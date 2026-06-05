@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '2.2.0';
+  var VERSION = '2.3.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -237,6 +237,22 @@
     + '.tz-postpone-menu{position:absolute;z-index:50;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 28px rgba(0,60,80,0.18);padding:4px;}'
     + '.tz-postpone-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 12px;border-radius:7px;cursor:pointer;font-size:0.85rem;color:#0f2b33;}'
     + '.tz-postpone-menu button:hover{background:#f2fafb;}'
+    /* KROK 2: swipe-to-delete — wrap z czerwonym tłem + toast COFNIJ. */
+    + '.tz-swipe-wrap{position:relative;overflow:hidden;}'
+    + '.tz-swipe-bg{position:absolute;inset:0;display:none;align-items:center;justify-content:flex-end;'
+    + 'padding-right:20px;background:#A32D2D;color:#fff;font-weight:600;font-size:0.9rem;border-radius:10px;cursor:pointer;}'
+    + '.tz-swipe-wrap.is-swiping .tz-swipe-bg,.tz-swipe-wrap.is-open-swipe .tz-swipe-bg{display:flex;}'
+    + '.tz-swipe-wrap .tz-row{position:relative;background:#fff;transition:transform .22s ease;touch-action:pan-y;}'
+    + '.tz-swipe-wrap.is-swiping .tz-row{transition:none;}'
+    + '.tz-swipe-wrap.is-removing{max-height:0 !important;opacity:0;transition:max-height .25s ease,opacity .2s ease;}'
+    + '.tz-undo-toast{position:fixed;left:50%;transform:translateX(-50%);'
+    + 'bottom:calc(env(safe-area-inset-bottom,0px) + 16px);background:#0f2b33;color:#fff;border-radius:12px;'
+    + 'padding:10px 16px;display:flex;gap:16px;align-items:center;z-index:1000002;font-size:0.9rem;'
+    + 'box-shadow:0 8px 24px rgba(0,0,0,0.3);white-space:nowrap;}'
+    + 'body.has-mobile-bottom-dock-visible .tz-undo-toast{bottom:var(--mobile-dock-pinned-scroll-top-bottom,calc(env(safe-area-inset-bottom,0px) + 96px));}'
+    + '.liquid-ios26 .tz-undo-toast button{background:transparent !important;border:0 !important;color:#5DCAA5 !important;'
+    + 'font-weight:700 !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;'
+    + 'padding:4px 6px !important;font-size:0.9rem !important;letter-spacing:0.03em;cursor:pointer;}'
     /* KROK 1: usuwanie — czerwona pozycja menu ⋮ i przycisk 🗑 w akcjach. */
     + '.tz-postpone-menu button.tz-menu-del{color:#A32D2D;font-weight:600;border-top:0.5px solid #f3dcdc;margin-top:2px;}'
     + '.tz-postpone-menu button.tz-menu-del.is-armed{background:#A32D2D;color:#fff;}'
@@ -884,7 +900,12 @@
     opts = opts || {};
     var done = !!n.completedAtISO;
     var cat = CAT_LABEL[n.category] || n.category || '';
+    // KROK 2: każdy wiersz w .tz-swipe-wrap z czerwonym tłem pod spodem —
+    // na mobile przeciągnięcie w lewo odsłania/usuwa (gest delegowany z roota);
+    // na desktopie wrap jest neutralny (gest nieaktywny, tło niewidoczne).
     return ''
+      + '<div class="tz-swipe-wrap">'
+      + '<div class="tz-swipe-bg" data-swipe-del="' + esc(n.id) + '">🗑 Usuń</div>'
       + '<div class="tz-row' + (done ? ' is-done' : '') + (opts.overdue ? ' is-overdue' : '') + '" data-note-id="' + esc(n.id) + '">'
       + '<div class="tz-row__main">'
       + (opts.hidePatient ? '' : ('<div class="tz-row__patient">' + esc(n.patientName || '')
@@ -911,6 +932,7 @@
           + (opts.gotoDay ? '<button type="button" data-act="goto">→ dzień</button>' : '')
           // KROK 1: usuwanie z pełnych akcji (desktop) — uzbrajanie inline.
           + '<button type="button" class="tz-del-btn" data-act="del" aria-label="Usuń wpis">🗑</button>'))
+      + '</div>'
       + '</div>'
       + '</div>';
   }
@@ -968,6 +990,15 @@
   }
 
   function bindRowActions(container, lookup) {
+    // KROK 2: gest swipe (delegowany z roota) czyta notatki po id — akumulujemy
+    // lookup na rootcie (swapy wyników dokładają swoje wpisy).
+    try {
+      var _r = root();
+      if (_r) {
+        _r.__tzRowLookup = _r.__tzRowLookup || {};
+        Object.keys(lookup).forEach(function (k) { _r.__tzRowLookup[k] = lookup[k]; });
+      }
+    } catch (_) { /* noop */ }
     var rows = container.querySelectorAll('.tz-row');
     for (var i = 0; i < rows.length; i += 1) {
       (function (row) {
@@ -1543,6 +1574,7 @@
   function render() {
     var el = root();
     if (!el) return;
+    _openSwipeRow = null; // KROK 2: DOM wymieniany — uchylony wiersz przestaje istnieć
     if (!unlocked()) { renderLocked(el); return; }
 
     var lookup = {};
@@ -1917,6 +1949,136 @@
     } catch (_) { /* noop */ }
   }
 
+  // ── KROK 2 (2026-06-05): swipe-to-delete na wierszach (mobile, wzór iOS Mail) ──
+  // Krótkie przeciągnięcie w lewo uchyla czerwony przycisk Usuń (tap = usuń),
+  // długie (≥55% szerokości) usuwa od razu. USUNIĘCIE JEST ODROCZONE: wiersz
+  // znika optymistycznie, toast „Usunięto · COFNIJ" odlicza 4 s i dopiero wtedy
+  // leci removePatientNote — COFNIJ tylko anuluje timer (zero realnego delete
+  // przed czasem, więc cofnięcie jest w 100% bezstratne).
+  var _pendingDelete = null; // { note, timer, toastEl }
+  function _flushPendingDelete() {
+    if (!_pendingDelete) return;
+    var pd = _pendingDelete;
+    _pendingDelete = null;
+    try { clearTimeout(pd.timer); } catch (_) { /* noop */ }
+    if (pd.toastEl && pd.toastEl.parentNode) pd.toastEl.remove();
+    deleteNote(pd.note);
+  }
+  function deleteWithUndo(note, rowWrap) {
+    // Poprzedni oczekujący wpis finalizujemy natychmiast (jeden toast naraz).
+    _flushPendingDelete();
+    if (rowWrap) {
+      try { rowWrap.style.maxHeight = rowWrap.offsetHeight + 'px'; void rowWrap.offsetHeight; } catch (_) { /* noop */ }
+      rowWrap.classList.add('is-removing');
+    }
+    var toast = doc.createElement('div');
+    toast.className = 'tz-undo-toast';
+    toast.innerHTML = '<span>Usunięto wpis</span><button type="button" id="tzUndoBtn">COFNIJ</button>';
+    doc.body.appendChild(toast);
+    var timer = setTimeout(function () {
+      if (!_pendingDelete) return;
+      var pd = _pendingDelete;
+      _pendingDelete = null;
+      if (pd.toastEl && pd.toastEl.parentNode) pd.toastEl.remove();
+      deleteNote(pd.note);
+    }, 4000);
+    _pendingDelete = { note: note, timer: timer, toastEl: toast };
+    toast.querySelector('#tzUndoBtn').addEventListener('click', function () {
+      if (!_pendingDelete) return;
+      try { clearTimeout(_pendingDelete.timer); } catch (_) { /* noop */ }
+      _pendingDelete = null;
+      toast.remove();
+      render(); // wiersz wraca z danych — nic nie było skasowane
+    });
+  }
+  var _openSwipeRow = null; // aktualnie uchylony wiersz (jeden naraz)
+  function _closeOpenSwipeRow() {
+    if (!_openSwipeRow) return;
+    _openSwipeRow.style.transform = '';
+    var w = _openSwipeRow.parentNode;
+    if (w && w.classList) w.classList.remove('is-open-swipe');
+    _openSwipeRow = null;
+  }
+  function bindRowSwipe(el) {
+    if (el.__tzRowSwipeBound) return;
+    el.__tzRowSwipeBound = true;
+    var row = null, wrap = null, note = null;
+    var sx = 0, sy = 0, dx = 0, taken = false;
+    var onMove = null, onEnd = null;
+    el.addEventListener('touchstart', function (ev) {
+      if (!isMobile()) return;
+      if (!ev.touches || ev.touches.length !== 1) return;
+      var t = ev.target;
+      row = t && t.closest ? t.closest('.tz-row') : null;
+      if (!row) { _closeOpenSwipeRow(); return; }
+      if (t.closest('button')) { row = null; return; } // przyciski akcji bez gestu
+      wrap = row.parentNode && row.parentNode.classList && row.parentNode.classList.contains('tz-swipe-wrap')
+        ? row.parentNode : null;
+      if (!wrap) { row = null; return; }
+      var lookupId = row.getAttribute('data-note-id');
+      note = (el.__tzRowLookup && el.__tzRowLookup[lookupId]) || null;
+      if (!note) { row = null; return; }
+      if (_openSwipeRow && _openSwipeRow !== row) _closeOpenSwipeRow();
+      sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; dx = 0; taken = false;
+      onMove = function (mv) {
+        if (!row || !mv.touches || mv.touches.length !== 1) return;
+        var mdx = mv.touches[0].clientX - sx;
+        var mdy = mv.touches[0].clientY - sy;
+        if (!taken) {
+          if (Math.abs(mdy) > 12 && Math.abs(mdy) > Math.abs(mdx)) { cleanup(); return; } // pionowy scroll
+          if (mdx > -10) return;          // tylko w LEWO; mały luz na drżenie
+          taken = true;
+          wrap.classList.add('is-swiping');
+        }
+        mv.preventDefault(); // przejęliśmy gest — bez scrolla w tle
+        dx = Math.max(mdx, -wrap.offsetWidth * 0.92);
+        if (dx > 0) dx = 0;
+        row.style.transform = 'translateX(' + Math.round(dx) + 'px)';
+      };
+      onEnd = function () {
+        if (!row) { cleanup(); return; }
+        var w = wrap.offsetWidth || 320;
+        wrap.classList.remove('is-swiping');
+        if (taken && Math.abs(dx) >= w * 0.55) {
+          // Pełne przeciągnięcie = usuń (z animacją wyjazdu).
+          row.style.transform = 'translateX(' + (-w) + 'px)';
+          deleteWithUndo(note, wrap);
+        } else if (taken && Math.abs(dx) >= 72) {
+          // Uchylenie: przycisk Usuń odsłonięty, tap w niego usuwa.
+          row.style.transform = 'translateX(-96px)';
+          wrap.classList.add('is-open-swipe');
+          _openSwipeRow = row;
+        } else if (taken) {
+          row.style.transform = '';
+        }
+        cleanup();
+      };
+      function cleanup() {
+        if (onMove) doc.removeEventListener('touchmove', onMove);
+        if (onEnd) { doc.removeEventListener('touchend', onEnd); doc.removeEventListener('touchcancel', onEnd); }
+        row = null; onMove = null; onEnd = null;
+      }
+      doc.addEventListener('touchmove', onMove, { passive: false });
+      doc.addEventListener('touchend', onEnd, { passive: true });
+      doc.addEventListener('touchcancel', onEnd, { passive: true });
+    }, { passive: true });
+    // Tap w odsłonięte czerwone tło = usuń.
+    el.addEventListener('click', function (ev) {
+      var bg = ev.target && ev.target.closest ? ev.target.closest('.tz-swipe-bg') : null;
+      if (!bg) return;
+      var w = bg.parentNode;
+      if (!w || !w.classList.contains('is-open-swipe')) return;
+      var r = w.querySelector('.tz-row');
+      var id = r && r.getAttribute('data-note-id');
+      var n = (el.__tzRowLookup && el.__tzRowLookup[id]) || null;
+      _openSwipeRow = null;
+      if (n) {
+        if (r) r.style.transform = 'translateX(' + (-(w.offsetWidth || 320)) + 'px)';
+        deleteWithUndo(n, w);
+      }
+    });
+  }
+
   // ── Swipe (2026-06-05): poziomy gest dotykowy przewija mies./tydz./dzień ────
   // Touch-only (desktop z myszą nieobjęty; tablet/telefon działa niezależnie od
   // szerokości). Bezpieczniki: 24px martwej strefy przy krawędziach (gest
@@ -1934,6 +2096,11 @@
     var MAX_DT = 600;
     el.addEventListener('touchstart', function (ev) {
       if (!ev.touches || ev.touches.length !== 1) { active = false; return; }
+      // KROK 2 (decyzja UX): nawigacja gestem WYŁĄCZONA w trybie wyszukiwania
+      // (lista stoi, przewijałby się tylko nagłówek — mylące) oraz na WIERSZACH
+      // (te przejmuje swipe-to-delete).
+      if (state.searchOpen) { active = false; return; }
+      if (ev.target && ev.target.closest && ev.target.closest('.tz-swipe-wrap')) { active = false; return; }
       var t = ev.touches[0];
       var vw = global.innerWidth || doc.documentElement.clientWidth || 0;
       if (t.clientX < EDGE || t.clientX > vw - EDGE) { active = false; return; }
@@ -1972,6 +2139,7 @@
     // Swipe na rootcie — element trwały (render podmienia tylko innerHTML),
     // więc wiążemy RAZ; gest działa we wszystkich widokach.
     try { bindSwipe(root()); } catch (_) { /* noop */ }
+    try { bindRowSwipe(root()); } catch (_) { /* noop */ }
 
     var V = getVault();
     if (V) {
