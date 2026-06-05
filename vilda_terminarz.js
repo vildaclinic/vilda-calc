@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '2.9.1';
+  var VERSION = '3.0.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -296,6 +296,14 @@
     + '.tz-wb-free{background:transparent;border:0;border-left:1px solid #d6e6e9;cursor:pointer;padding:0;}'
     + '.tz-wb-free:hover{background:#f2fafb;}'
     + '.tz-wb-free.is-wknd:hover{background:#E2EAF4;}'
+    + '.tz-wx .tz-wb{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}'
+    + '.tz-wb.is-drag-src{opacity:0.35;}'
+    + '.tz-wb--ghost{cursor:grabbing;}'
+    + '.tz-wx__dropind{position:absolute;z-index:3;border:2px dashed #00838d;border-radius:6px;'
+    + 'background:rgba(0,131,141,0.10);pointer-events:none;box-sizing:border-box;}'
+    + '.tz-wx__dropind span{position:absolute;top:1px;left:4px;font-size:0.66rem;font-weight:700;'
+    + 'color:#00606a;background:#fff;border-radius:4px;padding:0 4px;}'
+    + '.tz-wx__cell--all.is-drop{background:#d9f1f3;box-shadow:inset 0 0 0 2px #00838d;}'
     + '.tz-wb--ov{position:absolute;z-index:2;box-sizing:border-box;margin:0;display:flex;flex-direction:column;justify-content:center;}'
     + '.tz-wb--ov.is-min{padding:1px 6px;}'
     /* POPOVER V1: karta szczegółów bloku tygodnia (treść + akcje 2×2). */
@@ -1123,6 +1131,14 @@
   // Globalne połknięcie kliku przy otwartym popoverze (capture — przed handlerami
   // komórek/bloków): poza popoverem zamyka i NIC więcej; inny blok = przełączenie.
   function _bindWeekPopSwallow() {
+    // DnD: click generowany po upuszczeniu bloku NIE może otworzyć popovera
+    // ani trafić w komórkę — jednorazowo połykany (guard gaśnie też po 350 ms).
+    doc.addEventListener('click', function (ev) {
+      if (!_dragClickGuard) return;
+      _dragClickGuard = false;
+      ev.stopPropagation();
+      ev.preventDefault();
+    }, true);
     doc.addEventListener('click', function (ev) {
       if (!_weekPop) return;
       var t = ev.target;
@@ -1136,6 +1152,153 @@
       ev.stopPropagation();
       ev.preventDefault();
     }, true);
+  }
+
+  // ── DRAG&DROP (2026-06-05): przeciąganie bloków w siatce tygodnia ───────────
+  // Mysz: chwyt po >6px ruchu. Dotyk (tablet): long-press ~300 ms (ruch przed
+  // upływem = scroll → rezygnacja; pointercancel też anuluje). Duch bloku pod
+  // palcem/kursorem, wskaźnik celu ze snapem do 15 min; pas „Cały dzień" =
+  // jawne wyzerowanie godziny (null). Drop = JEDNO savePatientNote (merge-by-id
+  // zachowuje treść/czas trwania; sync LWW bez zmian). Escape anuluje.
+  var _drag = null;
+  var _dragClickGuard = false;
+  function _dragTouchBlock(ev) { if (_drag && _drag.active && ev.cancelable) ev.preventDefault(); }
+  function _dragKey(ev) { if (ev.key === 'Escape') _cancelWeekDrag(); }
+  function _dragCancelEv() { _cancelWeekDrag(); }
+  function _cancelWeekDrag() {
+    if (!_drag) return;
+    if (_drag.lp) clearTimeout(_drag.lp);
+    if (_drag.ghost && _drag.ghost.parentNode) _drag.ghost.remove();
+    if (_drag.ind && _drag.ind.parentNode) _drag.ind.remove();
+    if (_drag.blk) _drag.blk.classList.remove('is-drag-src');
+    if (_drag.allCell) _drag.allCell.classList.remove('is-drop');
+    doc.removeEventListener('pointermove', _dragMove);
+    doc.removeEventListener('pointerup', _dragUp);
+    doc.removeEventListener('pointercancel', _dragCancelEv);
+    doc.removeEventListener('keydown', _dragKey);
+    doc.removeEventListener('touchmove', _dragTouchBlock);
+    _drag = null;
+  }
+  function _startWeekDrag() {
+    if (!_drag || _drag.active) return;
+    _drag.active = true;
+    closeWeekPopover();
+    closePostponeMenus();
+    var blk = _drag.blk;
+    var r = blk.getBoundingClientRect();
+    var g = blk.cloneNode(true);
+    g.className = blk.className + ' tz-wb--ghost';
+    g.style.cssText = 'position:fixed;left:0;top:0;width:' + Math.round(r.width) + 'px;'
+      + 'height:' + Math.round(r.height) + 'px;margin:0;z-index:1000002;pointer-events:none;'
+      + 'opacity:0.92;box-shadow:0 12px 30px rgba(0,40,48,0.28);';
+    doc.body.appendChild(g);
+    _drag.ghost = g;
+    blk.classList.add('is-drag-src');
+    var grid = blk.closest('.tz-wx');
+    _drag.body = grid ? grid.querySelector('.tz-wx__bodyrel') : null;
+    _drag.allRow = grid ? grid.querySelector('.tz-wx__all') : null;
+    _drag.days = grid ? String(grid.getAttribute('data-days') || '').split(',') : [];
+    _drag.startMin = _drag.body ? (parseInt(_drag.body.getAttribute('data-start-min'), 10) || 0) : 0;
+    var dm = Number(_drag.note.durationMin);
+    _drag.durMin = (dm > 0) ? dm : 30;
+    var ind = doc.createElement('div');
+    ind.className = 'tz-wx__dropind';
+    ind.innerHTML = '<span></span>';
+    if (_drag.body) _drag.body.appendChild(ind);
+    _drag.ind = ind;
+    doc.addEventListener('touchmove', _dragTouchBlock, { passive: false });
+    try { if (_drag.type === 'touch' && global.navigator && global.navigator.vibrate) global.navigator.vibrate(10); } catch (_) {}
+    _dragPlace(_drag.cx, _drag.cy);
+  }
+  function _dragPlace(x, y) {
+    var d = _drag;
+    if (!d || !d.active) return;
+    d.ghost.style.transform = 'translate(' + Math.round(x - d.ghost.offsetWidth / 2) + 'px,' + Math.round(y - 14) + 'px)';
+    d.target = null;
+    if (d.allCell) { d.allCell.classList.remove('is-drop'); d.allCell = null; }
+    d.ind.style.display = 'none';
+    if (!d.body) return;
+    var br = d.body.getBoundingClientRect();
+    var colW = (br.width - 56) / 7;
+    var ar = d.allRow ? d.allRow.getBoundingClientRect() : null;
+    if (ar && y >= ar.top && y <= ar.bottom && x >= br.left + 56 && x <= br.right) {
+      var ci = Math.min(6, Math.max(0, Math.floor((x - br.left - 56) / colW)));
+      var cells = d.allRow.querySelectorAll('.tz-wx__cell--all');
+      if (cells[ci]) { d.allCell = cells[ci]; d.allCell.classList.add('is-drop'); }
+      d.target = { iso: d.days[ci], time: null };
+      return;
+    }
+    if (x < br.left + 56 || x > br.right || y < br.top || y > br.bottom) return;
+    var ci2 = Math.min(6, Math.max(0, Math.floor((x - br.left - 56) / colW)));
+    var rawMin = d.startMin + (y - br.top) / 2;
+    var endMin = d.startMin + br.height / 2;
+    var m = Math.round(rawMin / 15) * 15;
+    if (m < d.startMin) m = d.startMin;
+    if (m + d.durMin > endMin) m = Math.max(d.startMin, Math.floor((endMin - d.durMin) / 15) * 15);
+    var hh = hhOf(m);
+    d.target = { iso: d.days[ci2], time: hh };
+    d.ind.style.display = 'block';
+    d.ind.style.top = ((m - d.startMin) * 2 + 1) + 'px';
+    d.ind.style.height = Math.max(d.durMin * 2 - 2, 14) + 'px';
+    d.ind.style.left = 'calc(56px + (100% - 56px)*' + (ci2 / 7).toFixed(5) + ' + 2px)';
+    d.ind.style.width = 'calc((100% - 56px)*' + (1 / 7).toFixed(5) + ' - 5px)';
+    d.ind.firstChild.textContent = hh;
+  }
+  function _dragMove(ev) {
+    if (!_drag || ev.pointerId !== _drag.pid) return;
+    _drag.cx = ev.clientX; _drag.cy = ev.clientY;
+    if (!_drag.active) {
+      var dx = ev.clientX - _drag.sx, dy = ev.clientY - _drag.sy;
+      if ((dx * dx + dy * dy) > 36) {
+        if (_drag.type === 'touch') { _cancelWeekDrag(); return; }
+        _startWeekDrag();
+      }
+      return;
+    }
+    if (ev.cancelable) ev.preventDefault();
+    _dragPlace(ev.clientX, ev.clientY);
+  }
+  function _dragUp(ev) {
+    if (!_drag || ev.pointerId !== _drag.pid) return;
+    if (!_drag.active) { _cancelWeekDrag(); return; } // zwykły klik → popover
+    _dragClickGuard = true;
+    setTimeout(function () { _dragClickGuard = false; }, 350);
+    var t = _drag.target;
+    var note = _drag.note;
+    _cancelWeekDrag();
+    if (!t || !t.iso) return; // upuszczenie poza siatką = anuluj
+    var sameDay = (noteDayISO(note) === t.iso);
+    var sameTime = ((note.dueTime || null) === t.time);
+    if (sameDay && sameTime) return;
+    var V = getVault();
+    if (!V) return;
+    var p = corePayload(note);
+    p.dueDateISO = t.iso;
+    p.dueTime = t.time; // null = jawne wyzerowanie (pas „Cały dzień")
+    V.savePatientNote(p).then(refresh).catch(function (e) {
+      try { global.alert('Nie udało się przenieść terminu: ' + (e && e.message || '')); } catch (_) {}
+    });
+  }
+  function bindWeekDrag(container, lookup) {
+    var grid = container.querySelector('.tz-wx');
+    if (!grid || grid.__tzDragBound) return;
+    grid.__tzDragBound = true;
+    grid.addEventListener('pointerdown', function (ev) {
+      if (_drag) return;
+      if (ev.button !== undefined && ev.button !== 0) return;
+      var blk = ev.target && ev.target.closest ? ev.target.closest('.tz-wb[data-note-id]') : null;
+      if (!blk) return;
+      var note = lookup[blk.getAttribute('data-note-id')];
+      if (!note) return;
+      _drag = { note: note, blk: blk, pid: ev.pointerId, type: ev.pointerType || 'mouse',
+        sx: ev.clientX, sy: ev.clientY, cx: ev.clientX, cy: ev.clientY,
+        active: false, lp: null, target: null };
+      if (_drag.type === 'touch') _drag.lp = setTimeout(_startWeekDrag, 300);
+      doc.addEventListener('pointermove', _dragMove);
+      doc.addEventListener('pointerup', _dragUp);
+      doc.addEventListener('pointercancel', _dragCancelEv);
+      doc.addEventListener('keydown', _dragKey);
+    });
   }
 
   function closePostponeMenus() {
@@ -1395,6 +1558,7 @@
         });
       })(wblocks[wb]);
     }
+    bindWeekDrag(container, lookup); // DnD: chwyt myszą / long-press na tablecie
     // S3: chip sugestii „Oś czasu →" + zamknięcie osi + klik wpisu osi → dzień.
     var tls = container.querySelectorAll('[data-timeline-pid]');
     for (var t = 0; t < tls.length; t += 1) {
@@ -1781,7 +1945,7 @@
       if (parts.length < 2) return parts[0] || '';
       return parts[0] + ' ' + parts[1].charAt(0) + '.';
     }
-    var html = '<div class="tz-wx">';
+    var html = '<div class="tz-wx" data-days="' + dayISOs.join(',') + '">';
     function wkndCls(idx) { return (idx >= 5) ? ' is-wknd' : ''; } // So/Nd wyróżnione
     // Nagłówek dni (klik dnia → widok dnia; „+" jak dotąd).
     html += '<div class="tz-wx__row tz-wx__head"><span class="tz-wx__hh"></span>';
@@ -1810,7 +1974,7 @@
     html += '</div>';
     // Sloty 30-minutowe — komórki ZAWSZE identyczne (60px) i zawsze klikalne
     // (nowy termin); wpisy żyją na warstwie proporcjonalnej PONAD siatką.
-    html += '<div class="tz-wx__bodyrel">';
+    html += '<div class="tz-wx__bodyrel" data-start-min="' + rng.startMin + '">';
     for (var mm = rng.startMin; mm < rng.endMin; mm += 30) {
       var hh = hhOf(mm);
       var isFull = (mm % 60 === 0);
@@ -2050,6 +2214,7 @@
     var el = root();
     if (!el) return;
     _openSwipeRow = null; // KROK 2: DOM wymieniany — uchylony wiersz przestaje istnieć
+    _cancelWeekDrag();    // DnD: re-render unieważnia geometrię przeciągania
     closeWeekPopover();   // POPOVER V1: re-render unieważnia kotwicę bloku
     if (!unlocked()) { renderLocked(el); return; }
 
@@ -2577,6 +2742,7 @@
       // (lista stoi, przewijałby się tylko nagłówek — mylące) oraz na WIERSZACH
       // (te przejmuje swipe-to-delete).
       if (state.searchOpen) { active = false; return; }
+      if (_drag) { active = false; return; } // DnD: blok ma pierwszeństwo
       if (ev.target && ev.target.closest && ev.target.closest('.tz-swipe-wrap')) { active = false; return; }
       var t = ev.touches[0];
       var vw = global.innerWidth || doc.documentElement.clientWidth || 0;
