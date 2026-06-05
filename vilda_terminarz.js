@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '2.3.0';
+  var VERSION = '2.4.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -302,6 +302,9 @@
     + '.tz-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;box-sizing:border-box;}'
     + '.tz-modal{background:#fff;border-radius:14px;padding:18px 20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;}'
     + '.tz-modal h3{margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;}'
+    + '.tz-modal__head{display:flex;align-items:center;justify-content:space-between;gap:10px;}'
+    + '.tz-head-cancel,.tz-head-save{display:none;}'
+    + '.tz-modal__footnote{text-align:center;}'
     + '.tz-modal label{display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;}'
     + '.tz-modal input[type="text"],.tz-modal input[type="date"]{width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;box-sizing:border-box;}'
     /* Combobox pacjenta: lista NIE jest widoczna od razu i NIE wydłuża modala —
@@ -432,6 +435,7 @@
     + 'border-radius:6px !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;font-weight:600 !important;}'
     + '.liquid-ios26 .tz-modal button{'
     + 'background:#fff !important;border:0.5px solid #d7e9ec !important;color:#0f2b33 !important;'
+    + 'width:auto !important;flex:0 0 auto !important;'
     + 'border-radius:9px !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;padding:8px 14px !important;font-size:0.85rem !important;}'
     + '.liquid-ios26 .tz-modal button:hover{background:#f2fafb !important;}'
     + '.liquid-ios26 .tz-modal .tz-ntcat{border-radius:999px !important;padding:5px 12px !important;color:#5b6672 !important;font-size:0.8rem !important;}'
@@ -472,11 +476,35 @@
     + 'body.nav-ui-temporarily-hidden .terminarz-shell .tz-fab{'
     + 'bottom:calc(18px + env(safe-area-inset-bottom,0px)) !important;}'
     + '.tz-cell__add{display:none !important;}'
-    + '.tz-modal-overlay{align-items:flex-end;padding:0;}'
-    + '.tz-modal{max-width:none;border-radius:14px 14px 0 0;max-height:86vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));}'
+    /* REDESIGN MOBILE P2 (decyzja UX 2026-06-05): PEŁNOEKRANOWY formularz
+     * w stylu natywnego iOS — górny pasek [Anuluj · Nowy termin · Zapisz],
+     * treść przewijalna, kontrolki >=16px i tap-targety >=44px (HIG).
+     * Desktop zostaje przy karcie ze stopką (pasek ukryty bazowo). */
+    + '.tz-modal-overlay{align-items:stretch;padding:0;}'
+    + '.tz-modal{max-width:none;border-radius:0;max-height:none;height:100dvh;'
+    + 'padding:calc(env(safe-area-inset-top,0px) + 8px) 16px calc(env(safe-area-inset-bottom,0px) + 14px);gap:14px;box-sizing:border-box;}'
+    + '.tz-modal__head{border-bottom:0.5px solid #e7f1f3;padding-bottom:10px;margin:0 -16px;padding-left:16px;padding-right:16px;}'
+    + '.tz-modal h3{font-size:1.1rem;text-align:center;flex:1;}'
+    + '.tz-head-cancel,.tz-head-save{display:inline-flex;}'
+    + '.tz-modal__actions{display:none;}'
+    + '.tz-modal label{font-size:0.85rem;}'
     /* iOS: pole z font-size <16px wywołuje auto-zoom przy fokusie — na mobile
-     * KAŻDE pole modalu ma >=16px (wzorzec _preventIosFocusZoom z auth UI). */
-    + '.tz-modal input[type="text"],.tz-modal input[type="date"]{font-size:16px !important;height:42px;}'
+     * KAŻDA kontrolka modalu ma >=16px (wzorzec _preventIosFocusZoom z auth UI). */
+    + '.tz-modal input[type="text"],.tz-modal input[type="date"]{font-size:16px !important;height:46px;}'
+    + '.liquid-ios26 .tz-modal .tz-ntcat{font-size:16px !important;padding:10px 16px !important;}'
+    + '.tz-nt-daterow input[type="date"]{flex:1 1 150px;}'
+    + '.tz-nt-item{padding:12px;font-size:16px;}'
+    + '.tz-nt-ext{font-size:0.9rem;}'
+    + '.liquid-ios26 .tz-modal .tz-modal__actions button{'
+    + 'flex:1 1 0 !important;width:auto !important;height:48px !important;font-size:16px !important;font-weight:600 !important;}'
+    + '.liquid-ios26 .tz-modal .tz-link-btn{font-size:16px !important;padding:8px 6px !important;}'
+    + '.liquid-ios26 .tz-modal .tz-head-cancel,.liquid-ios26 .tz-modal .tz-head-save{'
+    + 'background:transparent !important;border:0 !important;box-shadow:none !important;'
+    + 'backdrop-filter:none !important;-webkit-backdrop-filter:none !important;'
+    + 'font-size:16px !important;padding:8px 4px !important;min-height:44px;}'
+    + '.liquid-ios26 .tz-modal .tz-head-cancel{color:#5b6672 !important;}'
+    + '.liquid-ios26 .tz-modal .tz-head-save{color:#00838d !important;font-weight:700 !important;}'
+    + '.liquid-ios26 .tz-modal .tz-head-save:disabled{opacity:0.5;}'
     + '.tz-searchbar input{font-size:16px !important;height:42px;}'
     + '}';
 
@@ -652,7 +680,11 @@
     var initISO = (typeof prefillISO === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prefillISO)) ? prefillISO : todayISO();
     overlay.innerHTML = ''
       + '<div class="tz-modal" role="dialog" aria-modal="true" aria-label="Nowy termin">'
+      + '<div class="tz-modal__head">'
+      + '<button type="button" id="tzNtCancelTop" class="tz-head-cancel">Anuluj</button>'
       + '<h3>Nowy termin</h3>'
+      + '<button type="button" id="tzNtSaveTop" class="tz-head-save">Zapisz</button>'
+      + '</div>'
       + '<div><label for="tzNtSearch">Pacjent</label>'
       + '<div class="tz-nt-combo">'
       + '<input type="text" id="tzNtSearch" autocomplete="off" placeholder="Szukaj pacjenta…">'
@@ -675,8 +707,9 @@
       + '<button type="button" class="tz-ntcat" data-plus-days="91">+3 mies.</button>'
       + '</div></div>'
       + '<div class="tz-modal__err" id="tzNtErr"></div>'
+      + '<div class="tz-modal__footnote">'
+      + '<button type="button" class="tz-link-btn" id="tzNtFull">Pełny edytor →</button></div>'
       + '<div class="tz-modal__actions">'
-      + '<button type="button" class="tz-link-btn" id="tzNtFull">Pełny edytor →</button>'
       + '<button type="button" id="tzNtCancel">Anuluj</button>'
       + '<button type="button" class="tz-nt-save" id="tzNtSave">Zapisz termin</button>'
       + '</div></div>';
@@ -814,6 +847,7 @@
       var v = validate();
       if (!v) return;
       saveBtn.disabled = true;
+      try { overlay.querySelector('#tzNtSaveTop').disabled = true; } catch (_) { /* noop */ }
       var payload = v.extName
         ? { patientId: (V.EXTERNAL_PATIENT_ID || '__vilda_external__'), externalName: v.extName, title: v.title, category: selCat, dueDateISO: v.dISO }
         : { patientId: selPid, title: v.title, category: selCat, dueDateISO: v.dISO };
@@ -821,6 +855,7 @@
         .then(function () { closeNewTermModal(); refresh(); })
         .catch(function (e) {
           saveBtn.disabled = false;
+          try { overlay.querySelector('#tzNtSaveTop').disabled = false; } catch (_) { /* noop */ }
           showErr('Nie udało się zapisać terminu: ' + (e && e.message || ''));
         });
     });
@@ -837,6 +872,8 @@
       AUI.showPatientNoteEditor({ patientId: selPid, note: draft, onSaved: function () { refresh(); } });
     });
     overlay.querySelector('#tzNtCancel').addEventListener('click', closeNewTermModal);
+    overlay.querySelector('#tzNtCancelTop').addEventListener('click', closeNewTermModal);
+    overlay.querySelector('#tzNtSaveTop').addEventListener('click', function () { saveBtn.click(); });
     overlay.addEventListener('click', function (ev) { if (ev.target === overlay) closeNewTermModal(); });
     doc.addEventListener('keydown', function onEsc(ev) {
       if (ev.key !== 'Escape') return;
