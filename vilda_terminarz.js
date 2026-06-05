@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '3.0.0';
+  var VERSION = '3.0.1';
   var doc = global.document;
   if (!doc) return;
 
@@ -213,7 +213,8 @@
     + '.tz-grid__head div{padding:8px 6px;text-align:center;font-size:0.75rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.04em;}'
     + '.tz-grid__head div.is-wknd{background:#DEE7F1;color:#0C447C;}'
     + '.tz-grid__body{display:grid;grid-template-columns:repeat(7,1fr);}'
-    + '.tz-cell{min-height:92px;border-bottom:1px solid #c9dde0;border-right:1px solid #c9dde0;padding:6px;cursor:pointer;position:relative;background:#fff;transition:background .12s;}'
+    + '.tz-cell{height:92px;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;border-bottom:1px solid #c9dde0;border-right:1px solid #c9dde0;padding:6px 6px 15px;cursor:pointer;position:relative;background:#fff;transition:background .12s;}'
+    + '.tz-cell__chips{flex:1 1 auto;min-height:0;overflow:hidden;align-self:stretch;}'
     + '.tz-cell:nth-child(7n){border-right:0;}'
     + '.tz-cell:hover{background:#f7fcfd;}'
     + '.tz-cell.is-other{background:#fafcfc;color:#9aa8aa;}'
@@ -449,14 +450,14 @@
     /* ── Święta państwowe: czerwone oznaczenia w trzech widokach ── */
     + '.tz-cell.is-holiday .tz-cell__num{color:#b91c1c;}'
     + '.tz-cell.is-today.is-holiday .tz-cell__num{color:#fff;}'
-    + '.tz-cell__holiday{display:block;font-size:0.62rem;color:#b91c1c;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+    + '.tz-cell__holiday{display:block;max-width:100%;font-size:0.62rem;color:#b91c1c;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
     + '.tz-wcol.is-holiday .tz-wcol__num{color:#b91c1c;}'
     + '.tz-wcol.is-today.is-holiday .tz-wcol__num{color:#fff;}'
     + '.tz-wcol__holiday{font-size:0.66rem;color:#b91c1c;font-weight:600;padding:1px 2px 0;line-height:1.15;}'
     + '.tz-holiday-inline{color:#b91c1c;font-weight:600;font-size:0.78rem;}'
     + '.tz-holiday-line{background:#fef2f2;border:0.5px solid #fecaca;color:#991b1b;border-radius:10px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin:0 0 10px;}'
-    + '@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-grid .tz-chip{display:none;}.tz-cell__holiday{display:none;}'
-    + '.tz-cell__dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}'
+    + '@media (max-width:700px){.tz-cell{height:58px;padding:4px 4px 12px;}.tz-grid .tz-chip{display:none;}.tz-cell__holiday{display:none;}'
+    + '.tz-cell__dots{gap:2px;bottom:4px;left:4px;right:4px;}'
     /* M2 (2026-06-05): linia 1 = ‹ tytuł › rozsunięte do KRAWĘDZI (strzałki w
      * stałych punktach, tytuł pełny i wyśrodkowany); linia 2 = Dziś + przełącznik. */
     + '.tz-nav{width:100%;justify-content:space-between;}'
@@ -468,7 +469,7 @@
     + '.tz-topbar__sp{display:none;}'
     + '.tz-switch{flex:1 1 auto;width:auto;}'
     + '.tz-switch button{flex:1 1 0;}}'
-    + '.tz-cell__dots{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}'
+    + '.tz-cell__dots{position:absolute;left:6px;right:6px;bottom:5px;display:flex;gap:3px;flex-wrap:nowrap;overflow:hidden;margin:0;}'
     + '.tz-dot{width:7px;height:7px;border-radius:50%;background:#00838d;display:inline-block;}'
     + '.tz-dot.tz-cat-treatment{background:#7c5cd6;}.tz-dot.tz-cat-observation{background:#0ea5e9;}.tz-dot.tz-cat-wynik{background:#b45309;}.tz-dot.is-done{opacity:0.4;}'
     /* ── KONTRA Liquid iOS26 (ios26-v2.css): `.liquid-ios26 button{...!important}`
@@ -1878,13 +1879,16 @@
         + '<button type="button" class="tz-cell__add" data-add-day="' + iso + '" aria-label="Dodaj termin ' + iso + '">+</button>';
       if (hol) html += '<span class="tz-cell__holiday">' + esc(hol) + '</span>';
       if (items.length) {
-        // Desktop: do 2 chipów + „+N"; mobile (CSS): kropki.
+        // Desktop: do 2 chipów + „+N" w PRZYCINANEJ strefie (komórka ma stałą
+        // wysokość — nic jej nie rozpycha); kropki ZAWSZE przy dolnej krawędzi.
+        html += '<div class="tz-cell__chips">';
         for (var c = 0; c < Math.min(items.length, 2); c += 1) {
           var n2 = items[c];
           html += '<span class="tz-chip ' + (CAT_CLASS[n2.category] || '') + (n2.completedAtISO ? ' is-done' : '') + '">'
             + esc((n2.patientName || '').split(' ')[0] || '') + ' · ' + esc(n2.title || '') + '</span>';
         }
         if (items.length > 2) html += '<span class="tz-chip tz-chip--more">+' + (items.length - 2) + '</span>';
+        html += '</div>';
         html += '<span class="tz-cell__dots">';
         for (var dgt = 0; dgt < Math.min(items.length, 4); dgt += 1) {
           html += '<span class="tz-dot ' + (CAT_CLASS[items[dgt].category] || '') + (items[dgt].completedAtISO ? ' is-done' : '') + '"></span>';
