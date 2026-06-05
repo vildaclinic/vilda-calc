@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '2.1.0';
+  var VERSION = '2.2.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -237,6 +237,11 @@
     + '.tz-postpone-menu{position:absolute;z-index:50;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 28px rgba(0,60,80,0.18);padding:4px;}'
     + '.tz-postpone-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 12px;border-radius:7px;cursor:pointer;font-size:0.85rem;color:#0f2b33;}'
     + '.tz-postpone-menu button:hover{background:#f2fafb;}'
+    /* KROK 1: usuwanie — czerwona pozycja menu ⋮ i przycisk 🗑 w akcjach. */
+    + '.tz-postpone-menu button.tz-menu-del{color:#A32D2D;font-weight:600;border-top:0.5px solid #f3dcdc;margin-top:2px;}'
+    + '.tz-postpone-menu button.tz-menu-del.is-armed{background:#A32D2D;color:#fff;}'
+    + '.tz-actions .tz-del-btn{color:#A32D2D;border-color:#ecc8c8;}'
+    + '.tz-actions .tz-del-btn.is-armed{background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600;}'
     /* ── Cykl C: tydzień W1 (siatka 7 kolumn — desktop/tablet) ── */
     + '.tz-week{background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;overflow:hidden;display:grid;grid-template-columns:repeat(7,1fr);}'
     + '.tz-wcol{border-right:0.5px solid #e7f1f3;min-height:170px;display:flex;flex-direction:column;}'
@@ -386,6 +391,11 @@
     + '.liquid-ios26 .terminarz-shell .tz-card__open,'
     + '.liquid-ios26 .terminarz-shell .tz-day-panel h2 button{border-radius:8px !important;color:#00838d !important;}'
     + '.liquid-ios26 .tz-postpone-menu button{border:0 !important;border-radius:7px !important;text-align:left !important;}'
+    /* KROK 1: czerwień usuwania musi przebić wymuszone color:#0f2b33 z counterów. */
+    + '.liquid-ios26 .tz-postpone-menu button.tz-menu-del{color:#A32D2D !important;border-top:0.5px solid #f3dcdc !important;border-radius:0 0 7px 7px !important;}'
+    + '.liquid-ios26 .tz-postpone-menu button.tz-menu-del.is-armed{background:#A32D2D !important;color:#fff !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-actions .tz-del-btn{color:#A32D2D !important;border-color:#ecc8c8 !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-actions .tz-del-btn.is-armed{background:#A32D2D !important;color:#fff !important;border-color:#A32D2D !important;}'
     + '.liquid-ios26 .terminarz-shell .tz-switch button{'
     + 'background:#fff !important;border:0 !important;border-radius:0 !important;color:#5b6672 !important;'
     + 'box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}'
@@ -828,6 +838,19 @@
     // interakcji), a na mobile wystrzeliwałby klawiaturę przy każdym otwarciu.
   }
 
+  // KROK 1 (2026-06-05): usuwanie wpisu — istniejąca ścieżka vaulta
+  // (removePatientNote: tombstone propagowany przez sync + notify → live refresh).
+  function deleteNote(note) {
+    var V = getVault();
+    if (!V || typeof V.removePatientNote !== 'function') {
+      try { global.alert('Usuwanie niedostępne — odśwież stronę (Ctrl+Shift+R).'); } catch (_) {}
+      return Promise.resolve();
+    }
+    return V.removePatientNote(note.id).then(refresh).catch(function (e) {
+      try { global.alert('Nie udało się usunąć wpisu: ' + (e && e.message || '')); } catch (_) {}
+    });
+  }
+
   function closePostponeMenus() {
     var ms = doc.querySelectorAll('.tz-postpone-menu');
     for (var i = 0; i < ms.length; i += 1) ms[i].remove();
@@ -885,7 +908,9 @@
             + '<button type="button" data-act="postpone">↻ Przełóż</button>')
           + '<button type="button" data-act="edit">✎ Edytuj</button>'
           // SEARCH: skok do dnia wydarzenia (czyści wyszukiwanie, otwiera widok Dzień).
-          + (opts.gotoDay ? '<button type="button" data-act="goto">→ dzień</button>' : '')))
+          + (opts.gotoDay ? '<button type="button" data-act="goto">→ dzień</button>' : '')
+          // KROK 1: usuwanie z pełnych akcji (desktop) — uzbrajanie inline.
+          + '<button type="button" class="tz-del-btn" data-act="del" aria-label="Usuń wpis">🗑</button>'))
       + '</div>'
       + '</div>';
   }
@@ -912,6 +937,25 @@
       b.addEventListener('click', function () { closePostponeMenus(); opt[1](); });
       menu.appendChild(b);
     });
+    // KROK 1: „Usuń" na czerwono, na końcu menu, z potwierdzeniem INLINE
+    // (pierwszy klik uzbraja — „Na pewno usunąć?", drugi usuwa; natywny confirm
+    // brzydko wygląda w standalone PWA). Klik poza menu = anulowanie.
+    var delBtn = doc.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'tz-menu-del';
+    delBtn.textContent = '🗑 Usuń';
+    var _armed = false;
+    delBtn.addEventListener('click', function () {
+      if (!_armed) {
+        _armed = true;
+        delBtn.textContent = 'Na pewno usunąć?';
+        delBtn.classList.add('is-armed');
+        return;
+      }
+      closePostponeMenus();
+      deleteNote(note);
+    });
+    menu.appendChild(delBtn);
     var rect = anchorBtn.getBoundingClientRect();
     menu.style.left = Math.max(8, rect.left + global.scrollX - 120) + 'px';
     menu.style.top = (rect.bottom + global.scrollY + 4) + 'px';
@@ -941,6 +985,23 @@
               else if (act === 'edit') editNote(note);
               else if (act === 'more') showMoreMenu(btn, note);
               else if (act === 'goto') gotoNoteDay(noteDayISO(note));
+              else if (act === 'del') {
+                // Uzbrajanie inline: 1. klik → „Na pewno?" (3 s na decyzję),
+                // 2. klik → usunięcie. Timeout cofa uzbrojenie.
+                if (btn.getAttribute('data-armed') === '1') {
+                  deleteNote(note);
+                  return;
+                }
+                btn.setAttribute('data-armed', '1');
+                btn.classList.add('is-armed');
+                btn.textContent = 'Na pewno?';
+                setTimeout(function () {
+                  if (!btn.isConnected) return;
+                  btn.removeAttribute('data-armed');
+                  btn.classList.remove('is-armed');
+                  btn.textContent = '🗑';
+                }, 3000);
+              }
             });
           })(btns[j]);
         }
