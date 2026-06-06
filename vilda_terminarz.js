@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '3.7.0';
+  var VERSION = '3.8.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -2429,11 +2429,13 @@
       });
       html += '</div>';
     }
-    // NAKŁADKI V1 (2026-06-06): bardzo długie wydarzenia (DYŻUR lub ≥ 4 h) =
-    // TŁO kolumny (pełna szerokość, etykieta u góry, niższy z-index). Krótkie
-    // wizyty leżą NA WIERZCHU i pakują się w pasy TYLKO między sobą — ich
-    // etykiety nigdy nie są zwężane przez długi blok. 30 min = pełna komórka.
-    var BAND_MIN = 240;
+    // NAKŁADKI V1 — REGUŁA RELACYJNA (2026-06-06): wydarzenie staje się TŁEM
+    // kolumny (pełna szerokość, etykieta u góry, niższy z-index) tylko gdy
+    // (a) jest DYŻUREM (zawsze), albo (b) NAKŁADA się na coś krótszego i jest od
+    // tego co najmniej BAND_RATIO× dłuższe. Brak magicznej liczby godzin: długie
+    // wydarzenie BEZ kolizji zostaje normalnym blokiem. Krótkie wizyty leżą NA
+    // WIERZCHU i pakują się w pasy TYLKO między sobą — etykiety zawsze czytelne.
+    var BAND_RATIO = 3;
     dayISOs.forEach(function (iso, idx) {
       var all = (state.notesByDay[iso] || []).filter(function (n) { return !!n.dueTime; })
         .map(function (n) {
@@ -2443,10 +2445,18 @@
         .sort(function (a, b) { return (a.s - b.s) || (a.e - b.e); });
       var colL = 'left:calc(56px + (100% - 56px)*' + (idx / 7).toFixed(5) + ' + 2px);';
       var colW = 'width:calc((100% - 56px)*' + (1 / 7).toFixed(5) + ' - 5px);';
-      var bands = [], shorts = [];
+      // Tło = dyżur ALBO ≥ BAND_RATIO× dłuższe od najkrótszego nakładającego się.
       all.forEach(function (ev) {
-        if (ev.n.category === 'duty' || (ev.e - ev.s) >= BAND_MIN) bands.push(ev); else shorts.push(ev);
+        if (ev.n.category === 'duty') { ev.band = true; return; }
+        var minOther = Infinity;
+        all.forEach(function (f) {
+          if (f === ev) return;
+          if (f.s < ev.e && f.e > ev.s) { var d = f.e - f.s; if (d < minOther) minOther = d; }
+        });
+        ev.band = (minOther !== Infinity) && ((ev.e - ev.s) >= BAND_RATIO * minOther);
       });
+      var bands = all.filter(function (ev) { return ev.band; });
+      var shorts = all.filter(function (ev) { return !ev.band; });
       // 1) TŁO: długie wydarzenia na pełną szerokość kolumny (za wizytami).
       bands.forEach(function (ev) {
         var n = ev.n;
