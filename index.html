@@ -83,7 +83,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=12" rel="stylesheet">
-<link href="style.css?v=43" rel="stylesheet">
+<link href="style.css?v=44" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 <link href="vilda_chrome.css?v=19" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=49" rel="stylesheet">
@@ -223,6 +223,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 }
 </style>
 <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
 (function(){
   try{
     var ss = window.sessionStorage;
@@ -233,47 +236,52 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
     }
   }catch(_){ /* brak dostępu do sessionStorage → nie blokujemy, by nie zostawić pustej strony */ }
 })();
+
+});
 </script>
 
-<script src="vilda_logger.js?v=2"></script>
-<script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=18"></script>
-<script src="vilda_session_bridge.js?v=1"></script>
-<script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=14"></script>
-<script src="vilda_vault.js?v=89"></script>
-<script src="vilda_sync.js?v=10"></script>
-<script src="vilda_sync_integration.js?v=9"></script>
-<script src="vilda_auth_ui.js?v=179"></script>
-<script src="vilda_data_safety_explainer.js?v=5"></script>
-<script src="vilda_crypto_strength_explainer.js?v=6"></script>
-<script src="vilda_pro_access.js?v=2"></script>
-<script src="vilda_pro_ui.js?v=2"></script>
-<script src="vilda_file_export.js?v=5"></script>
-<script src="vilda_deps.js?v=89"></script>
-<script src="vilda_update_hooks.js?v=7"></script>
-<script src="vilda_centile_chart_header.js?v=1"></script>
+<script defer src="vilda_logger.js?v=2"></script>
+<script defer src="vilda_html.js?v=4"></script>
+<script defer src="vilda_persistence_adapter.js?v=18"></script>
+<script defer src="vilda_session_bridge.js?v=1"></script>
+<script defer src="vilda_init.js?v=4"></script>
+<script defer src="vilda_crypto.js?v=14"></script>
+<script defer src="vilda_vault.js?v=89"></script>
+<script defer src="vilda_sync.js?v=10"></script>
+<script defer src="vilda_sync_integration.js?v=9"></script>
+<script defer src="vilda_auth_ui.js?v=179"></script>
+<script defer src="vilda_data_safety_explainer.js?v=5"></script>
+<script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
+<script defer src="vilda_pro_access.js?v=2"></script>
+<script defer src="vilda_pro_ui.js?v=2"></script>
+<script defer src="vilda_file_export.js?v=5"></script>
+<script defer src="vilda_deps.js?v=89"></script>
+<script defer src="vilda_update_hooks.js?v=7"></script>
+<script defer src="vilda_centile_chart_header.js?v=1"></script>
 <script src="vilda_gh_therapy_resource_audit.js?v=31" defer></script>
-<script src="vilda_app_helpers.js?v=2"></script>
-<script src="vilda_food_data.js?v=1"></script>
-<script src="vilda_macro_practice.js?v=2"></script>
-<script src="vilda_activity_burn.js?v=1"></script>
-<script src="vilda_food_summary.js?v=2"></script>
-<script src="vilda_data_import_export.js?v=27"></script>
-<script src="vilda_save_status_indicator.js?v=17"></script>
-<script src="vilda_advanced_growth.js?v=16"></script>
+<script defer src="vilda_app_helpers.js?v=2"></script>
+<script defer src="vilda_food_data.js?v=1"></script>
+<script defer src="vilda_macro_practice.js?v=2"></script>
+<script defer src="vilda_activity_burn.js?v=1"></script>
+<script defer src="vilda_food_summary.js?v=2"></script>
+<script defer src="vilda_data_import_export.js?v=27"></script>
+<script defer src="vilda_save_status_indicator.js?v=17"></script>
+<script defer src="vilda_advanced_growth.js?v=16"></script>
 <!-- Przelicznik jednostek laboratoryjnych — dane + silnik. Wystawia
      window.LabUnitConverter (z metodą evaluate) używany przez generator
      epikryzy do automatycznej oceny IGF-1 wg normy dla wieku/stadium Tannera.
      Dane MUSZĄ być przed konwerterem (czyta global.LabUnitsData przy starcie). -->
 <script src="lab_units_data.js?v=1" defer></script>
 <script src="lab_unit_converter.js?v=1" defer></script>
-<script src="vilda_epicrisis.js?v=10"></script>
-<script src="vilda_epicrisis_ui.js?v=8"></script>
-<script src="vilda_estimated_intake.js?v=3"></script>
+<script defer src="vilda_epicrisis.js?v=10"></script>
+<script defer src="vilda_epicrisis_ui.js?v=8"></script>
+<script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=62" defer></script>
 
 <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
 (function() {
   try {
     var VERSION = 'v3';
@@ -304,6 +312,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
     /* noop */
   }
 })();
+
+});
 </script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
      Ładowane leniwie z CDN dopiero przy eksporcie PDF — patrz VildaDeps.ensurePdfLibraries()
@@ -394,7 +404,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         ]
       }
       </script>
-<script src="vilda_chrome.js?v=39"></script>
+<script defer src="vilda_chrome.js?v=39"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
@@ -464,6 +474,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <option value="5">Tanner V — dojrzałość pełna</option>
         </select></label>
       <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
         // Progressive disclosure pola Tannera. Reguły:
         //   • wiek <18 r.ż. → pole ZAWSZE widoczne (główny use case pediatryczny)
         //   • wiek ≥18, brak wartości, brak manual reveal → pole ukryte, toggle widoczny
@@ -524,7 +537,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
             setTimeout(updateTannerVisibility, 800);
           });
         })();
-      </script>
+      
+});
+</script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
@@ -1378,7 +1393,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=43, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=44, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->
@@ -1744,8 +1759,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
 <script src="ds_lms.js" defer></script>
-<script src="vilda_down_syndrome.js?v=1"></script>
-<script src="vilda_anorexia_risk.js?v=1"></script>
+<script defer src="vilda_down_syndrome.js?v=1"></script>
+<script defer src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js" defer></script>
 <!-- Bayley-Pinneau stage 1 dataset for the advanced height prediction module. Loaded before app.js so future modules can access window.bayleyPinneauData. -->
@@ -1753,22 +1768,22 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <!-- Roche-Wainer-Thissen (RWT) dataset for the advanced height prediction module. -->
 <script src="rwt_data.js" defer></script>
 <!-- Reinehr 2019 CDGP-specific dataset for boys with retarded bone age. -->
-<script src="reinehr_cdgp_data.js"></script>
-<script src="advanced_growth_kowd.js?v=2"></script>
+<script defer src="reinehr_cdgp_data.js"></script>
+<script defer src="advanced_growth_kowd.js?v=2"></script>
 <!-- Moduł centyli tętna i liczby oddechów.  Ładowany przed app.js, aby udostępniać
      funkcje w globalnym zakresie (window.vitalSigns).  Nowa wersja wykorzystuje
      dane Bonafide et al. 2013 z korektami temperatury i stanu snu. -->
-<script src="vitalSigns.js"></script>
+<script defer src="vitalSigns.js"></script>
 <script src="adult_vitals.js?v=5" defer></script>
-<script src="vilda_growth_reference_data.js?v=1"></script>
-<script src="vilda_professional_module.js?v=2"></script>
-<script src="vilda_persist_runtime.js?v=7"></script>
-<script src="vilda_summary_cards.js?v=17"></script>
-<script src="vilda_diet_plan_ui.js?v=1"></script>
-<script src="vilda_estimated_intake_ui.js?v=1"></script>
-<script src="vilda_estimated_intake_runtime.js?v=1"></script>
-<script src="vilda_estimated_intake_input_model.js?v=1"></script>
-<script src="vilda_estimated_intake_dom_mount.js?v=1"></script>
+<script defer src="vilda_growth_reference_data.js?v=1"></script>
+<script defer src="vilda_professional_module.js?v=2"></script>
+<script defer src="vilda_persist_runtime.js?v=7"></script>
+<script defer src="vilda_summary_cards.js?v=17"></script>
+<script defer src="vilda_diet_plan_ui.js?v=1"></script>
+<script defer src="vilda_estimated_intake_ui.js?v=1"></script>
+<script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
+<script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
+<script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script src="app.js?v=182" defer></script>
 <script src="vilda_diet_recommendations.js?v=3" defer></script>
 <script src="vilda_patient_report.js?v=5" defer></script>
@@ -1983,6 +1998,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      Po kliknięciu przycisku „Generuj siatkę centylową” tworzy dwa wykresy (wzrostu i wagi),
      łączy je na jednej stronie A4 i wyświetla jako PDF w nowym oknie. -->
 <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
 /* Definicje z‑score dla wybranych centyli (3., 10., 25., 50., 75., 90., 97.). */
 const CENTILE_ZSCORES = { 3: -1.8808, 10: -1.281552, 25: -0.67448975, 50: 0, 75: 0.67448975, 90: 1.281552, 97: 1.8808 };
 
@@ -4205,10 +4223,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Po pełnym czyszczeniu nie przeładowujemy strony – stan jest resetowany w app.js.
 });
 
+
+});
 </script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
 <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
 /*
  * Poniższy blok zastępuje standardową funkcję generateCentileChart() oraz dodaje szereg funkcji
  * pomocniczych umożliwiających generowanie dwóch oddzielnych wykresów PDF: jeden dla dzieci
@@ -5535,10 +5558,15 @@ async function generateCentileChart() {
   }
 }
 // === KONIEC NOWEJ IMPLEMENTACJI SIATKI CENTYLOWEJ ===
+
+});
 </script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
 // === DOWN SYNDROME (DS) GROWTH CHARTS → PDF (0–20 lat) ==================
 // Wymaga: ds_lms.js (window.DS), drawCentileGrid(), valueFromLMS(), getLMSFromDataset(),
 // CENTILE_ZSCORES oraz biblioteki jsPDF (już są w tej stronie).
@@ -5764,6 +5792,8 @@ async function generateCentileChart() {
     }
   });
 })();
+
+});
 </script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
@@ -5826,6 +5856,9 @@ async function generateCentileChart() {
        Odczytuje aktualny tryb wyników (standardowy/profesjonalny) z localStorage,
        dzięki czemu zawartość podsumowania reaguje na przełącznik wyników. -->
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // Podsumowanie metaboliczne – obsługa przycisku i generowania wyników
     document.addEventListener('DOMContentLoaded', function() {
       const summarySection = document.getElementById('metabolicSummarySection');
@@ -6163,7 +6196,9 @@ async function generateCentileChart() {
         });
       }
     });
-  </script>
+  
+});
+</script>
 
   <!-- Baner zgody wstrzykiwany centralnie przez vilda_chrome.js (initConsentBanner) -->
   <!-- Przycisk "powrót na górę" widoczny w widoku mobilnym. Po kliknięciu
@@ -6199,6 +6234,9 @@ async function generateCentileChart() {
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
   (function(){
     function getCentileDataRoot() {
       if (typeof window !== 'undefined' && window.VildaDeps && typeof window.VildaDeps.requireObject === 'function') {
@@ -7449,12 +7487,17 @@ async function generateCentileChart() {
     window.promptPalczewskaRangeSelection = promptPalczewskaRangeSelection;
     window.generatePalczewskaCentileCharts = generatePalczewskaCentileCharts;
   })();
-  </script>
+  
+});
+</script>
 
   <!-- Skrypt do zapisywania stanu rozwinięcia/zwinięcia kart w localStorage i jego przywracania.  
        Dzięki temu sekcje, takie jak „Zaawansowane obliczenia wzrostowe” czy „Obwód głowy i klatki piersiowej”,
        pozostają w takim samym stanie (otwarte/zamknięte) podczas następnych wizyt na stronie. -->
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // Przywraca stan rozwinięcia poszczególnych sekcji (karty rozwijane) na podstawie localStorage.
     function applyCollapsedCardsState() {
       const states = (window.VildaPersistence && typeof window.VildaPersistence.readPreferenceJSON === 'function') ? window.VildaPersistence.readPreferenceJSON('CARD_COLLAPSE_STATE', {}) : {};
@@ -7507,7 +7550,9 @@ async function generateCentileChart() {
       applyCollapsedCardsState();
       registerCollapseListeners();
     });
-  </script>
+  
+});
+</script>
 
   <!-- Script controlling the publication charts toggle.  This script
        attaches listeners to the data source selector and the toggle itself.
@@ -7641,11 +7686,16 @@ async function generateCentileChart() {
   </script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // Remove the temporary js-loading class once initialization is complete.
     document.addEventListener('DOMContentLoaded', function() {
       document.body.classList.remove('js-loading');
     });
-  </script>
+  
+});
+</script>
 
   <!-- ═══ Interstitial: nowe urządzenie / odtwarzanie danych z serwera ══════
        Pokazuje się jednorazowo po odblokowaniu, gdy VildaSync wykryje że to
@@ -7760,6 +7810,9 @@ async function generateCentileChart() {
   </div>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
   (function () {
     'use strict';
 
@@ -7857,6 +7910,8 @@ async function generateCentileChart() {
     });
 
   })();
-  </script>
+  
+});
+</script>
 </body>
 </html>
