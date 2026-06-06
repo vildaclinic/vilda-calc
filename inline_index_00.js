@@ -1,0 +1,1 @@
+(function(){try{var t=window.sessionStorage,e=!!(t&&t.getItem("vilda-vault-session-v2")),a=!!(t&&t.getItem("VildaGuestMode")==="1");!e&&!a&&document.documentElement.classList.add("vilda-auth-locked")}catch{}})();
