@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '4.1.1';
+  var VERSION = '4.2.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -191,6 +191,12 @@
   // ── CSS (wstrzykiwane raz — bez dotykania plików .css) ─────────────────────
   var CSS = ''
     + '.terminarz-shell{max-width:980px;margin:0 auto;padding:8px 0 40px;}'
+    + '#terminarzRoot{position:relative;}'
+    + '#terminarzRoot.tz-anim-clip{overflow:hidden;}'
+    + '.tz-vbody--ghost,.tz-vbody{will-change:auto;}'
+    + '@keyframes tzTitleIn{from{opacity:0.25;transform:translateX(var(--ttl-dx,14px));}to{opacity:1;transform:none;}}'
+    + '.tz-title.is-anim-l{animation:tzTitleIn 240ms cubic-bezier(0.22,1,0.36,1);--ttl-dx:14px;}'
+    + '.tz-title.is-anim-r{animation:tzTitleIn 240ms cubic-bezier(0.22,1,0.36,1);--ttl-dx:-14px;}'
     + '.terminarz-locked{text-align:center;padding:64px 16px;color:#5b6672;}'
     + '.terminarz-locked__icon{font-size:2rem;margin-bottom:8px;}'
     + '.terminarz-locked__title{font-weight:600;color:#0f2b33;margin:0 0 4px;}'
@@ -1475,6 +1481,8 @@
   // zamknięcie z POŁKNIĘCIEM kliku (capture) — nic innego się nie odpala
   // (np. pusta komórka pod kursorem nie doda terminu). Wyjątek: klik w INNY
   // blok zamyka stary i pozwala otworzyć nowy jednym ruchem.
+  var _animDir = 0;   // W1: kierunek slide przy zmianie okresu (0 = bez animacji)
+  var _animToken = 0; // sprzątanie tylko najnowszej animacji
   var _weekPop = null; // { el, blockEl, noteId }
   function closeWeekPopover() {
     if (!_weekPop) return;
@@ -3077,7 +3085,13 @@
     if (!unlocked()) { renderLocked(el); return; }
 
     var lookup = {};
+    // W1 (2026-06-07): zmiana okresu (gest/strzałki) = slide+fade ciała widoku.
+    var animDir = _animDir; _animDir = 0;
+    var reducedMotion = false;
+    try { reducedMotion = global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+    var oldBody = (animDir && !reducedMotion) ? el.querySelector('.tz-vbody') : null;
     var html = headerHtml();
+    html += '<div class="tz-vbody">';
 
     if (state.searchOpen) {
       // SEARCH: przy OTWARTYM pasku ciało widoku to ZAWSZE kontener wyników
@@ -3096,10 +3110,45 @@
       }
     }
 
+    html += '</div>';
     // Cykl D: FAB „+" (tylko mobile — CSS) — globalne dodawanie terminu.
     html += '<button type="button" id="tzFab" class="tz-fab" aria-label="Nowy termin">+</button>';
 
     el.innerHTML = html;
+    // W1: duch starego ciała wyjeżdża (38% + fade), nowe wjeżdża z boku (100%);
+    // tylko transform/opacity (60 fps), clip na czas animacji, token anty-wyścig.
+    if (oldBody) {
+      var newBody = el.querySelector('.tz-vbody');
+      if (newBody) {
+        _animToken += 1;
+        var tok = _animToken;
+        var ghost = oldBody;
+        ghost.classList.add('tz-vbody--ghost');
+        ghost.style.cssText += ';position:absolute;left:0;right:0;top:' + newBody.offsetTop + 'px;margin:0;pointer-events:none;z-index:4;';
+        el.classList.add('tz-anim-clip');
+        el.appendChild(ghost);
+        newBody.style.transform = 'translateX(' + (animDir * 100) + '%)';
+        var ease = 'transform 240ms cubic-bezier(0.22,1,0.36,1), opacity 240ms ease';
+        global.requestAnimationFrame(function () {
+          global.requestAnimationFrame(function () {
+            ghost.style.transition = ease;
+            newBody.style.transition = ease;
+            ghost.style.transform = 'translateX(' + (-animDir * 38) + '%)';
+            ghost.style.opacity = '0';
+            newBody.style.transform = 'translateX(0)';
+          });
+        });
+        var ttl = el.querySelector('.tz-title');
+        if (ttl) ttl.classList.add(animDir > 0 ? 'is-anim-l' : 'is-anim-r');
+        setTimeout(function () {
+          if (tok !== _animToken) return; // nadpisane nowszą animacją/renderem
+          if (ghost.parentNode) ghost.remove();
+          newBody.style.transition = '';
+          newBody.style.transform = '';
+          el.classList.remove('tz-anim-clip');
+        }, 290);
+      }
+    }
 
     // Zdarzenia: przełącznik widoku.
     var sw = el.querySelectorAll('.tz-switch button[data-view]');
@@ -3259,6 +3308,7 @@
   }
 
   function shiftAnchor(delta) {
+    _animDir = (delta > 0) ? 1 : -1; // W1: slide+fade przy zmianie okresu
     state.splitISO = null; // przewinięcie okresu zamyka rozcięcie (dzień poza siatką)
     var a = parseISO(state.anchorISO);
     if (state.view === 'week') {
