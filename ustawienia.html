@@ -57,7 +57,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
   <link href="ios26-v2.css?v=12" rel="stylesheet">
-  <link href="style.css?v=43" rel="stylesheet">
+  <link href="style.css?v=44" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=19" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=49" rel="stylesheet">
@@ -140,24 +140,27 @@ html.vilda-pro-active .pro-sync-note {
 .pro-sync-note a:hover { color: #0050b0; }
 </style>
 
-  <script src="vilda_logger.js?v=2"></script>
-<script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=18"></script>
-<script src="vilda_session_bridge.js?v=1"></script>
-<script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=14"></script>
-<script src="vilda_vault.js?v=89"></script>
-<script src="vilda_sync.js?v=10"></script>
-<script src="vilda_sync_integration.js?v=9"></script>
-<script src="vilda_auth_ui.js?v=179"></script>
-<script src="vilda_data_safety_explainer.js?v=5"></script>
-<script src="vilda_crypto_strength_explainer.js?v=6"></script>
-<script src="vilda_pro_access.js?v=2"></script>
-<script src="vilda_pro_ui.js?v=2"></script>
-<script src="vilda_file_export.js?v=5"></script>
-<script src="vilda_deps.js?v=6"></script>
+  <script defer src="vilda_logger.js?v=2"></script>
+<script defer src="vilda_html.js?v=4"></script>
+<script defer src="vilda_persistence_adapter.js?v=18"></script>
+<script defer src="vilda_session_bridge.js?v=1"></script>
+<script defer src="vilda_init.js?v=4"></script>
+<script defer src="vilda_crypto.js?v=14"></script>
+<script defer src="vilda_vault.js?v=89"></script>
+<script defer src="vilda_sync.js?v=10"></script>
+<script defer src="vilda_sync_integration.js?v=9"></script>
+<script defer src="vilda_auth_ui.js?v=179"></script>
+<script defer src="vilda_data_safety_explainer.js?v=5"></script>
+<script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
+<script defer src="vilda_pro_access.js?v=2"></script>
+<script defer src="vilda_pro_ui.js?v=2"></script>
+<script defer src="vilda_file_export.js?v=5"></script>
+<script defer src="vilda_deps.js?v=6"></script>
   
 <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
 (function() {
   try {
     var VERSION = 'v3';
@@ -188,12 +191,14 @@ html.vilda-pro-active .pro-sync-note {
     /* noop */
   }
 })();
+
+});
 </script>
 
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
   <script src="ios26-ui.js?v=22" defer></script>
-<script src="vilda_chrome.js?v=39"></script>
+<script defer src="vilda_chrome.js?v=39"></script>
 </head>
 <body class="js-loading liquid-ios26 page-settings has-sidebar">
   <header>
@@ -2064,13 +2069,21 @@ html.vilda-pro-active .pro-sync-note {
   </script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // Remove the temporary js-loading class once initialization is complete.
     document.addEventListener('DOMContentLoaded', function() {
       document.body.classList.remove('js-loading');
     });
-  </script>
+  
+});
+</script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
   // === E1: Widoczność elementów siatek centylowych ===
   // 3 togglee w „Widoczność elementów siatek centylowych" — etykieta wartości
   // wzrostu, etykieta wartości wagi, linie odniesienia kanału centylowego.
@@ -2113,9 +2126,14 @@ html.vilda-pro-active .pro-sync-note {
       });
     });
   })();
-  </script>
+  
+});
+</script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
   // === Zarządzanie zgodą na analitykę (sekcja Prywatność w ustawieniach) ===
   (function () {
     'use strict';
@@ -2185,7 +2203,9 @@ html.vilda-pro-active .pro-sync-note {
       });
     });
   })();
-  </script>
+  
+});
+</script>
 
   <!-- Skrypt obsługujący suwak czasu pulsowania ramek w trybie PRO.  Suwak
        przechowuje wartość w localStorage (klucz 'pulseDurationMode') i nie
@@ -2251,6 +2271,9 @@ html.vilda-pro-active .pro-sync-note {
   </script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // === Sekcja 07 — Kopie zapasowe pacjentów (UI nad VildaFileExport) ===
     (function () {
       function $(id) { return document.getElementById(id); }
@@ -3737,9 +3760,14 @@ html.vilda-pro-active .pro-sync-note {
       });
       setTimeout(refresh, 1500); // ponowne sprawdzenie po pełnym wczytaniu
     })();
-  </script>
+  
+});
+</script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // === Krok 6 — chipy wartości bieżących w nagłówkach sekcji ===
     (function () {
       'use strict';
@@ -3829,9 +3857,14 @@ html.vilda-pro-active .pro-sync-note {
         updatePulseChip();
       }
     })();
-  </script>
+  
+});
+</script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // === Krok 7 — Scroll spy + click handler dla .settings-subnav ===
     (function () {
       'use strict';
@@ -3901,9 +3934,14 @@ html.vilda-pro-active .pro-sync-note {
 
       }, { once: true });
     })();
-  </script>
+  
+});
+</script>
 
   <script>
+/* DEFER-P1 (2026-06-07): wykonanie po bibliotekach defer */
+document.addEventListener('DOMContentLoaded', function () {
+
     // === Blokada sekcji dla niezalogowanych (Opcja B) ===
     (function () {
       'use strict';
@@ -4010,6 +4048,8 @@ html.vilda-pro-active .pro-sync-note {
         }
       }
     })();
-  </script>
+  
+});
+</script>
 </body>
 </html>
