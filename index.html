@@ -239,7 +239,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_pro_access.js?v=2"></script>
 <script defer src="vilda_pro_ui.js?v=2"></script>
 <script defer src="vilda_file_export.js?v=5"></script>
-<script defer src="vilda_deps.js?v=90"></script>
+<script defer src="vilda_deps.js?v=91"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
 <script src="vilda_gh_therapy_resource_audit.js?v=31" defer></script>
@@ -1696,43 +1696,55 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script src="app.js?v=182" defer></script>
-<script src="vilda_diet_recommendations.js?v=3" defer></script>
-<!-- PERF-P2e2 cykl 4 (2026-06-07): raport pacjenta (190 KB) ładowany LENIWIE:
-     idle po load LUB pierwsza interakcja. Wszyscy wywołujący globale raportu
-     (persist_runtime, adult_vitals, nutrition_norms, summary_cards) mają guardy
-     typeof — moduł wystawia globale po doczytaniu, a loader robi JEDNORAZOWE
-     odświeżenie karty podsumowania (updateProfessionalSummaryCard), żeby karta
-     nie została stara, gdy pipeline przeliczeń przebiegł przed doczytaniem.
-     Reguły kolejności w vilda_deps ograniczone do stron ze statycznym tagiem
-     (docpro, klirens). -->
+<!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
+     pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
+     reguła deps "diet-recommendations-before-patient-report" mówi, że raport
+     sięga po PDF zaleceń. Hook after-update diety rejestruje się przez rejestr
+     (registerAfterUpdateHook, order 30, replace:true) — późna rejestracja jest
+     wspierana konstrukcyjnie. Po doczytaniu każdego modułu one-shot odświeżenie
+     (widoczność sekcji diety / karta podsumowania), gdyby pipeline przeliczeń
+     przebiegł przed doczytaniem. Wszyscy wywołujący mają guardy typeof.
+     Na docpro/klirensie oba tagi pozostają STATYCZNE. -->
 <script>
 (function () {
   'use strict';
+  var SRC_DIET = 'vilda_diet_recommendations.js?v=3';
   var SRC_PR = 'vilda_patient_report.js?v=5';
   var started = false;
-  function loadPatientReport() {
+  function inject(src, onload) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.defer = true;
+    if (onload) s.addEventListener('load', onload, { once: true });
+    document.head.appendChild(s);
+  }
+  function loadDietThenReport() {
     if (started) return;
     started = true;
-    var s = document.createElement('script');
-    s.src = SRC_PR;
-    s.defer = true;
-    s.addEventListener('load', function () {
-      // one-shot refresh karty podsumowania po doczytaniu modułu
+    inject(SRC_DIET, function () {
+      // one-shot: widoczność sekcji zaleceń wg aktualnego stanu
       try {
-        if (typeof window.updateProfessionalSummaryCard === 'function') {
-          window.updateProfessionalSummaryCard();
+        if (typeof window.updateDietRecommendationsVisibility === 'function') {
+          window.updateDietRecommendationsVisibility();
         }
       } catch (_) {}
-    }, { once: true });
-    document.head.appendChild(s);
-    window.removeEventListener('pointerdown', loadPatientReport, true);
-    window.removeEventListener('keydown', loadPatientReport, true);
+      inject(SRC_PR, function () {
+        // one-shot refresh karty podsumowania po doczytaniu modułu
+        try {
+          if (typeof window.updateProfessionalSummaryCard === 'function') {
+            window.updateProfessionalSummaryCard();
+          }
+        } catch (_) {}
+      });
+    });
+    window.removeEventListener('pointerdown', loadDietThenReport, true);
+    window.removeEventListener('keydown', loadDietThenReport, true);
   }
-  window.addEventListener('pointerdown', loadPatientReport, true);
-  window.addEventListener('keydown', loadPatientReport, true);
+  window.addEventListener('pointerdown', loadDietThenReport, true);
+  window.addEventListener('keydown', loadDietThenReport, true);
   window.addEventListener('load', function () {
     var idle = window.requestIdleCallback || function (cb) { setTimeout(cb, 1200); };
-    idle(loadPatientReport, { timeout: 2500 });
+    idle(loadDietThenReport, { timeout: 2500 });
   });
 })();
 </script>
