@@ -239,7 +239,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_pro_access.js?v=2"></script>
 <script defer src="vilda_pro_ui.js?v=2"></script>
 <script defer src="vilda_file_export.js?v=5"></script>
-<script defer src="vilda_deps.js?v=89"></script>
+<script defer src="vilda_deps.js?v=90"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
 <script src="vilda_gh_therapy_resource_audit.js?v=31" defer></script>
@@ -1697,7 +1697,45 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script src="app.js?v=182" defer></script>
 <script src="vilda_diet_recommendations.js?v=3" defer></script>
-<script src="vilda_patient_report.js?v=5" defer></script>
+<!-- PERF-P2e2 cykl 4 (2026-06-07): raport pacjenta (190 KB) ładowany LENIWIE:
+     idle po load LUB pierwsza interakcja. Wszyscy wywołujący globale raportu
+     (persist_runtime, adult_vitals, nutrition_norms, summary_cards) mają guardy
+     typeof — moduł wystawia globale po doczytaniu, a loader robi JEDNORAZOWE
+     odświeżenie karty podsumowania (updateProfessionalSummaryCard), żeby karta
+     nie została stara, gdy pipeline przeliczeń przebiegł przed doczytaniem.
+     Reguły kolejności w vilda_deps ograniczone do stron ze statycznym tagiem
+     (docpro, klirens). -->
+<script>
+(function () {
+  'use strict';
+  var SRC_PR = 'vilda_patient_report.js?v=5';
+  var started = false;
+  function loadPatientReport() {
+    if (started) return;
+    started = true;
+    var s = document.createElement('script');
+    s.src = SRC_PR;
+    s.defer = true;
+    s.addEventListener('load', function () {
+      // one-shot refresh karty podsumowania po doczytaniu modułu
+      try {
+        if (typeof window.updateProfessionalSummaryCard === 'function') {
+          window.updateProfessionalSummaryCard();
+        }
+      } catch (_) {}
+    }, { once: true });
+    document.head.appendChild(s);
+    window.removeEventListener('pointerdown', loadPatientReport, true);
+    window.removeEventListener('keydown', loadPatientReport, true);
+  }
+  window.addEventListener('pointerdown', loadPatientReport, true);
+  window.addEventListener('keydown', loadPatientReport, true);
+  window.addEventListener('load', function () {
+    var idle = window.requestIdleCallback || function (cb) { setTimeout(cb, 1200); };
+    idle(loadPatientReport, { timeout: 2500 });
+  });
+})();
+</script>
 <script src="nutrition_norms.js?v=41" defer></script>
 <script src="nutrition_micros.js?v=26" defer></script>
 
