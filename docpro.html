@@ -650,15 +650,25 @@ html.vilda-pro-active   #proGateBanner { display: none; }
              dlatego gałęzie JS (aktywacja/dezaktywacja/brak PWZ) sterują
              też samą klasą (setDocproProSnap w vilda_professional_module.js).
              Pod-przyciski testów (gh/ogtt/acth/snp/...) zostają ukryte jak
-             dotąd; flu/thyroid/hypertension dosiadają się przez własne
-             obserwatory abx — bez zmian. */
+             dotąd.
+             FIX 1.0.37: flu/thyroid/hypertension też w prerenderze — ich
+             moduły pokazują je dopiero przy własnym init (obserwacja
+             computedStyle abx), a spóźnione wpięcie w siatkę (order 2/3/4)
+             przetasowywało już widoczne przyciski = „przebudowa drabinki"
+             na wolnych urządzeniach (iOS PWA). Warunek jest efektywnie ten
+             sam (widoczny abx ⟺ aktywny moduł), a ich sync ustawia potem
+             spójny inline flex; dezaktywacja zdejmuje klasę, więc kierunek
+             „ukryj" działa. */
           html.pro-prerender #abxButtonWrapper,
           html.pro-prerender #endoButtonWrapper,
           html.pro-prerender #igfButtonWrapper,
           html.pro-prerender #zscoreButtonWrapper,
           html.pro-prerender #obesityButtonWrapper,
           html.pro-prerender #bisphosButtonWrapper,
-          html.pro-prerender #sgaBirthButtonWrapper {
+          html.pro-prerender #sgaBirthButtonWrapper,
+          html.pro-prerender #fluButtonWrapper,
+          html.pro-prerender #thyroidCancerKidsButtonWrapper,
+          html.pro-prerender #hypertensionButtonWrapper {
             display: flex !important;
           }
           html.pro-prerender .doctor-info {
