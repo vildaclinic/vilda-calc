@@ -10,7 +10,6 @@
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src  'self' 'unsafe-inline'
-                https://unpkg.com
                 https://cdnjs.cloudflare.com
                 https://cdn.jsdelivr.net
                 https://cdn.sheetjs.com
@@ -22,7 +21,6 @@
                 https://www.google-analytics.com
                 https://analytics.google.com
                 https://vilda-sync.maciej-4b9.workers.dev
-                https://unpkg.com
                 https://region1.google-analytics.com
                 https://www.googletagmanager.com
                 https://cdn.jsdelivr.net;
@@ -295,7 +293,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
      Ładowane leniwie z CDN dopiero przy eksporcie PDF — patrz VildaDeps.ensurePdfLibraries()
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
-<script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
+<script src="lucide.min.js?v=1" defer></script>
 
   <!-- Progressive Web App meta tags and manifest -->
   <link rel="manifest" href="manifest.json">
