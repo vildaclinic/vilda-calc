@@ -2595,7 +2595,33 @@
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
   <script src="lab_units_data.js?v=35"></script>
   <script src="lab_unit_converter.js?v=4"></script>
-  <script src="lab_clinical_panels.js?v=141"></script>
+  <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
+       bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
+       (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
+       przed doładowaniem niczego nie psuje. Ładujemy: (a) po load+idle, (b) od razu
+       przy pierwszej interakcji ze stroną (wyścig zamykany wcześniej). -->
+  <script>
+  (function () {
+    var SRC = 'lab_clinical_panels.js?v=141';
+    var started = false;
+    function loadPanels() {
+      if (started) return;
+      started = true;
+      var s = document.createElement('script');
+      s.src = SRC;
+      s.defer = true;
+      document.head.appendChild(s);
+      window.removeEventListener('pointerdown', loadPanels, true);
+      window.removeEventListener('keydown', loadPanels, true);
+    }
+    window.addEventListener('pointerdown', loadPanels, true);
+    window.addEventListener('keydown', loadPanels, true);
+    window.addEventListener('load', function () {
+      var idle = window.requestIdleCallback || function (cb) { setTimeout(cb, 1200); };
+      idle(loadPanels, { timeout: 2500 });
+    });
+  })();
+  </script>
 
   <script>
   (function () {
