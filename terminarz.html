@@ -43,7 +43,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="manifest" href="manifest.json">
-  <title>Notatki – Waga i wzrost</title>
+  <title>Terminarz kliniczny – Waga i wzrost</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
@@ -289,96 +289,26 @@
   <script src="lucide.min.js?v=1" defer></script>
   <script src="ios26-ui.js?v=22" defer></script>
 <script defer src="vilda_chrome.js?v=42"></script>
+<script defer src="vilda_terminarz.js?v=49"></script>
 </head>
-<body class="js-loading liquid-ios26 page-notes has-sidebar">
+<body class="js-loading liquid-ios26 page-terminarz has-sidebar">
   <header></header>
   <div class="desktop-layout">
     <aside class="sidebar"></aside>
     <div class="main-content">
       <div class="container">
-        <div class="notes-shell">
-
-          <div class="notes-head">
-            <div class="notes-head__titles">
-              <h1>Notatki</h1>
-              <p class="notes-head__sub">Twoja biblioteka szablonów — opisy badań, zalecenia, wywiady. Dostępna z każdego urządzenia po zalogowaniu.</p>
-            </div>
-            <button type="button" class="notes-btn-primary" id="notesNewBtn">
-              <i data-lucide="plus"></i> Nowa notatka
-            </button>
+        <!-- Terminarz kliniczny (Cykl A): siatka miesieczna renderowana przez
+             vilda_terminarz.js. Tresc (terminy + nazwiska) istnieje WYLACZNIE
+             po odszyfrowaniu vaulta - przed unlockiem widac stan zablokowany. -->
+        <div class="terminarz-shell" id="terminarzRoot">
+          <div class="terminarz-locked" id="terminarzLockedState">
+            <div class="terminarz-locked__icon">&#128274;</div>
+            <p class="terminarz-locked__title">Zaloguj się, aby zobaczyć terminarz</p>
+            <p class="terminarz-locked__desc">Terminy kontroli są zaszyfrowane i dostępne tylko po odblokowaniu konta.</p>
           </div>
-
-          <div class="notes-pii" id="notesPiiNotice" style="display:none;">
-            <span class="notes-pii__icon">💡</span>
-            <div class="notes-pii__body">
-              <strong>Notatki to Twoje szablony — nie kartoteka pacjenta.</strong>
-              Wpisuj tu uniwersalne wzory (np. „opis USG tarczycy", „zalecenia w zapaleniu tarczycy").
-              Nie wpisuj danych konkretnych pacjentów (imię, PESEL, telefon).
-            </div>
-            <button type="button" class="notes-pii__close" id="notesPiiClose" aria-label="Zamknij">×</button>
-          </div>
-
-          <div class="notes-toolbar" id="notesToolbar" style="display:none;">
-            <div class="notes-search">
-              <span class="notes-search__icon"><i data-lucide="search"></i></span>
-              <input type="text" id="notesSearch" placeholder="Szukaj w notatkach…" autocomplete="off" />
-            </div>
-            <div class="notes-filters" id="notesFilters">
-              <button type="button" class="notes-filter is-active" data-cat="all">Wszystkie</button>
-              <button type="button" class="notes-filter" data-cat="badanie">Opisy badań</button>
-              <button type="button" class="notes-filter" data-cat="zalecenia">Zalecenia</button>
-              <button type="button" class="notes-filter" data-cat="wywiad">Wywiad</button>
-              <button type="button" class="notes-filter" data-cat="wlasne">Własne</button>
-            </div>
-          </div>
-
-          <div id="notesContainer">
-            <div class="notes-empty" id="notesLockedState">
-              <div class="notes-empty__icon">🔒</div>
-              <p class="notes-empty__title">Zaloguj się, aby zobaczyć notatki</p>
-              <p class="notes-empty__desc">Notatki są zaszyfrowane i dostępne tylko po odblokowaniu konta.</p>
-            </div>
-          </div>
-
         </div>
       </div>
     </div>
   </div>
-
-  <!-- Editor (slide-in) -->
-  <div class="note-editor-overlay" id="noteEditorOverlay">
-    <div class="note-editor" role="dialog" aria-modal="true" aria-label="Edytor notatki">
-      <div class="note-editor__head">
-        <h2 id="noteEditorTitle">Nowa notatka</h2>
-        <button type="button" class="note-editor__close" id="noteEditorClose" aria-label="Zamknij">×</button>
-      </div>
-      <div class="note-editor__body">
-        <p class="note-editor__err" id="noteEditorErr"></p>
-        <div class="note-field">
-          <label for="noteFieldTitle">Tytuł</label>
-          <input type="text" id="noteFieldTitle" maxlength="200" placeholder="np. Opis USG tarczycy" />
-        </div>
-        <div class="note-field">
-          <label for="noteFieldCategory">Kategoria</label>
-          <select id="noteFieldCategory">
-            <option value="badanie">Opis badania</option>
-            <option value="zalecenia">Zalecenia</option>
-            <option value="wywiad">Wywiad</option>
-            <option value="wlasne">Własne</option>
-          </select>
-        </div>
-        <div class="note-field">
-          <label for="noteFieldBody">Treść</label>
-          <textarea id="noteFieldBody" placeholder="Wpisz treść szablonu… (czysty tekst)"></textarea>
-        </div>
-      </div>
-      <div class="note-editor__foot">
-        <button type="button" class="note-btn-ghost" id="noteEditorCancel">Anuluj</button>
-        <button type="button" class="notes-btn-primary" id="noteEditorSave"><i data-lucide="check"></i> Zapisz</button>
-      </div>
-    </div>
-  </div>
-
-<script defer src="inline_notatki_00.js?v=1"></script>
 </body>
 </html>

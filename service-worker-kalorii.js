@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.881';
+const SW_VERSION = '1.0.23';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -91,6 +91,53 @@ const CORE_SHELL_URLS = [
   '/style.css?v=41',
   '/style.css?v=42',
   '/style.css?v=43',
+  '/style.css?v=44',
+  '/style.css?v=45',
+  '/style.css?v=46',
+  '/style.css?v=47',
+  '/style.css?v=48',
+  '/lab_clinical_panels.js?v=141',
+  // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
+  '/inline_docpro_00.js?v=1',
+  '/inline_docpro_01.js?v=1',
+  '/inline_docpro_02.js?v=1',
+  '/inline_docpro_03.js?v=1',
+  '/inline_docpro_04.js?v=1',
+  '/inline_docpro_05.js?v=1',
+  '/inline_docpro_06.js?v=1',
+  '/inline_index_00.js?v=1',
+  '/inline_index_01.js?v=1',
+  '/inline_index_02.js?v=1',
+  '/inline_index_03.js?v=1',
+  '/inline_index_04.js?v=1',
+  '/inline_index_05.js?v=1',
+  '/inline_index_06.js?v=1',
+  '/inline_index_07.js?v=1',
+  '/inline_index_08.js?v=1',
+  '/inline_index_09.js?v=1',
+  '/inline_index_10.js?v=1',
+  '/inline_kalkulator_klirens_00.js?v=1',
+  '/inline_kalkulator_klirens_01.js?v=1',
+  '/inline_kalkulator_klirens_02.js?v=1',
+  '/inline_kalkulator_klirens_03.js?v=1',
+  '/inline_kalkulator_klirens_04.js?v=1',
+  '/inline_kalkulator_klirens_05.js?v=1',
+  '/inline_kalkulator_klirens_06.js?v=1',
+  '/inline_kalkulator_klirens_07.js?v=1',
+  '/inline_kalkulator_klirens_08.js?v=1',
+  '/inline_kalkulator_klirens_09.js?v=1',
+  '/inline_notatki_00.js?v=1',
+  '/inline_subskrypcja_00.js?v=1',
+  '/inline_subskrypcja_01.js?v=1',
+  '/inline_ustawienia_00.js?v=1',
+  '/inline_ustawienia_01.js?v=1',
+  '/inline_ustawienia_02.js?v=1',
+  '/inline_ustawienia_03.js?v=1',
+  '/inline_ustawienia_04.js?v=1',
+  '/inline_ustawienia_05.js?v=1',
+  '/inline_ustawienia_06.js?v=1',
+  '/inline_ustawienia_07.js?v=1',
+
   '/sidebar.css',
   '/vilda_chrome.css',
   '/vilda_chrome.css?v=2',
@@ -109,6 +156,8 @@ const CORE_SHELL_URLS = [
   '/ios26-v2.css',
   '/ios26-v2.css?v=10',
   '/logo_vilda.jpeg',
+  '/logo_vilda.webp',
+  '/lucide.min.js?v=1',
   '/vilda_logger.js',
   '/vilda_logger.js?v=2',
   '/vilda_html.js',
@@ -204,6 +253,21 @@ const CORE_SHELL_URLS = [
   '/vilda_vault.js?v=72',
   '/vilda_vault.js?v=73',
   '/vilda_vault.js?v=74',
+  '/vilda_vault.js?v=75',
+  '/vilda_vault.js?v=76',
+  '/vilda_vault.js?v=77',
+  '/vilda_vault.js?v=78',
+  '/vilda_vault.js?v=79',
+  '/vilda_vault.js?v=80',
+  '/vilda_vault.js?v=81',
+  '/vilda_vault.js?v=82',
+  '/vilda_vault.js?v=83',
+  '/vilda_vault.js?v=84',
+  '/vilda_vault.js?v=85',
+  '/vilda_vault.js?v=86',
+  '/vilda_vault.js?v=87',
+  '/vilda_vault.js?v=88',
+  '/vilda_vault.js?v=89',
   '/vilda_auth_ui.js',
   '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
@@ -313,6 +377,38 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=147',
   '/vilda_auth_ui.js?v=148',
   '/vilda_auth_ui.js?v=149',
+  '/vilda_auth_ui.js?v=150',
+  '/vilda_auth_ui.js?v=151',
+  '/vilda_auth_ui.js?v=152',
+  '/vilda_auth_ui.js?v=153',
+  '/vilda_auth_ui.js?v=154',
+  '/vilda_auth_ui.js?v=155',
+  '/vilda_auth_ui.js?v=156',
+  '/vilda_auth_ui.js?v=157',
+  '/vilda_auth_ui.js?v=158',
+  '/vilda_auth_ui.js?v=159',
+  '/vilda_auth_ui.js?v=160',
+  '/vilda_auth_ui.js?v=161',
+  '/vilda_auth_ui.js?v=162',
+  '/vilda_auth_ui.js?v=163',
+  '/vilda_auth_ui.js?v=164',
+  '/vilda_auth_ui.js?v=165',
+  '/vilda_auth_ui.js?v=166',
+  '/vilda_auth_ui.js?v=167',
+  '/vilda_auth_ui.js?v=168',
+  '/vilda_auth_ui.js?v=169',
+  '/vilda_auth_ui.js?v=170',
+  '/vilda_auth_ui.js?v=171',
+  '/vilda_auth_ui.js?v=172',
+  '/vilda_auth_ui.js?v=173',
+  '/vilda_auth_ui.js?v=174',
+  '/vilda_auth_ui.js?v=175',
+  '/vilda_auth_ui.js?v=176',
+  '/vilda_auth_ui.js?v=177',
+  '/vilda_auth_ui.js?v=178',
+  '/vilda_auth_ui.js?v=179',
+  '/vilda_auth_ui.js?v=180',
+  '/vilda_auth_ui.js?v=181',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
   '/vilda_chrome.js?v=12',
@@ -339,12 +435,70 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=34',
   '/vilda_chrome.js?v=35',
   '/vilda_chrome.js?v=36',
+  '/vilda_chrome.js?v=37',
+  '/vilda_chrome.js?v=38',
+  '/vilda_chrome.js?v=39',
+  '/vilda_chrome.js?v=40',
+  '/vilda_chrome.js?v=41',
+  '/vilda_chrome.js?v=42',
+  '/vilda_terminarz.js?v=1',
+  '/vilda_terminarz.js?v=2',
+  '/vilda_terminarz.js?v=3',
+  '/vilda_terminarz.js?v=4',
+  '/vilda_terminarz.js?v=5',
+  '/vilda_terminarz.js?v=6',
+  '/vilda_terminarz.js?v=7',
+  '/vilda_terminarz.js?v=8',
+  '/vilda_terminarz.js?v=9',
+  '/vilda_terminarz.js?v=10',
+  '/vilda_terminarz.js?v=11',
+  '/vilda_terminarz.js?v=12',
+  '/vilda_terminarz.js?v=13',
+  '/vilda_terminarz.js?v=14',
+  '/vilda_terminarz.js?v=15',
+  '/vilda_terminarz.js?v=16',
+  '/vilda_terminarz.js?v=17',
+  '/vilda_terminarz.js?v=18',
+  '/vilda_terminarz.js?v=19',
+  '/vilda_terminarz.js?v=20',
+  '/vilda_terminarz.js?v=21',
+  '/vilda_terminarz.js?v=22',
+  '/vilda_terminarz.js?v=23',
+  '/vilda_terminarz.js?v=24',
+  '/vilda_terminarz.js?v=25',
+  '/vilda_terminarz.js?v=26',
+  '/vilda_terminarz.js?v=27',
+  '/vilda_terminarz.js?v=28',
+  '/vilda_terminarz.js?v=29',
+  '/vilda_terminarz.js?v=30',
+  '/vilda_terminarz.js?v=31',
+  '/vilda_terminarz.js?v=32',
+  '/vilda_terminarz.js?v=33',
+  '/vilda_terminarz.js?v=34',
+  '/vilda_terminarz.js?v=35',
+  '/vilda_terminarz.js?v=36',
+  '/vilda_terminarz.js?v=37',
+  '/vilda_terminarz.js?v=38',
+  '/vilda_terminarz.js?v=39',
+  '/vilda_terminarz.js?v=40',
+  '/vilda_terminarz.js?v=41',
+  '/vilda_terminarz.js?v=42',
+  '/vilda_terminarz.js?v=43',
+  '/vilda_terminarz.js?v=44',
+  '/vilda_terminarz.js?v=45',
+  '/vilda_terminarz.js?v=46',
+  '/vilda_terminarz.js?v=47',
+  '/vilda_terminarz.js?v=48',
+  '/vilda_terminarz.js?v=49',
   '/vilda_chrome.css?v=11',
   '/vilda_chrome.css?v=12',
   '/vilda_chrome.css?v=15',
   '/vilda_chrome.css?v=16',
   '/vilda_chrome.css?v=17',
   '/vilda_chrome.css?v=18',
+  '/vilda_chrome.css?v=19',
+  '/vilda_chrome.css?v=20',
+  '/vilda_chrome.css?v=21',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -369,12 +523,24 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=37',
   '/vilda_auth_ui.css?v=38',
   '/vilda_auth_ui.css?v=39',
+  '/vilda_auth_ui.css?v=40',
+  '/vilda_auth_ui.css?v=41',
+  '/vilda_auth_ui.css?v=42',
+  '/vilda_auth_ui.css?v=43',
+  '/vilda_auth_ui.css?v=44',
+  '/vilda_auth_ui.css?v=45',
+  '/vilda_auth_ui.css?v=46',
+  '/vilda_auth_ui.css?v=47',
+  '/vilda_auth_ui.css?v=48',
+  '/vilda_auth_ui.css?v=49',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
   '/vilda_file_export.js?v=5',
   '/vilda_deps.js',
   '/vilda_deps.js?v=87',
   '/vilda_deps.js?v=89',
+  '/vilda_deps.js?v=90',
+  '/vilda_deps.js?v=91',
   '/vilda_update_hooks.js',
   '/vilda_update_hooks.js?v=7',
   '/vilda_centile_chart_header.js',
@@ -397,6 +563,8 @@ const CORE_SHELL_URLS = [
   '/vilda_data_import_export.js?v=21',
   '/vilda_data_import_export.js?v=22',
   '/vilda_data_import_export.js?v=25',
+  '/vilda_data_import_export.js?v=26',
+  '/vilda_data_import_export.js?v=27',
   '/vilda_advanced_growth.js',
   '/vilda_advanced_growth.js?v=16',
   '/vilda_estimated_intake.js',
@@ -409,9 +577,28 @@ const CORE_SHELL_URLS = [
   '/vilda_persist_runtime.js?v=2',
   '/vilda_persist_runtime.js?v=3',
   '/vilda_persist_runtime.js?v=4',
+  '/vilda_persist_runtime.js?v=5',
+  '/vilda_persist_runtime.js?v=6',
+  '/vilda_persist_runtime.js?v=7',
+  '/vilda_persist_runtime.js?v=8',
   '/vilda_summary_cards.js',
   '/vilda_summary_cards.js?v=2',
   '/vilda_summary_cards.js?v=3',
+  '/vilda_summary_cards.js?v=4',
+  '/vilda_summary_cards.js?v=5',
+  '/vilda_summary_cards.js?v=6',
+  '/vilda_summary_cards.js?v=7',
+  '/vilda_summary_cards.js?v=8',
+  '/vilda_summary_cards.js?v=9',
+  '/vilda_summary_cards.js?v=10',
+  '/vilda_summary_cards.js?v=11',
+  '/vilda_summary_cards.js?v=12',
+  '/vilda_summary_cards.js?v=13',
+  '/vilda_summary_cards.js?v=14',
+  '/vilda_summary_cards.js?v=15',
+  '/vilda_summary_cards.js?v=16',
+  '/vilda_summary_cards.js?v=17',
+  '/vilda_summary_cards.js?v=18',
   '/vilda_diet_plan_ui.js',
   '/vilda_diet_plan_ui.js?v=1',
   '/vilda_estimated_intake_ui.js',
@@ -424,6 +611,7 @@ const CORE_SHELL_URLS = [
   '/vilda_estimated_intake_dom_mount.js?v=1',
   '/vilda_update_prep.js',
   '/vilda_update_prep.js?v=62',
+  '/vilda_update_prep.js?v=63',
   '/app.js',
   '/app.js?v=173',
   '/app.js?v=174',
@@ -431,16 +619,19 @@ const CORE_SHELL_URLS = [
   '/app.js?v=178',
   '/app.js?v=179',
   '/app.js?v=181',
+  '/app.js?v=182',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',
   '/vilda_diet_recommendations.js',
   '/vilda_diet_recommendations.js?v=3',
   '/vilda_patient_report.js',
   '/vilda_patient_report.js?v=4',
+  '/vilda_patient_report.js?v=5',
   '/nutrition_norms.js',
   '/nutrition_norms.js?v=41',
   '/nutrition_micros.js',
   '/nutrition_micros.js?v=25',
+  '/nutrition_micros.js?v=26',
   '/adult_vitals.js',
   '/adult_vitals.js?v=5',
   '/ds_lms.js',
@@ -464,6 +655,8 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js?v=18',
   '/ios26-ui.js?v=19',
   '/ios26-ui.js?v=20',
+  '/ios26-ui.js?v=21',
+  '/ios26-ui.js?v=22',
   '/tutorial.js?v=6',
   '/tutorial.js?v=7',
   '/tutorial.js?v=8',
@@ -480,6 +673,15 @@ const CORE_SHELL_URLS = [
   '/custom-fixes.js?v=21',
   '/custom-fixes.js?v=22',
   '/custom-fixes.js?v=23',
+  '/custom-fixes.js?v=24',
+  '/custom-fixes.js?v=25',
+  '/custom-fixes.js?v=26',
+  '/custom-fixes.js?v=27',
+  '/custom-fixes.js?v=28',
+  '/custom-fixes.js?v=29',
+  '/custom-fixes.js?v=30',
+  '/custom-fixes.js?v=31',
+  '/custom-fixes.js?v=32',
   '/reposition.js',
   '/reposition.js?v=5',
   '/growth-basic-module.js?v=8',
@@ -509,7 +711,8 @@ const OPTIONAL_DOCUMENTS = [
   '/ngenla-instrukcja.html',
   '/przelicznik-doposilkowy-instrukcja.html',
   '/subskrypcja.html',
-  '/notatki.html'
+  '/notatki.html',
+  '/terminarz.html'
 ];
 
 const OPTIONAL_ASSETS = [
@@ -531,12 +734,16 @@ const OPTIONAL_ASSETS = [
   '/sga_malewski_data.js',
   '/sga_birth_module.js',
   '/sga_birth_module.js?v=7',
+  '/sga_birth_module.js?v=8',
+  '/sga_birth_module.js?v=9',
   '/docpro_state_persist.js',
   '/docpro_state_persist.js?v=4',
   '/lab_units_data.js',
   '/lab_units_data.js?v=1',
+  '/lab_units_data.js?v=35',
   '/lab_unit_converter.js',
   '/lab_unit_converter.js?v=1',
+  '/lab_unit_converter.js?v=4',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
@@ -600,6 +807,25 @@ const SHELL_PATHS = new Set(
     .filter(Boolean)
 );
 
+// ── PWA-SUBPATH (2026-06-05): aplikacja na GitHub Pages żyje pod /vilda-calc/,
+// a cały SW (precache, klucze cache, DOCUMENT_PATHS) myśli w przestrzeni „/x".
+// Most: wejściowe pathname requestów są OD-skopowane do przestrzeni aplikacji
+// (unscopePathname: '/vilda-calc/app.js' → '/app.js'), a wychodzące fetche
+// precache DO-skopowane do realnego URL-a (scopeHref: '/app.js?v=1' →
+// https://host/vilda-calc/app.js?v=1). Na hostingu z roota SCOPE_PATH==='/'
+// i obie funkcje są neutralne — zero zmiany zachowania lokalnie.
+const SCOPE_BASE = new URL('./', self.location);
+const SCOPE_PATH = SCOPE_BASE.pathname;
+function unscopePathname(pathname) {
+  if (SCOPE_PATH !== '/' && typeof pathname === 'string' && pathname.startsWith(SCOPE_PATH)) {
+    return '/' + pathname.slice(SCOPE_PATH.length);
+  }
+  return pathname;
+}
+function scopeHref(appUrl) {
+  return new URL(String(appUrl).replace(/^\//, ''), SCOPE_BASE).href;
+}
+
 function toURL(input) {
   try {
     return typeof input === 'string'
@@ -622,7 +848,8 @@ function isSameOrigin(input) {
 
 function getPathname(input) {
   const url = toURL(input);
-  return url ? url.pathname : '';
+  // PWA-SUBPATH: porównania działają w przestrzeni aplikacji („/x").
+  return url ? unscopePathname(url.pathname) : '';
 }
 
 function normalizeNavigationPath(pathname) {
@@ -720,7 +947,7 @@ function getShellCacheKeyFromStaticUrl(input) {
   const url = toURL(input);
   if (!url) return null;
 
-  const pathname = url.pathname;
+  const pathname = unscopePathname(url.pathname); // PWA-SUBPATH
   if (!SHELL_PATHS.has(pathname)) return null;
 
   // Dla zasobów statycznych z query stringiem (np. app.js?v=100) kluczem cache
@@ -735,7 +962,7 @@ function getShellCacheKeyFromRequest(request) {
   const url = toURL(request);
   if (!url) return null;
 
-  const pathname = url.pathname;
+  const pathname = unscopePathname(url.pathname); // PWA-SUBPATH
 
   if (isNavigationRequest(request)) {
     const normalizedPath = normalizeNavigationPath(pathname);
@@ -749,7 +976,7 @@ function getNavigationCacheKeyFromResponse(request, response) {
   if (!isSameOrigin(request)) return null;
 
   const responseUrl = toURL(response?.url || request.url);
-  const pathname = responseUrl ? responseUrl.pathname : getPathname(request);
+  const pathname = responseUrl ? unscopePathname(responseUrl.pathname) : getPathname(request); // PWA-SUBPATH
   const normalizedPath = normalizeNavigationPath(pathname);
 
   if (DOCUMENT_PATHS.has(normalizedPath)) return normalizedPath;
@@ -1004,7 +1231,8 @@ async function updateRuntimeFromNetwork(request) {
 
 async function fetchAndStorePrecacheUrl(url, { required = false } = {}) {
   const cache = await caches.open(SHELL_CACHE);
-  const request = new Request(url, { cache: 'reload', redirect: 'follow' });
+  // PWA-SUBPATH: fetch pod realny URL w zasięgu SW; klucz cache zostaje w „/x".
+  const request = new Request(scopeHref(url), { cache: 'reload', redirect: 'follow' });
   const response = await fetch(request);
   const pathname = getPathname(url);
   const cacheKey = DOCUMENT_PATHS.has(pathname)
