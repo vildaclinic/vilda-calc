@@ -56,7 +56,7 @@
     <!-- Integrate the calculator with the Waga i wzrost site styles -->
     <link href="style.css?v=48" rel="stylesheet" />
     <link href="sidebar.css" rel="stylesheet" />
-    <link href="vilda_chrome.css?v=21" rel="stylesheet">
+    <link href="vilda_chrome.css?v=22" rel="stylesheet">
     <link href="vilda_auth_ui.css?v=49" rel="stylesheet" />
     <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet" />
     <script defer src="vilda_logger.js?v=2"></script>
@@ -88,7 +88,7 @@
 <script src="vilda_update_prep.js?v=63" defer></script>
     
 <script defer src="inline_kalkulator_klirens_00.js?v=1"></script>
-<link href="ios26-v2.css?v=12" rel="stylesheet" />
+<link href="ios26-v2.css?v=13" rel="stylesheet" />
     <!-- Use the same Inter font as the main site -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -397,13 +397,16 @@ html, body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: auto;
   scroll-behavior: smooth;
-  overflow-x: hidden;
 }
 html {
   min-height: 100%;
 }
 body {
   min-height: 100%;
+  /* overflow-x CELOWO na body, NIE na html (2026-06-07): hidden na html robi
+     z <html> wewnętrzny scroll container i scrollbar-gutter (style.css)
+     rezerwował pas OBOK paska -> dwa paski. Patrz analogiczny fix w style.css. */
+  overflow-x: hidden;
 }
 @supports (min-height: 100svh) {
   body {
@@ -1585,7 +1588,7 @@ input[type="submit"]:focus-visible {
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=42"></script>
+<script defer src="vilda_chrome.js?v=43"></script>
 </head>
 
 <body class="js-loading liquid-ios26 has-sidebar">
