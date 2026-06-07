@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.17';
+const SW_VERSION = '1.0.18';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -154,6 +154,7 @@ const CORE_SHELL_URLS = [
   '/ios26-v2.css?v=10',
   '/logo_vilda.jpeg',
   '/logo_vilda.webp',
+  '/lucide.min.js?v=1',
   '/vilda_logger.js',
   '/vilda_logger.js?v=2',
   '/vilda_html.js',
