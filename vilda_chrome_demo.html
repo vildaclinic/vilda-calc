@@ -8,7 +8,6 @@
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src  'self' 'unsafe-inline'
-                https://unpkg.com
                 https://cdnjs.cloudflare.com
                 https://cdn.jsdelivr.net
                 https://cdn.sheetjs.com
@@ -49,11 +48,14 @@
 <meta charset="utf-8">
 <title>Demo nowego chrome — wagaiwzrost.pl</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/></noscript>
 <link href="ios26-v2.css?v=12" rel="stylesheet">
 <link href="style.css?v=43" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
-<link href="vilda_chrome.css?v=18" rel="stylesheet">
+<link href="vilda_chrome.css?v=21" rel="stylesheet">
 <style>
   /* Style dodatkowe TYLKO dla strony demo — pokazują panel kontrolny */
   .demo-controls {
@@ -125,7 +127,7 @@
     .demo-controls { width: calc(100% - 2rem); }
   }
 </style>
-  <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
+  <script src="lucide.min.js?v=1" defer></script>
 </head>
 <body class="js-loading liquid-ios26 has-sidebar">
 <header data-vilda-chrome-header></header>
@@ -208,7 +210,7 @@
   };
 })();
 </script>
-<script src="vilda_chrome.js?v=36"></script>
+<script src="vilda_chrome.js?v=42"></script>
 <script>
 // Panel demo — przełączanie stanu konta, wczytywanie pacjentów
 document.addEventListener('DOMContentLoaded', function () {
