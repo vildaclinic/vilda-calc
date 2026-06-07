@@ -641,6 +641,30 @@ html.vilda-pro-active   #proGateBanner { display: none; }
              jest kontrolowana wyłącznie w kodzie JavaScript (activateProfessionalModule
              oraz validatePWZ), dlatego tutaj nie ustawiamy stylu display. */
 
+          /* PRO-PRERENDER (2026-06-07): gdy skrypt inline na początku body
+             rozpozna aktywny moduł lekarski (snapshot/PWZ), klasa
+             pro-prerender na <html> pokazuje od pierwszej klatki DOKŁADNIE
+             ten zestaw wrapperów, który odsłania activateProfessionalModule,
+             i chowa instrukcję wpisania PWZ. !important jest konieczny,
+             bo wrappery mają inline'owe style="display:none" w HTML —
+             dlatego gałęzie JS (aktywacja/dezaktywacja/brak PWZ) sterują
+             też samą klasą (setDocproProSnap w vilda_professional_module.js).
+             Pod-przyciski testów (gh/ogtt/acth/snp/...) zostają ukryte jak
+             dotąd; flu/thyroid/hypertension dosiadają się przez własne
+             obserwatory abx — bez zmian. */
+          html.pro-prerender #abxButtonWrapper,
+          html.pro-prerender #endoButtonWrapper,
+          html.pro-prerender #igfButtonWrapper,
+          html.pro-prerender #zscoreButtonWrapper,
+          html.pro-prerender #obesityButtonWrapper,
+          html.pro-prerender #bisphosButtonWrapper,
+          html.pro-prerender #sgaBirthButtonWrapper {
+            display: flex !important;
+          }
+          html.pro-prerender .doctor-info {
+            display: none !important;
+          }
+
           /*
            * Przycisk „Leczenie bisfosfonianami” powinien zachowywać się
            * tak samo jak pozostałe przyciski modułu lekarskiego.  Globalne
@@ -1270,6 +1294,36 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
      ios26-ui.js?v=22 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
+
+<script>
+/* PRO-PRERENDER (2026-06-07, wzorzec O1a): drabinka modułu lekarskiego
+   (Antybiotykoterapia / Testy w endokrynologii / GH-IGF-1 / Z-score / ...)
+   od PIERWSZEJ klatki, zamiast odsłaniania po asynchronicznym łańcuchu
+   persist→professional_module→activate. Źródła stanu (oba synchroniczne,
+   zero danych medycznych): (1) bool docproPro w sesyjnym snapshocie
+   vildaChromeUiSnapV1 — pisany w vilda_professional_module.js przy każdej
+   (de)aktywacji, czyszczony przy locku/wylogowaniu przez vilda_chrome.js;
+   (2) fallback: obecność zapamiętanego klucza pwzNumber w localStorage
+   (na docpro checkbox „Jestem lekarzem" jest na stałe zaznaczony w HTML,
+   więc aktywacja zależy wyłącznie od PWZ). Wyłącznie kosmetyka widoczności
+   — weryfikacja PWZ i logika modułów bez zmian. */
+(function () {
+  try {
+    var on = false;
+    try {
+      var s = JSON.parse(sessionStorage.getItem('vildaChromeUiSnapV1') || 'null');
+      on = !!(s && s.docproPro === true);
+    } catch (_) {}
+    if (!on) {
+      try {
+        var p = localStorage.getItem('pwzNumber');
+        on = !!(p && String(p).trim());
+      } catch (_) {}
+    }
+    if (on) document.documentElement.classList.add('pro-prerender');
+  } catch (_) {}
+})();
+</script>
 
 <header>
 </header>
@@ -3498,7 +3552,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      dopiero przy pierwszym uruchomieniu tej akcji — patrz vildaEnsureXlsxLibrary()
      w vilda_professional_module.js (URL + SRI: xlsx@0.18.5 / sha384-vtjasy…). -->
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
-<script defer src="vilda_professional_module.js?v=2"></script>
+<script defer src="vilda_professional_module.js?v=3"></script>
 <script defer src="vilda_persist_runtime.js?v=8"></script>
 <script defer src="vilda_summary_cards.js?v=18"></script>
 <script defer src="vilda_diet_plan_ui.js?v=1"></script>
