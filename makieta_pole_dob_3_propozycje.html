@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pole „Data urodzenia" — 3 propozycje</title>
+<style>
+  :root{--accent:#00838d;--ink:#08202c;--label:#2e4a54;--muted:#6a7a7c;
+        --in-border:#d6dde0;--danger:#b71c1c;--page:#f4f7f8;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif;padding:28px 18px 60px}
+  .wrap{max-width:1040px;margin:0 auto}
+  h1{font-size:22px;font-weight:600;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;color:var(--muted);font-size:14px;margin:0 0 24px}
+  .col{background:#eef3f4;border-radius:16px;padding:18px;margin-bottom:20px}
+  .badge{background:var(--accent);color:#fff;font-size:12px;font-weight:600;padding:3px 11px;border-radius:999px}
+  .vdesc{font-size:13px;color:#516068;margin-left:8px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start;margin-top:12px}
+  .label{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--label);margin-bottom:6px}
+  .input{padding:13px 14px;border:1.5px solid var(--in-border);border-radius:12px;background:#fff;font-size:16px;color:var(--ink)}
+  .input.ph{color:#9aafb5}
+  .input.err{border-color:var(--danger)}
+  .help{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}
+  .errmsg{font-size:13px;color:var(--danger);margin-top:6px}
+  .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;color:var(--accent);font-size:15px;cursor:help}
+  .tip{margin-top:8px;background:#fff;border:1px solid #d7e9ec;border-radius:9px;box-shadow:0 6px 18px rgba(0,60,80,.10);padding:9px 11px;font-size:12px;color:#41575d;line-height:1.4;max-width:230px}
+  .spec{margin-top:12px;background:#fff;border:1px solid #e0e8eb;border-radius:10px;padding:10px 13px;
+        font:12px/1.55 ui-monospace,Menlo,monospace;color:#33474f;white-space:pre-wrap}
+  .note{font-size:12px;color:#7c8b91;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pole „Data urodzenia" — 3 propozycje</h1>
+  <p class="sub">Problem: podpowiedź i placeholder błędu używały klasy „pustego stanu" (kafelek padding 24px + tło + obwódka) → w wąskiej kolumnie tekst zawijał się na 5 linii, a pusty błąd dawał drugi pusty kafelek.</p>
+
+  <div class="col">
+    <span class="badge">Propozycja A</span><span class="vdesc">Podpowiedź jako zwykły tekst pod polem (bez kafelka)</span>
+    <div class="grid">
+      <div><div class="label">Płeć</div><div class="input">chłopiec</div></div>
+      <div><div class="label">Data urodzenia</div><div class="input ph">DD-MM-RRRR</div><div class="help">Opcjonalnie — wiek policzy się automatycznie przy kolejnych pomiarach.</div></div>
+      <div><div class="label">Wiek (lata)</div><div class="input">12</div></div>
+    </div>
+    <div class="note">Błąd walidacji w tym samym miejscu, na czerwono, tylko gdy data błędna (brak pustego boksu).</div>
+    <div class="spec">.dob-help { font-size:13px; color:#6a7a7c; margin-top:6px; line-height:1.4; }  /* zwykły tekst, BEZ tła/obwódki */
+.dob-err  { font-size:13px; color:#b71c1c; margin-top:6px; }            /* puste = display:none / brak min-height */
+USUNĄĆ klasę .vilda-patient-empty-msg z podpowiedzi i z efDobErr.</div>
+  </div>
+
+  <div class="col">
+    <span class="badge">Propozycja B</span><span class="vdesc">Pole szersze (2 kolumny) — podpowiedź w jednej linii</span>
+    <div class="grid">
+      <div style="grid-column:span 2;"><div class="label">Data urodzenia</div><div class="input ph">DD-MM-RRRR</div><div class="help">Opcjonalnie. Wypełnij, by aplikacja automatycznie liczyła wiek przy kolejnych pomiarach.</div></div>
+      <div><div class="label">Wiek (lata)</div><div class="input">12</div></div>
+    </div>
+    <div class="note">Komórka DOB: grid-column: span 2 — pełne zdanie czyta się naturalnie.</div>
+    <div class="spec">efDobCell.style = 'grid-column: span 2;';  /* + helper/err jak w A */</div>
+  </div>
+
+  <div class="col">
+    <span class="badge">Propozycja C</span><span class="vdesc">Krótki helper + pełny opis pod ikoną „i"</span>
+    <div class="grid">
+      <div><div class="label">Płeć</div><div class="input">chłopiec</div></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span class="label" style="margin:0;">Data urodzenia</span><span class="info" title="Wypełnij, by aplikacja automatycznie liczyła wiek przy kolejnych pomiarach.">ⓘ</span></div>
+        <div class="input ph">DD-MM-RRRR</div><div class="help">Opcjonalnie</div>
+        <div class="tip">ⓘ Wiek policzy się automatycznie przy kolejnych pomiarach.</div>
+      </div>
+      <div><div class="label">Wiek (lata)</div><div class="input">12</div></div>
+    </div>
+    <div class="note">Pod polem tylko „Opcjonalnie"; pełne wyjaśnienie w dymku ikony „i" (dymek pokazany poglądowo).</div>
+    <div class="spec">label + ikona info (tooltip / title); pod polem helper „Opcjonalnie".
+Najmniej tekstu w layoucie, zero zawijania.</div>
+  </div>
+
+</div>
+</body>
+</html>

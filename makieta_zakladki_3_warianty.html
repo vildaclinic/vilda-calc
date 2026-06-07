@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karta pacjenta — 3 warianty zakładek</title>
+<style>
+  :root{
+    --accent:#00838d; --accent-dk:#00636b; --ink:#08202c; --tab-ink:#3a4a52;
+    --muted:#6a8089; --border:#e0eef0; --track:#eef5f6; --pill-border:#bcdfe2;
+    --surface:#fff; --page:#f4f7f8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif;color:var(--ink);padding:28px 18px 60px}
+  .wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+  h1{font-size:22px;font-weight:600;text-align:center;margin:0 0 6px}
+  .sub{text-align:center;color:var(--muted);font-size:14px;margin:0 0 14px}
+  .variant{background:#eef3f4;border-radius:16px;padding:18px}
+  .vhead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .badge{background:var(--accent);color:#fff;font-size:12px;font-weight:600;padding:3px 11px;border-radius:999px}
+  .vdesc{font-size:13px;color:#516068}
+  .hero{background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--accent);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .hero-info{flex:1;min-width:150px}
+  .hero-name{font-size:20px;font-weight:600}
+  .hero-meta{font-size:13px;color:var(--muted);margin-top:2px}
+  .hero-actions{display:flex;gap:8px}
+  /* przyciski Edytuj / Nowy pomiar — ZMNIEJSZONE */
+  .pill{background:#fff;color:var(--accent);border:1px solid var(--pill-border);border-radius:9px;padding:8px 14px;font-size:15px;font-weight:500;white-space:nowrap;cursor:pointer}
+  /* dolne przyciski — ODNIESIENIE WIELKOŚCI (bez zmian) */
+  .footer{display:flex;gap:12px}
+  .btn{flex:1;border-radius:12px;padding:14px 20px;font-size:15px;font-weight:500;cursor:pointer}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid #d6dde0}
+  .btn-primary{background:var(--accent);color:#fff;border:0}
+  .note{font-size:12px;color:#7c8b91;margin-top:8px}
+  /* wspólne dla zakładek */
+  .tab{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:16px;font-weight:500;white-space:nowrap;cursor:pointer;border:0;background:transparent}
+  /* W1 segmentowany */
+  .tabs-seg{display:flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px}
+  .tabs-seg .tab{padding:9px 8px;border-radius:9px;color:var(--tab-ink)}
+  .tabs-seg .tab.active{background:var(--accent);color:#fff}
+  /* W2 podkreślenie */
+  .tabs-und{display:flex;background:#fff;border:1px solid var(--border);border-radius:12px;padding:0 6px;margin-bottom:12px}
+  .tabs-und .tab{padding:11px 8px;border-bottom:3px solid transparent;color:var(--muted)}
+  .tabs-und .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  /* W3 chipy */
+  .tabs-chip{display:flex;gap:8px;margin-bottom:12px}
+  .tabs-chip .tab{padding:9px 10px;border-radius:10px;background:var(--track);color:var(--tab-ink)}
+  .tabs-chip .tab.active{background:var(--accent);color:#fff}
+  .spec{margin-top:12px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:#33474f;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Karta pacjenta — 3 warianty paska zakładek</h1>
+    <p class="sub">Etykieta 16 px (bez auto-zoom na mobile) · wysokość zakładki niższa niż przycisków Wczytaj/Wróć · mniejsze przyciski Edytuj/Nowy pomiar</p>
+  </div>
+
+  <!-- WARIANT 1 -->
+  <section class="variant">
+    <div class="vhead"><span class="badge">Wariant 1</span><span class="vdesc">Segmentowany — kompaktowy track, jedna linia</span></div>
+    <div class="hero">
+      <div class="hero-info"><div class="hero-name">Stołowska Natalia</div><div class="hero-meta">9 lat 9 mies. · F</div></div>
+      <div class="hero-actions"><button class="pill">✎ Edytuj</button><button class="pill">+ Nowy pomiar</button></div>
+    </div>
+    <div class="tabs-seg">
+      <button class="tab active">Status</button>
+      <button class="tab">Siatki centylowe</button>
+      <button class="tab">Notatki</button>
+      <button class="tab">Historia</button>
+    </div>
+    <div class="footer"><button class="btn btn-ghost">← Wróć do listy</button><button class="btn btn-primary">Wczytaj tego pacjenta</button></div>
+    <div class="note">Wysokość zakładki ≈ 40 px · przycisku ≈ 47 px</div>
+    <div class="spec">.vilda-patient-tab { padding: 9px 8px; font-size: 16px; white-space: nowrap; flex: 1 1 0; }
+.vilda-patient-tabs { gap: 4px; padding: 4px; }
+/* klucz: white-space:nowrap zapobiega zawijaniu „Siatki centylowe" do 2 linii */</div>
+  </section>
+
+  <!-- WARIANT 2 -->
+  <section class="variant">
+    <div class="vhead"><span class="badge">Wariant 2</span><span class="vdesc">Podkreślenie — najlżejszy, bez wypełnionych kafelków</span></div>
+    <div class="hero">
+      <div class="hero-info"><div class="hero-name">Stołowska Natalia</div><div class="hero-meta">9 lat 9 mies. · F</div></div>
+      <div class="hero-actions"><button class="pill">✎ Edytuj</button><button class="pill">+ Nowy pomiar</button></div>
+    </div>
+    <div class="tabs-und">
+      <button class="tab active">Status</button>
+      <button class="tab">Siatki centylowe</button>
+      <button class="tab">Notatki</button>
+      <button class="tab">Historia</button>
+    </div>
+    <div class="footer"><button class="btn btn-ghost">← Wróć do listy</button><button class="btn btn-primary">Wczytaj tego pacjenta</button></div>
+    <div class="note">Wysokość zakładki ≈ 44 px · płaski, bez „pływających" kafelków</div>
+    <div class="spec">.vilda-patient-tab { padding: 11px 8px; font-size: 16px; border-bottom: 3px solid transparent; color: #6a8089; }
+.vilda-patient-tab--active { color: #00838d; border-bottom-color: #00838d; }
+/* track bez tła/cienia — sam dolny wskaźnik */</div>
+  </section>
+
+  <!-- WARIANT 3 -->
+  <section class="variant">
+    <div class="vhead"><span class="badge">Wariant 3</span><span class="vdesc">Chipy — aktywny turkusowy, reszta jasne pigułki</span></div>
+    <div class="hero">
+      <div class="hero-info"><div class="hero-name">Stołowska Natalia</div><div class="hero-meta">9 lat 9 mies. · F</div></div>
+      <div class="hero-actions"><button class="pill">✎ Edytuj</button><button class="pill">+ Nowy pomiar</button></div>
+    </div>
+    <div class="tabs-chip">
+      <button class="tab active">Status</button>
+      <button class="tab">Siatki centylowe</button>
+      <button class="tab">Notatki</button>
+      <button class="tab">Historia</button>
+    </div>
+    <div class="footer"><button class="btn btn-ghost">← Wróć do listy</button><button class="btn btn-primary">Wczytaj tego pacjenta</button></div>
+    <div class="note">Wysokość zakładki ≈ 40 px · wyraźny aktywny, lekka reszta</div>
+    <div class="spec">.vilda-patient-tab { padding: 9px 10px; font-size: 16px; border-radius: 10px; background: #eef5f6; color: #3a4a52; }
+.vilda-patient-tab--active { background: #00838d; color: #fff; }
+.vilda-patient-tabs { gap: 8px; padding: 0; background: transparent; } /* bez wspólnego tracku */</div>
+  </section>
+
+</div>
+</body>
+</html>
