@@ -381,7 +381,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         ]
       }
       </script>
-<script defer src="vilda_chrome.js?v=41"></script>
+<script defer src="vilda_chrome.js?v=42"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
@@ -1702,7 +1702,36 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script src="nutrition_micros.js?v=26" defer></script>
 
 <!-- po app.js -->
-<script src="gh_igf_therapy.js?v=8" defer></script>
+<!-- PERF-P2e2 cykl 3 (2026-06-07): moduł terapii GH/IGF (53 KB) ładowany LENIWIE:
+     idle po load LUB pierwsza interakcja. Audyt konsumentów: kartę #ghIgfTherapyCard
+     wstrzykuje SAM moduł (0 wystąpień w HTML); custom-fixes ma wyłączony reposition
+     (early return) i guardy null; data_import_export woła vildaGhIgfPersistApi z
+     typeof-guardem przy akcjach użytkownika; resource_audit obserwuje kartę przez
+     MutationObserver z disconnect-on-detect (zaprojektowany na późną kartę).
+     Na docpro.html tag pozostaje STATYCZNY (docpro_state_persist, okna 80-1500 ms). -->
+<script>
+(function () {
+  'use strict';
+  var SRC_GHIGF = 'gh_igf_therapy.js?v=8';
+  var started = false;
+  function loadGhIgf() {
+    if (started) return;
+    started = true;
+    var s = document.createElement('script');
+    s.src = SRC_GHIGF;
+    s.defer = true;
+    document.head.appendChild(s);
+    window.removeEventListener('pointerdown', loadGhIgf, true);
+    window.removeEventListener('keydown', loadGhIgf, true);
+  }
+  window.addEventListener('pointerdown', loadGhIgf, true);
+  window.addEventListener('keydown', loadGhIgf, true);
+  window.addEventListener('load', function () {
+    var idle = window.requestIdleCallback || function (cb) { setTimeout(cb, 1200); };
+    idle(loadGhIgf, { timeout: 2500 });
+  });
+})();
+</script>
 <!-- PERF-P2e2 cykl 2 (2026-06-07): kalkulator antybiotykoterapii (165 KB) ładowany
      LENIWIE: idle po load LUB pierwsza interakcja. Bezpieczne, bo: kartę wstrzykuje
      SAM moduł (do tego czasu jej nie ma), custom-fixes toleruje późną kartę (stub),
