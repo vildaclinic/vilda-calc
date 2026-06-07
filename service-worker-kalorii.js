@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.9';
+const SW_VERSION = '1.0.10';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -728,8 +728,10 @@ const OPTIONAL_ASSETS = [
   '/docpro_state_persist.js?v=4',
   '/lab_units_data.js',
   '/lab_units_data.js?v=1',
+  '/lab_units_data.js?v=35',
   '/lab_unit_converter.js',
   '/lab_unit_converter.js?v=1',
+  '/lab_unit_converter.js?v=4',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
