@@ -251,12 +251,41 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_data_import_export.js?v=27"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
 <script defer src="vilda_advanced_growth.js?v=16"></script>
-<!-- Przelicznik jednostek laboratoryjnych — dane + silnik. Wystawia
-     window.LabUnitConverter (z metodą evaluate) używany przez generator
-     epikryzy do automatycznej oceny IGF-1 wg normy dla wieku/stadium Tannera.
-     Dane MUSZĄ być przed konwerterem (czyta global.LabUnitsData przy starcie). -->
-<script src="lab_units_data.js?v=1" defer></script>
-<script src="lab_unit_converter.js?v=1" defer></script>
+<!-- PERF-P2e2 (2026-06-07): przelicznik jednostek laboratoryjnych — dane (212 KB)
+     + silnik ładowane LENIWIE: idle po load LUB pierwsza interakcja. Jedyny
+     konsument na tej stronie to generator epikryzy (akcja użytkownika, dużo
+     później), z pełnym strażnikiem: if (global.LabUnitConverter && typeof
+     .evaluate === 'function'). Dane MUSZĄ być przed konwerterem (czyta
+     global.LabUnitsData przy starcie) — loader wstrzykuje sekwencyjnie. -->
+<script>
+(function () {
+  'use strict';
+  var SRC_DATA = 'lab_units_data.js?v=35';
+  var SRC_CONV = 'lab_unit_converter.js?v=4';
+  var started = false;
+  function inject(src, onload) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.defer = true;
+    if (onload) s.addEventListener('load', onload, { once: true });
+    document.head.appendChild(s);
+  }
+  function loadLabPair() {
+    if (started) return;
+    started = true;
+    // sekwencja: dane -> (po załadowaniu) konwerter
+    inject(SRC_DATA, function () { inject(SRC_CONV); });
+    window.removeEventListener('pointerdown', loadLabPair, true);
+    window.removeEventListener('keydown', loadLabPair, true);
+  }
+  window.addEventListener('pointerdown', loadLabPair, true);
+  window.addEventListener('keydown', loadLabPair, true);
+  window.addEventListener('load', function () {
+    var idle = window.requestIdleCallback || function (cb) { setTimeout(cb, 1200); };
+    idle(loadLabPair, { timeout: 2500 });
+  });
+})();
+</script>
 <script defer src="vilda_epicrisis.js?v=10"></script>
 <script defer src="vilda_epicrisis_ui.js?v=8"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
