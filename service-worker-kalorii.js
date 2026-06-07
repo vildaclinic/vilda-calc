@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.8';
+const SW_VERSION = '1.0.9';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -92,6 +92,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=42',
   '/style.css?v=43',
   '/style.css?v=44',
+  '/style.css?v=45',
   '/lab_clinical_panels.js?v=141',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
   '/inline_docpro_00.js?v=1',
@@ -152,6 +153,7 @@ const CORE_SHELL_URLS = [
   '/ios26-v2.css',
   '/ios26-v2.css?v=10',
   '/logo_vilda.jpeg',
+  '/logo_vilda.webp',
   '/vilda_logger.js',
   '/vilda_logger.js?v=2',
   '/vilda_html.js',
@@ -402,6 +404,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=178',
   '/vilda_auth_ui.js?v=179',
   '/vilda_auth_ui.js?v=180',
+  '/vilda_auth_ui.js?v=181',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
   '/vilda_chrome.js?v=12',
@@ -617,6 +620,7 @@ const CORE_SHELL_URLS = [
   '/nutrition_norms.js?v=41',
   '/nutrition_micros.js',
   '/nutrition_micros.js?v=25',
+  '/nutrition_micros.js?v=26',
   '/adult_vitals.js',
   '/adult_vitals.js?v=5',
   '/ds_lms.js',
