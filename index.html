@@ -1749,7 +1749,46 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 })();
 </script>
 <script src="nutrition_norms.js?v=41" defer></script>
-<script src="nutrition_micros.js?v=26" defer></script>
+<!-- PERF-P2e2 cykl 6a (2026-06-07): mikroskładniki (296 KB — największy plik
+     toru) ładowane LENIWIE: idle po load LUB pierwsza interakcja. Hook
+     after-update rejestruje się przez rejestr (z fallbackiem w samym module),
+     wszyscy konsumenci czytają globale null-safe, a sekcja
+     #nutritionMicrosSection to statyczny kontener wypełniany dopiero hookiem.
+     Po doczytaniu one-shot VildaNutritionMicros.renderCardFromDom() odtwarza
+     kartę, gdyby pipeline przeliczeń przebiegł przed doczytaniem. Fetch 4 plików
+     micronorms_*.json przesuwa się razem z modułem poza okno krytyczne.
+     UWAGA: vilda_update_prep ZOSTAJE STATYCZNY — to orkiestrator update(),
+     lazy oznaczałby wyścig z pierwszym wpisem użytkownika. -->
+<script>
+(function () {
+  'use strict';
+  var SRC_MICROS = 'nutrition_micros.js?v=26';
+  var started = false;
+  function loadMicros() {
+    if (started) return;
+    started = true;
+    var s = document.createElement('script');
+    s.src = SRC_MICROS;
+    s.defer = true;
+    s.addEventListener('load', function () {
+      try {
+        if (window.VildaNutritionMicros && typeof window.VildaNutritionMicros.renderCardFromDom === 'function') {
+          window.VildaNutritionMicros.renderCardFromDom();
+        }
+      } catch (_) {}
+    }, { once: true });
+    document.head.appendChild(s);
+    window.removeEventListener('pointerdown', loadMicros, true);
+    window.removeEventListener('keydown', loadMicros, true);
+  }
+  window.addEventListener('pointerdown', loadMicros, true);
+  window.addEventListener('keydown', loadMicros, true);
+  window.addEventListener('load', function () {
+    var idle = window.requestIdleCallback || function (cb) { setTimeout(cb, 1200); };
+    idle(loadMicros, { timeout: 2500 });
+  });
+})();
+</script>
 
 <!-- po app.js -->
 <!-- PERF-P2e2 cykl 3 (2026-06-07): moduł terapii GH/IGF (53 KB) ładowany LENIWIE:
