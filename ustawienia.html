@@ -381,7 +381,7 @@ html.vilda-pro-active .pro-sync-note {
                 <p class="settings-accordion-text">Osobno sterujesz dolnym dockiem i strzałką „powrót na górę”.</p>
               </div>
               <div class="settings-accordion-meta">
-                <span class="settings-mini-chip">2 przełączniki</span>
+                <span class="settings-mini-chip">3 przełączniki</span>
                 <span class="settings-mini-chip">Mobile</span>
               </div>
               <span class="settings-chevron" aria-hidden="true">⌄</span>
@@ -406,10 +406,36 @@ html.vilda-pro-active .pro-sync-note {
                       <span class="slider"></span>
                     </label>
                   </div>
+                  <div class="setting-item">
+                    <span>Szybki dock (wersja testowa)</span>
+                    <label class="switch">
+                      <input type="checkbox" id="fastDockShellSetting">
+                      <span class="slider"></span>
+                    </label>
+                  </div>
                 </div>
+                <p class="settings-section-note" id="fastDockShellNote">
+                  Eksperyment: zakładki Terminarz i Lab przełączają się natychmiast (bez przeładowania). Po zmianie odśwież stronę. Możesz też wejść bezpośrednio na <code>app.html</code>.
+                </p>
               </div>
             </div>
           </details>
+          <script>
+          (function () {
+            try {
+              var cb = document.getElementById('fastDockShellSetting');
+              if (!cb) return;
+              var KEY = 'vilda-spa-shell-v1';
+              try { cb.checked = (window.localStorage.getItem(KEY) === 'on'); } catch (e) { cb.checked = false; }
+              cb.addEventListener('change', function () {
+                try {
+                  if (cb.checked) window.localStorage.setItem(KEY, 'on');
+                  else window.localStorage.removeItem(KEY);
+                } catch (e) { /* noop */ }
+              });
+            } catch (e) { /* noop */ }
+          })();
+          </script>
 
           <div class="settings-group-label">Wykresy i obliczenia</div>
           <details class="settings-accordion" id="settings-section-pal">
