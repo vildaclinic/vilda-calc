@@ -47,7 +47,7 @@
   <!-- APP-SHELL (B1): gdy strona ładuje się jako panel iframe (?embedded=1),
        chowamy jej własny chrome, by nie dublować ramki shella (app.html). -->
   <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
-  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded .desktop-layout{display:block!important}.vilda-embedded .main-content{margin:0!important}.vilda-embedded body{padding-bottom:0!important}</style>
+  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
