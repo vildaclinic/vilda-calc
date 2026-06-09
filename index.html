@@ -26,7 +26,7 @@
                 https://cdn.jsdelivr.net;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -58,6 +58,10 @@
       przygotowanego pliku wagaiwzrost‑og.jpg umieszczonego w katalogu images.
     -->
     <title>wagaiwzrost.pl</title>
+    <!-- APP-SHELL (B1): gdy strona ładuje się jako panel iframe (?embedded=1),
+         chowamy jej własny chrome, by nie dublować ramki shella (app.html). -->
+    <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+    <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Zaktualizowany opis: akcentujemy markę Waga i wzrost oraz kluczowe funkcje aplikacji -->
     <meta name="description" content="Waga i wzrost – kompleksowy kalkulator BMI, siatek centylowych, WHR, BMR oraz zapotrzebowania kalorycznego. Zawiera moduł lekarski z testami hormonalnymi i terapią GH/IGF‑1. Darmowe narzędzie edukacyjne Vilda Clinic">
@@ -384,7 +388,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
-     ios26-ui.js?v=26 dołączy klasę dynamicznie. -->
+     ios26-ui.js?v=27 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
 
 <header>
@@ -2056,7 +2060,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="inline_index_05.js?v=1"></script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=26" defer></script>
+<script src="ios26-ui.js?v=27" defer></script>
 <!-- Guided tutorial for first‑time users -->
 <script src="tutorial.js?v=8" defer></script>
 
