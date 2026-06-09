@@ -28,7 +28,7 @@
                 https://cdn.jsdelivr.net;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -54,7 +54,9 @@
 <meta charset="utf-8">
 <title>Kalkulator klirensu kreatyniny / eGFR – Waga i wzrost</title>
     <!-- Integrate the calculator with the Waga i wzrost site styles -->
-    <link href="style.css?v=48" rel="stylesheet" />
+    <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
+  <link href="style.css?v=48" rel="stylesheet" />
     <link href="sidebar.css" rel="stylesheet" />
     <link href="vilda_chrome.css?v=22" rel="stylesheet">
     <link href="vilda_auth_ui.css?v=49" rel="stylesheet" />
@@ -2574,7 +2576,7 @@ document.addEventListener('DOMContentLoaded', () => {
          na stronie głównej imię, wiek, płeć, masa oraz wzrost są automatycznie
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
-<script src="ios26-ui.js?v=24" defer></script>
+<script src="ios26-ui.js?v=25" defer></script>
 <script defer src="inline_kalkulator_klirens_07.js?v=1"></script>
 <script defer src="vilda_down_syndrome.js?v=1"></script>
 <script defer src="vilda_anorexia_risk.js?v=1"></script>
