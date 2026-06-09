@@ -3,7 +3,7 @@
   "short_name": "Waga i wzrost",
   "description": "Waga i wzrost – kompleksowy kalkulator percentyli, BMI i spalania kalorii z modułem lekarskim do testów endokrynologicznych oraz terapii GH/IGF‑1. Darmowe narzędzie edukacyjne Vilda Clinic",
   "id": "./",
-  "start_url": "./",
+  "start_url": "app.html#/start",
   "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
