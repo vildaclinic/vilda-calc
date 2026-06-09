@@ -1013,8 +1013,10 @@ input[type="submit"]:focus-visible {
 }
 
 .result-box.out-of-range {
-  background: #ffebee;
-  border-color: #e57373;
+  /* !important: glass-theme id-scoped reguły (#xxxCard .result-box) nadpisują
+     to tło wyższą specyficznością — wymuszamy jasnoczerwone tło wszędzie. */
+  background: #ffebee !important;
+  border-color: #e57373 !important;
 }
 .result-box.out-of-range strong {
   color: #c62828;
