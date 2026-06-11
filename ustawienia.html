@@ -1213,6 +1213,19 @@ html.vilda-pro-active .pro-sync-note {
                         + Dodaj Face ID / odcisk palca na tym urządzeniu
                       </button>
                     </div>
+                    <!-- PWA-PASSKEY (2026-06-11): zainstalowana aplikacja (PWA) na
+                         komputerze widzi INNE magazyny kluczy niż przeglądarka
+                         (np. Chrome-PWA nie ma dostępu do Apple Passwords / pęku
+                         iCloud). Drugi klucz zarejestrowany TUTAJ trafia do
+                         magazynu dostępnego w aplikacji — klucze działają
+                         równolegle. -->
+                    <p class="settings-inline-note" id="passkeyPwaHint" style="margin-top:8px;">
+                      💡 Wskazówka: jeśli Touch ID / Face ID działa w przeglądarce,
+                      ale w zainstalowanej aplikacji (PWA) nie ma takiej opcji —
+                      otwórz te Ustawienia <strong>w aplikacji</strong> i dodaj tu
+                      drugi klucz dla tego urządzenia. Klucze działają równolegle,
+                      każdy w swoim magazynie.
+                    </p>
                     <p class="settings-inline-note" id="passkeyStatus" style="margin-top:10px;">&nbsp;</p>
 
                     <div id="bioAutoTriggerRow" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid #e6eef0;">
@@ -2131,7 +2144,7 @@ html.vilda-pro-active .pro-sync-note {
     });
   </script>
 
-  <script defer src="inline_ustawienia_04.js?v=1"></script>
+  <script defer src="inline_ustawienia_04.js?v=2"></script>
 
   <script defer src="inline_ustawienia_05.js?v=1"></script>
 

@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.136';
+const SW_VERSION = '1.0.137';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -133,7 +133,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_01.js?v=1',
   '/inline_ustawienia_02.js?v=1',
   '/inline_ustawienia_03.js?v=1',
-  '/inline_ustawienia_04.js?v=1',
+  '/inline_ustawienia_04.js?v=2',
   '/inline_ustawienia_05.js?v=1',
   '/inline_ustawienia_06.js?v=1',
   '/inline_ustawienia_07.js?v=1',
