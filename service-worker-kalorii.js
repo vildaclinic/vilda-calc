@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.140';
+const SW_VERSION = '1.0.141';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -790,6 +790,7 @@ const OPTIONAL_DOCUMENTS = [
   '/notatki.html',
   '/terminarz.html',
   '/przelicznik-jednostek.html',
+  '/lab_pin_result.js',
   '/app.html'
 ];
 
