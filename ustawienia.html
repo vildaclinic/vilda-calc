@@ -833,6 +833,19 @@ html.vilda-pro-active .pro-sync-note {
                         </button>
                       </div>
                       <p class="settings-inline-note settings-backup-note" id="syncSlotStatus"></p>
+
+                      <!-- ID konta (slotId) — do nadawania/cofania planu PRO po stronie serwera -->
+                      <div class="settings-control-header" style="margin-top:0.9rem;">
+                        <h3 class="settings-control-title">ID konta</h3>
+                      </div>
+                      <p class="settings-control-desc">
+                        Identyfikator tego konta na serwerze (potrzebny do nadawania lub cofania planu PRO). Nie zawiera danych pacjentów ani hasła.
+                      </p>
+                      <div class="settings-card-toggle-row settings-backup-btn-row" style="align-items:center;gap:8px;flex-wrap:wrap;">
+                        <code id="accountSlotIdText" style="font-size:0.76rem;word-break:break-all;background:#f3f6f7;border:1px solid #e1e8ea;border-radius:6px;padding:5px 8px;color:#334;flex:1 1 240px;min-width:0;">zaloguj się, aby zobaczyć</code>
+                        <button type="button" id="accountSlotIdCopyBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>Kopiuj</button>
+                      </div>
+                      <p class="settings-inline-note settings-backup-note" id="accountSlotIdStatus"></p>
                     </div>
                   </details>
 
@@ -2144,7 +2157,7 @@ html.vilda-pro-active .pro-sync-note {
     });
   </script>
 
-  <script defer src="inline_ustawienia_04.js?v=2"></script>
+  <script defer src="inline_ustawienia_04.js?v=3"></script>
 
   <script defer src="inline_ustawienia_05.js?v=1"></script>
 
