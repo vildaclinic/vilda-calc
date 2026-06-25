@@ -19,12 +19,14 @@
                 https://www.google-analytics.com
                 https://analytics.google.com
                 https://vilda-sync.maciej-4b9.workers.dev
+                wss://vilda-sync.maciej-4b9.workers.dev
+
                 https://region1.google-analytics.com
                 https://www.googletagmanager.com
                 https://cdn.jsdelivr.net;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -33,6 +35,10 @@
   <meta http-equiv="Permissions-Policy"
         content="geolocation=(), microphone=(), payment=(), usb=(), bluetooth=()">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <!-- App-shell (B1): jako panel w app.html (?embedded=1) chowamy własny nagłówek/sidebar/dock —
+       chrome dostarcza shell. Identyczne jak w pozostałych hostowanych stronach. -->
+  <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
 <!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
      GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
      Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
@@ -55,11 +61,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
-  <link href="ios26-v2.css?v=12" rel="stylesheet">
-  <link href="style.css?v=48" rel="stylesheet">
+  <link href="ios26-v2.css?v=18" rel="stylesheet">
+  <link href="style.css?v=54" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=22" rel="stylesheet">
-  <link href="vilda_auth_ui.css?v=49" rel="stylesheet">
+  <link href="vilda_auth_ui.css?v=57" rel="stylesheet">
   <link href="ustawienia.css?v=8" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
@@ -145,13 +151,16 @@ html.vilda-pro-active .pro-sync-note {
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
-<script defer src="vilda_vault.js?v=89"></script>
-<script defer src="vilda_sync.js?v=10"></script>
-<script defer src="vilda_sync_integration.js?v=9"></script>
-<script defer src="vilda_auth_ui.js?v=181"></script>
+<script defer src="vilda_vault.js?v=120"></script>
+<script defer src="vilda_frame_sync.js?v=2"></script>
+<script defer src="vilda_sync.js?v=17"></script>
+<script defer src="vilda_sync_integration.js?v=26"></script>
+<script defer src="vilda_realtime.js?v=5"></script>
+<script defer src="vilda_auth_ui.js?v=277"></script>
+<script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
-<script defer src="vilda_pro_access.js?v=2"></script>
+<script defer src="vilda_pro_access.js?v=9"></script>
 <script defer src="vilda_pro_ui.js?v=2"></script>
 <script defer src="vilda_file_export.js?v=5"></script>
 <script defer src="vilda_deps.js?v=6"></script>
@@ -160,8 +169,8 @@ html.vilda-pro-active .pro-sync-note {
 
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="lucide.min.js?v=1" defer></script>
-  <script src="ios26-ui.js?v=22" defer></script>
-<script defer src="vilda_chrome.js?v=43"></script>
+  <script src="ios26-ui.js?v=37" defer></script>
+<script defer src="vilda_chrome.js?v=56"></script>
 </head>
 <body class="js-loading liquid-ios26 page-settings has-sidebar">
   <header>
@@ -381,7 +390,7 @@ html.vilda-pro-active .pro-sync-note {
                 <p class="settings-accordion-text">Osobno sterujesz dolnym dockiem i strzałką „powrót na górę”.</p>
               </div>
               <div class="settings-accordion-meta">
-                <span class="settings-mini-chip">2 przełączniki</span>
+                <span class="settings-mini-chip">3 przełączniki</span>
                 <span class="settings-mini-chip">Mobile</span>
               </div>
               <span class="settings-chevron" aria-hidden="true">⌄</span>
@@ -406,10 +415,36 @@ html.vilda-pro-active .pro-sync-note {
                       <span class="slider"></span>
                     </label>
                   </div>
+                  <div class="setting-item">
+                    <span>Szybki dock (wersja testowa)</span>
+                    <label class="switch">
+                      <input type="checkbox" id="fastDockShellSetting">
+                      <span class="slider"></span>
+                    </label>
+                  </div>
                 </div>
+                <p class="settings-section-note" id="fastDockShellNote">
+                  Eksperyment: zakładki Terminarz i Lab przełączają się natychmiast (bez przeładowania). Po zmianie odśwież stronę. Możesz też wejść bezpośrednio na <code>app.html</code>.
+                </p>
               </div>
             </div>
           </details>
+          <script>
+          (function () {
+            try {
+              var cb = document.getElementById('fastDockShellSetting');
+              if (!cb) return;
+              var KEY = 'vilda-spa-shell-v1';
+              try { cb.checked = (window.localStorage.getItem(KEY) === 'on'); } catch (e) { cb.checked = false; }
+              cb.addEventListener('change', function () {
+                try {
+                  if (cb.checked) window.localStorage.setItem(KEY, 'on');
+                  else window.localStorage.removeItem(KEY);
+                } catch (e) { /* noop */ }
+              });
+            } catch (e) { /* noop */ }
+          })();
+          </script>
 
           <div class="settings-group-label">Wykresy i obliczenia</div>
           <details class="settings-accordion" id="settings-section-pal">
@@ -581,6 +616,56 @@ html.vilda-pro-active .pro-sync-note {
                   aby aplikacja automatycznie nadpisywała ten sam plik <code>.wiw</code> po każdej wizycie.
                 </p>
                 <div class="settings-control-grid">
+
+                  <!-- Eksport wszystkich danych (RODO art. 20 — przenoszalność) -->
+                  <div class="settings-control-card settings-control-card--wide" id="exportAllDataCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Eksport wszystkich moich danych</h3>
+                    </div>
+                    <p class="settings-control-desc">
+                      Pobierz komplet swoich danych (pacjenci, pomiary, notatki, wyniki, leczenie) w jednym pliku JSON — odszyfrowanym lokalnie. Format maszynowo-czytelny (przenoszalność danych, RODO art. 20). Plik zawiera dane wrażliwe — przechowuj bezpiecznie.
+                    </p>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <button type="button" id="exportAllDataBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn" disabled>
+                        Eksportuj wszystkie moje dane (JSON)
+                      </button>
+                    </div>
+                    <p class="settings-inline-note settings-backup-note" id="exportAllDataStatus">Zaloguj się, aby wyeksportować dane.</p>
+                  </div>
+
+                  <!-- Import kopii pacjentów (przeniesione z ekranu Pacjenci → tutaj) -->
+                  <div class="settings-control-card settings-control-card--wide" id="importPatientsCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Importuj kopie pacjentów</h3>
+                    </div>
+                    <p class="settings-control-desc">
+                      Wczytaj pliki kopii pacjentów (.wiw) i zaimportuj wybrane konta do swojego sejfu. Pliki ze starego konta wymagają hasła, którym je zaszyfrowano. Import scala dane lokalnie — zero-knowledge (nic nie idzie na serwer).
+                    </p>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <button type="button" id="importPatientsBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn">
+                        Importuj kopie pacjentów
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Dziennik dostępu (audit log) — kontekst dokumentacji medycznej -->
+                  <div class="settings-control-card settings-control-card--wide" id="auditLogCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Dziennik dostępu</h3>
+                      <span class="settings-tag" id="auditLogTag">—</span>
+                    </div>
+                    <p class="settings-control-desc">
+                      Rejestr „kto / kiedy / co" (otwarcie karty pacjenta, zapis i usunięcie notatki, eksport danych, odblokowanie) — szyfrowany lokalnie kluczem konta, z wykrywaniem manipulacji (łańcuch hashy). Zapisywany na tym urządzeniu, nie wysyłany na serwer.
+                    </p>
+                    <div id="auditLogList" style="max-height:220px;overflow:auto;font-size:0.78rem;color:#374151;border:1px solid #e1e8ea;border-radius:8px;padding:6px 8px;background:#fbfdfd;margin:6px 0;">Zaloguj się, aby zobaczyć dziennik.</div>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <button type="button" id="auditLogRefreshBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>Odśwież</button>
+                      <button type="button" id="auditLogExportBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>Eksportuj dziennik</button>
+                      <button type="button" id="auditLogClearBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" style="color:#dc2626;" disabled>Wyczyść</button>
+                    </div>
+                    <p class="settings-inline-note settings-backup-note" id="auditLogStatus"></p>
+                  </div>
+
                   <div class="settings-control-card settings-backup-card settings-control-card--wide" id="backupFolderCard">
 
                     <!-- ── Podsekcja 1: Folder kopii ── -->
@@ -774,6 +859,32 @@ html.vilda-pro-active .pro-sync-note {
                       Hasło jest jedynym kluczem do danych — serwer przechowuje wyłącznie zaszyfrowane bajty i nigdy nie zna Twojego hasła ani danych pacjentów.
                     </p>
                   </div>
+
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja: łączność na żywo (WebSocket realtime) ── -->
+                  <div class="settings-control-header" style="align-items:center;gap:8px;">
+                    <h3 class="settings-control-title">Łączność na żywo</h3>
+                    <span class="settings-tag" id="realtimeStatusTag">—</span>
+                  </div>
+                  <p class="settings-control-desc" id="realtimeStatusDesc">
+                    Gdy aktywna, zmiany z innych urządzeń pojawiają się natychmiast (zamiast czekać na odświeżenie).
+                  </p>
+
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja: ID konta (slotId) — WIDOCZNE; do nadawania/cofania planu PRO ── -->
+                  <div class="settings-control-header">
+                    <h3 class="settings-control-title">ID konta</h3>
+                  </div>
+                  <p class="settings-control-desc">
+                    Identyfikator tego konta na serwerze (potrzebny do nadawania lub cofania planu PRO). Nie zawiera danych pacjentów ani hasła.
+                  </p>
+                  <div class="settings-card-toggle-row settings-backup-btn-row" style="align-items:center;gap:8px;flex-wrap:wrap;">
+                    <code id="accountSlotIdText" style="font-size:0.76rem;word-break:break-all;background:#f3f6f7;border:1px solid #e1e8ea;border-radius:6px;padding:5px 8px;color:#334;flex:1 1 240px;min-width:0;">zaloguj się, aby zobaczyć</code>
+                    <button type="button" id="accountSlotIdCopyBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>Kopiuj</button>
+                  </div>
+                  <p class="settings-inline-note settings-backup-note" id="accountSlotIdStatus"></p>
 
                   <div class="settings-backup-sep" role="separator"></div>
 
@@ -1182,6 +1293,19 @@ html.vilda-pro-active .pro-sync-note {
                         + Dodaj Face ID / odcisk palca na tym urządzeniu
                       </button>
                     </div>
+                    <!-- PWA-PASSKEY (2026-06-11): zainstalowana aplikacja (PWA) na
+                         komputerze widzi INNE magazyny kluczy niż przeglądarka
+                         (np. Chrome-PWA nie ma dostępu do Apple Passwords / pęku
+                         iCloud). Drugi klucz zarejestrowany TUTAJ trafia do
+                         magazynu dostępnego w aplikacji — klucze działają
+                         równolegle. -->
+                    <p class="settings-inline-note" id="passkeyPwaHint" style="margin-top:8px;">
+                      💡 Wskazówka: jeśli Touch ID / Face ID działa w przeglądarce,
+                      ale w zainstalowanej aplikacji (PWA) nie ma takiej opcji —
+                      otwórz te Ustawienia <strong>w aplikacji</strong> i dodaj tu
+                      drugi klucz dla tego urządzenia. Klucze działają równolegle,
+                      każdy w swoim magazynie.
+                    </p>
                     <p class="settings-inline-note" id="passkeyStatus" style="margin-top:10px;">&nbsp;</p>
 
                     <div id="bioAutoTriggerRow" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid #e6eef0;">
@@ -1282,6 +1406,7 @@ html.vilda-pro-active .pro-sync-note {
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="kontakt.html" class="site-footer__link">Kontakt</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link">Regulamin</a>
     </nav>
   </div>
   <div class="site-footer__disclaimer-wrap">
@@ -2100,7 +2225,7 @@ html.vilda-pro-active .pro-sync-note {
     });
   </script>
 
-  <script defer src="inline_ustawienia_04.js?v=1"></script>
+  <script defer src="inline_ustawienia_04.js?v=8"></script>
 
   <script defer src="inline_ustawienia_05.js?v=1"></script>
 

@@ -21,12 +21,14 @@
                 https://www.google-analytics.com
                 https://analytics.google.com
                 https://vilda-sync.maciej-4b9.workers.dev
+                wss://vilda-sync.maciej-4b9.workers.dev
+
                 https://region1.google-analytics.com
                 https://www.googletagmanager.com
                 https://cdn.jsdelivr.net;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -58,6 +60,10 @@
       przygotowanego pliku wagaiwzrost‑og.jpg umieszczonego w katalogu images.
     -->
     <title>wagaiwzrost.pl</title>
+    <!-- APP-SHELL (B1): gdy strona ładuje się jako panel iframe (?embedded=1),
+         chowamy jej własny chrome, by nie dublować ramki shella (app.html). -->
+    <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+    <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Zaktualizowany opis: akcentujemy markę Waga i wzrost oraz kluczowe funkcje aplikacji -->
     <meta name="description" content="Waga i wzrost – kompleksowy kalkulator BMI, siatek centylowych, WHR, BMR oraz zapotrzebowania kalorycznego. Zawiera moduł lekarski z testami hormonalnymi i terapią GH/IGF‑1. Darmowe narzędzie edukacyjne Vilda Clinic">
@@ -80,11 +86,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
-<link href="ios26-v2.css?v=12" rel="stylesheet">
-<link href="style.css?v=48" rel="stylesheet">
+<link href="ios26-v2.css?v=18" rel="stylesheet">
+<link href="style.css?v=54" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 <link href="vilda_chrome.css?v=22" rel="stylesheet">
-<link href="vilda_auth_ui.css?v=49" rel="stylesheet">
+<link href="vilda_auth_ui.css?v=57" rel="stylesheet">
 <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet">
 <link href="vilda_obesity_banner.css?v=3" rel="stylesheet">
 
@@ -228,13 +234,16 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
-<script defer src="vilda_vault.js?v=89"></script>
-<script defer src="vilda_sync.js?v=10"></script>
-<script defer src="vilda_sync_integration.js?v=9"></script>
-<script defer src="vilda_auth_ui.js?v=181"></script>
+<script defer src="vilda_vault.js?v=120"></script>
+<script defer src="vilda_frame_sync.js?v=2"></script>
+<script defer src="vilda_sync.js?v=17"></script>
+<script defer src="vilda_sync_integration.js?v=26"></script>
+<script defer src="vilda_realtime.js?v=5"></script>
+<script defer src="vilda_auth_ui.js?v=277"></script>
+<script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
-<script defer src="vilda_pro_access.js?v=2"></script>
+<script defer src="vilda_pro_access.js?v=9"></script>
 <script defer src="vilda_pro_ui.js?v=2"></script>
 <script defer src="vilda_file_export.js?v=5"></script>
 <script defer src="vilda_deps.js?v=91"></script>
@@ -246,9 +255,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=27"></script>
+<script defer src="vilda_data_import_export.js?v=31"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
-<script defer src="vilda_advanced_growth.js?v=16"></script>
+<script defer src="vilda_advanced_growth.js?v=17"></script>
 <!-- PERF-P2e2 (2026-06-07): przelicznik jednostek laboratoryjnych — dane (212 KB)
      + silnik ładowane LENIWIE: idle po load LUB pierwsza interakcja. Jedyny
      konsument na tej stronie to generator epikryzy (akcja użytkownika, dużo
@@ -379,12 +388,12 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         ]
       }
       </script>
-<script defer src="vilda_chrome.js?v=43"></script>
+<script defer src="vilda_chrome.js?v=56"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
-     ios26-ui.js?v=22 dołączy klasę dynamicznie. -->
+     ios26-ui.js?v=37 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
 
 <header>
@@ -407,39 +416,78 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
   <div class="half">
     <fieldset class="user-card">
       <!-- Zmodyfikowane pole wieku: lata oraz opcjonalnie miesiące -->
-      <!-- Nowe pole imię i nazwisko -->
-      <label>Imię i&nbsp;Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
-        <input type="text" id="name">
+      <!-- P-SPLIT (2026-06-23): rozdzielone Nazwisko/Imię. #name pozostaje UKRYTYM
+           „kanonem" (czyta je kolektor, restore, autosave i wspólne sharedUserData oraz
+           pozostałe strony), synchronizowanym skryptem na końcu strony. -->
+      <label>Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+        <input type="text" id="lastName" autocomplete="off">
       </label>
-      <label>Wiek (lata):
-        <!-- Pozwalamy podać wiek w latach od 0 do 130; lata są wymagane -->
-        <input type="number" id="age" min="0" max="130" oninput="debouncedUpdate()" required></label>
-      <!-- Nowe pole na wiek w miesiącach; zakres 1–11, opcjonalne -->
-      <label>Wiek <span style="font-weight:400;opacity:0.65;">(miesiące – opcjonalnie)</span>:
-        <!--
-          Umożliwiamy wpisywanie jedynie wartości od 1 do 11 (pełne miesiące).
-          Pole pozostawione puste jest interpretowane jako brak dodatkowych miesięcy.
-          Ustawiamy atrybut step="1" aby wymusić podawanie tylko liczb całkowitych.
-        -->
-        <input type="number" id="ageMonths" min="1" max="11" step="1" oninput="debouncedUpdate()"></label>
+      <label>Imię <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+        <input type="text" id="firstName" autocomplete="off">
+      </label>
+      <input type="hidden" id="name">
+      <script>
+      /* P-SPLIT: synchronizacja Nazwisko/Imię ⇄ ukryte #name (kanon). Hook na setterze
+         .value pola #name łapie także zapisy ZEWNĘTRZNE (restore/import/sharedUserData),
+         więc widoczne pola zawsze odzwierciedlają #name, a kolektor i autosave czytają #name. */
+      (function(){
+        function $(id){return document.getElementById(id);}
+        var nm=$('name'), fn=$('firstName'), ln=$('lastName');
+        if(!nm||!fn||!ln) return;
+        var syncing=false;
+        /* Konwencja „Nazwisko Imię": kanon = nazwisko + imię; podział: pierwszy wyraz = nazwisko. */
+        function combine(){ return [(ln.value||'').trim(),(fn.value||'').trim()].filter(Boolean).join(' '); }
+        function splitName(full){ var s=(full==null?'':String(full)).trim().replace(/\s+/g,' '); if(!s) return {f:'',l:''}; var p=s.split(' '); if(p.length===1) return {f:'',l:p[0]}; var l=p.shift(); return {f:p.join(' '),l:l}; }
+        function toName(){ if(syncing) return; syncing=true; nm.value=combine(); try{ nm.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){ } syncing=false; }
+        function fromName(){ if(syncing) return; syncing=true; var s=splitName(nm.value); fn.value=s.f; ln.value=s.l; syncing=false; }
+        fn.addEventListener('input', toName);
+        ln.addEventListener('input', toName);
+        try{
+          var proto=Object.getPrototypeOf(nm), d=Object.getOwnPropertyDescriptor(proto,'value');
+          if(d&&d.configurable){ Object.defineProperty(nm,'value',{ configurable:true, enumerable:d.enumerable,
+            get:function(){ return d.get.call(this); },
+            set:function(v){ d.set.call(this,v); if(!syncing){ fromName(); } } }); }
+        }catch(_){ }
+        fromName();
+      })();
+      </script>
+      <!-- Wiek: lata + miesiące w JEDNYM wierszu (2026-06-23). Miesiące 1–11 opcjonalne. -->
+      <style>
+        .vild-age-row{display:flex;gap:12px;align-items:flex-start;}
+        .vild-age-row > label{flex:1 1 0;min-width:0;}
+        .vild-age-row > label.vild-age-years{flex:1.1 1 0;}
+        @media (max-width:360px){ .vild-age-row{flex-direction:column;gap:0;} }
+        /* Tanner toggle — wygląd jak makieta. !important + prefiks .liquid-ios26, bo motyw
+           liquid glass nadpisuje `button` (background/border/box-shadow) z !important. */
+        .vild-tanner-toggle,
+        .liquid-ios26 .vild-tanner-toggle{
+          /* blok o szerokości treści, w rytmie formularza: 0.7rem nad i (przez margin-top
+             następnej etykiety) 0.7rem pod → symetrycznie między Płcią a Wagą. */
+          display:block!important;width:fit-content!important;margin:0.7rem 0 0!important;
+          padding:8px 12px!important;font-size:.82rem!important;font-weight:600!important;
+          background:transparent!important;border:1px solid #cfe0e3!important;border-radius:9px!important;
+          color:#5a7274!important;cursor:pointer!important;font-family:inherit!important;line-height:1.2!important;
+          height:auto!important;min-height:0!important;
+          box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;text-align:left!important;}
+        .vild-tanner-toggle:hover,
+        .liquid-ios26 .vild-tanner-toggle:hover{border-color:#00838d!important;color:#00838d!important;background:transparent!important;}
+      </style>
+      <div class="vild-age-row">
+        <label class="vild-age-years">Wiek (lata):
+          <input type="number" id="age" min="0" max="130" oninput="debouncedUpdate()" required></label>
+        <label>Wiek (miesiące):
+          <input type="number" id="ageMonths" min="1" max="11" step="1" oninput="debouncedUpdate()"></label>
+      </div>
       <label>Płeć:
         <select id="sex" onchange="debouncedUpdate()">
           <option value="M">Mężczyzna</option>
           <option value="F">Kobieta</option>
         </select></label>
-      <!-- Etap Tannera — progressive disclosure: dla pacjentów <18 r.ż. zawsze widoczne;
-           dla dorosłych ukryte (Tanner V jest standardową wartością domyślną dla
-           pacjenta po dojrzewaniu), ale można ujawnić toggle'em w rzadkich
-           przypadkach (np. dorosły z opóźnionym dojrzewaniem). Jeśli wartość jest
-           już wpisana — pole pokazuje się niezależnie od wieku. -->
-      <button type="button" id="tannerToggleBtn"
-              style="display:none;align-self:flex-start;margin:0.25rem 0 0.5rem;
-                     padding:0.35rem 0.65rem;font-size:0.82rem;font-weight:500;
-                     background:transparent;border:1px solid #cfe0e3;border-radius:8px;
-                     color:#5a7274;cursor:pointer;text-align:left;line-height:1.3;">
-        + Pokaż etap Tannera <span style="opacity:0.7;">(dla zaburzeń dojrzewania u dorosłych)</span>
-      </button>
-      <label id="tannerStageWrap">Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
+      <!-- Etap Tannera — progressive disclosure (2026-06-23): pole DOMYŚLNIE UKRYTE dla KAŻDEGO
+           wieku (Tanner liczony automatycznie z wieku). Toggle ujawnia pole; jeśli wartość jest
+           już wpisana (restore/autosave) — pole pokazuje się samo. Logika w inline_index_02.js. -->
+      <button type="button" id="tannerToggleBtn" class="vild-tanner-toggle">+ Pokaż etap dojrzewania (Tanner)</button>
+      <label id="tannerStageWrap" style="display:none;">Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
         <select id="tannerStage" onchange="debouncedUpdate(); if (typeof updateTannerVisibility === 'function') updateTannerVisibility();">
           <option value="">— nieznany / automatycznie z wieku —</option>
           <option value="1">Tanner I — przedpokwitaniowy</option>
@@ -448,7 +496,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <option value="4">Tanner IV — późne pokwitanie</option>
           <option value="5">Tanner V — dojrzałość pełna</option>
         </select></label>
-      <script defer src="inline_index_02.js?v=1"></script>
+      <script defer src="inline_index_02.js?v=3"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
@@ -1302,7 +1350,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=48, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=54, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->
@@ -1646,6 +1694,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="kontakt.html" class="site-footer__link">Kontakt</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link">Regulamin</a>
     </nav>
   </div>
   <div class="site-footer__disclaimer-wrap">
@@ -1685,7 +1734,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vitalSigns.js"></script>
 <script src="adult_vitals.js?v=5" defer></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
-<script defer src="vilda_professional_module.js?v=2"></script>
+<script defer src="vilda_professional_module.js?v=4"></script>
 <script defer src="vilda_persist_runtime.js?v=8"></script>
 <script defer src="vilda_summary_cards.js?v=18"></script>
 <script defer src="vilda_diet_plan_ui.js?v=1"></script>
@@ -1693,7 +1742,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=182" defer></script>
+<script src="app.js?v=183" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport
@@ -1706,7 +1755,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_DIET = 'vilda_diet_recommendations.js?v=3';
+  var SRC_DIET = 'vilda_diet_recommendations.js?v=4';
   var SRC_PR = 'vilda_patient_report.js?v=5';
   var started = false;
   function inject(src, onload) {
@@ -1799,7 +1848,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_GHIGF = 'gh_igf_therapy.js?v=8';
+  var SRC_GHIGF = 'gh_igf_therapy.js?v=20';
   var started = false;
   function loadGhIgf() {
     if (started) return;
@@ -2047,16 +2096,16 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      Kod ten korzysta z globalnych tablic LMS (zdefiniowanych w app.js) oraz bibliotek jsPDF i Canvas.
      Po kliknięciu przycisku „Generuj siatkę centylową” tworzy dwa wykresy (wzrostu i wagi),
      łączy je na jednej stronie A4 i wyświetla jako PDF w nowym oknie. -->
-<script defer src="inline_index_03.js?v=1"></script>
+<script defer src="inline_index_03.js?v=4"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
-<script defer src="inline_index_04.js?v=1"></script>
+<script defer src="inline_index_04.js?v=19"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script defer src="inline_index_05.js?v=1"></script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=22" defer></script>
+<script src="ios26-ui.js?v=37" defer></script>
 <!-- Guided tutorial for first‑time users -->
 <script src="tutorial.js?v=8" defer></script>
 
@@ -2130,7 +2179,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=32" defer></script>
+  <script src="custom-fixes.js?v=47" defer></script>
 
   <!-- Dynamic repositioning of Cole and Advanced Growth cards on mobile/desktop
        views.  This script adjusts the DOM order of these elements only in

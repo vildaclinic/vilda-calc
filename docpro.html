@@ -21,12 +21,14 @@
                 https://www.google-analytics.com
                 https://analytics.google.com
                 https://vilda-sync.maciej-4b9.workers.dev
+                wss://vilda-sync.maciej-4b9.workers.dev
+
                 https://region1.google-analytics.com
                 https://www.googletagmanager.com
                 https://cdn.jsdelivr.net;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -59,6 +61,10 @@
     -->
     <title>DocPro – Waga i wzrost</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- APP-SHELL (B1): gdy strona ładuje się jako panel iframe (?embedded=1),
+       chowamy jej własny chrome, by nie dublować ramki shella (app.html). -->
+  <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
     <!-- Zaktualizowany opis: akcentujemy markę Waga i wzrost oraz kluczowe funkcje aplikacji -->
     <meta name="description" content="Waga i wzrost – kompleksowy kalkulator BMI, siatek centylowych, WHR, BMR oraz zapotrzebowania kalorycznego. Zawiera moduł lekarski z testami hormonalnymi i terapią GH/IGF‑1. Darmowe narzędzie edukacyjne Vilda Clinic">
     <meta name="keywords" content="kalkulator BMI, niskorosłość, zespół Downa, siatki centylowe, zdrowie dzieci, wzrost dziecka, niedowaga, nadwaga, otyłość, plan odchudzania, dieta redukcyjna, kalkulator kalorii, analiza WHR, zapotrzebowanie kaloryczne, testy hormonalne, testy endokrynologiczne, hormon wzrostu, terapia hormonem wzrostu, IGF-1">
@@ -80,11 +86,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
-<link href="style.css?v=48" rel="stylesheet" />
-<link href="ios26-v2.css?v=12" rel="stylesheet" />
+<link href="style.css?v=54" rel="stylesheet" />
+<link href="ios26-v2.css?v=18" rel="stylesheet" />
 <link href="sidebar.css" rel="stylesheet" />
 <link href="vilda_chrome.css?v=22" rel="stylesheet">
-<link href="vilda_auth_ui.css?v=49" rel="stylesheet" />
+<link href="vilda_auth_ui.css?v=57" rel="stylesheet" />
 <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet" />
 <link href="vilda_obesity_banner.css?v=3" rel="stylesheet" />
 
@@ -179,13 +185,16 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
-<script defer src="vilda_vault.js?v=89"></script>
-<script defer src="vilda_sync.js?v=10"></script>
-<script defer src="vilda_sync_integration.js?v=9"></script>
-<script defer src="vilda_auth_ui.js?v=181"></script>
+<script defer src="vilda_vault.js?v=120"></script>
+<script defer src="vilda_frame_sync.js?v=2"></script>
+<script defer src="vilda_sync.js?v=17"></script>
+<script defer src="vilda_sync_integration.js?v=26"></script>
+<script defer src="vilda_realtime.js?v=5"></script>
+<script defer src="vilda_auth_ui.js?v=277"></script>
+<script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
-<script defer src="vilda_pro_access.js?v=2"></script>
+<script defer src="vilda_pro_access.js?v=9"></script>
 <script defer src="vilda_pro_ui.js?v=2"></script>
 <script defer src="vilda_file_export.js?v=5"></script>
 <script defer src="vilda_deps.js?v=91"></script>
@@ -197,9 +206,9 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=27"></script>
+<script defer src="vilda_data_import_export.js?v=31"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
-<script defer src="vilda_advanced_growth.js?v=16"></script>
+<script defer src="vilda_advanced_growth.js?v=17"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=63" defer></script>
 
@@ -640,6 +649,40 @@ html.vilda-pro-active   #proGateBanner { display: none; }
              do czasu pozytywnej weryfikacji numeru PWZ.  Widoczność tego przycisku
              jest kontrolowana wyłącznie w kodzie JavaScript (activateProfessionalModule
              oraz validatePWZ), dlatego tutaj nie ustawiamy stylu display. */
+
+          /* PRO-PRERENDER (2026-06-07): gdy skrypt inline na początku body
+             rozpozna aktywny moduł lekarski (snapshot/PWZ), klasa
+             pro-prerender na <html> pokazuje od pierwszej klatki DOKŁADNIE
+             ten zestaw wrapperów, który odsłania activateProfessionalModule,
+             i chowa instrukcję wpisania PWZ. !important jest konieczny,
+             bo wrappery mają inline'owe style="display:none" w HTML —
+             dlatego gałęzie JS (aktywacja/dezaktywacja/brak PWZ) sterują
+             też samą klasą (setDocproProSnap w vilda_professional_module.js).
+             Pod-przyciski testów (gh/ogtt/acth/snp/...) zostają ukryte jak
+             dotąd.
+             FIX 1.0.37: flu/thyroid/hypertension też w prerenderze — ich
+             moduły pokazują je dopiero przy własnym init (obserwacja
+             computedStyle abx), a spóźnione wpięcie w siatkę (order 2/3/4)
+             przetasowywało już widoczne przyciski = „przebudowa drabinki"
+             na wolnych urządzeniach (iOS PWA). Warunek jest efektywnie ten
+             sam (widoczny abx ⟺ aktywny moduł), a ich sync ustawia potem
+             spójny inline flex; dezaktywacja zdejmuje klasę, więc kierunek
+             „ukryj" działa. */
+          html.pro-prerender #abxButtonWrapper,
+          html.pro-prerender #endoButtonWrapper,
+          html.pro-prerender #igfButtonWrapper,
+          html.pro-prerender #zscoreButtonWrapper,
+          html.pro-prerender #obesityButtonWrapper,
+          html.pro-prerender #bisphosButtonWrapper,
+          html.pro-prerender #sgaBirthButtonWrapper,
+          html.pro-prerender #fluButtonWrapper,
+          html.pro-prerender #thyroidCancerKidsButtonWrapper,
+          html.pro-prerender #hypertensionButtonWrapper {
+            display: flex !important;
+          }
+          html.pro-prerender .doctor-info {
+            display: none !important;
+          }
 
           /*
            * Przycisk „Leczenie bisfosfonianami” powinien zachowywać się
@@ -1263,13 +1306,43 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 }
 
 </style>
-<script defer src="vilda_chrome.js?v=43"></script>
+<script defer src="vilda_chrome.js?v=56"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
-     ios26-ui.js?v=22 dołączy klasę dynamicznie. -->
+     ios26-ui.js?v=37 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
+
+<script>
+/* PRO-PRERENDER (2026-06-07, wzorzec O1a): drabinka modułu lekarskiego
+   (Antybiotykoterapia / Testy w endokrynologii / GH-IGF-1 / Z-score / ...)
+   od PIERWSZEJ klatki, zamiast odsłaniania po asynchronicznym łańcuchu
+   persist→professional_module→activate. Źródła stanu (oba synchroniczne,
+   zero danych medycznych): (1) bool docproPro w sesyjnym snapshocie
+   vildaChromeUiSnapV1 — pisany w vilda_professional_module.js przy każdej
+   (de)aktywacji, czyszczony przy locku/wylogowaniu przez vilda_chrome.js;
+   (2) fallback: obecność zapamiętanego klucza pwzNumber w localStorage
+   (na docpro checkbox „Jestem lekarzem" jest na stałe zaznaczony w HTML,
+   więc aktywacja zależy wyłącznie od PWZ). Wyłącznie kosmetyka widoczności
+   — weryfikacja PWZ i logika modułów bez zmian. */
+(function () {
+  try {
+    var on = false;
+    try {
+      var s = JSON.parse(sessionStorage.getItem('vildaChromeUiSnapV1') || 'null');
+      on = !!(s && s.docproPro === true);
+    } catch (_) {}
+    if (!on) {
+      try {
+        var p = localStorage.getItem('pwzNumber');
+        on = !!(p && String(p).trim());
+      } catch (_) {}
+    }
+    if (on) document.documentElement.classList.add('pro-prerender');
+  } catch (_) {}
+})();
+</script>
 
 <header>
 </header>
@@ -3466,6 +3539,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="kontakt.html" class="site-footer__link">Kontakt</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link">Regulamin</a>
     </nav>
   </div>
   <div class="site-footer__disclaimer-wrap">
@@ -3496,9 +3570,9 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      Była potrzebna wyłącznie do wsadowego importu/eksportu Z-score (rzadka akcja),
      a blokowała start strony przy każdej wizycie. Teraz ładowana leniwie z CDN
      dopiero przy pierwszym uruchomieniu tej akcji — patrz vildaEnsureXlsxLibrary()
-     w vilda_professional_module.js (URL + SRI: xlsx@0.18.5 / sha384-vtjasy…). -->
+     w vilda_professional_module.js (cdn.sheetjs.com xlsx-0.20.3; aktualizacja 2026-06-14 z 0.18.5 — CVE). -->
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
-<script defer src="vilda_professional_module.js?v=2"></script>
+<script defer src="vilda_professional_module.js?v=4"></script>
 <script defer src="vilda_persist_runtime.js?v=8"></script>
 <script defer src="vilda_summary_cards.js?v=18"></script>
 <script defer src="vilda_diet_plan_ui.js?v=1"></script>
@@ -3506,12 +3580,12 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=182" defer></script>
-<script src="vilda_diet_recommendations.js?v=3" defer></script>
+<script src="app.js?v=183" defer></script>
+<script src="vilda_diet_recommendations.js?v=4" defer></script>
 <script src="vilda_patient_report.js?v=5" defer></script>
 <!-- po app.js -->
-<script src="gh_igf_therapy.js?v=8" defer></script>
-<script src="gh_therapy_monitor.js?v=13" defer></script>
+<script src="gh_igf_therapy.js?v=20" defer></script>
+<script src="gh_therapy_monitor.js?v=24" defer></script>
 <!-- Skrypt kalkulatora antybiotykoterapii – generuje kartę dawek antybiotyków.
      Ładowany po głównym pliku app.js i module GH/IGF, aby skorzystać z już zainicjowanych
      elementów DOM oraz funkcji (np. pobierania masy ciała). Plik antibiotic_therapy.js
@@ -3555,7 +3629,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="inline_docpro_03.js?v=1"></script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=22" defer></script>
+<script src="ios26-ui.js?v=37" defer></script>
 <!-- Guided tutorial for first‑time users -->
 <script src="tutorial.js?v=8" defer></script>
 
@@ -3655,7 +3729,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=32" defer></script>
+  <script src="custom-fixes.js?v=47" defer></script>
   <script src="docpro_state_persist.js?v=4" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts
