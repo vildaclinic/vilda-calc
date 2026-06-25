@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://cdnjs.cloudflare.com
+                https://cdn.jsdelivr.net
+                https://cdn.sheetjs.com
+                https://www.googletagmanager.com;
+    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com data:;
+    img-src     'self' data: blob: https:;
+    connect-src 'self'
+                https://www.google-analytics.com
+                https://analytics.google.com
+                https://vilda-sync.maciej-4b9.workers.dev
+                wss://vilda-sync.maciej-4b9.workers.dev
+
+                https://region1.google-analytics.com
+                https://www.googletagmanager.com
+                https://cdn.jsdelivr.net;
+    worker-src  'self';
+    manifest-src 'self';
+    frame-src   'self';
+    child-src   'self';
+    frame-ancestors 'none';
+    base-uri    'self';
+    form-action 'self';
+    object-src  'none';
+  ">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy"
+        content="geolocation=(), microphone=(), payment=(), usb=(), bluetooth=()">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="manifest" href="manifest.json">
+  <title>Vilda — aplikacja</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
+  <link href="ios26-v2.css?v=18" rel="stylesheet">
+  <link href="style.css?v=54" rel="stylesheet">
+  <link href="sidebar.css" rel="stylesheet">
+  <link href="vilda_chrome.css?v=22" rel="stylesheet">
+  <link href="vilda_auth_ui.css?v=57" rel="stylesheet">
+  <link href="vilda_shell.css?v=11" rel="stylesheet">
+  <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet">
+
+<script>
+(function(){
+  try{
+    var c=localStorage.getItem('vilda-pro-plan-v1');
+    if(c)c=JSON.parse(c);
+    var ok=c&&c.plan==='pro'&&c.validUntil&&new Date(c.validUntil).getTime()>Date.now();
+    document.documentElement.classList.add(ok?'vilda-pro-active':'vilda-pro-inactive');
+  }catch(_){document.documentElement.classList.add('vilda-pro-inactive');}
+})();
+</script>
+
+  <script defer src="vilda_logger.js?v=2"></script>
+<script defer src="vilda_html.js?v=4"></script>
+<script defer src="vilda_persistence_adapter.js?v=18"></script>
+<script defer src="vilda_session_bridge.js?v=1"></script>
+<script defer src="vilda_init.js?v=4"></script>
+<script defer src="vilda_crypto.js?v=14"></script>
+<script defer src="vilda_vault.js?v=120"></script>
+<script defer src="vilda_sync.js?v=17"></script>
+<script defer src="vilda_sync_integration.js?v=26"></script>
+<script defer src="vilda_realtime.js?v=5"></script>
+<script defer src="vilda_auth_ui.js?v=277"></script>
+<script defer src="vilda_audit_log.js?v=1"></script>
+<script defer src="vilda_pro_access.js?v=9"></script>
+
+  <script src="lucide.min.js?v=1" defer></script>
+  <script src="ios26-ui.js?v=37" defer></script>
+<script defer src="vilda_chrome.js?v=56"></script>
+<script defer src="vilda_shell.js?v=45"></script>
+<script defer src="vilda_frame_sync.js?v=2"></script>
+</head>
+<body class="js-loading liquid-ios26 page-shell has-sidebar">
+  <header></header>
+  <div class="desktop-layout">
+    <aside class="sidebar"></aside>
+    <div class="main-content">
+      <!-- App-shell (B1): kontener ciepłych paneli iframe. Każda hostowana
+           zakładka docka żyje w utrzymywanym iframe; vilda_shell.js przełącza
+           pokaż/ukryj bez przeładowania. Treść (terminy, nazwiska) istnieje
+           wyłącznie po odszyfrowaniu vaulta WEWNĄTRZ danego iframe. -->
+      <main class="app-shell-main">
+        <div id="appPanes">
+          <div class="app-shell-skeleton" id="appShellSkeleton">Ładowanie…</div>
+        </div>
+      </main>
+    </div>
+    <!-- Trzecia kolumna „decor" shella (2026-06-15): panel Start (same-origin)
+         montuje tu mini-podsumowanie pacjenta. Domyślnie ukryta/zwinięta
+         (vilda_shell.css) — pokazywana tylko na Start gdy ma treść. -->
+    <aside id="vildaShellDecor" class="decor-sidebar" aria-hidden="true"></aside>
+  </div>
+</body>
+</html>
