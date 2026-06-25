@@ -16,6 +16,8 @@
                 https://www.google-analytics.com
                 https://analytics.google.com
                 https://vilda-sync.maciej-4b9.workers.dev
+                wss://vilda-sync.maciej-4b9.workers.dev
+
                 https://region1.google-analytics.com
                 https://www.googletagmanager.com
                 https://cdn.jsdelivr.net;
@@ -41,11 +43,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/></noscript>
-  <link href="ios26-v2.css?v=12" rel="stylesheet">
-  <link href="style.css?v=48" rel="stylesheet">
+  <link href="ios26-v2.css?v=18" rel="stylesheet">
+  <link href="style.css?v=54" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=22" rel="stylesheet">
-  <link href="vilda_auth_ui.css?v=49" rel="stylesheet">
+  <link href="vilda_auth_ui.css?v=57" rel="stylesheet">
 
   <script src="lucide.min.js?v=1" defer></script>
 
@@ -55,10 +57,12 @@
   <script defer src="vilda_session_bridge.js?v=1"></script>
   <script defer src="vilda_init.js?v=4"></script>
   <script defer src="vilda_crypto.js?v=14"></script>
-  <script defer src="vilda_vault.js?v=89"></script>
-  <script defer src="vilda_sync.js?v=10"></script>
-  <script defer src="vilda_sync_integration.js?v=9"></script>
-  <script defer src="vilda_auth_ui.js?v=181"></script>
+  <script defer src="vilda_vault.js?v=120"></script>
+  <script defer src="vilda_sync.js?v=17"></script>
+  <script defer src="vilda_sync_integration.js?v=26"></script>
+<script defer src="vilda_realtime.js?v=5"></script>
+  <script defer src="vilda_auth_ui.js?v=277"></script>
+<script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
   <script defer src="vilda_deps.js?v=6"></script>
@@ -1029,6 +1033,13 @@
             Odblokuj 30 dni PRO za darmo →
           </button>
 
+          <!-- Subskrypcja przez Stripe (Krok 4) -->
+          <button type="button" id="subBuyBtn" class="sub-plan__cta sub-plan__cta--pro"
+                  style="margin-top:10px;background:#fff;color:#5856D6;border:1.5px solid #5856D6;">
+            Subskrybuj PRO (49 zł / mies.) →
+          </button>
+          <div id="subBuyStatus" class="sub-trial-status" role="status" aria-live="polite"></div>
+
         </div>
 
       </div><!-- /sub-plans -->
@@ -1489,6 +1500,7 @@
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="subskrypcja.html" class="site-footer__link" aria-current="page">Vilda PRO</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link">Regulamin</a>
     </nav>
   </div>
   <div class="site-footer__disclaimer-wrap">
@@ -1503,11 +1515,11 @@
 </footer>
 
 <!-- ─── Skrypty ────────────────────────────────────────────────────────── -->
-<script defer src="vilda_pro_access.js?v=2"></script>
+<script defer src="vilda_pro_access.js?v=9"></script>
 <script defer src="vilda_pro_ui.js?v=2"></script>
-<script defer src="vilda_chrome.js?v=43"></script>
+<script defer src="vilda_chrome.js?v=56"></script>
 
-<script defer src="inline_subskrypcja_00.js?v=1"></script>
+<script defer src="inline_subskrypcja_00.js?v=2"></script>
 
 <!-- FAQ accordion -->
 <script defer src="inline_subskrypcja_01.js?v=1"></script>

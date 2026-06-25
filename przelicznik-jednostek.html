@@ -22,7 +22,7 @@
                 https://www.googletagmanager.com;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -47,14 +47,18 @@
   <title>Przelicznik jednostek laboratoryjnych – wagaiwzrost.pl</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="manifest" href="manifest.json">
+  <!-- APP-SHELL (B1): gdy strona ładuje się jako panel iframe (?embedded=1),
+       chowamy jej własny chrome, by nie dublować ramki shella (app.html). -->
+  <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
   <meta name="description" content="Konwerter jednostek konwencjonalnych (μg/dL, ng/mL, pg/mL) na jednostki SI (nmol/L, pmol/L, μmol/L) dla hormonów osi nadnerczowo‑gonadalnej, steroidów płciowych i witaminy D." />
   <meta name="robots" content="index, follow" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
-  <link rel="stylesheet" href="ios26-v2.css?v=12" />
-  <link rel="stylesheet" href="style.css?v=43" />
+  <link rel="stylesheet" href="ios26-v2.css?v=18" />
+  <link rel="stylesheet" href="style.css?v=54" />
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=22" rel="stylesheet">
 
@@ -67,7 +71,7 @@
   <script>
   (function() {
     try {
-      var VERSION = 'v3';
+      var VERSION = 'v4';
       var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
       var persistence = window.VildaPersistence || null;
       var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
@@ -2270,8 +2274,9 @@
     }
   </style>
 
-  <script src="vilda_chrome.js?v=43"></script>
+  <script src="vilda_chrome.js?v=56"></script>
   <script src="lucide.min.js?v=1" defer></script>
+  <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
 
 <body class="js-loading liquid-ios26 has-sidebar">
@@ -2573,6 +2578,7 @@
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="kontakt.html" class="site-footer__link">Kontakt</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link">Regulamin</a>
     </nav>
   </div>
   <div class="site-footer__disclaimer-wrap">
@@ -2590,11 +2596,12 @@
     <i data-lucide="arrow-up"></i>
   </button>
 
-  <script src="ios26-ui.js?v=22" defer></script>
+  <script src="ios26-ui.js?v=37" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
   <script src="lab_units_data.js?v=35"></script>
   <script src="lab_unit_converter.js?v=4"></script>
+  <script src="lab_pin_result.js?v=3"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno

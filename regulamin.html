@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <!-- ═══ Security headers ═══════════════════════════════════════════════
+       Content-Security-Policy ogranicza skąd mogą być ładowane zasoby.
+       Referrer-Policy ukrywa pełne URL przed zewnętrznymi serwisami.
+       Permissions-Policy wyłącza dostęp do sprzętu (kamera, mikrofon, GPS). -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://cdnjs.cloudflare.com
+                https://cdn.jsdelivr.net
+                https://cdn.sheetjs.com
+                https://www.googletagmanager.com;
+    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com data:;
+    img-src     'self' data: blob: https:;
+    connect-src 'self'
+                https://www.google-analytics.com
+                https://analytics.google.com
+                https://region1.google-analytics.com
+                https://www.googletagmanager.com;
+    worker-src  'self';
+    manifest-src 'self';
+    frame-ancestors 'none';
+    base-uri    'self';
+    form-action 'self';
+    object-src  'none';
+  ">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy"
+        content="geolocation=(), camera=(), microphone=(), payment=(), usb=(), bluetooth=()">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="manifest" href="manifest.json">
+  <title>Regulamin – wagaiwzrost.pl</title>
+  <meta name="description" content="Regulamin korzystania z aplikacji wagaiwzrost.pl — warunki świadczenia usługi, plan Vilda PRO, płatności i ograniczenie odpowiedzialności." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://wagaiwzrost.pl/regulamin.html" />
+  <link rel="stylesheet" href="style.css?v=54" />
+  <link rel="stylesheet" href="ios26-v2.css?v=18" />
+  <link rel="stylesheet" href="sidebar.css" />
+
+  <link href="vilda_chrome.css?v=22" rel="stylesheet">
+  <script src="vilda_logger.js?v=2"></script>
+<script src="vilda_html.js?v=4"></script>
+<script src="vilda_persistence_adapter.js?v=18"></script>
+<script src="vilda_session_bridge.js?v=1"></script>
+<script src="vilda_init.js?v=4"></script>
+<script src="vilda_deps.js?v=6"></script>
+
+  <style>
+    .privacy-shell {
+      padding-block: 1rem 2.5rem;
+    }
+    .privacy-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      border-radius: 24px;
+      box-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+      padding: 2rem 2rem 2.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .privacy-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(0, 168, 181, 0.10), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(4, 120, 87, 0.06), transparent 32%);
+      z-index: -1;
+    }
+    .privacy-card h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--primary, #00838d);
+      margin-bottom: 0.3rem;
+    }
+    .privacy-card .privacy-subtitle {
+      font-size: 0.88rem;
+      color: #6b7280;
+      margin-bottom: 0;
+    }
+    .privacy-card h2 {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #164c47;
+      margin: 2rem 0 0.6rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1.5px solid rgba(22, 76, 71, 0.12);
+    }
+    .privacy-card h2:first-of-type {
+      margin-top: 1.4rem;
+    }
+    .privacy-card p {
+      margin: 0.5rem 0;
+      line-height: 1.65;
+      font-size: 0.94rem;
+      color: #1f2937;
+    }
+    .privacy-card ul,
+    .privacy-card ol {
+      margin: 0.5rem 0 0.5rem 1.4rem;
+      line-height: 1.65;
+      font-size: 0.94rem;
+      color: #1f2937;
+    }
+    .privacy-card li {
+      margin-bottom: 0.3rem;
+    }
+    .privacy-card .privacy-contact-box {
+      background: rgba(0, 131, 141, 0.06);
+      border: 1px solid rgba(0, 131, 141, 0.18);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      margin-top: 1rem;
+      font-size: 0.92rem;
+      line-height: 1.7;
+    }
+    .privacy-card .privacy-contact-box strong {
+      color: #00838d;
+    }
+    /* Banner roboczy — widoczne ostrzeżenie, że treść wymaga zatwierdzenia prawnika.
+       USUNĄĆ po finalizacji regulaminu. */
+    .legal-draft-banner {
+      background: #fff7ed;
+      border: 1.5px solid #f59e0b;
+      border-radius: 14px;
+      padding: 0.9rem 1.1rem;
+      margin: 1.2rem 0 0.5rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #7c2d12;
+    }
+    .legal-draft-banner strong { color: #b45309; }
+    /* Placeholder do uzupełnienia treści prawnej. USUNĄĆ wraz z wypełnieniem. */
+    .legal-todo {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.16);
+      border: 1px dashed #f59e0b;
+      border-radius: 6px;
+      padding: 0.05rem 0.4rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #92400e;
+    }
+    @media (max-width: 640px) {
+      .privacy-card {
+        padding: 1.25rem 1rem 1.75rem;
+      }
+    }
+  </style>
+  <script src="lucide.min.js?v=1" defer></script>
+<script src="vilda_chrome.js?v=56"></script>
+</head>
+<body class="js-loading liquid-ios26 has-sidebar privacy-page">
+  <header></header>
+  <div class="desktop-layout">
+    <aside data-vilda-chrome-sidebar class="sidebar"></aside>
+    <main class="main-content">
+      <div class="privacy-shell">
+
+        <div class="privacy-card">
+          <h1>Regulamin</h1>
+          <p class="privacy-subtitle">Wersja robocza (szkielet) &nbsp;·&nbsp; data wejścia w życie: <span class="legal-todo">[DD.MM.RRRR — do ustalenia]</span> &nbsp;·&nbsp; wagaiwzrost.pl</p>
+
+          <div class="legal-draft-banner">
+            <strong>Dokument roboczy — do zatwierdzenia przez prawnika.</strong>
+            Poniższy regulamin jest <em>szkieletem</em> przygotowanym jako rusztowanie struktury.
+            Treść każdej sekcji wymaga sprawdzenia, uzupełnienia i zatwierdzenia przez radcę prawnego /
+            adwokata przed publikacją. Fragmenty wymagające decyzji oznaczono żółtym tłem
+            <span class="legal-todo">[w ten sposób]</span>. Niniejszy szkielet nie stanowi porady prawnej.
+          </div>
+
+          <h2>1. Postanowienia ogólne i definicje</h2>
+          <p>
+            Niniejszy Regulamin określa zasady korzystania z aplikacji internetowej (PWA)
+            <strong>wagaiwzrost.pl</strong> oraz z płatnego planu <strong>Vilda PRO</strong>,
+            świadczonych drogą elektroniczną przez Usługodawcę.
+          </p>
+          <p>Na potrzeby Regulaminu poniższe pojęcia oznaczają:</p>
+          <ul>
+            <li><strong>Aplikacja</strong> — aplikacja webowa/PWA dostępna pod adresem wagaiwzrost.pl,
+              służąca do obliczeń auksologicznych (centyle, Z-score) i wspomagania pracy klinicznej.</li>
+            <li><strong>Usługodawca</strong> — podmiot wskazany w pkt 2.</li>
+            <li><strong>Użytkownik</strong> — osoba korzystająca z Aplikacji; w szczególności pracownik
+              ochrony zdrowia. <span class="legal-todo">[Określić, czy usługa kierowana jest wyłącznie do profesjonalistów, czy także do konsumentów — wpływa na prawo odstąpienia i obowiązki informacyjne.]</span></li>
+            <li><strong>Konto</strong> — zbiór zasobów i ustawień przypisanych Użytkownikowi po rejestracji.</li>
+            <li><strong>Plan PRO</strong> — odpłatny zakres funkcji Aplikacji (m.in. centyle Palczewskiej,
+              Z-score, moduł DocPro).</li>
+            <li><strong>Sejf danych (Vilda Vault)</strong> — lokalny, szyfrowany magazyn danych pacjentów
+              w przeglądarce Użytkownika (architektura zero-knowledge).</li>
+          </ul>
+
+          <h2>2. Usługodawca</h2>
+          <p>Usługę świadczy:</p>
+          <div class="privacy-contact-box">
+            <strong>Vilda Clinic sp. z o.o.</strong><br>
+            KRS: 0001102016<br>
+            NIP: 7010867977<br>
+            REGON: 528545547<br>
+            adres: <span class="legal-todo">[adres siedziby — do uzupełnienia]</span><br>
+            e-mail: <a href="mailto:kontakt@vildaclinic.pl">kontakt@vildaclinic.pl</a>
+          </div>
+
+          <h2>3. Zakres usługi i wymagania techniczne</h2>
+          <p>
+            Aplikacja jest narzędziem kalkulacyjnym i organizacyjnym działającym przede wszystkim
+            lokalnie w przeglądarce Użytkownika. Do prawidłowego działania wymagana jest aktualna
+            przeglądarka internetowa z obsługą JavaScript, IndexedDB oraz Web Crypto API i połączenie
+            z Internetem (m.in. do logowania i synchronizacji zaszyfrowanej kopii danych).
+          </p>
+          <p>
+            <span class="legal-todo">[Doprecyzować zakres funkcjonalny w wersji bezpłatnej i PRO, minimalne wymagania techniczne oraz ewentualne ograniczenia terytorialne.]</span>
+          </p>
+
+          <h2>4. Rejestracja, Konto i bezpieczeństwo danych</h2>
+          <p>
+            Korzystanie z części funkcji wymaga założenia Konta. Dane pacjentów wprowadzane w Aplikacji
+            są szyfrowane po stronie Użytkownika (AES-GCM-256, klucz wyprowadzany z hasła metodą
+            PBKDF2-SHA256) i przechowywane lokalnie; do chmury trafia wyłącznie zaszyfrowana kopia.
+            Usługodawca nie ma technicznej możliwości odczytu treści danych pacjentów (zero-knowledge).
+          </p>
+          <p>
+            Użytkownik odpowiada za zachowanie poufności hasła i klucza odzyskiwania. Ze względu na
+            architekturę zero-knowledge <strong>utrata hasła i klucza odzyskiwania oznacza nieodwracalną
+            utratę dostępu do zaszyfrowanych danych</strong>.
+            <span class="legal-todo">[Potwierdzić brzmienie klauzuli o utracie dostępu i zakresie odpowiedzialności Usługodawcy.]</span>
+          </p>
+
+          <h2>5. Charakter narzędzia — zastrzeżenie medyczne</h2>
+          <p>
+            Aplikacja ma charakter informacyjny i pomocniczy. <strong>Nie zastępuje konsultacji
+            lekarskiej, badania ani samodzielnej decyzji klinicznej</strong>. Wyniki obliczeń należy
+            zawsze interpretować w kontekście całości obrazu klinicznego pacjenta.
+          </p>
+          <p>
+            <span class="legal-todo">[KLUCZOWE: ustalić z prawnikiem/specjalistą ds. wyrobów medycznych, czy Aplikacja kwalifikuje się jako oprogramowanie będące wyrobem medycznym (MDR 2017/745, MDCG 2019-11). Treść tej sekcji oraz oznakowanie zależą od tej kwalifikacji.]</span>
+          </p>
+
+          <h2>6. Plan Vilda PRO — zakres i okres próbny</h2>
+          <p>
+            Plan PRO udostępnia rozszerzony zakres funkcji Aplikacji. Nowy Użytkownik może otrzymać
+            bezpłatny okres próbny, po którym dostęp do funkcji PRO wymaga aktywnej subskrypcji.
+            Usługodawca może nadać lub cofnąć dostęp PRO (np. po wygaśnięciu lub anulowaniu płatności).
+          </p>
+          <p>
+            <span class="legal-todo">[Określić: długość okresu próbnego, dokładny zakres funkcji PRO, zasady utraty dostępu i zachowania danych po wygaśnięciu PRO.]</span>
+          </p>
+
+          <h2>7. Płatności, odnowienia i odstąpienie</h2>
+          <p>
+            Płatności za Plan PRO obsługiwane są przez zewnętrznego operatora płatności
+            <strong>Stripe</strong>. Usługodawca nie przechowuje danych kart płatniczych.
+          </p>
+          <p>
+            <span class="legal-todo">[Uzupełnić: ceny i waluty, model rozliczeń (miesięczny/roczny), zasady automatycznego odnawiania i jego anulowania, faktury, reklamacje płatności, prawo odstąpienia w terminie 14 dni i wyjątek dla treści/usług cyfrowych (art. 38 ustawy o prawach konsumenta) — o ile usługa kierowana jest do konsumentów.]</span>
+          </p>
+
+          <h2>8. Zasady korzystania (dozwolone użycie)</h2>
+          <p>
+            Użytkownik zobowiązuje się korzystać z Aplikacji zgodnie z prawem i Regulaminem, w tym nie
+            podejmować prób obchodzenia zabezpieczeń, dekompilacji ani nieuprawnionego dostępu do funkcji
+            płatnych.
+            <span class="legal-todo">[Doprecyzować katalog zachowań zabronionych i skutki ich naruszenia.]</span>
+          </p>
+
+          <h2>9. Własność intelektualna</h2>
+          <p>
+            Aplikacja oraz jej elementy (kod, układ, grafika, bazy danych referencyjnych) podlegają
+            ochronie prawnej i przysługują Usługodawcy lub jego licencjodawcom.
+            <span class="legal-todo">[Określić zakres licencji udzielanej Użytkownikowi oraz źródła/licencje danych referencyjnych (np. siatki centylowe).]</span>
+          </p>
+
+          <h2>10. Odpowiedzialność</h2>
+          <p>
+            <span class="legal-todo">[Sformułować zakres i granice odpowiedzialności Usługodawcy zgodnie z przepisami bezwzględnie obowiązującymi — z uwzględnieniem charakteru medycznego narzędzia i statusu Użytkownika (konsument/profesjonalista).]</span>
+          </p>
+
+          <h2>11. Reklamacje i rozwiązywanie sporów</h2>
+          <p>
+            Reklamacje można składać na adres e-mail Usługodawcy.
+            <span class="legal-todo">[Uzupełnić: termin rozpatrzenia reklamacji, tryb, a dla konsumentów — informację o pozasądowych sposobach rozpatrywania sporów i platformie ODR.]</span>
+          </p>
+
+          <h2>12. Dane osobowe</h2>
+          <p>
+            Zasady przetwarzania danych osobowych opisuje
+            <a href="polityka-prywatnosci.html">Polityka prywatności</a>, stanowiąca integralne
+            uzupełnienie niniejszego Regulaminu.
+          </p>
+
+          <h2>13. Zmiany Regulaminu</h2>
+          <p>
+            Usługodawca może zmienić Regulamin z ważnych przyczyn. O zmianach Użytkownicy zostaną
+            poinformowani z odpowiednim wyprzedzeniem.
+            <span class="legal-todo">[Określić tryb i termin powiadamiania oraz skutki braku akceptacji zmian, zwłaszcza dla aktywnych subskrypcji.]</span>
+          </p>
+
+          <h2>14. Postanowienia końcowe</h2>
+          <p>
+            W sprawach nieuregulowanych zastosowanie mają przepisy prawa polskiego.
+            <span class="legal-todo">[Wskazać prawo właściwe i właściwość sądu z uwzględnieniem przepisów konsumenckich; datę wejścia w życie.]</span>
+          </p>
+
+        </div><!-- /.privacy-card -->
+
+      </div><!-- /.privacy-shell -->
+    </main>
+  </div>
+
+  <footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        KRS 0001102016
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link" aria-current="page">Regulamin</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
+    </p>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
+</footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+      document.body.classList.remove('js-loading');
+    });
+  </script>
+  <script src="ios26-ui.js?v=37" defer></script>
+</body>
+</html>
