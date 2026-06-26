@@ -23,12 +23,14 @@
                 https://www.google-analytics.com
                 https://analytics.google.com
                 https://vilda-sync.maciej-4b9.workers.dev
+                wss://vilda-sync.maciej-4b9.workers.dev
+
                 https://region1.google-analytics.com
                 https://www.googletagmanager.com
                 https://cdn.jsdelivr.net;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -54,10 +56,12 @@
 <meta charset="utf-8">
 <title>Kalkulator klirensu kreatyniny / eGFR – Waga i wzrost</title>
     <!-- Integrate the calculator with the Waga i wzrost site styles -->
-    <link href="style.css?v=48" rel="stylesheet" />
+    <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
+  <link href="style.css?v=54" rel="stylesheet" />
     <link href="sidebar.css" rel="stylesheet" />
     <link href="vilda_chrome.css?v=22" rel="stylesheet">
-    <link href="vilda_auth_ui.css?v=49" rel="stylesheet" />
+    <link href="vilda_auth_ui.css?v=57" rel="stylesheet" />
     <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet" />
     <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
@@ -65,10 +69,14 @@
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
-<script defer src="vilda_vault.js?v=89"></script>
-<script defer src="vilda_sync.js?v=10"></script>
-<script defer src="vilda_sync_integration.js?v=9"></script>
-<script defer src="vilda_auth_ui.js?v=181"></script>
+<script defer src="vilda_vault.js?v=125"></script>
+<script defer src="vilda_frame_sync.js?v=2"></script>
+<script defer src="vilda_sync.js?v=17"></script>
+<script defer src="vilda_sync_integration.js?v=26"></script>
+<script defer src="vilda_realtime.js?v=5"></script>
+<script defer src="qrcode.min.js?v=1"></script>
+<script defer src="vilda_auth_ui.js?v=288"></script>
+<script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script defer src="vilda_file_export.js?v=5"></script>
@@ -81,7 +89,7 @@
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=27"></script>
+<script defer src="vilda_data_import_export.js?v=31"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
 <script defer src="vilda_advanced_growth.js?v=16"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
@@ -1011,8 +1019,10 @@ input[type="submit"]:focus-visible {
 }
 
 .result-box.out-of-range {
-  background: #ffebee;
-  border-color: #e57373;
+  /* !important: glass-theme id-scoped reguły (#xxxCard .result-box) nadpisują
+     to tło wyższą specyficznością — wymuszamy jasnoczerwone tło wszędzie. */
+  background: #ffebee !important;
+  border-color: #e57373 !important;
 }
 .result-box.out-of-range strong {
   color: #c62828;
@@ -1582,13 +1592,15 @@ input[type="submit"]:focus-visible {
   <!-- Usunięto ikonę Apple (PWA) -->
 
 <!-- 2. BIBLIOTEKI -->
-<script defer src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js" integrity="sha384-QOLV4jDrHYFU/0mHkVIR8QkZgRISiTcaqHqMGcW7LZ5/DGKTJWGwVFCh5knANMvj" crossorigin="anonymous"></script>
+<!-- BEZPIECZEŃSTWO 2026-06-14: SheetJS 0.19.3 → 0.20.3 (CVE-2024-22363 ReDoS fix ≥0.20.2).
+     SRI tymczasowo zdjęte (brak możliwości policzenia hasha 0.20.3 tutaj); ochrona: HTTPS + CSP (script-src cdn.sheetjs.com). -->
+<script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
      Ładowane leniwie z CDN dopiero przy eksporcie PDF — patrz VildaDeps.ensurePdfLibraries()
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=43"></script>
+<script defer src="vilda_chrome.js?v=56"></script>
 </head>
 
 <body class="js-loading liquid-ios26 has-sidebar">
@@ -2020,6 +2032,7 @@ input[type="submit"]:focus-visible {
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="kontakt.html" class="site-footer__link">Kontakt</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link">Regulamin</a>
     </nav>
   </div>
   <div class="site-footer__disclaimer-wrap">
@@ -2574,12 +2587,12 @@ document.addEventListener('DOMContentLoaded', () => {
          na stronie głównej imię, wiek, płeć, masa oraz wzrost są automatycznie
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
-<script src="ios26-ui.js?v=22" defer></script>
+<script src="ios26-ui.js?v=37" defer></script>
 <script defer src="inline_kalkulator_klirens_07.js?v=1"></script>
 <script defer src="vilda_down_syndrome.js?v=1"></script>
 <script defer src="vilda_anorexia_risk.js?v=1"></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
-<script defer src="vilda_professional_module.js?v=2"></script>
+<script defer src="vilda_professional_module.js?v=4"></script>
 <script defer src="vilda_persist_runtime.js?v=8"></script>
 <script defer src="vilda_summary_cards.js?v=18"></script>
 <script defer src="vilda_diet_plan_ui.js?v=1"></script>
@@ -2587,10 +2600,10 @@ document.addEventListener('DOMContentLoaded', () => {
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=182" defer></script>
-<script src="vilda_diet_recommendations.js?v=3" defer></script>
+<script src="app.js?v=183" defer></script>
+<script src="vilda_diet_recommendations.js?v=4" defer></script>
 <script src="vilda_patient_report.js?v=5" defer></script>
-<script src="custom-fixes.js?v=32" defer></script>
+<script src="custom-fixes.js?v=47" defer></script>
 <!-- Skrypt obsługujący tryb agregowania wyników dla tego samego pacjenta.  -->
 <script defer>
 document.addEventListener('DOMContentLoaded', () => {

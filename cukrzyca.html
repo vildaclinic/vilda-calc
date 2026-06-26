@@ -22,7 +22,7 @@
                 https://www.googletagmanager.com;
     worker-src  'self';
     manifest-src 'self';
-    frame-ancestors 'none';
+    frame-ancestors 'self';
     base-uri    'self';
     form-action 'self';
     object-src  'none';
@@ -31,6 +31,10 @@
   <meta http-equiv="Permissions-Policy"
         content="geolocation=(), camera=(), microphone=(), payment=(), usb=(), bluetooth=()">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <!-- App-shell (B1): jako panel w app.html (?embedded=1) chowamy własny nagłówek/sidebar/dock —
+       chrome dostarcza shell. Identyczne jak w pozostałych hostowanych stronach. -->
+  <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
+  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
 <!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
      GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
      Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
@@ -64,7 +68,7 @@
   <meta name="twitter:description" content="Praktyczny przewodnik dla osób z cukrzycą i rodziców dzieci z cukrzycą. Proste moduły, które pomagają liczyć posiłki, dobrać insulinę i lepiej radzić sobie na co dzień.">
   <meta name="twitter:image" content="https://wagaiwzrost.pl/posters/przelicznik_doposilkowy_poster.png">
   <link href="ios26-v2.css?v=18" rel="stylesheet">
-  <link href="style.css?v=43" rel="stylesheet">
+  <link href="style.css?v=54" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
 
   <link href="vilda_chrome.css?v=22" rel="stylesheet">
@@ -127,7 +131,7 @@
 <script>
 (function() {
   try {
-    var VERSION = 'v3';
+    var VERSION = 'v4';
     var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
     var persistence = window.VildaPersistence || null;
     var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
@@ -159,7 +163,7 @@
 <script src="lucide.min.js?v=1" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js" integrity="sha384-vseuUuO/VRMn00lXYd5m/Pk4l/7RjMqhXGf6G0RALy+On0txYb39dQsUQDAd7q5L" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js" integrity="sha384-nXUiXap6sIVQQCtbYdJPsTOTJwv3rZjOdv8Ckh+3udRCVp3YLpdgHnjpPHD/LaC0" crossorigin="anonymous"></script>
-  <script src="ios26-ui.js?v=22" defer></script>
+  <script src="ios26-ui.js?v=37" defer></script>
   <style>
     [hidden] {
       display: none !important;
@@ -4012,7 +4016,7 @@
     }
 
   </style>
-<script src="vilda_chrome.js?v=43"></script>
+<script src="vilda_chrome.js?v=56"></script>
 </head>
 <body class="js-loading liquid-ios26 page-cukrzyca has-sidebar">
   <header>
@@ -4024,6 +4028,10 @@
     <main class="main-content" id="main-content">
       <div class="container">
         <section id="moduleLauncher" class="diab-launchpad" aria-labelledby="diabLaunchpadHeading">
+          <a href="materialy-edukacyjne.html" class="diab-back-to-wiedza"
+             style="display:inline-flex;align-items:center;gap:6px;margin-bottom:14px;font-size:0.9rem;font-weight:500;color:#0f6e56;text-decoration:none;">
+            <span aria-hidden="true">←</span><span>Wróć do Wiedzy</span>
+          </a>
           <section class="card diab-launchpad__hero">
             <div class="diab-launchpad__hero-grid">
               <div class="diab-launchpad__intro">
@@ -4921,6 +4929,7 @@
       <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
       <a href="kontakt.html" class="site-footer__link">Kontakt</a>
       <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+      <a href="regulamin.html" class="site-footer__link">Regulamin</a>
     </nav>
   </div>
   <div class="site-footer__disclaimer-wrap">
