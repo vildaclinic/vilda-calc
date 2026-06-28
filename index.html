@@ -87,7 +87,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=18" rel="stylesheet">
-<link href="style.css?v=54" rel="stylesheet">
+<link href="style.css?v=56" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 <link href="vilda_chrome.css?v=22" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=57" rel="stylesheet">
@@ -240,7 +240,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_sync_integration.js?v=26"></script>
 <script defer src="vilda_realtime.js?v=5"></script>
 <script defer src="qrcode.min.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=289"></script>
+<script defer src="vilda_auth_ui.js?v=290"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -297,7 +297,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_epicrisis.js?v=10"></script>
 <script defer src="vilda_epicrisis_ui.js?v=8"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=63" defer></script>
+<script src="vilda_update_prep.js?v=65" defer></script>
 
 <script defer src="inline_index_01.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -612,6 +612,10 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 
       <!-- Sekcja testów stymulacyjnych GH została przeniesiona poza moduł profesjonalny. -->
     </div>
+    <!-- Faza 2: kompaktowa karta „Przypomnienia" (tylko PRO) — wypełniacz prawej kolumny
+         w miejsce #errorBox. Montaż, treść i widoczność: vilda_auth_ui.js (syncRemindersInline);
+         chowa się gdy pojawi się „Podsumowanie wyników". Domyślnie ukryta. -->
+    <div id="remindersInline" class="vild-rem-inline" style="display:none;"></div>
     <!-- Komunikaty po prawej stronie: błąd braku danych oraz instrukcja zapisu/wczytania
          Przenosimy komunikat „Podaj jednocześnie wiek, wagę i wzrost” do prawej kolumny formularza
          oraz umieszczamy pod nim informację o konieczności podania imienia i zapisania danych,
@@ -1351,7 +1355,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=54, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=56, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->
@@ -1743,7 +1747,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=183" defer></script>
+<script src="app.js?v=184" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport
