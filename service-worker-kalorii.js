@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.408';
+const SW_VERSION = '1.0.409';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -951,6 +951,7 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js?v=35',
   '/ios26-ui.js?v=36',
   '/ios26-ui.js?v=37',
+  '/ios26-ui.js?v=38',
   '/tutorial.js?v=6',
   '/tutorial.js?v=7',
   '/tutorial.js?v=8',
