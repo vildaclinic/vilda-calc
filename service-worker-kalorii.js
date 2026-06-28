@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.403';
+const SW_VERSION = '1.0.405';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -86,6 +86,8 @@ const CORE_SHELL_URLS = [
   '/manifest.json',
   '/style.css',
   '/style.css?v=54',
+  '/style.css?v=55',
+  '/style.css?v=56',
   '/style.css?v=39',
   '/style.css?v=40',
   '/style.css?v=41',
@@ -550,6 +552,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=287',
   '/vilda_auth_ui.js?v=288',
   '/vilda_auth_ui.js?v=289',
+  '/vilda_auth_ui.js?v=290',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
@@ -868,6 +871,8 @@ const CORE_SHELL_URLS = [
   '/vilda_update_prep.js',
   '/vilda_update_prep.js?v=62',
   '/vilda_update_prep.js?v=63',
+  '/vilda_update_prep.js?v=64',
+  '/vilda_update_prep.js?v=65',
   '/app.js',
   '/app.js?v=173',
   '/app.js?v=174',
@@ -877,6 +882,7 @@ const CORE_SHELL_URLS = [
   '/app.js?v=181',
   '/app.js?v=182',
   '/app.js?v=183',
+  '/app.js?v=184',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',
   '/vilda_diet_recommendations.js',
