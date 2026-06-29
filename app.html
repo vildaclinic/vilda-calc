@@ -33,33 +33,6 @@
   <meta http-equiv="Permissions-Policy"
         content="geolocation=(), microphone=(), payment=(), usb=(), bluetooth=()">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
-<!-- iOS B2 (2026-06-29): na iOS „ciepły" shell-iframe jest dławiony przez WebKit —
-     przychodzący sync do BEZCZYNNEGO iframe dociera z kilkudziesięciosekundowym
-     opóźnieniem (dotyk budzi panel, więc wysyłka działa; pasywny odbiór nie).
-     Dlatego na iOS przechodzimy na nawigację TOP-LEVEL (MPA): strony są samodzielne,
-     każda jest liderem realtime → sync natychmiastowy, bez iframe. Desktop/Android
-     zostają na „ciepłym" shellu (tam iframe NIE jest dławiony). Sesja (unlock) trzyma
-     się w sessionStorage, więc nawigacja między stronami NIE wylogowuje. -->
-<script>
-(function () {
-  try {
-    var ua = navigator.userAgent || '';
-    var isIOS = /iPad|iPhone|iPod/.test(ua)
-      || (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
-    if (!isIOS) return; // desktop / Android → shell bez zmian
-    var MAP = {
-      start: 'index.html', terminarz: 'terminarz.html', ustawienia: 'ustawienia.html',
-      pacjenci: 'index.html', notatki: 'notatki.html', docpro: 'docpro.html',
-      lab: 'przelicznik-jednostek.html', klirens: 'kalkulator-klirens.html',
-      homa: 'homa-ir.html', steroidy: 'steroidy.html', edu: 'materialy-edukacyjne.html',
-      cukrzyca: 'cukrzyca.html'
-    };
-    var m = String(location.hash || '').match(/^#\/([a-z]+)/);
-    var page = (m && MAP[m[1]]) ? MAP[m[1]] : 'index.html';
-    location.replace(page);
-  } catch (_) {}
-})();
-</script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
