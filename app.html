@@ -56,7 +56,7 @@
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=22" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=57" rel="stylesheet">
-  <link href="vilda_shell.css?v=11" rel="stylesheet">
+  <link href="vilda_shell.css?v=12" rel="stylesheet">
   <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet">
 
 <script>
@@ -69,6 +69,14 @@
   }catch(_){document.documentElement.classList.add('vilda-pro-inactive');}
 })();
 </script>
+
+<!-- SHELL (2026-06-30): app.html JEST shellem — dodajemy html.vilda-shell-host
+     SYNCHRONICZNIE, przed pierwszym malowaniem (jak .vilda-embedded w stronach i bootstrap
+     PRO powyżej). Dzięki temu DOCELOWY układ shella (w tym 14px przerwy pod nagłówkiem,
+     równej z lewym sidebarem — patrz vilda_shell.css @media ≥992px) obowiązuje od pierwszej
+     klatki i nic nie „podjeżdża" po starcie. boot() w vilda_shell.js dokłada tę klasę
+     ponownie (idempotentnie). -->
+<script>try{document.documentElement.classList.add('vilda-shell-host');}catch(_){}</script>
 
   <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
