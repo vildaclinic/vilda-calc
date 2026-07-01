@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pacjenci — A · widok mobilny</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:#0e2a30;
+    min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:26px 16px 40px;
+    background:radial-gradient(900px 500px at 50% -10%,#ecf7f3,rgba(236,247,243,0) 60%),linear-gradient(180deg,#f7fbfb,#eff5f6);}
+  .cap{text-align:center;}
+  .cap h2{margin:0;font-size:1.05rem;font-weight:800;letter-spacing:-.01em;}
+  .cap p{margin:3px 0 0;font-size:.82rem;color:#5b6c72;}
+
+  .phone{
+    position:relative;width:393px;max-width:94vw;height:min(852px,82vh);
+    background:#0b1012;border-radius:52px;padding:13px;
+    box-shadow:0 2px 2px rgba(255,255,255,.4) inset,0 40px 80px rgba(8,30,34,.34),0 10px 24px rgba(8,30,34,.22);
+  }
+  .phone::after{content:"";position:absolute;inset:5px;border-radius:48px;border:1px solid rgba(255,255,255,.08);pointer-events:none;}
+  .screen{position:relative;width:100%;height:100%;border-radius:40px;overflow:hidden;background:#eef5f6;}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:108px;height:31px;background:#000;border-radius:999px;z-index:10;}
+  iframe{width:100%;height:100%;border:0;display:block;background:transparent;}
+
+  .hint{font-size:.76rem;color:#7b8a8f;text-align:center;max-width:393px;}
+  @media (max-width:430px){ .phone{border-radius:44px;padding:10px;} .screen{border-radius:34px;} }
+</style>
+</head>
+<body>
+  <div class="cap">
+    <h2>Pacjenci — widok mobilny</h2>
+    <p>Opcja A · Liquid Glass</p>
+  </div>
+  <div class="phone">
+    <div class="island"></div>
+    <div class="screen">
+      <iframe src="makieta_pacjenci_v2-A_liquid-glass.html" title="Pacjenci — mobile" loading="eager"></iframe>
+    </div>
+  </div>
+  <div class="hint">To realna opcja A osadzona na szerokości telefonu (393&nbsp;px) — przewijaj wewnątrz ekranu. Przyciski są pod listą; „Dodaj osobę spoza bazy" jest pełną szerokością na górze stopki.</div>
+</body>
+</html>

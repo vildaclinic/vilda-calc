@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warianty skali dawki — Trend leczenia GH</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:22px 16px 60px;}
+  .wrap{max-width:1140px;margin:0 auto;}
+  h1{font-size:1.2rem;margin:0 0 4px;}
+  .sub{margin:0 0 18px;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .grid{display:flex;gap:20px;flex-wrap:wrap;align-items:stretch;}
+  .card{background:#fff;border:1px solid #dbe7e9;border-radius:14px;padding:14px 16px 16px;box-shadow:0 6px 20px rgba(3,42,48,.06);width:352px;max-width:100%;display:flex;flex-direction:column;}
+  .card.reco{border-color:#9FE1CB;box-shadow:0 6px 22px rgba(15,110,86,.12);}
+  .tag{font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#0F6E56;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:20px;padding:2px 9px;align-self:flex-start;margin-bottom:8px;}
+  .tag.n{color:#5b6672;background:#eef3f4;border-color:#d7e1e3;}
+  h2{font-size:.98rem;margin:0 0 2px;}
+  .cap{font-size:.79rem;color:#5b6672;line-height:1.5;margin:8px 2px 0;}
+  .cap b{color:#0f2b33;}
+  .legend{font-size:11px;color:#5b6672;margin:4px 0 6px;}
+  .pros{font-size:.76rem;margin:8px 0 0;line-height:1.5;}
+  .pros .p{color:#1F7A3D;}.pros .m{color:#A3563B;}
+  .note{margin-top:20px;background:#fff;border:1px solid #dbe7e9;border-radius:12px;padding:14px 16px;font-size:.84rem;color:#33464e;line-height:1.55;}
+  .note b{color:#0f2b33;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Wariant skali dawki — do wyboru</h1>
+  <p class="sub">Te same dane Graczyka (0,029 / 0,027 / 0,029 / 0,029 / 0,030 mg/kg/d). Różni się tylko sposób doboru osi pionowej dawki. Oś X po wieku, podziałki + wartości — wspólne.</p>
+
+  <div class="grid">
+    <div class="card reco">
+      <span class="tag">Zalecany</span>
+      <h2>A · Pasmo wokół danych</h2>
+      <div class="legend">oś dobrana tak, by dane wypełniały ~⅓ wysokości</div>
+      <div id="cA"></div>
+      <p class="pros"><span class="p">+ widać kształt trendu (dip i odbicie), proporcjonalnie</span><br><span class="m">− oś nie od zera (mitygowane wartościami na osi)</span></p>
+      <p class="cap"><b>Najlepsze do śledzenia tego pacjenta.</b> Mała zmiana wygląda na małą, ale jest czytelna.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag n">Wariant</span>
+      <h2>B · Oś od zera</h2>
+      <div class="legend">oś 0 → trochę ponad max dawki</div>
+      <div id="cB"></div>
+      <p class="pros"><span class="p">+ najuczciwsze: „dawka stabilna" = płaska linia u góry</span><br><span class="m">− drobne wahania prawie niewidoczne</span></p>
+      <p class="cap"><b>Komunikat: stabilność.</b> Linia wysoko i płasko = dawka praktycznie się nie zmienia. Gubi detal.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag n">Wariant</span>
+      <h2>C · Stała skala + typowy zakres</h2>
+      <div class="legend">oś stała (np. 0,01–0,045) + zacieniony zakres typowy</div>
+      <div id="cC"></div>
+      <p class="pros"><span class="p">+ porównywalne między pacjentami + kontekst kliniczny</span><br><span class="m">− „typowy zakres" zależy od programu/preparatu</span></p>
+      <p class="cap"><b>Pokazuje: czy dawka mieści się w typowym oknie.</b> Linia w zacienionym pasie = dawka w normie.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Krótko:</b> <b>A (pasmo)</b> — najlepsze do oceny trendu u danego pacjenta (zalecane). <b>B (od zera)</b> — najmocniej podkreśla, że dawka jest stabilna, ale spłaszcza detale. <b>C (stała + zakres)</b> — najbardziej „kliniczne" i porównywalne, ale wymaga zdefiniowania typowego zakresu per program (SNP/SGA/ZT/PNN/PWS/IGF‑1), co dla mekaserminy i somatropin różni się. Można też złożyć A+C (pasmo wokół danych z lekkim tłem zakresu, gdy oś go obejmuje).<br>
+    Reszta poprawek (oś X po wieku, podziałki + wartości, druga oś IGF‑1 z opisem, ukrywanie IGF‑1 przy braku) jest taka sama niezależnie od wybranego wariantu skali.
+  </div>
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+function E(t,a){const e=document.createElementNS(NS,t);if(a)for(const k in a)e.setAttribute(k,a[k]);return e;}
+function comma(n,d){return (+Number(n).toFixed(d)).toString().replace('.',',');}
+function ageDec(m){return (m/12).toFixed(1).replace('.',',');}
+function ticks(lo,hi,n){const raw=(hi-lo)/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),norm=raw/mag;let step=(norm<1.5?1:norm<3?2:norm<7?5:10)*mag;const out=[];for(let v=Math.ceil(lo/step-1e-9)*step;v<=hi+1e-9;v+=step)out.push(+v.toFixed(6));return out;}
+
+function chart(pts, mode, ref){
+  const W=320,H=210,padL=46,padR=14,padT=16,padB=32,plotW=W-padL-padR,plotH=H-padT-padB;
+  const aMin=Math.min(...pts.map(p=>p.ageM)),aMax=Math.max(...pts.map(p=>p.ageM)),xspan=(aMax-aMin)||1;
+  const x=m=>padL+(m-aMin)/xspan*plotW;
+  const ds=pts.map(p=>p.dose),dMinD=Math.min(...ds),dMaxD=Math.max(...ds);
+  let dLo,dHi;
+  if(mode==='band'){const span=Math.max((dMaxD-dMinD)/0.38,0.008),mid=(dMinD+dMaxD)/2;dLo=mid-span/2;dHi=mid+span/2;if(dLo<0){dHi-=dLo;dLo=0;}}
+  else if(mode==='zero'){dLo=0;dHi=dMaxD*1.2;}
+  else {dLo=0.01;dHi=0.045;}
+  const yD=v=>padT+(1-(v-dLo)/(dHi-dLo))*plotH;
+  const svg=E('svg',{viewBox:`0 0 ${W} ${H}`,width:'100%'});
+  // tło typowego zakresu (wariant C)
+  if(ref){const y1=yD(Math.min(ref[1],dHi)),y2=yD(Math.max(ref[0],dLo));svg.appendChild(E('rect',{x:padL,y:y1,width:plotW,height:Math.max(0,y2-y1),fill:'#E1F5EE'}));
+    const rt=E('text',{x:W-padR-2,y:y1+11,'text-anchor':'end','font-size':'8.5',fill:'#0F6E56'});rt.textContent='typowy zakres';svg.appendChild(rt);}
+  // siatka + wartości
+  ticks(dLo,dHi,4).forEach(t=>{if(t<dLo-1e-9||t>dHi+1e-9)return;const yy=yD(t);
+    svg.appendChild(E('line',{x1:padL,y1:yy,x2:W-padR,y2:yy,stroke:'#eef3f4'}));
+    const tx=E('text',{x:padL-6,y:yy+3,'text-anchor':'end','font-size':'9.5',fill:'#0F6E56'});tx.textContent=comma(t,3);svg.appendChild(tx);});
+  svg.appendChild(E('line',{x1:padL,y1:padT,x2:padL,y2:H-padB,stroke:'#cdd9dc'}));
+  svg.appendChild(E('line',{x1:padL,y1:H-padB,x2:W-padR,y2:H-padB,stroke:'#cdd9dc'}));
+  pts.forEach(p=>{const tx=E('text',{x:x(p.ageM),y:H-padB+14,'text-anchor':'middle','font-size':'9.5',fill:'#5b6672'});tx.textContent=ageDec(p.ageM);svg.appendChild(tx);});
+  const xl=E('text',{x:padL+plotW/2,y:H-3,'text-anchor':'middle','font-size':'9',fill:'#8a979c'});xl.textContent='wiek (lata)';svg.appendChild(xl);
+  svg.appendChild(E('polyline',{points:pts.map(p=>x(p.ageM)+','+yD(p.dose).toFixed(1)).join(' '),fill:'none',stroke:'#0F6E56','stroke-width':'2.4'}));
+  pts.forEach(p=>svg.appendChild(E('circle',{cx:x(p.ageM),cy:yD(p.dose).toFixed(1),r:'3.4',fill:'#0F6E56'})));
+  return svg;
+}
+const g=[{ageM:104,dose:0.029},{ageM:110,dose:0.027},{ageM:115,dose:0.029},{ageM:122,dose:0.029},{ageM:127,dose:0.030}];
+document.getElementById('cA').appendChild(chart(g,'band'));
+document.getElementById('cB').appendChild(chart(g,'zero'));
+document.getElementById('cC').appendChild(chart(g,'clinical',[0.025,0.035]));
+</script>
+</body>
+</html>

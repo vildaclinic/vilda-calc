@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Historia z wpisami leczenia GH przy pomiarach</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:22px 16px 60px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-size:1.18rem;margin:0 0 4px;}
+  .sub{margin:0 0 6px;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .cols{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;margin-top:14px;}
+  .col{flex:1 1 330px;min-width:300px;}
+  .ctag{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px;}
+  .ctag.now{color:#b4453a;}.ctag.fix{color:#0F6E56;}
+  /* oś */
+  .tl{position:relative;padding-left:20px;}
+  .tl::before{content:"";position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:#d7e9ec;}
+  .age{position:relative;margin-bottom:14px;}
+  .age::before{content:"";position:absolute;left:-17px;top:5px;width:9px;height:9px;border-radius:50%;background:#0F6E56;border:2px solid #fff;box-shadow:0 0 0 1px #9FE1CB;}
+  .agelbl{font-size:.78rem;font-weight:700;color:#0f2b33;margin-bottom:5px;}
+  .card{background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:10px 12px;margin-bottom:7px;}
+  .chip{display:inline-block;padding:2px 8px;font-size:0.68rem;font-weight:600;border-radius:999px;margin-bottom:5px;}
+  .chip.pom{color:#0B5C84;background:#E7F6FD;}
+  .chip.lecz{color:#1F7A3D;background:#E8F8EC;}
+  .mmain{font-weight:600;font-size:0.9rem;color:#0f2b33;}
+  .msub{font-size:0.82rem;color:#374151;margin-top:2px;}
+  .ghblock{margin-top:2px;padding:7px 10px;background:#E8F8EC;border:0.5px solid #b9e6c6;border-radius:8px;font-size:0.84rem;color:#1b5e34;line-height:1.5;}
+  .ghhead{font-weight:700;color:#0f3d22;margin-bottom:2px;}
+  .ghrow span.k{color:#3a7a4e;}.ghrow span.v{font-weight:600;color:#0f3d22;}
+  .warn{margin-top:3px;color:#8a5a00;font-weight:600;}
+  .note{margin-top:18px;background:#fff;border:1px solid #dbe7e9;border-radius:12px;padding:14px 16px;font-size:.84rem;color:#33464e;line-height:1.55;}
+  .note b{color:#0f2b33;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Historia — leczenie GH przy każdym pomiarze</h1>
+  <p class="sub">Realne dane Graczyka: 5 punktów monitora (8 l. 8 m. → 10 l. 7 m.). Po lewej — teraz; po prawej — po zmianie.</p>
+
+  <div class="cols">
+    <!-- TERAZ -->
+    <div class="col">
+      <p class="ctag now">Teraz — tylko 1 wpis leczenia</p>
+      <div class="tl">
+        <div class="age"><div class="agelbl">10 l. 7 m.</div>
+          <div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 137 cm · Waga 33,8 kg</div><div class="msub">BMI 18,0 · Prędkość 8,9 cm/rok</div></div>
+          <div class="card"><span class="chip lecz">Leczenie</span><div class="mmain" style="font-weight:600;">leczenie rhGH</div>
+            <div class="ghblock"><div class="ghhead">Kontynuacja leczenia</div>
+              <div class="ghrow"><span class="k">Lek: </span><span class="v">Omnitrope 10 mg</span></div>
+              <div class="ghrow"><span class="k">Dawka: </span><span class="v">0,030 mg/kg/d (1,00 mg/d)</span></div>
+              <div class="ghrow"><span class="k">Program: </span><span class="v">SGA</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="age"><div class="agelbl">10 l. 2 m.</div><div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 133,3 cm · Waga 31,1 kg</div><div class="msub">BMI 17,5 · Prędkość 6,5 cm/rok</div></div></div>
+        <div class="age"><div class="agelbl">9 l. 7 m.</div><div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 129,5 cm · Waga 27,6 kg</div><div class="msub">BMI 16,5 · Prędkość 9,4 cm/rok</div></div></div>
+        <div class="age"><div class="agelbl">9 l. 2 m.</div><div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 125,6 cm · Waga 25,3 kg</div><div class="msub">BMI 16,0 · Prędkość 9,2 cm/rok</div></div></div>
+        <div class="age"><div class="agelbl">8 l. 8 m.</div><div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 121,0 cm · Waga 24,0 kg</div><div class="msub">BMI 16,4</div></div></div>
+      </div>
+    </div>
+
+    <!-- PO ZMIANIE -->
+    <div class="col">
+      <p class="ctag fix">Po zmianie — leczenie przy każdym punkcie</p>
+      <div class="tl">
+        <div class="age"><div class="agelbl">10 l. 7 m.</div>
+          <div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 137 cm · Waga 33,8 kg</div><div class="msub">BMI 18,0 · Prędkość 8,9 cm/rok</div></div>
+          <div class="card"><span class="chip lecz">Leczenie</span>
+            <div class="ghblock"><div class="ghhead">Kontynuacja leczenia</div>
+              <div class="ghrow"><span class="k">Lek: </span><span class="v">Omnitrope 10 mg</span></div>
+              <div class="ghrow"><span class="k">Dawka: </span><span class="v">0,030 mg/kg/d (1,01 mg/d)</span></div>
+              <div class="ghrow"><span class="k">Program: </span><span class="v">SNP</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="age"><div class="agelbl">10 l. 2 m.</div>
+          <div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 133,3 cm · Waga 31,1 kg</div><div class="msub">BMI 17,5 · Prędkość 6,5 cm/rok</div></div>
+          <div class="card"><span class="chip lecz">Leczenie</span>
+            <div class="ghblock"><div class="ghhead">Kontynuacja leczenia</div>
+              <div class="ghrow"><span class="k">Lek: </span><span class="v">Omnitrope 10 mg</span></div>
+              <div class="ghrow"><span class="k">Dawka: </span><span class="v">0,029 mg/kg/d (0,90 mg/d)</span></div>
+              <div class="ghrow"><span class="k">Program: </span><span class="v">SGA</span></div>
+              <div class="warn">⚠ Zmiana preparatu: Omnitrope 5 mg → Omnitrope 10 mg</div>
+            </div>
+          </div>
+        </div>
+        <div class="age"><div class="agelbl">9 l. 7 m.</div>
+          <div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 129,5 cm · Waga 27,6 kg</div><div class="msub">BMI 16,5 · Prędkość 9,4 cm/rok</div></div>
+          <div class="card"><span class="chip lecz">Leczenie</span>
+            <div class="ghblock"><div class="ghhead">Kontynuacja leczenia</div>
+              <div class="ghrow"><span class="k">Lek: </span><span class="v">Omnitrope 5 mg</span></div>
+              <div class="ghrow"><span class="k">Dawka: </span><span class="v">0,029 mg/kg/d (0,80 mg/d)</span></div>
+              <div class="ghrow"><span class="k">Program: </span><span class="v">SGA</span></div>
+              <div class="warn">⚠ Zmiana preparatu: Omnitrope 10 mg → Omnitrope 5 mg</div>
+            </div>
+          </div>
+        </div>
+        <div class="age"><div class="agelbl">9 l. 2 m.</div>
+          <div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 125,6 cm · Waga 25,3 kg</div><div class="msub">BMI 16,0 · Prędkość 9,2 cm/rok</div></div>
+          <div class="card"><span class="chip lecz">Leczenie</span>
+            <div class="ghblock"><div class="ghhead">Kontynuacja leczenia</div>
+              <div class="ghrow"><span class="k">Lek: </span><span class="v">Omnitrope 10 mg</span></div>
+              <div class="ghrow"><span class="k">Dawka: </span><span class="v">0,027 mg/kg/d (0,68 mg/d)</span></div>
+              <div class="ghrow"><span class="k">Program: </span><span class="v">SGA</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="age"><div class="agelbl">8 l. 8 m.</div>
+          <div class="card"><span class="chip pom">Pomiar</span><div class="mmain">Wzrost 121,0 cm · Waga 24,0 kg</div><div class="msub">BMI 16,4</div></div>
+          <div class="card"><span class="chip lecz">Leczenie</span>
+            <div class="ghblock"><div class="ghhead">Włączenie leczenia</div>
+              <div class="ghrow"><span class="k">Lek: </span><span class="v">Omnitrope 10 mg</span></div>
+              <div class="ghrow"><span class="k">Dawka: </span><span class="v">0,029 mg/kg/d (0,70 mg/d)</span></div>
+              <div class="ghrow"><span class="k">Program: </span><span class="v">SGA</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Jak to zrobimy (plan):</b> w builderze osi czasu (<code>vilda_vault.js · listPatientTimelineEvents</code>) dla każdego punktu monitora GH z najnowszego snapshotu dokładamy wpis „leczenie" zakotwiczony po wieku (<code>linkedAgeMonths</code> = wiek punktu) — z gotowych pól punktu (typ → Włączenie/Kontynuacja/Zakończenie, lek, dawka mg/kg/d + mg/d, program). Render Historii już to umie wyświetlić (zielony blok „Leczenie") — w tym ostrzeżenie o zmianie preparatu (tu: Omnitrope 10→5→10 mg). <b>Bez dublowania „Pomiarów"</b> (wieki punktów = wieki pomiarów). Notatki‑auto z <code>ghPointId</code> chowamy z osi (zastępują je punkty), więc ostatni punkt nie zdubluje się z notatką.<br>
+    <b>Uwaga z danych:</b> ostatni punkt (10 l. 7 m.) ma program <b>SNP</b>, reszta <b>SGA</b> — wygląda na omyłkę wpisu; oraz preparat zmieniał się 10→5→10 mg. To realne dane, nie błąd makiety.
+  </div>
+</div>
+</body>
+</html>

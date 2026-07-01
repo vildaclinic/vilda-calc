@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Statystyki Terminarza + miesięczny recap</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:22px 16px 60px;}
+  .wrap{max-width:920px;margin:0 auto;}
+  h1{font-size:1.2rem;margin:0 0 4px;}
+  .sub{margin:0 0 16px;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .cols{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+  .col{flex:1 1 360px;min-width:330px;}
+  .ctag{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;color:#0F6E56;}
+  /* „telefon" */
+  .phone{background:#fff;border:1px solid #d7e9ec;border-radius:22px;padding:16px 14px 20px;box-shadow:0 6px 24px rgba(15,43,51,.07);}
+  .ph-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .ph-title{font-size:1.05rem;font-weight:700;}
+  .ph-ico{width:30px;height:30px;border-radius:9px;background:#e7f3f1;display:flex;align-items:center;justify-content:center;font-size:0.95rem;}
+  /* przełącznik okresu */
+  .seg{display:flex;gap:0;background:#eef4f5;border:1px solid #dbe7e9;border-radius:999px;padding:3px;margin-bottom:14px;}
+  .seg button{flex:1;border:0;background:transparent;font:inherit;font-size:0.8rem;font-weight:600;color:#5b6672;padding:6px 4px;border-radius:999px;cursor:pointer;}
+  .seg button.on{background:#0e857f;color:#fff;}
+  .period{font-size:0.78rem;color:#5b6672;margin:-6px 0 12px;}
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;}
+  .kpi{border:0.5px solid #d7e9ec;border-radius:13px;padding:11px 12px;background:#fbfdfd;}
+  .kpi .v{font-size:1.5rem;font-weight:800;line-height:1;color:#0f2b33;}
+  .kpi .l{font-size:0.74rem;color:#5b6672;margin-top:4px;}
+  .kpi .d{font-size:0.7rem;font-weight:700;margin-top:5px;}
+  .up{color:#1F7A3D;}.down{color:#b4453a;}.flat{color:#8a8f94;}
+  .kpi.hero{grid-column:1 / -1;background:linear-gradient(180deg,#effaf6,#fbfdfd);}
+  .kpi.hero .v{font-size:2rem;}
+  /* sekcje */
+  .sec-h{font-size:0.76rem;font-weight:700;color:#0f2b33;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.03em;}
+  /* słupki dni */
+  .barchart{border:0.5px solid #d7e9ec;border-radius:13px;padding:12px 12px 8px;background:#fff;margin-bottom:6px;}
+  .bc-cap{font-size:0.72rem;color:#5b6672;margin-bottom:8px;}
+  .bars{display:flex;align-items:flex-end;gap:7px;height:96px;}
+  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;}
+  .bcol .bar{width:100%;max-width:26px;border-radius:5px 5px 0 0;background:#9FE1CB;}
+  .bcol .bar.peak{background:#0e857f;}
+  .bcol .bl{font-size:0.66rem;color:#9aa8aa;}
+  /* rozkład kategorii */
+  .rowcat{display:flex;align-items:center;gap:9px;margin:7px 0;font-size:0.82rem;}
+  .rowcat .dot{width:10px;height:10px;border-radius:3px;flex:none;}
+  .rowcat .nm{flex:1;color:#374151;}
+  .rowcat .ct{font-weight:700;color:#0f2b33;}
+  .rowcat .track{height:7px;border-radius:999px;background:#eef4f5;flex:1.4;overflow:hidden;}
+  .rowcat .fill{height:100%;border-radius:999px;}
+  /* jakość */
+  .quality{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+  .qbox{border:0.5px solid #d7e9ec;border-radius:12px;padding:10px;text-align:center;background:#fbfdfd;}
+  .qbox .qv{font-size:1.2rem;font-weight:800;}
+  .qbox .ql{font-size:0.68rem;color:#5b6672;margin-top:3px;}
+  /* recap */
+  .recap{background:linear-gradient(160deg,#0e857f,#0b6e63);color:#fff;border-radius:20px;padding:18px 17px;box-shadow:0 8px 26px rgba(14,133,127,.28);}
+  .recap .rk{font-size:0.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.85;}
+  .recap h2{font-size:1.3rem;margin:3px 0 2px;font-weight:800;}
+  .recap .lead{font-size:0.92rem;line-height:1.5;margin:8px 0 14px;opacity:.97;}
+  .recap .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .rstat{background:rgba(255,255,255,.13);border-radius:12px;padding:9px 11px;}
+  .rstat .rv{font-size:1.35rem;font-weight:800;line-height:1;}
+  .rstat .rl{font-size:0.7rem;opacity:.9;margin-top:4px;}
+  .rstat .rd{font-size:0.68rem;font-weight:700;margin-top:4px;opacity:.95;}
+  .recap .hl{display:flex;gap:8px;align-items:flex-start;font-size:0.83rem;line-height:1.45;background:rgba(255,255,255,.1);border-radius:10px;padding:9px 11px;margin-top:7px;}
+  .recap .btn{margin-top:14px;display:inline-block;background:#fff;color:#0b6e63;font-weight:700;font-size:0.82rem;border-radius:999px;padding:9px 16px;}
+  .note{margin-top:18px;background:#fff;border:1px solid #dbe7e9;border-radius:12px;padding:14px 16px;font-size:.83rem;color:#33464e;line-height:1.55;}
+  .note b{color:#0f2b33;}
+  .tonebox{margin-top:10px;border-left:3px solid #9FE1CB;padding:6px 0 6px 11px;font-size:0.82rem;color:#33464e;}
+  .tonebox em{color:#0F6E56;font-style:normal;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Statystyki Terminarza — makieta v1</h1>
+  <p class="sub">Liczone lokalnie z notatek kalendarza (po odblokowaniu) — serwer nic nie wie. Liczby poniżej są przykładowe (czerwiec 2026, pediatra‑endokrynolog).</p>
+
+  <div class="cols">
+    <!-- EKRAN STATYSTYKI -->
+    <div class="col">
+      <p class="ctag">Ekran „Statystyki" w Terminarzu</p>
+      <div class="phone">
+        <div class="ph-head">
+          <div class="ph-title">Statystyki</div>
+          <div class="ph-ico">📊</div>
+        </div>
+
+        <div class="seg">
+          <button>Tydzień</button>
+          <button class="on">Miesiąc</button>
+          <button>Rok</button>
+        </div>
+        <div class="period">📅 czerwiec 2026 · 21 dni roboczych</div>
+
+        <!-- WIZYTY -->
+        <div class="kpis">
+          <div class="kpi hero">
+            <div class="v">138</div>
+            <div class="l">wizyt pacjentów w tym miesiącu</div>
+            <div class="d up">▲ 12% vs maj (123)</div>
+          </div>
+          <div class="kpi">
+            <div class="v">6,6</div>
+            <div class="l">średnio dziennie</div>
+            <div class="d up">▲ 0,4</div>
+          </div>
+          <div class="kpi">
+            <div class="v">32</div>
+            <div class="l">średnio w tygodniu</div>
+            <div class="d flat">≈ jak w maju</div>
+          </div>
+        </div>
+
+        <!-- WYKRES DNI -->
+        <div class="sec-h">Wizyty dzień po dniu</div>
+        <div class="barchart">
+          <div class="bc-cap">Najwięcej: <b>wtorki</b> (śr. 9,1/dzień)</div>
+          <div class="bars">
+            <div class="bcol"><div class="bar" style="height:55%"></div><div class="bl">pn</div></div>
+            <div class="bcol"><div class="bar peak" style="height:100%"></div><div class="bl">wt</div></div>
+            <div class="bcol"><div class="bar" style="height:78%"></div><div class="bl">śr</div></div>
+            <div class="bcol"><div class="bar" style="height:64%"></div><div class="bl">cz</div></div>
+            <div class="bcol"><div class="bar" style="height:72%"></div><div class="bl">pt</div></div>
+            <div class="bcol"><div class="bar" style="height:10%"></div><div class="bl">sb</div></div>
+            <div class="bcol"><div class="bar" style="height:0%"></div><div class="bl">nd</div></div>
+          </div>
+        </div>
+
+        <!-- ROZKŁAD WIZYT -->
+        <div class="sec-h">Rozkład wizyt wg typu</div>
+        <div class="rowcat"><span class="dot" style="background:#0B5C84"></span><span class="nm">Kontrola</span><span class="track"><span class="fill" style="width:51%;background:#0B5C84"></span></span><span class="ct">70</span></div>
+        <div class="rowcat"><span class="dot" style="background:#1F7A3D"></span><span class="nm">Leczenie</span><span class="track"><span class="fill" style="width:20%;background:#1F7A3D"></span></span><span class="ct">28</span></div>
+        <div class="rowcat"><span class="dot" style="background:#0E7C86"></span><span class="nm">Badanie</span><span class="track"><span class="fill" style="width:18%;background:#0E7C86"></span></span><span class="ct">25</span></div>
+        <div class="rowcat"><span class="dot" style="background:#B07A1E"></span><span class="nm">Obserwacja</span><span class="track"><span class="fill" style="width:7%;background:#B07A1E"></span></span><span class="ct">10</span></div>
+        <div class="rowcat"><span class="dot" style="background:#5b6672"></span><span class="nm">Procedura</span><span class="track"><span class="fill" style="width:4%;background:#5b6672"></span></span><span class="ct">5</span></div>
+
+        <!-- GRAFIK -->
+        <div class="sec-h">Grafik lekarza</div>
+        <div class="kpis">
+          <div class="kpi"><div class="v">12</div><div class="l">Poradnie</div><div class="d flat">NFZ 8 · komercja 4</div></div>
+          <div class="kpi"><div class="v">5</div><div class="l">Dyżury</div><div class="d flat">razem 60 h</div></div>
+          <div class="kpi" style="grid-column:1 / -1"><div class="v">9</div><div class="l">Zajęcia ze studentami</div><div class="d flat">Wykład 3 · Seminarium 4 · Ćwiczenia 2 · razem 13,5 h</div></div>
+        </div>
+
+        <!-- JAKOŚĆ -->
+        <div class="sec-h">Jakość grafiku</div>
+        <div class="quality">
+          <div class="qbox"><div class="qv" style="color:#1F7A3D">92%</div><div class="ql">wykonane</div></div>
+          <div class="qbox"><div class="qv" style="color:#b4453a">5%</div><div class="ql">nieobecność<br>(no‑show)</div></div>
+          <div class="qbox"><div class="qv" style="color:#8a5a00">3%</div><div class="ql">odwołane</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECAP -->
+    <div class="col">
+      <p class="ctag">Karta podsumowania — przy 1. wejściu w nowym miesiącu</p>
+      <div class="recap">
+        <div class="rk">Podsumowanie miesiąca</div>
+        <h2>Maj 2026 👏</h2>
+        <div class="lead">Pracowity, dobrze poukładany miesiąc — i widać progres względem kwietnia.</div>
+        <div class="rgrid">
+          <div class="rstat"><div class="rv">123</div><div class="rl">wizyty</div><div class="rd">▲ 9% vs kwiecień</div></div>
+          <div class="rstat"><div class="rv">95%</div><div class="rl">frekwencja</div><div class="rd">▲ tylko 5% no‑show</div></div>
+          <div class="rstat"><div class="rv">6</div><div class="rl">dyżury · 72 h</div><div class="rd">rekord półrocza</div></div>
+          <div class="rstat"><div class="rv">8</div><div class="rl">zajęcia ze studentami</div><div class="rd">11 h dydaktyki</div></div>
+        </div>
+        <div class="hl">💪 <span>Najbardziej obłożony dzień to wtorek — średnio 8,4 wizyty. Dobra robota!</span></div>
+        <div class="hl">🌿 <span>Zadbałeś też o oddech: 3 dni urlopu i 1 konferencja.</span></div>
+        <span class="btn">Zobacz pełne statystyki →</span>
+      </div>
+
+      <div class="note">
+        <b>Ton komunikatu</b> dobiera się automatycznie do danych — kilka wariantów:
+        <div class="tonebox"><em>Więcej niż zwykle:</em> „Pracowity miesiąc — 142 wizyty, o 12% więcej niż w maju 💪"</div>
+        <div class="tonebox"><em>Spokojniej:</em> „Spokojniejszy miesiąc — dobry moment na złapanie oddechu (4 dni urlopu)."</div>
+        <div class="tonebox"><em>Świetna frekwencja:</em> „Tylko 3% nieobecności — pacjenci się stawiają."</div>
+        <div class="tonebox"><em>Progres:</em> „Coraz lepiej — trzeci miesiąc wzrostu liczby wizyt z rzędu."</div>
+      </div>
+
+      <div class="note">
+        <b>Jak to policzymy (zgodnie z E2E).</b> Wszystko liczone w przeglądarce z <code>listAllPatientNotes()</code> po odblokowaniu — serwer nie dostaje żadnych liczb. Karta podsumowania pojawia się przy pierwszym otwarciu aplikacji w nowym miesiącu (znacznik w localStorage <code>vilda-recap-YYYY-MM</code>). Opcjonalnie lokalne powiadomienie PWA, jeśli włączysz notyfikacje.<br>
+        <b>Uwaga o danych:</b> liczby wizyt, poradni, dyżurów, dydaktyki, no‑show i „wykonane" są dostępne już dziś. Rozbicie nieobecności na <i>urlop vs konferencja</i> (tu pokazane w recapie) wymaga drobnego pola <code>absKind</code> — świadomie poza pierwszą wersją ekranu statystyk.
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

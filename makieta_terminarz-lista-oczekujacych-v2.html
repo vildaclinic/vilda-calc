@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Lista oczekujących v2 (zwijalne karty)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:20px 14px 60px;}
+  .pagehead{max-width:1040px;margin:0 auto 6px;}
+  .pagehead h1{font-size:1.2rem;margin:0 0 4px;}
+  .pagehead p{margin:0;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .vlabel{max-width:1040px;margin:24px auto 8px;font-size:.74rem;font-weight:700;color:#5b6672;text-transform:uppercase;letter-spacing:.05em;}
+  .frames{max-width:1040px;margin:0 auto;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+  .frame .cap{font-size:.72rem;color:#5b6672;font-weight:600;margin-bottom:6px;}
+  .device{background:#f5f8f9;border:1px solid #d7e0e2;border-radius:16px;padding:14px;box-shadow:0 12px 30px rgba(3,42,48,.1);}
+  .device.desktop{width:660px;max-width:100%;}
+  .device.mobile{width:360px;}
+
+  /* top bar */
+  .wl-top{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid #dbe7e9;border-radius:14px;padding:12px 14px;margin-bottom:12px;flex-wrap:wrap;}
+  .wl-sum{font-size:.84rem;color:#5b6672;}
+  .wl-sum b{color:#0F6E56;font-weight:700;}
+  .wl-new{display:inline-flex;align-items:center;gap:7px;border:0;background:linear-gradient(135deg,#00838d,#00b0a6);color:#fff;border-radius:11px;padding:10px 15px;font-size:.86rem;font-weight:600;cursor:pointer;box-shadow:0 3px 10px rgba(0,131,141,.28);font-family:inherit;}
+
+  /* procedure card */
+  .pl{background:#fff;border:1px solid #dbe7e9;border-radius:14px;margin-bottom:12px;overflow:hidden;box-shadow:0 4px 16px rgba(3,42,48,.05);}
+  .pl__head{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;flex-wrap:wrap;}
+  .pl__chev{flex:0 0 auto;color:#9bb0b3;transition:transform .18s;font-size:1.1rem;line-height:1;}
+  .pl.collapsed .pl__chev{transform:rotate(-90deg);}
+  .pl__ico{width:30px;height:30px;border-radius:9px;background:#E1F5EE;border:1px solid #bfe6d6;display:flex;align-items:center;justify-content:center;font-size:1rem;flex:0 0 auto;}
+  .pl__name{font-size:.96rem;font-weight:700;color:#0F6E56;}
+  .pl__count{font-size:.72rem;font-weight:700;background:#E1F5EE;color:#0F6E56;padding:2px 9px;border-radius:999px;}
+  .pl__urg{font-size:.7rem;font-weight:700;background:#FCEBEB;color:#A32D2D;padding:2px 9px;border-radius:999px;}
+  .pl__termpill{display:inline-flex;align-items:center;gap:6px;background:#EAF3FF;border:1px solid #bcd9f7;color:#1d5b9e;border-radius:999px;padding:3px 10px;font-size:.76rem;font-weight:600;}
+  .pl__termset{display:inline-flex;align-items:center;gap:5px;border:1px dashed #bcd0d4;background:#fff;color:#5b6672;border-radius:999px;padding:3px 10px;font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;}
+  .pl__spacer{flex:1 1 auto;}
+  .pl__meta{flex:1 1 100%;font-size:.74rem;color:#7c8a8d;margin-left:40px;}
+  .pl__meta b{color:#A35F00;font-weight:700;}
+
+  .pl__body{border-top:1px solid #eef3f4;padding:10px 14px 14px;}
+  .pl.collapsed .pl__body{display:none;}
+  .pl__toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .pl__addp{display:inline-flex;align-items:center;gap:5px;border:1.5px solid #5DCAA5;background:#fff;color:#0F6E56;border-radius:10px;padding:7px 12px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;}
+  .pl__sched{display:inline-flex;align-items:center;gap:5px;border:0;background:#0F6E56;color:#fff;border-radius:10px;padding:7px 13px;font-size:.8rem;font-weight:600;cursor:pointer;margin-left:auto;font-family:inherit;}
+
+  .row{display:flex;align-items:center;gap:11px;padding:9px 10px;border:0.5px solid #e6eef0;border-radius:10px;margin-bottom:6px;background:#fff;}
+  .row.is-urgent{border-left:3px solid #E24B4A;}
+  .row.sel{background:#F2FBF8;border-color:#9FE1CB;}
+  .chk{width:18px;height:18px;accent-color:#0F6E56;flex:0 0 auto;cursor:pointer;}
+  .ava{width:32px;height:32px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem;background:linear-gradient(135deg,#5b9aa6,#41808c);}
+  .who{flex:1 1 auto;min-width:0;}
+  .who .nm{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .who .wt{font-size:.74rem;color:#7c8a8d;}
+  .rowurg{flex:0 0 auto;font-size:.68rem;font-weight:700;background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:999px;}
+  .acts{display:flex;gap:4px;flex:0 0 auto;}
+  .act{width:30px;height:30px;border:0.5px solid #d7e9ec;background:#fff;color:#5b6672;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+
+  .pl--empty .pl__body{display:block;}
+  .emptybox{text-align:center;color:#7c8a8d;font-size:.84rem;padding:14px;line-height:1.6;border:1px dashed #cfdee0;border-radius:10px;}
+
+  /* select bar */
+  .selbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:12px;padding:11px 14px;margin-top:4px;}
+  .selbar span{font-size:.82rem;font-weight:600;color:#0F6E56;}
+  .selbar button{border:0;background:#0F6E56;color:#fff;border-radius:11px;padding:9px 15px;font-size:.84rem;font-weight:600;cursor:pointer;font-family:inherit;}
+  .device.mobile .pl__meta{margin-left:0;}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Lista oczekujących — v2 (zwijalne karty + porządek)</h1>
+    <p>Każda procedura to zwijalna karta. Góra: „＋ Nowa lista". Enroll per-lista („＋ Dodaj pacjenta"). Per-lista „Umów listę →" (zaznacza wszystkich i otwiera umawianie). Nagłówek pokazuje liczbę, pilnych, najdłuższe oczekiwanie i termin listy.</p>
+  </div>
+
+  <div class="vlabel">Desktop</div>
+  <div class="frames">
+    <div class="frame"><div class="cap">Desktop</div><div class="device desktop" id="d"></div></div>
+    <div class="frame"><div class="cap">Mobile</div><div class="device mobile" id="m"></div></div>
+  </div>
+
+<script>
+  var DATA = [
+    { type:'Biopsja tarczycy (BACC)', icon:'🔬', term:'21.07.2026, 10:00', collapsed:false,
+      pts:[ {nm:'Nowak Franciszek', wait:'oczekuje 12 dni', urgent:true},
+            {nm:'Kowalska Zofia', wait:'oczekuje 5 dni'},
+            {nm:'Wiśniewski Jan', wait:'oczekuje 3 dni'} ] },
+    { type:'USG bioder', icon:'🦴', term:null, collapsed:true,
+      pts:[ {nm:'Lewandowska Maja', wait:'oczekuje 8 dni'},
+            {nm:'Zieliński Piotr', wait:'oczekuje 2 dni'} ] },
+    { type:'Nowa lista (np. Echo serca)', icon:'➕', term:null, collapsed:false, empty:true, pts:[] }
+  ];
+  function eln(t,c,txt){var e=document.createElement(t); if(c)e.className=c; if(txt!=null)e.textContent=txt; return e;}
+
+  function buildCard(L){
+    var card = eln('div','pl' + (L.collapsed?' collapsed':'') + (L.empty?' pl--empty':''));
+    var head = eln('div','pl__head');
+    head.appendChild(eln('span','pl__chev','▾'));
+    head.appendChild(eln('div','pl__ico', L.icon));
+    head.appendChild(eln('span','pl__name', L.type));
+    if(!L.empty){
+      head.appendChild(eln('span','pl__count', String(L.pts.length)));
+      var urg = L.pts.filter(function(p){return p.urgent;}).length;
+      if(urg) head.appendChild(eln('span','pl__urg', urg+' pilny'));
+    }
+    head.appendChild(eln('span','pl__spacer'));
+    if(!L.empty){
+      if(L.term){ var tp=eln('span','pl__termpill','📅 '+L.term); head.appendChild(tp); }
+      else { head.appendChild(eln('button','pl__termset','📅 Ustaw termin listy')); }
+    }
+    // meta line (longest wait)
+    if(!L.empty){
+      var oldest = L.pts.reduce(function(mx,p){var n=parseInt((p.wait.match(/\d+/)||[0])[0],10); return n>mx?n:mx;},0);
+      var meta = eln('div','pl__meta'); meta.innerHTML = 'najdłużej czeka: <b>'+oldest+' dni</b>'; head.appendChild(meta);
+    }
+    card.appendChild(head);
+
+    var body = eln('div','pl__body');
+    if(L.empty){
+      body.appendChild(eln('div','emptybox','Lista założona — nie ma jeszcze pacjentów.\nDodaj pierwszego przyciskiem poniżej.'));
+      var tb0 = eln('div','pl__toolbar'); tb0.appendChild(eln('button','pl__addp','＋ Dodaj pacjenta')); body.appendChild(tb0);
+    } else {
+      var tb = eln('div','pl__toolbar');
+      tb.appendChild(eln('button','pl__addp','＋ Dodaj pacjenta'));
+      tb.appendChild(eln('button','pl__sched','Umów listę ('+L.pts.length+') →'));
+      body.appendChild(tb);
+      L.pts.forEach(function(p){
+        var r=eln('div','row'+(p.urgent?' is-urgent':''));
+        r.appendChild(eln('input','chk')); r.lastChild.type='checkbox';
+        var av=eln('div','ava',(p.nm[0]||'?')); r.appendChild(av);
+        var who=eln('div','who'); who.appendChild(eln('div','nm',p.nm)); who.appendChild(eln('div','wt',p.wait)); r.appendChild(who);
+        if(p.urgent) r.appendChild(eln('span','rowurg','Pilne'));
+        var a=eln('div','acts'); a.appendChild(eln('button','act','✎')); a.appendChild(eln('button','act','🗑')); r.appendChild(a);
+        body.appendChild(r);
+      });
+    }
+    card.appendChild(body);
+    head.addEventListener('click',function(e){ if(e.target.closest('button'))return; card.classList.toggle('collapsed'); });
+    return card;
+  }
+
+  function build(host){
+    var total=0, urg=0, lists=0;
+    DATA.forEach(function(L){ if(!L.empty){ total+=L.pts.length; urg+=L.pts.filter(function(p){return p.urgent;}).length; } lists++; });
+    var top=eln('div','wl-top');
+    var sum=eln('div','wl-sum'); sum.innerHTML='<b>'+total+'</b> pacjentów · <b>'+urg+'</b> pilnych · <b>'+lists+'</b> listy';
+    top.appendChild(sum);
+    top.appendChild(eln('button','wl-new','＋ Nowa lista'));
+    host.appendChild(top);
+    DATA.forEach(function(L){ host.appendChild(buildCard(L)); });
+    var sb=eln('div','selbar'); sb.appendChild(eln('span','Zaznaczono 2')); sb.appendChild(eln('button',null,'Umów zaznaczonych na termin')); host.appendChild(sb);
+  }
+  build(document.getElementById('d'));
+  build(document.getElementById('m'));
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Przypomnienia (modal) — układ 3-kolumnowy</title>
+<style>
+  :root{
+    --primary:#00838d;--text:#333;
+    --over-bg:#FFF3E0;--over-tx:#A35F00;--over-br:#F6D9AE;
+    --today-bg:#E8F8EC;--today-tx:#1F7A3D;--today-br:#BFE8CC;
+    --pend-bg:#E9E9FB;--pend-tx:#302D9C;--pend-br:#CFCFF2;
+    --cat-followup:#32ADE6;--cat-treatment:#34C759;--cat-badanie:#5856D6;--cat-duty:#FF3B30;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;color:var(--text);background:#dfe7e8;padding:18px;}
+  .pagebar{max-width:1320px;margin:0 auto 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .pagebar h1{font-size:1.05rem;margin:0;color:#0c3a3e;}
+  .pagebar .desc{font-size:.82rem;color:#5a7274;flex:1;min-width:200px;}
+  .seg{display:inline-flex;background:#fff;border:1px solid #cfdedf;border-radius:11px;padding:4px;gap:4px;}
+  .seg button{border:none;background:transparent;font:inherit;font-size:.8rem;font-weight:600;color:#5a7274;padding:7px 13px;border-radius:8px;cursor:pointer;}
+  .seg button.on{background:var(--primary);color:#fff;}
+
+  /* okno modala (pełnoekranowy w aplikacji; tu w ramce) */
+  .modal{max-width:1320px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,40,45,.18);overflow:hidden;display:flex;flex-direction:column;min-height:660px;}
+  .m-head{display:flex;align-items:center;padding:18px 24px 6px;}
+  .m-head h2{font-size:1.4rem;margin:0;flex:1;color:#10282b;}
+  .m-x{width:38px;height:38px;border-radius:50%;border:1px solid #e3eaeb;background:#fff;color:#5a7274;font-size:1.1rem;cursor:pointer;}
+
+  /* 3 kolumny */
+  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:14px 24px 8px;flex:1;}
+  @media(max-width:980px){ .cols{grid-template-columns:1fr;} }
+  .col{display:flex;flex-direction:column;min-width:0;}
+  .col-head{display:flex;align-items:baseline;gap:10px;border-radius:14px;padding:14px 16px;margin-bottom:12px;}
+  .col-head .num{font-size:1.7rem;font-weight:800;line-height:1;}
+  .col-head .lbl{font-size:.95rem;font-weight:700;}
+  .col.over  .col-head{background:var(--over-bg);color:var(--over-tx);}
+  .col.today .col-head{background:var(--today-bg);color:var(--today-tx);}
+  .col.pend  .col-head{background:var(--pend-bg);color:var(--pend-tx);}
+  .col-body{display:flex;flex-direction:column;gap:12px;}
+
+  /* karta kategorii (jak w obecnym modalu: „Wyniki badań · N") */
+  .catcard{border:1px solid #e7edee;border-radius:14px;overflow:hidden;background:#fbfdfd;}
+  .col.over  .catcard{background:#fffaf2;border-color:var(--over-br);}
+  .col.today .catcard{background:#f5fcf7;border-color:var(--today-br);}
+  .col.pend  .catcard{background:#f8f8fe;border-color:var(--pend-br);}
+  .catcard-h{display:flex;align-items:center;gap:9px;padding:11px 14px;font-weight:700;font-size:.92rem;}
+  .catcard-h .ic{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex:0 0 auto;}
+  .catcard-h .cnt{margin-left:auto;font-size:.8rem;font-weight:800;color:#8a99a0;}
+
+  .row{display:flex;align-items:center;gap:11px;padding:10px 14px;border-top:1px solid #eef3f3;flex-wrap:wrap;}
+  .av{flex:0 0 auto;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem;box-shadow:0 1px 3px rgba(0,0,0,.18);}
+  .row .meta{flex:1 1 140px;min-width:0;}
+  .row .nm{font-size:.92rem;font-weight:700;color:#16242a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row .sub{font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row .when{flex:0 0 auto;text-align:right;}
+  .row .when .rel{font-size:.82rem;font-weight:800;}
+  .row .when .day{font-size:.74rem;color:#94a3a6;}
+  .rel.over{color:var(--over-tx);}
+  .rel.today{color:var(--today-tx);}
+  .rel.pend{color:var(--pend-tx);}
+  .acts{display:flex;gap:7px;flex:0 0 auto;width:100%;justify-content:flex-end;margin-top:2px;}
+  .acts button{font:inherit;font-size:.8rem;font-weight:600;border-radius:8px;padding:6px 12px;cursor:pointer;background:#fff;}
+  .b-done{border:1px solid #9bd6ad;color:#1c7a3c;}
+  .b-snooze{border:1px solid #d3dde0;color:#5a7274;}
+
+  /* pusty stan kolumny */
+  .col-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#8aa0a2;border:1.5px dashed #dde7e8;border-radius:14px;padding:30px 14px;min-height:140px;}
+  .col-empty .ok{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:8px;}
+  .col.over  .col-empty .ok{background:var(--over-bg);color:var(--over-tx);}
+  .col.today .col-empty .ok{background:var(--today-bg);color:var(--today-tx);}
+  .col.pend  .col-empty .ok{background:var(--pend-bg);color:var(--pend-tx);}
+  .col-empty .t{font-size:.88rem;font-weight:600;color:#5a7274;}
+
+  .m-foot{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-top:1px solid #eef2f3;background:#fbfdfd;}
+  .m-foot .ghost{border:1px solid #cfdedf;background:#fff;color:#3a5a5c;font:inherit;font-weight:600;font-size:.86rem;border-radius:10px;padding:9px 16px;cursor:pointer;}
+  .m-foot .primary{border:none;background:var(--primary);color:#fff;font:inherit;font-weight:700;font-size:.9rem;border-radius:10px;padding:10px 22px;cursor:pointer;}
+
+  .foothint{max-width:1320px;margin:12px auto 0;font-size:.82rem;color:#52646a;background:#fff;border:1px solid #d8e3e4;border-radius:12px;padding:12px 16px;line-height:1.55;}
+  .foothint b{color:#0c3a3e;}
+</style>
+</head>
+<body>
+  <div class="pagebar">
+    <h1>Przypomnienia — modal pełnoekranowy (desktop)</h1>
+    <span class="desc">Lista ułożona w 3 kolumnach pod kafelkami nagłówka (zamiast wyśrodkowanej jednej kolumny). Dane fikcyjne.</span>
+    <div class="seg" id="seg">
+      <button class="on" data-s="full">Przykład pełny</button>
+      <button data-s="shot">Jak na zrzucie (2 puste)</button>
+    </div>
+  </div>
+
+  <div class="modal">
+    <div class="m-head"><h2>Przypomnienia</h2><button class="m-x">✕</button></div>
+    <div class="cols" id="cols"></div>
+    <div class="m-foot"><button class="ghost">Otwórz terminarz</button><button class="primary">Zamknij</button></div>
+  </div>
+
+  <div class="foothint">
+    <b>Zachowanie:</b> 3 kolumny tylko na szerokim desktopie (≥ ~1000&nbsp;px); na wąskim ekranie / tablecie / mobile zwijają się do 1 kolumny (obecny układ). Kolumny zawsze trzy (spójność z nagłówkiem) — pusta kategoria pokazuje placeholder „nic tu nie ma", zamiast znikać. Wiersze zachowują akcje (Zrobione / Przełóż); w wąskiej kolumnie akcje schodzą do drugiej linii.
+  </div>
+
+<script>
+  var AV={followup:'var(--cat-followup)',treatment:'var(--cat-treatment)',badanie:'var(--cat-badanie)',duty:'var(--cat-duty)'};
+  function row(ini,name,sub,col,rel,relcls,day){
+    return '<div class="row">'
+      +'<div class="av" style="background:linear-gradient(135deg,'+col+','+col+'cc)">'+ini+'</div>'
+      +'<div class="meta"><div class="nm">'+name+'</div><div class="sub" style="color:'+col+'">'+sub+'</div></div>'
+      +'<div class="when"><div class="rel '+relcls+'">'+rel+'</div><div class="day">'+day+'</div></div>'
+      +'<div class="acts"><button class="b-done">Zrobione</button><button class="b-snooze">Przełóż ▾</button></div>'
+      +'</div>';
+  }
+  function catcard(icCol,icTxt,title,cnt,rows){
+    return '<div class="catcard"><div class="catcard-h"><span class="ic" style="background:'+icCol+'">'+icTxt+'</span>'+title+'<span class="cnt">'+cnt+'</span></div>'+rows.join('')+'</div>';
+  }
+  function emptyCol(kind,txt){ return '<div class="col-empty"><div class="ok">✓</div><div class="t">'+txt+'</div></div>'; }
+
+  var DATA={
+    full:{
+      over:{n:3, body: catcard(AV.followup,'◷','Kontrole',2,[
+              row('KJ','Kowalski Jan','Kontrola — wzrost',AV.followup,'3 dni temu','over','pn 22.06'),
+              row('NA','Nowak Aleksandra','Kontrola — masa ciała',AV.followup,'5 dni temu','over','sob 20.06')])
+            + catcard(AV.treatment,'℞','Leczenie',1,[
+              row('WA','Wiśniewska Anna','Leczenie rhGH',AV.treatment,'wczoraj','over','wt 24.06')]) },
+      today:{n:2, body: catcard(AV.followup,'◷','Kontrole',2,[
+              row('KP','Kamiński Piotr','Kontrola',AV.followup,'dziś','today','12:30'),
+              row('ZM','Zielińska Maria','Kontrola — IGF-1',AV.followup,'dziś','today','15:00')]) },
+      pend:{n:2, body: catcard(AV.badanie,'✎','Wyniki badań',2,[
+              row('PM','Pinczewski Michał','Wynik badania — wynik BAC',AV.badanie,'3 dni temu','pend','pn 22.06'),
+              row('TL','Tomczak Laura','Wynik badania — wynik BAC',AV.badanie,'3 dni temu','pend','pn 22.06')]) }
+    },
+    shot:{
+      over:{n:0, body: emptyCol('over','Nic zaległego — czysto ✓')},
+      today:{n:0, body: emptyCol('today','Na dziś nic nie zaplanowano')},
+      pend:{n:2, body: catcard(AV.badanie,'✎','Wyniki badań',2,[
+              row('PM','Pinczewski Michał','Wynik badania — wynik BAC',AV.badanie,'3 dni temu','pend','pn 22.06'),
+              row('TL','Tomczak Laura','Wynik badania — wynik BAC',AV.badanie,'3 dni temu','pend','pn 22.06')]) }
+    }
+  };
+
+  function render(s){
+    var d=DATA[s];
+    document.getElementById('cols').innerHTML =
+      '<div class="col over"><div class="col-head"><span class="num">'+d.over.n+'</span><span class="lbl">zaległe</span></div><div class="col-body">'+d.over.body+'</div></div>'
+     +'<div class="col today"><div class="col-head"><span class="num">'+d.today.n+'</span><span class="lbl">na dziś</span></div><div class="col-body">'+d.today.body+'</div></div>'
+     +'<div class="col pend"><div class="col-head"><span class="num">'+d.pend.n+'</span><span class="lbl">oczekujące</span></div><div class="col-body">'+d.pend.body+'</div></div>';
+  }
+  document.querySelectorAll('#seg button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('#seg button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on'); render(b.dataset.s);
+    });
+  });
+  render('full');
+</script>
+</body>
+</html>

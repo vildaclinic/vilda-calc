@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta — Statystyki desktop A (Dashboard) dopracowane</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#e9eff1;padding:26px 22px 70px;}
+  .wrap{max-width:1200px;margin:0 auto;}
+  h1{font-size:1.2rem;margin:0 0 14px;color:#33464e;font-weight:700;}
+
+  .surface{background:#fbfdfe;border:1px solid #d7e9ec;border-radius:22px;padding:22px 24px 26px;box-shadow:0 8px 26px rgba(15,43,51,.06);}
+
+  /* topbar */
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:14px;}
+  .ttitle{font-size:1.15rem;font-weight:800;color:#0f2b33;}
+  .tright{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .seg{display:flex;background:#eef4f5;border:1px solid #dbe7e9;border-radius:999px;padding:4px;width:330px;}
+  .seg button{flex:1;border:0;background:transparent;font:inherit;font-size:.9rem;font-weight:600;color:#5b6672;padding:9px 4px;border-radius:999px;cursor:pointer;}
+  .seg button.on{background:#0e857f;color:#fff;}
+  .period{display:flex;align-items:center;gap:8px;background:#eaf6f4;border:1px solid #cfe7e3;border-radius:11px;padding:9px 16px;}
+  .period .pmonth{font-weight:700;color:#0f3d39;font-size:1.02rem;text-transform:capitalize;}
+  .period .psep{color:#9bb7b2;}
+  .period .pwork{color:#4f6b66;font-size:.92rem;}
+
+  .h{font-size:.82rem;font-weight:700;color:#0f2b33;margin:0 0 14px;text-transform:uppercase;letter-spacing:.04em;}
+  .card{background:#fff;border:0.5px solid #d7e9ec;border-radius:16px;padding:18px 20px;}
+
+  /* KPI */
+  .kpirow{display:grid;grid-template-columns:1.55fr 1fr 1fr 1fr;gap:14px;margin-bottom:16px;}
+  .kpi{border:0.5px solid #d7e9ec;border-radius:16px;padding:18px 19px;background:#fbfdfd;display:flex;flex-direction:column;justify-content:center;}
+  .kpi .v{font-size:1.9rem;font-weight:800;line-height:1;color:#0f2b33;}
+  .kpi .l{font-size:.88rem;color:#5b6672;margin-top:7px;}
+  .kpi .d{font-size:.83rem;font-weight:700;margin-top:9px;}
+  .kpi.hero{background:linear-gradient(155deg,#e6f7f0,#fbfdfd);border-color:#bce5da;}
+  .kpi.hero .v{font-size:3rem;}
+  .kpi.hero .l{font-size:1rem;}
+  .chip{display:inline-block;width:fit-content;background:#dff3ea;color:#14794e;border-radius:999px;padding:3px 10px;}
+  .up{color:#1F7A3D;}.flat{color:#8a8f94;}
+
+  /* rzędy */
+  .midrow{display:grid;grid-template-columns:1.75fr 1.05fr;gap:16px;margin-bottom:16px;}
+  .botrow{display:grid;grid-template-columns:1.75fr 1.05fr;gap:16px;}
+  .cap{font-size:.86rem;color:#5b6672;margin-bottom:14px;}
+  .cap b{color:#0f3d39;}
+
+  /* wykres dni z wartościami nad słupkami */
+  .bars{display:flex;align-items:flex-end;gap:12px;height:168px;border-bottom:1px solid #edf2f3;padding-bottom:2px;}
+  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;}
+  .bcol .bv{font-size:.82rem;font-weight:700;color:#0f3d39;}
+  .bcol .bv.zero{color:#c2ccce;font-weight:600;}
+  .bcol .bar{width:100%;max-width:46px;border-radius:7px 7px 0 0;background:#9FE1CB;min-height:3px;}
+  .bcol .bar.peak{background:#0e857f;}
+  .bweekrow{display:flex;gap:12px;margin-top:8px;}
+  .bweekrow .bl{flex:1;text-align:center;font-size:.84rem;color:#7c8a8c;font-weight:500;}
+
+  /* PASKI rozkładu — jeden kolor, długość = proporcja (max=100%); fill display:block */
+  .rc{display:flex;align-items:center;gap:13px;margin:13px 0;font-size:.96rem;}
+  .rc .nm{width:104px;color:#1f2d33;font-weight:500;flex:none;}
+  .rc .track{display:block;height:16px;border-radius:999px;background:#e7eef0;flex:1;overflow:hidden;box-shadow:inset 0 0 0 .5px #d5e2e5;}
+  .rc .fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#0e857f,#0b6e63);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);}
+  .rc .ct{font-weight:800;color:#0f2b33;width:34px;text-align:right;flex:none;font-size:1.06rem;}
+
+  /* grafik tiles */
+  .gtiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .gtile{border:0.5px solid #d7e9ec;border-radius:14px;padding:16px;background:#fbfdfd;}
+  .gtile .gv{font-size:1.7rem;font-weight:800;}
+  .gtile .gl{font-size:.9rem;color:#374151;margin-top:4px;font-weight:600;}
+  .gtile .gs{font-size:.8rem;color:#8a8f94;margin-top:6px;}
+
+  /* jakość — z mini pierścieniem */
+  .qwrap{display:flex;align-items:center;gap:22px;}
+  .ring{width:104px;height:104px;border-radius:50%;flex:none;
+    background:conic-gradient(#1F7A3D 0 92%, #edf0f1 92% 100%);
+    display:flex;align-items:center;justify-content:center;}
+  .ring .inner{width:74px;height:74px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .ring .rv{font-size:1.45rem;font-weight:800;color:#1F7A3D;line-height:1;}
+  .ring .rl{font-size:.66rem;color:#5b6672;margin-top:2px;}
+  .qside .qline{display:flex;align-items:center;gap:9px;margin:9px 0;font-size:.92rem;}
+  .qside .qd{width:11px;height:11px;border-radius:3px;flex:none;}
+  .qside .qn{font-weight:800;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Statystyki — desktop, wariant A (dopracowany)</h1>
+  <div class="surface">
+    <div class="topbar">
+      <div class="ttitle">📊 Statystyki Terminarza</div>
+      <div class="tright">
+        <div class="seg"><button>Tydzień</button><button class="on">Miesiąc</button><button>Rok</button></div>
+        <div class="period"><span class="pmonth">czerwiec 2026</span><span class="psep">·</span><span class="pwork">19 dni roboczych (do dziś)</span></div>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpirow">
+      <div class="kpi hero"><div class="v">138</div><div class="l">wizyt pacjentów w tym okresie</div><div class="d"><span class="chip">▲ 12% vs poprzedni miesiąc (do dziś)</span></div></div>
+      <div class="kpi"><div class="v">6,6</div><div class="l">średnio dziennie</div><div class="d up">▲ 0,4</div></div>
+      <div class="kpi"><div class="v">32</div><div class="l">średnio w tygodniu</div><div class="d flat">≈ jak w maju</div></div>
+      <div class="kpi"><div class="v" style="color:#1F7A3D">92%</div><div class="l">frekwencja (wykonane)</div><div class="d flat">5% no‑show</div></div>
+    </div>
+
+    <!-- wykresy -->
+    <div class="midrow">
+      <div class="card"><div class="h">Wizyty dzień po dniu</div><div class="cap">Najwięcej: <b>wtorki</b> · średnio 9,1 wizyty/dzień roboczy</div>
+        <div class="bars">
+          <div class="bcol"><div class="bv">5</div><div class="bar" style="height:56%"></div></div>
+          <div class="bcol"><div class="bv">9</div><div class="bar peak" style="height:100%"></div></div>
+          <div class="bcol"><div class="bv">7</div><div class="bar" style="height:78%"></div></div>
+          <div class="bcol"><div class="bv">6</div><div class="bar" style="height:67%"></div></div>
+          <div class="bcol"><div class="bv">6</div><div class="bar" style="height:67%"></div></div>
+          <div class="bcol"><div class="bv">1</div><div class="bar" style="height:11%"></div></div>
+          <div class="bcol"><div class="bv zero">0</div><div class="bar" style="height:0%"></div></div>
+        </div>
+        <div class="bweekrow"><span class="bl">pn</span><span class="bl">wt</span><span class="bl">śr</span><span class="bl">cz</span><span class="bl">pt</span><span class="bl">sb</span><span class="bl">nd</span></div>
+      </div>
+      <div class="card"><div class="h">Rozkład wizyt wg typu</div>
+        <div class="rc"><span class="nm">Kontrola</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="ct">70</span></div>
+        <div class="rc"><span class="nm">Leczenie</span><span class="track"><span class="fill" style="width:40%"></span></span><span class="ct">28</span></div>
+        <div class="rc"><span class="nm">Badanie</span><span class="track"><span class="fill" style="width:36%"></span></span><span class="ct">25</span></div>
+        <div class="rc"><span class="nm">Obserwacja</span><span class="track"><span class="fill" style="width:14%"></span></span><span class="ct">10</span></div>
+        <div class="rc"><span class="nm">Procedura</span><span class="track"><span class="fill" style="width:7%"></span></span><span class="ct">5</span></div>
+      </div>
+    </div>
+
+    <!-- detale -->
+    <div class="botrow">
+      <div class="card"><div class="h">Grafik lekarza</div>
+        <div class="gtiles">
+          <div class="gtile"><div class="gv">12</div><div class="gl">Poradnie</div><div class="gs">NFZ 8 · komercja 4</div></div>
+          <div class="gtile"><div class="gv">5</div><div class="gl">Dyżury</div><div class="gs">razem 60 h</div></div>
+          <div class="gtile"><div class="gv">9</div><div class="gl">Zajęcia ze studentami</div><div class="gs">razem 13,5 h</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="h">Jakość grafiku</div>
+        <div class="qwrap">
+          <div class="ring"><div class="inner"><div class="rv">92%</div><div class="rl">wykonane</div></div></div>
+          <div class="qside">
+            <div class="qline"><span class="qd" style="background:#1F7A3D"></span><span class="qn">127</span><span>wizyt wykonanych</span></div>
+            <div class="qline"><span class="qd" style="background:#b4453a"></span><span class="qn">7</span><span>nieobecności (5% no‑show)</span></div>
+            <div class="qline"><span class="qd" style="background:#e3e9ea"></span><span class="qn">4</span><span>jeszcze niezamknięte</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <p style="max-width:1200px;margin:14px auto 0;font-size:.8rem;color:#8a99a0;line-height:1.5;">Liczone lokalnie z kalendarza — dane nie opuszczają urządzenia. Liczby przykładowe. Na węższych ekranach (tablet/mobile) układ zwija się do jednej kolumny — wersja już zatwierdzona.</p>
+</div>
+</body>
+</html>

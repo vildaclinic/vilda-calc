@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pacjenci — A · Liquid Glass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0e2a30; --muted:#56727b; --faint:#8aa3a9;
+    --accent:#00838d; --accent2:#00b8a9; --danger:#d64141; --ext:#b5731a;
+    --glass:rgba(255,255,255,.66); --glass-2:rgba(255,255,255,.5);
+    --glass-brd:rgba(255,255,255,.8); --glass-sh:0 10px 30px rgba(3,42,48,.1);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);
+    display:flex;flex-direction:column;-webkit-text-size-adjust:100%;position:relative;overflow:hidden;
+    background:
+      radial-gradient(900px 600px at 8% -8%, #e6f8f4 0%, rgba(230,248,244,0) 55%),
+      radial-gradient(800px 600px at 102% 6%, #ecf5fd 0%, rgba(236,245,253,0) 55%),
+      radial-gradient(700px 700px at 50% 116%, #f0fbf6 0%, rgba(240,251,246,0) 60%),
+      linear-gradient(180deg,#fcfefe,#f6fafb);
+  }
+  /* miękkie kolorowe „blobs" pod szkłem */
+  body::before,body::after{content:"";position:absolute;border-radius:50%;filter:blur(64px);opacity:.34;z-index:0;pointer-events:none;}
+  body::before{width:340px;height:340px;left:-80px;top:90px;background:radial-gradient(circle,#7fe0d2,transparent 70%);}
+  body::after{width:300px;height:300px;right:-70px;bottom:120px;background:radial-gradient(circle,#9cd2f5,transparent 70%);}
+
+  .wrap{position:relative;z-index:1;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;max-width:1120px;width:100%;margin:0 auto;padding:0 18px;}
+
+  /* nagłówek-szkło, przyklejony */
+  .top{position:sticky;top:0;z-index:5;padding:18px 0 12px;}
+  .top h1{margin:0;font-size:1.7rem;font-weight:800;letter-spacing:-.02em;}
+  .top .count{font-size:.95rem;font-weight:600;color:var(--muted);margin-top:1px;}
+
+  .glass{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+    border:1px solid var(--glass-brd);box-shadow:var(--glass-sh),inset 0 1px 0 rgba(255,255,255,.7);}
+
+  .search{position:relative;margin:14px 0 12px;border-radius:18px;}
+  .search input{width:100%;border:0;background:transparent;outline:none;font-family:inherit;font-size:1.05rem;color:var(--ink);padding:15px 16px 15px 48px;border-radius:18px;}
+  .search input::placeholder{color:var(--faint);}
+  .search .ic{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:var(--accent);opacity:.85;}
+
+  .filters{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .seg{display:flex;gap:4px;padding:4px;border-radius:999px;}
+  .seg button{border:0;background:transparent;color:var(--muted);font-family:inherit;font-size:.84rem;font-weight:600;padding:8px 16px;border-radius:999px;cursor:pointer;transition:.15s;}
+  .seg button.on{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 12px rgba(0,131,141,.32);}
+  .seg button:not(.on):hover{color:var(--accent);}
+  .sortwrap{margin-left:auto;position:relative;}
+  .sortpill{display:flex;align-items:center;gap:7px;border-radius:999px;padding:8px 14px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;border:0;}
+  .sortpill .sa{color:var(--accent);}
+  .sortpill .sc{color:var(--faint);font-size:.78rem;transition:transform .15s;}
+  .sortpill.open .sc{transform:rotate(180deg);}
+  .sortmenu{position:absolute;right:0;top:calc(100% + 7px);z-index:30;min-width:208px;border-radius:16px;padding:7px;display:flex;flex-direction:column;gap:2px;}
+  .sortmenu[hidden]{display:none;}
+  .sortmenu .mh{font-size:.68rem;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px 4px;}
+  .sortopt{display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;background:transparent;border-radius:11px;
+    padding:11px 12px;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;width:100%;}
+  .sortopt:hover{background:rgba(0,131,141,.09);}
+  .sortopt .sub{font-size:.74rem;font-weight:500;color:var(--muted);}
+  .sortopt.on{color:var(--accent);background:rgba(0,131,141,.1);}
+  .sortopt .tick{opacity:0;font-weight:800;color:var(--accent);}
+  .sortopt.on .tick{opacity:1;}
+
+  .scroll{flex:1 1 auto;min-height:0;overflow:auto;padding:2px 2px 16px;}
+  .scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:rgba(0,131,141,.2);border-radius:8px}
+
+  .sec{font-size:.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding:14px 6px 8px;}
+
+  /* poziomy pasek „ostatnio" — mini-szklane karty */
+  .recent{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;}
+  .recent::-webkit-scrollbar{display:none}
+  .rcard{flex:0 0 auto;width:130px;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:transform .15s;}
+  .rcard:hover{transform:translateY(-3px);}
+  .rcard .nm{font-size:.9rem;font-weight:700;line-height:1.15;}
+  .rcard .mt{font-size:.74rem;color:var(--muted);}
+
+  .row{display:flex;align-items:center;gap:13px;border-radius:18px;padding:12px 14px;margin-bottom:9px;cursor:pointer;transition:transform .14s, box-shadow .14s, background .14s;}
+  .row:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(3,42,48,.16),inset 0 1px 0 rgba(255,255,255,.8);background:rgba(255,255,255,.7);}
+  .row.dup{border-color:rgba(214,65,65,.4);}
+  .ava{flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;box-shadow:0 4px 10px rgba(3,42,48,.18), inset 0 1px 1px rgba(255,255,255,.4);}
+  .row .ava{width:46px;height:46px;font-size:1.1rem;}
+  .info{min-width:0;flex:1 1 auto;}
+  .nm{font-weight:700;font-size:1.02rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .meta{font-size:.82rem;color:var(--muted);margin-top:2px;}
+  .badge{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:999px;}
+  .badge.ext{color:var(--ext);background:rgba(214,158,62,.18);border:1px solid rgba(214,158,62,.3);}
+  .dup-txt{color:var(--danger);font-weight:600;}
+  .chev{margin-left:6px;color:var(--faint);flex:0 0 auto;}
+
+  .foot{flex:0 0 auto;display:flex;gap:10px;align-items:center;padding:12px 0 18px;flex-wrap:wrap;}
+  .gbtn{border-radius:14px;padding:12px 16px;font-family:inherit;font-size:.88rem;font-weight:600;color:var(--muted);cursor:pointer;border:0;}
+  .gbtn.primary{margin-left:auto;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 22px rgba(0,131,141,.34);}
+
+  /* ── mobile ── */
+  @media (max-width:520px){
+    .wrap{padding:0 14px;}
+    .top{padding:14px 0 10px;}
+    .top h1{font-size:1.45rem;}
+    .search input{font-size:1rem;padding:13px 14px 13px 44px;}
+    .filters{gap:6px;flex-wrap:nowrap;}
+    .seg{flex:1 1 auto;min-width:0;}
+    .seg button{flex:1 1 auto;padding:8px 5px;font-size:.76rem;white-space:nowrap;}
+    .sortwrap{flex:0 0 auto;width:104px;}                 /* stała szerokość — segment się nie zwęża */
+    .sortpill{width:100%;justify-content:center;padding:9px 8px;gap:5px;}
+    .sortpill .sc{display:none;}      /* na mobile bez strzałki, etykieta zostaje */
+    .sortmenu{min-width:180px;}
+    .recent{gap:9px;}.rcard{width:120px;padding:12px;}
+    .row{padding:11px 13px;gap:11px;}
+    .row .ava{width:42px;height:42px;font-size:1rem;}
+    .nm{font-size:.98rem;}
+    .foot{gap:8px;}
+    .gbtn{flex:1 1 calc(50% - 4px);text-align:center;}
+    .gbtn.primary{flex:1 1 100%;margin-left:0;order:-1;}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>Pacjenci</h1>
+      <div class="count" id="count"></div>
+      <div class="search glass">
+        <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.8-3.8"/></svg></span>
+        <input id="q" type="search" placeholder="Szukaj pacjenta…">
+      </div>
+      <div class="filters">
+        <div class="seg glass" id="seg">
+          <button data-v="all" class="on">Wszyscy</button>
+          <button data-v="base">Z bazy</button>
+          <button data-v="ext">Spoza bazy</button>
+        </div>
+        <div class="sortwrap">
+          <button class="sortpill glass" id="sortBtn" aria-haspopup="menu"><span class="sa">⇅</span><span class="sl">Ostatni</span><span class="sc">⌄</span></button>
+          <div class="sortmenu glass" id="sortMenu" hidden role="menu">
+            <div class="mh">Sortuj według</div>
+            <button class="sortopt" data-s="recent" role="menuitemradio"><span>Ostatnio aktywni</span><span class="tick">✓</span></button>
+            <button class="sortopt" data-s="az" role="menuitemradio"><span>Nazwisko A–Z</span><span class="tick">✓</span></button>
+            <button class="sortopt" data-s="age" role="menuitemradio"><span>Wiek</span><span class="tick">✓</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scroll" id="scroll"></div>
+    <div class="foot">
+      <button class="gbtn glass">Strona główna</button>
+      <button class="gbtn glass">Importuj kopie</button>
+      <button class="gbtn glass primary">+ Dodaj osobę spoza bazy</button>
+    </div>
+  </div>
+
+<script src="makieta_pacjenci_data.js"></script>
+<script>
+var state={filter:'all',q:'',sort:'recent'};
+function render(keep){
+  var pos=null,had=false; if(keep){var a=document.activeElement;if(a&&a.id==='q'){had=true;pos=a.selectionStart;}}
+  var arr=PT.filtered(state);
+  document.getElementById('count').textContent=arr.length+(arr.length===1?' pacjent · z bazy i spoza bazy':' pacjentów · z bazy i spoza bazy');
+  var sc=document.getElementById('scroll'); sc.innerHTML='';
+  if(!arr.length){var e=PT.el('div','sec','Brak pasujących pacjentów.');e.style.textAlign='center';e.style.padding='40px';sc.appendChild(e);return;}
+  var mob=window.matchMedia('(max-width:520px)').matches; // mobile: bez „Ostatnio otwierani"
+  if(state.sort==='recent'&&!state.q&&!mob){
+    var rec=arr.slice().sort(function(a,b){return a.recent-b.recent;}).slice(0,4);
+    sc.appendChild(PT.el('div','sec','Ostatnio otwierani'));
+    var strip=PT.el('div','recent');
+    rec.forEach(function(p){
+      var c=PT.el('div','rcard glass');
+      var av=PT.el('div','ava',PT.ini(p));av.style.cssText+=PT.avaBg(p)+'width:38px;height:38px;font-size:.95rem;';
+      c.appendChild(av);
+      c.appendChild(PT.el('div','nm',p.name));
+      c.appendChild(PT.el('div','mt',PT.shortMeta(p)));
+      c.onclick=function(){};strip.appendChild(c);
+    });
+    sc.appendChild(strip);
+    sc.appendChild(PT.el('div','sec','Wszyscy · A–Z'));
+    arr.slice().sort(function(a,b){return a.name.localeCompare(b.name,'pl');}).forEach(function(p){sc.appendChild(rowOf(p));});
+  } else {
+    arr.forEach(function(p){sc.appendChild(rowOf(p));});
+  }
+  if(keep&&had){var i=document.getElementById('q');if(i){i.focus();try{i.setSelectionRange(pos,pos);}catch(e){}}}
+}
+function rowOf(p){
+  var r=PT.el('div','row glass'+(PT.isDup(p)?' dup':''));
+  var av=PT.el('div','ava',PT.ini(p));av.style.cssText+=PT.avaBg(p);
+  var info=PT.el('div','info');
+  var nm=PT.el('div','nm');nm.appendChild(PT.el('span',null,p.name));
+  if(p.ext)nm.appendChild(PT.el('span','badge ext','spoza bazy'));
+  info.appendChild(nm);
+  info.appendChild(PT.el('div','meta'+(PT.isDup(p)?' dup-txt':''),PT.meta(p)));
+  if(PT.isDup(p))info.appendChild(PT.el('div','meta dup-txt','to samo nazwisko — rozróżnij datą urodzenia'));
+  r.appendChild(av);r.appendChild(info);
+  r.appendChild(PT.el('span','chev','›'));
+  r.onclick=function(){};return r;
+}
+document.getElementById('q').addEventListener('input',function(){state.q=this.value;render(true);});
+document.getElementById('seg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(this.children,function(x){x.classList.remove('on');});b.classList.add('on');state.filter=b.dataset.v;render();});
+var sortLabels={recent:'Ostatni',az:'A–Z',age:'Wiek'};
+var sortBtn=document.getElementById('sortBtn'),sortMenu=document.getElementById('sortMenu');
+function paintSort(){sortBtn.querySelector('.sl').textContent=sortLabels[state.sort];sortMenu.querySelectorAll('.sortopt').forEach(function(o){o.classList.toggle('on',o.dataset.s===state.sort);});}
+sortBtn.addEventListener('click',function(e){e.stopPropagation();var willOpen=sortMenu.hidden;sortMenu.hidden=!willOpen;sortBtn.classList.toggle('open',willOpen);});
+sortMenu.addEventListener('click',function(e){var o=e.target.closest('.sortopt');if(!o)return;state.sort=o.dataset.s;paintSort();sortMenu.hidden=true;sortBtn.classList.remove('open');render();});
+document.addEventListener('click',function(e){if(!sortMenu.hidden&&!sortMenu.contains(e.target)&&!sortBtn.contains(e.target)){sortMenu.hidden=true;sortBtn.classList.remove('open');}});
+paintSort();
+var _rT;window.addEventListener('resize',function(){clearTimeout(_rT);_rT=setTimeout(function(){render();},150);}); // przerysuj przy zmianie szerokości (desktop↔mobile)
+render();
+</script>
+</body>
+</html>

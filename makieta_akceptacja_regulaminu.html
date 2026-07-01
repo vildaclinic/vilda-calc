@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta — akceptacja regulaminu + podział treści</title>
+<style>
+  :root{--primary:#00838d;--text:#28363a;--warn-bg:#FFF7ED;--warn-br:#F3D6A8;--warn-tx:#92560b;
+    --pro-bg:#EEF6FF;--pro-br:#CBE2F7;--pro-tx:#1d5a93;--radius:14px;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;color:var(--text);
+    background:radial-gradient(1200px 600px at 80% -10%,#e7f6f7,rgba(231,246,247,0) 60%),#eef3f4;padding:26px 18px 60px;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  h1{font-size:1.3rem;margin:0 0 4px;color:#0c3a3e;}
+  .lead{color:#5a7274;font-size:.92rem;margin:0 0 22px;max-width:780px;line-height:1.55;}
+  code{background:#e6edee;padding:1px 5px;border-radius:5px;font-size:.85em;}
+
+  /* ─ ekran akceptacji ─ */
+  .gate-scrim{background:rgba(12,40,45,.18);border-radius:18px;padding:34px 16px;display:flex;justify-content:center;margin-bottom:26px;}
+  .gate{background:#fff;max-width:560px;width:100%;border-radius:18px;box-shadow:0 24px 60px rgba(0,40,45,.22);overflow:hidden;}
+  .gate-h{padding:22px 26px 6px;display:flex;gap:12px;align-items:flex-start;}
+  .gate-h .ic{width:42px;height:42px;border-radius:12px;background:#e6f5f6;color:var(--primary);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .gate-h .ic svg{width:24px;height:24px;}
+  .gate-h h2{font-size:1.18rem;margin:0 0 2px;color:#0c3a3e;}
+  .gate-h p{margin:0;font-size:.86rem;color:#6b8385;}
+  .gate-body{padding:14px 26px 4px;}
+  .panel{border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:.85rem;line-height:1.5;}
+  .panel.warn{background:var(--warn-bg);border:1px solid var(--warn-br);}
+  .panel.pro{background:var(--pro-bg);border:1px solid var(--pro-br);}
+  .panel .ph{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:4px;}
+  .panel.warn .ph{color:var(--warn-tx);}
+  .panel.pro .ph{color:var(--pro-tx);}
+  .panel.warn .ph svg,.panel.pro .ph svg{width:17px;height:17px;}
+  .links{font-size:.83rem;margin:6px 0 12px;}
+  .links a{color:var(--primary);font-weight:600;text-decoration:none;margin-right:14px;}
+  .accept-row{display:flex;gap:10px;align-items:flex-start;background:#f6fafa;border:1px solid #d8e6e7;border-radius:11px;padding:12px 14px;margin-bottom:6px;cursor:pointer;}
+  .accept-row input{margin-top:2px;width:18px;height:18px;flex:0 0 auto;accent-color:var(--primary);}
+  .accept-row label{font-size:.88rem;font-weight:600;color:#28363a;cursor:pointer;}
+  .gate-foot{padding:8px 26px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .ver{font-size:.74rem;color:#94a6a8;}
+  .btn{font:inherit;font-weight:700;font-size:.92rem;border-radius:11px;padding:11px 22px;cursor:pointer;border:none;}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:disabled{background:#bcd3d4;cursor:not-allowed;}
+
+  /* ─ podział treści ─ */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px;}
+  @media(max-width:760px){.split{grid-template-columns:1fr;}}
+  .col{background:#fff;border:1px solid #e1e8ea;border-radius:14px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .col h3{margin:0 0 4px;font-size:1rem;color:#0c3a3e;display:flex;align-items:center;gap:8px;}
+  .badge{font-size:.66rem;font-weight:800;border-radius:999px;padding:2px 9px;text-transform:uppercase;letter-spacing:.04em;}
+  .badge.must{background:#ffe9e6;color:#b2271d;}
+  .badge.open{background:#e6f5f6;color:var(--primary);}
+  .col .sub{font-size:.8rem;color:#6b8385;margin:0 0 10px;}
+  .col ul{margin:0;padding-left:18px;font-size:.85rem;line-height:1.6;}
+  .col li{margin:5px 0;}
+
+  .note{font-size:.85rem;color:#46585a;background:#fff;border:1px solid #e1e8ea;border-radius:14px;padding:16px 18px;line-height:1.6;}
+  .note h3{margin:0 0 8px;font-size:.98rem;color:#0c3a3e;}
+  .note b{color:#0c3a3e;}
+  .note ul{margin:6px 0 0;padding-left:20px;}
+  .legalbox{margin-top:12px;background:#FFF7ED;border:1px solid #F3D6A8;border-radius:11px;padding:11px 14px;color:#92560b;font-size:.83rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Akceptacja regulaminu + zastrzeżenia medyczne</h1>
+  <p class="lead">Bramka pokazywana raz (i ponownie po zmianie wersji). Akceptujesz <b>zastrzeżenia medyczne</b> (część regulaminu); <b>źródła/bibliografia</b> nie są w bramce — zostają jawną stroną „Źródła i metodologia". Treść 1:1 z obecnych paneli aplikacji (skrócona).</p>
+
+  <!-- EKRAN AKCEPTACJI -->
+  <div class="gate-scrim">
+    <div class="gate">
+      <div class="gate-h">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div><h2>Zanim zaczniesz</h2><p>Zapoznaj się z charakterem narzędzia i zaakceptuj regulamin.</p></div>
+      </div>
+      <div class="gate-body">
+        <div class="panel warn">
+          <div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3l9 16H3l9-16z" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke-linecap="round"/></svg>Przeznaczenie i zastrzeżenia</div>
+          <b>Waga i wzrost</b> to narzędzie informacyjno‑edukacyjne. Wyniki kalkulatorów i analiz <b>nie stanowią oceny klinicznej, rozpoznania, zalecenia terapeutycznego ani planu leczenia</b> i nie zastępują konsultacji lekarskiej. W razie wątpliwości skonsultuj się z lekarzem.
+        </div>
+        <div class="panel pro">
+          <div class="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 3v6a4 4 0 008 0V3M9 21a4 4 0 004-4v-2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="17" r="2"/></svg>Moduł Profesjonalny (DocPro) — wyłącznie dla lekarzy</div>
+          Kalkulatory dawek i obliczenia kliniczne mają charakter pomocniczy; wymagają weryfikacji z ChPL i aktualną literaturą. Ostateczna decyzja terapeutyczna należy do lekarza prowadzącego.
+        </div>
+        <div class="links">
+          <a href="#">Pełny regulamin →</a>
+          <a href="#">Polityka prywatności →</a>
+          <a href="#">Źródła i metodologia →</a>
+        </div>
+        <div class="accept-row" onclick="var c=document.getElementById('chk');c.checked=!c.checked;sync();">
+          <input type="checkbox" id="chk" onclick="event.stopPropagation();sync();">
+          <label for="chk">Przeczytałem(-am) i akceptuję <b>Regulamin</b> wraz z zastrzeżeniami medycznymi oraz <b>Politykę prywatności</b>.</label>
+        </div>
+      </div>
+      <div class="gate-foot">
+        <span class="ver">Regulamin v1 · akceptacja zapisywana z datą i wersją</span>
+        <button class="btn btn-primary" id="go" disabled>Akceptuję i przechodzę dalej</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PODZIAŁ TREŚCI -->
+  <div class="split">
+    <div class="col">
+      <h3>Regulamin <span class="badge must">akceptacja wymagana</span></h3>
+      <p class="sub">Krótkie, prawne, do zaakceptowania. Trafia do §5 „Zastrzeżenie medyczne".</p>
+      <ul>
+        <li><b>Przeznaczenie i zastrzeżenia</b> — narzędzie informacyjno‑edukacyjne, brak rozpoznania/zalecenia/planu leczenia.</li>
+        <li><b>DocPro — wyłącznie dla lekarzy</b> — obliczenia pomocnicze, weryfikacja z ChPL, decyzja należy do lekarza.</li>
+        <li>Odnośnik do pełnej <b>bibliografii</b> (nie wklejamy jej do bramki).</li>
+        <li>Zapis akceptacji: <b>wersja + data</b> (lokalnie, opcjonalnie w koncie/syncu).</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>Źródła i metodologia <span class="badge open">jawna strona</span></h3>
+      <p class="sub">Bez bramki, dostępne dla każdego (też gości). Linkowane z regulaminu, stopki i aplikacji.</p>
+      <ul>
+        <li>Pełna <b>bibliografia</b> (siatki centylowe, testy hormonalne, predykcja wzrostu, normy żywieniowe, przeliczniki lab, leki…).</li>
+        <li>Krótki opis <b>metodologii</b> per moduł.</li>
+        <li>Zostaje też skrócony disclaimer w aplikacji z linkiem tutaj — transparentność w kontekście.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <h3>Mechanika (propozycja) <span class="badge must" style="vertical-align:middle;">do akceptacji</span></h3>
+    <ul>
+      <li><b>Kiedy:</b> przy pierwszym użyciu (obejmuje też gości) — ekran jak wyżej, blokuje wejście do kalkulatora do czasu akceptacji.</li>
+      <li><b>Wersjonowanie:</b> <code>vilda-terms-accepted: {version, dateISO}</code> w localStorage; podbicie wersji regulaminu → ponowna prośba o akceptację (to domyka placeholder „§13 zmiany regulaminu").</li>
+      <li><b>Zero‑knowledge:</b> zapis lokalny; dla zalogowanych można dołożyć do konta/syncu (znacznik akceptacji, bez danych wrażliwych).</li>
+      <li><b>Spójność:</b> usuwamy duplikację — disclaimer żyje w regulaminie (§5), a w aplikacji zostaje skrót + linki; źródła w jednym miejscu („Źródła i metodologia").</li>
+    </ul>
+    <div class="legalbox">
+      ⚠ <b>Nie jestem prawnikiem.</b> Regulamin ma już wpisany kluczowy <code>[legal-todo]</code>: ustalić ze specjalistą ds. wyrobów medycznych, czy aplikacja kwalifikuje się jako oprogramowanie‑wyrób medyczny (MDR 2017/745). Brzmienie zastrzeżeń i sam fakt bramki akceptacji powinien zatwierdzić prawnik — ja składam to technicznie i redakcyjnie.
+    </div>
+  </div>
+</div>
+
+<script>
+  function sync(){ document.getElementById('go').disabled = !document.getElementById('chk').checked; }
+  document.getElementById('go').addEventListener('click',function(){ if(!this.disabled) alert('→ zapis akceptacji (wersja + data) i wejście do aplikacji'); });
+</script>
+</body>
+</html>
