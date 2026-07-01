@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Terminarz: popraw nazwisko osoby na wpisie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0f2b33;--muted:#5b6672;--teal:#00838d;--teal2:#00b8a9;--wlgreen:#0F6E56;--line:rgba(0,131,141,.16);--field:#f7fbfc;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:#eef5f6;padding:22px 16px 60px;}
+  .wrap{max-width:560px;margin:0 auto;}
+  .note{background:#E1F5EE;border:1px solid #9FE1CB;border-radius:12px;padding:11px 14px;font-size:.85rem;color:#0c5a47;line-height:1.5;margin-bottom:16px;}
+  .note b{color:#0a4a3b;}
+
+  .modal{background:#fff;border:0.5px solid #d7e9ec;border-radius:16px;overflow:hidden;box-shadow:0 14px 40px rgba(0,81,88,.12);}
+  .mhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:0.5px solid #eef2f3;}
+  .mhead h3{margin:0;font-size:1.02rem;font-weight:700;}
+  .mhead .x{border:0;background:none;color:var(--muted);font-size:.9rem;cursor:pointer;font-family:inherit;}
+  .mhead .save{border:0;background:var(--wlgreen);color:#fff;border-radius:9px;padding:7px 13px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;}
+  .sec{padding:14px;}
+  .sec-lbl{font-size:.8rem;font-weight:600;color:var(--muted);margin:0 0 8px;}
+
+  /* zablokowana osoba (tz-nt-lockpat) + NOWY przycisk „Edytuj osobę" */
+  .lockpat{display:flex;align-items:center;gap:10px;background:#EAF5F4;border:0.5px solid #cfe3e6;border-radius:9px;padding:9px 12px;}
+  .lockpat__av{width:28px;height:28px;border-radius:50%;background:var(--wlgreen);color:#E1F5EE;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex:0 0 auto;}
+  .lockpat__nm{font-size:.95rem;font-weight:600;}
+  .lockpat__ic{color:#9aa7a6;font-size:.95rem;}
+  .lockpat__edit{margin-left:auto;display:inline-flex;align-items:center;gap:5px;border:1px solid #cfe6df;background:#fff;color:var(--wlgreen);border-radius:9px;padding:6px 11px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .lockpat__edit:hover{background:#E1F5EE;border-color:#5DCAA5;}
+  .cap{font-size:.72rem;color:#9aa7a6;margin:6px 2px 0;}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:4px;}
+  .field input{width:100%;font-size:.98rem;font-family:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;color:var(--ink);background:#fff;}
+  .field input[readonly]{background:#f3f7f8;color:#5b6672;}
+
+  /* karta edycji osoby (.vilda-edit2-like) */
+  .ed{display:none;}
+  .ed.open{display:block;}
+  .main.hidden{display:none;}
+  .edcard{padding:14px;}
+  .edback{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--teal);border-radius:10px;padding:7px 11px;font-size:.84rem;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:12px;}
+  .edtitle{font-size:1.05rem;font-weight:800;margin:0 0 2px;}
+  .edsub{font-size:.82rem;color:var(--muted);margin:0 0 14px;}
+  .grid2{display:flex;gap:12px;}
+  .grid2 .field{flex:1;}
+  .infohint{display:flex;gap:8px;align-items:flex-start;background:#fff7ec;border:1px solid #ffd79a;border-radius:10px;padding:9px 12px;font-size:.8rem;color:#A35F00;line-height:1.45;margin:4px 0 14px;}
+  .edacts{display:flex;gap:10px;}
+  .edacts button{border-radius:11px;padding:11px 15px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--line);background:#fff;color:var(--muted);}
+  .edacts .ok{border:0;color:#fff;background:linear-gradient(135deg,var(--teal),var(--teal2));margin-left:auto;}
+  .badge{font-size:.62rem;font-weight:700;color:#b5731a;background:rgba(214,158,62,.18);border:1px solid rgba(214,158,62,.3);border-radius:999px;padding:2px 9px;text-transform:uppercase;letter-spacing:.03em;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="note">
+      Poprawka: na zablokowanej osobie we wpisie Terminarza pojawia się <b>„✎ Edytuj osobę"</b>. Otwiera edycję danych
+      (Nazwisko/Imię) — zmiana <b>propaguje na wszystkie wpisy</b> tej osoby. Kliknij „Edytuj osobę", popraw „Natalia" → „Natasza", Zapisz.
+    </div>
+
+    <div class="modal">
+      <!-- WIDOK 1: edycja terminu (osoba zablokowana + akcja edycji osoby) -->
+      <div class="main" id="main">
+        <div class="mhead"><button class="x">Anuluj</button><h3>Edytuj termin</h3><button class="save">Zapisz</button></div>
+        <div class="sec">
+          <p class="sec-lbl">👤 Pacjent</p>
+          <div class="lockpat">
+            <span class="lockpat__av" id="chipAv">WN</span>
+            <span class="lockpat__nm" id="chipNm">Woźniak Natalia</span>
+            <span class="badge">spoza bazy</span>
+            <span class="lockpat__ic" aria-hidden="true">🔒</span>
+            <button class="lockpat__edit" id="editPerson">✎ Edytuj osobę</button>
+          </div>
+          <p class="cap">Pacjenta nie zmienia się przy edycji terminu — możesz tylko poprawić jego dane.</p>
+
+          <div style="margin-top:14px;">
+            <p class="sec-lbl">🔬 Procedura</p>
+            <div class="field"><input type="text" value="Biopsja tarczycy" readonly></div>
+            <p class="sec-lbl">🗓 Termin</p>
+            <div class="grid2">
+              <div class="field"><label>Data</label><input type="text" value="12.07.2026" readonly></div>
+              <div class="field"><label>Godzina</label><input type="text" value="09:30" readonly></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WIDOK 2: edycja danych osoby (spoza bazy) -->
+      <div class="ed" id="ed">
+        <div class="edcard">
+          <button class="edback" id="edBack">‹ Wróć do terminu</button>
+          <h2 class="edtitle">Edytuj osobę spoza bazy</h2>
+          <p class="edsub">Popraw dane — zmiana obejmie wszystkie wpisy tej osoby.</p>
+          <div class="infohint">⚠ Zmiana nazwiska/imienia zaktualizuje tę osobę <b>we wszystkich</b> jej wpisach w Terminarzu i na listach.</div>
+          <div class="grid2">
+            <div class="field"><label>Nazwisko</label><input type="text" id="fLast" value="Woźniak"></div>
+            <div class="field"><label>Imię</label><input type="text" id="fFirst" value="Natalia"></div>
+          </div>
+          <div class="edacts"><button id="edCancel">Anuluj</button><button class="ok" id="edSave">Zapisz</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var main=document.getElementById('main'), ed=document.getElementById('ed');
+  function show(view){ if(view==='ed'){ed.classList.add('open');main.classList.add('hidden');} else {ed.classList.remove('open');main.classList.remove('hidden');} }
+  document.getElementById('editPerson').addEventListener('click',function(){ show('ed'); });
+  document.getElementById('edBack').addEventListener('click',function(){ show('main'); });
+  document.getElementById('edCancel').addEventListener('click',function(){ show('main'); });
+  document.getElementById('edSave').addEventListener('click',function(){
+    var l=(document.getElementById('fLast').value||'').trim(), f=(document.getElementById('fFirst').value||'').trim();
+    var full=(l+' '+f).trim();
+    document.getElementById('chipNm').textContent=full||'(bez nazwiska)';
+    document.getElementById('chipAv').textContent=((l[0]||'')+(f[0]||'')).toUpperCase()||'?';
+    show('main');
+  });
+</script>
+</body>
+</html>

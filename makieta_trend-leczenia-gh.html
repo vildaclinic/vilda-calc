@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — poprawiony wykres „Trend leczenia GH"</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:22px 16px 60px;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  h1{font-size:1.2rem;margin:0 0 4px;}
+  .sub{margin:0 0 18px;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .grid{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+  .card{background:#fff;border:1px solid #dbe7e9;border-radius:14px;padding:14px 16px 16px;box-shadow:0 6px 20px rgba(3,42,48,.06);width:520px;max-width:100%;}
+  .card.now{border-color:#f0c9c4;background:#fffafa;}
+  .lbl{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#5b6672;margin:0 0 2px;}
+  .lbl.now{color:#b4453a;}
+  .lbl.fix{color:#0F6E56;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#33464e;margin:6px 0 8px;}
+  .legend .li{display:inline-flex;align-items:center;gap:6px;}
+  .legend .ln{width:16px;height:3px;border-radius:2px;display:inline-block;}
+  .legend .off{opacity:.4;text-decoration:line-through;}
+  .cap{font-size:.78rem;color:#5b6672;line-height:1.5;margin:10px 2px 0;}
+  .cap b{color:#0f2b33;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}
+  th{text-align:left;color:#5b6672;font-weight:500;padding:4px 6px;border-bottom:1px solid #eef3f4;}
+  td{padding:4px 6px;border-bottom:1px solid #f4f7f8;color:#1a2b30;}
+  .note{max-width:1080px;margin:20px auto 0;background:#fff;border:1px solid #dbe7e9;border-radius:12px;padding:14px 16px;font-size:.84rem;color:#33464e;line-height:1.55;}
+  .note b{color:#0f2b33;}
+  .pill{display:inline-block;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:7px;padding:1px 7px;font-size:.78rem;color:#0F6E56;margin:0 2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>„Trend leczenia GH" — teraz vs po poprawkach</h1>
+  <p class="sub">Te same dane Graczyka (dawki 0,029 / 0,027 / 0,029 / 0,029 / 0,030 mg/kg/d; IGF‑1 brak). Skala na makiecie liczona tak, jak zrobiłaby to docelowa poprawka.</p>
+
+  <div class="grid">
+    <div class="card now">
+      <p class="lbl now">Teraz</p>
+      <div class="legend"><span class="li"><span class="ln" style="background:#0F6E56"></span>dawka</span><span class="li"><span class="ln" style="background:#7F77DD"></span>IGF‑1 ng/ml</span></div>
+      <div id="chartNow"></div>
+      <p class="cap"><b>Problem:</b> oś X po kolejności (nie po wieku), dawka autoskalowana na pełną wysokość → korekta 0,003 mg/kg/d wygląda jak załamanie. Brak podziałek i wartości; legenda IGF‑1 mimo braku danych.</p>
+    </div>
+
+    <div class="card">
+      <p class="lbl fix">Po poprawkach · Graczyk (bez IGF‑1)</p>
+      <div class="legend"><span class="li"><span class="ln" style="background:#0F6E56"></span>dawka (mg/kg/d)</span><span class="li off"><span class="ln" style="background:#7F77DD"></span>IGF‑1 — brak danych</span></div>
+      <div id="chartFix"></div>
+      <p class="cap"><b>Co się zmienia:</b> oś X po <b>wieku</b>; <b>uczciwa skala</b> (dane wypełniają ~⅓ wysokości, min. pasmo) → widać, że dawka jest <b>stabilna</b>; <b>podziałki + wartości</b> na osi; oś IGF‑1 i fioletowa legenda <b>ukryte</b>, gdy brak danych.</p>
+    </div>
+
+    <div class="card">
+      <p class="lbl fix">Po poprawkach · przykład z IGF‑1</p>
+      <div class="legend"><span class="li"><span class="ln" style="background:#0F6E56"></span>dawka (mg/kg/d) — oś lewa</span><span class="li"><span class="ln" style="background:#7F77DD"></span>IGF‑1 (ng/ml) — oś prawa</span></div>
+      <div id="chartIgf"></div>
+      <p class="cap"><b>Dwie czytelne osie:</b> dawka po lewej (zielona), IGF‑1 po prawej (fioletowa), obie z wartościami. Widać odpowiedź IGF‑1 na rosnącą dawkę. Oś X po wieku, podziałki, kropki punktów.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Kluczowa zmiana — skala dawki.</b> Zamiast rozciągać dane na 100% wysokości (przez co 10‑procentowa korekta wygląda dramatycznie), oś dobiera <b>sensowne pasmo z minimalną rozpiętością</b> — dane zajmują ~⅓–½ wykresu, a etykiety pokazują realne wartości. Dzięki temu „stabilna dawka" wygląda jak stabilna, a prawdziwa zmiana trendu jest nadal widoczna.<br>
+    <b>Do wyboru wariant skali:</b> <span class="pill">pasmo wokół danych (zalecane)</span> albo <span class="pill">oś od zera</span> (jeszcze mocniej „spłaszcza", dosłownie pokazuje udział dawki). Reszta zmian (oś X po wieku, podziałki+wartości, dwie osie, ukrywanie IGF‑1 przy braku) wspólna dla obu.
+  </div>
+</div>
+
+<script>
+const SVGNS='http://www.w3.org/2000/svg';
+function elns(t,a){const e=document.createElementNS(SVGNS,t);if(a)for(const k in a)e.setAttribute(k,a[k]);return e;}
+function comma(n,d){return (+Number(n).toFixed(d)).toString().replace('.',',');}
+function ageDec(m){return (m/12).toFixed(1).replace('.',',');}
+// „ładne" podziałki
+function ticks(lo,hi,n){
+  const raw=(hi-lo)/n, mag=Math.pow(10,Math.floor(Math.log10(raw))), norm=raw/mag;
+  let step=(norm<1.5?1:norm<3?2:norm<7?5:10)*mag;
+  const out=[]; for(let v=Math.ceil(lo/step-1e-9)*step; v<=hi+1e-9; v+=step) out.push(+v.toFixed(6));
+  return out;
+}
+
+// ── STARY wykres (odwzorowanie obecnego): X po indeksie, autoskala pełna, bez podziałek ──
+function buildNow(pts){
+  const W=460,H=180,padL=20,padR=20,padT=14,padB=22,n=pts.length;
+  const x=i=> n<=1?(padL+(W-padL-padR)/2):(padL+i*(W-padL-padR)/(n-1));
+  const ds=pts.map(p=>p.dose); let dMin=Math.min(...ds),dMax=Math.max(...ds); if(dMin===dMax){dMin-=0.01;dMax+=0.01;}
+  const y=v=>padT+(1-(v-dMin)/(dMax-dMin))*(H-padT-padB);
+  const svg=elns('svg',{viewBox:`0 0 ${W} ${H}`,width:'100%',style:'max-width:520px'});
+  svg.appendChild(elns('line',{x1:padL,y1:padT,x2:padL,y2:H-padB,stroke:'#dfe7ea'}));
+  svg.appendChild(elns('line',{x1:padL,y1:H-padB,x2:W-padR,y2:H-padB,stroke:'#dfe7ea'}));
+  svg.appendChild(elns('polyline',{points:pts.map((p,i)=>x(i)+','+y(p.dose).toFixed(1)).join(' '),fill:'none',stroke:'#0F6E56','stroke-width':'2.4'}));
+  pts.forEach((p,i)=>svg.appendChild(elns('circle',{cx:x(i),cy:y(p.dose).toFixed(1),r:'3.6',fill:'#0F6E56'})));
+  return svg;
+}
+
+// ── NOWY wykres: X po wieku, uczciwa skala dawki, podziałki+wartości, druga oś IGF-1 gdy jest ──
+function buildFixed(pts){
+  const hasIg=pts.some(p=>p.igf1!=null);
+  const W=560,H=224,padL=50,padR=hasIg?50:18,padT=16,padB=34;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const aMin=Math.min(...pts.map(p=>p.ageM)), aMax=Math.max(...pts.map(p=>p.ageM));
+  const xspan=(aMax-aMin)||1;
+  const x=m=> padL + (m-aMin)/xspan*plotW;
+  // skala dawki: pasmo z minimalną rozpiętością (dane ~⅓ wysokości)
+  const ds=pts.map(p=>p.dose); const dataMin=Math.min(...ds),dataMax=Math.max(...ds);
+  const span=Math.max((dataMax-dataMin)/0.38, 0.008); const mid=(dataMin+dataMax)/2;
+  let dLo=mid-span/2, dHi=mid+span/2; if(dLo<0){dHi-=dLo;dLo=0;}
+  const yD=v=>padT+(1-(v-dLo)/(dHi-dLo))*plotH;
+  // skala IGF-1
+  let igs=pts.filter(p=>p.igf1!=null).map(p=>p.igf1), iLo=0,iHi=1;
+  if(hasIg){iLo=Math.min(...igs);iHi=Math.max(...igs);const pad=Math.max((iHi-iLo)*0.25,15);iLo=Math.max(0,iLo-pad);iHi+=pad;}
+  const yI=v=>padT+(1-(v-iLo)/(iHi-iLo))*plotH;
+
+  const svg=elns('svg',{viewBox:`0 0 ${W} ${H}`,width:'100%',style:'max-width:520px'});
+  // siatka pozioma + wartości dawki (lewa oś)
+  ticks(dLo,dHi,4).forEach(t=>{
+    if(t<dLo-1e-9||t>dHi+1e-9)return;
+    const yy=yD(t);
+    svg.appendChild(elns('line',{x1:padL,y1:yy,x2:W-padR,y2:yy,stroke:'#eef3f4'}));
+    const tx=elns('text',{x:padL-6,y:yy+3,'text-anchor':'end','font-size':'10','fill':'#0F6E56'});tx.textContent=comma(t,3);svg.appendChild(tx);
+  });
+  // wartości IGF-1 (prawa oś)
+  if(hasIg){ ticks(iLo,iHi,3).forEach(t=>{ if(t<iLo-1e-9||t>iHi+1e-9)return; const yy=yI(t);
+    const tx=elns('text',{x:W-padR+6,y:yy+3,'text-anchor':'start','font-size':'10','fill':'#7F77DD'});tx.textContent=String(Math.round(t));svg.appendChild(tx); }); }
+  // osie
+  svg.appendChild(elns('line',{x1:padL,y1:padT,x2:padL,y2:H-padB,stroke:'#cdd9dc'}));
+  svg.appendChild(elns('line',{x1:padL,y1:H-padB,x2:W-padR,y2:H-padB,stroke:'#cdd9dc'}));
+  if(hasIg)svg.appendChild(elns('line',{x1:W-padR,y1:padT,x2:W-padR,y2:H-padB,stroke:'#cdd9dc'}));
+  // etykiety wieku (X)
+  pts.forEach(p=>{const tx=elns('text',{x:x(p.ageM),y:H-padB+15,'text-anchor':'middle','font-size':'10','fill':'#5b6672'});tx.textContent=ageDec(p.ageM);svg.appendChild(tx);});
+  const xl=elns('text',{x:padL+plotW/2,y:H-4,'text-anchor':'middle','font-size':'9.5','fill':'#8a979c'});xl.textContent='wiek (lata)';svg.appendChild(xl);
+  // linia + punkty IGF-1 (pod spodem)
+  if(hasIg){
+    const seq=pts.filter(p=>p.igf1!=null);
+    svg.appendChild(elns('polyline',{points:seq.map(p=>x(p.ageM)+','+yI(p.igf1).toFixed(1)).join(' '),fill:'none',stroke:'#7F77DD','stroke-width':'2.2'}));
+    seq.forEach(p=>svg.appendChild(elns('circle',{cx:x(p.ageM),cy:yI(p.igf1).toFixed(1),r:'3.4',fill:'#7F77DD'})));
+  }
+  // linia + punkty dawki (na wierzchu) + etykiety wartości
+  svg.appendChild(elns('polyline',{points:pts.map(p=>x(p.ageM)+','+yD(p.dose).toFixed(1)).join(' '),fill:'none',stroke:'#0F6E56','stroke-width':'2.4'}));
+  pts.forEach(p=>{ svg.appendChild(elns('circle',{cx:x(p.ageM),cy:yD(p.dose).toFixed(1),r:'3.6',fill:'#0F6E56'}));
+    const tx=elns('text',{x:x(p.ageM),y:yD(p.dose)-8,'text-anchor':'middle','font-size':'9.5','fill':'#0F6E56','font-weight':'600'});tx.textContent=comma(p.dose,3);svg.appendChild(tx); });
+  return svg;
+}
+
+const graczyk=[{ageM:104,dose:0.029,igf1:null},{ageM:110,dose:0.027,igf1:null},{ageM:115,dose:0.029,igf1:null},{ageM:122,dose:0.029,igf1:null},{ageM:127,dose:0.030,igf1:null}];
+const withIgf=[{ageM:96,dose:0.025,igf1:110},{ageM:102,dose:0.028,igf1:160},{ageM:108,dose:0.030,igf1:205},{ageM:114,dose:0.032,igf1:250},{ageM:120,dose:0.033,igf1:282}];
+document.getElementById('chartNow').appendChild(buildNow(graczyk));
+document.getElementById('chartFix').appendChild(buildFixed(graczyk));
+document.getElementById('chartIgf').appendChild(buildFixed(withIgf));
+</script>
+</body>
+</html>

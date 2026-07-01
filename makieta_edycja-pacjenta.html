@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Edycja pacjenta (nowa wersja)</title>
+<style>
+  :root{
+    --primary:#00838d; --secondary:#00b0a6; --ink:#0f2b33; --muted:#5b6672;
+    --line:rgba(0,131,141,.16); --card:#fff; --bg:#eef5f6; --danger:#C2271D;
+    --radius:16px; --field-bg:#f7fbfc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%;padding:18px 0 120px;}
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px;}
+  .compare{max-width:1100px;margin:0 auto 10px;padding:0 16px;color:var(--muted);font-size:.82rem;}
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .back{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;
+    color:var(--primary);border-radius:10px;padding:8px 12px;font-size:.86rem;font-weight:600;cursor:pointer;}
+  h1{font-size:1.25rem;margin:0;font-weight:700;letter-spacing:-.01em;}
+  .sub{font-size:.84rem;color:var(--muted);margin:2px 0 0;}
+
+  /* Pasek tożsamości pacjenta (podgląd na żywo) */
+  .identity{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#e9f6f7,#f4fbfb);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;}
+  .avatar{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-weight:700;font-size:1.1rem;}
+  .identity__name{font-weight:700;font-size:1.05rem;}
+  .identity__meta{font-size:.82rem;color:var(--muted);margin-top:1px;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 14px 16px;margin-bottom:14px;box-shadow:0 6px 22px rgba(0,81,88,.05);}
+  .card__h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;}
+  .card__h h2{font-size:.95rem;margin:0;font-weight:700;color:var(--ink);}
+  .card__h .badge{font-size:.68rem;font-weight:700;color:var(--primary);background:#e3f3f4;
+    border-radius:999px;padding:3px 9px;text-transform:uppercase;letter-spacing:.03em;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:480px){ .grid{grid-template-columns:1fr;} }
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field--wide{grid-column:1 / -1;}
+  label{font-size:.78rem;font-weight:600;color:var(--muted);}
+  .lab-row{display:flex;align-items:center;gap:6px;}
+  input,select{width:100%;font-size:1rem;font-family:inherit;color:var(--ink);background:var(--field-bg);
+    border:1px solid var(--line);border-radius:11px;padding:11px 12px;outline:none;transition:border-color .12s,box-shadow .12s;}
+  input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,131,141,.12);background:#fff;}
+  input::placeholder{color:#9bb0b2;}
+  .hint{font-size:.72rem;color:var(--muted);}
+  .info{width:18px;height:18px;border-radius:50%;border:1px solid var(--line);color:var(--primary);
+    display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;cursor:help;background:#fff;}
+
+  /* Segmentowana płeć */
+  .seg{display:flex;background:var(--field-bg);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px;}
+  .seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:9px 8px;font-size:.92rem;font-weight:600;
+    color:var(--muted);cursor:pointer;font-family:inherit;}
+  .seg button.is-on{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;
+    box-shadow:0 2px 7px rgba(0,131,141,.28);}
+
+  /* Para pól w jednej komórce (np. tyg + dni) */
+  .pair{display:flex;gap:8px;}
+  .pair > div{flex:1;display:flex;flex-direction:column;gap:5px;}
+
+  /* Zwijana sekcja okołoporodowa */
+  .collapse__head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;
+    margin:0;width:100%;background:none;border:0;padding:0;font-family:inherit;color:var(--ink);text-align:left;}
+  .chev{transition:transform .2s;color:var(--muted);}
+  .collapse.is-open .chev{transform:rotate(90deg);}
+  .collapse__body{display:none;margin-top:12px;}
+  .collapse.is-open .collapse__body{display:block;}
+
+  .note{display:flex;gap:8px;align-items:flex-start;background:#f0f7ff;border:1px solid rgba(0,100,220,.14);
+    border-radius:12px;padding:10px 12px;font-size:.8rem;color:#44535c;line-height:1.45;margin-bottom:14px;}
+
+  /* Strefa usuwania */
+  .danger{margin-top:6px;border-top:1px dashed var(--line);padding-top:12px;}
+  .danger button{background:#fff;border:1px solid #ecc8c8;color:var(--danger);border-radius:11px;
+    padding:10px 14px;font-size:.86rem;font-weight:600;cursor:pointer;}
+
+  /* Sticky pasek akcji */
+  .actionbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));}
+  .actionbar__in{max-width:640px;margin:0 auto;display:flex;gap:10px;}
+  .btn{border-radius:12px;padding:13px 16px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--line);}
+  .btn-ghost{background:#fff;color:var(--muted);flex:0 0 auto;}
+  .btn-primary{flex:1;border:0;color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary));
+    box-shadow:0 6px 18px rgba(0,131,141,.28);}
+  .tag-new{display:inline-block;background:#e8f6f7;color:var(--primary);font-size:.66rem;font-weight:700;
+    border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em;}
+</style>
+</head>
+<body>
+  <div class="compare">Makieta poglądowa (nie podpięta do danych) — proponowany układ ekranu „Edycja pacjenta". Płeć i zwijanie sekcji są klikalne.</div>
+  <div class="wrap">
+    <div class="topbar">
+      <button class="back">‹ Karta pacjenta</button>
+    </div>
+    <h1>Edycja pacjenta</h1>
+    <p class="sub">Dane stałe pacjenta. Pomiary (wzrost, masa, wiek) dodajesz przez „+ Nowy pomiar".</p>
+
+    <div class="identity" style="margin-top:14px;">
+      <div class="avatar" id="ava">N</div>
+      <div>
+        <div class="identity__name" id="idName">Nowak Franciszek</div>
+        <div class="identity__meta" id="idMeta">chłopiec · ur. 12-01-2018</div>
+      </div>
+    </div>
+
+    <!-- DANE PACJENTA -->
+    <div class="card">
+      <div class="card__h"><h2>Dane pacjenta</h2></div>
+      <div class="grid">
+        <div class="field">
+          <label>Nazwisko<span class="tag-new">nowe</span></label>
+          <input id="fLast" value="Nowak" placeholder="Nazwisko" maxlength="80">
+        </div>
+        <div class="field">
+          <label>Imię<span class="tag-new">nowe</span></label>
+          <input id="fFirst" value="Franciszek" placeholder="Imię" maxlength="80">
+        </div>
+        <div class="field">
+          <label>Płeć</label>
+          <div class="seg" id="segSex">
+            <button data-v="M" class="is-on">chłopiec</button>
+            <button data-v="K">dziewczynka</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="lab-row"><label>Data urodzenia</label><span class="info" title="Opcjonalnie. Wypełnij, by aplikacja liczyła wiek automatycznie i odróżniała pacjentów o tym samym nazwisku.">i</span></div>
+          <input id="fDob" value="12-01-2018" placeholder="DD-MM-RRRR (opcjonalnie)" inputmode="numeric" maxlength="10">
+          <span class="hint">Rozróżnia pacjentów o tym samym nazwisku.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPIEKUN / KONTAKT (dane opcjonalne) -->
+    <div class="card">
+      <div class="card__h"><h2>Opiekun / kontakt</h2><span class="badge">opcjonalne</span></div>
+      <div class="grid">
+        <div class="field field--wide"><label>Imię i nazwisko opiekuna</label><input value="" placeholder="np. Anna Nowak" maxlength="120"></div>
+        <div class="field"><label>Relacja</label>
+          <div class="seg" data-seg="rel">
+            <button class="is-on" type="button">matka</button><button type="button">ojciec</button><button type="button">inny</button>
+          </div>
+        </div>
+        <div class="field"><label>Telefon opiekuna</label><input value="" inputmode="tel" placeholder="np. +48 600 100 200"></div>
+        <div class="field field--wide"><label>E-mail opiekuna</label><input value="" inputmode="email" placeholder="np. opiekun@example.com"></div>
+      </div>
+      <div class="hint" style="margin-top:8px;">Osoba do kontaktu w sprawach pacjenta (zwłaszcza dla małoletnich) — pod przyszłą komunikację (przypomnienia o wizytach, wyniki). Szyfrowane jak reszta — serwer nie widzi.</div>
+    </div>
+
+    <!-- WZROST RODZICÓW -->
+    <div class="card">
+      <div class="card__h"><h2>Wzrost rodziców</h2><span class="badge">do MPH</span></div>
+      <div class="grid">
+        <div class="field"><label>Wzrost matki (cm)</label><input value="166" inputmode="decimal" placeholder="cm"></div>
+        <div class="field"><label>Wzrost ojca (cm)</label><input value="181" inputmode="decimal" placeholder="cm"></div>
+      </div>
+    </div>
+
+    <!-- DANE OKOŁOPORODOWE (zwijane) -->
+    <div class="card collapse" id="peri">
+      <button class="collapse__head" type="button" id="periToggle">
+        <span style="display:flex;align-items:center;gap:8px;">
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          <span style="font-weight:700;font-size:.95rem;">Dane okołoporodowe</span>
+        </span>
+        <span class="badge">opcjonalne · SGA / epikryza</span>
+      </button>
+      <div class="collapse__body">
+        <div class="grid">
+          <div class="field field--wide">
+            <label>Wiek ciążowy</label>
+            <div class="pair">
+              <div><input value="38" inputmode="numeric" placeholder="tyg. (22–43)"></div>
+              <div><input value="4" inputmode="numeric" placeholder="dni (0–6)"></div>
+            </div>
+          </div>
+          <div class="field"><label>Masa urodzeniowa (g)</label><input value="3250" inputmode="numeric" placeholder="g"></div>
+          <div class="field"><label>Długość urodzeniowa (cm)</label><input value="54" inputmode="decimal" placeholder="cm"></div>
+          <div class="field"><label>Obwód głowy (cm)</label><input value="35" inputmode="decimal" placeholder="cm"></div>
+          <div class="field"><label>Która ciąża / poród</label>
+            <div class="pair">
+              <div><input value="2" inputmode="numeric" placeholder="ciąża"></div>
+              <div><input value="2" inputmode="numeric" placeholder="poród"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <span>ℹ️</span>
+      <span>Pomiary (wzrost, masa, wiek) nie są tutaj — dodajesz je przez „+ Nowy pomiar", a korektę ostatniego w zakładce Historia. Dane okołoporodowe zasilają moduł SGA i epikryzę.</span>
+    </div>
+
+    <div class="danger">
+      <button type="button">Usuń pacjenta</button>
+    </div>
+  </div>
+
+  <div class="actionbar">
+    <div class="actionbar__in">
+      <button class="btn btn-ghost">Przywróć</button>
+      <button class="btn btn-primary">Zapisz zmiany</button>
+    </div>
+  </div>
+
+<script>
+  // Podgląd tożsamości na żywo
+  var fLast=document.getElementById('fLast'),fFirst=document.getElementById('fFirst'),fDob=document.getElementById('fDob');
+  var idName=document.getElementById('idName'),idMeta=document.getElementById('idMeta'),ava=document.getElementById('ava');
+  var sex='M';
+  function refresh(){
+    var last=(fLast.value||'').trim(),first=(fFirst.value||'').trim();
+    idName.textContent=(last||first)?((last+' '+first).trim()):'(bez nazwiska)';
+    ava.textContent=(last||first||'?').charAt(0).toUpperCase();
+    var bits=[sex==='M'?'chłopiec':'dziewczynka']; if((fDob.value||'').trim()) bits.push('ur. '+fDob.value.trim());
+    idMeta.textContent=bits.join(' · ');
+  }
+  [fLast,fFirst,fDob].forEach(function(e){e.addEventListener('input',refresh);});
+  [].forEach.call(document.querySelectorAll('.seg'),function(seg){
+    seg.addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b)return;
+      [].forEach.call(this.children,function(x){x.classList.remove('is-on');}); b.classList.add('is-on');
+      if(this.id==='segSex'){ sex=b.getAttribute('data-v'); refresh(); }
+    });
+  });
+  document.getElementById('periToggle').addEventListener('click',function(){document.getElementById('peri').classList.toggle('is-open');});
+  refresh();
+</script>
+</body>
+</html>

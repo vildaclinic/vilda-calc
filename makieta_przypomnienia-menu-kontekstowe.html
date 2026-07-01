@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — menu kontekstowe (long-press) w Przypomnieniach · iOS</title>
+<style>
+  *{box-sizing:border-box}
+  :root{ --ios:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,Helvetica,Arial,sans-serif; }
+  body{margin:0;font-family:var(--ios);color:#0f2b33;background:#eef4f5;padding:22px 16px 60px;}
+  .pagehead{max-width:1000px;margin:0 auto 6px;}
+  .pagehead h1{font-size:1.18rem;margin:0 0 4px;}
+  .pagehead p{margin:0;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .vlabel{max-width:1000px;margin:22px auto 10px;font-size:.74rem;font-weight:700;color:#5b6672;text-transform:uppercase;letter-spacing:.05em;}
+  .frames{max-width:1000px;margin:0 auto;display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start;}
+  .frame .cap{font-size:.74rem;color:#5b6672;margin:10px 2px 0;line-height:1.5;width:320px;}
+
+  /* ── telefon ── */
+  .phone{width:320px;border-radius:34px;background:#0f2b33;padding:10px;box-shadow:0 18px 50px rgba(3,42,48,.28);}
+  .screen{position:relative;border-radius:26px;overflow:hidden;height:600px;background:linear-gradient(180deg,#eaf5f6,#f6fafa);}
+  .statusbar{height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:.74rem;font-weight:600;color:#0f2b33;}
+  .modalhead{padding:6px 16px 10px;}
+  .modalhead h2{margin:0;font-size:1.35rem;font-weight:800;letter-spacing:-.02em;}
+  .modalhead .sub{font-size:.78rem;color:#7c8a8d;margin-top:1px;}
+  .list{padding:4px 12px;display:flex;flex-direction:column;gap:8px;}
+
+  /* wiersz przypomnienia (jak w kodzie: awatar kat., nazwisko, kat—tytuł, czas po prawej) */
+  .row{background:#fff;border:1px solid rgba(255,255,255,.85);border-radius:11px;padding:9px 11px;display:flex;gap:11px;align-items:center;box-shadow:0 1px 2px rgba(3,42,48,.05);}
+  .av{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.9rem;}
+  .mid{flex:1 1 auto;min-width:0;}
+  .nm{font-size:.92rem;font-weight:600;color:#0f2b33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ct{font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pend{font-size:.74rem;color:#302D9C;margin-top:1px;}
+  .when{flex:0 0 auto;text-align:right;min-width:52px;}
+  .when .t{font-size:.9rem;color:#0f2b33;font-weight:600;}
+  .when .d{font-size:.68rem;color:#8a979c;}
+  .when .o{font-size:.72rem;font-weight:700;}
+
+  /* kolory kategorii (z PATIENT_NOTE_CATEGORY_LABELS) */
+  .c-follow{--a:#32ADE6;--c:#0E6E99;}
+  .c-badanie{--a:#5856D6;--c:#4341B5;}
+  .c-treat{--a:#34C759;--c:#1F7A3D;}
+  .av.c-follow,.av.c-badanie,.av.c-treat{background:linear-gradient(135deg,var(--a),color-mix(in srgb,var(--a) 80%,#000));}
+  .ct.c-follow{color:#0E6E99;}.ct.c-badanie{color:#4341B5;}.ct.c-treat{color:#1F7A3D;}
+  .when .o.c-follow{color:#0E6E99;}
+
+  /* ── nakładka long-press (przyciemnione + rozmyte tło, uniesiony wiersz, menu iOS) ── */
+  .lp{position:absolute;inset:0;background:rgba(15,43,51,.30);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);display:flex;flex-direction:column;align-items:stretch;padding:0 12px;}
+  .lp-spacer{flex:1;}
+  .lifted{transform:scale(1.03);box-shadow:0 18px 40px rgba(0,0,0,.30);border:0;margin:0 2px;}
+  .menu{align-self:flex-start;width:248px;margin:10px 4px 0;border-radius:14px;overflow:hidden;background:rgba(250,250,250,.82);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);box-shadow:0 12px 40px rgba(0,0,0,.28);}
+  .mi{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 15px;height:46px;font-size:1.0rem;color:#0f2b33;cursor:default;border-bottom:.5px solid rgba(60,60,67,.12);}
+  .mi:last-child{border-bottom:0;}
+  .mi .ico{font-size:1.04rem;width:22px;text-align:center;flex:0 0 auto;color:#3c5358;}
+  .mi.dim{opacity:.5;}
+  .mi.destructive{color:#FF3B30;}
+  .mi.destructive .ico{color:#FF3B30;}
+  .lp-foot{flex:1;}
+
+  .note{max-width:1000px;margin:20px auto 0;background:#fff;border:1px solid #dbe7e9;border-radius:12px;padding:14px 16px;font-size:.84rem;color:#33464e;line-height:1.55;}
+  .note b{color:#0f2b33;}
+  .pill{display:inline-block;background:#eef4f5;border:1px solid #d7e9ec;border-radius:7px;padding:1px 7px;font-size:.78rem;color:#41616a;margin:0 2px;}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Menu kontekstowe po przytrzymaniu (long-press) — sekcja Przypomnienia · iOS</h1>
+    <p>Przytrzymanie wiersza ~0,4 s → tło przyciemnia się i rozmywa, wiersz „unosi się", a pod nim pojawia się menu w stylu iOS z akcjami. To <b>jedyne miejsce</b>, gdzie na mobile dosięgniesz akcji wiersza — dziś na telefonie wiersze są bez przycisków. (To long-press, nie pomiar siły — iOS web nie udostępnia 3D Touch ani wibracji.)</p>
+  </div>
+
+  <div class="vlabel">Dwa warianty menu — wg typu pozycji (akcje = realne funkcje z kodu)</div>
+  <div class="frames">
+
+    <!-- A: wizyta pacjenta (Kontrola) -->
+    <div class="frame">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● 􀙇 100%</span></div>
+        <div class="modalhead"><h2>Przypomnienia</h2><div class="sub">Dziś · 3 do obsłużenia</div></div>
+        <!-- nakładka long-press -->
+        <div class="lp">
+          <div style="height:64px;"></div>
+          <!-- uniesiony wiersz -->
+          <div class="row lifted">
+            <div class="av c-follow">N</div>
+            <div class="mid"><div class="nm">Nowak Franciszek</div><div class="ct c-follow">Kontrola — wzrost, TSH</div></div>
+            <div class="when"><div class="t">10:30</div></div>
+          </div>
+          <!-- menu iOS -->
+          <div class="menu">
+            <div class="mi"><span>Otwórz kartę pacjenta</span><span class="ico">􀉭</span></div>
+            <div class="mi"><span>Zrobione</span><span class="ico">✓</span></div>
+            <div class="mi"><span>Przełóż…</span><span class="ico">􀐫</span></div>
+            <div class="mi destructive"><span>Nie zgłosił się</span><span class="ico">✕</span></div>
+          </div>
+          <div class="lp-foot"></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Kontrola (wizyta pacjenta).</b> Akcje: Otwórz kartę · Zrobione (<code>completePatientNote</code>) · Przełóż (podmenu) · Nie zgłosił się (czerwone — tylko Kontrola).</div>
+    </div>
+
+    <!-- B: oczekujący wynik (Badanie) -->
+    <div class="frame">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● 􀙇 100%</span></div>
+        <div class="modalhead"><h2>Przypomnienia</h2><div class="sub">Oczekujące · 2</div></div>
+        <div class="lp">
+          <div style="height:64px;"></div>
+          <div class="row lifted">
+            <div class="av c-badanie">K</div>
+            <div class="mid"><div class="nm">Kowalska Zofia</div><div class="ct c-badanie">Badanie — TSH, fT4</div><div class="pend">Oczekujący wynik · sprawdzaj co 7 dni</div></div>
+            <div class="when"><div class="d">3 dni temu</div></div>
+          </div>
+          <div class="menu">
+            <div class="mi"><span>Wynik dostępny</span><span class="ico">✓</span></div>
+            <div class="mi"><span>Jeszcze nie ma → za 7 dni</span><span class="ico">􀐫</span></div>
+            <div class="mi"><span>Otwórz kartę pacjenta</span><span class="ico">􀉭</span></div>
+            <div class="mi"><span>Przełóż…</span><span class="ico">􀉉</span></div>
+          </div>
+          <div class="lp-foot"></div>
+        </div>
+      </div></div>
+      <div class="cap"><b>Badanie — oczekujący wynik.</b> Akcje dopasowane: Wynik dostępny (<code>completePatientNote</code>) · Jeszcze nie ma → za N dni (<code>snoozePatientNote</code> wg kadencji) · Otwórz kartę · Przełóż.</div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <b>Zachowanie:</b> przytrzymanie ≥ ~400 ms otwiera menu; ruch palca &gt; ~10 px = to scroll → menu się nie pojawia. Krótki tap działa jak dotąd (desktop: otwiera kartę). Na desktopie to samo menu pod <span class="pill">prawym klikiem</span>. Wyłączamy domyślny callout Safari (<span class="pill">-webkit-touch-callout: none</span>).<br>
+    <b>Podmenu „Przełóż…":</b> <span class="pill">jutro</span> <span class="pill">za 3 dni</span> <span class="pill">za tydzień</span> <span class="pill">wybierz datę…</span> (<code>snoozePatientNote</code>).<br>
+    <b>Poradnia / Dyżur</b> (bloki grafiku, nie zadania): menu skrócone — tylko <span class="pill">Otwórz w Terminarzu</span> albo bez menu (jak dziś bez akcji).<br>
+    <b>Bez zmian w danych/RODO</b> — to wyłącznie warstwa UI nad istniejącymi funkcjami; E2E i zero-knowledge nienaruszone.
+  </div>
+</body>
+</html>

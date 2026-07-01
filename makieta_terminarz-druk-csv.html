@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Eksport CSV z modala druku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:22px 16px 60px;}
+  .pagehead{max-width:1080px;margin:0 auto 6px;}
+  .pagehead h1{font-size:1.2rem;margin:0 0 4px;}
+  .pagehead p{margin:0;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .vlabel{max-width:1080px;margin:24px auto 8px;font-size:.74rem;font-weight:700;color:#5b6672;text-transform:uppercase;letter-spacing:.05em;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  .frames{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;}
+  .cap{font-size:.72rem;color:#5b6672;font-weight:600;margin-bottom:8px;}
+
+  /* ── stopka modala druku ── */
+  .pdfoot{background:#fff;border:1px solid #dbe7e9;border-radius:14px;box-shadow:0 8px 26px rgba(3,42,48,.10);width:520px;max-width:100%;overflow:hidden;}
+  .pdfoot__body{padding:14px 16px;border-bottom:1px solid #eef3f4;}
+  .pdfoot__body .lab{font-size:.72rem;font-weight:700;color:#5b6672;text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;}
+  .seg{display:inline-flex;border:1px solid #cfe0e3;border-radius:9px;overflow:hidden;}
+  .seg button{border:0;background:#fff;color:#5b6672;font:inherit;font-size:.82rem;padding:7px 14px;cursor:pointer;}
+  .seg button.on{background:#0F6E56;color:#fff;font-weight:600;}
+  .hint{font-size:.74rem;color:#7c8a8d;margin:10px 0 0;line-height:1.45;}
+  .foot{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#f7fbfb;}
+  .foot .spacer{flex:1;}
+  .btn-cancel{border:1px solid #d7e9ec;background:#fff;color:#5b6672;border-radius:9px;padding:9px 14px;font:inherit;font-size:.84rem;cursor:pointer;}
+  .btn-csv{border:1px solid #0F6E56;background:#fff;color:#0F6E56;border-radius:9px;padding:9px 14px;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .btn-print{border:0;background:#0F6E56;color:#fff;border-radius:9px;padding:9px 16px;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+
+  .rodo{display:flex;gap:9px;align-items:flex-start;background:#FFF7E6;border:1px solid #F2D795;border-radius:10px;padding:9px 11px;margin-top:12px;font-size:.76rem;color:#7A5C00;line-height:1.45;}
+
+  /* ── podgląd pliku ── */
+  .file{background:#fff;border:1px solid #dbe7e9;border-radius:14px;overflow:hidden;width:520px;max-width:100%;box-shadow:0 8px 26px rgba(3,42,48,.10);}
+  .file__bar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#0f2b33;color:#cfe7df;font-size:.78rem;}
+  .file__bar .dot{width:9px;height:9px;border-radius:50%;background:#e7584d;}
+  .file__bar .dot.y{background:#e8b23a;}.file__bar .dot.g{background:#33b27b;}
+  .file__bar .nm{margin-left:8px;font-weight:600;color:#fff;}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  th{text-align:left;background:#f1f7f6;color:#41616a;font-weight:700;padding:6px 9px;border-bottom:1px solid #dbe7e9;white-space:nowrap;}
+  td{padding:5px 9px;border-bottom:1px solid #eef3f4;color:#2c4148;vertical-align:top;}
+  tr:last-child td{border-bottom:0;}
+  .urg{color:#b42318;font-weight:700;}
+  .raw{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#33464e;background:#f7fbfb;border-top:1px solid #dbe7e9;padding:10px 12px;white-space:pre;overflow-x:auto;line-height:1.5;}
+  .raw .h{color:#0F6E56;font-weight:600;}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Eksport CSV — dane do arkusza</h1>
+    <p>W modalu „Drukuj" dochodzi przycisk <b>⬇ Eksport CSV</b> obok „🖨 Drukuj". Eksportuje <b>aktywny tryb</b> (Grafik wizyt albo Lista oczekujących) z <b>bieżącymi filtrami</b> — zakres, kategorie, wybrana lista, anonimizacja. Plik UTF-8 (z BOM, polskie znaki w Excelu OK), separator <b>średnik (;)</b>. Wszystko liczone lokalnie — na serwer nic nie idzie.</p>
+  </div>
+
+  <div class="vlabel">1 · Przycisk w stopce modala</div>
+  <div class="wrap">
+    <div class="pdfoot">
+      <div class="pdfoot__body">
+        <p class="lab">Co eksportujesz</p>
+        <div class="seg"><button class="on">Grafik wizyt</button><button>Lista oczekujących</button></div>
+        <p class="hint">CSV bierze dokładnie to, co widać w podglądzie — ten sam zakres, te same kategorie i anonimizację.</p>
+        <div class="rodo"><span>⚠️</span><span><b>Bez anonimizacji</b> plik zawiera nazwiska i jest zapisywany lokalnie, niezaszyfrowany. Do list wywieszanych w gabinecie włącz <b>Anonimizuj</b>.</span></div>
+      </div>
+      <div class="foot">
+        <button class="btn-cancel">Anuluj</button>
+        <span class="spacer"></span>
+        <button class="btn-csv">⬇ Eksport CSV</button>
+        <button class="btn-print">🖨 Drukuj</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="vlabel">2 · Jak wygląda wyeksportowany plik</div>
+  <div class="wrap frames">
+    <div>
+      <div class="cap">Grafik wizyt — grafik_2026-07-21.csv</div>
+      <div class="file">
+        <div class="file__bar"><span class="dot"></span><span class="dot y"></span><span class="dot g"></span><span class="nm">grafik_2026-07-21.csv</span></div>
+        <table>
+          <thead><tr><th>Data</th><th>Godzina</th><th>Pacjent</th><th>Kategoria</th><th>Status</th><th>Tytuł / uwaga</th></tr></thead>
+          <tbody>
+            <tr><td>2026-07-21</td><td>09:00</td><td>Nowak Franciszek</td><td>Kontrola</td><td>—</td><td>kontrola wzrostu</td></tr>
+            <tr><td>2026-07-21</td><td>10:00</td><td>Kowalska Zofia</td><td>Wynik badania</td><td>—</td><td>TSH, fT4</td></tr>
+            <tr><td>2026-07-21</td><td>11:00–14:00</td><td>Poradnia</td><td>Poradnia</td><td>—</td><td></td></tr>
+            <tr><td>2026-07-21</td><td>12:00</td><td>Wiśniewski Jan</td><td>Procedura</td><td>—</td><td>USG bioder</td></tr>
+          </tbody>
+        </table>
+        <div class="raw"><span class="h">Data;Godzina;Pacjent;Kategoria;Status;Tytuł / uwaga</span>
+2026-07-21;09:00;Nowak Franciszek;Kontrola;—;kontrola wzrostu
+2026-07-21;10:00;Kowalska Zofia;Wynik badania;—;"TSH, fT4"
+2026-07-21;11:00–14:00;Poradnia;Poradnia;—;</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="cap">Lista oczekujących — lista-oczekujacych_biopsja.csv (z anonimizacją)</div>
+      <div class="file">
+        <div class="file__bar"><span class="dot"></span><span class="dot y"></span><span class="dot g"></span><span class="nm">lista-oczekujacych_biopsja.csv</span></div>
+        <table>
+          <thead><tr><th>Procedura</th><th>Pacjent</th><th>Priorytet</th><th>Czeka od</th><th>Czas oczekiwania</th><th>Termin listy</th></tr></thead>
+          <tbody>
+            <tr><td>Biopsja tarczycy (BACC)</td><td>K.A.</td><td class="urg">pilne</td><td>2026-05-12</td><td>6 tyg.</td><td>21.07, 10:00</td></tr>
+            <tr><td>Biopsja tarczycy (BACC)</td><td>N.F.</td><td>zwykły</td><td>2026-06-01</td><td>3 tyg.</td><td>21.07, 10:00</td></tr>
+            <tr><td>Biopsja tarczycy (BACC)</td><td>W.J.</td><td>zwykły</td><td>2026-06-10</td><td>2 tyg.</td><td>21.07, 10:00</td></tr>
+          </tbody>
+        </table>
+        <div class="raw"><span class="h">Procedura;Pacjent;Priorytet;Czeka od;Czas oczekiwania;Termin listy</span>
+Biopsja tarczycy (BACC);K.A.;pilne;2026-05-12;6 tyg.;"21.07, 10:00"
+Biopsja tarczycy (BACC);N.F.;zwykły;2026-06-01;3 tyg.;"21.07, 10:00"</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

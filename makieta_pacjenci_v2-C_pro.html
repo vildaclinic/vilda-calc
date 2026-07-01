@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pacjenci — C · Pro / minimal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#101822; --muted:#6a7682; --faint:#9aa6b1;
+    --accent:#0a7a82; --accent-soft:#e6f3f3; --danger:#c8392e; --ext:#9a6a12;
+    --bg:#f7f9fa; --card:#ffffff; --line:#e9edf0; --line2:#eef2f4;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg);
+    display:flex;flex-direction:column;-webkit-text-size-adjust:100%;}
+  .wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;max-width:980px;width:100%;margin:0 auto;padding:0 22px;}
+
+  .top{flex:0 0 auto;padding:22px 0 0;}
+  .top .eyebrow{font-size:.74rem;font-weight:600;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;}
+  .top h1{margin:3px 0 0;font-size:1.55rem;font-weight:700;letter-spacing:-.02em;display:flex;align-items:baseline;gap:10px;}
+  .top h1 .n{font-size:.92rem;font-weight:600;color:var(--faint);letter-spacing:0;}
+
+  .cmd{position:relative;margin:16px 0 4px;}
+  .cmd input{width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;
+    padding:12px 70px 12px 42px;font-family:inherit;font-size:.98rem;color:var(--ink);outline:none;transition:.14s;}
+  .cmd input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(10,122,130,.1);}
+  .cmd .ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--faint);}
+  .cmd .kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:.72rem;font-weight:600;color:var(--faint);
+    border:1px solid var(--line);border-radius:6px;padding:2px 7px;background:#fafbfc;}
+
+  .tabs{display:flex;gap:22px;align-items:center;border-bottom:1px solid var(--line);margin-top:10px;}
+  .tab{position:relative;background:none;border:0;font-family:inherit;font-size:.88rem;font-weight:600;color:var(--muted);
+    padding:11px 0;cursor:pointer;}
+  .tab.on{color:var(--ink);}
+  .tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);border-radius:2px;}
+  .tab .c{font-size:.74rem;color:var(--faint);margin-left:5px;font-weight:600;}
+  .sort{margin-left:auto;background:none;border:0;font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;padding:8px 0;}
+
+  .scroll{flex:1 1 auto;min-height:0;overflow:auto;margin-top:4px;}
+  .scroll::-webkit-scrollbar{width:9px}.scroll::-webkit-scrollbar-thumb{background:#dde3e7;border-radius:9px}
+
+  .azh{position:sticky;top:0;background:linear-gradient(var(--bg),var(--bg) 72%,rgba(247,249,250,0));
+    font-size:.72rem;font-weight:700;color:var(--faint);letter-spacing:.06em;padding:14px 4px 5px;z-index:2;}
+
+  .row{display:flex;align-items:center;gap:13px;padding:9px 8px;border-radius:10px;cursor:pointer;transition:background .12s;position:relative;}
+  .row + .row{box-shadow:inset 0 1px 0 var(--line2);}
+  .row:hover{background:var(--card);box-shadow:0 1px 0 var(--line2),0 6px 18px rgba(16,24,34,.06);}
+  .ava{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:700;font-size:.86rem;}
+  .info{min-width:0;flex:1 1 auto;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
+  .nm{font-weight:600;font-size:.96rem;}
+  .meta{font-size:.82rem;color:var(--muted);}
+  .meta.dup-txt{color:var(--danger);font-weight:600;}
+  .right{margin-left:auto;display:flex;align-items:center;gap:12px;flex:0 0 auto;}
+  .tag{font-size:.7rem;font-weight:600;color:var(--ext);}
+  .tag.base{color:var(--faint);font-weight:500;}
+  .open{opacity:0;font-size:.78rem;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:7px;padding:5px 11px;transition:.12s;}
+  .row:hover .open{opacity:1;}
+  .dupdot{width:6px;height:6px;border-radius:50%;background:var(--danger);flex:0 0 auto;}
+
+  .foot{flex:0 0 auto;display:flex;gap:8px;align-items:center;padding:12px 0 18px;border-top:1px solid var(--line);}
+  .btn{border-radius:10px;padding:10px 15px;font-family:inherit;font-size:.86rem;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--muted);}
+  .btn-primary{border:0;color:#fff;background:var(--accent);margin-left:auto;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="eyebrow">Praktyka</div>
+      <h1>Pacjenci <span class="n" id="n"></span></h1>
+      <div class="cmd">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.8-3.8"/></svg></span>
+        <input id="q" type="search" placeholder="Szukaj lub przejdź do pacjenta…">
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-v="all">Wszyscy <span class="c" id="c-all"></span></button>
+        <button class="tab" data-v="base">Z bazy <span class="c" id="c-base"></span></button>
+        <button class="tab" data-v="ext">Spoza bazy <span class="c" id="c-ext"></span></button>
+        <button class="sort" id="sort">Sortuj: ostatni ⌄</button>
+      </div>
+    </div>
+    <div class="scroll" id="scroll"></div>
+    <div class="foot">
+      <button class="btn">Strona główna</button>
+      <button class="btn">Importuj kopie</button>
+      <button class="btn btn-primary">+ Dodaj osobę spoza bazy</button>
+    </div>
+  </div>
+
+<script src="makieta_pacjenci_data.js"></script>
+<script>
+var state={filter:'all',q:'',sort:'recent'};
+function counts(){
+  var all=PT.DATA.length, ext=PT.DATA.filter(function(p){return p.ext;}).length;
+  document.getElementById('c-all').textContent=all;
+  document.getElementById('c-base').textContent=all-ext;
+  document.getElementById('c-ext').textContent=ext;
+}
+function render(keep){
+  var pos=null,had=false; if(keep){var a=document.activeElement;if(a&&a.id==='q'){had=true;pos=a.selectionStart;}}
+  var arr=PT.filtered(state);
+  document.getElementById('n').textContent=arr.length;
+  var sc=document.getElementById('scroll');sc.innerHTML='';
+  if(!arr.length){var e=PT.el('div','azh','Brak pasujących pacjentów.');e.style.color='var(--muted)';e.style.textAlign='center';e.style.padding='40px';sc.appendChild(e);if(keep&&had){var i0=document.getElementById('q');if(i0)i0.focus();}return;}
+  if(state.sort==='az'||state.q){
+    var prev=null;
+    arr.slice().sort(function(a,b){return a.name.localeCompare(b.name,'pl');}).forEach(function(p){
+      var L=p.last[0].toUpperCase();
+      if(L!==prev){sc.appendChild(PT.el('div','azh',L));prev=L;}
+      sc.appendChild(rowOf(p));
+    });
+  } else {
+    sc.appendChild(PT.el('div','azh','OSTATNIO'));
+    arr.slice().sort(function(a,b){return a.recent-b.recent;}).forEach(function(p){sc.appendChild(rowOf(p));});
+  }
+  if(keep&&had){var i=document.getElementById('q');if(i){i.focus();try{i.setSelectionRange(pos,pos);}catch(e){}}}
+}
+function rowOf(p){
+  var r=PT.el('div','row');
+  var av=PT.el('div','ava',PT.ini(p));av.style.cssText+=PT.avaBg(p);
+  var info=PT.el('div','info');
+  info.appendChild(PT.el('span','nm',p.name));
+  if(PT.isDup(p))info.appendChild(PT.el('span','dupdot'));
+  info.appendChild(PT.el('span','meta'+(PT.isDup(p)?' dup-txt':''),PT.meta(p)));
+  var right=PT.el('div','right');
+  right.appendChild(PT.el('span','tag'+(p.ext?'':' base'),p.ext?'spoza bazy':'pełna karta'));
+  right.appendChild(PT.el('span','open','Otwórz'));
+  r.appendChild(av);r.appendChild(info);r.appendChild(right);
+  return r;
+}
+document.getElementById('q').addEventListener('input',function(){state.q=this.value;render(true);});
+document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});b.classList.add('on');state.filter=b.dataset.v;render();});});
+document.getElementById('sort').addEventListener('click',function(){state.sort=state.sort==='recent'?'az':state.sort==='az'?'age':'recent';this.textContent='Sortuj: '+({recent:'ostatni',az:'A–Z',age:'wiek'}[state.sort])+' ⌄';render();});
+counts();render();
+</script>
+</body>
+</html>

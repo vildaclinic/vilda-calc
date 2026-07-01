@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Lista oczekujących: termin całej listy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:#0f2b33;background:#eef5f6;padding:22px 16px 60px;}
+  .wrap{max-width:640px;margin:0 auto;}
+  .note{background:#E1F5EE;border:1px solid #9FE1CB;border-radius:12px;padding:11px 14px;font-size:.85rem;color:#0c5a47;line-height:1.5;margin-bottom:16px;}
+  .note b{color:#0a4a3b;}
+
+  .tz-wl{background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;overflow:hidden;}
+  .tz-wl__bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;border-bottom:0.5px solid #d7e9ec;flex-wrap:wrap;}
+  .tz-wl__sum{font-size:0.8rem;color:#5b6672;}.tz-wl__sum b{color:#0F6E56;font-weight:600;}
+  .tz-wl__add{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #5DCAA5;background:#fff;color:#0F6E56;border-radius:11px;padding:8px 13px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;}
+  .tz-wl__body{padding:6px 16px 14px;}
+
+  /* nagłówek grupy z terminem listy */
+  .tz-wl__ghead{display:flex;align-items:center;gap:8px;padding:14px 0 4px;flex-wrap:wrap;}
+  .tz-wl__gname{font-size:0.9rem;font-weight:700;color:#0F6E56;}
+  .tz-wl__count{font-size:0.72rem;font-weight:600;background:#E1F5EE;color:#0F6E56;padding:1px 8px;border-radius:999px;}
+  .tz-wl__gadd{margin-left:auto;display:inline-flex;align-items:center;gap:5px;border:1px solid #cfe6df;background:#fff;color:#0F6E56;border-radius:9px;padding:5px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  /* wiersz „termin listy" pod nazwą grupy */
+  .tz-wl__sched{flex:1 1 100%;display:flex;align-items:center;gap:8px;margin:2px 0 6px;}
+  .tz-wl__schedtag{display:inline-flex;align-items:center;gap:6px;background:#EAF3FF;border:1px solid #bcd9f7;color:#1d5b9e;border-radius:8px;padding:4px 10px;font-size:0.8rem;font-weight:600;}
+  .tz-wl__schedset{display:inline-flex;align-items:center;gap:5px;border:1px dashed #bcd0d4;background:#fff;color:#5b6672;border-radius:8px;padding:4px 10px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;}
+  .tz-wl__schedset:hover{border-color:#5DCAA5;color:#0F6E56;}
+  .tz-wl__schededit{border:0;background:none;color:#1d5b9e;cursor:pointer;font-size:0.78rem;font-weight:600;font-family:inherit;text-decoration:underline;}
+
+  .tz-wl__row{display:flex;align-items:center;gap:11px;padding:10px 12px;border:0.5px solid #e3eef0;border-radius:9px;margin-bottom:6px;background:#fff;}
+  .tz-wl__nm{font-size:0.92rem;font-weight:600;}
+  .tz-wl__wait{font-size:0.76rem;color:#5b6672;margin-top:1px;}
+  .tz-wl__acts{margin-left:auto;display:flex;gap:4px;}
+  .tz-wl__act{border:0.5px solid #d7e9ec;background:#fff;color:#5b6672;border-radius:8px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+
+  /* edytor terminu listy (inline) */
+  .schedbox{flex:1 1 100%;border:1px dashed #bcd9f7;background:#f5faff;border-radius:10px;padding:11px;margin:2px 0 8px;}
+  .schedbox .r{display:flex;gap:10px;flex-wrap:wrap;}
+  .schedbox .f{flex:1 1 140px;}
+  .schedbox label{display:block;font-size:0.74rem;font-weight:600;color:#5b6672;margin:0 0 3px;}
+  .schedbox input{width:100%;font-size:0.92rem;font-family:inherit;border:1px solid #cfe0e3;border-radius:9px;padding:8px 10px;}
+  .schedbox .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .schedbox .acts button{border-radius:9px;padding:8px 13px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;border:0;}
+  .schedbox .ok{background:#0F6E56;color:#fff;}
+  .schedbox .clr{background:#fff;border:1px solid #F0B7B7!important;color:#A32D2D;}
+  .schedbox .cx{background:#fff;border:1px solid #d7e9ec!important;color:#5b6672;}
+
+  .addcard{margin-top:18px;background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;padding:16px;}
+  .addcard h3{margin:0 0 4px;font-size:1rem;font-weight:800;}
+  .addcard .cap{font-size:.8rem;color:#5b6672;margin:0 0 12px;}
+  .addcard .sec{margin-bottom:12px;}
+  .addcard .sec p{font-size:.8rem;font-weight:600;color:#5b6672;margin:0 0 5px;}
+  .addcard input{width:100%;font-size:.95rem;font-family:inherit;border:1px solid #cfe0e3;border-radius:9px;padding:9px 11px;}
+  .addcard .row2{display:flex;gap:10px;}.addcard .row2 .f{flex:1;}
+  .optline{font-size:.74rem;color:#1d5b9e;margin-top:4px;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="note">
+      Poprawka: do <b>całej listy</b> (typ procedury) można dopisać <b>termin (data + godzina)</b>. Widać go w nagłówku listy:
+      „Biopsja tarczycy (BACC) — 📅 termin 21.07.2026, godz. 10:00". Termin ustawisz <b>przy zakładaniu listy</b> oraz <b>później</b>
+      (ikona/odnośnik przy nagłówku). To dane listy — pacjenci zostają na liście, termin nie znika.
+    </div>
+
+    <div class="tz-wl">
+      <div class="tz-wl__bar"><span class="tz-wl__sum"><b>5</b> pacjentów</span>
+        <button class="tz-wl__add">＋ Dodaj pacjenta</button></div>
+      <div class="tz-wl__body">
+
+        <!-- Lista Z terminem -->
+        <div class="tz-wl__ghead">
+          <span class="tz-wl__gname">Biopsja tarczycy (BACC)</span><span class="tz-wl__count">3</span>
+          <button class="tz-wl__gadd">＋ dodaj</button>
+          <div class="tz-wl__sched" id="schedA">
+            <span class="tz-wl__schedtag">📅 termin 21.07.2026, godz. 10:00</span>
+            <button class="tz-wl__schededit" data-edit="A">zmień</button>
+          </div>
+        </div>
+        <div class="tz-wl__row"><div><div class="tz-wl__nm">Nowak Franciszek</div><div class="tz-wl__wait">czeka 12 dni</div></div><div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div></div>
+        <div class="tz-wl__row"><div><div class="tz-wl__nm">Kowalska Zofia</div><div class="tz-wl__wait">czeka 5 dni</div></div><div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div></div>
+
+        <!-- Lista BEZ terminu -->
+        <div class="tz-wl__ghead">
+          <span class="tz-wl__gname">USG bioder</span><span class="tz-wl__count">2</span>
+          <button class="tz-wl__gadd">＋ dodaj</button>
+          <div class="tz-wl__sched" id="schedB">
+            <button class="tz-wl__schedset" data-edit="B">📅 Ustaw termin listy</button>
+          </div>
+        </div>
+        <div class="tz-wl__row"><div><div class="tz-wl__nm">Lewandowska Maja</div><div class="tz-wl__wait">czeka 8 dni</div></div><div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div></div>
+
+      </div>
+    </div>
+
+    <!-- Drugi punkt wejścia: przy zakładaniu listy (modal dodawania) -->
+    <div class="addcard">
+      <h3>Dodaj pacjenta / nowa lista</h3>
+      <p class="cap">Podgląd modala dodawania — z opcjonalnym terminem całej listy.</p>
+      <div class="sec"><p>👤 Pacjent</p><input type="text" placeholder="Szukaj pacjenta…"></div>
+      <div class="sec"><p>🔬 Typ procedury (lista)</p><input type="text" value="Biopsja tarczycy (BACC)"></div>
+      <div class="sec"><p>📅 Termin całej listy (opcjonalnie)</p>
+        <div class="row2"><div class="f"><input type="text" placeholder="dd.mm.rrrr" value="21.07.2026"></div><div class="f"><input type="text" placeholder="godz." value="10:00"></div></div>
+        <div class="optline">Zostaw puste, jeśli termin nie jest jeszcze znany — dodasz go później przy liście.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  function boxHtml(id, hasDate){
+    return '<div class="schedbox" data-box="'+id+'">'
+      + '<div class="r"><div class="f"><label>Data</label><input type="text" placeholder="dd.mm.rrrr" value="'+(hasDate?'21.07.2026':'')+'"></div>'
+      + '<div class="f"><label>Godzina</label><input type="text" placeholder="np. 10:00" value="'+(hasDate?'10:00':'')+'"></div></div>'
+      + '<div class="acts"><button class="ok">Zapisz termin</button>'
+      + (hasDate?'<button class="clr">Usuń termin</button>':'')
+      + '<button class="cx">Anuluj</button></div></div>';
+  }
+  function close(){ document.querySelectorAll('.schedbox').forEach(function(b){b.remove();}); }
+  document.addEventListener('click',function(e){
+    var ed=e.target.closest('[data-edit]');
+    if(ed){ var id=ed.getAttribute('data-edit'); var host=document.getElementById('sched'+id); var open=host.querySelector('.schedbox'); close(); if(!open){ host.insertAdjacentHTML('beforeend', boxHtml(id, id==='A')); } return; }
+    if(e.target.classList&&(e.target.classList.contains('cx')||e.target.classList.contains('ok')||e.target.classList.contains('clr'))) close();
+  });
+</script>
+</body>
+</html>

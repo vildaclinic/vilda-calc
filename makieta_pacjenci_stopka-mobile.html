@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pacjenci — stopka mobile (delikatniej)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0e2a30; --muted:#56727b; --faint:#8aa3a9; --accent:#00838d; --accent2:#00b8a9; --ext:#b5731a;
+    --glass:rgba(255,255,255,.62); --glass-brd:rgba(255,255,255,.8); }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);
+    min-height:100%;display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 16px 40px;
+    background:radial-gradient(900px 500px at 50% -10%,#ecf7f3,rgba(236,247,243,0) 60%),linear-gradient(180deg,#f7fbfb,#eff5f6);}
+  .cap{text-align:center}
+  .cap h2{margin:0;font-size:1.05rem;font-weight:800;}
+  .cap p{margin:3px 0 0;font-size:.82rem;color:var(--muted);}
+  .seg{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:4px;background:#e7eff0;border-radius:999px;padding:4px;}
+  .seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:7px 14px;font:600 .82rem inherit;font-family:inherit;cursor:pointer;}
+  .seg button.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 3px 10px rgba(0,131,141,.3);}
+
+  .phone{position:relative;width:393px;max-width:94vw;height:min(720px,72vh);background:#0b1012;border-radius:50px;padding:12px;
+    box-shadow:0 2px 2px rgba(255,255,255,.4) inset,0 36px 70px rgba(8,30,34,.32);}
+  .screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;display:flex;flex-direction:column;
+    background:radial-gradient(700px 420px at 8% -10%,#e6f8f4,rgba(230,248,244,0) 55%),linear-gradient(180deg,#fcfefe,#f6fafb);}
+  .island{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:104px;height:28px;background:#000;border-radius:999px;z-index:5;}
+
+  .scr{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:34px 14px 0;}
+  .h1{font-size:1.4rem;font-weight:800;margin:0;}
+  .sub{font-size:.8rem;color:var(--muted);margin:1px 0 10px;}
+  .glass{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+    border:1px solid var(--glass-brd);box-shadow:0 10px 30px rgba(3,42,48,.1),inset 0 1px 0 rgba(255,255,255,.7);}
+  .list{flex:1 1 auto;min-height:0;overflow:auto;}
+  .row{display:flex;align-items:center;gap:11px;border-radius:16px;padding:11px 13px;margin-bottom:8px;}
+  .ava{width:42px;height:42px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;box-shadow:0 4px 10px rgba(3,42,48,.18);}
+  .nm{font-weight:700;font-size:.98rem;}
+  .mt{font-size:.78rem;color:var(--muted);margin-top:1px;}
+
+  /* ====== STOPKI (warianty) ====== */
+  .foot{flex:0 0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0 calc(12px + env(safe-area-inset-bottom));}
+  .gbtn{font-family:inherit;cursor:pointer;border:0;}
+
+  /* obecna (referencja) — ciężka: ghost dzielą rząd, primary pełna szerokość */
+  .foot.cur .gbtn{border-radius:14px;padding:12px 16px;font-size:.88rem;font-weight:600;color:var(--muted);flex:1 1 calc(50% - 4px);text-align:center;}
+  .foot.cur .gbtn.primary{flex:1 1 100%;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 22px rgba(0,131,141,.34);}
+
+  /* WARIANT „2 przyciski" — Slim glass, jeden rząd: Strona główna + Dodaj osobę (Importuj → Ustawienia) */
+  .foot.two .gbtn{border-radius:12px;padding:10px 14px;font-size:.84rem;font-weight:600;color:var(--muted);flex:1 1 auto;text-align:center;white-space:nowrap;box-shadow:0 4px 14px rgba(3,42,48,.07),inset 0 1px 0 rgba(255,255,255,.6)!important;}
+  .foot.two .gbtn.primary{flex:1.5 1 auto;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 5px 14px rgba(0,131,141,.26)!important;border:0!important;}
+
+  /* WARIANT 1 — „Slim glass": to samo ułożenie, ale subtelniejsze (mniejsze, lżejszy cień, mniejszy radius) */
+  .foot.v1 .gbtn{border-radius:12px;padding:9px 12px;font-size:.82rem;font-weight:600;color:var(--muted);flex:1 1 calc(50% - 4px);text-align:center;box-shadow:0 4px 14px rgba(3,42,48,.07),inset 0 1px 0 rgba(255,255,255,.6)!important;}
+  .foot.v1 .gbtn.primary{flex:1 1 100%;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 5px 14px rgba(0,131,141,.26)!important;border:0!important;}
+
+  /* WARIANT 2 — „Primary + linki": główne CTA pełną szerokością (slim), a Strona główna/Importuj jako lekkie linki pod spodem */
+  .foot.v2{flex-direction:column;align-items:stretch;gap:10px;}
+  .foot.v2 .gbtn.primary{width:100%;border-radius:13px;padding:12px 16px;font-size:.9rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 16px rgba(0,131,141,.28);}
+  .foot.v2 .links{display:flex;justify-content:center;gap:18px;}
+  .foot.v2 .links .gbtn{background:transparent!important;border:0!important;box-shadow:none!important;color:var(--accent);font-size:.84rem;font-weight:600;padding:6px 4px;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+
+  /* WARIANT 3 — „Trzy slim w rzędzie": wszystkie trzy w jednym rzędzie, drobne, primary akcentowane */
+  .foot.v3{flex-wrap:nowrap;}
+  .foot.v3 .gbtn{flex:1 1 0;min-width:0;border-radius:11px;padding:9px 8px;font-size:.78rem;font-weight:600;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 4px 12px rgba(3,42,48,.06),inset 0 1px 0 rgba(255,255,255,.6)!important;}
+  .foot.v3 .gbtn.primary{flex:1.4 1 0;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 5px 13px rgba(0,131,141,.26)!important;border:0!important;}
+  .hint{font-size:.75rem;color:var(--faint);text-align:center;max-width:393px;}
+</style>
+</head>
+<body>
+  <div class="cap"><h2>Pacjenci — stopka mobile</h2><p>delikatniejsze przyciski (do wyboru)</p></div>
+  <div class="seg" id="seg">
+    <button data-v="two" class="on">2 przyciski</button>
+    <button data-v="v1">Slim (3)</button>
+    <button data-v="v2">Primary + linki</button>
+    <button data-v="v3">Trzy w rzędzie</button>
+    <button data-v="cur">Obecna</button>
+  </div>
+
+  <div class="phone">
+    <div class="island"></div>
+    <div class="screen">
+      <div class="scr">
+        <h1 class="h1">Pacjenci</h1>
+        <div class="sub">Łącznie 300 — z bazy i spoza bazy</div>
+        <div class="list" id="list"></div>
+        <div class="foot v1" id="foot">
+          <button class="gbtn glass">Strona główna</button>
+          <button class="gbtn glass">Importuj kopie</button>
+          <button class="gbtn glass primary">+ Dodaj osobę spoza bazy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hint" id="hint"></div>
+
+<script>
+  var sample=[['Roszak Leon','3 l. 5 mies. · chłopiec',true],['Zuzanna Nowicka','10 l. 9 mies.',false],['Leon Roszak','3 l. 5 mies. · chłopiec',false],['Kacper Materna','13 l. 6 mies. · chłopiec',false]];
+  function hue(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;}
+  var list=document.getElementById('list');
+  sample.forEach(function(p){
+    var r=document.createElement('div');r.className='row glass';
+    var h=hue(p[0]);
+    r.innerHTML='<div class="ava" style="background:linear-gradient(140deg,hsl('+h+',38%,52%),hsl('+((h+34)%360)+',40%,44%))">'+p[0][0]+'</div>'+
+      '<div style="min-width:0"><div class="nm">'+p[0]+'</div><div class="mt">'+p[1]+'</div></div>';
+    list.appendChild(r);
+  });
+  var foot=document.getElementById('foot'), hint=document.getElementById('hint');
+  var HINTS={
+    two:'Slim glass, dwa przyciski w jednym rzędzie: „Strona główna” + „+ Dodaj osobę spoza bazy”. Opcja „Importuj kopie” przeniesiona do Ustawień aplikacji.',
+    v1:'Wariant 1 — to samo ułożenie co teraz, ale subtelniejsze: mniejsze, lżejszy cień, mniejszy promień.',
+    v2:'Wariant 2 — główne CTA „Dodaj osobę" pełną szerokością; „Strona główna” i „Importuj kopie” jako lekkie linki pod spodem.',
+    v3:'Wariant 3 — trzy drobne przyciski w jednym rzędzie, „Dodaj osobę” lekko akcentowane.',
+    cur:'Obecna stopka (referencja) — cięższa: dwa przyciski w rzędzie + „Dodaj osobę” pełną szerokością.'
+  };
+  var MARKUP={
+    two:'<button class="gbtn glass">Strona główna</button><button class="gbtn glass primary">+ Dodaj osobę spoza bazy</button>',
+    v1:'<button class="gbtn glass">Strona główna</button><button class="gbtn glass">Importuj kopie</button><button class="gbtn glass primary">+ Dodaj osobę spoza bazy</button>',
+    v2:'<button class="gbtn primary">+ Dodaj osobę spoza bazy</button><div class="links"><button class="gbtn">Strona główna</button><button class="gbtn">Importuj kopie</button></div>',
+    v3:'<button class="gbtn glass">Strona główna</button><button class="gbtn glass">Importuj kopie</button><button class="gbtn glass primary">+ Dodaj osobę</button>',
+    cur:'<button class="gbtn glass">Strona główna</button><button class="gbtn glass">Importuj kopie</button><button class="gbtn glass primary">+ Dodaj osobę spoza bazy</button>'
+  };
+  function set(v){ foot.className='foot '+v; foot.innerHTML=MARKUP[v]; hint.textContent=HINTS[v]; }
+  document.getElementById('seg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(this.children,function(x){x.classList.remove('on');});b.classList.add('on');set(b.dataset.v);});
+  set('two');
+</script>
+</body>
+</html>

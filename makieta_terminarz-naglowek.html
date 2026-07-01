@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — nagłówek Terminarza (widoczna data)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:20px 16px 60px;}
+  .pagehead{max-width:1080px;margin:0 auto 6px;}
+  .pagehead h1{font-size:1.2rem;margin:0 0 4px;}
+  .pagehead p{margin:0;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .vlabel{max-width:1080px;margin:26px auto 8px;font-size:.78rem;font-weight:700;color:#0f2b33;}
+  .vlabel small{display:block;font-weight:500;color:#5b6672;font-size:.78rem;margin-top:2px;}
+  .stage{max-width:1080px;margin:0 auto;background:#fff;border:1px solid #dbe7e9;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(3,42,48,.07);}
+  .stage.tablet{max-width:720px;}
+  .gridhint{height:42px;margin-top:10px;border-top:1px solid #eef3f4;display:flex;align-items:flex-end;}
+  .gridhint span{font-size:.72rem;color:#aab8bb;}
+
+  /* ===== autentyczne style kontrolek ===== */
+  .nav button,.today{border:0.5px solid #d7e9ec;background:#fff;border-radius:10px;padding:8px 13px;cursor:pointer;font-size:0.95rem;color:#0f2b33;font-weight:600;font-family:inherit;}
+  .ico{width:40px;height:40px;border:1px solid rgba(0,131,141,.18);background:#fff;border-radius:11px;color:#3f5a5c;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:0 0 auto;}
+  .ico svg{width:19px;height:19px;}
+  .switch{display:inline-flex;align-items:stretch;height:40px;border:1px solid rgba(0,131,141,.18);border-radius:12px;background:#fff;padding:3px;gap:2px;flex:0 0 auto;}
+  .switch button{border:0;background:transparent;padding:0 13px;height:100%;font-size:0.82rem;color:#5b6672;cursor:pointer;font-weight:600;border-radius:9px;display:inline-flex;align-items:center;white-space:nowrap;font-family:inherit;}
+  .switch button.on{background:linear-gradient(135deg,#00838d,#00b0a6);color:#fff;box-shadow:0 2px 7px rgba(0,131,141,.28);}
+  .add{height:40px;background:linear-gradient(135deg,#00838d,#00b0a6);color:#fff;border:0;border-radius:12px;padding:0 16px;font-size:0.86rem;font-weight:600;display:inline-flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 3px 10px rgba(0,131,141,.28);flex:0 0 auto;font-family:inherit;}
+  .add svg{width:17px;height:17px;}
+  .title{font-weight:700;color:#0f2b33;white-space:nowrap;}
+  .sp{flex:1 1 auto;}
+
+  /* ===== A: dwurzędowy ===== */
+  .vA .row{display:flex;align-items:center;gap:10px;}
+  .vA .row1{margin-bottom:10px;}
+  .vA .nav{display:flex;gap:6px;flex:0 0 auto;}
+  .vA .title{font-size:1.5rem;}
+  .vA .row2 .switch button{padding:0 15px;}
+
+  /* ===== B: jeden rząd, data ma priorytet ===== */
+  .vB .bar{display:flex;align-items:center;gap:9px;flex-wrap:nowrap;}
+  .vB .nav{display:flex;gap:6px;flex:0 0 auto;}
+  .vB .title{font-size:1.3rem;flex:0 0 auto;padding-left:6px;}  /* NIE kurczy się */
+  .vB .switch{min-width:0;overflow-x:auto;}
+
+  /* ===== C: tytuł wyśrodkowany ===== */
+  .vC .bar{display:flex;align-items:center;gap:9px;flex-wrap:nowrap;}
+  .vC .nav{display:flex;gap:6px;flex:0 0 auto;}
+  .vC .title{flex:1 1 auto;text-align:center;font-size:1.45rem;min-width:0;}
+  .vC .wait{display:inline-flex;align-items:center;gap:6px;height:40px;border:1px solid rgba(0,131,141,.18);background:#fff;border-radius:11px;color:#0F6E56;font-weight:600;font-size:.82rem;padding:0 12px;cursor:pointer;flex:0 0 auto;font-family:inherit;}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Nagłówek Terminarza — żeby data była widoczna</h1>
+    <p>Problem: tytuł („Czerwiec 2026") ucina się do „Czerwie…", bo prawy blok (4-elementowy przełącznik + druk + Dodaj termin) wypycha tytuł. Trzy podejścia; każde na szerokości zbliżonej do Twojego zrzutu.</p>
+  </div>
+
+  <!-- A -->
+  <div class="vlabel">Wariant A · dwurzędowy<small>Rząd 1: nawigacja + DUŻA data + akcje. Rząd 2: „Dziś" + przełącznik widoku. Data nigdy się nie ściska; najbardziej odporne na każdą szerokość.</small></div>
+  <div class="stage vA">
+    <div class="row row1">
+      <div class="nav"><button>‹</button><button>›</button></div>
+      <span class="title">Czerwiec 2026</span>
+      <span class="sp"></span>
+      <button class="ico" title="Szukaj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <button class="ico" title="Drukuj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg></button>
+      <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h13"/><path d="M21 13V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="M16 19h6M19 16v6"/></svg>Dodaj termin</button>
+    </div>
+    <div class="row row2">
+      <button class="today">Dziś</button>
+      <span class="sp"></span>
+      <div class="switch"><button class="on">Miesiąc</button><button>Tydzień</button><button>Dzień</button><button>Lista oczekujących</button></div>
+    </div>
+    <div class="gridhint"><span>PN   WT   ŚR   CZ   PT   SO   ND  …(siatka)</span></div>
+  </div>
+
+  <!-- B -->
+  <div class="vlabel">Wariant B · jeden rząd, data ma priorytet<small>Tytuł ustawiony „na sztywno" (nie kurczy się), bez duplikatu „Dziś". To przełącznik widoku ewentualnie się zwęża/przewija. Minimalna zmiana układu.</small></div>
+  <div class="stage vB">
+    <div class="bar">
+      <div class="nav"><button>‹</button><button>›</button><button class="today">Dziś</button></div>
+      <span class="title">Czerwiec 2026</span>
+      <span class="sp"></span>
+      <button class="ico" title="Szukaj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <div class="switch"><button class="on">Miesiąc</button><button>Tydzień</button><button>Dzień</button><button>Lista oczekujących</button></div>
+      <button class="ico" title="Drukuj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg></button>
+      <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h13"/><path d="M21 13V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="M16 19h6M19 16v6"/></svg>Dodaj termin</button>
+    </div>
+    <div class="gridhint"><span>PN   WT   ŚR   CZ   PT   SO   ND  …(siatka)</span></div>
+  </div>
+
+  <!-- C -->
+  <div class="vlabel">Wariant C · tytuł wyśrodkowany + „Lista oczekujących" wyjęta z przełącznika<small>Data na środku (jak w Google/Apple Calendar). Przełącznik to tylko Miesiąc/Tydzień/Dzień; „Lista oczekujących" jako osobny przycisk z ikoną — to i tak inny typ widoku (bez dat), więc logicznie nie pasuje do przełącznika okresu.</small></div>
+  <div class="stage vC">
+    <div class="bar">
+      <div class="nav"><button>‹</button><button>›</button><button class="today">Dziś</button></div>
+      <span class="title">Czerwiec 2026</span>
+      <button class="ico" title="Szukaj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <div class="switch"><button class="on">Miesiąc</button><button>Tydzień</button><button>Dzień</button></div>
+      <button class="wait"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>Oczekujący</button>
+      <button class="ico" title="Drukuj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg></button>
+      <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h13"/><path d="M21 13V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="M16 19h6M19 16v6"/></svg>Dodaj termin</button>
+    </div>
+    <div class="gridhint"><span>PN   WT   ŚR   CZ   PT   SO   ND  …(siatka)</span></div>
+  </div>
+
+  <!-- A na wąsko (tablet) — dowód odporności -->
+  <div class="vlabel">Wariant A na wąskim ekranie (tablet ~720px) — data dalej widoczna</div>
+  <div class="stage vA tablet">
+    <div class="row row1">
+      <div class="nav"><button>‹</button><button>›</button></div>
+      <span class="title" style="font-size:1.3rem;">Czerwiec 2026</span>
+      <span class="sp"></span>
+      <button class="ico" title="Szukaj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+      <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h13"/><path d="M21 13V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="M16 19h6M19 16v6"/></svg>Dodaj</button>
+    </div>
+    <div class="row row2">
+      <button class="today">Dziś</button>
+      <span class="sp"></span>
+      <div class="switch"><button class="on">Miesiąc</button><button>Tydzień</button><button>Dzień</button><button>Lista oczek.</button></div>
+    </div>
+    <div class="gridhint"><span>PN   WT   ŚR   CZ   PT   SO   ND  …(siatka)</span></div>
+  </div>
+
+</body>
+</html>

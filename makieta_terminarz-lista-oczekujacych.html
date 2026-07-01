@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Lista oczekujących: dodawanie do istniejącej listy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;color:#0f2b33;background:#eef5f6;padding:22px 16px 60px;}
+  .wrap{max-width:640px;margin:0 auto;}
+  .note{background:#E1F5EE;border:1px solid #9FE1CB;border-radius:12px;padding:11px 14px;font-size:.85rem;color:#0c5a47;line-height:1.5;margin-bottom:16px;}
+  .note b{color:#0a4a3b;}
+
+  /* ===== styl jak w aplikacji (.tz-wl*) ===== */
+  .tz-wl{background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;overflow:hidden;}
+  .tz-wl__bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;border-bottom:0.5px solid #d7e9ec;flex-wrap:wrap;}
+  .tz-wl__sum{font-size:0.8rem;color:#5b6672;}
+  .tz-wl__sum b{color:#0F6E56;font-weight:600;}
+  .tz-wl__add{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #5DCAA5;background:#fff;color:#0F6E56;border-radius:11px;padding:8px 13px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;}
+  .tz-wl__add:hover{background:#E1F5EE;}
+  .tz-wl__body{padding:6px 16px 14px;}
+  .tz-wl__ghead{display:flex;align-items:center;gap:8px;padding:14px 0 6px;}
+  .tz-wl__gname{font-size:0.85rem;font-weight:600;color:#0F6E56;}
+  .tz-wl__count{font-size:0.72rem;font-weight:600;background:#E1F5EE;color:#0F6E56;padding:1px 8px;border-radius:999px;}
+  /* NOWE: przycisk „dodaj do tej listy" przy nagłówku grupy */
+  .tz-wl__gadd{margin-left:auto;display:inline-flex;align-items:center;gap:5px;border:1px solid #cfe6df;background:#fff;color:#0F6E56;border-radius:9px;padding:5px 10px;font-size:0.76rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .tz-wl__gadd:hover{background:#E1F5EE;border-color:#5DCAA5;}
+  .tz-wl__row{display:flex;align-items:center;gap:11px;padding:10px 12px;border:0.5px solid #e3eef0;border-radius:9px;margin-bottom:6px;background:#fff;}
+  .tz-wl__row.is-urgent{border-left:3px solid #E24B4A;border-radius:0 9px 9px 0;}
+  .tz-wl__main{flex:1 1 auto;min-width:0;}
+  .tz-wl__nm{font-size:0.92rem;font-weight:600;color:#0f2b33;}
+  .tz-wl__wait{font-size:0.76rem;color:#5b6672;margin-top:1px;}
+  .tz-wl__urg{flex:0 0 auto;font-size:0.7rem;font-weight:600;background:#FCEBEB;color:#A32D2D;padding:2px 9px;border-radius:999px;}
+  .tz-wl__acts{display:flex;gap:4px;flex:0 0 auto;}
+  .tz-wl__act{border:0.5px solid #d7e9ec;background:#fff;color:#5b6672;border-radius:8px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.95rem;}
+
+  /* mini-formularz dodawania (inline, ilustracyjny) */
+  .addbox{border:1px dashed #9FE1CB;background:#f6fdfb;border-radius:11px;padding:12px;margin:6px 0 4px;}
+  .addbox h4{margin:0 0 8px;font-size:0.85rem;font-weight:700;color:#0F6E56;}
+  .addbox label{display:block;font-size:0.76rem;font-weight:600;color:#5b6672;margin:8px 0 3px;}
+  .addbox input{width:100%;font-size:0.92rem;font-family:inherit;border:1px solid #d7e9ec;border-radius:9px;padding:9px 11px;color:#0f2b33;}
+  .addbox input.locked{background:#E1F5EE;border-color:#9FE1CB;color:#0F6E56;font-weight:600;}
+  .addbox .lockhint{font-size:0.72rem;color:#0F6E56;margin-top:3px;}
+  .addbox .acts{display:flex;gap:8px;margin-top:12px;}
+  .addbox .acts button{border:0;border-radius:10px;padding:9px 14px;font-size:0.84rem;font-weight:700;cursor:pointer;font-family:inherit;}
+  .addbox .ok{background:#0F6E56;color:#fff;}
+  .addbox .cancel{background:#fff;border:1px solid #d7e9ec!important;color:#5b6672;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="note">
+      Poprawka: każda <b>lista (typ procedury)</b> dostaje przy nagłówku przycisk <b>„＋ Dodaj do tej listy”</b>,
+      który otwiera dodawanie z <b>typem procedury już ustawionym</b> — nie trzeba go wpisywać. Górny „＋ Dodaj pacjenta”
+      zostaje do tworzenia nowej listy / dowolnego typu.
+    </div>
+
+    <div class="tz-wl">
+      <div class="tz-wl__bar">
+        <span class="tz-wl__sum"><b>5</b> pacjentów · <b>1</b> pilny</span>
+        <button type="button" class="tz-wl__add" id="addAny"><span style="font-size:1.05rem;line-height:1;">＋</span> Dodaj pacjenta</button>
+      </div>
+      <div class="tz-wl__body" id="body">
+
+        <div class="tz-wl__ghead">
+          <span class="tz-wl__gname">Biopsja tarczycy</span><span class="tz-wl__count">3</span>
+          <button type="button" class="tz-wl__gadd" data-list="Biopsja tarczycy">＋ Dodaj do tej listy</button>
+        </div>
+        <div class="addbox hidden" data-box="Biopsja tarczycy"></div>
+        <div class="tz-wl__row is-urgent">
+          <div class="tz-wl__main"><div class="tz-wl__nm">Nowak Franciszek</div><div class="tz-wl__wait">czeka 12 dni</div></div>
+          <span class="tz-wl__urg">Pilne</span>
+          <div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div>
+        </div>
+        <div class="tz-wl__row">
+          <div class="tz-wl__main"><div class="tz-wl__nm">Kowalska Zofia</div><div class="tz-wl__wait">czeka 5 dni</div></div>
+          <div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div>
+        </div>
+        <div class="tz-wl__row">
+          <div class="tz-wl__main"><div class="tz-wl__nm">Wiśniewski Antoni</div><div class="tz-wl__wait">czeka 2 dni</div></div>
+          <div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div>
+        </div>
+
+        <div class="tz-wl__ghead">
+          <span class="tz-wl__gname">USG bioder</span><span class="tz-wl__count">2</span>
+          <button type="button" class="tz-wl__gadd" data-list="USG bioder">＋ Dodaj do tej listy</button>
+        </div>
+        <div class="addbox hidden" data-box="USG bioder"></div>
+        <div class="tz-wl__row">
+          <div class="tz-wl__main"><div class="tz-wl__nm">Lewandowska Maja</div><div class="tz-wl__wait">czeka 8 dni</div></div>
+          <div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div>
+        </div>
+        <div class="tz-wl__row">
+          <div class="tz-wl__main"><div class="tz-wl__nm">Wójcik Jan</div><div class="tz-wl__wait">czeka 1 dzień</div></div>
+          <div class="tz-wl__acts"><button class="tz-wl__act">✎</button><button class="tz-wl__act">🗑</button></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  function boxHtml(list, locked){
+    return '<h4>'+(locked?('Dodaj do listy: '+list):'Dodaj pacjenta')+'</h4>'
+      + '<label>Pacjent</label><input type="text" placeholder="Wpisz lub wybierz pacjenta…">'
+      + '<label>Typ procedury (lista)</label>'
+      + (locked
+          ? '<input type="text" class="locked" value="'+list+'" readonly><div class="lockhint">✓ ustawione automatycznie — dodajesz do istniejącej listy</div>'
+          : '<input type="text" placeholder="np. Biopsja tarczycy — nowa lub istniejąca">')
+      + '<label>Priorytet</label><input type="text" value="Normalny / Pilny" readonly style="color:#5b6672;">'
+      + '<div class="acts"><button class="ok">Dodaj do listy</button><button class="cancel" data-cancel>Anuluj</button></div>';
+  }
+  function closeAll(){ document.querySelectorAll('.addbox').forEach(function(b){ b.classList.add('hidden'); b.innerHTML=''; }); }
+  document.querySelectorAll('.tz-wl__gadd').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var list=btn.getAttribute('data-list');
+      var box=document.querySelector('.addbox[data-box="'+list+'"]');
+      var wasOpen=!box.classList.contains('hidden');
+      closeAll();
+      if(!wasOpen){ box.innerHTML=boxHtml(list,true); box.classList.remove('hidden'); }
+    });
+  });
+  document.getElementById('addAny').addEventListener('click',function(){
+    var first=document.querySelector('.addbox');
+    var wasOpen=!first.classList.contains('hidden') && first.getAttribute('data-locked')==='no';
+    closeAll();
+    if(!wasOpen){ first.setAttribute('data-locked','no'); first.innerHTML=boxHtml('',false); first.classList.remove('hidden'); }
+  });
+  document.addEventListener('click',function(e){ if(e.target&&e.target.hasAttribute('data-cancel')) closeAll(); });
+</script>
+</body>
+</html>

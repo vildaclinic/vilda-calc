@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta — Statystyki: poprawki desktop</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#eef4f5;padding:24px 18px 70px;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  h1{font-size:1.25rem;margin:0 0 4px;}
+  .sub{margin:0 0 18px;color:#5b6672;font-size:.9rem;line-height:1.55;}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 16px;font-size:.84rem;color:#33464e;}
+  .legend b{color:#0F6E56;}
+  .cols{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;}
+  .panel{flex:1 1 460px;min-width:420px;background:#fff;border:1px solid #d7e9ec;border-radius:18px;padding:18px 20px 22px;box-shadow:0 6px 22px rgba(15,43,51,.06);}
+  .ptag{font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:0 0 12px;}
+  .ptag.now{color:#b4453a;}.ptag.fix{color:#0F6E56;}
+
+  /* ───────── BAZA (obecne rozmiary, do porównania w panelu „teraz") ───────── */
+  .s0 .seg{display:flex;background:#eef4f5;border:1px solid #dbe7e9;border-radius:999px;padding:3px;margin:0 0 12px;}
+  .s0 .seg button{flex:1;border:0;background:transparent;font:inherit;font-size:.82rem;font-weight:600;color:#5b6672;padding:7px 4px;border-radius:999px;}
+  .s0 .seg button.on{background:#0e857f;color:#fff;}
+  .s0 .period{font-size:.8rem;color:#5b6672;margin:-2px 0 12px;}
+  .s0 .h{font-size:.74rem;font-weight:700;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.03em;}
+  .s0 .rc{display:flex;align-items:center;gap:9px;margin:7px 0;font-size:.82rem;}
+  .s0 .rc .dot{width:10px;height:10px;border-radius:3px;flex:none;}
+  .s0 .rc .nm{width:88px;color:#374151;flex:none;}
+  .s0 .rc .track{height:7px;border-radius:999px;background:#eef4f5;flex:1;overflow:hidden;}
+  .s0 .rc .fill{height:100%;border-radius:999px;}
+  .s0 .rc .ct{font-weight:700;color:#0f2b33;width:30px;text-align:right;flex:none;}
+  .s0 .kpi-l{font-size:.74rem;color:#5b6672;}
+  .s0 .bl{font-size:.66rem;color:#9aa8aa;}
+
+  /* ───────── PO POPRAWCE (desktop: większe czcionki + wyraźne paski) ───────── */
+  .s1{--fz-h:.86rem;--fz-l:.88rem;--fz-d:.82rem;--fz-cap:.86rem;--fz-bl:.8rem;--fz-rc:.98rem;--fz-note:.82rem;}
+  .s1 .seg{display:flex;background:#eef4f5;border:1px solid #dbe7e9;border-radius:999px;padding:4px;margin:0 0 14px;}
+  .s1 .seg button{flex:1;border:0;background:transparent;font:inherit;font-size:.9rem;font-weight:600;color:#5b6672;padding:9px 4px;border-radius:999px;cursor:pointer;}
+  .s1 .seg button.on{background:#0e857f;color:#fff;}
+  .s1 .period{font-size:.92rem;color:#5b6672;margin:-2px 0 16px;}
+  .s1 .h{font-size:var(--fz-h);font-weight:700;color:#0f2b33;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.03em;}
+  .s1 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .s1 .kpi{border:0.5px solid #d7e9ec;border-radius:14px;padding:14px 15px;background:#fbfdfd;}
+  .s1 .kpi .v{font-size:1.7rem;font-weight:800;line-height:1;color:#0f2b33;}
+  .s1 .kpi .l{font-size:var(--fz-l);color:#5b6672;margin-top:5px;}
+  .s1 .kpi .d{font-size:var(--fz-d);font-weight:700;margin-top:6px;}
+  .s1 .kpi.hero{grid-column:1 / -1;background:linear-gradient(180deg,#effaf6,#fbfdfd);}
+  .s1 .kpi.hero .v{font-size:2.35rem;}
+  .up{color:#1F7A3D;}.flat{color:#8a8f94;}
+  .s1 .bc{border:0.5px solid #d7e9ec;border-radius:14px;padding:14px 14px 10px;background:#fff;}
+  .s1 .bc-cap{font-size:var(--fz-cap);color:#5b6672;margin-bottom:10px;}
+  .s1 .bars{display:flex;align-items:flex-end;gap:9px;height:104px;}
+  .s1 .bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
+  .s1 .bcol .bar{width:100%;max-width:30px;border-radius:6px 6px 0 0;background:#9FE1CB;min-height:2px;}
+  .s1 .bcol .bar.peak{background:#0e857f;}
+  .s1 .bcol .bl{font-size:var(--fz-bl);color:#7c8a8c;font-weight:500;}
+
+  /* PASKI ROZKŁADU — grubsze, nasycony fill z gradientem głębi, pogrubione liczby */
+  .s1 .rc{display:flex;align-items:center;gap:12px;margin:10px 0;font-size:var(--fz-rc);}
+  .s1 .rc .dot{width:12px;height:12px;border-radius:3px;flex:none;}
+  .s1 .rc .nm{width:104px;color:#1f2d33;font-weight:500;flex:none;}
+  .s1 .rc .track{height:13px;border-radius:999px;background:#e7eef0;flex:1;overflow:hidden;box-shadow:inset 0 0 0 0.5px #d5e2e5;}
+  .s1 .rc .fill{height:100%;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.28);}
+  .s1 .rc .ct{font-weight:800;color:#0f2b33;width:34px;text-align:right;flex:none;font-size:1.05rem;}
+  .s1 .q{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .s1 .qbox{border:0.5px solid #d7e9ec;border-radius:13px;padding:13px;text-align:center;background:#fbfdfd;}
+  .s1 .qbox .qv{font-size:1.5rem;font-weight:800;}
+  .s1 .qbox .ql{font-size:.84rem;color:#5b6672;margin-top:4px;}
+  .s1 .note{font-size:var(--fz-note);color:#8a99a0;margin-top:16px;line-height:1.55;}
+
+  /* przed/po dla pojedynczego paska */
+  .cmp{margin-top:22px;background:#fff;border:1px solid #d7e9ec;border-radius:16px;padding:16px 20px;}
+  .cmp h3{margin:0 0 12px;font-size:.95rem;}
+  .cmp .row{display:flex;align-items:center;gap:14px;margin:10px 0;}
+  .cmp .tag{width:52px;font-size:.74rem;font-weight:700;color:#9aa8aa;}
+  .cmp .barwrap{flex:1;display:flex;align-items:center;gap:12px;}
+  .cmp .lab{width:90px;font-size:.92rem;color:#374151;}
+  .old-track{height:7px;border-radius:999px;background:#eef4f5;flex:1;overflow:hidden;}
+  .old-fill{height:100%;width:66%;background:#1F7A3D;border-radius:999px;}
+  .new-track{height:13px;border-radius:999px;background:#e7eef0;flex:1;overflow:hidden;box-shadow:inset 0 0 0 .5px #d5e2e5;}
+  .new-fill{height:100%;width:66%;border-radius:999px;background:linear-gradient(90deg,#1F7A3D,#15602f);box-shadow:inset 0 1px 0 rgba(255,255,255,.28);}
+  .cmp .ct{font-weight:800;color:#0f2b33;width:30px;text-align:right;font-size:1.05rem;}
+  .cmp .ctold{font-weight:700;width:30px;text-align:right;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Statystyki — poprawki na desktopie</h1>
+  <p class="sub">Trzy zmiany: (1) większe czcionki tam, gdzie były drobne; (2) szerszy panel — wykorzystanie miejsca na desktopie; (3) wyraźniejsze paski w „Rozkład wizyt wg typu" (grubsze, nasycony kolor, pogrubione liczby). Mobile zostaje bez zmian (tam rozmiary były dobre).</p>
+  <div class="legend"><span>Po lewej: <b style="color:#b4453a">teraz</b> (drobna czcionka, blady pasek)</span><span>Po prawej: <b>po poprawce</b> (desktop)</span></div>
+
+  <div class="cols">
+    <!-- TERAZ -->
+    <div class="panel s0">
+      <p class="ptag now">Teraz</p>
+      <div class="seg"><button>Tydzień</button><button class="on">Miesiąc</button><button>Rok</button></div>
+      <div class="period">📅 czerwiec 2026 · 19 dni roboczych (do dziś)</div>
+      <div class="h">Rozkład wizyt wg typu</div>
+      <div class="rc"><span class="dot" style="background:#0B5C84"></span><span class="nm">Kontrola</span><span class="track"><span class="fill" style="width:100%;background:#0B5C84"></span></span><span class="ct">70</span></div>
+      <div class="rc"><span class="dot" style="background:#1F7A3D"></span><span class="nm">Leczenie</span><span class="track"><span class="fill" style="width:40%;background:#1F7A3D"></span></span><span class="ct">28</span></div>
+      <div class="rc"><span class="dot" style="background:#0E7C86"></span><span class="nm">Badanie</span><span class="track"><span class="fill" style="width:36%;background:#0E7C86"></span></span><span class="ct">25</span></div>
+      <div class="rc"><span class="dot" style="background:#B07A1E"></span><span class="nm">Obserwacja</span><span class="track"><span class="fill" style="width:14%;background:#B07A1E"></span></span><span class="ct">10</span></div>
+      <div class="rc"><span class="dot" style="background:#5b6672"></span><span class="nm">Procedura</span><span class="track"><span class="fill" style="width:7%;background:#5b6672"></span></span><span class="ct">5</span></div>
+      <div class="h">Grafik lekarza</div>
+      <div style="font-size:.74rem;color:#5b6672;margin-bottom:4px;">NFZ 3 · komercja 2 · razem 24 h dyżurów</div>
+      <div class="bl">drobne podpisy: pn / wt / śr… (0,66rem)</div>
+    </div>
+
+    <!-- PO POPRAWCE -->
+    <div class="panel s1">
+      <p class="ptag fix">Po poprawce (desktop)</p>
+      <div class="seg"><button>Tydzień</button><button class="on">Miesiąc</button><button>Rok</button></div>
+      <div class="period">📅 czerwiec 2026 · 19 dni roboczych (do dziś)</div>
+      <div class="kpis">
+        <div class="kpi hero"><div class="v">138</div><div class="l">wizyt pacjentów w tym okresie</div><div class="d up">▲ 12% vs poprz. miesiąc (do dziś)</div></div>
+        <div class="kpi"><div class="v">6,6</div><div class="l">średnio dziennie</div></div>
+        <div class="kpi"><div class="v">32</div><div class="l">średnio w tygodniu</div></div>
+      </div>
+      <div class="h">Wizyty dzień po dniu</div>
+      <div class="bc"><div class="bc-cap">Najwięcej: <b>wtorki</b> (śr. 9,1/dzień)</div><div class="bars">
+        <div class="bcol"><div class="bar" style="height:55%"></div><div class="bl">pn</div></div>
+        <div class="bcol"><div class="bar peak" style="height:100%"></div><div class="bl">wt</div></div>
+        <div class="bcol"><div class="bar" style="height:78%"></div><div class="bl">śr</div></div>
+        <div class="bcol"><div class="bar" style="height:64%"></div><div class="bl">cz</div></div>
+        <div class="bcol"><div class="bar" style="height:72%"></div><div class="bl">pt</div></div>
+        <div class="bcol"><div class="bar" style="height:12%"></div><div class="bl">sb</div></div>
+        <div class="bcol"><div class="bar" style="height:0%"></div><div class="bl">nd</div></div>
+      </div></div>
+      <div class="h">Rozkład wizyt wg typu</div>
+      <div class="rc"><span class="dot" style="background:#0B5C84"></span><span class="nm">Kontrola</span><span class="track"><span class="fill" style="width:100%;background:linear-gradient(90deg,#0B5C84,#073f5b)"></span></span><span class="ct">70</span></div>
+      <div class="rc"><span class="dot" style="background:#1F7A3D"></span><span class="nm">Leczenie</span><span class="track"><span class="fill" style="width:40%;background:linear-gradient(90deg,#1F7A3D,#15602f)"></span></span><span class="ct">28</span></div>
+      <div class="rc"><span class="dot" style="background:#0E7C86"></span><span class="nm">Badanie</span><span class="track"><span class="fill" style="width:36%;background:linear-gradient(90deg,#0E7C86,#0a5b62)"></span></span><span class="ct">25</span></div>
+      <div class="rc"><span class="dot" style="background:#B07A1E"></span><span class="nm">Obserwacja</span><span class="track"><span class="fill" style="width:14%;background:linear-gradient(90deg,#B07A1E,#8a5f15)"></span></span><span class="ct">10</span></div>
+      <div class="rc"><span class="dot" style="background:#5b6672"></span><span class="nm">Procedura</span><span class="track"><span class="fill" style="width:7%;background:linear-gradient(90deg,#5b6672,#444c55)"></span></span><span class="ct">5</span></div>
+      <div class="h">Grafik lekarza</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v">12</div><div class="l">Poradnie</div><div class="d flat">NFZ 8 · komercja 4</div></div>
+        <div class="kpi"><div class="v">5</div><div class="l">Dyżury</div><div class="d flat">razem 60 h</div></div>
+      </div>
+      <div class="h">Jakość grafiku</div>
+      <div class="q"><div class="qbox"><div class="qv" style="color:#1F7A3D">92%</div><div class="ql">wykonane (127/138)</div></div><div class="qbox"><div class="qv" style="color:#b4453a">5%</div><div class="ql">nieobecność / no‑show</div></div></div>
+      <div class="note">Liczone lokalnie z kalendarza — dane nie opuszczają urządzenia.</div>
+    </div>
+  </div>
+
+  <!-- przed/po paska -->
+  <div class="cmp">
+    <h3>Pasek rozkładu — z bliska</h3>
+    <div class="row"><span class="tag">teraz</span><div class="barwrap"><span class="lab">Leczenie</span><span class="old-track"><span class="old-fill"></span></span><span class="ctold">28</span></div></div>
+    <div class="row"><span class="tag" style="color:#0F6E56">po</span><div class="barwrap"><span class="lab">Leczenie</span><span class="new-track"><span class="new-fill"></span></span><span class="ct">28</span></div></div>
+    <p style="margin:8px 0 0;font-size:.82rem;color:#5b6672;line-height:1.5;">Pasek grubszy (7 → 13 px), nasycony kolor z lekkim gradientem (ciemniejsza prawa krawędź), subtelna obwódka toru i pogrubiona liczba. Pusta część toru jest mniej „blada" i nie dominuje.</p>
+  </div>
+</div>
+</body>
+</html>

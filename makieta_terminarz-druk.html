@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — modal Drukuj v2 (desktop dwupanelowy + mobile)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#dfe8ea;padding:22px 14px 60px;}
+  .pagehead{max-width:1180px;margin:0 auto 8px;}
+  .pagehead h1{font-size:1.2rem;margin:0 0 4px;}
+  .pagehead p{margin:0;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .vlabel{max-width:1180px;margin:24px auto 8px;font-size:.74rem;font-weight:700;color:#5b6672;text-transform:uppercase;letter-spacing:.05em;}
+  .frames{max-width:1180px;margin:0 auto;display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;}
+  .cap{font-size:.72rem;color:#5b6672;font-weight:600;margin-bottom:8px;}
+  .phone{width:392px;border:10px solid #1f3438;border-radius:36px;background:#eef2f3;padding:10px;box-shadow:0 16px 40px rgba(3,42,48,.18);}
+
+  /* ── modal ── */
+  .pmodal{background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,40,48,.28);overflow:hidden;display:flex;flex-direction:column;}
+  .pmodal--desktop{width:940px;max-width:100%;max-height:84vh;}
+  .pmodal--mobile{width:100%;max-height:78vh;}
+  .pm-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef3f4;flex:0 0 auto;}
+  .pm-head h2{font-size:1.05rem;font-weight:700;margin:0;}
+  .pm-x{border:0;background:transparent;color:#8a979c;font-size:1.1rem;cursor:pointer;line-height:1;padding:4px;}
+
+  .pm-grid{display:grid;flex:1 1 auto;min-height:0;}
+  .pmodal--desktop .pm-grid{grid-template-columns:400px 1fr;}
+  .pmodal--mobile .pm-grid{grid-template-columns:1fr;}
+  .pm-opts{padding:16px 18px;overflow-y:auto;min-width:0;}
+  .pmodal--desktop .pm-opts{border-right:1px solid #eef3f4;}
+  .pm-preview{background:#eef2f3;padding:16px;overflow-y:auto;min-width:0;}
+  .pmodal--mobile .pm-preview{border-top:1px solid #eef3f4;}
+
+  .lab{font-size:.76rem;color:#5b6672;margin:13px 0 6px;font-weight:600;}
+  .lab:first-child{margin-top:0;}
+  .seg{display:flex;gap:6px;}
+  .seg button{flex:1 1 0;min-width:0;padding:8px 6px;border-radius:9px;font-size:.82rem;cursor:pointer;border:0.5px solid #d7e9ec;background:#fff;color:#3f5a5c;font-weight:600;font-family:inherit;white-space:normal;line-height:1.15;text-align:center;}
+  .seg button.on{background:#00838d;color:#fff;border-color:#00838d;}
+  .seg.big button{padding:10px 8px;flex-direction:column;display:flex;gap:2px;align-items:center;}
+  .seg.big .s{font-size:.66rem;font-weight:500;opacity:.85;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{border:1px solid #d7e9ec;background:#fff;color:#3f5a5c;border-radius:999px;padding:5px 11px;font-size:.77rem;font-weight:600;cursor:pointer;}
+  .chip.on{background:#E1F5EE;border-color:#5DCAA5;color:#0F6E56;}
+  .colgrid{display:flex;flex-wrap:wrap;gap:8px 14px;}
+  .colgrid label{display:flex;align-items:center;gap:6px;font-size:.83rem;color:#33464e;cursor:pointer;}
+  select,.txt{width:100%;font-size:.85rem;padding:8px 9px;border-radius:9px;border:0.5px solid #d7e9ec;font-family:inherit;background:#fff;color:#0f2b33;}
+  .hint{font-size:.72rem;color:#8a979c;margin-top:5px;line-height:1.4;}
+  .badge-new{display:inline-block;background:#E1F5EE;color:#0F6E56;font-size:.58rem;font-weight:700;border-radius:5px;padding:1px 5px;margin-left:5px;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle;}
+
+  .pm-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #eef3f4;background:#fff;flex:0 0 auto;}
+  .btn-cancel{padding:9px 15px;border-radius:9px;border:0.5px solid #d7e9ec;background:#fff;color:#5b6672;font-size:.85rem;cursor:pointer;font-family:inherit;}
+  .btn-go{padding:9px 18px;border-radius:9px;border:0;background:linear-gradient(135deg,#00838d,#00b0a6);color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;box-shadow:0 3px 10px rgba(0,131,141,.28);}
+
+  .is-visits .for-wait{display:none;} .is-wait .for-visits{display:none;}
+  .pv-cap{font-size:.7rem;color:#7c8a8d;font-weight:600;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;}
+
+  /* podgląd — kartka A4 */
+  .sheet{background:#fff;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:16px 18px;font-size:12px;color:#111;max-width:100%;}
+  .pmodal--desktop .sheet{min-height:480px;}
+  .sheet .ph{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px;gap:10px;}
+  .sheet .ph h3{margin:0;font-size:15px;} .sheet .ph .sub{font-size:11px;color:#555;margin-top:2px;}
+  .sheet .ph .cnt{font-size:11px;color:#555;white-space:nowrap;}
+  .sheet table{width:100%;border-collapse:collapse;}
+  .sheet th{text-align:left;font-size:10.5px;color:#555;border-bottom:1px solid #999;padding:4px 5px;}
+  .sheet td{padding:5px;border-bottom:1px solid #ededed;font-size:12px;vertical-align:top;}
+  .sheet .chk{display:inline-block;width:13px;height:13px;border:1px solid #888;}
+  .sheet .grp{font-size:12px;font-weight:700;color:#0e6e57;border-bottom:1px solid #bcd;padding:9px 2px 4px;margin-top:8px;}
+  .sheet .term{font-size:11px;color:#1d5b9e;font-weight:600;margin-bottom:8px;}
+  .sheet .resline{border-bottom:1px dotted #bbb;height:15px;}
+  .sheet .urg{color:#b42318;font-weight:700;}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Modal „Drukuj" v2 — desktop dwupanelowy + porządny mobile</h1>
+    <p>Desktop: opcje po lewej, <b>duży podgląd po prawej</b> (widać efekt po zaznaczeniu opcji). Mobile: <b>jedna kolumna, pełna szerokość, bez poziomego scrolla</b>, akcje na dole. Kliknij „Grafik wizyt / Lista oczekujących", by zobaczyć oba tryby.</p>
+  </div>
+
+  <div class="vlabel">Desktop</div>
+  <div class="frames">
+    <div><div class="cap">Desktop — szeroki, dwupanelowy</div><div id="host-d"></div></div>
+  </div>
+
+  <div class="vlabel">Mobile</div>
+  <div class="frames">
+    <div><div class="cap">Mobile — jedna kolumna, sticky akcje</div><div class="phone"><div id="host-m"></div></div></div>
+  </div>
+
+<script>
+  function pvVisits(){
+    return '<div class="pv-cap">Podgląd wydruku</div><div class="sheet">'
+      + '<div class="ph"><div><h3>dr n. med. Maciej Flader</h3><div class="sub">Zaplanowane wizyty — 22–28 czerwca 2026</div></div><div class="cnt">6 wizyt</div></div>'
+      + '<div class="grp">poniedziałek 22.06 · 2</div>'
+      + '<table><tr><td style="width:62px;">09:00</td><td>Nowak Franciszek</td><td style="width:84px;">Kontrola</td><td style="width:74px;color:#1a7f37;">✓</td></tr>'
+      + '<tr><td>09:30</td><td>Kowalska Zofia</td><td>Wynik bad.</td><td style="color:#888;">—</td></tr></table>'
+      + '<div class="grp">wtorek 23.06 · 2</div>'
+      + '<table><tr><td style="width:62px;">11:00</td><td>Wiśniewski Jan</td><td style="width:84px;">Obserwacja</td><td style="width:74px;color:#888;">—</td></tr>'
+      + '<tr><td>12:15</td><td>Lewandowska Maja</td><td>Leczenie</td><td style="color:#888;">—</td></tr></table>'
+      + '<div class="grp">czwartek 25.06 · 2</div>'
+      + '<table><tr><td style="width:62px;">08:30</td><td>Zieliński Piotr</td><td style="width:84px;">Kontrola</td><td style="width:74px;color:#888;">—</td></tr>'
+      + '<tr><td>10:00</td><td>Wójcik Anna</td><td>Procedura</td><td style="color:#888;">—</td></tr></table>'
+      + '</div>';
+  }
+  function pvWait(){
+    return '<div class="pv-cap">Podgląd wydruku</div><div class="sheet">'
+      + '<div class="ph"><div><h3>dr n. med. Maciej Flader</h3><div class="sub">Lista oczekujących — Biopsja tarczycy (BACC)</div></div><div class="cnt">3 pacjentów</div></div>'
+      + '<div class="term">📅 termin listy: 21.07.2026, godz. 10:00</div>'
+      + '<table><thead><tr><th style="width:24px;">✓</th><th>Pacjent</th><th style="width:74px;">Czeka</th><th>Wynik / uwaga</th></tr></thead>'
+      + '<tr><td><span class="chk"></span></td><td>Antczak Krzysztof <span class="urg">• pilne</span></td><td>2 dni</td><td><div class="resline"></div></td></tr>'
+      + '<tr><td><span class="chk"></span></td><td>Sztamblewski Andrzej</td><td>dziś</td><td><div class="resline"></div></td></tr>'
+      + '<tr><td><span class="chk"></span></td><td>Tatarynowicz Kamil</td><td>dziś</td><td><div class="resline"></div></td></tr></table>'
+      + '</div>';
+  }
+
+  function optsHtml(){
+    return ''
+      + '<div class="lab">Co drukować</div>'
+      + '<div class="seg big js-mode">'
+      +   '<button class="on" data-mode="visits"><span>Grafik wizyt</span><span class="s">wizyty z datą</span></button>'
+      +   '<button data-mode="wait"><span>Lista oczekujących<span class="badge-new">nowe</span></span><span class="s">procedury bez terminu</span></button>'
+      + '</div>'
+      // GRAFIK WIZYT
+      + '<div class="for-visits">'
+      +   '<div class="lab">Zakres</div>'
+      +   '<div class="seg js-seg"><button class="on">Dzień</button><button>Tydzień</button><button>Miesiąc<span class="badge-new">nowe</span></button></div>'
+      +   '<div class="lab">Kategorie<span class="badge-new">nowe</span></div>'
+      +   '<div class="chips js-chips"><span class="chip on" data-c="all">Wszystkie</span><span class="chip" data-c="k">Kontrole</span><span class="chip" data-c="o">Obserwacje</span><span class="chip" data-c="l">Leczenie</span><span class="chip" data-c="w">Wyniki</span><span class="chip" data-c="p">Procedury</span><span class="chip" data-c="d">Dyżury / Poradnie</span></div>'
+      +   '<div class="lab">Układ</div>'
+      +   '<div class="seg js-seg"><button class="on">Tabela</button><button>Agenda</button><button>Lista</button></div>'
+      +   '<div class="lab">Kolumny</div>'
+      +   '<div class="colgrid"><label><input type="checkbox" checked> Godzina</label><label><input type="checkbox" checked> Pacjent</label><label><input type="checkbox" checked> Kategoria</label><label><input type="checkbox" checked> Status</label><label><input type="checkbox"> Tytuł / uwaga</label><label><input type="checkbox"> Kratka do odhaczenia</label></div>'
+      + '</div>'
+      // LISTA OCZEKUJĄCYCH
+      + '<div class="for-wait">'
+      +   '<div class="lab">Która lista</div>'
+      +   '<select><option>Wszystkie listy</option><option selected>Biopsja tarczycy (BACC)</option><option>USG bioder</option></select>'
+      +   '<div class="hint">Otwarte z widoku „Lista oczekujących" → domyślnie ta, na którą patrzysz.</div>'
+      +   '<div class="lab">Na wydruku</div>'
+      +   '<div class="colgrid"><label><input type="checkbox" checked> Czas oczekiwania</label><label><input type="checkbox" checked> Termin listy</label><label><input type="checkbox" checked> Kratka do odhaczenia</label><label><input type="checkbox"> Miejsce na wynik / uwagę</label><label><input type="checkbox"> Oznacz „Pilne"</label></div>'
+      +   '<div class="lab">Układ</div>'
+      +   '<div class="seg js-seg"><button class="on">Tabela</button><button>Lista</button></div>'
+      + '</div>'
+      // wspólne
+      + '<div class="lab">Nagłówek</div>'
+      + '<input class="txt" type="text" value="dr n. med. Maciej Flader" placeholder="np. dr n. med. …">';
+  }
+
+  function buildModal(host, device){
+    var m = document.createElement('div');
+    m.className = 'pmodal pmodal--' + device + ' is-visits';
+    m.innerHTML = ''
+      + '<div class="pm-head"><h2>Drukuj</h2><button class="pm-x" aria-label="Zamknij">✕</button></div>'
+      + '<div class="pm-grid">'
+      +   '<div class="pm-opts">' + optsHtml() + '</div>'
+      +   '<div class="pm-preview"></div>'
+      + '</div>'
+      + '<div class="pm-foot"><button class="btn-cancel">Anuluj</button><button class="btn-go">🖨 Drukuj</button></div>';
+    host.appendChild(m);
+    var prev = m.querySelector('.pm-preview');
+    function paint(mode){
+      m.classList.toggle('is-visits', mode==='visits');
+      m.classList.toggle('is-wait', mode==='wait');
+      m.querySelectorAll('.js-mode button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-mode')===mode); });
+      prev.innerHTML = (mode==='wait') ? pvWait() : pvVisits();
+    }
+    m.querySelectorAll('.js-mode button').forEach(function(b){ b.addEventListener('click', function(){ paint(b.getAttribute('data-mode')); }); });
+    m.querySelectorAll('.js-seg').forEach(function(s){ s.querySelectorAll('button').forEach(function(b){ b.addEventListener('click', function(){ s.querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); }); }); });
+    m.querySelectorAll('.js-chips').forEach(function(cw){ cw.querySelectorAll('.chip').forEach(function(c){ c.addEventListener('click', function(){
+      if(c.getAttribute('data-c')==='all'){ cw.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');}); c.classList.add('on'); }
+      else { var all=cw.querySelector('.chip[data-c="all"]'); if(all) all.classList.remove('on'); c.classList.toggle('on'); }
+    }); }); });
+    paint('visits');
+  }
+  buildModal(document.getElementById('host-d'), 'desktop');
+  buildModal(document.getElementById('host-m'), 'mobile');
+</script>
+</body>
+</html>

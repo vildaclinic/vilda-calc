@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta — tooltipy błędów zakresu nad polami</title>
+<style>
+  :root{
+    --primary:#00838d; --secondary:#00b0a6; --text:#333; --danger:#c62828;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #e7f6f7 0%, rgba(231,246,247,0) 60%),
+      radial-gradient(900px 500px at -10% 110%, #eaf7f5 0%, rgba(234,247,245,0) 55%),
+      #f4f8f9;
+    padding:28px 18px 60px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+  h1{font-size:1.35rem;margin:0 0 4px;color:#0c3a3e;}
+  .lead{color:#5a7274;font-size:.92rem;margin:0 0 22px;line-height:1.5;}
+  .panel{
+    background:#fff;border:1px solid #e1e8ea;border-radius:16px;padding:22px 22px 26px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:22px;
+  }
+  .panel h2{font-size:1.02rem;margin:0 0 3px;color:#0c3a3e;}
+  .panel .sub{color:#6b8385;font-size:.83rem;margin:0 0 18px;}
+
+  /* ---- Controls ---- */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px;}
+  .seg{display:inline-flex;background:#eef3f4;border-radius:11px;padding:4px;gap:4px;}
+  .seg button{
+    border:none;background:transparent;font:inherit;font-size:.82rem;font-weight:600;color:#5a7274;
+    padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .15s;
+  }
+  .seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .seg.danger button.on{color:var(--danger);}
+  .chip{
+    border:1px solid #cfe0e3;background:#fff;color:#46686b;font:inherit;font-size:.8rem;font-weight:600;
+    padding:7px 13px;border-radius:9px;cursor:pointer;transition:all .15s;
+  }
+  .chip.on{border-color:var(--primary);color:var(--primary);background:#f0fafa;}
+  .controls-label{font-size:.78rem;color:#8aa0a2;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-right:2px;}
+
+  /* ---- Mock form (zbliżony do strony głównej) ---- */
+  .form{max-width:430px;margin:26px auto 6px;}
+  .age-row{display:flex;gap:12px;}
+  .age-row .field.years{flex:1.1;}
+  .age-row .field{flex:1;}
+  .field{margin:0 0 18px;position:relative;}
+  .field > label{display:block;font-size:.92rem;color:#3a4d4f;margin-bottom:6px;}
+  .field input, .field select{
+    width:100%;font:inherit;font-size:1rem;color:#1f2d2e;
+    padding:12px 14px;border:1.5px solid #d7e2e4;border-radius:12px;background:#fff;outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,131,141,.12);}
+  /* pole z błędem */
+  .field.err input{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,131,141,.14);}
+  body.vDanger .field.err input{border-color:var(--danger);box-shadow:0 0 0 3px rgba(198,40,40,.14);}
+
+  /* ============ TOOLTIP — styl 1:1 z referencyjnego .menu-tooltip (override chrome) ============ */
+  .tip{
+    position:absolute; left:14px; bottom:calc(100% + 10px); z-index:20;
+    background:rgba(255,255,255,0.96);
+    color:var(--primary);
+    border:1.5px solid rgba(0,131,141,0.20);
+    border-radius:10px;
+    box-shadow:0 4px 20px rgba(0,81,88,0.13), 0 1px 4px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+    -webkit-backdrop-filter:blur(14px) saturate(1.6); backdrop-filter:blur(14px) saturate(1.6);
+    font-size:0.83rem; font-weight:500; line-height:1.3;
+    padding:0.6rem 1rem; max-width:300px;
+    display:flex;align-items:center;gap:8px;
+    opacity:0; transform:translateY(4px); pointer-events:none;
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .field.err .tip{opacity:1;transform:translateY(0);}
+  /* strzałka skierowana w dół, na pole */
+  .tip::after{
+    content:""; position:absolute; left:22px; top:100%; width:12px; height:12px;
+    margin-top:-7px; transform:rotate(45deg);
+    background:rgba(255,255,255,0.96);
+    border-right:1.5px solid rgba(0,131,141,0.20);
+    border-bottom:1.5px solid rgba(0,131,141,0.20);
+    -webkit-backdrop-filter:blur(14px) saturate(1.6); backdrop-filter:blur(14px) saturate(1.6);
+  }
+  .tip .ic{flex:0 0 auto;width:15px;height:15px;display:inline-flex;}
+  .tip .ic svg{width:15px;height:15px;display:block;}
+
+  /* Wariant czerwony (sygnalizuje błąd) */
+  body.vDanger .tip{
+    color:var(--danger);
+    border-color:rgba(198,40,40,0.22);
+    box-shadow:0 4px 20px rgba(120,20,20,0.13), 0 1px 4px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+  }
+  body.vDanger .tip::after{border-right-color:rgba(198,40,40,0.22);border-bottom-color:rgba(198,40,40,0.22);}
+
+  /* ---- Referencja (jak wygląda obecny tooltip „Zapisz dane") ---- */
+  .ref-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .ref-item{display:flex;align-items:center;gap:10px;background:#f6fafa;border:1px dashed #cfe0e3;border-radius:12px;padding:12px 14px;}
+  .ref-sidebar-item{font-size:.9rem;color:#9aa8aa;display:flex;align-items:center;gap:8px;}
+  .ref-tip{
+    background:rgba(255,255,255,0.96);color:var(--primary);
+    border:1.5px solid rgba(0,131,141,0.20);border-radius:10px;
+    box-shadow:0 4px 20px rgba(0,81,88,0.13),0 1px 4px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.8);
+    font-size:0.83rem;font-weight:500;padding:0.6rem 1rem;
+  }
+
+  /* ---- before/after ---- */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:680px){.ba{grid-template-columns:1fr;}}
+  .ba .col{border:1px solid #e6edee;border-radius:12px;padding:14px;background:#fbfdfd;}
+  .ba .col h3{margin:0 0 10px;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:#8aa0a2;}
+  .old-errbox{
+    border:1px solid #d0dede;border-radius:10px;background:#fff;padding:14px 16px;color:#444;font-size:.9rem;
+  }
+  .old-errbox .ttl{font-size:.7rem;color:#aab;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;}
+  .mini-field{font-size:.82rem;color:#6b8385;border:1.5px solid #d7e2e4;border-radius:9px;padding:8px 10px;background:#fff;position:relative;margin-top:26px;}
+  .mini-tip{
+    position:absolute;left:8px;bottom:calc(100% + 8px);
+    background:rgba(255,255,255,0.96);color:var(--primary);border:1.5px solid rgba(0,131,141,0.20);
+    border-radius:9px;box-shadow:0 4px 16px rgba(0,81,88,.13);font-size:.74rem;font-weight:500;padding:.45rem .7rem;white-space:nowrap;
+  }
+  .mini-tip::after{content:"";position:absolute;left:16px;top:100%;width:9px;height:9px;margin-top:-5px;transform:rotate(45deg);background:rgba(255,255,255,0.96);border-right:1.5px solid rgba(0,131,141,0.20);border-bottom:1.5px solid rgba(0,131,141,0.20);}
+
+  .notes{font-size:.86rem;color:#46585a;line-height:1.6;}
+  .notes b{color:#0c3a3e;}
+  .notes ul{margin:8px 0 0;padding-left:20px;}
+  .notes li{margin:5px 0;}
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;color:var(--primary);background:#e6f5f6;border-radius:999px;padding:2px 9px;vertical-align:middle;}
+</style>
+</head>
+<body class="vPrimary">
+<div class="wrap">
+
+  <h1>Tooltipy błędów zakresu nad polem</h1>
+  <p class="lead">
+    Zamiast komunikatu w karcie po prawej (<code>#errorBox</code>), błąd zakresu pojawia się jako
+    tooltip <b>nad tym polem</b>, w którym wpisano złą wartość. Styl 1:1 z tooltipa „Zapisz dane"
+    (szklista biel, blur, turkusowy cienki border, miękki cień, 0.83rem/500). Dodano strzałkę
+    wskazującą pole (referencyjny tooltip strzałki nie ma — można pominąć).
+  </p>
+
+  <!-- REFERENCJA -->
+  <div class="panel">
+    <h2>Referencja — obecny tooltip „Zapisz dane"</h2>
+    <p class="sub">Tak wygląda dziś tooltip w sidebarze (źródło stylu, który odwzorowujemy).</p>
+    <div class="ref-row">
+      <div class="ref-item">
+        <span class="ref-sidebar-item">💾 Zapisz dane</span>
+        <span class="ref-tip">Aby zapisać dane, wprowadź imię, wiek, wzrost i wagę.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERAKTYWNA MAKIETA -->
+  <div class="panel">
+    <h2>Podgląd na formularzu strony głównej</h2>
+    <p class="sub">Kliknij, by pokazać/ukryć błąd na danym polu. Przełącz wariant kolorystyczny.</p>
+
+    <div class="controls">
+      <span class="controls-label">Pole</span>
+      <button class="chip on" data-f="years">Wiek (lata)</button>
+      <button class="chip" data-f="weight">Waga</button>
+      <button class="chip" data-f="height">Wzrost</button>
+    </div>
+    <div class="controls">
+      <span class="controls-label">Wariant</span>
+      <div class="seg" id="variantSeg">
+        <button class="on" data-v="vPrimary">A · turkusowy (wierny)</button>
+        <button data-v="vDanger">B · czerwony (błąd)</button>
+      </div>
+    </div>
+
+    <div class="form">
+      <div class="age-row">
+        <div class="field years err" id="f-years">
+          <div class="tip"><span class="ic">__ICON__</span><span>Wiek poza zakresem (0–130 lat)</span></div>
+          <label>Wiek (lata):</label>
+          <input type="text" value="250" inputmode="numeric">
+        </div>
+        <div class="field" id="f-months">
+          <label>Wiek (miesiące):</label>
+          <input type="text" value="" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Płeć:</label>
+        <select><option>Mężczyzna</option><option>Kobieta</option></select>
+      </div>
+
+      <div class="field" id="f-weight">
+        <div class="tip"><span class="ic">__ICON__</span><span>Waga poza zakresem (1–500 kg)</span></div>
+        <label>Waga (kg):</label>
+        <input type="text" value="999" inputmode="decimal">
+      </div>
+
+      <div class="field" id="f-height">
+        <div class="tip"><span class="ic">__ICON__</span><span>Wzrost poza zakresem (40–250 cm)</span></div>
+        <label>Wzrost (cm):</label>
+        <input type="text" value="300" inputmode="decimal">
+      </div>
+    </div>
+  </div>
+
+  <!-- PRZED / PO -->
+  <div class="panel">
+    <h2>Przed → po</h2>
+    <p class="sub">Co się zmienia w doświadczeniu użytkownika.</p>
+    <div class="ba">
+      <div class="col">
+        <h3>Przed — komunikat w karcie po prawej</h3>
+        <div class="old-errbox">
+          <div class="ttl">#errorBox (prawa kolumna)</div>
+          Wiek poza zakresem (0–130 lat)<br>
+          Waga poza zakresem (1–500 kg)
+        </div>
+        <p style="font-size:.8rem;color:#8aa0a2;margin:10px 0 0;">Błąd jest daleko od pola — trzeba szukać, którego pola dotyczy.</p>
+      </div>
+      <div class="col">
+        <h3>Po — tooltip przy polu</h3>
+        <div class="mini-field">
+          <div class="mini-tip">Wiek poza zakresem (0–130 lat)</div>
+          Wiek (lata): 250
+        </div>
+        <p style="font-size:.8rem;color:#8aa0a2;margin:18px 0 0;">Błąd dokładnie nad polem, którego dotyczy — od razu wiadomo, co poprawić.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZACHOWANIE -->
+  <div class="panel">
+    <h2>Proponowane zachowanie <span class="pill">do akceptacji</span></h2>
+    <div class="notes">
+      <ul>
+        <li><b>Kiedy:</b> tooltip pojawia się, gdy wartość pola wykracza poza zakres (wiek 0–130, waga 1–500&nbsp;kg, wzrost 40–250&nbsp;cm) — reaktywnie, przy wpisywaniu.</li>
+        <li><b>Gdzie:</b> nad tym konkretnym polem (osobny tooltip dla wieku, wagi, wzrostu); może być kilka naraz, jeśli kilka pól ma błąd.</li>
+        <li><b>Znika:</b> automatycznie, gdy wartość wróci do zakresu (lub pole zostanie wyczyszczone).</li>
+        <li><b>#errorBox:</b> przestaje pokazywać błędy zakresu. Komunikat „Podaj jednocześnie wiek, wagę i wzrost…" zostaje bez zmian (to nie błąd zakresu, tylko braki).</li>
+        <li><b>Mobile:</b> tooltip nad polem; jeśli brak miejsca u góry (pierwsze pole), spada pod pole. Liquid-glass i tak nadpisuje style z <code>!important</code> — kod uodpornię na motyw.</li>
+        <li><b>Dostępność:</b> <code>role="alert"</code> + powiązanie <code>aria-describedby</code> z polem.</li>
+      </ul>
+      <p style="margin-top:14px;"><b>Do decyzji:</b> wariant kolorystyczny — <b>A</b> wierny referencji (turkus) czy <b>B</b> czerwony (czytelniejszy jako błąd). Oraz: zostawić strzałkę wskazującą pole czy nie.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.5" r="1.1" fill="currentColor"/></svg>';
+  document.body.innerHTML = document.body.innerHTML.replace(/__ICON__/g, ICON);
+
+  // przełączniki pól
+  document.querySelectorAll('.chip').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btn.classList.toggle('on');
+      var map = { years:'f-years', weight:'f-weight', height:'f-height' };
+      var f = document.getElementById(map[btn.dataset.f]);
+      if(f) f.classList.toggle('err', btn.classList.contains('on'));
+    });
+  });
+  // wariant kolorystyczny
+  document.querySelectorAll('#variantSeg button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('#variantSeg button').forEach(function(b){b.classList.remove('on');});
+      btn.classList.add('on');
+      document.body.classList.remove('vPrimary','vDanger');
+      document.body.classList.add(btn.dataset.v);
+      document.getElementById('variantSeg').classList.toggle('danger', btn.dataset.v==='vDanger');
+    });
+  });
+</script>
+</body>
+</html>

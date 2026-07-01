@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Przypomnienia (redesign + podział Zaległych)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#e7eef0;padding:20px 14px 60px;}
+  .pagehead{max-width:1100px;margin:0 auto 16px;}
+  .pagehead h1{font-size:1.2rem;margin:0 0 4px;}
+  .pagehead p{margin:0;color:#5b6672;font-size:.86rem;line-height:1.5;}
+  .vlabel{max-width:1100px;margin:26px auto 10px;font-size:.74rem;font-weight:700;color:#5b6672;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:8px;}
+  .vlabel::before{content:"";flex:0 0 26px;height:2px;background:#c2d3d6;border-radius:2px;}
+  .frames{max-width:1100px;margin:0 auto;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+  .frame{display:flex;flex-direction:column;gap:8px;}
+  .frame .cap{font-size:.72rem;color:#5b6672;font-weight:600;}
+  .device{background:#f5f8f9;border:1px solid #d7e0e2;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px rgba(3,42,48,.12);}
+  .device.desktop{width:680px;max-width:100%;}
+  .device.mobile{width:360px;}
+
+  /* ===== wspólny szkielet agendy ===== */
+  .agenda{display:flex;flex-direction:column;height:620px;background:#f5f8f9;}
+  .ag-head{padding:14px 16px;background:#fff;border-bottom:1px solid #e6eef0;flex:0 0 auto;}
+  .ag-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .ag-title{font-size:1.06rem;font-weight:700;}
+  .ag-date{font-size:.76rem;color:#8a979c;font-weight:500;}
+  .ag-x{border:0;background:transparent;color:#8a979c;font-size:1.1rem;cursor:pointer;line-height:1;padding:4px;}
+  .stats{display:flex;gap:8px;margin-top:12px;}
+  .stat{flex:1;border-radius:12px;padding:9px 11px;display:flex;flex-direction:column;gap:1px;}
+  .stat b{font-size:1.25rem;font-weight:800;line-height:1;}
+  .stat span{font-size:.7rem;font-weight:600;opacity:.9;}
+  .stat.ov{background:#FFF3E0;color:#A35F00;}
+  .stat.td{background:#E8F8EC;color:#1F7A3D;}
+  .stat.pd{background:#EDEDFB;color:#4341B5;}
+
+  .ag-body{flex:1 1 auto;overflow-y:auto;padding:12px 14px 16px;display:flex;flex-direction:column;gap:14px;}
+  .ag-foot{flex:0 0 auto;padding:11px 16px;background:#fff;border-top:1px solid #e6eef0;display:flex;justify-content:space-between;align-items:center;}
+  .foot-link{border:0;background:transparent;color:#00838d;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;padding:6px;}
+  .foot-close{border:0;background:#00838d;color:#fff;font-weight:700;font-size:.88rem;border-radius:10px;padding:9px 18px;cursor:pointer;font-family:inherit;}
+
+  .sec-title{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:700;color:#3a4a50;margin:2px 0;}
+  .sec-title .dot{width:8px;height:8px;border-radius:50%;}
+
+  /* nagłówek grupy kategorii */
+  .catgrp{display:flex;flex-direction:column;gap:6px;}
+  .cathead{display:flex;align-items:center;gap:9px;}
+  .catico{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex:0 0 auto;}
+  .catname{font-size:.84rem;font-weight:700;}
+  .catcount{font-size:.7rem;font-weight:700;border-radius:999px;padding:1px 8px;}
+
+  /* wiersz przypomnienia */
+  .row{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid #eef3f4;border-radius:12px;padding:9px 11px;}
+  .ava{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.9rem;}
+  .who{flex:1 1 auto;min-width:0;}
+  .who .nm{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .who .ti{font-size:.78rem;color:#5b6672;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .when{flex:0 0 auto;text-align:right;}
+  .when .rel{font-size:.72rem;font-weight:700;}
+  .when .dt{font-size:.68rem;color:#8a979c;}
+  .acts{display:flex;gap:5px;flex:0 0 auto;margin-left:4px;}
+  .acts button{border-radius:8px;border:1px solid #d7e9ec;background:#fff;color:#5b6672;font-size:.74rem;font-weight:600;padding:5px 9px;cursor:pointer;font-family:inherit;}
+  .acts .done{border-color:#34C759;color:#1F7A3D;}
+  .chev{color:#c2d0d3;font-size:1.1rem;flex:0 0 auto;}
+  .ov-pill{background:#FFF3E0;color:#A35F00;border-radius:999px;padding:2px 8px;font-size:.7rem;font-weight:700;display:inline-block;}
+  .td-pill{background:#E8F8EC;color:#1F7A3D;border-radius:999px;padding:2px 8px;font-size:.7rem;font-weight:700;display:inline-block;}
+
+  /* ===== WARIANT A — karty kategorii (miękkie, tonowane tło grupy) ===== */
+  .v-A .catgrp{background:var(--cbg);border:1px solid var(--cbd);border-radius:14px;padding:10px 10px 11px;}
+  .v-A .catcount{background:#fff;color:var(--cac);}
+  .v-A .row{border:1px solid rgba(255,255,255,.7);box-shadow:0 1px 0 rgba(3,42,48,.03);}
+  .v-A .sec-title{margin-top:2px;}
+
+  /* ===== WARIANT B — agenda premium (belka akcentu, bez tła grupy) ===== */
+  .v-B .catgrp{gap:7px;}
+  .v-B .cathead{border-bottom:2px solid var(--cbd);padding-bottom:5px;}
+  .v-B .catcount{background:var(--cac);color:#fff;}
+  .v-B .row{border-left:4px solid var(--cac);border-radius:0 12px 12px 0;}
+  .v-B .ag-body{background:linear-gradient(180deg,#f5f8f9,#eef4f5);}
+
+  /* mobile: bez przycisków akcji (wiersz informacyjny + chevron) */
+  .device.mobile .acts{display:none;}
+  .device.desktop .chev{display:none;}
+  .device.mobile .stat b{font-size:1.15rem;}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Przypomnienia — redesign + podział „Zaległych"</h1>
+    <p>Góra: nagłówek ze statystykami (Zaległe · Dziś · Oczekujące). „Zaległe" rozbite na <b>typy</b> (Wyniki, Kontrole, Obserwacje, Leczenie, Procedury) — kolory i ikony 1:1 z kategoriami notatek. Dwa warianty estetyki do wyboru; każdy w wersji desktop i mobile (mobile = wiersze informacyjne, akcje w Terminarzu).</p>
+  </div>
+
+  <div class="vlabel">Wariant A · karty kategorii (spokojny, kliniczny)</div>
+  <div class="frames">
+    <div class="frame"><span class="cap">Desktop</span><div class="device desktop" id="A-d"></div></div>
+    <div class="frame"><span class="cap">Mobile</span><div class="device mobile" id="A-m"></div></div>
+  </div>
+
+  <div class="vlabel">Wariant B · agenda premium (akcentowane belki, statystyki)</div>
+  <div class="frames">
+    <div class="frame"><span class="cap">Desktop</span><div class="device desktop" id="B-d"></div></div>
+    <div class="frame"><span class="cap">Mobile</span><div class="device mobile" id="B-m"></div></div>
+  </div>
+
+<script>
+  // Kolory/ikony 1:1 z PATIENT_NOTE_CATEGORY_LABELS (+ Procedura).
+  var CAT = {
+    wynik:   { label:'Wyniki badań', icon:'🧪', ac:'#5856D6', bg:'#EDEDFB', bd:'#C8C6F2' },
+    kontrola:{ label:'Kontrole',     icon:'🩺', ac:'#32ADE6', bg:'#E7F6FD', bd:'#BBE6F7' },
+    obser:   { label:'Obserwacje',   icon:'👁️', ac:'#007AFF', bg:'#E5F1FF', bd:'#BcdAF7' },
+    leczenie:{ label:'Leczenie',     icon:'💊', ac:'#34C759', bg:'#E8F8EC', bd:'#BfeBC8' },
+    proc:    { label:'Procedury',    icon:'🔬', ac:'#AF52DE', bg:'#F6ECFC', bd:'#E3C9F2' }
+  };
+  var DATA = {
+    overdue: [
+      { cat:'wynik', items:[
+        { nm:'Nowak Franciszek', ti:'TSH, FT4', rel:'5 dni', dt:'śr 18.06' },
+        { nm:'Kowalska Zofia', ti:'Morfologia', rel:'12 dni', dt:'pn 11.06' } ]},
+      { cat:'kontrola', items:[
+        { nm:'Wiśniewski Jan', ti:'Kontrola wzrostu', rel:'3 dni', dt:'pt 20.06' },
+        { nm:'Lewandowska Maja', ti:'Kontrola po leczeniu', rel:'1 dzień', dt:'pn 23.06' } ]},
+      { cat:'obser', items:[
+        { nm:'Zieliński Piotr', ti:'Obserwacja masy ciała', rel:'8 dni', dt:'pt 15.06' } ]},
+      { cat:'leczenie', items:[
+        { nm:'Wójcik Anna', ti:'Ocena odpowiedzi na GH', rel:'2 dni', dt:'sb 21.06' } ]}
+    ],
+    today: [
+      { cat:'kontrola', items:[ { nm:'Kamiński Igor', ti:'Kontrola', time:'09:30' } ]},
+      { cat:'wynik', items:[ { nm:'Szymańska Lena', ti:'IGF-1', time:'cały dzień' } ]}
+    ],
+    pending: [ { nm:'Mazur Tomasz', ti:'Posiew — oczekiwany wynik', sub:'sprawdzaj co 3 dni' } ]
+  };
+
+  function eln(t,c,txt){ var e=document.createElement(t); if(c)e.className=c; if(txt!=null)e.textContent=txt; return e; }
+  function cssVars(cat){ var m=CAT[cat]; return '--cac:'+m.ac+';--cbg:'+m.bg+';--cbd:'+m.bd+';'; }
+
+  function rowEl(it, cat, kind){
+    var m=CAT[cat];
+    var r=eln('div','row'); r.setAttribute('style','--cac:'+m.ac+';');
+    var av=eln('div','ava', (it.nm[0]||'?')); av.style.background='linear-gradient(135deg,'+m.ac+','+m.ac+'cc)';
+    var who=eln('div','who');
+    who.appendChild(eln('div','nm',it.nm));
+    who.appendChild(eln('div','ti', m.label.replace(/e$/,'a')+' — '+it.ti));
+    var when=eln('div','when');
+    if(kind==='overdue'){ var rel=eln('div','rel',it.rel+' temu'); rel.style.color=m.ac; when.appendChild(rel); when.appendChild(eln('div','dt',it.dt)); }
+    else if(kind==='today'){ when.appendChild(eln('span','td-pill', it.time||'dziś')); }
+    else { var p=eln('div','dt',it.sub||''); when.appendChild(p); }
+    r.appendChild(av); r.appendChild(who); r.appendChild(when);
+    if(kind!=='pending'){
+      var acts=eln('div','acts');
+      acts.appendChild(eln('button','done','Zrobione'));
+      acts.appendChild(eln('button',null,'Przełóż ▾'));
+      r.appendChild(acts);
+    }
+    r.appendChild(eln('div','chev','›'));
+    return r;
+  }
+
+  function catGroup(cat, items, kind){
+    var m=CAT[cat];
+    var g=eln('div','catgrp'); g.setAttribute('style', cssVars(cat));
+    var head=eln('div','cathead');
+    var ico=eln('div','catico', m.icon); ico.style.background=m.bg; ico.style.border='1px solid '+m.bd;
+    head.appendChild(ico);
+    var nm=eln('div','catname', m.label); nm.style.color=m.ac; head.appendChild(nm);
+    var cnt=eln('div','catcount', String(items.length)); head.appendChild(cnt);
+    g.appendChild(head);
+    items.forEach(function(it){ g.appendChild(rowEl(it,cat,kind)); });
+    return g;
+  }
+
+  function buildAgenda(variant){
+    var a=eln('div','agenda v-'+variant);
+    // header
+    var head=eln('div','ag-head');
+    var tr=eln('div','ag-title-row');
+    var left=eln('div'); left.appendChild(eln('div','ag-title','Przypomnienia')); left.appendChild(eln('div','ag-date','wtorek, 24 czerwca'));
+    tr.appendChild(left); tr.appendChild(eln('button','ag-x','✕')); head.appendChild(tr);
+    var ovN=DATA.overdue.reduce(function(s,g){return s+g.items.length;},0);
+    var tdN=DATA.today.reduce(function(s,g){return s+g.items.length;},0);
+    var pdN=DATA.pending.length;
+    var stats=eln('div','stats');
+    function stat(c,n,l){ var s=eln('div','stat '+c); s.appendChild(eln('b',null,String(n))); s.appendChild(eln('span',null,l)); return s; }
+    stats.appendChild(stat('ov',ovN,'zaległe')); stats.appendChild(stat('td',tdN,'na dziś')); stats.appendChild(stat('pd',pdN,'oczekujące'));
+    head.appendChild(stats); a.appendChild(head);
+    // body
+    var body=eln('div','ag-body');
+    var st1=eln('div','sec-title'); var d1=eln('span','dot'); d1.style.background='#FF9500'; st1.appendChild(d1); st1.appendChild(eln('span',null,'Zaległe')); body.appendChild(st1);
+    DATA.overdue.forEach(function(g){ body.appendChild(catGroup(g.cat,g.items,'overdue')); });
+    var st2=eln('div','sec-title'); var d2=eln('span','dot'); d2.style.background='#34C759'; st2.appendChild(d2); st2.appendChild(eln('span',null,'Dziś')); body.appendChild(st2);
+    DATA.today.forEach(function(g){ body.appendChild(catGroup(g.cat,g.items,'today')); });
+    var st3=eln('div','sec-title'); var d3=eln('span','dot'); d3.style.background='#5856D6'; st3.appendChild(d3); st3.appendChild(eln('span',null,'Oczekujące wyniki')); body.appendChild(st3);
+    body.appendChild(catGroup('wynik', DATA.pending, 'pending'));
+    a.appendChild(body);
+    // footer
+    var foot=eln('div','ag-foot'); foot.appendChild(eln('button','foot-link','Otwórz terminarz')); foot.appendChild(eln('button','foot-close','Zamknij')); a.appendChild(foot);
+    return a;
+  }
+
+  ['A','B'].forEach(function(v){
+    document.getElementById(v+'-d').appendChild(buildAgenda(v));
+    document.getElementById(v+'-m').appendChild(buildAgenda(v));
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — formularz główny (wiek w jednym wierszu + Tanner ukryty)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0f2b33; --muted:#5a7274; --line:#cfe0e3; --line2:#e1eaec; --primary:#00838d; --secondary:#00b0a6; --bg:#eef5f6; --field:#fff; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:var(--ink);
+    background:var(--bg);padding:24px 16px 60px;}
+  .wrap{max-width:560px;margin:0 auto;}
+  .note{background:#eafaf7;border:1px solid #b8e6df;border-radius:12px;padding:11px 14px;font-size:.85rem;color:#0a5f5a;margin-bottom:16px;line-height:1.5;}
+  .note b{color:#084f4a;}
+
+  .card{background:var(--field);border:1px solid var(--line2);border-radius:16px;padding:18px;box-shadow:0 8px 26px rgba(0,81,88,.06);}
+  .card h2{margin:0 0 14px;font-size:1.05rem;font-weight:700;letter-spacing:-.01em;}
+  label{display:block;margin-bottom:13px;font-size:.84rem;font-weight:600;color:var(--ink);}
+  label .opt{font-weight:400;color:var(--muted);}
+  input,select{width:100%;margin-top:5px;font-size:1rem;font-family:inherit;color:var(--ink);background:var(--field);
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;transition:border-color .12s,box-shadow .12s;}
+  input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,131,141,.13);}
+
+  /* === ZMIANA 1: wiek lata + miesiące w jednym wierszu === */
+  .row{display:flex;gap:12px;margin-bottom:13px;}
+  .row label{margin-bottom:0;flex:1 1 0;min-width:0;}
+  .row .years{flex:1.1 1 0;}
+  @media (max-width:380px){ .row{flex-direction:column;gap:0;} .row label{margin-bottom:13px;} }
+
+  /* === ZMIANA 2: etap Tannera domyślnie ukryty (jak u dorosłych) === */
+  .tanner-toggle{display:inline-flex;align-items:center;gap:6px;margin:2px 0 13px;
+    padding:8px 12px;font-size:.82rem;font-weight:600;background:transparent;border:1px solid var(--line);
+    border-radius:9px;color:var(--muted);cursor:pointer;font-family:inherit;}
+  .tanner-toggle:hover{border-color:var(--primary);color:var(--primary);}
+  .tanner-wrap{display:none;}
+  .tanner-wrap.open{display:block;}
+  .hint{font-size:.78rem;color:var(--muted);margin:-6px 0 13px;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+  .pill{font-size:.72rem;font-weight:600;color:var(--primary);background:#e3f3f4;border-radius:999px;padding:4px 10px;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="note">
+      Makieta zmian w formularzu głównym (<b>index.html</b>): <b>wiek w latach i miesiącach w jednym wierszu</b>,
+      a <b>etap dojrzewania (Tanner) domyślnie ukryty</b> — pokazywany dopiero po kliknięciu, tak jak dziś u osób dorosłych.
+      Reszta pól bez zmian.
+    </div>
+
+    <div class="card">
+      <h2>Dane pacjenta</h2>
+
+      <label>Nazwisko <span class="opt">(opcjonalnie)</span>
+        <input type="text" placeholder="np. Nowak">
+      </label>
+      <label>Imię <span class="opt">(opcjonalnie)</span>
+        <input type="text" placeholder="np. Franciszek">
+      </label>
+
+      <!-- ZMIANA 1: jeden wiersz -->
+      <div class="row">
+        <label class="years">Wiek (lata)
+          <input type="number" min="0" max="130" placeholder="np. 7">
+        </label>
+        <label>Miesiące <span class="opt">(opcj.)</span>
+          <input type="number" min="1" max="11" step="1" placeholder="0–11">
+        </label>
+      </div>
+
+      <label>Płeć
+        <select>
+          <option>Mężczyzna</option>
+          <option>Kobieta</option>
+        </select>
+      </label>
+
+      <!-- ZMIANA 2: Tanner domyślnie ukryty -->
+      <button type="button" class="tanner-toggle" id="tToggle">+ Pokaż etap dojrzewania (Tanner)</button>
+      <div class="tanner-wrap" id="tWrap">
+        <label style="margin-top:0;">Etap dojrzewania (Tanner) <span class="opt">(opcjonalnie, dla wieku rozwojowego)</span>
+          <select>
+            <option value="">— nieznany / automatycznie z wieku —</option>
+            <option>Tanner I — przedpokwitaniowy</option>
+            <option>Tanner II — wczesne pokwitanie</option>
+            <option>Tanner III — środek pokwitania</option>
+            <option>Tanner IV — późne pokwitanie</option>
+            <option>Tanner V — dojrzałość pełna</option>
+          </select>
+        </label>
+        <div class="hint">Domyślnie liczony automatycznie z wieku — uzupełnij ręcznie tylko, gdy chcesz nadpisać.</div>
+      </div>
+
+      <label>Waga (kg)
+        <input type="number" step="0.1" placeholder="np. 23.5">
+      </label>
+      <label>Wzrost (cm)
+        <input type="number" step="0.1" placeholder="np. 122">
+      </label>
+
+      <div class="legend">
+        <span class="pill">↔ wiek w jednym wierszu</span>
+        <span class="pill">▾ Tanner domyślnie ukryty</span>
+      </div>
+    </div>
+  </div>
+
+<script>
+  var t=document.getElementById('tToggle'), w=document.getElementById('tWrap');
+  t.addEventListener('click',function(){
+    var open=w.classList.toggle('open');
+    t.textContent=(open?'− Ukryj etap dojrzewania (Tanner)':'+ Pokaż etap dojrzewania (Tanner)');
+  });
+</script>
+</body>
+</html>
