@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta — Statystyki desktop: 3 warianty</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#0f2b33;background:#e9eff1;padding:26px 22px 80px;}
+  .wrap{max-width:1240px;margin:0 auto;}
+  h1{font-size:1.3rem;margin:0 0 4px;}
+  .intro{margin:0 0 8px;color:#5b6672;font-size:.92rem;line-height:1.55;}
+  .vhead{display:flex;align-items:baseline;gap:12px;margin:40px 0 14px;padding-top:18px;border-top:2px solid #d3e0e3;}
+  .vnum{font-size:.78rem;font-weight:800;letter-spacing:.06em;color:#fff;background:#0e857f;border-radius:999px;padding:4px 11px;}
+  .vname{font-size:1.05rem;font-weight:700;}
+  .vdesc{font-size:.86rem;color:#5b6672;}
+
+  /* ── wspólne komponenty ── */
+  .surface{background:#fbfdfe;border:1px solid #d7e9ec;border-radius:20px;padding:18px 20px 22px;box-shadow:0 6px 20px rgba(15,43,51,.05);}
+  .seg{display:flex;background:#eef4f5;border:1px solid #dbe7e9;border-radius:999px;padding:4px;width:340px;max-width:100%;}
+  .seg button{flex:1;border:0;background:transparent;font:inherit;font-size:.9rem;font-weight:600;color:#5b6672;padding:9px 4px;border-radius:999px;cursor:pointer;}
+  .seg button.on{background:#0e857f;color:#fff;}
+  .period{display:flex;justify-content:center;align-items:center;gap:8px;background:#eaf6f4;border:1px solid #cfe7e3;border-radius:11px;padding:8px 16px;width:fit-content;max-width:100%;}
+  .period .pmonth{font-weight:700;color:#0f3d39;font-size:1.02rem;text-transform:capitalize;}
+  .period .psep{color:#9bb7b2;}
+  .period .pwork{color:#4f6b66;font-size:.92rem;}
+
+  .h{font-size:.82rem;font-weight:700;color:#0f2b33;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em;}
+  .card{background:#fff;border:0.5px solid #d7e9ec;border-radius:16px;padding:16px 18px;}
+  .kpi{border:0.5px solid #d7e9ec;border-radius:14px;padding:15px 16px;background:#fbfdfd;}
+  .kpi .v{font-size:1.8rem;font-weight:800;line-height:1;color:#0f2b33;}
+  .kpi .l{font-size:.86rem;color:#5b6672;margin-top:6px;}
+  .kpi .d{font-size:.82rem;font-weight:700;margin-top:7px;}
+  .kpi.hero{background:linear-gradient(160deg,#e7f7f1,#fbfdfd);border-color:#bfe6db;}
+  .kpi.hero .v{font-size:2.7rem;}
+  .kpi.hero .l{font-size:.95rem;}
+  .up{color:#1F7A3D;}.flat{color:#8a8f94;}
+
+  /* wykres dni */
+  .bars{display:flex;align-items:flex-end;gap:10px;height:140px;}
+  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end;}
+  .bcol .bar{width:100%;max-width:42px;border-radius:7px 7px 0 0;background:#9FE1CB;min-height:3px;}
+  .bcol .bar.peak{background:#0e857f;}
+  .bcol .bl{font-size:.84rem;color:#7c8a8c;font-weight:500;}
+  .cap{font-size:.86rem;color:#5b6672;margin-bottom:12px;}
+
+  /* PASKI rozkładu — jeden kolor, długość = proporcja (max=100%); fill = display:block! */
+  .rc{display:flex;align-items:center;gap:13px;margin:11px 0;font-size:.96rem;}
+  .rc .nm{width:108px;color:#1f2d33;font-weight:500;flex:none;}
+  .rc .track{display:block;height:15px;border-radius:999px;background:#e7eef0;flex:1;overflow:hidden;box-shadow:inset 0 0 0 .5px #d5e2e5;}
+  .rc .fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#0e857f,#0b6e63);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);}
+  .rc .ct{font-weight:800;color:#0f2b33;width:34px;text-align:right;flex:none;font-size:1.05rem;}
+
+  /* grafik mini-tiles */
+  .gtile{border:0.5px solid #d7e9ec;border-radius:13px;padding:13px 14px;background:#fbfdfd;}
+  .gtile .gv{font-size:1.5rem;font-weight:800;}
+  .gtile .gl{font-size:.84rem;color:#5b6672;margin-top:3px;}
+  .gtile .gs{font-size:.76rem;color:#8a8f94;margin-top:5px;}
+
+  /* jakość */
+  .qbox{border:0.5px solid #d7e9ec;border-radius:13px;padding:14px;text-align:center;background:#fbfdfd;}
+  .qbox .qv{font-size:1.7rem;font-weight:800;}
+  .qbox .ql{font-size:.82rem;color:#5b6672;margin-top:4px;}
+
+  /* ════ WARIANT A — Dashboard (rzędy: KPI → wykresy → detale) ════ */
+  .A .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .A .kpirow{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:13px;margin-bottom:14px;}
+  .A .midrow{display:grid;grid-template-columns:1.7fr 1.1fr;gap:14px;margin-bottom:14px;}
+  .A .botrow{display:grid;grid-template-columns:1.7fr 1.1fr;gap:14px;}
+  .A .gtiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .A .qrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* ════ WARIANT B — Dwie kolumny semantyczne (Pacjenci | Grafik) ════ */
+  .B .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .B .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+  .B .coltitle{font-size:.95rem;font-weight:700;color:#0f6e56;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .B .coltitle.doc{color:#0B5C84;}
+  .B .kpi2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  .B .gtiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;}
+  .B .qrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* ════ WARIANT C — Bento (kafelki o różnych rozmiarach) ════ */
+  .C .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .C .bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(10px,auto);gap:14px;
+    grid-template-areas:"hero hero days days" "dist dist days days" "clin duty teach qual";}
+  .C .b-hero{grid-area:hero;}.C .b-days{grid-area:days;}.C .b-dist{grid-area:dist;}
+  .C .b-clin{grid-area:clin;}.C .b-duty{grid-area:duty;}.C .b-teach{grid-area:teach;}.C .b-qual{grid-area:qual;}
+  .C .bento .card,.C .bento .kpi{height:100%;}
+  .C .b-hero{display:flex;flex-direction:column;justify-content:center;}
+  .C .qmini{display:flex;gap:18px;align-items:center;justify-content:space-around;height:100%;}
+  .C .qmini .qv{font-size:1.5rem;font-weight:800;}
+  .C .qmini .ql{font-size:.76rem;color:#5b6672;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Statystyki — desktop: 3 warianty układu</h1>
+  <p class="intro">Te same dane (czerwiec 2026), trzy różne sposoby rozłożenia na szerokim ekranie. Paski rozkładu w jednym kolorze (max = 100%), data wyśrodkowana. Wybierz wariant — dopracujemy go dalej.</p>
+
+  <!-- ───────────────── WARIANT A ───────────────── -->
+  <div class="vhead"><span class="vnum">A</span><span class="vname">Dashboard</span><span class="vdesc">— rzędy: pasek KPI → wykresy → detale. Klasyczny, czytelny układ analityczny.</span></div>
+  <div class="surface A">
+    <div class="topbar">
+      <div class="seg"><button>Tydzień</button><button class="on">Miesiąc</button><button>Rok</button></div>
+      <div class="period"><span class="pmonth">czerwiec 2026</span><span class="psep">·</span><span class="pwork">19 dni roboczych (do dziś)</span></div>
+    </div>
+    <div class="kpirow">
+      <div class="kpi hero"><div class="v">138</div><div class="l">wizyt pacjentów</div><div class="d up">▲ 12% vs poprz. miesiąc (do dziś)</div></div>
+      <div class="kpi"><div class="v">6,6</div><div class="l">średnio dziennie</div></div>
+      <div class="kpi"><div class="v">32</div><div class="l">średnio w tygodniu</div></div>
+      <div class="kpi"><div class="v" style="color:#1F7A3D">92%</div><div class="l">wizyt wykonanych</div></div>
+    </div>
+    <div class="midrow">
+      <div class="card"><div class="h">Wizyty dzień po dniu</div><div class="cap">Najwięcej: <b>wtorki</b> (śr. 9,1/dzień)</div>
+        <div class="bars">
+          <div class="bcol"><div class="bar" style="height:55%"></div><div class="bl">pn</div></div>
+          <div class="bcol"><div class="bar peak" style="height:100%"></div><div class="bl">wt</div></div>
+          <div class="bcol"><div class="bar" style="height:78%"></div><div class="bl">śr</div></div>
+          <div class="bcol"><div class="bar" style="height:64%"></div><div class="bl">cz</div></div>
+          <div class="bcol"><div class="bar" style="height:72%"></div><div class="bl">pt</div></div>
+          <div class="bcol"><div class="bar" style="height:12%"></div><div class="bl">sb</div></div>
+          <div class="bcol"><div class="bar" style="height:0%"></div><div class="bl">nd</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="h">Rozkład wizyt wg typu</div>
+        <div class="rc"><span class="nm">Kontrola</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="ct">70</span></div>
+        <div class="rc"><span class="nm">Leczenie</span><span class="track"><span class="fill" style="width:40%"></span></span><span class="ct">28</span></div>
+        <div class="rc"><span class="nm">Badanie</span><span class="track"><span class="fill" style="width:36%"></span></span><span class="ct">25</span></div>
+        <div class="rc"><span class="nm">Obserwacja</span><span class="track"><span class="fill" style="width:14%"></span></span><span class="ct">10</span></div>
+        <div class="rc"><span class="nm">Procedura</span><span class="track"><span class="fill" style="width:7%"></span></span><span class="ct">5</span></div>
+      </div>
+    </div>
+    <div class="botrow">
+      <div class="card"><div class="h">Grafik lekarza</div>
+        <div class="gtiles">
+          <div class="gtile"><div class="gv">12</div><div class="gl">Poradnie</div><div class="gs">NFZ 8 · komercja 4</div></div>
+          <div class="gtile"><div class="gv">5</div><div class="gl">Dyżury</div><div class="gs">razem 60 h</div></div>
+          <div class="gtile"><div class="gv">9</div><div class="gl">Zajęcia ze studentami</div><div class="gs">razem 13,5 h</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="h">Jakość grafiku</div>
+        <div class="qrow"><div class="qbox"><div class="qv" style="color:#1F7A3D">92%</div><div class="ql">wykonane (127/138)</div></div><div class="qbox"><div class="qv" style="color:#b4453a">5%</div><div class="ql">nieobecność / no‑show</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────────────── WARIANT B ───────────────── -->
+  <div class="vhead"><span class="vnum">B</span><span class="vname">Dwie kolumny semantyczne</span><span class="vdesc">— lewa: wizyty pacjentów, prawa: grafik lekarza i jakość. Logiczny podział treści.</span></div>
+  <div class="surface B">
+    <div class="topbar">
+      <div class="seg"><button>Tydzień</button><button class="on">Miesiąc</button><button>Rok</button></div>
+      <div class="period"><span class="pmonth">czerwiec 2026</span><span class="psep">·</span><span class="pwork">19 dni roboczych (do dziś)</span></div>
+    </div>
+    <div class="cols">
+      <!-- lewa: pacjenci -->
+      <div>
+        <div class="coltitle">🧑‍⚕️ Pacjenci</div>
+        <div class="kpi2">
+          <div class="kpi hero" style="grid-column:1 / -1"><div class="v">138</div><div class="l">wizyt pacjentów w tym okresie</div><div class="d up">▲ 12% vs poprz. miesiąc (do dziś)</div></div>
+          <div class="kpi"><div class="v">6,6</div><div class="l">średnio dziennie</div></div>
+          <div class="kpi"><div class="v">32</div><div class="l">średnio w tygodniu</div></div>
+        </div>
+        <div class="card" style="margin-bottom:14px"><div class="h">Wizyty dzień po dniu</div><div class="cap">Najwięcej: <b>wtorki</b></div>
+          <div class="bars">
+            <div class="bcol"><div class="bar" style="height:55%"></div><div class="bl">pn</div></div>
+            <div class="bcol"><div class="bar peak" style="height:100%"></div><div class="bl">wt</div></div>
+            <div class="bcol"><div class="bar" style="height:78%"></div><div class="bl">śr</div></div>
+            <div class="bcol"><div class="bar" style="height:64%"></div><div class="bl">cz</div></div>
+            <div class="bcol"><div class="bar" style="height:72%"></div><div class="bl">pt</div></div>
+            <div class="bcol"><div class="bar" style="height:12%"></div><div class="bl">sb</div></div>
+            <div class="bcol"><div class="bar" style="height:0%"></div><div class="bl">nd</div></div>
+          </div>
+        </div>
+        <div class="card"><div class="h">Rozkład wizyt wg typu</div>
+          <div class="rc"><span class="nm">Kontrola</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="ct">70</span></div>
+          <div class="rc"><span class="nm">Leczenie</span><span class="track"><span class="fill" style="width:40%"></span></span><span class="ct">28</span></div>
+          <div class="rc"><span class="nm">Badanie</span><span class="track"><span class="fill" style="width:36%"></span></span><span class="ct">25</span></div>
+          <div class="rc"><span class="nm">Obserwacja</span><span class="track"><span class="fill" style="width:14%"></span></span><span class="ct">10</span></div>
+          <div class="rc"><span class="nm">Procedura</span><span class="track"><span class="fill" style="width:7%"></span></span><span class="ct">5</span></div>
+        </div>
+      </div>
+      <!-- prawa: grafik -->
+      <div>
+        <div class="coltitle doc">📋 Grafik lekarza i jakość</div>
+        <div class="gtiles">
+          <div class="gtile"><div class="gv">12</div><div class="gl">Poradnie</div><div class="gs">NFZ 8 · komercja 4</div></div>
+          <div class="gtile"><div class="gv">5</div><div class="gl">Dyżury</div><div class="gs">razem 60 h</div></div>
+          <div class="gtile"><div class="gv">9</div><div class="gl">Studenci</div><div class="gs">13,5 h dydaktyki</div></div>
+        </div>
+        <div class="card" style="margin-bottom:14px"><div class="h">Jakość grafiku</div>
+          <div class="qrow"><div class="qbox"><div class="qv" style="color:#1F7A3D">92%</div><div class="ql">wykonane (127/138)</div></div><div class="qbox"><div class="qv" style="color:#b4453a">5%</div><div class="ql">nieobecność / no‑show</div></div></div>
+        </div>
+        <div class="card"><div class="h">Obłożenie tygodnia</div><div class="cap">Najbardziej obłożony: <b>wtorek</b> · najlżejszy: <b>sobota</b></div>
+          <div class="rc"><span class="nm">Poniedziałek</span><span class="track"><span class="fill" style="width:55%"></span></span><span class="ct">5</span></div>
+          <div class="rc"><span class="nm">Wtorek</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="ct">9</span></div>
+          <div class="rc"><span class="nm">Środa</span><span class="track"><span class="fill" style="width:78%"></span></span><span class="ct">7</span></div>
+          <div class="rc"><span class="nm">Czwartek</span><span class="track"><span class="fill" style="width:64%"></span></span><span class="ct">6</span></div>
+          <div class="rc"><span class="nm">Piątek</span><span class="track"><span class="fill" style="width:72%"></span></span><span class="ct">6</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────────────── WARIANT C ───────────────── -->
+  <div class="vhead"><span class="vnum">C</span><span class="vname">Bento</span><span class="vdesc">— kafelki o różnych rozmiarach (mozaika). Nowoczesny, „oddychający" układ, mocny akcent na wykres.</span></div>
+  <div class="surface C">
+    <div class="topbar">
+      <div class="seg"><button>Tydzień</button><button class="on">Miesiąc</button><button>Rok</button></div>
+      <div class="period"><span class="pmonth">czerwiec 2026</span><span class="psep">·</span><span class="pwork">19 dni roboczych (do dziś)</span></div>
+    </div>
+    <div class="bento">
+      <div class="kpi hero b-hero"><div class="v">138</div><div class="l">wizyt pacjentów</div><div class="d up">▲ 12% vs poprz. miesiąc</div>
+        <div style="display:flex;gap:18px;margin-top:14px;">
+          <div><div style="font-size:1.3rem;font-weight:800">6,6</div><div style="font-size:.78rem;color:#5b6672">śr. dziennie</div></div>
+          <div><div style="font-size:1.3rem;font-weight:800">32</div><div style="font-size:.78rem;color:#5b6672">śr. tygodniowo</div></div>
+        </div>
+      </div>
+      <div class="card b-days"><div class="h">Wizyty dzień po dniu</div><div class="cap">Najwięcej: <b>wtorki</b> (śr. 9,1/dzień)</div>
+        <div class="bars" style="height:180px">
+          <div class="bcol"><div class="bar" style="height:55%"></div><div class="bl">pn</div></div>
+          <div class="bcol"><div class="bar peak" style="height:100%"></div><div class="bl">wt</div></div>
+          <div class="bcol"><div class="bar" style="height:78%"></div><div class="bl">śr</div></div>
+          <div class="bcol"><div class="bar" style="height:64%"></div><div class="bl">cz</div></div>
+          <div class="bcol"><div class="bar" style="height:72%"></div><div class="bl">pt</div></div>
+          <div class="bcol"><div class="bar" style="height:12%"></div><div class="bl">sb</div></div>
+          <div class="bcol"><div class="bar" style="height:0%"></div><div class="bl">nd</div></div>
+        </div>
+      </div>
+      <div class="card b-dist"><div class="h">Rozkład wizyt wg typu</div>
+        <div class="rc"><span class="nm">Kontrola</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="ct">70</span></div>
+        <div class="rc"><span class="nm">Leczenie</span><span class="track"><span class="fill" style="width:40%"></span></span><span class="ct">28</span></div>
+        <div class="rc"><span class="nm">Badanie</span><span class="track"><span class="fill" style="width:36%"></span></span><span class="ct">25</span></div>
+        <div class="rc"><span class="nm">Obserwacja</span><span class="track"><span class="fill" style="width:14%"></span></span><span class="ct">10</span></div>
+        <div class="rc"><span class="nm">Procedura</span><span class="track"><span class="fill" style="width:7%"></span></span><span class="ct">5</span></div>
+      </div>
+      <div class="gtile b-clin"><div class="gv">12</div><div class="gl">Poradnie</div><div class="gs">NFZ 8 · komercja 4</div></div>
+      <div class="gtile b-duty"><div class="gv">5</div><div class="gl">Dyżury</div><div class="gs">razem 60 h</div></div>
+      <div class="gtile b-teach"><div class="gv">9</div><div class="gl">Studenci</div><div class="gs">13,5 h</div></div>
+      <div class="card b-qual"><div class="qmini"><div><div class="qv" style="color:#1F7A3D">92%</div><div class="ql">wykonane</div></div><div><div class="qv" style="color:#b4453a">5%</div><div class="ql">no‑show</div></div></div></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

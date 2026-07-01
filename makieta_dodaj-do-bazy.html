@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makieta — Dodaj osobę spoza bazy do bazy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#00838d; --secondary:#00b0a6; --ink:#0f2b33; --muted:#5b6672;
+    --line:rgba(0,131,141,.16); --card:#fff; --bg:#eef5f6; --danger:#C2271D;
+    --amber:#9a6b00; --amber-bg:#fff6e6; --amber-line:#f0d9a8;
+    --radius:16px; --field-bg:#f7fbfc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%;padding:18px 0 140px;}
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px;}
+  .stepnote{max-width:640px;margin:0 auto 16px;padding:12px 14px;background:#E1F5EE;border:1px solid #9FE1CB;
+    border-radius:12px;font-size:.84rem;color:#0c5a47;line-height:1.5;}
+  .stepnote b{color:#0a4a3b;}
+  .flowlabel{max-width:640px;margin:22px auto 8px;padding:0 4px;font-size:.74rem;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:8px;}
+  .flowlabel::before{content:"";flex:0 0 22px;height:2px;background:var(--line);border-radius:2px;}
+
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .back{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;
+    color:var(--primary);border-radius:10px;padding:8px 12px;font-size:.86rem;font-weight:600;cursor:pointer;}
+  h1{font-size:1.2rem;margin:0;font-weight:700;letter-spacing:-.01em;}
+  .sub{font-size:.84rem;color:var(--muted);margin:2px 0 0;}
+
+  /* ── Karta wejściowa: osoba spoza bazy ── */
+  .extcard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:6px;
+    box-shadow:0 6px 22px rgba(0,81,88,.05);}
+  .extcard__id{display:flex;align-items:center;gap:12px;}
+  .ava{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:700;font-size:1.1rem;background:linear-gradient(140deg,#7a8aa8,#5d6a86);}
+  .extcard__nm{font-weight:700;font-size:1.05rem;}
+  .extcard__meta{font-size:.82rem;color:var(--muted);margin-top:1px;}
+  .badge-ext{display:inline-block;font-size:.66rem;font-weight:700;color:#1d5b9e;background:#EAF3FF;border:1px solid #bcd9f7;
+    border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle;}
+  .extcard__acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .ebtn{border-radius:11px;padding:10px 14px;font-size:.86rem;font-weight:600;cursor:pointer;font-family:inherit;
+    border:1px solid var(--line);background:#fff;color:var(--primary);}
+  .ebtn-primary{border:0;color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary));
+    box-shadow:0 6px 16px rgba(0,131,141,.26);display:inline-flex;align-items:center;gap:6px;}
+
+  /* ── Identity preview (na żywo) ── */
+  .identity{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#e9f6f7,#f4fbfb);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;}
+  .identity .ava{background:linear-gradient(135deg,var(--primary),var(--secondary));}
+  .identity__name{font-weight:700;font-size:1.05rem;}
+  .identity__meta{font-size:.82rem;color:var(--muted);margin-top:1px;}
+  .conv-arrow{margin-left:auto;font-size:.72rem;font-weight:700;color:var(--primary);background:#fff;border:1px solid var(--line);
+    border-radius:999px;padding:4px 10px;white-space:nowrap;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 14px 16px;margin-bottom:14px;box-shadow:0 6px 22px rgba(0,81,88,.05);}
+  .card__h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;}
+  .card__h h2{font-size:.95rem;margin:0;font-weight:700;}
+  .req{font-size:.66rem;font-weight:700;color:#fff;background:var(--danger);border-radius:999px;padding:3px 9px;
+    text-transform:uppercase;letter-spacing:.03em;}
+  .opt{font-size:.66rem;font-weight:700;color:var(--muted);background:#eef3f4;border-radius:999px;padding:3px 9px;
+    text-transform:uppercase;letter-spacing:.03em;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:480px){ .grid{grid-template-columns:1fr;} }
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field--wide{grid-column:1 / -1;}
+  label{font-size:.78rem;font-weight:600;color:var(--muted);}
+  input,select,textarea{width:100%;font-size:1rem;font-family:inherit;color:var(--ink);background:var(--field-bg);
+    border:1px solid var(--line);border-radius:11px;padding:11px 12px;outline:none;transition:border-color .12s,box-shadow .12s;}
+  textarea{resize:vertical;min-height:64px;}
+  input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,131,141,.12);background:#fff;}
+  input::placeholder,textarea::placeholder{color:#9bb0b2;}
+  .hint{font-size:.72rem;color:var(--muted);}
+  .prefill{display:inline-block;background:#e8f6f7;color:var(--primary);font-size:.64rem;font-weight:700;
+    border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em;}
+  .dob-err{font-size:.74rem;color:var(--danger);font-weight:600;display:flex;align-items:center;gap:5px;}
+  .dob-ok{font-size:.74rem;color:#0F6E56;font-weight:600;display:none;align-items:center;gap:5px;}
+  input.bad{border-color:#e7b4b0;background:#fff7f6;}
+
+  /* Segmentowana płeć */
+  .seg{display:flex;background:var(--field-bg);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px;}
+  .seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:9px 8px;font-size:.92rem;font-weight:600;
+    color:var(--muted);cursor:pointer;font-family:inherit;}
+  .seg button.is-on{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;
+    box-shadow:0 2px 7px rgba(0,131,141,.28);}
+
+  /* Sticky pasek akcji */
+  .actionbar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));}
+  .actionbar__in{max-width:640px;margin:0 auto;display:flex;gap:10px;align-items:center;}
+  .actionbar .lock{font-size:.72rem;color:var(--muted);margin-right:auto;display:flex;align-items:center;gap:5px;}
+  .btn{border-radius:12px;padding:13px 16px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--line);}
+  .btn-ghost{background:#fff;color:var(--muted);flex:0 0 auto;}
+  .btn-primary{flex:0 0 auto;border:0;color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary));
+    box-shadow:0 6px 18px rgba(0,131,141,.28);display:inline-flex;align-items:center;gap:6px;}
+  .btn-primary:disabled{opacity:.45;box-shadow:none;cursor:not-allowed;}
+
+  /* ── Okno duplikatu ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,43,51,.45);display:none;align-items:center;justify-content:center;
+    padding:20px;z-index:50;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:18px;max-width:440px;width:100%;padding:20px;box-shadow:0 24px 60px rgba(0,30,40,.3);}
+  .modal h3{margin:0 0 6px;font-size:1.05rem;}
+  .modal p{margin:0 0 14px;font-size:.86rem;color:var(--muted);line-height:1.5;}
+  .modal .dup{display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid var(--amber-line);
+    border-radius:12px;padding:10px 12px;margin-bottom:14px;}
+  .modal .dup .ava{width:38px;height:38px;font-size:.95rem;background:linear-gradient(135deg,var(--primary),var(--secondary));}
+  .modal .dup b{font-size:.92rem;color:var(--ink);}
+  .modal .dup small{display:block;font-size:.76rem;color:var(--muted);}
+  .modal__acts{display:flex;flex-direction:column;gap:8px;}
+  .modal__acts button{border-radius:11px;padding:12px 14px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;}
+  .m-merge{border:0;color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary));}
+  .m-new{border:1px solid var(--line);background:#fff;color:var(--ink);}
+  .m-cancel{border:1px solid var(--line);background:#fff;color:var(--muted);text-align:center;}
+  .m-merge small,.m-new small{display:block;font-weight:500;font-size:.74rem;opacity:.92;margin-top:2px;}
+  .m-new small{color:var(--muted);}
+</style>
+</head>
+<body>
+
+  <div class="stepnote">
+    Nowa funkcja: osobę <b>spoza bazy</b> można <b>dodać do bazy pacjentów</b>. To ten sam rekord (ten sam identyfikator),
+    więc <b>wpisy w Terminarzu zostają podpięte automatycznie</b>. Konwersja prosi o <b>pełną datę urodzenia</b> (spoza bazy
+    ma tylko rocznik), a wolny „Kontakt" trafia do <b>notatki opiekuna</b> — nic nie ginie.
+  </div>
+
+  <!-- ─────────── 1) PUNKT WEJŚCIA: karta osoby spoza bazy ─────────── -->
+  <div class="flowlabel">1 · Karta osoby spoza bazy</div>
+  <div class="wrap">
+    <div class="extcard">
+      <div class="extcard__id">
+        <div class="ava">L</div>
+        <div>
+          <div class="extcard__nm">Lewandowska Maja <span class="badge-ext">spoza bazy</span></div>
+          <div class="extcard__meta">dziewczynka · ur. 2014</div>
+        </div>
+      </div>
+      <div class="extcard__acts">
+        <button class="ebtn">Edytuj dane</button>
+        <button class="ebtn ebtn-primary" onclick="document.getElementById('form').scrollIntoView({behavior:'smooth'});">
+          <span style="font-size:1.05rem;line-height:1;">＋</span> Dodaj do bazy
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── 2) EKRAN KONWERSJI ─────────── -->
+  <div class="flowlabel">2 · Dodaj do bazy — uzupełnij dane</div>
+  <div class="wrap" id="form">
+    <div class="topbar">
+      <button class="back">←</button>
+      <div>
+        <h1>Dodaj do bazy</h1>
+        <div class="sub">Uzupełnij dane, by przenieść osobę spoza bazy do pełnej kartoteki.</div>
+      </div>
+    </div>
+
+    <!-- podgląd tożsamości -->
+    <div class="identity">
+      <div class="ava" id="pvAva">L</div>
+      <div>
+        <div class="identity__name" id="pvName">Lewandowska Maja</div>
+        <div class="identity__meta" id="pvMeta">dziewczynka · ur. 2014</div>
+      </div>
+      <span class="conv-arrow">spoza bazy → do bazy</span>
+    </div>
+
+    <!-- Tożsamość -->
+    <div class="card">
+      <div class="card__h"><h2>Tożsamość</h2><span class="opt">przeniesione</span></div>
+      <div class="grid">
+        <div class="field">
+          <label>Nazwisko <span class="prefill">z rekordu</span></label>
+          <input type="text" value="Lewandowska">
+        </div>
+        <div class="field">
+          <label>Imię <span class="prefill">z rekordu</span></label>
+          <input type="text" value="Maja">
+        </div>
+        <div class="field field--wide">
+          <label>Płeć <span class="prefill">z rekordu</span></label>
+          <div class="seg"><button>chłopiec</button><button class="is-on">dziewczynka</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data urodzenia — WYMAGANA -->
+    <div class="card">
+      <div class="card__h"><h2>Data urodzenia</h2><span class="req">wymagane</span></div>
+      <div class="grid">
+        <div class="field field--wide">
+          <label>Pełna data urodzenia <span class="prefill">rok: 2014</span></label>
+          <input type="text" id="dob" placeholder="dd.mm.2014" value="" inputmode="numeric" autocomplete="off">
+          <div class="dob-err" id="dobErr">⚠ Uzupełnij pełną datę urodzenia (dzień i miesiąc) — wymagana w bazie.</div>
+          <div class="dob-ok" id="dobOk">✓ Data poprawna — wiek policzy się automatycznie.</div>
+          <div class="hint">Osoba spoza bazy ma tylko rocznik. Podpowiadamy <b>2014</b> — dodaj dzień i miesiąc.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kontakt / opiekun -->
+    <div class="card">
+      <div class="card__h"><h2>Kontakt / opiekun</h2><span class="opt">opcjonalne</span></div>
+      <div class="grid">
+        <div class="field field--wide">
+          <label>Notatka opiekuna <span class="prefill">z pola „Kontakt"</span></label>
+          <textarea>tel. 600 100 200, skierowanie z poradni rejonowej</textarea>
+          <div class="hint">Wolny tekst „Kontakt" ze spoza bazy przenosimy tu w całości. Możesz rozdzielić go niżej.</div>
+        </div>
+        <div class="field"><label>Imię i nazwisko opiekuna</label><input type="text" placeholder="np. matka — Anna Lewandowska"></div>
+        <div class="field"><label>Telefon</label><input type="text" placeholder="np. +48 600 100 200"></div>
+      </div>
+    </div>
+
+    <!-- Wzrost rodziców (MPH) — stałe, bez wymiaru czasu -->
+    <div class="card">
+      <div class="card__h"><h2>Wzrost rodziców (MPH)</h2><span class="opt">opcjonalne</span></div>
+      <div class="grid">
+        <div class="field"><label>Wzrost mamy (cm)</label><input type="number" placeholder="cm"></div>
+        <div class="field"><label>Wzrost taty (cm)</label><input type="number" placeholder="cm"></div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Stałe wartości dorosłych — do wyliczenia wzrostu docelowego (MPH).</div>
+    </div>
+
+    <!-- Pomiary dziecka: NIE tutaj (są datowane) -->
+    <div class="note" style="background:#f0f7ff;border-color:rgba(0,100,220,.14);">
+      <span>📏</span>
+      <div><b>Pomiary dziecka (wzrost/waga)</b> dodasz po dodaniu do bazy przez <b>„+ Nowy pomiar"</b> — tam jest pole <b>„Data pomiaru"</b> (dziś lub wstecznie), więc punkt stanie na siatce we właściwym wieku. Dlatego nie zbieramy ich tutaj bez daty.</div>
+    </div>
+  </div>
+
+  <!-- sticky akcje -->
+  <div class="actionbar">
+    <div class="actionbar__in">
+      <span class="lock" id="lockMsg">🔒 Najpierw uzupełnij datę urodzenia</span>
+      <button class="btn btn-ghost">Anuluj</button>
+      <button class="btn btn-primary" id="saveBtn" disabled onclick="document.getElementById('dup').classList.add('show')">
+        <span style="font-size:1.05rem;line-height:1;">＋</span> Dodaj do bazy
+      </button>
+    </div>
+  </div>
+
+  <!-- ─────────── 3) OKNO DUPLIKATU (gdy nazwisko już jest w bazie) ─────────── -->
+  <div class="modal-overlay" id="dup">
+    <div class="modal">
+      <h3>Ten pacjent może już być w bazie</h3>
+      <p>W bazie jest już pacjent o tym samym nazwisku. Co chcesz zrobić?</p>
+      <div class="dup">
+        <div class="ava">L</div>
+        <div><b>Lewandowska Maja</b><small>w bazie · dziewczynka · ur. 12.03.2014</small></div>
+      </div>
+      <div class="modal__acts">
+        <button class="m-merge" onclick="document.getElementById('dup').classList.remove('show')">
+          Scal z istniejącym pacjentem
+          <small>Wpisy z Terminarza przejdą na pacjenta z bazy, lekki rekord zniknie.</small>
+        </button>
+        <button class="m-new" onclick="document.getElementById('dup').classList.remove('show')">
+          Utwórz nowego mimo to
+          <small>Powstanie osobny pacjent (może wymagać rozróżnienia datą urodzenia).</small>
+        </button>
+        <button class="m-cancel" onclick="document.getElementById('dup').classList.remove('show')">Anuluj</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Demo: walidacja wymaganej, pełnej daty urodzenia (dd.mm.rrrr) → odblokowanie „Dodaj do bazy".
+  var dob = document.getElementById('dob'), saveBtn = document.getElementById('saveBtn');
+  var dobErr = document.getElementById('dobErr'), dobOk = document.getElementById('dobOk'), lockMsg = document.getElementById('lockMsg');
+  function validDob(s){
+    var m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec((s||'').trim());
+    if(!m) return false;
+    var d=+m[1], mo=+m[2], y=+m[3];
+    if(mo<1||mo>12||d<1||d>31||y<1900||y>new Date().getFullYear()) return false;
+    var dt=new Date(y,mo-1,d); return dt && dt.getMonth()===mo-1 && dt.getDate()===d;
+  }
+  function refresh(){
+    var ok = validDob(dob.value);
+    saveBtn.disabled = !ok;
+    dobErr.style.display = (dob.value.trim()==='' || ok) ? 'none' : 'flex';
+    dobOk.style.display = ok ? 'flex' : 'none';
+    dob.classList.toggle('bad', dob.value.trim()!=='' && !ok);
+    lockMsg.style.display = ok ? 'none' : 'flex';
+  }
+  dob.addEventListener('input', refresh);
+  refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pacjenci — 3 propozycje (jedna lista)</title>
+<style>
+  :root{
+    --primary:#00838d; --secondary:#00b0a6; --ink:#0f2b33; --muted:#5b6672;
+    --line:rgba(0,131,141,.16); --card:#fff; --bg:#eef5f6; --field:#f7fbfc;
+    --danger:#C2271D; --ext:#A35F00; --ext-bg:#FFF3E0;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);display:flex;flex-direction:column;-webkit-text-size-adjust:100%;}
+
+  /* ── pasek przełącznika propozycji (tylko makieta) ── */
+  .demo-bar{flex:0 0 auto;background:#0f2b33;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .demo-bar b{font-size:.92rem;font-weight:700;letter-spacing:.01em;}
+  .demo-seg{display:flex;gap:4px;background:rgba(255,255,255,.12);border-radius:999px;padding:3px;}
+  .demo-seg button{border:0;background:transparent;color:#cfe3e5;border-radius:999px;padding:6px 14px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;}
+  .demo-seg button.on{background:var(--secondary);color:#053;color:#062b27;}
+  .demo-desc{font-size:.78rem;color:#9fc1c3;flex:1 1 220px;min-width:0;}
+
+  /* ── ramka „telefon/ekran" — wypełnia całą dostępną wysokość ── */
+  .screen{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;max-width:1180px;width:100%;margin:0 auto;padding:14px 16px 0;}
+  .scr-head{flex:0 0 auto;}
+  .scr-title{font-size:1.4rem;font-weight:700;letter-spacing:-.01em;margin:0;}
+  .scr-sub{font-size:.84rem;color:var(--muted);margin:2px 0 12px;}
+  .count-pill{font-size:.72rem;font-weight:700;color:var(--primary);background:#e3f3f4;border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:middle;}
+
+  /* wspólne: chip typu, awatar */
+  .chip-ext{font-size:.62rem;font-weight:700;color:var(--ext);background:var(--ext-bg);border-radius:999px;padding:2px 8px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;}
+  .ava{flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;}
+  .dup-flag{color:var(--danger);font-weight:600;}
+
+  /* segment filtra + search + sort — wspólny pasek narzędzi */
+  .toolbar{flex:0 0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  .search{position:relative;flex:1 1 220px;min-width:0;}
+  .search input{width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px 10px 34px;font-size:.92rem;font-family:inherit;color:var(--ink);outline:none;}
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,131,141,.12);}
+  .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#8aa3a6;}
+  .seg{display:flex;gap:3px;background:#e7eff0;border-radius:999px;padding:3px;}
+  .seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:7px 13px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .seg button.on{background:var(--primary);color:#fff;box-shadow:0 2px 6px rgba(0,131,141,.25);}
+  .sortbtn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 12px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+
+  /* obszar przewijany — KLUCZ: wypełnia resztę wysokości ekranu */
+  .scroll{flex:1 1 auto;min-height:0;overflow:auto;padding-bottom:14px;}
+  .scroll::-webkit-scrollbar{width:9px;}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(0,131,141,.22);border-radius:9px;}
+
+  .actions{flex:0 0 auto;display:flex;gap:10px;padding:10px 0 14px;border-top:1px solid var(--line);}
+  .btn{border-radius:12px;padding:11px 15px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--line);background:#fff;color:var(--muted);}
+  .btn-primary{border:0;color:#fff;background:linear-gradient(135deg,var(--primary),var(--secondary));box-shadow:0 5px 14px rgba(0,131,141,.25);}
+  .empty{color:var(--muted);font-size:.86rem;text-align:center;padding:26px 10px;}
+
+  /* ═══════════ A: LISTA + FILTRY (wygodne wiersze) ═══════════ */
+  #viewA .row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:transform .1s,box-shadow .1s;text-align:left;width:100%;}
+  #viewA .row:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,81,88,.10);}
+  #viewA .row.dup{border-color:#f1c9c4;}
+  #viewA .ava{width:42px;height:42px;font-size:1.02rem;}
+  #viewA .nm{font-weight:600;font-size:1rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  #viewA .meta{font-size:.8rem;color:var(--muted);margin-top:2px;}
+  #viewA .arrow{margin-left:auto;color:#9bb0b2;font-size:1.3rem;flex:0 0 auto;}
+
+  /* ═══════════ B: SEARCH-FIRST (gęsta lista, indeks A–Z) ═══════════ */
+  #viewB .hero{position:relative;margin-bottom:10px;}
+  #viewB .hero input{width:100%;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px 14px 14px 44px;font-size:1.05rem;font-family:inherit;color:var(--ink);outline:none;box-shadow:0 4px 14px rgba(0,81,88,.05);}
+  #viewB .hero input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,131,141,.12);}
+  #viewB .hero svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#8aa3a6;}
+  #viewB .sec{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:10px 4px 4px;position:sticky;top:0;background:linear-gradient(var(--bg),var(--bg) 70%,rgba(238,245,246,0));}
+  #viewB .drow{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:10px;cursor:pointer;border-left:3px solid transparent;}
+  #viewB .drow:hover{background:#fff;}
+  #viewB .drow.ext{border-left-color:var(--ext);}
+  #viewB .drow.base{border-left-color:var(--secondary);}
+  #viewB .ava{width:32px;height:32px;font-size:.82rem;}
+  #viewB .nm{font-weight:600;font-size:.94rem;}
+  #viewB .meta{font-size:.76rem;color:var(--muted);margin-left:auto;text-align:right;white-space:nowrap;}
+  #viewB .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;}
+
+  /* ═══════════ C: SIATKA KART (responsywna, wypełnia szerokość i wysokość) ═══════════ */
+  #viewC .grid{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));align-content:start;}
+  #viewC .pcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer;transition:transform .1s,box-shadow .1s;display:flex;flex-direction:column;gap:9px;position:relative;}
+  #viewC .pcard:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(0,81,88,.12);}
+  #viewC .pcard.dup{border-color:#f1c9c4;}
+  #viewC .top{display:flex;align-items:center;gap:11px;}
+  #viewC .ava{width:46px;height:46px;font-size:1.15rem;}
+  #viewC .nm{font-weight:700;font-size:1rem;line-height:1.2;}
+  #viewC .meta{font-size:.78rem;color:var(--muted);margin-top:2px;}
+  #viewC .foot{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;}
+  #viewC .chip-ext{position:absolute;top:12px;right:12px;}
+  #viewC .pcard.base .nm-wrap{padding-right:0;}
+
+  @media (max-width:520px){
+    .demo-desc{display:none}
+    .scr-title{font-size:1.25rem}
+  }
+</style>
+</head>
+<body>
+  <div class="demo-bar">
+    <b>Pacjenci · makieta</b>
+    <div class="demo-seg" id="seg">
+      <button data-v="A" class="on">A · Lista + filtry</button>
+      <button data-v="B">B · Search-first</button>
+      <button data-v="C">C · Siatka kart</button>
+    </div>
+    <div class="demo-desc" id="desc"></div>
+  </div>
+
+  <div class="screen">
+    <div class="scr-head">
+      <h1 class="scr-title">Pacjenci <span class="count-pill" id="countPill"></span></h1>
+      <p class="scr-sub" id="scrSub">Jedna lista — pacjenci z bazy i spoza bazy razem. Kliknij, aby otworzyć kartę.</p>
+    </div>
+    <div id="mount" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;"></div>
+    <div class="actions">
+      <button class="btn">Strona główna</button>
+      <button class="btn btn-primary" style="margin-left:auto">+ Dodaj pacjenta</button>
+      <button class="btn">Importuj kopie</button>
+    </div>
+  </div>
+
+<script>
+/* ── Wspólne dane (zunifikowane: z bazy + spoza bazy) ── */
+var DATA = [
+  {last:'Nowak', first:'Franciszek', sex:'M', dob:'2014-03-12', age:'12 l.', ext:false, recent:1, last_visit:'wizyta 3 dni temu'},
+  {last:'Nowak', first:'Franciszek', sex:'M', dob:'2018-09-01', age:'7 l.', ext:false, recent:5, last_visit:'wizyta 2 tyg. temu'},
+  {last:'Kowalska', first:'Zofia', sex:'K', dob:'2016-06-20', age:'9 l.', ext:false, recent:2, last_visit:'wizyta 5 dni temu'},
+  {last:'Wiśniewski', first:'Antoni', sex:'M', dob:'2012-11-05', age:'13 l.', ext:false, recent:8, last_visit:'wizyta 1 mies. temu'},
+  {last:'Lewandowska', first:'Maja', sex:'K', dob:'2020-01-15', age:'6 l.', ext:false, recent:3, last_visit:'wizyta wczoraj'},
+  {last:'Wójcik', first:'Jan', sex:'M', dob:'2019-04-22', age:'7 l.', ext:false, recent:9, last_visit:'wizyta 6 tyg. temu'},
+  {last:'Kamińska', first:'Zuzanna', sex:'K', dob:'2015-08-30', age:'10 l.', ext:false, recent:4, last_visit:'wizyta 8 dni temu'},
+  {last:'Zieliński', first:'Filip', sex:'M', dob:'2017', age:'~9 l.', ext:true, recent:6, last_visit:'termin: kontrola 12.07'},
+  {last:'Szymański', first:'Aleksander', sex:'M', dob:'2013', age:'~13 l.', ext:true, recent:11, last_visit:'termin: brak'},
+  {last:'Dąbrowska', first:'Lena', sex:'K', dob:'2021', age:'~5 l.', ext:true, recent:7, last_visit:'termin: szczepienie 02.07'},
+  {last:'Mazur', first:'Hanna', sex:'K', dob:'2016', age:'~10 l.', ext:true, recent:10, last_visit:'termin: wynik badania'},
+  {last:'Krawczyk', first:'Igor', sex:'M', dob:'2011-02-18', age:'15 l.', ext:false, recent:12, last_visit:'wizyta 3 mies. temu'}
+];
+DATA.forEach(function(p){ p.name = p.last + ' ' + p.first; });
+
+/* kolizje nazwisk (to samo last+first) → pełne DOB + flaga */
+var nameCount = {};
+DATA.forEach(function(p){ var k=(p.last+' '+p.first).toLowerCase(); nameCount[k]=(nameCount[k]||0)+1; });
+function isDup(p){ return nameCount[(p.last+' '+p.first).toLowerCase()]>1; }
+
+function hue(s){ var h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))%360; return h; }
+function avaStyle(p, size){ var hu=hue(p.name); return 'background:linear-gradient(135deg,hsl('+hu+',42%,46%),hsl('+((hu+28)%360)+',46%,40%));'; }
+function meta(p){
+  var dob = isDup(p) ? ('ur. '+(p.ext?p.dob:fmtDob(p.dob))) : ('ur. '+String(p.dob).slice(0,4));
+  return [dob, p.age, p.sex].filter(Boolean).join(' · ');
+}
+function fmtDob(iso){ var d=String(iso).split('-'); return d.length===3 ? (d[2]+'.'+d[1]+'.'+d[0]) : iso; }
+
+var state = { view:'A', filter:'all', q:'', sort:'recent' };
+var DESC = {
+  A:'Ewolucja obecnego: wygodne wiersze, segment Wszyscy/Z bazy/Spoza bazy FILTRUJE jedną listę zamiast przełączać ekrany. Najniższy próg wejścia.',
+  B:'Wyszukiwarka na pierwszym planie + gęste wiersze z akcentem typu i indeksem A–Z. Najlepsze dla rosnącej bazy — dużo pacjentów na wysokim ekranie.',
+  C:'Responsywna siatka kart: 1 kolumna na telefonie, 2–4 na tablecie/desktopie. Wypełnia szerokość i wysokość — najnowocześniej, świetne na dużych ekranach.'
+};
+
+function filtered(){
+  var q = state.q.trim().toLowerCase().replace(/ł/g,'l');
+  var arr = DATA.filter(function(p){
+    if(state.filter==='base' && p.ext) return false;
+    if(state.filter==='ext' && !p.ext) return false;
+    if(q){ var n=p.name.toLowerCase().replace(/ł/g,'l'); if(n.indexOf(q)<0) return false; }
+    return true;
+  });
+  if(state.sort==='recent') arr.sort(function(a,b){return a.recent-b.recent;});
+  else if(state.sort==='az') arr.sort(function(a,b){return a.name.localeCompare(b.name,'pl');});
+  else if(state.sort==='age') arr.sort(function(a,b){return parseFloat(a.age.replace(/[^0-9.]/g,''))-parseFloat(b.age.replace(/[^0-9.]/g,''));});
+  return arr;
+}
+
+/* ── helpery DOM ── */
+function elc(tag, cls, txt){ var e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; }
+function searchIcon(){ return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'; }
+function toolbar(withSegInline){
+  var tb = elc('div','toolbar');
+  var s = elc('div','search'); s.innerHTML = searchIcon();
+  var inp = elc('input'); inp.type='search'; inp.placeholder='Szukaj pacjenta…'; inp.value=state.q;
+  inp.addEventListener('input', function(){ state.q=inp.value; render(true); });
+  s.appendChild(inp); tb.appendChild(s);
+  var seg = elc('div','seg');
+  [['all','Wszyscy'],['base','Z bazy'],['ext','Spoza bazy']].forEach(function(o){
+    var b=elc('button',state.filter===o[0]?'on':'',o[1]);
+    b.addEventListener('click',function(){ state.filter=o[0]; render(); });
+    seg.appendChild(b);
+  });
+  tb.appendChild(seg);
+  var sort=elc('button','sortbtn'); sort.innerHTML='⇅ '+({recent:'Ostatni',az:'A–Z',age:'Wiek'}[state.sort]);
+  sort.addEventListener('click',function(){ state.sort = state.sort==='recent'?'az':state.sort==='az'?'age':'recent'; render(); });
+  tb.appendChild(sort);
+  return {tb:tb, inp:inp};
+}
+
+/* ═══ A ═══ */
+function renderA(mount){
+  var t=toolbar(); mount.appendChild(t.tb);
+  var sc=elc('div','scroll'); var arr=filtered();
+  if(!arr.length) sc.appendChild(elc('div','empty','Brak pasujących pacjentów.'));
+  arr.forEach(function(p){
+    var row=elc('button','row'+(isDup(p)?' dup':'')); row.type='button';
+    var av=elc('div','ava',(p.last[0]||'?').toUpperCase()); av.setAttribute('style',avaStyle(p));
+    var info=elc('div'); info.style.minWidth='0';
+    var nm=elc('div','nm'); nm.appendChild(elc('span',null,p.name));
+    if(p.ext) nm.appendChild(elc('span','chip-ext','spoza bazy'));
+    info.appendChild(nm);
+    var m=elc('div','meta'+(isDup(p)?' dup-flag':''),meta(p)); info.appendChild(m);
+    if(isDup(p)) info.appendChild(elc('div','meta dup-flag','to samo nazwisko — rozróżnij datą urodzenia'));
+    row.appendChild(av); row.appendChild(info); row.appendChild(elc('span','arrow','›'));
+    sc.appendChild(row);
+  });
+  mount.appendChild(sc);
+}
+
+/* ═══ B ═══ */
+function renderB(mount){
+  var hero=elc('div','hero'); hero.innerHTML=searchIcon();
+  var inp=elc('input'); inp.type='search'; inp.placeholder='Szukaj pacjenta po nazwisku lub imieniu…'; inp.value=state.q;
+  inp.addEventListener('input',function(){ state.q=inp.value; render(true); });
+  hero.appendChild(inp); mount.appendChild(hero);
+  // filtry jako chipy
+  var seg=elc('div','seg'); seg.style.marginBottom='8px';
+  [['all','Wszyscy'],['base','Z bazy'],['ext','Spoza bazy']].forEach(function(o){
+    var b=elc('button',state.filter===o[0]?'on':'',o[1]);
+    b.addEventListener('click',function(){ state.filter=o[0]; render(); }); seg.appendChild(b);
+  });
+  mount.appendChild(seg);
+  var sc=elc('div','scroll'); var arr=filtered();
+  if(!arr.length){ sc.appendChild(elc('div','empty','Brak pasujących pacjentów.')); mount.appendChild(sc); return; }
+  // grupuj: Ostatnio otwierani (3) + reszta A–Z
+  var recent = arr.slice().sort(function(a,b){return a.recent-b.recent;}).slice(0,3);
+  var rest = arr.slice().sort(function(a,b){return a.name.localeCompare(b.name,'pl');});
+  if(state.sort==='recent'){
+    sc.appendChild(elc('div','sec','Ostatnio otwierani'));
+    recent.forEach(function(p){ sc.appendChild(drow(p)); });
+    sc.appendChild(elc('div','sec','Wszyscy · A–Z'));
+    rest.forEach(function(p){ sc.appendChild(drow(p)); });
+  } else {
+    rest.forEach(function(p){ sc.appendChild(drow(p)); });
+  }
+  mount.appendChild(sc);
+  function drow(p){
+    var r=elc('div','drow '+(p.ext?'ext':'base'));
+    var av=elc('div','ava',(p.last[0]||'?').toUpperCase()); av.setAttribute('style',avaStyle(p));
+    var info=elc('div'); info.style.minWidth='0';
+    var nm=elc('div','nm'+(isDup(p)?' dup-flag':''),p.name); info.appendChild(nm);
+    var m=elc('div','meta'+(isDup(p)?' dup-flag':''),meta(p));
+    r.appendChild(av); r.appendChild(info); r.appendChild(m);
+    return r;
+  }
+}
+
+/* ═══ C ═══ */
+function renderC(mount){
+  var t=toolbar(); mount.appendChild(t.tb);
+  var sc=elc('div','scroll'); var grid=elc('div','grid'); var arr=filtered();
+  if(!arr.length) sc.appendChild(elc('div','empty','Brak pasujących pacjentów.'));
+  arr.forEach(function(p){
+    var c=elc('div','pcard '+(p.ext?'ext':'base')+(isDup(p)?' dup':''));
+    if(p.ext) c.appendChild(elc('span','chip-ext','spoza bazy'));
+    var top=elc('div','top');
+    var av=elc('div','ava',(p.last[0]||'?').toUpperCase()); av.setAttribute('style',avaStyle(p));
+    var nw=elc('div'); nw.className='nm-wrap'; nw.style.minWidth='0';
+    nw.appendChild(elc('div','nm',p.name));
+    nw.appendChild(elc('div','meta'+(isDup(p)?' dup-flag':''),meta(p)));
+    top.appendChild(av); top.appendChild(nw); c.appendChild(top);
+    c.appendChild(elc('div','foot', (p.ext?'🗓 ':'📊 ')+p.last_visit));
+    grid.appendChild(c);
+  });
+  sc.appendChild(grid); mount.appendChild(sc);
+}
+
+function render(keepFocus){
+  var focusVal=null, hadFocus=false;
+  if(keepFocus){ var a=document.activeElement; if(a&&a.tagName==='INPUT'){ hadFocus=true; focusVal=a.selectionStart; } }
+  document.getElementById('desc').textContent = DESC[state.view];
+  var arr=filtered();
+  document.getElementById('countPill').textContent = arr.length + (arr.length===1?' pacjent':' pacjentów');
+  var mount=document.getElementById('mount'); mount.innerHTML='';
+  if(state.view==='A') renderA(mount);
+  else if(state.view==='B') renderB(mount);
+  else renderC(mount);
+  if(keepFocus && hadFocus){ var inp=mount.querySelector('input[type=search]'); if(inp){ inp.focus(); try{inp.setSelectionRange(focusVal,focusVal);}catch(e){} } }
+}
+
+document.getElementById('seg').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b)return;
+  [].forEach.call(this.children,function(x){x.classList.remove('on');}); b.classList.add('on');
+  state.view=b.getAttribute('data-v'); render();
+});
+render();
+</script>
+</body>
+</html>

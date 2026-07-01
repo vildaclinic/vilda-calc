@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makieta — karta Przypomnień w prawej kolumnie (PRO)</title>
+<style>
+  :root{
+    --primary:#00838d; --secondary:#00b0a6; --text:#333; --radius:12px;
+    /* palety sekcji (1:1 z modala Przypomnień) */
+    --over-bg:#FFF3E0; --over-tx:#A35F00;
+    --today-bg:#E8F8EC; --today-tx:#1F7A3D;
+    --pend-bg:#E9E9FB; --pend-tx:#302D9C;
+    /* kolory kategorii (1:1 z PATIENT_NOTE_CATEGORY_LABELS) */
+    --cat-followup:#32ADE6; --cat-badanie:#5856D6; --cat-treatment:#34C759;
+    --cat-duty:#FF3B30; --cat-clinic:#FFB300; --cat-nfz:#AF52DE; --cat-edu:#FF9500;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #e7f6f7 0%, rgba(231,246,247,0) 60%),
+      #f4f8f9;
+    padding:26px 18px 60px;
+  }
+  .wrap{max-width:1060px;margin:0 auto;}
+  h1{font-size:1.35rem;margin:0 0 4px;color:#0c3a3e;}
+  .lead{color:#5a7274;font-size:.92rem;margin:0 0 18px;line-height:1.55;max-width:760px;}
+  code{background:#eef3f4;padding:1px 5px;border-radius:5px;font-size:.85em;}
+
+  /* sterowanie stanami */
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px;}
+  .controls-label{font-size:.74rem;color:#8aa0a2;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-right:4px;}
+  .seg{display:inline-flex;background:#eef3f4;border-radius:11px;padding:4px;gap:4px;flex-wrap:wrap;}
+  .seg button{border:none;background:transparent;font:inherit;font-size:.8rem;font-weight:600;color:#5a7274;padding:8px 13px;border-radius:8px;cursor:pointer;transition:all .15s;}
+  .seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.13);}
+
+  /* układ dwukolumnowy jak na stronie głównej */
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start;}
+  @media(max-width:760px){.layout{grid-template-columns:1fr;}}
+  .col-card{background:#fff;border:1px solid #e1e8ea;border-radius:16px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .form-ghost{opacity:.55;}
+  .form-ghost h4{margin:0 0 12px;font-size:.95rem;color:#0c3a3e;}
+  .gf{margin:0 0 12px;}
+  .gf label{display:block;font-size:.8rem;color:#3a4d4f;margin-bottom:4px;}
+  .gf .inp{height:40px;border:1.5px solid #d7e2e4;border-radius:10px;background:#fbfdfd;display:flex;align-items:center;padding:0 12px;font-size:.9rem;color:#7d9092;}
+  .gf-row{display:flex;gap:10px;}
+  .gf-row .gf{flex:1;}
+
+  .rightcol{display:flex;flex-direction:column;gap:14px;min-height:120px;}
+
+  /* === Karta „Podsumowanie wyników" (kontekst — gdy są wyniki) === */
+  .summary-card{position:relative;background:#fff;border:1.5px solid rgba(0,131,141,.28);border-radius:14px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,81,88,.06);}
+  .summary-card .pro{position:absolute;top:12px;right:14px;font-size:.62rem;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--primary);border-radius:999px;padding:2px 8px;}
+  .summary-card h3{margin:0 0 10px;font-size:1rem;color:#0c3a3e;}
+  .sum-row{display:flex;justify-content:space-between;font-size:.86rem;padding:5px 0;border-bottom:1px dashed #eef2f3;color:#3a4d4f;}
+  .sum-row:last-child{border-bottom:none;}
+  .sum-row b{color:#0c3a3e;font-weight:600;}
+  .sum-row .z{color:#7d9092;font-size:.8rem;}
+
+  /* === KARTA PRZYPOMNIEŃ (nowa, prawa kolumna) === */
+  .rem-card{background:#fff;border:1px solid #d8e6e7;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,81,88,.05);display:flex;flex-direction:column;}
+  .rem-head{display:flex;align-items:center;gap:9px;padding:13px 16px 11px;}
+  .rem-head .bell{width:20px;height:20px;color:var(--primary);flex:0 0 auto;}
+  .rem-head .ttl{font-size:.98rem;font-weight:700;color:#0c3a3e;flex:1;}
+  .rem-head .all{font-size:.78rem;font-weight:600;color:var(--primary);text-decoration:none;cursor:pointer;white-space:nowrap;}
+  .rem-stats{display:flex;gap:7px;padding:0 16px 12px;flex-wrap:wrap;}
+  .stat{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:700;border-radius:9px;padding:5px 10px;}
+  .stat .n{font-size:.92rem;}
+  .stat.over{background:var(--over-bg);color:var(--over-tx);}
+  .stat.today{background:var(--today-bg);color:var(--today-tx);}
+  .stat.pend{background:var(--pend-bg);color:var(--pend-tx);}
+
+  .rem-list{border-top:1px solid #eef2f3;flex:1 1 auto;}
+  .rem-row{display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid #f3f7f7;}
+  .rem-row:last-child{border-bottom:none;}
+  .av{flex:0 0 auto;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.82rem;box-shadow:0 1px 3px rgba(0,0,0,.18);}
+  .rem-row .meta{flex:1;min-width:0;}
+  .rem-row .nm{font-size:.88rem;font-weight:600;color:#1f2d2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rem-row .cat{font-size:.78rem;color:#64797b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rem-row .cat .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+  .rem-row .when{flex:0 0 auto;font-size:.74rem;font-weight:700;border-radius:7px;padding:3px 8px;white-space:nowrap;}
+  .when.w-over{background:var(--over-bg);color:var(--over-tx);}
+  .when.w-today{background:var(--today-bg);color:var(--today-tx);}
+  .when.w-pend{background:var(--pend-bg);color:var(--pend-tx);}
+  .rem-foot{padding:10px 16px;text-align:center;border-top:1px solid #eef2f3;}
+  .rem-foot button{font:inherit;font-size:.82rem;font-weight:600;color:var(--primary);background:#f0fafa;border:1px solid #cfe8e9;border-radius:9px;padding:8px 14px;cursor:pointer;width:100%;}
+
+  /* pusty stan */
+  .rem-empty{padding:22px 16px;text-align:center;color:#6b8385;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .rem-empty .ok{width:34px;height:34px;border-radius:50%;background:var(--today-bg);color:var(--today-tx);display:inline-flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:1.1rem;}
+  .rem-empty .t{font-size:.9rem;font-weight:600;color:#3a4d4f;}
+  .rem-empty .s{font-size:.8rem;margin-top:2px;}
+
+  .note{font-size:.82rem;color:#46585a;background:#fff;border:1px solid #e1e8ea;border-radius:14px;padding:16px 18px;line-height:1.6;margin-top:20px;}
+  .note h2{font-size:.98rem;margin:0 0 8px;color:#0c3a3e;}
+  .note b{color:#0c3a3e;}
+  .note ul{margin:6px 0 0;padding-left:20px;}
+  .note li{margin:5px 0;}
+  .tag{display:inline-block;font-size:.68rem;font-weight:800;border-radius:999px;padding:2px 8px;color:#fff;background:var(--primary);vertical-align:middle;}
+  .muted{color:#8aa0a2;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Karta „Przypomnienia" w prawej kolumnie <span class="tag">PRO</span></h1>
+  <p class="lead">
+    W trybie PRO <code>#errorBox</code> znika całkowicie — w jego miejscu (prawa kolumna, obok formularza)
+    montujemy kompaktową kartę <b>Przypomnienia</b> (to samo źródło, co dzwoneczek:
+    <code>listPatientNotesDueByDate()</code>). Karta jest wypełniaczem prawej kolumny: gdy pojawią się
+    „Podsumowanie wyników", karta <b>znika</b> (jak dawny errorBox) — zero kolizji. Gdy jej miejsce jest
+    puste, ma <b>tę samą wysokość co główny formularz</b> (symetria).
+  </p>
+
+  <div class="controls">
+    <span class="controls-label">Stan</span>
+    <div class="seg" id="stateSeg">
+      <button class="on" data-s="empty">Pusty formularz (są przypomnienia)</button>
+      <button data-s="results">Wpisane wyniki (karta znika)</button>
+      <button data-s="none">Brak przypomnień (pusty stan)</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- LEWA: formularz (kontekst, wyszarzony) -->
+    <div class="col-card form-ghost">
+      <h4>Dane pacjenta</h4>
+      <div class="gf"><label>Nazwisko / Imię</label><div class="inp">—</div></div>
+      <div class="gf-row">
+        <div class="gf"><label>Wiek (lata)</label><div class="inp" id="ghAge">—</div></div>
+        <div class="gf"><label>Wiek (mies.)</label><div class="inp">—</div></div>
+      </div>
+      <div class="gf"><label>Płeć</label><div class="inp">Mężczyzna</div></div>
+      <div class="gf"><label>Waga (kg)</label><div class="inp" id="ghW">—</div></div>
+      <div class="gf"><label>Wzrost (cm)</label><div class="inp" id="ghH">—</div></div>
+    </div>
+
+    <!-- PRAWA: tu żyje karta Przypomnień (+ ew. Podsumowanie wyników) -->
+    <div class="rightcol" id="rightcol"></div>
+  </div>
+
+  <div class="note">
+    <h2>Zachowanie i decyzje <span class="tag">do akceptacji</span></h2>
+    <ul>
+      <li><b>Tylko PRO + zalogowany.</b> Poza PRO nic się nie zmienia. W PRO <code>#errorBox</code> nie pokazuje żadnych etykiet (komunikat „Podaj jednocześnie…" też znika — błędy zakresu są już w tooltipach z fazy 1).</li>
+      <li><b>Wyniki → karta znika.</b> Montaż po <code>#currentSummaryWrap</code>, przed <code>#infoMessages</code>. Gdy pojawi się „Podsumowanie wyników", karta przypomnień <b>chowa się</b> (jak dawny errorBox) — zero kolizji.</li>
+      <li><b>Symetria.</b> Gdy karta jest widoczna (brak wyników), ma <b>tę samą wysokość co główny formularz</b> po lewej (min-height = wysokość <code>.user-card</code>; w kodzie reużyję wzorca <code>updateInfoCardHeight</code> z <code>custom-fixes.js</code>, który już tak robił dla <code>#infoMessages</code>).</li>
+      <li><b>Treść kompaktu:</b> liczniki Zaległe / Dziś / Oczekujące (paleta z modala), do 3 najpilniejszych pozycji (awatar w kolorze kategorii, „kategoria — tytuł", termin), oraz „Pokaż wszystkie (N)".</li>
+      <li><b>„Pokaż wszystkie"</b> otwiera pełny modal dzwonka (<code>maybeShowReminders({force:true})</code>) — zero duplikacji logiki. Akcje (Zrobione/Przełóż) tylko w modalu — kompakt zostaje czysty.</li>
+      <li><b>Pusty stan:</b> gdy brak przypomnień — komunikat „Brak przypomnień na dziś" (karta zostaje, trzyma symetrię).</li>
+      <li><b>Auto-odświeżanie:</b> te same sygnały co badge dzwonka (<code>onPatientNoteChanged</code>, <code>vilda:sync-merged</code>, kanał <code>vilda-notes</code>).</li>
+    </ul>
+    <p style="margin-top:12px;"><b>Decyzje przyjęte:</b> wyniki → karta znika; pusty stan → komunikat „Brak przypomnień"; akcje → tylko podgląd + modal. Liczba w „Pokaż wszystkie" = liczba pacjentów (spójnie z dzwonkiem).</p>
+  </div>
+
+</div>
+
+<script>
+  var BELL = '<svg class="bell" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 8a6 6 0 1 1 12 0c0 5 1.5 7 1.5 7H4.5S6 13 6 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+  // przykładowe (fikcyjne) przypomnienia — wyłącznie do pokazania układu
+  var ITEMS = [
+    { ini:'KJ', name:'Kowalski Jan',     cat:'Kontrola',     col:'var(--cat-followup)',  when:'3 dni temu', w:'w-over' },
+    { ini:'WA', name:'Wiśniewska Anna',  cat:'Leczenie rhGH',col:'var(--cat-treatment)', when:'wczoraj',    w:'w-over' },
+    { ini:'KP', name:'Kamiński Piotr',   cat:'Kontrola',     col:'var(--cat-followup)',  when:'dziś 12:30', w:'w-today' }
+  ];
+
+  function remCard(){
+    var rows = ITEMS.map(function(it){
+      return '<div class="rem-row">'
+        + '<div class="av" style="background:linear-gradient(135deg,'+it.col+','+it.col+'cc)">'+it.ini+'</div>'
+        + '<div class="meta"><div class="nm">'+it.name+'</div>'
+        + '<div class="cat"><span class="dot" style="background:'+it.col+'"></span>'+it.cat+'</div></div>'
+        + '<div class="when '+it.w+'">'+it.when+'</div></div>';
+    }).join('');
+    return '<div class="rem-card">'
+      + '<div class="rem-head">'+BELL+'<span class="ttl">Przypomnienia</span><a class="all" onclick="alert(\'→ maybeShowReminders({force:true}) — pełny modal\')">Pokaż wszystkie (4)</a></div>'
+      + '<div class="rem-stats">'
+      +   '<span class="stat over"><span class="n">2</span> zaległe</span>'
+      +   '<span class="stat today"><span class="n">1</span> dziś</span>'
+      +   '<span class="stat pend"><span class="n">1</span> oczekujące</span>'
+      + '</div>'
+      + '<div class="rem-list">'+rows+'</div>'
+      + '<div class="rem-foot"><button onclick="alert(\'→ maybeShowReminders({force:true}) — pełny modal\')">Pokaż wszystkie przypomnienia →</button></div>'
+      + '</div>';
+  }
+  function remEmpty(){
+    return '<div class="rem-card"><div class="rem-head">'+BELL+'<span class="ttl">Przypomnienia</span></div>'
+      + '<div class="rem-empty"><div class="ok">✓</div><div class="t">Brak przypomnień na dziś</div>'
+      + '<div class="s">Nic nie wymaga teraz Twojej uwagi.</div></div></div>';
+  }
+  function summaryCard(){
+    return '<div class="summary-card"><span class="pro">PRO</span><h3>Podsumowanie wyników</h3>'
+      + '<div class="sum-row"><span>Masa ciała</span><b>28&nbsp;kg · 45. centyl <span class="z">(Z = −0,12)</span></b></div>'
+      + '<div class="sum-row"><span>Wzrost</span><b>132&nbsp;cm · 60. centyl <span class="z">(Z = 0,25)</span></b></div>'
+      + '<div class="sum-row"><span>BMI</span><b>16,1 · 38. centyl <span class="z">(Z = −0,30)</span></b></div>'
+      + '<div class="sum-row"><span>Pole pow. ciała</span><b>1,01&nbsp;m²</b></div>'
+      + '</div>';
+  }
+
+  function render(state){
+    var rc = document.getElementById('rightcol');
+    var ghAge=document.getElementById('ghAge'), ghW=document.getElementById('ghW'), ghH=document.getElementById('ghH');
+    if(state==='results'){ ghAge.textContent='9'; ghW.textContent='28'; ghH.textContent='132'; }
+    else { ghAge.textContent='—'; ghW.textContent='—'; ghH.textContent='—'; }
+
+    if(state==='empty')   rc.innerHTML = remCard();
+    if(state==='none')    rc.innerHTML = remEmpty();
+    if(state==='results') rc.innerHTML = summaryCard(); // wyniki → karta przypomnień znika (jak errorBox)
+
+    // Symetria: pusta karta przypomnień ma wysokość głównego formularza
+    if(state==='empty' || state==='none'){
+      requestAnimationFrame(function(){
+        var form=document.querySelector('.form-ghost');
+        var card=rc.querySelector('.rem-card');
+        if(form&&card){ card.style.minHeight = form.offsetHeight + 'px'; }
+      });
+    }
+  }
+
+  document.querySelectorAll('#stateSeg button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#stateSeg button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+      render(b.dataset.s);
+    });
+  });
+  render('empty');
+</script>
+</body>
+</html>
