@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.481';
+const SW_VERSION = '1.0.482';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1132,12 +1132,15 @@ const OPTIONAL_ASSETS = [
   '/hypertension_therapy.js?v=4',
   '/obesity_therapy.js',
   '/obesity_therapy.js?v=4',
+  '/obesity_therapy.js?v=5',
   '/obesity_therapy_monitor.js',
   '/obesity_therapy_monitor.js?v=1',
   '/obesity_therapy_monitor.js?v=2',
   '/obesity_therapy_monitor.js?v=3',
   '/obesity_therapy_monitor.js?v=4',
   '/obesity_therapy_monitor.js?v=5',
+  '/obesity_response_criteria.js',
+  '/obesity_response_criteria.js?v=1',
   '/sga_intergrowth_data.js',
   '/sga_malewski_data.js',
   '/sga_birth_module.js',
