@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.474';
+const SW_VERSION = '1.0.481';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -222,6 +222,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=16',
   '/vilda_persistence_adapter.js?v=17',
   '/vilda_persistence_adapter.js?v=18',
+  '/vilda_persistence_adapter.js?v=19',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -590,6 +591,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=317',
   '/vilda_auth_ui.js?v=318',
   '/vilda_auth_ui.js?v=319',
+  '/vilda_auth_ui.js?v=320',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
@@ -887,6 +889,8 @@ const CORE_SHELL_URLS = [
   '/vilda_data_import_export.js?v=29',
   '/vilda_data_import_export.js?v=30',
   '/vilda_data_import_export.js?v=31',
+  '/vilda_data_import_export.js?v=32',
+  '/vilda_data_import_export.js?v=33',
   '/vilda_advanced_growth.js',
   '/vilda_advanced_growth.js?v=16',
   '/vilda_advanced_growth.js?v=17',
@@ -1128,6 +1132,12 @@ const OPTIONAL_ASSETS = [
   '/hypertension_therapy.js?v=4',
   '/obesity_therapy.js',
   '/obesity_therapy.js?v=4',
+  '/obesity_therapy_monitor.js',
+  '/obesity_therapy_monitor.js?v=1',
+  '/obesity_therapy_monitor.js?v=2',
+  '/obesity_therapy_monitor.js?v=3',
+  '/obesity_therapy_monitor.js?v=4',
+  '/obesity_therapy_monitor.js?v=5',
   '/sga_intergrowth_data.js',
   '/sga_malewski_data.js',
   '/sga_birth_module.js',

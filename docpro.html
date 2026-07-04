@@ -181,7 +181,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=18"></script>
+<script defer src="vilda_persistence_adapter.js?v=19"></script>
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
@@ -191,7 +191,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_sync_integration.js?v=33"></script>
 <script defer src="vilda_realtime.js?v=6"></script>
 <script defer src="qrcode.min.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=319"></script>
+<script defer src="vilda_auth_ui.js?v=320"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -207,7 +207,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=31"></script>
+<script defer src="vilda_data_import_export.js?v=33"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
 <script defer src="vilda_advanced_growth.js?v=17"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
@@ -1890,6 +1890,61 @@ html.vilda-pro-active   #proGateBanner { display: none; }
       </div>
       <div id="obesitySourcesSection" style="display:none; margin-top:0.8rem;">
         <ul id="obesitySourcesList" style="list-style-type: disc; margin-left:1.5rem;"></ul>
+      </div>
+    </div>
+
+    <!-- === Monitorowanie leczenia otyłości (obesityTherapyPoints) — 2026-07-04 ===
+         Wzór: monitor GH (gh_therapy_monitor.js). Punkty zapisują się z pacjentem
+         (collectUserData) i zasilą panel „Dane analityczne". Logika: obesity_therapy_monitor.js. -->
+    <div id="obesityMonitorSection" style="margin-top:1.4rem; border-top:1px solid #e0eef0; padding-top:1rem;">
+      <style>
+        #obesityMonitorSection .obm-fgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+        @media(max-width:560px){#obesityMonitorSection .obm-fgrid{grid-template-columns:repeat(2,1fr)}}
+        #obesityMonitorSection .obm-fgrid label{font-size:.75rem;color:#5a7274;display:flex;flex-direction:column;gap:3px}
+        #obesityMonitorSection .obm-fgrid input{padding:7px 9px;border:1px solid #9FE1CB;border-radius:8px;font-size:.9rem;font-family:inherit}
+        #obesityMonitorSection .obm-visit{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+        #obesityMonitorSection .obm-visit button{flex:1;min-width:130px}
+        #obesityMonitorSection table{border-collapse:collapse;width:100%;font-size:.82rem;min-width:560px}
+        #obesityMonitorSection th,#obesityMonitorSection td{padding:8px 9px;text-align:center;border-bottom:1px solid #e0eef0;white-space:nowrap}
+        #obesityMonitorSection th{font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#5a7274;font-weight:800}
+        #obesityMonitorSection td.obm-l{text-align:left}
+        #obesityMonitorSection .obm-badge{font-size:.66rem;font-weight:800;border-radius:999px;padding:2px 8px}
+        #obesityMonitorSection .obm-badge.s{background:#0F6E56;color:#fff}
+        #obesityMonitorSection .obm-badge.c{background:#CDEFE3;color:#0b5443}
+        #obesityMonitorSection .obm-badge.e{background:#eceff1;color:#555}
+        #obesityMonitorSection .obm-date{font-size:.68rem;color:#5a7274;margin-top:2px}
+        #obesityMonitorSection .obm-red.good{color:#1a8f5c;font-weight:800}
+        #obesityMonitorSection .obm-red.bad{color:#c0453b;font-weight:800}
+        #obesityMonitorSection .obm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}
+        #obesityMonitorSection .obm-empty{text-align:center;color:#5a7274;font-size:.85rem;padding:18px;border:1px dashed #e0eef0;border-radius:10px}
+      </style>
+      <h3 style="text-align:center; margin-bottom:0.3rem;">Monitorowanie leczenia</h3>
+      <p style="text-align:center; font-size:0.82rem; color:#5a7274; margin:0 0 0.8rem;">
+        Dodawaj punkty terapii (Włączenie / Kontynuacja / Zakończenie). BMI, BMI-SDS i redukcję masy od włączenia liczymy automatycznie. Punkty zapisują się z pacjentem.
+      </p>
+      <div class="obm-fgrid">
+        <label>Wiek (lata)<input id="obesityAge" inputmode="numeric" placeholder="np. 15"></label>
+        <label>Wiek — mies.<input id="obesityAgeMonths" inputmode="numeric" placeholder="0–11"></label>
+        <label>Masa (kg)<input id="obesityWeight" inputmode="decimal" placeholder="np. 85,5"></label>
+        <label>Wzrost (cm)<input id="obesityHeight" inputmode="decimal" placeholder="np. 166"></label>
+        <label>Dawka<input id="obesityDose" placeholder="np. 2,4 mg"></label>
+        <label>Data wizyty<input id="obesityDate" type="date"></label>
+      </div>
+      <div style="font-size:.75rem;color:#5a7274;margin-top:10px;">Rodzaj wizyty:</div>
+      <div class="obm-visit">
+        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('start')">Włączenie leczenia</button>
+        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button>
+        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button>
+      </div>
+      <h4 style="margin:1rem 0 0.4rem;">Punkty terapii (<span id="obesityTherapyCount">0</span>)</h4>
+      <div id="obesityTherapyEmpty" class="obm-empty">Brak punktów. Dodaj „Włączenie leczenia" — to baseline, od którego liczymy redukcję i odpowiedź na leczenie.</div>
+      <div id="obesityTherapyTableWrap" style="display:none; overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Rodzaj wizyty</th><th>Wiek</th><th>Masa (kg)</th><th>Wzrost (cm)</th><th>BMI</th><th>BMI-SDS</th><th>Dawka</th><th>Redukcja masy</th><th>Redukcja BMI</th><th>Usuń</th>
+          </tr></thead>
+          <tbody id="obesityTherapyTbody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -3599,6 +3654,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
          aby korzystał z już zainicjowanych elementów DOM (np. pola wagi i wieku). -->
     <script src="flu_therapy.js?v=5" defer></script>
 <script src="obesity_therapy.js?v=4" defer></script>
+<script src="obesity_therapy_monitor.js?v=5" defer></script>
 <script src="hypertension_therapy.js?v=4" defer></script>
 <script src="thyroid_cancer_kids.js?v=4" defer></script>
 
