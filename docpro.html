@@ -1859,7 +1859,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     <style>
       #obesityCard .obs-lead{text-align:center;font-size:.84rem;color:#56727b;margin:4px 0 0;line-height:1.4}
       #obesityCard .obs-tabs{display:flex!important;gap:6px!important;background:#eef4f3!important;border-radius:13px!important;padding:4px!important;margin:14px 0 16px!important;box-shadow:none!important}
-      #obesityCard button.obs-tab{flex:1 1 auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:0!important;border-radius:10px!important;padding:10px 8px!important;margin:0!important;font-family:inherit!important;font-size:.86rem!important;font-weight:700!important;color:#33464e!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;min-height:0!important;height:auto!important;width:auto!important;text-transform:none!important;letter-spacing:normal!important}
+      #obesityCard button.obs-tab{flex:1 1 0!important;width:0!important;min-width:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:0!important;border-radius:10px!important;padding:10px 8px!important;margin:0!important;font-family:inherit!important;font-size:.86rem!important;font-weight:700!important;color:#33464e!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;min-height:0!important;height:auto!important;text-transform:none!important;letter-spacing:normal!important}
       #obesityCard button.obs-tab.on{background:#fff!important;color:#0F6E56!important;box-shadow:0 2px 8px rgba(14,42,48,.08)!important}
       #obesityCard .obs-tab-n{font-size:.68rem;font-weight:800;background:#0F6E56;color:#fff;border-radius:999px;padding:1px 7px;line-height:1.4}
       #obesityCard .obs-selrow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:2px}
@@ -1952,7 +1952,11 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         #obesityMonitorSection .obm-visit button{flex:1;min-width:130px}
         #obesityMonitorSection table{border-collapse:collapse;width:100%;font-size:.82rem;min-width:560px}
         #obesityMonitorSection th,#obesityMonitorSection td{padding:8px 9px;text-align:center;border-bottom:1px solid #e0eef0;white-space:nowrap}
-        #obesityMonitorSection th{font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#5a7274;font-weight:800}
+        /* Nagłówki tabeli: białe litery na ciemnym (teal) tle — czytelne w każdym
+           motywie (poprzednio #5a7274 ginęło na ciemnym/glass tle karty). */
+        #obesityMonitorSection th{font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#fff !important;font-weight:800;background:#0F6E56}
+        #obesityMonitorSection thead th:first-child{border-top-left-radius:8px}
+        #obesityMonitorSection thead th:last-child{border-top-right-radius:8px}
         #obesityMonitorSection td.obm-l{text-align:left}
         #obesityMonitorSection .obm-badge{font-size:.66rem;font-weight:800;border-radius:999px;padding:2px 8px}
         #obesityMonitorSection .obm-badge.s{background:#0F6E56;color:#fff}
