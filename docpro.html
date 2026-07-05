@@ -1848,56 +1848,100 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        Lista preparatów jest filtrowana na podstawie wieku (sekcja „Dane użytkownika”).
        Po wyborze preparatu aplikacja automatycznie generuje schemat dawkowania zgodnie z ChPL. -->
   <div id="obesityCard" class="card" style="display:none;">
+    <!-- ═══ Przebudowa 2026-07-04 — WARIANT B z makiety
+         makiety/makieta_docpro_leczenie_otylosci_uklad.html (wybór Macieja):
+         dwie zakładki „💊 Zalecenia" / „📈 Monitorowanie leczenia (N)". Pasek akcji
+         (Kopiuj / Dawkowanie / Info+źródła) siedzi POD treścią zaleceń i pojawia się
+         dopiero, gdy zalecenia istnieją (fix: przycisk kopiowania wisiał nad
+         instrukcją „Wybierz substancję…"). Kwalifikacja ChPL w bursztynowym boxie.
+         Style przycisków z !important — motyw liquid glass (ios26-ui) nadpisuje
+         <button> (ten sam wzorzec co .vilda-gha-btn w karcie pacjenta). -->
+    <style>
+      #obesityCard .obs-lead{text-align:center;font-size:.84rem;color:#56727b;margin:4px 0 0;line-height:1.4}
+      #obesityCard .obs-tabs{display:flex!important;gap:6px!important;background:#eef4f3!important;border-radius:13px!important;padding:4px!important;margin:14px 0 16px!important;box-shadow:none!important}
+      #obesityCard button.obs-tab{flex:1 1 auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:0!important;border-radius:10px!important;padding:10px 8px!important;margin:0!important;font-family:inherit!important;font-size:.86rem!important;font-weight:700!important;color:#33464e!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;min-height:0!important;height:auto!important;width:auto!important;text-transform:none!important;letter-spacing:normal!important}
+      #obesityCard button.obs-tab.on{background:#fff!important;color:#0F6E56!important;box-shadow:0 2px 8px rgba(14,42,48,.08)!important}
+      #obesityCard .obs-tab-n{font-size:.68rem;font-weight:800;background:#0F6E56;color:#fff;border-radius:999px;padding:1px 7px;line-height:1.4}
+      #obesityCard .obs-selrow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:2px}
+      #obesityCard .obs-selrow label{font-size:.78rem;color:#56727b;display:flex;flex-direction:column;gap:4px;min-width:220px;flex:1;max-width:340px;text-align:left}
+      #obesityCard .obs-selrow select{padding:9px 10px;border:1px solid #9FE1CB;border-radius:9px;font:inherit;font-size:.9rem;background:#fff}
+      #obesityCard .obs-elig{border:1px solid #f0c68a;background:#fff7ed;border-radius:12px;padding:11px 13px;font-size:.86rem;line-height:1.45;margin-top:12px;text-align:left}
+      #obesityCard .obs-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;justify-content:flex-start}
+      #obesityCard button.obs-act{border:0!important;border-radius:11px!important;padding:10px 14px!important;margin:0!important;font-family:inherit!important;font-size:.85rem!important;font-weight:700!important;cursor:pointer!important;box-shadow:none!important;min-height:0!important;height:auto!important;width:auto!important;flex:0 1 auto!important;text-transform:none!important;letter-spacing:normal!important}
+      #obesityCard button.obs-act.pri{background:#0F6E56!important;color:#fff!important}
+      #obesityCard button.obs-act.sec{background:#CDEFE3!important;color:#04342C!important}
+      #obesityCard button.obs-act.ghost{background:#eef4f3!important;color:#33464e!important}
+      #obesityCard .obs-ch{font-size:.72rem;margin-left:2px}
+      #obesityCard .obs-fold{border:1px solid #E1F0EB;border-radius:12px;padding:11px 13px;margin-top:8px;font-size:.9rem;background:#fff;text-align:left}
+      #obesityCard .obs-fold h3{margin:0 0 6px;font-size:.8rem;color:#0F6E56;text-transform:uppercase;letter-spacing:.04em;text-align:left}
+      @media(max-width:560px){
+        #obesityCard button.obs-tab{font-size:.78rem!important;padding:9px 5px!important}
+        #obesityCard .obs-selrow label{min-width:100%;max-width:none}
+        #obesityCard button.obs-act{flex:1 1 auto!important}
+      }
+    </style>
     <h2 style="text-align:center;">Leczenie otyłości</h2>
-    <p style="text-align:center; font-size:0.9rem; margin-top:0.4rem;">
-      Wprowadź wiek, masę ciała i wzrost w sekcji „Dane użytkownika”, a następnie wybierz substancję i preparat, aby przygotować zalecenia.
+    <p class="obs-lead">
+      Dobór leku i zalecenia wg ChPL (wiek, masa i wzrost z sekcji „Dane użytkownika”) oraz monitorowanie
+      odpowiedzi na leczenie — punkty wizyt zasilają kartę pacjenta i automatyczną ocenę wg progów ChPL.
     </p>
 
-    <div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;margin-top:0.8rem;">
-      <label>Substancja czynna:<br>
+    <div class="obs-tabs" role="tablist">
+      <button type="button" id="obesityTabRecBtn" class="obs-tab on" role="tab" aria-selected="true">💊 Zalecenia</button>
+      <button type="button" id="obesityTabMonBtn" class="obs-tab" role="tab" aria-selected="false">📈 Monitorowanie leczenia <span id="obesityTabMonCount" class="obs-tab-n">0</span></button>
+    </div>
+
+    <div id="obesityTabRecPanel" role="tabpanel">
+    <div class="obs-selrow">
+      <label>Substancja czynna
         <select id="obesitySubstance">
           <option value="">– wybierz –</option>
         </select>
       </label>
 
-      <label>Preparat (nazwa handlowa):<br>
+      <label>Preparat (nazwa handlowa)
         <select id="obesityBrand" disabled>
           <option value="">– wybierz –</option>
         </select>
       </label>
     </div>
 
-    <div id="obesityEligibilityBox" class="result-box" style="display:none; margin-top:0.8rem; font-size:0.95rem; text-align:left;"></div>
+    <div id="obesityEligibilityBox" class="obs-elig" style="display:none;"></div>
 
-    <div style="text-align:center; margin-top:1rem;">
-      <button type="button" id="obesityCopyRec" class="igf-btn">Zalecenia do wklejenia - kliknij i skopiuj</button>
+    <div id="obesityResult" class="result-box" style="margin-top:12px; font-size:1rem; text-align:left;"></div>
+
+    <!-- Pasek akcji POD zaleceniami — obesity_therapy.js pokazuje go dopiero,
+         gdy zalecenia są wygenerowane. -->
+    <div id="obesityActionsRow" class="obs-actions" style="display:none;">
+      <button type="button" id="obesityCopyRec" class="obs-act pri">📋 Kopiuj zalecenia</button>
+      <button type="button" id="obesityShowDosing" class="obs-act sec">Informacje o dawkowaniu <span class="obs-ch">⌄</span></button>
+      <button type="button" id="obesityShowExtras" class="obs-act ghost">Informacje dodatkowe i źródła <span class="obs-ch">⌄</span></button>
     </div>
 
-    <div id="obesityResult" class="result-box" style="margin-top:1rem; font-size:1rem; text-align:left;"></div>
-
-    <div id="obesityDoseBtnWrapper" style="text-align:center; margin-top:1rem;">
-      <button type="button" id="obesityShowDosing" class="igf-btn">Informacje o dawkowaniu</button>
-    </div>
-    <div id="obesityDoseSection" style="display:none; margin-top:0.8rem;">
-      <h3 style="text-align:center; margin-bottom:0.5rem;">Informacje o dawkowaniu</h3>
+    <div id="obesityDoseSection" class="obs-fold" style="display:none;">
+      <h3>Informacje o dawkowaniu</h3>
       <div id="obesityDoseContent"></div>
     </div>
 
-    <div id="obesityInfoSection" style="display:none; margin-top:1rem;">
-      <h3 style="text-align:center; margin-bottom:0.5rem;">Informacje dodatkowe:</h3>
+    <div id="obesityInfoSection" class="obs-fold" style="display:none;">
+      <h3>Informacje dodatkowe</h3>
       <ul id="obesityInfoList" style="list-style-type: disc; margin-left:1.5rem;"></ul>
-      <div style="text-align:center; margin-top:1rem;">
-        <button type="button" id="obesityShowSources" class="igf-btn">Źródła</button>
+      <div style="margin-top:10px;">
+        <button type="button" id="obesityShowSources" class="obs-act ghost">Źródła <span class="obs-ch">⌄</span></button>
       </div>
       <div id="obesitySourcesSection" style="display:none; margin-top:0.8rem;">
         <ul id="obesitySourcesList" style="list-style-type: disc; margin-left:1.5rem;"></ul>
       </div>
     </div>
 
+    </div><!-- /obesityTabRecPanel -->
+
     <!-- === Monitorowanie leczenia otyłości (obesityTherapyPoints) — 2026-07-04 ===
          Wzór: monitor GH (gh_therapy_monitor.js). Punkty zapisują się z pacjentem
-         (collectUserData) i zasilą panel „Dane analityczne". Logika: obesity_therapy_monitor.js. -->
-    <div id="obesityMonitorSection" style="margin-top:1.4rem; border-top:1px solid #e0eef0; padding-top:1rem;">
+         (collectUserData) i zasilą panel „Dane analityczne". Logika: obesity_therapy_monitor.js.
+         Wariant B: sekcja żyje w zakładce „Monitorowanie leczenia" (licznik na tabie). -->
+    <div id="obesityTabMonPanel" role="tabpanel" style="display:none;">
+    <div id="obesityMonitorSection">
       <style>
         #obesityMonitorSection .obm-fgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
         @media(max-width:560px){#obesityMonitorSection .obm-fgrid{grid-template-columns:repeat(2,1fr)}}
@@ -1919,7 +1963,6 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         #obesityMonitorSection .obm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}
         #obesityMonitorSection .obm-empty{text-align:center;color:#5a7274;font-size:.85rem;padding:18px;border:1px dashed #e0eef0;border-radius:10px}
       </style>
-      <h3 style="text-align:center; margin-bottom:0.3rem;">Monitorowanie leczenia</h3>
       <p style="text-align:center; font-size:0.82rem; color:#5a7274; margin:0 0 0.8rem;">
         Dodawaj punkty terapii (Włączenie / Kontynuacja / Zakończenie). BMI, BMI-SDS i redukcję masy od włączenia liczymy automatycznie. Punkty zapisują się z pacjentem.
       </p>
@@ -1948,6 +1991,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         </table>
       </div>
     </div>
+    </div><!-- /obesityTabMonPanel -->
   </div>
 
     <!-- Nowy moduł: Leczenie nadciśnienia.
@@ -3654,8 +3698,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     <!-- Skrypt modułu leczenia grypy.  Ładowany po antybiotykoterapii i przed bisfosfonianami,
          aby korzystał z już zainicjowanych elementów DOM (np. pola wagi i wieku). -->
     <script src="flu_therapy.js?v=5" defer></script>
-<script src="obesity_therapy.js?v=5" defer></script>
-<script src="obesity_therapy_monitor.js?v=5" defer></script>
+<script src="obesity_therapy.js?v=6" defer></script>
+<script src="obesity_therapy_monitor.js?v=6" defer></script>
 <script src="hypertension_therapy.js?v=4" defer></script>
 <script src="thyroid_cancer_kids.js?v=4" defer></script>
 
