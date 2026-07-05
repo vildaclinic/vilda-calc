@@ -192,7 +192,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_realtime.js?v=6"></script>
 <script defer src="qrcode.min.js?v=1"></script>
 <script defer src="obesity_response_criteria.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=325"></script>
+<script defer src="vilda_auth_ui.js?v=326"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -1947,6 +1947,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         @media(max-width:560px){#obesityMonitorSection .obm-fgrid{grid-template-columns:repeat(2,1fr)}}
         #obesityMonitorSection .obm-fgrid label{font-size:.75rem;color:#5a7274;display:flex;flex-direction:column;gap:3px}
         #obesityMonitorSection .obm-fgrid input{padding:7px 9px;border:1px solid #9FE1CB;border-radius:8px;font-size:.9rem;font-family:inherit}
+        #obesityMonitorSection .obm-fgrid select{padding:7px 9px;border:1px solid #9FE1CB;border-radius:8px;font-size:.9rem;font-family:inherit;background:#fff}
         #obesityMonitorSection .obm-visit{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
         #obesityMonitorSection .obm-visit button{flex:1;min-width:130px}
         #obesityMonitorSection table{border-collapse:collapse;width:100%;font-size:.82rem;min-width:560px}
@@ -1966,11 +1967,18 @@ html.vilda-pro-active   #proGateBanner { display: none; }
       <p style="text-align:center; font-size:0.82rem; color:#5a7274; margin:0 0 0.8rem;">
         Dodawaj punkty terapii (Włączenie / Kontynuacja / Zakończenie). BMI, BMI-SDS i redukcję masy od włączenia liczymy automatycznie. Punkty zapisują się z pacjentem.
       </p>
+      <!-- Prefill leku z notatek (fix 3, 2026-07-04): pasek podpowiedzi wypełnia
+           obesity_therapy.js (maybeSuggestMonitorDrugFromNotes) — DOM-safe, bez HTML. -->
+      <div id="obesityMonDrugSuggest" style="display:none;border:1px dashed #f0c68a;background:#fff7ed;border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:.82rem;color:#5a7274;"></div>
       <div class="obm-fgrid">
         <label>Wiek (lata)<input id="obesityAge" inputmode="numeric" placeholder="np. 15"></label>
         <label>Wiek — mies.<input id="obesityAgeMonths" inputmode="numeric" placeholder="0–11"></label>
         <label>Masa (kg)<input id="obesityWeight" inputmode="decimal" placeholder="np. 85,5"></label>
         <label>Wzrost (cm)<input id="obesityHeight" inputmode="decimal" placeholder="np. 166"></label>
+        <!-- Fix 2 (2026-07-04): monitor ma WŁASNY wybór leku (dokumentuje stan
+             faktyczny — celowo bez age-gate i bez confirmu poza-ChPL). Opcje
+             wypełnia obesity_therapy.js (populateMonitorDrugSelect). -->
+        <label>Lek<select id="obesityMonDrug"><option value="">– wybierz –</option></select></label>
         <label>Dawka<input id="obesityDose" placeholder="np. 2,4 mg"></label>
         <label>Data wizyty<input id="obesityDate" type="date"></label>
       </div>
@@ -3698,8 +3706,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     <!-- Skrypt modułu leczenia grypy.  Ładowany po antybiotykoterapii i przed bisfosfonianami,
          aby korzystał z już zainicjowanych elementów DOM (np. pola wagi i wieku). -->
     <script src="flu_therapy.js?v=5" defer></script>
-<script src="obesity_therapy.js?v=8" defer></script>
-<script src="obesity_therapy_monitor.js?v=6" defer></script>
+<script src="obesity_therapy.js?v=9" defer></script>
+<script src="obesity_therapy_monitor.js?v=7" defer></script>
 <script src="hypertension_therapy.js?v=4" defer></script>
 <script src="thyroid_cancer_kids.js?v=4" defer></script>
 
