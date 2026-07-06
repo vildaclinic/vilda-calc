@@ -158,7 +158,7 @@ html.vilda-pro-active .pro-sync-note {
 <script defer src="vilda_realtime.js?v=6"></script>
 <script defer src="qrcode.min.js?v=1"></script>
 <script defer src="obesity_response_criteria.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=333"></script>
+<script defer src="vilda_auth_ui.js?v=334"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -638,14 +638,14 @@ html.vilda-pro-active .pro-sync-note {
                   <!-- Import kopii pacjentów (przeniesione z ekranu Pacjenci → tutaj) -->
                   <div class="settings-control-card settings-control-card--wide" id="importPatientsCard">
                     <div class="settings-control-header">
-                      <h3 class="settings-control-title">Importuj kopie pacjentów</h3>
+                      <h3 class="settings-control-title">Importuj kopie i pojedynczych pacjentów</h3>
                     </div>
                     <p class="settings-control-desc">
-                      Wczytaj pliki kopii pacjentów (.wiw) i zaimportuj wybrane konta do swojego sejfu. Pliki ze starego konta wymagają hasła, którym je zaszyfrowano. Import scala dane lokalnie — zero-knowledge (nic nie idzie na serwer).
+                      Wczytaj pliki kopii całego konta (.wiw) lub pojedynczych pacjentów zapisanych do pliku (.json) i zaimportuj wybrane do swojego sejfu. Pliki .wiw ze starego konta wymagają hasła, którym je zaszyfrowano — pliki .json pojedynczych pacjentów nie wymagają hasła. Import scala dane lokalnie — zero-knowledge (nic nie idzie na serwer).
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <button type="button" id="importPatientsBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn">
-                        Importuj kopie pacjentów
+                        Importuj pacjentów
                       </button>
                     </div>
                   </div>
