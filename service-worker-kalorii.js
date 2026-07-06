@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.518';
+const SW_VERSION = '1.0.520';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -223,6 +223,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=17',
   '/vilda_persistence_adapter.js?v=18',
   '/vilda_persistence_adapter.js?v=19',
+  '/vilda_persistence_adapter.js?v=20',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -919,6 +920,7 @@ const CORE_SHELL_URLS = [
   '/vilda_data_import_export.js?v=35',
   '/vilda_data_import_export.js?v=36',
   '/vilda_data_import_export.js?v=37',
+  '/vilda_data_import_export.js?v=38',
   '/vilda_advanced_growth.js',
   '/vilda_advanced_growth.js?v=16',
   '/vilda_advanced_growth.js?v=17',
@@ -1158,6 +1160,10 @@ const OPTIONAL_ASSETS = [
   '/flu_therapy.js?v=5',
   '/bisphos_therapy.js',
   '/bisphos_therapy.js?v=4',
+  '/bisphos_therapy.js?v=5',
+  '/bisphos_therapy.js?v=6',
+  '/bisphos_therapy_monitor.js',
+  '/bisphos_therapy_monitor.js?v=1',
   '/thyroid_cancer_kids.js',
   '/thyroid_cancer_kids.js?v=4',
   '/hypertension_therapy.js',

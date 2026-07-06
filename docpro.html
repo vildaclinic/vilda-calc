@@ -181,7 +181,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=19"></script>
+<script defer src="vilda_persistence_adapter.js?v=20"></script>
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
@@ -208,7 +208,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=37"></script>
+<script defer src="vilda_data_import_export.js?v=38"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
 <script defer src="vilda_advanced_growth.js?v=17"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
@@ -3100,6 +3100,21 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        kalkulatora Z‑score został przesunięty poniżej tej karty. -->
   <div id="bisphosCard" class="card" style="display:none;">
     <h2 style="text-align:center;">Leczenie bisfosfonianami</h2>
+    <!-- Zakładki (2026-07-06) — wzorzec #obesityCard/#ghIgfTherapyCard: 💊 Leczenie / 📈 Monitorowanie.
+         Monitor punktów terapii + trend parametrów kostnych żyje w panelu #bisphosTabMonPanel
+         (buduje go bisphos_therapy_monitor.js). !important — motyw liquid glass nadpisuje <button>. -->
+    <style>
+      #bisphosCard .bp-tabs{display:flex!important;gap:6px!important;background:#eef4f3!important;border-radius:13px!important;padding:4px!important;margin:14px 0 16px!important;box-shadow:none!important}
+      #bisphosCard button.bp-tab{flex:1 1 0!important;width:0!important;min-width:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:0!important;border-radius:10px!important;padding:10px 8px!important;margin:0!important;font-family:inherit!important;font-size:.9rem!important;font-weight:700!important;color:#33464e!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;min-height:0!important;height:auto!important;text-transform:none!important;letter-spacing:normal!important}
+      #bisphosCard button.bp-tab.on{background:#fff!important;color:#00838d!important;box-shadow:0 2px 8px rgba(14,42,48,.08)!important}
+      #bisphosCard .bp-tab-n{font-size:.68rem;font-weight:800;background:#00838d;color:#fff;border-radius:999px;padding:1px 7px;line-height:1.4}
+      @media(max-width:560px){ #bisphosCard button.bp-tab{font-size:.8rem!important;padding:9px 5px!important} }
+    </style>
+    <div class="bp-tabs" role="tablist">
+      <button type="button" id="bisphosTabRecBtn" class="bp-tab on" role="tab" aria-selected="true">💊 Leczenie</button>
+      <button type="button" id="bisphosTabMonBtn" class="bp-tab" role="tab" aria-selected="false">📈 Monitorowanie <span id="bisphosTabMonCount" class="bp-tab-n">0</span></button>
+    </div>
+    <div id="bisphosTabRecPanel" role="tabpanel">
     <p style="text-align:center; font-size:0.9rem; margin-top:0.4rem;">Wprowadź wagę w sekcji „Dane użytkownika”, a następnie wybierz poniższe parametry, aby obliczyć dawkę bisfosfonianu.</p>
     <div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;margin-top:0.8rem;">
       <!-- Dodajemy pole wyboru wskazania, aby lekarz mógł określić powód leczenia.
@@ -3132,6 +3147,87 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     </div>
     <!-- Wyniki bisfosfonianów wyświetlane są wyrównane do lewej. -->
     <div id="bisphosResult" class="result-box" style="margin-top:1rem; font-size:1.2rem; text-align:left;"></div>
+    </div><!-- /bisphosTabRecPanel -->
+
+    <!-- ═══ Zakładka Monitorowanie — punkty terapii + trend parametrów kostnych.
+         Logika: bisphos_therapy_monitor.js. Punkty zapisują się z pacjentem. ═══ -->
+    <div id="bisphosTabMonPanel" role="tabpanel" style="display:none;">
+      <div id="bisphosMonitorSection">
+        <style>
+          #bisphosMonitorSection .bpm-fgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+          @media(max-width:560px){#bisphosMonitorSection .bpm-fgrid{grid-template-columns:repeat(2,1fr)}}
+          #bisphosMonitorSection .bpm-fgrid label{font-size:.72rem;color:#5a7274;display:flex;flex-direction:column;gap:3px}
+          #bisphosMonitorSection .bpm-fgrid input,#bisphosMonitorSection .bpm-fgrid select{padding:7px 9px;border:1px solid #9FE1CB;border-radius:8px;font-size:.9rem;font-family:inherit;background:#fff}
+          #bisphosMonitorSection .bpm-sub{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#00838d;margin:14px 0 6px}
+          #bisphosMonitorSection .bpm-visit{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+          #bisphosMonitorSection .bpm-visit button{flex:1;min-width:150px}
+          #bisphosMonitorSection table{border-collapse:collapse;width:100%;font-size:.82rem;min-width:640px}
+          #bisphosMonitorSection th,#bisphosMonitorSection td{padding:8px 9px;text-align:center;border-bottom:1px solid #e0eef0;white-space:nowrap}
+          #bisphosMonitorSection th{font-size:.66rem;text-transform:uppercase;letter-spacing:.03em;color:#fff !important;font-weight:800;background:#00838d}
+          #bisphosMonitorSection thead th:first-child{border-top-left-radius:8px}
+          #bisphosMonitorSection thead th:last-child{border-top-right-radius:8px}
+          #bisphosMonitorSection td.bpm-l,#bisphosMonitorSection th.bpm-l{text-align:left}
+          #bisphosMonitorSection .bpm-badge{font-size:.64rem;font-weight:800;border-radius:999px;padding:2px 8px}
+          #bisphosMonitorSection .bpm-badge.s{background:#00838d;color:#fff}
+          #bisphosMonitorSection .bpm-badge.c{background:#CDEFE3;color:#0b5443}
+          #bisphosMonitorSection .bpm-badge.e{background:#eceff1;color:#555}
+          #bisphosMonitorSection .bpm-good{color:#1a8f5c;font-weight:800}
+          #bisphosMonitorSection .bpm-bad{color:#c0453b;font-weight:800}
+          #bisphosMonitorSection .bpm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}
+          #bisphosMonitorSection .bpm-empty{text-align:center;color:#5a7274;font-size:.85rem;padding:16px;border:1px dashed #e0eef0;border-radius:10px}
+          #bisphosMonitorSection .bpm-bone-h{margin:20px 0 6px;font-size:.9rem;font-weight:800;color:#153b34}
+        </style>
+        <p style="text-align:center;font-size:.82rem;color:#5a7274;margin:0 0 .8rem;">Dodawaj punkty terapii (Włączenie / Kontynuacja / Zakończenie). Skumulowaną dawkę roczną liczymy z dat; parametry kostne (DXA/klinika) wpisujesz opcjonalnie per wizyta. Punkty zapisują się z pacjentem.</p>
+
+        <div class="bpm-fgrid">
+          <label>Data wizyty<input id="bisphosMonDate" type="date"></label>
+          <label>Wiek (lata)<input id="bisphosMonAge" inputmode="numeric" placeholder="np. 9"></label>
+          <label>Wiek — mies.<input id="bisphosMonAgeMonths" inputmode="numeric" placeholder="0–11"></label>
+          <label>Masa (kg)<input id="bisphosMonWeight" inputmode="decimal" placeholder="np. 24"></label>
+          <label>Wskazanie<select id="bisphosMonIndication"><option value="oi">OI</option><option value="osteoporoza">Osteoporoza</option><option value="crmo">CRMO</option></select></label>
+          <label>Preparat<select id="bisphosMonDrug"><option value="">– wybierz –</option><option value="pamifos">Pamifos (pamidronian)</option><option value="zomikos">Zomikos (zoledronian)</option></select></label>
+          <label>Dawka (mg/kg)<input id="bisphosMonDose" inputmode="decimal" placeholder="np. 1,0"></label>
+          <label>Dni w cyklu<input id="bisphosMonCycleDays" inputmode="numeric" placeholder="pami 3 / zoled 1"></label>
+          <label>Wlew (min)<input id="bisphosMonInfusion" inputmode="numeric" placeholder="np. 180"></label>
+        </div>
+        <div class="bpm-sub">Parametry kostne (opcjonalnie — DXA/klinika)</div>
+        <div class="bpm-fgrid">
+          <label>LS aBMD Z-score<input id="bisphosMonLsZ" inputmode="decimal" placeholder="np. −2,4"></label>
+          <label>TBLH Z-score<input id="bisphosMonTblhZ" inputmode="decimal" placeholder="np. −2,1"></label>
+          <label>Złamania od ost. wizyty<input id="bisphosMonFractures" inputmode="numeric" placeholder="np. 0"></label>
+          <label>Wzrost-SDS<input id="bisphosMonHeightSds" inputmode="decimal" placeholder="np. −2,6"></label>
+          <label>Ból VAS (0–10)<input id="bisphosMonVas" inputmode="numeric" placeholder="0–10"></label>
+        </div>
+        <div style="font-size:.75rem;color:#5a7274;margin-top:10px;">Rodzaj wizyty:</div>
+        <div class="bpm-visit">
+          <button type="button" class="igf-btn" onclick="window.bisphosAddTherapyPoint && window.bisphosAddTherapyPoint('start')">Włączenie leczenia</button>
+          <button type="button" class="igf-btn" onclick="window.bisphosAddTherapyPoint && window.bisphosAddTherapyPoint('continue')">Kontynuacja leczenia</button>
+          <button type="button" class="igf-btn" onclick="window.bisphosAddTherapyPoint && window.bisphosAddTherapyPoint('end')">Zakończenie leczenia</button>
+        </div>
+
+        <h4 style="margin:1rem 0 0.4rem;">Punkty terapii (<span id="bisphosTherapyCount">0</span>)</h4>
+        <div id="bisphosTherapyEmpty" class="bpm-empty">Brak punktów. Dodaj „Włączenie leczenia" — to baseline dla skumulowanej dawki i trendu.</div>
+        <div id="bisphosTherapyTableWrap" style="display:none;overflow-x:auto;">
+          <table>
+            <thead><tr>
+              <th class="bpm-l">Rodzaj</th><th>Data</th><th>Wiek</th><th>Wskazanie</th><th>Preparat</th><th>Dawka</th><th>Wlew</th><th>Skum. roczna</th><th>Usuń</th>
+            </tr></thead>
+            <tbody id="bisphosTherapyTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="bpm-bone-h">🦴 Parametry kostne — trend (DXA co 6–12 mies.)</div>
+        <div id="bisphosBoneEmpty" class="bpm-empty">Brak wpisów DXA/klinicznych. Uzupełnij pola „Parametry kostne" przy dodawaniu punktu, aby zbudować trend.</div>
+        <div id="bisphosBoneTableWrap" style="display:none;overflow-x:auto;">
+          <table>
+            <thead><tr>
+              <th class="bpm-l">Data / wiek</th><th>LS aBMD Z</th><th>TBLH Z</th><th>Δ od włączenia</th><th>Złamania</th><th>Wzrost-SDS</th><th>Ból VAS</th>
+            </tr></thead>
+            <tbody id="bisphosBoneTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /bisphosTabMonPanel -->
   </div>
   <!-- Nowy przycisk do otwierania kalkulatora Z‑score w trybie profesjonalnym -->
   <div id="zscoreButtonWrapper" class="module-btn-wrapper" style="display:none;">
@@ -3719,7 +3815,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
          Ładowany po głównym pliku app.js i modułach GH/IGF, aby skorzystać z już zainicjowanych 
          elementów DOM oraz funkcji (np. pobierania masy ciała). Skrypt ten oblicza dawki 
          pamidronianu i zoledronianu na podstawie wagi dziecka oraz wybranych parametrów terapii. -->
-    <script src="bisphos_therapy.js?v=4" defer></script>
+    <script src="bisphos_therapy.js?v=6" defer></script>
+    <script src="bisphos_therapy_monitor.js?v=1" defer></script>
     <script src="sga_intergrowth_data.js" defer></script>
     <script src="sga_malewski_data.js" defer></script>
     <script src="sga_birth_module.js?v=9" defer></script>
