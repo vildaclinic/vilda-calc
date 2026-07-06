@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.516';
+const SW_VERSION = '1.0.517';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -917,6 +917,7 @@ const CORE_SHELL_URLS = [
   '/vilda_data_import_export.js?v=34',
   '/vilda_data_import_export.js?v=35',
   '/vilda_data_import_export.js?v=36',
+  '/vilda_data_import_export.js?v=37',
   '/vilda_advanced_growth.js',
   '/vilda_advanced_growth.js?v=16',
   '/vilda_advanced_growth.js?v=17',
@@ -1020,6 +1021,7 @@ const CORE_SHELL_URLS = [
   '/gh_igf_therapy.js?v=18',
   '/gh_igf_therapy.js?v=19',
   '/gh_igf_therapy.js?v=20',
+  '/gh_igf_therapy.js?v=21',
   '/antibiotic_therapy.js',
   '/antibiotic_therapy.js?v=10',
   '/userData.js',
@@ -1150,6 +1152,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=23',
   '/gh_therapy_monitor.js?v=24',
   '/gh_therapy_monitor.js?v=25',
+  '/gh_therapy_monitor.js?v=26',
   '/flu_therapy.js',
   '/flu_therapy.js?v=5',
   '/bisphos_therapy.js',
@@ -1188,6 +1191,7 @@ const OPTIONAL_ASSETS = [
   '/sga_birth_module.js?v=9',
   '/docpro_state_persist.js',
   '/docpro_state_persist.js?v=4',
+  '/docpro_state_persist.js?v=5',
   '/lab_units_data.js',
   '/lab_units_data.js?v=1',
   '/lab_units_data.js?v=35',
