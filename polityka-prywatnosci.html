@@ -290,9 +290,12 @@
               </tr>
               <tr>
                 <td><strong>IndexedDB</strong> — cache trybu chmurowego (baza <code>vilda-cloud-cache</code>)</td>
-                <td>Zaszyfrowana kopia danych pacjentów (<strong>wyłącznie szyfrogram</strong>)
-                  na zaufanym urządzeniu w trybie chmurowym — umożliwia pracę offline i natychmiastowy
-                  start bez ponownego pobierania z chmury; osobny, odizolowany wpis dla każdego konta</td>
+                <td>Lokalna kopia danych pacjentów na zaufanym urządzeniu (tryb chmurowy) —
+                  umożliwia pracę offline i natychmiastowy start. Tożsamość pacjenta (imię, data
+                  urodzenia), pomiary i treść notatek są <strong>zaszyfrowane</strong> (AES-GCM-256);
+                  metadane organizacyjne (kategoria/termin wizyty, nazwa leku, procedura) są
+                  pseudonimizowane — powiązane z losowym identyfikatorem, nie z nazwiskiem. Osobny
+                  wpis dla każdego konta</td>
                 <td>Po wylogowaniu („Wyloguj się"), usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
               </tr>
             </tbody>
@@ -311,20 +314,23 @@
             i nigdy nie opuszcza urządzenia ani synchronizowanej kopii zaszyfrowanej.
           </p>
           <p>
-            <strong>Tryb chmurowy — zaszyfrowany cache na zaufanym urządzeniu:</strong> jeżeli
-            użytkownik (lekarz) korzysta z konta w trybie chmurowym, aplikacja może przechowywać na
-            urządzeniu <strong>zaszyfrowaną</strong> lokalną kopię danych pacjentów (baza
-            <code>vilda-cloud-cache</code>). Na dysku znajduje się <strong>wyłącznie szyfrogram</strong>
-            (AES-GCM-256) — te same zaszyfrowane rekordy, które przechowuje serwer synchronizacji;
-            administrator nie ma technicznej możliwości ich odczytu. <strong>Klucz szyfrowania nigdy
-            nie jest zapisywany na urządzeniu</strong> — jest wyprowadzany z hasła lub Touch-ID
-            (PBKDF2-SHA256, 600 000 iteracji) i istnieje wyłącznie w pamięci podczas odblokowanej sesji.
-            Cache jest odizolowany osobno dla każdego konta. Kopia zostaje <strong>automatycznie i trwale
-            usunięta</strong> przy wylogowaniu („Wyloguj się") oraz przy usunięciu konta; przetrwa
-            natomiast samo zablokowanie po bezczynności i zamknięcie aplikacji — co pozwala na szybkie,
-            offline'owe wznowienie pracy po ponownym podaniu hasła lub Touch-ID. Mechanizm jest
-            przeznaczony dla urządzeń własnych — na sprzęcie współdzielonym zalecane jest wylogowanie
-            po zakończeniu pracy.
+            <strong>Tryb chmurowy — lokalny cache na zaufanym urządzeniu:</strong> jeżeli użytkownik
+            (lekarz) korzysta z konta w trybie chmurowym, aplikacja może przechowywać na urządzeniu
+            lokalną kopię danych pacjentów (baza <code>vilda-cloud-cache</code>), aby działać offline
+            i startować natychmiast. <strong>Dane identyfikujące pacjenta (imię, data urodzenia),
+            wszystkie pomiary oraz treść notatek są zaszyfrowane</strong> algorytmem AES-GCM-256.
+            Metadane organizacyjne notatek i wizyt (kategoria, terminy, nazwa i dawka leku, typ
+            procedury) są przechowywane w postaci <strong>pseudonimizowanej</strong> — powiązane
+            wyłącznie z losowym identyfikatorem rekordu, nie z danymi osobowymi pacjenta. <strong>Klucz
+            szyfrowania nigdy nie jest zapisywany na urządzeniu</strong> — jest wyprowadzany z hasła
+            lub Touch-ID (PBKDF2-SHA256, 600 000 iteracji) i istnieje wyłącznie w pamięci podczas
+            odblokowanej sesji. Do serwera synchronizacji dane wysyłane są w postaci <strong>w całości
+            zaszyfrowanej</strong> — administrator nie ma technicznej możliwości ich odczytu. Cache jest
+            odizolowany osobno dla każdego konta i zostaje <strong>automatycznie usunięty</strong> przy
+            wylogowaniu („Wyloguj się") oraz przy usunięciu konta; przetrwa natomiast zablokowanie po
+            bezczynności i zamknięcie aplikacji — co pozwala na szybkie, offline'owe wznowienie pracy
+            po ponownym podaniu hasła lub Touch-ID. Mechanizm jest przeznaczony dla urządzeń własnych —
+            na sprzęcie współdzielonym zalecane jest wylogowanie po zakończeniu pracy.
           </p>
 
           <h2>4. Google Analytics 4 (analityka)</h2>
