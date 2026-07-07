@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.521';
+const SW_VERSION = '1.0.533';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -352,6 +352,10 @@ const CORE_SHELL_URLS = [
   '/vilda_vault.js?v=133',
   '/vilda_vault.js?v=134',
   '/vilda_vault.js?v=135',
+  '/vilda_vault.js?v=136',
+  '/vilda_vault.js?v=137',
+  '/vilda_vault.js?v=138',
+  '/vilda_vault.js?v=139',
   '/vilda_auth_ui.js',
   '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
@@ -612,6 +616,8 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=334',
   '/vilda_auth_ui.js?v=335',
   '/vilda_auth_ui.js?v=336',
+  '/vilda_auth_ui.js?v=337',
+  '/vilda_auth_ui.js?v=338',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
@@ -921,6 +927,7 @@ const CORE_SHELL_URLS = [
   '/vilda_data_import_export.js?v=36',
   '/vilda_data_import_export.js?v=37',
   '/vilda_data_import_export.js?v=38',
+  '/vilda_data_import_export.js?v=39',
   '/vilda_advanced_growth.js',
   '/vilda_advanced_growth.js?v=16',
   '/vilda_advanced_growth.js?v=17',
@@ -983,6 +990,7 @@ const CORE_SHELL_URLS = [
   '/app.js?v=182',
   '/app.js?v=183',
   '/app.js?v=184',
+  '/app.js?v=185',
   '/vilda_terms_gate.js?v=1',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',
@@ -1025,6 +1033,7 @@ const CORE_SHELL_URLS = [
   '/gh_igf_therapy.js?v=19',
   '/gh_igf_therapy.js?v=20',
   '/gh_igf_therapy.js?v=21',
+  '/gh_igf_therapy.js?v=22',
   '/antibiotic_therapy.js',
   '/antibiotic_therapy.js?v=10',
   '/userData.js',
@@ -1095,6 +1104,7 @@ const CORE_SHELL_URLS = [
   '/custom-fixes.js?v=47',
   '/custom-fixes.js?v=48',
   '/custom-fixes.js?v=49',
+  '/custom-fixes.js?v=50',
   '/reposition.js',
   '/reposition.js?v=5',
   '/growth-basic-module.js?v=8',
@@ -1157,6 +1167,9 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=25',
   '/gh_therapy_monitor.js?v=26',
   '/gh_therapy_monitor.js?v=27',
+  '/gh_therapy_monitor.js?v=28',
+  '/gh_therapy_monitor.js?v=29',
+  '/gh_therapy_monitor.js?v=30',
   '/flu_therapy.js',
   '/flu_therapy.js?v=5',
   '/bisphos_therapy.js',
