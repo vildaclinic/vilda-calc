@@ -87,10 +87,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=18" rel="stylesheet">
-<link href="style.css?v=54" rel="stylesheet">
+<link href="style.css?v=57" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
-<link href="vilda_chrome.css?v=22" rel="stylesheet">
-<link href="vilda_auth_ui.css?v=57" rel="stylesheet">
+<link href="vilda_chrome.css?v=35" rel="stylesheet">
+<link href="vilda_auth_ui.css?v=58" rel="stylesheet">
 <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet">
 <link href="vilda_obesity_banner.css?v=3" rel="stylesheet">
 
@@ -230,22 +230,24 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=18"></script>
+<script defer src="vilda_persistence_adapter.js?v=20"></script>
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
-<script defer src="vilda_vault.js?v=120"></script>
+<script defer src="vilda_vault.js?v=135"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
-<script defer src="vilda_sync.js?v=17"></script>
-<script defer src="vilda_sync_integration.js?v=26"></script>
-<script defer src="vilda_realtime.js?v=5"></script>
-<script defer src="vilda_auth_ui.js?v=277"></script>
+<script defer src="vilda_sync.js?v=19"></script>
+<script defer src="vilda_sync_integration.js?v=33"></script>
+<script defer src="vilda_realtime.js?v=6"></script>
+<script defer src="qrcode.min.js?v=1"></script>
+<script defer src="obesity_response_criteria.js?v=1"></script>
+<script defer src="vilda_auth_ui.js?v=336"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script defer src="vilda_pro_access.js?v=9"></script>
 <script defer src="vilda_pro_ui.js?v=2"></script>
-<script defer src="vilda_file_export.js?v=5"></script>
+<script defer src="vilda_file_export.js?v=7"></script>
 <script defer src="vilda_deps.js?v=91"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
@@ -255,7 +257,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=31"></script>
+<script defer src="vilda_data_import_export.js?v=38"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
 <script defer src="vilda_advanced_growth.js?v=17"></script>
 <!-- PERF-P2e2 (2026-06-07): przelicznik jednostek laboratoryjnych — dane (212 KB)
@@ -296,7 +298,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_epicrisis.js?v=10"></script>
 <script defer src="vilda_epicrisis_ui.js?v=8"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=63" defer></script>
+<script src="vilda_update_prep.js?v=65" defer></script>
 
 <script defer src="inline_index_01.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -388,12 +390,12 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         ]
       }
       </script>
-<script defer src="vilda_chrome.js?v=56"></script>
+<script defer src="vilda_chrome.js?v=65"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
-     ios26-ui.js?v=37 dołączy klasę dynamicznie. -->
+     ios26-ui.js?v=40 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
 
 <header>
@@ -611,6 +613,10 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 
       <!-- Sekcja testów stymulacyjnych GH została przeniesiona poza moduł profesjonalny. -->
     </div>
+    <!-- Faza 2: kompaktowa karta „Przypomnienia" (tylko PRO) — wypełniacz prawej kolumny
+         w miejsce #errorBox. Montaż, treść i widoczność: vilda_auth_ui.js (syncRemindersInline);
+         chowa się gdy pojawi się „Podsumowanie wyników". Domyślnie ukryta. -->
+    <div id="remindersInline" class="vild-rem-inline" style="display:none;"></div>
     <!-- Komunikaty po prawej stronie: błąd braku danych oraz instrukcja zapisu/wczytania
          Przenosimy komunikat „Podaj jednocześnie wiek, wagę i wzrost” do prawej kolumny formularza
          oraz umieszczamy pod nim informację o konieczności podania imienia i zapisania danych,
@@ -1105,7 +1111,6 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
       </div>
     </div><!-- /#leftColumnWrap -->
 
-
   <!-- Kontener grupujący kartę Wskaźnika Cole'a i drogę do normy BMI -->
     <!-- Prawa kolumna: kontener z kartami WFL, Cole'a, WHR, itp. Pozostaje
          niezmieniona. -->
@@ -1350,7 +1355,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=54, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=57, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->
@@ -1536,124 +1541,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
   <!-- karta dla dzieci <5 lat z nadwagą/otyłością – komunikat o konsultacji -->
   <div id="childConsultCard" class="plan-card" style="display:none;"></div>
   <!-- koniec Plan odchudzania -->
-  <!--
-    Nowy blok źródeł i zastrzeżeń (2025‑07‑24)
-    Ten fieldset jest domyślnie ukryty i pojawia się dopiero po wykonaniu obliczeń.
-    Umieszczamy go wewnątrz kontenera, aby zachować spójny układ z innymi kartami.
-  -->
-  <fieldset id="sourceFieldset" style="display:none;">
-    <legend>O aplikacji: źródła, metodologia i zastrzeżenia</legend>
-
-    <div class="source-panel source-panel--warning">
-      <div class="source-panel__heading">
-        <span class="source-panel__icon" data-lucide="triangle-alert"></span>
-        <strong>Przeznaczenie i zastrzeżenia</strong>
-      </div>
-      <p>
-        <strong>Waga i wzrost</strong> to narzędzie o charakterze informacyjnym i edukacyjnym.
-        Algorytmy aplikacji dostosowują obliczenia do wprowadzonych danych — wieku, wzrostu, masy ciała i płci —
-        jednak wyniki kalkulatorów, modułów i analiz nie stanowią oceny klinicznej i nie zastępują
-        profesjonalnej konsultacji medycznej. Wyniki <strong>nie stanowią rozpoznania</strong>,
-        <strong>nie są zaleceniem terapeutycznym</strong> ani <strong>planem leczenia</strong>.
-        W razie wątpliwości zdrowotnych należy skonsultować się z lekarzem lub innym odpowiednim specjalistą.
-      </p>
-    </div>
-
-    <div class="source-panel source-panel--pro">
-      <div class="source-panel__heading">
-        <span class="source-panel__icon" data-lucide="stethoscope"></span>
-        <strong>Moduł Profesjonalny (DocPro) — wyłącznie dla lekarzy</strong>
-      </div>
-      <p>
-        Moduł Profesjonalny jest przeznaczony wyłącznie dla lekarzy. Zawiera m.in. farmakologiczne kalkulatory
-        testowych dawek leków, obliczenia kliniczne i zestawienia dopasowane do danych pacjenta.
-        Korzystanie z tego modułu wymaga wykształcenia medycznego oraz umiejętności samodzielnej interpretacji wyników.
-      </p>
-      <ul>
-        <li>Wyniki modułów specjalistycznych mają charakter obliczeniowy i pomocniczy — nie stanowią gotowych zleceń ani rekomendacji klinicznych.</li>
-        <li>Wszystkie obliczenia wymagają weryfikacji z aktualną literaturą medyczną, Charakterystyką Produktu Leczniczego (ChPL) oraz obowiązującymi standardami klinicznymi.</li>
-        <li>Dawki obliczone przez aplikację nie uwzględniają wszystkich indywidualnych czynników klinicznych — ostateczna decyzja terapeutyczna należy zawsze do lekarza prowadzącego.</li>
-        <li>Moduł może być stosowany wyłącznie przez osoby z wykształceniem medycznym zdolne do samodzielnej interpretacji wyników.</li>
-      </ul>
-    </div>
-
-    <div class="source-toggle-wrap">
-      <button type="button" id="toggleSources" aria-expanded="false">Źródła</button>
-    </div>
-    <ol id="sourceList" style="display:none;padding-left:1.25rem;margin-top:0.5rem;">
-      <li>Chen LM, Chen YC, Hsiao HP, Chen BH, Chao MC. Role of thyrotropin‑releasing hormone test in re‑evaluation of congenital hypothyroidism. <em>Kaohsiung J Med Sci.</em> 2014 Aug;30(8):383‑9. doi: 10.1016/j.kjms.2014.04.005. Epub 2014 May 28. PMID: 25002375; PMCID: PMC11916237.</li>
-      <li>Fröhlich E, Wahl R. The forgotten effects of thyrotropin‑releasing hormone: Metabolic functions and medical applications. <em>Front Neuroendocrinol.</em> 2019 Jan;52:29‑43. doi: 10.1016/j.yfrne.2018.06.006. Epub 2018 Jun 22. PMID: 29935915.</li>
-      <li>PETER J. SNYDER, ROBERT D. UTIGER. Response to Thyrotropin Releasing Hormone (TRH) in Normal Man. <em>The Journal of Clinical Endocrinology &amp; Metabolism.</em> 1972 Feb;34(2):380–385. doi: 10.1210/jcem-34-2-380.</li>
-      <li>Özsu E, Şıklar Z, Bilici E, Ceran A, Uyanık R, Çetin T, Aycan Z, Berberoğlu M. Intramuscular Short‑term ACTH Test for the Determination of Adrenal Function in Children: Safe, Effective and Reliable. <em>J Clin Res Pediatr Endocrinol.</em> 2020 Sep 2;12(3):241‑247. doi: 10.4274/jcrpe.galenos.2019.2019.0099. Epub 2019 Dec 17. PMID: 31842523; PMCID: PMC7499132.</li>
-      <li>Gutierrez CE, De Beritto T. Relative Adrenal Insufficiency in the Preterm Infant. <em>Neoreviews.</em> 2022 May 1;23(5):e328‑e334. doi: 10.1542/neo.23-5-e328. PMID: 35490186.</li>
-      <li>Buonocore F, McGlacken‑Byrne SM, Del Valle I, Achermann JC. Current Insights Into Adrenal Insufficiency in the Newborn and Young Infant. <em>Front Pediatr.</em> 2020 Dec 14;8:619041. doi: 10.3389/fped.2020.619041. PMID: 33381483; PMCID: PMC7767829.</li>
-      <li>Pyrżak B, Walczak M, red. <em>Endokrynologia wieku rozwojowego.</em> Wyd. 2. Warszawa: PZWL Wydawnictwo Lekarskie; 2023.</li>
-      <li>Dudek A, Niedziela M. Test z insuliną, z glukagonem oraz z argininą/insuliną na wydzielanie hormonu wzrostu – wykonanie testów i ich interpretacja. <em>Endokrynol. Ped.</em> 2009;9(Suppl 1):40–44.</li>
-      <li>Ginalska‑Malinowska M, Malinowska A. Test z argininą, z klonidyną oraz z L‑Dopa na wydzielanie hormonu wzrostu (GH) – wykonanie testów i ich interpretacja. <em>Endokrynol. Ped.</em> 2009;9(Suppl 1):23–28.</li>
-      <li>Kułaga Z, Litwin M, Tkaczyk M, Palczewska I, Zajączkowska M, Zwolińska D, Krynicki T, Wasilewska A, Moczulska A, Morawiec-Knysak A, Barwicka K, Grajda A, Gurzkowska B, Napieralska E, Pan H. Polish 2010 growth references for school‑aged children and adolescents. <em>Eur J Pediatr.</em> 2011 May;170(5):599‑609. doi: 10.1007/s00431-010-1329-x. Epub 2010 Oct 23. PMID: 20972688; PMCID: PMC3078309.</li>
-      <li>WHO Multicentre Growth Reference Study Group. <em>WHO Child Growth Standards based on length/height, weight and age.</em> <em>Acta Paediatr Suppl.</em> 2006 Apr;450:76‑85. doi: 10.1111/j.1651-2227.2006.tb02378.x. PMID: 16817681.</li>
-      <li>Kułaga Z, Grajda A, Gurzkowska B, Góźdź M, Wojtyło M, Swiąder A, Różdżyńska‑Świątkowska A, Litwin M. Polish 2012 growth references for preschool children. <em>Eur J Pediatr.</em> 2013 Jun;172(6):753‑61. doi: 10.1007/s00431-013-1954-2. Epub 2013 Feb 1. PMID: 23371392; PMCID: PMC3663205.</li>
-      <li>Bloem M. The 2006 WHO child growth standards. <em>BMJ.</em> 2007 Apr 7;334(7596):705‑6. doi: 10.1136/bmj.39155.658843.BE. PMID: 17413142; PMCID: PMC1847861.</li>
-      <li>Boguszewski MCS. Growth hormone deficiency and replacement in children. <em>Rev Endocr Metab Disord.</em> 2021 Mar;22(1):101‑108. doi: 10.1007/s11154-020-09604-2. Epub 2020 Oct 8. PMID: 33029711.</li>
-      <li><strong>Moduł predykcji wzrostu ostatecznego (wiek kostny, Bayley-Pinneau, RWT, profile KOWD-like):</strong>
-        <ul style="margin-top:0.35rem;margin-bottom:0.1rem;padding-left:1.25rem;">
-          <li>Bayley&nbsp;N, Pinneau&nbsp;SR. Tables for predicting adult height from skeletal age: revised for use with the Greulich-Pyle hand standards. <em>J&nbsp;Pediatr.</em>&nbsp;1952;40(4):423‑441. [oryginalne tabele Bayley-Pinneau oraz tabele błędu predykcji]</li>
-          <li>Greulich&nbsp;WW, Pyle&nbsp;SI. <em>Radiographic Atlas of Skeletal Development of the Hand and Wrist.</em> 2nd&nbsp;ed. Stanford: Stanford University Press; 1959.</li>
-          <li>Roche&nbsp;AF, Wainer&nbsp;H, Thissen&nbsp;D. The RWT Method for the Prediction of Adult Stature. <em>Pediatrics.</em>&nbsp;1975;56(6):1026‑1033.</li>
-          <li>Thodberg&nbsp;HH, Juul&nbsp;A, Lomholt&nbsp;J, Martin&nbsp;DD, Jenni&nbsp;OG, Caflisch&nbsp;J, Ranke&nbsp;MB, Molinari&nbsp;L, Kreiborg&nbsp;S. Adult Height Prediction Models. W:&nbsp;<em>Handbook of Growth and Growth Monitoring in Health and Disease.</em> Springer; 2009.</li>
-          <li>Krajewska-Siuda&nbsp;E, Małecka-Tendera&nbsp;E, Krajewski-Siuda&nbsp;K. Ocena metod prognozowania wzrostu ostatecznego u chłopców z konstytucjonalnym opóźnieniem wzrastania i dojrzewania / Critical evaluation of adult height prediction methods in boys with constitutional delay of growth and puberty. <em>Endokrynol.&nbsp;Ped.</em>&nbsp;2005;4(3):39‑44.</li>
-          <li>Reinehr&nbsp;T, Hoffmann&nbsp;E, Rothermel&nbsp;J, Lehrian&nbsp;TJ, Brämswig&nbsp;J, Binder&nbsp;G. A New Model of Adult Height Prediction Validated in Boys with Constitutional Delay of Growth and Puberty. <em>Horm&nbsp;Res&nbsp;Paediatr.</em>&nbsp;2019;91:186‑194. doi:&nbsp;10.1159/000499712.</li>
-          <li>Akın Kağızmanlı&nbsp;G, Özalp Kızılay&nbsp;D, Deveci Sevim&nbsp;R, Yüksek Acinikli&nbsp;K, Mete Kalaycı&nbsp;F, Tekneci&nbsp;A, Demir&nbsp;K, Böber&nbsp;E, Anık&nbsp;A, Özen&nbsp;S, Abacı&nbsp;A. What is the Most Effective Method for Predicting Adult Height in Boys with Constitutional Delay of Growth and Puberty? <em>J&nbsp;Clin&nbsp;Res&nbsp;Pediatr&nbsp;Endocrinol.</em>&nbsp;2025. doi:&nbsp;10.4274/jcrpe.galenos.2025.2024-11-6.</li>
-        </ul>
-      </li>
-      <li>Moduł tętna i liczby oddechów: Fleming&nbsp;S. i&nbsp;wsp. (2011); Bonafide&nbsp;CP i&nbsp;wsp. (2013); Daymont&nbsp;C. i&nbsp;wsp. (2015); Nijman&nbsp;RG i&nbsp;wsp. (2012); Herbert i&nbsp;wsp. (2020) &mdash; źródła siatek centylowych oraz korekt temperatury i snu/czuwania wykorzystanych w modułach tętna, oddechów i interpretacji RR.</li>
-      <li>Moduł obwodu głowy i klatki piersiowej: siatki Instytutu Matki i Dziecka (Palczewska i Niedźwiecka) dla obwodu głowy i klatki piersiowej; dla obwodu głowy u noworodków i dzieci w 1. miesiącu życia — INTERGROWTH-21st z modułu SGA, z odniesieniem do wieku ciążowego.</li>
-      <li>Moduł WHR: WHO 2008/2011 cut-offs dla dorosłych oraz polskie siatki talii i bioder OLAF/OLA dla dzieci.</li>
-      <li>Moduły norm żywieniowych: karty „Normy żywieniowe: białko, tłuszcz, węglowodany” oraz „Normy żywieniowe: witaminy i składniki mineralne” zbudowano na podstawie: Rychlik&nbsp;E, Stoś&nbsp;K, Woźniak&nbsp;A, Mojska&nbsp;H, red. <a href="normy-02.01.pdf" target="_blank" rel="noopener noreferrer"><em>Normy żywienia dla populacji Polski</em></a>. Warszawa: Narodowy Instytut Zdrowia Publicznego PZH – Państwowy Instytut Badawczy; 2024. ISBN: 978-83-65870-78-0. Wykorzystano m.in. rozdziały: Białka, Tłuszcze, Węglowodany, Witaminy, Składniki mineralne oraz Górne tolerowane poziomy spożycia witamin i składników mineralnych; w module makroskładników rozróżniono normę białka EAR/RDA w g/d od praktycznych zakresów udziału energii z białka, tłuszczów i węglowodanów służących do układania diety.</li>
-      <li>Blok „Witamina D — profilaktyczna suplementacja” w karcie „Normy żywieniowe: witaminy i składniki mineralne” opracowano na podstawie: Płudowski&nbsp;P, Kos-Kudła&nbsp;B, Walczak&nbsp;M, Fal&nbsp;A, Zozulińska-Ziółkiewicz&nbsp;D, Sieroszewski&nbsp;P, Peregud-Pogorzelski&nbsp;J, Lauterbach&nbsp;R, Targowski&nbsp;T, Lewiński&nbsp;A i&nbsp;wsp. <a href="https://doi.org/10.3390/nu15030695" target="_blank" rel="noopener noreferrer"><em>Guidelines for Preventing and Treating Vitamin D Deficiency: A 2023 Update in Poland</em></a>. <em>Nutrients</em>. 2023;15(3):695. doi:&nbsp;10.3390/nu15030695; Demay&nbsp;MB, Pittas&nbsp;AG, Bikle&nbsp;DD, Diab&nbsp;DL, Kiely&nbsp;ME, Lazaretti-Castro&nbsp;M, Lips&nbsp;P, Mitchell&nbsp;DM, Murad&nbsp;MH, Powers&nbsp;S, Rao&nbsp;SD, Scragg&nbsp;R, Tayek&nbsp;JA, Valent&nbsp;AM, Walsh&nbsp;JME, McCartney&nbsp;CR. <a href="https://doi.org/10.1210/clinem/dgae290" target="_blank" rel="noopener noreferrer"><em>Vitamin D for the Prevention of Disease: An Endocrine Society Clinical Practice Guideline</em></a>. <em>J Clin Endocrinol Metab.</em> 2024;109(8):1907–1947. doi:&nbsp;10.1210/clinem/dgae290; NIH Office of Dietary Supplements. <a href="https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Vitamin D — Fact Sheet for Health Professionals</em></a>. Wykorzystano m.in. profilaktyczne zakresy dawek, ostrożnościową interpretację suplementacji profilaktycznej oraz przelicznik 1&nbsp;µg = 40&nbsp;IU. Wartości w aplikacji mają charakter informacyjny i nie zastępują leczenia niedoboru witaminy D ustalanego indywidualnie na podstawie stanu klinicznego i/lub stężenia 25(OH)D.</li>
-      <li>Okna „Zobacz przykłady” dla wapnia, żelaza, jodu, cynku i folianów w karcie „Normy żywieniowe: witaminy i składniki mineralne” opracowano na podstawie: Narodowy Instytut Zdrowia Publicznego PZH – Państwowy Instytut Badawczy. <a href="https://www.pzh.gov.pl/uslugi/tabele-wartosci-odzywczej-produktow/baza-danych-wersja-pelna/" target="_blank" rel="noopener noreferrer"><em>Tabele wartości odżywczej produktów spożywczych i potraw — baza danych, wersja pełna</em></a>; NIH Office of Dietary Supplements. <a href="https://ods.od.nih.gov/factsheets/Calcium-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Calcium — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Iron-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Iron — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Iodine-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Iodine — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Zinc-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Zinc — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Folate-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Folate — Fact Sheet for Health Professionals</em></a>; U.S. Department of Agriculture, Agricultural Research Service. <a href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener noreferrer"><em>FoodData Central</em></a>. Wartości porcji są orientacyjne i służą wyłącznie jako przykłady edukacyjne — zawartość składników może różnić się zależnie od produktu, producenta, obróbki i wielkości porcji.</li>
-      <li>Kartę „Kalorie posiłków i czas spalania” oraz okna „Zobacz przykłady” dla białka, tłuszczów i węglowodanów w karcie „Normy żywieniowe: białko, tłuszcz, węglowodany” uporządkowano na podstawie: U.S. Department of Agriculture, Agricultural Research Service. <a href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener noreferrer"><em>FoodData Central</em></a> — w szczególności danych Foundation Foods, SR Legacy oraz Food and Nutrient Database for Dietary Studies (FNDDS). Przykłady produktów i typowych porcji mają charakter edukacyjny; wartości mogą różnić się zależnie od odmiany, producenta, obróbki i wielkości porcji. Dla produktów markowych w ostrzeżeniach wykorzystano orientacyjne wartości z etykiet producentów, a dla dań złożonych — przybliżone wartości dla typowej porcji.</li>
-      <li>Moduł SGA urodzeniowego: Niklasson&nbsp;A., Albertsson-Wikland&nbsp;K. Continuous growth reference from 24th week of gestation to 24 months by gender. <em>BMC Pediatr.</em> 2008;8:8. doi:&nbsp;10.1186/1471-2431-8-8; INTERGROWTH-21st: Villar i&nbsp;wsp. <em>Lancet.</em> 2014;384:857-68 oraz 2016;387:844-5; Malewski i&nbsp;wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego, zaimplementowana na podstawie dostarczonej fotografii tabel; źródło obejmuje wyłącznie masę urodzeniową.</li>
-      <li>Moduł HOMA-IR: Kosovski&nbsp;IB i&nbsp;wsp. <em>Evaluation of Fasting Glucose-Insulin-C-Peptide-Derived Metabolic Indices for Identifying Metabolic Syndrome in Young, Healthy Adults.</em> <em>Nutrients.</em> 2024; Biernacka-Bartnik&nbsp;A i&nbsp;wsp. <em>The Cut-Off Value for HOMA-IR Discriminating the Insulin Resistance Based on the SHBG Level in Women with Polycystic Ovary Syndrome.</em> <em>Front Med.</em> 2023; Łupińska&nbsp;A i&nbsp;wsp. <em>Comparison of the Clinical Utility of Two Insulin Resistance Indices: IRI-HOMA and IRI-Belfiore in Diagnosing Insulin Resistance and Metabolic Complications in Children.</em> <em>J Clin Med.</em> 2024; Kondakis&nbsp;K i&nbsp;wsp. <em>Developing a Risk Assessment Tool for Identifying Individuals at High Risk for Developing Insulin Resistance in European Adolescents: The HELENA-IR Score.</em> <em>J Pediatr Endocrinol Metab.</em> 2022.</li>
-      <li>Moduł steroidów &mdash; przeliczenia i ekwiwalenty: National Adrenal Diseases Foundation. <em>Corticosteroid comparison chart.</em> 2021; Biggar&nbsp;WD, Skalsky&nbsp;A, McDonald&nbsp;CM. <em>Comparing deflazacort and prednisone in Duchenne muscular dystrophy.</em> <em>J Neuromuscul Dis.</em> 2022;9(4):463-476; Tóth&nbsp;M, Zakár&nbsp;T. <em>Relative binding affinities of testosterone, 19-nortestosterone and their 5α-reduced derivatives to the androgen receptor and to other androgen-binding proteins.</em> <em>J Steroid Biochem.</em> 1982;17(6):653-660; Yarrow&nbsp;JF i&nbsp;wsp. <em>Am J Physiol Endocrinol Metab.</em> 2011;300(4):E650-E660; Patanè&nbsp;FG i&nbsp;wsp. <em>Medicina (Kaunas).</em> 2020;56(11):606; National Heart, Lung, and Blood Institute. <em>Expert Panel Report 3: Guidelines for the Diagnosis and Management of Asthma.</em> 2007.</li>
-      <li>Moduł HPTA / PCT: Solanki&nbsp;P i&nbsp;wsp. (2023); Bi i&nbsp;wsp. (2018); Bonnecaze&nbsp;AK, O&rsquo;Connor&nbsp;T, Burns&nbsp;CA; Grant&nbsp;B i&nbsp;wsp.; Bond&nbsp;P, Smit&nbsp;DL, de&nbsp;Ronde&nbsp;W; Rahnema&nbsp;CD i&nbsp;wsp. <em>Anabolic steroid-induced hypogonadism: diagnosis and treatment.</em> <em>Fertil Steril.</em> 2014.</li>
-      <li>Moduł bisfosfonianów: Marginean&nbsp;O. i&nbsp;wsp. (2017); Bowden&nbsp;SA, Mahan&nbsp;JD. <em>Zoledronic acid in pediatric metabolic bone disorders.</em> 2017; Yoon&nbsp;JH i&nbsp;wsp. (2021); Miettunen&nbsp;P. i&nbsp;wsp. (2009); Awadh&nbsp;NI i&nbsp;wsp. (2024); protokoły Great Ormond Street Hospital (GOSH) i Starship dotyczące dożylnej terapii bisfosfonianami u dzieci.</li>
-      <li>Moduł infekcji wirusowych: Charakterystyka produktu leczniczego Segosana; FLU&nbsp;KOMPAS&nbsp;POZ &mdash; Adults; KOMPAS Grypa&nbsp;23/24 &mdash; dzieci; <em>StatPearls</em> (NCBI Bookshelf) dla oseltamiwiru oraz szczepień i ospy wietrznej; materiały PMC/PubMed dotyczące bezpieczeństwa ibuprofenu w ospie wietrznej, leczenia VZV, profilaktyki poekspozycyjnej oraz skuteczności szczepień przeciw grypie u osób z cukrzycą.</li>
-      <li>Moduł leczenia otyłości: Wegovy &mdash; ChPL i EMA EPAR; Saxenda &mdash; ChPL i EMA EPAR; Mysimba &mdash; EMA Product Information oraz URPL.</li>
-      <li>Moduł terapii nadciśnienia: ESC 2024; opracowanie / tłumaczenie zaleceń ESC 2024 w <em>Kardiologii Polskiej</em>; ESH &mdash; wytyczne dotyczące nadciśnienia u dzieci i młodzieży; AAP 2017; NHBPEP <em>The Fourth Report on the Diagnosis, Evaluation, and Treatment of High Blood Pressure in Children and Adolescents</em> (2004); projekt OLAF; Obrycki&nbsp;Ł. i&nbsp;wsp. (<em>Pediatric Nephrology</em>, 2025); leksykon.com.pl.</li>
-      <li>Moduł raka tarczycy u dzieci: Handkiewicz-Junak&nbsp;D. i&nbsp;wsp. <em>Diagnostics and treatment of differentiated thyroid carcinoma in children &mdash; Guidelines of the Polish National Scientific Societies, 2024 Update.</em> <em>Endokrynologia Polska.</em> 2024;75(6):565-591. doi:&nbsp;10.5603/ep.103845; Cibas&nbsp;ES, Ali&nbsp;SZ. <em>The 2017 Bethesda System for Reporting Thyroid Cytopathology.</em> <em>Thyroid.</em> 2017;27(11):1341-1346. doi:&nbsp;10.1089/thy.2017.0500; polskie rekomendacje dorosłych z 2022&nbsp;r. (EU-TIRADS-PL / <em>Endokrynologia Polska</em>); Francis&nbsp;GL i&nbsp;wsp. <em>Management Guidelines for Children with Thyroid Nodules and Differentiated Thyroid Cancer.</em> <em>Thyroid.</em> 2015;25(7):716-759. doi:&nbsp;10.1089/thy.2014.0460; AJCC/UICC TNM &mdash; 8. edycja; <em>WHO Classification of Thyroid Tumours</em> (2022); Robbins i&nbsp;wsp. 2002/2008 oraz Carty i&nbsp;wsp. 2009 dla terminologii neck dissection i przedziału centralnego.</li>
-      <li>Moduł antybiotykoterapii: <em>Rekomendacje postępowania w pozaszpitalnych zakażeniach układu oddechowego</em> (wyd. 2016); rekomendacje antybiotyki.edu.pl; CDC Clinical Guidance; wybrane artykuły PubMed/PMC oraz praktyczne opracowania AAFP, UIC Drug Information Group, Johns Hopkins ABX Guide, OHSU, MedStar, Carilion i Northwestern wykorzystane w regułach dawkowania i komunikatach ostrzegawczych zapisanych w antibiotic_therapy.js.</li>
-      <li><strong>Moduł przelicznika jednostek laboratoryjnych:</strong>
-        <ul style="margin-top:0.35rem;margin-bottom:0.1rem;padding-left:1.25rem;">
-          <li>Współczynniki przeliczeniowe oraz zakresy referencyjne dorosłych dla hormonów osi nadnerczowo-gonadalnej i steroidów płciowych: Rifai&nbsp;N, Horvath&nbsp;AR, Wittwer&nbsp;CT, red. <em>Tietz Textbook of Clinical Chemistry and Molecular Diagnostics.</em> 6th&nbsp;ed. St.&nbsp;Louis: Elsevier; 2018.</li>
-          <li>Próg hipogonadyzmu u mężczyzn (< 9,2 nmol/L / < 264 ng/dL u młodych nieotyłych): Bhasin&nbsp;S, Brito&nbsp;JP, Cunningham&nbsp;GR, Hayes&nbsp;FJ, Hodis&nbsp;HN, Matsumoto&nbsp;AM, Snyder&nbsp;PJ, Swerdloff&nbsp;RS, Wu&nbsp;FC, Yialamas&nbsp;MA. <a href="https://academic.oup.com/jcem/article/103/5/1715/4939465" target="_blank" rel="noopener noreferrer"><em>Testosterone Therapy in Men With Hypogonadism: An Endocrine Society Clinical Practice Guideline</em></a>. <em>J Clin Endocrinol Metab.</em> 2018;103(5):1715-1744. doi:&nbsp;10.1210/jc.2018-00229.</li>
-          <li>Próg po teście hamowania deksametazonem (DST < 50 nmol/L / < 1,8 μg/dL) oraz stratyfikacja kortyzolu: Nieman&nbsp;LK, Biller&nbsp;BMK, Findling&nbsp;JW, Newell-Price&nbsp;J, Savage&nbsp;MO, Stewart&nbsp;PM, Montori&nbsp;VM. <em>The Diagnosis of Cushing's Syndrome: An Endocrine Society Clinical Practice Guideline.</em> <em>J Clin Endocrinol Metab.</em> 2008;93(5):1526-1540. doi:&nbsp;10.1210/jc.2008-0125.</li>
-          <li>Stratyfikacja 17-OH-progesteronu oraz progowe wartości dla CAH (test ACTH > 30 nmol/L = > 1 000 ng/dL): Speiser&nbsp;PW, Arlt&nbsp;W, Auchus&nbsp;RJ, Baskin&nbsp;LS, Conway&nbsp;GS, Merke&nbsp;DP, Meyer-Bahlburg&nbsp;HFL, Miller&nbsp;WL, Murad&nbsp;MH, Oberfield&nbsp;SE, White&nbsp;PC. <a href="https://doi.org/10.1210/jc.2018-01865" target="_blank" rel="noopener noreferrer"><em>Congenital Adrenal Hyperplasia Due to Steroid 21-Hydroxylase Deficiency: An Endocrine Society Clinical Practice Guideline</em></a>. <em>J Clin Endocrinol Metab.</em> 2018;103(11):4043-4088. doi:&nbsp;10.1210/jc.2018-01865.</li>
-          <li>Stratyfikacja aldosteronu i interpretacja stosunku ARR: Funder&nbsp;JW, Carey&nbsp;RM, Mantero&nbsp;F, Murad&nbsp;MH, Reincke&nbsp;M, Shibata&nbsp;H, Stowasser&nbsp;M, Young&nbsp;WF&nbsp;Jr. <a href="https://doi.org/10.1210/jc.2015-4061" target="_blank" rel="noopener noreferrer"><em>The Management of Primary Aldosteronism: Case Detection, Diagnosis, and Treatment: An Endocrine Society Clinical Practice Guideline</em></a>. <em>J Clin Endocrinol Metab.</em> 2016;101(5):1889-1916. doi:&nbsp;10.1210/jc.2015-4061.</li>
-          <li>Progi 25-OH wit. D (niedobór &lt; 50 nmol/L, suboptymalny 50–75, optymalny 75–125, górny próg bezpieczny &lt; 250) — jednolite dla wszystkich grup wiekowych: Płudowski&nbsp;P, Kos-Kudła&nbsp;B, Walczak&nbsp;M, Fal&nbsp;A, Zozulińska-Ziółkiewicz&nbsp;D, Sieroszewski&nbsp;P, Peregud-Pogorzelski&nbsp;J, Lauterbach&nbsp;R, Targowski&nbsp;T, Lewiński&nbsp;A i&nbsp;wsp. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9920487/" target="_blank" rel="noopener noreferrer"><em>Guidelines for Preventing and Treating Vitamin D Deficiency: A 2023 Update in Poland</em></a>. <em>Nutrients.</em> 2023;15(3):695. doi:&nbsp;10.3390/nu15030695.</li>
-          <li>Pediatryczne zakresy referencyjne sterydów i hormonów płodności (CALIPER, planowane w fazie 2 modułu): Bailey&nbsp;D, Colantonio&nbsp;D, Kyriakopoulou&nbsp;L i&nbsp;wsp. <a href="https://pubmed.ncbi.nlm.nih.gov/23637247/" target="_blank" rel="noopener noreferrer"><em>Marked biological variance in endocrine and biochemical markers in childhood: establishment of pediatric reference intervals using healthy community children from the CALIPER cohort</em></a>. <em>Clin Chem.</em> 2013;59(9):1393-1405; Konforte&nbsp;D i&nbsp;wsp. <a href="https://pubmed.ncbi.nlm.nih.gov/23637248/" target="_blank" rel="noopener noreferrer"><em>Complex biological pattern of fertility hormones in children and adolescents: a study of healthy children from the CALIPER cohort and establishment of pediatric reference intervals</em></a>. <em>Clin Chem.</em> 2013;59(8):1215-1227; Kyriakopoulou&nbsp;L i&nbsp;wsp. <a href="https://pubmed.ncbi.nlm.nih.gov/23337690/" target="_blank" rel="noopener noreferrer"><em>A sensitive and rapid mass spectrometric method for the simultaneous measurement of eight steroid hormones and CALIPER pediatric reference intervals</em></a>. <em>Clin Biochem.</em> 2013;46(7-8):642-651; Bohn&nbsp;MK i&nbsp;wsp. <em>Pediatric reference intervals for endocrine markers and fertility hormones in healthy children and adolescents on the Siemens Healthineers Atellica immunoassay system.</em> <em>Clin Chem Lab Med.</em> 2021;59(8):1421-1430.</li>
-          <li>Pediatryczne zakresy referencyjne wraz ze stratyfikacją Tannera dla ACTH, 11-deoksykortyzolu, kortykosteronu, 17-OH-pregnenolonu, pregnenolonu, DHEA, DHEA-S, androstendionu, wolnego testosteronu, DHT, estradiolu, estronu i progesteronu pochodzą z Mayo Clinic Laboratories: <a href="https://www.mayocliniclabs.com/test-catalog/Overview/8411" target="_blank" rel="noopener noreferrer">Test 8411 (ACTH)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/46920" target="_blank" rel="noopener noreferrer">46920 (11-DC)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/88221" target="_blank" rel="noopener noreferrer">88221 (kortykosteron)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/81151" target="_blank" rel="noopener noreferrer">81151 (17-OH-preg.)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/88645" target="_blank" rel="noopener noreferrer">88645 (pregnenolon)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/81405" target="_blank" rel="noopener noreferrer">81405 (DHEA)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/113595" target="_blank" rel="noopener noreferrer">113595 (DHEA-S)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/9709" target="_blank" rel="noopener noreferrer">9709 (A4)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/83686" target="_blank" rel="noopener noreferrer">83686 (wolny T)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/81479" target="_blank" rel="noopener noreferrer">81479 (DHT)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/81816" target="_blank" rel="noopener noreferrer">81816 (E2)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/81418" target="_blank" rel="noopener noreferrer">81418 (E1)</a>, <a href="https://www.mayocliniclabs.com/test-catalog/Overview/8141" target="_blank" rel="noopener noreferrer">8141 (P4)</a>. Mayo cytuje dalej źródła oryginalne: Kushnir&nbsp;MM, Rockwood&nbsp;AL, Roberts&nbsp;WL, Pattison&nbsp;EG, Bunker&nbsp;AM, Fitzgerald&nbsp;RL, Meikle&nbsp;AW. <em>Performance characteristics of a novel tandem mass spectrometry assay for serum testosterone.</em> <em>Clin Chem.</em> 2006;52(8):1559-1567 oraz Soldin&nbsp;SJ, Brugnara&nbsp;C, Wong&nbsp;EC, red. <em>Pediatric Reference Ranges.</em> Wyd. 4–5. Washington, DC: AACC Press; 2003/2005. Polskie wytyczne pediatryczne: Pyrżak&nbsp;B, Walczak&nbsp;M, red. <em>Endokrynologia wieku rozwojowego.</em> Wyd.&nbsp;2. Warszawa: PZWL Wydawnictwo Lekarskie; 2023.</li>
-          <li>Współczynniki przeliczeniowe pomiędzy jednostkami konwencjonalnymi a SI obliczono na podstawie mas cząsteczkowych z bazy PubChem/CAS; drobne różnice (&lt; 1 %) względem zewnętrznych kalkulatorów (np. childmetrics.org) wynikają z zaokrągleń. Zakresy referencyjne stanowią wartości orientacyjne — każde laboratorium wydaje wynik z własnymi widełkami, do których należy się odnieść.</li>
-        </ul>
-      </li>
-
-    </ol>
-    <!-- Skrypt do rozwijania listy źródeł. Funkcja toggluje widoczność listy po kliknięciu przycisku. -->
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const toggleButton = document.getElementById('toggleSources');
-        const sourceList = document.getElementById('sourceList');
-        if (toggleButton && sourceList) {
-          toggleButton.addEventListener('click', function() {
-            const isHidden = sourceList.style.display === 'none' || sourceList.style.display === '';
-            sourceList.style.display = isHidden ? 'block' : 'none';
-            // Aktualizuj atrybut aria-expanded dla lepszej dostępności
-            toggleButton.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-          });
-        }
-      });
-    </script>
-  </fieldset>
+  
 </div>
 <button id="downloadPDF" style="margin-top:16px;" hidden>Pobierz raport PDF</button>
   </div><!-- /main-content -->
@@ -1742,7 +1630,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=183" defer></script>
+<script defer src="vilda_terms_gate.js?v=1"></script>
+<script src="app.js?v=184" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport
@@ -1848,7 +1737,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_GHIGF = 'gh_igf_therapy.js?v=20';
+  var SRC_GHIGF = 'gh_igf_therapy.js?v=21';
   var started = false;
   function loadGhIgf() {
     if (started) return;
@@ -2091,7 +1980,6 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 
 
 
-
 <!-- Skrypt generujący siatki centylowe wagi i wzrostu w formacie PDF.
      Kod ten korzysta z globalnych tablic LMS (zdefiniowanych w app.js) oraz bibliotek jsPDF i Canvas.
      Po kliknięciu przycisku „Generuj siatkę centylową” tworzy dwa wykresy (wzrostu i wagi),
@@ -2105,7 +1993,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="inline_index_05.js?v=1"></script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=37" defer></script>
+<script src="ios26-ui.js?v=40" defer></script>
 <!-- Guided tutorial for first‑time users -->
 <script src="tutorial.js?v=8" defer></script>
 
@@ -2179,7 +2067,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=47" defer></script>
+  <script src="custom-fixes.js?v=49" defer></script>
 
   <!-- Dynamic repositioning of Cole and Advanced Growth cards on mobile/desktop
        views.  This script adjusts the DOM order of these elements only in

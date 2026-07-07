@@ -58,27 +58,29 @@
     <!-- Integrate the calculator with the Waga i wzrost site styles -->
     <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
   <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
-  <link href="style.css?v=54" rel="stylesheet" />
+  <link href="style.css?v=57" rel="stylesheet" />
     <link href="sidebar.css" rel="stylesheet" />
-    <link href="vilda_chrome.css?v=22" rel="stylesheet">
-    <link href="vilda_auth_ui.css?v=57" rel="stylesheet" />
+    <link href="vilda_chrome.css?v=35" rel="stylesheet">
+    <link href="vilda_auth_ui.css?v=58" rel="stylesheet" />
     <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet" />
     <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=18"></script>
+<script defer src="vilda_persistence_adapter.js?v=20"></script>
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
-<script defer src="vilda_vault.js?v=120"></script>
+<script defer src="vilda_vault.js?v=135"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
-<script defer src="vilda_sync.js?v=17"></script>
-<script defer src="vilda_sync_integration.js?v=26"></script>
-<script defer src="vilda_realtime.js?v=5"></script>
-<script defer src="vilda_auth_ui.js?v=277"></script>
+<script defer src="vilda_sync.js?v=19"></script>
+<script defer src="vilda_sync_integration.js?v=33"></script>
+<script defer src="vilda_realtime.js?v=6"></script>
+<script defer src="qrcode.min.js?v=1"></script>
+<script defer src="obesity_response_criteria.js?v=1"></script>
+<script defer src="vilda_auth_ui.js?v=336"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
-<script defer src="vilda_file_export.js?v=5"></script>
+<script defer src="vilda_file_export.js?v=7"></script>
 <script defer src="vilda_deps.js?v=91"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
@@ -88,11 +90,11 @@
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=31"></script>
+<script defer src="vilda_data_import_export.js?v=38"></script>
 <script defer src="vilda_save_status_indicator.js?v=17"></script>
-<script defer src="vilda_advanced_growth.js?v=16"></script>
+<script defer src="vilda_advanced_growth.js?v=17"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=63" defer></script>
+<script src="vilda_update_prep.js?v=65" defer></script>
     
 <script defer src="inline_kalkulator_klirens_00.js?v=1"></script>
 <link href="ios26-v2.css?v=18" rel="stylesheet" />
@@ -1599,7 +1601,7 @@ input[type="submit"]:focus-visible {
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=56"></script>
+<script defer src="vilda_chrome.js?v=65"></script>
 </head>
 
 <body class="js-loading liquid-ios26 has-sidebar">
@@ -2586,7 +2588,7 @@ document.addEventListener('DOMContentLoaded', () => {
          na stronie głównej imię, wiek, płeć, masa oraz wzrost są automatycznie
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
-<script src="ios26-ui.js?v=37" defer></script>
+<script src="ios26-ui.js?v=40" defer></script>
 <script defer src="inline_kalkulator_klirens_07.js?v=1"></script>
 <script defer src="vilda_down_syndrome.js?v=1"></script>
 <script defer src="vilda_anorexia_risk.js?v=1"></script>
@@ -2599,10 +2601,10 @@ document.addEventListener('DOMContentLoaded', () => {
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=183" defer></script>
+<script src="app.js?v=184" defer></script>
 <script src="vilda_diet_recommendations.js?v=4" defer></script>
 <script src="vilda_patient_report.js?v=5" defer></script>
-<script src="custom-fixes.js?v=47" defer></script>
+<script src="custom-fixes.js?v=49" defer></script>
 <!-- Skrypt obsługujący tryb agregowania wyników dla tego samego pacjenta.  -->
 <script defer>
 document.addEventListener('DOMContentLoaded', () => {
