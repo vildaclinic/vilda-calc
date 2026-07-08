@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.550';
+const SW_VERSION = '1.0.555';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -364,6 +364,7 @@ const CORE_SHELL_URLS = [
   '/vilda_vault.js?v=145',
   '/vilda_vault.js?v=146',
   '/vilda_vault.js?v=147',
+  '/vilda_vault.js?v=148',
   '/vilda_auth_ui.js',
   '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
@@ -626,6 +627,9 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=336',
   '/vilda_auth_ui.js?v=337',
   '/vilda_auth_ui.js?v=338',
+  '/vilda_auth_ui.js?v=339',
+  '/vilda_auth_ui.js?v=340',
+  '/vilda_auth_ui.js?v=341',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
@@ -1219,6 +1223,10 @@ const OPTIONAL_ASSETS = [
   '/obesity_therapy_monitor.js?v=13',
   '/obesity_response_criteria.js',
   '/obesity_response_criteria.js?v=1',
+  '/gh_therapy_segments.js',
+  '/gh_therapy_segments.js?v=1',
+  '/gh_therapy_segments.js?v=2',
+  '/gh_therapy_segments.js?v=3',
   '/sga_intergrowth_data.js',
   '/sga_malewski_data.js',
   '/sga_birth_module.js',
