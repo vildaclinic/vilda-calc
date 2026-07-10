@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.570';
+const SW_VERSION = '1.0.571';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -111,6 +111,7 @@ const CORE_SHELL_URLS = [
   '/inline_docpro_02.js?v=1',
   '/inline_docpro_03.js?v=1',
   '/inline_docpro_04.js?v=1',
+  '/inline_docpro_04.js?v=2',
   '/inline_docpro_05.js?v=1',
   '/inline_docpro_06.js?v=1',
   '/inline_index_00.js?v=1',
@@ -143,6 +144,7 @@ const CORE_SHELL_URLS = [
   '/inline_index_04.js?v=19',
   '/inline_index_05.js?v=1',
   '/inline_index_06.js?v=1',
+  '/inline_index_06.js?v=2',
   '/inline_index_07.js?v=1',
   '/inline_index_08.js?v=1',
   '/inline_index_09.js?v=1',
@@ -641,6 +643,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=345',
   '/vilda_auth_ui.js?v=346',
   '/vilda_patient_summary_copy.js?v=1',
+  '/vilda_patient_summary_copy.js?v=2',
   '/vilda_version_history_ui.js?v=1',
   '/vilda_version_history_ui.js?v=2',
   '/vilda_version_history_ui.js?v=3',
@@ -999,6 +1002,7 @@ const CORE_SHELL_URLS = [
   '/vilda_summary_cards.js?v=16',
   '/vilda_summary_cards.js?v=17',
   '/vilda_summary_cards.js?v=18',
+  '/vilda_summary_cards.js?v=19',
   '/vilda_diet_plan_ui.js',
   '/vilda_diet_plan_ui.js?v=1',
   '/vilda_estimated_intake_ui.js',
@@ -1208,6 +1212,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=32',
   '/gh_therapy_monitor.js?v=33',
   '/gh_therapy_monitor.js?v=34',
+  '/gh_therapy_monitor.js?v=35',
   '/flu_therapy.js',
   '/flu_therapy.js?v=5',
   '/bisphos_therapy.js',
