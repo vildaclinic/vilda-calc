@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.599';
+const SW_VERSION = '1.0.600';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1176,6 +1176,7 @@ const CORE_SHELL_URLS = [
   '/custom-fixes.js?v=49',
   '/custom-fixes.js?v=50',
   '/custom-fixes.js?v=51',
+  '/custom-fixes.js?v=52',
   '/reposition.js',
   '/reposition.js?v=5',
   '/growth-basic-module.js?v=8',
