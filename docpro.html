@@ -87,10 +87,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="style.css?v=57" rel="stylesheet" />
-<link href="ios26-v2.css?v=18" rel="stylesheet" />
+<link href="ios26-v2.css?v=19" rel="stylesheet" />
 <link href="sidebar.css" rel="stylesheet" />
 <link href="vilda_chrome.css?v=35" rel="stylesheet">
-<link href="vilda_auth_ui.css?v=58" rel="stylesheet" />
+<link href="vilda_auth_ui.css?v=63" rel="stylesheet" />
 <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet" />
 <link href="vilda_obesity_banner.css?v=3" rel="stylesheet" />
 
@@ -185,14 +185,18 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=14"></script>
-<script defer src="vilda_vault.js?v=139"></script>
+<script defer src="vilda_retention.js?v=1"></script>
+<script defer src="vilda_vault.js?v=152"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
-<script defer src="vilda_sync.js?v=21"></script>
-<script defer src="vilda_sync_integration.js?v=34"></script>
+<script defer src="vilda_sync.js?v=28"></script>
+<script defer src="vilda_sync_integration.js?v=38"></script>
 <script defer src="vilda_realtime.js?v=6"></script>
 <script defer src="qrcode.min.js?v=1"></script>
 <script defer src="obesity_response_criteria.js?v=1"></script>
-<script defer src="vilda_auth_ui.js?v=338"></script>
+<script defer src="gh_therapy_segments.js?v=3"></script>
+<script defer src="vilda_patient_summary_copy.js?v=2"></script>
+<script defer src="vilda_auth_ui.js?v=352"></script>
+<script defer src="vilda_version_history_ui.js?v=11"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -208,8 +212,9 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=39"></script>
-<script defer src="vilda_save_status_indicator.js?v=17"></script>
+<script defer src="vilda_data_import_export.js?v=46"></script>
+<script defer src="vilda_save_status_indicator.js?v=23"></script>
+<script defer src="vilda_unsaved_guard.js?v=3"></script>
 <script defer src="vilda_advanced_growth.js?v=17"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=65" defer></script>
@@ -1308,7 +1313,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 }
 
 </style>
-<script defer src="vilda_chrome.js?v=65"></script>
+<script defer src="vilda_chrome.js?v=68"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
@@ -3782,8 +3787,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      w vilda_professional_module.js (cdn.sheetjs.com xlsx-0.20.3; aktualizacja 2026-06-14 z 0.18.5 — CVE). -->
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=4"></script>
-<script defer src="vilda_persist_runtime.js?v=8"></script>
-<script defer src="vilda_summary_cards.js?v=18"></script>
+<script defer src="vilda_persist_runtime.js?v=9"></script>
+<script defer src="vilda_summary_cards.js?v=19"></script>
 <script defer src="vilda_diet_plan_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
@@ -3794,8 +3799,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script src="vilda_patient_report.js?v=5" defer></script>
 <!-- po app.js -->
 <script src="vilda_module_monitor_badges.js?v=1" defer></script>
-<script src="gh_igf_therapy.js?v=22" defer></script>
-<script src="gh_therapy_monitor.js?v=30" defer></script>
+<script src="gh_igf_therapy.js?v=23" defer></script>
+<script src="gh_therapy_monitor.js?v=36" defer></script>
 <!-- Skrypt kalkulatora antybiotykoterapii – generuje kartę dawek antybiotyków.
      Ładowany po głównym pliku app.js i module GH/IGF, aby skorzystać z już zainicjowanych
      elementów DOM oraz funkcji (np. pobierania masy ciała). Plik antibiotic_therapy.js
@@ -3891,7 +3896,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        i kopiuje je do schowka.  
        Odczytuje aktualny tryb wyników (standardowy/profesjonalny) z localStorage,
        dzięki czemu zawartość podsumowania reaguje na przełącznik wyników. -->
-  <script defer src="inline_docpro_04.js?v=1"></script>
+  <script defer src="inline_docpro_04.js?v=2"></script>
 
   <!-- Debug output for currentSummaryCard status (temporary) -->
   <!-- Usunięto paski debugowe -->
@@ -3941,7 +3946,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=50" defer></script>
+  <script src="custom-fixes.js?v=52" defer></script>
   <script src="docpro_state_persist.js?v=5" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts
