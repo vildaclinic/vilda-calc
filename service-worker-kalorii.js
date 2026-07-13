@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.620';
+const SW_VERSION = '1.0.621';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -378,6 +378,7 @@ const CORE_SHELL_URLS = [
   '/vilda_vault.js?v=152',
   '/vilda_vault.js?v=153',
   '/vilda_vault.js?v=154',
+  '/vilda_vault.js?v=155',
   '/vilda_retention.js?v=1',
   '/vilda_auth_ui.js',
   '/vilda_auth_ui.js?v=16',
@@ -1539,6 +1540,17 @@ function isNavigationRequest(request) {
 
 function shouldBypassCache(request) {
   const pathname = getPathname(request);
+
+  // R-3/W-7 AUDYT TERMINARZA (2026-07-13): żądania do workera synchronizacji
+  // NIGDY nie przechodzą przez cache SW (runtime cache ma TTL 30 dni!) — statusy,
+  // ETagi, szyfrogramy blobów i entitlement muszą być zawsze świeże. Dotąd
+  // chronił wyłącznie nagłówek Cache-Control: no-store z workera (jedna warstwa);
+  // ten bypass to druga, niezależna. UWAGA: przy przejściu na własną domenę
+  // workera (plan P4) dopisać ją tutaj.
+  try {
+    const reqHost = new URL(request.url).hostname;
+    if (reqHost.endsWith('.workers.dev')) return true;
+  } catch (_) { /* niepoprawny URL → dalej standardowe reguły */ }
 
   if (request.headers.has('range')) return true;
   if (request.destination === 'video') return true;
