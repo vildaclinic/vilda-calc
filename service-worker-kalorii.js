@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.615';
+const SW_VERSION = '1.0.616';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -230,6 +230,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=20',
   '/vilda_persistence_adapter.js?v=21',
   '/vilda_persistence_adapter.js?v=22',
+  '/vilda_persistence_adapter.js?v=23',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -1006,6 +1007,7 @@ const CORE_SHELL_URLS = [
   '/vilda_advanced_growth.js',
   '/vilda_advanced_growth.js?v=16',
   '/vilda_advanced_growth.js?v=17',
+  '/vilda_advanced_growth.js?v=18',
   '/vilda_estimated_intake.js',
   '/vilda_estimated_intake.js?v=3',
   '/vilda_growth_reference_data.js',
@@ -1072,6 +1074,7 @@ const CORE_SHELL_URLS = [
   '/app.js?v=184',
   '/app.js?v=185',
   '/app.js?v=186',
+  '/app.js?v=187',
   '/vilda_terms_gate.js?v=1',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',
@@ -1272,6 +1275,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=34',
   '/gh_therapy_monitor.js?v=35',
   '/gh_therapy_monitor.js?v=36',
+  '/gh_therapy_monitor.js?v=37',
   '/flu_therapy.js',
   '/flu_therapy.js?v=5',
   '/bisphos_therapy.js',
