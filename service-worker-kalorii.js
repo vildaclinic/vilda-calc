@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.624';
+const SW_VERSION = '1.0.625';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -660,6 +660,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=352',
   '/vilda_auth_ui.js?v=353',
   '/vilda_auth_ui.js?v=354',
+  '/vilda_auth_ui.js?v=355',
   '/vilda_patient_summary_copy.js?v=1',
   '/vilda_patient_summary_copy.js?v=2',
   '/vilda_version_history_ui.js?v=1',
@@ -1287,6 +1288,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=35',
   '/gh_therapy_monitor.js?v=36',
   '/gh_therapy_monitor.js?v=37',
+  '/gh_therapy_monitor.js?v=38',
   '/flu_therapy.js',
   '/flu_therapy.js?v=5',
   '/bisphos_therapy.js',
@@ -1296,6 +1298,7 @@ const OPTIONAL_ASSETS = [
   '/bisphos_therapy_monitor.js',
   '/bisphos_therapy_monitor.js?v=1',
   '/bisphos_therapy_monitor.js?v=2',
+  '/bisphos_therapy_monitor.js?v=3',
   '/vilda_module_monitor_badges.js',
   '/vilda_module_monitor_badges.js?v=1',
   '/thyroid_cancer_kids.js',
@@ -1323,6 +1326,7 @@ const OPTIONAL_ASSETS = [
   '/obesity_therapy_monitor.js?v=11',
   '/obesity_therapy_monitor.js?v=12',
   '/obesity_therapy_monitor.js?v=13',
+  '/obesity_therapy_monitor.js?v=14',
   '/obesity_response_criteria.js',
   '/obesity_response_criteria.js?v=1',
   '/gh_therapy_segments.js',
