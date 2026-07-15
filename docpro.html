@@ -99,11 +99,28 @@
      i przed renderem body (żeby nie było flash treści bez blokady). -->
 <script>
 (function(){
+  // Anti-flash: synchroniczny, optymistyczny odczyt stanu PRO BIEZACEGO uzytkownika
+  // (bez weryfikacji podpisu - autorytatywnie koryguje VildaProUi.refresh() po
+  // zaladowaniu pro_access/pro_ui). Klucze sa per-user (od 8Q-10); dawny odczyt
+  // globalnego 'vilda-pro-plan-v1' byl martwy -> baner migal u kazdego subskrybenta.
   try{
-    var c=localStorage.getItem('vilda-pro-plan-v1');
-    if(c)c=JSON.parse(c);
-    var ok=c&&c.plan==='pro'&&c.validUntil&&new Date(c.validUntil).getTime()>Date.now();
-    document.documentElement.classList.add(ok?'vilda-pro-active':'vilda-pro-inactive');
+    var uid=null;
+    try{ var s=localStorage.getItem('vilda-vault-session-v2'); if(s){ uid=(JSON.parse(s)||{}).userId||null; } }catch(_){}
+    var pro=false;
+    if(uid){
+      try{
+        var tok=localStorage.getItem('vilda-pro-token-v1:'+uid);
+        if(tok){ var p0=tok.split('.')[0];
+          if(p0){ var b=p0.replace(/-/g,'+').replace(/_/g,'/'); while(b.length%4)b+='='; var pl=JSON.parse(atob(b));
+            var exp=(typeof pl.exp==='number')?(pl.exp<1e12?pl.exp*1000:pl.exp):0;
+            if(pl.plan==='pro'&&exp>Date.now())pro=true; } }
+      }catch(_){}
+      if(!pro){ try{ var h=localStorage.getItem('vilda-pro-ui-hint-v1:'+uid); if(h){ var hp=JSON.parse(h);
+        if(hp&&hp.pro===true&&typeof hp.until==='number'&&hp.until>Date.now())pro=true; } }catch(_){} }
+      if(!pro){ try{ var c=localStorage.getItem('vilda-pro-plan-v1:'+uid); if(c){ var cp=JSON.parse(c);
+        if(cp&&cp.plan==='pro'&&cp.validUntil&&new Date(cp.validUntil).getTime()>Date.now())pro=true; } }catch(_){} }
+    }
+    document.documentElement.classList.add(pro?'vilda-pro-active':'vilda-pro-inactive');
   }catch(_){document.documentElement.classList.add('vilda-pro-inactive');}
 })();
 </script>
@@ -201,7 +218,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script defer src="vilda_pro_access.js?v=10"></script>
-<script defer src="vilda_pro_ui.js?v=2"></script>
+<script defer src="vilda_pro_ui.js?v=3"></script>
 <script defer src="vilda_file_export.js?v=7"></script>
 <script defer src="vilda_deps.js?v=91"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
