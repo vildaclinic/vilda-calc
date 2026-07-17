@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.644';
+const SW_VERSION = '1.0.646';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -161,6 +161,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_08.js?v=1',
   '/inline_kalkulator_klirens_09.js?v=1',
   '/inline_notatki_00.js?v=2',
+  '/inline_notatki_00.js?v=3',
   '/inline_subskrypcja_00.js?v=1',
   '/inline_subskrypcja_00.js?v=2',
   '/inline_subskrypcja_01.js?v=1',
@@ -898,6 +899,7 @@ const CORE_SHELL_URLS = [
   '/vilda_terminarz.js?v=176',
   '/vilda_terminarz.js?v=177',
   '/vilda_terminarz.js?v=178',
+  '/vilda_terminarz.js?v=179',
   '/vilda_chrome.css?v=11',
   '/vilda_chrome.css?v=12',
   '/vilda_chrome.css?v=15',
@@ -1159,6 +1161,7 @@ const CORE_SHELL_URLS = [
   '/gh_igf_therapy.js?v=23',
   '/antibiotic_therapy.js',
   '/antibiotic_therapy.js?v=10',
+  '/antibiotic_therapy.js?v=11',
   '/userData.js',
   '/userData.js?v=6',
   '/ios26-ui.js',
