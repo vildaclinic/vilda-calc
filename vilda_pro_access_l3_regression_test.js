@@ -84,10 +84,6 @@ const ACTIVATED  = new Date(Date.now() -  1 * 24 * 60 * 60 * 1000).toISOString()
 
 const ACCESS_PATH = path.join(__dirname, 'vilda_pro_access.js');
 const accessSource = fs.readFileSync(ACCESS_PATH, 'utf8');
-const wrappedAccess = accessSource.replace(
-  /\}\(typeof window !== 'undefined' \? window : this\)\);?\s*$/,
-  '}(__mockGlobal__));'
-);
 
 function makeGlobal(opts) {
   opts = opts || {};
@@ -104,8 +100,11 @@ function makeGlobal(opts) {
 
 function loadAccessModule(g) {
   g.VildaProAccess = null;
-  const fn = new Function('__mockGlobal__', wrappedAccess);
+  const fn = new Function('window', accessSource);
   fn(g);
+  if (g.VildaProAccess && typeof g.VildaProAccess.__setTokenModeForTest === 'function') {
+    g.VildaProAccess.__setTokenModeForTest(false);
+  }
   return g.VildaProAccess;
 }
 
