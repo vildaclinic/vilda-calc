@@ -46,6 +46,7 @@ export default defineConfig({
       testMatch: /mobile\.spec\.mjs/,
       use: {
         ...mobileDevice,
+        browserName: 'chromium',
         serviceWorkers: 'block'
       }
     }
