@@ -3196,6 +3196,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
           #bisphosMonitorSection .bpm-badge.e{background:#eceff1;color:#555}
           #bisphosMonitorSection .bpm-good{color:#1a8f5c;font-weight:800}
           #bisphosMonitorSection .bpm-bad{color:#c0453b;font-weight:800}
+          #bisphosMonitorSection .bpm-warn{color:#b26a00;font-weight:800}
           #bisphosMonitorSection .bpm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}
           #bisphosMonitorSection .bpm-empty{text-align:center;color:#5a7274;font-size:.85rem;padding:16px;border:1px dashed #e0eef0;border-radius:10px}
           #bisphosMonitorSection .bpm-bone-h{margin:20px 0 6px;font-size:.9rem;font-weight:800;color:#153b34}
@@ -3825,7 +3826,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      tworzy kartę kalkulującą dawki najpopularniejszych antybiotyków u dzieci na podstawie
      zaleceń z Rekomendacji 2016 i danych wprowadzonych przez użytkownika w sekcji
      „Dane użytkownika”. -->
-<script src="antibiotic_therapy.js?v=12" defer></script>
+<script src="antibiotic_therapy.js?v=13" defer></script>
 
     <!-- Skrypt modułu leczenia grypy.  Ładowany po antybiotykoterapii i przed bisfosfonianami,
          aby korzystał z już zainicjowanych elementów DOM (np. pola wagi i wieku). -->
@@ -3839,8 +3840,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
          Ładowany po głównym pliku app.js i modułach GH/IGF, aby skorzystać z już zainicjowanych 
          elementów DOM oraz funkcji (np. pobierania masy ciała). Skrypt ten oblicza dawki 
          pamidronianu i zoledronianu na podstawie wagi dziecka oraz wybranych parametrów terapii. -->
-    <script src="bisphos_therapy.js?v=6" defer></script>
-    <script src="bisphos_therapy_monitor.js?v=3" defer></script>
+    <script src="bisphos_therapy.js?v=8" defer></script>
+    <script src="bisphos_therapy_monitor.js?v=4" defer></script>
     <script src="sga_intergrowth_data.js" defer></script>
     <script src="sga_malewski_data.js" defer></script>
     <script src="sga_birth_module.js?v=9" defer></script>
