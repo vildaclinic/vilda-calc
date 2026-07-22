@@ -1,0 +1,46 @@
+name: Analiza bezpieczeństwa CodeQL
+
+on:
+  push:
+    branches: [audyt]
+  pull_request:
+    branches: [audyt]
+  # Harmonogram i ręczny dispatch będą dostępne po ustawieniu audyt jako
+  # gałęzi domyślnej. Do tego czasu skany uruchamiają push i pull_request.
+  schedule:
+    - cron: "23 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vilda-codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v6
+
+      - name: Zainicjuj CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Przeanalizuj kod
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript

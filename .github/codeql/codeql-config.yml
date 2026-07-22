@@ -1,0 +1,13 @@
+name: "Vilda CodeQL"
+
+queries:
+  - uses: "security-extended"
+
+paths-ignore:
+  - "**/*.min.js"
+  - "tests/**"
+  - "**/*_test.js"
+  - "vilda_smoke_tests.js"
+  - "playwright-report/**"
+  - "test-results/**"
+  - "coverage/**"

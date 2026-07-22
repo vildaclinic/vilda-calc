@@ -1,0 +1,80 @@
+name: "Propozycja funkcji"
+description: "Opisz potrzebę użytkownika i oczekiwany efekt."
+title: "feat: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Opisz problem, nie prawdziwy przypadek pacjenta. Jeżeli propozycja zmienia wzór, próg, dawkę, dane referencyjne albo interpretację, użyj formularza „Zmiana medyczna”.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: "Prywatność"
+      options:
+        - label: "Potwierdzam, że zgłoszenie i załączniki nie zawierają danych pacjenta ani sekretów."
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem użytkownika"
+      description: "Co jest dziś trudne, niemożliwe albo podatne na pomyłkę?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "Proponowany efekt"
+      description: "Opisz oczekiwane zachowanie bez narzucania implementacji, jeśli nie jest konieczna."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: "Główny użytkownik"
+      options:
+        - "Lekarz lub inny profesjonalista medyczny"
+        - "Pacjent lub opiekun"
+        - "Administrator projektu"
+        - "Wszyscy użytkownicy"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: clinical_change
+    attributes:
+      label: "Czy propozycja zmienia obliczenie albo interpretację medyczną?"
+      options:
+        - "Nie wiem"
+        - "Nie"
+        - "Tak — utworzę zamiast tego zgłoszenie zmiany medycznej"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data_impact
+    attributes:
+      label: "Wpływ na dane"
+      options:
+        - "Brak nowych danych"
+        - "Nowe pole lub preferencja bez danych pacjenta"
+        - "Zmiana danych pacjenta, zapisu, eksportu lub synchronizacji"
+        - "Nie wiem"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Rozważone alternatywy"
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Warunki akceptacji"
+      description: "Po czym będzie wiadomo, że funkcja działa poprawnie na desktopie i mobile?"
+    validations:
+      required: true

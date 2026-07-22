@@ -1,0 +1,110 @@
+name: "Zmiana medyczna"
+description: "Zgłoś zmianę wzoru, progu, dawki, jednostki, danych referencyjnych lub interpretacji."
+title: "clinical: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        To zgłoszenie opisuje zmianę mogącą wpływać na wynik kliniczny. Nie podawaj danych prawdziwego pacjenta. Zgłoszenie nie jest konsultacją medyczną.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: "Prywatność i odpowiedzialność"
+      options:
+        - label: "Potwierdzam, że wszystkie przypadki są syntetyczne i nie zawierają danych pacjenta."
+          required: true
+        - label: "Rozumiem, że zmiana wymaga źródła, testu i akceptacji klinicznej właściciela."
+          required: true
+
+  - type: input
+    id: algorithm
+    attributes:
+      label: "Algorytm lub moduł"
+      placeholder: "np. RENAL — eGFR / ANTIBIOTIC-RX — dawkowanie"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: change_type
+    attributes:
+      label: "Rodzaj zmiany"
+      multiple: true
+      options:
+        - "Wzór lub współczynnik"
+        - "Próg lub zakres referencyjny"
+        - "Dawka, maksimum, częstość lub czas terapii"
+        - "Dane tabelaryczne, LMS lub interpolacja"
+        - "Jednostka lub konwersja"
+        - "Zaokrąglenie albo precyzja"
+        - "Populacja, wiek, płeć lub wskazanie"
+        - "Interpretacja lub ostrzeżenie"
+        - "Źródło albo wersja wytycznych"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: "Obecne zachowanie"
+      description: "Podaj syntetyczne wejście i obecny wynik, jeśli to możliwe."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_behavior
+    attributes:
+      label: "Proponowane zachowanie"
+      description: "Opisz wynik, jednostki, progi i regułę zaokrąglenia."
+    validations:
+      required: true
+
+  - type: textarea
+    id: population
+    attributes:
+      label: "Populacja i zakres stosowania"
+      description: "Wiek, płeć, rozpoznanie, wskazanie, wyłączenia i przypadki graniczne."
+    validations:
+      required: true
+
+  - type: textarea
+    id: sources
+    attributes:
+      label: "Źródła"
+      description: "Autor/instytucja, tytuł, rok, wersja, DOI/PMID/URL oraz dokładne miejsce tabeli lub rekomendacji."
+    validations:
+      required: true
+
+  - type: textarea
+    id: data_provenance
+    attributes:
+      label: "Pochodzenie i możliwość użycia danych"
+      description: "Dotyczy tabel, wykresów i zbiorów: sposób transkrypcji, licencja/zgoda oraz kontrola jakości."
+    validations:
+      required: true
+
+  - type: textarea
+    id: regression_cases
+    attributes:
+      label: "Syntetyczne przypadki regresyjne"
+      description: "Co najmniej przypadek typowy i graniczny w formie wejście → oczekiwany wynik."
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: "Jednostki, precyzja i granice"
+      description: "Wskaż jednostki, moment zaokrąglenia, zachowanie na granicy i poza zakresem."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: source_confirmation
+    attributes:
+      label: "Potwierdzenie źródła"
+      options:
+        - label: "Źródło jest możliwe do odnalezienia i wskazuje dokładnie proponowaną regułę."
+          required: true
+        - label: "Opisano, czy źródło jest aktualne i czy zastępuje wcześniejszą wersję."
+          required: true
