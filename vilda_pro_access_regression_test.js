@@ -83,19 +83,18 @@ function makeGlobal(opts) {
 const MODULE_PATH = path.join(__dirname, 'vilda_pro_access.js');
 const moduleSource = fs.readFileSync(MODULE_PATH, 'utf8');
 
-// Owija source tak żeby IIFE dostało nasz mockGlobal zamiast window/this
-// Podmieniamy ostatnią linię: }(typeof window !== 'undefined' ? window : this));
-// na: }(mockGlobal));
-const wrappedSource = moduleSource.replace(
-  /\}\(typeof window !== 'undefined' \? window : this\)\);?\s*$/,
-  '}(__mockGlobal__));'
-);
-
 function loadModule(mockGlobal) {
   // Reset guard żeby moduł mógł się zainicjalizować ponownie
   mockGlobal.VildaProAccess = null;
-  const fn = new Function('__mockGlobal__', wrappedSource);
+  // Przekazanie mocka jako `window` działa zarówno dla czytelnej, jak i
+  // zminifikowanej postaci IIFE. Test nie zależy już od tekstu końcówki pliku.
+  const fn = new Function('window', moduleSource);
   fn(mockGlobal);
+  // Ten historyczny zestaw bada warstwę cache per-user, nie nowszy tryb
+  // kryptograficznych tokenów uprawnień. Wymuszamy więc testowany tryb jawnie.
+  if (mockGlobal.VildaProAccess && typeof mockGlobal.VildaProAccess.__setTokenModeForTest === 'function') {
+    mockGlobal.VildaProAccess.__setTokenModeForTest(false);
+  }
   return mockGlobal.VildaProAccess;
 }
 
