@@ -1,5 +1,63 @@
+# Zależności i wyniki testów
 node_modules/
 playwright-report/
 test-results/
 coverage/
+
+# Lokalne ustawienia, sekrety i stan narzędzi
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.npmrc
+!.npmrc.example
+.wrangler/
+.cache/
+*.log
+
+# Dane pacjentów, eksporty i lokalne bazy
+*.wiw
+backup/
+backups/
+exports/
+patient-data/
+dane-pacjentow/
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.dump
+
+# Klucze i certyfikaty prywatne
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Lokalne kopie i archiwa
+*.bak
+*.backup
+*.old
+*.tmp
+*.swp
+*~
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+
+# Pliki systemowe i tymczasowe
 .DS_Store
+._*
+__MACOSX/
+.AppleDouble
+Thumbs.db
+Desktop.ini
+~$*
