@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.653';
+const SW_VERSION = '1.0.654';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1320,6 +1320,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=38',
   '/flu_therapy.js',
   '/flu_therapy.js?v=5',
+  '/flu_therapy.js?v=6',
   '/bisphos_therapy.js',
   '/bisphos_therapy.js?v=4',
   '/bisphos_therapy.js?v=5',
