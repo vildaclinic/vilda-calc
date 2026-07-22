@@ -14,6 +14,7 @@ npx playwright install chromium
 ## Dostępne kontrole
 
 ```bash
+npm run test:repo    # zakazane typy plików i typowe sekrety w repozytorium
 npm run lint         # reguły ESLint nastawione na błędy wykonania
 npm run test:syntax  # node --check dla wszystkich plików .js i .mjs
 npm run test:unit    # Vitest: dane referencyjne, konwersje i czyste modele
@@ -22,6 +23,8 @@ npm run test:e2e     # Playwright: strony, HOMA-IR, smoke suite, mobile i PWA
 npm test             # wszystkie kontrole niewymagające przeglądarki
 npm run test:ci      # pełny zestaw lokalny odpowiadający GitHub Actions
 ```
+
+Kontrola `test:repo` działa na plikach śledzonych przez Git oraz lokalnych plikach nieobjętych regułami ignorowania. Blokuje m.in. eksporty `.wiw`, typowe backupy danych, klucze prywatne, pliki środowiskowe, cache Workera, poprawne checksumowo numery PESEL i popularne formaty aktywnych tokenów. Plik tekstowy większy niż 8 MiB wymaga osobnej, świadomej decyzji i jest domyślnie blokowany, ponieważ automatyczny skan nie czyta jego treści. Kontrola jest dodatkową barierą, a nie zastępstwem ręcznego sprawdzenia, czy zgłoszenie, zrzut ekranu albo plik testowy nie zawiera danych pacjenta.
 
 Testy przeglądarkowe same uruchamiają lokalny serwer na `127.0.0.1:4173`.
 

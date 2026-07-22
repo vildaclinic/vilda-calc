@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: "Zgłoś podatność prywatnie"
+    url: "https://wagaiwzrost.pl/kontakt.html"
+    about: "Nie publikuj luk, sekretów ani danych pacjentów w publicznym Issue. Instrukcja znajduje się w SECURITY.md."
+  - name: "Kontakt z Vilda Clinic"
+    url: "https://vildaclinic.pl/"
+    about: "GitHub nie służy do konsultacji medycznych ani przekazywania dokumentacji pacjenta."

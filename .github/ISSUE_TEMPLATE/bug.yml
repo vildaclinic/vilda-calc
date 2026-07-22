@@ -1,0 +1,104 @@
+name: "Zgłoszenie błędu"
+description: "Zgłoś odtwarzalny problem techniczny na danych syntetycznych."
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dziękujemy za zgłoszenie. Issue jest publiczne. Nie wklejaj danych pacjenta, eksportu `.wiw`, prawdziwych logów, tokenów ani niezredagowanych zrzutów ekranu.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: "Prywatność"
+      options:
+        - label: "Potwierdzam, że zgłoszenie i załączniki nie zawierają danych pacjenta ani sekretów."
+          required: true
+        - label: "Wszystkie przykłady i dane wejściowe są syntetyczne."
+          required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: "Moduł"
+      options:
+        - "Start — wzrastanie, BMI i energia"
+        - "DocPro"
+        - "Klirens"
+        - "HOMA-IR"
+        - "Steroidy"
+        - "Cukrzyca"
+        - "Terminarz lub notatki"
+        - "Pacjenci, zapis lub raport"
+        - "Logowanie, synchronizacja lub PWA"
+        - "Inny"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Kroki odtworzenia"
+      description: "Podaj minimalną, numerowaną sekwencję działań."
+      placeholder: |
+        1. Otwórz...
+        2. Wybierz...
+        3. Wpisz syntetyczne dane...
+    validations:
+      required: true
+
+  - type: textarea
+    id: synthetic_input
+    attributes:
+      label: "Syntetyczne dane wejściowe"
+      description: "Podaj tylko pola potrzebne do odtworzenia."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: "Rzeczywisty wynik"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Oczekiwany wynik"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: clinical_impact
+    attributes:
+      label: "Możliwy wpływ kliniczny"
+      options:
+        - "Nie wiem"
+        - "Brak — problem wyłącznie techniczny lub wizualny"
+        - "Możliwy — wynik albo interpretacja mogą się zmieniać"
+        - "Potwierdzony — znany wynik jest nieprawidłowy"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Przeglądarka i urządzenie"
+      placeholder: "np. Safari na iPhone 15 Pro / Chrome na macOS"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: "Adres strony i wersja"
+      description: "Podaj URL oraz widoczną wersję/cache, jeśli jest dostępna."
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: "Dodatkowe informacje"
+      description: "Tylko oczyszczone logi lub screenshoty z danych syntetycznych."
