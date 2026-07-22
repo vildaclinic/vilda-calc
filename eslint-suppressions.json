@@ -1,0 +1,344 @@
+{
+  "antibiotic_therapy.js": {
+    "no-dupe-keys": {
+      "count": 49
+    },
+    "no-prototype-builtins": {
+      "count": 2
+    },
+    "no-useless-assignment": {
+      "count": 9
+    }
+  },
+  "app.js": {
+    "no-irregular-whitespace": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "no-unmodified-loop-condition": {
+      "count": 2
+    },
+    "no-unreachable": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 19
+    }
+  },
+  "bisphos_therapy.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "bisphos_therapy_monitor.js": {
+    "no-useless-escape": {
+      "count": 2
+    }
+  },
+  "bp_module.js": {
+    "no-useless-assignment": {
+      "count": 2
+    }
+  },
+  "circumference_module.js": {
+    "no-useless-escape": {
+      "count": 1
+    }
+  },
+  "cukrzyca.js": {
+    "no-useless-assignment": {
+      "count": 6
+    }
+  },
+  "custom-fixes.js": {
+    "no-useless-assignment": {
+      "count": 3
+    }
+  },
+  "docpro_state_persist.js": {
+    "no-useless-escape": {
+      "count": 2
+    }
+  },
+  "flu_therapy.js": {
+    "no-useless-assignment": {
+      "count": 7
+    }
+  },
+  "gh_igf_therapy.js": {
+    "no-useless-assignment": {
+      "count": 4
+    }
+  },
+  "gh_therapy_monitor.js": {
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 2
+    }
+  },
+  "inline_docpro_05.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "inline_index_07.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "inline_kalkulator_klirens_04.js": {
+    "no-useless-assignment": {
+      "count": 2
+    }
+  },
+  "inline_ustawienia_04.js": {
+    "no-useless-assignment": {
+      "count": 4
+    }
+  },
+  "ios26-ui.js": {
+    "no-useless-assignment": {
+      "count": 3
+    }
+  },
+  "lab_unit_converter.js": {
+    "no-irregular-whitespace": {
+      "count": 1
+    }
+  },
+  "nutrition_micros.js": {
+    "no-useless-assignment": {
+      "count": 6
+    }
+  },
+  "nutrition_norms.js": {
+    "no-useless-assignment": {
+      "count": 4
+    }
+  },
+  "obesity_migration_assist.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "respiratory_module.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "sga_birth_module.js": {
+    "no-useless-assignment": {
+      "count": 4
+    }
+  },
+  "tutorial.js": {
+    "no-irregular-whitespace": {
+      "count": 1
+    }
+  },
+  "vilda_advanced_growth.js": {
+    "no-useless-assignment": {
+      "count": 3
+    },
+    "no-useless-escape": {
+      "count": 1
+    }
+  },
+  "vilda_anorexia_risk.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_app_helpers.js": {
+    "no-cond-assign": {
+      "count": 1
+    }
+  },
+  "vilda_auth_ui.js": {
+    "no-cond-assign": {
+      "count": 3
+    },
+    "no-unmodified-loop-condition": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 17
+    }
+  },
+  "vilda_centile_chart_header.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_chrome.js": {
+    "no-useless-assignment": {
+      "count": 3
+    }
+  },
+  "vilda_crypto.js": {
+    "no-useless-escape": {
+      "count": 1
+    }
+  },
+  "vilda_data_import_export.js": {
+    "no-useless-assignment": {
+      "count": 4
+    }
+  },
+  "vilda_deps.js": {
+    "no-dupe-keys": {
+      "count": 2
+    },
+    "no-useless-assignment": {
+      "count": 5
+    }
+  },
+  "vilda_diet_recommendations.js": {
+    "no-useless-assignment": {
+      "count": 6
+    },
+    "no-useless-escape": {
+      "count": 3
+    }
+  },
+  "vilda_epicrisis.js": {
+    "no-useless-assignment": {
+      "count": 5
+    }
+  },
+  "vilda_file_export.js": {
+    "no-useless-assignment": {
+      "count": 1
+    },
+    "no-useless-escape": {
+      "count": 2
+    }
+  },
+  "vilda_frame_sync.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_gh_therapy_resource_audit.js": {
+    "no-dupe-keys": {
+      "count": 3
+    }
+  },
+  "vilda_growth_prediction_validation.js": {
+    "no-useless-escape": {
+      "count": 2
+    }
+  },
+  "vilda_html.js": {
+    "no-cond-assign": {
+      "count": 1
+    }
+  },
+  "vilda_patient_report.js": {
+    "no-irregular-whitespace": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 2
+    },
+    "no-useless-assignment": {
+      "count": 6
+    },
+    "no-useless-escape": {
+      "count": 6
+    }
+  },
+  "vilda_patient_summary_copy.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_persist_runtime.js": {
+    "no-useless-assignment": {
+      "count": 3
+    },
+    "no-useless-escape": {
+      "count": 1
+    }
+  },
+  "vilda_persistence_adapter.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_pro_access_l3_regression_test.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_professional_module.js": {
+    "no-unreachable": {
+      "count": 1
+    },
+    "no-useless-escape": {
+      "count": 1
+    }
+  },
+  "vilda_realtime.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_shell.js": {
+    "no-useless-assignment": {
+      "count": 3
+    }
+  },
+  "vilda_summary_cards.js": {
+    "no-prototype-builtins": {
+      "count": 3
+    },
+    "no-useless-assignment": {
+      "count": 8
+    }
+  },
+  "vilda_sync_integration.js": {
+    "no-unmodified-loop-condition": {
+      "count": 2
+    },
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "vilda_terminarz.js": {
+    "no-unmodified-loop-condition": {
+      "count": 10
+    },
+    "no-useless-assignment": {
+      "count": 3
+    }
+  },
+  "vilda_update_prep.js": {
+    "no-useless-assignment": {
+      "count": 3
+    }
+  },
+  "vilda_vault.js": {
+    "no-control-regex": {
+      "count": 1
+    },
+    "no-dupe-keys": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 18
+    },
+    "no-useless-escape": {
+      "count": 1
+    }
+  },
+  "vilda_version_history_ui.js": {
+    "no-useless-assignment": {
+      "count": 1
+    }
+  }
+}

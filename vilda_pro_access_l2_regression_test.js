@@ -98,15 +98,14 @@ function makeGlobal(opts) {
 
 const MODULE_PATH = path.join(__dirname, 'vilda_pro_access.js');
 const moduleSource = fs.readFileSync(MODULE_PATH, 'utf8');
-const wrappedSource = moduleSource.replace(
-  /\}\(typeof window !== 'undefined' \? window : this\)\);?\s*$/,
-  '}(__mockGlobal__));'
-);
 
 function loadModule(g) {
   g.VildaProAccess = null;
-  const fn = new Function('__mockGlobal__', wrappedSource);
+  const fn = new Function('window', moduleSource);
   fn(g);
+  if (g.VildaProAccess && typeof g.VildaProAccess.__setTokenModeForTest === 'function') {
+    g.VildaProAccess.__setTokenModeForTest(false);
+  }
   return g.VildaProAccess;
 }
 

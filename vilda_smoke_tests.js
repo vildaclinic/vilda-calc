@@ -93,30 +93,30 @@
     'advanced-growth-intake-sync-final-validation'
   ]);
   const EXPECTED_BROWSER_SCRIPTS = Object.freeze([
-    'vilda_deps.js?v=87',
+    'vilda_deps.js?v=91',
     'vilda_update_hooks.js?v=7',
     'vilda_centile_chart_header.js?v=1',
     'vilda_gh_therapy_resource_audit.js?v=31',
     'vilda_app_helpers.js?v=2',
     'vilda_macro_practice.js?v=2',
-    'vilda_data_import_export.js?v=16',
+    'vilda_data_import_export.js?v=52',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
-    'vilda_update_prep.js?v=61',
+    'vilda_update_prep.js?v=65',
     'vilda_growth_reference_data.js?v=1',
-    'vilda_professional_module.js?v=1',
-    'vilda_persist_runtime.js?v=2',
-    'vilda_summary_cards.js?v=1',
-    'vilda_diet_plan_ui.js?v=1',
+    'vilda_professional_module.js?v=4',
+    'vilda_persist_runtime.js?v=12',
+    'vilda_summary_cards.js?v=19',
+    'vilda_diet_plan_ui.js?v=2',
     'vilda_estimated_intake_ui.js?v=1',
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
-    'app.js?v=173',
+    'app.js?v=188',
     'vilda_smoke_tests.js?v=48',
-    'vilda_diet_recommendations.js?v=2',
+    'vilda_diet_recommendations.js?v=4',
     'nutrition_norms.js?v=41',
-    'nutrition_micros.js?v=25'
+    'nutrition_micros.js?v=26'
   ]);
   const MANIFEST = Object.freeze([
     Object.freeze({ id: 'smoke-suite-api', group: 'smoke-suite', required: true, description: 'API VildaSmokeTests i aliasy konsolowe są dostępne.' }),
@@ -472,8 +472,8 @@
     const contractDetail = checkNamedContracts(DEFAULT_PERSIST_RUNTIME_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.0.0' &&
-        api.STEP === '8Q-3' &&
+        api.VERSION === '1.0.1' &&
+        api.STEP === '8Q-3b' &&
         typeof api.init === 'function' &&
         typeof api.initPersistRuntime === 'function' &&
         typeof api.getSnapshot === 'function' &&
@@ -833,41 +833,49 @@
     const mountResult = api && typeof api.applyEstimatedIntakeResultsRenderModel === 'function'
       ? api.applyEstimatedIntakeResultsRenderModel(targets, { html: '<p>Smoke mount</p>', branch: 'multi-row-interval-render', legendVisible: true }, { dependencies: deps })
       : null;
+    const legendDisplayAfterRender = legendEl.style.display;
     const descAfter = api && typeof api.describeEstimatedIntakeCalcTargets === 'function' ? api.describeEstimatedIntakeCalcTargets(targets) : null;
     const hideResult = api && typeof api.hideEstimatedIntakeLegend === 'function' ? api.hideEstimatedIntakeLegend(targets) : null;
     const after = captureWindowState();
     const contractDetail = checkNamedContracts(DEFAULT_ESTIMATED_INTAKE_DOM_MOUNT_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
 
-    return {
-      ok: !!api &&
-        api.VERSION === '1.0.0' &&
-        api.STEP === '8Q-9' &&
+    const checks = {
+      apiPresent: !!api,
+      version: !!api && api.VERSION === '1.0.0',
+      step: !!api && api.STEP === '8Q-9',
+      apiSurface: !!api &&
         typeof api.getEstimatedIntakeCalcOutputTargets === 'function' &&
         typeof api.describeEstimatedIntakeCalcTargets === 'function' &&
         typeof api.getEstimatedIntakeCalcBranch === 'function' &&
         typeof api.applyEstimatedIntakeResultsRenderModel === 'function' &&
         typeof api.hideEstimatedIntakeLegend === 'function' &&
         typeof api.getSnapshot === 'function' &&
-        typeof snapshotFn === 'function' &&
-        !!(snapshot && snapshot.readOnly === true && snapshot.moduleOnly === true && snapshot.canRenderDom === true && snapshot.didRenderDom === false && snapshot.didWriteWindowState === false) &&
-        !!(targets && targets.res === res && targets.legendEl === legendEl && targets.resultsId === 'intakeResults' && targets.legendId === 'intakeLegend') &&
-        branchEmpty === 'empty-rows-message' && branchSingle === 'single-row-maintenance' && branchMulti === 'multi-row-interval-render' &&
-        !!(descBefore && descBefore.hasResults === true && descBefore.hasLegend === true && descBefore.resultsHtmlLength === 0) &&
-        !!(mountResult && mountResult.didRenderDom === true && mountResult.didSetLegendDisplay === true && mountResult.legendVisible === true && res.innerHTML.indexOf('Smoke mount') !== -1 && legendEl.style.display === 'block') &&
-        !!(descAfter && descAfter.resultsHtmlLength > 0) &&
-        hideResult === true && legendEl.style.display === 'none' &&
-        calls.some(function (call) { return call.type === 'setTrustedHtml' && call.context === 'estimated-intake-dom-mount'; }) &&
-        stateChanged(before, after) === false &&
-        contractDetail.ok === true,
+        typeof snapshotFn === 'function',
+      snapshot: !!(snapshot && snapshot.readOnly === true && snapshot.moduleOnly === true && snapshot.canRenderDom === true && snapshot.didRenderDom === false && snapshot.didWriteWindowState === false),
+      targets: !!(targets && targets.res === res && targets.legendEl === legendEl && targets.resultsId === 'intakeResults' && targets.legendId === 'intakeLegend'),
+      branches: branchEmpty === 'empty-rows-message' && branchSingle === 'single-row-maintenance' && branchMulti === 'multi-row-interval-render',
+      descriptionBefore: !!(descBefore && descBefore.hasResults === true && descBefore.hasLegend === true && descBefore.resultsHtmlLength === 0),
+      render: !!(mountResult && mountResult.didRenderDom === true && mountResult.didSetLegendDisplay === true && mountResult.legendVisible === true && res.innerHTML.indexOf('Smoke mount') !== -1 && legendDisplayAfterRender === 'block'),
+      descriptionAfter: !!(descAfter && descAfter.resultsHtmlLength > 0),
+      hideLegend: hideResult === true && legendEl.style.display === 'none',
+      trustedHtmlContext: calls.some(function (call) { return call.type === 'setTrustedHtml' && call.context === 'estimated-intake-dom-mount'; }),
+      noGlobalSideEffects: stateChanged(before, after) === false,
+      contracts: contractDetail.ok === true
+    };
+
+    return {
+      ok: Object.keys(checks).every(function (key) { return checks[key] === true; }),
       version: api ? api.VERSION : null,
       step: api ? api.STEP : null,
       snapshot: snapshot ? clonePlain(snapshot, 4) : null,
       samples: {
         branches: [branchEmpty, branchSingle, branchMulti],
         htmlLength: res.innerHTML.length,
-        legendDisplay: legendEl.style.display,
+        legendDisplayAfterRender: legendDisplayAfterRender,
+        legendDisplayAfterHide: legendEl.style.display,
         calls: calls.map(function (call) { return call.type; })
       },
+      checks,
       sideEffectsChangedOnGlobal: stateChanged(before, after),
       contractDetail
     };
@@ -1507,7 +1515,7 @@
     const summary = snapshot && snapshot.summary ? snapshot.summary : null;
     return {
       ok: !!api &&
-        api.VERSION === '1.10.0' &&
+        api.VERSION === '1.13.17' &&
         typeof api.getSnapshot === 'function' &&
         typeof api.getGHTherapyIndexedDbAuditSnapshot === 'function' &&
         typeof api.getApiSurfaceStatus === 'function' &&

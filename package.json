@@ -1,0 +1,25 @@
+{
+  "name": "vilda-calc-quality",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Narzędzia jakości i testy regresyjne dla statycznej aplikacji vilda-calc.",
+  "scripts": {
+    "lint": "eslint . --suppressions-location eslint-suppressions.json",
+    "test:syntax": "node tests/scripts/check-js-syntax.mjs",
+    "test:unit": "vitest run",
+    "test:pro": "node vilda_pro_access_regression_test.js && node vilda_pro_access_l2_regression_test.js && node vilda_pro_access_l3_regression_test.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test": "npm run lint && npm run test:syntax && npm run test:unit && npm run test:pro",
+    "test:ci": "npm test && npm run test:e2e"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "eslint": "10.7.0",
+    "globals": "17.7.0",
+    "vitest": "4.1.10"
+  }
+}
