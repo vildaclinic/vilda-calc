@@ -14,10 +14,6 @@ const repositoryFiles = execFileSync(
   .filter(Boolean)
   .map((file) => file.replaceAll('\\', '/'));
 
-// Plik istniał w publicznym repozytorium przed wprowadzeniem tej polityki.
-// Wyjątek nie zezwala na dodawanie kolejnych kopii *.bak.
-const legacyPathAllowlist = new Set(['lab_units_data.js.bak']);
-
 const forbiddenPathRules = [
   {
     label: 'eksport danych .wiw',
@@ -130,12 +126,10 @@ function hasValidPesel(content) {
 }
 
 for (const file of repositoryFiles) {
-  if (!legacyPathAllowlist.has(file)) {
-    for (const rule of forbiddenPathRules) {
-      if (rule.matches(file)) {
-        violations.push(`${file}: ${rule.label}`);
-        break;
-      }
+  for (const rule of forbiddenPathRules) {
+    if (rule.matches(file)) {
+      violations.push(`${file}: ${rule.label}`);
+      break;
     }
   }
 
