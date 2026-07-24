@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.654';
+const SW_VERSION = '1.0.658';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -672,6 +672,8 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=361',
   '/vilda_auth_ui.js?v=362',
   '/vilda_auth_ui.js?v=363',
+  '/vilda_auth_ui.js?v=364',
+  '/vilda_auth_ui.js?v=365',
   '/vilda_growth_prediction_validation.js?v=1',
   '/vilda_growth_prediction_validation.js?v=2',
   '/vilda_growth_prediction_validation.js?v=3',
@@ -1119,6 +1121,7 @@ const CORE_SHELL_URLS = [
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
+  '/vilda_unsaved_guard.js?v=4',
   '/vilda_diet_recommendations.js',
   '/vilda_diet_recommendations.js?v=3',
   '/vilda_diet_recommendations.js?v=4',
@@ -1193,6 +1196,7 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js?v=38',
   '/ios26-ui.js?v=39',
   '/ios26-ui.js?v=40',
+  '/ios26-ui.js?v=41',
   '/tutorial.js?v=6',
   '/tutorial.js?v=7',
   '/tutorial.js?v=8',
@@ -1337,7 +1341,7 @@ const OPTIONAL_ASSETS = [
   '/thyroid_cancer_kids.js',
   '/thyroid_cancer_kids.js?v=4',
   '/hypertension_therapy.js',
-  '/hypertension_therapy.js?v=4',
+  '/hypertension_therapy.js?v=5',
   '/obesity_therapy.js',
   '/obesity_therapy.js?v=4',
   '/obesity_therapy.js?v=5',
@@ -2015,6 +2019,11 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
+      // NAJPIERW przejmij kontrolę nad klientami — dzięki temu controllerchange
+      // (i reload po kliknięciu „Aktualizuj”) zaskakuje NATYCHMIAST, bez czekania na
+      // czyszczenie cache poniżej. (fix banera aktualizacji 2026-07-22)
+      await self.clients.claim();
+
       const keys = await caches.keys();
 
       await migrateOldRuntimeCaches(keys);
@@ -2033,8 +2042,6 @@ self.addEventListener('activate', (event) => {
     void _;
   }
       }
-
-      await self.clients.claim();
     })()
   );
 });
