@@ -482,6 +482,10 @@ body {
   color: var(--danger);
   font-weight: 600;
 }
+#pdfReport .warn-yellow {
+  color: #9a6700;
+  font-weight: 600;
+}
 
 /* Buttons */
 button,
@@ -660,17 +664,14 @@ section.card,
 
   /*
    * Ukryj przycisk Info oraz odpowiadający mu dymek narzędziowy dla pól
-   * #ktvToggle (przełącznik pokazywania zaawansowanych obliczeń KT/V)
-   * i #includeKTV (opcja dołączenia wyników KT/V do raportu AI).  Skrypt
-   * automatycznego generowania przycisków Info tworzy te elementy, jednak w
-   * przypadku tych dwóch pól nie chcemy ich wyświetlać – kryjemy je więc
+   * #ktvToggle (przełącznik pokazywania zaawansowanych obliczeń KT/V).
+   * Skrypt automatycznego generowania przycisków Info tworzy ten element,
+   * jednak w tym przypadku nie chcemy go wyświetlać – kryjemy go więc
    * całkowicie za pomocą CSS.  Zastosowano wysoki priorytet (!important), aby
    * nadpisać dowolne inne reguły.
    */
   #ktvToggle + .info-btn,
-  #includeKTV + .info-btn,
-  #ktvToggle + .info-btn + .tooltip,
-  #includeKTV + .info-btn + .tooltip {
+  #ktvToggle + .info-btn + .tooltip {
     display: none !important;
   }
 
@@ -1355,14 +1356,12 @@ input[type="submit"]:focus-visible {
     }
   }
 
-  /* Center Info buttons for specific checkbox fields. The toggle for advanced KT/V
-     calculations (#ktvToggle) and the option to include KT/V in the AI report
-     (#includeKTV) are rendered as checkboxes with an adjacent Info button. By default
+  /* Center the Info button for the advanced KT/V toggle (#ktvToggle).
+     The toggle is rendered as a checkbox with an adjacent Info button. By default
      checkbox wrappers (.wrap-info) add a top margin to the Info button which pushes it
      down and misaligns it with the checkbox and label. The rules below remove that
      top margin and vertically center the button within the wrapper. */
-  #ktvToggle + .info-btn,
-  #includeKTV + .info-btn {
+  #ktvToggle + .info-btn {
     margin-top: 0;
     align-self: center;
   }
@@ -1630,10 +1629,19 @@ input[type="submit"]:focus-visible {
           <input type="text" id="fullName"></label>
         <label>Wiek (lata):
           <input type="number" id="age" min="0" max="120" required></label>
-        <label>Wiek <span style="font-weight:400;opacity:0.65;">(miesiące – opcjonalnie)</span>:
+        <label>Wiek <span style="font-weight:400;opacity:0.65;">(miesiące od ostatnich urodzin, 0–11)</span>:
           <input type="number" id="ageMonths" min="0" max="11" placeholder="np. 6"></label>
+        <label>Wiek noworodka <span style="font-weight:400;opacity:0.65;">(ukończone dni życia, 0–28; tylko dla 0 lat i 0 mies.)</span>:
+          <input type="number" id="ageDays" min="0" max="28" step="1" placeholder="np. 14"></label>
+        <label for="neonatalTermStatus">Urodzenie o czasie <span style="font-weight:400;opacity:0.65;">(wymagane tylko dla wzoru noworodkowego)</span>:
+          <select id="neonatalTermStatus">
+            <option value="" selected>— nie określono —</option>
+            <option value="term">Tak — noworodek donoszony</option>
+            <option value="preterm">Nie — wcześniak</option>
+          </select></label>
         <label>Płeć:
           <select id="sex">
+            <option value="" selected>— wybierz —</option>
             <option value="M">Mężczyzna</option>
             <option value="F">Kobieta</option>
           </select></label>
@@ -1662,6 +1670,15 @@ input[type="submit"]:focus-visible {
           <option value="">— wybierz —</option>
         </select>
         <div class="formula-note" id="formulaNote" style="display:none;"></div>
+        <details id="legacyFormulaHistory" style="margin-top:.55rem;">
+          <summary>Wzory historyczne — informacje</summary>
+          <p style="margin:.45rem 0 0;font-size:.9rem;">
+            Klasyczny „Legacy Schwartz” z dobieranym współczynnikiem <em>k</em> jest wyłączony z obliczeń.
+            Powstał dla starszych metod oznaczania kreatyniny, a współczynnika nie wolno wybierać wyłącznie
+            na podstawie wieku. Współczesna ścieżka kreatyninowa używa CKiD U25; Bedside Schwartz 2009
+            pozostaje jedynie jawnym wynikiem porównawczym w ograniczonym profilu 1–16 lat.
+          </p>
+        </details>
 
         <!-- Nowy checkbox: włącza tryb agregowania wyników w obrębie jednego pacjenta.  -->
         <label class="inline-checkbox-label" style="margin-top:0.5rem; font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
@@ -1716,6 +1733,43 @@ input[type="submit"]:focus-visible {
               <option value="umol">µmol/L</option>
             </select>
           </label>
+          <label>Metoda oznaczenia kreatyniny w surowicy:
+            <select id="ScrAssay">
+              <option value="" selected>— nie określono —</option>
+              <option value="enzymatic_idms">Metoda enzymatyczna, standaryzowana do IDMS</option>
+              <option value="jaffe_idms">Metoda Jaffego, kalibrowana do IDMS</option>
+              <option value="not_idms">Metoda niestandaryzowana do IDMS / nieznana</option>
+            </select>
+          </label>
+          <label for="creatinineState">Stan markerów filtracji do obliczeń eGFR/eCrCl:
+            <select id="creatinineState">
+              <option value="unknown" selected>Nie wiadomo, czy używane markery są stabilne</option>
+              <option value="stable">Stabilne / zbliżone do stanu stacjonarnego</option>
+              <option value="rapidlyChanging">Co najmniej jeden marker szybko się zmienia</option>
+            </select>
+          </label>
+          <label for="suspectedAKI" class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="suspectedAKI" class="white-checkbox" style="margin:0;">
+            <span>Podejrzenie ostrego uszkodzenia nerek (AKI)</span>
+          </label>
+          <label class="advanced-field pro-field">Cystatyna C (mg/L):
+            <input type="number" step="0.01" id="CystatinC" />
+          </label>
+          <label class="advanced-field pro-field">Standaryzacja cystatyny C:
+            <select id="CystatinCStandardization">
+              <option value="" selected>— nie określono —</option>
+              <option value="ERM-DA471/IFCC">Identyfikowalność ERM-DA471/IFCC</option>
+              <option value="not_ifcc">Niepotwierdzona / inna</option>
+            </select>
+          </label>
+          <label class="advanced-field pro-field">Metoda oznaczenia cystatyny C:
+            <select id="CystatinCAssayMethod">
+              <option value="" selected>— nie określono —</option>
+              <option value="nephelometric">Nefelometryczna</option>
+              <option value="immunoturbidimetric">Immunoturbidymetryczna</option>
+              <option value="other">Inna</option>
+            </select>
+          </label>
           <!-- Parametry z surowicy (elektrolity i inne) -->
           <label class="advanced-field">Sód (Na, mmol/L):
             <input type="number" id="S_Na" step="0.1" />
@@ -1730,10 +1784,10 @@ input[type="submit"]:focus-visible {
             <input type="number" id="S_HCO3" step="0.1" />
           </label>
           <!-- Serum phosphate with selectable units (mg/dl or mmol/L).  The unit selector defaults to mg/dl. -->
-          <label class="advanced-field">Fosfor (PO₄):
+          <label class="advanced-field">Fosfor nieorganiczny (Pᵢ):
             <input type="number" id="S_PO4" step="0.1" />
           </label>
-          <label class="advanced-field">Jednostka fosforu w surowicy:
+          <label class="advanced-field">Jednostka Pᵢ w surowicy:
             <select id="S_PO4_unit">
               <option value="mg/dl" selected>mg/dl</option>
               <option value="mmol/L">mmol/L</option>
@@ -1764,6 +1818,19 @@ input[type="submit"]:focus-visible {
 
         <!-- Parametry z próbki moczu (nowa sekcja) -->
         <fieldset id="spotSet" class="advanced-field pro-field"><legend>Parametry z próbki moczu</legend>
+          <label>Rodzaj próbki moczu:
+            <select id="spotSampleKind">
+              <option value="" selected>— nie określono —</option>
+              <option value="firstMorning">Pierwszy poranny mocz (środkowy strumień)</option>
+              <option value="secondMorning">Drugi poranny mocz</option>
+              <option value="random">Próbka losowa</option>
+              <option value="timed">Próbka ze zbiórki czasowej</option>
+            </select>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotSameSpecimen" class="white-checkbox" style="margin:0;">
+            <span>Wszystkie podane anality punktowe i kreatynina pochodzą z tej samej próbki moczu</span>
+          </label>
           <!-- Kreatynina w próbce moczu (nowe pole) -->
           <label>Kreatynina w próbce moczu:
             <input type="number" step="0.1" id="Ucr_spot" />
@@ -1781,6 +1848,78 @@ input[type="submit"]:focus-visible {
           <label>Albumina/kreatynina (ACR, mg/g):
             <input type="number" step="0.1" id="U_ACR" readonly />
           </label>
+          <label>Białko całkowite w próbce moczu (mg/L):
+            <input type="number" step="0.1" id="U_Prot_spot" />
+          </label>
+          <label>Białko/kreatynina (PCR, mg/g):
+            <input type="number" step="0.1" id="U_PCR" readonly />
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotMenstruation" class="white-checkbox" style="margin:0;">
+            <span>Próbka pobrana podczas miesiączki</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotHematuria" class="white-checkbox" style="margin:0;">
+            <span>Krwiomocz</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotInfection" class="white-checkbox" style="margin:0;">
+            <span>Zakażenie dróg moczowych / infekcja</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotExercise" class="white-checkbox" style="margin:0;">
+            <span>Intensywny wysiłek przed pobraniem</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotAcuteIllness" class="white-checkbox" style="margin:0;">
+            <span>Ostra choroba / stan przejściowy</span>
+          </label>
+          <!-- === Frakcje wydalnicze i UAG ze sparowanej próbki — START === -->
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotPairedChemistry" class="white-checkbox" style="margin:0;">
+            <span>Elektrolity i kreatynina pochodzą z tej samej próbki moczu, a krew pobrano równocześnie</span>
+          </label>
+          <label class="advanced-field pro-field">Sód w próbce moczu (mmol/L):
+            <input type="number" id="U_Na_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field">Sód w surowicy (mmol/L):
+            <input type="number" id="S_Na_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field">Potas w próbce moczu (mmol/L):
+            <input type="number" id="U_K_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field">Potas w surowicy (mmol/L):
+            <input type="number" id="S_K_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field">Chlorki w próbce moczu (mmol/L):
+            <input type="number" id="U_Cl_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field">Chlorki w surowicy (mmol/L):
+            <input type="number" id="S_Cl_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field">HCO₃⁻ w próbce moczu (mmol/L):
+            <input type="number" id="U_HCO3_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field">HCO₃⁻ w surowicy (mmol/L):
+            <input type="number" id="S_HCO3_spot" step="0.1" />
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotDiureticUse" class="white-checkbox" style="margin:0;">
+            <span>Stosowanie diuretyku może wpływać na interpretację FE</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotKnownCKD" class="white-checkbox" style="margin:0;">
+            <span>Rozpoznana CKD może ograniczać interpretację FE</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotBicarbonateLoad" class="white-checkbox" style="margin:0;">
+            <span>FEHCO₃ pochodzi z udokumentowanego testu obciążenia wodorowęglanem</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="spotNagmaContext" class="white-checkbox" style="margin:0;">
+            <span>UAG oceniany w potwierdzonej kwasicy metabolicznej z prawidłową luką surowicy</span>
+          </label>
+          <!-- === Frakcje wydalnicze i UAG ze sparowanej próbki — END === -->
         <!-- Wapń w próbce moczu wraz z wyborem jednostki (mg/dl lub mmol/L).  
              Użytkownik może podać stężenie wapnia w dowolnej z tych jednostek,
              a skrypt automatycznie przeliczy je do mg/dl podczas obliczeń
@@ -1803,10 +1942,29 @@ input[type="submit"]:focus-visible {
           <label class="advanced-field pro-field">pH pojedynczej próbki moczu:
             <input type="number" id="U_pH" step="0.01" placeholder="np. 5.8" />
           </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stoneSpotFasting" class="white-checkbox" style="margin:0;">
+            <span>Próbkę do oceny pH pobrano na czczo</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stonePhPersistent" class="white-checkbox" style="margin:0;">
+            <span>Nieprawidłowy profil pH potwierdzono w powtarzanych pomiarach</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stoneUtiExcluded" class="white-checkbox" style="margin:0;">
+            <span>Wykluczono zakażenie dróg moczowych</span>
+          </label>
           <label class="advanced-field pro-field">Szczawiany w próbce moczu (Ox, mg/dl):
             <input type="number" id="Ox_Cr_spot" step="0.1" />
           </label>
-          <label class="advanced-field pro-field">Cytryniany w próbce moczu (Cit, mg/dl):
+          <label class="advanced-field pro-field">Sposób raportowania szczawianów w próbce punktowej:
+            <select id="oxalateSpotReportingEntity">
+              <option value="" selected>— wybierz z wyniku laboratorium —</option>
+              <option value="oxalic_acid">mg kwasu szczawiowego/dl</option>
+              <option value="oxalate_ion">mg jonu szczawianowego/dl</option>
+            </select>
+          </label>
+          <label class="advanced-field pro-field">Cytryniany jako kwas cytrynowy w próbce moczu (Cit, mg/dl):
             <input type="number" id="Cit_Cr_spot" step="1" />
           </label>
           <!-- === KAMICA (próbka moczu) — END === -->
@@ -1816,19 +1974,19 @@ input[type="submit"]:focus-visible {
                Użytkownik wprowadza stężenie fosforanów w próbce oraz kreatyninę w surowicy
                i fosfor w surowicy wraz z jednostkami.  Pola te będą widoczne w wersji
                „Obliczenia z próbki moczu” oraz w wersji profesjonalnej. -->
-          <label class="advanced-field pro-field">Fosforany w próbce moczu:
+          <label class="advanced-field pro-field">Fosfor nieorganiczny (Pᵢ) w próbce moczu:
             <input type="number" step="0.1" id="U_PO4_spot" />
           </label>
-          <label class="advanced-field pro-field">Jednostka fosforanów w próbce moczu:
+          <label class="advanced-field pro-field">Jednostka Pᵢ w próbce moczu:
             <select id="U_PO4_spot_unit">
               <option value="mg/dl" selected>mg/dl</option>
               <option value="mmol/L">mmol/L</option>
             </select>
           </label>
-          <label class="advanced-field pro-field">Fosfor w surowicy:
+          <label class="advanced-field pro-field">Fosfor nieorganiczny (Pᵢ) w surowicy:
             <input type="number" step="0.1" id="S_PO4_spot" />
           </label>
-          <label class="advanced-field pro-field">Jednostka fosforu w surowicy:
+          <label class="advanced-field pro-field">Jednostka Pᵢ w surowicy:
             <select id="S_PO4_spot_unit">
               <option value="mg/dl" selected>mg/dl</option>
               <option value="mmol/L">mmol/L</option>
@@ -1843,17 +2001,74 @@ input[type="submit"]:focus-visible {
               <option value="umol">µmol/L</option>
             </select>
           </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="tmpOvernightFasting" class="white-checkbox" style="margin:0;">
+            <span>Nocne pozostawanie na czczo przed pobraniem TmP/GFR</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="tmpPairedSameTime" class="white-checkbox" style="margin:0;">
+            <span>Krew i drugi poranny mocz pobrano równocześnie</span>
+          </label>
           <!-- === TmP/GFR (próbka moczu) — END === -->
         </fieldset>
       </div>
       <!-- Prawa kolumna: Parametry z dobowej zbiórki moczu -->
       <div class="param-col">
         <fieldset id="dzmSet"><legend>Parametry z dobowej zbiórki moczu</legend>
-          <label>Kreatynina w moczu 24 h (mg/dl):
+          <label>Stężenie kreatyniny w wymieszanej czasowej zbiórce moczu (mg/dl):
             <input type="number" step="0.1" id="Ucr" />
           </label>
-          <label>Objętość dobowej zbiórki moczu (ml):
+          <label>Całkowita objętość czasowej zbiórki moczu (ml):
             <input type="number" id="V24" placeholder="np. 1500" />
+          </label>
+          <label>Początek zbiórki:
+            <input type="datetime-local" id="collectionStartAt" />
+          </label>
+          <label>Koniec zbiórki:
+            <input type="datetime-local" id="collectionEndAt" />
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="collectionStartVoidDiscarded" class="white-checkbox" style="margin:0;">
+            <span>Początkową mikcję odrzucono i zapisano czas</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="collectionFinalVoidIncluded" class="white-checkbox" style="margin:0;">
+            <span>Końcową mikcję włączono dokładnie przy zakończeniu</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="collectionNoMissedVoids" class="white-checkbox" style="margin:0;">
+            <span>Nie pominięto żadnej porcji moczu</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="collectionNoSpillage" class="white-checkbox" style="margin:0;">
+            <span>Nie rozlano żadnej porcji</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="collectionNoExtraVoids" class="white-checkbox" style="margin:0;">
+            <span>Nie dodano porcji spoza przedziału zbiórki</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="collectionStorageFollowed" class="white-checkbox" style="margin:0;">
+            <span>Przestrzegano instrukcji przechowywania laboratorium</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="serumSampleDuringCollection" class="white-checkbox" style="margin:0;">
+            <span>Kreatyninę w surowicy pobrano podczas tej zbiórki</span>
+          </label>
+          <label>Data i godzina pobrania kreatyniny w surowicy:
+            <input type="datetime-local" id="serumSampleAt" />
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stoneMetabolicEvaluationContext" class="white-checkbox" style="margin:0;">
+            <span>Wyniki służą swoistej ocenie metabolicznej lub profilaktyce nawrotów kamicy</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stoneCollectionPlausibilityReviewed" class="white-checkbox" style="margin:0;">
+            <span>Wiarygodność zbiórki oceniono klinicznie, także względem dobowego wydalania kreatyniny</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stoneTwoCollectionsConfirmed" class="white-checkbox" style="margin:0;">
+            <span>Profil potwierdzono w dwóch kolejnych wiarygodnych zbiórkach 24-godzinnych</span>
           </label>
           <label class="advanced-field">Sód (Na, mmol/L):
             <input type="number" id="U_Na" step="0.1" />
@@ -1867,7 +2082,7 @@ input[type="submit"]:focus-visible {
           <label class="advanced-field">HCO₃⁻ (mmol/L):
             <input type="number" id="U_HCO3" step="0.1" />
           </label>
-          <label class="advanced-field">Fosfor (PO₄, mg/dl):
+          <label class="advanced-field">Fosfor nieorganiczny (Pᵢ, mg P/dl):
             <input type="number" id="U_PO4" step="0.1" />
           </label>
           <label class="advanced-field">Kwas moczowy (mg/dl):
@@ -1880,21 +2095,36 @@ input[type="submit"]:focus-visible {
           <label class="advanced-field">Magnez (Mg, mg/L):
             <input type="number" id="U_Mg" step="0.1" />
           </label>
-          <label class="advanced-field">Białko całkowite (mg/24 h):
+          <label class="advanced-field">Białko całkowite w całej zbiórce (mg):
             <input type="number" id="U_Prot" step="1" />
           </label>
           <!-- === KAMICA (dobowa zbiórka) — START === -->
           <label class="advanced-field pro-field">Szczawiany (Ox, mg/dl):
             <input type="number" id="U_Ox" step="0.1" />
           </label>
-          <label class="advanced-field pro-field">Cytryniany (Cit, mg/dl):
+          <label class="advanced-field pro-field">Sposób raportowania szczawianów (DZM i próbka punktowa):
+            <select id="oxalateReportingEntity">
+              <option value="" selected>— wybierz z wyniku laboratorium —</option>
+              <option value="oxalic_acid">mg kwasu szczawiowego/dl</option>
+              <option value="oxalate_ion">mg jonu szczawianowego/dl</option>
+            </select>
+          </label>
+          <label class="advanced-field pro-field">Cytryniany jako kwas cytrynowy (Cit, mg/dl):
             <input type="number" id="U_Cit" step="1" />
           </label>
           <label class="advanced-field pro-field">Cystyna (Cys, mg/dl):
-            <input type="number" id="U_Cys" step="1" />
+            <input type="number" id="U_Cys" step="0.1" />
           </label>
           <label class="advanced-field pro-field">pH dobowego moczu:
             <input type="number" id="pH24" step="0.01" />
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stoneKnownCystinuria" class="white-checkbox" style="margin:0;">
+            <span>Rozpoznana cystynuria — u dorosłych zastosuj cele terapeutyczne zamiast progów przesiewowych</span>
+          </label>
+          <label class="advanced-field pro-field inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="stoneThiolTherapy" class="white-checkbox" style="margin:0;">
+            <span>Leczenie lekiem tiolowym może zakłócać rutynowe oznaczenie cystyny</span>
           </label>
           <!-- === KAMICA (dobowa zbiórka) — END === -->
         </fieldset>
@@ -1910,26 +2140,100 @@ input[type="submit"]:focus-visible {
 
       <!-- Pola KT/V – usunięto klasę .ktv-grid, aby Info button był w tej samej linii co pole -->
       <div id="ktvFields" style="display:none;margin-top:8px;">
-          <label>Czas dializy (h):
-            <input type="number" id="ktvTime" step="0.1" data-max="8">
+          <label>Metoda leczenia nerkozastępczego:
+            <select id="ktvModality">
+              <option value="">— wybierz —</option>
+              <option value="IHD">Hemodializa przerywana (IHD)</option>
+            </select>
           </label>
-          <label>Ubytek masy (UF, kg):
-            <input type="number" id="ktvUF" step="0.1" data-max="10">
+          <label>Liczba planowych sesji IHD na tydzień:
+            <input type="number" id="ktvSessionsPerWeek" min="2" max="7" step="1" data-max="7">
+          </label>
+          <label>Rzeczywisty odstęp przed badaną sesją (PIDI):
+            <select id="ktvPidiDays">
+              <option value="">— wybierz —</option>
+              <option value="1">około 1 doby</option>
+              <option value="2">około 2 dób</option>
+              <option value="3">około 3 dób</option>
+              <option value="4">około 4 dób</option>
+              <option value="other">inny / niepewny</option>
+            </select>
+          </label>
+          <label>Czas dializy (min):
+            <input type="number" id="ktvDurationMinutes" min="1" max="480" step="1" data-max="480">
+          </label>
+          <label>Ultrafiltracja netto (UF, L):
+            <input type="number" id="ktvUF" min="0" max="10" step="0.1" data-max="10">
           </label>
           <label>Masa ciała po dializie (kg):
-            <input type="number" id="ktvW" step="0.1" data-max="300">
+            <input type="number" id="ktvW" min="0.1" max="300" step="0.1" data-max="300">
           </label>
-          <label>Mocznik przed (mg/dl):
-            <input type="number" id="UreaPre" step="1" data-max="400">
+          <label>Analit:
+            <select id="ktvUreaAnalyte">
+              <option value="">— wybierz —</option>
+              <option value="urea">mocznik</option>
+              <option value="BUN">azot mocznika (BUN)</option>
+            </select>
           </label>
-          <label>Mocznik po (mg/dl):
-            <input type="number" id="UreaPost" step="1" data-max="400">
+          <label>Wspólna jednostka próbki przed i po:
+            <select id="ktvUreaUnit">
+              <option value="">— wybierz —</option>
+              <option value="mg/dL">mg/dl</option>
+              <option value="mmol/L">mmol/L</option>
+            </select>
+          </label>
+          <label>Stężenie przed dializą:
+            <input type="number" id="UreaPre" min="0.1" max="400" step="1" data-max="400">
+          </label>
+          <label>Stężenie po dializie:
+            <input type="number" id="UreaPost" min="0.1" max="400" step="1" data-max="400">
+          </label>
+          <label>Typ dostępu naczyniowego:
+            <select id="ktvAccessType">
+              <option value="" selected>— nie określono —</option>
+              <option value="AVF">przetoka tętniczo-żylna (AVF)</option>
+              <option value="AVG">graft tętniczo-żylny (AVG)</option>
+              <option value="CVC">cewnik żylny (CVC)</option>
+            </select>
+          </label>
+          <label>Metoda pobrania próbki po dializie:
+            <select id="ktvPostMethod">
+              <option value="" selected>— wybierz —</option>
+              <option value="slow_flow_100ml_15s">slow-flow: 100 ml/min przez 15 s</option>
+              <option value="stop_dialysate_3min">stop-dialysate-flow przez około 3 min</option>
+              <option value="other">inna / niepotwierdzona</option>
+            </select>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="ktvSameSession" class="white-checkbox" style="margin:0;">
+            <span>Próbki przed i po pochodzą z tej samej sesji</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="ktvPreBeforeDialysis" class="white-checkbox" style="margin:0;">
+            <span>Próbkę „przed” pobrano bezpośrednio przed rozpoczęciem IHD</span>
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="ktvPreNoDilution" class="white-checkbox" style="margin:0;">
+            <span>Przed pobraniem nie podano soli, heparyny ani innego płynu rozcieńczającego</span>
+          </label>
+          <label>Resztkowy klirens mocznika (Kru, ml/min/1,73 m²):
+            <input type="number" id="ktvKru" min="0" max="30" step="0.1" data-max="30">
+          </label>
+          <label>Data pomiaru Kru:
+            <input type="date" id="ktvKruMeasuredAt">
+          </label>
+          <label class="inline-checkbox-label" style="display:flex;align-items:center;gap:.45rem;">
+            <input type="checkbox" id="ktvTreatmentsDelivered" class="white-checkbox" style="margin:0;">
+            <span>Planowane sesje w ocenianym okresie wykonano regularnie, bez skracania</span>
           </label>
       </div>
 
       <!-- wyniki -->
+      <div id="ktvValidation" class="result-box warn-yellow" role="alert" aria-live="polite" style="display:none;"></div>
       <div id="ktvResult" class="result-box" style="display:none;"></div>
       <div id="ektvResult" class="result-box" style="display:none;"></div>
+      <div id="urrResult" class="result-box" style="display:none;"></div>
+      <div id="ktvInterpretation" class="result-box" style="display:none;"></div>
     </div>
   </form>
 
@@ -1938,20 +2242,20 @@ input[type="submit"]:focus-visible {
     <div class="card" id="clcrCard">
       <h3 id="patientName" class="text-center" style="margin:0 0 0.4rem 0;"></h3>
       <h2 class="text-center">Klirens / eGFR</h2>
-      <p class="text-center" style="font-size:1.2em;">w nawiasach podano zakres referencyjny dla płci i wieku</p>
+      <p class="text-center" style="font-size:1.05em;">Wynik jest prezentowany wraz z metodą, populacją i założeniami interpretacji.</p>
       <div id="clcrInfo"></div>
-      <small>*Klirens 24 h obliczany tylko, gdy podasz zarówno Ucr, V24 i Scr.</small>
+      <small>*Zmierzony klirens kreatyniny wymaga dokładnego czasu, kompletnego protokołu zbiórki, Ucr, objętości i Scr pobranej podczas zbiórki.</small>
     </div>
   </div>
   <div class="card" id="elecCard" style="display:none;">
     <h2 class="text-center">Inne wskaźniki</h2>
-    <p class="text-center" style="font-size:1.2em;">w nawiasach podano zakres referencyjny dla płci i wieku</p>
+    <p class="text-center" style="font-size:1.05em;">Zakres jest pokazywany wyłącznie wtedy, gdy jednostka, materiał i populacja są zgodne ze źródłem.</p>
     <div id="elecInfo"></div>
   </div>
 
   <!-- Karta ryzyka kamicy nerkowej: pokazuje dodatkowe wskaźniki i alerty tylko w wersji profesjonalnej -->
   <div class="card advanced-field pro-field" id="stoneCard" style="display:none;">
-    <h2 class="text-center">Ryzyko kamicy nerkowej</h2>
+    <h2 class="text-center">Parametry związane z kamicą — interpretacja zależna od populacji i próbki</h2>
     <div id="stoneInfo"></div>
   </div>
 
@@ -1978,7 +2282,11 @@ input[type="submit"]:focus-visible {
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script defer src="inline_kalkulator_klirens_01.js?v=1"></script>
 
-    <script defer src="inline_kalkulator_klirens_02.js?v=1"></script>
+    <script defer src="clcr_clinical_safety.js?v=3"></script>
+    <script defer src="clcr_stone_safety.js?v=1"></script>
+    <script defer src="clcr_dialysis_safety.js?v=1"></script>
+    <script defer src="clcr_extended_egfr.js?v=1"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=4"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -1987,13 +2295,7 @@ input[type="submit"]:focus-visible {
 <div class="container" id="aiContainer" style="margin-top:1.5rem;">
   <fieldset id="aiFieldset" hidden>
     <legend>Interpretacja AI</legend>
-    <p>Po naciśnięciu przycisku poniżej system przygotuje gotowe zapytanie do asystenta AI (np. ChatGPT) na podstawie wprowadzonych danych i wszystkich obliczonych wyników. Zapytanie zostanie automatycznie skopiowane do schowka, aby można je było łatwo wkleić do asystenta i uzyskać interpretację wyników.</p>
-    <!-- Opcjonalne dołączenie wyników KT/V do raportu AI.  Etykieta jest wyśrodkowana,
-         a checkbox umieszczony w jednej linii obok tekstu.  Użyto niestandardowego
-         białego pola wyboru, aby zachować jasny wygląd również w ciemnym motywie. -->
-    <label class="inline-checkbox-label center-text" style="margin:0.5rem 0;">
-      <span>Uwzględnij wyniki KT/V w raporcie AI</span> <input type="checkbox" id="includeKTV" class="white-checkbox">
-    </label>
+    <p>Po naciśnięciu przycisku poniżej system przygotuje gotowe zapytanie do asystenta AI (np. ChatGPT) na podstawie wprowadzonych danych i wszystkich widocznych wyników. Ten sam zakres wyników jest używany w PDF, DOCX i raporcie AI.</p>
     <button id="askAI">Zapytaj AI</button>
   </fieldset>
 </div>
@@ -2051,7 +2353,7 @@ input[type="submit"]:focus-visible {
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=1"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=4"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -2067,6 +2369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const label = field.closest('label');
     if (!label) return;
+    if (!label.htmlFor) label.htmlFor = field.id;
     // Skip placeholder rows entirely – these labels are only used to
     // maintain equal row heights and should never produce a visible
     // input-group wrapper.  Without this guard, the wrapper would
@@ -2086,7 +2389,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.classList.add('wrap-info');
       // For specific checkbox fields we want the Info button centered relative to
       // the control. Add special marker classes so CSS can target these wrappers.
-      if (field.id === 'ktvToggle' || field.id === 'includeKTV') {
+      if (field.id === 'ktvToggle') {
         wrapper.classList.add('center-info');
       }
       // Dla pola "Obliczenia dla tego samego pacjenta" chcemy, aby checkbox
@@ -2200,10 +2503,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const rightFs = ensureSpotSetRight();
         if (!leftFs || !rightFs) return;
         const rightIds = [
-          'Ox_Cr_spot','Cit_Cr_spot',
+          'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot',
+          'spotPairedChemistry',
+          'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
+          'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
+          'spotDiureticUse','spotKnownCKD','spotBicarbonateLoad','spotNagmaContext',
           'U_PO4_spot','U_PO4_spot_unit',
           'S_PO4_spot','S_PO4_spot_unit',
-          'Scr_spot','Scr_spot_unit'
+          'Scr_spot','Scr_spot_unit',
+          'tmpOvernightFasting','tmpPairedSameTime'
         ];
         rightIds.forEach(id => moveSpotPairTo(id, rightFs));
       }
@@ -2212,13 +2520,61 @@ document.addEventListener('DOMContentLoaded', () => {
         const rightFs = document.getElementById('spotSetRight');
         if (!leftFs) return;
         const fullOrder = [
-          'Ucr_spot','Ucr_spot_unit','U_Alb','U_ACR','Ca_spot','Ca_spot_unit','U_pH',
-          'Ox_Cr_spot','Cit_Cr_spot','U_PO4_spot','U_PO4_spot_unit',
-          'S_PO4_spot','S_PO4_spot_unit','Scr_spot','Scr_spot_unit'
+          'spotSampleKind','spotSameSpecimen','Ucr_spot','Ucr_spot_unit',
+          'U_Alb','U_ACR','U_Prot_spot','U_PCR',
+          'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
+          'Ca_spot','Ca_spot_unit','U_pH',
+          'Ox_Cr_spot','oxalateSpotReportingEntity','Cit_Cr_spot',
+          'spotPairedChemistry',
+          'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
+          'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
+          'spotDiureticUse','spotKnownCKD','spotBicarbonateLoad','spotNagmaContext',
+          'U_PO4_spot','U_PO4_spot_unit',
+          'S_PO4_spot','S_PO4_spot_unit','Scr_spot','Scr_spot_unit',
+          'tmpOvernightFasting','tmpPairedSameTime'
         ];
         fullOrder.forEach(id => moveSpotPairTo(id, leftFs));
         if (rightFs && rightFs.parentElement) rightFs.parentElement.removeChild(rightFs);
       }
+  function clearKtvModule(options = {}) {
+    const clearInputs = options.clearInputs !== false;
+    const ktvCard = document.getElementById('ktvCard');
+    const ktvFields = document.getElementById('ktvFields');
+    const ktvToggle = document.getElementById('ktvToggle');
+    if (ktvToggle) ktvToggle.checked = false;
+    if (ktvFields) ktvFields.style.display = 'none';
+    if (ktvCard) ktvCard.style.display = 'none';
+    ['ktvValidation', 'ktvResult', 'ektvResult', 'urrResult', 'ktvInterpretation'].forEach(id => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.style.display = 'none';
+      try {
+        clcrClearElement(element);
+      } catch (_) {
+        element.textContent = '';
+      }
+    });
+    if (clearInputs && ktvFields) {
+      ktvFields.querySelectorAll('input, select').forEach(control => {
+        if (control.type === 'checkbox' || control.type === 'radio') {
+          control.checked = false;
+        } else {
+          control.value = '';
+        }
+        control.classList.remove('error', 'is-filled', 'must-fill');
+        const message = control.parentNode?.querySelector('.validation-message');
+        if (message) message.textContent = '';
+      });
+    }
+  }
+  function clearClcrVersionControl(control) {
+    if (!control) return;
+    if (control.type === 'checkbox' || control.type === 'radio') {
+      control.checked = false;
+    } else {
+      control.value = '';
+    }
+  }
   function applyVersion(version) {
     try {
       if (typeof window.clcrCaptureVersionValues === 'function') {
@@ -2236,6 +2592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // can tailor the displayed results accordingly.  Without this the
     // update() routine has no knowledge of the user’s version choice.
     window.currentVersion = version;
+    if (version !== 'pro') clearKtvModule({ clearInputs: true });
     // Preserve unit selects to avoid losing default values when switching modes
     const preservedUnits = {};
     ['ScrUnit','S_PO4_unit'].forEach(id => {
@@ -2273,14 +2630,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
                || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
             // Preserve existing values in same-patient mode or after explicit JSON/autosave restore
-            if (!skipClearing) inp.value = '';
+            if (!skipClearing) clearClcrVersionControl(inp);
           });
         } else {
           // Clear values of any inputs/selects inside the advanced element
         el.querySelectorAll('input, select').forEach(inp => {
           if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
              || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
-          if (!skipClearing) inp.value = '';
+          if (!skipClearing) clearClcrVersionControl(inp);
         });
         }
       });
@@ -2329,7 +2686,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // fosforanów w surowicy, wapnia w próbce ani kreatyniny w próbce moczu
             if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
                || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
-            if (!skipClearing) inp.value = '';
+            if (!skipClearing) clearClcrVersionControl(inp);
           });
         } else {
           el.style.display = '';
@@ -2342,7 +2699,7 @@ document.addEventListener('DOMContentLoaded', () => {
             next.querySelectorAll('input, select').forEach(inp => {
           if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
              || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
-              if (!skipClearing) inp.value = '';
+              if (!skipClearing) clearClcrVersionControl(inp);
             });
           }
         }
@@ -2371,14 +2728,15 @@ document.addEventListener('DOMContentLoaded', () => {
           // Zachowaj wybrane jednostki dla kreatyniny w surowicy oraz
           // wapnia i fosforanów w surowicy.  Te wartości przydadzą się po
           // powrocie z trybu próbki moczu.
-          if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit')) return;
-          if (!skipClearing) inp.value = '';
+          if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit'
+             || inp.id === 'creatinineState' || inp.id === 'suspectedAKI')) return;
+          if (!skipClearing) clearClcrVersionControl(inp);
         });
       }
       if (dzmSetEl) {
         dzmSetEl.style.display = 'none';
         dzmSetEl.querySelectorAll('input, select').forEach(inp => {
-          if (!skipClearing) inp.value = '';
+          if (!skipClearing) clearClcrVersionControl(inp);
         });
       }
       advFields.forEach(el => {
@@ -2391,7 +2749,7 @@ document.addEventListener('DOMContentLoaded', () => {
           el.querySelectorAll('input, select').forEach(inp => {
             if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
                || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
-            if (!skipClearing) inp.value = '';
+            if (!skipClearing) clearClcrVersionControl(inp);
           });
         } else if (inSpotSection) {
           // W sekcji próbkowej pokazujemy wszystkie pola zaawansowane (także pro‑field)
@@ -2402,7 +2760,7 @@ document.addEventListener('DOMContentLoaded', () => {
           el.querySelectorAll('input, select').forEach(inp => {
             if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
                || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
-            if (!skipClearing) inp.value = '';
+            if (!skipClearing) clearClcrVersionControl(inp);
           });
         }
         const next = el.nextElementSibling;
@@ -2412,7 +2770,7 @@ document.addEventListener('DOMContentLoaded', () => {
           next.querySelectorAll('input, select').forEach(inp => {
               if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
                  || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
-              if (!skipClearing) inp.value = '';
+              if (!skipClearing) clearClcrVersionControl(inp);
             });
           } else if (inSpotSection) {
             next.style.display = '';
@@ -2421,7 +2779,7 @@ document.addEventListener('DOMContentLoaded', () => {
           next.querySelectorAll('input, select').forEach(inp => {
             if (inp && inp.id && (inp.id === 'ScrUnit' || inp.id === 'Ca_spot_unit' || inp.id === 'Ucr_spot_unit'
                || inp.id === 'S_Ca_unit' || inp.id === 'S_PO4_unit' || inp.id === 'U_PO4_spot_unit')) return;
-            if (!skipClearing) inp.value = '';
+            if (!skipClearing) clearClcrVersionControl(inp);
           });
           }
         }
@@ -2531,11 +2889,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elecCard) elecCard.style.display = 'none';
         const stoneCard = document.getElementById('stoneCard');
         if (stoneCard) stoneCard.style.display = 'none';
-        // ukryj wyniki KT/V jeśli widoczne
-        const ktvResEl  = document.getElementById('ktvResult');
-        const ektvResEl = document.getElementById('ektvResult');
-        if (ktvResEl)  ktvResEl.style.display  = 'none';
-        if (ektvResEl) ektvResEl.style.display = 'none';
+        clearKtvModule({ clearInputs: true });
         // schowaj przyciski pobierania raportów
         const pdfBtn  = document.getElementById('downloadPDF');
         const docBtn  = document.getElementById('downloadDOCX');
@@ -2550,6 +2904,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stoneInfoEl) clcrClearElement(stoneInfoEl);
         // zresetuj aktualną wersję na wartość pustą
         window.currentVersion = '';
+        if (typeof update === 'function') update();
         // nie wywołuj applyVersion ponownie
         return;
       }
@@ -2604,7 +2959,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=188" defer></script>
+<script src="app.js?v=189" defer></script>
 <script src="vilda_diet_recommendations.js?v=4" defer></script>
 <script src="vilda_patient_report.js?v=5" defer></script>
 <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=57" defer></script>
@@ -2612,7 +2967,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script defer>
 document.addEventListener('DOMContentLoaded', () => {
   const sameCb = document.getElementById('samePatientMode');
-  const CLCR_FORMULA_IDS = ['egfr','cg','cg_norm','cl24','sch_var','sch_idms'];
+  const CLCR_FORMULA_IDS = ['egfr','ckid_u25','egfr_cr_cys','ckid_u25_cys','ckid_u25_cr_cys','neonatal_egfr','cg','cg_norm','cl24','sch_var','sch_idms','ACR','PCR'];
   const state = {
     enabled: false,
     patientKey: null,
@@ -2624,9 +2979,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const fullName  = (document.getElementById('fullName')?.value || '').trim().toLowerCase();
     const sexVal    = document.getElementById('sex')?.value || '';
     const ageVal    = document.getElementById('age')?.value || '';
+    const ageMonthsVal = document.getElementById('ageMonths')?.value || '';
+    const ageDaysVal = document.getElementById('ageDays')?.value || '';
+    const neonatalTermStatusVal = document.getElementById('neonatalTermStatus')?.value || '';
     const weightVal = document.getElementById('weight')?.value || '';
     const heightVal = document.getElementById('height')?.value || '';
-    return [fullName, sexVal, ageVal, weightVal, heightVal].join('|');
+    const scrVal = document.getElementById('Scr')?.value || '';
+    const scrUnitVal = document.getElementById('ScrUnit')?.value || '';
+    const scrAssayVal = document.getElementById('ScrAssay')?.value || '';
+    const ucrVal = document.getElementById('Ucr')?.value || '';
+    const volume24Val = document.getElementById('V24')?.value || '';
+    const urineAlbuminVal = document.getElementById('U_Alb')?.value || '';
+    const spotCreatinineVal = document.getElementById('Ucr_spot')?.value || '';
+    const spotCreatinineUnitVal = document.getElementById('Ucr_spot_unit')?.value || '';
+    const creatinineStateVal = document.getElementById('creatinineState')?.value || '';
+    const suspectedAKIVal = document.getElementById('suspectedAKI')?.checked ? '1' : '0';
+    const additionalContext = [
+      'collectionStartAt','collectionEndAt',
+      'collectionStartVoidDiscarded','collectionFinalVoidIncluded',
+      'collectionNoMissedVoids','collectionNoSpillage','collectionNoExtraVoids',
+      'collectionStorageFollowed','serumSampleDuringCollection','serumSampleAt',
+      'stoneMetabolicEvaluationContext','stoneCollectionPlausibilityReviewed',
+      'stoneTwoCollectionsConfirmed',
+      'spotSampleKind','spotSameSpecimen','U_Prot_spot',
+      'CystatinC','CystatinCStandardization','CystatinCAssayMethod',
+      'oxalateSpotReportingEntity',
+      'spotMenstruation','spotHematuria','spotInfection','spotExercise','spotAcuteIllness',
+      'spotPairedChemistry',
+      'U_Na_spot','S_Na_spot','U_K_spot','S_K_spot',
+      'U_Cl_spot','S_Cl_spot','U_HCO3_spot','S_HCO3_spot',
+      'spotDiureticUse','spotKnownCKD','spotBicarbonateLoad','spotNagmaContext',
+      'U_PO4_spot','U_PO4_spot_unit','S_PO4_spot','S_PO4_spot_unit',
+      'Scr_spot','Scr_spot_unit','tmpOvernightFasting','tmpPairedSameTime'
+    ].map(id => {
+      const element = document.getElementById(id);
+      if (!element) return '';
+      return element.type === 'checkbox' ? (element.checked ? '1' : '0') : (element.value || '');
+    });
+    return [
+      fullName,
+      sexVal,
+      ageVal,
+      ageMonthsVal,
+      ageDaysVal,
+      neonatalTermStatusVal,
+      weightVal,
+      heightVal,
+      scrVal,
+      scrUnitVal,
+      scrAssayVal,
+      ucrVal,
+      volume24Val,
+      urineAlbuminVal,
+      spotCreatinineVal,
+      spotCreatinineUnitVal,
+      creatinineStateVal,
+      suspectedAKIVal,
+      ...additionalContext
+    ].join('|');
   }
 
   function resetAggregator() {
@@ -2640,12 +3050,50 @@ document.addEventListener('DOMContentLoaded', () => {
     return Array.from(nodes || []).map(node => node.cloneNode(true));
   }
 
-  function collectFormulaNodes(container, formulaId) {
-    if (!container || !formulaId) return [];
+  function collectFormulaNodes(container, formulaIds) {
+    const ids = Array.isArray(formulaIds) ? formulaIds : [formulaIds];
+    const allowed = new Set(ids.filter(Boolean));
+    if (!container || !allowed.size) return [];
     const children = Array.from(container.children || []);
-    const direct = children.filter(node => node && node.dataset && node.dataset.clcrFormula === formulaId);
+    const direct = children.filter(node => (
+      node &&
+      node.dataset &&
+      allowed.has(node.dataset.clcrFormula)
+    ));
     if (direct.length) return cloneNodes(direct);
     return [];
+  }
+
+  function getFormulaCollectionPlan(formulaId) {
+    const ageContext = window.ClcrClinicalSafety &&
+      typeof window.ClcrClinicalSafety.readAgeFromDocument === 'function'
+        ? window.ClcrClinicalSafety.readAgeFromDocument(document)
+        : null;
+    const transitionAge = !!(
+      ageContext &&
+      ageContext.valid &&
+      ageContext.exactYears >= 18 &&
+      ageContext.exactYears < 26
+    );
+    if (!transitionAge) {
+      return { storageId: formulaId, formulaIds: [formulaId] };
+    }
+    if (formulaId === 'egfr' || formulaId === 'ckid_u25') {
+      return {
+        storageId: 'transition_egfr_cr',
+        formulaIds: ['egfr', 'ckid_u25']
+      };
+    }
+    if (
+      formulaId === 'egfr_cr_cys' ||
+      formulaId === 'ckid_u25_cr_cys'
+    ) {
+      return {
+        storageId: 'transition_egfr_cr_cys',
+        formulaIds: ['egfr_cr_cys', 'ckid_u25_cr_cys']
+      };
+    }
+    return { storageId: formulaId, formulaIds: [formulaId] };
   }
 
   function hasNodeContent(nodes) {
@@ -2694,8 +3142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (formulaId && clFormulaIds.indexOf(formulaId) !== -1) {
-      const nodes = collectFormulaNodes(clcrInfoEl, formulaId);
-      if (nodes.length) rememberFormula(formulaId, nodes);
+      const plan = getFormulaCollectionPlan(formulaId);
+      const nodes = collectFormulaNodes(clcrInfoEl, plan.formulaIds);
+      if (nodes.length) rememberFormula(plan.storageId, nodes);
     }
 
     return renderAggregate(clcrInfoEl, resultsEl);
