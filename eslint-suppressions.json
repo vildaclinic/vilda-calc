@@ -90,11 +90,6 @@
       "count": 1
     }
   },
-  "inline_kalkulator_klirens_04.js": {
-    "no-useless-assignment": {
-      "count": 2
-    }
-  },
   "inline_ustawienia_04.js": {
     "no-useless-assignment": {
       "count": 4
