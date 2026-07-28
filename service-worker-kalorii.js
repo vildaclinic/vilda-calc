@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.658';
+const SW_VERSION = '1.0.659';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -151,9 +151,15 @@ const CORE_SHELL_URLS = [
   '/inline_index_10.js?v=1',
   '/inline_kalkulator_klirens_00.js?v=1',
   '/inline_kalkulator_klirens_01.js?v=1',
+  '/clcr_clinical_safety.js?v=3',
+  '/clcr_stone_safety.js?v=1',
+  '/clcr_dialysis_safety.js?v=1',
+  '/clcr_extended_egfr.js?v=1',
   '/inline_kalkulator_klirens_02.js?v=1',
+  '/inline_kalkulator_klirens_02.js?v=4',
   '/inline_kalkulator_klirens_03.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=1',
+  '/inline_kalkulator_klirens_04.js?v=4',
   '/inline_kalkulator_klirens_05.js?v=1',
   '/inline_kalkulator_klirens_06.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=1',
@@ -1108,6 +1114,7 @@ const CORE_SHELL_URLS = [
   '/app.js?v=186',
   '/app.js?v=187',
   '/app.js?v=188',
+  '/app.js?v=189',
   '/vilda_terms_gate.js?v=1',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',

@@ -15,7 +15,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | ENERGY | BMI, BMR, TEE i plan energetyczny | `app.js`, `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js` | E2E ładowania `index.html` i centralny smoke; brak pełnej regresji wszystkich obliczeń | zinwentaryzowane; wymaga rozpisania wzorów i populacji |
 | INTAKE | Szacowane spożycie energii | `vilda_estimated_intake*.js` | Vitest modelu szacowanego spożycia | test regresyjny; źródła i ograniczenia do ujednolicenia |
 | NUTRITION | Normy żywienia i mikroskładniki | `nutrition_norms.js`, `nutrition_micros.js`, pliki `micronorms_*.json` | kontrola składni; brak dedykowanej regresji wartości klinicznych | źródło do weryfikacji per składnik |
-| RENAL | Klirens, eGFR, BSA i wskaźniki moczowe | `kalkulator-klirens.html`, `inline_kalkulator_klirens_*.js` | E2E wyłącznie ładowania strony; brak dedykowanej regresji równań | wysoki priorytet przeglądu wersji równań i etykiet |
+| RENAL | Klirens, eGFR, BSA, wskaźniki moczowe, kamica i adekwatność HD | `kalkulator-klirens.html`, `inline_kalkulator_klirens_*.js`, `clcr_*.js` | 186 dedykowanych testów jednostkowych Klirens oraz cztery zestawy E2E wywołujące rzeczywisty interfejs; dodatkowo testy składni i PWA | wdrożone do testów; nadal wymaga walidacji prospektywnej i końcowej akceptacji nefrologicznej |
 | HOMA | HOMA-IR i interpretacja | `homa-ir.html` | E2E znanego przypadku | test regresyjny; progi populacyjne do pełnego rejestru |
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
@@ -40,9 +40,52 @@ Przed zmianą dawek należy:
 3. dodać przypadki regresyjne dla minimum, maksimum i ograniczeń wieku/masy;
 4. uzyskać akceptację kliniczną.
 
-### RENAL — nazwa i wersja CKD-EPI
+### RENAL — profil algorytmów wdrożony do testów 2026-07-28
 
-Interfejs i komentarze nie używają obecnie całkowicie spójnego nazewnictwa roku równania i roku wytycznych. Nie należy zmieniać etykiety ani wzoru bez jednoczesnej identyfikacji publikacji równania, populacji oraz dokumentu klasyfikacyjnego.
+Status tego wpisu to **wdrożenie do testów**, a nie walidacja kliniczna ani regulacyjna. Reguły kwalifikacji populacji, próbki i metody oznaczenia są częścią wyniku: ostrzeżenie w interfejsie nie zastępuje blokady obliczenia.
+
+#### Zakres i ograniczenia
+
+| Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
+|---|---|---|
+| eGFR z kreatyniny | CKiD U25 eGFRcr dla wieku 1–25 lat; 2021 CKD-EPI eGFRcr od 18 lat; w wieku 18–25 lat oba wyniki są pokazywane równolegle. Bedside Schwartz 2009 pozostaje wzorem porównawczym w wieku 1–16 lat. | Podejrzenie AKI lub szybko zmieniająca się Scr blokują wynik. Przy nieznanej stabilności albo niepotwierdzonej zgodności oznaczenia z IDMS aplikacja pokazuje oszacowanie bez kategorii G; stabilna Scr i IDMS pozwalają na kategoryzację G. Wyjątkiem jest ścieżka neonatalna, w której enzymatyczna metoda IDMS stanowi twardą bramkę. CKiD U25 opracowano głównie w łagodnej lub umiarkowanej CKD; nie jest uniwersalnym przesiewem zdrowej populacji. |
+| eGFR z cystatyny C | 2021 CKD-EPI eGFRcr-cys od 18 lat; CKiD U25 eGFRcys i średnia eGFRcr-cys w wieku 1–25 lat. | Identyfikowalność ERM-DA471/IFCC jest twardą bramką. Metoda oznaczenia jest raportowana; jej brak albo metoda inna niż profil nefelometryczny CKiD generują ograniczenie, lecz same nie blokują obliczenia. Wynik jest blokowany przy niestabilnym markerze; wariant U25 ma ograniczoną możliwość uogólnienia poza profilem CKiD. |
+| Noworodek | Ograniczone oszacowanie `0,31 × wzrost [cm] / Scr [mg/dL]` dla donoszonego noworodka w 0.–28. dniu życia. Aplikacja dodatkowo wymaga bieżącej masy ciała >2,5 kg jako konserwatywnej bramki bezpieczeństwa, a nie granicy zwalidowanej populacji. | Wcześniactwo, masa ≤2,5 kg, 29. dzień życia, AKI lub niestabilna Scr blokują wynik. Równanie wyprowadzono w metaanalizie indywidualnych danych pacjentów; autorzy wskazali potrzebę walidacji w dużej kohorcie noworodkowej. Wynik nie otrzymuje kategorii G KDIGO. |
+| CrCl i BSA | Klirens ze zbiórki czasowej wymaga rzeczywistego czasu, kompletnego protokołu i próbki surowicy pobranej w trakcie zbiórki. Indeksowanie używa Haycocka przed 18. rokiem życia i Du Bois od 18 lat. | Błędy zbiórki pozostają głównym źródłem błędu. Cockcroft-Gault jest dostępny wyłącznie od 18 lat: surowy eCrCl używa podanej masy rzeczywistej i jest nieindeksowany, a opcjonalny `cg_norm` przelicza go przez BSA do 1,73 m². Oba pozostają eCrCl, nie eGFR. |
+| KDIGO G/A, ACR i PCR | Kategorie są wyznaczane z wartości niezaokrąglonej. Obliczenie ACR/PCR wymaga zgodnych jednostek i potwierdzenia wspólnej próbki; kategoria A i automatyczna interpretacja pediatryczna wymagają pierwszego porannego moczu bez zaznaczonych konfunderów. Kategorie G i A są wstrzymane przed 2. rokiem życia. W wieku 6 mies.–<2 lat automatyczny próg pediatryczny dotyczy wyłącznie PCR <500 mg/g; od 2 do <18 lat stosowane są odrębne progi ACR/PCR. | Kategoria G nie jest pokazywana przy AKI, niestabilnym lub niestandaryzowanym markerze. Sama kategoria nie rozpoznaje PChN bez kryterium przewlekłości. |
+| Frakcje wydalane i TmP/GFR | Analit i kreatynina muszą pochodzić z tej samej próbki moczu, a próbka krwi być równoczesna. TmP/GFR używa drugiego porannego moczu po nocy na czczo; przed 19. rokiem stosowana jest ścieżka pediatryczna, od 19. roku algorytm Waltona–Bijvoeta/Payne’a z gałęzią dla TRP >0,86. | TmP/GFR nie jest liczone z DZM. Automatyczne zakresy laboratoryjne pozostają wyłączone do czasu wersjonowanego profilu metody i lokalnej walidacji. |
+| Kamica | Profil EAU Urolithiasis 2026 rozdziela dorosłe mmol/24 h od pediatrycznej interpretacji wapnia w mmol/kg/24 h i wiekowego Ca/Cr w próbce punktowej; konwencja masowa szczawianu jest jawna. Pozostałe pediatryczne anality są pokazywane liczbowo bez automatycznych progów. Progi DZM wymagają dokładnie 24-godzinnej bieżącej zbiórki i właściwego kontekstu. | EAU zaleca dwie kolejne zbiórki w swoistej ocenie metabolicznej. Komunikaty są przesiewowe, nie stawiają rozpoznania i nie są samodzielnym zaleceniem leczenia. |
+| Hemodializa | Moduł dotyczy wyłącznie pojedynczej sesji IHD. spKt/Vurea Daugirdasa II używa źródłowych par GFAC dla 2–7 sesji/tydz. i rzeczywistego PIDI; URR i eKt/V są liczone z niezaokrąglonych danych, z uwzględnieniem dostępu AV/CVC, protokołu próbek i aktualności Kru. | Moduł jest niedostępny przed 2. rokiem życia, a w wieku 2–17 lat wymaga protokołu slow-flow. Dla 5–7 sesji/tydz. sesja >300 min jest blokowana i wymaga formalnego modelowania mocznika. Pary GFAC 2–7 pochodzą z symulacji, a walidację FHN opisano dla schematów 3, 4 i 6×/tydz. Progi 1,2/1,4 są stosowane tylko w opisanym profilu dorosłej IHD 3×/tydz.; poza nim oraz w pediatrii wynik techniczny nie otrzymuje dorosłej kategorii adekwatności. |
+
+EKFC pozostaje wyłączone za bramką lokalnej walidacji. Historyczny Schwartz z dobieranym współczynnikiem (k) jest wyłączony z rutynowego użycia.
+
+#### Źródła wersjonowane
+
+1. [KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of CKD](https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf) — klasy G/A, przewlekłość, dobór równań, pediatria i ograniczenia CrCl.
+2. [NIDDK — eGFR Equations for Children, Adolescents, & Young Adults](https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/children-adolescents-young-adults) oraz [kalkulatory dla dorosłych i pediatrii](https://www.niddk.nih.gov/health-information/professionals/clinical-tools-patient-management/kidney-disease/laboratory-evaluation/estimated-gfr-calculators/adults-pediatrics) — CKiD U25, Bedside Schwartz, ścieżka neonatalna i porównanie w wieku 18–25 lat.
+3. Inker LA et al., 2021 CKD-EPI bez zmiennej rasy, [DOI 10.1056/NEJMoa2102953](https://doi.org/10.1056/NEJMoa2102953).
+4. Pierce CB et al., CKiD U25, [DOI 10.1016/j.kint.2020.10.047](https://doi.org/10.1016/j.kint.2020.10.047); Schwartz GJ et al., Bedside Schwartz, [DOI 10.1681/ASN.2008030287](https://doi.org/10.1681/ASN.2008030287).
+5. Smeets NJL et al., równanie eGFR `0,31 × wzrost / Scr` dla noworodków, [DOI 10.1681/ASN.2021101326](https://doi.org/10.1681/ASN.2021101326) — metaanaliza indywidualnych danych pacjentów; wymagana dalsza walidacja w dużej kohorcie noworodkowej.
+6. Derain Dubourg L et al., TmP/GFR od dzieciństwa do dorosłości, [DOI 10.1093/ndt/gfab331](https://doi.org/10.1093/ndt/gfab331); Barth JH et al., algorytm Waltona–Bijvoeta/Payne’a, [DOI 10.1258/0004563001901371](https://doi.org/10.1258/0004563001901371).
+7. [EAU Guidelines on Urolithiasis 2026](https://uroweb.org/guidelines/urolithiasis/chapter/metabolic-evaluation-and-recurrence-prevention) — próbki, jednostki, progi i cele kamicowe.
+8. Daugirdas JT, równanie II, [DOI 10.1681/ASN.V451205](https://doi.org/10.1681/ASN.V451205); Daugirdas JT, eKt/V, [DOI 10.1016/S1073-4449(12)80028-8](https://doi.org/10.1016/S1073-4449(12)80028-8); Daugirdas JT et al., GFAC zależny od częstości/PIDI, [DOI 10.1093/ndt/gfs115](https://doi.org/10.1093/ndt/gfs115); KDOQI 2006 — protokół pobrania, [DOI 10.1053/j.ajkd.2006.03.051](https://doi.org/10.1053/j.ajkd.2006.03.051); [KDOQI 2015](https://doi.org/10.1053/j.ajkd.2015.07.015).
+9. Haycock GB et al., BSA, [DOI 10.1016/S0022-3476(78)80601-5](https://doi.org/10.1016/S0022-3476(78)80601-5); Du Bois D i Du Bois EF, [DOI 10.1001/archinte.1916.00080130010002](https://doi.org/10.1001/archinte.1916.00080130010002).
+10. Cockcroft DW i Gault MH, [DOI 10.1159/000180580](https://doi.org/10.1159/000180580).
+
+#### Reprezentatywne przypadki syntetyczne
+
+| Przypadek | Wejście | Oczekiwany wynik produkcyjny |
+|---|---|---|
+| CKD-EPI-CR | mężczyzna, 50 lat, Scr 1,0 mg/dL, marker stabilny, bez AKI | 2021 CKD-EPI eGFRcr ≈91,6915 mL/min/1,73 m²; przy AKI wynik i kategoria G są blokowane |
+| U25-CR | dziewczynka, 10 lat, 140 cm, Scr 0,6 mg/dL, IDMS | CKiD U25 eGFRcr ≈82,9016 mL/min/1,73 m²; od 26. urodzin wzór jest niedostępny |
+| NEONATAL | donoszony noworodek, 14. dzień, 3,4 kg, 50 cm, Scr 0,5 mg/dL oznaczona enzymatycznie i zgodna z IDMS | ograniczone eGFR 31 mL/min/1,73 m²; wcześniactwo albo 29. dzień blokuje wynik |
+| BEDSIDE | dziecko 10-letnie, 140 cm, Scr 0,6 mg/dL, IDMS | Bedside Schwartz ≈96,3667 mL/min/1,73 m² jako wynik porównawczy |
+| STONE-CA | Ca 4,0078 mg/dL, kompletna zbiórka 1000 mL przez 1440 min | 40,078 mg/24 h = 1,000 mmol/24 h; próg uruchamia się tylko w zgodnym profilu |
+| HD-KTV | dorosły, IHD 3×/tydz., PIDI 2 dni, BUN 120→36 mg/dL w tej samej sesji; próbka pre-HD bez rozcieńczenia, próbka post slow-flow 100 mL/min przez 15 s; 240 min, UF 2 L, masa po HD 70 kg, AVF/AVG, Kru 1,5 mL/min/1,73 m² zmierzone <3 mies. wcześniej, regularne pełne sesje potwierdzone | spKt/V ≈1,401054; eKt/V ≈1,222738; URR 70%; klasyfikacja z wartości niezaokrąglonych |
+
+Zmianie względem starej wersji mogą ulec wyniki na granicach wieku, wyniki pediatryczne wcześniej liczone wzorem dorosłym, kategorie ukrywane przy niestabilnych markerach, TmP/GFR przy wysokim TRP, indeksowany CrCl u dzieci, interpretacje kamicy oraz Kt/V po innym PIDI. Starych wyników nie należy porównywać liczba-do-liczby bez identyfikacji wersji algorytmu.
+
+Pełną walidację przed użyciem produkcyjnym nadal stanowią: recenzja nefrologa dziecięcego i nefrologa dorosłych, test na zanonimizowanym zestawie referencyjnym, porównanie z metodami lokalnych laboratoriów oraz walidacja prospektywna.
 
 ### GROWTH-PRED — pochodzenie danych
 
