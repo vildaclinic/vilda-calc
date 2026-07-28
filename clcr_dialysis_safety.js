@@ -84,8 +84,7 @@
   function normalizeKruUnit(value) {
     const token = normalizeToken(value)
       .replace(/²/g, "2")
-      .replace(/\^2/g, "2")
-      .replace(/ml/g, "ml");
+      .replace(/\^2/g, "2");
     return token === "ml/min/1.73m2" ? "mL/min/1.73m²" : null;
   }
 
