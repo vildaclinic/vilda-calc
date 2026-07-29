@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 async function openCalculator(page, version = 'pro') {
+  await page.addInitScript(() => {
+    window.__CLCR_TEST_LEGACY_BROAD = true;
+  });
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'domcontentloaded' });
   const guestButton = page.getByRole('button', {
     name: 'Korzystaj bez logowania',
@@ -459,8 +462,14 @@ test('nie porównuje U25 eGFRcys z dorosłym równaniem łączonym w wieku 18–
   });
   await page.locator('#formulaPicker').selectOption('ckid_u25_cys');
   await page.waitForFunction(() => window.clcrIsResetting !== true);
-  await page.locator('#Scr').fill('0.9');
-  await page.locator('#ScrAssay').selectOption('enzymatic_idms');
+  await page.evaluate(() => {
+    const scr = document.getElementById('Scr');
+    const assay = document.getElementById('ScrAssay');
+    scr.value = '0.9';
+    assay.value = 'enzymatic_idms';
+    scr.dispatchEvent(new Event('input', { bubbles: true }));
+    assay.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   await page.locator('#creatinineState').selectOption('stable');
   await page.locator('#CystatinC').fill('1');
   await page.locator('#CystatinCStandardization').selectOption(

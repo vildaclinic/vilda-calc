@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 async function openCalculator(page, version = 'basic') {
+  await page.addInitScript(() => {
+    window.__CLCR_TEST_LEGACY_BROAD = true;
+  });
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'domcontentloaded' });
   const guestButton = page.getByRole('button', {
     name: 'Korzystaj bez logowania',
@@ -50,7 +53,12 @@ async function confirmTimedCollectionProtocol(page) {
     'collectionStorageFollowed',
     'serumSampleDuringCollection'
   ]) {
-    await page.locator(`#${id}`).check();
+    const answer = page.locator(`#ui_${id}_answer`);
+    if (await answer.count()) {
+      await answer.selectOption('yes');
+    } else {
+      await page.locator(`#${id}`).check();
+    }
   }
   await page.locator('#serumSampleAt').fill('2026-07-27T12:00');
 }
@@ -256,8 +264,13 @@ test('czasowy klirens używa rzeczywistego czasu i wymaga kompletnego protokołu
   await expect(page.locator('#clcrInfo')).toContainText('12');
   await expect(page.locator('#clcrInfo')).toContainText('nie zmierzony GFR');
 
-  await page.locator('#collectionNoMissedVoids').uncheck();
-  await expect(page.locator('#clcrInfo')).toContainText('Nie obliczono');
+  await page.locator('#ui_collectionNoMissedVoids_answer').selectOption('no');
+  await expect(page.locator('#clcrReadiness')).toContainText(
+    'warunek protokołu nie został spełniony'
+  );
+  await expect(page.locator('#clcrInfo')).not.toContainText(
+    'Zmierzony klirens kreatyniny'
+  );
 });
 
 test('blokuje ilości dobowe przy niepotwierdzonej zbiórce i nie wymaga do nich Scr', async ({ page }) => {

@@ -330,6 +330,7 @@ const maxValues = {
     ktvTreatmentsDelivered:
       "Ocena progowa pojedynczej sesji wymaga potwierdzenia, że cały oceniany schemat realizowano regularnie bez skracania zabiegów.",
   };
+window.ClcrInfoTexts = Object.freeze({ ...infoTexts });
 document.addEventListener("DOMContentLoaded", () => {
   ((window.currentVersion = ""),
     document.querySelectorAll('#clcrForm input[type="number"]').forEach((e) => {
@@ -756,7 +757,10 @@ function update() {
         l && u ? i.classList.add("is-filled") : i.classList.remove("is-filled");
       }),
     validateClcrAgeContext(ageContext),
-    document.querySelector("#clcrForm .error"))
+    window.ClcrUiWorkflow &&
+    typeof window.ClcrUiWorkflow.hasBlockingValidationError === "function"
+      ? window.ClcrUiWorkflow.hasBlockingValidationError()
+      : document.querySelector("#clcrForm .error"))
   ) {
     (hideAllClcrResultOutputs({ clear: !0 }),
       typeof syncClcrReportVisibility == "function" &&
@@ -2034,7 +2038,23 @@ function update() {
     const L = u === "mg/mg" ? 3 : 1;
     ve += `<div class="result-box${m ? "" : " out-of-range"}"><strong>${q}:</strong> ${l.toFixed(L)} ${u}${V}</div>`;
   }
-  (y("Wydalanie\xA0sodu\xA0(Na)", bt, "mmol/24 h"),
+  (y("Wydalanie kwasu moczowego", kt, "mg/kg/24 h", "UA_mgkg"),
+    y("Wydalanie wapnia", Te, "mg/kg/24 h", "Ca_mgkg"),
+    y("Wydalanie magnezu", xt, "mg/kg/24 h", "Mg_mgkg"),
+    y(
+      "Wydalanie fosforu nieorganicznego (P\u1D62)",
+      Ct,
+      "mg P/24 h",
+      "PO4_mgkg",
+    ),
+    y("Wydalanie szczawianów", je, "mg/kg/24 h", "Ox_mgkg"),
+    y("Wydalanie cytrynianów", Be, "mg/kg/24 h", "Cit_mgkg"),
+    y("Kwas moczowy/kreatynina", Et, "mg/mg", "KM_Cr"),
+    y("Wapń/kreatynina", St, "mg/mg", "Ca_Cr"),
+    y("Magnez/wapń", Pt, "mg/mg", "Mg_Ca"),
+    y("Fosfor nieorganiczny/kreatynina", It, "mg/mg", "PO4_Cr"),
+    y("Wapń/cytryniany", yt, "mg/mg", "Ca_Cit"),
+    y("Wydalanie\xA0sodu\xA0(Na)", bt, "mmol/24 h"),
     y("Wydalanie\xA0potasu\xA0(K)", zt, "mmol/24 h"),
     y(
       "Stosunek\xA0potasu\xA0do\xA0sumy\xA0potasu\xA0i\xA0sodu\xA0(K/(K+Na))",
@@ -2808,7 +2828,9 @@ function update() {
                 netUfLiters: readKtvNumber("ktvUF"),
                 postWeightKg: readKtvNumber("ktvW"),
                 accessType: $("ktvAccessType")?.value || "unknown",
-                kruValue: readKtvNumber("ktvKru"),
+                kruValue: $("ktvKru")?.classList.contains("error")
+                  ? null
+                  : readKtvNumber("ktvKru"),
                 kruUnit: "mL/min/1.73m\u00B2",
                 kruMeasuredAt: $("ktvKruMeasuredAt")?.value || "",
                 evaluationDate:
@@ -3462,85 +3484,20 @@ function isClcrElementActuallyVisible(e) {
         x,
       ].join(`
 
-`),
-      c = "";
-    if (!c) {
-      try {
-        (await navigator.clipboard.writeText(_),
-          alert(
-            `Przygotowano zapytanie do AI. Zosta\u0142o ono skopiowane do schowka. Wklej je w ChatGPT, aby uzyska\u0107 interpretacj\u0119 wynik\xF3w:
-
-` + _,
-          ));
-      } catch {
-        alert(
-          `Przygotowano zapytanie do AI. Z powodu ustawie\u0144 przegl\u0105darki nie mo\u017Cna by\u0142o automatycznie skopiowa\u0107 tekstu. Skopiuj poni\u017Cszy tekst r\u0119cznie i wklej go w ChatGPT, aby uzyska\u0107 interpretacj\u0119 wynik\xF3w:
-
-` + _,
-        );
-      }
-      return;
-    }
-    const f = "https://api.openai.com/v1/chat/completions",
-      F = {
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Jesteś asystentem medycznym interpretującym raporty laboratoryjne i obliczenia eGFR. " +
-              stoneSafetyInstruction +
-              " " +
-              tubularSafetyInstruction,
-          },
-          {
-            role: "user",
-            content:
-              `Zinterpretuj nast\u0119puj\u0105cy raport pacjenta. Podaj kr\xF3tkie podsumowanie i ewentualne zalecenia:
-
-` + x,
-          },
-        ],
-        temperature: 0.4,
-        max_tokens: 400,
-      };
+`);
     try {
-      const g =
-        typeof window < "u" &&
-        window.VildaAppHelpers &&
-        typeof window.VildaAppHelpers.fetchJsonWithTimeout == "function"
-          ? window.VildaAppHelpers.fetchJsonWithTimeout
-          : typeof window < "u" &&
-              typeof window.vildaFetchJsonWithTimeout == "function"
-            ? window.vildaFetchJsonWithTimeout
-            : null;
-      if (typeof g != "function")
-        throw new Error(
-          "Brak helpera fetchJsonWithTimeout dla interpretacji AI.",
-        );
-      const O =
-        (
-          await g(f, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${c}`,
-            },
-            body: JSON.stringify(F),
-            timeoutMs: 2e4,
-            context: "clcr-ai-interpretation",
-          })
-        ).choices?.[0]?.message?.content || "Brak odpowiedzi.";
-      alert(
-        `Interpretacja AI:
-
-` + O,
-      );
-    } catch (g) {
-      (console.error(g),
+      (await navigator.clipboard.writeText(_),
         alert(
-          "Wyst\u0105pi\u0142 b\u0142\u0105d podczas \u0142\u0105czenia z API. Sprawd\u017A konfiguracj\u0119 i po\u0142\u0105czenie internetowe.",
+          `Przygotowano zapytanie do AI. Zosta\u0142o ono skopiowane do schowka. Wklej je w ChatGPT, aby uzyska\u0107 interpretacj\u0119 wynik\xF3w:
+
+` + _,
         ));
+    } catch {
+      alert(
+        `Przygotowano zapytanie do AI. Z powodu ustawie\u0144 przegl\u0105darki nie mo\u017Cna by\u0142o automatycznie skopiowa\u0107 tekstu. Skopiuj poni\u017Cszy tekst r\u0119cznie i wklej go w ChatGPT, aby uzyska\u0107 interpretacj\u0119 wynik\xF3w:
+
+` + _,
+      );
     }
   }));
 function syncClcrReportVisibility() {

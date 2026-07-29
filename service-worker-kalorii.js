@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.659';
+const SW_VERSION = '1.0.661';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -43,6 +43,7 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   latestClcrPreserveRestoredValuesFix: '8Q-4c1-klirens-preserve-restored-values',
   latestGrowthDefaultSourceFix: '8Q-4c1a-growth-source-default-olaf',
   latestClcrClosureSmoke: '8Q-4c2-klirens-smoke-closure',
+  latestClcrWorkflowUi: '8Q-4d-klirens-progressive-workflow-ui',
   latestReorganizationStep: '8Q-9-estimated-intake-dom-mount',
   readOnly: true,
   navigation: 'cache-first-background-refresh',
@@ -157,15 +158,21 @@ const CORE_SHELL_URLS = [
   '/clcr_extended_egfr.js?v=1',
   '/inline_kalkulator_klirens_02.js?v=1',
   '/inline_kalkulator_klirens_02.js?v=4',
+  '/inline_kalkulator_klirens_02.js?v=5',
   '/inline_kalkulator_klirens_03.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=1',
   '/inline_kalkulator_klirens_04.js?v=4',
+  '/inline_kalkulator_klirens_04.js?v=5',
+  '/inline_kalkulator_klirens_04.js?v=6',
   '/inline_kalkulator_klirens_05.js?v=1',
   '/inline_kalkulator_klirens_06.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=1',
   '/inline_kalkulator_klirens_07.js?v=2',
+  '/inline_kalkulator_klirens_07.js?v=3',
   '/inline_kalkulator_klirens_08.js?v=1',
   '/inline_kalkulator_klirens_09.js?v=1',
+  '/clcr_ui_workflow.css?v=1',
+  '/clcr_ui_workflow.js?v=1',
   '/inline_notatki_00.js?v=2',
   '/inline_notatki_00.js?v=3',
   '/inline_subskrypcja_00.js?v=1',
