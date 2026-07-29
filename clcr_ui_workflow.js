@@ -199,6 +199,17 @@
     "collectionStorageFollowed",
   ]);
 
+  const DZM_QUALITY_FIELDS = Object.freeze([
+    "collectionStartVoidDiscarded",
+    "collectionFinalVoidIncluded",
+    "collectionNoMissedVoids",
+    "collectionNoSpillage",
+    "collectionNoExtraVoids",
+    "collectionStorageFollowed",
+  ]);
+
+  const DZM_QUALITY_GROUP_FOCUS_ID = "clcrDzmQualityGroup";
+
   const SPOT_INTERFERENCE_FIELDS = Object.freeze([
     "spotMenstruation",
     "spotHematuria",
@@ -673,11 +684,12 @@
   }
 
   const Model = Object.freeze({
-    version: "1.0.0",
+    version: "1.1.0",
     MODULES,
     HISTORICAL_FORMULA_IDS,
     LEVEL_ORDER,
     FORMULA_CONTEXT,
+    DZM_QUALITY_FIELDS,
     HELP_OVERRIDES,
     SHARED_MODULE_FIELD_IDS,
     ACTIVE_CONFOUNDER_MESSAGES,
@@ -715,6 +727,8 @@
     readiness: null,
     moduleToggle: null,
     mobileModulesExpanded: false,
+    dzmQualityGroup: null,
+    dzmQualityBulkUpdate: false,
   };
 
   function formulaById(formulaId) {
@@ -834,15 +848,20 @@
     return view;
   }
 
+  function currentProtocolValueVault() {
+    return (
+      global.__vildaClcrVersionValueVault &&
+      typeof global.__vildaClcrVersionValueVault === "object"
+        ? global.__vildaClcrVersionValueVault
+        : null
+    );
+  }
+
   function ensureProtocolAnswer(view) {
     if (!view) return null;
     const control = view.control;
     if (String(control.type).toLowerCase() !== "checkbox") return null;
-    const vault =
-      global.__vildaClcrVersionValueVault &&
-      typeof global.__vildaClcrVersionValueVault === "object"
-        ? global.__vildaClcrVersionValueVault
-        : null;
+    const vault = currentProtocolValueVault();
     if (view.answerSelect) {
       const answerId = view.answerSelect.id;
       if (
@@ -888,15 +907,264 @@
         control.dispatchEvent(new Event("input", { bubbles: true }));
         control.dispatchEvent(new Event("change", { bubbles: true }));
       }
+      const liveVault = currentProtocolValueVault();
+      if (liveVault) {
+        liveVault[answer.id] = answer.value;
+        liveVault[control.id] = control.checked;
+      }
+      if (
+        DZM_QUALITY_FIELDS.includes(control.id) &&
+        !state.dzmQualityBulkUpdate
+      ) {
+        syncDzmQualityGroupState();
+      }
       scheduleReadiness();
     });
     control.addEventListener("change", () => {
       if (control.checked) answer.value = "yes";
       else if (answer.value === "yes") answer.value = "";
+      const liveVault = currentProtocolValueVault();
+      if (liveVault) {
+        liveVault[answer.id] = answer.value;
+        liveVault[control.id] = control.checked;
+      }
+      if (
+        DZM_QUALITY_FIELDS.includes(control.id) &&
+        !state.dzmQualityBulkUpdate
+      ) {
+        syncDzmQualityGroupState();
+      }
     });
     view.wrapper.insertBefore(answer, view.helpPanel);
     view.answerSelect = answer;
     return answer;
+  }
+
+  function dzmQualityAnswerSummary() {
+    const answers = DZM_QUALITY_FIELDS.map((fieldId) => {
+      const view = state.fieldViews.get(fieldId);
+      const answer = view
+        ? view.answerSelect || ensureProtocolAnswer(view)
+        : null;
+      return answer ? answer.value : "";
+    });
+    const yesCount = answers.filter((answer) => answer === "yes").length;
+    const noCount = answers.filter((answer) => answer === "no").length;
+    const unknownCount = answers.filter(
+      (answer) => answer === "unknown",
+    ).length;
+    const missingCount =
+      DZM_QUALITY_FIELDS.length - yesCount - noCount - unknownCount;
+    return {
+      answers,
+      yesCount,
+      noCount,
+      unknownCount,
+      missingCount,
+      complete: yesCount === DZM_QUALITY_FIELDS.length,
+    };
+  }
+
+  function ensureDzmQualityGroup() {
+    if (state.dzmQualityGroup) return state.dzmQualityGroup;
+    const firstView = state.fieldViews.get(DZM_QUALITY_FIELDS[0]);
+    if (!firstView || !firstView.originalParent) return null;
+
+    const group = createElement("section", "clcr-dzm-quality");
+    group.id = DZM_QUALITY_GROUP_FOCUS_ID;
+    group.setAttribute("role", "group");
+    group.setAttribute(
+      "aria-labelledby",
+      `${DZM_QUALITY_GROUP_FOCUS_ID}Title`,
+    );
+
+    const header = createElement("div", "clcr-dzm-quality__header");
+    const title = createElement(
+      "h3",
+      "clcr-dzm-quality__title",
+      "Jakość zbiórki moczu",
+    );
+    title.id = `${DZM_QUALITY_GROUP_FOCUS_ID}Title`;
+    const badge = createElement(
+      "span",
+      "clcr-field__status",
+      "Wymagane potwierdzenie",
+    );
+    const stateText = createElement(
+      "span",
+      "clcr-dzm-quality__state",
+      "0/6 potwierdzono",
+    );
+    stateText.setAttribute("aria-live", "polite");
+    header.append(title, badge, stateText);
+
+    const description = createElement(
+      "p",
+      "clcr-dzm-quality__description",
+      "Potwierdź jednym kliknięciem, jeśli początek i koniec, kompletność porcji bez rozlania, czas zbiórki i przechowywanie były prawidłowe. Jeśli nie lub nie wiesz — otwórz szczegóły.",
+    );
+    description.id = `${DZM_QUALITY_GROUP_FOCUS_ID}Description`;
+    stateText.id = `${DZM_QUALITY_GROUP_FOCUS_ID}State`;
+    group.setAttribute(
+      "aria-describedby",
+      `${description.id} ${stateText.id}`,
+    );
+
+    const confirmAll = createElement(
+      "button",
+      "clcr-dzm-quality__confirm",
+      "Tak — wszystkie warunki spełniono",
+    );
+    confirmAll.type = "button";
+    confirmAll.setAttribute(
+      "aria-describedby",
+      `${description.id} ${stateText.id}`,
+    );
+
+    const details = createElement("details", "clcr-dzm-quality__details");
+    details.setAttribute("aria-describedby", description.id);
+    const summary = createElement(
+      "summary",
+      "clcr-dzm-quality__summary",
+      "Sprawdź szczegóły / zgłoś problem",
+    );
+    const fields = createElement("div", "clcr-dzm-quality__fields");
+    details.append(summary, fields);
+    group.append(header, description, confirmAll, details);
+
+    confirmAll.addEventListener("click", () => {
+      const currentSummary = dzmQualityAnswerSummary();
+      if (currentSummary.noCount || currentSummary.unknownCount) {
+        details.open = true;
+        const firstUnconfirmedId = DZM_QUALITY_FIELDS.find((fieldId) => {
+          const view = state.fieldViews.get(fieldId);
+          return (
+            view &&
+            view.answerSelect &&
+            ["no", "unknown"].includes(view.answerSelect.value)
+          );
+        });
+        if (firstUnconfirmedId) focusField(firstUnconfirmedId);
+        return;
+      }
+      state.dzmQualityBulkUpdate = true;
+      DZM_QUALITY_FIELDS.forEach((fieldId) => {
+        const view = state.fieldViews.get(fieldId);
+        const answer = view
+          ? view.answerSelect || ensureProtocolAnswer(view)
+          : null;
+        if (!answer || answer.value === "yes") return;
+        answer.value = "yes";
+        answer.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      state.dzmQualityBulkUpdate = false;
+      details.open = false;
+      syncDzmQualityGroupState();
+      scheduleReadiness();
+    });
+
+    firstView.originalParent.insertBefore(group, firstView.wrapper);
+    state.dzmQualityGroup = {
+      group,
+      header,
+      title,
+      badge,
+      stateText,
+      description,
+      confirmAll,
+      details,
+      fields,
+    };
+    return state.dzmQualityGroup;
+  }
+
+  function syncDzmQualityGroupState() {
+    const qualityGroup = state.dzmQualityGroup;
+    if (!qualityGroup || qualityGroup.group.hidden) return;
+    const summary = dzmQualityAnswerSummary();
+    qualityGroup.group.dataset.clcrQualityState = summary.complete
+      ? "confirmed"
+      : summary.noCount
+        ? "failed"
+        : summary.unknownCount
+          ? "unknown"
+          : "incomplete";
+
+    if (summary.complete) {
+      qualityGroup.stateText.textContent = "6/6 potwierdzono";
+      qualityGroup.confirmAll.textContent =
+        "Tak — wszystkie warunki spełniono";
+    } else if (summary.noCount || summary.unknownCount) {
+      const stateParts = [];
+      if (summary.yesCount) stateParts.push(`${summary.yesCount} Tak`);
+      if (summary.noCount) stateParts.push(`${summary.noCount} Nie`);
+      if (summary.unknownCount) {
+        stateParts.push(`${summary.unknownCount} Nie wiem`);
+      }
+      if (summary.missingCount) {
+        stateParts.push(`${summary.missingCount} bez odpowiedzi`);
+      }
+      qualityGroup.stateText.textContent = stateParts.join(" · ");
+      qualityGroup.confirmAll.textContent =
+        "Przejdź do odpowiedzi wymagającej zmiany";
+      qualityGroup.details.open = true;
+    } else {
+      qualityGroup.stateText.textContent = `${summary.yesCount}/6 potwierdzono`;
+      qualityGroup.confirmAll.textContent =
+        "Tak — wszystkie warunki spełniono";
+    }
+  }
+
+  function restoreDzmQualityFields() {
+    const qualityGroup = state.dzmQualityGroup;
+    if (!qualityGroup) return;
+    DZM_QUALITY_FIELDS.forEach((fieldId) => {
+      const view = state.fieldViews.get(fieldId);
+      if (!view || !view.originalParent) return;
+      if (view.wrapper.parentNode === qualityGroup.fields) {
+        view.originalParent.insertBefore(view.wrapper, qualityGroup.group);
+      }
+    });
+    qualityGroup.group.hidden = true;
+  }
+
+  function syncDzmQualityGroup() {
+    const activeQualityFields = DZM_QUALITY_FIELDS.filter((fieldId) =>
+      state.activeFieldIds.has(fieldId),
+    );
+    if (!activeQualityFields.length) {
+      if (state.dzmQualityGroup) state.dzmQualityGroup.group.hidden = true;
+      return;
+    }
+    const qualityGroup = ensureDzmQualityGroup();
+    if (!qualityGroup) return;
+    const firstView = state.fieldViews.get(DZM_QUALITY_FIELDS[0]);
+    if (
+      firstView &&
+      firstView.originalParent &&
+      firstView.wrapper.parentNode === firstView.originalParent
+    ) {
+      firstView.originalParent.insertBefore(qualityGroup.group, firstView.wrapper);
+    }
+    DZM_QUALITY_FIELDS.forEach((fieldId) => {
+      const view = state.fieldViews.get(fieldId);
+      if (!view) return;
+      qualityGroup.fields.appendChild(view.wrapper);
+    });
+    const required = activeQualityFields.some((fieldId) =>
+      state.requiredFieldIds.has(fieldId),
+    );
+    qualityGroup.group.hidden = false;
+    qualityGroup.group.dataset.clcrStatus = required
+      ? "required"
+      : "interpretation";
+    qualityGroup.badge.className = `clcr-field__status clcr-field__status--${
+      required ? "required" : "interpretation"
+    }`;
+    qualityGroup.badge.textContent = required
+      ? "Wymagane potwierdzenie"
+      : "Do pełnej interpretacji";
+    syncDzmQualityGroupState();
   }
 
   function setFieldStatus(view, status) {
@@ -951,10 +1219,24 @@
       patientCard.style.display = sectionHasVisibleFields(patientSet) ? "" : "none";
     }
     const paramRow = documentRef.querySelector("#clcrForm > .param-row");
-    const visibleParameter = ["serumSet", "spotSet", "spotSetRight", "dzmSet"].some(
-      (id) => sectionHasVisibleFields(documentRef.getElementById(id)),
-    );
-    if (paramRow) paramRow.style.display = visibleParameter ? "" : "none";
+    let visibleColumnCount = 0;
+    if (paramRow) {
+      Array.from(paramRow.children)
+        .filter((child) => child.classList?.contains("param-col"))
+        .forEach((column) => {
+          const fieldsets = Array.from(column.children).filter(
+            (child) => String(child.tagName).toLowerCase() === "fieldset",
+          );
+          const visible = fieldsets.some((fieldset) =>
+            sectionHasVisibleFields(fieldset),
+          );
+          column.hidden = !visible;
+          if (visible) visibleColumnCount += 1;
+        });
+      paramRow.dataset.clcrVisibleColumns = String(visibleColumnCount);
+      paramRow.hidden = visibleColumnCount === 0;
+      paramRow.style.display = visibleColumnCount ? "" : "none";
+    }
     const ktvCard = documentRef.getElementById("ktvCard");
     if (ktvCard) {
       ktvCard.style.display =
@@ -1119,6 +1401,7 @@
       }
     });
 
+    syncDzmQualityGroup();
     const accr = state.fieldViews.get("U_ACR");
     const pcr = state.fieldViews.get("U_PCR");
     if (accr) accr.wrapper.hidden = true;
@@ -1164,6 +1447,7 @@
       view.wrapper.hidden = !active.has(fieldId);
       setFieldStatus(view, "optional");
     });
+    restoreDzmQualityFields();
     restoreCollapsibleContextFields();
     syncFieldPairs();
     syncFieldsetVisibility();
@@ -1219,9 +1503,38 @@
   }
 
   function focusField(fieldId) {
+    if (fieldId === DZM_QUALITY_GROUP_FOCUS_ID && state.dzmQualityGroup) {
+      const { group, confirmAll, details } = state.dzmQualityGroup;
+      const answerSummary = dzmQualityAnswerSummary();
+      const firstProblemId =
+        answerSummary.noCount || answerSummary.unknownCount
+          ? DZM_QUALITY_FIELDS.find((qualityFieldId) => {
+              const view = state.fieldViews.get(qualityFieldId);
+              return (
+                view &&
+                view.answerSelect &&
+                ["no", "unknown"].includes(view.answerSelect.value)
+              );
+            })
+          : "";
+      const problemView = firstProblemId
+        ? state.fieldViews.get(firstProblemId)
+        : null;
+      const target = problemView?.answerSelect || confirmAll;
+      if (problemView) details.open = true;
+      try {
+        group.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.focus({ preventScroll: true });
+      } catch (_) {
+        target.focus();
+      }
+      return;
+    }
     const view = state.fieldViews.get(fieldId);
     if (!view) return;
     const target = view.answerSelect || view.control;
+    const details = view.wrapper.closest("details");
+    if (details) details.open = true;
     try {
       view.wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
       target.focus({ preventScroll: true });
@@ -1803,12 +2116,15 @@
     entries.forEach((entry) => {
       const item = createElement("li");
       const fieldId = entry.fieldId || "";
-      const view = fieldId ? state.fieldViews.get(fieldId) : null;
+      const isDzmQualityGroup = fieldId === DZM_QUALITY_GROUP_FOCUS_ID;
+      const view = fieldId && !isDzmQualityGroup
+        ? state.fieldViews.get(fieldId)
+        : null;
       const label = entry.label || (view ? view.labelText : fieldId);
       const text = entry.reason
         ? `${label} — ${entry.reason}`
         : entry.message || label;
-      if (fieldId && view) {
+      if (fieldId && (view || isDzmQualityGroup)) {
         const button = createElement("button", "clcr-missing-link", text);
         button.type = "button";
         button.addEventListener("click", () => focusField(fieldId));
@@ -1819,6 +2135,32 @@
       list.appendChild(item);
     });
     state.readiness.appendChild(list);
+  }
+
+  function compactReadinessEntries(entries) {
+    const source = Array.isArray(entries) ? entries : [];
+    const qualityEntries = source.filter((entry) =>
+      DZM_QUALITY_FIELDS.includes(entry.fieldId),
+    );
+    if (!qualityEntries.length) return source;
+    const firstIndex = source.findIndex((entry) =>
+      DZM_QUALITY_FIELDS.includes(entry.fieldId),
+    );
+    const answerSummary = dzmQualityAnswerSummary();
+    const reason = answerSummary.noCount
+      ? "co najmniej jeden warunek nie został spełniony."
+      : answerSummary.unknownCount
+        ? "kompletności zbiórki nie można potwierdzić."
+        : "potwierdź wszystkie 6 warunków jednym kliknięciem albo uzupełnij szczegóły.";
+    const compacted = source.filter(
+      (entry) => !DZM_QUALITY_FIELDS.includes(entry.fieldId),
+    );
+    compacted.splice(Math.min(firstIndex, compacted.length), 0, {
+      fieldId: DZM_QUALITY_GROUP_FOCUS_ID,
+      label: "Jakość czasowej lub dobowej zbiórki moczu",
+      reason,
+    });
+    return compacted;
   }
 
   function renderReadiness() {
@@ -1868,7 +2210,7 @@
             : `Do obliczenia „${formula.label}” brakuje:`,
         ),
       );
-      appendReadinessList(readiness.missing);
+      appendReadinessList(compactReadinessEntries(readiness.missing));
       return;
     }
     if (readiness.status === "blocked") {
@@ -2409,7 +2751,7 @@
   }
 
   const Workflow = {
-    version: "1.0.0",
+    version: "1.1.0",
     model: Model,
     state,
     selectLevel: chooseLevel,
