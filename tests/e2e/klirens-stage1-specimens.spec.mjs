@@ -44,21 +44,28 @@ async function setPatient(page, {
 }
 
 async function confirmTimedCollectionProtocol(page) {
-  for (const id of [
-    'collectionStartVoidDiscarded',
-    'collectionFinalVoidIncluded',
-    'collectionNoMissedVoids',
-    'collectionNoSpillage',
-    'collectionNoExtraVoids',
-    'collectionStorageFollowed',
-    'serumSampleDuringCollection'
-  ]) {
-    const answer = page.locator(`#ui_${id}_answer`);
-    if (await answer.count()) {
-      await answer.selectOption('yes');
-    } else {
+  const confirmAll = page.locator(
+    '#clcrDzmQualityGroup .clcr-dzm-quality__confirm'
+  );
+  if (await confirmAll.isVisible()) {
+    await confirmAll.click();
+  } else {
+    for (const id of [
+      'collectionStartVoidDiscarded',
+      'collectionFinalVoidIncluded',
+      'collectionNoMissedVoids',
+      'collectionNoSpillage',
+      'collectionNoExtraVoids',
+      'collectionStorageFollowed',
+    ]) {
       await page.locator(`#${id}`).check();
     }
+  }
+  const serumAnswer = page.locator('#ui_serumSampleDuringCollection_answer');
+  if (await serumAnswer.count()) {
+    await serumAnswer.selectOption('yes');
+  } else {
+    await page.locator('#serumSampleDuringCollection').check();
   }
   await page.locator('#serumSampleAt').fill('2026-07-27T12:00');
 }
@@ -264,6 +271,7 @@ test('czasowy klirens używa rzeczywistego czasu i wymaga kompletnego protokołu
   await expect(page.locator('#clcrInfo')).toContainText('12');
   await expect(page.locator('#clcrInfo')).toContainText('nie zmierzony GFR');
 
+  await page.locator('#clcrDzmQualityGroup summary').click();
   await page.locator('#ui_collectionNoMissedVoids_answer').selectOption('no');
   await expect(page.locator('#clcrReadiness')).toContainText(
     'warunek protokołu nie został spełniony'

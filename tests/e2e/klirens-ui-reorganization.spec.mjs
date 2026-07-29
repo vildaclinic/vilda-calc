@@ -179,7 +179,7 @@ test('wyszukanie KT/V otwiera formularz PRO bez widocznego przełącznika', asyn
   );
 });
 
-test('DZM pokazuje protokół zbiórki jako wymagany do wyniku /24 h', async ({
+test('DZM grupuje 6 warunków zbiórki i pozwala potwierdzić je jednym kliknięciem', async ({
   page,
 }) => {
   await openCalculator(page);
@@ -187,6 +187,18 @@ test('DZM pokazuje protokół zbiórki jako wymagany do wyniku /24 h', async ({
 
   await expect(page.locator('#collectionStartAt')).toBeVisible();
   await expect(page.locator('#collectionEndAt')).toBeVisible();
+  const qualityGroup = page.locator('#clcrDzmQualityGroup');
+  const details = qualityGroup.locator('details');
+  const confirmAll = qualityGroup.locator('.clcr-dzm-quality__confirm');
+  await expect(qualityGroup).toBeVisible();
+  await expect(qualityGroup).toContainText(
+    'Jakość zbiórki moczu'
+  );
+  await expect(qualityGroup).toContainText('0/6 potwierdzono');
+  await expect(details).not.toHaveAttribute('open', '');
+  await expect(confirmAll).toHaveText(
+    'Tak — wszystkie warunki spełniono'
+  );
   for (const fieldId of [
     'collectionStartVoidDiscarded',
     'collectionFinalVoidIncluded',
@@ -195,7 +207,26 @@ test('DZM pokazuje protokół zbiórki jako wymagany do wyniku /24 h', async ({
     'collectionNoExtraVoids',
     'collectionStorageFollowed',
   ]) {
-    await expect(page.locator(`#ui_${fieldId}_answer`)).toBeVisible();
+    await expect(page.locator(`#ui_${fieldId}_answer`)).toBeHidden();
+  }
+  await expect(page.locator('#clcrReadiness')).toContainText(
+    'Jakość czasowej lub dobowej zbiórki moczu'
+  );
+  await expect(page.locator('#clcrReadiness')).not.toContainText(
+    'Początkową mikcję odrzucono'
+  );
+  await confirmAll.click();
+  await expect(qualityGroup).toContainText('6/6 potwierdzono');
+  await expect(confirmAll).not.toHaveAttribute('aria-pressed', /.*/);
+  for (const fieldId of [
+    'collectionStartVoidDiscarded',
+    'collectionFinalVoidIncluded',
+    'collectionNoMissedVoids',
+    'collectionNoSpillage',
+    'collectionNoExtraVoids',
+    'collectionStorageFollowed',
+  ]) {
+    await expect(page.locator(`#${fieldId}`)).toBeChecked();
   }
   await expect(page.locator('#clcrReadiness')).toContainText(
     'Początek zbiórki'
@@ -203,6 +234,170 @@ test('DZM pokazuje protokół zbiórki jako wymagany do wyniku /24 h', async ({
   await expect(
     page.locator('[data-clcr-field-id="collectionStartAt"]')
   ).toHaveAttribute('data-clcr-status', 'required');
+
+  await qualityGroup.locator('summary').click();
+  const firstAnswer = page.locator(
+    '#ui_collectionStartVoidDiscarded_answer'
+  );
+  await firstAnswer.selectOption('no');
+  await expect(qualityGroup).toContainText('5 Tak · 1 Nie');
+  await expect(confirmAll).toHaveText(
+    'Przejdź do odpowiedzi wymagającej zmiany'
+  );
+  await expect(confirmAll).toBeEnabled();
+  await expect(page.locator('#collectionStartVoidDiscarded')).not.toBeChecked();
+  await expect(page.locator('#clcrReadiness')).toContainText(
+    'co najmniej jeden warunek nie został spełniony'
+  );
+
+  await firstAnswer.selectOption('yes');
+  await expect(qualityGroup).toContainText('6/6 potwierdzono');
+  await expect(page.locator('#collectionStartVoidDiscarded')).toBeChecked();
+});
+
+test('pojedyncza widoczna kolumna DZM zajmuje całą szerokość przy 1600 px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await openCalculator(page);
+  await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
+
+  const columns = page.locator('#clcrForm > .param-row > .param-col');
+  await expect(columns).toHaveCount(2);
+  await expect(columns.nth(0)).toBeHidden();
+  await expect(columns.nth(1)).toBeVisible();
+
+  const desktopLayout = await page.evaluate(() => {
+    const row = document.querySelector('#clcrForm > .param-row');
+    const dzm = document.getElementById('dzmSet');
+    const rowRect = row.getBoundingClientRect();
+    const dzmRect = dzm.getBoundingClientRect();
+    return {
+      visibleColumns: row.dataset.clcrVisibleColumns,
+      leftDifference: Math.abs(rowRect.left - dzmRect.left),
+      widthDifference: Math.abs(rowRect.width - dzmRect.width),
+    };
+  });
+  expect(desktopLayout.visibleColumns).toBe('1');
+  expect(desktopLayout.leftDifference).toBeLessThanOrEqual(1);
+  expect(desktopLayout.widthDifference).toBeLessThanOrEqual(2);
+});
+
+test('DZM inicjalizuje pełną szerokość bez przewijania przy 320 px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await openCalculator(page);
+  await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
+
+  const columns = page.locator('#clcrForm > .param-row > .param-col');
+  await expect(columns.nth(0)).toBeHidden();
+  await expect(columns.nth(1)).toBeVisible();
+  const mobileLayout = await page.evaluate(() => {
+    const row = document.querySelector('#clcrForm > .param-row');
+    const dzm = document.getElementById('dzmSet');
+    const rowRect = row.getBoundingClientRect();
+    const dzmRect = dzm.getBoundingClientRect();
+    return {
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      leftDifference: Math.abs(rowRect.left - dzmRect.left),
+      widthDifference: Math.abs(rowRect.width - dzmRect.width),
+    };
+  });
+  expect(mobileLayout.scrollWidth).toBeLessThanOrEqual(
+    mobileLayout.clientWidth + 1
+  );
+  expect(mobileLayout.leftDifference).toBeLessThanOrEqual(1);
+  expect(mobileLayout.widthDifference).toBeLessThanOrEqual(2);
+});
+
+test('po restore zmiana odpowiedzi DZM nie wraca do starego vaultu', async ({
+  page,
+}) => {
+  await openCalculator(page);
+  await selectFromSearch(page, 'wydalanie sodu', 'Na_mmol_d');
+  await page.waitForFunction(
+    () => typeof window.applyClcrSessionSnapshot === 'function'
+  );
+
+  const qualityIds = [
+    'collectionStartVoidDiscarded',
+    'collectionFinalVoidIncluded',
+    'collectionNoMissedVoids',
+    'collectionNoSpillage',
+    'collectionNoExtraVoids',
+    'collectionStorageFollowed',
+  ];
+  const applied = await page.evaluate(ids => {
+    const inputs = {
+      currentVersion: 'advanced',
+      formulaPicker: 'Na_mmol_d',
+      age: '10',
+      ageMonths: '0',
+      U_Na: '100',
+      V24: '1000',
+      collectionStartAt: '2026-07-27T08:00',
+      collectionEndAt: '2026-07-28T08:00',
+    };
+    ids.forEach((id, index) => {
+      const answer = index === 0 ? 'no' : index === 1 ? 'unknown' : 'yes';
+      inputs[id] = answer === 'yes';
+      inputs[`ui_${id}_answer`] = answer;
+    });
+    return window.applyClcrSessionSnapshot(
+      {
+        version: 2,
+        currentVersion: 'advanced',
+        selectedFormula: 'Na_mmol_d',
+        preserveAcrossVersions: true,
+        preservedInputs: { ...inputs },
+        inputs,
+      },
+      {
+        source: 'e2e-dzm-restore',
+        update: true,
+        dispatchEvents: false,
+        preserveAcrossVersions: true,
+      }
+    );
+  }, qualityIds);
+  expect(applied).toBe(true);
+
+  const qualityGroup = page.locator('#clcrDzmQualityGroup');
+  await expect(qualityGroup).toContainText('4 Tak · 1 Nie · 1 Nie wiem');
+  await expect(
+    page.locator('#ui_collectionStartVoidDiscarded_answer')
+  ).toHaveValue('no');
+  await expect(
+    page.locator('#ui_collectionFinalVoidIncluded_answer')
+  ).toHaveValue('unknown');
+
+  await page
+    .locator('#ui_collectionStartVoidDiscarded_answer')
+    .selectOption('yes');
+  await page
+    .locator('#ui_collectionFinalVoidIncluded_answer')
+    .selectOption('yes');
+  await expect(qualityGroup).toContainText('6/6 potwierdzono');
+  for (const fieldId of qualityIds) {
+    await expect(page.locator(`#${fieldId}`)).toBeChecked();
+    await expect(page.locator(`#ui_${fieldId}_answer`)).toHaveValue('yes');
+  }
+  await expect.poll(async () =>
+    page.evaluate(() => window.getClcrFormulaReadiness('Na_mmol_d'))
+  ).toMatchObject({
+    valueReady: true,
+    missingFieldIds: [],
+    hasBlockedProtocol: false,
+  });
+
+  await page.evaluate(() => window.ClcrUiWorkflow.refresh());
+  await expect(qualityGroup).toContainText('6/6 potwierdzono');
+  for (const fieldId of qualityIds) {
+    await expect(page.locator(`#${fieldId}`)).toBeChecked();
+    await expect(page.locator(`#ui_${fieldId}_answer`)).toHaveValue('yes');
+  }
 });
 
 test('CKD-EPI pokazuje listę braków, a błąd ukrytego pola spot nie bramkuje wyniku', async ({
