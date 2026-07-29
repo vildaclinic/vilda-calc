@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 async function openCalculator(page, version = 'basic') {
+  await page.addInitScript(() => {
+    window.__CLCR_TEST_LEGACY_BROAD = true;
+  });
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'domcontentloaded' });
   const guestButton = page.getByRole('button', {
     name: 'Korzystaj bez logowania',
@@ -301,7 +304,11 @@ test('zmiana danych DZM unieważnia zapamiętany klirens 24 h', async ({ page })
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(page.locator('#clcrInfo')).toContainText('Zmierzony klirens kreatyniny');
 
-  await page.locator('#V24').fill('2000');
+  await page.evaluate(() => {
+    const volume = document.getElementById('V24');
+    volume.value = '2000';
+    volume.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(page.locator('#clcrInfo')).not.toContainText('Zmierzony klirens kreatyniny');
 });

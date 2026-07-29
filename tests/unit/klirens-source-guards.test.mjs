@@ -46,6 +46,16 @@ describe('Klirens — blokady źródłowe etapu 0', () => {
     expect(safety).not.toContain('computeDaugirdas');
   });
 
+  it('przygotowuje raport AI wyłącznie lokalnie i nie wysyła danych pacjenta do API', () => {
+    expect(engine).toContain('navigator.clipboard.writeText(_)');
+    expect(engine).not.toContain('api.openai.com');
+    expect(engine).not.toContain('/v1/chat/completions');
+    expect(engine).not.toMatch(/Authorization\s*:\s*`Bearer/);
+    expect(html).toContain(
+      'aplikacja nie wysyła danych pacjenta do zewnętrznego API'
+    );
+  });
+
   it('nie zawiera wycofanych etykiet i błędnych komunikatów', () => {
     const source = `${html}\n${formulas}\n${engine}\n${safety}`;
     expect(source).not.toMatch(/CKD.?EPI.{0,24}2022/i);

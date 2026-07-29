@@ -3,7 +3,7 @@
 
 <!DOCTYPE html>
 <!-- Kalkulator klirensu kreatyniny/eGFR – zmodyfikowany, aby automatycznie aktywować zaawansowane pola KT/V -->
-<html lang="pl">
+<html lang="pl" data-clcr-workflow-ui="1">
 <head>
   <!-- ═══ Security headers ═══════════════════════════════════════════════
        Content-Security-Policy ogranicza skąd mogą być ładowane zasoby.
@@ -1604,6 +1604,7 @@ input[type="submit"]:focus-visible {
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
 <script defer src="vilda_chrome.js?v=69"></script>
+<link href="clcr_ui_workflow.css?v=1" rel="stylesheet" />
 </head>
 
 <body class="js-loading liquid-ios26 has-sidebar">
@@ -2286,7 +2287,7 @@ input[type="submit"]:focus-visible {
     <script defer src="clcr_stone_safety.js?v=1"></script>
     <script defer src="clcr_dialysis_safety.js?v=1"></script>
     <script defer src="clcr_extended_egfr.js?v=1"></script>
-    <script defer src="inline_kalkulator_klirens_02.js?v=4"></script>
+    <script defer src="inline_kalkulator_klirens_02.js?v=5"></script>
     <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script defer src="inline_kalkulator_klirens_03.js?v=1"></script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -2295,7 +2296,7 @@ input[type="submit"]:focus-visible {
 <div class="container" id="aiContainer" style="margin-top:1.5rem;">
   <fieldset id="aiFieldset" hidden>
     <legend>Interpretacja AI</legend>
-    <p>Po naciśnięciu przycisku poniżej system przygotuje gotowe zapytanie do asystenta AI (np. ChatGPT) na podstawie wprowadzonych danych i wszystkich widocznych wyników. Ten sam zakres wyników jest używany w PDF, DOCX i raporcie AI.</p>
+    <p>Po naciśnięciu przycisku poniżej system przygotuje gotowe zapytanie do asystenta AI (np. ChatGPT) na podstawie wprowadzonych danych i wszystkich widocznych wyników. Zapytanie zostanie wyłącznie skopiowane do schowka — aplikacja nie wysyła danych pacjenta do zewnętrznego API. Ten sam zakres wyników jest używany w PDF, DOCX i raporcie AI.</p>
     <button id="askAI">Zapytaj AI</button>
   </fieldset>
 </div>
@@ -2353,7 +2354,7 @@ input[type="submit"]:focus-visible {
 </footer>
 
 <!-- 5. LOGIKA JS -->
-<script defer src="inline_kalkulator_klirens_04.js?v=4"></script>
+<script defer src="inline_kalkulator_klirens_04.js?v=6"></script>
 
 <!-- Moduł obsługi kliknięć listy dynamicznych wyników wyszukiwania -->
 <script defer src="inline_kalkulator_klirens_05.js?v=1"></script>
@@ -2361,6 +2362,7 @@ input[type="submit"]:focus-visible {
 <!-- 6. INFO BUTTONS: automatyczne dodawanie przycisków „Info” oraz dymków narzędziowych -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  if (document.documentElement.dataset.clcrWorkflowUi === '1') return;
 
   /* ------- 3.1 AUTOMATYCZNE DODAWANIE PRZYCISKU INFO (jeśli go brak) ------- */
   document.querySelectorAll('input[id], select[id]').forEach(field => {
@@ -2419,7 +2421,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /* treść: z data-info albo z globalnej tablicy infoTexts */
     const customText = field.dataset.info ||
                        (typeof infoTexts === 'object' ? infoTexts[field.id] : '');
-    tooltip.textContent = customText || 'Brak opisu.';
+    tooltip.textContent = customText;
     wrapper.appendChild(tooltip);
   });
 
@@ -2464,6 +2466,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Script: version selection and dynamic form handling -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  if (document.documentElement.dataset.clcrWorkflowUi === '1') return;
   const paramRow = document.querySelector('.param-row');
   const ktvCard = document.getElementById('ktvCard');
   // Ensure param row and KT/V card are hidden initially
@@ -2947,7 +2950,7 @@ document.addEventListener('DOMContentLoaded', () => {
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
 <script src="ios26-ui.js?v=41" defer></script>
-<script defer src="inline_kalkulator_klirens_07.js?v=2"></script>
+<script defer src="inline_kalkulator_klirens_07.js?v=3"></script>
 <script defer src="vilda_down_syndrome.js?v=1"></script>
 <script defer src="vilda_anorexia_risk.js?v=1"></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
@@ -3199,5 +3202,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script defer src="inline_kalkulator_klirens_08.js?v=1"></script>
   <script defer src="inline_kalkulator_klirens_09.js?v=1"></script>
+  <script defer src="clcr_ui_workflow.js?v=1"></script>
 </body>
 </html>

@@ -1,5 +1,21 @@
 (function () {
   const C = { basic: "basic", advanced: "advanced", spot: "spot", pro: "pro" },
+    timedCollectionProtocol = Object.freeze([
+      "collectionStartAt",
+      "collectionEndAt",
+      "collectionStartVoidDiscarded",
+      "collectionFinalVoidIncluded",
+      "collectionNoMissedVoids",
+      "collectionNoSpillage",
+      "collectionNoExtraVoids",
+      "collectionStorageFollowed",
+    ]),
+    ktvSamplingProtocol = Object.freeze([
+      "ktvPostMethod",
+      "ktvSameSession",
+      "ktvPreBeforeDialysis",
+      "ktvPreNoDilution",
+    ]),
     l = [
       {
         id: "egfr",
@@ -61,7 +77,7 @@
       {
         id: "neonatal_egfr",
         label: "eGFR noworodka donoszonego (0\u201328 dni)",
-        version: "basic",
+        version: "advanced",
         requires: [
           "age",
           "ageMonths",
@@ -92,7 +108,7 @@
       {
         id: "cl24",
         label: "Zmierzony klirens kreatyniny (zbiórka czasowa)",
-        version: "basic",
+        version: "advanced",
         requires: [
           "age",
           "Ucr",
@@ -124,7 +140,7 @@
       {
         id: "sch_idms",
         label: "Bedside Schwartz 2009 (IDMS)",
-        version: "basic",
+        version: "advanced",
         requires: ["age", "height", "Scr", "ScrUnit"],
         note: "Pomocnicze przybliżenie dostępne wyłącznie dla wieku 1\u201316 lat. Opracowano je u dzieci z CKD i mierzonym GFR około 15\u201175 mL/min/1,73 m\xB2, dla kreatyniny oznaczonej metodą zgodną z IDMS.",
       },
@@ -132,43 +148,61 @@
         id: "UA_mgkg",
         label: "Wydalanie kwasu moczowego (DZM; bez automatycznej normy)",
         version: "advanced",
-        requires: ["age", "U_UA", "V24", "weight"],
+        requires: [
+          "age",
+          "U_UA",
+          "V24",
+          "weight",
+          ...timedCollectionProtocol,
+        ],
       },
       {
         id: "Ca_mgkg",
         label: "Wydalanie wapnia (DZM; bez automatycznej normy)",
         version: "advanced",
-        requires: ["age", "U_Ca", "V24", "weight"],
+        requires: [
+          "age",
+          "U_Ca",
+          "V24",
+          "weight",
+          ...timedCollectionProtocol,
+        ],
       },
       {
         id: "Mg_mgkg",
         label: "Wydalanie magnezu (DZM; bez automatycznej normy)",
         version: "advanced",
-        requires: ["age", "U_Mg", "V24", "weight"],
+        requires: [
+          "age",
+          "U_Mg",
+          "V24",
+          "weight",
+          ...timedCollectionProtocol,
+        ],
       },
       {
         id: "PO4_mgkg",
         label: "Wydalanie fosforu nieorganicznego (P\u1D62; DZM)",
         version: "advanced",
-        requires: ["age", "U_PO4", "V24"],
+        requires: ["age", "U_PO4", "V24", ...timedCollectionProtocol],
       },
       {
         id: "Prot_mgkg",
         label: "Białko całkowite w DZM",
         version: "advanced",
-        requires: ["age", "U_Prot"],
+        requires: ["age", "U_Prot", ...timedCollectionProtocol],
       },
       {
         id: "Na_mmol_d",
         label: "Wydalanie\xA0sodu (mmol/d)",
         version: "advanced",
-        requires: ["age", "U_Na", "V24"],
+        requires: ["age", "U_Na", "V24", ...timedCollectionProtocol],
       },
       {
         id: "K_mmol_d",
         label: "Wydalanie\xA0potasu (mmol/d)",
         version: "advanced",
-        requires: ["age", "U_K", "V24"],
+        requires: ["age", "U_K", "V24", ...timedCollectionProtocol],
       },
       {
         id: "KM_Cr",
@@ -277,6 +311,7 @@
         version: "spot",
         requires: [
           "age",
+          "spotSameSpecimen",
           "Ca_spot",
           "Ca_spot_unit",
           "Ucr_spot",
@@ -287,13 +322,25 @@
         id: "OxCr_spot",
         label: "Ox/Cr (spot) [mg/mg]",
         version: "spot",
-        requires: ["Ox_Cr_spot", "Ucr_spot", "Ucr_spot_unit"],
+        requires: [
+          "spotSameSpecimen",
+          "oxalateSpotReportingEntity",
+          "Ox_Cr_spot",
+          "Ucr_spot",
+          "Ucr_spot_unit",
+        ],
       },
       {
         id: "CitCr_spot",
         label: "Cit/Cr (spot) [mg/mg]",
         version: "spot",
-        requires: ["age", "Cit_Cr_spot", "Ucr_spot", "Ucr_spot_unit"],
+        requires: [
+          "age",
+          "spotSameSpecimen",
+          "Cit_Cr_spot",
+          "Ucr_spot",
+          "Ucr_spot_unit",
+        ],
       },
       {
         id: "TMP_GFR",
@@ -325,13 +372,26 @@
         id: "Ox_mgkg",
         label: "Wydalanie szczawianów (DZM; bez automatycznej normy)",
         version: "pro",
-        requires: ["age", "U_Ox", "V24", "weight"],
+        requires: [
+          "age",
+          "U_Ox",
+          "oxalateReportingEntity",
+          "V24",
+          "weight",
+          ...timedCollectionProtocol,
+        ],
       },
       {
         id: "Cit_mgkg",
         label: "Wydalanie cytrynianów (DZM; bez automatycznej normy)",
         version: "pro",
-        requires: ["age", "U_Cit", "V24", "weight"],
+        requires: [
+          "age",
+          "U_Cit",
+          "V24",
+          "weight",
+          ...timedCollectionProtocol,
+        ],
       },
       {
         id: "Ca_Cit",
@@ -343,7 +403,7 @@
         id: "pH24",
         label: "pH dobowej zbi\xF3rki (24\xA0h)",
         version: "pro",
-        requires: ["pH24"],
+        requires: ["pH24", ...timedCollectionProtocol],
       },
       {
         id: "KTV",
@@ -361,6 +421,7 @@
           "ktvUreaUnit",
           "UreaPre",
           "UreaPost",
+          ...ktvSamplingProtocol,
         ],
         note: "GFAC jest dobierany wyłącznie dla dokładnie udokumentowanej pary częstości IHD i rzeczywistego PIDI; interpretacja progowa wymaga dodatkowo protokołu próbek i aktualnego Kru.",
       },
@@ -597,7 +658,10 @@
       p(i && i.reason ? i.reason : "Ten wzór nie jest dostępny dla podanego wieku.");
       typeof window.update == "function" && window.update();
     }
-    const i = document.getElementById("formulaSearch");
+    const i =
+      document.documentElement.dataset.clcrWorkflowUi === "1"
+        ? null
+        : document.getElementById("formulaSearch");
     i &&
       !i.dataset.clcrFormulaSearchBound &&
       ((i.dataset.clcrFormulaSearchBound = "1"),
@@ -729,7 +793,7 @@
   (document.addEventListener("DOMContentLoaded", () => {
     S();
     const e = document.getElementById("formulaPicker");
-    if (e) {
+    if (e && document.documentElement.dataset.clcrWorkflowUi !== "1") {
       const r = () => {
         const t = document.getElementById("formulaSearch");
         (t && t.value && (t.value = ""), typeof S == "function" && S());
