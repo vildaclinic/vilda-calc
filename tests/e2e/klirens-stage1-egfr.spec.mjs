@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 async function openCalculator(page) {
+  await page.addInitScript(() => {
+    window.__CLCR_TEST_LEGACY_BROAD = true;
+  });
   await page.goto('/kalkulator-klirens.html', { waitUntil: 'domcontentloaded' });
   const guestButton = page.getByRole('button', {
     name: 'Korzystaj bez logowania',
