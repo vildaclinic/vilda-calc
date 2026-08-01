@@ -188,6 +188,124 @@
     module.formulaIds.forEach((formulaId) => MODULE_BY_FORMULA.set(formulaId, module));
   });
 
+  // ————————————————————————————————————————————————————————————————
+  // Faza 0 — słownik parametrów karty pacjenta (CLCR_PARAM_DICTIONARY).
+  // Nazwy zatwierdzone (ZAŁOŻENIA §4). Zmiana wyłącznie prezentacji /
+  // nazewnictwa serii — ZERO wpływu na liczenie (silnik i moduły
+  // kliniczne pozostają zamrożone). Klucz serii = testKey `clcr:<id>`,
+  // spójny z tagami silnika `data-clcr-formula`.
+  //   ① Wyniki wieloczłonowe → osobne serie: białko DZM (Prot_mgkg) i
+  //      KT/V (KTV) rozbite; `sourceFormulaId` wskazuje formułę-źródło.
+  //   ② ACR/PCR → jednostka `mg/g`.
+  //   ③ Etykiety opisowe; kryptyczne nazwy wzorów w podlinii `method`.
+  // ————————————————————————————————————————————————————————————————
+  const PARAM_GROUPS = Object.freeze([
+    Object.freeze({ id: "egfr", title: "eGFR i klirensy kreatyniny" }),
+    Object.freeze({ id: "dzm-excr", title: "Zbiórka dobowa — wydalania" }),
+    Object.freeze({ id: "dzm-ratio", title: "Zbiórka dobowa — wskaźniki" }),
+    Object.freeze({ id: "dzm-protein", title: "Zbiórka dobowa — białko" }),
+    Object.freeze({ id: "spot-ratio", title: "Próbka punktowa — wskaźniki" }),
+    Object.freeze({ id: "spot-fe", title: "Próbka punktowa — frakcje wydalnicze" }),
+    Object.freeze({ id: "spot-other", title: "Próbka punktowa — pozostałe" }),
+    Object.freeze({ id: "ph", title: "pH moczu" }),
+    Object.freeze({ id: "ktv", title: "Dializa — adekwatność KT/V" }),
+  ]);
+
+  const PARAM_DICTIONARY_SOURCE = [
+    // eGFR i klirensy kreatyniny (grupa egfr) — etykieta opisowa + metoda w podlinii (③)
+    { id: "egfr", group: "egfr", label: "eGFR — dorośli (kreatynina)", method: "wzór CKD‑EPI 2021, bez współczynnika rasowego", unit: "mL/min/1,73 m²" },
+    { id: "ckid_u25", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (kreatynina)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
+    { id: "egfr_cr_cys", group: "egfr", label: "eGFR — dorośli (kreatynina + cystatyna C)", method: "wzór CKD‑EPI 2021", unit: "mL/min/1,73 m²" },
+    { id: "ckid_u25_cys", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (cystatyna C)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
+    { id: "ckid_u25_cr_cys", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (kreatynina + cystatyna C)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
+    { id: "neonatal_egfr", group: "egfr", label: "eGFR — noworodek donoszony (kreatynina)", method: "wzór noworodkowy", unit: "mL/min/1,73 m²" },
+    { id: "cg", group: "egfr", label: "Klirens kreatyniny — dorośli (ml/min)", method: "wzór Cockcrofta‑Gaulta, nieindeksowany", unit: "mL/min" },
+    { id: "cg_norm", group: "egfr", label: "Klirens kreatyniny — dorośli (1,73 m²)", method: "wzór Cockcrofta‑Gaulta, przeliczony", unit: "mL/min/1,73 m²" },
+    { id: "cl24", group: "egfr", label: "Klirens kreatyniny — zmierzony (DZM)", method: "z dobowej zbiórki moczu", unit: "mL/min" },
+    { id: "sch_idms", group: "egfr", label: "eGFR — dzieci (kreatynina)", method: "przyłóżkowy wzór Schwartza, IDMS", unit: "mL/min/1,73 m²" },
+    // Zbiórka dobowa — wydalania (grupa dzm-excr)
+    { id: "Ca_mgkg", group: "dzm-excr", label: "Wydalanie wapnia (DZM)", unit: "mg/kg/24 h" },
+    { id: "UA_mgkg", group: "dzm-excr", label: "Wydalanie kwasu moczowego (DZM)", unit: "mg/kg/24 h" },
+    { id: "Mg_mgkg", group: "dzm-excr", label: "Wydalanie magnezu (DZM)", unit: "mg/kg/24 h" },
+    { id: "PO4_mgkg", group: "dzm-excr", label: "Wydalanie fosforanów (Pi, DZM)", unit: "mg P/24 h" },
+    { id: "Ox_mgkg", group: "dzm-excr", label: "Wydalanie szczawianów (DZM)", unit: "mg/kg/24 h" },
+    { id: "Cit_mgkg", group: "dzm-excr", label: "Wydalanie cytrynianów (DZM)", unit: "mg/kg/24 h" },
+    { id: "Na_mmol_d", group: "dzm-excr", label: "Wydalanie sodu (DZM)", unit: "mmol/24 h" },
+    { id: "K_mmol_d", group: "dzm-excr", label: "Wydalanie potasu (DZM)", unit: "mmol/24 h" },
+    // Zbiórka dobowa — wskaźniki (grupa dzm-ratio)
+    { id: "Ca_Cr", group: "dzm-ratio", label: "Wapń/kreatynina (DZM)", unit: "mg/mg" },
+    { id: "KM_Cr", group: "dzm-ratio", label: "Kwas moczowy/kreatynina (DZM)", unit: "mg/mg" },
+    { id: "PO4_Cr", group: "dzm-ratio", label: "Fosforany/kreatynina (Pi, DZM)", unit: "mg/mg" },
+    { id: "Mg_Ca", group: "dzm-ratio", label: "Magnez/wapń (DZM)", unit: "mg/mg" },
+    { id: "Ca_Cit", group: "dzm-ratio", label: "Wapń/cytryniany (DZM)", unit: "mg/mg" },
+    { id: "B_Cr", group: "dzm-ratio", label: "Białko/kreatynina (DZM)", unit: "mg/mg" },
+    { id: "K_frac", group: "dzm-ratio", label: "Udział potasu — K/(K+Na)", unit: "%" },
+    { id: "AGs", group: "dzm-ratio", label: "Luka anionowa surowicy (bez K)", unit: "mmol/L" },
+    // Zbiórka dobowa — białko (serie rozdzielone ①; źródło: Prot_mgkg)
+    { id: "Prot_mg24", group: "dzm-protein", label: "Białko w DZM [mg/24 h]", unit: "mg/24 h", sourceFormulaId: "Prot_mgkg" },
+    { id: "Prot_g24", group: "dzm-protein", label: "Białko w DZM [g/24 h]", unit: "g/24 h", sourceFormulaId: "Prot_mgkg" },
+    { id: "Prot_bsa", group: "dzm-protein", label: "Białko w DZM / BSA [mg/m²/24 h]", unit: "mg/m²/24 h", sourceFormulaId: "Prot_mgkg" },
+    // Próbka punktowa — wskaźniki (grupa spot-ratio); ACR/PCR w mg/g (②)
+    { id: "CaCr_spot", group: "spot-ratio", label: "Wapń/kreatynina (próbka punktowa)", unit: "mg/mg" },
+    { id: "OxCr_spot", group: "spot-ratio", label: "Szczawiany/kreatynina (próbka punktowa)", unit: "mg/mg" },
+    { id: "CitCr_spot", group: "spot-ratio", label: "Cytryniany/kreatynina (próbka punktowa)", unit: "mg/mg" },
+    { id: "ACR", group: "spot-ratio", label: "Albumina/kreatynina — ACR", unit: "mg/g" },
+    { id: "PCR", group: "spot-ratio", label: "Białko/kreatynina — PCR (próbka punktowa)", unit: "mg/g" },
+    // Próbka punktowa — frakcje wydalnicze (grupa spot-fe)
+    { id: "FENa_spot", group: "spot-fe", label: "Frakcja wydalania sodu (FENa)", unit: "%" },
+    { id: "FEK_spot", group: "spot-fe", label: "Frakcja wydalania potasu (FEK)", unit: "%" },
+    { id: "FECl_spot", group: "spot-fe", label: "Frakcja wydalania chlorków (FECl)", unit: "%" },
+    { id: "FEHCO3_spot", group: "spot-fe", label: "Frakcja wydalania HCO₃ (FEHCO₃)", unit: "%" },
+    // Próbka punktowa — pozostałe (grupa spot-other)
+    { id: "AGu_spot", group: "spot-other", label: "Luka anionowa moczu (UAG)", unit: "mmol/L" },
+    { id: "TMP_GFR", group: "spot-other", label: "TmP/GFR — próg reabsorpcji fosforanów", unit: "mmol/L" },
+    // pH moczu (grupa ph)
+    { id: "pH_spot", group: "ph", label: "pH moczu (próbka punktowa)", unit: "—" },
+    { id: "pH24", group: "ph", label: "pH moczu (DZM)", unit: "—" },
+    // Dializa — KT/V (serie rozdzielone ①; źródło: KTV)
+    { id: "KTV_spktv", group: "ktv", label: "spKt/V (mocznik, pojedyncza pula)", unit: "—", sourceFormulaId: "KTV" },
+    { id: "KTV_ektv", group: "ktv", label: "eKt/V (mocznik, równoważony)", unit: "—", sourceFormulaId: "KTV" },
+    { id: "KTV_urr", group: "ktv", label: "URR — wskaźnik redukcji mocznika", unit: "%", sourceFormulaId: "KTV" },
+  ];
+
+  const PARAM_DICTIONARY = Object.freeze(
+    PARAM_DICTIONARY_SOURCE.map((entry) =>
+      Object.freeze({
+        id: entry.id,
+        testKey: "clcr:" + entry.id,
+        group: entry.group,
+        label: entry.label,
+        method: entry.method || null,
+        unit: entry.unit,
+        sourceFormulaId: entry.sourceFormulaId || entry.id,
+      }),
+    ),
+  );
+
+  const PARAM_BY_KEY = new Map();
+  PARAM_DICTIONARY.forEach((entry) => {
+    PARAM_BY_KEY.set(entry.id, entry);
+    PARAM_BY_KEY.set(entry.testKey, entry);
+  });
+
+  function normalizeTestKey(testKey) {
+    const raw = String(testKey == null ? "" : testKey).trim();
+    if (!raw) return "";
+    return raw.startsWith("clcr:") ? raw.slice(5) : raw;
+  }
+
+  function getParam(testKey) {
+    return PARAM_BY_KEY.get(normalizeTestKey(testKey)) || null;
+  }
+
+  function getParamGroups() {
+    return PARAM_GROUPS.map((group) => ({
+      id: group.id,
+      title: group.title,
+      entries: PARAM_DICTIONARY.filter((entry) => entry.group === group.id),
+    }));
+  }
+
   const DZM_PROTOCOL_FIELDS = Object.freeze([
     "collectionStartAt",
     "collectionEndAt",
@@ -689,6 +807,10 @@
     HISTORICAL_FORMULA_IDS,
     LEVEL_ORDER,
     FORMULA_CONTEXT,
+    PARAM_DICTIONARY,
+    PARAM_GROUPS,
+    getParam,
+    getParamGroups,
     DZM_QUALITY_FIELDS,
     HELP_OVERRIDES,
     SHARED_MODULE_FIELD_IDS,
