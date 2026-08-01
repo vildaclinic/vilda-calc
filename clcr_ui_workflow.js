@@ -2900,3 +2900,405 @@
     init();
   }
 })(typeof window !== "undefined" ? window : globalThis);
+
+/* ————————————————————————————————————————————————————————————————
+ * Faza 1 — ClcrVisitSave: zapis aktywnego wyniku klirensu do karty pacjenta.
+ * Czyta datapointy z tagów silnika (data-clcr-series / data-clcr-value —
+ * warstwa prezentacji, bez wpływu na liczenie), mapuje przez słownik
+ * ClcrUiModel.PARAM_DICTIONARY i zapisuje przez VildaVault.savePatientNote
+ * jako notatki kategorii „wynik-klirens" grupowane po wspólnej dacie wizyty.
+ * Bramka: aktywne tylko przy odblokowanym sejfie + wczytanym pacjencie;
+ * gość liczy bez zmian, zapis nieaktywny. Serie wieloczłonowe (białko DZM,
+ * KT/V) to osobne tagi → osobne datapointy (decyzja ①).
+ * ———————————————————————————————————————————————————————————————— */
+(function (global) {
+  "use strict";
+
+  const doc = global.document;
+  const CATEGORY = "wynik-klirens";
+  const state = { patientId: null, patientName: "" };
+
+  function vault() {
+    return global.VildaVault && typeof global.VildaVault === "object"
+      ? global.VildaVault
+      : null;
+  }
+
+  function vaultUnlocked() {
+    const v = vault();
+    try {
+      return !!(v && typeof v.isUnlocked === "function" && v.isUnlocked());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function model() {
+    return global.ClcrUiModel && typeof global.ClcrUiModel === "object"
+      ? global.ClcrUiModel
+      : null;
+  }
+
+  function resolveCurrentPatientId() {
+    return typeof state.patientId === "string" && state.patientId
+      ? state.patientId
+      : null;
+  }
+
+  function isVisible(el) {
+    if (!el) return false;
+    if (typeof el.getClientRects === "function") {
+      try {
+        return el.getClientRects().length > 0;
+      } catch (e) {
+        /* fall through */
+      }
+    }
+    let node = el;
+    while (node) {
+      if (node.hidden) return false;
+      if (node.style && node.style.display === "none") return false;
+      node = node.parentElement || null;
+    }
+    return true;
+  }
+
+  function toNumber(raw) {
+    if (raw == null) return NaN;
+    const s = String(raw).trim();
+    if (s === "") return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  // Mapuje pojedynczy tag (id serii + surowa wartość) na datapoint wg słownika.
+  function mapDatapoint(series, rawValue) {
+    const m = model();
+    if (!m || typeof m.getParam !== "function") return null;
+    const entry = m.getParam(series);
+    if (!entry) return null;
+    const valueNum = toNumber(rawValue);
+    if (!Number.isFinite(valueNum)) return null;
+    return {
+      id: entry.id,
+      testKey: entry.testKey,
+      label: entry.label,
+      unit: entry.unit,
+      group: entry.group,
+      sourceFormulaId: entry.sourceFormulaId,
+      valueNum: valueNum,
+    };
+  }
+
+  // Zbiera wszystkie WIDOCZNE, otagowane wyniki (po jednym na serię).
+  function collectActiveDatapoints(root) {
+    const scope = root || doc;
+    if (!scope || typeof scope.querySelectorAll !== "function") return [];
+    const seen = new Set();
+    const out = [];
+    const nodes = scope.querySelectorAll("[data-clcr-series]");
+    for (let i = 0; i < nodes.length; i += 1) {
+      const el = nodes[i];
+      if (!isVisible(el)) continue;
+      const series = el.getAttribute("data-clcr-series");
+      if (!series || seen.has(series)) continue;
+      const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
+      if (!dp) continue;
+      seen.add(series);
+      out.push(dp);
+    }
+    return out;
+  }
+
+  function formatValueString(n) {
+    if (!Number.isFinite(n)) return "";
+    if (Number.isInteger(n)) return String(n);
+    return String(Number(n.toFixed(3)));
+  }
+
+  function pad2(v) {
+    return String(v).padStart(2, "0");
+  }
+
+  function todayISO(dateLike) {
+    const d = dateLike instanceof Date ? dateLike : new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  function normalizeDateISO(value) {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return /^(\d{4})-(\d{1,2})-(\d{1,2})$/.test(trimmed) ? trimmed : null;
+  }
+
+  // Zapis: jedna notatka na datapoint, wspólna data = jedna wizyta.
+  async function saveActiveResultToCard(opts) {
+    const options = opts || {};
+    const v = vault();
+    if (!vaultUnlocked() || !v || typeof v.savePatientNote !== "function") {
+      return { ok: false, reason: "locked", saved: 0, total: 0, errors: [] };
+    }
+    const patientId = options.patientId || resolveCurrentPatientId();
+    if (!patientId) {
+      return { ok: false, reason: "no-patient", saved: 0, total: 0, errors: [] };
+    }
+    const clinicalDateISO = normalizeDateISO(options.clinicalDateISO) || todayISO();
+    const datapoints = Array.isArray(options.datapoints)
+      ? options.datapoints
+      : collectActiveDatapoints(options.root);
+    if (!datapoints.length) {
+      return { ok: false, reason: "no-data", saved: 0, total: 0, errors: [] };
+    }
+    let saved = 0;
+    const errors = [];
+    for (let i = 0; i < datapoints.length; i += 1) {
+      const dp = datapoints[i];
+      try {
+        await v.savePatientNote({
+          patientId: patientId,
+          category: CATEGORY,
+          clinicalDateISO: clinicalDateISO,
+          title: dp.label,
+          body: "Kalkulator klirensu · " + dp.testKey,
+          labResult: {
+            test: dp.label,
+            value: formatValueString(dp.valueNum),
+            valueNum: dp.valueNum,
+            unit: dp.unit,
+          },
+        });
+        saved += 1;
+      } catch (e) {
+        errors.push({
+          testKey: dp.testKey,
+          message: e && e.message ? e.message : String(e),
+        });
+      }
+    }
+    return {
+      ok: errors.length === 0 && saved > 0,
+      reason: errors.length ? "partial" : "ok",
+      saved: saved,
+      total: datapoints.length,
+      errors: errors,
+      clinicalDateISO: clinicalDateISO,
+    };
+  }
+
+  function seriesWord(n) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs === 1) return "seria";
+    if (last >= 2 && last <= 4 && (abs < 12 || abs > 14)) return "serie";
+    return "serii";
+  }
+
+  function readPatientName() {
+    if (!doc) return "";
+    const el = doc.getElementById("patientName");
+    return el && el.textContent ? el.textContent.trim() : "";
+  }
+
+  // ————————————————————————— UI (wstrzykiwane, nie w statycznym HTML) —————————
+  let ui = null;
+  let refreshQueued = false;
+
+  function setStatus(message, kind) {
+    if (!ui || !ui.status) return;
+    ui.status.textContent = message || "";
+    ui.status.className = "cvs-status" + (kind ? " cvs-" + kind : "");
+  }
+
+  function buildUI() {
+    if (!doc || ui) return;
+    const anchor =
+      doc.getElementById("stoneCard") ||
+      doc.getElementById("elecCard") ||
+      doc.getElementById("results");
+    if (!anchor || !anchor.parentNode) return;
+    const card = doc.createElement("section");
+    card.className = "card clcr-visit-save";
+    card.id = "clcrVisitSaveCard";
+    card.hidden = true;
+    card.innerHTML =
+      '<h2 class="text-center">Zapisz wynik do karty pacjenta</h2>' +
+      '<div class="cvs-row">' +
+      '<label class="cvs-date" for="clcrVisitDate">Data wizyty' +
+      '<input type="date" id="clcrVisitDate" name="clcrVisitDate"></label>' +
+      '<button type="button" id="clcrVisitSaveBtn" class="cvs-btn">Zapisz wynik do karty</button>' +
+      "</div>" +
+      '<p class="cvs-hint" id="clcrVisitHint"></p>' +
+      '<p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>';
+    anchor.parentNode.insertBefore(card, anchor.nextSibling);
+    ui = {
+      card: card,
+      date: card.querySelector("#clcrVisitDate"),
+      btn: card.querySelector("#clcrVisitSaveBtn"),
+      hint: card.querySelector("#clcrVisitHint"),
+      status: card.querySelector("#clcrVisitStatus"),
+    };
+    if (ui.date) ui.date.value = todayISO();
+    if (ui.btn) ui.btn.addEventListener("click", onSaveClick);
+    refresh();
+  }
+
+  function refresh() {
+    if (!ui) return;
+    const datapoints = collectActiveDatapoints();
+    if (!datapoints.length) {
+      ui.card.hidden = true;
+      return;
+    }
+    ui.card.hidden = false;
+    const unlocked = vaultUnlocked();
+    const patientId = resolveCurrentPatientId();
+    const ready = unlocked && !!patientId;
+    if (ui.btn) ui.btn.disabled = !ready;
+    if (!ui.hint) return;
+    if (!unlocked) {
+      ui.hint.textContent =
+        "Zaloguj się do sejfu, aby zapisać wynik do karty. Liczenie działa bez logowania.";
+    } else if (!patientId) {
+      ui.hint.textContent =
+        "Wczytaj pacjenta, aby zapisać wynik do jego karty.";
+    } else {
+      const cnt = datapoints.length;
+      const name = state.patientName || readPatientName();
+      ui.hint.textContent =
+        "Do zapisania: " +
+        cnt +
+        " " +
+        seriesWord(cnt) +
+        (name ? " · pacjent: " + name : "");
+    }
+  }
+
+  function scheduleRefresh() {
+    if (refreshQueued || !ui) return;
+    refreshQueued = true;
+    const run = function () {
+      refreshQueued = false;
+      refresh();
+    };
+    if (typeof global.requestAnimationFrame === "function") {
+      global.requestAnimationFrame(run);
+    } else {
+      setTimeout(run, 0);
+    }
+  }
+
+  async function onSaveClick() {
+    if (!ui || !ui.btn || ui.btn.disabled) return;
+    ui.btn.disabled = true;
+    setStatus("Zapisywanie…", "pending");
+    let res;
+    try {
+      res = await saveActiveResultToCard({
+        clinicalDateISO: ui.date ? ui.date.value : null,
+      });
+    } catch (e) {
+      res = { ok: false, reason: "error", saved: 0, total: 0, errors: [e] };
+    }
+    if (res.ok) {
+      setStatus(
+        "✓ Zapisano do karty (" +
+          res.saved +
+          " " +
+          seriesWord(res.saved) +
+          ", " +
+          res.clinicalDateISO +
+          ").",
+        "ok",
+      );
+    } else if (res.reason === "no-patient") {
+      setStatus("Nie wczytano pacjenta — zapis niemożliwy.", "err");
+    } else if (res.reason === "locked") {
+      setStatus("Sejf zablokowany — zaloguj się, aby zapisać.", "err");
+    } else if (res.reason === "no-data") {
+      setStatus("Brak wyniku do zapisania.", "err");
+    } else {
+      setStatus(
+        "Zapisano " +
+          res.saved +
+          "/" +
+          res.total +
+          "; niepowodzenia: " +
+          res.errors.length +
+          ".",
+        "warn",
+      );
+    }
+    refresh();
+  }
+
+  function observeResults() {
+    if (!doc || typeof global.MutationObserver !== "function") return;
+    const ids = [
+      "results",
+      "clcrInfo",
+      "elecInfo",
+      "stoneInfo",
+      "ktvResult",
+      "ektvResult",
+      "urrResult",
+    ];
+    const obs = new global.MutationObserver(scheduleRefresh);
+    for (let i = 0; i < ids.length; i += 1) {
+      const el = doc.getElementById(ids[i]);
+      if (el) {
+        obs.observe(el, { childList: true, subtree: true, attributes: true });
+      }
+    }
+  }
+
+  function onPatientLoaded(event) {
+    const detail = event && event.detail ? event.detail : null;
+    const id = detail && detail.patientId;
+    if (typeof id === "string" && id) {
+      state.patientId = id;
+      state.patientName =
+        (detail && typeof detail.patientName === "string"
+          ? detail.patientName
+          : "") || readPatientName();
+    }
+    refresh();
+  }
+
+  function init() {
+    buildUI();
+    observeResults();
+    if (doc) {
+      doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
+      if (global.addEventListener) {
+        global.addEventListener("focus", scheduleRefresh);
+      }
+    }
+  }
+
+  const api = {
+    vaultUnlocked: vaultUnlocked,
+    resolveCurrentPatientId: resolveCurrentPatientId,
+    collectActiveDatapoints: collectActiveDatapoints,
+    mapDatapoint: mapDatapoint,
+    saveActiveResultToCard: saveActiveResultToCard,
+    formatValueString: formatValueString,
+    todayISO: todayISO,
+    normalizeDateISO: normalizeDateISO,
+    seriesWord: seriesWord,
+    // testowe / introspekcja
+    _setPatientId: function (id) {
+      state.patientId = typeof id === "string" && id ? id : null;
+    },
+    _refresh: refresh,
+  };
+
+  global.ClcrVisitSave = api;
+
+  if (doc && typeof doc.addEventListener === "function") {
+    if (doc.readyState === "loading") {
+      doc.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  }
+})(typeof window !== "undefined" ? window : globalThis);

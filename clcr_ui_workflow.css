@@ -1220,3 +1220,64 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ——— Faza 1: karta „Zapisz wynik do karty pacjenta" (ClcrVisitSave) ——— */
+.clcr-visit-save { margin-top: 1rem; }
+.clcr-visit-save[hidden] { display: none; }
+.clcr-visit-save .cvs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  justify-content: center;
+  margin: 0.5rem 0 0.25rem;
+}
+.clcr-visit-save .cvs-date {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+}
+.clcr-visit-save .cvs-date input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  min-height: 2.5rem;
+}
+.clcr-visit-save .cvs-btn {
+  padding: 0.6rem 1.1rem;
+  min-height: 2.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: #0d7d8c;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.clcr-visit-save .cvs-btn:hover:not([disabled]) { background: #0a5c68; }
+.clcr-visit-save .cvs-btn[disabled] {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+.clcr-visit-save .cvs-hint {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0.25rem 0 0;
+}
+.clcr-visit-save .cvs-status {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.35rem 0 0;
+  min-height: 1.2rem;
+}
+.clcr-visit-save .cvs-status.cvs-ok { color: #0f766e; }
+.clcr-visit-save .cvs-status.cvs-err { color: #b91c1c; }
+.clcr-visit-save .cvs-status.cvs-warn { color: #b45309; }
+.clcr-visit-save .cvs-status.cvs-pending { color: #64748b; }
