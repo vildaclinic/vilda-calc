@@ -1281,3 +1281,58 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 .clcr-visit-save .cvs-status.cvs-err { color: #b91c1c; }
 .clcr-visit-save .cvs-status.cvs-warn { color: #b45309; }
 .clcr-visit-save .cvs-status.cvs-pending { color: #64748b; }
+
+/* ——— Faza 2: panel „Historia wyników" + sparkline (ClcrVisitSave) ——— */
+.clcr-visit-history { margin-top: 1rem; }
+.clcr-visit-history[hidden] { display: none; }
+.clcr-visit-history .cvs-hist-body { margin-top: 0.4rem; }
+.clcr-visit-history .cvs-hist-item {
+  padding: 0.6rem 0;
+  border-top: 1px solid #eef2f6;
+}
+.clcr-visit-history .cvs-hist-item:first-child { border-top: 0; }
+.clcr-visit-history .cvs-hist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.clcr-visit-history .cvs-hist-label { font-weight: 700; font-size: 0.95rem; }
+.clcr-visit-history .cvs-spark { flex: none; }
+.clcr-visit-history .cvs-spark path { stroke: #0d7d8c; }
+.clcr-visit-history .cvs-spark circle { fill: #0d7d8c; }
+/* Trend KIERUNKOWY, NEUTRALNY — jeden kolor dla ↑/↓/→ (kierunek niesie strzałka,
+   nie kolor: dla eGFR wzrost korzystny, dla wydalania wapnia odwrotnie). */
+.clcr-visit-history .cvs-trend,
+.clcr-visit-history .cvs-trend-up,
+.clcr-visit-history .cvs-trend-down,
+.clcr-visit-history .cvs-trend-flat {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+.clcr-visit-history .cvs-hist-points {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+}
+.clcr-visit-history .cvs-hist-points li {
+  display: flex;
+  gap: 0.35rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+.clcr-visit-history .cvs-hist-points .cvs-date {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+.clcr-visit-history .cvs-hist-points .cvs-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

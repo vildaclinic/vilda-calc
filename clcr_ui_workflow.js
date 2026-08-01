@@ -283,10 +283,20 @@
   );
 
   const PARAM_BY_KEY = new Map();
+  const PARAM_BY_LABEL = new Map();
   PARAM_DICTIONARY.forEach((entry) => {
     PARAM_BY_KEY.set(entry.id, entry);
     PARAM_BY_KEY.set(entry.testKey, entry);
+    PARAM_BY_LABEL.set(entry.label, entry);
   });
+
+  // Odczyt serii z sejfu grupujemy po PELNEJ etykiecie labResult.test
+  // (obejście §2 — magazyn gubi testKey). Mapowanie etykieta → wpis słownika
+  // pozwala odzyskać grupę/jednostkę/formułę-źródło przy budowie historii.
+  function getParamByLabel(label) {
+    if (typeof label !== "string") return null;
+    return PARAM_BY_LABEL.get(label.trim()) || null;
+  }
 
   function normalizeTestKey(testKey) {
     const raw = String(testKey == null ? "" : testKey).trim();
@@ -810,6 +820,7 @@
     PARAM_DICTIONARY,
     PARAM_GROUPS,
     getParam,
+    getParamByLabel,
     getParamGroups,
     DZM_QUALITY_FIELDS,
     HELP_OVERRIDES,
@@ -3130,6 +3141,100 @@
     return "serii";
   }
 
+  // ————————————————————————— Faza 2: odczyt serii + trend —————————————————
+  // Grupujemy datowane notatki wynik-klirens po PELNEJ etykiecie labResult.test
+  // (obejście §2). NIE używamy wbudowanego listPatientLabSeries (jego slug Ur
+  // bierze tekst przed „(" i skleja różne serie). Ograniczamy do parametrów
+  // aktywnego modułu — tak jak zapis.
+  function buildSeriesFromNotes(notes, options) {
+    const list = Array.isArray(notes) ? notes : [];
+    const target = resolveTargetFormulaSet(options);
+    const m = model();
+    const byLabel = new Map();
+    for (let i = 0; i < list.length; i += 1) {
+      const note = list[i];
+      if (!note || note.category !== CATEGORY) continue;
+      const lab = note.labResult;
+      if (!lab || typeof lab.test !== "string" || !lab.test) continue;
+      const valueNum =
+        typeof lab.valueNum === "number" && isFinite(lab.valueNum)
+          ? lab.valueNum
+          : toNumber(lab.value);
+      if (!Number.isFinite(valueNum)) continue;
+      const label = lab.test;
+      const entry =
+        m && typeof m.getParamByLabel === "function"
+          ? m.getParamByLabel(label)
+          : null;
+      const sourceFormulaId = entry ? entry.sourceFormulaId : null;
+      if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
+      const dateISO =
+        normalizeDateISO(note.clinicalDateISO) ||
+        (typeof note.clinicalDateISO === "string"
+          ? note.clinicalDateISO.slice(0, 10)
+          : "");
+      if (!byLabel.has(label)) {
+        byLabel.set(label, {
+          label: label,
+          unit: (lab.unit || (entry ? entry.unit : "") || "").trim(),
+          id: entry ? entry.id : null,
+          group: entry ? entry.group : null,
+          sourceFormulaId: sourceFormulaId,
+          points: [],
+        });
+      }
+      byLabel.get(label).points.push({
+        dateISO: dateISO,
+        valueNum: valueNum,
+        noteId: note.id || null,
+      });
+    }
+    const series = Array.from(byLabel.values());
+    series.forEach((s) => {
+      s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
+    });
+    return series;
+  }
+
+  async function readActiveSeries(patientId, options) {
+    const v = vault();
+    const pid = patientId || resolveCurrentPatientId();
+    if (
+      !pid ||
+      !vaultUnlocked() ||
+      !v ||
+      typeof v.listPatientNotesForPatient !== "function"
+    ) {
+      return [];
+    }
+    let notes;
+    try {
+      notes = await v.listPatientNotesForPatient(pid);
+    } catch (e) {
+      return [];
+    }
+    return buildSeriesFromNotes(notes, options);
+  }
+
+  // Trend KIERUNKOWY, neutralny: strzałka pokazuje kierunek, kolor NIE ocenia
+  // „dobrze/źle" (dla eGFR wzrost korzystny, dla wydalania wapnia odwrotnie).
+  function seriesTrend(points) {
+    if (!Array.isArray(points) || points.length < 2) return null;
+    const latest = points[points.length - 1];
+    const prev = points[points.length - 2];
+    const delta = latest.valueNum - prev.valueNum;
+    const eps = 1e-9;
+    const direction = delta > eps ? "up" : delta < -eps ? "down" : "flat";
+    return {
+      direction: direction,
+      prev: prev.valueNum,
+      latest: latest.valueNum,
+      delta: delta,
+    };
+  }
+
+  const TREND_ARROW = { up: "↑", down: "↓", flat: "→" };
+
   function readPatientName() {
     if (!doc) return "";
     const el = doc.getElementById("patientName");
@@ -3266,6 +3371,184 @@
       );
     }
     refresh();
+    scheduleHistoryRefresh();
+  }
+
+  // ————————————————————————— Faza 2: panel historii ———————————————————————
+  let historyUi = null;
+  let historyQueued = false;
+
+  function escapeHtml(text) {
+    return String(text == null ? "" : text).replace(/[&<>"']/g, function (ch) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[ch];
+    });
+  }
+
+  function fmtNum(n) {
+    return formatValueString(n);
+  }
+
+  function buildSparkline(points) {
+    const w = 128;
+    const h = 30;
+    const pad = 4;
+    const vals = points.map(function (p) {
+      return p.valueNum;
+    });
+    const n = vals.length;
+    if (!n) return "";
+    const min = Math.min.apply(null, vals);
+    const max = Math.max.apply(null, vals);
+    const span = max - min || 1;
+    const xAt = function (i) {
+      return n === 1 ? w / 2 : pad + (i * (w - 2 * pad)) / (n - 1);
+    };
+    const yAt = function (v) {
+      return h - pad - ((v - min) / span) * (h - 2 * pad);
+    };
+    if (n === 1) {
+      return (
+        '<svg class="cvs-spark" width="' +
+        w +
+        '" height="' +
+        h +
+        '" viewBox="0 0 ' +
+        w +
+        " " +
+        h +
+        '" aria-hidden="true"><circle cx="' +
+        xAt(0).toFixed(1) +
+        '" cy="' +
+        yAt(vals[0]).toFixed(1) +
+        '" r="2.6"/></svg>'
+      );
+    }
+    const d = vals
+      .map(function (v, i) {
+        return (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(v).toFixed(1);
+      })
+      .join(" ");
+    return (
+      '<svg class="cvs-spark" width="' +
+      w +
+      '" height="' +
+      h +
+      '" viewBox="0 0 ' +
+      w +
+      " " +
+      h +
+      '" aria-hidden="true"><path d="' +
+      d +
+      '" fill="none" stroke-width="1.6"/><circle cx="' +
+      xAt(n - 1).toFixed(1) +
+      '" cy="' +
+      yAt(vals[n - 1]).toFixed(1) +
+      '" r="2.6"/></svg>'
+    );
+  }
+
+  function renderHistory(series) {
+    if (!historyUi) return;
+    const withData = (series || []).filter(function (s) {
+      return s.points && s.points.length;
+    });
+    if (!withData.length) {
+      historyUi.card.hidden = true;
+      historyUi.body.innerHTML = "";
+      return;
+    }
+    historyUi.card.hidden = false;
+    historyUi.body.innerHTML = withData
+      .map(function (s) {
+        const pts = s.points;
+        const trend = seriesTrend(pts);
+        const unit = s.unit ? " " + s.unit : "";
+        const trendLine = trend
+          ? '<span class="cvs-trend cvs-trend-' +
+            trend.direction +
+            '">' +
+            TREND_ARROW[trend.direction] +
+            " vs. poprzednio (" +
+            escapeHtml(fmtNum(trend.prev)) +
+            " → " +
+            escapeHtml(fmtNum(trend.latest)) +
+            escapeHtml(unit) +
+            ")</span>"
+          : '<span class="cvs-trend cvs-trend-flat">pojedynczy pomiar</span>';
+        const dots = pts
+          .map(function (p) {
+            return (
+              '<li><span class="cvs-date">' +
+              escapeHtml(p.dateISO || "—") +
+              '</span><span class="cvs-num">' +
+              escapeHtml(fmtNum(p.valueNum)) +
+              escapeHtml(unit) +
+              "</span></li>"
+            );
+          })
+          .join("");
+        return (
+          '<div class="cvs-hist-item"><div class="cvs-hist-head"><span class="cvs-hist-label">Historia — ' +
+          escapeHtml(s.label) +
+          "</span>" +
+          buildSparkline(pts) +
+          "</div>" +
+          trendLine +
+          '<ul class="cvs-hist-points">' +
+          dots +
+          "</ul></div>"
+        );
+      })
+      .join("");
+  }
+
+  function buildHistoryUI() {
+    if (!doc || historyUi) return;
+    const anchor =
+      doc.getElementById("clcrVisitSaveCard") ||
+      doc.getElementById("stoneCard") ||
+      doc.getElementById("results");
+    if (!anchor || !anchor.parentNode) return;
+    const card = doc.createElement("section");
+    card.className = "card clcr-visit-history";
+    card.id = "clcrHistoryCard";
+    card.hidden = true;
+    card.innerHTML =
+      '<h2 class="text-center">Historia wyników</h2>' +
+      '<div class="cvs-hist-body" id="clcrHistoryBody"></div>';
+    anchor.parentNode.insertBefore(card, anchor.nextSibling);
+    historyUi = { card: card, body: card.querySelector("#clcrHistoryBody") };
+  }
+
+  async function refreshActiveHistory() {
+    if (!historyUi) return;
+    if (!vaultUnlocked() || !resolveCurrentPatientId()) {
+      historyUi.card.hidden = true;
+      historyUi.body.innerHTML = "";
+      return;
+    }
+    const series = await readActiveSeries();
+    renderHistory(series);
+  }
+
+  function scheduleHistoryRefresh() {
+    if (historyQueued || !historyUi) return;
+    historyQueued = true;
+    const run = function () {
+      historyQueued = false;
+      refreshActiveHistory();
+    };
+    if (typeof global.requestAnimationFrame === "function") {
+      global.requestAnimationFrame(run);
+    } else {
+      setTimeout(run, 0);
+    }
   }
 
   function observeResults() {
@@ -3279,7 +3562,10 @@
       "ektvResult",
       "urrResult",
     ];
-    const obs = new global.MutationObserver(scheduleRefresh);
+    const obs = new global.MutationObserver(function () {
+      scheduleRefresh();
+      scheduleHistoryRefresh();
+    });
     for (let i = 0; i < ids.length; i += 1) {
       const el = doc.getElementById(ids[i]);
       if (el) {
@@ -3299,10 +3585,12 @@
           : "") || readPatientName();
     }
     refresh();
+    scheduleHistoryRefresh();
   }
 
   function init() {
     buildUI();
+    buildHistoryUI();
     observeResults();
     if (doc) {
       doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
@@ -3318,6 +3606,10 @@
     collectActiveDatapoints: collectActiveDatapoints,
     mapDatapoint: mapDatapoint,
     saveActiveResultToCard: saveActiveResultToCard,
+    buildSeriesFromNotes: buildSeriesFromNotes,
+    readActiveSeries: readActiveSeries,
+    seriesTrend: seriesTrend,
+    refreshActiveHistory: refreshActiveHistory,
     formatValueString: formatValueString,
     todayISO: todayISO,
     normalizeDateISO: normalizeDateISO,

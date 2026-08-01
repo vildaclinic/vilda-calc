@@ -147,3 +147,40 @@ test('gość bez pacjenta — karta zapisu nieaktywna z podpowiedzią', async ({
   await expect(page.locator('#clcrVisitSaveBtn')).toBeDisabled();
   await expect(page.locator('#clcrVisitHint')).toContainText('Zaloguj się');
 });
+
+test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', async ({ page }) => {
+  await openCalculatorGuest(page);
+  await setupVaultPatient(page);
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
+  await page.waitForTimeout(60);
+
+  await page.locator('#age').fill('50');
+  await page.locator('#sex').selectOption('M');
+  await page.locator('#weight').fill('80');
+  await page.locator('#height').fill('180');
+  await page.locator('#creatinineState').selectOption('stable');
+
+  // wizyta 1 (Scr 1.0 → wyższy eGFR)
+  await page.locator('#Scr').fill('1.0');
+  await page.evaluate(() => window.clcrUpdate());
+  await page.locator('#clcrVisitDate').fill('2026-06-01');
+  await page.locator('#clcrVisitSaveBtn').click();
+  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+
+  // wizyta 2 (Scr 1.4 → niższy eGFR)
+  await page.locator('#Scr').fill('1.4');
+  await page.evaluate(() => window.clcrUpdate());
+  await page.locator('#clcrVisitDate').fill('2026-07-01');
+  await page.locator('#clcrVisitSaveBtn').click();
+  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+
+  const hist = page.locator('#clcrHistoryCard');
+  await expect(hist).toBeVisible();
+  await expect(hist).toContainText('Historia — eGFR — dorośli (kreatynina)');
+  await expect(hist.locator('.cvs-hist-points li')).toHaveCount(2);
+  await expect(hist.locator('.cvs-spark')).toHaveCount(1);
+  await expect(hist).toContainText('vs. poprzednio');
+  // punkty datowane
+  await expect(hist).toContainText('2026-06-01');
+  await expect(hist).toContainText('2026-07-01');
+});
