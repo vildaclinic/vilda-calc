@@ -2990,10 +2990,46 @@
     };
   }
 
-  // Zbiera wszystkie WIDOCZNE, otagowane wyniki (po jednym na serię).
-  function collectActiveDatapoints(root) {
+  // Zbiór formuł-źródeł do zapisu = formuły AKTYWNEGO MODUŁU (wybór lekarza).
+  // Dzięki temu zapis obejmuje:
+  //  • pojedynczą wybraną formułę (np. eGFR dorośli → tylko egfr),
+  //  • cały panel wielo-formułowy (np. DZM → wszystkie analitów tego modułu),
+  // a WYKLUCZA porównania z innych modułów, które silnik dokłada obok
+  // (np. wybór CKiD U25 u 20-latka renderuje też egfr/cg — panel porównawczy).
+  function moduleFormulaSet(formulaId) {
+    if (typeof formulaId !== "string" || !formulaId) return null;
+    const m = model();
+    const mod =
+      m && typeof m.getModuleForFormula === "function"
+        ? m.getModuleForFormula(formulaId)
+        : null;
+    if (mod && Array.isArray(mod.formulaIds) && mod.formulaIds.length) {
+      return new Set(mod.formulaIds);
+    }
+    return new Set([formulaId]);
+  }
+
+  function resolveTargetFormulaSet(options) {
+    const opts = options || {};
+    if (Array.isArray(opts.formulaIds)) return new Set(opts.formulaIds);
+    if (typeof opts.formulaId === "string" && opts.formulaId) {
+      return moduleFormulaSet(opts.formulaId);
+    }
+    const wf = global.ClcrUiWorkflow;
+    const activeId =
+      wf && wf.state && typeof wf.state.activeFormulaId === "string"
+        ? wf.state.activeFormulaId
+        : "";
+    // Brak wybranej formuły (tryb broad/testowy) → brak filtra (zbierz wszystko).
+    return activeId ? moduleFormulaSet(activeId) : null;
+  }
+
+  // Zbiera WIDOCZNE, otagowane wyniki (po jednym na serię), ograniczone do
+  // formuł aktywnego modułu (chyba że nie wybrano formuły — wtedy wszystko).
+  function collectActiveDatapoints(root, options) {
     const scope = root || doc;
     if (!scope || typeof scope.querySelectorAll !== "function") return [];
+    const target = resolveTargetFormulaSet(options);
     const seen = new Set();
     const out = [];
     const nodes = scope.querySelectorAll("[data-clcr-series]");
@@ -3004,6 +3040,7 @@
       if (!series || seen.has(series)) continue;
       const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
       if (!dp) continue;
+      if (target && !target.has(dp.sourceFormulaId)) continue;
       seen.add(series);
       out.push(dp);
     }
@@ -3045,7 +3082,7 @@
     const clinicalDateISO = normalizeDateISO(options.clinicalDateISO) || todayISO();
     const datapoints = Array.isArray(options.datapoints)
       ? options.datapoints
-      : collectActiveDatapoints(options.root);
+      : collectActiveDatapoints(options.root, options);
     if (!datapoints.length) {
       return { ok: false, reason: "no-data", saved: 0, total: 0, errors: [] };
     }

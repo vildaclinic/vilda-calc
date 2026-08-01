@@ -72,6 +72,55 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     expect(dps.find((d) => d.id === 'egfr').valueNum).toBeCloseTo(91.6, 3);
   });
 
+  it('collectActiveDatapoints: filtr po module wybranej formuły — wyklucza porównania z innych modułów', () => {
+    const vs = g.ClcrVisitSave;
+    // U 20-latka wybór CKiD U25 renderuje też egfr/cg/cg_norm (panel porównawczy) —
+    // zapisujemy TYLKO wybraną formułę (moduł child-egfr = [ckid_u25]).
+    const root = fakeRoot([
+      fakeEl('ckid_u25', '83'),
+      fakeEl('egfr', '95'),
+      fakeEl('cg', '110'),
+      fakeEl('cg_norm', '96'),
+    ]);
+    const dps = vs.collectActiveDatapoints(root, { formulaId: 'ckid_u25' });
+    expect(dps.map((d) => d.id)).toEqual(['ckid_u25']);
+  });
+
+  it('collectActiveDatapoints: panel DZM zapisuje anality swojego modułu, pomija cudze', () => {
+    const vs = g.ClcrVisitSave;
+    // timed-urine-panel zawiera Ca_mgkg, UA_mgkg… ale NIE Ox_mgkg (stone-profile).
+    const root = fakeRoot([
+      fakeEl('Ca_mgkg', '4'),
+      fakeEl('UA_mgkg', '8'),
+      fakeEl('Ox_mgkg', '0.3'), // inny moduł → pomiń
+      fakeEl('egfr', '95'), // inny moduł → pomiń
+    ]);
+    const dps = vs.collectActiveDatapoints(root, { formulaId: 'Ca_mgkg' });
+    const ids = dps.map((d) => d.id).sort();
+    expect(ids).toContain('Ca_mgkg');
+    expect(ids).toContain('UA_mgkg');
+    expect(ids).not.toContain('Ox_mgkg');
+    expect(ids).not.toContain('egfr');
+  });
+
+  it('collectActiveDatapoints: pojedyncza formuła (eGFR dorośli) — bez CG obok', () => {
+    const vs = g.ClcrVisitSave;
+    const root = fakeRoot([fakeEl('egfr', '92'), fakeEl('cg', '100'), fakeEl('cg_norm', '87')]);
+    const dps = vs.collectActiveDatapoints(root, { formulaId: 'egfr' });
+    expect(dps.map((d) => d.id)).toEqual(['egfr']);
+  });
+
+  it('collectActiveDatapoints: białko DZM — wybór modułu zapisuje 3 serie (①)', () => {
+    const vs = g.ClcrVisitSave;
+    const root = fakeRoot([
+      fakeEl('Prot_mg24', '1500'),
+      fakeEl('Prot_g24', '1.5'),
+      fakeEl('Prot_bsa', '850'),
+    ]);
+    const dps = vs.collectActiveDatapoints(root, { formulaId: 'Prot_mgkg' });
+    expect(dps.map((d) => d.id).sort()).toEqual(['Prot_bsa', 'Prot_g24', 'Prot_mg24']);
+  });
+
   it('normalizeDateISO / formatValueString / seriesWord', () => {
     const vs = g.ClcrVisitSave;
     expect(vs.normalizeDateISO('2026-08-01')).toBe('2026-08-01');

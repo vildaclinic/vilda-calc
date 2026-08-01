@@ -40,41 +40,8 @@ async function setupVaultPatient(page) {
   });
 }
 
-test('zapisuje wynik eGFR jako notatkę wynik-klirens w karcie pacjenta', async ({ page }) => {
-  await openCalculatorGuest(page);
-  const setup = await setupVaultPatient(page);
-  expect(setup.unlocked).toBe(true);
-  expect(typeof setup.patientId).toBe('string');
-  expect(setup.patientId.length).toBeGreaterThan(0);
-
-  // dorosły → eGFR (2021 CKD-EPI)
-  await page.locator('#age').fill('50');
-  await page.locator('#ageMonths').fill('0');
-  await page.locator('#sex').selectOption('M');
-  await page.locator('#weight').fill('80');
-  await page.locator('#height').fill('180');
-  await page.locator('#Scr').fill('1.0');
-  await page.locator('#creatinineState').selectOption('stable');
-  await page.evaluate(() => window.clcrUpdate());
-
-  // tag silnika obecny
-  await expect(page.locator('#clcrInfo [data-clcr-series="egfr"]')).toHaveCount(1);
-
-  // karta zapisu widoczna i aktywna (sejf + pacjent)
-  const card = page.locator('#clcrVisitSaveCard');
-  await expect(card).toBeVisible();
-  const btn = page.locator('#clcrVisitSaveBtn');
-  await expect(btn).toBeEnabled();
-
-  await page.locator('#clcrVisitDate').fill('2026-08-01');
-  await btn.click();
-
-  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', {
-    timeout: 15000,
-  });
-
-  // odczyt z sejfu — notatki wynik-klirens
-  const notes = await page.evaluate(async (pid) => {
+async function readClinicalNotes(page, patientId) {
+  return page.evaluate(async (pid) => {
     const list = await window.VildaVault.listPatientNotesForPatient(pid);
     return list
       .filter((n) => n.category === 'wynik-klirens')
@@ -85,19 +52,83 @@ test('zapisuje wynik eGFR jako notatkę wynik-klirens w karcie pacjenta', async 
         body: n.body,
         labResult: n.labResult,
       }));
-  }, setup.patientId);
+  }, patientId);
+}
 
-  expect(notes.length).toBeGreaterThan(0);
-  const egfr = notes.find(
-    (n) => n.labResult && n.labResult.test === 'eGFR — dorośli (kreatynina)',
-  );
-  expect(egfr, 'notatka eGFR istnieje').toBeTruthy();
+test('zapisuje TYLKO wybraną formułę (eGFR dorośli) — bez Cockcrofta obok', async ({ page }) => {
+  await openCalculatorGuest(page);
+  const setup = await setupVaultPatient(page);
+  expect(setup.unlocked).toBe(true);
+  expect(setup.patientId.length).toBeGreaterThan(0);
+
+  // ręczny wybór formuły (jak w produkcji) → activeFormulaId = egfr
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
+  await page.waitForTimeout(60);
+  await page.locator('#age').fill('50');
+  await page.locator('#sex').selectOption('M');
+  await page.locator('#weight').fill('80');
+  await page.locator('#height').fill('180');
+  await page.locator('#Scr').fill('1.0');
+  await page.locator('#creatinineState').selectOption('stable');
+  await page.evaluate(() => window.clcrUpdate());
+
+  await expect(page.locator('[data-clcr-series="egfr"]')).toHaveCount(1);
+  const btn = page.locator('#clcrVisitSaveBtn');
+  await expect(page.locator('#clcrVisitSaveCard')).toBeVisible();
+  await expect(btn).toBeEnabled();
+  await page.locator('#clcrVisitDate').fill('2026-08-01');
+  await btn.click();
+  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+
+  const notes = await readClinicalNotes(page, setup.patientId);
+  const labels = notes.map((n) => n.labResult && n.labResult.test);
+  expect(labels).toContain('eGFR — dorośli (kreatynina)');
+  // wybrano tylko eGFR — Cockcroft nie może się zapisać
+  expect(labels).not.toContain('Klirens kreatyniny — dorośli (ml/min)');
+  expect(labels).not.toContain('Klirens kreatyniny — dorośli (1,73 m²)');
+
+  const egfr = notes.find((n) => n.labResult.test === 'eGFR — dorośli (kreatynina)');
   expect(egfr.clinicalDateISO).toContain('2026-08-01');
   expect(egfr.labResult.unit).toBe('mL/min/1,73 m²');
   expect(egfr.labResult.valueNum).toBeGreaterThan(85);
   expect(egfr.labResult.valueNum).toBeLessThan(100);
-  // OBEJŚCIE §2: testKey wędruje do treści notatki
   expect(egfr.body).toContain('clcr:egfr');
+});
+
+test('CKiD U25 u 20-latka — zapisuje tylko wybraną formułę, wyklucza panel porównawczy', async ({ page }) => {
+  await openCalculatorGuest(page);
+  const setup = await setupVaultPatient(page);
+
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('ckid_u25'));
+  await page.waitForTimeout(60);
+  await page.locator('#age').fill('20');
+  await page.locator('#sex').selectOption('F');
+  await page.locator('#weight').fill('60');
+  await page.locator('#height').fill('165');
+  await page.locator('#Scr').fill('0.9');
+  await page.locator('#creatinineState').selectOption('stable');
+  await page.evaluate(() => window.clcrUpdate());
+
+  // silnik renderuje egfr/cg jako porównanie (otagowane), ale zapis ich pomija
+  const visibleSeries = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-clcr-series]'))
+      .filter((el) => el.getClientRects().length > 0)
+      .map((el) => el.getAttribute('data-clcr-series')),
+  );
+  expect(visibleSeries).toContain('ckid_u25');
+  expect(visibleSeries).toContain('egfr'); // panel porównawczy widoczny
+
+  await page.locator('#clcrVisitDate').fill('2026-08-01');
+  await page.locator('#clcrVisitSaveBtn').click();
+  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+
+  const labels = (await readClinicalNotes(page, setup.patientId)).map(
+    (n) => n.labResult && n.labResult.test,
+  );
+  expect(labels).toContain('eGFR — dzieci i młodzież 1–25 lat (kreatynina)');
+  // porównawcze egfr/cg NIE mogą trafić do karty
+  expect(labels).not.toContain('eGFR — dorośli (kreatynina)');
+  expect(labels).not.toContain('Klirens kreatyniny — dorośli (ml/min)');
 });
 
 test('gość bez pacjenta — karta zapisu nieaktywna z podpowiedzią', async ({ page }) => {
