@@ -36,6 +36,12 @@ async function setupVaultPatient(page) {
     document.dispatchEvent(
       new CustomEvent('vilda:patient-loaded', { detail: { patientId } }),
     );
+    // Faza 5: po wczytaniu pacjenta blok tożsamości domyślnie się zwija do chipa
+    // (Wariant C). Ten test dotyczy zapisu wyniku, więc rozwijamy panel jak lekarz
+    // („Dane pacjenta ▾"), aby edytować pola tożsamości.
+    if (window.ClcrIdentity && typeof window.ClcrIdentity.setCollapsed === 'function') {
+      window.ClcrIdentity.setCollapsed(false);
+    }
     return { patientId, unlocked: V.isUnlocked() };
   });
 }

@@ -1405,3 +1405,44 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 .clcr-patient-card .cpc-note { font-size: 12.5px; color: #5a7274; margin-top: 10px; }
 .clcr-patient-card .cpc-empty { color: #5a7274; text-align: center; padding: 24px 12px; }
 html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
+
+/* ——— Faza 5: chip pacjenta + zwijany blok tożsamości (Wariant C) ——— */
+.clcr-ident-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px; margin: 0 0 12px;
+  background: #fff; border: 1px solid #e3ecec; border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(18, 72, 77, 0.05);
+}
+.clcr-ident-bar[hidden] { display: none; }
+.clcr-ident-id { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
+.clcr-ident-avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex: none;
+  background: #00838d; color: #fff; font-weight: 800; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; letter-spacing: 0.02em;
+}
+.clcr-ident-who { display: flex; flex-direction: column; min-width: 0; }
+.clcr-ident-name { font-weight: 800; font-size: 16px; line-height: 1.15; color: #15363a; }
+.clcr-ident-sub { color: #557074; font-size: 12.5px; font-weight: 600; }
+.clcr-ident-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.clcr-ident-badge {
+  background: #f4fafa; border: 1px solid #e3ecec; border-radius: 999px;
+  padding: 3px 10px; font-size: 12.5px; font-weight: 700; color: #006b73;
+  font-variant-numeric: tabular-nums;
+}
+.clcr-ident-badge--mass { background: #fff8e7; border-color: #ead6a8; color: #8a5400; }
+.clcr-ident-toggle {
+  margin-left: auto; border: 1px solid #d0dede; background: #fff; color: #006b73;
+  border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 13px; font-weight: 750;
+  cursor: pointer; min-height: 36px;
+}
+.clcr-ident-toggle:hover { background: #f4fafa; }
+/* Zwinięty stan (pacjent z karty): chowamy pola tożsamości, chip zostaje.
+   Używamy KLASY (nie właściwości .hidden pól), więc logika widoczności
+   sekcji per-formuła (sectionHasVisibleFields czyta .hidden) nie chowa karty. */
+.patient-card.clcr-ident-collapsed > #patientSet { display: none !important; }
+/* Notka daty pomiaru masy w rozwiniętym panelu (bez wymuszonego potwierdzania) */
+.clcr-weight-note {
+  display: block; margin-top: 4px; font-size: 12px; font-weight: 650; color: #8a5400;
+}
+.clcr-weight-note.fresh { color: #147a64; }
+.clcr-weight-note[hidden] { display: none; }

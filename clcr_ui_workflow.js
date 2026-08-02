@@ -3936,3 +3936,413 @@
     }
   }
 })(typeof window !== "undefined" ? window : globalThis);
+
+/* ————————————————————————————————————————————————————————————————————————
+ * Faza 5 — chip pacjenta + zwijany blok tożsamości (Wariant C).
+ *
+ * Warstwa PREZENTACJI nad istniejącym #patientSet — ZERO zmian w matematyce
+ * silnika i w potoku podstawiania danych (applyLoadedData / userData.js /
+ * applyClcrSessionSnapshot nadal wypełniają pola). Moduł:
+ *   • pokazuje chip pacjenta (avatar + nazwisko + wiek·płeć) zamiast pola
+ *     „Imię i nazwisko", ze skrótami: wiek (granularny), wzrost, masa+data;
+ *   • zwija pola tożsamości do chipa, gdy wczytano pacjenta z karty
+ *     (rozwinięcie na żądanie: „Dane pacjenta ▾");
+ *   • przy pacjencie z karty pokazuje datę ostatniego pomiaru masy i sam
+ *     stempluje „dziś", gdy lekarz wpisze nową masę — BEZ osobnego
+ *     potwierdzania (decyzja Macieja 02.08.2026);
+ *   • w trybie gościa / bez pacjenta NIE ingeruje — #patientSet w pełni widoczny
+ *     (dzięki temu obliczenia anonimowe i istniejące testy działają bez zmian).
+ * ———————————————————————————————————————————————————————————————————————— */
+(function (global) {
+  "use strict";
+  const doc = global.document;
+  if (!doc) return;
+
+  const COLLAPSE_CLASS = "clcr-ident-collapsed";
+  const SYNC_FIELDS = [
+    "age",
+    "ageMonths",
+    "ageDays",
+    "neonatalTermStatus",
+    "sex",
+    "height",
+    "weight",
+  ];
+
+  const st = {
+    built: false,
+    currentName: "",
+    lastWeightDateISO: null, // data ostatniego pomiaru masy (z ostatniego snapshotu)
+    weightTouched: false, // lekarz wpisał nową masę na tej wizycie → „dziś"
+    lastPatientId: null,
+  };
+
+  function vault() {
+    return global.VildaVault && typeof global.VildaVault === "object"
+      ? global.VildaVault
+      : null;
+  }
+  function vaultUnlocked() {
+    try {
+      const v = vault();
+      return !!(v && typeof v.isUnlocked === "function" && v.isUnlocked());
+    } catch (e) {
+      return false;
+    }
+  }
+  function isGuest() {
+    try {
+      return !!(
+        global.VildaSession &&
+        typeof global.VildaSession.isGuestMode === "function" &&
+        global.VildaSession.isGuestMode()
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+  function patientId() {
+    try {
+      const api = global.ClcrVisitSave;
+      return (
+        (api && typeof api.resolveCurrentPatientId === "function"
+          ? api.resolveCurrentPatientId()
+          : null) || null
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+  function hasPatient() {
+    return vaultUnlocked() && !isGuest() && !!patientId();
+  }
+  function todayISO() {
+    try {
+      const api = global.ClcrVisitSave;
+      if (api && typeof api.todayISO === "function") return api.todayISO();
+    } catch (e) {
+      /* fall through */
+    }
+    try {
+      return new Date().toISOString().slice(0, 10);
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function el(id) {
+    return doc.getElementById(id);
+  }
+  function fieldStr(id) {
+    const e = el(id);
+    return e && e.value != null ? String(e.value).trim() : "";
+  }
+  function fieldNum(id) {
+    const s = fieldStr(id);
+    if (s === "") return null;
+    const n = Number(s.replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function fmtNum(n) {
+    if (n == null || !Number.isFinite(n)) return "";
+    return Number.isInteger(n)
+      ? String(n)
+      : String(Number(n.toFixed(2))).replace(".", ",");
+  }
+  function fmtDatePl(iso) {
+    if (!iso || typeof iso !== "string") return "";
+    const m = iso.slice(0, 10).split("-");
+    if (m.length !== 3) return "";
+    return m[2] + "." + m[1] + "." + m[0];
+  }
+  function yearWord(y) {
+    y = Math.round(y);
+    const a = y % 100;
+    const l = y % 10;
+    if (y === 1) return "rok";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "lata";
+    return "lat";
+  }
+  function dayWord(d) {
+    d = Math.round(d);
+    return d === 1 ? "dzień" : "dni";
+  }
+
+  // Wiek z dokładnością wynikającą z wprowadzonych pól:
+  //  • noworodek (0 lat, 0 mies., dni > 0) → „14 dni · donoszony/wcześniak"
+  //  • niemowlę (0 lat, mies. > 0)         → „8 mies."
+  //  • dziecko/dorosły z miesiącami        → „10 lat 3 mies."
+  //  • dorosły                             → „54 lata"
+  function ageString() {
+    const y = fieldNum("age");
+    const mo = fieldNum("ageMonths");
+    const d = fieldNum("ageDays");
+    if ((y === 0 || y == null) && (mo === 0 || mo == null) && d != null && d > 0) {
+      const term = fieldStr("neonatalTermStatus");
+      const t =
+        term === "term" ? " · donoszony" : term === "preterm" ? " · wcześniak" : "";
+      return d + " " + dayWord(d) + t;
+    }
+    if ((y === 0 || y == null) && mo != null && mo > 0) {
+      return mo + " mies.";
+    }
+    if (y != null) {
+      let base = y + " " + yearWord(y);
+      if (mo != null && mo > 0) base += " " + mo + " mies.";
+      return base;
+    }
+    return "";
+  }
+  function sexWord() {
+    const s = fieldStr("sex");
+    if (s === "M") return "mężczyzna";
+    if (s === "F") return "kobieta";
+    return "";
+  }
+  function readName() {
+    if (st.currentName) return st.currentName;
+    const h = el("patientName");
+    if (h && h.textContent && h.textContent.trim()) return h.textContent.trim();
+    const fn = el("fullName");
+    if (fn && fn.value && fn.value.trim()) return fn.value.trim();
+    return "";
+  }
+  function initials(name) {
+    const parts = String(name || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return "•";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function card() {
+    return doc.querySelector(".patient-card");
+  }
+  function isCollapsed() {
+    const c = card();
+    return !!(c && c.classList.contains(COLLAPSE_CLASS));
+  }
+  function setCollapsed(collapsed) {
+    const c = card();
+    if (!c) return;
+    c.classList.toggle(COLLAPSE_CLASS, !!collapsed);
+    renderBar();
+  }
+
+  function buildBar() {
+    if (st.built) return;
+    const c = card();
+    const set = el("patientSet");
+    if (!c || !set) return;
+    const bar = doc.createElement("div");
+    bar.id = "clcrIdentityBar";
+    bar.className = "clcr-ident-bar";
+    bar.hidden = true;
+    c.insertBefore(bar, set);
+    bar.addEventListener("click", function (e) {
+      const t = e.target.closest("[data-ident-act]");
+      if (!t) return;
+      if (t.getAttribute("data-ident-act") === "toggle") {
+        setCollapsed(!isCollapsed());
+      }
+    });
+    st.built = true;
+  }
+
+  function renderBar() {
+    if (!st.built) buildBar();
+    const bar = el("clcrIdentityBar");
+    const c = card();
+    if (!bar || !c) return;
+    if (!hasPatient()) {
+      bar.hidden = true;
+      c.classList.remove(COLLAPSE_CLASS);
+      return;
+    }
+    bar.hidden = false;
+    const collapsed = isCollapsed();
+    const name = readName() || "Pacjent";
+    const age = ageString();
+    const sx = sexWord();
+    const sub = [age, sx].filter(Boolean).join(" · ");
+
+    let badges = "";
+    if (collapsed) {
+      const h = fieldNum("height");
+      const w = fieldNum("weight");
+      const b = [];
+      if (age) b.push('<span class="clcr-ident-badge">' + esc(age) + "</span>");
+      if (h != null)
+        b.push('<span class="clcr-ident-badge">' + esc(fmtNum(h)) + " cm</span>");
+      if (w != null) {
+        const dtxt = st.weightTouched
+          ? "dziś"
+          : st.lastWeightDateISO
+            ? fmtDatePl(st.lastWeightDateISO)
+            : "";
+        b.push(
+          '<span class="clcr-ident-badge clcr-ident-badge--mass">Masa ' +
+            esc(fmtNum(w)) +
+            " kg" +
+            (dtxt ? " · " + esc(dtxt) : "") +
+            "</span>",
+        );
+      }
+      if (b.length) badges = '<div class="clcr-ident-badges">' + b.join("") + "</div>";
+    }
+    const toggleLabel = collapsed ? "Dane pacjenta ▾" : "Zwiń ▲";
+    bar.innerHTML =
+      '<div class="clcr-ident-id">' +
+      '<span class="clcr-ident-avatar">' +
+      esc(initials(name)) +
+      "</span>" +
+      '<span class="clcr-ident-who">' +
+      '<span class="clcr-ident-name">' +
+      esc(name) +
+      "</span>" +
+      (sub ? '<span class="clcr-ident-sub">' + esc(sub) + "</span>" : "") +
+      "</span></div>" +
+      badges +
+      '<button type="button" class="clcr-ident-toggle" data-ident-act="toggle">' +
+      toggleLabel +
+      "</button>";
+  }
+
+  // Notka daty pomiaru masy pod polem #weight (w rozwiniętym panelu).
+  function renderWeightNote() {
+    const w = el("weight");
+    if (!w) return;
+    let note = el("clcrWeightMeasuredNote");
+    if (!hasPatient()) {
+      if (note) note.hidden = true;
+      return;
+    }
+    if (!note) {
+      note = doc.createElement("span");
+      note.id = "clcrWeightMeasuredNote";
+      note.className = "clcr-weight-note";
+      if (w.parentNode) w.parentNode.insertBefore(note, w.nextSibling);
+    }
+    note.hidden = false;
+    if (st.weightTouched) {
+      note.textContent = "nowy pomiar: dziś " + fmtDatePl(todayISO());
+      note.classList.add("fresh");
+    } else if (st.lastWeightDateISO) {
+      note.textContent =
+        "ostatni pomiar: " +
+        fmtDatePl(st.lastWeightDateISO) +
+        " — nadpisz, jeśli pacjent był ważony dziś.";
+      note.classList.remove("fresh");
+    } else {
+      note.textContent = "podaj masę zmierzoną na tej wizycie.";
+      note.classList.remove("fresh");
+    }
+  }
+
+  function renderAll() {
+    renderBar();
+    renderWeightNote();
+  }
+
+  // Odczyt daty ostatniego pomiaru masy z ostatniego snapshotu pacjenta.
+  async function loadWeightDate() {
+    st.lastWeightDateISO = null;
+    const pid = patientId();
+    const v = vault();
+    if (!pid || !v || typeof v.getPatient !== "function") return;
+    try {
+      const p = await v.getPatient(pid);
+      const snap = p && Array.isArray(p.snapshots) ? p.snapshots[0] : null;
+      const user = snap && snap.payload ? snap.payload.user : null;
+      if (user && typeof user.measuredAtISO === "string" && user.measuredAtISO) {
+        st.lastWeightDateISO = user.measuredAtISO;
+      } else if (snap && typeof snap.savedAtISO === "string" && snap.savedAtISO) {
+        st.lastWeightDateISO = snap.savedAtISO;
+      }
+    } catch (e) {
+      /* brak daty — chip pokaże masę bez daty */
+    }
+    renderAll();
+  }
+
+  let renderTimers = [];
+  function scheduleRenders() {
+    renderTimers.forEach((t) => global.clearTimeout(t));
+    renderTimers = [0, 80, 400].map((ms) => global.setTimeout(renderAll, ms));
+  }
+
+  function onPatientLoaded(event) {
+    const detail = event && event.detail ? event.detail : null;
+    st.currentName =
+      detail && typeof detail.name === "string" && detail.name.trim()
+        ? detail.name.trim()
+        : "";
+    const pid = patientId();
+    // Nowy pacjent → reset stempla masy i domyślne zwinięcie (Wariant C).
+    if (pid !== st.lastPatientId) {
+      st.weightTouched = false;
+      st.lastPatientId = pid;
+    }
+    if (hasPatient()) {
+      setCollapsed(true);
+      loadWeightDate();
+    }
+    scheduleRenders();
+  }
+
+  function onFieldInput(e) {
+    const t = e && e.target;
+    if (!t || !t.id) return;
+    if (t.id === "weight") {
+      // tylko realna edycja lekarza stempluje „dziś" (nie programowe podstawienie)
+      if (e.isTrusted && String(t.value).trim() !== "") {
+        st.weightTouched = true;
+      }
+    }
+    if (SYNC_FIELDS.indexOf(t.id) !== -1) renderAll();
+  }
+
+  function init() {
+    buildBar();
+    const set = el("patientSet");
+    if (set) {
+      set.addEventListener("input", onFieldInput);
+      set.addEventListener("change", onFieldInput);
+    }
+    doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
+    // Pacjent mógł zostać wczytany przed inicjalizacją (odtworzenie sesji).
+    if (hasPatient()) {
+      setCollapsed(true);
+      loadWeightDate();
+    }
+    scheduleRenders();
+  }
+
+  const api = {
+    renderBar: renderBar,
+    renderWeightNote: renderWeightNote,
+    ageString: ageString,
+    setCollapsed: setCollapsed,
+    isCollapsed: isCollapsed,
+    _state: st,
+  };
+  global.ClcrIdentity = api;
+
+  if (typeof doc.addEventListener === "function") {
+    if (doc.readyState === "loading") {
+      doc.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  }
+})(typeof window !== "undefined" ? window : globalThis);
