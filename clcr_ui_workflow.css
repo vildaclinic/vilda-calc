@@ -1622,3 +1622,33 @@ html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.warn-yellow {
 html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.out-of-range {
   border-color: #ecc3c3 !important; box-shadow: inset 3px 0 0 var(--clcr-error) !important;
 }
+
+/* ——— Układ B (U3): pasek „Wymagane dane X/Y" + „Zobacz pełny opis wyniku ↓" ——— */
+html[data-clcr-workflow-ui="1"] .clcr-progress {
+  margin: 0 0 12px; border-radius: 13px; background: var(--clcr-surface-soft); padding: 12px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-progress[hidden] { display: none !important; }
+html[data-clcr-workflow-ui="1"] .clcr-progress__meta {
+  display: flex; align-items: center; justify-content: space-between;
+  color: var(--clcr-muted); font-size: 12px; font-weight: 700;
+}
+html[data-clcr-workflow-ui="1"] .clcr-progress__value { color: var(--clcr-heading); }
+html[data-clcr-workflow-ui="1"] .clcr-progress__track {
+  height: 7px; margin-top: 8px; overflow: hidden; border-radius: 999px; background: #dce7e7;
+}
+html[data-clcr-workflow-ui="1"] .clcr-progress__fill {
+  display: block; width: 0; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--clcr-primary), var(--clcr-accent));
+  transition: width 220ms ease;
+}
+html[data-clcr-workflow-ui="1"] .clcr-fullreport-button {
+  display: block !important; width: 100% !important; min-height: 44px !important;
+  margin: 0 0 16px !important;
+  border: 1px solid var(--clcr-primary) !important; border-radius: 11px !important;
+  background: var(--clcr-primary) !important; color: #fff !important;
+  box-shadow: 0 8px 18px rgba(0, 131, 141, 0.2) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  font: inherit !important; font-weight: 750 !important; cursor: pointer !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-fullreport-button:hover { background: var(--clcr-primary-dark) !important; }
+html[data-clcr-workflow-ui="1"] .clcr-fullreport-button[hidden] { display: none !important; }

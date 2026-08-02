@@ -4378,6 +4378,10 @@
   ];
   let rail = null;
   let head = null;
+  let progressEl = null;
+  let progressValue = null;
+  let progressFill = null;
+  let fullReportBtn = null;
   let reportSection = null;
   let reportHead = null;
   let reportTitle = null;
@@ -4438,11 +4442,42 @@
     rail = doc.createElement("aside");
     rail.id = "clcrResultRail";
     rail.className = "clcr-result-rail";
+
+    // Pasek „Wymagane dane X/Y".
+    progressEl = doc.createElement("div");
+    progressEl.className = "clcr-progress";
+    progressEl.hidden = true;
+    const pMeta = doc.createElement("div");
+    pMeta.className = "clcr-progress__meta";
+    const pLabel = doc.createElement("span");
+    pLabel.textContent = "Wymagane dane";
+    progressValue = doc.createElement("strong");
+    progressValue.className = "clcr-progress__value";
+    progressValue.textContent = "0/0";
+    pMeta.append(pLabel, progressValue);
+    const pTrack = doc.createElement("div");
+    pTrack.className = "clcr-progress__track";
+    progressFill = doc.createElement("span");
+    progressFill.className = "clcr-progress__fill";
+    pTrack.appendChild(progressFill);
+    progressEl.append(pMeta, pTrack);
+    rail.appendChild(progressEl);
+
     head = doc.createElement("div");
     head.className = "clcr-rail-head";
     head.id = "clcrRailHead";
     head.hidden = true;
     rail.appendChild(head);
+
+    // „Zobacz pełny opis wyniku ↓" — przewija do sekcji „Wynik i raport".
+    fullReportBtn = doc.createElement("button");
+    fullReportBtn.type = "button";
+    fullReportBtn.className = "clcr-fullreport-button";
+    fullReportBtn.textContent = "Zobacz pełny opis wyniku ↓";
+    fullReportBtn.hidden = true;
+    fullReportBtn.addEventListener("click", scrollToReport);
+    rail.appendChild(fullReportBtn);
+
     ws.appendChild(rail);
 
     buildReport(ws);
@@ -4509,6 +4544,45 @@
       const card = el(id);
       if (card && card.parentNode !== rail) rail.appendChild(card);
     });
+  }
+
+  function scrollToReport() {
+    if (!reportSection || reportSection.hidden) return;
+    try {
+      reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      reportSection.scrollIntoView();
+    }
+  }
+
+  // Pasek „Wymagane dane X/Y" — liczony z pól wymaganych aktywnej formuły
+  // (state.requiredFieldIds w modelu). Bez zmian w matematyce.
+  function renderProgress() {
+    if (!progressEl) return;
+    let ids = null;
+    try {
+      const wf = global.ClcrUiWorkflow;
+      if (wf && wf.state && wf.state.requiredFieldIds) ids = wf.state.requiredFieldIds;
+    } catch (e) {
+      ids = null;
+    }
+    // Pomijamy selektory jednostek (mają domyślną wartość — to nie „dane do wpisania").
+    const list = (ids ? Array.from(ids) : []).filter((fid) => !/unit$/i.test(fid));
+    const total = list.length;
+    if (!total) {
+      progressEl.hidden = true;
+      return;
+    }
+    let filled = 0;
+    list.forEach((fid) => {
+      const c = el(fid);
+      if (c && typeof c.value === "string" && c.value.trim() !== "") filled += 1;
+    });
+    progressEl.hidden = false;
+    if (progressValue) progressValue.textContent = filled + "/" + total;
+    if (progressFill) {
+      progressFill.style.width = Math.round((filled / total) * 100) + "%";
+    }
   }
 
   // Wynik do nagłówka bierzemy z WYŚWIETLANEGO tekstu tagowanego węzła (jak widzi
@@ -4593,9 +4667,11 @@
     // gdy jest policzony wynik (head widoczny). Węzły wyników silnika w .clcr-result-extra
     // pozostają w przepływie i zarządzają własną widocznością (nie chowamy ich —
     // zapis/historia je obserwują).
+    renderProgress();
     const hasResult = !!(head && !head.hidden);
     if (reportHead) reportHead.hidden = !hasResult;
     if (reportActions) reportActions.hidden = !hasResult;
+    if (fullReportBtn) fullReportBtn.hidden = !hasResult;
     // Dynamiczny tytuł sekcji: „<nazwa formuły> — pełny opis wyniku".
     if (reportTitle) {
       let label = "";
@@ -4614,12 +4690,19 @@
   }
 
   function observe() {
-    if (typeof global.MutationObserver !== "function") return;
-    const obs = new global.MutationObserver(scheduleRefresh);
-    RESULT_IDS.forEach((id) => {
-      const node = el(id);
-      if (node) obs.observe(node, { childList: true, subtree: true, attributes: true });
-    });
+    if (typeof global.MutationObserver === "function") {
+      const obs = new global.MutationObserver(scheduleRefresh);
+      RESULT_IDS.forEach((id) => {
+        const node = el(id);
+        if (node) obs.observe(node, { childList: true, subtree: true, attributes: true });
+      });
+    }
+    // Pasek „Wymagane dane X/Y" aktualizujemy też przy wpisywaniu pól.
+    const form = el("clcrForm");
+    if (form) {
+      form.addEventListener("input", scheduleRefresh);
+      form.addEventListener("change", scheduleRefresh);
+    }
   }
 
   function init() {
