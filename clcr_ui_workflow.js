@@ -4380,6 +4380,7 @@
   let head = null;
   let reportSection = null;
   let reportHead = null;
+  let reportTitle = null;
   let reportActions = null;
   let built = false;
   let refreshTimer = null;
@@ -4464,10 +4465,10 @@
     const kicker = doc.createElement("span");
     kicker.className = "clcr-step-kicker";
     kicker.textContent = "Wynik i raport";
-    const title = doc.createElement("h2");
-    title.className = "clcr-result-report__title";
-    title.textContent = "Pełny opis wyniku";
-    reportHead.append(kicker, title);
+    reportTitle = doc.createElement("h2");
+    reportTitle.className = "clcr-result-report__title";
+    reportTitle.textContent = "Pełny opis wyniku";
+    reportHead.append(kicker, reportTitle);
     reportSection.appendChild(reportHead);
 
     const extra = doc.createElement("div");
@@ -4595,6 +4596,17 @@
     const hasResult = !!(head && !head.hidden);
     if (reportHead) reportHead.hidden = !hasResult;
     if (reportActions) reportActions.hidden = !hasResult;
+    // Dynamiczny tytuł sekcji: „<nazwa formuły> — pełny opis wyniku".
+    if (reportTitle) {
+      let label = "";
+      if (hasResult && head) {
+        const fEl = head.querySelector(".clcr-rail-formula");
+        if (fEl && fEl.textContent) label = fEl.textContent.trim();
+      }
+      reportTitle.textContent = label
+        ? label + " — pełny opis wyniku"
+        : "Pełny opis wyniku";
+    }
   }
   function scheduleRefresh() {
     if (refreshTimer) global.clearTimeout(refreshTimer);
