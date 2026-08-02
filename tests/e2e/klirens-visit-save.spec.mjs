@@ -137,6 +137,35 @@ test('CKiD U25 u 20-latka — zapisuje tylko wybraną formułę, wyklucza panel 
   expect(labels).not.toContain('Klirens kreatyniny — dorośli (ml/min)');
 });
 
+test('Faza 6: Cockcroft–Gault (cg) — zapis formuły dorosłej z masą ciała', async ({ page }) => {
+  await openCalculatorGuest(page);
+  const setup = await setupVaultPatient(page);
+
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('cg'));
+  await page.waitForTimeout(60);
+  await page.locator('#age').fill('60');
+  await page.locator('#sex').selectOption('M');
+  await page.locator('#weight').fill('80');
+  await page.locator('#Scr').fill('1.2');
+  await page.locator('#creatinineState').selectOption('stable');
+  await page.evaluate(() => window.clcrUpdate());
+
+  await expect(page.locator('[data-clcr-series="cg"]')).toHaveCount(1);
+  await page.locator('#clcrVisitDate').fill('2026-08-01');
+  await page.locator('#clcrVisitSaveBtn').click();
+  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+
+  const notes = await readClinicalNotes(page, setup.patientId);
+  const cg = notes.find((n) => n.labResult && n.labResult.test === 'Klirens kreatyniny — dorośli (ml/min)');
+  expect(cg).toBeTruthy();
+  expect(cg.labResult.unit).toBe('mL/min');
+  // U4b: historia = wartość WYŚWIETLONA (całkowita), nie surowa z ułamkiem
+  expect(Number.isInteger(cg.labResult.valueNum)).toBe(true);
+  expect(cg.labResult.valueNum).toBeGreaterThan(60);
+  expect(cg.labResult.valueNum).toBeLessThan(90);
+  expect(cg.body).toContain('clcr:cg');
+});
+
 test('gość bez pacjenta — karta zapisu nieaktywna z podpowiedzią', async ({ page }) => {
   await openCalculatorGuest(page);
   // liczymy bez sejfu/pacjenta
