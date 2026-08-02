@@ -4378,6 +4378,9 @@
   ];
   let rail = null;
   let head = null;
+  let reportSection = null;
+  let reportHead = null;
+  let reportActions = null;
   let built = false;
   let refreshTimer = null;
 
@@ -4440,10 +4443,62 @@
     head.hidden = true;
     rail.appendChild(head);
     ws.appendChild(rail);
+
+    buildReport(ws);
     built = true;
 
     adoptCards();
     scheduleRefresh();
+  }
+
+  // Sekcja „Wynik i raport" — pełny opis wyniku POD układem (pełna szerokość).
+  // Przenosimy istniejące węzły wyników silnika + przyciski raportów/AI w jedno
+  // miejsce (nie usuwamy ich — zostają obserwowane przez zapis/historię).
+  function buildReport(ws) {
+    reportSection = doc.createElement("section");
+    reportSection.id = "clcrResultReport";
+    reportSection.className = "clcr-result-report";
+    reportHead = doc.createElement("div");
+    reportHead.className = "clcr-result-report__head";
+    reportHead.hidden = true;
+    const kicker = doc.createElement("span");
+    kicker.className = "clcr-step-kicker";
+    kicker.textContent = "Wynik i raport";
+    const title = doc.createElement("h2");
+    title.className = "clcr-result-report__title";
+    title.textContent = "Pełny opis wyniku";
+    reportHead.append(kicker, title);
+    reportSection.appendChild(reportHead);
+
+    const extra = doc.createElement("div");
+    extra.className = "clcr-result-extra";
+    [
+      "ktvValidation",
+      "ktvResult",
+      "ektvResult",
+      "urrResult",
+      "ktvInterpretation",
+      "results",
+      "elecCard",
+      "stoneCard",
+    ].forEach((id) => {
+      const box = el(id);
+      if (box) extra.appendChild(box);
+    });
+    reportSection.appendChild(extra);
+
+    reportActions = doc.createElement("div");
+    reportActions.className = "clcr-result-report__actions";
+    reportActions.hidden = true;
+    ["downloadPDF", "downloadDOCX", "askAI"].forEach((id) => {
+      const btn = el(id);
+      if (btn) reportActions.appendChild(btn);
+    });
+    reportSection.appendChild(reportActions);
+    const aiContainer = el("aiContainer");
+    if (aiContainer) reportSection.appendChild(aiContainer);
+
+    ws.insertAdjacentElement("afterend", reportSection);
   }
 
   // Przenosimy karty Zapis/Historia (wstrzyknięte przez ClcrVisitSave) do railu.
@@ -4533,6 +4588,13 @@
   function refresh() {
     adoptCards();
     renderHead();
+    // Nagłówek „Wynik i raport" + rząd akcji (PDF/DOCX/AI) pokazujemy dopiero,
+    // gdy jest policzony wynik (head widoczny). Węzły wyników silnika w .clcr-result-extra
+    // pozostają w przepływie i zarządzają własną widocznością (nie chowamy ich —
+    // zapis/historia je obserwują).
+    const hasResult = !!(head && !head.hidden);
+    if (reportHead) reportHead.hidden = !hasResult;
+    if (reportActions) reportActions.hidden = !hasResult;
   }
   function scheduleRefresh() {
     if (refreshTimer) global.clearTimeout(refreshTimer);
