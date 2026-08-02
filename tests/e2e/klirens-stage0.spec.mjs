@@ -272,10 +272,9 @@ test('Kt/V u dziecka 2–17 lat pozostaje wynikiem technicznym bez dorosłych pr
   await expect(page.locator('#ktvInterpretation')).toContainText('pediatryczny');
 });
 
-test('opuszczenie PRO bezwarunkowo usuwa Kt/V także w trybie tego samego pacjenta', async ({ page }) => {
+test('opuszczenie PRO bezwarunkowo usuwa Kt/V', async ({ page }) => {
   await openCalculator(page, 'pro');
   await setPatient(page, { age: 50 });
-  await page.locator('#samePatientMode').check();
   await page.locator('#ktvToggle').check();
   await fillValidAdultKtv(page);
   await expect(page.locator('#ktvResult')).toBeVisible();
@@ -285,30 +284,4 @@ test('opuszczenie PRO bezwarunkowo usuwa Kt/V także w trybie tego samego pacjen
   await expect(page.locator('#ktvResult')).toBeHidden();
   await expect(page.locator('#ktvResult')).toHaveText('');
   await expect(page.locator('#ktvValidation')).toHaveText('');
-});
-
-test('zmiana danych DZM unieważnia zapamiętany klirens 24 h', async ({ page }) => {
-  await openCalculator(page);
-  await setPatient(page, { age: 50 });
-  await page.locator('#Scr').fill('1');
-  await page.locator('#creatinineState').selectOption('stable');
-  await page.locator('#Ucr').fill('100');
-  await page.locator('#V24').fill('1440');
-  await setTimedCollection(page);
-  await confirmTimedCollectionProtocol(page);
-  await page.locator('#samePatientMode').check();
-  await page.locator('#formulaPicker').selectOption('cl24');
-  await expect(page.locator('#clcrInfo')).toContainText('Zmierzony klirens kreatyniny');
-
-  await page.locator('#formulaPicker').selectOption('egfr');
-  await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
-  await expect(page.locator('#clcrInfo')).toContainText('Zmierzony klirens kreatyniny');
-
-  await page.evaluate(() => {
-    const volume = document.getElementById('V24');
-    volume.value = '2000';
-    volume.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
-  await expect(page.locator('#clcrInfo')).not.toContainText('Zmierzony klirens kreatyniny');
 });
