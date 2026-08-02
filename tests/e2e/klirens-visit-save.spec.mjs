@@ -184,3 +184,47 @@ test('Faza 2: historia pokazuje datowane punkty, sparkline i trend kierunkowy', 
   await expect(hist).toContainText('2026-06-01');
   await expect(hist).toContainText('2026-07-01');
 });
+
+test('Faza 3: Karta pacjenta pokazuje flowsheet parametry × wizyty', async ({ page }) => {
+  await openCalculatorGuest(page);
+  await setupVaultPatient(page);
+  await page.evaluate(() => window.ClcrUiWorkflow.selectFormula('egfr'));
+  await page.waitForTimeout(60);
+  await page.locator('#age').fill('50');
+  await page.locator('#sex').selectOption('M');
+  await page.locator('#weight').fill('80');
+  await page.locator('#height').fill('180');
+  await page.locator('#creatinineState').selectOption('stable');
+
+  await page.locator('#Scr').fill('1.0');
+  await page.evaluate(() => window.clcrUpdate());
+  await page.locator('#clcrVisitDate').fill('2026-06-01');
+  await page.locator('#clcrVisitSaveBtn').click();
+  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+
+  await page.locator('#Scr').fill('1.4');
+  await page.evaluate(() => window.clcrUpdate());
+  await page.locator('#clcrVisitDate').fill('2026-08-01');
+  await page.locator('#clcrVisitSaveBtn').click();
+  await expect(page.locator('#clcrVisitStatus')).toContainText('Zapisano', { timeout: 15000 });
+
+  // wejście „Karta pacjenta →"
+  const open = page.locator('#clcrOpenCardBtn');
+  await expect(open).toBeVisible();
+  await open.click();
+
+  const card = page.locator('#clcrPatientCard');
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('Karta pacjenta');
+  await expect(card).toContainText('eGFR — dorośli (kreatynina)');
+  // nagłówek: Parametr + 2 daty + Zakres + Trend = 5 kolumn
+  await expect(card.locator('.cpc-flow thead th')).toHaveCount(5);
+  await expect(card.locator('.cpc-flow thead th.nowcol')).toHaveCount(1);
+  // najnowsza kolumna wyróżniona w wierszu
+  await expect(card.locator('.cpc-flow tbody td.now')).toHaveCount(1);
+  await expect(card).toContainText('01.08.26');
+
+  // „Zamknij" chowa kartę
+  await page.locator('#cpcClose').click();
+  await expect(card).toBeHidden();
+});

@@ -1336,3 +1336,72 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* ——— Faza 3: wejście „Karta pacjenta →" + widok Karta pacjenta (flowsheet) ——— */
+.clcr-visit-save .cvs-open-row { text-align: center; margin: 0.4rem 0 0; }
+.clcr-visit-save .cvs-link {
+  border: 0; background: transparent; color: #006b73; font: inherit;
+  font-weight: 700; font-size: 0.95rem; cursor: pointer; padding: 4px 6px;
+}
+.clcr-visit-save .cvs-link:hover { text-decoration: underline; }
+
+.clcr-patient-card {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 54, 58, 0.5);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 14px; overflow: auto;
+}
+.clcr-patient-card[hidden] { display: none; }
+.clcr-patient-card .cpc-inner {
+  background: #fff; border-radius: 16px; width: 100%; max-width: 1000px;
+  box-shadow: 0 20px 60px rgba(18, 72, 77, 0.25); padding: 20px 22px; margin: auto 0;
+}
+.clcr-patient-card .cpc-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.clcr-patient-card .cpc-kick {
+  display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.07em;
+  text-transform: uppercase; color: #00838d; margin-bottom: 4px;
+}
+.clcr-patient-card .cpc-name { margin: 0; font-size: 20px; }
+.clcr-patient-card .cpc-sub { color: #5a7274; font-size: 13.5px; }
+.clcr-patient-card .cpc-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.clcr-patient-card .cpc-btn {
+  border: 1px solid #00838d; background: #00838d; color: #fff;
+  border-radius: 11px; min-height: 42px; padding: 9px 15px; font: inherit;
+  font-weight: 750; cursor: pointer;
+}
+.clcr-patient-card .cpc-btn.cpc-ghost { background: #fff; color: #006b73; }
+.clcr-patient-card .cpc-flowwrap { overflow-x: auto; }
+.clcr-patient-card .cpc-flow {
+  width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px;
+}
+.clcr-patient-card .cpc-flow th,
+.clcr-patient-card .cpc-flow td {
+  padding: 9px 12px; text-align: right; border-bottom: 1px solid #e7efef;
+}
+.clcr-patient-card .cpc-flow th:first-child,
+.clcr-patient-card .cpc-flow td:first-child { text-align: left; }
+.clcr-patient-card .cpc-flow thead th {
+  font-size: 12px; font-weight: 800; color: #5a7274; text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.clcr-patient-card .cpc-flow thead th.nowcol { color: #006b73; }
+.clcr-patient-card .cpc-flow .param { font-weight: 730; }
+.clcr-patient-card .cpc-flow .ref { color: #5a7274; font-weight: 650; }
+.clcr-patient-card .cpc-flow td.val { font-variant-numeric: tabular-nums; font-weight: 730; }
+.clcr-patient-card .cpc-flow td.miss { color: #5a7274; font-weight: 600; }
+.clcr-patient-card .cpc-flow td.hi { color: #a91f2a; background: #fdecec; }
+.clcr-patient-card .cpc-flow td.now { outline: 2px solid #00838d; outline-offset: -2px; border-radius: 8px; }
+.clcr-patient-card .cpc-flow tr:last-child td { border-bottom: 0; }
+/* trend NEUTRALNY — jeden kolor dla ↑/↓/→ (kierunek niesie strzałka) */
+.clcr-patient-card .cpc-flow .tchip {
+  display: inline-block; font-size: 11.5px; font-weight: 800;
+  border-radius: 999px; padding: 2px 8px; background: #f4fafa; color: #006b73;
+}
+.clcr-patient-card .cpc-flow .cvs-spark path { stroke: #00838d; }
+.clcr-patient-card .cpc-flow .cvs-spark circle { fill: #00838d; }
+.clcr-patient-card .cpc-note { font-size: 12.5px; color: #5a7274; margin-top: 10px; }
+.clcr-patient-card .cpc-empty { color: #5a7274; text-align: center; padding: 24px 12px; }
+html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }

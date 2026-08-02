@@ -3022,6 +3022,7 @@
 
   function resolveTargetFormulaSet(options) {
     const opts = options || {};
+    if (opts.allParams) return null; // Faza 3: cała karta — wszystkie parametry
     if (Array.isArray(opts.formulaIds)) return new Set(opts.formulaIds);
     if (typeof opts.formulaId === "string" && opts.formulaId) {
       return moduleFormulaSet(opts.formulaId);
@@ -3033,6 +3034,23 @@
         : "";
     // Brak wybranej formuły (tryb broad/testowy) → brak filtra (zbierz wszystko).
     return activeId ? moduleFormulaSet(activeId) : null;
+  }
+
+  // Zakres referencyjny (span .range) i flaga „poza zakresem" (klasa) z
+  // otagowanego boksu wyniku — jeśli silnik je pokazał dla tego parametru.
+  function readRangeText(el) {
+    if (!el || typeof el.querySelector !== "function") return "";
+    const r = el.querySelector(".range");
+    const t = r && r.textContent ? r.textContent : "";
+    return t.replace(/\s+/g, " ").trim();
+  }
+  function elementOutOfRange(el) {
+    return !!(
+      el &&
+      el.classList &&
+      typeof el.classList.contains === "function" &&
+      el.classList.contains("out-of-range")
+    );
   }
 
   // Zbiera WIDOCZNE, otagowane wyniki (po jednym na serię), ograniczone do
@@ -3052,6 +3070,8 @@
       const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
       if (!dp) continue;
       if (target && !target.has(dp.sourceFormulaId)) continue;
+      dp.norm = readRangeText(el);
+      dp.outOfRange = elementOutOfRange(el);
       seen.add(series);
       out.push(dp);
     }
@@ -3102,19 +3122,28 @@
     const errors = [];
     for (let i = 0; i < datapoints.length; i += 1) {
       const dp = datapoints[i];
+      const labResult = {
+        test: dp.label,
+        value: formatValueString(dp.valueNum),
+        valueNum: dp.valueNum,
+        unit: dp.unit,
+      };
+      // Zakres referencyjny (jeśli silnik go pokazał) — do kolumny „Zakres".
+      if (dp.norm) labResult.norm = String(dp.norm).slice(0, 200);
+      // Znacznik „poza zakresem" w treści (magazyn nie ma pola boolean) —
+      // czytelny dla lekarza i parsowalny przez flowsheet (§2: testKey też tu).
+      const body =
+        "Kalkulator klirensu · " +
+        dp.testKey +
+        (dp.outOfRange ? " · wynik poza zakresem" : "");
       try {
         await v.savePatientNote({
           patientId: patientId,
           category: CATEGORY,
           clinicalDateISO: clinicalDateISO,
           title: dp.label,
-          body: "Kalkulator klirensu · " + dp.testKey,
-          labResult: {
-            test: dp.label,
-            value: formatValueString(dp.valueNum),
-            valueNum: dp.valueNum,
-            unit: dp.unit,
-          },
+          body: body,
+          labResult: labResult,
         });
         saved += 1;
       } catch (e) {
@@ -3184,15 +3213,29 @@
           points: [],
         });
       }
+      const outOfRange =
+        typeof note.body === "string" &&
+        note.body.indexOf("poza zakresem") >= 0;
+      const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
       byLabel.get(label).points.push({
         dateISO: dateISO,
         valueNum: valueNum,
+        outOfRange: outOfRange,
+        norm: norm,
         noteId: note.id || null,
       });
     }
     const series = Array.from(byLabel.values());
     series.forEach((s) => {
       s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
+      // Zakres serii = z najnowszego punktu, który go niesie.
+      s.norm = "";
+      for (let k = s.points.length - 1; k >= 0; k -= 1) {
+        if (s.points[k].norm) {
+          s.norm = s.points[k].norm;
+          break;
+        }
+      }
     });
     return series;
   }
@@ -3215,6 +3258,55 @@
       return [];
     }
     return buildSeriesFromNotes(notes, options);
+  }
+
+  // Faza 3: pełna karta pacjenta — WSZYSTKIE parametry × wizyty (daty).
+  function dictionaryIndex(id) {
+    const m = model();
+    const dict = m && Array.isArray(m.PARAM_DICTIONARY) ? m.PARAM_DICTIONARY : [];
+    for (let i = 0; i < dict.length; i += 1) {
+      if (dict[i].id === id) return i;
+    }
+    return Number.MAX_SAFE_INTEGER; // etykiety spoza słownika na koniec
+  }
+
+  async function readPatientFlowsheet(patientId) {
+    const series = await readActiveSeries(patientId, { allParams: true });
+    const dateSet = new Set();
+    series.forEach((s) => {
+      s.points.forEach((p) => {
+        if (p.dateISO) dateSet.add(p.dateISO);
+      });
+    });
+    const visits = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+    const parameters = series
+      .map((s) => {
+        const byDate = {};
+        s.points.forEach((p) => {
+          byDate[p.dateISO] = {
+            valueNum: p.valueNum,
+            outOfRange: !!p.outOfRange,
+          };
+        });
+        return {
+          label: s.label,
+          unit: s.unit,
+          id: s.id,
+          group: s.group,
+          sourceFormulaId: s.sourceFormulaId,
+          norm: s.norm || "",
+          points: s.points,
+          trend: seriesTrend(s.points),
+          byDate: byDate,
+        };
+      })
+      .sort((a, b) => {
+        const ia = dictionaryIndex(a.id);
+        const ib = dictionaryIndex(b.id);
+        if (ia !== ib) return ia - ib;
+        return String(a.label).localeCompare(String(b.label), "pl");
+      });
+    return { visits: visits, parameters: parameters };
   }
 
   // Trend KIERUNKOWY, neutralny: strzałka pokazuje kierunek, kolor NIE ocenia
@@ -3271,7 +3363,8 @@
       '<button type="button" id="clcrVisitSaveBtn" class="cvs-btn">Zapisz wynik do karty</button>' +
       "</div>" +
       '<p class="cvs-hint" id="clcrVisitHint"></p>' +
-      '<p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>';
+      '<p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>' +
+      '<p class="cvs-open-row"><button type="button" id="clcrOpenCardBtn" class="cvs-link" hidden>Karta pacjenta →</button></p>';
     anchor.parentNode.insertBefore(card, anchor.nextSibling);
     ui = {
       card: card,
@@ -3279,9 +3372,11 @@
       btn: card.querySelector("#clcrVisitSaveBtn"),
       hint: card.querySelector("#clcrVisitHint"),
       status: card.querySelector("#clcrVisitStatus"),
+      openBtn: card.querySelector("#clcrOpenCardBtn"),
     };
     if (ui.date) ui.date.value = todayISO();
     if (ui.btn) ui.btn.addEventListener("click", onSaveClick);
+    if (ui.openBtn) ui.openBtn.addEventListener("click", openPatientCard);
     refresh();
   }
 
@@ -3297,6 +3392,7 @@
     const patientId = resolveCurrentPatientId();
     const ready = unlocked && !!patientId;
     if (ui.btn) ui.btn.disabled = !ready;
+    if (ui.openBtn) ui.openBtn.hidden = !ready;
     if (!ui.hint) return;
     if (!unlocked) {
       ui.hint.textContent =
@@ -3552,6 +3648,183 @@
     }
   }
 
+  // ————————————————————————— Faza 3: Karta pacjenta (flowsheet) ————————————
+  let patientCardUi = null;
+
+  function formatDateShort(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+    if (!m) return String(iso || "");
+    return m[3] + "." + m[2] + "." + m[1].slice(2);
+  }
+
+  function paramWord(n) {
+    const a = Math.abs(n) % 100;
+    const l = a % 10;
+    if (a === 1) return "parametr";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "parametry";
+    return "parametrów";
+  }
+  function visitWord(n) {
+    const a = Math.abs(n) % 100;
+    const l = a % 10;
+    if (a === 1) return "wizyta";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "wizyty";
+    return "wizyt";
+  }
+
+  function closePatientCard() {
+    if (patientCardUi) patientCardUi.overlay.hidden = true;
+    if (doc && doc.documentElement) {
+      doc.documentElement.classList.remove("clcr-card-open");
+    }
+  }
+
+  function buildPatientCardUI() {
+    if (!doc || patientCardUi || typeof doc.createElement !== "function") return;
+    const overlay = doc.createElement("div");
+    overlay.className = "clcr-patient-card";
+    overlay.id = "clcrPatientCard";
+    overlay.hidden = true;
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "Karta pacjenta");
+    overlay.innerHTML =
+      '<div class="cpc-inner">' +
+      '<div class="cpc-head"><div class="cpc-id">' +
+      '<span class="cpc-kick">Karta pacjenta</span>' +
+      '<h2 class="cpc-name" id="cpcName"></h2>' +
+      '<span class="cpc-sub" id="cpcSub"></span></div>' +
+      '<div class="cpc-acts">' +
+      '<button type="button" class="cpc-btn" id="cpcNew">＋ Nowa wizyta</button>' +
+      '<button type="button" class="cpc-btn cpc-ghost" id="cpcClose">Zamknij</button>' +
+      "</div></div>" +
+      '<div class="cpc-body" id="cpcBody"></div></div>';
+    (doc.body || doc.documentElement).appendChild(overlay);
+    patientCardUi = {
+      overlay: overlay,
+      name: overlay.querySelector("#cpcName"),
+      sub: overlay.querySelector("#cpcSub"),
+      body: overlay.querySelector("#cpcBody"),
+    };
+    const closeBtn = overlay.querySelector("#cpcClose");
+    const newBtn = overlay.querySelector("#cpcNew");
+    if (closeBtn) closeBtn.addEventListener("click", closePatientCard);
+    // „+ Nowa wizyta" wraca do kalkulatora (zamyka kartę).
+    if (newBtn) newBtn.addEventListener("click", closePatientCard);
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) closePatientCard();
+    });
+  }
+
+  function renderFlowsheet(data) {
+    if (!patientCardUi) return;
+    const visits = (data && data.visits) || [];
+    const params = (data && data.parameters) || [];
+    if (!params.length) {
+      patientCardUi.body.innerHTML =
+        '<p class="cpc-empty">Brak zapisanych wyników. Policz wynik i zapisz go do karty, aby zbudować historię wizyt.</p>';
+      return;
+    }
+    const latest = visits.length ? visits[visits.length - 1] : null;
+    const headCols = visits
+      .map(function (d) {
+        return (
+          '<th class="' +
+          (d === latest ? "nowcol" : "") +
+          '">' +
+          escapeHtml(formatDateShort(d)) +
+          "</th>"
+        );
+      })
+      .join("");
+    const rows = params
+      .map(function (p) {
+        const cells = visits
+          .map(function (d) {
+            const cell = p.byDate[d];
+            const isNow = d === latest;
+            if (!cell) {
+              return '<td class="val miss' + (isNow ? " now" : "") + '">—</td>';
+            }
+            const cls =
+              "val" + (cell.outOfRange ? " hi" : "") + (isNow ? " now" : "");
+            return (
+              '<td class="' + cls + '">' + escapeHtml(fmtNum(cell.valueNum)) + "</td>"
+            );
+          })
+          .join("");
+        const trend = p.trend
+          ? '<span class="tchip">' +
+            TREND_ARROW[p.trend.direction] +
+            "</span> " +
+            buildSparkline(p.points)
+          : '<span class="tchip">·</span>';
+        const norm = p.norm ? escapeHtml(p.norm) : "—";
+        return (
+          '<tr><td class="param">' +
+          escapeHtml(p.label) +
+          '<br><span class="ref">' +
+          escapeHtml(p.unit || "") +
+          "</span></td>" +
+          cells +
+          '<td class="ref">' +
+          norm +
+          '</td><td class="trendcell">' +
+          trend +
+          "</td></tr>"
+        );
+      })
+      .join("");
+    patientCardUi.body.innerHTML =
+      '<div class="cpc-flowwrap"><table class="cpc-flow"><thead><tr><th>Parametr</th>' +
+      headCols +
+      "<th>Zakres</th><th>Trend</th></tr></thead><tbody>" +
+      rows +
+      "</tbody></table></div>" +
+      '<p class="cpc-note">Czerwony = wartość poza zakresem (referencja). Kolumna z ramką = ostatnia wizyta. Brak pomiaru = „—". Strzałka trendu pokazuje kierunek; kolor nie ocenia.</p>';
+  }
+
+  async function openPatientCard() {
+    if (!doc) return;
+    if (!patientCardUi) buildPatientCardUI();
+    if (!patientCardUi) return;
+    if (!vaultUnlocked() || !resolveCurrentPatientId()) return;
+    let name = state.patientName || readPatientName() || "";
+    if (!name) {
+      try {
+        const v = vault();
+        if (v && typeof v.getPatient === "function") {
+          const p = await v.getPatient(resolveCurrentPatientId());
+          if (p && typeof p.name === "string" && p.name.trim()) {
+            name = p.name.trim();
+          }
+        }
+      } catch (e) {
+        /* nazwa pozostanie domyślna */
+      }
+    }
+    patientCardUi.name.textContent = name || "Pacjent";
+    patientCardUi.sub.textContent = "";
+    patientCardUi.body.innerHTML = '<p class="cpc-empty">Wczytywanie…</p>';
+    patientCardUi.overlay.hidden = false;
+    if (doc.documentElement) doc.documentElement.classList.add("clcr-card-open");
+    let data;
+    try {
+      data = await readPatientFlowsheet();
+    } catch (e) {
+      data = { visits: [], parameters: [] };
+    }
+    patientCardUi.sub.textContent =
+      data.parameters.length +
+      " " +
+      paramWord(data.parameters.length) +
+      " · " +
+      data.visits.length +
+      " " +
+      visitWord(data.visits.length);
+    renderFlowsheet(data);
+  }
+
   function observeResults() {
     if (!doc || typeof global.MutationObserver !== "function") return;
     const ids = [
@@ -3592,6 +3865,7 @@
   function init() {
     buildUI();
     buildHistoryUI();
+    buildPatientCardUI();
     observeResults();
     if (doc) {
       doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
@@ -3609,8 +3883,11 @@
     saveActiveResultToCard: saveActiveResultToCard,
     buildSeriesFromNotes: buildSeriesFromNotes,
     readActiveSeries: readActiveSeries,
+    readPatientFlowsheet: readPatientFlowsheet,
     seriesTrend: seriesTrend,
     refreshActiveHistory: refreshActiveHistory,
+    openPatientCard: openPatientCard,
+    closePatientCard: closePatientCard,
     formatValueString: formatValueString,
     todayISO: todayISO,
     normalizeDateISO: normalizeDateISO,

@@ -91,4 +91,71 @@ describe('Klirens — historia serii (Faza 2)', () => {
     const t = vs.seriesTrend([{ valueNum: 95 }, { valueNum: 90 }, { valueNum: 85 }]);
     expect(t).toMatchObject({ direction: 'down', prev: 90, latest: 85 });
   });
+
+  it('buildSeriesFromNotes: łapie zakres (norm) i flagę poza-zakresem z treści', () => {
+    const vs = g.ClcrVisitSave;
+    const notes = [
+      { category: 'wynik-klirens', clinicalDateISO: '2026-06-01',
+        body: 'Kalkulator klirensu · clcr:egfr · wynik poza zakresem',
+        labResult: { test: EGFR, valueNum: 88, unit: 'mL/min/1,73 m²', norm: '≥ 90' } },
+      { category: 'wynik-klirens', clinicalDateISO: '2026-08-01',
+        body: 'Kalkulator klirensu · clcr:egfr',
+        labResult: { test: EGFR, valueNum: 95, unit: 'mL/min/1,73 m²', norm: '≥ 90' } },
+    ];
+    const s = vs.buildSeriesFromNotes(notes, { formulaId: 'egfr' })[0];
+    expect(s.norm).toBe('≥ 90');
+    expect(s.points.find((p) => p.dateISO === '2026-06-01').outOfRange).toBe(true);
+    expect(s.points.find((p) => p.dateISO === '2026-08-01').outOfRange).toBe(false);
+  });
+});
+
+const CA = 'Wydalanie wapnia (DZM)';
+function flowNote(dateISO, label, valueNum, unit, { norm = '', hi = false } = {}) {
+  return {
+    category: 'wynik-klirens',
+    clinicalDateISO: dateISO,
+    body: 'Kalkulator klirensu · clcr:x' + (hi ? ' · wynik poza zakresem' : ''),
+    labResult: { test: label, valueNum, unit, norm: norm || undefined },
+  };
+}
+
+describe('Klirens — flowsheet karty pacjenta (Faza 3)', () => {
+  let g;
+  beforeEach(() => {
+    g = load();
+    g.VildaVault = {
+      isUnlocked: () => true,
+      listPatientNotesForPatient: async () => [
+        flowNote('2026-06-01', EGFR, 88, 'mL/min/1,73 m²', { norm: '≥ 90', hi: true }),
+        flowNote('2026-08-01', EGFR, 81, 'mL/min/1,73 m²', { norm: '≥ 90', hi: true }),
+        flowNote('2026-08-01', CA, 3.2, 'mg/kg/24 h', { norm: '< 4,0', hi: false }),
+      ],
+    };
+  });
+
+  it('readPatientFlowsheet: buduje siatkę parametry × wizyty (wszystkie parametry)', async () => {
+    const vs = g.ClcrVisitSave;
+    const data = await vs.readPatientFlowsheet('p1');
+    expect(data.visits).toEqual(['2026-06-01', '2026-08-01']);
+    // sort wg słownika: egfr przed Ca_mgkg
+    expect(data.parameters.map((p) => p.id)).toEqual(['egfr', 'Ca_mgkg']);
+
+    const egfr = data.parameters[0];
+    expect(egfr.byDate['2026-06-01']).toMatchObject({ valueNum: 88, outOfRange: true });
+    expect(egfr.byDate['2026-08-01']).toMatchObject({ valueNum: 81, outOfRange: true });
+    expect(egfr.norm).toBe('≥ 90');
+    expect(egfr.trend.direction).toBe('down');
+
+    const ca = data.parameters[1];
+    expect(ca.byDate['2026-06-01']).toBeUndefined(); // brak pomiaru → „—"
+    expect(ca.byDate['2026-08-01']).toMatchObject({ valueNum: 3.2, outOfRange: false });
+    expect(ca.norm).toBe('< 4,0');
+  });
+
+  it('readPatientFlowsheet: pusto, gdy sejf zablokowany', async () => {
+    const vs = g.ClcrVisitSave;
+    g.VildaVault.isUnlocked = () => false;
+    const data = await vs.readPatientFlowsheet('p1');
+    expect(data).toEqual({ visits: [], parameters: [] });
+  });
 });
