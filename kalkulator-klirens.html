@@ -1681,14 +1681,9 @@ input[type="submit"]:focus-visible {
           </p>
         </details>
 
-        <!-- Nowy checkbox: włącza tryb agregowania wyników w obrębie jednego pacjenta.  -->
-        <label class="inline-checkbox-label" style="margin-top:0.5rem; font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
-          <!-- Ustaw atrybut form="none" (dowolna nieistniejąca wartość), aby checkbox nie był częścią formularza #clcrForm.
-               Dzięki temu wywołanie form.reset() nie odznaczy go przy każdej zmianie formuły. -->
-          <input type="checkbox" id="samePatientMode" class="white-checkbox" style="margin:0;" form="none"
-                 data-info="Po zaznaczeniu tej opcji kalkulator traktuje kolejne obliczenia jako wykonane u tego samego pacjenta. Dane identyfikujące pacjenta (imię, płeć, wiek, masa, wzrost) pozostają zapisane, a wyniki z kolejnych formuł są dopisywane i prezentowane razem w karcie Klirens/eGFR. Po zmianie danych pacjenta, odznaczeniu pola lub użyciu przycisku „Wyczyść wszystkie pola” zebrane wyniki zostaną wyczyszczone.">
-          <span>Obliczenia dla tego samego pacjenta</span>
-        </label>
+        <!-- Faza 4: stary tryb „Obliczenia dla tego samego pacjenta" (samePatientMode)
+             wygaszony — zastępuje go model wizyt (zapis wyniku do karty pacjenta).
+             Checkbox usunięty z UI; wszystkie czytniki są null-safe (brak = tryb OFF). -->
       </div>
     </div>
     <!-- 🆕 Placeholder w miejscu karty „Ostatni pomiar (klirens/eGFR)” gdy brak wczytanych danych -->

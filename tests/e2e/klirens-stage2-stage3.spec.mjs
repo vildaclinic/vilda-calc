@@ -420,37 +420,9 @@ test('rozszerzony eGFR egzekwuje IDMS/IFCC, dobiera wiek i pokazuje metodę BSA'
   await expect(clcr).not.toContainText('Kategoria GFR wg KDIGO');
 });
 
-test('automatyczna kategoria G wybiera ważny marker i zachowuje kontekst cystatyny w agregacji', async ({ page }) => {
-  await openCalculator(page);
-  await setPatient(page, {
-    age: 10,
-    sex: 'M',
-    weight: 30,
-    height: 140
-  });
-  await page.locator('#samePatientMode').check();
-  await page.locator('#Scr').fill('0.6');
-  await page.locator('#ScrAssay').selectOption('not_idms');
-  await page.locator('#creatinineState').selectOption('stable');
-  await page.locator('#CystatinC').fill('2');
-  await page.locator('#CystatinCStandardization').selectOption(
-    'ERM-DA471/IFCC'
-  );
-  await page.locator('#CystatinCAssayMethod').selectOption('nephelometric');
-
-  const clcr = page.locator('#clcrInfo');
-  await expect(clcr).toContainText(
-    'Kategoria GFR wg KDIGO (CKiD U25 eGFRcys)'
-  );
-  await expect(clcr).not.toContainText(
-    'Kategoria GFR wg KDIGO (CKiD U25 eGFRcr)'
-  );
-
-  await page.locator('#formulaPicker').selectOption('ckid_u25_cys');
-  await page.waitForFunction(() => window.clcrIsResetting !== true);
-  await expect(clcr).toContainText('Powierzchnia ciała (Haycock)');
-  await expect(clcr).toContainText('Ocena pediatryczna');
-});
+// Test „automatyczna kategoria G ... kontekst cystatyny w agregacji" USUNIĘTY
+// w Fazie 4: walidował zachowanie starego trybu samePatientMode (agregacja
+// wielu markerów w jednej karcie), który został wygaszony na rzecz modelu wizyt.
 
 test('nie porównuje U25 eGFRcys z dorosłym równaniem łączonym w wieku 18–25 lat', async ({ page }) => {
   await openCalculator(page);

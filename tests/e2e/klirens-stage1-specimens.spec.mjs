@@ -242,12 +242,6 @@ test('liczy FE i UAG wyłącznie ze sparowanej próbki punktowej', async ({ page
   await expect(page.locator('#elecInfo')).toContainText('UAG; próbka punktowa');
   await expect(page.locator('#elecInfo')).toContainText('bez potwierdzonej kwasicy metabolicznej');
   await expect(page.locator('#elecInfo .out-of-range')).toHaveCount(0);
-
-  await page.locator('#samePatientMode').check();
-  await page.locator('#formulaPicker').selectOption('FECl_spot');
-  await page.waitForFunction(() => window.clcrIsResetting !== true);
-  await expect(page.locator('#elecInfo')).toContainText('Nie obliczono FECl');
-  await expect(page.locator('#elecInfo')).toContainText('FENa (sparowana próbka punktowa)');
 });
 
 test('czasowy klirens używa rzeczywistego czasu i wymaga kompletnego protokołu', async ({ page }) => {

@@ -69,15 +69,6 @@ test('w wieku 18–25 lat pokazuje CKiD U25 i 2021 CKD-EPI równolegle', async (
   await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
   await expect(page.locator('#clcrInfo')).toContainText('zgodnie z NIDDK');
   await expect(page.locator('[data-clcr-code="ckid_u25"]')).toContainText('76');
-
-  await page.locator('#samePatientMode').check();
-  await page.locator('#formulaPicker').selectOption('egfr');
-  await expect(page.locator('#clcrInfo')).toContainText('CKiD U25');
-  await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
-
-  await page.locator('#formulaPicker').selectOption('ckid_u25');
-  await expect(page.locator('#clcrInfo')).toContainText('CKiD U25');
-  await expect(page.locator('#clcrInfo')).toContainText('2021 CKD');
 });
 
 test('w wieku 18–25 lat ujawnia brak danych do drugiego równania', async ({ page }) => {

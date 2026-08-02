@@ -1011,7 +1011,7 @@ function update() {
             )
           : { eligible: !l || o, reason: "" };
     let S = "";
-    function q(r, w, Z = "", de, Vt) {
+    function q(r, w, Z = "", de, Vt, Sk) {
       if (!isFiniteNum(w)) return;
       const Nt = ageContext && ageContext.valid ? ageContext.group : null,
         ae = Nt ? clRefRanges[de]?.[Nt] || null : null;
@@ -1057,7 +1057,10 @@ function update() {
           (acrDisplay && acrDisplay.crossesCategoryBoundary)
             ? ` <span class="calculation-detail">(położenie wartości surowej względem progu: ${clcrEscapeHtml((gfrDisplay || acrDisplay).raw)})</span>`
             : "";
-      S += `<div class="result-box${at ? "" : " out-of-range"}" data-clcr-formula="${$t}" data-clcr-code="${Dt}"><strong>${r}:</strong> ${displayValue}${Z}${calculationDetail}${lt}</div>`;
+      const seriesAttr = Sk
+        ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${w}"`
+        : "";
+      S += `<div class="result-box${at ? "" : " out-of-range"}" data-clcr-formula="${$t}" data-clcr-code="${Dt}"${seriesAttr}><strong>${r}:</strong> ${displayValue}${Z}${calculationDetail}${lt}</div>`;
     }
     function T(r = {}) {
       const gfrEntries =
@@ -1306,6 +1309,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "egfr",
               r,
+              "egfr",
             );
           break;
         case "egfr_cr_cys":
@@ -1316,6 +1320,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "egfr_cr_cys",
               r,
+              "egfr_cr_cys",
             );
             appendExtendedEgfrWarnings(r, ckdEpiCrCysResult);
           } else appendExtendedEgfrFailure(r, ckdEpiCrCysResult);
@@ -1328,6 +1333,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "ckid_u25_cys",
               r,
+              "ckid_u25_cys",
             );
             appendExtendedEgfrWarnings(r, ckidU25CysResult);
           } else appendExtendedEgfrFailure(r, ckidU25CysResult);
@@ -1340,6 +1346,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "ckid_u25_cr_cys",
               r,
+              "ckid_u25_cr_cys",
             );
             appendExtendedEgfrWarnings(r, ckidU25CrCysResult);
           } else appendExtendedEgfrFailure(r, ckidU25CrCysResult);
@@ -1352,6 +1359,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "ckid_u25",
               r,
+              "ckid_u25",
             );
             S +=
               '<div class="result-box warn-yellow" data-clcr-formula="ckid_u25"><strong>Profil CKiD U25:</strong> równanie opracowano głównie u dzieci i młodych osób z łagodną lub umiarkowaną CKD. Przy wysokim/prawidłowym GFR może zaniżać wynik; trend i kontekst kliniczny są ważniejsze niż pojedyncza liczba.</div>';
@@ -1369,6 +1377,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "neonatal_egfr",
               r,
+              "neonatal_egfr",
             );
           if (m.neonatal_egfr != null) {
             S +=
@@ -1387,6 +1396,7 @@ function update() {
               "\u202FmL/min",
               "cg",
               r,
+              "cg",
             );
             appendCgContext();
           }
@@ -1399,6 +1409,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "cg",
               r,
+              "cg_norm",
             );
             appendCgContext();
           }
@@ -1411,6 +1422,7 @@ function update() {
               "\u202FmL/min",
               "cl24",
               r,
+              "cl24",
             );
             q(
               `Zmierzony klirens kreatyniny (1,73\u202Fm\xB2; ${bsaMethod})`,
@@ -1458,6 +1470,7 @@ function update() {
               "\u202FmL/min/1,73\u202Fm\xB2",
               "sch",
               r,
+              "sch_idms",
             );
             S +=
               '<div class="result-box warn-yellow" data-clcr-formula="sch_idms"><strong>Profil walidacyjny:</strong> równanie opracowano u dzieci z CKD w wieku 1–16 lat, z mierzonym GFR około 15–75 mL/min/1,73 m² i kreatyniną oznaczaną metodą zgodną z IDMS. CKiD U25 pozostaje preferowaną współczesną ścieżką kreatyninową.</div>';
@@ -1471,6 +1484,7 @@ function update() {
               "\u202Fmg/g",
               "acr",
               r,
+              "ACR",
             );
             q(
               "Albumina/kreatynina (ACR; jednostka alternatywna)",
@@ -1492,6 +1506,7 @@ function update() {
               "\u202Fmg/g",
               "pcr",
               r,
+              "PCR",
             );
             q(
               "Białko/kreatynina (PCR; jednostka alternatywna)",
@@ -2021,7 +2036,7 @@ function update() {
           })
         : null;
   let ve = "";
-  function y(i, l, u = "", S) {
+  function y(i, l, u = "", S, Sk) {
     if (!isFiniteNum(l)) return;
     const q = i.replace(/\u00A0/g, " "),
       T = ageContext && ageContext.valid ? ageContext.group : null,
@@ -2036,43 +2051,46 @@ function update() {
           (m = !1));
     }
     const L = u === "mg/mg" ? 3 : 1;
-    ve += `<div class="result-box${m ? "" : " out-of-range"}"><strong>${q}:</strong> ${l.toFixed(L)} ${u}${V}</div>`;
+    const Sa = Sk
+      ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${l}"`
+      : "";
+    ve += `<div class="result-box${m ? "" : " out-of-range"}"${Sa}><strong>${q}:</strong> ${l.toFixed(L)} ${u}${V}</div>`;
   }
-  (y("Wydalanie kwasu moczowego", kt, "mg/kg/24 h", "UA_mgkg"),
-    y("Wydalanie wapnia", Te, "mg/kg/24 h", "Ca_mgkg"),
-    y("Wydalanie magnezu", xt, "mg/kg/24 h", "Mg_mgkg"),
+  (y("Wydalanie kwasu moczowego", kt, "mg/kg/24 h", "UA_mgkg", "UA_mgkg"),
+    y("Wydalanie wapnia", Te, "mg/kg/24 h", "Ca_mgkg", "Ca_mgkg"),
+    y("Wydalanie magnezu", xt, "mg/kg/24 h", "Mg_mgkg", "Mg_mgkg"),
     y(
       "Wydalanie fosforu nieorganicznego (P\u1D62)",
       Ct,
       "mg P/24 h",
-      "PO4_mgkg",
+      "PO4_mgkg", "PO4_mgkg",
     ),
-    y("Wydalanie szczawianów", je, "mg/kg/24 h", "Ox_mgkg"),
-    y("Wydalanie cytrynianów", Be, "mg/kg/24 h", "Cit_mgkg"),
-    y("Kwas moczowy/kreatynina", Et, "mg/mg", "KM_Cr"),
-    y("Wapń/kreatynina", St, "mg/mg", "Ca_Cr"),
-    y("Magnez/wapń", Pt, "mg/mg", "Mg_Ca"),
-    y("Fosfor nieorganiczny/kreatynina", It, "mg/mg", "PO4_Cr"),
-    y("Wapń/cytryniany", yt, "mg/mg", "Ca_Cit"),
-    y("Wydalanie\xA0sodu\xA0(Na)", bt, "mmol/24 h"),
-    y("Wydalanie\xA0potasu\xA0(K)", zt, "mmol/24 h"),
+    y("Wydalanie szczawianów", je, "mg/kg/24 h", "Ox_mgkg", "Ox_mgkg"),
+    y("Wydalanie cytrynianów", Be, "mg/kg/24 h", "Cit_mgkg", "Cit_mgkg"),
+    y("Kwas moczowy/kreatynina", Et, "mg/mg", "KM_Cr", "KM_Cr"),
+    y("Wapń/kreatynina", St, "mg/mg", "Ca_Cr", "Ca_Cr"),
+    y("Magnez/wapń", Pt, "mg/mg", "Mg_Ca", "Mg_Ca"),
+    y("Fosfor nieorganiczny/kreatynina", It, "mg/mg", "PO4_Cr", "PO4_Cr"),
+    y("Wapń/cytryniany", yt, "mg/mg", "Ca_Cit", "Ca_Cit"),
+    y("Wydalanie\xA0sodu\xA0(Na)", bt, "mmol/24 h", undefined, "Na_mmol_d"),
+    y("Wydalanie\xA0potasu\xA0(K)", zt, "mmol/24 h", undefined, "K_mmol_d"),
     y(
       "Stosunek\xA0potasu\xA0do\xA0sumy\xA0potasu\xA0i\xA0sodu\xA0(K/(K+Na))",
       Ft,
       "%",
-      "K_frac",
+      "K_frac", "K_frac",
     ),
     y(
       "Luka anionowa surowicy (bez K; nieskorygowana o albuminę)",
       Tt,
-      "mmol/L",
+      "mmol/L", undefined, "AGs",
     ),
-    y("Bia\u0142ko całkowite w DZM", vt, "mg/24 h"),
-    y("Bia\u0142ko całkowite w DZM", proteinG24, "g/24 h"),
+    y("Bia\u0142ko całkowite w DZM", vt, "mg/24 h", undefined, "Prot_mg24"),
+    y("Bia\u0142ko całkowite w DZM", proteinG24, "g/24 h", undefined, "Prot_g24"),
     o &&
       t < 18 &&
-      y("Białko całkowite znormalizowane do BSA", proteinPerBsa, "mg/m\xB2/24 h"),
-    y("Białko/kreatynina w DZM", Rt, "mg/mg"));
+      y("Białko całkowite znormalizowane do BSA", proteinPerBsa, "mg/m\xB2/24 h", undefined, "Prot_bsa"),
+    y("Białko/kreatynina w DZM", Rt, "mg/mg", undefined, "B_Cr"));
   const spotFeFormulaIds = new Set([
       "FENa_spot",
       "FEK_spot",
@@ -2095,17 +2113,19 @@ function update() {
       ].some((value) => value !== null);
   let renderedSpotFractionalExcretion = !1;
   [
-    ["FENa", spotFeNa],
-    ["FEK", spotFeK],
-    ["FECl", spotFeCl],
-    ["FEHCO\u2083", spotFeHco3],
-  ].forEach(([label, result]) => {
+    ["FENa", spotFeNa, "FENa_spot"],
+    ["FEK", spotFeK, "FEK_spot"],
+    ["FECl", spotFeCl, "FECl_spot"],
+    ["FEHCO\u2083", spotFeHco3, "FEHCO3_spot"],
+  ].forEach(([label, result, seriesKey]) => {
     if (!result || !result.ok) return;
     renderedSpotFractionalExcretion = !0;
     y(
       `${label} (sparowana próbka punktowa)`,
       result.valuePct,
       "%",
+      undefined,
+      seriesKey,
     );
   });
   if (isFiniteNum(spotUag)) {
@@ -2113,6 +2133,8 @@ function update() {
       "Luka anionowa moczu (UAG; próbka punktowa)",
       spotUag,
       "mmol/L",
+      undefined,
+      "AGu_spot",
     );
   }
   const selectedFeResult = {
@@ -2206,7 +2228,7 @@ function update() {
         tmpValueMg = tmpGfrResult.tmpGfrMgDl.toFixed(2),
         trpPct = (tmpGfrResult.trp * 100).toFixed(1),
         fePct = (tmpGfrResult.fePo4 * 100).toFixed(1);
-      ve += `<div class="result-box" data-clcr-formula="TMP_GFR"><strong>TmP/GFR:</strong> ${tmpValueMmol}\u202Fmmol/L (${tmpValueMg}\u202Fmg/dL)</div>`;
+      ve += `<div class="result-box" data-clcr-formula="TMP_GFR" data-clcr-series="TMP_GFR" data-clcr-value="${tmpGfrResult.tmpGfrMmolL}"><strong>TmP/GFR:</strong> ${tmpValueMmol}\u202Fmmol/L (${tmpValueMg}\u202Fmg/dL)</div>`;
       ve += `<div class="result-box" data-clcr-formula="TMP_GFR"><strong>TRP:</strong> ${trpPct}%</div>`;
       ve += `<div class="result-box" data-clcr-formula="TMP_GFR"><strong>FEPO\u2084:</strong> ${fePct}%</div>`;
       ve += `<div class="result-box" data-clcr-formula="TMP_GFR"><strong>Metoda:</strong> ${branchLabel}</div>`;
@@ -2307,9 +2329,13 @@ function update() {
         "Cit_Cr_spot",
         "U_pH",
       ].some(stoneFieldProvided);
-  function appendStoneValue(label, valueMarkup, cssClass = "") {
+  function appendStoneValue(label, valueMarkup, cssClass = "", Sk, Sv) {
     if (!valueMarkup) return;
-    he += `<div class="result-box${cssClass ? ` ${cssClass}` : ""}"><strong>${clcrEscapeHtml(label)}:</strong> ${valueMarkup}</div>`;
+    const Sa =
+      Sk && isFiniteNum(Sv)
+        ? ` data-clcr-series="${clcrEscapeHtml(Sk)}" data-clcr-value="${Sv}"`
+        : "";
+    he += `<div class="result-box${cssClass ? ` ${cssClass}` : ""}"${Sa}><strong>${clcrEscapeHtml(label)}:</strong> ${valueMarkup}</div>`;
   }
   function appendStoneDzmValue(label, conversion, options = {}) {
     if (!conversion) return;
@@ -2574,7 +2600,7 @@ function update() {
           spotCalciumCreatinineMolMol,
           3,
           pediatricCaCr,
-        )} mol/mol)`,
+        )} mol/mol)`, "", "CaCr_spot", spotCalciumCreatinineMgMg,
       );
     } else if (
       stoneFieldProvided("Ca_spot") ||
@@ -2612,12 +2638,12 @@ function update() {
           spotOxalateReportingEntity === "oxalicAcid"
             ? "mg kwasu szczawiowego/mg kreatyniny"
             : "mg jonu szczawianowego/mg kreatyniny"
-        } \u2014 bez automatycznego progu dla wieku`,
+        } \u2014 bez automatycznego progu dla wieku`, "", "OxCr_spot", spotOxCr,
       );
     spotCitCr !== null &&
       appendStoneValue(
         "Cit/Cr (ta sama próbka punktowa)",
-        `${spotCitCr.toFixed(3)} mg kwasu cytrynowego/mg kreatyniny \u2014 bez automatycznego progu dla wieku i płci`,
+        `${spotCitCr.toFixed(3)} mg kwasu cytrynowego/mg kreatyniny \u2014 bez automatycznego progu dla wieku i płci`, "", "CitCr_spot", spotCitCr,
       );
     if (
       stoneFieldProvided("Ox_Cr_spot") &&
@@ -2653,7 +2679,7 @@ function update() {
             )
             ? [">", 5.8]
             : null,
-        )} \u2014 pojedynczy wynik bez automatycznego rozpoznania`,
+        )} \u2014 pojedynczy wynik bez automatycznego rozpoznania`, "", "pH_spot", ye,
       );
     Ie > 0 &&
       appendStoneValue(
@@ -2675,7 +2701,7 @@ function update() {
       urineCollectionProtocolComplete &&
       appendStoneValue(
         "pH czasowej zbiórki",
-        formatStoneThresholdSafe(we, 2, adultStone && adultStone.ph),
+        formatStoneThresholdSafe(we, 2, adultStone && adultStone.ph), "", "pH24", we,
       );
     if (
       isFiniteNum(we) &&
@@ -2902,6 +2928,11 @@ function update() {
             `<strong>spKt/Vurea \u2014 Daugirdas II:</strong> ${clcrEscapeHtml(result.display.spKtV)}<br><span>GFAC ${result.values.gfac.toFixed(4)}; ${result.metadata.sessionsPerWeek}\u00D7/tydz.; PIDI ${result.metadata.pidiDays} d. Wynik pojedynczej sesji.</span>`,
             "ktv result",
           );
+          ktvResult.setAttribute("data-clcr-series", "KTV_spktv");
+          ktvResult.setAttribute(
+            "data-clcr-value",
+            String(result.values.spKtV),
+          );
           ktvResult.style.display = "block";
         }
         if (ektvResult && result.values.eKtV !== null) {
@@ -2910,6 +2941,11 @@ function update() {
             ektvResult,
             `<strong>Szacowane eKt/Vurea:</strong> ${clcrEscapeHtml(result.display.eKtV)}<br><span>Dostęp ${clcrEscapeHtml(method.access)}; T w minutach; C=${method.constantMinutes} min.</span>`,
             "ektv result",
+          );
+          ektvResult.setAttribute("data-clcr-series", "KTV_ektv");
+          ektvResult.setAttribute(
+            "data-clcr-value",
+            String(result.values.eKtV),
           );
           ektvResult.style.display = "block";
         }
@@ -2921,6 +2957,11 @@ function update() {
             urrResult,
             `<strong>URR:</strong> ${clcrEscapeHtml(result.display.urrPct)}%${urrContext}`,
             "urr result",
+          );
+          urrResult.setAttribute("data-clcr-series", "KTV_urr");
+          urrResult.setAttribute(
+            "data-clcr-value",
+            String(result.values.urrPct),
           );
           urrResult.style.display = "block";
         }

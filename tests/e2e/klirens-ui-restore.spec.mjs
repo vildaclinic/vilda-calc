@@ -88,11 +88,6 @@ test('opóźnione odtworzenie eGFR → ACR synchronizuje aktywną ścieżkę i p
     version: 'spot',
   });
   await expect(page.locator('#version-spot')).toHaveClass(/selected/);
-  await expect(page.locator('#clcrForm #samePatientMode')).toHaveCount(1);
-  await page.locator('#samePatientMode').check();
-  await expect.poll(async () =>
-    page.evaluate(() => window.buildClcrSessionSnapshot()?.inputs?.samePatientMode)
-  ).toBe(true);
   await expect(page.locator('#U_Alb')).toBeVisible();
   await expect(page.locator('#U_Alb')).toHaveValue('42');
   await expect(page.locator('#Ucr_spot')).toBeVisible();
