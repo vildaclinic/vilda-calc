@@ -1,21 +1,27 @@
 html[data-clcr-workflow-ui="1"] {
   --clcr-primary: #00838d;
   --clcr-primary-dark: #006b73;
-  --clcr-accent: #00a99f;
+  --clcr-accent: #00b0a6;
   --clcr-surface: #ffffff;
-  --clcr-surface-soft: #f4fafa;
+  --clcr-surface-tint: #eef8f8;
+  --clcr-surface-soft: #f5f9f9;
   --clcr-page: #f7fbfb;
   --clcr-border: #d0dede;
   --clcr-border-soft: #e3ecec;
-  --clcr-text: #15363a;
-  --clcr-muted: #557074;
-  --clcr-error: #a91f2a;
-  --clcr-error-bg: #fff1f2;
-  --clcr-warning: #8a5400;
-  --clcr-warning-bg: #fff8e7;
+  --clcr-text: #333333;
+  --clcr-heading: #14393d;
+  --clcr-muted: #5a7274;
+  --clcr-error: #c62828;
+  --clcr-error-bg: #fff1f1;
+  --clcr-warning: #9a5b00;
+  --clcr-warning-bg: #fff7e6;
   --clcr-success: #147a64;
-  --clcr-success-bg: #edf9f5;
-  --clcr-shadow: 0 14px 38px rgba(18, 72, 77, 0.09);
+  --clcr-success-bg: #eaf8f3;
+  --clcr-radius-card: 18px;
+  --clcr-radius-control: 12px;
+  --clcr-shadow: 0 8px 28px rgba(0, 81, 88, 0.1);
+  --clcr-shadow-card: 0 8px 28px rgba(0, 81, 88, 0.1);
+  --clcr-shadow-small: 0 2px 10px rgba(0, 81, 88, 0.07);
 }
 
 html[data-clcr-workflow-ui="1"],
@@ -1220,3 +1226,429 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ——— Faza 1: karta „Zapisz wynik do karty pacjenta" (ClcrVisitSave) ——— */
+.clcr-visit-save { margin-top: 1rem; }
+.clcr-visit-save[hidden] { display: none; }
+.clcr-visit-save .cvs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  justify-content: center;
+  margin: 0.5rem 0 0.25rem;
+}
+.clcr-visit-save .cvs-date {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+}
+.clcr-visit-save .cvs-date input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  min-height: 2.5rem;
+}
+.clcr-visit-save .cvs-btn {
+  padding: 0.6rem 1.1rem;
+  min-height: 2.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: #00838d;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.clcr-visit-save .cvs-btn:hover:not([disabled]) { background: #006b73; }
+.clcr-visit-save .cvs-btn[disabled] {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+.clcr-visit-save .cvs-hint {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0.25rem 0 0;
+}
+.clcr-visit-save .cvs-status {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.35rem 0 0;
+  min-height: 1.2rem;
+}
+.clcr-visit-save .cvs-status.cvs-ok { color: #0f766e; }
+.clcr-visit-save .cvs-status.cvs-err { color: #b91c1c; }
+.clcr-visit-save .cvs-status.cvs-warn { color: #b45309; }
+.clcr-visit-save .cvs-status.cvs-pending { color: #64748b; }
+
+/* ——— Faza 2: panel „Historia wyników" + sparkline (ClcrVisitSave) ——— */
+.clcr-visit-history { margin-top: 1rem; }
+.clcr-visit-history[hidden] { display: none; }
+.clcr-visit-history .cvs-hist-body { margin-top: 0.4rem; }
+.clcr-visit-history .cvs-hist-item {
+  padding: 0.6rem 0;
+  border-top: 1px solid #eef2f6;
+}
+.clcr-visit-history .cvs-hist-item:first-child { border-top: 0; }
+.clcr-visit-history .cvs-hist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.clcr-visit-history .cvs-hist-label { font-weight: 700; font-size: 0.95rem; }
+.clcr-visit-history .cvs-spark { flex: none; }
+.clcr-visit-history .cvs-spark path { stroke: #00838d; }
+.clcr-visit-history .cvs-spark circle { fill: #00838d; }
+/* Trend KIERUNKOWY, NEUTRALNY — jeden kolor dla ↑/↓/→ (kierunek niesie strzałka,
+   nie kolor: dla eGFR wzrost korzystny, dla wydalania wapnia odwrotnie). */
+.clcr-visit-history .cvs-trend,
+.clcr-visit-history .cvs-trend-up,
+.clcr-visit-history .cvs-trend-down,
+.clcr-visit-history .cvs-trend-flat {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+.clcr-visit-history .cvs-hist-points {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+}
+.clcr-visit-history .cvs-hist-points li {
+  display: flex;
+  gap: 0.35rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+.clcr-visit-history .cvs-hist-points .cvs-date {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+.clcr-visit-history .cvs-hist-points .cvs-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ——— Faza 3: wejście „Karta pacjenta →" + widok Karta pacjenta (flowsheet) ——— */
+.clcr-visit-save .cvs-open-row { text-align: center; margin: 0.4rem 0 0; }
+.clcr-visit-save .cvs-link {
+  border: 0; background: transparent; color: #006b73; font: inherit;
+  font-weight: 700; font-size: 0.95rem; cursor: pointer; padding: 4px 6px;
+}
+.clcr-visit-save .cvs-link:hover { text-decoration: underline; }
+
+.clcr-patient-card {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15, 54, 58, 0.5);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 14px; overflow: auto;
+}
+.clcr-patient-card[hidden] { display: none; }
+.clcr-patient-card .cpc-inner {
+  background: #fff; border-radius: 16px; width: 100%; max-width: 1000px;
+  box-shadow: 0 20px 60px rgba(18, 72, 77, 0.25); padding: 20px 22px; margin: auto 0;
+}
+.clcr-patient-card .cpc-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.clcr-patient-card .cpc-kick {
+  display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.07em;
+  text-transform: uppercase; color: #00838d; margin-bottom: 4px;
+}
+.clcr-patient-card .cpc-name { margin: 0; font-size: 20px; }
+.clcr-patient-card .cpc-sub { color: #5a7274; font-size: 13.5px; }
+.clcr-patient-card .cpc-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.clcr-patient-card .cpc-btn {
+  border: 1px solid #00838d; background: #00838d; color: #fff;
+  border-radius: 11px; min-height: 42px; padding: 9px 15px; font: inherit;
+  font-weight: 750; cursor: pointer;
+}
+.clcr-patient-card .cpc-btn.cpc-ghost { background: #fff; color: #006b73; }
+.clcr-patient-card .cpc-flowwrap { overflow-x: auto; }
+.clcr-patient-card .cpc-flow {
+  width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px;
+}
+.clcr-patient-card .cpc-flow th,
+.clcr-patient-card .cpc-flow td {
+  padding: 9px 12px; text-align: right; border-bottom: 1px solid #e7efef;
+}
+.clcr-patient-card .cpc-flow th:first-child,
+.clcr-patient-card .cpc-flow td:first-child { text-align: left; }
+.clcr-patient-card .cpc-flow thead th {
+  font-size: 12px; font-weight: 800; color: #5a7274; text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.clcr-patient-card .cpc-flow thead th.nowcol { color: #006b73; }
+.clcr-patient-card .cpc-flow .param { font-weight: 730; }
+.clcr-patient-card .cpc-flow .ref { color: #5a7274; font-weight: 650; }
+.clcr-patient-card .cpc-flow td.val { font-variant-numeric: tabular-nums; font-weight: 730; }
+.clcr-patient-card .cpc-flow td.miss { color: #5a7274; font-weight: 600; }
+.clcr-patient-card .cpc-flow td.hi { color: #a91f2a; background: #fdecec; }
+.clcr-patient-card .cpc-flow td.now { outline: 2px solid #00838d; outline-offset: -2px; border-radius: 8px; }
+.clcr-patient-card .cpc-flow tr:last-child td { border-bottom: 0; }
+/* trend NEUTRALNY — jeden kolor dla ↑/↓/→ (kierunek niesie strzałka) */
+.clcr-patient-card .cpc-flow .tchip {
+  display: inline-block; font-size: 11.5px; font-weight: 800;
+  border-radius: 999px; padding: 2px 8px; background: #f4fafa; color: #006b73;
+}
+.clcr-patient-card .cpc-flow .cvs-spark path { stroke: #00838d; }
+.clcr-patient-card .cpc-flow .cvs-spark circle { fill: #00838d; }
+.clcr-patient-card .cpc-note { font-size: 12.5px; color: #5a7274; margin-top: 10px; }
+.clcr-patient-card .cpc-empty { color: #5a7274; text-align: center; padding: 24px 12px; }
+html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
+
+/* ——— Faza 5: chip pacjenta + zwijany blok tożsamości (Wariant C) ——— */
+.clcr-ident-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px; margin: 0 0 12px;
+  background: #fff; border: 1px solid #e3ecec; border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(18, 72, 77, 0.05);
+}
+.clcr-ident-bar[hidden] { display: none; }
+.clcr-ident-id { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
+.clcr-ident-avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex: none;
+  background: #00838d; color: #fff; font-weight: 800; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; letter-spacing: 0.02em;
+}
+.clcr-ident-who { display: flex; flex-direction: column; min-width: 0; }
+.clcr-ident-name { font-weight: 800; font-size: 16px; line-height: 1.15; color: #15363a; }
+.clcr-ident-sub { color: #557074; font-size: 12.5px; font-weight: 600; }
+.clcr-ident-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.clcr-ident-badge {
+  background: #f4fafa; border: 1px solid #e3ecec; border-radius: 999px;
+  padding: 3px 10px; font-size: 12.5px; font-weight: 700; color: #006b73;
+  font-variant-numeric: tabular-nums;
+}
+.clcr-ident-badge--mass { background: #fff8e7; border-color: #ead6a8; color: #8a5400; }
+.clcr-ident-toggle {
+  margin-left: auto; border: 1px solid #d0dede; background: #fff; color: #006b73;
+  border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 13px; font-weight: 750;
+  cursor: pointer; min-height: 36px;
+}
+.clcr-ident-toggle:hover { background: #f4fafa; }
+/* Zwinięty stan (pacjent z karty): chowamy pola tożsamości, chip zostaje.
+   Używamy KLASY (nie właściwości .hidden pól), więc logika widoczności
+   sekcji per-formuła (sectionHasVisibleFields czyta .hidden) nie chowa karty. */
+.patient-card.clcr-ident-collapsed > #patientSet { display: none !important; }
+/* Notka daty pomiaru masy w rozwiniętym panelu (bez wymuszonego potwierdzania) */
+.clcr-weight-note {
+  display: block; margin-top: 4px; font-size: 12px; font-weight: 650; color: #8a5400;
+}
+.clcr-weight-note.fresh { color: #147a64; }
+.clcr-weight-note[hidden] { display: none; }
+
+/* ——— Układ B (U1): dwie kolumny + przyklejony panel „Wynik" ———
+   Warstwa PREZENTACJI: #clcrForm (wejścia) do lewej kolumny, prawy rail
+   przyklejony. Wyniki szczegółowe zostają pełną szerokością POD workspace.
+   Relayout tylko na dużych ekranach — mobile bez zmian (chroni testy 320px). */
+.clcr-workspace { min-width: 0; }
+/* #clcrForm ma klasę .flex (row-wrap) → w kolumnie workspace stackujemy pionowo,
+   żeby karta pacjenta i parametry miały jednakową, pełną szerokość kolumny. */
+.clcr-workspace > #clcrForm {
+  display: flex; flex-direction: column; align-items: stretch; gap: 14px; flex-wrap: nowrap;
+}
+.clcr-workspace > #clcrForm > .param-row { width: 100%; }
+/* Nadpisujemy dawny patch „equalize 50%" (max-width: calc(50% - 8px)) — w nowym
+   układzie karta pacjenta ma wypełniać całą lewą kolumnę. */
+html[data-clcr-workflow-ui="1"] .clcr-workspace #clcrForm > .patient-card {
+  max-width: none; width: 100%; flex: 1 1 auto;
+}
+.clcr-result-rail { min-width: 0; }
+.clcr-result-rail > .card { margin-bottom: 16px; }
+.clcr-rail-head {
+  background: #fff; border: 2px solid #00838d; border-radius: 16px;
+  padding: 16px 18px; box-shadow: 0 10px 28px rgba(18,72,77,.06); margin-bottom: 16px;
+}
+.clcr-rail-head[hidden] { display: none; }
+.clcr-rail-kick {
+  display: block; font-size: 11px; font-weight: 800; letter-spacing: .07em;
+  text-transform: uppercase; color: #00838d; margin-bottom: 4px;
+}
+.clcr-rail-formula { font-size: 12.5px; font-weight: 800; color: #006b73; }
+.clcr-rnum {
+  font: 600 2.5rem/1 Inter, sans-serif; letter-spacing: -.02em; color: #00838d;
+  display: inline-flex; align-items: flex-end; margin: 6px 0 2px;
+}
+.clcr-rnum small { font-size: .34em; margin-left: .35em; color: #444; font-weight: 600; padding-bottom: .25em; }
+.clcr-rail-empty { color: #557074; font-size: 13.5px; }
+
+@media (min-width: 980px) {
+  .clcr-workspace {
+    display: grid; grid-template-columns: minmax(0, 1fr) 348px; gap: 20px; align-items: start;
+  }
+  .clcr-workspace > #clcrForm { min-width: 0; }
+  .clcr-result-rail { position: sticky; top: 74px; align-self: start; }
+}
+
+/* U1: rozluźnienie bloku tożsamości — w węższej lewej kolumnie długie etykiety
+   (Imię i nazwisko, Wiek miesiące…) nie mieszczą się w 2 kolumnach → 1 kolumna.
+   Parametry (surowica/DZM/próbka) zostają 2-kolumnowe (krótkie etykiety). */
+html[data-clcr-workflow-ui="1"] #clcrForm #patientSet {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-clcr-workflow-ui="1"] #clcrForm #patientSet .clcr-field {
+  min-height: 0;
+}
+
+/* ——— Układ B (U2): czyste pola + sekcja „Wynik i raport" (wg makiety Macieja) ———
+   Usuwamy zbędne etykiety statusu pól (Wymagane / Opcjonalne / Do pełnej
+   interpretacji) — wymagalność niesie panel „Wymagane dane", nie każde pole. */
+html[data-clcr-workflow-ui="1"] .clcr-field__status { display: none !important; }
+html[data-clcr-workflow-ui="1"] .clcr-field__heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* Sekcja „Wynik i raport" — pełny opis wyniku POD układem (pełna szerokość). */
+.clcr-step-kicker {
+  display: block; margin: 0; color: var(--clcr-primary);
+  font-size: 12px; font-weight: 780; letter-spacing: 0.1em; text-transform: uppercase;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report {
+  margin: 20px 0 1.5rem; padding: 22px;
+  background: var(--clcr-surface); border: 1px solid var(--clcr-border-soft);
+  border-radius: var(--clcr-radius-card); box-shadow: var(--clcr-shadow-card);
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report[hidden] { display: none !important; }
+html[data-clcr-workflow-ui="1"] .clcr-result-report__head { margin-bottom: 14px; }
+html[data-clcr-workflow-ui="1"] .clcr-result-report__head[hidden] { display: none !important; }
+html[data-clcr-workflow-ui="1"] .clcr-result-report__title {
+  margin: 4px 0 0; color: var(--clcr-heading); font-size: 1.35rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-extra {
+  display: flex; min-width: 0; flex-direction: column; gap: 14px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-extra #results.grid-two {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report__actions {
+  display: flex; margin-top: 16px; flex-wrap: wrap; gap: 10px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report__actions[hidden] { display: none !important; }
+/* Trzy jednakowe przyciski akcji (PDF, DOCX, Zapytaj AI): białe tło, teal ramka. */
+html[data-clcr-workflow-ui="1"] .clcr-result-report__actions button {
+  margin: 0 !important; width: auto !important; min-height: 44px !important;
+  padding: 10px 16px !important; border: 1px solid var(--clcr-border) !important;
+  border-radius: 11px !important; background: #fff !important;
+  color: var(--clcr-primary-dark) !important; font: inherit !important;
+  font-weight: 750 !important; box-shadow: none !important;
+  backdrop-filter: none !important; cursor: pointer !important; flex: 1 1 160px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report__actions button:hover {
+  border-color: var(--clcr-primary) !important;
+  background: var(--clcr-surface-soft) !important;
+}
+/* #aiContainer: zostaje tylko nota prywatności jako drobna wskazówka. */
+html[data-clcr-workflow-ui="1"] .clcr-result-report #aiContainer {
+  max-width: none; margin: 10px 0 0 !important; padding: 0;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #aiFieldset {
+  border: 0 !important; margin: 0 !important; padding: 0 !important;
+  background: transparent !important; min-inline-size: 0 !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #aiFieldset > legend {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important; overflow: hidden !important;
+  clip: rect(0 0 0 0) !important; white-space: nowrap !important; border: 0 !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #aiFieldset > p {
+  margin: 0 !important; font-size: 12.5px !important; line-height: 1.5 !important;
+  color: var(--clcr-muted) !important;
+}
+
+/* ——— Układ B (U2b): sekcja „Wynik i raport" 1:1 z makietą KLIKALNY_13 ———
+   Czyszczenie kart wyników silnika w sekcji + boxy wyników side-by-side. */
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrCard,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #elecCard,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneCard {
+  margin: 0 0 8px !important; padding: 0 !important; background: transparent !important;
+  border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+}
+/* Ukrywamy zbędne nagłówki „Klirens / eGFR", podtytuł i powtórzoną nazwę pacjenta. */
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrCard > h2,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrCard > p.text-center,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #elecCard > h2,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #elecCard > p.text-center,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneCard > h2,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #patientName {
+  display: none !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrCard > small {
+  display: block; margin-top: 10px; color: var(--clcr-muted); font-size: 12px;
+}
+/* Boxy wyników: 1 kolumna (mobile) → 2 kolumny (desktop), pod sekcją jest miejsce. */
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #elecInfo,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
+}
+@media (min-width: 760px) {
+  html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo,
+  html[data-clcr-workflow-ui="1"] .clcr-result-report #elecInfo,
+  html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* Czyste boxy wyniku: białe tło, teal akcent od lewej; bursztyn dla uwag, czerwony poza zakresem. */
+html[data-clcr-workflow-ui="1"] .clcr-result-report #clcrInfo > .result-box,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #elecInfo > .result-box,
+html[data-clcr-workflow-ui="1"] .clcr-result-report #stoneInfo > .result-box {
+  margin: 0 !important; padding: 12px 14px !important; background: #fff !important;
+  border: 1px solid #b9dcdb !important; border-radius: 13px !important;
+  box-shadow: inset 3px 0 0 var(--clcr-primary) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  color: var(--clcr-text) !important; font-size: 14px !important; line-height: 1.5 !important;
+  text-align: left !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.warn-yellow {
+  background: var(--clcr-warning-bg) !important; border-color: #ead6a8 !important;
+  box-shadow: inset 3px 0 0 var(--clcr-warning) !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-result-report .result-box.out-of-range {
+  border-color: #ecc3c3 !important; box-shadow: inset 3px 0 0 var(--clcr-error) !important;
+}
+
+/* ——— Układ B (U3): pasek „Wymagane dane X/Y" + „Zobacz pełny opis wyniku ↓" ——— */
+html[data-clcr-workflow-ui="1"] .clcr-progress {
+  margin: 0 0 12px; border-radius: 13px; background: var(--clcr-surface-soft); padding: 12px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-progress[hidden] { display: none !important; }
+html[data-clcr-workflow-ui="1"] .clcr-progress__meta {
+  display: flex; align-items: center; justify-content: space-between;
+  color: var(--clcr-muted); font-size: 12px; font-weight: 700;
+}
+html[data-clcr-workflow-ui="1"] .clcr-progress__value { color: var(--clcr-heading); }
+html[data-clcr-workflow-ui="1"] .clcr-progress__track {
+  height: 7px; margin-top: 8px; overflow: hidden; border-radius: 999px; background: #dce7e7;
+}
+html[data-clcr-workflow-ui="1"] .clcr-progress__fill {
+  display: block; width: 0; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--clcr-primary), var(--clcr-accent));
+  transition: width 220ms ease;
+}
+html[data-clcr-workflow-ui="1"] .clcr-fullreport-button {
+  display: block !important; width: 100% !important; min-height: 44px !important;
+  margin: 0 0 16px !important;
+  border: 1px solid var(--clcr-primary) !important; border-radius: 11px !important;
+  background: var(--clcr-primary) !important; color: #fff !important;
+  box-shadow: 0 8px 18px rgba(0, 131, 141, 0.2) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  font: inherit !important; font-weight: 750 !important; cursor: pointer !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-fullreport-button:hover { background: var(--clcr-primary-dark) !important; }
+html[data-clcr-workflow-ui="1"] .clcr-fullreport-button[hidden] { display: none !important; }

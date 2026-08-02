@@ -188,6 +188,134 @@
     module.formulaIds.forEach((formulaId) => MODULE_BY_FORMULA.set(formulaId, module));
   });
 
+  // ————————————————————————————————————————————————————————————————
+  // Faza 0 — słownik parametrów karty pacjenta (CLCR_PARAM_DICTIONARY).
+  // Nazwy zatwierdzone (ZAŁOŻENIA §4). Zmiana wyłącznie prezentacji /
+  // nazewnictwa serii — ZERO wpływu na liczenie (silnik i moduły
+  // kliniczne pozostają zamrożone). Klucz serii = testKey `clcr:<id>`,
+  // spójny z tagami silnika `data-clcr-formula`.
+  //   ① Wyniki wieloczłonowe → osobne serie: białko DZM (Prot_mgkg) i
+  //      KT/V (KTV) rozbite; `sourceFormulaId` wskazuje formułę-źródło.
+  //   ② ACR/PCR → jednostka `mg/g`.
+  //   ③ Etykiety opisowe; kryptyczne nazwy wzorów w podlinii `method`.
+  // ————————————————————————————————————————————————————————————————
+  const PARAM_GROUPS = Object.freeze([
+    Object.freeze({ id: "egfr", title: "eGFR i klirensy kreatyniny" }),
+    Object.freeze({ id: "dzm-excr", title: "Zbiórka dobowa — wydalania" }),
+    Object.freeze({ id: "dzm-ratio", title: "Zbiórka dobowa — wskaźniki" }),
+    Object.freeze({ id: "dzm-protein", title: "Zbiórka dobowa — białko" }),
+    Object.freeze({ id: "spot-ratio", title: "Próbka punktowa — wskaźniki" }),
+    Object.freeze({ id: "spot-fe", title: "Próbka punktowa — frakcje wydalnicze" }),
+    Object.freeze({ id: "spot-other", title: "Próbka punktowa — pozostałe" }),
+    Object.freeze({ id: "ph", title: "pH moczu" }),
+    Object.freeze({ id: "ktv", title: "Dializa — adekwatność KT/V" }),
+  ]);
+
+  const PARAM_DICTIONARY_SOURCE = [
+    // eGFR i klirensy kreatyniny (grupa egfr) — etykieta opisowa + metoda w podlinii (③)
+    { id: "egfr", group: "egfr", label: "eGFR — dorośli (kreatynina)", method: "wzór CKD‑EPI 2021, bez współczynnika rasowego", unit: "mL/min/1,73 m²" },
+    { id: "ckid_u25", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (kreatynina)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
+    { id: "egfr_cr_cys", group: "egfr", label: "eGFR — dorośli (kreatynina + cystatyna C)", method: "wzór CKD‑EPI 2021", unit: "mL/min/1,73 m²" },
+    { id: "ckid_u25_cys", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (cystatyna C)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
+    { id: "ckid_u25_cr_cys", group: "egfr", label: "eGFR — dzieci i młodzież 1–25 lat (kreatynina + cystatyna C)", method: "wzór CKiD U25", unit: "mL/min/1,73 m²" },
+    { id: "neonatal_egfr", group: "egfr", label: "eGFR — noworodek donoszony (kreatynina)", method: "wzór noworodkowy", unit: "mL/min/1,73 m²" },
+    { id: "cg", group: "egfr", label: "Klirens kreatyniny — dorośli (ml/min)", method: "wzór Cockcrofta‑Gaulta, nieindeksowany", unit: "mL/min" },
+    { id: "cg_norm", group: "egfr", label: "Klirens kreatyniny — dorośli (1,73 m²)", method: "wzór Cockcrofta‑Gaulta, przeliczony", unit: "mL/min/1,73 m²" },
+    { id: "cl24", group: "egfr", label: "Klirens kreatyniny — zmierzony (DZM)", method: "z dobowej zbiórki moczu", unit: "mL/min" },
+    { id: "sch_idms", group: "egfr", label: "eGFR — dzieci (kreatynina)", method: "przyłóżkowy wzór Schwartza, IDMS", unit: "mL/min/1,73 m²" },
+    // Zbiórka dobowa — wydalania (grupa dzm-excr)
+    { id: "Ca_mgkg", group: "dzm-excr", label: "Wydalanie wapnia (DZM)", unit: "mg/kg/24 h" },
+    { id: "UA_mgkg", group: "dzm-excr", label: "Wydalanie kwasu moczowego (DZM)", unit: "mg/kg/24 h" },
+    { id: "Mg_mgkg", group: "dzm-excr", label: "Wydalanie magnezu (DZM)", unit: "mg/kg/24 h" },
+    { id: "PO4_mgkg", group: "dzm-excr", label: "Wydalanie fosforanów (Pi, DZM)", unit: "mg P/24 h" },
+    { id: "Ox_mgkg", group: "dzm-excr", label: "Wydalanie szczawianów (DZM)", unit: "mg/kg/24 h" },
+    { id: "Cit_mgkg", group: "dzm-excr", label: "Wydalanie cytrynianów (DZM)", unit: "mg/kg/24 h" },
+    { id: "Na_mmol_d", group: "dzm-excr", label: "Wydalanie sodu (DZM)", unit: "mmol/24 h" },
+    { id: "K_mmol_d", group: "dzm-excr", label: "Wydalanie potasu (DZM)", unit: "mmol/24 h" },
+    // Zbiórka dobowa — wskaźniki (grupa dzm-ratio)
+    { id: "Ca_Cr", group: "dzm-ratio", label: "Wapń/kreatynina (DZM)", unit: "mg/mg" },
+    { id: "KM_Cr", group: "dzm-ratio", label: "Kwas moczowy/kreatynina (DZM)", unit: "mg/mg" },
+    { id: "PO4_Cr", group: "dzm-ratio", label: "Fosforany/kreatynina (Pi, DZM)", unit: "mg/mg" },
+    { id: "Mg_Ca", group: "dzm-ratio", label: "Magnez/wapń (DZM)", unit: "mg/mg" },
+    { id: "Ca_Cit", group: "dzm-ratio", label: "Wapń/cytryniany (DZM)", unit: "mg/mg" },
+    { id: "B_Cr", group: "dzm-ratio", label: "Białko/kreatynina (DZM)", unit: "mg/mg" },
+    { id: "K_frac", group: "dzm-ratio", label: "Udział potasu — K/(K+Na)", unit: "%" },
+    { id: "AGs", group: "dzm-ratio", label: "Luka anionowa surowicy (bez K)", unit: "mmol/L" },
+    // Zbiórka dobowa — białko (serie rozdzielone ①; źródło: Prot_mgkg)
+    { id: "Prot_mg24", group: "dzm-protein", label: "Białko w DZM [mg/24 h]", unit: "mg/24 h", sourceFormulaId: "Prot_mgkg" },
+    { id: "Prot_g24", group: "dzm-protein", label: "Białko w DZM [g/24 h]", unit: "g/24 h", sourceFormulaId: "Prot_mgkg" },
+    { id: "Prot_bsa", group: "dzm-protein", label: "Białko w DZM / BSA [mg/m²/24 h]", unit: "mg/m²/24 h", sourceFormulaId: "Prot_mgkg" },
+    // Próbka punktowa — wskaźniki (grupa spot-ratio); ACR/PCR w mg/g (②)
+    { id: "CaCr_spot", group: "spot-ratio", label: "Wapń/kreatynina (próbka punktowa)", unit: "mg/mg" },
+    { id: "OxCr_spot", group: "spot-ratio", label: "Szczawiany/kreatynina (próbka punktowa)", unit: "mg/mg" },
+    { id: "CitCr_spot", group: "spot-ratio", label: "Cytryniany/kreatynina (próbka punktowa)", unit: "mg/mg" },
+    { id: "ACR", group: "spot-ratio", label: "Albumina/kreatynina — ACR", unit: "mg/g" },
+    { id: "PCR", group: "spot-ratio", label: "Białko/kreatynina — PCR (próbka punktowa)", unit: "mg/g" },
+    // Próbka punktowa — frakcje wydalnicze (grupa spot-fe)
+    { id: "FENa_spot", group: "spot-fe", label: "Frakcja wydalania sodu (FENa)", unit: "%" },
+    { id: "FEK_spot", group: "spot-fe", label: "Frakcja wydalania potasu (FEK)", unit: "%" },
+    { id: "FECl_spot", group: "spot-fe", label: "Frakcja wydalania chlorków (FECl)", unit: "%" },
+    { id: "FEHCO3_spot", group: "spot-fe", label: "Frakcja wydalania HCO₃ (FEHCO₃)", unit: "%" },
+    // Próbka punktowa — pozostałe (grupa spot-other)
+    { id: "AGu_spot", group: "spot-other", label: "Luka anionowa moczu (UAG)", unit: "mmol/L" },
+    { id: "TMP_GFR", group: "spot-other", label: "TmP/GFR — próg reabsorpcji fosforanów", unit: "mmol/L" },
+    // pH moczu (grupa ph)
+    { id: "pH_spot", group: "ph", label: "pH moczu (próbka punktowa)", unit: "—" },
+    { id: "pH24", group: "ph", label: "pH moczu (DZM)", unit: "—" },
+    // Dializa — KT/V (serie rozdzielone ①; źródło: KTV)
+    { id: "KTV_spktv", group: "ktv", label: "spKt/V (mocznik, pojedyncza pula)", unit: "—", sourceFormulaId: "KTV" },
+    { id: "KTV_ektv", group: "ktv", label: "eKt/V (mocznik, równoważony)", unit: "—", sourceFormulaId: "KTV" },
+    { id: "KTV_urr", group: "ktv", label: "URR — wskaźnik redukcji mocznika", unit: "%", sourceFormulaId: "KTV" },
+  ];
+
+  const PARAM_DICTIONARY = Object.freeze(
+    PARAM_DICTIONARY_SOURCE.map((entry) =>
+      Object.freeze({
+        id: entry.id,
+        testKey: "clcr:" + entry.id,
+        group: entry.group,
+        label: entry.label,
+        method: entry.method || null,
+        unit: entry.unit,
+        sourceFormulaId: entry.sourceFormulaId || entry.id,
+      }),
+    ),
+  );
+
+  const PARAM_BY_KEY = new Map();
+  const PARAM_BY_LABEL = new Map();
+  PARAM_DICTIONARY.forEach((entry) => {
+    PARAM_BY_KEY.set(entry.id, entry);
+    PARAM_BY_KEY.set(entry.testKey, entry);
+    PARAM_BY_LABEL.set(entry.label, entry);
+  });
+
+  // Odczyt serii z sejfu grupujemy po PELNEJ etykiecie labResult.test
+  // (obejście §2 — magazyn gubi testKey). Mapowanie etykieta → wpis słownika
+  // pozwala odzyskać grupę/jednostkę/formułę-źródło przy budowie historii.
+  function getParamByLabel(label) {
+    if (typeof label !== "string") return null;
+    return PARAM_BY_LABEL.get(label.trim()) || null;
+  }
+
+  function normalizeTestKey(testKey) {
+    const raw = String(testKey == null ? "" : testKey).trim();
+    if (!raw) return "";
+    return raw.startsWith("clcr:") ? raw.slice(5) : raw;
+  }
+
+  function getParam(testKey) {
+    return PARAM_BY_KEY.get(normalizeTestKey(testKey)) || null;
+  }
+
+  function getParamGroups() {
+    return PARAM_GROUPS.map((group) => ({
+      id: group.id,
+      title: group.title,
+      entries: PARAM_DICTIONARY.filter((entry) => entry.group === group.id),
+    }));
+  }
+
   const DZM_PROTOCOL_FIELDS = Object.freeze([
     "collectionStartAt",
     "collectionEndAt",
@@ -689,6 +817,11 @@
     HISTORICAL_FORMULA_IDS,
     LEVEL_ORDER,
     FORMULA_CONTEXT,
+    PARAM_DICTIONARY,
+    PARAM_GROUPS,
+    getParam,
+    getParamByLabel,
+    getParamGroups,
     DZM_QUALITY_FIELDS,
     HELP_OVERRIDES,
     SHARED_MODULE_FIELD_IDS,
@@ -2776,5 +2909,1878 @@
     documentRef.addEventListener("DOMContentLoaded", init);
   } else {
     init();
+  }
+})(typeof window !== "undefined" ? window : globalThis);
+
+/* ————————————————————————————————————————————————————————————————
+ * Faza 1 — ClcrVisitSave: zapis aktywnego wyniku klirensu do karty pacjenta.
+ * Czyta datapointy z tagów silnika (data-clcr-series / data-clcr-value —
+ * warstwa prezentacji, bez wpływu na liczenie), mapuje przez słownik
+ * ClcrUiModel.PARAM_DICTIONARY i zapisuje przez VildaVault.savePatientNote
+ * jako notatki kategorii „wynik-klirens" grupowane po wspólnej dacie wizyty.
+ * Bramka: aktywne tylko przy odblokowanym sejfie + wczytanym pacjencie;
+ * gość liczy bez zmian, zapis nieaktywny. Serie wieloczłonowe (białko DZM,
+ * KT/V) to osobne tagi → osobne datapointy (decyzja ①).
+ * ———————————————————————————————————————————————————————————————— */
+(function (global) {
+  "use strict";
+
+  const doc = global.document;
+  const CATEGORY = "wynik-klirens";
+  const state = { patientId: null, patientName: "" };
+
+  function vault() {
+    return global.VildaVault && typeof global.VildaVault === "object"
+      ? global.VildaVault
+      : null;
+  }
+
+  function vaultUnlocked() {
+    const v = vault();
+    try {
+      return !!(v && typeof v.isUnlocked === "function" && v.isUnlocked());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function model() {
+    return global.ClcrUiModel && typeof global.ClcrUiModel === "object"
+      ? global.ClcrUiModel
+      : null;
+  }
+
+  function resolveCurrentPatientId() {
+    return typeof state.patientId === "string" && state.patientId
+      ? state.patientId
+      : null;
+  }
+
+  function isVisible(el) {
+    if (!el) return false;
+    if (typeof el.getClientRects === "function") {
+      try {
+        return el.getClientRects().length > 0;
+      } catch (e) {
+        /* fall through */
+      }
+    }
+    let node = el;
+    while (node) {
+      if (node.hidden) return false;
+      if (node.style && node.style.display === "none") return false;
+      node = node.parentElement || null;
+    }
+    return true;
+  }
+
+  function toNumber(raw) {
+    if (raw == null) return NaN;
+    const s = String(raw).trim();
+    if (s === "") return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  // Mapuje pojedynczy tag (id serii + surowa wartość) na datapoint wg słownika.
+  function mapDatapoint(series, rawValue) {
+    const m = model();
+    if (!m || typeof m.getParam !== "function") return null;
+    const entry = m.getParam(series);
+    if (!entry) return null;
+    const valueNum = toNumber(rawValue);
+    if (!Number.isFinite(valueNum)) return null;
+    return {
+      id: entry.id,
+      testKey: entry.testKey,
+      label: entry.label,
+      unit: entry.unit,
+      group: entry.group,
+      sourceFormulaId: entry.sourceFormulaId,
+      valueNum: valueNum,
+    };
+  }
+
+  // Zbiór formuł-źródeł do zapisu = formuły AKTYWNEGO MODUŁU (wybór lekarza).
+  // Dzięki temu zapis obejmuje:
+  //  • pojedynczą wybraną formułę (np. eGFR dorośli → tylko egfr),
+  //  • cały panel wielo-formułowy (np. DZM → wszystkie analitów tego modułu),
+  // a WYKLUCZA porównania z innych modułów, które silnik dokłada obok
+  // (np. wybór CKiD U25 u 20-latka renderuje też egfr/cg — panel porównawczy).
+  function moduleFormulaSet(formulaId) {
+    if (typeof formulaId !== "string" || !formulaId) return null;
+    const m = model();
+    const mod =
+      m && typeof m.getModuleForFormula === "function"
+        ? m.getModuleForFormula(formulaId)
+        : null;
+    if (mod && Array.isArray(mod.formulaIds) && mod.formulaIds.length) {
+      return new Set(mod.formulaIds);
+    }
+    return new Set([formulaId]);
+  }
+
+  function resolveTargetFormulaSet(options) {
+    const opts = options || {};
+    if (opts.allParams) return null; // Faza 3: cała karta — wszystkie parametry
+    if (Array.isArray(opts.formulaIds)) return new Set(opts.formulaIds);
+    if (typeof opts.formulaId === "string" && opts.formulaId) {
+      return moduleFormulaSet(opts.formulaId);
+    }
+    const wf = global.ClcrUiWorkflow;
+    const activeId =
+      wf && wf.state && typeof wf.state.activeFormulaId === "string"
+        ? wf.state.activeFormulaId
+        : "";
+    // Brak wybranej formuły (tryb broad/testowy) → brak filtra (zbierz wszystko).
+    return activeId ? moduleFormulaSet(activeId) : null;
+  }
+
+  // Zakres referencyjny (span .range) i flaga „poza zakresem" (klasa) z
+  // otagowanego boksu wyniku — jeśli silnik je pokazał dla tego parametru.
+  function readRangeText(el) {
+    if (!el || typeof el.querySelector !== "function") return "";
+    const r = el.querySelector(".range");
+    const t = r && r.textContent ? r.textContent : "";
+    return t.replace(/\s+/g, " ").trim();
+  }
+  function elementOutOfRange(el) {
+    return !!(
+      el &&
+      el.classList &&
+      typeof el.classList.contains === "function" &&
+      el.classList.contains("out-of-range")
+    );
+  }
+
+  // Wartość WYŚWIETLONA przez silnik (z zaokrągleniem) — żeby historia/karta
+  // pokazywały to samo co kalkulator (np. 80, a nie surowe 79,77). Z tekstu
+  // otagowanego boksu bierzemy token liczbowy NAJBLIŻSZY surowej wartości; gdy
+  // brak sensownego dopasowania (różnica > zaokrąglenie), zostawiamy surową.
+  function displayedNumber(el, rawNum) {
+    if (!el || !Number.isFinite(rawNum)) return rawNum;
+    const txt = el.textContent || "";
+    const tokens = txt.match(/-?\d+(?:[.,]\d+)?/g);
+    if (!tokens) return rawNum;
+    let best = null;
+    let bestDiff = Infinity;
+    for (let i = 0; i < tokens.length; i += 1) {
+      const n = Number(tokens[i].replace(",", "."));
+      if (!Number.isFinite(n)) continue;
+      const diff = Math.abs(n - rawNum);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = n;
+      }
+    }
+    if (best === null) return rawNum;
+    const tol = Math.max(1, Math.abs(rawNum) * 0.02);
+    return bestDiff <= tol ? best : rawNum;
+  }
+
+  // Zbiera WIDOCZNE, otagowane wyniki (po jednym na serię), ograniczone do
+  // formuł aktywnego modułu (chyba że nie wybrano formuły — wtedy wszystko).
+  function collectActiveDatapoints(root, options) {
+    const scope = root || doc;
+    if (!scope || typeof scope.querySelectorAll !== "function") return [];
+    const target = resolveTargetFormulaSet(options);
+    const seen = new Set();
+    const out = [];
+    const nodes = scope.querySelectorAll("[data-clcr-series]");
+    for (let i = 0; i < nodes.length; i += 1) {
+      const el = nodes[i];
+      if (!isVisible(el)) continue;
+      const series = el.getAttribute("data-clcr-series");
+      if (!series || seen.has(series)) continue;
+      const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
+      if (!dp) continue;
+      if (target && !target.has(dp.sourceFormulaId)) continue;
+      // Historia/karta = to samo zaokrąglenie co kalkulator (wyświetlona wartość).
+      dp.valueNum = displayedNumber(el, dp.valueNum);
+      dp.norm = readRangeText(el);
+      dp.outOfRange = elementOutOfRange(el);
+      seen.add(series);
+      out.push(dp);
+    }
+    return out;
+  }
+
+  function formatValueString(n) {
+    if (!Number.isFinite(n)) return "";
+    const rounded = Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
+    // Polski separator dziesiętny (spójnie z kalkulatorem: „1,73 m²").
+    return rounded.replace(".", ",");
+  }
+
+  function pad2(v) {
+    return String(v).padStart(2, "0");
+  }
+
+  function todayISO(dateLike) {
+    const d = dateLike instanceof Date ? dateLike : new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  function normalizeDateISO(value) {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return /^(\d{4})-(\d{1,2})-(\d{1,2})$/.test(trimmed) ? trimmed : null;
+  }
+
+  // Zapis: jedna notatka na datapoint, wspólna data = jedna wizyta.
+  async function saveActiveResultToCard(opts) {
+    const options = opts || {};
+    const v = vault();
+    if (!vaultUnlocked() || !v || typeof v.savePatientNote !== "function") {
+      return { ok: false, reason: "locked", saved: 0, total: 0, errors: [] };
+    }
+    const patientId = options.patientId || resolveCurrentPatientId();
+    if (!patientId) {
+      return { ok: false, reason: "no-patient", saved: 0, total: 0, errors: [] };
+    }
+    const clinicalDateISO = normalizeDateISO(options.clinicalDateISO) || todayISO();
+    const datapoints = Array.isArray(options.datapoints)
+      ? options.datapoints
+      : collectActiveDatapoints(options.root, options);
+    if (!datapoints.length) {
+      return { ok: false, reason: "no-data", saved: 0, total: 0, errors: [] };
+    }
+    let saved = 0;
+    const errors = [];
+    for (let i = 0; i < datapoints.length; i += 1) {
+      const dp = datapoints[i];
+      const labResult = {
+        test: dp.label,
+        value: formatValueString(dp.valueNum),
+        valueNum: dp.valueNum,
+        unit: dp.unit,
+      };
+      // Zakres referencyjny (jeśli silnik go pokazał) — do kolumny „Zakres".
+      if (dp.norm) labResult.norm = String(dp.norm).slice(0, 200);
+      // Znacznik „poza zakresem" w treści (magazyn nie ma pola boolean) —
+      // czytelny dla lekarza i parsowalny przez flowsheet (§2: testKey też tu).
+      const body =
+        "Kalkulator klirensu · " +
+        dp.testKey +
+        (dp.outOfRange ? " · wynik poza zakresem" : "");
+      try {
+        await v.savePatientNote({
+          patientId: patientId,
+          category: CATEGORY,
+          clinicalDateISO: clinicalDateISO,
+          title: dp.label,
+          body: body,
+          labResult: labResult,
+        });
+        saved += 1;
+      } catch (e) {
+        errors.push({
+          testKey: dp.testKey,
+          message: e && e.message ? e.message : String(e),
+        });
+      }
+    }
+    return {
+      ok: errors.length === 0 && saved > 0,
+      reason: errors.length ? "partial" : "ok",
+      saved: saved,
+      total: datapoints.length,
+      errors: errors,
+      clinicalDateISO: clinicalDateISO,
+    };
+  }
+
+  function seriesWord(n) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs === 1) return "seria";
+    if (last >= 2 && last <= 4 && (abs < 12 || abs > 14)) return "serie";
+    return "serii";
+  }
+
+  // ————————————————————————— Faza 2: odczyt serii + trend —————————————————
+  // Grupujemy datowane notatki wynik-klirens po PELNEJ etykiecie labResult.test
+  // (obejście §2). NIE używamy wbudowanego listPatientLabSeries (jego slug Ur
+  // bierze tekst przed „(" i skleja różne serie). Ograniczamy do parametrów
+  // aktywnego modułu — tak jak zapis.
+  function buildSeriesFromNotes(notes, options) {
+    const list = Array.isArray(notes) ? notes : [];
+    const target = resolveTargetFormulaSet(options);
+    const m = model();
+    const byLabel = new Map();
+    for (let i = 0; i < list.length; i += 1) {
+      const note = list[i];
+      if (!note || note.category !== CATEGORY) continue;
+      const lab = note.labResult;
+      if (!lab || typeof lab.test !== "string" || !lab.test) continue;
+      const valueNum =
+        typeof lab.valueNum === "number" && isFinite(lab.valueNum)
+          ? lab.valueNum
+          : toNumber(lab.value);
+      if (!Number.isFinite(valueNum)) continue;
+      const label = lab.test;
+      const entry =
+        m && typeof m.getParamByLabel === "function"
+          ? m.getParamByLabel(label)
+          : null;
+      const sourceFormulaId = entry ? entry.sourceFormulaId : null;
+      if (target && (!sourceFormulaId || !target.has(sourceFormulaId))) continue;
+      const dateISO =
+        normalizeDateISO(note.clinicalDateISO) ||
+        (typeof note.clinicalDateISO === "string"
+          ? note.clinicalDateISO.slice(0, 10)
+          : "");
+      if (!byLabel.has(label)) {
+        byLabel.set(label, {
+          label: label,
+          unit: (lab.unit || (entry ? entry.unit : "") || "").trim(),
+          id: entry ? entry.id : null,
+          group: entry ? entry.group : null,
+          sourceFormulaId: sourceFormulaId,
+          points: [],
+        });
+      }
+      const outOfRange =
+        typeof note.body === "string" &&
+        note.body.indexOf("poza zakresem") >= 0;
+      const norm = typeof lab.norm === "string" ? lab.norm.trim() : "";
+      byLabel.get(label).points.push({
+        dateISO: dateISO,
+        valueNum: valueNum,
+        outOfRange: outOfRange,
+        norm: norm,
+        noteId: note.id || null,
+      });
+    }
+    const series = Array.from(byLabel.values());
+    series.forEach((s) => {
+      s.points.sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)));
+      // Zakres serii = z najnowszego punktu, który go niesie.
+      s.norm = "";
+      for (let k = s.points.length - 1; k >= 0; k -= 1) {
+        if (s.points[k].norm) {
+          s.norm = s.points[k].norm;
+          break;
+        }
+      }
+    });
+    return series;
+  }
+
+  async function readActiveSeries(patientId, options) {
+    const v = vault();
+    const pid = patientId || resolveCurrentPatientId();
+    if (
+      !pid ||
+      !vaultUnlocked() ||
+      !v ||
+      typeof v.listPatientNotesForPatient !== "function"
+    ) {
+      return [];
+    }
+    let notes;
+    try {
+      notes = await v.listPatientNotesForPatient(pid);
+    } catch (e) {
+      return [];
+    }
+    return buildSeriesFromNotes(notes, options);
+  }
+
+  // Faza 3: pełna karta pacjenta — WSZYSTKIE parametry × wizyty (daty).
+  function dictionaryIndex(id) {
+    const m = model();
+    const dict = m && Array.isArray(m.PARAM_DICTIONARY) ? m.PARAM_DICTIONARY : [];
+    for (let i = 0; i < dict.length; i += 1) {
+      if (dict[i].id === id) return i;
+    }
+    return Number.MAX_SAFE_INTEGER; // etykiety spoza słownika na koniec
+  }
+
+  async function readPatientFlowsheet(patientId) {
+    const series = await readActiveSeries(patientId, { allParams: true });
+    const dateSet = new Set();
+    series.forEach((s) => {
+      s.points.forEach((p) => {
+        if (p.dateISO) dateSet.add(p.dateISO);
+      });
+    });
+    const visits = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+    const parameters = series
+      .map((s) => {
+        const byDate = {};
+        s.points.forEach((p) => {
+          byDate[p.dateISO] = {
+            valueNum: p.valueNum,
+            outOfRange: !!p.outOfRange,
+          };
+        });
+        return {
+          label: s.label,
+          unit: s.unit,
+          id: s.id,
+          group: s.group,
+          sourceFormulaId: s.sourceFormulaId,
+          norm: s.norm || "",
+          points: s.points,
+          trend: seriesTrend(s.points),
+          byDate: byDate,
+        };
+      })
+      .sort((a, b) => {
+        const ia = dictionaryIndex(a.id);
+        const ib = dictionaryIndex(b.id);
+        if (ia !== ib) return ia - ib;
+        return String(a.label).localeCompare(String(b.label), "pl");
+      });
+    return { visits: visits, parameters: parameters };
+  }
+
+  // Trend KIERUNKOWY, neutralny: strzałka pokazuje kierunek, kolor NIE ocenia
+  // „dobrze/źle" (dla eGFR wzrost korzystny, dla wydalania wapnia odwrotnie).
+  function seriesTrend(points) {
+    if (!Array.isArray(points) || points.length < 2) return null;
+    const latest = points[points.length - 1];
+    const prev = points[points.length - 2];
+    const delta = latest.valueNum - prev.valueNum;
+    const eps = 1e-9;
+    const direction = delta > eps ? "up" : delta < -eps ? "down" : "flat";
+    return {
+      direction: direction,
+      prev: prev.valueNum,
+      latest: latest.valueNum,
+      delta: delta,
+    };
+  }
+
+  const TREND_ARROW = { up: "↑", down: "↓", flat: "→" };
+
+  function readPatientName() {
+    if (!doc) return "";
+    const el = doc.getElementById("patientName");
+    return el && el.textContent ? el.textContent.trim() : "";
+  }
+
+  // ————————————————————————— UI (wstrzykiwane, nie w statycznym HTML) —————————
+  let ui = null;
+  let refreshQueued = false;
+
+  function setStatus(message, kind) {
+    if (!ui || !ui.status) return;
+    ui.status.textContent = message || "";
+    ui.status.className = "cvs-status" + (kind ? " cvs-" + kind : "");
+  }
+
+  function buildUI() {
+    if (!doc || ui) return;
+    const anchor =
+      doc.getElementById("stoneCard") ||
+      doc.getElementById("elecCard") ||
+      doc.getElementById("results");
+    if (!anchor || !anchor.parentNode) return;
+    const card = doc.createElement("section");
+    card.className = "card clcr-visit-save";
+    card.id = "clcrVisitSaveCard";
+    card.hidden = true;
+    card.innerHTML =
+      '<h2 class="text-center">Zapisz wynik do karty pacjenta</h2>' +
+      '<div class="cvs-row">' +
+      '<label class="cvs-date" for="clcrVisitDate">Data wizyty' +
+      '<input type="date" id="clcrVisitDate" name="clcrVisitDate"></label>' +
+      '<button type="button" id="clcrVisitSaveBtn" class="cvs-btn">Zapisz wynik do karty</button>' +
+      "</div>" +
+      '<p class="cvs-hint" id="clcrVisitHint"></p>' +
+      '<p class="cvs-status" id="clcrVisitStatus" role="status" aria-live="polite"></p>' +
+      '<p class="cvs-open-row"><button type="button" id="clcrOpenCardBtn" class="cvs-link" hidden>Karta pacjenta →</button></p>';
+    anchor.parentNode.insertBefore(card, anchor.nextSibling);
+    ui = {
+      card: card,
+      date: card.querySelector("#clcrVisitDate"),
+      btn: card.querySelector("#clcrVisitSaveBtn"),
+      hint: card.querySelector("#clcrVisitHint"),
+      status: card.querySelector("#clcrVisitStatus"),
+      openBtn: card.querySelector("#clcrOpenCardBtn"),
+    };
+    if (ui.date) ui.date.value = todayISO();
+    if (ui.btn) ui.btn.addEventListener("click", onSaveClick);
+    if (ui.openBtn) ui.openBtn.addEventListener("click", openPatientCard);
+    refresh();
+  }
+
+  function refresh() {
+    if (!ui) return;
+    const datapoints = collectActiveDatapoints();
+    if (!datapoints.length) {
+      ui.card.hidden = true;
+      return;
+    }
+    ui.card.hidden = false;
+    const unlocked = vaultUnlocked();
+    const patientId = resolveCurrentPatientId();
+    const ready = unlocked && !!patientId;
+    if (ui.btn) ui.btn.disabled = !ready;
+    if (ui.openBtn) ui.openBtn.hidden = !ready;
+    if (!ui.hint) return;
+    if (!unlocked) {
+      ui.hint.textContent =
+        "Zaloguj się do sejfu, aby zapisać wynik do karty. Liczenie działa bez logowania.";
+    } else if (!patientId) {
+      ui.hint.textContent =
+        "Wczytaj pacjenta, aby zapisać wynik do jego karty.";
+    } else {
+      const cnt = datapoints.length;
+      const name = state.patientName || readPatientName();
+      ui.hint.textContent =
+        "Do zapisania: " +
+        cnt +
+        " " +
+        seriesWord(cnt) +
+        (name ? " · pacjent: " + name : "");
+    }
+  }
+
+  function scheduleRefresh() {
+    if (refreshQueued || !ui) return;
+    refreshQueued = true;
+    const run = function () {
+      refreshQueued = false;
+      refresh();
+    };
+    if (typeof global.requestAnimationFrame === "function") {
+      global.requestAnimationFrame(run);
+    } else {
+      setTimeout(run, 0);
+    }
+  }
+
+  async function onSaveClick() {
+    if (!ui || !ui.btn || ui.btn.disabled) return;
+    ui.btn.disabled = true;
+    setStatus("Zapisywanie…", "pending");
+    let res;
+    try {
+      res = await saveActiveResultToCard({
+        clinicalDateISO: ui.date ? ui.date.value : null,
+      });
+    } catch (e) {
+      res = { ok: false, reason: "error", saved: 0, total: 0, errors: [e] };
+    }
+    if (res.ok) {
+      setStatus(
+        "✓ Zapisano do karty (" +
+          res.saved +
+          " " +
+          seriesWord(res.saved) +
+          ", " +
+          res.clinicalDateISO +
+          ").",
+        "ok",
+      );
+    } else if (res.reason === "no-patient") {
+      setStatus("Nie wczytano pacjenta — zapis niemożliwy.", "err");
+    } else if (res.reason === "locked") {
+      setStatus("Sejf zablokowany — zaloguj się, aby zapisać.", "err");
+    } else if (res.reason === "no-data") {
+      setStatus("Brak wyniku do zapisania.", "err");
+    } else {
+      setStatus(
+        "Zapisano " +
+          res.saved +
+          "/" +
+          res.total +
+          "; niepowodzenia: " +
+          res.errors.length +
+          ".",
+        "warn",
+      );
+    }
+    refresh();
+    scheduleHistoryRefresh();
+  }
+
+  // ————————————————————————— Faza 2: panel historii ———————————————————————
+  let historyUi = null;
+  let historyQueued = false;
+
+  function escapeHtml(text) {
+    return String(text == null ? "" : text).replace(/[&<>"']/g, function (ch) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[ch];
+    });
+  }
+
+  function fmtNum(n) {
+    return formatValueString(n);
+  }
+
+  function buildSparkline(points) {
+    const w = 128;
+    const h = 30;
+    const pad = 4;
+    const vals = points.map(function (p) {
+      return p.valueNum;
+    });
+    const n = vals.length;
+    if (!n) return "";
+    const min = Math.min.apply(null, vals);
+    const max = Math.max.apply(null, vals);
+    const span = max - min || 1;
+    const xAt = function (i) {
+      return n === 1 ? w / 2 : pad + (i * (w - 2 * pad)) / (n - 1);
+    };
+    const yAt = function (v) {
+      return h - pad - ((v - min) / span) * (h - 2 * pad);
+    };
+    if (n === 1) {
+      return (
+        '<svg class="cvs-spark" width="' +
+        w +
+        '" height="' +
+        h +
+        '" viewBox="0 0 ' +
+        w +
+        " " +
+        h +
+        '" aria-hidden="true"><circle cx="' +
+        xAt(0).toFixed(1) +
+        '" cy="' +
+        yAt(vals[0]).toFixed(1) +
+        '" r="2.6"/></svg>'
+      );
+    }
+    const d = vals
+      .map(function (v, i) {
+        return (i ? "L" : "M") + xAt(i).toFixed(1) + " " + yAt(v).toFixed(1);
+      })
+      .join(" ");
+    return (
+      '<svg class="cvs-spark" width="' +
+      w +
+      '" height="' +
+      h +
+      '" viewBox="0 0 ' +
+      w +
+      " " +
+      h +
+      '" aria-hidden="true"><path d="' +
+      d +
+      '" fill="none" stroke-width="1.6"/><circle cx="' +
+      xAt(n - 1).toFixed(1) +
+      '" cy="' +
+      yAt(vals[n - 1]).toFixed(1) +
+      '" r="2.6"/></svg>'
+    );
+  }
+
+  function renderHistory(series) {
+    if (!historyUi) return;
+    const withData = (series || []).filter(function (s) {
+      return s.points && s.points.length;
+    });
+    if (!withData.length) {
+      historyUi.card.hidden = true;
+      historyUi.body.innerHTML = "";
+      return;
+    }
+    historyUi.card.hidden = false;
+    historyUi.body.innerHTML = withData
+      .map(function (s) {
+        const pts = s.points;
+        const trend = seriesTrend(pts);
+        const unit = s.unit ? " " + s.unit : "";
+        const trendLine = trend
+          ? '<span class="cvs-trend cvs-trend-' +
+            trend.direction +
+            '">' +
+            TREND_ARROW[trend.direction] +
+            " vs. poprzednio (" +
+            escapeHtml(fmtNum(trend.prev)) +
+            " → " +
+            escapeHtml(fmtNum(trend.latest)) +
+            escapeHtml(unit) +
+            ")</span>"
+          : '<span class="cvs-trend cvs-trend-flat">pojedynczy pomiar</span>';
+        const dots = pts
+          .map(function (p) {
+            return (
+              '<li><span class="cvs-date">' +
+              escapeHtml(p.dateISO || "—") +
+              '</span><span class="cvs-num">' +
+              escapeHtml(fmtNum(p.valueNum)) +
+              escapeHtml(unit) +
+              "</span></li>"
+            );
+          })
+          .join("");
+        return (
+          '<div class="cvs-hist-item"><div class="cvs-hist-head"><span class="cvs-hist-label">Historia — ' +
+          escapeHtml(s.label) +
+          "</span>" +
+          buildSparkline(pts) +
+          "</div>" +
+          trendLine +
+          '<ul class="cvs-hist-points">' +
+          dots +
+          "</ul></div>"
+        );
+      })
+      .join("");
+  }
+
+  function buildHistoryUI() {
+    if (!doc || historyUi) return;
+    const anchor =
+      doc.getElementById("clcrVisitSaveCard") ||
+      doc.getElementById("stoneCard") ||
+      doc.getElementById("results");
+    if (!anchor || !anchor.parentNode) return;
+    const card = doc.createElement("section");
+    card.className = "card clcr-visit-history";
+    card.id = "clcrHistoryCard";
+    card.hidden = true;
+    card.innerHTML =
+      '<h2 class="text-center">Historia wyników</h2>' +
+      '<div class="cvs-hist-body" id="clcrHistoryBody"></div>';
+    anchor.parentNode.insertBefore(card, anchor.nextSibling);
+    historyUi = { card: card, body: card.querySelector("#clcrHistoryBody") };
+  }
+
+  async function refreshActiveHistory() {
+    if (!historyUi) return;
+    if (!vaultUnlocked() || !resolveCurrentPatientId()) {
+      historyUi.card.hidden = true;
+      historyUi.body.innerHTML = "";
+      return;
+    }
+    const series = await readActiveSeries();
+    renderHistory(series);
+  }
+
+  function scheduleHistoryRefresh() {
+    if (historyQueued || !historyUi) return;
+    historyQueued = true;
+    const run = function () {
+      historyQueued = false;
+      refreshActiveHistory();
+    };
+    if (typeof global.requestAnimationFrame === "function") {
+      global.requestAnimationFrame(run);
+    } else {
+      setTimeout(run, 0);
+    }
+  }
+
+  // ————————————————————————— Faza 3: Karta pacjenta (flowsheet) ————————————
+  let patientCardUi = null;
+
+  function formatDateShort(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+    if (!m) return String(iso || "");
+    return m[3] + "." + m[2] + "." + m[1].slice(2);
+  }
+
+  function paramWord(n) {
+    const a = Math.abs(n) % 100;
+    const l = a % 10;
+    if (a === 1) return "parametr";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "parametry";
+    return "parametrów";
+  }
+  function visitWord(n) {
+    const a = Math.abs(n) % 100;
+    const l = a % 10;
+    if (a === 1) return "wizyta";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "wizyty";
+    return "wizyt";
+  }
+
+  function closePatientCard() {
+    if (patientCardUi) patientCardUi.overlay.hidden = true;
+    if (doc && doc.documentElement) {
+      doc.documentElement.classList.remove("clcr-card-open");
+    }
+  }
+
+  function buildPatientCardUI() {
+    if (!doc || patientCardUi || typeof doc.createElement !== "function") return;
+    const overlay = doc.createElement("div");
+    overlay.className = "clcr-patient-card";
+    overlay.id = "clcrPatientCard";
+    overlay.hidden = true;
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "Karta pacjenta");
+    overlay.innerHTML =
+      '<div class="cpc-inner">' +
+      '<div class="cpc-head"><div class="cpc-id">' +
+      '<span class="cpc-kick">Karta pacjenta</span>' +
+      '<h2 class="cpc-name" id="cpcName"></h2>' +
+      '<span class="cpc-sub" id="cpcSub"></span></div>' +
+      '<div class="cpc-acts">' +
+      '<button type="button" class="cpc-btn" id="cpcNew">＋ Nowa wizyta</button>' +
+      '<button type="button" class="cpc-btn cpc-ghost" id="cpcClose">Zamknij</button>' +
+      "</div></div>" +
+      '<div class="cpc-body" id="cpcBody"></div></div>';
+    (doc.body || doc.documentElement).appendChild(overlay);
+    patientCardUi = {
+      overlay: overlay,
+      name: overlay.querySelector("#cpcName"),
+      sub: overlay.querySelector("#cpcSub"),
+      body: overlay.querySelector("#cpcBody"),
+    };
+    const closeBtn = overlay.querySelector("#cpcClose");
+    const newBtn = overlay.querySelector("#cpcNew");
+    if (closeBtn) closeBtn.addEventListener("click", closePatientCard);
+    // „+ Nowa wizyta" wraca do kalkulatora (zamyka kartę).
+    if (newBtn) newBtn.addEventListener("click", closePatientCard);
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) closePatientCard();
+    });
+  }
+
+  function renderFlowsheet(data) {
+    if (!patientCardUi) return;
+    const visits = (data && data.visits) || [];
+    const params = (data && data.parameters) || [];
+    if (!params.length) {
+      patientCardUi.body.innerHTML =
+        '<p class="cpc-empty">Brak zapisanych wyników. Policz wynik i zapisz go do karty, aby zbudować historię wizyt.</p>';
+      return;
+    }
+    const latest = visits.length ? visits[visits.length - 1] : null;
+    const headCols = visits
+      .map(function (d) {
+        return (
+          '<th class="' +
+          (d === latest ? "nowcol" : "") +
+          '">' +
+          escapeHtml(formatDateShort(d)) +
+          "</th>"
+        );
+      })
+      .join("");
+    const rows = params
+      .map(function (p) {
+        const cells = visits
+          .map(function (d) {
+            const cell = p.byDate[d];
+            const isNow = d === latest;
+            if (!cell) {
+              return '<td class="val miss' + (isNow ? " now" : "") + '">—</td>';
+            }
+            const cls =
+              "val" + (cell.outOfRange ? " hi" : "") + (isNow ? " now" : "");
+            return (
+              '<td class="' + cls + '">' + escapeHtml(fmtNum(cell.valueNum)) + "</td>"
+            );
+          })
+          .join("");
+        const trend = p.trend
+          ? '<span class="tchip">' +
+            TREND_ARROW[p.trend.direction] +
+            "</span> " +
+            buildSparkline(p.points)
+          : '<span class="tchip">·</span>';
+        const norm = p.norm ? escapeHtml(p.norm) : "—";
+        return (
+          '<tr><td class="param">' +
+          escapeHtml(p.label) +
+          '<br><span class="ref">' +
+          escapeHtml(p.unit || "") +
+          "</span></td>" +
+          cells +
+          '<td class="ref">' +
+          norm +
+          '</td><td class="trendcell">' +
+          trend +
+          "</td></tr>"
+        );
+      })
+      .join("");
+    patientCardUi.body.innerHTML =
+      '<div class="cpc-flowwrap"><table class="cpc-flow"><thead><tr><th>Parametr</th>' +
+      headCols +
+      "<th>Zakres</th><th>Trend</th></tr></thead><tbody>" +
+      rows +
+      "</tbody></table></div>" +
+      '<p class="cpc-note">Czerwony = wartość poza zakresem (referencja). Kolumna z ramką = ostatnia wizyta. Brak pomiaru = „—". Strzałka trendu pokazuje kierunek; kolor nie ocenia.</p>';
+  }
+
+  async function openPatientCard() {
+    if (!doc) return;
+    if (!patientCardUi) buildPatientCardUI();
+    if (!patientCardUi) return;
+    if (!vaultUnlocked() || !resolveCurrentPatientId()) return;
+    let name = state.patientName || readPatientName() || "";
+    let demo = "";
+    try {
+      const v = vault();
+      if (v && typeof v.getPatient === "function") {
+        const p = await v.getPatient(resolveCurrentPatientId());
+        const header = p && p.header ? p.header : null;
+        if (header) {
+          if (!name && typeof header.name === "string" && header.name.trim()) {
+            name = header.name.trim();
+          }
+          demo = demographicsText(header);
+        }
+      }
+    } catch (e) {
+      /* nazwa/demografia pozostaną domyślne */
+    }
+    patientCardUi.name.textContent = name || "Pacjent";
+    patientCardUi.sub.textContent = "";
+    patientCardUi.body.innerHTML = '<p class="cpc-empty">Wczytywanie…</p>';
+    patientCardUi.overlay.hidden = false;
+    if (doc.documentElement) doc.documentElement.classList.add("clcr-card-open");
+    let data;
+    try {
+      data = await readPatientFlowsheet();
+    } catch (e) {
+      data = { visits: [], parameters: [] };
+    }
+    const counts =
+      data.parameters.length +
+      " " +
+      paramWord(data.parameters.length) +
+      " · " +
+      data.visits.length +
+      " " +
+      visitWord(data.visits.length);
+    patientCardUi.sub.textContent = [demo, counts].filter(Boolean).join(" · ");
+    renderFlowsheet(data);
+  }
+
+  function yearWord(n) {
+    const y = Math.round(n);
+    const a = y % 100;
+    const l = y % 10;
+    if (y === 1) return "rok";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "lata";
+    return "lat";
+  }
+
+  function demographicsText(header) {
+    const parts = [];
+    if (typeof header.age === "number" && isFinite(header.age) && header.age > 0) {
+      parts.push(header.age + " " + yearWord(header.age));
+    }
+    if (typeof header.sex === "string") {
+      const s = header.sex.toLowerCase();
+      if (header.sex === "M" || s === "male" || s === "m") parts.push("mężczyzna");
+      else if (header.sex === "F" || s === "female" || s === "f" || s === "k")
+        parts.push("kobieta");
+    }
+    return parts.join(" · ");
+  }
+
+  function observeResults() {
+    if (!doc || typeof global.MutationObserver !== "function") return;
+    const ids = [
+      "results",
+      "clcrInfo",
+      "elecInfo",
+      "stoneInfo",
+      "ktvResult",
+      "ektvResult",
+      "urrResult",
+    ];
+    const obs = new global.MutationObserver(function () {
+      scheduleRefresh();
+      scheduleHistoryRefresh();
+    });
+    for (let i = 0; i < ids.length; i += 1) {
+      const el = doc.getElementById(ids[i]);
+      if (el) {
+        obs.observe(el, { childList: true, subtree: true, attributes: true });
+      }
+    }
+  }
+
+  function onPatientLoaded(event) {
+    const detail = event && event.detail ? event.detail : null;
+    const id = detail && detail.patientId;
+    if (typeof id === "string" && id) {
+      state.patientId = id;
+      state.patientName =
+        (detail && typeof detail.patientName === "string"
+          ? detail.patientName
+          : "") || readPatientName();
+    }
+    refresh();
+    scheduleHistoryRefresh();
+  }
+
+  function init() {
+    buildUI();
+    buildHistoryUI();
+    buildPatientCardUI();
+    observeResults();
+    if (doc) {
+      doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
+      if (global.addEventListener) {
+        global.addEventListener("focus", scheduleRefresh);
+      }
+    }
+  }
+
+  const api = {
+    vaultUnlocked: vaultUnlocked,
+    resolveCurrentPatientId: resolveCurrentPatientId,
+    collectActiveDatapoints: collectActiveDatapoints,
+    mapDatapoint: mapDatapoint,
+    saveActiveResultToCard: saveActiveResultToCard,
+    buildSeriesFromNotes: buildSeriesFromNotes,
+    readActiveSeries: readActiveSeries,
+    readPatientFlowsheet: readPatientFlowsheet,
+    seriesTrend: seriesTrend,
+    refreshActiveHistory: refreshActiveHistory,
+    openPatientCard: openPatientCard,
+    closePatientCard: closePatientCard,
+    formatValueString: formatValueString,
+    todayISO: todayISO,
+    normalizeDateISO: normalizeDateISO,
+    seriesWord: seriesWord,
+    // testowe / introspekcja
+    _setPatientId: function (id) {
+      state.patientId = typeof id === "string" && id ? id : null;
+    },
+    _refresh: refresh,
+  };
+
+  global.ClcrVisitSave = api;
+
+  if (doc && typeof doc.addEventListener === "function") {
+    if (doc.readyState === "loading") {
+      doc.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  }
+})(typeof window !== "undefined" ? window : globalThis);
+
+/* ————————————————————————————————————————————————————————————————————————
+ * Faza 5 — chip pacjenta + zwijany blok tożsamości (Wariant C).
+ *
+ * Warstwa PREZENTACJI nad istniejącym #patientSet — ZERO zmian w matematyce
+ * silnika i w potoku podstawiania danych (applyLoadedData / userData.js /
+ * applyClcrSessionSnapshot nadal wypełniają pola). Moduł:
+ *   • pokazuje chip pacjenta (avatar + nazwisko + wiek·płeć) zamiast pola
+ *     „Imię i nazwisko", ze skrótami: wiek (granularny), wzrost, masa+data;
+ *   • zwija pola tożsamości do chipa, gdy wczytano pacjenta z karty
+ *     (rozwinięcie na żądanie: „Dane pacjenta ▾");
+ *   • przy pacjencie z karty pokazuje datę ostatniego pomiaru masy i sam
+ *     stempluje „dziś", gdy lekarz wpisze nową masę — BEZ osobnego
+ *     potwierdzania (decyzja Macieja 02.08.2026);
+ *   • w trybie gościa / bez pacjenta NIE ingeruje — #patientSet w pełni widoczny
+ *     (dzięki temu obliczenia anonimowe i istniejące testy działają bez zmian).
+ * ———————————————————————————————————————————————————————————————————————— */
+(function (global) {
+  "use strict";
+  const doc = global.document;
+  if (!doc) return;
+
+  const COLLAPSE_CLASS = "clcr-ident-collapsed";
+  const SYNC_FIELDS = [
+    "age",
+    "ageMonths",
+    "ageDays",
+    "neonatalTermStatus",
+    "sex",
+    "height",
+    "weight",
+  ];
+
+  const st = {
+    built: false,
+    currentName: "",
+    lastWeightDateISO: null, // data ostatniego pomiaru masy (z ostatniego snapshotu)
+    weightTouched: false, // lekarz wpisał nową masę na tej wizycie → „dziś"
+    lastPatientId: null,
+  };
+
+  function vault() {
+    return global.VildaVault && typeof global.VildaVault === "object"
+      ? global.VildaVault
+      : null;
+  }
+  function vaultUnlocked() {
+    try {
+      const v = vault();
+      return !!(v && typeof v.isUnlocked === "function" && v.isUnlocked());
+    } catch (e) {
+      return false;
+    }
+  }
+  function isGuest() {
+    try {
+      return !!(
+        global.VildaSession &&
+        typeof global.VildaSession.isGuestMode === "function" &&
+        global.VildaSession.isGuestMode()
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+  function patientId() {
+    try {
+      const api = global.ClcrVisitSave;
+      return (
+        (api && typeof api.resolveCurrentPatientId === "function"
+          ? api.resolveCurrentPatientId()
+          : null) || null
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+  function hasPatient() {
+    return vaultUnlocked() && !isGuest() && !!patientId();
+  }
+  function todayISO() {
+    try {
+      const api = global.ClcrVisitSave;
+      if (api && typeof api.todayISO === "function") return api.todayISO();
+    } catch (e) {
+      /* fall through */
+    }
+    try {
+      return new Date().toISOString().slice(0, 10);
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function el(id) {
+    return doc.getElementById(id);
+  }
+  function fieldStr(id) {
+    const e = el(id);
+    return e && e.value != null ? String(e.value).trim() : "";
+  }
+  function fieldNum(id) {
+    const s = fieldStr(id);
+    if (s === "") return null;
+    const n = Number(s.replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function fmtNum(n) {
+    if (n == null || !Number.isFinite(n)) return "";
+    return Number.isInteger(n)
+      ? String(n)
+      : String(Number(n.toFixed(2))).replace(".", ",");
+  }
+  function fmtDatePl(iso) {
+    if (!iso || typeof iso !== "string") return "";
+    const m = iso.slice(0, 10).split("-");
+    if (m.length !== 3) return "";
+    return m[2] + "." + m[1] + "." + m[0];
+  }
+  function yearWord(y) {
+    y = Math.round(y);
+    const a = y % 100;
+    const l = y % 10;
+    if (y === 1) return "rok";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "lata";
+    return "lat";
+  }
+  function dayWord(d) {
+    d = Math.round(d);
+    return d === 1 ? "dzień" : "dni";
+  }
+
+  // Wiek z dokładnością wynikającą z wprowadzonych pól:
+  //  • noworodek (0 lat, 0 mies., dni > 0) → „14 dni · donoszony/wcześniak"
+  //  • niemowlę (0 lat, mies. > 0)         → „8 mies."
+  //  • dziecko/dorosły z miesiącami        → „10 lat 3 mies."
+  //  • dorosły                             → „54 lata"
+  function ageString() {
+    const y = fieldNum("age");
+    const mo = fieldNum("ageMonths");
+    const d = fieldNum("ageDays");
+    if ((y === 0 || y == null) && (mo === 0 || mo == null) && d != null && d > 0) {
+      const term = fieldStr("neonatalTermStatus");
+      const t =
+        term === "term" ? " · donoszony" : term === "preterm" ? " · wcześniak" : "";
+      return d + " " + dayWord(d) + t;
+    }
+    if ((y === 0 || y == null) && mo != null && mo > 0) {
+      return mo + " mies.";
+    }
+    if (y != null) {
+      let base = y + " " + yearWord(y);
+      if (mo != null && mo > 0) base += " " + mo + " mies.";
+      return base;
+    }
+    return "";
+  }
+  function sexWord() {
+    const s = fieldStr("sex");
+    if (s === "M") return "mężczyzna";
+    if (s === "F") return "kobieta";
+    return "";
+  }
+  function readName() {
+    if (st.currentName) return st.currentName;
+    const h = el("patientName");
+    if (h && h.textContent && h.textContent.trim()) return h.textContent.trim();
+    const fn = el("fullName");
+    if (fn && fn.value && fn.value.trim()) return fn.value.trim();
+    return "";
+  }
+  function initials(name) {
+    const parts = String(name || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return "•";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function card() {
+    return doc.querySelector(".patient-card");
+  }
+  function isCollapsed() {
+    const c = card();
+    return !!(c && c.classList.contains(COLLAPSE_CLASS));
+  }
+  function setCollapsed(collapsed) {
+    const c = card();
+    if (!c) return;
+    c.classList.toggle(COLLAPSE_CLASS, !!collapsed);
+    renderBar();
+  }
+
+  function buildBar() {
+    if (st.built) return;
+    const c = card();
+    const set = el("patientSet");
+    if (!c || !set) return;
+    const bar = doc.createElement("div");
+    bar.id = "clcrIdentityBar";
+    bar.className = "clcr-ident-bar";
+    bar.hidden = true;
+    c.insertBefore(bar, set);
+    bar.addEventListener("click", function (e) {
+      const t = e.target.closest("[data-ident-act]");
+      if (!t) return;
+      if (t.getAttribute("data-ident-act") === "toggle") {
+        setCollapsed(!isCollapsed());
+      }
+    });
+    st.built = true;
+  }
+
+  function renderBar() {
+    if (!st.built) buildBar();
+    const bar = el("clcrIdentityBar");
+    const c = card();
+    if (!bar || !c) return;
+    if (!hasPatient()) {
+      bar.hidden = true;
+      c.classList.remove(COLLAPSE_CLASS);
+      return;
+    }
+    bar.hidden = false;
+    const collapsed = isCollapsed();
+    const name = readName() || "Pacjent";
+    const age = ageString();
+    const sx = sexWord();
+    const sub = [age, sx].filter(Boolean).join(" · ");
+
+    let badges = "";
+    if (collapsed) {
+      const h = fieldNum("height");
+      const w = fieldNum("weight");
+      const b = [];
+      if (age) b.push('<span class="clcr-ident-badge">' + esc(age) + "</span>");
+      if (h != null)
+        b.push('<span class="clcr-ident-badge">' + esc(fmtNum(h)) + " cm</span>");
+      if (w != null) {
+        const dtxt = st.weightTouched
+          ? "dziś"
+          : st.lastWeightDateISO
+            ? fmtDatePl(st.lastWeightDateISO)
+            : "";
+        b.push(
+          '<span class="clcr-ident-badge clcr-ident-badge--mass">Masa ' +
+            esc(fmtNum(w)) +
+            " kg" +
+            (dtxt ? " · " + esc(dtxt) : "") +
+            "</span>",
+        );
+      }
+      if (b.length) badges = '<div class="clcr-ident-badges">' + b.join("") + "</div>";
+    }
+    const toggleLabel = collapsed ? "Dane pacjenta ▾" : "Zwiń ▲";
+    bar.innerHTML =
+      '<div class="clcr-ident-id">' +
+      '<span class="clcr-ident-avatar">' +
+      esc(initials(name)) +
+      "</span>" +
+      '<span class="clcr-ident-who">' +
+      '<span class="clcr-ident-name">' +
+      esc(name) +
+      "</span>" +
+      (sub ? '<span class="clcr-ident-sub">' + esc(sub) + "</span>" : "") +
+      "</span></div>" +
+      badges +
+      '<button type="button" class="clcr-ident-toggle" data-ident-act="toggle">' +
+      toggleLabel +
+      "</button>";
+  }
+
+  // Notka daty pomiaru masy pod polem #weight (w rozwiniętym panelu).
+  function renderWeightNote() {
+    const w = el("weight");
+    if (!w) return;
+    let note = el("clcrWeightMeasuredNote");
+    if (!hasPatient()) {
+      if (note) note.hidden = true;
+      return;
+    }
+    if (!note) {
+      note = doc.createElement("span");
+      note.id = "clcrWeightMeasuredNote";
+      note.className = "clcr-weight-note";
+      if (w.parentNode) w.parentNode.insertBefore(note, w.nextSibling);
+    }
+    note.hidden = false;
+    if (st.weightTouched) {
+      note.textContent = "nowy pomiar: dziś " + fmtDatePl(todayISO());
+      note.classList.add("fresh");
+    } else if (st.lastWeightDateISO) {
+      note.textContent =
+        "ostatni pomiar: " +
+        fmtDatePl(st.lastWeightDateISO) +
+        " — nadpisz, jeśli pacjent był ważony dziś.";
+      note.classList.remove("fresh");
+    } else {
+      note.textContent = "podaj masę zmierzoną na tej wizycie.";
+      note.classList.remove("fresh");
+    }
+  }
+
+  function renderAll() {
+    renderBar();
+    renderWeightNote();
+  }
+
+  // Odczyt daty ostatniego pomiaru masy z ostatniego snapshotu pacjenta.
+  async function loadWeightDate() {
+    st.lastWeightDateISO = null;
+    const pid = patientId();
+    const v = vault();
+    if (!pid || !v || typeof v.getPatient !== "function") return;
+    try {
+      const p = await v.getPatient(pid);
+      const snap = p && Array.isArray(p.snapshots) ? p.snapshots[0] : null;
+      const user = snap && snap.payload ? snap.payload.user : null;
+      if (user && typeof user.measuredAtISO === "string" && user.measuredAtISO) {
+        st.lastWeightDateISO = user.measuredAtISO;
+      } else if (snap && typeof snap.savedAtISO === "string" && snap.savedAtISO) {
+        st.lastWeightDateISO = snap.savedAtISO;
+      }
+    } catch (e) {
+      /* brak daty — chip pokaże masę bez daty */
+    }
+    renderAll();
+  }
+
+  let renderTimers = [];
+  function scheduleRenders() {
+    renderTimers.forEach((t) => global.clearTimeout(t));
+    renderTimers = [0, 80, 400].map((ms) => global.setTimeout(renderAll, ms));
+  }
+
+  function onPatientLoaded(event) {
+    const detail = event && event.detail ? event.detail : null;
+    st.currentName =
+      detail && typeof detail.name === "string" && detail.name.trim()
+        ? detail.name.trim()
+        : "";
+    const pid = patientId();
+    // Nowy pacjent → reset stempla masy i domyślne zwinięcie (Wariant C).
+    if (pid !== st.lastPatientId) {
+      st.weightTouched = false;
+      st.lastPatientId = pid;
+    }
+    if (hasPatient()) {
+      setCollapsed(true);
+      loadWeightDate();
+    }
+    scheduleRenders();
+  }
+
+  function onFieldInput(e) {
+    const t = e && e.target;
+    if (!t || !t.id) return;
+    if (t.id === "weight") {
+      // tylko realna edycja lekarza stempluje „dziś" (nie programowe podstawienie)
+      if (e.isTrusted && String(t.value).trim() !== "") {
+        st.weightTouched = true;
+      }
+    }
+    if (SYNC_FIELDS.indexOf(t.id) !== -1) renderAll();
+  }
+
+  function init() {
+    buildBar();
+    const set = el("patientSet");
+    if (set) {
+      set.addEventListener("input", onFieldInput);
+      set.addEventListener("change", onFieldInput);
+    }
+    doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
+    // Pacjent mógł zostać wczytany przed inicjalizacją (odtworzenie sesji).
+    if (hasPatient()) {
+      setCollapsed(true);
+      loadWeightDate();
+    }
+    scheduleRenders();
+  }
+
+  const api = {
+    renderBar: renderBar,
+    renderWeightNote: renderWeightNote,
+    ageString: ageString,
+    setCollapsed: setCollapsed,
+    isCollapsed: isCollapsed,
+    _state: st,
+  };
+  global.ClcrIdentity = api;
+
+  if (typeof doc.addEventListener === "function") {
+    if (doc.readyState === "loading") {
+      doc.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  }
+})(typeof window !== "undefined" ? window : globalThis);
+
+/* ————————————————————————————————————————————————————————————————————————
+ * Układ B — U1: dwie kolumny + przyklejony panel „Wynik" (Wariant B Macieja).
+ *
+ * Warstwa PREZENTACJI/UKŁADU — ZERO zmian w matematyce silnika. Moduł:
+ *   • owija #clcrForm (wejścia) w lewą kolumnę „workspace", a po prawej tworzy
+ *     przyklejony (sticky, desktop) rail „Wynik";
+ *   • rail pokazuje NAGŁÓWEK wyniku (duża liczba) czytany z tagów silnika
+ *     data-clcr-series/value (dodanych w Fazie 1 — bez liczenia tutaj);
+ *   • przenosi istniejące karty „Zapisz wynik do karty" i „Historia" (Fazy 1–2)
+ *     do railu;
+ *   • wyniki szczegółowe (#results/#elecCard/#stoneCard) zostają PEŁNĄ
+ *     szerokością pod workspace (U2 zamieni je na tabelę data-card).
+ * Aktywne tylko gdy workflow UI aktywne (data-clcr-workflow-ui="1"); mobile bez
+ * relayoutu (grid dopiero ≥980px) — chroni istniejące testy 320px.
+ * ———————————————————————————————————————————————————————————————————————— */
+(function (global) {
+  "use strict";
+  const doc = global.document;
+  if (!doc) return;
+
+  const RESULT_IDS = [
+    "results",
+    "clcrInfo",
+    "elecInfo",
+    "stoneInfo",
+    "ktvResult",
+    "ektvResult",
+    "urrResult",
+  ];
+  let rail = null;
+  let head = null;
+  let progressEl = null;
+  let progressValue = null;
+  let progressFill = null;
+  let fullReportBtn = null;
+  let reportSection = null;
+  let reportHead = null;
+  let reportTitle = null;
+  let reportActions = null;
+  let built = false;
+  let refreshTimer = null;
+
+  function workflowActive() {
+    return (
+      doc.documentElement &&
+      doc.documentElement.dataset &&
+      doc.documentElement.dataset.clcrWorkflowUi === "1"
+    );
+  }
+  function el(id) {
+    return doc.getElementById(id);
+  }
+  function formatValue(n) {
+    try {
+      const vs = global.ClcrVisitSave;
+      if (vs && typeof vs.formatValueString === "function") return vs.formatValueString(n);
+    } catch (e) {
+      /* fallback */
+    }
+    if (!isFinite(n)) return "";
+    return (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)))).replace(".", ",");
+  }
+  function activeFormulaId() {
+    try {
+      const wf = global.ClcrUiWorkflow;
+      return (wf && wf.state && wf.state.activeFormulaId) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+  function paramFor(id) {
+    try {
+      const wf = global.ClcrUiWorkflow;
+      if (wf && wf.model && typeof wf.model.getParam === "function") return wf.model.getParam(id);
+    } catch (e) {
+      /* brak */
+    }
+    return null;
+  }
+  // Etykieta stanu nad liczbą: pełny wynik vs sam wynik liczbowy (interpretacja
+  // ograniczona). CSS robi wersaliki („WYNIK LICZBOWY GOTOWY").
+  function stateKicker() {
+    try {
+      const wf = global.ClcrUiWorkflow;
+      const rd =
+        wf && typeof wf.getFormulaReadiness === "function"
+          ? wf.getFormulaReadiness()
+          : null;
+      if (rd && rd.valueReady) {
+        return rd.interpretationReady ? "Wynik gotowy" : "Wynik liczbowy gotowy";
+      }
+    } catch (e) {
+      /* fallback */
+    }
+    return "Wynik";
+  }
+
+  function build() {
+    if (built) return;
+    const container = doc.querySelector(".container");
+    const form = el("clcrForm");
+    if (!container || !form) return;
+    if (form.parentNode !== container) return; // model jeszcze nie ustawił układu
+    const ws = doc.createElement("div");
+    ws.id = "clcrWorkspace";
+    ws.className = "clcr-workspace";
+    container.insertBefore(ws, form);
+    ws.appendChild(form); // lewa kolumna = wejścia
+
+    rail = doc.createElement("aside");
+    rail.id = "clcrResultRail";
+    rail.className = "clcr-result-rail";
+
+    // Pasek „Wymagane dane X/Y".
+    progressEl = doc.createElement("div");
+    progressEl.className = "clcr-progress";
+    progressEl.hidden = true;
+    const pMeta = doc.createElement("div");
+    pMeta.className = "clcr-progress__meta";
+    const pLabel = doc.createElement("span");
+    pLabel.textContent = "Wymagane dane";
+    progressValue = doc.createElement("strong");
+    progressValue.className = "clcr-progress__value";
+    progressValue.textContent = "0/0";
+    pMeta.append(pLabel, progressValue);
+    const pTrack = doc.createElement("div");
+    pTrack.className = "clcr-progress__track";
+    progressFill = doc.createElement("span");
+    progressFill.className = "clcr-progress__fill";
+    pTrack.appendChild(progressFill);
+    progressEl.append(pMeta, pTrack);
+    rail.appendChild(progressEl);
+
+    head = doc.createElement("div");
+    head.className = "clcr-rail-head";
+    head.id = "clcrRailHead";
+    head.hidden = true;
+    rail.appendChild(head);
+
+    // Skrót interpretacji (#clcrReadiness — „Stan obliczenia") przenosimy z lewej
+    // kolumny do panelu Wynik, pod liczbę. Model aktualizuje go przez referencję.
+    const readinessEl = el("clcrReadiness");
+    if (readinessEl) rail.appendChild(readinessEl);
+
+    // „Zobacz pełny opis wyniku ↓" — przewija do sekcji „Wynik i raport".
+    fullReportBtn = doc.createElement("button");
+    fullReportBtn.type = "button";
+    fullReportBtn.className = "clcr-fullreport-button";
+    fullReportBtn.textContent = "Zobacz pełny opis wyniku ↓";
+    fullReportBtn.hidden = true;
+    fullReportBtn.addEventListener("click", scrollToReport);
+    rail.appendChild(fullReportBtn);
+
+    ws.appendChild(rail);
+
+    buildReport(ws);
+    built = true;
+
+    adoptCards();
+    scheduleRefresh();
+  }
+
+  // Sekcja „Wynik i raport" — pełny opis wyniku POD układem (pełna szerokość).
+  // Przenosimy istniejące węzły wyników silnika + przyciski raportów/AI w jedno
+  // miejsce (nie usuwamy ich — zostają obserwowane przez zapis/historię).
+  function buildReport(ws) {
+    reportSection = doc.createElement("section");
+    reportSection.id = "clcrResultReport";
+    reportSection.className = "clcr-result-report";
+    reportHead = doc.createElement("div");
+    reportHead.className = "clcr-result-report__head";
+    reportHead.hidden = true;
+    const kicker = doc.createElement("span");
+    kicker.className = "clcr-step-kicker";
+    kicker.textContent = "Wynik i raport";
+    reportTitle = doc.createElement("h2");
+    reportTitle.className = "clcr-result-report__title";
+    reportTitle.textContent = "Pełny opis wyniku";
+    reportHead.append(kicker, reportTitle);
+    reportSection.appendChild(reportHead);
+
+    const extra = doc.createElement("div");
+    extra.className = "clcr-result-extra";
+    [
+      "ktvValidation",
+      "ktvResult",
+      "ektvResult",
+      "urrResult",
+      "ktvInterpretation",
+      "results",
+      "elecCard",
+      "stoneCard",
+    ].forEach((id) => {
+      const box = el(id);
+      if (box) extra.appendChild(box);
+    });
+    reportSection.appendChild(extra);
+
+    reportActions = doc.createElement("div");
+    reportActions.className = "clcr-result-report__actions";
+    reportActions.hidden = true;
+    ["downloadPDF", "downloadDOCX", "askAI"].forEach((id) => {
+      const btn = el(id);
+      if (btn) reportActions.appendChild(btn);
+    });
+    reportSection.appendChild(reportActions);
+    const aiContainer = el("aiContainer");
+    if (aiContainer) reportSection.appendChild(aiContainer);
+
+    ws.insertAdjacentElement("afterend", reportSection);
+  }
+
+  // Przenosimy karty Zapis/Historia (wstrzyknięte przez ClcrVisitSave) do railu.
+  function adoptCards() {
+    if (!rail) return;
+    ["clcrVisitSaveCard", "clcrHistoryCard"].forEach((id) => {
+      const card = el(id);
+      if (card && card.parentNode !== rail) rail.appendChild(card);
+    });
+  }
+
+  function scrollToReport() {
+    if (!reportSection || reportSection.hidden) return;
+    try {
+      reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      reportSection.scrollIntoView();
+    }
+  }
+
+  // Pasek „Wymagane dane X/Y" — liczony z pól wymaganych aktywnej formuły
+  // (state.requiredFieldIds w modelu). Bez zmian w matematyce.
+  function renderProgress() {
+    if (!progressEl) return;
+    let ids = null;
+    try {
+      const wf = global.ClcrUiWorkflow;
+      if (wf && wf.state && wf.state.requiredFieldIds) ids = wf.state.requiredFieldIds;
+    } catch (e) {
+      ids = null;
+    }
+    // Pomijamy selektory jednostek (mają domyślną wartość — to nie „dane do wpisania").
+    const list = (ids ? Array.from(ids) : []).filter((fid) => !/unit$/i.test(fid));
+    const total = list.length;
+    if (!total) {
+      progressEl.hidden = true;
+      return;
+    }
+    let filled = 0;
+    list.forEach((fid) => {
+      const c = el(fid);
+      if (c && typeof c.value === "string" && c.value.trim() !== "") filled += 1;
+    });
+    progressEl.hidden = false;
+    if (progressValue) progressValue.textContent = filled + "/" + total;
+    if (progressFill) {
+      progressFill.style.width = Math.round((filled / total) * 100) + "%";
+    }
+  }
+
+  // Wynik do nagłówka bierzemy z WYŚWIETLANEGO tekstu tagowanego węzła (jak widzi
+  // go lekarz w wynikach szczegółowych — z zaokrągleniem silnika), a nie z surowej
+  // wartości data-clcr-value (ta bywa pełnoprecyzyjna, np. 79,77 vs wyświetlane 80).
+  function parseDisplay(node) {
+    const txt = (node.textContent || "").replace(/\s+/g, " ").trim();
+    if (!txt) return null;
+    const ci = txt.indexOf(":");
+    let label = "";
+    let rhs = txt;
+    if (ci > 0 && ci < txt.length - 1) {
+      label = txt.slice(0, ci).trim();
+      rhs = txt.slice(ci + 1).trim();
+    }
+    // liczba wiodąca (z opcjonalnym < > ≤ ≥) + reszta = jednostka
+    const m = rhs.match(/^([<>≤≥]?\s*-?\d[\d.,]*)(.*)$/);
+    if (!m) return { label: label, value: rhs, unit: "" };
+    return { label: label, value: m[1].trim(), unit: (m[2] || "").trim() };
+  }
+
+  function renderHead() {
+    if (!head) return;
+    const id = activeFormulaId();
+    let node = null;
+    if (id) {
+      const nodes = doc.querySelectorAll("[data-clcr-series][data-clcr-value]");
+      for (let i = 0; i < nodes.length; i += 1) {
+        const n = nodes[i];
+        if (n.getAttribute("data-clcr-series") !== id) continue;
+        if ((n.textContent || "").trim() === "") continue;
+        node = n;
+        break;
+      }
+    }
+    if (!node) {
+      head.hidden = true;
+      head.innerHTML = "";
+      return;
+    }
+    const parsed = parseDisplay(node);
+    let label = parsed && parsed.label ? parsed.label : "";
+    if (!label) {
+      const param = paramFor(id);
+      if (param && param.label) label = param.label;
+    }
+    let value = parsed ? parsed.value : "";
+    let unit = parsed ? parsed.unit : "";
+    if (!value) {
+      // ostatnia deska ratunku: surowa wartość
+      const raw = node.getAttribute("data-clcr-value");
+      const num = raw != null && raw !== "" ? Number(raw) : NaN;
+      if (!isFinite(num)) {
+        head.hidden = true;
+        head.innerHTML = "";
+        return;
+      }
+      value = formatValue(num);
+      const param = paramFor(id);
+      unit = param && param.unit ? param.unit : "";
+    }
+    head.hidden = false;
+    head.innerHTML =
+      '<span class="clcr-rail-kick">' + escapeHtml(stateKicker()) + "</span>" +
+      (label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "") +
+      '<div class="clcr-rnum">' +
+      escapeHtml(value) +
+      (unit ? "<small>" + escapeHtml(unit) + "</small>" : "") +
+      "</div>";
+  }
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function refresh() {
+    adoptCards();
+    renderHead();
+    // Nagłówek „Wynik i raport" + rząd akcji (PDF/DOCX/AI) pokazujemy dopiero,
+    // gdy jest policzony wynik (head widoczny). Węzły wyników silnika w .clcr-result-extra
+    // pozostają w przepływie i zarządzają własną widocznością (nie chowamy ich —
+    // zapis/historia je obserwują).
+    renderProgress();
+    const hasResult = !!(head && !head.hidden);
+    if (reportHead) reportHead.hidden = !hasResult;
+    if (reportActions) reportActions.hidden = !hasResult;
+    if (fullReportBtn) fullReportBtn.hidden = !hasResult;
+    // Dynamiczny tytuł sekcji: „<nazwa formuły> — pełny opis wyniku".
+    if (reportTitle) {
+      let label = "";
+      if (hasResult && head) {
+        const fEl = head.querySelector(".clcr-rail-formula");
+        if (fEl && fEl.textContent) label = fEl.textContent.trim();
+      }
+      reportTitle.textContent = label
+        ? label + " — pełny opis wyniku"
+        : "Pełny opis wyniku";
+    }
+  }
+  function scheduleRefresh() {
+    if (refreshTimer) global.clearTimeout(refreshTimer);
+    refreshTimer = global.setTimeout(refresh, 60);
+  }
+
+  function observe() {
+    if (typeof global.MutationObserver === "function") {
+      const obs = new global.MutationObserver(scheduleRefresh);
+      RESULT_IDS.forEach((id) => {
+        const node = el(id);
+        if (node) obs.observe(node, { childList: true, subtree: true, attributes: true });
+      });
+    }
+    // Pasek „Wymagane dane X/Y" aktualizujemy też przy wpisywaniu pól.
+    const form = el("clcrForm");
+    if (form) {
+      form.addEventListener("input", scheduleRefresh);
+      form.addEventListener("change", scheduleRefresh);
+    }
+  }
+
+  function init() {
+    if (!workflowActive()) return;
+    build();
+    if (!built) {
+      // model mógł jeszcze nie przestawić #clcrForm — spróbuj ponownie
+      global.setTimeout(function () {
+        build();
+        if (built) observe();
+      }, 120);
+      return;
+    }
+    observe();
+  }
+
+  global.ClcrLayout = {
+    refresh: refresh,
+    renderHead: renderHead,
+    _rail: function () {
+      return rail;
+    },
+  };
+
+  if (typeof doc.addEventListener === "function") {
+    if (doc.readyState === "loading") {
+      doc.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
   }
 })(typeof window !== "undefined" ? window : globalThis);
