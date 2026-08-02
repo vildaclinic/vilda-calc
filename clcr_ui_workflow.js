@@ -3053,6 +3053,31 @@
     );
   }
 
+  // Wartość WYŚWIETLONA przez silnik (z zaokrągleniem) — żeby historia/karta
+  // pokazywały to samo co kalkulator (np. 80, a nie surowe 79,77). Z tekstu
+  // otagowanego boksu bierzemy token liczbowy NAJBLIŻSZY surowej wartości; gdy
+  // brak sensownego dopasowania (różnica > zaokrąglenie), zostawiamy surową.
+  function displayedNumber(el, rawNum) {
+    if (!el || !Number.isFinite(rawNum)) return rawNum;
+    const txt = el.textContent || "";
+    const tokens = txt.match(/-?\d+(?:[.,]\d+)?/g);
+    if (!tokens) return rawNum;
+    let best = null;
+    let bestDiff = Infinity;
+    for (let i = 0; i < tokens.length; i += 1) {
+      const n = Number(tokens[i].replace(",", "."));
+      if (!Number.isFinite(n)) continue;
+      const diff = Math.abs(n - rawNum);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = n;
+      }
+    }
+    if (best === null) return rawNum;
+    const tol = Math.max(1, Math.abs(rawNum) * 0.02);
+    return bestDiff <= tol ? best : rawNum;
+  }
+
   // Zbiera WIDOCZNE, otagowane wyniki (po jednym na serię), ograniczone do
   // formuł aktywnego modułu (chyba że nie wybrano formuły — wtedy wszystko).
   function collectActiveDatapoints(root, options) {
@@ -3070,6 +3095,8 @@
       const dp = mapDatapoint(series, el.getAttribute("data-clcr-value"));
       if (!dp) continue;
       if (target && !target.has(dp.sourceFormulaId)) continue;
+      // Historia/karta = to samo zaokrąglenie co kalkulator (wyświetlona wartość).
+      dp.valueNum = displayedNumber(el, dp.valueNum);
       dp.norm = readRangeText(el);
       dp.outOfRange = elementOutOfRange(el);
       seen.add(series);
@@ -4426,6 +4453,23 @@
     }
     return null;
   }
+  // Etykieta stanu nad liczbą: pełny wynik vs sam wynik liczbowy (interpretacja
+  // ograniczona). CSS robi wersaliki („WYNIK LICZBOWY GOTOWY").
+  function stateKicker() {
+    try {
+      const wf = global.ClcrUiWorkflow;
+      const rd =
+        wf && typeof wf.getFormulaReadiness === "function"
+          ? wf.getFormulaReadiness()
+          : null;
+      if (rd && rd.valueReady) {
+        return rd.interpretationReady ? "Wynik gotowy" : "Wynik liczbowy gotowy";
+      }
+    } catch (e) {
+      /* fallback */
+    }
+    return "Wynik";
+  }
 
   function build() {
     if (built) return;
@@ -4468,6 +4512,11 @@
     head.id = "clcrRailHead";
     head.hidden = true;
     rail.appendChild(head);
+
+    // Skrót interpretacji (#clcrReadiness — „Stan obliczenia") przenosimy z lewej
+    // kolumny do panelu Wynik, pod liczbę. Model aktualizuje go przez referencję.
+    const readinessEl = el("clcrReadiness");
+    if (readinessEl) rail.appendChild(readinessEl);
 
     // „Zobacz pełny opis wyniku ↓" — przewija do sekcji „Wynik i raport".
     fullReportBtn = doc.createElement("button");
@@ -4646,7 +4695,7 @@
     }
     head.hidden = false;
     head.innerHTML =
-      '<span class="clcr-rail-kick">Wynik</span>' +
+      '<span class="clcr-rail-kick">' + escapeHtml(stateKicker()) + "</span>" +
       (label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "") +
       '<div class="clcr-rnum">' +
       escapeHtml(value) +
