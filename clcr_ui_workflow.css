@@ -1446,3 +1446,56 @@ html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
 }
 .clcr-weight-note.fresh { color: #147a64; }
 .clcr-weight-note[hidden] { display: none; }
+
+/* ——— Układ B (U1): dwie kolumny + przyklejony panel „Wynik" ———
+   Warstwa PREZENTACJI: #clcrForm (wejścia) do lewej kolumny, prawy rail
+   przyklejony. Wyniki szczegółowe zostają pełną szerokością POD workspace.
+   Relayout tylko na dużych ekranach — mobile bez zmian (chroni testy 320px). */
+.clcr-workspace { min-width: 0; }
+/* #clcrForm ma klasę .flex (row-wrap) → w kolumnie workspace stackujemy pionowo,
+   żeby karta pacjenta i parametry miały jednakową, pełną szerokość kolumny. */
+.clcr-workspace > #clcrForm {
+  display: flex; flex-direction: column; align-items: stretch; gap: 14px; flex-wrap: nowrap;
+}
+.clcr-workspace > #clcrForm > .param-row { width: 100%; }
+/* Nadpisujemy dawny patch „equalize 50%" (max-width: calc(50% - 8px)) — w nowym
+   układzie karta pacjenta ma wypełniać całą lewą kolumnę. */
+html[data-clcr-workflow-ui="1"] .clcr-workspace #clcrForm > .patient-card {
+  max-width: none; width: 100%; flex: 1 1 auto;
+}
+.clcr-result-rail { min-width: 0; }
+.clcr-result-rail > .card { margin-bottom: 16px; }
+.clcr-rail-head {
+  background: #fff; border: 2px solid #00838d; border-radius: 16px;
+  padding: 16px 18px; box-shadow: 0 10px 28px rgba(18,72,77,.06); margin-bottom: 16px;
+}
+.clcr-rail-head[hidden] { display: none; }
+.clcr-rail-kick {
+  display: block; font-size: 11px; font-weight: 800; letter-spacing: .07em;
+  text-transform: uppercase; color: #00838d; margin-bottom: 4px;
+}
+.clcr-rail-formula { font-size: 12.5px; font-weight: 800; color: #006b73; }
+.clcr-rnum {
+  font: 600 2.5rem/1 Inter, sans-serif; letter-spacing: -.02em; color: #00838d;
+  display: inline-flex; align-items: flex-end; margin: 6px 0 2px;
+}
+.clcr-rnum small { font-size: .34em; margin-left: .35em; color: #444; font-weight: 600; padding-bottom: .25em; }
+.clcr-rail-empty { color: #557074; font-size: 13.5px; }
+
+@media (min-width: 980px) {
+  .clcr-workspace {
+    display: grid; grid-template-columns: minmax(0, 1fr) 348px; gap: 20px; align-items: start;
+  }
+  .clcr-workspace > #clcrForm { min-width: 0; }
+  .clcr-result-rail { position: sticky; top: 74px; align-self: start; }
+}
+
+/* U1: rozluźnienie bloku tożsamości — w węższej lewej kolumnie długie etykiety
+   (Imię i nazwisko, Wiek miesiące…) nie mieszczą się w 2 kolumnach → 1 kolumna.
+   Parametry (surowica/DZM/próbka) zostają 2-kolumnowe (krótkie etykiety). */
+html[data-clcr-workflow-ui="1"] #clcrForm #patientSet {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-clcr-workflow-ui="1"] #clcrForm #patientSet .clcr-field {
+  min-height: 0;
+}

@@ -4346,3 +4346,235 @@
     }
   }
 })(typeof window !== "undefined" ? window : globalThis);
+
+/* ————————————————————————————————————————————————————————————————————————
+ * Układ B — U1: dwie kolumny + przyklejony panel „Wynik" (Wariant B Macieja).
+ *
+ * Warstwa PREZENTACJI/UKŁADU — ZERO zmian w matematyce silnika. Moduł:
+ *   • owija #clcrForm (wejścia) w lewą kolumnę „workspace", a po prawej tworzy
+ *     przyklejony (sticky, desktop) rail „Wynik";
+ *   • rail pokazuje NAGŁÓWEK wyniku (duża liczba) czytany z tagów silnika
+ *     data-clcr-series/value (dodanych w Fazie 1 — bez liczenia tutaj);
+ *   • przenosi istniejące karty „Zapisz wynik do karty" i „Historia" (Fazy 1–2)
+ *     do railu;
+ *   • wyniki szczegółowe (#results/#elecCard/#stoneCard) zostają PEŁNĄ
+ *     szerokością pod workspace (U2 zamieni je na tabelę data-card).
+ * Aktywne tylko gdy workflow UI aktywne (data-clcr-workflow-ui="1"); mobile bez
+ * relayoutu (grid dopiero ≥980px) — chroni istniejące testy 320px.
+ * ———————————————————————————————————————————————————————————————————————— */
+(function (global) {
+  "use strict";
+  const doc = global.document;
+  if (!doc) return;
+
+  const RESULT_IDS = [
+    "results",
+    "clcrInfo",
+    "elecInfo",
+    "stoneInfo",
+    "ktvResult",
+    "ektvResult",
+    "urrResult",
+  ];
+  let rail = null;
+  let head = null;
+  let built = false;
+  let refreshTimer = null;
+
+  function workflowActive() {
+    return (
+      doc.documentElement &&
+      doc.documentElement.dataset &&
+      doc.documentElement.dataset.clcrWorkflowUi === "1"
+    );
+  }
+  function el(id) {
+    return doc.getElementById(id);
+  }
+  function formatValue(n) {
+    try {
+      const vs = global.ClcrVisitSave;
+      if (vs && typeof vs.formatValueString === "function") return vs.formatValueString(n);
+    } catch (e) {
+      /* fallback */
+    }
+    if (!isFinite(n)) return "";
+    return (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)))).replace(".", ",");
+  }
+  function activeFormulaId() {
+    try {
+      const wf = global.ClcrUiWorkflow;
+      return (wf && wf.state && wf.state.activeFormulaId) || "";
+    } catch (e) {
+      return "";
+    }
+  }
+  function paramFor(id) {
+    try {
+      const wf = global.ClcrUiWorkflow;
+      if (wf && wf.model && typeof wf.model.getParam === "function") return wf.model.getParam(id);
+    } catch (e) {
+      /* brak */
+    }
+    return null;
+  }
+
+  function build() {
+    if (built) return;
+    const container = doc.querySelector(".container");
+    const form = el("clcrForm");
+    if (!container || !form) return;
+    if (form.parentNode !== container) return; // model jeszcze nie ustawił układu
+    const ws = doc.createElement("div");
+    ws.id = "clcrWorkspace";
+    ws.className = "clcr-workspace";
+    container.insertBefore(ws, form);
+    ws.appendChild(form); // lewa kolumna = wejścia
+
+    rail = doc.createElement("aside");
+    rail.id = "clcrResultRail";
+    rail.className = "clcr-result-rail";
+    head = doc.createElement("div");
+    head.className = "clcr-rail-head";
+    head.id = "clcrRailHead";
+    head.hidden = true;
+    rail.appendChild(head);
+    ws.appendChild(rail);
+    built = true;
+
+    adoptCards();
+    scheduleRefresh();
+  }
+
+  // Przenosimy karty Zapis/Historia (wstrzyknięte przez ClcrVisitSave) do railu.
+  function adoptCards() {
+    if (!rail) return;
+    ["clcrVisitSaveCard", "clcrHistoryCard"].forEach((id) => {
+      const card = el(id);
+      if (card && card.parentNode !== rail) rail.appendChild(card);
+    });
+  }
+
+  // Wynik do nagłówka bierzemy z WYŚWIETLANEGO tekstu tagowanego węzła (jak widzi
+  // go lekarz w wynikach szczegółowych — z zaokrągleniem silnika), a nie z surowej
+  // wartości data-clcr-value (ta bywa pełnoprecyzyjna, np. 79,77 vs wyświetlane 80).
+  function parseDisplay(node) {
+    const txt = (node.textContent || "").replace(/\s+/g, " ").trim();
+    if (!txt) return null;
+    const ci = txt.indexOf(":");
+    let label = "";
+    let rhs = txt;
+    if (ci > 0 && ci < txt.length - 1) {
+      label = txt.slice(0, ci).trim();
+      rhs = txt.slice(ci + 1).trim();
+    }
+    // liczba wiodąca (z opcjonalnym < > ≤ ≥) + reszta = jednostka
+    const m = rhs.match(/^([<>≤≥]?\s*-?\d[\d.,]*)(.*)$/);
+    if (!m) return { label: label, value: rhs, unit: "" };
+    return { label: label, value: m[1].trim(), unit: (m[2] || "").trim() };
+  }
+
+  function renderHead() {
+    if (!head) return;
+    const id = activeFormulaId();
+    let node = null;
+    if (id) {
+      const nodes = doc.querySelectorAll("[data-clcr-series][data-clcr-value]");
+      for (let i = 0; i < nodes.length; i += 1) {
+        const n = nodes[i];
+        if (n.getAttribute("data-clcr-series") !== id) continue;
+        if ((n.textContent || "").trim() === "") continue;
+        node = n;
+        break;
+      }
+    }
+    if (!node) {
+      head.hidden = true;
+      head.innerHTML = "";
+      return;
+    }
+    const parsed = parseDisplay(node);
+    let label = parsed && parsed.label ? parsed.label : "";
+    if (!label) {
+      const param = paramFor(id);
+      if (param && param.label) label = param.label;
+    }
+    let value = parsed ? parsed.value : "";
+    let unit = parsed ? parsed.unit : "";
+    if (!value) {
+      // ostatnia deska ratunku: surowa wartość
+      const raw = node.getAttribute("data-clcr-value");
+      const num = raw != null && raw !== "" ? Number(raw) : NaN;
+      if (!isFinite(num)) {
+        head.hidden = true;
+        head.innerHTML = "";
+        return;
+      }
+      value = formatValue(num);
+      const param = paramFor(id);
+      unit = param && param.unit ? param.unit : "";
+    }
+    head.hidden = false;
+    head.innerHTML =
+      '<span class="clcr-rail-kick">Wynik</span>' +
+      (label ? '<div class="clcr-rail-formula">' + escapeHtml(label) + "</div>" : "") +
+      '<div class="clcr-rnum">' +
+      escapeHtml(value) +
+      (unit ? "<small>" + escapeHtml(unit) + "</small>" : "") +
+      "</div>";
+  }
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function refresh() {
+    adoptCards();
+    renderHead();
+  }
+  function scheduleRefresh() {
+    if (refreshTimer) global.clearTimeout(refreshTimer);
+    refreshTimer = global.setTimeout(refresh, 60);
+  }
+
+  function observe() {
+    if (typeof global.MutationObserver !== "function") return;
+    const obs = new global.MutationObserver(scheduleRefresh);
+    RESULT_IDS.forEach((id) => {
+      const node = el(id);
+      if (node) obs.observe(node, { childList: true, subtree: true, attributes: true });
+    });
+  }
+
+  function init() {
+    if (!workflowActive()) return;
+    build();
+    if (!built) {
+      // model mógł jeszcze nie przestawić #clcrForm — spróbuj ponownie
+      global.setTimeout(function () {
+        build();
+        if (built) observe();
+      }, 120);
+      return;
+    }
+    observe();
+  }
+
+  global.ClcrLayout = {
+    refresh: refresh,
+    renderHead: renderHead,
+    _rail: function () {
+      return rail;
+    },
+  };
+
+  if (typeof doc.addEventListener === "function") {
+    if (doc.readyState === "loading") {
+      doc.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  }
+})(typeof window !== "undefined" ? window : globalThis);
