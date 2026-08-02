@@ -63,4 +63,4 @@ Desktop.ini
 ~$*
 
 # Makiety odbioru faz (dostarczane przez chat, nie do repo)
-makieta_klirens_faza*.html
+makieta_klirens_*.html
