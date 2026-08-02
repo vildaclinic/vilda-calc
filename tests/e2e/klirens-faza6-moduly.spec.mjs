@@ -57,7 +57,9 @@ async function fillAndCompute(page, formulaId, vals, yesBooleans) {
     async ({ id, vals, yes }) => {
       const W = window.ClcrUiWorkflow;
       W.selectFormula(id);
-      await new Promise((r) => setTimeout(r, 60));
+      await new Promise((r) => {
+        setTimeout(r, 60);
+      });
       const set = (fid, v) => {
         const e = document.getElementById(fid);
         if (!e) throw new Error('brak pola: ' + fid);
@@ -84,7 +86,9 @@ async function fillAndCompute(page, formulaId, vals, yesBooleans) {
         }
       }
       window.clcrUpdate();
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((r) => {
+        setTimeout(r, 120);
+      });
     },
     { id: formulaId, vals, yes: yesBooleans },
   );
