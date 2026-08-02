@@ -3060,8 +3060,9 @@
 
   function formatValueString(n) {
     if (!Number.isFinite(n)) return "";
-    if (Number.isInteger(n)) return String(n);
-    return String(Number(n.toFixed(3)));
+    const rounded = Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
+    // Polski separator dziesiętny (spójnie z kalkulatorem: „1,73 m²").
+    return rounded.replace(".", ",");
   }
 
   function pad2(v) {

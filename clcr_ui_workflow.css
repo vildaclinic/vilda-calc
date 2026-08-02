@@ -1252,13 +1252,13 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
   min-height: 2.6rem;
   border: 0;
   border-radius: 8px;
-  background: #0d7d8c;
+  background: #00838d;
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
 }
-.clcr-visit-save .cvs-btn:hover:not([disabled]) { background: #0a5c68; }
+.clcr-visit-save .cvs-btn:hover:not([disabled]) { background: #006b73; }
 .clcr-visit-save .cvs-btn[disabled] {
   background: #cbd5e1;
   color: #64748b;
@@ -1300,8 +1300,8 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 }
 .clcr-visit-history .cvs-hist-label { font-weight: 700; font-size: 0.95rem; }
 .clcr-visit-history .cvs-spark { flex: none; }
-.clcr-visit-history .cvs-spark path { stroke: #0d7d8c; }
-.clcr-visit-history .cvs-spark circle { fill: #0d7d8c; }
+.clcr-visit-history .cvs-spark path { stroke: #00838d; }
+.clcr-visit-history .cvs-spark circle { fill: #00838d; }
 /* Trend KIERUNKOWY, NEUTRALNY — jeden kolor dla ↑/↓/→ (kierunek niesie strzałka,
    nie kolor: dla eGFR wzrost korzystny, dla wydalania wapnia odwrotnie). */
 .clcr-visit-history .cvs-trend,

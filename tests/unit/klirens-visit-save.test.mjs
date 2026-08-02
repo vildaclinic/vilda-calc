@@ -129,7 +129,8 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     expect(vs.normalizeDateISO(null)).toBeNull();
 
     expect(vs.formatValueString(100)).toBe('100');
-    expect(vs.formatValueString(91.69148)).toBe('91.691');
+    expect(vs.formatValueString(91.69148)).toBe('91,69'); // 2 miejsca, przecinek
+    expect(vs.formatValueString(3.2)).toBe('3,2');
     expect(vs.formatValueString(NaN)).toBe('');
 
     expect(vs.seriesWord(1)).toBe('seria');
