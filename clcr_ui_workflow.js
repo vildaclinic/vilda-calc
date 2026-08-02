@@ -3790,18 +3790,21 @@
     if (!patientCardUi) return;
     if (!vaultUnlocked() || !resolveCurrentPatientId()) return;
     let name = state.patientName || readPatientName() || "";
-    if (!name) {
-      try {
-        const v = vault();
-        if (v && typeof v.getPatient === "function") {
-          const p = await v.getPatient(resolveCurrentPatientId());
-          if (p && typeof p.name === "string" && p.name.trim()) {
-            name = p.name.trim();
+    let demo = "";
+    try {
+      const v = vault();
+      if (v && typeof v.getPatient === "function") {
+        const p = await v.getPatient(resolveCurrentPatientId());
+        const header = p && p.header ? p.header : null;
+        if (header) {
+          if (!name && typeof header.name === "string" && header.name.trim()) {
+            name = header.name.trim();
           }
+          demo = demographicsText(header);
         }
-      } catch (e) {
-        /* nazwa pozostanie domyślna */
       }
+    } catch (e) {
+      /* nazwa/demografia pozostaną domyślne */
     }
     patientCardUi.name.textContent = name || "Pacjent";
     patientCardUi.sub.textContent = "";
@@ -3814,7 +3817,7 @@
     } catch (e) {
       data = { visits: [], parameters: [] };
     }
-    patientCardUi.sub.textContent =
+    const counts =
       data.parameters.length +
       " " +
       paramWord(data.parameters.length) +
@@ -3822,7 +3825,31 @@
       data.visits.length +
       " " +
       visitWord(data.visits.length);
+    patientCardUi.sub.textContent = [demo, counts].filter(Boolean).join(" · ");
     renderFlowsheet(data);
+  }
+
+  function yearWord(n) {
+    const y = Math.round(n);
+    const a = y % 100;
+    const l = y % 10;
+    if (y === 1) return "rok";
+    if (l >= 2 && l <= 4 && (a < 12 || a > 14)) return "lata";
+    return "lat";
+  }
+
+  function demographicsText(header) {
+    const parts = [];
+    if (typeof header.age === "number" && isFinite(header.age) && header.age > 0) {
+      parts.push(header.age + " " + yearWord(header.age));
+    }
+    if (typeof header.sex === "string") {
+      const s = header.sex.toLowerCase();
+      if (header.sex === "M" || s === "male" || s === "m") parts.push("mężczyzna");
+      else if (header.sex === "F" || s === "female" || s === "f" || s === "k")
+        parts.push("kobieta");
+    }
+    return parts.join(" · ");
   }
 
   function observeResults() {
