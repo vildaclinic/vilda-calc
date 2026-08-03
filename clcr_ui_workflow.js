@@ -862,6 +862,7 @@
     mobileModulesExpanded: false,
     dzmQualityGroup: null,
     dzmQualityBulkUpdate: false,
+    openHelp: null,
   };
 
   function formulaById(formulaId) {
@@ -889,7 +890,45 @@
       .trim() || control.id;
   }
 
+  // Dymek pomocy pozycjonowany względem OKNA (position:fixed): stała
+  // szerokość niezależna od szerokości pola, klamrowanie do krawędzi,
+  // odwracanie nad przycisk przy braku miejsca u dołu.
+  function positionHelpTooltip(button, panel) {
+    const rect = button.getBoundingClientRect();
+    const width = Math.min(320, global.innerWidth - 24);
+    const left = Math.min(
+      Math.max(12, rect.right - width),
+      global.innerWidth - width - 12,
+    );
+    panel.style.width = `${width}px`;
+    panel.classList.remove("clcr-field__help--above");
+    const height = panel.getBoundingClientRect().height;
+    let top = rect.bottom + 10;
+    if (top + height > global.innerHeight - 10 && rect.top - 10 - height > 10) {
+      top = rect.top - 10 - height;
+      panel.classList.add("clcr-field__help--above");
+    }
+    // „Szkło" powłoki (backdrop-filter na fieldset) czyni go blokiem
+    // zawierającym dla position:fixed — wtedy left/top liczą się względem
+    // fieldsetu, nie okna. Przeliczamy współrzędne OKNA na układ tego bloku
+    // (offsetParent = blok zawierający; null = okno).
+    const containingBlock = panel.offsetParent;
+    const cbRect = containingBlock
+      ? containingBlock.getBoundingClientRect()
+      : { left: 0, top: 0 };
+    panel.style.left = `${left - cbRect.left}px`;
+    panel.style.top = `${top - cbRect.top}px`;
+    const arrowX = Math.max(
+      14,
+      Math.min(width - 24, rect.left + rect.width / 2 - left - 5),
+    );
+    panel.style.setProperty("--clcr-arrow-x", `${arrowX}px`);
+  }
+
   function closeAllHelp(exceptPanel) {
+    if (state.openHelp && state.openHelp.panel !== exceptPanel) {
+      state.openHelp = null;
+    }
     state.fieldViews.forEach((view) => {
       if (!view.helpPanel || view.helpPanel === exceptPanel) return;
       view.helpPanel.hidden = true;
@@ -946,6 +985,12 @@
       closeAllHelp(willOpen ? helpPanel : null);
       helpPanel.hidden = !willOpen;
       infoButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) {
+        positionHelpTooltip(infoButton, helpPanel);
+        state.openHelp = { button: infoButton, panel: helpPanel };
+      } else if (state.openHelp && state.openHelp.panel === helpPanel) {
+        state.openHelp = null;
+      }
     });
     heading.append(name, badge, infoButton);
     label.insertBefore(heading, preservedControl);
@@ -2863,6 +2908,46 @@
     documentRef.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeAllHelp(null);
     });
+    // Dymki pomocy są nakładką (position:fixed, pointer-events:none) — muszą się
+    // domykać kliknięciem poza dymkiem. Faza capture: działa nawet gdy element
+    // po drodze zatrzymuje propagację kliknięcia.
+    documentRef.addEventListener(
+      "click",
+      (event) => {
+        const target = event.target;
+        if (
+          target &&
+          typeof target.closest === "function" &&
+          target.closest(".clcr-info-button")
+        ) {
+          return;
+        }
+        closeAllHelp(null);
+      },
+      true,
+    );
+    // Dymek podąża za przyciskiem przy przewijaniu strony/panelu; chowamy go
+    // dopiero, gdy przycisk wyjedzie poza ekran.
+    let helpScrollFrame = 0;
+    const trackOpenHelp = () => {
+      if (helpScrollFrame) return;
+      helpScrollFrame = global.requestAnimationFrame(() => {
+        helpScrollFrame = 0;
+        const open = state.openHelp;
+        if (!open || open.panel.hidden) return;
+        const rect = open.button.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > global.innerHeight) {
+          closeAllHelp(null);
+          return;
+        }
+        positionHelpTooltip(open.button, open.panel);
+      });
+    };
+    global.addEventListener("scroll", trackOpenHelp, {
+      capture: true,
+      passive: true,
+    });
+    global.addEventListener("resize", trackOpenHelp);
     const clear = documentRef.getElementById("clearBtn");
     if (clear) {
       clear.addEventListener("click", () => {
