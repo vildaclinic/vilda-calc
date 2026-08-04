@@ -20,6 +20,9 @@
  * KONTRAKT (jak inne silniki: calculateRWTPrediction), wejście:
  *   { sex:'M'|'F', chronologicalAgeYears, chronologicalAgeMonths, currentHeightCm,
  *     currentWeightKg, motherHeightCm, fatherHeightCm }
+ *   Wiek: chronologicalAgeMonths = ŁĄCZNE miesiące (ma pierwszeństwo); chronologicalAgeYears =
+ *   fallback, gdy miesięcy brak. NIE sumuje się lat i miesięcy — to redundantne jednostki tego
+ *   samego wieku (spójnie z BP/RWT). {ageMonths:120, ageYears:10} → 10 lat.
  * Wyjście: { available:true, predictedAdultHeightCm, method:'khamis-roche', ageYears, sex, midparentCm }
  *          lub { available:false, reason:'missing-sex'|'missing-chronological-age'|'missing-input'|'out-of-range' }
  *   (kształt zgodny z BP/RWT: available + predictedAdultHeightCm / available:false + reason)
@@ -111,18 +114,21 @@
     return null;
   }
 
-  // Wiek w latach (dziesiętnie). Konwencja jak RWT: całe lata + reszta miesięcy (0–11).
+  // Wiek w latach (dziesiętnie). KONWENCJA KODU (BP/RWT w vilda_advanced_growth.js):
+  //   chronologicalAgeMonths to ŁĄCZNE miesiące i ma PIERWSZEŃSTWO; chronologicalAgeYears jest
+  //   fallbackiem użytym dopiero, gdy miesięcy brak. To redundantne jednostki TEGO SAMEGO wieku —
+  //   NIE sumujemy lat i miesięcy. Moduł walidacji podaje {ageMonths:120, ageYears:10} = 10 lat
+  //   (nie 20). Zaokrąglenie do pełnych miesięcy — spójnie z BP/RWT (Math.round(miesiące)).
   function resolveAgeYears(input) {
-    var y = num(input.chronologicalAgeYears);
-    var m = num(input.chronologicalAgeMonths);
-    // Całe lata + reszta miesięcy (konwencja RWT) TYLKO gdy lata są całkowite; lata dziesiętne
-    // (np. 10,25) są autorytatywne i nie dubluje się ich miesiącami.
-    if (y !== null && m !== null) return Number.isInteger(y) ? y + m / 12 : y;
-    if (y !== null) return y; // gotowe lata dziesiętne
-    if (m !== null) return m / 12; // podane tylko miesiące (traktowane jako łączne)
-    var am = num(input.ageMonths);
-    if (am !== null) return am / 12;
-    return null;
+    var mo = num(input.chronologicalAgeMonths);
+    if (mo === null) mo = num(input.ageMonths);
+    if (mo === null) {
+      var yr = num(input.chronologicalAgeYears);
+      if (yr === null) yr = num(input.ageYears);
+      if (yr === null) return null;
+      mo = yr * 12;
+    }
+    return Math.round(mo) / 12;
   }
 
   // Interpolacja liniowa współczynników po wieku (mirror rwtInterpolateAgeWeights).

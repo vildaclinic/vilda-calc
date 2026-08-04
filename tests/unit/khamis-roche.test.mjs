@@ -3,6 +3,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // Silnik Khamisa-Roche (vilda_khamis_roche.js). Współczynniki z ERRATY 1995 (kolumna „masa” 10× vs 1994).
 // Wartości oczekiwane policzone NIEZALEŻNIE (osobny skrypt referencyjny), nie z tego samego kodu.
+//
+// KONWENCJA WIEKU (jak BP/RWT w vilda_advanced_growth.js): chronologicalAgeMonths = ŁĄCZNE miesiące
+// i ma pierwszeństwo; chronologicalAgeYears = fallback. NIE sumujemy lat i miesięcy. Dlatego fixture
+// `base()` podaje wiek dziesiętnie przez chronologicalAgeYears (bez chronologicalAgeMonths).
 
 const g = loadBrowserScript('vilda_khamis_roche.js', {});
 const KR = g.VildaKhamisRoche;
@@ -12,7 +16,6 @@ function base(overrides = {}) {
   return {
     sex: 'M',
     chronologicalAgeYears: 10,
-    chronologicalAgeMonths: 0,
     currentHeightCm: 138,
     currentWeightKg: 32,
     motherHeightCm: 163,
@@ -55,10 +58,10 @@ describe('Khamis-Roche — wartości referencyjne (niezależnie policzone)', () 
     ['chłopiec 10,0 l 138/32 163/178', base(), 177.1596],
     ['dziewczynka 12,0 l 150/42 165/179', base({ sex: 'F', chronologicalAgeYears: 12, currentHeightCm: 150, currentWeightKg: 42, motherHeightCm: 165, fatherHeightCm: 179 }), 165.3935],
     ['chłopiec 7,0 l (wiersz) 120/23 170/183', base({ chronologicalAgeYears: 7, currentHeightCm: 120, currentWeightKg: 23, motherHeightCm: 170, fatherHeightCm: 183 }), 178.5854],
-    ['dziewczynka 15,5 l (wiersz) 160/52 160/175', base({ sex: 'F', chronologicalAgeYears: 15, chronologicalAgeMonths: 6, currentHeightCm: 160, currentWeightKg: 52, motherHeightCm: 160, fatherHeightCm: 175 }), 161.4181],
+    ['dziewczynka 15,5 l (wiersz) 160/52 160/175', base({ sex: 'F', chronologicalAgeYears: 15.5, currentHeightCm: 160, currentWeightKg: 52, motherHeightCm: 160, fatherHeightCm: 175 }), 161.4181],
     ['chłopiec 10,25 l (interpolacja) 139/32 163/178', base({ chronologicalAgeYears: 10.25, currentHeightCm: 139 }), 177.1694],
     ['chłopiec 4,0 l (min) 100/16 170/183', base({ chronologicalAgeYears: 4, currentHeightCm: 100, currentWeightKg: 16, motherHeightCm: 170, fatherHeightCm: 183 }), 178.6989],
-    ['chłopiec 17,5 l (max) 175/62 170/183', base({ chronologicalAgeYears: 17, chronologicalAgeMonths: 6, currentHeightCm: 175, currentWeightKg: 62, motherHeightCm: 170, fatherHeightCm: 183 }), 174.0176],
+    ['chłopiec 17,5 l (max) 175/62 170/183', base({ chronologicalAgeYears: 17.5, currentHeightCm: 175, currentWeightKg: 62, motherHeightCm: 170, fatherHeightCm: 183 }), 174.0176],
   ];
   for (const [name, input, expected] of cases) {
     it(`${name} → ${expected} cm`, () => {
@@ -67,6 +70,15 @@ describe('Khamis-Roche — wartości referencyjne (niezależnie policzone)', () 
       expect(r.predictedAdultHeightCm).toBeCloseTo(expected, 2); // ±0,005 cm
     });
   }
+
+  it('wiek produkcyjny: {ageYears:10, ageMonths:120} → 10 l. (NIE 20), wynik jak dla 10,0 — regresja', () => {
+    // Moduł walidacji podaje jednocześnie chronologicalAgeMonths (łączne) i chronologicalAgeYears.
+    // Wcześniejszy błąd sumował je (10 + 120/12 = 20 → out-of-range). Ten test to blokuje.
+    const r = predict(base({ chronologicalAgeYears: 10, chronologicalAgeMonths: 120 }));
+    expect(r.available).toBe(true);
+    expect(r.ageYears).toBeCloseTo(10, 9);
+    expect(r.predictedAdultHeightCm).toBeCloseTo(177.1596, 2);
+  });
 
   it('interpolacja: wiersz exact → interpolated=false; między → interpolated=true', () => {
     expect(predict(base({ chronologicalAgeYears: 10 })).interpolated).toBe(false);
@@ -80,11 +92,13 @@ describe('Khamis-Roche — wartości referencyjne (niezależnie policzone)', () 
 
 describe('Khamis-Roche — zakres i braki danych', () => {
   it('poza zakresem 4,0–17,5 → out-of-range (bez ekstrapolacji)', () => {
-    expect(predict(base({ chronologicalAgeYears: 3, chronologicalAgeMonths: 11 }))).toEqual({ available: false, reason: 'out-of-range' });
-    expect(predict(base({ chronologicalAgeYears: 18, chronologicalAgeMonths: 0 }))).toEqual({ available: false, reason: 'out-of-range' });
+    // 47 mies. = 3,9166 r.ż. (tuż poniżej 4,0)
+    expect(predict(base({ chronologicalAgeYears: null, chronologicalAgeMonths: 47 }))).toEqual({ available: false, reason: 'out-of-range' });
+    // 216 mies. = 18,0 r.ż. (tuż powyżej 17,5)
+    expect(predict(base({ chronologicalAgeYears: null, chronologicalAgeMonths: 216 }))).toEqual({ available: false, reason: 'out-of-range' });
     // brzegi włącznie
-    expect(predict(base({ chronologicalAgeYears: 4, chronologicalAgeMonths: 0, currentHeightCm: 100, currentWeightKg: 16 })).available).toBe(true);
-    expect(predict(base({ chronologicalAgeYears: 17, chronologicalAgeMonths: 6, currentHeightCm: 170, currentWeightKg: 60 })).available).toBe(true);
+    expect(predict(base({ chronologicalAgeYears: 4, currentHeightCm: 100, currentWeightKg: 16 })).available).toBe(true);
+    expect(predict(base({ chronologicalAgeYears: 17.5, currentHeightCm: 170, currentWeightKg: 60 })).available).toBe(true);
   });
 
   it('braki wejścia → właściwe reason', () => {
@@ -113,11 +127,14 @@ describe('Khamis-Roche — normalizacja płci i wieku', () => {
     expect(KR._normalizeSex('?')).toBe(null);
   });
 
-  it('wiek: całe lata + reszta miesięcy vs lata dziesiętne vs miesiące łączne', () => {
-    expect(KR._resolveAgeYears({ chronologicalAgeYears: 10, chronologicalAgeMonths: 6 })).toBeCloseTo(10.5, 9);
-    expect(KR._resolveAgeYears({ chronologicalAgeYears: 10.5 })).toBeCloseTo(10.5, 9);
+  it('wiek: miesiące łączne mają pierwszeństwo, lata to fallback, NIE sumujemy', () => {
+    expect(KR._resolveAgeYears({ chronologicalAgeMonths: 120 })).toBeCloseTo(10, 9);
     expect(KR._resolveAgeYears({ chronologicalAgeMonths: 126 })).toBeCloseTo(10.5, 9);
+    expect(KR._resolveAgeYears({ chronologicalAgeYears: 10.5 })).toBeCloseTo(10.5, 9); // fallback, gdy brak miesięcy
     expect(KR._resolveAgeYears({ ageMonths: 126 })).toBeCloseTo(10.5, 9);
+    // KLUCZOWE: redundantne miesiące+lata tego samego wieku → miesiące wygrywają, bez sumowania
+    expect(KR._resolveAgeYears({ chronologicalAgeMonths: 120, chronologicalAgeYears: 10 })).toBeCloseTo(10, 9);
+    expect(KR._resolveAgeYears({ chronologicalAgeMonths: 123, chronologicalAgeYears: 99 })).toBeCloseTo(10.25, 9);
     expect(KR._resolveAgeYears({})).toBe(null);
   });
 });
