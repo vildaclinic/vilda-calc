@@ -91,6 +91,44 @@ Pełną walidację przed użyciem produkcyjnym nadal stanowią: recenzja nefrolo
 
 Dane Bayley–Pinneau oraz część modelu RWT wymagają jednoznacznego zapisu pochodzenia tabel/wykresu, metody transkrypcji lub interpolacji, zakresów oraz prawa wykorzystania. Test zgodności z obecną tablicą nie zastępuje weryfikacji materiału źródłowego.
 
+### GROWTH-PRED-KR — Khamis–Roche (prognoza wzrostu ostatecznego bez wieku kostnego), wdrożenie do testów 2026-08-04
+
+Status wpisu to **wdrożenie do testów**, nie walidacja kliniczna. Metoda Khamisa-Roche’a (KR) prognozuje wzrost ostateczny z płci, wieku metrykalnego, aktualnego wzrostu i masy oraz średniej wzrostu rodziców (midparent), **bez wieku kostnego**. Silnik `vilda_khamis_roche.js` udostępnia `window.calculateKhamisRochePrediction`; moduł walidacji prognoz (`vilda_growth_prediction_validation.js`) wpina KR jako piątą metodę obok Bayley–Pinneau, RWT, Reinehr/CDGP i celu MPH.
+
+#### Zakres i ograniczenia
+
+| Obszar | Wdrożona reguła | Najważniejsze ograniczenia |
+|---|---|---|
+| Populacja | Model opracowano na białych dzieciach amerykańskich bez chorób (Fels Longitudinal Study, 223 chłopców i 210 dziewcząt, płd.-zach. Ohio; dane co pół roku). | Wg autorów stosowalność ograniczona do białych dzieci bez stanów zmieniających potencjał wzrostu; przydatny dla dzieci nietypowych wzrostem lub dojrzałością jak na wiek, ale nie zwalidowany dla zaburzeń endokrynologicznych ani innych populacji. Wynik ma charakter poglądowy. |
+| Zmienne wejściowe | Płeć, wiek metrykalny, aktualny wzrost i masa, wzrost matki i ojca. Midparent = (matka + ojciec)/2, ta sama definicja dla obu płci. | BEZ wieku kostnego — to główna przewaga (liczy się, gdy RWT/Bayley–Pinneau nie mają wieku kostnego), ale też rezygnacja z predyktora dojrzałości. Braki wzrostu, masy lub wzrostu rodzica → brak wyniku (`missing-input`). |
+| Jednostki i konwersja | Tablice współczynników w **calach/funtach**. Silnik konwertuje wejście cm→cale (÷2,54) i kg→funty (÷0,45359237), liczy w calach, wynik przelicza na cm (×2,54). | Konwersja jednostek jest częścią wzoru; zmiana stałych konwersji jest zmianą kliniczną. Zaokrąglenie wyłącznie na prezentacji. |
+| Wiek | `chronologicalAgeMonths` = łączne miesiące, ma pierwszeństwo; `chronologicalAgeYears` = fallback, gdy miesięcy brak. Zaokrąglenie do pełnych miesięcy (spójnie z Bayley–Pinneau/RWT). Lat i miesięcy NIE sumuje się. | Redundantne `{ageMonths:120, ageYears:10}` oznacza 10 lat (nie 20). Regułę pilnują testy jednostkowe i integracyjny. |
+| Zakres wieku i interpolacja | 4,0–17,5 r.ż., tablice co 0,5 roku. Trafienie w wiersz → współczynniki wiersza; między wierszami → **interpolacja liniowa** współczynników po wieku; poza 4,0–17,5 → `out-of-range` **bez ekstrapolacji**. Zachowanie i brzegi (włącznie) spójne z `rwtInterpolateAgeWeights` (RWT). | Poza zakresem brak wyniku, a nie oszacowanie brzegowe. |
+| Transkrypcja tablic | Użyto współczynników z **erraty 1995**. Errata poprawia wyłącznie kolumnę „masa”, która w erracie jest ~10× większa niż w druku 1994 (np. dziewczęta 7,0 r.ż.: −0,13184 zamiast −0,013184). Kolumny β0 / wzrost / midparent są identyczne w 1994 i erracie. | Test-strażnik transkrypcji pilnuje kolumny „masa” (errata, nie druk 1994). Wybór erraty potwierdzony analizą wymiarową: współczynniki erraty trafiają w cel śreniorodzicielski przypadków kontrolnych, druk 1994 zawyża o 6–10 cm. |
+
+Dokładność wg pracy źródłowej: błędy KR są „tylko nieco większe” niż metody Roche–Wainer–Thissen używającej wieku kostnego. Silnik nie nadaje prognozie statusu „zwalidowana klinicznie”.
+
+#### Źródła wersjonowane
+
+1. Khamis HJ, Roche AF. „Predicting adult stature without using skeletal age: the Khamis-Roche method.” *Pediatrics* 1994;94(4 Pt 1):504–507. PMID [7936860](https://pubmed.ncbi.nlm.nih.gov/7936860/) (bez DOI w indeksie PubMed).
+2. Erratum: *Pediatrics* 1995;95(3):457 — korekta kolumny współczynników masy (wartości ~10× względem druku 1994). **Wartości wdrożone pochodzą z tej erraty.**
+
+#### Reprezentatywne przypadki syntetyczne
+
+Dane w pełni fikcyjne. Wartości oczekiwane policzono niezależnie od kodu produkcyjnego; testy pinują je z tolerancją ±0,005 cm.
+
+| Przypadek | Wejście | Oczekiwany wynik produkcyjny |
+|---|---|---|
+| KR-M-10 | chłopiec 10,0 l, wzrost 138, masa 32, rodzice 163/178 | 177,1596 cm |
+| KR-F-12 | dziewczynka 12,0 l, wzrost 150, masa 42, rodzice 165/179 | 165,3935 cm |
+| KR-M-INTERP | chłopiec 10,25 l (interpolacja), wzrost 139, masa 32, rodzice 163/178 | 177,1694 cm; `interpolated=true` |
+| KR-M-MIN | chłopiec 4,0 l (brzeg), wzrost 100, masa 16, rodzice 170/183 | 178,6989 cm |
+| KR-M-MAX | chłopiec 17,5 l (brzeg), wzrost 175, masa 62, rodzice 170/183 | 174,0176 cm |
+| KR-OOR | 47 mies. (3,92 l) lub 216 mies. (18,0 l) | `available:false, reason:"out-of-range"` (bez ekstrapolacji) |
+| KR-AGE-REG | `{chronologicalAgeYears:10, chronologicalAgeMonths:120}` (wejście produkcyjne) | 10 lat → 177,1596 cm (NIE 20 lat / out-of-range) |
+
+Wpływ na dotychczasowe wyniki: dodanie KR **nie zmienia** prognoz Bayley–Pinneau, RWT, Reinehr/CDGP ani celu MPH. KR pojawia się jako dodatkowa kolumna/karta w „Walidacji prognoz”, uczestniczy w wyborze metody „najbliżej FH” i w eksporcie kohorty. Karta „Zaawansowane obliczenia wzrostowe” pozostaje bez KR do osobnej decyzji (patrz PR).
+
 ### GROWTH-LMS — kompletność cytowań
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
