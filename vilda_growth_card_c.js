@@ -1,58 +1,53 @@
-/* vilda_growth_card_c.js — prezentacja prognoz wzrostu na karcie „Zaawansowane obliczenia wzrostowe”
- * w układzie „Wariant C” (wynik wiodący + rozwijane metody + cel MPH na końcu).
+/* vilda_growth_card_c.js — prezentacja prognoz wzrostu na karcie „Zaawansowane obliczenia wzrostowe”.
+ * Uklad „B (clean)”: duza liczba wiodaca + lista metod z przedzialem ±, cel MPH, kafel tempa
+ * wzrastania, a reszta (wiarygodnosc slownie, profil/dobor modelu, nota KR) w rozwijanych „Szczegolach”.
  *
- * Czytelny moduł (nie-minified) zgodnie z AGENTS.md §2: cała logika prezentacji i konsensusu tutaj,
- * a zminifikowany vilda_advanced_growth.js jedynie WYWOŁUJE window.VildaGrowthCardC.render(input).
+ * Czytelny modul (nie-minified) wg AGENTS.md §2: cala logika prezentacji tutaj; zminifikowany
+ * vilda_advanced_growth.js jedynie WYWOLUJE window.VildaGrowthCardC.render(input).
  *
- * Zakres: SAMA PREZENTACJA prognoz + policzenie metody Khamisa-Roche’a (KR) z globalnego silnika
- * window.calculateKhamisRochePrediction. NIE zmienia wzorów BP/RWT/Reinehr ani MPH — bierze ich
- * gotowe wyniki. Kolejność metod STAŁA: RWT → Bayley–Pinneau → Khamis–Roche → Reinehr/CDGP, a MPH
- * (cel rodzicielski, nie prognoza) na końcu. Brakujące metody są ukrywane.
+ * Zakres: SAMA PREZENTACJA + policzenie KR z window.calculateKhamisRochePrediction. NIE zmienia wzorow
+ * BP/RWT/Reinehr/MPH. Kolejnosc STALA: RWT → BP → KR → Reinehr; MPH (cel, nie prognoza) na koncu listy.
+ * Brakujace metody ukrywane. BEZ pastylek „NOWA”/wiarygodnosci i bez „Uwagi ogolnej” (decyzja wlasciciela).
  *
- * BŁĄD KR (dana kliniczna): średni 90% przedział błędu metody wg Khamis HJ, Roche AF, Pediatrics
- * 1994;94(4 Pt 1):504–507 (PMID 7936860): ±2,1 cala (chłopcy) / ±1,7 cala (dziewczęta) →
- * ±5,3 cm / ±4,3 cm. Wartość jest ZBIORCZA (nie zależy od wieku), inaczej niż tablicowe ± dla BP/RWT.
- * Wiarygodność KR: „orientacyjna” (stała, konserwatywnie — nowa metoda, populacja Fels).
+ * BLAD KR: sredni 90% przedzial bledu metody (Khamis HJ, Roche AF, Pediatrics 1994;94(4 Pt 1):504-507,
+ * PMID 7936860): ±2,1 cala (chlopcy) / ±1,7 cala (dziewczeta) → ±5,3 cm / ±4,3 cm. Zbiorczy (nie per wiek).
  */
 (function (w) {
   'use strict';
 
   var STYLE_ID = 'vgcc-style';
-  // Błąd KR (połówka 90% przedziału) wg płci — z pracy 1994 (±2,1/±1,7 cala → cm).
   var KR_ERR_HALFWIDTH_CM = { M: 5.3, F: 4.3 };
-  // Progi zgodności metod (rozrzut max−min prognoz), spójne z modułem walidacji: ≤3 dobra, ≤6 umiarkowana.
   var AGREE_GOOD_CM = 3, AGREE_MODERATE_CM = 6;
 
   var CSS = [
     '.vgcc{--vgcc-brand:#00838d;--vgcc-ink:#14393d;--vgcc-muted:#5a7274;--vgcc-line:#e3ecec}',
-    '.vgcc-lead{background:linear-gradient(180deg,#fff,#f4fafa);border:1px solid #00838d33;border-radius:12px;padding:.85rem;text-align:center;margin:.2rem 0 .55rem}',
-    '.vgcc-lead-cap{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--vgcc-muted)}',
-    '.vgcc-lead-big{font-size:1.85rem;font-weight:800;color:var(--vgcc-ink);line-height:1.05}',
-    '.vgcc-lead-rng{color:var(--vgcc-muted);font-size:.86rem;margin-top:.12rem}',
-    '.vgcc-lead-rng b{color:var(--vgcc-ink)}',
-    '.vgcc-details{background:#fff;border:1px solid var(--vgcc-line);border-radius:10px;overflow:hidden}',
-    '.vgcc-details>summary{cursor:pointer;list-style:none;padding:.55rem .75rem;font-weight:700;color:#006b73;display:flex;justify-content:space-between;align-items:center;font-size:.9rem}',
-    '.vgcc-details>summary::-webkit-details-marker{display:none}',
-    '.vgcc-details>summary::after{content:"\\25BE";color:var(--vgcc-muted);margin-left:.5rem}',
-    '.vgcc-details[open]>summary::after{content:"\\25B4"}',
-    '.vgcc-row{display:flex;align-items:center;gap:.45rem;justify-content:space-between;padding:.5rem .75rem;border-top:1px solid var(--vgcc-line);font-size:.9rem}',
-    '.vgcc-row-l{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;min-width:0}',
+    '.vgcc-hero{background:linear-gradient(180deg,#fff,#f4fafa);border:1px solid #00838d33;border-radius:12px;padding:.8rem;text-align:center;margin:.15rem 0 .55rem}',
+    '.vgcc-hero-cap{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--vgcc-muted)}',
+    '.vgcc-hero-big{font-size:2rem;font-weight:800;color:var(--vgcc-ink);line-height:1.05}',
+    '.vgcc-hero-sub{color:var(--vgcc-muted);font-size:.85rem;margin-top:.12rem}',
+    '.vgcc-hero-sub b{color:var(--vgcc-ink)}',
+    '.vgcc-methods{background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;padding:.1rem .6rem;margin-bottom:.5rem}',
+    '.vgcc-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.42rem .1rem;border-top:1px solid var(--vgcc-line);font-size:.9rem}',
+    '.vgcc-row:first-child{border-top:0}',
     '.vgcc-nm{font-weight:700;color:#233}',
     '.vgcc-val{font-weight:800;color:var(--vgcc-ink);font-variant-numeric:tabular-nums;white-space:nowrap}',
     '.vgcc-pm{color:var(--vgcc-muted);font-size:.78rem;white-space:nowrap}',
-    '.vgcc-row-mph{background:#fbf6ec;border-top:1px solid #e7d8bb}',
-    '.vgcc-row-mph .vgcc-nm{color:#8a4b00}',
-    '.vgcc-tgt{font-size:.62rem;font-weight:800;color:#8a4b00;background:#f6e9cf;border:1px solid #e0c893;border-radius:5px;padding:.06rem .32rem}',
-    '.vgcc-newtag{display:inline-block;background:var(--vgcc-brand);color:#fff;font-size:.58rem;font-weight:800;padding:.06rem .34rem;border-radius:5px}',
-    '.vgcc-badge{display:inline-flex;align-items:center;justify-content:center;padding:.22rem .55rem;border-radius:999px;font-size:.72rem;font-weight:700;line-height:1.2;border:1px solid;white-space:nowrap}',
-    '.vgcc-badge.is-high{background:#00838d1f;border-color:#00838d42;color:#0a5157}',
-    '.vgcc-badge.is-moderate{background:#00838d14;border-color:#00838d33;color:#0a5157}',
-    '.vgcc-badge.is-lowered{background:#c75d001f;border-color:#c75d003d;color:#8a4b00}',
-    '.vgcc-badge.is-low{background:#c628281a;border-color:#c628283d;color:#c62828}',
-    '.vgcc-badge.is-indicative{background:#5a6f701a;border-color:#5a6f7033;color:#445758}',
-    '.vgcc-hint{font-size:.78rem;color:var(--vgcc-muted);padding:.45rem .75rem;border-top:1px dashed #d0dede;background:#fafcfc}',
-    '.vgcc-fn{font-size:.72rem;color:var(--vgcc-muted);margin:.4rem .1rem 0}',
-    '.vgcc-disc{margin-top:.55rem;padding:.6rem .8rem;border-radius:12px;border:1px solid rgba(199,93,0,.22);background:linear-gradient(180deg,#fff9f0,#fff5e6);color:#6d4a11;font-size:.78rem}',
+    '.vgcc-mph{display:flex;align-items:center;gap:.4rem;justify-content:center;background:#fbf6ec;border:1px solid #e7d8bb;border-radius:9px;padding:.4rem .6rem;margin:.1rem 0 .5rem;font-size:.84rem;color:#6d4a11}',
+    '.vgcc-mph b{color:#8a4b00}',
+    '.vgcc-stats{display:flex;gap:.5rem;margin:.15rem 0 .5rem}',
+    '.vgcc-stat{flex:1;background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;padding:.45rem .5rem;text-align:center}',
+    '.vgcc-stat .k{font-size:.64rem;text-transform:uppercase;letter-spacing:.03em;color:var(--vgcc-muted)}',
+    '.vgcc-stat .v{font-weight:800;color:var(--vgcc-ink);font-variant-numeric:tabular-nums;font-size:1rem}',
+    '.vgcc-stat .u{font-size:.66rem;color:var(--vgcc-muted)}',
+    '.vgcc-hint{font-size:.78rem;color:var(--vgcc-muted);margin:.3rem 0 .4rem}',
+    '.vgcc-det{background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;margin-top:.1rem}',
+    '.vgcc-det>summary{cursor:pointer;list-style:none;padding:.5rem .7rem;font-weight:700;color:#006b73;display:flex;justify-content:space-between;align-items:center;font-size:.84rem}',
+    '.vgcc-det>summary::-webkit-details-marker{display:none}',
+    '.vgcc-det>summary::after{content:"\\25BE";color:var(--vgcc-muted);margin-left:.5rem}',
+    '.vgcc-det[open]>summary::after{content:"\\25B4"}',
+    '.vgcc-det-body{padding:.15rem .7rem .6rem;font-size:.8rem;color:#445}',
+    '.vgcc-det-body p{margin:.35rem 0}',
+    '.vgcc-lbl{color:var(--vgcc-muted)}',
     '.vgcc-empty{padding:.7rem;text-align:center;color:var(--vgcc-muted);font-size:.9rem}'
   ].join('');
 
@@ -61,8 +56,7 @@
       if (typeof document === 'undefined' || !document.getElementById) return;
       if (document.getElementById(STYLE_ID)) return;
       var st = document.createElement('style');
-      st.id = STYLE_ID;
-      st.textContent = CSS;
+      st.id = STYLE_ID; st.textContent = CSS;
       (document.head || document.documentElement).appendChild(st);
     } catch (_) { /* noop */ }
   }
@@ -80,7 +74,6 @@
   function fmt1(v) { var n = num(v); return n === null ? '' : n.toFixed(1).replace('.', ','); }
   function fmt0(v) { var n = num(v); return n === null ? '' : String(Math.round(n)); }
 
-  // levelKey (z modułu wiarygodności) → etykieta PL + klasa CSS.
   function levelLabel(k) {
     switch (String(k || '')) {
       case 'high': return 'wysoka';
@@ -90,25 +83,10 @@
       default: return 'orientacyjna';
     }
   }
-  function levelClass(k) {
-    switch (String(k || '')) {
-      case 'high': return 'is-high';
-      case 'moderate': return 'is-moderate';
-      case 'lowered': return 'is-lowered';
-      case 'low': return 'is-low';
-      default: return 'is-indicative';
-    }
-  }
-  function sexLabel(sex) {
-    var s = String(sex || '').trim().toUpperCase();
-    return (s === 'F' || s === 'K') ? 'dziewczynka' : 'chłopiec';
-  }
   function sexKey(sex) {
     var s = String(sex || '').trim().toUpperCase();
     return (s === 'F' || s === 'K') ? 'F' : 'M';
   }
-
-  // Odczyt levelKey danej metody z modelu wiarygodności (Ht → entryMap[methodKey].levelKey).
   function levelFor(reliabilityModel, methodKey) {
     if (!reliabilityModel) return null;
     var map = reliabilityModel.entryMap || null;
@@ -119,166 +97,133 @@
     }
     return null;
   }
-
   function predValue(result) {
     if (!result || typeof result !== 'object' || result.available !== true) return null;
     return num(result.predictedAdultHeightCm);
   }
 
-  // Konsensus prognoz: mediana, zakres (min–max) i zgodność (rozrzut).
   function consensus(values) {
     var v = (values || []).map(num).filter(function (x) { return x !== null; }).sort(function (a, b) { return a - b; });
-    if (!v.length) return { count: 0, median: null, min: null, max: null, spread: null, agreementKey: null, agreementLabel: null };
+    if (!v.length) return { count: 0, median: null, min: null, max: null, spread: null, agreementLabel: null };
     var n = v.length;
     var median = n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2;
     var min = v[0], max = v[n - 1], spread = max - min;
-    var agreementKey = spread <= AGREE_GOOD_CM ? 'dobra' : (spread <= AGREE_MODERATE_CM ? 'umiarkowana' : 'niska');
-    return { count: n, median: median, min: min, max: max, spread: spread, agreementKey: agreementKey, agreementLabel: agreementKey };
+    var agreementLabel = spread <= AGREE_GOOD_CM ? 'dobra' : (spread <= AGREE_MODERATE_CM ? 'umiarkowana' : 'niska');
+    return { count: n, median: median, min: min, max: max, spread: spread, agreementLabel: agreementLabel };
   }
 
-  // Buduje uporządkowaną listę dostępnych metod (STAŁA kolejność) + policza KR.
   function buildModel(input) {
     input = input || {};
     var sk = sexKey(input.sex);
+    var rm = input.reliabilityModel || null;
     var entries = [];
 
-    // 1. RWT
-    (function () {
-      var val = predValue(input.rwt);
+    function add(key, label, result, pm) {
+      var val = predValue(result);
       if (val === null) return;
-      entries.push({ key: 'rwt', label: 'RWT', value: val, pm: num(input.rwt.errorBoundHalfWidthCm),
-        levelKey: levelFor(input.reliabilityModel, 'rwt') || 'moderate' });
-    })();
-    // 2. Bayley–Pinneau
+      entries.push({ key: key, label: label, value: val, pm: pm, levelKey: null });
+    }
+    // 1. RWT  2. Bayley-Pinneau  3. Khamis-Roche  4. Reinehr/CDGP
+    add('rwt', 'RWT', input.rwt, num(input.rwt && input.rwt.errorBoundHalfWidthCm));
+    if (entries.length) entries[entries.length - 1].levelKey = levelFor(rm, 'rwt') || 'moderate';
+    add('bp', 'Bayley–Pinneau', input.bp, num(input.bp && input.bp.errorBoundHalfWidthCm));
     (function () {
-      var val = predValue(input.bp);
-      if (val === null) return;
-      entries.push({ key: 'bp', label: 'Bayley–Pinneau', value: val, pm: num(input.bp.errorBoundHalfWidthCm),
-        levelKey: levelFor(input.reliabilityModel, 'bayleyPinneau') || 'moderate' });
+      var e = entries[entries.length - 1];
+      if (e && e.key === 'bp') e.levelKey = levelFor(rm, 'bayleyPinneau') || 'moderate';
     })();
-    // 3. Khamis–Roche — policz z globalnego silnika (jeśli obecny)
-    var khamisComputed = null;
     (function () {
       var engine = w.calculateKhamisRochePrediction;
       if (typeof engine !== 'function') return;
       var r;
       try {
-        r = engine({
-          sex: input.sex,
-          chronologicalAgeYears: input.ageYears,
-          chronologicalAgeMonths: input.ageMonths,
-          currentHeightCm: input.currentHeightCm,
-          currentWeightKg: input.currentWeightKg,
-          motherHeightCm: input.motherHeightCm,
-          fatherHeightCm: input.fatherHeightCm
-        });
+        r = engine({ sex: input.sex, chronologicalAgeYears: input.ageYears, chronologicalAgeMonths: input.ageMonths,
+          currentHeightCm: input.currentHeightCm, currentWeightKg: input.currentWeightKg,
+          motherHeightCm: input.motherHeightCm, fatherHeightCm: input.fatherHeightCm });
       } catch (_) { r = null; }
-      khamisComputed = r;
       var val = predValue(r);
       if (val === null) return;
-      entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: KR_ERR_HALFWIDTH_CM[sk],
-        levelKey: 'indicative', isNew: true, note: 'bez WK' });
+      entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: KR_ERR_HALFWIDTH_CM[sk], levelKey: 'indicative', noBoneAge: true });
     })();
-    // 4. Reinehr/CDGP
+    add('reinehr', 'Reinehr/CDGP', input.reinehr, num(input.reinehr && input.reinehr.errorBoundHalfWidthCm));
     (function () {
-      var val = predValue(input.reinehr);
-      if (val === null) return;
-      entries.push({ key: 'reinehr', label: 'Reinehr/CDGP', value: val, pm: num(input.reinehr.errorBoundHalfWidthCm),
-        levelKey: levelFor(input.reliabilityModel, 'reinehr') || 'indicative' });
+      var e = entries[entries.length - 1];
+      if (e && e.key === 'reinehr') e.levelKey = levelFor(rm, 'reinehr') || 'indicative';
     })();
 
     var con = consensus(entries.map(function (e) { return e.value; }));
     var mphCm = num(input.mphCm);
-    var mphCentileText = input.mphCentileText != null ? String(input.mphCentileText) : '';
-
-    // Podpowiedź o wieku kostnym: gdy go brak, a metody bez KR nie policzyły się.
     var boneAgeMissing = num(input.boneAgeYears) === null;
-    var missingBoneMethods = boneAgeMissing && entries.some(function (e) { return e.key === 'khamis'; }) &&
-      !entries.some(function (e) { return e.key === 'bp'; });
 
     return {
       sexKey: sk,
-      subhead: input.subheadHtml || '',
       entries: entries,
       consensus: con,
-      mph: mphCm !== null ? { cm: mphCm, centileText: mphCentileText } : null,
+      mph: mphCm !== null ? { cm: mphCm, centileText: input.mphCentileText != null ? String(input.mphCentileText) : '' } : null,
+      tempo: num(input.growthVelocityCmPerYear) !== null ? { cm: num(input.growthVelocityCmPerYear), context: input.growthVelocityContext != null ? String(input.growthVelocityContext) : '' } : null,
       hasKhamis: entries.some(function (e) { return e.key === 'khamis'; }),
-      khamisComputed: khamisComputed,
-      showBoneAgeHint: missingBoneMethods,
-      // Tekst ostrzeżenia bierzemy z aplikacji (Hn / profil), nie dublujemy słów w kodzie.
-      disclaimerText: input.disclaimerText != null ? String(input.disclaimerText) : '',
-      // Podsumowanie profilu (KOWD-like/CDGP-like) z aplikacji — zachowujemy jako kontekst kliniczny.
-      profileSummaryHtml: input.profileSummaryHtml != null ? String(input.profileSummaryHtml) : ''
+      boneAgeMissing: boneAgeMissing,
+      showBoneAgeHint: boneAgeMissing && entries.some(function (e) { return e.key === 'khamis'; }) && !entries.some(function (e) { return e.key === 'bp'; }),
+      profileStatus: rm && rm.profileStatusLabel ? String(rm.profileStatusLabel) : '',
+      profileSummary: rm && rm.profileSummaryText ? String(rm.profileSummaryText) : ''
     };
   }
 
-  function badge(levelKey) {
-    return '<span class="vgcc-badge ' + levelClass(levelKey) + '">' + esc(levelLabel(levelKey)) + '</span>';
-  }
-
-  function methodRow(e) {
-    var right = '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>';
-    if (e.pm !== null && e.pm !== undefined) {
-      right += ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + (e.key === 'khamis' ? '<sup>*</sup>' : '') + '</span>';
-    } else if (e.note) {
-      right += ' <span class="vgcc-pm">' + esc(e.note) + '</span>';
-    }
-    var left = '<span class="vgcc-nm">' + esc(e.label) + '</span>';
-    if (e.isNew) left += ' <span class="vgcc-newtag">NOWA</span>';
-    left += ' ' + badge(e.levelKey);
-    return '<div class="vgcc-row"><div class="vgcc-row-l">' + left + '</div><div>' + right + '</div></div>';
-  }
-
-  function mphRow(mph) {
-    var right = '<span class="vgcc-val">' + esc(fmt1(mph.cm)) + ' cm</span>';
-    if (mph.centileText) right += ' <span class="vgcc-pm">' + esc(mph.centileText) + '</span>';
-    return '<div class="vgcc-row vgcc-row-mph"><div class="vgcc-row-l"><span class="vgcc-nm">MPH</span> ' +
-      '<span class="vgcc-tgt">CEL RODZICIELSKI</span></div><div>' + right + '</div></div>';
-  }
-
-  function leadHtml(model) {
+  function heroHtml(model) {
     var c = model.consensus;
     if (c.count >= 2) {
-      var rng = '<b>' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm</b> · zgodność <b>' + esc(c.agreementLabel) + '</b>' +
-        (c.spread !== null ? ' (' + esc(fmt1(c.spread)) + ' cm)' : '');
-      return '<div class="vgcc-lead"><div class="vgcc-lead-cap">Konsensus ' + c.count + ' metod</div>' +
-        '<div class="vgcc-lead-big">≈ ' + esc(fmt0(c.median)) + ' cm</div>' +
-        '<div class="vgcc-lead-rng">' + rng + '</div></div>';
+      return '<div class="vgcc-hero"><div class="vgcc-hero-cap">Konsensus ' + c.count + ' metod</div>' +
+        '<div class="vgcc-hero-big">≈ ' + esc(fmt0(c.median)) + ' cm</div>' +
+        '<div class="vgcc-hero-sub"><b>' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm</b> · zgodność ' + esc(c.agreementLabel) + '</div></div>';
     }
     if (c.count === 1) {
       var e = model.entries[0];
-      var sub = (e.pm !== null && e.pm !== undefined ? '±' + esc(fmt1(e.pm)) + ' cm (90%) · ' : '') + esc(levelLabel(e.levelKey));
-      return '<div class="vgcc-lead"><div class="vgcc-lead-cap">' + esc(e.label) +
-        ' — jedyna dostępna metoda</div>' +
-        '<div class="vgcc-lead-big">≈ ' + esc(fmt0(e.value)) + ' cm</div>' +
-        '<div class="vgcc-lead-rng">' + sub + '</div></div>';
+      var sub = (e.pm !== null && e.pm !== undefined ? '±' + esc(fmt1(e.pm)) + ' cm' : '') +
+        (model.boneAgeMissing ? (e.pm != null ? ' · ' : '') + '<b>bez wieku kostnego</b>' : '');
+      return '<div class="vgcc-hero"><div class="vgcc-hero-cap">' + esc(e.label) + '</div>' +
+        '<div class="vgcc-hero-big">≈ ' + esc(fmt0(e.value)) + ' cm</div>' +
+        '<div class="vgcc-hero-sub">' + sub + '</div></div>';
     }
-    return '<div class="vgcc-lead"><div class="vgcc-empty">Uzupełnij dane (wzrost, masę, wzrost rodziców, wiek kostny), aby policzyć prognozę.</div></div>';
+    return '<div class="vgcc-hero"><div class="vgcc-empty">Uzupełnij dane (wzrost, masę, wzrost rodziców, wiek kostny), aby policzyć prognozę.</div></div>';
+  }
+
+  function methodsHtml(model) {
+    if (model.consensus.count < 2) return ''; // dla 1 metody hero wystarcza
+    var rows = model.entries.map(function (e) {
+      var right = '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>' +
+        (e.pm !== null && e.pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + '</span>' : '');
+      return '<div class="vgcc-row"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
+    }).join('');
+    return '<div class="vgcc-methods">' + rows + '</div>';
+  }
+
+  function mphHtml(model) {
+    if (!model.mph) return '';
+    var c = model.mph.centileText ? ' <span class="vgcc-pm">' + esc(model.mph.centileText) + '</span>' : '';
+    return '<div class="vgcc-mph">🎯 Cel rodzicielski (MPH): <b>' + esc(fmt1(model.mph.cm)) + ' cm</b>' + c + '</div>';
+  }
+
+  function statsHtml(model) {
+    if (!model.tempo) return '';
+    var ctx = model.tempo.context ? '<div class="u">' + esc(model.tempo.context) + '</div>' : '<div class="u">cm/rok</div>';
+    return '<div class="vgcc-stats"><div class="vgcc-stat"><div class="k">Tempo wzrastania</div>' +
+      '<div class="v">' + esc(fmt1(model.tempo.cm)) + '</div>' + ctx + '</div></div>';
   }
 
   function detailsHtml(model) {
-    var count = model.entries.length;
-    var rows = model.entries.map(methodRow).join('');
-    if (model.mph) rows += mphRow(model.mph);
-    if (model.showBoneAgeHint) {
-      rows += '<div class="vgcc-hint">Bayley–Pinneau, RWT i Reinehr wymagają <b>wieku kostnego</b> — uzupełnij, aby je zobaczyć.</div>';
+    var parts = [];
+    if (model.entries.length) {
+      var rel = model.entries.map(function (e) { return esc(e.label) + ' ' + esc(levelLabel(e.levelKey)); }).join(' · ');
+      parts.push('<p><span class="vgcc-lbl">Wiarygodność:</span> ' + rel + '</p>');
     }
-    var summary = 'Metody szczegółowo (' + count + ')' + (model.mph ? ' + cel MPH' : '');
-    return '<details class="vgcc-details" open><summary>' + esc(summary) + '</summary>' + rows + '</details>';
-  }
-
-  function footnoteHtml(model) {
-    if (!model.hasKhamis) return '';
-    return '<p class="vgcc-fn"><sup>*</sup> Khamis–Roche: średni 90% przedział błędu metody ' +
-      '(±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku ' +
-      '— inaczej niż tablicowe ± dla BP/RWT. Liczy się bez wieku kostnego.</p>';
-  }
-
-  function disclaimerBlock(model) {
-    var base = model.disclaimerText ? esc(model.disclaimerText) : '';
-    var kr = model.hasKhamis ? ' Khamis–Roche: populacja Fels (białe dzieci USA), bez wieku kostnego — najsłabsza dla nietypowego wzrostu.' : '';
-    if (!base && !kr) return '';
-    return '<div class="vgcc-disc"><strong>Uwaga ogólna:</strong> ' + base + esc(kr) + '</div>';
+    if (model.profileStatus || model.profileSummary) {
+      parts.push('<p><span class="vgcc-lbl">Profil predykcyjny:</span> ' + esc(model.profileStatus || '') +
+        (model.profileSummary ? '. ' + esc(model.profileSummary) : '') + '</p>');
+    }
+    if (model.hasKhamis) {
+      parts.push('<p><span class="vgcc-lbl">Khamis–Roche:</span> błąd zbiorczy 90% metody (±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku; liczy się bez wieku kostnego, populacja Fels (białe dzieci USA).</p>');
+    }
+    if (!parts.length) return '';
+    return '<details class="vgcc-det"><summary>Szczegóły i wiarygodność</summary><div class="vgcc-det-body">' + parts.join('') + '</div></details>';
   }
 
   function render(input) {
@@ -286,23 +231,21 @@
     var model;
     try { model = buildModel(input); } catch (_) { model = null; }
     if (!model) return '';
-    var html = '<div class="vgcc">' + leadHtml(model) + detailsHtml(model) + footnoteHtml(model);
-    if (model.profileSummaryHtml) html += '<div class="vgcc-fn">' + model.profileSummaryHtml + '</div>';
-    html += disclaimerBlock(model);
+    var html = '<div class="vgcc">' + heroHtml(model) + methodsHtml(model) + mphHtml(model) + statsHtml(model);
+    if (model.showBoneAgeHint) html += '<p class="vgcc-hint">Bayley–Pinneau, RWT i Reinehr wymagają wieku kostnego — uzupełnij, aby je zobaczyć.</p>';
+    html += detailsHtml(model);
     html += '</div>';
     return html;
   }
 
   w.VildaGrowthCardC = {
-    version: '1',
+    version: '2',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     render: render,
     _buildModel: buildModel,
     _consensus: consensus,
     _levelLabel: levelLabel,
-    _levelClass: levelClass,
     _esc: esc,
-    _sexKey: sexKey,
-    _sexLabel: sexLabel
+    _sexKey: sexKey
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
