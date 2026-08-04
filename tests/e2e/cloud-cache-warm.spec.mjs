@@ -201,3 +201,31 @@ test('KONTROLA + opt-out: przy pref „0” cache pozostaje pusty mimo trybu chm
   await page.waitForTimeout(3500);
   expect(await durableRecordCount(page)).toBe(0);
 });
+
+// POKRYCIE WSZYSTKICH WEJŚĆ: enabler musi działać na KAŻDEJ stronie ładującej sejf, bo PWA
+// startuje z app.html (start_url manifestu), a nie z index.html. localStorage jest współdzielony
+// per-origin, ale gdy urządzenie nigdy nie otworzy index.html (jak PWA na iPhonie), pref nie
+// zostałby ustawiony — dlatego enabler jest wpięty przed vilda_vault.js na wszystkich wejściach.
+for (const entry of ['app.html', 'terminarz.html', 'kalkulator-klirens.html', 'ustawienia.html']) {
+  test(`enabler aktywny na wejściu „${entry}” (nie tylko index.html)`, async ({ page }) => {
+    await page.goto(`/${entry}`, { waitUntil: 'domcontentloaded' });
+    // Enabler to skrypt ładowany przy starcie (defer, przed vault) — niezależny od stanu logowania.
+    await page.waitForFunction(
+      () => window.VildaCloudCacheWarm && window.VildaCloudCacheWarm.__init,
+      { timeout: 10000 },
+    );
+    const marker = await page.evaluate(() => window.VildaCloudCacheWarm);
+    expect(marker.enabled).toBe(true);
+    expect(await page.evaluate(() => window.VILDA_PERSISTENT_CLOUD_CACHE)).toBe(true);
+    expect(
+      await page.evaluate(() =>
+        window.localStorage.getItem('vilda-persistent-cloud-cache-v1'),
+      ),
+    ).toBe('1');
+    // Gdy sejf zdąży się załadować, jego własne API też potwierdza włączenie.
+    await page.waitForFunction(() => Boolean(window.VildaVault), { timeout: 10000 });
+    expect(
+      await page.evaluate(() => window.VildaVault.isPersistentCloudCacheEnabled()),
+    ).toBe(true);
+  });
+}
