@@ -108,6 +108,10 @@ Status wpisu to **wdrożenie do testów**, nie walidacja kliniczna. Metoda Khami
 
 Dokładność wg pracy źródłowej: błędy KR są „tylko nieco większe” niż metody Roche–Wainer–Thissen używającej wieku kostnego. Silnik nie nadaje prognozie statusu „zwalidowana klinicznie”.
 
+#### Błąd metody prezentowany w karcie „Zaawansowane obliczenia wzrostowe” (dana kliniczna)
+
+Karta pokazuje przy prognozie KR **zbiorczy (średni) 90% przedział błędu metody**, wprost z pracy 1994: średnio **±2,1 cala dla chłopców i ±1,7 cala dla dziewcząt** → wdrożone jako **±5,3 cm (chłopcy) / ±4,3 cm (dziewczęta)**. Średni MAD (50%) metody to ≈0,8 cala (≈2,0 cm). W ODRÓŻNIENIU od Bayley–Pinneau/RWT ten przedział jest **zbiorczy (nie zależy od wieku metrykalnego)** — praca podaje wartości uśrednione dla zakresu 4,0–17,5 r.ż., a nie tablicę per wiek; przy młodszym wieku rzeczywisty przedział jest większy. Wartość jest jawnie oznaczona przypisem w karcie. Wiarygodność KR w prezentacji jest ustawiona konserwatywnie na „orientacyjna” (nowa metoda, populacja Fels). Wartości ±5,3/±4,3 cm są związane w teście jednostkowym modułu prezentacji (`vilda_growth_card_c.js`).
+
 #### Źródła wersjonowane
 
 1. Khamis HJ, Roche AF. „Predicting adult stature without using skeletal age: the Khamis-Roche method.” *Pediatrics* 1994;94(4 Pt 1):504–507. PMID [7936860](https://pubmed.ncbi.nlm.nih.gov/7936860/) (bez DOI w indeksie PubMed).
