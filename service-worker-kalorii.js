@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.663';
+const SW_VERSION = '1.0.664';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -85,6 +85,9 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
 const CORE_SHELL_URLS = [
   ROOT_DOCUMENT,
   '/manifest.json',
+  // Wyłącznik awaryjny trwałego cache (kill-switch) — musi być dostępny także offline,
+  // by na każdym wejściu zgasić „Opcję A” i posprzątać bazę vilda-cloud-cache.
+  '/vilda_cloud_cache_warm.js?v=2',
   '/style.css',
   '/style.css?v=54',
   '/style.css?v=55',
