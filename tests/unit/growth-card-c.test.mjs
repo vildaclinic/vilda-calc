@@ -163,3 +163,20 @@ describe('Wariant B — konsensus ważony wiarygodnością (Wniosek 2)', () => {
     expect(html).toContain('mediana metod');
   });
 });
+
+describe('Wariant B — poprawki UI (C+)', () => {
+  const C = load(170.8);
+  it('MPH: centyl czytelnie „NN. centyl"', () => {
+    expect(C.render(baseInput({ mphCentileText: '37' }))).toContain('; <span class="vgcc-mph-cent">37. centyl</span>');
+    // odporność na format „55c" → „55. centyl"
+    expect(C.render(baseInput({ mphCentileText: '55c' }))).toContain('55. centyl');
+  });
+  it('Tempo: wartość i jednostka w jednej linii', () => {
+    expect(C.render(baseInput())).toContain('<div class="vu"><span class="v">5,1</span> <span class="u">cm/rok (7 mies.)</span></div>');
+  });
+  it('metoda preferowana wyróżniona w tabeli (is-pref na wierszu o największej wadze = RWT)', () => {
+    const html = C.render(baseInput());
+    expect(html).toMatch(/<div class="vgcc-row is-pref"><span class="vgcc-nm">RWT/);
+    expect(html).not.toContain('is-pref"><span class="vgcc-nm">Bayley');
+  });
+});
