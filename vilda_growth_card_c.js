@@ -232,7 +232,7 @@
     try { model = buildModel(input); } catch (_) { model = null; }
     if (!model) return '';
     var html = '<div class="vgcc">' + heroHtml(model) + methodsHtml(model) + mphHtml(model) + statsHtml(model);
-    if (model.showBoneAgeHint) html += '<p class="vgcc-hint">Bayley–Pinneau, RWT i Reinehr wymagają wieku kostnego — uzupełnij, aby je zobaczyć.</p>';
+    if (model.showBoneAgeHint) html += '<p class="vgcc-hint">Część metod (np. Bayley–Pinneau) wymaga wieku kostnego — uzupełnij go, aby sprawdzić dostępność pozostałych prognoz.</p>';
     html += detailsHtml(model);
     html += '</div>';
     return html;
