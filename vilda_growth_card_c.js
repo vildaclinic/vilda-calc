@@ -19,6 +19,13 @@
   var KR_ERR_HALFWIDTH_CM = { M: 5.3, F: 4.3 };
   var AGREE_GOOD_CM = 3, AGREE_MODERATE_CM = 6;
 
+  // Ważony konsensus (Wniosek 2 / SPEC_dobor_metody). Waga metody = f_wiar(poziom) / σ²,
+  // gdzie σ = errorBoundHalfWidthCm / 1,645 (90% półszerokość → SD). Metoda o najwyższej wadze
+  // = „preferowana dla profilu". PARAMETRY KLINICZNE — do strojenia przez właściciela, bez zmian logiki.
+  var CONSENSUS_W = { high: 1.0, moderate: 0.7, lowered: 0.5, indicative: 0.5, low: 0.3 };
+  var CI90_TO_SD = 1.645;
+  var DEFAULT_SIGMA_CM = 3.0; // gdy metoda nie podaje błędu
+
   var CSS = [
     '.vgcc{--vgcc-brand:#00838d;--vgcc-ink:#14393d;--vgcc-muted:#5a7274;--vgcc-line:#e3ecec}',
     '.vgcc-hero{background:linear-gradient(180deg,#fff,#f4fafa);border:1px solid #00838d33;border-radius:12px;padding:.8rem;text-align:center;margin:.15rem 0 .55rem}',
@@ -26,6 +33,9 @@
     '.vgcc-hero-big{font-size:2rem;font-weight:800;color:var(--vgcc-ink);line-height:1.05}',
     '.vgcc-hero-sub{color:var(--vgcc-muted);font-size:.85rem;margin-top:.12rem}',
     '.vgcc-hero-sub b{color:var(--vgcc-ink)}',
+    '.vgcc-hero.is-low{background:linear-gradient(180deg,#fff,#fff9f0);border-color:#e0a12a66}',
+    '.vgcc-hero.is-low .vgcc-hero-cap{color:#9a6b12}',
+    '.vgcc-warn{color:#9a6b12;font-weight:700}',
     '.vgcc-methods{background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;padding:.1rem .6rem;margin-bottom:.5rem}',
     '.vgcc-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.42rem .1rem;border-top:1px solid var(--vgcc-line);font-size:.9rem}',
     '.vgcc-row:first-child{border-top:0}',
@@ -112,6 +122,34 @@
     return { count: n, median: median, min: min, max: max, spread: spread, agreementLabel: agreementLabel };
   }
 
+  // Waga pojedynczej metody: wiarygodność (poziom) / wariancja (z błędu 90%).
+  function weightForEntry(e) {
+    var f = CONSENSUS_W[e && e.levelKey];
+    if (f === undefined || f === null) f = CONSENSUS_W.indicative;
+    var pm = num(e && e.pm);
+    var sigma = (pm !== null && pm > 0) ? pm / CI90_TO_SD : DEFAULT_SIGMA_CM;
+    if (!(sigma > 0)) sigma = DEFAULT_SIGMA_CM;
+    return f / (sigma * sigma);
+  }
+  // Ważony konsensus + metoda preferowana (największa waga). Nie zmienia zakresu min–max.
+  function weightedConsensus(entries) {
+    var es = (entries || []).filter(function (e) { return e && num(e.value) !== null; });
+    if (!es.length) return { count: 0, weighted: null, recommendedKey: null, recommendedLabel: null };
+    var sw = 0, swv = 0, best = null, bestW = -Infinity;
+    for (var i = 0; i < es.length; i++) {
+      var w = weightForEntry(es[i]);
+      if (!(w > 0) || !isFinite(w)) w = 0;
+      sw += w; swv += w * num(es[i].value);
+      if (w > bestW) { bestW = w; best = es[i]; }
+    }
+    return {
+      count: es.length,
+      weighted: sw > 0 ? swv / sw : null,
+      recommendedKey: best ? best.key : null,
+      recommendedLabel: best ? best.label : null
+    };
+  }
+
   function buildModel(input) {
     input = input || {};
     var sk = sexKey(input.sex);
@@ -151,6 +189,7 @@
     })();
 
     var con = consensus(entries.map(function (e) { return e.value; }));
+    var wcon = weightedConsensus(entries);
     var mphCm = num(input.mphCm);
     var boneAgeMissing = num(input.boneAgeYears) === null;
 
@@ -158,6 +197,7 @@
       sexKey: sk,
       entries: entries,
       consensus: con,
+      weighted: wcon,
       mph: mphCm !== null ? { cm: mphCm, centileText: input.mphCentileText != null ? String(input.mphCentileText) : '' } : null,
       tempo: num(input.growthVelocityCmPerYear) !== null ? { cm: num(input.growthVelocityCmPerYear), context: input.growthVelocityContext != null ? String(input.growthVelocityContext) : '' } : null,
       hasKhamis: entries.some(function (e) { return e.key === 'khamis'; }),
@@ -170,10 +210,14 @@
 
   function heroHtml(model) {
     var c = model.consensus;
+    var wc = model.weighted || {};
     if (c.count >= 2) {
-      return '<div class="vgcc-hero"><div class="vgcc-hero-cap">Konsensus ' + c.count + ' metod</div>' +
-        '<div class="vgcc-hero-big">≈ ' + esc(fmt0(c.median)) + ' cm</div>' +
-        '<div class="vgcc-hero-sub"><b>' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm</b> · zgodność ' + esc(c.agreementLabel) + '</div></div>';
+      var headline = (wc.weighted !== null && wc.weighted !== undefined) ? wc.weighted : c.median;
+      var low = c.agreementLabel === 'niska';
+      var rec = (low && wc.recommendedLabel) ? ' · <span class="vgcc-warn">preferowana: ' + esc(wc.recommendedLabel) + '</span>' : '';
+      return '<div class="vgcc-hero' + (low ? ' is-low' : '') + '"><div class="vgcc-hero-cap">Konsensus ' + c.count + ' metod (ważony)</div>' +
+        '<div class="vgcc-hero-big">≈ ' + esc(fmt0(headline)) + ' cm</div>' +
+        '<div class="vgcc-hero-sub"><b>' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm</b> · zgodność ' + esc(c.agreementLabel) + rec + '</div></div>';
     }
     if (c.count === 1) {
       var e = model.entries[0];
@@ -211,6 +255,11 @@
 
   function detailsHtml(model) {
     var parts = [];
+    if (model.consensus && model.consensus.count >= 2 && model.weighted && model.weighted.weighted !== null) {
+      parts.push('<p><span class="vgcc-lbl">Konsensus:</span> ważony wiarygodnością ' + esc(fmt1(model.weighted.weighted)) +
+        ' cm (mediana metod ' + esc(fmt1(model.consensus.median)) + ' cm).' +
+        (model.weighted.recommendedLabel ? ' Największa waga dla tego profilu: ' + esc(model.weighted.recommendedLabel) + '.' : '') + '</p>');
+    }
     if (model.entries.length) {
       var rel = model.entries.map(function (e) { return esc(e.label) + ' ' + esc(levelLabel(e.levelKey)); }).join(' · ');
       parts.push('<p><span class="vgcc-lbl">Wiarygodność:</span> ' + rel + '</p>');
@@ -239,11 +288,13 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '2',
+    version: '3',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
+    CONSENSUS_W: CONSENSUS_W,
     render: render,
     _buildModel: buildModel,
     _consensus: consensus,
+    _weightedConsensus: weightedConsensus,
     _levelLabel: levelLabel,
     _esc: esc,
     _sexKey: sexKey
