@@ -122,3 +122,44 @@ describe('Wariant B — render (clean, HTML)', () => {
     expect(html).toContain('Konsensus 2 metod');
   });
 });
+
+describe('Wariant B — konsensus ważony wiarygodnością (Wniosek 2)', () => {
+  const C = load(176.0);
+  it('_weightedConsensus: waga = f(poziom)/σ², metoda preferowana = największa waga', () => {
+    const wc = C._weightedConsensus([
+      { key: 'rwt', label: 'RWT', value: 177.8, pm: 4.6, levelKey: 'high' },
+      { key: 'bp', label: 'Bayley–Pinneau', value: 182.0, pm: 5.2, levelKey: 'low' },
+      { key: 'reinehr', label: 'Reinehr/CDGP', value: 175.5, pm: 4.0, levelKey: 'high' },
+    ]);
+    expect(wc.recommendedKey).toBe('reinehr');      // high + najwęższy błąd
+    expect(wc.weighted).toBeCloseTo(177.0, 1);       // odciąga od obniżonego BP (182)
+    // przy równych poziomach i błędach ważony == średnia
+    const eq = C._weightedConsensus([
+      { key: 'a', label: 'A', value: 170, pm: 4, levelKey: 'moderate' },
+      { key: 'b', label: 'B', value: 176, pm: 4, levelKey: 'moderate' },
+    ]);
+    expect(eq.weighted).toBeCloseTo(173, 5);
+  });
+  it('nagłówek konsensusu jest „ważony"; kompatybilność wsteczna wartości', () => {
+    const html = C.render(baseInput());
+    expect(html).toContain('Konsensus 4 metod (ważony)');
+    expect(html).toContain('≈ 178 cm'); // ważony 177,9 → 178 (jak mediana)
+  });
+  it('niska zgodność (spread>6): flaga is-low + metoda preferowana na wierzchu', () => {
+    const html = C.render(baseInput({
+      sex: 'M', boneAgeYears: 11.5,
+      bp: { available: true, predictedAdultHeightCm: 184.0, errorBoundHalfWidthCm: 5.2 },
+      rwt: { available: true, predictedAdultHeightCm: 177.8, errorBoundHalfWidthCm: 4.6 },
+      reinehr: { available: true, predictedAdultHeightCm: 175.5, errorBoundHalfWidthCm: 4.0 },
+      reliabilityModel: { entryMap: { rwt: { levelKey: 'high' }, bayleyPinneau: { levelKey: 'low' }, reinehr: { levelKey: 'high' } } },
+    }));
+    expect(html).toContain('is-low');
+    expect(html).toContain('zgodność niska');
+    expect(html).toContain('preferowana:');
+  });
+  it('mediana i ważony pokazane w Szczegółach', () => {
+    const html = C.render(baseInput());
+    expect(html).toContain('ważony wiarygodnością');
+    expect(html).toContain('mediana metod');
+  });
+});
