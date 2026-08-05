@@ -95,7 +95,9 @@ describe('Wariant B — render (clean, HTML)', () => {
     // słowo „orientacyjna” dozwolone TYLKO w Szczegółach (wiarygodność słownie), nie na wierzchu
     expect(html.split('Szczegóły')[0]).not.toContain('orientacyjna');
     expect(html).not.toContain('Konsensus');
-    expect(html).toContain('wymagają wieku kostnego');
+    // etykieta poprawiona: nie twierdzi już fałszywie, że RWT/Reinehr wymagają wieku kostnego
+    expect(html).toContain('Część metod (np. Bayley–Pinneau) wymaga wieku kostnego');
+    expect(html).not.toContain('RWT i Reinehr wymagają');
     expect(html).toContain('Cel rodzicielski (MPH)');
     // brak wierszy metod BP/RWT/Reinehr
     expect(html).not.toContain('<span class="vgcc-nm">Bayley');
