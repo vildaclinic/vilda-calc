@@ -42,16 +42,20 @@
     '.vgcc-nm{font-weight:700;color:#233}',
     '.vgcc-val{font-weight:800;color:var(--vgcc-ink);font-variant-numeric:tabular-nums;white-space:nowrap}',
     '.vgcc-pm{color:var(--vgcc-muted);font-size:.78rem;white-space:nowrap}',
-    '.vgcc-mph{display:flex;align-items:center;gap:.4rem;justify-content:center;background:#fbf6ec;border:1px solid #e7d8bb;border-radius:9px;padding:.4rem .6rem;margin:.1rem 0 .5rem;font-size:.84rem;color:#6d4a11}',
+    '.vgcc-mph{display:block;text-align:center;background:#fbf6ec;border:1px solid #e7d8bb;border-radius:9px;padding:.4rem .6rem;margin:.1rem 0 .5rem;font-size:.9rem;color:#6d4a11}',
+    '.vgcc-mph-cent{color:#8a6a2a}',
     '.vgcc-mph b{color:#8a4b00}',
     '.vgcc-stats{display:flex;gap:.5rem;margin:.15rem 0 .5rem}',
     '.vgcc-stat{flex:1;background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;padding:.45rem .5rem;text-align:center}',
-    '.vgcc-stat .k{font-size:.64rem;text-transform:uppercase;letter-spacing:.03em;color:var(--vgcc-muted)}',
-    '.vgcc-stat .v{font-weight:800;color:var(--vgcc-ink);font-variant-numeric:tabular-nums;font-size:1rem}',
-    '.vgcc-stat .u{font-size:.66rem;color:var(--vgcc-muted)}',
+    '.vgcc-stat .k{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--vgcc-muted)}',
+    '.vgcc-stat .vu{margin-top:.12rem}',
+    '.vgcc-stat .v{font-weight:800;color:var(--vgcc-ink);font-variant-numeric:tabular-nums;font-size:1.18rem}',
+    '.vgcc-stat .u{font-size:.84rem;color:var(--vgcc-muted);margin-left:.3rem}',
+    '.vgcc-row.is-pref{border-left:3px solid var(--vgcc-brand);padding-left:.5rem;background:#ecf7f7;border-radius:0 7px 7px 0}',
+    '.vgcc-row.is-pref .vgcc-nm{color:#006b73}',
     '.vgcc-hint{font-size:.78rem;color:var(--vgcc-muted);margin:.3rem 0 .4rem}',
     '.vgcc-det{background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;margin-top:.1rem}',
-    '.vgcc-det>summary{cursor:pointer;list-style:none;padding:.5rem .7rem;font-weight:700;color:#006b73;display:flex;justify-content:space-between;align-items:center;font-size:.84rem}',
+    '.vgcc-det>summary{cursor:pointer;list-style:none;padding:.5rem .7rem;font-weight:700;color:#006b73;display:flex;justify-content:center;align-items:center;font-size:.84rem}',
     '.vgcc-det>summary::-webkit-details-marker{display:none}',
     '.vgcc-det>summary::after{content:"\\25BE";color:var(--vgcc-muted);margin-left:.5rem}',
     '.vgcc-det[open]>summary::after{content:"\\25B4"}',
@@ -232,25 +236,28 @@
 
   function methodsHtml(model) {
     if (model.consensus.count < 2) return ''; // dla 1 metody hero wystarcza
+    var prefKey = model.weighted && model.weighted.recommendedKey;
     var rows = model.entries.map(function (e) {
       var right = '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>' +
         (e.pm !== null && e.pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + '</span>' : '');
-      return '<div class="vgcc-row"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
+      var cls = (prefKey && e.key === prefKey) ? ' is-pref' : '';
+      return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
     }).join('');
     return '<div class="vgcc-methods">' + rows + '</div>';
   }
 
   function mphHtml(model) {
     if (!model.mph) return '';
-    var c = model.mph.centileText ? ' <span class="vgcc-pm">' + esc(model.mph.centileText) + '</span>' : '';
+    var cm = model.mph.centileText != null ? String(model.mph.centileText).match(/\d+/) : null;
+    var c = cm ? '; <span class="vgcc-mph-cent">' + esc(cm[0]) + '. centyl</span>' : '';
     return '<div class="vgcc-mph">🎯 Cel rodzicielski (MPH): <b>' + esc(fmt1(model.mph.cm)) + ' cm</b>' + c + '</div>';
   }
 
   function statsHtml(model) {
     if (!model.tempo) return '';
-    var ctx = model.tempo.context ? '<div class="u">' + esc(model.tempo.context) + '</div>' : '<div class="u">cm/rok</div>';
+    var u = model.tempo.context ? esc(model.tempo.context) : 'cm/rok';
     return '<div class="vgcc-stats"><div class="vgcc-stat"><div class="k">Tempo wzrastania</div>' +
-      '<div class="v">' + esc(fmt1(model.tempo.cm)) + '</div>' + ctx + '</div></div>';
+      '<div class="vu"><span class="v">' + esc(fmt1(model.tempo.cm)) + '</span> <span class="u">' + u + '</span></div></div></div>';
   }
 
   function detailsHtml(model) {
@@ -288,7 +295,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '3',
+    version: '4',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
