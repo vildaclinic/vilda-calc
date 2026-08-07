@@ -172,8 +172,8 @@ function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var v1=verdictCh(met,sa0,sb0,ca,
       return d<=-1?{t:"bad",l:"łamie kanał w dół"}:d<=-0.5?{t:"warn",l:"łamie kanał w dół"}:d>=0.5&&cb>97?{t:"warn",l:"ponad 97 centyl"}:{t:"stable",l:"w kanale rodzicielskim"}}
     return v1}
   if(rd&&ca>=10){
-    if(d<=-1.5)return{t:"warn",l:"spadek bardzo szybki — do kontroli"};
-    if(d<=-0.2)return{t:"good",l:"redukcja zgodna z planem"};
+    if(d<=-1.5)return{t:"warn",l:"redukcja bardzo szybka — do kontroli"};
+    if(d<=-0.2)return{t:"good",l:"redukcja w trakcie leczenia"};
     if(d>=0.2)return{t:v1.t==="bad"?"bad":"warn",l:"narasta mimo leczenia"}}
   return v1}
 function ctxClean(x){return String(x==null?"":x).replace(/[<>]/g,"")}
@@ -182,16 +182,24 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
   var agA=ageOf(a),agB=ageOf(b);
   function ovlM(r){if(!r||r.a==null||!isFinite(r.a))return 0;var x0=Math.max(agA,r.a),x1=Math.min(agB,r.b==null||!isFinite(r.b)?agB:r.b);return Math.max(0,x1-x0)}
   var ghM=cx?ovlM(cx.gh):0,rdM=cx?ovlM(cx.red):0,rdOn=rdM>=3;
-  items.forEach(function(it){var sa=statAt(it,a),sb=statAt(it,b),m=it.sc,dec="height"===m.metric?0:1,velU="height"===m.metric?"cm/rok":"weight"===m.metric?"kg/rok":null;
+  items.forEach(function(it){var sa=statAt(it,a),sb=statAt(it,b),m=it.sc,dec="height"===m.metric?0:1,velMo="weight"===m.metric&&dt<12,velU="height"===m.metric?"cm/rok":"weight"===m.metric?(velMo?"kg/mies.":"kg/rok"):null;
     if(!sa||!sb){tr+='<tr><td>'+(m.title||"")+'</td><td colspan="6" class="l">— brak pomiaru w tym punkcie</td></tr>';
       cards+='<div class="vilda-cmp-kpi"><div class="nm">'+(m.title||"")+'</div><div class="ftv">— brak pomiaru w tym punkcie</div></div>';return}
-    var dv=sb.val-sa.val,dyr=dt/12,vel=dyr>0?dv/dyr:0,ca=sa.c,cb=sb.c,ip=ca!=null&&cb!=null?interpCh(ca,cb,sa.sd,sb.sd):["flat","",""];
-    var v=verdictCh2(m.metric,sa.sd,sb.sd,ca,cb,ghM,cx?cx.mpSds:null,rdOn),vW=function(h){return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":h};
-    var dS=(dv>=0?"+":"")+fmt(dv,dec)+" "+(m.unit||""),velS=velU?(vel>=0?"+":"")+fmt(vel,1)+" "+velU:null;
+    var dv=sb.val-sa.val,dyr=dt/12,ca=sa.c,cb=sb.c,ip=ca!=null&&cb!=null?interpCh(ca,cb,sa.sd,sb.sd):["flat","",""];
+    var v=verdictCh2(m.metric,sa.sd,sb.sd,ca,cb,ghM,cx?cx.mpSds:null,rdOn);
+    // Strażnik TEMPA redukcji (nie osłabia 🔴): odstęp ≥2 mies., start ≥10c, spadek — 🟠 gdy
+    // ≤−1,5 SDS/rok lub (waga) ubytek >1 kg/mies. u dziecka <12 lat / >~0,9 kg/tydz. (≈3,9 kg/mies.) u ≥12 lat.
+    if(v&&v.t!=="bad"&&("weight"===m.metric||"bmi"===m.metric)&&ca!=null&&ca>=10&&sa.sd!=null&&sb.sd!=null&&dt>=2){
+      var _dS=Math.round(100*(sb.sd-sa.sd))/100;
+      if(_dS<=-0.2){var _fast=_dS/(dt/12)<=-1.5;
+        if(!_fast&&"weight"===m.metric){var _km=dv/dt;_fast=agB<144?_km<=-1:_km<=-3.9}
+        _fast&&(v={t:"warn",l:"redukcja bardzo szybka — do kontroli"})}}
+    var vW=function(h){return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":h};
+    var _vv2=velMo?(dt>0?dv/dt:0):(dyr>0?dv/dyr:0),dS=(dv>=0?"+":"")+fmt(dv,dec)+" "+(m.unit||""),velS=velU?(_vv2>=0?"+":"")+fmt(_vv2,1)+" "+velU:null;
     var vA=cmpValHtml(m,sa),vB=cmpValHtml(m,sb),sds=cmpSdsHtml(sa,sb,v),chip=ip[1]?'<span class="vilda-cmp-chip '+(v?VCHIP[v.t]:ip[0])+'">'+ip[1]+"</span>":"";
     var zoneH=ip[2]+(v?(ip[2]?" \xB7 ":"")+'<b class="vilda-v-'+v.t+'">'+v.l+"</b>":"");
     tr+="<tr><td>"+(m.title||"")+"</td><td>"+vA+"</td><td>"+vB+'</td><td class="dlt">'+vW(dS)+'</td><td class="vel">'+(velS?vW(velS):"—")+"</td><td>"+sds+'</td><td class="l">'+chip+'<div class="zone">'+zoneH+"</div></td></tr>";
-    cards+='<div class="vilda-cmp-kpi"><div class="nm">'+(m.title||"")+'</div><div class="stat">'+(velS?vW(velS.replace("/rok",""))+"<small>/rok</small>":vW(dS)+"<small>Δ</small>")+"</div>"+
+    cards+='<div class="vilda-cmp-kpi"><div class="nm">'+(m.title||"")+'</div><div class="stat">'+(velS?vW(velS.slice(0,velS.lastIndexOf("/")))+"<small>/"+velS.slice(velS.lastIndexOf("/")+1)+"</small>":vW(dS)+"<small>Δ</small>")+"</div>"+
       '<div class="ftv">'+vA+'<span class="ar">→</span>'+vB+"</div>"+
       '<div class="meta">'+(velS?"<span>Δ <b>"+vW(dS)+"</b></span>":"")+"<span>SDS <b>"+sds+"</b></span></div>"+
       (ip[1]?'<div class="zn">'+chip+'<span class="zone">'+zoneH+"</span></div>":"")+"</div>";
