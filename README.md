@@ -80,3 +80,5 @@ Zasady pracy z danymi: [docs/DATA_PROTECTION.md](docs/DATA_PROTECTION.md). Podat
 - [Testowanie](TESTING.md)
 - [Zasady współtworzenia](CONTRIBUTING.md)
 - [Polityka bezpieczeństwa](SECURITY.md)
+
+<!-- redeploy 2026-08-07: ponowne wyzwolenie wdrożenia GitHub Pages po awarii GitHub Actions (run #2503 utknął w kolejce, brak przycisku anulowania dla workflow zarządzanego). Treść aplikacji bez zmian — wdraża scalone poprawki v374/SW 1.0.681. -->
