@@ -156,7 +156,7 @@ function verdictCh(met,sa0,sb0,ca,cb){if(typeof sa0!="number"||typeof sb0!="numb
   if(low)return d>=0.2?{t:"good",l:"nadrabia niedobór"}:d<=-0.5?{t:"bad",l:"pogłębia niedobór"}:d<=-0.2?{t:"warn",l:"pogłębia niedobór"}:{t:"stable",l:"stabilnie"};
   if(high){if(W)return d<=-1?{t:"warn",l:"szybki spadek kanału"}:d<=-0.2?{t:"stable",l:"normalizacja"}:d>=0.5?{t:"warn",l:"coraz wyżej ponad normą"}:{t:"stable",l:"stabilnie"};
     if(d<=-1.5)return{t:"warn",l:"bardzo szybki spadek"};if(d<=-0.2)return{t:"good",l:"redukcja"};
-    if(d>=0.5||d>=0.2&&cb>=97)return{t:"bad",l:"bmi"===met?"wchodzi w otyłość":cb>=97?"wchodzi w strefę ≥97":"szybko narasta nadmiar"};
+    if(d>=0.5||d>=0.2&&cb>=97)return{t:"bad",l:"bmi"===met?(cb>=97?(ca>=97?"otyłość pogłębia się":"wchodzi w otyłość"):"szybko narasta nadmiar"):cb>=97?(ca>=97?"nadmiar pogłębia się (>97c)":"wchodzi w strefę ≥97"):"szybko narasta nadmiar"};
     return d>=0.2?{t:"warn",l:"narasta nadmiar"}:{t:"stable",l:"stabilnie"}}
   if(W)return d<=-1?{t:"bad",l:"łamie kanał w dół"}:d<=-0.5?{t:"warn",l:"łamie kanał w dół"}:d>=0.5&&cb>97?{t:"warn",l:"ponad 97 centyl"}:{t:"stable",l:"stabilnie"};
   if(Math.abs(d)>=0.5){var al="bmi"===met?cb>=97||cb<5:cb<=3||cb>=97;
