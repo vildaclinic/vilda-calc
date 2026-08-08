@@ -28,7 +28,7 @@ describe('epikryza — spójność testów GH z rozpoznaniem KOWD', () => {
     const t = gen({ sex: 'F', ageYears: 12, ageMonths: 0 }, { diagnosis: 'kowd' });
     expect(t).not.toContain('Wydzielanie hormonu wzrostu');
     expect(t).not.toContain('nie potwierdzają');
-    expect(t).toContain('Zalecana obserwacja auksometryczna za 6 miesięcy.');
+    expect(t).toContain('Zalecana kontrolna ocena auksologiczna za 6 miesięcy.');
   });
 
   it('co najmniej jeden szczyt ≥10: zdanie o prawidłowym wydzielaniu zostaje', () => {
@@ -73,21 +73,21 @@ describe('epikryza — wspólne progi hSDS−mpSDS (sekcja auksologiczna vs ISS)
 
   it('−0,72: „w granicach potencjału” i BEZ zdania ISS o potencjale (dawna sprzeczność)', () => {
     const t = gen({ ...base, hSdsMpSds: -0.72 }, { diagnosis: 'iss' });
-    expect(t).toContain('rośnie w granicach swojego potencjału');
+    expect(t).toContain('rośnie w granicach potencjału');
     expect(t).not.toContain('wyraźnie poniżej oczekiwanego');
     expect(t).not.toContain('na granicy oczekiwanego');
   });
 
   it('−1,70: „na granicy” w obu miejscach, minus typograficzny U+2212 w ISS', () => {
     const t = gen({ ...base, hSdsMpSds: -1.7 }, { diagnosis: 'iss' });
-    expect(t).toContain('rośnie na granicy swojego potencjału');
-    expect(t).toContain('znajduje się na granicy oczekiwanego potencjału genetycznego (hSDS − mpSDS = −1,70)');
+    expect(t).toContain('rośnie na dolnej granicy potencjału');
+    expect(t).toContain('pozostaje na granicy oczekiwanego potencjału genetycznego, co wymaga dalszej obserwacji');
   });
 
   it('−2,30: „poniżej” i „wyraźnie poniżej” spójnie', () => {
     const t = gen({ ...base, hSdsMpSds: -2.3 }, { diagnosis: 'iss' });
-    expect(t).toContain('rośnie poniżej swojego potencjału');
-    expect(t).toContain('wyraźnie poniżej oczekiwanego potencjału genetycznego (hSDS − mpSDS = −2,30)');
+    expect(t).toContain('rośnie poniżej potencjału');
+    expect(t).toContain('pozostaje wyraźnie poniżej oczekiwanego potencjału genetycznego');
   });
 });
 
@@ -97,7 +97,7 @@ describe('epikryza — testy GH: kontekst second_only wnioskuje z obu testów', 
       diagnosis: 'ghd',
       ghTests: { performed: 'yes', context: 'second_only', test1: { type: 'clonidine', peakGh: '12' }, test2: { type: 'glucagon', peakGh: '8' } }
     });
-    expect(t).not.toContain('Oba wyniki poniżej normy');
+    expect(t).not.toContain('znajdują się poniżej normy');
     expect(t).toContain('w co najmniej jednym teście wskazuje na prawidłowe wydzielanie');
     expect(t).toContain('wykluczono niedobór hormonu wzrostu');
   });
@@ -107,7 +107,7 @@ describe('epikryza — testy GH: kontekst second_only wnioskuje z obu testów', 
       diagnosis: 'ghd',
       ghTests: { performed: 'yes', context: 'second_only', test1: { type: 'clonidine', peakGh: '7' }, test2: { type: 'glucagon', peakGh: '8' } }
     });
-    expect(t).toContain('Oba wyniki poniżej normy, co potwierdza niedobór');
+    expect(t).toContain('Oba wyniki znajdują się poniżej normy, co potwierdza niedobór');
     expect(t).toContain('odpowiadają niedoborowi hormonu wzrostu');
   });
 });
@@ -120,7 +120,7 @@ describe('epikryza — testy GH: kontekst both z jednym wypełnionym testem', ()
     });
     expect(t).toContain('szczytowe stężenie GH 5,1 ng/mL');
     expect(t).toContain('konieczne jest uzupełnienie diagnostyki o drugi test');
-    expect(t).toContain('wynik wykonanego testu stymulacyjnego (szczyt GH 5,1 ng/mL) jest poniżej normy i wymaga potwierdzenia w drugim teście');
+    expect(t).toContain('Rozpoznanie niedoboru hormonu wzrostu pozostaje na tym etapie niepotwierdzone — wynik wykonanego testu stymulacyjnego wymaga weryfikacji w drugim teście.');
     expect(t).not.toContain('odpowiadają niedoborowi');
   });
 
@@ -130,7 +130,7 @@ describe('epikryza — testy GH: kontekst both z jednym wypełnionym testem', ()
       ghTests: { performed: 'yes', context: 'both', test1: { type: 'clonidine', peakGh: 7 } }
     });
     expect(t).toContain('konieczne jest uzupełnienie diagnostyki o drugi test');
-    expect(t).toContain('wynik pierwszego testu stymulacyjnego (szczyt GH 7,0 ng/mL) jest poniżej normy');
+    expect(t).toContain('wynik pierwszego testu stymulacyjnego wymaga weryfikacji w drugim teście');
     expect(t).not.toContain('odpowiadają niedoborowi');
   });
 
@@ -154,7 +154,7 @@ describe('epikryza — testy GH: kontekst both z jednym wypełnionym testem', ()
       ghTests: { performed: 'yes', context: 'first_only', test1: { type: 'clonidine', peakGh: 7 } }
     });
     expect(pending).toContain('konieczne jest uzupełnienie diagnostyki o drugi test');
-    expect(pending).toContain('wymaga potwierdzenia w drugim teście');
+    expect(pending).toContain('pozostaje na tym etapie niepotwierdzone');
   });
 });
 
@@ -164,7 +164,7 @@ describe('epikryza — SGA respektuje wywiad o nadgonieniu wzrostu', () => {
       diagnosis: 'sga',
       birth: { birthWeightG: 2100, birthWeightSds: -2.5, catchUp: 'yes' }
     });
-    expect(t).not.toContain('(SGA) bez nadgonienia');
+    expect(t).not.toContain('bez doganiania wzrostu');
     expect(t).toContain('rozpoznanie niskorosłości na tle SGA wymaga weryfikacji');
     expect(t).not.toContain('B.64');
   });
@@ -174,7 +174,7 @@ describe('epikryza — SGA respektuje wywiad o nadgonieniu wzrostu', () => {
       diagnosis: 'sga',
       birth: { birthWeightG: 2100, birthWeightSds: -2.5, catchUp: 'no' }
     });
-    expect(t).toContain('(SGA) bez nadgonienia wzrostu do 4. roku życia.');
+    expect(t).toContain('(SGA), bez doganiania wzrostu do 4. roku życia.');
     expect(t).toContain('B.64');
   });
 
@@ -184,7 +184,8 @@ describe('epikryza — SGA respektuje wywiad o nadgonieniu wzrostu', () => {
       birth: { birthWeightG: 2100, birthWeightSds: -2.5, catchUp: 'no' },
       ghTests: { performed: 'yes', context: 'both', test1: { type: 'clonidine', peakGh: 12 }, test2: { type: 'glucagon', peakGh: 11 } }
     });
-    expect(t).toContain('nie zamyka drogi do leczenia hormonem wzrostu');
+    expect(t).toContain('jest zgodne z kryteriami programu leczenia');
+    expect(t).not.toContain('nie zamyka drogi');
   });
 });
 
@@ -194,7 +195,7 @@ describe('epikryza — otyłość: progi jak w aplikacji i rozpoznanie z obu kry
       { sex: 'M', ageYears: 12, ageMonths: 1, height: 150, weight: 60, bmi: 26.7, bmiPercentile: 98, coleIndex: 118 },
       { diagnosis: 'obesity' }
     );
-    expect(t).toContain('Na podstawie centyla BMI (98. centyla) rozpoznano otyłość prostą');
+    expect(t).toContain('Na podstawie centyla BMI (98. centyl) rozpoznano otyłość prostą');
     expect(t).not.toContain('rozpoznano nadwagę');
   });
 
@@ -231,7 +232,7 @@ describe('epikryza — otyłość: progi jak w aplikacji i rozpoznanie z obu kry
       { diagnosis: 'obesity' }
     );
     expect(t).toContain("wskaźnika Cole'a (118%)");
-    expect(t).toContain('centyla BMI (86. centyla)');
+    expect(t).toContain('centyla BMI (86. centyl)');
     expect(t).toContain('rozpoznano nadwagę');
     expect(t).not.toContain('Colea');
   });
@@ -242,6 +243,7 @@ describe('epikryza — otyłość: progi jak w aplikacji i rozpoznanie z obu kry
       { diagnosis: 'obesity' }
     );
     expect(olbrzymia).toContain('rozpoznano otyłość olbrzymią');
+    expect(olbrzymia).toContain('BMI SDS ≥ +3');
     const cole160 = gen({ sex: 'M', ageYears: 13, ageMonths: 0, bmi: 35, coleIndex: 160 }, { diagnosis: 'obesity' });
     expect(cole160).toContain("wskaźnika Cole'a (160%) rozpoznano otyłość prostą");
     expect(cole160).not.toContain('olbrzymią');
@@ -308,13 +310,14 @@ describe('epikryza P3 — warstwa językowa i formatowanie', () => {
       { sex: 'M', ageYears: 12, ageMonths: 6, height: 140, testicularVolume: 'lt4' },
       { clinical: { tannerGenitalia: 1, tannerPubic: 1 } }
     );
-    expect(t).toContain('G1, obj. jąder <4 ml, P1');
+    expect(t).toContain('G1, objętość jąder <4 mL, P1');
     expect(t).not.toContain('lt4');
+    expect(t).not.toContain('obj. jąder');
     const t2 = gen(
       { sex: 'M', ageYears: 12, ageMonths: 6, height: 140, testicularVolume: '4to6' },
       { clinical: { tannerGenitalia: 2, tannerPubic: 2 } }
     );
-    expect(t2).toContain('obj. jąder 4–6 ml');
+    expect(t2).toContain('objętość jąder 4–6 mL');
   });
 
   it('brak wzrostu nie wycieka jako „wzrost null cm”', () => {
@@ -389,7 +392,7 @@ describe('epikryza P3 — warstwa językowa i formatowanie', () => {
       diagnosis: 'ghd',
       ghTests: { performed: 'yes', context: 'first_only', test1: { type: 'clonidine', peakGh: 12 } }
     });
-    expect(t).toContain('zwolniono do domu z zaleceniami.');
+    expect(t).toContain('wypisano do domu z zaleceniami.');
     expect(t).not.toContain('jak niżej');
   });
 
@@ -462,9 +465,9 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
 
   it('sekcja auksologiczna: werdykt całości, najgorszy odcinek i flaga pozycyjna (słownik lekarski)', () => {
     const t = gen({ sex: 'M', ageYears: 7, ageMonths: 0, height: 110, boneAge: 6, trajectory: trajDecel }, {});
-    expect(t).toContain('Automatyczna analiza trajektorii wzrostu (okres 4 r.ż. – 7 r.ż.): istotna deceleracja wzrastania.');
-    expect(t).toContain('Największe pogorszenie toru obserwowano między 5 r.ż. a 6 r.ż. (ΔSDS −1,20 — istotna deceleracja wzrastania).');
-    expect(t).toContain('Względem pomiaru z wieku 4 r.ż. stwierdzono istotne obniżenie pozycji centylowej wzrostu (ΔhSDS −1,20) — obraz deceleracji wzrastania.');
+    expect(t).toContain('Analiza toru wzrastania w wieku 4–7 lat wykazała istotną decelerację wzrastania.');
+    expect(t).toContain('Największe pogorszenie toru wzrastania obserwowano w wieku 5–6 lat (ΔSDS = −1,20).');
+    expect(t).toContain('W porównaniu z pomiarem wykonanym w wieku 4 lat pozycja centylowa wzrostu obniżyła się istotnie (ΔhSDS = −1,20).');
   });
 
   it('najgorszy odcinek pokrywający cały okres obserwacji nie jest powtarzany', () => {
@@ -476,9 +479,9 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
 
   it('brak trajektorii w metrykach: dokument bez nowych zdań (regresja)', () => {
     const t = gen({ sex: 'M', ageYears: 7, ageMonths: 0, height: 110 }, {});
-    expect(t).not.toContain('Automatyczna analiza');
+    expect(t).not.toContain('Analiza toru wzrastania');
     expect(t).not.toContain('pogorszenie toru');
-    expect(t).not.toContain('opóźnionego dojrzewania');
+    expect(t).not.toContain('opóźnionemu dojrzewaniu');
   });
 
   it('nota o opóźnionym dojrzewaniu w badaniu przedmiotowym, próg wg płci (13/14 lat)', () => {
@@ -487,9 +490,9 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
       { sex: 'F', ageYears: 13, ageMonths: 6, height: 145, trajectory: noTraj },
       { clinical: { tannerBreasts: 1, tannerPubic: 1 } }
     );
-    expect(girl).toContain('Nie stwierdzono cech pokwitania w wieku powyżej 13 lat — obraz opóźnionego dojrzewania, wskazana ocena specjalistyczna.');
+    expect(girl).toContain('U dziewczynki po ukończeniu 13. roku życia nie stwierdzono cech dojrzewania płciowego — obraz odpowiada opóźnionemu dojrzewaniu; wskazana dalsza diagnostyka endokrynologiczna.');
     const boy = gen({ sex: 'M', ageYears: 14, ageMonths: 6, height: 150, trajectory: noTraj }, {});
-    expect(boy).toContain('powyżej 14 lat — obraz opóźnionego dojrzewania');
+    expect(boy).toContain('U chłopca po ukończeniu 14. roku życia nie stwierdzono cech dojrzewania płciowego');
   });
 
   it('sekcja przebiegu leczenia GH z odcinków ghOn, umieszczona przed prognozą', () => {
@@ -509,8 +512,8 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
       { sex: 'M', ageYears: 11, ageMonths: 0, height: 135, predictions: { rwt: { value: 172, error: 3 } }, trajectory: trajGh },
       {}
     );
-    expect(r.text).toContain('Ocena odpowiedzi wzrostowej na leczenie hormonem wzrostu (analiza trajektorii): w okresie 8 r.ż. – 9 r.ż. — dobra odpowiedź na GH (ΔSDS +0,45); w okresie 9 r.ż. – 10 r.ż. — słaba odpowiedź na GH — do oceny (ΔSDS +0,05).');
-    const ig = r.sections.findIndex((x) => x.includes('Ocena odpowiedzi wzrostowej'));
+    expect(r.text).toContain('W okresie leczenia hormonem wzrostu analiza trajektorii wykazała dobrą odpowiedź wzrostową w wieku 8–9 lat (ΔSDS = +0,45) oraz słabą odpowiedź wzrostową (do oceny) w wieku 9–10 lat (ΔSDS = +0,05).');
+    const ig = r.sections.findIndex((x) => x.includes('W okresie leczenia hormonem wzrostu'));
     const ik = r.sections.findIndex((x) => x.includes('Prognozowany wzrost ostateczny'));
     expect(ig).toBeGreaterThanOrEqual(0);
     expect(ik).toBeGreaterThan(ig);
@@ -530,11 +533,12 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
       delayedPuberty: false
     };
     const t = gen({ sex: 'M', ageYears: 12, ageMonths: 6, bmi: 31, bmiPercentile: 98, trajectory: trajRed }, { diagnosis: 'obesity' });
-    expect(t).toContain('W okresie zamierzonej redukcji masy ciała analiza trajektorii wskazuje: redukcja w trakcie leczenia (ΔSDS −0,40).');
+    expect(t).toContain('Analiza trajektorii potwierdza redukcję nadmiaru masy ciała w okresie leczenia (ΔSDS = −0,40).');
     const noRd = JSON.parse(JSON.stringify(trajRed));
     noRd.bmi.segments.forEach((s) => { s.rdOn = false; });
     const t2 = gen({ sex: 'M', ageYears: 12, ageMonths: 6, bmi: 31, bmiPercentile: 98, trajectory: noRd }, { diagnosis: 'obesity' });
-    expect(t2).not.toContain('zamierzonej redukcji');
+    expect(t2).not.toContain('Analiza trajektorii potwierdza');
+    expect(t2).not.toContain('mimo leczenia');
   });
 
   it('karta zaawansowana wystawia model i odcinek terapii GH z wierszy importu (ghSync)', () => {
@@ -556,5 +560,120 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
     expect(uiSource).toContain('he2=!isNaN(t2)&&t2>=1&&t2<=5?{stage:t2,atAgeMonths:');
     expect(uiSource).toContain('a9-he2.atAgeMonths<=12');
     expect(uiSource).toContain('he=null,he2=null');
+  });
+});
+
+describe('epikryza P5 — szlif językowy i rejestr medyczny (audyt 2026-08-08)', () => {
+  it('wiek kostny bez zeugmy; wypisano do domu; wywiad rodzinny ujemny', () => {
+    const t = gen({ sex: 'M', ageYears: 12, ageMonths: 0, boneAge: 8.5, boneAgeDelay: 2, motherHeight: 165, fatherHeight: 180, mph: 179 }, { familyDelayedPuberty: 'no' });
+    expect(t).toContain('; jest on opóźniony o 2 lata w stosunku do wieku metrykalnego.');
+    expect(t).toContain('Wywiad rodzinny w kierunku konstytucjonalnego opóźnienia wzrastania i dojrzewania jest ujemny.');
+    const g = gen({ sex: 'M', ageYears: 10, ageMonths: 0 }, { diagnosis: 'ghd', ghTests: { performed: 'yes', context: 'first_only', test1: { type: 'clonidine', peakGh: 12 } } });
+    expect(g).toContain('wypisano do domu');
+    expect(g).not.toContain('zwolniono');
+  });
+
+  it('SDS zamiast Z-score; wg norm; tydzień ciąży z dniami w nawiasie; doganianie wzrostu', () => {
+    const t = gen({ sex: 'M', ageYears: 6, ageMonths: 0 }, {
+      birth: { gestationalWeeks: 39, gestationalDays: 2, birthWeightG: 1900, birthWeightSds: -2.6, sdsSourceLabel: 'Niklasson / Albertsson-Wikland', catchUp: 'no' }
+    });
+    expect(t).toContain('w 39. tygodniu ciąży (39+2)');
+    expect(t).toContain('SDS = −2,60 wg norm Niklasson');
+    expect(t).not.toContain('Z‑score');
+    expect(t).toContain('masa i/lub długość ciała przy urodzeniu poniżej −2 SDS');
+    expect(t).toContain('Bez doganiania wzrostu (catch-up growth) do 4. roku życia.');
+  });
+
+  it('GHD pending bez anakolutu i bez dublowania wartości testu', () => {
+    const t = gen({ sex: 'M', ageYears: 10, ageMonths: 0 }, {
+      diagnosis: 'ghd',
+      ghTests: { performed: 'yes', context: 'first_only', test1: { type: 'clonidine', peakGh: 6.8 } }
+    });
+    expect(t).toContain('Rozpoznanie niedoboru hormonu wzrostu pozostaje na tym etapie niepotwierdzone — wynik pierwszego testu stymulacyjnego wymaga weryfikacji w drugim teście.');
+    expect(t).not.toContain('Na podstawie przeprowadzonej diagnostyki wynik');
+    const idx = t.indexOf('6,8 ng/mL');
+    expect(t.indexOf('6,8 ng/mL', idx + 1)).toBe(-1);
+  });
+
+  it('GHD potwierdzone: IGF-1 wspiera „to rozpoznanie” bez powtórzenia frazy', () => {
+    const t = gen({ sex: 'M', ageYears: 10, ageMonths: 0 }, {
+      diagnosis: 'ghd',
+      labs: { igf1: 40, igf1Status: 'below' },
+      ghTests: { performed: 'yes', context: 'both', test1: { type: 'clonidine', peakGh: 6 }, test2: { type: 'glucagon', peakGh: 7 } }
+    });
+    expect(t).toContain('Niskie stężenie IGF‑1 dodatkowo wspiera to rozpoznanie.');
+    expect(t).not.toContain('w połączeniu ze szczytem');
+  });
+
+  it('otyłość: powikłania jako odesłanie do sekcji wyżej (bez listy w mianowniku); HDL z jednym miejscem po przecinku', () => {
+    const t = gen(
+      { sex: 'M', ageYears: 13, ageMonths: 0, bmi: 32, bmiPercentile: 99 },
+      { diagnosis: 'obesity', obesity: { homaIrElevated: 'yes', lipidsNormal: 'no', hdl: '1', bpNormal: 'no', altElevated: 'yes', thyroidNormal: 'no' } }
+    );
+    expect(t).toContain('Przebieg powikłany jest opisanymi wyżej zaburzeniami metabolicznymi.');
+    expect(t).not.toContain('Stwierdzono powikłania metaboliczne:');
+    expect(t).toContain('HDL 1,0 mmol/L');
+  });
+
+  it('KOWD: prognoza bez powtórzonej liczby; ostrzeżenie spięte z kontrolą auksologiczną', () => {
+    const t = gen({ sex: 'M', ageYears: 13, ageMonths: 0, predictions: { rwt: { value: 171.8, error: 2.6 } } }, {
+      diagnosis: 'kowd',
+      ghTests: { performed: 'yes', context: 'both', test1: { type: 'clonidine', peakGh: 6 }, test2: { type: 'glucagon', peakGh: 7 } }
+    });
+    expect(t).toContain('Przedstawiona wyżej prognoza wzrostu ostatecznego jest zadowalająca.');
+    expect(t.match(/171,8 cm/g)).toHaveLength(1);
+    expect(t).toContain('przysadki; niezależnie od tego zalecana jest kontrolna ocena auksologiczna za 6 miesięcy.');
+  });
+
+  it('SGA: bez powtórzonej prognozy RWT (wartość tylko w sekcji prognoz)', () => {
+    const t = gen(
+      { sex: 'M', ageYears: 6, ageMonths: 0, predictions: { rwt: { value: 168.2, error: 3.1 } } },
+      { diagnosis: 'sga', birth: { birthWeightG: 2100, birthWeightSds: -2.5, catchUp: 'no' } }
+    );
+    expect(t.match(/168,2 cm/g)).toHaveLength(1);
+  });
+
+  it('Turner: genetyka bez interpretacji przy rozpoznaniu; program lekowy; weryfikacja badaniem kariotypu', () => {
+    const t = gen({ sex: 'F', ageYears: 9, ageMonths: 0 }, {
+      diagnosis: 'turner',
+      genetics: { karyotype: 'done', karyotypeResult: '45X' }
+    });
+    expect(t).toContain('Badania genetyczne: kariotyp 45,X.');
+    expect(t).not.toContain('kariotyp 45,X — zespół Turnera');
+    expect(t).toContain('program lekowy B.42 NFZ');
+    expect(t).toContain('dalsza opieka w poradni endokrynologicznej');
+    const bez = gen({ sex: 'F', ageYears: 9, ageMonths: 0 }, { diagnosis: 'turner' });
+    expect(bez).toContain('konieczna weryfikacja badaniem kariotypu');
+  });
+
+  it('tarczyca: rozpoznanie w rejestrze klinicznym z kontrolą auksologiczną', () => {
+    const t = gen({ sex: 'F', ageYears: 8, ageMonths: 0 }, { diagnosis: 'thyroid' });
+    expect(t).toContain('Rozpoznano niedoczynność tarczycy, będącą prawdopodobną przyczyną niskorosłości i spowolnienia tempa wzrastania.');
+    expect(t).toContain('doganianie wzrostu (catch-up growth)');
+    expect(t).toContain('kontrolna ocena auksologiczna po 6 miesiącach od wyrównania czynności tarczycy');
+  });
+
+  it('lewodopa w narzędniku; choroba Hashimoto pełną nazwą; dieta i aktywność', () => {
+    const t = gen({ sex: 'F', ageYears: 10, ageMonths: 0 }, {
+      diagnosis: 'ghd',
+      clinical: { chronicDisease: 'yes', chronicDiseases: ['tarczyca'] },
+      ghTests: { performed: 'yes', context: 'first_only', test1: { type: 'ldopa', peakGh: 12 } }
+    });
+    expect(t).toContain('z lewodopą (L‑DOPA)');
+    expect(t).toContain('przewlekłe autoimmunizacyjne zapalenie tarczycy (chorobę Hashimoto) z niedoczynnością tarczycy');
+    const ob = gen({ sex: 'M', ageYears: 13, ageMonths: 0, bmi: 32, bmiPercentile: 99 }, { diagnosis: 'obesity' });
+    expect(ob).toContain('(dieta i aktywność fizyczna)');
+  });
+
+  it('ułamkowe przedziały wieku w zdaniach trajektorii („w wieku 10–11,5 roku”)', () => {
+    const t = gen({ sex: 'M', ageYears: 12, ageMonths: 6, trajectory: {
+      height: {
+        fromAgeM: 120, toAgeM: 138,
+        total: { label: 'nadrabia niedobór wzrostu', tone: 'good' }, worst: null, redFlag: null,
+        segments: [{ fromAgeM: 120, toAgeM: 138, dSds: 0.4, label: 'dobra odpowiedź na GH', tone: 'good', ghOn: true, rdOn: false }]
+      }, weight: null, bmi: null, delayedPuberty: false
+    } }, {});
+    expect(t).toContain('Wynik analizy toru wzrastania w wieku 10–11,5 roku: nadrabia niedobór wzrostu.');
+    expect(t).toContain('dobrą odpowiedź wzrostową w wieku 10–11,5 roku (ΔSDS = +0,40)');
   });
 });
