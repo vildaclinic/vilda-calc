@@ -293,3 +293,119 @@ describe('epikryza — kolektor UI liczy flagę tempa hierarchią modułu trajek
     expect(uiSource).toContain('ye!=null&&i>=4&&i<=12&&(ve=ye<4.5)');
   });
 });
+
+describe('epikryza P3 — warstwa językowa i formatowanie', () => {
+  it('dopełniacz wieku po „w wieku” (lata 1–4, miesiące 1–4, 0 lat)', () => {
+    expect(gen({ sex: 'F', ageYears: 4, ageMonths: 3 }, {})).toContain('w wieku 4 lat i 3 miesięcy została');
+    expect(gen({ sex: 'M', ageYears: 1, ageMonths: 2 }, {})).toContain('w wieku 1 roku i 2 miesięcy został');
+    expect(gen({ sex: 'M', ageYears: 12, ageMonths: 1 }, {})).toContain('w wieku 12 lat i 1 miesiąca');
+    expect(gen({ sex: 'F', ageYears: 0, ageMonths: 7 }, {})).toContain('w wieku 7 miesięcy');
+    expect(gen({ sex: 'F', ageYears: 5, ageMonths: 0 }, {})).toContain('w wieku 5 lat została');
+  });
+
+  it('objętość jąder jako etykieta kliniczna zamiast tokenu selecta', () => {
+    const t = gen(
+      { sex: 'M', ageYears: 12, ageMonths: 6, height: 140, testicularVolume: 'lt4' },
+      { clinical: { tannerGenitalia: 1, tannerPubic: 1 } }
+    );
+    expect(t).toContain('G1, obj. jąder <4 ml, P1');
+    expect(t).not.toContain('lt4');
+    const t2 = gen(
+      { sex: 'M', ageYears: 12, ageMonths: 6, height: 140, testicularVolume: '4to6' },
+      { clinical: { tannerGenitalia: 2, tannerPubic: 2 } }
+    );
+    expect(t2).toContain('obj. jąder 4–6 ml');
+  });
+
+  it('brak wzrostu nie wycieka jako „wzrost null cm”', () => {
+    const t = gen({ sex: 'F', ageYears: 5, ageMonths: 0, weight: 18 }, {});
+    expect(t).not.toContain('null');
+    expect(t).toContain('masa ciała 18 kg');
+  });
+
+  it('priming zależny od płci (chłopiec: androgenowy, dziewczynka: estrogenowy)', () => {
+    const boy = gen({ sex: 'M', ageYears: 13, ageMonths: 0 }, {
+      diagnosis: 'ghd',
+      ghTests: { performed: 'yes', context: 'first_only', priming: 'yes', test1: { type: 'clonidine', peakGh: 12 } }
+    });
+    expect(boy).toContain('Zastosowano priming androgenowy.');
+    expect(boy).not.toContain('estrogenowy');
+    const girl = gen({ sex: 'F', ageYears: 13, ageMonths: 0 }, {
+      diagnosis: 'ghd',
+      ghTests: { performed: 'yes', context: 'first_only', priming: 'yes', test1: { type: 'clonidine', peakGh: 12 } }
+    });
+    expect(girl).toContain('Zastosowano priming estrogenowy.');
+  });
+
+  it('wartości laboratoryjne z przecinkiem dziesiętnym i jednostkami (TSH mU/L, fT4 pmol/L, kortyzol, lipidy)', () => {
+    const labs = gen({ sex: 'F', ageYears: 9, ageMonths: 0 }, { labs: { thyroidNormal: 'no', tsh: '28.4', ft4: '0.6' } });
+    expect(labs).toContain('TSH 28,4 mU/L');
+    expect(labs).toContain('fT4 0,6 pmol/L');
+    const cort = gen({ sex: 'F', ageYears: 9, ageMonths: 0 }, { labs: { cortisolNormal: 'no', cortisolMorning: '93.5' } });
+    expect(cort).toContain('(93,5 nmol/L)');
+    const lip = gen(
+      { sex: 'M', ageYears: 13, ageMonths: 0, bmi: 32, bmiPercentile: 99 },
+      { diagnosis: 'obesity', obesity: { lipidsNormal: 'no', cholTotal: '5.8', ldl: '3.9', hdl: '0.9', triglycerides: '2.1', thyroidNormal: 'no', tsh: '6.2' } }
+    );
+    expect(lip).toContain('Chol 5,8 mmol/L');
+    expect(lip).toContain('TG 2,1 mmol/L');
+    expect(lip).toContain('TSH 6,2 mU/L');
+  });
+
+  it('niewykonana celiakia jako osobne zdanie, nie w liście po „stwierdzono:”', () => {
+    const t = gen({ sex: 'F', ageYears: 9, ageMonths: 0 }, { labs: { celiacNormal: 'not_done', cbcNormal: 'no' } });
+    expect(t).toContain('stwierdzono: odchylenia w morfologii krwi. Badania w kierunku celiakii nie wykonano.');
+    const solo = gen({ sex: 'F', ageYears: 9, ageMonths: 0 }, { labs: { celiacNormal: 'not_done' } });
+    expect(solo).toContain('Badania w kierunku celiakii nie wykonano.');
+    expect(solo).not.toContain('stwierdzono:');
+  });
+
+  it('wolny tekst wywiadu bez podwójnej kropki', () => {
+    const t = gen(
+      { sex: 'M', ageYears: 9, ageMonths: 0 },
+      { clinical: { chronicDisease: 'yes', chronicDiseases: ['astma'], chronicOther: 'stan po appendektomii.' } }
+    );
+    expect(t).toContain('stan po appendektomii.');
+    expect(t).not.toContain('appendektomii..');
+  });
+
+  it('wywiad okołoporodowy bez wiszącego „dziecko urodzone,” przy braku tygodnia ciąży', () => {
+    const t = gen({ sex: 'M', ageYears: 6, ageMonths: 0 }, { birth: { birthWeightG: 2100 } });
+    expect(t).toContain('Wywiad okołoporodowy: masa urodzeniowa 2100 g.');
+    expect(t).not.toContain('urodzone,');
+    const withWeeks = gen({ sex: 'M', ageYears: 6, ageMonths: 0 }, { birth: { gestationalWeeks: 38, birthWeightG: 2100 } });
+    expect(withWeeks).toContain('dziecko urodzone w 38. tygodniu ciąży, masa urodzeniowa 2100 g');
+  });
+
+  it('odmiana wieku kostnego („2,5 roku”, „1 rok”, „3 lata”, „10 lat”)', () => {
+    expect(gen({ sex: 'M', ageYears: 9, ageMonths: 0, boneAge: 2.5 }, {})).toContain('oceniono na 2,5 roku');
+    expect(gen({ sex: 'M', ageYears: 9, ageMonths: 0, boneAge: 1 }, {})).toContain('oceniono na 1 rok');
+    expect(gen({ sex: 'M', ageYears: 9, ageMonths: 0, boneAge: 3 }, {})).toContain('oceniono na 3 lata');
+    expect(gen({ sex: 'M', ageYears: 12, ageMonths: 0, boneAge: 10 }, {})).toContain('oceniono na 10 lat');
+  });
+
+  it('zakończenie GHD bez odwołania do nieistniejącej sekcji zaleceń', () => {
+    const t = gen({ sex: 'M', ageYears: 10, ageMonths: 0 }, {
+      diagnosis: 'ghd',
+      ghTests: { performed: 'yes', context: 'first_only', test1: { type: 'clonidine', peakGh: 12 } }
+    });
+    expect(t).toContain('zwolniono do domu z zaleceniami.');
+    expect(t).not.toContain('jak niżej');
+  });
+
+  it('własny powód hospitalizacji zachowuje akronimy (mała litera tylko na początku)', () => {
+    const t = gen({ sex: 'M', ageYears: 10, ageMonths: 0 }, { reasons: ['Kwalifikacji do programu B.19 NFZ'] });
+    expect(t).toContain('w celu kwalifikacji do programu B.19 NFZ');
+    expect(t).not.toContain('b.19 nfz');
+  });
+
+  it('norma testów GH jako „≥10 ng/mL” — spójna ze szczytem równym dokładnie 10,0', () => {
+    const t = gen({ sex: 'M', ageYears: 10, ageMonths: 0 }, {
+      diagnosis: 'ghd',
+      ghTests: { performed: 'yes', context: 'first_only', test1: { type: 'clonidine', peakGh: 10 } }
+    });
+    expect(t).toContain('(norma ≥10 ng/mL)');
+    expect(t).not.toContain('norma powyżej 10');
+    expect(t).toContain('prawidłowe wydzielanie');
+  });
+});
