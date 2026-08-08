@@ -64,6 +64,7 @@ export default defineConfig([
       'test-results/**',
       'coverage/**',
       'jsQR.min.js',
+      'jszip.min.js',
       'lucide.min.js',
       'qrcode.min.js'
     ]
