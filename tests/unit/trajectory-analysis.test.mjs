@@ -281,7 +281,7 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
     expect(model.velocity.cmPerYear).toBeCloseTo(4, 5);
     expect(model.velocity.usedLastYear).toBe(true);
     expect(model.velocity.slow).toBe(true);
-    // >10 lat: getVelocityThreshold zwraca null — moduł oznacza brak automatycznej oceny
+    // >10 lat bez Tannera/wieku kostnego: reguła generyczna okołopokwitaniowa (<4 cm/rok → warn)
     const model2 = vta.analyze({
       measurements: [{ ageMonths: 144, height: 150 }],
       currentAgeMonths: 156,
@@ -289,8 +289,10 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
       sex: 'M'
     });
     expect(model2.velocity.threshold).toBeNull();
-    expect(model2.velocity.slow).toBe(false);
-    expect(model2.velocity.aboveNormAge).toBe(true);
+    expect(model2.velocity.basis).toBe('generic');
+    expect(model2.velocity.slow).toBe(true);
+    expect(model2.velocity.severity).toBe('warn');
+    expect(model2.velocity.alarm).toBe(false);
   });
 
   it('zwraca null przy mniej niż dwóch punktach z policzalną statystyką', () => {
@@ -560,5 +562,143 @@ describe('banery kart wzrostowych z modelu (wariant 1 konsolidacji)', () => {
     expect(hidden).toContain('Automatyczna analiza trajektorii');
     // model niezmutowany — flaga nadal w modelu (dla banera i plakietek)
     expect(model.metrics.find((m) => m.metric === 'height').redFlag).not.toBeNull();
+  });
+});
+
+describe('ocena tempa >10 lat: hierarchia Tanner → wiek kostny → reguła generyczna', () => {
+  function makeVta(table) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
+    const cut = (name) => {
+      const i = appSource.indexOf(`function ${name}(`);
+      let depth = 0;
+      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
+        if (appSource[k] === '{') depth += 1;
+        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
+      }
+      throw new Error(name);
+    };
+    const helpers = new Function(`
+      ${cut('pickPrevForLastYear')}
+      ${cut('pickPrevFallback')}
+      ${cut('velocityCmPerYear')}
+      ${cut('getVelocityThreshold')}
+      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
+    `)();
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      ...helpers,
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+
+  // 12-latek, 3 cm w 12 mies. → 3,0 cm/rok (<4)
+  function analyzeSlow12(vta, sex, context) {
+    return vta.analyze({
+      measurements: [{ ageMonths: 132, height: 150 }],
+      currentAgeMonths: 144,
+      currentHeight: 153,
+      sex,
+      context
+    });
+  }
+  const T = { 'HT|132': 0, 'HT|144': -0.3 };
+
+  it('Tanner I: poziom alarmowy (danger) — baner tempa aktywny', () => {
+    const vta = makeVta(T);
+    const m = analyzeSlow12(vta, 'M', { tannerStage: 1 });
+    expect(m.velocity.slow).toBe(true);
+    expect(m.velocity.severity).toBe('danger');
+    expect(m.velocity.alarm).toBe(true);
+    expect(m.velocity.basis).toBe('tanner1');
+    const alerts = vta.buildCardAlertsHtml(m);
+    expect(alerts).toContain('Tempo wzrastania poniżej normy dla wieku');
+    expect(alerts).toContain('Tanner I');
+  });
+
+  it('Tanner II–III: czujność (warn) — bez banera; Tanner IV–V: bez oceny, nota o deceleracji', () => {
+    const vta = makeVta(T);
+    const m2 = analyzeSlow12(vta, 'K', { tannerStage: 2 });
+    expect(m2.velocity.slow).toBe(true);
+    expect(m2.velocity.severity).toBe('warn');
+    expect(m2.velocity.alarm).toBe(false);
+    expect(vta.buildCardAlertsHtml(m2)).toBe('');
+    expect(vta.buildPatientHtml(m2)).toContain('do oceny');
+    const m4 = analyzeSlow12(vta, 'K', { tannerStage: 4 });
+    expect(m4.velocity.slow).toBe(false);
+    expect(m4.velocity.note).toContain('deceleracja fizjologiczna');
+  });
+
+  it('wiek kostny: świeży BA <10 lat dobiera normę wg BA na poziomie warn; nieświeży → reguła generyczna', () => {
+    const vta = makeVta(T);
+    // BA 8 lat oznaczony przy 140 mies. (świeży): norma ≥5 cm/rok → 3,0 poniżej → warn
+    const fresh = analyzeSlow12(vta, 'M', { boneAge: { baMonths: 96, atAgeMonths: 140 } });
+    expect(fresh.velocity.basis).toBe('boneAge');
+    expect(fresh.velocity.slow).toBe(true);
+    expect(fresh.velocity.severity).toBe('warn');
+    expect(fresh.velocity.alarm).toBe(false);
+    expect(fresh.velocity.normLabel).toContain('wieku kostnego');
+    // BA oznaczony przy 100 mies. (44 mies. temu — nieświeży) → poziom 3 (generyczny)
+    const stale = analyzeSlow12(vta, 'M', { boneAge: { baMonths: 96, atAgeMonths: 100 } });
+    expect(stale.velocity.basis).toBe('generic');
+  });
+
+  it('reguła generyczna: okna wiekowe dziewczęta ≤13 lat / chłopcy ≤15 lat', () => {
+    const vta = makeVta({ 'HT|156': 0, 'HT|168': -0.3 });
+    const mk = (sex) => vta.analyze({
+      measurements: [{ ageMonths: 156, height: 155 }],
+      currentAgeMonths: 168,
+      currentHeight: 158,
+      sex
+    });
+    const boy14 = mk('M'); // 14 lat — w oknie chłopców (≤15)
+    expect(boy14.velocity.basis).toBe('generic');
+    expect(boy14.velocity.slow).toBe(true);
+    expect(boy14.velocity.severity).toBe('warn');
+    const girl14 = mk('K'); // 14 lat — poza oknem dziewcząt (≤13)
+    expect(girl14.velocity.basis).toBeNull();
+    expect(girl14.velocity.aboveNormAge).toBe(true);
+    expect(girl14.velocity.slow).toBe(false);
+  });
+
+  it('poniżej 10 lat zachowanie bez zmian (norma metrykalna, poziom alarmowy)', () => {
+    const vta = makeVta({ 'HT|84': 0, 'HT|96': -0.2 });
+    const m = vta.analyze({
+      measurements: [{ ageMonths: 84, height: 120 }],
+      currentAgeMonths: 96,
+      currentHeight: 124,
+      sex: 'M'
+    });
+    expect(m.velocity.basis).toBe('age');
+    expect(m.velocity.slow).toBe(true);
+    expect(m.velocity.severity).toBe('danger');
+    expect(m.velocity.alarm).toBe(true);
+  });
+
+  it('opóźnione dojrzewanie: Tanner I u dziewczynki >13 lat / chłopca >14 lat', () => {
+    const vta = makeVta({ 'HT|150': 0, 'HT|162': -0.2 });
+    const mk = (sex) => vta.analyze({
+      measurements: [{ ageMonths: 150, height: 150 }],
+      currentAgeMonths: 162, // 13,5 roku
+      currentHeight: 155,
+      sex,
+      context: { tannerStage: 1 }
+    });
+    const girl = mk('K'); // 13,5 > 13 → nota
+    expect(girl.delayedPuberty).toBe(true);
+    expect(vta.buildPatientHtml(girl)).toContain('obraz opóźnionego dojrzewania');
+    expect(vta.buildHtml(girl)).toContain('obraz opóźnionego dojrzewania');
+    const boy = mk('M'); // 13,5 < 14 → bez noty
+    expect(boy.delayedPuberty).toBe(false);
   });
 });
