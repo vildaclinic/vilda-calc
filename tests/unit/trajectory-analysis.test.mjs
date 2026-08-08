@@ -145,8 +145,8 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
     expect(h.segments).toHaveLength(3);
     expect(h.segments.map((s) => s.dSds)).toEqual([-0.1, -1.2, -0.1]);
     expect(h.worst.a.ageMonths).toBe(60);
-    expect(h.worst.verdict).toEqual({ t: 'bad', l: 'łamie kanał w dół' });
-    expect(h.total).toEqual({ t: 'bad', l: 'łamie kanał w dół' });
+    expect(h.worst.verdict).toEqual({ t: 'bad', l: 'istotna deceleracja wzrastania' });
+    expect(h.total).toEqual({ t: 'bad', l: 'istotna deceleracja wzrastania' });
   });
 
   it('czerwona flaga pozycyjna: baza = pierwszy pomiar ≥24 mies. (reguła PR #64)', () => {
@@ -218,11 +218,11 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
     });
     const bmi = model.metrics.find((m) => m.metric === 'bmi');
     const wt = model.metrics.find((m) => m.metric === 'weight');
-    expect(bmi.total).toEqual({ t: 'bad', l: 'otyłość pogłębia się' });
-    expect(wt.total).toEqual({ t: 'bad', l: 'nadmiar pogłębia się (>97c)' });
+    expect(bmi.total).toEqual({ t: 'bad', l: 'progresja otyłości' });
+    expect(wt.total).toEqual({ t: 'bad', l: 'progresja nadmiaru masy (>97. centyla)' });
     const html = vta.buildHtml(model);
-    expect(html).toContain('otyłość pogłębia się');
-    expect(html).toContain('nadmiar pogłębia się (&gt;97c)');
+    expect(html).toContain('progresja otyłości');
+    expect(html).toContain('progresja nadmiaru masy (&gt;97. centyla)');
   });
 
   it('tempo wzrastania używa produkcyjnych funkcji okna i progu (norma 5–10 lat)', () => {
@@ -291,5 +291,57 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
       currentHeight: 110,
       sex: 'M'
     })).toBe('');
+  });
+});
+
+describe('renderer Karty pacjenta (buildPatientHtml)', () => {
+  function makeVta(table) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+
+  it('panel z czerwoną flagą, chipami słownika lekarskiego i tabelą odcinków', () => {
+    const vta = makeVta({ 'HT|48': 0.3, 'HT|72': -0.35, 'HT|96': -1.1 });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 72, height: 116 }],
+      currentAgeMonths: 96,
+      currentHeight: 123,
+      sex: 'M'
+    });
+    const html = vta.buildPatientHtml(model);
+    expect(html).toContain('Analiza trajektorii');
+    expect(html).toContain('Istotne obniżenie pozycji centylowej wzrostu');
+    expect(html).toContain('obraz deceleracji wzrastania');
+    expect(html).toContain('istotna deceleracja wzrastania');
+    expect(html).toContain('Szczegóły odcinków trajektorii (2)');
+    expect(html).toContain('<svg'); // sparkline
+    expect(html).toContain('vtap-main" open');
+  });
+
+  it('opcja collapsed usuwa atrybut open; brak modelu daje pusty HTML', () => {
+    const vta = makeVta({ 'HT|48': 0.3, 'HT|72': 0.3 });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }],
+      currentAgeMonths: 72,
+      currentHeight: 118,
+      sex: 'K'
+    });
+    const collapsed = vta.buildPatientHtml(model, { collapsed: true });
+    expect(collapsed).toContain('vtap-main"');
+    expect(collapsed).not.toContain('vtap-main" open');
+    expect(vta.buildPatientHtml(null)).toBe('');
   });
 });
