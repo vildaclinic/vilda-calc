@@ -779,3 +779,77 @@ describe('etap Tannera z rekordu pacjenta (świeżość TANNER_FRESH_M)', () => 
     expect(m.velocity.severity).toBe('warn');
   });
 });
+
+describe('panel trajektorii w karcie zaawansowanej (buildCardPanelHtml, hybryda)', () => {
+  function makeVta(table, browserExtra = {}) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      ...browserExtra,
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+  const T = { 'HT|48': 0.3, 'HT|84': -0.9, 'HT|96': -1.0 };
+  const mkModel = (vta) => vta.analyze({
+    measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 84, height: 120 }],
+    currentAgeMonths: 96,
+    currentHeight: 124,
+    sex: 'M'
+  });
+
+  it('opakowuje panel pacjenta w blok wynikowy karty, domyślnie rozwinięty i bez flagi (baner ją niesie)', () => {
+    const vta = makeVta(T);
+    const html = vta.buildCardPanelHtml(mkModel(vta));
+    expect(html).toContain('adv-growth-result-block--trajectory');
+    expect(html).toContain('class="vtap"');
+    expect(html).toContain('vtap-main" open');
+    expect(html).toContain('Analiza trajektorii');
+    expect(html).not.toContain('Istotne obniżenie pozycji centylowej wzrostu');
+    expect(vta.buildCardPanelHtml(null)).toBe('');
+  });
+
+  it('respektuje zapamiętane zwinięcie z localStorage (wspólny klucz z Kartą pacjenta)', () => {
+    const store = { vildaTrajectoryPanelCollapsed: '1' };
+    const vta = makeVta(T, {
+      localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } }
+    });
+    expect(vta.isPanelCollapsed()).toBe(true);
+    const html = vta.buildCardPanelHtml(mkModel(vta));
+    expect(html).toContain('vtap-main"');
+    expect(html).not.toContain('vtap-main" open');
+    // jawna opcja wygrywa
+    expect(vta.buildCardPanelHtml(mkModel(vta), { collapsed: false })).toContain('vtap-main" open');
+  });
+
+  it('wirePanelToggle zapisuje stan przy zwijaniu/rozwijaniu (idempotentnie)', () => {
+    const store = {};
+    const vta = makeVta(T, {
+      localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } }
+    });
+    let listener = null;
+    const main = {
+      open: true,
+      _vtaWired: undefined,
+      addEventListener(ev, fn) { if (ev === 'toggle') listener = fn; }
+    };
+    const scope = { querySelector: (sel) => (sel === '.vtap-main' ? main : null) };
+    expect(vta.wirePanelToggle(scope)).toBe(true);
+    expect(vta.wirePanelToggle(scope)).toBe(false); // już wpięte
+    main.open = false;
+    listener();
+    expect(store.vildaTrajectoryPanelCollapsed).toBe('1');
+    main.open = true;
+    listener();
+    expect(store.vildaTrajectoryPanelCollapsed).toBe('0');
+  });
+});
