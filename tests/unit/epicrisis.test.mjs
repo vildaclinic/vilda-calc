@@ -444,3 +444,117 @@ describe('epikryza P4 — prefill kreatora z danych aplikacji i lokalny JSZip', 
     expect(sw).toContain("'/jszip.min.js?v=1',");
   });
 });
+
+describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
+  const trajDecel = {
+    height: {
+      fromAgeM: 48, toAgeM: 84,
+      total: { label: 'istotna deceleracja wzrastania', tone: 'bad' },
+      worst: { fromAgeM: 60, toAgeM: 72, dSds: -1.2, label: 'istotna deceleracja wzrastania', tone: 'bad' },
+      redFlag: { dSds: -1.2, baseAgeMonths: 48 },
+      segments: [
+        { fromAgeM: 48, toAgeM: 60, dSds: 0.05, label: 'stabilny tor wzrastania', tone: 'stable', ghOn: false, rdOn: false },
+        { fromAgeM: 60, toAgeM: 72, dSds: -1.2, label: 'istotna deceleracja wzrastania', tone: 'bad', ghOn: false, rdOn: false }
+      ]
+    },
+    weight: null, bmi: null, delayedPuberty: false
+  };
+
+  it('sekcja auksologiczna: werdykt całości, najgorszy odcinek i flaga pozycyjna (słownik lekarski)', () => {
+    const t = gen({ sex: 'M', ageYears: 7, ageMonths: 0, height: 110, boneAge: 6, trajectory: trajDecel }, {});
+    expect(t).toContain('Automatyczna analiza trajektorii wzrostu (okres 4 r.ż. – 7 r.ż.): istotna deceleracja wzrastania.');
+    expect(t).toContain('Największe pogorszenie toru obserwowano między 5 r.ż. a 6 r.ż. (ΔSDS −1,20 — istotna deceleracja wzrastania).');
+    expect(t).toContain('Względem pomiaru z wieku 4 r.ż. stwierdzono istotne obniżenie pozycji centylowej wzrostu (ΔhSDS −1,20) — obraz deceleracji wzrastania.');
+  });
+
+  it('najgorszy odcinek pokrywający cały okres obserwacji nie jest powtarzany', () => {
+    const traj = JSON.parse(JSON.stringify(trajDecel));
+    traj.height.worst = { fromAgeM: 48, toAgeM: 84, dSds: -1.2, label: 'istotna deceleracja wzrastania', tone: 'bad' };
+    const t = gen({ sex: 'M', ageYears: 7, ageMonths: 0, trajectory: traj }, {});
+    expect(t).not.toContain('Największe pogorszenie');
+  });
+
+  it('brak trajektorii w metrykach: dokument bez nowych zdań (regresja)', () => {
+    const t = gen({ sex: 'M', ageYears: 7, ageMonths: 0, height: 110 }, {});
+    expect(t).not.toContain('Automatyczna analiza');
+    expect(t).not.toContain('pogorszenie toru');
+    expect(t).not.toContain('opóźnionego dojrzewania');
+  });
+
+  it('nota o opóźnionym dojrzewaniu w badaniu przedmiotowym, próg wg płci (13/14 lat)', () => {
+    const noTraj = { height: null, weight: null, bmi: null, delayedPuberty: true };
+    const girl = gen(
+      { sex: 'F', ageYears: 13, ageMonths: 6, height: 145, trajectory: noTraj },
+      { clinical: { tannerBreasts: 1, tannerPubic: 1 } }
+    );
+    expect(girl).toContain('Nie stwierdzono cech pokwitania w wieku powyżej 13 lat — obraz opóźnionego dojrzewania, wskazana ocena specjalistyczna.');
+    const boy = gen({ sex: 'M', ageYears: 14, ageMonths: 6, height: 150, trajectory: noTraj }, {});
+    expect(boy).toContain('powyżej 14 lat — obraz opóźnionego dojrzewania');
+  });
+
+  it('sekcja przebiegu leczenia GH z odcinków ghOn, umieszczona przed prognozą', () => {
+    const trajGh = {
+      height: {
+        fromAgeM: 96, toAgeM: 132,
+        total: { label: 'nadrabia niedobór wzrostu', tone: 'good' }, worst: null, redFlag: null,
+        segments: [
+          { fromAgeM: 96, toAgeM: 108, dSds: 0.45, label: 'dobra odpowiedź na GH', tone: 'good', ghOn: true, rdOn: false },
+          { fromAgeM: 108, toAgeM: 120, dSds: 0.05, label: 'słaba odpowiedź na GH — do oceny', tone: 'warn', ghOn: true, rdOn: false },
+          { fromAgeM: 120, toAgeM: 132, dSds: 0.1, label: 'stabilny tor wzrastania', tone: 'stable', ghOn: false, rdOn: false }
+        ]
+      },
+      weight: null, bmi: null, delayedPuberty: false
+    };
+    const r = epicrisis.generate(
+      { sex: 'M', ageYears: 11, ageMonths: 0, height: 135, predictions: { rwt: { value: 172, error: 3 } }, trajectory: trajGh },
+      {}
+    );
+    expect(r.text).toContain('Ocena odpowiedzi wzrostowej na leczenie hormonem wzrostu (analiza trajektorii): w okresie 8 r.ż. – 9 r.ż. — dobra odpowiedź na GH (ΔSDS +0,45); w okresie 9 r.ż. – 10 r.ż. — słaba odpowiedź na GH — do oceny (ΔSDS +0,05).');
+    const ig = r.sections.findIndex((x) => x.includes('Ocena odpowiedzi wzrostowej'));
+    const ik = r.sections.findIndex((x) => x.includes('Prognozowany wzrost ostateczny'));
+    expect(ig).toBeGreaterThanOrEqual(0);
+    expect(ik).toBeGreaterThan(ig);
+  });
+
+  it('otyłość: ostatni odcinek z aktywną redukcją trafia do rozpoznania; bez rdOn — bez zdania', () => {
+    const trajRed = {
+      height: null, weight: null,
+      bmi: {
+        fromAgeM: 132, toAgeM: 150,
+        total: { label: 'redukcja nadmiaru masy ciała (BMI)', tone: 'good' }, worst: null, redFlag: null,
+        segments: [
+          { fromAgeM: 132, toAgeM: 141, dSds: 0.1, label: 'narasta mimo leczenia', tone: 'warn', ghOn: false, rdOn: true },
+          { fromAgeM: 141, toAgeM: 150, dSds: -0.4, label: 'redukcja w trakcie leczenia', tone: 'good', ghOn: false, rdOn: true }
+        ]
+      },
+      delayedPuberty: false
+    };
+    const t = gen({ sex: 'M', ageYears: 12, ageMonths: 6, bmi: 31, bmiPercentile: 98, trajectory: trajRed }, { diagnosis: 'obesity' });
+    expect(t).toContain('W okresie zamierzonej redukcji masy ciała analiza trajektorii wskazuje: redukcja w trakcie leczenia (ΔSDS −0,40).');
+    const noRd = JSON.parse(JSON.stringify(trajRed));
+    noRd.bmi.segments.forEach((s) => { s.rdOn = false; });
+    const t2 = gen({ sex: 'M', ageYears: 12, ageMonths: 6, bmi: 31, bmiPercentile: 98, trajectory: noRd }, { diagnosis: 'obesity' });
+    expect(t2).not.toContain('zamierzonej redukcji');
+  });
+
+  it('karta zaawansowana wystawia model i odcinek terapii GH z wierszy importu (ghSync)', () => {
+    const cardSource = fs.readFileSync(path.join(repositoryRoot, 'vilda_advanced_growth.js'), 'utf8');
+    expect(cardSource).toContain('window.advancedGrowthTrajectory=TJ9||null');
+    expect(cardSource).toContain('q8.ghSync===!0');
+    expect(cardSource).toContain('c9.gh={a:g8,b:x8}');
+  });
+
+  it('kolektor destyluje model do metrics.trajectory (height/weight/bmi + delayedPuberty)', () => {
+    const uiSource = fs.readFileSync(path.join(repositoryRoot, 'vilda_epicrisis_ui.js'), 'utf8');
+    expect(uiSource).toContain('trajectory:function(){try{var tj9=s.advancedGrowthTrajectory');
+    expect(uiSource).toContain('delayedPuberty:!!tj9.delayedPuberty');
+    expect(uiSource).toContain('ghOn:!!s9.ghOn,rdOn:!!s9.rdOn');
+  });
+
+  it('prefill Tannera z rekordu pacjenta (Vault) ze strażnikiem świeżości 12 mies., za formularzem głównym', () => {
+    const uiSource = fs.readFileSync(path.join(repositoryRoot, 'vilda_epicrisis_ui.js'), 'utf8');
+    expect(uiSource).toContain('he2=!isNaN(t2)&&t2>=1&&t2<=5?{stage:t2,atAgeMonths:');
+    expect(uiSource).toContain('a9-he2.atAgeMonths<=12');
+    expect(uiSource).toContain('he=null,he2=null');
+  });
+});
