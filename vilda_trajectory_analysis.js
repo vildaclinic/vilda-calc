@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -130,21 +130,23 @@
 
   function verdictForPair(met, sa0, sb0, ca, cb) {
     if (typeof sa0 !== 'number' || typeof sb0 !== 'number' || !isFinite(sa0) || !isFinite(sb0) || ca == null || cb == null) return null;
-    var d = Math.round(100 * (sb0 - sa0)) / 100, W = met === 'height', low = ca < 10, high = W ? ca > 90 : ca >= (met === 'bmi' ? 85 : 90);
-    if (low) return d >= 0.2 ? { t: 'good', l: 'nadrabia niedobór' } : d <= -0.5 ? { t: 'bad', l: 'pogłębia niedobór' } : d <= -0.2 ? { t: 'warn', l: 'pogłębia niedobór' } : { t: 'stable', l: 'stabilnie' };
+    var d = Math.round(100 * (sb0 - sa0)) / 100, W = met === 'height', B = met === 'bmi', low = ca < 10, high = W ? ca > 90 : ca >= (B ? 85 : 90);
+    var ST = W ? 'stabilny tor wzrastania' : B ? 'stabilny tor BMI' : 'stabilny tor masy ciała';
+    var ND = W ? 'pogłębianie niedoboru wzrostu' : 'pogłębianie niedoboru masy ciała';
+    if (low) return d >= 0.2 ? { t: 'good', l: W ? 'nadrabia niedobór wzrostu' : 'nadrabia niedobór masy ciała' } : d <= -0.5 ? { t: 'bad', l: ND } : d <= -0.2 ? { t: 'warn', l: ND } : { t: 'stable', l: ST };
     if (high) {
-      if (W) return d <= -1 ? { t: 'warn', l: 'szybki spadek kanału' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja' } : d >= 0.5 ? { t: 'warn', l: 'coraz wyżej ponad normą' } : { t: 'stable', l: 'stabilnie' };
-      if (d <= -1.5) return { t: 'warn', l: 'bardzo szybki spadek' };
-      if (d <= -0.2) return { t: 'good', l: 'redukcja' };
-      if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: met === 'bmi' ? (cb >= 97 ? (ca >= 97 ? 'otyłość pogłębia się' : 'wchodzi w otyłość') : 'szybko narasta nadmiar') : (cb >= 97 ? (ca >= 97 ? 'nadmiar pogłębia się (>97c)' : 'wchodzi w strefę ≥97') : 'szybko narasta nadmiar') };
-      return d >= 0.2 ? { t: 'warn', l: 'narasta nadmiar' } : { t: 'stable', l: 'stabilnie' };
+      if (W) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja z wysokich centyli' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja pozycji centylowej' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja wzrastania' } : { t: 'stable', l: ST };
+      if (d <= -1.5) return { t: 'warn', l: B ? 'szybki spadek BMI — wskazana ocena' : 'szybka utrata masy — wskazana ocena' };
+      if (d <= -0.2) return { t: 'good', l: B ? 'redukcja BMI' : 'redukcja nadmiaru masy ciała' };
+      if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: B ? (cb >= 97 ? (ca >= 97 ? 'progresja otyłości' : 'przekroczenie progu otyłości (≥97c)') : 'szybkie narastanie BMI') : (cb >= 97 ? (ca >= 97 ? 'progresja nadmiaru masy (>97. centyla)' : 'przekroczenie 97. centyla masy ciała') : 'nasilony przyrost masy ciała') };
+      return d >= 0.2 ? { t: 'warn', l: B ? 'narastanie nadmiaru BMI' : 'narastanie nadmiaru masy ciała' } : { t: 'stable', l: ST };
     }
-    if (W) return d <= -1 ? { t: 'bad', l: 'łamie kanał w dół' } : d <= -0.5 ? { t: 'warn', l: 'łamie kanał w dół' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'ponad 97 centyl' } : { t: 'stable', l: 'stabilnie' };
+    if (W) return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: ST };
     if (Math.abs(d) >= 0.5) {
-      var al = met === 'bmi' ? (cb >= 97 || cb < 5) : (cb <= 3 || cb >= 97);
-      return al ? { t: 'bad', l: d > 0 ? (met === 'bmi' ? 'wchodzi w otyłość' : 'wchodzi w strefę ≥97') : (met === 'bmi' ? 'wchodzi w niedowagę' : 'wchodzi w strefę <3') } : { t: 'warn', l: d > 0 ? 'szybko w górę na siatce' : 'szybko w dół na siatce' };
+      var al = B ? (cb >= 97 || cb < 5) : (cb <= 3 || cb >= 97);
+      return al ? { t: 'bad', l: d > 0 ? (B ? 'przekroczenie progu otyłości (≥97c)' : 'przekroczenie 97. centyla masy ciała') : (B ? 'przekroczenie progu niedowagi (<5c)' : 'obniżenie poniżej 3. centyla masy') } : { t: 'warn', l: d > 0 ? 'istotne przesunięcie centylowe w górę' : 'istotne przesunięcie centylowe w dół' };
     }
-    return { t: 'stable', l: 'stabilnie' };
+    return { t: 'stable', l: ST };
   }
 
   // Opis strefy dla pary — transkrypcja interpCh panelu (zwraca sam tekst strefy).
@@ -369,8 +371,9 @@
       + ' · SDS ' + esc(fmtS(m.first.sd) + ' → ' + fmtS(m.last.sd))
       + ' — ' + vSpan(m.total) + '</p>';
     if (m.redFlag) {
-      line += '<p class="vta-red">⚠ Wzrost: przekroczenie kanałów centylowych w dół '
-        + '(ΔhSDS ' + esc(fmtS(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths)) + ')</p>';
+      line += '<p class="vta-red">⚠ Istotne obniżenie pozycji centylowej wzrostu '
+        + '(ΔhSDS ' + esc(fmtS(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
+        + ') — obraz deceleracji wzrastania</p>';
     }
     if (m.worst && m.worst.verdict && (m.worst.verdict.t === 'bad' || m.worst.verdict.t === 'warn') && m.segments.length > 1) {
       line += '<p>↳ najpoważniejszy odcinek: ' + esc(fmtAgeM(m.worst.a.ageMonths)) + ' → ' + esc(fmtAgeM(m.worst.b.ageMonths))
@@ -434,6 +437,192 @@
     }
   }
 
+  // ── Renderer dla Karty pacjenta — język wizualny panelu „Porównanie pomiarów" (.vilda-cmp-*) ──
+
+  var PSTYLE_ID = 'vtap-style';
+  var PCSS = [
+    '.vtap{margin:12px 2px 2px;background:#fff;border:1px solid #e3ecec;border-radius:14px;overflow:hidden}',
+    '.vtap summary{list-style:none;cursor:pointer}',
+    '.vtap summary::-webkit-details-marker{display:none}',
+    '.vtap .vtap-h{font-size:13px;margin:0;padding:11px 14px;background:linear-gradient(90deg,#0a6b73,#00838d);color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:800;flex-wrap:wrap}',
+    '.vtap .vtap-h .sub{font-size:11px;font-weight:500;opacity:.92}',
+    '.vtap .vtap-h .tg{font-size:10.5px;font-weight:700;background:rgba(255,255,255,.16);border-radius:999px;padding:1px 9px}',
+    '.vtap .vtap-h .tg::after{content:"zwiń ▾"}',
+    '.vtap details:not([open])>summary .tg::after{content:"rozwiń ▸"}',
+    '.vtap .vtap-flag{padding:9px 14px;background:#fdecea;border-bottom:1px solid #f6d4d0;font-size:12px;font-weight:700;color:#b71c1c;line-height:1.45}',
+    '.vtap .vtap-row{padding:9px 14px;border-top:1px solid #eef4f4}',
+    '.vtap .vtap-row:first-of-type{border-top:0}',
+    '.vtap .vtap-pm{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}',
+    '.vtap .vtap-pm .nm{font-size:12.5px;font-weight:800;color:#0d5a61;min-width:52px}',
+    '.vtap .vtap-pm .sp{flex:0 0 92px}',
+    '.vtap .vtap-ft{font-size:12.5px;margin-top:3px;color:#243b40;font-variant-numeric:tabular-nums}',
+    '.vtap .vtap-ft .c{color:#5a7274;font-size:11.5px}',
+    '.vtap .vtap-ft .ar{color:#9aabb0;margin:0 5px}',
+    '.vtap .vtap-seg{font-size:11.5px;color:#4a6168;margin-top:4px}',
+    '.vtap .vtap-chip{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px}',
+    '.vtap .vtap-chip.vg{background:#e7f6ef;color:#0f6e56}',
+    '.vtap .vtap-chip.vs{background:#eef2f4;color:#3f5459}',
+    '.vtap .vtap-chip.vw{background:#fdf1e5;color:#c75d00}',
+    '.vtap .vtap-chip.vb{background:#fdecea;color:#c62828}',
+    '.vtap .vtap-det>summary{padding:9px 14px;background:#f7fbfb;border-top:1px solid #eef4f4;font-size:11.5px;font-weight:800;color:#0a6b73}',
+    '.vtap .vtap-det>summary::before{content:"▸ "}',
+    '.vtap .vtap-det[open]>summary::before{content:"▾ "}',
+    '.vtap .vtap-tb{padding:4px 14px 12px;overflow-x:auto}',
+    '.vtap .vtap-tb table{width:100%;border-collapse:collapse;font-size:12px;min-width:430px;font-variant-numeric:tabular-nums}',
+    '.vtap .vtap-tb th{font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:#00b0a6;color:#fff;font-weight:800;text-align:left;padding:6px 8px}',
+    '.vtap .vtap-tb th:first-child{border-radius:8px 0 0 8px}',
+    '.vtap .vtap-tb th:last-child{border-radius:0 8px 8px 0}',
+    '.vtap .vtap-tb td{padding:6px 8px;border-bottom:1px solid #eef4f4;white-space:nowrap}',
+    '.vtap .vtap-foot{padding:9px 14px;background:#f7fbfb;border-top:1px solid #eef4f4;font-size:11px;color:#5a7274;line-height:1.45}'
+  ].join('\n');
+
+  function ensurePatientStyle() {
+    try {
+      var d = w.document;
+      if (!d || d.getElementById(PSTYLE_ID)) return;
+      var st = d.createElement('style');
+      st.id = PSTYLE_ID;
+      st.textContent = PCSS;
+      (d.head || d.documentElement).appendChild(st);
+    } catch (e) { /* brak DOM (test) */ }
+  }
+
+  var CHIP_CLS = { good: 'vg', stable: 'vs', warn: 'vw', bad: 'vb' };
+
+  function chipHtml(v) {
+    if (!v) return '';
+    return '<span class="vtap-chip ' + (CHIP_CLS[v.t] || 'vs') + '">' + esc(v.l) + '</span>';
+  }
+
+  // Miniatura trendu SDS: polilinia z wyróżnioną ostatnią kropką (czysto poglądowa, bez osi).
+  function sparklineSvg(series, tone) {
+    if (!series || series.length < 2) return '';
+    var xs = series.map(function (p) { return p.ageMonths; });
+    var ys = series.map(function (p) { return p.sd; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+    var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    var xr = x1 - x0 || 1, yr = (y1 - y0) < 0.4 ? 0.4 : (y1 - y0);
+    var ym = (y0 + y1) / 2;
+    var pts = series.map(function (p) {
+      var x = 4 + 84 * (p.ageMonths - x0) / xr;
+      var y = 11 - 16 * (p.sd - ym) / yr;
+      return { x: Math.round(x * 10) / 10, y: Math.round(Math.max(2, Math.min(20, y)) * 10) / 10 };
+    });
+    var line = tone === 'danger' ? '#d98a80' : tone === 'warn' ? '#dcb27a' : '#8fb6ba';
+    var dot = tone === 'danger' ? '#c62828' : tone === 'warn' ? '#c75d00' : '#0a6b73';
+    var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p.x + ',' + p.y; }).join(' ');
+    var last = pts[pts.length - 1];
+    return '<svg viewBox="0 0 92 22" width="92" height="22" aria-hidden="true">'
+      + '<path d="' + d + '" fill="none" stroke="' + line + '" stroke-width="1.6"/>'
+      + '<circle cx="' + last.x + '" cy="' + last.y + '" r="2.6" fill="' + dot + '"/></svg>';
+  }
+
+  function patientMetricRowHtml(m) {
+    var html = '<div class="vtap-row"><div class="vtap-pm">'
+      + '<span class="nm">' + esc(m.title) + '</span>'
+      + '<span class="sp">' + sparklineSvg(m.series, m.tone) + '</span>'
+      + chipHtml(m.total) + '</div>'
+      + '<div class="vtap-ft">' + esc(fmt(m.first.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
+      + ' <span class="c">(' + esc(fmtC(m.first.c)) + 'c)</span><span class="ar">→</span>'
+      + esc(fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
+      + ' <span class="c">(' + esc(fmtC(m.last.c)) + 'c)</span>'
+      + ' <span class="c">· SDS ' + esc(fmtS(m.first.sd) + ' → ' + fmtS(m.last.sd)) + '</span></div>';
+    if (m.worst && m.worst.verdict && (m.worst.verdict.t === 'bad' || m.worst.verdict.t === 'warn') && m.segments.length > 1) {
+      html += '<div class="vtap-seg">↳ najpoważniejszy odcinek: ' + esc(fmtAgeM(m.worst.a.ageMonths)) + ' → '
+        + esc(fmtAgeM(m.worst.b.ageMonths)) + ' (ΔSDS ' + esc(fmtS(m.worst.dSds)) + ') — ' + esc(m.worst.verdict.l) + '</div>';
+    }
+    return html + '</div>';
+  }
+
+  function patientVelocityRowHtml(vel) {
+    if (!vel) return '';
+    var ctx = vel.gapM != null ? ' <span class="c">(ostatnich ' + Math.round(vel.gapM) + ' mies.)</span>' : '';
+    var chip;
+    if (vel.slow) chip = '<span class="vtap-chip vb">poniżej normy dla wieku' + (vel.threshold && vel.threshold.label ? ' (' + esc(vel.threshold.label) + ')' : '') + '</span>';
+    else if (vel.threshold && vel.usedLastYear) chip = '<span class="vtap-chip vg">w normie' + (vel.threshold.label ? ' (' + esc(vel.threshold.label) + ')' : '') + '</span>';
+    else if (vel.aboveNormAge) chip = '<span class="vtap-chip vs">wiek &gt;10 lat — norma nieoceniana (pokwitanie)</span>';
+    else chip = '<span class="vtap-chip vs">poza oknem oceny normy</span>';
+    return '<div class="vtap-row"><div class="vtap-pm"><span class="nm">Tempo</span>'
+      + '<span class="vtap-ft" style="margin:0;flex:1">' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok' + ctx + '</span>'
+      + chip + '</div></div>';
+  }
+
+  function patientSegmentsHtml(model) {
+    var rows = '', count = 0;
+    model.metrics.forEach(function (m) {
+      m.segments.forEach(function (s) {
+        count += 1;
+        rows += '<tr><td>' + esc(m.title) + '</td>'
+          + '<td>' + esc(fmtAgeM(s.a.ageMonths) + ' → ' + fmtAgeM(s.b.ageMonths)) + '</td>'
+          + '<td>' + esc(fmtC(s.a.c) + 'c → ' + fmtC(s.b.c) + 'c') + '</td>'
+          + '<td>' + esc(fmtS(s.a.sd) + ' → ' + fmtS(s.b.sd)) + '</td>'
+          + '<td>' + (s.verdict ? chipHtml(s.verdict) : '<span class="vtap-chip vs">odstęp &lt;' + P.SEGMENT_MIN_GAP_M + ' mies.</span>') + '</td></tr>';
+      });
+    });
+    if (!rows) return '';
+    return '<details class="vtap-det"><summary>Szczegóły odcinków trajektorii (' + count + ')</summary>'
+      + '<div class="vtap-tb"><table><thead><tr><th>Parametr</th><th>Odcinek</th><th>Centyle</th><th>SDS</th><th>Werdykt</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div></details>';
+  }
+
+  function buildPatientHtml(model, opts) {
+    if (!model || !model.metrics || !model.metrics.length) return '';
+    ensurePatientStyle();
+    var open = !(opts && opts.collapsed);
+    var sub = fmt(model.points[0].ageMonths / 12, 1) + ' → ' + fmt(model.points[model.points.length - 1].ageMonths / 12, 1)
+      + ' r.ż. · ' + model.points.length + ' pomiar' + (model.points.length === 1 ? '' : model.points.length < 5 ? 'y' : 'ów')
+      + (model.source ? ' · źródło: ' + model.source : '');
+    var html = '<details class="vtap-main"' + (open ? ' open' : '') + '>'
+      + '<summary class="vtap-h"><span>Analiza trajektorii</span><span class="sub">' + esc(sub) + '</span><span class="tg"></span></summary>';
+    model.metrics.forEach(function (m) {
+      if (m.redFlag) {
+        html += '<div class="vtap-flag">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS '
+          + esc(fmtS(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
+          + ') — obraz deceleracji wzrastania, wskazana ocena endokrynologiczna</div>';
+      }
+    });
+    model.metrics.forEach(function (m) { html += patientMetricRowHtml(m); });
+    html += patientVelocityRowHtml(model.velocity);
+    html += patientSegmentsHtml(model);
+    html += '<div class="vtap-foot">Analiza przesiewowa: progi i słownik identyczne z panelem „Porównanie pomiarów" i alarmami kart wzrostowych. Nie zastępuje oceny klinicznej.</div>';
+    html += '</details>';
+    return html;
+  }
+
+  var COLLAPSE_KEY = 'vildaTrajectoryPanelCollapsed';
+
+  // Montuje panel w Karcie pacjenta: przed pierwszym elementem `beforeSelector` (domyślnie panel
+  // porównania), z pamięcią zwinięcia per użytkownik (localStorage — nie dotyka danych pacjenta).
+  function renderPatientPanel(container, input, opts) {
+    try {
+      if (!container || typeof container.appendChild !== 'function') return null;
+      var doc = container.ownerDocument || (w.document || null);
+      var old = container.querySelector ? container.querySelector('.vtap') : null;
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      var model = analyze(input);
+      if (!model) return null;
+      var collapsed = false;
+      try { collapsed = w.localStorage && w.localStorage.getItem(COLLAPSE_KEY) === '1'; } catch (e0) { collapsed = false; }
+      var html = buildPatientHtml(model, { collapsed: collapsed });
+      if (!html || !doc) return null;
+      var host = doc.createElement('div');
+      host.className = 'vtap';
+      host.innerHTML = html;
+      var beforeSel = (opts && opts.before) || '.vilda-cmp-panel';
+      var ref = null;
+      try { ref = container.querySelector(beforeSel); } catch (e1) { ref = null; }
+      if (ref && ref.parentNode === container) container.insertBefore(host, ref);
+      else container.appendChild(host);
+      var main = host.querySelector('.vtap-main');
+      main && main.addEventListener('toggle', function () {
+        try { w.localStorage && w.localStorage.setItem(COLLAPSE_KEY, main.open ? '0' : '1'); } catch (e2) { /* prywatny tryb */ }
+      });
+      return model;
+    } catch (e) {
+      return null;
+    }
+  }
+
   w.VildaTrajectoryAnalysis = {
     version: VERSION,
     PARAMS: P,
@@ -446,6 +635,8 @@
     buildPoints: buildPoints,
     analyze: analyze,
     buildHtml: buildHtml,
-    analyzeAndRenderHtml: analyzeAndRenderHtml
+    analyzeAndRenderHtml: analyzeAndRenderHtml,
+    buildPatientHtml: buildPatientHtml,
+    renderPatientPanel: renderPatientPanel
   };
 })(typeof window !== 'undefined' ? window : globalThis);
