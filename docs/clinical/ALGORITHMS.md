@@ -145,6 +145,7 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
   - opis kanału/strefy: identyczny z `interpCh` panelu (granice 3/10/25/50/75/90/97);
   - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64);
   - tempo wzrastania: produkcyjne `pickPrevForLastYear`/`pickPrevFallback`/`velocityCmPerYear`/`getVelocityThreshold` (okno 12±3 mies., fallback 6–8 mies., progi wg wieku); dla wieku >10 lat progu brak — moduł komunikuje, że normy tempa w okresie pokwitania nie są oceniane automatycznie (świadoma luka, do osobnej decyzji klinicznej właściciela).
+- Kontekst kliniczny per odcinek (od v3 modułu): transkrypcja 1:1 reguł `verdictCh2` panelu porównania — terapia GH (ocena odpowiedzi przy ≥6 mies. terapii w odcinku: ΔSDS ≥0,3 dobra / <0,1 słaba), kanał rodzicielski MPH (progi ±1,5 SDS względem mpSDS), zamierzona redukcja (nakładanie ≥3 mies., nigdy przy ca<10). Kontekst przekazywany z Karty pacjenta (`_vildaCmpCtx` — ten sam, którego używa panel porównania); parytet z realnym `verdictCh2` pilnowany testem (siatka 72 000 przypadków).
 - Jedyny własny parametr: `SEGMENT_MIN_GAP_M = 3` mies. — strażnik jakości danych (odcinki krótsze są pokazywane bez werdyktu, bo ocena ΔSDS na tak krótkich odstępach jest niestabilna pomiarowo). Nie jest to próg interpretacji klinicznej.
 - Analiza ma charakter przesiewowy i nie zastępuje oceny klinicznej; nie nadaje się jej statusu „zwalidowana klinicznie".
 
