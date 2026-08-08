@@ -133,6 +133,31 @@ Dane w pełni fikcyjne. Wartości oczekiwane policzono niezależnie od kodu prod
 
 Wpływ na dotychczasowe wyniki: dodanie KR **nie zmienia** prognoz Bayley–Pinneau, RWT, Reinehr/CDGP ani celu MPH. KR pojawia się jako dodatkowa kolumna/karta w „Walidacji prognoz”, uczestniczy w wyborze metody „najbliżej FH” i w eksporcie kohorty. Karta „Zaawansowane obliczenia wzrostowe” pozostaje bez KR do osobnej decyzji (patrz PR).
 
+### GROWTH-TRAJ — automatyczna analiza trajektorii na siatce centylowej, wdrożenie do testów 2026-08-08
+
+Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizuje wszystkie kolejne odcinki między pomiarami (wzrost, masa, BMI) i podsumowuje całą trajektorię. Renderowany w karcie „Zaawansowane obliczenia wzrostowe" pod tabelą tempa wg okresów.
+
+#### Zakres i ograniczenia
+
+- Moduł **nie wprowadza żadnych nowych progów klinicznych** — jest kompozycją istniejących, przyjętych reguł aplikacji:
+  - statystyka punktu (centyl/SDS): wspólna ścieżka `advHistoryResolveMetric` z fallbackiem tabel Palczewskiej (jak „Podsumowanie wyników" i panel porównania A→B, v386);
+  - werdykt pary punktów: progi ΔSDS i słownik etykiet identyczne z `verdictCh` panelu porównania (v388); parytet pilnuje test `tests/unit/trajectory-analysis.test.mjs` uruchamiający realny `verdictCh` z `vilda_auth_ui.js` na siatce ~1000 przypadków;
+  - opis kanału/strefy: identyczny z `interpCh` panelu (granice 3/10/25/50/75/90/97);
+  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64);
+  - tempo wzrastania: produkcyjne `pickPrevForLastYear`/`pickPrevFallback`/`velocityCmPerYear`/`getVelocityThreshold` (okno 12±3 mies., fallback 6–8 mies., progi wg wieku); dla wieku >10 lat progu brak — moduł komunikuje, że normy tempa w okresie pokwitania nie są oceniane automatycznie (świadoma luka, do osobnej decyzji klinicznej właściciela).
+- Jedyny własny parametr: `SEGMENT_MIN_GAP_M = 3` mies. — strażnik jakości danych (odcinki krótsze są pokazywane bez werdyktu, bo ocena ΔSDS na tak krótkich odstępach jest niestabilna pomiarowo). Nie jest to próg interpretacji klinicznej.
+- Analiza ma charakter przesiewowy i nie zastępuje oceny klinicznej; nie nadaje się jej statusu „zwalidowana klinicznie".
+
+#### Reprezentatywne przypadki syntetyczne
+
+| Przypadek | Wejście | Oczekiwany wynik |
+| --- | --- | --- |
+| TRAJ-SEG | wzrost hSDS 0,4→0,3→−0,9→−1,0 (48→60→72→84 mies.) | najpoważniejszy odcinek 60→72 mies. (ΔSDS −1,2, „łamie kanał w dół"); całość „łamie kanał w dół" |
+| TRAJ-REDFLAG | hSDS 1,9 (6 m.) → 1,3 (30 m.) → 0,1 (72 m.) | czerwona flaga od bazy 30 mies. (ΔhSDS −1,2); punkt niemowlęcy pominięty jako baza |
+| TRAJ-CATCHDOWN | hSDS 1,9 (6 m.) → 0,2 (40 m.) → 0,1 (72 m.) | brak czerwonej flagi (spadek przed 24. mies.) |
+| TRAJ-OBESE | pacjent 12,1→12,5 r.ż., waga/BMI >97c → >97c | „nadmiar pogłębia się (>97c)" / „otyłość pogłębia się" (słownik v388) |
+| TRAJ-VELO | 120→124 cm w 12 mies. w wieku 8 lat | 4,0 cm/rok — poniżej normy ≥5 cm/rok (próg 5–10 lat) |
+
 ### GROWTH-LMS — kompletność cytowań
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
