@@ -158,6 +158,8 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
 | 2 | wiek kostny (świeży ≤18 mies.) | norma `getVelocityThreshold(BA)`; BA 10–13/10–15 lat → <4 cm/rok | czujność (błąd oceny BA ~±1 rok) |
 | 3 | brak danych | dziewczęta 10–13 lat / chłopcy 10–15 lat: <4 cm/rok | czujność („możliwy późny skok pokwitaniowy") |
 
+Źródło etapu Tannera: pole formularza (karty na stronie głównej — stan bieżący) lub `payload.user.tannerStage` z najnowszego zapisu pacjenta (Karta pacjenta); wpis z rekordu jest używany tylko, gdy zapisany w ciągu ostatnich 12 mies. (`TANNER_FRESH_M` — stadium zmienia się w czasie); starszy jest pokazywany w pasku kontekstu jako „nieaktualny, pominięty w ocenie".
+
 Dodatek: Tanner I u dziewcząt >13 lat / chłopców >14 lat → niezależna nota „obraz opóźnionego dojrzewania, wskazana ocena" (Palmert MR, Dunkel L. *Delayed puberty.* N Engl J Med 2012;366(5):443-53, PMID 22296078, doi:10.1056/NEJMcp1109290).
 
 Przypadki syntetyczne: TRAJ-VELO-T1 (12 lat, 3,0 cm/rok, Tanner I → alarm); TRAJ-VELO-T2 (j.w., Tanner II → czujność, bez banera); TRAJ-VELO-T4 (Tanner IV → bez oceny, nota); TRAJ-VELO-BA (BA 8 lat świeży → norma ≥5 cm/rok, czujność; BA nieświeży → reguła generyczna); TRAJ-VELO-GEN (chłopiec 14 lat bez danych → czujność; dziewczynka 14 lat → poza oknem); TRAJ-DELAY (Tanner I, dziewczynka 13,5 r. → nota; chłopiec 13,5 r. → bez noty).

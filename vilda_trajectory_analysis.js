@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '5';
+  var VERSION = '6';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -43,6 +43,8 @@
     PUB_AGE_MAX_F_M: 156,       // dziewczęta: okno generyczne do 13 lat
     PUB_AGE_MAX_M_M: 180,       // chłopcy: okno generyczne do 15 lat
     BONE_AGE_FRESH_M: 18,       // wiek kostny użyty tylko, gdy oznaczony w ciągu ostatnich 18 mies.
+    TANNER_FRESH_M: 12,         // etap Tannera z rekordu pacjenta użyty tylko, gdy zapisany w ciągu
+                                // ostatnich 12 mies. (stadium zmienia się w czasie — strażnik jakości danych)
     // Opóźnione dojrzewanie (Palmert & Dunkel, N Engl J Med 2012;366:443-53, PMID 22296078,
     // doi:10.1056/NEJMcp1109290): brak cech pokwitania u dziewcząt >13 lat / chłopców >14 lat.
     DELAYED_PUB_F_M: 156,
@@ -205,12 +207,13 @@
     var red = raw.red && raw.red.a != null && isFinite(raw.red.a) ? { a: raw.red.a, b: raw.red.b != null && isFinite(raw.red.b) ? raw.red.b : null, label: raw.red.label || null } : null;
     var ts = num(raw.tannerStage);
     ts = ts != null && ts >= 1 && ts <= 5 ? Math.round(ts) : null;
+    var tsAt = num(raw.tannerAtAgeMonths);
     var ba = null;
     if (raw.boneAge && num(raw.boneAge.baMonths) != null && num(raw.boneAge.baMonths) > 0) {
       ba = { baMonths: num(raw.boneAge.baMonths), atAgeMonths: num(raw.boneAge.atAgeMonths) };
     }
     if (mp == null && !gh && !red && ts == null && !ba) return null;
-    return { mpSds: mp, gh: gh, red: red, tannerStage: ts, boneAge: ba };
+    return { mpSds: mp, gh: gh, red: red, tannerStage: ts, tannerAtAgeMonths: tsAt, tannerStale: false, boneAge: ba };
   }
 
   // Opis strefy dla pary — transkrypcja interpCh panelu (zwraca sam tekst strefy).
@@ -467,6 +470,17 @@
     var ctx = normalizeContext(input.context);
     var pts = buildPoints(input);
     if (pts.length < 2) return null;
+    // Świeżość etapu Tannera z rekordu pacjenta: starszy niż TANNER_FRESH_M — pomijany w ocenie
+    // (pasek kontekstu pokazuje go jako nieaktualny). Tanner z bieżącego formularza (bez tannerAtAgeMonths)
+    // jest zawsze traktowany jako aktualny.
+    if (ctx && ctx.tannerStage != null && ctx.tannerAtAgeMonths != null) {
+      var nowAgeM = pts[pts.length - 1].ageMonths;
+      if (nowAgeM - ctx.tannerAtAgeMonths > P.TANNER_FRESH_M) {
+        ctx.tannerStale = true;
+        ctx.tannerStaleStage = ctx.tannerStage;
+        ctx.tannerStage = null;
+      }
+    }
     var metrics = [];
     METRICS.forEach(function (met) {
       var m = analyzeMetric(met, pts, sex, source, ctx);
@@ -714,7 +728,11 @@
     if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push('🧬 kanał rodzicielski (MPH): SDS ' + esc(fmtS(ctx.mpSds)));
     if (ctx.gh) items.push('💉 terapia GH: od ' + esc(fmtAgeM(ctx.gh.a)) + (ctx.gh.b != null ? ' do ' + esc(fmtAgeM(ctx.gh.b)) : ' — nadal') + ' (odcinki: 💉)');
     if (ctx.red) items.push('⬇ zamierzona redukcja' + (ctx.red.label ? ' (' + esc(ctx.red.label) + ')' : '') + ': od ' + esc(fmtAgeM(ctx.red.a)) + (ctx.red.b != null ? ' do ' + esc(fmtAgeM(ctx.red.b)) : ' — nadal') + ' (odcinki: ⬇)');
-    if (ctx.tannerStage != null) items.push('Tanner ' + esc(['I', 'II', 'III', 'IV', 'V'][ctx.tannerStage - 1] || String(ctx.tannerStage)));
+    var TROMAN = ['I', 'II', 'III', 'IV', 'V'];
+    if (ctx.tannerStage != null) items.push('Tanner ' + esc(TROMAN[ctx.tannerStage - 1] || String(ctx.tannerStage))
+      + (ctx.tannerAtAgeMonths != null ? ' (z zapisu w wieku ' + esc(fmtAgeM(ctx.tannerAtAgeMonths)) + ')' : ''));
+    else if (ctx.tannerStale && ctx.tannerStaleStage != null) items.push('Tanner ' + esc(TROMAN[ctx.tannerStaleStage - 1] || String(ctx.tannerStaleStage))
+      + ' (z zapisu w wieku ' + esc(fmtAgeM(ctx.tannerAtAgeMonths)) + ' — nieaktualny, pominięty w ocenie)');
     if (ctx.boneAge) items.push('wiek kostny: ' + esc(fmtAgeM(ctx.boneAge.baMonths)) + (ctx.boneAge.atAgeMonths != null ? ' (oznaczony w wieku ' + esc(fmtAgeM(ctx.boneAge.atAgeMonths)) + ')' : ''));
     if (!items.length) return '';
     return '<div class="vtap-ctx"><span>' + items.join('</span><span>') + '</span></div>';
