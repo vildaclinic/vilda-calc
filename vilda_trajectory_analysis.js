@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '7';
+  var VERSION = '8';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -380,24 +380,49 @@
         severity: null, basis: null, normLabel: null, note: null,
         aboveNormAge: false
       };
-      var thr = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(target) : null;
-      if (thr) {
-        // <10 lat: dotychczasowe normy wg wieku metrykalnego (poziom alarmowy jak dotąd).
-        out.threshold = thr;
-        out.basis = 'age';
-        out.normLabel = thr.label || null;
-        out.slow = !!(usedLastYear && v < thr.threshold);
-        out.severity = out.slow ? 'danger' : null;
-        out.alarm = out.slow;
-        return out;
-      }
-      if (target / 12 < 10) return out; // brak progu poniżej 1 r.ż. itp. — bez oceny
-      // ── >10 lat: hierarchia wg dostępnych danych (akceptacja właściciela 2026-08-08) ──
-      assessPubertalVelocity(out, target, sex, ctx);
+      applyVelocityNorms(out, target, sex, ctx);
       return out;
     } catch (e) {
       return null;
     }
+  }
+
+  function applyVelocityNorms(out, target, sex, ctx) {
+    var v = out.cmPerYear, usedLastYear = out.usedLastYear;
+    var thr = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(target) : null;
+    if (thr) {
+      // <10 lat: dotychczasowe normy wg wieku metrykalnego (poziom alarmowy jak dotąd).
+      out.threshold = thr;
+      out.basis = 'age';
+      out.normLabel = thr.label || null;
+      out.slow = !!(usedLastYear && v < thr.threshold);
+      out.severity = out.slow ? 'danger' : null;
+      out.alarm = out.slow;
+      return out;
+    }
+    if (target / 12 < 10) return out; // brak progu poniżej 1 r.ż. itp. — bez oceny
+    // ── >10 lat: hierarchia wg dostępnych danych (akceptacja właściciela 2026-08-08) ──
+    assessPubertalVelocity(out, target, sex, ctx);
+    return out;
+  }
+
+  // Ocena już policzonej wartości tempa (np. z karty zaawansowanej) tą samą hierarchią norm,
+  // której używa heightVelocity(). usedLastYear odtwarzane z odstępu pomiarów: pickPrevForLastYear
+  // akceptuje odstęp 9–15 mies., pickPrevFallback liczy się jako okno roczne przy 6–8 mies.,
+  // więc łącznie ocena względem normy obowiązuje dla odstępu 6–15 mies.
+  function assessVelocityValue(v, gapM, ageMonths, sex, ctx) {
+    var vv = num(v);
+    var target = num(ageMonths);
+    if (vv == null || !isFinite(vv) || target == null) return null;
+    var g = num(gapM);
+    var out = {
+      cmPerYear: vv, gapM: g, usedLastYear: g != null && g >= 6 && g <= 15,
+      threshold: null, slow: false, alarm: false,
+      severity: null, basis: null, normLabel: null, note: null,
+      aboveNormAge: false
+    };
+    applyVelocityNorms(out, target, sexMK(sex), ctx);
+    return out;
   }
 
   // Ocena tempa >10 r.ż.: Tanner (poziom 1) → wiek kostny (poziom 2) → reguła generyczna (poziom 3).
@@ -920,6 +945,7 @@
     chan: chan,
     toneCent: toneCent,
     buildPoints: buildPoints,
+    assessVelocityValue: assessVelocityValue,
     analyze: analyze,
     buildHtml: buildHtml,
     buildCardAlertsHtml: buildCardAlertsHtml,
