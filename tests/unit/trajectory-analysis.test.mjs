@@ -853,3 +853,98 @@ describe('panel trajektorii w karcie zaawansowanej (buildCardPanelHtml, hybryda)
     expect(store.vildaTrajectoryPanelCollapsed).toBe('0');
   });
 });
+
+describe('assessVelocityValue — ocena gotowej wartości tempa tą samą hierarchią norm', () => {
+  function makeVta() {
+    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
+    const cut = (name) => {
+      const i = appSource.indexOf(`function ${name}(`);
+      let depth = 0;
+      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
+        if (appSource[k] === '{') depth += 1;
+        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
+      }
+      throw new Error(name);
+    };
+    const helpers = new Function(`
+      ${cut('pickPrevForLastYear')}
+      ${cut('pickPrevFallback')}
+      ${cut('velocityCmPerYear')}
+      ${cut('getVelocityThreshold')}
+      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
+    `)();
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      ...helpers,
+      advHistoryResolveMetric() {
+        return { result: { percentile: 50, sd: 0 }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+
+  it('<10 lat: produkcyjny próg wg wieku, poziom alarmowy (parytet z heightVelocity w analyze)', () => {
+    const vta = makeVta();
+    const va = vta.assessVelocityValue(4.0, 12, 96, 'M', null);
+    expect(va.usedLastYear).toBe(true);
+    expect(va.basis).toBe('age');
+    expect(va.slow).toBe(true);
+    expect(va.severity).toBe('danger');
+    expect(va.alarm).toBe(true);
+    // parytet z pełnym heightVelocity liczonym z punktów (4 cm w 12 mies., 8 lat)
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 84, height: 120 }],
+      currentAgeMonths: 96,
+      currentHeight: 124,
+      sex: 'M'
+    });
+    expect(va.slow).toBe(model.velocity.slow);
+    expect(va.severity).toBe(model.velocity.severity);
+    expect(va.basis).toBe(model.velocity.basis);
+    expect(va.normLabel).toBe(model.velocity.normLabel);
+    // 4,7 cm/rok w wieku 6 lat: poniżej normy ≥5 (stara reguła 4,5 mówiła „w normie”)
+    const va2 = vta.assessVelocityValue(4.7, 12, 72, 'M', null);
+    expect(va2.slow).toBe(true);
+    // 5,5 cm/rok w wieku 4,5 roku: poniżej normy ≥6 (stara reguła 4,5 mówiła „w normie”)
+    const va3 = vta.assessVelocityValue(5.5, 12, 54, 'M', null);
+    expect(va3.slow).toBe(true);
+  });
+
+  it('odstęp poza oknem rocznym (6–15 mies.): bez porównania z normą', () => {
+    const vta = makeVta();
+    const va = vta.assessVelocityValue(3.0, 30, 96, 'M', null);
+    expect(va.usedLastYear).toBe(false);
+    expect(va.slow).toBe(false);
+    const va2 = vta.assessVelocityValue(3.0, 4, 96, 'M', null);
+    expect(va2.usedLastYear).toBe(false);
+  });
+
+  it('>10 lat: hierarchia Tanner → wiek kostny → reguła generyczna jak w analyze', () => {
+    const vta = makeVta();
+    const t1 = vta.assessVelocityValue(3.0, 12, 144, 'M', { tannerStage: 1 });
+    expect(t1.basis).toBe('tanner1');
+    expect(t1.severity).toBe('danger');
+    expect(t1.alarm).toBe(true);
+    const t4 = vta.assessVelocityValue(3.0, 12, 144, 'M', { tannerStage: 4 });
+    expect(t4.slow).toBe(false);
+    expect(t4.normLabel).toBeNull();
+    expect(t4.note).toContain('deceleracja fizjologiczna');
+    const ba = vta.assessVelocityValue(4.2, 12, 132, 'M', { boneAge: { baMonths: 108, atAgeMonths: 132 } });
+    expect(ba.basis).toBe('boneAge');
+    expect(ba.slow).toBe(true);
+    expect(ba.severity).toBe('warn');
+    const gen = vta.assessVelocityValue(3.0, 12, 156, 'K', null);
+    expect(gen.basis).toBe('generic');
+    expect(gen.severity).toBe('warn');
+    // dziewczynka 13,5 r.: powyżej okna generycznego → bez oceny
+    const above = vta.assessVelocityValue(3.0, 12, 163, 'K', null);
+    expect(above.basis).toBeNull();
+    expect(above.aboveNormAge).toBe(true);
+    expect(above.normLabel).toBeNull();
+  });
+
+  it('brak wartości lub wieku → null', () => {
+    const vta = makeVta();
+    expect(vta.assessVelocityValue(null, 12, 96, 'M', null)).toBeNull();
+    expect(vta.assessVelocityValue(4.0, 12, null, 'M', null)).toBeNull();
+  });
+});
