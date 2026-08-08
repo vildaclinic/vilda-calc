@@ -28,6 +28,22 @@ function extractRealVerdictCh() {
   return new Function(`return (${fnSource.replace(/^function verdictCh/, 'function')})`)();
 }
 
+function extractRealVerdictCh2() {
+  const source = fs.readFileSync(
+    path.join(repositoryRoot, 'vilda_auth_ui.js'),
+    'utf8'
+  );
+  const v1 = source.slice(
+    source.indexOf('function verdictCh(met,'),
+    source.indexOf('var VCHIP=')
+  );
+  const v2 = source.slice(
+    source.indexOf('function verdictCh2('),
+    source.indexOf('function ctxClean(')
+  );
+  return new Function(`${v1}\n${v2}\nreturn verdictCh2;`)();
+}
+
 function extractRealInterpCh() {
   const source = fs.readFileSync(
     path.join(repositoryRoot, 'vilda_auth_ui.js'),
@@ -343,5 +359,126 @@ describe('renderer Karty pacjenta (buildPatientHtml)', () => {
     expect(collapsed).toContain('vtap-main"');
     expect(collapsed).not.toContain('vtap-main" open');
     expect(vta.buildPatientHtml(null)).toBe('');
+  });
+});
+
+describe('kontekst kliniczny per odcinek (parytet z realnym verdictCh2)', () => {
+  const realVerdict2 = extractRealVerdictCh2();
+  const { VildaTrajectoryAnalysis } = loadModule();
+
+  it('verdictForPairCtx daje identyczny wynik dla siatki przypadków GH/MPH/redukcji', () => {
+    const centiles = [2, 4.5, 8, 15, 40, 60, 86, 92, 96, 98];
+    const sdsPairs = [
+      [-2.4, -2.0], [-2.0, -2.4], [-1.2, -0.7], [-0.4, -0.6], [0, 0.4],
+      [0.6, 1.2], [1.3, 0.6], [1.9, 2.5], [2.3, 2.1], [0.2, 0.25]
+    ];
+    const gms = [0, 5, 6, 14];
+    const mps = [null, -0.4, 1.2];
+    const rds = [false, true];
+    let compared = 0;
+    for (const met of ['height', 'weight', 'bmi']) {
+      for (const ca of centiles) {
+        for (const cb of centiles) {
+          for (const [sa, sb] of sdsPairs) {
+            for (const gm of gms) {
+              for (const mp of mps) {
+                for (const rd of rds) {
+                  expect(VildaTrajectoryAnalysis.verdictForPairCtx(met, sa, sb, ca, cb, gm, mp, rd))
+                    .toEqual(realVerdict2(met, sa, sb, ca, cb, gm, mp, rd));
+                  compared += 1;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(compared).toBe(3 * centiles.length * centiles.length * sdsPairs.length * gms.length * mps.length * rds.length);
+  });
+});
+
+describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
+  function makeVtaCtx(table) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+
+  it('GH tylko w odcinku objętym terapią ≥6 mies.; poza nim werdykt populacyjny', () => {
+    const vta = makeVtaCtx({ 'HT|60': -2.1, 'HT|72': -2.0, 'HT|84': -1.5 });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 60, height: 100 }, { ageMonths: 72, height: 108 }],
+      currentAgeMonths: 84,
+      currentHeight: 116,
+      sex: 'M',
+      context: { gh: { a: 72, b: null } } // terapia GH od 72. mies., nadal
+    });
+    const h = model.metrics.find((m) => m.metric === 'height');
+    // odcinek 60→72: przed terapią (nakładanie 0) → werdykt populacyjny (niedobór, poprawa)
+    expect(h.segments[0].ghOn).toBe(false);
+    expect(h.segments[0].verdict).toEqual({ t: 'stable', l: 'stabilny tor wzrastania' });
+    // odcinek 72→84: 12 mies. GH, ΔSDS +0,5 → dobra odpowiedź na GH
+    expect(h.segments[1].ghOn).toBe(true);
+    expect(h.segments[1].verdict).toEqual({ t: 'good', l: 'dobra odpowiedź na GH' });
+  });
+
+  it('kanał rodzicielski MPH zmienia werdykt wzrostu, redukcja zmienia werdykt wagi/BMI (ca≥10)', () => {
+    const vta = makeVtaCtx({
+      'HT|120': -2.0, 'HT|132': -1.8,
+      'WT|120': 1.6, 'WT|132': 1.2,
+      'BMI|120': 1.8, 'BMI|132': 1.3
+    });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 120, height: 125, weight: 42 }],
+      currentAgeMonths: 132,
+      currentHeight: 131,
+      currentWeight: 43,
+      sex: 'K',
+      context: { mpSds: -0.2, red: { a: 118, b: null, label: 'otyłość' } }
+    });
+    const h = model.metrics.find((m) => m.metric === 'height');
+    expect(h.total).toEqual({ t: 'good', l: 'nadrabia względem kanału rodzicielskiego' });
+    const wt = model.metrics.find((m) => m.metric === 'weight');
+    expect(wt.segments[0].rdOn).toBe(true);
+    expect(wt.total).toEqual({ t: 'good', l: 'redukcja w trakcie leczenia' });
+    const bmi = model.metrics.find((m) => m.metric === 'bmi');
+    expect(bmi.total).toEqual({ t: 'good', l: 'redukcja w trakcie leczenia' });
+    const html = vta.buildPatientHtml(model);
+    expect(html).toContain('kanał rodzicielski (MPH)');
+    expect(html).toContain('zamierzona redukcja (otyłość)');
+    expect(html).toContain(' ⬇');
+  });
+
+  it('bez kontekstu wynik identyczny jak dotychczas (regresja)', () => {
+    const table = { 'HT|48': 0.4, 'HT|60': 0.3, 'HT|72': -0.9, 'HT|84': -1.0 };
+    const vta = makeVtaCtx(table);
+    const bare = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 60, height: 110 }, { ageMonths: 72, height: 113 }],
+      currentAgeMonths: 84,
+      currentHeight: 118,
+      sex: 'M'
+    });
+    const withEmptyCtx = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 60, height: 110 }, { ageMonths: 72, height: 113 }],
+      currentAgeMonths: 84,
+      currentHeight: 118,
+      sex: 'M',
+      context: {}
+    });
+    expect(withEmptyCtx.context).toBeNull();
+    expect(withEmptyCtx.metrics.find((m) => m.metric === 'height').total)
+      .toEqual(bare.metrics.find((m) => m.metric === 'height').total);
   });
 });
