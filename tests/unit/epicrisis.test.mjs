@@ -409,3 +409,38 @@ describe('epikryza P3 — warstwa językowa i formatowanie', () => {
     expect(t).toContain('prawidłowe wydzielanie');
   });
 });
+
+describe('epikryza P4 — prefill kreatora z danych aplikacji i lokalny JSZip', () => {
+  const uiSource = fs.readFileSync(path.join(repositoryRoot, 'vilda_epicrisis_ui.js'), 'utf8');
+
+  it('seeduje wywiad rodzinny KOWD z karty zaawansowanej (yes/no, unknown pomijane)', () => {
+    expect(uiSource).toContain('f9=e9.familyDelayedPuberty;(f9==="yes"||f9==="no")&&(y.answers.familyDelayedPuberty=f9)');
+  });
+
+  it('seeduje Tanner z formularza głównego (#tannerStage) do właściwego pola wg płci', () => {
+    expect(uiSource).toContain('document.getElementById("tannerStage")');
+    expect(uiSource).toContain('y.pd&&y.pd.sex==="M"?y.answers.clinical.tannerGenitalia=String(v9):y.answers.clinical.tannerBreasts=String(v9)');
+  });
+
+  it('seeduje choroby przewlekłe z pola wykluczeń karty (growthExclusion)', () => {
+    expect(uiSource).toContain('g9=e9.growthExclusion;(g9==="yes"||g9==="no")');
+    expect(uiSource).toContain('y.answers.clinical.chronicDisease=g9');
+  });
+
+  it('dane urodzeniowe z karty SGA tylko jako fallback, gdy brak snapshotu Vault', () => {
+    expect(uiSource).toContain('if(!y.answers.birth){');
+    expect(uiSource).toContain('w9("sgaBirthWeeks")');
+    expect(uiSource).toContain('w9("sgaBirthWeight")');
+    expect(uiSource).toContain('input[name="sgaBirthSource"]:checked');
+    expect(uiSource).toContain('(b9.birthWeightG!=null||b9.birthLengthCm!=null)&&(y.answers.birth=b9)');
+  });
+
+  it('JSZip ładowany lokalnie (offline PWA) z fallbackiem do CDN', () => {
+    expect(uiSource).toContain('var He="jszip.min.js?v=1"');
+    expect(uiSource).toContain('Ne9="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"');
+    const jszip = fs.readFileSync(path.join(repositoryRoot, 'jszip.min.js'), 'utf8');
+    expect(jszip).toContain('JSZip v3.10.1');
+    const sw = fs.readFileSync(path.join(repositoryRoot, 'service-worker-kalorii.js'), 'utf8');
+    expect(sw).toContain("'/jszip.min.js?v=1',");
+  });
+});
