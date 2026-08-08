@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '6';
+  var VERSION = '7';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -819,13 +819,14 @@
     if (!model || !model.metrics || !model.metrics.length) return '';
     ensurePatientStyle();
     var open = !(opts && opts.collapsed);
+    var hideRedFlag = !!(opts && opts.hideRedFlag); // karty: flagę niesie baner (PR #68) — bez powtórki
     var sub = fmt(model.points[0].ageMonths / 12, 1) + ' → ' + fmt(model.points[model.points.length - 1].ageMonths / 12, 1)
       + ' r.ż. · ' + model.points.length + ' pomiar' + (model.points.length === 1 ? '' : model.points.length < 5 ? 'y' : 'ów')
       + (model.source ? ' · źródło: ' + model.source : '');
     var html = '<details class="vtap-main"' + (open ? ' open' : '') + '>'
       + '<summary class="vtap-h"><span>Analiza trajektorii</span><span class="sub">' + esc(sub) + '</span><span class="tg"></span></summary>';
     html += contextStripHtml(model.context);
-    model.metrics.forEach(function (m) {
+    hideRedFlag || model.metrics.forEach(function (m) {
       if (m.redFlag) {
         html += '<div class="vtap-flag">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS '
           + esc(fmtS(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
@@ -846,6 +847,41 @@
 
   var COLLAPSE_KEY = 'vildaTrajectoryPanelCollapsed';
 
+  // Stan zwijania per użytkownik (localStorage; domyślnie rozwinięty) — wspólny dla Karty pacjenta
+  // i karty „Zaawansowane obliczenia wzrostowe".
+  function isPanelCollapsed() {
+    try { return !!(w.localStorage && w.localStorage.getItem(COLLAPSE_KEY) === '1'); } catch (e) { return false; }
+  }
+
+  // Wpina zapamiętywanie zwijania na pierwszym .vtap-main w podanym elemencie (idempotentnie).
+  function wirePanelToggle(scope) {
+    try {
+      if (!scope || typeof scope.querySelector !== 'function') return false;
+      var main = scope.querySelector('.vtap-main');
+      if (!main || main._vtaWired) return false;
+      main._vtaWired = true;
+      main.addEventListener('toggle', function () {
+        try { w.localStorage && w.localStorage.setItem(COLLAPSE_KEY, main.open ? '0' : '1'); } catch (e2) { /* prywatny tryb */ }
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Panel trajektorii dla karty „Zaawansowane obliczenia wzrostowe" (hybryda zaakceptowana
+  // 2026-08-08): ten sam renderer co w Karcie pacjenta, opakowany w blok wynikowy karty;
+  // flaga pozostaje w banerze karty (hideRedFlag), stan zwijania wspólny (domyślnie rozwinięty).
+  function buildCardPanelHtml(model, opts) {
+    var o = opts || {};
+    var html = buildPatientHtml(model, {
+      collapsed: o.collapsed != null ? o.collapsed : isPanelCollapsed(),
+      hideRedFlag: o.hideRedFlag != null ? o.hideRedFlag : true
+    });
+    if (!html) return '';
+    return '<div class="adv-growth-result-block adv-growth-result-block--trajectory"><div class="vtap">' + html + '</div></div>';
+  }
+
   // Montuje panel w Karcie pacjenta: przed pierwszym elementem `beforeSelector` (domyślnie panel
   // porównania), z pamięcią zwinięcia per użytkownik (localStorage — nie dotyka danych pacjenta).
   function renderPatientPanel(container, input, opts) {
@@ -856,9 +892,7 @@
       if (old && old.parentNode) old.parentNode.removeChild(old);
       var model = analyze(input);
       if (!model) return null;
-      var collapsed = false;
-      try { collapsed = w.localStorage && w.localStorage.getItem(COLLAPSE_KEY) === '1'; } catch (e0) { collapsed = false; }
-      var html = buildPatientHtml(model, { collapsed: collapsed });
+      var html = buildPatientHtml(model, { collapsed: isPanelCollapsed() });
       if (!html || !doc) return null;
       var host = doc.createElement('div');
       host.className = 'vtap';
@@ -868,10 +902,7 @@
       try { ref = container.querySelector(beforeSel); } catch (e1) { ref = null; }
       if (ref && ref.parentNode === container) container.insertBefore(host, ref);
       else container.appendChild(host);
-      var main = host.querySelector('.vtap-main');
-      main && main.addEventListener('toggle', function () {
-        try { w.localStorage && w.localStorage.setItem(COLLAPSE_KEY, main.open ? '0' : '1'); } catch (e2) { /* prywatny tryb */ }
-      });
+      wirePanelToggle(host);
       return model;
     } catch (e) {
       return null;
@@ -894,6 +925,9 @@
     buildCardAlertsHtml: buildCardAlertsHtml,
     analyzeAndRenderHtml: analyzeAndRenderHtml,
     buildPatientHtml: buildPatientHtml,
+    buildCardPanelHtml: buildCardPanelHtml,
+    isPanelCollapsed: isPanelCollapsed,
+    wirePanelToggle: wirePanelToggle,
     renderPatientPanel: renderPatientPanel
   };
 })(typeof window !== 'undefined' ? window : globalThis);
