@@ -482,3 +482,83 @@ describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
       .toEqual(bare.metrics.find((m) => m.metric === 'height').total);
   });
 });
+
+describe('banery kart wzrostowych z modelu (wariant 1 konsolidacji)', () => {
+  function makeVta(table) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
+    const cut = (name) => {
+      const i = appSource.indexOf(`function ${name}(`);
+      let depth = 0;
+      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
+        if (appSource[k] === '{') depth += 1;
+        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
+      }
+      throw new Error(name);
+    };
+    const helpers = new Function(`
+      ${cut('pickPrevForLastYear')}
+      ${cut('pickPrevFallback')}
+      ${cut('velocityCmPerYear')}
+      ${cut('getVelocityThreshold')}
+      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
+    `)();
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      ...helpers,
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+
+  it('buildCardAlertsHtml renderuje flagę i alarm tempa; oba znikają, gdy trajektoria czysta', () => {
+    const vta = makeVta({ 'HT|48': 0.3, 'HT|84': -0.9, 'HT|96': -1.0 });
+    // flaga (Δ −1,3 od 48 mies.) + tempo 4 cm w 12 mies. → poniżej normy 5–10 lat
+    const alarmed = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 84, height: 120 }],
+      currentAgeMonths: 96,
+      currentHeight: 124,
+      sex: 'M'
+    });
+    const html = vta.buildCardAlertsHtml(alarmed);
+    expect(html).toContain('istotne obniżenie pozycji centylowej wzrostu');
+    expect(html).toContain('obraz deceleracji wzrastania');
+    expect(html).toContain('Tempo wzrastania poniżej normy dla wieku');
+    expect(html).toContain('norma: ≥5 cm/rok');
+    expect(html).toContain('umów wizytę');
+    const clean = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }],
+      currentAgeMonths: 60,
+      currentHeight: 111,
+      sex: 'M'
+    });
+    // brak flagi (Δ 0) — tempo 7 cm/rok w normie 3–5 lat
+    expect(vta.buildCardAlertsHtml(clean)).toBe('');
+    expect(vta.buildCardAlertsHtml(null)).toBe('');
+  });
+
+  it('buildHtml z hideRedFlag nie powtarza flagi (baner karty ją niesie), bez opcji — powtarza', () => {
+    const vta = makeVta({ 'HT|48': 0.3, 'HT|84': -0.9, 'HT|96': -1.0 });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 48, height: 104 }, { ageMonths: 84, height: 120 }],
+      currentAgeMonths: 96,
+      currentHeight: 124,
+      sex: 'M'
+    });
+    expect(vta.buildHtml(model)).toContain('Istotne obniżenie pozycji centylowej wzrostu');
+    const hidden = vta.buildHtml(model, { hideRedFlag: true });
+    expect(hidden).not.toContain('Istotne obniżenie pozycji centylowej wzrostu');
+    expect(hidden).toContain('Automatyczna analiza trajektorii');
+    // model niezmutowany — flaga nadal w modelu (dla banera i plakietek)
+    expect(model.metrics.find((m) => m.metric === 'height').redFlag).not.toBeNull();
+  });
+});

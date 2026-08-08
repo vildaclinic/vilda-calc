@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '4';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -424,6 +424,38 @@
     return '<span class="vta-' + esc(v.t) + '">' + esc(v.l) + '</span>';
   }
 
+  // ── Czerwone banery kart wzrostowych — JEDYNE źródło treści alarmów (wariant 1, decyzja
+  // właściciela 2026-08-08): karty renderują wynik tej funkcji zamiast własnych kopii komunikatów.
+  // Progi bez zmian (flaga: reguła PR #64; tempo: getVelocityThreshold).
+
+  var CARD_ALERT_LINK = ', wskazana konsultacja endokrynologiczna, <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" style="color: var(--danger); text-decoration: underline;">umów wizytę</a>';
+
+  function heightRedFlagOf(model) {
+    if (!model || !model.metrics) return null;
+    for (var i = 0; i < model.metrics.length; i++) {
+      if (model.metrics[i].metric === 'height') return model.metrics[i].redFlag || null;
+    }
+    return null;
+  }
+
+  function buildCardAlertsHtml(model) {
+    if (!model) return '';
+    var out = '';
+    var rf = heightRedFlagOf(model);
+    if (rf) {
+      out += '<p style="color: var(--danger); font-weight:600;">Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu (zmiana hSDS: '
+        + esc(fmtS(rf.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(rf.baseAgeMonths))
+        + ') — obraz deceleracji wzrastania' + CARD_ALERT_LINK + '</p>';
+    }
+    if (model.velocity && model.velocity.slow) {
+      var norm = model.velocity.threshold && model.velocity.threshold.label
+        ? ' <span style="font-weight:400;">(norma: ' + esc(model.velocity.threshold.label) + ')</span>' : '';
+      out += '<p style="color: var(--danger); font-weight:600;">Tempo wzrastania poniżej normy dla wieku'
+        + CARD_ALERT_LINK + norm + '</p>';
+    }
+    return out;
+  }
+
   function metricSummaryHtml(m) {
     var line = '<p><span class="vta-lbl">' + esc(m.title) + ':</span> '
       + esc(fmt(m.first.value, m.dec) + (m.unit ? ' ' + m.unit : '') + ' → ' + fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
@@ -476,12 +508,13 @@
       + '<tbody>' + rows + '</tbody></table></details>';
   }
 
-  function buildHtml(model) {
+  function buildHtml(model, opts) {
     if (!model || !model.metrics || !model.metrics.length) return '';
     ensureStyle();
+    var hideRedFlag = !!(opts && opts.hideRedFlag); // flagę pokazuje baner karty (wariant 1) — bez powtórki
     var html = '<div class="adv-growth-result-block adv-growth-result-block--trajectory"><div class="vta">';
     html += '<p class="vta-title"><strong>Automatyczna analiza trajektorii (siatka centylowa)</strong></p>';
-    model.metrics.forEach(function (m) { html += metricSummaryHtml(m); });
+    model.metrics.forEach(function (m) { html += metricSummaryHtml(hideRedFlag ? withoutRedFlag(m) : m); });
     html += velocityHtml(model.velocity);
     html += segmentsTableHtml(model);
     html += '<p class="vta-note">Analiza przesiewowa: progi i słownik werdyktów identyczne z panelem porównania A→B na siatkach oraz alarmami karty; nie zastępuje oceny klinicznej.</p>';
@@ -489,10 +522,18 @@
     return html;
   }
 
-  function analyzeAndRenderHtml(input) {
+  function withoutRedFlag(m) {
+    if (!m || !m.redFlag) return m;
+    var c = {};
+    for (var k in m) c[k] = m[k];
+    c.redFlag = null;
+    return c;
+  }
+
+  function analyzeAndRenderHtml(input, opts) {
     try {
       var model = analyze(input);
-      return model ? buildHtml(model) : '';
+      return model ? buildHtml(model, opts) : '';
     } catch (e) {
       return '';
     }
@@ -711,6 +752,7 @@
     buildPoints: buildPoints,
     analyze: analyze,
     buildHtml: buildHtml,
+    buildCardAlertsHtml: buildCardAlertsHtml,
     analyzeAndRenderHtml: analyzeAndRenderHtml,
     buildPatientHtml: buildPatientHtml,
     renderPatientPanel: renderPatientPanel
