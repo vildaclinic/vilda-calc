@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.695';
+const SW_VERSION = '1.0.696';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -714,6 +714,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=384',
   '/vilda_auth_ui.js?v=385',
   '/vilda_auth_ui.js?v=386',
+  '/vilda_auth_ui.js?v=387',
   '/vilda_growth_prediction_validation.js?v=1',
   '/vilda_growth_prediction_validation.js?v=2',
   '/vilda_growth_prediction_validation.js?v=3',
@@ -1136,6 +1137,7 @@ const CORE_SHELL_URLS = [
   '/vilda_summary_cards.js?v=20',
   '/vilda_summary_cards.js?v=21',
   '/vilda_summary_cards.js?v=22',
+  '/vilda_summary_cards.js?v=23',
   '/vilda_diet_plan_ui.js',
   '/vilda_diet_plan_ui.js?v=1',
   '/vilda_diet_plan_ui.js?v=2',
@@ -1168,6 +1170,7 @@ const CORE_SHELL_URLS = [
   '/app.js?v=188',
   '/app.js?v=189',
   '/app.js?v=190',
+  '/app.js?v=191',
   '/vilda_terms_gate.js?v=1',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',
@@ -1310,6 +1313,7 @@ const CORE_SHELL_URLS = [
   '/reposition.js',
   '/reposition.js?v=5',
   '/growth-basic-module.js?v=8',
+  '/growth-basic-module.js?v=9',
   '/vilda_pro_access.js',
   '/vilda_pro_access.js?v=1',
   '/vilda_pro_access.js?v=2',
