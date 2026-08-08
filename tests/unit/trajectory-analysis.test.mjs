@@ -702,3 +702,80 @@ describe('ocena tempa >10 lat: hierarchia Tanner → wiek kostny → reguła gen
     expect(boy.delayedPuberty).toBe(false);
   });
 });
+
+describe('etap Tannera z rekordu pacjenta (świeżość TANNER_FRESH_M)', () => {
+  function makeVta(table) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
+    const cut = (name) => {
+      const i = appSource.indexOf(`function ${name}(`);
+      let depth = 0;
+      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
+        if (appSource[k] === '{') depth += 1;
+        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
+      }
+      throw new Error(name);
+    };
+    const helpers = new Function(`
+      ${cut('pickPrevForLastYear')}
+      ${cut('pickPrevFallback')}
+      ${cut('velocityCmPerYear')}
+      ${cut('getVelocityThreshold')}
+      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
+    `)();
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      ...helpers,
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+  const T = { 'HT|150': 0, 'HT|162': -0.2 };
+  const mk = (vta, context) => vta.analyze({
+    measurements: [{ ageMonths: 150, height: 150 }],
+    currentAgeMonths: 162, // 13,5 roku, tempo 3,0 cm/rok
+    currentHeight: 153,
+    sex: 'K',
+    context
+  });
+
+  it('świeży Tanner z rekordu (≤12 mies.) działa jak z formularza — ocena i nota o dojrzewaniu', () => {
+    const vta = makeVta(T);
+    const m = mk(vta, { tannerStage: 1, tannerAtAgeMonths: 156 }); // zapis 6 mies. temu
+    expect(m.context.tannerStage).toBe(1);
+    expect(m.velocity.basis).toBe('tanner1');
+    expect(m.velocity.alarm).toBe(true);
+    expect(m.delayedPuberty).toBe(true);
+    expect(vta.buildPatientHtml(m)).toContain('z zapisu w wieku 13 lat');
+  });
+
+  it('nieaktualny Tanner (>12 mies.) jest pominięty: ocena generyczna, bez noty, pasek pokazuje pominięcie', () => {
+    const vta = makeVta(T);
+    const m = mk(vta, { tannerStage: 1, tannerAtAgeMonths: 140 }); // zapis 22 mies. temu
+    expect(m.context.tannerStage).toBeNull();
+    expect(m.context.tannerStale).toBe(true);
+    expect(m.velocity.basis).toBeNull(); // dziewczynka 13,5 r. — poza oknem generycznym
+    expect(m.velocity.aboveNormAge).toBe(true);
+    expect(m.delayedPuberty).toBe(false);
+    const html = vta.buildPatientHtml(m);
+    expect(html).toContain('nieaktualny, pominięty w ocenie');
+    expect(html).not.toContain('obraz opóźnionego dojrzewania');
+  });
+
+  it('Tanner bez wieku zapisu (bieżący formularz) — zawsze aktualny (regresja kart)', () => {
+    const vta = makeVta(T);
+    const m = mk(vta, { tannerStage: 2 });
+    expect(m.context.tannerStage).toBe(2);
+    expect(m.velocity.basis).toBe('tanner23');
+    expect(m.velocity.severity).toBe('warn');
+  });
+});
