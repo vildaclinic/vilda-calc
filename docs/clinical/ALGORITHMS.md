@@ -141,7 +141,7 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
 
 - Moduł **nie wprowadza żadnych nowych progów klinicznych** — jest kompozycją istniejących, przyjętych reguł aplikacji:
   - statystyka punktu (centyl/SDS): wspólna ścieżka `advHistoryResolveMetric` z fallbackiem tabel Palczewskiej (jak „Podsumowanie wyników" i panel porównania A→B, v386);
-  - werdykt pary punktów: progi ΔSDS i słownik etykiet identyczne z `verdictCh` panelu porównania (v388); parytet pilnuje test `tests/unit/trajectory-analysis.test.mjs` uruchamiający realny `verdictCh` z `vilda_auth_ui.js` na siatce ~1000 przypadków;
+  - werdykt pary punktów: progi ΔSDS identyczne z `verdictCh` panelu porównania (v388); etykiety w rejestrze lekarskim (słownik zaakceptowany przez właściciela 2026-08-08: m.in. „istotna deceleracja wzrastania", „progresja otyłości", „nadrabia niedobór wzrostu", „dalsza akceleracja wzrastania") — wspólne dla panelu porównania, alarmów kart i modułu; parytet pilnuje test `tests/unit/trajectory-analysis.test.mjs` uruchamiający realny `verdictCh` z `vilda_auth_ui.js` na siatce ~1000 przypadków;
   - opis kanału/strefy: identyczny z `interpCh` panelu (granice 3/10/25/50/75/90/97);
   - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64);
   - tempo wzrastania: produkcyjne `pickPrevForLastYear`/`pickPrevFallback`/`velocityCmPerYear`/`getVelocityThreshold` (okno 12±3 mies., fallback 6–8 mies., progi wg wieku); dla wieku >10 lat progu brak — moduł komunikuje, że normy tempa w okresie pokwitania nie są oceniane automatycznie (świadoma luka, do osobnej decyzji klinicznej właściciela).
@@ -152,10 +152,10 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
 
 | Przypadek | Wejście | Oczekiwany wynik |
 | --- | --- | --- |
-| TRAJ-SEG | wzrost hSDS 0,4→0,3→−0,9→−1,0 (48→60→72→84 mies.) | najpoważniejszy odcinek 60→72 mies. (ΔSDS −1,2, „łamie kanał w dół"); całość „łamie kanał w dół" |
+| TRAJ-SEG | wzrost hSDS 0,4→0,3→−0,9→−1,0 (48→60→72→84 mies.) | najpoważniejszy odcinek 60→72 mies. (ΔSDS −1,2, „istotna deceleracja wzrastania"); całość „istotna deceleracja wzrastania" |
 | TRAJ-REDFLAG | hSDS 1,9 (6 m.) → 1,3 (30 m.) → 0,1 (72 m.) | czerwona flaga od bazy 30 mies. (ΔhSDS −1,2); punkt niemowlęcy pominięty jako baza |
 | TRAJ-CATCHDOWN | hSDS 1,9 (6 m.) → 0,2 (40 m.) → 0,1 (72 m.) | brak czerwonej flagi (spadek przed 24. mies.) |
-| TRAJ-OBESE | pacjent 12,1→12,5 r.ż., waga/BMI >97c → >97c | „nadmiar pogłębia się (>97c)" / „otyłość pogłębia się" (słownik v388) |
+| TRAJ-OBESE | pacjent 12,1→12,5 r.ż., waga/BMI >97c → >97c | „progresja nadmiaru masy (>97. centyla)" / „progresja otyłości" (słownik lekarski) |
 | TRAJ-VELO | 120→124 cm w 12 mies. w wieku 8 lat | 4,0 cm/rok — poniżej normy ≥5 cm/rok (próg 5–10 lat) |
 
 ### GROWTH-LMS — kompletność cytowań
