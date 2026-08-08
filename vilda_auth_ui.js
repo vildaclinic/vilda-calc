@@ -80,8 +80,8 @@ function statAt(it,vbx){var sc=it.sc,age=ageOf(vbx),mv=visitVal(it,vbx),yv,val=n
   if(ts&&typeof ts.percentile=="number"&&isFinite(ts.percentile)){c=ts.percentile;sd=typeof ts.sd=="number"&&isFinite(ts.sd)?ts.sd:probit(ts.percentile/100)}
   var lms=null;if(c==null){try{lms=sc.lmsAt?sc.lmsAt(age):null}catch(e){}}
   if(lms&&isFinite(lms[0])&&lms[1]>0&&isFinite(lms[2])&&val>0){var L=lms[0],Mv=lms[1],Sv=lms[2],z=L!==0?(Math.pow(val/Mv,L)-1)/(L*Sv):Math.log(val/Mv)/Sv;if(isFinite(z)){sd=z;c=ncdf(z)*100}}
-  if(c==null){var zb=yv!=null?sdsFromBands(it.bands,vbx,yv):null;if(zb!=null){sd=zb;c=ncdf(zb)*100}else{c=centNum(it.bands,vbx,yv);if(c!=null)sd=probit(c/100)}}
-  return{age:age,val:val,c:c,sd:sd,yv:yv}}
+  var ap=!1;if(c==null){var zb=yv!=null?sdsFromBands(it.bands,vbx,yv):null;if(zb!=null){sd=zb;c=ncdf(zb)*100;ap=!0}else{c=centNum(it.bands,vbx,yv);if(c!=null){sd=probit(c/100);ap=!0}}}
+  return{age:age,val:val,c:c,sd:sd,yv:yv,approx:ap}}
 // crosshair state + rendering
 var locked=!1,cmp=!1,selA=null,selB=null,lastX=0,lastY=0,has=!1,raf=0,curVbx=base.padL;
 var supTs=0,g=null,cmpCand=null,tipDock=!1,tX=0,tY=0,tS=6,tRaf=0,tp={},tpN=0,zg=null,zRaf=0;
@@ -145,7 +145,7 @@ function toneSds(sd0){if(typeof sd0!="number"||!isFinite(sd0))return null;var d=
 function toneMax(t1,t2){return t1==null?t2:t2==null?t1:t1==="danger"||t2==="danger"?"danger":t1==="warn"||t2==="warn"?"warn":"normal"}
 function tSpan(t,h){return t?'<span class="vilda-tone-'+t+'">'+h+"</span>":"<span>"+h+"</span>"}
 function cmpValHtml(m,st){var dec="height"===m.metric?0:1;return tSpan(toneCent(m.metric,st.c),fmt(st.val,dec)+" "+(m.unit||"")+' <span class="c">('+(st.c!=null?fmtC(st.c)+"c":"—")+")</span>")}
-function cmpSdsHtml(sa,sb,v){if(sa.sd==null||sb.sd==null)return"—";var h=fmtS(sa.sd)+" → "+fmtS(sb.sd);return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":tSpan(toneMax(toneSds(sa.sd),toneSds(sb.sd)),h)}
+function cmpSdsHtml(sa,sb,v){if(sa.sd==null||sb.sd==null)return"—";var h=(sa.approx?"≈":"")+fmtS(sa.sd)+" → "+(sb.approx?"≈":"")+fmtS(sb.sd);return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":tSpan(toneMax(toneSds(sa.sd),toneSds(sb.sd)),h)}
 // Werdykt korzystności ZMIANY A→B: kierunek oceniany względem pozycji wyjściowej.
 // Niedobór (<10c): ruch do mediany = poprawa, dalej w dół = pogorszenie. Nadmiar (waga ≥90c, BMI ≥85c):
 // redukcja = poprawa, dalej w górę = pogorszenie. Wysoki wzrost (>90c): spadek ku medianie = neutralna
