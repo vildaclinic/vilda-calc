@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.702';
+const SW_VERSION = '1.0.703';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -718,6 +718,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=388',
   '/vilda_auth_ui.js?v=389',
   '/vilda_auth_ui.js?v=390',
+  '/vilda_auth_ui.js?v=391',
   '/vilda_growth_prediction_validation.js?v=1',
   '/vilda_growth_prediction_validation.js?v=2',
   '/vilda_growth_prediction_validation.js?v=3',
@@ -1102,10 +1103,12 @@ const CORE_SHELL_URLS = [
   '/vilda_advanced_growth.js?v=24',
   '/vilda_advanced_growth.js?v=25',
   '/vilda_advanced_growth.js?v=26',
+  '/vilda_advanced_growth.js?v=27',
   '/vilda_trajectory_analysis.js?v=1',
   '/vilda_trajectory_analysis.js?v=2',
   '/vilda_trajectory_analysis.js?v=3',
   '/vilda_trajectory_analysis.js?v=4',
+  '/vilda_trajectory_analysis.js?v=5',
   '/vilda_estimated_intake.js',
   '/vilda_estimated_intake.js?v=3',
   '/vilda_growth_reference_data.js',
@@ -1328,6 +1331,7 @@ const CORE_SHELL_URLS = [
   '/growth-basic-module.js?v=10',
   '/growth-basic-module.js?v=11',
   '/growth-basic-module.js?v=12',
+  '/growth-basic-module.js?v=13',
   '/vilda_pro_access.js',
   '/vilda_pro_access.js?v=1',
   '/vilda_pro_access.js?v=2',

@@ -16,14 +16,15 @@
  *  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 od pierwszego pomiaru z wieku ≥24 mies. (PR #64);
  *  - tempo wzrastania: window.pickPrevForLastYear / pickPrevFallback / velocityCmPerYear /
  *    getVelocityThreshold — identycznie jak karta „Zaawansowane obliczenia wzrostowe";
- *    dla wieku >10 lat brak progu (świadoma luka okresu pokwitania) — moduł jedynie to komunikuje.
+ *    dla wieku >10 lat hierarchia okołopokwitaniowa wg dostępnych danych (Tanner → wiek kostny →
+ *    reguła generyczna) — parametry i źródła w P (akceptacja właściciela 2026-08-08).
  * Jedyny własny parametr to strażnik jakości danych SEGMENT_MIN_GAP_M (odcinki krótsze niż 3 mies.
  * są pokazywane, ale bez werdyktu — annualizacja/ocena tak krótkich odstępów jest niestabilna).
  */
 (function (w) {
   'use strict';
 
-  var VERSION = '4';
+  var VERSION = '5';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -31,7 +32,21 @@
     REDFLAG_DSDS: -1.0,
     REDFLAG_BASE_MIN_M: 24,
     CLINES: [3, 10, 25, 50, 75, 90, 97],
-    CHN: ['<3', '3–10', '10–25', '25–50', '50–75', '75–90', '90–97', '>97']
+    CHN: ['<3', '3–10', '10–25', '25–50', '50–75', '75–90', '90–97', '>97'],
+    // ── Ocena tempa wzrastania >10 r.ż. (PARAMETRY KLINICZNE, akceptacja właściciela 2026-08-08) ──
+    // Źródła: Tanner & Whitehouse, Arch Dis Child 1976;51:170-9 (PMID 952550, doi:10.1136/adc.51.3.170)
+    // — centyle tempa dla wcześnie/przeciętnie/późno dojrzewających; Tanner & Davies, J Pediatr
+    // 1985;107:317-29 (PMID 3875704, doi:10.1016/s0022-3476(85)80501-1). 4 cm/rok ≈ dolna granica
+    // nadiru przedpokwitaniowego u późno dojrzewających. Reguła przesiewowa, nie diagnostyczna.
+    PUB_VELO_MIN: 4,            // cm/rok — próg okołopokwitaniowy (<4 alarmuje/ostrzega wg kontekstu)
+    PUB_AGE_MIN_M: 120,         // od 10 lat (poniżej działa getVelocityThreshold)
+    PUB_AGE_MAX_F_M: 156,       // dziewczęta: okno generyczne do 13 lat
+    PUB_AGE_MAX_M_M: 180,       // chłopcy: okno generyczne do 15 lat
+    BONE_AGE_FRESH_M: 18,       // wiek kostny użyty tylko, gdy oznaczony w ciągu ostatnich 18 mies.
+    // Opóźnione dojrzewanie (Palmert & Dunkel, N Engl J Med 2012;366:443-53, PMID 22296078,
+    // doi:10.1056/NEJMcp1109290): brak cech pokwitania u dziewcząt >13 lat / chłopców >14 lat.
+    DELAYED_PUB_F_M: 156,
+    DELAYED_PUB_M_M: 168
   };
 
   var METRICS = [
@@ -188,8 +203,14 @@
     var mp = typeof raw.mpSds === 'number' && isFinite(raw.mpSds) ? raw.mpSds : null;
     var gh = raw.gh && raw.gh.a != null && isFinite(raw.gh.a) ? { a: raw.gh.a, b: raw.gh.b != null && isFinite(raw.gh.b) ? raw.gh.b : null } : null;
     var red = raw.red && raw.red.a != null && isFinite(raw.red.a) ? { a: raw.red.a, b: raw.red.b != null && isFinite(raw.red.b) ? raw.red.b : null, label: raw.red.label || null } : null;
-    if (mp == null && !gh && !red) return null;
-    return { mpSds: mp, gh: gh, red: red };
+    var ts = num(raw.tannerStage);
+    ts = ts != null && ts >= 1 && ts <= 5 ? Math.round(ts) : null;
+    var ba = null;
+    if (raw.boneAge && num(raw.boneAge.baMonths) != null && num(raw.boneAge.baMonths) > 0) {
+      ba = { baMonths: num(raw.boneAge.baMonths), atAgeMonths: num(raw.boneAge.atAgeMonths) };
+    }
+    if (mp == null && !gh && !red && ts == null && !ba) return null;
+    return { mpSds: mp, gh: gh, red: red, tannerStage: ts, boneAge: ba };
   }
 
   // Opis strefy dla pary — transkrypcja interpCh panelu (zwraca sam tekst strefy).
@@ -328,7 +349,7 @@
 
   // ── Tempo wzrastania — identyczna logika doboru okna i progu jak karta zaawansowana ──
 
-  function heightVelocity(pts, currentAgeMonths) {
+  function heightVelocity(pts, currentAgeMonths, sex, ctx) {
     try {
       var hp = pts.filter(function (p) { return p.height != null; });
       if (hp.length < 2) return null;
@@ -350,16 +371,91 @@
         }
       }
       if (v == null || !isFinite(v)) return null;
-      var thr = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(target) : null;
-      var slow = !!(thr && usedLastYear && v < thr.threshold);
-      return {
+      var out = {
         cmPerYear: v, gapM: gapM, usedLastYear: usedLastYear,
-        threshold: thr, slow: slow,
-        aboveNormAge: !thr && target / 12 >= 10
+        threshold: null, slow: false, alarm: false,
+        severity: null, basis: null, normLabel: null, note: null,
+        aboveNormAge: false
       };
+      var thr = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(target) : null;
+      if (thr) {
+        // <10 lat: dotychczasowe normy wg wieku metrykalnego (poziom alarmowy jak dotąd).
+        out.threshold = thr;
+        out.basis = 'age';
+        out.normLabel = thr.label || null;
+        out.slow = !!(usedLastYear && v < thr.threshold);
+        out.severity = out.slow ? 'danger' : null;
+        out.alarm = out.slow;
+        return out;
+      }
+      if (target / 12 < 10) return out; // brak progu poniżej 1 r.ż. itp. — bez oceny
+      // ── >10 lat: hierarchia wg dostępnych danych (akceptacja właściciela 2026-08-08) ──
+      assessPubertalVelocity(out, target, sex, ctx);
+      return out;
     } catch (e) {
       return null;
     }
+  }
+
+  // Ocena tempa >10 r.ż.: Tanner (poziom 1) → wiek kostny (poziom 2) → reguła generyczna (poziom 3).
+  // Ocenia tylko przy oknie rocznym/awaryjnym (usedLastYear) — jak dotychczasowe normy.
+  function assessPubertalVelocity(out, targetAgeM, sex, ctx) {
+    var v = out.cmPerYear;
+    var isM = sexMK(sex) === 'M';
+    var genMax = isM ? P.PUB_AGE_MAX_M_M : P.PUB_AGE_MAX_F_M;
+    var ts = ctx && ctx.tannerStage != null ? ctx.tannerStage : null;
+    if (ts != null) {
+      if (ts === 1) {
+        // Badaniem wykluczono skok — obowiązuje norma przedpokwitaniowa.
+        out.basis = 'tanner1';
+        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok przed skokiem (Tanner I)';
+        out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
+        out.severity = out.slow ? 'danger' : null;
+        out.alarm = out.slow;
+        return;
+      }
+      if (ts === 2 || ts === 3) {
+        out.basis = 'tanner23';
+        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok w trakcie pokwitania (Tanner ' + (ts === 2 ? 'II' : 'III') + ')';
+        out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
+        out.severity = out.slow ? 'warn' : null;
+        return;
+      }
+      // Tanner IV–V: fizjologiczna deceleracja po skoku — bez oceny automatycznej.
+      out.basis = 'tanner45';
+      out.note = 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V') + ') — deceleracja fizjologiczna';
+      return;
+    }
+    var ba = ctx && ctx.boneAge ? ctx.boneAge : null;
+    var baFresh = ba && (ba.atAgeMonths == null || (targetAgeM - ba.atAgeMonths) <= P.BONE_AGE_FRESH_M);
+    if (ba && baFresh) {
+      var thrBA = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(ba.baMonths) : null;
+      if (thrBA) {
+        // Norma dobrana wg wieku kostnego; poziom czujność (błąd oceny BA ~±1 rok).
+        out.basis = 'boneAge';
+        out.normLabel = (thrBA.label || '') + ' — wg wieku kostnego ' + fmtAgeM(ba.baMonths);
+        out.slow = !!(out.usedLastYear && v < thrBA.threshold);
+        out.severity = out.slow ? 'warn' : null;
+        return;
+      }
+      if (ba.baMonths >= P.PUB_AGE_MIN_M && ba.baMonths <= genMax) {
+        out.basis = 'boneAgeGeneric';
+        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok — wg wieku kostnego ' + fmtAgeM(ba.baMonths) + ' (okres okołopokwitaniowy)';
+        out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
+        out.severity = out.slow ? 'warn' : null;
+        return;
+      }
+      out.aboveNormAge = true; // wiek kostny powyżej okna — bez oceny
+      return;
+    }
+    if (targetAgeM <= genMax) {
+      out.basis = 'generic';
+      out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok (okres okołopokwitaniowy — możliwy późny skok)';
+      out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
+      out.severity = out.slow ? 'warn' : null;
+      return;
+    }
+    out.aboveNormAge = true;
   }
 
   // ── Analiza całości ──
@@ -377,6 +473,10 @@
       if (m) metrics.push(m);
     });
     if (!metrics.length) return null;
+    var lastAgeM = pts[pts.length - 1].ageMonths;
+    // Opóźnione dojrzewanie (Palmert & Dunkel 2012): Tanner I u dziewcząt >13 lat / chłopców >14 lat.
+    var delayedPuberty = !!(ctx && ctx.tannerStage === 1
+      && lastAgeM > (sex === 'M' ? P.DELAYED_PUB_M_M : P.DELAYED_PUB_F_M));
     return {
       version: VERSION,
       sex: sex,
@@ -384,7 +484,8 @@
       context: ctx,
       points: pts,
       metrics: metrics,
-      velocity: heightVelocity(pts, input.currentAgeMonths)
+      delayedPuberty: delayedPuberty,
+      velocity: heightVelocity(pts, input.currentAgeMonths, sex, ctx)
     };
   }
 
@@ -447,9 +548,11 @@
         + esc(fmtS(rf.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(rf.baseAgeMonths))
         + ') — obraz deceleracji wzrastania' + CARD_ALERT_LINK + '</p>';
     }
-    if (model.velocity && model.velocity.slow) {
-      var norm = model.velocity.threshold && model.velocity.threshold.label
-        ? ' <span style="font-weight:400;">(norma: ' + esc(model.velocity.threshold.label) + ')</span>' : '';
+    // Czerwony baner tempa tylko dla poziomu alarmowego (danger); poziom „czujność" (warn,
+    // reguły okołopokwitaniowe) pokazują chipy bloku trajektorii i panelu — bez banera.
+    if (model.velocity && model.velocity.alarm) {
+      var norm = model.velocity.normLabel
+        ? ' <span style="font-weight:400;">(norma: ' + esc(model.velocity.normLabel) + ')</span>' : '';
       out += '<p style="color: var(--danger); font-weight:600;">Tempo wzrastania poniżej normy dla wieku'
         + CARD_ALERT_LINK + norm + '</p>';
     }
@@ -475,20 +578,31 @@
     return line;
   }
 
+  // Wspólna klasyfikacja opisu tempa dla obu rendererów: {cls, text}.
+  function velocityAssessment(vel) {
+    if (!vel) return null;
+    if (vel.slow && vel.severity === 'danger') return { cls: 'bad', text: 'poniżej normy dla wieku' + (vel.normLabel ? ' (' + vel.normLabel + ')' : '') };
+    if (vel.slow) return { cls: 'warn', text: 'do oceny — ' + (vel.normLabel || 'poniżej progu przesiewowego') };
+    if (vel.note) return { cls: 'stable', text: vel.note };
+    if (vel.basis && vel.usedLastYear) return { cls: 'good', text: 'w normie' + (vel.normLabel ? ' (' + vel.normLabel + ')' : '') };
+    if (vel.aboveNormAge) return { cls: 'stable', text: 'poza oknem automatycznej oceny normy tempa' };
+    if (!vel.usedLastYear) return { cls: 'stable', text: 'odstęp pomiarów poza oknem oceny, bez porównania z normą' };
+    return null;
+  }
+
   function velocityHtml(vel) {
     if (!vel) return '';
     var ctx = vel.gapM != null ? ' (ostatnich ' + Math.round(vel.gapM) + ' mies.)' : '';
     var txt = '<span class="vta-lbl">Tempo wzrastania:</span> ' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok' + esc(ctx);
-    if (vel.slow) {
-      txt += ' — <span class="vta-bad">poniżej normy' + (vel.threshold && vel.threshold.label ? ' (' + esc(vel.threshold.label) + ')' : '') + '</span>';
-    } else if (vel.threshold && vel.usedLastYear) {
-      txt += ' — <span class="vta-good">w normie' + (vel.threshold.label ? ' (' + esc(vel.threshold.label) + ')' : '') + '</span>';
-    } else if (vel.aboveNormAge) {
-      txt += ' <span class="vta-stable">— normy tempa dla wieku >10 lat nie są oceniane automatycznie (okres pokwitania)</span>';
-    } else if (!vel.usedLastYear) {
-      txt += ' <span class="vta-stable">— odstęp pomiarów poza oknem oceny, bez porównania z normą</span>';
-    }
+    var a = velocityAssessment(vel);
+    if (a) txt += ' — <span class="vta-' + a.cls + '">' + esc(a.text) + '</span>';
     return '<p>' + txt + '</p>';
+  }
+
+  function delayedPubertyHtml(model, cls) {
+    if (!model || !model.delayedPuberty) return '';
+    var lim = model.sex === 'M' ? '14' : '13';
+    return '<p class="' + cls + '">Tanner I w wieku powyżej ' + lim + ' lat — obraz opóźnionego dojrzewania, wskazana ocena</p>';
   }
 
   function segmentsTableHtml(model) {
@@ -516,6 +630,7 @@
     html += '<p class="vta-title"><strong>Automatyczna analiza trajektorii (siatka centylowa)</strong></p>';
     model.metrics.forEach(function (m) { html += metricSummaryHtml(hideRedFlag ? withoutRedFlag(m) : m); });
     html += velocityHtml(model.velocity);
+    html += delayedPubertyHtml(model, 'vta-warn');
     html += segmentsTableHtml(model);
     html += '<p class="vta-note">Analiza przesiewowa: progi i słownik werdyktów identyczne z panelem porównania A→B na siatkach oraz alarmami karty; nie zastępuje oceny klinicznej.</p>';
     html += '</div></div>';
@@ -599,6 +714,8 @@
     if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push('🧬 kanał rodzicielski (MPH): SDS ' + esc(fmtS(ctx.mpSds)));
     if (ctx.gh) items.push('💉 terapia GH: od ' + esc(fmtAgeM(ctx.gh.a)) + (ctx.gh.b != null ? ' do ' + esc(fmtAgeM(ctx.gh.b)) : ' — nadal') + ' (odcinki: 💉)');
     if (ctx.red) items.push('⬇ zamierzona redukcja' + (ctx.red.label ? ' (' + esc(ctx.red.label) + ')' : '') + ': od ' + esc(fmtAgeM(ctx.red.a)) + (ctx.red.b != null ? ' do ' + esc(fmtAgeM(ctx.red.b)) : ' — nadal') + ' (odcinki: ⬇)');
+    if (ctx.tannerStage != null) items.push('Tanner ' + esc(['I', 'II', 'III', 'IV', 'V'][ctx.tannerStage - 1] || String(ctx.tannerStage)));
+    if (ctx.boneAge) items.push('wiek kostny: ' + esc(fmtAgeM(ctx.boneAge.baMonths)) + (ctx.boneAge.atAgeMonths != null ? ' (oznaczony w wieku ' + esc(fmtAgeM(ctx.boneAge.atAgeMonths)) + ')' : ''));
     if (!items.length) return '';
     return '<div class="vtap-ctx"><span>' + items.join('</span><span>') + '</span></div>';
   }
@@ -648,14 +765,14 @@
     return html + '</div>';
   }
 
+  var CHIP_BY_CLS = { bad: 'vb', warn: 'vw', good: 'vg', stable: 'vs' };
+
   function patientVelocityRowHtml(vel) {
     if (!vel) return '';
     var ctx = vel.gapM != null ? ' <span class="c">(ostatnich ' + Math.round(vel.gapM) + ' mies.)</span>' : '';
-    var chip;
-    if (vel.slow) chip = '<span class="vtap-chip vb">poniżej normy dla wieku' + (vel.threshold && vel.threshold.label ? ' (' + esc(vel.threshold.label) + ')' : '') + '</span>';
-    else if (vel.threshold && vel.usedLastYear) chip = '<span class="vtap-chip vg">w normie' + (vel.threshold.label ? ' (' + esc(vel.threshold.label) + ')' : '') + '</span>';
-    else if (vel.aboveNormAge) chip = '<span class="vtap-chip vs">wiek &gt;10 lat — norma nieoceniana (pokwitanie)</span>';
-    else chip = '<span class="vtap-chip vs">poza oknem oceny normy</span>';
+    var a = velocityAssessment(vel);
+    var chip = a ? '<span class="vtap-chip ' + (CHIP_BY_CLS[a.cls] || 'vs') + '">' + esc(a.text) + '</span>'
+      : '<span class="vtap-chip vs">poza oknem oceny normy</span>';
     return '<div class="vtap-row"><div class="vtap-pm"><span class="nm">Tempo</span>'
       + '<span class="vtap-ft" style="margin:0;flex:1">' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok' + ctx + '</span>'
       + chip + '</div></div>';
@@ -699,6 +816,10 @@
     });
     model.metrics.forEach(function (m) { html += patientMetricRowHtml(m); });
     html += patientVelocityRowHtml(model.velocity);
+    if (model.delayedPuberty) {
+      html += '<div class="vtap-row"><span class="vtap-chip vw">Tanner I &gt;' + (model.sex === 'M' ? '14' : '13')
+        + ' lat — obraz opóźnionego dojrzewania, wskazana ocena</span></div>';
+    }
     html += patientSegmentsHtml(model);
     html += '<div class="vtap-foot">Analiza przesiewowa: progi i słownik identyczne z panelem „Porównanie pomiarów" i alarmami kart wzrostowych. Nie zastępuje oceny klinicznej.</div>';
     html += '</details>';

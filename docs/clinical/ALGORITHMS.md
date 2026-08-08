@@ -144,7 +144,23 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
   - werdykt pary punktów: progi ΔSDS identyczne z `verdictCh` panelu porównania (v388); etykiety w rejestrze lekarskim (słownik zaakceptowany przez właściciela 2026-08-08: m.in. „istotna deceleracja wzrastania", „progresja otyłości", „nadrabia niedobór wzrostu", „dalsza akceleracja wzrastania") — wspólne dla panelu porównania, alarmów kart i modułu; parytet pilnuje test `tests/unit/trajectory-analysis.test.mjs` uruchamiający realny `verdictCh` z `vilda_auth_ui.js` na siatce ~1000 przypadków;
   - opis kanału/strefy: identyczny z `interpCh` panelu (granice 3/10/25/50/75/90/97);
   - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64);
-  - tempo wzrastania: produkcyjne `pickPrevForLastYear`/`pickPrevFallback`/`velocityCmPerYear`/`getVelocityThreshold` (okno 12±3 mies., fallback 6–8 mies., progi wg wieku); dla wieku >10 lat progu brak — moduł komunikuje, że normy tempa w okresie pokwitania nie są oceniane automatycznie (świadoma luka, do osobnej decyzji klinicznej właściciela).
+  - tempo wzrastania <10 lat: produkcyjne `pickPrevForLastYear`/`pickPrevFallback`/`velocityCmPerYear`/`getVelocityThreshold` (okno 12±3 mies., fallback 6–8 mies., progi wg wieku metrykalnego, poziom alarmowy).
+
+#### Ocena tempa wzrastania >10 lat — hierarchia okołopokwitaniowa (akceptacja kliniczna właściciela 2026-08-08)
+
+Źródła: Tanner JM, Whitehouse RH. *Clinical longitudinal standards…* Arch Dis Child 1976;51(3):170-9 (PMID 952550, doi:10.1136/adc.51.3.170) — centyle tempa osobno dla wcześnie/przeciętnie/późno dojrzewających; Tanner JM, Davies PS. J Pediatr 1985;107(3):317-29 (PMID 3875704, doi:10.1016/s0022-3476(85)80501-1). Próg 4 cm/rok ≈ dolna granica nadiru przedpokwitaniowego u późno dojrzewających. Populacje brytyjska/północnoamerykańska (brak polskich norm tempa w aplikacji); reguła przesiewowa, nie diagnostyczna. Parametry w `PARAMS` modułu (do strojenia przez właściciela).
+
+| Priorytet | Dane | Reguła | Poziom |
+| --- | --- | --- | --- |
+| 1 | Tanner I (formularz) | tempo <4 cm/rok | alarmowy (baner + konsultacja) — konfudent skoku wykluczony badaniem |
+| 1 | Tanner II–III | tempo <4 cm/rok | czujność (chip „do oceny — osłabiony skok?"); bez banera |
+| 1 | Tanner IV–V | — | bez oceny; nota „deceleracja fizjologiczna po skoku" |
+| 2 | wiek kostny (świeży ≤18 mies.) | norma `getVelocityThreshold(BA)`; BA 10–13/10–15 lat → <4 cm/rok | czujność (błąd oceny BA ~±1 rok) |
+| 3 | brak danych | dziewczęta 10–13 lat / chłopcy 10–15 lat: <4 cm/rok | czujność („możliwy późny skok pokwitaniowy") |
+
+Dodatek: Tanner I u dziewcząt >13 lat / chłopców >14 lat → niezależna nota „obraz opóźnionego dojrzewania, wskazana ocena" (Palmert MR, Dunkel L. *Delayed puberty.* N Engl J Med 2012;366(5):443-53, PMID 22296078, doi:10.1056/NEJMcp1109290).
+
+Przypadki syntetyczne: TRAJ-VELO-T1 (12 lat, 3,0 cm/rok, Tanner I → alarm); TRAJ-VELO-T2 (j.w., Tanner II → czujność, bez banera); TRAJ-VELO-T4 (Tanner IV → bez oceny, nota); TRAJ-VELO-BA (BA 8 lat świeży → norma ≥5 cm/rok, czujność; BA nieświeży → reguła generyczna); TRAJ-VELO-GEN (chłopiec 14 lat bez danych → czujność; dziewczynka 14 lat → poza oknem); TRAJ-DELAY (Tanner I, dziewczynka 13,5 r. → nota; chłopiec 13,5 r. → bez noty).
 - Kontekst kliniczny per odcinek (od v3 modułu): transkrypcja 1:1 reguł `verdictCh2` panelu porównania — terapia GH (ocena odpowiedzi przy ≥6 mies. terapii w odcinku: ΔSDS ≥0,3 dobra / <0,1 słaba), kanał rodzicielski MPH (progi ±1,5 SDS względem mpSDS), zamierzona redukcja (nakładanie ≥3 mies., nigdy przy ca<10). Kontekst przekazywany z Karty pacjenta (`_vildaCmpCtx` — ten sam, którego używa panel porównania); parytet z realnym `verdictCh2` pilnowany testem (siatka 72 000 przypadków).
 - Czerwone banery obu kart wzrostowych (istotne obniżenie pozycji centylowej; tempo poniżej normy) są od konsolidacji (wariant 1, decyzja właściciela 2026-08-08) zasilane wprost z modelu modułu (`buildCardAlertsHtml`) — jedno źródło prawdy dla banerów, ramki alarmowej kart i plakietek Karty pacjenta; dotychczasowa logika wbudowana kart pozostaje wyłącznie jako fallback przy niedostępności modułu. Blok trajektorii w kartach nie powtarza flagi (opcja `hideRedFlag`).
 - Jedyny własny parametr: `SEGMENT_MIN_GAP_M = 3` mies. — strażnik jakości danych (odcinki krótsze są pokazywane bez werdyktu, bo ocena ΔSDS na tak krótkich odstępach jest niestabilna pomiarowo). Nie jest to próg interpretacji klinicznej.
