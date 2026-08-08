@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -149,6 +149,49 @@
     return { t: 'stable', l: ST };
   }
 
+  // Nakładka kontekstu klinicznego — transkrypcja 1:1 verdictCh2 panelu porównania.
+  // gm: miesiące terapii GH w odcinku (ocena odpowiedzi od gm>=6); mp: SDS kanału rodzicielskiego (MPH);
+  // rd: zamierzona redukcja aktywna w odcinku (panel: nakładanie >=3 mies.; nigdy przy niedoborze ca<10).
+  // Parytet z realnym verdictCh2 pilnowany testem trajectory-analysis.test.mjs.
+  function verdictForPairCtx(met, sa0, sb0, ca, cb, gm, mp, rd) {
+    var v1 = verdictForPair(met, sa0, sb0, ca, cb);
+    if (!v1) return null;
+    var d = Math.round(100 * (sb0 - sa0)) / 100;
+    if (met === 'height') {
+      if (gm >= 6) return d >= 0.3 ? { t: 'good', l: 'dobra odpowiedź na GH' } : d < 0.1 ? { t: 'warn', l: 'słaba odpowiedź na GH — do oceny' } : { t: 'stable', l: 'odpowiedź umiarkowana (GH)' };
+      if (typeof mp === 'number' && isFinite(mp)) {
+        var e0 = Math.round(100 * (sa0 - mp)) / 100;
+        if (e0 <= -1.5) return d >= 0.2 ? { t: 'good', l: 'nadrabia względem kanału rodzicielskiego' } : d <= -0.5 ? { t: 'bad', l: 'oddala się od kanału rodzicielskiego' } : d <= -0.2 ? { t: 'warn', l: 'oddala się od kanału rodzicielskiego' } : { t: 'stable', l: 'stabilnie (poniżej kanału rodzicielskiego)' };
+        if (e0 >= 1.5) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja wzrastania' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja do kanału rodzicielskiego' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja ponad kanał rodzicielski' } : { t: 'stable', l: 'stabilny tor wzrastania' };
+        return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: 'w kanale rodzicielskim' };
+      }
+      return v1;
+    }
+    if (rd && ca >= 10) {
+      if (d <= -1.5) return { t: 'warn', l: 'redukcja bardzo szybka — do kontroli' };
+      if (d <= -0.2) return { t: 'good', l: 'redukcja w trakcie leczenia' };
+      if (d >= 0.2) return { t: v1.t === 'bad' ? 'bad' : 'warn', l: 'narasta mimo leczenia' };
+    }
+    return v1;
+  }
+
+  // Nakładanie się przedziału kontekstu (w miesiącach wieku; b==null → trwa nadal) z odcinkiem [a0,b0].
+  function overlapM(intv, a0, b0) {
+    if (!intv || intv.a == null || !isFinite(intv.a)) return 0;
+    var x0 = Math.max(a0, intv.a);
+    var x1 = Math.min(b0, intv.b == null || !isFinite(intv.b) ? b0 : intv.b);
+    return Math.max(0, x1 - x0);
+  }
+
+  function normalizeContext(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    var mp = typeof raw.mpSds === 'number' && isFinite(raw.mpSds) ? raw.mpSds : null;
+    var gh = raw.gh && raw.gh.a != null && isFinite(raw.gh.a) ? { a: raw.gh.a, b: raw.gh.b != null && isFinite(raw.gh.b) ? raw.gh.b : null } : null;
+    var red = raw.red && raw.red.a != null && isFinite(raw.red.a) ? { a: raw.red.a, b: raw.red.b != null && isFinite(raw.red.b) ? raw.red.b : null, label: raw.red.label || null } : null;
+    if (mp == null && !gh && !red) return null;
+    return { mpSds: mp, gh: gh, red: red };
+  }
+
   // Opis strefy dla pary — transkrypcja interpCh panelu (zwraca sam tekst strefy).
   function zoneForPair(ca, cb, sa, sb) {
     var a = chan(ca), b = chan(cb);
@@ -208,7 +251,7 @@
 
   // ── Analiza jednej metryki ──
 
-  function analyzeMetric(met, pts, sex, source) {
+  function analyzeMetric(met, pts, sex, source, ctx) {
     var series = [];
     pts.forEach(function (p) {
       var v = p[met.key];
@@ -219,23 +262,39 @@
     });
     if (series.length < 2) return null;
 
+    // Werdykt pary z kontekstem klinicznym (jak panel porównania): GH liczone tylko dla wzrostu,
+    // redukcja tylko dla wagi/BMI przy nakładaniu >=3 mies. w danym odcinku.
+    function pairVerdict(a0, b0) {
+      if (!ctx) return { v: verdictForPair(met.key, a0.sd, b0.sd, a0.c, b0.c), ghOn: false, rdOn: false };
+      var ghM = met.key === 'height' ? overlapM(ctx.gh, a0.ageMonths, b0.ageMonths) : 0;
+      var rdOn = met.key !== 'height' && overlapM(ctx.red, a0.ageMonths, b0.ageMonths) >= 3;
+      return {
+        v: verdictForPairCtx(met.key, a0.sd, b0.sd, a0.c, b0.c, ghM, ctx.mpSds, rdOn),
+        ghOn: ghM >= 6,
+        rdOn: rdOn && a0.c >= 10
+      };
+    }
+
     var segments = [];
     for (var i = 0; i < series.length - 1; i++) {
       var a = series[i], b = series[i + 1];
       var gapM = b.ageMonths - a.ageMonths;
       var dSds = Math.round(100 * (b.sd - a.sd)) / 100;
+      var pv = gapM >= P.SEGMENT_MIN_GAP_M ? pairVerdict(a, b) : null;
       segments.push({
         a: a, b: b, gapM: gapM,
         dVal: b.value - a.value,
         dSds: dSds,
         zone: zoneForPair(a.c, b.c, a.sd, b.sd),
-        verdict: gapM >= P.SEGMENT_MIN_GAP_M ? verdictForPair(met.key, a.sd, b.sd, a.c, b.c) : null
+        verdict: pv ? pv.v : null,
+        ghOn: pv ? pv.ghOn : false,
+        rdOn: pv ? pv.rdOn : false
       });
     }
 
     var first = series[0], last = series[series.length - 1];
-    var total = (last.ageMonths - first.ageMonths) >= P.SEGMENT_MIN_GAP_M
-      ? verdictForPair(met.key, first.sd, last.sd, first.c, last.c) : null;
+    var totalPv = (last.ageMonths - first.ageMonths) >= P.SEGMENT_MIN_GAP_M ? pairVerdict(first, last) : null;
+    var total = totalPv ? totalPv.v : null;
 
     // najpoważniejszy odcinek: bad > warn, potem największe |ΔSDS|
     var sev = { bad: 2, warn: 1 };
@@ -309,11 +368,12 @@
     if (!input || typeof input !== 'object') return null;
     var sex = sexMK(input.sex);
     var source = input.source != null ? input.source : (typeof w.bmiSource !== 'undefined' ? w.bmiSource : null);
+    var ctx = normalizeContext(input.context);
     var pts = buildPoints(input);
     if (pts.length < 2) return null;
     var metrics = [];
     METRICS.forEach(function (met) {
-      var m = analyzeMetric(met, pts, sex, source);
+      var m = analyzeMetric(met, pts, sex, source, ctx);
       if (m) metrics.push(m);
     });
     if (!metrics.length) return null;
@@ -321,6 +381,7 @@
       version: VERSION,
       sex: sex,
       source: source != null ? String(source).toUpperCase() : null,
+      context: ctx,
       points: pts,
       metrics: metrics,
       velocity: heightVelocity(pts, input.currentAgeMonths)
@@ -449,6 +510,7 @@
     '.vtap .vtap-h .tg{font-size:10.5px;font-weight:700;background:rgba(255,255,255,.16);border-radius:999px;padding:1px 9px}',
     '.vtap .vtap-h .tg::after{content:"zwiń ▾"}',
     '.vtap details:not([open])>summary .tg::after{content:"rozwiń ▸"}',
+    '.vtap .vtap-ctx{padding:8px 14px;background:#f2f9f9;border-bottom:1px solid #e3ecec;font-size:11.5px;font-weight:600;color:#39555b;display:flex;gap:12px;flex-wrap:wrap}',
     '.vtap .vtap-flag{padding:9px 14px;background:#fdecea;border-bottom:1px solid #f6d4d0;font-size:12px;font-weight:700;color:#b71c1c;line-height:1.45}',
     '.vtap .vtap-row{padding:9px 14px;border-top:1px solid #eef4f4}',
     '.vtap .vtap-row:first-of-type{border-top:0}',
@@ -488,6 +550,17 @@
   }
 
   var CHIP_CLS = { good: 'vg', stable: 'vs', warn: 'vw', bad: 'vb' };
+
+  // Pasek kontekstu klinicznego (jak vilda-cmp-ctx panelu porównania) + legenda znaczników odcinków.
+  function contextStripHtml(ctx) {
+    if (!ctx) return '';
+    var items = [];
+    if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push('🧬 kanał rodzicielski (MPH): SDS ' + esc(fmtS(ctx.mpSds)));
+    if (ctx.gh) items.push('💉 terapia GH: od ' + esc(fmtAgeM(ctx.gh.a)) + (ctx.gh.b != null ? ' do ' + esc(fmtAgeM(ctx.gh.b)) : ' — nadal') + ' (odcinki: 💉)');
+    if (ctx.red) items.push('⬇ zamierzona redukcja' + (ctx.red.label ? ' (' + esc(ctx.red.label) + ')' : '') + ': od ' + esc(fmtAgeM(ctx.red.a)) + (ctx.red.b != null ? ' do ' + esc(fmtAgeM(ctx.red.b)) : ' — nadal') + ' (odcinki: ⬇)');
+    if (!items.length) return '';
+    return '<div class="vtap-ctx"><span>' + items.join('</span><span>') + '</span></div>';
+  }
 
   function chipHtml(v) {
     if (!v) return '';
@@ -552,8 +625,9 @@
     model.metrics.forEach(function (m) {
       m.segments.forEach(function (s) {
         count += 1;
+        var mark = s.ghOn ? ' 💉' : s.rdOn ? ' ⬇' : '';
         rows += '<tr><td>' + esc(m.title) + '</td>'
-          + '<td>' + esc(fmtAgeM(s.a.ageMonths) + ' → ' + fmtAgeM(s.b.ageMonths)) + '</td>'
+          + '<td>' + esc(fmtAgeM(s.a.ageMonths) + ' → ' + fmtAgeM(s.b.ageMonths)) + mark + '</td>'
           + '<td>' + esc(fmtC(s.a.c) + 'c → ' + fmtC(s.b.c) + 'c') + '</td>'
           + '<td>' + esc(fmtS(s.a.sd) + ' → ' + fmtS(s.b.sd)) + '</td>'
           + '<td>' + (s.verdict ? chipHtml(s.verdict) : '<span class="vtap-chip vs">odstęp &lt;' + P.SEGMENT_MIN_GAP_M + ' mies.</span>') + '</td></tr>';
@@ -574,6 +648,7 @@
       + (model.source ? ' · źródło: ' + model.source : '');
     var html = '<details class="vtap-main"' + (open ? ' open' : '') + '>'
       + '<summary class="vtap-h"><span>Analiza trajektorii</span><span class="sub">' + esc(sub) + '</span><span class="tg"></span></summary>';
+    html += contextStripHtml(model.context);
     model.metrics.forEach(function (m) {
       if (m.redFlag) {
         html += '<div class="vtap-flag">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS '
@@ -628,6 +703,7 @@
     PARAMS: P,
     statFor: statFor,
     verdictForPair: verdictForPair,
+    verdictForPairCtx: verdictForPairCtx,
     zoneForPair: zoneForPair,
     zoneLabel: zoneLabel,
     chan: chan,
