@@ -958,3 +958,70 @@ describe('siatki Karty pacjenta — pionowa linia najechania kończy się na osi
     expect(source).not.toContain('line.style.height=hr.height+"px"');
   });
 });
+
+describe('BMI >97. centyla nigdy „stabilny tor BMI” (decyzja właściciela 2026-08-09)', () => {
+  it('mała zmiana przy BMI >97c daje ostrzeżenie; waga i BMI <97c bez zmian; parytet z realnym verdictCh', () => {
+    const vta = loadModule().VildaTrajectoryAnalysis;
+    expect(vta.verdictForPair('bmi', 2.3, 2.4, 98.9, 99.2)).toEqual({ t: 'warn', l: 'utrzymująca się otyłość (>97c)' });
+    expect(vta.verdictForPair('bmi', 2.4, 2.4, 99.2, 99.2)).toEqual({ t: 'warn', l: 'utrzymująca się otyłość (>97c)' });
+    expect(vta.verdictForPair('weight', 2.3, 2.4, 98.9, 99.2)).toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
+    expect(vta.verdictForPair('bmi', 1.2, 1.3, 88, 90)).toEqual({ t: 'stable', l: 'stabilny tor BMI' });
+    const real = extractRealVerdictCh();
+    for (const [sa, sb, ca, cb] of [[2.3, 2.4, 98.9, 99.2], [2.4, 2.4, 99.2, 99.2], [2.4, 2.3, 99.2, 98.9]]) {
+      expect(vta.verdictForPair('bmi', sa, sb, ca, cb)).toEqual(real('bmi', sa, sb, ca, cb));
+    }
+  });
+});
+
+describe('chip odpowiedzi na leczenie (para od startu zamierzonej redukcji)', () => {
+  function makeVta(table) {
+    const centileFromSds = (sds) => Math.min(99.9, Math.max(0.1, 100 * (0.5 * (1 + Math.tanh(sds * 0.79)))));
+    return loadBrowserScript('vilda_trajectory_analysis.js', {
+      bmiSource: 'OLAF',
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+
+  it('chip wiersza pokazuje werdykt okresu leczenia, całość zostaje w total', () => {
+    const vta = makeVta({ 'WT|144': 1.0, 'WT|192': 1.5, 'WT|196': 1.2 });
+    const m = vta.analyze({
+      measurements: [
+        { ageMonths: 144, weight: 52 },
+        { ageMonths: 192, weight: 66 }
+      ],
+      currentAgeMonths: 196, currentWeight: 64, sex: 'K',
+      context: { red: { a: 192, b: null, label: 'Wegovy' } }
+    });
+    const wt = m.metrics.find((x) => x.metric === 'weight');
+    expect(wt.total.l).toBe('narasta mimo leczenia');
+    expect(wt.treatment).not.toBeNull();
+    expect(wt.treatment.dSds).toBeCloseTo(-0.3, 5);
+    expect(wt.treatment.verdict.l).toBe('redukcja w trakcie leczenia');
+    const html = vta.buildPatientHtml(m);
+    expect(html).toContain('redukcja w trakcie leczenia');
+    expect(html).toContain('okres leczenia (od 16 lat)');
+  });
+
+  it('bez kontekstu redukcji chip pozostaje werdyktem całości (regresja)', () => {
+    const vta = makeVta({ 'WT|144': 1.0, 'WT|192': 1.5, 'WT|196': 1.2 });
+    const m = vta.analyze({
+      measurements: [{ ageMonths: 144, weight: 52 }, { ageMonths: 192, weight: 66 }],
+      currentAgeMonths: 196, currentWeight: 64, sex: 'K'
+    });
+    const wt = m.metrics.find((x) => x.metric === 'weight');
+    expect(wt.treatment).toBeNull();
+  });
+});
+
+describe('siatki Karty pacjenta — dymek i zaznaczanie tekstu nad panelem trajektorii', () => {
+  it('mousemove/pointerdown ignorują panel (.vtap), a tekst panelu można zaznaczać', () => {
+    const source = fs.readFileSync(path.join(repositoryRoot, 'vilda_auth_ui.js'), 'utf8');
+    expect(source).toContain('if(e.target&&e.target.closest&&e.target.closest(".vtap")){if(cmp){');
+    expect(source).toContain('g=e.target&&e.target.closest&&e.target.closest(".vtap")?null:');
+    expect(source).toContain('.vilda-siatka-charts .vtap{-webkit-user-select:text;user-select:text}');
+  });
+});
