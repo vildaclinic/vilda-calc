@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '8';
+  var VERSION = '9';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -156,7 +156,7 @@
       if (d <= -1.5) return { t: 'warn', l: B ? 'szybki spadek BMI — wskazana ocena' : 'szybka utrata masy — wskazana ocena' };
       if (d <= -0.2) return { t: 'good', l: B ? 'redukcja BMI' : 'redukcja nadmiaru masy ciała' };
       if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: B ? (cb >= 97 ? (ca >= 97 ? 'progresja otyłości' : 'przekroczenie progu otyłości (≥97c)') : 'szybkie narastanie BMI') : (cb >= 97 ? (ca >= 97 ? 'progresja nadmiaru masy (>97. centyla)' : 'przekroczenie 97. centyla masy ciała') : 'nasilony przyrost masy ciała') };
-      return d >= 0.2 ? { t: 'warn', l: B ? 'narastanie nadmiaru BMI' : 'narastanie nadmiaru masy ciała' } : { t: 'stable', l: ST };
+      return d >= 0.2 ? { t: 'warn', l: B ? 'narastanie nadmiaru BMI' : 'narastanie nadmiaru masy ciała' } : B && cb >= 97 ? { t: 'warn', l: 'utrzymująca się otyłość (>97c)' } : { t: 'stable', l: ST };
     }
     if (W) return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: ST };
     if (Math.abs(d) >= 0.5) {
@@ -342,10 +342,27 @@
       }
     }
 
+    // Chip odpowiedzi na leczenie (decyzja właściciela 2026-08-09): dla masy/BMI przy aktywnej
+    // zamierzonej redukcji werdykt wiersza liczony od pomiaru na starcie leczenia do ostatniego
+    // (te same progi rd co panel porównania); całość okresu pozostaje w total.
+    var treatment = null;
+    if (met.key !== 'height' && ctx && ctx.red && ctx.red.a != null) {
+      var tb = null;
+      for (var t9 = 0; t9 < series.length; t9++) { if (series[t9].ageMonths <= ctx.red.a) tb = series[t9]; }
+      if (!tb) tb = series[0];
+      if (tb !== last && (last.ageMonths - tb.ageMonths) >= P.SEGMENT_MIN_GAP_M
+        && overlapM(ctx.red, tb.ageMonths, last.ageMonths) >= 3) {
+        var tp = pairVerdict(tb, last);
+        if (tp && tp.v && tp.rdOn) {
+          treatment = { a: tb, b: last, dSds: Math.round(100 * (last.sd - tb.sd)) / 100, verdict: tp.v };
+        }
+      }
+    }
     return {
       metric: met.key, title: met.title, unit: met.unit, dec: met.dec,
       series: series, segments: segments,
       first: first, last: last, total: total, worst: worst, redFlag: redFlag,
+      treatment: treatment,
       tone: toneCent(met.key, last.c)
     };
   }
@@ -795,12 +812,16 @@
     var html = '<div class="vtap-row"><div class="vtap-pm">'
       + '<span class="nm">' + esc(m.title) + '</span>'
       + '<span class="sp">' + sparklineSvg(m.series, m.tone) + '</span>'
-      + chipHtml(m.total) + '</div>'
+      + chipHtml(m.treatment ? m.treatment.verdict : m.total) + '</div>'
       + '<div class="vtap-ft">' + esc(fmt(m.first.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
       + ' <span class="c">(' + esc(fmtC(m.first.c)) + 'c)</span><span class="ar">→</span>'
       + esc(fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
       + ' <span class="c">(' + esc(fmtC(m.last.c)) + 'c)</span>'
       + ' <span class="c">· SDS ' + esc(fmtS(m.first.sd) + ' → ' + fmtS(m.last.sd)) + '</span></div>';
+    if (m.treatment) {
+      html += '<div class="vtap-seg">↳ okres leczenia (od ' + esc(fmtAgeM(m.treatment.a.ageMonths)) + '): ΔSDS '
+        + esc(fmtS(m.treatment.dSds)) + ' — ' + esc(m.treatment.verdict.l) + '</div>';
+    }
     if (m.worst && m.worst.verdict && (m.worst.verdict.t === 'bad' || m.worst.verdict.t === 'warn') && m.segments.length > 1) {
       html += '<div class="vtap-seg">↳ najpoważniejszy odcinek: ' + esc(fmtAgeM(m.worst.a.ageMonths)) + ' → '
         + esc(fmtAgeM(m.worst.b.ageMonths)) + ' (ΔSDS ' + esc(fmtS(m.worst.dSds)) + ') — ' + esc(m.worst.verdict.l) + '</div>';
