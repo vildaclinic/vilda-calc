@@ -948,3 +948,13 @@ describe('assessVelocityValue — ocena gotowej wartości tempa tą samą hierar
     expect(vta.assessVelocityValue(4.0, 12, null, 'M', null)).toBeNull();
   });
 });
+
+describe('siatki Karty pacjenta — pionowa linia najechania kończy się na osi X siatki BMI', () => {
+  it('wysokość linii liczona helperem crossH (oś X ostatniego SVG), nie wysokością hosta z panelem trajektorii', () => {
+    const source = fs.readFileSync(path.join(repositoryRoot, 'vilda_auth_ui.js'), 'utf8');
+    expect(source).toContain('function crossH(hr){try{var l9=svgs[svgs.length-1]');
+    expect(source).toContain('r9.height*((s9.H-s9.padB)/s9.H)');
+    expect(source.match(/line\.style\.height=crossH\(hr\)\+"px"/g)).toHaveLength(2);
+    expect(source).not.toContain('line.style.height=hr.height+"px"');
+  });
+});

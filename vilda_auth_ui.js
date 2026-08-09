@@ -19,7 +19,7 @@ var base=svgs[0]._vildaScale;
 var line=doc.createElement("div");line.className="vilda-siatka-cross";
 var badge=doc.createElement("span");badge.className="vilda-siatka-age";badge.textContent="—";line.appendChild(badge);
 var tip=doc.createElement("div");tip.className="vilda-siatka-tip";
-host.appendChild(line);host.appendChild(tip);
+host.appendChild(line);host.appendChild(tip); function crossH(hr){try{var l9=svgs[svgs.length-1],r9=l9.getBoundingClientRect(),s9=l9._vildaScale;if(s9&&s9.H>0)return Math.max(0,r9.top-hr.top+r9.height*((s9.H-s9.padB)/s9.H))}catch(e9){}return hr.height} 
 var items=svgs.map(function(svg){
   var sc=svg._vildaScale;
   var dot=doc.createElementNS(NS,"circle");dot.setAttribute("r",COARSE?"4.6":"3.6"),dot.setAttribute("fill","#b71c1c"),dot.setAttribute("stroke","#fff"),dot.setAttribute("stroke-width","1.3"),dot.setAttribute("opacity","0"),dot.setAttribute("pointer-events","none");
@@ -88,7 +88,7 @@ var supTs=0,g=null,cmpCand=null,tipDock=!1,tX=0,tY=0,tS=6,tRaf=0,tp={},tpN=0,zg=
 function sup(){return Date.now()<supTs}
 function place(vbx,snapped,ax,ay){
   var hr=host.getBoundingClientRect(),screenX=screenXFromVbx(vbx),em=snapped&&!locked;
-  line.style.left=screenX-hr.left+"px",line.style.height=hr.height+"px",line.classList.add("on"),line.classList.toggle("snap",em),line.classList.toggle("pinned",locked);
+  line.style.left=screenX-hr.left+"px",line.style.height=crossH(hr)+"px",line.classList.add("on"),line.classList.toggle("snap",em),line.classList.toggle("pinned",locked);
   badge.textContent=(locked?"🔒 ":em?"● ":"")+fmt(ageOf(vbx)/12,1)+" r.ż.";
   var rows="",bline="";
   items.forEach(function(it){
@@ -116,7 +116,7 @@ function hide(){line.classList.remove("on"),tip.classList.remove("on"),items.for
 function cmpPreview(clientX,clientY,tolPx){var vbx=vbxFromClient(clientX,clientY),ctm=ctmOf(),sx=ctm&&ctm.a?ctm.a:1,nv=nearestVisit(vbx),tol=tolPx==null?16:tolPx;
   if(nv.x==null||(isFinite(tol)&&nv.d*sx>tol)){line.classList.remove("on"),tip.classList.remove("on"),items.forEach(function(it){it.dot.setAttribute("opacity","0")});return null}
   vbx=nv.x;var hr=host.getBoundingClientRect(),screenX=screenXFromVbx(vbx);
-  line.style.left=screenX-hr.left+"px",line.style.height=hr.height+"px",line.classList.add("on"),line.classList.remove("pinned"),line.classList.add("snap");
+  line.style.left=screenX-hr.left+"px",line.style.height=crossH(hr)+"px",line.classList.add("on"),line.classList.remove("pinned"),line.classList.add("snap");
   badge.textContent=fmt(ageOf(vbx)/12,1)+" r.ż.";
   items.forEach(function(it){var yv=it.pat?yAtX(it.pat,vbx):null;if(yv==null){it.dot.setAttribute("opacity","0");return}it.dot.setAttribute("cx",vbx),it.dot.setAttribute("cy",yv),it.dot.setAttribute("opacity","1"),it.dot.setAttribute("r",COARSE?"5.2":"4.2")});
   if(tipDock&&vbar){tip.classList.remove("on");vbarSet('<span class="vb-a meas">'+(selA==null?"Puść: pomiar A":"Puść: pomiar B")+"</span>"+fmt(ageOf(vbx)/12,1)+" r.ż.")}
