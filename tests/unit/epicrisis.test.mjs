@@ -677,3 +677,18 @@ describe('epikryza P5 — szlif językowy i rejestr medyczny (audyt 2026-08-08)'
     expect(t).toContain('dobrą odpowiedź wzrostową w wieku 10–11,5 roku (ΔSDS = +0,40)');
   });
 });
+
+describe('epikryza P6 — przycisk „Generuj epikryzę” w karcie (geometria i odstępy)', () => {
+  it('przycisk ma geometrię 1:1 z „Generuj raport” (pełna szerokość, padding, radius) i znacznik PRO', () => {
+    const uiSource = fs.readFileSync(path.join(repositoryRoot, 'vilda_epicrisis_ui.js'), 'utf8');
+    expect(uiSource).toContain('width:100%;display:flex;align-items:center;justify-content:center;background:"+ee+";color:#fff;border:none;border-radius:12px;padding:0.72rem 1rem;font-size:1rem;font-weight:700');
+    expect(uiSource).not.toContain('margin-left:8px');
+    expect(uiSource).toContain('{class:"pro-superscript"},"PRO"');
+  });
+
+  it('kontener akcji raportu układa przyciski w kolumnę z odstępem 1rem (równym z odstępem do siatek)', () => {
+    const css = fs.readFileSync(path.join(repositoryRoot, 'style.css'), 'utf8');
+    expect(css).toContain('.adv-report-actions{margin-top:.95rem;display:flex;flex-direction:column;gap:1rem}');
+    expect(css).toContain('.adv-buttons{display:flex;justify-content:center;gap:1.5rem;margin-top:1rem}');
+  });
+});
