@@ -1025,3 +1025,29 @@ describe('siatki Karty pacjenta — dymek i zaznaczanie tekstu nad panelem traje
     expect(source).toContain('.vilda-siatka-charts .vtap{-webkit-user-select:text;user-select:text}');
   });
 });
+
+describe('start z niedoboru masy/BMI: etykietę różnicuje centyl końcowy (decyzja właściciela 2026-08-09)', () => {
+  it('masa: nadrabia (<10c) / wyrównanie (10–75c) / do obserwacji (75–90c) / przekroczenie 90c; parytet z verdictCh', () => {
+    const vta = loadModule().VildaTrajectoryAnalysis;
+    expect(vta.verdictForPair('weight', -1.5, -1.25, 7, 9.5)).toEqual({ t: 'good', l: 'nadrabia niedobór masy ciała' });
+    expect(vta.verdictForPair('weight', -1.5, -0.3, 7, 36)).toEqual({ t: 'good', l: 'wyrównanie niedoboru masy ciała' });
+    expect(vta.verdictForPair('weight', -1.5, 0.85, 7, 80)).toEqual({ t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem masy ciała — do obserwacji' });
+    expect(vta.verdictForPair('weight', -1.5, 1.5, 7, 93)).toEqual({ t: 'bad', l: 'przekroczenie 90. centyla masy ciała po wyrównaniu niedoboru' });
+    const real = extractRealVerdictCh();
+    for (const [met, sa, sb, ca, cb] of [
+      ['weight', -1.5, -0.3, 7, 36], ['weight', -1.5, 0.85, 7, 80], ['weight', -1.5, 1.5, 7, 93],
+      ['bmi', -1.4, 0, 8, 50], ['bmi', -1.4, 1.3, 8, 90], ['bmi', -1.4, 2.1, 8, 98]
+    ]) {
+      expect(vta.verdictForPair(met, sa, sb, ca, cb)).toEqual(real(met, sa, sb, ca, cb));
+    }
+  });
+
+  it('BMI: wyrównanie (10–85c) / do obserwacji (85–97c) / przekroczenie progu otyłości (≥97c); wzrost bez zmian', () => {
+    const vta = loadModule().VildaTrajectoryAnalysis;
+    expect(vta.verdictForPair('bmi', -1.4, 0, 8, 50)).toEqual({ t: 'good', l: 'wyrównanie niedoboru (BMI)' });
+    expect(vta.verdictForPair('bmi', -1.4, 1.3, 8, 90)).toEqual({ t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem BMI — do obserwacji' });
+    expect(vta.verdictForPair('bmi', -1.4, 2.1, 8, 98)).toEqual({ t: 'bad', l: 'przekroczenie progu otyłości (≥97c)' });
+    expect(vta.verdictForPair('height', -1.7, -0.5, 5, 30)).toEqual({ t: 'good', l: 'nadrabia niedobór wzrostu' });
+    expect(vta.verdictForPair('weight', -1.5, -1.7, 7, 5)).toEqual({ t: 'warn', l: 'pogłębianie niedoboru masy ciała' });
+  });
+});
