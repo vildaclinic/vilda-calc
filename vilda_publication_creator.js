@@ -890,7 +890,7 @@
       '#' + OVERLAY_ID + ' .pubc-lhidden .pubc-ltxt{color:' + COLORS.muted + ';text-decoration:line-through}' +
       '#' + OVERLAY_ID + ' .pubc-lmsg{padding:.55rem .75rem;font-size:.82rem;color:' + COLORS.muted + ';font-style:italic}' +
       /* Rozwijany panel elementów siatki */
-      '#' + OVERLAY_ID + ' .pubc-opts{overflow:hidden;max-height:0;opacity:0;background:#ffffff;border-bottom:1px solid transparent;transform:translateY(-4px);transition:max-height .3s ease,opacity .22s ease,transform .3s ease,border-color .3s ease}' +
+      '#' + OVERLAY_ID + ' .pubc-opts{flex:0 0 auto;overflow:hidden;max-height:0;opacity:0;background:#ffffff;border-bottom:1px solid transparent;transform:translateY(-4px);transition:max-height .3s ease,opacity .22s ease,transform .3s ease,border-color .3s ease}' +
       '#' + OVERLAY_ID + ' .pubc-opts.pubc-opts-open{opacity:1;transform:translateY(0);border-bottom-color:' + COLORS.border + '}' +
       '@media (prefers-reduced-motion: reduce){#' + OVERLAY_ID + ' .pubc-opts{transition:none;transform:none}}' +
       '@media (max-width:640px){' +
@@ -1854,6 +1854,12 @@
       }
       elemBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
       elemBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    /* Po rozwinięciu zdejmij sztywny max-height — inaczej późniejsze
+       zawinięcie tekstu lub zmiana szerokości okna przycina dolne checkboxy. */
+    optsPanel.addEventListener('transitionend', function (ev) {
+      if (ev.propertyName !== 'max-height') return;
+      if (optsPanel.classList.contains('pubc-opts-open')) optsPanel.style.maxHeight = 'none';
     });
 
     /* Obszar tre\u015bci: przewija si\u0119 w pionie (siatka + pomoc + lista adnotacji),
