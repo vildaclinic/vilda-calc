@@ -304,6 +304,40 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(win.advancedGrowthData.pubFree.weight).toHaveLength(1);
   });
 
+  it('pubOptions: domyślne wartości (summary wyłączona, widoczność z globalnych flag, reszta włączona)', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    expect(PC.isElementEnabled('summary')).toBe(false);
+    expect(PC.isElementEnabled('boneAge')).toBe(true);
+    expect(PC.isElementEnabled('mph')).toBe(true);
+    expect(PC.isElementEnabled('patientName')).toBe(true);
+    expect(PC.isElementEnabled('parentsHeader')).toBe(true);
+    // trzy opcje widoczności dziedziczą starty z globalnych flag Ustawień
+    expect(PC.isElementEnabled('bandReference')).toBe(true);
+    win.centileShowBandReference = false;
+    expect(PC.isElementEnabled('bandReference')).toBe(false);
+    win.centileShowHeightValueLabel = false;
+    expect(PC.isElementEnabled('heightLabel')).toBe(false);
+    expect(PC.isElementEnabled('weightLabel')).toBe(true);
+  });
+
+  it('pubOptions: setOption zapisuje per wydruk w danych karty i wygrywa z globalnymi flagami', () => {
+    const win = { centileShowBandReference: false };
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    PC._setOption('bandReference', true);
+    // pierwszy zapis zasiewa komplet opcji wartościami domyślnymi
+    expect(win.advancedGrowthData.pubOptions.bandReference).toBe(true);
+    expect(win.advancedGrowthData.pubOptions.summary).toBe(false);
+    expect(win.advancedGrowthData.pubOptions.boneAge).toBe(true);
+    expect(PC.isElementEnabled('bandReference')).toBe(true);
+    PC._setOption('boneAge', false);
+    expect(PC.isElementEnabled('boneAge')).toBe(false);
+    PC._setOption('summary', true);
+    expect(PC.isElementEnabled('summary')).toBe(true);
+  });
+
   it('grot na orbicie: ramka w poziomie od punktu → grot z boku punktu, linia pozioma', () => {
     const PC = loadCreator();
     // środek ramki (1300, 1000) idealnie na prawo od punktu (1000, 1000)
@@ -433,6 +467,21 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
     'utf8'
   );
 
+  it('inline_index_07.js bramkuje elementy siatki publikacyjnej przez isElementEnabled', () => {
+    expect(generatorSource).toContain('__pubok=n=>');
+    expect(generatorSource).toContain('__pubok("patientName")');
+    expect(generatorSource).toContain('__pubok("parentsHeader")');
+    expect(generatorSource).toContain('__pubok("boneAge")');
+    expect(generatorSource).toContain('__pubok("mph")');
+    expect(generatorSource).toContain('__pubok("summary")');
+  });
+
+  it('inline_index_03.js: helpery widoczności pytają kreator w trybie publikacji', () => {
+    const core = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+    expect(core).toContain('isElementEnabled(e==="cm"?"heightLabel":"weightLabel")');
+    expect(core).toContain('isElementEnabled("bandReference")');
+  });
+
   it('inline_index_07.js woła VildaPublicationCreator.drawAnnotations dla obu siatek', () => {
     expect(generatorSource).toContain(
       'PC.drawAnnotations(e,{chartType:o,plotX:te+120,plotY:ne+80,plotW:Z-120-100,plotH:U-80-80,minY:F,maxY:R})'
@@ -445,7 +494,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=9');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=10');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
@@ -489,6 +538,15 @@ describe('Trwałość układu: commit danych karty zachowuje pubLayout (realny D
     expect(win.advancedGrowthData.pubLayout).toEqual({ height: { a120: { dx: 60, dy: -110 } }, weight: {} });
     expect(win.advancedGrowthData.pubFree.height).toHaveLength(1);
     expect(win.advancedGrowthData.pubFree.height[0].txt).toBe('Uwaga');
+  });
+
+  it('nowy obiekt danych karty dziedziczy pubOptions z poprzedniego', () => {
+    const win = {};
+    win.advancedGrowthData = { pubOptions: { boneAge: false, summary: true } };
+    const commit = extractRealCommit()(win);
+    const fresh = { measurements: [] };
+    commit(fresh, { global: win });
+    expect(win.advancedGrowthData.pubOptions).toEqual({ boneAge: false, summary: true });
   });
 
   it('istniejący pubLayout nowego obiektu nie jest nadpisywany, a null czyści dane', () => {
