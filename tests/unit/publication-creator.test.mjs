@@ -155,6 +155,44 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(same.moved).toBe(false);
   });
 
+  it('grot na orbicie: ramka w poziomie od punktu → grot z boku punktu, linia pozioma', () => {
+    const PC = loadCreator();
+    // środek ramki (1300, 1000) idealnie na prawo od punktu (1000, 1000)
+    const item = {
+      key: 'x', px: 1000, py: 1000, tipY: 1015, drop: 200,
+      autoX: 900, autoY: 1220, x: 1200, y: 950, w: 200, h: 100,
+      lines: ['ab'], comment: 'ab', moved: true
+    };
+    const calls = [];
+    PC._drawItems(fakeCtx(calls), [item]);
+    // wierzchołek grotu na orbicie: 15 px od punktu po stronie ramki → (1015, 1000)
+    const apex = calls.find((c) => c[0] === 'moveTo' && Math.abs(c[1] - 1015) < 1e-6 && Math.abs(c[2] - 1000) < 1e-6);
+    expect(apex).toBeTruthy();
+    // łącznik zaczyna się od podstawy grotu (1025, 1000) i biegnie poziomo do środka ramki (1300, 1000)
+    const lineStart = calls.find((c) => c[0] === 'moveTo' && Math.abs(c[1] - 1025) < 1e-6 && Math.abs(c[2] - 1000) < 1e-6);
+    expect(lineStart).toBeTruthy();
+    const lineEnd = calls.find((c) => c[0] === 'lineTo' && Math.abs(c[1] - 1300) < 1e-6 && Math.abs(c[2] - 1000) < 1e-6);
+    expect(lineEnd).toBeTruthy();
+  });
+
+  it('grot na orbicie: ramka nad punktem → grot nad punktem (nie chowa się pod punktem)', () => {
+    const PC = loadCreator();
+    // środek ramki (1000, 800) idealnie nad punktem (1000, 1000)
+    const item = {
+      key: 'x', px: 1000, py: 1000, tipY: 1015, drop: 200,
+      autoX: 900, autoY: 1220, x: 900, y: 750, w: 200, h: 100,
+      lines: ['ab'], comment: 'ab', moved: true
+    };
+    const calls = [];
+    PC._drawItems(fakeCtx(calls), [item]);
+    // wierzchołek grotu NAD punktem: (1000, 985)
+    const apex = calls.find((c) => c[0] === 'moveTo' && Math.abs(c[1] - 1000) < 1e-6 && Math.abs(c[2] - 985) < 1e-6);
+    expect(apex).toBeTruthy();
+    // żaden element strzałki nie jest rysowany poniżej punktu
+    const belowPoint = calls.filter((c) => (c[0] === 'moveTo' || c[0] === 'lineTo') && c[2] > 1000.01);
+    expect(belowPoint).toHaveLength(0);
+  });
+
   it('magnes pionu: środek ramki w progu od pionu punktu doskakuje idealnie do pionu', () => {
     const PC = loadCreator();
     // ramka automatycznie wyśrodkowana pod punktem: autoX + w/2 === px
@@ -258,7 +296,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=3');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=4');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
