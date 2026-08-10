@@ -23,7 +23,21 @@
  *   dx,dy — ręczne przesunięcie ramki w pikselach kanwy eksportu (2480×3508),
  *           niezależne od skali podglądu;
  *   en:0  — adnotacja UKRYTA na tej siatce (na drugiej pozostaje widoczna);
- *   txt   — treść komentarza TYLKO dla tej siatki (nadpisuje wspólną).
+ *   txt   — treść komentarza TYLKO dla tej siatki (nadpisuje wspólną);
+ *   fs    — rozmiar czcionki ramki na tej siatce (px kanwy; domyślnie 40).
+ *
+ * Adnotacje WOLNE (niepowiązane z punktem pomiaru) żyją per siatka w:
+ *     advancedGrowthData.pubFree = { height: [wpis, ...], weight: [...] }
+ * Wpis: { id, ageMonths, value, txt, arrow, fs, dx, dy }
+ *   ageMonths/value — kotwica w JEDNOSTKACH DANYCH (wiek w mies., cm/kg),
+ *                     dzięki czemu pozycja przeżywa zmianę zakresu osi Y;
+ *   arrow:true      — strzałka do kotwicy (z ramką, gdy txt niepusty;
+ *                     sama strzałka, gdy txt pusty);
+ *   arrow:false     — samodzielna etykieta tekstowa (ramka wyśrodkowana na
+ *                     kotwicy, bez strzałki);
+ *   fs              — rozmiar czcionki (px kanwy; domyślnie 40);
+ *   dx,dy           — przesunięcie ramki (lub ogona samej strzałki) względem
+ *                     pozycji automatycznej, w px kanwy.
  * Wspólne pola pomiaru (arrowEnabled/arrowComment) pozostają domyślne dla OBU
  * siatek — bez nadpisań adnotacje są identyczne (jak dotychczas).
  * Klucz "a<wiekMies>" odnosi się do pomiaru o danym wieku (zaokrąglonym do
@@ -43,8 +57,8 @@
   var OVERLAY_ID = 'vilda-pub-creator-overlay';
   var CANVAS_W = 2480;
   var CANVAS_H = 3508;
-  var FONT_PX = 40;              // rozmiar czcionki komentarza (px kanwy eksportu)
-  var LINE_H = FONT_PX * 1.3;    // wysokość wiersza tekstu w ramce
+  var FONT_PX = 40;              // domyślny rozmiar czcionki komentarza (px kanwy eksportu)
+  var FONT_CHOICES = [28, 40, 52, 64]; // dostępne rozmiary czcionki ramek
   var PAD_X = 20;                // wewnętrzny margines poziomy ramki
   var PAD_Y = 20;                // wewnętrzny margines pionowy ramki
   var WRAP_CHARS = 12;           // twarde łamanie komentarza co N znaków
@@ -118,7 +132,9 @@
         ageMonths: ageMonths,
         value: value,
         comment: ov && typeof ov.txt === 'string' ? ov.txt : sharedComment,
-        ownText: !!(ov && typeof ov.txt === 'string')
+        ownText: !!(ov && typeof ov.txt === 'string'),
+        fs: ov && Number(ov.fs) > 0 ? Number(ov.fs) : FONT_PX,
+        arrow: true
       });
     }
     if (Array.isArray(adv.measurements)) {
@@ -142,6 +158,34 @@
   }
 
   /*
+   * Adnotacje wolne (pubFree) danej siatki — strzałki do dowolnego miejsca
+   * i samodzielne etykiety, z kotwicą w jednostkach danych.
+   */
+  function collectFree(adv, chartType) {
+    var out = [];
+    var list = adv && adv.pubFree && Array.isArray(adv.pubFree[chartType]) ? adv.pubFree[chartType] : [];
+    list.forEach(function (f) {
+      if (!f || typeof f !== 'object') return;
+      var a = toNum(f.ageMonths);
+      var v = toNum(f.value);
+      if (!Number.isFinite(a) || !Number.isFinite(v)) return;
+      out.push({
+        kind: 'free',
+        key: 'f' + String(f.id),
+        id: f.id,
+        ageMonths: a,
+        value: v,
+        comment: typeof f.txt === 'string' ? f.txt : '',
+        arrow: f.arrow !== false,
+        fs: Number(f.fs) > 0 ? Number(f.fs) : FONT_PX,
+        dx: Number.isFinite(Number(f.dx)) ? Number(f.dx) : 0,
+        dy: Number.isFinite(Number(f.dy)) ? Number(f.dy) : 0
+      });
+    });
+    return out;
+  }
+
+  /*
    * Wszystkie punkty pomiarowe (kandydaci do adnotacji) dla danej siatki —
    * także te bez włączonej strzałki. Używane do klikania w punkty w kreatorze.
    */
@@ -160,7 +204,8 @@
         hiddenHere: !!(enabled && ov && ov.en === 0),
         ownText: !!(ov && typeof ov.txt === 'string'),
         comment: ov && typeof ov.txt === 'string' ? ov.txt : sharedComment,
-        sharedComment: sharedComment
+        sharedComment: sharedComment,
+        fs: ov && Number(ov.fs) > 0 ? Number(ov.fs) : FONT_PX
       });
     }
     if (Array.isArray(adv.measurements)) {
@@ -194,21 +239,34 @@
     var boxBorder = lineWidthOf('publicationArrowBoxBorder', 3);
     var offsets = (adv && adv.pubLayout && adv.pubLayout[chartType]) || {};
     var arrows = collectArrows(adv, chartType);
-    if (!arrows.length) return items;
+    var free = collectFree(adv, chartType);
+    if (!arrows.length && !free.length) return items;
     ctx.save();
-    ctx.font = 'normal ' + FONT_PX + 'px sans-serif';
     var placed = [];
-    arrows.forEach(function (ar) {
-      var px = geom.plotX + (ar.ageMonths - 12) * pxPerMonth;
-      var py = geom.plotY + geom.plotH - (ar.value - geom.minY) * pxPerUnit;
-      var lines = wrapComment(ar.comment);
+
+    function measureBox(lines, fs) {
+      ctx.font = 'normal ' + fs + 'px sans-serif';
       var maxTextW = 0;
       lines.forEach(function (l) {
         var tw = ctx.measureText(l).width;
         if (tw > maxTextW) maxTextW = tw;
       });
-      var boxW = lines.length > 0 ? PAD_X * 2 + maxTextW : 0;
-      var boxH = lines.length > 0 ? PAD_Y * 2 + lines.length * LINE_H : 0;
+      return {
+        w: lines.length > 0 ? PAD_X * 2 + maxTextW : 0,
+        h: lines.length > 0 ? PAD_Y * 2 + lines.length * fs * 1.3 : 0
+      };
+    }
+
+    /* Adnotacje pomiarowe — algorytm automatyczny zgodny 1:1 z dotychczasowym
+       generatorem (ramka wyśrodkowana pod punktem, kolizje rozwiązywane
+       opuszczaniem o krok). */
+    arrows.forEach(function (ar) {
+      var px = geom.plotX + (ar.ageMonths - 12) * pxPerMonth;
+      var py = geom.plotY + geom.plotH - (ar.value - geom.minY) * pxPerUnit;
+      var lines = wrapComment(ar.comment);
+      var dims = measureBox(lines, ar.fs);
+      var boxW = dims.w;
+      var boxH = dims.h;
       var tipY = py + TIP_GAP;
       var drop = dropStep;
       var boxX = px - boxW / 2;
@@ -246,6 +304,8 @@
         value: ar.value,
         comment: (ar.comment || '').trim(),
         ownText: !!ar.ownText,
+        arrow: true,
+        fs: ar.fs,
         lines: lines,
         px: px,
         py: py,
@@ -260,6 +320,57 @@
         moved: !!(dx || dy)
       });
     });
+
+    /* Adnotacje wolne: strzałka do kotwicy (pozycja automatyczna jak przy
+       pomiarach, sama strzałka = pionowo pod kotwicą) albo etykieta
+       wyśrodkowana na kotwicy (bez strzałki i bez kolizji — miejsce wybiera
+       użytkownik). */
+    free.forEach(function (fr) {
+      var px = geom.plotX + (fr.ageMonths - 12) * pxPerMonth;
+      var py = geom.plotY + geom.plotH - (fr.value - geom.minY) * pxPerUnit;
+      var lines = wrapComment(fr.comment);
+      var dims = measureBox(lines, fr.fs);
+      var boxW = dims.w;
+      var boxH = dims.h;
+      var tipY = py + TIP_GAP;
+      var autoX;
+      var autoY;
+      if (!fr.arrow) {
+        autoX = px - boxW / 2;
+        autoY = py - boxH / 2;
+      } else if (lines.length > 0) {
+        autoX = px - boxW / 2;
+        autoY = tipY + dropStep + BOX_GAP;
+        placed.push({ x0: autoX + fr.dx - boxBorder, y0: autoY + fr.dy - boxBorder, x1: autoX + fr.dx + boxW + boxBorder, y1: autoY + fr.dy + boxH + boxBorder });
+      } else {
+        /* sama strzałka: „ogon” pionowo pod kotwicą */
+        autoX = px;
+        autoY = tipY + dropStep;
+      }
+      items.push({
+        kind: 'free',
+        key: fr.key,
+        id: fr.id,
+        ageMonths: fr.ageMonths,
+        value: fr.value,
+        comment: (fr.comment || '').trim(),
+        ownText: false,
+        arrow: fr.arrow,
+        fs: fr.fs,
+        lines: lines,
+        px: px,
+        py: py,
+        tipY: tipY,
+        drop: dropStep,
+        autoX: autoX,
+        autoY: autoY,
+        x: autoX + fr.dx,
+        y: autoY + fr.dy,
+        w: boxW,
+        h: boxH,
+        moved: !!(fr.dx || fr.dy)
+      });
+    });
     ctx.restore();
     return items;
   }
@@ -268,7 +379,8 @@
    * Rysuje adnotacje na kontekście kanwy. Ramki bez ręcznego przesunięcia
    * rysowane są identycznie jak dotąd (pionowa strzałka pod punktem);
    * ramki przesunięte ręcznie dostają łącznik od środka ramki do punktu
-   * pomiaru z grotem przy punkcie.
+   * pomiaru z grotem przy punkcie. Samodzielne etykiety (arrow:false) mają
+   * tylko ramkę; sama strzałka bez treści — linię z grotem do kotwicy.
    */
   function drawItems(ctx, items) {
     if (!items || !items.length) return;
@@ -277,10 +389,12 @@
     ctx.save();
     ctx.strokeStyle = '#000000';
     ctx.fillStyle = '#000000';
-    ctx.font = 'normal ' + FONT_PX + 'px sans-serif';
     items.forEach(function (it) {
+      ctx.font = 'normal ' + it.fs + 'px sans-serif';
       ctx.lineWidth = arrowLine;
-      if (!it.moved) {
+      if (it.arrow === false) {
+        /* samodzielna etykieta — bez strzałki */
+      } else if (!it.moved) {
         ctx.beginPath();
         ctx.moveTo(it.px, it.tipY + HEAD_LEN);
         ctx.lineTo(it.px, it.tipY + it.drop);
@@ -333,7 +447,7 @@
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         it.lines.forEach(function (line, li) {
-          ctx.fillText(line, it.x + PAD_X, it.y + PAD_Y + li * LINE_H);
+          ctx.fillText(line, it.x + PAD_X, it.y + PAD_Y + li * it.fs * 1.3);
         });
         ctx.restore();
       }
@@ -456,6 +570,7 @@
     if (!ov.dy) delete ov.dy;
     if (ov.en !== 0) delete ov.en;
     if (typeof ov.txt !== 'string') delete ov.txt;
+    if (!(Number(ov.fs) > 0) || Number(ov.fs) === FONT_PX) delete ov.fs;
     if (!Object.keys(ov).length) delete store[chartType][key];
   }
 
@@ -473,18 +588,78 @@
 
   function clearAnnotationOverrides(key) {
     ['height', 'weight'].forEach(function (c) {
-      updateOverride(c, key, { en: undefined, txt: undefined });
+      updateOverride(c, key, { en: undefined, txt: undefined, fs: undefined });
     });
   }
 
+  /* ── Magazyn adnotacji wolnych (pubFree) ── */
+
+  function freeStore() {
+    var adv = w.advancedGrowthData;
+    if (!adv || typeof adv !== 'object') return null;
+    if (!adv.pubFree || typeof adv.pubFree !== 'object') adv.pubFree = {};
+    if (!Array.isArray(adv.pubFree.height)) adv.pubFree.height = [];
+    if (!Array.isArray(adv.pubFree.weight)) adv.pubFree.weight = [];
+    return adv.pubFree;
+  }
+
+  function addFree(chartType, data) {
+    var store = freeStore();
+    if (!store) return null;
+    var maxId = 0;
+    ['height', 'weight'].forEach(function (c) {
+      store[c].forEach(function (f) {
+        if (f && Number(f.id) > maxId) maxId = Number(f.id);
+      });
+    });
+    var item = {
+      id: maxId + 1,
+      ageMonths: Math.round(data.ageMonths * 10) / 10,
+      value: Math.round(data.value * 10) / 10,
+      txt: typeof data.txt === 'string' ? data.txt : '',
+      arrow: data.arrow !== false,
+      fs: Number(data.fs) > 0 ? Number(data.fs) : FONT_PX
+    };
+    store[chartType].push(item);
+    return item.id;
+  }
+
+  function updateFree(chartType, id, patch) {
+    var store = freeStore();
+    if (!store) return;
+    var item = null;
+    for (var i = 0; i < store[chartType].length; i++) {
+      if (store[chartType][i] && store[chartType][i].id === id) { item = store[chartType][i]; break; }
+    }
+    if (!item) return;
+    Object.keys(patch).forEach(function (k) {
+      if (patch[k] === undefined) delete item[k];
+      else item[k] = patch[k];
+    });
+    if (!item.dx) delete item.dx;
+    if (!item.dy) delete item.dy;
+  }
+
+  function removeFree(chartType, id) {
+    var store = freeStore();
+    if (!store) return;
+    store[chartType] = store[chartType].filter(function (f) { return f && f.id !== id; });
+  }
+
   /* „Przywróć układ automatyczny” cofa tylko położenia ramek na aktywnej
-     siatce — ukrycia i osobne treści per siatka zostają. */
+     siatce (także wolnych adnotacji) — ukrycia i osobne treści zostają. */
   function resetLayout(chartType) {
     var store = layoutStore();
     if (!store) return;
     Object.keys(store[chartType]).forEach(function (key) {
       updateOverride(chartType, key, { dx: undefined, dy: undefined });
     });
+    var free = freeStore();
+    if (free) {
+      free[chartType].forEach(function (f) {
+        if (f) { delete f.dx; delete f.dy; }
+      });
+    }
   }
 
   /* ══════════════ Interaktywny kreator (panel inline w karcie) ══════════════ */
@@ -518,7 +693,9 @@
       '#' + OVERLAY_ID + ' .pubc-danger{background:#ffffff!important;color:' + COLORS.danger + '!important;border:1px solid ' + COLORS.danger + '!important;border-radius:8px!important}' +
       '#' + OVERLAY_ID + ' .pubc-ghost{background:transparent!important;color:' + COLORS.muted + '!important;border:none!important;border-radius:8px!important}' +
       '#' + OVERLAY_ID + ' .pubc-tab{background:#ffffff!important;color:' + COLORS.text + '!important;border:1px solid ' + COLORS.border + '!important;border-radius:999px!important}' +
-      '#' + OVERLAY_ID + ' .pubc-tab[aria-selected="true"]{background:' + COLORS.primary + '!important;color:#ffffff!important;border-color:' + COLORS.primary + '!important}';
+      '#' + OVERLAY_ID + ' .pubc-tab[aria-selected="true"]{background:' + COLORS.primary + '!important;color:#ffffff!important;border-color:' + COLORS.primary + '!important}' +
+      '#' + OVERLAY_ID + ' .pubc-tool[aria-pressed="true"]{background:' + COLORS.primary + '!important;color:#ffffff!important;border-color:' + COLORS.primary + '!important}' +
+      '#' + OVERLAY_ID + ' select{background:#ffffff!important;color:' + COLORS.text + '!important;border:1px solid ' + COLORS.border + '!important;border-radius:6px!important;width:auto!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}';
     var styleEl = document.createElement('style');
     styleEl.id = STYLE_ID;
     styleEl.textContent = css;
@@ -744,7 +921,10 @@
         ';border-radius:999px;padding:3px 10px;font-size:0.78rem;color:' + COLORS.text + ';max-width:100%;');
       append(chip, el('span', 'color:' + COLORS.muted + ';font-variant-numeric:tabular-nums;', null, ageTxt));
       append(chip, el('span', 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;', null,
-        it.comment || '(bez komentarza)'));
+        it.comment || (it.kind === 'free' && it.arrow ? '(sama strzałka)' : '(bez komentarza)')));
+      if (it.kind === 'free') {
+        append(chip, el('span', 'color:' + COLORS.muted + ';border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:0.66rem;font-weight:700;white-space:nowrap;', null, it.arrow ? 'wolna strzałka' : 'etykieta'));
+      }
       if (it.moved) {
         append(chip, el('span', 'color:' + COLORS.accent + ';border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:0.66rem;font-weight:700;white-space:nowrap;', null, 'przesunięta ręcznie'));
       }
@@ -779,10 +959,36 @@
     var items = ui.items[ui.active] || [];
     for (var i = items.length - 1; i >= 0; i--) {
       var it = items[i];
-      if (!it.w) continue;
-      if (pos.x >= it.x - 12 && pos.x <= it.x + it.w + 12 && pos.y >= it.y - 12 && pos.y <= it.y + it.h + 12) return it;
+      if (it.w) {
+        if (pos.x >= it.x - 12 && pos.x <= it.x + it.w + 12 && pos.y >= it.y - 12 && pos.y <= it.y + it.h + 12) return it;
+      } else if (it.kind === 'free') {
+        /* sama strzałka: chwytamy za „ogon” */
+        var dx = pos.x - it.x;
+        var dy = pos.y - it.y;
+        if (Math.sqrt(dx * dx + dy * dy) < 60) return it;
+      }
     }
     return null;
+  }
+
+  function itemForKey(key) {
+    var items = ui.items[ui.active] || [];
+    for (var i = 0; i < items.length; i++) if (items[i].key === key) return items[i];
+    return null;
+  }
+
+  function freeTarget(it) {
+    return { free: true, key: it.key, id: it.id, comment: it.comment, fs: it.fs, arrow: it.arrow };
+  }
+
+  function setPlaceMode(mode) {
+    if (!ui) return;
+    ui.placeMode = ui.placeMode === mode ? null : mode;
+    ui.toolBtns.arrow.setAttribute('aria-pressed', ui.placeMode === 'arrow' ? 'true' : 'false');
+    ui.toolBtns.label.setAttribute('aria-pressed', ui.placeMode === 'label' ? 'true' : 'false');
+    ['height', 'weight'].forEach(function (c) {
+      ui.overlays[c].style.cursor = ui.placeMode ? 'crosshair' : 'pointer';
+    });
   }
 
   function hitPoint(pos) {
@@ -814,6 +1020,11 @@
     var ed = ui.editor;
     ed._point = point;
     ed.querySelector('textarea').value = point.comment || '';
+    /* Wolne adnotacje nie mają rozdzielania treści ani ukrywania per siatka
+       (żyją tylko na jednej siatce) */
+    ui.editorParts.scopeRow.style.display = point.free ? 'none' : '';
+    ui.editorParts.hideBtn.style.display = point.free ? 'none' : '';
+    ui.editorParts.fsSelect.value = String(FONT_CHOICES.indexOf(Number(point.fs)) >= 0 ? Number(point.fs) : FONT_PX);
     var own = ed.querySelector('.pubc-scope-own');
     var shared = ed.querySelector('.pubc-scope-shared');
     if (own) own.checked = !!point.ownText;
@@ -848,16 +1059,20 @@
         var pos = overlayCoords(evt);
         if (!pos) return;
         closeEditor();
+        if (ui.placeMode) {
+          /* tryb wstawiania wolnej adnotacji: klik = miejsce kotwicy */
+          drag = { place: pos, startX: pos.x, startY: pos.y, moved: false };
+          return;
+        }
         var box = hitBox(pos);
         if (box) {
-          var store = layoutStore();
-          var off = store && store[chart][box.key];
           drag = {
             key: box.key,
+            freeId: box.kind === 'free' ? box.id : null,
             startX: pos.x,
             startY: pos.y,
-            baseDx: off && Number.isFinite(Number(off.dx)) ? Number(off.dx) : 0,
-            baseDy: off && Number.isFinite(Number(off.dy)) ? Number(off.dy) : 0,
+            baseDx: box.x - box.autoX,
+            baseDy: box.y - box.autoY,
             moved: false
           };
           ui.selectedKey = box.key;
@@ -900,7 +1115,8 @@
               }
             }
           }
-          setOffset(chart, drag.key, ndx, ndy);
+          if (drag.freeId !== null && drag.freeId !== undefined) updateFree(chart, drag.freeId, { dx: Math.round(ndx), dy: Math.round(ndy) });
+          else setOffset(chart, drag.key, ndx, ndy);
           renderOverlay();
         }
       });
@@ -909,14 +1125,39 @@
         var d = drag;
         drag = null;
         ui.snapGuides = null;
+        if (d.place && !d.moved && ui.placeMode) {
+          /* Wstawienie wolnej adnotacji w klikniętym miejscu siatki */
+          var geomA = activeGeom();
+          if (geomA) {
+            var ppm = geomA.plotW / 204;
+            var ppu = geomA.plotH / (geomA.maxY - geomA.minY);
+            var age = Math.max(12, Math.min(216, 12 + (d.place.x - geomA.plotX) / ppm));
+            var val = Math.max(geomA.minY, Math.min(geomA.maxY, geomA.minY + (geomA.plotY + geomA.plotH - d.place.y) / ppu));
+            var isLabel = ui.placeMode === 'label';
+            var newId = addFree(ui.active, { ageMonths: age, value: val, txt: isLabel ? 'Etykieta' : '', arrow: !isLabel });
+            setPlaceMode(ui.placeMode);
+            scheduleSave();
+            ui.selectedKey = 'f' + newId;
+            renderOverlay();
+            var itNew = itemForKey('f' + newId);
+            if (itNew) openEditor(freeTarget(itNew), { left: evt.clientX, top: evt.clientY + 14 });
+            flashSaveNote();
+          }
+          return;
+        }
         if (d.key) {
           if (d.moved) {
             scheduleSave();
             flashSaveNote();
             renderOverlay();
           } else {
-            var point = pointForKey(d.key);
-            if (point) openEditor(point, { left: evt.clientX, top: evt.clientY + 14 });
+            var itc = itemForKey(d.key);
+            if (itc && itc.kind === 'free') {
+              openEditor(freeTarget(itc), { left: evt.clientX, top: evt.clientY + 14 });
+            } else {
+              var point = pointForKey(d.key);
+              if (point) openEditor(point, { left: evt.clientX, top: evt.clientY + 14 });
+            }
           }
           return;
         }
@@ -946,15 +1187,23 @@
     ed.querySelector('.pubc-save').addEventListener('click', function () {
       var point = ed._point;
       if (point) {
-        var ownScope = ed.querySelector('.pubc-scope-own');
         var text = ed.querySelector('textarea').value.trim();
-        if (ownScope && ownScope.checked) {
-          /* Treść tylko dla aktywnej siatki — wspólny komentarz bez zmian */
-          setChartText(ui.active, point.key, text);
+        var fsVal = Number(ui.editorParts.fsSelect.value) || FONT_PX;
+        if (point.free) {
+          updateFree(ui.active, point.id, { txt: text, fs: fsVal });
           scheduleSave();
         } else {
-          setChartText(ui.active, point.key, undefined);
-          setArrowComment(point, text);
+          var ownScope = ed.querySelector('.pubc-scope-own');
+          if (ownScope && ownScope.checked) {
+            /* Treść tylko dla aktywnej siatki — wspólny komentarz bez zmian */
+            setChartText(ui.active, point.key, text);
+            scheduleSave();
+          } else {
+            setChartText(ui.active, point.key, undefined);
+            setArrowComment(point, text);
+          }
+          updateOverride(ui.active, point.key, { fs: fsVal });
+          scheduleSave();
         }
       }
       closeEditor();
@@ -986,8 +1235,12 @@
       var point = ed._point;
       closeEditor();
       if (point) {
-        setArrowEnabled(point, false);
-        clearAnnotationOverrides(point.key);
+        if (point.free) {
+          removeFree(ui.active, point.id);
+        } else {
+          setArrowEnabled(point, false);
+          clearAnnotationOverrides(point.key);
+        }
         scheduleSave();
       }
       ui.selectedKey = null;
@@ -1073,7 +1326,12 @@
     var zoomIn = el('button', zoomCss, { type: 'button', class: 'pubc-neutral', 'aria-label': 'Przybli\u017c siatk\u0119' }, '+');
     var zoomFit = el('button', BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.8rem;font-weight:600;', { type: 'button', class: 'pubc-outline' }, 'Dopasuj');
     var saveNote = el('span', 'font-size:0.76rem;color:#2e7d32;opacity:0.55;transition:opacity 0.2s;margin-left:auto;', null, '\u2713 Uk\u0142ad zapisywany automatycznie w danych karty');
-    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, saveNote);
+    /* Narz\u0119dzia wolnych adnotacji: strza\u0142ka do dowolnego miejsca / etykieta */
+    var toolSep = el('span', 'width:1px;align-self:stretch;background:' + COLORS.border + ';margin:0 0.3rem;');
+    var toolCss = BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.8rem;font-weight:600;';
+    var addArrowBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Strza\u0142ka');
+    var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
+    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, saveNote);
 
     /* Obszar wykres\u00f3w: wype\u0142nia ca\u0142\u0105 pozosta\u0142\u0105 wysoko\u015b\u0107 ekranu, przewijanie
        w obu osiach wewn\u0105trz (dla powi\u0119kszenia) */
@@ -1135,6 +1393,19 @@
     var scopeShared = scopeOption('pubc-scope-shared', 'Tre\u015b\u0107 wsp\u00f3lna dla obu siatek');
     var scopeOwn = scopeOption('pubc-scope-own', 'Tre\u015b\u0107 tylko dla tej siatki');
     append(scopeRow, scopeShared, scopeOwn);
+    /* Rozmiar czcionki ramki */
+    var fsRow = el('div', 'display:flex;align-items:center;gap:6px;margin-top:0.4rem;font-size:0.76rem;color:' + COLORS.text + ';');
+    var fsSelect = document.createElement('select');
+    fsSelect.className = 'pubc-fs';
+    fsSelect.style.cssText = 'width:auto;flex:1;margin:0;padding:0.15rem 0.3rem;border:1px solid ' + COLORS.border + ';border-radius:6px;font-size:0.78rem;background:#fff;color:' + COLORS.text + ';font-family:inherit;';
+    var fsLabels = { 28: 'ma\u0142a', 40: 'normalna', 52: 'du\u017ca', 64: 'bardzo du\u017ca' };
+    FONT_CHOICES.forEach(function (fsVal) {
+      var opt = document.createElement('option');
+      opt.value = String(fsVal);
+      opt.textContent = (fsLabels[fsVal] || fsVal) + ' (' + fsVal + ' px)';
+      fsSelect.appendChild(opt);
+    });
+    append(fsRow, el('span', 'white-space:nowrap;', null, 'Czcionka:'), fsSelect);
     var edBtnCss = BTN_BASE + 'flex:1;padding:0.32rem 0.4rem;font-size:0.78rem;font-weight:600;';
     var edBtns = el('div', 'display:flex;gap:0.4rem;margin-top:0.45rem;');
     var edSave = el('button', edBtnCss, { type: 'button', class: 'pubc-save pubc-primary' }, 'Zapisz');
@@ -1144,7 +1415,7 @@
     var edHide = el('button', edBtnCss, { type: 'button', class: 'pubc-hide pubc-neutral' }, 'Ukryj na tej siatce');
     var edDel = el('button', edBtnCss, { type: 'button', class: 'pubc-del pubc-danger' }, 'Usu\u0144');
     append(edBtns2, edHide, edDel);
-    append(editor, ta, scopeRow, edBtns, edBtns2);
+    append(editor, ta, scopeRow, fsRow, edBtns, edBtns2);
     inners.height.appendChild(editor);
 
     /* Stopka */
@@ -1175,9 +1446,17 @@
       active: 'height',
       selectedKey: null,
       snapGuides: null,
+      placeMode: null,
+      toolBtns: { arrow: addArrowBtn, label: addLabelBtn },
+      editorParts: { scopeRow: scopeRow, fsRow: fsRow, fsSelect: fsSelect, hideBtn: edHide },
       items: {},
       points: {},
-      onKeyDown: function (evt) { if (evt.key === 'Escape') closeCreator(); }
+      onKeyDown: function (evt) {
+        if (evt.key !== 'Escape') return;
+        /* Escape najpierw wyłącza tryb wstawiania, dopiero potem zamyka kreator */
+        if (ui && ui.placeMode) setPlaceMode(ui.placeMode);
+        else closeCreator();
+      }
     };
     /* Dopasowanie 100% = szeroko\u015b\u0107 kontenera przewijania (bez paddingu) */
     var avail = scrolls.height.clientWidth - 16;
@@ -1198,6 +1477,8 @@
     zoomIn.addEventListener('click', function () { setZoom(ui.zoom + ZOOM_STEP); });
     zoomOut.addEventListener('click', function () { setZoom(ui.zoom - ZOOM_STEP); });
     zoomFit.addEventListener('click', function () { setZoom(1); });
+    addArrowBtn.addEventListener('click', function () { setPlaceMode('arrow'); });
+    addLabelBtn.addEventListener('click', function () { setPlaceMode('label'); });
     resetBtn.addEventListener('click', function () {
       resetLayout(ui.active);
       scheduleSave();
@@ -1229,6 +1510,10 @@
        (testy wołają PRAWDZIWE funkcje produkcyjne — zob. AGENTS.md §3.5). */
     _wrapComment: wrapComment,
     _collectArrows: collectArrows,
+    _collectFree: collectFree,
+    _addFree: addFree,
+    _updateFree: updateFree,
+    _removeFree: removeFree,
     _collectPoints: collectPoints,
     _computeLayout: computeLayout,
     _drawItems: drawItems,

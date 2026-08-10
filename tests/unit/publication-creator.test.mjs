@@ -16,7 +16,8 @@ function loadCreator(browserGlobal = {}) {
   return browserGlobal.VildaPublicationCreator;
 }
 
-// Sztywna metryka tekstu: szerokość = liczba znaków * 20 px (deterministyczna).
+// Sztywna metryka tekstu zależna od czcionki: szerokość = liczba znaków * (fs/2)
+// (przy domyślnych 40 px daje to 20 px/znak, jak we wcześniejszych oczekiwaniach).
 function fakeCtx(calls = []) {
   return {
     font: '',
@@ -39,7 +40,11 @@ function fakeCtx(calls = []) {
     arc() {},
     clearRect() {},
     fillText(t, x, y) { calls.push(['fillText', t, x, y]); },
-    measureText(t) { return { width: String(t).length * 20 }; }
+    measureText(t) {
+      const m = /(\d+(?:\.\d+)?)px/.exec(this.font || '');
+      const fs = m ? Number(m[1]) : 40;
+      return { width: String(t).length * (fs / 2) };
+    }
   };
 }
 
@@ -209,11 +214,101 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(same.moved).toBe(false);
   });
 
+  it('wolna strzałka z ramką: kotwica w jednostkach danych, ramka pod kotwicą, przesunięcie stosowane', () => {
+    const PC = loadCreator();
+    const adv = { measurements: [], pubFree: { height: [{ id: 1, ageMonths: 100, value: 150, txt: 'Uwaga', arrow: true, dx: 80, dy: -60 }], weight: [] } };
+    const items = PC._computeLayout(fakeCtx(), adv, 'height', GEOM);
+    expect(items).toHaveLength(1);
+    const it0 = items[0];
+    const px = GEOM.plotX + (100 - 12) * (GEOM.plotW / 204);
+    const py = GEOM.plotY + GEOM.plotH - (150 - GEOM.minY) * PX_PER_UNIT;
+    expect(it0.kind).toBe('free');
+    expect(it0.key).toBe('f1');
+    expect(it0.px).toBeCloseTo(px, 6);
+    expect(it0.py).toBeCloseTo(py, 6);
+    expect(it0.autoX).toBeCloseTo(px - it0.w / 2, 6);
+    expect(it0.autoY).toBeCloseTo(py + 15 + DROP_STEP + 5, 6);
+    expect(it0.x).toBeCloseTo(it0.autoX + 80, 6);
+    expect(it0.y).toBeCloseTo(it0.autoY - 60, 6);
+    expect(it0.moved).toBe(true);
+    // wolna adnotacja żyje tylko na swojej siatce
+    expect(PC._computeLayout(fakeCtx(), adv, 'weight', GEOM)).toHaveLength(0);
+  });
+
+  it('samodzielna etykieta: ramka wyśrodkowana na kotwicy, bez strzałki', () => {
+    const PC = loadCreator();
+    const adv = { measurements: [], pubFree: { height: [{ id: 2, ageMonths: 60, value: 100, txt: 'Etykieta', arrow: false }], weight: [] } };
+    const items = PC._computeLayout(fakeCtx(), adv, 'height', GEOM);
+    expect(items).toHaveLength(1);
+    const it0 = items[0];
+    expect(it0.arrow).toBe(false);
+    expect(it0.autoX).toBeCloseTo(it0.px - it0.w / 2, 6);
+    expect(it0.autoY).toBeCloseTo(it0.py - it0.h / 2, 6);
+    const calls = [];
+    PC._drawItems(fakeCtx(calls), items);
+    // jest ramka i tekst, ale ŻADNEJ kreski strzałki (moveTo/lineTo poza rect)
+    expect(calls.filter((c) => c[0] === 'rect')).toHaveLength(1);
+    expect(calls.filter((c) => c[0] === 'fillText')).toHaveLength(1);
+    expect(calls.filter((c) => c[0] === 'moveTo' || c[0] === 'lineTo')).toHaveLength(0);
+  });
+
+  it('sama strzałka (bez treści): rysuje grot i linię, bez ramki', () => {
+    const PC = loadCreator();
+    const adv = { measurements: [], pubFree: { height: [{ id: 3, ageMonths: 80, value: 120, txt: '', arrow: true }], weight: [] } };
+    const items = PC._computeLayout(fakeCtx(), adv, 'height', GEOM);
+    expect(items).toHaveLength(1);
+    expect(items[0].w).toBe(0);
+    const calls = [];
+    PC._drawItems(fakeCtx(calls), items);
+    expect(calls.filter((c) => c[0] === 'rect')).toHaveLength(0);
+    expect(calls.filter((c) => c[0] === 'fill').length).toBeGreaterThan(0);
+    // pionowa linia od grotu do ogona pod kotwicą
+    const lineStart = calls.find((c) => c[0] === 'moveTo' && Math.abs(c[1] - items[0].px) < 1e-6);
+    expect(lineStart).toBeTruthy();
+  });
+
+  it('rozmiar czcionki: nadpisanie fs zmienia wymiary ramki, a prune usuwa fs domyślne', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    const adv = sampleAdv();
+    adv.pubLayout = { height: { a120: { fs: 52 } }, weight: {} };
+    const it52 = PC._computeLayout(fakeCtx(), adv, 'height', GEOM).find((i) => i.key === 'a120');
+    expect(it52.fs).toBe(52);
+    // 'Start terapii rhGH' → ['Start terapi','i rhGH']: max 12 znaków * 26 px + 2*20
+    expect(it52.w).toBeCloseTo(12 * 26 + 40, 6);
+    expect(it52.h).toBeCloseTo(2 * 52 * 1.3 + 40, 6);
+    // prune: fs=40 (domyślne) znika, fs=52 zostaje
+    win.advancedGrowthData = sampleAdv();
+    PC._updateOverride('height', 'a120', { fs: 40 });
+    expect(win.advancedGrowthData.pubLayout.height.a120).toBeUndefined();
+    PC._updateOverride('height', 'a120', { fs: 52 });
+    expect(win.advancedGrowthData.pubLayout.height.a120).toEqual({ fs: 52 });
+  });
+
+  it('pubFree: add/update/remove na realnym magazynie danych karty', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    const id = PC._addFree('height', { ageMonths: 90.24, value: 123.46, txt: 'x', arrow: true });
+    expect(id).toBe(1);
+    expect(win.advancedGrowthData.pubFree.height[0]).toEqual({ id: 1, ageMonths: 90.2, value: 123.5, txt: 'x', arrow: true, fs: 40 });
+    PC._updateFree('height', id, { txt: 'y', fs: 64, dx: 10, dy: 0 });
+    expect(win.advancedGrowthData.pubFree.height[0].txt).toBe('y');
+    expect(win.advancedGrowthData.pubFree.height[0].fs).toBe(64);
+    expect(win.advancedGrowthData.pubFree.height[0].dx).toBe(10);
+    expect(win.advancedGrowthData.pubFree.height[0].dy).toBeUndefined();
+    // id rośnie globalnie (obie siatki)
+    expect(PC._addFree('weight', { ageMonths: 50, value: 20, txt: '', arrow: true })).toBe(2);
+    PC._removeFree('height', id);
+    expect(win.advancedGrowthData.pubFree.height).toHaveLength(0);
+    expect(win.advancedGrowthData.pubFree.weight).toHaveLength(1);
+  });
+
   it('grot na orbicie: ramka w poziomie od punktu → grot z boku punktu, linia pozioma', () => {
     const PC = loadCreator();
     // środek ramki (1300, 1000) idealnie na prawo od punktu (1000, 1000)
     const item = {
-      key: 'x', px: 1000, py: 1000, tipY: 1015, drop: 200,
+      key: 'x', px: 1000, py: 1000, tipY: 1015, drop: 200, fs: 40,
       autoX: 900, autoY: 1220, x: 1200, y: 950, w: 200, h: 100,
       lines: ['ab'], comment: 'ab', moved: true
     };
@@ -233,7 +328,7 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     const PC = loadCreator();
     // środek ramki (1000, 800) idealnie nad punktem (1000, 1000)
     const item = {
-      key: 'x', px: 1000, py: 1000, tipY: 1015, drop: 200,
+      key: 'x', px: 1000, py: 1000, tipY: 1015, drop: 200, fs: 40,
       autoX: 900, autoY: 1220, x: 900, y: 750, w: 200, h: 100,
       lines: ['ab'], comment: 'ab', moved: true
     };
@@ -350,7 +445,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=5');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=6');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
@@ -381,14 +476,19 @@ describe('Trwałość układu: commit danych karty zachowuje pubLayout (realny D
     )(() => {}, globalRef);
   }
 
-  it('nowy obiekt danych karty dziedziczy pubLayout z poprzedniego', () => {
+  it('nowy obiekt danych karty dziedziczy pubLayout i pubFree z poprzedniego', () => {
     const win = {};
-    win.advancedGrowthData = { pubLayout: { height: { a120: { dx: 60, dy: -110 } }, weight: {} } };
+    win.advancedGrowthData = {
+      pubLayout: { height: { a120: { dx: 60, dy: -110 } }, weight: {} },
+      pubFree: { height: [{ id: 1, ageMonths: 100, value: 150, txt: 'Uwaga', arrow: true, fs: 40 }], weight: [] }
+    };
     const commit = extractRealCommit()(win);
     const fresh = { measurements: [] };
     commit(fresh, { global: win });
     expect(win.advancedGrowthData).toBe(fresh);
     expect(win.advancedGrowthData.pubLayout).toEqual({ height: { a120: { dx: 60, dy: -110 } }, weight: {} });
+    expect(win.advancedGrowthData.pubFree.height).toHaveLength(1);
+    expect(win.advancedGrowthData.pubFree.height[0].txt).toBe('Uwaga');
   });
 
   it('istniejący pubLayout nowego obiektu nie jest nadpisywany, a null czyści dane', () => {
