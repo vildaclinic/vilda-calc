@@ -602,6 +602,7 @@
   var PUB_OPTION_DEFS = [
     { key: 'patientName', label: 'Wiersz „Patient” (imię i nazwisko)', group: 'header' },
     { key: 'parentsHeader', label: 'Wzrosty rodziców i MPH w nagłówku', group: 'header' },
+    { key: 'footer', label: 'Stopka „Data source …” (źródło danych)', group: 'header' },
     { key: 'mph', label: 'Romb MPH na siatce', group: 'chart' },
     { key: 'boneAge', label: 'Znaczniki wieku kostnego', group: 'chart' },
     { key: 'bandReference', label: 'Linie odniesienia kanału centylowego', group: 'chart' },
@@ -770,6 +771,10 @@
       '#' + OVERLAY_ID + ' .pubc-lhidden{color:' + COLORS.muted + '}' +
       '#' + OVERLAY_ID + ' .pubc-lhidden .pubc-ltxt{color:' + COLORS.muted + ';text-decoration:line-through}' +
       '#' + OVERLAY_ID + ' .pubc-lmsg{padding:.55rem .75rem;font-size:.82rem;color:' + COLORS.muted + ';font-style:italic}' +
+      /* Rozwijany panel elementów siatki */
+      '#' + OVERLAY_ID + ' .pubc-opts{overflow:hidden;max-height:0;opacity:0;background:#ffffff;border-bottom:1px solid transparent;transform:translateY(-4px);transition:max-height .3s ease,opacity .22s ease,transform .3s ease,border-color .3s ease}' +
+      '#' + OVERLAY_ID + ' .pubc-opts.pubc-opts-open{opacity:1;transform:translateY(0);border-bottom-color:' + COLORS.border + '}' +
+      '@media (prefers-reduced-motion: reduce){#' + OVERLAY_ID + ' .pubc-opts{transition:none;transform:none}}' +
       '@media (max-width:640px){' +
       '#' + OVERLAY_ID + ' .pubc-lrow{grid-template-columns:4.2rem 1fr auto;grid-template-areas:"age txt acts" "age type acts"}' +
       '#' + OVERLAY_ID + ' .pubc-lrow .pubc-lage{grid-area:age}' +
@@ -1638,13 +1643,14 @@
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, elemBtn, saveNote);
 
-    /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) */
-    var optsPanel = el('div', 'display:none;padding:0.5rem 0.9rem 0.6rem;border-bottom:1px solid ' + COLORS.border + ';background:#ffffff;');
-    var optsWrap = el('div', 'display:flex;flex-wrap:wrap;gap:0.5rem 2rem;');
+    /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) \u2014 rozwijany z animacj\u0105
+       (klasa pubc-opts we wstrzykiwanym arkuszu; max-height ustawiane z JS) */
+    var optsPanel = el('div', null, { class: 'pubc-opts' });
+    var optsWrap = el('div', 'display:flex;flex-wrap:wrap;gap:0.5rem 2rem;padding:0.5rem 0.9rem 0.6rem;');
     ['header', 'chart'].forEach(function (group) {
       var col = el('div', 'display:flex;flex-direction:column;gap:0.2rem;min-width:16rem;');
       append(col, el('span', 'font-size:0.68rem;letter-spacing:0.06em;text-transform:uppercase;color:' + COLORS.muted + ';margin-bottom:2px;', null,
-        group === 'header' ? 'Nag\u0142\u00f3wek' : 'Elementy siatki'));
+        group === 'header' ? 'Nag\u0142\u00f3wek i stopka' : 'Elementy siatki'));
       PUB_OPTION_DEFS.forEach(function (def) {
         if (def.group !== group) return;
         var lab = el('label', 'display:flex;align-items:center;gap:7px;cursor:pointer;margin:0;font-size:0.8rem;color:' + COLORS.text + ';width:auto;');
@@ -1672,10 +1678,20 @@
       });
     }
     elemBtn.addEventListener('click', function () {
-      var open = optsPanel.style.display === 'none';
-      if (open) syncOptionCheckboxes();
-      optsPanel.style.display = open ? '' : 'none';
+      var open = !optsPanel.classList.contains('pubc-opts-open');
+      if (open) {
+        syncOptionCheckboxes();
+        optsPanel.classList.add('pubc-opts-open');
+        optsPanel.style.maxHeight = optsPanel.scrollHeight + 'px';
+      } else {
+        /* start animacji zwijania od aktualnej wysokości */
+        optsPanel.style.maxHeight = optsPanel.scrollHeight + 'px';
+        void optsPanel.offsetHeight;
+        optsPanel.classList.remove('pubc-opts-open');
+        optsPanel.style.maxHeight = '0px';
+      }
       elemBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
+      elemBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
     /* Obszar tre\u015bci: przewija si\u0119 w pionie (siatka + pomoc + lista adnotacji),
