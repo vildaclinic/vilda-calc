@@ -155,6 +155,45 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(same.moved).toBe(false);
   });
 
+  it('magnes pionu: środek ramki w progu od pionu punktu doskakuje idealnie do pionu', () => {
+    const PC = loadCreator();
+    // ramka automatycznie wyśrodkowana pod punktem: autoX + w/2 === px
+    const item = { autoX: 400, autoY: 900, w: 200, h: 100, px: 500, py: 700 };
+    // przesunięcie w bok o 10 px przy progu 16 px → dx wraca do idealnego pionu (0)
+    let s = PC._applySnap(item, 10, 300, 16);
+    expect(s.v).toBe(true);
+    expect(s.dx).toBe(0);
+    expect(s.dy).toBe(300);
+    // poza progiem — bez przyciągania
+    s = PC._applySnap(item, 40, 300, 16);
+    expect(s.v).toBe(false);
+    expect(s.dx).toBe(40);
+  });
+
+  it('magnes poziomu: środek ramki na wysokości punktu daje idealnie poziomą strzałkę', () => {
+    const PC = loadCreator();
+    const item = { autoX: 400, autoY: 900, w: 200, h: 100, px: 500, py: 700 };
+    // środek ramki Y = 900+50+dy; punkt py=700 → dy=-250 idealnie; -242 jest w progu 16
+    const s = PC._applySnap(item, 300, -242, 16);
+    expect(s.h).toBe(true);
+    expect(s.dy).toBe(-250);
+    expect(s.dx).toBe(300);
+  });
+
+  it('magnes pozycji automatycznej: małe przesunięcie w obu osiach wraca do (0,0)', () => {
+    const PC = loadCreator();
+    const item = { autoX: 400, autoY: 900, w: 200, h: 100, px: 500, py: 700 };
+    const s = PC._applySnap(item, 6, -9, 16);
+    expect(s.auto).toBe(true);
+    expect(s.dx).toBe(0);
+    expect(s.dy).toBe(0);
+    // bez progu (0) — funkcja niczego nie zmienia
+    const raw = PC._applySnap(item, 6, -9, 0);
+    expect(raw.dx).toBe(6);
+    expect(raw.dy).toBe(-9);
+    expect(raw.auto).toBe(false);
+  });
+
   it('rysowanie: ramka nieprzesunięta ma pionową strzałkę, przesunięta — łącznik do punktu', () => {
     const PC = loadCreator();
     const adv = sampleAdv();
@@ -219,7 +258,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=2');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=3');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });

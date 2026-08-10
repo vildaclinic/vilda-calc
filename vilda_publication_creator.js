@@ -468,6 +468,72 @@
   var ZOOM_MAX = 3;
   var ZOOM_STEP = 0.25;
 
+  /* Promień magnesu w pikselach EKRANU — przeliczany na piksele kanwy wg
+     aktualnego powiększenia, żeby siła przyciągania była stała wizualnie. */
+  var SNAP_DISPLAY_PX = 8;
+
+  /*
+   * Magnetyczne przyciąganie przeciąganej ramki (czysta funkcja — testowana
+   * jednostkowo). Przyjmuje element układu (autoX/autoY/w/h + px/py punktu),
+   * proponowane przesunięcie {dx,dy} i próg w px kanwy. Zwraca skorygowane
+   * przesunięcie oraz flagi aktywnych magnesów:
+   *  - auto: ramka blisko pozycji automatycznej → wraca dokładnie do niej,
+   *  - v:    środek ramki blisko pionu przez punkt → idealnie pionowa strzałka,
+   *  - h:    środek ramki blisko poziomu przez punkt → idealnie pozioma strzałka.
+   */
+  function applySnap(item, dx, dy, threshold) {
+    var out = { dx: dx, dy: dy, v: false, h: false, auto: false };
+    if (!item || !(threshold > 0)) return out;
+    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
+      out.dx = 0;
+      out.dy = 0;
+      out.auto = true;
+      return out;
+    }
+    var centerX = item.autoX + item.w / 2 + dx;
+    if (Math.abs(centerX - item.px) < threshold) {
+      out.dx = item.px - (item.autoX + item.w / 2);
+      out.v = true;
+    }
+    var centerY = item.autoY + item.h / 2 + dy;
+    if (Math.abs(centerY - item.py) < threshold) {
+      out.dy = item.py - (item.autoY + item.h / 2);
+      out.h = true;
+    }
+    return out;
+  }
+
+  /* Blokada przewijania strony pod pełnoekranowym kreatorem — wariant odporny
+     na iOS Safari: body zostaje przypięte w miejscu, pozycję przywracamy przy
+     zamknięciu. */
+  var savedScrollY = 0;
+
+  function lockBodyScroll() {
+    try {
+      savedScrollY = window.scrollY || window.pageYOffset || 0;
+      var b = document.body;
+      b.style.position = 'fixed';
+      b.style.top = (-savedScrollY) + 'px';
+      b.style.left = '0';
+      b.style.right = '0';
+      b.style.width = '100%';
+      b.style.overflow = 'hidden';
+    } catch (e) { /* ignore */ }
+  }
+
+  function unlockBodyScroll() {
+    try {
+      var b = document.body;
+      b.style.position = '';
+      b.style.top = '';
+      b.style.left = '';
+      b.style.right = '';
+      b.style.width = '';
+      b.style.overflow = '';
+      window.scrollTo(0, savedScrollY || 0);
+    } catch (e) { /* ignore */ }
+  }
+
   function el(tag, css, attrs, text) {
     var n = document.createElement(tag);
     if (css) n.style.cssText = css;
@@ -511,6 +577,7 @@
     if (!ui) return;
     try { document.removeEventListener('keydown', ui.onKeyDown); } catch (e) { /* ignore */ }
     try { ui.panel.remove(); } catch (e) { /* ignore */ }
+    unlockBodyScroll();
     ui = null;
   }
 
@@ -547,6 +614,25 @@
       var pxPerMonth = geom.plotW / 204;
       var pxPerUnit = geom.plotH / (geom.maxY - geom.minY);
       ctx.save();
+      /* Prowadnice magnesów (tylko podgląd, nie trafiają do eksportu) */
+      if (ui.snapGuides) {
+        ctx.strokeStyle = COLORS.secondary;
+        ctx.lineWidth = 4;
+        ctx.setLineDash([16, 14]);
+        if (ui.snapGuides.v !== null && ui.snapGuides.v !== undefined) {
+          ctx.beginPath();
+          ctx.moveTo(ui.snapGuides.v, geom.plotY);
+          ctx.lineTo(ui.snapGuides.v, geom.plotY + geom.plotH);
+          ctx.stroke();
+        }
+        if (ui.snapGuides.h !== null && ui.snapGuides.h !== undefined) {
+          ctx.beginPath();
+          ctx.moveTo(geom.plotX, ui.snapGuides.h);
+          ctx.lineTo(geom.plotX + geom.plotW, ui.snapGuides.h);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
       points.forEach(function (p) {
         var x = geom.plotX + (p.ageMonths - 12) * pxPerMonth;
         var y = geom.plotY + geom.plotH - (p.value - geom.minY) * pxPerUnit;
@@ -703,7 +789,30 @@
         var dy = pos.y - drag.startY;
         if (Math.abs(dx) > 25 || Math.abs(dy) > 25) drag.moved = true;
         if (drag.key && drag.moved) {
-          setOffset(chart, drag.key, drag.baseDx + dx, drag.baseDy + dy);
+          var ndx = drag.baseDx + dx;
+          var ndy = drag.baseDy + dy;
+          ui.snapGuides = null;
+          /* Magnesy: pion/poziom przez punkt + powrót do pozycji automatycznej.
+             Przytrzymanie Alt wyłącza przyciąganie (standard programów graficznych). */
+          if (!evt.altKey) {
+            var items = ui.items[chart] || [];
+            var dragged = null;
+            for (var di = 0; di < items.length; di++) {
+              if (items[di].key === drag.key) { dragged = items[di]; break; }
+            }
+            if (dragged) {
+              var snapped = applySnap(dragged, ndx, ndy, SNAP_DISPLAY_PX / pos.scale);
+              ndx = snapped.dx;
+              ndy = snapped.dy;
+              if (snapped.v || snapped.h || snapped.auto) {
+                ui.snapGuides = {
+                  v: (snapped.v || snapped.auto) ? dragged.px : null,
+                  h: (snapped.h || snapped.auto) ? dragged.py : null
+                };
+              }
+            }
+          }
+          setOffset(chart, drag.key, ndx, ndy);
           renderOverlay();
         }
       });
@@ -711,6 +820,7 @@
         if (!drag || ui.active !== chart) { drag = null; return; }
         var d = drag;
         drag = null;
+        ui.snapGuides = null;
         if (d.key) {
           if (d.moved) {
             scheduleSave();
@@ -738,7 +848,10 @@
           flashSaveNote();
         }
       });
-      overlay.addEventListener('pointercancel', function () { drag = null; });
+      overlay.addEventListener('pointercancel', function () {
+        drag = null;
+        if (ui && ui.snapGuides) { ui.snapGuides = null; renderOverlay(); }
+      });
     });
 
     var ed = ui.editor;
@@ -771,7 +884,7 @@
     ui.selectedKey = null;
     closeEditor();
     ['height', 'weight'].forEach(function (c) {
-      ui.wraps[c].style.display = c === chart ? '' : 'none';
+      ui.wraps[c].style.display = c === chart ? 'flex' : 'none';
       /* Kolory aktywnej zakładki pochodzą z wstrzykniętego arkusza (.pubc-tab[aria-selected]) */
       ui.tabs[c].setAttribute('aria-selected', c === chart ? 'true' : 'false');
     });
@@ -805,16 +918,15 @@
       return;
     }
     ensureStyle();
-    var mountRow = document.getElementById('publicationToggleRow');
-    if (!mountRow || !mountRow.parentNode) return;
     var canvases = buildPreviewCanvases();
     if (!canvases) {
       alert('Nie uda\u0142o si\u0119 przygotowa\u0107 podgl\u0105du siatek. Uzupe\u0142nij wiek, p\u0142e\u0107, mas\u0119 i wzrost, a nast\u0119pnie spr\u00f3buj ponownie.');
       return;
     }
 
-    /* Panel inline: pe\u0142na szeroko\u015b\u0107 karty, strona przewija si\u0119 naturalnie. */
-    var panel = el('div', 'width:100%;box-sizing:border-box;margin:0.9rem 0 0;background:#ffffff;border:1px solid ' + COLORS.border + ';border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'region', 'aria-label': 'Kreator siatek do publikacji' });
+    /* Pe\u0142noekranowy tryb roboczy: warstwa na ca\u0142y viewport, strona pod spodem
+       zablokowana (lockBodyScroll). */
+    var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Kreator siatek do publikacji' });
 
     /* Nag\u0142\u00f3wek */
     var head = el('div', 'display:flex;align-items:center;gap:0.6rem;padding:0.65rem 0.9rem;background:' + COLORS.card + ';border-bottom:1px solid ' + COLORS.border + ';flex-wrap:wrap;');
@@ -839,16 +951,17 @@
     var saveNote = el('span', 'font-size:0.76rem;color:#2e7d32;opacity:0.55;transition:opacity 0.2s;margin-left:auto;', null, '\u2713 Uk\u0142ad zapisywany automatycznie w danych karty');
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, saveNote);
 
-    /* Obszar wykres\u00f3w: kontener przewijany w obu osiach (dla powi\u0119kszenia) */
-    var body = el('div', 'padding:0.7rem 0.9rem;');
+    /* Obszar wykres\u00f3w: wype\u0142nia ca\u0142\u0105 pozosta\u0142\u0105 wysoko\u015b\u0107 ekranu, przewijanie
+       w obu osiach wewn\u0105trz (dla powi\u0119kszenia) */
+    var body = el('div', 'flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:0.55rem 0.9rem;');
     var wraps = {};
     var inners = {};
     var scrolls = {};
     var bases = {};
     var overlays = {};
     ['height', 'weight'].forEach(function (chart) {
-      var wrap = el('div', chart === 'weight' ? 'display:none;' : '');
-      var scroll = el('div', 'overflow:auto;max-height:78vh;border:1px solid ' + COLORS.border + ';border-radius:8px;background:#eef3f3;padding:8px;box-sizing:border-box;');
+      var wrap = el('div', 'flex:1 1 auto;min-height:0;display:flex;flex-direction:column;' + (chart === 'weight' ? 'display:none;' : ''));
+      var scroll = el('div', 'flex:1 1 auto;min-height:0;overflow:auto;border:1px solid ' + COLORS.border + ';border-radius:8px;background:#eef3f3;padding:8px;box-sizing:border-box;');
       var inner = el('div', 'position:relative;width:fit-content;margin:0 auto;');
       var base = canvases[chart];
       base.style.cssText = 'display:block;width:900px;height:auto;background:#fff;';
@@ -898,7 +1011,8 @@
     append(foot, resetBtn, genBtn);
 
     append(panel, head, toolbar, body, foot);
-    mountRow.insertAdjacentElement('afterend', panel);
+    document.body.appendChild(panel);
+    lockBodyScroll();
 
     ui = {
       panel: panel,
@@ -917,6 +1031,7 @@
       fitWidth: 900,
       active: 'height',
       selectedKey: null,
+      snapGuides: null,
       items: {},
       points: {},
       onKeyDown: function (evt) { if (evt.key === 'Escape') closeCreator(); }
@@ -954,7 +1069,6 @@
 
     setupInteractions();
     switchTab('height');
-    try { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
   }
 
   /* Arkusz wstrzykiwany od razu, żeby przycisk „Kreator adnotacji” w wierszu
@@ -975,6 +1089,7 @@
     _collectPoints: collectPoints,
     _computeLayout: computeLayout,
     _drawItems: drawItems,
+    _applySnap: applySnap,
     _arrowKey: arrowKey,
     _setSuppress: function (v) { suppressPainting = !!v; },
     _geomStore: geomStore
