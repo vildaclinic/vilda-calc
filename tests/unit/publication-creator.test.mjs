@@ -91,6 +91,60 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(arrows.map((a) => a.value)).toEqual([41, 45]);
   });
 
+  it('nadpisanie en:0 ukrywa adnotację tylko na wskazanej siatce', () => {
+    const PC = loadCreator();
+    const adv = sampleAdv();
+    // ukryj adnotację a120 wyłącznie na siatce masy ciała
+    adv.pubLayout = { height: {}, weight: { a120: { en: 0 } } };
+    const arrowsH = PC._collectArrows(adv, 'height');
+    const arrowsW = PC._collectArrows(adv, 'weight');
+    expect(arrowsH.map((a) => a.key)).toContain('a120');
+    expect(arrowsW.map((a) => a.key)).not.toContain('a120');
+    // pozostałe adnotacje na siatce masy nietknięte
+    expect(arrowsW.map((a) => a.key)).toEqual(['a144', 'cur']);
+  });
+
+  it('nadpisanie txt podmienia treść tylko na wskazanej siatce (druga zachowuje wspólną)', () => {
+    const PC = loadCreator();
+    const adv = sampleAdv();
+    adv.pubLayout = { height: { a120: { txt: 'Etykieta siatki wzrostu' } }, weight: {} };
+    const h = PC._collectArrows(adv, 'height').find((a) => a.key === 'a120');
+    const w = PC._collectArrows(adv, 'weight').find((a) => a.key === 'a120');
+    expect(h.comment).toBe('Etykieta siatki wzrostu');
+    expect(h.ownText).toBe(true);
+    expect(w.comment).toBe('Start terapii rhGH');
+    expect(w.ownText).toBe(false);
+    // punkty raportują stan ukrycia/osobnej treści dla kreatora
+    adv.pubLayout.weight.a120 = { en: 0 };
+    const ptH = PC._collectPoints(adv, 'height').find((p) => p.key === 'a120');
+    const ptW = PC._collectPoints(adv, 'weight').find((p) => p.key === 'a120');
+    expect(ptH.ownText).toBe(true);
+    expect(ptH.hiddenHere).toBe(false);
+    expect(ptW.hiddenHere).toBe(true);
+    expect(ptW.sharedComment).toBe('Start terapii rhGH');
+  });
+
+  it('updateOverride scala pola i usuwa pusty wpis; przesunięcie nie kasuje ukrycia', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    // ukrycie + przesunięcie współistnieją w jednym wpisie
+    PC._updateOverride('weight', 'a120', { en: 0 });
+    PC._updateOverride('weight', 'a120', { dx: 50, dy: -30 });
+    expect(win.advancedGrowthData.pubLayout.weight.a120).toEqual({ en: 0, dx: 50, dy: -30 });
+    // wyzerowanie przesunięcia zostawia ukrycie
+    PC._updateOverride('weight', 'a120', { dx: 0, dy: 0 });
+    expect(win.advancedGrowthData.pubLayout.weight.a120).toEqual({ en: 0 });
+    // zdjęcie ukrycia usuwa cały wpis
+    PC._updateOverride('weight', 'a120', { en: undefined });
+    expect(win.advancedGrowthData.pubLayout.weight.a120).toBeUndefined();
+    // sama treść też utrzymuje wpis, a jej usunięcie go czyści
+    PC._updateOverride('height', 'cur', { txt: 'osobna' });
+    expect(win.advancedGrowthData.pubLayout.height.cur).toEqual({ txt: 'osobna' });
+    PC._updateOverride('height', 'cur', { txt: undefined });
+    expect(win.advancedGrowthData.pubLayout.height.cur).toBeUndefined();
+  });
+
   it('kandydaci do kliknięcia obejmują też punkty bez strzałki, w zakresie 12–216 mies.', () => {
     const PC = loadCreator();
     const adv = sampleAdv();
@@ -296,7 +350,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=4');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=5');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
