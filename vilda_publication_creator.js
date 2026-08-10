@@ -184,7 +184,8 @@
           arrow: false,
           fs: Number(f.fs) > 0 ? Number(f.fs) : FONT_PX,
           dx: Number.isFinite(Number(f.dx)) ? Number(f.dx) : 0,
-          dy: Number.isFinite(Number(f.dy)) ? Number(f.dy) : 0
+          dy: Number.isFinite(Number(f.dy)) ? Number(f.dy) : 0,
+          bdy: Number.isFinite(Number(f.bdy)) ? Number(f.bdy) : 0
         });
         return;
       }
@@ -370,8 +371,10 @@
     free.forEach(function (fr) {
       if (fr.bracket) {
         /* Klamra: dwie pionowe linie od punktów, pozioma spinka nad wyższym
-           z nich, ogonek ze środka do ramki z tekstem. Końce rozwiązywane
-           na żywo z pomiarów — brak któregoś punktu pomija klamrę. */
+           z nich (domyślnie) albo na wysokości wybranej przeciągnięciem
+           poprzeczki (bdy w px kanwy — także pod punktami), ogonek ze środka
+           do ramki z tekstem. Końce rozwiązywane na żywo z pomiarów — brak
+           któregoś punktu pomija klamrę. */
         var val1 = measurementPointValue(adv, chartType, fr.a1);
         var val2 = measurementPointValue(adv, chartType, fr.a2);
         if (val1 === null || val2 === null) return;
@@ -379,12 +382,17 @@
         var ax2 = geom.plotX + (Math.max(fr.a1, fr.a2) - 12) * pxPerMonth;
         var ay1 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val1 : val2) - geom.minY) * pxPerUnit;
         var ay2 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val2 : val1) - geom.minY) * pxPerUnit;
-        var yb = Math.min(ay1, ay2) - dropStep;
+        var ybAuto = Math.min(ay1, ay2) - dropStep;
+        var yb = Math.max(geom.plotY, Math.min(geom.plotY + geom.plotH, ybAuto + fr.bdy));
         var midX = (ax1 + ax2) / 2;
+        /* ramka po stronie poprzeczki odwróconej od punktów */
+        var bBelow = yb > (ay1 + ay2) / 2;
         var bLines = wrapComment(fr.comment);
         var bDims = measureBox(bLines, fr.fs);
         var bAutoX = bLines.length > 0 ? midX - bDims.w / 2 : midX;
-        var bAutoY = bLines.length > 0 ? yb - BRACKET_STUB - bDims.h : yb - BRACKET_STUB;
+        var bAutoY = bBelow
+          ? yb + BRACKET_STUB
+          : (bLines.length > 0 ? yb - BRACKET_STUB - bDims.h : yb - BRACKET_STUB);
         items.push({
           kind: 'free',
           bracket: true,
@@ -403,6 +411,8 @@
           x2: ax2,
           y2: ay2,
           yb: yb,
+          ybAuto: ybAuto,
+          bdy: fr.bdy,
           px: midX,
           py: yb,
           tipY: yb,
@@ -484,13 +494,19 @@
       ctx.font = 'normal ' + it.fs + 'px sans-serif';
       ctx.lineWidth = arrowLine;
       if (it.bracket) {
-        /* klamra: pionowe linie od punktów (z odstępem od kropki), pozioma
-           spinka, ogonek ze środka do ramki (lub wolnego końca, gdy bez tekstu) */
+        /* klamra: pionowe linie od punktów (z odstępem od kropki) w stronę
+           poprzeczki — nad albo pod punktami, zależnie gdzie ją przeciągnięto —
+           pozioma spinka, ogonek ze środka do ramki (lub wolnego końca, gdy
+           bez tekstu); noga krótsza niż odstęp od kropki jest pomijana */
         ctx.beginPath();
-        ctx.moveTo(it.x1, it.y1 - TIP_GAP);
-        ctx.lineTo(it.x1, it.yb);
-        ctx.moveTo(it.x2, it.y2 - TIP_GAP);
-        ctx.lineTo(it.x2, it.yb);
+        if (Math.abs(it.yb - it.y1) > TIP_GAP) {
+          ctx.moveTo(it.x1, it.yb < it.y1 ? it.y1 - TIP_GAP : it.y1 + TIP_GAP);
+          ctx.lineTo(it.x1, it.yb);
+        }
+        if (Math.abs(it.yb - it.y2) > TIP_GAP) {
+          ctx.moveTo(it.x2, it.yb < it.y2 ? it.y2 - TIP_GAP : it.y2 + TIP_GAP);
+          ctx.lineTo(it.x2, it.yb);
+        }
         ctx.moveTo(it.x1, it.yb);
         ctx.lineTo(it.x2, it.yb);
         var bTx = it.lines.length > 0 ? it.x + it.w / 2 : it.x;
@@ -807,6 +823,7 @@
     });
     if (!item.dx) delete item.dx;
     if (!item.dy) delete item.dy;
+    if (!item.bdy) delete item.bdy;
   }
 
   function removeFree(chartType, id) {
@@ -826,7 +843,7 @@
     var free = freeStore();
     if (free) {
       free[chartType].forEach(function (f) {
-        if (f) { delete f.dx; delete f.dy; }
+        if (f) { delete f.dx; delete f.dy; delete f.bdy; }
       });
     }
   }
@@ -890,7 +907,7 @@
       '#' + OVERLAY_ID + ' .pubc-lhidden .pubc-ltxt{color:' + COLORS.muted + ';text-decoration:line-through}' +
       '#' + OVERLAY_ID + ' .pubc-lmsg{padding:.55rem .75rem;font-size:.82rem;color:' + COLORS.muted + ';font-style:italic}' +
       /* Rozwijany panel elementów siatki */
-      '#' + OVERLAY_ID + ' .pubc-opts{overflow:hidden;max-height:0;opacity:0;background:#ffffff;border-bottom:1px solid transparent;transform:translateY(-4px);transition:max-height .3s ease,opacity .22s ease,transform .3s ease,border-color .3s ease}' +
+      '#' + OVERLAY_ID + ' .pubc-opts{flex:0 0 auto;overflow:hidden;max-height:0;opacity:0;background:#ffffff;border-bottom:1px solid transparent;transform:translateY(-4px);transition:max-height .3s ease,opacity .22s ease,transform .3s ease,border-color .3s ease}' +
       '#' + OVERLAY_ID + ' .pubc-opts.pubc-opts-open{opacity:1;transform:translateY(0);border-bottom-color:' + COLORS.border + '}' +
       '@media (prefers-reduced-motion: reduce){#' + OVERLAY_ID + ' .pubc-opts{transition:none;transform:none}}' +
       '@media (max-width:640px){' +
@@ -1044,7 +1061,7 @@
 
   function flashSaveNote() {
     if (!ui) return;
-    ui.saveNote.textContent = '✓ Układ zapisany w danych karty';
+    ui.saveNote.textContent = '✓ zapisano';
     ui.saveNote.style.opacity = '1';
     clearTimeout(ui.saveNoteTimer);
     ui.saveNoteTimer = setTimeout(function () {
@@ -1369,6 +1386,18 @@
     return null;
   }
 
+  /* Poprzeczka klamry (pozioma spinka z ogonkiem) — chwytana do regulacji
+     wysokości: przeciąganie w pionie przesuwa ją nad albo pod punkty. */
+  function hitBracketBar(pos) {
+    var items = ui.items[ui.active] || [];
+    for (var i = items.length - 1; i >= 0; i--) {
+      var it = items[i];
+      if (!it.bracket) continue;
+      if (pos.x >= it.x1 - 25 && pos.x <= it.x2 + 25 && Math.abs(pos.y - it.yb) < 40) return it;
+    }
+    return null;
+  }
+
   function freeTarget(it) {
     return { free: true, key: it.key, id: it.id, comment: it.comment, fs: it.fs, arrow: it.arrow };
   }
@@ -1515,6 +1544,22 @@
           evt.preventDefault();
           return;
         }
+        var bar = hitBracketBar(pos);
+        if (bar) {
+          drag = {
+            barKey: bar.key,
+            freeId: bar.id,
+            startX: pos.x,
+            startY: pos.y,
+            baseBdy: bar.bdy || 0,
+            moved: false
+          };
+          ui.selectedKey = bar.key;
+          renderOverlay();
+          try { overlay.setPointerCapture(evt.pointerId); } catch (e) { /* ignore */ }
+          evt.preventDefault();
+          return;
+        }
         var pt = hitPoint(pos);
         if (pt) {
           drag = { pointToggle: pt, startX: pos.x, startY: pos.y, moved: false };
@@ -1533,6 +1578,20 @@
         var dx = pos.x - drag.startX;
         var dy = pos.y - drag.startY;
         if (Math.abs(dx) > 25 || Math.abs(dy) > 25) drag.moved = true;
+        if (drag.barKey && drag.moved) {
+          /* regulacja wysokości poprzeczki klamry (tylko pion);
+             magnes wraca do pozycji automatycznej, Alt go wyłącza */
+          var nbdy = drag.baseBdy + dy;
+          ui.snapGuides = null;
+          var barIt = itemForKey(drag.barKey);
+          if (!evt.altKey && Math.abs(nbdy) < SNAP_DISPLAY_PX / pos.scale) {
+            nbdy = 0;
+            if (barIt) ui.snapGuides = { v: null, h: barIt.ybAuto };
+          }
+          updateFree(chart, drag.freeId, { bdy: Math.round(nbdy) });
+          renderOverlay();
+          return;
+        }
         if (drag.key && drag.moved) {
           var ndx = drag.baseDx + dx;
           var ndy = drag.baseDy + dy;
@@ -1610,6 +1669,18 @@
               if (isLabel) ui.editor._fresh = { kind: 'label', id: newId };
             }
             flashSaveNote();
+          }
+          return;
+        }
+        if (d.barKey) {
+          if (d.moved) {
+            scheduleSave();
+            flashSaveNote();
+            renderOverlay();
+          } else {
+            /* klik w poprzeczkę bez przeciągnięcia = edycja klamry */
+            var itBar = itemForKey(d.barKey);
+            if (itBar) openEditor(freeTarget(itBar), { left: evt.clientX, top: evt.clientY + 14 });
           }
           return;
         }
@@ -1795,13 +1866,13 @@
     var zoomLabel = el('span', 'min-width:3.2rem;text-align:center;font-size:0.82rem;color:' + COLORS.text + ';font-variant-numeric:tabular-nums;', { 'aria-live': 'polite' }, '100%');
     var zoomIn = el('button', zoomCss, { type: 'button', class: 'pubc-neutral', 'aria-label': 'Przybli\u017c siatk\u0119' }, '+');
     var zoomFit = el('button', BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.8rem;font-weight:600;', { type: 'button', class: 'pubc-outline' }, 'Dopasuj');
-    var saveNote = el('span', 'font-size:0.76rem;color:#2e7d32;opacity:0.55;transition:opacity 0.2s;margin-left:auto;', null, '\u2713 Uk\u0142ad zapisywany automatycznie w danych karty');
+    var saveNote = el('span', 'font-size:0.76rem;color:#2e7d32;opacity:0.55;transition:opacity 0.2s;margin-left:auto;', { title: 'Uk\u0142ad zapisywany automatycznie w danych karty' }, '\u2713 zapisano');
     /* Narz\u0119dzia wolnych adnotacji: strza\u0142ka do dowolnego miejsca / etykieta */
     var toolSep = el('span', 'width:1px;align-self:stretch;background:' + COLORS.border + ';margin:0 0.3rem;');
     var toolCss = BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.8rem;font-weight:600;';
     var addArrowBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Strza\u0142ka');
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
-    var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105' }, '+ Klamra');
+    var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105; poprzeczk\u0119 mo\u017cna potem przeci\u0105gn\u0105\u0107 wy\u017cej lub ni\u017cej' }, '+ Klamra');
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn, saveNote);
 
@@ -1854,6 +1925,12 @@
       }
       elemBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
       elemBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    /* Po rozwinięciu zdejmij sztywny max-height — inaczej późniejsze
+       zawinięcie tekstu lub zmiana szerokości okna przycina dolne checkboxy. */
+    optsPanel.addEventListener('transitionend', function (ev) {
+      if (ev.propertyName !== 'max-height') return;
+      if (optsPanel.classList.contains('pubc-opts-open')) optsPanel.style.maxHeight = 'none';
     });
 
     /* Obszar tre\u015bci: przewija si\u0119 w pionie (siatka + pomoc + lista adnotacji),
