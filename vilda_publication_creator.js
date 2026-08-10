@@ -275,23 +275,31 @@
         ctx.closePath();
         ctx.fill();
       } else {
+        /* Grot „na orbicie”: wierzchołek zawsze w odległości TIP_GAP od punktu,
+           po stronie ramki (na promieniu punkt→środek ramki), skierowany w punkt.
+           Dzięki temu ramka nad punktem daje grot nad punktem, a ramka idealnie
+           w poziomie — poziomą strzałkę, bez łamania linii. */
         var cx = it.x + it.w / 2;
         var cy = it.y + it.h / 2;
-        var ang = Math.atan2(cy - (it.py + TIP_GAP), cx - it.px);
-        var tipX = it.px;
-        var tipYm = it.py + TIP_GAP;
+        var vx = cx - it.px;
+        var vy = cy - it.py;
+        var vlen = Math.sqrt(vx * vx + vy * vy);
+        var nx = vlen > 0.001 ? vx / vlen : 0;
+        var ny = vlen > 0.001 ? vy / vlen : 1;
+        var tipX = it.px + nx * TIP_GAP;
+        var tipYm = it.py + ny * TIP_GAP;
+        var baseX = tipX + nx * HEAD_LEN;
+        var baseY = tipYm + ny * HEAD_LEN;
         ctx.beginPath();
-        ctx.moveTo(tipX + Math.cos(ang) * HEAD_LEN, tipYm + Math.sin(ang) * HEAD_LEN);
+        ctx.moveTo(baseX, baseY);
         ctx.lineTo(cx, cy);
         ctx.stroke();
-        var bx = tipX + Math.cos(ang) * HEAD_LEN;
-        var by = tipYm + Math.sin(ang) * HEAD_LEN;
-        var nx = -Math.sin(ang) * HEAD_HALF;
-        var ny = Math.cos(ang) * HEAD_HALF;
+        var wxOff = -ny * HEAD_HALF;
+        var wyOff = nx * HEAD_HALF;
         ctx.beginPath();
         ctx.moveTo(tipX, tipYm);
-        ctx.lineTo(bx + nx, by + ny);
-        ctx.lineTo(bx - nx, by - ny);
+        ctx.lineTo(baseX + wxOff, baseY + wyOff);
+        ctx.lineTo(baseX - wxOff, baseY - wyOff);
         ctx.closePath();
         ctx.fill();
       }
@@ -909,6 +917,12 @@
   function openCreator() {
     if (typeof document === 'undefined') return;
     if (ui) { closeCreator(); return; }
+    /* Odśwież dane karty PRZED bramkami i budową podglądu — bez tego na
+       podglądzie mogłoby zabraknąć np. świeżo wpisanego wieku kostnego
+       (advancedGrowthData bywa nieprzeliczone, m.in. po odtworzeniu sesji).
+       Przeliczenie musi poprzedzać sprawdzenie publicationCharts, bo może
+       zaktualizować także stan trybu publikacji. */
+    recalc();
     if (w.VildaProAccess && typeof w.VildaProAccess.hasAccess === 'function' && !w.VildaProAccess.hasAccess()) {
       alert('Kreator adnotacji siatek do publikacji jest funkcj\u0105 PRO. Uaktywnij plan PRO, aby korzysta\u0107 z tej funkcji.');
       return;
