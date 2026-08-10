@@ -695,7 +695,38 @@
       '#' + OVERLAY_ID + ' .pubc-tab{background:#ffffff!important;color:' + COLORS.text + '!important;border:1px solid ' + COLORS.border + '!important;border-radius:999px!important}' +
       '#' + OVERLAY_ID + ' .pubc-tab[aria-selected="true"]{background:' + COLORS.primary + '!important;color:#ffffff!important;border-color:' + COLORS.primary + '!important}' +
       '#' + OVERLAY_ID + ' .pubc-tool[aria-pressed="true"]{background:' + COLORS.primary + '!important;color:#ffffff!important;border-color:' + COLORS.primary + '!important}' +
-      '#' + OVERLAY_ID + ' select{background:#ffffff!important;color:' + COLORS.text + '!important;border:1px solid ' + COLORS.border + '!important;border-radius:6px!important;width:auto!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}';
+      '#' + OVERLAY_ID + ' select{background:#ffffff!important;color:' + COLORS.text + '!important;border:1px solid ' + COLORS.border + '!important;border-radius:6px!important;width:auto!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}' +
+      /* Lista adnotacji pod siatką (wiersze zamiast chipów) */
+      '#' + OVERLAY_ID + ' .pubc-list{border:1px solid ' + COLORS.border + ';border-radius:10px;overflow:hidden;background:#ffffff;text-align:left}' +
+      '#' + OVERLAY_ID + ' .pubc-list-head{display:flex;align-items:center;gap:.6rem;padding:.45rem .75rem;background:' + COLORS.card + ';border-bottom:1px solid ' + COLORS.border + ';font-size:.78rem}' +
+      '#' + OVERLAY_ID + ' .pubc-cnt{font-weight:700;color:' + COLORS.primary + '}' +
+      '#' + OVERLAY_ID + ' .pubc-hint{margin-left:auto;color:' + COLORS.muted + ';font-size:.72rem}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow{display:grid;grid-template-columns:4.6rem 7.4rem 1fr auto;gap:.6rem;align-items:center;padding:.4rem .75rem;border-bottom:1px solid #e4ecec;font-size:.8rem;cursor:pointer;background:#ffffff}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow:last-child{border-bottom:none}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow:hover{background:rgba(0,131,141,.06)}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow.pubc-selected{background:rgba(0,131,141,.11);box-shadow:inset 3px 0 0 ' + COLORS.primary + '}' +
+      '#' + OVERLAY_ID + ' .pubc-lage{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;color:' + COLORS.text + '}' +
+      '#' + OVERLAY_ID + ' .pubc-ltype{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;color:' + COLORS.muted + ';white-space:nowrap}' +
+      '#' + OVERLAY_ID + ' .pubc-lic{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#fff;background:' + COLORS.primary + ';flex:0 0 auto}' +
+      '#' + OVERLAY_ID + ' .pubc-lic-free{background:' + COLORS.secondary + '}' +
+      '#' + OVERLAY_ID + ' .pubc-lic-label{background:#607d8b}' +
+      '#' + OVERLAY_ID + ' .pubc-ltxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + COLORS.text + '}' +
+      '#' + OVERLAY_ID + ' .pubc-lempty{color:' + COLORS.muted + ';font-style:italic}' +
+      '#' + OVERLAY_ID + ' .pubc-lbadge{border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:.62rem;font-weight:700;white-space:nowrap;margin-left:6px}' +
+      '#' + OVERLAY_ID + ' .pubc-lacts{display:inline-flex;gap:2px}' +
+      '#' + OVERLAY_ID + ' .pubc-lacts button{border:none!important;background:transparent!important;color:' + COLORS.muted + '!important;font-size:.85rem;padding:2px 6px!important;border-radius:6px!important;line-height:1;cursor:pointer}' +
+      '#' + OVERLAY_ID + ' .pubc-lacts button:hover{background:rgba(0,0,0,.06)!important;color:' + COLORS.text + '!important}' +
+      '#' + OVERLAY_ID + ' .pubc-lsub{padding:.3rem .75rem;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:' + COLORS.muted + ';background:#fafcfc;border-bottom:1px solid #e4ecec}' +
+      '#' + OVERLAY_ID + ' .pubc-lhidden{color:' + COLORS.muted + '}' +
+      '#' + OVERLAY_ID + ' .pubc-lhidden .pubc-ltxt{color:' + COLORS.muted + ';text-decoration:line-through}' +
+      '#' + OVERLAY_ID + ' .pubc-lmsg{padding:.55rem .75rem;font-size:.82rem;color:' + COLORS.muted + ';font-style:italic}' +
+      '@media (max-width:640px){' +
+      '#' + OVERLAY_ID + ' .pubc-lrow{grid-template-columns:4.2rem 1fr auto;grid-template-areas:"age txt acts" "age type acts"}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow .pubc-lage{grid-area:age}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow .pubc-ltype{grid-area:type}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow .pubc-ltxt{grid-area:txt}' +
+      '#' + OVERLAY_ID + ' .pubc-lrow .pubc-lacts{grid-area:acts}' +
+      '}';
     var styleEl = document.createElement('style');
     styleEl.id = STYLE_ID;
     styleEl.textContent = css;
@@ -904,43 +935,194 @@
     renderAnnList();
   }
 
+  /* ── Lista adnotacji pod siatką (wiersze wg wieku, akcje, sekcja ukrytych) ── */
+
+  function annAgeText(ageMonths) {
+    return (ageMonths / 12).toFixed(1).replace('.', ',') + ' r.ż.';
+  }
+
+  /* Podświetla adnotację na siatce i przewija kontener tak, by była widoczna.
+     Zwraca współrzędne kanwy środka adnotacji (do pozycjonowania edytora). */
+  function focusItem(key) {
+    ui.selectedKey = key;
+    renderOverlay();
+    var overlay = ui.overlays[ui.active];
+    var scroll = ui.scrolls[ui.active];
+    var rect = overlay.getBoundingClientRect();
+    if (!rect.width) return null;
+    var it = itemForKey(key);
+    var cx;
+    var cy;
+    if (it) {
+      cx = it.w ? it.x + it.w / 2 : it.x;
+      cy = it.h ? it.y + it.h / 2 : it.y;
+    } else {
+      /* adnotacja ukryta na tej siatce — wycentruj na punkcie pomiaru */
+      var geomA = activeGeom();
+      var pts = ui.points[ui.active] || [];
+      for (var i = 0; i < pts.length; i++) {
+        if (pts[i].key === key && geomA) {
+          cx = geomA.plotX + (pts[i].ageMonths - 12) * (geomA.plotW / 204);
+          cy = geomA.plotY + geomA.plotH - (pts[i].value - geomA.minY) * (geomA.plotH / (geomA.maxY - geomA.minY));
+          break;
+        }
+      }
+    }
+    if (cx === undefined) return null;
+    scroll.scrollLeft = cx * (rect.width / CANVAS_W) - scroll.clientWidth / 2;
+    scroll.scrollTop = cy * (rect.height / CANVAS_H) - scroll.clientHeight / 2;
+    return { cx: cx, cy: cy };
+  }
+
+  function editFromList(key) {
+    var pos = focusItem(key);
+    var it = itemForKey(key);
+    var overlay = ui.overlays[ui.active];
+    var rect = overlay.getBoundingClientRect();
+    var sx = rect.width / CANVAS_W;
+    var sy = rect.height / CANVAS_H;
+    var left;
+    var top;
+    if (it) {
+      left = rect.left + it.x * sx;
+      top = rect.top + (it.y + it.h) * sy + 10;
+    } else if (pos) {
+      left = rect.left + pos.cx * sx;
+      top = rect.top + pos.cy * sy + 10;
+    } else return;
+    if (it && it.kind === 'free') {
+      openEditor(freeTarget(it), { left: left, top: top });
+    } else {
+      var p = pointForKey(key);
+      if (p) openEditor(p, { left: left, top: top });
+    }
+  }
+
+  function deleteAnnotation(target) {
+    if (target.kind === 'free') {
+      removeFree(ui.active, target.id);
+    } else {
+      var point = pointForKey(target.key);
+      if (point) setArrowEnabled(point, false);
+      clearAnnotationOverrides(target.key);
+    }
+    scheduleSave();
+    closeEditor();
+    ui.selectedKey = null;
+    renderOverlay();
+    flashSaveNote();
+  }
+
+  function confirmDeleteAnnotation(target) {
+    var name = target.comment ? '„' + target.comment + '”' : 'tę adnotację';
+    var q = target.kind === 'free'
+      ? 'Usunąć ' + name + ' z tej siatki?'
+      : 'Usunąć ' + name + ' z obu siatek?';
+    var ok = true;
+    try { ok = window.confirm(q); } catch (e) { /* ignore */ }
+    if (ok) deleteAnnotation(target);
+  }
+
   function renderAnnList() {
     if (!ui) return;
     var list = ui.listEl;
     list.textContent = '';
-    var items = ui.items[ui.active] || [];
+    var items = (ui.items[ui.active] || []).slice().sort(function (a, b) { return a.ageMonths - b.ageMonths; });
     var hiddenPts = (ui.points[ui.active] || []).filter(function (p) { return p.hiddenHere; });
+
+    function actBtn(symbol, title) {
+      return el('button', null, { type: 'button', title: title, 'aria-label': title }, symbol);
+    }
+
+    var head = el('div', null, { class: 'pubc-list-head' });
+    append(head, el('span', null, { class: 'pubc-cnt' }, 'Adnotacje na tej siatce: ' + (items.length + hiddenPts.length)));
+    append(head, el('span', null, { class: 'pubc-hint' }, 'kliknij wiersz, aby podświetlić na siatce'));
+    append(list, head);
+
     if (!items.length && !hiddenPts.length) {
-      append(list, el('span', 'font-size:0.82rem;color:' + COLORS.muted + ';font-style:italic;', null,
-        'Brak adnotacji — kliknij punkt pomiaru na siatce, aby dodać strzałkę z komentarzem.'));
+      append(list, el('div', null, { class: 'pubc-lmsg' },
+        'Brak adnotacji — kliknij punkt pomiaru na siatce albo użyj „+ Strzałka” / „+ Etykieta”.'));
       return;
     }
+
     items.forEach(function (it) {
-      var ageTxt = (it.ageMonths / 12).toFixed(1).replace('.', ',') + ' r.ż.';
-      var chip = el('span', 'display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid ' + COLORS.border +
-        ';border-radius:999px;padding:3px 10px;font-size:0.78rem;color:' + COLORS.text + ';max-width:100%;');
-      append(chip, el('span', 'color:' + COLORS.muted + ';font-variant-numeric:tabular-nums;', null, ageTxt));
-      append(chip, el('span', 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;', null,
-        it.comment || (it.kind === 'free' && it.arrow ? '(sama strzałka)' : '(bez komentarza)')));
-      if (it.kind === 'free') {
-        append(chip, el('span', 'color:' + COLORS.muted + ';border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:0.66rem;font-weight:700;white-space:nowrap;', null, it.arrow ? 'wolna strzałka' : 'etykieta'));
+      var row = el('div', null, { class: 'pubc-lrow' + (ui.selectedKey === it.key ? ' pubc-selected' : '') });
+      append(row, el('span', null, { class: 'pubc-lage' }, annAgeText(it.ageMonths)));
+      var type = el('span', null, { class: 'pubc-ltype' });
+      var icCls = it.kind === 'free' ? (it.arrow ? ' pubc-lic-free' : ' pubc-lic-label') : '';
+      var icTxt = it.kind === 'free' ? (it.arrow ? '↗' : 'T') : '●';
+      append(type, el('span', null, { class: 'pubc-lic' + icCls }, icTxt),
+        document.createTextNode(it.kind === 'free' ? (it.arrow ? 'wolna strzałka' : 'etykieta') : 'pomiar'));
+      append(row, type);
+      var txt = el('span', null, { class: 'pubc-ltxt' });
+      if (it.comment) txt.appendChild(document.createTextNode(it.comment));
+      else append(txt, el('span', null, { class: 'pubc-lempty' }, it.kind === 'free' && it.arrow ? 'sama strzałka (bez treści)' : '(bez komentarza)'));
+      if (it.moved) append(txt, el('span', 'color:' + COLORS.accent + ';', { class: 'pubc-lbadge' }, 'przesunięta'));
+      if (it.ownText) append(txt, el('span', 'color:' + COLORS.primary + ';', { class: 'pubc-lbadge' }, 'treść tej siatki'));
+      if (it.fs !== FONT_PX) append(txt, el('span', 'color:' + COLORS.primary + ';', { class: 'pubc-lbadge' }, it.fs + ' px'));
+      append(row, txt);
+      var acts = el('span', null, { class: 'pubc-lacts' });
+      var editBtn = actBtn('✎', 'Edytuj');
+      editBtn.addEventListener('click', function (evt) {
+        evt.stopPropagation();
+        editFromList(it.key);
+      });
+      append(acts, editBtn);
+      if (it.kind !== 'free') {
+        var hideBtn = actBtn('👁', 'Ukryj na tej siatce');
+        hideBtn.addEventListener('click', function (evt) {
+          evt.stopPropagation();
+          setChartHidden(ui.active, it.key, true);
+          scheduleSave();
+          closeEditor();
+          renderOverlay();
+          flashSaveNote();
+        });
+        append(acts, hideBtn);
       }
-      if (it.moved) {
-        append(chip, el('span', 'color:' + COLORS.accent + ';border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:0.66rem;font-weight:700;white-space:nowrap;', null, 'przesunięta ręcznie'));
-      }
-      if (it.ownText) {
-        append(chip, el('span', 'color:' + COLORS.primary + ';border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:0.66rem;font-weight:700;white-space:nowrap;', null, 'treść tej siatki'));
-      }
-      append(list, chip);
+      var delBtn = actBtn('🗑', 'Usuń');
+      delBtn.addEventListener('click', function (evt) {
+        evt.stopPropagation();
+        confirmDeleteAnnotation(it);
+      });
+      append(acts, delBtn);
+      append(row, acts);
+      row.addEventListener('click', function () { focusItem(it.key); });
+      append(list, row);
     });
-    hiddenPts.forEach(function (p) {
-      var ageTxt = (p.ageMonths / 12).toFixed(1).replace('.', ',') + ' r.ż.';
-      var chip = el('span', 'display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px dashed ' + COLORS.border +
-        ';border-radius:999px;padding:3px 10px;font-size:0.78rem;color:' + COLORS.muted + ';max-width:100%;');
-      append(chip, el('span', 'font-variant-numeric:tabular-nums;', null, ageTxt));
-      append(chip, el('span', null, null, 'ukryta na tej siatce'));
-      append(list, chip);
-    });
+
+    if (hiddenPts.length) {
+      append(list, el('div', null, { class: 'pubc-lsub' }, 'Ukryte na tej siatce'));
+      hiddenPts.forEach(function (p) {
+        var row = el('div', null, { class: 'pubc-lrow pubc-lhidden' });
+        append(row, el('span', null, { class: 'pubc-lage' }, annAgeText(p.ageMonths)));
+        var type = el('span', null, { class: 'pubc-ltype' });
+        append(type, el('span', null, { class: 'pubc-lic' }, '●'), document.createTextNode('pomiar'));
+        append(row, type);
+        var txt = el('span', null, { class: 'pubc-ltxt' });
+        txt.appendChild(document.createTextNode(p.comment || '(bez komentarza)'));
+        append(row, txt);
+        var acts = el('span', null, { class: 'pubc-lacts' });
+        var showBtn = actBtn('👁', 'Pokaż na tej siatce');
+        showBtn.addEventListener('click', function (evt) {
+          evt.stopPropagation();
+          setChartHidden(ui.active, p.key, false);
+          scheduleSave();
+          renderOverlay();
+          flashSaveNote();
+        });
+        append(acts, showBtn);
+        var delBtn = actBtn('🗑', 'Usuń');
+        delBtn.addEventListener('click', function (evt) {
+          evt.stopPropagation();
+          confirmDeleteAnnotation({ kind: p.kind, key: p.key, comment: p.comment });
+        });
+        append(acts, delBtn);
+        append(row, acts);
+        row.addEventListener('click', function () { focusItem(p.key); });
+        append(list, row);
+      });
+    }
   }
 
   function overlayCoords(evt) {
@@ -1233,19 +1415,13 @@
     });
     ed.querySelector('.pubc-del').addEventListener('click', function () {
       var point = ed._point;
-      closeEditor();
-      if (point) {
-        if (point.free) {
-          removeFree(ui.active, point.id);
-        } else {
-          setArrowEnabled(point, false);
-          clearAnnotationOverrides(point.key);
-        }
-        scheduleSave();
-      }
-      ui.selectedKey = null;
-      renderOverlay();
-      flashSaveNote();
+      if (!point) { closeEditor(); return; }
+      confirmDeleteAnnotation({
+        kind: point.free ? 'free' : 'm',
+        id: point.id,
+        key: point.key,
+        comment: point.comment
+      });
     });
   }
 
@@ -1368,7 +1544,7 @@
       append(help, s);
     });
     body.appendChild(help);
-    var listEl = el('div', 'display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:center;margin-top:0.5rem;');
+    var listEl = el('div', 'margin-top:0.55rem;', { class: 'pubc-list' });
     body.appendChild(listEl);
 
     /* Edytor komentarza (nak\u0142adka pozycjonowana przy ramce, przewija si\u0119 z siatk\u0105).
