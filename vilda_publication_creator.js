@@ -1304,7 +1304,15 @@
           return;
         }
         var pt = hitPoint(pos);
-        if (pt) drag = { pointToggle: pt, startX: pos.x, startY: pos.y, moved: false };
+        if (pt) {
+          drag = { pointToggle: pt, startX: pos.x, startY: pos.y, moved: false };
+          return;
+        }
+        /* klik w puste pole siatki gasi podświetlenie zaznaczonej ramki */
+        if (ui.selectedKey) {
+          ui.selectedKey = null;
+          renderOverlay();
+        }
       });
       overlay.addEventListener('pointermove', function (evt) {
         if (!drag || ui.active !== chart) return;
