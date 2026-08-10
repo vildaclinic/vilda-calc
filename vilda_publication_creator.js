@@ -844,6 +844,7 @@
 
   function closeCreator() {
     if (!ui) return;
+    try { dismissEditor(); } catch (e) { /* ignore */ }
     try { document.removeEventListener('keydown', ui.onKeyDown); } catch (e) { /* ignore */ }
     try { ui.panel.remove(); } catch (e) { /* ignore */ }
     unlockBodyScroll();
@@ -1194,13 +1195,41 @@
     if (ui && ui.editor) {
       ui.editor.style.display = 'none';
       ui.editor._point = null;
+      ui.editor._fresh = null;
     }
+  }
+
+  /*
+   * Zamknięcie edytora BEZ zapisu. Jeżeli edytor dotyczył świeżo utworzonej
+   * adnotacji (klik w punkt pomiaru albo nowa etykieta), porzucenie edycji
+   * wycofuje jej utworzenie — na siatce nie zostaje „goła” strzałka.
+   * (Wolna strzałka bez treści jest kompletna sama w sobie, więc zostaje.)
+   */
+  function dismissEditor() {
+    if (ui && ui.editor && ui.editor._fresh) {
+      var f = ui.editor._fresh;
+      ui.editor._fresh = null;
+      if (f.kind === 'm') {
+        var p = pointForKey(f.key);
+        if (p && p.enabled) setArrowEnabled(p, false);
+        clearAnnotationOverrides(f.key);
+      } else if (f.kind === 'label') {
+        removeFree(ui.active, f.id);
+      }
+      scheduleSave();
+      closeEditor();
+      ui.selectedKey = null;
+      renderOverlay();
+      return;
+    }
+    closeEditor();
   }
 
   function openEditor(point, displayPos) {
     if (!ui) return;
     var ed = ui.editor;
     ed._point = point;
+    ed._fresh = null;
     ed.querySelector('textarea').value = point.comment || '';
     /* Wolne adnotacje nie mają rozdzielania treści ani ukrywania per siatka
        (żyją tylko na jednej siatce) */
@@ -1240,13 +1269,24 @@
         if (ui.active !== chart) return;
         var pos = overlayCoords(evt);
         if (!pos) return;
-        closeEditor();
         if (ui.placeMode) {
+          dismissEditor();
           /* tryb wstawiania wolnej adnotacji: klik = miejsce kotwicy */
           drag = { place: pos, startX: pos.x, startY: pos.y, moved: false };
           return;
         }
         var box = hitBox(pos);
+        var freshRef = ui.editor ? ui.editor._fresh : null;
+        if (box && freshRef && ((freshRef.kind === 'm' && box.key === freshRef.key) ||
+            (freshRef.kind === 'label' && box.kind === 'free' && box.id === freshRef.id))) {
+          /* interakcja ze świeżą adnotacją (np. przeciągnięcie jej ramki)
+             to nie rezygnacja — zamknij edytor, adnotacja zostaje */
+          closeEditor();
+        } else {
+          dismissEditor();
+          /* wycofanie świeżej adnotacji mogło zmienić układ — przelicz trafienie */
+          box = hitBox(pos);
+        }
         if (box) {
           drag = {
             key: box.key,
@@ -1322,7 +1362,11 @@
             ui.selectedKey = 'f' + newId;
             renderOverlay();
             var itNew = itemForKey('f' + newId);
-            if (itNew) openEditor(freeTarget(itNew), { left: evt.clientX, top: evt.clientY + 14 });
+            if (itNew) {
+              openEditor(freeTarget(itNew), { left: evt.clientX, top: evt.clientY + 14 });
+              /* świeża etykieta bez zapisu = rezygnacja (sama strzałka zostaje) */
+              if (isLabel) ui.editor._fresh = { kind: 'label', id: newId };
+            }
             flashSaveNote();
           }
           return;
@@ -1349,14 +1393,20 @@
              rozdzielić treść lub ukryć adnotację na aktywnej siatce.
              Usunięcie — wyłącznie przyciskiem „Usuń” w edytorze. */
           var p = d.pointToggle;
+          var created = false;
           if (!p.enabled) {
             setArrowEnabled(p, true);
+            created = true;
             flashSaveNote();
           }
           ui.selectedKey = p.key;
           renderOverlay();
           var fresh = pointForKey(p.key);
-          if (fresh) openEditor(fresh, { left: evt.clientX, top: evt.clientY + 14 });
+          if (fresh) {
+            openEditor(fresh, { left: evt.clientX, top: evt.clientY + 14 });
+            /* świeżo utworzona adnotacja: porzucenie edycji ją wycofa */
+            if (created) ui.editor._fresh = { kind: 'm', key: p.key };
+          }
         }
       });
       overlay.addEventListener('pointercancel', function () {
@@ -1368,6 +1418,7 @@
     var ed = ui.editor;
     ed.querySelector('.pubc-save').addEventListener('click', function () {
       var point = ed._point;
+      ed._fresh = null;
       if (point) {
         var text = ed.querySelector('textarea').value.trim();
         var fsVal = Number(ui.editorParts.fsSelect.value) || FONT_PX;
@@ -1394,7 +1445,7 @@
       flashSaveNote();
     });
     ed.querySelector('.pubc-cancel').addEventListener('click', function () {
-      closeEditor();
+      dismissEditor();
       ui.selectedKey = null;
       renderOverlay();
     });
@@ -1404,6 +1455,7 @@
     });
     ed.querySelector('.pubc-hide').addEventListener('click', function () {
       var point = ed._point;
+      ed._fresh = null;
       closeEditor();
       if (point) {
         setChartHidden(ui.active, point.key, !point.hiddenHere);
@@ -1427,11 +1479,11 @@
 
   function switchTab(chart) {
     if (!ui) return;
+    dismissEditor();
     ui.active = chart;
     ui.selectedKey = null;
-    closeEditor();
     ['height', 'weight'].forEach(function (c) {
-      ui.wraps[c].style.display = c === chart ? 'flex' : 'none';
+      ui.wraps[c].style.display = c === chart ? '' : 'none';
       /* Kolory aktywnej zakładki pochodzą z wstrzykniętego arkusza (.pubc-tab[aria-selected]) */
       ui.tabs[c].setAttribute('aria-selected', c === chart ? 'true' : 'false');
     });
@@ -1509,17 +1561,18 @@
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, saveNote);
 
-    /* Obszar wykres\u00f3w: wype\u0142nia ca\u0142\u0105 pozosta\u0142\u0105 wysoko\u015b\u0107 ekranu, przewijanie
-       w obu osiach wewn\u0105trz (dla powi\u0119kszenia) */
-    var body = el('div', 'flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:0.55rem 0.9rem;');
+    /* Obszar tre\u015bci: przewija si\u0119 w pionie (siatka + pomoc + lista adnotacji),
+       a sama siatka ma sta\u0142\u0105 wysoko\u015b\u0107 z w\u0142asnym przewijaniem w obu osiach \u2014
+       dzi\u0119ki temu lista pod siatk\u0105 jest zawsze osi\u0105galna. */
+    var body = el('div', 'flex:1 1 auto;min-height:0;overflow-y:auto;padding:0.55rem 0.9rem;');
     var wraps = {};
     var inners = {};
     var scrolls = {};
     var bases = {};
     var overlays = {};
     ['height', 'weight'].forEach(function (chart) {
-      var wrap = el('div', 'flex:1 1 auto;min-height:0;display:flex;flex-direction:column;' + (chart === 'weight' ? 'display:none;' : ''));
-      var scroll = el('div', 'flex:1 1 auto;min-height:0;overflow:auto;border:1px solid ' + COLORS.border + ';border-radius:8px;background:#eef3f3;padding:8px;box-sizing:border-box;');
+      var wrap = el('div', chart === 'weight' ? 'display:none;' : '');
+      var scroll = el('div', 'height:min(62vh, 820px);overflow:auto;border:1px solid ' + COLORS.border + ';border-radius:8px;background:#eef3f3;padding:8px;box-sizing:border-box;');
       var inner = el('div', 'position:relative;width:fit-content;margin:0 auto;');
       var base = canvases[chart];
       base.style.cssText = 'display:block;width:900px;height:auto;background:#fff;';
