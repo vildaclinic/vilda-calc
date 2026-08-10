@@ -592,6 +592,56 @@
     });
   }
 
+  /* ── Przełączniki elementów siatki per wydruk (pubOptions) ──
+     Sterują wyłącznie siatkami PUBLIKACYJNYMI; zwykłe (kolorowe) siatki dalej
+     słuchają globalnych ustawień aplikacji. Wartości startowe trzech opcji
+     widoczności są przepisywane z globalnych flag Ustawień przy pierwszym
+     zapisie opcji. Ramka podsumowania domyślnie wyłączona (jak dotychczas
+     w trybie publikacji). */
+
+  var PUB_OPTION_DEFS = [
+    { key: 'patientName', label: 'Wiersz „Patient” (imię i nazwisko)', group: 'header' },
+    { key: 'parentsHeader', label: 'Wzrosty rodziców i MPH w nagłówku', group: 'header' },
+    { key: 'mph', label: 'Romb MPH na siatce', group: 'chart' },
+    { key: 'boneAge', label: 'Znaczniki wieku kostnego', group: 'chart' },
+    { key: 'bandReference', label: 'Linie odniesienia kanału centylowego', group: 'chart' },
+    { key: 'heightLabel', label: 'Etykieta przy ostatnim pomiarze wzrostu', group: 'chart' },
+    { key: 'weightLabel', label: 'Etykieta przy ostatnim pomiarze wagi', group: 'chart' },
+    { key: 'summary', label: 'Ramka podsumowania', group: 'chart' }
+  ];
+
+  function defaultOptionValue(name) {
+    if (name === 'summary') return false;
+    /* surowe flagi globalne (nie helpery — te w trybie publikacji pytają
+       z powrotem kreator, co dałoby rekurencję) */
+    if (name === 'bandReference') return !(w.centileShowBandReference === false);
+    if (name === 'heightLabel') return !(w.centileShowHeightValueLabel === false);
+    if (name === 'weightLabel') return !(w.centileShowWeightValueLabel === false);
+    return true;
+  }
+
+  /*
+   * Publiczne: czy element siatki publikacyjnej jest włączony w tym wydruku.
+   * Wołane przez generator (inline_index_07.js) i helpery widoczności rdzenia
+   * (inline_index_03.js) w trybie publikacji.
+   */
+  function isElementEnabled(name) {
+    var adv = w.advancedGrowthData;
+    var o = adv && adv.pubOptions;
+    if (o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, name)) return o[name] !== false;
+    return defaultOptionValue(name);
+  }
+
+  function setOption(name, value) {
+    var adv = w.advancedGrowthData;
+    if (!adv || typeof adv !== 'object') return;
+    if (!adv.pubOptions || typeof adv.pubOptions !== 'object') {
+      adv.pubOptions = {};
+      PUB_OPTION_DEFS.forEach(function (d) { adv.pubOptions[d.key] = defaultOptionValue(d.key); });
+    }
+    adv.pubOptions[name] = !!value;
+  }
+
   /* ── Magazyn adnotacji wolnych (pubFree) ── */
 
   function freeStore() {
@@ -840,6 +890,24 @@
     }
     if (!pair || pair.length < 2) return null;
     return { height: pair[0], weight: pair[1] };
+  }
+
+  /*
+   * Przebudowa kanw bazowych podglądu (po zmianie przełączników elementów
+   * siatki) z zachowaniem powiększenia i adnotacji.
+   */
+  function refreshPreview() {
+    if (!ui) return;
+    var canvases = buildPreviewCanvases();
+    if (!canvases) return;
+    ['height', 'weight'].forEach(function (chart) {
+      var old = ui.bases[chart];
+      canvases[chart].style.cssText = old.style.cssText;
+      old.parentNode.replaceChild(canvases[chart], old);
+      ui.bases[chart] = canvases[chart];
+    });
+    applyZoom();
+    renderOverlay();
   }
 
   function closeCreator() {
@@ -1304,7 +1372,15 @@
           return;
         }
         var pt = hitPoint(pos);
-        if (pt) drag = { pointToggle: pt, startX: pos.x, startY: pos.y, moved: false };
+        if (pt) {
+          drag = { pointToggle: pt, startX: pos.x, startY: pos.y, moved: false };
+          return;
+        }
+        /* klik w puste pole siatki gasi podświetlenie zaznaczonej ramki */
+        if (ui.selectedKey) {
+          ui.selectedKey = null;
+          renderOverlay();
+        }
       });
       overlay.addEventListener('pointermove', function (evt) {
         if (!drag || ui.active !== chart) return;
@@ -1559,7 +1635,48 @@
     var toolCss = BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.8rem;font-weight:600;';
     var addArrowBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Strza\u0142ka');
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
-    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, saveNote);
+    var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
+    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, elemBtn, saveNote);
+
+    /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) */
+    var optsPanel = el('div', 'display:none;padding:0.5rem 0.9rem 0.6rem;border-bottom:1px solid ' + COLORS.border + ';background:#ffffff;');
+    var optsWrap = el('div', 'display:flex;flex-wrap:wrap;gap:0.5rem 2rem;');
+    ['header', 'chart'].forEach(function (group) {
+      var col = el('div', 'display:flex;flex-direction:column;gap:0.2rem;min-width:16rem;');
+      append(col, el('span', 'font-size:0.68rem;letter-spacing:0.06em;text-transform:uppercase;color:' + COLORS.muted + ';margin-bottom:2px;', null,
+        group === 'header' ? 'Nag\u0142\u00f3wek' : 'Elementy siatki'));
+      PUB_OPTION_DEFS.forEach(function (def) {
+        if (def.group !== group) return;
+        var lab = el('label', 'display:flex;align-items:center;gap:7px;cursor:pointer;margin:0;font-size:0.8rem;color:' + COLORS.text + ';width:auto;');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'pubc-optcb';
+        cb.setAttribute('data-opt', def.key);
+        cb.style.cssText = 'width:auto;margin:0;padding:0;accent-color:' + COLORS.primary + ';';
+        cb.addEventListener('change', function () {
+          setOption(def.key, cb.checked);
+          scheduleSave();
+          flashSaveNote();
+          refreshPreview();
+        });
+        append(lab, cb, document.createTextNode(def.label));
+        append(col, lab);
+      });
+      append(optsWrap, col);
+    });
+    append(optsPanel, optsWrap);
+
+    function syncOptionCheckboxes() {
+      optsPanel.querySelectorAll('.pubc-optcb').forEach(function (cb) {
+        cb.checked = isElementEnabled(cb.getAttribute('data-opt'));
+      });
+    }
+    elemBtn.addEventListener('click', function () {
+      var open = optsPanel.style.display === 'none';
+      if (open) syncOptionCheckboxes();
+      optsPanel.style.display = open ? '' : 'none';
+      elemBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
+    });
 
     /* Obszar tre\u015bci: przewija si\u0119 w pionie (siatka + pomoc + lista adnotacji),
        a sama siatka ma sta\u0142\u0105 wysoko\u015b\u0107 z w\u0142asnym przewijaniem w obu osiach \u2014
@@ -1653,7 +1770,7 @@
     var genBtn = el('button', BTN_BASE + 'padding:0.55rem 0.9rem;font-size:0.88rem;font-weight:700;', { type: 'button', class: 'pubc-primary' }, 'Generuj siatki (PDF)');
     append(foot, resetBtn, genBtn);
 
-    append(panel, head, toolbar, body, foot);
+    append(panel, head, toolbar, optsPanel, body, foot);
     document.body.appendChild(panel);
     lockBodyScroll();
 
@@ -1745,6 +1862,8 @@
     _removeFree: removeFree,
     _collectPoints: collectPoints,
     _computeLayout: computeLayout,
+    isElementEnabled: isElementEnabled,
+    _setOption: setOption,
     _drawItems: drawItems,
     _applySnap: applySnap,
     _updateOverride: updateOverride,
