@@ -14,16 +14,22 @@
  *     edycję treści w miejscu oraz dodawanie/usuwanie strzałek kliknięciem
  *     w punkt pomiaru — dla siatki wzrostu i masy ciała.
  *
- * Układ adnotacji (ręczne przesunięcia ramek) jest zapisywany w danych karty:
+ * Układ adnotacji i nadpisania per siatka są zapisywane w danych karty:
  *     advancedGrowthData.pubLayout = {
- *       height: { "a<wiekMies>": {dx,dy}, cur: {dx,dy} },
+ *       height: { "a<wiekMies>": {dx,dy,en,txt}, cur: {...} },
  *       weight: { ... }
  *     }
- * Przesunięcia wyrażone są w pikselach kanwy eksportu (2480×3508), więc są
- * niezależne od skali podglądu. Klucz "a<wiekMies>" odnosi się do pomiaru
- * o danym wieku (zaokrąglonym do pełnych miesięcy), "cur" — do bieżącego pomiaru.
- * Obiekt advancedGrowthData jest klonowany w snapshotach persystencji, więc
- * układ wędruje do zapisu pacjenta razem z resztą danych karty.
+ * Pola wpisu (wszystkie opcjonalne):
+ *   dx,dy — ręczne przesunięcie ramki w pikselach kanwy eksportu (2480×3508),
+ *           niezależne od skali podglądu;
+ *   en:0  — adnotacja UKRYTA na tej siatce (na drugiej pozostaje widoczna);
+ *   txt   — treść komentarza TYLKO dla tej siatki (nadpisuje wspólną).
+ * Wspólne pola pomiaru (arrowEnabled/arrowComment) pozostają domyślne dla OBU
+ * siatek — bez nadpisań adnotacje są identyczne (jak dotychczas).
+ * Klucz "a<wiekMies>" odnosi się do pomiaru o danym wieku (zaokrąglonym do
+ * pełnych miesięcy), "cur" — do bieżącego pomiaru. Obiekt advancedGrowthData
+ * jest klonowany w snapshotach persystencji, więc układ wędruje do zapisu
+ * pacjenta razem z resztą danych karty.
  *
  * Automatyczne rozmieszczenie ramek (punkt startowy przed ręcznym przesunięciem)
  * odtwarza DOKŁADNIE dotychczasowy algorytm generatora: łamanie komentarza co
@@ -87,39 +93,48 @@
     return lines;
   }
 
+  /* Nadpisanie per siatka dla danego klucza adnotacji (albo null). */
+  function chartOverride(adv, chartType, key) {
+    var ov = adv && adv.pubLayout && adv.pubLayout[chartType] && adv.pubLayout[chartType][key];
+    return ov && typeof ov === 'object' ? ov : null;
+  }
+
   /*
-   * Zbiera włączone strzałki dla danej siatki (height/weight) z danych karty —
-   * identyczne kryteria jak dotychczasowy blok w generatorze.
+   * Zbiera strzałki widoczne na danej siatce (height/weight) z danych karty.
+   * Baza = wspólne pola pomiaru (identyczne kryteria jak dotychczasowy blok
+   * w generatorze); nadpisania per siatka: en:0 ukrywa adnotację na tej
+   * siatce, txt podmienia treść tylko na tej siatce.
    */
   function collectArrows(adv, chartType) {
     var out = [];
     if (!adv || typeof adv !== 'object') return out;
+    function push(kind, ageMonths, value, sharedComment) {
+      var key = arrowKey(kind, ageMonths);
+      var ov = chartOverride(adv, chartType, key);
+      if (ov && ov.en === 0) return;
+      out.push({
+        kind: kind,
+        key: key,
+        ageMonths: ageMonths,
+        value: value,
+        comment: ov && typeof ov.txt === 'string' ? ov.txt : sharedComment,
+        ownText: !!(ov && typeof ov.txt === 'string')
+      });
+    }
     if (Array.isArray(adv.measurements)) {
       adv.measurements.forEach(function (m) {
         if (!m || !m.arrowEnabled) return;
         var a = toNum(m.ageMonths);
         var v = chartType === 'height' ? toNum(m.height) : toNum(m.weight);
         if (!Number.isFinite(a) || !Number.isFinite(v)) return;
-        out.push({
-          kind: 'm',
-          key: arrowKey('m', a),
-          ageMonths: a,
-          value: v,
-          comment: typeof m.arrowComment === 'string' ? m.arrowComment : ''
-        });
+        push('m', a, v, typeof m.arrowComment === 'string' ? m.arrowComment : '');
       });
     }
     if (adv.currentArrowEnabled) {
       var ca = toNum(adv.currentAgeMonths);
       var cv = chartType === 'height' ? toNum(adv.currentHeight) : toNum(adv.currentWeight);
       if (Number.isFinite(ca) && Number.isFinite(cv)) {
-        out.push({
-          kind: 'cur',
-          key: 'cur',
-          ageMonths: ca,
-          value: cv,
-          comment: typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : ''
-        });
+        push('cur', ca, cv, typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '');
       }
     }
     out.sort(function (x, y) { return x.ageMonths - y.ageMonths; });
@@ -133,33 +148,34 @@
   function collectPoints(adv, chartType) {
     var pts = [];
     if (!adv || typeof adv !== 'object') return pts;
+    function pushPoint(kind, ageMonths, value, enabled, sharedComment) {
+      var key = arrowKey(kind, ageMonths);
+      var ov = chartOverride(adv, chartType, key);
+      pts.push({
+        kind: kind,
+        key: key,
+        ageMonths: ageMonths,
+        value: value,
+        enabled: enabled,
+        hiddenHere: !!(enabled && ov && ov.en === 0),
+        ownText: !!(ov && typeof ov.txt === 'string'),
+        comment: ov && typeof ov.txt === 'string' ? ov.txt : sharedComment,
+        sharedComment: sharedComment
+      });
+    }
     if (Array.isArray(adv.measurements)) {
       adv.measurements.forEach(function (m) {
         if (!m) return;
         var a = toNum(m.ageMonths);
         var v = chartType === 'height' ? toNum(m.height) : toNum(m.weight);
         if (!Number.isFinite(a) || !Number.isFinite(v) || a < 12 || a > 216) return;
-        pts.push({
-          kind: 'm',
-          key: arrowKey('m', a),
-          ageMonths: a,
-          value: v,
-          enabled: !!m.arrowEnabled,
-          comment: typeof m.arrowComment === 'string' ? m.arrowComment : ''
-        });
+        pushPoint('m', a, v, !!m.arrowEnabled, typeof m.arrowComment === 'string' ? m.arrowComment : '');
       });
     }
     var ca = toNum(adv.currentAgeMonths);
     var cv = chartType === 'height' ? toNum(adv.currentHeight) : toNum(adv.currentWeight);
     if (Number.isFinite(ca) && Number.isFinite(cv) && ca >= 12 && ca <= 216) {
-      pts.push({
-        kind: 'cur',
-        key: 'cur',
-        ageMonths: ca,
-        value: cv,
-        enabled: !!adv.currentArrowEnabled,
-        comment: typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : ''
-      });
+      pushPoint('cur', ca, cv, !!adv.currentArrowEnabled, typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '');
     }
     return pts;
   }
@@ -229,6 +245,7 @@
         ageMonths: ar.ageMonths,
         value: ar.value,
         comment: (ar.comment || '').trim(),
+        ownText: !!ar.ownText,
         lines: lines,
         px: px,
         py: py,
@@ -421,17 +438,53 @@
     return adv.pubLayout;
   }
 
-  function setOffset(chartType, key, dx, dy) {
+  /*
+   * Scala łatkę z wpisem nadpisań ({dx,dy,en,txt}); wartość undefined usuwa
+   * pole. Wpis znika, gdy nie zostaje w nim nic znaczącego (zerowe przesunięcie,
+   * brak ukrycia, brak własnej treści).
+   */
+  function updateOverride(chartType, key, patch) {
     var store = layoutStore();
     if (!store) return;
-    if (!dx && !dy) delete store[chartType][key];
-    else store[chartType][key] = { dx: Math.round(dx), dy: Math.round(dy) };
+    var ov = store[chartType][key];
+    if (!ov || typeof ov !== 'object') ov = store[chartType][key] = {};
+    Object.keys(patch).forEach(function (k) {
+      if (patch[k] === undefined) delete ov[k];
+      else ov[k] = patch[k];
+    });
+    if (!ov.dx) delete ov.dx;
+    if (!ov.dy) delete ov.dy;
+    if (ov.en !== 0) delete ov.en;
+    if (typeof ov.txt !== 'string') delete ov.txt;
+    if (!Object.keys(ov).length) delete store[chartType][key];
   }
 
+  function setOffset(chartType, key, dx, dy) {
+    updateOverride(chartType, key, { dx: Math.round(dx), dy: Math.round(dy) });
+  }
+
+  function setChartHidden(chartType, key, hidden) {
+    updateOverride(chartType, key, { en: hidden ? 0 : undefined });
+  }
+
+  function setChartText(chartType, key, txt) {
+    updateOverride(chartType, key, { txt: typeof txt === 'string' ? txt : undefined });
+  }
+
+  function clearAnnotationOverrides(key) {
+    ['height', 'weight'].forEach(function (c) {
+      updateOverride(c, key, { en: undefined, txt: undefined });
+    });
+  }
+
+  /* „Przywróć układ automatyczny” cofa tylko położenia ramek na aktywnej
+     siatce — ukrycia i osobne treści per siatka zostają. */
   function resetLayout(chartType) {
     var store = layoutStore();
     if (!store) return;
-    store[chartType] = {};
+    Object.keys(store[chartType]).forEach(function (key) {
+      updateOverride(chartType, key, { dx: undefined, dy: undefined });
+    });
   }
 
   /* ══════════════ Interaktywny kreator (panel inline w karcie) ══════════════ */
@@ -645,10 +698,19 @@
         var x = geom.plotX + (p.ageMonths - 12) * pxPerMonth;
         var y = geom.plotY + geom.plotH - (p.value - geom.minY) * pxPerUnit;
         ctx.beginPath();
-        ctx.strokeStyle = p.enabled ? COLORS.primary : 'rgba(0,131,141,0.45)';
-        ctx.lineWidth = p.enabled ? 8 : 5;
+        if (p.hiddenHere) {
+          /* adnotacja istnieje, ale jest ukryta na tej siatce — przerywany pierścień */
+          ctx.setLineDash([10, 8]);
+          ctx.strokeStyle = 'rgba(0,131,141,0.55)';
+          ctx.lineWidth = 5;
+        } else {
+          ctx.setLineDash([]);
+          ctx.strokeStyle = p.enabled ? COLORS.primary : 'rgba(0,131,141,0.45)';
+          ctx.lineWidth = p.enabled ? 8 : 5;
+        }
         ctx.arc(x, y, 30, 0, 2 * Math.PI);
         ctx.stroke();
+        ctx.setLineDash([]);
       });
       if (ui.selectedKey) {
         items.forEach(function (it) {
@@ -670,7 +732,8 @@
     var list = ui.listEl;
     list.textContent = '';
     var items = ui.items[ui.active] || [];
-    if (!items.length) {
+    var hiddenPts = (ui.points[ui.active] || []).filter(function (p) { return p.hiddenHere; });
+    if (!items.length && !hiddenPts.length) {
       append(list, el('span', 'font-size:0.82rem;color:' + COLORS.muted + ';font-style:italic;', null,
         'Brak adnotacji — kliknij punkt pomiaru na siatce, aby dodać strzałkę z komentarzem.'));
       return;
@@ -685,6 +748,17 @@
       if (it.moved) {
         append(chip, el('span', 'color:' + COLORS.accent + ';border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:0.66rem;font-weight:700;white-space:nowrap;', null, 'przesunięta ręcznie'));
       }
+      if (it.ownText) {
+        append(chip, el('span', 'color:' + COLORS.primary + ';border:1px solid currentColor;border-radius:999px;padding:0 6px;font-size:0.66rem;font-weight:700;white-space:nowrap;', null, 'treść tej siatki'));
+      }
+      append(list, chip);
+    });
+    hiddenPts.forEach(function (p) {
+      var ageTxt = (p.ageMonths / 12).toFixed(1).replace('.', ',') + ' r.ż.';
+      var chip = el('span', 'display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px dashed ' + COLORS.border +
+        ';border-radius:999px;padding:3px 10px;font-size:0.78rem;color:' + COLORS.muted + ';max-width:100%;');
+      append(chip, el('span', 'font-variant-numeric:tabular-nums;', null, ageTxt));
+      append(chip, el('span', null, null, 'ukryta na tej siatce'));
       append(list, chip);
     });
   }
@@ -740,12 +814,18 @@
     var ed = ui.editor;
     ed._point = point;
     ed.querySelector('textarea').value = point.comment || '';
+    var own = ed.querySelector('.pubc-scope-own');
+    var shared = ed.querySelector('.pubc-scope-shared');
+    if (own) own.checked = !!point.ownText;
+    if (shared) shared.checked = !point.ownText;
+    var hideBtn = ed.querySelector('.pubc-hide');
+    if (hideBtn) hideBtn.textContent = point.hiddenHere ? 'Pokaż na tej siatce' : 'Ukryj na tej siatce';
     /* Edytor pozycjonowany w kontenerze kanwy (position:relative), więc
        przewija się razem z powiększoną siatką. */
     var inner = ui.inners[ui.active];
     var innerRect = inner.getBoundingClientRect();
-    var left = Math.max(6, Math.min(Math.max(6, innerRect.width - 250), displayPos.left - innerRect.left));
-    var top = Math.max(6, Math.min(Math.max(6, innerRect.height - 160), displayPos.top - innerRect.top));
+    var left = Math.max(6, Math.min(Math.max(6, innerRect.width - 276), displayPos.left - innerRect.left));
+    var top = Math.max(6, Math.min(Math.max(6, innerRect.height - 220), displayPos.top - innerRect.top));
     ed.style.left = left + 'px';
     ed.style.top = top + 'px';
     ed.style.display = 'block';
@@ -841,19 +921,19 @@
           return;
         }
         if (d.pointToggle && !d.moved) {
+          /* Klik w pusty punkt tworzy wspólną adnotację (obie siatki — domyślnie
+             to samo); klik w punkt opisany otwiera edytor, w którym można
+             rozdzielić treść lub ukryć adnotację na aktywnej siatce.
+             Usunięcie — wyłącznie przyciskiem „Usuń” w edytorze. */
           var p = d.pointToggle;
-          if (p.enabled) {
-            setArrowEnabled(p, false);
-            ui.selectedKey = null;
-            renderOverlay();
-          } else {
+          if (!p.enabled) {
             setArrowEnabled(p, true);
-            ui.selectedKey = p.key;
-            renderOverlay();
-            var fresh = pointForKey(p.key);
-            if (fresh) openEditor(fresh, { left: evt.clientX, top: evt.clientY + 14 });
+            flashSaveNote();
           }
-          flashSaveNote();
+          ui.selectedKey = p.key;
+          renderOverlay();
+          var fresh = pointForKey(p.key);
+          if (fresh) openEditor(fresh, { left: evt.clientX, top: evt.clientY + 14 });
         }
       });
       overlay.addEventListener('pointercancel', function () {
@@ -865,7 +945,18 @@
     var ed = ui.editor;
     ed.querySelector('.pubc-save').addEventListener('click', function () {
       var point = ed._point;
-      if (point) setArrowComment(point, ed.querySelector('textarea').value.trim());
+      if (point) {
+        var ownScope = ed.querySelector('.pubc-scope-own');
+        var text = ed.querySelector('textarea').value.trim();
+        if (ownScope && ownScope.checked) {
+          /* Treść tylko dla aktywnej siatki — wspólny komentarz bez zmian */
+          setChartText(ui.active, point.key, text);
+          scheduleSave();
+        } else {
+          setChartText(ui.active, point.key, undefined);
+          setArrowComment(point, text);
+        }
+      }
       closeEditor();
       ui.selectedKey = null;
       renderOverlay();
@@ -876,10 +967,29 @@
       ui.selectedKey = null;
       renderOverlay();
     });
+    /* Powrót do treści wspólnej pokazuje wspólny komentarz jako punkt wyjścia */
+    ed.querySelector('.pubc-scope-shared').addEventListener('change', function () {
+      if (ed._point) ed.querySelector('textarea').value = ed._point.sharedComment || '';
+    });
+    ed.querySelector('.pubc-hide').addEventListener('click', function () {
+      var point = ed._point;
+      closeEditor();
+      if (point) {
+        setChartHidden(ui.active, point.key, !point.hiddenHere);
+        scheduleSave();
+      }
+      ui.selectedKey = null;
+      renderOverlay();
+      flashSaveNote();
+    });
     ed.querySelector('.pubc-del').addEventListener('click', function () {
       var point = ed._point;
       closeEditor();
-      if (point) setArrowEnabled(point, false);
+      if (point) {
+        setArrowEnabled(point, false);
+        clearAnnotationOverrides(point.key);
+        scheduleSave();
+      }
       ui.selectedKey = null;
       renderOverlay();
       flashSaveNote();
@@ -994,7 +1104,7 @@
       body.appendChild(wrap);
     });
     var help = el('div', 'display:flex;gap:0.4rem 1rem;flex-wrap:wrap;font-size:0.76rem;color:' + COLORS.muted + ';margin-top:0.55rem;justify-content:center;');
-    [['Kliknij punkt', 'dodaj / usu\u0144 komentarz'], ['Przeci\u0105gnij ramk\u0119', 'zmie\u0144 po\u0142o\u017cenie'], ['Kliknij ramk\u0119', 'edytuj tre\u015b\u0107']].forEach(function (pair) {
+    [['Kliknij punkt', 'dodaj / edytuj komentarz'], ['Przeci\u0105gnij ramk\u0119', 'zmie\u0144 po\u0142o\u017cenie'], ['Kliknij ramk\u0119', 'edytuj / rozdziel tre\u015b\u0107 mi\u0119dzy siatki']].forEach(function (pair) {
       var s = el('span', null, null, null);
       append(s, el('b', 'color:' + COLORS.text + ';font-weight:600;', null, pair[0]), document.createTextNode(' \u2014 ' + pair[1]));
       append(help, s);
@@ -1003,19 +1113,38 @@
     var listEl = el('div', 'display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:center;margin-top:0.5rem;');
     body.appendChild(listEl);
 
-    /* Edytor komentarza (nak\u0142adka pozycjonowana przy ramce, przewija si\u0119 z siatk\u0105) */
-    var editor = el('div', 'position:absolute;z-index:30;background:#fff;border:1.5px solid ' + COLORS.primary + ';border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.25);padding:0.55rem;width:238px;box-sizing:border-box;display:none;');
+    /* Edytor komentarza (nak\u0142adka pozycjonowana przy ramce, przewija si\u0119 z siatk\u0105).
+       Pozwala rozdzieli\u0107 tre\u015b\u0107 mi\u0119dzy siatki (wsp\u00f3lna / tylko ta siatka) oraz
+       ukry\u0107 adnotacj\u0119 na aktywnej siatce, zostawiaj\u0105c j\u0105 na drugiej. */
+    var editor = el('div', 'position:absolute;z-index:30;background:#fff;border:1.5px solid ' + COLORS.primary + ';border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.25);padding:0.55rem;width:264px;box-sizing:border-box;display:none;');
     var ta = document.createElement('textarea');
     ta.maxLength = 120;
     ta.setAttribute('aria-label', 'Tre\u015b\u0107 komentarza');
     ta.style.cssText = 'width:100%;height:64px;resize:none;border:1px solid ' + COLORS.border + ';border-radius:6px;font-family:inherit;font-size:0.85rem;padding:0.35rem 0.45rem;box-sizing:border-box;background:#fff;color:' + COLORS.text + ';box-shadow:none;margin:0;';
-    var edBtns = el('div', 'display:flex;gap:0.4rem;margin-top:0.45rem;');
+    var scopeRow = el('div', 'display:flex;flex-direction:column;gap:2px;margin-top:0.4rem;');
+    function scopeOption(cls, label) {
+      var lab = el('label', 'display:flex;align-items:center;gap:6px;cursor:pointer;margin:0;font-size:0.76rem;color:' + COLORS.text + ';width:auto;');
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'pubc-scope';
+      input.className = cls;
+      input.style.cssText = 'width:auto;margin:0;padding:0;accent-color:' + COLORS.primary + ';';
+      append(lab, input, document.createTextNode(label));
+      return lab;
+    }
+    var scopeShared = scopeOption('pubc-scope-shared', 'Tre\u015b\u0107 wsp\u00f3lna dla obu siatek');
+    var scopeOwn = scopeOption('pubc-scope-own', 'Tre\u015b\u0107 tylko dla tej siatki');
+    append(scopeRow, scopeShared, scopeOwn);
     var edBtnCss = BTN_BASE + 'flex:1;padding:0.32rem 0.4rem;font-size:0.78rem;font-weight:600;';
+    var edBtns = el('div', 'display:flex;gap:0.4rem;margin-top:0.45rem;');
     var edSave = el('button', edBtnCss, { type: 'button', class: 'pubc-save pubc-primary' }, 'Zapisz');
     var edCancel = el('button', edBtnCss, { type: 'button', class: 'pubc-cancel pubc-neutral' }, 'Anuluj');
+    append(edBtns, edSave, edCancel);
+    var edBtns2 = el('div', 'display:flex;gap:0.4rem;margin-top:0.4rem;');
+    var edHide = el('button', edBtnCss, { type: 'button', class: 'pubc-hide pubc-neutral' }, 'Ukryj na tej siatce');
     var edDel = el('button', edBtnCss, { type: 'button', class: 'pubc-del pubc-danger' }, 'Usu\u0144');
-    append(edBtns, edSave, edCancel, edDel);
-    append(editor, ta, edBtns);
+    append(edBtns2, edHide, edDel);
+    append(editor, ta, scopeRow, edBtns, edBtns2);
     inners.height.appendChild(editor);
 
     /* Stopka */
@@ -1104,6 +1233,7 @@
     _computeLayout: computeLayout,
     _drawItems: drawItems,
     _applySnap: applySnap,
+    _updateOverride: updateOverride,
     _arrowKey: arrowKey,
     _setSuppress: function (v) { suppressPainting = !!v; },
     _geomStore: geomStore
