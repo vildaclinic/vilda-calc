@@ -384,6 +384,45 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(brW.y2).toBeCloseTo(yW2, 4);
   });
 
+  it('klamra: bdy reguluje wysokość poprzeczki, także pod punktami (nogi w dół, ramka pod spinką)', () => {
+    const PC = loadCreator();
+    const adv = sampleAdv();
+    // bdy ujemne: spinka wyżej niż pozycja automatyczna, ramka nadal nad nią
+    adv.pubFree = { height: [{ id: 8, br: 1, a1: 120, a2: 152, txt: 'x', fs: 40, bdy: -300 }], weight: [] };
+    let br = PC._computeLayout(fakeCtx(), adv, 'height', GEOM).find((i) => i.bracket);
+    expect(br.yb).toBeCloseTo(br.ybAuto - 300, 6);
+    expect(br.autoY).toBeCloseTo(br.yb - 46 - br.h, 6);
+    // bdy dodatnie pod oba punkty: nogi biegną w dół, ramka pod spinką
+    const yLow = Math.max(br.y1, br.y2);
+    const bdyDown = Math.round(yLow + 400 - br.ybAuto);
+    adv.pubFree.height[0].bdy = bdyDown;
+    br = PC._computeLayout(fakeCtx(), adv, 'height', GEOM).find((i) => i.bracket);
+    expect(br.yb).toBeCloseTo(br.ybAuto + bdyDown, 4);
+    expect(br.yb).toBeGreaterThan(yLow);
+    expect(br.autoY).toBeCloseTo(br.yb + 46, 6);
+    const calls = [];
+    PC._drawItems(fakeCtx(calls), [br]);
+    // noga od punktu 1 startuje POD kropką (y1 + odstęp 15) i schodzi do yb
+    const legDown = calls.some((c, i) => c[0] === 'moveTo' && Math.abs(c[1] - br.x1) < 0.01 && Math.abs(c[2] - (br.y1 + 15)) < 0.01 &&
+      calls[i + 1] && calls[i + 1][0] === 'lineTo' && Math.abs(calls[i + 1][2] - br.yb) < 0.01);
+    expect(legDown).toBe(true);
+    // poprzeczka nie wychodzi poza pole wykresu (clamp do dołu obszaru)
+    adv.pubFree.height[0].bdy = 99999;
+    br = PC._computeLayout(fakeCtx(), adv, 'height', GEOM).find((i) => i.bracket);
+    expect(br.yb).toBeCloseTo(GEOM.plotY + GEOM.plotH, 6);
+  });
+
+  it('klamra: _updateFree(bdy) zapisuje wysokość poprzeczki w pubFree i czyści wartość zerową', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    const id = PC._addFree('height', { br: 1, a1: 120, a2: 152, txt: '', fs: 40 });
+    PC._updateFree('height', id, { bdy: 250 });
+    expect(win.advancedGrowthData.pubFree.height[0].bdy).toBe(250);
+    PC._updateFree('height', id, { bdy: 0 });
+    expect('bdy' in win.advancedGrowthData.pubFree.height[0]).toBe(false);
+  });
+
   it('grot na orbicie: ramka w poziomie od punktu → grot z boku punktu, linia pozioma', () => {
     const PC = loadCreator();
     // środek ramki (1300, 1000) idealnie na prawo od punktu (1000, 1000)
@@ -541,7 +580,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=13');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=14');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
