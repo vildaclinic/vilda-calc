@@ -445,7 +445,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=6');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=7');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
