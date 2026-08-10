@@ -339,6 +339,51 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(PC.isElementEnabled('summary')).toBe(true);
   });
 
+  it('klamra: dwie pionowe linie od punktów, spinka nad wyższym, ramka nad ogonkiem', () => {
+    const PC = loadCreator();
+    const adv = sampleAdv();
+    adv.pubFree = { height: [{ id: 5, br: 1, a1: 120, a2: 152, txt: 'Okres leczenia', fs: 40 }], weight: [] };
+    const items = PC._computeLayout(fakeCtx(), adv, 'height', GEOM);
+    const br = items.find((i) => i.bracket);
+    expect(br).toBeTruthy();
+    const x1 = GEOM.plotX + (120 - 12) * (GEOM.plotW / 204);
+    const x2 = GEOM.plotX + (152 - 12) * (GEOM.plotW / 204);
+    const y1 = GEOM.plotY + GEOM.plotH - (140 - GEOM.minY) * PX_PER_UNIT; // wzrost 140 przy 120 mies.
+    const y2 = GEOM.plotY + GEOM.plotH - (161 - GEOM.minY) * PX_PER_UNIT; // bieżący 161 przy 152 mies.
+    expect(br.x1).toBeCloseTo(x1, 6);
+    expect(br.x2).toBeCloseTo(x2, 6);
+    // spinka nad WYŻSZYM punktem (mniejsze y) o krok 10 jednostek
+    expect(br.yb).toBeCloseTo(Math.min(y1, y2) - DROP_STEP, 6);
+    // ramka wyśrodkowana nad ogonkiem
+    expect(br.px).toBeCloseTo((x1 + x2) / 2, 6);
+    expect(br.autoX).toBeCloseTo(br.px - br.w / 2, 6);
+    expect(br.autoY).toBeCloseTo(br.yb - 46 - br.h, 6);
+    // rysowanie: pozioma spinka od x1 do x2 na poziomie yb
+    const calls = [];
+    PC._drawItems(fakeCtx(calls), [br]);
+    const horiz = calls.some((c, i) => c[0] === 'moveTo' && Math.abs(c[1] - x1) < 0.01 && Math.abs(c[2] - br.yb) < 0.01 &&
+      calls[i + 1] && calls[i + 1][0] === 'lineTo' && Math.abs(calls[i + 1][1] - x2) < 0.01 && Math.abs(calls[i + 1][2] - br.yb) < 0.01);
+    expect(horiz).toBe(true);
+    // brak grotu strzałki (fill tylko dla ramki)
+    expect(calls.filter((c) => c[0] === 'closePath')).toHaveLength(0);
+  });
+
+  it('klamra: brak któregoś punktu pomiaru pomija klamrę; końce rozwiązywane per siatka', () => {
+    const PC = loadCreator();
+    const adv = sampleAdv();
+    // a2=200 nie istnieje wśród pomiarów → klamra pominięta
+    adv.pubFree = { height: [{ id: 6, br: 1, a1: 120, a2: 200, txt: '', fs: 40 }], weight: [] };
+    expect(PC._computeLayout(fakeCtx(), adv, 'height', GEOM).filter((i) => i.bracket)).toHaveLength(0);
+    // na siatce masy końce mają wartości masy
+    adv.pubFree = { height: [], weight: [{ id: 7, br: 1, a1: 120, a2: 144, txt: 'x', fs: 40 }] };
+    const brW = PC._computeLayout(fakeCtx(), adv, 'weight', { plotX: 100, plotY: 100, plotW: 2040, plotH: 2600, minY: 0, maxY: 90 }).find((i) => i.bracket);
+    expect(brW).toBeTruthy();
+    const yW1 = 100 + 2600 - (32 - 0) * (2600 / 90);
+    const yW2 = 100 + 2600 - (41 - 0) * (2600 / 90);
+    expect(brW.y1).toBeCloseTo(yW1, 4);
+    expect(brW.y2).toBeCloseTo(yW2, 4);
+  });
+
   it('grot na orbicie: ramka w poziomie od punktu → grot z boku punktu, linia pozioma', () => {
     const PC = loadCreator();
     // środek ramki (1300, 1000) idealnie na prawo od punktu (1000, 1000)
@@ -496,7 +541,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=11');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=12');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
