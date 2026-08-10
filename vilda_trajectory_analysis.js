@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '9';
+  var VERSION = '10';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -150,7 +150,20 @@
     var d = Math.round(100 * (sb0 - sa0)) / 100, W = met === 'height', B = met === 'bmi', low = ca < 10, high = W ? ca > 90 : ca >= (B ? 85 : 90);
     var ST = W ? 'stabilny tor wzrastania' : B ? 'stabilny tor BMI' : 'stabilny tor masy ciała';
     var ND = W ? 'pogłębianie niedoboru wzrostu' : 'pogłębianie niedoboru masy ciała';
-    if (low) return d >= 0.2 ? { t: 'good', l: W ? 'nadrabia niedobór wzrostu' : 'nadrabia niedobór masy ciała' } : d <= -0.5 ? { t: 'bad', l: ND } : d <= -0.2 ? { t: 'warn', l: ND } : { t: 'stable', l: ST };
+    if (low) {
+      if (d >= 0.2) {
+        // Start z niedoboru (<10c): etykietę różnicuje centyl końcowy (decyzja właściciela 2026-08-09).
+        if (W) return { t: 'good', l: 'nadrabia niedobór wzrostu' };
+        if (cb < 10) return { t: 'good', l: 'nadrabia niedobór masy ciała' };
+        if (B) return cb >= 97 ? { t: 'bad', l: 'przekroczenie progu otyłości (≥97c)' }
+          : cb >= 85 ? { t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem BMI — do obserwacji' }
+          : { t: 'good', l: 'wyrównanie niedoboru (BMI)' };
+        return cb >= 90 ? { t: 'bad', l: 'przekroczenie 90. centyla masy ciała po wyrównaniu niedoboru' }
+          : cb >= 75 ? { t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem masy ciała — do obserwacji' }
+          : { t: 'good', l: 'wyrównanie niedoboru masy ciała' };
+      }
+      return d <= -0.5 ? { t: 'bad', l: ND } : d <= -0.2 ? { t: 'warn', l: ND } : { t: 'stable', l: ST };
+    }
     if (high) {
       if (W) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja z wysokich centyli' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja pozycji centylowej' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja wzrastania' } : { t: 'stable', l: ST };
       if (d <= -1.5) return { t: 'warn', l: B ? 'szybki spadek BMI — wskazana ocena' : 'szybka utrata masy — wskazana ocena' };
