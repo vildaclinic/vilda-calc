@@ -313,6 +313,7 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(PC.isElementEnabled('mph')).toBe(true);
     expect(PC.isElementEnabled('patientName')).toBe(true);
     expect(PC.isElementEnabled('parentsHeader')).toBe(true);
+    expect(PC.isElementEnabled('footer')).toBe(true);
     // trzy opcje widoczności dziedziczą starty z globalnych flag Ustawień
     expect(PC.isElementEnabled('bandReference')).toBe(true);
     win.centileShowBandReference = false;
@@ -474,6 +475,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
     expect(generatorSource).toContain('__pubok("boneAge")');
     expect(generatorSource).toContain('__pubok("mph")');
     expect(generatorSource).toContain('__pubok("summary")');
+    expect(generatorSource).toContain('__pubok("footer")');
   });
 
   it('inline_index_03.js: helpery widoczności pytają kreator w trybie publikacji', () => {
@@ -494,7 +496,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=10');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=11');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
