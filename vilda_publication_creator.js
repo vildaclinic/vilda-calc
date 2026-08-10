@@ -68,6 +68,7 @@
   var BOX_GAP = 5;               // odstęp ramki od końca linii strzałki
   var DROP_UNITS = 10;           // krok opuszczania ramki przy kolizji (jednostki wartości)
   var COLLISION_MAX = 10;        // maks. liczba iteracji rozwiązywania kolizji
+  var BRACKET_STUB = 46;         // długość ogonka od środka klamry do ramki (px kanwy)
 
   var COLORS = {
     primary: '#00838d',
@@ -166,6 +167,27 @@
     var list = adv && adv.pubFree && Array.isArray(adv.pubFree[chartType]) ? adv.pubFree[chartType] : [];
     list.forEach(function (f) {
       if (!f || typeof f !== 'object') return;
+      if (f.br) {
+        /* klamra spinająca dwa punkty pomiaru (wiek w miesiącach obu końców) */
+        var b1 = toNum(f.a1);
+        var b2 = toNum(f.a2);
+        if (!Number.isFinite(b1) || !Number.isFinite(b2)) return;
+        out.push({
+          kind: 'free',
+          bracket: true,
+          key: 'f' + String(f.id),
+          id: f.id,
+          a1: Math.round(b1),
+          a2: Math.round(b2),
+          ageMonths: Math.min(b1, b2),
+          comment: typeof f.txt === 'string' ? f.txt : '',
+          arrow: false,
+          fs: Number(f.fs) > 0 ? Number(f.fs) : FONT_PX,
+          dx: Number.isFinite(Number(f.dx)) ? Number(f.dx) : 0,
+          dy: Number.isFinite(Number(f.dy)) ? Number(f.dy) : 0
+        });
+        return;
+      }
       var a = toNum(f.ageMonths);
       var v = toNum(f.value);
       if (!Number.isFinite(a) || !Number.isFinite(v)) return;
@@ -183,6 +205,26 @@
       });
     });
     return out;
+  }
+
+  /* Wartość pomiaru (wzrost/masa) dla punktu o danym wieku — do rozwiązywania
+     końców klamry na żywo (klamra podąża za edycją pomiarów). */
+  function measurementPointValue(adv, chartType, ageMonths) {
+    var target = Math.round(toNum(ageMonths));
+    if (!Number.isFinite(target)) return null;
+    var found = null;
+    if (Array.isArray(adv.measurements)) {
+      adv.measurements.forEach(function (m) {
+        if (!m || Math.round(toNum(m.ageMonths)) !== target) return;
+        var v = chartType === 'height' ? toNum(m.height) : toNum(m.weight);
+        if (Number.isFinite(v)) found = v;
+      });
+    }
+    if (found === null && Math.round(toNum(adv.currentAgeMonths)) === target) {
+      var cv = chartType === 'height' ? toNum(adv.currentHeight) : toNum(adv.currentWeight);
+      if (Number.isFinite(cv)) found = cv;
+    }
+    return found;
   }
 
   /*
@@ -326,6 +368,55 @@
        wyśrodkowana na kotwicy (bez strzałki i bez kolizji — miejsce wybiera
        użytkownik). */
     free.forEach(function (fr) {
+      if (fr.bracket) {
+        /* Klamra: dwie pionowe linie od punktów, pozioma spinka nad wyższym
+           z nich, ogonek ze środka do ramki z tekstem. Końce rozwiązywane
+           na żywo z pomiarów — brak któregoś punktu pomija klamrę. */
+        var val1 = measurementPointValue(adv, chartType, fr.a1);
+        var val2 = measurementPointValue(adv, chartType, fr.a2);
+        if (val1 === null || val2 === null) return;
+        var ax1 = geom.plotX + (Math.min(fr.a1, fr.a2) - 12) * pxPerMonth;
+        var ax2 = geom.plotX + (Math.max(fr.a1, fr.a2) - 12) * pxPerMonth;
+        var ay1 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val1 : val2) - geom.minY) * pxPerUnit;
+        var ay2 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val2 : val1) - geom.minY) * pxPerUnit;
+        var yb = Math.min(ay1, ay2) - dropStep;
+        var midX = (ax1 + ax2) / 2;
+        var bLines = wrapComment(fr.comment);
+        var bDims = measureBox(bLines, fr.fs);
+        var bAutoX = bLines.length > 0 ? midX - bDims.w / 2 : midX;
+        var bAutoY = bLines.length > 0 ? yb - BRACKET_STUB - bDims.h : yb - BRACKET_STUB;
+        items.push({
+          kind: 'free',
+          bracket: true,
+          key: fr.key,
+          id: fr.id,
+          ageMonths: fr.ageMonths,
+          a1: fr.a1,
+          a2: fr.a2,
+          comment: (fr.comment || '').trim(),
+          ownText: false,
+          arrow: false,
+          fs: fr.fs,
+          lines: bLines,
+          x1: ax1,
+          y1: ay1,
+          x2: ax2,
+          y2: ay2,
+          yb: yb,
+          px: midX,
+          py: yb,
+          tipY: yb,
+          drop: BRACKET_STUB,
+          autoX: bAutoX,
+          autoY: bAutoY,
+          x: bAutoX + fr.dx,
+          y: bAutoY + fr.dy,
+          w: bDims.w,
+          h: bDims.h,
+          moved: !!(fr.dx || fr.dy)
+        });
+        return;
+      }
       var px = geom.plotX + (fr.ageMonths - 12) * pxPerMonth;
       var py = geom.plotY + geom.plotH - (fr.value - geom.minY) * pxPerUnit;
       var lines = wrapComment(fr.comment);
@@ -392,7 +483,22 @@
     items.forEach(function (it) {
       ctx.font = 'normal ' + it.fs + 'px sans-serif';
       ctx.lineWidth = arrowLine;
-      if (it.arrow === false) {
+      if (it.bracket) {
+        /* klamra: pionowe linie od punktów (z odstępem od kropki), pozioma
+           spinka, ogonek ze środka do ramki (lub wolnego końca, gdy bez tekstu) */
+        ctx.beginPath();
+        ctx.moveTo(it.x1, it.y1 - TIP_GAP);
+        ctx.lineTo(it.x1, it.yb);
+        ctx.moveTo(it.x2, it.y2 - TIP_GAP);
+        ctx.lineTo(it.x2, it.yb);
+        ctx.moveTo(it.x1, it.yb);
+        ctx.lineTo(it.x2, it.yb);
+        var bTx = it.lines.length > 0 ? it.x + it.w / 2 : it.x;
+        var bTy = it.lines.length > 0 ? it.y + it.h / 2 : it.y;
+        ctx.moveTo(it.px, it.yb);
+        ctx.lineTo(bTx, bTy);
+        ctx.stroke();
+      } else if (it.arrow === false) {
         /* samodzielna etykieta — bez strzałki */
       } else if (!it.moved) {
         ctx.beginPath();
@@ -663,14 +769,26 @@
         if (f && Number(f.id) > maxId) maxId = Number(f.id);
       });
     });
-    var item = {
-      id: maxId + 1,
-      ageMonths: Math.round(data.ageMonths * 10) / 10,
-      value: Math.round(data.value * 10) / 10,
-      txt: typeof data.txt === 'string' ? data.txt : '',
-      arrow: data.arrow !== false,
-      fs: Number(data.fs) > 0 ? Number(data.fs) : FONT_PX
-    };
+    var item;
+    if (data.br) {
+      item = {
+        id: maxId + 1,
+        br: 1,
+        a1: Math.round(toNum(data.a1)),
+        a2: Math.round(toNum(data.a2)),
+        txt: typeof data.txt === 'string' ? data.txt : '',
+        fs: Number(data.fs) > 0 ? Number(data.fs) : FONT_PX
+      };
+    } else {
+      item = {
+        id: maxId + 1,
+        ageMonths: Math.round(data.ageMonths * 10) / 10,
+        value: Math.round(data.value * 10) / 10,
+        txt: typeof data.txt === 'string' ? data.txt : '',
+        arrow: data.arrow !== false,
+        fs: Number(data.fs) > 0 ? Number(data.fs) : FONT_PX
+      };
+    }
     store[chartType].push(item);
     return item.id;
   }
@@ -994,6 +1112,20 @@
         ctx.stroke();
         ctx.setLineDash([]);
       });
+      /* pierwszy wybrany punkt klamry — wyróżnienie do czasu drugiego kliknięcia */
+      if (ui.bracketFirst) {
+        points.forEach(function (p) {
+          if (p.key !== ui.bracketFirst.key) return;
+          var bx = geom.plotX + (p.ageMonths - 12) * pxPerMonth;
+          var by = geom.plotY + geom.plotH - (p.value - geom.minY) * pxPerUnit;
+          ctx.beginPath();
+          ctx.setLineDash([]);
+          ctx.strokeStyle = COLORS.secondary;
+          ctx.lineWidth = 10;
+          ctx.arc(bx, by, 42, 0, 2 * Math.PI);
+          ctx.stroke();
+        });
+      }
       if (ui.selectedKey) {
         items.forEach(function (it) {
           if (it.key !== ui.selectedKey || !it.w) return;
@@ -1121,16 +1253,20 @@
 
     items.forEach(function (it) {
       var row = el('div', null, { class: 'pubc-lrow' + (ui.selectedKey === it.key ? ' pubc-selected' : '') });
-      append(row, el('span', null, { class: 'pubc-lage' }, annAgeText(it.ageMonths)));
+      var ageLabel = it.bracket
+        ? (Math.min(it.a1, it.a2) / 12).toFixed(1).replace('.', ',') + '–' + (Math.max(it.a1, it.a2) / 12).toFixed(1).replace('.', ',') + ' r.ż.'
+        : annAgeText(it.ageMonths);
+      append(row, el('span', null, { class: 'pubc-lage' }, ageLabel));
       var type = el('span', null, { class: 'pubc-ltype' });
-      var icCls = it.kind === 'free' ? (it.arrow ? ' pubc-lic-free' : ' pubc-lic-label') : '';
-      var icTxt = it.kind === 'free' ? (it.arrow ? '↗' : 'T') : '●';
+      var icCls = it.kind === 'free' ? (it.bracket ? ' pubc-lic-label' : it.arrow ? ' pubc-lic-free' : ' pubc-lic-label') : '';
+      var icTxt = it.kind === 'free' ? (it.bracket ? '⊓' : it.arrow ? '↗' : 'T') : '●';
       append(type, el('span', null, { class: 'pubc-lic' + icCls }, icTxt),
-        document.createTextNode(it.kind === 'free' ? (it.arrow ? 'wolna strzałka' : 'etykieta') : 'pomiar'));
+        document.createTextNode(it.kind === 'free' ? (it.bracket ? 'klamra' : it.arrow ? 'wolna strzałka' : 'etykieta') : 'pomiar'));
       append(row, type);
       var txt = el('span', null, { class: 'pubc-ltxt' });
       if (it.comment) txt.appendChild(document.createTextNode(it.comment));
-      else append(txt, el('span', null, { class: 'pubc-lempty' }, it.kind === 'free' && it.arrow ? 'sama strzałka (bez treści)' : '(bez komentarza)'));
+      else append(txt, el('span', null, { class: 'pubc-lempty' },
+        it.bracket ? 'klamra (bez tekstu)' : it.kind === 'free' && it.arrow ? 'sama strzałka (bez treści)' : '(bez komentarza)'));
       if (it.moved) append(txt, el('span', 'color:' + COLORS.accent + ';', { class: 'pubc-lbadge' }, 'przesunięta'));
       if (it.ownText) append(txt, el('span', 'color:' + COLORS.primary + ';', { class: 'pubc-lbadge' }, 'treść tej siatki'));
       if (it.fs !== FONT_PX) append(txt, el('span', 'color:' + COLORS.primary + ';', { class: 'pubc-lbadge' }, it.fs + ' px'));
@@ -1240,11 +1376,14 @@
   function setPlaceMode(mode) {
     if (!ui) return;
     ui.placeMode = ui.placeMode === mode ? null : mode;
+    ui.bracketFirst = null;
     ui.toolBtns.arrow.setAttribute('aria-pressed', ui.placeMode === 'arrow' ? 'true' : 'false');
     ui.toolBtns.label.setAttribute('aria-pressed', ui.placeMode === 'label' ? 'true' : 'false');
+    ui.toolBtns.bracket.setAttribute('aria-pressed', ui.placeMode === 'bracket' ? 'true' : 'false');
     ['height', 'weight'].forEach(function (c) {
       ui.overlays[c].style.cursor = ui.placeMode ? 'crosshair' : 'pointer';
     });
+    renderOverlay();
   }
 
   function hitPoint(pos) {
@@ -1429,6 +1568,28 @@
         drag = null;
         ui.snapGuides = null;
         if (d.place && !d.moved && ui.placeMode) {
+          if (ui.placeMode === 'bracket') {
+            /* klamra: dwa kliknięcia w punkty pomiaru */
+            var ptB = hitPoint(d.place);
+            if (ptB) {
+              if (!ui.bracketFirst) {
+                ui.bracketFirst = { key: ptB.key, ageMonths: ptB.ageMonths };
+                renderOverlay();
+              } else if (Math.round(ptB.ageMonths) !== Math.round(ui.bracketFirst.ageMonths)) {
+                var brId = addFree(ui.active, { br: 1, a1: ui.bracketFirst.ageMonths, a2: ptB.ageMonths, txt: '', fs: FONT_PX });
+                setPlaceMode('bracket');
+                scheduleSave();
+                ui.selectedKey = 'f' + brId;
+                renderOverlay();
+                /* klamra jest kompletna bez tekstu (jak sama strzałka) —
+                   zamknięcie edytora bez zapisu jej nie wycofuje */
+                var itBr = itemForKey('f' + brId);
+                if (itBr) openEditor(freeTarget(itBr), { left: evt.clientX, top: evt.clientY + 14 });
+                flashSaveNote();
+              }
+            }
+            return;
+          }
           /* Wstawienie wolnej adnotacji w klikniętym miejscu siatki */
           var geomA = activeGeom();
           if (geomA) {
@@ -1640,8 +1801,9 @@
     var toolCss = BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.8rem;font-weight:600;';
     var addArrowBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Strza\u0142ka');
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
+    var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105' }, '+ Klamra');
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
-    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, elemBtn, saveNote);
+    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn, saveNote);
 
     /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) \u2014 rozwijany z animacj\u0105
        (klasa pubc-opts we wstrzykiwanym arkuszu; max-height ustawiane z JS) */
@@ -1809,7 +1971,8 @@
       selectedKey: null,
       snapGuides: null,
       placeMode: null,
-      toolBtns: { arrow: addArrowBtn, label: addLabelBtn },
+      bracketFirst: null,
+      toolBtns: { arrow: addArrowBtn, label: addLabelBtn, bracket: addBracketBtn },
       editorParts: { scopeRow: scopeRow, fsRow: fsRow, fsSelect: fsSelect, hideBtn: edHide },
       items: {},
       points: {},
@@ -1841,6 +2004,7 @@
     zoomFit.addEventListener('click', function () { setZoom(1); });
     addArrowBtn.addEventListener('click', function () { setPlaceMode('arrow'); });
     addLabelBtn.addEventListener('click', function () { setPlaceMode('label'); });
+    addBracketBtn.addEventListener('click', function () { setPlaceMode('bracket'); });
     resetBtn.addEventListener('click', function () {
       resetLayout(ui.active);
       scheduleSave();
