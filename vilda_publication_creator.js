@@ -9,7 +9,8 @@
  *     deleguje rysowanie adnotacji do VildaPublicationCreator.drawAnnotations(),
  *     dzięki czemu podgląd w kreatorze i wyeksportowany plik są identyczne
  *     co do piksela (WYSIWYG).
- *  2. Dostarcza interaktywny kreator (modal): przeciąganie ramek z komentarzami,
+ *  2. Dostarcza interaktywny kreator (panel inline na pełną szerokość karty,
+ *     z przybliżaniem/oddalaniem siatki): przeciąganie ramek z komentarzami,
  *     edycję treści w miejscu oraz dodawanie/usuwanie strzałek kliknięciem
  *     w punkt pomiaru — dla siatki wzrostu i masy ciała.
  *
@@ -425,9 +426,47 @@
     store[chartType] = {};
   }
 
-  /* ══════════════ Interaktywny kreator (modal) ══════════════ */
+  /* ══════════════ Interaktywny kreator (panel inline w karcie) ══════════════ */
 
   var ui = null;
+
+  /*
+   * Globalny arkusz aplikacji stylizuje wszystkie <button> (width:100%,
+   * margin-top, tło turkusowe), a liquid glass (ios26-v2.css) przemalowuje je
+   * regułą `.liquid-ios26 button{background:#fff3!important;...}` — style
+   * inline przegrywają z !important. Dlatego moduł wstrzykuje własny arkusz
+   * z selektorami o wyższej specyficzności (#vilda-pub-creator-overlay .pubc-*)
+   * i !important — tak samo robią inne funkcje aplikacji (np. przyciski kart
+   * mają dedykowane reguły w ios26-v2.css).
+   */
+  var BTN_BASE = 'width:auto;margin:0;box-shadow:none;font-family:inherit;line-height:1.2;cursor:pointer;';
+
+  var STYLE_ID = 'vilda-pub-creator-style';
+
+  function ensureStyle() {
+    if (typeof document === 'undefined' || document.getElementById(STYLE_ID)) return;
+    var css =
+      '#openPublicationCreatorBtn{background:' + GRADIENT + '!important;color:#fff!important;' +
+      'border:none!important;border-radius:8px!important;box-shadow:none!important;' +
+      'backdrop-filter:none!important;-webkit-backdrop-filter:none!important;width:auto!important;margin:0!important}' +
+      '#' + OVERLAY_ID + ' button{width:auto!important;margin:0!important;box-shadow:none!important;' +
+      'backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transition:none!important}' +
+      '#' + OVERLAY_ID + ' .pubc-primary{background:' + GRADIENT + '!important;color:#fff!important;border:none!important;border-radius:8px!important}' +
+      '#' + OVERLAY_ID + ' .pubc-outline{background:#ffffff!important;color:' + COLORS.primary + '!important;border:1.5px solid ' + COLORS.primary + '!important;border-radius:8px!important}' +
+      '#' + OVERLAY_ID + ' .pubc-neutral{background:#ffffff!important;color:' + COLORS.text + '!important;border:1px solid ' + COLORS.border + '!important;border-radius:8px!important}' +
+      '#' + OVERLAY_ID + ' .pubc-danger{background:#ffffff!important;color:' + COLORS.danger + '!important;border:1px solid ' + COLORS.danger + '!important;border-radius:8px!important}' +
+      '#' + OVERLAY_ID + ' .pubc-ghost{background:transparent!important;color:' + COLORS.muted + '!important;border:none!important;border-radius:8px!important}' +
+      '#' + OVERLAY_ID + ' .pubc-tab{background:#ffffff!important;color:' + COLORS.text + '!important;border:1px solid ' + COLORS.border + '!important;border-radius:999px!important}' +
+      '#' + OVERLAY_ID + ' .pubc-tab[aria-selected="true"]{background:' + COLORS.primary + '!important;color:#ffffff!important;border-color:' + COLORS.primary + '!important}';
+    var styleEl = document.createElement('style');
+    styleEl.id = STYLE_ID;
+    styleEl.textContent = css;
+    (document.head || document.documentElement).appendChild(styleEl);
+  }
+
+  var ZOOM_MIN = 0.5;
+  var ZOOM_MAX = 3;
+  var ZOOM_STEP = 0.25;
 
   function el(tag, css, attrs, text) {
     var n = document.createElement(tag);
@@ -471,7 +510,7 @@
   function closeCreator() {
     if (!ui) return;
     try { document.removeEventListener('keydown', ui.onKeyDown); } catch (e) { /* ignore */ }
-    try { ui.backdrop.remove(); } catch (e) { /* ignore */ }
+    try { ui.panel.remove(); } catch (e) { /* ignore */ }
     ui = null;
   }
 
@@ -607,10 +646,12 @@
     var ed = ui.editor;
     ed._point = point;
     ed.querySelector('textarea').value = point.comment || '';
-    var wrap = ui.wraps[ui.active];
-    var wrapRect = wrap.getBoundingClientRect();
-    var left = Math.max(6, Math.min(wrapRect.width - 250, displayPos.left - wrapRect.left));
-    var top = Math.max(6, Math.min(wrapRect.height - 150, displayPos.top - wrapRect.top));
+    /* Edytor pozycjonowany w kontenerze kanwy (position:relative), więc
+       przewija się razem z powiększoną siatką. */
+    var inner = ui.inners[ui.active];
+    var innerRect = inner.getBoundingClientRect();
+    var left = Math.max(6, Math.min(Math.max(6, innerRect.width - 250), displayPos.left - innerRect.left));
+    var top = Math.max(6, Math.min(Math.max(6, innerRect.height - 160), displayPos.top - innerRect.top));
     ed.style.left = left + 'px';
     ed.style.top = top + 'px';
     ed.style.display = 'block';
@@ -731,129 +772,174 @@
     closeEditor();
     ['height', 'weight'].forEach(function (c) {
       ui.wraps[c].style.display = c === chart ? '' : 'none';
-      var tab = ui.tabs[c];
-      tab.style.background = c === chart ? COLORS.primary : '#ffffff';
-      tab.style.color = c === chart ? '#ffffff' : COLORS.text;
-      tab.style.borderColor = c === chart ? COLORS.primary : COLORS.border;
-      tab.setAttribute('aria-selected', c === chart ? 'true' : 'false');
+      /* Kolory aktywnej zakładki pochodzą z wstrzykniętego arkusza (.pubc-tab[aria-selected]) */
+      ui.tabs[c].setAttribute('aria-selected', c === chart ? 'true' : 'false');
     });
     renderOverlay();
   }
 
+  function applyZoom() {
+    if (!ui) return;
+    ui.zoomLabel.textContent = Math.round(ui.zoom * 100) + '%';
+    var width = Math.max(220, Math.round(ui.fitWidth * ui.zoom));
+    ['height', 'weight'].forEach(function (chart) {
+      ui.bases[chart].style.width = width + 'px';
+    });
+  }
+
+  function setZoom(z) {
+    if (!ui) return;
+    ui.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    applyZoom();
+  }
+
   function openCreator() {
     if (typeof document === 'undefined') return;
+    if (ui) { closeCreator(); return; }
     if (w.VildaProAccess && typeof w.VildaProAccess.hasAccess === 'function' && !w.VildaProAccess.hasAccess()) {
-      alert('Kreator adnotacji siatek do publikacji jest funkcją PRO. Uaktywnij plan PRO, aby korzystać z tej funkcji.');
+      alert('Kreator adnotacji siatek do publikacji jest funkcj\u0105 PRO. Uaktywnij plan PRO, aby korzysta\u0107 z tej funkcji.');
       return;
     }
     if (!w.publicationCharts) {
-      alert('Włącz najpierw przełącznik „Siatki do publikacji”, aby otworzyć kreator adnotacji.');
+      alert('W\u0142\u0105cz najpierw prze\u0142\u0105cznik \u201eSiatki do publikacji\u201d, aby otworzy\u0107 kreator adnotacji.');
       return;
     }
-    closeCreator();
+    ensureStyle();
+    var mountRow = document.getElementById('publicationToggleRow');
+    if (!mountRow || !mountRow.parentNode) return;
     var canvases = buildPreviewCanvases();
     if (!canvases) {
-      alert('Nie udało się przygotować podglądu siatek. Uzupełnij wiek, płeć, masę i wzrost, a następnie spróbuj ponownie.');
+      alert('Nie uda\u0142o si\u0119 przygotowa\u0107 podgl\u0105du siatek. Uzupe\u0142nij wiek, p\u0142e\u0107, mas\u0119 i wzrost, a nast\u0119pnie spr\u00f3buj ponownie.');
       return;
     }
 
-    var backdrop = el('div', 'position:fixed;inset:0;background:rgba(0,20,22,0.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:0.6rem;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Kreator siatek do publikacji' });
-    var panel = el('div', 'background:#ffffff;border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,0.3);width:min(96vw,900px);max-height:96vh;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;');
+    /* Panel inline: pe\u0142na szeroko\u015b\u0107 karty, strona przewija si\u0119 naturalnie. */
+    var panel = el('div', 'width:100%;box-sizing:border-box;margin:0.9rem 0 0;background:#ffffff;border:1px solid ' + COLORS.border + ';border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'region', 'aria-label': 'Kreator siatek do publikacji' });
 
-    /* Nagłówek */
-    var head = el('div', 'display:flex;align-items:center;gap:0.6rem;padding:0.7rem 1rem;background:' + COLORS.card + ';border-bottom:1px solid ' + COLORS.border + ';flex-wrap:wrap;');
-    var title = el('span', 'font-weight:700;color:' + COLORS.primary + ';font-size:0.98rem;', null, 'Kreator siatek do publikacji');
+    /* Nag\u0142\u00f3wek */
+    var head = el('div', 'display:flex;align-items:center;gap:0.6rem;padding:0.65rem 0.9rem;background:' + COLORS.card + ';border-bottom:1px solid ' + COLORS.border + ';flex-wrap:wrap;');
+    var title = el('span', 'font-weight:700;color:' + COLORS.primary + ';font-size:0.95rem;', null, 'Kreator siatek do publikacji');
     var proSup = el('sup', 'font-size:0.62em;font-weight:800;margin-left:2px;', { class: 'pro-superscript' }, 'PRO');
     title.appendChild(proSup);
     var tabs = el('div', 'display:flex;gap:0.35rem;margin-left:auto;', { role: 'tablist' });
-    var tabH = el('button', 'border:1px solid ' + COLORS.border + ';background:#fff;color:' + COLORS.text + ';border-radius:999px;padding:0.3rem 0.9rem;font-size:0.85rem;font-weight:600;cursor:pointer;', { type: 'button', role: 'tab' }, 'Wzrost');
-    var tabW = el('button', 'border:1px solid ' + COLORS.border + ';background:#fff;color:' + COLORS.text + ';border-radius:999px;padding:0.3rem 0.9rem;font-size:0.85rem;font-weight:600;cursor:pointer;', { type: 'button', role: 'tab' }, 'Masa ciała');
+    var tabCss = BTN_BASE + 'padding:0.3rem 0.9rem;font-size:0.85rem;font-weight:600;';
+    var tabH = el('button', tabCss, { type: 'button', role: 'tab', class: 'pubc-tab' }, 'Wzrost');
+    var tabW = el('button', tabCss, { type: 'button', role: 'tab', class: 'pubc-tab' }, 'Masa cia\u0142a');
     append(tabs, tabH, tabW);
-    var closeBtn = el('button', 'border:none;background:transparent;color:' + COLORS.muted + ';font-size:1.3rem;cursor:pointer;line-height:1;padding:0.2rem 0.4rem;', { type: 'button', 'aria-label': 'Zamknij kreator' }, '✕');
+    var closeBtn = el('button', BTN_BASE + 'font-size:1.25rem;padding:0.15rem 0.4rem;', { type: 'button', class: 'pubc-ghost', 'aria-label': 'Zamknij kreator' }, '\u2715');
     append(head, title, tabs, closeBtn);
 
-    /* Obszar wykresu */
-    var body = el('div', 'padding:0.7rem 1rem;overflow:auto;flex:1 1 auto;');
+    /* Pasek narz\u0119dzi: zoom + status zapisu */
+    var toolbar = el('div', 'display:flex;align-items:center;gap:0.4rem;padding:0.5rem 0.9rem;border-bottom:1px solid ' + COLORS.border + ';flex-wrap:wrap;background:#fff;');
+    var zoomCss = BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.95rem;font-weight:700;';
+    var zoomOut = el('button', zoomCss, { type: 'button', class: 'pubc-neutral', 'aria-label': 'Oddal siatk\u0119' }, '\u2212');
+    var zoomLabel = el('span', 'min-width:3.2rem;text-align:center;font-size:0.82rem;color:' + COLORS.text + ';font-variant-numeric:tabular-nums;', { 'aria-live': 'polite' }, '100%');
+    var zoomIn = el('button', zoomCss, { type: 'button', class: 'pubc-neutral', 'aria-label': 'Przybli\u017c siatk\u0119' }, '+');
+    var zoomFit = el('button', BTN_BASE + 'padding:0.25rem 0.65rem;font-size:0.8rem;font-weight:600;', { type: 'button', class: 'pubc-outline' }, 'Dopasuj');
+    var saveNote = el('span', 'font-size:0.76rem;color:#2e7d32;opacity:0.55;transition:opacity 0.2s;margin-left:auto;', null, '\u2713 Uk\u0142ad zapisywany automatycznie w danych karty');
+    append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, saveNote);
+
+    /* Obszar wykres\u00f3w: kontener przewijany w obu osiach (dla powi\u0119kszenia) */
+    var body = el('div', 'padding:0.7rem 0.9rem;');
     var wraps = {};
+    var inners = {};
+    var scrolls = {};
+    var bases = {};
     var overlays = {};
     ['height', 'weight'].forEach(function (chart) {
-      var wrap = el('div', 'position:relative;margin:0 auto;width:fit-content;max-width:100%;' + (chart === 'weight' ? 'display:none;' : ''));
+      var wrap = el('div', chart === 'weight' ? 'display:none;' : '');
+      var scroll = el('div', 'overflow:auto;max-height:78vh;border:1px solid ' + COLORS.border + ';border-radius:8px;background:#eef3f3;padding:8px;box-sizing:border-box;');
+      var inner = el('div', 'position:relative;width:fit-content;margin:0 auto;');
       var base = canvases[chart];
-      base.style.cssText = 'display:block;max-height:min(62vh,760px);max-width:100%;width:auto;height:auto;border:1px solid ' + COLORS.border + ';border-radius:8px;';
+      base.style.cssText = 'display:block;width:900px;height:auto;background:#fff;';
       var overlay = document.createElement('canvas');
       overlay.width = CANVAS_W;
       overlay.height = CANVAS_H;
       overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;cursor:pointer;';
-      append(wrap, base, overlay);
+      append(inner, base, overlay);
+      append(scroll, inner);
+      append(wrap, scroll);
       wraps[chart] = wrap;
+      inners[chart] = inner;
+      scrolls[chart] = scroll;
+      bases[chart] = base;
       overlays[chart] = overlay;
       body.appendChild(wrap);
     });
     var help = el('div', 'display:flex;gap:0.4rem 1rem;flex-wrap:wrap;font-size:0.76rem;color:' + COLORS.muted + ';margin-top:0.55rem;justify-content:center;');
-    [['Kliknij punkt', 'dodaj / usuń komentarz'], ['Przeciągnij ramkę', 'zmień położenie'], ['Kliknij ramkę', 'edytuj treść']].forEach(function (pair) {
+    [['Kliknij punkt', 'dodaj / usu\u0144 komentarz'], ['Przeci\u0105gnij ramk\u0119', 'zmie\u0144 po\u0142o\u017cenie'], ['Kliknij ramk\u0119', 'edytuj tre\u015b\u0107']].forEach(function (pair) {
       var s = el('span', null, null, null);
-      append(s, el('b', 'color:' + COLORS.text + ';font-weight:600;', null, pair[0]), document.createTextNode(' — ' + pair[1]));
+      append(s, el('b', 'color:' + COLORS.text + ';font-weight:600;', null, pair[0]), document.createTextNode(' \u2014 ' + pair[1]));
       append(help, s);
     });
     body.appendChild(help);
     var listEl = el('div', 'display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:center;margin-top:0.5rem;');
     body.appendChild(listEl);
 
-    /* Edytor komentarza (nakładka pozycjonowana przy ramce) */
-    var editor = el('div', 'position:absolute;z-index:30;background:#fff;border:1.5px solid ' + COLORS.primary + ';border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.25);padding:0.55rem;width:238px;display:none;');
+    /* Edytor komentarza (nak\u0142adka pozycjonowana przy ramce, przewija si\u0119 z siatk\u0105) */
+    var editor = el('div', 'position:absolute;z-index:30;background:#fff;border:1.5px solid ' + COLORS.primary + ';border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.25);padding:0.55rem;width:238px;box-sizing:border-box;display:none;');
     var ta = document.createElement('textarea');
     ta.maxLength = 120;
-    ta.setAttribute('aria-label', 'Treść komentarza');
-    ta.style.cssText = 'width:100%;height:64px;resize:none;border:1px solid ' + COLORS.border + ';border-radius:6px;font-family:inherit;font-size:0.85rem;padding:0.35rem 0.45rem;box-sizing:border-box;';
+    ta.setAttribute('aria-label', 'Tre\u015b\u0107 komentarza');
+    ta.style.cssText = 'width:100%;height:64px;resize:none;border:1px solid ' + COLORS.border + ';border-radius:6px;font-family:inherit;font-size:0.85rem;padding:0.35rem 0.45rem;box-sizing:border-box;background:#fff;color:' + COLORS.text + ';box-shadow:none;margin:0;';
     var edBtns = el('div', 'display:flex;gap:0.4rem;margin-top:0.45rem;');
-    var edSave = el('button', 'flex:1;border:none;background:' + COLORS.primary + ';color:#fff;border-radius:6px;padding:0.32rem 0.4rem;font-size:0.78rem;font-weight:600;cursor:pointer;', { type: 'button', class: 'pubc-save' }, 'Zapisz');
-    var edCancel = el('button', 'flex:1;border:1px solid ' + COLORS.border + ';background:#fff;color:' + COLORS.text + ';border-radius:6px;padding:0.32rem 0.4rem;font-size:0.78rem;font-weight:600;cursor:pointer;', { type: 'button', class: 'pubc-cancel' }, 'Anuluj');
-    var edDel = el('button', 'flex:1;border:1px solid ' + COLORS.danger + ';background:#fff;color:' + COLORS.danger + ';border-radius:6px;padding:0.32rem 0.4rem;font-size:0.78rem;font-weight:600;cursor:pointer;', { type: 'button', class: 'pubc-del' }, 'Usuń');
+    var edBtnCss = BTN_BASE + 'flex:1;padding:0.32rem 0.4rem;font-size:0.78rem;font-weight:600;';
+    var edSave = el('button', edBtnCss, { type: 'button', class: 'pubc-save pubc-primary' }, 'Zapisz');
+    var edCancel = el('button', edBtnCss, { type: 'button', class: 'pubc-cancel pubc-neutral' }, 'Anuluj');
+    var edDel = el('button', edBtnCss, { type: 'button', class: 'pubc-del pubc-danger' }, 'Usu\u0144');
     append(edBtns, edSave, edCancel, edDel);
     append(editor, ta, edBtns);
-    /* Edytor pozycjonowany względem aktywnego wrappera */
-    wraps.height.appendChild(editor);
+    inners.height.appendChild(editor);
 
     /* Stopka */
-    var foot = el('div', 'display:flex;align-items:center;gap:0.5rem;padding:0.6rem 1rem;border-top:1px solid ' + COLORS.border + ';background:' + COLORS.card + ';flex-wrap:wrap;');
-    var saveNote = el('span', 'font-size:0.78rem;color:#2e7d32;opacity:0.55;transition:opacity 0.2s;', null, '✓ Układ zapisywany automatycznie w danych karty');
-    var resetBtn = el('button', 'border:1.5px solid ' + COLORS.primary + ';background:#fff;color:' + COLORS.primary + ';border-radius:8px;padding:0.5rem 0.8rem;font-size:0.85rem;font-weight:600;cursor:pointer;', { type: 'button' }, 'Przywróć układ automatyczny');
-    var genBtn = el('button', 'border:none;background:' + GRADIENT + ';color:#fff;border-radius:8px;padding:0.55rem 0.9rem;font-size:0.88rem;font-weight:700;cursor:pointer;', { type: 'button' }, 'Generuj siatki (PDF)');
-    var spacer = el('span', 'flex:1 1 auto;');
-    append(foot, saveNote, spacer, resetBtn, genBtn);
+    var foot = el('div', 'display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;padding:0.6rem 0.9rem;border-top:1px solid ' + COLORS.border + ';background:' + COLORS.card + ';flex-wrap:wrap;');
+    var resetBtn = el('button', BTN_BASE + 'padding:0.5rem 0.8rem;font-size:0.85rem;font-weight:600;', { type: 'button', class: 'pubc-outline' }, 'Przywr\u00f3\u0107 uk\u0142ad automatyczny');
+    var genBtn = el('button', BTN_BASE + 'padding:0.55rem 0.9rem;font-size:0.88rem;font-weight:700;', { type: 'button', class: 'pubc-primary' }, 'Generuj siatki (PDF)');
+    append(foot, resetBtn, genBtn);
 
-    append(panel, head, body, foot);
-    append(backdrop, panel);
-    document.body.appendChild(backdrop);
+    append(panel, head, toolbar, body, foot);
+    mountRow.insertAdjacentElement('afterend', panel);
 
     ui = {
-      backdrop: backdrop,
+      panel: panel,
       wraps: wraps,
+      inners: inners,
+      scrolls: scrolls,
+      bases: bases,
       overlays: overlays,
       tabs: { height: tabH, weight: tabW },
       listEl: listEl,
       editor: editor,
       saveNote: saveNote,
       saveNoteTimer: null,
+      zoomLabel: zoomLabel,
+      zoom: 1,
+      fitWidth: 900,
       active: 'height',
       selectedKey: null,
       items: {},
       points: {},
       onKeyDown: function (evt) { if (evt.key === 'Escape') closeCreator(); }
     };
+    /* Dopasowanie 100% = szeroko\u015b\u0107 kontenera przewijania (bez paddingu) */
+    var avail = scrolls.height.clientWidth - 16;
+    if (avail > 200) ui.fitWidth = avail;
+    applyZoom();
 
     tabH.addEventListener('click', function () {
-      /* Edytor musi „podążać” za aktywnym wrapperem */
-      wraps.height.appendChild(editor);
+      /* Edytor musi \u201epod\u0105\u017ca\u0107\u201d za aktywn\u0105 siatk\u0105 */
+      inners.height.appendChild(editor);
       switchTab('height');
     });
     tabW.addEventListener('click', function () {
-      wraps.weight.appendChild(editor);
+      inners.weight.appendChild(editor);
       switchTab('weight');
     });
     closeBtn.addEventListener('click', closeCreator);
-    backdrop.addEventListener('click', function (evt) { if (evt.target === backdrop) closeCreator(); });
     document.addEventListener('keydown', ui.onKeyDown);
+    zoomIn.addEventListener('click', function () { setZoom(ui.zoom + ZOOM_STEP); });
+    zoomOut.addEventListener('click', function () { setZoom(ui.zoom - ZOOM_STEP); });
+    zoomFit.addEventListener('click', function () { setZoom(1); });
     resetBtn.addEventListener('click', function () {
       resetLayout(ui.active);
       scheduleSave();
@@ -868,6 +954,13 @@
 
     setupInteractions();
     switchTab('height');
+    try { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* ignore */ }
+  }
+
+  /* Arkusz wstrzykiwany od razu, żeby przycisk „Kreator adnotacji” w wierszu
+     przełącznika miał właściwe kolory także pod liquid glass. */
+  if (typeof document !== 'undefined') {
+    try { ensureStyle(); } catch (e) { /* ignore */ }
   }
 
   w.VildaPublicationCreator = {
