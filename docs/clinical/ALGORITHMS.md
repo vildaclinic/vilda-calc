@@ -210,6 +210,18 @@ Przypadki syntetyczne (testy `tests/unit/epicrisis.test.mjs`, wywołują realny 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### GROWTH-LMS — interpolacja krzywych centylowych Palczewskiej (2026-08-11)
+
+Dane: `centile_data.js` (Palczewska & Niedźwiecka, IMiD 1999; waga, wzrost i BMI, węzły 1–222 mies., rozstaw od 1 mies. w niemowlęctwie do 12 mies. w wieku szkolnym; wszystkie 180 wierszy ma komplet p3–p97, co potwierdza test regresyjny).
+
+Metoda (moduł `vilda_centile_interpolation.js`, `window.VildaCentileInterp`): monotoniczny sześcienny spline Hermite'a PCHIP w wariancie Fritscha–Carlsona/Butlanda (nachylenia wewnętrzne: ważona średnia harmoniczna ilorazów różnicowych, zero przy zmianie znaku; nachylenia brzegowe: niecentrowany wzór trójpunktowy z klamrami zachowującymi kształt). Własności: wartość na każdym węźle równa dokładnie opublikowanej wartości tabeli; monotoniczność między węzłami (brak przestrzeleń), przez co sąsiednie linie centylowe nie mogą się sztucznie przeciąć — obie własności objęte testem `tests/unit/centile-interpolation.test.mjs` na rzeczywistych funkcjach produkcyjnych.
+
+Granice i ekstrapolacja (celowo identyczne z wcześniejszą produkcyjną funkcją `getPalReferenceCentileInterpolated` w `app.js`): dla wieku ≤ pierwszego węzła ekstrapolacja liniowa z dwóch pierwszych węzłów (używana przez siatkę 0–3 dla miesiąca 0.); dla wieku ≥ ostatniego węzła wartość ostatniego węzła; poza tym brak ekstrapolacji.
+
+Zastąpiona implementacja: interpolacja odcinkowo-liniowa z następczym wygładzaniem uśrednianiem rysowanych krzywych (siatka 1–18: 12 przejść jądra 1-2-3-2-1/9 w `inline_index_07.js`; siatki 0–3 i DS: 6 przejść średniej 3-punktowej w `inline_index_03/04/05.js`). Wygładzanie uśrednianiem przesuwało rysowane krzywe względem wartości tabeli (zmierzone do −0,44 kg na p97 wagi chłopców w 13. r.ż. i −0,30 kg na p50 wagi w 4. mies.), przez co punkt pacjenta o centylu liczonym numerycznie mógł leżeć po złej stronie narysowanej linii. Po zmianie krzywe i obliczenia numeryczne (`getPLWeightCentile`/`getPLHeightCentile` → `calcPercentileStatsPL`) używają tej samej funkcji; wartości numeryczne między węzłami różnią się od dawnej interpolacji liniowej maksymalnie o ~0,7 kg (p3 wagi, przedział węzłów rocznych po skoku pokwitaniowym), a na węzłach są niezmienione. Interpolacja parametrów LMS (`getLMSFromDataset` — OLAF, WHO, DS; konsumenci m.in. `bp_module.js`) pozostała celowo nietknięta (liniowa per parametr); w siatkach LMS usunięto wyłącznie wygładzanie uśrednianiem rysowanych krzywych.
+
+Stary kod interpolacji liniowej i wygładzania pozostaje w plikach jako fallback wykonywany tylko wtedy, gdy `vilda_centile_interpolation.js` nie jest załadowany (obecnie: `docpro.html` do czasu konsolidacji kopii siatek). Preferencja `PAL_SMOOTH_PASSES` działa wyłącznie w ścieżce fallbacku.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
