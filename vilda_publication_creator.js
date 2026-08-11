@@ -812,17 +812,20 @@
     });
   }
 
-  /* ── Przełączniki elementów siatki per wydruk (pubOptions) ──
-     Sterują wyłącznie siatkami PUBLIKACYJNYMI; zwykłe (kolorowe) siatki dalej
-     słuchają globalnych ustawień aplikacji. Wartości startowe trzech opcji
-     widoczności są przepisywane z globalnych flag Ustawień przy pierwszym
-     zapisie opcji. Ramka podsumowania domyślnie wyłączona (jak dotychczas
-     w trybie publikacji). */
+  /* ── Przełączniki elementów siatki per wydruk ──
+     Kontekst 'pub': magazyn w danych karty (pubOptions). Kontekst 'palRegular':
+     magazyn centralny (chartCreatorData.palRegular.options). Poza kreatorem
+     i trybami renderu (kontekst 'default') isElementEnabled zwraca wartości
+     domyślne, czyli dokładnie dotychczasowe zachowanie zwykłych siatek —
+     dzięki temu helpery widoczności mogą pytać kreator bezwarunkowo.
+     Wartości startowe trzech opcji widoczności są przepisywane z globalnych
+     flag Ustawień. Ramka podsumowania: publikacja domyślnie wyłączona
+     (jak dotychczas), zwykła siatka domyślnie włączona (jak dotychczas). */
 
   var PUB_OPTION_DEFS = [
-    { key: 'patientName', label: 'Wiersz „Patient” (imię i nazwisko)', group: 'header' },
+    { key: 'patientName', label: 'Wiersz „Patient” (imię i nazwisko)', regLabel: 'Imię i nazwisko w nagłówku', group: 'header' },
     { key: 'parentsHeader', label: 'Wzrosty rodziców i MPH w nagłówku', group: 'header' },
-    { key: 'footer', label: 'Stopka „Data source …” (źródło danych)', group: 'header' },
+    { key: 'footer', label: 'Stopka „Data source …” (źródło danych)', regLabel: 'Stopka „wagaiwzrost.pl”', group: 'header' },
     { key: 'mph', label: 'Romb MPH na siatce', group: 'chart' },
     { key: 'boneAge', label: 'Znaczniki wieku kostnego', group: 'chart' },
     { key: 'bandReference', label: 'Linie odniesienia kanału centylowego', group: 'chart' },
@@ -831,34 +834,71 @@
     { key: 'summary', label: 'Ramka podsumowania', group: 'chart' }
   ];
 
-  function defaultOptionValue(name) {
-    if (name === 'summary') return false;
-    /* surowe flagi globalne (nie helpery — te w trybie publikacji pytają
-       z powrotem kreator, co dałoby rekurencję) */
+  /* Flaga renderu zwykłej siatki Palczewskiej 1–18 — ustawiana przez generator
+     (ze w inline_index_07.js) na czas budowy kanw, żeby bramki elementów
+     wiedziały, że mają czytać opcje kontekstu zwykłego. */
+  var regularRenderActive = false;
+
+  function defaultOptionValue(name, ctxId) {
+    if (name === 'summary') return ctxId === 'palRegular';
+    /* surowe flagi globalne (nie helpery — te pytają z powrotem kreator,
+       co dałoby rekurencję) */
     if (name === 'bandReference') return !(w.centileShowBandReference === false);
     if (name === 'heightLabel') return !(w.centileShowHeightValueLabel === false);
     if (name === 'weightLabel') return !(w.centileShowWeightValueLabel === false);
     return true;
   }
 
+  /* Kontekst, którego opcje obowiązują w tej chwili: otwarty kreator ma
+     pierwszeństwo (jego podglądy budują się z przypiętą flagą), potem tryb
+     publikacji, potem trwający render zwykłej siatki Palczewskiej. */
+  function optionsContext() {
+    if (ui) return creatorContext === 'palRegular' ? 'palRegular' : 'pub';
+    if (w.publicationCharts) return 'pub';
+    if (regularRenderActive) return 'palRegular';
+    return 'default';
+  }
+
   /*
-   * Publiczne: czy element siatki publikacyjnej jest włączony w tym wydruku.
-   * Wołane przez generator (inline_index_07.js) i helpery widoczności rdzenia
-   * (inline_index_03.js) w trybie publikacji.
+   * Publiczne: czy element siatki jest włączony w tym wydruku. Wołane przez
+   * generator (inline_index_07.js) i helpery widoczności rdzenia
+   * (inline_index_03.js); poza kreatorem i trybami renderu zwraca domyślne
+   * wartości globalne (zachowanie dotychczasowe).
    */
   function isElementEnabled(name) {
-    var adv = w.advancedGrowthData;
-    var o = adv && adv.pubOptions;
-    if (o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, name)) return o[name] !== false;
-    return defaultOptionValue(name);
+    var ctxId = optionsContext();
+    if (ctxId === 'palRegular') {
+      /* czytaj bez tworzenia magazynu — zwykły render nie może zostawiać
+         śladów w danych użytkowników, którzy kreatora nie używają */
+      var cc = w.chartCreatorData;
+      var o2 = cc && cc.palRegular && cc.palRegular.options;
+      if (o2 && typeof o2 === 'object' && Object.prototype.hasOwnProperty.call(o2, name)) return o2[name] !== false;
+      return defaultOptionValue(name, 'palRegular');
+    }
+    if (ctxId === 'pub') {
+      var adv = w.advancedGrowthData;
+      var o = adv && adv.pubOptions;
+      if (o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, name)) return o[name] !== false;
+      return defaultOptionValue(name, 'pub');
+    }
+    return defaultOptionValue(name, 'default');
   }
 
   function setOption(name, value) {
+    if (creatorContext === 'palRegular') {
+      var s = regRoot();
+      if (!s.options || typeof s.options !== 'object') {
+        s.options = {};
+        PUB_OPTION_DEFS.forEach(function (d) { s.options[d.key] = defaultOptionValue(d.key, 'palRegular'); });
+      }
+      s.options[name] = !!value;
+      return;
+    }
     var adv = w.advancedGrowthData;
     if (!adv || typeof adv !== 'object') return;
     if (!adv.pubOptions || typeof adv.pubOptions !== 'object') {
       adv.pubOptions = {};
-      PUB_OPTION_DEFS.forEach(function (d) { adv.pubOptions[d.key] = defaultOptionValue(d.key); });
+      PUB_OPTION_DEFS.forEach(function (d) { adv.pubOptions[d.key] = defaultOptionValue(d.key, 'pub'); });
     }
     adv.pubOptions[name] = !!value;
   }
@@ -1998,9 +2038,6 @@
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
     var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105; poprzeczk\u0119 mo\u017cna potem przeci\u0105gn\u0105\u0107 wy\u017cej lub ni\u017cej' }, '+ Klamra');
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
-    /* Prze\u0142\u0105czniki element\u00f3w steruj\u0105 dzi\u015b wy\u0142\u0105cznie siatkami publikacyjnymi \u2014
-       w kontek\u015bcie zwyk\u0142ej siatki panel ukryty (planowana faza rozwoju). */
-    if (isRegular) elemBtn.style.display = 'none';
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn, saveNote);
 
     /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) \u2014 rozwijany z animacj\u0105
@@ -2025,7 +2062,7 @@
           flashSaveNote();
           refreshPreview();
         });
-        append(lab, cb, document.createTextNode(def.label));
+        append(lab, cb, document.createTextNode(isRegular && def.regLabel ? def.regLabel : def.label));
         append(col, lab);
       });
       append(optsWrap, col);
@@ -2217,7 +2254,18 @@
     });
     genBtn.addEventListener('click', function () {
       try {
-        if (typeof w.generatePalczewskaCentileCharts === 'function') w.generatePalczewskaCentileCharts();
+        if (typeof w.generatePalczewskaCentileCharts !== 'function') return;
+        if (creatorContext === 'palRegular') {
+          /* WYSIWYG: PDF z kreatora zwykłej siatki zawsze w kolorowym stylu,
+             nawet gdy przełącznik publikacji jest gdzieś włączony */
+          var pf = w.publicationCharts;
+          w.publicationCharts = false;
+          Promise.resolve(w.generatePalczewskaCentileCharts())
+            .catch(function () { /* ignore */ })
+            .then(function () { w.publicationCharts = pf; });
+        } else {
+          w.generatePalczewskaCentileCharts();
+        }
       } catch (e) { /* ignore */ }
     });
 
@@ -2256,6 +2304,7 @@
     _geomStore: geomStore,
     _setContext: function (c) { creatorContext = c === 'palRegular' ? 'palRegular' : 'pub'; },
     _advForContext: advForContext,
-    _regRoot: regRoot
+    _regRoot: regRoot,
+    _setRegularRender: function (v) { regularRenderActive = !!v; }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

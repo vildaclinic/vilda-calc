@@ -324,7 +324,8 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
   });
 
   it('pubOptions: setOption zapisuje per wydruk w danych karty i wygrywa z globalnymi flagami', () => {
-    const win = { centileShowBandReference: false };
+    // opcje publikacyjne obowiązują w trybie publikacji (rozstrzyganie kontekstu)
+    const win = { centileShowBandReference: false, publicationCharts: true };
     const PC = loadCreator(win);
     win.advancedGrowthData = sampleAdv();
     PC._setOption('bandReference', true);
@@ -421,6 +422,58 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(win.advancedGrowthData.pubFree.height[0].bdy).toBe(250);
     PC._updateFree('height', id, { bdy: 0 });
     expect('bdy' in win.advancedGrowthData.pubFree.height[0]).toBe(false);
+  });
+
+  it('opcje elementów per kontekst: zwykły render czyta chartCreatorData, publikacyjny pubOptions', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    // poza kreatorem i renderami: wartości domyślne = dotychczasowe zachowanie
+    expect(PC.isElementEnabled('summary')).toBe(false);
+    expect(PC.isElementEnabled('boneAge')).toBe(true);
+    // zapis opcji w kontekście zwykłym trafia do magazynu centralnego z regularnymi domyślnymi
+    PC._setContext('palRegular');
+    PC._setOption('boneAge', false);
+    PC._setContext('pub');
+    expect(win.chartCreatorData.palRegular.options.boneAge).toBe(false);
+    expect(win.chartCreatorData.palRegular.options.summary).toBe(true); // zwykła siatka: ramka domyślnie włączona
+    expect(win.advancedGrowthData.pubOptions).toBeUndefined();
+    // render zwykłej siatki (flaga generatora) honoruje opcje kontekstu zwykłego
+    PC._setRegularRender(true);
+    expect(PC.isElementEnabled('boneAge')).toBe(false);
+    expect(PC.isElementEnabled('summary')).toBe(true);
+    PC._setRegularRender(false);
+    // render publikacyjny nie widzi opcji zwykłych (własne domyślne)
+    win.publicationCharts = true;
+    expect(PC.isElementEnabled('boneAge')).toBe(true);
+    expect(PC.isElementEnabled('summary')).toBe(false);
+    win.publicationCharts = false;
+    // bez renderu i kreatora wracają domyślne globalne
+    expect(PC.isElementEnabled('boneAge')).toBe(true);
+  });
+
+  it('inline_index_07.js: bramki elementów działają też w gałęziach zwykłej siatki', () => {
+    const generatorSource = fs.readFileSync(path.join(repositoryRoot, 'inline_index_07.js'), 'utf8');
+    // flaga renderu zwykłego ustawiana w ze() i zdejmowana w finally
+    expect(generatorSource).toContain('_setRegularRender(!window.publicationCharts)');
+    expect(generatorSource).toContain('_setRegularRender(!1)');
+    // nagłówek zwykły: imię i nazwisko + wiersz rodziców/MPH za bramkami
+    expect(generatorSource).toContain('}else{Pe&&__pubok("patientName")&&(');
+    expect(generatorSource).toContain('const n=__pubok("parentsHeader")?[Ue,qe,He].filter(Boolean):[];');
+    // stopka zwykła wagaiwzrost.pl za bramką footer
+    expect(generatorSource).toContain('else if(__pubok("footer")){e.textAlign="left"');
+    // wiek kostny i MPH bramkowane bez warunku trybu publikacji
+    expect(generatorSource).toContain('if(!__pubok("boneAge"))return;');
+    expect(generatorSource).toContain('if(!__pubok("mph"))return;');
+    expect(generatorSource).not.toContain('if(S&&!__pubok("boneAge"))return;');
+    // ramka podsumowania zwykła
+    expect(generatorSource).toContain('else if(!t||!__pubok("summary"))return;');
+  });
+
+  it('inline_index_03.js: helpery widoczności pytają kreator bezwarunkowo (kontekst rozstrzyga moduł)', () => {
+    const core = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+    expect(core).toContain('function isCentileCurrentPointLabelVisible(e){if(typeof window<"u"&&(e==="cm"||e==="kg")){try{');
+    expect(core).toContain('function isCentileBandReferenceVisible(){if(typeof window<"u"){try{');
   });
 
   it('kontekst palRegular: strzałki z magazynu centralnego, checkboxy pomiarów ignorowane', () => {
@@ -649,7 +702,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=15');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=16');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
