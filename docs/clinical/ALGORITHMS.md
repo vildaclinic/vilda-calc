@@ -231,6 +231,8 @@ Krzywe LMS (OLAF, WHO, zespół Downa) nie przechodzą przez moduł: interpolacj
 
 Stary kod interpolacji liniowej i wygładzania pozostaje w plikach jako fallback wykonywany, gdy `vilda_centile_interpolation.js` nie jest załadowany. Preferencja `PAL_SMOOTH_PASSES` działa wyłącznie w ścieżce fallbacku. Moduł jest ładowany w `index.html` i `docpro.html`.
 
+Warstwa rysowania (bez zmian algorytmicznych): od etapu 1 konsolidacji kopii siatek (2026-08-11) prymitywy rysowania — style/szerokości linii, flagi widoczności, metryki pola wykresu, motyw canvas, punkt bieżący, serie pomiarów i `drawCentileGrid` — są wyodrębnione verbatim z `inline_index_03.js` do wspólnego `vilda_centile_charts.js` (index.html + docpro.html), zastępując starszą ręczną kopię z `inline_docpro_01.js`. Niezmienność wyników wykazano regresją pikselową (SHA-256 PNG identyczne na index.html przed/po); parzystości renderowania między stronami pilnuje stały test `tests/e2e/centile-chart-parity.spec.mjs`.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
