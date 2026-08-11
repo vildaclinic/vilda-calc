@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=6' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=7' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -161,4 +161,92 @@ test('DIET-PDF-FULL-COMPLETE: pełny raport PDF zawiera komplet zaleceń z witam
   expect(result.hasKomplet).toBe(true);
   expect(result.hasVitD).toBe(true);
   expect(result.hasIU).toBe(true);
+});
+
+// ── Etap 3: plan SMART — warianty dziecięce, fallback bazowy, chipy, rotacja mitów ──
+
+async function buildSmart(page, { ageYears, sex, weightKg, heightCm, checkedKeys }) {
+  return page.evaluate(({ ageYears, sex, weightKg, heightCm, checkedKeys }) => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    set('age', ageYears); set('ageMonths', 0); set('sex', sex);
+    set('weight', weightKg); set('height', heightCm);
+    window.ensureDietRecommendationsElements();
+    document.querySelectorAll('[data-diet-survey-key]').forEach((el) => {
+      el.checked = checkedKeys.includes(el.getAttribute('data-diet-survey-key'));
+    });
+    const result = window.buildDietSmartRecommendationResult();
+    return {
+      text: result && result.textOutput ? result.textOutput : '',
+      surveyCompleted: !!(result && result.surveyCompleted),
+    };
+  }, { ageYears, sex, weightKg, heightCm, checkedKeys });
+}
+
+// DIET-SMART-CHILD-BASE: dziecko 6 lat, w ankiecie zaznaczone tylko „alergie
+// lub nietolerancje" (chip bez własnego celu) → fallback bazowy musi dać cele
+// DZIECIĘCE (woda, warzywa, posiłek bez ekranu), nie dorosłą triadę z metodą
+// talerza; przypomnienie honoruje chip alergii (przedtem martwy).
+test('DIET-SMART-CHILD-BASE: fallback bazowy dziecka + aktywny chip alergii', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openWithDietModule(page);
+  const result = await buildSmart(page, {
+    ageYears: 6, sex: 'M', weightKg: 28, heightCm: 118,
+    checkedKeys: ['allergiesOrIntolerances'],
+  });
+  expect(result.surveyCompleted).toBe(true);
+  expect(result.text).toContain('Woda jako podstawowy nap');
+  expect(result.text).toContain('bez ekranu');
+  expect(result.text).not.toContain('Talerz zdrowego żywienia');
+  expect(result.text).not.toContain('redukcji masy');
+  // Chip „alergie lub nietolerancje" ma realny efekt w przypomnieniu:
+  expect(result.text).toContain('alergiach lub nietolerancjach');
+  expect(result.text).toContain('zamienników bezpiecznych dla pacjenta');
+});
+
+// DIET-SMART-CHILD-PROTEIN: dziecko szkolne z „mało białka" + „nie lubi ryb"
+// → cel białkowy w brzmieniu dziecięcym (rozwój, nie „redukcja masy"),
+// a lista produktów respektuje chip dislikesFish (przedtem martwy).
+test('DIET-SMART-CHILD-PROTEIN: cel białkowy dziecka bez narracji redukcyjnej i bez ryb', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openWithDietModule(page);
+  const result = await buildSmart(page, {
+    ageYears: 8, sex: 'F', weightKg: 38, heightCm: 132,
+    checkedKeys: ['lowProtein', 'dislikesFish'],
+  });
+  expect(result.text).toContain('głównych posiłkach dziecka');
+  expect(result.text).toContain('prawidłowy rozwój');
+  expect(result.text).toContain('zamiast ryb wybierz inne akceptowane');
+  expect(result.text).not.toContain('redukcji masy');
+  expect(result.text).not.toContain('jaja, ryby,');
+});
+
+// DIET-MYTH-ROTATION: nastolatek z zaznaczonym tylko „mało białka" zawęża pulę
+// mitów tagami do jednej pozycji (perfect_diet, tag „teen"). Prośba o nowy mit
+// musi sięgnąć do pełnej puli wiekowej (fallback rAll) — przedtem rotacja
+// utykała i zwracała wciąż ten sam mit.
+test('DIET-MYTH-ROTATION: nowy mit przy zawężonej puli tagów faktycznie się zmienia', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openWithDietModule(page);
+  const result = await page.evaluate(() => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    set('age', 14); set('ageMonths', 0); set('sex', 'M');
+    set('weight', 75); set('height', 165);
+    window.ensureDietRecommendationsElements();
+    document.querySelectorAll('[data-diet-survey-key]').forEach((el) => {
+      el.checked = el.getAttribute('data-diet-survey-key') === 'lowProtein';
+    });
+    const mythOf = (text) => (text.split('\n').find((l) => l.startsWith('Mit / popularne przekonanie:')) || '').trim();
+    const first = window.buildDietSmartRecommendationResult();
+    window.dietRecommendationsRequestNewMyth();
+    const second = window.buildDietSmartRecommendationResult();
+    return {
+      firstMyth: mythOf(first && first.textOutput ? first.textOutput : ''),
+      secondMyth: mythOf(second && second.textOutput ? second.textOutput : ''),
+    };
+  });
+  expect(result.firstMyth).not.toBe('');
+  expect(result.secondMyth).not.toBe('');
+  expect(result.secondMyth).not.toBe(result.firstMyth);
 });
