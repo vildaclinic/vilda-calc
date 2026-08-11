@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=11' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=12' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -415,6 +415,9 @@ test('DIET-PAL-TARGET-BMI: mediana Palczewskiej liczona przez BMI jak OLAF', asy
   const result = await page.evaluate(() => {
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
     window.professionalMode = true;
+    if (typeof window.setCheckedGrowthDataSource === 'function') {
+      window.setCheckedGrowthDataSource('PALCZEWSKA');
+    }
     window.bmiSource = 'PALCZEWSKA';
     set('age', 10); set('ageMonths', 0); set('sex', 'M');
     set('weight', 62); set('height', 160);
@@ -484,4 +487,61 @@ test('DIET-UNDER10-DISCLAIMER: dyskleimer poniżej 10 lat pada w trybie profesjo
   });
   expect(older).not.toContain('poglądowy');
   expect(older).not.toContain('endokrynologiem');
+  // Uwaga z przeglądu PR #109: dziecko <10 lat z BMI w NORMIE (ścieżka WHR)
+  // dostaje wariant neutralny — bez fałszywej klasyfikacji „z nadwagą lub otyłością".
+  const normalBmi = await generate(page, {
+    ageYears: 8, sex: 'F', weightKg: 26, heightCm: 130,
+  });
+  expect(normalBmi).toContain('poglądowy');
+  expect(normalBmi).toContain('endokrynologiem');
+  expect(normalBmi).not.toContain('z nadwagą lub otyłością');
+});
+
+// DIET-PAL-P97-BOUNDARY: regresja brzegowa progu otyłości 97c po ujednoliceniu
+// metodyki (etap 6) — klasyfikacja nadwaga/otyłość wokół progu BMI p97
+// Palczewskiej liczonego tą samą inwersją bmiPercentileChildPal, której używa
+// produkcja. Chłopiec 10 lat, 160 cm: tuż pod progiem → „nadwaga",
+// na progu i powyżej → „otyłość".
+test('DIET-PAL-P97-BOUNDARY: klasyfikacja wokół progu 97c BMI Palczewskiej', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const result = await page.evaluate(() => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    if (typeof window.setCheckedGrowthDataSource === 'function') {
+      window.setCheckedGrowthDataSource('PALCZEWSKA');
+    }
+    window.bmiSource = 'PALCZEWSKA';
+    window.ensureDietRecommendationsElements();
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    flag('reduceToggle', true); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
+    // Prog 97c BMI tą samą metodą co produkcja (inwersja bmiPercentileChildPal):
+    if (typeof window.bmiPercentileChildPal !== 'function') return { error: 'brak bmiPercentileChildPal' };
+    let lo = 5; let hi = 40;
+    for (let i = 0; i < 30; i += 1) {
+      const mid = (lo + hi) / 2;
+      const pct = window.bmiPercentileChildPal(mid, 'M', 120);
+      if (pct == null || Number.isNaN(pct)) return { error: 'bmiPercentileChildPal zwraca null' };
+      if (pct < 97) lo = mid; else hi = mid;
+    }
+    const bmi97 = (lo + hi) / 2;
+    const heightM2 = Math.pow(1.6, 2);
+    const run = (weightKg) => {
+      set('age', 10); set('ageMonths', 0); set('sex', 'M');
+      set('weight', weightKg.toFixed(1)); set('height', 160);
+      const out = window.generateDietRecommendations();
+      return out && out.textOutput ? out.textOutput : '';
+    };
+    return {
+      bmi97,
+      below: run((bmi97 - 0.4) * heightM2),
+      above: run((bmi97 + 0.4) * heightM2),
+    };
+  });
+  expect(result.error).toBeUndefined();
+  // Tuż pod progiem: klasyfikacja „nadwaga", bez słownictwa otyłości:
+  expect(result.below).toMatch(/nadwa/u);
+  expect(result.below).not.toMatch(/otyło/u);
+  // Powyżej progu: klasyfikacja „otyłość":
+  expect(result.above).toMatch(/otyło/u);
 });
