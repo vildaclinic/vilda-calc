@@ -123,7 +123,7 @@
   var creatorContext = 'pub';
 
   /* Konteksty inne niż publikacyjny (magazyn centralny per rodzaj siatki). */
-  var STORE_CONTEXTS = { palRegular: 1, olaf: 1 };
+  var STORE_CONTEXTS = { palRegular: 1, olaf: 1, palInfant: 1 };
 
   function ctxRoot(ctxId) {
     var root = w.chartCreatorData;
@@ -884,7 +884,7 @@
   var renderContextId = null;
 
   function defaultOptionValue(name, ctxId) {
-    if (name === 'summary') return ctxId === 'palRegular' || ctxId === 'olaf';
+    if (name === 'summary') return ctxId === 'palRegular' || ctxId === 'olaf' || ctxId === 'palInfant';
     /* surowe flagi globalne (nie helpery — te pytają z powrotem kreator,
        co dałoby rekurencję) */
     if (name === 'bandReference') return !(w.centileShowBandReference === false);
@@ -1247,6 +1247,30 @@
       try { copy.getContext('2d').drawImage(page, 0, 0); } catch (e3) { /* ignore */ }
       return { height: page, weight: copy };
     }
+    if (creatorContext === 'palInfant') {
+      /* Strona Palczewskiej 0–3: jedna kanwa A4 z dwoma wykresami — budowana
+         tak samo jak przez „Generuj siatkę Palczewska" (bez podstawiania
+         stanu efektywnego, jak w ścieżce przycisku). */
+      if (typeof w.buildPalczewskaInfantPageCanvas !== 'function') return null;
+      var pinInf = w.publicationCharts;
+      suppressPainting = true;
+      var pageInf;
+      try {
+        w.publicationCharts = false;
+        pageInf = w.buildPalczewskaInfantPageCanvas({ sex: sex, userAgeMonths: months, userWeight: wt, userHeight: ht });
+      } catch (eInf) {
+        pageInf = null;
+      } finally {
+        suppressPainting = false;
+        w.publicationCharts = pinInf;
+      }
+      if (!pageInf) return null;
+      var copyInf = document.createElement('canvas');
+      copyInf.width = pageInf.width;
+      copyInf.height = pageInf.height;
+      try { copyInf.getContext('2d').drawImage(pageInf, 0, 0); } catch (eInf2) { /* ignore */ }
+      return { height: pageInf, weight: copyInf };
+    }
     if (typeof w.buildPalczewskaExtendedCanvases !== 'function') return null;
     /* Kontekst zwykłej siatki: podgląd renderowany w kolorowym, polskim stylu
        (publicationCharts przypięte na false na czas budowy kanw). */
@@ -1333,7 +1357,7 @@
     /* Kontekst OLAF: oba wykresy leżą na jednej stronie, więc nakładka
        aktywnej zakładki dorysowuje też adnotacje drugiego wykresu (bez
        interakcji) — podgląd strony jest zawsze kompletny. */
-    if (creatorContext === 'olaf') {
+    if (creatorContext === 'olaf' || creatorContext === 'palInfant') {
       var other = chart === 'height' ? 'weight' : 'height';
       var geomOther = geomStore[other];
       if (geomOther) drawItems(ctx, computeLayout(ctx, adv, other, geomOther));
@@ -2097,11 +2121,13 @@
       var ageEl0 = document.getElementById('age');
       var ageMEl0 = document.getElementById('ageMonths');
       var months0 = Math.round((ageEl0 && parseFloat(ageEl0.value) || 0) * 12 + (ageMEl0 && parseFloat(ageMEl0.value) || 0));
-      var minMo = ctxId === 'olaf' ? 36 : 12;
+      var minMo = ctxId === 'olaf' ? 36 : (ctxId === 'palInfant' ? 0 : 12);
       if (!(months0 >= minMo && months0 <= 216)) {
         alert(ctxId === 'olaf'
           ? 'Kreator siatki OLAF (3\u201318 lat) jest dost\u0119pny dla wieku od 3 do 18 lat.'
-          : 'Kreator siatki Palczewskiej 1\u201318 lat jest dost\u0119pny dla wieku od 1 do 18 lat.');
+          : (ctxId === 'palInfant'
+            ? 'Kreator siatki Palczewskiej 0\u20133 lata jest dost\u0119pny dla wieku od 0 do 18 lat.'
+            : 'Kreator siatki Palczewskiej 1\u201318 lat jest dost\u0119pny dla wieku od 1 do 18 lat.'));
         return;
       }
     }
@@ -2117,9 +2143,12 @@
        zablokowana (lockBodyScroll). */
     var isRegular = ctxId === 'palRegular';
     var isOlaf = ctxId === 'olaf';
+    var isInfant = ctxId === 'palInfant';
     var creatorTitle = isOlaf
       ? 'Kreator siatek — OLAF 3–18 lat'
-      : (isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji');
+      : (isInfant
+        ? 'Kreator siatek — Palczewska 0–3 lata'
+        : (isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji'));
     var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': creatorTitle });
 
     /* Nag\u0142\u00f3wek */
@@ -2164,6 +2193,8 @@
         if (def.group !== group) return;
         /* strona OLAF nie rysuje stopki — opcja bez zastosowania */
         if (isOlaf && def.key === 'footer') return;
+        /* strona 0–3 nie ma wiersza rodziców ani rombu MPH (MPH leży na 18 r.ż.) */
+        if (isInfant && (def.key === 'parentsHeader' || def.key === 'mph')) return;
         var lab = el('label', 'display:flex;align-items:center;gap:7px;cursor:pointer;margin:0;font-size:0.8rem;color:' + COLORS.text + ';width:auto;');
         var cb = document.createElement('input');
         cb.type = 'checkbox';
@@ -2176,7 +2207,7 @@
           flashSaveNote();
           refreshPreview();
         });
-        append(lab, cb, document.createTextNode((isRegular || isOlaf) && def.regLabel ? def.regLabel : def.label));
+        append(lab, cb, document.createTextNode((isRegular || isOlaf || isInfant) && def.regLabel ? def.regLabel : def.label));
         append(col, lab);
       });
       append(optsWrap, col);
@@ -2383,7 +2414,7 @@
           return;
         }
         if (typeof w.generatePalczewskaCentileCharts !== 'function') return;
-        if (creatorContext === 'palRegular') {
+        if (creatorContext === 'palRegular' || creatorContext === 'palInfant') {
           /* WYSIWYG: PDF z kreatora zwykłej siatki zawsze w kolorowym stylu,
              nawet gdy przełącznik publikacji jest gdzieś włączony */
           var pf = w.publicationCharts;
