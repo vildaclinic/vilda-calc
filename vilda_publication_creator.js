@@ -123,7 +123,10 @@
   var creatorContext = 'pub';
 
   /* Konteksty inne niż publikacyjny (magazyn centralny per rodzaj siatki). */
-  var STORE_CONTEXTS = { palRegular: 1, olaf: 1, palInfant: 1 };
+  var STORE_CONTEXTS = { palRegular: 1, olaf: 1, palInfant: 1, who: 1 };
+
+  /* Konteksty stron „dwa wykresy na jednej kanwie A4" (wspólny budowniczy). */
+  var PAGE_CONTEXTS = { olaf: 1, palInfant: 1, who: 1 };
 
   function ctxRoot(ctxId) {
     var root = w.chartCreatorData;
@@ -1204,11 +1207,12 @@
     var sex = sexEl.value === 'M' ? 'M' : 'F';
     var wt = wtEl ? parseFloat(wtEl.value) : NaN;
     var ht = htEl ? parseFloat(htEl.value) : NaN;
-    if (creatorContext === 'olaf') {
-      /* Strona OLAF: jedna kanwa A4 z dwoma wykresami — budowana tak samo
-         jak przez „Generuj siatkę OLAF" (stan efektywny podstawiony na czas
-         budowy; obie zakładki kreatora pokazują pełną stronę). */
+    if (creatorContext === 'olaf' || creatorContext === 'who') {
+      /* Strony OLAF / WHO: jedna kanwa A4 z dwoma wykresami — budowana tak
+         samo jak przez „Generuj siatkę OLAF/WHO" (stan efektywny podstawiony
+         na czas budowy; obie zakładki kreatora pokazują pełną stronę). */
       if (typeof w.buildCentilePageCanvas !== 'function') return null;
+      var isWho = creatorContext === 'who';
       var effAdv = null;
       try {
         if (typeof w.getEffectiveCentileGrowthDataState === 'function') effAdv = w.getEffectiveCentileGrowthDataState();
@@ -1220,16 +1224,16 @@
       try {
         if (effAdv && typeof effAdv === 'object') w.advancedGrowthData = effAdv;
         page = w.buildCentilePageCanvas({
-          rangeMinX: 36,
-          rangeMaxX: 216,
+          rangeMinX: isWho ? 0 : 36,
+          rangeMaxX: isWho ? 35 : 216,
           sex: sex,
           userAgeMonths: months,
           userWeight: wt,
           userHeight: ht,
           headerTitle: sex === 'M' ? 'Siatka centylowa chłopcy' : 'Siatka centylowa dziewczynki',
-          headerSubtitle: 'Badanie OLAF (3–18 lat)',
-          footerText: '',
-          chartSource: 'OLAF'
+          headerSubtitle: isWho ? 'Dane: WHO, wiek 0 - 3 lata' : 'Badanie OLAF (3–18 lat)',
+          footerText: isWho ? 'Dane do siatek: WHO (0–<3 lata)' : '',
+          chartSource: isWho ? 'WHO' : 'OLAF'
         });
       } catch (e) {
         page = null;
@@ -1337,7 +1341,7 @@
      OLAF" (generateCentileChart podstawia go na czas renderu). */
   function activeAdv() {
     var base = w.advancedGrowthData || null;
-    if (creatorContext === 'olaf' && typeof w.getEffectiveCentileGrowthDataState === 'function') {
+    if ((creatorContext === 'olaf' || creatorContext === 'who') && typeof w.getEffectiveCentileGrowthDataState === 'function') {
       try {
         var eff = w.getEffectiveCentileGrowthDataState();
         if (eff && typeof eff === 'object') base = eff;
@@ -1357,7 +1361,7 @@
     /* Kontekst OLAF: oba wykresy leżą na jednej stronie, więc nakładka
        aktywnej zakładki dorysowuje też adnotacje drugiego wykresu (bez
        interakcji) — podgląd strony jest zawsze kompletny. */
-    if (creatorContext === 'olaf' || creatorContext === 'palInfant') {
+    if (PAGE_CONTEXTS[creatorContext]) {
       var other = chart === 'height' ? 'weight' : 'height';
       var geomOther = geomStore[other];
       if (geomOther) drawItems(ctx, computeLayout(ctx, adv, other, geomOther));
@@ -2121,13 +2125,16 @@
       var ageEl0 = document.getElementById('age');
       var ageMEl0 = document.getElementById('ageMonths');
       var months0 = Math.round((ageEl0 && parseFloat(ageEl0.value) || 0) * 12 + (ageMEl0 && parseFloat(ageMEl0.value) || 0));
-      var minMo = ctxId === 'olaf' ? 36 : (ctxId === 'palInfant' ? 0 : 12);
-      if (!(months0 >= minMo && months0 <= 216)) {
+      var minMo = ctxId === 'olaf' ? 36 : (ctxId === 'palInfant' || ctxId === 'who' ? 0 : 12);
+      var maxMo = ctxId === 'who' ? 35 : 216;
+      if (!(months0 >= minMo && months0 <= maxMo)) {
         alert(ctxId === 'olaf'
           ? 'Kreator siatki OLAF (3\u201318 lat) jest dost\u0119pny dla wieku od 3 do 18 lat.'
-          : (ctxId === 'palInfant'
+          : (ctxId === 'who'
+            ? 'Kreator siatki WHO (0\u20133 lata) jest dost\u0119pny dla wieku do 3 lat.'
+            : (ctxId === 'palInfant'
             ? 'Kreator siatki Palczewskiej 0\u20133 lata jest dost\u0119pny dla wieku od 0 do 18 lat.'
-            : 'Kreator siatki Palczewskiej 1\u201318 lat jest dost\u0119pny dla wieku od 1 do 18 lat.'));
+            : 'Kreator siatki Palczewskiej 1\u201318 lat jest dost\u0119pny dla wieku od 1 do 18 lat.')));
         return;
       }
     }
@@ -2144,11 +2151,14 @@
     var isRegular = ctxId === 'palRegular';
     var isOlaf = ctxId === 'olaf';
     var isInfant = ctxId === 'palInfant';
+    var isWho = ctxId === 'who';
     var creatorTitle = isOlaf
       ? 'Kreator siatek — OLAF 3–18 lat'
-      : (isInfant
+      : (isWho
+        ? 'Kreator siatek — WHO 0–3 lata'
+        : (isInfant
         ? 'Kreator siatek — Palczewska 0–3 lata'
-        : (isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji'));
+        : (isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji')));
     var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': creatorTitle });
 
     /* Nag\u0142\u00f3wek */
@@ -2195,6 +2205,9 @@
         if (isOlaf && def.key === 'footer') return;
         /* strona 0–3 nie ma wiersza rodziców ani rombu MPH (MPH leży na 18 r.ż.) */
         if (isInfant && (def.key === 'parentsHeader' || def.key === 'mph')) return;
+        /* strona WHO nie rysuje wiersza rodziców, rombu MPH ani ramki
+           podsumowania (budowniczy pomija ją dla zakresu do 35 mies.) */
+        if (isWho && (def.key === 'parentsHeader' || def.key === 'mph' || def.key === 'summary')) return;
         var lab = el('label', 'display:flex;align-items:center;gap:7px;cursor:pointer;margin:0;font-size:0.8rem;color:' + COLORS.text + ';width:auto;');
         var cb = document.createElement('input');
         cb.type = 'checkbox';
@@ -2207,7 +2220,7 @@
           flashSaveNote();
           refreshPreview();
         });
-        append(lab, cb, document.createTextNode((isRegular || isOlaf || isInfant) && def.regLabel ? def.regLabel : def.label));
+        append(lab, cb, document.createTextNode((isRegular || isOlaf || isInfant || isWho) && def.regLabel ? def.regLabel : def.label));
         append(col, lab);
       });
       append(optsWrap, col);
@@ -2399,12 +2412,12 @@
     });
     genBtn.addEventListener('click', function () {
       try {
-        if (creatorContext === 'olaf') {
-          /* PDF strony OLAF tą samą ścieżką co przycisk karty (źródło
+        if (creatorContext === 'olaf' || creatorContext === 'who') {
+          /* PDF strony OLAF/WHO tą samą ścieżką co przycisk karty (źródło
              przypięte na czas asynchronicznego generowania) */
           if (typeof w.generateCentileChart !== 'function') return;
           var prevSrc = w.overrideCentileSource;
-          w.overrideCentileSource = 'OLAF';
+          w.overrideCentileSource = creatorContext === 'who' ? 'WHO' : 'OLAF';
           Promise.resolve(w.generateCentileChart())
             .catch(function () { /* ignore */ })
             .then(function () {
