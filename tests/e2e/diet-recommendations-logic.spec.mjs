@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=9' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=10' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -88,6 +88,9 @@ test('DIET-ADULT-UNDERWEIGHT: niedowaga z alertem WHR bez planu redukcyjnego', a
   expect(text).not.toContain('tempu redukcji');
   expect(text).not.toContain('deficytowi energetycznemu');
   expect(text).not.toContain('niedopuszczenie do dalszego wzrostu masy');
+  // Etap 6 (decyzja właściciela): przy niedowadze nie pada cel zmniejszania talii:
+  expect(text).not.toContain('Dodatkowym celem');
+  expect(text).not.toContain('zmniejszenie obwodu talii');
 });
 
 test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjnej', async ({ page }) => {
@@ -396,4 +399,65 @@ test('DIET-FILENAME-PL: sanitizer nazw plików transliteruje ł/Ł', async ({ pa
   await page.waitForFunction(() => typeof window.patientReportSanitizeFilename === 'function');
   const sanitized = await page.evaluate(() => window.patientReportSanitizeFilename('Michał Łąka'));
   expect(sanitized).toBe('Michal_Laka');
+});
+
+// ── Etap 6 (decyzje właściciela): cele Palczewskiej metodą BMI jak OLAF; talia przy WHR ──
+
+// DIET-PAL-TARGET-BMI: przy źródle Palczewska wartości wagowe narracji liczone
+// są teraz metodą BMI (centyl BMI × wzrost²) — jak przy OLAF — a nie z centyli
+// masy względem wieku. Tabela Palczewskiej nie ma kolumny p85 (cel 85c już
+// wcześniej szedł ścieżką BMI), ale mediana (p50) i próg otyłości (p97) szły
+// z masy-dla-wieku. Wysoki chłopiec (160 cm w wieku 10 lat) ujawnia różnicę:
+// mediana masy-dla-wieku ignorowała wzrost.
+test('DIET-PAL-TARGET-BMI: mediana Palczewskiej liczona przez BMI jak OLAF', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const result = await page.evaluate(() => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    window.bmiSource = 'PALCZEWSKA';
+    set('age', 10); set('ageMonths', 0); set('sex', 'M');
+    set('weight', 62); set('height', 160);
+    window.ensureDietRecommendationsElements();
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    flag('reduceToggle', true); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
+    const out = window.generateDietRecommendations();
+    const text = out && out.textOutput ? out.textOutput : '';
+    const bmi50 = typeof window.getPalCentile === 'function' ? window.getPalCentile('M', 120, 50, 'BMI') : null;
+    const wt50 = typeof window.getPalCentile === 'function' ? window.getPalCentile('M', 120, 50, 'WT') : null;
+    const numbers = Array.from(text.matchAll(/ok\. (\d+,\d) ?kg/g)).map((m) => Number(m[1].replace(',', '.')));
+    return { text, bmi50, wt50, numbers };
+  });
+  expect(result.bmi50).not.toBeNull();
+  expect(result.wt50).not.toBeNull();
+  const expected = result.bmi50 * Math.pow(1.6, 2);
+  // Nowa mediana (BMI-owa) musi pojawić się w tekście:
+  const hit = result.numbers.some((n) => Math.abs(n - expected) < 0.75);
+  expect(hit).toBe(true);
+  // Stara mediana (50c masy-dla-wieku) różni się przy 160 cm o wiele kilogramów
+  // i nie może już występować:
+  expect(Math.abs(expected - result.wt50)).toBeGreaterThan(1.5);
+  const oldHit = result.numbers.some((n) => Math.abs(n - result.wt50) < 0.5);
+  expect(oldHit).toBe(false);
+});
+
+// DIET-WHR-WAIST-GATE: kontrola warunku — dorosły z nadwagą/otyłością i alertem
+// WHR nadal dostaje cel zmniejszenia obwodu talii (gate wycina go tylko przy
+// niedowadze, sprawdzanej w rozszerzonym DIET-ADULT-UNDERWEIGHT).
+test('DIET-WHR-WAIST-GATE: otyły dorosły z alertem WHR zachowuje cel obwodu talii', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openWithDietModule(page);
+  const text = await page.evaluate(() => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    set('age', 35); set('ageMonths', 0); set('sex', 'M');
+    set('weight', 105); set('height', 175);
+    const whr = document.getElementById('whrInfo');
+    if (whr) { whr.style.display = 'block'; whr.classList.add('whr-warning'); }
+    const result = window.generateDietRecommendations();
+    if (whr) { whr.style.display = 'none'; whr.classList.remove('whr-warning'); }
+    return result && result.textOutput ? result.textOutput : '';
+  });
+  expect(text).toContain('Dodatkowym celem');
+  expect(text).toContain('zmniejszenie obwodu talii');
 });

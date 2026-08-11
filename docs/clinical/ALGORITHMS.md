@@ -252,7 +252,14 @@ Testy: DIET-GROWTH-ENDED-STAB (scenariusz z flagą i kontrolny bez niej), DIET-K
 
 Testy: DIET-PDF-VALIDATION (brak wieku, wzrost w metrach), DIET-FILENAME-PL (transliteracja na rzeczywistym `patientReportSanitizeFilename`), rozszerzenie DIET-KCAL-CONSISTENT o frazę etykiety PAL.
 
-Nierozstrzygnięte (decyzje właściciela): cele wagowe przy źródle Palczewskiej to 85c masy względem wieku, ale narracja mówi „norma dla Twojego wieku i wzrostu" (OLAF liczy przez BMI — ta sama osoba dostaje różne cele zależnie od źródła; ujednolicenie metodyki lub brzmienia wymaga akceptacji); martwe ścieżki `!professionalMode` (m.in. dyskleimer dla dzieci <10 lat, który nigdy nie pada); zdanie o obwodzie talii przy niedowadze z alertem WHR.
+**Etap 6 (2026-08-11, decyzje właściciela) — metodyka BMI dla wartości wagowych Palczewskiej; warunek celu obwodu talii:**
+
+1. **Wartości wagowe przy źródle Palczewska liczone metodą BMI, jak przy OLAF** (decyzja właściciela: „ujednolicić zgodnie z tym jak teraz jest w przypadku OLAF"). Stan zastany był mieszany: tabela Palczewskiej nie ma kolumny p85, więc próg nadwagi i cel 85c szły już ścieżką BMI (inwersja `bmiPercentileChildPal` przez wyszukiwanie binarne), ale **mediana** (kolumna p50 masy-dla-wieku) i **próg otyłości 97c** (kolumna p97 masy-dla-wieku, przeliczana na ekwiwalent BMI przez ÷wzrost²) pochodziły z masy względem wieku — u dziecka wysokiego lub niskiego dawało to wartości przesunięte względem metody OLAF (LMS/BMI). Po zmianie wszystkie cztery wielkości (progi 85c/97c oraz cel i mediana narracji) liczone są primarnie z centyli BMI Palczewskiej (inwersja `bmiPercentileChildPal`, fallback: kolumny BMI tabeli), a centyle masy-dla-wieku pozostają wyłącznie ostatnim fallbackiem przy niedostępności wartości BMI. Wpływ na wcześniej zapisane wyniki: u dzieci o wzroście istotnie odbiegającym od mediany zmieniają się mediana masy w narracji (np. chłopiec 10 lat, 160 cm: ~43 kg metodą BMI wobec ~31,5 kg z masy-dla-wieku) i klasyfikacja otyłości blisko progu 97c; wartości przy wzroście bliskim mediany zmieniają się nieznacznie.
+2. **Cel zmniejszenia obwodu talii przy alercie WHR u dorosłych** (decyzja właściciela: „warunkuj") — zdanie „Dodatkowym celem … zmniejszenie obwodu talii…" nie jest emitowane przy niedowadze (BMI < 18,5); pozostaje bez zmian dla pozostałych klas BMI.
+
+Testy: DIET-PAL-TARGET-BMI (mediana Palczewskiej metodą BMI na realnym `generateDietRecommendations` i `getPalCentile`), DIET-WHR-WAIST-GATE (kontrola: otyły dorosły z WHR zachowuje cel talii), rozszerzenie DIET-ADULT-UNDERWEIGHT (niedowaga+WHR bez celu talii).
+
+Nierozstrzygnięte (decyzja właściciela w toku): martwe ścieżki `!professionalMode` (m.in. dyskleimer dla dzieci <10 lat, który nigdy nie pada).
 
 ### GROWTH-LMS — interpolacja krzywych centylowych Palczewskiej (2026-08-11)
 
