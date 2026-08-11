@@ -68,40 +68,33 @@ test('generator siatek 1–18 renderuje identyczne piksele na index.html i docpr
   expect(docproHashes).toEqual(indexHashes);
 });
 
-// Etap 3 konsolidacji: obie strony ładują ten sam inline_index_03/04.js —
-// pełne canvasy stron siatek (Palczewska 0–3, OLAF 3–18, WHO 0–35) muszą być
-// identyczne między stronami. Dla WHO bramka elementów kreatora publikacji
-// (obecnego tylko na index.html) jest w teście ujednolicona stubem —
-// w produkcji kreator może chować elementy per wydruk na index, a docpro
-// bez kreatora rysuje wszystko; to różnica konfiguracji, nie kodu siatek.
+// Etap 3 konsolidacji + ujednolicenie bramek: obie strony ładują ten sam
+// inline_index_03/04.js ORAZ vilda_publication_creator.js (na docpro pasywny,
+// bez UI), więc pełne canvasy stron siatek (Palczewska 0–3, OLAF 3–18,
+// WHO 0–35) — łącznie z bramkami „Elementy siatki" (np. domyślnie wyłączoną
+// ramką podsumowania WHO) — muszą być bitowo identyczne bez żadnych stubów.
 const RENDER_PAGES = `(() => {
-  const saved = window.VildaPublicationCreator;
-  window.VildaPublicationCreator = { isElementEnabled: () => true };
-  try {
-    const out = [];
-    out.push(buildCentilePageCanvas({ rangeMinX: 0, rangeMaxX: 36, sex: 'M',
-      userAgeMonths: 24, userWeight: 12, userHeight: 88,
-      headerTitle: 'Siatka testowa', headerSubtitle: 'Zakres: 0–3 lata',
-      footerText: 'test', chartSource: 'PALCZEWSKA' }).toDataURL('image/png'));
-    out.push(buildCentilePageCanvas({ rangeMinX: 36, rangeMaxX: 216, sex: 'F',
-      userAgeMonths: 120, userWeight: 32, userHeight: 140,
-      headerTitle: 'Siatka testowa', headerSubtitle: 'Zakres: 3–18 lat',
-      footerText: 'test', chartSource: 'OLAF' }).toDataURL('image/png'));
-    out.push(buildCentilePageCanvas({ rangeMinX: 0, rangeMaxX: 35, sex: 'F',
-      userAgeMonths: 18, userWeight: 10.5, userHeight: 80,
-      headerTitle: 'Siatka testowa', headerSubtitle: 'Dane: WHO, wiek 0 - 3 lata',
-      footerText: 'test', chartSource: 'WHO' }).toDataURL('image/png'));
-    return out;
-  } finally {
-    if (saved === undefined) delete window.VildaPublicationCreator;
-    else window.VildaPublicationCreator = saved;
-  }
+  const out = [];
+  out.push(buildCentilePageCanvas({ rangeMinX: 0, rangeMaxX: 36, sex: 'M',
+    userAgeMonths: 24, userWeight: 12, userHeight: 88,
+    headerTitle: 'Siatka testowa', headerSubtitle: 'Zakres: 0–3 lata',
+    footerText: 'test', chartSource: 'PALCZEWSKA' }).toDataURL('image/png'));
+  out.push(buildCentilePageCanvas({ rangeMinX: 36, rangeMaxX: 216, sex: 'F',
+    userAgeMonths: 120, userWeight: 32, userHeight: 140,
+    headerTitle: 'Siatka testowa', headerSubtitle: 'Zakres: 3–18 lat',
+    footerText: 'test', chartSource: 'OLAF' }).toDataURL('image/png'));
+  out.push(buildCentilePageCanvas({ rangeMinX: 0, rangeMaxX: 35, sex: 'F',
+    userAgeMonths: 18, userWeight: 10.5, userHeight: 80,
+    headerTitle: 'Siatka testowa', headerSubtitle: 'Dane: WHO, wiek 0 - 3 lata',
+    footerText: 'test', chartSource: 'WHO' }).toDataURL('image/png'));
+  return out;
 })()`;
 
 async function renderPageHashes(page, path) {
   await page.goto('/' + path, { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.buildCentilePageCanvas === 'function'
-    && typeof window.drawCentileGrid === 'function');
+    && typeof window.drawCentileGrid === 'function'
+    && !!window.VildaPublicationCreator);
   await page.evaluate(() => document.fonts && document.fonts.ready);
   const urls = await page.evaluate(RENDER_PAGES);
   return urls.map((u) => createHash('sha256').update(u).digest('hex'));

@@ -237,6 +237,8 @@ Etap 2 (2026-08-11): `docpro.html` ładuje generator siatek Palczewskiej 1–18 
 
 Etap 3 (2026-08-11, finał konsolidacji): `docpro.html` ładuje także `inline_index_03.js` (LMS, nagłówek imienia, strona standardUser, legacy generator) oraz `inline_index_04.js` (buildCentilePageCanvas, stan siatek, generateCentileChart) zamiast starszych kopii `inline_docpro_01/02.js` — cały stos rysowania siatek jest teraz jednym zestawem plików dla obu stron. Regresja pikselowa: index.html bitowo niezmieniony (5/5 przypadków); strony Palczewska 0–3 i OLAF 3–18 bitowo identyczne między stronami; strona WHO 0–35 identyczna przy ujednoliconej bramce elementów kreatora (test ze stubem) — jedyna produkcyjna różnica to element „podsumowanie" sterowany kreatorem publikacji, który jest załadowany wyłącznie na index.html (różnica konfiguracji stron, nie kodu siatek). Parzystości pilnuje trzeci test w `centile-chart-parity.spec.mjs`. Pliki `inline_docpro_01/02.js` pozostają w repozytorium dla zgodności precache SW.
 
+Ujednolicenie bramek (2026-08-11, decyzja właściciela): `docpro.html` ładuje także `vilda_publication_creator.js` (moduł pasywny — bez przycisku i UI kreatora na tej stronie), przez co bramki `isElementEnabled` („Elementy siatki", w tym domyślnie wyłączona ramka podsumowania w kontekście WHO) oraz adnotacje zapisane z pacjentem działają identycznie na obu stronach. Regresja pikselowa: pełna naturalna parzystość index↔docpro (5/5 przypadków bitowo identycznych, bez stubów); test parzystości stron uproszczony do wariantu produkcyjnego.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
