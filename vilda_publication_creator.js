@@ -877,8 +877,14 @@
      wiedziały, że mają czytać opcje kontekstu zwykłego. */
   var regularRenderActive = false;
 
+  /* Kontekst renderu ustawiany przez budowniczego stron OLAF/WHO
+     (buildCentilePageCanvas): 'olaf' na czas budowy strony OLAF, null dla
+     stron bez kontekstu kreatora. Bramki elementów strony czytają przez to
+     opcje właściwego kontekstu. */
+  var renderContextId = null;
+
   function defaultOptionValue(name, ctxId) {
-    if (name === 'summary') return ctxId === 'palRegular';
+    if (name === 'summary') return ctxId === 'palRegular' || ctxId === 'olaf';
     /* surowe flagi globalne (nie helpery — te pytają z powrotem kreator,
        co dałoby rekurencję) */
     if (name === 'bandReference') return !(w.centileShowBandReference === false);
@@ -891,11 +897,8 @@
      pierwszeństwo (jego podglądy budują się z przypiętą flagą), potem tryb
      publikacji, potem trwający render zwykłej siatki Palczewskiej. */
   function optionsContext() {
-    if (ui) {
-      if (creatorContext === 'palRegular') return 'palRegular';
-      /* kontekst OLAF: panel elementów w kolejnej fazie — obowiązują domyślne */
-      return creatorContext === 'olaf' ? 'default' : 'pub';
-    }
+    if (ui) return creatorContext === 'pub' ? 'pub' : creatorContext;
+    if (renderContextId) return renderContextId;
     if (w.publicationCharts) return 'pub';
     if (regularRenderActive) return 'palRegular';
     return 'default';
@@ -909,13 +912,13 @@
    */
   function isElementEnabled(name) {
     var ctxId = optionsContext();
-    if (ctxId === 'palRegular') {
+    if (STORE_CONTEXTS[ctxId]) {
       /* czytaj bez tworzenia magazynu — zwykły render nie może zostawiać
          śladów w danych użytkowników, którzy kreatora nie używają */
       var cc = w.chartCreatorData;
-      var o2 = cc && cc.palRegular && cc.palRegular.options;
+      var o2 = cc && cc[ctxId] && cc[ctxId].options;
       if (o2 && typeof o2 === 'object' && Object.prototype.hasOwnProperty.call(o2, name)) return o2[name] !== false;
-      return defaultOptionValue(name, 'palRegular');
+      return defaultOptionValue(name, ctxId);
     }
     if (ctxId === 'pub') {
       var adv = w.advancedGrowthData;
@@ -931,7 +934,7 @@
       var s = regRoot();
       if (!s.options || typeof s.options !== 'object') {
         s.options = {};
-        PUB_OPTION_DEFS.forEach(function (d) { s.options[d.key] = defaultOptionValue(d.key, 'palRegular'); });
+        PUB_OPTION_DEFS.forEach(function (d) { s.options[d.key] = defaultOptionValue(d.key, creatorContext); });
       }
       s.options[name] = !!value;
       return;
@@ -2147,9 +2150,6 @@
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
     var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105; poprzeczk\u0119 mo\u017cna potem przeci\u0105gn\u0105\u0107 wy\u017cej lub ni\u017cej' }, '+ Klamra');
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
-    /* Kontekst OLAF: prze\u0142\u0105czniki element\u00f3w strony OLAF to kolejna faza \u2014
-       bramki w buildCentilePageCanvas jeszcze nie istniej\u0105. */
-    if (isOlaf) elemBtn.style.display = 'none';
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn, saveNote);
 
     /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) \u2014 rozwijany z animacj\u0105
@@ -2162,6 +2162,8 @@
         group === 'header' ? 'Nag\u0142\u00f3wek i stopka' : 'Elementy siatki'));
       PUB_OPTION_DEFS.forEach(function (def) {
         if (def.group !== group) return;
+        /* strona OLAF nie rysuje stopki — opcja bez zastosowania */
+        if (isOlaf && def.key === 'footer') return;
         var lab = el('label', 'display:flex;align-items:center;gap:7px;cursor:pointer;margin:0;font-size:0.8rem;color:' + COLORS.text + ';width:auto;');
         var cb = document.createElement('input');
         cb.type = 'checkbox';
@@ -2174,7 +2176,7 @@
           flashSaveNote();
           refreshPreview();
         });
-        append(lab, cb, document.createTextNode(isRegular && def.regLabel ? def.regLabel : def.label));
+        append(lab, cb, document.createTextNode((isRegular || isOlaf) && def.regLabel ? def.regLabel : def.label));
         append(col, lab);
       });
       append(optsWrap, col);
@@ -2431,6 +2433,7 @@
     _setContext: function (c) { creatorContext = STORE_CONTEXTS[c] ? c : 'pub'; },
     _advForContext: advForContext,
     _regRoot: regRoot,
-    _setRegularRender: function (v) { regularRenderActive = !!v; }
+    _setRegularRender: function (v) { regularRenderActive = !!v; },
+    _setRenderContext: function (c) { renderContextId = STORE_CONTEXTS[c] ? c : null; }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
