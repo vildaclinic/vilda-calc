@@ -592,11 +592,59 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(win.chartCreatorData.palRegular ? win.chartCreatorData.palRegular.options : undefined).toBeUndefined();
   });
 
+  it('kontekst palInfant: oś 0–36 mies., osobny magazyn, opcje z domyślnymi strony 0–3', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = {
+      measurements: [{ ageMonths: 8, height: 68, weight: 8, arrowEnabled: false, arrowComment: '' }],
+      currentAgeMonths: 30,
+      currentHeight: 92,
+      currentWeight: 13,
+      currentArrowEnabled: false
+    };
+    // geometria strony 0–3: ageMin 0 (wartość zerowa musi być honorowana)
+    const geomInf = { plotX: 100, plotY: 100, plotW: 1800, plotH: 2600, minY: 40, maxY: 110, ageMin: 0, ageMax: 36 };
+    // punkty klikalne w zakresie 0–36
+    const pts = PC._collectPoints(win.advancedGrowthData, 'height', geomInf);
+    expect(pts.map((p) => p.ageMonths)).toEqual([8, 30]);
+    // adnotacja punktu w kontekście palInfant trafia do osobnego magazynu
+    PC._setContext('palInfant');
+    PC._setOption('footer', false);
+    PC._setContext('pub');
+    expect(win.chartCreatorData.palInfant.options.footer).toBe(false);
+    expect(win.chartCreatorData.palInfant.options.summary).toBe(true); // ramka domyślnie włączona
+    expect(win.chartCreatorData.palRegular).toBeUndefined();
+    expect(win.chartCreatorData.olaf).toBeUndefined();
+    // marker renderu strony 0–3 honoruje opcje palInfant
+    PC._setRenderContext('palInfant');
+    expect(PC.isElementEnabled('footer')).toBe(false);
+    expect(PC.isElementEnabled('summary')).toBe(true);
+    PC._setRenderContext(null);
+    expect(PC.isElementEnabled('footer')).toBe(true);
+    // mapowanie wieku na osi 0–36: 8 mies. → plotX + 8*(plotW/36)
+    PC._setContext('palInfant');
+    PC._addFree('height', { ageMonths: 8, value: 68, txt: 'x', arrow: false });
+    PC._setContext('pub');
+    const advInf = PC._advForContext(win.advancedGrowthData, 'palInfant');
+    const it8 = PC._computeLayout(fakeCtx(), advInf, 'height', geomInf).find((i) => i.kind === 'free');
+    expect(it8.px).toBeCloseTo(100 + 8 * (1800 / 36), 6);
+  });
+
+  it('inline_index_04/03: ctxId palInfant dla stron Palczewskiej 0–36 i bramka stopki', () => {
+    const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
+    const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+    expect(gen04).toContain('_setRenderContext(se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null)');
+    expect(gen04).toContain('var q=se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null;');
+    // stopka strony (vildaclinic.pl + footerText) za bramką footer
+    expect(gen04).toContain(',!se&&__ok04("footer")){');
+    expect(core03).toContain('==="PALCZEWSKA"&&t.rangeMaxX<=36?"palInfant":null;');
+  });
+
   it('inline_index_04/03: bramki elementów strony OLAF w obu stylach siatki', () => {
     const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
     const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
     // marker renderu ustawiany przed rozwidleniem stylu i zdejmowany na obu wyjściach
-    expect(gen04).toContain('_setRenderContext(se?"olaf":null)');
+    expect(gen04).toContain('_setRenderContext(se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null)');
     expect(gen04.split('_setRenderContext(null)').length - 1).toBe(2);
     // bramki gałęzi profesjonalnej
     expect(gen04).toContain('He&&__ok04("patientName")&&n.fillText(He');
@@ -613,12 +661,12 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
     const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
     // gałąź profesjonalna: dwa wywołania z ctxId zależnym od strony OLAF
-    expect(gen04).toContain('var q=se?"olaf":null;');
+    expect(gen04).toContain('var q=se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null;');
     expect(gen04).toContain('PC.drawAnnotations(n,{chartType:"height",ctxId:q,plotX:100+120,plotY:me+80');
     expect(gen04).toContain('PC.drawAnnotations(n,{chartType:"weight",ctxId:q,plotX:100+120,plotY:Ge+80');
     expect(gen04).toContain('ageMin:e,ageMax:t})');
     // gałąź standardowa: delegacja z metryk plotu obu kart
-    expect(core03).toContain('==="OLAF"&&t.rangeMinX>=36?"olaf":null;');
+    expect(core03).toContain('==="OLAF"&&t.rangeMinX>=36?"olaf":');
     expect(core03).toContain('PC.drawAnnotations(e,{chartType:"height",ctxId:q,plotX:W.px,plotY:W.py');
     expect(core03).toContain('PC.drawAnnotations(e,{chartType:"weight",ctxId:q,plotX:Y.px,plotY:Y.py');
   });
@@ -807,7 +855,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=18');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=19');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
