@@ -210,6 +210,16 @@ Przypadki syntetyczne (testy `tests/unit/epicrisis.test.mjs`, wywołują realny 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ENERGY — poprawki logiczne zaleceń dietetycznych, etap 1 (2026-08-11)
+
+Moduł `vilda_diet_recommendations.js`. Naprawiono trzy klasy błędów logicznych wykrytych w audycie (bez zmiany wzorów, danych ani progów):
+
+1. **Norma płynów wg płci** — warunek porównywał płeć z `"K"`, podczas gdy formularz używa wartości `M`/`F`; w efekcie dziewczynki ≥10 lat otrzymywały męską normę 2,5 l/d zamiast 2,0 l/d, a tekst dla rodzica opisywał dziecko jako „płci męskiej". Po poprawce (`"K"`→`"F"`, 3 miejsca) dawka i etykieta zgodne z płcią.
+2. **Niedowaga u dorosłych (ścieżka alertu WHR)** — blok celów sprawdzał alert WHR przed klasą niedowagi, przez co osoba z BMI <18,5 dostawała cel „niedopuszczenie do dalszego wzrostu masy ciała" oraz (z powodu auto-wyboru poziomu diety) zdanie o deficycie i „tempie redukcji". Po poprawce zalecenia niedowagi mają pierwszeństwo, a zdanie o deficycie/tempie redukcji jest emitowane tylko poza klasą niedowagi.
+3. **Dziecko z BMI w normie (ścieżka alertu WHR)** — narracja celu wagowego („zredukować o 0,0 kg"), blok „wyrośnie z nadwagi/otyłości" i zdanie o deficycie diety były emitowane bez sprawdzenia przekroczenia progu; po poprawce wymagają flagi nadwagi/otyłości (BMI ≥ ekwiwalent 85./97. centyla), a dziecko w normie otrzymuje komunikat „masa ciała mieści się w granicach normy" plus zalecenia stylu życia.
+
+Przypadki syntetyczne i test wywołujący rzeczywistą funkcję produkcyjną (`window.generateDietRecommendations` na załadowanej stronie): `tests/e2e/diet-recommendations-logic.spec.mjs` (DIET-SEX-HYDRATION, DIET-ADULT-UNDERWEIGHT, DIET-CHILD-NORM-WHR). Znane ograniczenie (poza zakresem etapu 1): przy niedowadze z alertem WHR pozostaje zdanie o „dodatkowym celu zmniejszenia obwodu talii" (fenotyp centralnej adipozji przy niskim BMI); ocena, czy je warunkować, należy do właściciela.
+
 ### GROWTH-LMS — interpolacja krzywych centylowych Palczewskiej (2026-08-11)
 
 Dane: `centile_data.js` (Palczewska & Niedźwiecka, IMiD 1999; waga, wzrost i BMI, węzły 1–222 mies., rozstaw od 1 mies. w niemowlęctwie do 12 mies. w wieku szkolnym; wszystkie 180 wierszy ma komplet p3–p97, co potwierdza test regresyjny).
