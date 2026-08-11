@@ -42,3 +42,28 @@ test('drawCentileGrid renderuje identyczne piksele na index.html i docpro.html',
   const docproHash = await renderHash(page, 'docpro.html');
   expect(docproHash).toBe(indexHash);
 });
+
+// Etap 2 konsolidacji: obie strony ładują ten sam generator siatek 1–18
+// (inline_index_07.js). Test pilnuje, by pełne canvasy generatora
+// (wzrost + waga) pozostały identyczne między stronami.
+const RENDER_GENERATOR = `(() => {
+  const arr = window.buildPalczewskaExtendedCanvases({
+    sex: 'M', userAgeMonths: 120, userWeight: 32, userHeight: 140,
+  });
+  return [arr[0].toDataURL('image/png'), arr[1].toDataURL('image/png')];
+})()`;
+
+async function renderGeneratorHashes(page, path) {
+  await page.goto('/' + path, { waitUntil: 'load' });
+  await page.waitForFunction(() => typeof window.buildPalczewskaExtendedCanvases === 'function');
+  await page.evaluate(() => document.fonts && document.fonts.ready);
+  const urls = await page.evaluate(RENDER_GENERATOR);
+  return urls.map((u) => createHash('sha256').update(u).digest('hex'));
+}
+
+test('generator siatek 1–18 renderuje identyczne piksele na index.html i docpro.html', async ({ page }) => {
+  test.setTimeout(90_000);
+  const indexHashes = await renderGeneratorHashes(page, 'index.html');
+  const docproHashes = await renderGeneratorHashes(page, 'docpro.html');
+  expect(docproHashes).toEqual(indexHashes);
+});

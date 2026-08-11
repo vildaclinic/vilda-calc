@@ -233,6 +233,8 @@ Stary kod interpolacji liniowej i wygładzania pozostaje w plikach jako fallback
 
 Warstwa rysowania (bez zmian algorytmicznych): od etapu 1 konsolidacji kopii siatek (2026-08-11) prymitywy rysowania — style/szerokości linii, flagi widoczności, metryki pola wykresu, motyw canvas, punkt bieżący, serie pomiarów i `drawCentileGrid` — są wyodrębnione verbatim z `inline_index_03.js` do wspólnego `vilda_centile_charts.js` (index.html + docpro.html), zastępując starszą ręczną kopię z `inline_docpro_01.js`. Niezmienność wyników wykazano regresją pikselową (SHA-256 PNG identyczne na index.html przed/po); parzystości renderowania między stronami pilnuje stały test `tests/e2e/centile-chart-parity.spec.mjs`.
 
+Etap 2 (2026-08-11): `docpro.html` ładuje generator siatek Palczewskiej 1–18 bezpośrednio z `inline_index_07.js` — ręcznie utrzymywana kopia `inline_docpro_05.js` (zawierająca martwe gałęzie trybu publikacyjnego, nieosiągalne bez `vilda_publication_creator.js`) nie jest już ładowana. Regresja pikselowa przed/po: pełne canvasy generatora (wzrost i waga, 2 zestawy wejść) bitowo identyczne na obu stronach; parzystości pilnuje drugi test w `centile-chart-parity.spec.mjs`. Plik `inline_docpro_05.js` pozostaje w repozytorium wyłącznie dla zgodności wymaganego precache Service Workera (lista append-only).
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
