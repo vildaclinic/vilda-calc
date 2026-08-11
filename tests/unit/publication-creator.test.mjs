@@ -566,6 +566,49 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'OLAF-notka')).toBe(true);
   });
 
+  it('opcje elementów strony OLAF: marker renderu wybiera magazyn olaf, domyślne = dzisiejsze zachowanie', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    // zapis opcji w kontekście OLAF trafia do chartCreatorData.olaf z regularnymi domyślnymi
+    PC._setContext('olaf');
+    PC._setOption('boneAge', false);
+    PC._setContext('pub');
+    expect(win.chartCreatorData.olaf.options.boneAge).toBe(false);
+    expect(win.chartCreatorData.olaf.options.summary).toBe(true); // strona OLAF: ramka domyślnie włączona
+    // marker renderu ustawiany przez budowniczego stron honoruje opcje OLAF
+    PC._setRenderContext('olaf');
+    expect(PC.isElementEnabled('boneAge')).toBe(false);
+    expect(PC.isElementEnabled('summary')).toBe(true);
+    expect(PC.isElementEnabled('patientName')).toBe(true);
+    // marker wygrywa z flagą publikacji (strony OLAF nigdy nie są publikacyjne)
+    win.publicationCharts = true;
+    expect(PC.isElementEnabled('boneAge')).toBe(false);
+    win.publicationCharts = false;
+    PC._setRenderContext(null);
+    // bez markera i kreatora wracają domyślne globalne (zero zmian dla stron WHO itd.)
+    expect(PC.isElementEnabled('boneAge')).toBe(true);
+    // opcje OLAF i Palczewskiej zwykłej są rozdzielne
+    expect(win.chartCreatorData.palRegular ? win.chartCreatorData.palRegular.options : undefined).toBeUndefined();
+  });
+
+  it('inline_index_04/03: bramki elementów strony OLAF w obu stylach siatki', () => {
+    const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
+    const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+    // marker renderu ustawiany przed rozwidleniem stylu i zdejmowany na obu wyjściach
+    expect(gen04).toContain('_setRenderContext(se?"olaf":null)');
+    expect(gen04.split('_setRenderContext(null)').length - 1).toBe(2);
+    // bramki gałęzi profesjonalnej
+    expect(gen04).toContain('He&&__ok04("patientName")&&n.fillText(He');
+    expect(gen04).toContain('O=__ok04("parentsHeader")?[$,V,U].filter(Boolean):[];');
+    expect(gen04).toContain('if(!d||!__ok04("boneAge"))return;');
+    expect(gen04).toContain('if(!d||!__ok04("mph"))return;');
+    expect(gen04).toContain('||!__ok04("summary"))return;const g=getCentileSummaryOverlayLines();');
+    // bramki gałęzi standardowej
+    expect(core03).toContain('N&&__okS("patientName")&&(');
+    expect(core03).toContain('__okS("summary")&&(drawStandardCentileSummaryBox(');
+  });
+
   it('inline_index_04/03: delegacja adnotacji na stronach OLAF w obu stylach siatki', () => {
     const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
     const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
@@ -764,7 +807,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=17');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=18');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
