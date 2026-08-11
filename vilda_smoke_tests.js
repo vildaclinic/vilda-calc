@@ -112,9 +112,9 @@
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
-    'app.js?v=192',
-    'vilda_smoke_tests.js?v=58',
-    'vilda_diet_recommendations.js?v=12',
+    'app.js?v=193',
+    'vilda_smoke_tests.js?v=59',
+    'vilda_diet_recommendations.js?v=13',
     'nutrition_norms.js?v=41',
     'nutrition_micros.js?v=26'
   ]);

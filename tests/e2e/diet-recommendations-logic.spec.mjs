@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=12' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=13' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -544,4 +544,94 @@ test('DIET-PAL-P97-BOUNDARY: klasyfikacja wokół progu 97c BMI Palczewskiej', a
   expect(result.below).not.toMatch(/otyło/u);
   // Powyżej progu: klasyfikacja „otyłość":
   expect(result.above).toMatch(/otyło/u);
+});
+
+// ── Prognoza wzrostu ostatecznego (konsensus metod) w zaleceniach dietetycznych ──
+// Decyzja właściciela 2026-08-11: gdy karta „Zaawansowane obliczenia wzrostowe"
+// ma ≥1 metodę prognozy (RWT/BP/KR/Reinehr), pozostały wzrost w zaleceniach
+// liczony jest z ważonego konsensusu metod (advancedGrowthData.finalHeightPrediction),
+// a MPH zostaje wyłącznie fallbackiem. Wpływa to też na dostępność stabilizacji.
+
+async function openWithGrowthAndDiet(page) {
+  await openWithDietModule(page);
+  await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function');
+}
+
+// DIET-FINAL-HEIGHT-CONSENSUS: pełne dane karty (rodzice + wiek kostny) →
+// zalecenia cytują prognozę (konsensus 3 metod), pozostały wzrost = prognoza −
+// obecny wzrost; po usunięciu prognozy fallback MPH wraca („na podstawie
+// wzrostu rodziców"). Dane fikcyjne.
+test('DIET-FINAL-HEIGHT-CONSENSUS: pozostały wzrost z konsensusu metod, MPH jako fallback', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithGrowthAndDiet(page);
+  const result = await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+    window.professionalMode = true;
+    set('age', 10); set('ageMonths', 0); set('sex', 'F');
+    set('height', 145); set('weight', 55);
+    set('advMotherHeight', 165); set('advFatherHeight', 178); set('advBoneAge', 9);
+    window.calculateGrowthAdvanced();
+    const d = window.advancedGrowthData || {};
+    const fhp = d.finalHeightPrediction || null;
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    flag('reduceToggle', true); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
+    const out = window.generateDietRecommendations();
+    const withPrediction = out && out.textOutput ? out.textOutput : '';
+    delete d.finalHeightPrediction;
+    const out2 = window.generateDietRecommendations();
+    const mphFallback = out2 && out2.textOutput ? out2.textOutput : '';
+    return { fhp, withPrediction, mphFallback };
+  });
+  expect(result.fhp).not.toBeNull();
+  expect(result.fhp.methodCount).toBeGreaterThanOrEqual(2);
+  expect(result.fhp.cm).toBeGreaterThanOrEqual(result.fhp.minCm);
+  expect(result.fhp.cm).toBeLessThanOrEqual(result.fhp.maxCm);
+  // Tekst cytuje prognozę, nie MPH:
+  expect(result.withPrediction).toContain('prognozowany wzrost ostateczny');
+  expect(result.withPrediction).toContain(`konsensus ${result.fhp.methodCount} metod`);
+  expect(result.withPrediction).not.toContain('na podstawie wzrostu rodziców');
+  // Pozostały wzrost = prognoza − obecny wzrost (co do 0,1 cm):
+  const remaining = (result.fhp.cm - 145).toFixed(1).replace('.', ',');
+  expect(result.withPrediction).toContain(`urosnąć ok. ${remaining} cm`);
+  // Fallback MPH bez prognozy — dotychczasowe brzmienie:
+  expect(result.mphFallback).toContain('na podstawie wzrostu rodziców');
+  expect(result.mphFallback).not.toContain('prognozowany wzrost ostateczny');
+});
+
+// DIET-STAB-FINAL-HEIGHT: prognoza zmienia decyzję o stabilizacji. Dziewczynka
+// 11 lat, 150 cm / 58 kg, niskie MPH (152 cm), opóźniony wiek kostny (9 lat) →
+// konsensus ~166,6 cm: przy prognozie stabilizacja DOSTĘPNA (dziecko zdąży
+// wyrosnąć do normy), przy samym MPH — ZABLOKOWANA. Dane fikcyjne.
+test('DIET-STAB-FINAL-HEIGHT: prognoza ostateczna steruje dostępnością stabilizacji', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithGrowthAndDiet(page);
+  const result = await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+    window.professionalMode = true;
+    set('age', 11); set('ageMonths', 0); set('sex', 'F');
+    set('height', 150); set('weight', 58);
+    set('advMotherHeight', 152); set('advFatherHeight', 165); set('advBoneAge', 9);
+    window.calculateGrowthAdvanced();
+    const d = window.advancedGrowthData || {};
+    const stab = document.getElementById('stabilizationToggle');
+    const withPrediction = {
+      cm: d.finalHeightPrediction ? d.finalHeightPrediction.cm : null,
+      mph: d.targetHeight,
+      possible: window.isStabilizationPossibleForCurrentData(),
+      disabled: stab ? stab.disabled : null,
+    };
+    delete d.finalHeightPrediction;
+    window.updateStabilizationEligibility();
+    const mphOnly = {
+      possible: window.isStabilizationPossibleForCurrentData(),
+      disabled: stab ? stab.disabled : null,
+    };
+    return { withPrediction, mphOnly };
+  });
+  expect(result.withPrediction.cm).toBeGreaterThan(160);
+  expect(result.withPrediction.mph).toBe(152);
+  expect(result.withPrediction.possible).toBe(true);
+  expect(result.withPrediction.disabled).toBe(false);
+  expect(result.mphOnly.possible).toBe(false);
+  expect(result.mphOnly.disabled).toBe(true);
 });

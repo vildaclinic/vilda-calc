@@ -154,7 +154,10 @@
     };
   }
 
-  function buildModel(input) {
+  // Budowa listy metod prognozy — wspólna dla renderu karty i czystego API
+  // computeFinalHeightPrediction. Wynik KR można podać gotowy (input.khamis,
+  // np. z ładunku adaptera) albo zostawić do policzenia silnikiem.
+  function buildEntries(input) {
     input = input || {};
     var sk = sexKey(input.sex);
     var rm = input.reliabilityModel || null;
@@ -174,14 +177,16 @@
       if (e && e.key === 'bp') e.levelKey = levelFor(rm, 'bayleyPinneau') || 'moderate';
     })();
     (function () {
-      var engine = w.calculateKhamisRochePrediction;
-      if (typeof engine !== 'function') return;
-      var r;
-      try {
-        r = engine({ sex: input.sex, chronologicalAgeYears: input.ageYears, chronologicalAgeMonths: input.ageMonths,
-          currentHeightCm: input.currentHeightCm, currentWeightKg: input.currentWeightKg,
-          motherHeightCm: input.motherHeightCm, fatherHeightCm: input.fatherHeightCm });
-      } catch (_) { r = null; }
+      var r = input.khamis && typeof input.khamis === 'object' ? input.khamis : null;
+      if (!r) {
+        var engine = w.calculateKhamisRochePrediction;
+        if (typeof engine !== 'function') return;
+        try {
+          r = engine({ sex: input.sex, chronologicalAgeYears: input.ageYears, chronologicalAgeMonths: input.ageMonths,
+            currentHeightCm: input.currentHeightCm, currentWeightKg: input.currentWeightKg,
+            motherHeightCm: input.motherHeightCm, fatherHeightCm: input.fatherHeightCm });
+        } catch (_) { r = null; }
+      }
       var val = predValue(r);
       if (val === null) return;
       entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: KR_ERR_HALFWIDTH_CM[sk], levelKey: 'indicative', noBoneAge: true });
@@ -191,6 +196,47 @@
       var e = entries[entries.length - 1];
       if (e && e.key === 'reinehr') e.levelKey = levelFor(rm, 'reinehr') || 'indicative';
     })();
+    return entries;
+  }
+
+  // Czysta prognoza wzrostu ostatecznego dla innych modułów (bez DOM): ważony
+  // konsensus dostępnych metod (te same wagi co karta); przy jednej metodzie —
+  // jej wynik. MPH celowo poza prognozą (cel genetyczny — fallback po stronie
+  // konsumenta). Widełki ±: przedział błędu metody preferowanej (największa
+  // waga) — decyzja właściciela 2026-08-11.
+  function computeFinalHeightPrediction(input) {
+    var entries = buildEntries(input || {});
+    if (!entries.length) return null;
+    var wcon = weightedConsensus(entries);
+    var cm = num(wcon.weighted);
+    if (cm === null) return null;
+    var preferred = null;
+    for (var i = 0; i < entries.length; i++) {
+      if (entries[i].key === wcon.recommendedKey) preferred = entries[i];
+    }
+    var pm = preferred ? num(preferred.pm) : null;
+    var halfWidthCm = pm !== null && pm > 0 ? pm : DEFAULT_SIGMA_CM * CI90_TO_SD;
+    var con = consensus(entries.map(function (e) { return e.value; }));
+    return {
+      cm: cm,
+      halfWidthCm: halfWidthCm,
+      methodCount: entries.length,
+      source: entries.length >= 2 ? 'consensus' : entries[0].key,
+      sourceLabel: entries.length >= 2 ? 'konsensus ' + entries.length + ' metod' : entries[0].label,
+      preferredKey: wcon.recommendedKey || null,
+      preferredLabel: wcon.recommendedLabel || null,
+      minCm: con.min,
+      maxCm: con.max,
+      agreementLabel: con.agreementLabel,
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value }; })
+    };
+  }
+
+  function buildModel(input) {
+    input = input || {};
+    var sk = sexKey(input.sex);
+    var rm = input.reliabilityModel || null;
+    var entries = buildEntries(input);
 
     var con = consensus(entries.map(function (e) { return e.value; }));
     var wcon = weightedConsensus(entries);
@@ -295,10 +341,11 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '4',
+    version: '6',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
+    computeFinalHeightPrediction: computeFinalHeightPrediction,
     _buildModel: buildModel,
     _consensus: consensus,
     _weightedConsensus: weightedConsensus,

@@ -269,6 +269,18 @@ Testy: DIET-PAL-TARGET-BMI (mediana Palczewskiej metodą BMI na realnym `generat
 
 Tym wpisem wszystkie ustalenia audytu modułu z 2026-08-11 (wraz z uwagami przeglądu PR #109) są rozstrzygnięte i wdrożone (etapy 1–7).
 
+### ENERGY/GROWTH — prognoza wzrostu ostatecznego w zaleceniach dietetycznych (2026-08-11, decyzja właściciela)
+
+Dotąd wszystkie szacunki „ile dziecko może jeszcze urosnąć" w module zaleceń dietetycznych — oraz bramka dostępności strategii stabilizacji masy — opierały się wyłącznie na MPH (mid-parental height, `advancedGrowthData.targetHeight` = (wzrost matki + ojca ± 13)/2, przedział ±8,5 cm). Aplikacja dysponuje jednak lepszymi metodami prognozy wzrostu ostatecznego na karcie „Zaawansowane obliczenia wzrostowe" (RWT, Bayley–Pinneau, Khamis–Roche, Reinehr/CDGP z profilem wiarygodności i ważonym konsensusem).
+
+Po zmianie (decyzja właściciela: konsensus metod, gdy dostępny; widełki ± metody preferowanej):
+
+1. **Publikacja prognozy**: czysta funkcja `window.VildaGrowthCardC.computeFinalHeightPrediction(...)` (wydzielona z logiki karty — te same wagi: waga metody = f_wiar(poziom)/σ², σ = półszerokość 90% błędu / 1,645; przy jednej metodzie — jej wynik; MPH celowo poza konsensusem jako cel genetyczny, nie prognoza). Adapter karty dopisuje wynik do `advancedGrowthData.finalHeightPrediction` — `{cm, halfWidthCm (przedział metody preferowanej), methodCount, source, sourceLabel, preferredKey/Label, minCm, maxCm, agreementLabel, methods[]}` — przy każdym przeliczeniu karty.
+2. **Konsumenci** (reguła: prognoza jeśli dostępna i skończona, inaczej MPH — dotychczasowe zachowanie): (a) pozostały wzrost w narracji zaleceń (`je`/`Vi`; przy prognozie ≤ obecny wzrost wzrost traktowany jako zakończony — prognoza to szacunek wzrostu ostatecznego, który, inaczej niż MPH, nie powinien być przekraczany „z natury"); (b) nawias źródłowy w tekstach — „prognozowany wzrost ostateczny — konsensus N metod z karty zaawansowanych obliczeń wzrostowych — to ok. X cm ±Y cm" zamiast „na podstawie wzrostu rodziców … ±8,5 cm"; (c) sufit projekcji wzrostu w symulacji „czas do normy BMI"; (d) bramka dostępności stabilizacji (`isStabilizationPossibleForCurrentData`/`updateStabilizationEligibility` w app.js) — masa docelowa przy górnej normie BMI liczona na wysokości prognozy, nie MPH.
+3. **Wpływ na wcześniej zapisane wyniki**: u dzieci z wypełnioną kartą zaawansowaną (rodzice + ew. wiek kostny) pozostały wzrost i decyzja o stabilizacji mogą się zmienić — np. dziecko z opóźnionym wiekiem kostnym i niskim MPH może odzyskać opcję stabilizacji (prognoza > MPH), a z przyspieszonym — ją stracić. Bez danych karty zachowanie bez zmian (fallback MPH, a bez rodziców — brak szacunku, jak dotąd).
+
+Testy na rzeczywistych funkcjach produkcyjnych (`calculateGrowthAdvanced` → `generateDietRecommendations`/`updateStabilizationEligibility`): DIET-FINAL-HEIGHT-CONSENSUS (konsensus 3 metod cytowany w tekście, pozostały wzrost = prognoza − wzrost obecny co do 0,1 cm, fallback MPH po usunięciu prognozy) i DIET-STAB-FINAL-HEIGHT (dziewczynka 11 lat, MPH 152 cm vs konsensus ~166,6 cm przy opóźnionym wieku kostnym: stabilizacja dostępna z prognozą, zablokowana przy samym MPH) w `tests/e2e/diet-recommendations-logic.spec.mjs`; matematyka konsensusu zweryfikowana niezależnie od DOM (zgodność z ręcznym wyliczeniem wag co do pełnej precyzji).
+
 ### GROWTH-LMS — interpolacja krzywych centylowych Palczewskiej (2026-08-11)
 
 Dane: `centile_data.js` (Palczewska & Niedźwiecka, IMiD 1999; waga, wzrost i BMI, węzły 1–222 mies., rozstaw od 1 mies. w niemowlęctwie do 12 mies. w wieku szkolnym; wszystkie 180 wierszy ma komplet p3–p97, co potwierdza test regresyjny).
