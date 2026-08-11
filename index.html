@@ -309,7 +309,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 </script>
 <script defer src="vilda_epicrisis.js?v=14"></script>
 <script defer src="vilda_epicrisis_ui.js?v=13"></script>
-<script defer src="vilda_publication_creator.js?v=16"></script>
+<script defer src="vilda_publication_creator.js?v=17"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=65" defer></script>
 
@@ -837,9 +837,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
       <button type="button" id="generatePalCentileChart" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
         Generuj siatkę Palczewska
       </button>
-      <!-- Centralny kreator siatek (PRO), faza 1: zwykła siatka Palczewskiej 1–18 lat.
-           Widoczność steruje updateCentileButtons (inline_index_07.js): źródło
-           PALCZEWSKA + wiek 1–18 lat. -->
+      <!-- Centralny kreator siatek (PRO): Palczewska 1–18 lat albo OLAF 3–18 lat,
+           zależnie od wybranego źródła danych. Widoczność steruje
+           updateCentileButtons (inline_index_07.js). -->
       <button type="button" id="openChartCreatorBtn" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
         Kreator siatek<sup class="pro-superscript">PRO</sup>
       </button>
@@ -2009,10 +2009,10 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      Kod ten korzysta z globalnych tablic LMS (zdefiniowanych w app.js) oraz bibliotek jsPDF i Canvas.
      Po kliknięciu przycisku „Generuj siatkę centylową” tworzy dwa wykresy (wzrostu i wagi),
      łączy je na jednej stronie A4 i wyświetla jako PDF w nowym oknie. -->
-<script defer src="inline_index_03.js?v=6"></script>
+<script defer src="inline_index_03.js?v=7"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
-<script defer src="inline_index_04.js?v=19"></script>
+<script defer src="inline_index_04.js?v=20"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script defer src="inline_index_05.js?v=1"></script>
@@ -2111,7 +2111,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
   <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
-  <script defer src="inline_index_07.js?v=6"></script>
+  <script defer src="inline_index_07.js?v=7"></script>
 
   <!-- Skrypt do zapisywania stanu rozwinięcia/zwinięcia kart w localStorage i jego przywracania.  
        Dzięki temu sekcje, takie jak „Zaawansowane obliczenia wzrostowe” czy „Obwód głowy i klatki piersiowej”,
@@ -2258,13 +2258,15 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           }
         });
       }
-      // Centralny kreator siatek (PRO) — faza 1: zwykła siatka Palczewskiej 1–18 lat
-      // z karty Centyle i BMI (kontekst palRegular, magazyn chartCreatorData).
+      // Centralny kreator siatek (PRO) z karty Centyle i BMI — kontekst wg
+      // wybranego źródła danych: Palczewska 1–18 (palRegular) albo OLAF 3–18.
       const chartCreatorBtn = document.getElementById('openChartCreatorBtn');
       if (chartCreatorBtn) {
         chartCreatorBtn.addEventListener('click', function() {
           if (window.VildaPublicationCreator && typeof window.VildaPublicationCreator.open === 'function') {
-            window.VildaPublicationCreator.open({ context: 'palRegular' });
+            const st = typeof getCentileChartState === 'function' ? getCentileChartState() : null;
+            const ctx = st && st.source === 'OLAF' ? 'olaf' : 'palRegular';
+            window.VildaPublicationCreator.open({ context: ctx });
           }
         });
       }

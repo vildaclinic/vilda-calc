@@ -518,6 +518,68 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(freeId).toBe(1);
   });
 
+  it('oś wieku parametryzowana przez geometrię: OLAF 36–216 mies. mapuje wiek poprawnie', () => {
+    const PC = loadCreator();
+    const adv = sampleAdv();
+    const geomOlaf = { ...GEOM, ageMin: 36, ageMax: 216 }; // 2040 px / 180 mies.
+    const items = PC._computeLayout(fakeCtx(), adv, 'height', geomOlaf);
+    const it120 = items.find((i) => i.key === 'a120');
+    expect(it120.px).toBeCloseTo(GEOM.plotX + (120 - 36) * (GEOM.plotW / 180), 6);
+    // punkty klikalne filtrowane zakresem siatki: 6 mies. poza, 120 w zakresie
+    adv.measurements.push({ ageMonths: 6, height: 66, weight: 7 });
+    const pts = PC._collectPoints(adv, 'height', geomOlaf);
+    expect(pts.map((p) => p.ageMonths)).toEqual([120, 132, 144, 152]);
+    // bez geometrii zostaje domyślna domena 12–216 (Palczewska) — bez regresji
+    const itemsPal = PC._computeLayout(fakeCtx(), sampleAdv(), 'height', GEOM);
+    expect(itemsPal.find((i) => i.key === 'a120').px).toBeCloseTo(GEOM.plotX + (120 - 12) * (GEOM.plotW / 204), 6);
+  });
+
+  it('drawAnnotations: ctxId z generatora stron — olaf czyta magazyn OLAF, null nic nie rysuje', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    win.advancedGrowthData.measurements = [];
+    win.advancedGrowthData.currentArrowEnabled = false;
+    PC._setContext('olaf');
+    PC._addFree('height', { ageMonths: 100, value: 120, txt: 'OLAF-notka', arrow: false });
+    PC._setContext('pub');
+    const geomBase = { chartType: 'height', ...GEOM, ageMin: 36, ageMax: 216 };
+    // strona OLAF: ctxId 'olaf' → etykieta z magazynu OLAF (mimo braku flagi publikacji)
+    let calls = [];
+    PC.drawAnnotations(fakeCtx(calls), { ...geomBase, ctxId: 'olaf' });
+    expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'OLAF-notka')).toBe(true);
+    // geometria zapamiętana z domeną wieku strony
+    expect(PC._geomStore.height.ageMin).toBe(36);
+    expect(PC._geomStore.height.ageMax).toBe(216);
+    // strona bez kontekstu kreatora (np. WHO): ctxId null → nic i bez nadpisania geometrii
+    calls = [];
+    PC.drawAnnotations(fakeCtx(calls), { ...geomBase, ageMin: 0, ageMax: 35, ctxId: null });
+    expect(calls).toHaveLength(0);
+    expect(PC._geomStore.height.ageMin).toBe(36);
+    // magazyny OLAF i Palczewskiej zwykłej są rozdzielne
+    expect(win.chartCreatorData.olaf.free.height).toHaveLength(1);
+    expect(win.chartCreatorData.palRegular ? (win.chartCreatorData.palRegular.free?.height || []).length : 0).toBe(0);
+    // ctxId wygrywa z flagą publikacji (strony OLAF nigdy nie są publikacyjne)
+    win.publicationCharts = true;
+    calls = [];
+    PC.drawAnnotations(fakeCtx(calls), { ...geomBase, ctxId: 'olaf' });
+    expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'OLAF-notka')).toBe(true);
+  });
+
+  it('inline_index_04/03: delegacja adnotacji na stronach OLAF w obu stylach siatki', () => {
+    const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
+    const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+    // gałąź profesjonalna: dwa wywołania z ctxId zależnym od strony OLAF
+    expect(gen04).toContain('var q=se?"olaf":null;');
+    expect(gen04).toContain('PC.drawAnnotations(n,{chartType:"height",ctxId:q,plotX:100+120,plotY:me+80');
+    expect(gen04).toContain('PC.drawAnnotations(n,{chartType:"weight",ctxId:q,plotX:100+120,plotY:Ge+80');
+    expect(gen04).toContain('ageMin:e,ageMax:t})');
+    // gałąź standardowa: delegacja z metryk plotu obu kart
+    expect(core03).toContain('==="OLAF"&&t.rangeMinX>=36?"olaf":null;');
+    expect(core03).toContain('PC.drawAnnotations(e,{chartType:"height",ctxId:q,plotX:W.px,plotY:W.py');
+    expect(core03).toContain('PC.drawAnnotations(e,{chartType:"weight",ctxId:q,plotX:Y.px,plotY:Y.py');
+  });
+
   it('drawAnnotations wybiera magazyn wg trybu renderu (publicationCharts)', () => {
     const win = {};
     const PC = loadCreator(win);
@@ -702,7 +764,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=16');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=17');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });

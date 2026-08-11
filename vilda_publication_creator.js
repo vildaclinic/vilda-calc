@@ -122,11 +122,14 @@
      checkboxów karty zaawansowanej — żyje w chartCreatorData.palRegular.shared. */
   var creatorContext = 'pub';
 
-  function regRoot() {
+  /* Konteksty inne niż publikacyjny (magazyn centralny per rodzaj siatki). */
+  var STORE_CONTEXTS = { palRegular: 1, olaf: 1 };
+
+  function ctxRoot(ctxId) {
     var root = w.chartCreatorData;
     if (!root || typeof root !== 'object') root = w.chartCreatorData = {};
-    var s = root.palRegular;
-    if (!s || typeof s !== 'object') s = root.palRegular = {};
+    var s = root[ctxId];
+    if (!s || typeof s !== 'object') s = root[ctxId] = {};
     if (!s.layout || typeof s.layout !== 'object') s.layout = {};
     if (!s.layout.height || typeof s.layout.height !== 'object') s.layout.height = {};
     if (!s.layout.weight || typeof s.layout.weight !== 'object') s.layout.weight = {};
@@ -137,9 +140,13 @@
     return s;
   }
 
+  function regRoot() {
+    return ctxRoot(creatorContext !== 'pub' ? creatorContext : 'palRegular');
+  }
+
   function advForContext(adv, ctxId) {
-    if (ctxId !== 'palRegular' || !adv || typeof adv !== 'object') return adv;
-    var s = regRoot();
+    if (!STORE_CONTEXTS[ctxId] || !adv || typeof adv !== 'object') return adv;
+    var s = ctxRoot(ctxId);
     var v = Object.create(adv);
     v.__ctxRegular = true;
     v.pubLayout = s.layout;
@@ -154,6 +161,22 @@
     var sh = adv && adv.pubShared;
     var e = sh && sh[key];
     return e && typeof e === 'object' ? e : null;
+  }
+
+  /* Zakres osi wieku siatki — z geometrii przekazanej przez generator
+     (ageMin/ageMax w px kanwy); domyślnie 12–216 mies. (Palczewska 1–18).
+     Kontekst OLAF pracuje na 36–216 mies. */
+  function ageMinOf(geom) {
+    return geom && Number.isFinite(geom.ageMin) ? geom.ageMin : 12;
+  }
+
+  function ageMaxOf(geom) {
+    return geom && Number.isFinite(geom.ageMax) ? geom.ageMax : 216;
+  }
+
+  function ageSpanOf(geom) {
+    var span = ageMaxOf(geom) - ageMinOf(geom);
+    return span > 0 ? span : 204;
   }
 
   /* Nadpisanie per siatka dla danego klucza adnotacji (albo null). */
@@ -288,9 +311,11 @@
    * Wszystkie punkty pomiarowe (kandydaci do adnotacji) dla danej siatki —
    * także te bez włączonej strzałki. Używane do klikania w punkty w kreatorze.
    */
-  function collectPoints(adv, chartType) {
+  function collectPoints(adv, chartType, geom) {
     var pts = [];
     if (!adv || typeof adv !== 'object') return pts;
+    var aMin = ageMinOf(geom);
+    var aMax = ageMaxOf(geom);
     var regular = !!adv.__ctxRegular;
     function regState(kind, ageMonths) {
       var sh = sharedEntry(adv, arrowKey(kind, ageMonths));
@@ -317,7 +342,7 @@
         if (!m) return;
         var a = toNum(m.ageMonths);
         var v = chartType === 'height' ? toNum(m.height) : toNum(m.weight);
-        if (!Number.isFinite(a) || !Number.isFinite(v) || a < 12 || a > 216) return;
+        if (!Number.isFinite(a) || !Number.isFinite(v) || a < aMin || a > aMax) return;
         if (regular) {
           var rs = regState('m', a);
           pushPoint('m', a, v, rs.enabled, rs.comment);
@@ -328,7 +353,7 @@
     }
     var ca = toNum(adv.currentAgeMonths);
     var cv = chartType === 'height' ? toNum(adv.currentHeight) : toNum(adv.currentWeight);
-    if (Number.isFinite(ca) && Number.isFinite(cv) && ca >= 12 && ca <= 216) {
+    if (Number.isFinite(ca) && Number.isFinite(cv) && ca >= aMin && ca <= aMax) {
       if (regular) {
         var rc = regState('cur', ca);
         pushPoint('cur', ca, cv, rc.enabled, rc.comment);
@@ -347,7 +372,7 @@
   function computeLayout(ctx, adv, chartType, geom) {
     var items = [];
     if (!geom || !(geom.maxY > geom.minY)) return items;
-    var pxPerMonth = geom.plotW / 204;
+    var pxPerMonth = geom.plotW / ageSpanOf(geom);
     var pxPerUnit = geom.plotH / (geom.maxY - geom.minY);
     var dropStep = DROP_UNITS * pxPerUnit;
     var boxBorder = lineWidthOf('publicationArrowBoxBorder', 3);
@@ -375,7 +400,7 @@
        generatorem (ramka wyśrodkowana pod punktem, kolizje rozwiązywane
        opuszczaniem o krok). */
     arrows.forEach(function (ar) {
-      var px = geom.plotX + (ar.ageMonths - 12) * pxPerMonth;
+      var px = geom.plotX + (ar.ageMonths - ageMinOf(geom)) * pxPerMonth;
       var py = geom.plotY + geom.plotH - (ar.value - geom.minY) * pxPerUnit;
       var lines = wrapComment(ar.comment);
       var dims = measureBox(lines, ar.fs);
@@ -449,8 +474,8 @@
         var val1 = measurementPointValue(adv, chartType, fr.a1);
         var val2 = measurementPointValue(adv, chartType, fr.a2);
         if (val1 === null || val2 === null) return;
-        var ax1 = geom.plotX + (Math.min(fr.a1, fr.a2) - 12) * pxPerMonth;
-        var ax2 = geom.plotX + (Math.max(fr.a1, fr.a2) - 12) * pxPerMonth;
+        var ax1 = geom.plotX + (Math.min(fr.a1, fr.a2) - ageMinOf(geom)) * pxPerMonth;
+        var ax2 = geom.plotX + (Math.max(fr.a1, fr.a2) - ageMinOf(geom)) * pxPerMonth;
         var ay1 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val1 : val2) - geom.minY) * pxPerUnit;
         var ay2 = geom.plotY + geom.plotH - ((fr.a1 <= fr.a2 ? val2 : val1) - geom.minY) * pxPerUnit;
         var ybAuto = Math.min(ay1, ay2) - dropStep;
@@ -498,7 +523,7 @@
         });
         return;
       }
-      var px = geom.plotX + (fr.ageMonths - 12) * pxPerMonth;
+      var px = geom.plotX + (fr.ageMonths - ageMinOf(geom)) * pxPerMonth;
       var py = geom.plotY + geom.plotH - (fr.value - geom.minY) * pxPerUnit;
       var lines = wrapComment(fr.comment);
       var dims = measureBox(lines, fr.fs);
@@ -658,15 +683,28 @@
 
   function drawAnnotations(ctx, geom) {
     if (!ctx || !geom || !geom.chartType) return;
+    /* Kontekst malowania wynika z trybu renderu: siatki publikacyjne czytają
+       magazyn karty (pubLayout/pubFree); generator stron OLAF/WHO przekazuje
+       ctxId w geometrii ('olaf' albo null = strona bez kontekstu kreatora,
+       np. WHO — wtedy nie rysujemy i nie nadpisujemy geometrii); ścieżka
+       Palczewskiej 1–18 (bez ctxId) → magazyn zwykłej siatki. Pusty magazyn
+       = nic do narysowania. */
+    var renderCtx;
+    if (geom.ctxId !== undefined) {
+      /* strony z budowniczego OLAF/WHO nigdy nie są publikacyjne — ctxId
+         rozstrzyga, nawet gdy tryb publikacji jest gdzieś włączony */
+      renderCtx = geom.ctxId;
+    } else {
+      renderCtx = w.publicationCharts ? 'pub' : 'palRegular';
+    }
+    if (!renderCtx) return;
     geomStore[geom.chartType] = {
       plotX: geom.plotX, plotY: geom.plotY, plotW: geom.plotW, plotH: geom.plotH,
-      minY: geom.minY, maxY: geom.maxY
+      minY: geom.minY, maxY: geom.maxY,
+      ageMin: Number.isFinite(geom.ageMin) ? geom.ageMin : undefined,
+      ageMax: Number.isFinite(geom.ageMax) ? geom.ageMax : undefined
     };
     if (suppressPainting) return;
-    /* Kontekst malowania wynika z trybu renderu: siatki publikacyjne czytają
-       magazyn karty (pubLayout/pubFree), zwykła siatka Palczewskiej 1–18 —
-       magazyn centralny kreatora. Pusty magazyn = nic do narysowania. */
-    var renderCtx = w.publicationCharts ? 'pub' : 'palRegular';
     var adv = advForContext(w.advancedGrowthData || null, renderCtx);
     if (!adv) return;
     var items = computeLayout(ctx, adv, geom.chartType, geomStore[geom.chartType]);
@@ -706,7 +744,7 @@
   }
 
   function setArrowEnabled(point, enabled) {
-    if (creatorContext === 'palRegular') {
+    if (creatorContext !== 'pub') {
       /* kontekst zwykłej siatki: wpis w magazynie centralnym, bez dotykania
          checkboxów strzałek karty zaawansowanej */
       var rs = regRoot();
@@ -738,7 +776,7 @@
   }
 
   function setArrowComment(point, text) {
-    if (creatorContext === 'palRegular') {
+    if (creatorContext !== 'pub') {
       var rs = regRoot();
       var rk = arrowKey(point.kind, point.ageMonths);
       var re = rs.shared[rk];
@@ -763,7 +801,7 @@
   }
 
   function layoutStore() {
-    if (creatorContext === 'palRegular') return regRoot().layout;
+    if (creatorContext !== 'pub') return regRoot().layout;
     var adv = w.advancedGrowthData;
     if (!adv || typeof adv !== 'object') return null;
     if (!adv.pubLayout || typeof adv.pubLayout !== 'object') adv.pubLayout = {};
@@ -853,7 +891,11 @@
      pierwszeństwo (jego podglądy budują się z przypiętą flagą), potem tryb
      publikacji, potem trwający render zwykłej siatki Palczewskiej. */
   function optionsContext() {
-    if (ui) return creatorContext === 'palRegular' ? 'palRegular' : 'pub';
+    if (ui) {
+      if (creatorContext === 'palRegular') return 'palRegular';
+      /* kontekst OLAF: panel elementów w kolejnej fazie — obowiązują domyślne */
+      return creatorContext === 'olaf' ? 'default' : 'pub';
+    }
     if (w.publicationCharts) return 'pub';
     if (regularRenderActive) return 'palRegular';
     return 'default';
@@ -885,7 +927,7 @@
   }
 
   function setOption(name, value) {
-    if (creatorContext === 'palRegular') {
+    if (creatorContext !== 'pub') {
       var s = regRoot();
       if (!s.options || typeof s.options !== 'object') {
         s.options = {};
@@ -906,7 +948,7 @@
   /* ── Magazyn adnotacji wolnych (pubFree) ── */
 
   function freeStore() {
-    if (creatorContext === 'palRegular') return regRoot().free;
+    if (creatorContext !== 'pub') return regRoot().free;
     var adv = w.advancedGrowthData;
     if (!adv || typeof adv !== 'object') return null;
     if (!adv.pubFree || typeof adv.pubFree !== 'object') adv.pubFree = {};
@@ -1149,7 +1191,6 @@
   }
 
   function buildPreviewCanvases() {
-    if (typeof w.buildPalczewskaExtendedCanvases !== 'function') return null;
     var ageEl = document.getElementById('age');
     var ageMEl = document.getElementById('ageMonths');
     var sexEl = document.getElementById('sex');
@@ -1160,6 +1201,50 @@
     var sex = sexEl.value === 'M' ? 'M' : 'F';
     var wt = wtEl ? parseFloat(wtEl.value) : NaN;
     var ht = htEl ? parseFloat(htEl.value) : NaN;
+    if (creatorContext === 'olaf') {
+      /* Strona OLAF: jedna kanwa A4 z dwoma wykresami — budowana tak samo
+         jak przez „Generuj siatkę OLAF" (stan efektywny podstawiony na czas
+         budowy; obie zakładki kreatora pokazują pełną stronę). */
+      if (typeof w.buildCentilePageCanvas !== 'function') return null;
+      var effAdv = null;
+      try {
+        if (typeof w.getEffectiveCentileGrowthDataState === 'function') effAdv = w.getEffectiveCentileGrowthDataState();
+      } catch (e) { effAdv = null; }
+      var hadAdv = Object.prototype.hasOwnProperty.call(w, 'advancedGrowthData');
+      var prevAdv = w.advancedGrowthData;
+      suppressPainting = true;
+      var page;
+      try {
+        if (effAdv && typeof effAdv === 'object') w.advancedGrowthData = effAdv;
+        page = w.buildCentilePageCanvas({
+          rangeMinX: 36,
+          rangeMaxX: 216,
+          sex: sex,
+          userAgeMonths: months,
+          userWeight: wt,
+          userHeight: ht,
+          headerTitle: sex === 'M' ? 'Siatka centylowa chłopcy' : 'Siatka centylowa dziewczynki',
+          headerSubtitle: 'Badanie OLAF (3–18 lat)',
+          footerText: '',
+          chartSource: 'OLAF'
+        });
+      } catch (e) {
+        page = null;
+      } finally {
+        suppressPainting = false;
+        if (effAdv && typeof effAdv === 'object') {
+          if (hadAdv) w.advancedGrowthData = prevAdv;
+          else { try { delete w.advancedGrowthData; } catch (e2) { w.advancedGrowthData = undefined; } }
+        }
+      }
+      if (!page) return null;
+      var copy = document.createElement('canvas');
+      copy.width = page.width;
+      copy.height = page.height;
+      try { copy.getContext('2d').drawImage(page, 0, 0); } catch (e3) { /* ignore */ }
+      return { height: page, weight: copy };
+    }
+    if (typeof w.buildPalczewskaExtendedCanvases !== 'function') return null;
     /* Kontekst zwykłej siatki: podgląd renderowany w kolorowym, polskim stylu
        (publicationCharts przypięte na false na czas budowy kanw). */
     var pinFlag = creatorContext === 'palRegular';
@@ -1219,9 +1304,19 @@
     return geomStore[ui.active] || null;
   }
 
-  /* Dane karty widziane przez UI kreatora w aktywnym kontekście. */
+  /* Dane karty widziane przez UI kreatora w aktywnym kontekście.
+     Kontekst OLAF pracuje na stanie efektywnym (scalone dane zaawansowane
+     + podstawowe) — dokładnie tym, którego używa przycisk „Generuj siatkę
+     OLAF" (generateCentileChart podstawia go na czas renderu). */
   function activeAdv() {
-    return advForContext(w.advancedGrowthData || null, creatorContext);
+    var base = w.advancedGrowthData || null;
+    if (creatorContext === 'olaf' && typeof w.getEffectiveCentileGrowthDataState === 'function') {
+      try {
+        var eff = w.getEffectiveCentileGrowthDataState();
+        if (eff && typeof eff === 'object') base = eff;
+      } catch (e) { /* ignore */ }
+    }
+    return advForContext(base, creatorContext);
   }
 
   function renderOverlay() {
@@ -1232,15 +1327,23 @@
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     var geom = geomStore[chart];
     var adv = activeAdv() || {};
+    /* Kontekst OLAF: oba wykresy leżą na jednej stronie, więc nakładka
+       aktywnej zakładki dorysowuje też adnotacje drugiego wykresu (bez
+       interakcji) — podgląd strony jest zawsze kompletny. */
+    if (creatorContext === 'olaf') {
+      var other = chart === 'height' ? 'weight' : 'height';
+      var geomOther = geomStore[other];
+      if (geomOther) drawItems(ctx, computeLayout(ctx, adv, other, geomOther));
+    }
     var items = geom ? computeLayout(ctx, adv, chart, geom) : [];
     drawItems(ctx, items);
     ui.items[chart] = items;
-    var points = geom ? collectPoints(adv, chart) : [];
+    var points = geom ? collectPoints(adv, chart, geom) : [];
     ui.points[chart] = points;
     /* Warstwa pomocnicza podglądu (nie trafia do eksportu): turkusowe
        pierścienie oznaczają klikalne punkty pomiarowe, obwódka — zaznaczoną ramkę. */
     if (geom) {
-      var pxPerMonth = geom.plotW / 204;
+      var pxPerMonth = geom.plotW / ageSpanOf(geom);
       var pxPerUnit = geom.plotH / (geom.maxY - geom.minY);
       ctx.save();
       /* Prowadnice magnesów (tylko podgląd, nie trafiają do eksportu) */
@@ -1263,7 +1366,7 @@
         ctx.setLineDash([]);
       }
       points.forEach(function (p) {
-        var x = geom.plotX + (p.ageMonths - 12) * pxPerMonth;
+        var x = geom.plotX + (p.ageMonths - ageMinOf(geom)) * pxPerMonth;
         var y = geom.plotY + geom.plotH - (p.value - geom.minY) * pxPerUnit;
         ctx.beginPath();
         if (p.hiddenHere) {
@@ -1284,7 +1387,7 @@
       if (ui.bracketFirst) {
         points.forEach(function (p) {
           if (p.key !== ui.bracketFirst.key) return;
-          var bx = geom.plotX + (p.ageMonths - 12) * pxPerMonth;
+          var bx = geom.plotX + (p.ageMonths - ageMinOf(geom)) * pxPerMonth;
           var by = geom.plotY + geom.plotH - (p.value - geom.minY) * pxPerUnit;
           ctx.beginPath();
           ctx.setLineDash([]);
@@ -1336,7 +1439,7 @@
       var pts = ui.points[ui.active] || [];
       for (var i = 0; i < pts.length; i++) {
         if (pts[i].key === key && geomA) {
-          cx = geomA.plotX + (pts[i].ageMonths - 12) * (geomA.plotW / 204);
+          cx = geomA.plotX + (pts[i].ageMonths - ageMinOf(geomA)) * (geomA.plotW / ageSpanOf(geomA));
           cy = geomA.plotY + geomA.plotH - (pts[i].value - geomA.minY) * (geomA.plotH / (geomA.maxY - geomA.minY));
           break;
         }
@@ -1569,13 +1672,13 @@
   function hitPoint(pos) {
     var geom = activeGeom();
     if (!geom) return null;
-    var pxPerMonth = geom.plotW / 204;
+    var pxPerMonth = geom.plotW / ageSpanOf(geom);
     var pxPerUnit = geom.plotH / (geom.maxY - geom.minY);
     var points = ui.points[ui.active] || [];
     var best = null;
     var bestD = 70; // promień trafienia w px kanwy
     points.forEach(function (p) {
-      var x = geom.plotX + (p.ageMonths - 12) * pxPerMonth;
+      var x = geom.plotX + (p.ageMonths - ageMinOf(geom)) * pxPerMonth;
       var y = geom.plotY + geom.plotH - (p.value - geom.minY) * pxPerUnit;
       var d = Math.sqrt((pos.x - x) * (pos.x - x) + (pos.y - y) * (pos.y - y));
       if (d < bestD) { bestD = d; best = p; }
@@ -1803,9 +1906,9 @@
           /* Wstawienie wolnej adnotacji w klikniętym miejscu siatki */
           var geomA = activeGeom();
           if (geomA) {
-            var ppm = geomA.plotW / 204;
+            var ppm = geomA.plotW / ageSpanOf(geomA);
             var ppu = geomA.plotH / (geomA.maxY - geomA.minY);
-            var age = Math.max(12, Math.min(216, 12 + (d.place.x - geomA.plotX) / ppm));
+            var age = Math.max(ageMinOf(geomA), Math.min(ageMaxOf(geomA), ageMinOf(geomA) + (d.place.x - geomA.plotX) / ppm));
             var val = Math.max(geomA.minY, Math.min(geomA.maxY, geomA.minY + (geomA.plotY + geomA.plotH - d.place.y) / ppu));
             var isLabel = ui.placeMode === 'label';
             var newId = addFree(ui.active, { ageMonths: age, value: val, txt: isLabel ? 'Etykieta' : '', arrow: !isLabel });
@@ -1972,7 +2075,7 @@
   function openCreator(opts) {
     if (typeof document === 'undefined') return;
     if (ui) { closeCreator(); return; }
-    var ctxId = opts && opts.context === 'palRegular' ? 'palRegular' : 'pub';
+    var ctxId = opts && STORE_CONTEXTS[opts.context] ? opts.context : 'pub';
     /* Odśwież dane karty PRZED bramkami i budową podglądu — bez tego na
        podglądzie mogłoby zabraknąć np. świeżo wpisanego wieku kostnego
        (advancedGrowthData bywa nieprzeliczone, m.in. po odtworzeniu sesji).
@@ -1987,12 +2090,15 @@
       alert('W\u0142\u0105cz najpierw prze\u0142\u0105cznik \u201eSiatki do publikacji\u201d, aby otworzy\u0107 kreator adnotacji.');
       return;
     }
-    if (ctxId === 'palRegular') {
+    if (ctxId !== 'pub') {
       var ageEl0 = document.getElementById('age');
       var ageMEl0 = document.getElementById('ageMonths');
       var months0 = Math.round((ageEl0 && parseFloat(ageEl0.value) || 0) * 12 + (ageMEl0 && parseFloat(ageMEl0.value) || 0));
-      if (!(months0 >= 12 && months0 <= 216)) {
-        alert('Kreator siatki Palczewskiej 1\u201318 lat jest dost\u0119pny dla wieku od 1 do 18 lat.');
+      var minMo = ctxId === 'olaf' ? 36 : 12;
+      if (!(months0 >= minMo && months0 <= 216)) {
+        alert(ctxId === 'olaf'
+          ? 'Kreator siatki OLAF (3\u201318 lat) jest dost\u0119pny dla wieku od 3 do 18 lat.'
+          : 'Kreator siatki Palczewskiej 1\u201318 lat jest dost\u0119pny dla wieku od 1 do 18 lat.');
         return;
       }
     }
@@ -2007,7 +2113,10 @@
     /* Pe\u0142noekranowy tryb roboczy: warstwa na ca\u0142y viewport, strona pod spodem
        zablokowana (lockBodyScroll). */
     var isRegular = ctxId === 'palRegular';
-    var creatorTitle = isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji';
+    var isOlaf = ctxId === 'olaf';
+    var creatorTitle = isOlaf
+      ? 'Kreator siatek — OLAF 3–18 lat'
+      : (isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji');
     var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': creatorTitle });
 
     /* Nag\u0142\u00f3wek */
@@ -2038,6 +2147,9 @@
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
     var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105; poprzeczk\u0119 mo\u017cna potem przeci\u0105gn\u0105\u0107 wy\u017cej lub ni\u017cej' }, '+ Klamra');
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
+    /* Kontekst OLAF: prze\u0142\u0105czniki element\u00f3w strony OLAF to kolejna faza \u2014
+       bramki w buildCentilePageCanvas jeszcze nie istniej\u0105. */
+    if (isOlaf) elemBtn.style.display = 'none';
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn, saveNote);
 
     /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) \u2014 rozwijany z animacj\u0105
@@ -2254,6 +2366,20 @@
     });
     genBtn.addEventListener('click', function () {
       try {
+        if (creatorContext === 'olaf') {
+          /* PDF strony OLAF tą samą ścieżką co przycisk karty (źródło
+             przypięte na czas asynchronicznego generowania) */
+          if (typeof w.generateCentileChart !== 'function') return;
+          var prevSrc = w.overrideCentileSource;
+          w.overrideCentileSource = 'OLAF';
+          Promise.resolve(w.generateCentileChart())
+            .catch(function () { /* ignore */ })
+            .then(function () {
+              if (prevSrc === undefined) { try { delete w.overrideCentileSource; } catch (e2) { w.overrideCentileSource = undefined; } }
+              else w.overrideCentileSource = prevSrc;
+            });
+          return;
+        }
         if (typeof w.generatePalczewskaCentileCharts !== 'function') return;
         if (creatorContext === 'palRegular') {
           /* WYSIWYG: PDF z kreatora zwykłej siatki zawsze w kolorowym stylu,
@@ -2302,7 +2428,7 @@
     _arrowKey: arrowKey,
     _setSuppress: function (v) { suppressPainting = !!v; },
     _geomStore: geomStore,
-    _setContext: function (c) { creatorContext = c === 'palRegular' ? 'palRegular' : 'pub'; },
+    _setContext: function (c) { creatorContext = STORE_CONTEXTS[c] ? c : 'pub'; },
     _advForContext: advForContext,
     _regRoot: regRoot,
     _setRegularRender: function (v) { regularRenderActive = !!v; }
