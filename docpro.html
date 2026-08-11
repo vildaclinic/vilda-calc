@@ -3803,6 +3803,10 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js" defer></script>
+<!-- Wspólny interpolator PCHIP krzywych centylowych Palczewskiej (ten sam moduł co na index.html).
+     app.js oraz inline_docpro_01/02/05.js delegują do niego interpolację i pomijają dawne
+     wygładzanie uśrednianiem (fallback: stara ścieżka, gdy moduł nie jest załadowany). -->
+<script defer src="vilda_centile_interpolation.js?v=2"></script>
 <!-- PERF: biblioteka XLSX (SheetJS) NIE jest już ładowana synchronicznie tutaj.
      Była potrzebna wyłącznie do wsadowego importu/eksportu Z-score (rzadka akcja),
      a blokowała start strony przy każdej wizycie. Teraz ładowana leniwie z CDN
@@ -3860,10 +3864,10 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      Kod ten korzysta z globalnych tablic LMS (zdefiniowanych w app.js) oraz bibliotek jsPDF i Canvas.
      Po kliknięciu przycisku „Generuj siatkę centylową” tworzy dwa wykresy (wzrostu i wagi),
      łączy je na jednej stronie A4 i wyświetla jako PDF w nowym oknie. -->
-<script defer src="inline_docpro_01.js?v=1"></script>
+<script defer src="inline_docpro_01.js?v=3"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
-<script defer src="inline_docpro_02.js?v=1"></script>
+<script defer src="inline_docpro_02.js?v=3"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script defer src="inline_docpro_03.js?v=1"></script>
@@ -4006,7 +4010,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
   <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
-  <script defer src="inline_docpro_05.js?v=1"></script>
+  <script defer src="inline_docpro_05.js?v=2"></script>
 
   <!-- Skrypt aktywujący moduł lekarski na stronie DocPro. Po załadowaniu
        strony automatycznie zaznacza ukryty checkbox #isDoctor i wywołuje

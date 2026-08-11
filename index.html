@@ -1637,7 +1637,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <!-- Wspólny interpolator PCHIP krzywych centylowych Palczewskiej (monotoniczny spline Hermite'a).
      Ładowany po centile_data.js; app.js oraz inline_index_03/04/07.js delegują do niego interpolację
      i pomijają dawne wygładzanie uśrednianiem (fallback: stara ścieżka, gdy moduł nie jest załadowany). -->
-<script defer src="vilda_centile_interpolation.js?v=1"></script>
+<script defer src="vilda_centile_interpolation.js?v=2"></script>
 <!-- Bayley-Pinneau stage 1 dataset for the advanced height prediction module. Loaded before app.js so future modules can access window.bayleyPinneauData. -->
 <script src="bayley_pinneau_data.js" defer></script>
 <!-- Roche-Wainer-Thissen (RWT) dataset for the advanced height prediction module. -->
@@ -2013,13 +2013,13 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      Kod ten korzysta z globalnych tablic LMS (zdefiniowanych w app.js) oraz bibliotek jsPDF i Canvas.
      Po kliknięciu przycisku „Generuj siatkę centylową” tworzy dwa wykresy (wzrostu i wagi),
      łączy je na jednej stronie A4 i wyświetla jako PDF w nowym oknie. -->
-<script defer src="inline_index_03.js?v=11"></script>
+<script defer src="inline_index_03.js?v=12"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
-<script defer src="inline_index_04.js?v=24"></script>
+<script defer src="inline_index_04.js?v=25"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
-<script defer src="inline_index_05.js?v=2"></script>
+<script defer src="inline_index_05.js?v=3"></script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
 <script src="ios26-ui.js?v=41" defer></script>
