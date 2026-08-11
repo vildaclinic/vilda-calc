@@ -241,6 +241,19 @@ Testy na rzeczywistych funkcjach produkcyjnych (`window.buildDietSmartRecommenda
 
 Testy: DIET-GROWTH-ENDED-STAB (scenariusz z flagą i kontrolny bez niej), DIET-KCAL-CONSISTENT, DIET-SMART-PAD-TWO w `tests/e2e/diet-recommendations-logic.spec.mjs`.
 
+**Etap 5 (2026-08-11) — walidacja wejścia PDF, jawna niekompletność, czytelność, transliteracja, wspólne etykiety PAL:**
+
+1. **Walidacja danych pacjenta w generatorze PDF (`di()`)** — generator przyjmował dowolne dane: puste pola wieku dawały chip „0 lat 0 mies." i treść dla małego dziecka, wzrost wpisany w metrach dawał „BMI 24221,5", a dla niemowląt tryb „full" produkował raport-atrapę z placeholderami. Po poprawce generator odmawia pracy z czytelnym komunikatem, gdy wiek ≤ 5 lat (zgodnie z bramką widoczności modułu), brak masy/wzrostu albo BMI poza zakresem 8–90 (sygnał błędnych jednostek).
+2. **Jawna niekompletność raportu** — strona, której nie udało się przenieść do PDF, znikała bez śladu (toast „wygenerowano" przy 1 z 2 stron). Po poprawce nieudane przygotowanie którejkolwiek strony (obraz lub cięcie na segmenty) przerywa generowanie z błędem; w `ri()` dodatkowy pas bezpieczeństwa porównuje liczbę stron z liczbą przygotowanych obrazów.
+3. **Podłoga czytelności strony klasycznej (`It()`)** — dopasowanie skali mogło zejść do 0,22× (nieczytelny druk) albo przyciąć treść przez `overflow:hidden`. Po poprawce minimalna skala wynosi 0,45×, a gdy strona jest pomniejszona do ≤0,5× lub treść mimo to nie mieści się w polu strony, toast po wygenerowaniu ostrzega o obniżonej czytelności (mechanizm flagi `data-diet-pdf-fit-warning` przenoszonej przez `di()`/`ri()`).
+4. **Transliteracja ł/Ł w nazwach plików** — NFD nie rozkłada „ł", więc „Michał Łąka" stawał się `Micha_ka`. Poprawka w `patientReportSanitizeFilename` (`vilda_patient_report.js`, wspólna dla wszystkich raportów) i w zapasowym sanitizerze modułu diety: `ł→l`, `Ł→L` przed normalizacją.
+5. **Martwy `maxLength` i znacznik obcięcia w kartach zintegrowanych** — `At()` ignorował limit długości pozycji (parametr 420 był martwy), a `Ct()` ucinał listy do `maxItems` bez śladu. Po poprawce pozycja dłuższa niż limit jest przycinana na granicy słowa z wielokropkiem, a obcięta lista dostaje pozycję „… oraz N kolejnych — komplet na stronie „Komplet zaleceń"" (strona kompletu istnieje w trybie „full" zawsze od etapu 2).
+6. **Wspólne etykiety PAL** — narracja używała słownika `PAL_OPTIONS` z `app.js` („wysoka"), podczas gdy karta planu pokazuje etykiety z `ENERGY_PAL_TABLE_LABELS` („aktywny tryb życia") — pacjent widział dwie różne nazwy tego samego poziomu. Po poprawce `Ht()` preferuje wspólny słownik karty planu (z fallbackiem do `PAL_OPTIONS`), a fraza cytuje etykietę: „deklarowaną aktywność na poziomie „umiarkowana aktywność" (PAL 1,6)".
+
+Testy: DIET-PDF-VALIDATION (brak wieku, wzrost w metrach), DIET-FILENAME-PL (transliteracja na rzeczywistym `patientReportSanitizeFilename`), rozszerzenie DIET-KCAL-CONSISTENT o frazę etykiety PAL.
+
+Nierozstrzygnięte (decyzje właściciela): cele wagowe przy źródle Palczewskiej to 85c masy względem wieku, ale narracja mówi „norma dla Twojego wieku i wzrostu" (OLAF liczy przez BMI — ta sama osoba dostaje różne cele zależnie od źródła; ujednolicenie metodyki lub brzmienia wymaga akceptacji); martwe ścieżki `!professionalMode` (m.in. dyskleimer dla dzieci <10 lat, który nigdy nie pada); zdanie o obwodzie talii przy niedowadze z alertem WHR.
+
 ### GROWTH-LMS — interpolacja krzywych centylowych Palczewskiej (2026-08-11)
 
 Dane: `centile_data.js` (Palczewska & Niedźwiecka, IMiD 1999; waga, wzrost i BMI, węzły 1–222 mies., rozstaw od 1 mies. w niemowlęctwie do 12 mies. w wieku szkolnym; wszystkie 180 wierszy ma komplet p3–p97, co potwierdza test regresyjny).

@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=8' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=9' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -116,7 +116,7 @@ test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjn
 test('DIET-PDF-FULL-COMPLETE: pełny raport PDF zawiera komplet zaleceń z witaminą D', async ({ page }) => {
   test.setTimeout(180_000);
   await openWithDietModule(page);
-  await page.addScriptTag({ url: '/vilda_patient_report.js?v=5' });
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=6' });
   await page.waitForFunction(() => typeof window.patientReportCreateRenderHost === 'function');
   const result = await page.evaluate(async () => {
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
@@ -332,6 +332,9 @@ test('DIET-KCAL-CONSISTENT: narracja i normy podają tę samą kaloryczność pl
   const normsKcal = digits(norms[1]);
   expect(narrationKcal % 100).toBe(0);
   expect(normsKcal).toBe(narrationKcal);
+  // Etap 5: etykieta aktywności pochodzi ze wspólnego słownika karty planu
+  // i jest cytowana jawnie („na poziomie „X" (PAL y)"):
+  expect(text).toMatch(/deklarowaną aktywność na poziomie „[^"]+" \(PAL \d,\d\)/u);
 });
 
 // DIET-SMART-PAD-TWO: pojedynczy trafiony chip nie może dawać planu z jednym
@@ -350,4 +353,47 @@ test('DIET-SMART-PAD-TWO: plan z jednym trafionym chipem dostaje drugi cel bazow
   expect(result.text).toMatch(/1\. Źródło białka/u);
   // Dopełnienie z triady dziecięcej:
   expect(result.text).toContain('Woda jako podstawowy nap');
+});
+
+// ── Etap 5: walidacja danych wejściowych PDF i transliteracja nazw plików ──
+
+// DIET-PDF-VALIDATION: generator PDF odmawia pracy na danych bez sensu zamiast
+// produkować raport-atrapę (chip „0 lat 0 mies.", „BMI 24221,5").
+test('DIET-PDF-VALIDATION: generator PDF odrzuca brak wieku i błędne jednostki', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const results = await page.evaluate(async () => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    const tryCollect = async () => {
+      try {
+        await window.dietRecommendationsCollectPdfPages({ mode: 'full' });
+        return '';
+      } catch (err) {
+        return err && err.message ? err.message : 'unknown';
+      }
+    };
+    // Scenariusz 1: puste pola wieku (interpretowane jako 0 lat).
+    set('age', ''); set('ageMonths', '');
+    set('sex', 'M'); set('weight', 70); set('height', 170);
+    const noAge = await tryCollect();
+    // Scenariusz 2: wzrost wpisany w metrach → absurdalne BMI.
+    set('age', 30); set('ageMonths', 0);
+    set('weight', 70); set('height', 1.7);
+    const metersHeight = await tryCollect();
+    return { noAge, metersHeight };
+  });
+  expect(results.noAge).toContain('wieku');
+  expect(results.metersHeight).toContain('centymetrach');
+});
+
+// DIET-FILENAME-PL: „Michał Łąka" nie może tracić liter ł/Ł w nazwie pliku
+// (NFD nie rozkłada ł — przedtem wychodziło „Micha_ka"). Dane fikcyjne.
+test('DIET-FILENAME-PL: sanitizer nazw plików transliteruje ł/Ł', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openWithDietModule(page);
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=6' });
+  await page.waitForFunction(() => typeof window.patientReportSanitizeFilename === 'function');
+  const sanitized = await page.evaluate(() => window.patientReportSanitizeFilename('Michał Łąka'));
+  expect(sanitized).toBe('Michal_Laka');
 });
