@@ -32,7 +32,7 @@ test('repozytoryjny zestaw smoke nie ma wymaganych błędów', async ({ page }) 
   await page.waitForFunction(() => Boolean(
     window.VildaDietRecommendations && window.VildaNutritionMicros
   ));
-  await page.addScriptTag({ url: '/vilda_smoke_tests.js?v=51' });
+  await page.addScriptTag({ url: '/vilda_smoke_tests.js?v=52' });
 
   const result = await page.evaluate(() => window.vildaRunSmokeRegressionSuite());
 

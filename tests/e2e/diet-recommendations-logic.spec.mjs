@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=5' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=6' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -106,4 +106,59 @@ test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjn
   // Zalecenia stylu życia pozostają:
   expect(text).toMatch(/posiłk/);
   expect(text).toMatch(/60 minut/);
+});
+
+// ── Etap 2: kompletność PDF „full" ──
+// DIET-PDF-FULL-COMPLETE: otyłe dziecko z flagą wit. D → tryb „full" ma
+// 3 strony, a przechwycony markup hosta zawiera stronę „Komplet zaleceń"
+// z dawkowaniem witaminy D (przedtem: 2 strony, wit. D gubione w sekcji
+// `other`). Tryb „classic" nadal 1 strona.
+test('DIET-PDF-FULL-COMPLETE: pełny raport PDF zawiera komplet zaleceń z witaminą D', async ({ page }) => {
+  test.setTimeout(180_000);
+  await openWithDietModule(page);
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=5' });
+  await page.waitForFunction(() => typeof window.patientReportCreateRenderHost === 'function');
+  const result = await page.evaluate(async () => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    set('age', 12); set('ageMonths', 0); set('sex', 'M');
+    set('weight', 75); set('height', 155);
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    flag('vitDSuppFlag', true); flag('hydrationFlag', true);
+    flag('reduceToggle', true); flag('stabilizationToggle', false);
+    // Hermetyczne stuby bibliotek PDF (CDN niedostępny w środowisku testów) —
+    // testujemy logikę składania stron modułu, nie renderowanie jsPDF.
+    window.vildaEnsurePdfLibraries = async () => true;
+    window.jspdf = window.jspdf || { jsPDF: function JsPdfStub() {} };
+    window.html2canvas = window.html2canvas || (async (el, opts) => {
+      const c = document.createElement('canvas');
+      c.width = (opts && opts.width) || el.offsetWidth || 1240;
+      c.height = (opts && opts.height) || el.offsetHeight || 1754;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+      return c;
+    });
+    const captured = { html: '' };
+    const observer = new MutationObserver(() => {
+      document.querySelectorAll('.diet-pdf-root').forEach((root) => {
+        if (root.innerHTML.length > captured.html.length) captured.html = root.innerHTML;
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    const full = await window.dietRecommendationsCollectPdfPages({ mode: 'full' });
+    const classic = await window.dietRecommendationsCollectPdfPages({ mode: 'classic' });
+    observer.disconnect();
+    return {
+      fullPages: full && full.pages ? full.pages.length : 0,
+      classicPages: classic && classic.pages ? classic.pages.length : 0,
+      hasKomplet: captured.html.includes('Komplet zalece'),
+      hasVitD: /witamin/i.test(captured.html),
+      hasIU: captured.html.includes('IU'),
+    };
+  });
+  expect(result.fullPages).toBe(3);
+  expect(result.classicPages).toBe(1);
+  expect(result.hasKomplet).toBe(true);
+  expect(result.hasVitD).toBe(true);
+  expect(result.hasIU).toBe(true);
 });
