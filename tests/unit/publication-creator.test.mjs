@@ -423,6 +423,71 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect('bdy' in win.advancedGrowthData.pubFree.height[0]).toBe(false);
   });
 
+  it('kontekst palRegular: strzałki z magazynu centralnego, checkboxy pomiarów ignorowane', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    const advReg = PC._advForContext(win.advancedGrowthData, 'palRegular');
+    // pomiar a120 ma arrowEnabled=true, ale w kontekście zwykłym liczy się magazyn shared
+    expect(PC._collectArrows(advReg, 'height')).toHaveLength(0);
+    // wpis w shared włącza adnotację na OBU siatkach ze wspólną treścią
+    win.chartCreatorData.palRegular.shared.a120 = { on: 1, txt: 'Diagnoza' };
+    const h = PC._collectArrows(advReg, 'height');
+    const w2 = PC._collectArrows(advReg, 'weight');
+    expect(h.map((a) => a.key)).toEqual(['a120']);
+    expect(w2.map((a) => a.key)).toEqual(['a120']);
+    expect(h[0].comment).toBe('Diagnoza');
+    // punkty klikalne raportują stan z magazynu centralnego
+    const pts = PC._collectPoints(advReg, 'height');
+    expect(pts.find((p) => p.key === 'a120').enabled).toBe(true);
+    expect(pts.find((p) => p.key === 'cur').enabled).toBe(false); // currentArrowEnabled ignorowane
+    // kontekst publikacyjny nieruszony: nadal czyta checkboxy pomiarów
+    expect(PC._collectArrows(win.advancedGrowthData, 'height').map((a) => a.key)).toEqual(['a120', 'a144', 'cur']);
+  });
+
+  it('kontekst palRegular: magazyny układu i wolnych adnotacji odseparowane od advancedGrowthData', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    PC._setContext('palRegular');
+    PC._updateOverride('height', 'a120', { dx: 70, dy: -40 });
+    const freeId = PC._addFree('height', { ageMonths: 100, value: 120, txt: 'Notatka', arrow: false });
+    PC._setContext('pub');
+    // zapisy trafiły do chartCreatorData, nie do danych karty
+    expect(win.chartCreatorData.palRegular.layout.height.a120).toEqual({ dx: 70, dy: -40 });
+    expect(win.chartCreatorData.palRegular.free.height[0].txt).toBe('Notatka');
+    expect(win.advancedGrowthData.pubLayout).toBeUndefined();
+    expect(win.advancedGrowthData.pubFree).toBeUndefined();
+    // a zapisy publikacyjne nie widzą wpisów kontekstu zwykłego
+    PC._updateOverride('height', 'cur', { dx: 5, dy: 5 });
+    expect(win.advancedGrowthData.pubLayout.height.cur).toEqual({ dx: 5, dy: 5 });
+    expect(win.chartCreatorData.palRegular.layout.height.cur).toBeUndefined();
+    expect(freeId).toBe(1);
+  });
+
+  it('drawAnnotations wybiera magazyn wg trybu renderu (publicationCharts)', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = sampleAdv();
+    win.advancedGrowthData.measurements = [];
+    win.advancedGrowthData.currentArrowEnabled = false;
+    // etykieta tylko w magazynie kontekstu zwykłego
+    PC._setContext('palRegular');
+    PC._addFree('height', { ageMonths: 100, value: 120, txt: 'Zwykła', arrow: false });
+    PC._setContext('pub');
+    const geom = { chartType: 'height', ...GEOM };
+    // render zwykłej siatki (publicationCharts=false) maluje etykietę z magazynu centralnego
+    win.publicationCharts = false;
+    let calls = [];
+    PC.drawAnnotations(fakeCtx(calls), geom);
+    expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'Zwykła')).toBe(true);
+    // render publikacyjny (flaga true) nie widzi tej etykiety
+    win.publicationCharts = true;
+    calls = [];
+    PC.drawAnnotations(fakeCtx(calls), geom);
+    expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'Zwykła')).toBe(false);
+  });
+
   it('grot na orbicie: ramka w poziomie od punktu → grot z boku punktu, linia pozioma', () => {
     const PC = loadCreator();
     // środek ramki (1300, 1000) idealnie na prawo od punktu (1000, 1000)
@@ -536,7 +601,8 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
       plotX: GEOM.plotX, plotY: GEOM.plotY, plotW: GEOM.plotW, plotH: GEOM.plotH,
       minY: 0, maxY: 90
     });
-    // bez tłumienia — maluje adnotacje
+    // bez tłumienia — maluje adnotacje (render publikacyjny czyta dane karty)
+    win.publicationCharts = true;
     PC.drawAnnotations(fakeCtx(calls), {
       chartType: 'weight',
       plotX: GEOM.plotX, plotY: GEOM.plotY, plotW: GEOM.plotW, plotH: GEOM.plotH,
@@ -572,15 +638,18 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
     expect(generatorSource).toContain(
       'PC.drawAnnotations(e,{chartType:o,plotX:te+120,plotY:ne+80,plotW:Z-120-100,plotH:U-80-80,minY:F,maxY:R})'
     );
-    // delegacja jest poza gałęzią wyłącznie-wzrostową…
-    expect(generatorSource).toContain('})()),window.publicationCharts&&(function(){try{var PC=window.VildaPublicationCreator');
+    // delegacja jest poza gałęzią wyłącznie-wzrostową i BEZ bramki trybu
+    // publikacji — drawAnnotations sam wybiera magazyn wg publicationCharts
+    // (centralny kreator siatek: kontekst palRegular dla zwykłej siatki)
+    expect(generatorSource).toContain('})()),(function(){try{var PC=window.VildaPublicationCreator');
+    expect(generatorSource).not.toContain('window.publicationCharts&&(function(){try{var PC=window.VildaPublicationCreator');
     // …a stary blok rysujący strzałki tylko dla wzrostu został usunięty
     expect(generatorSource).not.toContain('if(!window.publicationCharts||o!=="height")return;const t=window.advancedGrowthData');
   });
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=14');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=15');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });

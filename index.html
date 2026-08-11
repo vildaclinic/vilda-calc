@@ -264,7 +264,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=52"></script>
+<script defer src="vilda_data_import_export.js?v=53"></script>
 <script defer src="vilda_save_status_indicator.js?v=24"></script>
 <script defer src="vilda_unsaved_guard.js?v=4"></script>
 <script defer src="vilda_khamis_roche.js?v=1"></script>
@@ -309,7 +309,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 </script>
 <script defer src="vilda_epicrisis.js?v=14"></script>
 <script defer src="vilda_epicrisis_ui.js?v=13"></script>
-<script defer src="vilda_publication_creator.js?v=14"></script>
+<script defer src="vilda_publication_creator.js?v=15"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=65" defer></script>
 
@@ -836,6 +836,12 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
       </button>
       <button type="button" id="generatePalCentileChart" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
         Generuj siatkę Palczewska
+      </button>
+      <!-- Centralny kreator siatek (PRO), faza 1: zwykła siatka Palczewskiej 1–18 lat.
+           Widoczność steruje updateCentileButtons (inline_index_07.js): źródło
+           PALCZEWSKA + wiek 1–18 lat. -->
+      <button type="button" id="openChartCreatorBtn" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
+        Kreator siatek<sup class="pro-superscript">PRO</sup>
       </button>
     </div>
     <p style="font-size:0.9rem;margin-top:0.5rem;">
@@ -1642,7 +1648,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script src="adult_vitals.js?v=5" defer></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=4"></script>
-<script defer src="vilda_persist_runtime.js?v=12"></script>
+<script defer src="vilda_persist_runtime.js?v=13"></script>
 <script defer src="vilda_summary_cards.js?v=23"></script>
 <script defer src="vilda_diet_plan_ui.js?v=2"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
@@ -2105,7 +2111,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
   <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
-  <script defer src="inline_index_07.js?v=4"></script>
+  <script defer src="inline_index_07.js?v=5"></script>
 
   <!-- Skrypt do zapisywania stanu rozwinięcia/zwinięcia kart w localStorage i jego przywracania.  
        Dzięki temu sekcje, takie jak „Zaawansowane obliczenia wzrostowe” czy „Obwód głowy i klatki piersiowej”,
@@ -2249,6 +2255,16 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         creatorOpenBtn.addEventListener('click', function() {
           if (window.VildaPublicationCreator && typeof window.VildaPublicationCreator.open === 'function') {
             window.VildaPublicationCreator.open();
+          }
+        });
+      }
+      // Centralny kreator siatek (PRO) — faza 1: zwykła siatka Palczewskiej 1–18 lat
+      // z karty Centyle i BMI (kontekst palRegular, magazyn chartCreatorData).
+      const chartCreatorBtn = document.getElementById('openChartCreatorBtn');
+      if (chartCreatorBtn) {
+        chartCreatorBtn.addEventListener('click', function() {
+          if (window.VildaPublicationCreator && typeof window.VildaPublicationCreator.open === 'function') {
+            window.VildaPublicationCreator.open({ context: 'palRegular' });
           }
         });
       }

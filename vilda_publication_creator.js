@@ -108,6 +108,54 @@
     return lines;
   }
 
+  /* ══════════ Konteksty kreatora (centralny kreator siatek) ══════════
+     'pub'        — siatki do publikacji; magazyn w danych karty
+                    (advancedGrowthData.pubLayout/pubFree/pubOptions),
+     'palRegular' — zwykła (kolorowa) siatka Palczewskiej 1–18 lat z karty
+                    Centyle i BMI; magazyn centralny window.chartCreatorData
+                    .palRegular, zapisywany z pacjentem niezależnie od podmian
+                    advancedGrowthData przy generowaniu siatek.
+     Wirtualny obiekt advForContext podstawia magazyn kontekstu pod pola
+     pubLayout/pubFree (prototypem pozostaje advancedGrowthData, więc pomiary
+     i wiek są wspólne) — cała geometria i edycja działają bez zmian.
+     W kontekście zwykłym włączenie/treść adnotacji punktu pomiaru NIE dotyka
+     checkboxów karty zaawansowanej — żyje w chartCreatorData.palRegular.shared. */
+  var creatorContext = 'pub';
+
+  function regRoot() {
+    var root = w.chartCreatorData;
+    if (!root || typeof root !== 'object') root = w.chartCreatorData = {};
+    var s = root.palRegular;
+    if (!s || typeof s !== 'object') s = root.palRegular = {};
+    if (!s.layout || typeof s.layout !== 'object') s.layout = {};
+    if (!s.layout.height || typeof s.layout.height !== 'object') s.layout.height = {};
+    if (!s.layout.weight || typeof s.layout.weight !== 'object') s.layout.weight = {};
+    if (!s.free || typeof s.free !== 'object') s.free = {};
+    if (!Array.isArray(s.free.height)) s.free.height = [];
+    if (!Array.isArray(s.free.weight)) s.free.weight = [];
+    if (!s.shared || typeof s.shared !== 'object') s.shared = {};
+    return s;
+  }
+
+  function advForContext(adv, ctxId) {
+    if (ctxId !== 'palRegular' || !adv || typeof adv !== 'object') return adv;
+    var s = regRoot();
+    var v = Object.create(adv);
+    v.__ctxRegular = true;
+    v.pubLayout = s.layout;
+    v.pubFree = s.free;
+    v.pubShared = s.shared;
+    return v;
+  }
+
+  /* Wspólny (dla obu siatek) wpis adnotacji punktu pomiaru w kontekście
+     zwykłym: obecność wpisu = adnotacja włączona; txt = wspólna treść. */
+  function sharedEntry(adv, key) {
+    var sh = adv && adv.pubShared;
+    var e = sh && sh[key];
+    return e && typeof e === 'object' ? e : null;
+  }
+
   /* Nadpisanie per siatka dla danego klucza adnotacji (albo null). */
   function chartOverride(adv, chartType, key) {
     var ov = adv && adv.pubLayout && adv.pubLayout[chartType] && adv.pubLayout[chartType][key];
@@ -138,20 +186,28 @@
         arrow: true
       });
     }
+    var regular = !!adv.__ctxRegular;
     if (Array.isArray(adv.measurements)) {
       adv.measurements.forEach(function (m) {
-        if (!m || !m.arrowEnabled) return;
+        if (!m) return;
         var a = toNum(m.ageMonths);
         var v = chartType === 'height' ? toNum(m.height) : toNum(m.weight);
         if (!Number.isFinite(a) || !Number.isFinite(v)) return;
-        push('m', a, v, typeof m.arrowComment === 'string' ? m.arrowComment : '');
+        var sh = regular ? sharedEntry(adv, arrowKey('m', a)) : null;
+        if (regular ? !sh : !m.arrowEnabled) return;
+        push('m', a, v, regular
+          ? (typeof sh.txt === 'string' ? sh.txt : '')
+          : (typeof m.arrowComment === 'string' ? m.arrowComment : ''));
       });
     }
-    if (adv.currentArrowEnabled) {
+    var shc = regular ? sharedEntry(adv, 'cur') : null;
+    if (regular ? shc : adv.currentArrowEnabled) {
       var ca = toNum(adv.currentAgeMonths);
       var cv = chartType === 'height' ? toNum(adv.currentHeight) : toNum(adv.currentWeight);
       if (Number.isFinite(ca) && Number.isFinite(cv)) {
-        push('cur', ca, cv, typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '');
+        push('cur', ca, cv, regular
+          ? (shc && typeof shc.txt === 'string' ? shc.txt : '')
+          : (typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : ''));
       }
     }
     out.sort(function (x, y) { return x.ageMonths - y.ageMonths; });
@@ -235,6 +291,11 @@
   function collectPoints(adv, chartType) {
     var pts = [];
     if (!adv || typeof adv !== 'object') return pts;
+    var regular = !!adv.__ctxRegular;
+    function regState(kind, ageMonths) {
+      var sh = sharedEntry(adv, arrowKey(kind, ageMonths));
+      return { enabled: !!sh, comment: sh && typeof sh.txt === 'string' ? sh.txt : '' };
+    }
     function pushPoint(kind, ageMonths, value, enabled, sharedComment) {
       var key = arrowKey(kind, ageMonths);
       var ov = chartOverride(adv, chartType, key);
@@ -257,13 +318,23 @@
         var a = toNum(m.ageMonths);
         var v = chartType === 'height' ? toNum(m.height) : toNum(m.weight);
         if (!Number.isFinite(a) || !Number.isFinite(v) || a < 12 || a > 216) return;
-        pushPoint('m', a, v, !!m.arrowEnabled, typeof m.arrowComment === 'string' ? m.arrowComment : '');
+        if (regular) {
+          var rs = regState('m', a);
+          pushPoint('m', a, v, rs.enabled, rs.comment);
+        } else {
+          pushPoint('m', a, v, !!m.arrowEnabled, typeof m.arrowComment === 'string' ? m.arrowComment : '');
+        }
       });
     }
     var ca = toNum(adv.currentAgeMonths);
     var cv = chartType === 'height' ? toNum(adv.currentHeight) : toNum(adv.currentWeight);
     if (Number.isFinite(ca) && Number.isFinite(cv) && ca >= 12 && ca <= 216) {
-      pushPoint('cur', ca, cv, !!adv.currentArrowEnabled, typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '');
+      if (regular) {
+        var rc = regState('cur', ca);
+        pushPoint('cur', ca, cv, rc.enabled, rc.comment);
+      } else {
+        pushPoint('cur', ca, cv, !!adv.currentArrowEnabled, typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '');
+      }
     }
     return pts;
   }
@@ -592,7 +663,11 @@
       minY: geom.minY, maxY: geom.maxY
     };
     if (suppressPainting) return;
-    var adv = w.advancedGrowthData || null;
+    /* Kontekst malowania wynika z trybu renderu: siatki publikacyjne czytają
+       magazyn karty (pubLayout/pubFree), zwykła siatka Palczewskiej 1–18 —
+       magazyn centralny kreatora. Pusty magazyn = nic do narysowania. */
+    var renderCtx = w.publicationCharts ? 'pub' : 'palRegular';
+    var adv = advForContext(w.advancedGrowthData || null, renderCtx);
     if (!adv) return;
     var items = computeLayout(ctx, adv, geom.chartType, geomStore[geom.chartType]);
     drawItems(ctx, items);
@@ -631,6 +706,19 @@
   }
 
   function setArrowEnabled(point, enabled) {
+    if (creatorContext === 'palRegular') {
+      /* kontekst zwykłej siatki: wpis w magazynie centralnym, bez dotykania
+         checkboxów strzałek karty zaawansowanej */
+      var rs = regRoot();
+      var rk = arrowKey(point.kind, point.ageMonths);
+      if (enabled) {
+        if (!rs.shared[rk] || typeof rs.shared[rk] !== 'object') rs.shared[rk] = { on: 1 };
+      } else {
+        delete rs.shared[rk];
+      }
+      scheduleSave();
+      return;
+    }
     if (point.kind === 'cur') {
       var cb = document.getElementById('advCurrentArrowEnable');
       if (cb && !!cb.checked !== !!enabled) {
@@ -650,6 +738,15 @@
   }
 
   function setArrowComment(point, text) {
+    if (creatorContext === 'palRegular') {
+      var rs = regRoot();
+      var rk = arrowKey(point.kind, point.ageMonths);
+      var re = rs.shared[rk];
+      if (!re || typeof re !== 'object') re = rs.shared[rk] = { on: 1 };
+      re.txt = String(text || '');
+      scheduleSave();
+      return;
+    }
     var input;
     if (point.kind === 'cur') {
       input = document.getElementById('advCurrentArrowComment');
@@ -666,6 +763,7 @@
   }
 
   function layoutStore() {
+    if (creatorContext === 'palRegular') return regRoot().layout;
     var adv = w.advancedGrowthData;
     if (!adv || typeof adv !== 'object') return null;
     if (!adv.pubLayout || typeof adv.pubLayout !== 'object') adv.pubLayout = {};
@@ -768,6 +866,7 @@
   /* ── Magazyn adnotacji wolnych (pubFree) ── */
 
   function freeStore() {
+    if (creatorContext === 'palRegular') return regRoot().free;
     var adv = w.advancedGrowthData;
     if (!adv || typeof adv !== 'object') return null;
     if (!adv.pubFree || typeof adv.pubFree !== 'object') adv.pubFree = {};
@@ -1021,12 +1120,18 @@
     var sex = sexEl.value === 'M' ? 'M' : 'F';
     var wt = wtEl ? parseFloat(wtEl.value) : NaN;
     var ht = htEl ? parseFloat(htEl.value) : NaN;
+    /* Kontekst zwykłej siatki: podgląd renderowany w kolorowym, polskim stylu
+       (publicationCharts przypięte na false na czas budowy kanw). */
+    var pinFlag = creatorContext === 'palRegular';
+    var prevFlag = w.publicationCharts;
     suppressPainting = true;
     var pair;
     try {
+      if (pinFlag) w.publicationCharts = false;
       pair = w.buildPalczewskaExtendedCanvases({ sex: sex, userAgeMonths: months, userWeight: wt, userHeight: ht });
     } finally {
       suppressPainting = false;
+      if (pinFlag) w.publicationCharts = prevFlag;
     }
     if (!pair || pair.length < 2) return null;
     return { height: pair[0], weight: pair[1] };
@@ -1057,6 +1162,7 @@
     try { ui.panel.remove(); } catch (e) { /* ignore */ }
     unlockBodyScroll();
     ui = null;
+    creatorContext = 'pub';
   }
 
   function flashSaveNote() {
@@ -1073,6 +1179,11 @@
     return geomStore[ui.active] || null;
   }
 
+  /* Dane karty widziane przez UI kreatora w aktywnym kontekście. */
+  function activeAdv() {
+    return advForContext(w.advancedGrowthData || null, creatorContext);
+  }
+
   function renderOverlay() {
     if (!ui) return;
     var chart = ui.active;
@@ -1080,7 +1191,7 @@
     var ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     var geom = geomStore[chart];
-    var adv = w.advancedGrowthData || {};
+    var adv = activeAdv() || {};
     var items = geom ? computeLayout(ctx, adv, chart, geom) : [];
     drawItems(ctx, items);
     ui.items[chart] = items;
@@ -1818,9 +1929,10 @@
     applyZoom();
   }
 
-  function openCreator() {
+  function openCreator(opts) {
     if (typeof document === 'undefined') return;
     if (ui) { closeCreator(); return; }
+    var ctxId = opts && opts.context === 'palRegular' ? 'palRegular' : 'pub';
     /* Odśwież dane karty PRZED bramkami i budową podglądu — bez tego na
        podglądzie mogłoby zabraknąć np. świeżo wpisanego wieku kostnego
        (advancedGrowthData bywa nieprzeliczone, m.in. po odtworzeniu sesji).
@@ -1828,13 +1940,23 @@
        zaktualizować także stan trybu publikacji. */
     recalc();
     if (w.VildaProAccess && typeof w.VildaProAccess.hasAccess === 'function' && !w.VildaProAccess.hasAccess()) {
-      alert('Kreator adnotacji siatek do publikacji jest funkcj\u0105 PRO. Uaktywnij plan PRO, aby korzysta\u0107 z tej funkcji.');
+      alert('Kreator siatek jest funkcj\u0105 PRO. Uaktywnij plan PRO, aby korzysta\u0107 z tej funkcji.');
       return;
     }
-    if (!w.publicationCharts) {
+    if (ctxId === 'pub' && !w.publicationCharts) {
       alert('W\u0142\u0105cz najpierw prze\u0142\u0105cznik \u201eSiatki do publikacji\u201d, aby otworzy\u0107 kreator adnotacji.');
       return;
     }
+    if (ctxId === 'palRegular') {
+      var ageEl0 = document.getElementById('age');
+      var ageMEl0 = document.getElementById('ageMonths');
+      var months0 = Math.round((ageEl0 && parseFloat(ageEl0.value) || 0) * 12 + (ageMEl0 && parseFloat(ageMEl0.value) || 0));
+      if (!(months0 >= 12 && months0 <= 216)) {
+        alert('Kreator siatki Palczewskiej 1\u201318 lat jest dost\u0119pny dla wieku od 1 do 18 lat.');
+        return;
+      }
+    }
+    creatorContext = ctxId;
     ensureStyle();
     var canvases = buildPreviewCanvases();
     if (!canvases) {
@@ -1844,11 +1966,13 @@
 
     /* Pe\u0142noekranowy tryb roboczy: warstwa na ca\u0142y viewport, strona pod spodem
        zablokowana (lockBodyScroll). */
-    var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Kreator siatek do publikacji' });
+    var isRegular = ctxId === 'palRegular';
+    var creatorTitle = isRegular ? 'Kreator siatek — Palczewska 1–18 lat' : 'Kreator siatek do publikacji';
+    var panel = el('div', 'position:fixed;inset:0;z-index:10000;box-sizing:border-box;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;', { id: OVERLAY_ID, role: 'dialog', 'aria-modal': 'true', 'aria-label': creatorTitle });
 
     /* Nag\u0142\u00f3wek */
     var head = el('div', 'display:flex;align-items:center;gap:0.6rem;padding:0.65rem 0.9rem;background:' + COLORS.card + ';border-bottom:1px solid ' + COLORS.border + ';flex-wrap:wrap;');
-    var title = el('span', 'font-weight:700;color:' + COLORS.primary + ';font-size:0.95rem;', null, 'Kreator siatek do publikacji');
+    var title = el('span', 'font-weight:700;color:' + COLORS.primary + ';font-size:0.95rem;', null, creatorTitle);
     var proSup = el('sup', 'font-size:0.62em;font-weight:800;margin-left:2px;', { class: 'pro-superscript' }, 'PRO');
     title.appendChild(proSup);
     var tabs = el('div', 'display:flex;gap:0.35rem;margin-left:auto;', { role: 'tablist' });
@@ -1874,6 +1998,9 @@
     var addLabelBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c miejsce na siatce' }, '+ Etykieta');
     var addBracketBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Kliknij, a potem wska\u017c DWA punkty pomiaru do spi\u0119cia klamr\u0105; poprzeczk\u0119 mo\u017cna potem przeci\u0105gn\u0105\u0107 wy\u017cej lub ni\u017cej' }, '+ Klamra');
     var elemBtn = el('button', toolCss, { type: 'button', class: 'pubc-neutral pubc-tool', 'aria-pressed': 'false', title: 'Poka\u017c/ukryj elementy siatki w tym wydruku' }, 'Elementy siatki');
+    /* Prze\u0142\u0105czniki element\u00f3w steruj\u0105 dzi\u015b wy\u0142\u0105cznie siatkami publikacyjnymi \u2014
+       w kontek\u015bcie zwyk\u0142ej siatki panel ukryty (planowana faza rozwoju). */
+    if (isRegular) elemBtn.style.display = 'none';
     append(toolbar, zoomOut, zoomLabel, zoomIn, zoomFit, toolSep, addArrowBtn, addLabelBtn, addBracketBtn, elemBtn, saveNote);
 
     /* Panel prze\u0142\u0105cznik\u00f3w element\u00f3w siatki (per wydruk) \u2014 rozwijany z animacj\u0105
@@ -2126,6 +2253,9 @@
     _updateOverride: updateOverride,
     _arrowKey: arrowKey,
     _setSuppress: function (v) { suppressPainting = !!v; },
-    _geomStore: geomStore
+    _geomStore: geomStore,
+    _setContext: function (c) { creatorContext = c === 'palRegular' ? 'palRegular' : 'pub'; },
+    _advForContext: advForContext,
+    _regRoot: regRoot
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
