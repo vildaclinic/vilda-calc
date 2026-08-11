@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.737';
+const SW_VERSION = '1.0.738';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1651,7 +1651,11 @@ const OPTIONAL_ASSETS = [
   '/inline_index_04.js?v=25',
   '/inline_index_05.js?v=3',
   '/inline_docpro_01.js?v=3',
-  '/inline_docpro_02.js?v=3'
+  '/inline_docpro_02.js?v=3',
+  '/vilda_centile_charts.js',
+  '/vilda_centile_charts.js?v=1',
+  '/inline_index_03.js?v=13',
+  '/inline_docpro_01.js?v=4'
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];

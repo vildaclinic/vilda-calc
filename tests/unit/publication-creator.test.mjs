@@ -470,8 +470,10 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(generatorSource).toContain('else if(!t||!__pubok("summary"))return;');
   });
 
-  it('inline_index_03.js: helpery widoczności pytają kreator bezwarunkowo (kontekst rozstrzyga moduł)', () => {
-    const core = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+  it('vilda_centile_charts.js: helpery widoczności pytają kreator bezwarunkowo (kontekst rozstrzyga moduł)', () => {
+    // Etap 1 konsolidacji: helpery przeniesione verbatim z inline_index_03.js
+    // do wspólnego vilda_centile_charts.js (index.html + docpro.html).
+    const core = fs.readFileSync(path.join(repositoryRoot, 'vilda_centile_charts.js'), 'utf8');
     expect(core).toContain('function isCentileCurrentPointLabelVisible(e){if(typeof window<"u"&&(e==="cm"||e==="kg")){try{');
     expect(core).toContain('function isCentileBandReferenceVisible(){if(typeof window<"u"){try{');
   });
@@ -879,8 +881,8 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
     expect(generatorSource).toContain('__pubok("footer")');
   });
 
-  it('inline_index_03.js: helpery widoczności pytają kreator w trybie publikacji', () => {
-    const core = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+  it('vilda_centile_charts.js: helpery widoczności pytają kreator w trybie publikacji', () => {
+    const core = fs.readFileSync(path.join(repositoryRoot, 'vilda_centile_charts.js'), 'utf8');
     expect(core).toContain('isElementEnabled(e==="cm"?"heightLabel":"weightLabel")');
     expect(core).toContain('isElementEnabled("bandReference")');
   });
