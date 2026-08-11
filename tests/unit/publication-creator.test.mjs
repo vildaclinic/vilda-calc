@@ -630,21 +630,66 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     expect(it8.px).toBeCloseTo(100 + 8 * (1800 / 36), 6);
   });
 
+  it('kontekst who: oś 0–35 mies., osobny magazyn, routing ctxId ze stron WHO', () => {
+    const win = {};
+    const PC = loadCreator(win);
+    win.advancedGrowthData = {
+      measurements: [],
+      currentAgeMonths: 8,
+      currentHeight: 68,
+      currentWeight: 8,
+      currentArrowEnabled: false
+    };
+    // etykieta w magazynie WHO
+    PC._setContext('who');
+    PC._addFree('height', { ageMonths: 10, value: 72, txt: 'WHO-notka', arrow: false });
+    PC._setContext('pub');
+    expect(win.chartCreatorData.who.free.height).toHaveLength(1);
+    expect(win.chartCreatorData.palInfant).toBeUndefined();
+    // strona WHO (ctxId 'who') maluje z magazynu WHO na osi 0–35
+    const geomWho = { chartType: 'height', plotX: 100, plotY: 100, plotW: 1750, plotH: 2600, minY: 40, maxY: 110, ageMin: 0, ageMax: 35 };
+    const calls = [];
+    PC.drawAnnotations(fakeCtx(calls), { ...geomWho, ctxId: 'who' });
+    expect(calls.some((c) => c[0] === 'fillText' && c[1] === 'WHO-notka')).toBe(true);
+    expect(PC._geomStore.height.ageMin).toBe(0);
+    expect(PC._geomStore.height.ageMax).toBe(35);
+    // pozycja etykiety: 10 mies. → plotX + 10*(plotW/35)
+    const advWho = PC._advForContext(win.advancedGrowthData, 'who');
+    const it10 = PC._computeLayout(fakeCtx(), advWho, 'height', geomWho).find((i) => i.kind === 'free');
+    expect(it10.px).toBeCloseTo(100 + 10 * (1750 / 35), 6);
+    // opcje: marker renderu 'who' czyta magazyn WHO
+    PC._setContext('who');
+    PC._setOption('boneAge', false);
+    PC._setContext('pub');
+    PC._setRenderContext('who');
+    expect(PC.isElementEnabled('boneAge')).toBe(false);
+    expect(PC.isElementEnabled('patientName')).toBe(true);
+    PC._setRenderContext(null);
+    expect(PC.isElementEnabled('boneAge')).toBe(true);
+  });
+
+  it('inline_index_04/03: ctxId who dla stron WHO w obu stylach', () => {
+    const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
+    const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
+    expect(gen04).toContain('_setRenderContext(se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":L==="WHO"?"who":null)');
+    expect(gen04).toContain('var q=se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":L==="WHO"?"who":null;');
+    expect(core03).toContain('==="WHO"?"who":null;');
+  });
+
   it('inline_index_04/03: ctxId palInfant dla stron Palczewskiej 0–36 i bramka stopki', () => {
     const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
     const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
-    expect(gen04).toContain('_setRenderContext(se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null)');
-    expect(gen04).toContain('var q=se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null;');
+    expect(gen04).toContain('"palInfant":L==="WHO"?"who":null');
     // stopka strony (vildaclinic.pl + footerText) za bramką footer
     expect(gen04).toContain(',!se&&__ok04("footer")){');
-    expect(core03).toContain('==="PALCZEWSKA"&&t.rangeMaxX<=36?"palInfant":null;');
+    expect(core03).toContain('==="PALCZEWSKA"&&t.rangeMaxX<=36?"palInfant":');
   });
 
   it('inline_index_04/03: bramki elementów strony OLAF w obu stylach siatki', () => {
     const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
     const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
     // marker renderu ustawiany przed rozwidleniem stylu i zdejmowany na obu wyjściach
-    expect(gen04).toContain('_setRenderContext(se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null)');
+    expect(gen04).toContain('_setRenderContext(se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":L==="WHO"?"who":null)');
     expect(gen04.split('_setRenderContext(null)').length - 1).toBe(2);
     // bramki gałęzi profesjonalnej
     expect(gen04).toContain('He&&__ok04("patientName")&&n.fillText(He');
@@ -661,7 +706,7 @@ describe('VildaPublicationCreator — geometria adnotacji (parytet z generatorem
     const gen04 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_04.js'), 'utf8');
     const core03 = fs.readFileSync(path.join(repositoryRoot, 'inline_index_03.js'), 'utf8');
     // gałąź profesjonalna: dwa wywołania z ctxId zależnym od strony OLAF
-    expect(gen04).toContain('var q=se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":null;');
+    expect(gen04).toContain('var q=se?"olaf":L==="PALCZEWSKA"&&t<=36?"palInfant":L==="WHO"?"who":null;');
     expect(gen04).toContain('PC.drawAnnotations(n,{chartType:"height",ctxId:q,plotX:100+120,plotY:me+80');
     expect(gen04).toContain('PC.drawAnnotations(n,{chartType:"weight",ctxId:q,plotX:100+120,plotY:Ge+80');
     expect(gen04).toContain('ageMin:e,ageMax:t})');
@@ -855,7 +900,7 @@ describe('Integracja: generator siatek deleguje adnotacje do modułu', () => {
 
   it('index.html ładuje moduł kreatora i zawiera przycisk otwierający (PRO)', () => {
     const indexHtml = fs.readFileSync(path.join(repositoryRoot, 'index.html'), 'utf8');
-    expect(indexHtml).toContain('vilda_publication_creator.js?v=19');
+    expect(indexHtml).toContain('vilda_publication_creator.js?v=20');
     expect(indexHtml).toContain('id="openPublicationCreatorBtn"');
     expect(indexHtml).toContain('Kreator adnotacji<sup class="pro-superscript">PRO</sup>');
   });
