@@ -231,6 +231,16 @@ Przypadki syntetyczne i test wywołujący rzeczywistą funkcję produkcyjną (`w
 
 Testy na rzeczywistych funkcjach produkcyjnych (`window.buildDietSmartRecommendationResult`, `window.dietRecommendationsRequestNewMyth`): DIET-SMART-CHILD-BASE, DIET-SMART-CHILD-PROTEIN, DIET-MYTH-ROTATION w `tests/e2e/diet-recommendations-logic.spec.mjs`.
 
+**Etap 4 (2026-08-11) — „Wzrost zakończony" a stabilizacja, spójność kaloryczności, PAL pacjenta w normach, dopełnienie planu:**
+
+1. **„Wzrost zakończony" blokuje strategię stabilizacji** — strategia stabilizacji masy u dziecka opiera się na założeniu, że BMI obniży się wraz z dalszym wzrastaniem; przy zaznaczonej fladze `growthEndedFlag` to założenie nie obowiązuje (reguła z `app.js`: „nie zdąży wyrosnąć → redukcja"), a mimo to moduł pozwalał wybrać stabilizację w nowoczesnym UI i generował jej narrację. Po poprawce wszystkie cztery miejsca wyprowadzające strategię (`ti()` dla planu SMART, `pe()` dla narracji energetycznej, `Ci()` dla dyspozycji do generatora stabilizacyjnego, `Te()` dla stanu przycisków) traktują zakończony wzrost jako wymuszenie redukcji, a przycisk „Stabilizacja" jest wtedy ukryty i wyłączony. Dodatkowo gałąź dorosłego w `we()` odznacza przełącznik stabilizacji przy wymuszaniu redukcji (dotąd oba mogły być zaznaczone naraz).
+2. **Jedna kaloryczność planu w dokumencie** — narracja zaokrąglała kaloryczność wybranej diety do 100 kcal („ok. 2200 kcal/dzień"), a sekcja norm żywieniowych liczyła i drukowała wartość niezaokrągloną („2237 kcal/d") — ten sam dokument podawał dwie różne liczby. Po poprawce `Gt()` zaokrągla kaloryczność wybranej diety do 100 kcal również dla norm (gałęzie zapasowe norm — wartość główna/zakres energii z modelu norm — pozostają bez zmian).
+3. **PAL pacjenta w normach żywieniowych** — przy selektorze PAL „inherit" model norm dostawał `mainPal` z domyślnych ustawień karty norm (PAL 1,6) zamiast PAL użytego w planie pacjenta; przekazywany parametr `palUsed` był martwy. Po poprawce `Wt()` przy braku liczbowego selektora używa `palUsed` planu, z dotychczasowym fallbackiem do ustawień karty.
+4. **Dopełnienie planu do 2 celów** — gdy ankieta trafiała dokładnie jednym chipem w cel, plan zawierał jeden cel wbrew obietnicy „2–3 małe kroki". Po poprawce `st()` dopełnia plan drugim celem z triady bazowej właściwej dla wieku (pomijając cel już obecny), z najniższym priorytetem.
+5. **Odporność na brak stałej wieku dorosłego** — pięć surowych odwołań `>= ENERGY_ADULT_START_AGE` (ReferenceError przy niezaładowanej stałej) przechodzi przez istniejący akcesor `Si()` z typeof-guardem, a jego fallback ujednolicono z produkcyjną wartością stałej (19 lat, `vilda_diet_plan_ui.js`; dotąd fallback wynosił 18).
+
+Testy: DIET-GROWTH-ENDED-STAB (scenariusz z flagą i kontrolny bez niej), DIET-KCAL-CONSISTENT, DIET-SMART-PAD-TWO w `tests/e2e/diet-recommendations-logic.spec.mjs`.
+
 ### GROWTH-LMS — interpolacja krzywych centylowych Palczewskiej (2026-08-11)
 
 Dane: `centile_data.js` (Palczewska & Niedźwiecka, IMiD 1999; waga, wzrost i BMI, węzły 1–222 mies., rozstaw od 1 mies. w niemowlęctwie do 12 mies. w wieku szkolnym; wszystkie 180 wierszy ma komplet p3–p97, co potwierdza test regresyjny).

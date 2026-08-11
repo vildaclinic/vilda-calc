@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=7' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=8' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -249,4 +249,105 @@ test('DIET-MYTH-ROTATION: nowy mit przy zawężonej puli tagów faktycznie się 
   expect(result.firstMyth).not.toBe('');
   expect(result.secondMyth).not.toBe('');
   expect(result.secondMyth).not.toBe(result.firstMyth);
+});
+
+// ── Etap 4: growthEnded a stabilizacja, spójność kcal, dopełnienie planu do 2 celów ──
+
+// DIET-GROWTH-ENDED-STAB: dziecko z otyłością i zakończonym wzrostem nie może
+// dostać strategii stabilizacji („BMI obniży się wraz z dalszym wzrastaniem"),
+// nawet gdy przełącznik stabilizacji pozostał zaznaczony. Bez growthEnded
+// stabilizacja działa dalej normalnie (kontrola, że guard nie wycina legalnej ścieżki).
+test('DIET-GROWTH-ENDED-STAB: zakończony wzrost wymusza narrację redukcyjną', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const run = (growthEnded) => page.evaluate((ge) => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    set('age', 10); set('ageMonths', 0); set('sex', 'M');
+    set('weight', 60); set('height', 140);
+    window.ensureDietRecommendationsElements();
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    flag('reduceToggle', false);
+    flag('stabilizationToggle', true);
+    flag('growthEndedFlag', ge);
+    const result = window.generateDietRecommendations();
+    // Odśwież nowoczesne UI strategii (we() → Te()) tak, jak robi to moduł
+    // po każdej przebudowie wyniku SMART:
+    window.buildDietSmartRecommendationResult();
+    const btn = document.querySelector('[data-diet-strategy-choice="stabilization"]');
+    return {
+      text: result && result.textOutput ? result.textOutput : '',
+      stabChoiceHidden: btn ? !!btn.hidden : null,
+    };
+  }, growthEnded);
+
+  const withGrowthEnded = await run(true);
+  expect(withGrowthEnded.text).not.toMatch(/dalszym wzrastaniem|dalszego wzrastania/u);
+  expect(withGrowthEnded.text).toMatch(/zredukowa|redukcji/u);
+  if (withGrowthEnded.stabChoiceHidden !== null) {
+    expect(withGrowthEnded.stabChoiceHidden).toBe(true);
+  }
+
+  const withoutGrowthEnded = await run(false);
+  expect(withoutGrowthEnded.text).toMatch(/wzrastani/u);
+  expect(withoutGrowthEnded.text).not.toMatch(/zredukowa|potrzebę redukcji/u);
+  if (withoutGrowthEnded.stabChoiceHidden !== null) {
+    expect(withoutGrowthEnded.stabChoiceHidden).toBe(false);
+  }
+});
+
+// DIET-KCAL-CONSISTENT: jeden dokument = jedna kaloryczność planu. Narracja
+// („zalecana kaloryczność … ok. X kcal/dzień") i normy żywieniowe („Normy
+// żywieniowe dla planu około Y kcal/d") muszą podawać tę samą liczbę,
+// zaokrągloną do 100 kcal (przedtem: 2200 vs 2237).
+test('DIET-KCAL-CONSISTENT: narracja i normy podają tę samą kaloryczność planu', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const text = await page.evaluate(() => {
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
+    window.professionalMode = true;
+    set('age', 35); set('ageMonths', 0); set('sex', 'M');
+    set('weight', 105); set('height', 175);
+    window.ensureDietRecommendationsElements();
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    flag('reduceToggle', true); flag('stabilizationToggle', false);
+    flag('nutritionNormsFlag', true); flag('patientFacingToggle', false);
+    const dl = document.getElementById('dietLevel');
+    if (dl && !Array.from(dl.options).some((o) => o.value === 'moderate')) {
+      const opt = document.createElement('option');
+      opt.value = 'moderate';
+      opt.textContent = 'dieta umiarkowana';
+      dl.appendChild(opt);
+    }
+    if (dl) dl.value = 'moderate';
+    const result = window.generateDietRecommendations();
+    return result && result.textOutput ? result.textOutput : '';
+  });
+  const digits = (s) => Number(String(s).replace(/[^\d]/g, ''));
+  const narration = text.match(/wynosi ok\. ([\d\s]+) kcal\/dzień/u);
+  const norms = text.match(/Normy żywieniowe dla planu około ([\d\s]+) kcal\/d/u);
+  expect(narration).not.toBeNull();
+  expect(norms).not.toBeNull();
+  const narrationKcal = digits(narration[1]);
+  const normsKcal = digits(norms[1]);
+  expect(narrationKcal % 100).toBe(0);
+  expect(normsKcal).toBe(narrationKcal);
+});
+
+// DIET-SMART-PAD-TWO: pojedynczy trafiony chip nie może dawać planu z jednym
+// celem (obietnica „2–3 małe kroki") — plan jest dopełniany celem z triady
+// bazowej właściwej dla wieku.
+test('DIET-SMART-PAD-TWO: plan z jednym trafionym chipem dostaje drugi cel bazowy', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openWithDietModule(page);
+  const result = await buildSmart(page, {
+    ageYears: 8, sex: 'M', weightKg: 40, heightCm: 132,
+    checkedKeys: ['lowProtein'],
+  });
+  expect(result.text).toContain('1. ');
+  expect(result.text).toContain('\n2. ');
+  // Cel trafiony chipem pozostaje pierwszy (wyższy priorytet):
+  expect(result.text).toMatch(/1\. Źródło białka/u);
+  // Dopełnienie z triady dziecięcej:
+  expect(result.text).toContain('Woda jako podstawowy nap');
 });
