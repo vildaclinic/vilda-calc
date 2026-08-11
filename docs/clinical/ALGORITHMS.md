@@ -259,7 +259,9 @@ Testy: DIET-PDF-VALIDATION (brak wieku, wzrost w metrach), DIET-FILENAME-PL (tra
 
 Testy: DIET-PAL-TARGET-BMI (mediana Palczewskiej metodą BMI na realnym `generateDietRecommendations` i `getPalCentile`), DIET-WHR-WAIST-GATE (kontrola: otyły dorosły z WHR zachowuje cel talii), rozszerzenie DIET-ADULT-UNDERWEIGHT (niedowaga+WHR bez celu talii).
 
-Nierozstrzygnięte (decyzja właściciela w toku): martwe ścieżki `!professionalMode` (m.in. dyskleimer dla dzieci <10 lat, który nigdy nie pada).
+**Etap 7 (2026-08-11, decyzja właściciela: „emituj zawsze") — ożywienie martwych ścieżek `!professionalMode`:** dwa fragmenty generatora dziecięcego były emitowane wyłącznie poza trybem profesjonalnym, w którym moduł nie jest osiągalny — nie pojawiały się więc w żadnym dokumencie: (1) zalecenie konsultacji z dietetykiem lub psychologiem dziecięcym (kryteria: wiek <10 lat, BMI ≥120% progu lub dieta intensywna) oraz (2) dyskleimer dla dzieci <10 lat („plan należy traktować wyłącznie orientacyjnie/poglądowo; wskazana konsultacja z dietetykiem lub endokrynologiem dziecięcym"). Po zmianie oba emitowane są zawsze przy spełnieniu kryteriów merytorycznych, niezależnie od trybu aplikacji; dyskleimer trafia na początek dokumentu jako karta ostrzeżenia. Test: DIET-UNDER10-DISCLAIMER (otyłe dziecko 8 lat w trybie profesjonalnym dostaje oba teksty; dziecko 12 lat bez kryteriów — żadnego).
+
+Tym wpisem wszystkie ustalenia audytu modułu z 2026-08-11 są rozstrzygnięte i wdrożone (etapy 1–7).
 
 ### GROWTH-LMS — interpolacja krzywych centylowych Palczewskiej (2026-08-11)
 

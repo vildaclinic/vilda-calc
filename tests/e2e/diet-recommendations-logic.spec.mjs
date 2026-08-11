@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=10' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=11' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -460,4 +460,28 @@ test('DIET-WHR-WAIST-GATE: otyły dorosły z alertem WHR zachowuje cel obwodu ta
   });
   expect(text).toContain('Dodatkowym celem');
   expect(text).toContain('zmniejszenie obwodu talii');
+});
+
+// ── Etap 7 (decyzja właściciela): dyskleimer <10 lat i zalecenie konsultacji emitowane zawsze ──
+
+// DIET-UNDER10-DISCLAIMER: otyłe dziecko 8 lat w trybie profesjonalnym dostaje
+// dyskleimer „plan ma charakter poglądowy" (konsultacja z dietetykiem lub
+// endokrynologiem dziecięcym) oraz zalecenie konsultacji z dietetykiem lub
+// psychologiem dziecięcym — przedtem oba teksty były martwe (emitowane tylko
+// poza trybem profesjonalnym, w którym moduł nie jest osiągalny). Dziecko 12 lat
+// bez kryteriów (umiarkowane BMI) nie dostaje dyskleimera.
+test('DIET-UNDER10-DISCLAIMER: dyskleimer poniżej 10 lat pada w trybie profesjonalnym', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const young = await generate(page, {
+    ageYears: 8, sex: 'F', weightKg: 45, heightCm: 130,
+  });
+  expect(young).toContain('endokrynologiem');
+  expect(young).toContain('poglądowy');
+  expect(young).toContain('psychologiem dziecięcym');
+  const older = await generate(page, {
+    ageYears: 12, sex: 'F', weightKg: 55, heightCm: 152,
+  });
+  expect(older).not.toContain('poglądowy');
+  expect(older).not.toContain('endokrynologiem');
 });
