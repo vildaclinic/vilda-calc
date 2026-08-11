@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.733';
+const SW_VERSION = '1.0.734';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -150,6 +150,7 @@ const CORE_SHELL_URLS = [
   '/inline_index_04.js?v=20',
   '/inline_index_04.js?v=21',
   '/inline_index_04.js?v=22',
+  '/inline_index_04.js?v=23',
   '/inline_index_05.js?v=1',
   '/inline_index_06.js?v=1',
   '/inline_index_06.js?v=2',
@@ -1617,6 +1618,7 @@ const OPTIONAL_ASSETS = [
   '/inline_index_03.js?v=7',
   '/inline_index_03.js?v=8',
   '/inline_index_03.js?v=9',
+  '/inline_index_03.js?v=10',
   '/vilda_advanced_growth.js?v=32',
   '/vilda_publication_creator.js?v=11',
   '/inline_index_07.js?v=4',
@@ -1624,6 +1626,7 @@ const OPTIONAL_ASSETS = [
   '/inline_index_07.js?v=6',
   '/inline_index_07.js?v=7',
   '/inline_index_07.js?v=8',
+  '/inline_index_07.js?v=9',
   '/vilda_publication_creator.js?v=12',
   '/vilda_publication_creator.js?v=13',
   '/vilda_publication_creator.js?v=14',
@@ -1631,7 +1634,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_publication_creator.js?v=16',
   '/vilda_publication_creator.js?v=17',
   '/vilda_publication_creator.js?v=18',
-  '/vilda_publication_creator.js?v=19'
+  '/vilda_publication_creator.js?v=19',
+  '/vilda_publication_creator.js?v=20'
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
