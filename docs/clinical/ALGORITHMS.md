@@ -341,7 +341,12 @@ Etap 2 (2026-08-12, ten sam przegląd):
 
 Testy etapu 2: TONORM-S2-ADULT-UNDER (brakujące kg do 18,5), TONORM-S2-ADULT-NEAR-LIMIT (BMI 24,97 → komunikat graniczny; BMI 25,2 → redukcja z nowym dopiskiem), TONORM-S2-TEEN-18-UNDER (18-latek centylem) w `tests/e2e/bmi-norm-path-logic.spec.mjs`.
 
-Pozostałe ustalenia przeglądu do etapu 3 (decyzje): brak czynnika dziecięcego +10% w tabeli aktywności (stosuje go karta „Kalorie posiłków”), czas/dystans przy stałej masie startowej, etykieta „Otyłość olbrzymia” u niemowląt.
+Etap 3 (2026-08-12, decyzje właściciela):
+
+1. **Konwencje przelicznika MET pozostają — udokumentowane.** Tabela „Droga do normy" świadomie NIE stosuje czynnika dziecięcego +10% (< 14 lat), którego używa karta „Kalorie posiłków" (`applyChildFactor` w presecie `food_times`, brak w `bmi_journey`) — długoterminowy szacunek drogi do normy zostaje na czystym wzorze MET. Czas/dystans liczone są przy stałej masie startowej — przy dużych redukcjach niedoszacowują czasu (masa spada, spalanie/min maleje); wynik jest jawnie oznaczony jako szacunek (gwiazdka przy karcie).
+2. **„Otyłość olbrzymia" dopiero od 5. roku życia.** Etykieta z-score ≥ +3 pojawiała się od urodzenia (u niemowląt bez znaczenia klinicznego i stygmatyzująca). Po zmianie produkcyjny resolver kategorii (`vildaResolvePediatricBmiCategoryFromPercentile`, plus kopia zapasowa w `vilda_update_prep.js`) przyjmuje `ageMonths` i stosuje etykietę od 60 mies.; młodsze dzieci z z ≥ +3 dostają „Otyłość". Wywołania bez podanego wieku zachowują dotychczasowe działanie (ścieżka `bmiCategoryChildExact` używana przez moduł nadciśnienia — bez zmian). Obserwacja przy okazji: dla nastolatków z-score OLAF LMS saturuje się poniżej +3 (L < 0 daje asymptotę z = 1/(−L·S), np. 13 lat: BMI 45 → z ≈ 2,9), więc etykieta bywa tam nieosiągalna z natury danych LMS — to cecha istniejąca, nieobjęta zmianą.
+
+Test etapu 3: TONORM-S3-SEVERE-LABEL (niemowlę i 59 mies. z z ≥ +3 → „Otyłość"; 72 mies. → „Otyłość olbrzymia"; bramka resolvera wprost dla 59/60 mies. i wywołania bez wieku) w `tests/e2e/bmi-norm-path-logic.spec.mjs`.
 
 Testy (produkcyjna ścieżka `window.update()` + DOM karty, dane fikcyjne): TONORM-S1-INFANT-NORMAL, TONORM-S1-INFANT-HIGH, TONORM-S1-INFANT-UNDER, TONORM-S1-TODDLER-2-5-HIGH, TONORM-S1-OLDER-UNCHANGED w `tests/e2e/bmi-norm-path-logic.spec.mjs`.
 
