@@ -317,9 +317,10 @@ Po zmianie:
 2. **Węglowodany 6–11 mies.**: zamiast przedziału %E — AI 95 g/d (`carb_ai_g_day: 95`, `carb_percent_range: null`); kafel pokazuje „95 g/d" z notą o AI, bez udziału % energii; wartość dostępna także bez wyliczonej energii (AI nie zależy od TEE). Ukryta linijka „—" udziału %E, gdy przedział nie istnieje.
 3. **Punkt odniesienia posiłków** (`planningReference`) dla 6–11 mies. wyrównany do nowych wartości: białko 10 / tłuszcz 40 / węglowodany 50%E (dotąd 37,5/52,5).
 4. **„Szczegóły obliczeń"**: dodane zdanie wyjaśniające odmienny zapis norm niemowlęcych (tłuszcz — wartość referencyjna, węglowodany — AI w g/d).
-5. **Bez zmian**: jakość tłuszczu (SFA „tak mało, jak to możliwe", LA 4%E, ALA 0,5%E, DHA min. 100 mg/d), niemowlęta 0–5 mies. (nadal bez norm liczbowych — żywienie mlekiem), dzieci ≥1 r.ż. i dorośli; arkusze praktyczne i tak są zablokowane dla niemowląt (`Le()`).
+5. **Karta raportu pacjenta i podsumowanie wyników** (`vilda_patient_report.js`, follow-up przeglądu Codex): formatery raportu również zwijają zdegenerowane przedziały (bez „40–40% energii"/„95–95 g/d"), nota AI węglowodanów trafia do notki karty raportu, a linia „Makroskładniki do planowania diety" oznacza wartość węglowodanów jako „(AI — spożycie wystarczające)".
+6. **Bez zmian**: jakość tłuszczu (SFA „tak mało, jak to możliwe", LA 4%E, ALA 0,5%E, DHA min. 100 mg/d), niemowlęta 0–5 mies. (nadal bez norm liczbowych — żywienie mlekiem), dzieci ≥1 r.ż. i dorośli; arkusze praktyczne i tak są zablokowane dla niemowląt (`Le()`).
 
-Testy: NORM-U2-INFANT-FAT (40%E → „około 40% energii", gramy z TEE), NORM-U2-INFANT-CARB-AI (95 g/d niezależnie od energii, brak %E), NORM-U2-INFANT-RENDER (noty na kaflach, brak „—"), NORM-U2-RANGES-INTACT (dzieci/dorośli bez regresji) w `tests/e2e/nutrition-norms-logic.spec.mjs`.
+Testy: NORM-U2-INFANT-FAT (40%E → „około 40% energii", gramy z TEE), NORM-U2-INFANT-CARB-AI (95 g/d niezależnie od energii, brak %E), NORM-U2-INFANT-RENDER (noty na kaflach, brak „—"), NORM-U2-REPORT (karta raportu pacjenta i linie podsumowania na produkcyjnych funkcjach `patientReportBuild*`), NORM-U2-RANGES-INTACT (dzieci/dorośli bez regresji) w `tests/e2e/nutrition-norms-logic.spec.mjs`.
 
 ### ENERGY/GROWTH — prognoza wzrostu ostatecznego w zaleceniach dietetycznych (2026-08-11, decyzja właściciela)
 

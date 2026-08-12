@@ -216,6 +216,33 @@ test('NORM-U2-INFANT-RENDER: kafle karty — „około 40% energii", „95 g/d",
   expect(html).not.toContain('nutrition-norms-sub--macro-share">—<');
 });
 
+test('NORM-U2-REPORT: karta raportu pacjenta — „około 40% energii", „95 g/d", nota AI, bez „40–40"', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=7' });
+  await page.waitForFunction(() => typeof window.patientReportBuildNutritionCardFromModel === 'function');
+  const out = await page.evaluate(() => {
+    const model = window.nutritionNormsBuildCardModel(
+      { ageYears: 0.67, ageMonthsOpt: 8, sex: 'M', weightKg: 8, heightCm: 70 },
+      { includeInSummary: true },
+    );
+    const card = window.patientReportBuildNutritionCardFromModel(model);
+    const lines = window.patientReportBuildNutritionSummaryLinesFromModel(model);
+    return { card, lines };
+  });
+  const fatRow = out.card.rows.find((r) => r.label === 'Tłuszcze');
+  const carbRow = out.card.rows.find((r) => r.label === 'Węglowodany');
+  expect(fatRow.valueText).toContain('około 40% energii');
+  expect(fatRow.valueText).not.toContain('40–40');
+  expect(carbRow.valueText).toBe('95 g/d');
+  expect(out.card.note).toContain('spożycie wystarczające (AI)');
+  expect(out.card.note).toContain('wartość referencyjną');
+  const macroLine = out.lines.find((l) => l.startsWith('Makroskładniki'));
+  expect(macroLine).toContain('węglowodany 95 g/d (AI — spożycie wystarczające)');
+  expect(macroLine).not.toContain('95–95');
+  expect(macroLine).not.toContain('40–40');
+});
+
 test('NORM-U2-RANGES-INTACT: dzieci ≥1 r.ż. i dorośli bez regresji przedziałów', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
