@@ -325,6 +325,21 @@ Stan końcowy kodu (po przywróceniu):
 
 Testy: NORM-U2-INFANT-MACROS (przedziały i gramy z TEE, planningReference), NORM-U2-INFANT-RENDER (kafle bez „około 40%", bez AI), NORM-U2-REPORT (karta raportu i linie podsumowania na produkcyjnych `patientReportBuild*`; robustność formaterów na zdegenerowanych parach), NORM-U2-RANGES-INTACT (dzieci/dorośli bez regresji) w `tests/e2e/nutrition-norms-logic.spec.mjs`.
 
+### ENERGY-PAL — potwierdzenie mnożnika wzrastania (U3) i PAL 1,4 dla 10–18 lat jako opcja kliniczna (2026-08-12, decyzja właściciela)
+
+**U3 — mnożnik wzrastania potwierdzony w pierwotnym źródle.** Rozdział o energii w PDF-ie norm (w repo): „U dzieci i młodzieży w wieku od 1 do 18 lat wydatek energetyczny związany ze wzrastaniem został uwzględniony jako 1 % wzrost wartości PAL dla każdej grupy wiekowej". Aplikacja mnoży TEE przez `ENERGY_CHILD_GROWTH_MULTIPLIER = 1,01` do 18 r.ż. włącznie — ponieważ TEE = REE × PAL, podniesienie PAL o 1% i pomnożenie TEE przez 1,01 są tożsame. Konwencja aplikacji jest więc dokładnie metodą norm; bez zmian kodu.
+
+**Zestawy PAL wg norm (ten sam rozdział):** dzieci 1–3 lata — jeden poziom 1,4; dzieci 4–9 lat — 1,4/1,6/1,8; dzieci i młodzież 10–18 lat — 1,6/1,8/2,0; REE dzieci wzorami Henry'ego, masy/wysokości referencyjne z WHO (1–3) i OLA/OLAF (3–18). Zestawy w module energii (`vilda_diet_plan_ui.js`) są z tym zgodne.
+
+**Zmiana (prośba właściciela):** rosnąca otyłość i malejąca aktywność dzieci uzasadniają możliwość świadomego wyboru PAL 1,4 także w wieku 10–18 lat, którego normy dla tej grupy nie definiują. Wdrożono go analogicznie do istniejącego dorosłego PAL 1,2 („tryb kliniczny poza Normami 2024"):
+
+1. **Wspólny moduł energii**: nowy zestaw `child_10_18_clinical = [1,4, 1,6, 1,8, 2,0]` zwracany przez `energyGetAllowedPals(…, "clinical")`; flaga `clinicalOverride` uogólniona z „PAL 1,2 u dorosłych" na „PAL spoza zestawu normatywnego danej grupy wieku"; plakietka „Tryb kliniczny" i opis PAL podają właściwą wartość (nie tylko 1,2); opcje selectów budowane przez moduł dostają dopisek „(poza Normami 2024)" dla wartości pozanormatywnych.
+2. **Plan odchudzania**: dostaje 1,4 dla 10–18 lat automatycznie (preset `plan_reduction` używa polityki klinicznej) — dotąd select dla tej grupy zawierał tylko 1,6–2,0, a programowe 1,4 przycinano do 1,6.
+3. **Karta Norm żywieniowych**: selektor PAL dla 10–18 lat pokazuje dodatkową opcję „1.4 – mała aktywność (poza Normami 2024)"; jej wybór liczy energię tą samą metodą norm (Henry × PAL × korekta wzrastania +1%), a karta pokazuje komunikat informacyjny („normy dla 10–18 lat definiują PAL 1,6–2,0; przyjęto na podstawie oceny klinicznej"). Rozwiązanie selekcji przechodzi na politykę kliniczną wyłącznie dla wartości z listy rozszerzeń dla dzieci — dorosły PAL 1,2 pozostaje na karcie niedostępny. „Pełen zakres aktywności" pozostaje normatywny (1,6–2,0). Makra %E→g przeliczają się z niższego TEE; białko w g/d bez zmian (liczone od masy). Model karty niesie flagę `energy.clinicalPal`, a karta raportu pacjenta dopisuje zastrzeżenie o wyborze poza normami.
+4. **Bez zmian**: dzieci 1–9 lat (1,4 pozostaje opcją normatywną bez adnotacji), dorośli (1,2 nadal tylko w trybach klinicznych planu/spożycia), niemowlęta.
+
+Testy: NORM-PAL14-CHILD (TEE 13-latka skaluje się liniowo z PAL, komunikat, opcja z dopiskiem, nota w raporcie), NORM-PAL14-RANGE-AND-GUARDS (pełen zakres bez 1,4; 4–9 lat bez adnotacji; dorosły bez 1,2 na karcie), NORM-PAL14-SHARED (zestawy normative/clinical, `clinicalOverride`, select planu z 1,4 i dopiskiem) w `tests/e2e/nutrition-norms-logic.spec.mjs`.
+
 ### ENERGY/GROWTH — prognoza wzrostu ostatecznego w zaleceniach dietetycznych (2026-08-11, decyzja właściciela)
 
 Dotąd wszystkie szacunki „ile dziecko może jeszcze urosnąć" w module zaleceń dietetycznych — oraz bramka dostępności strategii stabilizacji masy — opierały się wyłącznie na MPH (mid-parental height, `advancedGrowthData.targetHeight` = (wzrost matki + ojca ± 13)/2, przedział ±8,5 cm). Aplikacja dysponuje jednak lepszymi metodami prognozy wzrostu ostatecznego na karcie „Zaawansowane obliczenia wzrostowe" (RWT, Bayley–Pinneau, Khamis–Roche, Reinehr/CDGP z profilem wiarygodności i ważonym konsensusem).
