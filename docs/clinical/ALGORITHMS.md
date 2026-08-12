@@ -305,7 +305,21 @@ Po zmianie (wybór właściciela spośród 4 wariantów: „od masy należnej"):
 
 Testy na rzeczywistej funkcji produkcyjnej `nutritionNormsBuildCardModel` i produkcyjnym rendererze (`tests/e2e/nutrition-norms-logic.spec.mjs`, dane fikcyjne): NORM-PROT-U1-ADULT-OBESE (49,7 vs 91,3 g/d), NORM-PROT-U1-CHILD-OBESE (masa typowa vs 55 kg), NORM-PROT-U1-NEAR-EQUAL (porównanie ukryte <1 g), NORM-PROT-U1-NO-WEIGHT (norma ze wzrostu), NORM-PROT-U1-INFANT (bez zmian), NORM-PROT-U1-RENDER (podstawa na karcie, gramatyka porównań).
 
-Pozostałe ustalenia przeglądu 2026-08-12 (bez zmian kodu): wartości modułu zweryfikowane jako zgodne z edycją 2024 — tłuszcz dorosłych 30–40%E (20–30%E przy PAL ≤ 1,4), węglowodany 45–65%E, białko %E 5–15 (<2 lat) / 10–20 / 15–20 (≥65 lat), tłuszcz ≤3 lat 35–40%E, LA 4%E, ALA 0,5%E, EPA+DHA 250 mg/d; przedziały niemowlęce 30–45%E (tłuszcz) i 45–55%E (węglowodany) to konwencja aplikacji wokół wartości referencyjnej ~40%E — do ewentualnego potwierdzenia źródłem; mnożnik wzrastania ~1,01 w TEE stosowany do 18. r.ż. włącznie (konwencja wspólnego modułu energii).
+Pozostałe ustalenia przeglądu 2026-08-12 (bez zmian kodu): wartości modułu zweryfikowane jako zgodne z edycją 2024 — tłuszcz dorosłych 30–40%E (20–30%E przy PAL ≤ 1,4), węglowodany 45–65%E, białko %E 5–15 (<2 lat) / 10–20 / 15–20 (≥65 lat), tłuszcz ≤3 lat 35–40%E, LA 4%E, ALA 0,5%E, EPA+DHA 250 mg/d; przedziały niemowlęce 30–45%E (tłuszcz) i 45–55%E (węglowodany) były konwencją aplikacji — usunięte w zmianie NUTRITION-NORMS-U2 poniżej; mnożnik wzrastania ~1,01 w TEE stosowany do 18. r.ż. włącznie (konwencja wspólnego modułu energii).
+
+### NUTRITION-NORMS-U2 — tłuszcz i węglowodany u niemowląt 6–11 mies. wg zapisu norm (2026-08-12, decyzja właściciela)
+
+Kontekst: karta pokazywała dla niemowląt 6–11 mies. „przedziały norm" tłuszczu 30–45%E i węglowodanów 45–55%E z podpisem źródłowym NIZP PZH–PIB, choć normy nie podają dla tego wieku żadnego z tych przedziałów. Normy formułują: tłuszcz jako **wartość referencyjną ~40% energii** (za EFSA — spożycie odpowiednie dla 6–12 mies.), a węglowodany jako **spożycie wystarczające (AI) 95 g/d** (zapis gramowy, nie %E; spójny z AI 95 g/d dla 7–12 mies. wg IOM). Weryfikacja z 2026-08-12 oparta na zgodnych omówieniach norm 2024 i wartościach EFSA/IOM; pełny PDF norm był niedostępny sieciowo — wiersz tabeli do potwierdzenia przez właściciela przy przeglądzie PR.
+
+Po zmianie:
+
+1. **Tłuszcz 6–11 mies.**: wartość referencyjna 40%E (zapis wewnętrzny `[40,40]`), prezentowana jako „około 40% energii" z przeliczeniem na gramy z TEE; pod kaflem nota, że to wartość referencyjna z norm. Formatery przedziałów (`O`, `X`) zwijają zdegenerowane przedziały do pojedynczej wartości („około 40% energii", „34 g/d"), co obejmuje też linijkę podsumowania.
+2. **Węglowodany 6–11 mies.**: zamiast przedziału %E — AI 95 g/d (`carb_ai_g_day: 95`, `carb_percent_range: null`); kafel pokazuje „95 g/d" z notą o AI, bez udziału % energii; wartość dostępna także bez wyliczonej energii (AI nie zależy od TEE). Ukryta linijka „—" udziału %E, gdy przedział nie istnieje.
+3. **Punkt odniesienia posiłków** (`planningReference`) dla 6–11 mies. wyrównany do nowych wartości: białko 10 / tłuszcz 40 / węglowodany 50%E (dotąd 37,5/52,5).
+4. **„Szczegóły obliczeń"**: dodane zdanie wyjaśniające odmienny zapis norm niemowlęcych (tłuszcz — wartość referencyjna, węglowodany — AI w g/d).
+5. **Bez zmian**: jakość tłuszczu (SFA „tak mało, jak to możliwe", LA 4%E, ALA 0,5%E, DHA min. 100 mg/d), niemowlęta 0–5 mies. (nadal bez norm liczbowych — żywienie mlekiem), dzieci ≥1 r.ż. i dorośli; arkusze praktyczne i tak są zablokowane dla niemowląt (`Le()`).
+
+Testy: NORM-U2-INFANT-FAT (40%E → „około 40% energii", gramy z TEE), NORM-U2-INFANT-CARB-AI (95 g/d niezależnie od energii, brak %E), NORM-U2-INFANT-RENDER (noty na kaflach, brak „—"), NORM-U2-RANGES-INTACT (dzieci/dorośli bez regresji) w `tests/e2e/nutrition-norms-logic.spec.mjs`.
 
 ### ENERGY/GROWTH — prognoza wzrostu ostatecznego w zaleceniach dietetycznych (2026-08-11, decyzja właściciela)
 
