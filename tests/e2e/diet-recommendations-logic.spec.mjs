@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=13' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=14' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -634,4 +634,69 @@ test('DIET-STAB-FINAL-HEIGHT: prognoza ostateczna steruje dostępnością stabil
   expect(result.withPrediction.disabled).toBe(false);
   expect(result.mphOnly.possible).toBe(false);
   expect(result.mphOnly.disabled).toBe(true);
+});
+
+// ── Język zaleceń energetycznych: spójny rejestr wg adresata (2026-08-12) ──
+// „Dla pacjenta": dorosły/rodzic — konsekwentne „Proszę…"; nastolatek —
+// konsekwentna forma „ty" (bez „Proszę + bezokolicznik"). „Standardowy"
+// nastolatka wyrównany do neutralnego zapisu klinicznego (decyzja właściciela).
+
+async function genEnergyText(page, { age, sex, w, h, pf }) {
+  return page.evaluate(({ age, sex, w, h, pf }) => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    window.professionalMode = true;
+    const dl = document.getElementById('dietLevel');
+    if (dl && !Array.from(dl.options).some((o) => o.value === 'moderate')) {
+      const opt = document.createElement('option'); opt.value = 'moderate'; dl.appendChild(opt);
+    }
+    set('age', age); set('ageMonths', 0); set('sex', sex);
+    set('weight', w); set('height', h);
+    if (dl) dl.value = 'moderate';
+    flag('reduceToggle', true); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
+    flag('vitDSuppFlag', true); flag('hydrationFlag', true);
+    flag('journeyFlag', true); flag('nutritionNormsFlag', true);
+    flag('patientFacingToggle', pf);
+    return window.generateDietRecommendations().textOutput;
+  }, { age, sex, w, h, pf });
+}
+
+test('DIET-LANG-TEEN: nastolatek — pacjent per „ty", standard neutralnie klinicznie', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const pac = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: true });
+  // Tryb pacjencki: bez formalnego „Proszę + bezokolicznik", konsekwentne „ty":
+  expect(pac).not.toMatch(/Proszę (jeść|planować|pamiętać)/u);
+  expect(pac).toContain('Jedz regularnie');
+  expect(pac).toContain('Twoja obecna masa ciała');
+  expect(pac).toContain('Pamiętaj o regularnym piciu wody');
+  const std = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  // Standard: zero form „ty", neutralny zapis kliniczny:
+  expect(std).not.toMatch(/\bTwoj|\bmusisz\b|\bPostaraj\b|\bStaraj\b|\bporozmawiaj\b|zajmie Ci/u);
+  expect(std).toContain('Obecna masa ciała wynosi');
+  expect(std).toContain('Wskazana jest aktywność fizyczna');
+  expect(std).toContain('wskazana jest konsultacja z dietetykiem lub psychologiem dziecięcym');
+});
+
+test('DIET-LANG-ADULT: dorosły pacjent — gramatyka klasy BMI i plan bez kancelaryzmów', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const pac = await genEnergyText(page, { age: 35, sex: 'M', w: 105, h: 175, pf: true });
+  expect(pac).toContain('co oznacza otyłość');
+  expect(pac).not.toContain('co odpowiada otyłość');
+  expect(pac).toContain('Proponowany plan zakłada');
+  expect(pac).not.toContain('W proponowanym planie przyjęto');
+});
+
+test('DIET-LANG-ARTIFACTS: bez „miesiąca/miesięcy", minutowej precyzji spalania i „uzyskujemy"', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const std = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  expect(std).not.toContain('miesiąca/miesięcy');
+  expect(std).toMatch(/ok\. \d+,\d miesiąca|ok\. \d+ miesięcy/u);
+  expect(std).not.toMatch(/\d+ h \d+ min/u);
+  expect(std).toMatch(/około \d+ godzin/u);
+  const childPac = await genEnergyText(page, { age: 8, sex: 'F', w: 45, h: 130, pf: true });
+  expect(childPac).not.toContain('uzyskujemy');
+  expect(childPac).toContain('Taki plan daje deficyt');
 });

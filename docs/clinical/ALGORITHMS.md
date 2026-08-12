@@ -269,6 +269,16 @@ Testy: DIET-PAL-TARGET-BMI (mediana Palczewskiej metodą BMI na realnym `generat
 
 Tym wpisem wszystkie ustalenia audytu modułu z 2026-08-11 (wraz z uwagami przeglądu PR #109) są rozstrzygnięte i wdrożone (etapy 1–7).
 
+### ENERGY — język zaleceń energetycznych: spójny rejestr wg adresata (2026-08-12, decyzja właściciela)
+
+Przełącznik „Język zaleceń" (Dla pacjenta / Standardowy) jest opcją wyłącznie zakładki „Zalecenia energetyczne". Analiza wygenerowanych dokumentów wykazała niekonsekwencje rejestru; po decyzji właściciela („naprawiaj" + „standard nastolatka też wyrównaj do neutralnego") ujednolicono brzmienie — bez zmian liczb, progów i logiki klinicznej (26 podmian tekstów):
+
+1. **„Dla pacjenta"**: nastolatek (11–18 lat) — konsekwentna forma „ty" w całym dokumencie (usunięte mieszanki typu „Proszę jeść regularnie… wybieraj… Ogranicz…" → „Jedz regularnie…"; „Proszę planować…" → „Planuj…"; „Proszę pamiętać…" → „Pamiętaj…"); dorosły — poprawka gramatyczna („co odpowiada otyłość I stopnia" → „co oznacza otyłość I stopnia") i usunięty kancelaryzm („W proponowanym planie przyjęto…" → „Proponowany plan zakłada…"); rodzic (<11 lat) — „Przy takim ustawieniu uzyskujemy deficyt…" → „Taki plan daje deficyt…".
+2. **„Standardowy" u nastolatka** wyrównany do neutralnego zapisu klinicznego, jak u dorosłego (dotąd luźna ty-forma): m.in. „Twoja obecna waga to…, musisz zredukować…" → „Obecna masa ciała wynosi…, co oznacza potrzebę redukcji…"; „Postaraj się jeść…" → „Zalecane jest regularne spożywanie…"; „Staraj się być aktywny…" → „Wskazana jest aktywność fizyczna…"; „zadbaj o suplementację" → „wskazana jest suplementacja"; „Pamiętaj o nawodnieniu…" → „Zalecane jest odpowiednie nawodnienie…"; „zajmie Ci około" → „można szacować na około"; „Jeżeli masz trudności… porozmawiaj z rodzicami…" → „W razie trudności… wskazana jest konsultacja…". Nawias prognozy MPH bez „Twój". Teksty dziecięce (<11, do rodzica) — bez zmian.
+3. **Artefakty szablonu** (oba tryby): „(ok. 4,8 miesiąca/miesięcy)" → poprawna odmiana przez pomocnika `mLb` (4,8 miesiąca / 12 miesięcy / 1 miesiąca); czasy spalania „około 155 h 28 min" → „około 155 godzin" (≥10 h bez minutowej precyzji; poniżej: „godz. + min").
+
+Testy: DIET-LANG-TEEN (oba tryby nastolatka), DIET-LANG-ADULT, DIET-LANG-ARTIFACTS w `tests/e2e/diet-recommendations-logic.spec.mjs`.
+
 ### ENERGY/GROWTH — prognoza wzrostu ostatecznego w zaleceniach dietetycznych (2026-08-11, decyzja właściciela)
 
 Dotąd wszystkie szacunki „ile dziecko może jeszcze urosnąć" w module zaleceń dietetycznych — oraz bramka dostępności strategii stabilizacji masy — opierały się wyłącznie na MPH (mid-parental height, `advancedGrowthData.targetHeight` = (wzrost matki + ojca ± 13)/2, przedział ±8,5 cm). Aplikacja dysponuje jednak lepszymi metodami prognozy wzrostu ostatecznego na karcie „Zaawansowane obliczenia wzrostowe" (RWT, Bayley–Pinneau, Khamis–Roche, Reinehr/CDGP z profilem wiarygodności i ważonym konsensusem).
