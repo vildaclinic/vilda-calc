@@ -258,3 +258,49 @@ test('TONORM-J-NARROW: panel mieści się w wąskiej kolumnie bez poziomego prze
   });
   expect(fits).toBe(true);
 });
+
+test('TONORM-PDF-MODEL: getPdfModel() oddaje cel, wybory i termin dla raportu PDF (bez emoji)', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const m = await page.evaluate(() => window.VildaBmiJourney.getPdfModel());
+  expect(m.available).toBe(true);
+  expect(m.goalMain).toBe('Twój cel: -16,1 kg');
+  expect(m.goalSub).toContain('(24,9)');
+  expect(m.startCel).toBe('Start: 95,0 kg · Cel: 78,9 kg');
+  // Domyślny stan: dieta włączona + spacer — dokładnie te wiersze trafiają do PDF.
+  expect(m.rows.some((r) => r[0].startsWith('Dieta '))).toBe(true);
+  expect(m.rows.some((r) => r[0] === 'Spacer 30 min/d')).toBe(true);
+  expect(m.totalRow[0]).toBe('Razem');
+  // Separator tysięcy w fmtInt to NBSP (U+00A0) — w WinAnsi renderuje się jak spacja.
+  expect(m.totalRow[1]).toMatch(/^ok\. [\d \u00A0]+$/);
+  expect(m.totalRow[2]).toMatch(/^-\d+,\d\d$/);
+  expect(m.whenText).toMatch(/^Przy tym planie osiągniesz normę BMI (w|we) .+ \(za ok\. .+miesi.+\)\.$/);
+  // Font standardowy jsPDF: nazwy wierszy muszą być wolne od emoji.
+  for (const r of m.rows.concat([m.totalRow])) {
+    expect(/^[ -˿]+$/u.test(r[0])).toBe(true);
+  }
+});
+
+test('TONORM-PDF-MODEL-SELECTION: model PDF podąża za wyborem użytkownika (rower → gainText)', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  await page.evaluate(() => document.querySelector('.bmi-journey-chip[data-key="bike"]').click());
+  const m = await page.evaluate(() => window.VildaBmiJourney.getPdfModel());
+  expect(m.available).toBe(true);
+  expect(m.rows.some((r) => r[0] === 'Rower 2×45 min')).toBe(true);
+  expect(m.gainText).toContain('Dzięki ruchowi');
+});
+
+test('TONORM-PDF-FALLBACK: po przeliczeniu na BMI w normie model PDF melduje available:false', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  let m = await page.evaluate(() => window.VildaBmiJourney.getPdfModel());
+  expect(m.available).toBe(true);
+  // Ten sam pacjent po redukcji: panel znika z karty, więc PDF musi wrócić do starej sekcji.
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 70, height: 178 });
+  m = await page.evaluate(() => window.VildaBmiJourney.getPdfModel());
+  expect(m.available).toBe(false);
+});
