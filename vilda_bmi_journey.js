@@ -17,11 +17,11 @@
 
   // Tygodniowe dawki ruchu: klucz z biblioteki MET (vilda_food_data.js) + minuty/tydzień.
   var MOVES = [
-    { id: 'walk', minWeek: 210, chip: '🚶 spacer 30 min/d', row: '🚶 Spacer 30 min dziennie' },
-    { id: 'bike', minWeek: 90, chip: '🚴 rower 2×45 min', row: '🚴 Rower 2 × 45 min' },
-    { id: 'swim', minWeek: 45, chip: '🏊 basen 1×45 min', row: '🏊 Basen 1 × 45 min' },
-    { id: 'dance', minWeek: 60, chip: '💃 taniec 1×60 min', row: '💃 Taniec 1 × 60 min' },
-    { id: 'run', minWeek: 90, chip: '🏃 bieganie 3×30 min', row: '🏃 Bieganie 3 × 30 min' }
+    { id: 'walk', minWeek: 210, chip: '🚶 spacer 30 min/d', row: '🚶 Spacer 30 min/d' },
+    { id: 'bike', minWeek: 90, chip: '🚴 rower 2×45 min', row: '🚴 Rower 2×45 min' },
+    { id: 'swim', minWeek: 45, chip: '🏊 basen 1×45 min', row: '🏊 Basen 1×45 min' },
+    { id: 'dance', minWeek: 60, chip: '💃 taniec 1×60 min', row: '💃 Taniec 1×60 min' },
+    { id: 'run', minWeek: 90, chip: '🏃 bieganie 3×30 min', row: '🏃 Bieganie 3×30 min' }
   ];
   var MONTHS_LOC = ['w styczniu', 'w lutym', 'w marcu', 'w kwietniu', 'w maju', 'w czerwcu',
     'w lipcu', 'w sierpniu', 'we wrześniu', 'w październiku', 'w listopadzie', 'w grudniu'];
@@ -167,11 +167,11 @@
     var html = '';
     for (var i = 0; i < model.rows.length; i += 1) {
       var r = model.rows[i];
-      html += '<tr><td>' + esc(r.name) + '</td><td>≈ ' + fmtInt(r.kcalWeek) + ' kcal</td><td>−'
-        + fmt(r.kcalWeek * 52 / 12 / kk, 2) + ' kg / mies.</td></tr>';
+      html += '<tr><td>' + esc(r.name) + '</td><td>≈ ' + fmtInt(r.kcalWeek) + '</td><td>−'
+        + fmt(r.kcalWeek * 52 / 12 / kk, 2) + '</td></tr>';
     }
-    html += '<tr class="bmi-journey-sum"><td>Razem</td><td>≈ ' + fmtInt(model.totalWeek) + ' kcal</td><td>−'
-      + fmt(model.totalWeek * 52 / 12 / kk, 2) + ' kg / mies.</td></tr>';
+    html += '<tr class="bmi-journey-sum"><td>Razem</td><td>≈ ' + fmtInt(model.totalWeek) + '</td><td>−'
+      + fmt(model.totalWeek * 52 / 12 / kk, 2) + '</td></tr>';
     return html;
   }
 
@@ -247,51 +247,54 @@
       + ' kg</span><small>' + targetLabel + '</small></div>'
       + '<div class="bmi-journey-startcel">Start: ' + fmt(ctx.weightKg, 1) + ' kg · Cel: ' + fmt(goalKg, 1) + ' kg</div>'
       + dietChips + moveChips
-      + '<table class="bmi-journey-table" aria-live="polite"><thead><tr><th>Twój wybór</th><th>Tygodniowo</th><th>Wkład w cel</th></tr></thead>'
+      + '<table class="bmi-journey-table" aria-live="polite"><thead><tr><th>Twój wybór</th><th>kcal/tydz.</th><th>kg/mies.</th></tr></thead>'
       + '<tbody>' + renderRows(model) + '</tbody></table>'
       + '<div class="bmi-journey-result">' + renderResult(model) + '</div>'
-      + yearlyBadge(ctx)
-      + (ctx.metTableHtml
-        ? '<details class="bmi-journey-details"><summary>Pełna tabela aktywności (dystanse i czasy)</summary>' + ctx.metTableHtml + '</details>'
-        : '');
+      + yearlyBadge(ctx);
   }
 
   function ensureStyles() {
     if (d.getElementById('bmiJourneyStyles')) return;
-    var css = '.bmi-journey-goal{text-align:center}'
-      + '.bmi-journey-goal .bmi-journey-n{display:block;font-size:1.9rem;font-weight:700;color:var(--primary,#00838d);line-height:1.15}'
-      + '.bmi-journey-goal small{display:block;color:var(--muted,#5b6f6f)}'
-      + '.bmi-journey-startcel{color:var(--muted,#5b6f6f);font-size:.9rem;text-align:center;margin-bottom:.4rem}'
-      + '.bmi-journey-switchrow{display:flex;align-items:center;justify-content:center;gap:.55rem;margin:.9rem 0 .5rem;cursor:pointer;user-select:none}'
-      + '.bmi-journey-switch{width:40px;height:22px;border-radius:999px;background:#c9d6d4;position:relative;flex:none;transition:background .2s}'
-      + '.bmi-journey-switch::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .2s}'
-      + '.bmi-journey-switchrow[aria-checked="true"] .bmi-journey-switch{background:#2e8f57}'
-      + '.bmi-journey-switchrow[aria-checked="true"] .bmi-journey-switch::after{left:21px}'
-      + '.bmi-journey-chips{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin:.3rem 0 .5rem}'
-      + '.bmi-journey-lbl{flex-basis:100%;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted,#5b6f6f);text-align:center}'
-      + '.bmi-journey-chip{font:inherit;font-size:.85rem;border:1px solid var(--border,#c9d6d4);background:transparent;color:inherit;border-radius:999px;padding:.28rem .75rem;cursor:pointer}'
-      + '.bmi-journey-chip[aria-pressed="true"]{background:var(--primary,#00838d);border-color:var(--primary,#00838d);color:#fff;font-weight:600}'
-      + '.bmi-journey-table{border-collapse:collapse;width:100%;margin-top:.6rem}'
-      + '.bmi-journey-table th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#5b6f6f);border-bottom:1px solid var(--border,#c9d6d4);padding:.3rem .35rem}'
-      + '.bmi-journey-table th:nth-child(2),.bmi-journey-table th:nth-child(3),.bmi-journey-table td:nth-child(2),.bmi-journey-table td:nth-child(3){text-align:right}'
-      + '.bmi-journey-table td{padding:.4rem .35rem;border-bottom:1px solid var(--border,#e0e8e6);font-size:.93rem}'
-      + '.bmi-journey-sum td{border-bottom:0;border-top:2px solid var(--border,#c9d6d4);font-weight:700}'
-      + '.bmi-journey-sum td:first-child{color:#2e8f57}'
-      + '.bmi-journey-placeholder td{color:var(--muted,#5b6f6f);font-style:italic;border-bottom:0}'
-      + '.bmi-journey-when{text-align:center;margin:.85rem 0 0;font-size:1rem}'
-      + '.bmi-journey-when b{color:var(--primary,#00838d)}'
-      + '.bmi-journey-gain{display:block;text-align:center;margin:.4rem auto 0;font-size:.88rem}'
-      + '.bmi-journey-gain span{display:inline-block;background:rgba(46,143,87,.13);color:#2e8f57;font-weight:650;border-radius:999px;padding:.22rem .75rem}'
-      + '.bmi-journey-timeline{margin-top:.9rem}'
-      + '.bmi-journey-track{position:relative;height:12px;border-radius:7px;background:rgba(127,127,127,.18)}'
-      + '.bmi-journey-fill{position:absolute;top:0;bottom:0;left:0;border-radius:7px;background:linear-gradient(90deg,#2e8f57,var(--primary,#00838d))}'
-      + '.bmi-journey-marks{position:relative;height:3.2rem;font-size:.78rem}'
-      + '.bmi-journey-mark{position:absolute;top:.35rem;transform:translateX(-50%);text-align:center;white-space:nowrap}'
-      + '.bmi-journey-mark::before{content:"";display:block;width:2px;height:9px;background:var(--muted,#5b6f6f);margin:-13px auto 4px}'
-      + '.bmi-journey-mark b{display:block}'
-      + '.bmi-journey-badge{background:rgba(176,116,31,.12);color:#8a5c17;border-radius:8px;padding:.5rem .75rem;font-size:.86rem;margin-top:.7rem}'
-      + '.bmi-journey-details{margin-top:.6rem}'
-      + '.bmi-journey-details summary{cursor:pointer;color:var(--primary,#00838d);font-size:.88rem}'
+    var css = '#bmiJourneyMount{--bj-muted:#5b6f6f;--bj-line:rgba(91,111,111,.35);--bj-teal:var(--primary,#00838d);--bj-green:#2e8f57;--bj-num:#00727b;--bj-chipbg:rgba(255,255,255,.55)}'
+      /* liquid glass: ciemniejsze warianty dla kontrastu na jasnym szkle */
+      + '.liquid-ios26 #bmiJourneyMount{--bj-muted:#28494b;--bj-line:rgba(10,50,54,.28);--bj-teal:#0b6d76;--bj-green:#1e6f43;--bj-num:#0a5a62;--bj-chipbg:rgba(255,255,255,.5)}'
+      + '.bmi-journey-goal{text-align:center}'
+      + '.bmi-journey-goal .bmi-journey-n{display:block;font-size:1.55rem;font-weight:750;color:var(--bj-num);line-height:1.15;font-variant-numeric:tabular-nums}'
+      + '.bmi-journey-goal small{display:block;color:var(--bj-muted);font-size:.8rem;margin-top:.1rem}'
+      + '.bmi-journey-startcel{color:var(--bj-muted);font-size:.82rem;text-align:center;margin:.15rem 0 .5rem;font-variant-numeric:tabular-nums}'
+      + '.bmi-journey-switchrow{display:flex;align-items:center;justify-content:center;gap:.5rem;margin:.7rem 0 .45rem;cursor:pointer;user-select:none;font-size:.92rem}'
+      + '.bmi-journey-switch{width:38px;height:21px;border-radius:999px;background:#9fb4b2;position:relative;flex:none;transition:background .2s}'
+      + '.bmi-journey-switch::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .2s}'
+      + '.bmi-journey-switchrow[aria-checked="true"] .bmi-journey-switch{background:var(--bj-green)}'
+      + '.bmi-journey-switchrow[aria-checked="true"] .bmi-journey-switch::after{left:20px}'
+      + '.bmi-journey-chips{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:center;margin:.25rem 0 .45rem}'
+      + '.bmi-journey-lbl{flex-basis:100%;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--bj-muted);text-align:center}'
+      /* chipy: komplet jawnych wartości + !important — specyficzność #id wygrywa z `.liquid-ios26 button{...}!important` */
+      + '#bmiJourneyMount .bmi-journey-chip{font:inherit!important;font-size:.78rem!important;line-height:1.25!important;border:1px solid var(--bj-line)!important;background:var(--bj-chipbg)!important;color:inherit!important;border-radius:999px!important;padding:.22rem .6rem!important;cursor:pointer!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;margin:0!important;width:auto!important;transform:none!important}'
+      + '#bmiJourneyMount .bmi-journey-chip[aria-pressed="true"]{background:var(--bj-teal)!important;border-color:var(--bj-teal)!important;color:#fff!important;font-weight:600!important}'
+      + '#bmiJourneyMount .bmi-journey-chip:focus-visible{outline:2px solid var(--bj-teal)!important;outline-offset:2px!important}'
+      /* tabela: jawne tła i kolory + !important — wygrywa z globalnym `th{background:var(--secondary);color:#fff}` */
+      + '#bmiJourneyMount .bmi-journey-table{border-collapse:collapse!important;width:100%!important;margin:.45rem 0 0!important;font-variant-numeric:tabular-nums}'
+      + '#bmiJourneyMount .bmi-journey-table th{background:transparent!important;color:var(--bj-muted)!important;text-align:left!important;font-size:.66rem!important;font-weight:600!important;text-transform:uppercase!important;letter-spacing:.05em!important;border:0!important;border-bottom:1px solid var(--bj-line)!important;padding:.24rem .25rem!important;width:auto!important;margin:0!important;border-radius:0!important}'
+      + '#bmiJourneyMount .bmi-journey-table th:nth-child(2),#bmiJourneyMount .bmi-journey-table th:nth-child(3),#bmiJourneyMount .bmi-journey-table td:nth-child(2),#bmiJourneyMount .bmi-journey-table td:nth-child(3){text-align:right!important}'
+      + '#bmiJourneyMount .bmi-journey-table td{background:transparent!important;color:inherit!important;border:0!important;border-bottom:1px solid var(--bj-line)!important;padding:.3rem .25rem!important;font-size:.84rem!important}'
+      + '#bmiJourneyMount .bmi-journey-sum td{border-bottom:0!important;border-top:2px solid var(--bj-line)!important;font-weight:700!important}'
+      + '#bmiJourneyMount .bmi-journey-sum td:first-child{color:var(--bj-green)!important}'
+      + '#bmiJourneyMount .bmi-journey-placeholder td{color:var(--bj-muted)!important;font-style:italic;border-bottom:0!important}'
+      + '.bmi-journey-when{text-align:center;margin:.7rem 0 0;font-size:.9rem}'
+      + '.bmi-journey-when b{color:var(--bj-num)}'
+      + '.bmi-journey-gain{display:block;text-align:center;margin:.35rem auto 0;font-size:.8rem}'
+      + '.bmi-journey-gain span{display:inline-block;background:rgba(46,143,87,.14);color:var(--bj-green);font-weight:650;border-radius:999px;padding:.2rem .65rem}'
+      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-gain span{background:rgba(255,255,255,.5)}'
+      + '.bmi-journey-timeline{margin-top:.75rem}'
+      + '.bmi-journey-track{position:relative;height:10px;border-radius:6px;background:rgba(127,127,127,.22)}'
+      + '.bmi-journey-fill{position:absolute;top:0;bottom:0;left:0;border-radius:6px;background:linear-gradient(90deg,var(--bj-green),var(--bj-teal))}'
+      + '.bmi-journey-marks{position:relative;height:2.9rem;font-size:.7rem}'
+      + '.bmi-journey-mark{position:absolute;top:.3rem;transform:translateX(-50%);text-align:center;white-space:nowrap;color:var(--bj-muted)}'
+      + '.bmi-journey-mark::before{content:"";display:block;width:2px;height:8px;background:var(--bj-muted);margin:-11px auto 3px}'
+      + '.bmi-journey-mark b{display:block;color:inherit;font-size:.78rem;color:var(--bj-num)}'
+      + '.bmi-journey-badge{background:rgba(176,116,31,.13);color:#8a5c17;border-radius:8px;padding:.42rem .6rem;font-size:.76rem;margin-top:.6rem}'
+      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-badge{background:rgba(255,244,214,.55);color:#6d4a12}'
       + '@media (prefers-reduced-motion: no-preference){.bmi-journey-fill{transition:width .4s ease}}';
     var style = d.createElement('style');
     style.id = 'bmiJourneyStyles';

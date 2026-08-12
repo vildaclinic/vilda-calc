@@ -96,9 +96,9 @@ test('TONORM-S1-OLDER-JOURNEY: 13 lat i dorosły — panel „Droga do normy 2.0
   expect(teen.text).toContain('Twój cel:');
   expect(teen.text).toContain('85. centyl dla wieku');
   expect(teen.text).not.toContain('Musisz zredukować');
-  // Stara tabela MET dostępna pod zwijanym „dla dociekliwych".
-  expect(teen.text).toContain('Pełna tabela aktywności');
-  expect(teen.text).toContain('Dystans / Czas do normy');
+  // Sekcja „Pełna tabela aktywności" usunięta (decyzja właściciela, makieta v7).
+  expect(teen.text).not.toContain('Pełna tabela aktywności');
+  expect(teen.text).not.toContain('Dystans / Czas do normy');
   const adult = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   expect(adult.visible).toBe(true);
   expect(adult.text).toContain('Twój cel:');
@@ -185,7 +185,7 @@ test('TONORM-J-ADULT-PANEL: panel dieta+ruch dla dorosłego — cel, diety z sil
   expect(out.text).toContain('umiarkowana −');
   expect(out.text).toContain('intensywna −');
   expect(out.text).toContain('Razem');
-  expect(out.text).toContain('kg / mies.');
+  expect(out.text).toContain('kg/mies.');
   expect(out.text).toMatch(/osiągniesz normę BMI (w|we) .+ \(za ok\. .+miesi/);
 });
 
@@ -197,7 +197,7 @@ test('TONORM-J-INTERACTIONS: chipy budują tabelę, toggle wyłącza dietę, wyb
   const txt = () => page.evaluate(() => document.getElementById('bmiJourneyMount').textContent.replace(/\s+/g, ' ').trim());
   await click('.bmi-journey-chip[data-key="bike"]');
   let t = await txt();
-  expect(t).toContain('Rower 2 × 45 min');
+  expect(t).toContain('Rower 2×45 min');
   expect(t).toContain('Dzięki ruchowi o');
   await click('[data-journey="toggle"]');
   t = await txt();
@@ -226,5 +226,35 @@ test('TONORM-J-PERSIST: wybór aktywności przeżywa kolejne przeliczenia karty'
   await page.evaluate(() => document.querySelector('.bmi-journey-chip[data-key="swim"]').click());
   // Kolejny update() (np. zmiana masy) nie może zgubić wyboru.
   const out = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 94, height: 178 });
-  expect(out.text).toContain('Basen 1 × 45 min');
+  expect(out.text).toContain('Basen 1×45 min');
+});
+
+test('TONORM-J-THEME: liquid glass nie nadpisuje tabeli ani chipów panelu', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const out = await page.evaluate(() => {
+    document.body.classList.add('liquid-ios26');
+    const th = getComputedStyle(document.querySelector('#bmiJourneyMount .bmi-journey-table th'));
+    const chip = getComputedStyle(document.querySelector('#bmiJourneyMount .bmi-journey-chip[aria-pressed="true"]'));
+    document.body.classList.remove('liquid-ios26');
+    return { thBg: th.backgroundColor, chipColor: chip.color, chipRadius: chip.borderRadius };
+  });
+  // Globalne th{background:var(--secondary);color:#fff} nie może zjeść nagłówków…
+  expect(out.thBg).toBe('rgba(0, 0, 0, 0)');
+  // …a .liquid-ios26 button{…}!important nie może przemalować zaznaczonego chipa.
+  expect(out.chipColor).toBe('rgb(255, 255, 255)');
+  expect(out.chipRadius).toBe('999px');
+});
+
+test('TONORM-J-NARROW: panel mieści się w wąskiej kolumnie bez poziomego przewijania', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 380, height: 900 });
+  await openIndex(page);
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const fits = await page.evaluate(() => {
+    const card = document.getElementById('toNormCard');
+    return card.scrollWidth <= card.clientWidth + 1;
+  });
+  expect(fits).toBe(true);
 });
