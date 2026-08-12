@@ -24,13 +24,18 @@ import { expect, test } from '@playwright/test';
 //  NORM-PROT-U1-RENDER: karta w DOM pokazuje podstawę przy „Norma białka"
 //    i poprawną gramatycznie linię porównania „dla masy aktualnej".
 //
-// Zmiana U2 (niemowlęta 6–11 mies., zapisy zgodne z normami):
-//  NORM-U2-INFANT-FAT: tłuszcz to wartość referencyjna 40%E ([40,40]),
-//    gramy przeliczone z TEE; nota o wartości referencyjnej.
-//  NORM-U2-INFANT-CARB-AI: węglowodany to AI 95 g/d (bez %E), dostępne
-//    także bez masy ciała (AI nie zależy od TEE).
-//  NORM-U2-INFANT-RENDER: kafle karty pokazują „około 40% energii",
-//    „95 g/d" i notę AI; brak osieroconego „—" przy udziale %E węglowodanów.
+// Zmiana U2 (niemowlęta 6–11 mies.) — wartości POTWIERDZONE w pierwotnym
+// źródle (PDF „Normy spożycia dla populacji Polski", w repo): tłuszcz
+// 30–45%E (Tabela 1 i 2 rozdziału o tłuszczach), węglowodany RI 45–55%E
+// (Tabela 8 rozdziału o węglowodanach, wg PTGHiŻD 2014). Pierwsza wersja
+// U2 (40%E referencyjnie, AI 95 g/d) opierała się na błędnych omówieniach
+// wtórnych i została wycofana po weryfikacji z PDF-em.
+//  NORM-U2-INFANT-MACROS: tłuszcz [30,45]%E i węglowodany [45,55]%E,
+//    gramy przeliczone z TEE, planningReference 10/37,5/52,5%E.
+//  NORM-U2-INFANT-RENDER: kafle karty pokazują „30–45% energii"
+//    i „45–55% energii" — bez „około 40%", bez „95 g/d", bez not AI.
+//  NORM-U2-REPORT: karta raportu pacjenta i linie podsumowania pokazują
+//    przedziały; formatery raportu zwijają zdegenerowane pary (robustność).
 //  NORM-U2-RANGES-INTACT: dzieci ≥1 r.ż. i dorośli — przedziały bez regresji.
 
 async function openIndex(page) {
@@ -151,7 +156,7 @@ test('NORM-PROT-U1-RENDER: karta pokazuje podstawę normy, raport — porównani
   expect(out.comparisonNote).not.toContain('dla masa ');
 });
 
-test('NORM-U2-INFANT-FAT: tłuszcz 6–11 mies. jako wartość referencyjna 40%E', async ({ page }) => {
+test('NORM-U2-INFANT-MACROS: tłuszcz 30–45%E i węglowodany 45–55%E wg tabel norm', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   const m = await buildModel(
@@ -159,39 +164,24 @@ test('NORM-U2-INFANT-FAT: tłuszcz 6–11 mies. jako wartość referencyjna 40%E
     { ageYears: 0.67, ageMonthsOpt: 8, sex: 'M', weightKg: 8, heightCm: 70 },
     {},
   );
-  expect(m.fat.percentRange).toEqual([40, 40]);
-  expect(m.fat.lowActivityNote).toContain('wartość referencyjną');
-  // Gramy przeliczone z energii: 40% TEE / 9 kcal na g.
+  // Tabela 1 (tłuszcze): niemowlęta > 6–12 mies. → 30–45 % E.
+  expect(m.fat.percentRange).toEqual([30, 45]);
+  expect(m.fat.lowActivityNote || '').toBe('');
+  // Tabela 8 (węglowodany): 6–11 mies. → RI 45–55 % E.
+  expect(m.carbs.percentRange).toEqual([45, 55]);
+  // Gramy przeliczone z TEE (Tabela 2 norm liczy je tak samo: %E × TEE / 9).
   expect(m.energy.available).toBe(true);
   const tee = m.energy.mainValue;
-  expect(m.fat.gramRange[0]).toBeCloseTo((tee * 0.4) / 9, 0);
-  expect(m.fat.gramRange[1]).toBeCloseTo((tee * 0.4) / 9, 0);
-  // Punkt odniesienia posiłków wyrównany do 10/40/50%E.
-  expect(m.planningReference.percent.fat).toBe(40);
-  expect(m.planningReference.percent.carbs).toBe(50);
+  expect(m.fat.gramRange[0]).toBeCloseTo((tee * 0.3) / 9, 0);
+  expect(m.fat.gramRange[1]).toBeCloseTo((tee * 0.45) / 9, 0);
+  expect(m.carbs.gramRange[0]).toBeCloseTo((tee * 0.45) / 4, 0);
+  expect(m.carbs.gramRange[1]).toBeCloseTo((tee * 0.55) / 4, 0);
+  // Punkt odniesienia posiłków: środki przedziałów (10/37,5/52,5 %E).
+  expect(m.planningReference.percent.fat).toBe(37.5);
+  expect(m.planningReference.percent.carbs).toBe(52.5);
 });
 
-test('NORM-U2-INFANT-CARB-AI: węglowodany 6–11 mies. jako AI 95 g/d, także bez masy', async ({ page }) => {
-  test.setTimeout(90_000);
-  await openIndex(page);
-  const withWeight = await buildModel(
-    page,
-    { ageYears: 0.67, ageMonthsOpt: 8, sex: 'F', weightKg: 8, heightCm: 70 },
-    {},
-  );
-  expect(withWeight.carbs.percentRange).toBeNull();
-  expect(withWeight.carbs.gramRange).toEqual([95, 95]);
-  expect(withWeight.carbs.aiNote).toContain('spożycie wystarczające (AI)');
-  // AI nie zależy od TEE — dostępne również bez masy ciała.
-  const noWeight = await buildModel(
-    page,
-    { ageYears: 0.67, ageMonthsOpt: 8, sex: 'F', weightKg: null, heightCm: null },
-    {},
-  );
-  expect(noWeight.carbs.gramRange).toEqual([95, 95]);
-});
-
-test('NORM-U2-INFANT-RENDER: kafle karty — „około 40% energii", „95 g/d", nota AI, bez „—"', async ({ page }) => {
+test('NORM-U2-INFANT-RENDER: kafle karty pokazują przedziały, bez wartości referencyjnych i AI', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   const html = await page.evaluate(() => {
@@ -208,12 +198,44 @@ test('NORM-U2-INFANT-RENDER: kafle karty — „około 40% energii", „95 g/d",
     const mount = document.getElementById('nutritionNormsMount');
     return mount ? mount.innerHTML : '';
   });
-  expect(html).toContain('około 40% energii');
-  expect(html).toContain('95 g/d');
-  expect(html).toContain('spożycie wystarczające (AI)');
-  expect(html).toContain('wartość referencyjną');
-  // Kafel węglowodanów nie pokazuje osieroconej linii „—" po udziale %E.
-  expect(html).not.toContain('nutrition-norms-sub--macro-share">—<');
+  expect(html).toContain('30–45% energii');
+  expect(html).toContain('45–55% energii');
+  expect(html).not.toContain('około 40% energii');
+  expect(html).not.toContain('spożycie wystarczające (AI)');
+  expect(html).not.toContain('95 g/d');
+});
+
+test('NORM-U2-REPORT: karta raportu pacjenta pokazuje przedziały; formatery zwijają zdegenerowane pary', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=7' });
+  await page.waitForFunction(() => typeof window.patientReportBuildNutritionCardFromModel === 'function');
+  const out = await page.evaluate(() => {
+    const model = window.nutritionNormsBuildCardModel(
+      { ageYears: 0.67, ageMonthsOpt: 8, sex: 'M', weightKg: 8, heightCm: 70 },
+      { includeInSummary: true },
+    );
+    const card = window.patientReportBuildNutritionCardFromModel(model);
+    const lines = window.patientReportBuildNutritionSummaryLinesFromModel(model);
+    const degeneratePercent = window.patientReportFormatNutritionNormsPercentRange
+      ? window.patientReportFormatNutritionNormsPercentRange([40, 40])
+      : null;
+    const degenerateGrams = window.patientReportFormatNutritionNormsGramRange
+      ? window.patientReportFormatNutritionNormsGramRange([95, 95], 0)
+      : null;
+    return { card, lines, degeneratePercent, degenerateGrams };
+  });
+  const fatRow = out.card.rows.find((r) => r.label === 'Tłuszcze');
+  const carbRow = out.card.rows.find((r) => r.label === 'Węglowodany');
+  expect(fatRow.valueText).toContain('30–45% energii');
+  expect(carbRow.valueText).toContain('45–55% energii');
+  const macroLine = out.lines.find((l) => l.startsWith('Makroskładniki'));
+  expect(macroLine).toContain('tłuszcz 30–45% energii');
+  expect(macroLine).toContain('węglowodany 45–55% energii');
+  // Robustność formaterów raportu (uwaga Codex z #116): zdegenerowana para
+  // nigdy nie renderuje się jako „40–40% energii" / „95–95 g/d".
+  if (out.degeneratePercent !== null) expect(out.degeneratePercent).toBe('około 40% energii');
+  if (out.degenerateGrams !== null) expect(out.degenerateGrams).toBe('95 g/d');
 });
 
 test('NORM-U2-RANGES-INTACT: dzieci ≥1 r.ż. i dorośli bez regresji przedziałów', async ({ page }) => {
@@ -226,7 +248,6 @@ test('NORM-U2-RANGES-INTACT: dzieci ≥1 r.ż. i dorośli bez regresji przedzia�
   );
   expect(child.fat.percentRange).toEqual([30, 40]);
   expect(child.carbs.percentRange).toEqual([45, 65]);
-  expect(child.carbs.aiNote || '').toBe('');
   const adult = await buildModel(
     page,
     { ageYears: 40, ageMonthsOpt: null, sex: 'F', weightKg: 70, heightCm: 165 },
