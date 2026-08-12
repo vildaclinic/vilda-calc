@@ -136,3 +136,34 @@ test('TONORM-S2-TEEN-18-UNDER: 18-latek z niskim BMI oceniany centylem, nie prog
   expect(out.visible).toBe(true);
   expect(out.text.toLowerCase()).not.toContain('niedowag');
 });
+
+test('TONORM-S3-SEVERE-LABEL: „Otyłość olbrzymia" (z ≥ +3) dopiero od 5. roku życia', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const out = await page.evaluate(() => {
+    const pick = (months, sex) => {
+      // Znajdź BMI z z-score >= 3 dla danego wieku (produkcyjny bmiZscore).
+      let bmi = 20;
+      while (bmi < 45 && Number(window.bmiZscore(bmi, sex, months)) < 3.05) bmi += 0.5;
+      return { bmi, z: Number(window.bmiZscore(bmi, sex, months)), cat: window.bmiCategoryChild(bmi, sex, months) };
+    };
+    return {
+      infant7m: pick(7, 'M'),
+      preschool59m: pick(59, 'F'),
+      school72m: pick(72, 'M'),
+      // Przy 13 latach z-score OLAF LMS saturuje się poniżej 3 (L < 0),
+      // więc bramkę testujemy wprost na produkcyjnym resolverze.
+      resolver59: window.vildaResolvePediatricBmiCategoryFromPercentile(99, { useOlaf: true, zScore: 3.2, ageMonths: 59 }),
+      resolver60: window.vildaResolvePediatricBmiCategoryFromPercentile(99, { useOlaf: true, zScore: 3.2, ageMonths: 60 }),
+      resolverNoAge: window.vildaResolvePediatricBmiCategoryFromPercentile(99, { useOlaf: true, zScore: 3.2 }),
+    };
+  });
+  expect(out.infant7m.z).toBeGreaterThanOrEqual(3);
+  expect(out.infant7m.cat).toBe('Otyłość');
+  expect(out.preschool59m.cat).toBe('Otyłość');
+  expect(out.school72m.cat).toBe('Otyłość olbrzymia');
+  expect(out.resolver59).toBe('Otyłość');
+  expect(out.resolver60).toBe('Otyłość olbrzymia');
+  // Bez podanego wieku resolver zachowuje dotychczasowe działanie.
+  expect(out.resolverNoAge).toBe('Otyłość olbrzymia');
+});
