@@ -82,24 +82,28 @@ test('TONORM-S1-TODDLER-2-5-HIGH: 3 lata, BMI > 85c → „nadwyżka" i spowolni
   expect(out.text).toContain('Nadwyżka masy względem górnej granicy normy');
   expect(out.text).toContain('kcal');
   expect(out.text).toContain('spowolnienie przyrostu masy');
+  expect(out.text).toContain('Nadwyżka względem 50. centyla BMI');
   expect(out.text).not.toContain('Musisz zredukować');
   expect(out.text).not.toContain('Dystans / Czas do normy');
   expect(out.text).toContain('konsultacji');
 });
 
-test('TONORM-S1-OLDER-UNCHANGED: 13 lat i dorosły — tryb redukcyjny z tabelą bez regresji', async ({ page }) => {
+test('TONORM-S1-OLDER-JOURNEY: 13 lat i dorosły — panel „Droga do normy 2.0" zamiast recepty', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   const teen = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
   expect(teen.visible).toBe(true);
-  expect(teen.text).toContain('Musisz zredukować');
+  expect(teen.text).toContain('Twój cel:');
+  expect(teen.text).toContain('85. centyl dla wieku');
+  expect(teen.text).not.toContain('Musisz zredukować');
+  // Stara tabela MET dostępna pod zwijanym „dla dociekliwych".
+  expect(teen.text).toContain('Pełna tabela aktywności');
   expect(teen.text).toContain('Dystans / Czas do normy');
-  expect(teen.text).toContain('Nadwyżka względem 50. centyla BMI');
-  expect(teen.text).not.toContain('Do 50 centyla');
   const adult = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   expect(adult.visible).toBe(true);
-  expect(adult.text).toContain('Musisz zredukować');
-  expect(adult.text).toContain('Dystans / Czas do normy');
+  expect(adult.text).toContain('Twój cel:');
+  expect(adult.text).toContain('Start: 95,0 kg');
+  expect(adult.text).not.toContain('Musisz zredukować');
 });
 
 test('TONORM-S2-ADULT-UNDER: dorosły z niedowagą dostaje komunikat i brakujące kg do 18,5', async ({ page }) => {
@@ -124,8 +128,8 @@ test('TONORM-S2-ADULT-NEAR-LIMIT: BMI 24,9–25 → komunikat o górnej granicy 
   expect(out.text).toContain('zbliża się do jej górnej granicy');
   // Od progu nadwagi (BMI ≥ 25) redukcja wraca.
   const over = await renderToNorm(page, { age: 30, months: 0, sex: 'M', weight: 80, height: 178 });
-  expect(over.text).toContain('Musisz zredukować');
-  expect(over.text).toContain('Nadwyżka względem BMI 22');
+  expect(over.text).toContain('Twój cel:');
+  expect(over.text).toContain('do górnej granicy normy BMI');
 });
 
 test('TONORM-S2-TEEN-18-UNDER: 18-latek z niskim BMI oceniany centylem, nie progiem dorosłych', async ({ page }) => {
@@ -166,4 +170,61 @@ test('TONORM-S3-SEVERE-LABEL: „Otyłość olbrzymia" (z ≥ +3) dopiero od 5. 
   expect(out.resolver60).toBe('Otyłość olbrzymia');
   // Bez podanego wieku resolver zachowuje dotychczasowe działanie.
   expect(out.resolverNoAge).toBe('Otyłość olbrzymia');
+});
+
+test('TONORM-J-ADULT-PANEL: panel dieta+ruch dla dorosłego — cel, diety z silnika planu, Razem, termin', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const out = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  expect(out.text).toContain('Twój cel:');
+  expect(out.text).toContain('−16,1 kg');
+  expect(out.text).toContain('Start: 95,0 kg · Cel: 78,9 kg');
+  expect(out.text).toContain('Połącz z planem diety');
+  // Deficyty diet liczone produkcyjnym silnikiem Planu odchudzania.
+  expect(out.text).toContain('lekka −');
+  expect(out.text).toContain('umiarkowana −');
+  expect(out.text).toContain('intensywna −');
+  expect(out.text).toContain('Razem');
+  expect(out.text).toContain('kg / mies.');
+  expect(out.text).toMatch(/osiągniesz normę BMI (w|we) .+ \(za ok\. .+miesi/);
+});
+
+test('TONORM-J-INTERACTIONS: chipy budują tabelę, toggle wyłącza dietę, wybór diety się przełącza', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const click = (sel) => page.evaluate((s) => document.querySelector(s).click(), sel);
+  const txt = () => page.evaluate(() => document.getElementById('bmiJourneyMount').textContent.replace(/\s+/g, ' ').trim());
+  await click('.bmi-journey-chip[data-key="bike"]');
+  let t = await txt();
+  expect(t).toContain('Rower 2 × 45 min');
+  expect(t).toContain('Dzięki ruchowi o');
+  await click('[data-journey="toggle"]');
+  t = await txt();
+  expect(t).not.toContain('Dieta (jak w planie odchudzania)');
+  expect(t).toContain('Włącz plan diety');
+  await click('[data-journey="toggle"]');
+  await click('.bmi-journey-chip[data-key="intense"]');
+  t = await txt();
+  expect(t).toContain('Dieta intensywna');
+  expect(t).not.toContain('Dieta umiarkowana ≈');
+});
+
+test('TONORM-J-CHILD: 13-latek — cel 85. centyla, domyślna dieta lekka, minima dziecięce', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const out = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
+  expect(out.text).toContain('85. centyl dla wieku');
+  expect(out.text).toContain('Dieta lekka');
+  expect(out.text).toMatch(/osiągniesz normę BMI/);
+});
+
+test('TONORM-J-PERSIST: wybór aktywności przeżywa kolejne przeliczenia karty', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  await page.evaluate(() => document.querySelector('.bmi-journey-chip[data-key="swim"]').click());
+  // Kolejny update() (np. zmiana masy) nie może zgubić wyboru.
+  const out = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 94, height: 178 });
+  expect(out.text).toContain('Basen 1 × 45 min');
 });
