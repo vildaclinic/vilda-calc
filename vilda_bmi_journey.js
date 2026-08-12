@@ -11,7 +11,7 @@
   'use strict';
   if (!w || w.VildaBmiJourney) return;
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var STORAGE_KEY = 'vildaBmiJourneyState';
   var KCAL_PER_KG_FALLBACK = 7700;
 
@@ -359,6 +359,44 @@
     return true;
   }
 
+  // Wersja tekstowa panelu dla raportu PDF (jsPDF, font standardowy):
+  // bez emoji i znaków spoza Latin Extended-A, minus/≈ zapisane ASCII.
+  function pdfText(txt) {
+    return String(txt).replace(/[^ -˿]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  function getPdfModel() {
+    if (!lastCtx || !d.getElementById('bmiJourneyMount')) return { available: false };
+    var model = computeModel(lastCtx);
+    if (!model.rows.length || model.weeksCombo == null) return { available: false };
+    var kk = kcalPerKg();
+    var mc = weeksToMonthsHalf(model.weeksCombo);
+    var rows = [];
+    for (var i = 0; i < model.rows.length; i += 1) {
+      var r = model.rows[i];
+      rows.push([pdfText(r.name), 'ok. ' + fmtInt(r.kcalWeek), '-' + fmt(r.kcalWeek * 52 / 12 / kk, 2)]);
+    }
+    var gainText = '';
+    if (model.weeksDiet != null && model.weeksDiet > model.weeksCombo) {
+      var diff = Math.round((weeksToMonthsHalf(model.weeksDiet) - mc) * 2) / 2;
+      gainText = diff >= 0.5
+        ? 'Dzięki ruchowi o ' + monthsWord(diff) + ' szybciej niż na samej diecie.'
+        : 'Dzięki ruchowi nieznacznie szybciej niż na samej diecie.';
+    }
+    return {
+      available: true,
+      goalMain: 'Twój cel: -' + fmt(lastCtx.kgToLose, 1) + ' kg',
+      goalSub: lastCtx.isChild
+        ? 'do górnej granicy normy BMI (85. centyl dla wieku)'
+        : 'do górnej granicy normy BMI (' + fmt(lastCtx.targetBmi, 1) + ')',
+      startCel: 'Start: ' + fmt(lastCtx.weightKg, 1) + ' kg · Cel: ' + fmt(lastCtx.weightKg - lastCtx.kgToLose, 1) + ' kg',
+      rows: rows,
+      totalRow: ['Razem', 'ok. ' + fmtInt(model.totalWeek), '-' + fmt(model.totalWeek * 52 / 12 / kk, 2)],
+      whenText: 'Przy tym planie osiągniesz normę BMI ' + dateAfterWeeks(model.weeksCombo)
+        + ' (za ok. ' + monthsWord(mc) + ').',
+      gainText: gainText
+    };
+  }
+
   function getSnapshot() {
     return {
       version: VERSION,
@@ -370,6 +408,7 @@
   w.VildaBmiJourney = {
     VERSION: VERSION,
     mount: mount,
+    getPdfModel: getPdfModel,
     getSnapshot: getSnapshot
   };
 })(typeof window !== 'undefined' ? window : globalThis, typeof document !== 'undefined' ? document : null);
