@@ -360,9 +360,14 @@
   }
 
   // Wersja tekstowa panelu dla raportu PDF (jsPDF, font standardowy):
-  // bez emoji i znaków spoza Latin Extended-A, minus/≈ zapisane ASCII.
+  // bez emoji i znaków spoza U+0020–U+02FF, minus/≈ zapisane ASCII.
   function pdfText(txt) {
-    return String(txt).replace(/[^ -˿]/g, '').replace(/\s+/g, ' ').trim();
+    var t = String(txt), out = '';
+    for (var i = 0; i < t.length; i += 1) {
+      var c = t.charCodeAt(i);
+      if (c >= 0x20 && c <= 0x2ff) out += t.charAt(i);
+    }
+    return out.replace(/\s+/g, ' ').trim();
   }
   function getPdfModel() {
     if (!lastCtx || !d.getElementById('bmiJourneyMount')) return { available: false };

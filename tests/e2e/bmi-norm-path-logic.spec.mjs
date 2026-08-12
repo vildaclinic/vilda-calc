@@ -272,8 +272,8 @@ test('TONORM-PDF-MODEL: getPdfModel() oddaje cel, wybory i termin dla raportu PD
   expect(m.rows.some((r) => r[0].startsWith('Dieta '))).toBe(true);
   expect(m.rows.some((r) => r[0] === 'Spacer 30 min/d')).toBe(true);
   expect(m.totalRow[0]).toBe('Razem');
-  // Separator tysięcy w fmtInt to NBSP ( ) — w WinAnsi renderuje się jak spacja.
-  expect(m.totalRow[1]).toMatch(/^ok\. [\d  ]+$/);
+  // Separator tysięcy w fmtInt to NBSP (U+00A0) — w WinAnsi renderuje się jak spacja.
+  expect(m.totalRow[1]).toMatch(/^ok\. [\d \u00A0]+$/);
   expect(m.totalRow[2]).toMatch(/^-\d+,\d\d$/);
   expect(m.whenText).toMatch(/^Przy tym planie osiągniesz normę BMI (w|we) .+ \(za ok\. .+miesi.+\)\.$/);
   // Font standardowy jsPDF: nazwy wierszy muszą być wolne od emoji.
