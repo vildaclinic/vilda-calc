@@ -119,7 +119,7 @@ test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjn
 test('DIET-PDF-FULL-COMPLETE: pełny raport PDF zawiera komplet zaleceń z witaminą D', async ({ page }) => {
   test.setTimeout(180_000);
   await openWithDietModule(page);
-  await page.addScriptTag({ url: '/vilda_patient_report.js?v=6' });
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=7' });
   await page.waitForFunction(() => typeof window.patientReportCreateRenderHost === 'function');
   const result = await page.evaluate(async () => {
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
@@ -395,7 +395,7 @@ test('DIET-PDF-VALIDATION: generator PDF odrzuca brak wieku i błędne jednostki
 test('DIET-FILENAME-PL: sanitizer nazw plików transliteruje ł/Ł', async ({ page }) => {
   test.setTimeout(90_000);
   await openWithDietModule(page);
-  await page.addScriptTag({ url: '/vilda_patient_report.js?v=6' });
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=7' });
   await page.waitForFunction(() => typeof window.patientReportSanitizeFilename === 'function');
   const sanitized = await page.evaluate(() => window.patientReportSanitizeFilename('Michał Łąka'));
   expect(sanitized).toBe('Michal_Laka');
