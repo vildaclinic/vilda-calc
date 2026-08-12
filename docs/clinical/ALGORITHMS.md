@@ -350,6 +350,19 @@ Test etapu 3: TONORM-S3-SEVERE-LABEL (niemowlę i 59 mies. z z ≥ +3 → „Oty
 
 Testy (produkcyjna ścieżka `window.update()` + DOM karty, dane fikcyjne): TONORM-S1-INFANT-NORMAL, TONORM-S1-INFANT-HIGH, TONORM-S1-INFANT-UNDER, TONORM-S1-TODDLER-2-5-HIGH, TONORM-S1-OLDER-UNCHANGED w `tests/e2e/bmi-norm-path-logic.spec.mjs`.
 
+### BMI-TONORM-J — „Droga do normy 2.0": panel dieta + ruch (2026-08-12, makieta zatwierdzona przez właściciela)
+
+Tryb redukcyjny karty (≥ 5 lat) zastąpiony interaktywnym panelem (nowy moduł `vilda_bmi_journey.js`), wg makiety iterowanej z właścicielem:
+
+1. **Nagłówek celu (wyśrodkowany)**: „Twój cel: −X kg / do górnej granicy normy BMI (24,9 u dorosłych; 85. centyl dla wieku u dzieci) / Start · Cel". Bez trybu rozkazującego i bez sześciocyfrowych kalorii; bez linii/paska postępu (decyzja właściciela). Uwaga: etykieta u dorosłych pokazuje 24,9 — rzeczywisty cel redukcyjny (0,1 BMI poniżej progu normy), spójny z liczonym „Cel: … kg".
+2. **Przełącznik „Połącz z planem diety" (wyśrodkowany, domyślnie włączony)** + chipy diet: deficyty liczone produkcyjnym silnikiem Planu odchudzania (`energyBuildPlanReductionState` → `proposeDietsFromTEE`; minima kaloryczne i wariant dziecięcy w silniku). Domyślna dieta: lekka u dzieci, umiarkowana u dorosłych — dopóki użytkownik nie wybierze własnej.
+3. **Chipy ruchu (wyśrodkowane, wielokrotny wybór)** — stałe dawki tygodniowe: spacer 30 min/d (210 min), rower 2×45, basen 1×45, taniec 1×60, bieganie 3×30; kcal/tydzień = MET × 3,5 × masa / 200 × minuty (istniejąca biblioteka MET).
+4. **Tabela wkładów budowana z wyboru**: wiersz na każdą zaznaczoną pozycję (kcal/tydzień, wkład −kg/mies. = kcal_tydz × 52/12/7700) + wiersz „Razem"; pusta prosi o wybór.
+5. **Termin i oś czasu**: czas łączony = kg_do_celu × 7700 / (7 × deficyt_diety + kcal_ruchu_tydz); prezentacja w miesiącach zaokrąglanych do 0,5 z polską odmianą; zdanie „Przy tym planie osiągniesz normę BMI 〈w miesiącu roku〉 (za ok. X …)"; pigułka „Dzięki ruchowi o Y szybciej niż na samej diecie" (warianty brzegowe: „dołóż ruch…", „włącz plan diety — sam ruch to długa droga"); oś czasu ze znacznikami „dieta + ruch" / „sama dieta". Stara tabela MET (dystanse/czasy) przeniesiona pod zwijane „Pełna tabela aktywności"; odznaka roczna porównuje roczny dystans spaceru z trasami miast.
+6. **Zakres i stan**: wybór (toggle/dieta/ruch) trwały w `localStorage` i przeżywa przeliczenia karty; dzieci 2–5 lat i < 2 lat bez panelu (komunikaty z etapu 1 — tam pozostaje też dopisek „Nadwyżka względem 50. centyla BMI"); niedowaga i norma bez zmian; przy braku modułu karta degraduje się do poprzedniego HTML. PDF raportu — osobny etap.
+
+Testy: TONORM-J-ADULT-PANEL, TONORM-J-INTERACTIONS, TONORM-J-CHILD, TONORM-J-PERSIST + zaktualizowane TONORM-S1-OLDER-JOURNEY/S2-NEAR-LIMIT w `tests/e2e/bmi-norm-path-logic.spec.mjs`.
+
 ### ENERGY-PAL — potwierdzenie mnożnika wzrastania (U3) i PAL 1,4 dla 10–18 lat jako opcja kliniczna (2026-08-12, decyzja właściciela)
 
 **U3 — mnożnik wzrastania potwierdzony w pierwotnym źródle.** Rozdział o energii w PDF-ie norm (w repo): „U dzieci i młodzieży w wieku od 1 do 18 lat wydatek energetyczny związany ze wzrastaniem został uwzględniony jako 1 % wzrost wartości PAL dla każdej grupy wiekowej". Aplikacja mnoży TEE przez `ENERGY_CHILD_GROWTH_MULTIPLIER = 1,01` do 18 r.ż. włącznie — ponieważ TEE = REE × PAL, podniesienie PAL o 1% i pomnożenie TEE przez 1,01 są tożsame. Konwencja aplikacji jest więc dokładnie metodą norm; bez zmian kodu.
