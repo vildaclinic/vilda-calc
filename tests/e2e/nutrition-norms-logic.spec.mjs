@@ -208,7 +208,7 @@ test('NORM-U2-INFANT-RENDER: kafle karty pokazują przedziały, bez wartości re
 test('NORM-U2-REPORT: karta raportu pacjenta pokazuje przedziały; formatery zwijają zdegenerowane pary', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
-  await page.addScriptTag({ url: '/vilda_patient_report.js?v=7' });
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=8' });
   await page.waitForFunction(() => typeof window.patientReportBuildNutritionCardFromModel === 'function');
   const out = await page.evaluate(() => {
     const model = window.nutritionNormsBuildCardModel(
@@ -236,6 +236,105 @@ test('NORM-U2-REPORT: karta raportu pacjenta pokazuje przedziały; formatery zwi
   // nigdy nie renderuje się jako „40–40% energii" / „95–95 g/d".
   if (out.degeneratePercent !== null) expect(out.degeneratePercent).toBe('około 40% energii');
   if (out.degenerateGrams !== null) expect(out.degenerateGrams).toBe('95 g/d');
+});
+
+test('NORM-PAL14-CHILD: PAL 1,4 dla 13-latka — opcja kliniczna, TEE metodą norm, komunikat', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const m14 = await buildModel(
+    page,
+    { ageYears: 13, ageMonthsOpt: null, sex: 'M', weightKg: 45, heightCm: 158 },
+    { palSelector: '1.4', bodyMode: 'actual' },
+  );
+  const m16 = await buildModel(
+    page,
+    { ageYears: 13, ageMonthsOpt: null, sex: 'M', weightKg: 45, heightCm: 158 },
+    { palSelector: '1.6', bodyMode: 'actual' },
+  );
+  expect(m14.energy.available).toBe(true);
+  expect(m14.energy.usedPal).toBe(1.4);
+  expect(m14.energy.clinicalPal).toBe(true);
+  expect(m16.energy.clinicalPal).toBe(false);
+  // Ta sama metoda norm (Henry × PAL × 1,01): TEE skaluje się liniowo z PAL.
+  expect(m14.energy.mainValue).toBeCloseTo((m16.energy.mainValue * 1.4) / 1.6, 0);
+  // Komunikat o wyborze poza normami.
+  const note = (m14.messages || []).find((x) => String(x.text || '').includes('poza Normami 2024'));
+  expect(note).toBeTruthy();
+  expect(note.text).toContain('1,6–2,0');
+  // Opcja w selektorze karty: 1,4 z dopiskiem, oznaczona jako kliniczna.
+  const opt = m14.ui.palOptions.find((o) => o.value === '1.4');
+  expect(opt).toBeTruthy();
+  expect(opt.label).toContain('(poza Normami 2024)');
+  expect(opt.clinical).toBe(true);
+  // Karta raportu pacjenta przenosi zastrzeżenie.
+  await page.addScriptTag({ url: '/vilda_patient_report.js?v=8' });
+  await page.waitForFunction(() => typeof window.patientReportBuildNutritionCardFromModel === 'function');
+  const reportNote = await page.evaluate((model) => window.patientReportBuildNutritionCardFromModel(model).note, m14);
+  expect(reportNote).toContain('poza Normami 2024');
+});
+
+test('NORM-PAL14-RANGE-AND-GUARDS: „pełen zakres" bez 1,4; 4–9 lat normatywnie; dorosły bez 1,2', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  // „Pełen zakres aktywności" dla 13-latka pozostaje normatywny: 1,6–2,0.
+  const range = await buildModel(
+    page,
+    { ageYears: 13, ageMonthsOpt: null, sex: 'F', weightKg: 45, heightCm: 158 },
+    { palSelector: 'range', bodyMode: 'actual' },
+  );
+  const pals = (range.energy.items || []).map((i) => i.pal);
+  expect(pals).toEqual([1.6, 1.8, 2]);
+  expect(range.energy.clinicalPal).toBe(false);
+  // Dziecko 4–9 lat: 1,4 to zwykła opcja normatywna, bez plakietki i komunikatu.
+  const young = await buildModel(
+    page,
+    { ageYears: 7, ageMonthsOpt: null, sex: 'F', weightKg: 24, heightCm: 122 },
+    { palSelector: '1.4', bodyMode: 'actual' },
+  );
+  expect(young.energy.usedPal).toBe(1.4);
+  expect(young.energy.clinicalPal).toBe(false);
+  expect((young.messages || []).some((x) => String(x.text || '').includes('poza Normami 2024'))).toBe(false);
+  const youngOpt = young.ui.palOptions.find((o) => o.value === '1.4');
+  expect(youngOpt.label).not.toContain('poza Normami');
+  // Dorosły: karta norm nie oferuje i nie przyjmuje PAL 1,2 (kliniczny tylko w planie).
+  const adult = await buildModel(
+    page,
+    { ageYears: 40, ageMonthsOpt: null, sex: 'M', weightKg: 80, heightCm: 178 },
+    { palSelector: '1.2', bodyMode: 'actual' },
+  );
+  expect(adult.ui.palOptions.some((o) => o.value === '1.2')).toBe(false);
+  expect(adult.energy.usedPal).not.toBe(1.2);
+  expect(adult.energy.clinicalPal).toBe(false);
+});
+
+test('NORM-PAL14-SHARED: wspólny moduł energii — zestawy, rozwiązanie 1,4 i select planu dla 13-latka', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const out = await page.evaluate(() => {
+    const normative = Array.from(window.energyGetAllowedPals(13, 0, 'normative'));
+    const clinical = Array.from(window.energyGetAllowedPals(13, 0, 'clinical'));
+    const resolved = window.energyResolvePalSelection({
+      ageYears: 13,
+      ageMonthsOpt: 0,
+      palInput: '1.4',
+      palPolicy: 'clinical',
+      allowRange: false,
+    });
+    const sel = document.createElement('select');
+    window.energyPopulatePlanPalSelect(sel, { ageYears: 13, ageMonthsOpt: 0, value: '1.4' });
+    const options = Array.from(sel.options).map((o) => ({ value: o.value, label: o.textContent }));
+    return { normative, clinical, resolved, options, selected: sel.value };
+  });
+  expect(out.normative).toEqual([1.6, 1.8, 2]);
+  expect(out.clinical).toEqual([1.4, 1.6, 1.8, 2]);
+  expect(out.resolved.used).toBe(1.4);
+  expect(out.resolved.clinicalOverride).toBe(true);
+  expect(out.resolved.note || '').toBe('');
+  // Select Planu odchudzania dla 13-latka zawiera 1,4 z dopiskiem i przyjmuje wybór.
+  const opt14 = out.options.find((o) => o.value === '1.4');
+  expect(opt14).toBeTruthy();
+  expect(opt14.label).toContain('poza Normami 2024');
+  expect(out.selected).toBe('1.4');
 });
 
 test('NORM-U2-RANGES-INTACT: dzieci ≥1 r.ż. i dorośli bez regresji przedziałów', async ({ page }) => {
