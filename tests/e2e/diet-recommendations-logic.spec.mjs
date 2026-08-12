@@ -18,7 +18,7 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=14' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=15' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
 }
 
@@ -694,9 +694,71 @@ test('DIET-LANG-ARTIFACTS: bez „miesiąca/miesięcy", minutowej precyzji spala
   const std = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
   expect(std).not.toContain('miesiąca/miesięcy');
   expect(std).toMatch(/ok\. \d+,\d miesiąca|ok\. \d+ miesięcy/u);
+  // Godzinowe totale spalania usunięte w całości (patrz DIET-ACT-ACCELERATOR):
   expect(std).not.toMatch(/\d+ h \d+ min/u);
-  expect(std).toMatch(/około \d+ godzin/u);
+  expect(std).not.toMatch(/około \d{2,} godzin/u);
   const childPac = await genEnergyText(page, { age: 8, sex: 'F', w: 45, h: 130, pf: true });
   expect(childPac).not.toContain('uzyskujemy');
   expect(childPac).toContain('Taki plan daje deficyt');
+});
+
+// ── Ruch jako akcelerator + spójność wzrost/redukcja (2026-08-12, decyzje właściciela) ──
+
+// DIET-ACT-ACCELERATOR: zamiast zniechęcających totali („Rower – około 207 godzin"
+// spalania całego nadmiaru bez diety) dokument pokazuje ruch jako akcelerator
+// szacunku dietetycznego: kcal realnej sesji + krótszy czas dojścia do normy.
+test('DIET-ACT-ACCELERATOR: ruch skraca szacunek dietetyczny zamiast strasznych totali', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const text = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  // Totale i mecze zniknęły:
+  expect(text).not.toMatch(/około \d{2,} godzin/u);
+  expect(text).not.toContain('meczów');
+  expect(text).not.toContain('spalenie całego nadmiaru');
+  // Akcelerator: sesja z kcal i krótszy czas:
+  const m = text.match(/szacować na około (\d+) tygodni.*po 45 minut tygodniowo \(ok\. (\d+) kcal każda\) skracają szacowany czas do około (\d+) tygodni/su);
+  expect(m).not.toBeNull();
+  const weeksDiet = Number(m[1]);
+  const sessionKcal = Number(m[2]);
+  const weeksWithActivity = Number(m[3]);
+  expect(weeksWithActivity).toBeLessThan(weeksDiet);
+  // Kcal sesji z wzoru MET (rower 6, 45 min, masa 75 kg): 6×3,5×75/200×45 ≈ 354
+  expect(Math.abs(sessionKcal - 354)).toBeLessThanOrEqual(1);
+});
+
+// DIET-GROWTH-STRATEGY-TEXT: tekst wzrostowy zależy od strategii — w redukcji
+// bez „masa ma rosnąć minimalnie/pozostać zbliżona" (sprzeczność z planem
+// −0,6 kg/tydz.), w stabilizacji klasyczne brzmienie zostaje.
+test('DIET-GROWTH-STRATEGY-TEXT: bez sprzeczności utrzymuj-vs-redukuj', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const red = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  expect(red).not.toMatch(/rosła w tym czasie minimalnie|rosła jak najwolniej|pozostała zbliżona do obecnej/u);
+  expect(red).toContain('przyspiesza wychodzenie z');
+  const stab = await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+    const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
+    window.professionalMode = true;
+    set('age', 14); set('ageMonths', 0); set('sex', 'M');
+    set('weight', 75); set('height', 165);
+    flag('reduceToggle', false); flag('stabilizationToggle', true); flag('growthEndedFlag', false);
+    flag('patientFacingToggle', false);
+    return window.generateDietRecommendations().textOutput;
+  });
+  expect(stab).toContain('rosła w tym czasie minimalnie');
+});
+
+// DIET-ACT-UNISEX: listy aktywności bez podziału wg płci — dziewczynka i chłopiec
+// dostają ten sam zestaw przykładów (z tańcem włącznie).
+test('DIET-ACT-UNISEX: wspólne listy aktywności dla obu płci', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openWithDietModule(page);
+  const boy = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  expect(boy).toContain('taniec');
+  expect(boy).not.toContain('piłka nożna');
+  const boyActivityLines = boy.split('\n').filter((l) => l.includes('taniec')).map((l) => l.replace(/^\d+\. /, ''));
+  const girl = await genEnergyText(page, { age: 14, sex: 'F', w: 75, h: 165, pf: false });
+  for (const line of boyActivityLines.filter((l) => l.startsWith('Wskazana jest aktywność'))) {
+    expect(girl).toContain(line);
+  }
 });
