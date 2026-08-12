@@ -94,9 +94,45 @@ test('TONORM-S1-OLDER-UNCHANGED: 13 lat i dorosły — tryb redukcyjny z tabelą
   expect(teen.visible).toBe(true);
   expect(teen.text).toContain('Musisz zredukować');
   expect(teen.text).toContain('Dystans / Czas do normy');
-  expect(teen.text).toContain('Do 50 centyla');
+  expect(teen.text).toContain('Nadwyżka względem 50. centyla BMI');
+  expect(teen.text).not.toContain('Do 50 centyla');
   const adult = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   expect(adult.visible).toBe(true);
   expect(adult.text).toContain('Musisz zredukować');
   expect(adult.text).toContain('Dystans / Czas do normy');
+});
+
+test('TONORM-S2-ADULT-UNDER: dorosły z niedowagą dostaje komunikat i brakujące kg do 18,5', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const out = await renderToNorm(page, { age: 30, months: 0, sex: 'F', weight: 45, height: 170 });
+  expect(out.visible).toBe(true);
+  expect(out.text.toLowerCase()).toContain('niedowag');
+  // 18,5 × 1,70² = 53,465 kg → brakuje ok. 8,5 kg.
+  expect(out.text).toContain('Brakuje ok.');
+  expect(out.text).toContain('8,5');
+  expect(out.text).not.toContain('Musisz zredukować');
+});
+
+test('TONORM-S2-ADULT-NEAR-LIMIT: BMI 24,9–25 → komunikat o górnej granicy zamiast „redukcji 0,1 kg"', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  // 79,1 kg / 178 cm → BMI 24,97 (powyżej celu 24,9, poniżej progu nadwagi 25).
+  const out = await renderToNorm(page, { age: 30, months: 0, sex: 'M', weight: 79.1, height: 178 });
+  expect(out.visible).toBe(true);
+  expect(out.text).not.toContain('Musisz zredukować');
+  expect(out.text).toContain('zbliża się do jej górnej granicy');
+  // Od progu nadwagi (BMI ≥ 25) redukcja wraca.
+  const over = await renderToNorm(page, { age: 30, months: 0, sex: 'M', weight: 80, height: 178 });
+  expect(over.text).toContain('Musisz zredukować');
+  expect(over.text).toContain('Nadwyżka względem BMI 22');
+});
+
+test('TONORM-S2-TEEN-18-UNDER: 18-latek z niskim BMI oceniany centylem, nie progiem dorosłych', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  // 18 lat, BMI 18,2 — u dorosłych „niedowaga", ale centylowo w normie (> 5c).
+  const out = await renderToNorm(page, { age: 18, months: 0, sex: 'M', weight: 57.7, height: 178 });
+  expect(out.visible).toBe(true);
+  expect(out.text.toLowerCase()).not.toContain('niedowag');
 });
