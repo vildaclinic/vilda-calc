@@ -269,6 +269,18 @@ Testy: DIET-PAL-TARGET-BMI (mediana Palczewskiej metodą BMI na realnym `generat
 
 Tym wpisem wszystkie ustalenia audytu modułu z 2026-08-11 (wraz z uwagami przeglądu PR #109) są rozstrzygnięte i wdrożone (etapy 1–7).
 
+### ENERGY — ruch jako akcelerator; spójność wzrost/redukcja (2026-08-12, decyzje właściciela)
+
+Analiza zaleceń energetycznych pod kątem błędów logicznych/merytorycznych i motywującego brzmienia. Ustalenia i zmiany (3 decyzje właściciela — wszystkie rekomendacje przyjęte):
+
+1. **Blok czasu spalania przebudowany na akcelerator.** Dotąd dokument podawał teoretyczny czas spalenia CAŁEGO nadmiaru energii (nadmiar kg × 7700 kcal) pojedynczą aktywnością bez udziału diety (np. „Rower – około 207 godzin", „Piłka nożna – około 119 meczów") — liczby poprawne rachunkowo (wzór MET: kcal/min = MET × 3,5 × masa ÷ 200; zweryfikowane co do godziny), ale zniechęcające i mylące obok dietetycznego szacunku tygodni. Po zmianie ruch jest pokazywany jako akcelerator szacunku Z DIETĄ: kaloryczność realnej sesji (jazda na rowerze MET 6, 45 min, masa pacjenta) i nowy czas przy 3 sesjach tygodniowo — `z2 = ⌈nadmiar ÷ (utrata_z_diety + 3·kcal_sesji/7700)⌉` (np. „ok. 21 tygodni → ok. 17 tygodni"), z dopiskiem o korzyściach ruchu niezależnych od masy. Dietetyczny szacunek tygodni — bez zmian metodycznych.
+2. **Teksty wzrostowe zależne od strategii.** Dotąd komunikat „masa ma rosnąć minimalnie / pozostać zbliżona do obecnej" (filozofia stabilizacji) pojawiał się także w trybie REDUKCJI, obok planu −0,4/−0,6 kg/tydz. — dwa sprzeczne cele w jednym dokumencie. Po zmianie w redukcji wzrastanie jest przedstawiane jako dodatkowy sprzymierzeniec planu („każdy dodatkowy centymetr … przyspiesza wychodzenie z nadwagi/otyłości"), a klasyczne brzmienie zostaje wyłącznie w stabilizacji.
+3. **Listy aktywności ujednolicone między płciami** (dotąd: chłopcy bieganie/rower/piłka nożna, dziewczęta pływanie/taniec/rower) — wspólny zestaw przykładów (rower, pływanie, bieganie, taniec, gry zespołowe) w bloku akceleratora i punkcie o codziennym ruchu.
+
+Pozostałe elementy narracji energetycznej sprawdzone bez zastrzeżeń: 7700 kcal/kg i wartości MET (standard), przeliczenia tygodnie↔miesiące, spójność deficyt↔tempo, normy płynów, dawkowanie wit. D.
+
+Testy: DIET-ACT-ACCELERATOR (weryfikacja kcal sesji z wzoru MET co do ±1 kcal i skrócenia szacunku), DIET-GROWTH-STRATEGY-TEXT (redukcja bez „rosła minimalnie", stabilizacja z klasycznym brzmieniem), DIET-ACT-UNISEX w `tests/e2e/diet-recommendations-logic.spec.mjs`.
+
 ### ENERGY — język zaleceń energetycznych: spójny rejestr wg adresata (2026-08-12, decyzja właściciela)
 
 Przełącznik „Język zaleceń" (Dla pacjenta / Standardowy) jest opcją wyłącznie zakładki „Zalecenia energetyczne". Analiza wygenerowanych dokumentów wykazała niekonsekwencje rejestru; po decyzji właściciela („naprawiaj" + „standard nastolatka też wyrównaj do neutralnego") ujednolicono brzmienie — bez zmian liczb, progów i logiki klinicznej (26 podmian tekstów):
