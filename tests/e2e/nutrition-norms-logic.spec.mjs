@@ -23,6 +23,15 @@ import { expect, test } from '@playwright/test';
 //    aktualna.
 //  NORM-PROT-U1-RENDER: karta w DOM pokazuje podstawę przy „Norma białka"
 //    i poprawną gramatycznie linię porównania „dla masy aktualnej".
+//
+// Zmiana U2 (niemowlęta 6–11 mies., zapisy zgodne z normami):
+//  NORM-U2-INFANT-FAT: tłuszcz to wartość referencyjna 40%E ([40,40]),
+//    gramy przeliczone z TEE; nota o wartości referencyjnej.
+//  NORM-U2-INFANT-CARB-AI: węglowodany to AI 95 g/d (bez %E), dostępne
+//    także bez masy ciała (AI nie zależy od TEE).
+//  NORM-U2-INFANT-RENDER: kafle karty pokazują „około 40% energii",
+//    „95 g/d" i notę AI; brak osieroconego „—" przy udziale %E węglowodanów.
+//  NORM-U2-RANGES-INTACT: dzieci ≥1 r.ż. i dorośli — przedziały bez regresji.
 
 async function openIndex(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
@@ -140,4 +149,95 @@ test('NORM-PROT-U1-RENDER: karta pokazuje podstawę normy, raport — porównani
   // Zdanie porównawcze (karta raportu) — poprawna gramatyka, bez „dla masa ...".
   expect(out.comparisonNote).toContain('dla masy aktualnej');
   expect(out.comparisonNote).not.toContain('dla masa ');
+});
+
+test('NORM-U2-INFANT-FAT: tłuszcz 6–11 mies. jako wartość referencyjna 40%E', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const m = await buildModel(
+    page,
+    { ageYears: 0.67, ageMonthsOpt: 8, sex: 'M', weightKg: 8, heightCm: 70 },
+    {},
+  );
+  expect(m.fat.percentRange).toEqual([40, 40]);
+  expect(m.fat.lowActivityNote).toContain('wartość referencyjną');
+  // Gramy przeliczone z energii: 40% TEE / 9 kcal na g.
+  expect(m.energy.available).toBe(true);
+  const tee = m.energy.mainValue;
+  expect(m.fat.gramRange[0]).toBeCloseTo((tee * 0.4) / 9, 0);
+  expect(m.fat.gramRange[1]).toBeCloseTo((tee * 0.4) / 9, 0);
+  // Punkt odniesienia posiłków wyrównany do 10/40/50%E.
+  expect(m.planningReference.percent.fat).toBe(40);
+  expect(m.planningReference.percent.carbs).toBe(50);
+});
+
+test('NORM-U2-INFANT-CARB-AI: węglowodany 6–11 mies. jako AI 95 g/d, także bez masy', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const withWeight = await buildModel(
+    page,
+    { ageYears: 0.67, ageMonthsOpt: 8, sex: 'F', weightKg: 8, heightCm: 70 },
+    {},
+  );
+  expect(withWeight.carbs.percentRange).toBeNull();
+  expect(withWeight.carbs.gramRange).toEqual([95, 95]);
+  expect(withWeight.carbs.aiNote).toContain('spożycie wystarczające (AI)');
+  // AI nie zależy od TEE — dostępne również bez masy ciała.
+  const noWeight = await buildModel(
+    page,
+    { ageYears: 0.67, ageMonthsOpt: 8, sex: 'F', weightKg: null, heightCm: null },
+    {},
+  );
+  expect(noWeight.carbs.gramRange).toEqual([95, 95]);
+});
+
+test('NORM-U2-INFANT-RENDER: kafle karty — „około 40% energii", „95 g/d", nota AI, bez „—"', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const html = await page.evaluate(() => {
+    const set = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = String(value);
+    };
+    set('age', 0);
+    set('ageMonths', 8);
+    set('sex', 'M');
+    set('weight', 8);
+    set('height', 70);
+    window.renderNutritionNormsCardFromDom();
+    const mount = document.getElementById('nutritionNormsMount');
+    return mount ? mount.innerHTML : '';
+  });
+  expect(html).toContain('około 40% energii');
+  expect(html).toContain('95 g/d');
+  expect(html).toContain('spożycie wystarczające (AI)');
+  expect(html).toContain('wartość referencyjną');
+  // Kafel węglowodanów nie pokazuje osieroconej linii „—" po udziale %E.
+  expect(html).not.toContain('nutrition-norms-sub--macro-share">—<');
+});
+
+test('NORM-U2-RANGES-INTACT: dzieci ≥1 r.ż. i dorośli bez regresji przedziałów', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const child = await buildModel(
+    page,
+    { ageYears: 9, ageMonthsOpt: null, sex: 'M', weightKg: 30, heightCm: 135 },
+    { palSelector: '1.6', bodyMode: 'actual' },
+  );
+  expect(child.fat.percentRange).toEqual([30, 40]);
+  expect(child.carbs.percentRange).toEqual([45, 65]);
+  expect(child.carbs.aiNote || '').toBe('');
+  const adult = await buildModel(
+    page,
+    { ageYears: 40, ageMonthsOpt: null, sex: 'F', weightKg: 70, heightCm: 165 },
+    { palSelector: '1.6', bodyMode: 'actual' },
+  );
+  expect(adult.fat.percentRange).toEqual([30, 40]);
+  expect(adult.carbs.percentRange).toEqual([45, 65]);
+  const toddler = await buildModel(
+    page,
+    { ageYears: 2, ageMonthsOpt: null, sex: 'F', weightKg: 12, heightCm: 88 },
+    { palSelector: '1.6', bodyMode: 'actual' },
+  );
+  expect(toddler.fat.percentRange).toEqual([35, 40]);
 });
