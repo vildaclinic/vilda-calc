@@ -1229,6 +1229,7 @@ const CORE_SHELL_URLS = [
   '/nutrition_norms.js?v=41',
   '/nutrition_norms.js?v=42',
   '/nutrition_norms.js?v=43',
+  '/nutrition_norms.js?v=44',
   '/nutrition_micros.js',
   '/nutrition_micros.js?v=25',
   '/nutrition_micros.js?v=26',
