@@ -11,7 +11,7 @@
   'use strict';
   if (!w || w.VildaBmiJourney) return;
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var STORAGE_KEY = 'vildaBmiJourneyState';
   var KCAL_PER_KG_FALLBACK = 7700;
 
@@ -141,7 +141,11 @@
   function computeModel(ctx) {
     var diets = resolveDiets(ctx);
     var dietAvailable = diets.length > 0;
-    var dietKey = state.dietKey;
+    // Fuzja kart, etap 1: jeden wybór diety w aplikacji — źródłem prawdy jest
+    // select #dietLevel karty „Plan odchudzania"; localStorage tylko jako
+    // fallback, gdy selectu nie ma na stronie.
+    var dietSel = d.getElementById('dietLevel');
+    var dietKey = dietSel && dietSel.value ? dietSel.value : state.dietKey;
     var found = null;
     for (var i = 0; i < diets.length; i += 1) if (diets[i].key === dietKey) found = diets[i];
     if (!found) {
@@ -343,6 +347,15 @@
     } else if (kind === 'diet') {
       state.dietOn = true;
       state.dietKey = el.getAttribute('data-key');
+      // Ustaw wspólny select i przelicz kartę „Plan odchudzania" — obie karty
+      // mają zawsze pokazywać tę samą dietę i te same terminy.
+      var dietSel = d.getElementById('dietLevel');
+      if (dietSel && dietSel.value !== state.dietKey) {
+        dietSel.value = state.dietKey;
+        if (typeof w.updatePlanFromDiet === 'function') {
+          try { w.updatePlanFromDiet(); } catch (err) { /* plan przeliczy się przy następnym update() */ }
+        }
+      }
     } else if (kind === 'move') {
       var key = el.getAttribute('data-key');
       state.moves[key] = !state.moves[key];
@@ -443,6 +456,7 @@
   w.VildaBmiJourney = {
     VERSION: VERSION,
     mount: mount,
+    refresh: rerender,
     getPdfModel: getPdfModel,
     getSnapshot: getSnapshot
   };
