@@ -45,9 +45,9 @@ test('PLAN-S1-ADULT-TARGET: dorosły dostaje liczbowy czas do granicy normy (cel
   const out = await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   expect(out.visible).toBe(true);
   // PAL 1,4, dieta umiarkowana (−588 kcal → 0,5345 kg/tydz.), cel 24,9 → 78,87 kg:
-  // 16,13 kg / 2,32 kg/mies. → 7 mies. (siatka 0,5). Dotąd: „– tyg.".
-  expect(out.text).toMatch(/osiągniesz górną granicę normy BMI w czasie: 7 mies\./);
-  expect(out.text).toMatch(/7 mies\. \(w \S+ \d{4}\)/u);
+  // 16,13 kg / 2,32 kg/mies. → 7 mies. (siatka 0,5); układ 2.0: zdanie + znacznik osi.
+  expect(out.text).toMatch(/Stosując dietę umiarkowaną osiągniesz górną granicę normy BMI (w|we) \S+ \d{4} \(za ok\. 7 miesięcy\)/u);
+  expect(out.text).toMatch(/7 mies\.\s*granica normy/u);
   expect(out.text).not.toContain('– mies.');
   expect(out.text).not.toContain('tyg.');
 });
@@ -56,9 +56,9 @@ test('PLAN-S1-ADULT-LABEL: druga karta u dorosłego mówi o środku normy (BMI 2
   test.setTimeout(90_000);
   await openIndex(page);
   const out = await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
-  expect(out.text).toContain('środka normy (BMI 22)');
+  // Układ 2.0: drugi cel jako znacznik osi czasu „BMI 22" z czasem w miesiącach.
+  expect(out.text).toMatch(/\d+(,5)? mies\.\s*BMI 22/u);
   expect(out.text).not.toContain('50. centyl');
-  expect(out.text).toMatch(/BMI 22\) za: \d+(,5)? mies\./);
 });
 
 test('PLAN-S1-CHILD-LABEL: u dziecka druga karta zostaje przy 50. centylu BMI', async ({ page }) => {
@@ -68,7 +68,8 @@ test('PLAN-S1-CHILD-LABEL: u dziecka druga karta zostaje przy 50. centylu BMI', 
   expect(out.visible).toBe(true);
   expect(out.text).toContain('50. centyl BMI');
   expect(out.text).not.toContain('BMI 22');
-  expect(out.text).toMatch(/osiągniesz górną granicę normy BMI w czasie: \d+(,5)? mies\./);
+  expect(out.text).toMatch(/osiągniesz górną granicę normy BMI/);
+  expect(out.text).toMatch(/\d+(,5)? mies\.\s*granica normy/u);
 });
 
 test('PLAN-S1-GUARDS: fillDietSelect bez #dietChoiceWrap nie rzuca; martwy proposeDiets usunięty', async ({ page }) => {
@@ -231,4 +232,92 @@ test('PLAN-S3-HORIZON: przy horyzoncie > 18 mies. pojawia się zastrzeżenie ori
     return (document.getElementById('planResults')?.textContent || '').replace(/\s+/g, ' ').trim();
   });
   expect(out).toContain('szacunek orientacyjny');
+});
+
+// ===== Plan odchudzania 2.0 (koncepcja C): hero, oś czasu, segmenty,
+// karta w prawej kolumnie dla wszystkich (decyzja właściciela). =====
+
+test('PLAN-C-LAYOUT: karta w prawej kolumnie (normWrapper) i u dorosłego, i u dziecka; stare kroki ukryte', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const probe = async (fill) => {
+    await renderPlan(page, fill);
+    return page.evaluate(() => ({
+      parent: document.getElementById('planCard')?.parentElement?.id,
+      inputs: getComputedStyle(document.getElementById('planInputs')).display,
+      palSelect: !!document.getElementById('palFactor'),
+      dietSelect: !!document.getElementById('dietLevel'),
+    }));
+  };
+  const adult = await probe({ age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  expect(adult.parent).toBe('normWrapper');
+  expect(adult.inputs).toBe('none');
+  const child = await probe({ age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
+  expect(child.parent).toBe('normWrapper');
+  // Ukryte selecty pozostają źródłem prawdy (autosave, integracje).
+  expect(child.palSelect).toBe(true);
+  expect(child.dietSelect).toBe(true);
+});
+
+test('PLAN-C-SEGMENTS: segmenty diety i PAL sterują ukrytymi selectami i przeliczają kartę', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  await page.evaluate(() => document.querySelector('#planResults [data-plan2-diet="intense"]').click());
+  let out = await page.evaluate(() => ({
+    diet: document.getElementById('dietLevel').value,
+    text: (document.getElementById('planResults').textContent || '').replace(/\s+/g, ' '),
+  }));
+  expect(out.diet).toBe('intense');
+  expect(out.text).toContain('Stosując dietę intensywną');
+  expect(out.text).toContain('−802 kcal/dzień');
+  await page.evaluate(() => document.querySelector('#planResults [data-plan2-pal="1.6"]').click());
+  await page.waitForTimeout(900); // debouncedUpdate
+  out = await page.evaluate(() => ({
+    pal: document.getElementById('palFactor').value,
+    text: (document.getElementById('planResults').textContent || '').replace(/\s+/g, ' '),
+  }));
+  expect(out.pal).toBe('1.6');
+  expect(out.text).toContain('−916 kcal/dzień');
+  // Niedostępna dieta (podłoga REE u dziecka przy PAL 1,4) jest wyszarzona, nie znika.
+  await renderPlan(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
+  const dis = await page.evaluate(() => {
+    // PAL 1,6 został z poprzedniego kroku — wróć na 1,4 (przy 1,6 intensywna jest legalna).
+    document.getElementById('palFactor').value = '1.4';
+    window.update();
+    const b = document.querySelector('#planResults [data-plan2-diet="intense"]');
+    return { disabled: b?.disabled, label: (b?.textContent || '').trim() };
+  });
+  expect(dis.disabled).toBe(true);
+  expect(dis.label).toContain('niedostępna');
+});
+
+test('PLAN-C-THEME: liquid glass nie przemalowuje segmentów (jawne style + #id + !important)', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const out = await page.evaluate(() => {
+    document.body.classList.add('liquid-ios26');
+    const on = getComputedStyle(document.querySelector('#planResults .plan2-seg button[aria-pressed="true"]'));
+    const off = getComputedStyle(document.querySelector('#planResults .plan2-seg button[aria-pressed="false"]'));
+    document.body.classList.remove('liquid-ios26');
+    return { onColor: on.color, onRadius: on.borderRadius, offBg: off.backgroundColor };
+  });
+  // `.liquid-ios26 button{...}!important` nie może wygrać z segmentami:
+  expect(out.onColor).toBe('rgb(255, 255, 255)');
+  expect(out.onRadius).toBe('0px');
+  expect(out.offBg).toBe('rgba(0, 0, 0, 0)');
+});
+
+test('PLAN-C-NARROW: karta mieści się w wąskiej kolumnie bez poziomego przewijania', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 380, height: 900 });
+  await openIndex(page);
+  await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const fits = await page.evaluate(() => {
+    const card = document.getElementById('planCard');
+    return { card: card.scrollWidth <= card.clientWidth + 1, doc: document.documentElement.scrollWidth <= 381 };
+  });
+  expect(fits.card).toBe(true);
+  expect(fits.doc).toBe(true);
 });

@@ -107,7 +107,7 @@
     'vilda_professional_module.js?v=4',
     'vilda_persist_runtime.js?v=13',
     'vilda_summary_cards.js?v=23',
-    'vilda_diet_plan_ui.js?v=6',
+    'vilda_diet_plan_ui.js?v=7',
     'vilda_bmi_journey.js?v=4',
     'vilda_estimated_intake_ui.js?v=1',
     'vilda_estimated_intake_runtime.js?v=1',
@@ -535,7 +535,7 @@
     const contractDetail = checkNamedContracts(DEFAULT_DIET_PLAN_UI_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.2.0' &&
+        api.VERSION === '1.3.0' &&
         api.STEP === '8Q-5' &&
         typeof api.init === 'function' &&
         typeof api.initDietPlanUI === 'function' &&
