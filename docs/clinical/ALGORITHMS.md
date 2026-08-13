@@ -367,6 +367,23 @@ Testy: TONORM-J-ADULT-PANEL, TONORM-J-INTERACTIONS, TONORM-J-CHILD, TONORM-J-PER
 
 Etap C — sekcja PDF raportu BMI (2026-08-12): sekcja „DROGA DO NORMY BMI" w raporcie PDF (`downloadPDF` w `app.js`) odzwierciedla panel zamiast starego układu. Moduł publikuje `VildaBmiJourney.getPdfModel()` — tekstową wersję aktualnego stanu panelu (nagłówek celu i Start·Cel, wiersze tabeli wkładów z rzeczywistego wyboru użytkownika + „Razem", zdanie z przewidywanym terminem w miesiącach zaokrąglanych do 0,5 oraz zysk z ruchu). Liczby identyczne z panelem (ten sam `computeModel`); dla fontu standardowego jsPDF (helvetica/WinAnsi) nazwy wierszy są filtrowane z emoji (znaki poza U+0020–U+02FF), a „≈"/„−" zapisywane jako „ok."/„-". Gdy model melduje `available:false` (panel niezamontowany: BMI w normie, niedowaga, wiek < 5 lat, brak modułu albo pusty wybór), PDF renderuje dotychczasową sekcję (komunikat karty + tabela MET z przykładem trasy) — stara ścieżka pozostaje w kodzie jako fallback. Testy: TONORM-PDF-MODEL, TONORM-PDF-MODEL-SELECTION, TONORM-PDF-FALLBACK.
 
+### ENERGY-PLAN — przegląd karty „Plan odchudzania", etap 1 (2026-08-13)
+
+**Weryfikacja źródłowa silnika energii (`vilda_diet_plan_ui.js`).** Wszystkie współczynniki wzorów Henry'ego (REE, strefy: 1–2, 3–9, 10–17, 18, 19–29, 30–59, ≥60 lat, obie płcie) porównano z Tabelą 1/2 rozdziału o energii w PDF-ie Norm 2024 (w repo) oraz wersjami MJ/dobę — zgodne. Moduł poprawnie realizuje też przypis norm o błędnym wzorze kcal dla chłopców 3–9 lat (liczy z wersji MJ × 239). Wzór Butte dla niemowląt 6–11 mies. (TEE = −152,0 + 92,8 × W) — zgodny; uwaga: norma energii niemowląt to TEE + energia wzrastania, moduł podaje samo TEE (plan dla niemowląt i tak zablokowany). Dla ≥60 lat moduł stosuje równanie Henry'ego 60–70 również powyżej 70 lat — jak normy (Tabela 2 ma jedną strefę „≥ 60").
+
+**Erratum norm — NIE „poprawiać" na 226.** Kolumna kcal Tabeli 1 podaje dla chłopców 10–17 lat `15,6·W + 226·H + 299`, ale kolumna MJ z tej samej tabeli (`0,0651·W + 1,11·H + 1,25`) po przeliczeniu ×239 daje ~265, a pierwotna publikacja Henry'ego (2005) podaje 266. Wartość „226" w kolumnie kcal norm to najprawdopodobniej literówka (analogiczna do udokumentowanego w normach błędu dla chłopców 3–9 lat). Moduł używa 266 — zgodnie z wersją MJ norm i pierwotnym źródłem.
+
+**Etap 1 — naprawione (PR):**
+
+1. **Cel dorosłych w „czasie do granicy normy"**: czytany z nieistniejącego `ADULT_BMI.NORMAL_MAX` (obiekt ma tylko UNDER/OVER/OBESE) → `undefined` → każdy dorosły widział „– tyg. (≈ – lat)". Teraz cel z `toNormalBMITarget()` (dorośli: 24,9; dzieci: 85. centyl) — ten sam cel co karta „Droga do normy BMI", więc obie karty liczą ten sam czas dla tej samej diety.
+2. **Druga karta wyniku u dorosłych**: nagłówek „idealna waga (50. centyl BMI)" był pediatryczny, a cel to sztywne BMI 22 — u dorosłych brzmi teraz „dojdziesz do środka normy (BMI 22)"; u dzieci bez zmian (50. centyl z LMS dla wieku).
+3. **`fillDietSelect`**: dostęp do `#dietChoiceWrap.style` bez null-checka (wyjątek przy braku elementu) — dodane osłony.
+4. **Martwy export `proposeDiets(BMR, PAL, …)`** (TEE=BMR×PAL bez korekty wzrastania ×1,01, zero wywołań w repo, HTML i testach) — usunięty; `proposeDietsFromTEE` pozostaje jedynym wejściem.
+
+Poza zakresem etapu 1 (do decyzji właściciela): bramka wieku w trybie profesjonalnym (plan redukcyjny widoczny nawet <2 lat), dorosłocentryczne opisy diet (sztywne zakresy kcal), płaskie minimum 1200 kcal dla dzieci 1–18, liniowe prognozy wieloletnie u dzieci bez uwzględnienia wzrastania.
+
+Testy: PLAN-S1-ADULT-TARGET, PLAN-S1-ADULT-LABEL, PLAN-S1-CHILD-LABEL, PLAN-S1-GUARDS w `tests/e2e/diet-plan-logic.spec.mjs` (na produkcyjnym `window.update()`).
+
 ### ENERGY-PAL — potwierdzenie mnożnika wzrastania (U3) i PAL 1,4 dla 10–18 lat jako opcja kliniczna (2026-08-12, decyzja właściciela)
 
 **U3 — mnożnik wzrastania potwierdzony w pierwotnym źródle.** Rozdział o energii w PDF-ie norm (w repo): „U dzieci i młodzieży w wieku od 1 do 18 lat wydatek energetyczny związany ze wzrastaniem został uwzględniony jako 1 % wzrost wartości PAL dla każdej grupy wiekowej". Aplikacja mnoży TEE przez `ENERGY_CHILD_GROWTH_MULTIPLIER = 1,01` do 18 r.ż. włącznie — ponieważ TEE = REE × PAL, podniesienie PAL o 1% i pomnożenie TEE przez 1,01 są tożsame. Konwencja aplikacji jest więc dokładnie metodą norm; bez zmian kodu.
