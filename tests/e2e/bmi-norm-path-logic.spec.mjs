@@ -93,7 +93,7 @@ test('TONORM-S1-OLDER-JOURNEY: 13 lat i dorosły — panel „Droga do normy 2.0
   await openIndex(page);
   const teen = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
   expect(teen.visible).toBe(true);
-  expect(teen.text).toContain('Twój cel:');
+  expect(teen.text).toContain('Cel: −');
   expect(teen.text).toContain('85. centyl dla wieku');
   expect(teen.text).not.toContain('Musisz zredukować');
   // Sekcja „Pełna tabela aktywności" usunięta (decyzja właściciela, makieta v7).
@@ -101,7 +101,7 @@ test('TONORM-S1-OLDER-JOURNEY: 13 lat i dorosły — panel „Droga do normy 2.0
   expect(teen.text).not.toContain('Dystans / Czas do normy');
   const adult = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   expect(adult.visible).toBe(true);
-  expect(adult.text).toContain('Twój cel:');
+  expect(adult.text).toContain('Cel: −');
   expect(adult.text).toContain('Start: 95,0 kg');
   expect(adult.text).not.toContain('Musisz zredukować');
 });
@@ -128,7 +128,7 @@ test('TONORM-S2-ADULT-NEAR-LIMIT: BMI 24,9–25 → komunikat o górnej granicy 
   expect(out.text).toContain('zbliża się do jej górnej granicy');
   // Od progu nadwagi (BMI ≥ 25) redukcja wraca.
   const over = await renderToNorm(page, { age: 30, months: 0, sex: 'M', weight: 80, height: 178 });
-  expect(over.text).toContain('Twój cel:');
+  expect(over.text).toContain('Cel: −');
   expect(over.text).toContain('do górnej granicy normy BMI');
 });
 
@@ -176,17 +176,21 @@ test('TONORM-J-ADULT-PANEL: panel dieta+ruch dla dorosłego — cel, diety z sil
   test.setTimeout(90_000);
   await openIndex(page);
   const out = await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
-  expect(out.text).toContain('Twój cel:');
-  expect(out.text).toContain('−16,1 kg');
-  expect(out.text).toContain('Start: 95,0 kg · Cel: 78,9 kg');
-  expect(out.text).toContain('Połącz z planem diety');
-  // Deficyty diet liczone produkcyjnym silnikiem Planu odchudzania.
-  expect(out.text).toContain('lekka −');
-  expect(out.text).toContain('umiarkowana −');
-  expect(out.text).toContain('intensywna −');
+  // Karta scalona (Droga do normy 3.0): hero z terminem, cel, kaloryczność, segmenty.
+  expect(out.text).toMatch(/\d+(,5)? mies\./);
+  expect(out.text).toMatch(/(w|we) \S+ \d{4} · (dieta \+ ruch|sama dieta)/u);
+  expect(out.text).toContain('Cel: −16,1 kg');
+  expect(out.text).toContain('Start: 95,0 kg → Cel: 78,9 kg');
+  expect(out.text).toMatch(/2\s?100 kcal\/dzień/u);
+  // Deficyty diet liczone produkcyjnym silnikiem Planu odchudzania (segment diety).
+  expect(out.text).toContain('lekka');
+  expect(out.text).toContain('umiarkowana');
+  expect(out.text).toContain('intensywna');
   expect(out.text).toContain('Razem');
   expect(out.text).toContain('kg/mies.');
-  expect(out.text).toMatch(/osiągniesz normę BMI (w|we) .+ \(za ok\. .+miesi/);
+  // Stara karta planu jest ukryta — jej rolę pełni karta scalona.
+  const planHidden = await page.evaluate(() => document.getElementById('planCard')?.style.display);
+  expect(planHidden).toBe('none');
 });
 
 test('TONORM-J-INTERACTIONS: chipy budują tabelę, toggle wyłącza dietę, wybór diety się przełącza', async ({ page }) => {
@@ -195,19 +199,17 @@ test('TONORM-J-INTERACTIONS: chipy budują tabelę, toggle wyłącza dietę, wyb
   await renderToNorm(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   const click = (sel) => page.evaluate((s) => document.querySelector(s).click(), sel);
   const txt = () => page.evaluate(() => document.getElementById('bmiJourneyMount').textContent.replace(/\s+/g, ' ').trim());
-  await click('.bmi-journey-chip[data-key="bike"]');
+  await click('#bmiJourneyMount .bmi-journey-chip[data-key="bike"]');
   let t = await txt();
   expect(t).toContain('Rower 2×45 min');
   expect(t).toContain('Dzięki ruchowi o');
-  await click('[data-journey="toggle"]');
-  t = await txt();
-  expect(t).not.toContain('Dieta (jak w planie odchudzania)');
-  expect(t).toContain('Włącz plan diety');
-  await click('[data-journey="toggle"]');
-  await click('.bmi-journey-chip[data-key="intense"]');
+  // Karta scalona: dieta jako segment sterujący wspólnym selectem #dietLevel.
+  await click('#bmiJourneyMount [data-journey="diet"][data-key="intense"]');
   t = await txt();
   expect(t).toContain('Dieta intensywna');
   expect(t).not.toContain('Dieta umiarkowana ≈');
+  const sel = await page.evaluate(() => document.getElementById('dietLevel').value);
+  expect(sel).toBe('intense');
 });
 
 test('TONORM-J-CHILD: 13-latek — cel 85. centyla, domyślna dieta lekka, minima dziecięce', async ({ page }) => {
@@ -216,7 +218,7 @@ test('TONORM-J-CHILD: 13-latek — cel 85. centyla, domyślna dieta lekka, minim
   const out = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
   expect(out.text).toContain('85. centyl dla wieku');
   expect(out.text).toContain('Dieta lekka');
-  expect(out.text).toMatch(/osiągniesz normę BMI/);
+  expect(out.text).toMatch(/\d+(,5)? mies\./);
 });
 
 test('TONORM-J-PERSIST: wybór aktywności przeżywa kolejne przeliczenia karty', async ({ page }) => {

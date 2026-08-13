@@ -1,17 +1,18 @@
 /*
- * Droga do normy 2.0 — interaktywny panel „dieta + ruch" karty „Droga do normy BMI".
- * Prezentacja wg makiety zatwierdzonej 2026-08-12: wyśrodkowany nagłówek celu,
- * przełącznik „Połącz z planem diety", chipy diet (z produkcyjnego silnika
- * Planu odchudzania) i dawek ruchu (MET × masa), tabela wkładów budowana
- * z wyboru, przewidywany termin osiągnięcia normy (miesiące zaokrąglane do 0,5)
- * i oś czasu „sama dieta / dieta + ruch". Dotyczy trybu redukcyjnego ≥ 5 lat;
- * młodsze dzieci obsługuje vilda_update_prep.js (etap 1 przeglądu).
+ * Droga do normy 3.0 — karta scalona (fuzja „Drogi do normy BMI" i „Planu
+ * odchudzania", wariant C1 makiety zatwierdzonej 2026-08-13): hero z terminem,
+ * pigułka zysku z ruchu, wyeksponowany cel (−kg / granica normy / Start→Cel),
+ * kaloryczność diety na zielonym tle, segmenty PAL i diety (sterują ukrytymi
+ * selectami #palFactor/#dietLevel — jedno źródło prawdy), chipy ruchu,
+ * zwijane „Szczegóły planu" (deficyt/tempo, tabela wkładów, opis diety,
+ * odznaka roczna) i ostrzeżenia kliniczne. Dotyczy trybu redukcyjnego ≥ 5 lat;
+ * młodsze dzieci i tryb profesjonalny 2–5 lat obsługuje vilda_update_prep.js.
  */
 (function (w, d) {
   'use strict';
   if (!w || w.VildaBmiJourney) return;
 
-  var VERSION = '1.3.0';
+  var VERSION = '2.0.0';
   var STORAGE_KEY = 'vildaBmiJourneyState';
   var KCAL_PER_KG_FALLBACK = 7700;
 
@@ -28,6 +29,7 @@
 
   var state = loadState();
   var lastCtx = null;
+  var lastEngineState = null;
 
   function kcalPerKg() {
     return typeof w.KCAL_PER_KG === 'number' && isFinite(w.KCAL_PER_KG) && w.KCAL_PER_KG > 0
@@ -116,8 +118,9 @@
         heightCm: ctx.heightCm,
         palInput: palEl ? palEl.value : null
       });
+      lastEngineState = st || null;
       return st && Array.isArray(st.diets) ? st.diets : [];
-    } catch (err) { return []; }
+    } catch (err) { lastEngineState = null; return []; }
   }
   function moveKcalWeek(moveId, weightKg) {
     if (typeof w.activityGetDefinition !== 'function' || typeof w.activityBurnPerMinuteKcal !== 'function') return 0;
@@ -154,7 +157,7 @@
       if (!found && diets.length) found = diets[0];
       dietKey = found ? found.key : null;
     }
-    var dietOn = state.dietOn && dietAvailable;
+    var dietOn = dietAvailable;
     var deficitDay = dietOn && found ? found.deficit : 0;
     var rows = [];
     if (dietOn && found) {
@@ -176,6 +179,7 @@
     var dietT = dietOn && deficitDay > 0 ? timeToNorm(ctx, deficitDay * 7 / kk) : null;
     return {
       diets: diets, dietAvailable: dietAvailable, dietOn: dietOn, dietKey: dietKey,
+      found: found,
       rows: rows, moveWeek: moveWeek, totalWeek: totalWeek,
       monthsCombo: comboT ? comboT.months : null,
       monthsDiet: dietT ? dietT.months : null,
@@ -200,46 +204,81 @@
     return html;
   }
 
-  function renderResult(model) {
-    var mc = model.monthsCombo;
-    var md = model.monthsDiet;
-    var html = '';
-    if (mc != null) {
-      html += '<p class="bmi-journey-when">Przy tym planie osiągniesz normę BMI <b>'
-        + esc(dateAfterMonths(mc)) + '</b> (za ok. ' + esc(monthsWord(mc)) + ').</p>';
-    }
-    if (mc != null && model.growthAware && fin(model.annualGrowthCm)) {
-      html += '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie (ok. '
-        + esc(fmt(model.annualGrowthCm, 1)) + ' cm/rok)</p>';
-    }
+  function gainPill(model) {
+    var mc = model.monthsCombo, md = model.monthsDiet;
     var gain = '';
     if (md != null && mc != null && md > mc) {
       var diff = Math.round((md - mc) * 2) / 2;
       gain = diff >= 0.5
-        ? 'Dzięki ruchowi o ' + monthsWord(diff) + ' szybciej niż na samej diecie'
-        : 'Dzięki ruchowi nieznacznie szybciej niż na samej diecie';
-    } else if (mc != null && model.dietOn && model.moveWeek === 0) {
+        ? 'Dzięki ruchowi o ' + monthsWord(diff) + ' szybciej'
+        : 'Dzięki ruchowi nieznacznie szybciej';
+    } else if (mc != null && model.moveWeek === 0) {
       gain = 'Dołóż ruch, żeby osiągnąć normę szybciej';
-    } else if (mc != null && !model.dietOn) {
-      gain = model.dietAvailable ? 'Włącz plan diety — sam ruch to długa droga' : '';
     } else if (mc == null) {
       gain = 'Zaznacz dietę lub ruch, żeby zobaczyć przewidywany termin';
     }
-    if (gain) html += '<div class="bmi-journey-gain"><span>' + esc(gain) + '</span></div>';
-    // Oś czasu: znaczniki w miesiącach (0,5), wypełnienie proporcjonalne.
-    if (mc != null) {
-      var showDiet = md != null && model.moveWeek > 0 && md > mc;
-      var maxW = Math.max(mc, showDiet ? md : mc, 0.5);
-      var pC = Math.max(4, mc / maxW * 84);
-      var comboLabel = model.dietOn ? (model.moveWeek > 0 ? 'dieta + ruch' : 'sama dieta') : 'sam ruch';
-      html += '<div class="bmi-journey-timeline"><div class="bmi-journey-track">'
-        + '<div class="bmi-journey-fill" style="width:' + pC.toFixed(1) + '%"></div></div>'
-        + '<div class="bmi-journey-marks">'
-        + '<span class="bmi-journey-mark" style="left:' + pC.toFixed(1) + '%"><b>' + esc(monthsShort(mc)) + '</b>' + esc(comboLabel) + '</span>'
-        + (showDiet
-          ? '<span class="bmi-journey-mark" style="left:' + (md / maxW * 84).toFixed(1) + '%"><b>' + esc(monthsShort(md)) + '</b>sama dieta</span>'
-          : '')
-        + '</div></div>';
+    return gain ? '<div class="bmi-journey-gain"><span>' + esc(gain) + '</span></div>' : '';
+  }
+
+  // Segment PAL budowany z opcji ukrytego selecta #palFactor (żywe źródło prawdy).
+  function palSegment() {
+    var sel = d.getElementById('palFactor');
+    if (!sel || !sel.options || !sel.options.length) return '';
+    var html = '<span class="bmi-journey-lbl">Aktywność (PAL)</span><div class="bmi-journey-seg" role="group" aria-label="Poziom aktywności PAL">';
+    for (var i = 0; i < sel.options.length; i += 1) {
+      var o = sel.options[i];
+      var clin = /klinicz|poza Normami/i.test(o.textContent || '');
+      html += '<button type="button" data-journey="pal" data-key="' + esc(o.value) + '"'
+        + ' aria-pressed="' + (o.value === sel.value ? 'true' : 'false') + '"'
+        + ' title="' + esc(o.textContent || '') + '">'
+        + esc(String(o.value).replace('.', ',')) + (clin ? '\u202F*' : '') + '</button>';
+    }
+    return html + '</div>';
+  }
+
+  // Segment diety: wszystkie poziomy z konfiguracji silnika; poziom wycięty
+  // przez minimum kaloryczne jest wyszarzony z podpisem „niedostępna".
+  function dietSegment(model) {
+    var cfg = w.DIET_LEVELS && typeof w.DIET_LEVELS === 'object' ? w.DIET_LEVELS : null;
+    if (!cfg) return '';
+    var html = '<span class="bmi-journey-lbl">Dieta</span><div class="bmi-journey-seg" role="group" aria-label="Rodzaj diety">';
+    Object.keys(cfg).forEach(function (key) {
+      var av = null;
+      for (var i = 0; i < model.diets.length; i += 1) if (model.diets[i].key === key) av = model.diets[i];
+      html += '<button type="button" data-journey="diet" data-key="' + esc(key) + '"'
+        + ' aria-pressed="' + (key === model.dietKey ? 'true' : 'false') + '"'
+        + (av ? '' : ' disabled title="poniżej minimum kalorycznego dla tego pacjenta"') + '>'
+        + esc(cfg[key].label)
+        + '<span class="bmi-journey-sub">' + (av ? '\u2212' + fmtInt(av.deficit) + '\u202Fkcal/d' : 'niedostępna') + '</span></button>';
+    });
+    return html + '</div>';
+  }
+
+  function detailsSection(ctx, model) {
+    var html = '<details class="bmi-journey-det"><summary>Szczegóły planu</summary>';
+    if (model.found) {
+      html += '<p class="bmi-journey-recepta">deficyt <b>\u2212' + fmtInt(model.found.deficit)
+        + '\u202Fkcal/dzień</b> · tempo ok. <b>' + fmt(model.found.weeklyLoss, 1) + '\u202Fkg/tydz.</b></p>';
+    }
+    html += '<table class="bmi-journey-table" aria-live="polite"><thead><tr><th>Twój wybór</th><th>kcal/tydz.</th><th>kg/mies.</th></tr></thead>'
+      + '<tbody>' + renderRows(model) + '</tbody></table>';
+    if (model.found && w.DIET_BULLETS && w.DIET_BULLETS[model.dietKey] && w.DIET_LEVELS && w.DIET_LEVELS[model.dietKey]) {
+      var extra = w.DIET_BULLETS[model.dietKey].slice(2);
+      var items = ['deficyt ok.\u202F' + Math.round(w.DIET_LEVELS[model.dietKey].deficitPct * 100)
+        + '\u202F% całkowitego wydatku energetycznego'].concat(extra);
+      html += '<ul class="bmi-journey-bullets">' + items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
+    }
+    html += yearlyBadge(ctx) + '</details>';
+    return html;
+  }
+
+  function warningsSection(ctx, model) {
+    var html = '';
+    if (ctx.ageYears >= 5 && ctx.ageYears < 10) {
+      html += '<div class="bmi-journey-warn">\u26A0\u00A0Dieta u dzieci w wieku 5\u20139\u00A0lat wymaga nadzoru dietetyka lub lekarza.</div>';
+    }
+    if (model.dietKey === 'intense') {
+      html += '<div class="bmi-journey-warn">\u26A0\u00A0Intensywna dieta wymaga nadzoru specjalisty i nie powinna być stosowana dłużej niż kilka tygodni.</div>';
     }
     return html;
   }
@@ -248,60 +287,93 @@
     var model = computeModel(ctx);
     var goalKg = ctx.weightKg - ctx.kgToLose;
     var targetLabel = ctx.isChild
-      ? 'do górnej granicy normy BMI (85. centyl dla wieku)'
+      ? 'do górnej granicy normy BMI (85. centyl dla wieku)'
       : 'do górnej granicy normy BMI (' + fmt(ctx.targetBmi, 1) + ')';
-    var dietChips = '';
-    if (model.dietAvailable) {
-      dietChips += '<div class="bmi-journey-switchrow" data-journey="toggle" role="switch" aria-checked="'
-        + (model.dietOn ? 'true' : 'false') + '" tabindex="0"><span class="bmi-journey-switch"></span>'
-        + '<b>Połącz z planem diety</b></div>';
-      if (model.dietOn) {
-        dietChips += '<div class="bmi-journey-chips"><span class="bmi-journey-lbl">Dieta (jak w planie odchudzania)</span>';
-        for (var i = 0; i < model.diets.length; i += 1) {
-          var di = model.diets[i];
-          dietChips += '<button type="button" class="bmi-journey-chip" data-journey="diet" data-key="' + esc(di.key) + '"'
-            + ' aria-pressed="' + (di.key === model.dietKey ? 'true' : 'false') + '">'
-            + esc(di.name) + ' −' + fmtInt(di.deficit) + ' kcal/d</button>';
-        }
-        dietChips += '</div>';
-      }
-    }
-    var moveChips = '<div class="bmi-journey-chips"><span class="bmi-journey-lbl">Ruch — dodaj, ile realnie dasz radę</span>';
+    var mc = model.monthsCombo;
+    var badge = lastEngineState && lastEngineState.modeBadge && typeof w.energyRenderModeBadgeHtml === 'function'
+      ? '<div class="energy-mode-badge-row energy-mode-badge-row--results">' + w.energyRenderModeBadgeHtml(lastEngineState.modeBadge) + '</div>'
+      : '';
+    var hero = mc != null
+      ? '<div class="bmi-journey-hero"><span class="bmi-journey-heron">' + esc(monthsShort(mc)) + '</span>'
+        + '<div class="bmi-journey-herocap"><b>' + esc(dateAfterMonths(mc)) + '</b> · '
+        + (model.moveWeek > 0 ? 'dieta + ruch' : 'sama dieta') + '</div></div>'
+      : '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
+        + '<div class="bmi-journey-herocap">zaznacz dietę lub ruch</div></div>';
+    var growth = mc != null && model.growthAware && fin(model.annualGrowthCm)
+      ? '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie (ok. ' + esc(fmt(model.annualGrowthCm, 1)) + ' cm/rok)</p>'
+      : '';
+    var horizon = mc != null && mc > 18
+      ? '<p class="bmi-journey-growth">szacunek orientacyjny — tempo warto weryfikować co 3\u20136 miesięcy</p>'
+      : '';
+    var goalbox = '<div class="bmi-journey-goalbox">'
+      + '<div class="bmi-journey-g1">Cel: <b>\u2212' + fmt(ctx.kgToLose, 1) + '\u202Fkg</b></div>'
+      + '<div class="bmi-journey-g2">' + targetLabel + '</div>'
+      + '<div class="bmi-journey-g3">Start: <b>' + fmt(ctx.weightKg, 1) + '\u202Fkg</b> \u2192 Cel: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
+      + '</div>';
+    var kcal = model.found
+      ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)
+        + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
+        + '<div class="bmi-journey-kcalcap">' + ((ctx.isChild ? 'light' : 'moderate') === model.dietKey ? 'zalecana kaloryczność diety' : 'kaloryczność wybranej diety') + '</div></div>'
+      : '';
+    var moveChips = '<span class="bmi-journey-lbl">Ruch — przyspiesz osiągnięcie celu</span><div class="bmi-journey-chips">';
     for (var m = 0; m < MOVES.length; m += 1) {
       moveChips += '<button type="button" class="bmi-journey-chip" data-journey="move" data-key="' + esc(MOVES[m].id) + '"'
         + ' aria-pressed="' + (state.moves[MOVES[m].id] ? 'true' : 'false') + '">' + esc(MOVES[m].chip) + '</button>';
     }
     moveChips += '</div>';
-    return '<div class="bmi-journey-goal"><span>Twój cel:</span><span class="bmi-journey-n">−' + fmt(ctx.kgToLose, 1)
-      + ' kg</span><small>' + targetLabel + '</small></div>'
-      + '<div class="bmi-journey-startcel">Start: ' + fmt(ctx.weightKg, 1) + ' kg · Cel: ' + fmt(goalKg, 1) + ' kg</div>'
-      + dietChips + moveChips
-      + '<table class="bmi-journey-table" aria-live="polite"><thead><tr><th>Twój wybór</th><th>kcal/tydz.</th><th>kg/mies.</th></tr></thead>'
-      + '<tbody>' + renderRows(model) + '</tbody></table>'
-      + '<div class="bmi-journey-result">' + renderResult(model) + '</div>'
-      + yearlyBadge(ctx);
+    return badge + hero + growth + horizon + gainPill(model) + goalbox + kcal
+      + palSegment() + dietSegment(model) + moveChips
+      + detailsSection(ctx, model) + warningsSection(ctx, model);
   }
 
   function ensureStyles() {
     if (d.getElementById('bmiJourneyStyles')) return;
-    var css = '#bmiJourneyMount{--bj-muted:#5b6f6f;--bj-line:rgba(91,111,111,.35);--bj-teal:var(--primary,#00838d);--bj-green:#2e8f57;--bj-num:#00727b;--bj-chipbg:rgba(255,255,255,.55)}'
+    var css = '#bmiJourneyMount{--bj-muted:#5b6f6f;--bj-line:rgba(91,111,111,.35);--bj-teal:var(--primary,#00838d);--bj-green:#2e8f57;--bj-num:#00727b;--bj-chipbg:rgba(255,255,255,.55);--bj-warnbg:#fdf3e0;--bj-warnink:#7a5a19;--bj-kcalbg:rgba(46,143,87,.14)}'
       /* liquid glass: ciemniejsze warianty dla kontrastu na jasnym szkle */
-      + '.liquid-ios26 #bmiJourneyMount{--bj-muted:#28494b;--bj-line:rgba(10,50,54,.28);--bj-teal:#0b6d76;--bj-green:#1e6f43;--bj-num:#0a5a62;--bj-chipbg:rgba(255,255,255,.5)}'
-      + '.bmi-journey-goal{text-align:center}'
-      + '.bmi-journey-goal .bmi-journey-n{display:block;font-size:1.55rem;font-weight:750;color:var(--bj-num);line-height:1.15;font-variant-numeric:tabular-nums}'
-      + '.bmi-journey-goal small{display:block;color:var(--bj-muted);font-size:.8rem;margin-top:.1rem}'
-      + '.bmi-journey-startcel{color:var(--bj-muted);font-size:.82rem;text-align:center;margin:.15rem 0 .5rem;font-variant-numeric:tabular-nums}'
-      + '.bmi-journey-switchrow{display:flex;align-items:center;justify-content:center;gap:.5rem;margin:.7rem 0 .45rem;cursor:pointer;user-select:none;font-size:.92rem}'
-      + '.bmi-journey-switch{width:38px;height:21px;border-radius:999px;background:#9fb4b2;position:relative;flex:none;transition:background .2s}'
-      + '.bmi-journey-switch::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .2s}'
-      + '.bmi-journey-switchrow[aria-checked="true"] .bmi-journey-switch{background:var(--bj-green)}'
-      + '.bmi-journey-switchrow[aria-checked="true"] .bmi-journey-switch::after{left:20px}'
+      + '.liquid-ios26 #bmiJourneyMount{--bj-muted:#28494b;--bj-line:rgba(10,50,54,.28);--bj-teal:#0b6d76;--bj-green:#1e6f43;--bj-num:#0a5a62;--bj-chipbg:rgba(255,255,255,.5);--bj-warnbg:rgba(255,244,214,.6);--bj-warnink:#6d4a12;--bj-kcalbg:rgba(255,255,255,.5)}'
+      + '#bmiJourneyMount{font-variant-numeric:tabular-nums}'
+      + '.bmi-journey-hero{text-align:center;margin:.25rem 0 0}'
+      + '.bmi-journey-heron{font-size:1.9rem;font-weight:750;color:var(--bj-num);line-height:1.1}'
+      + '.bmi-journey-herocap{font-size:.76rem;color:var(--bj-muted);margin-top:.05rem}'
+      + '.bmi-journey-herocap b{color:var(--bj-num)}'
+      + '.bmi-journey-growth{text-align:center;margin:.2rem 0 0;font-size:.72rem;color:var(--bj-muted)}'
+      + '.bmi-journey-gain{display:block;text-align:center;margin:.3rem auto 0;font-size:.78rem}'
+      + '.bmi-journey-gain span{display:inline-block;background:rgba(46,143,87,.14);color:var(--bj-green);font-weight:650;border-radius:999px;padding:.16rem .6rem}'
+      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-gain span{background:rgba(255,255,255,.5)}'
+      + '.bmi-journey-goalbox{text-align:center;margin:.75rem 0 .1rem;padding:.5rem .35rem .55rem;border-top:1px solid var(--bj-line);border-bottom:1px solid var(--bj-line)}'
+      + '.bmi-journey-g1{font-size:1.02rem}'
+      + '.bmi-journey-g1 b{font-size:1.4rem;font-weight:750;color:var(--bj-num)}'
+      + '.bmi-journey-g2{font-size:.78rem;color:var(--bj-muted);margin-top:.08rem}'
+      + '.bmi-journey-g3{font-size:.85rem;margin-top:.28rem}'
+      + '.bmi-journey-g3 b{color:var(--bj-num)}'
+      /* kaloryczność — hero na zielonym tle (wariant C1 makiety) */
+      + '.bmi-journey-kcal{text-align:center;margin:.75rem .3rem .1rem;padding:.5rem .4rem .55rem;background:var(--bj-kcalbg);border-radius:12px}'
+      + '.bmi-journey-kcaln{font-size:1.9rem;font-weight:750;color:var(--bj-green);line-height:1.1}'
+      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-kcaln{color:var(--bj-num)}'
+      + '.bmi-journey-kcalu{font-size:.82rem;color:var(--bj-muted)}'
+      + '.bmi-journey-kcalcap{font-size:.72rem;color:var(--bj-green);margin-top:.05rem}'
+      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-kcalcap{color:var(--bj-muted)}'
+      + '.bmi-journey-lbl{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--bj-muted);text-align:center;margin:.7rem 0 .25rem}'
+      /* segmenty PAL/diety: komplet jawnych wartości + !important — #id wygrywa z `.liquid-ios26 button{...}!important` */
+      + '#bmiJourneyMount .bmi-journey-seg{display:flex;border:1px solid var(--bj-line);border-radius:10px;overflow:hidden;margin:0}'
+      + '#bmiJourneyMount .bmi-journey-seg button{font:inherit!important;font-size:.74rem!important;line-height:1.3!important;padding:.32rem .15rem!important;border:0!important;border-left:1px solid var(--bj-line)!important;border-radius:0!important;background:transparent!important;color:inherit!important;margin:0!important;flex:1 1 0!important;width:auto!important;min-width:0!important;cursor:pointer!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:none!important}'
+      + '#bmiJourneyMount .bmi-journey-seg button:first-child{border-left:0!important}'
+      + '#bmiJourneyMount .bmi-journey-seg button[aria-pressed="true"]{background:var(--bj-teal)!important;color:#fff!important;font-weight:600!important}'
+      + '#bmiJourneyMount .bmi-journey-seg button:disabled{opacity:.45!important;cursor:not-allowed!important}'
+      + '#bmiJourneyMount .bmi-journey-seg button:focus-visible{outline:2px solid var(--bj-teal)!important;outline-offset:-2px!important}'
+      + '#bmiJourneyMount .bmi-journey-sub{display:block;font-size:.64rem;opacity:.78}'
       + '.bmi-journey-chips{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:center;margin:.25rem 0 .45rem}'
-      + '.bmi-journey-lbl{flex-basis:100%;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--bj-muted);text-align:center}'
-      /* chipy: komplet jawnych wartości + !important — specyficzność #id wygrywa z `.liquid-ios26 button{...}!important` */
+      /* chipy ruchu: jawne wartości + !important (odporność na motywy) */
       + '#bmiJourneyMount .bmi-journey-chip{font:inherit!important;font-size:.78rem!important;line-height:1.25!important;border:1px solid var(--bj-line)!important;background:var(--bj-chipbg)!important;color:inherit!important;border-radius:999px!important;padding:.22rem .6rem!important;cursor:pointer!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;margin:0!important;width:auto!important;transform:none!important}'
       + '#bmiJourneyMount .bmi-journey-chip[aria-pressed="true"]{background:var(--bj-teal)!important;border-color:var(--bj-teal)!important;color:#fff!important;font-weight:600!important}'
       + '#bmiJourneyMount .bmi-journey-chip:focus-visible{outline:2px solid var(--bj-teal)!important;outline-offset:2px!important}'
+      /* szczegóły planu */
+      + '#bmiJourneyMount .bmi-journey-det{margin-top:.7rem;font-size:.8rem}'
+      + '#bmiJourneyMount .bmi-journey-det summary{cursor:pointer;color:var(--bj-num);font-weight:600;text-align:center;list-style:none}'
+      + '#bmiJourneyMount .bmi-journey-det summary::after{content:" \u25BE"}'
+      + '#bmiJourneyMount .bmi-journey-det[open] summary::after{content:" \u25B4"}'
+      + '#bmiJourneyMount .bmi-journey-recepta{text-align:center;margin:.45rem 0 .1rem;font-size:.8rem}'
+      + '#bmiJourneyMount .bmi-journey-recepta b{color:var(--bj-num)}'
       /* tabela: jawne tła i kolory + !important — wygrywa z globalnym `th{background:var(--secondary);color:#fff}` */
       + '#bmiJourneyMount .bmi-journey-table{border-collapse:collapse!important;width:100%!important;margin:.45rem 0 0!important;font-variant-numeric:tabular-nums}'
       + '#bmiJourneyMount .bmi-journey-table th{background:transparent!important;color:var(--bj-muted)!important;text-align:left!important;font-size:.66rem!important;font-weight:600!important;text-transform:uppercase!important;letter-spacing:.05em!important;border:0!important;border-bottom:1px solid var(--bj-line)!important;padding:.24rem .25rem!important;width:auto!important;margin:0!important;border-radius:0!important}'
@@ -310,22 +382,11 @@
       + '#bmiJourneyMount .bmi-journey-sum td{border-bottom:0!important;border-top:2px solid var(--bj-line)!important;font-weight:700!important}'
       + '#bmiJourneyMount .bmi-journey-sum td:first-child{color:var(--bj-green)!important}'
       + '#bmiJourneyMount .bmi-journey-placeholder td{color:var(--bj-muted)!important;font-style:italic;border-bottom:0!important}'
-      + '.bmi-journey-when{text-align:center;margin:.7rem 0 0;font-size:.9rem}'
-      + '.bmi-journey-growth{text-align:center;margin:.15rem 0 0;font-size:.72rem;color:var(--bj-muted)}'
-      + '.bmi-journey-when b{color:var(--bj-num)}'
-      + '.bmi-journey-gain{display:block;text-align:center;margin:.35rem auto 0;font-size:.8rem}'
-      + '.bmi-journey-gain span{display:inline-block;background:rgba(46,143,87,.14);color:var(--bj-green);font-weight:650;border-radius:999px;padding:.2rem .65rem}'
-      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-gain span{background:rgba(255,255,255,.5)}'
-      + '.bmi-journey-timeline{margin-top:.75rem}'
-      + '.bmi-journey-track{position:relative;height:10px;border-radius:6px;background:rgba(127,127,127,.22)}'
-      + '.bmi-journey-fill{position:absolute;top:0;bottom:0;left:0;border-radius:6px;background:linear-gradient(90deg,var(--bj-green),var(--bj-teal))}'
-      + '.bmi-journey-marks{position:relative;height:2.9rem;font-size:.7rem}'
-      + '.bmi-journey-mark{position:absolute;top:.3rem;transform:translateX(-50%);text-align:center;white-space:nowrap;color:var(--bj-muted)}'
-      + '.bmi-journey-mark::before{content:"";display:block;width:2px;height:8px;background:var(--bj-muted);margin:-11px auto 3px}'
-      + '.bmi-journey-mark b{display:block;color:inherit;font-size:.78rem;color:var(--bj-num)}'
+      + '#bmiJourneyMount .bmi-journey-bullets{margin:.5rem 0 0;padding-left:1.1rem;font-size:.78rem;color:inherit}'
+      + '#bmiJourneyMount .bmi-journey-bullets li{margin:.15rem 0}'
+      + '.bmi-journey-warn{background:var(--bj-warnbg);color:var(--bj-warnink);border-radius:8px;font-size:.75rem;padding:.42rem .58rem;margin-top:.6rem}'
       + '.bmi-journey-badge{background:rgba(176,116,31,.13);color:#8a5c17;border-radius:8px;padding:.42rem .6rem;font-size:.76rem;margin-top:.6rem}'
-      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-badge{background:rgba(255,244,214,.55);color:#6d4a12}'
-      + '@media (prefers-reduced-motion: no-preference){.bmi-journey-fill{transition:width .4s ease}}';
+      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-badge{background:rgba(255,244,214,.55);color:#6d4a12}';
     var style = d.createElement('style');
     style.id = 'bmiJourneyStyles';
     style.textContent = css;
@@ -340,15 +401,20 @@
 
   function onClick(ev) {
     var el = ev.target && ev.target.closest ? ev.target.closest('[data-journey]') : null;
-    if (!el) return;
+    if (!el || el.disabled) return;
     var kind = el.getAttribute('data-journey');
-    if (kind === 'toggle') {
-      state.dietOn = el.getAttribute('aria-checked') !== 'true';
-    } else if (kind === 'diet') {
-      state.dietOn = true;
+    if (kind === 'pal') {
+      var palSel = d.getElementById('palFactor');
+      if (palSel) {
+        palSel.value = el.getAttribute('data-key');
+        if (typeof w.updatePalDescription === 'function') { try { w.updatePalDescription(palSel.value); } catch (err) { /* opis PAL opcjonalny */ } }
+        if (typeof w.debouncedUpdate === 'function') w.debouncedUpdate();
+        else if (typeof w.update === 'function') w.update();
+      }
+      return;
+    }
+    if (kind === 'diet') {
       state.dietKey = el.getAttribute('data-key');
-      // Ustaw wspólny select i przelicz kartę „Plan odchudzania" — obie karty
-      // mają zawsze pokazywać tę samą dietę i te same terminy.
       var dietSel = d.getElementById('dietLevel');
       if (dietSel && dietSel.value !== state.dietKey) {
         dietSel.value = state.dietKey;
@@ -362,15 +428,6 @@
     } else {
       return;
     }
-    saveState();
-    rerender();
-  }
-  function onKeydown(ev) {
-    if (ev.key !== ' ' && ev.key !== 'Enter') return;
-    var el = ev.target && ev.target.closest ? ev.target.closest('[data-journey="toggle"]') : null;
-    if (!el) return;
-    ev.preventDefault();
-    state.dietOn = el.getAttribute('aria-checked') !== 'true';
     saveState();
     rerender();
   }
@@ -391,7 +448,6 @@
     };
     if (!host.dataset.journeyWired) {
       host.addEventListener('click', onClick);
-      host.addEventListener('keydown', onKeydown);
       host.dataset.journeyWired = '1';
     }
     setHtml(host, renderPanel(lastCtx), 'bmi-journey:panel');
