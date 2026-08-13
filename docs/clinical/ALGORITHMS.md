@@ -127,11 +127,28 @@ Dane w pełni fikcyjne. Wartości oczekiwane policzono niezależnie od kodu prod
 | KR-F-12 | dziewczynka 12,0 l, wzrost 150, masa 42, rodzice 165/179 | 165,3935 cm |
 | KR-M-INTERP | chłopiec 10,25 l (interpolacja), wzrost 139, masa 32, rodzice 163/178 | 177,1694 cm; `interpolated=true` |
 | KR-M-MIN | chłopiec 4,0 l (brzeg), wzrost 100, masa 16, rodzice 170/183 | 178,6989 cm |
-| KR-M-MAX | chłopiec 17,5 l (brzeg), wzrost 175, masa 62, rodzice 170/183 | 174,0176 cm |
+| KR-M-MAX | chłopiec 17,5 l (brzeg), wzrost 175, masa 62, rodzice 170/183 | równanie: 174,0176 cm (`predictedAdultHeightCmRaw`); wynik po ograniczeniu: 175 cm, `clampedToCurrentHeight:true` (patrz GROWTH-PRED-CLAMP) |
 | KR-OOR | 47 mies. (3,92 l) lub 216 mies. (18,0 l) | `available:false, reason:"out-of-range"` (bez ekstrapolacji) |
 | KR-AGE-REG | `{chronologicalAgeYears:10, chronologicalAgeMonths:120}` (wejście produkcyjne) | 10 lat → 177,1596 cm (NIE 20 lat / out-of-range) |
 
 Wpływ na dotychczasowe wyniki: dodanie KR **nie zmienia** prognoz Bayley–Pinneau, RWT, Reinehr/CDGP ani celu MPH. KR pojawia się jako dodatkowa kolumna/karta w „Walidacji prognoz”, uczestniczy w wyborze metody „najbliżej FH” i w eksporcie kohorty. Karta „Zaawansowane obliczenia wzrostowe” pozostaje bez KR do osobnej decyzji (patrz PR).
+
+### GROWTH-PRED-CLAMP — ograniczenie prognozy wzrostu ostatecznego od dołu aktualnym wzrostem, decyzja właściciela 2026-08-13
+
+**Problem.** Khamis–Roche i RWT są czystymi regresjami liniowymi — żaden opublikowany współczynnik nie gwarantuje wyniku ≥ aktualnego wzrostu. Przy górnej granicy zakresu wieku (chłopcy ~17–17,5 r.ż. dla KR) pozostały wzrost jest bliski zeru i równanie potrafi zwrócić prognozę **niższą niż już zmierzony wzrost** (np. chłopiec 17,5 l, 176 cm/55 kg, midparent 171 cm → KR 175,16 cm). To artefakt głęboko wewnątrz błędu metody (KR ±5,3/±4,3 cm), ale fizycznie niemożliwy — wzrost ostateczny nie może być niższy niż osiągnięty — i w prezentacji wyglądał na błąd aplikacji. Bayley–Pinneau i Reinehr są strukturalnie odporne (dzielą aktualny wzrost przez odsetek ≤ 100%).
+
+**Reguła (warstwa aplikacyjna, nie zmiana wzorów).** Współczynniki i równania pozostają wierne publikacjom; ograniczenie jest jawnie udokumentowaną obróbką wyniku:
+
+1. **Prognoza punktowa**: `predictedAdultHeightCm = max(wynik równania, aktualny wzrost)`. Surowy wynik równania pozostaje w `predictedAdultHeightCmRaw`, ograniczenie sygnalizuje flaga `clampedToCurrentHeight`. Dla RWT dodatkowo `remainingGrowthCm = 0` przy aktywnym ograniczeniu.
+2. **Przedział błędu — truncacja, nie translacja**: dolna granica = `max(raw − półszerokość, aktualny wzrost)`; górna granica liczona **zawsze od wartości surowej** (`raw + półszerokość`), by nie zawyżać przedziału metody (176 ± 5,3 sugerowałoby górną granicę 181,3 zamiast 180,5). Gdy cały przedział leży poniżej aktualnego wzrostu, widełki zapadają się do pojedynczej wartości (obie granice = aktualny wzrost).
+3. **Prezentacja**: przy aktywnym ograniczeniu zapis „±" jest zastępowany jawnymi widełkami „dół–góra cm" z adnotacją pokazującą wartość surową, np. „Prognoza wzrostu ostatecznego (metoda Khamis-Roche): 176,0–180,5 cm — metoda wskazała 175,2 ±5,3 cm, ale prognoza nie może być niższa niż obecny wzrost (pacjent jest już blisko wzrostu ostatecznego)". Bez ograniczenia format „X cm (±Y cm)" pozostaje bez zmian.
+4. **Konsensus karty C**: wpisy metod wchodzą do ważonego konsensusu po ograniczeniu (generyczny strażnik obejmuje też wyniki przekazane z zapisów sprzed tej zmiany), więc konsensus i zakres min–max nigdy nie spadają poniżej aktualnego wzrostu. Moduł „Walidacja prognoz" liczy prognozy w historycznych punktach pomiarowych — ograniczenie działa tam względem wzrostu z danego punktu (spójne fizycznie; metryki MAE/bias liczone z wartości ograniczonych).
+
+**Zakres wdrożenia**: silnik KR (`vilda_khamis_roche.js`), silnik RWT i budowniczy linii podsumowania (`vilda_advanced_growth.js`), karta C (`vilda_growth_card_c.js`), linia KR podsumowania (`vilda_summary_cards.js`), widełki wykresu prognoz (`vilda_auth_ui.js`). Konsumenci progu wzrastania (zalecenia dietetyczne, symulacja wzrastania) mieli już strażniki `prognoza > wzrost` — po ograniczeniu równość oznacza dla nich to samo, co wcześniej wartość niższa (stabilizacja/fallback MPH), więc decyzje nie ulegają zmianie.
+
+**Przypadek syntetyczny** (dane fikcyjne; test `tests/unit/final-height-clamp.test.mjs` wywołuje realne silniki): chłopiec 17,5 l (210 mies.), wzrost 176 cm, masa 55 kg, rodzice 165/177 → KR raw 175,16 cm; wynik: `predictedAdultHeightCm 176,0`, przedział 176,0–180,5 cm (175,16 + 5,3), `clampedToCurrentHeight:true`.
+
+**Wpływ kliniczny**: zmiana dotyczy wyłącznie przypadków, w których równanie zwraca wynik poniżej zmierzonego wzrostu (pacjenci tuż przy końcu wzrastania); prognoza punktowa może wzrosnąć maksymalnie o wielkość artefaktu (tu 0,8 cm, zawsze wewnątrz błędu metody), a górne granice przedziałów pozostają niezmienione. Status: wdrożenie zaakceptowane kierunkowo przez właściciela (rozmowa 2026-08-13); nie nadaje metodom statusu „zwalidowane klinicznie".
 
 ### GROWTH-TRAJ — automatyczna analiza trajektorii na siatce centylowej, wdrożenie do testów 2026-08-08
 
