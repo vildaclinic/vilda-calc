@@ -401,6 +401,15 @@ Testy: PLAN-S2-FLOOR-REE (intensywna znika przy PAL 1,4 u 8-latka i wraca przy 1
 
 Testy: PLAN-S3-SIM-API (dziecko ≤ liniowo, otyłość ściśle szybciej, dorosły dokładnie liniowo, 50c dalej niż 85c), PLAN-S3-GROWTH-NOTE (dopisek w planie i panelu, brak u dorosłego), PLAN-S3-HORIZON (zastrzeżenie > 18 mies.) + zaktualizowane PLAN-S1-* na miesiące.
 
+**Plan odchudzania 2.0 — prezentacja „oś czasu" (2026-08-13, koncepcja C wybrana przez właściciela z makiety trzech wariantów).** Bez zmian w obliczeniach — wyłącznie prezentacja i układ:
+
+1. **Nowa karta** (`vilda_diet_plan_ui.js` 1.3.0, render w `updatePlanFromDiet`): hero z kalorycznością („2100 kcal/dzień — zalecana/wybrana kaloryczność diety"), oś czasu z dwoma znacznikami — „granica normy" (85c/24,9) i drugi cel („BMI 22" u dorosłych / „50. centyl BMI" u dzieci) — zdanie z terminem („Stosując dietę umiarkowaną osiągniesz górną granicę normy BMI w marcu 2027 (za ok. 7 miesięcy)."), pigułka deficytu i tempa, a POD wynikami segmentowane przełączniki PAL i diety; szczegóły diety zwijane. Dotychczasowe ~2000 px wysokości na telefonie → ~510–560 px.
+2. **Selecty `#palFactor`/`#dietLevel` pozostają w DOM jako źródło prawdy** (autosave, import/eksport, integracje: panel Drogi, Zalecenia dietetyczne) — sekcja „Krok 1/Krok 2" jest ukryta CSS-em, segmenty ustawiają wartości selectów i wywołują dotychczasowe ścieżki (`debouncedUpdate`/`updatePlanFromDiet`). Dieta wycięta przez minimum (max(1200, REE)) jest w segmencie wyszarzona z podpisem „niedostępna" zamiast znikać.
+3. **Karta w prawej kolumnie dla wszystkich** (decyzja właściciela): `reposition.js` przenosił `planCard` do `normWrapper` tylko dla dorosłych (dzieci: pełna szerokość) — bramka wieku usunięta, na desktopie karta zawsze po `toNormCard` w prawej kolumnie, na mobile w naturalnym jednokolumnowym przepływie. `#planResults` zawsze jednokolumnowy.
+4. **Style utwardzone jak w panelu Drogi** (wstrzykiwany `#planUiStyles`): jawne wartości + `!important` + specyficzność `#planCard …`, ciemniejsze zmienne pod `.liquid-ios26`; test computed-styles pilnuje odporności na `.liquid-ios26 button{…}!important`.
+
+Testy: PLAN-C-LAYOUT (prawa kolumna u dorosłego i dziecka, kroki ukryte, selecty żywe), PLAN-C-SEGMENTS (segmenty sterują selectami; wyszarzona „niedostępna"), PLAN-C-THEME (computed styles pod liquid glass), PLAN-C-NARROW (brak poziomego przewijania przy 380 px) + PLAN-S1-* dopasowane do nowego układu.
+
 ### ENERGY-PAL — potwierdzenie mnożnika wzrastania (U3) i PAL 1,4 dla 10–18 lat jako opcja kliniczna (2026-08-12, decyzja właściciela)
 
 **U3 — mnożnik wzrastania potwierdzony w pierwotnym źródle.** Rozdział o energii w PDF-ie norm (w repo): „U dzieci i młodzieży w wieku od 1 do 18 lat wydatek energetyczny związany ze wzrastaniem został uwzględniony jako 1 % wzrost wartości PAL dla każdej grupy wiekowej". Aplikacja mnoży TEE przez `ENERGY_CHILD_GROWTH_MULTIPLIER = 1,01` do 18 r.ż. włącznie — ponieważ TEE = REE × PAL, podniesienie PAL o 1% i pomnożenie TEE przez 1,01 są tożsame. Konwencja aplikacji jest więc dokładnie metodą norm; bez zmian kodu.
