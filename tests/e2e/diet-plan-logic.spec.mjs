@@ -97,3 +97,72 @@ test('PLAN-S1-GUARDS: fillDietSelect bez #dietChoiceWrap nie rzuca; martwy propo
   expect(out.liveExport).toBe('function');
   expect(out.moduleExport).toBe('function');
 });
+
+// ===== Etap 2: minimum dziecięce max(1200, REE), bramka wieku trybu
+// profesjonalnego, punkty opisu diety z realnych wartości pacjenta. =====
+
+async function setProfessionalMode(page, on) {
+  await page.evaluate((on) => {
+    const tgl = document.getElementById('resultsModeToggle');
+    if (tgl && tgl.checked !== on) {
+      tgl.checked = on;
+      tgl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }, on);
+}
+
+test('PLAN-S2-FLOOR-REE: minimum dziecka = max(1200, REE) — intensywna znika przy PAL 1,4, wraca przy 1,6', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const diets = async (pal) => page.evaluate((pal) => {
+    document.getElementById('palFactor').value = pal;
+    window.update();
+    return [...document.getElementById('dietLevel').options].map((o) => o.textContent);
+  }, pal);
+  await renderPlan(page, { age: 8, months: 0, sex: 'M', weight: 45, height: 130 });
+  // REE Henry'ego (chłopiec 3–9): (0,0632·45 + 1,31·1,30 + 1,28)·239 ≈ 1393 kcal.
+  // PAL 1,4 → TEE ≈ 1969; intensywna −591 → 1378 < 1393 → wypada.
+  const low = await diets('1.4');
+  expect(low.some((t) => t.includes('lekka'))).toBe(true);
+  expect(low.some((t) => t.includes('umiarkowana'))).toBe(true);
+  expect(low.some((t) => t.includes('intensywna'))).toBe(false);
+  // PAL 1,6 → TEE ≈ 2251; intensywna −675 → 1576 ≥ 1393 → dostępna.
+  const mid = await diets('1.6');
+  expect(mid.some((t) => t.includes('intensywna'))).toBe(true);
+});
+
+test('PLAN-S2-PROF-GATE: tryb profesjonalny — <2 lat plan ukryty, 2–5 lat z adnotacją kliniczną, ≥5 bez niej', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await setProfessionalMode(page, true);
+  const under2 = await renderPlan(page, { age: 1, months: 6, sex: 'M', weight: 14, height: 80 });
+  expect(under2.visible).toBe(false);
+  const toddler = await renderPlan(page, { age: 3, months: 0, sex: 'F', weight: 20, height: 95 });
+  expect(toddler.visible).toBe(true);
+  const warn3 = await page.evaluate(() => {
+    const el = document.getElementById('planWarning');
+    return { display: el?.style.display, text: (el?.textContent || '').trim() };
+  });
+  expect(warn3.display).not.toBe('none');
+  // Między „5" a „lat" jest wąska spacja niełamliwa (U+202F).
+  expect(warn3.text).toContain('Wiek 2–5 lat');
+  expect(warn3.text).toContain('do oceny klinicznej');
+  const school = await renderPlan(page, { age: 8, months: 0, sex: 'M', weight: 45, height: 130 });
+  expect(school.visible).toBe(true);
+  const warn8 = await page.evaluate(() => document.getElementById('planWarning')?.style.display);
+  expect(warn8).toBe('none');
+  // Poza trybem profesjonalnym 3-latek nadal bez planu (konsultacja).
+  await setProfessionalMode(page, false);
+  const control = await renderPlan(page, { age: 3, months: 0, sex: 'F', weight: 20, height: 95 });
+  expect(control.visible).toBe(false);
+});
+
+test('PLAN-S2-BULLETS: opis wybranej diety podaje realny deficyt i tempo pacjenta zamiast sztywnych zakresów', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  const out = await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  // Dorosły, dieta umiarkowana: deficyt 22% z TEE 2676 → 588 kcal, 0,5 kg/tydz.
+  expect(out.text).toContain('ok. 588 kcal dziennie');
+  expect(out.text).toContain('przewidywana utrata ok. 0,5 kg tygodniowo');
+  expect(out.text).not.toContain('500–750 kcal dziennie');
+});
