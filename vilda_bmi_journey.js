@@ -329,9 +329,10 @@
   function ensureStyles() {
     if (d.getElementById('bmiJourneyStyles')) return;
     var css = '#bmiJourneyMount{--bj-muted:#5b6f6f;--bj-line:rgba(91,111,111,.35);--bj-teal:var(--primary,#00838d);--bj-green:#2e8f57;--bj-num:#00727b;--bj-chipbg:rgba(255,255,255,.55);--bj-warnbg:#fdf3e0;--bj-warnink:#7a5a19;--bj-kcalbg:rgba(46,143,87,.14)}'
-      /* liquid glass: ciemniejsze warianty dla kontrastu na jasnym szkle */
-      + '.liquid-ios26 #bmiJourneyMount{--bj-muted:#28494b;--bj-line:rgba(10,50,54,.28);--bj-teal:#0b6d76;--bj-green:#1e6f43;--bj-num:#0a5a62;--bj-chipbg:rgba(255,255,255,.5);--bj-warnbg:rgba(255,244,214,.6);--bj-warnink:#6d4a12;--bj-kcalbg:rgba(255,255,255,.5)}'
-      + '#bmiJourneyMount{font-variant-numeric:tabular-nums}'
+      /* liquid glass: ciemniejsze tusze dla kontrastu, ale zielone akcenty C1 (tło kcal, pigułka zysku) zostają */
+      + '.liquid-ios26 #bmiJourneyMount{--bj-muted:#28494b;--bj-line:rgba(10,50,54,.28);--bj-teal:#0b6d76;--bj-green:#1e6f43;--bj-num:#0a5a62;--bj-chipbg:rgba(255,255,255,.5);--bj-warnbg:rgba(255,244,214,.6);--bj-warnink:#6d4a12;--bj-kcalbg:rgba(46,143,87,.16)}'
+      /* baza 1rem: neutralizuje odziedziczone .result-box{font-size:1.75rem} (rozdymało odstępy międzyznakowe) */
+      + '#bmiJourneyMount{font-variant-numeric:tabular-nums;font-size:1rem}'
       + '.bmi-journey-hero{text-align:center;margin:.25rem 0 0}'
       + '.bmi-journey-heron{font-size:1.9rem;font-weight:750;color:var(--bj-num);line-height:1.1}'
       + '.bmi-journey-herocap{font-size:.76rem;color:var(--bj-muted);margin-top:.05rem}'
@@ -339,7 +340,7 @@
       + '.bmi-journey-growth{text-align:center;margin:.2rem 0 0;font-size:.72rem;color:var(--bj-muted)}'
       + '.bmi-journey-gain{display:block;text-align:center;margin:.3rem auto 0;font-size:.78rem}'
       + '.bmi-journey-gain span{display:inline-block;background:rgba(46,143,87,.14);color:var(--bj-green);font-weight:650;border-radius:999px;padding:.16rem .6rem}'
-      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-gain span{background:rgba(255,255,255,.5)}'
+      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-gain span{background:rgba(46,143,87,.16)}'
       + '.bmi-journey-goalbox{text-align:center;margin:.75rem 0 .1rem;padding:.5rem .35rem .55rem;border-top:1px solid var(--bj-line);border-bottom:1px solid var(--bj-line)}'
       + '.bmi-journey-g1{font-size:1.02rem}'
       + '.bmi-journey-g1 b{font-size:1.4rem;font-weight:750;color:var(--bj-num)}'
@@ -349,10 +350,8 @@
       /* kaloryczność — hero na zielonym tle (wariant C1 makiety) */
       + '.bmi-journey-kcal{text-align:center;margin:.75rem .3rem .1rem;padding:.5rem .4rem .55rem;background:var(--bj-kcalbg);border-radius:12px}'
       + '.bmi-journey-kcaln{font-size:1.9rem;font-weight:750;color:var(--bj-green);line-height:1.1}'
-      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-kcaln{color:var(--bj-num)}'
       + '.bmi-journey-kcalu{font-size:.82rem;color:var(--bj-muted)}'
       + '.bmi-journey-kcalcap{font-size:.72rem;color:var(--bj-green);margin-top:.05rem}'
-      + '.liquid-ios26 #bmiJourneyMount .bmi-journey-kcalcap{color:var(--bj-muted)}'
       + '.bmi-journey-lbl{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--bj-muted);text-align:center;margin:.7rem 0 .25rem}'
       /* segmenty PAL/diety: komplet jawnych wartości + !important — #id wygrywa z `.liquid-ios26 button{...}!important` */
       + '#bmiJourneyMount .bmi-journey-seg{display:flex;border:1px solid var(--bj-line);border-radius:10px;overflow:hidden;margin:0}'
@@ -382,10 +381,11 @@
       + '#bmiJourneyMount .bmi-journey-sum td{border-bottom:0!important;border-top:2px solid var(--bj-line)!important;font-weight:700!important}'
       + '#bmiJourneyMount .bmi-journey-sum td:first-child{color:var(--bj-green)!important}'
       + '#bmiJourneyMount .bmi-journey-placeholder td{color:var(--bj-muted)!important;font-style:italic;border-bottom:0!important}'
-      + '#bmiJourneyMount .bmi-journey-bullets{margin:.5rem 0 0;padding-left:1.1rem;font-size:.78rem;color:inherit}'
+      /* text-align:left — odziedziczone .result-box{text-align:center} środkowało łamane wiersze */
+      + '#bmiJourneyMount .bmi-journey-bullets{margin:.5rem 0 0;padding-left:1.1rem;font-size:.78rem;color:inherit;text-align:left}'
       + '#bmiJourneyMount .bmi-journey-bullets li{margin:.15rem 0}'
-      + '.bmi-journey-warn{background:var(--bj-warnbg);color:var(--bj-warnink);border-radius:8px;font-size:.75rem;padding:.42rem .58rem;margin-top:.6rem}'
-      + '.bmi-journey-badge{background:rgba(176,116,31,.13);color:#8a5c17;border-radius:8px;padding:.42rem .6rem;font-size:.76rem;margin-top:.6rem}'
+      + '.bmi-journey-warn{background:var(--bj-warnbg);color:var(--bj-warnink);border-radius:8px;font-size:.75rem;padding:.42rem .58rem;margin-top:.6rem;text-align:left}'
+      + '.bmi-journey-badge{background:rgba(176,116,31,.13);color:#8a5c17;border-radius:8px;padding:.42rem .6rem;font-size:.76rem;margin-top:.6rem;text-align:left}'
       + '.liquid-ios26 #bmiJourneyMount .bmi-journey-badge{background:rgba(255,244,214,.55);color:#6d4a12}';
     var style = d.createElement('style');
     style.id = 'bmiJourneyStyles';
