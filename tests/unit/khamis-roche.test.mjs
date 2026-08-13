@@ -67,9 +67,37 @@ describe('Khamis-Roche — wartości referencyjne (niezależnie policzone)', () 
     it(`${name} → ${expected} cm`, () => {
       const r = predict(input);
       expect(r.available).toBe(true);
-      expect(r.predictedAdultHeightCm).toBeCloseTo(expected, 2); // ±0,005 cm
+      // Wartość referencyjna równania weryfikowana na predictedAdultHeightCmRaw —
+      // predictedAdultHeightCm może być podniesione do aktualnego wzrostu (clamp).
+      expect(r.predictedAdultHeightCmRaw).toBeCloseTo(expected, 2); // ±0,005 cm
+      expect(r.predictedAdultHeightCm).toBeCloseTo(Math.max(expected, input.currentHeightCm), 2);
     });
   }
+
+  describe('clamp do aktualnego wzrostu (prognoza nie może być niższa niż zmierzony wzrost)', () => {
+    it('chłopiec 17,5 l 175 cm: równanie 174,0 < wzrost → clamp do 175, raw zachowany', () => {
+      const r = predict(base({ chronologicalAgeYears: 17.5, currentHeightCm: 175, currentWeightKg: 62, motherHeightCm: 170, fatherHeightCm: 183 }));
+      expect(r.available).toBe(true);
+      expect(r.clampedToCurrentHeight).toBe(true);
+      expect(r.predictedAdultHeightCm).toBe(175);
+      expect(r.predictedAdultHeightCmRaw).toBeCloseTo(174.0176, 2);
+    });
+
+    it('przypadek właściciela: chłopiec 17,5 l 176/55, rodzice 165/177 → raw 175,2, clamp do 176', () => {
+      const r = predict({ sex: 'M', chronologicalAgeMonths: 210, currentHeightCm: 176, currentWeightKg: 55, motherHeightCm: 165, fatherHeightCm: 177 });
+      expect(r.available).toBe(true);
+      expect(r.clampedToCurrentHeight).toBe(true);
+      expect(r.predictedAdultHeightCm).toBe(176);
+      expect(r.predictedAdultHeightCmRaw).toBeCloseTo(175.16, 1);
+    });
+
+    it('prognoza powyżej wzrostu → bez clampu, raw === predicted', () => {
+      const r = predict(base());
+      expect(r.clampedToCurrentHeight).toBe(false);
+      expect(r.predictedAdultHeightCm).toBe(r.predictedAdultHeightCmRaw);
+      expect(r.predictedAdultHeightCm).toBeCloseTo(177.1596, 2);
+    });
+  });
 
   it('wiek produkcyjny: {ageYears:10, ageMonths:120} → 10 l. (NIE 20), wynik jak dla 10,0 — regresja', () => {
     // Moduł walidacji podaje jednocześnie chronologicalAgeMonths (łączne) i chronologicalAgeYears.

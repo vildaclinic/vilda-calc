@@ -11,6 +11,14 @@
  *
  * BLAD KR: sredni 90% przedzial bledu metody (Khamis HJ, Roche AF, Pediatrics 1994;94(4 Pt 1):504-507,
  * PMID 7936860): ±2,1 cala (chlopcy) / ±1,7 cala (dziewczeta) → ±5,3 cm / ±4,3 cm. Zbiorczy (nie per wiek).
+ *
+ * CLAMP DO AKTUALNEGO WZROSTU (decyzja wlasciciela 2026-08-13): prognoza punktowa kazdej metody nie
+ * moze byc nizsza niz zmierzony wzrost (artefakt regresji przy gornej granicy wieku). Wartosc ponizej
+ * aktualnego wzrostu jest podnoszona do niego (rawValue + flaga clamped w entry), a w prezentacji
+ * zamiast "±" pokazywane sa widelki obciete od dolu: [obecny wzrost, max(raw + polszerokosc, obecny
+ * wzrost)] — gorna granica liczona od wartosci SUROWEJ, zeby nie zawyzac przedzialu metody; gdy caly
+ * przedzial lezy ponizej obecnego wzrostu, widelki zapadaja sie do pojedynczej wartosci. Konsensus
+ * liczy sie z wartosci obcietych.
  */
 (function (w) {
   'use strict';
@@ -161,12 +169,27 @@
     input = input || {};
     var sk = sexKey(input.sex);
     var rm = input.reliabilityModel || null;
+    var curH = num(input.currentHeightCm);
+    if (curH !== null && curH <= 0) curH = null;
     var entries = [];
 
+    // Wzrost ostateczny nie może być niższy niż już zmierzony: prognozę punktową
+    // ogranicza się od dołu aktualnym wzrostem (surowa wartość w rawValue, flaga
+    // clamped). Górna granica przedziału błędu liczy się ZAWSZE od wartości
+    // surowej (raw + pm) — clamp obcina przedział od dołu, nie przesuwa go w górę.
     function add(key, label, result, pm) {
       var val = predValue(result);
       if (val === null) return;
-      entries.push({ key: key, label: label, value: val, pm: pm, levelKey: null });
+      var raw = num(result && result.predictedAdultHeightCmRaw);
+      if (raw === null) raw = val;
+      var clamped = result && result.clampedToCurrentHeight === true;
+      if (curH !== null && val < curH) { val = curH; clamped = true; }
+      entries.push({
+        key: key, label: label, value: val, pm: pm, levelKey: null,
+        rawValue: raw, clamped: clamped,
+        loCm: pm !== null && pm !== undefined ? (clamped ? val : val - pm) : null,
+        hiCm: pm !== null && pm !== undefined ? Math.max(raw + pm, val) : null
+      });
     }
     // 1. RWT  2. Bayley-Pinneau  3. Khamis-Roche  4. Reinehr/CDGP
     add('rwt', 'RWT', input.rwt, num(input.rwt && input.rwt.errorBoundHalfWidthCm));
@@ -189,7 +212,13 @@
       }
       var val = predValue(r);
       if (val === null) return;
-      entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: KR_ERR_HALFWIDTH_CM[sk], levelKey: 'indicative', noBoneAge: true });
+      var pm = KR_ERR_HALFWIDTH_CM[sk];
+      var raw = num(r.predictedAdultHeightCmRaw);
+      if (raw === null) raw = val;
+      var clamped = r.clampedToCurrentHeight === true;
+      if (curH !== null && val < curH) { val = curH; clamped = true; }
+      entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: pm, levelKey: 'indicative', noBoneAge: true,
+        rawValue: raw, clamped: clamped, loCm: clamped ? val : val - pm, hiCm: Math.max(raw + pm, val) });
     })();
     add('reinehr', 'Reinehr/CDGP', input.reinehr, num(input.reinehr && input.reinehr.errorBoundHalfWidthCm));
     (function () {
@@ -228,7 +257,7 @@
       minCm: con.min,
       maxCm: con.max,
       agreementLabel: con.agreementLabel,
-      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value }; })
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true }; })
     };
   }
 
@@ -271,8 +300,12 @@
     }
     if (c.count === 1) {
       var e = model.entries[0];
-      var sub = (e.pm !== null && e.pm !== undefined ? '±' + esc(fmt1(e.pm)) + ' cm' : '') +
-        (model.boneAgeMissing ? (e.pm != null ? ' · ' : '') + '<b>bez wieku kostnego</b>' : '');
+      var pmTxt = e.clamped
+        ? '<b>' + (e.hiCm !== null && e.hiCm !== undefined && e.hiCm > e.value + 0.049
+            ? esc(fmt1(e.value)) + '–' + esc(fmt1(e.hiCm)) : esc(fmt1(e.value))) + ' cm</b>'
+        : (e.pm !== null && e.pm !== undefined ? '±' + esc(fmt1(e.pm)) + ' cm' : '');
+      var sub = pmTxt +
+        (model.boneAgeMissing ? (pmTxt ? ' · ' : '') + '<b>bez wieku kostnego</b>' : '');
       return '<div class="vgcc-hero"><div class="vgcc-hero-cap">' + esc(e.label) + '</div>' +
         '<div class="vgcc-hero-big">≈ ' + esc(fmt0(e.value)) + ' cm</div>' +
         '<div class="vgcc-hero-sub">' + sub + '</div></div>';
@@ -284,8 +317,11 @@
     if (model.consensus.count < 2) return ''; // dla 1 metody hero wystarcza
     var prefKey = model.weighted && model.weighted.recommendedKey;
     var rows = model.entries.map(function (e) {
-      var right = '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>' +
-        (e.pm !== null && e.pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + '</span>' : '');
+      var right = e.clamped
+        ? '<span class="vgcc-val">' + (e.hiCm !== null && e.hiCm !== undefined && e.hiCm > e.value + 0.049
+            ? esc(fmt1(e.value)) + '–' + esc(fmt1(e.hiCm)) : esc(fmt1(e.value))) + ' cm</span>'
+        : '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>' +
+          (e.pm !== null && e.pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + '</span>' : '');
       var cls = (prefKey && e.key === prefKey) ? ' is-pref' : '';
       return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
     }).join('');
@@ -321,6 +357,15 @@
       parts.push('<p><span class="vgcc-lbl">Profil predykcyjny:</span> ' + esc(model.profileStatus || '') +
         (model.profileSummary ? '. ' + esc(model.profileSummary) : '') + '</p>');
     }
+    var clampedEntries = model.entries.filter(function (e) { return e.clamped; });
+    if (clampedEntries.length) {
+      var cl = clampedEntries.map(function (e) {
+        return esc(e.label) + ' wskazała ' + esc(fmt1(e.rawValue)) + ' cm';
+      }).join(', ');
+      parts.push('<p><span class="vgcc-lbl">Prognoza a obecny wzrost:</span> ' +
+        (clampedEntries.length === 1 ? 'metoda ' : 'metody: ') + cl +
+        ', czyli mniej niż zmierzony wzrost. Prognoza nie może być niższa niż obecny wzrost, dlatego jako minimum przyjęto obecny wzrost, a przedział błędu obcięto od dołu (pacjent jest już blisko wzrostu ostatecznego).</p>');
+    }
     if (model.hasKhamis) {
       parts.push('<p><span class="vgcc-lbl">Khamis–Roche:</span> błąd zbiorczy 90% metody (±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku; liczy się bez wieku kostnego, populacja Fels (białe dzieci USA).</p>');
     }
@@ -341,7 +386,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '6',
+    version: '7',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
