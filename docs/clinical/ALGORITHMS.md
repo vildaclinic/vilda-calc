@@ -476,6 +476,16 @@ Etap 3 (2026-08-11, finał konsolidacji): `docpro.html` ładuje także `inline_i
 
 Ujednolicenie bramek (2026-08-11, decyzja właściciela): `docpro.html` ładuje także `vilda_publication_creator.js` (moduł pasywny — bez przycisku i UI kreatora na tej stronie), przez co bramki `isElementEnabled` („Elementy siatki", w tym domyślnie wyłączona ramka podsumowania w kontekście WHO) oraz adnotacje zapisane z pacjentem działają identycznie na obu stronach. Regresja pikselowa: pełna naturalna parzystość index↔docpro (5/5 przypadków bitowo identycznych, bez stubów); test parzystości stron uproszczony do wariantu produkcyjnego.
 
+## Domyślny PAL planu redukcji wg pasma normatywnego dla wieku (2026-08-13)
+
+**Zmiana (decyzja właściciela):** domyślna wartość selektora aktywności `#palFactor` (plan redukcji / karta „Droga do normy BMI") nie jest już stałym 1,4 dla wszystkich, lecz **najniższym poziomem normatywnym pasma wieku** wg wspólnego modułu energii (`energyDefaultPlanPal`): 1–3 lata → 1,4 (jedyna wartość pasma), 4–9 lat → 1,4, **10–18 lat → 1,6**, dorośli → 1,4, niemowlęta → nie dotyczy. Jedyna grupa z realnie zmienionym domyślnym TEE to 10–18 lat: dotychczasowe domyślne 1,4 leży **poza** pasmem normatywnym Norm żywienia 2024 dla tej grupy (1,6–2,0; transkrypcja pasm zweryfikowana źródłowo przy wdrożeniu opcji klinicznej PAL 1,4 — patrz wpis o PAL 1,4 jako opcji klinicznej) i było stosowane jako cichy default trybu klinicznego.
+
+**Zasada nadrzędna:** wartość domyślna obowiązuje wyłącznie, dopóki PAL jest „nietknięty". Świadomy wybór (zmiana selecta, klik segmentu na karcie Drogi) oraz każda wartość przywrócona z zapisu (wczytanie pacjenta, import JSON, restore sesji — flaga `__vildaPlanPalTouched`) mają pierwszeństwo i nigdy nie są nadpisywane; przejście pacjenta między pasmami wieku zmienia PAL tylko dla wartości nietkniętej (wtedy przelicza się nowy default). Nietknięty default jest oznaczony na karcie Drogi dopiskiem „PAL przyjęty domyślnie dla wieku — dostosuj do aktywności pacjenta".
+
+**Domknięcie fallbacku silnika:** przy pustej/nienumerycznej wartości wejściowej `energyNormalizePal` i `energyResolvePalSelection` wybierają pierwszą wartość **normatywną** pasma zamiast pierwszej pozycji listy (w politykach klinicznych była to wartość kliniczna — u dorosłych 1,2), więc tryb kliniczny nigdy nie włącza się bez jawnej decyzji.
+
+**Wpływ na wyniki:** dla nietkniętego formularza nastolatka 10–18 lat TEE, propozycje diet, minimum kaloryczne względem REE i oś czasu planu liczą się teraz przy PAL 1,6 zamiast 1,4 (wyższy TEE → większa bezwzględna wartość deficytu przy tym samym %). Zapisani pacjenci i każdy jawny wybór — bez zmian. Testy: PLAN-PAL-DEFAULT-TEEN (12 lat → 1,6 + dopisek), PLAN-PAL-DEFAULT-ADULT (30 lat → 1,4), PLAN-PAL-TOUCHED-KEPT (jawny wybór 1,4 u nastolatka przeżywa przeliczenia), PLAN-PAL-RESTORE-KEPT (wczytany zapis z 1,4 u nastolatka nie jest nadpisywany) w `tests/e2e/diet-plan-logic.spec.mjs`.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

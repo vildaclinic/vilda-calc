@@ -233,7 +233,13 @@
         + ' title="' + esc(o.textContent || '') + '">'
         + esc(String(o.value).replace('.', ',')) + (clin ? '\u202F*' : '') + '</button>';
     }
-    return html + '</div>';
+    html += '</div>';
+    // Warto\u015B\u0107 nietkni\u0119ta = przyj\u0119ta domy\u015Blnie wg pasma normatywnego dla wieku (Normy 2024);
+    // sygnalizujemy to, by lekarz wiedzia\u0142, \u017Ce to za\u0142o\u017Cenie, a nie dana pacjenta.
+    if (w.__vildaPlanPalTouched !== true && sel.value) {
+      html += '<div class="bmi-journey-pal-note">PAL przyj\u0119ty domy\u015Blnie dla wieku \u2014 dostosuj do aktywno\u015Bci pacjenta.</div>';
+    }
+    return html;
   }
 
   // Segment diety: wszystkie poziomy z konfiguracji silnika; poziom wycięty
@@ -353,6 +359,7 @@
       + '.bmi-journey-kcalu{font-size:.82rem;color:var(--bj-muted)}'
       + '.bmi-journey-kcalcap{font-size:.72rem;color:var(--bj-green);margin-top:.05rem}'
       + '.bmi-journey-lbl{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--bj-muted);text-align:center;margin:.7rem 0 .25rem}'
+      + '.bmi-journey-pal-note{font-size:.7rem;color:var(--bj-muted);text-align:center;margin:.2rem .4rem 0;font-style:italic}'
       /* segmenty PAL/diety: komplet jawnych wartości + !important — #id wygrywa z `.liquid-ios26 button{...}!important` */
       + '#bmiJourneyMount .bmi-journey-seg{display:flex;border:1px solid var(--bj-line);border-radius:10px;overflow:hidden;margin:0}'
       + '#bmiJourneyMount .bmi-journey-seg button{font:inherit!important;font-size:.74rem!important;line-height:1.3!important;padding:.32rem .15rem!important;border:0!important;border-left:1px solid var(--bj-line)!important;border-radius:0!important;background:transparent!important;color:inherit!important;margin:0!important;flex:1 1 0!important;width:auto!important;min-width:0!important;cursor:pointer!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:none!important}'
@@ -406,6 +413,8 @@
     if (kind === 'pal') {
       var palSel = d.getElementById('palFactor');
       if (palSel) {
+        // Świadomy wybór PAL — od teraz update_prep nie nadpisuje wartości domyślną dla wieku.
+        w.__vildaPlanPalTouched = true;
         palSel.value = el.getAttribute('data-key');
         if (typeof w.updatePalDescription === 'function') { try { w.updatePalDescription(palSel.value); } catch (err) { /* opis PAL opcjonalny */ } }
         if (typeof w.debouncedUpdate === 'function') w.debouncedUpdate();
