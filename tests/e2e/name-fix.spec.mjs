@@ -165,6 +165,105 @@ test('Rekord Z JAWNYMI częściami — bez promptu; pola z części nawet gdy ko
   await expect(page.locator('#vnfDone')).toBeHidden();
 });
 
+// REGRESJA v2: payload snapshotu niedostępny (sejf zwraca payload:null przy nieudanym
+// odszyfrowaniu; w trybie chmurowym lista snapshotów bywa chwilowo pusta) NIE oznacza
+// „starego rekordu jednopolowego". Wcześniej poprawnie zapisany pacjent dostawał wtedy
+// fałszywy prompt „Rozdziel imię i nazwisko".
+test('Payload TRWALE niedostępny — bez promptu i bez ruszania pól (mimo ponownej próby)', async ({ page }) => {
+  await openIndexGuest(page);
+  await createSyntheticVault(page);
+
+  // Pacjent zapisany wzorcowo, z jawnymi częściami.
+  const { patientId } = await saveAndLoad(page, {
+    name: 'Surdyk Szymon',
+    user: { firstName: 'Szymon', lastName: 'Surdyk', age: 9, sex: 'M' },
+  });
+  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+
+  // Od teraz każdy odczyt zwraca snapshoty BEZ payloadu (dokładnie jak sejf po
+  // nieudanym odszyfrowaniu) — obejmuje to także ponowną próbę modułu.
+  await page.evaluate((pid) => {
+    const V = window.VildaVault;
+    const orig = V.getPatient.bind(V);
+    window.__vnfGetPatientCalls = 0;
+    V.getPatient = async (id) => {
+      const rec = await orig(id);
+      if (rec && id === pid) {
+        window.__vnfGetPatientCalls += 1;
+        rec.snapshots = (rec.snapshots || []).map((s) => ({ ...s, payload: null }));
+      }
+      return rec;
+    };
+  }, patientId);
+
+  // Symulacja stanu pól po zwykłym wczytaniu (P-SPLIT rozdzielił kanon „Nazwisko Imię").
+  await page.evaluate((pid) => {
+    document.getElementById('name').value = 'Surdyk Szymon';
+    document.getElementById('lastName').value = 'Surdyk';
+    document.getElementById('firstName').value = 'Szymon';
+    document.dispatchEvent(
+      new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid } }),
+    );
+  }, patientId);
+
+  // Czekamy, aż moduł wykona ponowną próbę (≥2 odczyty; inne moduły nasłuchujące
+  // 'vilda:patient-loaded' też wołają getPatient, więc licznik nie jest dokładnie 2),
+  // plus chwila na osiadanie — potem asercje behawioralne.
+  await expect
+    .poll(() => page.evaluate(() => window.__vnfGetPatientCalls), { timeout: 15000 })
+    .toBeGreaterThanOrEqual(2);
+  await page.waitForTimeout(700);
+
+  // Bez promptu, bez potwierdzenia, pola nietknięte.
+  await expect(page.locator('#vnfFix')).toBeHidden();
+  await expect(page.locator('#vnfDone')).toBeHidden();
+  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+  await expect(page.locator('#firstName')).toHaveValue('Szymon');
+});
+
+test('Payload CHWILOWO niedostępny — ponowna próba trafia, części zastosowane, bez promptu', async ({ page }) => {
+  await openIndexGuest(page);
+  await createSyntheticVault(page);
+
+  const { patientId } = await saveAndLoad(page, {
+    name: 'Surdyk Szymon',
+    user: { firstName: 'Szymon', lastName: 'Surdyk', age: 9, sex: 'M' },
+  });
+  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+
+  // PIERWSZY kolejny odczyt zwraca payload:null (chwilowy zator), następne działają normalnie.
+  await page.evaluate((pid) => {
+    const V = window.VildaVault;
+    const orig = V.getPatient.bind(V);
+    let failed = false;
+    V.getPatient = async (id) => {
+      const rec = await orig(id);
+      if (rec && id === pid && !failed) {
+        failed = true;
+        rec.snapshots = (rec.snapshots || []).map((s) => ({ ...s, payload: null }));
+      }
+      return rec;
+    };
+  }, patientId);
+
+  // Pola celowo rozjechane — poprawne wartości mają przyjść z ponownej próby odczytu.
+  await page.evaluate((pid) => {
+    document.getElementById('name').value = '';
+    document.getElementById('lastName').value = '';
+    document.getElementById('firstName').value = '';
+    document.dispatchEvent(
+      new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid } }),
+    );
+  }, patientId);
+
+  // Po ponownej próbie (ok. 1,2 s) pola ustawione z JAWNYCH części, bez promptu.
+  await expect(page.locator('#lastName')).toHaveValue('Surdyk', { timeout: 15000 });
+  await expect(page.locator('#firstName')).toHaveValue('Szymon');
+  await expect(page.locator('#name')).toHaveValue('Surdyk Szymon');
+  await expect(page.locator('#vnfFix')).toBeHidden();
+  await expect(page.locator('#vnfDone')).toBeHidden();
+});
+
 test('Rekord JEDNOTOKENOWY — całość w Nazwisko, Imię puste, bez promptu', async ({ page }) => {
   await openIndexGuest(page);
   await createSyntheticVault(page);
