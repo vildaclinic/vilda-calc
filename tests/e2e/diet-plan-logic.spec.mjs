@@ -321,3 +321,51 @@ test('PLAN-C-NARROW: karta mieści się w wąskiej kolumnie bez poziomego przewi
   expect(fits.card).toBe(true);
   expect(fits.doc).toBe(true);
 });
+
+// ===== Fuzja kart, etap 1: jeden wybór diety w aplikacji — panel „Drogi
+// do normy" czyta/ustawia #dietLevel; obie karty zawsze zgodne. =====
+
+test('PLAN-SYNC-BOTH-WAYS: klik diety w Drodze ustawia plan i odwrotnie; zgodność przeżywa przeliczenia', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const snap = () => page.evaluate(() => ({
+    sel: document.getElementById('dietLevel').value,
+    journey: document.querySelector('#bmiJourneyMount .bmi-journey-chip[data-journey="diet"][aria-pressed="true"]')?.textContent || '',
+    plan: document.querySelector('#planResults [data-plan2-diet][aria-pressed="true"]')?.getAttribute('data-plan2-diet'),
+  }));
+  // Droga → Plan
+  await page.evaluate(() => document.querySelector('#bmiJourneyMount .bmi-journey-chip[data-key="intense"]').click());
+  let s = await snap();
+  expect(s.sel).toBe('intense');
+  expect(s.plan).toBe('intense');
+  expect(s.journey).toContain('intensywna');
+  // Plan → Droga
+  await page.evaluate(() => document.querySelector('#planResults [data-plan2-diet="light"]').click());
+  s = await snap();
+  expect(s.sel).toBe('light');
+  expect(s.plan).toBe('light');
+  expect(s.journey).toContain('lekka');
+  // Przeliczenie karty (zmiana masy) nie gubi wspólnego wyboru.
+  await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 94, height: 178 });
+  s = await snap();
+  expect(s.sel).toBe('light');
+  expect(s.plan).toBe('light');
+  expect(s.journey).toContain('lekka');
+});
+
+test('PLAN-SYNC-TIMES: przy wyłączonym ruchu obie karty pokazują ten sam termin dla tej samej diety', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
+  const out = await page.evaluate(() => {
+    // Wyłącz spacer (domyślny ruch) — panel liczy wtedy samą dietę, jak plan.
+    const walk = document.querySelector('#bmiJourneyMount .bmi-journey-chip[data-key="walk"]');
+    if (walk && walk.getAttribute('aria-pressed') === 'true') walk.click();
+    const j = (document.getElementById('bmiJourneyMount').textContent || '').match(/za ok\. ([^)]+)\)/);
+    const p = (document.getElementById('planResults').textContent || '').match(/za ok\. ([^)]+)\)/);
+    return { journey: j && j[1], plan: p && p[1] };
+  });
+  expect(out.journey).toBeTruthy();
+  expect(out.journey).toBe(out.plan);
+});
