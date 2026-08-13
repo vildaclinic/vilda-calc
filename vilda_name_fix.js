@@ -43,6 +43,17 @@
  *     ponownie; ustawiamy stan PRZED zapisem, więc ewentualne wtórne zdarzenia nie
  *     powodują rekurencji. Zapis (updateSnapshotPayload) emituje tylko wewnętrzne
  *     powiadomienia sejfu, nie DOM-owe 'vilda:patient-loaded'.
+ *   - PAYLOAD NIEDOSTĘPNY ≠ REKORD JEDNOPOLOWY (v2): sejf przy nieudanym
+ *     odszyfrowaniu payloadu zwraca snapshot z payload:null (a w trybie chmurowym
+ *     lista snapshotów bywa chwilowo pusta tuż po odblokowaniu / przy problemie
+ *     sieci). Taki stan mówi „nie wiem”, a nie „stary rekord bez części” — dlatego
+ *     przy braku payloadu robimy JEDNĄ ponowną próbę odczytu po krótkiej chwili,
+ *     a gdy payload nadal jest niedostępny, NIE pokazujemy promptu i nie ruszamy
+ *     pól (zostaje poprawny podział z P-SPLIT kanonu „Nazwisko Imię”). Bez tego
+ *     poprawnie zapisany pacjent potrafił dostać fałszywy prompt korekty.
+ *   - Kolejność zdarzeń: monotoniczny licznik `loadSeq` unieważnia w locie starsze,
+ *     jeszcze nieukończone odczyty (w tym oczekującą ponowną próbę), gdy nadejdzie
+ *     nowsze 'vilda:patient-loaded' — stan pól zawsze odpowiada OSTATNIEMU zdarzeniu.
  *   - Nie zmieniamy matematyki silnika ani innych funkcji.
  */
 (function (w) {
@@ -68,10 +79,16 @@
   var resolved = new Map();
   // currentPromptId: id pacjenta, dla którego prompt jest AKTUALNIE otwarty (albo null).
   var currentPromptId = null;
+  // loadSeq: rośnie z każdym 'vilda:patient-loaded'; handler porównuje po każdym await,
+  // by starszy (jeszcze trwający) odczyt nie nadpisał stanu nowszego zdarzenia.
+  var loadSeq = 0;
+  // Odstęp przed ponowną próbą odczytu, gdy payload snapshotu jest chwilowo niedostępny.
+  var RETRY_DELAY_MS = 1200;
 
   // --- Drobne narzędzia --------------------------------------------------------------
   function str(x) { return x == null ? '' : String(x); }
   function norm(x) { return str(x).replace(/\s+/g, ' ').trim(); }
+  function delay(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
   function tokens(nameStr) { var n = norm(nameStr); return n ? n.split(' ') : []; }
   function warn(msg) { try { if (w.console && w.console.warn) w.console.warn('[vilda_name_fix] ' + msg); } catch (_) {} }
   function getVault() { return w.VildaVault || null; }
@@ -416,6 +433,8 @@
 
   // --- Główny handler zdarzenia ------------------------------------------------------
   async function handlePatientLoaded(ev) {
+    // Każde zdarzenie unieważnia starsze, jeszcze trwające odczyty (por. BEZPIECZNIKI).
+    var seq = ++loadSeq;
     var detail = (ev && ev.detail) || {};
     var patientId = (typeof detail.patientId === 'string')
       ? detail.patientId
@@ -433,6 +452,17 @@
     if (patientId && currentPromptId === patientId) return;
 
     var rec = await loadRecord(patientId);
+    if (seq !== loadSeq) return; // w trakcie odczytu nadeszło nowsze zdarzenie
+
+    // Payload snapshotu niedostępny (chmura jeszcze nie dociągnęła danych albo
+    // odszyfrowanie payloadu się nie powiodło → sejf zwraca payload:null) — to stan
+    // przejściowy, nie cecha rekordu. Jedna ponowna próba po krótkiej chwili.
+    if (rec && !rec.payload) {
+      await delay(RETRY_DELAY_MS);
+      if (seq !== loadSeq) return;
+      rec = await loadRecord(patientId);
+      if (seq !== loadSeq) return;
+    }
 
     // Zamknij ewentualny prompt/potwierdzenie z poprzedniego pacjenta.
     hidePrompt();
@@ -440,6 +470,14 @@
 
     // Bez rekordu (sejf zablokowany/błąd) — nie ruszamy pól (unikamy błędnej korekty).
     if (!rec) { warn('brak rekordu dla patientId=' + (patientId || '(brak)') + ' — pomijam'); return; }
+
+    // Payload nadal niedostępny → „nie wiem”, NIE „rekord jednopolowy”: bez promptu,
+    // bez ruszania pól (zostaje podział kanonu przez P-SPLIT). Fałszywy prompt dla
+    // poprawnie zapisanego pacjenta jest gorszy niż brak korekty starego rekordu.
+    if (!rec.payload) {
+      warn('payload snapshotu niedostępny dla patientId=' + (patientId || '(brak)') + ' — pomijam bez promptu');
+      return;
+    }
 
     var payload = rec.payload || {};
     var pu = (payload.user && typeof payload.user === 'object') ? payload.user : {};
@@ -489,7 +527,7 @@
   // Publiczny znacznik gotowości (dla testów/diagnostyki; nie zmienia zachowania aplikacji).
   w.VildaNameFix = {
     __init: true,
-    version: '1',
+    version: '2',
     resolvedCount: function () { return resolved.size; }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
