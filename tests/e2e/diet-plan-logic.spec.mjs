@@ -43,9 +43,11 @@ test('PLAN-S1-ADULT-TARGET: dorosły dostaje liczbowy czas do granicy normy (cel
   test.setTimeout(90_000);
   await openIndex(page);
   const out = await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
-  expect(out.visible).toBe(true);
+  // Karta scalona: planCard ukryty, silnik renderuje do ukrytego planResults
+  // (selecty, autosave, integracje) — asercje liczbowe pozostają ważne.
+  expect(out.visible).toBe(false);
   // PAL 1,4, dieta umiarkowana (−588 kcal → 0,5345 kg/tydz.), cel 24,9 → 78,87 kg:
-  // 16,13 kg / 2,32 kg/mies. → 7 mies. (siatka 0,5); układ 2.0: zdanie + znacznik osi.
+  // 16,13 kg / 2,32 kg/mies. → 7 mies. (siatka 0,5).
   expect(out.text).toMatch(/Stosując dietę umiarkowaną osiągniesz górną granicę normy BMI (w|we) \S+ \d{4} \(za ok\. 7 miesięcy\)/u);
   expect(out.text).toMatch(/7 mies\.\s*granica normy/u);
   expect(out.text).not.toContain('– mies.');
@@ -65,7 +67,7 @@ test('PLAN-S1-CHILD-LABEL: u dziecka druga karta zostaje przy 50. centylu BMI', 
   test.setTimeout(90_000);
   await openIndex(page);
   const out = await renderPlan(page, { age: 8, months: 0, sex: 'M', weight: 45, height: 130 });
-  expect(out.visible).toBe(true);
+  expect(out.visible).toBe(false);
   expect(out.text).toContain('50. centyl BMI');
   expect(out.text).not.toContain('BMI 22');
   expect(out.text).toMatch(/osiągniesz górną granicę normy BMI/);
@@ -151,9 +153,12 @@ test('PLAN-S2-PROF-GATE: tryb profesjonalny — <2 lat plan ukryty, 2–5 lat z 
   expect(warn3.text).toContain('Wiek 2–5 lat');
   expect(warn3.text).toContain('do oceny klinicznej');
   const school = await renderPlan(page, { age: 8, months: 0, sex: 'M', weight: 45, height: 130 });
-  expect(school.visible).toBe(true);
+  // ≥5 lat: karta scalona przejmuje UI (planCard ukryty), ostrzeżenie 5–9 w panelu.
+  expect(school.visible).toBe(false);
   const warn8 = await page.evaluate(() => document.getElementById('planWarning')?.style.display);
   expect(warn8).toBe('none');
+  const mount8 = await page.evaluate(() => (document.getElementById('bmiJourneyMount')?.textContent || '').replace(/\s+/g, ' '));
+  expect(mount8).toContain('Dieta u dzieci w wieku 5–9 lat wymaga nadzoru');
   // Poza trybem profesjonalnym 3-latek nadal bez planu (konsultacja).
   await setProfessionalMode(page, false);
   const control = await renderPlan(page, { age: 3, months: 0, sex: 'F', weight: 20, height: 95 });
@@ -252,6 +257,9 @@ test('PLAN-C-LAYOUT: karta w prawej kolumnie (normWrapper) i u dorosłego, i u d
   const adult = await probe({ age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   expect(adult.parent).toBe('normWrapper');
   expect(adult.inputs).toBe('none');
+  // Karta scalona: cały planCard ukryty, panel w toNormCard przejmuje UI.
+  const cardDisplay = await page.evaluate(() => document.getElementById('planCard')?.style.display);
+  expect(cardDisplay).toBe('none');
   const child = await probe({ age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
   expect(child.parent).toBe('normWrapper');
   // Ukryte selecty pozostają źródłem prawdy (autosave, integracje).
@@ -331,11 +339,11 @@ test('PLAN-SYNC-BOTH-WAYS: klik diety w Drodze ustawia plan i odwrotnie; zgodno�
   await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
   const snap = () => page.evaluate(() => ({
     sel: document.getElementById('dietLevel').value,
-    journey: document.querySelector('#bmiJourneyMount .bmi-journey-chip[data-journey="diet"][aria-pressed="true"]')?.textContent || '',
+    journey: document.querySelector('#bmiJourneyMount [data-journey="diet"][aria-pressed="true"]')?.textContent || '',
     plan: document.querySelector('#planResults [data-plan2-diet][aria-pressed="true"]')?.getAttribute('data-plan2-diet'),
   }));
   // Droga → Plan
-  await page.evaluate(() => document.querySelector('#bmiJourneyMount .bmi-journey-chip[data-key="intense"]').click());
+  await page.evaluate(() => document.querySelector('#bmiJourneyMount [data-journey="diet"][data-key="intense"]').click());
   let s = await snap();
   expect(s.sel).toBe('intense');
   expect(s.plan).toBe('intense');
@@ -362,10 +370,12 @@ test('PLAN-SYNC-TIMES: przy wyłączonym ruchu obie karty pokazują ten sam term
     // Wyłącz spacer (domyślny ruch) — panel liczy wtedy samą dietę, jak plan.
     const walk = document.querySelector('#bmiJourneyMount .bmi-journey-chip[data-key="walk"]');
     if (walk && walk.getAttribute('aria-pressed') === 'true') walk.click();
-    const j = (document.getElementById('bmiJourneyMount').textContent || '').match(/za ok\. ([^)]+)\)/);
-    const p = (document.getElementById('planResults').textContent || '').match(/za ok\. ([^)]+)\)/);
-    return { journey: j && j[1], plan: p && p[1] };
+    const j = (document.getElementById('bmiJourneyMount').textContent || '').match(/(\d+(?:,\d)?) mies\./);
+    const p = (document.getElementById('planResults').textContent || '').match(/za ok\. (\d+(?:,\d)?) miesi/);
+    const mode = (document.getElementById('bmiJourneyMount').textContent || '').includes('sama dieta');
+    return { journey: j && j[1], plan: p && p[1], mode };
   });
+  expect(out.mode).toBe(true);
   expect(out.journey).toBeTruthy();
   expect(out.journey).toBe(out.plan);
 });
