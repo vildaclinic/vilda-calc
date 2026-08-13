@@ -379,3 +379,84 @@ test('PLAN-SYNC-TIMES: przy wyłączonym ruchu obie karty pokazują ten sam term
   expect(out.journey).toBeTruthy();
   expect(out.journey).toBe(out.plan);
 });
+
+// --- Domyślny PAL wg pasma normatywnego dla wieku (2026-08-13) -----------------
+// Nastolatek 10–18 lat: pasmo normatywne Norm 2024 to 1,6–2,0, więc nietknięty
+// formularz dostaje 1,6 (dotąd: kliniczne 1,4 dla każdego). Jawny wybór i wartości
+// z zapisu pacjenta mają pierwszeństwo (flaga __vildaPlanPalTouched).
+
+test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,6 + dopisek o wartości domyślnej', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
+  const out = await page.evaluate(() => ({
+    pal: document.getElementById('palFactor').value,
+    engineDefault: typeof energyDefaultPlanPal === 'function' ? energyDefaultPlanPal(12, 0) : null,
+    touched: window.__vildaPlanPalTouched === true,
+    note: (document.getElementById('bmiJourneyMount')?.textContent || '').includes('PAL przyjęty domyślnie dla wieku'),
+  }));
+  expect(out.engineDefault).toBe(1.6);
+  expect(out.pal).toBe('1.6');
+  expect(out.touched).toBe(false);
+  expect(out.note).toBe(true);
+});
+
+test('PLAN-PAL-DEFAULT-ADULT: dorosły zostaje przy PAL 1,4 (dolna granica pasma normatywnego)', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 30, months: 0, sex: 'M', weight: 95, height: 178 });
+  const out = await page.evaluate(() => ({
+    pal: document.getElementById('palFactor').value,
+    engineDefault: typeof energyDefaultPlanPal === 'function' ? energyDefaultPlanPal(30, 0) : null,
+  }));
+  expect(out.engineDefault).toBe(1.4);
+  expect(out.pal).toBe('1.4');
+});
+
+test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,4 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania na 1,6)', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
+  const out = await page.evaluate(() => {
+    const sel = document.getElementById('palFactor');
+    // Świadomy wybór jak z UI: zmiana wartości + natywne zdarzenie 'change'.
+    sel.value = '1.4';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    window.update();
+    window.update(); // drugie przeliczenie — wartość ma przetrwać
+    return {
+      pal: sel.value,
+      touched: window.__vildaPlanPalTouched === true,
+      note: (document.getElementById('bmiJourneyMount')?.textContent || '').includes('PAL przyjęty domyślnie dla wieku'),
+    };
+  });
+  expect(out.touched).toBe(true);
+  expect(out.pal).toBe('1.4');
+  expect(out.note).toBe(false);
+});
+
+test('PLAN-PAL-RESTORE-KEPT: wczytany zapis nastolatka z PAL 1,4 nie jest nadpisywany wartością domyślną', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
+  const out = await page.evaluate(() => {
+    // Ścieżka produkcyjna wczytania zapisu (pacjent/JSON/sesja): applyLoadedData
+    // z plan.palFactor oznacza wartość jako świadomą (touched) i ustawia select.
+    window.VildaDataImportExport.applyLoadedData({
+      version: 1,
+      name: 'Testowy Pacjent',
+      user: { age: 12, ageMonths: 0, sex: 'M', weight: 70, height: 150 },
+      plan: { palFactor: 1.4, dietLevel: null },
+    });
+    // Dopewnij pola antropometryczne (payload testowy jest minimalny), potem przelicz.
+    const set = (id, v) => { const el = document.getElementById(id); if (el && !el.value) el.value = String(v); };
+    set('age', 12); set('weight', 70); set('height', 150);
+    window.update();
+    return {
+      pal: document.getElementById('palFactor').value,
+      touched: window.__vildaPlanPalTouched === true,
+    };
+  });
+  expect(out.touched).toBe(true);
+  expect(out.pal).toBe('1.4');
+});
