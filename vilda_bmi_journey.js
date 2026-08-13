@@ -11,7 +11,7 @@
   'use strict';
   if (!w || w.VildaBmiJourney) return;
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var STORAGE_KEY = 'vildaBmiJourneyState';
   var KCAL_PER_KG_FALLBACK = 7700;
 
@@ -54,6 +54,24 @@
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
   function weeksToMonthsHalf(weeks) { return Math.round((weeks * 12 / 52) * 2) / 2; }
+  // Etap 3: dzieci dostają czas z wspólnej symulacji wzrastania (silnik energii);
+  // dorośli — dotychczasowa matematyka liniowa (symulacja dałaby ten sam wynik).
+  function timeToNorm(ctx, weeklyLossKg) {
+    if (!(weeklyLossKg > 0) || !(ctx.kgToLose > 0)) return null;
+    if (ctx.isChild && typeof w.energySimulateMonthsToBmiTarget === 'function') {
+      try {
+        var sim = w.energySimulateMonthsToBmiTarget({
+          ageYears: ctx.ageYears, ageMonthsOpt: 0, sex: ctx.sex,
+          weightKg: ctx.weightKg, heightCm: ctx.heightCm,
+          weeklyLossKg: weeklyLossKg, target: 'norm'
+        });
+        if (sim && sim.months != null) {
+          return { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm };
+        }
+      } catch (err) { /* fallback liniowy poniżej */ }
+    }
+    return { months: weeksToMonthsHalf(Math.ceil(ctx.kgToLose / weeklyLossKg)), growthAware: false, annualGrowthCm: null };
+  }
   function monthsWord(m) {
     if (m % 1 !== 0) return fmt(m, 1) + ' miesiąca';
     if (m === 1) return '1 miesiąc';
@@ -61,9 +79,9 @@
     return (r >= 2 && r <= 4 && (c < 12 || c > 14)) ? m + ' miesiące' : m + ' miesięcy';
   }
   function monthsShort(m) { return (m % 1 !== 0 ? fmt(m, 1) : String(m)) + ' mies.'; }
-  function dateAfterWeeks(weeks) {
+  function dateAfterMonths(months) {
     var dt = new Date();
-    dt.setDate(dt.getDate() + Math.round(weeks * 7));
+    dt.setDate(dt.getDate() + Math.round(months * 30.44));
     return MONTHS_LOC[dt.getMonth()] + ' ' + dt.getFullYear();
   }
 
@@ -150,12 +168,15 @@
     }
     var totalWeek = deficitDay * 7 + moveWeek;
     var kk = kcalPerKg();
-    var weeksCombo = totalWeek > 0 ? Math.ceil(ctx.kgToLose * kk / totalWeek) : null;
-    var weeksDiet = dietOn && deficitDay > 0 ? Math.ceil(ctx.kgToLose * kk / (deficitDay * 7)) : null;
+    var comboT = totalWeek > 0 ? timeToNorm(ctx, totalWeek / kk) : null;
+    var dietT = dietOn && deficitDay > 0 ? timeToNorm(ctx, deficitDay * 7 / kk) : null;
     return {
       diets: diets, dietAvailable: dietAvailable, dietOn: dietOn, dietKey: dietKey,
       rows: rows, moveWeek: moveWeek, totalWeek: totalWeek,
-      weeksCombo: weeksCombo, weeksDiet: weeksDiet
+      monthsCombo: comboT ? comboT.months : null,
+      monthsDiet: dietT ? dietT.months : null,
+      growthAware: !!(comboT && comboT.growthAware),
+      annualGrowthCm: comboT ? comboT.annualGrowthCm : null
     };
   }
 
@@ -176,39 +197,43 @@
   }
 
   function renderResult(model) {
-    var mc = model.weeksCombo != null ? weeksToMonthsHalf(model.weeksCombo) : null;
-    var md = model.weeksDiet != null ? weeksToMonthsHalf(model.weeksDiet) : null;
+    var mc = model.monthsCombo;
+    var md = model.monthsDiet;
     var html = '';
-    if (model.weeksCombo != null) {
+    if (mc != null) {
       html += '<p class="bmi-journey-when">Przy tym planie osiągniesz normę BMI <b>'
-        + esc(dateAfterWeeks(model.weeksCombo)) + '</b> (za ok. ' + esc(monthsWord(mc)) + ').</p>';
+        + esc(dateAfterMonths(mc)) + '</b> (za ok. ' + esc(monthsWord(mc)) + ').</p>';
+    }
+    if (mc != null && model.growthAware && fin(model.annualGrowthCm)) {
+      html += '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie (ok. '
+        + esc(fmt(model.annualGrowthCm, 1)) + ' cm/rok)</p>';
     }
     var gain = '';
-    if (model.weeksDiet != null && model.weeksCombo != null && model.weeksDiet > model.weeksCombo) {
+    if (md != null && mc != null && md > mc) {
       var diff = Math.round((md - mc) * 2) / 2;
       gain = diff >= 0.5
         ? 'Dzięki ruchowi o ' + monthsWord(diff) + ' szybciej niż na samej diecie'
         : 'Dzięki ruchowi nieznacznie szybciej niż na samej diecie';
-    } else if (model.weeksCombo != null && model.dietOn && model.moveWeek === 0) {
+    } else if (mc != null && model.dietOn && model.moveWeek === 0) {
       gain = 'Dołóż ruch, żeby osiągnąć normę szybciej';
-    } else if (model.weeksCombo != null && !model.dietOn) {
+    } else if (mc != null && !model.dietOn) {
       gain = model.dietAvailable ? 'Włącz plan diety — sam ruch to długa droga' : '';
-    } else if (model.weeksCombo == null) {
+    } else if (mc == null) {
       gain = 'Zaznacz dietę lub ruch, żeby zobaczyć przewidywany termin';
     }
     if (gain) html += '<div class="bmi-journey-gain"><span>' + esc(gain) + '</span></div>';
     // Oś czasu: znaczniki w miesiącach (0,5), wypełnienie proporcjonalne.
-    if (model.weeksCombo != null) {
-      var showDiet = model.weeksDiet != null && model.moveWeek > 0 && model.weeksDiet > model.weeksCombo;
-      var maxW = Math.max(model.weeksCombo, showDiet ? model.weeksDiet : model.weeksCombo, 1);
-      var pC = Math.max(4, model.weeksCombo / maxW * 84);
+    if (mc != null) {
+      var showDiet = md != null && model.moveWeek > 0 && md > mc;
+      var maxW = Math.max(mc, showDiet ? md : mc, 0.5);
+      var pC = Math.max(4, mc / maxW * 84);
       var comboLabel = model.dietOn ? (model.moveWeek > 0 ? 'dieta + ruch' : 'sama dieta') : 'sam ruch';
       html += '<div class="bmi-journey-timeline"><div class="bmi-journey-track">'
         + '<div class="bmi-journey-fill" style="width:' + pC.toFixed(1) + '%"></div></div>'
         + '<div class="bmi-journey-marks">'
         + '<span class="bmi-journey-mark" style="left:' + pC.toFixed(1) + '%"><b>' + esc(monthsShort(mc)) + '</b>' + esc(comboLabel) + '</span>'
         + (showDiet
-          ? '<span class="bmi-journey-mark" style="left:' + (model.weeksDiet / maxW * 84).toFixed(1) + '%"><b>' + esc(monthsShort(md)) + '</b>sama dieta</span>'
+          ? '<span class="bmi-journey-mark" style="left:' + (md / maxW * 84).toFixed(1) + '%"><b>' + esc(monthsShort(md)) + '</b>sama dieta</span>'
           : '')
         + '</div></div>';
     }
@@ -282,6 +307,7 @@
       + '#bmiJourneyMount .bmi-journey-sum td:first-child{color:var(--bj-green)!important}'
       + '#bmiJourneyMount .bmi-journey-placeholder td{color:var(--bj-muted)!important;font-style:italic;border-bottom:0!important}'
       + '.bmi-journey-when{text-align:center;margin:.7rem 0 0;font-size:.9rem}'
+      + '.bmi-journey-growth{text-align:center;margin:.15rem 0 0;font-size:.72rem;color:var(--bj-muted)}'
       + '.bmi-journey-when b{color:var(--bj-num)}'
       + '.bmi-journey-gain{display:block;text-align:center;margin:.35rem auto 0;font-size:.8rem}'
       + '.bmi-journey-gain span{display:inline-block;background:rgba(46,143,87,.14);color:var(--bj-green);font-weight:650;border-radius:999px;padding:.2rem .65rem}'
@@ -372,17 +398,17 @@
   function getPdfModel() {
     if (!lastCtx || !d.getElementById('bmiJourneyMount')) return { available: false };
     var model = computeModel(lastCtx);
-    if (!model.rows.length || model.weeksCombo == null) return { available: false };
+    if (!model.rows.length || model.monthsCombo == null) return { available: false };
     var kk = kcalPerKg();
-    var mc = weeksToMonthsHalf(model.weeksCombo);
+    var mc = model.monthsCombo;
     var rows = [];
     for (var i = 0; i < model.rows.length; i += 1) {
       var r = model.rows[i];
       rows.push([pdfText(r.name), 'ok. ' + fmtInt(r.kcalWeek), '-' + fmt(r.kcalWeek * 52 / 12 / kk, 2)]);
     }
     var gainText = '';
-    if (model.weeksDiet != null && model.weeksDiet > model.weeksCombo) {
-      var diff = Math.round((weeksToMonthsHalf(model.weeksDiet) - mc) * 2) / 2;
+    if (model.monthsDiet != null && model.monthsDiet > model.monthsCombo) {
+      var diff = Math.round((model.monthsDiet - mc) * 2) / 2;
       gainText = diff >= 0.5
         ? 'Dzięki ruchowi o ' + monthsWord(diff) + ' szybciej niż na samej diecie.'
         : 'Dzięki ruchowi nieznacznie szybciej niż na samej diecie.';
@@ -396,8 +422,12 @@
       startCel: 'Start: ' + fmt(lastCtx.weightKg, 1) + ' kg · Cel: ' + fmt(lastCtx.weightKg - lastCtx.kgToLose, 1) + ' kg',
       rows: rows,
       totalRow: ['Razem', 'ok. ' + fmtInt(model.totalWeek), '-' + fmt(model.totalWeek * 52 / 12 / kk, 2)],
-      whenText: 'Przy tym planie osiągniesz normę BMI ' + dateAfterWeeks(model.weeksCombo)
-        + ' (za ok. ' + monthsWord(mc) + ').',
+      whenText: 'Przy tym planie osiągniesz normę BMI ' + dateAfterMonths(mc)
+        + ' (za ok. ' + monthsWord(mc)
+        + (model.growthAware && fin(model.annualGrowthCm)
+          ? '; uwzględnia dalsze wzrastanie ok. ' + fmt(model.annualGrowthCm, 1) + ' cm/rok'
+          : '')
+        + ').',
       gainText: gainText
     };
   }
