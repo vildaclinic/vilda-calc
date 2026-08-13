@@ -26,6 +26,16 @@
  * Wyjście: { available:true, predictedAdultHeightCm, method:'khamis-roche', ageYears, sex, midparentCm }
  *          lub { available:false, reason:'missing-sex'|'missing-chronological-age'|'missing-input'|'out-of-range' }
  *   (kształt zgodny z BP/RWT: available + predictedAdultHeightCm / available:false + reason)
+ *
+ * OGRANICZENIE OD DOŁU AKTUALNYM WZROSTEM (decyzja kliniczna właściciela 2026-08-13):
+ *   Równanie KR to czysta regresja — przy górnej granicy wieku (chłopcy ~17–17,5 l) potrafi
+ *   zwrócić wynik NIŻSZY niż już zmierzony wzrost (fizycznie niemożliwe; artefakt wewnątrz
+ *   błędu metody ±2,1/±1,7 cala). Wtedy predictedAdultHeightCm = aktualny wzrost, a surowy
+ *   wynik równania pozostaje w predictedAdultHeightCmRaw z flagą clampedToCurrentHeight:true.
+ *   Górna granica przedziału błędu ZAWSZE liczy się od wartości SUROWEJ (raw + półszerokość) —
+ *   clamp obcina przedział od dołu, nie przesuwa go w górę; gdy cały przedział leży poniżej
+ *   aktualnego wzrostu, zapada się do pojedynczej wartości (odpowiedzialność konsumentów).
+ *   predictedAdultHeightCmRaw i clampedToCurrentHeight zwracane są w każdym dostępnym wyniku.
  */
 (function (w) {
   'use strict';
@@ -191,9 +201,14 @@
     var predictedCm = predictedIn * 2.54;
     if (!Number.isFinite(predictedCm)) return { available: false, reason: 'missing-input' };
 
+    // Wzrost ostateczny nie może być niższy niż już zmierzony (patrz nagłówek modułu).
+    var clamped = predictedCm < heightCm;
+
     return {
       available: true,
-      predictedAdultHeightCm: predictedCm,
+      predictedAdultHeightCm: clamped ? heightCm : predictedCm,
+      predictedAdultHeightCmRaw: predictedCm,
+      clampedToCurrentHeight: clamped,
       method: 'khamis-roche',
       sex: sex,
       ageYears: ageYears,
@@ -205,7 +220,7 @@
   // Eksport globalny (jak inne silniki) + namespace do testów.
   try { w.calculateKhamisRochePrediction = calculateKhamisRochePrediction; } catch (_) { /* noop */ }
   w.VildaKhamisRoche = {
-    version: '1',
+    version: '2',
     source: 'Khamis-Roche Pediatrics 1994;94:504-7 + erratum 1995;95:457',
     MIN_AGE: MIN_AGE,
     MAX_AGE: MAX_AGE,
