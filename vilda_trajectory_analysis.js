@@ -153,8 +153,8 @@
     if (low) {
       if (d >= 0.2) {
         // Start z niedoboru (<10c): etykietę różnicuje centyl końcowy (decyzja właściciela 2026-08-09).
-        if (W) return { t: 'good', l: 'nadrabia niedobór wzrostu' };
-        if (cb < 10) return { t: 'good', l: 'nadrabia niedobór masy ciała' };
+        if (W) return { t: 'good', l: 'wyrównywanie niedoboru wzrostu (catch-up)' };
+        if (cb < 10) return { t: 'good', l: 'wyrównywanie niedoboru masy ciała' };
         if (B) return cb >= 97 ? { t: 'bad', l: 'przekroczenie progu otyłości (≥97c)' }
           : cb >= 85 ? { t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem BMI — do obserwacji' }
           : { t: 'good', l: 'wyrównanie niedoboru (BMI)' };
@@ -168,13 +168,13 @@
       if (W) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja z wysokich centyli' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja pozycji centylowej' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja wzrastania' } : { t: 'stable', l: ST };
       if (d <= -1.5) return { t: 'warn', l: B ? 'szybki spadek BMI — wskazana ocena' : 'szybka utrata masy — wskazana ocena' };
       if (d <= -0.2) return { t: 'good', l: B ? 'redukcja BMI' : 'redukcja nadmiaru masy ciała' };
-      if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: B ? (cb >= 97 ? (ca >= 97 ? 'progresja otyłości' : 'przekroczenie progu otyłości (≥97c)') : 'szybkie narastanie BMI') : (cb >= 97 ? (ca >= 97 ? 'progresja nadmiaru masy (>97. centyla)' : 'przekroczenie 97. centyla masy ciała') : 'nasilony przyrost masy ciała') };
-      return d >= 0.2 ? { t: 'warn', l: B ? 'narastanie nadmiaru BMI' : 'narastanie nadmiaru masy ciała' } : B && cb >= 97 ? { t: 'warn', l: 'utrzymująca się otyłość (>97c)' } : { t: 'stable', l: ST };
+      if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: B ? (cb >= 97 ? (ca >= 97 ? 'progresja otyłości' : 'przekroczenie progu otyłości (≥97c)') : 'szybka progresja nadwagi (BMI)') : (cb >= 97 ? (ca >= 97 ? 'progresja nadmiaru masy (>97. centyla)' : 'przekroczenie 97. centyla masy ciała') : 'nasilony przyrost masy ciała') };
+      return d >= 0.2 ? { t: 'warn', l: B ? 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' : 'narastanie nadmiaru masy ciała' } : B && cb >= 97 ? { t: 'warn', l: 'utrzymująca się otyłość (>97c)' } : { t: 'stable', l: ST };
     }
     if (W) return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: ST };
     if (Math.abs(d) >= 0.5) {
       var al = B ? (cb >= 97 || cb < 5) : (cb <= 3 || cb >= 97);
-      return al ? { t: 'bad', l: d > 0 ? (B ? 'przekroczenie progu otyłości (≥97c)' : 'przekroczenie 97. centyla masy ciała') : (B ? 'przekroczenie progu niedowagi (<5c)' : 'obniżenie poniżej 3. centyla masy') } : { t: 'warn', l: d > 0 ? 'istotne przesunięcie centylowe w górę' : 'istotne przesunięcie centylowe w dół' };
+      return al ? { t: 'bad', l: d > 0 ? (B ? 'przekroczenie progu otyłości (≥97c)' : 'przekroczenie 97. centyla masy ciała') : (B ? 'przekroczenie progu niedowagi (<5c)' : 'obniżenie masy ciała poniżej 3. centyla') } : { t: 'warn', l: d > 0 ? 'istotne przesunięcie centylowe w górę' : 'istotne przesunięcie centylowe w dół' };
     }
     return { t: 'stable', l: ST };
   }
@@ -195,7 +195,7 @@
         if (e0 >= 1.5) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja wzrastania' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja do kanału rodzicielskiego' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja ponad kanał rodzicielski' } : { t: 'stable', l: 'stabilny tor wzrastania' };
         if (ca < 10) {
           if (d <= -0.5) return { t: 'bad', l: 'pogłębianie niedoboru wzrostu' };
-          if (d <= -0.2) return { t: 'warn', l: 'zjazd w dolnym paśmie normy (3.–10. centyl) — do obserwacji' };
+          if (d <= -0.2) return { t: 'warn', l: 'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl) — do obserwacji' };
         }
         return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: 'w kanale rodzicielskim' };
       }
@@ -204,7 +204,7 @@
     if (rd && ca >= 10) {
       if (d <= -1.5) return { t: 'warn', l: 'redukcja bardzo szybka — do kontroli' };
       if (d <= -0.2) return { t: 'good', l: 'redukcja w trakcie leczenia' };
-      if (d >= 0.2) return { t: v1.t === 'bad' ? 'bad' : 'warn', l: 'narasta mimo leczenia' };
+      if (d >= 0.2) return { t: v1.t === 'bad' ? 'bad' : 'warn', l: 'przyrost masy mimo leczenia redukcyjnego' };
     }
     return v1;
   }

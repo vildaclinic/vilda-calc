@@ -499,7 +499,7 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
     const trajGh = {
       height: {
         fromAgeM: 96, toAgeM: 132,
-        total: { label: 'nadrabia niedobór wzrostu', tone: 'good' }, worst: null, redFlag: null,
+        total: { label: 'wyrównywanie niedoboru wzrostu (catch-up)', tone: 'good' }, worst: null, redFlag: null,
         segments: [
           { fromAgeM: 96, toAgeM: 108, dSds: 0.45, label: 'dobra odpowiedź na GH', tone: 'good', ghOn: true, rdOn: false },
           { fromAgeM: 108, toAgeM: 120, dSds: 0.05, label: 'słaba odpowiedź na GH — do oceny', tone: 'warn', ghOn: true, rdOn: false },
@@ -526,7 +526,7 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
         fromAgeM: 132, toAgeM: 150,
         total: { label: 'redukcja nadmiaru masy ciała (BMI)', tone: 'good' }, worst: null, redFlag: null,
         segments: [
-          { fromAgeM: 132, toAgeM: 141, dSds: 0.1, label: 'narasta mimo leczenia', tone: 'warn', ghOn: false, rdOn: true },
+          { fromAgeM: 132, toAgeM: 141, dSds: 0.1, label: 'przyrost masy mimo leczenia redukcyjnego', tone: 'warn', ghOn: false, rdOn: true },
           { fromAgeM: 141, toAgeM: 150, dSds: -0.4, label: 'redukcja w trakcie leczenia', tone: 'good', ghOn: false, rdOn: true }
         ]
       },
@@ -669,11 +669,11 @@ describe('epikryza P5 — szlif językowy i rejestr medyczny (audyt 2026-08-08)'
     const t = gen({ sex: 'M', ageYears: 12, ageMonths: 6, trajectory: {
       height: {
         fromAgeM: 120, toAgeM: 138,
-        total: { label: 'nadrabia niedobór wzrostu', tone: 'good' }, worst: null, redFlag: null,
+        total: { label: 'wyrównywanie niedoboru wzrostu (catch-up)', tone: 'good' }, worst: null, redFlag: null,
         segments: [{ fromAgeM: 120, toAgeM: 138, dSds: 0.4, label: 'dobra odpowiedź na GH', tone: 'good', ghOn: true, rdOn: false }]
       }, weight: null, bmi: null, delayedPuberty: false
     } }, {});
-    expect(t).toContain('Wynik analizy toru wzrastania w wieku 10–11,5 roku: nadrabia niedobór wzrostu.');
+    expect(t).toContain('Wynik analizy toru wzrastania w wieku 10–11,5 roku: wyrównywanie niedoboru wzrostu (catch-up).');
     expect(t).toContain('dobrą odpowiedź wzrostową w wieku 10–11,5 roku (ΔSDS = +0,40)');
   });
 });
