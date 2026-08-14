@@ -205,6 +205,60 @@
     return v1;
   }
 
+  // ── Nakładka spójności waga↔BMI — transkrypcja 1:1 verdictWtBmi panelu porównania. ──
+  // „Stabilna" waga (ΔSDS ≥ +0,2, poniżej własnego progu ostrzeżenia) przy BMI warn/bad
+  // w kierunku nadmiaru (ΔSDS BMI ≥ +0,2) w tym samym odcinku nie jest stabilna klinicznie:
+  // masa-do-wieku maskuje nadmiar, gdy wzrost odstaje w dół (decyzja właściciela 2026-08-14).
+  // Nie zmieniaj reguły bez zmiany verdictWtBmi — parytet pilnuje trajectory-analysis.test.mjs.
+  function weightBmiOverlayVerdict(v, dW, vB, dB) {
+    if (!v || v.t !== 'stable' || !(dW >= 0.2)) return v;
+    if (!vB || (vB.t !== 'warn' && vB.t !== 'bad') || !(dB >= 0.2)) return v;
+    return { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
+  }
+
+  // Zastosowanie nakładki do gotowych metryk: odcinki wagi parowane z odcinkami BMI po wieku
+  // granic; po zmianach przeliczany jest najpoważniejszy odcinek wagi (ta sama reguła co
+  // w analyzeMetric). Werdykty chipu leczenia (redukcja) pozostają nietknięte — ścieżka rd
+  // nie zwraca „stabilnych" werdyktów przy ΔSDS ≥ 0,2, więc warunek nakładki ich nie obejmuje.
+  function applyWeightBmiConsistency(metrics) {
+    var wt = null, bm = null;
+    metrics.forEach(function (m) {
+      if (m.metric === 'weight') wt = m;
+      else if (m.metric === 'bmi') bm = m;
+    });
+    if (!wt || !bm) return;
+    function bmiSegFor(a0, b0) {
+      for (var i = 0; i < bm.segments.length; i++) {
+        var s = bm.segments[i];
+        if (s.a.ageMonths === a0 && s.b.ageMonths === b0) return s;
+      }
+      return null;
+    }
+    var changed = false;
+    wt.segments.forEach(function (s) {
+      if (!s.verdict) return;
+      var bs = bmiSegFor(s.a.ageMonths, s.b.ageMonths);
+      if (!bs || !bs.verdict) return;
+      var nv = weightBmiOverlayVerdict(s.verdict, s.dSds, bs.verdict, bs.dSds);
+      if (nv !== s.verdict) { s.verdict = nv; changed = true; }
+    });
+    if (wt.total && bm.total
+      && wt.first.ageMonths === bm.first.ageMonths && wt.last.ageMonths === bm.last.ageMonths) {
+      var dW = Math.round(100 * (wt.last.sd - wt.first.sd)) / 100;
+      var dB = Math.round(100 * (bm.last.sd - bm.first.sd)) / 100;
+      wt.total = weightBmiOverlayVerdict(wt.total, dW, bm.total, dB);
+    }
+    if (changed) {
+      var sev = { bad: 2, warn: 1 }, worst = null;
+      wt.segments.forEach(function (s) {
+        if (!s.verdict || !sev[s.verdict.t]) return;
+        if (!worst || sev[s.verdict.t] > sev[worst.verdict.t] ||
+          (sev[s.verdict.t] === sev[worst.verdict.t] && Math.abs(s.dSds) > Math.abs(worst.dSds))) worst = s;
+      });
+      wt.worst = worst;
+    }
+  }
+
   // Nakładanie się przedziału kontekstu (w miesiącach wieku; b==null → trwa nadal) z odcinkiem [a0,b0].
   function overlapM(intv, a0, b0) {
     if (!intv || intv.a == null || !isFinite(intv.a)) return 0;
@@ -542,6 +596,7 @@
       if (m) metrics.push(m);
     });
     if (!metrics.length) return null;
+    applyWeightBmiConsistency(metrics);
     var lastAgeM = pts[pts.length - 1].ageMonths;
     // Opóźnione dojrzewanie (Palmert & Dunkel 2012): Tanner I u dziewcząt >13 lat / chłopców >14 lat.
     var delayedPuberty = !!(ctx && ctx.tannerStage === 1
@@ -974,6 +1029,7 @@
     statFor: statFor,
     verdictForPair: verdictForPair,
     verdictForPairCtx: verdictForPairCtx,
+    weightBmiOverlayVerdict: weightBmiOverlayVerdict,
     zoneForPair: zoneForPair,
     zoneLabel: zoneLabel,
     chan: chan,

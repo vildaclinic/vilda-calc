@@ -183,6 +183,13 @@ function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var v1=verdictCh(met,sa0,sb0,ca,
     if(d<=-0.2)return{t:"good",l:"redukcja w trakcie leczenia"};
     if(d>=0.2)return{t:v1.t==="bad"?"bad":"warn",l:"narasta mimo leczenia"}}
   return v1}
+// Nakładka spójności waga↔BMI (decyzja właściciela 2026-08-14): „stabilna" waga rosnąca ≥0,2 SDS
+// przy BMI ostrzegającym o narastaniu nadmiaru (ΔSDS BMI ≥0,2, warn/bad) w tym samym odcinku
+// nie jest stabilna klinicznie — masa-do-wieku maskuje nadmiar, gdy wzrost odstaje w dół.
+// Transkrypcja 1:1 w vilda_trajectory_analysis.js (weightBmiOverlayVerdict) — parytet pilnuje test.
+function verdictWtBmi(v,dW,vB,dB){if(!v||"stable"!==v.t||!(dW>=0.2))return v;
+  if(!vB||"warn"!==vB.t&&"bad"!==vB.t||!(dB>=0.2))return v;
+  return{t:"warn",l:"przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI"}}
 function ctxClean(x){return String(x==null?"":x).replace(/[<>]/g,"")}
 function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(b)-ageOf(a),tr="",cards="";
   var cx=null;try{cx=host._vildaCmpCtx||null}catch(eC){}
@@ -201,6 +208,11 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
       if(_dS<=-0.2){var _fast=_dS/(dt/12)<=-1.5;
         if(!_fast&&"weight"===m.metric){var _km=dv/dt;_fast=agB<144?_km<=-1:_km<=-3.9}
         _fast&&(v={t:"warn",l:"redukcja bardzo szybka — do kontroli"})}}
+    if("weight"===m.metric&&v&&"stable"===v.t){var _bit=null;items.forEach(function(x){x.sc&&"bmi"===x.sc.metric&&(_bit=x)});
+      var _b1=_bit?statAt(_bit,a):null,_b2=_bit?statAt(_bit,b):null;
+      if(_b1&&_b2&&typeof _b1.sd=="number"&&typeof _b2.sd=="number"){
+        var _vb=verdictCh2("bmi",_b1.sd,_b2.sd,_b1.c,_b2.c,ghM,cx?cx.mpSds:null,rdOn);
+        v=verdictWtBmi(v,Math.round(100*(sb.sd-sa.sd))/100,_vb,Math.round(100*(_b2.sd-_b1.sd))/100)}}
     var vW=function(h){return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":h};
     var _vv2=velMo?(dt>0?dv/dt:0):(dyr>0?dv/dyr:0),dS=(dv>=0?"+":"")+fmt(dv,dec)+" "+(m.unit||""),velS=velU?(_vv2>=0?"+":"")+fmt(_vv2,1)+" "+velU:null;
     var vA=cmpValHtml(m,sa),vB=cmpValHtml(m,sb),sds=cmpSdsHtml(sa,sb,v),chip=ip[1]?'<span class="vilda-cmp-chip '+(v?VCHIP[v.t]:ip[0])+'">'+ip[1]+"</span>":"";
