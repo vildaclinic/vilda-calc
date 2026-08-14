@@ -56,6 +56,18 @@ function extractRealVerdictWtBmi() {
   return new Function(`${source.slice(start, end)}\nreturn verdictWtBmi;`)();
 }
 
+function extractRealVerdictHtPos() {
+  const source = fs.readFileSync(
+    path.join(repositoryRoot, 'vilda_auth_ui.js'),
+    'utf8'
+  );
+  const start = source.indexOf('function verdictHtPos(');
+  const end = source.indexOf('function ctxClean(', start);
+  expect(start).toBeGreaterThan(-1);
+  expect(end).toBeGreaterThan(start);
+  return new Function(`${source.slice(start, end)}\nreturn verdictHtPos;`)();
+}
+
 function extractRealInterpCh() {
   const source = fs.readFileSync(
     path.join(repositoryRoot, 'vilda_auth_ui.js'),
@@ -140,6 +152,32 @@ describe('parytet werdyktów z panelem porównania (realny verdictCh z vilda_aut
       }
     }
     expect(compared).toBe(verdicts.length * verdicts.length * deltas.length * deltas.length);
+  });
+
+  it('heightPositionOverlayVerdict daje identyczny wynik co realny verdictHtPos (siatka przypadków)', () => {
+    const real = extractRealVerdictHtPos();
+    const verdicts = [
+      null,
+      { t: 'stable', l: 'stabilnie (poniżej kanału rodzicielskiego)' },
+      { t: 'stable', l: 'w kanale rodzicielskim' },
+      { t: 'warn', l: 'deceleracja toru wzrastania' },
+      { t: 'good', l: 'nadrabia niedobór wzrostu' }
+    ];
+    const cbs = [1.5, 2.9, 3, 4, 8, 9.9, 10, 40, 96];
+    const mps = [null, -0.1, 0.6];
+    const sa0s = [-2.2, -1.7, -1.6, -1.3, -0.4, 0.5];
+    for (const v of verdicts) {
+      for (const cb of cbs) {
+        for (const mp of mps) {
+          for (const sa0 of sa0s) {
+            for (const ghOn of [false, true]) {
+              expect(VildaTrajectoryAnalysis.heightPositionOverlayVerdict(v, cb, mp, sa0, ghOn))
+                .toEqual(real(v, cb, mp, sa0, ghOn));
+            }
+          }
+        }
+      }
+    }
   });
 
   it('zoneForPair odpowiada tekstowi strefy z realnego interpCh', () => {
@@ -499,6 +537,39 @@ describe('kontekst kliniczny per odcinek (parytet z realnym verdictCh2)', () => 
   });
 });
 
+describe('czułość dolnego pasma pod nakładką MPH i nakładka pozycyjna wzrostu (2026-08-14)', () => {
+  const { VildaTrajectoryAnalysis: vta } = loadModule();
+
+  it('zjazd 9c→5c w kanale rodzicielskim (gałąź środkowa MPH) ostrzega jak słownik populacyjny', () => {
+    // Bez naprawy gałąź środkowa (|e0|<1,5) dawała „w kanale rodzicielskim" (stable) mimo ΔSDS −0,32.
+    expect(vta.verdictForPairCtx('height', -1.34, -1.66, 9, 5, 0, 0, false))
+      .toEqual({ t: 'warn', l: 'zjazd w dolnym paśmie normy (3.–10. centyl) — do obserwacji' });
+    // Głębszy zjazd w dolnym paśmie → bad, spójnie ze słownikiem populacyjnym.
+    expect(vta.verdictForPairCtx('height', -1.3, -1.9, 9, 3.1, 0, 0, false))
+      .toEqual({ t: 'bad', l: 'pogłębianie niedoboru wzrostu' });
+    // Poza dolnym pasmem (ca≥10) progi gałęzi środkowej bez zmian.
+    expect(vta.verdictForPairCtx('height', -1.0, -1.3, 16, 10.5, 0, 0, false))
+      .toEqual({ t: 'stable', l: 'w kanale rodzicielskim' });
+  });
+
+  it('nakładka pozycyjna: <3c zawsze, 3–10c tylko poniżej kanału, nie przy GH', () => {
+    const ST = { t: 'stable', l: 'stabilny tor wzrastania' };
+    expect(vta.heightPositionOverlayVerdict(ST, 2.5, null, -2.1, false))
+      .toEqual({ t: 'warn', l: 'tor stabilny, ale poniżej 3. centyla — niedobór wzrostu' });
+    expect(vta.heightPositionOverlayVerdict(ST, 4, -0.1, -1.6, false))
+      .toEqual({ t: 'warn', l: 'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego — do obserwacji' });
+    // 3–10c w kanale rodzicielskim (rodzinnie niski wzrost) — bez alarmu.
+    expect(vta.heightPositionOverlayVerdict(ST, 8, -1.2, -1.5, false)).toEqual(ST);
+    // 3–10c bez danych MPH — bez alarmu (decyzja właściciela).
+    expect(vta.heightPositionOverlayVerdict(ST, 4, null, -1.6, false)).toEqual(ST);
+    // Aktywna ocena GH — nakładka się wycofuje.
+    expect(vta.heightPositionOverlayVerdict(ST, 2.5, -0.1, -2.1, true)).toEqual(ST);
+    // Werdykty inne niż stabilne — nietknięte.
+    const W = { t: 'warn', l: 'deceleracja toru wzrastania' };
+    expect(vta.heightPositionOverlayVerdict(W, 2.5, -0.1, -2.1, false)).toEqual(W);
+  });
+});
+
 describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
   function makeVtaCtx(table) {
     const centileFromSds = (sds) => {
@@ -528,9 +599,10 @@ describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
       context: { gh: { a: 72, b: null } } // terapia GH od 72. mies., nadal
     });
     const h = model.metrics.find((m) => m.metric === 'height');
-    // odcinek 60→72: przed terapią (nakładanie 0) → werdykt populacyjny (niedobór, poprawa)
+    // odcinek 60→72: przed terapią (nakładanie 0) → werdykt populacyjny; koniec odcinka ~2,3c,
+    // więc nakładka pozycyjna (2026-08-14) zamienia „stabilny" na ostrzeżenie pozycyjne.
     expect(h.segments[0].ghOn).toBe(false);
-    expect(h.segments[0].verdict).toEqual({ t: 'stable', l: 'stabilny tor wzrastania' });
+    expect(h.segments[0].verdict).toEqual({ t: 'warn', l: 'tor stabilny, ale poniżej 3. centyla — niedobór wzrostu' });
     // odcinek 72→84: 12 mies. GH, ΔSDS +0,5 → dobra odpowiedź na GH
     expect(h.segments[1].ghOn).toBe(true);
     expect(h.segments[1].verdict).toEqual({ t: 'good', l: 'dobra odpowiedź na GH' });
@@ -561,6 +633,38 @@ describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
     expect(html).toContain('kanał rodzicielski (MPH)');
     expect(html).toContain('zamierzona redukcja (otyłość)');
     expect(html).toContain(' ⬇');
+  });
+
+  it('pacjentka GH z MPH: wzrost 4c poniżej kanału → nakładka pozycyjna; sparkline w kolorze werdyktu', () => {
+    // Pełny przypadek z karty właściciela: HT −1,6→−1,7 (5c→4c), WT +0,3→+0,6, BMI +1,2→+1,6;
+    // MPH SDS −0,1 (e0 = −1,5 → tor poniżej kanału); GH od 138. mies. (nakładanie 0 w odcinku).
+    const vta = makeVtaCtx({
+      'HT|130': -1.6, 'HT|138': -1.7,
+      'WT|130': 0.3, 'WT|138': 0.6,
+      'BMI|130': 1.2, 'BMI|138': 1.6
+    });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 130, height: 135, weight: 39.5 }],
+      currentAgeMonths: 138,
+      currentHeight: 139,
+      currentWeight: 46,
+      sex: 'K',
+      context: { mpSds: -0.1, gh: { a: 138, b: null } }
+    });
+    const h = model.metrics.find((m) => m.metric === 'height');
+    expect(h.total).toEqual({
+      t: 'warn',
+      l: 'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego — do obserwacji'
+    });
+    expect(model.metrics.find((m) => m.metric === 'weight').total)
+      .toEqual({ t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' });
+    expect(model.metrics.find((m) => m.metric === 'bmi').total)
+      .toEqual({ t: 'warn', l: 'narastanie nadmiaru BMI' });
+    // R1: wszystkie trzy wiersze mają werdykt warn → wszystkie sparkline'y w tonie ostrzegawczym,
+    // żadnego w tonie neutralnym (linia #8fb6ba) — kolor kreski spójny z etykietą.
+    const html = vta.buildPatientHtml(model);
+    expect((html.match(/#dcb27a/g) || []).length).toBe(3);
+    expect(html).not.toContain('#8fb6ba');
   });
 
   it('bez kontekstu wynik identyczny jak dotychczas (regresja)', () => {

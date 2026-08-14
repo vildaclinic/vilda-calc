@@ -54,6 +54,13 @@ vbarSet(null);
 function yAtX(path,xt){if(!path||!path.getTotalLength)return null;var L;try{L=path.getTotalLength()}catch(e){return null}if(!(L>0))return null;var a,b;try{a=path.getPointAtLength(0),b=path.getPointAtLength(L)}catch(e){return null}var xmin=Math.min(a.x,b.x),xmax=Math.max(a.x,b.x);if(xt<xmin-.75||xt>xmax+.75)return null;var lo=0,hi=L,pt=a;for(var i=0;i<26;i++){var mid=(lo+hi)/2;pt=path.getPointAtLength(mid),pt.x<xt?lo=mid:hi=mid}return pt.y}
 function centNum(bands,xt,yp){if(yp==null)return null;var pts=[];bands.forEach(function(b){var y=yAtX(b,xt);if(y!=null){var c=parseFloat(b.getAttribute("data-vc"));isFinite(c)&&pts.push({c:c,y:y})}});if(pts.length<2)return null;pts.sort(function(p,q){return p.y-q.y});var hi=pts[0],lo=pts[pts.length-1];if(yp<=hi.y)return hi.c;if(yp>=lo.y)return lo.c;for(var i=0;i<pts.length-1;i++){var p=pts[i],q=pts[i+1];if(yp>=p.y&&yp<=q.y){var f=q.y-p.y?(yp-p.y)/(q.y-p.y):0;return p.c+(q.c-p.c)*f}}return null}
 function cent(bands,xt,yp){var c=centNum(bands,xt,yp);if(c==null)return"";var hi=97,lo=3;if(c>=hi)return"≥"+hi+"c";if(c<=lo)return"<"+lo+"c";return"~"+Math.round(c)+"c"}
+// Centyl dymka tą samą ścieżką statystyczną co tryb porównania i analiza trajektorii (tabStatsAt);
+// geometria narysowanych pasm zostaje wyłącznie jako fallback. „~" tylko dla pozycji między
+// pomiarami (wartość interpolowana z krzywej pacjenta), pomiar dokładny bez „~".
+function centTip(it,vbx,yv,val,exact){try{var ts=it.sc&&it.sc.tabStatsAt?it.sc.tabStatsAt(ageOf(vbx),val):null;
+  if(ts&&typeof ts.percentile=="number"&&isFinite(ts.percentile)){var c=ts.percentile;
+    return c>=97?"≥97c":c<=3?"<3c":(exact?"":"~")+Math.round(c)+"c"}}catch(e0){}
+  return cent(it.bands,vbx,yv)}
 function fmt(v,d){return v.toFixed(d).replace(".",",")}
 function _erf(x){var s=x<0?-1:1;x=Math.abs(x);var t=1/(1+.3275911*x);var y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return s*y}
 function ncdf(z){return .5*(1+_erf(z/Math.SQRT2))}
@@ -97,7 +104,7 @@ function place(vbx,snapped,ax,ay){
     if(yv==null||val==null){it.dot.setAttribute("opacity","0"),it.ring&&it.ring.setAttribute("opacity","0"),rows+='<div class="vilda-tip-r"><span>'+(sc.title||"")+"</span><span>—</span></div>";bline+=(bline?'<span class="vb-s">·</span>':"")+(sc.title||"")+" —";return}
     it.dot.setAttribute("cx",vbx),it.dot.setAttribute("cy",yv),it.dot.setAttribute("opacity","1"),it.dot.setAttribute("r",em?(COARSE?"5.8":"4.7"):(COARSE?"4.6":"3.6"));
     it.ring&&(it.ring.setAttribute("cx",vbx),it.ring.setAttribute("cy",yv),it.ring.setAttribute("opacity",em?"0.9":"0"));
-    var dec="height"===sc.metric?0:1,c=cent(it.bands,vbx,yv);
+    var dec="height"===sc.metric?0:1,c=centTip(it,vbx,yv,val,mv!=null);
     rows+='<div class="vilda-tip-r"><span>'+(sc.title||"")+"</span><span>"+fmt(val,dec)+" "+(sc.unit||"")+(c?' <span class="vilda-tip-c">'+c+"</span>":"")+"</span></div>";
     bline+=(bline?'<span class="vb-s">·</span>':"")+("bmi"===sc.metric?"BMI "+fmt(val,dec):fmt(val,dec)+" "+(sc.unit||""))+(c?' <span class="vb-c">'+c+"</span>":"");
   });
@@ -176,6 +183,7 @@ function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var v1=verdictCh(met,sa0,sb0,ca,
     if(typeof mp=="number"&&isFinite(mp)){var e0=Math.round(100*(sa0-mp))/100;
       if(e0<=-1.5)return d>=0.2?{t:"good",l:"nadrabia względem kanału rodzicielskiego"}:d<=-0.5?{t:"bad",l:"oddala się od kanału rodzicielskiego"}:d<=-0.2?{t:"warn",l:"oddala się od kanału rodzicielskiego"}:{t:"stable",l:"stabilnie (poniżej kanału rodzicielskiego)"};
       if(e0>=1.5)return d<=-1?{t:"warn",l:"szybka deceleracja wzrastania"}:d<=-0.2?{t:"stable",l:"normalizacja do kanału rodzicielskiego"}:d>=0.5?{t:"warn",l:"dalsza akceleracja ponad kanał rodzicielski"}:{t:"stable",l:"stabilny tor wzrastania"};
+      if(ca<10){if(d<=-0.5)return{t:"bad",l:"pogłębianie niedoboru wzrostu"};if(d<=-0.2)return{t:"warn",l:"zjazd w dolnym paśmie normy (3.–10. centyl) — do obserwacji"}}
       return d<=-1?{t:"bad",l:"istotna deceleracja wzrastania"}:d<=-0.5?{t:"warn",l:"deceleracja toru wzrastania"}:d>=0.5&&cb>97?{t:"warn",l:"akceleracja z przekroczeniem 97. centyla"}:{t:"stable",l:"w kanale rodzicielskim"}}
     return v1}
   if(rd&&ca>=10){
@@ -190,6 +198,15 @@ function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var v1=verdictCh(met,sa0,sb0,ca,
 function verdictWtBmi(v,dW,vB,dB){if(!v||"stable"!==v.t||!(dW>=0.2))return v;
   if(!vB||"warn"!==vB.t&&"bad"!==vB.t||!(dB>=0.2))return v;
   return{t:"warn",l:"przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI"}}
+// Nakładka pozycyjna wzrostu (decyzja właściciela 2026-08-14): „stabilny" tor nie jest uspokajający,
+// gdy pozycja tego nie uzasadnia — <3c zawsze (niedobór wzrostu z definicji, poza normą 3–97c),
+// 3–10c tylko poniżej kanału rodzicielskiego (≥1,5 SDS pod MPH). Nie stosuje się przy aktywnej
+// ocenie odpowiedzi na GH (etykiety GH adresują problem). Transkrypcja 1:1 w module trajektorii.
+function verdictHtPos(v,cb,mp,sa0,ghOn){if(!v||"stable"!==v.t||ghOn)return v;
+  if(cb<3)return{t:"warn",l:"tor stabilny, ale poniżej 3. centyla — niedobór wzrostu"};
+  if(cb<10&&typeof mp=="number"&&isFinite(mp)&&Math.round(100*(sa0-mp))/100<=-1.5)
+    return{t:"warn",l:"tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego — do obserwacji"};
+  return v}
 function ctxClean(x){return String(x==null?"":x).replace(/[<>]/g,"")}
 function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(b)-ageOf(a),tr="",cards="";
   var cx=null;try{cx=host._vildaCmpCtx||null}catch(eC){}
@@ -201,6 +218,7 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
       cards+='<div class="vilda-cmp-kpi"><div class="nm">'+(m.title||"")+'</div><div class="ftv">— brak pomiaru w tym punkcie</div></div>';return}
     var dv=sb.val-sa.val,dyr=dt/12,ca=sa.c,cb=sb.c,ip=ca!=null&&cb!=null?interpCh(ca,cb,sa.sd,sb.sd):["flat","",""];
     var v=verdictCh2(m.metric,sa.sd,sb.sd,ca,cb,ghM,cx?cx.mpSds:null,rdOn);
+    "height"===m.metric&&(v=verdictHtPos(v,cb,cx?cx.mpSds:null,sa.sd,ghM>=6));
     // Strażnik TEMPA redukcji (nie osłabia 🔴): odstęp ≥2 mies., start ≥10c, spadek — 🟠 gdy
     // ≤−1,5 SDS/rok lub (waga) ubytek >1 kg/mies. u dziecka <12 lat / >~0,9 kg/tydz. (≈3,9 kg/mies.) u ≥12 lat.
     if(v&&v.t!=="bad"&&("weight"===m.metric||"bmi"===m.metric)&&ca!=null&&ca>=10&&sa.sd!=null&&sb.sd!=null&&dt>=2){

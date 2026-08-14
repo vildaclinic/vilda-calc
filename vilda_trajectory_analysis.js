@@ -193,6 +193,10 @@
         var e0 = Math.round(100 * (sa0 - mp)) / 100;
         if (e0 <= -1.5) return d >= 0.2 ? { t: 'good', l: 'nadrabia względem kanału rodzicielskiego' } : d <= -0.5 ? { t: 'bad', l: 'oddala się od kanału rodzicielskiego' } : d <= -0.2 ? { t: 'warn', l: 'oddala się od kanału rodzicielskiego' } : { t: 'stable', l: 'stabilnie (poniżej kanału rodzicielskiego)' };
         if (e0 >= 1.5) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja wzrastania' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja do kanału rodzicielskiego' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja ponad kanał rodzicielski' } : { t: 'stable', l: 'stabilny tor wzrastania' };
+        if (ca < 10) {
+          if (d <= -0.5) return { t: 'bad', l: 'pogłębianie niedoboru wzrostu' };
+          if (d <= -0.2) return { t: 'warn', l: 'zjazd w dolnym paśmie normy (3.–10. centyl) — do obserwacji' };
+        }
         return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: 'w kanale rodzicielskim' };
       }
       return v1;
@@ -214,6 +218,19 @@
     if (!v || v.t !== 'stable' || !(dW >= 0.2)) return v;
     if (!vB || (vB.t !== 'warn' && vB.t !== 'bad') || !(dB >= 0.2)) return v;
     return { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
+  }
+
+  // ── Nakładka pozycyjna wzrostu — transkrypcja 1:1 verdictHtPos panelu porównania. ──
+  // „Stabilny" tor nie jest uspokajający, gdy pozycja tego nie uzasadnia: <3c zawsze (niedobór
+  // wzrostu z definicji, poza normą populacyjną 3–97c), 3–10c tylko przy torze poniżej kanału
+  // rodzicielskiego (≥1,5 SDS pod MPH). Pasmo 3–10c samo w sobie to DOLNE PASMO NORMY, nie brak
+  // normy (decyzja właściciela 2026-08-14). Nie stosuje się przy aktywnej ocenie odpowiedzi na GH.
+  function heightPositionOverlayVerdict(v, cb, mp, sa0, ghOn) {
+    if (!v || v.t !== 'stable' || ghOn) return v;
+    if (cb < 3) return { t: 'warn', l: 'tor stabilny, ale poniżej 3. centyla — niedobór wzrostu' };
+    if (cb < 10 && typeof mp === 'number' && isFinite(mp) && Math.round(100 * (sa0 - mp)) / 100 <= -1.5)
+      return { t: 'warn', l: 'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego — do obserwacji' };
+    return v;
   }
 
   // Zastosowanie nakładki do gotowych metryk: odcinki wagi parowane z odcinkami BMI po wieku
@@ -356,11 +373,17 @@
     // Werdykt pary z kontekstem klinicznym (jak panel porównania): GH liczone tylko dla wzrostu,
     // redukcja tylko dla wagi/BMI przy nakładaniu >=3 mies. w danym odcinku.
     function pairVerdict(a0, b0) {
-      if (!ctx) return { v: verdictForPair(met.key, a0.sd, b0.sd, a0.c, b0.c), ghOn: false, rdOn: false };
+      if (!ctx) {
+        var v0 = verdictForPair(met.key, a0.sd, b0.sd, a0.c, b0.c);
+        if (met.key === 'height') v0 = heightPositionOverlayVerdict(v0, b0.c, null, a0.sd, false);
+        return { v: v0, ghOn: false, rdOn: false };
+      }
       var ghM = met.key === 'height' ? overlapM(ctx.gh, a0.ageMonths, b0.ageMonths) : 0;
       var rdOn = met.key !== 'height' && overlapM(ctx.red, a0.ageMonths, b0.ageMonths) >= 3;
+      var v = verdictForPairCtx(met.key, a0.sd, b0.sd, a0.c, b0.c, ghM, ctx.mpSds, rdOn);
+      if (met.key === 'height') v = heightPositionOverlayVerdict(v, b0.c, ctx.mpSds, a0.sd, ghM >= 6);
       return {
-        v: verdictForPairCtx(met.key, a0.sd, b0.sd, a0.c, b0.c, ghM, ctx.mpSds, rdOn),
+        v: v,
         ghOn: ghM >= 6,
         rdOn: rdOn && a0.c >= 10
       };
@@ -867,8 +890,8 @@
       var y = 11 - 16 * (p.sd - ym) / yr;
       return { x: Math.round(x * 10) / 10, y: Math.round(Math.max(2, Math.min(20, y)) * 10) / 10 };
     });
-    var line = tone === 'danger' ? '#d98a80' : tone === 'warn' ? '#dcb27a' : '#8fb6ba';
-    var dot = tone === 'danger' ? '#c62828' : tone === 'warn' ? '#c75d00' : '#0a6b73';
+    var line = tone === 'danger' ? '#d98a80' : tone === 'warn' ? '#dcb27a' : tone === 'good' ? '#8cc3ab' : '#8fb6ba';
+    var dot = tone === 'danger' ? '#c62828' : tone === 'warn' ? '#c75d00' : tone === 'good' ? '#0f6e56' : '#0a6b73';
     var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p.x + ',' + p.y; }).join(' ');
     var last = pts[pts.length - 1];
     return '<svg viewBox="0 0 92 22" width="92" height="22" aria-hidden="true">'
@@ -876,10 +899,20 @@
       + '<circle cx="' + last.x + '" cy="' + last.y + '" r="2.6" fill="' + dot + '"/></svg>';
   }
 
+  // Kolor sparkline'a = werdykt wiersza (ten sam, który zasila chip) — jedno źródło prawdy
+  // koloru w wierszu (decyzja właściciela 2026-08-14). Pozycja centylowa (m.tone) zostaje
+  // wyłącznie jako fallback, gdy wiersz nie ma werdyktu (np. za krótki okres obserwacji).
+  var VERDICT_TONE = { bad: 'danger', warn: 'warn', good: 'good', stable: 'normal' };
+
+  function rowTone(m) {
+    var v = m.treatment ? m.treatment.verdict : m.total;
+    return (v && VERDICT_TONE[v.t]) || m.tone;
+  }
+
   function patientMetricRowHtml(m) {
     var html = '<div class="vtap-row"><div class="vtap-pm">'
       + '<span class="nm">' + esc(m.title) + '</span>'
-      + '<span class="sp">' + sparklineSvg(m.series, m.tone) + '</span>'
+      + '<span class="sp">' + sparklineSvg(m.series, rowTone(m)) + '</span>'
       + chipHtml(m.treatment ? m.treatment.verdict : m.total) + '</div>'
       + '<div class="vtap-ft">' + esc(fmt(m.first.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
       + ' <span class="c">(' + esc(fmtC(m.first.c)) + 'c)</span><span class="ar">→</span>'
@@ -1030,6 +1063,7 @@
     verdictForPair: verdictForPair,
     verdictForPairCtx: verdictForPairCtx,
     weightBmiOverlayVerdict: weightBmiOverlayVerdict,
+    heightPositionOverlayVerdict: heightPositionOverlayVerdict,
     zoneForPair: zoneForPair,
     zoneLabel: zoneLabel,
     chan: chan,
