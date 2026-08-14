@@ -134,8 +134,8 @@ describe('parytet werdyktów z panelem porównania (realny verdictCh z vilda_aut
     const verdicts = [
       null,
       { t: 'stable', l: 'stabilny tor masy ciała' },
-      { t: 'warn', l: 'narastanie nadmiaru BMI' },
-      { t: 'bad', l: 'szybkie narastanie BMI' },
+      { t: 'warn', l: 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' },
+      { t: 'bad', l: 'szybka progresja nadwagi (BMI)' },
       { t: 'good', l: 'redukcja BMI' }
     ];
     const deltas = [-0.6, -0.2, 0, 0.1, 0.19, 0.2, 0.3, 0.49, 0.6];
@@ -161,7 +161,7 @@ describe('parytet werdyktów z panelem porównania (realny verdictCh z vilda_aut
       { t: 'stable', l: 'stabilnie (poniżej kanału rodzicielskiego)' },
       { t: 'stable', l: 'w kanale rodzicielskim' },
       { t: 'warn', l: 'deceleracja toru wzrastania' },
-      { t: 'good', l: 'nadrabia niedobór wzrostu' }
+      { t: 'good', l: 'wyrównywanie niedoboru wzrostu (catch-up)' }
     ];
     const cbs = [1.5, 2.9, 3, 4, 8, 9.9, 10, 40, 96];
     const mps = [null, -0.1, 0.6];
@@ -373,7 +373,7 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
   it('nakładka waga↔BMI: „stabilna" waga przy narastającym BMI dostaje ostrzeżenie (przypadek pacjentki GH)', () => {
     // 10 lat 10 mies. → 11 lat 6 mies.; SDS jak w rekordzie zgłoszonym przez właściciela:
     // waga +0,3→+0,6 (61c→72c, strefa środkowa — sama w sobie „stabilna"),
-    // BMI +1,2→+1,6 (89c→94c, strefa ≥85c — „narastanie nadmiaru BMI").
+    // BMI +1,2→+1,6 (89c→94c, strefa ≥85c — „progresja nadwagi (BMI w paśmie 85.–97. centyla)").
     const vta = makeGlobalWithStats({
       'HT|130': -1.6, 'HT|138': -1.7,
       'WT|130': 0.3, 'WT|138': 0.6,
@@ -389,7 +389,7 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
     });
     const wt = model.metrics.find((m) => m.metric === 'weight');
     const bmi = model.metrics.find((m) => m.metric === 'bmi');
-    expect(bmi.total).toEqual({ t: 'warn', l: 'narastanie nadmiaru BMI' });
+    expect(bmi.total).toEqual({ t: 'warn', l: 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' });
     const OVERLAY = { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
     expect(wt.segments[0].verdict).toEqual(OVERLAY);
     expect(wt.total).toEqual(OVERLAY);
@@ -543,7 +543,7 @@ describe('czułość dolnego pasma pod nakładką MPH i nakładka pozycyjna wzro
   it('zjazd 9c→5c w kanale rodzicielskim (gałąź środkowa MPH) ostrzega jak słownik populacyjny', () => {
     // Bez naprawy gałąź środkowa (|e0|<1,5) dawała „w kanale rodzicielskim" (stable) mimo ΔSDS −0,32.
     expect(vta.verdictForPairCtx('height', -1.34, -1.66, 9, 5, 0, 0, false))
-      .toEqual({ t: 'warn', l: 'zjazd w dolnym paśmie normy (3.–10. centyl) — do obserwacji' });
+      .toEqual({ t: 'warn', l: 'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl) — do obserwacji' });
     // Głębszy zjazd w dolnym paśmie → bad, spójnie ze słownikiem populacyjnym.
     expect(vta.verdictForPairCtx('height', -1.3, -1.9, 9, 3.1, 0, 0, false))
       .toEqual({ t: 'bad', l: 'pogłębianie niedoboru wzrostu' });
@@ -659,7 +659,7 @@ describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
     expect(model.metrics.find((m) => m.metric === 'weight').total)
       .toEqual({ t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' });
     expect(model.metrics.find((m) => m.metric === 'bmi').total)
-      .toEqual({ t: 'warn', l: 'narastanie nadmiaru BMI' });
+      .toEqual({ t: 'warn', l: 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' });
     // R1: wszystkie trzy wiersze mają werdykt warn → wszystkie sparkline'y w tonie ostrzegawczym,
     // żadnego w tonie neutralnym (linia #8fb6ba) — kolor kreski spójny z etykietą.
     const html = vta.buildPatientHtml(model);
@@ -1201,7 +1201,7 @@ describe('chip odpowiedzi na leczenie (para od startu zamierzonej redukcji)', ()
       context: { red: { a: 192, b: null, label: 'Wegovy' } }
     });
     const wt = m.metrics.find((x) => x.metric === 'weight');
-    expect(wt.total.l).toBe('narasta mimo leczenia');
+    expect(wt.total.l).toBe('przyrost masy mimo leczenia redukcyjnego');
     expect(wt.treatment).not.toBeNull();
     expect(wt.treatment.dSds).toBeCloseTo(-0.3, 5);
     expect(wt.treatment.verdict.l).toBe('redukcja w trakcie leczenia');
@@ -1233,7 +1233,7 @@ describe('siatki Karty pacjenta — dymek i zaznaczanie tekstu nad panelem traje
 describe('start z niedoboru masy/BMI: etykietę różnicuje centyl końcowy (decyzja właściciela 2026-08-09)', () => {
   it('masa: nadrabia (<10c) / wyrównanie (10–75c) / do obserwacji (75–90c) / przekroczenie 90c; parytet z verdictCh', () => {
     const vta = loadModule().VildaTrajectoryAnalysis;
-    expect(vta.verdictForPair('weight', -1.5, -1.25, 7, 9.5)).toEqual({ t: 'good', l: 'nadrabia niedobór masy ciała' });
+    expect(vta.verdictForPair('weight', -1.5, -1.25, 7, 9.5)).toEqual({ t: 'good', l: 'wyrównywanie niedoboru masy ciała' });
     expect(vta.verdictForPair('weight', -1.5, -0.3, 7, 36)).toEqual({ t: 'good', l: 'wyrównanie niedoboru masy ciała' });
     expect(vta.verdictForPair('weight', -1.5, 0.85, 7, 80)).toEqual({ t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem masy ciała — do obserwacji' });
     expect(vta.verdictForPair('weight', -1.5, 1.5, 7, 93)).toEqual({ t: 'bad', l: 'przekroczenie 90. centyla masy ciała po wyrównaniu niedoboru' });
@@ -1251,7 +1251,7 @@ describe('start z niedoboru masy/BMI: etykietę różnicuje centyl końcowy (dec
     expect(vta.verdictForPair('bmi', -1.4, 0, 8, 50)).toEqual({ t: 'good', l: 'wyrównanie niedoboru (BMI)' });
     expect(vta.verdictForPair('bmi', -1.4, 1.3, 8, 90)).toEqual({ t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem BMI — do obserwacji' });
     expect(vta.verdictForPair('bmi', -1.4, 2.1, 8, 98)).toEqual({ t: 'bad', l: 'przekroczenie progu otyłości (≥97c)' });
-    expect(vta.verdictForPair('height', -1.7, -0.5, 5, 30)).toEqual({ t: 'good', l: 'nadrabia niedobór wzrostu' });
+    expect(vta.verdictForPair('height', -1.7, -0.5, 5, 30)).toEqual({ t: 'good', l: 'wyrównywanie niedoboru wzrostu (catch-up)' });
     expect(vta.verdictForPair('weight', -1.5, -1.7, 7, 5)).toEqual({ t: 'warn', l: 'pogłębianie niedoboru masy ciała' });
   });
 });
