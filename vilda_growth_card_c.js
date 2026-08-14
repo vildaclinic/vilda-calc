@@ -364,7 +364,7 @@
       }).join(', ');
       parts.push('<p><span class="vgcc-lbl">Prognoza a obecny wzrost:</span> ' +
         (clampedEntries.length === 1 ? 'metoda ' : 'metody: ') + cl +
-        ', czyli poniżej zmierzonego wzrostu. Dolną granicę prognozy ograniczono do aktualnego wzrostu, z odpowiednim obcięciem przedziału błędu; pacjent/pacjentka jest już blisko osiągnięcia wzrostu ostatecznego.</p>');
+        ', czyli poniżej zmierzonego wzrostu. Dolną granicę prognozy ograniczono do aktualnego wzrostu, z odpowiednim obcięciem przedziału błędu; ' + (model.sexKey === 'F' ? 'pacjentka' : 'pacjent') + ' jest już blisko osiągnięcia wzrostu ostatecznego.</p>');
     }
     if (model.hasKhamis) {
       parts.push('<p><span class="vgcc-lbl">Khamis–Roche:</span> błąd zbiorczy 90% metody (±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku; liczy się bez wieku kostnego, populacja Fels (białe dzieci USA).</p>');

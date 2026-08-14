@@ -56,7 +56,22 @@ describe('RWT — clamp w silniku produkcyjnym (calculateRWTPrediction)', () => 
     expect(line).toContain('Prognoza wzrostu ostatecznego (metoda RWT): 185,0 cm');
     expect(line).toContain('oszacowanie metody');
     expect(line).toContain('dolną granicę ograniczono do aktualnego wzrostu');
+    expect(line).toContain('pacjent jest już blisko osiągnięcia wzrostu ostatecznego'); // sexKey 'M' z silnika
+    expect(line).not.toContain('pacjentka');
     expect(line).not.toContain('185,0–'); // bez odwróconych/zapadniętych widełek
+  });
+
+  it('linia podsumowania: forma żeńska dla dziewczynki, łamana bez danych o płci', () => {
+    const rF = win.calculateRWTPrediction({ ...input, sex: 'F', currentHeightCm: 178, motherHeightCm: 150, fatherHeightCm: 158 });
+    if (rF.available === true && rF.clampedToCurrentHeight === true) {
+      expect(win.advGrowthBuildRWTSummaryCardLine(rF)).toContain('pacjentka jest już blisko osiągnięcia wzrostu ostatecznego');
+    }
+    const lineNoSex = win.advGrowthBuildRWTSummaryCardLine({
+      available: true, hasErrorInterval: true, clampedToCurrentHeight: true,
+      predictedAdultHeightCm: 176, predictedAdultHeightCmRaw: 175.2,
+      errorBoundHalfWidthCm: 3.1, predictionIntervalLowerCm: 176, predictionIntervalUpperCm: 178.3,
+    });
+    expect(lineNoSex).toContain('pacjent/pacjentka jest już blisko osiągnięcia wzrostu ostatecznego');
   });
 
   it('linia podsumowania: przedział niezapadnięty → widełki „lo–hi cm"', () => {
@@ -129,6 +144,7 @@ describe('Karta C — wpisy, konsensus i prezentacja po clampie', () => {
     expect(html).toContain('176,0–180,5 cm'); // 175,16+5,3 = 180,46 → 180,5
     expect(html).toContain('Prognoza a obecny wzrost');
     expect(html).toContain('Dolną granicę prognozy ograniczono do aktualnego wzrostu');
+    expect(html).toContain('pacjent jest już blisko osiągnięcia wzrostu ostatecznego'); // OWNER_CASE: chłopiec
     expect(html).toContain('175,2'); // surowa wartość równania widoczna w adnotacji
   });
 
