@@ -824,7 +824,7 @@
     '.vtap .vtap-ft .c{color:#5a7274;font-size:11.5px}',
     '.vtap .vtap-ft .ar{color:#9aabb0;margin:0 5px}',
     '.vtap .vtap-seg{font-size:11.5px;color:#4a6168;margin-top:4px}',
-    '.vtap .vtap-chip{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px}',
+    '.vtap .vtap-chip{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:normal;min-width:0;line-height:1.35;text-align:left}',
     '.vtap .vtap-chip.vg{background:#e7f6ef;color:#0f6e56}',
     '.vtap .vtap-chip.vs{background:#eef2f4;color:#3f5459}',
     '.vtap .vtap-chip.vw{background:#fdf1e5;color:#c75d00}',
@@ -838,6 +838,7 @@
     '.vtap .vtap-tb th:first-child{border-radius:8px 0 0 8px}',
     '.vtap .vtap-tb th:last-child{border-radius:0 8px 8px 0}',
     '.vtap .vtap-tb td{padding:6px 8px;border-bottom:1px solid #eef4f4;white-space:nowrap}',
+    '.vtap .vtap-tb td:last-child{white-space:normal;min-width:190px;line-height:1.35}',
     '.vtap .vtap-foot{padding:9px 14px;background:#f7fbfb;border-top:1px solid #eef4f4;font-size:11px;color:#5a7274;line-height:1.45}'
   ].join('\n');
 
