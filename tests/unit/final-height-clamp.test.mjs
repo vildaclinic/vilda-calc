@@ -54,8 +54,8 @@ describe('RWT — clamp w silniku produkcyjnym (calculateRWTPrediction)', () => 
     const r = win.calculateRWTPrediction(input);
     const line = win.advGrowthBuildRWTSummaryCardLine(r);
     expect(line).toContain('Prognoza wzrostu ostatecznego (metoda RWT): 185,0 cm');
-    expect(line).toContain('metoda wskazała');
-    expect(line).toContain('nie może być niższa niż obecny wzrost');
+    expect(line).toContain('oszacowanie metody');
+    expect(line).toContain('dolną granicę ograniczono do aktualnego wzrostu');
     expect(line).not.toContain('185,0–'); // bez odwróconych/zapadniętych widełek
   });
 
@@ -67,7 +67,7 @@ describe('RWT — clamp w silniku produkcyjnym (calculateRWTPrediction)', () => 
       errorBoundHalfWidthCm: 3.1, predictionIntervalLowerCm: 176, predictionIntervalUpperCm: 178.3,
     });
     expect(line).toContain('176,0–178,3 cm');
-    expect(line).toContain('metoda wskazała 175,2 ±3,1 cm');
+    expect(line).toContain('oszacowanie metody: 175,2 ±3,1 cm');
   });
 
   it('bez clampu linia bez zmian: „X cm (±Y cm)" — regresja formatu', () => {
@@ -128,7 +128,7 @@ describe('Karta C — wpisy, konsensus i prezentacja po clampie', () => {
     const html = win.VildaGrowthCardC.render(ownerInput());
     expect(html).toContain('176,0–180,5 cm'); // 175,16+5,3 = 180,46 → 180,5
     expect(html).toContain('Prognoza a obecny wzrost');
-    expect(html).toContain('nie może być niższa niż obecny wzrost');
+    expect(html).toContain('Dolną granicę prognozy ograniczono do aktualnego wzrostu');
     expect(html).toContain('175,2'); // surowa wartość równania widoczna w adnotacji
   });
 
