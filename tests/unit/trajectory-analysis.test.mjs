@@ -44,6 +44,18 @@ function extractRealVerdictCh2() {
   return new Function(`${v1}\n${v2}\nreturn verdictCh2;`)();
 }
 
+function extractRealVerdictWtBmi() {
+  const source = fs.readFileSync(
+    path.join(repositoryRoot, 'vilda_auth_ui.js'),
+    'utf8'
+  );
+  const start = source.indexOf('function verdictWtBmi(');
+  const end = source.indexOf('function ctxClean(', start);
+  expect(start).toBeGreaterThan(-1);
+  expect(end).toBeGreaterThan(start);
+  return new Function(`${source.slice(start, end)}\nreturn verdictWtBmi;`)();
+}
+
 function extractRealInterpCh() {
   const source = fs.readFileSync(
     path.join(repositoryRoot, 'vilda_auth_ui.js'),
@@ -103,6 +115,31 @@ describe('parytet werdyktów z panelem porównania (realny verdictCh z vilda_aut
         }
       }
     }
+  });
+
+  it('weightBmiOverlayVerdict daje identyczny wynik co realny verdictWtBmi (siatka przypadków)', () => {
+    const real = extractRealVerdictWtBmi();
+    const verdicts = [
+      null,
+      { t: 'stable', l: 'stabilny tor masy ciała' },
+      { t: 'warn', l: 'narastanie nadmiaru BMI' },
+      { t: 'bad', l: 'szybkie narastanie BMI' },
+      { t: 'good', l: 'redukcja BMI' }
+    ];
+    const deltas = [-0.6, -0.2, 0, 0.1, 0.19, 0.2, 0.3, 0.49, 0.6];
+    let compared = 0;
+    for (const v of verdicts) {
+      for (const dW of deltas) {
+        for (const vB of verdicts) {
+          for (const dB of deltas) {
+            expect(VildaTrajectoryAnalysis.weightBmiOverlayVerdict(v, dW, vB, dB))
+              .toEqual(real(v, dW, vB, dB));
+            compared += 1;
+          }
+        }
+      }
+    }
+    expect(compared).toBe(verdicts.length * verdicts.length * deltas.length * deltas.length);
   });
 
   it('zoneForPair odpowiada tekstowi strefy z realnego interpCh', () => {
@@ -293,6 +330,69 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
     expect(model2.velocity.slow).toBe(true);
     expect(model2.velocity.severity).toBe('warn');
     expect(model2.velocity.alarm).toBe(false);
+  });
+
+  it('nakładka waga↔BMI: „stabilna" waga przy narastającym BMI dostaje ostrzeżenie (przypadek pacjentki GH)', () => {
+    // 10 lat 10 mies. → 11 lat 6 mies.; SDS jak w rekordzie zgłoszonym przez właściciela:
+    // waga +0,3→+0,6 (61c→72c, strefa środkowa — sama w sobie „stabilna"),
+    // BMI +1,2→+1,6 (89c→94c, strefa ≥85c — „narastanie nadmiaru BMI").
+    const vta = makeGlobalWithStats({
+      'HT|130': -1.6, 'HT|138': -1.7,
+      'WT|130': 0.3, 'WT|138': 0.6,
+      'BMI|130': 1.2, 'BMI|138': 1.6
+    });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 130, height: 135, weight: 39.5 }],
+      currentAgeMonths: 138,
+      currentHeight: 139,
+      currentWeight: 46,
+      sex: 'K',
+      source: 'OLAF'
+    });
+    const wt = model.metrics.find((m) => m.metric === 'weight');
+    const bmi = model.metrics.find((m) => m.metric === 'bmi');
+    expect(bmi.total).toEqual({ t: 'warn', l: 'narastanie nadmiaru BMI' });
+    const OVERLAY = { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
+    expect(wt.segments[0].verdict).toEqual(OVERLAY);
+    expect(wt.total).toEqual(OVERLAY);
+    expect(wt.worst).not.toBeNull();
+    expect(wt.worst.verdict).toEqual(OVERLAY);
+    const html = vta.buildHtml(model);
+    expect(html).toContain('przyrost masy szybszy niż wzrastanie');
+    expect(html).not.toContain('stabilny tor masy ciała');
+  });
+
+  it('nakładka waga↔BMI nie działa przy malejącym BMI ani przy niemal płaskiej wadze', () => {
+    // BMI w dół (redukcja BMI, good) → waga zostaje „stabilna"
+    const vtaDown = makeGlobalWithStats({
+      'HT|130': 0.0, 'HT|138': 0.3,
+      'WT|130': 0.3, 'WT|138': 0.6,
+      'BMI|130': 1.6, 'BMI|138': 1.2
+    });
+    const mDown = vtaDown.analyze({
+      measurements: [{ ageMonths: 130, height: 140, weight: 40 }],
+      currentAgeMonths: 138,
+      currentHeight: 146,
+      currentWeight: 44,
+      sex: 'K'
+    });
+    expect(mDown.metrics.find((m) => m.metric === 'weight').total)
+      .toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
+    // waga +0,1 SDS (poniżej progu nakładki) mimo BMI warn → bez nakładki
+    const vtaFlat = makeGlobalWithStats({
+      'HT|130': -1.6, 'HT|138': -1.7,
+      'WT|130': 0.3, 'WT|138': 0.4,
+      'BMI|130': 1.2, 'BMI|138': 1.6
+    });
+    const mFlat = vtaFlat.analyze({
+      measurements: [{ ageMonths: 130, height: 135, weight: 39.5 }],
+      currentAgeMonths: 138,
+      currentHeight: 139,
+      currentWeight: 44,
+      sex: 'K'
+    });
+    expect(mFlat.metrics.find((m) => m.metric === 'weight').total)
+      .toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
   });
 
   it('zwraca null przy mniej niż dwóch punktach z policzalną statystyką', () => {
