@@ -726,14 +726,19 @@
   }
 
   // Wspólna klasyfikacja opisu tempa dla obu rendererów: {cls, text}.
+  // Poza `text` (zdanie w jednym ciągu — renderer profesjonalny) zwraca też rozbiórkę dla
+  // belki Tempo makiety B: `short` (krótki werdykt do chipa) i `note` (norma/kontekst do
+  // wyciszonej dopiski) — usuwa zagnieżdżone nawiasy typu „w normie (≥4 cm/rok (…))".
   function velocityAssessment(vel) {
     if (!vel) return null;
-    if (vel.slow && vel.severity === 'danger') return { cls: 'bad', text: 'poniżej normy dla wieku' + (vel.normLabel ? ' (' + vel.normLabel + ')' : '') };
-    if (vel.slow) return { cls: 'warn', text: 'do oceny — ' + (vel.normLabel || 'poniżej progu przesiewowego') };
-    if (vel.note) return { cls: 'stable', text: vel.note };
-    if (vel.basis && vel.usedLastYear) return { cls: 'good', text: 'w normie' + (vel.normLabel ? ' (' + vel.normLabel + ')' : '') };
-    if (vel.aboveNormAge) return { cls: 'stable', text: 'poza oknem automatycznej oceny normy tempa' };
-    if (!vel.usedLastYear) return { cls: 'stable', text: 'odstęp pomiarów poza oknem oceny, bez porównania z normą' };
+    if (vel.slow && vel.severity === 'danger') {
+      return { cls: 'bad', text: 'poniżej normy dla wieku' + (vel.normLabel ? ' (' + vel.normLabel + ')' : ''), short: 'poniżej normy dla wieku', note: vel.normLabel ? 'norma ' + vel.normLabel : null };
+    }
+    if (vel.slow) return { cls: 'warn', text: 'do oceny — ' + (vel.normLabel || 'poniżej progu przesiewowego'), short: 'do oceny', note: vel.normLabel ? 'norma ' + vel.normLabel : 'poniżej progu przesiewowego' };
+    if (vel.note) return { cls: 'stable', text: vel.note, short: vel.note, note: null };
+    if (vel.basis && vel.usedLastYear) return { cls: 'good', text: 'w normie' + (vel.normLabel ? ' (' + vel.normLabel + ')' : ''), short: 'w normie', note: vel.normLabel ? 'norma ' + vel.normLabel : null };
+    if (vel.aboveNormAge) return { cls: 'stable', text: 'poza oknem automatycznej oceny normy tempa', short: 'poza oknem automatycznej oceny normy tempa', note: null };
+    if (!vel.usedLastYear) return { cls: 'stable', text: 'odstęp pomiarów poza oknem oceny, bez porównania z normą', short: 'odstęp pomiarów poza oknem oceny, bez porównania z normą', note: null };
     return null;
   }
 
@@ -809,21 +814,33 @@
     '.vtap summary{list-style:none;cursor:pointer}',
     '.vtap summary::-webkit-details-marker{display:none}',
     '.vtap .vtap-h{font-size:13px;margin:0;padding:11px 14px;background:linear-gradient(90deg,#0a6b73,#00838d);color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:800;flex-wrap:wrap}',
-    '.vtap .vtap-h .sub{font-size:11px;font-weight:500;opacity:.92}',
     '.vtap .vtap-h .tg{font-size:10.5px;font-weight:700;background:rgba(255,255,255,.16);border-radius:999px;padding:1px 9px}',
     '.vtap .vtap-h .tg::after{content:"zwiń ▾"}',
     '.vtap details:not([open])>summary .tg::after{content:"rozwiń ▸"}',
-    '.vtap .vtap-ctx{padding:8px 14px;background:#f2f9f9;border-bottom:1px solid #e3ecec;font-size:11.5px;font-weight:600;color:#39555b;display:flex;gap:12px;flex-wrap:wrap}',
+    '.vtap .vtap-meta{padding:8px 14px;background:#f2f9f9;border-bottom:1px solid #e3ecec;display:flex;gap:6px;flex-wrap:wrap}',
+    '.vtap .vtap-mchip{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #d9e8e8;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#39555b;white-space:nowrap}',
+    '.vtap .vtap-mchip .k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7d979b}',
     '.vtap .vtap-flag{padding:9px 14px;background:#fdecea;border-bottom:1px solid #f6d4d0;font-size:12px;font-weight:700;color:#b71c1c;line-height:1.45}',
     '.vtap .vtap-row{padding:9px 14px;border-top:1px solid #eef4f4}',
-    '.vtap .vtap-row:first-of-type{border-top:0}',
-    '.vtap .vtap-pm{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}',
-    '.vtap .vtap-pm .nm{font-size:12.5px;font-weight:800;color:#0d5a61;min-width:52px}',
-    '.vtap .vtap-pm .sp{flex:0 0 92px}',
-    '.vtap .vtap-ft{font-size:12.5px;margin-top:3px;color:#243b40;font-variant-numeric:tabular-nums}',
-    '.vtap .vtap-ft .c{color:#5a7274;font-size:11.5px}',
-    '.vtap .vtap-ft .ar{color:#9aabb0;margin:0 5px}',
-    '.vtap .vtap-seg{font-size:11.5px;color:#4a6168;margin-top:4px}',
+    '.vtap .vtap-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px 14px 4px}',
+    '.vtap .vtap-card{border:1px solid #e3ecec;border-left:4px solid #b9c8ca;border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;min-width:0}',
+    '.vtap .vtap-card.cw{border-left-color:#dcb27a}',
+    '.vtap .vtap-card.cb{border-left-color:#d98a80}',
+    '.vtap .vtap-card.cg{border-left-color:#8cc3ab}',
+    '.vtap .vtap-card .top{display:flex;justify-content:space-between;align-items:center;gap:6px}',
+    '.vtap .vtap-card .nm{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0d5a61}',
+    '.vtap .vtap-card .big{font-size:18px;font-weight:800;letter-spacing:-.01em;color:#243b40;font-variant-numeric:tabular-nums}',
+    '.vtap .vtap-card .big .d{font-size:11px;font-weight:700;margin-left:6px}',
+    '.vtap .vtap-card .sub{font-size:11.5px;color:#5a7274;font-variant-numeric:tabular-nums}',
+    '.vtap .vtap-card .vdt{border-top:1px dashed #e3ecec;margin-top:4px;padding-top:5px;font-size:11px;font-weight:700;line-height:1.4}',
+    '.vtap .vtap-card .vdt::before{content:"●";font-size:8px;vertical-align:2px;margin-right:5px}',
+    '.vtap .vt-w{color:#c75d00}.vtap .vt-b{color:#c62828}.vtap .vt-g{color:#0f6e56}.vtap .vt-s{color:#3f5459}',
+    '.vtap .vtap-seg{font-size:10.5px;color:#4a6168;margin-top:2px;line-height:1.4}',
+    '.vtap .vtap-tempo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 14px 12px;padding:8px 11px;background:#f7fbfb;border:1px solid #e3ecec;border-radius:10px}',
+    '.vtap .vtap-tempo .nm{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0d5a61}',
+    '.vtap .vtap-tempo .v{font-size:15px;font-weight:800;color:#243b40;font-variant-numeric:tabular-nums}',
+    '.vtap .vtap-tempo .mut{font-size:11px;color:#5a7274}',
+    '.vtap .vtap-tempo .note{font-size:10.5px;color:#5a7274;flex-basis:100%;line-height:1.4}',
     '.vtap .vtap-chip{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:normal;min-width:0;line-height:1.35;text-align:left}',
     '.vtap .vtap-chip.vg{background:#e7f6ef;color:#0f6e56}',
     '.vtap .vtap-chip.vs{background:#eef2f4;color:#3f5459}',
@@ -855,21 +872,36 @@
 
   var CHIP_CLS = { good: 'vg', stable: 'vs', warn: 'vw', bad: 'vb' };
 
-  // Pasek kontekstu klinicznego (jak vilda-cmp-ctx panelu porównania) + legenda znaczników odcinków.
-  function contextStripHtml(ctx) {
-    if (!ctx) return '';
-    var items = [];
-    if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push('🧬 kanał rodzicielski (MPH): SDS ' + esc(fmtS(ctx.mpSds)));
-    if (ctx.gh) items.push('💉 terapia GH: od ' + esc(fmtAgeM(ctx.gh.a)) + (ctx.gh.b != null ? ' do ' + esc(fmtAgeM(ctx.gh.b)) : ' — nadal') + ' (odcinki: 💉)');
-    if (ctx.red) items.push('⬇ zamierzona redukcja' + (ctx.red.label ? ' (' + esc(ctx.red.label) + ')' : '') + ': od ' + esc(fmtAgeM(ctx.red.a)) + (ctx.red.b != null ? ' do ' + esc(fmtAgeM(ctx.red.b)) : ' — nadal') + ' (odcinki: ⬇)');
-    var TROMAN = ['I', 'II', 'III', 'IV', 'V'];
-    if (ctx.tannerStage != null) items.push('Tanner ' + esc(TROMAN[ctx.tannerStage - 1] || String(ctx.tannerStage))
-      + (ctx.tannerAtAgeMonths != null ? ' (z zapisu w wieku ' + esc(fmtAgeM(ctx.tannerAtAgeMonths)) + ')' : ''));
-    else if (ctx.tannerStale && ctx.tannerStaleStage != null) items.push('Tanner ' + esc(TROMAN[ctx.tannerStaleStage - 1] || String(ctx.tannerStaleStage))
-      + ' (z zapisu w wieku ' + esc(fmtAgeM(ctx.tannerAtAgeMonths)) + ' — nieaktualny, pominięty w ocenie)');
-    if (ctx.boneAge) items.push('wiek kostny: ' + esc(fmtAgeM(ctx.boneAge.baMonths)) + (ctx.boneAge.atAgeMonths != null ? ' (oznaczony w wieku ' + esc(fmtAgeM(ctx.boneAge.atAgeMonths)) + ')' : ''));
-    if (!items.length) return '';
-    return '<div class="vtap-ctx"><span>' + items.join('</span><span>') + '</span></div>';
+  // Pasek żetonów meta (makieta B, decyzja właściciela 2026-08-15): zakres/pomiary/źródło
+  // + kontekst kliniczny jako oddzielne żetony z małą etykietą, zamiast ciągu tekstu.
+  // Pełne nazwy kliniczne („kanał rodzicielski (MPH)", „zamierzona redukcja (…)") żyją
+  // w atrybutach title — widoczna etykieta jest skrótowa.
+  function mchip(key, val, title) {
+    return '<span class="vtap-mchip"' + (title ? ' title="' + esc(title) + '"' : '') + '>'
+      + (key ? '<span class="k">' + key + '</span>' : '') + esc(val) + '</span>';
+  }
+
+  function metaStripHtml(model) {
+    var n = model.points.length;
+    var items = [
+      mchip('okres', fmt(model.points[0].ageMonths / 12, 1) + ' → ' + fmt(model.points[n - 1].ageMonths / 12, 1) + ' r.ż.'),
+      mchip('', n + ' pomiar' + (n === 1 ? '' : n < 5 ? 'y' : 'ów'))
+    ];
+    if (model.source) items.push(mchip('źródło', model.source));
+    var ctx = model.context;
+    if (ctx) {
+      if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push(mchip('🧬 MPH', 'SDS ' + fmtS(ctx.mpSds), 'kanał rodzicielski (MPH)'));
+      if (ctx.gh) items.push(mchip('💉 GH', 'od ' + fmtAgeM(ctx.gh.a) + (ctx.gh.b != null ? ' do ' + fmtAgeM(ctx.gh.b) : ' — nadal'), 'terapia GH (oznaczone odcinki: 💉)'));
+      if (ctx.red) items.push(mchip('⬇ redukcja', (ctx.red.label ? ctx.red.label + ' · ' : '') + 'od ' + fmtAgeM(ctx.red.a) + (ctx.red.b != null ? ' do ' + fmtAgeM(ctx.red.b) : ' — nadal'),
+        'zamierzona redukcja' + (ctx.red.label ? ' (' + ctx.red.label + ')' : '') + ' (oznaczone odcinki: ⬇)'));
+      var TROMAN = ['I', 'II', 'III', 'IV', 'V'];
+      if (ctx.tannerStage != null) items.push(mchip('Tanner', (TROMAN[ctx.tannerStage - 1] || String(ctx.tannerStage))
+        + (ctx.tannerAtAgeMonths != null ? ' (z zapisu w wieku ' + fmtAgeM(ctx.tannerAtAgeMonths) + ')' : '')));
+      else if (ctx.tannerStale && ctx.tannerStaleStage != null) items.push(mchip('Tanner', (TROMAN[ctx.tannerStaleStage - 1] || String(ctx.tannerStaleStage))
+        + ' (z zapisu w wieku ' + fmtAgeM(ctx.tannerAtAgeMonths) + ' — nieaktualny, pominięty w ocenie)'));
+      if (ctx.boneAge) items.push(mchip('wiek kostny', fmtAgeM(ctx.boneAge.baMonths) + (ctx.boneAge.atAgeMonths != null ? ' (oznaczony w wieku ' + fmtAgeM(ctx.boneAge.atAgeMonths) + ')' : '')));
+    }
+    return '<div class="vtap-meta">' + items.join('') + '</div>';
   }
 
   function chipHtml(v) {
@@ -910,16 +942,22 @@
     return (v && VERDICT_TONE[v.t]) || m.tone;
   }
 
-  function patientMetricRowHtml(m) {
-    var html = '<div class="vtap-row"><div class="vtap-pm">'
-      + '<span class="nm">' + esc(m.title) + '</span>'
-      + '<span class="sp">' + sparklineSvg(m.series, rowTone(m)) + '</span>'
-      + chipHtml(m.treatment ? m.treatment.verdict : m.total) + '</div>'
-      + '<div class="vtap-ft">' + esc(fmt(m.first.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
-      + ' <span class="c">(' + esc(fmtC(m.first.c)) + 'c)</span><span class="ar">→</span>'
-      + esc(fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
-      + ' <span class="c">(' + esc(fmtC(m.last.c)) + 'c)</span>'
-      + ' <span class="c">· SDS ' + esc(fmtS(m.first.sd) + ' → ' + fmtS(m.last.sd)) + '</span></div>';
+  var STRIPE_CLS = { bad: 'cb', warn: 'cw', good: 'cg', stable: 'cs' };
+  var TEXT_CLS = { bad: 'vt-b', warn: 'vt-w', good: 'vt-g', stable: 'vt-s' };
+
+  // Karta statusu parametru (makieta B): pasek koloru werdyktu, przejście centylowe z ΔSDS
+  // jako liczba wiodąca, werdykt jako zdanie pod kreską (nie chip).
+  function patientMetricCardHtml(m) {
+    var v = m.treatment ? m.treatment.verdict : m.total;
+    var tCls = TEXT_CLS[v && v.t] || 'vt-s';
+    var html = '<div class="vtap-card ' + (STRIPE_CLS[v && v.t] || 'cs') + '">'
+      + '<div class="top"><span class="nm">' + esc(m.title) + '</span>'
+      + '<span class="sp">' + sparklineSvg(m.series, rowTone(m)) + '</span></div>'
+      + '<div class="big">' + esc(fmtC(m.first.c)) + 'c<span aria-hidden="true"> → </span>' + esc(fmtC(m.last.c)) + 'c'
+      + '<span class="d ' + tCls + '">ΔSDS ' + esc(fmtS(m.last.sd - m.first.sd)) + '</span></div>'
+      + '<div class="sub">' + esc(fmt(m.first.value, m.dec)) + ' → ' + esc(fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
+      + ' · SDS ' + esc(fmtS(m.first.sd) + ' → ' + fmtS(m.last.sd)) + '</div>';
+    if (v) html += '<div class="vdt ' + tCls + '">' + esc(v.l) + '</div>';
     if (m.treatment) {
       html += '<div class="vtap-seg">↳ okres leczenia (od ' + esc(fmtAgeM(m.treatment.a.ageMonths)) + '): ΔSDS '
         + esc(fmtS(m.treatment.dSds)) + ' — ' + esc(m.treatment.verdict.l) + '</div>';
@@ -933,15 +971,19 @@
 
   var CHIP_BY_CLS = { bad: 'vb', warn: 'vw', good: 'vg', stable: 'vs' };
 
+  // Belka Tempo (makieta B): wartość + krótki werdykt w chipie, norma i kontekst
+  // pokwitaniowy w wyciszonej dopisce — bez zagnieżdżonych nawiasów.
   function patientVelocityRowHtml(vel) {
     if (!vel) return '';
-    var ctx = vel.gapM != null ? ' <span class="c">(ostatnich ' + Math.round(vel.gapM) + ' mies.)</span>' : '';
     var a = velocityAssessment(vel);
-    var chip = a ? '<span class="vtap-chip ' + (CHIP_BY_CLS[a.cls] || 'vs') + '">' + esc(a.text) + '</span>'
+    var chip = a ? '<span class="vtap-chip ' + (CHIP_BY_CLS[a.cls] || 'vs') + '">' + esc(a.short) + '</span>'
       : '<span class="vtap-chip vs">poza oknem oceny normy</span>';
-    return '<div class="vtap-row"><div class="vtap-pm"><span class="nm">Tempo</span>'
-      + '<span class="vtap-ft" style="margin:0;flex:1">' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok' + ctx + '</span>'
-      + chip + '</div></div>';
+    return '<div class="vtap-tempo"><span class="nm">Tempo</span>'
+      + '<span class="v">' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok</span>'
+      + (vel.gapM != null ? '<span class="mut">ostatnich ' + Math.round(vel.gapM) + ' mies.</span>' : '')
+      + chip
+      + (a && a.note ? '<span class="note">' + esc(a.note) + '</span>' : '')
+      + '</div>';
   }
 
   function patientSegmentsHtml(model) {
@@ -968,12 +1010,9 @@
     ensurePatientStyle();
     var open = !(opts && opts.collapsed);
     var hideRedFlag = !!(opts && opts.hideRedFlag); // karty: flagę niesie baner (PR #68) — bez powtórki
-    var sub = fmt(model.points[0].ageMonths / 12, 1) + ' → ' + fmt(model.points[model.points.length - 1].ageMonths / 12, 1)
-      + ' r.ż. · ' + model.points.length + ' pomiar' + (model.points.length === 1 ? '' : model.points.length < 5 ? 'y' : 'ów')
-      + (model.source ? ' · źródło: ' + model.source : '');
     var html = '<details class="vtap-main"' + (open ? ' open' : '') + '>'
-      + '<summary class="vtap-h"><span>Analiza trajektorii</span><span class="sub">' + esc(sub) + '</span><span class="tg"></span></summary>';
-    html += contextStripHtml(model.context);
+      + '<summary class="vtap-h"><span>Analiza trajektorii</span><span class="tg"></span></summary>';
+    html += metaStripHtml(model);
     hideRedFlag || model.metrics.forEach(function (m) {
       if (m.redFlag) {
         html += '<div class="vtap-flag">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS '
@@ -981,7 +1020,9 @@
           + ') — obraz deceleracji wzrastania, wskazana ocena endokrynologiczna</div>';
       }
     });
-    model.metrics.forEach(function (m) { html += patientMetricRowHtml(m); });
+    html += '<div class="vtap-cards">';
+    model.metrics.forEach(function (m) { html += patientMetricCardHtml(m); });
+    html += '</div>';
     html += patientVelocityRowHtml(model.velocity);
     if (model.delayedPuberty) {
       html += '<div class="vtap-row"><span class="vtap-chip vw">Tanner I &gt;' + (model.sex === 'M' ? '14' : '13')
