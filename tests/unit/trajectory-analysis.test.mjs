@@ -667,6 +667,40 @@ describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
     expect(html).not.toContain('#8fb6ba');
   });
 
+  it('prezentacja wariantu B (makieta 2026-08-15): karty statusu, żetony meta, belka Tempo', () => {
+    const vta = makeVtaCtx({
+      'HT|130': -1.6, 'HT|138': -1.7,
+      'WT|130': 0.3, 'WT|138': 0.6,
+      'BMI|130': 1.2, 'BMI|138': 1.6
+    });
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 130, height: 135, weight: 39.5 }],
+      currentAgeMonths: 138,
+      currentHeight: 139,
+      currentWeight: 46,
+      sex: 'K',
+      context: { mpSds: -0.1, gh: { a: 138, b: null } }
+    });
+    const html = vta.buildPatientHtml(model);
+    // Żetony meta zamiast podtytułu i paska tekstowego kontekstu.
+    expect(html).toContain('vtap-meta');
+    expect(html).toContain('>okres</span>');
+    expect(html).toContain('2 pomiary');
+    expect(html).toContain('>źródło</span>OLAF');
+    expect(html).toContain('🧬 MPH');
+    expect(html).toContain('title="kanał rodzicielski (MPH)"');
+    expect(html).not.toContain('vtap-ctx');
+    // Karty statusu: pasek koloru werdyktu (warn ×3), przejście centylowe + ΔSDS, werdykt zdaniem.
+    expect(html).toContain('vtap-cards');
+    expect((html.match(/vtap-card cw/g) || []).length).toBe(3);
+    expect(html).toContain('ΔSDS +0,4');
+    expect(html).toContain('progresja nadwagi (BMI w paśmie 85.–97. centyla)');
+    expect(html).not.toContain('vtap-ft');
+    // Bez zagnieżdżonych nawiasów w całym panelu (stub nie liczy tempa — belkę Tempo
+    // pokrywa test „do oceny" w hierarchii norm tempa).
+    expect(html).not.toMatch(/\([^)]*\([^)]*\)[^)]*\)/);
+  });
+
   it('bez kontekstu wynik identyczny jak dotychczas (regresja)', () => {
     const table = { 'HT|48': 0.4, 'HT|60': 0.3, 'HT|72': -0.9, 'HT|84': -1.0 };
     const vta = makeVtaCtx(table);
