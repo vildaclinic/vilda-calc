@@ -3548,10 +3548,10 @@ html.vilda-pro-active   #proGateBanner { display: none; }
                Użytkownik może wpisać jeden lub oba pomiary; wyniki pojawią się odpowiednio poniżej. -->
           <div class="circ-inputs" style="display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;">
             <label>Obwód głowy (cm):
-              <input type="number" id="headCircumference" min="30" max="60" step="0.1">
+              <input type="number" id="headCircumference" min="18" max="65" step="0.1">
             </label>
             <label>Obwód klatki piersiowej (cm):
-              <input type="number" id="chestCircumference" min="30" max="80" step="0.1">
+              <input type="number" id="chestCircumference" min="25" max="130" step="0.1">
             </label>
           </div>
           <!-- Wyniki dla obwodu głowy i klatki piersiowej.  
@@ -3901,7 +3901,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <!-- Moduł obwodów głowy i klatki piersiowej.  
      Skrypt powinien być ładowany po module ciśnienia krwi, aby mieć dostęp do funkcji pomocniczych jak applyPulse.
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
-<script src="circumference_module.js?v=13" defer></script>
+<script src="circumference_module.js?v=14" defer></script>
 
 <!-- Prosta obsługa przycisku rozwijającego kartę obwodów głowy i klatki piersiowej.
      Po załadowaniu DOM przypinamy zdarzenie click do przycisku toggleCircSection,
