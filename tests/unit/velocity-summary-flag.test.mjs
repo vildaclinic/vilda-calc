@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 // Karta „Podsumowanie wyników": linia tempa wzrastania ma nosić werdykt i kolor
 // spójny z kartą „Zaawansowane obliczenia wzrostowe" (decyzja właściciela 2026-08-13,
@@ -154,6 +159,41 @@ describe('Podsumowanie wyników — kolor wiersza tempa (vilda_patient_report.js
       expect(tone('Aktualne tempo wzrastania (z ostatnich 12 mies.): 3,8 cm/rok — poniżej normy (norma: ≥5 cm/rok)')).toBe('normal');
     } finally {
       delete globalThis.getAgeDecimal;
+    }
+  });
+});
+
+describe('Podsumowanie wyników — tony i highlighty linii obwodów (naprawa etapu 2 po audycie)', () => {
+  function loadTone2(domValues) {
+    const win = makeWindow(domValues);
+    globalThis.document = win.document;
+    loadBrowserScript('vilda_patient_report.js', win);
+    return win.getProfessionalSummaryLineTone;
+  }
+
+  const CHILD2 = Object.freeze({ weight: '26.2', height: '130.8', age: '8', ageMonths: '9', sex: 'M' });
+
+  it('progi tonów obwodów identyczne z kartą modułu: 3/10/90/97', () => {
+    const tone = loadTone2(CHILD2);
+    expect(tone('Obwód głowy: 50 centyl')).toBe('normal');
+    expect(tone('Obwód głowy: 8 centyl')).toBe('warn'); // stara gałąź ogólna dawała normal (warn dopiero ≤5)
+    expect(tone('Obwód głowy: 93 centyl')).toBe('warn');
+    expect(tone('Obwód głowy: <3. centyla (Z‑score = -2,41)')).toBe('danger');
+    expect(tone('Obwód klatki piersiowej: >97. centyla')).toBe('danger');
+    expect(tone('Obwód klatki piersiowej: 95 centyl')).toBe('warn');
+  });
+
+  it('kolektor wyróżnień raportu ma gałęzie obwodów (asercja źródłowa — funkcja nieeksponowana)', () => {
+    const src = fs.readFileSync(path.join(repoRoot, 'vilda_patient_report.js'), 'utf8');
+    expect(src).toContain('Obw\\xF3d g\\u0142owy jest poza typowym zakresem centylowym dla wieku i p\\u0142ci.');
+    expect(src).toContain('Obw\\xF3d klatki piersiowej jest poza typowym zakresem centylowym dla wieku i p\\u0142ci.');
+  });
+
+  it('trzy buildery linii podsumowania formatują ogony jako „<3. centyla"/„>97. centyla"', () => {
+    for (const [f, v] of [['vilda_summary_cards.js', 'a.'], ['inline_index_06.js', 'window.'], ['inline_docpro_04.js', 'window.']]) {
+      const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+      expect(src, f).toContain(v + 'headCircPercentile<3?"<3. centyla":' + v + 'headCircPercentile>97?">97. centyla":');
+      expect(src, f).toContain(v + 'chestCircPercentile<3?"<3. centyla":' + v + 'chestCircPercentile>97?">97. centyla":');
     }
   });
 });
