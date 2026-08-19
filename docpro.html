@@ -3553,6 +3553,12 @@ html.vilda-pro-active   #proGateBanner { display: none; }
             <label class="circ-input-field">Obwód klatki piersiowej (cm):
               <input type="number" id="chestCircumference" min="25" max="130" step="0.1">
             </label>
+            <label class="circ-input-field">Normy obwodu głowy 0–5 lat:
+              <select id="circNormsSource">
+                <option value="imid" selected>IMiD (Palczewska i Niedźwiedzka)</option>
+                <option value="who">WHO 2006/2007</option>
+              </select>
+            </label>
           </div>
           <!-- Wyniki dla obwodu głowy i klatki piersiowej.
                Elementy są wypełniane dynamicznie przez circumference_module.js.
@@ -3576,6 +3582,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
               </div>
             </div>
           </div>
+          <div id="circHeadChestNote" class="source-note circ-pro-note" style="display:none"></div>
           <div id="circChartProHint" class="source-note circ-pro-note">
             Generowanie siatek obwodu głowy i klatki piersiowej jest dostępne w trybie Wyniki profesjonalne <span class="circ-pro-pill">PRO</span>.
           </div>
@@ -3922,7 +3929,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <!-- Moduł obwodów głowy i klatki piersiowej.  
      Skrypt powinien być ładowany po module ciśnienia krwi, aby mieć dostęp do funkcji pomocniczych jak applyPulse.
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
-<script src="circumference_module.js?v=14" defer></script>
+<script src="who_head_data.js" defer></script>
+<script src="circumference_module.js?v=15" defer></script>
 
 <!-- Prosta obsługa przycisku rozwijającego kartę obwodów głowy i klatki piersiowej.
      Po załadowaniu DOM przypinamy zdarzenie click do przycisku toggleCircSection,

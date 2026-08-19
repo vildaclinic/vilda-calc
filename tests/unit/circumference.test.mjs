@@ -115,3 +115,77 @@ describe('ścieżka noworodkowa: ocena wielkości urodzeniowej z zapisu SGA', ()
     expect(api.assessNewborn(36, 'K')).toBeNull();
   });
 });
+
+describe('etap 3a: wiek korygowany wcześniaków (D1)', () => {
+  const api = loadCirc();
+
+  it('koryguje wiek dla GA <37 tc: 6-mies. dziecko z 28. tc → ~3,2 mies. wieku skorygowanego', () => {
+    const r = api.pretermAdjust(0.5, { weeks: 28, days: 0 });
+    expect(r).not.toBeNull();
+    expect(r.ageYears).toBeCloseTo(0.5 - (40 - 28) * 7 / 365.25, 6);
+    expect(r.gaWeeks).toBe(28);
+    expect(r.chronoYears).toBe(0.5);
+  });
+
+  it('granice konwencji: GA ≥37 tc bez korekcji; po 24. mies. życia bez korekcji', () => {
+    expect(api.pretermAdjust(0.5, { weeks: 38, days: 0 })).toBeNull();
+    expect(api.pretermAdjust(0.5, { weeks: 37, days: 0 })).toBeNull();
+    expect(api.pretermAdjust(2.5, { weeks: 28, days: 0 })).toBeNull();
+    expect(api.pretermAdjust(0.5, { weeks: 36, days: 6 })).not.toBeNull();
+    expect(api.pretermAdjust(0.5, null)).toBeNull();
+  });
+});
+
+describe('etap 3a: przełącznik WHO 0–5 lat dla obwodu głowy (D2, domyślnie IMiD)', () => {
+  function loadCircWho(extra = {}) {
+    const g = Object.assign({ vildaOnReady: () => {} }, extra);
+    loadBrowserScript('who_head_data.js', g);
+    return loadBrowserScript('circumference_module.js', g).VildaCircumference;
+  }
+
+  it('wiersz WHO: mediany zgodne z tabelami polowymi WHO (chłopcy 12 mies., dziewczynki 6 mies.)', () => {
+    const api = loadCircWho();
+    expect(api.whoHeadRow('M', 1).p50).toBeCloseTo(46.07, 1);
+    expect(api.whoHeadRow('K', 0.5).p50).toBeCloseTo(42.2, 1);
+    expect(api.whoHeadRow('M', 6)).toBeNull(); // poza zakresem 0–5 lat
+  });
+
+  it('ocena wg WHO: dziecko na medianie WHO → z≈0, centyl≈50, nota źródłowa WHO', () => {
+    const api = loadCircWho();
+    const r = api.assessRegular('head', 46.07, 'M', 1, 'who');
+    expect(r.ok).toBe(true);
+    expect(r.whoUsed).toBe(true);
+    expect(Math.abs(r.zScore)).toBeLessThan(0.01);
+    expect(r.perc).toBeCloseTo(50, 0);
+    expect(r.sourceHtml).toContain('WHO Child Growth Standards');
+    // ta sama wartość na siatce IMiD leży niżej (IMiD ~1 cm wyżej od WHO)
+    const imid = api.assessRegular('head', 46.07, 'M', 1);
+    expect(imid.perc).toBeLessThan(40);
+    expect(imid.sourceHtml).toContain('Instytutu Matki i Dziecka');
+  });
+
+  it('WHO wybrane, ale dane niezaładowane → cichy fallback na IMiD z uczciwą notą IMiD', () => {
+    const api = loadCirc(); // bez who_head_data.js
+    const r = api.assessRegular('head', 46.07, 'M', 1, 'who');
+    expect(r.ok).toBe(true);
+    expect(r.whoUsed).toBe(false);
+    expect(r.sourceHtml).toContain('Instytutu Matki i Dziecka');
+  });
+});
+
+describe('etap 3a: linia informacyjna głowa − klatka (D4, bez werdyktu)', () => {
+  const api = loadCirc();
+
+  it('emitowana dla obu pomiarów u dziecka 1 mies.–2 lata, z różnicą w cm', () => {
+    const html = api.headChestNote(38, 36.5, 0.5);
+    expect(html).toContain('Różnica obwodów głowa − klatka: +1,5 cm');
+    expect(html).toContain('bez oceny centylowej');
+  });
+
+  it('ujemna różnica ze znakiem minus; brak emisji po 2. r.ż., poniżej 1. mies. i przy braku pomiaru', () => {
+    expect(api.headChestNote(45, 47, 1.5)).toContain('− klatka: −2,0 cm');
+    expect(api.headChestNote(50, 52, 3)).toBe('');
+    expect(api.headChestNote(35, 33, 0.04)).toBe('');
+    expect(api.headChestNote(NaN, 36, 0.5)).toBe('');
+  });
+});
