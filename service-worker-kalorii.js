@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.785';
+const SW_VERSION = '1.0.786';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -116,8 +116,6 @@ const CORE_SHELL_URLS = [
   '/inline_docpro_01.js?v=1',
   '/inline_docpro_02.js?v=1',
   '/inline_docpro_03.js?v=1',
-  '/inline_docpro_04.js?v=1',
-  '/inline_docpro_04.js?v=2',
   '/inline_docpro_05.js?v=1',
   '/inline_docpro_06.js?v=1',
   '/inline_index_00.js?v=1',
@@ -153,8 +151,6 @@ const CORE_SHELL_URLS = [
   '/inline_index_04.js?v=22',
   '/inline_index_04.js?v=23',
   '/inline_index_05.js?v=1',
-  '/inline_index_06.js?v=1',
-  '/inline_index_06.js?v=2',
   '/inline_index_07.js?v=1',
   '/inline_index_08.js?v=1',
   '/inline_index_09.js?v=1',
@@ -1314,6 +1310,7 @@ const CORE_SHELL_URLS = [
   '/bp_module.js?v=4',
   '/circumference_module.js',
   '/who_head_data.js',
+  '/vilda_summary_inline.js?v=1',
   '/circumference_module.js?v=15',
   '/respiratory_module.js',
   '/respiratory_module.js?v=3',
