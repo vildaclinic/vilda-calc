@@ -190,10 +190,37 @@ describe('Podsumowanie wyników — tony i highlighty linii obwodów (naprawa et
   });
 
   it('trzy buildery linii podsumowania formatują ogony jako „<3. centyla"/„>97. centyla"', () => {
-    for (const [f, v] of [['vilda_summary_cards.js', 'a.'], ['inline_index_06.js', 'window.'], ['inline_docpro_04.js', 'window.']]) {
+    for (const [f, v] of [['vilda_summary_cards.js', 'a.'], ['vilda_summary_inline.js', 'window.']]) {
       const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
       expect(src, f).toContain(v + 'headCircPercentile<3?"<3. centyla":' + v + 'headCircPercentile>97?">97. centyla":');
       expect(src, f).toContain(v + 'chestCircPercentile<3?"<3. centyla":' + v + 'chestCircPercentile>97?">97. centyla":');
     }
+  });
+});
+
+describe('konsolidacja D5: jedna kopia inline „Podsumowania wyników" dla obu stron', () => {
+  it('index.html i docpro.html ładują vilda_summary_inline.js; bliźniacze pliki nie istnieją', () => {
+    for (const page of ['index.html', 'docpro.html']) {
+      const src = fs.readFileSync(path.join(repoRoot, page), 'utf8');
+      expect(src, page).toContain('vilda_summary_inline.js?v=1');
+      expect(src, page).not.toContain('inline_index_06.js');
+      expect(src, page).not.toContain('inline_docpro_04.js');
+    }
+    expect(fs.existsSync(path.join(repoRoot, 'inline_index_06.js'))).toBe(false);
+    expect(fs.existsSync(path.join(repoRoot, 'inline_docpro_04.js'))).toBe(false);
+  });
+
+  it('wspólny plik formatuje każdą liczbę dziesiętną z polskim przecinkiem (bug docpro naprawiony)', () => {
+    const src = fs.readFileSync(path.join(repoRoot, 'vilda_summary_inline.js'), 'utf8');
+    // każde toFixed(...) w linii wyniku ma za sobą zamianę kropki na przecinek
+    // każde toFixed(1|2) musi mieć za sobą zamianę kropki na przecinek
+    const bad = (src.match(/toFixed\((?:1|2)\)/g) || []).length - (src.match(/toFixed\((?:1|2)\)\.replace\("\.",","\)/g) || []).length;
+    expect(bad, 'toFixed bez .replace(".", ",")').toBe(0);
+  });
+
+  it('linia hSDS − mpSDS: mpSDS z targetStats z fallbackiem na przeliczenie ze źródła (bez crasha)', () => {
+    const src = fs.readFileSync(path.join(repoRoot, 'vilda_summary_inline.js'), 'utf8');
+    expect(src).toContain('i.targetStats&&typeof i.targetStats.sd=="number"?i.targetStats.sd:a.sd');
+    expect(src).not.toContain('f.sd-i.targetStats.sd;');
   });
 });
