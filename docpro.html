@@ -3589,6 +3589,26 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         </div>
       </div>
 
+      <!-- Moduł: Proporcja masy do wysokości ciała (weight-for-height).
+           Ocena masy ciała względem WZROSTU (nie wieku) wg Tabel 63–64 IMiD (Palczewska i Niedźwiedzka).
+           Wynik liczy się automatycznie z pól masy, wzrostu, płci i wieku formularza głównego
+           (obsługa w wfh_module.js). -->
+      <div id="wfhSection" style="margin-top:0;">
+        <button type="button" id="toggleWfhSection"
+          style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0.6rem auto;">
+          Proporcja masy do wysokości ciała
+        </button>
+        <div id="wfhCard" class="card" style="display:none;margin-top:1rem;">
+          <h2 style="text-align:center;">Proporcja masy do wysokości ciała</h2>
+          <p class="source-note" style="margin-top:0;">
+            Ocena masy ciała względem wzrostu (weight‑for‑height) — niezależna od wieku metrykalnego,
+            szczególnie przydatna u dzieci do ok. 3. roku życia, gdzie BMI działa słabo.
+            Wynik liczy się automatycznie z masy, wzrostu i płci podanych w formularzu powyżej.
+          </p>
+          <div id="wfhResult" class="result-box"></div>
+        </div>
+      </div>
+
       <div id="downSyndromeSection" style="display:none;">
         <button type="button" id="toggleDownSyndrome" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0.6rem auto;">
           Obliczenia dla dzieci z zespołem Downa
@@ -3931,6 +3951,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
 <script src="who_head_data.js" defer></script>
 <script src="circumference_module.js?v=15" defer></script>
+<script src="wfh_module.js?v=1" defer></script>
 
 <!-- Prosta obsługa przycisku rozwijającego kartę obwodów głowy i klatki piersiowej.
      Po załadowaniu DOM przypinamy zdarzenie click do przycisku toggleCircSection,

@@ -224,3 +224,47 @@ describe('konsolidacja D5: jedna kopia inline „Podsumowania wyników" dla obu 
     expect(src).not.toContain('f.sd-i.targetStats.sd;');
   });
 });
+
+describe('Proporcja masy do wysokości: linia podsumowania, ton i highlight (Tabele 63–64 IMiD)', () => {
+  function loadTone3(domValues) {
+    const win = makeWindow(domValues);
+    globalThis.document = win.document;
+    loadBrowserScript('vilda_patient_report.js', win);
+    return win.getProfessionalSummaryLineTone;
+  }
+
+  const CHILD3 = Object.freeze({ weight: '10.5', height: '80', age: '1', ageMonths: '3', sex: 'M' });
+
+  it('ton linii z progami 3/10/90/97 jak dla obwodów; centyl czytany za masą i wzrostem', () => {
+    const tone = loadTone3(CHILD3);
+    // liczby masy i wzrostu w treści nie mogą zmylić parsera centyla
+    expect(tone('Proporcja masy do wysokości: 10,5 kg przy wzroście 80,0 cm – 45,2. centyl')).toBe('normal');
+    expect(tone('Proporcja masy do wysokości: 8 centyl')).toBe('warn');
+    expect(tone('Proporcja masy do wysokości: 93 centyl')).toBe('warn');
+    expect(tone('Proporcja masy do wysokości: <3. centyla (Z‑score = -2,41)')).toBe('danger');
+    expect(tone('Proporcja masy do wysokości: >97. centyla')).toBe('danger');
+  });
+
+  it('oba buildery linii emitują wpis wfh z ogonami „<3. centyla"/„>97. centyla"', () => {
+    for (const [f, v] of [['vilda_summary_cards.js', 'a.'], ['vilda_summary_inline.js', 'window.']]) {
+      const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+      expect(src, f).toContain(v + 'wfhPercentile<3?"<3. centyla":' + v + 'wfhPercentile>97?">97. centyla":');
+    }
+  });
+
+  it('raport pacjenta: wfhPercentile/wfhSD w liście live-update i gałąź highlightu (asercje źródłowe)', () => {
+    const src = fs.readFileSync(path.join(repoRoot, 'vilda_patient_report.js'), 'utf8');
+    expect(src).toContain('"chestCircPercentile","chestCircSD","wfhPercentile","wfhSD"');
+    expect(src).toContain('Proporcja masy do wysoko\\u015Bci cia\\u0142a jest poza typowym zakresem centylowym.');
+  });
+
+  it('obie strony mają kartę #wfhCard i ładują wfh_module.js; SW cache\'uje moduł', () => {
+    for (const page of ['index.html', 'docpro.html']) {
+      const src = fs.readFileSync(path.join(repoRoot, page), 'utf8');
+      expect(src, page).toContain('id="wfhCard"');
+      expect(src, page).toContain('wfh_module.js?v=1');
+    }
+    const sw = fs.readFileSync(path.join(repoRoot, 'service-worker-kalorii.js'), 'utf8');
+    expect(sw).toContain("'/wfh_module.js?v=1',");
+  });
+});
