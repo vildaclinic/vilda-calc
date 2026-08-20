@@ -2,10 +2,17 @@
 // Ocena masy ciała względem WZROSTU (nie wieku) — parametr szczególnie przydatny u dzieci
 // do ok. 3. roku życia, gdzie BMI działa słabo; spójny z konwencją książeczek zdrowia.
 //
-// Źródło danych: Palczewska I., Niedźwiedzka Z. „Wskaźniki rozwoju somatycznego dzieci
-// i młodzieży warszawskiej", Med. Wieku Rozw. 2001;5(2) Suplement I — Tabela 63 (chłopcy,
-// 50–195 cm) i Tabela 64 (dziewczęta, 50–185 cm), krok 5 cm; populacja 1 mies.–18 lat.
-// Digitalizacja ze skanu oryginału w powiększeniach 300 dpi (2026-08-19).
+// Dwa źródła norm (fuzja dawnej karty „Wskaźnik WFL" z tą kartą, 2026-08-20):
+// 1. IMiD (domyślne): Palczewska I., Niedźwiedzka Z. „Wskaźniki rozwoju somatycznego dzieci
+//    i młodzieży warszawskiej", Med. Wieku Rozw. 2001;5(2) Suplement I — Tabela 63 (chłopcy,
+//    50–195 cm) i Tabela 64 (dziewczęta, 50–185 cm), krok 5 cm; populacja 1 mies.–18 lat.
+//    Digitalizacja ze skanu oryginału w powiększeniach 300 dpi (2026-08-19).
+// 2. WHO 2006 (tylko dzieci ≤2 lat): weight-for-length, tablice LMS 45–110 cm co 0,5 cm
+//    z modułu vilda_growth_reference_data.js (WFL_DATA_BOYS/GIRLS); werdykty w oryginalnych
+//    kategoriach WHO (progi z-score ±2/±3 SD), bo progi centylowe IMiD nie przystają do
+//    tego standardu. Wybór źródła: #wfhNormsSource (persist wspólny jak circNormsSource).
+// Centyle WHO są dla tej samej masy zwykle wyższe niż IMiD (różnica populacji, do ~25 pkt) —
+// w trybie PRO karta pokazuje dla dzieci ≤2 lat wynik obu źródeł jednocześnie.
 //
 // Adnotacje źródłowe:
 // - Tabela 64, wiersz 75 cm: w druku kolumny p3/p10 w odwrotnej kolejności (8,0 | 7,3);
@@ -152,8 +159,75 @@
 
   var SOURCE_NOTE = '<div class="source-note">Źródło referencyjne: siatki Instytutu Matki i Dziecka (Palczewska i Niedźwiedzka; Warszawa 1996–99) — proporcja masy do wysokości ciała, Tabele 63–64 (chłopcy 50–195 cm, dziewczęta 50–185 cm). Parametr niezależny od wieku metrykalnego — szczególnie przydatny u dzieci do ok. 3. roku życia.</div>';
 
+  // ── Źródło WHO 2006 (weight-for-length, dzieci ≤2 lat) ──
+
+  var WHO_MAX_AGE = 2;
+
+  function whoData() {
+    try {
+      var d = typeof window !== 'undefined' ? window.VildaGrowthReferenceData : null;
+      if (d && Array.isArray(d.WFL_DATA_BOYS) && d.WFL_DATA_BOYS.length
+        && Array.isArray(d.WFL_DATA_GIRLS) && d.WFL_DATA_GIRLS.length) return d;
+    } catch (e) { }
+    return null;
+  }
+
+  function whoAvailable(ageYears) {
+    return !!whoData() && isFinite(ageYears) && ageYears <= WHO_MAX_AGE;
+  }
+
+  // Wiersz LMS interpolowany liniowo po długości; poza 45–110 cm — null.
+  function whoLms(sex, heightCm) {
+    var d = whoData();
+    if (!d) return null;
+    var tab = sex === 'M' || sex === 'male' ? d.WFL_DATA_BOYS : d.WFL_DATA_GIRLS;
+    if (!isFinite(heightCm) || heightCm < tab[0][0] || heightCm > tab[tab.length - 1][0]) return null;
+    for (var i = 0; i < tab.length - 1; i++) {
+      var a = tab[i], b = tab[i + 1];
+      if (heightCm >= a[0] && heightCm <= b[0]) {
+        var f = b[0] === a[0] ? 0 : (heightCm - a[0]) / (b[0] - a[0]);
+        return [a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2]), a[3] + f * (b[3] - a[3])];
+      }
+    }
+    return null;
+  }
+
+  function whoZ(weightKg, sex, heightCm) {
+    var lms = whoLms(sex, heightCm);
+    if (!lms || !isFinite(weightKg)) return NaN;
+    var L = lms[0], M = lms[1], S = lms[2];
+    if (!M || !S) return NaN;
+    return L !== 0 ? (Math.pow(weightKg / M, L) - 1) / (L * S) : Math.log(weightKg / M) / S;
+  }
+
+  // Kategorie WHO wg oryginalnych progów standardu (±2/±3 SD) — jak w dawnej karcie WFL.
+  function classifyWho(z) {
+    if (!isFinite(z)) return { cat: null, severity: '' };
+    if (z < -2) return { cat: 'who_underweight', severity: 'danger' };
+    if (z <= 2) return { cat: 'who_normal', severity: '' };
+    if (z <= 3) return { cat: 'who_overweight', severity: 'warning' };
+    return { cat: 'who_obesity', severity: 'danger' };
+  }
+
+  var MSG_WHO = {
+    who_underweight: 'Niedowaga wg klasyfikacji WHO (z < −2 SD) — wskazana konsultacja lekarska.',
+    who_normal: 'W normie wg klasyfikacji WHO (−2 SD ≤ z ≤ +2 SD).',
+    who_overweight: 'Nadwaga wg klasyfikacji WHO (+2 SD < z ≤ +3 SD) — wskazana kontrola pomiaru i obserwacja.',
+    who_obesity: 'Otyłość wg klasyfikacji WHO (z > +3 SD) — wskazana konsultacja lekarska.'
+  };
+
+  var WHO_LABEL = {
+    who_underweight: 'Niedowaga', who_normal: 'W normie',
+    who_overweight: 'Nadwaga', who_obesity: 'Otyłość'
+  };
+
+  var WHO_NOTE = '<div class="source-note">Źródło referencyjne: WHO Child Growth Standards 2006 — weight-for-length (długość 45–110 cm, dzieci do 2. roku życia), standard preskryptywny. Uwaga: dla tej samej masy centyle WHO są zwykle wyższe niż na polskiej siatce IMiD (różnica populacji referencyjnych).</div>';
+
   // Czysta ocena — eksportowana do testów. sex: 'M' = chłopcy, inne = dziewczęta.
-  function assess(weightKg, heightCm, sex, ageYears) {
+  // source: 'who' = normy WHO 2006 (tylko dzieci ≤2 lat, długość 45–110 cm; poza pokryciem
+  // cichy fallback na IMiD z uczciwą notą IMiD — jak przełącznik WHO w module obwodów);
+  // inne wartości = IMiD. Wynik niesie source/whoUsed, z których korzysta prezentacja.
+  function assess(weightKg, heightCm, sex, ageYears, source) {
     if (!isFinite(weightKg) || !isFinite(heightCm)) return { ok: false, reason: 'missing' };
     if (isFinite(ageYears) && ageYears > 18.5) {
       return { ok: false, reason: 'age-range', message: 'Proporcja masy do wysokości wg siatek IMiD jest dostępna dla wieku do 18,5 roku życia.' };
@@ -164,16 +238,32 @@
     if (weightKg < 1 || weightKg > 200) {
       return { ok: false, reason: 'implausible-weight', message: 'Wpisana masa ciała jest poza wiarygodnym zakresem pomiaru — sprawdź, czy nie doszło do pomyłki.' };
     }
+    if (source === 'who' && whoAvailable(ageYears)) {
+      var wz = whoZ(weightKg, sex, heightCm);
+      if (isFinite(wz)) {
+        return {
+          ok: true, source: 'who', whoUsed: true, weightKg: weightKg, heightCm: heightCm, sex: sex,
+          perc: cdf(wz) * 100, zScore: wz, cls: classifyWho(wz), catLabel: WHO_LABEL[classifyWho(wz).cat] || '',
+          sourceHtml: WHO_NOTE
+        };
+      }
+      if (heightCm < 45) {
+        return { ok: false, reason: 'height-range', message: 'Normy WHO weight-for-length obejmują długość od 45 cm.' };
+      }
+      // długość > 110 cm lub dane WHO niezaładowane → fallback na IMiD poniżej
+    }
     var maxH = sex === 'M' ? 195 : 185;
     if (heightCm < 50 || heightCm > maxH) {
-      return { ok: false, reason: 'height-range', message: 'Tabele proporcji masy do wysokości obejmują wzrost 50–' + maxH + ' cm dla tej płci.' };
+      var hint = heightCm >= 45 && heightCm < 50 && whoAvailable(ageYears)
+        ? ' Normy WHO 2006 obejmują długość od 45 cm — możesz przełączyć źródło norm.' : '';
+      return { ok: false, reason: 'height-range', message: 'Tabele proporcji masy do wysokości (IMiD) obejmują wzrost 50–' + maxH + ' cm dla tej płci.' + hint };
     }
     var row = rowFor(sex, heightCm);
-    if (!row) return { ok: false, reason: 'height-range', message: 'Tabele proporcji masy do wysokości obejmują wzrost 50–' + maxH + ' cm dla tej płci.' };
+    if (!row) return { ok: false, reason: 'height-range', message: 'Tabele proporcji masy do wysokości (IMiD) obejmują wzrost 50–' + maxH + ' cm dla tej płci.' };
     var z = zFromRow(weightKg, row);
     var perc = isFinite(z) ? cdf(z) * 100 : NaN;
     return {
-      ok: isFinite(perc), weightKg: weightKg, heightCm: heightCm, sex: sex,
+      ok: isFinite(perc), source: 'imid', whoUsed: false, weightKg: weightKg, heightCm: heightCm, sex: sex,
       row: row, perc: perc, zScore: z, cls: classify(perc), sourceHtml: SOURCE_NOTE
     };
   }
@@ -207,7 +297,21 @@
   }
 
   function clearGlobals() {
-    try { window.wfhPercentile = undefined; window.wfhSD = undefined; } catch (e) { }
+    try { window.wfhPercentile = undefined; window.wfhSD = undefined; window.wfhSource = undefined; } catch (e) { }
+  }
+
+  function selectedSource() {
+    var sel = document.getElementById('wfhNormsSource');
+    return sel && sel.value === 'who' ? 'who' : 'imid';
+  }
+
+  // Prezentacja centyla: IMiD z ogonami na 3/97 (progi klasyfikacji IMiD); WHO liczbowo
+  // z klamrą wyświetlania 0,1–99,9 (progi WHO to ±2/±3 SD, ogony 3/97 by je fałszowały).
+  function percText(res) {
+    if (res.source === 'who') {
+      return fmtPl(Math.min(99.9, Math.max(0.1, res.perc)), 1) + '. centyl';
+    }
+    return res.perc < 3 ? '<3. centyla' : res.perc > 97 ? '>97. centyla' : fmtPl(res.perc, 1) + '. centyl';
   }
 
   function update() {
@@ -222,6 +326,8 @@
     var age = typeof getAgeDecimal === 'function' ? getAgeDecimal() : NaN;
     var aE = document.getElementById('age'), aM = document.getElementById('ageMonths');
     var ageEmpty = aE && String(aE.value).trim() === '' && (!aM || String(aM.value).trim() === '');
+    var srcRow = document.getElementById('wfhNormsRow');
+    if (srcRow) srcRow.style.display = !ageEmpty && whoAvailable(age) ? '' : 'none';
     if (!isFinite(w) || !isFinite(h)) {
       clearGlobals();
       setHtml(box, '<p class="circ-placeholder">Uzupełnij masę i wzrost w formularzu, aby zobaczyć wynik.</p>');
@@ -232,23 +338,37 @@
       setHtml(box, '<p class="circ-placeholder">Podaj wiek pacjenta, aby ocenić proporcję masy do wysokości (dla dziecka poniżej 1. miesiąca życia wielkość urodzeniową ocenia moduł SGA).</p>');
       return;
     }
-    var res = assess(w, h, sex, age);
+    var res = assess(w, h, sex, age, selectedSource());
     if (!res.ok) {
       clearGlobals();
       setHtml(box, '<p class="circ-placeholder">' + (res.message || 'Nie można ocenić proporcji masy do wysokości.') + '</p>');
       return;
     }
-    var percText = res.perc < 3 ? '<3. centyla' : res.perc > 97 ? '>97. centyla' : fmtPl(res.perc, 1) + '. centyl';
-    var html = '<p><strong>Proporcja masy do wysokości:</strong> ' + fmtPl(w, 1) + ' kg przy wzroście '
-      + fmtPl(h, 1) + ' cm – ' + percText;
+    var who = res.source === 'who';
+    var html = '<p><strong>Proporcja masy do ' + (who ? 'długości' : 'wysokości') + ':</strong> '
+      + fmtPl(w, 1) + ' kg przy ' + (who ? 'długości ' : 'wzroście ')
+      + fmtPl(h, 1) + ' cm – ' + percText(res);
     if (isPro() && isFinite(res.zScore)) html += ' (Z‑score = ' + fmtPl(res.zScore, 2) + ')';
     html += '.</p>';
-    if (res.cls && res.cls.cat) html += '<div class="circ-definition">' + MSG[res.cls.cat] + '</div>';
+    var msg = who ? MSG_WHO[res.cls.cat] : MSG[res.cls.cat];
+    if (res.cls && res.cls.cat && msg) html += '<div class="circ-definition">' + msg + '</div>';
+    // D1: porównanie źródeł w trybie PRO dla dzieci ≤2 lat — rozjazd WHO↔IMiD jest jawny.
+    if (isPro() && whoAvailable(age)) {
+      var other = assess(w, h, sex, age, who ? 'imid' : 'who');
+      if (other.ok && other.source !== res.source) {
+        var otherWho = other.source === 'who';
+        var cmp = 'Dla porównania — wg ' + (otherWho ? 'WHO 2006 (weight‑for‑length)' : 'IMiD (Tabele 63–64)') + ': '
+          + percText(other) + ' (Z‑score = ' + fmtPl(other.zScore, 2) + ')';
+        if (otherWho && other.cls && other.cls.severity) cmp += ' — „' + (other.catLabel || '') + '" wg WHO';
+        html += '<div class="source-note circ-pro-note">' + cmp + '.</div>';
+      }
+    }
     html += res.sourceHtml;
     setHtml(box, html);
     try {
       window.wfhPercentile = isFinite(res.perc) ? res.perc : undefined;
       window.wfhSD = isFinite(res.zScore) ? res.zScore : undefined;
+      window.wfhSource = res.source;
     } catch (e) { }
     if (res.cls && res.cls.severity === 'warning') {
       box.classList.add('rr-warning');
@@ -275,6 +395,8 @@
     });
     var sexEl = document.getElementById('sex');
     sexEl && sexEl.addEventListener('change', update);
+    var srcSel = document.getElementById('wfhNormsSource');
+    srcSel && srcSel.addEventListener('change', update);
     var pro = document.getElementById('resultsModeToggle');
     pro && pro.addEventListener('change', update);
     document.addEventListener('vildaResultsModeChanged', update);
@@ -285,7 +407,11 @@
   }
 
   if (typeof window !== 'undefined') {
-    window.VildaWfh = { assess: assess, rowFor: rowFor, zFromRow: zFromRow, classify: classify, tables: { male: BOYS, female: GIRLS } };
+    window.VildaWfh = {
+      assess: assess, rowFor: rowFor, zFromRow: zFromRow, classify: classify,
+      whoLms: whoLms, whoZ: whoZ, classifyWho: classifyWho,
+      tables: { male: BOYS, female: GIRLS }
+    };
   }
 
   if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
