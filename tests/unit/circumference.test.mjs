@@ -23,8 +23,10 @@ describe('silnik regularny: spójność centyla i z-score (tabele IMiD)', () => 
     expect(r.perc).toBeCloseTo(50, 3);
   });
 
-  it('błędny wiersz danych klatki K 6 mies. (mean/SD skopiowane z głowy) nie wpływa już na wynik', () => {
-    // p50 klatki K w 6. mies. = 42,5; skorumpowane mean=42,81/SD=1,13 nie są używane
+  it('anomalny wiersz klatki K 6 mies. (mean/SD jak w tabeli głowy — błąd składu ORYGINAŁU) nie wpływa na wynik', () => {
+    // Weryfikacja ze skanem oryginału (2026-08-19): mean=42,81/SD=1,13 są ŹRÓDŁOWE (Tabela 12,
+    // najpewniej błąd składu publikacji — identyczne z Tabelą 10 głowy); percentyle właściwe dla
+    // klatki (p50=42,5). Silnik liczy z percentyli, więc anomalia mean/SD pozostaje bez wpływu.
     const r = api.assessRegular('chest', 42.5, 'K', 0.5);
     expect(r.zScore).toBeCloseTo(0, 5);
     expect(r.perc).toBeCloseTo(50, 3);
