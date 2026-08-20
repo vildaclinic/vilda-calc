@@ -202,7 +202,7 @@ describe('konsolidacja D5: jedna kopia inline „Podsumowania wyników" dla obu 
   it('index.html i docpro.html ładują vilda_summary_inline.js; bliźniacze pliki nie istnieją', () => {
     for (const page of ['index.html', 'docpro.html']) {
       const src = fs.readFileSync(path.join(repoRoot, page), 'utf8');
-      expect(src, page).toContain('vilda_summary_inline.js?v=1');
+      expect(src, page).toMatch(/vilda_summary_inline\.js\?v=\d+/);
       expect(src, page).not.toContain('inline_index_06.js');
       expect(src, page).not.toContain('inline_docpro_04.js');
     }
@@ -262,9 +262,59 @@ describe('Proporcja masy do wysokości: linia podsumowania, ton i highlight (Tab
     for (const page of ['index.html', 'docpro.html']) {
       const src = fs.readFileSync(path.join(repoRoot, page), 'utf8');
       expect(src, page).toContain('id="wfhCard"');
-      expect(src, page).toContain('wfh_module.js?v=1');
+      expect(src, page).toMatch(/wfh_module\.js\?v=\d+/);
     }
     const sw = fs.readFileSync(path.join(repoRoot, 'service-worker-kalorii.js'), 'utf8');
     expect(sw).toContain("'/wfh_module.js?v=1',");
+  });
+});
+
+describe('fuzja WFL × IMiD: linia WHO w podsumowaniu, tony WHO, sprzątnięta stara karta', () => {
+  function loadTone4(domValues) {
+    const win = makeWindow(domValues);
+    globalThis.document = win.document;
+    loadBrowserScript('vilda_patient_report.js', win);
+    return win.getProfessionalSummaryLineTone;
+  }
+
+  const INFANT = Object.freeze({ weight: '10.9', height: '80', age: '1', ageMonths: '3', sex: 'M' });
+
+  it('ton linii z dopiskiem (WHO 2006) używa progów WHO ±2/±3 SD, nie 3/10/90/97', () => {
+    const tone = loadTone4(INFANT);
+    expect(tone('Proporcja masy do wysokości (WHO 2006): 50,0. centyl')).toBe('normal');
+    expect(tone('Proporcja masy do wysokości (WHO 2006): 2,5. centyl')).toBe('normal'); // IMiD dałoby danger
+    expect(tone('Proporcja masy do wysokości (WHO 2006): 95,0. centyl')).toBe('normal'); // IMiD dałoby warn
+    expect(tone('Proporcja masy do wysokości (WHO 2006): 99,3. centyl')).toBe('warn'); // Nadwaga WHO
+    expect(tone('Proporcja masy do wysokości (WHO 2006): 99,9. centyl')).toBe('danger'); // Otyłość WHO
+    expect(tone('Proporcja masy do wysokości (WHO 2006): 1,8. centyl')).toBe('danger'); // Niedowaga WHO
+    // linia bez dopisku (źródło IMiD) zachowuje progi 3/10/90/97
+    expect(tone('Proporcja masy do wysokości: 95,0. centyl')).toBe('warn');
+  });
+
+  it('buildery linii znają źródło: dopisek (WHO 2006) i format liczbowy przy wfhSource="who"', () => {
+    for (const [f, v] of [['vilda_summary_cards.js', 'a.'], ['vilda_summary_inline.js', 'window.']]) {
+      const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+      expect(src, f).toContain(v + 'wfhSource==="who"');
+      expect(src, f).toContain('(WHO 2006)');
+    }
+    const rep = fs.readFileSync(path.join(repoRoot, 'vilda_patient_report.js'), 'utf8');
+    expect(rep).toContain('"wfhPercentile","wfhSD","wfhSource"');
+  });
+
+  it('stara karta WFL usunięta; przełącznik #wfhNormsSource obecny na obu stronach', () => {
+    for (const page of ['index.html', 'docpro.html']) {
+      const src = fs.readFileSync(path.join(repoRoot, page), 'utf8');
+      expect(src, page).not.toContain('id="wflCard"');
+      expect(src, page).not.toContain('id="wflInfo"');
+      expect(src, page).toContain('id="wfhNormsSource"');
+    }
+    // reposition: slot dawnej karty WFL przejęła karta połączona
+    const rp = fs.readFileSync(path.join(repoRoot, 'reposition.js'), 'utf8');
+    expect(rp).not.toContain('"wflCard"');
+    expect(rp).toContain('"wfhSection"');
+    // nota AAP wskazuje kartę połączoną, nie dawny wskaźnik WFL
+    const prep = fs.readFileSync(path.join(repoRoot, 'vilda_update_prep.js'), 'utf8');
+    expect(prep).not.toContain('zaleca stosowanie wska\\u017Anika waga do d\\u0142ugo');
+    expect(prep).toContain('Proporcja masy do wysoko\\u015Bci cia\\u0142a\\u201D');
   });
 });

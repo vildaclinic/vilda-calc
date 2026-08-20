@@ -311,7 +311,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_epicrisis_ui.js?v=13"></script>
 <script defer src="vilda_publication_creator.js?v=20"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=72" defer></script>
+<script src="vilda_update_prep.js?v=73" defer></script>
 
 <script defer src="inline_index_01.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -1086,6 +1086,15 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
             szczególnie przydatna u dzieci do ok. 3. roku życia, gdzie BMI działa słabo.
             Wynik liczy się automatycznie z masy, wzrostu i płci podanych w formularzu powyżej.
           </p>
+          <!-- Przełącznik źródła norm (fuzja z dawną kartą WFL): widoczny tylko dla dzieci
+               do 2. roku życia — normy WHO weight-for-length kończą się na 110 cm i 2 latach.
+               Widocznością steruje wfh_module.js; wybór persystuje jak każdy select z id. -->
+          <label class="circ-input-field" id="wfhNormsRow" style="display:none;margin-bottom:0.6rem;">Źródło norm (do 2. roku życia):
+            <select id="wfhNormsSource">
+              <option value="imid" selected>IMiD (Palczewska i Niedźwiedzka)</option>
+              <option value="who">WHO 2006 (weight‑for‑length)</option>
+            </select>
+          </label>
           <div id="wfhResult" class="result-box"></div>
         </div>
       </div>
@@ -1315,20 +1324,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
       </div>
     </div>
 
-    <!-- Nowa karta: wskaźnik waga do długości/wzrostu (WFL).  
-         W układzie jednokolumnowym pojawia się nad kartą wskaźnika Cole’a,  
-         w układzie dwukolumnowym po prawej stronie również nad kartą Cole’a.  
-         Elementy w środku są wypełniane dynamicznie w JS. -->
-    <div class="card" id="wflCard" style="display:none;">
-      <h2 style="text-align:center;">Wskaźnik waga do długości/wzrostu (WFL)</h2>
-      <!-- W tej sekcji JS wstawia obliczony Z‑score oraz krótką informację o wyniku. -->
-      <div id="wflInfo" class="result-box"></div>
-      <!-- Krótkie wyjaśnienie lub interpretacja wyniku wskaźnika WFL.  
-           Używamy tej samej klasy co w przypadku wskaźnika Cole’a, aby zachować spójny wygląd. -->
-      <p id="wflExplanation" class="cole-explanation"></p>
-      <!-- Tabela norm dla wskaźnika waga/wzrost; wypełniana w JS. -->
-      <div id="wflNormTable" style="display:none;"></div>
-    </div>
+    <!-- Dawna karta "Wskaźnik waga do długości/wzrostu (WFL)" została scalona z kartą
+         "Proporcja masy do wysokości ciała" (#wfhSection) — normy WHO 2006 są tam dostępne
+         przełącznikiem źródła dla dzieci do 2. roku życia (fuzja 2026-08-20). -->
 
     <!-- Karta Wskaźnika Cole'a – wypełniana dynamicznie w JS -->
     <div class="card" id="coleCard" style="display:none;">
@@ -1680,7 +1678,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=4"></script>
 <script defer src="vilda_persist_runtime.js?v=13"></script>
-<script defer src="vilda_summary_cards.js?v=25"></script>
+<script defer src="vilda_summary_cards.js?v=26"></script>
 <script defer src="vilda_diet_plan_ui.js?v=9"></script>
 <script defer src="vilda_bmi_journey.js?v=7"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
@@ -1702,7 +1700,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 (function () {
   'use strict';
   var SRC_DIET = 'vilda_diet_recommendations.js?v=15';
-  var SRC_PR = 'vilda_patient_report.js?v=9';
+  var SRC_PR = 'vilda_patient_report.js?v=10';
   var started = false;
   function inject(src, onload) {
     var s = document.createElement('script');
@@ -1869,7 +1867,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           bpCard: 'bpCard',
           circSection: 'circSection',
           downSyndromeSection: 'downSyndromeSection',
-          wflCard: 'wflCard',
+          // Klucz historyczny „wflCard": po fuzji steruje kartą połączoną (#wfhSection),
+          // aby zapisane ustawienia widoczności użytkowników nadal działały.
+          wflCard: 'wfhSection',
           coleCard: 'coleCard',
           whrCard: 'whrCard',
           advancedGrowthSection: 'advancedGrowthSection',
@@ -2080,7 +2080,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
 <script src="who_head_data.js" defer></script>
 <script src="circumference_module.js?v=15" defer></script>
-<script src="wfh_module.js?v=1" defer></script>
+<script src="wfh_module.js?v=2" defer></script>
 
 <!-- Moduł liczby oddechów. Ładowany po module ciśnienia krwi i obwodów, aby
      móc korzystać z funkcji pomocniczych z app.js (np. getAgeDecimal).
@@ -2113,7 +2113,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
        i kopiuje je do schowka.  
        Odczytuje aktualny tryb wyników (standardowy/profesjonalny) z localStorage,
        dzięki czemu zawartość podsumowania reaguje na przełącznik wyników. -->
-  <script defer src="vilda_summary_inline.js?v=1"></script>
+  <script defer src="vilda_summary_inline.js?v=2"></script>
 
   <!-- Baner zgody wstrzykiwany centralnie przez vilda_chrome.js (initConsentBanner) -->
   <!-- Przycisk "powrót na górę" widoczny w widoku mobilnym. Po kliknięciu
@@ -2129,13 +2129,13 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=57" defer></script>
+  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=58" defer></script>
 
   <!-- Dynamic repositioning of Cole and Advanced Growth cards on mobile/desktop
        views.  This script adjusts the DOM order of these elements only in
        the single‑column layout.  It is loaded after all other scripts to
        ensure that the elements exist in the DOM before repositioning. -->
-  <script src="reposition.js?v=6" defer></script>
+  <script src="reposition.js?v=7" defer></script>
 
   <!-- Debug output for currentSummaryCard status (temporary) -->
   <!-- Usunięto paski debugowe -->
