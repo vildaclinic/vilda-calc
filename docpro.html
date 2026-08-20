@@ -244,7 +244,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_advanced_growth.js?v=34"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=8"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=72" defer></script>
+<script src="vilda_update_prep.js?v=73" defer></script>
 
 <script defer src="inline_docpro_00.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -3605,6 +3605,15 @@ html.vilda-pro-active   #proGateBanner { display: none; }
             szczególnie przydatna u dzieci do ok. 3. roku życia, gdzie BMI działa słabo.
             Wynik liczy się automatycznie z masy, wzrostu i płci podanych w formularzu powyżej.
           </p>
+          <!-- Przełącznik źródła norm (fuzja z dawną kartą WFL): widoczny tylko dla dzieci
+               do 2. roku życia — normy WHO weight-for-length kończą się na 110 cm i 2 latach.
+               Widocznością steruje wfh_module.js; wybór persystuje jak każdy select z id. -->
+          <label class="circ-input-field" id="wfhNormsRow" style="display:none;margin-bottom:0.6rem;">Źródło norm (do 2. roku życia):
+            <select id="wfhNormsSource">
+              <option value="imid" selected>IMiD (Palczewska i Niedźwiedzka)</option>
+              <option value="who">WHO 2006 (weight‑for‑length)</option>
+            </select>
+          </label>
           <div id="wfhResult" class="result-box"></div>
         </div>
       </div>
@@ -3635,20 +3644,9 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     <!-- Prawa kolumna: kontener z kartami WFL, Cole'a, WHR, itp. Pozostaje
          niezmieniona. -->
     <div id="normWrapper" class="norm-wrapper">
-    <!-- Nowa karta: wskaźnik waga do długości/wzrostu (WFL).  
-         W układzie jednokolumnowym pojawia się nad kartą wskaźnika Cole’a,  
-         w układzie dwukolumnowym po prawej stronie również nad kartą Cole’a.  
-         Elementy w środku są wypełniane dynamicznie w JS. -->
-    <div class="card" id="wflCard" style="display:none;">
-      <h2 style="text-align:center;">Wskaźnik waga do długości/wzrostu (WFL)</h2>
-      <!-- W tej sekcji JS wstawia obliczony Z‑score oraz krótką informację o wyniku. -->
-      <div id="wflInfo" class="result-box"></div>
-      <!-- Krótkie wyjaśnienie lub interpretacja wyniku wskaźnika WFL.  
-           Używamy tej samej klasy co w przypadku wskaźnika Cole’a, aby zachować spójny wygląd. -->
-      <p id="wflExplanation" class="cole-explanation"></p>
-      <!-- Tabela norm dla wskaźnika waga/wzrost; wypełniana w JS. -->
-      <div id="wflNormTable" style="display:none;"></div>
-    </div>
+    <!-- Dawna karta "Wskaźnik waga do długości/wzrostu (WFL)" została scalona z kartą
+         "Proporcja masy do wysokości ciała" (#wfhSection) — normy WHO 2006 są tam dostępne
+         przełącznikiem źródła dla dzieci do 2. roku życia (fuzja 2026-08-20). -->
 
     <!-- Sekcja podsumowania metabolicznego.  
          Pojawia się, gdy użytkownik uzupełni minimalny zestaw danych (wiek, waga, wzrost).  
@@ -3868,7 +3866,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=4"></script>
 <script defer src="vilda_persist_runtime.js?v=13"></script>
-<script defer src="vilda_summary_cards.js?v=25"></script>
+<script defer src="vilda_summary_cards.js?v=26"></script>
 <script defer src="vilda_diet_plan_ui.js?v=9"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
@@ -3876,7 +3874,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script src="app.js?v=193" defer></script>
 <script src="vilda_diet_recommendations.js?v=15" defer></script>
-<script src="vilda_patient_report.js?v=9" defer></script>
+<script src="vilda_patient_report.js?v=10" defer></script>
 <!-- po app.js -->
 <script src="vilda_module_monitor_badges.js?v=1" defer></script>
 <script src="gh_igf_therapy.js?v=24" defer></script>
@@ -3951,7 +3949,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
 <script src="who_head_data.js" defer></script>
 <script src="circumference_module.js?v=15" defer></script>
-<script src="wfh_module.js?v=1" defer></script>
+<script src="wfh_module.js?v=2" defer></script>
 
 <!-- Prosta obsługa przycisku rozwijającego kartę obwodów głowy i klatki piersiowej.
      Po załadowaniu DOM przypinamy zdarzenie click do przycisku toggleCircSection,
@@ -3988,7 +3986,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        i kopiuje je do schowka.  
        Odczytuje aktualny tryb wyników (standardowy/profesjonalny) z localStorage,
        dzięki czemu zawartość podsumowania reaguje na przełącznik wyników. -->
-  <script defer src="vilda_summary_inline.js?v=1"></script>
+  <script defer src="vilda_summary_inline.js?v=2"></script>
 
   <!-- Debug output for currentSummaryCard status (temporary) -->
   <!-- Usunięto paski debugowe -->
@@ -4038,7 +4036,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=57" defer></script>
+  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=58" defer></script>
   <script src="docpro_state_persist.js?v=5" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts

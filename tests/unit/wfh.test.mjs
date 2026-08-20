@@ -126,3 +126,67 @@ describe('jakość danych z digitalizacji (skan 300 dpi, Tabele 63–64)', () =>
     expect(api.tables.female.at(-1).h).toBe(185);
   });
 });
+
+describe('fuzja z kartą WFL: źródło WHO 2006 (weight-for-length, ≤2 lat)', () => {
+  function loadWfhWho() {
+    const g = { vildaOnReady: () => {} };
+    loadBrowserScript('vilda_growth_reference_data.js', g);
+    return loadBrowserScript('wfh_module.js', g).VildaWfh;
+  }
+
+  it('dziecko na medianie WHO → z≈0, centyl≈50, whoUsed; ta sama masa wg IMiD wypada niżej', () => {
+    const api = loadWfhWho();
+    // dziewczęta 80 cm: mediana WHO M=10,0891 (tablica LMS 45–110 cm)
+    const r = api.assess(10.0891, 80, 'K', 1.2, 'who');
+    expect(r.ok).toBe(true);
+    expect(r.whoUsed).toBe(true);
+    expect(r.source).toBe('who');
+    expect(Math.abs(r.zScore)).toBeLessThan(0.001);
+    expect(r.perc).toBeCloseTo(50, 1);
+    expect(r.sourceHtml).toContain('WHO Child Growth Standards');
+    const imid = api.assess(10.0891, 80, 'K', 1.2);
+    expect(imid.source).toBe('imid');
+    expect(imid.perc).toBeLessThan(40); // rozjazd populacji: IMiD ~25. centyl
+  });
+
+  it('kategorie WHO wg oryginalnych progów ±2/±3 SD (nie progi centylowe IMiD)', () => {
+    const api = loadWfhWho();
+    expect(api.classifyWho(-2.1)).toEqual({ cat: 'who_underweight', severity: 'danger' });
+    expect(api.classifyWho(-1.96).cat).toBe('who_normal'); // ~2,5. centyla — wg WHO wciąż norma
+    expect(api.classifyWho(0)).toEqual({ cat: 'who_normal', severity: '' });
+    expect(api.classifyWho(2.5)).toEqual({ cat: 'who_overweight', severity: 'warning' });
+    expect(api.classifyWho(3.2)).toEqual({ cat: 'who_obesity', severity: 'danger' });
+  });
+
+  it('pokrycie WHO 45–110 cm: długość 47 cm liczy się z WHO, choć IMiD zaczyna od 50 cm', () => {
+    const api = loadWfhWho();
+    const who = api.assess(2.9, 47, 'K', 0.1, 'who');
+    expect(who.ok).toBe(true);
+    expect(who.whoUsed).toBe(true);
+    // to samo dziecko na IMiD → poza pokryciem, z podpowiedzią o przełączeniu źródła
+    const imid = api.assess(2.9, 47, 'K', 0.1);
+    expect(imid.ok).toBe(false);
+    expect(imid.reason).toBe('height-range');
+    expect(imid.message).toContain('WHO');
+  });
+
+  it('WHO poza swoim pokryciem → cichy fallback na IMiD (wiek >2 lat lub długość >110 cm)', () => {
+    const api = loadWfhWho();
+    const perAge = api.assess(19.2, 110, 'M', 5, 'who'); // wiek poza WHO
+    expect(perAge.ok).toBe(true);
+    expect(perAge.whoUsed).toBe(false);
+    expect(perAge.source).toBe('imid');
+    expect(perAge.sourceHtml).toContain('Instytutu Matki i Dziecka');
+    const perH = api.assess(21, 112, 'M', 1.9, 'who'); // długość poza WHO
+    expect(perH.whoUsed).toBe(false);
+    expect(perH.source).toBe('imid');
+  });
+
+  it('dane WHO niezaładowane → wybór WHO nie psuje oceny (fallback IMiD)', () => {
+    const api = loadWfh(); // bez vilda_growth_reference_data.js
+    const r = api.assess(10.9, 80, 'M', 1.2, 'who');
+    expect(r.ok).toBe(true);
+    expect(r.whoUsed).toBe(false);
+    expect(r.perc).toBeCloseTo(50, 3);
+  });
+});
