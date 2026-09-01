@@ -1,7 +1,8 @@
 /*
  * respiratory_module.js — karta „Liczba oddechów”.
  *
- * Wersja 2.2.0 (etapy 3–4 naprawy po audycie, 2026-09). Karta deleguje obliczenia do
+ * Wersja 2.2.1 (etapy 3–4 naprawy po audycie + follow-up double checku, 2026-09).
+ * Karta deleguje obliczenia do
  * window.vitalSigns (silnik centyli RR/HR) i odpowiada za prezentację wyniku:
  *  - czuwanie: centyl względem Fleming 2011 (dzieci zdrowe) lub Bonafide 2013 (szpitalne),
  *  - sen (dzieci zdrowe): ocena względem średniej ±SD snu spokojnego z Herbert 2020
@@ -117,11 +118,12 @@
     }
 
     var input = document.getElementById('respiratoryRateInput');
-    var rr = parseFloat(input ? input.value : '');
+    var rrRaw = input && input.value != null ? String(input.value).trim() : '';
+    var rr = parseFloat(rrRaw);
 
     resetTone(resultEl);
 
-    if (!rr || !isFinite(rr)) {
+    if (rrRaw === '' || !isFinite(rr)) {
       setTrustedHtml(resultEl, '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>', 'respiratory-module:resultEl');
       return;
     }
