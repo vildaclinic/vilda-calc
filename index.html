@@ -1518,7 +1518,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
       <!-- Pierwszy wiersz: liczba oddechów oraz temperatura obok siebie -->
       <div class="rr-row rr-row1">
         <label>Liczba oddechów na minutę:
-          <input type="number" id="respiratoryRateInput" min="5" max="60" step="1">
+          <input type="number" id="respiratoryRateInput" min="3" max="200" step="1">
         </label>
         <label>Temperatura (°C):
           <input type="number" id="respTemperature" min="34" max="42" step="0.1" placeholder="--">
@@ -2087,7 +2087,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      móc korzystać z funkcji pomocniczych z app.js (np. getAgeDecimal).
      Skrypt ten obsługuje kartę „Liczba oddechów” i oblicza centyl
      częstotliwości oddechu w oparciu o dane z vitalSignsPercentiles.js. -->
-<script src="respiratory_module.js?v=6" defer></script>
+<script src="respiratory_module.js?v=7" defer></script>
 
 <!-- Prosta obsługa przycisku rozwijającego kartę obwodów głowy i klatki piersiowej.
      Po załadowaniu DOM przypinamy zdarzenie click do przycisku toggleCircSection,
