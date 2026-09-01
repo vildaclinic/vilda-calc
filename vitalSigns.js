@@ -1,7 +1,7 @@
 /*
  * vitalSigns.js — silnik centyli tętna (HR) i liczby oddechów (RR) dla dzieci 0–18 lat.
  *
- * Wersja 2.2.0 — naprawa po audycie modułu „Liczba oddechów” (2026-09, etapy 1–3).
+ * Wersja 2.3.0 — naprawa po audycie modułu „Liczba oddechów” (2026-09, etapy 1–4).
  *
  * Dane referencyjne (wartości przepisane 1:1 z publikacji):
  *  - Fleming S. i wsp., „Normal ranges of heart rate and respiratory rate in children
@@ -24,8 +24,13 @@
  *    od etapu 3 korekta RR jest stosowana wyłącznie dla temperatur ≥36 °C — poniżej tej
  *    wartości ekstrapolacja współczynnika wyprowadzonego u dzieci gorączkujących nie ma
  *    uzasadnienia (wynik zwracany bez korekty, z flagą temperatureApplied=false);
- *    korekta HR pozostaje bez bramki (karta Tętno poza zakresem tego audytu),
- *  - temperatura HR: +10 uderzeń/min na 1 °C względem 37 °C (Daymont i wsp. 2015),
+ *    korekta HR pozostaje bez bramki (karta Tętno poza zakresem tego audytu);
+ *    od etapu 4 korekty temperaturowej RR nie stosuje się także do źródła szpitalnego —
+ *    krzywe Bonafide wyprowadzono u dzieci hospitalizowanych bez wykluczenia gorączki,
+ *    więc nakładanie na nie współczynnika Nijmana liczyłoby gorączkę podwójnie
+ *    (flaga temperatureIgnoredForHospital dla warstwy prezentacji),
+ *  - temperatura HR: +10 uderzeń/min na 1 °C względem 37 °C (Davies i Maconochie,
+ *    Emerg Med J 2009 — „ok. 10 uderzeń/min na 1 °C”; zbieżnie Daymont i wsp. 2015),
  *  - sen RR (od etapu 2): ocena bezpośrednio względem referencji snu Herbert 2020
  *    zamiast dawnego odejmowania poprawki od tabel Fleminga; źródło szpitalne (Bonafide)
  *    nie rozróżnia snu i czuwania, więc tryb snu nie modyfikuje norm szpitalnych.
@@ -315,14 +320,20 @@
     var curve = population === 'hospital' ? CURVES.hospitalRr : CURVES.healthyRr;
     var values = valuesForAge(curve, ageYears);
     if (offset) shiftValues(values, offset);
-    if (tempShift) shiftValues(values, tempShift);
     var out = {
       kind: 'points',
       source: population === 'hospital' ? 'bonafide' : 'fleming',
-      temperatureApplied: temperatureApplied,
       values: values
     };
-    if (asleep && population === 'hospital') out.sleepIgnoredForHospital = true;
+    if (population === 'hospital') {
+      // Krzywe Bonafide obejmują dzieci gorączkujące — korekta Nijmana liczyłaby gorączkę podwójnie.
+      out.temperatureApplied = false;
+      if (o.temperature != null && Number.isFinite(o.temperature)) out.temperatureIgnoredForHospital = true;
+      if (asleep) out.sleepIgnoredForHospital = true;
+    } else {
+      if (tempShift) shiftValues(values, tempShift);
+      out.temperatureApplied = temperatureApplied;
+    }
     return out;
   }
 
@@ -370,6 +381,7 @@
     };
     if (ref.sleepBeyondCoverage) out.sleepBeyondCoverage = true;
     if (ref.sleepIgnoredForHospital) out.sleepIgnoredForHospital = true;
+    if (ref.temperatureIgnoredForHospital) out.temperatureIgnoredForHospital = true;
     if (ref.kind === 'points') {
       var z = zFromValues(ref.values, x);
       var s = summary(ref.values);
