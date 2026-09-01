@@ -1521,7 +1521,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <input type="number" id="respiratoryRateInput" min="5" max="60" step="1">
         </label>
         <label>Temperatura (°C):
-          <input type="number" id="respTemperature" min="30" max="42" step="0.1" placeholder="--">
+          <input type="number" id="respTemperature" min="34" max="42" step="0.1" placeholder="--">
         </label>
       </div>
       <!-- Drugi wiersz: stan czuwanie/sen oraz tryb populacji -->
@@ -1674,7 +1674,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      funkcje w globalnym zakresie (window.vitalSigns).  Wersja 2 liczy centyl ze
      wszystkich punktów centylowych pasma (Fleming 2011 / Bonafide 2013) z interpolacją
      między pasmami wieku; korekty temperatury i snu jak dotychczas. -->
-<script defer src="vitalSigns.js?v=3"></script>
+<script defer src="vitalSigns.js?v=4"></script>
 <script src="adult_vitals.js?v=5" defer></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=4"></script>
@@ -2087,7 +2087,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
      móc korzystać z funkcji pomocniczych z app.js (np. getAgeDecimal).
      Skrypt ten obsługuje kartę „Liczba oddechów” i oblicza centyl
      częstotliwości oddechu w oparciu o dane z vitalSignsPercentiles.js. -->
-<script src="respiratory_module.js?v=4" defer></script>
+<script src="respiratory_module.js?v=5" defer></script>
 
 <!-- Prosta obsługa przycisku rozwijającego kartę obwodów głowy i klatki piersiowej.
      Po załadowaniu DOM przypinamy zdarzenie click do przycisku toggleCircSection,
