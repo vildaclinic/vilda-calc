@@ -155,6 +155,41 @@ describe('silnik: bramki korekty temperaturowej (etapy 3–4)', () => {
   });
 });
 
+describe('ścieżka HR: bramki korekty temperaturowej (naprawa Tętna, etap 2)', () => {
+  it('35 °C → bez korekty (flaga false), 36 i 39 °C → korekta przesuwa pasma o 10/°C', () => {
+    const cold = vs.getHrAssessment(2, 110, { temperature: 35 });
+    expect(cold.temperatureApplied).toBe(false);
+    expect(cold.percentile).toBeCloseTo(vs.getHrPercentile(2, 110, {}), 6);
+    const at36 = vs.getHrAssessment(2, 110 - 10, { temperature: 36 });
+    expect(at36.temperatureApplied).toBe(true);
+    expect(at36.percentile).toBeCloseTo(vs.getHrPercentile(2, 110, {}), 6);
+    const fever = vs.getHrAssessment(2, 110 + 20, { temperature: 39 });
+    expect(fever.temperatureApplied).toBe(true);
+    expect(fever.percentile).toBeCloseTo(vs.getHrPercentile(2, 110, {}), 6);
+  });
+
+  it('źródło szpitalne: temperatura nigdy nie modyfikuje norm HR (flaga temperatureIgnoredForHospital)', () => {
+    const withTemp = vs.getHrAssessment(1, 150, { population: 'hospital', temperature: 39.5 });
+    const without = vs.getHrAssessment(1, 150, { population: 'hospital' });
+    expect(withTemp.percentile).toBeCloseTo(without.percentile, 10);
+    expect(withTemp.temperatureApplied).toBe(false);
+    expect(withTemp.temperatureIgnoredForHospital).toBe(true);
+    expect(without.temperatureIgnoredForHospital).toBeUndefined();
+    expect(withTemp.source).toBe('bonafide');
+  });
+
+  it('getHrValues (raport pacjenta) z T<36 identyczne z wersją bez temperatury', () => {
+    expect(vs.getHrValues(5, { temperature: 35 })).toEqual(vs.getHrValues(5, {}));
+  });
+
+  it('kotwice: pasmo Birth (127 → 50,0), Z spójny z centylem, źródło fleming', () => {
+    const a = vs.getHrAssessment(0, 127, {});
+    expect(a.percentile).toBeCloseTo(50, 2);
+    expect(a.source).toBe('fleming');
+    expect(vs._normalCdf(a.z) * 100).toBeCloseTo(a.percentile, 6);
+  });
+});
+
 describe('kształty API dla karty ciśnienia i raportu pacjenta', () => {
   it('getHrValues/getRrValues zwracają {p10, median, p90} z liczbami', () => {
     for (const v of [vs.getHrValues(1, {}), vs.getRrValues(1, {}), vs.getRrValues(1, { state: 'sleep' })]) {
