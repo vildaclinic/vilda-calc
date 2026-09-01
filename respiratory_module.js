@@ -1,1 +1,155 @@
-(function(){function a(e,t,o){if(!e)return!1;const n=t==null?"":String(t);try{return typeof window<"u"&&window.VildaHtml&&typeof window.VildaHtml.setTrustedHtml=="function"?window.VildaHtml.setTrustedHtml(e,n,{context:o||"respiratory-module"}):(e.textContent=n,!0)}catch(s){return typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("respiratory_module.js",s,{helper:"respiratorySetTrustedHtml",context:o||""}),!1}}function w(e){const t=e.population==="hospital"?"Bonafide&nbsp;et&nbsp;al.&nbsp;2013":"Fleming&nbsp;et&nbsp;al.&nbsp;2011",o=[];e.state&&e.state.toLowerCase()==="sleep"&&o.push("o r\xF3\u017Cnice&nbsp;sen/czuwanie&nbsp;(Herbert&nbsp;et&nbsp;al.&nbsp;2020)"),e.temperature!==void 0&&e.temperature!==null&&o.push("o temperatur\u0119&nbsp;(Nijman&nbsp;et&nbsp;al.&nbsp;2012)");let n="\u0179r\xF3d\u0142o: "+t;return o.length>0&&(n+="; wynik&nbsp;skorygowano&nbsp;"+o.join("&nbsp;i&nbsp;")),'<p class="source-note">'+n+"</p>"}function r(){const e=document.getElementById("respiratoryResult");if(!e)return;let t=0;if(typeof getAgeDecimal=="function")t=getAgeDecimal();else{const i=document.getElementById("age")?.value;t=parseFloat(i)||0}const o=document.getElementById("respiratoryRateInput"),n=parseFloat(o?.value);if(e.className="result-box",e.classList.remove("rr-warning","rr-danger"),!n||!isFinite(n)){a(e,'<p class="bp-placeholder">Wpisz liczb\u0119 oddech\xF3w powy\u017Cej, aby zobaczy\u0107 wynik.</p>',"respiratory-module:resultEl");return}if(t<0||isNaN(t)||t>18){a(e,"<p>Normy liczby oddech\xF3w dost\u0119pne s\u0105 dla wieku 0\u201318&nbsp;lat.</p>","respiratory-module:resultEl");return}const s=typeof window<"u"?window.vitalSigns:null;if(s&&typeof s.getRrPercentile=="function"){const i=document.getElementById("respState"),y=document.getElementById("respPopulation"),f=document.getElementById("respTemperature"),g=i?i.value:"awake",b=y?y.value:"healthy",u=f?f.value:"",c=u&&!isNaN(parseFloat(u))?parseFloat(u):null,E={population:b,state:g};c!==null&&(E.temperature=c);const l=s.getRrPercentile(t,n,E);if(typeof l=="number"&&!isNaN(l)){let d;l<1?d="&lt;1":l>99?d="&gt;99":d=Math.round(l).toString();let m="";m+=`<p>Liczba oddech\xF3w: <strong>${n.toFixed(0)}&nbsp;/min</strong> \u2013 ${d}. centyl</p>`;const h=w({population:b,state:g,temperature:c});m+=h,a(e,m,"respiratory-module:resultEl");return}}a(e,"<p>Brak danych do obliczenia centyla.</p>","respiratory-module:resultEl")}function p(){const e=document.getElementById("respiratoryRateInput");if(!e)return;e.addEventListener("input",r);const t=document.getElementById("age"),o=document.getElementById("ageMonths");t&&t.addEventListener("input",r),o&&o.addEventListener("input",r);const n=document.getElementById("respState"),s=document.getElementById("respPopulation"),i=document.getElementById("respTemperature");n&&(n.addEventListener("change",r),n.addEventListener("input",r)),s&&(s.addEventListener("change",r),s.addEventListener("input",r)),i&&i.addEventListener("input",r),r()}typeof window<"u"&&typeof window.vildaOnReady=="function"?window.vildaOnReady("respiratory-module:init",p):document.readyState==="loading"?document.addEventListener("DOMContentLoaded",p,{once:!0}):p()})();
+/*
+ * respiratory_module.js — karta „Liczba oddechów”.
+ *
+ * Wersja 2.0.0 (etap 2 naprawy po audycie, 2026-09). Karta deleguje obliczenia do
+ * window.vitalSigns (silnik centyli RR/HR) i odpowiada za prezentację wyniku:
+ *  - czuwanie: centyl względem Fleming 2011 (dzieci zdrowe) lub Bonafide 2013 (szpitalne),
+ *  - sen (dzieci zdrowe): ocena względem średniej ±SD snu spokojnego z Herbert 2020
+ *    (pokrycie 0–4,5 roku; powyżej — uczciwy komunikat zamiast ekstrapolacji),
+ *  - sen + źródło szpitalne: normy Bonafide bez modyfikacji (publikacja nie rozróżnia
+ *    snu i czuwania) z adnotacją w nocie źródłowej.
+ * Walidacje wejść i tony/werdykty karty — etap 3 naprawy.
+ */
+(function () {
+  'use strict';
+
+  function setTrustedHtml(el, html, context) {
+    if (!el) return false;
+    var text = html == null ? '' : String(html);
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(el, text, { context: context || 'respiratory-module' });
+      }
+      el.textContent = text;
+      return true;
+    } catch (err) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('respiratory_module.js', err, { helper: 'respiratorySetTrustedHtml', context: context || '' });
+      }
+      return false;
+    }
+  }
+
+  function sourceNote(assessment, opts) {
+    var source = assessment && assessment.source;
+    var base;
+    if (source === 'bonafide') {
+      base = 'Bonafide&nbsp;et&nbsp;al.&nbsp;2013';
+    } else if (source === 'herbert-sleep') {
+      base = 'Herbert&nbsp;et&nbsp;al.&nbsp;2020 (sen spokojny; ocena względem średniej ± SD)';
+    } else {
+      base = 'Fleming&nbsp;et&nbsp;al.&nbsp;2011';
+    }
+    var note = 'Źródło: ' + base;
+    if (opts.temperature !== undefined && opts.temperature !== null) {
+      note += '; wynik&nbsp;skorygowano&nbsp;o temperaturę&nbsp;(Nijman&nbsp;et&nbsp;al.&nbsp;2012)';
+    }
+    if (assessment && assessment.sleepIgnoredForHospital) {
+      note += '. Tryb snu nie modyfikuje norm szpitalnych — dane Bonafide et&nbsp;al. nie rozróżniają snu i czuwania.';
+    }
+    return '<p class="source-note">' + note + '</p>';
+  }
+
+  function render() {
+    var resultEl = document.getElementById('respiratoryResult');
+    if (!resultEl) return;
+
+    var age = 0;
+    if (typeof getAgeDecimal === 'function') {
+      age = getAgeDecimal();
+    } else {
+      var ageRaw = document.getElementById('age') ? document.getElementById('age').value : '';
+      age = parseFloat(ageRaw) || 0;
+    }
+
+    var input = document.getElementById('respiratoryRateInput');
+    var rr = parseFloat(input ? input.value : '');
+
+    resultEl.className = 'result-box';
+    resultEl.classList.remove('rr-warning', 'rr-danger');
+
+    if (!rr || !isFinite(rr)) {
+      setTrustedHtml(resultEl, '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>', 'respiratory-module:resultEl');
+      return;
+    }
+    if (age < 0 || isNaN(age) || age > 18) {
+      setTrustedHtml(resultEl, '<p>Normy liczby oddechów dostępne są dla wieku 0–18&nbsp;lat.</p>', 'respiratory-module:resultEl');
+      return;
+    }
+
+    var vs = typeof window !== 'undefined' ? window.vitalSigns : null;
+    if (vs && (typeof vs.getRrAssessment === 'function' || typeof vs.getRrPercentile === 'function')) {
+      var stateEl = document.getElementById('respState');
+      var populationEl = document.getElementById('respPopulation');
+      var temperatureEl = document.getElementById('respTemperature');
+      var state = stateEl ? stateEl.value : 'awake';
+      var population = populationEl ? populationEl.value : 'healthy';
+      var temperatureRaw = temperatureEl ? temperatureEl.value : '';
+      var temperature = temperatureRaw && !isNaN(parseFloat(temperatureRaw)) ? parseFloat(temperatureRaw) : null;
+      var opts = { population: population, state: state };
+      if (temperature !== null) opts.temperature = temperature;
+
+      var assessment = typeof vs.getRrAssessment === 'function'
+        ? vs.getRrAssessment(age, rr, opts)
+        : { percentile: vs.getRrPercentile(age, rr, opts) };
+
+      if (assessment && assessment.sleepBeyondCoverage) {
+        setTrustedHtml(
+          resultEl,
+          '<p>Normy liczby oddechów we śnie (Herbert et&nbsp;al.&nbsp;2020) obejmują wiek do 4,5&nbsp;roku życia. ' +
+            'U starszego dziecka oceń liczbę oddechów w czuwaniu.</p>',
+          'respiratory-module:resultEl'
+        );
+        return;
+      }
+
+      var percentile = assessment ? assessment.percentile : NaN;
+      if (typeof percentile === 'number' && !isNaN(percentile)) {
+        var label;
+        if (percentile < 1) label = '&lt;1';
+        else if (percentile > 99) label = '&gt;99';
+        else label = Math.round(percentile).toString();
+        var html = '<p>Liczba oddechów: <strong>' + rr.toFixed(0) + '&nbsp;/min</strong> – ' + label + '. centyl</p>';
+        html += sourceNote(assessment, opts);
+        setTrustedHtml(resultEl, html, 'respiratory-module:resultEl');
+        return;
+      }
+    }
+
+    setTrustedHtml(resultEl, '<p>Brak danych do obliczenia centyla.</p>', 'respiratory-module:resultEl');
+  }
+
+  function init() {
+    var input = document.getElementById('respiratoryRateInput');
+    if (!input) return;
+    input.addEventListener('input', render);
+
+    var ageEl = document.getElementById('age');
+    var ageMonthsEl = document.getElementById('ageMonths');
+    if (ageEl) ageEl.addEventListener('input', render);
+    if (ageMonthsEl) ageMonthsEl.addEventListener('input', render);
+
+    var stateEl = document.getElementById('respState');
+    var populationEl = document.getElementById('respPopulation');
+    var temperatureEl = document.getElementById('respTemperature');
+    if (stateEl) {
+      stateEl.addEventListener('change', render);
+      stateEl.addEventListener('input', render);
+    }
+    if (populationEl) {
+      populationEl.addEventListener('change', render);
+      populationEl.addEventListener('input', render);
+    }
+    if (temperatureEl) temperatureEl.addEventListener('input', render);
+
+    render();
+  }
+
+  if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+    window.vildaOnReady('respiratory-module:init', init);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+})();
