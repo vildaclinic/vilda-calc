@@ -79,7 +79,8 @@ describe('dane DS: niezmienniki struktury (anty-regresja syntetycznych krzywych)
         expect(row[2], `${name}[${k}] S`).toBeGreaterThan(0);
       }
       const n = Object.keys(tab).length;
-      if (name.includes('INFANT')) expect(n, name).toBeGreaterThanOrEqual(36);
+      if (name.includes('WFL')) expect(n, name).toBe(name.includes('BOYS') ? 45 : 39); // 49–93 M / 52–90 K co 1 cm
+      else if (name.includes('INFANT')) expect(n, name).toBeGreaterThanOrEqual(36);
       else expect(n, name).toBe(37); // 2..20 co 0,5
     }
   });
@@ -119,5 +120,104 @@ describe('silnik DS: centyle na naprawionych danych', () => {
     expect(Math.abs(before - after)).toBeLessThan(25);
     expect(before).toBeGreaterThan(40); // 46,0 cm blisko mediany po obu stronach granicy
     expect(after).toBeGreaterThan(40);
+  });
+});
+
+describe('etapy 2–3 naprawy: bramki, walidacje, tony, Z-score PRO, WFL DS', () => {
+  function loadDsDom(values = {}, { pro = false } = {}) {
+    const src =
+      fs.readFileSync(path.join(repoRoot, 'ds_lms.js'), 'utf8') + '\n' +
+      fs.readFileSync(path.join(repoRoot, 'vilda_down_syndrome.js'), 'utf8') + '\n' +
+      ';window.__dsTest={buildResultsHTML:__ds_buildResultsHTML,wflPercentile:__ds_wflPercentile,classify:__ds_classify,fmtPerc:__ds_fmtPerc};';
+    const els = { resultsModeToggle: { checked: pro } };
+    for (const [k, v] of Object.entries(values)) els[k] = { value: String(v) };
+    const doc = { getElementById: (id) => els[id] || null, addEventListener() {} };
+    const g = { vildaAppOnReady: () => {}, document: doc };
+    new Function('window', 'globalThis', 'document', src)(g, g, doc);
+    return g.__dsTest;
+  }
+
+  it('pusty wiek → monit o wiek zamiast liczenia jak dla noworodka (bramka etapu 2)', () => {
+    const api = loadDsDom({ weight: '31.5', height: '128.8', sex: 'F' });
+    const r = api.buildResultsHTML();
+    expect(r.html).toContain('Podaj wiek pacjenta');
+    expect(r.html).not.toContain('. centyl'); // żadnego policzonego wyniku
+  });
+
+  it('walidacje pomiarów: masa poza 1–200 kg i wzrost poza 30–210 cm → komunikat, nie pseudocentyl', () => {
+    const api = loadDsDom({ age: '5', ageMonths: '0', weight: '500', height: '20', sex: 'M' });
+    const r = api.buildResultsHTML();
+    expect(r.html.match(/poza wiarygodnym zakresem/g)).toHaveLength(2);
+    expect(r.html).not.toContain('>97');
+  });
+
+  it('tony 3/10/90/97 i ogony jak w całej aplikacji; najgorszy ton steruje ramką boxa', () => {
+    const api = loadDsDom({ age: '10', ageMonths: '0', weight: '31.5', height: '106.5', sex: 'F' });
+    const r = api.buildResultsHTML();
+    // 106,5 cm u 10-latki (stara „mediana") to wg publikacji <3. centyla → danger
+    expect(r.html).toContain('&lt;3. centyla');
+    expect(r.severity).toBe('danger');
+    const norm = loadDsDom({ age: '10', ageMonths: '0', weight: '31.5', height: '128.8', sex: 'F' }).buildResultsHTML();
+    expect(norm.severity).toBe('');
+    expect(norm.html).toContain('50. centyl');
+  });
+
+  it('Z-score pojawia się tylko w trybie PRO', () => {
+    const vals = { age: '10', ageMonths: '0', weight: '31.5', height: '128.8', sex: 'F' };
+    expect(loadDsDom(vals).buildResultsHTML().html).not.toContain('Z‑score');
+    const pro = loadDsDom(vals, { pro: true }).buildResultsHTML().html;
+    expect(pro).toContain('Z‑score');
+  });
+
+  it('nota źródłowa Zemel 2015 jest częścią wyniku karty', () => {
+    const api = loadDsDom({ age: '5', ageMonths: '0', weight: '16', height: '98', sex: 'M' });
+    expect(api.buildResultsHTML().html).toContain('Pediatrics 2015');
+  });
+
+  it('WFL DS (<2 lat): dziecko na medianie masy-do-długości → ~50 centyl; zastępuje notę „stosuj WFL"', () => {
+    const api = loadDsDom({ age: '1', ageMonths: '0', weight: '8.482', height: '70', sex: 'M' });
+    // chłopcy 70 cm: mediana WFL DS M=8,482 (Zemel, tabela weight-for-length)
+    expect(api.wflPercentile('M', 70, 8.482)).toBeCloseTo(50, 1);
+    const r = api.buildResultsHTML();
+    expect(r.html).toContain('Masa do długości (WFL DS)');
+    expect(r.html).not.toContain('stosuj WFL');
+    expect(r.html).toContain('Normy BMI DS obowiązują od 2. r.ż.');
+  });
+
+  it('WFL DS poza pokryciem długości → czytelny komunikat z zakresem (M 49–93, K 52–90 cm)', () => {
+    const api = loadDsDom({ age: '0', ageMonths: '3', weight: '4.5', height: '45', sex: 'M' });
+    const r = api.buildResultsHTML();
+    expect(r.html).toContain('poza pokryciem norm');
+    expect(r.html).toContain('49–93 cm');
+    expect(api.wflPercentile('M', 45, 4.5)).toBeNull();
+    expect(api.wflPercentile('K', 91, 14)).toBeNull();
+  });
+
+  it('dane WFL DS: mediana rośnie ściśle z długością w obu tabelach', () => {
+    for (const name of ['DS_WFL_BOYS', 'DS_WFL_GIRLS']) {
+      const tab = DS[name] || g.DS[name];
+      const ks = Object.keys(tab).map(Number).sort((a, b) => a - b);
+      for (let i = 1; i < ks.length; i++) {
+        expect(tab[String(ks[i])][1], `${name}: ${ks[i - 1]}→${ks[i]}`).toBeGreaterThan(tab[String(ks[i - 1])][1]);
+      }
+    }
+  });
+});
+
+describe('etap 4 naprawy: siatka PDF bez wygładzania, spójna granica 36 mies.', () => {
+  it('generator nie wygładza już krzywych centylowych (usunięta 6× średnia ruchoma)', () => {
+    for (const f of ['inline_index_05.js', 'inline_docpro_03.js']) {
+      const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+      expect(src, f).not.toContain('L(p[g],6)');
+      expect(src, f).not.toContain('function L(e,n=6)');
+    }
+  });
+
+  it('granica niemowlę/dziecko jest jednolita: <=36 mies. dla wagi i wzrostu', () => {
+    for (const f of ['inline_index_05.js', 'inline_docpro_03.js']) {
+      const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+      expect(src, f).toContain('if(n<=36){');
+      expect(src, f).not.toContain('if(n<36){');
+    }
   });
 });
