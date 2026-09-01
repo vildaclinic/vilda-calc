@@ -1,7 +1,7 @@
 /*
  * respiratory_module.js — karta „Liczba oddechów”.
  *
- * Wersja 2.1.0 (etap 3 naprawy po audycie, 2026-09). Karta deleguje obliczenia do
+ * Wersja 2.2.0 (etapy 3–4 naprawy po audycie, 2026-09). Karta deleguje obliczenia do
  * window.vitalSigns (silnik centyli RR/HR) i odpowiada za prezentację wyniku:
  *  - czuwanie: centyl względem Fleming 2011 (dzieci zdrowe) lub Bonafide 2013 (szpitalne),
  *  - sen (dzieci zdrowe): ocena względem średniej ±SD snu spokojnego z Herbert 2020
@@ -10,7 +10,9 @@
  *    snu i czuwania) z adnotacją w nocie źródłowej.
  * Etap 3: bramka pustego wieku (bez cichego liczenia dla 0 lat), walidacja RR (3–200/min)
  * i temperatury (34–42 °C; korekta Nijmana stosowana przez silnik tylko ≥36 °C — nota
- * mówi wprost, czy korektę zastosowano), werdykt słowny i tony rr-warning/rr-danger
+ * mówi wprost, czy korektę zastosowano; do norm szpitalnych korekt temperatury nie
+ * stosuje się wcale — krzywe Bonafide obejmują dzieci gorączkujące), werdykt słowny
+ * i tony rr-warning/rr-danger
  * według ogólnych progów aplikacji (3/10/90/97), ogony „<3. centyla”/„>97. centyla”,
  * Z-score w trybie profesjonalnym.
  */
@@ -159,7 +161,9 @@
         ? vs.getRrAssessment(age, rr, opts)
         : { percentile: vs.getRrPercentile(age, rr, opts) };
 
-      if (temperature !== null && assessment && assessment.temperatureApplied === false) {
+      if (assessment && assessment.temperatureIgnoredForHospital) {
+        temperatureInfo = 'Korekt temperatury nie stosuje się do norm szpitalnych — krzywe Bonafide et&nbsp;al. wyprowadzono u dzieci hospitalizowanych, w tym gorączkujących.';
+      } else if (temperature !== null && assessment && assessment.temperatureApplied === false) {
         temperatureInfo = 'Korekta temperaturowa (Nijman et&nbsp;al.&nbsp;2012) jest stosowana od 36&nbsp;°C — podanej temperatury nie uwzględniono w wyniku.';
       }
 
