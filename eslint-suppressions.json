@@ -39,7 +39,7 @@
   },
   "bp_module.js": {
     "no-useless-assignment": {
-      "count": 2
+      "count": 1
     }
   },
   "circumference_module.js": {
