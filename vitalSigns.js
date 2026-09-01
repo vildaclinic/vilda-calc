@@ -1,7 +1,8 @@
 /*
  * vitalSigns.js — silnik centyli tętna (HR) i liczby oddechów (RR) dla dzieci 0–18 lat.
  *
- * Wersja 2.3.0 — naprawa po audycie modułu „Liczba oddechów” (2026-09, etapy 1–4).
+ * Wersja 2.4.0 — naprawa po audytach modułu „Liczba oddechów” (etapy 1–4)
+ * i karty „Tętno” (etap 2): wspólna semantyka korekty temperaturowej dla RR i HR.
  *
  * Dane referencyjne (wartości przepisane 1:1 z publikacji):
  *  - Fleming S. i wsp., „Normal ranges of heart rate and respiratory rate in children
@@ -24,13 +25,15 @@
  *    od etapu 3 korekta RR jest stosowana wyłącznie dla temperatur ≥36 °C — poniżej tej
  *    wartości ekstrapolacja współczynnika wyprowadzonego u dzieci gorączkujących nie ma
  *    uzasadnienia (wynik zwracany bez korekty, z flagą temperatureApplied=false);
- *    korekta HR pozostaje bez bramki (karta Tętno poza zakresem tego audytu);
  *    od etapu 4 korekty temperaturowej RR nie stosuje się także do źródła szpitalnego —
  *    krzywe Bonafide wyprowadzono u dzieci hospitalizowanych bez wykluczenia gorączki,
  *    więc nakładanie na nie współczynnika Nijmana liczyłoby gorączkę podwójnie
  *    (flaga temperatureIgnoredForHospital dla warstwy prezentacji),
  *  - temperatura HR: +10 uderzeń/min na 1 °C względem 37 °C (Davies i Maconochie,
- *    Emerg Med J 2009 — „ok. 10 uderzeń/min na 1 °C”; zbieżnie Daymont i wsp. 2015),
+ *    Emerg Med J 2009 — „ok. 10 uderzeń/min na 1 °C”; zbieżnie Daymont i wsp. 2015,
+ *    z zastrzeżeniem zmienności między wiekami); od etapu 2 naprawy Tętna korekta HR
+ *    ma tę samą semantykę co RR: stosowana wyłącznie ≥36 °C i nigdy do źródła
+ *    szpitalnego (te same flagi temperatureApplied / temperatureIgnoredForHospital),
  *  - sen RR (od etapu 2): ocena bezpośrednio względem referencji snu Herbert 2020
  *    zamiast dawnego odejmowania poprawki od tabel Fleminga; źródło szpitalne (Bonafide)
  *    nie rozróżnia snu i czuwania, więc tryb snu nie modyfikuje norm szpitalnych.
@@ -139,14 +142,18 @@
   // Współczynniki korekt (patrz nagłówek pliku).
   var HR_TEMP_COEF = 10; // ud./min na 1 °C
   var RR_TEMP_COEF = 2.2; // odd./min na 1 °C
-  var RR_TEMP_CORRECTION_MIN_C = 36; // korekta RR stosowana wyłącznie od tej temperatury
+  var TEMP_CORRECTION_MIN_C = 36; // korekty temperaturowe (RR i HR) stosowane wyłącznie od tej temperatury
 
-  // Przesunięcie korekty temperaturowej RR albo null, gdy korekty nie stosujemy
+  // Przesunięcie korekty temperaturowej albo null, gdy korekty nie stosujemy
   // (brak temperatury lub temperatura poniżej progu stosowalności).
-  function rrTemperatureShift(temperature) {
+  function temperatureShift(temperature, coefPerDegree) {
     if (temperature == null || !Number.isFinite(temperature)) return null;
-    if (temperature < RR_TEMP_CORRECTION_MIN_C) return null;
-    return RR_TEMP_COEF * (temperature - 37);
+    if (temperature < TEMP_CORRECTION_MIN_C) return null;
+    return coefPerDegree * (temperature - 37);
+  }
+
+  function rrTemperatureShift(temperature) {
+    return temperatureShift(temperature, RR_TEMP_COEF);
   }
 
   // Aproksymacja Zelena–Severo dystrybuanty standardowego rozkładu normalnego —
@@ -274,17 +281,30 @@
     return values;
   }
 
-  // Pełny (skorygowany) zestaw wartości centylowych dla wieku i opcji.
-  function correctedHrValues(ageYears, opts) {
+  // Referencja HR dla wieku i opcji — semantyka korekty temperaturowej jak w rrReference:
+  // korekta wyłącznie ≥36 °C, a dla źródła szpitalnego wcale (krzywe Bonafide obejmują
+  // dzieci gorączkujące, więc współczynnik Daymonta/Daviesa liczyłby gorączkę podwójnie).
+  function hrReference(ageYears, opts) {
     var o = opts || {};
     var population = String(o.population || 'healthy').toLowerCase();
     var curve = population === 'hospital' ? CURVES.hospitalHr : CURVES.healthyHr;
     var values = valuesForAge(curve, ageYears);
     if (typeof o.hrOffset === 'number' && o.hrOffset !== 0) shiftValues(values, o.hrOffset);
-    if (o.temperature != null && Number.isFinite(o.temperature)) {
-      shiftValues(values, HR_TEMP_COEF * (o.temperature - 37));
+    var out = {
+      source: population === 'hospital' ? 'bonafide' : 'fleming',
+      temperatureApplied: false,
+      values: values
+    };
+    if (population === 'hospital') {
+      if (o.temperature != null && Number.isFinite(o.temperature)) out.temperatureIgnoredForHospital = true;
+    } else {
+      var shift = temperatureShift(o.temperature, HR_TEMP_COEF);
+      if (shift !== null) {
+        out.temperatureApplied = true;
+        if (shift) shiftValues(values, shift);
+      }
     }
-    return values;
+    return out;
   }
 
   // Referencja RR dla wieku i opcji. Trzy warianty:
@@ -344,7 +364,7 @@
   // ------------------------------- Publiczne API -------------------------------
 
   function getHrValues(ageYears, opts) {
-    return summary(correctedHrValues(ageYears, opts));
+    return summary(hrReference(ageYears, opts).values);
   }
 
   function getRrValues(ageYears, opts) {
@@ -361,10 +381,20 @@
   }
 
   function getHrAssessment(ageYears, value, opts) {
-    var values = correctedHrValues(ageYears, opts);
-    var z = zFromValues(values, Number(value));
-    var s = summary(values);
-    return { percentile: Number.isFinite(z) ? normalCdf(z) * 100 : NaN, z: z, p10: s.p10, median: s.median, p90: s.p90 };
+    var ref = hrReference(ageYears, opts);
+    var z = zFromValues(ref.values, Number(value));
+    var s = summary(ref.values);
+    var out = {
+      percentile: Number.isFinite(z) ? normalCdf(z) * 100 : NaN,
+      z: z,
+      p10: s.p10,
+      median: s.median,
+      p90: s.p90,
+      source: ref.source,
+      temperatureApplied: ref.temperatureApplied
+    };
+    if (ref.temperatureIgnoredForHospital) out.temperatureIgnoredForHospital = true;
+    return out;
   }
 
   function getRrAssessment(ageYears, value, opts) {
@@ -421,6 +451,7 @@
     _getHospitalHrValues: function (ageYears) { return summary(valuesForAge(CURVES.hospitalHr, ageYears)); },
     _getHospitalRrValues: function (ageYears) { return summary(valuesForAge(CURVES.hospitalRr, ageYears)); },
     _rrReference: rrReference,
+    _hrReference: hrReference,
     _zFromValues: zFromValues,
     _normalCdf: normalCdf,
     _tables: { FLEMING_RR: FLEMING_RR, FLEMING_HR: FLEMING_HR, BONAFIDE: BONAFIDE, HERBERT_SLEEP_RR: HERBERT_SLEEP_RR }

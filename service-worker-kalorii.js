@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.798';
+const SW_VERSION = '1.0.799';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1737,7 +1737,9 @@ const OPTIONAL_ASSETS = [
   '/respiratory_module.js?v=6',
   '/bp_module.js?v=5',
   '/respiratory_module.js?v=7',
-  '/bp_module.js?v=6'
+  '/bp_module.js?v=6',
+  '/vitalSigns.js?v=6',
+  '/bp_module.js?v=7'
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
