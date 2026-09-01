@@ -1,7 +1,7 @@
 /*
  * vitalSigns.js — silnik centyli tętna (HR) i liczby oddechów (RR) dla dzieci 0–18 lat.
  *
- * Wersja 2.1.0 — naprawa po audycie modułu „Liczba oddechów” (2026-09, etapy 1–2).
+ * Wersja 2.2.0 — naprawa po audycie modułu „Liczba oddechów” (2026-09, etapy 1–3).
  *
  * Dane referencyjne (wartości przepisane 1:1 z publikacji):
  *  - Fleming S. i wsp., „Normal ranges of heart rate and respiratory rate in children
@@ -20,7 +20,11 @@
  *    ekstrapolować.
  *
  * Korekty:
- *  - temperatura RR: +2,2 oddechu/min na 1 °C względem 37 °C (Nijman i wsp., BMJ 2012),
+ *  - temperatura RR: +2,2 oddechu/min na 1 °C względem 37 °C (Nijman i wsp., BMJ 2012);
+ *    od etapu 3 korekta RR jest stosowana wyłącznie dla temperatur ≥36 °C — poniżej tej
+ *    wartości ekstrapolacja współczynnika wyprowadzonego u dzieci gorączkujących nie ma
+ *    uzasadnienia (wynik zwracany bez korekty, z flagą temperatureApplied=false);
+ *    korekta HR pozostaje bez bramki (karta Tętno poza zakresem tego audytu),
  *  - temperatura HR: +10 uderzeń/min na 1 °C względem 37 °C (Daymont i wsp. 2015),
  *  - sen RR (od etapu 2): ocena bezpośrednio względem referencji snu Herbert 2020
  *    zamiast dawnego odejmowania poprawki od tabel Fleminga; źródło szpitalne (Bonafide)
@@ -130,6 +134,15 @@
   // Współczynniki korekt (patrz nagłówek pliku).
   var HR_TEMP_COEF = 10; // ud./min na 1 °C
   var RR_TEMP_COEF = 2.2; // odd./min na 1 °C
+  var RR_TEMP_CORRECTION_MIN_C = 36; // korekta RR stosowana wyłącznie od tej temperatury
+
+  // Przesunięcie korekty temperaturowej RR albo null, gdy korekty nie stosujemy
+  // (brak temperatury lub temperatura poniżej progu stosowalności).
+  function rrTemperatureShift(temperature) {
+    if (temperature == null || !Number.isFinite(temperature)) return null;
+    if (temperature < RR_TEMP_CORRECTION_MIN_C) return null;
+    return RR_TEMP_COEF * (temperature - 37);
+  }
 
   // Aproksymacja Zelena–Severo dystrybuanty standardowego rozkładu normalnego —
   // ta sama, której używają pozostałe moduły centylowe aplikacji.
@@ -280,9 +293,9 @@
     var population = String(o.population || 'healthy').toLowerCase();
     var asleep = isSleepState(o.state);
     var offset = typeof o.rrOffset === 'number' && o.rrOffset !== 0 ? o.rrOffset : 0;
-    var tempShift = o.temperature != null && Number.isFinite(o.temperature)
-      ? RR_TEMP_COEF * (o.temperature - 37)
-      : 0;
+    var tempShift = rrTemperatureShift(o.temperature);
+    var temperatureApplied = tempShift !== null;
+    if (tempShift === null) tempShift = 0;
 
     if (asleep && population !== 'hospital') {
       var months = (Number.isFinite(ageYears) ? Math.max(0, ageYears) : 0) * 12;
@@ -293,6 +306,7 @@
       return {
         kind: 'meansd',
         source: 'herbert-sleep',
+        temperatureApplied: temperatureApplied,
         mean: ref.mean + offset + tempShift,
         sd: ref.sd
       };
@@ -305,6 +319,7 @@
     var out = {
       kind: 'points',
       source: population === 'hospital' ? 'bonafide' : 'fleming',
+      temperatureApplied: temperatureApplied,
       values: values
     };
     if (asleep && population === 'hospital') out.sleepIgnoredForHospital = true;
@@ -350,7 +365,8 @@
       p10: NaN,
       median: NaN,
       p90: NaN,
-      source: ref.source
+      source: ref.source,
+      temperatureApplied: !!ref.temperatureApplied
     };
     if (ref.sleepBeyondCoverage) out.sleepBeyondCoverage = true;
     if (ref.sleepIgnoredForHospital) out.sleepIgnoredForHospital = true;
