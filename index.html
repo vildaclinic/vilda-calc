@@ -1671,9 +1671,10 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="reinehr_cdgp_data.js?v=1"></script>
 <script defer src="advanced_growth_kowd.js?v=2"></script>
 <!-- Moduł centyli tętna i liczby oddechów.  Ładowany przed app.js, aby udostępniać
-     funkcje w globalnym zakresie (window.vitalSigns).  Nowa wersja wykorzystuje
-     dane Bonafide et al. 2013 z korektami temperatury i stanu snu. -->
-<script defer src="vitalSigns.js"></script>
+     funkcje w globalnym zakresie (window.vitalSigns).  Wersja 2 liczy centyl ze
+     wszystkich punktów centylowych pasma (Fleming 2011 / Bonafide 2013) z interpolacją
+     między pasmami wieku; korekty temperatury i snu jak dotychczas. -->
+<script defer src="vitalSigns.js?v=2"></script>
 <script src="adult_vitals.js?v=5" defer></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=4"></script>
