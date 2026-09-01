@@ -1,7 +1,7 @@
 /*
  * vitalSigns.js — silnik centyli tętna (HR) i liczby oddechów (RR) dla dzieci 0–18 lat.
  *
- * Wersja 2.0.0 — naprawa po audycie modułu „Liczba oddechów” (2026-09, etap 1).
+ * Wersja 2.1.0 — naprawa po audycie modułu „Liczba oddechów” (2026-09, etapy 1–2).
  *
  * Dane referencyjne (wartości przepisane 1:1 z publikacji):
  *  - Fleming S. i wsp., „Normal ranges of heart rate and respiratory rate in children
@@ -10,11 +10,21 @@
  *  - Bonafide C.P. i wsp., „Development of heart and respiratory rate percentile curves
  *    for hospitalized children”, Pediatrics 2013;131(4):e1150–e1157
  *    (dzieci hospitalizowane; centyle 10., 50., 90.).
+ *  - Herbert A., Pearn J., Wilson S., „Normal Percentiles for Respiratory Rate in Children —
+ *    Reference Ranges Determined from an Optical Sensor”, Children 2020;7(10):160 —
+ *    Tabela 4 (sen spokojny, metoda dwóch okresów 30 s): średnia, SD i mediana RR
+ *    w 7 pasmach wieku 0–4,5 roku. Publikacja NIE zawiera liczbowych tabel centylowych
+ *    (krzywe są tylko na wykresach), dlatego ocena snu jest liczona względem
+ *    opublikowanej średniej ±SD przy założeniu rozkładu normalnego (decyzja właściciela,
+ *    2026-09). Powyżej 4,5 roku brak norm snu — silnik zgłasza to flagą zamiast
+ *    ekstrapolować.
  *
- * Korekty (semantyka niezmieniona w etapie 1; przegląd zaplanowany w etapach 2–3 naprawy):
+ * Korekty:
  *  - temperatura RR: +2,2 oddechu/min na 1 °C względem 37 °C (Nijman i wsp., BMJ 2012),
  *  - temperatura HR: +10 uderzeń/min na 1 °C względem 37 °C (Daymont i wsp. 2015),
- *  - sen RR: odejmowana poprawka wyprowadzona z Herbert i wsp. 2020 (do przebudowy w etapie 2).
+ *  - sen RR (od etapu 2): ocena bezpośrednio względem referencji snu Herbert 2020
+ *    zamiast dawnego odejmowania poprawki od tabel Fleminga; źródło szpitalne (Bonafide)
+ *    nie rozróżnia snu i czuwania, więc tryb snu nie modyfikuje norm szpitalnych.
  *
  * Metoda (etap 1 naprawy — zamiast dawnego trójpunktowego odwzorowania odcinkowego):
  *  1. Wartości referencyjne pasma są interpolowane liniowo między ŚRODKAMI pasm wiekowych,
@@ -102,6 +112,21 @@
     { minYears: 15, maxYears: 18, hr: { 10: 62, 50: 82, 90: 107 }, rr: { 10: 14, 50: 18, 90: 23 } }
   ];
 
+  // ---------------------------------------------------------------------------
+  // Dane: Herbert 2020, Tabela 4 (dzieci zdrowe, sen spokojny; metoda 2 × 30 s).
+  // Pasma wieku w miesiącach [min, max); 1 tydzień = 7/30,4375 ≈ 0,23 miesiąca.
+  // ---------------------------------------------------------------------------
+  var HERBERT_SLEEP_RR = [
+    { range: '0–1 tydz.', minMonths: 0, maxMonths: 0.23, mean: 41.4, sd: 4.1, median: 41.0 },
+    { range: '1 tydz.–1 mies.', minMonths: 0.23, maxMonths: 1, mean: 41.5, sd: 5.4, median: 40.5 },
+    { range: '1–6 mies.', minMonths: 1, maxMonths: 6, mean: 35.4, sd: 7.2, median: 34.0 },
+    { range: '6 mies.–1 rok', minMonths: 6, maxMonths: 12, mean: 24.1, sd: 2.8, median: 23.5 },
+    { range: '1–2 lata', minMonths: 12, maxMonths: 24, mean: 22.1, sd: 3.5, median: 21.0 },
+    { range: '2–3 lata', minMonths: 24, maxMonths: 36, mean: 19.5, sd: 2.7, median: 19.0 },
+    { range: '3–4,5 roku', minMonths: 36, maxMonths: 54, mean: 19.3, sd: 2.7, median: 18.5 }
+  ];
+  var HERBERT_SLEEP_MAX_MONTHS = 54;
+
   // Współczynniki korekt (patrz nagłówek pliku).
   var HR_TEMP_COEF = 10; // ud./min na 1 °C
   var RR_TEMP_COEF = 2.2; // odd./min na 1 °C
@@ -137,7 +162,8 @@
     healthyHr: buildCurve(FLEMING_HR, function (b) { return b.values; }),
     healthyRr: buildCurve(FLEMING_RR, function (b) { return b.values; }),
     hospitalHr: buildCurve(BONAFIDE, function (b) { return b.hr; }),
-    hospitalRr: buildCurve(BONAFIDE, function (b) { return b.rr; })
+    hospitalRr: buildCurve(BONAFIDE, function (b) { return b.rr; }),
+    sleepRr: buildCurve(HERBERT_SLEEP_RR, function (b) { return { mean: b.mean, sd: b.sd }; })
   };
 
   // Wartości centylowe dla danego wieku: interpolacja liniowa między środkami pasm,
@@ -217,15 +243,9 @@
     return NaN;
   }
 
-  // Poprawka snu dla RR (Herbert i wsp. 2020) — semantyka z wersji 1, do przebudowy w etapie 2.
-  function sleepRrAdjustment(ageYears) {
-    var age = Number.isFinite(ageYears) ? ageYears : 0;
-    var atBirth = 18;
-    var atThree = 3.4;
-    if (age <= 0) return atBirth;
-    if (age < 3) return atBirth - (atBirth - atThree) * (age / 3);
-    if (age < 18) return atThree * (18 - age) / 15;
-    return 0;
+  function isSleepState(state) {
+    var s = String(state || 'awake').toLowerCase();
+    return s === 'sleep' || s === 'asleep' || s === 'sleeping';
   }
 
   function shiftValues(values, delta) {
@@ -249,25 +269,46 @@
     return values;
   }
 
-  function correctedRrValues(ageYears, opts) {
+  // Referencja RR dla wieku i opcji. Trzy warianty:
+  //  - kind 'points'  — pełny zestaw punktów centylowych (Fleming lub Bonafide),
+  //  - kind 'meansd'  — średnia ±SD snu spokojnego (Herbert 2020, sen + źródło zdrowe),
+  //  - kind 'none'    — sen poza pokryciem wiekowym norm Herberta (flaga zamiast ekstrapolacji).
+  // Źródło szpitalne (Bonafide) nie rozróżnia snu i czuwania — tryb snu go nie modyfikuje
+  // (flaga sleepIgnoredForHospital dla warstwy prezentacji).
+  function rrReference(ageYears, opts) {
     var o = opts || {};
     var population = String(o.population || 'healthy').toLowerCase();
+    var asleep = isSleepState(o.state);
+    var offset = typeof o.rrOffset === 'number' && o.rrOffset !== 0 ? o.rrOffset : 0;
+    var tempShift = o.temperature != null && Number.isFinite(o.temperature)
+      ? RR_TEMP_COEF * (o.temperature - 37)
+      : 0;
+
+    if (asleep && population !== 'hospital') {
+      var months = (Number.isFinite(ageYears) ? Math.max(0, ageYears) : 0) * 12;
+      if (months > HERBERT_SLEEP_MAX_MONTHS) {
+        return { kind: 'none', source: 'herbert-sleep', sleepBeyondCoverage: true };
+      }
+      var ref = valuesForAge(CURVES.sleepRr, ageYears);
+      return {
+        kind: 'meansd',
+        source: 'herbert-sleep',
+        mean: ref.mean + offset + tempShift,
+        sd: ref.sd
+      };
+    }
+
     var curve = population === 'hospital' ? CURVES.hospitalRr : CURVES.healthyRr;
     var values = valuesForAge(curve, ageYears);
-    if (typeof o.rrOffset === 'number' && o.rrOffset !== 0) shiftValues(values, o.rrOffset);
-    if (o.temperature != null && Number.isFinite(o.temperature)) {
-      shiftValues(values, RR_TEMP_COEF * (o.temperature - 37));
-    }
-    var state = String(o.state || 'awake').toLowerCase();
-    if (state === 'sleep' || state === 'asleep' || state === 'sleeping') {
-      var adj = sleepRrAdjustment(ageYears);
-      for (var key in values) {
-        if (Object.prototype.hasOwnProperty.call(values, key)) {
-          values[key] = Math.max(0, values[key] - adj);
-        }
-      }
-    }
-    return values;
+    if (offset) shiftValues(values, offset);
+    if (tempShift) shiftValues(values, tempShift);
+    var out = {
+      kind: 'points',
+      source: population === 'hospital' ? 'bonafide' : 'fleming',
+      values: values
+    };
+    if (asleep && population === 'hospital') out.sleepIgnoredForHospital = true;
+    return out;
   }
 
   function summary(values) {
@@ -281,7 +322,16 @@
   }
 
   function getRrValues(ageYears, opts) {
-    return summary(correctedRrValues(ageYears, opts));
+    var ref = rrReference(ageYears, opts);
+    if (ref.kind === 'points') return summary(ref.values);
+    if (ref.kind === 'meansd') {
+      return {
+        p10: ref.mean + Z_FOR_PERCENTILE[10] * ref.sd,
+        median: ref.mean,
+        p90: ref.mean + Z_FOR_PERCENTILE[90] * ref.sd
+      };
+    }
+    return { p10: NaN, median: NaN, p90: NaN };
   }
 
   function getHrAssessment(ageYears, value, opts) {
@@ -292,10 +342,35 @@
   }
 
   function getRrAssessment(ageYears, value, opts) {
-    var values = correctedRrValues(ageYears, opts);
-    var z = zFromValues(values, Number(value));
-    var s = summary(values);
-    return { percentile: Number.isFinite(z) ? normalCdf(z) * 100 : NaN, z: z, p10: s.p10, median: s.median, p90: s.p90 };
+    var ref = rrReference(ageYears, opts);
+    var x = Number(value);
+    var out = {
+      percentile: NaN,
+      z: NaN,
+      p10: NaN,
+      median: NaN,
+      p90: NaN,
+      source: ref.source
+    };
+    if (ref.sleepBeyondCoverage) out.sleepBeyondCoverage = true;
+    if (ref.sleepIgnoredForHospital) out.sleepIgnoredForHospital = true;
+    if (ref.kind === 'points') {
+      var z = zFromValues(ref.values, x);
+      var s = summary(ref.values);
+      out.z = z;
+      out.percentile = Number.isFinite(z) ? normalCdf(z) * 100 : NaN;
+      out.p10 = s.p10;
+      out.median = s.median;
+      out.p90 = s.p90;
+    } else if (ref.kind === 'meansd' && ref.sd > 0) {
+      var zs = Number.isFinite(x) ? (x - ref.mean) / ref.sd : NaN;
+      out.z = zs;
+      out.percentile = Number.isFinite(zs) ? normalCdf(zs) * 100 : NaN;
+      out.p10 = ref.mean + Z_FOR_PERCENTILE[10] * ref.sd;
+      out.median = ref.mean;
+      out.p90 = ref.mean + Z_FOR_PERCENTILE[90] * ref.sd;
+    }
+    return out;
   }
 
   function getHrPercentile(ageYears, value, opts) {
@@ -317,10 +392,10 @@
     _getHealthyRrValues: function (ageYears) { return summary(valuesForAge(CURVES.healthyRr, ageYears)); },
     _getHospitalHrValues: function (ageYears) { return summary(valuesForAge(CURVES.hospitalHr, ageYears)); },
     _getHospitalRrValues: function (ageYears) { return summary(valuesForAge(CURVES.hospitalRr, ageYears)); },
-    _sleepRrAdjustment: sleepRrAdjustment,
+    _rrReference: rrReference,
     _zFromValues: zFromValues,
     _normalCdf: normalCdf,
-    _tables: { FLEMING_RR: FLEMING_RR, FLEMING_HR: FLEMING_HR, BONAFIDE: BONAFIDE }
+    _tables: { FLEMING_RR: FLEMING_RR, FLEMING_HR: FLEMING_HR, BONAFIDE: BONAFIDE, HERBERT_SLEEP_RR: HERBERT_SLEEP_RR }
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
