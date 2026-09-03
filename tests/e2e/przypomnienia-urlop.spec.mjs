@@ -104,7 +104,9 @@ test('karta „Przypomnienia” i odznaka dzwoneczka pomijają dni urlopu', asyn
   // Przed poprawką ustalała się na „3” (dwa dni urlopu + pacjent) i nigdy nie schodziła do 1.
   const przycisk = page.locator('#vildaRemindersBtn');
   await expect(przycisk, 'odznaka zgodna z kartą i z modalem').toHaveAttribute('data-count', '1');
-  await expect(przycisk).toHaveAttribute('title', /1 pacjent wymaga uwagi/);
+  // Brzmienie tytułu zmienił PR 13 (decyzja D2: liczniki liczą notatki, nie pacjentów) — sens
+  // strażnika bez zmian: po odfiltrowaniu urlopu zostaje dokładnie jedna pozycja.
+  await expect(przycisk).toHaveAttribute('title', /1 przypomnienie do sprawdzenia/);
 
   // Modal spod dzwoneczka — powierzchnia, która filtrowała poprawnie już wcześniej.
   await page.evaluate(() => window.VildaAuthUI.maybeShowReminders({ force: true }));
