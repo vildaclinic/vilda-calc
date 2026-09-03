@@ -57,6 +57,13 @@ async function otworz(page, wpisy, opcje) {
         category: w.category || 'followup', dueDateISO: dzien(w.dniTemu), dueTime: w.time || null,
       });
     }
+    if (opts && opts.rezerwacja) {
+      // Rezerwacja terminu procedury — Terminarz zapisuje ją pod pseudopacjentem aktywności.
+      await V.savePatientNote({
+        patientId: V.ACTIVITY_PATIENT_ID || '__vilda_activity__', externalName: 'RTG klatki',
+        title: '', category: 'reservation', dueDateISO: dzien(0), dueTime: '10:00',
+      });
+    }
     if (opts && opts.dyzur) {
       // Dyżur pod pseudopacjentem aktywności, bez miejsca — tak zapisuje go Terminarz.
       await V.savePatientNote({
@@ -328,4 +335,64 @@ test('P8 — wiersze karty mają te same kolory co wiersze modalu spod dzwoneczk
   // Kontrola pozytywna: kolory naprawdę są kategoryjne, a nie jednym wspólnym odcieniem.
   const kolory = new Set(Object.values(K).map((r) => r.kategoriaKolor));
   expect(kolory.size, 'każda kategoria ma własny kolor').toBeGreaterThan(3);
+});
+
+test('P9 — procedura i rezerwacja mają w karcie ten sam kolor co w modalu', async ({ page }) => {
+  // Zgłoszenie właściciela 2026-09-03 (drugie, ze zrzutami): mimo P8 awatary procedur nadal
+  // różniły się między kartą a modalem. Przyczyna nie leżała w P8, tylko w słowniku kategorii Me:
+  // nie miał wpisów `procedura` ani `reservation`, więc każdy widok wpadał we WŁASNY awaryjny
+  // kolor — karta w szary #8E8E93, modal w niebieski #32ADE6 — a etykieta schodziła do „Notatka”
+  // (karta) albo do surowej nazwy kategorii „procedura” (modal). Terminarz zapisuje obie te
+  // kategorie z terminem, więc obie trafiają do przypomnień.
+  await otworz(page, [
+    { name: 'Ewa Biopsja', title: 'Biopsja tarczycy (BACC)', dniTemu: 0, category: 'procedura' },
+    { name: 'Filip Kontrola', title: 'Wpis', dniTemu: 0, category: 'followup' },
+  ], { rezerwacja: true });
+
+  const zbierzKarte = () => page.evaluate(() => Array.from(
+    document.querySelectorAll('#remindersInline .vild-rem-row'),
+  ).map((r) => ({
+    nazwa: r.querySelector('.vild-rem-nm')?.textContent,
+    kategoria: r.querySelector('.vild-rem-cat')?.textContent,
+    awatar: getComputedStyle(r.querySelector('.vild-rem-av')).backgroundImage,
+    kategoriaKolor: getComputedStyle(r.querySelector('.vild-rem-cat')).color,
+  })));
+
+  const zKarty = await zbierzKarte();
+  await page.evaluate(() => window.VildaAuthUI.maybeShowReminders({ force: true }));
+  await page.waitForSelector('.vilda-reminders-row', { timeout: 20000 });
+  const zModalu = await page.evaluate(() => Array.from(
+    document.querySelectorAll('.vilda-reminders-row'),
+  ).map((r) => {
+    const kids = Array.from(r.children);
+    const linie = kids[1] ? Array.from(kids[1].children) : [];
+    return {
+      nazwa: linie[0] && linie[0].textContent,
+      kategoria: linie[1] && linie[1].textContent,
+      awatar: getComputedStyle(kids[0]).backgroundImage,
+      kategoriaKolor: linie[1] && getComputedStyle(linie[1]).color,
+    };
+  }));
+
+  const wgNazwy = (lista) => Object.fromEntries(lista.map((r) => [r.nazwa, r]));
+  const K = wgNazwy(zKarty);
+  const M = wgNazwy(zModalu);
+  expect(Object.keys(K).sort(), 'te same wiersze w obu widokach').toEqual(Object.keys(M).sort());
+
+  for (const nazwa of ['Ewa Biopsja', 'Rezerwacja']) {
+    expect(K[nazwa], `wiersz „${nazwa}” jest w karcie`).toBeTruthy();
+    expect(K[nazwa].awatar, `tło awatara: ${nazwa}`).toBe(M[nazwa].awatar);
+    expect(K[nazwa].kategoriaKolor, `kolor kategorii: ${nazwa}`).toBe(M[nazwa].kategoriaKolor);
+    expect(K[nazwa].kategoria, `etykieta kategorii: ${nazwa}`).toBe(M[nazwa].kategoria);
+  }
+
+  // Kategorie mają własne etykiety po polsku, a nie awaryjne „Notatka” / surowy klucz.
+  expect(K['Ewa Biopsja'].kategoria).toContain('Procedura');
+  expect(K['Ewa Biopsja'].kategoria).toContain('Biopsja tarczycy (BACC)');
+  expect(K.Rezerwacja.kategoria).toContain('Rezerwacja');
+  expect(K['Ewa Biopsja'].kategoria).not.toContain('Notatka');
+  expect(M['Ewa Biopsja'].kategoria).not.toContain('procedura');
+
+  // Kontrola pozytywna: procedura nie dostała po prostu koloru sąsiedniej kontroli.
+  expect(K['Ewa Biopsja'].awatar).not.toBe(K['Filip Kontrola'].awatar);
 });
