@@ -737,3 +737,161 @@ describe('VildaVault — tombstony żyją rok, nie 90 dni (decyzja właściciela
     ).not.toContain(nota.id);
   });
 });
+
+
+describe('VildaVault — ostrzeżenie o nieaktualnym urządzeniu (PR 10, decyzja właściciela 2026-09-03)', () => {
+  // Tombstony żyją rok (blok wyżej). Urządzenie milczące dłużej ma u siebie skasowaną wizytę,
+  // a dowodu usunięcia już nigdzie nie ma — przy pierwszym syncu wizyta wraca na wszystkie
+  // urządzenia, cicho. Sejf odnotowuje więc moment każdego udanego scalenia i wystawia werdykt:
+  // ile dni minęło od poprzedniego scalenia na TYM urządzeniu (localDays) oraz ile minęło od
+  // ostatniego scalenia na urządzeniu, które przysłało payload (remoteDays). Interfejs wyłącznie
+  // ten werdykt renderuje. Próg jest tym samym oknem, co życie tombstonów — inaczej ostrzeżenie
+  // rozjechałoby się z chwilą, w której wskrzeszenie faktycznie staje się możliwe.
+  const dniTemu = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+
+  async function postarzZnacznik(dev, dni) {
+    const uid = dev.vault.getCurrentUser().userId;
+    const meta = (await dev.adapter.getUserMeta(uid)) || {};
+    meta.lastSyncMergeAtISO = dniTemu(dni);
+    await dev.adapter.putUserMeta(uid, meta);
+  }
+
+  it('próg ostrzeżenia to dokładnie okno życia tombstonów (365 dni)', async () => {
+    const dev = await createDevice('STALE-PROG');
+    const w = await dev.vault.getSyncStaleness();
+    expect(w.thresholdDays, 'próg = okno życia tombstonów').toBe(365);
+  });
+
+  it('urządzenie, które nigdy nie scalało, NIE ostrzega (świeża instalacja i wdrożenie wersji)', async () => {
+    const dev = await createDevice('STALE-NOWE');
+    const w = await dev.vault.getSyncStaleness();
+    expect(w.localLastMergeAtISO, 'brak znacznika przed pierwszym scaleniem').toBe(null);
+    expect(w.localDays).toBe(null);
+    expect(w.localStale, 'brak znacznika nie jest dowodem nieaktualności').toBe(false);
+    expect(w.warn).toBe(false);
+  });
+
+  it('pierwsze scalenie stempluje znacznik; payload niesie go dalej', async () => {
+    const a = await createDevice('STALE-A1');
+    const b = await createDevice('STALE-B1');
+    await a.vault.savePatient({ name: 'Anna Aktualna' });
+
+    const przed = await b.vault.exportSyncPayload();
+    expect(przed.lastMergeAtISO, 'przed pierwszym scaleniem pole jest puste').toBe(null);
+
+    await syncTo(b, a);
+
+    const po = await b.vault.getSyncStaleness();
+    expect(po.localLastMergeAtISO, 'scalenie odcisnęło znacznik').toBeTruthy();
+    expect(po.localDays, 'zero dni od scalenia').toBe(0);
+    expect(po.warn).toBe(false);
+
+    const payload = await b.vault.exportSyncPayload();
+    expect(payload.lastMergeAtISO, 'payload niesie znacznik nadawcy').toBe(po.localLastMergeAtISO);
+  });
+
+  it('milczenie dłuższe niż rok podnosi ostrzeżenie, 300 dni jeszcze nie', async () => {
+    const dev = await createDevice('STALE-LUKA');
+
+    await postarzZnacznik(dev, 300);
+    const krotkie = await dev.vault.getSyncStaleness();
+    expect(krotkie.localDays).toBe(300);
+    expect(krotkie.localStale, '300 dni mieści się w oknie tombstonów').toBe(false);
+    expect(krotkie.warn).toBe(false);
+
+    await postarzZnacznik(dev, 400);
+    const dlugie = await dev.vault.getSyncStaleness();
+    expect(dlugie.localDays).toBe(400);
+    expect(dlugie.localStale, '400 dni to już poza oknem — usunięcia mogły wyparować').toBe(true);
+    expect(dlugie.warn).toBe(true);
+  });
+
+  it('scalenie po rocznej przerwie zgłasza lukę SPRZED scalenia, a kolejne jest już czyste', async () => {
+    const a = await createDevice('STALE-A2');
+    const b = await createDevice('STALE-B2');
+    await a.vault.savePatient({ name: 'Bartosz Bierny' });
+
+    await syncTo(b, a);
+    await postarzZnacznik(b, 400);
+
+    const wynik = await syncTo(b, a);
+    expect(wynik.staleDevice, 'werdykt jedzie w wyniku scalenia').toBeTruthy();
+    expect(wynik.staleDevice.localDays, 'luka liczona sprzed tego scalenia').toBe(400);
+    expect(wynik.staleDevice.localStale).toBe(true);
+    expect(wynik.staleDevice.warn).toBe(true);
+
+    const kolejne = await syncTo(b, a);
+    expect(kolejne.staleDevice.localDays, 'znacznik odświeżony poprzednim scaleniem').toBe(0);
+    expect(kolejne.staleDevice.warn, 'ostrzeżenie nie zostaje na stałe').toBe(false);
+  });
+
+  it('payload od nieaktualnego nadawcy ostrzega odbiorcę, który sam jest na bieżąco', async () => {
+    const a = await createDevice('STALE-A3');
+    const b = await createDevice('STALE-B3');
+    await a.vault.savePatient({ name: 'Celina Cicha' });
+
+    // Oba urządzenia są na bieżąco…
+    await syncTo(a, b);
+    await syncTo(b, a);
+    // …ale nadawca milczał ponad rok.
+    await postarzZnacznik(a, 400);
+
+    const wynik = await b.vault.mergeSyncPayload(await a.vault.exportSyncPayload());
+    expect(wynik.staleDevice.localStale, 'odbiorca sam jest aktualny').toBe(false);
+    expect(wynik.staleDevice.remoteDays, 'nadawca milczał 400 dni').toBe(400);
+    expect(wynik.staleDevice.remoteStale).toBe(true);
+    expect(wynik.staleDevice.warn, 'ostrzeżenie podnosi którakolwiek ze stron').toBe(true);
+  });
+
+  it('delta NIE odświeża znacznika — to nie jest dowód pełnego scalenia', async () => {
+    // applyEncryptedDelta odszyfrowuje ładunek i podaje go temu samemu mergeSyncPayload. Delty
+    // (buildNoteDelta / buildTombstoneDelta / buildPatientDelta) niosą JEDEN rekord i nie mają
+    // `exportedAtISO` — pola, które wstawia wyłącznie pełny exportSyncPayload. Gdyby delta
+    // stemplowała znacznik, urządzenie żywiące się wyłącznie kanałem czasu rzeczywistego nigdy
+    // nie zobaczyłoby ostrzeżenia, choć pełnego scalenia (a więc i tombstonów) nie widziało od lat.
+    // W tym torze deltę podajemy wprost do mergeSyncPayload w postaci odszyfrowanej, bo dwa
+    // „urządzenia” harnessu to dwaj różni użytkownicy sejfu i nie dzielą klucza.
+    const a = await createDevice('STALE-A5');
+    const b = await createDevice('STALE-B5');
+    const pacjent = await a.vault.savePatient({ name: 'Eryk Delta' });
+    const pid = pacjent.id || pacjent.patientId;
+
+    await syncTo(b, a);
+    await postarzZnacznik(b, 400);
+
+    // Kształt ładunku delty tak, jak buduje go buildNoteDelta przed zaszyfrowaniem.
+    const pelny = await a.vault.exportSyncPayload();
+    const delta = {
+      schemaVersion: pelny.schemaVersion,
+      patients: [], tombstones: [], passkeys: [], passkeyTombstones: [], userPreferences: {},
+      notes: [], noteTombstones: [],
+      patientNotes: [], patientNoteTombstones: [{ id: `delta-${pid}`, deletedAtISO: new Date().toISOString() }]
+    };
+    expect(delta.exportedAtISO, 'delta nie ma znacznika pełnego eksportu').toBeUndefined();
+
+    await b.vault.mergeSyncPayload(delta);
+
+    const po = await b.vault.getSyncStaleness();
+    expect(po.localDays, 'delta nie odmłodziła znacznika').toBe(400);
+    expect(po.warn, 'ostrzeżenie zostaje do czasu pełnego scalenia').toBe(true);
+
+    // Dopiero pełny payload zamyka sprawę.
+    await syncTo(b, a);
+    expect((await b.vault.getSyncStaleness()).warn, 'pełne scalenie gasi ostrzeżenie').toBe(false);
+  });
+
+  it('payload bez pola (starsza wersja aplikacji) nie wywołuje fałszywego alarmu', async () => {
+    const a = await createDevice('STALE-A4');
+    const b = await createDevice('STALE-B4');
+    await a.vault.savePatient({ name: 'Damian Dawny' });
+
+    const payload = await a.vault.exportSyncPayload();
+    delete payload.lastMergeAtISO;
+
+    const wynik = await b.vault.mergeSyncPayload(payload);
+    expect(wynik.staleDevice.remoteLastMergeAtISO).toBe(null);
+    expect(wynik.staleDevice.remoteDays).toBe(null);
+    expect(wynik.staleDevice.remoteStale, 'brak pola to brak wiedzy, nie zarzut').toBe(false);
+    expect(wynik.staleDevice.warn).toBe(false);
+  });
+});
