@@ -64,9 +64,9 @@
   <link href="ios26-v2.css?v=19" rel="stylesheet">
   <link href="style.css?v=59" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
-  <link href="vilda_chrome.css?v=35" rel="stylesheet">
+  <link href="vilda_chrome.css?v=36" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=59" rel="stylesheet">
-  <link href="ustawienia.css?v=9" rel="stylesheet">
+  <link href="ustawienia.css?v=10" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
      Ustawia klasę vilda-pro-active / vilda-pro-inactive na <html>
@@ -153,9 +153,9 @@ html.vilda-pro-active .pro-sync-note {
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
 <script defer src="vilda_cloud_cache_warm.js?v=2"></script>
-<script defer src="vilda_vault.js?v=163"></script>
+<script defer src="vilda_vault.js?v=164"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
-<script defer src="vilda_sync.js?v=29"></script>
+<script defer src="vilda_sync.js?v=30"></script>
 <script defer src="vilda_sync_integration.js?v=38"></script>
 <script defer src="vilda_realtime.js?v=6"></script>
 <script defer src="qrcode.min.js?v=1"></script>
@@ -177,7 +177,7 @@ html.vilda-pro-active .pro-sync-note {
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="lucide.min.js?v=1" defer></script>
   <script src="ios26-ui.js?v=41" defer></script>
-<script defer src="vilda_chrome.js?v=69"></script>
+<script defer src="vilda_chrome.js?v=70"></script>
 </head>
 <body class="js-loading liquid-ios26 page-settings has-sidebar">
   <header>
@@ -845,6 +845,7 @@ html.vilda-pro-active .pro-sync-note {
                     <p class="settings-inline-note settings-backup-note" id="syncStatusNote">
                       Aby zarządzać synchronizacją, zaloguj się.
                     </p>
+                    <p class="settings-inline-note settings-backup-note settings-note-warn" id="syncStaleWarning" role="status" hidden></p>
                   </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
@@ -2247,7 +2248,7 @@ html.vilda-pro-active .pro-sync-note {
   </script>
 
   <script defer src="jsQR.min.js?v=1"></script>
-  <script defer src="inline_ustawienia_04.js?v=10"></script>
+  <script defer src="inline_ustawienia_04.js?v=11"></script>
 
   <script defer src="inline_ustawienia_05.js?v=1"></script>
 
