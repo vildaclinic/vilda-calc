@@ -260,3 +260,72 @@ test('P6 — karta ma nagłówek i etykietę regionu dla czytnika ekranu', async
     tag: 'H2', tekst: 'Przypomnienia',
   });
 });
+
+test('P8 — wiersze karty mają te same kolory co wiersze modalu spod dzwoneczka', async ({ page }) => {
+  // Zgłoszenie właściciela 2026-09-03: karta w prawej kolumnie strony głównej i pełnoekranowy
+  // widok spod dzwoneczka mają wyglądać kolorystycznie identycznie, razem z awatarami.
+  // Zmierzone przed poprawką: awatary już były identyczne (oba brały `accent` kategorii), ale
+  // linia kategorii w karcie miała stały szary #64797b, a w modalu kolor kategorii (#0E6E99,
+  // #0A5BBF, #1F7A3D, #C2271D, #006b73); nazwa różniła się odcieniem (#1f2d2e vs #0f2b33).
+  await otworz(page, [
+    { name: 'Anna Kontrola', title: 'Wpis', dniTemu: 0, category: 'followup' },
+    { name: 'Bartek Leczenie', title: 'Wpis', dniTemu: 0, category: 'treatment' },
+    { name: 'Celina Obserwacja', title: 'Wpis', dniTemu: 0, category: 'observation' },
+    { name: 'Damian Klirens', title: 'Wpis', dniTemu: 0, category: 'wynik-klirens' },
+  ], { dyzur: true });
+
+  const style = (r, sel, pole) => {
+    const el = sel ? r.querySelector(sel) : r;
+    return el ? getComputedStyle(el)[pole] : null;
+  };
+
+  const zKarty = await page.evaluate(() => Array.from(
+    document.querySelectorAll('#remindersInline .vild-rem-row'),
+  ).map((r) => {
+    const av = r.querySelector('.vild-rem-av');
+    const nm = r.querySelector('.vild-rem-nm');
+    const cat = r.querySelector('.vild-rem-cat');
+    return {
+      nazwa: nm && nm.textContent,
+      litera: av && av.textContent,
+      awatar: av && getComputedStyle(av).backgroundImage,
+      nazwaKolor: nm && getComputedStyle(nm).color,
+      kategoriaKolor: cat && getComputedStyle(cat).color,
+    };
+  }));
+  void style;
+
+  await page.evaluate(() => window.VildaAuthUI.maybeShowReminders({ force: true }));
+  await page.waitForSelector('.vilda-reminders-row', { timeout: 20000 });
+  const zModalu = await page.evaluate(() => Array.from(
+    document.querySelectorAll('.vilda-reminders-row'),
+  ).map((r) => {
+    const kids = Array.from(r.children);
+    const av = kids[0];
+    const linie = kids[1] ? Array.from(kids[1].children) : [];
+    return {
+      nazwa: linie[0] && linie[0].textContent,
+      litera: av && av.textContent,
+      awatar: av && getComputedStyle(av).backgroundImage,
+      nazwaKolor: linie[0] && getComputedStyle(linie[0]).color,
+      kategoriaKolor: linie[1] && getComputedStyle(linie[1]).color,
+    };
+  }));
+
+  expect(zKarty.length, 'oba widoki pokazują te same pozycje').toBe(zModalu.length);
+  const wgNazwy = (lista) => Object.fromEntries(lista.map((r) => [r.nazwa, r]));
+  const K = wgNazwy(zKarty);
+  const M = wgNazwy(zModalu);
+  expect(Object.keys(K).sort(), 'te same wiersze w obu widokach').toEqual(Object.keys(M).sort());
+
+  for (const nazwa of Object.keys(K)) {
+    expect(K[nazwa].kategoriaKolor, `kolor kategorii: ${nazwa}`).toBe(M[nazwa].kategoriaKolor);
+    expect(K[nazwa].awatar, `tło awatara: ${nazwa}`).toBe(M[nazwa].awatar);
+    expect(K[nazwa].litera, `litera awatara: ${nazwa}`).toBe(M[nazwa].litera);
+    expect(K[nazwa].nazwaKolor, `kolor nazwy: ${nazwa}`).toBe(M[nazwa].nazwaKolor);
+  }
+
+  // Kontrola pozytywna: kolory naprawdę są kategoryjne, a nie jednym wspólnym odcieniem.
+  const kolory = new Set(Object.values(K).map((r) => r.kategoriaKolor));
+  expect(kolory.size, 'każda kategoria ma własny kolor').toBeGreaterThan(3);
+});
