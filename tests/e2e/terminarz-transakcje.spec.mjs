@@ -414,6 +414,175 @@ test('I5 — „Usuń całą serię” zachowuje odnotowane (wykonane) podania l
   expect(d10(zostaly[0].dueDateISO)).toBe(D(1));
 });
 
+test('Przełóż o … liczy nową datę z rekordu w sejfie, nie z kopii w widoku', async ({ page }) => {
+  // Krawędź „a” z kontroli PR 5 (#170): Mn() brało datę bazową z kopii wpisu trzymanej przez
+  // widok/popover (pt(t) || Q()), więc gdy wizyta została w tle przesunięta (scalanie z innego
+  // urządzenia, którego moduł jeszcze nie zdążył pokazać), „+1 tydzień” liczyło od NIEAKTUALNEJ
+  // daty i zapisywało stary termin — zapis bez widocznego skutku (payload jest intencyjny, więc
+  // pozostałe pola ocalały). Nieaktualność kopii odtwarzamy zamrażając listę, z której moduł
+  // buduje widok; sam odczyt pojedynczej notatki (getPatientNote) zostaje prawdziwy.
+  const { D, D1 } = await otworzTerminarz(page);
+  const pid = await zapiszPacjenta(page, 'Renata Przekladana');
+  // Kategoria inna niż „followup”: tylko wtedy jest akcja „Przełóż” (followup ma „Nie zgłosił się”).
+  const id = await page.evaluate(
+    async (a) =>
+      (
+        await window.VildaVault.savePatientNote({
+          patientId: a.pid,
+          title: 'Obserwacja',
+          body: '',
+          category: 'observation',
+          dueDateISO: a.d,
+          dueTime: '09:00',
+        })
+      ).id,
+    { pid, d: D(1) },
+  );
+
+  await idzDoTygodnia(page, D1);
+  await odswiez(page);
+  await page.locator(`.tz-wb[data-note-id="${id}"]`).waitFor({ state: 'attached' });
+
+  // Od tej chwili moduł widzi zamrożoną listę — jego kopia wpisu przestaje nadążać za sejfem.
+  await page.evaluate(() => {
+    const v = window.VildaVault;
+    ['listPatientNotesInRange', 'listPatientNotesDueByDate'].forEach((nazwa) => {
+      const orig = v[nazwa].bind(v);
+      const cache = new Map();
+      v[nazwa] = async function zamrozony(...args) {
+        const klucz = JSON.stringify(args);
+        if (!cache.has(klucz)) cache.set(klucz, await orig(...args));
+        return cache.get(klucz);
+      };
+    });
+  });
+  // Jedno odświeżenie JESZCZE przed zmianą w tle — od teraz moduł widzi tylko tę migawkę.
+  await odswiez(page);
+
+  // W TLE (jak scalanie z innego urządzenia) wizyta przenosi się o dwa dni.
+  await page.evaluate(
+    async (a) => {
+      await window.VildaVault.savePatientNote({ id: a.id, patientId: a.pid, dueDateISO: a.d });
+    },
+    { id, pid, d: D(3) },
+  );
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        async (i) => String((await window.VildaVault.getPatientNote(i)).dueDateISO).slice(0, 10),
+        id,
+      ),
+    )
+    .toBe(D(3));
+  // Widok nadal pokazuje wpis w starym dniu — dokładnie ta sytuacja, w której klika lekarz.
+  expect(
+    await page.evaluate(
+      (noteId) => Boolean(document.querySelector(`.tz-wb[data-note-id="${noteId}"]`)),
+      id,
+    ),
+    'widok trzyma nieaktualną kopię wpisu',
+  ).toBe(true);
+
+  // Popover → „Przełóż” → „+1 tydzień”, wszystko na nieaktualnej kopii.
+  await page.evaluate((noteId) => {
+    document.querySelector(`.tz-wb[data-note-id="${noteId}"]`).click();
+    const b = document.querySelector('.tz-pop button[data-pop="postpone"]');
+    if (!b) throw new Error('brak przycisku „Przełóż” w popoverze');
+    b.click();
+    const plus = Array.from(document.querySelectorAll('.tz-postpone-menu button')).find(
+      (x) => (x.textContent || '').indexOf('+1 tydzie') === 0,
+    );
+    if (!plus) throw new Error('brak przycisku „+1 tydzień” w menu');
+    plus.click();
+  }, id);
+
+  // +1 tydzień ma być liczone od D(3) — aktualnej daty w sejfie — a nie od D(1) z kopii.
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(
+          async (i) => String((await window.VildaVault.getPatientNote(i)).dueDateISO).slice(0, 10),
+          id,
+        ),
+      { timeout: 8000 },
+    )
+    .toBe(D(10));
+  const po = await page.evaluate(async (i) => window.VildaVault.getPatientNote(i), id);
+  expect(po.title, 'reszta pól nietknięta').toBe('Obserwacja');
+  expect(po.dueTime, 'godzina nietknięta').toBe('09:00');
+});
+
+test('Seria podań leku: chip „Przelicz kolejne od nowej daty” nie kasuje przesunięcia na dzień roboczy', async ({
+  page,
+}) => {
+  // Krawędź „b” z kontroli PR 5 (#170), wada zastana (kod sprzed PR 1): handler chipa
+  // `.tzrx-reb` zapisywał decyzję jako `e[dzien] = { rebase }` — bez pola `mode`. Domyślne
+  // przesunięcie kolizji na najbliższy dzień roboczy powstaje dopiero przy liczeniu dat, więc
+  // sam klik w chip (bez wyboru trybu) kasował je i podanie zostawało w sobotę, mimo że dialog
+  // przez cały czas pokazywał datę roboczą.
+  const { D, D1, dialogi } = await otworzTerminarz(page);
+  await zapiszPacjenta(page, 'Lucjan Sobotni');
+
+  await otworzNowyTermin(page);
+  await wybierzPacjentaWModalu(page, 'Sobotni');
+  await klik(page, '#tzNtCats .tz-ntcat[data-cat="treatment"]');
+  await ustaw(page, '#tzNtDate', D1);
+  await klik(page, '#tzNtRxStep .tz-ntcat[data-step="custom"]');
+  await ustaw(page, '#tzNtRxStepInput', '5'); // poniedziałek + 5 dni = sobota
+  await klik(page, '#tzNtSave');
+
+  const sobota = D(6); // D1 + 5 dni
+  await page.locator(`#tzRxDlg [data-sched="${sobota}"]`).waitFor({ state: 'attached' });
+
+  const stanChipow = (dzien) =>
+    page.evaluate(
+      (d) => {
+        const wiersz = document.querySelector(`#tzRxDlg [data-sched="${d}"]`);
+        if (!wiersz) return null;
+        const chip = (sel) => {
+          const el = wiersz.querySelector(sel);
+          return el ? el.className.indexOf(' on') >= 0 || el.classList.contains('on') : null;
+        };
+        return {
+          zostaw: chip('.tzrx-act[data-act="leave"]'),
+          roboczy: chip('.tzrx-act[data-act="shift"]'),
+          przenies: chip('.tzrx-act[data-act="manual"]'),
+        };
+      },
+      dzien,
+    );
+
+  expect(await stanChipow(sobota), 'domyślnie zaznaczone przesunięcie na dzień roboczy').toEqual({
+    zostaw: false,
+    roboczy: true,
+    przenies: false,
+  });
+
+  // Klik w chip przeliczania — BEZ dotykania chipów trybu.
+  await klik(page, `#tzRxDlg [data-sched="${sobota}"] .tzrx-reb[data-reb="single"]`);
+  expect(
+    await stanChipow(sobota),
+    'chip przeliczania nie może skasować wyboru „najbliższy roboczy”',
+  ).toEqual({ zostaw: false, roboczy: true, przenies: false });
+
+  await klik(page, '#tzRxDlg #tzRxSave');
+  await expect
+    .poll(async () => (await wszystkieNotatki(page)).filter((n) => n.category === 'treatment').length)
+    .toBeGreaterThan(1);
+  const podania = (await wszystkieNotatki(page))
+    .filter((n) => n.category === 'treatment')
+    .map((n) => d10(n.dueDateISO));
+  const weekendy = podania.filter((d) => {
+    const dow = new Date(`${d}T12:00:00`).getDay();
+    return dow === 0 || dow === 6;
+  });
+  expect(weekendy, `podania w weekend: ${JSON.stringify(podania)}`).toEqual([]);
+  expect(podania, 'sobotnia kolizja nie została zapisana w sobotę').not.toContain(sobota);
+  expect(podania, 'kolizja wylądowała w najbliższym dniu roboczym (piątek — reguła remisu silnika)')
+    .toContain(D(5));
+  expect(dialogi.filter((x) => x.typ === 'alert'), JSON.stringify(dialogi)).toEqual([]);
+});
+
 test('I6 — rezerwacja terminu listy: awaria harmonogramu i ponowny „Zapisz” dają dokładnie jedną notatkę', async ({
   page,
 }) => {
