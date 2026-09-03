@@ -700,3 +700,40 @@ describe('VildaVault.listPatientNotesDueByDate — domyślny próg przypomnień 
     expect(r.idki).not.toContain(r.jutrzejsza.id);
   });
 });
+
+
+describe('VildaVault — tombstony żyją rok, nie 90 dni (decyzja właściciela 2026-09-03)', () => {
+  // Znaczniki usunięcia były przycinane po 90 dniach przy każdym eksporcie/scaleniu. Urządzenie,
+  // które milczało dłużej, wciąż miało u siebie skasowaną wizytę, a dowodu usunięcia już nie było —
+  // przy pierwszym syncu wizyta wracała na wszystkie urządzenia, bez żadnego komunikatu. Okno
+  // podniesione do 365 dni pokrywa realne przerwy (odłożony telefon, wakacje); dłuższa nieobecność
+  // to i tak przypadek „zaloguj się od nowa”.
+  const dniTemu = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+
+  it('tombstone sprzed 120 dni przeżywa eksport, sprzed 400 dni jest przycinany', async () => {
+    const dev = await createDevice('TTL');
+    const uid = dev.vault.getCurrentUser().userId;
+    const pacjent = await dev.vault.savePatient({ name: 'Tomasz Tombstone' });
+    const pid = pacjent.id || pacjent.patientId;
+    const nota = await dev.vault.savePatientNote({
+      patientId: pid, title: 'Wizyta do usunięcia', body: '', category: 'followup', dueDateISO: '2026-09-10'
+    });
+    await dev.vault.removePatientNote(nota.id);
+
+    // Postarzenie znacznika w magazynie — tak wygląda usunięcie sprzed kwartału.
+    await dev.adapter.putPatientNoteTombstoneForUser(uid, { id: nota.id, deletedAtISO: dniTemu(120) });
+    const po120 = await dev.vault.exportSyncPayload();
+    expect(
+      (po120.patientNoteTombstones || []).map((t) => t.id),
+      'usunięcie sprzed 120 dni nadal jedzie w payloadzie',
+    ).toContain(nota.id);
+
+    // Powyżej roku znacznik znika — okno ma górną granicę, żeby lista nie rosła w nieskończoność.
+    await dev.adapter.putPatientNoteTombstoneForUser(uid, { id: nota.id, deletedAtISO: dniTemu(400) });
+    const po400 = await dev.vault.exportSyncPayload();
+    expect(
+      (po400.patientNoteTombstones || []).map((t) => t.id),
+      'usunięcie sprzed 400 dni jest już przycięte',
+    ).not.toContain(nota.id);
+  });
+});

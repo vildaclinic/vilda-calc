@@ -583,6 +583,61 @@ test('Seria podań leku: chip „Przelicz kolejne od nowej daty” nie kasuje pr
   expect(dialogi.filter((x) => x.typ === 'alert'), JSON.stringify(dialogi)).toEqual([]);
 });
 
+test('Widok serii ostrzega o nierównych odstępach i czyści martwy klucz po PR 3', async ({ page }) => {
+  // Serie miesięczne zapisane przed poprawką silnika dat (PR 3) mają luki — daty są
+  // materializowane przy zapisie, więc nic ich później nie przelicza, a reguła serii nie jest
+  // przechowywana dla serii nieobecności/zajęć (tylko seriesId), więc automatyczna naprawa
+  // musiałaby zgadywać intencję. Zamiast tego widok serii liczy rozrzut odstępów i ostrzega.
+  const { D, D1 } = await otworzTerminarz(page);
+  const pid = await zapiszPacjenta(page, 'Seweryn Nierowny');
+  const dni = [D(1), D(32), D(93)]; // odstępy 31 i 61 dni — luka po pominiętym miesiącu
+  const ids = [];
+  for (let k = 0; k < dni.length; k += 1) {
+    const id = await page.evaluate(
+      async (a) =>
+        (
+          await window.VildaVault.savePatientNote({
+            patientId: a.pid,
+            title: 'Lek Y',
+            body: '',
+            category: 'treatment',
+            dueDateISO: a.d,
+            dueTime: '09:00',
+            seriesId: 'S-LUKA-e2e',
+          })
+        ).id,
+      { pid, d: dni[k] },
+    );
+    ids.push(id);
+  }
+
+  // Martwy klucz sprzed PR 3 znika przy starcie modułu.
+  await page.evaluate(() => localStorage.setItem('vilda-tz-rx-rebase-v1', 'full'));
+  await page.reload({ waitUntil: 'load' });
+  await odblokujPoReload(page, (await page.evaluate(() => window.VildaVault.getCurrentUser().userId)));
+  expect(
+    await page.evaluate(() => localStorage.getItem('vilda-tz-rx-rebase-v1')),
+    'nieużywany od PR 3 klucz jest sprzątany',
+  ).toBe(null);
+
+  await idzDoTygodnia(page, D1);
+  await odswiez(page);
+  await page.locator(`.tz-wb[data-note-id="${ids[0]}"]`).waitFor({ state: 'attached' });
+  await page.evaluate((noteId) => {
+    document.querySelector(`.tz-wb[data-note-id="${noteId}"]`).click();
+    const b = document.querySelector('.tz-pop button[data-pop="series"]');
+    if (!b) throw new Error('brak przycisku „Pokaż całą serię”');
+    b.click();
+  }, ids[0]);
+
+  await page.locator('#tzSeriesDlg').waitFor({ state: 'attached' });
+  await expect
+    .poll(async () => page.evaluate(() => document.querySelector('#tzSeriesDlg').textContent))
+    .toContain('Odstępy w tej serii są nierówne');
+  const tekst = await page.evaluate(() => document.querySelector('#tzSeriesDlg').textContent);
+  expect(tekst, 'ostrzeżenie podaje zmierzony rozrzut').toContain('od 31 do 61 dni');
+});
+
 test('I6 — rezerwacja terminu listy: awaria harmonogramu i ponowny „Zapisz” dają dokładnie jedną notatkę', async ({
   page,
 }) => {
