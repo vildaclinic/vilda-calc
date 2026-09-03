@@ -65,8 +65,10 @@
     var P = prefs();
     if (P) {
       try {
-        P.writeBooleanPreference(PREF_KEY, !!v);
-        return;
+        // Adapter potrafi ODMÓWIĆ zapisu i zwrócić false — robi tak w trybie gościa, gdzie stan
+        // użytkownika jest właśnie czyszczony. Wtedy zapisujemy lokalnie, żeby gość nie stracił
+        // pamięci zwinięcia; przy zalogowanym sejfie zapis przechodzi i jedzie do synchronizacji.
+        if (P.writeBooleanPreference(PREF_KEY, !!v) === true) return;
       } catch (_) {
         /* spadamy na localStorage poniżej */
       }

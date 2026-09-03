@@ -105,6 +105,16 @@ test('Z1 — karta grupuje wiersze po kategoriach z licznikiem i strzałką', as
   expect(kat.every((k) => k.rozwinieta === 'true'), 'domyślnie wszystko rozwinięte').toBe(true);
   expect(kat.every((k) => k.strzalka === '▾')).toBe(true);
   expect(kat.map((k) => k.widocznychWierszy)).toEqual([1, 2]);
+
+  // Licznik sekcji czasowej liczy NOTATKI, nie elementy listy. Po zgrupowaniu po kategoriach
+  // tablica przekazywana do sekcji niesie pary [nagłówek kategorii, kontener wierszy], więc
+  // jej długość to nie liczba przypomnień — CI złapało tu „Zaległe 2” przy jednej notatce.
+  const sekcja = await page.evaluate(() => {
+    const h = document.querySelector('#remindersInline .vild-rem-sec-today .vild-rem-sec-head');
+    return h ? Array.from(h.children).map((x) => x.textContent) : null;
+  });
+  expect(sekcja, 'nagłówek sekcji „Dziś” liczy trzy notatki, nie cztery elementy')
+    .toEqual(['Dziś', '3']);
 });
 
 test('Z2 — kliknięcie chowa wiersze tylko swojej kategorii, licznik zostaje', async ({ page }) => {
