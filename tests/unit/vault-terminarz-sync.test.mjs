@@ -895,3 +895,69 @@ describe('VildaVault — ostrzeżenie o nieaktualnym urządzeniu (PR 10, decyzja
     expect(wynik.staleDevice.warn).toBe(false);
   });
 });
+
+
+describe('VildaVault — urlop nie jest przypomnieniem (PR 11, zgłoszenie właściciela 2026-09-03)', () => {
+  // listPatientNotesDueByDate() to wyłącznie kanał przypomnień i zaległości: karta „Przypomnienia”
+  // na stronie głównej, odznaka dzwoneczka, modal spod dzwoneczka i panel „⚠ Zaległe” w Terminarzu.
+  // Nieobecności lekarza (Terminarz zapisuje je jako category:"absence", jedna notatka na każdy
+  // dzień urlopu, pod pseudopacjentem __vilda_activity__) trafiały do trzech z tych czterech
+  // powierzchni — modal odfiltrowywał je u siebie, reszta nie. Urlopu nie da się „odhaczyć”, więc
+  // nie jest zaległością; filtr stoi teraz w sejfie, żeby powierzchnie nie mogły się rozjechać.
+  // Kalendarz Terminarza bierze nieobecności z listPatientNotesInRange i ten tor jest nietknięty.
+  const p = (n) => String(n).padStart(2, '0');
+  const iso = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+
+  async function zUrlopem() {
+    const dev = await createDevice('URLOP');
+    const AID = dev.vault.ACTIVITY_PATIENT_ID || '__vilda_activity__';
+    const wczoraj = iso(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const dzis = iso(new Date());
+    for (const dzien of [wczoraj, dzis]) {
+      await dev.vault.savePatientNote({
+        patientId: AID, externalName: '', title: 'Urlop',
+        category: 'absence', dueDateISO: dzien, dueTime: null, seriesId: 'urlop-1'
+      });
+    }
+    const pacjent = await dev.vault.savePatient({ name: 'Jan Kontrolny' });
+    const wizyta = await dev.vault.savePatientNote({
+      patientId: pacjent.id || pacjent.patientId, title: 'Kontrola', body: '',
+      category: 'followup', dueDateISO: dzis
+    });
+    return { dev, wizyta, wczoraj, dzis, AID };
+  }
+
+  it('dni urlopu nie wchodzą do przypomnień, zwykła wizyta wchodzi', async () => {
+    const { dev, wizyta } = await zUrlopem();
+    const grupy = await dev.vault.listPatientNotesDueByDate();
+    const wszystkie = grupy.flatMap((g) => g.notes || []);
+
+    expect(wszystkie.map((n) => n.category), 'żadnej nieobecności w kanale przypomnień')
+      .not.toContain('absence');
+    expect(wszystkie.map((n) => n.id), 'kontrola pozytywna: wizyta pacjenta zostaje')
+      .toContain(wizyta.id);
+    expect(grupy.length, 'jedna grupa — sam pacjent, bez dwóch dni urlopu').toBe(1);
+    expect(grupy[0].patientName).toBe('Jan Kontrolny');
+  });
+
+  it('urlop pozostaje w kalendarzu — filtr dotyczy tylko kanału przypomnień', async () => {
+    const { dev, wczoraj, dzis } = await zUrlopem();
+    const zakres = await dev.vault.listPatientNotesInRange(wczoraj, `${dzis}T23:59:59.999Z`);
+    const urlopy = (zakres || []).filter((n) => n.category === 'absence');
+    expect(urlopy.length, 'oba dni urlopu nadal są w zakresie dla siatki Terminarza').toBe(2);
+    expect(urlopy.map((n) => n.title)).toEqual(['Urlop', 'Urlop']);
+  });
+
+  it('inne wpisy pseudopacjenta „aktywność” (np. zajęcia) nadal są przypomnieniem', async () => {
+    // Filtr celuje w kategorię, nie w pseudopacjenta — wykład czy dyżur ma się przypominać.
+    const dev = await createDevice('URLOP-AKT');
+    const AID = dev.vault.ACTIVITY_PATIENT_ID || '__vilda_activity__';
+    const dzis = iso(new Date());
+    const zajecia = await dev.vault.savePatientNote({
+      patientId: AID, externalName: 'Sala 3', title: 'Wykład',
+      category: 'activity', dueDateISO: dzis, dueTime: '23:50'
+    });
+    const grupy = await dev.vault.listPatientNotesDueByDate();
+    expect(grupy.flatMap((g) => g.notes || []).map((n) => n.id)).toContain(zajecia.id);
+  });
+});
