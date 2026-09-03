@@ -232,11 +232,15 @@ describe('D1 — najbliższy dzień roboczy ge()/ka(): reguła remisu WSTECZ (de
 });
 
 describe('D1 — wybór przeliczania serii bez lepkiej persystencji i strażnik odstępów', () => {
-  it('klucz localStorage „vilda-tz-rx-rebase-v1” zniknął z kodu (wybór żyje tylko w obrębie dialogu)', () => {
+  it('klucz localStorage „vilda-tz-rx-rebase-v1” nie jest już czytany ani zapisywany (od PR 7 tylko kasowany)', () => {
     // Ke()/$n() nie są wystawione w __internals (są sterowane z dialogu Qn, który wymaga DOM),
     // więc strażnik sprawdza źródło: dawniej jedno kliknięcie chipa utrwalało wybór globalnie.
-    expect(TERMINARZ_SOURCE).not.toContain('vilda-tz-rx-rebase-v1');
+    // Od PR 7 nazwa klucza wraca w kodzie w jednej roli — jednorazowego sprzątnięcia przy starcie.
+    expect(TERMINARZ_SOURCE).not.toMatch(/(getItem|setItem)\("vilda-tz-rx-rebase-v1"\)/);
     expect(TERMINARZ_SOURCE).not.toMatch(/localStorage\.(getItem|setItem)\(wr\)/);
+    const wystapienia = TERMINARZ_SOURCE.split('vilda-tz-rx-rebase-v1').length - 1;
+    expect(wystapienia, 'klucz występuje wyłącznie raz — w removeItem').toBe(1);
+    expect(TERMINARZ_SOURCE).toContain('removeItem("vilda-tz-rx-rebase-v1")');
   });
 
   it('strażnik odstępów Cg(): domyślne przesunięcia reguły świąt (do 3 dni) przy kroku 28 nie ostrzegają', () => {
