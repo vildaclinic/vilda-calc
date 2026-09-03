@@ -257,14 +257,14 @@ test.describe('I10 — drag&drop w widoku tygodnia liczy czas skalą siatki', ()
     expect(Math.abs(minuty - 14 * 60)).toBeLessThanOrEqual(15);
   });
 
-  test('siatka rozciągnięta poza dobę (dyżur nocny): upuszczenie na wiersz „25:00” zachowuje godzinę (dueTime \u2260 null)', async ({
+  test('siatka z dyżurem nocnym kończy się na dobie: upuszczenie na ostatni wiersz zapisuje poprawną godzinę', async ({
     page,
   }) => {
-    // yr() rozciąga siatkę do końca najpóźniejszego zdarzenia, więc nocny dyżur 19:00 + 12 h dokłada
-    // wiersze etykietowane „24:00”…„30:30”. Koniec siatki liczony bez klamry doby pozwoliłby upuścić
-    // blok na taki wiersz i zapisać „25:00”, czego regex sejfu /^([01]\d|2[0-3]):[0-5]\d$/ nie
-    // przyjmuje — notatka CICHO straciłaby dueTime i wpadła do pasa „cały dzień”. Strażnik:
-    // upuszczenie na wiersz spoza doby musi dać poprawną godzinę doby, mieszczącą cały blok.
+    // Do PR 7 yr() rozciągało siatkę do końca najpóźniejszego zdarzenia, więc nocny dyżur 19:00 + 12 h
+    // dokładał wiersze „24:00”…„30:30” — a upuszczenie na taki wiersz zapisywało godzinę, której regex
+    // sejfu /^([01]\d|2[0-3]):[0-5]\d$/ nie przyjmuje: notatka CICHO traciła dueTime i wpadała do pasa
+    // „cały dzień”. Od PR 7 siatka kończy się na dobie, więc strażnik pilnuje obu rzeczy naraz: że
+    // dyżur nocny nie rozciąga już siatki i że upuszczenie na ostatni wiersz daje godzinę mieszczącą blok.
     const { today } = await otworzTerminarz(page);
     const pid = await zapiszPacjenta(page, 'Nocna Rozciagajaca');
     await zapiszNotatke(page, {
@@ -293,9 +293,9 @@ test.describe('I10 — drag&drop w widoku tygodnia liczy czas skalą siatki', ()
 
     const g0 = await geometria(page, 0);
     const koniecSiatki = g0.startMin + g0.wierszy * 30;
-    expect(koniecSiatki, 'dyżur nocny musi rozciągnąć siatkę poza dobę').toBeGreaterThan(1440);
-    const docelowaMinuta = Math.min(25 * 60, g0.startMin + (g0.wierszy - 1) * 30);
-    expect(docelowaMinuta, 'wiersz celu musi leżeć poza dobą').toBeGreaterThan(1440);
+    expect(koniecSiatki, 'dyżur nocny nie rozciąga już siatki poza dobę').toBe(1440);
+    const docelowaMinuta = g0.startMin + (g0.wierszy - 1) * 30;
+    expect(docelowaMinuta, 'celem jest ostatni wiersz doby (23:30)').toBe(1410);
 
     // Chwytany blok (21:00) i docelowy wiersz muszą być jednocześnie w polu widzenia —
     // kursor Playwrighta operuje we współrzędnych viewportu.
@@ -449,4 +449,97 @@ test('D6 — partia 6 pacjentów od 23:00 co 15 min: ostrzeżenie „poza dobą�
   expect(await podglad()).toEqual(['22:00', '22:15', '22:30', '22:45', '23:00', '23:15']);
   expect(await ostrzezenie()).toBe('');
   expect(await stanPrzyciskow()).toEqual({ save: false, save2: false });
+});
+
+
+// ---------------------------------------------------------------------------------------------
+// Siatka domknięta do doby + ślad wydarzenia z poprzedniego dnia (decyzja właściciela 2026-09-03).
+
+test.describe('Siatka nie wychodzi poza dobę, a ogon dyżuru widać następnego dnia', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  const dzien = (today, n) => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() + n);
+    const p = (x) => String(x).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
+
+  test('dyżur 19:00 + 12 h: brak wierszy „24:00"…„30:30", blok przycięty do doby, żeton „z wczoraj" nazajutrz', async ({
+    page,
+  }) => {
+    // Przed zmianą yr() rozciągało siatkę do końca zdarzenia (1860 min), więc jeden nocny dyżur
+    // dokładał ~13 wierszy etykietowanych „24:00"…„30:30" KAŻDEMU dniu tygodnia — a po naprawie
+    // I10 (PR 4) i tak nie dało się w nich nic upuścić. Teraz siatka kończy się na dobie, blok jest
+    // przycięty, a informacja o trwaniu wydarzenia idzie podpisem „(+1 dz.)" i żetonem nazajutrz.
+    const { today } = await otworzTerminarz(page);
+    const pid = await zapiszPacjenta(page, 'Nocny Dyzurny');
+    const id = await zapiszNotatke(page, {
+      patientId: pid,
+      title: 'Nocny dyzur',
+      body: '',
+      category: 'duty',
+      dueDateISO: today,
+      dueTime: '19:00',
+      durationMin: 720,
+    });
+
+    await page.evaluate(() => window.VildaTerminarz.setView('week'));
+    await odswiez(page);
+    await page.locator('.tz-wx').waitFor({ state: 'attached' });
+
+    const etykiety = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.tz-wx__bodyrel .tz-wx__hh')).map((el) => el.textContent.trim()),
+    );
+    expect(etykiety.length, 'siatka ma wiersze').toBeGreaterThan(0);
+    expect(
+      etykiety.filter((t) => /^(2[4-9]|3\d):/.test(t)),
+      `etykiety poza dobą: ${JSON.stringify(etykiety)}`,
+    ).toEqual([]);
+    expect(etykiety[etykiety.length - 1], 'ostatni wiersz to 23:30').toBe('23:30');
+
+    // Blok dyżuru nie wystaje poniżej siatki.
+    const geometria = await page.evaluate((noteId) => {
+      const blok = document.querySelector(`.tz-wb[data-note-id="${noteId}"]:not(.tz-wb--tail)`);
+      const body = document.querySelector('.tz-wx__bodyrel');
+      if (!blok || !body) return null;
+      const b = blok.getBoundingClientRect();
+      const g = body.getBoundingClientRect();
+      return { dolBloku: Math.round(b.bottom), dolSiatki: Math.round(g.bottom), podpis: blok.textContent };
+    }, id);
+    expect(geometria, 'blok i siatka są w DOM').toBeTruthy();
+    expect(geometria.dolBloku, 'blok kończy się w obrębie siatki').toBeLessThanOrEqual(geometria.dolSiatki + 2);
+    expect(geometria.podpis, 'podpis nadal podaje prawdziwy koniec').toContain('07:00 (+1 dz.)');
+
+    // Żeton „z wczoraj" w wierszu całodniowym następnego dnia — klikalny, ale nieprzeciągalny.
+    const zeton = await page.evaluate(
+      (a) => {
+        const komorka = document.querySelector(`.tz-wx__cell--all[data-add-day="${a.jutro}"]`);
+        const el = komorka ? komorka.querySelector('.tz-wb--tail') : null;
+        return el ? { tekst: el.textContent.trim(), noteId: el.getAttribute('data-note-id') } : null;
+      },
+      { jutro: dzien(today, 1) },
+    );
+    expect(zeton, 'żeton „z wczoraj" jest w kolumnie następnego dnia').toBeTruthy();
+    expect(zeton.tekst).toContain('z wczoraj');
+    expect(zeton.tekst).toContain('do 07:00');
+    expect(zeton.noteId, 'żeton wskazuje wpis źródłowy').toBe(id);
+
+    // Widok dnia następnego (nagłówek kolumny przenosi do dnia): pasek „Z poprzedniego dnia".
+    await klik(page, `.tz-wx__dh[data-goto-day="${dzien(today, 1)}"]`);
+    await odswiez(page);
+    await page.locator('.tz-tail-row').waitFor({ state: 'attached', timeout: 8000 });
+    const pasek = await page.evaluate(() => {
+      const el = document.querySelector('.tz-tail-row');
+      return { tekst: el.textContent.trim(), noteId: el.getAttribute('data-note-id') };
+    });
+    expect(pasek.tekst).toContain('do 07:00');
+    expect(pasek.noteId, 'pasek wskazuje wpis źródłowy').toBe(id);
+
+    // Klik w pasek otwiera popover wpisu z jego prawdziwą datą i zakresem.
+    await klik(page, '.tz-tail-row');
+    await page.locator('.tz-pop').waitFor({ state: 'attached' });
+    const popover = await page.evaluate(() => document.querySelector('.tz-pop').textContent);
+    expect(popover).toContain('19:00–07:00 (+1 dz.)');
+  });
 });
