@@ -364,8 +364,10 @@ describe('D7 — etykiety względne: ciągła drabina dni → tygodnie → miesi
   // Przed audytem: „za N dni” do 45 dni, powyżej round(N/30,44) miesięcy — skok z „za 45 dni” na
   // „za 2 mies.”. PR 4 wypełnił lukę tygodniami (14–52 dni), ale kubełek „za 1 mies.” nadal nie
   // występował, a rok opisywały miesiące („za 12 mies.”). PR 8 (decyzja właściciela 2026-09-03)
-  // domyka drabinę: ≤13 dni → dni, 14–34 → tygodnie (2–5), 35–349 → miesiące (1–11), powyżej →
-  // lata z polską odmianą (rok / lata / lat).
+  // domknął drabinę: ≤13 dni → dni, 14–34 → tygodnie (2–5), 35–349 → miesiące (1–11), powyżej →
+  // lata z polską odmianą (rok / lata / lat). PR 9 (decyzja właściciela 2026-09-03) zastąpił
+  // liczebnik przy jedynce formą potoczną: „za miesiąc” / „miesiąc temu” i „za rok” / „rok temu”
+  // zamiast „za 1 mies.” i „za 1 rok”; pozostałe szczeble drabiny bez zmian.
   const ODNIESIENIE = '2026-09-02';
   const za = (n) => I.Fr(oISO(n, ODNIESIENIE), ODNIESIENIE);
 
@@ -377,13 +379,13 @@ describe('D7 — etykiety względne: ciągła drabina dni → tygodnie → miesi
     expect(za(14)).toBe('za 2 tyg.');
     expect(za(20)).toBe('za 3 tyg.');
     expect(za(34)).toBe('za 5 tyg.');
-    expect(za(35)).toBe('za 1 mies.');
-    expect(za(45)).toBe('za 1 mies.');
+    expect(za(35)).toBe('za miesiąc');
+    expect(za(45)).toBe('za miesiąc');
     expect(za(46)).toBe('za 2 mies.');
     expect(za(90)).toBe('za 3 mies.');
     expect(za(349)).toBe('za 11 mies.');
-    expect(za(350)).toBe('za 1 rok');
-    expect(za(365)).toBe('za 1 rok');
+    expect(za(350)).toBe('za rok');
+    expect(za(365)).toBe('za rok');
     expect(za(548)).toBe('za 2 lata');
     expect(za(1000)).toBe('za 3 lata');
     expect(za(1826)).toBe('za 5 lat');
@@ -393,52 +395,68 @@ describe('D7 — etykiety względne: ciągła drabina dni → tygodnie → miesi
     expect(za(-1)).toBe('wczoraj');
     expect(za(-7)).toBe('7 dni temu');
     expect(za(-14)).toBe('2 tyg. temu');
-    expect(za(-35)).toBe('1 mies. temu');
+    expect(za(-35)).toBe('miesiąc temu');
     expect(za(-90)).toBe('3 mies. temu');
-    expect(za(-365)).toBe('1 rok temu');
+    expect(za(-365)).toBe('rok temu');
     expect(za(-730)).toBe('2 lata temu');
     expect(za(-1826)).toBe('5 lat temu');
   });
 
-  it('każdy kubełek naprawdę występuje — miesiąc i rok już nie są pomijane', () => {
+  it('jedynka mówi po polsku: „za miesiąc” i „za rok”, nigdy „za 1 mies.” ani „za 1 rok”', () => {
     const wszystkie = new Set();
     for (let n = 2; n <= 2000; n += 1) wszystkie.add(za(n));
-    expect(wszystkie.has('za 1 mies.'), 'kubełek „za 1 mies.” istnieje').toBe(true);
-    expect(wszystkie.has('za 1 rok'), 'kubełek „za 1 rok” istnieje').toBe(true);
+    for (let n = -2000; n <= -2; n += 1) wszystkie.add(za(n));
+    expect(wszystkie.has('za miesiąc'), 'kubełek „za miesiąc” istnieje').toBe(true);
+    expect(wszystkie.has('miesiąc temu'), 'kubełek „miesiąc temu” istnieje').toBe(true);
+    expect(wszystkie.has('za rok'), 'kubełek „za rok” istnieje').toBe(true);
+    expect(wszystkie.has('rok temu'), 'kubełek „rok temu” istnieje').toBe(true);
+    expect(wszystkie.has('za 1 mies.'), 'liczebnik przy miesiącu nie wraca').toBe(false);
+    expect(wszystkie.has('za 1 rok'), 'liczebnik przy roku nie wraca').toBe(false);
+    expect(wszystkie.has('1 mies. temu'), 'liczebnik przy miesiącu nie wraca (przeszłość)').toBe(false);
+    expect(wszystkie.has('1 rok temu'), 'liczebnik przy roku nie wraca (przeszłość)').toBe(false);
     expect(wszystkie.has('za 11 mies.'), 'miesiące dochodzą do 11').toBe(true);
     expect(wszystkie.has('za 12 mies.'), 'rok opisują lata, nie 12 miesięcy').toBe(false);
     expect(wszystkie.has('za 1 tyg.'), 'tydzień opisują dni („za 7 dni”)').toBe(false);
+    expect(wszystkie.has('za tydzień'), 'tygodnia w liczbie pojedynczej też nie ma').toBe(false);
   });
 
+  // Jednostka etykiety niezależnie od tego, czy szczebel ma liczebnik (35 dni → „za miesiąc”,
+  // 46 dni → „za 2 mies.” — obie to ten sam szczebel drabiny).
+  const ROZBIOR = /^za (?:(\d+) )?(dni|tyg\.|mies\.|miesiąc|rok|lata|lat)$/;
+  const RODZINA = { dni: 'dni', 'tyg.': 'tyg.', 'mies.': 'mies.', miesiąc: 'mies.', rok: 'lata', lata: 'lata', lat: 'lata' };
+  const rozbior = (n) => {
+    const etykieta = za(n);
+    const m = etykieta.match(ROZBIOR);
+    expect(m, `N=${n} → ${etykieta}`).toBeTruthy();
+    return { etykieta, jednostka: RODZINA[m[2]], liczba: m[1] ? Number(m[1]) : 1 };
+  };
+
   it('brak przeskoków między jednostkami: dni → tygodnie → miesiące → lata', () => {
-    const jednostka = (n) => za(n).replace(/^za /, '').replace(/^\d+ /, '');
+    const jednostka = (n) => rozbior(n).jednostka;
     expect(jednostka(13)).toBe('dni');
     expect(jednostka(14)).toBe('tyg.');
     expect(jednostka(34)).toBe('tyg.');
     expect(jednostka(35)).toBe('mies.');
     expect(jednostka(349)).toBe('mies.');
-    expect(jednostka(350)).toBe('rok');
+    expect(jednostka(350)).toBe('lata');
     // Po etykiecie dziennej nigdy nie następuje miesięczna ani roczna, po tygodniowej — roczna.
     for (let n = 2; n <= 2000; n += 1) {
       const tu = jednostka(n);
       const dalej = jednostka(n + 1);
       if (tu === 'dni') expect(['dni', 'tyg.'], `granica przy ${n}`).toContain(dalej);
       if (tu === 'tyg.') expect(['tyg.', 'mies.'], `granica przy ${n}`).toContain(dalej);
-      if (tu === 'mies.') expect(['mies.', 'rok'], `granica przy ${n}`).toContain(dalej);
+      if (tu === 'mies.') expect(['mies.', 'lata'], `granica przy ${n}`).toContain(dalej);
     }
   });
 
   it('etykiety są ciągłe i niemalejące w obrębie jednostki dla 2…2000 dni', () => {
-    const kolejnosc = { dni: 0, 'tyg.': 1, 'mies.': 2, rok: 3, lata: 3, lat: 3 };
+    const kolejnosc = { dni: 0, 'tyg.': 1, 'mies.': 2, lata: 3 };
     let poprzedniaJednostka = 0;
     let poprzedniaLiczba = 0;
     for (let n = 2; n <= 2000; n += 1) {
-      const etykieta = za(n);
-      const m = etykieta.match(/^za (\d+) (dni|tyg\.|mies\.|rok|lata|lat)$/);
-      expect(m, `N=${n} → ${etykieta}`).toBeTruthy();
-      const jednostka = kolejnosc[m[2]];
+      const { etykieta, jednostka: nazwa, liczba } = rozbior(n);
+      const jednostka = kolejnosc[nazwa];
       expect(jednostka, `N=${n}`).toBeGreaterThanOrEqual(poprzedniaJednostka);
-      const liczba = Number(m[1]);
       if (jednostka === poprzedniaJednostka) {
         expect(liczba, `N=${n} → ${etykieta}`).toBeGreaterThanOrEqual(poprzedniaLiczba);
       }
