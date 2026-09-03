@@ -338,3 +338,303 @@ describe('VildaVault.savePatientNote — payload statusu nie cofa danych z synch
     expect(b2.rev).toBe(3);
   });
 });
+
+// ---------------------------------------------------------------------------------------------
+// K1–K3 — krawędzie NIEDOMKNIĘTE przez PR #166–#169, wykryte w kontroli końcowej audytu
+// Terminarza (2026-09-02) i naprawione w tym PR. Wszystkie scenariusze odtworzone ze skryptów
+// pomiarowych kontroli (t_k1.mjs, t_k2.mjs, t_d9d.mjs, t_k3.mjs) na PRAWDZIWYCH plikach repo.
+
+/**
+ * Wstrzykuje akcję lokalną DOKŁADNIE w okno migawki mergeSyncPayload: pierwsze wywołanie
+ * adapter.listPatientNotesForUser zrobione przez merge zwraca listę sprzed akcji, a akcja
+ * kończy się, zanim merge zdąży cokolwiek zapisać. Zwraca funkcję zdejmującą hak.
+ */
+function wOknieMigawkiMerge(dev, akcja) {
+  const adapter = dev.adapter;
+  const oryginal = adapter.listPatientNotesForUser.bind(adapter);
+  let uzbrojone = true;
+  adapter.listPatientNotesForUser = async function (userId) {
+    const migawka = await oryginal(userId);
+    if (uzbrojone) {
+      uzbrojone = false;
+      await akcja();
+    }
+    return migawka;
+  };
+  return () => { adapter.listPatientNotesForUser = oryginal; };
+}
+
+const maTombstone = (payload, id) =>
+  (payload.patientNoteTombstones || []).some((t) => t && t.id === id);
+
+describe('VildaVault.removePatientNote — wspólna kolejka zapisów per notatka (K1, kontrola 2026-09-02)', () => {
+  it('usunięcie wystartowane w trakcie zapisu tej samej notatki nie jest wskrzeszane, a tombstone zostaje w payloadzie synchronizacji', async () => {
+    // Źródło: K1 (z D9) — kolejka serializująca obejmowała wyłącznie savePatientNote;
+    // removePatientNote szło obok niej. Gdy zapis wystartował pierwszy, a usunięcie w trakcie,
+    // read-modify-write zapisu WSKRZESZAŁ notatkę (10/10 prób) i kasował jej tombstone
+    // (removePatientNoteTombstoneForUser), więc usunięcie znikało także z synchronizacji.
+    const dev = await createDevice('K1');
+    const pid = 'pat-k1';
+
+    for (let proba = 0; proba < 4; proba += 1) {
+      const created = await dev.vault.savePatientNote({
+        patientId: pid,
+        title: `Kontrola ${proba}`,
+        body: 'x',
+        category: 'followup',
+        dueDateISO: '2026-09-07',
+        dueTime: '09:00'
+      });
+      // zapis („✓ Wykonane”) startuje pierwszy, usunięcie (swipe/UNDO) w trakcie
+      const zapis = dev.vault.savePatientNote({
+        id: created.id,
+        patientId: pid,
+        completedAtISO: new Date().toISOString()
+      });
+      const usuniecie = dev.vault.removePatientNote(created.id);
+      await Promise.allSettled([zapis, usuniecie]);
+
+      expect(
+        await dev.vault.getPatientNote(created.id),
+        `próba ${proba}: równoległy zapis nie wskrzesza usuniętej notatki`
+      ).toBeFalsy();
+      expect(
+        maTombstone(await dev.vault.exportSyncPayload(), created.id),
+        `próba ${proba}: tombstone usunięcia jest w payloadzie synchronizacji`
+      ).toBe(true);
+    }
+
+    // Kontrola pozytywna (odwrotna kolejność, działała już przed naprawą): usunięcie pierwsze,
+    // zapis w trakcie — zapis ma zostać odrzucony, notatka pozostaje usunięta.
+    for (let proba = 0; proba < 3; proba += 1) {
+      const created = await dev.vault.savePatientNote({
+        patientId: pid,
+        title: `Odwrotna ${proba}`,
+        body: '',
+        category: 'followup',
+        dueDateISO: '2026-09-07'
+      });
+      const usuniecie = dev.vault.removePatientNote(created.id);
+      const zapis = dev.vault.savePatientNote({
+        id: created.id,
+        patientId: pid,
+        completedAtISO: new Date().toISOString()
+      });
+      const wyniki = await Promise.allSettled([usuniecie, zapis]);
+      expect(wyniki[1].status, `próba ${proba}: zapis po usunięciu odrzucony`).toBe('rejected');
+      expect(String(wyniki[1].reason && wyniki[1].reason.message)).toMatch(/nie istnieje/);
+      expect(await dev.vault.getPatientNote(created.id), `próba ${proba}: notatka pozostaje usunięta`).toBeFalsy();
+    }
+
+    // Kontrola pozytywna: równoległe zapisy PIĘCIU RÓŻNYCH notatek nie blokują się nawzajem.
+    const ids = [];
+    for (let i = 0; i < 5; i += 1) {
+      ids.push((await dev.vault.savePatientNote({
+        patientId: pid, title: `Rowna ${i}`, body: '', category: 'followup', dueDateISO: '2026-09-08'
+      })).id);
+    }
+    await Promise.all(ids.map((id) => dev.vault.savePatientNote({ id, patientId: pid, dueTime: '11:45' })));
+    for (const id of ids) {
+      expect((await dev.vault.getPatientNote(id)).dueTime, 'różne notatki zapisane równolegle').toBe('11:45');
+    }
+  });
+});
+
+describe('VildaVault.mergeSyncPayload — sekcja krytyczna per notatka (K2, kontrola 2026-09-02)', () => {
+  it('lokalny zapis wykonany w oknie migawki merge nie jest nadpisany starszą wersją zdalną', async () => {
+    // Źródło: K2 (z D9/I1) — merge decydował o nadpisaniu na podstawie MIGAWKI zrobionej na
+    // starcie fazy notatek, a pisał dziesiątki/setki ms później, prosto przez adapter, poza
+    // kolejką. Lokalny zapis wstrzelony w to okno ginął bezgłośnie (zmierzone 10/10).
+    // Po naprawie merge bierze blokadę per notatka i czyta rekord NA ŚWIEŻO w sekcji krytycznej.
+    const A = await createDevice('K2A');
+    const B = await createDevice('K2B');
+    const pid = 'pat-k2';
+
+    for (let proba = 0; proba < 3; proba += 1) {
+      const created = await A.vault.savePatientNote({
+        patientId: pid, title: `Wizyta ${proba}`, body: '', category: 'followup',
+        dueDateISO: '2026-09-07', dueTime: '09:00'
+      });
+      await syncTo(B, A);
+      await sleep(3);
+      // B przekłada wizytę i wysyła payload
+      await B.vault.savePatientNote({ id: created.id, patientId: pid, dueDateISO: '2026-09-10', dueTime: '11:00' });
+      const payload = await B.vault.exportSyncPayload();
+      await sleep(3);
+
+      // A: „✓ Wykonane” wykonane DOKŁADNIE w oknie migawki merge
+      const zdejmij = wOknieMigawkiMerge(A, () =>
+        A.vault.savePatientNote({ id: created.id, patientId: pid, completedAtISO: new Date().toISOString() }));
+      await A.vault.mergeSyncPayload(payload);
+      zdejmij();
+
+      const po = await A.vault.getPatientNote(created.id);
+      expect(po, `próba ${proba}: notatka istnieje po merge`).toBeTruthy();
+      expect(po.completedAtISO, `próba ${proba}: status „Wykonane” z okna migawki nie został zgubiony`).toBeTruthy();
+    }
+
+    // Kontrola pozytywna: merge BEZ wyścigu nadal przenosi zmiany i jest idempotentny.
+    const spokojna = await A.vault.savePatientNote({
+      patientId: pid, title: 'Spokojna', body: 'tresc', category: 'followup', dueDateISO: '2026-09-07', dueTime: '09:00'
+    });
+    await syncTo(B, A);
+    await sleep(3);
+    await B.vault.savePatientNote({ id: spokojna.id, patientId: pid, dueDateISO: '2026-09-12', dueTime: '13:15' });
+    await syncTo(A, B);
+    const poSpokojnej = await A.vault.getPatientNote(spokojna.id);
+    expect(day(poSpokojnej), 'merge bez wyścigu przenosi datę').toBe('2026-09-12');
+    expect(poSpokojnej.dueTime).toBe('13:15');
+    expect(poSpokojnej.title, 'tytuł zachowany').toBe('Spokojna');
+    expect(poSpokojnej.body, 'treść zachowana').toBe('tresc');
+    const powtorka = await syncTo(A, B);
+    expect(powtorka.updatedPatientNoteCount || 0, 'powtórzony merge nie zmienia notatek').toBe(0);
+  });
+
+  it('usunięcie przyniesione przez merge nie jest cofane przez równoległą szybką akcję i nie wraca na urządzenie, które kasowało', async () => {
+    // Źródło: K2 — merge kasował notatki bezpośrednio przez adapter, poza kolejką: równoległe
+    // „✓ Wykonane” wskrzeszało wizytę usuniętą na drugim urządzeniu (zmierzone 8/8) i wskrzeszenie
+    // replikowało się z powrotem na WSZYSTKIE urządzenia. Reguła po naprawie: w oknie
+    // współbieżności merge↔zapis wygrywa tombstone, deterministycznie i niezależnie od przeplotu.
+    const A = await createDevice('K2C');
+    const B = await createDevice('K2D');
+    const pid = 'pat-k2b';
+
+    for (let proba = 0; proba < 3; proba += 1) {
+      const created = await A.vault.savePatientNote({
+        patientId: pid, title: `Do usunięcia ${proba}`, body: '', category: 'followup', dueDateISO: '2026-09-07'
+      });
+      await syncTo(B, A);
+      await sleep(3);
+      await B.vault.removePatientNote(created.id); // usunięcie na drugim urządzeniu
+      const payload = await B.vault.exportSyncPayload();
+
+      // merge w tle na A + szybka akcja lekarza na tej samej wizycie (nieaktualny widok)
+      const merge = A.vault.mergeSyncPayload(payload);
+      const akcja = A.vault
+        .savePatientNote({ id: created.id, patientId: pid, completedAtISO: new Date().toISOString() })
+        .catch(() => null);
+      await Promise.all([merge, akcja]);
+
+      expect(await A.vault.getPatientNote(created.id), `próba ${proba}: usunięcie nie zostało cofnięte na A`).toBeFalsy();
+      expect(maTombstone(await A.vault.exportSyncPayload(), created.id), `próba ${proba}: A niesie tombstone dalej`).toBe(true);
+      await syncTo(B, A);
+      expect(await B.vault.getPatientNote(created.id), `próba ${proba}: wizyta nie wróciła na urządzenie, które kasowało`).toBeFalsy();
+    }
+
+    // Kontrola pozytywna LWW (poza wyścigiem): edycja lokalna ZAKOŃCZONA przed startem merge
+    // i nowsza niż deletedAtISO nadal przeżywa starsze usunięcie zdalne.
+    const lww = await A.vault.savePatientNote({
+      patientId: pid, title: 'LWW', body: '', category: 'followup', dueDateISO: '2026-09-07'
+    });
+    await syncTo(B, A);
+    await sleep(3);
+    await B.vault.removePatientNote(lww.id);
+    const payloadLww = await B.vault.exportSyncPayload();
+    await sleep(25);
+    await A.vault.savePatientNote({ id: lww.id, patientId: pid, completedAtISO: new Date().toISOString() });
+    await A.vault.mergeSyncPayload(payloadLww);
+    expect(
+      await A.vault.getPatientNote(lww.id),
+      'nowsza edycja zakończona przed merge przeżywa starsze usunięcie zdalne (LWW bez zmian)'
+    ).toBeTruthy();
+  });
+});
+
+describe('VildaVault.removeWaitlistList — awaria sprzątania nie kończy się cichym sukcesem (K3, kontrola 2026-09-02)', () => {
+  const ACT = '__vilda_activity__';
+
+  async function zalozListeZTerminem(dev, nazwa) {
+    await dev.vault.addWaitlistList(nazwa);
+    const rezerwacja = await dev.vault.savePatientNote({
+      patientId: ACT, category: 'reservation', externalName: nazwa, title: '',
+      dueDateISO: '2026-09-16', dueTime: '09:00', durationMin: 60, procedureType: nazwa
+    });
+    await dev.vault.setWaitlistSchedule(nazwa, {
+      dateISO: '2026-09-16', time: '09:00', reservationNoteId: rezerwacja.id, durationMin: 60
+    });
+    return rezerwacja.id;
+  }
+
+  async function stan(dev, klucz, rezerwacjaId) {
+    return {
+      lista: Boolean((await dev.vault.getWaitlistLists())[klucz]),
+      termin: Boolean((await dev.vault.getWaitlistSchedules())[klucz]),
+      rezerwacja: Boolean(await dev.vault.getPatientNote(rezerwacjaId))
+    };
+  }
+
+  it('awaria kasowania notatki-rezerwacji zgłasza błąd, nie zostawia sieroty w kalendarzu, a ponowna próba sprząta komplet', async () => {
+    // Źródło: K3 (z I6) — sprzątanie po usunięciu listy było opakowane w try{}catch{}: przy awarii
+    // kasowania rezerwacji funkcja kończyła się CICHYM SUKCESEM (lista znikała, w kalendarzu
+    // zostawał osierocony blok 🔒, bez komunikatu i bez ścieżki sprzątnięcia z UI).
+    const dev = await createDevice('K3B');
+
+    // Kontrola pozytywna: ścieżka szczęśliwa sprząta wszystko i propaguje się przez sync.
+    const drugie = await createDevice('K3Bs');
+    const idOk = await zalozListeZTerminem(dev, 'BACC');
+    await syncTo(drugie, dev);
+    await sleep(3);
+    await dev.vault.removeWaitlistList('BACC');
+    expect(await stan(dev, 'bacc', idOk), 'ścieżka szczęśliwa sprząta listę, termin i rezerwację')
+      .toEqual({ lista: false, termin: false, rezerwacja: false });
+    await syncTo(drugie, dev);
+    expect(await stan(drugie, 'bacc', idOk), 'usunięcie propaguje się na drugie urządzenie')
+      .toEqual({ lista: false, termin: false, rezerwacja: false });
+
+    // Awaria kasowania rezerwacji.
+    const idAwaria = await zalozListeZTerminem(dev, 'OGTT');
+    const oryginal = dev.adapter.removePatientNoteForUser.bind(dev.adapter);
+    dev.adapter.removePatientNoteForUser = async () => { throw new Error('symulowana awaria IndexedDB'); };
+    let blad = null;
+    try {
+      await dev.vault.removeWaitlistList('OGTT');
+    } catch (e) {
+      blad = e;
+    }
+    dev.adapter.removePatientNoteForUser = oryginal;
+
+    expect(blad, 'awaria sprzątania jest zgłoszona wywołującemu, a nie połknięta').toBeTruthy();
+    expect(blad.message, 'komunikat mówi, czego nie udało się usunąć').toMatch(/rezerwacji/);
+    expect(blad.message, 'komunikat mówi, że lista i termin pozostają bez zmian').toMatch(/pozostaj/);
+    expect(await stan(dev, 'ogtt', idAwaria), 'stan spójny: nic nie zniknęło, brak osieroconej rezerwacji')
+      .toEqual({ lista: true, termin: true, rezerwacja: true });
+
+    // Ponowne kliknięcie „Usuń listę” po ustaniu awarii domyka sprzątanie.
+    await dev.vault.removeWaitlistList('OGTT');
+    expect(await stan(dev, 'ogtt', idAwaria), 'ponowna próba sprząta komplet')
+      .toEqual({ lista: false, termin: false, rezerwacja: false });
+  });
+
+  it('awaria zapisu terminu listy zgłasza, co już zostało usunięte, a lista nie znika przed swoim terminem', async () => {
+    // Źródło: K3 (z I6) — drugi punkt awarii: zapis wlsched. Przed naprawą lista była kasowana
+    // JAKO PIERWSZA, więc porażka kolejnego kroku zostawiała osierocony termin listy bez listy;
+    // po naprawie kolejność jest odwrócona (rezerwacja → termin → lista) i błąd jest jawny.
+    const dev = await createDevice('K3C');
+    const id = await zalozListeZTerminem(dev, 'USG');
+
+    const oryginal = dev.adapter.putUserMeta.bind(dev.adapter);
+    let wywolania = 0;
+    dev.adapter.putUserMeta = async (...args) => {
+      wywolania += 1;
+      if (wywolania === 1) throw new Error('symulowana awaria zapisu terminu');
+      return oryginal(...args);
+    };
+    let blad = null;
+    try {
+      await dev.vault.removeWaitlistList('USG');
+    } catch (e) {
+      blad = e;
+    }
+    dev.adapter.putUserMeta = oryginal;
+
+    expect(blad, 'awaria zapisu terminu jest zgłoszona wywołującemu').toBeTruthy();
+    expect(blad.message, 'komunikat wskazuje termin listy').toMatch(/terminu listy/);
+    expect(blad.message, 'komunikat mówi, co JUŻ się udało (rezerwacja usunięta)').toMatch(/rezerwacj[ęe] usunięto/);
+    expect(await stan(dev, 'usg', id), 'lista i jej termin zostają — brak osieroconego terminu')
+      .toEqual({ lista: true, termin: true, rezerwacja: false });
+
+    await dev.vault.removeWaitlistList('USG');
+    expect(await stan(dev, 'usg', id), 'ponowna próba domyka usunięcie listy')
+      .toEqual({ lista: false, termin: false, rezerwacja: false });
+  });
+});

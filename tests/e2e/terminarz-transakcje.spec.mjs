@@ -523,6 +523,159 @@ test('I7 — cache dni nieobecności: brak fantomu po odrzuconym zapisie i po us
   expect(wizyty.length).toBe(1);
 });
 
+test('K3 — usunięcie listy oczekujących: awaria sprzątania rezerwacji jest zgłaszana, lista nie znika, a ponowna próba domyka', async ({
+  page,
+}) => {
+  // Kontrola końcowa audytu 2026-09-02, K3 (z I6): removeWaitlistList opakowywało sprzątanie
+  // w try{}catch{} — przy awarii kasowania notatki-rezerwacji kończyło się CICHYM SUKCESEM:
+  // lista znikała, a w kalendarzu zostawała osierocona rezerwacja (blok z kłódką) bez komunikatu
+  // i bez ścieżki sprzątnięcia z UI. Awaria wstrzykiwana NAJNIŻEJ, jak się da (pierwsze
+  // IDBObjectStore.delete rzuca), więc idzie przez całą ścieżkę sejfu, nie przez podmianę API.
+  const { dialogi, D } = await otworzTerminarz(page);
+  const rezerwacje = async () => (await wszystkieNotatki(page)).filter((n) => n.category === 'reservation');
+  const harmonogramy = async () =>
+    Object.keys((await page.evaluate(() => window.VildaVault.getWaitlistSchedules())) || {});
+  const listy = async () => Object.keys(await page.evaluate(() => window.VildaVault.getWaitlistLists()));
+
+  // Pusta lista z terminem i zarezerwowanym miejscem w kalendarzu (przycisk „Usuń listę”
+  // pokazuje się tylko przy liście bez pacjentów).
+  await page.evaluate(async () => {
+    await window.VildaVault.addWaitlistList('Rezonans');
+  });
+  await page.evaluate(() => window.VildaTerminarz.setView('waitlist'));
+  await odswiez(page);
+  await page.locator('[data-wl-sched]').first().waitFor({ state: 'attached' });
+  await page.evaluate(() => document.querySelector('[data-wl-sched]').click());
+  await page.locator('#tzSchedOverlay').waitFor({ state: 'attached' });
+  await ustaw(page, '#tzSchedDate', D(3));
+  await ustaw(page, '#tzSchedTime', '15:00');
+  await page.evaluate(() => {
+    const c = document.querySelector('#tzSchedResv');
+    if (!c.checked) c.click();
+  });
+  await klik(page, '#tzSchedSave');
+  await expect(page.locator('#tzSchedOverlay')).toHaveCount(0);
+  await page.waitForTimeout(600);
+  expect((await rezerwacje()).length).toBe(1);
+  await odswiez(page);
+
+  // Pierwsze delete() w IndexedDB rzuca — to dokładnie krok kasowania notatki-rezerwacji.
+  await page.evaluate(() => {
+    const proto = IDBObjectStore.prototype;
+    const orig = proto.delete;
+    let uzyte = false;
+    proto.delete = function (...a) {
+      if (!uzyte) {
+        uzyte = true;
+        proto.delete = orig;
+        throw new Error('SYMULOWANA AWARIA IndexedDB.delete');
+      }
+      return orig.apply(this, a);
+    };
+  });
+  const dialogowPrzed = dialogi.length;
+  await page.locator('[data-wl-dellist]').first().waitFor({ state: 'attached' });
+  await page.evaluate(() => document.querySelector('[data-wl-dellist]').click());
+  await expect.poll(() => dialogi.length).toBeGreaterThan(dialogowPrzed + 1); // confirm + alert
+  await page.waitForTimeout(800);
+
+  const komunikat = dialogi.slice(dialogowPrzed).map((d) => d.tekst).join(' || ');
+  expect(komunikat, 'lekarz dostaje jawny komunikat zamiast cichego sukcesu').toContain(
+    'Nie udało się usunąć listy',
+  );
+  expect(komunikat, 'komunikat mówi, czego nie udało się usunąć').toContain('rezerwacji');
+  expect(komunikat, 'komunikat mówi, że reszta została bez zmian').toContain('pozostają bez zmian');
+
+  // Stan po awarii jest spójny: nic nie znikło, w kalendarzu nie ma sieroty.
+  expect(await listy(), 'lista NIE znika przy nieudanym sprzątaniu').toHaveLength(1);
+  expect(await harmonogramy(), 'termin listy zostaje').toHaveLength(1);
+  expect((await rezerwacje()).length, 'rezerwacja zostaje (brak sieroty i brak cichej utraty)').toBe(1);
+
+  // Widok odświeżony po błędzie — przycisk „Usuń listę” znowu klikalny.
+  await page.locator('[data-wl-dellist]').first().waitFor({ state: 'attached' });
+  expect(await page.evaluate(() => document.querySelector('[data-wl-dellist]').disabled)).toBe(false);
+
+  // Ponowne kliknięcie po ustaniu awarii domyka sprzątanie.
+  await page.evaluate(() => document.querySelector('[data-wl-dellist]').click());
+  await expect.poll(async () => (await listy()).length, { timeout: 8000 }).toBe(0);
+  await page.waitForTimeout(400);
+  expect(await harmonogramy(), 'termin listy sprzątnięty przy ponownej próbie').toHaveLength(0);
+  expect((await rezerwacje()).length, 'rezerwacja sprzątnięta przy ponownej próbie').toBe(0);
+});
+
+test('K4 — partia z listy oczekujących: awaria procedury nie kasuje komunikatu o braku przypomnienia „Wynik”', async ({
+  page,
+}) => {
+  // Kontrola końcowa audytu 2026-09-02, K4 (z I4): catch od awarii PROCEDURY zerował listę
+  // nieudanych follow-upów, więc zgłoszony wcześniej w tej samej partii brak przypomnienia
+  // „Wynik” przepadał. Po rezygnacji z ponownego „Umów” pacjentka zostawała umówiona na
+  // procedurę bez przypomnienia o wyniku i BEZ JAKIEJKOLWIEK INFORMACJI dla lekarza.
+  const { dialogi, D } = await otworzTerminarz(page);
+  const pacjenci = [];
+  for (const name of ['Ala Cicha', 'Basia Cicha']) {
+    const pid = await zapiszPacjenta(page, name);
+    await page.evaluate(
+      async (a) =>
+        window.VildaVault.savePatientNote({
+          patientId: a.pid,
+          title: 'RTG',
+          body: '',
+          category: 'procedura',
+          procedureType: 'RTG',
+        }),
+      { pid },
+    );
+    pacjenci.push(pid);
+  }
+  await page.evaluate(() => window.VildaTerminarz.setView('waitlist'));
+  await odswiez(page);
+  await page.locator('.tz-wl__chk[data-wl-sel]').first().waitFor({ state: 'attached' });
+  await page.evaluate(() =>
+    document.querySelectorAll('.tz-wl__chk[data-wl-sel]').forEach((c) => {
+      if (!c.checked) c.click();
+    }),
+  );
+  await klik(page, '#tzWlSchedule');
+  await page.locator('#tzWlBatchOverlay').waitFor({ state: 'attached' });
+  await ustaw(page, '#tzWlbDate', D(4));
+  await klik(page, '#tzWlbPendChk');
+
+  // Kolejność zapisów: 1 = procedura Ali, 2 = „Wynik” Ali (awaria), 3 = procedura Basi (awaria).
+  await page.evaluate(() => {
+    const v = window.VildaVault;
+    const orig = v.savePatientNote;
+    let n = 0;
+    v.savePatientNote = function () {
+      n += 1;
+      if (n === 2 || n === 3) return Promise.reject(new Error(`SYMULOWANA AWARIA #${n}`));
+      return orig.apply(v, arguments);
+    };
+  });
+  await klik(page, '#tzWlbSave');
+  await expect.poll(() => dialogi.length).toBeGreaterThan(0);
+  await page.waitForTimeout(400);
+
+  const komunikat = dialogi.map((d) => d.tekst).join(' || ');
+  expect(komunikat, 'awaria procedury zgłoszona').toContain('Nie udało się umówić (Basia Cicha)');
+  expect(komunikat, 'pacjentka bez przypomnienia „Wynik” wymieniona w tym samym komunikacie').toContain(
+    'Ala Cicha',
+  );
+  expect(komunikat, 'komunikat nazywa brakujące przypomnienie').toMatch(/Wynik/);
+
+  // Rezygnacja z ponownego „Umów” — Ala ma procedurę bez przypomnienia, ale lekarz o tym wie.
+  await klik(page, '#tzWlbCancel');
+  await page.waitForTimeout(400);
+  const all = await wszystkieNotatki(page);
+  const bilans = pacjenci.map((pid) => ({
+    proc: all.filter((n) => n.patientId === pid && n.category === 'procedura' && n.dueDateISO).length,
+    wynik: all.filter((n) => n.patientId === pid && n.category === 'wynik-badania').length,
+  }));
+  expect(bilans).toEqual([
+    { proc: 1, wynik: 0 },
+    { proc: 0, wynik: 0 },
+  ]);
+});
+
 // ---------------------------------------------------------------------------------------------
 // I8 — tryb wąski (swipe z UNDO istnieje tylko dla szerokości ≤700 px). Uruchamiane w projekcie
 // desktop-chromium z nadpisanym kontekstem (viewport 390×844, dotyk). Headless Chromium nie ma
@@ -654,5 +807,147 @@ test.describe('I8 — usuwanie z UNDO w trybie wąskim', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
     await page.waitForTimeout(4500); // dłużej niż timer UNDO — nic nie może usunąć wpisu
     expect(await istnieje(page, idC)).toBe(true);
+  });
+
+  // K5 — kontrola końcowa audytu 2026-09-02: pagehide domyka usunięcie tylko wtedy, gdy dokument
+  // jeszcze żyje. Nawigacja W TEJ SAMEJ KARCIE w oknie 4 s (klik w link aplikacji, F5, page.goto)
+  // startowała removePatientNote, ale asynchroniczny łańcuch sejfu (odczyt → usunięcie →
+  // tombstone → audyt) nie kończył się przed zniszczeniem dokumentu: „usunięta” wizyta wracała.
+  // Naprawa: synchroniczny „zamiar usunięcia” w localStorage przy uzbrojeniu UNDO, dokańczany
+  // idempotentnie przy najbliższym starcie modułu i kasowany przy „Cofnij”.
+  const KLUCZ_ZAMIARU = 'vilda-tz-pending-del-v1';
+  const zamiar = (page) => page.evaluate((k) => localStorage.getItem(k), KLUCZ_ZAMIARU);
+
+  test('K5 — swipe → przejście na inną podstronę w oknie „Cofnij” domyka usunięcie po powrocie', async ({
+    page,
+  }) => {
+    const { userId, today } = await otworzTerminarz(page);
+    const pid = await zapiszPacjenta(page, 'Igor Nawigacyjny');
+    const id = await dodajCalodniowa(page, pid, today, 'UNDO-nawigacja');
+    await pokazWiersz(page, id);
+
+    const sw = await swipeUsun(page, id);
+    expect(sw.toast, JSON.stringify(sw)).toBe(true);
+    const zapisany = await zamiar(page);
+    expect(zapisany, 'zamiar usunięcia zapisany synchronicznie przy uzbrojeniu UNDO').toBeTruthy();
+    expect(JSON.parse(zapisany).id, 'zamiar dotyczy usuwanego wpisu').toBe(id);
+    expect(await istnieje(page, id), 'w oknie „Cofnij” wpis jeszcze jest').toBe(true);
+
+    // Klik w link aplikacji — nawigacja w TEJ SAMEJ karcie, wciąż w oknie 4 s.
+    await page.evaluate(() => {
+      const a = document.createElement('a');
+      a.href = '/index.html';
+      document.body.appendChild(a);
+      a.click();
+    });
+    await page.waitForTimeout(900);
+    await page.goto('/terminarz.html', { waitUntil: 'load' });
+    await odblokujPoReload(page, userId);
+
+    await expect.poll(() => istnieje(page, id), { timeout: 8000 }).toBe(false);
+    await page.evaluate(() => window.VildaTerminarz.setView('day'));
+    await odswiez(page);
+    await expect(page.locator(`.tz-row[data-note-id="${id}"]`)).toHaveCount(0);
+    expect(await zamiar(page), 'zamiar sprzątnięty po dokończeniu usunięcia').toBe(null);
+  });
+
+  test('K5 — swipe → F5 w oknie „Cofnij” domyka usunięcie, a po „Cofnij” przeładowanie zostawia wpis', async ({
+    page,
+  }) => {
+    const { userId, today } = await otworzTerminarz(page);
+    const pid = await zapiszPacjenta(page, 'Klara Cofajaca');
+
+    // (a) „Cofnij” kasuje zamiar — przeładowanie NIE MOŻE usunąć cofniętego wpisu.
+    const idCofniety = await dodajCalodniowa(page, pid, today, 'UNDO-cofniety-F5');
+    await pokazWiersz(page, idCofniety);
+    const swC = await swipeUsun(page, idCofniety);
+    expect(swC.toast, JSON.stringify(swC)).toBe(true);
+    expect(await zamiar(page)).toBeTruthy();
+    await klik(page, '#tzUndoBtn');
+    await page.waitForTimeout(200);
+    expect(await zamiar(page), '„Cofnij” kasuje zamiar natychmiast').toBe(null);
+    await page.reload({ waitUntil: 'load' });
+    await odblokujPoReload(page, userId);
+    await page.waitForTimeout(1200);
+    expect(await istnieje(page, idCofniety), 'cofnięty wpis przeżywa przeładowanie').toBe(true);
+
+    // (b) swipe bez „Cofnij” + F5 w oknie 4 s — usunięcie zostaje dokończone przy starcie modułu.
+    const idUsuwany = await dodajCalodniowa(page, pid, today, 'UNDO-F5');
+    await pokazWiersz(page, idUsuwany);
+    const swU = await swipeUsun(page, idUsuwany);
+    expect(swU.toast, JSON.stringify(swU)).toBe(true);
+    await page.reload({ waitUntil: 'load' });
+    await odblokujPoReload(page, userId);
+    await expect.poll(() => istnieje(page, idUsuwany), { timeout: 8000 }).toBe(false);
+    expect(await zamiar(page)).toBe(null);
+    expect(await istnieje(page, idCofniety), 'cofnięty wpis nadal nietknięty').toBe(true);
+
+    // (c) zamiar starszy niż okno ważności (10 min) jest ignorowany i czyszczony — nic nie ginie.
+    await page.evaluate(
+      (a) => {
+        localStorage.setItem(
+          a.k,
+          JSON.stringify({ id: a.id, u: null, s: null, ts: Date.now() - 11 * 60 * 1000 }),
+        );
+      },
+      { k: KLUCZ_ZAMIARU, id: idCofniety },
+    );
+    await page.reload({ waitUntil: 'load' });
+    await odblokujPoReload(page, userId);
+    await page.waitForTimeout(1200);
+    expect(await istnieje(page, idCofniety), 'przeterminowany zamiar nie usuwa wpisu').toBe(true);
+    expect(await zamiar(page), 'przeterminowany zamiar jest czyszczony').toBe(null);
+  });
+
+  test('K5 — zamknięcie karty: porzucony zamiar innej karty domyka się przy odblokowaniu sejfu', async ({
+    page,
+  }) => {
+    // Kontrola PR 5, pomiar zamknięcia karty: `pagehide` nie zdąża dokończyć usunięcia (przed PR 5
+    // ginęło 5/10 prób, po dołożeniu kolejki sejfu 0/10 dochodziło do skutku), a zamiar przeżywa
+    // w localStorage — ale identyfikator karty siedzi w sessionStorage, który ginie razem z kartą.
+    // Domknięcia musi więc podjąć się INNA karta i wolno jej to zrobić dopiero po wygaśnięciu okna
+    // „Cofnij” (10 s). Domknięcie bywa też odległe w czasie od startu modułu — sejf odblokowuje
+    // się dopiero po wpisaniu hasła — więc zamiar jest sprawdzany także przy odblokowaniu sejfu.
+    const { userId, today } = await otworzTerminarz(page);
+    const pid = await zapiszPacjenta(page, 'Zofia Zamknieta');
+    const id = await dodajCalodniowa(page, pid, today, 'UNDO-inna-karta');
+    const ustawZamiar = (wiekMs) =>
+      page.evaluate(
+        (a) => {
+          localStorage.setItem(
+            a.k,
+            JSON.stringify({ id: a.id, u: a.u, s: 'inna-karta-xyz', ts: Date.now() - a.w }),
+          );
+        },
+        { k: KLUCZ_ZAMIARU, id, u: userId, w: wiekMs },
+      );
+
+    // (a) świeży zamiar z innej karty — jej okno „Cofnij” może jeszcze trwać, nie ruszamy wpisu.
+    await ustawZamiar(0);
+    await page.reload({ waitUntil: 'load' });
+    await odblokujPoReload(page, userId);
+    await page.waitForTimeout(1500);
+    expect(await istnieje(page, id), 'świeży zamiar innej karty nie usuwa wpisu').toBe(true);
+    expect(await zamiar(page), 'świeży zamiar innej karty czeka na później').toBeTruthy();
+
+    // (b) ten sam zamiar po wygaśnięciu okna „Cofnij”, domknięty przy ODBLOKOWANIU sejfu.
+    //     Karta startuje z zablokowanym sejfem (czyścimy sessionStorage, więc sesja się nie
+    //     odtwarza — tak jak po zamknięciu przeglądarki), a hasło wpisujemy po wygaśnięciu
+    //     pętli startowej modułu (10 s): zamiar może domknąć już tylko hak odblokowania.
+    await ustawZamiar(20000);
+    await page.evaluate(() => sessionStorage.clear());
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaTerminarz));
+    expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
+    await page.waitForTimeout(11000); // dłużej niż pętla startowa modułu
+    expect(await zamiar(page), 'zablokowany sejf nie rusza zamiaru').toBeTruthy();
+    await page.evaluate(
+      async (a) => {
+        await window.VildaVault.unlockUser(a.userId, a.pw);
+      },
+      { userId, pw: HASLO },
+    );
+    await expect.poll(() => istnieje(page, id), { timeout: 8000 }).toBe(false);
+    expect(await zamiar(page), 'zamiar sprzątnięty po domknięciu').toBe(null);
   });
 });
