@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // Testy strażnicze po audycie Terminarza (2026-09-02) — znaleziska D9, I1, I2.
@@ -636,5 +636,67 @@ describe('VildaVault.removeWaitlistList — awaria sprzątania nie kończy się 
     await dev.vault.removeWaitlistList('USG');
     expect(await stan(dev, 'usg', id), 'ponowna próba domyka usunięcie listy')
       .toEqual({ lista: false, termin: false, rezerwacja: false });
+  });
+});
+
+
+describe('VildaVault.listPatientNotesDueByDate — domyślny próg przypomnień liczony z daty LOKALNEJ (2026-09-03)', () => {
+  // Kontrola PR 5 (krawędź „c"): domyślny próg powstawał jako
+  // `new Date(rok, mies., dzień, 23,59,59,999).toISOString()`, czyli lokalna północ przeliczona
+  // na UTC. Rekordy trzymają `dueDateISO` znormalizowane do `YYYY-MM-DDT00:00:00.000Z`, a
+  // porównanie jest leksykalne — więc na zachód od UTC próg przeskakiwał na dzień następny
+  // (Los Angeles, UTC-7: lokalne 23:59 dziś = jutro 06:59Z > jutro 00:00Z) i do przypomnień
+  // wpadały wizyty z JUTRA. To lustro znaleziska D8, które w samym Terminarzu naprawiono w PR 3
+  // przekazaniem własnego progu; `vilda_chrome.js` i `vilda_auth_ui.js` wołają bez argumentu.
+  const strefaWyjsciowa = process.env.TZ;
+  const p2 = (n) => String(n).padStart(2, '0');
+  const dzienLokalny = (offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() + (offset || 0));
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  };
+
+  async function sprawdzWStrefie(strefa) {
+    process.env.TZ = strefa;
+    const dev = await createDevice(`TZ${strefa.replace(/[^A-Za-z]/g, '')}`);
+    const dzis = dzienLokalny(0);
+    const jutro = dzienLokalny(1);
+    const pacjent = await dev.vault.savePatient({ name: 'Tomasz Strefowy' });
+    const pid = pacjent.id || pacjent.patientId;
+    const dzisiejsza = await dev.vault.savePatientNote({
+      patientId: pid, title: 'Kontrola dziś', body: '', category: 'followup', dueDateISO: dzis
+    });
+    const jutrzejsza = await dev.vault.savePatientNote({
+      patientId: pid, title: 'Kontrola jutro', body: '', category: 'followup', dueDateISO: jutro
+    });
+    // Wynik to grupy per pacjent: {patientId, patientName, notes[]} — spłaszczamy do id notatek.
+    const przypomnienia = await dev.vault.listPatientNotesDueByDate();
+    const idki = (przypomnienia || []).reduce((acc, gr) => acc.concat((gr.notes || []).map((n) => n.id)), []);
+    const zapisanaDzis = await dev.vault.getPatientNote(dzisiejsza.id);
+    return { dzis, jutro, dzisiejsza, jutrzejsza, idki, zapisanaDzis };
+  }
+
+  afterAll(() => {
+    process.env.TZ = strefaWyjsciowa;
+  });
+
+  it('Europe/Warsaw: przypomnienia obejmują dziś, ale nie jutro', async () => {
+    const r = await sprawdzWStrefie('Europe/Warsaw');
+    expect(String(r.zapisanaDzis.dueDateISO), 'sejf normalizuje termin do północy UTC')
+      .toBe(`${r.dzis}T00:00:00.000Z`);
+    expect(r.idki, 'dzisiejsza wizyta jest przypomnieniem').toContain(r.dzisiejsza.id);
+    expect(r.idki, 'jutrzejsza wizyta NIE jest jeszcze przypomnieniem').not.toContain(r.jutrzejsza.id);
+  });
+
+  it('America/Los_Angeles: jutrzejsza wizyta nie wchodzi do przypomnień (lustro D8)', async () => {
+    const r = await sprawdzWStrefie('America/Los_Angeles');
+    expect(r.idki, 'dzisiejsza wizyta jest przypomnieniem').toContain(r.dzisiejsza.id);
+    expect(r.idki, 'jutrzejsza wizyta NIE jest jeszcze przypomnieniem').not.toContain(r.jutrzejsza.id);
+  });
+
+  it('Pacific/Auckland (na wschód od UTC): próg zachowuje się tak samo', async () => {
+    const r = await sprawdzWStrefie('Pacific/Auckland');
+    expect(r.idki).toContain(r.dzisiejsza.id);
+    expect(r.idki).not.toContain(r.jutrzejsza.id);
   });
 });

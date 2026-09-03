@@ -301,7 +301,9 @@ describe('D2 — „Przełóż” o miesiące kalendarzowe (Cc) zamiast 30/91/18
     expect(TERMINARZ_SOURCE).toContain(
       '[["+1 tydzie\\u0144",7],["+1 miesi\\u0105c","m1"],["+3 miesi\\u0105ce","m3"],["+6 miesi\\u0119cy","m6"]]'
     );
-    expect(TERMINARZ_SOURCE).toMatch(/function Mn\(t,e\)\{[^}]*typeof e=="string"&&e\.charAt\(0\)==="m"\?Cc\(r,parseInt\(e\.slice\(1\),10\)\|\|0\):new Date\(r\.getFullYear\(\),r\.getMonth\(\),r\.getDate\(\)\+e\)/);
+    // Od naprawy krawędzi „a” (2026-09-03) Mn() najpierw czyta rekord z sejfu, więc między
+    // nagłówkiem a gałęzią „mN” stoi już callback — dopuszczamy dowolny kod pośredni.
+    expect(TERMINARZ_SOURCE).toMatch(/function Mn\(t,e\)\{[\s\S]{0,400}?typeof e=="string"&&e\.charAt\(0\)==="m"\?Cc\(r,parseInt\(e\.slice\(1\),10\)\|\|0\):new Date\(r\.getFullYear\(\),r\.getMonth\(\),r\.getDate\(\)\+e\)/);
   });
 });
 
