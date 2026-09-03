@@ -21,7 +21,7 @@ const HASLO = 'E2e#Karta!2026rem';
  * Terminy podaje się jako `dniTemu` (0 = dziś) — daty liczy PRZEGLĄDARKA, bo tylko ona zna
  * strefę wymuszoną przez test; kontener testowy chodzi w UTC i policzyłby inną dobę.
  */
-async function otworz(page, wpisy) {
+async function otworz(page, wpisy, opcje) {
   await page.route('**/*', (route) => {
     const u = route.request().url();
     if (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:')) {
@@ -36,7 +36,7 @@ async function otworz(page, wpisy) {
     HASLO,
   );
   await page.waitForFunction(() => window.VildaVault.isUnlocked());
-  await page.evaluate(async (lista) => {
+  await page.evaluate(async ({ lista, opts }) => {
     const V = window.VildaVault;
     const p = (n) => String(n).padStart(2, '0');
     const dzien = (ile) => {
@@ -44,14 +44,27 @@ async function otworz(page, wpisy) {
       d.setDate(d.getDate() - ile);
       return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
     };
+    let wspolny = null;
     for (const w of lista) {
-      const pac = await V.savePatient({ name: w.name });
+      let pid = wspolny;
+      if (!pid) {
+        const pac = await V.savePatient({ name: w.name });
+        pid = pac.id || pac.patientId;
+        if (opts && opts.tenSamPacjent) wspolny = pid;
+      }
       await V.savePatientNote({
-        patientId: pac.id || pac.patientId, title: w.title, body: '',
+        patientId: pid, title: w.title, body: '',
         category: w.category || 'followup', dueDateISO: dzien(w.dniTemu), dueTime: w.time || null,
       });
     }
-  }, wpisy);
+    if (opts && opts.dyzur) {
+      // Dyżur pod pseudopacjentem aktywności, bez miejsca — tak zapisuje go Terminarz.
+      await V.savePatientNote({
+        patientId: V.ACTIVITY_PATIENT_ID || '__vilda_activity__', externalName: '',
+        title: 'Dyżur nocny', category: 'duty', dueDateISO: dzien(0), dueTime: '23:55',
+      });
+    }
+  }, { lista: wpisy, opts: opcje || {} });
 
   // Wejście na stronę z gotowymi danymi — odznaka dzwoneczka liczy się przy starcie.
   await page.reload({ waitUntil: 'load' });
@@ -180,6 +193,70 @@ test('P2 — tytuł odznaki liczy wszystkie notatki, także po grupie z zaległo
   await page.waitForFunction(() => window.VildaVault && window.VildaVault.isUnlocked());
 
   const przycisk = page.locator('#vildaRemindersBtn');
-  await expect(przycisk, 'odznaka liczy pacjentów').toHaveAttribute('data-count', '2');
-  await expect(przycisk, 'tytuł liczy wszystkie cztery notatki').toHaveAttribute('title', /4 notatki/);
+  // Po decyzji właściciela D2 (2026-09-03) wszystkie liczniki liczą notatki, nie grupy pacjentów.
+  // Przed poprawką P2 sumowanie przerywało się na pierwszej grupie z zaległością i wychodziło 3.
+  await expect(przycisk, 'odznaka liczy notatki').toHaveAttribute('data-count', '4');
+  await expect(przycisk, 'tytuł nazywa liczbę przypomnień').toHaveAttribute('title', '4 przypomnienia do sprawdzenia');
+});
+
+test('P5 — chip, stopka i odznaka mówią tę samą liczbę: notatki, nie pacjentów', async ({ page }) => {
+  // Jeden pacjent z trzema notatkami: przed decyzją D2 chip pokazywał „1" nad trzema wierszami,
+  // a stopka zapraszała „Pokaż wszystkie (1)", choć modal pokazywał trzy pozycje.
+  await otworz(page, [
+    { name: 'Jan Trójnotatkowy', title: 'W1', dniTemu: 1 },
+    { name: 'Jan Trójnotatkowy', title: 'W2', dniTemu: 0, time: '08:00' },
+    { name: 'Jan Trójnotatkowy', title: 'W3', dniTemu: 0, time: '15:00' },
+  ], { tenSamPacjent: true });
+
+  const stan = await page.evaluate(() => {
+    const el = document.getElementById('remindersInline');
+    const btn = document.getElementById('vildaRemindersBtn');
+    return {
+      chip: el.querySelector('.vild-rem-chip')?.textContent,
+      stopka: el.querySelector('.vild-rem-all')?.textContent,
+      wierszy: el.querySelectorAll('.vild-rem-row').length,
+      odznaka: btn ? btn.getAttribute('data-count') : null,
+    };
+  });
+  expect(stan.wierszy, 'trzy notatki jednego pacjenta to trzy wiersze').toBe(3);
+  expect(stan.chip, 'chip zgadza się z liczbą wierszy').toBe('3');
+  expect(stan.stopka).toContain('Pokaż wszystkie (3)');
+  expect(stan.odznaka, 'odznaka mówi to samo co karta').toBe('3');
+});
+
+test('P4 — wpis aktywności bez miejsca pokazuje tytuł, nie „—" z awatarem „?"', async ({ page }) => {
+  await otworz(page, [{ name: 'Jan Kontrolny', title: 'Kontrola', dniTemu: 0 }], { dyzur: true });
+
+  const wiersz = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('#remindersInline .vild-rem-row'));
+    const r = rows.find((x) => (x.querySelector('.vild-rem-cat')?.textContent || '').includes('Dyżur'));
+    return r ? {
+      nazwa: r.querySelector('.vild-rem-nm')?.textContent,
+      kategoria: r.querySelector('.vild-rem-cat')?.textContent,
+      awatar: r.querySelector('.vild-rem-av')?.textContent,
+    } : null;
+  });
+  expect(wiersz, 'wiersz dyżuru jest w karcie').toBeTruthy();
+  expect(wiersz.nazwa, 'tytuł wpisu zamiast pustego nazwiska').toBe('Dyżur nocny');
+  expect(wiersz.nazwa).not.toBe('—');
+  expect(wiersz.awatar, 'inicjał kategorii zamiast znaku zapytania').toBe('D');
+  expect(wiersz.kategoria, 'kategoria zostaje w drugiej linii').toContain('Dyżur');
+});
+
+test('P6 — karta ma nagłówek i etykietę regionu dla czytnika ekranu', async ({ page }) => {
+  await otworz(page, [{ name: 'Jan Kontrolny', title: 'Kontrola', dniTemu: 0 }]);
+  const a11y = await page.evaluate(() => {
+    const el = document.getElementById('remindersInline');
+    const h = el.querySelector('h1,h2,h3,h4,h5,h6');
+    return {
+      region: el.getAttribute('role'),
+      etykieta: el.getAttribute('aria-label'),
+      naglowek: h ? { tag: h.tagName, tekst: h.textContent } : null,
+    };
+  });
+  expect(a11y.region).toBe('region');
+  expect(a11y.etykieta).toBe('Przypomnienia');
+  expect(a11y.naglowek, 'tytuł karty jest nagłówkiem, nie zwykłym tekstem').toEqual({
+    tag: 'H2', tekst: 'Przypomnienia',
+  });
 });
