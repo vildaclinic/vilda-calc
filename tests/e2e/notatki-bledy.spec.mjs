@@ -9,8 +9,13 @@ import { expect, test } from '../support/test-czas.mjs';
 //      „Usunąć notatkę?" przy awarii sejfu karta zostawała, a na stronie nie pojawiał się ŻADEN
 //      komunikat — użytkownik nie wiedział, czy kliknięcie w ogóle doszło.
 //
-// Oba testy podmieniają wyłącznie metodę sejfu, żeby wywołać awarię; cała ścieżka renderowania
-// i obsługi zdarzeń jest prawdziwa.
+// N3 — wyszukiwarka porównywała surowe `toLowerCase()`, więc „zoladek" nie znajdowało „żołądek".
+//      Przy polskiej bibliotece szablonów to trafia codziennie: nikt nie pisze ogonków w polu szukania.
+// N4 — przycisk „+ Nowa notatka" był widoczny i AKTYWNY w obu stanach bramkowanych (bez konta i
+//      bez PRO), a klik nie robił nic: ani edytora, ani komunikatu, ani przejścia do subskrypcji.
+//
+// Testy podmieniają wyłącznie metodę sejfu albo bramkę PRO; cała ścieżka renderowania i obsługi
+// zdarzeń jest prawdziwa.
 
 const HASLO = 'E2e#Notatki!2026';
 
@@ -163,4 +168,86 @@ test('N2 — nieudane usunięcie i przypięcie mówią, co się stało', async (
     return !(a && a.getClientRects().length);
   }, null, { timeout: 20000 });
   expect((await stan(page)).alertWidoczny, 'udana operacja sprząta po poprzednim błędzie').toBe(false);
+});
+
+test('N3 — wyszukiwarka znosi polskie znaki diakrytyczne w obie strony', async ({ page }) => {
+  await otworz(page);
+  await page.evaluate(async () => {
+    await window.VildaVault.saveNote({ title: 'Żołądek — opis USG', category: 'badanie', body: 'ściana żołądka' });
+    await window.VildaVault.saveNote({ title: 'Łokieć tenisisty', category: 'wywiad', body: 'ból przy zgięciu' });
+  });
+  await page.waitForFunction(() => document.querySelectorAll('.note-card').length === 5,
+    null, { timeout: 20000 });
+
+  const szukaj = async (fraza) => {
+    await page.evaluate((f) => {
+      const s = document.getElementById('notesSearch');
+      s.value = f;
+      s.dispatchEvent(new Event('input'));
+    }, fraza);
+    await page.waitForTimeout(300);
+    return page.evaluate(() => Array.from(document.querySelectorAll('.note-card__title'))
+      .map((e) => e.textContent));
+  };
+
+  // Zapytanie bez ogonków trafia w tytuł z ogonkami…
+  expect(await szukaj('zoladek'), 'zoladek → Żołądek').toEqual(['Żołądek — opis USG']);
+  expect(await szukaj('lokiec'), 'lokiec → Łokieć (ł nie rozkłada się przez NFD)')
+    .toEqual(['Łokieć tenisisty']);
+  // …i w treść, nie tylko w tytuł.
+  expect(await szukaj('sciana'), 'sciana → „ściana żołądka" w treści').toEqual(['Żołądek — opis USG']);
+  // Wielkość liter bez znaczenia, tak jak dotąd.
+  expect(await szukaj('ZOLADEK'), 'wersaliki bez ogonków też').toEqual(['Żołądek — opis USG']);
+  // Zapytanie Z ogonkami nadal działa — poprawka nie może zepsuć drogi, która działała.
+  expect(await szukaj('żołądek'), 'pisownia poprawna nadal trafia').toEqual(['Żołądek — opis USG']);
+  // Kontrola negatywna: normalizacja nie może zlepiać różnych słów.
+  expect(await szukaj('zoladeq'), 'fraza bez trafień nadal nie ma trafień').toEqual([]);
+});
+
+test('N4 — „+ Nowa notatka" znika tam, gdzie i tak nic by nie zrobił', async ({ page }) => {
+  await page.route('**/*', (route) => {
+    const u = route.request().url();
+    return (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:'))
+      ? route.continue() : route.abort();
+  });
+  await page.goto('/notatki.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+
+  const przycisk = () => page.evaluate(() => {
+    const b = document.getElementById('notesNewBtn');
+    return { widoczny: !!(b && b.getClientRects().length), tytulPustego: (document.querySelector('.notes-empty__title') || {}).textContent || null };
+  });
+
+  // Stan 1: brak konta — pełnoekranowy panel „Zaloguj się" ma własny komunikat, przycisk był ozdobą.
+  await page.waitForFunction(() => /Zaloguj si/.test(document.body.textContent), null, { timeout: 20000 });
+  expect(await przycisk(), 'bez konta').toMatchObject({
+    widoczny: false, tytulPustego: 'Zaloguj się, aby zobaczyć notatki',
+  });
+
+  // Stan 2: konto jest, PRO nie ma — panel ma własne „Zobacz plan PRO", więc martwy przycisk zbędny.
+  await page.evaluate(
+    async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }),
+    HASLO,
+  );
+  await page.waitForFunction(() => window.VildaVault.isUnlocked());
+  await page.waitForFunction(() => /funkcja Vilda PRO/.test(document.body.textContent),
+    null, { timeout: 20000 });
+  expect(await przycisk(), 'bez PRO').toMatchObject({
+    widoczny: false, tytulPustego: 'Notatki to funkcja Vilda PRO',
+  });
+
+  // Stan 3: PRO włączone — przycisk wraca i NAPRAWDĘ otwiera edytor.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+  });
+  await page.waitForFunction(() => {
+    const b = document.getElementById('notesNewBtn');
+    return !!(b && b.getClientRects().length);
+  }, null, { timeout: 20000 });
+  await page.evaluate(() => document.getElementById('notesNewBtn').click());
+  await page.waitForFunction(
+    () => document.getElementById('noteEditorOverlay').classList.contains('is-open'),
+    null, { timeout: 20000 },
+  );
 });
