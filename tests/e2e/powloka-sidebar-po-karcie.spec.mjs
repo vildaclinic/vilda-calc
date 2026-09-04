@@ -103,12 +103,39 @@ test('powłoka: sidebar wraca po wejściu w kartę pacjenta z pełnoekranowych P
   expect(poKliku.remindersOpen, 'klasa vilda-reminders-open nie może zostać po zdjęciu nakładki')
     .toBe(false);
 
-  // Skutek widoczny dla lekarza: sidebar wraca bez przeładowania strony.
+  // Karta pacjenta jest otwarta: powłoka trzyma sidebar schowany, bo <body> ramki nosi teraz
+  // `vilda-auth-embedded-open`. To ZAMIERZONE i dlatego nie sprawdzamy tu widoczności sidebara —
+  // pierwsza wersja tego testu właśnie na tym poległa na CI. Klasa Przypomnień musi jednak już
+  // być zdjęta: to jest przyczyna usterki i jedyny stan trwały, jaki da się w tym miejscu badać.
+  await ramkaStart(page).waitForSelector('#vilda-auth-ui-root button', { timeout: 20000 });
+  expect(await widokPowloki(page), 'karta pacjenta chowa sidebar — tak ma być').toMatchObject({
+    remindersOpen: false, nakladki: 0, sidebarWidoczny: false,
+  });
+
+  // „Wróć do listy" → lista pacjentów (nadal pełnoekranowa).
+  await ramkaStart(page).evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#vilda-auth-ui-root button'))
+      .find((x) => /Wróć do listy/.test(x.textContent));
+    if (!b) throw new Error('brak przycisku „Wróć do listy"');
+    b.click();
+  });
+  await ramkaStart(page).waitForFunction(() => Array.from(
+    document.querySelectorAll('#vilda-auth-ui-root button'),
+  ).some((x) => /Strona główna/.test(x.textContent)), null, { timeout: 20000 });
+
+  // „Strona główna" → wyjście z pełnego ekranu. TU sidebar ma wrócić, bez przeładowania.
+  await ramkaStart(page).evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#vilda-auth-ui-root button'))
+      .find((x) => /Strona główna/.test(x.textContent));
+    if (!b) throw new Error('brak przycisku „Strona główna"');
+    b.click();
+  });
   await page.waitForFunction(() => {
     const s = document.querySelector('aside.sidebar, aside[data-vilda-chrome-sidebar]');
     return !!(s && s.getClientRects().length);
-  }, null, { timeout: 15000 });
-  expect(await widokPowloki(page), 'sidebar wrócił bez przeładowania').toMatchObject({
-    sidebarWidoczny: true, paneAuthOpen: false,
+  }, null, { timeout: 20000 });
+
+  expect(await widokPowloki(page), 'sidebar wrócił bez przeładowania strony').toMatchObject({
+    sidebarWidoczny: true, paneAuthOpen: false, remindersOpen: false,
   });
 });
