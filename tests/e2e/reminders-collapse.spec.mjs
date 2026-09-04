@@ -63,7 +63,13 @@ async function injectOverdueSection(page) {
   });
 }
 
-test('klik „Zaległe” zwija i rozwija pozycje oraz zapisuje stan w localStorage', async ({
+// PR 17: stan tej sekcji jedzie teraz przez preferencję `remindersOverdueCollapsed` o klasie
+// `cloud-synced`, żeby był ten sam na wszystkich urządzeniach. Ten test chodzi jednak w TRYBIE
+// GOŚCIA, a tam adapter preferencji jest w stanie czyszczenia stanu użytkownika i odmawia
+// zapisu (zwraca false) — więc skrypt spada na lokalny klucz i to on jest tu sprawdzany.
+// Zmierzone: bez tego spadku klik gościa nie zapisywał już NICZEGO. Tor synchronizowany, dla
+// zalogowanego sejfu, pilnuje Z7 w tests/e2e/przypomnienia-zwijanie.spec.mjs.
+test('klik „Zaległe” zwija i rozwija pozycje oraz zapisuje stan lokalnie (tryb gościa)', async ({
   page,
 }) => {
   await openIndexGuest(page);

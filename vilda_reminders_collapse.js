@@ -9,7 +9,9 @@
  *   • Nagłówek sekcji (.vild-rem-sec-head) staje się klikalny; klik przełącza stan.
  *   • Obsługa przez DELEGACJĘ zdarzeń na document → działa także po każdym prze-renderowaniu
  *     panelu (nie trzeba podpinać się do konkretnego elementu, który znika przy re-renderze).
- *   • Stan trzymamy jako klasę na <html> (vrc-overdue-collapsed) ORAZ w localStorage. Klasa na
+ *   • Stan trzymamy jako klasę na <html> (vrc-overdue-collapsed) ORAZ w preferencji
+ *     `remindersOverdueCollapsed` o klasie `cloud-synced` — dzięki temu jedzie między
+ *     urządzeniami tak samo, jak stan zwinięcia kategorii (PR 17). Klasa na
  *     <html> sprawia, że CSS obowiązuje NATYCHMIAST dla każdego renderu panelu — bez migotania
  *     (żadnego „mignięcia” rozwiniętej listy przed zwinięciem).
  *   • Domyślnie: rozwinięte (brak wpisu w localStorage). Dotyczy TYLKO sekcji „Zaległe”.
@@ -25,13 +27,18 @@
 
   var doc = w.document;
   var root = doc.documentElement;
-  var LS_KEY = 'vilda-rem-overdue-collapsed-v1';
+  var LS_KEY = 'vilda-rem-overdue-collapsed-v1'; // dziedzictwo: stan sprzed synchronizacji
+  var PREF_KEY = 'remindersOverdueCollapsed';
   var HTML_CLASS = 'vrc-overdue-collapsed';
 
-  // Nie inicjalizuj dwa razy.
-  if (w.VildaRemindersCollapse && w.VildaRemindersCollapse.__init) return;
+  /** Adapter preferencji; gdy go nie ma (strona bez niego), spadamy na czysty localStorage. */
+  function prefs() {
+    var P = w.VildaPersistence;
+    return P && typeof P.readBooleanPreference === 'function'
+      && typeof P.writeBooleanPreference === 'function' ? P : null;
+  }
 
-  function isCollapsed() {
+  function legacyCollapsed() {
     try {
       return !!(w.localStorage && w.localStorage.getItem(LS_KEY) === '1');
     } catch (_) {
@@ -39,7 +46,33 @@
     }
   }
 
+  // Nie inicjalizuj dwa razy.
+  if (w.VildaRemindersCollapse && w.VildaRemindersCollapse.__init) return;
+
+  function isCollapsed() {
+    var P = prefs();
+    if (!P) return legacyCollapsed();
+    // Domyślną wartością jest stan sprzed synchronizacji, więc kto miał sekcję zwiniętą,
+    // ten ma ją zwiniętą dalej — bez osobnego kroku migracji.
+    try {
+      return !!P.readBooleanPreference(PREF_KEY, legacyCollapsed());
+    } catch (_) {
+      return legacyCollapsed();
+    }
+  }
+
   function saveCollapsed(v) {
+    var P = prefs();
+    if (P) {
+      try {
+        // Adapter potrafi ODMÓWIĆ zapisu i zwrócić false — robi tak w trybie gościa, gdzie stan
+        // użytkownika jest właśnie czyszczony. Wtedy zapisujemy lokalnie, żeby gość nie stracił
+        // pamięci zwinięcia; przy zalogowanym sejfie zapis przechodzi i jedzie do synchronizacji.
+        if (P.writeBooleanPreference(PREF_KEY, !!v) === true) return;
+      } catch (_) {
+        /* spadamy na localStorage poniżej */
+      }
+    }
     try {
       if (w.localStorage) w.localStorage.setItem(LS_KEY, v ? '1' : '0');
     } catch (_) {
@@ -75,6 +108,14 @@
   injectStyle();
   applyState();
 
+  // Scalenie z chmury wpisuje nową wartość preferencji bez zdarzenia — po synchronizacji
+  // przepisujemy klasę na <html>, żeby stan z drugiego urządzenia był widać od razu.
+  try {
+    w.addEventListener('vilda:sync-merged', applyState);
+  } catch (_) {
+    /* brak addEventListener — nic nie szkodzi, stan wejdzie przy następnym wczytaniu strony */
+  }
+
   // Delegowany klik: nagłówek sekcji „Zaległe” przełącza stan. Działa dla panelu renderowanego
   // w dowolnym momencie i po każdym re-renderze (nasłuch jest na document, nie na elemencie).
   doc.addEventListener(
@@ -94,7 +135,7 @@
   // Publiczny znacznik (dla testów/diagnostyki; nie zmienia zachowania).
   w.VildaRemindersCollapse = {
     __init: true,
-    version: '1',
+    version: '2',
     isCollapsed: isCollapsed,
   };
 })(typeof window !== 'undefined' ? window : this);
