@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/test-czas.mjs';
 
 // Zwijanie kategorii w karcie „Przypomnienia” (zgłoszenie właściciela 2026-09-03, wariant A).
 //

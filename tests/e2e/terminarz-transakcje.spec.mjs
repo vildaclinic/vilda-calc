@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/test-czas.mjs';
 
 // Testy strażnicze integralności zapisów w Terminarzu (vilda_terminarz.js) — pochodzą z audytu
 // Terminarza z 2026-09-02 (znaleziska I3–I8, naprawione w PR 2). Każdy test odtwarza zmierzony
