@@ -13,6 +13,9 @@ import { describe, expect, it } from 'vitest';
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const AUTH_UI_SOURCE = fs.readFileSync(path.join(repositoryRoot, 'vilda_auth_ui.js'), 'utf8');
 const TERMINARZ_SOURCE = fs.readFileSync(path.join(repositoryRoot, 'vilda_terminarz.js'), 'utf8');
+const ADAPTER_SOURCE = fs.readFileSync(
+  path.join(repositoryRoot, 'vilda_persistence_adapter.js'), 'utf8',
+);
 const ME_ZRODLO = AUTH_UI_SOURCE.slice(AUTH_UI_SOURCE.indexOf('var Me={'));
 
 /** Wycina początek zminifikowanej funkcji — klamry nie da się dopasować regexem w jednej linii. */
@@ -89,6 +92,51 @@ describe('vilda_auth_ui.js — kształt źródła po audycie karty „Przypomnie
     const ft = wytnij('function ft(G){', 200);
     expect(ft, 'ft() czyta ze słownika').toContain('var nt=Jv(G),j=nt.accent,E=nt.bg;');
     expect(ft, 'bez wyjątku na procedurę').not.toContain('#AF52DE');
+  });
+
+  it('PR 17: stan zwinięcia kategorii jest preferencją synchronizowaną w chmurze', () => {
+    // Cross-device działa tylko dla kluczy o klasie `cloud-synced`: taki klucz jedzie przez
+    // onPreferenceWrite do `userPreferences` sejfu, a stamtąd do payloadu synchronizacji.
+    // Klucz zapisany jako `local-persistent` zostałby na jednym urządzeniu i nikt by tego nie
+    // zauważył — stąd ten strażnik pilnuje samej KLASY, nie istnienia klucza.
+    expect(ADAPTER_SOURCE, 'klucz jest w katalogu')
+      .toContain('REMINDERS_COLLAPSED_CATEGORIES:"remindersCollapsedCategories"');
+    expect(ADAPTER_SOURCE, 'z klasą cloud-synced')
+      .toContain('[s.REMINDERS_COLLAPSED_CATEGORIES]:Object.freeze({scope:"reminders",'
+        + 'kind:"preference",storage:"cloud-synced"})');
+    expect(ADAPTER_SOURCE, 'i z aliasem, po którym woła go karta')
+      .toContain('remindersCollapsedCategories:s.REMINDERS_COLLAPSED_CATEGORIES');
+    expect(AUTH_UI_SOURCE, 'karta czyta i pisze dokładnie ten klucz')
+      .toContain('Qa1="remindersCollapsedCategories"');
+  });
+
+  it('PR 17: nowe identyfikatory nie kolidują z nazwami minifikatora', () => {
+    // Zmierzone na własnej skórze przy pierwszym podejściu: nazwy `Ka`, `Ke`, `Ki` i `Kl` były
+    // już zajęte przez minifikator, więc druga deklaracja `function Ki(` przesłoniła moją i
+    // nagłówki kategorii renderowały się PUSTE, bez żadnego błędu w konsoli. Plik jest
+    // zminifikowany i nie da się tego zobaczyć okiem — stąd strażnik liczy deklaracje.
+    const nowe = ['Qa0', 'Qa1', 'Qa2', 'Qa3', 'Qa4', 'Qa5', 'Qa6', 'Qa7', 'Qa8', 'Qa9'];
+    for (const nazwa of nowe) {
+      const deklaracje = (AUTH_UI_SOURCE.match(
+        new RegExp(`(function\\s+${nazwa}\\s*\\(|[\\s,;]${nazwa}=)`, 'g'),
+      ) || []).length;
+      expect(deklaracje, `identyfikator ${nazwa} zadeklarowany dokładnie raz`).toBe(1);
+    }
+  });
+
+  it('PR 17: oba widoki znakują sekcje kategorii tym samym atrybutem', () => {
+    // `data-vild-cat` jest jedynym spoiwem między kartą a modalem: przełącznik szuka po nim
+    // WSZYSTKICH sekcji tej kategorii w dokumencie, więc jeden klik zwija ją w obu widokach.
+    const karta = wytnij('function Qa9(t,a){', 900);
+    const modal = wytnij('function rt(G,nt,j){', 1600);
+    expect(karta, 'nagłówek kategorii w karcie').toContain('"data-vild-cat":u');
+    expect(karta, 'kontener wierszy w karcie').toContain('"data-vild-flow":"block"');
+    expect(modal, 'nagłówek kategorii w modalu').toContain('"data-vild-cat":G');
+    expect(modal, 'kontener wierszy w modalu').toContain('"data-vild-flow":"flex"');
+    expect(AUTH_UI_SOURCE, 'wszystkie trzy sekcje czasowe karty grupują po kategoriach')
+      .toContain('Qa9(o,"over")');
+    expect(AUTH_UI_SOURCE).toContain('Qa9(l,"today")');
+    expect(AUTH_UI_SOURCE).toContain('Qa9(d,"pend")');
   });
 
   it('PR 14: martwa funkcja Fs() nie wróciła', () => {

@@ -141,6 +141,8 @@ test.describe('P1 — kontrola pozytywna w Europe/Warsaw', () => {
   });
 });
 
+// Od PR 17 sekcja czasowa dzieli się jeszcze na kategorie, więc to sortowanie obowiązuje
+// W OBRĘBIE kategorii; kolejność samych kategorii pilnuje Z6 w przypomnienia-zwijanie.spec.mjs.
 test('P3 — kolejność: data rosnąco, a w obrębie doby całodniowe przed godzinowymi', async ({ page }) => {
   // Kolejność zapisu przeplatana celowo tak, żeby oczekiwany wynik nie był ani nią, ani jej
   // odwrotnością — inaczej test przechodziłby także na kodzie sprzed poprawki.

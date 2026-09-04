@@ -15,8 +15,6 @@ import { expect, test } from '@playwright/test';
 
 const HASLO = 'E2e#Urlop!2026guard';
 
-const p = (n) => String(n).padStart(2, '0');
-const iso = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 
 async function otworz(page, strona) {
   await page.route('**/*', (route) => {
@@ -39,10 +37,22 @@ async function otworz(page, strona) {
   });
 }
 
-/** Urlop na wczoraj i dziś + jedna zwykła wizyta jako kontrola pozytywna. */
+/**
+ * Urlop na wczoraj i dziś + jedna zwykła wizyta jako kontrola pozytywna.
+ *
+ * Daty liczy PRZEGLĄDARKA, nie kontener testowy. Kontener chodzi w UTC, a strona w strefie
+ * z konfiguracji Playwrighta (Europe/Warsaw), więc między 22:00 a 24:00 UTC obie doby się
+ * rozjeżdżały: zasiew mówił „dziś = 3 września”, a strona liczyła już 4 września i ta sama
+ * wizyta lądowała w „Zaległe” jako „wczoraj”. Test padał wtedy niezależnie od kodu — zmierzone
+ * na gałęzi bazowej o 22:19 UTC, 2 z 2.
+ */
 async function zasiej(page) {
-  return page.evaluate(async ({ wczoraj, dzis }) => {
+  return page.evaluate(async () => {
     const V = window.VildaVault;
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const dzis = iso(new Date());
+    const wczoraj = iso(new Date(Date.now() - 24 * 60 * 60 * 1000));
     const AID = V.ACTIVITY_PATIENT_ID || '__vilda_activity__';
     for (const dzien of [wczoraj, dzis]) {
       await V.savePatientNote({
@@ -55,7 +65,7 @@ async function zasiej(page) {
       patientId: pac.id || pac.patientId, title: 'Kontrola', body: '',
       category: 'followup', dueDateISO: dzis,
     });
-  }, { wczoraj: iso(new Date(Date.now() - 24 * 60 * 60 * 1000)), dzis: iso(new Date()) });
+  });
 }
 
 test('karta „Przypomnienia” i odznaka dzwoneczka pomijają dni urlopu', async ({ page }) => {
