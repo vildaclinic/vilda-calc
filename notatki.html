@@ -113,6 +113,24 @@
 }
 .notes-pii__close:hover { color: #0f2b33; }
 
+/* Alert akcji — niepowodzenie usuwania/przypinania. Do PR N1+N2: wcześniej te
+   operacje miały puste catch{} i padały bez śladu. */
+.notes-alert {
+  display: none; align-items: flex-start; gap: .7rem;
+  padding: .8rem 1rem; margin-bottom: 1rem;
+  background: #fff5f5; border: 1px solid rgba(192,57,90,.24); border-radius: 12px;
+  font-size: .85rem; color: #8a2338; line-height: 1.45;
+}
+.notes-alert__icon { font-size: 1.05rem; flex-shrink: 0; }
+.notes-alert__body { flex: 1 1 auto; min-width: 0; }
+.notes-alert__close {
+  flex-shrink: 0; border: 0; background: transparent; cursor: pointer;
+  color: #8a2338; font-size: 1.1rem; line-height: 1; padding: .1rem .35rem;
+}
+.notes-alert__close:hover { color: #5e1626; }
+.notes-empty--error .notes-empty__title { color: #8a2338; }
+.notes-empty__retry { margin-top: 1.1rem; }
+
 /* Toolbar: szukajka + filtry kategorii */
 .notes-toolbar { margin-bottom: 1.1rem; }
 .notes-search {
@@ -348,7 +366,12 @@
             </div>
           </div>
 
-          <div id="notesContainer">
+          <div class="notes-alert" id="notesAlert" role="alert" aria-live="assertive">
+<span class="notes-alert__icon" aria-hidden="true">⚠</span>
+<div class="notes-alert__body"></div>
+<button type="button" class="notes-alert__close" id="notesAlertClose" aria-label="Zamknij komunikat">×</button>
+</div>
+<div id="notesContainer">
             <div class="notes-empty" id="notesLockedState">
               <div class="notes-empty__icon">🔒</div>
               <p class="notes-empty__title">Zaloguj się, aby zobaczyć notatki</p>
@@ -395,6 +418,6 @@
     </div>
   </div>
 
-<script defer src="inline_notatki_00.js?v=3"></script>
+<script defer src="inline_notatki_00.js?v=4"></script>
 </body>
 </html>
