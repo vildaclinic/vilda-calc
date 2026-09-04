@@ -458,12 +458,28 @@ test('D6 — partia 6 pacjentów od 23:00 co 15 min: ostrzeżenie „poza dobą�
 test.describe('Siatka nie wychodzi poza dobę, a ogon dyżuru widać następnego dnia', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  const dzien = (today, n) => {
-    const d = new Date(`${today}T12:00:00`);
-    d.setDate(d.getDate() + n);
+  /**
+   * Poniedziałek bieżącego tygodnia i następujący po nim wtorek — LICZONE W PRZEGLĄDARCE.
+   *
+   * Siatka tygodnia rysuje dokładnie siedem kolumn, poniedziałek→niedziela: `Jt()` liczy start
+   * jako `data − (getDay()+6)%7`, a `Pr()` generuje z niego siedem dni; atrybuty `data-add-day`
+   * i `data-goto-day` istnieją TYLKO dla tej siódemki. Zasiew na „dziś" sprawiał więc, że
+   * w NIEDZIELĘ „jutro" wypadało poza tydzień: selektor zwracał null i test padał — przez całą
+   * lokalną niedzielę, czyli co siódme uruchomienie CI. Zasiew na poniedziałek daje „jutro" =
+   * wtorek, zawsze drugą kolumnę siatki, niezależnie od dnia tygodnia, zmiany czasu i granicy
+   * miesiąca. Kolumnę wyznacza strefa przeglądarki (Europe/Warsaw z konfiguracji Playwrighta),
+   * bo to ona wyznacza `c.anchorISO` przez `Q()` — kontener chodzi w UTC i policzyłby inny dzień.
+   */
+  const tydzienOd = (page) => page.evaluate(() => {
     const p = (x) => String(x).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-  };
+    const iso = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    const pon = new Date();
+    pon.setDate(pon.getDate() - ((pon.getDay() + 6) % 7));
+    const dodaj = (n) => { const d = new Date(pon); d.setDate(d.getDate() + n); return iso(d); };
+    return {
+      poniedzialek: iso(pon), wtorek: dodaj(1), niedziela: dodaj(6), poniedzialekZa: dodaj(7),
+    };
+  });
 
   test('dyżur 19:00 + 12 h: brak wierszy „24:00"…„30:30", blok przycięty do doby, żeton „z wczoraj" nazajutrz', async ({
     page,
@@ -472,14 +488,15 @@ test.describe('Siatka nie wychodzi poza dobę, a ogon dyżuru widać następnego
     // dokładał ~13 wierszy etykietowanych „24:00"…„30:30" KAŻDEMU dniu tygodnia — a po naprawie
     // I10 (PR 4) i tak nie dało się w nich nic upuścić. Teraz siatka kończy się na dobie, blok jest
     // przycięty, a informacja o trwaniu wydarzenia idzie podpisem „(+1 dz.)" i żetonem nazajutrz.
-    const { today } = await otworzTerminarz(page);
+    await otworzTerminarz(page);
+    const { poniedzialek, wtorek } = await tydzienOd(page);
     const pid = await zapiszPacjenta(page, 'Nocny Dyzurny');
     const id = await zapiszNotatke(page, {
       patientId: pid,
       title: 'Nocny dyzur',
       body: '',
       category: 'duty',
-      dueDateISO: today,
+      dueDateISO: poniedzialek,
       dueTime: '19:00',
       durationMin: 720,
     });
@@ -518,7 +535,7 @@ test.describe('Siatka nie wychodzi poza dobę, a ogon dyżuru widać następnego
         const el = komorka ? komorka.querySelector('.tz-wb--tail') : null;
         return el ? { tekst: el.textContent.trim(), noteId: el.getAttribute('data-note-id') } : null;
       },
-      { jutro: dzien(today, 1) },
+      { jutro: wtorek },
     );
     expect(zeton, 'żeton „z wczoraj" jest w kolumnie następnego dnia').toBeTruthy();
     expect(zeton.tekst).toContain('z wczoraj');
@@ -526,7 +543,7 @@ test.describe('Siatka nie wychodzi poza dobę, a ogon dyżuru widać następnego
     expect(zeton.noteId, 'żeton wskazuje wpis źródłowy').toBe(id);
 
     // Widok dnia następnego (nagłówek kolumny przenosi do dnia): pasek „Z poprzedniego dnia".
-    await klik(page, `.tz-wx__dh[data-goto-day="${dzien(today, 1)}"]`);
+    await klik(page, `.tz-wx__dh[data-goto-day="${wtorek}"]`);
     await odswiez(page);
     await page.locator('.tz-tail-row').waitFor({ state: 'attached', timeout: 8000 });
     const pasek = await page.evaluate(() => {
@@ -541,5 +558,62 @@ test.describe('Siatka nie wychodzi poza dobę, a ogon dyżuru widać następnego
     await page.locator('.tz-pop').waitFor({ state: 'attached' });
     const popover = await page.evaluate(() => document.querySelector('.tz-pop').textContent);
     expect(popover).toContain('19:00–07:00 (+1 dz.)');
+  });
+
+  test('krawędź tygodnia: ogon dyżuru z niedzieli widać dopiero po przejściu na następny tydzień', async ({
+    page,
+  }) => {
+    // Test wyżej zasiewa na poniedziałek, żeby nie padał w każdą lokalną niedzielę. Ten przypadek
+    // brzegowy — ogon przechodzący przez GRANICĘ TYGODNIA — zniknąłby wtedy z zestawu, więc
+    // wraca tutaj i to jawnie: niedziela bieżącego tygodnia jest zawsze siódmą kolumną siatki,
+    // niezależnie od dnia uruchomienia, więc test jest deterministyczny o każdej porze.
+    //
+    // Zachowanie jest ZAMIERZONE, nie zgubą: siatka rysuje dokładnie Pn→Nd (`Jt()`/`Pr()`),
+    // więc poniedziałek po niedzielnym dyżurze należy już do następnego tygodnia. Dane nie giną —
+    // `Fn()` ładuje dla widoku tygodnia zakres weekStart−1 … weekEnd, czyli po przejściu strzałką
+    // „›" niedzielny wpis jest wczytany i żeton pojawia się w kolumnie poniedziałku.
+    await otworzTerminarz(page);
+    const { niedziela, poniedzialekZa } = await tydzienOd(page);
+    const pid = await zapiszPacjenta(page, 'Niedzielny Dyzurny');
+    const id = await zapiszNotatke(page, {
+      patientId: pid,
+      title: 'Niedzielny dyzur',
+      body: '',
+      category: 'duty',
+      dueDateISO: niedziela,
+      dueTime: '19:00',
+      durationMin: 720,
+    });
+
+    await page.evaluate(() => window.VildaTerminarz.setView('week'));
+    await odswiez(page);
+    await page.locator('.tz-wx').waitFor({ state: 'attached' });
+
+    // Sam dyżur jest w siatce (kontrola pozytywna — zasiew zadziałał)…
+    const blokNiedzieli = await page.evaluate(
+      (noteId) => Boolean(document.querySelector(`.tz-wb[data-note-id="${noteId}"]:not(.tz-wb--tail)`)),
+      id,
+    );
+    expect(blokNiedzieli, 'blok niedzielnego dyżuru jest w bieżącym tygodniu').toBe(true);
+
+    // …ale jego ogon nie, bo poniedziałek jest już poza tą siódemką kolumn.
+    const ogonyWTygodniu = await page.evaluate(
+      () => document.querySelectorAll('.tz-wx .tz-wb--tail').length,
+    );
+    expect(ogonyWTygodniu, 'w bieżącym tygodniu nie ma kolumny na poniedziałek').toBe(0);
+
+    // Strzałka „›" — następny tydzień. Zakres ładowania to weekStart−1, więc niedziela wchodzi.
+    await klik(page, '#tzNext');
+    await odswiez(page);
+    await page.locator('.tz-wx').waitFor({ state: 'attached' });
+    const zeton = await page.evaluate((a) => {
+      const komorka = document.querySelector(`.tz-wx__cell--all[data-add-day="${a.pon}"]`);
+      const el = komorka ? komorka.querySelector('.tz-wb--tail') : null;
+      return el ? { tekst: el.textContent.trim(), noteId: el.getAttribute('data-note-id') } : null;
+    }, { pon: poniedzialekZa });
+    expect(zeton, 'żeton jest w kolumnie poniedziałku następnego tygodnia').toBeTruthy();
+    expect(zeton.tekst).toContain('z wczoraj');
+    expect(zeton.tekst).toContain('do 07:00');
+    expect(zeton.noteId, 'żeton wskazuje niedzielny wpis').toBe(id);
   });
 });
