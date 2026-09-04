@@ -465,12 +465,23 @@ describe('D7 — etykiety względne: ciągła drabina dni → tygodnie → miesi
     }
   });
 
+  // Poprzednia wersja czytała zegar trzykrotnie (raz w teście, raz w każdym wywołaniu Fr)
+  // i budowała oczekiwania z tego samego I.R, którego dotyczyła asercja: o północy test
+  // potrafił się wywrócić, a poza północą przechodził niezależnie od tego, co Fr() liczy.
+  // Zamrożona chwila i dosłowne daty rozstrzygają jedno i drugie.
   it('drugi argument (data odniesienia) jest opcjonalny — bez niego liczy się od dziś', () => {
-    const dzis = I.R(new Date());
-    expect(I.Fr(dzis)).toBe('dziś');
-    expect(I.Fr(oISO(1, dzis))).toBe('jutro');
-    expect(I.Fr(oISO(-1, dzis))).toBe('wczoraj');
-    expect(I.Fr(oISO(20, dzis))).toBe('za 3 tyg.');
+    vi.useFakeTimers({ now: new Date(2026, 8, 2, 9, 0, 0).getTime() });
+
+    expect(I.Fr('2026-09-02')).toBe('dziś');
+    expect(I.Fr('2026-09-03')).toBe('jutro');
+    expect(I.Fr('2026-09-01')).toBe('wczoraj');
+    expect(I.Fr('2026-09-22')).toBe('za 3 tyg.');
+
+    // te same daty policzone z jawnym odniesieniem muszą dać ten sam wynik —
+    // to jest właściwa treść testu: brak drugiego argumentu = „dziś”, nic więcej
+    for (const d of ['2026-09-02', '2026-09-03', '2026-09-01', '2026-09-22']) {
+      expect(I.Fr(d)).toBe(I.Fr(d, '2026-09-02'));
+    }
   });
 });
 

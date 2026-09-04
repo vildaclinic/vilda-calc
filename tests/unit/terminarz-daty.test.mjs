@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { CHWILE } from '../support/czas.mjs';
 
 // Audyt Terminarza 2026-09-02, I9/D1/D2/D8 — strażnicy silnika dat i powtórzeń.
 // Testy ładują PRAWDZIWY vilda_terminarz.js do fałszywego okna bez DOM: IIFE na poziomie
@@ -364,10 +365,29 @@ describe('D8 — próg „zaległych” (Cd) z lokalnych składników daty, niez
     expect(DZISIEJSZY_WPIS <= I.Cd()).toBe(false);
   });
 
-  it('bez zamrożonego zegara: próg = R(lokalne wczoraj) + "T23:59:59.999Z"', () => {
-    const teraz = new Date();
-    const wczoraj = new Date(teraz.getFullYear(), teraz.getMonth(), teraz.getDate() - 1);
-    expect(I.Cd()).toBe(I.R(wczoraj) + 'T23:59:59.999Z');
-    expect(I.R(teraz) + 'T00:00:00.000Z' <= I.Cd()).toBe(false);
+  // Poprzednia wersja tego bloku odtwarzała w teście tę samą formułę, którą sprawdzała
+  // (`I.R(lokalne wczoraj) + sufiks`), i to na niezamrożonym zegarze: obie strony asercji
+  // przeliczały się identycznie, więc test przechodził dla DOWOLNEJ implementacji Cd() —
+  // łącznie z zepsutą. Do tego trzy odczyty zegara w jednym teście dawały wyścig o północy.
+  // Zamiast tego bierzemy dobę, na której naiwne „minus 24 h" faktycznie się wykłada.
+  it('doba 23-godzinna: „wczoraj” liczone kalendarzowo, nie przez odjęcie 24 h', () => {
+    // 29.03.2026 Warszawa ma 23 h (zmiana czasu 02:00→03:00). Chwila = 30.03 00:30 lokalnie.
+    // Wczoraj to 29.03. Formuła `Date.now() - 24 h` trafiłaby w 28.03 23:30 lokalnie, czyli
+    // o dobę za daleko — i oznaczyłaby wpisy z 29.03 jako niezaległe.
+    process.env.TZ = 'Europe/Warsaw';
+    vi.useFakeTimers({ now: Date.parse(CHWILE.doba_23h) });
+    expect(new Date().getTimezoneOffset()).toBe(-120); // CEST już obowiązuje o 22:30 UTC
+    expect(I.R(new Date())).toBe('2026-03-30');
+
+    expect(I.Cd()).toBe('2026-03-29T23:59:59.999Z');
+
+    // kontrola negatywna: naiwne odjęcie doby cofa się o dzień za daleko
+    const naiwneWczoraj = I.R(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    expect(naiwneWczoraj).toBe('2026-03-28');
+    expect(naiwneWczoraj + 'T23:59:59.999Z').not.toBe(I.Cd());
+
+    // wpis z 29.03 jest zaległy, z 30.03 nie
+    expect('2026-03-29T00:00:00.000Z' <= I.Cd()).toBe(true);
+    expect('2026-03-30T00:00:00.000Z' <= I.Cd()).toBe(false);
   });
 });

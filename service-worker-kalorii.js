@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.820';
+const SW_VERSION = '1.0.821';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -183,6 +183,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.css?v=2',
   '/clcr_ui_workflow.js?v=1',
   '/clcr_ui_workflow.js?v=2',
+  '/clcr_ui_workflow.js?v=3',
   '/inline_notatki_00.js?v=2',
   '/inline_notatki_00.js?v=3',
   '/inline_subskrypcja_00.js?v=1',
@@ -1065,6 +1066,7 @@ const CORE_SHELL_URLS = [
   '/vilda_file_export.js?v=5',
   '/vilda_file_export.js?v=6',
   '/vilda_file_export.js?v=7',
+  '/vilda_file_export.js?v=8',
   '/vilda_deps.js',
   '/vilda_deps.js?v=87',
   '/vilda_deps.js?v=89',
@@ -1157,6 +1159,7 @@ const CORE_SHELL_URLS = [
   '/vilda_professional_module.js?v=2',
   '/vilda_professional_module.js?v=3',
   '/vilda_professional_module.js?v=4',
+  '/vilda_professional_module.js?v=5',
   '/vilda_persist_runtime.js',
   '/vilda_persist_runtime.js?v=2',
   '/vilda_persist_runtime.js?v=3',

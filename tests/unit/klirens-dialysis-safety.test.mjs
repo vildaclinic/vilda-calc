@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+
+const STREFA_BAZOWA = process.env.TZ;
 
 function loadDialysisSafety() {
   const repositoryRoot = path.resolve(
@@ -300,10 +302,28 @@ describe('Klirens — klasyfikacja tylko na surowych wartościach', () => {
 describe('Klirens — warunki interpretacji 1,2/1,4', () => {
   const dialysis = loadDialysisSafety();
 
-  it('formatuje datę oceny według lokalnego dnia, a nie UTC', () => {
-    const localHalfPastMidnight = new Date(2026, 6, 28, 0, 30);
-    expect(dialysis.localIsoDate(localHalfPastMidnight)).toBe('2026-07-28');
+  afterEach(() => {
+    process.env.TZ = STREFA_BAZOWA;
   });
+
+  // Poprzednia wersja tego strażnika brała jedną chwilę (00:30 lokalnie) i nie deklarowała strefy.
+  // Na WSCHÓD od UTC faktycznie rozdzielała dobę lokalną od UTC, ale na ZACHÓD (offset ≥ 0)
+  // 00:30 lokalnie to ta sama doba UTC — więc zepsuta implementacja `toISOString().slice(0, 10)`
+  // też by przeszła. Strażnik ma gryźć z obu stron: raz UTC wyprzedza dobę lokalną, raz zostaje w tyle.
+  it.each([
+    ['Pacific/Chatham', -765, [2026, 6, 28, 0, 30], '2026-07-28', '2026-07-27'],
+    ['America/Los_Angeles', 420, [2026, 6, 28, 23, 30], '2026-07-28', '2026-07-29']
+  ])(
+    'formatuje datę oceny według lokalnego dnia, a nie UTC (%s)',
+    (strefa, offset, czesci, oczekiwanyLokalny, dzienUtc) => {
+      process.env.TZ = strefa;
+      const chwila = new Date(...czesci);
+      expect(chwila.getTimezoneOffset()).toBe(offset);
+      // kontrola negatywna: doba UTC tej chwili jest inna niż lokalna
+      expect(chwila.toISOString().slice(0, 10)).toBe(dzienUtc);
+      expect(dialysis.localIsoDate(chwila)).toBe(oczekiwanyLokalny);
+    }
+  );
 
   it('wymaga aktualnego Kru <2 mL/min/1,73 m²', () => {
     const stale = dialysis.computeDialysisAdequacy(
