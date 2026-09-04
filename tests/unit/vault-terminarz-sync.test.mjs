@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // Testy strażnicze po audycie Terminarza (2026-09-02) — znaleziska D9, I1, I2.
@@ -959,5 +959,58 @@ describe('VildaVault — urlop nie jest przypomnieniem (PR 11, zgłoszenie wła�
     });
     const grupy = await dev.vault.listPatientNotesDueByDate();
     expect(grupy.flatMap((g) => g.notes || []).map((n) => n.id)).toContain(zajecia.id);
+  });
+});
+
+describe('PR 18 — data efektywna wyniku laboratoryjnego liczy dobę LOKALNIE, nie UTC', () => {
+  it('wynik z terminem na dziś nie dostaje daty utworzenia notatki sprzed tygodni', async () => {
+    // Znalezisko z przeglądu kruchości czasowej (2026-09-04). Cr() w vilda_vault.js porównywał
+    // `dueDateISO` z dobą UTC (`new Date().toISOString().slice(0,10)`). Na wschód od UTC przez
+    // pierwsze godziny doby lokalnej doba UTC to DZIEŃ WCZEŚNIEJ, więc notatka z terminem na
+    // DZIŚ nie przechodziła warunku `n <= r` i spadała na `createdAtISO`. W widoku serii wyników
+    // (listPatientLabSeries — sparkline i trend) punkt lądował w dniu utworzenia notatki,
+    // czyli potencjalnie o tygodnie wstecz. Okno w Europe/Warsaw: lokalne 00:00–01:59 latem
+    // i 00:00–00:59 zimą, czyli ok. 700 godzin rocznie.
+    //
+    // Test stoi na strefie z tests/setup/strefa.mjs (Pacific/Chatham, UTC+12:45): o 22:30 UTC
+    // jest tam już 11:15 następnego dnia, więc doba lokalna i UTC się rozjeżdżają.
+    const dev = await createDevice('LabCr');
+    const pacjent = await dev.vault.savePatient({ name: 'Iwona Wynikowa' });
+    const pid = pacjent.id || pacjent.patientId;
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      // 1) Notatkę zakładamy sześć tygodni wcześniej — to ona da `createdAtISO`.
+      vi.setSystemTime(new Date('2026-05-20T08:00:00Z'));
+      const zapisana = await dev.vault.savePatientNote({
+        patientId: pid,
+        title: 'TSH',
+        body: '',
+        category: 'wynik-badania',
+        dueDateISO: '2026-07-01',
+        labResult: { test: 'TSH', testKey: 'tsh', valueNum: 2.1, unit: 'mIU/l' },
+      });
+      const zMagazynu = await dev.vault.getPatientNote(zapisana.id);
+      expect(String(zMagazynu.createdAtISO).slice(0, 10), 'notatka założona 20 maja')
+        .toBe('2026-05-20');
+
+      // 2) Przesuwamy zegar na chwilę, w której doba lokalna (1 lipca) wyprzedza UTC (30 czerwca).
+      vi.setSystemTime(new Date('2026-06-30T22:30:00Z'));
+      const teraz = new Date();
+      const p = (x) => String(x).padStart(2, '0');
+      const lokalna = `${teraz.getFullYear()}-${p(teraz.getMonth() + 1)}-${p(teraz.getDate())}`;
+      expect(lokalna, 'lokalnie jest już 1 lipca').toBe('2026-07-01');
+      expect(teraz.toISOString().slice(0, 10), 'a w UTC dopiero 30 czerwca').toBe('2026-06-30');
+
+      const serie = await dev.vault.listPatientLabSeries(pid);
+      const tsh = serie.find((x) => x.testKey === 'tsh');
+      expect(tsh, 'seria TSH istnieje').toBeTruthy();
+      expect(tsh.points).toHaveLength(1);
+      expect(tsh.points[0].dateISO, 'punkt stoi w dniu terminu, nie w dniu założenia notatki')
+        .toBe('2026-07-01');
+      expect(tsh.points[0].dateISO, 'a już na pewno nie sześć tygodni wstecz').not.toBe('2026-05-20');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
