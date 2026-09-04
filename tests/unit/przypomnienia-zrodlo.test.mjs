@@ -139,6 +139,26 @@ describe('vilda_auth_ui.js — kształt źródła po audycie karty „Przypomnie
     expect(AUTH_UI_SOURCE).toContain('Qa9(d,"pend")');
   });
 
+  it('PR 22: każde wyjście z modalu zdejmuje nakładkę RAZEM z klasą vilda-reminders-open', () => {
+    // Powłoka app.html chowa swój sidebar, dopóki <body> ramki nosi `vilda-reminders-open`
+    // (vilda_shell.js, obserwator w vt()). Klasa musi więc znikać razem z nakładką, a nie tylko
+    // na przyciskach „Zamknij"/„×". Przed PR 22 cztery z pięciu wyjść wołały samo `s.remove()`
+    // i zostawiały klasę: sidebar znikał do przeładowania strony.
+    //
+    // Strażnik KLASY usterek: zamiast wyliczać dzisiejsze cztery ścieżki wymaga, żeby w pliku
+    // NIE BYŁO już gołego `s.remove()` — jedyną drogą wyjścia jest Qc0().
+    const wywolania = (AUTH_UI_SOURCE.match(/[^a-zA-Z0-9_$]s\.remove\(\)/g) || []).length;
+    expect(wywolania, 'jedyne s.remove() w pliku stoi w Qc0() — reszta wyjść woła Qc0()').toBe(1);
+
+    const qc0 = wytnij('function Qc0(){', 160);
+    expect(qc0, 'Qc0 zdejmuje nakładkę').toContain('s.remove()');
+    expect(qc0, 'Qc0 zdejmuje klasę').toContain("classList.remove(\"vilda-reminders-open\")");
+
+    // Kontrola pozytywna: Qc0 jest naprawdę używane na wszystkich wyjściach, nie tylko istnieje.
+    expect((AUTH_UI_SOURCE.match(/\bQc0\(\)/g) || []).length, 'pięć wyjść + definicja')
+      .toBeGreaterThanOrEqual(5);
+  });
+
   it('PR 14: martwa funkcja Fs() nie wróciła', () => {
     // Formatowała datę względną („dziś · HH:MM”), niosła powyższy błąd doby i nie miała ani
     // jednego wywołania. Usunięta; gdyby wróciła, wróciłby też nieużywany kod z wadą.
