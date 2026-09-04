@@ -266,15 +266,31 @@ test('N4 — „+ Nowa notatka" znika tam, gdzie i tak nic by nie zrobił', asyn
 //       w ogóle zobaczyło bibliotekę. Decyzja właściciela: „zamknięte znaczy zamknięte", więc
 //       klucza NIE bumpujemy — naprawiamy tylko to, żeby nie dało się go zamknąć przed czasem.
 
-test('R1a — lista odświeża się po scaleniu synchronizacji, bez przeładowania strony', async ({ page }) => {
-  await otworz(page);
-
-  // Licznik odczytów sejfu: pokazuje, czy strona w ogóle PRÓBUJE się odświeżyć.
+// Licznik odczytów sejfu: pokazuje, czy strona w ogóle PRÓBUJE się odświeżyć. Zerowany dopiero
+// wtedy, gdy odczyty ucichną — bootstrap sekcji ma jednorazową ankietę co 250 ms (`setInterval`
+// w `C()`), która po odblokowaniu sejfu robi jedno dodatkowe `listNotes()` i dopiero wtedy kasuje
+// interwał. Zerowanie licznika „na sztywno" zaraz po `otworz()` łapało to wywołanie jako rzekome
+// odświeżenie po scaleniu — na nieobciążonej maszynie zmierzone jako czerwone w 1 przebiegu na 3.
+async function licznikOdczytow(page) {
   await page.evaluate(() => {
     window.__n = 0;
     const oryg = window.VildaVault.listNotes;
     window.VildaVault.listNotes = async function () { window.__n += 1; return oryg.apply(this, arguments); };
   });
+  let ostatni = -1;
+  for (let i = 0; i < 25; i += 1) {
+    const teraz = await page.evaluate(() => window.__n);
+    if (teraz === ostatni) break;
+    ostatni = teraz;
+    await page.waitForTimeout(400);
+  }
+  await page.evaluate(() => { window.__n = 0; });
+}
+
+test('R1a — lista odświeża się po scaleniu synchronizacji, bez przeładowania strony', async ({ page }) => {
+  await otworz(page);
+
+  await licznikOdczytow(page);
 
   // Zdarzenie leci na document — tak rozgłasza je integracja synchronizacji.
   await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged', { bubbles: false })));
@@ -298,11 +314,7 @@ test('R1a — scalenie przy otwartym edytorze nie rusza listy, ale odświeża po
   // Najgorszy scenariusz tej poprawki: lekarz pisze treść szablonu, a przerysowanie listy pod
   // nakładką kasuje mu wpisany tekst. Odświeżenie jest więc ODKŁADANE do zamknięcia edytora.
   await otworz(page);
-  await page.evaluate(() => {
-    window.__n = 0;
-    const oryg = window.VildaVault.listNotes;
-    window.VildaVault.listNotes = async function () { window.__n += 1; return oryg.apply(this, arguments); };
-  });
+  await licznikOdczytow(page);
 
   await page.evaluate(() => document.getElementById('notesNewBtn').click());
   await page.waitForFunction(
@@ -380,4 +392,73 @@ test('R2 — baner o danych osobowych jest funkcją stanu bramek', async ({ page
   });
   await page.waitForTimeout(1200);
   expect((await baner()).widoczny, 'raz zamknięty zostaje zamknięty także po przeładowaniu').toBe(false);
+});
+
+// R3 — przycisk „Kopiuj" (`j()`) kopiował `e.body||""`, a zielone „Skopiowano" zapalał BEZWARUNKOWO.
+//      Zmierzone: notatka z samym tytułem wpisywała do schowka pusty ciąg, a przycisk meldował
+//      sukces. Drugi wariant: `.catch(function(){})` — odmowa dostępu do schowka (polityka
+//      przeglądarki, brak gestu, tryb prywatny) kończyła się CAŁKOWITĄ ciszą.
+
+const kliknijKopiuj = (page, tytul) => page.evaluate((t) => {
+  const karta = Array.prototype.slice.call(document.querySelectorAll('.note-card'))
+    .find((k) => (k.querySelector('.note-card__title') || {}).textContent === t);
+  if (!karta) throw new Error('nie ma karty o tytule ' + t);
+  karta.querySelector('.note-act--copy').click();
+}, tytul);
+
+const etykietaKopiuj = (page, tytul) => page.evaluate((t) => {
+  const karta = Array.prototype.slice.call(document.querySelectorAll('.note-card'))
+    .find((k) => (k.querySelector('.note-card__title') || {}).textContent === t);
+  const b = karta && karta.querySelector('.note-act--copy');
+  return b ? { tekst: b.textContent.trim(), zielony: b.classList.contains('is-done') } : null;
+}, tytul);
+
+test('R3a — „Kopiuj" oddaje treść notatki, a przy samym tytule nie wysyła pustki', async ({ page }) => {
+  await otworz(page);
+  await page.evaluate(async () => {
+    await window.VildaVault.saveNote({ title: 'Sam tytuł', category: 'wlasne', body: '' });
+    window.__kopie = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (t) => { window.__kopie.push(t); return Promise.resolve(); } },
+    });
+  });
+  await page.waitForFunction(() => document.querySelectorAll('.note-card').length === 4,
+    null, { timeout: 20000 });
+
+  // Kontrola dodatnia: notatka z treścią kopiuje treść — tego zachowania poprawka nie rusza.
+  await kliknijKopiuj(page, 'Opis USG tarczycy');
+  await page.waitForFunction(() => window.__kopie.length === 1, null, { timeout: 20000 });
+  expect(await page.evaluate(() => window.__kopie[0])).toBe('treść A');
+  expect(await etykietaKopiuj(page, 'Opis USG tarczycy')).toMatchObject({ tekst: 'Skopiowano', zielony: true });
+
+  // Właściwe znalezisko: przed poprawką do schowka szedł pusty ciąg, a przycisk i tak świecił.
+  await kliknijKopiuj(page, 'Sam tytuł');
+  await page.waitForFunction(() => window.__kopie.length === 2, null, { timeout: 20000 });
+  const drugi = await page.evaluate(() => window.__kopie[1]);
+  expect(drugi, 'schowek nie dostaje pustki').not.toBe('');
+  expect(drugi, 'przy braku treści kopiujemy tytuł — to cała zawartość notatki').toBe('Sam tytuł');
+});
+
+test('R3b — odmowa dostępu do schowka przestaje być cicha', async ({ page }) => {
+  await otworz(page);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error('brak zgody na schowek')) },
+    });
+  });
+
+  await kliknijKopiuj(page, 'Opis USG tarczycy');
+  await page.waitForFunction(() => {
+    const a = document.getElementById('notesAlert');
+    return !!(a && a.getClientRects().length);
+  }, null, { timeout: 20000 });
+
+  const po = await stan(page);
+  expect(po.alertTresc, 'użytkownik dowiaduje się, że kopiowanie padło')
+    .toContain('Nie udało się skopiować notatki');
+  expect(po.alertTresc, 'wraz z powodem od przeglądarki').toContain('brak zgody na schowek');
+  expect(await etykietaKopiuj(page, 'Opis USG tarczycy'),
+    'i na pewno nie widzi zielonego „Skopiowano"').toMatchObject({ tekst: 'Kopiuj', zielony: false });
 });
