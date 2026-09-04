@@ -333,6 +333,13 @@ test('P8 — wiersze karty mają te same kolory co wiersze modalu spod dzwoneczk
       awatar: av && getComputedStyle(av).backgroundImage,
       nazwaKolor: nm && getComputedStyle(nm).color,
       kategoriaKolor: cat && getComputedStyle(cat).color,
+      nazwaRozmiar: nm && getComputedStyle(nm).fontSize,
+      kategoriaRozmiar: cat && getComputedStyle(cat).fontSize,
+      literaRozmiar: av && getComputedStyle(av).fontSize,
+      kropka: (() => {
+        const d = r.querySelector('.vild-rem-dot');
+        return d ? getComputedStyle(d).backgroundColor : null;
+      })(),
     };
   }));
   void style;
@@ -351,6 +358,13 @@ test('P8 — wiersze karty mają te same kolory co wiersze modalu spod dzwoneczk
       awatar: av && getComputedStyle(av).backgroundImage,
       nazwaKolor: linie[0] && getComputedStyle(linie[0]).color,
       kategoriaKolor: linie[1] && getComputedStyle(linie[1]).color,
+      nazwaRozmiar: linie[0] && getComputedStyle(linie[0]).fontSize,
+      kategoriaRozmiar: linie[1] && getComputedStyle(linie[1]).fontSize,
+      literaRozmiar: av && getComputedStyle(av).fontSize,
+      kropka: (() => {
+        const d = linie[1] && linie[1].querySelector('span');
+        return d ? getComputedStyle(d).backgroundColor : null;
+      })(),
     };
   }));
 
@@ -365,7 +379,22 @@ test('P8 — wiersze karty mają te same kolory co wiersze modalu spod dzwoneczk
     expect(K[nazwa].awatar, `tło awatara: ${nazwa}`).toBe(M[nazwa].awatar);
     expect(K[nazwa].litera, `litera awatara: ${nazwa}`).toBe(M[nazwa].litera);
     expect(K[nazwa].nazwaKolor, `kolor nazwy: ${nazwa}`).toBe(M[nazwa].nazwaKolor);
+    // PR 21, decyzja właściciela: karta podciągnięta do WIĘKSZYCH rozmiarów modalu.
+    // Przed poprawką karta miała 13,92/12,32/13,12 px tam, gdzie modal 14,72/13,12/14,4 px.
+    expect(K[nazwa].nazwaRozmiar, `rozmiar nazwy: ${nazwa}`).toBe(M[nazwa].nazwaRozmiar);
+    expect(K[nazwa].kategoriaRozmiar, `rozmiar kategorii: ${nazwa}`)
+      .toBe(M[nazwa].kategoriaRozmiar);
+    expect(K[nazwa].literaRozmiar, `rozmiar litery awatara: ${nazwa}`)
+      .toBe(M[nazwa].literaRozmiar);
+    // PR 21: kropkę kategorii miała tylko karta — modal dostał ją w tym samym kolorze akcentu.
+    expect(K[nazwa].kropka, `karta ma kropkę kategorii: ${nazwa}`).toBeTruthy();
+    expect(M[nazwa].kropka, `modal ma kropkę kategorii: ${nazwa}`).toBeTruthy();
+    expect(K[nazwa].kropka, `kolor kropki: ${nazwa}`).toBe(M[nazwa].kropka);
   }
+
+  // Kontrola pozytywna dla kropki: to akcent KATEGORII, a nie jeden wspólny kolor.
+  const kropki = new Set(Object.values(M).map((r) => r.kropka));
+  expect(kropki.size, 'każda kategoria ma własną kropkę').toBeGreaterThan(3);
 
   // Kontrola pozytywna: kolory naprawdę są kategoryjne, a nie jednym wspólnym odcieniem.
   const kolory = new Set(Object.values(K).map((r) => r.kategoriaKolor));

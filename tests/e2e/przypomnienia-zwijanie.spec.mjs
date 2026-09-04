@@ -201,11 +201,15 @@ test('Z5 — zwinięcie jedzie w payloadzie synchronizacji na inne urządzenia',
   expect(typeof po.updatedAtISO, 'ze znacznikiem czasu do rozstrzygania konfliktów').toBe('string');
 });
 
-test('Z6 — w obrębie kategorii kolejność dat zostaje, kategorie idą stałym porządkiem', async ({ page }) => {
-  // Grupowanie po kategoriach zmienia kolejność WEWNĄTRZ sekcji czasowej: najpierw kategorie
-  // w stałym porządku (ten sam, którym modal układa swoje sekcje), a dopiero w nich sortowanie
-  // z PR 12 — data rosnąco, a w obrębie doby wpisy całodniowe przed godzinowymi. Zasiew jest
-  // przeplatany tak, żeby oczekiwany wynik nie był ani kolejnością zapisu, ani jej odwrotnością.
+test('Z6 — w obrębie kategorii kolejność dat zostaje, kategorie idą chronologicznie', async ({ page }) => {
+  // Grupowanie po kategoriach NIE przestawia kolejności czytania karty. Kategorie idą w takiej
+  // kolejności, w jakiej pojawia się ich pierwszy wpis, a wpisy są już posortowane sortowaniem
+  // z PR 12 — data rosnąco, a w obrębie doby całodniowe przed godzinowymi. Zjazd wzrokiem w dół
+  // karty to więc nadal zjazd w czasie, tylko z nagłówkami kategorii jako klamrami do zwijania.
+  // (Do PR 21 kategorie szły stałą listą Qa0 — najpierw wszystkie kontrole, potem procedury —
+  // przez co wpis starszy potrafił stać NIŻEJ od nowszego. Decyzja właściciela: chronologicznie.)
+  // Zasiew jest przeplatany tak, żeby oczekiwany wynik nie był ani kolejnością zapisu, ani jej
+  // odwrotnością, ani starą stałą kolejnością kategorii.
   await page.route('**/*', (route) => {
     const u = route.request().url();
     return (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:'))
@@ -249,11 +253,13 @@ test('Z6 — w obrębie kategorii kolejność dat zostaje, kategorie idą stały
       ? { naglowek: el.getAttribute('data-vild-cat') }
       : { wiersze: Array.from(el.querySelectorAll('.vild-rem-nm')).map((n) => n.textContent) })));
 
-  expect(uklad, 'kontrole przed procedurami — stała kolejność kategorii').toEqual([
-    { naglowek: 'followup' },
-    { wiersze: ['Damian Kontrolny', 'Bartek Kontrolny'] },
+  // Cecylia ma najstarszy termin (5 dni temu), więc jej kategoria otwiera sekcję — mimo że
+  // stara lista Qa0 stawiała followup przed procedurą.
+  expect(uklad, 'kategorie w kolejności swojego najstarszego wpisu').toEqual([
     { naglowek: 'procedura' },
     { wiersze: ['Cecylia Proceduralna', 'Anna Proceduralna'] },
+    { naglowek: 'followup' },
+    { wiersze: ['Damian Kontrolny', 'Bartek Kontrolny'] },
   ]);
 });
 
