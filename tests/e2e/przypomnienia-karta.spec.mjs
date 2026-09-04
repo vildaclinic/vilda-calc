@@ -17,6 +17,33 @@ import { expect, test } from '@playwright/test';
 const HASLO = 'E2e#Karta!2026rem';
 
 /**
+ * Chwila, na której startuje strona w blokach P1.
+ *
+ * P1 ma sens tylko wtedy, gdy doba LOKALNA różni się od UTC — inaczej nie odróżnia poprawki
+ * od jej braku. Sama strefa tego nie gwarantuje: Pacific/Auckland to UTC+12 (NZST), więc data
+ * lokalna wyprzedza UTC dopiero od 12:00 UTC. Przez pozostałe pół doby obie daty są równe
+ * i asercja „strefa musi rozjeżdżać dobę” padała. Zmierzone o 06:32 UTC: przeglądarka
+ * poprawnie zgłasza Intl 'Pacific/Auckland' i offset +720 min (godzina lokalna 18 przy 6 UTC),
+ * ale 4 września lokalnie i 4 września w UTC to ta sama data. Strefa działała — krucha była
+ * asercja. Zamiast ją osłabiać, ustalamy moment startu strony.
+ *
+ * 15 czerwca 13:00 UTC: Auckland 16 czerwca 01:00 (doba się rozjeżdża — o to chodzi w P1),
+ * Warszawa 15 czerwca 15:00 (ta sama doba — o to chodzi w kontroli pozytywnej).
+ * Czerwiec leży poza oboma przejściami czasu letniego, więc offsety są jednoznaczne.
+ */
+const CHWILA_P1 = '2026-06-15T13:00:00Z';
+
+/**
+ * Ustawia zegar strony na podaną chwilę i puszcza czas dalej normalnym tempem.
+ * `install` bez `resume` zatrzymałby czas, a aplikacja używa timerów (m.in. dławik odświeżania
+ * odznaki), więc zamrożony zegar zmieniłby zachowanie, zamiast je tylko ustabilizować.
+ */
+async function ustalChwile(page, chwilaISO) {
+  await page.clock.install({ time: new Date(chwilaISO) });
+  await page.clock.resume();
+}
+
+/**
  * Otwiera stronę główną, zakłada użytkownika sejfu, zasiewa wpisy i pokazuje kartę.
  * Terminy podaje się jako `dniTemu` (0 = dziś) — daty liczy PRZEGLĄDARKA, bo tylko ona zna
  * strefę wymuszoną przez test; kontener testowy chodzi w UTC i policzyłby inną dobę.
@@ -29,6 +56,7 @@ async function otworz(page, wpisy, opcje) {
     }
     return route.abort();
   });
+  if (opcje && opcje.chwila) await ustalChwile(page, opcje.chwila);
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
   await page.evaluate(
@@ -105,14 +133,18 @@ test.describe('P1 — Pacific/Auckland: lokalna doba wyprzedza UTC', () => {
     await otworz(page, [
       { name: 'Anna Wczorajsza', title: 'Kontrola', dniTemu: 1 },
       { name: 'Bogdan Dzisiejszy', title: 'Kontrola', dniTemu: 0 },
-    ]);
+    ], { chwila: CHWILA_P1 });
 
     const doby = await page.evaluate(() => ({
       lokalna: new Date().toLocaleDateString('sv'),
       utc: new Date().toISOString().slice(0, 10),
     }));
-    // Test ma sens tylko wtedy, gdy obie doby są różne — inaczej nie odróżnia poprawki od jej braku.
+    // Test ma sens tylko wtedy, gdy obie doby są różne — inaczej nie odróżnia poprawki od jej
+    // braku. Dzięki CHWILA_P1 jest to gwarantowane o każdej porze, a nie zależne od tego,
+    // o której godzinie akurat ruszyło CI.
     expect(doby.lokalna, 'strefa musi rozjeżdżać dobę lokalną z UTC').not.toBe(doby.utc);
+    expect(doby.utc, 'zegar strony stoi na ustalonej chwili').toBe('2026-06-15');
+    expect(doby.lokalna, 'a lokalnie jest już następny dzień').toBe('2026-06-16');
 
     const w = await wiersze(page);
     const zalegly = w.find((x) => x.sekcja === 'vild-rem-sec-over');
@@ -132,7 +164,16 @@ test.describe('P1 — kontrola pozytywna w Europe/Warsaw', () => {
     await otworz(page, [
       { name: 'Adam Przedwczorajszy', title: 'Kontrola', dniTemu: 2 },
       { name: 'Beata Wczorajsza', title: 'Kontrola', dniTemu: 1 },
-    ]);
+    ], { chwila: CHWILA_P1 });
+    const doby = await page.evaluate(() => ({
+      lokalna: new Date().toLocaleDateString('sv'),
+      utc: new Date().toISOString().slice(0, 10),
+    }));
+    // Kontrola pozytywna stoi na TEJ SAMEJ chwili co Auckland, ale w Warszawie doba się
+    // nie rozjeżdża — i właśnie to czyni ją kontrolą, a nie powtórzeniem tamtego testu.
+    expect(doby.lokalna, 'w Warszawie obie doby są zgodne').toBe(doby.utc);
+    expect(doby.utc).toBe('2026-06-15');
+
     const w = await wiersze(page);
     expect(w.map((x) => [x.nazwa, x.kiedy])).toEqual([
       ['Adam Przedwczorajszy', '2 dni temu'],
