@@ -46,6 +46,12 @@ async function otworz(page) {
   });
   await page.waitForFunction(() => document.querySelectorAll('.note-card').length === 3,
     null, { timeout: 20000 });
+  // Bootstrap sekcji ma jednorazową ankietę co 250 ms (`setInterval` w `C()`), która po
+  // odblokowaniu sejfu robi jeszcze jedno `l()` i dopiero wtedy kasuje interwał. To dodatkowe
+  // odświeżenie woła `Qn2()`, czyli SPRZĄTA pasek komunikatów — gdyby trafiło zaraz po nieudanej
+  // akcji, zdmuchnęłoby świeżo pokazany alert. Odczekanie ponad dwa takty daje każdemu testowi
+  // w tym pliku ustabilizowany punkt startu.
+  await page.waitForTimeout(600);
 }
 
 const stan = (page) => page.evaluate(() => {
@@ -461,4 +467,109 @@ test('R3b — odmowa dostępu do schowka przestaje być cicha', async ({ page })
   expect(po.alertTresc, 'wraz z powodem od przeglądarki').toContain('brak zgody na schowek');
   expect(await etykietaKopiuj(page, 'Opis USG tarczycy'),
     'i na pewno nie widzi zielonego „Skopiowano"').toMatchObject({ tekst: 'Kopiuj', zielony: false });
+});
+
+// R5 — zapis notatki skasowanej w międzyczasie na innym urządzeniu WSKRZESZAŁ ją bez słowa.
+//      `saveNote()` kasuje tombstone bezwarunkowo, więc szablon wracał, a kasowanie z drugiego
+//      urządzenia było cofane — po cichu. Zmierzone wcześniej: 3 notatki → 4 po zapisie.
+//      Decyzja właściciela: nie blokujemy zapisu, tylko mówimy po fakcie, co się stało.
+
+const idNotatki = (page, tytul) => page.evaluate(async (t) => {
+  const lista = await window.VildaVault.listNotes();
+  const n = lista.find((x) => x.title === t);
+  return n ? n.id : null;
+}, tytul);
+
+const kliknijEdytuj = (page, tytul) => page.evaluate((t) => {
+  const karta = Array.prototype.slice.call(document.querySelectorAll('.note-card'))
+    .find((k) => (k.querySelector('.note-card__title') || {}).textContent === t);
+  if (!karta) throw new Error('nie ma karty o tytule ' + t);
+  Array.prototype.slice.call(karta.querySelectorAll('.note-act'))
+    .find((b) => /Edytuj/.test(b.textContent)).click();
+}, tytul);
+
+test('R5 — wskrzeszenie szablonu skasowanego na innym urządzeniu przestaje być ciche', async ({ page }) => {
+  await otworz(page);
+  const id = await idNotatki(page, 'Opis USG tarczycy');
+  expect(id, 'notatka do edycji istnieje').toBeTruthy();
+
+  // Kontrola negatywna: zwykła edycja istniejącej notatki NIE ma prawa niczego zgłaszać.
+  await kliknijEdytuj(page, 'Opis USG tarczycy');
+  await page.waitForFunction(
+    () => document.getElementById('noteEditorOverlay').classList.contains('is-open'),
+    null, { timeout: 20000 },
+  );
+  await page.evaluate(() => { document.getElementById('noteFieldBody').value = 'treść A poprawiona'; });
+  await page.evaluate(() => document.getElementById('noteEditorSave').click());
+  await page.waitForFunction(
+    () => !document.getElementById('noteEditorOverlay').classList.contains('is-open'),
+    null, { timeout: 20000 },
+  );
+  await page.waitForTimeout(600);
+  expect((await stan(page)).alertWidoczny, 'zwykła edycja milczy').toBe(false);
+
+  // Właściwy scenariusz: lekarz otwiera szablon do edycji, a w tym czasie z drugiego urządzenia
+  // przychodzi jego skasowanie. Rekord znika z sejfu, zostaje tombstone — dokładnie to zostawia
+  // po sobie scalenie. Zapis kasuje tombstone i szablon wraca.
+  await kliknijEdytuj(page, 'Opis USG tarczycy');
+  await page.waitForFunction(
+    () => document.getElementById('noteEditorOverlay').classList.contains('is-open'),
+    null, { timeout: 20000 },
+  );
+  await page.evaluate(async (noteId) => window.VildaVault.removeNote(noteId), id);
+  await page.evaluate(() => { document.getElementById('noteFieldBody').value = 'treść dopisana po skasowaniu'; });
+  await page.evaluate(() => document.getElementById('noteEditorSave').click());
+
+  await page.waitForFunction(() => {
+    const a = document.getElementById('notesAlert');
+    return !!(a && a.getClientRects().length);
+  }, null, { timeout: 20000 });
+
+  const po = await stan(page);
+  expect(po.alertTresc, 'użytkownik wie, że zapis cofnął cudze skasowanie')
+    .toContain('skasowana na innym urządzeniu');
+  expect(po.alertTresc, 'i wie, co z tym zrobić').toContain('skasuj ją ponownie');
+  expect(po.karty, 'szablon faktycznie wrócił na listę').toBe(3);
+
+  // Pułapka wdrożeniowa: `l()` przy każdym sukcesie kasuje pasek, a nasłuch synchronizacji woła
+  // `l()`. Komunikat musi więc mieszkać w stanie i wracać przy renderze, inaczej znika w ułamku
+  // sekundy po pierwszym scaleniu.
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged', { bubbles: false })));
+  await page.waitForTimeout(900);
+  expect((await stan(page)).alertWidoczny, 'komunikat przeżywa odświeżenie po scaleniu').toBe(true);
+
+  // Zamknięcie krzyżykiem jest ostateczne — komunikat nie wraca przy kolejnym renderze listy.
+  await page.evaluate(() => document.getElementById('notesAlertClose').click());
+  await page.waitForFunction(() => {
+    const a = document.getElementById('notesAlert');
+    return !(a && a.getClientRects().length);
+  }, null, { timeout: 20000 });
+  await page.evaluate(() => {
+    const s = document.getElementById('notesSearch');
+    s.value = 'usg';
+    s.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForTimeout(600);
+  expect((await stan(page)).alertWidoczny, 'zamknięty komunikat nie wraca przy renderze').toBe(false);
+});
+
+test('R6 — pasek komunikatów znika razem z biblioteką w stanach bramkowanych', async ({ page }) => {
+  // Ta sama klasa co R2: pasek wisiał nad panelem logowania, bo bramki go nie chowały.
+  await otworz(page);
+  await page.evaluate(() => {
+    window.VildaVault.listNotes = async () => { throw new Error('sejf niedostępny'); };
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+  });
+  await page.waitForFunction(() => {
+    const a = document.getElementById('notesAlert');
+    return !!(a && a.getClientRects().length);
+  }, null, { timeout: 20000 });
+
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => false;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'free' } }));
+  });
+  await page.waitForFunction(() => /funkcja Vilda PRO/.test(document.body.textContent),
+    null, { timeout: 20000 });
+  expect((await stan(page)).alertWidoczny, 'pasek nie wisi nad panelem bramki').toBe(false);
 });
