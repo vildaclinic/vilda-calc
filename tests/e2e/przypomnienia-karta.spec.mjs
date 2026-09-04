@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { CHWILE } from '../support/czas.mjs';
+import { expect, test } from '../support/test-czas.mjs';
 
 // Audyt karty „Przypomnienia” (2026-09-03), etap 1 — P1, P2, P3.
 //
@@ -16,32 +17,9 @@ import { expect, test } from '@playwright/test';
 
 const HASLO = 'E2e#Karta!2026rem';
 
-/**
- * Chwila, na której startuje strona w blokach P1.
- *
- * P1 ma sens tylko wtedy, gdy doba LOKALNA różni się od UTC — inaczej nie odróżnia poprawki
- * od jej braku. Sama strefa tego nie gwarantuje: Pacific/Auckland to UTC+12 (NZST), więc data
- * lokalna wyprzedza UTC dopiero od 12:00 UTC. Przez pozostałe pół doby obie daty są równe
- * i asercja „strefa musi rozjeżdżać dobę” padała. Zmierzone o 06:32 UTC: przeglądarka
- * poprawnie zgłasza Intl 'Pacific/Auckland' i offset +720 min (godzina lokalna 18 przy 6 UTC),
- * ale 4 września lokalnie i 4 września w UTC to ta sama data. Strefa działała — krucha była
- * asercja. Zamiast ją osłabiać, ustalamy moment startu strony.
- *
- * 15 czerwca 13:00 UTC: Auckland 16 czerwca 01:00 (doba się rozjeżdża — o to chodzi w P1),
- * Warszawa 15 czerwca 15:00 (ta sama doba — o to chodzi w kontroli pozytywnej).
- * Czerwiec leży poza oboma przejściami czasu letniego, więc offsety są jednoznaczne.
- */
-const CHWILA_P1 = '2026-06-15T13:00:00Z';
-
-/**
- * Ustawia zegar strony na podaną chwilę i puszcza czas dalej normalnym tempem.
- * `install` bez `resume` zatrzymałby czas, a aplikacja używa timerów (m.in. dławik odświeżania
- * odznaki), więc zamrożony zegar zmieniłby zachowanie, zamiast je tylko ustabilizować.
- */
-async function ustalChwile(page, chwilaISO) {
-  await page.clock.install({ time: new Date(chwilaISO) });
-  await page.clock.resume();
-}
+// Wszystkie testy w tym pliku startują z ustalonej chwili — patrz tests/support/czas.mjs.
+// Domyślna (17 czerwca 2026, 13:00 UTC) jest tak dobrana, by w Pacific/Auckland (UTC+12) był
+// już NASTĘPNY dzień: bloki P1 właśnie tego rozjazdu dowodzą, więc nie potrzebują własnej chwili.
 
 /**
  * Otwiera stronę główną, zakłada użytkownika sejfu, zasiewa wpisy i pokazuje kartę.
@@ -56,7 +34,6 @@ async function otworz(page, wpisy, opcje) {
     }
     return route.abort();
   });
-  if (opcje && opcje.chwila) await ustalChwile(page, opcje.chwila);
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
   await page.evaluate(
@@ -127,24 +104,28 @@ const wiersze = (page) => page.evaluate(() => Array.from(
 })));
 
 test.describe('P1 — Pacific/Auckland: lokalna doba wyprzedza UTC', () => {
-  test.use({ timezoneId: 'Pacific/Auckland' });
+  // Ten blok WYMAGA chwili o godzinie UTC >= 12 — inaczej Auckland (UTC+12) jest jeszcze w tej
+  // samej dobie co UTC i test nie ma czego dowodzić. Przypinamy ją wprost, zamiast polegać na
+  // wartości domyślnej: dzięki temu przebiegi macierzowe (VILDA_CHWILA=niedziela, doba_25h…)
+  // nie unieważniają tego bloku, tylko go omijają.
+  test.use({ timezoneId: 'Pacific/Auckland', chwila: CHWILE.zwykla });
 
   test('etykieta wiersza zgadza się z sekcją, w której ten wiersz stoi', async ({ page }) => {
     await otworz(page, [
       { name: 'Anna Wczorajsza', title: 'Kontrola', dniTemu: 1 },
       { name: 'Bogdan Dzisiejszy', title: 'Kontrola', dniTemu: 0 },
-    ], { chwila: CHWILA_P1 });
+    ]);
 
     const doby = await page.evaluate(() => ({
       lokalna: new Date().toLocaleDateString('sv'),
       utc: new Date().toISOString().slice(0, 10),
     }));
     // Test ma sens tylko wtedy, gdy obie doby są różne — inaczej nie odróżnia poprawki od jej
-    // braku. Dzięki CHWILA_P1 jest to gwarantowane o każdej porze, a nie zależne od tego,
-    // o której godzinie akurat ruszyło CI.
+    // braku. Dzięki wspólnej wstrzykiwanej chwili jest to gwarantowane o każdej porze,
+    // a nie zależne od tego, o której godzinie akurat ruszyło CI.
     expect(doby.lokalna, 'strefa musi rozjeżdżać dobę lokalną z UTC').not.toBe(doby.utc);
-    expect(doby.utc, 'zegar strony stoi na ustalonej chwili').toBe('2026-06-15');
-    expect(doby.lokalna, 'a lokalnie jest już następny dzień').toBe('2026-06-16');
+    expect(doby.utc, 'zegar strony stoi na ustalonej chwili').toBe('2026-06-17');
+    expect(doby.lokalna, 'a lokalnie jest już następny dzień').toBe('2026-06-18');
 
     const w = await wiersze(page);
     const zalegly = w.find((x) => x.sekcja === 'vild-rem-sec-over');
@@ -158,13 +139,14 @@ test.describe('P1 — Pacific/Auckland: lokalna doba wyprzedza UTC', () => {
 });
 
 test.describe('P1 — kontrola pozytywna w Europe/Warsaw', () => {
-  test.use({ timezoneId: 'Europe/Warsaw' });
+  // Ta sama chwila co blok wyżej — na tym polega kontrola: identyczny moment, inna strefa.
+  test.use({ timezoneId: 'Europe/Warsaw', chwila: CHWILE.zwykla });
 
   test('etykiety zaległości bez zmian w strefie zgodnej z dotychczasowym zachowaniem', async ({ page }) => {
     await otworz(page, [
       { name: 'Adam Przedwczorajszy', title: 'Kontrola', dniTemu: 2 },
       { name: 'Beata Wczorajsza', title: 'Kontrola', dniTemu: 1 },
-    ], { chwila: CHWILA_P1 });
+    ]);
     const doby = await page.evaluate(() => ({
       lokalna: new Date().toLocaleDateString('sv'),
       utc: new Date().toISOString().slice(0, 10),
@@ -172,7 +154,7 @@ test.describe('P1 — kontrola pozytywna w Europe/Warsaw', () => {
     // Kontrola pozytywna stoi na TEJ SAMEJ chwili co Auckland, ale w Warszawie doba się
     // nie rozjeżdża — i właśnie to czyni ją kontrolą, a nie powtórzeniem tamtego testu.
     expect(doby.lokalna, 'w Warszawie obie doby są zgodne').toBe(doby.utc);
-    expect(doby.utc).toBe('2026-06-15');
+    expect(doby.utc).toBe('2026-06-17');
 
     const w = await wiersze(page);
     expect(w.map((x) => [x.nazwa, x.kiedy])).toEqual([
@@ -257,6 +239,14 @@ test('P5 — chip, stopka i odznaka mówią tę samą liczbę: notatki, nie pacj
     { name: 'Jan Trójnotatkowy', title: 'W2', dniTemu: 0, time: '08:00' },
     { name: 'Jan Trójnotatkowy', title: 'W3', dniTemu: 0, time: '15:00' },
   ], { tenSamPacjent: true });
+
+  // Odznaka dzwoneczka nadąża za kartą z opóźnieniem: kartę rysuje Br(), a odznakę dopiero
+  // Tr() → VildaChrome.refreshRemindersBtn() w następnym takcie (zmierzone ~150 ms). Czytanie
+  // jej w tym samym momencie co karty było wyścigiem, który do tej pory wygrywaliśmy przypadkiem.
+  await page.waitForFunction(() => {
+    const b = document.getElementById('vildaRemindersBtn');
+    return b && b.getAttribute('data-count') !== '0';
+  }, null, { timeout: 10000 });
 
   const stan = await page.evaluate(() => {
     const el = document.getElementById('remindersInline');
@@ -438,4 +428,31 @@ test('P9 — procedura i rezerwacja mają w karcie ten sam kolor co w modalu', a
 
   // Kontrola pozytywna: procedura nie dostała po prostu koloru sąsiedniej kontroli.
   expect(K['Ewa Biopsja'].awatar).not.toBe(K['Filip Kontrola'].awatar);
+});
+
+test.describe('P10 — filtr pory doby: dyżur, który już się skończył, znika z przypomnień', () => {
+  // Domyślna chwila (15:00 w Warszawie) nie wykonuje gałęzi `s >= h` w _o() (vilda_vault.js):
+  // wpisy kategorii duty/clinic/clinic-nfz z dzisiejszą datą są odsiewane dopiero wtedy, gdy
+  // ich godzina zakończenia już minęła. Bez tego bloku ustalona chwila ZABRAŁABY pokrycie tej
+  // gałęzi — świadomie tego nie robimy, więc jeden blok stoi tuż przed północą.
+  test.use({ chwila: CHWILE.przed_polnoca });
+
+  test('dyżur o 23:55 przepada o 23:58, a wizyta pacjenta zostaje', async ({ page }) => {
+    await otworz(page, [
+      { name: 'Klara Wieczorna', title: 'Kontrola', dniTemu: 0 },
+    ], { dyzur: true });
+
+    const pora = await page.evaluate(() => {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    });
+    expect(pora, 'blok stoi tuż przed północą — inaczej nie sprawdza tej gałęzi').toBe('23:58');
+
+    const wiersze = await page.evaluate(() => Array.from(
+      document.querySelectorAll('#remindersInline .vild-rem-nm'),
+    ).map((n) => n.textContent));
+
+    expect(wiersze, 'wizyta pacjenta nadal czeka').toContain('Klara Wieczorna');
+    expect(wiersze, 'dyżur zakończony o 23:55 nie jest już przypomnieniem').not.toContain('Dyżur nocny');
+  });
 });

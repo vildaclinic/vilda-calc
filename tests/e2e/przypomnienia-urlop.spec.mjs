@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/test-czas.mjs';
 
 // PR 11 (zgłoszenie właściciela 2026-09-03) — nieobecność lekarza („Urlop”) nie jest przypomnieniem.
 //
