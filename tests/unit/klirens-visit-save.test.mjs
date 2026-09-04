@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // Ładujemy clcr_ui_workflow.js (zawiera ClcrUiModel + dopięty ClcrVisitSave).
@@ -30,10 +30,17 @@ function fakeRoot(els) {
   };
 }
 
+const STREFA_BAZOWA = process.env.TZ;
+
 describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
   let g;
   beforeEach(() => {
     g = loadVisitSave();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    process.env.TZ = STREFA_BAZOWA;
   });
 
   it('mapDatapoint: mapuje tag serii przez słownik, odrzuca nieznane i nieliczbowe', () => {
@@ -214,7 +221,16 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
     expect(prot.every((p) => p.clinicalDateISO === '2026-08-01')).toBe(true);
   });
 
-  it('saveActiveResultToCard: domyślna data = dziś (YYYY-MM-DD) gdy nie podano', async () => {
+  it('saveActiveResultToCard: domyślna data = LOKALNY dzień, nie dzień UTC', async () => {
+    // 2026-07-27 13:00 UTC = 2026-07-28 01:45 w Pacific/Chatham (UTC+12:45, zima NZ).
+    // Poprzednia wersja tego testu sprawdzała wyłącznie KSZTAŁT (/^\d{4}-\d{2}-\d{2}$/),
+    // więc przechodziła też dla dnia UTC — czyli dla usterki, której miała pilnować.
+    // Ta chwila rozdziela oba dni, a asercja offsetu potwierdza, że strefa faktycznie się przełączyła.
+    process.env.TZ = 'Pacific/Chatham';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-27T13:00:00Z'));
+    expect(new Date().getTimezoneOffset()).toBe(-765);
+
     const calls = [];
     g.VildaVault = {
       isUnlocked: () => true,
@@ -231,7 +247,9 @@ describe('Klirens — ClcrVisitSave (Faza 1: zapis do karty)', () => {
       ],
     });
     expect(res.ok).toBe(true);
-    expect(res.clinicalDateISO).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(res.clinicalDateISO).toBe('2026-07-28');
     expect(calls[0].clinicalDateISO).toBe(res.clinicalDateISO);
+    // kontrola negatywna: dzień UTC tej samej chwili to 2026-07-27
+    expect(new Date().toISOString().slice(0, 10)).toBe('2026-07-27');
   });
 });

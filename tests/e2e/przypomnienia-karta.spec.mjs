@@ -211,7 +211,9 @@ test('P2 — tytuł odznaki liczy wszystkie notatki, także po grupie z zaległo
     const p = (n) => String(n).padStart(2, '0');
     const d = new Date();
     const dzis = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-    const y = new Date(Date.now() - 864e5);
+    // arytmetyka kalendarzowa: „minus 864e5 ms" cofa się o dwie doby w nocy po zmianie
+    // czasu na letni, więc pod VILDA_CHWILA=doba_23h zasiew rozjeżdżałby się o dzień
+    const y = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
     const wczoraj = `${y.getFullYear()}-${p(y.getMonth() + 1)}-${p(y.getDate())}`;
     const a = await V.savePatient({ name: 'Jan Trójnotatkowy' });
     const aid = a.id || a.patientId;

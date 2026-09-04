@@ -52,7 +52,14 @@ async function zasiej(page) {
     const pad = (n) => String(n).padStart(2, '0');
     const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const dzis = iso(new Date());
-    const wczoraj = iso(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    // arytmetyka kalendarzowa, nie „minus 24 h": w dobie 23-godzinnej (VILDA_CHWILA=doba_23h)
+    // odjęcie doby cofa się o dwa dni kalendarzowe
+    const oDni = (ile) => {
+      const d = new Date();
+      d.setDate(d.getDate() + ile);
+      return iso(d);
+    };
+    const wczoraj = oDni(-1);
     const AID = V.ACTIVITY_PATIENT_ID || '__vilda_activity__';
     for (const dzien of [wczoraj, dzis]) {
       await V.savePatientNote({
