@@ -907,12 +907,21 @@ describe('VildaVault — urlop nie jest przypomnieniem (PR 11, zgłoszenie wła�
   // Kalendarz Terminarza bierze nieobecności z listPatientNotesInRange i ten tor jest nietknięty.
   const p = (n) => String(n).padStart(2, '0');
   const iso = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  // JEDEN odczyt zegara na przebieg i arytmetyka KALENDARZOWA: `Date.now() - 24 h` cofa się
+  // o dwie doby w nocy po zmianie czasu na letni (doba 23-godzinna), a dwa osobne `new Date()`
+  // dają wyścig o północy. setDate() nie ma żadnego z tych problemów.
+  const oDni = (odniesienie, ile) => {
+    const d = new Date(odniesienie.getFullYear(), odniesienie.getMonth(), odniesienie.getDate());
+    d.setDate(d.getDate() + ile);
+    return iso(d);
+  };
 
   async function zUrlopem() {
     const dev = await createDevice('URLOP');
     const AID = dev.vault.ACTIVITY_PATIENT_ID || '__vilda_activity__';
-    const wczoraj = iso(new Date(Date.now() - 24 * 60 * 60 * 1000));
-    const dzis = iso(new Date());
+    const teraz = new Date();
+    const wczoraj = oDni(teraz, -1);
+    const dzis = oDni(teraz, 0);
     for (const dzien of [wczoraj, dzis]) {
       await dev.vault.savePatientNote({
         patientId: AID, externalName: '', title: 'Urlop',

@@ -4136,7 +4136,10 @@
       /* fall through */
     }
     try {
-      return new Date().toISOString().slice(0, 10);
+      const d = new Date();
+      return new Date(d.getTime() - d.getTimezoneOffset() * 6e4)
+        .toISOString()
+        .slice(0, 10);
     } catch (e) {
       return "";
     }
