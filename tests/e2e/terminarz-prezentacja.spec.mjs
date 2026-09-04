@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../support/test-czas.mjs';
 
 // Audyt Terminarza 2026-09-02, I10/D5/D6 — strażnicy prezentacji na REALNEJ stronie terminarz.html
 // z prawdziwym sejfem (VildaVault, IndexedDB). Wzorzec i pomocniki jak w
