@@ -251,3 +251,133 @@ test('N4 — „+ Nowa notatka" znika tam, gdzie i tak nic by nie zrobił', asyn
     null, { timeout: 20000 },
   );
 });
+
+// ---------------------------------------------------------------- rata 1 (R1a + R2)
+//
+// R1a — sekcja NIE reagowała na synchronizację. Sejf przy scalaniu pisze notatki wprost przez
+//       putNoteForUser i nie woła rozgłaszacza, a `onNoteChanged` odpala się tylko przy zmianach
+//       LOKALNYCH; nasłuchu `vilda:sync-merged` w tym pliku nie było wcale (sześć innych plików
+//       produkcyjnych go ma). ZMIERZONE licznikiem wywołań listNotes(): scalenie → 0 odświeżeń,
+//       zapis lokalny → 1. Skutek dla lekarza: szablon dodany na telefonie nie pojawiał się na
+//       komputerze do przeładowania strony, zmieniony pokazywał starą treść, skasowany wisiał.
+// R2  — baner o danych osobowych był pokazywany przy starcie i chowany tylko w stanie bez PRO.
+//       W stanie bez konta zostawał widoczny, a jego krzyżyk zapisuje localStorage NA STAŁE —
+//       dawało się skasować jedyne ostrzeżenie o danych osobowych z ekranu logowania, zanim się
+//       w ogóle zobaczyło bibliotekę. Decyzja właściciela: „zamknięte znaczy zamknięte", więc
+//       klucza NIE bumpujemy — naprawiamy tylko to, żeby nie dało się go zamknąć przed czasem.
+
+test('R1a — lista odświeża się po scaleniu synchronizacji, bez przeładowania strony', async ({ page }) => {
+  await otworz(page);
+
+  // Licznik odczytów sejfu: pokazuje, czy strona w ogóle PRÓBUJE się odświeżyć.
+  await page.evaluate(() => {
+    window.__n = 0;
+    const oryg = window.VildaVault.listNotes;
+    window.VildaVault.listNotes = async function () { window.__n += 1; return oryg.apply(this, arguments); };
+  });
+
+  // Zdarzenie leci na document — tak rozgłasza je integracja synchronizacji.
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged', { bubbles: false })));
+  await page.waitForFunction(() => window.__n >= 1, null, { timeout: 20000 });
+  expect(await page.evaluate(() => window.__n), 'scalenie odświeża listę').toBeGreaterThanOrEqual(1);
+
+  // Dławik 250 ms (wzorzec Ag() z Terminarza): seria scaleń nie robi serii odczytów sejfu.
+  await page.waitForTimeout(400);
+  const przedSeria = await page.evaluate(() => window.__n);
+  await page.evaluate(() => {
+    for (let i = 0; i < 5; i += 1) {
+      document.dispatchEvent(new CustomEvent('vilda:sync-merged', { bubbles: false }));
+    }
+  });
+  await page.waitForTimeout(900);
+  const poSerii = await page.evaluate(() => window.__n);
+  expect(poSerii - przedSeria, 'pięć scaleń pod rząd to jedno odświeżenie, nie pięć').toBe(1);
+});
+
+test('R1a — scalenie przy otwartym edytorze nie rusza listy, ale odświeża po jego zamknięciu', async ({ page }) => {
+  // Najgorszy scenariusz tej poprawki: lekarz pisze treść szablonu, a przerysowanie listy pod
+  // nakładką kasuje mu wpisany tekst. Odświeżenie jest więc ODKŁADANE do zamknięcia edytora.
+  await otworz(page);
+  await page.evaluate(() => {
+    window.__n = 0;
+    const oryg = window.VildaVault.listNotes;
+    window.VildaVault.listNotes = async function () { window.__n += 1; return oryg.apply(this, arguments); };
+  });
+
+  await page.evaluate(() => document.getElementById('notesNewBtn').click());
+  await page.waitForFunction(
+    () => document.getElementById('noteEditorOverlay').classList.contains('is-open'),
+    null, { timeout: 20000 },
+  );
+  await page.evaluate(() => { document.getElementById('noteFieldBody').value = 'niezapisany tekst'; });
+
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent('vilda:sync-merged', { bubbles: false })));
+  await page.waitForTimeout(900);
+  expect(await page.evaluate(() => window.__n), 'przy otwartym edytorze lista stoi').toBe(0);
+  expect(
+    await page.evaluate(() => document.getElementById('noteFieldBody').value),
+    'niezapisany tekst przeżywa scalenie',
+  ).toBe('niezapisany tekst');
+
+  // Zamknięcie edytora domyka odłożone odświeżenie.
+  await page.evaluate(() => document.getElementById('noteEditorCancel').click());
+  await page.waitForFunction(() => window.__n >= 1, null, { timeout: 20000 });
+});
+
+test('R2 — baner o danych osobowych jest funkcją stanu bramek', async ({ page }) => {
+  await page.route('**/*', (route) => {
+    const u = route.request().url();
+    return (u.startsWith('http://127.0.0.1:') || u.startsWith('data:') || u.startsWith('blob:'))
+      ? route.continue() : route.abort();
+  });
+  await page.goto('/notatki.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault));
+
+  const baner = () => page.evaluate(() => {
+    const e = document.getElementById('notesPiiNotice');
+    const x = document.getElementById('notesPiiClose');
+    return {
+      widoczny: !!(e && e.getClientRects().length),
+      krzyzykOsiagalny: !!(x && x.getClientRects().length),
+    };
+  });
+
+  // Stan 1: brak konta. Krzyżyk zapisuje localStorage NA STAŁE, więc tutaj nie wolno go pokazywać.
+  await page.waitForFunction(() => /Zaloguj si/.test(document.body.textContent), null, { timeout: 20000 });
+  expect(await baner(), 'bez konta: nie da się skasować ostrzeżenia, którego jeszcze nie było po co czytać')
+    .toMatchObject({ widoczny: false, krzyzykOsiagalny: false });
+
+  // Stan 2: konto jest, PRO nie ma.
+  await page.evaluate(
+    async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }),
+    HASLO,
+  );
+  await page.waitForFunction(() => window.VildaVault.isUnlocked());
+  await page.waitForFunction(() => /funkcja Vilda PRO/.test(document.body.textContent), null, { timeout: 20000 });
+  expect(await baner(), 'bez PRO również nie').toMatchObject({ widoczny: false });
+
+  // Stan 3: PRO włączone w trakcie sesji — baner wraca sam, bez przeładowania strony.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+  });
+  await page.waitForFunction(() => {
+    const e = document.getElementById('notesPiiNotice');
+    return !!(e && e.getClientRects().length);
+  }, null, { timeout: 20000 });
+
+  // Zamknięcie działa i JEST TRWAŁE — decyzja właściciela „zamknięte znaczy zamknięte".
+  await page.evaluate(() => document.getElementById('notesPiiClose').click());
+  await page.waitForFunction(() => {
+    const e = document.getElementById('notesPiiNotice');
+    return !(e && e.getClientRects().length);
+  }, null, { timeout: 20000 });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => Boolean(window.VildaVault && window.VildaProAccess));
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+  });
+  await page.waitForTimeout(1200);
+  expect((await baner()).widoczny, 'raz zamknięty zostaje zamknięty także po przeładowaniu').toBe(false);
+});
