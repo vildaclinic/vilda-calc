@@ -177,6 +177,41 @@ describe('tempo wysyłki po zmianie szablonu w bibliotece Notatek', () => {
     expect(syncPull, 'ale zostaje odłożone i wykonane po oknie dławika').toHaveBeenCalledTimes(2);
   });
 
+  it('nieudana wysyłka jest ponawiana, a nie połykana', async () => {
+    // Znalezisko 2026-09-05 po zgłoszeniu regresu kasowania: znacznik „mam coś do wysłania"
+    // był zerowany PRZED wywołaniem syncPush, a wynik szedł w pusty catch. Jedno nieudane
+    // żądanie — polityka workera, zerwana sieć, bramka STALE_DEVICE_GUARD po starcie sesji —
+    // i zmiana nie wychodziła NIGDY, bo nic o niej nie pamiętało. Skasowanie szablonu to
+    // zwykle pojedyncza, odosobniona czynność, więc trafia w to najdotkliwiej: nie ma
+    // kolejnej zmiany, która przypadkiem zabrałaby ją ze sobą.
+    const { handlery, syncPush } = zaladujIntegracje();
+    syncPush.mockImplementation(() => Promise.reject(new Error('sieć padła')));
+
+    handlery.note({ action: 'delete', id: 'n1' });
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS + 100);
+    expect(syncPush, 'pierwsza próba').toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(2100);
+    expect(syncPush, 'ponowienie po ~2 s').toHaveBeenCalledTimes(2);
+
+    syncPush.mockImplementation(() => Promise.resolve());
+    await vi.advanceTimersByTimeAsync(4100);
+    expect(syncPush, 'trzecia próba dochodzi do skutku').toHaveBeenCalledTimes(3);
+
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(syncPush, 'po sukcesie nic się już nie ponawia').toHaveBeenCalledTimes(3);
+  });
+
+  it('ponawianie ma koniec — nie kręci się w nieskończoność', async () => {
+    const { handlery, syncPush } = zaladujIntegracje();
+    syncPush.mockImplementation(() => Promise.reject(new Error('worker niedostępny')));
+
+    handlery.note({ action: 'save', id: 'n1' });
+    await vi.advanceTimersByTimeAsync(300000);
+    expect(syncPush.mock.calls.length, 'skończona liczba prób').toBeLessThanOrEqual(6);
+    expect(syncPush.mock.calls.length, 'ale więcej niż jedna').toBeGreaterThan(1);
+  });
+
   it('KONTROLA NEGATYWNA: pozostałe zdarzenia zostają na leniwym liczniku', async () => {
     // Pacjenci i notatki pacjenta mają własną natychmiastową deltę, więc pełny blob jest dla
     // nich tylko okresowym uzgodnieniem. Gdyby poprawka przyspieszyła i je, każda zmiana
