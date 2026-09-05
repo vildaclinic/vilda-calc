@@ -1855,17 +1855,48 @@ html.vilda-pro-active .pro-sync-note {
 
     const controls = {};
 
-    function syncControl(key, incomingValue, settings) {
+    // Zapis jest dławiony. Suwak wysyła `input` przy każdym pikselu przeciągnięcia, a
+    // `centileChartLineStyles` to klucz synchronizowany w chmurze — bez dławika jedno
+    // przeciągnięcie od 2 do 8 px to kilkadziesiąt zapisów i tyle samo powodów do wysyłki.
+    const WRITE_DEBOUNCE_MS = 400;
+    let writeTimer = null;
+    let pendingLabel = '';
+
+    function flushWrite() {
+      if (writeTimer) {
+        clearTimeout(writeTimer);
+        writeTimer = null;
+      }
+      if (!pendingLabel) return;
+      const label = pendingLabel;
+      pendingLabel = '';
+      writeSettings(settings);
+      setStatus('Zapisano: ' + label);
+    }
+
+    function scheduleWrite(label) {
+      pendingLabel = label;
+      if (writeTimer) clearTimeout(writeTimer);
+      writeTimer = setTimeout(flushWrite, WRITE_DEBOUNCE_MS);
+    }
+
+    // Ostatnia zmiana nie może zginąć, gdy karta znika szybciej, niż upłynie dławik.
+    window.addEventListener('pagehide', flushWrite);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'hidden') flushWrite();
+    });
+
+    function syncControl(key, incomingValue) {
+      const control = controls[key];
       const safeValue = normalizeValue(incomingValue, DEFAULTS[key]);
       settings[key] = safeValue;
-      if (controls[key]) {
-        controls[key].range.value = String(safeValue);
-        controls[key].number.value = String(safeValue);
-        controls[key].defaultInfo.textContent = 'Domyślnie: ' + formatPx(DEFAULTS[key]) + ' px';
-        controls[key].hint.textContent = 'Aktualnie ustawione: ' + formatPx(safeValue) + ' px';
+      if (control) {
+        control.range.value = String(safeValue);
+        control.number.value = String(safeValue);
+        control.defaultInfo.textContent = 'Domyślnie: ' + formatPx(DEFAULTS[key]) + ' px';
+        control.hint.textContent = 'Aktualnie ustawione: ' + formatPx(safeValue) + ' px';
       }
-      writeSettings(settings);
-      setStatus('Zapisano: ' + controls[key].labelText);
+      scheduleWrite(control ? control.labelText : key);
     }
 
     const settings = readSettings();
@@ -1927,13 +1958,17 @@ html.vilda-pro-active .pro-sync-note {
         const numberWrap = document.createElement('label');
         numberWrap.className = 'tech-chart-setting-number-wrap';
 
+        // Pole tekstowe, nie `type="number"`: przy typie liczbowym przeglądarka wycina
+        // przecinek dziesiętny jeszcze zanim kod go zobaczy — wpisane „2,5" wraca z pola
+        // jako „25”, więc `normalizeValue()` (które ma zamianę przecinka na kropkę)
+        // nigdy nie dostawało przecinka, a lekarz piszący po polsku dostawał 20 px.
+        // `inputmode="decimal"` zostawia na telefonie klawiaturę numeryczną.
         const number = document.createElement('input');
-        number.type = 'number';
+        number.type = 'text';
         number.className = 'tech-chart-setting-number';
-        number.min = '0.25';
-        number.max = '20';
-        number.step = '0.25';
         number.inputMode = 'decimal';
+        number.autocomplete = 'off';
+        number.setAttribute('aria-label', item.label + ' — grubość w pikselach (0,25–20)');
         number.value = String(settings[item.key]);
         numberWrap.appendChild(number);
 
@@ -1959,17 +1994,33 @@ html.vilda-pro-active .pro-sync-note {
         };
 
         range.addEventListener('input', function() {
-          syncControl(item.key, this.value, settings);
+          syncControl(item.key, this.value);
         });
 
-        number.addEventListener('input', function() {
-          const rawValue = String(this.value || '').trim();
-          if (!rawValue) return;
-          syncControl(item.key, rawValue, settings);
-        });
+        // Wartość z pola bierzemy dopiero przy zatwierdzeniu (Enter albo wyjście z pola).
+        // Wcześniej działo się to na `input`, czyli po KAŻDYM znaku, a `syncControl()`
+        // wpisywało znormalizowaną wartość z powrotem do pola. Wpisywane „2.5" przechodziło
+        // więc kolejno „2" → „2" (kropka zjedzona przez Number("2.")) → „25" → obcięte do 20.
+        // Zmierzone znak po znaku: pole grubości 2,5 px ustawiało 20 px i zapisywało to
+        // w kluczu synchronizowanym w chmurze, czyli na wszystkich urządzeniach.
+        function zatwierdzPole() {
+          const rawValue = String(number.value || '').trim();
+          if (!rawValue) {
+            // Puste pole to rezygnacja, nie „ustaw minimum" — Number("") daje 0, które
+            // clamp podniósłby do 0,25 px i cicho zmieniło ustawienie.
+            number.value = String(settings[item.key]);
+            return;
+          }
+          syncControl(item.key, rawValue);
+        }
 
-        number.addEventListener('blur', function() {
-          syncControl(item.key, this.value, settings);
+        number.addEventListener('change', zatwierdzPole);
+        number.addEventListener('blur', zatwierdzPole);
+        number.addEventListener('keydown', function(event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            zatwierdzPole();
+          }
         });
 
         groupGrid.appendChild(row);
@@ -1981,6 +2032,13 @@ html.vilda-pro-active .pro-sync-note {
 
     if (resetBtn) {
       resetBtn.addEventListener('click', function() {
+        // Zaległy zapis z dławika dotyczy stanu sprzed przywrócenia domyślnych — porzucamy go,
+        // żeby nie nadpisał komunikatu o resecie własnym „Zapisano: <pole>".
+        if (writeTimer) {
+          clearTimeout(writeTimer);
+          writeTimer = null;
+        }
+        pendingLabel = '';
         Object.keys(DEFAULTS).forEach(function(key) {
           settings[key] = DEFAULTS[key];
           if (controls[key]) {
