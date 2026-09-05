@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.834';
+const SW_VERSION = '1.0.835';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -209,6 +209,7 @@ const CORE_SHELL_URLS = [
   '/inline_ustawienia_04.js?v=9',
   '/inline_ustawienia_04.js?v=10',
   '/inline_ustawienia_04.js?v=11',
+  '/inline_ustawienia_04.js?v=12',
   '/jsQR.min.js?v=1',
   '/jszip.min.js?v=1',
   '/inline_ustawienia_05.js?v=1',
@@ -265,6 +266,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=22',
   '/vilda_persistence_adapter.js?v=23',
   '/vilda_persistence_adapter.js?v=24',
+  '/vilda_persistence_adapter.js?v=25',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -427,6 +429,7 @@ const CORE_SHELL_URLS = [
   '/vilda_vault.js?v=166',
   '/vilda_vault.js?v=167',
   '/vilda_vault.js?v=168',
+  '/vilda_vault.js?v=169',
   '/vilda_retention.js?v=1',
   '/vilda_auth_ui.js',
   '/vilda_auth_ui.js?v=16',
