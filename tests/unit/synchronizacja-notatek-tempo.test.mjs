@@ -17,7 +17,6 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // liczniku, bo one mają własny szybki tor i pełny blob jest dla nich tylko uzgodnieniem.
 
 const TOR_SZYBKI_MS = 3000;
-const SUFIT_MS = 10000;
 const TOR_LENIWY_MS = 60000;
 
 function makeStorage(seed) {
@@ -34,10 +33,12 @@ function makeStorage(seed) {
 function zaladujIntegracje() {
   const handlery = {};
   const syncPush = vi.fn(() => Promise.resolve());
+  const syncPull = vi.fn(() => Promise.resolve());
+  const stan = { odblokowany: false };
   const rejestrator = (nazwa) => (fn) => { handlery[nazwa] = fn; };
 
   const vault = {
-    isUnlocked: () => false,
+    isUnlocked: () => stan.odblokowany,
     isCloudOnlyMode: () => false,
     onUnlock: rejestrator('unlock'),
     onLock: rejestrator('lock'),
@@ -64,7 +65,7 @@ function zaladujIntegracje() {
       addEventListener() {}, removeEventListener() {}, dispatchEvent() {}, hidden: false,
     },
     VildaVault: vault,
-    VildaSync: { syncPush },
+    VildaSync: { syncPush, syncPull },
   };
   win.window = win;
   win.self = win;
@@ -74,7 +75,7 @@ function zaladujIntegracje() {
   if (typeof handlery.note !== 'function') {
     throw new Error('vilda_sync_integration.js nie zarejestrował onNoteChanged');
   }
-  return { handlery, syncPush };
+  return { handlery, syncPush, syncPull, stan, win };
 }
 
 describe('tempo wysyłki po zmianie szablonu w bibliotece Notatek', () => {
@@ -102,20 +103,78 @@ describe('tempo wysyłki po zmianie szablonu w bibliotece Notatek', () => {
     expect(syncPush).toHaveBeenCalledTimes(1);
   });
 
-  it('seria zapisów nie odsuwa wysyłki w nieskończoność — sufit od pierwszej zmiany', async () => {
-    // I() zaczyna od clearTimeout, więc bez sufitu wystarczyłoby zapisywać częściej niż co
-    // 3 sekundy, żeby wysyłka nie wyszła nigdy. Sufit liczy się od PIERWSZEJ niewysłanej zmiany.
+  it('seria zapisów nie odsuwa wysyłki w nieskończoność, ale też nie zalewa workera', async () => {
+    // Semantyka dławika: I() trzyma BEZWZGLĘDNY termin i nigdy nie odsuwa go w przyszłość, więc
+    // pierwszy zapis z serii wychodzi po 3 s, a kolejne dołączają się do już zaplanowanej wysyłki
+    // albo otwierają następne okno. Efekt jest dwustronny: nie ma zagłodzenia (dawniej pilnował
+    // tego osobny sufit 10 s, dziś jest to własność samego terminu) i nie ma zalewania — z tego
+    // toru nie wychodzi więcej niż jedna wysyłka na okno dławika.
     const { handlery, syncPush } = zaladujIntegracje();
 
     for (let i = 0; i < 9; i += 1) {
       handlery.note({ action: 'save', id: `n${i}` });
       await vi.advanceTimersByTimeAsync(1000);
-      if (i < 8) {
-        expect(syncPush, `po ${(i + 1) * 1000} ms serii wysyłka jeszcze czeka`).not.toHaveBeenCalled();
+      if (i === 2) {
+        expect(syncPush, 'pierwszy zapis serii wychodzi po ~3 s, nie czeka na koniec serii')
+          .toHaveBeenCalled();
       }
     }
     await vi.advanceTimersByTimeAsync(1200);
-    expect(syncPush, `sufit ${SUFIT_MS} ms domyka serię`).toHaveBeenCalled();
+    const okien = Math.ceil(10200 / TOR_SZYBKI_MS);
+    expect(syncPush.mock.calls.length, `nie więcej niż jedna wysyłka na okno ${TOR_SZYBKI_MS} ms`)
+      .toBeLessThanOrEqual(okien);
+  });
+
+  it('inne zdarzenie synchronizacji nie odsuwa wysyłki szablonu na minutę', async () => {
+    // Znalezisko z 2026-09-05: pierwsza wersja szybkiego toru dzieliła uchwyt timera `d` z torem
+    // leniwym, a I() zaczyna od clearTimeout. Wystarczyło, że w ciągu tych 3 sekund padło
+    // JAKIEKOLWIEK inne zdarzenie (preferencje, pacjent, lista pacjentów), żeby Pt() skasował
+    // termin szablonu i ustawił 60 s. Zmierzone na scalonym kodzie: 61 s zamiast 3 s.
+    // Poprawka: I() trzyma bezwzględny termin i nigdy nie odsuwa go w przyszłość.
+    const { handlery, syncPush } = zaladujIntegracje();
+
+    handlery.note({ action: 'save', id: 'n1' });
+    await vi.advanceTimersByTimeAsync(1000);
+    handlery.pref();
+
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS - 1100);
+    expect(syncPush, 'termin szablonu nadal obowiązuje').not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(syncPush, 'zapis szablonu wychodzi mimo innego zdarzenia w międzyczasie')
+      .toHaveBeenCalledTimes(1);
+  });
+
+  it('seria innych zdarzeń nie zagłodzi wysyłki szablonu', async () => {
+    // Wariant złośliwy tego samego: bez poprawki każda kolejna zmiana pacjenta przestawiała
+    // termin na 60 s od siebie. Zmierzone: 80 s przy zdarzeniach co 2 s przez 20 s.
+    const { handlery, syncPush } = zaladujIntegracje();
+
+    handlery.note({ action: 'save', id: 'n1' });
+    for (let i = 0; i < 10; i += 1) {
+      await vi.advanceTimersByTimeAsync(2000);
+      handlery.patient({ patientId: `p${i}` });
+    }
+    expect(syncPush, 'wysyłka szablonu poszła w pierwszych sekundach, nie po serii')
+      .toHaveBeenCalled();
+  });
+
+  it('powiadomienie o zmianie nie przepada, gdy trafi w dławik pobierania', async () => {
+    // Znalezisko 2026-09-05: S() (pullNow) przy dławiku 1,5 s albo przy trwającym pobraniu po
+    // prostu wychodziło. Powiadomienie z gniazda, które trafiło w to okno, znikało bez śladu,
+    // a najbliższe pobranie z zegara jest do 20 s później. Teraz jest odkładane, nie gubione.
+    const { syncPull, stan, win } = zaladujIntegracje();
+    stan.odblokowany = true;
+
+    win.VildaSyncIntegration.pullNow();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(syncPull, 'pierwsze powiadomienie pobiera od razu').toHaveBeenCalledTimes(1);
+
+    win.VildaSyncIntegration.pullNow();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(syncPull, 'drugie trafia w dławik i jeszcze nie pobiera').toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(syncPull, 'ale zostaje odłożone i wykonane po oknie dławika').toHaveBeenCalledTimes(2);
   });
 
   it('KONTROLA NEGATYWNA: pozostałe zdarzenia zostają na leniwym liczniku', async () => {
