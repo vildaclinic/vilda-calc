@@ -50,6 +50,7 @@ function zaladujIntegracje() {
     onPatientDeleted: rejestrator('patientDeleted'),
     onPreferenceChanged: rejestrator('pref'),
     onPasskeyChanged: rejestrator('passkey'),
+    onCredentialChanged: rejestrator('credential'),
     onPatientNoteChanged: rejestrator('patientNote'),
     onPatientListChanged: rejestrator('patientList'),
     getSyncMaterial: () => Promise.resolve({ slotId: 'a'.repeat(64), authToken: 'TOKEN' }),
@@ -309,5 +310,45 @@ describe('delta biblioteki szablonów — wysyłka', () => {
 
     expect(sendBeacon, 'brak delty').not.toHaveBeenCalled();
     expect(syncPush, 'ale pełna wysyłka działa').toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('zmiana hasła wychodzi z urządzenia', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  // Zgłoszenie właściciela 2026-09-05, po wdrożeniu U2: „hasło zmieniło się tylko na tym jednym
+  // urządzeniu, na którym robiłem tę zmianę". Koperta hasła BYŁA w ładunku i scalanie JĄ
+  // przyjmowało — testy U2 to pokazały. Czego nie pokazały: że po zmianie hasła nic nie
+  // planowało WYSYŁKI. Sejf zapisywał nową kopertę lokalnie i milczał, więc na serwerze
+  // zostawał blob sprzed zmiany, a drugie urządzenie pobierało starą kopertę.
+  //
+  // Mierzymy więc wyzwalacz, a nie ładunek: po zdarzeniu zmiany koperty ma polecieć syncPush.
+
+  it('po zmianie hasła leci wysyłka, i to szybkim torem', async () => {
+    const { handlery, syncPush } = zaladujIntegracje();
+    expect(typeof handlery.credential,
+      'integracja musi nasłuchiwać zmiany koperty hasła').toBe('function');
+
+    handlery.credential({ action: 'password-changed', updatedAtISO: '2026-09-05T22:00:00.000Z' });
+
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS - 100);
+    expect(syncPush, 'dławik szybkiego toru').not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(syncPush, `zmiana hasła nie może czekać ${TOR_LENIWY_MS} ms`).toHaveBeenCalledTimes(1);
+  });
+
+  it('nieudana wysyłka po zmianie hasła jest ponawiana', async () => {
+    // Zmiana hasła to zwykle czynność odosobniona: jeśli jedna nieudana próba przepadnie,
+    // nic jej nie zabierze przy okazji, bo nie ma „przy okazji".
+    const { handlery, syncPush } = zaladujIntegracje();
+    syncPush.mockRejectedValueOnce(new Error('siec padla'));
+
+    handlery.credential({ action: 'password-changed' });
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS + 100);
+    expect(syncPush).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(syncPush, 'ponowienie po nieudanej próbie').toHaveBeenCalledTimes(2);
   });
 });
