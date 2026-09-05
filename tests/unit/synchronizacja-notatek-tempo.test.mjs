@@ -34,6 +34,9 @@ function zaladujIntegracje() {
   const handlery = {};
   const syncPush = vi.fn(() => Promise.resolve());
   const syncPull = vi.fn(() => Promise.resolve());
+  const sendBeacon = vi.fn(() => true);
+  const buildLibraryNoteDelta = vi.fn(() => Promise.resolve({ iv: 'IV', data: 'ZASZYFROWANA-NOTATKA' }));
+  const buildLibraryNoteTombstoneDelta = vi.fn(() => Promise.resolve({ iv: 'IV', data: 'ZASZYFROWANY-NAGROBEK' }));
   const stan = { odblokowany: false };
   const rejestrator = (nazwa) => (fn) => { handlery[nazwa] = fn; };
 
@@ -49,12 +52,15 @@ function zaladujIntegracje() {
     onPasskeyChanged: rejestrator('passkey'),
     onPatientNoteChanged: rejestrator('patientNote'),
     onPatientListChanged: rejestrator('patientList'),
+    getSyncMaterial: () => Promise.resolve({ slotId: 'a'.repeat(64), authToken: 'TOKEN' }),
+    buildLibraryNoteDelta,
+    buildLibraryNoteTombstoneDelta,
   };
 
   const win = {
     localStorage: makeStorage({ 'vilda-sync-enabled-v1': 'true' }),
     sessionStorage: makeStorage(),
-    navigator: {},
+    navigator: { sendBeacon },
     setTimeout: (...a) => setTimeout(...a),
     clearTimeout: (...a) => clearTimeout(...a),
     setInterval: (...a) => setInterval(...a),
@@ -81,7 +87,10 @@ function zaladujIntegracje() {
   if (typeof handlery.note !== 'function') {
     throw new Error('vilda_sync_integration.js nie zarejestrował onNoteChanged');
   }
-  return { handlery, syncPush, syncPull, stan, win };
+  return {
+    handlery, syncPush, syncPull, stan, win,
+    sendBeacon, buildLibraryNoteDelta, buildLibraryNoteTombstoneDelta,
+  };
 }
 
 describe('tempo wysyłki po zmianie szablonu w bibliotece Notatek', () => {
@@ -246,5 +255,59 @@ describe('tempo wysyłki po zmianie szablonu w bibliotece Notatek', () => {
 
     await vi.advanceTimersByTimeAsync(TOR_LENIWY_MS);
     expect(syncPush, 'ale po leniwym terminie ma w końcu wyjść').toHaveBeenCalled();
+  });
+});
+
+// Rata B: biblioteka szablonów dostaje natychmiastową deltę przez sendBeacon — tę samą drogę,
+// którą notatki pacjenta mają od dawna i dzięki której Terminarz jest natychmiastowy. Worker
+// rozgłasza ją po WebSocket jako {type:'delta', payload}; odbiorca scala ją bez pobierania blobu.
+// Pełna wysyłka zostaje równolegle jako siatka bezpieczeństwa dla urządzeń offline.
+
+describe('delta biblioteki szablonów — wysyłka', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const cialo = (call) => JSON.parse(String(call[1] && call[1].tresc !== undefined ? call[1].tresc : call[1]));
+
+  it('zapis szablonu leci deltą od razu, nie czeka na pełną wysyłkę', async () => {
+    const { handlery, sendBeacon, buildLibraryNoteDelta, syncPush } = zaladujIntegracje();
+
+    handlery.note({ action: 'save', id: 'n1' });
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(buildLibraryNoteDelta, 'użyty builder biblioteki').toHaveBeenCalledWith('n1');
+    expect(sendBeacon, 'delta poszła natychmiast').toHaveBeenCalledTimes(1);
+    expect(String(sendBeacon.mock.calls[0][0]), 'na endpoint delty')
+      .toMatch(/\/v1\/slots\/a{64}\/delta$/);
+    expect(syncPush, 'a pełna wysyłka nadal czeka na swój dławik').not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS + 100);
+    expect(syncPush, 'pełna wysyłka zostaje jako siatka bezpieczeństwa').toHaveBeenCalledTimes(1);
+  });
+
+  it('skasowanie leci deltą nagrobka, ze znacznikiem z sejfu', async () => {
+    const { handlery, sendBeacon, buildLibraryNoteTombstoneDelta, buildLibraryNoteDelta } = zaladujIntegracje();
+
+    handlery.note({ action: 'delete', id: 'n2', deletedAtISO: '2030-01-01T00:00:00.000Z' });
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(buildLibraryNoteTombstoneDelta, 'nagrobek ze znacznikiem removeNote, nie własnym')
+      .toHaveBeenCalledWith('n2', '2030-01-01T00:00:00.000Z');
+    expect(buildLibraryNoteDelta, 'przy kasowaniu nie budujemy delty treści').not.toHaveBeenCalled();
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+  });
+
+  it('stary sejf bez builderów nie wywala wysyłki', async () => {
+    // Service worker potrafi podać starszy vilda_vault.js z cache. Brak funkcji ma być cichym
+    // nic-nie-robieniem — pełna wysyłka i tak dowiezie zmianę.
+    const { handlery, sendBeacon, syncPush, win } = zaladujIntegracje();
+    delete win.VildaVault.buildLibraryNoteDelta;
+    delete win.VildaVault.buildLibraryNoteTombstoneDelta;
+
+    handlery.note({ action: 'save', id: 'n3' });
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS + 100);
+
+    expect(sendBeacon, 'brak delty').not.toHaveBeenCalled();
+    expect(syncPush, 'ale pełna wysyłka działa').toHaveBeenCalledTimes(1);
   });
 });
