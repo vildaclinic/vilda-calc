@@ -65,7 +65,13 @@ function zaladujIntegracje() {
       addEventListener() {}, removeEventListener() {}, dispatchEvent() {}, hidden: false,
     },
     VildaVault: vault,
-    VildaSync: { syncPush, syncPull },
+    VildaSync: {
+      syncPush,
+      syncPull,
+      onSyncStart: rejestrator('syncStart'),
+      onSyncComplete: rejestrator('syncComplete'),
+      onSyncError: rejestrator('syncError'),
+    },
   };
   win.window = win;
   win.self = win;
@@ -175,6 +181,57 @@ describe('tempo wysyłki po zmianie szablonu w bibliotece Notatek', () => {
 
     await vi.advanceTimersByTimeAsync(1600);
     expect(syncPull, 'ale zostaje odłożone i wykonane po oknie dławika').toHaveBeenCalledTimes(2);
+  });
+
+  it('nieudana wysyłka jest ponawiana, a nie połykana', async () => {
+    // Znalezisko 2026-09-05 po zgłoszeniu regresu kasowania: znacznik „mam coś do wysłania"
+    // był zerowany PRZED wywołaniem syncPush, a wynik szedł w pusty catch. Jedno nieudane
+    // żądanie — polityka workera, zerwana sieć, bramka STALE_DEVICE_GUARD po starcie sesji —
+    // i zmiana nie wychodziła NIGDY, bo nic o niej nie pamiętało. Skasowanie szablonu to
+    // zwykle pojedyncza, odosobniona czynność, więc trafia w to najdotkliwiej: nie ma
+    // kolejnej zmiany, która przypadkiem zabrałaby ją ze sobą.
+    const { handlery, syncPush } = zaladujIntegracje();
+    syncPush.mockImplementation(() => Promise.reject(new Error('sieć padła')));
+
+    handlery.note({ action: 'delete', id: 'n1' });
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS + 100);
+    expect(syncPush, 'pierwsza próba').toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(2100);
+    expect(syncPush, 'ponowienie po ~2 s').toHaveBeenCalledTimes(2);
+
+    syncPush.mockImplementation(() => Promise.resolve());
+    await vi.advanceTimersByTimeAsync(4100);
+    expect(syncPush, 'trzecia próba dochodzi do skutku').toHaveBeenCalledTimes(3);
+
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(syncPush, 'po sukcesie nic się już nie ponawia').toHaveBeenCalledTimes(3);
+  });
+
+  it('ponawianie ma koniec — nie kręci się w nieskończoność', async () => {
+    const { handlery, syncPush } = zaladujIntegracje();
+    syncPush.mockImplementation(() => Promise.reject(new Error('worker niedostępny')));
+
+    handlery.note({ action: 'save', id: 'n1' });
+    await vi.advanceTimersByTimeAsync(300000);
+    expect(syncPush.mock.calls.length, 'skończona liczba prób').toBeLessThanOrEqual(6);
+    expect(syncPush.mock.calls.length, 'ale więcej niż jedna').toBeGreaterThan(1);
+  });
+
+  it('STALE_DEVICE_GUARD natychmiast pobiera, zamiast czekać na ślepy traf', async () => {
+    // Sejf wstrzymuje KAŻDĄ wysyłkę, dopóki w tej sesji przeglądarki nie zakończyło się ani
+    // jedno pobranie (STALE_DEVICE_GUARD w syncPush). Przy dawnym terminie 60 s pierwsze
+    // pobranie zawsze zdążyło. Po przyspieszeniu do 3 s wysyłka potrafi je wyprzedzić —
+    // i wtedy jedyną nadzieją jest to, że pobranie z zegara trafi się przed wyczerpaniem
+    // ponowień. Kod obsługuje teraz ten przypadek wprost: pobiera natychmiast.
+    const { handlery, syncPull, stan } = zaladujIntegracje();
+    stan.odblokowany = true;
+
+    expect(typeof handlery.syncError, 'integracja rejestruje onSyncError').toBe('function');
+    handlery.syncError({ code: 'STALE_DEVICE_GUARD', message: 'wstrzymano wysyłkę' });
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(syncPull, 'odpowiedzią na tę bramkę jest pobranie, nie cisza').toHaveBeenCalled();
   });
 
   it('KONTROLA NEGATYWNA: pozostałe zdarzenia zostają na leniwym liczniku', async () => {
