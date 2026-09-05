@@ -147,7 +147,7 @@ html.vilda-pro-active .pro-sync-note {
 
   <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=25"></script>
+<script defer src="vilda_persistence_adapter.js?v=26"></script>
 <script defer src="vilda_session_bridge.js?v=1"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
@@ -1595,18 +1595,25 @@ html.vilda-pro-active .pro-sync-note {
       const slider = document.getElementById('palSmoothPassSettings');
       const valueEl = document.getElementById('palSmoothPassSettingsValue');
       if (slider) {
-        const stored = window.vildaSettingsStorage.readNumber('PAL_SMOOTH_PASSES', null, { min: 0, max: 50 });
-        // Ustaw wartość suwaka i etykietę na wartość z localStorage lub domyślną 12
-        const initVal = (stored !== null ? stored : 12);
-        slider.value = initVal;
-        if (valueEl) valueEl.textContent = String(initVal);
-        // Zapisz do localStorage każdą zmianę
+        // Odczyt stanu BEZ ZAPISU. Wygładzanie jeździ teraz w chmurze, więc może zmienić się
+        // w tle po scaleniu z innego urządzenia — a zapis z powrotem zapętliłby synchronizację.
+        function odswiezPalSmoothZeStanu() {
+          const stored = window.vildaSettingsStorage.readNumber('PAL_SMOOTH_PASSES', null, { min: 0, max: 50 });
+          const val = (stored !== null ? stored : 12);
+          slider.value = val;
+          if (valueEl) valueEl.textContent = String(val);
+        }
+        odswiezPalSmoothZeStanu();
+        // Zapisz do stanu każdą zmianę
         slider.addEventListener('input', function() {
           const v2 = parseInt(this.value, 10);
           if (!isNaN(v2)) {
             window.vildaSettingsStorage.writeNumber('PAL_SMOOTH_PASSES', v2);
             if (valueEl) valueEl.textContent = String(v2);
           }
+        });
+        document.addEventListener('vilda:sync-status-changed', function() {
+          setTimeout(odswiezPalSmoothZeStanu, 300);
         });
       }
     });
@@ -2238,7 +2245,7 @@ html.vilda-pro-active .pro-sync-note {
 
   <script defer src="inline_ustawienia_01.js?v=1"></script>
 
-  <script defer src="inline_ustawienia_02.js?v=1"></script>
+  <script defer src="inline_ustawienia_02.js?v=2"></script>
 
   <script defer src="inline_ustawienia_03.js?v=1"></script>
 
@@ -2308,7 +2315,7 @@ html.vilda-pro-active .pro-sync-note {
   <script defer src="jsQR.min.js?v=1"></script>
   <script defer src="inline_ustawienia_04.js?v=12"></script>
 
-  <script defer src="inline_ustawienia_05.js?v=1"></script>
+  <script defer src="inline_ustawienia_05.js?v=2"></script>
 
   <script defer src="inline_ustawienia_06.js?v=1"></script>
 
