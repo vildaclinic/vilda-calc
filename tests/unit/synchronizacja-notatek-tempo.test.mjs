@@ -65,7 +65,13 @@ function zaladujIntegracje() {
       addEventListener() {}, removeEventListener() {}, dispatchEvent() {}, hidden: false,
     },
     VildaVault: vault,
-    VildaSync: { syncPush, syncPull },
+    VildaSync: {
+      syncPush,
+      syncPull,
+      onSyncStart: rejestrator('syncStart'),
+      onSyncComplete: rejestrator('syncComplete'),
+      onSyncError: rejestrator('syncError'),
+    },
   };
   win.window = win;
   win.self = win;
@@ -210,6 +216,22 @@ describe('tempo wysyłki po zmianie szablonu w bibliotece Notatek', () => {
     await vi.advanceTimersByTimeAsync(300000);
     expect(syncPush.mock.calls.length, 'skończona liczba prób').toBeLessThanOrEqual(6);
     expect(syncPush.mock.calls.length, 'ale więcej niż jedna').toBeGreaterThan(1);
+  });
+
+  it('STALE_DEVICE_GUARD natychmiast pobiera, zamiast czekać na ślepy traf', async () => {
+    // Sejf wstrzymuje KAŻDĄ wysyłkę, dopóki w tej sesji przeglądarki nie zakończyło się ani
+    // jedno pobranie (STALE_DEVICE_GUARD w syncPush). Przy dawnym terminie 60 s pierwsze
+    // pobranie zawsze zdążyło. Po przyspieszeniu do 3 s wysyłka potrafi je wyprzedzić —
+    // i wtedy jedyną nadzieją jest to, że pobranie z zegara trafi się przed wyczerpaniem
+    // ponowień. Kod obsługuje teraz ten przypadek wprost: pobiera natychmiast.
+    const { handlery, syncPull, stan } = zaladujIntegracje();
+    stan.odblokowany = true;
+
+    expect(typeof handlery.syncError, 'integracja rejestruje onSyncError').toBe('function');
+    handlery.syncError({ code: 'STALE_DEVICE_GUARD', message: 'wstrzymano wysyłkę' });
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(syncPull, 'odpowiedzią na tę bramkę jest pobranie, nie cisza').toHaveBeenCalled();
   });
 
   it('KONTROLA NEGATYWNA: pozostałe zdarzenia zostają na leniwym liczniku', async () => {
