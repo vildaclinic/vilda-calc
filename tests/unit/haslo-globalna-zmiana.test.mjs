@@ -283,12 +283,14 @@ describe('karta „Zmień hasło" mówi prawdę o zasięgu', () => {
       .toContain('Wyloguj wszystkie urządzenia');
   });
 
-  it('karta czyta ślad po przyjęciu cudzej zmiany i czyści go dopiero, gdy sekcja jest otwarta', () => {
+  it('karta czyta ślad po przyjęciu cudzej zmiany, ale sama go nie kasuje', () => {
     const s = zrodlo();
     expect(s).toContain('PASSWORD_CHANGED_REMOTELY_AT');
     expect(s, 'komunikat na przegranym urządzeniu')
       .toContain('zostało zmienione na innym urządzeniu');
-    expect(s, 'ślad kasowany tylko przy otwartej sekcji konta')
-      .toContain('d&&d.open&&typeof t.writePreferenceRaw');
+    // U2b: ślad gasi wyłącznie potwierdzenie modala. Gdy kasowała go też otwarta sekcja konta,
+    // wejście w Ustawienia mogło zetrzeć sygnał, zanim modal zdążył się pokazać.
+    expect(s, 'karta jest tylko zapasowym kanałem, nie właścicielem śladu')
+      .not.toContain('d&&d.open&&typeof t.writePreferenceRaw');
   });
 });
