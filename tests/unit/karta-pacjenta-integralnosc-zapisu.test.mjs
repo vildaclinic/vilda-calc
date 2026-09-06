@@ -186,7 +186,9 @@ describe('P14 — zapis na nieaktualnej kopii rekordu nie kasuje pomiarów', () 
 // „zawiera" wzorce, których szukamy jako nieobecnych.
 const zrodlo = (nazwa) => readFileSync(path.join(repoRoot, nazwa), 'utf8')
   .split('\n')
-  .map((w) => w.replace(/\/\/.*$/, ''))
+  // Tylko linie będące w całości komentarzem. Naiwne ucinanie od pierwszego „//" w linii
+  // kaleczy plik zminifikowany — w łańcuchach znakowych siedzą adresy https://.
+  .filter((w) => !/^\s*\/\//.test(w))
   .join('\n');
 
 describe('P13 — ekran edycji pacjenta', () => {
