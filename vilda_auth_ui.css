@@ -7,3 +7,10 @@ body.vilda-password-alert-open #mobileBottomDock,body.vilda-password-alert-open 
 .vilda-auth-btn-danger{color:#9f1239!important;border-color:#f0c2cd!important;background:#fff!important}
 @media(min-width:700px){.vilda-auth-sheet-password{max-height:82vh;padding-bottom:28px}}
 @media(max-width:699.98px){.vilda-auth-sheet-password{max-height:88dvh}}
+
+body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrollTopBtn{display:none!important;opacity:0!important;pointer-events:none!important}
+.vilda-auth-sheet-conflict{max-height:86dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+.vilda-auth-conflict-list{margin:0 0 18px;padding:0 0 0 20px;font-size:.86rem;line-height:1.6;color:#0f2b33}
+.vilda-auth-conflict-list li{margin:0 0 4px}
+@media(min-width:700px){.vilda-auth-sheet-conflict{max-height:82vh;padding-bottom:28px}}
+@media(max-width:699.98px){.vilda-auth-sheet-conflict{max-height:88dvh}}
