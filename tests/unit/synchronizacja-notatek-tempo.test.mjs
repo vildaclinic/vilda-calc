@@ -351,4 +351,21 @@ describe('zmiana hasła wychodzi z urządzenia', () => {
     await vi.advanceTimersByTimeAsync(2500);
     expect(syncPush, 'ponowienie po nieudanej próbie').toHaveBeenCalledTimes(2);
   });
+
+  it('zmiana PRZYJĘTA z chmury nie odbija wysyłki z powrotem', async () => {
+    // U2b: sejf wystawia teraz zdarzenie także wtedy, gdy kopertę PRZYNIOSŁO scalanie.
+    // Ten kierunek nie jest lokalną zmianą — właśnie skończyliśmy pobierać ten stan, więc
+    // odesłanie go natychmiast z powrotem to czysty ruch bez treści.
+    const { handlery, syncPush } = zaladujIntegracje();
+
+    handlery.credential({ action: 'password-changed-remotely', updatedAtISO: '2026-09-05T22:00:00.000Z' });
+
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS + 500);
+    expect(syncPush, 'przyjęcie cudzej koperty nie jest powodem do wysyłki').not.toHaveBeenCalled();
+
+    // Kontrola dodatnia w tym samym teście: ten sam nasłuch dalej reaguje na zmianę lokalną.
+    handlery.credential({ action: 'password-changed' });
+    await vi.advanceTimersByTimeAsync(TOR_SZYBKI_MS + 100);
+    expect(syncPush, 'lokalna zmiana nadal leci od razu').toHaveBeenCalledTimes(1);
+  });
 });
