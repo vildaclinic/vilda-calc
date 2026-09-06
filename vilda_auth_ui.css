@@ -14,3 +14,5 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
 .vilda-auth-conflict-list li{margin:0 0 4px}
 @media(min-width:700px){.vilda-auth-sheet-conflict{max-height:82vh;padding-bottom:28px}}
 @media(max-width:699.98px){.vilda-auth-sheet-conflict{max-height:88dvh}}
+
+.vilda-patient-age-note{font-size:.78rem;line-height:1.45;color:#5a7274;background:#f3f8f9;border-left:3px solid #cfe3e5;border-radius:0 8px 8px 0;padding:7px 10px;margin:0 0 10px}
