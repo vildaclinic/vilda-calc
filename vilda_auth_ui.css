@@ -16,3 +16,7 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
 @media(max-width:699.98px){.vilda-auth-sheet-conflict{max-height:88dvh}}
 
 .vilda-patient-age-note{font-size:.78rem;line-height:1.45;color:#5a7274;background:#f3f8f9;border-left:3px solid #cfe3e5;border-radius:0 8px 8px 0;padding:7px 10px;margin:0 0 10px}
+
+.vilda-note-wskazana{outline:2px solid #00838d;outline-offset:2px;box-shadow:0 0 0 6px rgba(0,131,141,.12)}
+.vilda-auth-sheet-info{max-height:86dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+@media(min-width:700px){.vilda-auth-sheet-info{max-height:82vh;padding-bottom:28px}}
