@@ -212,6 +212,9 @@ html.vilda-pro-active .pro-sync-note {
             <a class="settings-subnav-link" data-target="settings-section-pal" href="#settings-section-pal">
               <i data-lucide="activity"></i>Palczewska
             </a>
+            <a class="settings-subnav-link" data-target="settings-section-chart-visibility" href="#settings-section-chart-visibility">
+              <i data-lucide="eye"></i>Elementy siatek
+            </a>
             <a class="settings-subnav-link" data-target="settings-section-chart" href="#settings-section-chart">
               <i data-lucide="sliders-horizontal"></i>Centyle
             </a>
@@ -2071,18 +2074,28 @@ html.vilda-pro-active .pro-sync-note {
 
       function openSectionFromHash() {
         const hash = window.location.hash;
-        if (!hash) return;
-        const target = document.querySelector(hash);
-        if (target && target.classList.contains('settings-accordion')) {
-          target.open = true;
-          // Samo `open` nie wystarcza: sekcja bywa daleko poniżej ekranu, więc wejście
-          // z linku (np. z modala o zmianie hasła) lądowało na górze strony.
-          try { target.scrollIntoView({ block: 'start' }); } catch (_) { /* starsze przeglądarki */ }
-        }
+        if (!hash || hash.length < 2) return;
+        // `querySelector(hash)` rzucał wyjątkiem na haszu, który nie jest poprawnym selektorem
+        // — „#3" albo trasa SPA „#!/start". Wyjątek leciał z bloku DOMContentLoaded, więc
+        // przerywał go razem z rejestracją nasłuchu `hashchange`: jeden taki adres wyłączał
+        // deep-linki na całą wizytę. Szukamy po identyfikatorze, bo tego naprawdę chcemy.
+        let id = hash.slice(1);
+        try { id = decodeURIComponent(id); } catch (_) { /* niedomknięty %XX — bierzemy surowy */ }
+        const target = document.getElementById(id);
+        if (!target || !target.classList.contains('settings-accordion')) return;
+        // Sekcja pod kłódką (wylogowany użytkownik) zostaje zamknięta — inaczej wynik
+        // zależałby od kolejności skryptów.
+        if (target.classList.contains('settings-accordion--locked')) return;
+        target.open = true;
+        // Samo `open` nie wystarcza: sekcja bywa daleko poniżej ekranu, więc wejście
+        // z linku (np. z modala o zmianie hasła) lądowało na górze strony.
+        try { target.scrollIntoView({ block: 'start' }); } catch (_) { /* starsze przeglądarki */ }
       }
 
-      openSectionFromHash();
+      // Nasłuch rejestrujemy PRZED pierwszym wywołaniem — gdyby cokolwiek w środku padło,
+      // kolejne zmiany hasza mają dalej działać.
       window.addEventListener('hashchange', openSectionFromHash);
+      openSectionFromHash();
     });
   </script>
 
@@ -2322,6 +2335,6 @@ html.vilda-pro-active .pro-sync-note {
 
   <script defer src="inline_ustawienia_06.js?v=1"></script>
 
-  <script defer src="inline_ustawienia_07.js?v=1"></script>
+  <script defer src="inline_ustawienia_07.js?v=2"></script>
 </body>
 </html>
