@@ -1,5 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+
+const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 // Silnik opisu pacjenta (vilda_patient_narrative.js) — kilka zdań w języku karty leczenia,
 // składanych WYŁĄCZNIE z wielkości, które aplikacja już wylicza.
@@ -101,9 +106,9 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     });
 
     const t = zdanie(wynik, 'stan');
-    expect(t).toMatch(/^Wzrost 118 cm \([^)]*hSDS −0,4[^)]*\)/);
-    expect(t, 'masa i BMI w tej samej linii').toContain('masa 22,5 kg');
-    expect(t).toContain('BMI');
+    expect(t).toMatch(/^W wieku 7 lat chłopiec mierzy 118 cm \([^)]*hSDS −0,4[^)]*\)/);
+    expect(t, 'masa i BMI w tym samym zdaniu').toContain('i waży 22,5 kg');
+    expect(t).toContain('BMI wynosi');
     expect(t.endsWith('.'), 'zdanie kończy się kropką').toBe(true);
   });
 
@@ -112,7 +117,34 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     const { wynik } = opis(g, DECELERACJA.wejscie);
 
     expect(zdanie(wynik, 'przebieg'))
-      .toBe('Od pomiaru w wieku 4 lata pozycja centylowa wzrostu obniżyła się o 1,4 SD — obraz deceleracji wzrastania.');
+      .toBe('Od pomiaru w wieku 4 lat pozycja centylowa wzrostu obniżyła się o 1,4 SD, co wskazuje na decelerację tempa wzrastania.');
+  });
+
+  it('werdykt odcinka otwiera zdanie w bierniku, tak jak pisze endokrynolog', () => {
+    // Brzmienie właściciela (2026-09-07): „Istotną decelerację wzrastania zaobserwowano
+    // pomiędzy 5 a 6 rokiem życia" — etykieta karty jest w mianowniku, zdanie wymaga
+    // biernika i przedziału wieku bez liczebników porządkowych.
+    const g = srodowisko(DECELERACJA.tabela);
+    const { model, wynik } = opis(g, DECELERACJA.wejscie);
+
+    const h = model.metrics.filter((m) => m.metric === 'height')[0];
+    expect(h.worst.verdict.l, 'karta daje etykietę w mianowniku').toBe('istotna deceleracja wzrastania');
+    expect(zdanie(wynik, 'odcinek'))
+      .toBe('Istotną decelerację wzrastania zaobserwowano w wieku od 5 do 6 lat (ΔhSDS −1,2).');
+  });
+
+  it('przebieg całości jest zdaniem z orzeczeniem, a wniosek wisi na spójniku', () => {
+    const g = srodowisko({ 'HT|84': 0.3, 'HT|96': 0.35, 'HT|108': 0.4 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 84, height: 122 }, { ageMonths: 96, height: 128 }],
+      currentAgeMonths: 108,
+      currentHeight: 134,
+      sex: 'M',
+      source: 'OLAF',
+    });
+
+    expect(zdanie(wynik, 'przebieg'))
+      .toBe('Z analizy siatki centylowej wynika, że wzrost chłopca w wieku od 7 do 9 lat mieści się w kanale 50–75 c. (ΔhSDS +0,1), co wskazuje na stabilny tor wzrastania.');
   });
 
   it('wiek kostny opisany różnicą, bez oceny', () => {
@@ -126,9 +158,8 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     }, { boneAgeYears: 6 });
 
     expect(zdanie(wynik, 'wiekKostny'))
-      .toBe('Wiek kostny 6 lat wobec wieku metrykalnego 7 lat 4 mies. — opóźniony o 1 rok 4 mies.');
-    // Skrót „mies." niesie własną kropkę — druga byłaby błędem zapisu w karcie.
-    expect(zdanie(wynik, 'wiekKostny').endsWith('mies..'), 'zdublowana kropka').toBe(false);
+      .toBe('Wiek kostny oceniono na 6 lat przy wieku metrykalnym 7 lat i 4 miesięcy; jest on opóźniony o 1 rok i 4 miesiące.');
+    expect(zdanie(wynik, 'wiekKostny').endsWith('..'), 'zdublowana kropka').toBe(false);
   });
 
   it('potencjał rodzinny to liczby, a nie werdykt', () => {
@@ -143,9 +174,8 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     }, { motherHeight: 160, fatherHeight: 175, mph: 161 });
 
     const t = zdanie(wynik, 'potencjal');
-    expect(t).toContain('Wzrost rodziców: matka 160 cm, ojciec 175 cm.');
-    expect(t).toContain('MPH 161 cm (mpSDS +0,8).');
-    expect(t).toContain('Aktualny wzrost dziecka 1,2 SD poniżej potencjału rodzinnego.');
+    expect(t).toContain('Wzrost matki wynosi 160 cm, ojca 175 cm; wzrost docelowy (MPH) wynosi 161 cm (mpSDS +0,8).');
+    expect(t).toContain('Aktualny wzrost dziecka znajduje się 1,2 SD poniżej potencjału rodzinnego.');
     // Progu „poniżej potencjału” aplikacja nie ma — opis nie może go wprowadzać tylnymi
     // drzwiami przez słowo oceniające (AGENTS.md §3).
     expect(/istotn|nieprawidłow|niedobór|patologi/i.test(t), 'ocena bez podstawy w progach').toBe(false);
@@ -168,7 +198,7 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     });
 
     expect(zdanie(wynik, 'prognoza'))
-      .toBe('Prognozowany wzrost ostateczny 168 cm (Bayley-Pinneau, ±3,2 cm, wiarygodność wysoka), 171 cm (RWT, ±4,4 cm) — zgodność metod dobra.');
+      .toBe('Prognozowany wzrost ostateczny wynosi 168 cm metodą Bayley-Pinneau (±3,2 cm, wiarygodność wysoka) oraz 171 cm metodą RWT (±4,4 cm); zgodność metod jest dobra.');
   });
 });
 
@@ -189,6 +219,9 @@ describe('Parytet z kartą — opis nie mówi nic od siebie', () => {
     // rozdziela je przecinkiem zamiast zagnieżdżać nawias w nawiasie.
     expect(zdanie(wynik, 'tempo'), 'opis cytuje werdykt karty, a nie parafrazuje').toContain(zKarty.short);
     expect(zdanie(wynik, 'tempo'), 'opis podaje normę karty').toContain(zKarty.note);
+    // Pełne brzmienie właściciela (2026-09-07), słowo w słowo.
+    expect(zdanie(wynik, 'tempo'))
+      .toBe('Tempo wzrastania liczone z ostatnich 12 miesięcy obserwacji wynosi 4,0 cm/rok i znajduje się poniżej normy dla wieku (norma ≥5,5 cm/rok).');
   });
 
   it('zdanie o tempie nie ma nawiasu w nawiasie', () => {
@@ -222,6 +255,38 @@ describe('Parytet z kartą — opis nie mówi nic od siebie', () => {
     const skl = glebokoscNawiasow(t);
     expect(skl.max, `zdanie ma zagnieżdżony nawias: ${t}`).toBeLessThanOrEqual(1);
     expect(skl.bilans, 'nawiasy się domykają').toBe(0);
+    // Spłaszczenie nie gubi słów karty — zmienia się wyłącznie interpunkcja.
+    expect(t).toContain('≥4 cm/rok przed skokiem');
+    expect(t).toContain('Tanner I');
+  });
+
+  it('każda etykieta słownika karty ma formę zdaniową, żadna nie spada do ramki awaryjnej', () => {
+    // Etykiety czytane wprost ze źródła karty — to lista słów, nie kształt logiki.
+    // Gdy ktoś dopisze etykietę w karcie, ten test powie, że opis jej nie odmienia.
+    const zrodlo = fs.readFileSync(path.join(korzen, 'vilda_trajectory_analysis.js'), 'utf8');
+    const etykiety = new Set();
+    // Etykiety stoją po `l:` wprost albo w wyrażeniu warunkowym (`l: B ? '…' : '…'`),
+    // a dwie wspólne (`ST`, `ND`) są zmiennymi — stąd dwa przebiegi.
+    for (const m of zrodlo.matchAll(/\bl:\s*([^}]*)\}/g)) {
+      for (const q of m[1].matchAll(/'([^']+)'/g)) etykiety.add(q[1]);
+    }
+    for (const m of zrodlo.matchAll(/\b(?:ST|ND)\s*=\s*([^;]*);/g)) {
+      for (const q of m[1].matchAll(/'([^']+)'/g)) etykiety.add(q[1]);
+    }
+    expect(etykiety.size, 'regex znalazł słownik, a nie pustkę').toBeGreaterThanOrEqual(50);
+
+    const g = srodowisko({});
+    const spadly = [];
+    etykiety.forEach((l) => {
+      const k = g.VildaPatientNarrative.konkluzja(l, 'teraz');
+      if (k.startsWith(' — ')) spadly.push(l);
+    });
+    expect(spadly, 'etykiety bez odmiany w opisie').toEqual([]);
+
+    // Kontrola negatywna: etykieta spoza słownika NIE może trafić po „co wskazuje na"
+    // w złym przypadku — dostaje bezpieczną ramkę z myślnikiem.
+    expect(g.VildaPatientNarrative.konkluzja('nowa etykieta z przyszłości', 'teraz'))
+      .toBe(' — nowa etykieta z przyszłości');
   });
 
   it('etykieta werdyktu przebiegu pochodzi z karty', () => {
@@ -257,7 +322,7 @@ describe('Milczenie jest nazwane', () => {
     });
 
     expect(model.context.tannerStale, 'karta uznała stadium za nieaktualne').toBe(true);
-    expect(zdanie(wynik, 'zastrzezenia')).toContain('stadium Tannera nieaktualne');
+    expect(zdanie(wynik, 'zastrzezenia')).toContain('Zapisane stadium Tannera jest nieaktualne');
     expect(zdanie(wynik, 'dojrzewanie'), 'nieaktualne stadium nie udaje aktualnego').toBeNull();
   });
 
@@ -272,8 +337,25 @@ describe('Milczenie jest nazwane', () => {
     }, { lastMeasuredMonthsAgo: 14, boneAgeYears: 7, boneAgeMonthsAgo: 26 });
 
     const t = zdanie(wynik, 'zastrzezenia');
-    expect(t).toContain('ostatni pomiar sprzed 14 mies.');
-    expect(t).toContain('wiek kostny oznaczony 26 mies. temu');
+    expect(t).toContain('Ostatni pomiar wykonano 14 miesięcy temu.');
+    expect(t).toContain('Wiek kostny oznaczono 26 miesięcy temu, dlatego pominięto go w ocenie.');
+  });
+
+  it('okno oceny tempa jest w zdaniu o tempie, a nie powtórzone w zastrzeżeniach', () => {
+    // Uwaga właściciela (2026-09-07): „Do odnotowania: odstęp pomiarów poza oknem oceny
+    // tempa" nic nie wnosiło, bo to samo mówiło już zdanie o tempie.
+    const g = srodowisko({ 'HT|84': 0.3, 'HT|108': 0.4 });
+    const { model, wynik } = opis(g, {
+      measurements: [{ ageMonths: 84, height: 122 }],
+      currentAgeMonths: 108,
+      currentHeight: 133,
+      sex: 'M',
+      source: 'OLAF',
+    });
+
+    expect(model.velocity.usedLastYear, 'odstęp 24 mies. jest poza oknem karty').toBe(false);
+    expect(zdanie(wynik, 'tempo')).toContain('dlatego tempa nie porównano z normą');
+    expect(zdanie(wynik, 'zastrzezenia')).toBeNull();
   });
 
   it('kontrola negatywna: komplet świeżych danych nie generuje zastrzeżeń', () => {
