@@ -257,7 +257,10 @@
       minCm: con.min,
       maxCm: con.max,
       agreementLabel: con.agreementLabel,
-      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true }; })
+      // errorHalfWidthCm: polszerokosc 90% bledu metody (pm) — ta sama, ktora karta
+      // pokazuje jako „±"; konsumenci (opis pacjenta) czytaja ja stad, zeby stala
+      // Khamis-Roche nie miala drugiej kopii poza ta karta.
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null }; })
     };
   }
 
