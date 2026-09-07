@@ -53,7 +53,13 @@ function loadDevice() {
   loadBrowserScript('vilda_crypto.js', win);
   loadBrowserScript('vilda_vault.js', win);
   const vault = win.VildaVault;
-  vault.setStorageAdapter(vault.createInMemoryAdapter());
+  const adapter = vault.createInMemoryAdapter();
+  // Każdy odczyt historii to odszyfrowanie WSZYSTKICH wersji rekordu. Liczymy je,
+  // bo brama zapisu łatwo podwaja ten koszt na każdym zapisie.
+  vault.__odczytyHistorii = 0;
+  const orig = adapter.listSnapshotsForUser.bind(adapter);
+  adapter.listSnapshotsForUser = (...a) => { vault.__odczytyHistorii += 1; return orig(...a); };
+  vault.setStorageAdapter(adapter);
   return vault;
 }
 
@@ -297,6 +303,197 @@ describe('P14b — główny „Zapisz" porównuje treść, a nie identyfikator w
   });
 });
 
+// ── Kontrola końcowa audytu „Pacjenci" ────────────────────────────────────────
+// Cztery znaleziska z przeglądu całości pięciu rat, każde zmierzone na kodzie sprzed
+// tej poprawki.
+describe('Kontrola końcowa — brama zapisu po przeglądzie całości', () => {
+  it('K3 — poprawka SAMEJ masy na innym urządzeniu nie jest już niewidoczna', async () => {
+    // Klucz porównania brzmiał `ageMonths|height`, więc zmiana samej masy przechodziła
+    // przez bramę bez śladu, a zapis cicho ją cofał (masa wracała z 99 na 22).
+    const v = await sejf();
+    const pytania = [];
+    pytaj(v, (info) => { pytania.push(info); return 'scal'; });
+
+    const wczytane = payload('growthBasic', [60]);
+    const pierwszy = await v.savePatient(JSON.parse(JSON.stringify(wczytane)), { dedup: false });
+    await tik();
+    const poprawiony = payload('growthBasic', [60]);
+    poprawiony.growthBasic.data.measurements[0].weight = 99;
+    await v.savePatient(poprawiony, { patientId: pierwszy.patientId, dedup: false });
+    await tik();
+
+    const zapis = await v.savePatient(payload('growthBasic', [60]), {
+      patientId: pierwszy.patientId, dedup: false, baselinePayload: JSON.parse(JSON.stringify(wczytane)),
+    });
+
+    expect(pytania.length, 'poprawka masy jest cudzą pracą i wymaga pytania').toBe(1);
+    expect(pytania[0].foreign[0].rodzaj, 'to poprawka istniejącego wiersza, nie nowy pomiar')
+      .toBe('zmieniony');
+    expect(pytania[0].foreign[0].wZapisie.weight, 'pytanie pokazuje też wersję z formularza').toBe(22);
+
+    const po = await zapisany(v, pierwszy.patientId, zapis.snapshotId);
+    const wiersze = po.growthBasic.data.measurements;
+    expect(wiersze.length, 'poprawka zastępuje wiersz, nie dokłada duplikatu').toBe(1);
+    expect(wiersze[0].weight, 'masa poprawiona na innym urządzeniu zostaje').toBe(99);
+  });
+
+  it('K3 — kontrola negatywna: wiersz zmieniony przez samego lekarza nie pyta', async () => {
+    // Jeśli to lekarz przy tym formularzu zmienił masę, jego decyzja wygrywa bez pytania.
+    const v = await sejf();
+    let pytano = 0;
+    pytaj(v, () => { pytano += 1; return 'scal'; });
+
+    const wczytane = payload('growthBasic', [60]);
+    const pierwszy = await v.savePatient(JSON.parse(JSON.stringify(wczytane)), { dedup: false });
+    await tik();
+
+    const moj = payload('growthBasic', [60]);
+    moj.growthBasic.data.measurements[0].weight = 30;
+    const zapis = await v.savePatient(moj, {
+      patientId: pierwszy.patientId, dedup: false, baselinePayload: JSON.parse(JSON.stringify(wczytane)),
+    });
+
+    expect(pytano, 'własna zmiana lekarza to nie rozjazd').toBe(0);
+    const po = await zapisany(v, pierwszy.patientId, zapis.snapshotId);
+    expect(po.growthBasic.data.measurements[0].weight).toBe(30);
+  });
+
+  it('K4 — „Zapisz to, co w formularzu" nie jest cofane przez starą unię', async () => {
+    // Stare zabezpieczenie `no()` dokłada pomiary z głowy rekordu, gdy payload zawiera
+    // choć jeden wiersz `ghSync` (pacjent na terapii GH). Bez wyłączenia go decyzja
+    // lekarza była po cichu odwracana: zapisywało się [50, 60, 80] zamiast [50, 60].
+    const v = await sejf();
+    pytaj(v, () => 'nadpisz');
+
+    const gh = Object.assign(pomiar(50), { ghSync: true });
+    const zGh = (wieki) => {
+      const p = payload('advanced', []);
+      p.advanced = { data: { measurements: [JSON.parse(JSON.stringify(gh))].concat(wieki.map(pomiar)) } };
+      return p;
+    };
+
+    const wczytane = zGh([60]);
+    const pierwszy = await v.savePatient(JSON.parse(JSON.stringify(wczytane)), { dedup: false });
+    await tik();
+    await v.savePatient(zGh([60, 80]), { patientId: pierwszy.patientId, dedup: false });
+    await tik();
+
+    const zapis = await v.savePatient(zGh([60]), {
+      patientId: pierwszy.patientId, dedup: false, baselinePayload: JSON.parse(JSON.stringify(wczytane)),
+    });
+
+    const po = await zapisany(v, pierwszy.patientId, zapis.snapshotId);
+    expect(wieki(po.advanced), 'wybór lekarza zostaje wyborem lekarza').toEqual([50, 60]);
+  });
+
+  it('K4 — kontrola negatywna: bez deklarowanej kopii unia ghSync działa jak dotąd', async () => {
+    const v = await sejf();
+    const gh = Object.assign(pomiar(50), { ghSync: true });
+    const zGh = (wieki) => {
+      const p = payload('advanced', []);
+      p.advanced = { data: { measurements: [JSON.parse(JSON.stringify(gh))].concat(wieki.map(pomiar)) } };
+      return p;
+    };
+    const pierwszy = await v.savePatient(zGh([60]), { dedup: false });
+    await tik();
+    await v.savePatient(zGh([60, 80]), { patientId: pierwszy.patientId, dedup: false });
+    await tik();
+    const zapis = await v.savePatient(zGh([60]), { patientId: pierwszy.patientId, dedup: false });
+
+    const po = await zapisany(v, pierwszy.patientId, zapis.snapshotId);
+    expect(wieki(po.advanced), 'stare zabezpieczenie nietknięte tam, gdzie nikt nie pytał')
+      .toEqual([50, 60, 80]);
+  });
+
+  it('K2 — brama nie podwaja odczytów historii rekordu', async () => {
+    // Brama czytała głowę rekordu osobno, a zaraz po niej robiło to stare zabezpieczenie:
+    // dwa odszyfrowania całej historii na każdy zapis zamiast jednego.
+    const v = await sejf();
+    const pierwszy = await v.savePatient(payload('advanced', [60]), { dedup: false });
+    for (let i = 0; i < 5; i += 1) {
+      await tik();
+      await v.savePatient(payload('advanced', [60, 62 + i]), { patientId: pierwszy.patientId, dedup: false });
+    }
+    await tik();
+
+    v.__odczytyHistorii = 0;
+    await v.savePatient(payload('advanced', [60]), { patientId: pierwszy.patientId, dedup: false });
+    const bezKopii = v.__odczytyHistorii;
+    await tik();
+
+    v.__odczytyHistorii = 0;
+    await v.savePatient(payload('advanced', [60]), {
+      patientId: pierwszy.patientId, dedup: false, baselinePayload: payload('advanced', [60]),
+    });
+    const zKopia = v.__odczytyHistorii;
+
+    expect(bezKopii, 'zapis bez deklaracji czyta historię raz').toBe(1);
+    expect(zKopia, 'deklaracja kopii nie dokłada drugiego odczytu').toBe(bezKopii);
+  });
+
+  it('K1 — drugi zapis w tej samej wizycie nie pyta o przyjęty już wiersz', async () => {
+    // Scalenie dokłada pomiar do rekordu, ale nie do formularza — formularz pokazuje stan
+    // sprzed przyjęcia. Bez pamięci przyjętych wierszy kolejny „Zapisz" albo pytał o to
+    // samo drugi raz, albo (gdyby kopię odniesienia po prostu zaktualizować) kasował
+    // przyjęty wiersz jako „świadomie usunięty".
+    const v = await sejf();
+    let pytano = 0;
+    pytaj(v, () => { pytano += 1; return 'scal'; });
+
+    const wczytane = payload('advanced', [60, 66]);
+    const pierwszy = await v.savePatient(JSON.parse(JSON.stringify(wczytane)), { dedup: false });
+    await tik();
+    await v.savePatient(payload('advanced', [60, 66, 80]), { patientId: pierwszy.patientId, dedup: false });
+    await tik();
+
+    let pamiec = { patientId: null, wiersze: [] };
+    const pierwszyZapis = await v.savePatient(payload('advanced', [60, 66]), {
+      patientId: pierwszy.patientId, dedup: false,
+      baselinePayload: JSON.parse(JSON.stringify(wczytane)), przyjeteZBazy: pamiec,
+    });
+    expect(pierwszyZapis.scalonoZBazy, 'jeden wiersz przyjęty z bazy').toBe(1);
+    expect(pierwszyZapis.przyjeteZBazy.map((w) => w.pomiar.ageMonths), 'sejf oddaje, co przyjął')
+      .toEqual([80]);
+    pamiec = { patientId: pierwszyZapis.patientId, wiersze: pierwszyZapis.przyjeteZBazy };
+    await tik();
+
+    // Formularz się nie zmienił — nadal [60, 66].
+    const drugiZapis = await v.savePatient(payload('advanced', [60, 66]), {
+      patientId: pierwszy.patientId, dedup: false,
+      baselinePayload: JSON.parse(JSON.stringify(wczytane)), przyjeteZBazy: pamiec,
+    });
+
+    expect(pytano, 'pytanie pada raz, nie przy każdym zapisie').toBe(1);
+    const po = await zapisany(v, pierwszy.patientId, drugiZapis.snapshotId);
+    expect(wieki(po.advanced), 'przyjęty wiersz nie wypada przy kolejnym zapisie')
+      .toEqual([60, 66, 80]);
+  });
+
+  it('K1 — kontrola negatywna: pamięć innego pacjenta nie działa', async () => {
+    // Pamięć jest związana z pacjentem; wczytanie innego rekordu unieważnia ją samo z siebie.
+    const v = await sejf();
+    let pytano = 0;
+    pytaj(v, () => { pytano += 1; return 'nadpisz'; });
+
+    const wczytane = payload('advanced', [60, 66]);
+    const pierwszy = await v.savePatient(JSON.parse(JSON.stringify(wczytane)), { dedup: false });
+    await tik();
+    await v.savePatient(payload('advanced', [60, 66, 80]), { patientId: pierwszy.patientId, dedup: false });
+    await tik();
+
+    const zapis = await v.savePatient(payload('advanced', [60, 66]), {
+      patientId: pierwszy.patientId,
+      dedup: false,
+      baselinePayload: JSON.parse(JSON.stringify(wczytane)),
+      przyjeteZBazy: { patientId: 'inny-pacjent', wiersze: [{ gdzie: 'advanced', pomiar: pomiar(80) }] },
+    });
+
+    expect(pytano, 'cudza pamięć nie ucisza pytania').toBe(1);
+    const po = await zapisany(v, pierwszy.patientId, zapis.snapshotId);
+    expect(wieki(po.advanced), 'decyzja lekarza z tego zapisu obowiązuje').toEqual([60, 66]);
+  });
+});
+
 // Źródło bez komentarzy: opisy naprawy cytują kod, więc surowy plik „zawiera" wzorce,
 // których szukamy jako nieobecnych. Ucinamy całe linie komentarza — naiwne ucinanie od
 // pierwszego „//" kaleczy plik zminifikowany, bo w łańcuchach siedzą adresy https://.
@@ -318,11 +515,29 @@ describe('P14b — okablowanie aplikacji', () => {
     expect(kod, 'anulowanie ma własny komunikat').toContain('s.vildaSaveAborted===!0');
   });
 
+  it('aplikacja pamięta wiersze przyjęte z bazy i podaje je sejfowi', () => {
+    const kod = zrodlo('vilda_data_import_export.js');
+    expect(kod, 'zapis deklaruje pamięć przyjętych wierszy')
+      .toContain('przyjeteZBazy:{patientId:Bb4,wiersze:Bb5}');
+    expect(kod, 'pamięć uzupełnia się z odpowiedzi sejfu').toContain('s.przyjeteZBazy');
+    // Pierwsza próba przeładowywała formularz przez applyLoadedData — a ta funkcja czyści
+    // pola wieku, wagi i wzrostu, więc lekarstwo było gorsze od choroby. Złapało to e2e,
+    // nie test strukturalny.
+    expect(kod.includes('r.applyLoadedData(JSON.parse(JSON.stringify(a)))'),
+      'przeładowanie formularza po zapisie').toBe(false);
+  });
+
   it('modal pytania jest rejestrowany w sejfie', () => {
     const kod = zrodlo('vilda_auth_ui.js');
     expect(kod, 'rezolwer trafia do sejfu').toContain('setSaveConflictResolver(Gh2)');
     expect(kod, 'rejestracja odpala się przy starcie').toContain('try{Gh3()}catch{}');
     expect(kod, 'modal ma trzy wyjścia').toContain('d("nadpisz")');
+    expect(kod, 'przyciski nazywają obie ścieżki, nie tylko dopisywanie')
+      .toContain('text:"Przyjmij dane z bazy"');
+    expect(kod, 'przyciski nazywają obie ścieżki, nie tylko dopisywanie')
+      .toContain('text:"Zapisz to, co w formularzu"');
+    expect(kod, 'lista rozróżnia pomiar dopisany od poprawionego')
+      .toContain('t.rodzaj==="zmieniony"');
     expect(kod, 'modal ma trzy wyjścia').toContain('d("anuluj")');
     expect(kod, 'modal ma trzy wyjścia').toContain('d("scal")');
   });
@@ -331,6 +546,11 @@ describe('P14b — okablowanie aplikacji', () => {
     const kod = zrodlo('vilda_vault.js');
     expect(kod, 'API sejfu zna rezolwer').toContain('setSaveConflictResolver:Bb8');
     expect(kod, 'brama odpala się tylko przy zadeklarowanej kopii')
-      .toContain('if(!i&&n.baselinePayload&&typeof n.baselinePayload=="object")await Bb6(');
+      .toContain('if(!i&&n.baselinePayload&&typeof n.baselinePayload=="object")Bc1=await Bb6(');
+    expect(kod.includes('async function Bb6(t,e,n){const r=await hr(t)'),
+      'brama czytająca historię drugi raz na własną rękę').toBe(false);
+    expect(kod.includes('function Bb7(t){return String(t&&t.ageMonths)+"|"+String(t&&t.height)}'),
+      'klucz ślepy na poprawkę samej masy').toBe(false);
+    expect(kod, 'stara unia da się wyłączyć decyzją lekarza').toContain('!(Ba1&&Ba1.noUnion===!0)');
   });
 });
