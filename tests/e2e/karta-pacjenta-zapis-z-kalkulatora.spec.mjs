@@ -13,7 +13,7 @@ import { expect, test } from '../support/test-czas.mjs';
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#ZapisKalkulator!26aa';
-const TYTUL = 'W rekordzie są pomiary, których nie ma w formularzu';
+const TYTUL = 'Ktoś inny zmienił ten rekord po wczytaniu danych';
 
 async function otworzZKontem(page) {
   await page.addInitScript(() => {
@@ -107,7 +107,7 @@ const glowa = (page, patientId) => page.evaluate(async (id) => {
 }, patientId);
 
 test.describe('P14b — „Zapisz dane" pyta, zanim skasuje cudzy pomiar', () => {
-  test('modal wymienia obcy pomiar, a „Dopisz je do zapisu" go zachowuje', async ({ page }) => {
+  test('modal wymienia obcy pomiar, a „Przyjmij dane z bazy" go zachowuje', async ({ page }) => {
     await otworzZKontem(page);
     await czekajNaRezolwer(page);
     const { patientId } = await zalozIWczytaj(page);
@@ -121,8 +121,9 @@ test.describe('P14b — „Zapisz dane" pyta, zanim skasuje cudzy pomiar', () =>
     await expect(modal.locator('.vilda-auth-conflict-list li')).toHaveCount(1);
     await expect(modal.locator('.vilda-auth-conflict-list li')).toContainText('6 lat 8 mies.');
     await expect(modal.locator('.vilda-auth-conflict-list li')).toContainText('118 cm');
+    await expect(modal.locator('.vilda-auth-conflict-list li')).toContainText('dopisany gdzie indziej');
 
-    await modal.getByRole('button', { name: 'Dopisz je do zapisu' }).click();
+    await modal.getByRole('button', { name: 'Przyjmij dane z bazy' }).click();
     await expect(modal).toHaveCount(0);
 
     await expect.poll(async () => (await glowa(page, patientId)).liczbaWersji).toBe(3);
@@ -147,6 +148,30 @@ test.describe('P14b — „Zapisz dane" pyta, zanim skasuje cudzy pomiar', () =>
     const po = await glowa(page, patientId);
     expect(po.snapshotId, 'głowa rekordu bez zmian').toBe(przed);
     expect(po.liczbaWersji, 'nie przybyło wersji').toBe(2);
+  });
+
+  test('po przyjęciu danych z bazy drugi zapis już nie pyta', async ({ page }) => {
+    // Kontrola końcowa. Scalenie dokładało pomiar do rekordu, ale nie do formularza,
+    // więc każdy kolejny „Zapisz" w tej samej wizycie pytał o to samo. Teraz formularz
+    // jest dociągany do rekordu, a rekord zachowuje przyjęty wiersz.
+    await otworzZKontem(page);
+    await czekajNaRezolwer(page);
+    const { patientId } = await zalozIWczytaj(page);
+    await drugieUrzadzenie(page, patientId);
+
+    await zapisz(page).click();
+    const modal = page.getByRole('alertdialog', { name: TYTUL });
+    await expect(modal).toBeVisible();
+    await modal.getByRole('button', { name: 'Przyjmij dane z bazy' }).click();
+    await expect(modal).toHaveCount(0);
+    await expect.poll(async () => (await glowa(page, patientId)).liczbaWersji).toBe(3);
+
+    await zapisz(page).click();
+
+    await expect.poll(async () => (await glowa(page, patientId)).liczbaWersji).toBe(4);
+    await expect(page.getByRole('alertdialog', { name: TYTUL })).toHaveCount(0);
+    const po = await glowa(page, patientId);
+    expect(po.wieki, 'przyjęty pomiar nie wypada przy kolejnym zapisie').toContain(80);
   });
 
   test('bez rozjazdu zapis idzie bez pytania', async ({ page }) => {
