@@ -214,11 +214,10 @@
   // ── Przycisk w karcie ────────────────────────────────────────────────────────
 
   // JEDEN trwaly wezel przycisku, przenoszony miedzy wrapperami — nie nowy przy kazdym
-  // renderze. Powod: klikniecie w przycisk tuz po wpisaniu masy zaczyna sie od blur pola,
-  // blur przelicza karte, karta buduje wrapper od nowa, i mouseup trafia w inny wezel niz
-  // mousedown — przegladarka nie sklada z tego zdarzenia click. Pierwsze klikniecie
-  // lekarza ginelo (zmierzone e2e: Playwright klika, zadnego click na dokumencie).
-  // Ten sam wezel pod kursorem przed i po renderze = klik dochodzi.
+  // dolozeniu. Od 1.0.852 wrapper akcji nie jest juz przebudowywany przy przeliczeniu karty
+  // (naprawa w vilda_patient_report.js), wiec trwalosc wezla nie jest juz tym, co ratuje
+  // klikniecie. Zostaje jako tanie zabezpieczenie na wypadek, gdyby wrapper zniknal i wrocil
+  // (przelaczenie trybu PRO): przycisk wraca ten sam, bez gubienia stanu.
   var przycisk = null;
 
   function zbudujPrzycisk() {
@@ -238,21 +237,13 @@
   function uruchomDelegacje() {
     var doc = w.document;
     if (!doc || typeof doc.addEventListener !== 'function') return;
-    var nasz = function (ev) {
-      return ev && ev.target && typeof ev.target.closest === 'function'
-        ? ev.target.closest('[' + ATTR + ']') : null;
-    };
-    // mousedown NIE zabiera fokusu polu formularza. Bez tego klikniecie tuz po wpisaniu
-    // masy zaczynaloby sie od blur pola → przeliczenie → karta buduje wrapper od nowa
-    // → mouseup trafia w inny wezel niz mousedown i przegladarka NIE sklada click.
-    // Pierwsze klikniecie lekarza ginelo bez sladu (zmierzone e2e; przycisk „Raport
-    // PDF" obok ma te sama wade). Klawiatura nie przechodzi przez mousedown — Enter
-    // i spacja dzialaja jak dotad.
-    doc.addEventListener('mousedown', function (ev) {
-      if (nasz(ev)) ev.preventDefault();
-    });
+    // Bez obejscia na mousedown: przycisk zachowuje sie jak kazdy inny (dostaje fokus).
+    // Ginace pierwsze klikniecie naprawione u zrodla — wrapper akcji przezywa przeliczenie
+    // karty, wiec mousedown i mouseup trafiaja w ten sam wezel.
     doc.addEventListener('click', function (ev) {
-      if (!nasz(ev)) return;
+      var cel = ev && ev.target && typeof ev.target.closest === 'function'
+        ? ev.target.closest('[' + ATTR + ']') : null;
+      if (!cel) return;
       ev.preventDefault();
       copyCurrent();
     });
@@ -277,9 +268,8 @@
     return n;
   }
 
-  // Obserwator dziala SYNCHRONICZNIE w mikrozadaniu po mutacji — celowo bez rAF.
-  // Miedzy mousedown a mouseup jest kilkadziesiat milisekund; przycisk musi wrocic do
-  // nowego wrappera, zanim przyjdzie mouseup (patrz komentarz przy `przycisk`).
+  // Obserwator dziala SYNCHRONICZNIE w mikrozadaniu po mutacji — celowo bez rAF, zeby
+  // przycisk wracal na miejsce w tej samej klatce, w ktorej wrapper sie pojawil.
   function uruchomObserwatora() {
     var doc = w.document;
     if (!doc || typeof w.MutationObserver !== 'function') return;
