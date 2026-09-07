@@ -77,7 +77,12 @@ describe('drobne', () => {
   it('P12 — przejście z Historii wskazuje wpis i nie używa alert()', () => {
     expect(kod.includes('else try{i.alert(f.title+(f.description?`\n\n`+f.description:""))}catch{}'),
       'surowy alert() przeglądarki dla obserwacji').toBe(false);
-    expect(kod).toContain('L.click(),f.noteId&&Gd6(f.noteId)');
+    // Kształt tej gałęzi zmienił się przy H7: wpisy leczenia są syntetyzowane z punktów
+    // terapii i nie mają identyfikatora notatki, więc odsiewamy je ZANIM przerzucimy
+    // lekarza na zakładkę Notatki — inaczej lądował tam, gdzie nic nie jest wskazane.
+    expect(kod, 'wpis bez identyfikatora dostaje treść na miejscu')
+      .toContain('if(!f.noteId){Gd5(f.title||"Wpis",f.body||f.description||"");return}');
+    expect(kod, 'prawdziwa notatka nadal jest wskazywana po przejściu').toContain('L.click(),Gd6(f.noteId)');
     expect(kod).toContain('else Gd5(f.title||"Wpis",f.description||"")');
     expect(kod, 'karta notatki niesie swój identyfikator').toContain('"data-note-id":S.id||""');
   });
