@@ -217,6 +217,47 @@ describe('H3 — próg przerwy w pomiarach zależy od wieku', () => {
   });
 });
 
+describe('H6 — wpisy leczenia mają jednolite tytuły', () => {
+  it('rhGH i otyłość zaczynają się wielką literą', async () => {
+    // Ta sama zakładka pokazywała „leczenie rhGH" małą literą obok „Leczenie otyłości"
+    // wielką. Tytuł wpisu jest tekstem dla lekarza, nie identyfikatorem — nic go nie
+    // dopasowuje, więc poprawka jest bezpieczna.
+    const v = await sejf();
+    const wynik = await v.savePatient({
+      name: 'Nowak Ala',
+      user: { lastName: 'Nowak', firstName: 'Ala', sex: 'K', age: 7, ageMonths: 0, height: 118, weight: 20 },
+      advanced: { data: { measurements: [
+        { ageMonths: 72, ageYears: 6, height: 115, weight: 19 },
+        { ageMonths: 84, ageYears: 7, height: 118, weight: 20 },
+      ] } },
+      ghTherapyPoints: [{ id: 'g1', type: 'start', ageYears: 6, ageMonths: 0, dose: 0.033, doseUnit: 'mg/kg/d', weight: 19, drug: 'Omnitrope' }],
+      obesityTherapyPoints: [{ id: 'o1', type: 'start', ageYears: 7, ageMonths: 0, dose: '3 mg', drug: 'Saxenda – liraglutyd', substance: 'liraglutyd' }],
+    }, { dedup: false });
+
+    const tytuly = (await v.listPatientTimelineEvents(wynik.patientId))
+      .filter((z) => z.type === 'note')
+      .map((z) => z.title)
+      .sort();
+    expect(tytuly).toEqual(['Leczenie otyłości', 'Leczenie rhGH']);
+  });
+
+  it('wpisy leczenia nadal nie mają identyfikatora notatki', async () => {
+    // To nie jest usterka, tylko fakt, na którym opiera się poprawka H7: te wpisy są
+    // syntetyzowane z punktów terapii, więc nie ma czego wskazywać w zakładce Notatki.
+    const v = await sejf();
+    const wynik = await v.savePatient({
+      name: 'Nowak Ala',
+      user: { lastName: 'Nowak', firstName: 'Ala', sex: 'K', age: 6, ageMonths: 0, height: 115, weight: 19 },
+      advanced: { data: { measurements: [{ ageMonths: 72, ageYears: 6, height: 115, weight: 19 }] } },
+      ghTherapyPoints: [{ id: 'g1', type: 'start', ageYears: 6, ageMonths: 0, dose: 0.033, doseUnit: 'mg/kg/d', weight: 19 }],
+    }, { dedup: false });
+
+    const wpis = (await v.listPatientTimelineEvents(wynik.patientId)).filter((z) => z.type === 'note')[0];
+    expect(wpis.noteId).toBeNull();
+    expect(wpis.body, 'treść wpisu jest samowystarczalna').toContain('Dawka: 0,033 mg/kg/d');
+  });
+});
+
 describe('Redakcja generowanych zdań', () => {
   it('lata odmieniają się także przy niepełnych latach', async () => {
     const v = await sejf();
