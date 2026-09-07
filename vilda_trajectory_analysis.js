@@ -1112,6 +1112,10 @@
     toneCent: toneCent,
     buildPoints: buildPoints,
     assessVelocityValue: assessVelocityValue,
+    // Udostepnione dla vilda_patient_narrative.js: opis tempa MUSI byc ten sam, ktory
+    // widzi lekarz na karcie. Kopia tej logiki w drugim module rozjechalaby sie po
+    // pierwszej zmianie progu.
+    velocityAssessment: velocityAssessment,
     analyze: analyze,
     buildHtml: buildHtml,
     buildCardAlertsHtml: buildCardAlertsHtml,
