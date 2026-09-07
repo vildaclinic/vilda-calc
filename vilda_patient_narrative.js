@@ -42,6 +42,14 @@
   var STARY_POMIAR_M = 12;
   var STARY_WIEK_KOSTNY_M = 18;
 
+  // Polszerokosc przedzialu potencjalu genetycznego (MPH): ±8,5 cm, czyli ok. ±2 SD
+  // rozkladu wzrostu doroslych dzieci wokol sredniej rodzicielskiej — Tanner JM,
+  // Goldstein H, Whitehouse RH. Arch Dis Child 1970;45(244):755–62, PMID 5491878,
+  // doi:10.1136/adc.45.244.755. Ta sama liczba, ktora aplikacja podaje w panelu
+  // lab_clinical_panels.js i w zaleceniach dietetycznych; tu tylko nazwana.
+  // Przekazanie `extra.mphHalfWidthCm` nadpisuje ja, gdy wywolujacy ma wlasna.
+  var MPH_POLSZEROKOSC_CM = 8.5;
+
   function ta() {
     return (w && w.VildaTrajectoryAnalysis) || null;
   }
@@ -386,8 +394,11 @@
     };
   }
 
-  // 6. Potencjal rodzinny — sam opis liczbowy, BEZ oceny: progu „ponizej potencjalu"
+  // 6. Potencjal genetyczny — sam opis liczbowy, BEZ oceny: progu „ponizej potencjalu"
   //    aplikacja nie ma, a wymyslanie go tutaj byloby zmiana kliniczna (AGENTS.md §3).
+  //    MPH jest nazywany potencjalem, nie „wzrostem docelowym": to srodek rozkladu, nie
+  //    prognoza — obok „Prognozowany wzrost ostateczny" czytalby sie jak druga prognoza
+  //    z inna liczba (uwaga wlasciciela 2026-09-07). Dlatego zawsze z przedzialem.
   function zdaniePotencjal(model, extra) {
     var mat = num(extra.motherHeight), ojc = num(extra.fatherHeight);
     var mph = num(extra.mph);
@@ -398,15 +409,19 @@
     if (ojc != null) czesci.push((mat != null ? 'ojca ' : 'ojca wynosi ') + fmt(ojc, 0) + ' cm');
     var txt = czesci.length ? 'Wzrost ' + czesci.join(', ') : '';
     if (mph != null) {
-      txt += (txt ? '; wzrost docelowy (MPH) wynosi ' : 'Wzrost docelowy (MPH) wynosi ')
-        + fmt(mph, 0) + ' cm' + (mpSds != null ? ' (mpSDS ' + fmtSds(mpSds) + ')' : '');
+      var pol = num(extra.mphHalfWidthCm);
+      if (pol == null || pol <= 0) pol = MPH_POLSZEROKOSC_CM;
+      var w2 = ['±' + fmt(pol, 1) + ' cm'];
+      if (mpSds != null) w2.push('mpSDS ' + fmtSds(mpSds));
+      txt += (txt ? '; potencjał genetyczny wzrostu (MPH) oceniono na ' : 'Potencjał genetyczny wzrostu (MPH) oceniono na ')
+        + fmt(mph, 0) + ' cm (' + w2.join(', ') + ')';
     }
     txt = kropka(txt);
     var h = metryka(model, 'height');
     if (mpSds != null && h && h.last && h.last.sd != null) {
       var d = h.last.sd - mpSds;
       txt += ' Aktualny wzrost dziecka znajduje się ' + fmtSdsAbs(d) + ' SD '
-        + (d < 0 ? 'poniżej' : 'powyżej') + ' potencjału rodzinnego.';
+        + (d < 0 ? 'poniżej' : 'powyżej') + ' potencjału genetycznego.';
     }
     return txt.trim() ? { id: 'potencjal', tone: 'plain', text: txt.trim() } : null;
   }

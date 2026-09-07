@@ -174,8 +174,12 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     }, { motherHeight: 160, fatherHeight: 175, mph: 161 });
 
     const t = zdanie(wynik, 'potencjal');
-    expect(t).toContain('Wzrost matki wynosi 160 cm, ojca 175 cm; wzrost docelowy (MPH) wynosi 161 cm (mpSDS +0,8).');
-    expect(t).toContain('Aktualny wzrost dziecka znajduje się 1,2 SD poniżej potencjału rodzinnego.');
+    // MPH to potencjał genetyczny z przedziałem ±8,5 cm (Tanner 1970), nie „wzrost
+    // docelowy" — obok prognozy czytałby się jak druga prognoza (uwaga właściciela
+    // 2026-09-07). To samo słowo, którego używa epikryza.
+    expect(t).toContain('Wzrost matki wynosi 160 cm, ojca 175 cm; potencjał genetyczny wzrostu (MPH) oceniono na 161 cm (±8,5 cm, mpSDS +0,8).');
+    expect(t).toContain('Aktualny wzrost dziecka znajduje się 1,2 SD poniżej potencjału genetycznego.');
+    expect(t, 'MPH nie jest prognozą ani celem').not.toMatch(/docelow|prognoz/);
     // Progu „poniżej potencjału” aplikacja nie ma — opis nie może go wprowadzać tylnymi
     // drzwiami przez słowo oceniające (AGENTS.md §3).
     expect(/istotn|nieprawidłow|niedobór|patologi/i.test(t), 'ocena bez podstawy w progach').toBe(false);
