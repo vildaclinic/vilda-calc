@@ -69,19 +69,20 @@
     return t.replace('-', '−').replace('.', ',');
   }
 
-  // Znak dopiero PO zaokragleniu — inaczej −0,04 dawalo „−0,0" (karta ma te sama usterke
-  // w fmtS). Zero bez znaku: „0,0" nie jest ani powyzej, ani ponizej.
+  // Doslownie ta sama regula co fmtS karty: zaokraglenie wartosci bezwzglednej, znak
+  // tylko wtedy, gdy wynik nie jest zerem. Poprzednia wersja zaokraglala PRZED nadaniem
+  // znaku, przez co −0,05 dawalo „0,0", a +0,05 „+0,1" — ta sama odleglosc od zera, dwa
+  // rozne wyniki. Parytet z karta pilnuje format-sds-zero.test.mjs.
   function fmtSds(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
-    var r = Math.round(s * 10) / 10;
-    if (r === 0) return '0,0';
-    return (r > 0 ? '+' : '−') + Math.abs(r).toFixed(1).replace('.', ',');
+    var t = Math.abs(s).toFixed(1);
+    return (parseFloat(t) === 0 ? '' : (s > 0 ? '+' : '−')) + t.replace('.', ',');
   }
 
   // Wartosc bezwzgledna SDS bez znaku — do zdan typu „obnizyla sie o 1,1 SD".
   function fmtSdsAbs(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
-    return Math.abs(Math.round(s * 10) / 10).toFixed(1).replace('.', ',');
+    return Math.abs(s).toFixed(1).replace('.', ',');
   }
 
   // ── Wiek po polsku — trzy przypadki, bo zdanie wymusza przypadek ──────────────
