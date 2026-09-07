@@ -61,19 +61,27 @@
 
   // ── Formaty liczb identyczne z karta (fmt/fmtS z vilda_trajectory_analysis.js) ──
 
+  // Minus typograficzny, jak w calym opisie; toFixed daje lacznik ASCII.
   function fmt(v, dec) {
-    return (typeof v === 'number' && isFinite(v)) ? v.toFixed(dec).replace('.', ',') : '—';
+    if (typeof v !== 'number' || !isFinite(v)) return '—';
+    var t = v.toFixed(dec);
+    if (/^-0(\.0+)?$/.test(t)) t = t.slice(1);
+    return t.replace('-', '−').replace('.', ',');
   }
 
+  // Znak dopiero PO zaokragleniu — inaczej −0,04 dawalo „−0,0" (karta ma te sama usterke
+  // w fmtS). Zero bez znaku: „0,0" nie jest ani powyzej, ani ponizej.
   function fmtSds(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
-    return (s >= 0 ? '+' : '−') + Math.abs(s).toFixed(1).replace('.', ',');
+    var r = Math.round(s * 10) / 10;
+    if (r === 0) return '0,0';
+    return (r > 0 ? '+' : '−') + Math.abs(r).toFixed(1).replace('.', ',');
   }
 
   // Wartosc bezwzgledna SDS bez znaku — do zdan typu „obnizyla sie o 1,1 SD".
   function fmtSdsAbs(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
-    return Math.abs(s).toFixed(1).replace('.', ',');
+    return Math.abs(Math.round(s * 10) / 10).toFixed(1).replace('.', ',');
   }
 
   // ── Wiek po polsku — trzy przypadki, bo zdanie wymusza przypadek ──────────────
@@ -213,6 +221,16 @@
     'w kanale rodzicielskim': {
       teraz: 'wzrost pozostaje w kanale rodzicielskim',
       wtedy: 'wzrost pozostawał w kanale rodzicielskim'
+    },
+    // Nakladki pozycyjne karty: to stan, nie zdarzenie — „tor stabilny … zaobserwowano"
+    // czytalo sie jak zdarzenie (przeglad 2026-09-07).
+    'tor stabilny, ale poniżej 3. centyla': {
+      teraz: 'tor jest stabilny, ale poniżej 3. centyla',
+      wtedy: 'tor był stabilny, ale poniżej 3. centyla'
+    },
+    'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego': {
+      teraz: 'tor jest stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego',
+      wtedy: 'tor był stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego'
     }
   };
 
@@ -231,9 +249,7 @@
     'obniżenie masy ciała poniżej 3. centyla', 'istotne przesunięcie centylowe w górę',
     'istotne przesunięcie centylowe w dół', 'przyrost masy mimo leczenia redukcyjnego',
     'przyrost masy szybszy niż wzrastanie',
-    'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl)',
-    'tor stabilny, ale poniżej 3. centyla',
-    'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego'
+    'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl)'
   ];
 
   function rozbijEtykiete(label) {
@@ -338,8 +354,12 @@
     if (b) {
       txt = duza(b.tekst) + ' zaobserwowano ' + kiedy + delta + (b.ogon ? ' — ' + b.ogon : '');
     } else {
-      txt = duza(kiedy) + ' zaobserwowano największą zmianę pozycji centylowej' + delta
-        + konkluzja(m.worst.verdict.l, 'wtedy');
+      var e = rozbijEtykiete(m.worst.verdict.l);
+      var z = ZDANIOWE[e.glowa];
+      txt = z
+        ? duza(kiedy) + delta + ' ' + z.wtedy + (e.ogon ? ' — ' + e.ogon : '')
+        : duza(kiedy) + ' zaobserwowano największą zmianę pozycji centylowej' + delta
+          + ' — ' + m.worst.verdict.l;
     }
     return { id: 'odcinek', tone: m.worst.verdict.t === 'bad' ? 'bad' : 'warn', text: kropka(txt) };
   }
@@ -365,9 +385,11 @@
     if (a && a.cls === 'bad') reszta = ' i znajduje się ' + a.short + norma;
     else if (a && a.cls === 'warn') reszta = ' i wymaga oceny' + norma;
     else if (a && a.cls === 'good') reszta = ' i mieści się ' + a.short + ' dla wieku' + norma;
-    else if (a && v.aboveNormAge) reszta = '; wiek ' + osoba(model.sex).kogo + ' wykracza poza okno automatycznej oceny normy tempa';
+    // Flaga aboveNormAge dotyczy wieku metrykalnego ALBO kostnego — stad doslowny tekst
+    // karty, bez „wiek chłopca", ktore bywaloby nieprawdziwe.
+    else if (a && v.aboveNormAge) reszta = ' — ' + a.text;
     else if (a && v.usedLastYear === false) reszta = '; odstęp między pomiarami wykracza poza okno oceny, dlatego tempa nie porównano z normą';
-    else if (a && a.text) reszta = ' — ' + a.text;
+    else if (a && a.text) reszta = '; ' + a.text;
     return {
       id: 'tempo',
       tone: a && a.cls === 'bad' ? 'bad' : (a && a.cls === 'warn' ? 'warn' : 'plain'),

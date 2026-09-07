@@ -22,9 +22,11 @@ const DANE = {
   boneAgeMonths: 66,
   motherHeight: 163,
   fatherHeight: 180,
-  bayleyPinneau: { available: true, predictedAdultHeightCm: 170.3, errorSdCm: 3.2 },
-  rwt: { available: true, predictedAdultHeightCm: 172.1, errorSdCm: 4.4 },
-  khamis: { available: true, predictedAdultHeightCm: 171, errorSdCm: null },
+  // errorSdCm (1 SD) i errorBoundHalfWidthCm (90%) to dwa rozne pola — opis ma brac to
+  // drugie, czyli liczbe z karty C. Test trzyma oba, zeby pomylka byla widoczna.
+  bayleyPinneau: { available: true, predictedAdultHeightCm: 170.3, errorSdCm: 1.9, errorBoundHalfWidthCm: 3.2 },
+  rwt: { available: true, predictedAdultHeightCm: 172.1, errorSdCm: null, errorBoundHalfWidthCm: 4.4 },
+  khamis: { available: true, predictedAdultHeightCm: 171 },
   predictionReliability: {
     agreementLabel: 'dobra',
     entryMap: {
@@ -38,7 +40,8 @@ const DANE = {
     methods: [
       { key: 'bayleyPinneau', label: 'Bayley-Pinneau', cm: 170.3 },
       { key: 'rwt', label: 'RWT', cm: 172.1 },
-      { key: 'khamis', label: 'Khamis–Roche', cm: 171 },
+      // Khamis–Roche nie ma błędu na własnym obiekcie — karta C niesie stałą metody w pm.
+      { key: 'khamis', label: 'Khamis–Roche', cm: 171, errorHalfWidthCm: 5.3 },
     ],
   },
 };
@@ -59,7 +62,7 @@ describe('buildInput — wejście opisu z danych karty zaawansowanej', () => {
     expect(we.lastMeasuredMonthsAgo).toBeNull();
   });
 
-  it('prognozy idą w kolejności karty, z błędem metody jak w epikryzie i etykietą wiarygodności', () => {
+  it('prognozy idą w kolejności karty, z błędem metody jak w karcie C (90%) i etykietą wiarygodności', () => {
     const g = okno();
     const we = g.VildaPatientNarrativeUI.buildInput(DANE, null);
 
@@ -68,10 +71,11 @@ describe('buildInput — wejście opisu z danych karty zaawansowanej', () => {
       key: 'bayleyPinneau', label: 'Bayley-Pinneau', cm: 170.3, errorHalfWidthCm: 3.2, reliabilityLabel: 'wysoka',
     });
     expect(we.predictions[1].reliabilityLabel).toBe('umiarkowana');
-    // Khamis–Roche nie ma wpisu w predictionReliability ani błędu — opis nie może go
-    // wymyślić: etykieta z finalHeightPrediction, reszta pusta.
+    expect(we.predictions[1].errorHalfWidthCm, 'RWT ma przedział z karty C, choć nie ma errorSdCm').toBe(4.4);
+    // Khamis–Roche nie ma wpisu w predictionReliability — opis nie może go wymyślić;
+    // błąd metody idzie z karty C (pm), etykieta z finalHeightPrediction.
     expect(we.predictions[2]).toEqual({
-      key: 'khamis', label: 'Khamis–Roche', cm: 171, errorHalfWidthCm: null, reliabilityLabel: null,
+      key: 'khamis', label: 'Khamis–Roche', cm: 171, errorHalfWidthCm: 5.3, reliabilityLabel: null,
     });
     expect(we.predictionAgreement).toBe('dobra');
   });
@@ -102,6 +106,9 @@ describe('buildInput — wejście opisu z danych karty zaawansowanej', () => {
     expect(we.predictions).toEqual([]);
     expect(we.predictionAgreement).toBeNull();
     // Metoda niedostępna (available !== true) też nie wchodzi do opisu.
+    // Bez errorBoundHalfWidthCm nie ma „±" — errorSdCm NIE jest zamiennikiem (inna wielkość).
+    const we3 = g.VildaPatientNarrativeUI.buildInput({ bayleyPinneau: { available: true, predictedAdultHeightCm: 170, errorSdCm: 2 } }, null);
+    expect(we3.predictions[0].errorHalfWidthCm).toBeNull();
     const we2 = g.VildaPatientNarrativeUI.buildInput({ bayleyPinneau: { available: false, predictedAdultHeightCm: 170 } }, null);
     expect(we2.predictions).toEqual([]);
   });
