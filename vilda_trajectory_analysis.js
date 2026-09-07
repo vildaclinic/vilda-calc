@@ -82,9 +82,15 @@
     return c <= 3 ? '<3' : c >= 97 ? '>97' : String(Math.round(c));
   }
 
+  // Znak nadawany PO zaokragleniu wartosci bezwzglednej. Wczesniej znak szedl z surowej
+  // wartosci, wiec ΔhSDS −0,04 (czyli brak zmiany) wychodzilo jako „−0,0" — zapis, ktory
+  // sugeruje spadek tam, gdzie zadnego kierunku nie ma. Samo zaokraglanie bez zmian
+  // (toFixed na wartosci bezwzglednej, jak dotad); zmienia sie wylacznie to, czy zero
+  // dostaje znak. Parytet z panelem porownania i epikryza pilnuje format-sds-zero.test.mjs.
   function fmtS(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
-    return (s >= 0 ? '+' : '−') + Math.abs(s).toFixed(1).replace('.', ',');
+    var t = Math.abs(s).toFixed(1);
+    return (parseFloat(t) === 0 ? '' : (s > 0 ? '+' : '−')) + t.replace('.', ',');
   }
 
   function fmtAgeM(mo) {
