@@ -47,8 +47,11 @@
     khamis: 'Khamis–Roche'
   };
 
-  // Prognozy wzrostu ostatecznego w kolejnosci karty. Blad metody = errorSdCm — ta sama
-  // liczba, ktora epikryza pisze jako „(±X cm)"; opis nie moze podac innej.
+  // Prognozy wzrostu ostatecznego w kolejnosci karty. Blad metody = errorBoundHalfWidthCm,
+  // czyli polszerokosc 90-proc. przedzialu — TA SAMA liczba, ktora karta C pokazuje jako
+  // „±X cm" obok przycisku i z ktorej liczy wiarygodnosc metody. Epikryza drukuje
+  // errorSdCm (1 SD, ma go tylko Bayley-Pinneau) — to rozjazd w aplikacji sprzed opisu,
+  // zgloszony wlascicielowi 2026-09-07; opis idzie za karta, na ktora lekarz patrzy.
   function prognozy(d) {
     var lista = [];
     var metody = d && d.finalHeightPrediction && Array.isArray(d.finalHeightPrediction.methods)
@@ -69,7 +72,9 @@
         key: k,
         label: (zMetod && zMetod.label) || (wiar && wiar.methodLabel) || NAZWY_METOD[k] || k,
         cm: cm,
-        errorHalfWidthCm: obj ? num(obj.errorSdCm) : null,
+        errorHalfWidthCm: zMetod && num(zMetod.errorHalfWidthCm) != null
+          ? num(zMetod.errorHalfWidthCm)
+          : (obj ? num(obj.errorBoundHalfWidthCm) : null),
         reliabilityLabel: wiar && wiar.label ? wiar.label : null
       });
     });

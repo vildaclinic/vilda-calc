@@ -313,6 +313,82 @@ describe('Parytet z kartą — opis nie mówi nic od siebie', () => {
   });
 });
 
+describe('Kontrola końcowa 2026-09-07 — usterki składu znalezione na siatce', () => {
+  it('zero SDS bez znaku, minus typograficzny w liczbach', () => {
+    const N = srodowisko({}).VildaPatientNarrative;
+    // Znak dopiero po zaokrągleniu: −0,04 to „0,0", nie „−0,0".
+    expect(N.formatSds(-0.04)).toBe('0,0');
+    expect(N.formatSds(0.04)).toBe('0,0');
+    expect(N.formatSds(-0.06)).toBe('−0,1');
+    expect(N.formatSds(0.06)).toBe('+0,1');
+    // Ujemne tempo (błąd pomiaru) — łącznik ASCII nie jest minusem.
+    const g = srodowisko({ 'HT|72': -0.4, 'HT|84': -0.9 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 72, height: 118 }],
+      currentAgeMonths: 84,
+      currentHeight: 117.8,
+      sex: 'M',
+      source: 'OLAF',
+    });
+    expect(zdanie(wynik, 'tempo')).toContain('wynosi −0,2 cm/rok');
+    expect(zdanie(wynik, 'tempo')).not.toContain('-0,2');
+  });
+
+  it('nakładka pozycyjna karty jest opisana jako stan, nie jako zdarzenie', () => {
+    // Trzy punkty <3c ze stabilnym torem: karta nakłada „tor stabilny, ale poniżej
+    // 3. centyla — niedobór wzrostu" (warn). To nie jest zdarzenie, którego się
+    // „zaobserwowano" — zdanie ma mówić o stanie.
+    const g = srodowisko({ 'HT|72': -2.4, 'HT|84': -2.4, 'HT|96': -2.4 });
+    const { model, wynik } = opis(g, {
+      measurements: [{ ageMonths: 72, height: 104 }, { ageMonths: 84, height: 109 }],
+      currentAgeMonths: 96,
+      currentHeight: 114,
+      sex: 'M',
+      source: 'OLAF',
+    });
+    const h = model.metrics.filter((m) => m.metric === 'height')[0];
+    expect(h.total.l, 'karta nałożyła werdykt pozycyjny').toBe('tor stabilny, ale poniżej 3. centyla — niedobór wzrostu');
+    expect(zdanie(wynik, 'przebieg')).toContain('; tor jest stabilny, ale poniżej 3. centyla — niedobór wzrostu.');
+    expect(zdanie(wynik, 'przebieg')).not.toContain('co wskazuje na tor stabilny');
+    if (zdanie(wynik, 'odcinek')) {
+      expect(zdanie(wynik, 'odcinek')).toMatch(/^W wieku od .* tor był stabilny, ale poniżej 3\. centyla — niedobór wzrostu\.$/);
+      expect(zdanie(wynik, 'odcinek')).not.toContain('zaobserwowano');
+    }
+  });
+
+  it('nota karty po skoku pokwitaniowym i flaga poza oknem — dosłownie, bez „wieku chłopca"', () => {
+    // Tanner V, 15 lat: karta oddaje notę „po skoku pokwitaniowym (Tanner V) — deceleracja
+    // fizjologiczna"; opis ma ją wprowadzić średnikiem, nie drugim myślnikiem.
+    const g = srodowisko({ 'HT|168': 0.2, 'HT|180': 0.1 });
+    const { model, wynik } = opis(g, {
+      measurements: [{ ageMonths: 168, height: 168 }],
+      currentAgeMonths: 180,
+      currentHeight: 171,
+      sex: 'M',
+      source: 'OLAF',
+      context: { tannerStage: 5 },
+    });
+    const a = g.VildaTrajectoryAnalysis.velocityAssessment(model.velocity);
+    expect(a && a.text, 'karta ma notę Tanner V').toContain('po skoku pokwitaniowym');
+    expect(zdanie(wynik, 'tempo')).toContain('cm/rok; po skoku pokwitaniowym (Tanner V) — deceleracja fizjologiczna.');
+    expect((zdanie(wynik, 'tempo').match(/ — /g) || []).length, 'jeden myślnik, nie dwa').toBe(1);
+
+    // Chłopiec 17 lat 6 mies. bez Tannera: wiek poza oknem norm — dosłowny tekst karty,
+    // bez „wiek chłopca", bo ta sama flaga zapala się także od wieku KOSTNEGO.
+    const g2 = srodowisko({ 'HT|198': 0.2, 'HT|210': 0.1 });
+    const { model: m2, wynik: w2 } = opis(g2, {
+      measurements: [{ ageMonths: 198, height: 174 }],
+      currentAgeMonths: 210,
+      currentHeight: 175,
+      sex: 'M',
+      source: 'OLAF',
+    });
+    expect(m2.velocity.aboveNormAge, 'karta zapaliła aboveNormAge').toBe(true);
+    expect(zdanie(w2, 'tempo')).toContain(' — poza oknem automatycznej oceny normy tempa.');
+    expect(zdanie(w2, 'tempo')).not.toMatch(/wiek (chłopca|dziewczynki|pacjenta)/);
+  });
+});
+
 describe('Milczenie jest nazwane', () => {
   it('nieaktualne stadium Tannera trafia do zastrzeżeń, a nie do oceny', () => {
     const g = srodowisko({ 'HT|72': -0.4, 'HT|180': -0.5 });
