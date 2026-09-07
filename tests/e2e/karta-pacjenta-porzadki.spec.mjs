@@ -187,6 +187,37 @@ test.describe('P2 + P11 + P12 — Notatki i Historia', () => {
       'notatka klirensowa pasuje do własnego filtra').toBeVisible();
   });
 
+  test('H7 — kliknięcie wpisu leczenia pokazuje treść, a nie pustą zakładkę', async ({ page }) => {
+    // Wpisy leczenia są syntetyzowane z punktów terapii i nie mają identyfikatora notatki,
+    // więc kliknięcie przerzucało lekarza na zakładkę Notatki i zostawiało go tam bez
+    // niczego wskazanego. Treść wpisu jest samowystarczalna — pokazujemy ją na miejscu.
+    await otworzZKontem(page);
+    const patientId = await page.evaluate(async () => {
+      const wynik = await window.VildaVault.savePatient({
+        name: 'Terapia Jan',
+        user: { lastName: 'Terapia', firstName: 'Jan', sex: 'M', age: 6, ageMonths: 0, height: 115, weight: 19 },
+        advanced: { data: { measurements: [{ ageMonths: 72, ageYears: 6, height: 115, weight: 19 }] } },
+        ghTherapyPoints: [{
+          id: 'g1', type: 'start', ageYears: 6, ageMonths: 0,
+          dose: 0.033, doseUnit: 'mg/kg/d', weight: 19, drug: 'Omnitrope',
+        }],
+      }, { dedup: false });
+      return wynik.patientId;
+    });
+    await otworzKarte(page, patientId);
+    await zakladka(page, 'timeline').click();
+
+    const historia = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
+    await historia.getByText('Leczenie rhGH').first().click();
+
+    const okno = page.locator('.vilda-auth-overlay-sheet');
+    await expect(okno, 'treść wpisu pokazuje się na miejscu').toBeVisible();
+    await expect(okno).toContainText('Leczenie rhGH');
+    await expect(okno).toContainText('Dawka: 0,033 mg/kg/d');
+    await expect(zakladka(page, 'timeline'),
+      'lekarz zostaje tam, gdzie kliknął').toHaveClass(/is-active|active/);
+  });
+
   test('P12 — kliknięcie wpisu wskazuje konkretną notatkę', async ({ page }) => {
     await otworzZKontem(page);
     const { patientId, klirensId } = await pacjentZNotatkami(page);
