@@ -13,9 +13,12 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //     poddawał się zamiast sięgnąć głębiej. Kontrolny pomiar zrobiony dwa miesiące po
 //     wykryciu spowolnienia kasował i ostrzeżenie, i prędkość — dokładnie wtedy, gdy były
 //     najbardziej potrzebne.
-// H3. Próg „Przerwy w pomiarach" wynosił 12 miesięcy niezależnie od wieku. Decyzja
-//     właściciela: 3 mies. do 2. roku życia, 6 mies. od 2 do 5 lat, 12 mies. powyżej —
-//     i wartość równa progowi ma się już liczyć.
+// H3. Próg „Przerwy w pomiarach" wynosił 12 miesięcy niezależnie od wieku. Zalecany
+//     odstęp zależy teraz od wieku: 3 mies. do 2. roku życia, 6 mies. od 2 do 5 lat,
+//     12 mies. powyżej — a komunikat odpala się dopiero PO PRZEKROCZENIU tej wartości.
+//     Pierwsze wdrożenie porównywało „co najmniej" i zapalało komunikat przy wizycie
+//     odbytej dokładnie w zalecanym rytmie: przedszkolak prowadzony wzorcowo co pół roku
+//     dostawał ostrzeżenie przy każdej wizycie bez wyjątku.
 
 function makeStorage() {
   const m = Object.create(null);
@@ -167,13 +170,16 @@ describe('H3 — próg przerwy w pomiarach zależy od wieku', () => {
   const przerwa = (e) => obserwacje(e, 'measurement-gap').length;
 
   const przypadki = [
-    ['do 2 lat: 3 miesiące odpalają', [[9, 72], [12, 75]], 1],
-    ['do 2 lat: 2 miesiące jeszcze nie', [[10, 73], [12, 75]], 0],
-    ['2–5 lat: 6 miesięcy odpala', [[36, 95], [42, 99]], 1],
-    ['2–5 lat: 5 miesięcy jeszcze nie', [[36, 95], [41, 98]], 0],
-    ['granica 5 lat liczy się jeszcze jako 6 mies.', [[60, 110], [66, 113]], 1],
-    ['powyżej 5 lat: 12 miesięcy odpala', [[72, 115], [84, 121]], 1],
-    ['powyżej 5 lat: 11 miesięcy jeszcze nie', [[72, 115], [83, 120]], 0],
+    ['do 2 lat: 4 miesiące to już przerwa', [[8, 71], [12, 75]], 1],
+    ['do 2 lat: 3 miesiące to jeszcze zalecany rytm', [[9, 72], [12, 75]], 0],
+    ['2–5 lat: 7 miesięcy to już przerwa', [[36, 95], [43, 100]], 1],
+    ['2–5 lat: 6 miesięcy to jeszcze zalecany rytm', [[36, 95], [42, 99]], 0],
+    ['pasmo 6 mies. sięga równych 5 lat: 7 odpala', [[60, 110], [67, 114]], 1],
+    ['pasmo 6 mies. sięga równych 5 lat: 6 nie odpala', [[60, 110], [66, 113]], 0],
+    ['pasmo 12 mies. zaczyna się od 61. miesiąca: 12 nie odpala', [[61, 111], [73, 118]], 0],
+    ['pasmo 12 mies. zaczyna się od 61. miesiąca: 13 odpala', [[61, 111], [74, 119]], 1],
+    ['powyżej 5 lat: 13 miesięcy to już przerwa', [[72, 115], [85, 122]], 1],
+    ['powyżej 5 lat: 12 miesięcy to jeszcze zalecany rytm', [[72, 115], [84, 121]], 0],
   ];
 
   for (const [opis, pary, oczekiwane] of przypadki) {
@@ -182,6 +188,26 @@ describe('H3 — próg przerwy w pomiarach zależy od wieku', () => {
       expect(przerwa(await osCzasu(v, pary))).toBe(oczekiwane);
     });
   }
+
+  it('prawidłowo prowadzony pacjent nie dostaje ani jednego ostrzeżenia', async () => {
+    // To jest cały sens tej poprawki. Przedszkolak mierzony co pół roku i dziecko szkolne
+    // mierzone raz w roku robią dokładnie to, co zalecane — Historia ma o tym milczeć.
+    const v = await sejf();
+    expect(przerwa(await osCzasu(v, [[24, 87], [30, 91], [36, 95], [42, 99], [48, 103], [54, 106], [60, 110]])),
+      'przedszkolak co pół roku').toBe(0);
+    const v2 = await sejf();
+    expect(przerwa(await osCzasu(v2, [[72, 115], [84, 121], [96, 127], [108, 133]])),
+      'dziecko szkolne raz w roku').toBe(0);
+  });
+
+  it('kontrola dodatnia: prawdziwe zaniedbanie i spóźnienia nadal widać', async () => {
+    // Czułość ma zostać nietknięta — inaczej cisza kupiona byłaby przeoczeniem.
+    const v = await sejf();
+    expect(przerwa(await osCzasu(v, [[6, 67], [24, 87]])), '18 miesięcy przerwy u niemowlaka').toBe(1);
+    const v2 = await sejf();
+    expect(przerwa(await osCzasu(v2, [[6, 67], [10, 73], [16, 80], [23, 86], [36, 95]])),
+      'każdy odstęp o miesiąc dłuższy niż zalecany').toBe(4);
+  });
 
   it('próg bierze wiek, w którym przerwa się zaczęła', async () => {
     // Przerwa 4 miesiące przez granicę 2 lat: zaczyna się w 22. miesiącu, czyli obowiązuje
