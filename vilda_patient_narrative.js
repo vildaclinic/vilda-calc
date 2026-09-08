@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
 
   // Progi UJAWNIANIA, nie progi kliniczne. Bramkuja wylacznie zdania o wieku danych,
   // czyli decyduja o tym, KIEDY opis przyznaje sie do starych danych — nigdy o tym, jak
@@ -310,6 +310,29 @@
     return { id: 'stan', tone: 'plain', text: kropka(txt) };
   }
 
+  // 1b. Utrwalona niskoroslosc po urodzeniu jako SGA (wariant A konsensusu 2023).
+  // Progi, pasma wieku i bramke wczesniactwa liczy vilda_sga_catchup.js; tutaj zostaje
+  // wylacznie glos. Zdanie powstaje TYLKO ponizej progu — brak zdania to konwencja tego
+  // silnika (tak samo milczy zdanie o dryfie prognozy), a NIE stwierdzenie, ze catch-up
+  // nastapil: powyzej progu konsensus po prostu nie zaleca diagnostyki w tym wieku.
+  function zdanieCatchUp(extra) {
+    var c = extra && extra.sgaCatchUp;
+    if (!c || !c.ponizejProgu) return null;
+    var opis = [];
+    if (c.masaSdsUr != null) opis.push('masa urodzeniowa ' + fmtSds(c.masaSdsUr) + ' SD');
+    if (c.dlugoscSdsUr != null) opis.push('długość urodzeniowa ' + fmtSds(c.dlugoscSdsUr) + ' SD');
+    if (c.tygodnie != null) opis.push(c.tygodnie + (c.dni ? '+' + c.dni : '') + ' tc');
+    var nawias = opis.length ? ' (' + opis.join(', ') + ')' : '';
+    return {
+      id: 'sgaCatchUp',
+      tone: 'bad',
+      text: kropka('Dziecko urodzone jako SGA' + nawias
+        + '; wzrost pozostaje poniżej progu ' + fmtSds(c.prog)
+        + ' SD, przy którym konsensus międzynarodowy z 2023 roku zaleca u dzieci urodzonych'
+        + ' jako SGA diagnostykę utrwalonej niskorosłości')
+    };
+  }
+
   // 2. Przebieg wzrastania — flaga deceleracji ma pierwszenstwo przed opisem ogolnym.
   function zdaniePrzebieg(model) {
     var m = metryka(model, 'height');
@@ -574,6 +597,7 @@
     var e = extra && typeof extra === 'object' ? extra : {};
     var zdania = [
       zdanieStan(model),
+      zdanieCatchUp(e),
       zdaniePrzebieg(model),
       zdanieOdcinek(model),
       zdanieTempo(model),

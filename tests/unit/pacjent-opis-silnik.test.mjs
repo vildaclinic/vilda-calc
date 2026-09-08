@@ -576,3 +576,81 @@ describe('Kompozycja — kolejność zdań jest częścią bezpieczeństwa', () 
       .toBe(g.VildaTrajectoryAnalysis.version);
   });
 });
+
+// Zdanie o utrwalonej niskorosłości po urodzeniu jako SGA (wariant A konsensusu 2023).
+// Progi liczy vilda_sga_catchup.js; tutaj sprawdzamy wyłącznie głos i miejsce w opisie.
+const SGA_PONIZEJ = {
+  kryteriumSga: 'masa',
+  masaSdsUr: -2.4,
+  dlugoscSdsUr: null,
+  tygodnie: 34,
+  dni: 2,
+  wczesniak: true,
+  wiekMies: 50,
+  hSds: -2.3,
+  prog: -2,
+  pasmo: '3-4lata',
+  ponizejProgu: true,
+};
+
+describe('SGA bez catch-upu — etap 4b', () => {
+  it('zdanie nazywa pochodzenie, próg i to, czego dotyczy zalecenie', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie, { sgaCatchUp: SGA_PONIZEJ });
+    const t = zdanie(wynik, 'sgaCatchUp');
+
+    expect(t).toMatch(/urodzone jako SGA/);
+    expect(t).toMatch(/masa urodzeniowa −2,4 SD/);
+    expect(t).toMatch(/34\+2 tc/);
+    expect(t).toMatch(/poniżej progu −2,0 SD/);
+    expect(t).toMatch(/konsensus międzynarodowy z 2023 roku/);
+    expect(t).toMatch(/diagnostykę utrwalonej niskorosłości/);
+  });
+
+  it('nie powtarza wieku ani hSDS — to już powiedziało zdanie o stanie', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie, { sgaCatchUp: SGA_PONIZEJ });
+    const t = zdanie(wynik, 'sgaCatchUp');
+    expect(t).not.toMatch(/W wieku/);
+    expect(t, 'hSDS pacjenta należy do zdania o stanie').not.toMatch(/−2,3/);
+  });
+
+  it('stoi zaraz po zdaniu o stanie — pochodzenie ramuje resztę opisu', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie, { sgaCatchUp: SGA_PONIZEJ });
+    const kolejnosc = wynik.sentences.map((z) => z.id);
+    expect(kolejnosc[0]).toBe('stan');
+    expect(kolejnosc[1]).toBe('sgaCatchUp');
+  });
+
+  it('powyżej progu zdanie nie powstaje — milczenie to konwencja tego silnika', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie, {
+      sgaCatchUp: { ...SGA_PONIZEJ, hSds: -0.4, ponizejProgu: false },
+    });
+    expect(zdanie(wynik, 'sgaCatchUp')).toBeNull();
+  });
+
+  it('bez oceny SGA opis wygląda dokładnie tak jak dotąd', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const bez = opis(g, DECELERACJA.wejscie, {});
+    const zNull = opis(g, DECELERACJA.wejscie, { sgaCatchUp: null });
+    expect(zdanie(bez.wynik, 'sgaCatchUp')).toBeNull();
+    expect(zNull.wynik.text).toBe(bez.wynik.text);
+  });
+
+  it('dziecko SGA po samej długości urodzeniowej też jest opisane', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie, {
+      sgaCatchUp: {
+        ...SGA_PONIZEJ, kryteriumSga: 'dlugosc', masaSdsUr: null, dlugoscSdsUr: -2.2,
+        tygodnie: 39, dni: 0, wczesniak: false, prog: -2.5, pasmo: '2lata', wiekMies: 30,
+      },
+    });
+    const t = zdanie(wynik, 'sgaCatchUp');
+    expect(t).toMatch(/długość urodzeniowa −2,2 SD/);
+    expect(t).toMatch(/39 tc/);
+    expect(t, 'bez „+0" przy pełnych tygodniach').not.toMatch(/39\+0/);
+    expect(t).toMatch(/poniżej progu −2,5 SD/);
+  });
+});
