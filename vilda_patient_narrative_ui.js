@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '4';
   var ATTR = 'data-patient-narrative-copy-btn';
   var ETYKIETA = 'Kopiuj opis pacjenta';
 
@@ -132,10 +132,16 @@
     return null;
   }
 
-  // Dane urodzeniowe ta sama regula, co kolektor rekordu (GROWTH-BIRTH-REC): karta, jesli
-  // niesie dane, w przeciwnym razie wartosc przeniesiona z rekordu. Dzieki temu opis mowi
-  // to samo na index.html i na docpro.html — karta SGA istnieje tylko na tej drugiej.
+  // Dane urodzeniowe: pierwszenstwo zrodel rozstrzyga vilda_perinatal_source.js — karta
+  // SGA, potem sekcja `birth` przeniesiona z rekordu, potem „Dane okoloporodowe" z Karty
+  // Pacjenta. Dzieki temu opis mowi to samo na index.html i na docpro.html, a pacjent,
+  // ktory dane wpisal tylko w Karcie Pacjenta, tez je dostaje (zgloszenie z 2026-09-08).
+  // Sciezka zapasowa zostaje na wypadek, gdyby modulu zrodel na stronie nie bylo.
   function stanUrodzeniowy() {
+    var P = w.VildaPerinatalSource;
+    if (P && typeof P.biezace === 'function') {
+      try { return P.biezace(); } catch (e) { /* nizej stara sciezka */ }
+    }
     var karta = null;
     try {
       var api = w.vildaSgaBirthPersistApi;
@@ -148,6 +154,20 @@
     return przeniesione && typeof przeniesione === 'object' ? przeniesione : null;
   }
 
+  // Plec do przeliczenia SDS urodzeniowego. Silnik karty SGA traktuje kazda wartosc inna
+  // niz zenska jako chlopca — wiec „brak plci" cicho zamienilby sie w chlopca. Sekcja
+  // „Dane okoloporodowe" plci nie niesie, wiec bez tego lancucha dziewczynka wpisana
+  // wylacznie w Karcie Pacjenta dostawalaby SDS liczony z norm meskich.
+  function plecDoSds(karta, model) {
+    var kandydaci = [karta ? karta.sex : null, model ? model.sex : null];
+    for (var i = 0; i < kandydaci.length; i += 1) {
+      var t = String(kandydaci[i] == null ? '' : kandydaci[i]).trim().toUpperCase();
+      if (t === 'F' || t === 'K' || t === 'FEMALE') return 'female';
+      if (t === 'M' || t === 'MALE') return 'male';
+    }
+    return null;
+  }
+
   // SGA bez catch-upu — progi liczy vilda_sga_catchup.js, SDS urodzeniowe ten sam silnik,
   // ktory liczy karte SGA. Bez ktoregokolwiek z nich zdanie po prostu nie powstaje.
   function sgaCatchUp(model) {
@@ -156,6 +176,8 @@
     if (!C || typeof C.ocen !== 'function' || !S || typeof S.compute !== 'function') return null;
     var karta = stanUrodzeniowy();
     if (!karta) return null;
+    var plec = plecDoSds(karta, model);
+    if (!plec) return null;
     var h = metryka(model, 'height');
     var ost = h && h.last ? h.last : null;
     if (!ost) return null;
@@ -164,7 +186,7 @@
       var klucz = Array.isArray(karta.sourceKeys) && karta.sourceKeys.length
         ? karta.sourceKeys[0] : 'niklasson';
       sds = S.compute(klucz, {
-        sex: karta.sex,
+        sex: plec,
         weeks: karta.weeks,
         days: karta.days,
         weightG: karta.weight,
@@ -180,7 +202,12 @@
         tygodnie: karta.weeks,
         dni: karta.days,
         wiekMies: ost.ageMonths,
-        hSds: ost.sd
+        hSds: ost.sd,
+        // Powyzej 4. r.z. prog jest CENTYLOWY (kryterium 3 programu B.64), a konwencje SD
+        // roznia sie miedzy narzedziami — dlatego idzie centyl, nie tylko hSDS. Zrodlo
+        // siatek jedzie razem z nim, bo program odwoluje sie do siatek polskich.
+        centyl: ost.c,
+        zrodloSiatek: model ? model.source : null
       });
     } catch (e) { return null; }
   }

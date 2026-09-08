@@ -17,7 +17,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var ID_PRZYCISKU = 'copyB64ChecklistBtn';
 
   function num(x) {
@@ -109,13 +109,24 @@
   // Stan karty urodzeniowej i SDS policzony tym samym silnikiem, ktory liczy karte.
   // Przy kilku zaznaczonych zrodlach bierzemy pierwsze — sciaga ma podac jedno,
   // a nie sugerowac, ze program dopuszcza porownywanie.
-  function urodzeniowe() {
-    var api = w.vildaSgaBirthPersistApi;
+  //
+  // SKAD DANE: pierwszenstwo zrodel rozstrzyga vilda_perinatal_source.js — karta SGA,
+  // potem sekcja `birth` z rekordu, potem „Dane okoloporodowe" z Karty Pacjenta. Bez
+  // tego sciaga milczala u pacjenta, ktory dane urodzeniowe ma tylko w Karcie Pacjenta
+  // i nie otwieral karty SGA (zgloszenie wlasciciela 2026-09-08).
+  function urodzeniowe(plecZapasowa) {
     var karta = null;
-    try {
-      if (api && typeof api.captureState === 'function') karta = api.captureState();
-    } catch (e) {
-      karta = null;
+    var P = w.VildaPerinatalSource;
+    if (P && typeof P.biezace === 'function') {
+      try { karta = P.biezace(); } catch (e) { karta = null; }
+    }
+    if (!karta) {
+      try {
+        var api = w.vildaSgaBirthPersistApi;
+        if (api && typeof api.captureState === 'function') karta = api.captureState();
+      } catch (e) {
+        karta = null;
+      }
     }
     if (!karta) return { karta: null, sds: null };
     var silnik = w.VildaSgaBirth;
@@ -125,7 +136,10 @@
         var klucz = Array.isArray(karta.sourceKeys) && karta.sourceKeys.length
           ? karta.sourceKeys[0] : 'niklasson';
         var wynik = silnik.compute(klucz, {
-          sex: karta.sex,
+          // Silnik traktuje kazda plec inna niz zenska jako chlopca, a sekcja „Dane
+          // okoloporodowe" plci nie niesie — bez wartosci zapasowej z formularza
+          // dziewczynka z Karty Pacjenta dostalaby SDS z norm meskich.
+          sex: plecNorm(karta.sex) || plecZapasowa || karta.sex,
           weeks: karta.weeks,
           days: karta.days,
           weightG: karta.weight,
@@ -140,15 +154,25 @@
     return { karta: karta, sds: sds };
   }
 
+  // 'male' / 'female' / null — ksztalt, ktory rozumie silnik karty SGA.
+  function plecNorm(x) {
+    var t = String(x == null ? '' : x).trim().toUpperCase();
+    if (t === 'F' || t === 'K' || t === 'FEMALE') return 'female';
+    if (t === 'M' || t === 'MALE') return 'male';
+    return null;
+  }
+
   function zbierz() {
-    var u = urodzeniowe();
+    var m = model();
+    var plecFormularza = pole('sex');
+    var u = urodzeniowe(plecNorm(plecFormularza) || plecNorm(m ? m.sex : null));
     return zbierzZeZrodel({
-      model: model(),
+      model: m,
       adv: w.advancedGrowthData || null,
       karta: u.karta,
       sds: u.sds,
       imie: pole('name') || pole('advName') || pole('fullName'),
-      plecFormularza: pole('sex')
+      plecFormularza: plecFormularza
     });
   }
 

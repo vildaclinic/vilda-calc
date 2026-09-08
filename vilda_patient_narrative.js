@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '4';
 
   // Progi UJAWNIANIA, nie progi kliniczne. Bramkuja wylacznie zdania o wieku danych,
   // czyli decyduja o tym, KIEDY opis przyznaje sie do starych danych — nigdy o tym, jak
@@ -315,21 +315,54 @@
   // wylacznie glos. Zdanie powstaje TYLKO ponizej progu — brak zdania to konwencja tego
   // silnika (tak samo milczy zdanie o dryfie prognozy), a NIE stwierdzenie, ze catch-up
   // nastapil: powyzej progu konsensus po prostu nie zaleca diagnostyki w tym wieku.
+  // Do 4. r.z. mowi konsensus 2023 (kiedy kierowac na diagnostyke), powyzej — zalacznik
+  // B.64 (kiedy wolno leczyc). Miedzy 4. a 5. rokiem obowiazuja oba i oba sa nazwane.
   function zdanieCatchUp(extra) {
     var c = extra && extra.sgaCatchUp;
-    if (!c || !c.ponizejProgu) return null;
+    if (!c) return null;
+    var kons = c.konsensus && c.konsensus.ponizej ? c.konsensus : null;
+    var b64 = c.b64 && c.b64.ponizej ? c.b64 : null;
+    // Zgodnosc wsteczna z modulem sprzed SW 1.0.865, ktory nie mial pol `konsensus`/`b64`.
+    if (!kons && !b64) {
+      if (!c.ponizejProgu || c.prog == null) return null;
+      kons = { prog: c.prog };
+    }
     var opis = [];
     if (c.masaSdsUr != null) opis.push('masa urodzeniowa ' + fmtSds(c.masaSdsUr) + ' SD');
     if (c.dlugoscSdsUr != null) opis.push('długość urodzeniowa ' + fmtSds(c.dlugoscSdsUr) + ' SD');
     if (c.tygodnie != null) opis.push(c.tygodnie + (c.dni ? '+' + c.dni : '') + ' tc');
     var nawias = opis.length ? ' (' + opis.join(', ') + ')' : '';
+
+    var progKons = kons
+      ? 'poniżej progu ' + fmtSds(kons.prog)
+        + ' SD, przy którym konsensus międzynarodowy z 2023 roku zaleca u dzieci urodzonych'
+        + ' jako SGA diagnostykę utrwalonej niskorosłości'
+      : null;
+    var progB64 = b64
+      ? 'poniżej ' + b64.progCentyl + '. centyla — kryterium wysokości ciała programu'
+        + ' lekowego B.64'
+      : null;
+    var czesc;
+    if (progKons && progB64) {
+      czesc = progKons + ', a zarazem ' + progB64;
+    } else if (progKons) {
+      czesc = progKons;
+    } else {
+      // Samodzielne kryterium B.64 dostaje pelna nazwe programu — poza pasmem konsensusu
+      // to jedyne zdanie, ktore o nim mowi.
+      czesc = progB64 + ' (leczenie hormonem wzrostu dzieci urodzonych jako zbyt małe'
+        + ' w porównaniu do czasu trwania ciąży)';
+    }
+    // Program odwoluje sie do siatek polskich; policzenie centyla z innych nie unieważnia
+    // pomiaru, ale lekarz musi o tym wiedziec, zanim uzna kryterium za zmierzone.
+    if (b64 && b64.siatkiPolskie === false) {
+      czesc += ', przy czym pozycję centylową policzono wg siatek ' + b64.zrodloSiatek
+        + ', a program odwołuje się do siatek dla populacji polskiej';
+    }
     return {
       id: 'sgaCatchUp',
       tone: 'bad',
-      text: kropka('Dziecko urodzone jako SGA' + nawias
-        + '; wzrost pozostaje poniżej progu ' + fmtSds(c.prog)
-        + ' SD, przy którym konsensus międzynarodowy z 2023 roku zaleca u dzieci urodzonych'
-        + ' jako SGA diagnostykę utrwalonej niskorosłości')
+      text: kropka('Dziecko urodzone jako SGA' + nawias + '; wzrost pozostaje ' + czesc)
     };
   }
 
