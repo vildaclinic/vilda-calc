@@ -341,6 +341,36 @@ Właściciel poprosił o znalezienie norm, które domknęłyby kryterium 4. **Ni
 
 **Wniosek:** kryterium 4 zostaje „do sprawdzenia ręcznie" do czasu, aż pojawi się tablica, którą da się zobaczyć i zacytować. Wpisanie norm brytyjskich pod etykietą polskich byłoby cichym podmienieniem populacji w dokumencie kwalifikacyjnym — i tego nie zrobiono.
 
+### GROWTH-HV-SDS — SDS tempa wzrastania wg Rikkena i Wita (SW 1.0.860, 2026-09-08)
+
+Nowy czytelny moduł `vilda_height_velocity_sds.js`. Aplikacja umiała dotąd powiedzieć „4,1 cm/rok"; teraz umie powiedzieć, jak to tempo wypada wobec rówieśników. Źródło: **Rikken B, Wit JM. Prepubertal height velocity references over a wide age range. *Arch Dis Child* 1992;67:1277–80**, [DOI](https://doi.org/10.1136/adc.67.10.1277) — model ICP dopasowany do **szwedzkiego** badania podłużnego.
+
+**To NIE domyka kryterium 4 programu B.64.** Program wymaga norm dla populacji **polskiej**, a te nie istnieją w żadnym zweryfikowanym źródle (patrz GROWTH-B64 i sprostowanie niżej). Wynik tego modułu jest informacją kliniczną z **jawnie nazwaną populacją odniesienia**, nie spełnieniem kryterium — i tak musi być prezentowany.
+
+- *Równania (tabele 1 i 2 pracy):* średnia dla 0,5 ≤ t ≤ 3,0 to wielomian interpozycyjny `a + bt + ct²` (chłopcy 27,11 / −12,73 / 2,06; dziewczęta 25,28 / −11,07 / 1,73), powyżej 3,0 komponent dziecięcy `b + 2ct` (chłopcy 8,54 − 0,36t; dziewczęta 8,88 − 0,42t). SD: `a + exp(−bt + c)` (chłopcy 0,691 / 0,538 / 0,912; dziewczęta 0,820 / 0,649 / 0,635). W punkcie t = 3,0 obowiązuje wielomian — u dziewcząt obie gałęzie dają różne liczby (7,64 vs 7,62), a tabela źródłowa podaje 7,64.
+- **Cztery granice, poza którymi moduł milczy zamiast zgadywać:**
+  - **Okno obserwacji 12 ± 1 mies.** Autorzy piszą wprost, że dla krótszych odstępów należałoby użyć **większego** SD, a jego wielkość jest nieznana; policzenie SDS z półrocznej obserwacji na tym SD **zawyżyłoby wynik co do wartości bezwzględnej — dziecko wyglądałoby gorzej, niż jest**. Tolerancja ±1 mies. nie jest liczbą dobraną przez implementację: tak definiuje przyrost roczny **Kelly i wsp., *JCEM* 2014;99:2104–12**, [DOI](https://doi.org/10.1210/jc.2013-4455) („annual (12 ± 1 mo) HV measurements"). **To jest bezpośredni konflikt z B.64**, który dopuszcza obserwację już od 6 miesięcy.
+  - **Wiek do 15,5 roku (chłopcy) i 13,5 roku (dziewczęta)** — granice przyjęte przez autorów, bo dłuższy stan przedpokwitaniowy uznali za niefizjologiczny.
+  - **Tylko przed pokwitaniem.** Znany etap Tannera > I → odmowa. Nieznany Tanner nie blokuje, ale wynik niesie flagę `zalozonoPrzedpokwitaniowy`.
+  - **SD powyżej 10 lat (chłopcy) i 8 lat (dziewczęta) jest ekstrapolowane** — autorzy mówią, że ta część opiera się na nieudowodnionych założeniach. Każdy taki wynik niesie flagę `sdEkstrapolowane`.
+- *Strażnicy:* `tests/unit/tempo-wzrastania-sds.test.mjs` (13). Wyrocznią jest **tabela 3 pracy źródłowej** — 31 punktów wieku dla chłopców i 27 dla dziewcząt, średnia i SD, sprawdzane co do drugiego miejsca po przecinku. To jedyny sposób zweryfikowania, że równania przepisano poprawnie, bez dostępu do danych pierwotnych. Do tego wszystkie cztery granice w obie strony, z kontrolami pozytywnymi na brzegach okna (11 i 13 mies. przechodzą). **Zmierzone czerwone:** bez modułu 13/13; przeciwko **naiwnemu wariantowi z trzema typowymi błędami przepisania** (zgubiony minus w wykładniku SD, zgubiony współczynnik 2 w komponencie dziecięcym, brak bramki okna) — **5 z 13**, każda porażka na właściwym teście.
+
+#### Sprostowanie i domknięcie poszukiwania norm tempa
+
+Właściciel dostarczył trzy prace z listy. Wynik triażu:
+
+| Praca | Werdykt |
+|---|---|
+| **Rikken i Wit 1992** ([DOI](https://doi.org/10.1136/adc.67.10.1277)) | **wdrożone** — równania i pełna tabela 3 w artykule |
+| **Kelly i wsp. 2014** ([DOI](https://doi.org/10.1210/jc.2013-4455)) | **zablokowane** — parametry LMS są w *Supplemental Table 2 a/b*, poza artykułem |
+| **Bakker i wsp. 2008** ([DOI](https://doi.org/10.1210/jc.2007-1581)) | **nieprzydatne do tego celu** — wyniki są *„primarily graphical"* (ryciny 1–5); jedyne tabele liczbowe to liczebności i dawki. Kohorta obejmuje IGHD, OGHD, ISS i zespół Turnera — **SGA nie jest wśród rozpoznań** |
+
+Wcześniejszy wpis GROWTH-B64 mówił, że norm tempa nie ma. **To pozostaje prawdą dla populacji polskiej**, ale nie dla oceny tempa w ogóle — i to jest sprostowanie: normy istnieją i jedne z nich są teraz w aplikacji, tyle że szwedzkie. Monografia Palczewskiej i Niedźwieckiej została **przeczytana w oryginale** (skan, 122 strony): spis treści wymienia 64 tabele i 64 ryciny, wszystkie dotyczące cech i wskaźników przekrojowych; **żadnej pozycji o tempie**. Wprowadzenie potwierdza przekrojowy charakter badania (6366 dzieci, 1996–99). Niezależnie potwierdza to zdekompilowany „Kalkulator wzrostowy" (Smyczyńska 2016), który liczy tempo wyłącznie w cm/rok, bez SDS.
+
+#### Uwaga o zgodności hSDS z innymi narzędziami
+
+„Kalkulator wzrostowy" liczy SD wysokości jako `(c50 − c3)/2`. Przy rozkładzie normalnym `c50 − c3 = 1,8808·SD`, więc jego SD jest o ok. 6% mniejsze od prawdziwego, a raportowany HSDS o ok. 6,3% większy co do modułu. **W tamtym narzędziu „−2 SD" to z definicji 3 centyl.** Vilda-calc liczy inaczej — dla Palczewskiej interpoluje między opublikowanymi centylami i przelicza je przez `normInv`, więc 3 centyl to −1,8808 SD. Dziecko dokładnie na 3 centylu: **−1,88 w vilda-calc, −2,00 w tamtym kalkulatorze**. To nie jest błąd żadnego z nich, tylko dwie definicje SD; odnotowane, bo przy porównywaniu wyników różnica rzuca się w oczy. Ściągi B.64 to nie dotyczy — kryterium 3 liczone jest na **centylu**, który znaczy to samo w obu konwencjach.
+
 ### GROWTH-LMS — kompletność cytowań
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
