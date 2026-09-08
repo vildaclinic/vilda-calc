@@ -9,9 +9,16 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 // Progi z konsensusu 2023 (Hokken-Koelega i wsp., Endocr Rev 44:539–565): „< −2.5 SDS
 // at age 2 years or < −2 SDS at 3 to 4 years of age".
 //
+// Od SW 1.0.865 moduł ma DRUGIE źródło: załącznik B.64 (kryteria 2 i 3 — wiek > 4 lat,
+// wysokość < 3 centyla wg siatek polskich). Dokumenty odpowiadają na różne pytania:
+// konsensus mówi, KIEDY KIEROWAĆ NA DIAGNOSTYKĘ, B.64 — KIEDY WOLNO LECZYĆ. Pierwsza
+// wersja modułu milczała powyżej 60 miesięcy, czyli dokładnie na rdzeniowej populacji
+// programu (sześciolatek SGA poniżej 3 centyla). Zgłoszone przez właściciela.
+//
 // Testy pilnują tego, co w takim module najłatwiej zepsuć po cichu: granic pasm wieku
-// (każdy miesiąc ma dokładnie jedną regułę albo żadnej), bramki wcześniactwa i tego,
-// że moduł milczy wszędzie tam, gdzie konsensus progu nie definiuje.
+// (każdy miesiąc ma dokładnie jedną regułę albo żadnej), bramki wcześniactwa, tego,
+// że moduł milczy wszędzie tam, gdzie żadne źródło progu nie definiuje, i tego, że
+// dwa progi nie zlewają się w jeden.
 
 let S;
 beforeAll(() => {
@@ -148,5 +155,118 @@ describe('Milczenie', () => {
   it('puste wejście nie wywraca modułu', () => {
     expect(S.ocen(null)).toBeNull();
     expect(S.ocen({})).toBeNull();
+  });
+});
+
+// ── Kryterium wysokości ciała programu B.64 (SW 1.0.865) ──────────────────────
+
+describe('Progi B.64 przepisane z załącznika', () => {
+  it('są dokładnie takie, jak w ściądze — ten sam dokument, te same liczby', () => {
+    expect(S.PROGI.B64_WIEK_MIES).toBe(48);
+    expect(S.PROGI.B64_CENTYL).toBe(3);
+    expect(S.PROGI.B64_SIATKI).toBe('PALCZEWSKA');
+    expect(S.PROGI.Z_3_CENTYL).toBeCloseTo(-1.8808, 6);
+  });
+});
+
+describe('Kryterium B.64 — wiek i pozycja centylowa', () => {
+  it('granica wieku jest OSTRA: 48 miesięcy to jeszcze nie „> 4 lat"', () => {
+    expect(S.kryteriumB64(48, 1.2, -2.4, 'PALCZEWSKA')).toBeNull();
+    expect(S.kryteriumB64(49, 1.2, -2.4, 'PALCZEWSKA')).not.toBeNull();
+  });
+
+  it('granica centyla jest ostra: dokładnie 3. centyl to nie „poniżej 3 centyla"', () => {
+    expect(S.kryteriumB64(84, 3, null, 'PALCZEWSKA').ponizej).toBe(false);
+    expect(S.kryteriumB64(84, 2.9, null, 'PALCZEWSKA').ponizej).toBe(true);
+  });
+
+  it('centyl ma pierwszeństwo przed hSDS — konwencje SD różnią się między narzędziami', () => {
+    // hSDS mówiłby „poniżej", centyl mówi „nie". Wygrywa centyl, bo tak brzmi załącznik.
+    const w = S.kryteriumB64(84, 4.5, -2.4, 'PALCZEWSKA');
+    expect(w.ponizej).toBe(false);
+    expect(w.zCentyla).toBe(true);
+  });
+
+  it('bez centyla wchodzi awaryjnie hSDS przy z = −1,8808 (parytet ze ściągą)', () => {
+    expect(S.kryteriumB64(84, null, -1.9, 'PALCZEWSKA').ponizej).toBe(true);
+    expect(S.kryteriumB64(84, null, -1.88, 'PALCZEWSKA').ponizej).toBe(false);
+    expect(S.kryteriumB64(84, null, -1.9, 'PALCZEWSKA').zCentyla).toBe(false);
+  });
+
+  it('siatki nazywa wprost: polskie, nie-polskie albo nieznane', () => {
+    expect(S.kryteriumB64(84, 1.2, null, 'PALCZEWSKA').siatkiPolskie).toBe(true);
+    expect(S.kryteriumB64(84, 1.2, null, 'OLAF').siatkiPolskie).toBe(false);
+    expect(S.kryteriumB64(84, 1.2, null, null).siatkiPolskie).toBeNull();
+  });
+
+  it('kontrola negatywna: bez pomiaru nie ma kryterium', () => {
+    expect(S.kryteriumB64(84, null, null, 'PALCZEWSKA')).toBeNull();
+    expect(S.kryteriumB64(null, 1.2, null, 'PALCZEWSKA')).toBeNull();
+  });
+});
+
+describe('Ocena powyżej 4. roku życia — rdzeniowa populacja programu B.64', () => {
+  it('sześciolatek SGA poniżej 3 centyla NIE jest już przemilczany', () => {
+    const w = S.ocen({ ...SGA, wiekMies: 78, hSds: -2.4, centyl: 0.8, zrodloSiatek: 'PALCZEWSKA' });
+    expect(w).not.toBeNull();
+    expect(w.ponizejProgu).toBe(true);
+    expect(w.b64.ponizej).toBe(true);
+    expect(w.pasmo).toBe('b64');
+  });
+
+  it('powyżej 60 miesięcy konsensus nie dopisuje własnego progu', () => {
+    const w = S.ocen({ ...SGA, wiekMies: 78, hSds: -2.4, centyl: 0.8, zrodloSiatek: 'PALCZEWSKA' });
+    expect(w.konsensus).toBeNull();
+    expect(w.prog).toBeNull();
+    expect(w.zrodlo).toBe(S.ZRODLO_B64);
+  });
+
+  it('siedmiolatek na 5. centylu dostaje wynik z ponizejProgu = false, a nie null', () => {
+    const w = S.ocen({ ...SGA, wiekMies: 84, hSds: -1.7, centyl: 5, zrodloSiatek: 'PALCZEWSKA' });
+    expect(w).not.toBeNull();
+    expect(w.ponizejProgu).toBe(false);
+  });
+
+  it('w paśmie 49–60 miesięcy obowiązują OBA kryteria i oba są nazwane', () => {
+    const w = S.ocen({ ...SGA, wiekMies: 54, hSds: -2.4, centyl: 0.8, zrodloSiatek: 'PALCZEWSKA' });
+    expect(w.konsensus.prog).toBe(-2);
+    expect(w.konsensus.ponizej).toBe(true);
+    expect(w.b64.progCentyl).toBe(3);
+    expect(w.b64.ponizej).toBe(true);
+  });
+
+  it('dwa progi nie zlewają się w jeden: −2,0 SD jest surowsze niż 3. centyl', () => {
+    // −1,95 SD: powyżej progu konsensusu, ale poniżej 3. centyla (z = −1,8808).
+    const w = S.ocen({ ...SGA, wiekMies: 54, hSds: -1.95, centyl: 2.6, zrodloSiatek: 'PALCZEWSKA' });
+    expect(w.konsensus.ponizej).toBe(false);
+    expect(w.b64.ponizej).toBe(true);
+    expect(w.ponizejProgu).toBe(true);
+  });
+
+  it('dokładnie 48 miesięcy to jeszcze wyłącznie pasmo konsensusu', () => {
+    const w = S.ocen({ ...SGA, wiekMies: 48, hSds: -2.4, centyl: 0.8, zrodloSiatek: 'PALCZEWSKA' });
+    expect(w.konsensus.prog).toBe(-2);
+    expect(w.b64).toBeNull();
+  });
+
+  it('wcześniak powyżej 4. r.ż. jest oceniany — bramka nic tam nie blokuje', () => {
+    const w = S.ocen({
+      masaSdsUr: -2.4, dlugoscSdsUr: -2.2, tygodnie: 32, dni: 3,
+      wiekMies: 78, hSds: -2.4, centyl: 0.8, zrodloSiatek: 'PALCZEWSKA',
+    });
+    expect(w.wczesniak).toBe(true);
+    expect(w.b64.ponizej).toBe(true);
+  });
+
+  it('kontrola negatywna: powyżej 60 miesięcy bez pomiaru nadal milczenie', () => {
+    expect(S.ocen({ ...SGA, wiekMies: 84, hSds: null, centyl: null })).toBeNull();
+    expect(S.ocen({ masaSdsUr: -1.2, wiekMies: 84, hSds: -2.4, centyl: 0.8 })).toBeNull();
+  });
+
+  it('zgodność wsteczna: w paśmie konsensusu `prog` i `pasmo` znaczą to, co znaczyły', () => {
+    const w = S.ocen({ ...SGA, wiekMies: 38, hSds: -2.3 });
+    expect(w.prog).toBe(-2);
+    expect(w.pasmo).toBe('3-4lata');
+    expect(w.zrodlo).toBe(S.ZRODLO);
   });
 });
