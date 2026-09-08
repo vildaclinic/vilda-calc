@@ -98,3 +98,31 @@ test('docpro.html: wczytanie pacjenta BEZ danych urodzeniowych nie przenosi ich 
   expect(po.weeks).toBe('');
   expect(po.weight).toBe('');
 });
+
+test('docpro.html: „Wyczyść dane urodzeniowe" usuwa je z rekordu, resztę pacjenta zostawia', async ({ page }) => {
+  // Sam przycisk czyścił dotąd tylko pola karty; po dopisaniu sekcji `birth` kolektor
+  // przenosiłby zapisaną wartość, więc dane wracałyby przy kolejnym wczytaniu.
+  await otworz(page, 'docpro.html');
+  const po = await page.evaluate((rek) => {
+    window.applyLoadedData(rek);
+    // Wzrost wpisany jak przez lekarza — kontrola, że przycisk nie sprząta cudzych pól.
+    document.getElementById('height').value = '86';
+    document.getElementById('resetSgaBirth').click();
+    const zebrane = window.vildaExport.collectUserData();
+    return {
+      birth: zebrane.birth,
+      przeniesione: window.vildaBirthData,
+      weeks: (document.getElementById('sgaBirthWeeks') || {}).value,
+      weight: (document.getElementById('sgaBirthWeight') || {}).value,
+      wzrost: zebrane.user && zebrane.user.height,
+      plec: zebrane.user && zebrane.user.sex,
+    };
+  }, REKORD);
+  expect(po.birth, 'dane urodzeniowe znikają z rekordu').toBeNull();
+  expect(po.przeniesione, 'przeniesiona wartość też').toBeNull();
+  expect(po.weeks).toBe('');
+  expect(po.weight).toBe('');
+  // Kontrola negatywna: przycisk nie jest „wyczyść wszystko".
+  expect(po.wzrost, 'reszta rekordu nietknięta').toBe(86);
+  expect(po.plec).toBe('M');
+});
