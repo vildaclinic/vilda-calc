@@ -3402,8 +3402,9 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 
   <div class="sga-birth-actions">
     <button type="button" id="computeSgaBirth" class="igf-btn">Oblicz SDS</button>
-    <button type="button" id="resetSgaBirth" class="sga-birth-secondary-btn">Wyczyść moduł</button>
+    <button type="button" id="resetSgaBirth" class="sga-birth-secondary-btn">Wyczyść dane urodzeniowe</button>
   </div>
+  <span class="sga-birth-help" style="display:block;margin-top:0.35rem;">Czyści pola tej karty i usuwa dane urodzeniowe z rekordu pacjenta — pozostałe dane pacjenta zostają nietknięte. Zapisz pacjenta ponownie, żeby zmiana trafiła do zapisanej karty.</span>
 
   <div id="sgaBirthMessage" class="sga-birth-message" aria-live="polite"></div>
   <div id="sgaBirthResults" class="sga-birth-results" style="display:none;"></div>
@@ -3906,7 +3907,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     <script src="bisphos_therapy_monitor.js?v=5" defer></script>
     <script src="sga_intergrowth_data.js" defer></script>
     <script src="sga_malewski_data.js" defer></script>
-    <script src="sga_birth_module.js?v=9" defer></script>
+    <script src="sga_birth_module.js?v=10" defer></script>
 
     <!-- Skrypt synchronizujący podstawowe dane użytkownika (imię, wiek, płeć, masa i wzrost) pomiędzy
          stronami aplikacji. Plik userData.js zapisuje dane w localStorage i wczytuje je na
