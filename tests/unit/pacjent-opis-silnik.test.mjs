@@ -639,6 +639,105 @@ describe('SGA bez catch-upu — etap 4b', () => {
     expect(zNull.wynik.text).toBe(bez.wynik.text);
   });
 
+});
+
+// Powyżej 4. r.ż. próg jest CENTYLOWY i pochodzi z programu B.64, nie z konsensusu.
+// Do SW 1.0.864 zdanie w ogóle tam nie powstawało — czyli milczało na rdzeniowej
+// populacji programu. Zgłoszone przez właściciela.
+const SGA_B64 = {
+  kryteriumSga: 'masa',
+  masaSdsUr: -2.4,
+  dlugoscSdsUr: null,
+  tygodnie: 39,
+  dni: 0,
+  wczesniak: false,
+  wiekMies: 78,
+  hSds: -2.4,
+  centyl: 0.8,
+  konsensus: null,
+  b64: {
+    progCentyl: 3, centyl: 0.8, ponizej: true, zCentyla: true,
+    siatkiPolskie: true, zrodloSiatek: 'PALCZEWSKA',
+  },
+  prog: null,
+  pasmo: 'b64',
+  ponizejProgu: true,
+};
+
+// 4,5 roku: obowiązują oba kryteria naraz.
+const SGA_OBA = {
+  ...SGA_B64,
+  wiekMies: 54,
+  konsensus: { prog: -2, pasmo: '3-4lata', ponizej: true },
+};
+
+describe('SGA powyżej 4. roku życia — kryterium programu B.64', () => {
+  const zloz = (c) => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie, { sgaCatchUp: c });
+    return zdanie(wynik, 'sgaCatchUp');
+  };
+
+  it('sześciolatek poniżej 3. centyla dostaje zdanie o programie B.64', () => {
+    const t = zloz(SGA_B64);
+    expect(t).not.toBeNull();
+    expect(t).toMatch(/urodzone jako SGA/);
+    expect(t).toMatch(/poniżej 3\. centyla/);
+    expect(t).toMatch(/programu lekowego B\.64/);
+  });
+
+  it('nie przypisuje progu konsensusowi, który go tam nie definiuje', () => {
+    const t = zloz(SGA_B64);
+    expect(t).not.toMatch(/konsensus/);
+    // Nawias z danymi urodzeniowymi nadal podaje SD — chodzi o BRAK progu w SD.
+    expect(t).not.toMatch(/poniżej progu/);
+    expect(t).not.toMatch(/diagnostykę utrwalonej niskorosłości/);
+  });
+
+  it('samodzielne kryterium B.64 dostaje pełną nazwę programu', () => {
+    expect(zloz(SGA_B64)).toMatch(/zbyt małe w porównaniu do czasu trwania ciąży/);
+  });
+
+  it('w paśmie 49–60 miesięcy zdanie nazywa OBA kryteria', () => {
+    const t = zloz(SGA_OBA);
+    expect(t).toMatch(/poniżej progu −2,0 SD/);
+    expect(t).toMatch(/konsensus międzynarodowy z 2023 roku/);
+    expect(t).toMatch(/a zarazem poniżej 3\. centyla/);
+    expect(t).toMatch(/programu lekowego B\.64/);
+    // Wersja łączona NIE powtarza pełnej nazwy programu — zdanie i tak jest długie.
+    expect(t).not.toMatch(/zbyt małe w porównaniu do czasu trwania ciąży/);
+  });
+
+  it('centyl policzony spoza siatek polskich jest nazwany wprost', () => {
+    const t = zloz({
+      ...SGA_B64,
+      b64: { ...SGA_B64.b64, siatkiPolskie: false, zrodloSiatek: 'OLAF' },
+    });
+    expect(t).toMatch(/wg siatek OLAF/);
+    expect(t).toMatch(/siatek dla populacji polskiej/);
+  });
+
+  it('kontrola negatywna: przy siatkach polskich dopisku nie ma', () => {
+    expect(zloz(SGA_B64)).not.toMatch(/siatek dla populacji polskiej/);
+  });
+
+  it('kontrola negatywna: powyżej 3. centyla zdanie nie powstaje', () => {
+    expect(zloz({
+      ...SGA_B64,
+      centyl: 5,
+      b64: { ...SGA_B64.b64, centyl: 5, ponizej: false },
+      ponizejProgu: false,
+    })).toBeNull();
+  });
+
+  it('zdanie zestawia kryterium, a NIE orzeka o kwalifikacji do programu', () => {
+    const t = zloz(SGA_B64);
+    expect(t).not.toMatch(/kwalifikuje/);
+    expect(t).not.toMatch(/spełnia kryteria/);
+  });
+});
+
+describe('SGA bez catch-upu — etap 4b, ciąg dalszy', () => {
   it('dziecko SGA po samej długości urodzeniowej też jest opisane', () => {
     const g = srodowisko(DECELERACJA.tabela);
     const { wynik } = opis(g, DECELERACJA.wejscie, {

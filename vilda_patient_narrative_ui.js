@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '4';
   var ATTR = 'data-patient-narrative-copy-btn';
   var ETYKIETA = 'Kopiuj opis pacjenta';
 
@@ -202,7 +202,12 @@
         tygodnie: karta.weeks,
         dni: karta.days,
         wiekMies: ost.ageMonths,
-        hSds: ost.sd
+        hSds: ost.sd,
+        // Powyzej 4. r.z. prog jest CENTYLOWY (kryterium 3 programu B.64), a konwencje SD
+        // roznia sie miedzy narzedziami — dlatego idzie centyl, nie tylko hSDS. Zrodlo
+        // siatek jedzie razem z nim, bo program odwoluje sie do siatek polskich.
+        centyl: ost.c,
+        zrodloSiatek: model ? model.source : null
       });
     } catch (e) { return null; }
   }

@@ -369,3 +369,82 @@ test.describe('Dane okołoporodowe z Karty Pacjenta zasilają opis', () => {
     expect(t).toMatch(/poniżej progu −2,0 SD/);
   });
 });
+
+// GROWTH-SGA-B64: siedmiolatka urodzona jako SGA, poniżej 3. centyla — rdzeniowa populacja
+// programu B.64. Do SW 1.0.864 opis w tym wieku w ogóle nie powstawał. Test sprawdza
+// PRAWDZIWY łańcuch na index.html: siatki wybrane przełącznikiem, centyl policzony przez
+// kartę, kryterium przez vilda_sga_catchup.js, zdanie przez silnik opisu.
+const REKORD_SGA_7LAT = {
+  name: 'Testowa Zofia',
+  user: { lastName: 'Testowa', firstName: 'Zofia', sex: 'F', age: 7, ageMonths: 0, height: 108, weight: 18 },
+  birth: {
+    sourceChoice: 'niklasson', sourceKeys: ['niklasson'], sex: 'female',
+    weeks: '39', days: '0', weight: '2150', length: '44', head: '32', hasComputed: true,
+  },
+  advanced: {
+    name: 'Testowa Zofia',
+    motherHeight: 158,
+    fatherHeight: 170,
+    data: {
+      measurements: [
+        { ageMonths: 60, ageYears: 5, height: 99, weight: 15 },
+        { ageMonths: 72, ageYears: 6, height: 103, weight: 16.5 },
+      ],
+    },
+  },
+};
+
+async function opisSiedmiolatki(page, siatki) {
+  await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), REKORD_SGA_7LAT);
+  if (await page.locator('#sex').isEnabled()) await page.selectOption('#sex', 'F');
+  await page.fill('#age', '7');
+  await page.fill('#ageMonths', '0');
+  await page.fill('#height', '108');
+  await page.fill('#weight', '18');
+  await page.evaluate((zrodlo) => {
+    const pro = document.getElementById('resultsModeToggle');
+    if (pro && !pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
+    const radio = document.getElementById(zrodlo);
+    if (radio && !radio.disabled) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
+  }, siatki);
+  return page.evaluate(() => {
+    const m = window.advancedGrowthTrajectory;
+    const we = window.VildaPatientNarrativeUI.buildInput(window.advancedGrowthData || {}, m);
+    const wynik = window.VildaPatientNarrative.compose(m, we);
+    const z = wynik && wynik.sentences.find((x) => x.id === 'sgaCatchUp');
+    return { zrodlo: m && m.source, ocena: we.sgaCatchUp, zdanie: z ? z.text : null };
+  });
+}
+
+test.describe('SGA powyżej 4. roku życia — kryterium programu B.64', () => {
+  test('siedmiolatka poniżej 3. centyla dostaje zdanie o programie, nie milczenie', async ({ page }) => {
+    await otworz(page);
+    const nasiatkach = await opisSiedmiolatki(page, 'sourcePalczewska');
+
+    // Kontrole pozytywne: wiek powyżej pasma konsensusu, siatki polskie, centyl < 3.
+    expect(nasiatkach.ocena, 'moduł progów się odezwał').not.toBeNull();
+    expect(nasiatkach.ocena.wiekMies).toBeGreaterThan(60);
+    expect(nasiatkach.ocena.konsensus, 'konsensus nie definiuje tam progu').toBeNull();
+    expect(nasiatkach.ocena.b64.ponizej, 'poniżej 3. centyla').toBe(true);
+    expect(nasiatkach.ocena.centyl).toBeLessThan(3);
+
+    expect(nasiatkach.zdanie).toMatch(/urodzon[ae] jako SGA/);
+    expect(nasiatkach.zdanie).toMatch(/poniżej 3\. centyla/);
+    expect(nasiatkach.zdanie).toMatch(/programu lekowego B\.64/);
+    // Na siatkach polskich zastrzeżenia o siatkach nie ma.
+    if (nasiatkach.zrodlo === 'PALCZEWSKA') {
+      expect(nasiatkach.zdanie).not.toMatch(/siatek dla populacji polskiej/);
+      expect(nasiatkach.ocena.b64.siatkiPolskie).toBe(true);
+    }
+  });
+
+  test('centyl policzony na siatkach OLAF jest w zdaniu nazwany wprost', async ({ page }) => {
+    await otworz(page);
+    const naOlaf = await opisSiedmiolatki(page, 'sourceOlaf');
+    expect(naOlaf.zrodlo, 'przełącznik naprawdę zmienił siatki').toBe('OLAF');
+    expect(naOlaf.ocena.b64.siatkiPolskie).toBe(false);
+    expect(naOlaf.zdanie).toMatch(/wg siatek OLAF/);
+    expect(naOlaf.zdanie).toMatch(/siatek dla populacji polskiej/);
+  });
+});
