@@ -125,3 +125,89 @@ describe('buildInput — wejście opisu z danych karty zaawansowanej', () => {
     expect(wynik.reason).toContain('co najmniej dwóch pomiarów');
   });
 });
+
+// SGA bez catch-upu — adapter spina trzy źródła: stan karty urodzeniowej (albo wartość
+// przeniesioną z rekordu), silnik SDS urodzeniowych i moduł progów. Testy pilnują reguły
+// wyboru źródła, bo od niej zależy, czy opis mówi to samo na index.html i na docpro.html.
+
+const MODEL_Z_WZROSTEM = {
+  metrics: [
+    { metric: 'weight', last: { value: 15, sd: -1.2, c: 11, ageMonths: 50 } },
+    { metric: 'height', last: { value: 96, sd: -2.3, c: 1.1, ageMonths: 50 } },
+  ],
+};
+
+const KARTA_Z_DANYMI = {
+  sourceKeys: ['niklasson'], sex: 'male',
+  weeks: '34', days: '2', weight: '1850', length: '43', head: '31',
+};
+
+const PUSTA_KARTA = { sourceKeys: ['niklasson'], sex: '', weeks: '', days: '0', weight: '', length: '', head: '' };
+
+function oknoSga(g, { karta, przeniesione } = {}) {
+  g.VildaSgaBirth = {
+    compute: (klucz, we) => {
+      g.__computeWolane = { klucz, we };
+      return { sourceShortLabel: 'Niklasson', weightSds: -2.4, lengthSds: -1.8, headSds: -1.1 };
+    },
+  };
+  g.VildaSgaCatchUp = {
+    ocen: (we) => { g.__ocenWolane = we; return { ponizejProgu: true, prog: -2, ...we }; },
+  };
+  if (karta) g.vildaSgaBirthPersistApi = { captureState: () => karta };
+  if (przeniesione) g.vildaBirthData = przeniesione;
+  return g;
+}
+
+describe('buildInput — ocena SGA bez catch-upu', () => {
+  it('bierze stan karty urodzeniowej, gdy ta niesie dane', () => {
+    const g = oknoSga(okno(), { karta: KARTA_Z_DANYMI });
+    const we = g.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM);
+    expect(we.sgaCatchUp).not.toBeNull();
+    expect(g.__computeWolane.we.weeks).toBe('34');
+    expect(g.__ocenWolane.masaSdsUr).toBe(-2.4);
+    expect(g.__ocenWolane.tygodnie).toBe('34');
+    // Wiek i hSDS z metryki WYSOKOŚCI, nie z pierwszej metryki na liście.
+    expect(g.__ocenWolane.wiekMies).toBe(50);
+    expect(g.__ocenWolane.hSds).toBe(-2.3);
+  });
+
+  it('bez karty schodzi na wartość przeniesioną z rekordu — to samo zdanie na obu stronach', () => {
+    const g = oknoSga(okno(), { przeniesione: KARTA_Z_DANYMI });
+    g.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM);
+    expect(g.__computeWolane.we.weeks).toBe('34');
+  });
+
+  it('pusta karta nie wygrywa z wartością przeniesioną', () => {
+    const g = oknoSga(okno(), { karta: PUSTA_KARTA, przeniesione: { ...KARTA_Z_DANYMI, weeks: '36' } });
+    g.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM);
+    expect(g.__computeWolane.we.weeks).toBe('36');
+  });
+
+  it('bez danych urodzeniowych, bez silnika albo bez pomiaru wzrostu — po prostu null', () => {
+    expect(oknoSga(okno()).VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM).sgaCatchUp)
+      .toBeNull();
+    const bezSilnika = okno();
+    bezSilnika.vildaBirthData = KARTA_Z_DANYMI;
+    bezSilnika.VildaSgaCatchUp = { ocen: () => ({}) };
+    expect(bezSilnika.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM).sgaCatchUp)
+      .toBeNull();
+    const bezWzrostu = oknoSga(okno(), { karta: KARTA_Z_DANYMI });
+    expect(bezWzrostu.VildaPatientNarrativeUI.buildInput({}, { metrics: [] }).sgaCatchUp)
+      .toBeNull();
+    expect(bezWzrostu.VildaPatientNarrativeUI.buildInput({}, null).sgaCatchUp).toBeNull();
+  });
+
+  it('wyjątek silnika SDS nie wywraca całego opisu', () => {
+    const g = oknoSga(okno(), { karta: KARTA_Z_DANYMI });
+    g.VildaSgaBirth = { compute: () => { throw new Error('silnik padł'); } };
+    expect(() => g.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM)).not.toThrow();
+    expect(g.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM).sgaCatchUp).toBeNull();
+  });
+
+  it('błąd SDS z karty (np. wiek ciążowy poza zakresem źródła) też daje null', () => {
+    const g = oknoSga(okno(), { karta: KARTA_Z_DANYMI });
+    g.VildaSgaBirth = { compute: () => ({ error: 'Źródło nie obejmuje podanego wieku ciążowego.' }) };
+    expect(g.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM).sgaCatchUp).toBeNull();
+  });
+});

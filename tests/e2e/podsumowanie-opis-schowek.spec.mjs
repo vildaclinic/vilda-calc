@@ -242,3 +242,58 @@ test.describe('„Kopiuj opis pacjenta" w karcie Podsumowanie wyników', () => {
     expect(await page.evaluate(() => window.__schowek)).toBeUndefined();
   });
 });
+
+// Etap 4b: SGA bez catch-upu. Ten test sprawdza PRAWDZIWY łańcuch na index.html — czyli
+// tam, gdzie karty SGA w ogóle nie ma. Dane urodzeniowe idą z rekordu pacjenta (sekcja
+// `birth`, GROWTH-BIRTH-REC), SDS liczy silnik karty SGA załadowany bez UI, a progi
+// vilda_sga_catchup.js. To domyka obietnicę, że opis mówi to samo na obu stronach.
+const REKORD_SGA = {
+  name: 'Testowa Zofia',
+  user: { lastName: 'Testowa', firstName: 'Zofia', sex: 'F', age: 4, ageMonths: 2, height: 92, weight: 13 },
+  birth: {
+    sourceChoice: 'niklasson', sourceKeys: ['niklasson'], sex: 'female',
+    weeks: '39', days: '0', weight: '2150', length: '44', head: '32', hasComputed: true,
+  },
+  advanced: {
+    name: 'Testowa Zofia',
+    motherHeight: 158,
+    fatherHeight: 170,
+    data: {
+      measurements: [
+        { ageMonths: 24, ageYears: 2, height: 79, weight: 10 },
+        { ageMonths: 36, ageYears: 3, height: 85, weight: 11.5 },
+      ],
+    },
+  },
+};
+
+test.describe('SGA bez catch-upu — łańcuch bez karty SGA na stronie', () => {
+  test('opis rozpoznaje SGA z rekordu i nazywa próg konsensusu', async ({ page }) => {
+    await otworz(page);
+    // Kontrola pozytywna: na index.html karty SGA naprawdę nie ma, a mimo to silnik
+    // SDS urodzeniowych i moduł progów są dostępne.
+    expect(await page.evaluate(() => Boolean(document.getElementById('sgaBirthCard')))).toBe(false);
+    expect(await page.evaluate(() => Boolean(window.VildaSgaBirth && window.VildaSgaCatchUp))).toBe(true);
+
+    await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), REKORD_SGA);
+    if (await page.locator('#sex').isEnabled()) await page.selectOption('#sex', 'F');
+    await page.fill('#age', '4');
+    await page.fill('#ageMonths', '2');
+    await page.fill('#height', '92');
+    await page.fill('#weight', '13');
+    await page.evaluate(() => {
+      const pro = document.getElementById('resultsModeToggle');
+      if (pro && !pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
+    });
+
+    await przycisk(page).click();
+    await page.waitForFunction(() => typeof window.__schowek === 'string' && window.__schowek.length > 0);
+    const t = await page.evaluate(() => window.__schowek);
+
+    expect(t).toMatch(/urodzon[ae] jako SGA/);
+    expect(t).toMatch(/39 tc/);
+    expect(t).toMatch(/poniżej progu −2,0 SD/);
+    expect(t).toMatch(/konsensus międzynarodowy z 2023 roku/);
+  });
+});

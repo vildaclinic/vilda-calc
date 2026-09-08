@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.862';
+const SW_VERSION = '1.0.863';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1851,7 +1851,10 @@ const OPTIONAL_ASSETS = [
   '/vilda_b64_checklist_ui.js?v=1',
   '/vilda_gh_response_b64.js?v=1',
   '/vilda_patient_narrative.js?v=4',
+  '/vilda_patient_narrative.js?v=5',
+  '/vilda_sga_catchup.js?v=1',
   '/vilda_patient_narrative_ui.js?v=4',
+  '/vilda_patient_narrative_ui.js?v=5',
   '/vilda_advanced_growth.js?v=36'
 ];
 

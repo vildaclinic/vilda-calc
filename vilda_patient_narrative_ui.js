@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var ATTR = 'data-patient-narrative-copy-btn';
   var ETYKIETA = 'Kopiuj opis pacjenta';
 
@@ -124,6 +124,67 @@
 
   // Wejscie „extra" dla VildaPatientNarrative.compose — czysta funkcja na obiekcie
   // advancedGrowthData, zeby dalo sie ja sprawdzic bez przegladarki.
+  function metryka(model, klucz) {
+    if (!model || !model.metrics) return null;
+    for (var i = 0; i < model.metrics.length; i += 1) {
+      if (model.metrics[i].metric === klucz) return model.metrics[i];
+    }
+    return null;
+  }
+
+  // Dane urodzeniowe ta sama regula, co kolektor rekordu (GROWTH-BIRTH-REC): karta, jesli
+  // niesie dane, w przeciwnym razie wartosc przeniesiona z rekordu. Dzieki temu opis mowi
+  // to samo na index.html i na docpro.html — karta SGA istnieje tylko na tej drugiej.
+  function stanUrodzeniowy() {
+    var karta = null;
+    try {
+      var api = w.vildaSgaBirthPersistApi;
+      if (api && typeof api.captureState === 'function') karta = api.captureState();
+    } catch (e) { karta = null; }
+    var niesie = karta && (String(karta.weeks || '').trim() || String(karta.weight || '').trim()
+      || String(karta.length || '').trim() || String(karta.head || '').trim());
+    if (niesie) return karta;
+    var przeniesione = w.vildaBirthData;
+    return przeniesione && typeof przeniesione === 'object' ? przeniesione : null;
+  }
+
+  // SGA bez catch-upu — progi liczy vilda_sga_catchup.js, SDS urodzeniowe ten sam silnik,
+  // ktory liczy karte SGA. Bez ktoregokolwiek z nich zdanie po prostu nie powstaje.
+  function sgaCatchUp(model) {
+    var C = w.VildaSgaCatchUp;
+    var S = w.VildaSgaBirth;
+    if (!C || typeof C.ocen !== 'function' || !S || typeof S.compute !== 'function') return null;
+    var karta = stanUrodzeniowy();
+    if (!karta) return null;
+    var h = metryka(model, 'height');
+    var ost = h && h.last ? h.last : null;
+    if (!ost) return null;
+    var sds;
+    try {
+      var klucz = Array.isArray(karta.sourceKeys) && karta.sourceKeys.length
+        ? karta.sourceKeys[0] : 'niklasson';
+      sds = S.compute(klucz, {
+        sex: karta.sex,
+        weeks: karta.weeks,
+        days: karta.days,
+        weightG: karta.weight,
+        lengthCm: karta.length,
+        headCm: karta.head
+      });
+    } catch (e) { return null; }
+    if (!sds || sds.error) return null;
+    try {
+      return C.ocen({
+        masaSdsUr: sds.weightSds,
+        dlugoscSdsUr: sds.lengthSds,
+        tygodnie: karta.weeks,
+        dni: karta.days,
+        wiekMies: ost.ageMonths,
+        hSds: ost.sd
+      });
+    } catch (e) { return null; }
+  }
+
   function buildInput(d, model) {
     d = d || {};
     var mpSds = d.targetStats && num(d.targetStats.sd) != null ? num(d.targetStats.sd)
@@ -144,7 +205,8 @@
       lastMeasuredMonthsAgo: null,
       predictions: prognozy(d),
       predictionAgreement: zgodnosc || null,
-      predictionDrift: dryfPrognozy(d, model)
+      predictionDrift: dryfPrognozy(d, model),
+      sgaCatchUp: sgaCatchUp(model)
     };
   }
 
