@@ -297,3 +297,75 @@ test.describe('SGA bez catch-upu — łańcuch bez karty SGA na stronie', () => 
     expect(t).toMatch(/konsensus międzynarodowy z 2023 roku/);
   });
 });
+
+// GROWTH-PERINATAL-SRC: ten sam pacjent, ale dane urodzeniowe wpisane WYŁĄCZNIE w Karcie
+// Pacjenta („Dane okołoporodowe"), bez sekcji `birth` i bez karty SGA. Do SW 1.0.863 opis
+// w takiej sytuacji w ogóle nie powstawał.
+//
+// Uczciwie o harnessie: sekcja `perinatal` żyje w zaszyfrowanym rekordzie i normalnie
+// trafia do pamięci modułu po wczytaniu pacjenta z sejfu. Test podaje ją wprost przez
+// `zapamietaj(...)` — czyli podmienia JEDNO ogniwo (odczyt z sejfu). Wszystko dalej jest
+// prawdziwe: zamiana pól, wybór źródła, silnik SDS, progi konsensusu i kompozycja opisu.
+const REKORD_BEZ_BIRTH = {
+  name: 'Testowa Zofia',
+  user: { lastName: 'Testowa', firstName: 'Zofia', sex: 'F', age: 4, ageMonths: 2, height: 92, weight: 13 },
+  advanced: {
+    name: 'Testowa Zofia',
+    motherHeight: 158,
+    fatherHeight: 170,
+    data: {
+      measurements: [
+        { ageMonths: 24, ageYears: 2, height: 79, weight: 10 },
+        { ageMonths: 36, ageYears: 3, height: 85, weight: 11.5 },
+      ],
+    },
+  },
+};
+
+const PERINATAL = {
+  gestationalWeeks: '39', gestationalDays: '0',
+  birthWeightG: '2150', birthLengthCm: '44', birthHeadCircCm: '32',
+  gravidity: '2', parity: '2',
+};
+
+test.describe('Dane okołoporodowe z Karty Pacjenta zasilają opis', () => {
+  test('opis powstaje, choć rekord nie ma sekcji `birth`, a strona nie ma karty SGA', async ({ page }) => {
+    await otworz(page);
+    await page.waitForFunction(() => Boolean(window.VildaPerinatalSource));
+
+    await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), REKORD_BEZ_BIRTH);
+    await page.evaluate((per) => {
+      window.VildaPerinatalSource.zapamietaj({ perinatal: per, user: { sex: 'F' } });
+    }, PERINATAL);
+
+    // Kontrole pozytywne: karty SGA nie ma, sekcji `birth` nie ma, a mimo to dane są.
+    const stan = await page.evaluate(() => ({
+      kartaSga: Boolean(document.getElementById('sgaBirthCard')),
+      przeniesione: window.vildaBirthData,
+      zrodlo: window.VildaPerinatalSource.biezace(),
+    }));
+    expect(stan.kartaSga, 'na index.html karty SGA nie ma').toBe(false);
+    expect(stan.przeniesione, 'rekord nie niósł sekcji `birth`').toBeFalsy();
+    expect(stan.zrodlo.weight, 'dane idą z Karty Pacjenta').toBe('2150');
+    expect(stan.zrodlo.sex, 'płeć wzięta z sekcji `user` rekordu').toBe('female');
+
+    if (await page.locator('#sex').isEnabled()) await page.selectOption('#sex', 'F');
+    await page.fill('#age', '4');
+    await page.fill('#ageMonths', '2');
+    await page.fill('#height', '92');
+    await page.fill('#weight', '13');
+    await page.evaluate(() => {
+      const pro = document.getElementById('resultsModeToggle');
+      if (pro && !pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
+    });
+
+    await przycisk(page).click();
+    await page.waitForFunction(() => typeof window.__schowek === 'string' && window.__schowek.length > 0);
+    const t = await page.evaluate(() => window.__schowek);
+
+    expect(t).toMatch(/urodzon[ae] jako SGA/);
+    expect(t).toMatch(/39 tc/);
+    expect(t).toMatch(/poniżej progu −2,0 SD/);
+  });
+});
