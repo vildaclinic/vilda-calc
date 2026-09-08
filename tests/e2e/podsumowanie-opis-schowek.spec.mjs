@@ -91,6 +91,80 @@ async function wypelnij(page, { zHistoria = true } = {}) {
 const przycisk = (page) => page.locator('.current-summary-actions [data-patient-narrative-copy-btn]');
 const toast = (page) => page.locator('#patientReportPdfToast, #patientNarrativeToast');
 
+// Etap 4: przebieg prognozy w czasie. Ten test sprawdza PRAWDZIWY łańcuch — eksport
+// silnika Bayleya-Pinneau z vilda_advanced_growth.js, wczytanie jego tabel, adapter
+// w vilda_patient_narrative_ui.js i moduł vilda_prediction_drift.js. Logika samego
+// porównania ma testy jednostkowe; tutaj chodzi o to, że ogniwa naprawdę się łączą.
+const REKORD_Z_WIEKIEM_KOSTNYM = {
+  name: 'Testowy Adam',
+  user: { lastName: 'Testowy', firstName: 'Adam', sex: 'M', age: 12, ageMonths: 0, height: 141, weight: 34 },
+  advanced: {
+    name: 'Testowy Adam',
+    boneAgeYears: 13,
+    motherHeight: 163,
+    fatherHeight: 180,
+    data: {
+      measurements: [
+        { ageMonths: 96, ageYears: 8, height: 122, weight: 24, boneAgeYears: 7.5 },
+        { ageMonths: 120, ageYears: 10, height: 132, weight: 29, boneAgeYears: 10.5 },
+      ],
+    },
+  },
+};
+
+test.describe('Przebieg prognozy w czasie — łańcuch do prawdziwego silnika', () => {
+  test('prognoza jest przeliczana dla dawnych wizyt z wieku kostnego zapisanego przy pomiarze', async ({ page }) => {
+    await otworz(page);
+    await page.evaluate((r) => window.applyLoadedData(JSON.parse(JSON.stringify(r))), REKORD_Z_WIEKIEM_KOSTNYM);
+    if (await page.locator('#sex').isEnabled()) await page.selectOption('#sex', 'M');
+    await page.fill('#age', '12');
+    await page.fill('#ageMonths', '0');
+    await page.fill('#height', '141');
+    await page.fill('#weight', '34');
+
+    const stan = await page.evaluate(() => {
+      const ustaw = (id, v) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.value = String(v);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      ustaw('advMotherHeight', 163);
+      ustaw('advFatherHeight', 180);
+      ustaw('advBoneAge', 13);
+      const pro = document.getElementById('resultsModeToggle');
+      if (pro && !pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced();
+      const we = window.VildaPatientNarrativeUI.buildInput(
+        window.advancedGrowthData || {},
+        window.advancedGrowthTrajectory,
+      );
+      return {
+        // Eksport jest globalem, jak reszta pomocników advGrowth* w tym pliku.
+        silnikWyeksportowany: typeof window.advGrowthComputeBayleyPinneau === 'function',
+        modulDryfu: Boolean(window.VildaPredictionDrift),
+        dryf: we.predictionDrift,
+      };
+    });
+
+    expect(stan.silnikWyeksportowany, 'silnik BP dostępny dla konsumentów').toBe(true);
+    expect(stan.modulDryfu, 'moduł przebiegu prognozy załadowany').toBe(true);
+    expect(stan.dryf, 'prawdziwy silnik policzył przebieg prognozy').not.toBeNull();
+    // Co najmniej dwie wizyty z wiekiem kostnym → co najmniej dwa punkty prognozy.
+    expect(stan.dryf.points.length).toBeGreaterThanOrEqual(2);
+    for (const p of stan.dryf.points) {
+      expect(Number.isFinite(p.cm), `prognoza dla ${p.ageMonths} mies. to liczba`).toBe(true);
+      expect(p.cm).toBeGreaterThan(100);
+      expect(p.cm).toBeLessThan(230);
+    }
+    // Punkty są posortowane wiekiem, a miara pochodzi z przedziału pierwszej prognozy.
+    expect(stan.dryf.points[0].ageMonths).toBeLessThan(stan.dryf.points[stan.dryf.points.length - 1].ageMonths);
+    expect(stan.dryf.yardstickCm, 'przedział błędu metody z prawdziwych tabel').toBeGreaterThan(0);
+    expect(stan.dryf.coverage).toBe(90);
+  });
+});
+
 test.describe('„Kopiuj opis pacjenta" w karcie Podsumowanie wyników', () => {
   test('przycisk stoi nad „Raport PDF dla pacjenta" i przeżywa ponowny render karty', async ({ page }) => {
     await otworz(page);

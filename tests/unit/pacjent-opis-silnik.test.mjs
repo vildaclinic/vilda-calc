@@ -389,6 +389,80 @@ describe('Kontrola końcowa 2026-09-07 — usterki składu znalezione na siatce'
   });
 });
 
+describe('Rozjazd prognozy w czasie — etap 4', () => {
+  const DRYF = {
+    method: 'Bayley-Pinneau',
+    first: { ageMonths: 96, cm: 176 },
+    last: { ageMonths: 144, cm: 168 },
+    deltaCm: -8,
+    yardstickCm: 3.2,
+    coverage: 90,
+    exceedsOwnInterval: true,
+  };
+
+  it('zdanie podaje wielkość zmiany i stawia obok niepewność metody', () => {
+    const g = srodowisko({ 'HT|132': -0.4, 'HT|144': -0.5 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 132, height: 138 }],
+      currentAgeMonths: 144,
+      currentHeight: 141,
+      sex: 'M',
+      source: 'OLAF',
+    }, { predictionDrift: DRYF });
+
+    expect(zdanie(wynik, 'prognozaDryf'))
+      .toBe('Prognoza wzrostu ostatecznego metodą Bayley-Pinneau obniżyła się o 8,0 cm w porównaniu z oceną w wieku 8 lat (176 cm → 168 cm) — więcej niż półszerokość przedziału 90% tej metody (±3,2 cm).');
+    // Zdanie NIE twierdzi, że zmiana jest istotna — moduł tego nie orzeka, więc opis też nie.
+    expect(zdanie(wynik, 'prognozaDryf')).not.toMatch(/istotn|znamienn|nieprawidłow/i);
+  });
+
+  it('wzrost prognozy opisany tym samym wzorem, w drugą stronę', () => {
+    const g = srodowisko({ 'HT|132': -0.4, 'HT|144': -0.5 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 132, height: 138 }],
+      currentAgeMonths: 144,
+      currentHeight: 141,
+      sex: 'M',
+      source: 'OLAF',
+    }, { predictionDrift: { ...DRYF, first: { ageMonths: 96, cm: 160 }, last: { ageMonths: 144, cm: 168 }, deltaCm: 8 } });
+
+    expect(zdanie(wynik, 'prognozaDryf')).toContain('podwyższyła się o 8,0 cm');
+    expect(zdanie(wynik, 'prognozaDryf')).toContain('(160 cm → 168 cm)');
+  });
+
+  it('kontrola negatywna: zmiana w granicach metody nie generuje zdania', () => {
+    const g = srodowisko({ 'HT|132': -0.4, 'HT|144': -0.5 });
+    const wej = {
+      measurements: [{ ageMonths: 132, height: 138 }],
+      currentAgeMonths: 144,
+      currentHeight: 141,
+      sex: 'M',
+      source: 'OLAF',
+    };
+    expect(zdanie(opis(g, wej, { predictionDrift: { ...DRYF, deltaCm: -2, exceedsOwnInterval: false } }).wynik, 'prognozaDryf')).toBeNull();
+    // Brak modelu dryfu w ogóle — opis bez tego zdania, bez błędu.
+    expect(zdanie(opis(g, wej, {}).wynik, 'prognozaDryf')).toBeNull();
+  });
+
+  it('zdanie o dryfie stoi po prognozie, a przed zastrzeżeniami', () => {
+    const g = srodowisko({ 'HT|132': -0.4, 'HT|144': -0.5 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 132, height: 138 }],
+      currentAgeMonths: 144,
+      currentHeight: 141,
+      sex: 'M',
+      source: 'OLAF',
+    }, {
+      predictions: [{ label: 'Bayley-Pinneau', cm: 168, errorHalfWidthCm: 3.2 }],
+      predictionDrift: DRYF,
+      lastMeasuredMonthsAgo: 14,
+    });
+    const kolejnosc = wynik.sentences.map((z) => z.id);
+    expect(kolejnosc.indexOf('prognoza')).toBeLessThan(kolejnosc.indexOf('prognozaDryf'));
+    expect(kolejnosc.indexOf('prognozaDryf')).toBeLessThan(kolejnosc.indexOf('zastrzezenia'));
+  });
+});
+
 describe('Milczenie jest nazwane', () => {
   it('nieaktualne stadium Tannera trafia do zastrzeżeń, a nie do oceny', () => {
     const g = srodowisko({ 'HT|72': -0.4, 'HT|180': -0.5 });
