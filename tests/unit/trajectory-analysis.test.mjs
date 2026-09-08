@@ -1147,6 +1147,108 @@ describe('assessVelocityValue — ocena gotowej wartości tempa tą samą hierar
     expect(va3.slow).toBe(true);
   });
 
+  // GROWTH-VELO-TANNER-U10 — poniżej 10 lat norma tempa szła WYŁĄCZNIE wg wieku metrykalnego
+  // i kontekst nie był czytany w ogóle. Dziewczynka 9,5 r.ż. po menarche, rosnąca fizjologiczne
+  // 3 cm/rok, dostawała alarm „poniżej normy ≥5 cm/rok" — nawet z ręcznie wpisanym Tannerem V.
+  // Zgłoszone przez właściciela 2026-09-08. Reguły dla Tannera IV–V nie zmieniamy: znosimy tylko
+  // granicę 10 lat, która ją odcinała.
+  it('<10 lat, Tanner IV–V: deceleracja po skoku nie jest alarmem', () => {
+    const vta = makeVta();
+    const iv = vta.assessVelocityValue(3.0, 12, 114, 'F', { tannerStage: 4 });
+    expect(iv.slow, 'fizjologiczna deceleracja to nie „poniżej normy"').toBe(false);
+    expect(iv.alarm).toBe(false);
+    expect(iv.severity).toBeNull();
+    expect(iv.basis).toBe('tanner45');
+    expect(iv.note).toMatch(/deceleracja fizjologiczna/);
+    expect(iv.note).toMatch(/Tanner IV/);
+    // Werdykt widoczny dla lekarza nie może brzmieć „poniżej normy dla wieku".
+    expect(vta.velocityAssessment(iv).cls).toBe('stable');
+
+    const v = vta.assessVelocityValue(2.0, 12, 114, 'F', { tannerStage: 5 });
+    expect(v.slow).toBe(false);
+    expect(v.note).toMatch(/Tanner V/);
+  });
+
+  it('<10 lat, Tanner I–III: próg wg wieku i poziom alarmu BEZ ZMIAN', () => {
+    const vta = makeVta();
+    // Kontrola negatywna najważniejsza w tej zmianie: w trakcie skoku oczekiwanie jest WYŻSZE,
+    // więc łagodniejszy próg okołopokwitaniowy (4 cm/rok) nie może tu wejść tylnymi drzwiami.
+    for (const ts of [1, 2, 3]) {
+      const va = vta.assessVelocityValue(4.5, 12, 108, 'F', { tannerStage: ts });
+      expect(va.slow, `Tanner ${ts}: 4,5 cm/rok nadal poniżej progu ≥5`).toBe(true);
+      expect(va.severity).toBe('danger');
+      expect(va.alarm).toBe(true);
+      expect(va.normLabel).toMatch(/5 cm\/rok/);
+    }
+    // Tanner potwierdzający stan przedpokwitaniowy nie zmienia werdyktu, tylko podstawę.
+    expect(vta.assessVelocityValue(4.5, 12, 108, 'F', { tannerStage: 1 }).basis).toBe('ageTanner');
+    expect(vta.assessVelocityValue(4.5, 12, 108, 'F', null).basis).toBe('age');
+  });
+
+  it('<10 lat bez Tannera: zachowanie dokładnie jak dotąd', () => {
+    const vta = makeVta();
+    const bez = vta.assessVelocityValue(4.0, 12, 96, 'M', null);
+    const pusty = vta.assessVelocityValue(4.0, 12, 96, 'M', {});
+    expect(bez.basis).toBe('age');
+    expect(pusty.basis).toBe('age');
+    expect(bez.slow).toBe(true);
+    expect(pusty.slow).toBe(true);
+    expect(pusty.severity).toBe('danger');
+  });
+
+  it('<10 lat, Tanner IV: także szybkie tempo zostaje bez werdyktu normy', () => {
+    const vta = makeVta();
+    const szybko = vta.assessVelocityValue(9.0, 12, 114, 'F', { tannerStage: 4 });
+    expect(szybko.slow).toBe(false);
+    expect(szybko.normLabel).toBeNull();
+    expect(szybko.threshold).toBeNull();
+    expect(vta.velocityAssessment(szybko).cls).toBe('stable');
+  });
+
+  it('reguła dotyczy fazy, nie wieku — działa też u najmłodszych', () => {
+    const vta = makeVta();
+    const male = vta.assessVelocityValue(4.0, 12, 48, 'F', { tannerStage: 4 });
+    expect(male.basis).toBe('tanner45');
+    expect(male.slow).toBe(false);
+  });
+
+  it('>10 lat: nic się nie zmienia', () => {
+    const vta = makeVta();
+    const po10 = vta.assessVelocityValue(3.0, 12, 132, 'F', { tannerStage: 4 });
+    expect(po10.basis).toBe('tanner45');
+    expect(po10.slow).toBe(false);
+  });
+
+  it('parytet z analyze(): ta sama reguła na pełnej ścieżce', () => {
+    const vta = makeVta();
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 102, height: 132 }],
+      currentAgeMonths: 114,
+      currentHeight: 135,
+      sex: 'F',
+      context: { tannerStage: 4 }
+    });
+    expect(model.velocity.basis).toBe('tanner45');
+    expect(model.velocity.slow).toBe(false);
+    expect(model.velocity.alarm).toBe(false);
+  });
+
+  it('nieaktualny Tanner z rekordu NIE wycisza alarmu', () => {
+    const vta = makeVta();
+    // Strażnik świeżości (TANNER_FRESH_M = 12 mies.) zeruje stopień starszy niż rok; bez tego
+    // jednorazowy wpis sprzed lat wyciszałby ocenę tempa na zawsze.
+    const model = vta.analyze({
+      measurements: [{ ageMonths: 102, height: 132 }],
+      currentAgeMonths: 114,
+      currentHeight: 135,
+      sex: 'F',
+      context: { tannerStage: 4, tannerAtAgeMonths: 90 }
+    });
+    expect(model.velocity.basis).toBe('age');
+    expect(model.velocity.slow).toBe(true);
+    expect(model.velocity.severity).toBe('danger');
+  });
+
   it('odstęp poza oknem rocznym (6–15 mies.): bez porównania z normą', () => {
     const vta = makeVta();
     const va = vta.assessVelocityValue(3.0, 30, 96, 'M', null);
