@@ -278,6 +278,19 @@ Moduł `vilda_patient_narrative.js` (`window.VildaPatientNarrative`) składa kil
   - *Obserwacja pozostawiona bez zmian:* oba monitory **już** traktowały zero osobno, ale wyłącznie dokładne (`h===0?"0"` przy zmianie Z-score, `et===0` → „0,0%"). Poprawka rozciąga tę intencję na wartości zaokrąglające się do zera; skrócony zapis „0" dla dokładnie zerowej zmiany zostaje (istniejące zachowanie, poza zakresem).
 - *Nieuruchomione świadomie:* zdania o odpowiedzi na rhGH i na leczenie przeciwotyłościowe. Wymagają progów, których aplikacja nie ma (odpowiedź pierwszoroczna na rhGH, istotność zmiany w terapii otyłości) — czyli decyzji właściciela ze źródłem, a nie liczby dobranej przez implementację.
 
+### GROWTH-PRED-CI — przedział przy prognozie wzrostu ostatecznego: epikryza wyrównana do karty (2026-09-07, decyzja właściciela)
+
+Silnik Bayleya-Pinneau liczy błąd metody z tabeli wiekowej i zapisuje go w **dwóch** polach: `errorSdCm` to **jedno odchylenie standardowe**, a `errorBoundHalfWidthCm` to **półszerokość przedziału o pokryciu `errorBoundsCoveragePercent`** (domyślnie 90%), liczona jako `errorBoundHalfWidthCm = errorSdCm × normalApproximationZ`, gdzie z = 1,645. To ta sama liczba przemnożona przez 1,645.
+
+**Rozjazd (stan do 1.0.854).** Karta „Zaawansowane obliczenia wzrostowe" i opis pacjenta pokazywały wersję 90%; kolektor epikryzy (`Te()` w `vilda_epicrisis_ui.js`) czytał `errorSdCm`. Dla tej samej prognozy dokument wypisowy podawał przedział **o ok. 40% węższy** niż karta, z której prognoza pochodzi (np. karta ±3,2 cm, epikryza ±1,9 cm). Ponieważ ±1 SD obejmuje ~68% przypadków, a ±1,645 SD — 90%, a przy „±" nie było napisane, która to wielkość, **dokument systematycznie zaniżał niepewność prognozy**. Druga połowa rozjazdu: obiekt wyniku RWT **nie ma pola `errorSdCm`**, więc RWT nie dostawał w epikryzie żadnego przedziału, choć na karcie ma własny.
+
+**Decyzja właściciela 2026-09-07:** epikryza przechodzi na `errorBoundHalfWidthCm` i **nazywa przedział wprost**, bo samo „±" jest dwuznaczne niezależnie od wybranej wielkości. Brzmienie: „Prognozowany wzrost ostateczny metodą Bayley-Pinneau wynosi 170,3 cm (przedział 90%: ±3,2 cm), a metodą RWT (Roche-Wainer-Thissen) 172,1 cm (przedział 90%: ±4,4 cm)." Właściciel przyjął do wiadomości, że jest to **zmiana treści dokumentu medycznego** — liczba w wypisie rośnie o 64% — i uznał ją za merytorycznie poprawną: nie zmienia prognozy punktowej, tylko przestaje zaniżać jej niepewność.
+
+- **Pokrycie idzie z danych**, nie z liczby wpisanej na sztywno: kolektor przenosi `errorBoundsCoveragePercent` obu metod, generator zaokrągla je i drukuje; brak wartości → 90%, czyli domyślne pokrycie obu silników. Dzięki temu zmiana pokrycia w silniku nie uczyni zdania nieprawdziwym.
+- **Bez zmian:** prognoza punktowa, wzory metod, clamp do aktualnego wzrostu, kolejność zdań. Prognoza bez przedziału nadal jest zdaniem bez nawiasu.
+- *Poza zakresem tej raty:* epikryza wymienia wyłącznie Bayleya-Pinneau i RWT, podczas gdy karta ma jeszcze Khamisa-Roche'a i Reinehra/CDGP. Odnotowane, nieruszone.
+- *Strażnicy:* `tests/unit/epikryza-przedzial-prognozy.test.mjs` (6). Generator mierzony **przez realny `generate()`**; kolektor — przez **wycięcie jego prawdziwego tekstu** z `vilda_epicrisis_ui.js` (`return` zamieniony na wyrażenie, żeby dało się odczytać zbudowany obiekt), z atrapą metody niosącą **oba pola błędu naraz**, żeby pomyłka pola była widoczna. **Zmierzone czerwone: 4 z 6**, przy dwóch zielonych kontrolach (prognoza bez przedziału nadal bez nawiasu; brak prognoz → dokument bez zmian). Żaden istniejący test nie pilnował tego zdania — to pierwsze jego pokrycie.
+
 ### GROWTH-LMS — kompletność cytowań
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
