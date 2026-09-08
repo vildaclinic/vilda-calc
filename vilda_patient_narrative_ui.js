@@ -81,6 +81,47 @@
     return lista;
   }
 
+  // Przebieg prognozy w czasie: dla kazdej ZAPISANEJ wizyty z wiekiem kostnym liczymy
+  // prognoze tak, jak wygladalaby na tamtej wizycie, i patrzymy, jak daleko odeszla od
+  // dzisiejszej. Silnik to ten sam Bayley-Pinneau, ktory liczy karte — wyeksportowany,
+  // zeby nie powstala druga kopia wzoru. Gdy ktoregokolwiek ogniwa brak, wychodzi null
+  // i opis po prostu nie ma tego zdania.
+  function dryfPrognozy(d, model) {
+    var D = w.VildaPredictionDrift;
+    // Pomocniki karty zaawansowanej sa eksportowane jako GLOBALE (i.advGrowth*), a nie na
+    // obiekcie VildaAdvancedGrowth — tak jak advGrowthBuildTargetHeightForReport, ktory
+    // app.js czyta w ten sam sposob. Wylapane e2e; testy jednostkowe tego nie widzialy,
+    // bo podstawiaja wlasny silnik.
+    var predict = w.advGrowthComputeBayleyPinneau;
+    if (!D || typeof D.analyze !== 'function') return null;
+    if (typeof predict !== 'function') return null;
+    d = d || {};
+    var pomiary = Array.isArray(d.measurements) ? d.measurements : [];
+    var baM = num(d.boneAgeMonths);
+    var h = model && model.metrics ? metrykaWzrostu(model) : null;
+    var teraz = h && baM != null && baM > 0
+      ? { ageMonths: h.ageMonths, height: h.value, boneAgeYears: baM / 12 }
+      : null;
+    try {
+      return D.analyze({
+        sex: (model && model.sex) || null,
+        measurements: pomiary,
+        current: teraz,
+        predict: predict
+      });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Ostatni punkt wzrostu z modelu karty — wiek i wartosc „dzisiejszego" pomiaru.
+  function metrykaWzrostu(model) {
+    for (var i = 0; i < model.metrics.length; i += 1) {
+      if (model.metrics[i].metric === 'height') return model.metrics[i].last || null;
+    }
+    return null;
+  }
+
   // Wejscie „extra" dla VildaPatientNarrative.compose — czysta funkcja na obiekcie
   // advancedGrowthData, zeby dalo sie ja sprawdzic bez przegladarki.
   function buildInput(d, model) {
@@ -102,7 +143,8 @@
       boneAgeMonthsAgo: null,
       lastMeasuredMonthsAgo: null,
       predictions: prognozy(d),
-      predictionAgreement: zgodnosc || null
+      predictionAgreement: zgodnosc || null,
+      predictionDrift: dryfPrognozy(d, model)
     };
   }
 

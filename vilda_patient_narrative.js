@@ -521,6 +521,29 @@
     return { id: 'prognoza', tone: 'plain', text: kropka(txt) };
   }
 
+  // 9b. Jak prognoza zmieniala sie w czasie. Zdanie powstaje TYLKO wtedy, gdy zmiana
+  //     przekracza wlasny przedzial bledu metody — czyli gdy sama metoda nie tlumaczy
+  //     tej roznicy. Model liczy vilda_prediction_drift.js; tutaj wylacznie redakcja.
+  //     Ton celowo neutralny: modul nie orzeka o istotnosci, wiec opis tez nie moze —
+  //     sygnalem jest samo pojawienie sie zdania.
+  function zdaniePrognozaDryf(extra) {
+    var d = extra && extra.predictionDrift;
+    if (!d || !d.exceedsOwnInterval || d.deltaCm == null) return null;
+    var kierunek = d.deltaCm < 0 ? 'obniżyła się' : 'podwyższyła się';
+    var miara = d.yardstickCm != null
+      ? ' — więcej niż półszerokość przedziału ' + (Math.round(d.coverage) || 90)
+        + '% tej metody (±' + fmt(d.yardstickCm, 1) + ' cm)'
+      : '';
+    return {
+      id: 'prognozaDryf',
+      tone: 'plain',
+      text: kropka('Prognoza wzrostu ostatecznego metodą ' + d.method + ' ' + kierunek
+        + ' o ' + fmt(Math.abs(d.deltaCm), 1) + ' cm w porównaniu z oceną w wieku '
+        + wiekDop(d.first.ageMonths) + ' (' + fmt(d.first.cm, 0) + ' cm → '
+        + fmt(d.last.cm, 0) + ' cm)' + miara)
+    };
+  }
+
   // 10. Zastrzezenia do danych — ZAWSZE na koncu i nigdy pomijane, gdy jest co powiedziec.
   //     Brak danych nie moze wygladac jak norma. Kazde zastrzezenie to osobne zdanie.
   //     Okno oceny tempa NIE jest tu powtarzane — mowi o nim samo zdanie o tempie
@@ -559,6 +582,7 @@
       zdanieWiekKostny(model, e),
       zdanieDojrzewanie(model),
       zdaniePrognoza(e),
+      zdaniePrognozaDryf(e),
       zdanieZastrzezenia(model, e)
     ].filter(Boolean);
     if (!zdania.length) return null;
