@@ -56,7 +56,8 @@ describe('Liczba opisowa w karcie', () => {
     expect(html).toContain('−2,4');
     expect(html).toContain('0,8 centyl');
     expect(html).toContain('mediana 5,87 cm/rok');
-    expect(html).toMatch(/populacja niemiecka/);
+    expect(html).toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
+    expect(html, 'etykieta techniczna nie trafia do lekarza').not.toMatch(/DONALD \(Niemcy/);
   });
 
   it('każdy wynik niesie zastrzeżenie o wahaniach i o braku polskich norm', () => {
@@ -189,6 +190,7 @@ describe('Zdanie do karty „Podsumowanie wyników”', () => {
     expect(z).toContain('SDS tempa:');
     expect(z).toContain('−2,4');
     expect(z).toContain('0,8 centyl');
+    expect(z).toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
   });
 
   it('mieści się w jednym zdaniu — wersja kompaktowa', () => {
@@ -233,6 +235,9 @@ describe('Kafelek obok wzrostu, masy i BMI', () => {
     expect(html).toContain('−2,4');
     expect(html).toContain('0,8 c.');
     expect(html).toContain('mediana 5,87 cm/rok');
+    expect(html, 'źródło podpisane jak w piśmiennictwie')
+      .toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
+    expect(html).not.toMatch(/DONALD \(Niemcy/);
   });
 
   it('wersja zwykła jest zwięzła — bez rozwijania i bez zastrzeżeń', () => {
@@ -247,8 +252,9 @@ describe('Kafelek obok wzrostu, masy i BMI', () => {
     const html = patientHvCardHtml(VEL_K, { sex: 'F' }, { rozwijalny: true });
     expect(html).toContain('<details');
     expect(html).toContain('vtap-hv-body');
-    expect(html).toMatch(/Populacja odniesienia: niemiecka/);
+    expect(html).toMatch(/Norma: Duran I i wsp\./);
     expect(html).toMatch(/PMID 40557842/);
+    expect(html).toMatch(/Populacja odniesienia: niemiecka/);
     expect(html).toMatch(/Odstęp pomiarów: 12 mies\./);
     expect(html).toMatch(/2,8 SD/);
     expect(html).toMatch(/Polskie normy tempa wzrastania nie istnieją/);
@@ -288,9 +294,14 @@ describe('Kafelek stoi w rzędzie kart, nie w martwej gałęzi', () => {
       .toBeLessThan(ciało.indexOf("html += '</div>';"));
   });
 
-  it('Karta pacjenta prosi o wersję rozwijalną', () => {
+  it('Karta pacjenta prosi o wersję rozwijalną — i prośba dochodzi', () => {
     const auth = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
     expect(auth).toContain('hvRozwijalny:!0');
+    // Do SW 1.0.871 renderPatientPanel budował panel na samych wartościach domyślnych,
+    // więc prośba Karty pacjenta ginęła w drodze i kafelek nigdy nie był rozwijalny.
+    const i = src.indexOf('function renderPatientPanel');
+    const j = src.indexOf('var COLLAPSE_KEY', i);
+    expect(src.slice(i, j)).toContain('hvRozwijalny: !!(opts && opts.hvRozwijalny)');
   });
 
   it('karta „Podsumowanie wyników” dopisuje wiersz po tempie wzrastania', () => {
@@ -299,5 +310,67 @@ describe('Kafelek stoi w rzędzie kart, nie w martwej gałęzi', () => {
     expect(sum).toContain('T.hvSdsPodsumowanie(');
     expect(sum.indexOf('Aktualne tempo wzrastania'), 'zdanie idzie PO tempie')
       .toBeLessThan(sum.indexOf('qHvSdsPush(e,C)'));
+  });
+});
+
+describe('Źródło podpisane jak w piśmiennictwie', () => {
+  it('każde źródło norm ma krótkie cytowanie, nie tylko etykietę', () => {
+    const okno = {};
+    for (const plik of ['hv_donald_data.js', 'hv_kelly_data.js', 'hv_cdgp_data.js']) {
+      new Function('window', fs.readFileSync(path.join(korzen, plik), 'utf8'))(okno);
+    }
+    expect(okno.VildaHvDonaldData.META.cytowanieKrotkie)
+      .toBe('Duran i wsp., J Pediatr Endocrinol Metab 2025');
+    expect(okno.VildaHvKellyData.META.cytowanieKrotkie)
+      .toBe('Kelly i wsp., J Clin Endocrinol Metab 2014');
+    expect(okno.VildaHvCdgpData.META.cytowanieKrotkie)
+      .toBe('Butenandt i Kunze, J Pediatr Endocrinol Metab 2010');
+  });
+
+  it('krótkie cytowanie ma kształt „autor, czasopismo rok”, bez nazwy kohorty w nawiasie', () => {
+    const okno = {};
+    for (const plik of ['hv_donald_data.js', 'hv_kelly_data.js', 'hv_cdgp_data.js']) {
+      new Function('window', fs.readFileSync(path.join(korzen, plik), 'utf8'))(okno);
+    }
+    for (const dane of [okno.VildaHvDonaldData, okno.VildaHvKellyData, okno.VildaHvCdgpData]) {
+      expect(dane.META.cytowanieKrotkie, dane.META.id).toMatch(/^[^(]+, [A-Z].+ (19|20)\d\d$/);
+    }
+  });
+
+  it('silnik przekazuje krótkie cytowanie w wyniku, także w gałęzi KOWD', () => {
+    const okno = {};
+    for (const plik of ['hv_donald_data.js', 'hv_kelly_data.js', 'hv_cdgp_data.js',
+      'vilda_height_velocity.js']) {
+      new Function('window', fs.readFileSync(path.join(korzen, plik), 'utf8'))(okno);
+    }
+    const r = okno.VildaHeightVelocity.oblicz({
+      sex: 'M', wiekLat: 13.5, cmPerYear: 4.2, oknoMies: 12, kowd: true,
+    });
+    expect(r.zrodlo.cytowanieKrotkie).toBe('Duran i wsp., J Pediatr Endocrinol Metab 2025');
+    expect(r.kowd.zrodloKrotkie).toBe('Butenandt i Kunze, J Pediatr Endocrinol Metab 2010');
+  });
+
+  it('gałąź KOWD w karcie też jest podpisana', () => {
+    const { hvSdsHtml } = karta({
+      VildaPubertalStatus: { dane: () => ({ wiekStartuLat: null, wiekMenarcheLat: null, kowd: 'tak' }) },
+    });
+    const html = hvSdsHtml({ cmPerYear: 4.2, gapM: 12, wiekSrodekMies: 162, plec: 'M' }, { sex: 'M' });
+    expect(html).toMatch(/wg Butenandt i Kunze, J Pediatr Endocrinol Metab 2010/);
+  });
+});
+
+describe('Przeliczanie na żywo', () => {
+  const src = fs.readFileSync(path.join(korzen, 'vilda_advanced_growth.js'), 'utf8');
+
+  it('zmiana pola pokwitaniowego odświeża kartę — inaczej wynik zostawał stary', () => {
+    // Lista pól, których zmiana wywołuje calculateGrowthAdvanced. Bez tych czterech
+    // wpisów lekarz zmieniał stadium albo wiek startu i widział poprzedni wynik.
+    for (const id of ['tannerStage', 'pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyCdgp']) {
+      expect(src, id).toContain(`"${id}"`);
+    }
+    const i = src.indexOf('"advGrowthExclusion"');
+    const lista = src.slice(i, i + 120);
+    expect(lista, 'nowe pola stoją w tej samej liście co dotychczasowe wejścia')
+      .toContain('"tannerStage"');
   });
 });

@@ -245,7 +245,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="obesity_response_criteria.js?v=1"></script>
 <script defer src="gh_therapy_segments.js?v=3"></script>
 <script defer src="vilda_patient_summary_copy.js?v=2"></script>
-<script defer src="vilda_auth_ui.js?v=417"></script>
+<script defer src="vilda_auth_ui.js?v=418"></script>
 <script defer src="vilda_name_fix.js?v=2"></script>
 <script defer src="vilda_reminders_collapse.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
@@ -269,20 +269,20 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_unsaved_guard.js?v=4"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
 <script defer src="vilda_growth_card_c.js?v=8"></script>
-<script defer src="vilda_trajectory_analysis.js?v=15"></script>
+<script defer src="vilda_trajectory_analysis.js?v=16"></script>
 <script defer src="vilda_prediction_drift.js?v=1"></script>
 <script defer src="vilda_height_velocity_sds.js?v=1"></script>
-<script defer src="hv_donald_data.js?v=1"></script>
-<script defer src="hv_kelly_data.js?v=2"></script>
-<script defer src="hv_cdgp_data.js?v=1"></script>
-<script defer src="vilda_height_velocity.js?v=2"></script>
+<script defer src="hv_donald_data.js?v=2"></script>
+<script defer src="hv_kelly_data.js?v=3"></script>
+<script defer src="hv_cdgp_data.js?v=2"></script>
+<script defer src="vilda_height_velocity.js?v=3"></script>
 <script defer src="vilda_puberty_source.js?v=2"></script>
 <script defer src="vilda_pubertal_status.js?v=1"></script>
 <script defer src="vilda_perinatal_source.js?v=1"></script>
 <script defer src="vilda_sga_catchup.js?v=2"></script>
 <script defer src="vilda_patient_narrative.js?v=6"></script>
 <script defer src="vilda_patient_narrative_ui.js?v=7"></script>
-<script defer src="vilda_advanced_growth.js?v=36"></script>
+<script defer src="vilda_advanced_growth.js?v=37"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=9"></script>
 <!-- PERF-P2e2 (2026-06-07): przelicznik jednostek laboratoryjnych — dane (212 KB)
      + silnik ładowane LENIWIE: idle po load LUB pierwsza interakcja. Jedyny
@@ -489,13 +489,14 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         .vild-tanner-toggle,
         .liquid-ios26 .vild-tanner-toggle{
           /* blok o szerokości treści, w rytmie formularza: 0.7rem nad i (przez margin-top
-             następnej etykiety) 0.7rem pod → symetrycznie między Płcią a Wagą. */
-          display:block!important;width:fit-content!important;margin:0.7rem 0 0!important;
+             następnej etykiety) 0.7rem pod → symetrycznie między Płcią a Wagą.
+             Wyśrodkowany (margin auto) — decyzja właściciela 2026-09-09. */
+          display:block!important;width:fit-content!important;margin:0.7rem auto 0!important;
           padding:8px 12px!important;font-size:.82rem!important;font-weight:600!important;
           background:transparent!important;border:1px solid #cfe0e3!important;border-radius:9px!important;
           color:#5a7274!important;cursor:pointer!important;font-family:inherit!important;line-height:1.2!important;
           height:auto!important;min-height:0!important;
-          box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;text-align:left!important;}
+          box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;text-align:center!important;}
         .vild-tanner-toggle:hover,
         .liquid-ios26 .vild-tanner-toggle:hover{border-color:#00838d!important;color:#00838d!important;background:transparent!important;}
       </style>
@@ -517,7 +518,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
            wiek startu pokwitania, wiek menarche i deklaracja KOWD to fakty trwałe (idą do
            sekcji `puberty` rekordu, tej samej, którą pokazuje Karta Pacjenta).
            Logika ujawniania w inline_index_02.js. -->
-      <button type="button" id="tannerToggleBtn" class="vild-tanner-toggle">+ Pokaż dojrzewanie płciowe</button>
+      <button type="button" id="tannerToggleBtn" class="vild-tanner-toggle">+ Dane pokwitaniowe</button>
       <label id="tannerStageWrap" style="display:none;">Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
         <select id="tannerStage" onchange="debouncedUpdate(); if (typeof updateTannerVisibility === 'function') updateTannerVisibility();">
           <option value="">— nieznany —</option>
@@ -541,7 +542,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         <p id="pubertyCdgpNote" style="margin:0.15rem 0 0.4rem 0;font-size:0.85em;opacity:0.7;">To ocena lekarza, nie wynik automatu — aplikacja nie rozpoznaje KOWD samodzielnie. Odpowiedź „tak” dokłada porównanie tempa z kwartylami dzieci z rozpoznanym KOWD; niczego nie odejmuje.</p>
         <p id="pubertyConflicts" role="status" style="display:none;margin:0.15rem 0 0.4rem 0;font-size:0.85em;color:#b26a00;"></p>
       </div>
-      <script defer src="inline_index_02.js?v=4"></script>
+      <script defer src="inline_index_02.js?v=5"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>

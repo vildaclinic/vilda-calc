@@ -35,7 +35,7 @@ async function otworz(page) {
 test.describe('Panel jest jednym miejscem wpisu', () => {
   test('domyślnie zwinięty, rozwija się pod przyciskiem i niesie komplet pól', async ({ page }) => {
     await otworz(page);
-    const przycisk = page.getByRole('button', { name: '+ Pokaż dojrzewanie płciowe' });
+    const przycisk = page.getByRole('button', { name: '+ Dane pokwitaniowe' });
     await expect(przycisk).toBeVisible();
     await expect(page.locator('#pubertyOnsetAge')).toBeHidden();
 
@@ -44,7 +44,7 @@ test.describe('Panel jest jednym miejscem wpisu', () => {
     await expect(page.locator('#pubertyOnsetAge')).toBeVisible();
     await expect(page.locator('#pubertyMenarcheAge')).toBeVisible();
     await expect(page.locator('#pubertyCdgp')).toBeVisible();
-    await expect(page.getByRole('button', { name: '− Ukryj dojrzewanie płciowe' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '− Dane pokwitaniowe' })).toBeVisible();
   });
 
   test('etykieta nie obiecuje już etapu podstawianego z wieku', async ({ page }) => {
@@ -54,6 +54,34 @@ test.describe('Panel jest jednym miejscem wpisu', () => {
     expect(opcje.join(' ')).not.toMatch(/automatycznie z wieku/);
   });
 
+  test('po wpisaniu stadium panel nadal daje się zwinąć', async ({ page }) => {
+    // Zgłoszenie właściciela: po zmianie stadium przycisk przestawał chować sekcję.
+    // Odsłanianie „samo z siebie" wygrywało z decyzją lekarza przy każdym odświeżeniu.
+    await otworz(page);
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
+    await page.locator('#tannerStage').selectOption('3');
+    await expect(page.locator('#tannerStage')).toBeVisible();
+
+    await page.getByRole('button', { name: '− Dane pokwitaniowe' }).click();
+    await expect(page.locator('#tannerStage'), 'sekcja się schowała').toBeHidden();
+    await expect(page.locator('#pubertyOnsetAge')).toBeHidden();
+
+    // I z powrotem — decyzja lekarza działa w obie strony.
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
+    await expect(page.locator('#tannerStage')).toBeVisible();
+  });
+
+  test('przycisk jest wyśrodkowany', async ({ page }) => {
+    await otworz(page);
+    const marginesy = await page.locator('#tannerToggleBtn').evaluate((e) => {
+      const s = getComputedStyle(e);
+      return { l: parseFloat(s.marginLeft), r: parseFloat(s.marginRight) };
+    });
+    expect(marginesy.l).toBeGreaterThan(1);
+    expect(Math.abs(marginesy.l - marginesy.r), 'równe marginesy = wyśrodkowany')
+      .toBeLessThan(2);
+  });
+
   test('panel otwiera się sam, gdy rekord niesie dane pokwitaniowe', async ({ page }) => {
     await otworz(page);
     await page.evaluate(() => {
@@ -61,14 +89,14 @@ test.describe('Panel jest jednym miejscem wpisu', () => {
       window.updateTannerVisibility();
     });
     await expect(page.locator('#pubertyOnsetAge')).toBeVisible();
-    await expect(page.getByRole('button', { name: '− Ukryj dojrzewanie płciowe' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '− Dane pokwitaniowe' })).toBeVisible();
   });
 });
 
 test.describe('Sprzeczności są pokazywane, nie rozstrzygane', () => {
   test('Tanner I przy wpisanym starcie pokwitania', async ({ page }) => {
     await otworz(page);
-    await page.getByRole('button', { name: '+ Pokaż dojrzewanie płciowe' }).click();
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
     await page.locator('#age').fill('12');
     await page.locator('#tannerStage').selectOption('1');
     await page.locator('#pubertyOnsetAge').fill('10');
@@ -83,7 +111,7 @@ test.describe('Sprzeczności są pokazywane, nie rozstrzygane', () => {
 
   test('kontrola negatywna: dane spójne nie generują noty', async ({ page }) => {
     await otworz(page);
-    await page.getByRole('button', { name: '+ Pokaż dojrzewanie płciowe' }).click();
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
     await page.locator('#age').fill('12');
     await page.locator('#tannerStage').selectOption('3');
     await page.locator('#pubertyOnsetAge').fill('10');
@@ -94,7 +122,7 @@ test.describe('Sprzeczności są pokazywane, nie rozstrzygane', () => {
 test.describe('Panel zapisuje do rekordu i z niego wraca', () => {
   test('zapis pacjenta niesie sekcję puberty, wczytanie odtwarza pola', async ({ page }) => {
     await otworz(page);
-    await page.getByRole('button', { name: '+ Pokaż dojrzewanie płciowe' }).click();
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
     await page.locator('#pubertyOnsetAge').fill('10.5');
     await page.locator('#pubertyMenarcheAge').fill('12.5');
     await page.locator('#pubertyCdgp').selectOption('tak');
@@ -121,7 +149,7 @@ test.describe('Panel zapisuje do rekordu i z niego wraca', () => {
 
   test('rekord bez sekcji czyści pola — nie zostaje po poprzednim pacjencie', async ({ page }) => {
     await otworz(page);
-    await page.getByRole('button', { name: '+ Pokaż dojrzewanie płciowe' }).click();
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
     await page.locator('#pubertyOnsetAge').fill('10.5');
     await page.evaluate(() => window.applyLoadedData({ user: { age: 8, sex: 'M' } }));
     await expect(page.locator('#pubertyOnsetAge')).toHaveValue('');
@@ -158,7 +186,7 @@ test.describe('HV-SDS w karcie wzrostowej', () => {
 
   test('deklaracja KOWD z panelu dokłada gałąź kwartylową', async ({ page }) => {
     await otworz(page);
-    await page.getByRole('button', { name: '+ Pokaż dojrzewanie płciowe' }).click();
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
     await page.locator('#pubertyCdgp').selectOption('tak');
     const html = await KARTA(page, {
       sex: 'M',

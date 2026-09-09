@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '13';
+  var VERSION = '14';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -832,6 +832,12 @@
     return { r: r, kelly: kelly, we: we };
   }
 
+  /* Zrodlo podpisujemy jak w pismiennictwie, nie etykieta techniczna: lekarz ma widziec,
+   * na czyich danych stoi liczba, i miec czym to zacytowac. */
+  function zrodloKrotkie(r) {
+    return (r && r.zrodlo && (r.zrodlo.cytowanieKrotkie || r.zrodlo.etykieta)) || 'nieznane źródło';
+  }
+
   function nazwaPozaKohorta(k) {
     return k === 'przedwczesne-pokwitanie' ? 'pokwitanie przedwczesne' : 'pokwitanie opóźnione';
   }
@@ -851,8 +857,8 @@
     }, null);
     if (!d) return '';
     if (d.r.sds == null) return 'SDS tempa: nie policzono — ' + (d.r.opisPowodu || 'brak danych');
-    var txt = 'SDS tempa: ' + fmtS(d.r.sds) + ' (' + fmt(d.r.centyl, 1) + ' centyl; '
-      + d.r.zrodlo.etykieta + ')';
+    var txt = 'SDS tempa: ' + fmtS(d.r.sds) + ' (' + fmt(d.r.centyl, 1) + ' centyl) — wg '
+      + zrodloKrotkie(d.r);
     if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
       txt += '; wg czasu pokwitania ' + fmtS(d.kelly.sds) + ' (' + NAZWA_PODGRUPY[d.kelly.podgrupa] + ')';
     }
@@ -879,7 +885,8 @@
     var glowa = '<div class="top"><span class="nm">SDS tempa</span></div>'
       + '<div class="big">' + esc(fmtS(r.sds))
       + '<span class="d vt-s">' + esc(fmt(r.centyl, 1) + ' c.') + '</span></div>'
-      + '<div class="sub">' + esc('mediana ' + fmt(r.mediana, 2) + ' cm/rok · ' + r.zrodlo.etykieta) + '</div>';
+      + '<div class="sub">' + esc('mediana ' + fmt(r.mediana, 2) + ' cm/rok') + '</div>'
+      + '<div class="vtap-hv-src">' + esc('wg ' + zrodloKrotkie(r)) + '</div>';
 
     var linie = [];
     if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
@@ -892,7 +899,8 @@
     if (r.kowd) {
       linie.push('KOWD (deklaracja lekarza): tempo ' + NAZWA_POLOZENIA[r.kowd.polozenie]
         + ' dzieci z rozpoznanym KOWD (mediana ' + fmt(r.kowd.mediana, 1) + ' cm/rok'
-        + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ').');
+        + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ') — wg '
+        + (r.kowd.zrodloKrotkie || 'danych KOWD') + '.');
     }
 
     if (!o.rozwijalny) {
@@ -903,9 +911,10 @@
     // Wersja rozwijalna: komplet opisu pomiaru pod jednym kliknięciem.
     var szczegoly = '';
     linie.forEach(function (t) { szczegoly += '<p>' + esc(t) + '</p>'; });
-    szczegoly += '<p>' + esc('Populacja odniesienia: ' + r.zrodlo.populacja + ' (' + r.zrodlo.etykieta
-      + ', PMID ' + r.zrodlo.pmid + '). Odstęp pomiarów: ' + fmt(r.oknoMies, 0) + ' mies. '
-      + 'Wiek środkowy przedziału: ' + fmtAgeM(vel.wiekSrodekMies) + '.') + '</p>';
+    szczegoly += '<p>' + esc('Norma: ' + r.zrodlo.cytowanie + ' PMID ' + r.zrodlo.pmid
+      + '. Populacja odniesienia: ' + r.zrodlo.populacja + '.') + '</p>';
+    szczegoly += '<p>' + esc('Odstęp pomiarów: ' + fmt(r.oknoMies, 0) + ' mies. Wiek środkowy '
+      + 'przedziału: ' + fmtAgeM(vel.wiekSrodekMies) + '.') + '</p>';
     (r.zastrzezenia || []).forEach(function (z) { szczegoly += '<p>' + esc(z) + '</p>'; });
 
     return '<div class="vtap-card cs vtap-hvc">'
@@ -925,7 +934,7 @@
     }
     var html = '<p><span class="vta-lbl">SDS tempa:</span> ' + esc(fmtS(r.sds))
       + esc(' (' + fmt(r.centyl, 1) + ' centyl; mediana ' + fmt(r.mediana, 2) + ' cm/rok)')
-      + ' — <span class="vta-stable">' + esc(r.zrodlo.etykieta + ', populacja ' + r.zrodlo.populacja)
+      + ' — <span class="vta-stable">' + esc('wg ' + zrodloKrotkie(r) + '; populacja ' + r.zrodlo.populacja)
       + '</span></p>';
     if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
       html += '<p><span class="vta-lbl">Wg czasu pokwitania:</span> ' + esc(fmtS(d.kelly.sds))
@@ -940,12 +949,65 @@
       html += '<p><span class="vta-lbl">KOWD (deklaracja lekarza):</span> '
         + esc('tempo ' + NAZWA_POLOZENIA[r.kowd.polozenie] + ' dzieci z rozpoznanym KOWD '
           + '(mediana ' + fmt(r.kowd.mediana, 1) + ' cm/rok'
-          + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ')') + '</p>';
+          + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ') — wg '
+          + (r.kowd.zrodloKrotkie || 'danych KOWD')) + '</p>';
     }
     html += '<p class="vta-stable">' + esc('Pojedynczy SDS tempa nie jest kryterium '
       + 'rozpoznania — u tego samego zdrowego dziecka waha się w obserwacji o ok. 2,8 SD. '
       + 'Polskich norm tempa nie ma; populacja odniesienia jest nazwana wyżej.') + '</p>';
     return html;
+  }
+
+  /* Dane kafelka HV-SDS dla zewnetrznego renderera — Karta pacjenta ma wlasny uklad
+   * kafelkow w zakladce „Status" (.vilda-patient-stats-grid) i nie moze wziac gotowego
+   * HTML-a panelu trajektorii. Zwracamy WYLACZNIE tresc, bez znacznikow: kto rysuje,
+   * ten decyduje o wygladzie, ale liczba i podpis zrodla pochodza z jednego liczenia.
+   *
+   * Wejscie jest takie samo jak w analyze() — dzieki temu karta nie musi sama skladac
+   * modelu tempa ani znac okna pomiarowego.
+   */
+  function hvSdsKafelek(input) {
+    var model = analyze(input);
+    if (!model || !model.velocity) return null;
+    var d = hvSdsDane(model.velocity, model);
+    if (!d) return null;
+    var r = d.r;
+    if (r.sds == null) {
+      return {
+        etykieta: 'SDS tempa',
+        wartosc: null,
+        nota: 'nie policzono — ' + (r.opisPowodu || 'brak danych'),
+        podpis: null, linie: [], szczegoly: []
+      };
+    }
+    var linie = [];
+    if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
+      linie.push('Wg czasu pokwitania: ' + fmtS(d.kelly.sds) + ' (Kelly, '
+        + NAZWA_PODGRUPY[d.kelly.podgrupa] + ')');
+    } else if (d.kelly && d.kelly.start && d.kelly.start.pozaKohorta) {
+      linie.push('Podgrupy nie przypisano — ' + nazwaPozaKohorta(d.kelly.start.pozaKohorta)
+        + ' leży poza kryteriami włączenia kohorty, na której zbudowano te normy.');
+    }
+    if (r.kowd) {
+      linie.push('KOWD (deklaracja lekarza): tempo ' + NAZWA_POLOZENIA[r.kowd.polozenie]
+        + ' dzieci z rozpoznanym KOWD (mediana ' + fmt(r.kowd.mediana, 1) + ' cm/rok'
+        + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ') — wg '
+        + (r.kowd.zrodloKrotkie || 'danych KOWD') + '.');
+    }
+    var szczegoly = [
+      'Norma: ' + r.zrodlo.cytowanie + ' PMID ' + r.zrodlo.pmid
+        + '. Populacja odniesienia: ' + r.zrodlo.populacja + '.',
+      'Odstęp pomiarów: ' + fmt(r.oknoMies, 0) + ' mies. Wiek środkowy przedziału: '
+        + fmtAgeM(model.velocity.wiekSrodekMies) + '. Tempo: ' + fmt(r.cmPerYear, 1) + ' cm/rok.'
+    ].concat(r.zastrzezenia || []);
+    return {
+      etykieta: 'SDS tempa',
+      wartosc: fmtS(r.sds),
+      nota: fmt(r.centyl, 1) + ' centyl · mediana ' + fmt(r.mediana, 2) + ' cm/rok',
+      podpis: 'wg ' + zrodloKrotkie(r),
+      linie: linie,
+      szczegoly: szczegoly
+    };
   }
 
   function velocityHtml(vel, model) {
@@ -1031,6 +1093,7 @@
     '.vtap .vtap-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px 14px 4px}',
     '.vtap .vtap-card{border:1px solid #e3ecec;border-left:4px solid #b9c8ca;border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;min-width:0}',
     '.vtap .vtap-hvc{border-left-color:#00838d}',
+    '.vtap .vtap-hv-src{font-size:10.5px;line-height:1.4;color:#6b878c;margin-top:1px}',
     '.vtap .vtap-hv{margin:0}',
     '.vtap .vtap-hv>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:3px;position:relative}',
     '.vtap .vtap-hv>summary::-webkit-details-marker{display:none}',
@@ -1300,7 +1363,12 @@
       if (old && old.parentNode) old.parentNode.removeChild(old);
       var model = analyze(input);
       if (!model) return null;
-      var html = buildPatientHtml(model, { collapsed: isPanelCollapsed() });
+      var html = buildPatientHtml(model, {
+        collapsed: isPanelCollapsed(),
+        // Opcje wolajacego szly dotad do kosza: panel budowal sie zawsze na wartosciach
+        // domyslnych, wiec prosba Karty pacjenta o rozwijalny kafelek nie mialo jak zadzialac.
+        hvRozwijalny: !!(opts && opts.hvRozwijalny)
+      });
       if (!html || !doc) return null;
       var host = doc.createElement('div');
       host.className = 'vtap';
@@ -1341,6 +1409,7 @@
     analyzeAndRenderHtml: analyzeAndRenderHtml,
     buildPatientHtml: buildPatientHtml,
     hvSdsPodsumowanie: hvSdsPodsumowanie,
+    hvSdsKafelek: hvSdsKafelek,
     buildCardPanelHtml: buildCardPanelHtml,
     isPanelCollapsed: isPanelCollapsed,
     wirePanelToggle: wirePanelToggle,

@@ -53,6 +53,7 @@
     wiekMaxLat: { F: 16.5, M: 17.0 },
     n: { F: 453, M: 473 },
     pomiarow: { F: 4557, M: 5224 },
+    cytowanieKrotkie: 'Duran i wsp., J Pediatr Endocrinol Metab 2025',
     cytowanie: 'Duran I i wsp. Height velocity in the detection of growth disorders '
       + 'reconsidered: a retrospective analysis of the DONALD study. '
       + 'J Pediatr Endocrinol Metab 2025;38(9):887-897.',

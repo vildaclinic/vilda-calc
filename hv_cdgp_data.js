@@ -42,6 +42,7 @@
     oknoMiesMax: 18,
     n: { F: 58, M: 121 },
     pomiarow: { F: 230, M: 479 },
+    cytowanieKrotkie: 'Butenandt i Kunze, J Pediatr Endocrinol Metab 2010',
     cytowanie: 'Butenandt O, Kunze D. Growth velocity in constitutional delay of growth '
       + 'and development. J Pediatr Endocrinol Metab 2010;23(1-2):19-25.',
     pmid: '20432802',
