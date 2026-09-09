@@ -443,3 +443,69 @@ describe('Czyszczenie formularza', () => {
       .toMatch(/vildaZwinDanePokwitaniowe = function \(\) \{\s*decyzjaUzytkownika = false;/);
   });
 });
+
+// GROWTH-HV-UI3 — ten sam pacjent, te same dane, dwie różne liczby (zgłoszenie właściciela,
+// SW 1.0.874): Karta pacjenta +2,2, „Podsumowanie wyników" −2,5. Przyczyna: zdanie
+// podsumowania liczyło model tempa z `measurements` karty zaawansowanej, a to są WYŁĄCZNIE
+// pomiary historyczne — bez dzisiejszego wzrostu analyze() brał ostatni z nich za pomiar
+// dzisiejszy i liczył tempo z niewłaściwej pary punktów.
+describe('Ten sam pacjent — ta sama liczba w podsumowaniu i w kafelku', () => {
+  // Chłopiec 9 lat 8 mies., 129,5 cm; rok temu 122 cm (7,5 cm/rok); dwa lata temu 116 cm.
+  const HISTORIA = [
+    { ageMonths: 92, ageYears: 92 / 12, height: 116, weight: 22 },
+    { ageMonths: 104, ageYears: 104 / 12, height: 122, weight: 25 },
+  ];
+
+  it('zdanie liczy SDS z tego samego tempa, które karta pokazuje wiersz wyżej', () => {
+    const { hvSdsPodsumowanie } = karta();
+    // Tak woła je karta podsumowania: tempo już policzone przez aplikację ORAZ pomiary.
+    const z = hvSdsPodsumowanie({
+      sex: 'M', cmPerYear: 7.5, gapM: 12, currentAgeMonths: 116,
+      measurements: HISTORIA, currentHeight: 129.5,
+    });
+    expect(z, 'tempo aplikacji ma pierwszeństwo przed liczeniem z pomiarów').toContain('+2,2');
+    expect(z).toContain('98,6 centyl');
+    expect(z).not.toMatch(/nie policzono/);
+  });
+
+  it('droga z pomiarów bez dzisiejszego wzrostu milczy — nie podaje liczby z cudzego przedziału', () => {
+    const { hvSdsPodsumowanie } = karta();
+    // Bez cmPerYear/gapM i bez currentHeight: przed poprawką analyze() liczył tu tempo
+    // między pomiarem sprzed dwóch lat a pomiarem sprzed roku, datując ten drugi na dziś.
+    const z = hvSdsPodsumowanie({ sex: 'M', currentAgeMonths: 116, measurements: HISTORIA });
+    expect(z).toBe('');
+  });
+
+  it('karta podsumowania przekazuje dzisiejszy pomiar osobno, a nie dokleja go do historii', () => {
+    const sum = fs.readFileSync(path.join(korzen, 'vilda_summary_cards.js'), 'utf8');
+    const i = sum.indexOf('function qPomiaryZKarty');
+    const j = sum.indexOf('function qVeloSuffix', i);
+    expect(i).toBeGreaterThan(-1);
+    expect(j).toBeGreaterThan(i);
+    const wejscia = [];
+    const okno = { VildaTrajectoryAnalysis: { hvSdsPodsumowanie: (we) => { wejscia.push(we); return 'SDS tempa: x'; } } };
+    const dokument = { getElementById: (id) => ({ value: { height: '129,5', weight: '27,6' }[id] || '' }), querySelectorAll: () => [] };
+    const { qHvSdsPush } = new Function('a', 'document', 'bmiSource',
+      `${sum.slice(i, j)}\nreturn { qHvSdsPush };`)(okno, dokument, 'OLAF');
+
+    const linie = [];
+    qHvSdsPush(linie, {
+      sex: 'M', growthVelocity: 7.5, growthVelocityGapM: 12, currentAgeMonths: 116,
+      currentHeight: 129.5, currentWeight: 27.6, measurements: HISTORIA,
+    });
+    expect(linie).toEqual(['SDS tempa: x']);
+    expect(wejscia).toHaveLength(1);
+    const we = wejscia[0];
+    expect(we.cmPerYear, 'tempo aplikacji idzie do zdania').toBe(7.5);
+    expect(we.gapM).toBe(12);
+    expect(we.currentHeight, 'dzisiejszy wzrost osobnym polem').toBe(129.5);
+    expect(we.currentWeight).toBe(27.6);
+    expect(we.measurements, 'historia bez doklejonego punktu dzisiejszego').toEqual(HISTORIA);
+
+    // Globalna bez dzisiejszych wartości — biorą się z pól formularza, nadal osobno.
+    qHvSdsPush(linie, { sex: 'M', currentAgeMonths: 116, measurements: HISTORIA });
+    const we2 = wejscia[1];
+    expect(we2.currentHeight).toBe(129.5);
+    expect(we2.measurements).toEqual(HISTORIA);
+  });
+});
