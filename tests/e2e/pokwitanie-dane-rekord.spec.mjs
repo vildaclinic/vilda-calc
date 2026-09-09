@@ -52,7 +52,10 @@ async function zalozPacjentke(page) {
 async function otworzEdycje(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientEditScreen(id), patientId);
   await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toBeVisible();
-  await page.getByRole('button', { name: 'Dojrzewanie płciowe' }).click();
+  // Pełna nazwa dostępna, bo od SW 1.0.870 formularz główny ma własny przycisk
+  // „+ Pokaż dojrzewanie płciowe" — sama fraza pasowałaby do obu.
+  await page.getByRole('button', { name: 'Dojrzewanie płciowe opcjonalne · tempo wzrastania' })
+    .click();
 }
 
 const sekcjaRekordu = (page, patientId) => page.evaluate(async (id) => {
