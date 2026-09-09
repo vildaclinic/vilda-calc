@@ -34,10 +34,14 @@ function karta(dodatkoweOkno) {
     return (parseFloat(t) === 0 ? '' : (v > 0 ? '+' : '−')) + t.replace('.', ',');
   };
   const velocityAssessment = () => ({ cls: 'bad', text: 'poniżej normy dla wieku' });
+  const num = (v) => (typeof v === 'number' && isFinite(v) ? v : (v == null || v === '' ? null
+    : (isFinite(parseFloat(String(v).replace(',', '.'))) ? parseFloat(String(v).replace(',', '.')) : null)));
+  const sexMK = (v) => (String(v || '').toUpperCase().startsWith('M') ? 'M' : 'F');
+  const fmtAgeM = (mo) => `${Math.floor(mo / 12)} lat ${Math.round(mo % 12)} mies.`;
   return new Function(
-    'w', 'esc', 'fmt', 'fmtS', 'velocityAssessment',
-    `${src.slice(start, end)}\nreturn { hvSdsHtml, velocityHtml };`,
-  )(okno, esc, fmt, fmtS, velocityAssessment);
+    'w', 'esc', 'fmt', 'fmtS', 'velocityAssessment', 'num', 'sexMK', 'fmtAgeM',
+    `${src.slice(start, end)}\nreturn { hvSdsHtml, velocityHtml, patientHvCardHtml, hvSdsPodsumowanie };`,
+  )(okno, esc, fmt, fmtS, velocityAssessment, num, sexMK, fmtAgeM);
 }
 
 // Dziewczynka 9,5 r.ż. w środku przedziału, 3,0 cm/rok, odstęp 12 mies.
@@ -80,10 +84,10 @@ describe('Liczba opisowa w karcie', () => {
     const src = fs.readFileSync(path.join(korzen, 'vilda_trajectory_analysis.js'), 'utf8');
     const start = src.indexOf('  var NAZWA_PODGRUPY = {');
     const end = src.indexOf('  function delayedPubertyHtml(');
-    const puste = new Function('w', 'esc', 'fmt', 'fmtS', 'velocityAssessment',
+    const puste = new Function('w', 'esc', 'fmt', 'fmtS', 'velocityAssessment', 'num', 'sexMK', 'fmtAgeM',
       `${src.slice(start, end)}\nreturn { velocityHtml };`)(
       {}, (x) => String(x), (v, d) => v.toFixed(d), (v) => String(v),
-      () => ({ cls: 'bad', text: 'poniżej normy' }));
+      () => ({ cls: 'bad', text: 'poniżej normy' }), (v) => v, (v) => v, (v) => String(v));
     const html = puste.velocityHtml(VEL, MODEL);
     expect(html).toContain('Tempo wzrastania:');
     expect(html).not.toContain('SDS tempa:');
@@ -169,5 +173,131 @@ describe('Kiedy karta milczy, a kiedy mówi dlaczego', () => {
     const html = hvSdsHtml({ ...VEL, wiekSrodekMies: 18 }, MODEL);
     expect(html).toContain('nie policzono');
     expect(html).toMatch(/poniżej dolnej granicy/);
+  });
+});
+
+// ── Trzy miejsca prezentacji (miejsca wskazane przez właściciela 2026-09-09) ──────────
+//
+// Jedno liczenie, trzy prezentacje. Gdyby każda liczyła sama, po pierwszej zmianie źródła
+// norm mówiłyby o pacjencie co innego — dlatego wszystkie idą przez hvSdsDane().
+
+describe('Zdanie do karty „Podsumowanie wyników”', () => {
+  it('jest tekstem, nie HTML-em — tamta karta składa wiersze przez textContent', () => {
+    const { hvSdsPodsumowanie } = karta();
+    const z = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 3, gapM: 12, currentAgeMonths: 120 });
+    expect(z).not.toMatch(/[<>]/);
+    expect(z).toContain('SDS tempa:');
+    expect(z).toContain('−2,4');
+    expect(z).toContain('0,8 centyl');
+  });
+
+  it('mieści się w jednym zdaniu — wersja kompaktowa', () => {
+    const { hvSdsPodsumowanie } = karta();
+    const z = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 3, gapM: 12, currentAgeMonths: 120 });
+    expect(z.length).toBeLessThan(140);
+  });
+
+  it('wiek środkowy liczony jest ze środka przedziału, nie z wieku bieżącego', () => {
+    const { hvSdsPodsumowanie, hvSdsHtml } = karta();
+    const zPodsumowania = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 3, gapM: 12, currentAgeMonths: 120 });
+    const zKarty = hvSdsHtml({ cmPerYear: 3, gapM: 12, wiekSrodekMies: 114, plec: 'F' }, { sex: 'F' });
+    expect(zPodsumowania).toContain('−2,4');
+    expect(zKarty).toContain('−2,4');
+  });
+
+  it('bez danych o odstępie albo wieku nie dopisuje nic', () => {
+    const { hvSdsPodsumowanie } = karta();
+    expect(hvSdsPodsumowanie({ sex: 'K', cmPerYear: 3 })).toBe('');
+    expect(hvSdsPodsumowanie({})).toBe('');
+    expect(hvSdsPodsumowanie(null)).toBe('');
+  });
+
+  it('deklaracja KOWD dopisuje się do tego samego zdania', () => {
+    const { hvSdsPodsumowanie } = karta({
+      VildaPubertalStatus: { dane: () => ({ wiekStartuLat: null, wiekMenarcheLat: null, kowd: 'tak' }) },
+    });
+    const z = hvSdsPodsumowanie({ sex: 'M', cmPerYear: 4.2, gapM: 12, currentAgeMonths: 168 });
+    expect(z).toContain('KOWD');
+    expect(z).toContain('poniżej 25. centyla');
+  });
+});
+
+describe('Kafelek obok wzrostu, masy i BMI', () => {
+  const VEL_K = { cmPerYear: 3, gapM: 12, wiekSrodekMies: 114, plec: 'F' };
+
+  it('ma klasę kafelka trajektorii, żeby wpaść w ten sam rząd', () => {
+    const { patientHvCardHtml } = karta();
+    const html = patientHvCardHtml(VEL_K, { sex: 'F' }, {});
+    expect(html).toMatch(/class="vtap-card [^"]*vtap-hvc"/);
+    expect(html).toContain('SDS tempa');
+    expect(html).toContain('−2,4');
+    expect(html).toContain('0,8 c.');
+    expect(html).toContain('mediana 5,87 cm/rok');
+  });
+
+  it('wersja zwykła jest zwięzła — bez rozwijania i bez zastrzeżeń', () => {
+    const { patientHvCardHtml } = karta();
+    const html = patientHvCardHtml(VEL_K, { sex: 'F' }, {});
+    expect(html).not.toContain('<details');
+    expect(html).not.toMatch(/2,8 SD/);
+  });
+
+  it('wersja rozwijalna niesie komplet opisu pomiaru', () => {
+    const { patientHvCardHtml } = karta();
+    const html = patientHvCardHtml(VEL_K, { sex: 'F' }, { rozwijalny: true });
+    expect(html).toContain('<details');
+    expect(html).toContain('vtap-hv-body');
+    expect(html).toMatch(/Populacja odniesienia: niemiecka/);
+    expect(html).toMatch(/PMID 40557842/);
+    expect(html).toMatch(/Odstęp pomiarów: 12 mies\./);
+    expect(html).toMatch(/2,8 SD/);
+    expect(html).toMatch(/Polskie normy tempa wzrastania nie istnieją/);
+  });
+
+  it('kafelek nie koloruje się werdyktem — pasek jest neutralny', () => {
+    const { patientHvCardHtml } = karta();
+    const html = patientHvCardHtml(VEL_K, { sex: 'F' }, { rozwijalny: true });
+    expect(html).not.toMatch(/vt-b|vt-w|vt-g\b/);
+    expect(html).toMatch(/class="vtap-card cs /);
+  });
+
+  it('odmowa też ma kafelek — z powodem, nie pustką', () => {
+    const { patientHvCardHtml } = karta();
+    const html = patientHvCardHtml({ ...VEL_K, gapM: 3 }, { sex: 'F' }, {});
+    expect(html).toContain('nie policzono');
+    expect(html).toMatch(/Odstęp między pomiarami/);
+  });
+
+  it('bez środka przedziału kafelka nie ma — nie ma czym indeksować normy', () => {
+    const { patientHvCardHtml } = karta();
+    expect(patientHvCardHtml({ ...VEL_K, wiekSrodekMies: null }, { sex: 'F' }, {})).toBe('');
+  });
+});
+
+describe('Kafelek stoi w rzędzie kart, nie w martwej gałęzi', () => {
+  const src = fs.readFileSync(path.join(korzen, 'vilda_trajectory_analysis.js'), 'utf8');
+
+  it('buildPatientHtml wstawia kafelek do .vtap-cards', () => {
+    // To jest strażnik pomyłki z SW 1.0.870: blok HV-SDS trafił wtedy do buildHtml,
+    // czyli do gałęzi, której aplikacja nie renderuje.
+    const i = src.indexOf('function buildPatientHtml');
+    const j = src.indexOf('var COLLAPSE_KEY', i);
+    const ciało = src.slice(i, j);
+    expect(ciało).toContain('patientHvCardHtml(model.velocity, model');
+    expect(ciało.indexOf('patientHvCardHtml'), 'kafelek przed zamknięciem .vtap-cards')
+      .toBeLessThan(ciało.indexOf("html += '</div>';"));
+  });
+
+  it('Karta pacjenta prosi o wersję rozwijalną', () => {
+    const auth = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
+    expect(auth).toContain('hvRozwijalny:!0');
+  });
+
+  it('karta „Podsumowanie wyników” dopisuje wiersz po tempie wzrastania', () => {
+    const sum = fs.readFileSync(path.join(korzen, 'vilda_summary_cards.js'), 'utf8');
+    expect(sum).toContain('qHvSdsPush(e,C)');
+    expect(sum).toContain('T.hvSdsPodsumowanie(');
+    expect(sum.indexOf('Aktualne tempo wzrastania'), 'zdanie idzie PO tempie')
+      .toBeLessThan(sum.indexOf('qHvSdsPush(e,C)'));
   });
 });
