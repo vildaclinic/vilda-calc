@@ -45,6 +45,8 @@ Taka zmiana wymaga łącznie:
 
 Zielone testy nie są dowodem poprawności medycznej. Agent nie nadaje algorytmowi statusu „zwalidowany klinicznie”.
 
+**Normy zawsze jako dane, nigdy jako założenie wbudowane w silnik** (decyzja właściciela 2026-09-09: aplikacja ma docelowo działać międzynarodowo, z możliwością wyboru populacji odniesienia). Nowy moduł referencyjny trzyma normy w osobnym pliku danych, przyjmuje źródło jako argument i niesie nazwę populacji w wyniku. Pełna reguła: `docs/ARCHITECTURE.md`, sekcja „Kierunek: wielopopulacyjność”.
+
 ## 4. Dane pacjentów i sekrety
 
 - Używaj wyłącznie jednoznacznie fikcyjnych danych testowych.
