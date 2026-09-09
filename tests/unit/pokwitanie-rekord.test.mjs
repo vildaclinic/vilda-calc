@@ -101,3 +101,49 @@ describe('Wpięcie w plik produkcyjny', () => {
     expect(src).toContain('identityReset:puberty-carry');
   });
 });
+
+describe('Panel formularza ma pierwszeństwo nad pamięcią rekordu', () => {
+  const zPolami = (pola) => {
+    const src = fs.readFileSync(path.join(korzen, 'vilda_data_import_export.js'), 'utf8');
+    const start = src.indexOf('/* GROWTH-PUB-REC');
+    const end = src.indexOf('function Bk2(', start);
+    const f = (id) => (Object.prototype.hasOwnProperty.call(pola, id) ? { value: pola[id] } : null);
+    return new Function('r', 'l', 'f', `${src.slice(start, end)}\nreturn { Bq0, Bq1 };`)(
+      { vildaPubertyData: { onsetAgeYears: 11.5, cdgpDeclared: 'nie' } }, () => {}, f,
+    );
+  };
+
+  it('wartość z panelu wygrywa z zapamiętaną', () => {
+    const { Bq1 } = zPolami({ pubertyOnsetAge: '9,8', pubertyCdgp: 'tak' });
+    expect(Bq1()).toEqual({ onsetAgeYears: 9.8, cdgpDeclared: 'tak' });
+  });
+
+  it('puste pole panelu kasuje wartość — lekarz ją usunął', () => {
+    const { Bq1 } = zPolami({ pubertyOnsetAge: '', pubertyCdgp: '' });
+    expect(Bq1()).toBeNull();
+  });
+
+  it('bez panelu (DocPro, import) zostaje to, co w pamięci', () => {
+    const { Bq1 } = zPolami({});
+    expect(Bq1()).toEqual({ onsetAgeYears: 11.5, cdgpDeclared: 'nie' });
+  });
+
+  it('deklaracja KOWD przyjmuje wyłącznie „tak” albo „nie”', () => {
+    expect(zPolami({ pubertyCdgp: 'byc moze' }).Bq1()).toEqual({ onsetAgeYears: 11.5 });
+    expect(zPolami({ pubertyCdgp: 'nie' }).Bq1()).toEqual({ onsetAgeYears: 11.5, cdgpDeclared: 'nie' });
+  });
+
+  it('zapamiętanie z rekordu niesie deklarację KOWD', () => {
+    const okno = {};
+    const { Bq0 } = pomocniki(okno);
+    Bq0({ puberty: { onsetAgeYears: 10, cdgpDeclared: 'tak' } });
+    expect(okno.vildaPubertyData).toEqual({ onsetAgeYears: 10, cdgpDeclared: 'tak' });
+  });
+
+  it('deklaracja spoza słownika nie wchodzi do pamięci', () => {
+    const okno = {};
+    const { Bq0 } = pomocniki(okno);
+    Bq0({ puberty: { cdgpDeclared: 'moze' } });
+    expect(okno.vildaPubertyData).toBeNull();
+  });
+});
