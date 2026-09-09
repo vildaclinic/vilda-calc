@@ -35,6 +35,13 @@ async function otworz(page) {
   );
 }
 
+// Rozwinięcie panelu „Dane pokwitaniowe" — domyślnie jest zwinięty.
+async function rozwinPanel(page) {
+  const btn = page.getByRole('button', { name: '+ Dane pokwitaniowe' });
+  if (await btn.count()) await btn.click();
+  await expect(page.locator('#tannerStage')).toBeVisible();
+}
+
 // Dziewczynka 10 lat, 135 cm; rok wcześniej 128 cm → 7,0 cm/rok.
 //
 // Karta zaawansowana podpina uchwyt przycisku LENIWIE (xa() w vilda_advanced_growth.js)
@@ -88,7 +95,8 @@ test.describe('Karta „Zaawansowane obliczenia wzrostowe”', () => {
 
     const hv = page.locator('#advResults .vtap-cards .vtap-hvc');
     await expect(hv).toBeVisible();
-    await expect(hv).toContainText('DONALD');
+    await expect(hv, 'źródło podpisane jak w piśmiennictwie')
+      .toContainText('wg Duran i wsp., J Pediatr Endocrinol Metab 2025');
     await expect(hv, 'w karcie zaawansowanej kafelek jest zwięzły').not.toContainText('2,8 SD');
   });
 
@@ -117,7 +125,7 @@ test.describe('Karta „Podsumowanie wyników”', () => {
     expect(iHv, 'wiersz SDS tempa jest w podsumowaniu').toBeGreaterThan(-1);
     expect(iHv, 'i stoi zaraz pod tempem').toBe(iTempo + 1);
     expect(linie[iHv]).toContain('centyl');
-    expect(linie[iHv]).toContain('DONALD');
+    expect(linie[iHv]).toContain('wg Duran i wsp., J Pediatr Endocrinol Metab 2025');
     expect(linie[iHv], 'karta składa wiersze przez textContent — żadnego HTML-a')
       .not.toMatch(/[<>]/);
   });
@@ -178,5 +186,94 @@ test.describe('Karta pacjenta, zakładka Status', () => {
     expect(wynik.pacjent).toContain('<details class="vtap-hv"');
     expect(wynik.karta, 'karta zaawansowana bez rozwijania').not.toContain('<details class="vtap-hv"');
     expect(wynik.karta, 'ale kafelek jest w obu').toContain('vtap-hvc');
+  });
+});
+
+test.describe('Wynik przelicza się na żywo', () => {
+  // Zgłoszenie właściciela: „czy zaznaczę Tanner I czy Tanner V, to widzę ten sam wynik".
+  // Przyczyna: pola pokwitaniowe nie były na liście wejść, których zmiana odświeża kartę.
+  test('zmiana stadium Tannera natychmiast zmienia werdykt tempa', async ({ page }) => {
+    await otworz(page);
+    await policzPacjentke(page);
+    await rozwinPanel(page);
+    const tempo = page.locator('#advResults .vtap-tempo');
+    await expect(tempo).toContainText('w normie');
+
+    await page.locator('#tannerStage').selectOption('5');
+    await expect(tempo, 'po skoku pokwitaniowym norma tempa nie ma zastosowania')
+      .toContainText('po skoku pokwitaniowym');
+    await expect(tempo).not.toContainText('w normie');
+  });
+
+  test('wpisanie wieku startu pokwitania dokłada podgrupę bez przeładowania', async ({ page }) => {
+    await otworz(page);
+    await policzPacjentke(page);
+    await rozwinPanel(page);
+    const kafelek = page.locator('#advResults .vtap-hvc');
+    await expect(kafelek).not.toContainText('Wg czasu pokwitania');
+
+    await page.locator('#pubertyOnsetAge').fill('12.5');
+    await expect(kafelek).toContainText('Wg czasu pokwitania');
+    await expect(kafelek).toContainText('dzieci dojrzewające później');
+  });
+
+  test('deklaracja KOWD dokłada gałąź do zdania w podsumowaniu', async ({ page }) => {
+    await otworz(page);
+    await policzPacjentke(page);
+    await rozwinPanel(page);
+    const zdanie = () => page.evaluate(() => String(window.generateMetabolicSummary() || '')
+      .split('\n').find((t) => /^SDS tempa/.test(t.trim())) || '');
+    expect(await zdanie()).not.toMatch(/KOWD/);
+
+    await page.locator('#pubertyCdgp').selectOption('tak');
+    await page.waitForFunction(() => String(window.generateMetabolicSummary() || '').includes('KOWD'));
+    expect(await zdanie()).toMatch(/KOWD/);
+  });
+});
+
+test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
+  // Do SW 1.0.871 kafelek powstawał wyłącznie w panelu trajektorii, a ten mieszka
+  // w INNEJ zakładce Karty pacjenta — więc w „Statusie" nie było go widać w ogóle.
+  // Dlatego test patrzy na widoczną zakładkę, nie na obecność węzła w DOM.
+  test('kafelek stoi w siatce statystyk i daje się rozwinąć', async ({ page }) => {
+    await otworz(page);
+    const patientId = await page.evaluate(async () => {
+      const w = await window.VildaVault.savePatient({
+        name: 'Testowa Ala',
+        user: {
+          lastName: 'Testowa', firstName: 'Ala', sex: 'K',
+          age: 10, ageMonths: 0, height: 135, weight: 30,
+        },
+        growthBasic: {
+          data: {
+            measurements: [
+              { ageMonths: 108, ageYears: 9, height: 128, weight: 27 },
+              { ageMonths: 120, ageYears: 10, height: 135, weight: 30 },
+            ],
+          },
+        },
+      }, { dedup: false });
+      return w.patientId;
+    });
+    await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+
+    const kafelek = page.locator('.vilda-patient-stat-details');
+    await expect(kafelek, 'kafelek jest WIDOCZNY, nie tylko obecny w DOM').toBeVisible();
+    await expect(kafelek).toContainText('SDS tempa');
+    await expect(kafelek).toContainText('wg Duran i wsp., J Pediatr Endocrinol Metab 2025');
+
+    // Kafelek stoi w tej samej siatce co wzrost, masa i BMI.
+    const etykiety = await page.evaluate(() => {
+      const pane = [...document.querySelectorAll('.vilda-patient-tab-content')]
+        .find((x) => !x.classList.contains('vilda-patient-tab-content--hidden'));
+      return [...pane.querySelectorAll('.vilda-patient-stat-label')]
+        .map((t) => (t.textContent || '').trim());
+    });
+    expect(etykiety).toEqual(expect.arrayContaining(['Wzrost', 'Waga', 'BMI', 'SDS tempa']));
+
+    await kafelek.locator('summary').click();
+    await expect(kafelek).toContainText('PMID 40557842');
+    await expect(kafelek).toContainText('Odstęp pomiarów');
+    await expect(kafelek).toContainText('2,8 SD');
   });
 });

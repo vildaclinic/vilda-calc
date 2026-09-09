@@ -6,6 +6,10 @@
  */
 (function () {
   var otwarty = false;
+  // Panel odsłania się SAM, gdy rekord albo autozapis przyniósł jakąkolwiek wartość — ale
+  // tylko dopóki lekarz sam o tym nie zdecydował. Bez tej pamięci sekcji nie dawało się
+  // zwinąć: każde odświeżenie widoczności otwierało ją z powrotem, bo pole było wypełnione.
+  var decyzjaUzytkownika = false;
   var wrap = document.getElementById('tannerStageWrap');
   var extra = document.getElementById('pubertyExtraWrap');
   var select = document.getElementById('tannerStage');
@@ -65,17 +69,16 @@
   }
 
   window.updateTannerVisibility = function () {
-    if (cokolwiekWpisane()) otwarty = true;
+    if (!decyzjaUzytkownika && cokolwiekWpisane()) otwarty = true;
     wrap.style.display = otwarty ? '' : 'none';
     if (extra) extra.style.display = otwarty ? '' : 'none';
     btn.style.display = '';
-    btn.textContent = otwarty
-      ? '− Ukryj dojrzewanie płciowe'
-      : '+ Pokaż dojrzewanie płciowe';
+    btn.textContent = otwarty ? '− Dane pokwitaniowe' : '+ Dane pokwitaniowe';
     pokazSprzecznosci();
   };
 
   btn.addEventListener('click', function () {
+    decyzjaUzytkownika = true;
     otwarty = !otwarty;
     window.updateTannerVisibility();
     if (otwarty) {
