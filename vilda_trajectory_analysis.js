@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '16';
+  var VERSION = '17';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -790,12 +790,25 @@
    *
    * JEDNO LICZENIE, TRZY PREZENTACJE (miejsca wskazane przez właściciela 2026-09-09):
    *   hvSdsPodsumowanie() — jedno zdanie w karcie „Podsumowanie wyników";
-   *   patientHvCardHtml() — kafelek obok wzrostu, masy i BMI w karcie zaawansowanej,
-   *                         a w Karcie pacjenta ten sam kafelek jako rozwijalny;
+   *   patientHvCardHtml() — kafelek obok wzrostu, masy i BMI (karta zaawansowana
+   *                         i zakładka „Siatki centylowe" Karty pacjenta), zwięzły;
+   *   hvSdsKafelek()      — treść kafelka w zakładce „Status" Karty pacjenta, tam
+   *                         rozwijalnego o komplet opisu pomiaru;
    *   hvSdsHtml()         — pełny blok akapitowy (buildHtml).
    * Gdyby każde z nich liczyło samo, po pierwszej zmianie źródła norm mówiłyby o pacjencie
    * co innego — dlatego liczy wyłącznie hvSdsDane().
    */
+  /* Centyl HV-SDS do jednosci (decyzja wlasciciela 2026-09-09): „21,7 centyl" to pozorna
+   * dokladnosc — SDS tempa u tego samego zdrowego dziecka waha sie o ok. 2,8 SD.
+   * Skrajne wartosci nie zaokraglaja sie do 0 ani 100: „<1" i „>99" mowia prawde. */
+  function fmtCentyl(c) {
+    var v = num(c);
+    if (v == null) return '—';
+    if (v < 0.5) return '<1';
+    if (v >= 99.5) return '>99';
+    return String(Math.round(v));
+  }
+
   function hvSdsDane(vel, model) {
     var H = w.VildaHeightVelocity;
     if (!H || typeof H.oblicz !== 'function' || !vel || vel.wiekSrodekMies == null) return null;
@@ -881,7 +894,7 @@
     var d = hvSdsDane(vel, null);
     if (!d) return '';
     if (d.r.sds == null) return 'SDS tempa: nie policzono — ' + (d.r.opisPowodu || 'brak danych');
-    var txt = 'SDS tempa: ' + fmtS(d.r.sds) + ' (' + fmt(d.r.centyl, 1) + ' centyl) — wg '
+    var txt = 'SDS tempa: ' + fmtS(d.r.sds) + ' (' + fmtCentyl(d.r.centyl) + ' centyl) — wg '
       + zrodloKrotkie(d.r);
     if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
       txt += '; wg czasu pokwitania ' + fmtS(d.kelly.sds) + ' (' + NAZWA_PODGRUPY[d.kelly.podgrupa] + ')';
@@ -892,12 +905,13 @@
     return txt;
   }
 
-  /* Kafelek obok wzrostu, masy i BMI. W Karcie pacjenta ten sam kafelek jest rozwijalny
-   * (opts.rozwijalny) — pod jednym kliknięciem mieści się komplet opisu pomiaru. */
-  function patientHvCardHtml(vel, model, opts) {
+  /* Kafelek obok wzrostu, masy i BMI — zwięzły, bez rozwijania, ten sam w karcie
+   * zaawansowanej i w zakładce „Siatki centylowe" Karty pacjenta (decyzja właściciela
+   * 2026-09-09). Komplet opisu pomiaru jest w jednym miejscu: pod kafelkiem w zakładce
+   * „Status" (hvSdsKafelek → Karta pacjenta). */
+  function patientHvCardHtml(vel, model) {
     var d = hvSdsDane(vel, model);
     if (!d) return '';
-    var o = opts || {};
     var r = d.r;
 
     if (r.sds == null) {
@@ -908,7 +922,7 @@
 
     var glowa = '<div class="top"><span class="nm">SDS tempa</span></div>'
       + '<div class="big">' + esc(fmtS(r.sds))
-      + '<span class="d vt-s">' + esc(fmt(r.centyl, 1) + ' c.') + '</span></div>'
+      + '<span class="d vt-s">' + esc(fmtCentyl(r.centyl) + ' c.') + '</span></div>'
       + '<div class="sub">' + esc('mediana ' + fmt(r.mediana, 2) + ' cm/rok') + '</div>'
       + '<div class="vtap-hv-src">' + esc('wg ' + zrodloKrotkie(r)) + '</div>';
 
@@ -927,23 +941,8 @@
         + (r.kowd.zrodloKrotkie || 'danych KOWD') + '.');
     }
 
-    if (!o.rozwijalny) {
-      var skrot = linie.length ? '<div class="vdt vt-s">' + esc(linie[0]) + '</div>' : '';
-      return '<div class="vtap-card cs vtap-hvc">' + glowa + skrot + '</div>';
-    }
-
-    // Wersja rozwijalna: komplet opisu pomiaru pod jednym kliknięciem.
-    var szczegoly = '';
-    linie.forEach(function (t) { szczegoly += '<p>' + esc(t) + '</p>'; });
-    szczegoly += '<p>' + esc('Norma: ' + r.zrodlo.cytowanie + ' PMID ' + r.zrodlo.pmid
-      + '. Populacja odniesienia: ' + r.zrodlo.populacja + '.') + '</p>';
-    szczegoly += '<p>' + esc('Odstęp pomiarów: ' + fmt(r.oknoMies, 0) + ' mies. Wiek środkowy '
-      + 'przedziału: ' + fmtAgeM(vel.wiekSrodekMies) + '.') + '</p>';
-    (r.zastrzezenia || []).forEach(function (z) { szczegoly += '<p>' + esc(z) + '</p>'; });
-
-    return '<div class="vtap-card cs vtap-hvc">'
-      + '<details class="vtap-hv"><summary>' + glowa + '<span class="vtap-hv-tg"></span></summary>'
-      + '<div class="vtap-hv-body">' + szczegoly + '</div></details></div>';
+    var skrot = linie.length ? '<div class="vdt vt-s">' + esc(linie[0]) + '</div>' : '';
+    return '<div class="vtap-card cs vtap-hvc">' + glowa + skrot + '</div>';
   }
 
   /* Pelny blok akapitowy — sciezka buildHtml. */
@@ -957,7 +956,7 @@
         + esc('nie policzono — ' + (r.opisPowodu || 'brak danych')) + '</span></p>';
     }
     var html = '<p><span class="vta-lbl">SDS tempa:</span> ' + esc(fmtS(r.sds))
-      + esc(' (' + fmt(r.centyl, 1) + ' centyl; mediana ' + fmt(r.mediana, 2) + ' cm/rok)')
+      + esc(' (' + fmtCentyl(r.centyl) + ' centyl; mediana ' + fmt(r.mediana, 2) + ' cm/rok)')
       + ' — <span class="vta-stable">' + esc('wg ' + zrodloKrotkie(r) + '; populacja ' + r.zrodlo.populacja)
       + '</span></p>';
     if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
@@ -1027,7 +1026,7 @@
     return {
       etykieta: 'SDS tempa',
       wartosc: fmtS(r.sds),
-      nota: fmt(r.centyl, 1) + ' centyl · mediana ' + fmt(r.mediana, 2) + ' cm/rok',
+      nota: fmtCentyl(r.centyl) + ' centyl · mediana ' + fmt(r.mediana, 2) + ' cm/rok',
       podpis: 'wg ' + zrodloKrotkie(r),
       linie: linie,
       szczegoly: szczegoly
@@ -1118,15 +1117,6 @@
     '.vtap .vtap-card{border:1px solid #e3ecec;border-left:4px solid #b9c8ca;border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;min-width:0}',
     '.vtap .vtap-hvc{border-left-color:#00838d}',
     '.vtap .vtap-hv-src{font-size:10.5px;line-height:1.4;color:#6b878c;margin-top:1px}',
-    '.vtap .vtap-hv{margin:0}',
-    '.vtap .vtap-hv>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:3px;position:relative}',
-    '.vtap .vtap-hv>summary::-webkit-details-marker{display:none}',
-    '.vtap .vtap-hv .vtap-hv-tg{font-size:10.5px;font-weight:700;color:#00838d;letter-spacing:.02em}',
-    '.vtap .vtap-hv .vtap-hv-tg::after{content:\'zwiń szczegóły ▾\'}',
-    '.vtap .vtap-hv:not([open]) .vtap-hv-tg::after{content:\'rozwiń szczegóły ▸\'}',
-    '.vtap .vtap-hv-body{margin-top:6px;padding-top:6px;border-top:1px dashed #cfe0e1}',
-    '.vtap .vtap-hv-body p{margin:0 0 5px;font-size:11.5px;line-height:1.5;color:#4a6367}',
-    '.vtap .vtap-hv-body p:last-child{margin-bottom:0}',
     '.vtap .vtap-card.cw{border-left-color:#dcb27a}',
     '.vtap .vtap-card.cb{border-left-color:#d98a80}',
     '.vtap .vtap-card.cg{border-left-color:#8cc3ab}',
@@ -1326,8 +1316,8 @@
     html += '<div class="vtap-cards">';
     model.metrics.forEach(function (m) { html += patientMetricCardHtml(m); });
     // Kafelek SDS tempa stoi obok wzrostu, masy i BMI (miejsce wskazane przez właściciela
-    // 2026-09-09). W Karcie pacjenta jest rozwijalny — mieści komplet opisu pomiaru.
-    html += patientHvCardHtml(model.velocity, model, { rozwijalny: !!(opts && opts.hvRozwijalny) });
+    // 2026-09-09). Zwięzły — szczegóły są pod kafelkiem w zakładce „Status" Karty pacjenta.
+    html += patientHvCardHtml(model.velocity, model);
     html += '</div>';
     html += patientVelocityRowHtml(model.velocity);
     if (model.delayedPuberty) {
@@ -1387,12 +1377,7 @@
       if (old && old.parentNode) old.parentNode.removeChild(old);
       var model = analyze(input);
       if (!model) return null;
-      var html = buildPatientHtml(model, {
-        collapsed: isPanelCollapsed(),
-        // Opcje wolajacego szly dotad do kosza: panel budowal sie zawsze na wartosciach
-        // domyslnych, wiec prosba Karty pacjenta o rozwijalny kafelek nie mialo jak zadzialac.
-        hvRozwijalny: !!(opts && opts.hvRozwijalny)
-      });
+      var html = buildPatientHtml(model, { collapsed: isPanelCollapsed() });
       if (!html || !doc) return null;
       var host = doc.createElement('div');
       host.className = 'vtap';

@@ -54,7 +54,7 @@ describe('Liczba opisowa w karcie', () => {
     const html = hvSdsHtml(VEL, MODEL);
     expect(html).toContain('SDS tempa:');
     expect(html).toContain('−2,4');
-    expect(html).toContain('0,8 centyl');
+    expect(html).toContain('1 centyl');
     expect(html).toContain('mediana 5,87 cm/rok');
     expect(html).toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
     expect(html, 'etykieta techniczna nie trafia do lekarza').not.toMatch(/DONALD \(Niemcy/);
@@ -189,7 +189,7 @@ describe('Zdanie do karty „Podsumowanie wyników”', () => {
     expect(z).not.toMatch(/[<>]/);
     expect(z).toContain('SDS tempa:');
     expect(z).toContain('−2,4');
-    expect(z).toContain('0,8 centyl');
+    expect(z).toContain('1 centyl');
     expect(z).toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
   });
 
@@ -233,7 +233,7 @@ describe('Kafelek obok wzrostu, masy i BMI', () => {
     expect(html).toMatch(/class="vtap-card [^"]*vtap-hvc"/);
     expect(html).toContain('SDS tempa');
     expect(html).toContain('−2,4');
-    expect(html).toContain('0,8 c.');
+    expect(html).toContain('1 c.');
     expect(html).toContain('mediana 5,87 cm/rok');
     expect(html, 'źródło podpisane jak w piśmiennictwie')
       .toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
@@ -247,22 +247,21 @@ describe('Kafelek obok wzrostu, masy i BMI', () => {
     expect(html).not.toMatch(/2,8 SD/);
   });
 
-  it('wersja rozwijalna niesie komplet opisu pomiaru', () => {
+  it('wersja jest jedna — zwięzła; prośba o rozwijanie nic nie zmienia (SW 1.0.875)', () => {
+    // Decyzja właściciela 2026-09-09: w zakładce „Siatki centylowe" kafelek nie jest
+    // klikalny ani rozwijalny — komplet opisu pomiaru jest tylko pod kafelkiem w „Statusie".
     const { patientHvCardHtml } = karta();
     const html = patientHvCardHtml(VEL_K, { sex: 'F' }, { rozwijalny: true });
-    expect(html).toContain('<details');
-    expect(html).toContain('vtap-hv-body');
-    expect(html).toMatch(/Norma: Duran I i wsp\./);
-    expect(html).toMatch(/PMID 40557842/);
-    expect(html).toMatch(/Populacja odniesienia: niemiecka/);
-    expect(html).toMatch(/Odstęp pomiarów: 12 mies\./);
-    expect(html).toMatch(/2,8 SD/);
-    expect(html).toMatch(/Polskie normy tempa wzrastania nie istnieją/);
+    expect(html).not.toContain('<details');
+    expect(html).not.toContain('vtap-hv-body');
+    expect(html).not.toMatch(/rozwiń szczegóły/);
+    expect(html).not.toMatch(/PMID 40557842/);
+    expect(html, 'źródło zostaje w podpisie kafelka').toMatch(/wg Duran i wsp\./);
   });
 
   it('kafelek nie koloruje się werdyktem — pasek jest neutralny', () => {
     const { patientHvCardHtml } = karta();
-    const html = patientHvCardHtml(VEL_K, { sex: 'F' }, { rozwijalny: true });
+    const html = patientHvCardHtml(VEL_K, { sex: 'F' });
     expect(html).not.toMatch(/vt-b|vt-w|vt-g\b/);
     expect(html).toMatch(/class="vtap-card cs /);
   });
@@ -294,14 +293,23 @@ describe('Kafelek stoi w rzędzie kart, nie w martwej gałęzi', () => {
       .toBeLessThan(ciało.indexOf("html += '</div>';"));
   });
 
-  it('Karta pacjenta prosi o wersję rozwijalną — i prośba dochodzi', () => {
+  it('Karta pacjenta nie prosi już o wersję rozwijalną, a moduł jej nie ma', () => {
+    // Do SW 1.0.874 zakładka „Siatki centylowe" dostawała kafelek z <details>; właściciel
+    // zdecydował, że szczegóły są tylko pod kafelkiem w „Statusie". Martwa opcja poszła
+    // razem z martwym CSS-em.
     const auth = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
-    expect(auth).toContain('hvRozwijalny:!0');
-    // Do SW 1.0.871 renderPatientPanel budował panel na samych wartościach domyślnych,
-    // więc prośba Karty pacjenta ginęła w drodze i kafelek nigdy nie był rozwijalny.
-    const i = src.indexOf('function renderPatientPanel');
-    const j = src.indexOf('var COLLAPSE_KEY', i);
-    expect(src.slice(i, j)).toContain('hvRozwijalny: !!(opts && opts.hvRozwijalny)');
+    expect(auth).not.toContain('hvRozwijalny');
+    expect(src).not.toContain('hvRozwijalny');
+    expect(src).not.toContain('vtap-hv-tg');
+    expect(src, 'stary CSS rozwijania też poszedł').not.toMatch(/rozwiń szczegóły/);
+  });
+
+  it('kafelek w „Statusie" nie niesie podpisu źródła — ten jest w rozwinięciu', () => {
+    const auth = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
+    const i = auth.indexOf('vhv-tile');
+    const blok = auth.slice(i - 1200, i + 1500);
+    expect(blok, 'podpis nie idzie na kafelek').not.toMatch(/text:Bh0\.podpis/);
+    expect(blok, 'rozwinięcie ma komplet szczegółów (w tym Norma … PMID)').toContain('Bh0.szczegoly.forEach');
   });
 
   it('karta „Podsumowanie wyników” dopisuje wiersz po tempie wzrastania', () => {
@@ -464,7 +472,7 @@ describe('Ten sam pacjent — ta sama liczba w podsumowaniu i w kafelku', () => 
       measurements: HISTORIA, currentHeight: 129.5,
     });
     expect(z, 'tempo aplikacji ma pierwszeństwo przed liczeniem z pomiarów').toContain('+2,2');
-    expect(z).toContain('98,6 centyl');
+    expect(z).toContain('99 centyl');
     expect(z).not.toMatch(/nie policzono/);
   });
 
@@ -507,5 +515,29 @@ describe('Ten sam pacjent — ta sama liczba w podsumowaniu i w kafelku', () => 
     const we2 = wejscia[1];
     expect(we2.currentHeight).toBe(129.5);
     expect(we2.measurements).toEqual(HISTORIA);
+  });
+});
+
+describe('Centyl HV-SDS do jedności', () => {
+  // Decyzja właściciela 2026-09-09: „21,7 centyl" to pozorna dokładność.
+  it('zaokrągla do jedności we wszystkich trzech prezentacjach', () => {
+    const { hvSdsPodsumowanie, patientHvCardHtml, hvSdsHtml } = karta();
+    // Dziewczynka 9,5 r.ż., 5,0 cm/rok, odstęp 12 mies. — centyl w środku skali.
+    const vel = { cmPerYear: 5, gapM: 12, wiekSrodekMies: 114, plec: 'F' };
+    const z = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 5, gapM: 12, currentAgeMonths: 120 });
+    const k = patientHvCardHtml(vel, { sex: 'F' });
+    const h = hvSdsHtml(vel, { sex: 'F' });
+    for (const t of [z, k, h]) {
+      expect(t, 'żadnego centyla z przecinkiem').not.toMatch(/\d+,\d+ (centyl|c\.)/);
+      expect(t).toMatch(/\b\d{1,2} (centyl|c\.)/);
+    }
+  });
+
+  it('skrajne wartości nie kłamią zerem ani setką', () => {
+    const { hvSdsPodsumowanie } = karta();
+    const nisko = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 1.5, gapM: 12, currentAgeMonths: 120 });
+    expect(nisko).toContain('(<1 centyl)');
+    const wysoko = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 12, gapM: 12, currentAgeMonths: 120 });
+    expect(wysoko).toContain('(>99 centyl)');
   });
 });
