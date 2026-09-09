@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '11';
+  var VERSION = '12';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -489,6 +489,9 @@
       if (v == null || !isFinite(v)) return null;
       var out = {
         cmPerYear: v, gapM: gapM, usedLastYear: usedLastYear,
+        // Srodek przedzialu, bo normy HV-SDS sa nim indeksowane (tak zbudowano oba zrodla LMS).
+        wiekSrodekMies: gapM != null ? target - gapM / 2 : null,
+        plec: sex,
         threshold: null, slow: false, alarm: false,
         severity: null, basis: null, normLabel: null, note: null,
         aboveNormAge: false
@@ -763,13 +766,105 @@
     return null;
   }
 
-  function velocityHtml(vel) {
+  var NAZWA_PODGRUPY = {
+    wczesniej: 'dzieci dojrzewające wcześniej',
+    przecietnie: 'dzieci dojrzewające przeciętnie',
+    pozniej: 'dzieci dojrzewające później'
+  };
+  var NAZWA_POLOZENIA = {
+    'ponizej-25c': 'poniżej 25. centyla',
+    '25-50c': 'między 25. a 50. centylem',
+    '50-75c': 'między 50. a 75. centylem',
+    'powyzej-75c': 'powyżej 75. centyla',
+    'ponizej-mediany': 'poniżej mediany',
+    'powyzej-mediany': 'powyżej mediany'
+  };
+
+  /* SDS tempa wzrastania — LICZBA OPISOWA, NIE ALARM (decyzja właściciela 2026-09-09).
+   *
+   * Werdykt tempa („poniżej normy dla wieku") pochodzi wyłącznie z velocityAssessment i ta
+   * funkcja go NIE dotyka: nie zmienia klasy, nie dokłada flagi, nie podnosi ani nie obniża
+   * poziomu alarmu. Powód jest z danych: w kohorcie DONALD HV-Z waha się u tego samego
+   * zdrowego dziecka średnio o 2,8 SD, a swoistość kryterium „< 25. centyla przez rok" to
+   * 10,4% u dziewcząt (Duran i wsp. 2025, doi:10.1515/jpem-2025-0225).
+   *
+   * Podgrupa Kelly'ego dokładana jest tylko wtedy, gdy w rekordzie jest wiek startu
+   * pokwitania — bez niego liczyłaby na krzywej uśrednionej, czyli na tym samym, co DONALD.
+   */
+  function hvSdsHtml(vel, model) {
+    var H = w.VildaHeightVelocity;
+    if (!H || typeof H.oblicz !== 'function' || !vel || vel.wiekSrodekMies == null) return '';
+    var plec = vel.plec || (model ? model.sex : null);
+    if (!plec) return '';
+    var wiekLat = vel.wiekSrodekMies / 12;
+
+    var dane = null;
+    try {
+      var S = w.VildaPubertalStatus;
+      if (S && typeof S.dane === 'function') dane = S.dane({ plec: plec, wiekLat: wiekLat });
+    } catch (e) { dane = null; }
+
+    var we = {
+      sex: plec,
+      wiekLat: wiekLat,
+      cmPerYear: vel.cmPerYear,
+      oknoMies: vel.gapM,
+      zrodlo: 'DONALD',
+      wiekStartuPokwitaniaLat: dane ? dane.wiekStartuLat : null,
+      wiekMenarcheLat: dane ? dane.wiekMenarcheLat : null,
+      kowd: !!(dane && dane.kowd === 'tak')
+    };
+    var r;
+    try { r = H.oblicz(we); } catch (e2) { return ''; }
+    if (!r) return '';
+
+    var html = '';
+    if (r.sds == null) {
+      // Milczenie wyglądałoby jak norma, więc powód odmowy dostaje zdanie.
+      return '<p><span class="vta-lbl">SDS tempa:</span> <span class="vta-stable">'
+        + esc('nie policzono — ' + (r.opisPowodu || 'brak danych')) + '</span></p>';
+    }
+    html += '<p><span class="vta-lbl">SDS tempa:</span> ' + esc(fmtS(r.sds))
+      + esc(' (' + fmt(r.centyl, 1) + ' centyl; mediana ' + fmt(r.mediana, 2) + ' cm/rok)')
+      + ' — <span class="vta-stable">' + esc(r.zrodlo.etykieta + ', populacja ' + r.zrodlo.populacja)
+      + '</span></p>';
+
+    // Podgrupa wg czasu pokwitania — tylko przy znanym wieku startu.
+    if (we.wiekStartuPokwitaniaLat != null) {
+      var rk;
+      try { rk = H.oblicz(Object.assign({}, we, { zrodlo: 'KELLY', kowd: false })); } catch (e3) { rk = null; }
+      if (rk && rk.podgrupa && rk.sds != null) {
+        html += '<p><span class="vta-lbl">Wg czasu pokwitania:</span> ' + esc(fmtS(rk.sds))
+          + esc(' (Kelly, ' + NAZWA_PODGRUPY[rk.podgrupa] + ')') + '</p>';
+      } else if (rk && rk.start && rk.start.pozaKohorta) {
+        html += '<p><span class="vta-lbl">Wg czasu pokwitania:</span> <span class="vta-stable">'
+          + esc('podgrupy nie przypisano — ' + (rk.start.pozaKohorta === 'przedwczesne-pokwitanie'
+            ? 'pokwitanie przedwczesne' : 'pokwitanie opóźnione')
+            + ' leży poza kryteriami włączenia kohorty, na której zbudowano te normy')
+          + '</span></p>';
+      }
+    }
+
+    if (r.kowd) {
+      html += '<p><span class="vta-lbl">KOWD (deklaracja lekarza):</span> '
+        + esc('tempo ' + NAZWA_POLOZENIA[r.kowd.polozenie] + ' dzieci z rozpoznanym KOWD '
+          + '(mediana ' + fmt(r.kowd.mediana, 1) + ' cm/rok'
+          + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ')') + '</p>';
+    }
+
+    html += '<p class="vta-stable">' + esc('Pojedynczy SDS tempa nie jest kryterium '
+      + 'rozpoznania — u tego samego zdrowego dziecka waha się w obserwacji o ok. 2,8 SD. '
+      + 'Polskich norm tempa nie ma; populacja odniesienia jest nazwana wyżej.') + '</p>';
+    return html;
+  }
+
+  function velocityHtml(vel, model) {
     if (!vel) return '';
     var ctx = vel.gapM != null ? ' (ostatnich ' + Math.round(vel.gapM) + ' mies.)' : '';
     var txt = '<span class="vta-lbl">Tempo wzrastania:</span> ' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok' + esc(ctx);
     var a = velocityAssessment(vel);
     if (a) txt += ' — <span class="vta-' + a.cls + '">' + esc(a.text) + '</span>';
-    return '<p>' + txt + '</p>';
+    return '<p>' + txt + '</p>' + hvSdsHtml(vel, model);
   }
 
   function delayedPubertyHtml(model, cls) {
@@ -802,7 +897,7 @@
     var html = '<div class="adv-growth-result-block adv-growth-result-block--trajectory"><div class="vta">';
     html += '<p class="vta-title"><strong>Automatyczna analiza trajektorii (siatka centylowa)</strong></p>';
     model.metrics.forEach(function (m) { html += metricSummaryHtml(hideRedFlag ? withoutRedFlag(m) : m); });
-    html += velocityHtml(model.velocity);
+    html += velocityHtml(model.velocity, model);
     html += delayedPubertyHtml(model, 'vta-warn');
     html += segmentsTableHtml(model);
     html += '<p class="vta-note">Analiza przesiewowa: progi i słownik werdyktów identyczne z panelem porównania A→B na siatkach oraz alarmami karty; nie zastępuje oceny klinicznej.</p>';

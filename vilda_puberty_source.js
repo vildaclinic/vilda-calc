@@ -28,9 +28,13 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
-  var POLA = ['onsetAgeYears', 'menarcheAgeYears'];
+  var POLA = ['onsetAgeYears', 'menarcheAgeYears', 'cdgpDeclared'];
+
+  // Deklaracja KOWD jest odpowiedzia lekarza, nie wynikiem automatu — dopuszczalne sa
+  // wylacznie te dwie wartosci, brak odpowiedzi zostaje brakiem odpowiedzi.
+  var KOWD_DOPUSZCZALNE = { tak: 1, nie: 1 };
 
   function liczba(x) {
     if (typeof x === 'number') return isFinite(x) ? x : null;
@@ -54,17 +58,21 @@
     if (!puberty || typeof puberty !== 'object') return null;
     var start = liczba(puberty.onsetAgeYears);
     var menarche = liczba(puberty.menarcheAgeYears);
-    if (start == null && menarche == null) return null;
+    var kowd = typeof puberty.cdgpDeclared === 'string'
+      && Object.prototype.hasOwnProperty.call(KOWD_DOPUSZCZALNE, puberty.cdgpDeclared)
+      ? puberty.cdgpDeclared : '';
+    if (start == null && menarche == null && !kowd) return null;
     return {
       wiekStartuPokwitaniaLat: start,
       wiekMenarcheLat: menarche,
+      kowd: kowd,
       zKartyPacjenta: true
     };
   }
 
   function niesieDane(s) {
     return !!(s && typeof s === 'object'
-      && (s.wiekStartuPokwitaniaLat != null || s.wiekMenarcheLat != null));
+      && (s.wiekStartuPokwitaniaLat != null || s.wiekMenarcheLat != null || s.kowd));
   }
 
   // ── Pamięć sekcji ────────────────────────────────────────────────────────────
