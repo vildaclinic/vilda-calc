@@ -374,3 +374,72 @@ describe('Przeliczanie na żywo', () => {
       .toContain('"tannerStage"');
   });
 });
+
+describe('Zdanie podsumowania nie zależy od gotowości globalnej', () => {
+  const src = fs.readFileSync(path.join(korzen, 'vilda_trajectory_analysis.js'), 'utf8');
+
+  // Tuż po wczytaniu pacjenta `advancedGrowthData` bywa jeszcze niewypełniona. Zdanie ma
+  // wtedy powstać z pomiarów — tak samo, jak kafelek w Karcie pacjenta. Zachowanie mierzy
+  // e2e (potrzebuje pełnej maszynerii centylowej); tutaj pilnujemy, że droga istnieje
+  // i że karta podsumowania ma z czego ją zasilić.
+  it('silnik zdania ma drugą drogę: pomiary zamiast odstępu', () => {
+    const i = src.indexOf('function hvSdsPodsumowanie');
+    const j = src.indexOf('function patientHvCardHtml', i);
+    const cialo = src.slice(i, j);
+    expect(cialo).toContain('Array.isArray(i.measurements)');
+    expect(cialo, 'model tempa liczony tą samą funkcją co karta').toContain('analyze({');
+    expect(cialo, 'brak jednego i drugiego to nadal brak danych').toContain("return '';");
+  });
+
+  it('karta podsumowania czyta pomiary i wiek z formularza, nie tylko z globalnej', () => {
+    const sum = fs.readFileSync(path.join(korzen, 'vilda_summary_cards.js'), 'utf8');
+    expect(sum).toContain('#advMeasurements .measure-row');
+    expect(sum).toContain('function qWiekMies');
+    expect(sum, 'wiek z pól formularza, nie z globalnej funkcji').toContain('num("age")*12+num("ageMonths")');
+  });
+});
+
+describe('Kafelek Karty pacjenta nie rozpycha siatki', () => {
+  const auth = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
+
+  it('szczegóły idą do osobnego panelu POD siatką, nie do wnętrza kafelka', () => {
+    // Zgłoszenie właściciela: <details> w komórce siatki rozciągał ją w dół
+    // i ciągnął za sobą sąsiednie kafelki.
+    expect(auth).toContain('class:"vhv-panel"');
+    expect(auth).toContain('BhPanel&&Nt.appendChild(BhPanel)');
+    expect(auth, 'panel dołącza się obok panelu walidacji prognoz, a nie do siatki')
+      .toMatch(/BhPanel&&Nt\.appendChild\(BhPanel\),Ce&&Ce\.panel/);
+    expect(auth, 'żadnego <details> w komórce siatki').not.toContain('vilda-patient-stat-details');
+  });
+
+  it('kafelek ma tę samą klasę wyglądu co wzrost, masa i BMI', () => {
+    expect(auth).toContain('vilda-patient-stat vilda-patient-stat--ok vhv-tile');
+  });
+
+  it('kafelek jest dostępny z klawiatury', () => {
+    expect(auth).toContain('role:"button",tabindex:"0"');
+    expect(auth).toContain('Bh9.key==="Enter"||Bh9.key===" "');
+  });
+});
+
+describe('Czyszczenie formularza', () => {
+  const io = fs.readFileSync(path.join(korzen, 'vilda_data_import_export.js'), 'utf8');
+
+  it('„Wyczyść wszystkie pola” czyści też pola pokwitaniowe', () => {
+    // Bez tego wiek startu pokwitania poprzedniego pacjenta zostawał w formularzu
+    // i wchodził do rekordu następnego.
+    const i = io.indexOf('function kt(){[');
+    const lista = io.slice(i, i + 400);
+    for (const id of ['tannerStage', 'pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyCdgp']) {
+      expect(lista, id).toContain(`"${id}"`);
+    }
+  });
+
+  it('i zwija panel „Dane pokwitaniowe”', () => {
+    expect(io).toContain('vildaZwinDanePokwitaniowe');
+    const inline = fs.readFileSync(path.join(korzen, 'inline_index_02.js'), 'utf8');
+    expect(inline).toContain('window.vildaZwinDanePokwitaniowe');
+    expect(inline, 'zwinięcie kasuje też pamięć decyzji lekarza')
+      .toMatch(/vildaZwinDanePokwitaniowe = function \(\) \{\s*decyzjaUzytkownika = false;/);
+  });
+});
