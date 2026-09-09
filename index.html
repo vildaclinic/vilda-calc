@@ -528,6 +528,19 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <option value="4">Tanner IV — późne pokwitanie</option>
           <option value="5">Tanner V — dojrzałość pełna</option>
         </select></label>
+      <!-- Objętość jąder: stan na dziś obok stadium, zapisywana z pomiarem. Kontener zwija
+           się z panelem; wewnętrzną etykietę chowa dla dziewcząt ta sama funkcja, która
+           dotąd robiła to w karcie zaawansowanej (updateAdvancedGrowthSexSpecificFields). -->
+      <div id="testicularVolumeWrap" style="display:none;">
+        <label>Objętość jąder <span style="font-weight:400;opacity:0.65;">(chłopcy; stan na dziś — u chłopców 4 ml to początek pokwitania)</span>:
+          <select id="advTesticularVolume" onchange="debouncedUpdate()">
+            <option value="">Wybierz</option>
+            <option value="lt4">&lt;4 ml</option>
+            <option value="4to6">4–6 ml</option>
+            <option value="gt6">&gt;6 ml</option>
+            <option value="unknown">nie wiem</option>
+          </select></label>
+      </div>
       <div id="pubertyExtraWrap" style="display:none;">
         <label>Wiek startu pokwitania (lata) <span style="font-weight:400;opacity:0.65;">(u dziewcząt stadium B2, u chłopców objętość jąder 4 ml)</span>:
           <input type="number" id="pubertyOnsetAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
@@ -542,7 +555,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         <p id="pubertyCdgpNote" style="margin:0.15rem 0 0.4rem 0;font-size:0.85em;opacity:0.7;">To ocena lekarza, nie wynik automatu — aplikacja nie rozpoznaje KOWD samodzielnie. Odpowiedź „tak” dokłada porównanie tempa z kwartylami dzieci z rozpoznanym KOWD; niczego nie odejmuje.</p>
         <p id="pubertyConflicts" role="status" style="display:none;margin:0.15rem 0 0.4rem 0;font-size:0.85em;color:#b26a00;"></p>
       </div>
-      <script defer src="inline_index_02.js?v=6"></script>
+      <script defer src="inline_index_02.js?v=7"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
@@ -1458,14 +1471,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <input type="number" id="advMotherHeight" min="100" max="250"></label>
         <label>Wzrost Taty (cm):
           <input type="number" id="advFatherHeight" min="100" max="250"></label>
-        <label>Objętość jąder (dotyczy chłopców):
-          <select id="advTesticularVolume">
-            <option value="">Wybierz</option>
-            <option value="lt4">&lt;4 ml</option>
-            <option value="4to6">4–6 ml</option>
-            <option value="gt6">&gt;6 ml</option>
-            <option value="unknown">nie wiem</option>
-          </select></label>
+        <!-- Objętość jąder przeniesiona do panelu „Dane pokwitaniowe" formularza głównego
+             (decyzja właściciela 2026-09-09) — to stan na dziś, jak etap Tannera. Ocena KOWD
+             czyta ją nadal po id #advTesticularVolume. -->
         <label>Rodzinne opóźnienie dojrzewania:
           <select id="advFamilyDelayedPuberty">
             <option value="">Wybierz</option>

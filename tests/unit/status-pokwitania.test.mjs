@@ -125,3 +125,28 @@ describe('Sprzeczności między polami', () => {
     expect(l.every((x) => typeof x === 'string')).toBe(true);
   });
 });
+
+describe('Objętość jąder mieszka w panelu pokwitaniowym (GROWTH-PUB-TWO)', () => {
+  // Strażnik strukturalny: zachowanie mierzy e2e (panel-dojrzewania.spec.mjs); tutaj
+  // pilnujemy, że pole nie wróciło do karty zaawansowanej i że panel wie o jego istnieniu.
+  it('pole stoi w #testicularVolumeWrap między stadium a dalszymi polami, poza kartą zaawansowaną', () => {
+    const html = fs.readFileSync(path.join(korzen, 'index.html'), 'utf8');
+    const pole = html.indexOf('id="advTesticularVolume"');
+    const wrap = html.indexOf('id="testicularVolumeWrap"');
+    const stadium = html.indexOf('id="tannerStageWrap"');
+    const dalsze = html.indexOf('id="pubertyExtraWrap"');
+    const karta = html.indexOf('id="advancedGrowthForm"');
+    expect(html.split('id="advTesticularVolume"').length - 1, 'dokładnie jedno pole').toBe(1);
+    expect(wrap).toBeGreaterThan(stadium);
+    expect(pole).toBeGreaterThan(wrap);
+    expect(pole).toBeLessThan(dalsze);
+    expect(pole, 'przed kartą zaawansowaną, nie w niej').toBeLessThan(karta);
+  });
+
+  it('panel otwiera się sam, gdy rekord niesie objętość jąder', () => {
+    const inline = fs.readFileSync(path.join(korzen, 'inline_index_02.js'), 'utf8');
+    expect(inline).toMatch(/var POLA = \[[^\]]*'advTesticularVolume'[^\]]*\]/);
+    expect(inline).toContain("getElementById('testicularVolumeWrap')");
+    expect(inline).toMatch(/jadraWrap\.style\.display = otwarty \? '' : 'none'/);
+  });
+});
