@@ -30,7 +30,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   var POWOD = {
     BRAK_DANYCH: 'brak-danych',
@@ -127,17 +127,55 @@
     return lista;
   }
 
-  /* Podgrupa Kelly'ego z wieku startu pokwitania. Progi sa danymi zrodla, nie stalymi
-   * silnika. Zwraca null, gdy wieku startu nie znamy — wtedy uzywana jest tabela dla calej
-   * kohorty, a nie zgadywana podgrupa. */
-  function podgrupaZWieku(plec, wiekStartu) {
+  var POZA_KOHORTA = {
+    PRZEDWCZESNE: 'przedwczesne-pokwitanie',
+    OPOZNIONE: 'opoznione-pokwitanie'
+  };
+
+  /* Ocena wieku startu pokwitania wobec kohorty Kelly'ego. Zwraca podgrupe ALBO nazwany
+   * powod, dla ktorego podgrupy nie ma.
+   *
+   * DLACZEGO TO NIE JEST SAM PRZEDZIAL PROGOW: podgrupy „wczesniej" i „pozniej" to
+   * cwiartki ZDROWEJ kohorty, z ktorej kryteria wlaczenia wprost wykluczaly przedwczesne
+   * i opoznione pokwitanie. Dziewczynka, ktora zaczela dojrzewac w 8. r.z., nie jest
+   * „dzieckiem dojrzewajacym wczesniej" w rozumieniu tych tabel — ona lezy poza ich
+   * walidacja. Przypisanie jej podgrupy „wczesniej" byloby porownaniem z norma, ktorej
+   * autorzy dla takiego dziecka nie budowali, i tego modul nie robi.
+   */
+  function ocenStartPokwitania(plec, wiekStartu) {
     var k = daneKelly();
     var t = num(wiekStartu);
-    if (!k || t == null || !k.PROGI_PODGRUP[plec]) return null;
+    if (!k || t == null || !k.PROGI_PODGRUP[plec] || !k.ZAKRES_STARTU
+      || !k.ZAKRES_STARTU[plec]) return null;
+    var z = k.ZAKRES_STARTU[plec];
+    var wynik = {
+      wiekStartuLat: t,
+      zakresKohorty: { min: z.min, max: z.max },
+      podgrupa: null,
+      pozaKohorta: null,
+      uwaga: null
+    };
+    if (t < z.min || t > z.max) {
+      wynik.pozaKohorta = t < z.min ? POZA_KOHORTA.PRZEDWCZESNE : POZA_KOHORTA.OPOZNIONE;
+      wynik.uwaga = 'Wiek startu pokwitania (' + t + ' r.ż.) leży poza kryteriami włączenia '
+        + 'kohorty, na której zbudowano podgrupy (' + z.min + '–' + z.max + ' r.ż.). '
+        + 'Podgrupa nie jest przypisywana: „wcześniej" i „później" to ćwiartki zdrowej '
+        + 'populacji, a nie grupy z zaburzeniem dojrzewania.';
+      return wynik;
+    }
     var p = k.PROGI_PODGRUP[plec];
-    if (t < p.wczesniej) return 'wczesniej';
-    if (t > p.pozniej) return 'pozniej';
-    return 'przecietnie';
+    if (t < p.wczesniej) wynik.podgrupa = 'wczesniej';
+    else if (t > p.pozniej) wynik.podgrupa = 'pozniej';
+    else wynik.podgrupa = 'przecietnie';
+    return wynik;
+  }
+
+  /* Podgrupa Kelly'ego z wieku startu pokwitania. Progi sa danymi zrodla, nie stalymi
+   * silnika. Zwraca null, gdy wieku startu nie znamy albo gdy dziecko lezy poza kohorta —
+   * wtedy uzywana jest tabela dla calej kohorty, a nie zgadywana podgrupa. */
+  function podgrupaZWieku(plec, wiekStartu) {
+    var o = ocenStartPokwitania(plec, wiekStartu);
+    return o ? o.podgrupa : null;
   }
 
   // ── Galaz KOWD ───────────────────────────────────────────────────────────────
@@ -216,10 +254,12 @@
     if (wiek > meta.wiekMaxLat[plec]) return odmowa(POWOD.WIEK_POWYZEJ, meta);
 
     // Podgrupa wg czasu pokwitania — tylko gdy zrodlo ja ma i gdy sa dane pacjenta.
+    var start = ocenStartPokwitania(plec, i.wiekStartuPokwitaniaLat);
+    var menarche = num(i.wiekMenarcheLat);
     var podgrupa = null;
     var tab = pakiet.LMS[plec];
     if (meta.uwzglednaCzasPokwitania && pakiet.LMS_PODGRUPY) {
-      podgrupa = i.podgrupa || podgrupaZWieku(plec, i.wiekStartuPokwitaniaLat);
+      podgrupa = i.podgrupa || (start ? start.podgrupa : null);
       var tabP = podgrupa && pakiet.LMS_PODGRUPY[plec]
         ? pakiet.LMS_PODGRUPY[plec][podgrupa] : null;
       if (tabP && wiek >= tabP[0][0] && wiek <= tabP[tabP.length - 1][0]) tab = tabP;
@@ -240,6 +280,15 @@
       zastrzezenia.push('Tempo ujemne oznacza błąd pomiaru albo wpisu; wynik jest '
         + 'formalny, nie kliniczny.');
     }
+    if (start && start.uwaga) zastrzezenia.push(start.uwaga);
+    // Menarche NIE jest przeliczane na wiek startu pokwitania. Odstep miedzy telarche
+    // a pierwsza miesiaczka jest indywidualny, a podgrupy zbudowano na wieku startu —
+    // podstawienie jednego za drugie bylby to prog wymyslony przez aplikacje.
+    if (menarche != null && (!start || start.wiekStartuLat == null)) {
+      zastrzezenia.push('Znany jest wiek menarche, ale nie wiek startu pokwitania. '
+        + 'Menarche nie zastępuje go w wyborze podgrupy: odstęp między początkiem '
+        + 'dojrzewania a pierwszą miesiączką jest indywidualny.');
+    }
 
     return {
       version: VERSION,
@@ -252,6 +301,8 @@
       oknoMies: okno,
       cmPerYear: hv,
       podgrupa: podgrupa,
+      start: start,
+      wiekMenarcheLat: menarche,
       zrodlo: {
         id: meta.id, etykieta: meta.etykieta, populacja: meta.populacja,
         cytowanie: meta.cytowanie, pmid: meta.pmid, doi: meta.doi
@@ -273,6 +324,8 @@
     zLms: zLms,
     centylZ: centylZ,
     podgrupaZWieku: podgrupaZWieku,
+    ocenStartPokwitania: ocenStartPokwitania,
+    POZA_KOHORTA: POZA_KOHORTA,
     ocenKowd: ocenKowd,
     oblicz: oblicz
   };
