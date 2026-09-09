@@ -63,6 +63,23 @@
     M: { wczesniej: 10.2, pozniej: 11.8 }
   };
 
+  /* Zakres wieku startu pokwitania, dla ktorego te podgrupy w ogole zostaly zbudowane —
+   * czyli kryteria wlaczenia do BMDCS, cytowane z Metod pracy doslownie:
+   *
+   *   „Precocious puberty was defined as breast development beginning before age 8 years
+   *    for girls and testicular size >= 4 cc before age 9 years for boys. Delayed puberty
+   *    was defined as breast development beginning after 13 years for girls and testicular
+   *    size >= 4 cc occurring after age 14 years for boys."
+   *
+   * Dziecko poza tym przedzialem NIE nalezy do podgrupy „wczesniej" ani „pozniej": te
+   * podgrupy sa cwiartkami ZDROWEJ kohorty, a nie grupami z zaburzeniem dojrzewania.
+   * Przypisanie mu ktorejkolwiek z nich byloby porownaniem z norma, ktora go nie obejmuje.
+   */
+  var ZAKRES_STARTU = {
+    F: { min: 8, max: 13 },
+    M: { min: 9, max: 14 }
+  };
+
   // Cala kohorta, bez uwzglednienia czasu pokwitania (tabela 2a). [wiek, L, M, S]
   var LMS = {
     F: [
@@ -445,6 +462,7 @@
   w.VildaHvKellyData = {
     META: META,
     PROGI_PODGRUP: PROGI_PODGRUP,
+    ZAKRES_STARTU: ZAKRES_STARTU,
     LMS: LMS,
     LMS_PODGRUPY: LMS_PODGRUPY
   };
