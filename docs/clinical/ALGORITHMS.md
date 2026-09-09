@@ -484,6 +484,17 @@ Dwa zgłoszenia domknięte jedną zmianą: **pytanie o KOWD** (gałąź kwartylo
 - **Odmowa też ma kafelek** — z nazwanym powodem, nie pustką.
 - *Strażnicy:* `tests/unit/tempo-hv-sds-karta.test.mjs` (15 → 29) i nowy `tests/e2e/hv-sds-trzy-miejsca.spec.mjs` (6). Kluczowe są trzy: kafelek musi stać w `.vtap-cards` **obok Wzrost/Waga/BMI** (odczyt z żywego DOM, nie z funkcji), zdanie w podsumowaniu musi stać **zaraz pod** tempem, a Karta pacjenta musi prosić o wersję rozwijalną, podczas gdy karta zaawansowana dostaje zwięzłą. Do tego jednostkowy strażnik pomyłki z 1.0.870: `buildPatientHtml` **musi** wołać `patientHvCardHtml` przed zamknięciem `.vtap-cards`.
 
+### GROWTH-HV-UI4 — prezentacja HV-SDS: centyl do jedności, kafelek Statusu bez podpisu, siatki bez rozwijania (SW 1.0.875, 2026-09-09, decyzja właściciela)
+
+Trzy decyzje redakcyjne po teście na żywo; liczenie bez zmian.
+
+- **Centyl do jedności — wszędzie.** „21,7 centyl" to pozorna dokładność (SDS tempa u tego samego zdrowego dziecka waha się o ok. 2,8 SD). Nowy `fmtCentyl()` w `vilda_trajectory_analysis.js` obsługuje wszystkie trzy prezentacje (zdanie w podsumowaniu, kafelek, blok akapitowy) i treść kafelka Statusu. Skrajne wartości **nie zaokrąglają się do 0 ani 100**: poniżej 0,5 → „<1", od 99,5 → „>99" — zero i sto byłyby nieprawdą.
+- **Kafelek w zakładce „Status" Karty pacjenta bez podpisu źródła.** Zostaje: „SDS tempa / −0,8 / 21 centyl · mediana 6,66 cm/rok / kliknij, aby rozwinąć". Pełne cytowanie z PMID i populacją odniesienia jest w rozwinięciu (`szczegoly[0]` z `hvSdsKafelek()`), więc atrybucja nie ginie — przenosi się o jedno kliknięcie.
+- **Kafelek w zakładce „Siatki centylowe" nie jest klikalny ani rozwijalny.** To ta sama zwięzła wersja, co w karcie zaawansowanej: liczba, centyl, mediana, „wg Duran i wsp., J Pediatr Endocrinol Metab 2025". Szczegóły są w jednym miejscu — pod kafelkiem w „Statusie". Opcja `rozwijalny`/`hvRozwijalny` (GROWTH-HV-UI) i jej CSS (`<details class="vtap-hv">`) usunięte jako martwe; `renderPatientPanel()` nadal przyjmuje opcje wołającego, ale Karta pacjenta już o rozwijanie nie prosi.
+- Wersja modułu `vilda_trajectory_analysis.js` 16 → 17 (`?v=19`); `vilda_auth_ui.js` `?v=420`.
+
+- *Strażnicy:* `tests/unit/tempo-hv-sds-karta.test.mjs` (44 → 47): centyl bez przecinka w trzech prezentacjach, „<1"/„>99" na skrajach, brak `hvRozwijalny` i martwego CSS-u, kafelek Statusu bez `podpis`, a rozwinięcie z kompletem szczegółów. E2E `hv-sds-trzy-miejsca` (14): kafelek w „Siatkach" bez `<details>`, identyczny z kafelkiem karty zaawansowanej; kafelek Statusu bez „wg Duran" i bez centyla z przecinkiem, cytowanie z PMID w panelu.
+
 ### GROWTH-HV-UI3 — ten sam pacjent, dwie różne liczby SDS tempa (SW 1.0.874, 2026-09-09, zgłoszenie właściciela)
 
 **Objaw.** Ten sam pacjent, te same dane: Karta pacjenta (zakładka Status) „SDS tempa +2,2 · 98,6 centyl · mediana 5,66 cm/rok", a „Podsumowanie wyników" — wiersz pod tym samym tempem 7,5 cm/rok — „SDS tempa: −2,5 (0,6 centyl)". Odtworzone w harnessie co do mechanizmu (u mnie zamiast −2,5 wychodziło „nie policzono — odstęp poza zakresem", bo inny był odstęp między pomiarami historycznymi; liczba zależy od danych, błąd nie).
