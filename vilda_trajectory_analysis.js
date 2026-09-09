@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '10';
+  var VERSION = '11';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -504,9 +504,24 @@
     var v = out.cmPerYear, usedLastYear = out.usedLastYear;
     var thr = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(target) : null;
     if (thr) {
-      // <10 lat: dotychczasowe normy wg wieku metrykalnego (poziom alarmowy jak dotąd).
+      // <10 lat: normy wg wieku metrykalnego (poziom alarmowy jak dotąd). Do SW 1.0.866 kontekst
+      // nie był tu czytany W OGÓLE — dziecko po skoku pokwitaniowym dostawało za fizjologiczną
+      // decelerację alarm „poniżej normy ≥5 cm/rok", nawet z ręcznie wpisanym Tannerem V
+      // (GROWTH-VELO-TANNER-U10, zgłoszenie właściciela). Reguła dla Tannera IV–V nie jest nowa:
+      // obowiązuje powyżej 10 lat od 2026-08-08. Znosimy tylko granicę wieku, która ją odcinała.
+      var ts = ctx && ctx.tannerStage != null ? ctx.tannerStage : null;
+      if (ts === 4 || ts === 5) {
+        out.basis = 'tanner45';
+        out.note = 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V')
+          + ') — deceleracja fizjologiczna; norma tempa dla wieku ' + fmtAgeM(target)
+          + ' nie ma tu zastosowania';
+        return out;
+      }
+      // Tanner I–III potwierdza, że norma dla wieku obowiązuje. Próg ANI poziom alarmu nie
+      // zmieniają się: w trakcie skoku oczekiwanie jest WYŻSZE, nie niższe, więc łagodniejszy
+      // próg okołopokwitaniowy (PUB_VELO_MIN) świadomie tu nie wchodzi.
       out.threshold = thr;
-      out.basis = 'age';
+      out.basis = ts != null ? 'ageTanner' : 'age';
       out.normLabel = thr.label || null;
       out.slow = !!(usedLastYear && v < thr.threshold);
       out.severity = out.slow ? 'danger' : null;
