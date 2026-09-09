@@ -106,7 +106,7 @@
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=5',
     'vilda_persist_runtime.js?v=13',
-    'vilda_summary_cards.js?v=28',
+    'vilda_summary_cards.js?v=29',
     'vilda_diet_plan_ui.js?v=9',
     'vilda_bmi_journey.js?v=7',
     'vilda_estimated_intake_ui.js?v=1',
