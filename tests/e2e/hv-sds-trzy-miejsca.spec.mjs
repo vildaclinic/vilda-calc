@@ -320,3 +320,138 @@ test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
     expect(wysokosciPo, 'żaden kafelek nie zmienił wysokości').toEqual(wysokosciPrzed);
   });
 });
+
+test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
+  // Zgłoszenie właściciela (SW 1.0.874): Karta pacjenta „+2,2 · 98,6 centyl", a „Podsumowanie
+  // wyników" tego samego pacjenta „−2,5 (0,6 centyl)". Ujawnia się dopiero przy DWÓCH pomiarach
+  // historycznych: zdanie podsumowania liczyło wtedy tempo z samej historii, bez pomiaru
+  // dzisiejszego. Dlatego ten test ma dwa wiersze, a nie jeden jak pozostałe.
+  //
+  // Chłopiec 9 lat 8 mies., 129,5 cm; rok temu 122 cm (7,5 cm/rok); dwa lata temu 116 cm.
+  // Na CI pierwsza wersja tej funkcji wywracała się na ukrytych wierszach pomiarowych:
+  // pola wypełniane przez `fill` kolejkują opóźnione przeliczenia, a klik w przełącznik
+  // karty jest PRZEŁĄCZNIKIEM — trafiony w złym momencie zamyka kartę zamiast ją otworzyć.
+  // Dlatego: nazwisko i imię przez `fill` (bramka zapisu ich wymaga), reszta jak w
+  // policzPacjentke — wartości plus synchroniczne update(), odczekanie dwóch klatek,
+  // a po kliknięciu jawne sprawdzenie, że karta jest otwarta.
+  async function policzChlopca(page) {
+    await page.fill('#lastName', 'Probny');
+    await page.fill('#firstName', 'Jedrek');
+    await page.evaluate(() => {
+      const set = (id, v) => {
+        const e = document.getElementById(id);
+        e.value = v;
+        e.dispatchEvent(new Event('input', { bubbles: true }));
+        e.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      set('age', '9'); set('ageMonths', '8'); set('sex', 'M');
+      set('height', '129.5'); set('weight', '27.6');
+      if (typeof window.update === 'function') window.update();
+    });
+    await page.evaluate(() => new Promise((r) => { requestAnimationFrame(() => { requestAnimationFrame(r); }); }));
+    await page.waitForSelector(
+      '#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
+      { state: 'attached' },
+    );
+    await page.evaluate(() => {
+      const t = document.getElementById('toggleAdvancedGrowth');
+      const f = document.getElementById('advancedGrowthForm');
+      if (f && getComputedStyle(f).display !== 'none') return; // już otwarta — nie zamykaj
+      if (t) { t.disabled = false; t.click(); }
+    });
+    await expect(page.locator('#advancedGrowthForm'), 'karta zaawansowana się odsłoniła')
+      .toBeVisible();
+    await page.waitForSelector('#advMeasurements .measure-row');
+    await page.evaluate(() => { window.addAdvMeasurementRow(); });
+    await page.evaluate(() => {
+      const rows = document.querySelectorAll('#advMeasurements .measure-row');
+      const set = (w, sel, v) => {
+        const e = w.querySelector(sel);
+        if (e) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }
+      };
+      set(rows[0], '.adv-age-years', '7'); set(rows[0], '.adv-age-months', '8');
+      set(rows[0], '.adv-height', '116'); set(rows[0], '.adv-weight', '22');
+      set(rows[1], '.adv-age-years', '8'); set(rows[1], '.adv-age-months', '8');
+      set(rows[1], '.adv-height', '122'); set(rows[1], '.adv-weight', '25');
+      window.calculateGrowthAdvanced();
+    });
+    await page.waitForSelector('#advResults .vtap-hvc');
+  }
+
+  const zdanie = (page) => page.evaluate(() => String(window.generateMetabolicSummary() || '')
+    .split('\n').find((t) => /^SDS tempa/.test(t.trim())) || '');
+
+  test('przy dwóch pomiarach historycznych podsumowanie i kafelek karty mówią to samo', async ({ page }) => {
+    await otworz(page);
+    await policzChlopca(page);
+    await expect(page.locator('#advResults .vtap-hvc')).toContainText('+2,2');
+    const z = await zdanie(page);
+    expect(z, 'ta sama liczba co w kafelku').toContain('+2,2');
+    expect(z).toContain('98,6 centyl');
+    expect(z).not.toMatch(/nie policzono/);
+  });
+
+  test('po „Wczytaj tego pacjenta” i wpisaniu dzisiejszych danych zdanie zgadza się z kafelkiem Statusu', async ({ page }) => {
+    await otworz(page);
+    await policzChlopca(page);
+    await page.locator('#saveDataBtnSidebar').click();
+    await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
+    const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
+
+    // Karta zaawansowana zapamiętuje wynik; nowy formularz zaczyna od zera jak u lekarza.
+    await page.evaluate(() => window.clearAllData());
+    // Karta pacjenta otwierana tak, jak robi to powłoka: z uchwytem wczytującym rekord.
+    await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
+      if (rekord) window.applyLoadedData(rekord);
+    }, null), pid);
+    const kafelek = page.locator('.vhv-tile');
+    await expect(kafelek).toBeVisible();
+    await expect(kafelek).toContainText('+2,2');
+    await expect(kafelek).toContainText('98,6 centyl');
+
+    await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+    await page.waitForFunction(() => !document.querySelector('.vilda-auth-screen'));
+    // Wczytanie zostawia wiek, masę i wzrost puste — to dzisiejszy pomiar, lekarz wpisuje go sam.
+    await page.fill('#age', '9');
+    await page.fill('#ageMonths', '8');
+    await page.fill('#height', '129.5');
+    await page.fill('#weight', '27.6');
+    await page.waitForFunction(() => /SDS tempa/.test(String(window.generateMetabolicSummary() || '')));
+    const z = await zdanie(page);
+    expect(z, 'bez odświeżania strony i z tą samą liczbą co w Karcie pacjenta').toContain('+2,2');
+    expect(z).toContain('98,6 centyl');
+  });
+
+  // Druga ścieżka wskazana przez właściciela: po „Wczytaj tego pacjenta" wybiera
+  // „Odtwórz zapis" (modal „Co chcesz zrobić?" z custom-fixes.js), a nie „Nowy pomiar".
+  // Formularz wraca wtedy z rekordu w całości — z ostatnim pomiarem i kartą podsumowania —
+  // i zdanie o SDS tempa ma tam stać od razu, bez odświeżania strony, z tą samą liczbą
+  // co w Karcie pacjenta. Przed poprawką na tej ścieżce stało „nie policzono" albo liczba
+  // z niewłaściwej pary punktów, zależnie od odstępów w historii.
+  test('po „Wczytaj tego pacjenta” → „Odtwórz zapis” zdanie stoi od razu i zgadza się z kafelkiem', async ({ page }) => {
+    await otworz(page);
+    await policzChlopca(page);
+    await page.locator('#saveDataBtnSidebar').click();
+    await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
+    const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
+
+    await page.evaluate(() => window.clearAllData());
+    await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
+      if (rekord) window.applyLoadedData(rekord);
+    }, null), pid);
+    const kafelek = page.locator('.vhv-tile');
+    await expect(kafelek).toBeVisible();
+    await expect(kafelek).toContainText('+2,2');
+
+    await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+    await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
+    await page.locator('#vildaLcmRestore').click();
+    await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+    await expect(page.locator('#height'), 'odtworzenie przywraca ostatni pomiar').toHaveValue('129.5');
+    await page.waitForFunction(() => /SDS tempa/.test(String(window.generateMetabolicSummary() || '')));
+    const z = await zdanie(page);
+    expect(z, 'ta sama liczba co w Karcie pacjenta, bez F5').toContain('+2,2');
+    expect(z).toContain('98,6 centyl');
+    expect(z).not.toMatch(/nie policzono/);
+  });
+});

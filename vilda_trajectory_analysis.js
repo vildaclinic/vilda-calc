@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '15';
+  var VERSION = '16';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -848,32 +848,36 @@
     var i = we && typeof we === 'object' ? we : {};
     var teraz = num(i.currentAgeMonths);
     var gap = num(i.gapM);
+    var v = num(i.cmPerYear);
     var vel = null;
 
-    /* Dwie drogi do modelu tempa, bo karta podsumowania bywa skladana ZANIM kalkulator
-     * przeliczy karte zaawansowana: tuz po wczytaniu pacjenta `advancedGrowthData` niesie
-     * jeszcze wartosci z rekordu, w ktorych odstepu pomiarow moze nie byc. Wtedy liczymy
-     * model tempa z samych pomiarow — tak samo jak karta trajektorii. Dopiero brak jednego
-     * i drugiego jest brakiem danych. (Zgloszenie wlasciciela: zdanie pojawialo sie dopiero
-     * po odswiezeniu strony.) */
-    if (Array.isArray(i.measurements) && i.measurements.length && teraz != null) {
+    /* KOLEJNOSC MA ZNACZENIE (zgloszenie wlasciciela, SW 1.0.874): ten sam pacjent dostawal
+     * w Karcie pacjenta +2,2, a w podsumowaniu -2,5. Zdanie stoi wiersz pod „Aktualne tempo
+     * wzrastania: X cm/rok" — musi wiec liczyc SDS z TEGO SAMEGO X i tego samego odstepu.
+     * Dlatego pierwsza droga to tempo juz policzone przez aplikacje; pomiary sa droga
+     * zapasowa na chwile, gdy globalna nie niesie odstepu (rekordy sprzed jego zapisu). */
+    if (v != null && isFinite(v) && gap != null && teraz != null) {
+      vel = { cmPerYear: v, gapM: gap, wiekSrodekMies: teraz - gap / 2, plec: sexMK(i.sex) };
+    }
+
+    /* Droga zapasowa: model tempa z pomiarow, ta sama funkcja co karta. Wymaga DZISIEJSZEGO
+     * wzrostu — `measurements` karty zaawansowanej to wylacznie pomiary historyczne, a bez
+     * currentHeight analyze() wzialoby ostatni z nich za pomiar dzisiejszy i policzylo tempo
+     * z niewlasciwej pary punktow. To byla przyczyna rozjazdu. Bez dzisiejszego wzrostu
+     * uczciwiej milczec, niz podac liczbe z cudzego przedzialu. */
+    if (!vel && Array.isArray(i.measurements) && i.measurements.length && teraz != null
+      && num(i.currentHeight) != null) {
       var model = analyze({
         measurements: i.measurements,
         currentAgeMonths: teraz,
+        currentHeight: num(i.currentHeight),
+        currentWeight: num(i.currentWeight),
         sex: i.sex,
         source: i.source != null ? i.source : null
       });
       if (model && model.velocity) vel = model.velocity;
     }
-    if (!vel) {
-      if (gap == null || teraz == null) return '';
-      vel = {
-        cmPerYear: num(i.cmPerYear),
-        gapM: gap,
-        wiekSrodekMies: teraz - gap / 2,
-        plec: sexMK(i.sex)
-      };
-    }
+    if (!vel) return '';
     var d = hvSdsDane(vel, null);
     if (!d) return '';
     if (d.r.sds == null) return 'SDS tempa: nie policzono — ' + (d.r.opisPowodu || 'brak danych');
