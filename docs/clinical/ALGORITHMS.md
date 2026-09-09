@@ -465,6 +465,25 @@ Dwa zgłoszenia domknięte jedną zmianą: **pytanie o KOWD** (gałąź kwartylo
 - *Strażnicy:* `tests/unit/status-pokwitania.test.mjs` (17 — granica świeżości ostra w obie strony, wszystkie sprzeczności plus kontrole negatywne, dowód że wejście pozostaje nietknięte), `tests/unit/tempo-hv-sds-karta.test.mjs` (15 — funkcje **wycięte z pliku produkcyjnego**, uruchomione na prawdziwym silniku i prawdziwych tablicach), rozszerzony `tests/unit/pokwitanie-rekord.test.mjs` (12 → 18) oraz `tests/e2e/panel-dojrzewania.spec.mjs` (10 — prawdziwy formularz: rozwinięcie panelu, sprzeczność na żywym DOM, zapis i powrót z rekordu, HV-SDS i gałąź KOWD w karcie). **Zmierzone czerwone** przeciwko kodowi sprzed poprawki: **17/17**, **15/15**, **5 z 18** i **10/10 e2e**. Przeciwko naiwnemu wariantowi z czterema typowymi błędami (HV-SDS przejmuje werdykt i koloruje kartę, menarche podstawiona za wiek startu, gałąź KOWD bez deklaracji lekarza, cisza zamiast nazwanego powodu odmowy) — **6 z 15**.
 - **Czego to nie zmienia:** progów oceny tempa w cm/rok, poziomów alarmowych, hierarchii okołopokwitaniowej ani kryteriów B.64. Ani jednej liczby klinicznej — zmienia się to, skąd biorą dane i co jeszcze karta o nich mówi.
 
+### GROWTH-HV-3 — HV-SDS w trzech miejscach karty (SW 1.0.871, 2026-09-09, miejsca wskazane przez właściciela)
+
+**Sprostowanie do GROWTH-PUB-ONE.** Blok HV-SDS wpięty w SW 1.0.870 trafił do `velocityHtml()`, czyli do `buildHtml()` — a aplikacja renderuje inną gałąź: `buildCardPanelHtml()` → `buildPatientHtml()` → `patientVelocityRowHtml()`. `buildHtml()` stoi w tym samym wyrażeniu warunkowym jako gałąź zapasowa, ale `buildCardPanelHtml` jest zawsze zdefiniowana, więc **nigdy się nie wykonuje**. Skutek: wynik nie pokazywał się nigdzie. Testy były zielone, bo wołały `buildHtml()` wprost — sprawdzały, że blok się poprawnie składa, a nie że aplikacja go pokazuje. Stąd nowy plik e2e patrzy wyłącznie na to, co realnie trafia na ekran.
+
+**Trzy miejsca, wskazane przez właściciela po obejrzeniu makiety:**
+
+| Gdzie | Postać | Funkcja |
+|---|---|---|
+| „Podsumowanie wyników" | jedno zdanie **zaraz pod** tempem wzrastania | `hvSdsPodsumowanie()` |
+| „Zaawansowane obliczenia wzrostowe" | kafelek **obok wzrostu, masy i BMI** (`.vtap-cards`) | `patientHvCardHtml()` |
+| Karta pacjenta, zakładka Status | ten sam kafelek, **rozwijalny** — komplet opisu pomiaru pod kliknięciem | `patientHvCardHtml({rozwijalny:true})` |
+
+- **Jedno liczenie, trzy prezentacje.** Wszystkie idą przez `hvSdsDane()`. Gdyby każda liczyła sama, po pierwszej zmianie źródła norm mówiłyby o pacjencie co innego — ta sama zasada, dla której `velocityAssessment` zostało w karcie wyeksportowane, zamiast skopiowane do opisu pacjenta (GROWTH-NARR).
+- **Karta „Podsumowanie wyników" składa wiersze przez `textContent`**, więc zdanie jest tekstem, nie HTML-em, i mieści się poniżej 140 znaków. Wchodzi jako kolejny element tablicy w `generateMetabolicSummary()`, **zaraz po** wierszu tempa — test pilnuje sąsiedztwa, nie samej obecności.
+- **Kafelek dołącza do istniejącego rzędu**, a nie tworzy własnego: klasa `.vtap-card` plus `.vtap-hvc` (akcent lewej krawędzi w kolorze aplikacji). Pasek kafelka jest **neutralny** (`cs`) — kafelek nie koloruje się werdyktem, bo HV-SDS nie jest werdyktem.
+- **Wersja rozwijalna** (`<details class="vtap-hv">`) niesie: podgrupę wg czasu pokwitania albo powód jej braku, gałąź KOWD, populację odniesienia z PMID, odstęp pomiarów, wiek środkowy przedziału i komplet zastrzeżeń silnika. Wersja zwięzła w karcie zaawansowanej pokazuje SDS, centyl, medianę i źródło — bez zastrzeżeń, żeby nie rozdymać rzędu kafelków.
+- **Odmowa też ma kafelek** — z nazwanym powodem, nie pustką.
+- *Strażnicy:* `tests/unit/tempo-hv-sds-karta.test.mjs` (15 → 29) i nowy `tests/e2e/hv-sds-trzy-miejsca.spec.mjs` (6). Kluczowe są trzy: kafelek musi stać w `.vtap-cards` **obok Wzrost/Waga/BMI** (odczyt z żywego DOM, nie z funkcji), zdanie w podsumowaniu musi stać **zaraz pod** tempem, a Karta pacjenta musi prosić o wersję rozwijalną, podczas gdy karta zaawansowana dostaje zwięzłą. Do tego jednostkowy strażnik pomyłki z 1.0.870: `buildPatientHtml` **musi** wołać `patientHvCardHtml` przed zamknięciem `.vtap-cards`.
+
 ### GROWTH-GH-B64 — próg odpowiedzi na leczenie hormonem wzrostu w monitorze terapii (SW 1.0.862, 2026-09-08, decyzja właściciela)
 
 Monitor terapii GH pokazywał tempo wzrastania w cm/rok **bez żadnego odniesienia** — kolumna „Tempo (cm/rok)" i „Śr. tempo" w tabeli segmentów, i nic poza tym. Załącznik **B.64** podaje jedną twardą liczbę, w kryteriach **wyłączenia** z programu: *„niezadowalający efekt leczenia definiowany jako przyrost wysokości ciała świadczeniobiorcy leczonego hormonem wzrostu **poniżej 2 cm/rok**"*. Nowy czytelny moduł `vilda_gh_response_b64.js` zestawia zmierzone tempo z tą liczbą i dokłada jedno zdanie pod tabelą metryk.

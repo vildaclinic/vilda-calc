@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '12';
+  var VERSION = '13';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -782,20 +782,25 @@
 
   /* SDS tempa wzrastania — LICZBA OPISOWA, NIE ALARM (decyzja właściciela 2026-09-09).
    *
-   * Werdykt tempa („poniżej normy dla wieku") pochodzi wyłącznie z velocityAssessment i ta
-   * funkcja go NIE dotyka: nie zmienia klasy, nie dokłada flagi, nie podnosi ani nie obniża
+   * Werdykt tempa („poniżej normy dla wieku") pochodzi wyłącznie z velocityAssessment i ten
+   * blok go NIE dotyka: nie zmienia klasy, nie dokłada flagi, nie podnosi ani nie obniża
    * poziomu alarmu. Powód jest z danych: w kohorcie DONALD HV-Z waha się u tego samego
    * zdrowego dziecka średnio o 2,8 SD, a swoistość kryterium „< 25. centyla przez rok" to
    * 10,4% u dziewcząt (Duran i wsp. 2025, doi:10.1515/jpem-2025-0225).
    *
-   * Podgrupa Kelly'ego dokładana jest tylko wtedy, gdy w rekordzie jest wiek startu
-   * pokwitania — bez niego liczyłaby na krzywej uśrednionej, czyli na tym samym, co DONALD.
+   * JEDNO LICZENIE, TRZY PREZENTACJE (miejsca wskazane przez właściciela 2026-09-09):
+   *   hvSdsPodsumowanie() — jedno zdanie w karcie „Podsumowanie wyników";
+   *   patientHvCardHtml() — kafelek obok wzrostu, masy i BMI w karcie zaawansowanej,
+   *                         a w Karcie pacjenta ten sam kafelek jako rozwijalny;
+   *   hvSdsHtml()         — pełny blok akapitowy (buildHtml).
+   * Gdyby każde z nich liczyło samo, po pierwszej zmianie źródła norm mówiłyby o pacjencie
+   * co innego — dlatego liczy wyłącznie hvSdsDane().
    */
-  function hvSdsHtml(vel, model) {
+  function hvSdsDane(vel, model) {
     var H = w.VildaHeightVelocity;
-    if (!H || typeof H.oblicz !== 'function' || !vel || vel.wiekSrodekMies == null) return '';
+    if (!H || typeof H.oblicz !== 'function' || !vel || vel.wiekSrodekMies == null) return null;
     var plec = vel.plec || (model ? model.sex : null);
-    if (!plec) return '';
+    if (!plec) return null;
     var wiekLat = vel.wiekSrodekMies / 12;
 
     var dane = null;
@@ -815,43 +820,128 @@
       kowd: !!(dane && dane.kowd === 'tak')
     };
     var r;
-    try { r = H.oblicz(we); } catch (e2) { return ''; }
-    if (!r) return '';
+    try { r = H.oblicz(we); } catch (e2) { return null; }
+    if (!r) return null;
 
-    var html = '';
+    // Podgrupa wg czasu pokwitania — tylko przy znanym wieku startu. Bez niego Kelly liczyłby
+    // na krzywej uśrednionej, czyli na tym samym, co DONALD.
+    var kelly = null;
+    if (we.wiekStartuPokwitaniaLat != null && r.sds != null) {
+      try { kelly = H.oblicz(Object.assign({}, we, { zrodlo: 'KELLY', kowd: false })); } catch (e3) { kelly = null; }
+    }
+    return { r: r, kelly: kelly, we: we };
+  }
+
+  function nazwaPozaKohorta(k) {
+    return k === 'przedwczesne-pokwitanie' ? 'pokwitanie przedwczesne' : 'pokwitanie opóźnione';
+  }
+
+  /* Jedno zdanie do karty „Podsumowanie wyników" — tekst, nie HTML, bo tamta karta składa
+   * wiersze przez textContent. Pusty ciąg znaczy „nie ma czego pokazać". */
+  function hvSdsPodsumowanie(we) {
+    var i = we && typeof we === 'object' ? we : {};
+    var gap = num(i.gapM);
+    var teraz = num(i.currentAgeMonths);
+    if (gap == null || teraz == null) return '';
+    var d = hvSdsDane({
+      cmPerYear: num(i.cmPerYear),
+      gapM: gap,
+      wiekSrodekMies: teraz - gap / 2,
+      plec: sexMK(i.sex)
+    }, null);
+    if (!d) return '';
+    if (d.r.sds == null) return 'SDS tempa: nie policzono — ' + (d.r.opisPowodu || 'brak danych');
+    var txt = 'SDS tempa: ' + fmtS(d.r.sds) + ' (' + fmt(d.r.centyl, 1) + ' centyl; '
+      + d.r.zrodlo.etykieta + ')';
+    if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
+      txt += '; wg czasu pokwitania ' + fmtS(d.kelly.sds) + ' (' + NAZWA_PODGRUPY[d.kelly.podgrupa] + ')';
+    }
+    if (d.r.kowd) {
+      txt += '; KOWD — tempo ' + NAZWA_POLOZENIA[d.r.kowd.polozenie] + ' dzieci z rozpoznanym KOWD';
+    }
+    return txt;
+  }
+
+  /* Kafelek obok wzrostu, masy i BMI. W Karcie pacjenta ten sam kafelek jest rozwijalny
+   * (opts.rozwijalny) — pod jednym kliknięciem mieści się komplet opisu pomiaru. */
+  function patientHvCardHtml(vel, model, opts) {
+    var d = hvSdsDane(vel, model);
+    if (!d) return '';
+    var o = opts || {};
+    var r = d.r;
+
     if (r.sds == null) {
-      // Milczenie wyglądałoby jak norma, więc powód odmowy dostaje zdanie.
+      var powodTxt = 'nie policzono — ' + (r.opisPowodu || 'brak danych');
+      return '<div class="vtap-card cs vtap-hvc"><div class="top"><span class="nm">SDS tempa</span></div>'
+        + '<div class="sub">' + esc(powodTxt) + '</div></div>';
+    }
+
+    var glowa = '<div class="top"><span class="nm">SDS tempa</span></div>'
+      + '<div class="big">' + esc(fmtS(r.sds))
+      + '<span class="d vt-s">' + esc(fmt(r.centyl, 1) + ' c.') + '</span></div>'
+      + '<div class="sub">' + esc('mediana ' + fmt(r.mediana, 2) + ' cm/rok · ' + r.zrodlo.etykieta) + '</div>';
+
+    var linie = [];
+    if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
+      linie.push('Wg czasu pokwitania: ' + fmtS(d.kelly.sds) + ' (Kelly, '
+        + NAZWA_PODGRUPY[d.kelly.podgrupa] + ')');
+    } else if (d.kelly && d.kelly.start && d.kelly.start.pozaKohorta) {
+      linie.push('Podgrupy nie przypisano — ' + nazwaPozaKohorta(d.kelly.start.pozaKohorta)
+        + ' leży poza kryteriami włączenia kohorty, na której zbudowano te normy.');
+    }
+    if (r.kowd) {
+      linie.push('KOWD (deklaracja lekarza): tempo ' + NAZWA_POLOZENIA[r.kowd.polozenie]
+        + ' dzieci z rozpoznanym KOWD (mediana ' + fmt(r.kowd.mediana, 1) + ' cm/rok'
+        + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ').');
+    }
+
+    if (!o.rozwijalny) {
+      var skrot = linie.length ? '<div class="vdt vt-s">' + esc(linie[0]) + '</div>' : '';
+      return '<div class="vtap-card cs vtap-hvc">' + glowa + skrot + '</div>';
+    }
+
+    // Wersja rozwijalna: komplet opisu pomiaru pod jednym kliknięciem.
+    var szczegoly = '';
+    linie.forEach(function (t) { szczegoly += '<p>' + esc(t) + '</p>'; });
+    szczegoly += '<p>' + esc('Populacja odniesienia: ' + r.zrodlo.populacja + ' (' + r.zrodlo.etykieta
+      + ', PMID ' + r.zrodlo.pmid + '). Odstęp pomiarów: ' + fmt(r.oknoMies, 0) + ' mies. '
+      + 'Wiek środkowy przedziału: ' + fmtAgeM(vel.wiekSrodekMies) + '.') + '</p>';
+    (r.zastrzezenia || []).forEach(function (z) { szczegoly += '<p>' + esc(z) + '</p>'; });
+
+    return '<div class="vtap-card cs vtap-hvc">'
+      + '<details class="vtap-hv"><summary>' + glowa + '<span class="vtap-hv-tg"></span></summary>'
+      + '<div class="vtap-hv-body">' + szczegoly + '</div></details></div>';
+  }
+
+  /* Pelny blok akapitowy — sciezka buildHtml. */
+  function hvSdsHtml(vel, model) {
+    var d = hvSdsDane(vel, model);
+    if (!d) return '';
+    var r = d.r;
+    if (r.sds == null) {
+      // Milczenie wygladaloby jak norma, wiec powod odmowy dostaje zdanie.
       return '<p><span class="vta-lbl">SDS tempa:</span> <span class="vta-stable">'
         + esc('nie policzono — ' + (r.opisPowodu || 'brak danych')) + '</span></p>';
     }
-    html += '<p><span class="vta-lbl">SDS tempa:</span> ' + esc(fmtS(r.sds))
+    var html = '<p><span class="vta-lbl">SDS tempa:</span> ' + esc(fmtS(r.sds))
       + esc(' (' + fmt(r.centyl, 1) + ' centyl; mediana ' + fmt(r.mediana, 2) + ' cm/rok)')
       + ' — <span class="vta-stable">' + esc(r.zrodlo.etykieta + ', populacja ' + r.zrodlo.populacja)
       + '</span></p>';
-
-    // Podgrupa wg czasu pokwitania — tylko przy znanym wieku startu.
-    if (we.wiekStartuPokwitaniaLat != null) {
-      var rk;
-      try { rk = H.oblicz(Object.assign({}, we, { zrodlo: 'KELLY', kowd: false })); } catch (e3) { rk = null; }
-      if (rk && rk.podgrupa && rk.sds != null) {
-        html += '<p><span class="vta-lbl">Wg czasu pokwitania:</span> ' + esc(fmtS(rk.sds))
-          + esc(' (Kelly, ' + NAZWA_PODGRUPY[rk.podgrupa] + ')') + '</p>';
-      } else if (rk && rk.start && rk.start.pozaKohorta) {
-        html += '<p><span class="vta-lbl">Wg czasu pokwitania:</span> <span class="vta-stable">'
-          + esc('podgrupy nie przypisano — ' + (rk.start.pozaKohorta === 'przedwczesne-pokwitanie'
-            ? 'pokwitanie przedwczesne' : 'pokwitanie opóźnione')
-            + ' leży poza kryteriami włączenia kohorty, na której zbudowano te normy')
-          + '</span></p>';
-      }
+    if (d.kelly && d.kelly.podgrupa && d.kelly.sds != null) {
+      html += '<p><span class="vta-lbl">Wg czasu pokwitania:</span> ' + esc(fmtS(d.kelly.sds))
+        + esc(' (Kelly, ' + NAZWA_PODGRUPY[d.kelly.podgrupa] + ')') + '</p>';
+    } else if (d.kelly && d.kelly.start && d.kelly.start.pozaKohorta) {
+      html += '<p><span class="vta-lbl">Wg czasu pokwitania:</span> <span class="vta-stable">'
+        + esc('podgrupy nie przypisano — ' + nazwaPozaKohorta(d.kelly.start.pozaKohorta)
+          + ' leży poza kryteriami włączenia kohorty, na której zbudowano te normy')
+        + '</span></p>';
     }
-
     if (r.kowd) {
       html += '<p><span class="vta-lbl">KOWD (deklaracja lekarza):</span> '
         + esc('tempo ' + NAZWA_POLOZENIA[r.kowd.polozenie] + ' dzieci z rozpoznanym KOWD '
           + '(mediana ' + fmt(r.kowd.mediana, 1) + ' cm/rok'
           + (r.kowd.n ? ', n = ' + r.kowd.n : '') + ')') + '</p>';
     }
-
     html += '<p class="vta-stable">' + esc('Pojedynczy SDS tempa nie jest kryterium '
       + 'rozpoznania — u tego samego zdrowego dziecka waha się w obserwacji o ok. 2,8 SD. '
       + 'Polskich norm tempa nie ma; populacja odniesienia jest nazwana wyżej.') + '</p>';
@@ -940,6 +1030,16 @@
     '.vtap .vtap-row{padding:9px 14px;border-top:1px solid #eef4f4}',
     '.vtap .vtap-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px 14px 4px}',
     '.vtap .vtap-card{border:1px solid #e3ecec;border-left:4px solid #b9c8ca;border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;min-width:0}',
+    '.vtap .vtap-hvc{border-left-color:#00838d}',
+    '.vtap .vtap-hv{margin:0}',
+    '.vtap .vtap-hv>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:3px;position:relative}',
+    '.vtap .vtap-hv>summary::-webkit-details-marker{display:none}',
+    '.vtap .vtap-hv .vtap-hv-tg{font-size:10.5px;font-weight:700;color:#00838d;letter-spacing:.02em}',
+    '.vtap .vtap-hv .vtap-hv-tg::after{content:\'zwiń szczegóły ▾\'}',
+    '.vtap .vtap-hv:not([open]) .vtap-hv-tg::after{content:\'rozwiń szczegóły ▸\'}',
+    '.vtap .vtap-hv-body{margin-top:6px;padding-top:6px;border-top:1px dashed #cfe0e1}',
+    '.vtap .vtap-hv-body p{margin:0 0 5px;font-size:11.5px;line-height:1.5;color:#4a6367}',
+    '.vtap .vtap-hv-body p:last-child{margin-bottom:0}',
     '.vtap .vtap-card.cw{border-left-color:#dcb27a}',
     '.vtap .vtap-card.cb{border-left-color:#d98a80}',
     '.vtap .vtap-card.cg{border-left-color:#8cc3ab}',
@@ -1138,6 +1238,9 @@
     });
     html += '<div class="vtap-cards">';
     model.metrics.forEach(function (m) { html += patientMetricCardHtml(m); });
+    // Kafelek SDS tempa stoi obok wzrostu, masy i BMI (miejsce wskazane przez właściciela
+    // 2026-09-09). W Karcie pacjenta jest rozwijalny — mieści komplet opisu pomiaru.
+    html += patientHvCardHtml(model.velocity, model, { rozwijalny: !!(opts && opts.hvRozwijalny) });
     html += '</div>';
     html += patientVelocityRowHtml(model.velocity);
     if (model.delayedPuberty) {
@@ -1237,6 +1340,7 @@
     buildCardAlertsHtml: buildCardAlertsHtml,
     analyzeAndRenderHtml: analyzeAndRenderHtml,
     buildPatientHtml: buildPatientHtml,
+    hvSdsPodsumowanie: hvSdsPodsumowanie,
     buildCardPanelHtml: buildCardPanelHtml,
     isPanelCollapsed: isPanelCollapsed,
     wirePanelToggle: wirePanelToggle,
