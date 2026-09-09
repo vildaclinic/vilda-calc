@@ -3,7 +3,7 @@ import { expect, test } from '../support/test-czas.mjs';
 // GROWTH-HV-3 — HV-SDS w trzech miejscach wskazanych przez właściciela (2026-09-09):
 //   1. karta „Podsumowanie wyników" — jedno zdanie pod tempem wzrastania;
 //   2. karta „Zaawansowane obliczenia wzrostowe" — kafelek obok wzrostu, masy i BMI;
-//   3. Karta pacjenta, zakładka Status — ten sam kafelek, rozwijalny.
+//   3. Karta pacjenta, zakładka Status — kafelek rozwijalny o komplet opisu pomiaru.
 //
 // Ten plik istnieje z powodu konkretnej pomyłki: w SW 1.0.870 blok HV-SDS trafił do
 // buildHtml(), czyli do gałęzi, której aplikacja nie renderuje. Testy jednostkowe były
@@ -144,10 +144,11 @@ test.describe('Karta „Podsumowanie wyników”', () => {
   });
 });
 
-test.describe('Karta pacjenta, zakładka Status', () => {
-  test('kafelek jest rozwijalny i niesie komplet opisu pomiaru', async ({ page }) => {
+test.describe('Karta pacjenta, zakładka „Siatki centylowe”', () => {
+  // Decyzja właściciela 2026-09-09: tu kafelek nie jest klikalny ani rozwijalny —
+  // szczegóły są pod kafelkiem w zakładce „Status".
+  test('kafelek jest zwięzły: liczba, centyl, mediana i źródło — bez rozwijania', async ({ page }) => {
     await otworz(page);
-    // Panel Karty pacjenta budowany jest tą samą funkcją, ale z prośbą o wersję rozwijalną.
     const html = await page.evaluate(() => {
       const model = window.VildaTrajectoryAnalysis.analyze({
         sex: 'K',
@@ -161,12 +162,14 @@ test.describe('Karta pacjenta, zakładka Status', () => {
       return window.VildaTrajectoryAnalysis.buildPatientHtml(model, { hvRozwijalny: true });
     });
     expect(html).toContain('vtap-hvc');
-    expect(html).toContain('<details class="vtap-hv"');
-    expect(html).toMatch(/Populacja odniesienia: niemiecka/);
-    expect(html).toMatch(/2,8 SD/);
+    expect(html, 'kafelek bez własnego rozwijania').not.toContain('<details class="vtap-hv"');
+    expect(html).not.toMatch(/rozwiń szczegóły/);
+    expect(html).not.toMatch(/Populacja odniesienia/);
+    expect(html).toMatch(/mediana \d+,\d\d cm\/rok/);
+    expect(html).toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
   });
 
-  test('Karta pacjenta prosi o wersję rozwijalną, karta zaawansowana o zwięzłą', async ({ page }) => {
+  test('Karta pacjenta i karta zaawansowana dostają ten sam zwięzły kafelek', async ({ page }) => {
     await otworz(page);
     const wynik = await page.evaluate(() => {
       const model = window.VildaTrajectoryAnalysis.analyze({
@@ -179,13 +182,13 @@ test.describe('Karta pacjenta, zakładka Status', () => {
         source: 'OLAF',
       });
       return {
-        pacjent: window.VildaTrajectoryAnalysis.buildPatientHtml(model, { hvRozwijalny: true }),
+        pacjent: window.VildaTrajectoryAnalysis.buildPatientHtml(model),
         karta: window.VildaTrajectoryAnalysis.buildCardPanelHtml(model),
       };
     });
-    expect(wynik.pacjent).toContain('<details class="vtap-hv"');
-    expect(wynik.karta, 'karta zaawansowana bez rozwijania').not.toContain('<details class="vtap-hv"');
-    expect(wynik.karta, 'ale kafelek jest w obu').toContain('vtap-hvc');
+    const kafelek = (h) => (h.match(/<div class="vtap-card cs vtap-hvc">.*?<\/div><\/div>/s) || [''])[0];
+    expect(kafelek(wynik.pacjent)).toContain('vtap-hvc');
+    expect(kafelek(wynik.pacjent), 'ten sam kafelek w obu miejscach').toBe(kafelek(wynik.karta));
   });
 });
 
@@ -285,7 +288,9 @@ test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
     const kafelek = page.locator('.vhv-tile');
     await expect(kafelek, 'kafelek jest WIDOCZNY, nie tylko obecny w DOM').toBeVisible();
     await expect(kafelek).toContainText('SDS tempa');
-    await expect(kafelek).toContainText('wg Duran i wsp., J Pediatr Endocrinol Metab 2025');
+    await expect(kafelek, 'podpis źródła nie stoi na kafelku (decyzja właściciela)')
+      .not.toContainText('wg Duran');
+    await expect(kafelek, 'centyl do jedności').not.toContainText(/\d,\d centyl/);
     await expect(kafelek, 'ta sama klasa wyglądu co wzrost, masa i BMI')
       .toHaveClass(/vilda-patient-stat--ok/);
 
@@ -307,6 +312,7 @@ test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
     await kafelek.click();
     const panel = page.locator('.vhv-panel');
     await expect(panel).toBeVisible();
+    await expect(panel, 'cytowanie z PMID jest w rozwinięciu').toContainText('Duran I');
     await expect(panel).toContainText('PMID 40557842');
     await expect(panel).toContainText('Odstęp pomiarów');
     await expect(panel).toContainText('2,8 SD');
@@ -322,7 +328,7 @@ test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
 });
 
 test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
-  // Zgłoszenie właściciela (SW 1.0.874): Karta pacjenta „+2,2 · 98,6 centyl", a „Podsumowanie
+  // Zgłoszenie właściciela (SW 1.0.874): Karta pacjenta „+2,2 · 98,6 centyl" (dziś: 99), a „Podsumowanie
   // wyników" tego samego pacjenta „−2,5 (0,6 centyl)". Ujawnia się dopiero przy DWÓCH pomiarach
   // historycznych: zdanie podsumowania liczyło wtedy tempo z samej historii, bez pomiaru
   // dzisiejszego. Dlatego ten test ma dwa wiersze, a nie jeden jak pozostałe.
@@ -387,7 +393,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     await expect(page.locator('#advResults .vtap-hvc')).toContainText('+2,2');
     const z = await zdanie(page);
     expect(z, 'ta sama liczba co w kafelku').toContain('+2,2');
-    expect(z).toContain('98,6 centyl');
+    expect(z).toContain('99 centyl');
     expect(z).not.toMatch(/nie policzono/);
   });
 
@@ -407,7 +413,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     const kafelek = page.locator('.vhv-tile');
     await expect(kafelek).toBeVisible();
     await expect(kafelek).toContainText('+2,2');
-    await expect(kafelek).toContainText('98,6 centyl');
+    await expect(kafelek).toContainText('99 centyl');
 
     await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
     await page.waitForFunction(() => !document.querySelector('.vilda-auth-screen'));
@@ -419,7 +425,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     await page.waitForFunction(() => /SDS tempa/.test(String(window.generateMetabolicSummary() || '')));
     const z = await zdanie(page);
     expect(z, 'bez odświeżania strony i z tą samą liczbą co w Karcie pacjenta').toContain('+2,2');
-    expect(z).toContain('98,6 centyl');
+    expect(z).toContain('99 centyl');
   });
 
   // Druga ścieżka wskazana przez właściciela: po „Wczytaj tego pacjenta" wybiera
@@ -451,7 +457,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     await page.waitForFunction(() => /SDS tempa/.test(String(window.generateMetabolicSummary() || '')));
     const z = await zdanie(page);
     expect(z, 'ta sama liczba co w Karcie pacjenta, bez F5').toContain('+2,2');
-    expect(z).toContain('98,6 centyl');
+    expect(z).toContain('99 centyl');
     expect(z).not.toMatch(/nie policzono/);
   });
 });
