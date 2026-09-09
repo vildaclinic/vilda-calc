@@ -12,11 +12,15 @@
   var decyzjaUzytkownika = false;
   var wrap = document.getElementById('tannerStageWrap');
   var extra = document.getElementById('pubertyExtraWrap');
+  // Objętość jąder mieszka w panelu od SW 1.0.876 (decyzja właściciela): stan na dziś,
+  // obok stadium. Kontener zwija się z panelem; etykietę dla dziewcząt chowa osobno
+  // updateAdvancedGrowthSexSpecificFields() (po id, jak dotąd w karcie zaawansowanej).
+  var jadraWrap = document.getElementById('testicularVolumeWrap');
   var select = document.getElementById('tannerStage');
   var btn = document.getElementById('tannerToggleBtn');
   if (!wrap || !select || !btn) return;
 
-  var POLA = ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyCdgp'];
+  var POLA = ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyCdgp', 'advTesticularVolume'];
 
   function pole(id) { return document.getElementById(id); }
 
@@ -68,10 +72,28 @@
     slot.style.display = '';
   }
 
+  // Objętość jąder dotyczy chłopców: u dziewczynki etykieta jest schowana i wyłączona —
+  // te same trzy operacje, które robi updateAdvancedGrowthSexSpecificFields() w app.js,
+  // żeby obie reguły mówiły to samo niezależnie od kolejności wywołań.
+  function pokazJadraWgPlci() {
+    if (!jadraWrap) return;
+    var etykieta = jadraWrap.querySelector('label');
+    var pole = document.getElementById('advTesticularVolume');
+    if (!etykieta || !pole) return;
+    var dziewczynka = String(plecFormularza() || '').trim().toUpperCase() === 'F';
+    etykieta.hidden = dziewczynka;
+    etykieta.style.display = dziewczynka ? 'none' : '';
+    if (dziewczynka) etykieta.setAttribute('aria-hidden', 'true');
+    else etykieta.removeAttribute('aria-hidden');
+    pole.disabled = dziewczynka;
+  }
+
   window.updateTannerVisibility = function () {
     if (!decyzjaUzytkownika && cokolwiekWpisane()) otwarty = true;
     wrap.style.display = otwarty ? '' : 'none';
     if (extra) extra.style.display = otwarty ? '' : 'none';
+    if (jadraWrap) jadraWrap.style.display = otwarty ? '' : 'none';
+    pokazJadraWgPlci();
     btn.style.display = '';
     btn.textContent = otwarty ? '− Dane pokwitaniowe' : '+ Dane pokwitaniowe';
     pokazSprzecznosci();
@@ -101,6 +123,10 @@
     if (e) e.addEventListener('change', pokazSprzecznosci);
   });
   select.addEventListener('change', pokazSprzecznosci);
+  (function () {
+    var plec = document.getElementById('sex');
+    if (plec) plec.addEventListener('change', function () { pokazJadraWgPlci(); pokazSprzecznosci(); });
+  }());
 
   window.updateTannerVisibility();
   window.addEventListener('load', function () {

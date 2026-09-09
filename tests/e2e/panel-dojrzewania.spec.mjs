@@ -235,3 +235,53 @@ test.describe('„Wyczyść wszystkie pola” zostawia formularz w stanie wyjśc
     expect(await page.evaluate(() => window.collectUserData().puberty)).toBeNull();
   });
 });
+
+test.describe('Objętość jąder mieszka w panelu, nie w karcie zaawansowanej', () => {
+  // GROWTH-PUB-TWO (decyzja właściciela): objętość jąder to „stan na dziś" jak etap
+  // Tannera, więc wpisuje się ją obok stadium — w panelu „Dane pokwitaniowe". Ocena KOWD
+  // czyta pole nadal po id, więc dostaje wartość jak dotąd, tylko z innego miejsca.
+  test('pole zwija się z panelem, a rozwinięte stoi obok stadium poza kartą zaawansowaną', async ({ page }) => {
+    await otworz(page);
+    await page.selectOption('#sex', 'M');
+    await expect(page.locator('#advTesticularVolume')).toBeHidden();
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
+    await expect(page.locator('#advTesticularVolume')).toBeVisible();
+
+    const polozenie = await page.evaluate(() => {
+      const pole = document.getElementById('advTesticularVolume');
+      const stadium = document.getElementById('tannerStageWrap');
+      const dalsze = document.getElementById('pubertyExtraWrap');
+      return {
+        wPanelu: Boolean(pole.closest('#testicularVolumeWrap')),
+        wKarcieZaawansowanej: Boolean(pole.closest('#advancedGrowthForm')),
+        poStadium: Boolean(stadium.compareDocumentPosition(pole) & Node.DOCUMENT_POSITION_FOLLOWING),
+        przedDalszymi: Boolean(dalsze.compareDocumentPosition(pole) & Node.DOCUMENT_POSITION_PRECEDING),
+      };
+    });
+    expect(polozenie).toEqual({
+      wPanelu: true, wKarcieZaawansowanej: false, poStadium: true, przedDalszymi: true,
+    });
+  });
+
+  test('u dziewczynki pole jest schowane tą samą regułą co dotąd', async ({ page }) => {
+    await otworz(page);
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
+    await page.selectOption('#sex', 'F');
+    await expect(page.locator('#advTesticularVolume')).toBeHidden();
+    await expect(page.locator('#tannerStage'), 'reszta panelu zostaje').toBeVisible();
+    await page.selectOption('#sex', 'M');
+    await expect(page.locator('#advTesticularVolume')).toBeVisible();
+  });
+
+  test('rekord z objętością jąder otwiera panel, a wartość nadal wchodzi do rekordu (KOWD)', async ({ page }) => {
+    await otworz(page);
+    await expect(page.locator('#advTesticularVolume')).toBeHidden();
+    await page.evaluate(() => window.applyLoadedData({
+      user: { age: 13, sex: 'M', height: 150, weight: 40 },
+      advanced: { testicularVolume: '4to6' },
+    }));
+    await expect(page.locator('#advTesticularVolume')).toBeVisible();
+    await expect(page.locator('#advTesticularVolume')).toHaveValue('4to6');
+    expect(await page.evaluate(() => window.collectUserData().advanced.testicularVolume)).toBe('4to6');
+  });
+});

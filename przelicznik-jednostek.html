@@ -390,6 +390,21 @@
       gap: 0.4rem 0.6rem;
       align-items: end;
     }
+    .lab-patient-override .lab-override-note {
+      grid-column: 1 / -1;
+      margin: 0.1rem 0 0.2rem;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: #7a4b00;
+      background: rgba(255, 170, 0, 0.10);
+      border: 1px solid rgba(255, 170, 0, 0.35);
+      border-radius: 0.4rem;
+    }
+    .lab-patient-override label.is-override select {
+      border-color: rgba(255, 170, 0, 0.7);
+      box-shadow: 0 0 0 2px rgba(255, 170, 0, 0.15);
+    }
     .lab-patient-override label {
       display: flex;
       flex-direction: column;
@@ -2423,7 +2438,7 @@
                     </label>
                     <label id="labOverrideTannerWrap" style="display:none;">Etap Tannera
                       <select id="labOverrideTanner">
-                        <option value="">(z danych)</option>
+                        <option value="" id="labOverrideTannerDefault">(z danych)</option>
                         <option value="1">Tanner I — przedpokwitaniowy</option>
                         <option value="2">Tanner II</option>
                         <option value="3">Tanner III</option>
@@ -2431,6 +2446,12 @@
                         <option value="5">Tanner V — dojrzałość pełna</option>
                       </select>
                     </label>
+                    <!-- Wybór stadium tutaj jest NADPISANIEM LOKALNYM: obowiązuje tylko w tym
+                         przeliczniku i nie zapisuje się u pacjenta. Miejscem wpisu stadium jest
+                         panel „Dane pokwitaniowe" formularza głównego (decyzja właściciela
+                         2026-09-09), a tu jest ono tylko czytane — dlatego opcja domyślna
+                         nazywa stadium z danych, a nadpisanie dostaje widoczną notę. -->
+                    <p id="labOverrideTannerNote" class="lab-override-note" role="status" style="display:none;"></p>
                     <button type="button" class="lab-override-reset" id="labOverrideReset">
                       Resetuj do danych pacjenta
                     </button>
@@ -2676,6 +2697,8 @@
     var overrideCycleEl = document.getElementById('labOverrideCycle');
     var overrideTannerWrapEl = document.getElementById('labOverrideTannerWrap');
     var overrideTannerEl = document.getElementById('labOverrideTanner');
+    var overrideTannerDefaultEl = document.getElementById('labOverrideTannerDefault');
+    var overrideTannerNoteEl = document.getElementById('labOverrideTannerNote');
     var overrideResetEl = document.getElementById('labOverrideReset');
     var clinicalHintEl  = document.getElementById('labClinicalHint');
     // Atrybuty pomiaru (cechy oznaczenia, nie pacjenta) — pora pobrania i test diagnostyczny.
@@ -3169,12 +3192,41 @@
       p._has_shared = !!(shared.sex || (typeof shared.age === 'number') || (typeof shared.tanner === 'number'));
       p._has_override = !!(localOverride.sex || localOverride.age != null ||
                            localOverride.tanner != null || localOverride.cycle_phase);
+      // Stadium z danych pacjenta i to, czy je tu nadpisano — dla opisu i noty.
+      p._shared_tanner = (typeof shared.tanner === 'number' && isFinite(shared.tanner)) ? shared.tanner : null;
+      p._tanner_overridden = (typeof localOverride.tanner === 'number' && isFinite(localOverride.tanner));
       return p;
     }
 
     /**
      * Opis tekstowy aktualnego kontekstu pacjenta dla nagłówka.
      */
+    var RZYMSKIE = ['I', 'II', 'III', 'IV', 'V'];
+
+    /* Opcja domyślna selektora Tannera nazywa stadium z danych pacjenta, a wybór
+     * innego dostaje notę: to nadpisanie lokalne, u pacjenta nic się nie zmienia. */
+    function renderTannerOverrideState(p) {
+      if (overrideTannerDefaultEl) {
+        overrideTannerDefaultEl.textContent = (typeof p._shared_tanner === 'number')
+          ? '(z danych: Tanner ' + RZYMSKIE[p._shared_tanner - 1] + ')'
+          : '(z danych: nieznany)';
+      }
+      if (overrideTannerWrapEl) overrideTannerWrapEl.classList.toggle('is-override', !!p._tanner_overridden);
+      if (overrideTannerNoteEl) {
+        if (p._tanner_overridden) {
+          overrideTannerNoteEl.textContent = 'Nadpisanie lokalne: Tanner ' + RZYMSKIE[p.tanner - 1]
+            + ' obowiązuje tylko w tym przeliczniku i nie zapisuje się u pacjenta'
+            + (typeof p._shared_tanner === 'number'
+              ? ' (u pacjenta pozostaje Tanner ' + RZYMSKIE[p._shared_tanner - 1] + ').'
+              : ' (u pacjenta stadium nie jest wpisane — wpisz je w panelu „Dane pokwitaniowe" formularza głównego).');
+          overrideTannerNoteEl.style.display = '';
+        } else {
+          overrideTannerNoteEl.textContent = '';
+          overrideTannerNoteEl.style.display = 'none';
+        }
+      }
+    }
+
     function describePatient(p) {
       if (!p || (!p.sex && p.age == null && p.tanner == null)) {
         return { text: 'Brak danych pacjenta — zakres ogólny dorosły', missing: true };
@@ -3187,14 +3239,19 @@
       }
       if (p.life_stage === 'pediatric') bits.push('wiek dziecięcy/młodzieńczy');
       if (typeof p.tanner === 'number') {
-        bits.push('Tanner ' + ['I','II','III','IV','V'][p.tanner - 1]);
+        var tannerTxt = 'Tanner ' + RZYMSKIE[p.tanner - 1];
+        if (p._tanner_overridden) {
+          tannerTxt += ' (nadpisanie lokalne' + (typeof p._shared_tanner === 'number'
+            ? '; u pacjenta: Tanner ' + RZYMSKIE[p._shared_tanner - 1] : '; u pacjenta: nieznany') + ')';
+        }
+        bits.push(tannerTxt);
       }
       if (p.cycle_phase) {
         var cyc = { follicular: 'faza folikularna', ovulation: 'pik owulacyjny',
                     luteal: 'faza lutealna', postmenopause: 'postmenopauza' };
         bits.push(cyc[p.cycle_phase] || p.cycle_phase);
       }
-      var suffix = p._has_override ? ' · override lokalny' : '';
+      var suffix = p._has_override ? ' · nadpisanie lokalne' : '';
       return { text: bits.join(' · ') + suffix, missing: false };
     }
 
@@ -3311,6 +3368,8 @@
       var tannerAware = !!(currentSubstance && TANNER_AWARE[currentSubstance.id]);
       var showTanner = tannerAware || (p && p.life_stage === 'pediatric');
       overrideTannerWrapEl.style.display = showTanner ? '' : 'none';
+      renderTannerOverrideState(p);
+      if (overrideTannerNoteEl && !showTanner) overrideTannerNoteEl.style.display = 'none';
       // Reset visible tylko gdy jest co resetować.
       overrideResetEl.style.display = p._has_override ? '' : 'none';
       // Hint kliniczny pod summary
