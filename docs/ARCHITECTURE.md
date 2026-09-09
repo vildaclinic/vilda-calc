@@ -130,6 +130,31 @@ CodeQL jest osobnym skanem bezpieczeństwa. Jego alert nie potwierdza podatnośc
 7. Zmiana PWA uwzględnia migrację istniejącego cache i scenariusz offline.
 8. Przed wdrożeniem publiczny artefakt musi przejść kontrolę kompletności „na czysto”, bez polegania na plikach pozostałych z poprzedniej wersji. Obecny proces nie potwierdza tego jeszcze automatycznie.
 
+## Kierunek: wielopopulacyjność (decyzja właściciela 2026-09-09)
+
+Aplikacja ma w przyszłości działać międzynarodowo. Docelowo użytkownik będzie mógł wybrać
+populację odniesienia (a być może i pochodzenie etniczne), więc **każdy zestaw norm musi być
+danymi, nie założeniem wbudowanym w silnik**.
+
+Reguła projektowa dla wszystkich nowych modułów referencyjnych:
+
+1. **Dane oddzielone od silnika.** Normy mieszkają w osobnym pliku danych (wzorzec, który
+   aplikacja już stosuje: `sga_intergrowth_data.js`, `sga_malewski_data.js`,
+   `bayley_pinneau_data.js`), a silnik jest bezpaństwowy i przyjmuje źródło jako argument.
+2. **Rejestr źródeł zamiast wartości domyślnej wbudowanej w kod.** Silnik wystawia listę
+   dostępnych źródeł z metadanymi: populacja, kraj, lata zbierania danych, zakres wieku,
+   dopuszczalny odstęp pomiarów, metoda (LMS / centyle / wzór), cytowanie z DOI.
+3. **Populacja odniesienia jest częścią wyniku, nie przypisem.** Każdy wynik niesie nazwę
+   źródła, żeby dało się je pokazać lekarzowi i zapisać w rekordzie — tak jak siatki
+   wzrostowe niosą już `source` (`PALCZEWSKA` / `OLAF` / `WHO`).
+4. **Brak polskich norm nie jest wymówką do milczenia, ale musi być nazwany.** Dla tempa
+   wzrastania polskich norm nie ma (sprawdzone: monografia Palczewskiej jest przekrojowa);
+   używamy najbliższej populacji i mówimy o tym wprost.
+
+Ta reguła obowiązuje wstecz przy każdej modyfikacji istniejących modułów referencyjnych i
+z góry przy każdym nowym. Wybór populacji w interfejsie jest osobnym, późniejszym etapem —
+architektura ma być na niego gotowa, zanim powstanie.
+
 ## Dług architektoniczny
 
 - proces źródło → artefakt publiczny nie jest jeszcze automatycznie odtwarzalny z tego repozytorium;
