@@ -36,6 +36,11 @@ async function otworz(page) {
 }
 
 // Dziewczynka 10 lat, 135 cm; rok wcześniej 128 cm → 7,0 cm/rok.
+//
+// Karta zaawansowana podpina uchwyt przycisku LENIWIE (xa() w vilda_advanced_growth.js)
+// i dopiero wtedy tworzy pierwszy wiersz pomiarowy. Klik przed podpięciem nie robi nic,
+// a wiersza jeszcze nie ma — na obciążonym runnerze to wywracało dwa z sześciu testów.
+// Dlatego czekamy na znacznik, który aplikacja sama stawia w DOM, zamiast na upływ czasu.
 async function policzPacjentke(page) {
   await page.evaluate(() => {
     document.getElementById('age').value = '10';
@@ -43,10 +48,20 @@ async function policzPacjentke(page) {
     document.getElementById('height').value = '135';
     document.getElementById('weight').value = '30';
     if (typeof window.update === 'function') window.update();
+  });
+  await page.waitForSelector(
+    '#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
+    { state: 'attached' },
+  );
+  // Przycisk bywa wyłączony bramką trybu — tu mierzymy zawartość karty, nie bramkę.
+  await page.evaluate(() => {
     const t = document.getElementById('toggleAdvancedGrowth');
     if (t) { t.disabled = false; t.click(); }
   });
+  await expect(page.locator('#advancedGrowthForm'), 'karta zaawansowana się odsłoniła')
+    .toBeVisible();
   await page.waitForSelector('#advMeasurements .measure-row');
+
   await page.evaluate(() => {
     const w = document.querySelector('#advMeasurements .measure-row');
     const set = (sel, v) => {
