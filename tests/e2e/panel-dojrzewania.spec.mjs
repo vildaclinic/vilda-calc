@@ -213,3 +213,25 @@ test.describe('HV-SDS w karcie wzrostowej', () => {
     expect(html).not.toContain('KOWD (deklaracja lekarza)');
   });
 });
+
+test.describe('„Wyczyść wszystkie pola” zostawia formularz w stanie wyjściowym', () => {
+  test('czyści pola pokwitaniowe i zwija panel', async ({ page }) => {
+    await otworz(page);
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
+    await page.locator('#tannerStage').selectOption('3');
+    await page.locator('#pubertyOnsetAge').fill('11');
+    await page.locator('#pubertyMenarcheAge').fill('12.5');
+    await page.locator('#pubertyCdgp').selectOption('tak');
+
+    await page.locator('#clearAllDataBtn').click();
+
+    // Bez czyszczenia tych pól wiek startu pokwitania poprzedniego pacjenta
+    // zostawał w formularzu i wchodził do rekordu następnego.
+    await expect(page.locator('#tannerStage')).toBeHidden();
+    await expect(page.getByRole('button', { name: '+ Dane pokwitaniowe' })).toBeVisible();
+    const wartosci = await page.evaluate(() => ['tannerStage', 'pubertyOnsetAge',
+      'pubertyMenarcheAge', 'pubertyCdgp'].map((id) => document.getElementById(id).value));
+    expect(wartosci).toEqual(['', '', '', '']);
+    expect(await page.evaluate(() => window.collectUserData().puberty)).toBeNull();
+  });
+});
