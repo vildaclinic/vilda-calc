@@ -50,6 +50,7 @@
     wiekMaxLat: { F: 17.5, M: 18.5 },
     n: { F: 775, M: 766 },
     pomiarow: { F: 2178, M: 2127 },
+    cytowanieKrotkie: 'Kelly i wsp., J Clin Endocrinol Metab 2014',
     cytowanie: 'Kelly A i wsp. Age-based reference ranges for annual height velocity '
       + 'in US children. J Clin Endocrinol Metab 2014;99(6):2104-12.',
     pmid: '24601728',

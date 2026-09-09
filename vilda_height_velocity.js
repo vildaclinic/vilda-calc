@@ -30,7 +30,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
 
   var POWOD = {
     BRAK_DANYCH: 'brak-danych',
@@ -202,7 +202,8 @@
           p25: p25, mediana: p50, p75: p75,
           polozenie: polozenie,
           tylkoMediana: p25 == null || p75 == null,
-          zrodlo: d.META.cytowanie, doi: d.META.doi,
+          zrodlo: d.META.cytowanie, zrodloKrotkie: d.META.cytowanieKrotkie || d.META.etykieta,
+          doi: d.META.doi,
           zastrzezenie: 'Kwartyle z małej próby klinicznej (n w tym przedziale wieku: '
             + r[2] + '), nie centyle referencyjne. SDS z tych danych policzyć się nie da.'
         };
@@ -305,6 +306,7 @@
       wiekMenarcheLat: menarche,
       zrodlo: {
         id: meta.id, etykieta: meta.etykieta, populacja: meta.populacja,
+        cytowanieKrotkie: meta.cytowanieKrotkie || meta.etykieta,
         cytowanie: meta.cytowanie, pmid: meta.pmid, doi: meta.doi
       },
       kowd: i.kowd === true ? ocenKowd(plec, wiek, hv) : null,

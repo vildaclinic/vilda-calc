@@ -53,7 +53,7 @@ async function otworzEdycje(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientEditScreen(id), patientId);
   await expect(page.getByRole('button', { name: 'Zapisz zmiany' })).toBeVisible();
   // Pełna nazwa dostępna, bo od SW 1.0.870 formularz główny ma własny przycisk
-  // „+ Pokaż dojrzewanie płciowe" — sama fraza pasowałaby do obu.
+  // „+ Dane pokwitaniowe" — sama fraza pasowałaby do obu.
   await page.getByRole('button', { name: 'Dojrzewanie płciowe opcjonalne · tempo wzrastania' })
     .click();
 }
