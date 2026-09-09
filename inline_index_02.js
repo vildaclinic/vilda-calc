@@ -77,6 +77,15 @@
     pokazSprzecznosci();
   };
 
+  /* Zwinięcie na żądanie — „Wyczyść wszystkie pola" ma zostawić formularz w stanie
+   * wyjściowym, a więc także z zamkniętym panelem. Kasujemy przy tym pamięć decyzji
+   * lekarza: po wyczyszczeniu nie ma czego pamiętać. */
+  window.vildaZwinDanePokwitaniowe = function () {
+    decyzjaUzytkownika = false;
+    otwarty = false;
+    window.updateTannerVisibility();
+  };
+
   btn.addEventListener('click', function () {
     decyzjaUzytkownika = true;
     otwarty = !otwarty;

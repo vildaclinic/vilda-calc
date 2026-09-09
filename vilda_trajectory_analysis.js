@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '14';
+  var VERSION = '15';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -846,15 +846,35 @@
    * wiersze przez textContent. Pusty ciąg znaczy „nie ma czego pokazać". */
   function hvSdsPodsumowanie(we) {
     var i = we && typeof we === 'object' ? we : {};
-    var gap = num(i.gapM);
     var teraz = num(i.currentAgeMonths);
-    if (gap == null || teraz == null) return '';
-    var d = hvSdsDane({
-      cmPerYear: num(i.cmPerYear),
-      gapM: gap,
-      wiekSrodekMies: teraz - gap / 2,
-      plec: sexMK(i.sex)
-    }, null);
+    var gap = num(i.gapM);
+    var vel = null;
+
+    /* Dwie drogi do modelu tempa, bo karta podsumowania bywa skladana ZANIM kalkulator
+     * przeliczy karte zaawansowana: tuz po wczytaniu pacjenta `advancedGrowthData` niesie
+     * jeszcze wartosci z rekordu, w ktorych odstepu pomiarow moze nie byc. Wtedy liczymy
+     * model tempa z samych pomiarow — tak samo jak karta trajektorii. Dopiero brak jednego
+     * i drugiego jest brakiem danych. (Zgloszenie wlasciciela: zdanie pojawialo sie dopiero
+     * po odswiezeniu strony.) */
+    if (Array.isArray(i.measurements) && i.measurements.length && teraz != null) {
+      var model = analyze({
+        measurements: i.measurements,
+        currentAgeMonths: teraz,
+        sex: i.sex,
+        source: i.source != null ? i.source : null
+      });
+      if (model && model.velocity) vel = model.velocity;
+    }
+    if (!vel) {
+      if (gap == null || teraz == null) return '';
+      vel = {
+        cmPerYear: num(i.cmPerYear),
+        gapM: gap,
+        wiekSrodekMies: teraz - gap / 2,
+        plec: sexMK(i.sex)
+      };
+    }
+    var d = hvSdsDane(vel, null);
     if (!d) return '';
     if (d.r.sds == null) return 'SDS tempa: nie policzono — ' + (d.r.opisPowodu || 'brak danych');
     var txt = 'SDS tempa: ' + fmtS(d.r.sds) + ' (' + fmt(d.r.centyl, 1) + ' centyl) — wg '

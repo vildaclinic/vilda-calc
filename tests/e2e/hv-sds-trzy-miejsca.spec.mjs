@@ -231,6 +231,31 @@ test.describe('Wynik przelicza się na żywo', () => {
   });
 });
 
+test.describe('Zdanie w podsumowaniu przeżywa niegotową globalną', () => {
+  // Zgłoszenie właściciela: po wczytaniu pacjenta zdanie o SDS tempa bywało nieobecne,
+  // a pojawiało się dopiero po odświeżeniu strony. Zdanie wisiało na `advancedGrowthData`,
+  // która tuż po wczytaniu bywa jeszcze niewypełniona.
+  test('brak wieku i pomiarów w globalnej nie kasuje zdania', async ({ page }) => {
+    await otworz(page);
+    await policzPacjentke(page);
+    const zdanie = () => page.evaluate(() => String(window.generateMetabolicSummary() || '')
+      .split('\n').find((t) => /^SDS tempa/.test(t.trim())) || '');
+    expect(await zdanie(), 'punkt wyjścia').toMatch(/centyl/);
+
+    // Stan, w jakim bywa karta tuż po wczytaniu pacjenta.
+    await page.evaluate(() => {
+      const C = window.advancedGrowthData || {};
+      window.advancedGrowthData = {
+        growthVelocity: C.growthVelocity,
+        growthVelocityUsedLastYear: true,
+        growthVelocityGapM: C.growthVelocityGapM,
+        sex: C.sex,
+      };
+    });
+    expect(await zdanie(), 'zdanie powstaje z pomiarów w formularzu').toMatch(/centyl/);
+  });
+});
+
 test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
   // Do SW 1.0.871 kafelek powstawał wyłącznie w panelu trajektorii, a ten mieszka
   // w INNEJ zakładce Karty pacjenta — więc w „Statusie" nie było go widać w ogóle.
@@ -257,10 +282,12 @@ test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
     });
     await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
 
-    const kafelek = page.locator('.vilda-patient-stat-details');
+    const kafelek = page.locator('.vhv-tile');
     await expect(kafelek, 'kafelek jest WIDOCZNY, nie tylko obecny w DOM').toBeVisible();
     await expect(kafelek).toContainText('SDS tempa');
     await expect(kafelek).toContainText('wg Duran i wsp., J Pediatr Endocrinol Metab 2025');
+    await expect(kafelek, 'ta sama klasa wyglądu co wzrost, masa i BMI')
+      .toHaveClass(/vilda-patient-stat--ok/);
 
     // Kafelek stoi w tej samej siatce co wzrost, masa i BMI.
     const etykiety = await page.evaluate(() => {
@@ -271,9 +298,25 @@ test.describe('Karta pacjenta — kafelek w zakładce Status', () => {
     });
     expect(etykiety).toEqual(expect.arrayContaining(['Wzrost', 'Waga', 'BMI', 'SDS tempa']));
 
-    await kafelek.locator('summary').click();
-    await expect(kafelek).toContainText('PMID 40557842');
-    await expect(kafelek).toContainText('Odstęp pomiarów');
-    await expect(kafelek).toContainText('2,8 SD');
+    // Szczegóły otwierają się w panelu POD siatką — kafelek nie może się rozciągać
+    // w dół ani ciągnąć za sobą sąsiadów (zgłoszenie właściciela).
+    const wysokosciPrzed = await page.evaluate(() => [...document.querySelectorAll(
+      '.vilda-patient-tab-content:not(.vilda-patient-tab-content--hidden) .vilda-patient-stat',
+    )].map((t) => Math.round(t.getBoundingClientRect().height)));
+
+    await kafelek.click();
+    const panel = page.locator('.vhv-panel');
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText('PMID 40557842');
+    await expect(panel).toContainText('Odstęp pomiarów');
+    await expect(panel).toContainText('2,8 SD');
+    expect(await page.evaluate(() => Boolean(
+      document.querySelector('.vhv-panel').closest('.vilda-patient-stats-grid'),
+    )), 'panel stoi poza siatką kafelków').toBe(false);
+
+    const wysokosciPo = await page.evaluate(() => [...document.querySelectorAll(
+      '.vilda-patient-tab-content:not(.vilda-patient-tab-content--hidden) .vilda-patient-stat',
+    )].map((t) => Math.round(t.getBoundingClientRect().height)));
+    expect(wysokosciPo, 'żaden kafelek nie zmienił wysokości').toEqual(wysokosciPrzed);
   });
 });
