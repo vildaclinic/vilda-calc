@@ -495,6 +495,43 @@ Domknięcie reguły z GROWTH-PUB-ONE („panel jest jedynym miejscem wpisu, resz
 
 - *Strażnicy:* `tests/e2e/panel-dojrzewania.spec.mjs` (13 → 16): pole zwija się z panelem i stoi po stadium a przed dalszymi polami, **poza** `#advancedGrowthForm`; u dziewczynki schowane, u chłopca widoczne; rekord z objętością otwiera panel, a `collectUserData().advanced.testicularVolume` nadal ją niesie. `tests/e2e/jednostki-tanner-nadpisanie.spec.mjs` (nowy, 4): opcja domyślna nazywa stadium z danych; nadpisanie ma notę, klasę i opis w nagłówku, a dane pacjenta zostają nietknięte; reset zdejmuje wszystko; brak stadium → nota odsyła do panelu. `tests/unit/status-pokwitania.test.mjs` (+2): strażnik strukturalny położenia pola w `index.html` i listy `POLA`. `kowd-dane-rekord` (e2e 4, unit 14) bez zmian — pilnuje, że KOWD nadal dostaje wartość.
 
+### GROWTH-HV-UI9 — okres w wierszu tempa: „ostatnich 1 lat" (SW 1.0.881, 2026-09-10, zgłoszenie właściciela)
+
+**Objaw.** „Tempo wzrastania: 6,1 cm/rok (obliczono jako średnią z **ostatnich 1 lat**)". To nie jest polszczyzna — a przy okazji zaokrąglenie gubiło informację: odstęp wynosił **16 miesięcy**.
+
+**Przyczyna.** `formatVelocityContext()` w `app.js` (jedna definicja, konsumowana przez `vilda_advanced_growth.js` i `growth-basic-module.js`):
+
+```js
+return n ? 'ostatni rok'
+  : a < 12 ? `ostatnich ${a} mies.`
+  : `ostatnich ${Math.round(a / 12)} lat`;
+```
+
+Trzy usterki naraz: (1) `Math.round(16/12)` = 1, więc liczebnik nie zgadzał się z rzeczownikiem („1 lat"); (2) zaokrąglenie do pełnych lat **kasowało resztę** — 16 i 12 miesięcy dawały ten sam napis; (3) gałąź `n` zwracała mianownik („ostatni rok"), a zdanie brzmi „obliczono jako średnią **z** …", czyli wymaga dopełniacza.
+
+**Naprawa.** Okres zawsze w dopełniaczu i bez zaokrąglania w dół:
+
+| odstęp | przed | po |
+|---|---|---|
+| 1 mies. | ostatnich 1 mies. | ostatniego miesiąca |
+| 11 mies. | ostatnich 11 mies. | ostatnich 11 miesięcy |
+| 16 mies. | **ostatnich 1 lat** | **ostatnich 16 miesięcy** |
+| 24 mies. | ostatnich 2 lat | ostatnich 2 lat |
+| 36 mies. | ostatnich 3 lat | ostatnich 3 lat |
+| 38 mies. | ostatnich 3 lat | ostatnich 3 lat i 2 miesięcy |
+| gałąź `usedLastYear` | ostatni rok | ostatniego roku |
+| brak odstępu | ostatnich NaN lat | *(pusto — bez nawiasu)* |
+
+Granica jednostek: **poniżej 24 miesięcy mówimy miesiącami**, wyżej latami i, gdy zostaje reszta, „X lat i Y miesięcy". Miesiące są naturalną jednostką odstępu między wizytami, a pełne lata czytają się lepiej dopiero powyżej dwóch.
+
+**Świadomie bez zmian:** druga gałąź wiersza („Aktualne tempo wzrastania (z ostatnich 11 mies.)") składa swój napis osobno i używa skrótu „mies.", który jest poprawny — nie ma tam czego odmieniać.
+
+**Znalezione przy okazji, poza zakresem tej poprawki.** Ta sama klasa błędu (liczebnik + „lat" bez odmiany) występuje jeszcze w: nagłówku „Wiek:" w PDF-ie „Raport BMI & Metabolizmu" (`app.js`), etykiecie wieku w Karcie pacjenta (`vilda_auth_ui.js`), „wiek ok. N lat" w opisie zapisu (`vilda_summary_cards.js`) i etykiecie wieku w `hypertension_therapy.js`. Moduły żywieniowe (`nutrition_norms.js`, `vilda_diet_plan_ui.js`) mają to już zrobione poprawnie. Zgłoszone właścicielowi jako osobna praca — przegląd językowy tych miejsc, każde z własnym przypadkiem gramatycznym i własnym strażnikiem.
+
+- Wersje: `app.js` `?v=193`/`?v=197` → `?v=198` (ujednolicone na wszystkich stronach); `SW_VERSION` 1.0.881.
+
+- *Strażnicy:* `tests/unit/tempo-odmiana-okresu.test.mjs` (nowy, 8) — funkcja wycięta z `app.js` i uruchomiona wprost: zgłoszony przypadek 16 miesięcy, miesiące do dwóch lat, liczba pojedyncza, pełne lata, lata z resztą, gałąź `usedLastYear`, brak odstępu, oraz przemiatanie 1–120 miesięcy z listą form zakazanych („1 lat", „ostatnich 1", „ostatni rok", `NaN`). `tests/e2e/hv-sds-trzy-miejsca.spec.mjs` (16, rozszerzony test odstępu 16 mies.) — zgłoszone zdanie w prawdziwym podsumowaniu. **Zmierzone czerwone** na kodzie sprzed poprawki: **7 z 8** jednostkowych (ósmy to kontrola pełnych lat, poprawna po obu stronach) i **1 z 1** e2e, z dosłownym „Tempo wzrastania: 6,1 cm/rok (obliczono jako średnią z ostatnich 1 lat)" w komunikacie błędu.
+
 ### GROWTH-HV-UI8 — SDS tempa wchodzi do opisu spod „Kopiuj opis pacjenta" (SW 1.0.880, 2026-09-10, zgłoszenie właściciela)
 
 **Objaw.** Karta pacjenta niosła kafelek „SDS tempa", „Podsumowanie wyników" niosło wiersz — a opis kopiowany przyciskiem „Kopiuj opis pacjenta" milczał o nim zupełnie.
