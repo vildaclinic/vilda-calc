@@ -143,6 +143,19 @@ test.describe('Punkty terapii GH wracają do historii po wczytaniu pacjenta', ()
     expect(hv, 'zdanie o SDS tempa jest, bez odświeżania strony').toBeTruthy();
     expect(hv).toContain('+2,5');
     expect(hv).not.toMatch(/nie policzono/);
+
+    // Zgłoszenie właściciela po pierwszej wersji poprawki: w formularzu głównym zostawał
+    // przycisk „Odtwórz zapisany stan", który po odtworzeniu nie ma już czego odtwarzać
+    // (klik powtarzał tę samą operację, więc na ekranie nic się nie zmieniało). Powodem był
+    // porządek wywołań: mostek punktów terapii startował PRZED tym, jak odtworzenie chowa
+    // ten przycisk, więc zapamiętywał go jako widoczny i po imporcie przywracał. Odczekanie
+    // jest tu celowe — import kończy się asynchronicznie i to właśnie jego koniec pokazywał
+    // przycisk z powrotem.
+    await page.waitForTimeout(1500);
+    await expect(
+      page.locator('#restoreStateBtn'),
+      'po odtworzeniu nie ma po co proponować odtworzenia jeszcze raz',
+    ).toBeHidden();
   });
 
   test('„Nowy pomiar”: punkt terapii zostaje w historii, nie trzeba rozwijać karty', async ({ page }) => {
