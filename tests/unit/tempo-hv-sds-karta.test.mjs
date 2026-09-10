@@ -541,3 +541,50 @@ describe('Centyl HV-SDS do jedności', () => {
     expect(wysoko).toContain('(>99 centyl)');
   });
 });
+
+describe('Zdanie stoi pod KAŻDYM wierszem tempa (GROWTH-HV-UI5)', () => {
+  // Zgłoszenie właściciela (SW 1.0.877): kafelek w Karcie pacjenta pokazywał „SDS tempa +0,5",
+  // a „Podsumowanie wyników" tego samego pacjenta milczało — i milczało też po odświeżeniu.
+  // Przyczyna: karta podsumowania ma DWIE gałęzie wiersza tempa, a HV-SDS był dopięty tylko
+  // do jednej. Rozstrzygający ślad ze zgłoszenia: wiersz brzmiał „Tempo wzrastania: 6,1 cm/rok
+  // (obliczono jako średnią z ostatnich 1 lat)", a nie „Aktualne tempo wzrastania (z ostatnich
+  // N mies.)". To druga gałąź, ta bez HV-SDS.
+  const sum = fs.readFileSync(path.join(korzen, 'vilda_summary_cards.js'), 'utf8');
+
+  it('obie gałęzie wiersza tempa wołają qHvSdsPush', () => {
+    const i = sum.indexOf('if(C.growthVelocity&&!isNaN(C.growthVelocity))');
+    const j = sum.indexOf('if(C.targetHeight', i);
+    expect(i, 'znaleziono blok tempa').toBeGreaterThan(-1);
+    const blok = sum.slice(i, j);
+    expect(blok.split('qHvSdsPush(e,C)').length - 1, 'jedno wywołanie na gałąź').toBe(2);
+    // Kontrola kierunkowa: gałąź „obliczono jako średnią" też je ma.
+    const k = blok.indexOf('Tempo wzrastania: ');
+    expect(blok.slice(k).indexOf('qHvSdsPush(e,C)'), 'wywołanie po wierszu drugiej gałęzi')
+      .toBeGreaterThan(-1);
+  });
+
+  it('okno normy tempa i okno HV-SDS to dwie różne reguły', () => {
+    // growthVelocityUsedLastYear pilnuje okna 9–15 mies. (norma tempa dla wieku).
+    // HV-SDS ma własne okno źródła — DONALD 6–18 mies. — i sam odmawia poza nim.
+    const donald = fs.readFileSync(path.join(korzen, 'hv_donald_data.js'), 'utf8');
+    expect(donald).toMatch(/oknoMiesMin:\s*6/);
+    expect(donald).toMatch(/oknoMiesMax:\s*18/);
+  });
+
+  it('odstęp 16 mies. (poza oknem normy, w oknie DONALD) daje liczbę, nie milczenie', () => {
+    // Odtworzony przypadek ze zgłoszenia: chłopiec, tempo 6,1 cm/rok, odstęp 16 mies.,
+    // wiek bieżący 11 lat 10 mies. → środek przedziału 11 lat 2 mies., mediana 5,46 cm/rok.
+    const { hvSdsPodsumowanie } = karta();
+    const z = hvSdsPodsumowanie({ sex: 'M', cmPerYear: 6.1, gapM: 16, currentAgeMonths: 142 });
+    expect(z).toContain('SDS tempa: +0,5');
+    expect(z).toContain('68 centyl');
+    expect(z).not.toMatch(/nie policzono/);
+  });
+
+  it('odstęp poza oknem DONALD mówi, dlaczego nie policzono — nie milczy', () => {
+    const { hvSdsPodsumowanie } = karta();
+    const z = hvSdsPodsumowanie({ sex: 'M', cmPerYear: 6.1, gapM: 24, currentAgeMonths: 142 });
+    expect(z).toMatch(/^SDS tempa: nie policzono/);
+    expect(z).toMatch(/Odstęp między pomiarami/);
+  });
+});
