@@ -495,6 +495,33 @@ Domknięcie reguły z GROWTH-PUB-ONE („panel jest jedynym miejscem wpisu, resz
 
 - *Strażnicy:* `tests/e2e/panel-dojrzewania.spec.mjs` (13 → 16): pole zwija się z panelem i stoi po stadium a przed dalszymi polami, **poza** `#advancedGrowthForm`; u dziewczynki schowane, u chłopca widoczne; rekord z objętością otwiera panel, a `collectUserData().advanced.testicularVolume` nadal ją niesie. `tests/e2e/jednostki-tanner-nadpisanie.spec.mjs` (nowy, 4): opcja domyślna nazywa stadium z danych; nadpisanie ma notę, klasę i opis w nagłówku, a dane pacjenta zostają nietknięte; reset zdejmuje wszystko; brak stadium → nota odsyła do panelu. `tests/unit/status-pokwitania.test.mjs` (+2): strażnik strukturalny położenia pola w `index.html` i listy `POLA`. `kowd-dane-rekord` (e2e 4, unit 14) bez zmian — pilnuje, że KOWD nadal dostaje wartość.
 
+### GROWTH-HV-UI8 — SDS tempa wchodzi do opisu spod „Kopiuj opis pacjenta" (SW 1.0.880, 2026-09-10, zgłoszenie właściciela)
+
+**Objaw.** Karta pacjenta niosła kafelek „SDS tempa", „Podsumowanie wyników" niosło wiersz — a opis kopiowany przyciskiem „Kopiuj opis pacjenta" milczał o nim zupełnie.
+
+**Zmierzone przed poprawką** (sonda na żywej stronie, dziewczynka 14 lat, 148,5 cm, punkt odniesienia 11 mies. wstecz):
+
+| miejsce | treść |
+|---|---|
+| kafelek karty | SDS TEMPA +2,5 · 99 c. |
+| „Podsumowanie wyników" | SDS tempa: +2,5 (99 centyl) — wg Duran i wsp. |
+| **opis pacjenta** | **brak zdania**; zamiast tego „Tempo wzrastania … wynosi 9,4 cm/rok — poza oknem automatycznej oceny normy tempa" |
+
+To drugie było gorsze niż samo milczenie. „Poza oknem automatycznej oceny normy tempa" mówi o progach `getVelocityThreshold`, które **kończą się na 10. roku życia**. Normy HV-SDS sięgają dalej i dla tej pacjentki dawały wynik. Opis szedł więc do dokumentacji ze zdaniem, że tempa nie oceniono, choć aplikacja je oceniła.
+
+**Naprawa — podział pracy jak przy `velocityAssessment`.** Karta oddaje **liczby i podpis źródła**, opis składa z nich zdanie własnym głosem. Dzięki temu nie powstaje ani druga kopia wzoru, ani drugie cytowanie.
+
+- `vilda_trajectory_analysis.js`: nowa, wyeksportowana `hvSdsDlaOpisu(vel, model)` — `{sds, centyl, centylTekst, medianaCmRok, zrodlo, kelly, kowd}` albo **`null`**. Liczy przez to samo `hvSdsDane()`, co kafelek i zdanie podsumowania.
+- `vilda_patient_narrative.js`: nowe zdanie `tempo-sds`, tuż po zdaniu `tempo`: „SDS tempa wzrastania dla wieku i płci wynosi −1,8 (4 centyl) — wg Duran i wsp., J Pediatr Endocrinol Metab 2025." Podgrupa wg czasu pokwitania i gałąź KOWD dopisują się jak w zdaniu podsumowania.
+
+**Gdy SDS się nie liczy, opisu nie ma — i to jest decyzja, nie przeoczenie** (decyzja właściciela). „Nie policzono — odstęp między pomiarami leży poza zakresem…" zostaje w karcie i w kafelku, gdzie milczenie wyglądałoby jak brak odchylenia (GROWTH-HV-UI5). Opis pacjenta to notatka do dokumentacji: metodologiczny powód odmowy nic tam nie wnosi, a zdanie o samym tempie i tak nazywa przypadek spoza okna oceny. Dlatego `hvSdsDlaOpisu` zwraca `null`, a nie tekst powodu.
+
+- Wersje: `vilda_trajectory_analysis.js` 17 → 18 (`?v=20`), `vilda_patient_narrative.js` 4 → 5 (`?v=7`); `SW_VERSION` 1.0.880.
+
+- *Strażnicy:* `tests/unit/tempo-hv-sds-karta.test.mjs` (51 → 55) — kontrakt `hvSdsDlaOpisu`: liczby i podpis źródła bez HTML-u, ta sama liczba co w zdaniu podsumowania, `null` przy każdym powodzie odmowy, KOWD jako dana. `tests/unit/pacjent-opis-silnik.test.mjs` (40 → 44) — brzmienie zdania co do znaku, jego pozycja zaraz po zdaniu o tempie, obecność w kopiowanym akapicie oraz dwie kontrole negatywne (brak SDS → cisza bez „nie policzono"; brak tablic norm → brak zdania). `tests/e2e/opis-pacjenta-sds-tempa.spec.mjs` (nowy, 2) — to samo na żywej stronie, przez `VildaPatientNarrativeUI.describeCurrent()`.
+
+  **Zmierzone czerwone** na kodzie sprzed poprawki: **6 z 8** jednostkowych i **1 z 2** e2e. Uczciwie: dwie jednostkowe kontrole negatywne i drugi test e2e są zielone po obu stronach — pilnują reguły „bez «nie policzono» w opisie", której naiwna implementacja (przepięcie `hvSdsPodsumowanie` wprost) by złamała, ale sam brak zdania spełniają też trywialnie. Przy okazji uodporniony wycinek źródła w harnessie karty: brak funkcji ma wywracać cztery testy jej kontraktu, a nie cały plik.
+
 ### GROWTH-HV-UI7 — po „Odtwórz zapis" zostawał przycisk „Odtwórz zapisany stan" (SW 1.0.879, 2026-09-10, zgłoszenie właściciela)
 
 **Objaw.** Po „Wczytaj tego pacjenta" → „Odtwórz zapis" dane wracały poprawnie, ale w formularzu głównym — pod „Wyczyść wszystkie pola" — stał przycisk „Odtwórz zapisany stan". Klik nic nie zmieniał: powtarzał tę samą operację na tych samych danych.

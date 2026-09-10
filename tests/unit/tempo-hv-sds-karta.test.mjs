@@ -40,7 +40,7 @@ function karta(dodatkoweOkno) {
   const fmtAgeM = (mo) => `${Math.floor(mo / 12)} lat ${Math.round(mo % 12)} mies.`;
   return new Function(
     'w', 'esc', 'fmt', 'fmtS', 'velocityAssessment', 'num', 'sexMK', 'fmtAgeM',
-    `${src.slice(start, end)}\nreturn { hvSdsHtml, velocityHtml, patientHvCardHtml, hvSdsPodsumowanie };`,
+    `${src.slice(start, end)}\nreturn { hvSdsHtml, velocityHtml, patientHvCardHtml, hvSdsPodsumowanie, hvSdsDlaOpisu: typeof hvSdsDlaOpisu === 'function' ? hvSdsDlaOpisu : null };`,
   )(okno, esc, fmt, fmtS, velocityAssessment, num, sexMK, fmtAgeM);
 }
 
@@ -221,6 +221,52 @@ describe('Zdanie do karty „Podsumowanie wyników”', () => {
     const z = hvSdsPodsumowanie({ sex: 'M', cmPerYear: 4.2, gapM: 12, currentAgeMonths: 168 });
     expect(z).toContain('KOWD');
     expect(z).toContain('poniżej 25. centyla');
+  });
+});
+
+describe('Liczby dla opisu pacjenta (hvSdsDlaOpisu)', () => {
+  // Opis spod „Kopiuj opis pacjenta" ma mówić o tej samej liczbie co kafelek i podsumowanie,
+  // ale własnymi słowami — dlatego karta oddaje WIELKOŚCI i podpis źródła, a nie gotowe zdanie.
+
+  it('oddaje liczby i podpis źródła, bez składania zdania', () => {
+    const { hvSdsDlaOpisu } = karta();
+    const d = hvSdsDlaOpisu(VEL, MODEL);
+    expect(d).toBeTruthy();
+    expect(d.sds).toBeCloseTo(-2.4, 1);
+    expect(d.centylTekst).toBe('1');
+    expect(d.zrodlo).toMatch(/Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
+    expect(typeof d.medianaCmRok).toBe('number');
+    // Podpis źródła jest atrybucją, nie ozdobnikiem — bez niego opis cytowałby liczbę znikąd.
+    expect(JSON.stringify(d)).not.toMatch(/[<>]/);
+  });
+
+  it('ta sama liczba, co w zdaniu podsumowania — jedno liczenie, dwie prezentacje', () => {
+    const { hvSdsDlaOpisu, hvSdsPodsumowanie } = karta();
+    const d = hvSdsDlaOpisu(VEL, MODEL);
+    const z = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 3, gapM: 12, currentAgeMonths: 120 });
+    expect(z).toContain('−2,4');
+    expect(Math.round(d.sds * 10) / 10).toBe(-2.4);
+    expect(z).toContain(`${d.centylTekst} centyl`);
+  });
+
+  it('gdy SDS nie powstał, oddaje null — powód odmowy zostaje w karcie', () => {
+    const { hvSdsDlaOpisu, hvSdsHtml } = karta();
+    // Ten sam pacjent, odstęp poza oknem norm: karta mówi dlaczego, opis milczy.
+    expect(hvSdsHtml({ ...VEL, gapM: 3 }, MODEL)).toContain('nie policzono');
+    expect(hvSdsDlaOpisu({ ...VEL, gapM: 3 }, MODEL)).toBeNull();
+    expect(hvSdsDlaOpisu({ ...VEL, wiekSrodekMies: 18 }, MODEL)).toBeNull();
+    expect(hvSdsDlaOpisu({ ...VEL, wiekSrodekMies: null }, MODEL)).toBeNull();
+    expect(hvSdsDlaOpisu(null, MODEL)).toBeNull();
+  });
+
+  it('podgrupa wg czasu pokwitania i KOWD wchodzą jako dane, nie jako tekst zdania', () => {
+    const { hvSdsDlaOpisu } = karta({
+      VildaPubertalStatus: { dane: () => ({ wiekStartuLat: null, wiekMenarcheLat: null, kowd: 'tak' }) },
+    });
+    const d = hvSdsDlaOpisu({ cmPerYear: 4.2, gapM: 12, wiekSrodekMies: 162, plec: 'M' }, { sex: 'M' });
+    expect(d).toBeTruthy();
+    expect(d.kowd).toBeTruthy();
+    expect(d.kowd.polozenie).toBe('poniżej 25. centyla');
   });
 });
 
