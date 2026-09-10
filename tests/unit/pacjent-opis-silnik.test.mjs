@@ -27,7 +27,7 @@ function centileFromSds(sds) {
 }
 
 // Jeden globalny obiekt na oba moduły — opis musi widzieć kartę, bo z niej czyta werdykty.
-function srodowisko(tabela) {
+function srodowisko(tabela, opcje) {
   const g = {
     bmiSource: 'OLAF',
     advHistoryResolveMetric(param, value, sex, ageYears, source) {
@@ -58,6 +58,15 @@ function srodowisko(tabela) {
       return { threshold: 5.5, label: '≥5,5 cm/rok' };
     },
   };
+  // Normy prędkości wzrastania (HV-SDS) ładujemy TYLKO na życzenie. Bez nich karta oddaje
+  // null i zdania „tempo-sds" po prostu nie ma — dokładnie tak, jak na stronie bez tych
+  // tablic. Dzięki temu starsze testy mierzą to, co mierzyły, a nowe biorą prawdziwe normy.
+  if (opcje && opcje.normyTempa) {
+    for (const plik of ['hv_donald_data.js', 'hv_kelly_data.js', 'hv_cdgp_data.js',
+      'vilda_height_velocity.js']) {
+      loadBrowserScript(plik, g);
+    }
+  }
   loadBrowserScript('vilda_trajectory_analysis.js', g);
   loadBrowserScript('vilda_patient_narrative.js', g);
   return g;
@@ -751,5 +760,62 @@ describe('SGA bez catch-upu — etap 4b, ciąg dalszy', () => {
     expect(t).toMatch(/39 tc/);
     expect(t, 'bez „+0" przy pełnych tygodniach').not.toMatch(/39\+0/);
     expect(t).toMatch(/poniżej progu −2,5 SD/);
+  });
+});
+
+// ── SDS tempa wzrastania w opisie (zgłoszenie właściciela 2026-09-10) ─────────────────
+//
+// Karta pacjenta i „Podsumowanie wyników" niosły SDS tempa, a opis kopiowany do
+// dokumentacji milczał — i mówił „poza oknem automatycznej oceny normy tempa" nawet wtedy,
+// gdy norma prędkości wzrastania istnieje i daje wynik (progi getVelocityThreshold kończą
+// się na 10. roku życia, normy HV-SDS sięgają dalej).
+
+describe('SDS tempa wzrastania w opisie', () => {
+  it('opis dostaje osobne zdanie, zaraz po zdaniu o tempie', () => {
+    const g = srodowisko(DECELERACJA.tabela, { normyTempa: true });
+    const { wynik } = opis(g, DECELERACJA.wejscie);
+
+    const t = zdanie(wynik, 'tempo-sds');
+    expect(t, 'zdanie o SDS tempa jest').toBeTruthy();
+    expect(t)
+      .toBe('SDS tempa wzrastania dla wieku i płci wynosi −1,8 (4 centyl) — wg Duran i wsp., J Pediatr Endocrinol Metab 2025.');
+
+    const kolejnosc = wynik.sentences.map((z) => z.id);
+    expect(kolejnosc.indexOf('tempo-sds'), 'stoi zaraz po zdaniu o tempie')
+      .toBe(kolejnosc.indexOf('tempo') + 1);
+    expect(wynik.text, 'wchodzi do kopiowanego akapitu').toContain(t);
+  });
+
+  it('liczba jest ta sama, którą karta pokazuje w kafelku i w podsumowaniu', () => {
+    const g = srodowisko(DECELERACJA.tabela, { normyTempa: true });
+    const { model, wynik } = opis(g, DECELERACJA.wejscie);
+    const zKarty = g.VildaTrajectoryAnalysis.hvSdsDlaOpisu(model.velocity, model);
+    expect(zKarty).toBeTruthy();
+    expect(zdanie(wynik, 'tempo-sds')).toContain(`${zKarty.centylTekst} centyl`);
+    expect(Math.round(zKarty.sds * 10) / 10).toBe(-1.8);
+  });
+
+  it('gdy SDS się nie liczy, opis milczy — bez komunikatu „nie policzono"', () => {
+    // Ten sam pacjent, ale pomiar odniesienia sprzed trzech lat: odstęp wypada poza okno
+    // norm HV-SDS. Karta powie dlaczego, notatka do dokumentacji ma o tym nie wspominać.
+    const g = srodowisko({ 'HT|48': 0.4, 'HT|84': -1.0 }, { normyTempa: true });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 48, height: 104 }],
+      currentAgeMonths: 84,
+      currentHeight: 118,
+      sex: 'M',
+      source: 'OLAF',
+    });
+    expect(zdanie(wynik, 'tempo'), 'zdanie o samym tempie zostaje').toBeTruthy();
+    expect(zdanie(wynik, 'tempo-sds')).toBeNull();
+    expect(wynik.text).not.toMatch(/nie policzono/);
+    expect(wynik.text).not.toMatch(/SDS tempa/);
+  });
+
+  it('bez tablic norm zdania nie ma — opis nie zmyśla liczby', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie);
+    expect(zdanie(wynik, 'tempo-sds')).toBeNull();
+    expect(zdanie(wynik, 'tempo'), 'reszta opisu bez zmian').toBeTruthy();
   });
 });

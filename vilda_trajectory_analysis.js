@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '17';
+  var VERSION = '18';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -905,6 +905,31 @@
     return txt;
   }
 
+  /* Liczby HV-SDS dla opisu pacjenta (vilda_patient_narrative.js) — same wielkosci i podpis
+   * zrodla, BEZ skladania zdania: brzmienie nalezy do modulu opisu, tak jak przy
+   * velocityAssessment. Dzieki temu nie powstaje druga kopia ani wzoru, ani cytowania.
+   *
+   * Zwraca null, gdy SDS nie powstal. To nie jest przeoczenie: opis pacjenta to notatka do
+   * dokumentacji, a nie karta wynikow. Powod metodologicznej odmowy ma swoje miejsce w
+   * karcie „Podsumowanie wynikow" i w kafelku — w notatce lekarskiej zdanie „nie policzono,
+   * bo odstep lezy poza zakresem norm" nic nie wnosi, a zdanie o tempie i tak nazywa juz
+   * przypadek spoza okna oceny (decyzja wlasciciela 2026-09-10). */
+  function hvSdsDlaOpisu(vel, model) {
+    var d = hvSdsDane(vel, model);
+    if (!d || d.r.sds == null) return null;
+    return {
+      sds: d.r.sds,
+      centyl: d.r.centyl,
+      centylTekst: fmtCentyl(d.r.centyl),
+      medianaCmRok: d.r.mediana,
+      zrodlo: zrodloKrotkie(d.r),
+      kelly: d.kelly && d.kelly.podgrupa && d.kelly.sds != null
+        ? { sds: d.kelly.sds, podgrupa: NAZWA_PODGRUPY[d.kelly.podgrupa] }
+        : null,
+      kowd: d.r.kowd ? { polozenie: NAZWA_POLOZENIA[d.r.kowd.polozenie] } : null
+    };
+  }
+
   /* Kafelek obok wzrostu, masy i BMI — zwięzły, bez rozwijania, ten sam w karcie
    * zaawansowanej i w zakładce „Siatki centylowe" Karty pacjenta (decyzja właściciela
    * 2026-09-09). Komplet opisu pomiaru jest w jednym miejscu: pod kafelkiem w zakładce
@@ -1418,6 +1443,7 @@
     analyzeAndRenderHtml: analyzeAndRenderHtml,
     buildPatientHtml: buildPatientHtml,
     hvSdsPodsumowanie: hvSdsPodsumowanie,
+    hvSdsDlaOpisu: hvSdsDlaOpisu,
     hvSdsKafelek: hvSdsKafelek,
     buildCardPanelHtml: buildCardPanelHtml,
     isPanelCollapsed: isPanelCollapsed,

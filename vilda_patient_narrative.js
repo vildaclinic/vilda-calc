@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '4';
+  var VERSION = '5';
 
   // Progi UJAWNIANIA, nie progi kliniczne. Bramkuja wylacznie zdania o wieku danych,
   // czyli decyduja o tym, KIEDY opis przyznaje sie do starych danych — nigdy o tym, jak
@@ -454,6 +454,34 @@
     };
   }
 
+  // 4b. SDS tempa wzrastania — liczby i podpis zrodla bierze karta (hvSdsDlaOpisu), zdanie
+  //     sklada ten modul. Bez tego zdania opis milczal o odchyleniu, ktore karta pokazuje
+  //     jako kafelek, a podsumowanie jako wiersz (zgloszenie wlasciciela 2026-09-10) — i
+  //     mowil „poza oknem automatycznej oceny normy tempa" takze wtedy, gdy norma predkosci
+  //     wzrastania istnieje i daje wynik (progi z getVelocityThreshold koncza sie na 10. r.z.,
+  //     normy HV-SDS siegaja dalej).
+  //
+  //     Gdy SDS nie powstal, karta zwraca null i zdania po prostu nie ma. Powod odmowy stoi
+  //     w karcie wynikow; w notatce do dokumentacji nic by nie wniosl.
+  function zdanieTempoSds(model) {
+    var t = ta();
+    if (!t || typeof t.hvSdsDlaOpisu !== 'function') return null;
+    var v = model && model.velocity;
+    if (!v || v.cmPerYear == null) return null;
+    var h;
+    try { h = t.hvSdsDlaOpisu(v, model); } catch (e) { return null; }
+    if (!h || typeof h.sds !== 'number' || !isFinite(h.sds)) return null;
+    var txt = 'SDS tempa wzrastania dla wieku i płci wynosi ' + fmtSds(h.sds)
+      + ' (' + h.centylTekst + ' centyl) — wg ' + h.zrodlo;
+    if (h.kelly) {
+      txt += '; wg czasu pokwitania ' + fmtSds(h.kelly.sds) + ' (' + h.kelly.podgrupa + ')';
+    }
+    if (h.kowd) {
+      txt += '; w odniesieniu do dzieci z rozpoznanym KOWD tempo leży ' + h.kowd.polozenie;
+    }
+    return { id: 'tempo-sds', tone: 'plain', text: kropka(txt) };
+  }
+
   // 5. Masa i BMI — zdanie tylko wtedy, gdy jest o czym mowic.
   function zdanieMasa(model) {
     var m = metryka(model, 'bmi');
@@ -634,6 +662,7 @@
       zdaniePrzebieg(model),
       zdanieOdcinek(model),
       zdanieTempo(model),
+      zdanieTempoSds(model),
       zdanieMasa(model),
       zdaniePotencjal(model, e),
       zdanieWiekKostny(model, e),
