@@ -13,15 +13,20 @@ Ta zmiana jest konieczna, aby:
 - Dependabot działał na aktualnym kodzie;
 - tygodniowy harmonogram CodeQL uruchamiał się z właściwej gałęzi.
 
-Po zmianie default branch trzeba potwierdzić ochronę `audyt`:
+Po zmianie default branch trzeba potwierdzić ochronę `audyt`. Realizuje ją **zestaw reguł** (ruleset) w Settings → Rules → Rulesets, a nie klasyczna ochrona gałęzi w Settings → Branches — to dwa różne mechanizmy i mylenie ich kosztowało cykl przy operacji z 2026-09-10:
 
-- każda zmiana przez pull request;
-- brak wymaganej akceptacji innej osoby, jeżeli właściciel pracuje sam;
-- wymagane dotychczasowe kontrole:
+- cel: gałąź `audyt` (Target branches → Include by pattern);
+- `Require a pull request before merging`, wymagane akceptacje: 0 (właściciel pracuje sam);
+- `Require status checks to pass`, dokładnie dwie kontrole:
   - `Lint, składnia i testy jednostkowe`;
   - `Testy przeglądarkowe i PWA`;
-- blokada force push i usunięcia gałęzi;
-- pusta lista zwykłych obejść albo świadome ograniczenie administratora.
+- `Block force pushes` i `Restrict deletions`;
+- pusta lista obejść (Bypass list) albo świadome ograniczenie administratora;
+- Enforcement status: `Active`.
+
+Nazwy wymaganych kontroli muszą **dokładnie** odpowiadać nazwom jobów w `ci.yml`. Literówka nie daje żadnego komunikatu — po prostu żaden pull request nigdy nie stanie się scalalny.
+
+**Jak zdjąć ochronę na czas operacji wymagającej force push.** Na stronie samego zestawu reguł przestaw `Enforcement status` na `Disabled`, wykonaj operację, wróć do `Active`. Adres, który GitHub podaje w komunikacie błędu (`/rules?ref=…`), prowadzi do listy **tylko do odczytu** — nie ma tam żadnego przełącznika, więc łatwo stamtąd omyłkowo skasować cały zestaw zamiast go wyłączyć.
 
 CodeQL należy najpierw uruchomić i przejrzeć jako baseline. Nie ustawiaj go od razu jako wymaganego testu, dopóki zastane alerty nie zostaną sklasyfikowane.
 
