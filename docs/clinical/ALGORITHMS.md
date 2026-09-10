@@ -495,6 +495,18 @@ Domknięcie reguły z GROWTH-PUB-ONE („panel jest jedynym miejscem wpisu, resz
 
 - *Strażnicy:* `tests/e2e/panel-dojrzewania.spec.mjs` (13 → 16): pole zwija się z panelem i stoi po stadium a przed dalszymi polami, **poza** `#advancedGrowthForm`; u dziewczynki schowane, u chłopca widoczne; rekord z objętością otwiera panel, a `collectUserData().advanced.testicularVolume` nadal ją niesie. `tests/e2e/jednostki-tanner-nadpisanie.spec.mjs` (nowy, 4): opcja domyślna nazywa stadium z danych; nadpisanie ma notę, klasę i opis w nagłówku, a dane pacjenta zostają nietknięte; reset zdejmuje wszystko; brak stadium → nota odsyła do panelu. `tests/unit/status-pokwitania.test.mjs` (+2): strażnik strukturalny położenia pola w `index.html` i listy `POLA`. `kowd-dane-rekord` (e2e 4, unit 14) bez zmian — pilnuje, że KOWD nadal dostaje wartość.
 
+### GROWTH-HV-UI7 — po „Odtwórz zapis" zostawał przycisk „Odtwórz zapisany stan" (SW 1.0.879, 2026-09-10, zgłoszenie właściciela)
+
+**Objaw.** Po „Wczytaj tego pacjenta" → „Odtwórz zapis" dane wracały poprawnie, ale w formularzu głównym — pod „Wyczyść wszystkie pola" — stał przycisk „Odtwórz zapisany stan". Klik nic nie zmieniał: powtarzał tę samą operację na tych samych danych.
+
+**Przyczyna — zła kolejność w poprawce GROWTH-HV-UI6.** `ghReimport()` zapamiętuje widoczność przycisku przed importem punktów terapii i przywraca ją po nim, bo mostek strzela zdarzeniem `input` w pole nazwy, a to potrafi ten przycisk schować (patrz GROWTH-HV-UI6). W `restoreLoadedState()` wywołanie stało **przed** miejscem, w którym samo odtworzenie chowa przycisk na koniec — więc zapamiętywało go jako widoczny i po zakończeniu importu przywracało. Przycisk wracał w jedynym momencie, w którym nie ma już czego odtwarzać.
+
+**Naprawa.** Wywołanie przeniesione na **sam koniec** `restoreLoadedState()`, za chowanie przycisku i za zdarzenie `vilda:state-restored`. Migawka bierze wtedy stan docelowy („schowany"), więc przywracanie jest tożsamościowe. Dwa pozostałe wywołania (`applyLoadedData()` i „Nowy pomiar") stoją już po tym, jak ich ścieżki ustawiły przycisk, i pozostają bez zmian — tam widoczność przycisku ma być zachowana i jest.
+
+- Wersje: `vilda_data_import_export.js` `?v=62` → `?v=63`; `SW_VERSION` 1.0.879.
+
+- *Strażnicy:* `tests/e2e/gh-punkty-po-wczytaniu.spec.mjs` (2 → 2, rozszerzony pierwszy test): po odtworzeniu i po odczekaniu na koniec asynchronicznego importu `#restoreStateBtn` jest schowany. Odczekanie jest w tym teście **konieczne** — to właśnie koniec importu pokazywał przycisk z powrotem, więc asercja bez zwłoki przechodziłaby także na kodzie z usterką. **Zmierzone czerwone** na kodzie sprzed poprawki: **1 z 1** (`Received: visible`).
+
 ### GROWTH-HV-UI6 — u pacjenta leczonego GH wczytanie zapisu gubiło punkty terapii, a z nimi tempo wzrastania (SW 1.0.878, 2026-09-10, zgłoszenie właściciela)
 
 **Objaw.** Pacjentka leczona hormonem wzrostu. Karta pacjenta (zakładka Status): „Prędkość wzrastania 9,4 cm/rok", kafelek „SDS tempa +1,5 · 93 centyl · mediana 6,54 cm/rok". „Podsumowanie wyników" zaraz po „Wczytaj tego pacjenta" → „Odtwórz zapis": „Tempo wzrastania: 8,2 cm/rok (obliczono jako średnią z ostatnich 3 lat)" i „SDS tempa: nie policzono — Odstęp między pomiarami leży poza zakresem…". Po odświeżeniu strony: znowu 9,4 cm/rok i SDS +1,5.
