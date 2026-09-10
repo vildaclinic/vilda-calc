@@ -156,6 +156,19 @@
     );
   }
 
+  // Odmiana rzeczownika „rok" po liczebniku (mianownik): 1 rok, 2-4 lata, 5+ lat,
+  // z wyjatkiem koncowek 12-14, ktore biora „lat" (12 lat, 22 lata, 113 lat).
+  function wiekLataMianownik(value) {
+    const v = Number(value);
+    if (!Number.isFinite(v)) return "lat";
+    if (v !== Math.round(v)) return "roku";
+    const n = Math.round(v);
+    const d = n % 10;
+    const s = n % 100;
+    if (n === 1) return "rok";
+    return d >= 2 && d <= 4 && !(s >= 12 && s <= 14) ? "lata" : "lat";
+  }
+
   function formatAge(ageContext) {
     if (!ageContext || !ageContext.valid) return "wiek nieokreślony";
     const years = ageContext.years;
@@ -164,7 +177,8 @@
     if (years === 0 && months === 0 && daysOfLife !== null)
       return `${daysOfLife}. dzień życia`;
     if (years === 0) return `${months} mies.`;
-    return months ? `${years} lat ${months} mies.` : `${years} lat`;
+    const noun = wiekLataMianownik(years);
+    return months ? `${years} ${noun} ${months} mies.` : `${years} ${noun}`;
   }
 
   function formulaEligibility(formulaId, ageContext) {
@@ -965,6 +979,7 @@
     parseAge,
     readAgeFromDocument,
     formatAge,
+    wiekLataMianownik,
     formulaEligibility,
     computeCkdEpi2021Cr,
     computeBedsideSchwartz,

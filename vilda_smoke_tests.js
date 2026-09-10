@@ -106,17 +106,17 @@
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=5',
     'vilda_persist_runtime.js?v=13',
-    'vilda_summary_cards.js?v=30',
+    'vilda_summary_cards.js?v=31',
     'vilda_diet_plan_ui.js?v=9',
     'vilda_bmi_journey.js?v=7',
     'vilda_estimated_intake_ui.js?v=1',
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
-    'app.js?v=198',
+    'app.js?v=199',
     'vilda_smoke_tests.js?v=65',
-    'vilda_diet_recommendations.js?v=15',
-    'nutrition_norms.js?v=45',
+    'vilda_diet_recommendations.js?v=16',
+    'nutrition_norms.js?v=46',
     'nutrition_micros.js?v=26'
   ]);
   const MANIFEST = Object.freeze([
