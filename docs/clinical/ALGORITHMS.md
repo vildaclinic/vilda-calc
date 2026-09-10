@@ -495,6 +495,36 @@ Domknięcie reguły z GROWTH-PUB-ONE („panel jest jedynym miejscem wpisu, resz
 
 - *Strażnicy:* `tests/e2e/panel-dojrzewania.spec.mjs` (13 → 16): pole zwija się z panelem i stoi po stadium a przed dalszymi polami, **poza** `#advancedGrowthForm`; u dziewczynki schowane, u chłopca widoczne; rekord z objętością otwiera panel, a `collectUserData().advanced.testicularVolume` nadal ją niesie. `tests/e2e/jednostki-tanner-nadpisanie.spec.mjs` (nowy, 4): opcja domyślna nazywa stadium z danych; nadpisanie ma notę, klasę i opis w nagłówku, a dane pacjenta zostają nietknięte; reset zdejmuje wszystko; brak stadium → nota odsyła do panelu. `tests/unit/status-pokwitania.test.mjs` (+2): strażnik strukturalny położenia pola w `index.html` i listy `POLA`. `kowd-dane-rekord` (e2e 4, unit 14) bez zmian — pilnuje, że KOWD nadal dostaje wartość.
 
+### GROWTH-HV-UI6 — u pacjenta leczonego GH wczytanie zapisu gubiło punkty terapii, a z nimi tempo wzrastania (SW 1.0.878, 2026-09-10, zgłoszenie właściciela)
+
+**Objaw.** Pacjentka leczona hormonem wzrostu. Karta pacjenta (zakładka Status): „Prędkość wzrastania 9,4 cm/rok", kafelek „SDS tempa +1,5 · 93 centyl · mediana 6,54 cm/rok". „Podsumowanie wyników" zaraz po „Wczytaj tego pacjenta" → „Odtwórz zapis": „Tempo wzrastania: 8,2 cm/rok (obliczono jako średnią z ostatnich 3 lat)" i „SDS tempa: nie policzono — Odstęp między pomiarami leży poza zakresem…". Po odświeżeniu strony: znowu 9,4 cm/rok i SDS +1,5.
+
+**To nie był błąd SDS.** Rozjazd był w **samym tempie** — 8,2 kontra 9,4 — a więc w zestawie pomiarów, z którego tempo się liczy. SDS tylko wiernie zameldował, że odstęp 36 mies. leży poza oknem norm (DONALD/KOWD 6–18 mies.).
+
+**Przyczyna — trzy rzeczy naraz.**
+
+1. **Zapis pacjenta celowo nie przechowuje wierszy z monitora terapii GH.** `collectUserData()` odsiewa z `advanced.data.measurements` wszystko z `ghSync === true`, a sanityzator `be()` odrzuca je po raz drugi przy odczycie. To jest **słuszne**: źródłem prawdy dla punktów terapii jest moduł „Monitorowanie leczenia hormonem wzrostu", nie kopia w rekordzie — inaczej edycja punktu w module rozjeżdżałaby się z zapisem.
+2. **Odtworzenie zapisu przywracało więc tylko wiersze „ręczne"** i wołało `calculateGrowthAdvanced()`. Mostek `importTherapyPointsToAdvancedGrowth()`, który dokłada wiersze z punktów terapii, nie był na tej ścieżce wołany **wcale** — dotąd uruchamiał go tylko klik w nagłówek karty zaawansowanej albo komunikat z `BroadcastChannel`. Stąd „po odświeżeniu jest dobrze": po przeładowaniu strony mostek dochodzi inną drogą.
+3. **A gdyby nawet ktoś go zawołał, nic by nie zrobił.** Czyszczenie formularza (`clearAllData`, `resetGrowthHistoryModulesAfterClear`) ustawia `__vildaSuppressGhAdvancedImportUntil = Date.now() + 4000`, a import na starcie sprawdza tę blokadę i wychodzi. Blokada ma sens (po wyczyszczeniu formularza punkty nie mają wracać), ale wczytanie pacjenta dzieje się **w tym samym oknie czterech sekund**.
+
+W efekcie najbliższy punkt — sprzed 11 miesięcy, wpisany przez moduł terapii — znikał z historii, a tempo liczyło się z jedynego pozostałego punktu sprzed trzech lat.
+
+**Naprawa.** Nowy pomocnik `ghReimport()` w `vilda_data_import_export.js`: zdejmuje blokadę importu i woła mostek, a po jego zakończeniu **przywraca stan sprzed** — flagę `hasUserModifiedAfterLoad` i widoczność przycisku „Odtwórz zapis". To drugie nie jest ozdobnikiem: mostek na koniec strzela zdarzeniem `input` w pole nazwy (żeby obudzić autozapis), a globalny nasłuch traktuje **każde** `input` po wczytaniu jako edycję lekarza — bez przywrócenia flagi modal „Co chcesz zrobić?" przestawał się pokazywać, a aplikacja pytałaby o niezapisane zmiany, których nikt nie wprowadził.
+
+Wołany w trzech miejscach, wszystkich po odtworzeniu wierszy z rekordu:
+
+- `restoreLoadedState()` — ścieżka „Odtwórz zapis" (zgłoszony objaw);
+- `applyLoadedData()` — samo „Wczytaj tego pacjenta";
+- obsługa przycisku „Nowy pomiar" w `custom-fixes.js` — ta gałąź nadpisuje `advancedGrowthData.measurements` listą z rekordu i przebudowuje wiersze, więc kasuje punkty terapii nawet wtedy, gdy przed chwilą wróciły.
+
+Punkty czytane są tak jak dotąd: najpierw IndexedDB modułu terapii, awaryjnie pamięć modułowa (`GH_THERAPY_POINTS`), którą `applyLoadedData()` zapisuje z rekordu **przed** importem. Gdy pacjent nie jest leczony i punktów nie ma, mostek usuwa ewentualne wiersze GH po poprzednim pacjencie — to jego dotychczasowe zachowanie, tu bez zmian.
+
+**Świadomie bez zmian:** wierszy GH nadal **nie zapisujemy** w rekordzie pacjenta. Naprawiamy odtwarzanie, nie duplikujemy źródła prawdy.
+
+- Wersje: `vilda_data_import_export.js` `?v=61` → `?v=62`; `custom-fixes.js` `?v=57`/`?v=58` → `?v=59` (ujednolicone); `SW_VERSION` 1.0.878.
+
+- *Strażnicy:* `tests/e2e/gh-punkty-po-wczytaniu.spec.mjs` (nowy, 2). Odtwarzają zgłoszenie co do cyfry: dziewczynka 14 lat, 148,5 cm, wiersz ręczny 11 lat 123,9 cm (odstęp 36 mies. → 8,2 cm/rok, poza oknem norm) i punkt terapii 13 lat 1 mies. 139,9 cm (odstęp 11 mies. → 9,4 cm/rok, SDS +2,5). Test pierwszy: po „Odtwórz zapis" wiersz punktu terapii jest w historii, wiersz tempa mówi 9,4 cm/rok **bez** „obliczono jako średnią", a zdanie o SDS tempa stoi od razu, bez odświeżania strony. Test drugi: po „Nowy pomiar" punkt terapii zostaje w historii bez rozwijania karty zaawansowanej. **Zmierzone czerwone** na kodzie sprzed poprawki: **2 z 2** (pierwszy przed całą naprawą, drugi po dwóch pierwszych wywołaniach a przed trzecim — każdy odróżnia swoją ścieżkę).
+
 ### GROWTH-HV-UI5 — zdanie o SDS tempa wisiało na jednej z dwóch gałęzi wiersza tempa (SW 1.0.877, 2026-09-10, zgłoszenie właściciela)
 
 **Objaw.** Karta pacjenta pokazywała kafelek „SDS tempa +0,5 · 69 centyl · mediana 5,46 cm/rok", a „Podsumowanie wyników" tego samego pacjenta nie miało tego zdania **wcale** — także po odświeżeniu strony. Właściciel: „u większości albo się wcale nie pojawia, albo się pojawia po odświeżeniu".
