@@ -461,3 +461,86 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     expect(z).not.toMatch(/nie policzono/);
   });
 });
+
+test.describe('Zdanie stoi także pod drugą gałęzią wiersza tempa', () => {
+  // Zgłoszenie właściciela (SW 1.0.877): u pacjenta „Monarcha Jan" Karta pacjenta pokazywała
+  // kafelek „SDS tempa +0,5 · 69 centyl · mediana 5,46 cm/rok", a „Podsumowanie wyników" tego
+  // samego pacjenta nie miało tego zdania — także po odświeżeniu strony. Rozstrzygający ślad:
+  // wiersz tempa brzmiał „Tempo wzrastania: 6,1 cm/rok (obliczono jako średnią z ostatnich
+  // 1 lat)", czyli powstał w DRUGIEJ gałęzi, do której HV-SDS nie był dopięty.
+  //
+  // Odstęp 16 mies. wypada poza okno 9–15 mies. używane przez normę tempa dla wieku
+  // (growthVelocityUsedLastYear = false), ale mieści się w oknie DONALD 6–18 mies., więc
+  // silnik ma z czego policzyć. Dokładnie ten przypadek odtwarzamy tutaj.
+  async function policzJana(page) {
+    await page.fill('#lastName', 'Probny');
+    await page.fill('#firstName', 'Jan');
+    await page.evaluate(() => {
+      const set = (id, v) => {
+        const e = document.getElementById(id);
+        e.value = v;
+        e.dispatchEvent(new Event('input', { bubbles: true }));
+        e.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      set('age', '11'); set('ageMonths', '10'); set('sex', 'M');
+      set('height', '143.2'); set('weight', '33.3');
+      if (typeof window.update === 'function') window.update();
+    });
+    await page.evaluate(() => new Promise((r) => { requestAnimationFrame(() => { requestAnimationFrame(r); }); }));
+    await page.waitForSelector(
+      '#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
+      { state: 'attached' },
+    );
+    await page.evaluate(() => {
+      const t = document.getElementById('toggleAdvancedGrowth');
+      const f = document.getElementById('advancedGrowthForm');
+      if (f && getComputedStyle(f).display !== 'none') return;
+      if (t) { t.disabled = false; t.click(); }
+    });
+    await expect(page.locator('#advancedGrowthForm')).toBeVisible();
+    await page.waitForSelector('#advMeasurements .measure-row');
+    await page.evaluate(() => {
+      const w = document.querySelector('#advMeasurements .measure-row');
+      const set = (sel, v) => {
+        const e = w.querySelector(sel);
+        if (e) { e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }
+      };
+      // 10 lat 6 mies. → odstęp do 11 lat 10 mies. wynosi 16 mies.
+      set('.adv-age-years', '10'); set('.adv-age-months', '6');
+      set('.adv-height', '135.05'); set('.adv-weight', '30');
+      window.calculateGrowthAdvanced();
+    });
+    await page.waitForSelector('#advResults .vtap-hvc');
+  }
+
+  const linie = (page) => page.evaluate(() => String(window.generateMetabolicSummary() || '')
+    .split('\n').map((t) => t.trim()).filter(Boolean));
+
+  test('odstęp 16 mies.: wiersz tempa idzie drugą gałęzią, a SDS tempa mimo to jest', async ({ page }) => {
+    await otworz(page);
+    await policzJana(page);
+
+    const l = await linie(page);
+    const iTempo = l.findIndex((t) => /^Tempo wzrastania:/.test(t));
+    expect(iTempo, 'to jest ta druga gałąź — bez niej test nie mierzy zgłoszonej usterki')
+      .toBeGreaterThan(-1);
+    expect(l[iTempo], 'brzmienie drugiej gałęzi').toMatch(/obliczono jako średnią/);
+
+    const iHv = l.findIndex((t) => /^SDS tempa/.test(t));
+    expect(iHv, 'zdanie o SDS tempa jest obecne').toBeGreaterThan(-1);
+    expect(iHv, 'i stoi zaraz pod tempem').toBe(iTempo + 1);
+    expect(l[iHv]).toContain('+0,5');
+    expect(l[iHv]).toContain('68 centyl');
+    expect(l[iHv]).toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
+    expect(l[iHv]).not.toMatch(/nie policzono/);
+  });
+
+  test('kafelek karty zaawansowanej i zdanie podsumowania niosą tę samą liczbę', async ({ page }) => {
+    await otworz(page);
+    await policzJana(page);
+    await expect(page.locator('#advResults .vtap-hvc')).toContainText('+0,5');
+    await expect(page.locator('#advResults .vtap-hvc')).toContainText('mediana 5,46 cm/rok');
+    const l = await linie(page);
+    expect(l.find((t) => /^SDS tempa/.test(t))).toContain('+0,5');
+  });
+});

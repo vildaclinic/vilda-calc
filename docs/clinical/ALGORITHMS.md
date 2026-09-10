@@ -495,6 +495,29 @@ Domknięcie reguły z GROWTH-PUB-ONE („panel jest jedynym miejscem wpisu, resz
 
 - *Strażnicy:* `tests/e2e/panel-dojrzewania.spec.mjs` (13 → 16): pole zwija się z panelem i stoi po stadium a przed dalszymi polami, **poza** `#advancedGrowthForm`; u dziewczynki schowane, u chłopca widoczne; rekord z objętością otwiera panel, a `collectUserData().advanced.testicularVolume` nadal ją niesie. `tests/e2e/jednostki-tanner-nadpisanie.spec.mjs` (nowy, 4): opcja domyślna nazywa stadium z danych; nadpisanie ma notę, klasę i opis w nagłówku, a dane pacjenta zostają nietknięte; reset zdejmuje wszystko; brak stadium → nota odsyła do panelu. `tests/unit/status-pokwitania.test.mjs` (+2): strażnik strukturalny położenia pola w `index.html` i listy `POLA`. `kowd-dane-rekord` (e2e 4, unit 14) bez zmian — pilnuje, że KOWD nadal dostaje wartość.
 
+### GROWTH-HV-UI5 — zdanie o SDS tempa wisiało na jednej z dwóch gałęzi wiersza tempa (SW 1.0.877, 2026-09-10, zgłoszenie właściciela)
+
+**Objaw.** Karta pacjenta pokazywała kafelek „SDS tempa +0,5 · 69 centyl · mediana 5,46 cm/rok", a „Podsumowanie wyników" tego samego pacjenta nie miało tego zdania **wcale** — także po odświeżeniu strony. Właściciel: „u większości albo się wcale nie pojawia, albo się pojawia po odświeżeniu".
+
+**Rozstrzygający ślad** był w treści zgłoszenia, nie w kodzie: wiersz tempa brzmiał „Tempo wzrastania: 6,1 cm/rok (obliczono jako średnią z ostatnich 1 lat)", a nie „Aktualne tempo wzrastania (z ostatnich N mies.): …". To dwa **różne** wiersze z dwóch różnych gałęzi tej samej instrukcji warunkowej w `vilda_summary_cards.js`:
+
+```js
+if (C.growthVelocityUsedLastYear) {  e.push('Aktualne tempo wzrastania…'); qHvSdsPush(e, C); }
+else                              {  e.push('Tempo wzrastania… (obliczono jako średnią…)');  /* nic */ }
+```
+
+HV-SDS był dopięty **tylko do pierwszej**. Stąd „u części pacjentów tak, u części nie": decydowało to, którą gałęzią policzyło się tempo.
+
+**Dlaczego to była zła granica.** `growthVelocityUsedLastYear` odpowiada na pytanie o **normę tempa dla wieku**: czy odstęp mieści się w oknie rocznym (`pickPrevForLastYear` przyjmuje 9–15 mies., awaryjnie 6–8). HV-SDS ma **własne, szersze okno** wzięte ze źródła norm — DONALD i KOWD 6–18 mies., Kelly 11–13 — i sam odmawia z nazwanym powodem, gdy odstęp z niego wypada. Wiązanie jednego z drugim odcinało wynik tam, gdzie silnik miał wszystko, czego potrzebuje.
+
+**Odtworzony przypadek** (zgłoszenie: „Monarcha Jan", chłopiec): wiek 11 lat 10 mies., tempo 6,1 cm/rok, odstęp **16 mies.** Szesnaście miesięcy leży poza oknem 9–15 (stąd druga gałąź), ale wewnątrz okna DONALD 6–18 — silnik liczy bez zastrzeżeń: środek przedziału 11 lat 2 mies., mediana 5,46 cm/rok, SDS +0,5. Zgadza się co do cyfry z kafelkiem Karty pacjenta, który liczył tą samą drogą przez `analyze()`.
+
+**Naprawa.** `qHvSdsPush(e, C)` wołane w **obu** gałęziach. Gdy odstęp wypada poza okno źródła, zdanie mówi „nie policzono" z powodem — milczenie wyglądałoby jak brak odchylenia.
+
+- Wersja `vilda_summary_cards.js` `?v=29` → `?v=30`.
+
+- *Strażnicy:* `tests/unit/tempo-hv-sds-karta.test.mjs` (47 → 51) i `tests/e2e/hv-sds-trzy-miejsca.spec.mjs` (14 → 16). E2E odtwarza zgłoszony przypadek na żywej stronie: pomiar 16 mies. wstecz, sprawdzenie, że wiersz tempa **faktycznie** poszedł drugą gałęzią (`obliczono jako średnią`) — bez tego test nie mierzyłby usterki — a mimo to zdanie o SDS tempa stoi pod nim i niesie tę samą liczbę co kafelek karty zaawansowanej. **Zmierzone czerwone** na kodzie sprzed poprawki: **2 z 2** e2e i 1 z 4 jednostkowych. Uczciwie: pozostałe trzy jednostkowe są kontrolami silnika i pozostają zielone po obu stronach — usterkę odróżnia warstwa e2e i strażnik strukturalny.
+
 ### GROWTH-HV-UI4 — prezentacja HV-SDS: centyl do jedności, kafelek Statusu bez podpisu, siatki bez rozwijania (SW 1.0.875, 2026-09-09, decyzja właściciela)
 
 Trzy decyzje redakcyjne po teście na żywo; liczenie bez zmian.
