@@ -222,6 +222,10 @@ test('Serię podań leku da się przedłużyć z modala edycji wpisu serii', asy
   await klik(page, '#tzNtSave');
   await page.locator('#tzRxDlg #tzRxSave').waitFor({ state: 'attached' });
   await klik(page, '#tzRxDlg #tzRxSave');
+  // Dialog znika dopiero po zapisaniu OSTATNIEGO wpisu serii — dopóki jest w DOM, zapis trwa.
+  // Migawka „przed” brana wcześniej łapała serię w połowie (CI: 6 z 14 wpisów) i późniejsza
+  // kontrola „zwykły zapis niczego nie dokłada” widziała dokończenie serii jako dołożenie.
+  await expect(page.locator('#tzRxDlg')).toHaveCount(0, { timeout: 30_000 });
   await expect
     .poll(async () => (await wszystkieNotatki(page)).filter((n) => n.category === 'treatment').length)
     .toBeGreaterThan(5);
