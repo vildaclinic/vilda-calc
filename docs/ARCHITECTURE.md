@@ -125,6 +125,11 @@ Zestaw e2e szedł jednym wątkiem i urósł do 19 minut na CI, aż przestał si�
 
 **Warunek, który trzeba utrzymać.** Żaden plik e2e nie może trzymać mutowalnego stanu na poziomie modułu ani używać `beforeAll`/`afterAll`. Dziś nie musi — testy w pliku idą po kolei — ale to jedyna rzecz, która dzieli nas od włączenia równoległości także wewnątrz plików, a stan między testami wprowadza się niechcący i cicho. Pilnuje tego `tests/unit/e2e-rownoleglosc.test.mjs`.
 
+**Co zostaje do rozważenia (odłożone decyzją właściciela 2026-09-11).** Zmierzony zysk na CI to 19 min 25 s → 14,5 min. Nie więcej, bo przez ostatnie 3 min 20 s biegu pracuje JEDEN worker, a trzy stoją: `ustawienia-panel-techniczny` przemiela swoje osiem testów po kolei, po ok. 32 s każdy. Żeby zejść niżej, trzeba rozbić ten ogon. Dwie drogi:
+
+1. **Równoległość wewnątrz wybranych plików** — tylko dla tych, które nie są kruche czasowo. Wymaga wcześniejszego utwardzenia kilku testów; każdy taki wyścig wychodzi dopiero pod obciążeniem, tak jak pięć opisanych niżej.
+2. **Potanienie najdroższych testów** — w `ustawienia-panel-techniczny` każdy z ośmiu testów od nowa zakłada konto sejfu i ładuje całą stronę. Te ~32 s idą głównie na przygotowanie, nie na sprawdzanie. Droga trudniejsza, ale daje więcej i nie wprowadza nowej klasy wyścigów.
+
 **Czego równoległość nie wybacza.** Każde „kliknij i od razu sprawdź" oraz każde odmierzone `waitForTimeout` staje się wyścigiem, gdy maszyna jest obciążona. Pięć takich miejsc wyszło dopiero po zrównolegleniu i wszystkie były **latentne od dawna** — jeden wątek na nieobciążonej maszynie po prostu nigdy nie przegrywał. Asercja ma czekać na **warunek**, a nie na upływ czasu; jeżeli wartość zapisuje się przez adapter ALBO awaryjnie do `localStorage`, test ma czytać ją tak, jak czyta ją moduł, a nie zaglądać do jednego magazynu.
 
 
