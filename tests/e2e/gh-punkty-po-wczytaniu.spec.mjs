@@ -100,10 +100,33 @@ async function policzPacjentke(page) {
 const linie = (page) => page.evaluate(() => String(window.generateMetabolicSummary() || '')
   .split('\n').map((t) => t.trim()).filter(Boolean));
 
+// Identyfikator zapisanego pacjenta — czytany w JEDNYM kroku i z ponawianiem.
+//
+// Rozbicie na „poczekaj, aż lista ma jeden wpis" i osobny odczyt `[0].patientId` to wyścig:
+// między tymi dwoma wywołaniami sejf potrafi jeszcze raz sięgnąć do IndexedDB i przez chwilę
+// oddać pustą listę. Pod obciążeniem trafiało to prosto w odczyt — „Cannot read properties of
+// undefined (reading 'patientId')". Złapane przy zrównoleglaniu zestawu; wyścig był tu od
+// początku, tylko jeden wątek nigdy go nie przegrywał.
+async function idZapisanegoPacjenta(page) {
+  let id = null;
+  await expect
+    .poll(
+      async () => {
+        id = await page.evaluate(async () => {
+          const lista = await window.VildaVault.listPatients();
+          return Array.isArray(lista) && lista.length === 1 && lista[0] ? lista[0].patientId : null;
+        });
+        return typeof id === 'string' && id.length > 0;
+      },
+      { message: 'sejf ma dokładnie jednego zapisanego pacjenta' },
+    )
+    .toBe(true);
+  return id;
+}
+
 async function zapiszIOtworzKarte(page) {
   await page.locator('#saveDataBtnSidebar').click();
-  await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
-  const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
+  const pid = await idZapisanegoPacjenta(page);
   await page.evaluate(() => window.clearAllData());
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
     if (rekord) window.applyLoadedData(rekord);

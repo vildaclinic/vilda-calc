@@ -117,6 +117,17 @@ Wersjonowane adresy zasobów są elementem migracji cache. Przy zmianie zasobu t
 
 Workflow `.github/workflows/ci.yml` uruchamia się dla PR-ów do `audyt` i commitów na `audyt`. Nie należy zmieniać nazw istniejących jobów bez sprawdzenia ochrony gałęzi.
 
+### Równoległość zestawu przeglądarkowego (decyzja właściciela 2026-09-11)
+
+Zestaw e2e szedł jednym wątkiem i urósł do 19 minut na CI, aż przestał się mieścić w limicie joba. Teraz **workery biorą po całym pliku**: `workers` w `playwright.config.mjs` to 4 na CI (tyle rdzeni ma runner `ubuntu-latest`), lokalnie decyduje Playwright. Zmienna `PLAYWRIGHT_WORKERS` nadpisuje jedno i drugie — do porównań A/B bez edytowania konfiguracji.
+
+**Testy w jednym pliku zostają po kolei** (`fullyParallel: false`). To nie jest ostrożność na wyrost, tylko wynik pomiaru: audyt wszystkich 51 plików nie znalazł ani jednego, który trzymałby stan między swoimi testami, ale próba puszczenia testów z jednego pliku równolegle wywracała się na **czasie** — pliki, w których pojedynczy test trwa kilkadziesiąt sekund, przekraczały budżet, gdy cztery ich testy dzieliły te same rdzenie. Zysk był przy tym niewielki (lokalnie 24,3 min wobec 26,8 min), bo na czterech rdzeniach wiąże łączna praca, a nie układ plików.
+
+**Warunek, który trzeba utrzymać.** Żaden plik e2e nie może trzymać mutowalnego stanu na poziomie modułu ani używać `beforeAll`/`afterAll`. Dziś nie musi — testy w pliku idą po kolei — ale to jedyna rzecz, która dzieli nas od włączenia równoległości także wewnątrz plików, a stan między testami wprowadza się niechcący i cicho. Pilnuje tego `tests/unit/e2e-rownoleglosc.test.mjs`.
+
+**Czego równoległość nie wybacza.** Każde „kliknij i od razu sprawdź" oraz każde odmierzone `waitForTimeout` staje się wyścigiem, gdy maszyna jest obciążona. Pięć takich miejsc wyszło dopiero po zrównolegleniu i wszystkie były **latentne od dawna** — jeden wątek na nieobciążonej maszynie po prostu nigdy nie przegrywał. Asercja ma czekać na **warunek**, a nie na upływ czasu; jeżeli wartość zapisuje się przez adapter ALBO awaryjnie do `localStorage`, test ma czytać ją tak, jak czyta ją moduł, a nie zaglądać do jednego magazynu.
+
+
 CodeQL jest osobnym skanem bezpieczeństwa. Jego alert nie potwierdza podatności bez analizy, a brak alertu nie potwierdza bezpieczeństwa ani poprawności klinicznej.
 
 ## Inwarianty architektury

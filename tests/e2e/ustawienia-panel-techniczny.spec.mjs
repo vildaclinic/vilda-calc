@@ -17,6 +17,20 @@ import { expect, test } from '../support/test-czas.mjs';
 // Testy jadą po prawdziwej stronie Ustawień i prawdziwej klawiaturze — nie podmieniamy niczego
 // poza odczytem localStorage w asercjach.
 
+// Budżet czasu na test podniesiony z domyślnych 60 s.
+//
+// Ten plik jest kosztowny SAM Z SIEBIE: każdy z ośmiu testów zakłada konto sejfu (PBKDF2),
+// czeka na zniknięcie nakładki logowania i w pętli otwiera akordeon. Na CI przy jednym wątku
+// pojedynczy test zajmował 43-50 s, czyli zjadał ponad trzy czwarte budżetu — zanim
+// cokolwiek zaczęło chodzić równolegle. Odkąd workery biorą po pliku, ten plik dzieli rdzenie
+// z trzema innymi i tamten zapas przestał istnieć.
+//
+// Zmierzone: przy próbie puszczenia jego testów RÓWNOLEGLE względem siebie wszystkie
+// przekraczały 60 s („Test timeout of 60000ms exceeded"). Tej próby nie wdrożyliśmy, ale
+// liczba pokazuje, jak cienki był margines. 120 s to zapas, nie zamiatanie problemu: żaden
+// z tych testów nie zbliża się do tej wartości, gdy maszyna nie jest przeciążona.
+test.describe.configure({ timeout: 120_000 });
+
 const POLE = '#centileLineSettingsGrid .tech-chart-setting-row';
 const HASLO = 'E2e#Ustawienia!2026';
 
