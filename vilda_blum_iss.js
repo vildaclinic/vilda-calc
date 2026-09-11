@@ -112,7 +112,9 @@
     var boneAge = num(input.boneAgeYears);
     if (boneAge !== null && boneAge <= 0) boneAge = null;
     var birthWeight = num(input.birthWeightKg);
-    if (birthWeight !== null && birthWeight <= 0) birthWeight = null;
+    // Masa urodzeniowa w kg; wartość > 20 traktowana jako gramy (3200 → 3,2); poza 0–10 kg → brak.
+    if (birthWeight !== null && birthWeight > 20) birthWeight = birthWeight / 1000;
+    if (birthWeight !== null && (birthWeight <= 0 || birthWeight > 10)) birthWeight = null;
 
     var modelId = pickModel(mother !== null, father !== null, boneAge !== null, birthWeight !== null);
     if (!modelId) return { available: false, reason: 'no-model' };
@@ -144,7 +146,7 @@
       rmseCm: m.rmse,
       errorBoundHalfWidthCm: halfWidth,
       hasErrorInterval: true,
-      predictionIntervalLowerCm: clamped ? predicted : round1(raw - halfWidth),
+      predictionIntervalLowerCm: Math.max(round1(raw - halfWidth), round1(heightCm)), // GROWTH-PRED-CLAMP: nie niżej niż obecny wzrost
       predictionIntervalUpperCm: Math.max(round1(raw + halfWidth), predicted),
       usedBoneAge: m.ba !== null,
       relativeBoneAge: m.ba !== null ? Math.round((boneAge / ageYears) * 1000) / 1000 : null,
