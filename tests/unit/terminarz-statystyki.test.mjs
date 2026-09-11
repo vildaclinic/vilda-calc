@@ -59,7 +59,7 @@ const oISO = (przesuniecie, odniesienie) => {
 describe('Hook testowy __internals (PR 4) — czyste funkcje prezentacji i statystyk', () => {
   it('publiczne API ma nadal cztery klucze, a __internals wystawia funkcje PR 3 i PR 4', () => {
     expect(Object.keys(win.VildaTerminarz)).toEqual(['version', 'refresh', 'setView', '__internals']);
-    expect(win.VildaTerminarz.version).toBe('4.2.0');
+    expect(win.VildaTerminarz.version).toBe('4.3.0');
     for (const nazwa of ['Jn', 'ge', 'ka', 'Vt', 'Nn', 'Dn', 'R', 'H', 'Ct', 'xr', 'Kn', 'Cc', 'Cd', 'Cg']) {
       expect(typeof I[nazwa], `PR 3: ${nazwa}`).toBe('function');
     }

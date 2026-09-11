@@ -423,7 +423,7 @@ test('Przełóż o … liczy nową datę z rekordu w sejfie, nie z kopii w widok
   // buduje widok; sam odczyt pojedynczej notatki (getPatientNote) zostaje prawdziwy.
   const { D, D1 } = await otworzTerminarz(page);
   const pid = await zapiszPacjenta(page, 'Renata Przekladana');
-  // Kategoria inna niż „followup”: tylko wtedy jest akcja „Przełóż” (followup ma „Nie zgłosił się”).
+  // „Przełóż” jest we wszystkich kategoriach pacjenta (od 2026-09-11 obok „Nie zgłosił się”).
   const id = await page.evaluate(
     async (a) =>
       (
