@@ -71,12 +71,12 @@
     var sign = delta > 0 ? '+' : '−';
     var dtxt = sign + abs + ' mies.';
     if (key === 'khamis') {
-      if (abs >= DELTA_GATE_MONTHS) return { factor: 0, excluded: true, note: 'poza konsensusem — metoda nie zna wieku kostnego, a rozbieżność wieku kostnego i metrykalnego wynosi ' + dtxt };
-      if (abs >= DELTA_KR_HALF_MONTHS) return { factor: 0.5, excluded: false, note: 'waga ×0,5 — bez korekty na wiek kostny przy rozbieżności ' + dtxt };
+      if (abs >= DELTA_GATE_MONTHS) return { factor: 0, excluded: true, note: 'poza konsensusem, bo metoda nie zna wieku kostnego (rozbieżność ' + dtxt + ')' };
+      if (abs >= DELTA_KR_HALF_MONTHS) return { factor: 0.5, excluded: false, note: 'waga ×0,5, bo metoda nie ma korekty na wiek kostny (rozbieżność ' + dtxt + ')' };
       return { factor: 1, excluded: false, note: '' };
     }
     if (key === 'rwt' && delta >= DELTA_GATE_MONTHS) {
-      return { factor: 0.5, excluded: false, note: 'waga ×0,5 — wiek kostny ma w RWT małą wagę, a jest przyspieszony o ' + dtxt };
+      return { factor: 0.5, excluded: false, note: 'waga ×0,5, bo wiek kostny ma w tej metodzie małą wagę, a jest przyspieszony o ' + dtxt };
     }
     return { factor: 1, excluded: false, note: '' };
   }
@@ -110,7 +110,6 @@
     '.vgcc-row.is-pref .vgcc-nm{color:#006b73}',
     '.vgcc-row.is-excl{opacity:.72}',
     '.vgcc-row.is-excl .vgcc-val{text-decoration:line-through;text-decoration-color:#b8c6c8;font-weight:600}',
-    '.vgcc-note{font-size:.7rem;font-weight:500;color:#9a6b12;margin-top:.1rem}',
     '.vgcc-hint{font-size:.78rem;color:var(--vgcc-muted);margin:.3rem 0 .4rem}',
     '.vgcc-det{background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;margin-top:.1rem}',
     '.vgcc-det>summary{cursor:pointer;list-style:none;padding:.5rem .7rem;font-weight:700;color:#006b73;display:flex;justify-content:center;align-items:center;font-size:.84rem}',
@@ -345,18 +344,18 @@
     var halfWidthCm = pm !== null && pm > 0 ? pm : DEFAULT_SIGMA_CM * CI90_TO_SD;
     var con = consensus(active.map(function (e) { return e.value; }));
     var gateFired = anyGateFired(entries);
-    var headlinePreferred = !!(preferred && con.agreementLabel === 'niska' && gateFired);
-    var cm = headlinePreferred ? num(preferred.value) : weightedCm;
+    // GROWTH-PRED-UI2 (2026-09-11): nagłówek i `cm` to ZAWSZE konsensus ważony — metoda
+    // preferowana jest wyróżniona w liście i nazwana w podtytule, nie zastępuje nagłówka.
+    var cm = weightedCm;
     var excluded = entries.filter(function (e) { return e.excluded; }).map(function (e) { return e.key; });
     var multi = active.length >= 2;
     return {
       cm: cm,
       halfWidthCm: halfWidthCm,
       methodCount: active.length,
-      source: headlinePreferred ? preferred.key : (multi ? 'consensus' : active[0].key),
-      sourceLabel: headlinePreferred ? (preferred.label + ' (metoda preferowana dla profilu)')
-        : (multi ? 'konsensus ' + active.length + (active.length === 1 ? ' metody' : ' metod') + (wcon.withMph ? ' i MPH' : '') : active[0].label),
-      headlineSource: headlinePreferred ? 'preferred' : 'weighted',
+      source: multi ? 'consensus' : active[0].key,
+      sourceLabel: multi ? 'konsensus ' + active.length + (active.length === 1 ? ' metody' : ' metod') + (wcon.withMph ? ' i MPH' : '') : active[0].label,
+      headlineSource: 'weighted',
       weightedCm: weightedCm,
       mphInConsensus: wcon.withMph === true,
       mphShare: wcon.mphShare || 0,
@@ -385,10 +384,7 @@
     var mphCm = num(input.mphCm);
     var wcon = weightedConsensus(entries, mphCm);
     var boneAgeMissing = num(input.boneAgeYears) === null;
-    var preferred = null;
-    for (var pi = 0; pi < active.length; pi++) if (active[pi].key === wcon.recommendedKey) preferred = active[pi];
     var gateFired = anyGateFired(entries);
-    var headlinePreferred = !!(preferred && con.agreementLabel === 'niska' && gateFired);
 
     return {
       sexKey: sk,
@@ -398,7 +394,7 @@
       weighted: wcon,
       deltaMonths: entries.deltaMonths !== undefined ? entries.deltaMonths : null,
       gateFired: gateFired,
-      headline: { source: headlinePreferred ? 'preferred' : 'weighted', entry: headlinePreferred ? preferred : null },
+      headline: { source: 'weighted', entry: null },
       mph: mphCm !== null ? { cm: mphCm, centileText: input.mphCentileText != null ? String(input.mphCentileText) : '' } : null,
       tempo: num(input.growthVelocityCmPerYear) !== null ? { cm: num(input.growthVelocityCmPerYear), context: input.growthVelocityContext != null ? String(input.growthVelocityContext) : '' } : null,
       hasKhamis: entries.some(function (e) { return e.key === 'khamis'; }),
@@ -413,25 +409,16 @@
   function heroHtml(model) {
     var c = model.consensus;
     var wc = model.weighted || {};
-    var capKons = 'Konsensus ' + c.count + (c.count === 1 ? ' metody' : ' metod') + (wc.withMph ? ' i MPH' : '') + ' (ważony)';
-    if (model.headline && model.headline.source === 'preferred' && model.headline.entry) {
-      var pe = model.headline.entry;
-      var pmt = pe.clamped
-        ? (pe.hiCm !== null && pe.hiCm !== undefined && pe.hiCm > pe.value + 0.049 ? esc(fmt1(pe.value)) + '–' + esc(fmt1(pe.hiCm)) + ' cm' : '')
-        : (pe.pm !== null && pe.pm !== undefined ? '±' + esc(fmt1(pe.pm)) + ' cm' : '');
-      return '<div class="vgcc-hero is-low"><div class="vgcc-hero-cap">Prognoza — metoda preferowana dla profilu: ' + esc(pe.label) + '</div>' +
-        '<div class="vgcc-hero-big">≈ ' + esc(fmt0(pe.value)) + ' cm</div>' +
-        '<div class="vgcc-hero-sub">' + (pmt ? '<b>' + pmt + '</b> · ' : '') + esc(capKons.replace(' (ważony)', '')) + ' ważony ≈ ' + esc(fmt0(wc.weighted)) + ' cm · <span class="vgcc-warn">zgodność ' + esc(c.agreementLabel) + '</span>' +
-        (c.count >= 2 ? ' (' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm)' : '') + '</div></div>';
-    }
+    // GROWTH-PRED-UI2: podpis stały („Konsensus metod (ważony)"), podtytuł = zgodność
+    // (+ metoda preferowana przy niskiej zgodności); widełki min–max tylko w Szczegółach.
+    var capKons = 'Konsensus metod (ważony)';
     if (c.count >= 2) {
       var headline = (wc.weighted !== null && wc.weighted !== undefined) ? wc.weighted : c.median;
       var low = c.agreementLabel === 'niska';
       var rec = (low && wc.recommendedLabel) ? ' · <span class="vgcc-warn">preferowana: ' + esc(wc.recommendedLabel) + '</span>' : '';
-      var range = '<b>' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm</b> · zgodność ' + esc(c.agreementLabel);
       return '<div class="vgcc-hero' + (low ? ' is-low' : '') + '"><div class="vgcc-hero-cap">' + esc(capKons) + '</div>' +
         '<div class="vgcc-hero-big">≈ ' + esc(fmt0(headline)) + ' cm</div>' +
-        '<div class="vgcc-hero-sub">' + range + rec + '</div></div>';
+        '<div class="vgcc-hero-sub">zgodność ' + esc(c.agreementLabel) + rec + '</div></div>';
     }
     if (c.count === 1) {
       var e = model.active[0];
@@ -459,9 +446,8 @@
         : '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>' +
           (e.pm !== null && e.pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + '</span>' : '');
       var cls = (prefKey && e.key === prefKey) ? ' is-pref' : (e.excluded ? ' is-excl' : '');
-      var note = e.excluded ? '<div class="vgcc-note">poza konsensusem — ' + esc(e.gateNote.replace(/^poza konsensusem — /, '')) + '</div>'
-        : (e.gateNote ? '<div class="vgcc-note">' + esc(e.gateNote) + '</div>' : '');
-      return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + note + '</span><span>' + right + '</span></div>';
+      // powody bramek (waga ×0,5 / poza konsensusem) — tylko w „Szczegóły i wiarygodność" (GROWTH-PRED-UI2)
+      return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
     }).join('');
     return '<div class="vgcc-methods">' + rows + '</div>';
   }
@@ -483,9 +469,11 @@
   function detailsHtml(model) {
     var parts = [];
     if (model.consensus && model.consensus.count >= 2 && model.weighted && model.weighted.weighted !== null) {
-      parts.push('<p><span class="vgcc-lbl">Konsensus:</span> ważony wiarygodnością ' + esc(fmt1(model.weighted.weighted)) +
+      parts.push('<p><span class="vgcc-lbl">Konsensus:</span> ' + esc(String(model.consensus.count)) + (model.weighted.withMph ? ' metody i MPH' : ' metody') +
+        ', ważony wiarygodnością ' + esc(fmt1(model.weighted.weighted)) + ' cm; widełki metod ' + esc(fmt1(model.consensus.min)) + '–' + esc(fmt1(model.consensus.max)) +
         ' cm (mediana metod ' + esc(fmt1(model.consensus.median)) + ' cm).' +
-        (model.weighted.recommendedLabel ? ' Największa waga dla tego profilu: ' + esc(model.weighted.recommendedLabel) + '.' : '') + '</p>');
+        (model.weighted.recommendedLabel ? ' Największa waga dla tego profilu: ' + esc(model.weighted.recommendedLabel) + '.' : '') +
+        (model.weighted.withMph ? ' MPH w konsensusie jako kotwica (udział ' + esc(String(Math.round((model.weighted.mphShare || 0) * 100))) + '%).' : '') + '</p>');
     }
     if (model.entries.length) {
       var rel = model.entries.map(function (e) { return esc(e.label) + ' ' + esc(levelLabel(e.levelKey)); }).join(' · ');
@@ -505,14 +493,14 @@
         ', czyli poniżej zmierzonego wzrostu. Dolną granicę prognozy ograniczono do aktualnego wzrostu, z odpowiednim obcięciem przedziału błędu; ' + (model.sexKey === 'F' ? 'pacjentka' : 'pacjent') + ' jest już blisko osiągnięcia wzrostu ostatecznego.</p>');
     }
     if (model.deltaMonths !== null && model.deltaMonths !== undefined && model.entries.length) {
-      var dm = model.deltaMonths, dsign = dm > 0 ? '+' : (dm < 0 ? '−' : '');
-      var gated = model.entries.filter(function (e) { return e.gateNote; }).map(function (e) { return esc(e.label) + ': ' + esc(e.gateNote); });
-      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> wiek kostny względem metrykalnego ' + esc(dsign + Math.abs(dm)) + ' mies.' +
-        (gated.length ? ' — ' + gated.join('; ') : ' — bez bramek (wszystkie metody z pełną wagą)') + '.' +
-        (model.weighted && model.weighted.withMph ? ' MPH w konsensusie jako kotwica (udział ' + esc(String(Math.round((model.weighted.mphShare || 0) * 100))) + '%).' : '') +
-        (model.headline && model.headline.source === 'preferred' ? ' Nagłówek pokazuje metodę preferowaną, bo zgodność metod jest niska.' : '') + '</p>');
-    } else if (model.weighted && model.weighted.withMph) {
-      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> MPH w konsensusie jako kotwica (udział ' + esc(String(Math.round((model.weighted.mphShare || 0) * 100))) + '%); bez wieku kostnego bramki Δ nie działają.</p>');
+      var dm = model.deltaMonths;
+      var dtxt = dm > 0 ? 'wiek kostny wyprzedza metrykalny o ' + esc(String(dm)) + ' mies.'
+        : (dm < 0 ? 'wiek kostny opóźniony względem metrykalnego o ' + esc(String(-dm)) + ' mies.' : 'wiek kostny zgodny z metrykalnym');
+      var gated = model.entries.filter(function (e) { return e.gateNote; }).map(function (e) { return esc(e.label) + ': ' + esc(e.gateNote) + '.'; });
+      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> ' + dtxt + ' ' +
+        (gated.length ? gated.join(' ') : 'Bez bramek: wszystkie metody z pełną wagą.') + '</p>');
+    } else if (model.entries.length >= 2 && model.boneAgeMissing) {
+      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> bez wieku kostnego bramki rozbieżności nie działają; wszystkie metody z pełną wagą.</p>');
     }
     if (model.hasBlum) {
       var be = model.entries.filter(function (e) { return e.key === 'blum'; })[0];
@@ -538,7 +526,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '8',
+    version: '9',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
