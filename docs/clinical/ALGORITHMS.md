@@ -539,6 +539,22 @@ Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat"
 
 - *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
 
+### GROWTH-HV-UI10 — ręczny wiersz i identyczny punkt terapii GH liczone podwójnie (SW 1.0.884, 2026-09-11, zgłoszenie właściciela)
+
+**Objaw.** Lekarz wpisał historyczne pomiary ręcznie w „Zaawansowanych obliczeniach wzrostowych", a potem — wstecznie — te same pomiary jako punkty terapii w monitorze GH (docpro). Po wczytaniu pacjenta każdy pomiar widniał **dwa razy**: raz jako wiersz ręczny, raz jako kopia punktu terapii. Usunięcie kopii i zapis nic nie dawało — po ponownym wczytaniu dubel wracał. Pacjent nie jest „zepsuty": obie kopie mają te same liczby, więc tempo liczy się z tej samej pary punktów — ale każde tempo liczone „z ostatnich N pomiarów" widziało jeden pomiar jako dwa, a lista była nieczytelna.
+
+**Przyczyna.** Mostek `importTherapyPointsToAdvancedGrowth` (`vilda_advanced_growth.js`) dopasowywał punkt terapii wyłącznie do wierszy **już oznaczonych** jako pochodzące z terapii (`data-gh-sync`/`data-gh-id`). Wiersz ręczny o tym samym wieku i tych samych pomiarach był dla niego niewidzialny — więc zawsze dokładał drugi. A ponieważ zapis pacjenta celowo nie przechowuje wierszy z terapii (źródłem prawdy jest moduł GH, GROWTH-HV-UI6), usunięcie kopii nie miało czego zapisać: przy każdym wczytaniu mostek odtwarzał ją z punktów terapii.
+
+**Naprawa.** Przed dołożeniem wiersza mostek szuka **wiersza ręcznego** o tym samym wieku (pełne miesiące) i tym samym wzroście (tolerancja 0,1 cm; masa — jeśli obie strony ją mają — tolerancja 0,1 kg; ta sama definicja „tego samego pomiaru", której mostek używa już wobec dzisiejszego pomiaru z głównego formularza). Gdy taki wiersz jest, punkt terapii **nie dostaje własnego wiersza**, a ewentualna wcześniejsza kopia znika. Wiersz ręczny zostaje zapisem lekarza: jest edytowalny i wchodzi do zapisu pacjenta jak dotąd. Punkty terapii z innych wizyt — albo w tym samym wieku, ale z innym pomiarem — dochodzą jak dotąd.
+
+**Dla istniejących zapisów nic nie trzeba robić.** Rekord właściciela zawiera tylko wiersze ręczne (kopie z terapii nigdy nie były zapisywane), więc po odświeżeniu aplikacji dublów po prostu nie ma.
+
+**Modal konfliktu przy zapisie to nie był błąd.** Docpro zapisał punkty terapii do tego samego rekordu pacjenta, a formularz główny był otwarty wcześniej — zapis z niego trafił na rekord nowszy niż ten, który wczytał. To zabezpieczenie przed nadpisaniem cudzych zmian zadziałało zgodnie z przeznaczeniem.
+
+- Wersje: `vilda_advanced_growth.js` `?v=37` → `?v=38`; `SW_VERSION` 1.0.884.
+
+- *Strażnik:* `tests/e2e/gh-punkt-a-reczny-wiersz.spec.mjs` (nowy, 3): (1) identyczny punkt terapii — z różnicą zaokrąglenia 140,0 wobec 139,9 — nie dubluje wiersza ręcznego ani od razu, ani po zapisie i „Odtwórz zapis"; (2) punkt z innej wizyty nadal dochodzi obok wiersza ręcznego; (3) inny pomiar w tym samym wieku to osobny punkt. **Zmierzone czerwone** na kodzie sprzed poprawki: **2 z 3** (pierwszy i drugi — w drugim dublował się punkt z tej samej wizyty), trzeci to kontrola prawdziwa po obu stronach.
+
 ### GROWTH-HV-UI9 — okres w wierszu tempa: „ostatnich 1 lat" (SW 1.0.881, 2026-09-10, zgłoszenie właściciela)
 
 **Objaw.** „Tempo wzrastania: 6,1 cm/rok (obliczono jako średnią z **ostatnich 1 lat**)". To nie jest polszczyzna — a przy okazji zaokrąglenie gubiło informację: odstęp wynosił **16 miesięcy**.
