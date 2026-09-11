@@ -142,8 +142,9 @@ describe('Wariant B — konsensus ważony wiarygodnością (Wniosek 2)', () => {
   });
   it('nagłówek konsensusu jest „ważony"; kompatybilność wsteczna wartości', () => {
     const html = C.render(baseInput());
-    expect(html).toContain('Konsensus 4 metod (ważony)');
-    expect(html).toContain('≈ 178 cm'); // ważony 177,9 → 178 (jak mediana)
+    // GROWTH-PRED-DOBOR: MPH (178,5) wchodzi do średniej ważonej jako kotwica (udział ~8%).
+    expect(html).toContain('Konsensus 4 metod i MPH (ważony)');
+    expect(html).toContain('≈ 178 cm'); // ważony 177,7 → 178 (jak mediana)
   });
   it('niska zgodność (spread>6): flaga is-low + metoda preferowana na wierzchu', () => {
     const html = C.render(baseInput({
@@ -153,9 +154,13 @@ describe('Wariant B — konsensus ważony wiarygodnością (Wniosek 2)', () => {
       reinehr: { available: true, predictedAdultHeightCm: 175.5, errorBoundHalfWidthCm: 4.0 },
       reliabilityModel: { entryMap: { rwt: { levelKey: 'high' }, bayleyPinneau: { levelKey: 'low' }, reinehr: { levelKey: 'high' } } },
     }));
+    // Δ = 11,5·12 − 156 = −18 mies. → bramka KR ×0,5 zadziałała, zgodność niska → nagłówek pokazuje
+    // metodę preferowaną (GROWTH-PRED-DOBOR), a konsensus ważony schodzi do podtytułu.
     expect(html).toContain('is-low');
     expect(html).toContain('zgodność niska');
-    expect(html).toContain('preferowana:');
+    expect(html).toContain('metoda preferowana dla profilu: Reinehr/CDGP');
+    expect(html).toContain('≈ 176 cm');
+    expect(html).toContain('ważony ≈ 177 cm');
   });
   it('mediana i ważony pokazane w Szczegółach', () => {
     const html = C.render(baseInput());

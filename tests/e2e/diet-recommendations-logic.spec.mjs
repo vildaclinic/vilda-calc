@@ -595,7 +595,11 @@ test('DIET-FINAL-HEIGHT-CONSENSUS: pozostały wzrost z konsensusu metod, MPH jak
   expect(result.fhp.cm).toBeLessThanOrEqual(result.fhp.maxCm);
   // Tekst cytuje prognozę, nie MPH:
   expect(result.withPrediction).toContain('prognozowany wzrost ostateczny');
-  expect(result.withPrediction).toContain(`konsensus ${result.fhp.methodCount} metod`);
+  // GROWTH-PRED-DOBOR (2026-09-12): etykieta źródła to konsensus („konsensus N metod i MPH") ALBO —
+  // przy niskiej zgodności i zadziałanej bramce wieku kostnego — metoda preferowana dla profilu.
+  // Tekst zaleceń ma cytować dokładnie tę etykietę, którą publikuje karta.
+  expect(result.fhp.sourceLabel).toMatch(/konsensus \d+ metod|metoda preferowana dla profilu/);
+  expect(result.withPrediction).toContain(result.fhp.sourceLabel);
   expect(result.withPrediction).not.toContain('na podstawie wzrostu rodziców');
   // Pozostały wzrost = prognoza − obecny wzrost (co do 0,1 cm):
   const remaining = (result.fhp.cm - 145).toFixed(1).replace('.', ',');
