@@ -61,14 +61,15 @@ describe('2. Karta: metoda bez przedziału nie wygrywa dzięki domyślnemu σ', 
 
 describe('3. Silnik BP: prognoza nie niżej niż obecny wzrost', () => {
   const { A } = loadAll();
-  it('dziewczynka 18 l, BA 18, 165 cm: korekta ujemna nie schodzi pod wzrost; pola clamp jak w RWT', () => {
-    const bp = A.calculateBayleyPinneauPrediction({ sex: 'F', chronologicalAgeMonths: 216, boneAgeYears: 18, currentHeightCm: 165 });
+  it('chłopiec 18 l, BA 18-6 (100%), 175 cm: korekta w dół (−0,36 cm) nie schodzi pod wzrost; pola clamp jak w RWT', () => {
+    // GROWTH-PRED-BP-SIGN: korekta = −(błąd średni); u chłopców 18-0 błąd +0,14 cala → −0,36 cm → 174,6 → obcięte do 175.
+    const bp = A.calculateBayleyPinneauPrediction({ sex: 'M', chronologicalAgeMonths: 216, boneAgeYears: 18.6, currentHeightCm: 175 });
     expect(bp.available).toBe(true);
-    expect(bp.predictedAdultHeightCm).toBe(165);
+    expect(bp.predictedAdultHeightCm).toBe(175);
     expect(bp.remainingGrowthCm).toBe(0);
     expect(bp.clampedToCurrentHeight).toBe(true);
-    expect(bp.predictedAdultHeightCmRaw).toBeCloseTo(164.9, 5);
-    expect(bp.predictionIntervalLowerCm).toBeGreaterThanOrEqual(165);
+    expect(bp.predictedAdultHeightCmRaw).toBeCloseTo(174.6, 5);
+    expect(bp.predictionIntervalLowerCm).toBeGreaterThanOrEqual(175);
   });
   it('zwykły przypadek: bez clampu, raw = prognoza', () => {
     const bp = A.calculateBayleyPinneauPrediction({ sex: 'M', chronologicalAgeMonths: 120, boneAgeYears: 10, currentHeightCm: 140 });
@@ -195,10 +196,9 @@ describe('8. Drobne: centyl MPH „<1"/„>100", wiek kostny w RWT, ostatni węz
     const m = A.calculateBayleyPinneauPrediction({ sex: 'M', chronologicalAgeMonths: 216, boneAgeYears: 18.6, currentHeightCm: 175 });
     expect(m.available).toBe(true);
     expect(m.percentMatureHeight).toBe(100);
-    // 100% × 175 = 175 + korekta populacyjna BP dla wieku 18 l (+0,4 u chłopców) — korekta zostaje
+    // 100% × 175 = 175; korekta populacyjna (−0,36 cm) obcięta clampem do wzrostu
     expect(m.predictedAdultHeightCmUncorrected).toBe(175);
-    expect(m.predictedAdultHeightCm).toBeGreaterThanOrEqual(175);
-    expect(m.predictedAdultHeightCm).toBeLessThan(176);
+    expect(m.predictedAdultHeightCm).toBe(175);
     const f = A.calculateBayleyPinneauPrediction({ sex: 'F', chronologicalAgeMonths: 216, boneAgeYears: 18.4, currentHeightCm: 165 });
     expect(f.available).toBe(true);
     expect(f.predictedAdultHeightCmUncorrected).toBe(165);

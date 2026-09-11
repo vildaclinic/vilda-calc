@@ -492,6 +492,7 @@
       tempo: num(input.growthVelocityCmPerYear) !== null ? { cm: num(input.growthVelocityCmPerYear), context: input.growthVelocityContext != null ? String(input.growthVelocityContext) : '' } : null,
       hasKhamis: entries.some(function (e) { return e.key === 'khamis'; }),
       hasBlum: entries.some(function (e) { return e.key === 'blum'; }),
+      hasBp: entries.some(function (e) { return e.key === 'bp'; }),
       boneAgeMissing: boneAgeMissing,
       showBoneAgeHint: boneAgeMissing && entries.some(function (e) { return e.key === 'khamis'; }) && !entries.some(function (e) { return e.key === 'bp'; }),
       profileStatus: rm && rm.profileStatusLabel ? String(rm.profileStatusLabel) : '',
@@ -638,6 +639,12 @@
       var be = model.entries.filter(function (e) { return e.key === 'blum'; })[0];
       parts.push('<p><span class="vgcc-lbl">Blum/ISS:</span> równania dla dzieci niskorosłych (hSDS ≤ −1,28; Blum i wsp., J Endocr Soc 2022' + (be && be.blumModelId ? ', model ' + esc(String(be.blumModelId)) : '') + '); RMSE 3,2–3,7 cm, kohorta niemiecko-holenderska. Nie stosować u dzieci rosnących prawidłowo ani wysokich.</p>');
     }
+    if (model.hasBp) {
+      var dmb = num(model.deltaMonths);
+      parts.push('<p><span class="vgcc-lbl">Bayley–Pinneau:</span> błąd odczytu wieku kostnego z RTG jest głównym źródłem błędu prognozy — autorki zalecają uśrednić kilka niezależnych odczytów.' +
+        (dmb !== null && dmb >= DELTA_GATE_MONTHS ? ' Bayley i Pinneau (1952): dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy, niż wskazują tabele.' : '') +
+        (dmb !== null && dmb <= -DELTA_GATE_MONTHS ? ' Bayley i Pinneau (1952): dzieci opóźnione o ponad 2 lata osiągają zwykle wzrost niższy, niż wskazują tabele.' : '') + '</p>');
+    }
     if (model.hasKhamis) {
       parts.push('<p><span class="vgcc-lbl">Khamis–Roche:</span> błąd zbiorczy 90% metody (±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku; liczy się bez wieku kostnego, populacja Fels (białe dzieci USA).</p>');
     }
@@ -659,7 +666,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '11',
+    version: '12',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
