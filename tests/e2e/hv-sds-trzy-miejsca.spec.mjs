@@ -405,7 +405,13 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
       set(rows[1], '.adv-height', '122'); set(rows[1], '.adv-weight', '25');
       window.calculateGrowthAdvanced();
     });
-    await page.waitForSelector('#advResults .vtap-hvc');
+    // Czekamy na OBECNOŚĆ kafelka, nie na jego widoczność. Kafelek powstaje przy każdym
+  // przeliczeniu karty zaawansowanej, niezależnie od tego, czy karta jest akurat rozwinięta —
+  // a asercje niżej czytają jego tekst, do czego widoczność nie jest potrzebna. Domyślny
+  // `waitForSelector` czeka na WIDOCZNOŚĆ i na CI wywrócił się z komunikatem
+  // „113 × locator resolved to hidden <div class=\"vtap-card cs vtap-hvc\">": karta była
+  // zwinięta, choć wynik był już policzony i poprawny.
+  await page.waitForSelector('#advResults .vtap-hvc', { state: 'attached' });
   }
 
   const zdanie = (page) => page.evaluate(() => String(window.generateMetabolicSummary() || '')
@@ -532,7 +538,13 @@ test.describe('Zdanie stoi także pod drugą gałęzią wiersza tempa', () => {
       set('.adv-height', '135.05'); set('.adv-weight', '30');
       window.calculateGrowthAdvanced();
     });
-    await page.waitForSelector('#advResults .vtap-hvc');
+    // Czekamy na OBECNOŚĆ kafelka, nie na jego widoczność. Kafelek powstaje przy każdym
+  // przeliczeniu karty zaawansowanej, niezależnie od tego, czy karta jest akurat rozwinięta —
+  // a asercje niżej czytają jego tekst, do czego widoczność nie jest potrzebna. Domyślny
+  // `waitForSelector` czeka na WIDOCZNOŚĆ i na CI wywrócił się z komunikatem
+  // „113 × locator resolved to hidden <div class=\"vtap-card cs vtap-hvc\">": karta była
+  // zwinięta, choć wynik był już policzony i poprawny.
+  await page.waitForSelector('#advResults .vtap-hvc', { state: 'attached' });
   }
 
   const linie = (page) => page.evaluate(() => String(window.generateMetabolicSummary() || '')
