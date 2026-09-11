@@ -1,5 +1,29 @@
 import { expect, test } from '../support/test-czas.mjs';
 
+// Identyfikator zapisanego pacjenta — czytany w JEDNYM kroku i z ponawianiem.
+//
+// Rozbicie na „poczekaj, aż lista ma jeden wpis" i osobny odczyt `[0].patientId` to wyścig:
+// między tymi dwoma wywołaniami sejf potrafi jeszcze raz sięgnąć do IndexedDB i przez chwilę
+// oddać pustą listę. Pod obciążeniem trafiało to prosto w odczyt — „Cannot read properties of
+// undefined (reading 'patientId')". Złapane przy zrównoleglaniu zestawu; wyścig był tu od
+// początku, tylko jeden wątek nigdy go nie przegrywał.
+async function idZapisanegoPacjenta(page) {
+  let id = null;
+  await expect
+    .poll(
+      async () => {
+        id = await page.evaluate(async () => {
+          const lista = await window.VildaVault.listPatients();
+          return Array.isArray(lista) && lista.length === 1 && lista[0] ? lista[0].patientId : null;
+        });
+        return typeof id === 'string' && id.length > 0;
+      },
+      { message: 'sejf ma dokładnie jednego zapisanego pacjenta' },
+    )
+    .toBe(true);
+  return id;
+}
+
 // GROWTH-HV-3 — HV-SDS w trzech miejscach wskazanych przez właściciela (2026-09-09):
 //   1. karta „Podsumowanie wyników" — jedno zdanie pod tempem wzrastania;
 //   2. karta „Zaawansowane obliczenia wzrostowe" — kafelek obok wzrostu, masy i BMI;
@@ -381,7 +405,13 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
       set(rows[1], '.adv-height', '122'); set(rows[1], '.adv-weight', '25');
       window.calculateGrowthAdvanced();
     });
-    await page.waitForSelector('#advResults .vtap-hvc');
+    // Czekamy na OBECNOŚĆ kafelka, nie na jego widoczność. Kafelek powstaje przy każdym
+  // przeliczeniu karty zaawansowanej, niezależnie od tego, czy karta jest akurat rozwinięta —
+  // a asercje niżej czytają jego tekst, do czego widoczność nie jest potrzebna. Domyślny
+  // `waitForSelector` czeka na WIDOCZNOŚĆ i na CI wywrócił się z komunikatem
+  // „113 × locator resolved to hidden <div class=\"vtap-card cs vtap-hvc\">": karta była
+  // zwinięta, choć wynik był już policzony i poprawny.
+  await page.waitForSelector('#advResults .vtap-hvc', { state: 'attached' });
   }
 
   const zdanie = (page) => page.evaluate(() => String(window.generateMetabolicSummary() || '')
@@ -401,8 +431,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     await otworz(page);
     await policzChlopca(page);
     await page.locator('#saveDataBtnSidebar').click();
-    await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
-    const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
+    const pid = await idZapisanegoPacjenta(page);
 
     // Karta zaawansowana zapamiętuje wynik; nowy formularz zaczyna od zera jak u lekarza.
     await page.evaluate(() => window.clearAllData());
@@ -438,8 +467,7 @@ test.describe('Ten sam pacjent — ta sama liczba w każdym miejscu', () => {
     await otworz(page);
     await policzChlopca(page);
     await page.locator('#saveDataBtnSidebar').click();
-    await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
-    const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
+    const pid = await idZapisanegoPacjenta(page);
 
     await page.evaluate(() => window.clearAllData());
     await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => {
@@ -510,7 +538,13 @@ test.describe('Zdanie stoi także pod drugą gałęzią wiersza tempa', () => {
       set('.adv-height', '135.05'); set('.adv-weight', '30');
       window.calculateGrowthAdvanced();
     });
-    await page.waitForSelector('#advResults .vtap-hvc');
+    // Czekamy na OBECNOŚĆ kafelka, nie na jego widoczność. Kafelek powstaje przy każdym
+  // przeliczeniu karty zaawansowanej, niezależnie od tego, czy karta jest akurat rozwinięta —
+  // a asercje niżej czytają jego tekst, do czego widoczność nie jest potrzebna. Domyślny
+  // `waitForSelector` czeka na WIDOCZNOŚĆ i na CI wywrócił się z komunikatem
+  // „113 × locator resolved to hidden <div class=\"vtap-card cs vtap-hvc\">": karta była
+  // zwinięta, choć wynik był już policzony i poprawny.
+  await page.waitForSelector('#advResults .vtap-hvc', { state: 'attached' });
   }
 
   const linie = (page) => page.evaluate(() => String(window.generateMetabolicSummary() || '')

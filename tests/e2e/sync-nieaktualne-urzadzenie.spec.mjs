@@ -47,10 +47,39 @@ const werdykt = (nadpisz) => ({
 });
 
 async function nadaj(page, detail) {
+  // Dwie rzeczy naraz, bo bez nich ten helper był źródłem trzech różnych „migających" błędów,
+  // które wyszły dopiero po zrównolegleniu zestawu (jeden wątek na wolnej maszynie po prostu
+  // nigdy nie przegrywał tych wyścigów).
+  //
+  // 1. Strona SAMA liczy werdykt: `q()` w inline_ustawienia_04.js woła asynchroniczne `Ny()`,
+  //    które pyta sejf o `getSyncStaleness()` i renderuje WYNIK PRAWDZIWY. Świeży sejf nie jest
+  //    nieaktualny, więc to wywołanie CHOWA baner — i jeśli wylądowało po naszym zdarzeniu,
+  //    kasowało je bez śladu. Dlatego podstawiamy sejfowi ten sam werdykt: późne `Ny()`
+  //    narysuje dokładnie to samo, zamiast walczyć z testem.
+  // 2. Nasłuchy zakładają DWA niezależne moduły (baner — inline_ustawienia_04.js, stan przycisku
+  //    w pasku — vilda_chrome.js), każdy w swoim momencie. Zdarzenie rzucone przed rejestracją
+  //    przepada, więc powtarzamy je, aż oba skutki będą widoczne. Render jest synchroniczny,
+  //    a zdarzenie idempotentne, więc powtórzenie niczego nie psuje.
   await page.evaluate((d) => {
-    document.dispatchEvent(new CustomEvent('vilda:sync-stale-device', { detail: d, bubbles: false }));
+    try {
+      if (window.VildaVault) window.VildaVault.getSyncStaleness = async () => d;
+    } catch (_) { /* brak sejfu — poniżej i tak rzucamy zdarzenie */ }
   }, detail);
-  await page.waitForTimeout(60);
+
+  await expect
+    .poll(
+      () => page.evaluate((d) => {
+        document.dispatchEvent(new CustomEvent('vilda:sync-stale-device', { detail: d, bubbles: false }));
+        const el = document.getElementById('syncStaleWarning');
+        const btn = document.getElementById('vildaSyncBtn');
+        return {
+          baner: Boolean(el) && !el.hidden,
+          przycisk: btn ? btn.getAttribute('data-sync-state') === 'stale' : false,
+        };
+      }, detail),
+      { message: 'strona musi przyjąć werdykt: baner i przycisk w pasku', timeout: 15_000 },
+    )
+    .toEqual({ baner: Boolean(detail.warn), przycisk: Boolean(detail.warn) });
 }
 
 async function stanBanera(page) {

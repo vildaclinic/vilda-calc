@@ -69,6 +69,24 @@ async function injectOverdueSection(page) {
 // zapisu (zwraca false) — więc skrypt spada na lokalny klucz i to on jest tu sprawdzany.
 // Zmierzone: bez tego spadku klik gościa nie zapisywał już NICZEGO. Tor synchronizowany, dla
 // zalogowanego sejfu, pilnuje Z7 w tests/e2e/przypomnienia-zwijanie.spec.mjs.
+// Zapisany stan czytamy DOKŁADNIE tak, jak czyta go moduł (isCollapsed w
+// vilda_reminders_collapse.js): najpierw adapter preferencji, a gdy go nie ma albo odmówi —
+// localStorage. To nie jest ozdobnik: `saveCollapsed` próbuje najpierw adaptera i wraca BEZ
+// zapisu do localStorage, jeśli adapter przyjmie wartość. W trybie gościa adapter odmawia
+// tylko w oknie czyszczenia stanu użytkownika, więc to, KTÓRY magazyn dostanie zapis, zależy
+// od czasu. Test zaglądający wyłącznie do localStorage widział wtedy wartość z poprzedniego
+// kliknięcia — złapane przy zrównoleglaniu zestawu („Expected 0, Received 1").
+const zapisanyStan = (page) => page.evaluate(() => {
+  const LS = 'vilda-rem-overdue-collapsed-v1';
+  let legacy = false;
+  try { legacy = localStorage.getItem(LS) === '1'; } catch (_) { /* brak storage */ }
+  const P = window.VildaPersistence;
+  if (P && typeof P.readBooleanPreference === 'function') {
+    try { return !!P.readBooleanPreference('remindersOverdueCollapsed', legacy); } catch (_) { return legacy; }
+  }
+  return legacy;
+});
+
 test('klik „Zaległe” zwija i rozwija pozycje oraz zapisuje stan lokalnie (tryb gościa)', async ({
   page,
 }) => {
@@ -90,20 +108,12 @@ test('klik „Zaległe” zwija i rozwija pozycje oraz zapisuje stan lokalnie (t
   await head.click();
   await expect(rows.first()).toBeHidden();
   await expect(rows.nth(1)).toBeHidden();
-  expect(
-    await page.evaluate(() =>
-      localStorage.getItem('vilda-rem-overdue-collapsed-v1'),
-    ),
-  ).toBe('1');
+  await expect.poll(() => zapisanyStan(page), { message: 'stan zwinięcia zapisany' }).toBe(true);
 
   // Ponowny klik → rozwinięte.
   await head.click();
   await expect(rows.first()).toBeVisible();
-  expect(
-    await page.evaluate(() =>
-      localStorage.getItem('vilda-rem-overdue-collapsed-v1'),
-    ),
-  ).toBe('0');
+  await expect.poll(() => zapisanyStan(page), { message: 'stan rozwinięcia zapisany' }).toBe(false);
 });
 
 test('stan zwinięcia przeżywa przeładowanie strony', async ({ page }) => {
@@ -112,11 +122,7 @@ test('stan zwinięcia przeżywa przeładowanie strony', async ({ page }) => {
 
   // Zwiń i potwierdź zapis.
   await page.locator('#vrc-test-panel .vild-rem-sec-head').click();
-  expect(
-    await page.evaluate(() =>
-      localStorage.getItem('vilda-rem-overdue-collapsed-v1'),
-    ),
-  ).toBe('1');
+  await expect.poll(() => zapisanyStan(page), { message: 'stan zwinięcia zapisany' }).toBe(true);
 
   // Przeładowanie: skrypt na starcie czyta localStorage i OD RAZU ustawia klasę na <html>
   // (dzięki temu przy ponownym renderze panelu pozycje są ukryte bez migotania).
@@ -124,11 +130,7 @@ test('stan zwinięcia przeżywa przeładowanie strony', async ({ page }) => {
   await page.waitForFunction(
     () => window.VildaRemindersCollapse && window.VildaRemindersCollapse.__init,
   );
-  expect(
-    await page.evaluate(() =>
-      localStorage.getItem('vilda-rem-overdue-collapsed-v1'),
-    ),
-  ).toBe('1');
+  await expect.poll(() => zapisanyStan(page), { message: 'stan zwinięcia zapisany' }).toBe(true);
   expect(
     await page.evaluate(() =>
       document.documentElement.classList.contains('vrc-overdue-collapsed'),

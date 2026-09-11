@@ -18,8 +18,15 @@ async function openWithDietModule(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.energyBuildPlanReductionState === 'function');
   // Moduł diety jest ładowany leniwie — doładuj produkcyjny plik wprost.
-  await page.addScriptTag({ url: '/vilda_diet_recommendations.js?v=15' });
+  await page.addScriptTag({ url: '/vilda_diet_recommendations.js' });
   await page.waitForFunction(() => typeof window.generateDietRecommendations === 'function');
+  // …a za nim moduł raportu pacjenta, z którego dieta korzysta (patientReportFormatAge,
+  // patientReportFormatIssueList i dalsze). Na stronie oba idą LENIWIE i SEKWENCYJNIE
+  // (dieta → raport) dopiero po pierwszym dotknięciu strony, więc bez tego kroku test
+  // wołał zalecenia w oknie, w którym raportu jeszcze nie ma. Na obciążonej maszynie
+  // okno się poszerza i test się wywracał — zmierzone przy zrównoleglaniu zestawu.
+  await page.addScriptTag({ url: '/vilda_patient_report.js' });
+  await page.waitForFunction(() => typeof window.patientReportFormatIssueList === 'function');
 }
 
 async function generate(page, { ageYears, ageMonths = 0, sex, weightKg, heightCm, vitD = false, hydration = false }) {
@@ -119,7 +126,7 @@ test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjn
 test('DIET-PDF-FULL-COMPLETE: pełny raport PDF zawiera komplet zaleceń z witaminą D', async ({ page }) => {
   test.setTimeout(180_000);
   await openWithDietModule(page);
-  await page.addScriptTag({ url: '/vilda_patient_report.js?v=8' });
+  await page.addScriptTag({ url: '/vilda_patient_report.js' });
   await page.waitForFunction(() => typeof window.patientReportCreateRenderHost === 'function');
   const result = await page.evaluate(async () => {
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
@@ -395,7 +402,7 @@ test('DIET-PDF-VALIDATION: generator PDF odrzuca brak wieku i błędne jednostki
 test('DIET-FILENAME-PL: sanitizer nazw plików transliteruje ł/Ł', async ({ page }) => {
   test.setTimeout(90_000);
   await openWithDietModule(page);
-  await page.addScriptTag({ url: '/vilda_patient_report.js?v=8' });
+  await page.addScriptTag({ url: '/vilda_patient_report.js' });
   await page.waitForFunction(() => typeof window.patientReportSanitizeFilename === 'function');
   const sanitized = await page.evaluate(() => window.patientReportSanitizeFilename('Michał Łąka'));
   expect(sanitized).toBe('Michal_Laka');

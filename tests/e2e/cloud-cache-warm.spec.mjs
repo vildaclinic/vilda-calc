@@ -43,9 +43,17 @@ async function openIndexGuest(page) {
 }
 
 // Symuluje „zainfekowane” urządzenie: pref='1' USTAWIONY zanim wczyta się wyłącznik.
+//
+// Tylko w ramce GŁÓWNEJ. `addInitScript` wykonuje się w KAŻDEJ ramce dokumentu, a powłoka
+// „app.html" montuje własną ramkę (`index.html?embedded=1`) — bez tego warunku symulacja
+// zarażała urządzenie PONOWNIE, już po tym, jak wyłącznik strony głównej ustawił '0'.
+// Zmierzony ślad wartości klucza na obciążonej maszynie: 1 (60 ms) → 0 (371 ms) →
+// 1 (586 ms, skrypt ramki) → 0 (983 ms, wyłącznik ramki). Asercja trafiająca w to okno
+// widziała '1'. Prawdziwe urządzenie ma tę preferencję raz, a nie raz na ramkę.
 async function preInfect(page) {
   await page.addInitScript((key) => {
     try {
+      if (window.top !== window) return;
       window.localStorage.setItem(key, '1');
     } catch (_) {
       /* pomiń */

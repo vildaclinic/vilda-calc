@@ -75,7 +75,13 @@ async function pacjentka(page, lata, miesiace, wzrost) {
     set('.adv-height', h); set('.adv-weight', '45');
     window.calculateGrowthAdvanced();
   }, [lata, miesiace, wzrost]);
-  await page.waitForSelector('#advResults .vtap-hvc');
+  // Czekamy na OBECNOŚĆ kafelka, nie na jego widoczność. Kafelek powstaje przy każdym
+  // przeliczeniu karty zaawansowanej, niezależnie od tego, czy karta jest akurat rozwinięta —
+  // a asercje niżej czytają jego tekst, do czego widoczność nie jest potrzebna. Domyślny
+  // `waitForSelector` czeka na WIDOCZNOŚĆ i na CI wywrócił się z komunikatem
+  // „113 × locator resolved to hidden <div class=\"vtap-card cs vtap-hvc\">": karta była
+  // zwinięta, choć wynik był już policzony i poprawny.
+  await page.waitForSelector('#advResults .vtap-hvc', { state: 'attached' });
 }
 
 const opis = (page) => page.evaluate(
