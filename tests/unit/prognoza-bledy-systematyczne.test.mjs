@@ -4,7 +4,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // GROWTH-PRED-BIAS (decyzja właściciela 2026-09-11, poziom A + C, próg ±2 SDS, wiersz pokazuje
 // wartość skorygowaną): korekty błędu systematycznego metod wg profilu pacjenta, MPH jako cel
 // warunkowy (regresja do średniej 0,78; Luo 1998), waga MPH ×0,5 w niskorosłości, Reinehr z własnym
-// przedziałem ±5,7 zamiast domyślnego σ 3,0. Dane fikcyjne.
+// przedziałem (±5,7; od GROWTH-PRED-REINEHR ±6,4) zamiast domyślnego σ 3,0. Dane fikcyjne.
 
 function loadCard() {
   const win = {};
@@ -65,7 +65,7 @@ describe('GROWTH-PRED-BIAS — reguły korekt (biasFor)', () => {
 
 describe('GROWTH-PRED-BIAS — chłopiec KOWD (Δ −30, hSDS −2,1)', () => {
   const C = loadCard();
-  it('BP 176,0 → 174,0 (σ×1,2), RWT 172,0 → 170,7, Reinehr ±5,7; MPH jako cel warunkowy z wagą ×0,5', () => {
+  it('BP 176,0 → 174,0 (σ×1,2), RWT 172,0 → 170,7, Reinehr ±6,4; MPH jako cel warunkowy z wagą ×0,5', () => {
     const r = C.computeFinalHeightPrediction(KOWD);
     const bp = r.methods.find((m) => m.key === 'bp');
     const rwt = r.methods.find((m) => m.key === 'rwt');
@@ -73,13 +73,13 @@ describe('GROWTH-PRED-BIAS — chłopiec KOWD (Δ −30, hSDS −2,1)', () => {
     expect(bp.cm).toBeCloseTo(174.0, 5); expect(bp.uncorrectedCm).toBeCloseTo(176.0, 5); expect(bp.biasCm).toBe(-2.0);
     expect(bp.errorHalfWidthCm).toBeCloseTo(5.7 * 1.2, 5);
     expect(rwt.cm).toBeCloseTo(170.7, 5); expect(rwt.biasCm).toBe(-1.3);
-    expect(re.errorHalfWidthCm).toBe(5.7);
+    expect(re.errorHalfWidthCm).toBe(6.4);
     expect(r.biasApplied).toEqual(['rwt', 'bp']);
     expect(r.mphAnchorCm).toBeCloseTo(179 + 0.78 * 2, 5); // 180,56
     expect(r.mphWeightFactor).toBe(0.5);
     // wynik = średnia ważona skorygowanych wartości i kotwicy:
     const w = (f, pm) => f / Math.pow(pm / SD, 2);
-    const wBp = w(0.5, 5.7 * 1.2), wRwt = w(0.7, 4.9), wRe = w(0.7, 5.7), wM = 0.5 * 0.7 / (5.1 * 5.1);
+    const wBp = w(0.5, 5.7 * 1.2), wRwt = w(0.7, 4.9), wRe = w(0.7, 6.4), wM = 0.5 * 0.7 / (5.1 * 5.1);
     const expected = (wBp * 174.0 + wRwt * 170.7 + wRe * 173.0 + wM * 180.56) / (wBp + wRwt + wRe + wM);
     expect(r.cm).toBeCloseTo(expected, 3);
     expect(r.preferredKey).toBe('rwt'); // po A1 Reinehr nie dominuje już „z urzędu"
@@ -151,8 +151,8 @@ describe('GROWTH-PRED-BIAS — pozostałe profile', () => {
   });
 });
 
-describe('GROWTH-PRED-BIAS — Reinehr z własnym przedziałem błędu (A1)', () => {
-  it('silnik Reinehr 2019 zwraca errorBoundHalfWidthCm 5,7', () => {
+describe('GROWTH-PRED-BIAS — Reinehr z własnym przedziałem błędu (A1; od GROWTH-PRED-REINEHR 6,4)', () => {
+  it('silnik Reinehr 2019 zwraca errorBoundHalfWidthCm 6,4 (z meta danych)', () => {
     const win = {};
     loadBrowserScript('reinehr_cdgp_data.js', win);
     loadBrowserScript('advanced_growth_kowd.js', win);
@@ -160,15 +160,15 @@ describe('GROWTH-PRED-BIAS — Reinehr z własnym przedziałem błędu (A1)', ()
       sex: 'M', chronologicalAgeYears: 14, boneAgeYears: 12, currentHeightCm: 150, profileModel: { shouldShowReinehr: true },
     });
     expect(r.available).toBe(true);
-    expect(r.errorBoundHalfWidthCm).toBe(5.7);
+    expect(r.errorBoundHalfWidthCm).toBe(6.4);
   });
-  it('waga Reinehra w karcie liczy się z ±5,7 (σ 3,46), nie z domyślnego σ 3,0', () => {
+  it('waga Reinehra w karcie liczy się z ±6,4 (σ 3,9), nie z domyślnego σ 3,0', () => {
     const C = loadCard();
     const wc = C._weightedConsensus([
       { key: 'rwt', label: 'RWT', value: 172, pm: 4.9, levelKey: 'moderate', gateFactor: 1 },
-      { key: 'reinehr', label: 'Reinehr/CDGP', value: 173, pm: 5.7, levelKey: 'moderate', gateFactor: 1 },
+      { key: 'reinehr', label: 'Reinehr/CDGP', value: 173, pm: 6.4, levelKey: 'moderate', gateFactor: 1 },
     ], null);
     expect(wc.recommendedKey).toBe('rwt');
-    expect(C.REINEHR_ERR_HALFWIDTH_CM).toBe(5.7);
+    expect(C.REINEHR_ERR_HALFWIDTH_CM).toBe(6.4);
   });
 });
