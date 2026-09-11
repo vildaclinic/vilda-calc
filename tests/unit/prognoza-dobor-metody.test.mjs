@@ -48,11 +48,14 @@ describe('Dobór metody — przypadek właściciela (Δ +36 mies., otyłość, M
     expect(C._deltaMonths({ boneAgeYears: 11.5, ageMonths: 156 })).toBe(-18);
     expect(C._deltaMonths({ ageMonths: 156 })).toBeNull();
   });
-  it('prognoza: nagłówek = Bayley–Pinneau 179,0 (metoda preferowana), konsensus ważony 182,3 z MPH (udział ~28%)', () => {
+  it('prognoza: nagłówek = konsensus ważony 182,3 z MPH (udział ~28%), preferowana Bayley–Pinneau, ± = jej przedział', () => {
     const r = C.computeFinalHeightPrediction(PRZYPADEK);
-    expect(r.headlineSource).toBe('preferred');
+    // GROWTH-PRED-UI2 (2026-09-11): `cm` to zawsze konsensus ważony — metoda preferowana
+    // nie zastępuje nagłówka (decyzja właściciela: konsensus jest metodą autorską).
+    expect(r.headlineSource).toBe('weighted');
     expect(r.preferredKey).toBe('bp');
-    expect(r.cm).toBeCloseTo(179.0, 1);
+    expect(r.cm).toBeCloseTo(r.weightedCm, 5);
+    expect(r.cm).toBeCloseTo(182.3, 0);
     expect(r.halfWidthCm).toBeCloseTo(5.7, 5);
     expect(r.weightedCm).toBeCloseTo(182.3, 0);
     expect(r.mphInConsensus).toBe(true);
@@ -63,20 +66,32 @@ describe('Dobór metody — przypadek właściciela (Δ +36 mies., otyłość, M
     expect(r.agreementLabel).toBe('niska');
     expect(r.minCm).toBe(179.0); expect(r.maxCm).toBe(190.7); // KR poza widełkami
     expect(r.methodCount).toBe(2);
-    expect(r.sourceLabel).toContain('Bayley–Pinneau');
+    expect(r.sourceLabel).toBe('konsensus 2 metod i MPH');
     const kr = r.methods.find((m) => m.key === 'khamis');
     expect(kr.excluded).toBe(true);
     expect(kr.gateNote).toContain('poza konsensusem');
   });
-  it('karta: hero z metodą preferowaną, KR przekreślone z notą, dobór metody w Szczegółach', () => {
+  it('karta (GROWTH-PRED-UI2): hero = „Konsensus metod (ważony) ≈ 182", podtytuł = zgodność + preferowana, bez widełek; wiersze bez not; powody w Szczegółach', () => {
     const html = C.render(PRZYPADEK);
-    expect(html).toContain('metoda preferowana dla profilu: Bayley–Pinneau');
-    expect(html).toContain('≈ 179 cm');
-    expect(html).toContain('ważony ≈ 182 cm');
-    expect(html).toContain('is-excl');
-    expect(html).toContain('poza konsensusem');
-    expect(html).toContain('MPH w konsensusie jako kotwica');
-    expect(html).toContain('+36 mies.');
+    const hero = html.slice(html.indexOf('vgcc-hero'), html.indexOf('vgcc-methods'));
+    expect(hero).toContain('Konsensus metod (ważony)');
+    expect(hero).toContain('≈ 182 cm');
+    expect(hero).toContain('zgodność niska');
+    expect(hero).toContain('preferowana: Bayley–Pinneau');
+    expect(hero).not.toContain('179,0–190,7');
+    expect(hero).not.toContain('metoda preferowana dla profilu');
+    const rows = html.slice(html.indexOf('vgcc-methods'), html.indexOf('vgcc-mph'));
+    expect(rows).toMatch(/<div class="vgcc-row is-pref"><span class="vgcc-nm">Bayley–Pinneau<\/span>/);
+    expect(rows).toMatch(/<div class="vgcc-row is-excl"><span class="vgcc-nm">Khamis–Roche<\/span>/);
+    expect(rows).not.toContain('vgcc-note');
+    expect(rows).not.toContain('poza konsensusem');
+    expect(rows).not.toContain('×0,5');
+    const det = html.slice(html.indexOf('vgcc-det'));
+    expect(det).toContain('widełki metod 179,0–190,7 cm');
+    expect(det).toContain('MPH w konsensusie jako kotwica (udział 28%)');
+    expect(det).toContain('wiek kostny wyprzedza metrykalny o 36 mies.');
+    expect(det).toContain('RWT: waga ×0,5, bo wiek kostny ma w tej metodzie małą wagę');
+    expect(det).toContain('Khamis–Roche: poza konsensusem, bo metoda nie zna wieku kostnego');
   });
   it('MPH nie może zostać „metodą preferowaną" ani wejść do widełek', () => {
     const wc = C._weightedConsensus([
@@ -92,7 +107,7 @@ describe('Dobór metody — przypadek właściciela (Δ +36 mies., otyłość, M
     expect(wc.withMph).toBe(false);
     expect(wc.weighted).toBe(170);
   });
-  it('bez zadziałanej bramki i przy dobrej zgodności nagłówek zostaje ważony', () => {
+  it('bez zadziałanej bramki i przy dobrej zgodności: brak wykluczeń, Szczegóły mówią „bez bramek"', () => {
     const r = C.computeFinalHeightPrediction({ ...PRZYPADEK, boneAgeYears: 9.2,
       bp: { available: true, predictedAdultHeightCm: 180, errorBoundHalfWidthCm: 5.7 },
       rwt: { available: true, predictedAdultHeightCm: 181, errorBoundHalfWidthCm: 4.9 },
@@ -100,6 +115,12 @@ describe('Dobór metody — przypadek właściciela (Δ +36 mies., otyłość, M
     expect(r.headlineSource).toBe('weighted');
     expect(r.excludedMethods).toEqual([]);
     expect(r.gateFired).toBe(false);
+    const html = C.render({ ...PRZYPADEK, boneAgeYears: 9.2,
+      bp: { available: true, predictedAdultHeightCm: 180, errorBoundHalfWidthCm: 5.7 },
+      rwt: { available: true, predictedAdultHeightCm: 181, errorBoundHalfWidthCm: 4.9 },
+      khamis: { available: true, predictedAdultHeightCm: 182 } });
+    expect(html).toContain('Bez bramek: wszystkie metody z pełną wagą.');
+    expect(html).not.toContain('preferowana:'); // zgodność wysoka → bez metody preferowanej w podtytule
   });
 });
 
