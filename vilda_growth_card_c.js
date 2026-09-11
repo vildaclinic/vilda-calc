@@ -32,7 +32,10 @@
   // = „preferowana dla profilu". PARAMETRY KLINICZNE — do strojenia przez właściciela, bez zmian logiki.
   var CONSENSUS_W = { high: 1.0, moderate: 0.7, lowered: 0.5, indicative: 0.5, low: 0.3 };
   var CI90_TO_SD = 1.645;
-  var DEFAULT_SIGMA_CM = 3.0; // gdy metoda nie podaje błędu
+  // Gdy metoda nie podaje błędu: σ NIE lepsze niż najsłabsza znana metoda (±5,7 cm → 3,47), żeby
+  // metoda bez przedziału nie wygrywała z metodami o udokumentowanym błędzie (audyt 2026-09-11).
+  var DEFAULT_ERR_HALFWIDTH_CM = 5.7;
+  var DEFAULT_SIGMA_CM = DEFAULT_ERR_HALFWIDTH_CM / 1.645;
 
   // GROWTH-PRED-DOBOR (decyzja właściciela 2026-09-12). Bramki stosowalności wg Δ = wiek kostny −
   // wiek metrykalny [mies.] i MPH jako kotwica konsensusu:
@@ -310,7 +313,7 @@
       var clamped = result && result.clampedToCurrentHeight === true;
       // GROWTH-PRED-BIAS: korekta błędu systematycznego PRZED clampem; surowa wartość zostaje.
       var bias = biasFor(key, biasCtx);
-      var uncorrected = val;
+      var uncorrected = raw; // to, co metoda wskazała — przed clampem silnika i przed korektą profilu
       if (bias) {
         val += bias.shiftCm; raw += bias.shiftCm;
         if (pm !== null && pm !== undefined) pm = pm * bias.sigmaFactor;
@@ -322,7 +325,7 @@
         uncorrectedCm: uncorrected,
         biasCm: bias ? bias.shiftCm : 0, biasSigmaFactor: bias ? bias.sigmaFactor : 1,
         biasNote: bias ? bias.note : '', biasSource: bias ? bias.source : '',
-        loCm: pm !== null && pm !== undefined ? (clamped ? val : val - pm) : null,
+        loCm: pm !== null && pm !== undefined ? Math.max(val - pm, curH !== null ? curH : -Infinity) : null,
         hiCm: pm !== null && pm !== undefined ? Math.max(raw + pm, val) : null
       });
     }
@@ -353,7 +356,8 @@
       var clamped = r.clampedToCurrentHeight === true;
       if (curH !== null && val < curH) { val = curH; clamped = true; }
       entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: pm, levelKey: 'indicative', noBoneAge: true,
-        rawValue: raw, clamped: clamped, loCm: clamped ? val : val - pm, hiCm: Math.max(raw + pm, val) });
+        rawValue: raw, clamped: clamped, uncorrectedCm: raw, biasCm: 0, biasSigmaFactor: 1, biasNote: '', biasSource: '',
+        loCm: Math.max(val - pm, curH !== null ? curH : -Infinity), hiCm: Math.max(raw + pm, val) });
     })();
     // Reinehr: własny przedział błędu, a gdy silnik go nie podaje — ±5,7 (GROWTH-PRED-BIAS, A1).
     (function () {
@@ -419,7 +423,14 @@
       if (active[i].key === wcon.recommendedKey) preferred = active[i];
     }
     var pm = preferred ? num(preferred.pm) : null;
-    var halfWidthCm = pm !== null && pm > 0 ? pm : DEFAULT_SIGMA_CM * CI90_TO_SD;
+    var halfWidthSource = 'preferred';
+    var halfWidthCm = pm !== null && pm > 0 ? pm : null;
+    if (halfWidthCm === null) {
+      // metoda preferowana bez przedziału: najszerszy znany ± wśród metod aktywnych, a bez żadnego — 5,7
+      var known = active.map(function (e) { return num(e.pm); }).filter(function (x) { return x !== null && x > 0; });
+      halfWidthCm = known.length ? Math.max.apply(null, known) : DEFAULT_ERR_HALFWIDTH_CM;
+      halfWidthSource = known.length ? 'widest-known' : 'default';
+    }
     var con = consensus(active.map(function (e) { return e.value; }));
     var gateFired = anyGateFired(entries);
     // GROWTH-PRED-UI2 (2026-09-11): nagłówek i `cm` to ZAWSZE konsensus ważony — metoda
@@ -430,6 +441,7 @@
     return {
       cm: cm,
       halfWidthCm: halfWidthCm,
+      halfWidthSource: halfWidthSource,
       methodCount: active.length,
       source: multi ? 'consensus' : active[0].key,
       sourceLabel: multi ? 'konsensus ' + active.length + (active.length === 1 ? ' metody' : ' metod') + (wcon.withMph ? ' i MPH' : '') : active[0].label,
@@ -513,6 +525,13 @@
         '<div class="vgcc-hero-big">≈ ' + esc(fmt0(e.value)) + ' cm</div>' +
         '<div class="vgcc-hero-sub">' + sub + '</div></div>';
     }
+    if (model.entries.length && !model.active.length) {
+      var exl = model.entries.map(function (e) { return esc(e.label); }).join(', ');
+      var dm = num(model.deltaMonths);
+      var dtxt = dm !== null ? ' — rozbieżność wieku kostnego i metrykalnego ' + esc((dm > 0 ? '+' : (dm < 0 ? '−' : '')) + Math.abs(dm)) + ' mies.' : '';
+      return '<div class="vgcc-hero is-low"><div class="vgcc-hero-cap">Prognoza bez konsensusu</div>' +
+        '<div class="vgcc-hero-sub">Dostępne metody (' + exl + ') są poza konsensusem' + dtxt + '. Prognoza z wieku kostnego wymaga metody Bayley–Pinneau lub RWT (wiek kostny, masa, wzrost rodziców).</div></div>';
+    }
     return '<div class="vgcc-hero"><div class="vgcc-empty">Uzupełnij dane (wzrost, masę, wzrost rodziców, wiek kostny), aby policzyć prognozę.</div></div>';
   }
 
@@ -535,8 +554,14 @@
 
   function mphHtml(model) {
     if (!model.mph) return '';
-    var cm = model.mph.centileText != null ? String(model.mph.centileText).match(/\d+/) : null;
-    var c = cm ? '; <span class="vgcc-mph-cent">' + esc(cm[0]) + '. centyl</span>' : '';
+    var ct = model.mph.centileText != null ? String(model.mph.centileText).replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '';
+    var cm = ct.match(/([<>])?\s*(\d+)/);
+    var c = '';
+    if (cm) {
+      if (cm[1] === '<') c = '; <span class="vgcc-mph-cent">&lt;' + esc(cm[2]) + '. centyla</span>';
+      else if (cm[1] === '>') c = '; <span class="vgcc-mph-cent">&gt;' + esc(cm[2]) + '. centyla</span>';
+      else c = '; <span class="vgcc-mph-cent">' + esc(cm[2]) + '. centyl</span>';
+    }
     return '<div class="vgcc-mph">🎯 Cel rodzicielski (MPH): <b>' + esc(fmt1(model.mph.cm)) + ' cm</b>' + c + '</div>';
   }
 
@@ -565,8 +590,9 @@
     if (!corr.length) return '';
     var items = corr.map(function (e) {
       var sign = e.biasCm > 0 ? '+' : '−';
-      return esc(e.label) + ' ' + esc(fmt1(e.uncorrectedCm)) + ' → ' + esc(fmt1(e.value)) + ' cm (' + sign + esc(fmt1(Math.abs(e.biasCm))) + ' cm' +
-        (e.biasSigmaFactor && e.biasSigmaFactor !== 1 ? ', σ ×' + esc(fmt1(e.biasSigmaFactor)) : '') + '): ' + esc(e.biasNote) + ' (' + esc(e.biasSource) + ')';
+      return esc(e.label) + ' ' + esc(fmt1(e.uncorrectedCm)) + ' → ' + esc(fmt1(e.rawValue)) + ' cm (' + sign + esc(fmt1(Math.abs(e.biasCm))) + ' cm' +
+        (e.biasSigmaFactor && e.biasSigmaFactor !== 1 ? ', σ ×' + esc(fmt1(e.biasSigmaFactor)) : '') + ')' +
+        (e.clamped ? ', obcięte do obecnego wzrostu ' + esc(fmt1(e.value)) + ' cm' : '') + ': ' + esc(e.biasNote) + ' (' + esc(e.biasSource) + ')';
     });
     return '<p><span class="vgcc-lbl">Korekta błędu systematycznego:</span> ' + items.join('; ') + '.</p>';
   }
@@ -590,7 +616,8 @@
     var clampedEntries = model.entries.filter(function (e) { return e.clamped; });
     if (clampedEntries.length) {
       var cl = clampedEntries.map(function (e) {
-        return esc(e.label) + ' wskazała ' + esc(fmt1(e.rawValue)) + ' cm';
+        return esc(e.label) + ' wskazała ' + esc(fmt1(e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.rawValue)) + ' cm' +
+          (e.biasCm ? ' (po korekcie ' + esc(fmt1(e.rawValue)) + ' cm)' : '');
       }).join(', ');
       parts.push('<p><span class="vgcc-lbl">Prognoza a obecny wzrost:</span> ' +
         (clampedEntries.length === 1 ? 'metoda ' : 'metody: ') + cl +
@@ -632,7 +659,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '10',
+    version: '11',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
@@ -640,12 +667,14 @@
     _buildModel: buildModel,
     _consensus: consensus,
     _weightedConsensus: weightedConsensus,
+    _buildEntries: buildEntries,
     _gateFor: gateFor,
     _biasFor: biasFor,
     _mphAnchor: mphAnchorFrom,
     BIAS_RULES: BIAS_RULES,
     MPH_SHRINK: MPH_SHRINK,
     REINEHR_ERR_HALFWIDTH_CM: REINEHR_ERR_HALFWIDTH_CM,
+    DEFAULT_ERR_HALFWIDTH_CM: DEFAULT_ERR_HALFWIDTH_CM,
     _deltaMonths: deltaMonthsFor,
     MPH_SIGMA_CM: MPH_SIGMA_CM,
     _levelLabel: levelLabel,
