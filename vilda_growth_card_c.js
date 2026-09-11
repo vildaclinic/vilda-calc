@@ -32,9 +32,10 @@
   // = „preferowana dla profilu". PARAMETRY KLINICZNE — do strojenia przez właściciela, bez zmian logiki.
   var CONSENSUS_W = { high: 1.0, moderate: 0.7, lowered: 0.5, indicative: 0.5, low: 0.3 };
   var CI90_TO_SD = 1.645;
-  // Gdy metoda nie podaje błędu: σ NIE lepsze niż najsłabsza znana metoda (±5,7 cm → 3,47), żeby
-  // metoda bez przedziału nie wygrywała z metodami o udokumentowanym błędzie (audyt 2026-09-11).
-  var DEFAULT_ERR_HALFWIDTH_CM = 5.7;
+  // Gdy metoda nie podaje błędu: σ NIE lepsze niż najsłabsza znana metoda (±6,4 cm → 3,9), żeby
+  // metoda bez przedziału nie wygrywała z metodami o udokumentowanym błędzie (audyt 2026-09-11;
+  // 6,4 = przedział Reinehra z GROWTH-PRED-REINEHR, wcześniej 5,7).
+  var DEFAULT_ERR_HALFWIDTH_CM = 6.4;
   var DEFAULT_SIGMA_CM = DEFAULT_ERR_HALFWIDTH_CM / 1.645;
 
   // GROWTH-PRED-DOBOR (decyzja właściciela 2026-09-12). Bramki stosowalności wg Δ = wiek kostny −
@@ -66,8 +67,8 @@
   //  • MPH: kotwica = cel WARUNKOWY: M + 0,78·(MPH − M), M = mediana wzrostu dorosłego danej płci
   //    (regresja do średniej, Luo 1998: TH = 46,0 + 0,78·MPH; Cole 2000); przy hSDS ≤ −2 waga
   //    kotwicy ×0,5 (dzieci ISS kończą ~0,6 SDS poniżej celu: Blum 2022, Rekers-Mombarg 1996).
-  //  • Reinehr/CDGP bez własnego przedziału błędu dostawał σ = 3,0 → sztuczna dominacja; teraz
-  //    ±5,7 cm (jak BP u chłopców z opóźnieniem; Maes 1997 SD 3,5).
+  //  • Reinehr/CDGP bez własnego przedziału błędu dostawał σ = 3,0 → sztuczna dominacja; od
+  //    GROWTH-PRED-REINEHR ±6,4 cm z pracy (Study A, 5.–95. centyl błędu −7,1…+5,6; wcześniej 5,7).
   var BIAS_TALL_SDS = 2, BIAS_SHORT_SDS = -2;
   var BIAS_RULES = {
     bpDelayBoys: { shift: -2.0, sigma: 1.2, note: 'Bayley–Pinneau przy opóźnieniu kostnym ≥ 2 lata zawyża u chłopców', source: 'Reinehr 2019; Brämswig 1990' },
@@ -77,7 +78,7 @@
   };
   var MPH_SHRINK = 0.78;
   var MPH_SHORT_WEIGHT = 0.5;
-  var REINEHR_ERR_HALFWIDTH_CM = 5.7;
+  var REINEHR_ERR_HALFWIDTH_CM = 6.4;
 
   // Korekta błędu systematycznego dla metody `key` w profilu `ctx`
   // ({ sexKey, deltaMonths, heightSds, boneAgeYears }) albo null.
@@ -359,10 +360,15 @@
         rawValue: raw, clamped: clamped, uncorrectedCm: raw, biasCm: 0, biasSigmaFactor: 1, biasNote: '', biasSource: '',
         loCm: Math.max(val - pm, curH !== null ? curH : -Infinity), hiCm: Math.max(raw + pm, val) });
     })();
-    // Reinehr: własny przedział błędu, a gdy silnik go nie podaje — ±5,7 (GROWTH-PRED-BIAS, A1).
+    // Reinehr: własny przedział błędu, a gdy silnik go nie podaje — ±6,4 (GROWTH-PRED-REINEHR).
     (function () {
       var pmR = num(input.reinehr && input.reinehr.errorBoundHalfWidthCm);
       add('reinehr', 'Reinehr/CDGP', input.reinehr, pmR !== null && pmR > 0 ? pmR : REINEHR_ERR_HALFWIDTH_CM);
+      var e = entries[entries.length - 1];
+      if (e && e.key === 'reinehr') {
+        e.reinehrExtrapolated = !!(input.reinehr && input.reinehr.usedExtrapolatedCoefficient === true);
+        e.reinehrPooled = !!(input.reinehr && input.reinehr.usedPooledCoefficient === true);
+      }
     })();
     (function () {
       var e = entries[entries.length - 1];
@@ -493,6 +499,9 @@
       hasKhamis: entries.some(function (e) { return e.key === 'khamis'; }),
       hasBlum: entries.some(function (e) { return e.key === 'blum'; }),
       hasBp: entries.some(function (e) { return e.key === 'bp'; }),
+      hasReinehr: entries.some(function (e) { return e.key === 'reinehr'; }),
+      reinehrExtrapolated: entries.some(function (e) { return e.key === 'reinehr' && e.reinehrExtrapolated; }),
+      reinehrPooled: entries.some(function (e) { return e.key === 'reinehr' && e.reinehrPooled; }),
       boneAgeMissing: boneAgeMissing,
       showBoneAgeHint: boneAgeMissing && entries.some(function (e) { return e.key === 'khamis'; }) && !entries.some(function (e) { return e.key === 'bp'; }),
       profileStatus: rm && rm.profileStatusLabel ? String(rm.profileStatusLabel) : '',
@@ -645,6 +654,11 @@
         (dmb !== null && dmb >= DELTA_GATE_MONTHS ? ' Bayley i Pinneau (1952): dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy, niż wskazują tabele.' : '') +
         (dmb !== null && dmb <= -DELTA_GATE_MONTHS ? ' Bayley i Pinneau (1952): dzieci opóźnione o ponad 2 lata osiągają zwykle wzrost niższy, niż wskazują tabele.' : '') + '</p>');
     }
+    if (model.hasReinehr) {
+      parts.push('<p><span class="vgcc-lbl">Reinehr 2019:</span> model dla chłopców z opóźnieniem kostnym >1 roku, opracowany u nieleczonych (bez testosteronu) po wykluczeniu niedoboru hormonu wzrostu, chorób tarczycy i hipogonadyzmu; przedział ±6,4 cm z kohorty rozwojowej (5.–95. centyl), w niezależnej walidacji model zawyżał o 2,9 cm (mediana).' +
+        (model.reinehrExtrapolated ? ' Przy wieku kostnym ≥14,5 l współczynniki są w publikacji ekstrapolowane (≤2 pomiary na węzeł).' : '') +
+        (model.reinehrPooled ? ' Przy wieku kostnym 10,5 i opóźnieniu ≥2 lata użyto współczynnika zbiorczego dla wszystkich opóźnień >1 rok (publikacja nie podaje osobnej wartości).' : '') + '</p>');
+    }
     if (model.hasKhamis) {
       parts.push('<p><span class="vgcc-lbl">Khamis–Roche:</span> błąd zbiorczy 90% metody (±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku; liczy się bez wieku kostnego, populacja Fels (białe dzieci USA).</p>');
     }
@@ -666,7 +680,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '12',
+    version: '13',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,

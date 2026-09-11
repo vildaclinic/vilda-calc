@@ -30,8 +30,8 @@ describe('1. Profil wiarygodności: brak przedziału ≠ „±0,0 cm = wysoka"',
 
 describe('2. Karta: metoda bez przedziału nie wygrywa dzięki domyślnemu σ', () => {
   const { A, C } = loadAll();
-  it('σ domyślne = 5,7/1,645; BP bez ± przegrywa z Khamis–Roche (±5,3), ± wyniku = najszerszy znany, nie 4,9', () => {
-    expect(C.DEFAULT_ERR_HALFWIDTH_CM).toBe(5.7);
+  it('σ domyślne = 6,4/1,645; BP bez ± przegrywa z Khamis–Roche (±5,3), ± wyniku = najszerszy znany, nie 4,9', () => {
+    expect(C.DEFAULT_ERR_HALFWIDTH_CM).toBe(6.4);
     const bp = A.calculateBayleyPinneauPrediction({ sex: 'M', chronologicalAgeMonths: 95, boneAgeYears: 8, currentHeightCm: 125 });
     const bt = A.advGrowthAssessBayleyPinneauReliability(bp, null);
     const r = C.computeFinalHeightPrediction({
@@ -43,10 +43,10 @@ describe('2. Karta: metoda bez przedziału nie wygrywa dzięki domyślnemu σ', 
     expect(r.halfWidthCm).toBe(5.3);
     expect(r.halfWidthSource).toBe('preferred');
   });
-  it('gdy preferowana nie ma ±: najszerszy znany ± wśród aktywnych; bez żadnego — 5,7 (nigdy 4,9)', () => {
+  it('gdy preferowana nie ma ±: najszerszy znany ± wśród aktywnych; bez żadnego — 6,4 (nigdy 4,9)', () => {
     const r = C.computeFinalHeightPrediction({
       sex: 'M', ageYears: 12, ageMonths: 144, boneAgeYears: 12, currentHeightCm: 150,
-      bp: { available: true, predictedAdultHeightCm: 176 }, // bez ±, poziom high → i tak σ 3,47
+      bp: { available: true, predictedAdultHeightCm: 176 }, // bez ±, poziom high → i tak σ 3,9
       rwt: { available: true, predictedAdultHeightCm: 175, errorBoundHalfWidthCm: 4.9 },
       reliabilityModel: { entryMap: { bayleyPinneau: { levelKey: 'high' }, rwt: { levelKey: 'low' } } },
     });
@@ -54,7 +54,7 @@ describe('2. Karta: metoda bez przedziału nie wygrywa dzięki domyślnemu σ', 
     expect(r.halfWidthCm).toBe(4.9);
     expect(r.halfWidthSource).toBe('widest-known');
     const r2 = C.computeFinalHeightPrediction({ sex: 'M', ageYears: 12, ageMonths: 144, currentHeightCm: 150, bp: { available: true, predictedAdultHeightCm: 176 } });
-    expect(r2.halfWidthCm).toBe(5.7);
+    expect(r2.halfWidthCm).toBe(6.4);
     expect(r2.halfWidthSource).toBe('default');
   });
 });
