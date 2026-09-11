@@ -78,7 +78,7 @@ describe('vilda_auth_ui.js — kształt źródła po audycie karty „Przypomnie
     // Przed poprawką każdy z dwóch widoków miał własny łańcuch awaryjny: karta szary #8E8E93 i
     // etykietę „Notatka”, modal niebieski #32ADE6 i surowy klucz kategorii. Dopóki obie ścieżki
     // przechodzą przez Jv(), nie mogą się rozjechać.
-    const ri = wytnij('function ri(t,a,n,Je){', 200);
+    const ri = wytnij('function ri(t,a,n,Je,Jg2){', 200); // PR 24: piąty parametr to grupa (g) dla akcji karty
     const it_ = wytnij('function it(G,nt){', 400);
     expect(ri, 'wiersz karty pyta Jv()').toContain('var r=Jv(a.category),o=r.accent,Jk=r.color,l=r.label,');
     expect(it_, 'wiersz modalu pyta Jv()').toContain('B=Jv(E.category),U=B.color,O=B.accent,J=B.label,');
