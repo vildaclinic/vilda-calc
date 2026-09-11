@@ -53,7 +53,7 @@ const ostatnia = (lista) => lista[lista.length - 1];
 describe('Hook testowy __internals (PR 3)', () => {
   it('ładuje się do fałszywego okna bez DOM i wystawia czyste funkcje dat obok publicznego API', () => {
     expect(Object.keys(win.VildaTerminarz)).toEqual(['version', 'refresh', 'setView', '__internals']);
-    expect(win.VildaTerminarz.version).toBe('4.2.0');
+    expect(win.VildaTerminarz.version).toBe('4.3.0');
     for (const nazwa of ['Jn', 'ge', 'ka', 'Vt', 'Kn', 'R', 'H', 'Cc', 'Cd', 'Cg']) {
       expect(typeof I[nazwa], nazwa).toBe('function');
     }
