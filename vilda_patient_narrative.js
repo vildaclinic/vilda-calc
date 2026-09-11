@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '5';
+  var VERSION = '6';
 
   // Progi UJAWNIANIA, nie progi kliniczne. Bramkuja wylacznie zdania o wieku danych,
   // czyli decyduja o tym, KIEDY opis przyznaje sie do starych danych — nigdy o tym, jak
@@ -96,7 +96,12 @@
     return { y: Math.floor(mo / 12), m: mo % 12, total: mo };
   }
 
-  function lataMian(n) { return n === 1 ? 'rok' : (n >= 2 && n <= 4 ? 'lata' : 'lat'); }
+  // Ta sama regula co miesMian nizej: koncowki 12-14 biora forme dopelniaczowa,
+  // wiec „12 lat", ale „22 lata". Uproszczenie `n>=2&&n<=4` mylilo sie od 22 w gore.
+  function lataMian(n) {
+    var d = n % 10, s = n % 100;
+    return n === 1 ? 'rok' : (d >= 2 && d <= 4 && !(s >= 12 && s <= 14) ? 'lata' : 'lat');
+  }
   function miesMian(n) {
     var d = n % 10, s = n % 100;
     return n === 1 ? 'miesiąc' : (d >= 2 && d <= 4 && !(s >= 12 && s <= 14) ? 'miesiące' : 'miesięcy');

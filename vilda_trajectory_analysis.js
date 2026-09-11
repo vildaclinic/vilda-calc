@@ -24,7 +24,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '18';
+  var VERSION = '19';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -96,7 +96,9 @@
   function fmtAgeM(mo) {
     mo = Math.round(mo);
     var y = Math.floor(mo / 12), r = mo % 12;
-    var ys = y ? y + (y === 1 ? ' rok' : (y >= 2 && y <= 4 ? ' lata' : ' lat')) : '';
+    var yd = y % 10, ys100 = y % 100;
+    var ys = y ? y + (y === 1 ? ' rok'
+      : (yd >= 2 && yd <= 4 && !(ys100 >= 12 && ys100 <= 14) ? ' lata' : ' lat')) : '';
     var rs = r ? r + ' mies.' : '';
     return ys && rs ? ys + ' ' + rs : (ys || rs || '0 mies.');
   }

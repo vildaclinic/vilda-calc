@@ -495,6 +495,50 @@ Domknięcie reguły z GROWTH-PUB-ONE („panel jest jedynym miejscem wpisu, resz
 
 - *Strażnicy:* `tests/e2e/panel-dojrzewania.spec.mjs` (13 → 16): pole zwija się z panelem i stoi po stadium a przed dalszymi polami, **poza** `#advancedGrowthForm`; u dziewczynki schowane, u chłopca widoczne; rekord z objętością otwiera panel, a `collectUserData().advanced.testicularVolume` nadal ją niesie. `tests/e2e/jednostki-tanner-nadpisanie.spec.mjs` (nowy, 4): opcja domyślna nazywa stadium z danych; nadpisanie ma notę, klasę i opis w nagłówku, a dane pacjenta zostają nietknięte; reset zdejmuje wszystko; brak stadium → nota odsyła do panelu. `tests/unit/status-pokwitania.test.mjs` (+2): strażnik strukturalny położenia pola w `index.html` i listy `POLA`. `kowd-dane-rekord` (e2e 4, unit 14) bez zmian — pilnuje, że KOWD nadal dostaje wartość.
 
+### LANG-WIEK — przegląd językowy: odmiana „roku" po liczebniku (SW 1.0.882, 2026-09-10, zlecenie właściciela)
+
+Ciąg dalszy GROWTH-HV-UI9. Tam poprawiony był jeden wiersz; tu przejrzane są **wszystkie** miejsca, w których aplikacja skleja wiek z liczby policzonej w locie.
+
+**Reguła.**
+
+| przypadek | 1 | 2–4 | 5+ | końcówki 12–14 | ułamek |
+|---|---|---|---|---|---|
+| mianownik („Wiek: …") | rok | lata | lat | **lat** (12 lat, ale 22 lata) | roku (2,5 roku) |
+| dopełniacz („w wieku …", „ok. …", „ostatnich …") | roku | lat | lat | lat | roku |
+
+Wyjątek końcówek 12–14 jest tym, co odróżnia pełną regułę od uproszczenia `n>=2&&n<=4`, które w aplikacji było w trzech kopiach i myliło się od 22 lat w górę. Normy żywienia obejmują także dorosłych, więc to nie jest przypadek teoretyczny.
+
+**Poprawione.**
+
+| miejsce | było | jest |
+|---|---|---|
+| nagłówek „Wiek:" w PDF-ie „Raport BMI & Metabolizmu" (`app.js`) | Wiek: 2 lat 3 mies. | Wiek: 2 lata 3 mies. |
+| Karta pacjenta — etykieta wieku i podgląd (`vilda_auth_ui.js`, 4 miejsca) | 2 lat | 2 lata |
+| opis zapisu w podsumowaniu (`vilda_summary_cards.js`) | wiek ok. 1 lat; wiek ok. 10.5 lat | wiek ok. 1 roku; wiek ok. 10,5 roku |
+| etykieta wieku w kalkulatorze klirensu (`clcr_clinical_safety.js`) | 2 lat 3 mies. | 2 lata 3 mies. |
+| etykieta wieku w module nadciśnienia (`hypertension_therapy.js`) | 2 lat 3 mies. | 2 lata 3 mies. |
+| zdanie o normach żywienia (`vilda_diet_recommendations.js`, 2 miejsca) | dla dzieci w wieku 1 lat | dla dzieci w wieku 1 roku |
+| zapasowa etykieta wieku (`vilda_diet_recommendations.js`) | 2,5 lat | 2,5 roku |
+| „Wiek:" w normach żywienia (`nutrition_norms.js`) | 22 lat | 22 lata |
+| `lataMian()` opisu pacjenta (`vilda_patient_narrative.js`) | 22 lat | 22 lata |
+| `fmtAgeM()` karty trajektorii (`vilda_trajectory_analysis.js`) | 22 lat | 22 lata |
+
+Przy okazji w opisie zapisu naprawiona kropka dziesiętna: „wiek ok. 10.5 lat" → „wiek ok. 10,5 roku". Pełny rok z `toFixed(1)` („10.0") nie pokazuje już zera po przecinku.
+
+**Sprawdzone i świadomie nietknięte** — te miejsca były już poprawne, więc ich nie ruszam:
+
+- `patientReportBuildTrendPeriodLabel()` w `vilda_patient_report.js` — ma osobną gałąź na `t === 12` („W okresie ostatniego roku"), więc „ostatnich 1 lat" tam nie powstaje;
+- `vilda_diet_plan_ui.js` — `completedYears === 1 ? '1 roku' : … + ' lat'`, dopełniacz zrobiony;
+- `Le()` w Karcie pacjenta i miesiące w `nutrition_norms.js` — odmiana miesięcy była już na miejscu (`Le` dostał tylko pełną regułę lat);
+- etykiety zakresów w `lab_clinical_panels.js`, `lab_units_data.js` i podobnych („2–5 lat", „>18 lat") — po liczbie w zakresie „lat" jest formą właściwą;
+- „poniżej/powyżej `7-6` lat" w `vilda_advanced_growth.js` — to zapis „lata-miesiące" z myślnikiem, nie liczebnik.
+
+**Dlaczego nie jeden wspólny moduł.** Reguła żyje w kilku kopiach i to jest świadome: moduły ładują się niezależnie, nie mają wspólnego globalu, a wprowadzenie nowego pliku dołożyłoby zależność kolejności ładowania na ośmiu stronach — dla reguły gramatycznej to zła wymiana. Zamiast tego kopie są **spięte testem**: strażnik sprawdza, że wszystkie dają ten sam wynik dla 0–130 lat, więc rozjazd między nimi jest błędem testu, a nie cichą różnicą.
+
+- Wersje: `app.js` `?v=199`, `vilda_auth_ui.js` `?v=421`, `vilda_summary_cards.js` `?v=31`, `clcr_clinical_safety.js` `?v=4`, `hypertension_therapy.js` `?v=6`, `vilda_diet_recommendations.js` `?v=16`, `vilda_patient_narrative.js` 5 → 6 (`?v=8`), `vilda_trajectory_analysis.js` 18 → 19 (`?v=21`), `nutrition_norms.js` `?v=46`; `SW_VERSION` 1.0.882.
+
+- *Strażnicy:* `tests/unit/wiek-odmiana-polska.test.mjs` (nowy, 20) — funkcje wycięte z plików produkcyjnych i uruchomione wprost: pięć kopii reguły mianownika, dopełniacz, etykiety klirensu, nadciśnienia, Karty pacjenta, opisu zapisu, norm żywienia i zaleceń żywieniowych, strażniki strukturalne na nagłówek PDF i na zniknięcie `age + " lat"`, wreszcie test spójności kopii dla 0–130 lat. **Zmierzone czerwone** na kodzie sprzed poprawki: **19 z 20** (dwudziesty to kontrola gałęzi sprzed roku życia w kalkulatorze klirensu, poprawna po obu stronach).
+
 ### GROWTH-HV-UI9 — okres w wierszu tempa: „ostatnich 1 lat" (SW 1.0.881, 2026-09-10, zgłoszenie właściciela)
 
 **Objaw.** „Tempo wzrastania: 6,1 cm/rok (obliczono jako średnią z **ostatnich 1 lat**)". To nie jest polszczyzna — a przy okazji zaokrąglenie gubiło informację: odstęp wynosił **16 miesięcy**.

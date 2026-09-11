@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.881';
+const SW_VERSION = '1.0.882';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -162,6 +162,7 @@ const CORE_SHELL_URLS = [
   '/inline_kalkulator_klirens_00.js?v=1',
   '/inline_kalkulator_klirens_01.js?v=1',
   '/clcr_clinical_safety.js?v=3',
+  '/clcr_clinical_safety.js?v=4',
   '/clcr_stone_safety.js?v=1',
   '/clcr_dialysis_safety.js?v=1',
   '/clcr_extended_egfr.js?v=1',
@@ -1294,6 +1295,7 @@ const CORE_SHELL_URLS = [
   '/nutrition_norms.js?v=43',
   '/nutrition_norms.js?v=44',
   '/nutrition_norms.js?v=45',
+  '/nutrition_norms.js?v=46',
   '/nutrition_micros.js',
   '/nutrition_micros.js?v=25',
   '/nutrition_micros.js?v=26',
@@ -1523,6 +1525,7 @@ const OPTIONAL_ASSETS = [
   '/thyroid_cancer_kids.js?v=4',
   '/hypertension_therapy.js',
   '/hypertension_therapy.js?v=5',
+  '/hypertension_therapy.js?v=6',
   '/obesity_therapy.js',
   '/obesity_therapy.js?v=4',
   '/obesity_therapy.js?v=5',
@@ -1755,12 +1758,14 @@ const OPTIONAL_ASSETS = [
   '/app.js?v=196',
   '/vilda_diet_recommendations.js?v=14',
   '/vilda_diet_recommendations.js?v=15',
+  '/vilda_diet_recommendations.js?v=16',
   '/vilda_patient_report.js?v=7',
   '/vilda_patient_report.js?v=8',
   '/vilda_patient_report.js?v=9',
   '/vilda_bmi_journey.js?v=3',
   '/app.js?v=197',
   '/app.js?v=198',
+  '/app.js?v=199',
   '/vilda_diet_plan_ui.js?v=4',
   '/vilda_diet_plan_ui.js?v=5',
   '/vilda_update_prep.js?v=70',
@@ -1864,6 +1869,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_sga_catchup.js?v=2',
   '/vilda_patient_narrative.js?v=6',
   '/vilda_patient_narrative.js?v=7',
+  '/vilda_patient_narrative.js?v=8',
   '/vilda_patient_narrative_ui.js?v=7',
   '/vilda_data_import_export.js?v=58',
   '/vilda_trajectory_analysis.js?v=13',
@@ -1902,9 +1908,12 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=417',
   '/vilda_trajectory_analysis.js?v=18',
   '/vilda_summary_cards.js?v=29',
+  '/vilda_summary_cards.js?v=31',
   '/vilda_trajectory_analysis.js?v=19',
   '/vilda_trajectory_analysis.js?v=20',
+  '/vilda_trajectory_analysis.js?v=21',
   '/vilda_auth_ui.js?v=420',
+  '/vilda_auth_ui.js?v=421',
   '/inline_index_02.js?v=7',
   '/vilda_summary_cards.js?v=30'
 ];
