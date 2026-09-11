@@ -34,6 +34,53 @@
   var CI90_TO_SD = 1.645;
   var DEFAULT_SIGMA_CM = 3.0; // gdy metoda nie podaje błędu
 
+  // GROWTH-PRED-DOBOR (decyzja właściciela 2026-09-12). Bramki stosowalności wg Δ = wiek kostny −
+  // wiek metrykalny [mies.] i MPH jako kotwica konsensusu:
+  //  • Khamis–Roche nie zna wieku kostnego: |Δ| < 12 → pełna waga; 12–24 → ×0,5; ≥ 24 → POZA
+  //    konsensusem (wiersz informacyjny). • RWT: Δ ≥ +24 → ×0,5 (wiek kostny jest w RWT jednym
+  //    z czterech regresorów o małej wadze). • Bayley–Pinneau przy przyspieszeniu liczy z tablicy
+  //    „przyspieszonej" — bez dodatkowej kary (kara za opóźnienie zostaje w profilu wiarygodności).
+  //  • MPH wchodzi do średniej ważonej jako kotwica: f = 0,7, σ = 5,1 cm (95% przedział celu
+  //    ±10 cm; Luo 1998, Pediatr Res 44:563) — udział nigdy nie przekracza ok. 1/3. Nie jest
+  //    „metodą preferowaną" i nie wchodzi do widełek min–max ani do zgodności.
+  //  • Nagłówek = wartość metody preferowanej, gdy zgodność jest niska I zadziałała jakaś bramka;
+  //    wtedy konsensus ważony schodzi do podtytułu. PARAMETRY KLINICZNE — do strojenia.
+  CONSENSUS_W.mph = 0.7;
+  var MPH_SIGMA_CM = 5.1;
+  var DELTA_KR_HALF_MONTHS = 12, DELTA_GATE_MONTHS = 24;
+  var GATE_LABELS = {
+    khamis: 'Khamis–Roche',
+    rwt: 'RWT'
+  };
+
+  // Δ = wiek kostny − wiek metrykalny w miesiącach (null, gdy brak któregoś).
+  function deltaMonthsFor(input) {
+    var ba = num(input && input.boneAgeYears);
+    var months = num(input && input.ageMonths);
+    if (months === null || months <= 0) {
+      var y = num(input && input.ageYears);
+      months = y !== null && y > 0 ? y * 12 : null;
+    }
+    if (ba !== null && ba > 0 && months !== null) return Math.round(ba * 12 - months);
+    var fromBp = num(input && input.bp && input.bp.deltaMonths);
+    return fromBp;
+  }
+  function gateFor(key, delta) {
+    if (delta === null || delta === undefined) return { factor: 1, excluded: false, note: '' };
+    var abs = Math.abs(delta);
+    var sign = delta > 0 ? '+' : '−';
+    var dtxt = sign + abs + ' mies.';
+    if (key === 'khamis') {
+      if (abs >= DELTA_GATE_MONTHS) return { factor: 0, excluded: true, note: 'poza konsensusem — metoda nie zna wieku kostnego, a rozbieżność wieku kostnego i metrykalnego wynosi ' + dtxt };
+      if (abs >= DELTA_KR_HALF_MONTHS) return { factor: 0.5, excluded: false, note: 'waga ×0,5 — bez korekty na wiek kostny przy rozbieżności ' + dtxt };
+      return { factor: 1, excluded: false, note: '' };
+    }
+    if (key === 'rwt' && delta >= DELTA_GATE_MONTHS) {
+      return { factor: 0.5, excluded: false, note: 'waga ×0,5 — wiek kostny ma w RWT małą wagę, a jest przyspieszony o ' + dtxt };
+    }
+    return { factor: 1, excluded: false, note: '' };
+  }
+
   var CSS = [
     '.vgcc{--vgcc-brand:#00838d;--vgcc-ink:#14393d;--vgcc-muted:#5a7274;--vgcc-line:#e3ecec}',
     '.vgcc-hero{background:linear-gradient(180deg,#fff,#f4fafa);border:1px solid #00838d33;border-radius:12px;padding:.8rem;text-align:center;margin:.15rem 0 .55rem}',
@@ -61,6 +108,9 @@
     '.vgcc-stat .u{font-size:.84rem;color:var(--vgcc-muted);margin-left:.3rem}',
     '.vgcc-row.is-pref{border-left:3px solid var(--vgcc-brand);padding-left:.5rem;background:#ecf7f7;border-radius:0 7px 7px 0}',
     '.vgcc-row.is-pref .vgcc-nm{color:#006b73}',
+    '.vgcc-row.is-excl{opacity:.72}',
+    '.vgcc-row.is-excl .vgcc-val{text-decoration:line-through;text-decoration-color:#b8c6c8;font-weight:600}',
+    '.vgcc-note{font-size:.7rem;font-weight:500;color:#9a6b12;margin-top:.1rem}',
     '.vgcc-hint{font-size:.78rem;color:var(--vgcc-muted);margin:.3rem 0 .4rem}',
     '.vgcc-det{background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;margin-top:.1rem}',
     '.vgcc-det>summary{cursor:pointer;list-style:none;padding:.5rem .7rem;font-weight:700;color:#006b73;display:flex;justify-content:center;align-items:center;font-size:.84rem}',
@@ -141,12 +191,14 @@
     var pm = num(e && e.pm);
     var sigma = (pm !== null && pm > 0) ? pm / CI90_TO_SD : DEFAULT_SIGMA_CM;
     if (!(sigma > 0)) sigma = DEFAULT_SIGMA_CM;
-    return f / (sigma * sigma);
+    var g = (e && typeof e.gateFactor === 'number' && isFinite(e.gateFactor)) ? e.gateFactor : 1;
+    if (e && e.excluded) g = 0;
+    return g * f / (sigma * sigma);
   }
   // Ważony konsensus + metoda preferowana (największa waga). Nie zmienia zakresu min–max.
-  function weightedConsensus(entries) {
-    var es = (entries || []).filter(function (e) { return e && num(e.value) !== null; });
-    if (!es.length) return { count: 0, weighted: null, recommendedKey: null, recommendedLabel: null };
+  function weightedConsensus(entries, mphCm) {
+    var es = (entries || []).filter(function (e) { return e && num(e.value) !== null && !e.excluded; });
+    if (!es.length) return { count: 0, weighted: null, recommendedKey: null, recommendedLabel: null, withMph: false, mphShare: 0 };
     var sw = 0, swv = 0, best = null, bestW = -Infinity;
     for (var i = 0; i < es.length; i++) {
       var w = weightForEntry(es[i]);
@@ -154,12 +206,27 @@
       sw += w; swv += w * num(es[i].value);
       if (w > bestW) { bestW = w; best = es[i]; }
     }
+    // MPH jako kotwica (GROWTH-PRED-DOBOR): tylko przy co najmniej DWÓCH metodach (przy jednej
+  // nie ma czego uśredniać — pokazujemy metodę jak dotąd); nigdy „preferowana".
+    var mph = num(mphCm), withMph = false, mphShare = 0;
+    if (mph !== null && mph > 0 && sw > 0 && es.length >= 2) {
+      var wm = CONSENSUS_W.mph / (MPH_SIGMA_CM * MPH_SIGMA_CM);
+      sw += wm; swv += wm * mph; withMph = true; mphShare = wm / sw;
+    }
     return {
       count: es.length,
       weighted: sw > 0 ? swv / sw : null,
       recommendedKey: best ? best.key : null,
-      recommendedLabel: best ? best.label : null
+      recommendedLabel: best ? best.label : null,
+      withMph: withMph,
+      mphShare: mphShare
     };
+  }
+  function activeEntries(entries) {
+    return (entries || []).filter(function (e) { return e && !e.excluded; });
+  }
+  function anyGateFired(entries) {
+    return (entries || []).some(function (e) { return e && (e.excluded || (typeof e.gateFactor === 'number' && e.gateFactor < 1)); });
   }
 
   // Budowa listy metod prognozy — wspólna dla renderu karty i czystego API
@@ -225,6 +292,36 @@
       var e = entries[entries.length - 1];
       if (e && e.key === 'reinehr') e.levelKey = levelFor(rm, 'reinehr') || 'indicative';
     })();
+    // 5. Blum/ISS (2022) — tylko dzieci niskie (hSDS ≤ −1,28); gotowy wynik z adaptera (input.blum)
+    // albo silnik window.calculateBlumIssPrediction, gdy karta dostała heightSds.
+    (function () {
+      var r = input.blum && typeof input.blum === 'object' ? input.blum : null;
+      if (!r) {
+        var engine = w.calculateBlumIssPrediction;
+        if (typeof engine !== 'function' || num(input.heightSds) === null) return;
+        try {
+          r = engine({ sex: input.sex, chronologicalAgeYears: input.ageYears, chronologicalAgeMonths: input.ageMonths,
+            currentHeightCm: input.currentHeightCm, heightSds: input.heightSds, boneAgeYears: input.boneAgeYears,
+            motherHeightCm: input.motherHeightCm, fatherHeightCm: input.fatherHeightCm, birthWeightKg: input.birthWeightKg });
+        } catch (_) { r = null; }
+      }
+      if (!r || r.available !== true) return;
+      add('blum', 'Blum/ISS', r, num(r.errorBoundHalfWidthCm));
+      var e = entries[entries.length - 1];
+      if (e && e.key === 'blum') {
+        e.levelKey = r.usedBoneAge === true ? 'moderate' : 'indicative';
+        e.blumModelId = r.modelId || null;
+      }
+    })();
+    // Bramki stosowalności wg Δ (GROWTH-PRED-DOBOR).
+    var delta = deltaMonthsFor(input);
+    for (var gi = 0; gi < entries.length; gi++) {
+      var g = gateFor(entries[gi].key, delta);
+      entries[gi].gateFactor = g.factor;
+      entries[gi].excluded = g.excluded;
+      entries[gi].gateNote = g.note;
+    }
+    entries.deltaMonths = delta;
     return entries;
   }
 
@@ -235,23 +332,37 @@
   // waga) — decyzja właściciela 2026-08-11.
   function computeFinalHeightPrediction(input) {
     var entries = buildEntries(input || {});
-    if (!entries.length) return null;
-    var wcon = weightedConsensus(entries);
-    var cm = num(wcon.weighted);
-    if (cm === null) return null;
+    var active = activeEntries(entries);
+    if (!active.length) return null;
+    var wcon = weightedConsensus(entries, num(input && input.mphCm));
+    var weightedCm = num(wcon.weighted);
+    if (weightedCm === null) return null;
     var preferred = null;
-    for (var i = 0; i < entries.length; i++) {
-      if (entries[i].key === wcon.recommendedKey) preferred = entries[i];
+    for (var i = 0; i < active.length; i++) {
+      if (active[i].key === wcon.recommendedKey) preferred = active[i];
     }
     var pm = preferred ? num(preferred.pm) : null;
     var halfWidthCm = pm !== null && pm > 0 ? pm : DEFAULT_SIGMA_CM * CI90_TO_SD;
-    var con = consensus(entries.map(function (e) { return e.value; }));
+    var con = consensus(active.map(function (e) { return e.value; }));
+    var gateFired = anyGateFired(entries);
+    var headlinePreferred = !!(preferred && con.agreementLabel === 'niska' && gateFired);
+    var cm = headlinePreferred ? num(preferred.value) : weightedCm;
+    var excluded = entries.filter(function (e) { return e.excluded; }).map(function (e) { return e.key; });
+    var multi = active.length >= 2;
     return {
       cm: cm,
       halfWidthCm: halfWidthCm,
-      methodCount: entries.length,
-      source: entries.length >= 2 ? 'consensus' : entries[0].key,
-      sourceLabel: entries.length >= 2 ? 'konsensus ' + entries.length + ' metod' : entries[0].label,
+      methodCount: active.length,
+      source: headlinePreferred ? preferred.key : (multi ? 'consensus' : active[0].key),
+      sourceLabel: headlinePreferred ? (preferred.label + ' (metoda preferowana dla profilu)')
+        : (multi ? 'konsensus ' + active.length + (active.length === 1 ? ' metody' : ' metod') + (wcon.withMph ? ' i MPH' : '') : active[0].label),
+      headlineSource: headlinePreferred ? 'preferred' : 'weighted',
+      weightedCm: weightedCm,
+      mphInConsensus: wcon.withMph === true,
+      mphShare: wcon.mphShare || 0,
+      deltaMonths: entries.deltaMonths !== undefined ? entries.deltaMonths : null,
+      gateFired: gateFired,
+      excludedMethods: excluded,
       preferredKey: wcon.recommendedKey || null,
       preferredLabel: wcon.recommendedLabel || null,
       minCm: con.min,
@@ -260,7 +371,7 @@
       // errorHalfWidthCm: polszerokosc 90% bledu metody (pm) — ta sama, ktora karta
       // pokazuje jako „±"; konsumenci (opis pacjenta) czytaja ja stad, zeby stala
       // Khamis-Roche nie miala drugiej kopii poza ta karta.
-      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null }; })
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '' }; })
     };
   }
 
@@ -269,20 +380,29 @@
     var sk = sexKey(input.sex);
     var rm = input.reliabilityModel || null;
     var entries = buildEntries(input);
-
-    var con = consensus(entries.map(function (e) { return e.value; }));
-    var wcon = weightedConsensus(entries);
+    var active = activeEntries(entries);
+    var con = consensus(active.map(function (e) { return e.value; }));
     var mphCm = num(input.mphCm);
+    var wcon = weightedConsensus(entries, mphCm);
     var boneAgeMissing = num(input.boneAgeYears) === null;
+    var preferred = null;
+    for (var pi = 0; pi < active.length; pi++) if (active[pi].key === wcon.recommendedKey) preferred = active[pi];
+    var gateFired = anyGateFired(entries);
+    var headlinePreferred = !!(preferred && con.agreementLabel === 'niska' && gateFired);
 
     return {
       sexKey: sk,
       entries: entries,
+      active: active,
       consensus: con,
       weighted: wcon,
+      deltaMonths: entries.deltaMonths !== undefined ? entries.deltaMonths : null,
+      gateFired: gateFired,
+      headline: { source: headlinePreferred ? 'preferred' : 'weighted', entry: headlinePreferred ? preferred : null },
       mph: mphCm !== null ? { cm: mphCm, centileText: input.mphCentileText != null ? String(input.mphCentileText) : '' } : null,
       tempo: num(input.growthVelocityCmPerYear) !== null ? { cm: num(input.growthVelocityCmPerYear), context: input.growthVelocityContext != null ? String(input.growthVelocityContext) : '' } : null,
       hasKhamis: entries.some(function (e) { return e.key === 'khamis'; }),
+      hasBlum: entries.some(function (e) { return e.key === 'blum'; }),
       boneAgeMissing: boneAgeMissing,
       showBoneAgeHint: boneAgeMissing && entries.some(function (e) { return e.key === 'khamis'; }) && !entries.some(function (e) { return e.key === 'bp'; }),
       profileStatus: rm && rm.profileStatusLabel ? String(rm.profileStatusLabel) : '',
@@ -293,16 +413,28 @@
   function heroHtml(model) {
     var c = model.consensus;
     var wc = model.weighted || {};
+    var capKons = 'Konsensus ' + c.count + (c.count === 1 ? ' metody' : ' metod') + (wc.withMph ? ' i MPH' : '') + ' (ważony)';
+    if (model.headline && model.headline.source === 'preferred' && model.headline.entry) {
+      var pe = model.headline.entry;
+      var pmt = pe.clamped
+        ? (pe.hiCm !== null && pe.hiCm !== undefined && pe.hiCm > pe.value + 0.049 ? esc(fmt1(pe.value)) + '–' + esc(fmt1(pe.hiCm)) + ' cm' : '')
+        : (pe.pm !== null && pe.pm !== undefined ? '±' + esc(fmt1(pe.pm)) + ' cm' : '');
+      return '<div class="vgcc-hero is-low"><div class="vgcc-hero-cap">Prognoza — metoda preferowana dla profilu: ' + esc(pe.label) + '</div>' +
+        '<div class="vgcc-hero-big">≈ ' + esc(fmt0(pe.value)) + ' cm</div>' +
+        '<div class="vgcc-hero-sub">' + (pmt ? '<b>' + pmt + '</b> · ' : '') + esc(capKons.replace(' (ważony)', '')) + ' ważony ≈ ' + esc(fmt0(wc.weighted)) + ' cm · <span class="vgcc-warn">zgodność ' + esc(c.agreementLabel) + '</span>' +
+        (c.count >= 2 ? ' (' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm)' : '') + '</div></div>';
+    }
     if (c.count >= 2) {
       var headline = (wc.weighted !== null && wc.weighted !== undefined) ? wc.weighted : c.median;
       var low = c.agreementLabel === 'niska';
       var rec = (low && wc.recommendedLabel) ? ' · <span class="vgcc-warn">preferowana: ' + esc(wc.recommendedLabel) + '</span>' : '';
-      return '<div class="vgcc-hero' + (low ? ' is-low' : '') + '"><div class="vgcc-hero-cap">Konsensus ' + c.count + ' metod (ważony)</div>' +
+      var range = '<b>' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm</b> · zgodność ' + esc(c.agreementLabel);
+      return '<div class="vgcc-hero' + (low ? ' is-low' : '') + '"><div class="vgcc-hero-cap">' + esc(capKons) + '</div>' +
         '<div class="vgcc-hero-big">≈ ' + esc(fmt0(headline)) + ' cm</div>' +
-        '<div class="vgcc-hero-sub"><b>' + esc(fmt1(c.min)) + '–' + esc(fmt1(c.max)) + ' cm</b> · zgodność ' + esc(c.agreementLabel) + rec + '</div></div>';
+        '<div class="vgcc-hero-sub">' + range + rec + '</div></div>';
     }
     if (c.count === 1) {
-      var e = model.entries[0];
+      var e = model.active[0];
       var pmTxt = e.clamped
         ? '<b>' + (e.hiCm !== null && e.hiCm !== undefined && e.hiCm > e.value + 0.049
             ? esc(fmt1(e.value)) + '–' + esc(fmt1(e.hiCm)) : esc(fmt1(e.value))) + ' cm</b>'
@@ -317,7 +449,8 @@
   }
 
   function methodsHtml(model) {
-    if (model.consensus.count < 2) return ''; // dla 1 metody hero wystarcza
+    var hasExcluded = model.entries.some(function (e) { return e.excluded; });
+    if (model.consensus.count < 2 && !hasExcluded) return ''; // dla 1 metody hero wystarcza
     var prefKey = model.weighted && model.weighted.recommendedKey;
     var rows = model.entries.map(function (e) {
       var right = e.clamped
@@ -325,8 +458,10 @@
             ? esc(fmt1(e.value)) + '–' + esc(fmt1(e.hiCm)) : esc(fmt1(e.value))) + ' cm</span>'
         : '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>' +
           (e.pm !== null && e.pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + '</span>' : '');
-      var cls = (prefKey && e.key === prefKey) ? ' is-pref' : '';
-      return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
+      var cls = (prefKey && e.key === prefKey) ? ' is-pref' : (e.excluded ? ' is-excl' : '');
+      var note = e.excluded ? '<div class="vgcc-note">poza konsensusem — ' + esc(e.gateNote.replace(/^poza konsensusem — /, '')) + '</div>'
+        : (e.gateNote ? '<div class="vgcc-note">' + esc(e.gateNote) + '</div>' : '');
+      return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + note + '</span><span>' + right + '</span></div>';
     }).join('');
     return '<div class="vgcc-methods">' + rows + '</div>';
   }
@@ -369,6 +504,20 @@
         (clampedEntries.length === 1 ? 'metoda ' : 'metody: ') + cl +
         ', czyli poniżej zmierzonego wzrostu. Dolną granicę prognozy ograniczono do aktualnego wzrostu, z odpowiednim obcięciem przedziału błędu; ' + (model.sexKey === 'F' ? 'pacjentka' : 'pacjent') + ' jest już blisko osiągnięcia wzrostu ostatecznego.</p>');
     }
+    if (model.deltaMonths !== null && model.deltaMonths !== undefined && model.entries.length) {
+      var dm = model.deltaMonths, dsign = dm > 0 ? '+' : (dm < 0 ? '−' : '');
+      var gated = model.entries.filter(function (e) { return e.gateNote; }).map(function (e) { return esc(e.label) + ': ' + esc(e.gateNote); });
+      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> wiek kostny względem metrykalnego ' + esc(dsign + Math.abs(dm)) + ' mies.' +
+        (gated.length ? ' — ' + gated.join('; ') : ' — bez bramek (wszystkie metody z pełną wagą)') + '.' +
+        (model.weighted && model.weighted.withMph ? ' MPH w konsensusie jako kotwica (udział ' + esc(String(Math.round((model.weighted.mphShare || 0) * 100))) + '%).' : '') +
+        (model.headline && model.headline.source === 'preferred' ? ' Nagłówek pokazuje metodę preferowaną, bo zgodność metod jest niska.' : '') + '</p>');
+    } else if (model.weighted && model.weighted.withMph) {
+      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> MPH w konsensusie jako kotwica (udział ' + esc(String(Math.round((model.weighted.mphShare || 0) * 100))) + '%); bez wieku kostnego bramki Δ nie działają.</p>');
+    }
+    if (model.hasBlum) {
+      var be = model.entries.filter(function (e) { return e.key === 'blum'; })[0];
+      parts.push('<p><span class="vgcc-lbl">Blum/ISS:</span> równania dla dzieci niskorosłych (hSDS ≤ −1,28; Blum i wsp., J Endocr Soc 2022' + (be && be.blumModelId ? ', model ' + esc(String(be.blumModelId)) : '') + '); RMSE 3,2–3,7 cm, kohorta niemiecko-holenderska. Nie stosować u dzieci rosnących prawidłowo ani wysokich.</p>');
+    }
     if (model.hasKhamis) {
       parts.push('<p><span class="vgcc-lbl">Khamis–Roche:</span> błąd zbiorczy 90% metody (±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku; liczy się bez wieku kostnego, populacja Fels (białe dzieci USA).</p>');
     }
@@ -389,7 +538,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '7',
+    version: '8',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
@@ -397,6 +546,9 @@
     _buildModel: buildModel,
     _consensus: consensus,
     _weightedConsensus: weightedConsensus,
+    _gateFor: gateFor,
+    _deltaMonths: deltaMonthsFor,
+    MPH_SIGMA_CM: MPH_SIGMA_CM,
     _levelLabel: levelLabel,
     _esc: esc,
     _sexKey: sexKey
