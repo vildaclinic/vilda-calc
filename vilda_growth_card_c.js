@@ -48,6 +48,56 @@
   CONSENSUS_W.mph = 0.7;
   var MPH_SIGMA_CM = 5.1;
   var DELTA_KR_HALF_MONTHS = 12, DELTA_GATE_MONTHS = 24;
+
+  // GROWTH-PRED-BIAS (decyzja właściciela 2026-09-11): korekty błędu SYSTEMATYCZNEGO metod wg
+  // profilu pacjenta (znak: prognoza − wzrost osiągnięty; korekta = −błąd). Wiersz metody pokazuje
+  // wartość skorygowaną; surowa w `uncorrectedCm` i w Szczegółach. Progi profilu: hSDS ≥ +2
+  // (wysokorosłość) / ≤ −2 (niskorosłość). PARAMETRY KLINICZNE — do strojenia.
+  //  • BP, chłopcy, Δ ≤ −24 mies.: −2,0 cm, σ×1,2 (Reinehr 2019 +1,6 przy opóźnieniu ≥ 2 l; Brämswig 1990
+  //    +3,1; Rohani 2018 +5,0; Sperlich 1995: 33% prognoz > 5 cm od wyniku).
+  //  • BP, chłopcy, hSDS ≥ +2 i wiek kostny < 12 l: −4,0 cm, σ×1,3 (Joss 1992 „masowo" do BA 12,
+  //    Bettendorf 1997 +0,6 SDS, Matias 2022 +5 cm); po BA 12 bez korekty (Joss: trafna).
+  //  • BP, dziewczęta, hSDS ≥ +2 i wiek kostny 12–14 l: −1,0 cm (Joss 1992; Drayer 1997 +0,7).
+  //  • RWT, hSDS ≤ −2: −1,3 cm (Blum 2022, walidacja n = 35: +1,33 ±4,4).
+  //  • Reguły BP są rozłączne (pierwsza pasująca), żeby korekty się nie sumowały.
+  //  • MPH: kotwica = cel WARUNKOWY: M + 0,78·(MPH − M), M = mediana wzrostu dorosłego danej płci
+  //    (regresja do średniej, Luo 1998: TH = 46,0 + 0,78·MPH; Cole 2000); przy hSDS ≤ −2 waga
+  //    kotwicy ×0,5 (dzieci ISS kończą ~0,6 SDS poniżej celu: Blum 2022, Rekers-Mombarg 1996).
+  //  • Reinehr/CDGP bez własnego przedziału błędu dostawał σ = 3,0 → sztuczna dominacja; teraz
+  //    ±5,7 cm (jak BP u chłopców z opóźnieniem; Maes 1997 SD 3,5).
+  var BIAS_TALL_SDS = 2, BIAS_SHORT_SDS = -2;
+  var BIAS_RULES = {
+    bpDelayBoys: { shift: -2.0, sigma: 1.2, note: 'Bayley–Pinneau przy opóźnieniu kostnym ≥ 2 lata zawyża u chłopców', source: 'Reinehr 2019; Brämswig 1990' },
+    bpTallBoys: { shift: -4.0, sigma: 1.3, note: 'Bayley–Pinneau w wysokorosłości zawyża u chłopców do wieku kostnego 12 lat', source: 'Joss 1992; Bettendorf 1997; Matias 2022' },
+    bpTallGirls: { shift: -1.0, sigma: 1.0, note: 'Bayley–Pinneau w wysokorosłości zawyża u dziewcząt przy wieku kostnym 12–14 lat', source: 'Joss 1992; Drayer 1997' },
+    rwtShort: { shift: -1.3, sigma: 1.0, note: 'RWT w niskorosłości (hSDS ≤ −2) zawyża', source: 'Blum 2022' }
+  };
+  var MPH_SHRINK = 0.78;
+  var MPH_SHORT_WEIGHT = 0.5;
+  var REINEHR_ERR_HALFWIDTH_CM = 5.7;
+
+  // Korekta błędu systematycznego dla metody `key` w profilu `ctx`
+  // ({ sexKey, deltaMonths, heightSds, boneAgeYears }) albo null.
+  function biasFor(key, ctx) {
+    ctx = ctx || {};
+    var sk = ctx.sexKey, d = num(ctx.deltaMonths), hs = num(ctx.heightSds), ba = num(ctx.boneAgeYears);
+    var r = null;
+    if (key === 'bp') {
+      if (sk === 'M' && d !== null && d <= -DELTA_GATE_MONTHS) r = BIAS_RULES.bpDelayBoys;
+      else if (sk === 'M' && hs !== null && hs >= BIAS_TALL_SDS && ba !== null && ba < 12) r = BIAS_RULES.bpTallBoys;
+      else if (sk === 'F' && hs !== null && hs >= BIAS_TALL_SDS && ba !== null && ba >= 12 && ba < 14) r = BIAS_RULES.bpTallGirls;
+    } else if (key === 'rwt') {
+      if (hs !== null && hs <= BIAS_SHORT_SDS) r = BIAS_RULES.rwtShort;
+    }
+    return r ? { shiftCm: r.shift, sigmaFactor: r.sigma, note: r.note, source: r.source } : null;
+  }
+  // Cel warunkowy z MPH: regresja do średniej wzrostu dorosłego danej płci (Luo 1998).
+  function mphAnchorFrom(mphCm, adultMedianCm) {
+    var m = num(mphCm), med = num(adultMedianCm);
+    if (m === null) return null;
+    if (med === null || med <= 0) return m;
+    return med + MPH_SHRINK * (m - med);
+  }
   var GATE_LABELS = {
     khamis: 'Khamis–Roche',
     rwt: 'RWT'
@@ -195,9 +245,11 @@
     return g * f / (sigma * sigma);
   }
   // Ważony konsensus + metoda preferowana (największa waga). Nie zmienia zakresu min–max.
-  function weightedConsensus(entries, mphCm) {
+  // opts: { anchorCm (cel warunkowy; domyślnie mphCm), heightSds (≤ −2 → waga kotwicy ×0,5) }
+  function weightedConsensus(entries, mphCm, opts) {
+    opts = opts || {};
     var es = (entries || []).filter(function (e) { return e && num(e.value) !== null && !e.excluded; });
-    if (!es.length) return { count: 0, weighted: null, recommendedKey: null, recommendedLabel: null, withMph: false, mphShare: 0 };
+    if (!es.length) return { count: 0, weighted: null, recommendedKey: null, recommendedLabel: null, withMph: false, mphShare: 0, mphAnchorCm: null, mphWeightFactor: 1 };
     var sw = 0, swv = 0, best = null, bestW = -Infinity;
     for (var i = 0; i < es.length; i++) {
       var w = weightForEntry(es[i]);
@@ -208,9 +260,12 @@
     // MPH jako kotwica (GROWTH-PRED-DOBOR): tylko przy co najmniej DWÓCH metodach (przy jednej
   // nie ma czego uśredniać — pokazujemy metodę jak dotąd); nigdy „preferowana".
     var mph = num(mphCm), withMph = false, mphShare = 0;
+    var anchor = num(opts.anchorCm); if (anchor === null || anchor <= 0) anchor = mph;
+    var hsW = num(opts.heightSds);
+    var mphWeightFactor = (hsW !== null && hsW <= BIAS_SHORT_SDS) ? MPH_SHORT_WEIGHT : 1;
     if (mph !== null && mph > 0 && sw > 0 && es.length >= 2) {
-      var wm = CONSENSUS_W.mph / (MPH_SIGMA_CM * MPH_SIGMA_CM);
-      sw += wm; swv += wm * mph; withMph = true; mphShare = wm / sw;
+      var wm = mphWeightFactor * CONSENSUS_W.mph / (MPH_SIGMA_CM * MPH_SIGMA_CM);
+      sw += wm; swv += wm * anchor; withMph = true; mphShare = wm / sw;
     }
     return {
       count: es.length,
@@ -218,7 +273,9 @@
       recommendedKey: best ? best.key : null,
       recommendedLabel: best ? best.label : null,
       withMph: withMph,
-      mphShare: mphShare
+      mphShare: mphShare,
+      mphAnchorCm: withMph ? anchor : null,
+      mphWeightFactor: withMph ? mphWeightFactor : 1
     };
   }
   function activeEntries(entries) {
@@ -238,6 +295,8 @@
     var curH = num(input.currentHeightCm);
     if (curH !== null && curH <= 0) curH = null;
     var entries = [];
+    var delta = deltaMonthsFor(input);
+    var biasCtx = { sexKey: sk, deltaMonths: delta, heightSds: num(input.heightSds), boneAgeYears: num(input.boneAgeYears) };
 
     // Wzrost ostateczny nie może być niższy niż już zmierzony: prognozę punktową
     // ogranicza się od dołu aktualnym wzrostem (surowa wartość w rawValue, flaga
@@ -249,10 +308,20 @@
       var raw = num(result && result.predictedAdultHeightCmRaw);
       if (raw === null) raw = val;
       var clamped = result && result.clampedToCurrentHeight === true;
+      // GROWTH-PRED-BIAS: korekta błędu systematycznego PRZED clampem; surowa wartość zostaje.
+      var bias = biasFor(key, biasCtx);
+      var uncorrected = val;
+      if (bias) {
+        val += bias.shiftCm; raw += bias.shiftCm;
+        if (pm !== null && pm !== undefined) pm = pm * bias.sigmaFactor;
+      }
       if (curH !== null && val < curH) { val = curH; clamped = true; }
       entries.push({
         key: key, label: label, value: val, pm: pm, levelKey: null,
         rawValue: raw, clamped: clamped,
+        uncorrectedCm: uncorrected,
+        biasCm: bias ? bias.shiftCm : 0, biasSigmaFactor: bias ? bias.sigmaFactor : 1,
+        biasNote: bias ? bias.note : '', biasSource: bias ? bias.source : '',
         loCm: pm !== null && pm !== undefined ? (clamped ? val : val - pm) : null,
         hiCm: pm !== null && pm !== undefined ? Math.max(raw + pm, val) : null
       });
@@ -286,7 +355,11 @@
       entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: pm, levelKey: 'indicative', noBoneAge: true,
         rawValue: raw, clamped: clamped, loCm: clamped ? val : val - pm, hiCm: Math.max(raw + pm, val) });
     })();
-    add('reinehr', 'Reinehr/CDGP', input.reinehr, num(input.reinehr && input.reinehr.errorBoundHalfWidthCm));
+    // Reinehr: własny przedział błędu, a gdy silnik go nie podaje — ±5,7 (GROWTH-PRED-BIAS, A1).
+    (function () {
+      var pmR = num(input.reinehr && input.reinehr.errorBoundHalfWidthCm);
+      add('reinehr', 'Reinehr/CDGP', input.reinehr, pmR !== null && pmR > 0 ? pmR : REINEHR_ERR_HALFWIDTH_CM);
+    })();
     (function () {
       var e = entries[entries.length - 1];
       if (e && e.key === 'reinehr') e.levelKey = levelFor(rm, 'reinehr') || 'indicative';
@@ -313,7 +386,6 @@
       }
     })();
     // Bramki stosowalności wg Δ (GROWTH-PRED-DOBOR).
-    var delta = deltaMonthsFor(input);
     for (var gi = 0; gi < entries.length; gi++) {
       var g = gateFor(entries[gi].key, delta);
       entries[gi].gateFactor = g.factor;
@@ -329,11 +401,17 @@
   // jej wynik. MPH celowo poza prognozą (cel genetyczny — fallback po stronie
   // konsumenta). Widełki ±: przedział błędu metody preferowanej (największa
   // waga) — decyzja właściciela 2026-08-11.
+  function mphOpts(input) {
+    input = input || {};
+    var anchor = num(input.mphAnchorCm);
+    if (anchor === null) anchor = mphAnchorFrom(input.mphCm, input.adultMedianHeightCm);
+    return { anchorCm: anchor, heightSds: num(input.heightSds) };
+  }
   function computeFinalHeightPrediction(input) {
     var entries = buildEntries(input || {});
     var active = activeEntries(entries);
     if (!active.length) return null;
-    var wcon = weightedConsensus(entries, num(input && input.mphCm));
+    var wcon = weightedConsensus(entries, num(input && input.mphCm), mphOpts(input));
     var weightedCm = num(wcon.weighted);
     if (weightedCm === null) return null;
     var preferred = null;
@@ -359,6 +437,9 @@
       weightedCm: weightedCm,
       mphInConsensus: wcon.withMph === true,
       mphShare: wcon.mphShare || 0,
+      mphAnchorCm: wcon.mphAnchorCm !== undefined ? wcon.mphAnchorCm : null,
+      mphWeightFactor: wcon.mphWeightFactor !== undefined ? wcon.mphWeightFactor : 1,
+      biasApplied: entries.filter(function (e) { return e.biasCm; }).map(function (e) { return e.key; }),
       deltaMonths: entries.deltaMonths !== undefined ? entries.deltaMonths : null,
       gateFired: gateFired,
       excludedMethods: excluded,
@@ -370,7 +451,7 @@
       // errorHalfWidthCm: polszerokosc 90% bledu metody (pm) — ta sama, ktora karta
       // pokazuje jako „±"; konsumenci (opis pacjenta) czytaja ja stad, zeby stala
       // Khamis-Roche nie miala drugiej kopii poza ta karta.
-      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '' }; })
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '', uncorrectedCm: e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.value, biasCm: e.biasCm || 0, biasNote: e.biasNote || '' }; })
     };
   }
 
@@ -382,7 +463,7 @@
     var active = activeEntries(entries);
     var con = consensus(active.map(function (e) { return e.value; }));
     var mphCm = num(input.mphCm);
-    var wcon = weightedConsensus(entries, mphCm);
+    var wcon = weightedConsensus(entries, mphCm, mphOpts(input));
     var boneAgeMissing = num(input.boneAgeYears) === null;
     var gateFired = anyGateFired(entries);
 
@@ -466,6 +547,29 @@
       '<div class="vu"><span class="v">' + esc(fmt1(model.tempo.cm)) + '</span> <span class="u">' + u + '</span></div></div></div>';
   }
 
+  function mphAnchorSentence(model) {
+    var wc = model.weighted || {};
+    var anchor = num(wc.mphAnchorCm), mph = model.mph ? num(model.mph.cm) : null;
+    var s = ' MPH w konsensusie jako ';
+    if (anchor !== null && mph !== null && Math.abs(anchor - mph) >= 0.05) {
+      s += 'cel warunkowy ' + esc(fmt1(anchor)) + ' cm (regresja do średniej 0,78, Luo 1998; udział ';
+    } else {
+      s += 'kotwica (udział ';
+    }
+    s += esc(String(Math.round((wc.mphShare || 0) * 100))) + '%';
+    if (wc.mphWeightFactor !== undefined && wc.mphWeightFactor < 1) s += '; waga ×0,5 w niskorosłości, bo dzieci ISS kończą poniżej celu, Blum 2022';
+    return s + ').';
+  }
+  function biasSentence(model) {
+    var corr = (model.entries || []).filter(function (e) { return e.biasCm; });
+    if (!corr.length) return '';
+    var items = corr.map(function (e) {
+      var sign = e.biasCm > 0 ? '+' : '−';
+      return esc(e.label) + ' ' + esc(fmt1(e.uncorrectedCm)) + ' → ' + esc(fmt1(e.value)) + ' cm (' + sign + esc(fmt1(Math.abs(e.biasCm))) + ' cm' +
+        (e.biasSigmaFactor && e.biasSigmaFactor !== 1 ? ', σ ×' + esc(fmt1(e.biasSigmaFactor)) : '') + '): ' + esc(e.biasNote) + ' (' + esc(e.biasSource) + ')';
+    });
+    return '<p><span class="vgcc-lbl">Korekta błędu systematycznego:</span> ' + items.join('; ') + '.</p>';
+  }
   function detailsHtml(model) {
     var parts = [];
     if (model.consensus && model.consensus.count >= 2 && model.weighted && model.weighted.weighted !== null) {
@@ -473,7 +577,7 @@
         ', ważony wiarygodnością ' + esc(fmt1(model.weighted.weighted)) + ' cm; widełki metod ' + esc(fmt1(model.consensus.min)) + '–' + esc(fmt1(model.consensus.max)) +
         ' cm (mediana metod ' + esc(fmt1(model.consensus.median)) + ' cm).' +
         (model.weighted.recommendedLabel ? ' Największa waga dla tego profilu: ' + esc(model.weighted.recommendedLabel) + '.' : '') +
-        (model.weighted.withMph ? ' MPH w konsensusie jako kotwica (udział ' + esc(String(Math.round((model.weighted.mphShare || 0) * 100))) + '%).' : '') + '</p>');
+        (model.weighted.withMph ? mphAnchorSentence(model) : '') + '</p>');
     }
     if (model.entries.length) {
       var rel = model.entries.map(function (e) { return esc(e.label) + ' ' + esc(levelLabel(e.levelKey)); }).join(' · ');
@@ -502,6 +606,7 @@
     } else if (model.entries.length >= 2 && model.boneAgeMissing) {
       parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> bez wieku kostnego bramki rozbieżności nie działają; wszystkie metody z pełną wagą.</p>');
     }
+    parts.push(biasSentence(model));
     if (model.hasBlum) {
       var be = model.entries.filter(function (e) { return e.key === 'blum'; })[0];
       parts.push('<p><span class="vgcc-lbl">Blum/ISS:</span> równania dla dzieci niskorosłych (hSDS ≤ −1,28; Blum i wsp., J Endocr Soc 2022' + (be && be.blumModelId ? ', model ' + esc(String(be.blumModelId)) : '') + '); RMSE 3,2–3,7 cm, kohorta niemiecko-holenderska. Nie stosować u dzieci rosnących prawidłowo ani wysokich.</p>');
@@ -509,6 +614,7 @@
     if (model.hasKhamis) {
       parts.push('<p><span class="vgcc-lbl">Khamis–Roche:</span> błąd zbiorczy 90% metody (±5,3 cm chłopcy / ±4,3 cm dziewczęta; Khamis–Roche 1994), nie zależy od wieku; liczy się bez wieku kostnego, populacja Fels (białe dzieci USA).</p>');
     }
+    parts = parts.filter(Boolean);
     if (!parts.length) return '';
     return '<details class="vgcc-det"><summary>Szczegóły i wiarygodność</summary><div class="vgcc-det-body">' + parts.join('') + '</div></details>';
   }
@@ -526,7 +632,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '9',
+    version: '10',
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,
@@ -535,6 +641,11 @@
     _consensus: consensus,
     _weightedConsensus: weightedConsensus,
     _gateFor: gateFor,
+    _biasFor: biasFor,
+    _mphAnchor: mphAnchorFrom,
+    BIAS_RULES: BIAS_RULES,
+    MPH_SHRINK: MPH_SHRINK,
+    REINEHR_ERR_HALFWIDTH_CM: REINEHR_ERR_HALFWIDTH_CM,
     _deltaMonths: deltaMonthsFor,
     MPH_SIGMA_CM: MPH_SIGMA_CM,
     _levelLabel: levelLabel,
