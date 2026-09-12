@@ -70,7 +70,7 @@ async function otworzZPacjentka(page) {
     if (f && getComputedStyle(f).display !== 'none') return;
     if (t) { t.disabled = false; t.click(); }
   });
-  await page.waitForSelector('#advMeasurements .measure-row');
+  await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });
 
   // Ręczny wiersz historyczny: 13 lat 1 mies., 139,9 cm, 45 kg.
   await page.evaluate(() => {
