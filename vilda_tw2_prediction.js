@@ -4,8 +4,9 @@
  * ŹRÓDŁA (współczynniki w tw2_data.js):
  *   Tanner JM i wsp. Arch Dis Child 1983;58:767–776, DOI 10.1136/adc.58.10.767 — równania „1"
  *   (3 zmienne) dla dziewcząt: 3.1a przed menarche, 3.1b po menarche (wiek menarche nieznany),
- *   3.1c po menarche (wiek menarche znany); dla chłopców: 2.1 (6,0–18,5 l; bez przyrostu wzrostu —
- *   tab. 2.2 z przyrostem nie jest używana), powyżej 18,5 l ostatni wiersz (s. 775).
+ *   3.1c po menarche (wiek menarche znany); dla chłopców: 2.1 (6,0–18,5 l, 3 zmienne) oraz 2.2
+ *   (11,0–18,0 l, 4 zmienne — z przyrostem wzrostu w ostatnim roku; równanie „2", s. 770: „u chłopców
+ *   od 11,0 lat, gdy przyrost jest dostępny"), powyżej ostatniego wiersza — ostatni wiersz (s. 775).
  *   Singleton A i wsp. Arch Fr Pediatr 1975;32:859–869 (PMID 175755): odsetek wzrostu ostatecznego
  *   osiągnięty przy menarche 95,5 ± 1,2 %, przyrost po menarche 7,3 ± 2 cm, większy przy niższym
  *   wieku kostnym przy menarche.
@@ -15,15 +16,25 @@
  *
  * KONTRAKT (jak calculateRWTPrediction / calculateKhamisRochePrediction):
  *   calculateTW2Prediction({ sex:'F'|'M', chronologicalAgeYears, chronologicalAgeMonths, currentHeightCm,
- *     boneAgeYears, boneAgeSource:'GP'|'TW2RUS', postmenarcheal:true|false|null, menarcheAgeYears })
- *   → { available:true, method:'tw2', table:'3.1a'|'3.1b'|'3.1c'|'2.1', rowAge, predictedAdultHeightCm,
+ *     boneAgeYears, boneAgeSource:'GP'|'TW2RUS', postmenarcheal:true|false|null, menarcheAgeYears,
+ *     heightIncrementCmPerYear, heightIncrementIntervalYears, heightIncrementFromAgeMonths })
+ *   → { available:true, method:'tw2', table:'3.1a'|'3.1b'|'3.1c'|'2.1'|'2.2', rowAge, predictedAdultHeightCm,
  *       predictedAdultHeightCmRaw, clampedToCurrentHeight, errorBoundHalfWidthCm (= 1,645·SD),
  *       residualSdCm, r, extrapolatedBelowTable, extrapolatedAboveTable, variants:{exactCa, clampedCa}|null,
  *       boneAgeSource, boneAgeProxyNote, menarcheStatusUnknown, notes[] }
  *     lub { available:false, reason:'missing-sex'|'missing-chronological-age'|'missing-input'|
  *           'missing-bone-age'|'missing-dataset'|'out-of-range'|'menarche-status-unknown' }
- *   • Chłopcy: jedna tablica (2.1), status menarche nieistotny; poniżej 6,0 l poza zakresem; powyżej
- *     18,5 l ostatni wiersz z flagą extrapolatedAboveTable (do 20 l).
+ *   • Chłopcy: status menarche nieistotny; poniżej 6,0 l poza zakresem; powyżej ostatniego wiersza
+ *     (18,5 l w 2.1, 18,0 l w 2.2) ostatni wiersz z flagą extrapolatedAboveTable (do 20 l).
+ *   • Chłopcy od 11 lat (najbliższe półrocze ≥ 11,0) z heightIncrementCmPerYear: tab. 2.2 (4 zmienne);
+ *     wynik niesie też withoutIncrementCm (tab. 2.1) do porównania i heightIncrement{CmPerYear,
+ *     IntervalYears, FromAgeMonths}. Bez przyrostu albo przed 11 l: tab. 2.1.
+ *
+ *   selectTW2HeightIncrement({ measurements:[{ageMonths, height}], currentAgeMonths, currentHeightCm })
+ *   → { available:true, incrementCmPerYear, intervalYears, intervalMonths, fromAgeMonths, fromHeightCm,
+ *       deltaCm } lub { available:false, reason:'missing-input'|'no-measurement-in-window' }
+ *   • Okno wg przypisu tab. 2.2: odstęp 0,83–1,12 roku (10–13,4 mies.); wybierany pomiar najbliższy
+ *     dokładnie roku; przyrost przeliczony na tempo roczne (Δcm / odstęp w latach).
  *   • Wiek: chronologicalAgeMonths (łączne miesiące) ma pierwszeństwo; lata to fallback.
  *   • Wiersz = najbliższy półroczny punkt wieku; w równaniu wiek DOKŁADNY (praca, s. 768).
  *   • Wiek kostny GP jest tylko PRZYBLIŻENIEM RUS — flaga boneAgeSource + nota; 3.1c ma mały
@@ -82,8 +93,40 @@
     for (var i = 0; i < table.rows.length; i++) if (Math.abs(table.rows[i].rowAge - rowAge) < 1e-9) row = table.rows[i];
     return { row: row, rowAge: rowAge, below: below, above: above };
   }
-  function evalRow(row, h, ca, rus, men) {
-    return row.h * h + row.ca * ca + row.rus * rus + (row.men || 0) * (men || 0) + row.konst;
+  function evalRow(row, h, ca, rus, men, dh) {
+    return row.h * h + row.ca * ca + row.rus * rus + (row.men || 0) * (men || 0) + (row.dh || 0) * (dh || 0) + row.konst;
+  }
+  var INCREMENT_WINDOW_YEARS = [0.83, 1.12]; // przypis tab. 2.2 (Tanner 1983)
+
+  function selectTW2HeightIncrement(input) {
+    input = input || {};
+    var cur = num(input.currentAgeMonths);
+    var h = num(input.currentHeightCm);
+    var list = Array.isArray(input.measurements) ? input.measurements : [];
+    if (cur === null || h === null || h <= 0) return { available: false, reason: 'missing-input' };
+    var best = null, bestDist = Infinity;
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      if (!m) continue;
+      var am = num(m.ageMonths), mh = num(m.height);
+      if (am === null || mh === null || mh <= 0) continue;
+      var dy = (cur - am) / 12;
+      if (dy < INCREMENT_WINDOW_YEARS[0] - 1e-9 || dy > INCREMENT_WINDOW_YEARS[1] + 1e-9) continue;
+      var dist = Math.abs(dy - 1);
+      if (dist < bestDist) { bestDist = dist; best = { am: am, mh: mh, dy: dy }; }
+    }
+    if (!best) return { available: false, reason: 'no-measurement-in-window', windowYears: INCREMENT_WINDOW_YEARS.slice() };
+    var delta = h - best.mh;
+    return {
+      available: true,
+      incrementCmPerYear: Math.round(delta / best.dy * 10) / 10,
+      deltaCm: round1(delta),
+      intervalYears: Math.round(best.dy * 100) / 100,
+      intervalMonths: Math.round(cur - best.am),
+      fromAgeMonths: best.am,
+      fromHeightCm: best.mh,
+      windowYears: INCREMENT_WINDOW_YEARS.slice()
+    };
   }
   function round1(v) { return Math.round(v * 10) / 10; }
 
@@ -103,12 +146,27 @@
     var notes = [];
     var table, tableKey;
     var post = false, menAge = null, statusUnknown = false;
+    var dh = null, dhInterval = null, dhFrom = null, withoutIncrement = null;
     if (sk === 'M') {
       if (!d.boys || !d.boys.all) return { available: false, reason: 'missing-dataset', message: 'Brak tablicy TW Mark II dla chłopców (tw2_data.js).' };
       table = d.boys.all; tableKey = '2.1';
       if (age < table.minRowAge - 0.25) return { available: false, reason: 'out-of-range', message: 'TW Mark II: równania dla chłopców od 6. roku życia.' };
       if (age > 20) return { available: false, reason: 'out-of-range', message: 'TW Mark II: poza zakresem wieku równań.' };
-      notes.push('równanie „1" (3 zmienne, tab. 2.1) bez przyrostu wzrostu w ostatnim roku — tablica 2.2 z przyrostem nie jest używana');
+      var inc = num(input.heightIncrementCmPerYear);
+      var t22 = d.boys.withIncrement;
+      if (inc !== null && t22 && Math.round(age * 2) / 2 >= t22.minRowAge) {
+        // równanie „2" (s. 770): chłopcy od 11,0 lat z dostępnym przyrostem wzrostu w ostatnim roku
+        var sel21 = nearestRow(table, age);
+        withoutIncrement = sel21.row ? round1(evalRow(sel21.row, h, age, ba, null, null)) : null;
+        table = t22; tableKey = '2.2';
+        dh = inc; dhInterval = num(input.heightIncrementIntervalYears); dhFrom = num(input.heightIncrementFromAgeMonths);
+        notes.push('równanie „2" (4 zmienne, tab. 2.2): przyrost wzrostu ' + String(round1(inc)).replace('.', ',') + ' cm/rok' +
+          (dhInterval !== null ? ' z ostatnich ' + String(Math.round(dhInterval * 12)) + ' mies. (przeliczony na rok)' : '') +
+          (withoutIncrement !== null ? '; bez przyrostu (tab. 2.1) byłoby ' + String(withoutIncrement).replace('.', ',') + ' cm' : ''));
+      } else {
+        notes.push('równanie „1" (3 zmienne, tab. 2.1) bez przyrostu wzrostu w ostatnim roku' +
+          (Math.round(age * 2) / 2 >= 11 ? ' — brak pomiaru sprzed 10–13 mies. w historii (tab. 2.2 wymaga przyrostu rocznego)' : ' (tab. 2.2 od 11. roku życia)'));
+      }
     } else {
       post = input.postmenarcheal === true;
       menAge = num(input.menarcheAgeYears);
@@ -139,7 +197,7 @@
       variants = { exactCa: round1(exact), clampedCa: round1(clamped) };
       notes.push('po menarche przed ' + String(table.minRowAge).replace('.', ',') + ' r.ż.: użyto wiersza ' + String(table.minRowAge).replace('.', ',') + ' (Tanner 1983, s. 775) w dwóch wariantach — wiek dokładny ' + String(variants.exactCa).replace('.', ',') + ' cm i wiek obcięty do ' + String(table.minRowAge).replace('.', ',') + ' lat ' + String(variants.clampedCa).replace('.', ',') + ' cm; wynik = środek, przedział rozszerzony; równania nie były testowane w przedwczesnym dojrzewaniu');
     } else {
-      raw = evalRow(row, h, age, ba, menAge);
+      raw = evalRow(row, h, age, ba, menAge, dh);
       if (sel.above) notes.push('wiek powyżej ostatniego wiersza tablicy ' + tableKey + ' — użyto wiersza ' + String(sel.rowAge).replace('.', ',') + ' (Tanner 1983, s. 775' + (sk === 'M' ? ': chłopcy z opóźnieniem wzrastania i niezrośniętymi nasadami' : '') + ')');
       if (!post && sel.below) notes.push('wiek poniżej pierwszego wiersza tablicy — użyto wiersza ' + String(sel.rowAge).replace('.', ','));
     }
@@ -174,7 +232,11 @@
       extrapolatedBelowTable: !!(post && sel.below),
       extrapolatedAboveTable: !!sel.above,
       variants: variants,
-      coefficients: { h: row.h, ca: row.ca, rus: row.rus, men: row.men || 0, konst: row.konst },
+      heightIncrementCmPerYear: dh,
+      heightIncrementIntervalYears: dhInterval,
+      heightIncrementFromAgeMonths: dhFrom,
+      withoutIncrementCm: withoutIncrement,
+      coefficients: { h: row.h, ca: row.ca, rus: row.rus, men: row.men || 0, dh: row.dh || 0, konst: row.konst },
       notes: notes
     };
   }
@@ -218,10 +280,13 @@
 
   w.calculateTW2Prediction = calculateTW2Prediction;
   w.calculateMenarcheFractionPrediction = calculateMenarcheFractionPrediction;
+  w.selectTW2HeightIncrement = selectTW2HeightIncrement;
   w.VildaTW2Prediction = {
-    VERSION: '2',
+    VERSION: '3',
     calculateTW2Prediction: calculateTW2Prediction,
     calculateMenarcheFractionPrediction: calculateMenarcheFractionPrediction,
+    selectTW2HeightIncrement: selectTW2HeightIncrement,
+    INCREMENT_WINDOW_YEARS: INCREMENT_WINDOW_YEARS,
     MENARCHE_FRACTION: MENARCHE_FRACTION,
     MENARCHE_FRACTION_SD: MENARCHE_FRACTION_SD,
     MENARCHE_BA_REF_YEARS: MENARCHE_BA_REF_YEARS,

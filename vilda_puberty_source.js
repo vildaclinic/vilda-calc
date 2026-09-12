@@ -28,11 +28,12 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '4';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
-  var POLA = ['onsetAgeYears', 'menarcheAgeYears', 'heightAtMenarcheCm', 'cdgpDeclared'];
+  // GROWTH-PRED-TW2C: boneAgeAtMenarcheYears — wiek kostny z RTG przy menarche (korekta Cho 2026).
+  var POLA = ['onsetAgeYears', 'menarcheAgeYears', 'heightAtMenarcheCm', 'boneAgeAtMenarcheYears', 'cdgpDeclared'];
 
   // Deklaracja KOWD jest odpowiedzia lekarza, nie wynikiem automatu — dopuszczalne sa
   // wylacznie te dwie wartosci, brak odpowiedzi zostaje brakiem odpowiedzi.
@@ -61,14 +62,16 @@
     var start = liczba(puberty.onsetAgeYears);
     var menarche = liczba(puberty.menarcheAgeYears);
     var wzrostMenarche = liczba(puberty.heightAtMenarcheCm);
+    var kostnyMenarche = liczba(puberty.boneAgeAtMenarcheYears);
     var kowd = typeof puberty.cdgpDeclared === 'string'
       && Object.prototype.hasOwnProperty.call(KOWD_DOPUSZCZALNE, puberty.cdgpDeclared)
       ? puberty.cdgpDeclared : '';
-    if (start == null && menarche == null && wzrostMenarche == null && !kowd) return null;
+    if (start == null && menarche == null && wzrostMenarche == null && kostnyMenarche == null && !kowd) return null;
     return {
       wiekStartuPokwitaniaLat: start,
       wiekMenarcheLat: menarche,
       wzrostPrzyMenarcheCm: wzrostMenarche,
+      wiekKostnyPrzyMenarcheLat: kostnyMenarche,
       kowd: kowd,
       zKartyPacjenta: true
     };
@@ -77,7 +80,7 @@
   function niesieDane(s) {
     return !!(s && typeof s === 'object'
       && (s.wiekStartuPokwitaniaLat != null || s.wiekMenarcheLat != null
-        || s.wzrostPrzyMenarcheCm != null || s.kowd));
+        || s.wzrostPrzyMenarcheCm != null || s.wiekKostnyPrzyMenarcheLat != null || s.kowd));
   }
 
   // ── Pamięć sekcji ────────────────────────────────────────────────────────────

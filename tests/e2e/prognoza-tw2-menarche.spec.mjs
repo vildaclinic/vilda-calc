@@ -11,14 +11,23 @@ async function otworz(page) {
     && typeof window.calculateTW2Prediction === 'function' && Boolean(window.VildaPubertalStatus));
 }
 
-function policz(page, { lata, miesiace, wzrost, masa, ba, menarche, plec = 'F', wzrostMenarche = null }) {
-  return page.evaluate(({ lata, miesiace, wzrost, masa, ba, menarche, plec, wzrostMenarche }) => {
+function policz(page, { lata, miesiace, wzrost, masa, ba, menarche, plec = 'F', wzrostMenarche = null, baMenarche = null, historia = null }) {
+  return page.evaluate(({ lata, miesiace, wzrost, masa, ba, menarche, plec, wzrostMenarche, baMenarche, historia }) => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : String(v); };
     window.professionalMode = true;
     set('age', lata); set('ageMonths', miesiace); set('sex', plec);
     set('height', wzrost); set('weight', masa);
     set('advMotherHeight', 165); set('advFatherHeight', 185); set('advBoneAge', ba);
-    set('pubertyMenarcheAge', menarche); set('pubertyMenarcheHeight', wzrostMenarche);
+    set('pubertyMenarcheAge', menarche); set('pubertyMenarcheHeight', wzrostMenarche); set('pubertyMenarcheBoneAge', baMenarche);
+    // GROWTH-PRED-TW2C: pomiar historyczny w pierwszym wierszu karty zaawansowanej (wartości przez DOM).
+    const t = document.getElementById('toggleAdvancedGrowth'); const f = document.getElementById('advancedGrowthForm');
+    if (t && f && getComputedStyle(f).display === 'none') { t.disabled = false; t.click(); }
+    const row = document.querySelector('#advMeasurements .measure-row');
+    if (row) {
+      const sr = (sel, v) => { const e = row.querySelector(sel); if (e) { e.value = v == null ? '' : String(v); e.dispatchEvent(new Event('input', { bubbles: true })); } };
+      const h = historia || {};
+      sr('.adv-age-years', h.lata); sr('.adv-age-months', h.miesiace); sr('.adv-height', h.wzrost); sr('.adv-weight', h.masa);
+    }
     window.calculateGrowthAdvanced();
     const d = window.advancedGrowthData || {};
     const card = document.querySelector('.vgcc');
@@ -31,7 +40,7 @@ function policz(page, { lata, miesiace, wzrost, masa, ba, menarche, plec = 'F', 
       bp: d.bayleyPinneau ? { cm: d.bayleyPinneau.predictedAdultHeightCm, groupKey: d.bayleyPinneau.groupKey, override: d.bayleyPinneau.groupOverrideApplied === true, reason: d.bayleyPinneau.groupReasonText } : null,
       cardText: norm(card ? card.textContent : ''),
     };
-  }, { lata, miesiace, wzrost, masa, ba, menarche, plec, wzrostMenarche });
+  }, { lata, miesiace, wzrost, masa, ba, menarche, plec, wzrostMenarche, baMenarche, historia });
 }
 
 test('8 l 9 mies., 147,3 cm, BA 12, menarche 8,75: konsensus ok. 158 cm (przedtem 168), TW Mark II 3.1c, RWT/KR poza, BP z tablicy przeciętnej', async ({ page }) => {
@@ -115,3 +124,39 @@ test('pole „Wzrost przy menarche": menarche 8,75 przy 147 cm, dziś 10 l 3 mie
   expect((bez.fhp.methods || []).some((m) => m.key === 'menarche')).toBe(false);
   expect(bez.cardText).not.toContain('Wzrost przy menarche / 0,955');
 });
+
+// GROWTH-PRED-TW2C — tab. 2.2 z przyrostem wzrostu z historii pomiarów i pole „Wiek kostny przy menarche".
+test('chłopiec 12 l, 150 cm, BA 12 z pomiarem 11 l 0 mies. 144 cm: TW Mark II z tab. 2.2 (przyrost 6 cm/rok) → 176,1 ±5,3; bez pomiaru — tab. 2.1 178,1', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+  const r = await policz(page, { plec: 'M', lata: 12, miesiace: 0, wzrost: 150, masa: 42, ba: 12, menarche: null, historia: { lata: 11, miesiace: 0, wzrost: 144, masa: 36 } });
+  expect(r.tw2).toMatchObject({ available: true, table: '2.2', rowAge: 12, heightIncrementCmPerYear: 6, heightIncrementIntervalYears: 1, heightIncrementFromAgeMonths: 132 });
+  expect(r.tw2.predictedAdultHeightCm).toBeCloseTo(176.1, 1);
+  expect(r.tw2.errorBoundHalfWidthCm).toBeCloseTo(5.3, 1);
+  expect(r.tw2.withoutIncrementCm).toBeCloseTo(178.1, 1);
+  expect((r.fhp.methods || []).find((m) => m.key === 'tw2')).toMatchObject({ tw2Table: '2.2', excluded: false });
+  expect(r.cardText).toMatch(/TW Mark II\s*176,1 cm ±5,3/);
+  expect(r.cardText).toContain('tablica 2.2 (4 zmienne: wzrost, wiek metrykalny, wiek kostny, przyrost wzrostu w ostatnim roku), wiersz 12 l');
+  expect(r.cardText).toContain('przyrost wzrostu 6 cm/rok z ostatnich 12 mies. (przeliczony na rok); bez przyrostu (tab. 2.1) byłoby 178,1 cm');
+
+  const bez = await policz(page, { plec: 'M', lata: 12, miesiace: 0, wzrost: 150, masa: 42, ba: 12, menarche: null, historia: { lata: '', miesiace: '', wzrost: '', masa: '' } });
+  expect(bez.tw2).toMatchObject({ available: true, table: '2.1', heightIncrementCmPerYear: null });
+  expect(bez.tw2.predictedAdultHeightCm).toBeCloseTo(178.1, 1);
+  expect(bez.cardText).toContain('brak pomiaru sprzed 10–13 mies. w historii');
+});
+
+test('pole „Wiek kostny przy menarche": menarche 8,75 przy 147 cm z wiekiem kostnym 11,5 → korekta Cho +4,7 cm (158,6), choć menarche była dawniej niż 12 mies. temu', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+  await expect(page.locator('#pubertyMenarcheBoneAge')).toBeAttached();
+  const r = await policz(page, { lata: 10, miesiace: 3, wzrost: 152, masa: 42, ba: 13, menarche: 8.75, wzrostMenarche: 147, baMenarche: 11.5 });
+  expect(r.puberty).toMatchObject({ postmenarcheal: true, heightAtMenarcheCm: 147, heightAtMenarcheSource: 'field', boneAgeAtMenarcheYears: 11.5, boneAgeAtMenarcheSource: 'field', menarcheRecent: false });
+  expect(r.menarche).toMatchObject({ available: true });
+  expect(r.menarche.baseCm).toBeCloseTo(153.9, 1);
+  expect(r.menarche.boneAgeAdjustmentCm).toBeCloseTo(4.7, 1);
+  expect(r.menarche.predictedAdultHeightCm).toBeCloseTo(158.6, 1);
+  expect(r.cardText).toMatch(/Wzrost przy menarche \/ 0,955\s*158,6 cm ±3,4/);
+  expect(r.cardText).toContain('korekta +4,7 cm');
+  expect(r.cardText).toContain('korekta na wiek kostny przy menarche 11,5 l wobec typowych 13 l: +4,7 cm (Cho 2026');
+});
+

@@ -165,3 +165,14 @@ describe('GROWTH-PRED-TW2B — wzrost przy menarche w statusie pokwitania', () =
   });
 });
 
+describe('GROWTH-PRED-TW2C — wiek kostny przy menarche w statusie pokwitania', () => {
+  it('POLA_DOM zna pole wieku kostnego przy menarche', () => {
+    expect(S.POLA_DOM.wiekKostnyMenarche).toBe('pubertyMenarcheBoneAge');
+  });
+  it('sprzeczności: u chłopca; bez wieku menarche; spójny wpis bez zastrzeżeń', () => {
+    expect(S.sprzecznosci({ plec: 'M', wiekKostnyPrzyMenarcheLat: 13 })).toEqual(['Wiek kostny przy menarche wpisany u chłopca.']);
+    expect(S.sprzecznosci({ plec: 'F', wiekKostnyPrzyMenarcheLat: 13 })).toEqual(['Wpisano wiek kostny przy menarche bez wieku menarche.']);
+    expect(S.sprzecznosci({ plec: 'F', wiekMenarcheLat: 12, wiekKostnyPrzyMenarcheLat: 13 })).toEqual([]);
+  });
+});
+

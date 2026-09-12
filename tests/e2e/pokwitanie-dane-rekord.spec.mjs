@@ -111,6 +111,33 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
     await expect(page.getByPlaceholder('cm, np. 152,5')).toHaveValue('147.3');
   });
 
+  test('wiek kostny przy menarche (GROWTH-PRED-TW2C) wchodzi do rekordu, wraca do edycji, wymaga wieku menarche i zakresu 2–20', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjentke(page);
+
+    await otworzEdycje(page, patientId);
+    await page.getByPlaceholder('lata, np. 13,0').fill('12,5');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText('Wiek kostny przy menarche wymaga wpisania wieku menarche.')).toBeVisible();
+    expect(await sekcjaRekordu(page, patientId)).toBeNull();
+
+    await page.getByPlaceholder('lata, np. 12,5').fill('10,5');
+    await page.getByPlaceholder('lata, np. 13,0').fill('125');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText('Wiek kostny przy menarche podaj w latach, w zakresie 2–20 (np. 13,0).')).toBeVisible();
+
+    await page.getByPlaceholder('lata, np. 13,0').fill('12,5');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await page.waitForFunction(
+      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
+      patientId,
+    );
+    expect(await sekcjaRekordu(page, patientId)).toEqual({ menarcheAgeYears: 10.5, boneAgeAtMenarcheYears: 12.5 });
+
+    await otworzEdycje(page, patientId);
+    await expect(page.getByPlaceholder('lata, np. 13,0')).toHaveValue('12.5');
+  });
+
   test('sama menarche wystarczy — start pokwitania bywa nieznany', async ({ page }) => {
     await otworzZKontem(page);
     const patientId = await zalozPacjentke(page);
