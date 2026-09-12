@@ -539,6 +539,10 @@
       gateFired: gateFired,
       excludedMethods: excluded,
       postmenarcheal: entries.postmenarcheal === true,
+      // GROWTH-PRED-PUB1: profil pokwitaniowy dla konsumentów (opis pacjenta, zalecenia).
+      pubertyProfile: input.pubertyProfile && typeof input.pubertyProfile === 'object'
+        ? { profil: input.pubertyProfile.profil || null, tempo: input.pubertyProfile.tempo || null, etykieta: input.pubertyProfile.etykieta || '', gnrhaStatus: input.pubertyProfile.gnrha ? (input.pubertyProfile.gnrha.status || '') : '' }
+        : null,
       preferredKey: wcon.recommendedKey || null,
       preferredLabel: wcon.recommendedLabel || null,
       minCm: con.min,
@@ -587,8 +591,35 @@
       boneAgeMissing: boneAgeMissing,
       showBoneAgeHint: boneAgeMissing && entries.some(function (e) { return e.key === 'khamis'; }) && !entries.some(function (e) { return e.key === 'bp'; }),
       profileStatus: rm && rm.profileStatusLabel ? String(rm.profileStatusLabel) : '',
-      profileSummary: rm && rm.profileSummaryText ? String(rm.profileSummaryText) : ''
+      profileSummary: rm && rm.profileSummaryText ? String(rm.profileSummaryText) : '',
+      // GROWTH-PRED-PUB1: profil pokwitaniowy z vilda_puberty_profile.js (adapter → input.pubertyProfile).
+      pubertyProfile: input.pubertyProfile && typeof input.pubertyProfile === 'object' ? input.pubertyProfile : null
     };
+  }
+
+  // Etykieta „Profil predykcyjny": profil pokwitaniowy ma pierwszeństwo przed profilem
+  // wiarygodności (KOWD/standardowy), gdy jest inny niż standardowy.
+  function profileLabelText(model) {
+    var pp = model.pubertyProfile;
+    if (pp && pp.profil && pp.profil !== 'standardowy' && pp.etykieta) return String(pp.etykieta);
+    if (model.profileStatus) return String(model.profileStatus) + (pp && pp.gnrha && pp.gnrha.wTrakcie ? ', GnRHa w trakcie' : (pp && pp.gnrha && pp.gnrha.poLeczeniu ? ', po GnRHa' : ''));
+    return pp && pp.etykieta ? String(pp.etykieta) : '';
+  }
+  function pubertyProfileParagraph(model) {
+    var pp = model.pubertyProfile;
+    if (!pp || typeof pp !== 'object') return '';
+    var parts = [];
+    var show = (pp.profil && pp.profil !== 'standardowy') || (pp.dowody && pp.dowody.length) || (pp.braki && pp.braki.length);
+    if (!show) return '';
+    var s = '<p><span class="vgcc-lbl">Profil pokwitaniowy:</span> ' + esc(pp.etykieta || '');
+    if (pp.dowody && pp.dowody.length) s += ' — ' + pp.dowody.map(function (d) { return esc(d); }).join('; ');
+    if (pp.braki && pp.braki.length) s += '. Brakuje: ' + pp.braki.map(function (d) { return esc(d); }).join('; ');
+    s += '.';
+    if (pp.gnrha && pp.gnrha.wTrakcie) s += ' W trakcie leczenia GnRHa prognoza rezydualnego wzrostu jest nierzetelna — nasady zamykają się wcześniej niż wynika z wieku kostnego, zwłaszcza po rozpoznaniu po 6. r.ż. (Lazar 2007).';
+    else if (pp.gnrha && pp.gnrha.poLeczeniu) s += ' Po zakończeniu GnRHa przyrost do wzrostu ostatecznego bywa mniejszy niż przewidziany w chwili odstawienia (Lazar 2007).';
+    if (pp.profil === 'przedwczesne' || pp.profil === 'wczesne') s += ' Reguły wag konsensusu dla tego profilu — w przygotowaniu (GROWTH-PRED-PUB2); dziś liczby jak w profilu standardowym.';
+    parts.push(s + '</p>');
+    return parts.join('');
   }
 
   function heroHtml(model) {
@@ -738,10 +769,12 @@
       var rel = model.entries.map(function (e) { return esc(e.label) + ' ' + esc(levelLabel(e.levelKey)); }).join(' · ');
       parts.push('<p><span class="vgcc-lbl">Wiarygodność:</span> ' + rel + '</p>');
     }
-    if (model.profileStatus || model.profileSummary) {
-      parts.push('<p><span class="vgcc-lbl">Profil predykcyjny:</span> ' + esc(model.profileStatus || '') +
+    var profLabel = profileLabelText(model);
+    if (profLabel || model.profileSummary) {
+      parts.push('<p><span class="vgcc-lbl">Profil predykcyjny:</span> ' + esc(profLabel) +
         (model.profileSummary ? '. ' + esc(model.profileSummary) : '') + '</p>');
     }
+    parts.push(pubertyProfileParagraph(model));
     var clampedEntries = model.entries.filter(function (e) { return e.clamped; });
     if (clampedEntries.length) {
       var cl = clampedEntries.map(function (e) {
@@ -803,7 +836,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '17',
+    version: '18',
     MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,

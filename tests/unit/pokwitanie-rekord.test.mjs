@@ -23,9 +23,21 @@ function pomocniki(okno) {
 const REKORD = { puberty: { onsetAgeYears: 11.5, menarcheAgeYears: 13 } };
 
 describe('Które pola są przenoszone', () => {
-  it('dokładnie cztery: wiek startu pokwitania, wiek menarche, wzrost i wiek kostny przy menarche (GROWTH-PRED-TW2B/C)', () => {
+  it('dokładnie sześć liczb: wiek startu pokwitania, wiek menarche, wzrost i wiek kostny przy menarche, wiek startu i końca GnRHa (GROWTH-PRED-TW2B/C, PUB1)', () => {
     const { Bq_pola } = pomocniki({});
-    expect(Bq_pola().sort()).toEqual(['boneAgeAtMenarcheYears', 'heightAtMenarcheCm', 'menarcheAgeYears', 'onsetAgeYears']);
+    expect(Bq_pola().sort()).toEqual(['boneAgeAtMenarcheYears', 'gnrhaStartAgeYears', 'gnrhaStopAgeYears', 'heightAtMenarcheCm', 'menarcheAgeYears', 'onsetAgeYears']);
+  });
+
+  it('status GnRHa przechodzi jak deklaracja KOWD: tylko ze słownika, zapamiętany z rekordu i oddany kolektorowi (GROWTH-PRED-PUB1)', () => {
+    const okno = {};
+    const { Bq0, Bq1 } = pomocniki(okno);
+    Bq0({ puberty: { onsetAgeYears: 7.2, gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 7.5 } });
+    expect(okno.vildaPubertyData).toEqual({ onsetAgeYears: 7.2, gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 7.5 });
+    expect(Bq1()).toEqual({ onsetAgeYears: 7.2, gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 7.5 });
+    const okno2 = {};
+    const h2 = pomocniki(okno2);
+    h2.Bq0({ puberty: { gnrhaStatus: 'moze', onsetAgeYears: 8 } });
+    expect(okno2.vildaPubertyData).toEqual({ onsetAgeYears: 8 });
   });
 
   it('wiek kostny przy menarche jest zapamiętywany z rekordu i oddawany kolektorowi (GROWTH-PRED-TW2C)', () => {

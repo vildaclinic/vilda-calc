@@ -32,7 +32,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '4';
 
   // Ta sama liczba, co P.TANNER_FRESH_M w vilda_trajectory_analysis.js.
   var SWIEZOSC_MIES = 12;
@@ -46,6 +46,10 @@
     wzrostMenarche: 'pubertyMenarcheHeight',
     // GROWTH-PRED-TW2C: wiek kostny (GP) z RTG wykonanego przy menarche — do korekty Cho 2026.
     wiekKostnyMenarche: 'pubertyMenarcheBoneAge',
+    // GROWTH-PRED-PUB1: leczenie GnRHa (status + wiek startu/końca) — fakt trwały rekordu.
+    gnrhaStatus: 'pubertyGnrhaStatus',
+    gnrhaStart: 'pubertyGnrhaStartAge',
+    gnrhaStop: 'pubertyGnrhaStopAge',
     kowd: 'pubertyCdgp',
     jadra: 'advTesticularVolume'
   };
@@ -131,6 +135,9 @@
     var wzrostMenarche = liczba(i.wzrostPrzyMenarcheCm);
     var wzrost = liczba(i.wzrostCm);
     var kostnyMenarche = liczba(i.wiekKostnyPrzyMenarcheLat);
+    var gStatus = i.gnrhaStatus == null ? '' : String(i.gnrhaStatus);
+    var gStart = liczba(i.gnrhaStartLat);
+    var gStop = liczba(i.gnrhaStopLat);
 
     if (plec === 'M' && t != null) {
       if (t === 1 && (jadra === '4to6' || jadra === 'gt6')) {
@@ -170,6 +177,21 @@
     if (kostnyMenarche != null && menarche == null && plec !== 'M') {
       lista.push('Wpisano wiek kostny przy menarche bez wieku menarche.');
     }
+    if (gStart != null && gStop != null && gStop < gStart) {
+      lista.push('Wiek zakończenia GnRHa wcześniejszy niż wiek rozpoczęcia.');
+    }
+    if (gStatus === 'w-trakcie' && gStop != null) {
+      lista.push('Leczenie GnRHa „w trakcie", a wpisano wiek zakończenia.');
+    }
+    if (gStatus === 'zakonczone' && gStop == null) {
+      lista.push('Leczenie GnRHa „zakończone" bez wieku zakończenia.');
+    }
+    if ((gStatus === 'w-trakcie' || gStatus === 'zakonczone') && gStart != null && wiek != null && gStart > wiek + 0.05) {
+      lista.push('Wiek rozpoczęcia GnRHa (' + String(gStart).replace('.', ',') + ' l) późniejszy niż wiek obecny.');
+    }
+    if ((gStart != null || gStop != null) && gStatus !== 'w-trakcie' && gStatus !== 'zakonczone') {
+      lista.push('Wpisano wiek leczenia GnRHa, a status leczenia to „' + (gStatus === 'brak' ? 'nie leczono' : 'nie pytano') + '".');
+    }
     return lista;
   }
 
@@ -192,6 +214,9 @@
     var menarcheDom = liczba(wartosc(POLA_DOM.menarche));
     var wzrostMenarcheDom = liczba(wartosc(POLA_DOM.wzrostMenarche));
     var kostnyMenarcheDom = liczba(wartosc(POLA_DOM.wiekKostnyMenarche));
+    var gnrhaStatusDom = wartosc(POLA_DOM.gnrhaStatus);
+    var gnrhaStartDom = liczba(wartosc(POLA_DOM.gnrhaStart));
+    var gnrhaStopDom = liczba(wartosc(POLA_DOM.gnrhaStop));
     var kowdDom = wartosc(POLA_DOM.kowd);
     var etap = ocenEtap({
       etapFormularz: i.etapFormularz != null ? i.etapFormularz : wartosc(POLA_DOM.etap),
@@ -208,6 +233,9 @@
       wiekMenarcheLat: menarcheDom != null ? menarcheDom : (rek ? rek.wiekMenarcheLat : null),
       wzrostPrzyMenarcheCm: wzrostMenarcheDom != null ? wzrostMenarcheDom : (rek && rek.wzrostPrzyMenarcheCm != null ? rek.wzrostPrzyMenarcheCm : null),
       wiekKostnyPrzyMenarcheLat: kostnyMenarcheDom != null ? kostnyMenarcheDom : (rek && rek.wiekKostnyPrzyMenarcheLat != null ? rek.wiekKostnyPrzyMenarcheLat : null),
+      gnrhaStatus: gnrhaStatusDom || (rek && rek.gnrhaStatus ? rek.gnrhaStatus : ''),
+      gnrhaStartLat: gnrhaStartDom != null ? gnrhaStartDom : (rek && rek.gnrhaStartLat != null ? rek.gnrhaStartLat : null),
+      gnrhaStopLat: gnrhaStopDom != null ? gnrhaStopDom : (rek && rek.gnrhaStopLat != null ? rek.gnrhaStopLat : null),
       kowd: kowdDom || (rek && rek.kowd ? rek.kowd : ''),
       jadra: wartosc(POLA_DOM.jadra)
     };
@@ -216,6 +244,7 @@
       wiekStartuLat: out.wiekStartuLat, wiekMenarcheLat: out.wiekMenarcheLat,
       wzrostPrzyMenarcheCm: out.wzrostPrzyMenarcheCm, wzrostCm: i.wzrostCm,
       wiekKostnyPrzyMenarcheLat: out.wiekKostnyPrzyMenarcheLat,
+      gnrhaStatus: out.gnrhaStatus, gnrhaStartLat: out.gnrhaStartLat, gnrhaStopLat: out.gnrhaStopLat,
       wiekLat: i.wiekLat
     });
     return out;

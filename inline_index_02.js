@@ -20,7 +20,8 @@
   var btn = document.getElementById('tannerToggleBtn');
   if (!wrap || !select || !btn) return;
 
-  var POLA = ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge', 'pubertyCdgp', 'advTesticularVolume'];
+  var POLA = ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge',
+    'pubertyGnrhaStatus', 'pubertyGnrhaStartAge', 'pubertyGnrhaStopAge', 'pubertyCdgp', 'advTesticularVolume'];
 
   function pole(id) { return document.getElementById(id); }
 
@@ -74,6 +75,9 @@
       wiekMenarcheLat: (pole('pubertyMenarcheAge') || {}).value,
       wzrostPrzyMenarcheCm: (pole('pubertyMenarcheHeight') || {}).value,
       wiekKostnyPrzyMenarcheLat: (pole('pubertyMenarcheBoneAge') || {}).value,
+      gnrhaStatus: (pole('pubertyGnrhaStatus') || {}).value,
+      gnrhaStartLat: (pole('pubertyGnrhaStartAge') || {}).value,
+      gnrhaStopLat: (pole('pubertyGnrhaStopAge') || {}).value,
       wzrostCm: wzrostCmFormularza(),
       wiekLat: wiekLatFormularza()
     });
@@ -98,6 +102,17 @@
     pole.disabled = dziewczynka;
   }
 
+  // GROWTH-PRED-PUB1: pola wieku GnRHa widać tylko przy statusie „w trakcie" albo „zakończone".
+  function pokazWiekGnrha() {
+    var wrap = document.getElementById('pubertyGnrhaAgesWrap');
+    var st = pole('pubertyGnrhaStatus');
+    if (!wrap || !st) return;
+    var v = String(st.value || '');
+    wrap.style.display = (otwarty && (v === 'w-trakcie' || v === 'zakonczone')) ? '' : 'none';
+    var stop = pole('pubertyGnrhaStopAge');
+    if (stop) stop.disabled = v !== 'zakonczone';
+  }
+
   window.updateTannerVisibility = function () {
     if (!decyzjaUzytkownika && cokolwiekWpisane()) otwarty = true;
     wrap.style.display = otwarty ? '' : 'none';
@@ -106,6 +121,7 @@
     pokazJadraWgPlci();
     btn.style.display = '';
     btn.textContent = otwarty ? '− Dane pokwitaniowe' : '+ Dane pokwitaniowe';
+    pokazWiekGnrha();
     pokazSprzecznosci();
   };
 
@@ -132,6 +148,10 @@
     if (e) e.addEventListener('input', pokazSprzecznosci);
     if (e) e.addEventListener('change', pokazSprzecznosci);
   });
+  (function () {
+    var st = pole('pubertyGnrhaStatus');
+    if (st) st.addEventListener('change', pokazWiekGnrha);
+  }());
   select.addEventListener('change', pokazSprzecznosci);
   (function () {
     var plec = document.getElementById('sex');

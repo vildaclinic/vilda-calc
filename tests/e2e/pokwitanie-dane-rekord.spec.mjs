@@ -138,6 +138,36 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
     await expect(page.getByPlaceholder('lata, np. 13,0')).toHaveValue('12.5');
   });
 
+  test('leczenie GnRHa (GROWTH-PRED-PUB1): status ze słownika i wiek startu/końca wchodzą do rekordu, odmowy z nazwanym powodem', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjentke(page);
+
+    await otworzEdycje(page, patientId);
+    const status = page.locator('.ve-coll-body select.vilda-auth-input').last();
+    // wiek bez statusu — odmowa
+    await page.getByPlaceholder('lata, np. 7,5').fill('7,5');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText('Wiek leczenia GnRHa wymaga statusu')).toBeVisible();
+    expect(await sekcjaRekordu(page, patientId)).toBeNull();
+
+    await status.selectOption('w-trakcie');
+    await page.getByPlaceholder('lata, np. 11,0').fill('10');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText('Przy leczeniu w trakcie zostaw wiek zakończenia pusty.')).toBeVisible();
+
+    await page.getByPlaceholder('lata, np. 11,0').fill('');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await page.waitForFunction(
+      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
+      patientId,
+    );
+    expect(await sekcjaRekordu(page, patientId)).toEqual({ gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 7.5 });
+
+    await otworzEdycje(page, patientId);
+    await expect(page.locator('.ve-coll-body select.vilda-auth-input').last()).toHaveValue('w-trakcie');
+    await expect(page.getByPlaceholder('lata, np. 7,5')).toHaveValue('7.5');
+  });
+
   test('sama menarche wystarczy — start pokwitania bywa nieznany', async ({ page }) => {
     await otworzZKontem(page);
     const patientId = await zalozPacjentke(page);

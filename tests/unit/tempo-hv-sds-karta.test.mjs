@@ -483,7 +483,7 @@ describe('Czyszczenie formularza', () => {
     // Bez tego wiek startu pokwitania poprzedniego pacjenta zostawał w formularzu
     // i wchodził do rekordu następnego.
     const i = io.indexOf('function kt(){[');
-    const lista = io.slice(i, i + 400);
+    const lista = io.slice(i, i + 600);
     for (const id of ['tannerStage', 'pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyCdgp']) {
       expect(lista, id).toContain(`"${id}"`);
     }

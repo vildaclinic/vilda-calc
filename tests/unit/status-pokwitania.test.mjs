@@ -176,3 +176,21 @@ describe('GROWTH-PRED-TW2C — wiek kostny przy menarche w statusie pokwitania',
   });
 });
 
+describe('GROWTH-PRED-PUB1 — leczenie GnRHa w statusie pokwitania', () => {
+  it('POLA_DOM zna trzy pola GnRHa', () => {
+    expect(S.POLA_DOM.gnrhaStatus).toBe('pubertyGnrhaStatus');
+    expect(S.POLA_DOM.gnrhaStart).toBe('pubertyGnrhaStartAge');
+    expect(S.POLA_DOM.gnrhaStop).toBe('pubertyGnrhaStopAge');
+  });
+  it('sprzeczności: koniec przed startem; „w trakcie" z końcem; „zakończone" bez końca; start po wieku obecnym; wiek bez statusu; spójne bez zastrzeżeń', () => {
+    expect(S.sprzecznosci({ plec: 'F', gnrhaStatus: 'zakonczone', gnrhaStartLat: 9, gnrhaStopLat: 8 })).toEqual(['Wiek zakończenia GnRHa wcześniejszy niż wiek rozpoczęcia.']);
+    expect(S.sprzecznosci({ plec: 'F', gnrhaStatus: 'w-trakcie', gnrhaStartLat: 7, gnrhaStopLat: 10 })).toEqual(['Leczenie GnRHa „w trakcie", a wpisano wiek zakończenia.']);
+    expect(S.sprzecznosci({ plec: 'F', gnrhaStatus: 'zakonczone', gnrhaStartLat: 7 })).toEqual(['Leczenie GnRHa „zakończone" bez wieku zakończenia.']);
+    expect(S.sprzecznosci({ plec: 'F', wiekLat: 7, gnrhaStatus: 'w-trakcie', gnrhaStartLat: 7.5 })).toEqual(['Wiek rozpoczęcia GnRHa (7,5 l) późniejszy niż wiek obecny.']);
+    expect(S.sprzecznosci({ plec: 'F', gnrhaStatus: 'brak', gnrhaStartLat: 7 })).toEqual(['Wpisano wiek leczenia GnRHa, a status leczenia to „nie leczono".']);
+    expect(S.sprzecznosci({ plec: 'F', gnrhaStatus: '', gnrhaStopLat: 11 })).toEqual(['Wpisano wiek leczenia GnRHa, a status leczenia to „nie pytano".']);
+    expect(S.sprzecznosci({ plec: 'F', wiekLat: 9, gnrhaStatus: 'w-trakcie', gnrhaStartLat: 7 })).toEqual([]);
+    expect(S.sprzecznosci({ plec: 'F', wiekLat: 12, gnrhaStatus: 'zakonczone', gnrhaStartLat: 7, gnrhaStopLat: 11 })).toEqual([]);
+  });
+});
+
