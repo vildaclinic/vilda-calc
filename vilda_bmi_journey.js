@@ -58,6 +58,20 @@
   function weeksToMonthsHalf(weeks) { return Math.round((weeks * 12 / 52) * 2) / 2; }
   // Etap 3: dzieci dostają czas z wspólnej symulacji wzrastania (silnik energii);
   // dorośli — dotychczasowa matematyka liniowa (symulacja dałaby ten sam wynik).
+  // ENERGY-REC-2: stabilizacja u dziecka — czas z tej samej symulacji przy tempie 0 (sam wzrost).
+  function timeToNormStab(ctx) {
+    if (!ctx.isChild || typeof w.energySimulateMonthsToBmiTarget !== 'function') return null;
+    try {
+      var geEl = d.getElementById('growthEndedFlag');
+      var sim = w.energySimulateMonthsToBmiTarget({
+        ageYears: ctx.ageYears, ageMonthsOpt: 0, sex: ctx.sex,
+        weightKg: ctx.weightKg, heightCm: ctx.heightCm,
+        weeklyLossKg: 0, target: 'norm',
+        growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
+      });
+      return sim ? { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm } : null;
+    } catch (err) { return null; }
+  }
   function timeToNorm(ctx, weeklyLossKg) {
     if (!(weeklyLossKg > 0) || !(ctx.kgToLose > 0)) return null;
     if (ctx.isChild && typeof w.energySimulateMonthsToBmiTarget === 'function') {
@@ -179,7 +193,21 @@
     var kk = kcalPerKg();
     var comboT = totalWeek > 0 ? timeToNorm(ctx, totalWeek / kk) : null;
     var dietT = dietOn && deficitDay > 0 ? timeToNorm(ctx, deficitDay * 7 / kk) : null;
+    var strategy = ctx.isChild && lastEngineState && lastEngineState.childObesityPlan && typeof w.energyResolveStrategyFromDom === 'function'
+      ? w.energyResolveStrategyFromDom(lastEngineState, { ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm })
+      : 'reduction';
+    if (strategy === 'stabilization' && fin(lastEngineState && lastEngineState.maintenanceKcal)) {
+      var stabT = timeToNormStab(ctx);
+      return {
+        diets: diets, dietAvailable: dietAvailable, dietOn: false, dietKey: dietKey, found: null,
+        rows: [], moveWeek: 0, totalWeek: 0,
+        monthsCombo: stabT ? stabT.months : null, monthsDiet: null,
+        growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null,
+        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, neededWeightKg: lastEngineState.neededWeightKg
+      };
+    }
     return {
+      stabMode: false,
       diets: diets, dietAvailable: dietAvailable, dietOn: dietOn, dietKey: dietKey,
       found: found,
       rows: rows, moveWeek: moveWeek, totalWeek: totalWeek,
@@ -274,7 +302,7 @@
     html += '<table class="bmi-journey-table" aria-live="polite"><thead><tr><th>Twój wybór</th><th>kcal/tydz.</th><th>kg/mies.</th></tr></thead>'
       + '<tbody>' + renderRows(model) + '</tbody></table>';
     if (model.found && w.DIET_BULLETS && w.DIET_BULLETS[model.dietKey] && w.DIET_LEVELS && w.DIET_LEVELS[model.dietKey]) {
-      var extra = w.DIET_BULLETS[model.dietKey].slice(2);
+      var extra = typeof w.energyDietBulletsExtra === 'function' ? w.energyDietBulletsExtra(model.dietKey, lastEngineState) : w.DIET_BULLETS[model.dietKey].slice(2);
       var items = [(lastEngineState && lastEngineState.childObesityPlan
         ? 'stały deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania dla masy należnej'
           + (fin(lastEngineState.neededWeightKg) ? ' (ok.\u202F' + fmt(lastEngineState.neededWeightKg, 1) + '\u202Fkg, mediana BMI dla wieku i wzrostu)' : '')
@@ -310,21 +338,34 @@
     var hero = mc != null
       ? '<div class="bmi-journey-hero"><span class="bmi-journey-heron">' + esc(monthsShort(mc)) + '</span>'
         + '<div class="bmi-journey-herocap"><b>' + esc(dateAfterMonths(mc)) + '</b> · '
-        + (model.moveWeek > 0 ? 'dieta + ruch' : 'sama dieta') + '</div></div>'
-      : '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
-        + '<div class="bmi-journey-herocap">zaznacz dietę lub ruch</div></div>';
-    var growth = mc != null && model.growthAware && fin(model.annualGrowthCm)
+        + (model.stabMode ? 'utrzymanie masy + wzrastanie' : model.moveWeek > 0 ? 'dieta + ruch' : 'sama dieta') + '</div></div>'
+      : model.stabMode
+        ? '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
+          + '<div class="bmi-journey-herocap">przy praktycznie zakończonym wzrastaniu samo utrzymanie masy nie doprowadzi do normy BMI</div></div>'
+        : '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
+          + '<div class="bmi-journey-herocap">zaznacz dietę lub ruch</div></div>';
+    var growth = mc != null && model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
       ? '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie (ok. ' + esc(fmt(model.annualGrowthCm, 1)) + ' cm/rok)</p>'
       : '';
     var horizon = mc != null && mc > 18
       ? '<p class="bmi-journey-growth">szacunek orientacyjny — tempo warto weryfikować co 3\u20136 miesięcy</p>'
       : '';
-    var goalbox = '<div class="bmi-journey-goalbox">'
-      + '<div class="bmi-journey-g1">Cel: <b>\u2212' + fmt(ctx.kgToLose, 1) + '\u202Fkg</b></div>'
-      + '<div class="bmi-journey-g2">' + targetLabel + '</div>'
-      + '<div class="bmi-journey-g3">Start: <b>' + fmt(ctx.weightKg, 1) + '\u202Fkg</b> \u2192 Cel: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
-      + '</div>';
-    var kcal = model.found
+    var goalbox = model.stabMode
+      ? '<div class="bmi-journey-goalbox">'
+        + '<div class="bmi-journey-g1">Cel: <b>utrzymanie masy ok. ' + fmt(ctx.weightKg, 1) + '\u202Fkg</b></div>'
+        + '<div class="bmi-journey-g2">BMI obniży się dzięki dalszemu wzrastaniu — ' + targetLabel + '</div>'
+        + '<div class="bmi-journey-g3">Górna granica normy przy obecnym wzroście: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
+        + '</div>'
+      : '<div class="bmi-journey-goalbox">'
+        + '<div class="bmi-journey-g1">Cel: <b>\u2212' + fmt(ctx.kgToLose, 1) + '\u202Fkg</b></div>'
+        + '<div class="bmi-journey-g2">' + targetLabel + '</div>'
+        + '<div class="bmi-journey-g3">Start: <b>' + fmt(ctx.weightKg, 1) + '\u202Fkg</b> \u2192 Cel: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
+        + '</div>';
+    var kcal = model.stabMode
+      ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.maintenanceKcal / 100) * 100)
+        + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
+        + '<div class="bmi-journey-kcalcap">energia utrzymania (stabilizacja masy ciała' + (fin(model.neededWeightKg) ? ', masa należna ok. ' + fmt(model.neededWeightKg, 1) + '\u202Fkg' : '') + ')</div></div>'
+      : model.found
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
         + '<div class="bmi-journey-kcalcap">' + ((ctx.isChild ? 'light' : 'moderate') === model.dietKey ? 'zalecana kaloryczność diety' : 'kaloryczność wybranej diety') + '</div></div>'
@@ -335,6 +376,10 @@
         + ' aria-pressed="' + (state.moves[MOVES[m].id] ? 'true' : 'false') + '">' + esc(MOVES[m].chip) + '</button>';
     }
     moveChips += '</div>';
+    if (model.stabMode) {
+      var stabNote = '<div class="bmi-journey-pal-note">Strategia: stabilizacja masy ciała — bez deficytu energetycznego; diety redukcyjne nieaktywne. Strategię zmienisz w Zaleceniach energetycznych.</div>';
+      return badge + hero + growth + horizon + goalbox + kcal + palSegment() + stabNote + warningsSection(ctx, model);
+    }
     return badge + hero + growth + horizon + gainPill(model) + goalbox + kcal
       + palSegment() + dietSegment(model) + moveChips
       + detailsSection(ctx, model) + warningsSection(ctx, model);
@@ -484,7 +529,7 @@
   function getPdfModel() {
     if (!lastCtx || !d.getElementById('bmiJourneyMount')) return { available: false };
     var model = computeModel(lastCtx);
-    if (!model.rows.length || model.monthsCombo == null) return { available: false };
+    if (model.stabMode || !model.rows.length || model.monthsCombo == null) return { available: false };
     var kk = kcalPerKg();
     var mc = model.monthsCombo;
     var rows = [];
@@ -510,7 +555,7 @@
       totalRow: ['Razem', 'ok. ' + fmtInt(model.totalWeek), '-' + fmt(model.totalWeek * 52 / 12 / kk, 2)],
       whenText: 'Przy tym planie osiągniesz normę BMI ' + dateAfterMonths(mc)
         + ' (za ok. ' + monthsWord(mc)
-        + (model.growthAware && fin(model.annualGrowthCm)
+        + (model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
           ? '; uwzględnia dalsze wzrastanie ok. ' + fmt(model.annualGrowthCm, 1) + ' cm/rok'
           : '')
         + ').',
