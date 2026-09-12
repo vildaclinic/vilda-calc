@@ -4,7 +4,8 @@ import { expect, test } from '@playwright/test';
 // dane z panelu „Dane pokwitaniowe" (etap, wiek startu, GnRHa) + wiek kostny bieżący i z wiersza historii
 // → adapter wyznacza profil i tempo, karta pokazuje etykietę i akapit. GROWTH-PRED-PUB2: w profilu
 // przedwczesnym / wczesnym działają reguły wag (RWT i KR poza, BP z tablicy przeciętnej ×1,3, TW2
-// orientacyjna) i zdanie „konsensus wobec celu rodzicielskiego". Dane FIKCYJNE.
+// orientacyjna) i zdanie „konsensus wobec celu rodzicielskiego". GROWTH-PRED-PUB3: wiersze informacyjne
+// poza konsensusem („Wzrost dla wieku kostnego", Wu 2023). Dane FIKCYJNE.
 
 async function otworz(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
@@ -37,7 +38,7 @@ function policz(page, a) {
     const bp = d.bayleyPinneau || null;
     return { profile: d.pubertyProfile || null, fhp: d.finalHeightPrediction || null, cardText: norm(card ? card.textContent : ''),
       bp: bp ? { available: bp.available === true, cm: bp.predictedAdultHeightCm, groupKey: bp.groupKey, auto: bp.groupAutoKey, override: bp.groupOverrideApplied === true, reason: bp.groupReasonText, altCm: bp.autoGroupPredictedAdultHeightCm } : null,
-      lms: d.adultHeightLMS || null };
+      lms: d.adultHeightLMS || null, hBa: d.heightSdsForBoneAge != null ? d.heightSdsForBoneAge : null };
   }, a);
 }
 
@@ -69,6 +70,17 @@ test('dziewczynka 7 l 6 mies., Tanner II od 7,0, BA 9,5 z BA 7,5 rok wcześniej:
   expect(r.cardText).toContain('tablica przyspieszona dałaby');
   expect(r.cardText).toContain('Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej celu (Kauli 1997)');
   expect(r.cardText).not.toContain('w przygotowaniu');
+  // GROWTH-PRED-PUB3: wiersze informacyjne — SDS wzrostu dla wieku kostnego z tych samych norm co centyle
+  expect(typeof r.hBa).toBe('number');
+  expect(r.fhp.infoRows.map((x) => x.key)).toEqual(['hba', 'wu2023']);
+  const hba = r.fhp.infoRows[0];
+  expect(hba.cm).toBeGreaterThan(120);
+  expect(hba.cm).toBeLessThan(190);
+  expect(r.fhp.methods.map((m) => m.key)).not.toContain('hba');
+  expect(r.cardText).toContain('Wzrost dla wieku kostnego poza konsensusem');
+  expect(r.cardText).toContain('Wu 2023 (CPP, dziewczęta) poza konsensusem');
+  expect(r.cardText).toContain('Wiersze informacyjne (poza konsensusem, bez wagi): Wzrost dla wieku kostnego');
+  expect(r.cardText).toContain('populacja chińska');
 });
 
 test('ta sama dziewczynka w trakcie GnRHa od 7,2 l: tempo nieoceniane, nota Lazar 2007; chłopiec 9 l 6 mies. z jądrami 4–6 ml bez wieku startu: wczesne z górnej granicy i prośba o wiek startu', async ({ page }) => {
@@ -95,6 +107,7 @@ test('ta sama dziewczynka w trakcie GnRHa od 7,2 l: tempo nieoceniane, nota Laza
   expect(b.cardText).toContain('Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm');
   expect(b.cardText).toContain('U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001)');
   expect(b.cardText).toContain('Konsensus wobec celu rodzicielskiego:');
+  expect(b.fhp.infoRows.map((x) => x.key)).toEqual(['hba']); // chłopiec: bez Wu 2023
 });
 
 test('bez danych pokwitaniowych profil standardowy: etykieta z modelu wiarygodności bez zmian, akapit tylko z listą braków', async ({ page }) => {
@@ -110,4 +123,6 @@ test('bez danych pokwitaniowych profil standardowy: etykieta z modelu wiarygodno
   expect(r.fhp.targetAssessment).toBeNull();
   expect(r.bp).toMatchObject({ override: false, groupKey: 'accelerated' });
   expect(r.fhp.excludedMethods).toEqual(['khamis']); // tylko bramka Δ +36, jak w GROWTH-PRED-DOBOR
+  expect(r.fhp.infoRows).toEqual([]);
+  expect(r.cardText).not.toContain('Wiersze informacyjne');
 });
