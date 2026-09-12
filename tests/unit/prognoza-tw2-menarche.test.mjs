@@ -80,7 +80,9 @@ describe('Silnik TW Mark II — przypadek właściciela i brzegi', () => {
   });
   it('brzegi: status nieznany, chłopiec, menarche w przyszłości, wiersz 16,5 powyżej tablicy, clamp do wzrostu', () => {
     expect(T({ ...base })).toMatchObject({ available: false, reason: 'menarche-status-unknown' });
-    expect(T({ ...base, sex: 'M', postmenarcheal: false })).toMatchObject({ available: false, reason: 'boys-not-implemented' });
+    // GROWTH-PRED-TW2B: chłopiec liczony z tab. 2.1 niezależnie od statusu menarche (przekazany status ignorowany)
+    expect(T({ ...base, sex: 'M', postmenarcheal: false })).toMatchObject({ available: true, table: '2.1', sex: 'M', postmenarcheal: null, menarcheStatusUnknown: false });
+    expect(T({ ...base, sex: 'M' })).toMatchObject({ available: true, table: '2.1' });
     expect(T({ ...base, boneAgeYears: null, postmenarcheal: true })).toMatchObject({ available: false, reason: 'missing-bone-age' });
     const fut = T({ ...base, postmenarcheal: true, menarcheAgeYears: 10 });
     expect(fut.table).toBe('3.1a');
@@ -157,10 +159,61 @@ describe('Karta konsensusu — profil po menarche', () => {
     expect(pre.methods.find((m) => m.key === 'tw2')).toMatchObject({ tw2Table: '3.1a', tw2Extrapolated: false, levelKey: 'lowered' });
     expect(pre.methods.find((m) => m.key === 'menarche')).toBeUndefined();
     expect(pre.mphWeightFactor).toBe(1);
-    const boy = C.computeFinalHeightPrediction({ ...P, sex: 'M', postmenarcheal: null });
-    expect(boy.methods.find((m) => m.key === 'tw2')).toBeUndefined();
+    // GROWTH-PRED-TW2B: chłopiec dostaje wiersz TW Mark II z tab. 2.1 (silnik wołany z karty), bez profilu po menarche
+    const boy = C.computeFinalHeightPrediction({ ...P, sex: 'M', postmenarcheal: null, tw2: null, menarche: null });
+    expect(boy.methods.find((m) => m.key === 'tw2')).toMatchObject({ tw2Table: '2.1', tw2Extrapolated: false, levelKey: 'lowered', excluded: false });
+    expect(boy.methods.find((m) => m.key === 'menarche')).toBeUndefined();
     expect(boy.postmenarcheal).toBe(false);
+    expect(boy.mphWeightFactor).toBe(1);
     expect(C._gateFor('rwt', 36, { postmenarcheal: true })).toMatchObject({ excluded: true, factor: 0 });
     expect(C._gateFor('bp', 36, { postmenarcheal: true })).toMatchObject({ excluded: false, factor: 1 });
   });
 });
+
+describe('GROWTH-PRED-TW2B — chłopcy (tab. 2.1) i wzrost przy menarche z pola', () => {
+  const B = (o) => T({ sex: 'M', chronologicalAgeMonths: 108, currentHeightCm: 145, boneAgeYears: 12, ...o });
+  it('transkrypcja tab. 2.1: rozmiar 26 wierszy 6,0–18,5; komórki rozstrzygnięte wobec OCR (9,0 SD 4,1; 13,0 stała 99; 16,0 stała 80)', () => {
+    const t = D.boys.all;
+    expect(t.table).toBe('2.1');
+    expect(t.rows.length).toBe(26);
+    expect(t.rows[0]).toMatchObject({ rowAge: 6, h: 1.28, ca: -7.5, rus: -0.12, konst: 75, residualSdCm: 4.7, r: 0.82 });
+    expect(t.rows.find((r) => r.rowAge === 9)).toMatchObject({ h: 1.16, ca: -5.0, rus: -1.30, konst: 79, residualSdCm: 4.1, r: 0.87 });
+    expect(t.rows.find((r) => r.rowAge === 13)).toMatchObject({ h: 1.01, ca: -2.1, rus: -3.90, konst: 99, residualSdCm: 3.7, r: 0.89 });
+    expect(t.rows.find((r) => r.rowAge === 16)).toMatchObject({ h: 0.85, ca: -0.4, rus: -2.65, konst: 80, residualSdCm: 2.9, r: 0.93 });
+    expect(t.rows[25]).toMatchObject({ rowAge: 18.5, h: 0.98, ca: 0, rus: -1.90, konst: 37, residualSdCm: 1.4, r: 0.99 });
+  });
+  it('chłopiec 9 l, 145 cm, BA 12: 1,16·145 − 5,0·9 − 1,30·12 + 79 = 186,6 ±6,7 (1,645·4,1), poziom obniżony', () => {
+    const r = B({});
+    expect(r).toMatchObject({ available: true, table: '2.1', rowAge: 9, extrapolatedBelowTable: false, extrapolatedAboveTable: false, variants: null });
+    expect(r.predictedAdultHeightCm).toBeCloseTo(186.6, 1);
+    expect(r.errorBoundHalfWidthCm).toBeCloseTo(6.7, 1);
+    expect(r.notes.join(' ')).toContain('tablica 2.2 z przyrostem nie jest używana');
+    expect(r.notes.join(' ')).toContain('Greulicha');
+  });
+  it('brzegi chłopców: poniżej 6 lat poza zakresem; 19-latek z niezrośniętymi nasadami → ostatni wiersz 18,5 z flagą; powyżej 20 lat poza zakresem', () => {
+    expect(B({ chronologicalAgeMonths: 66, currentHeightCm: 112, boneAgeYears: 5.5 })).toMatchObject({ available: false, reason: 'out-of-range' });
+    const old = B({ chronologicalAgeMonths: 228, currentHeightCm: 172, boneAgeYears: 17 });
+    expect(old).toMatchObject({ available: true, rowAge: 18.5, extrapolatedAboveTable: true });
+    // 0,98·172 − 1,90·17 + 37 = 173,3
+    expect(old.predictedAdultHeightCm).toBeCloseTo(173.3, 1);
+    expect(old.notes.join(' ')).toContain('niezrośniętymi nasadami');
+    expect(B({ chronologicalAgeMonths: 246 })).toMatchObject({ available: false, reason: 'out-of-range' });
+  });
+  it('karta: chłopiec z TW Mark II w konsensusie obok BP i RWT; akapit nazywa tablicę 2.1 i chłopców', () => {
+    const boyP = { sex: 'M', ageYears: 9, ageMonths: 108, currentHeightCm: 145, boneAgeYears: 12, motherHeightCm: 165, fatherHeightCm: 185,
+      bp: { available: true, predictedAdultHeightCm: 179.0, errorBoundHalfWidthCm: 5.7 },
+      rwt: { available: true, predictedAdultHeightCm: 190.7, errorBoundHalfWidthCm: 4.9 },
+      khamis: { available: true, predictedAdultHeightCm: 193.5, errorBoundHalfWidthCm: 5.3 } };
+    const f = C.computeFinalHeightPrediction(boyP);
+    const tw2 = f.methods.find((m) => m.key === 'tw2');
+    expect(tw2).toMatchObject({ tw2Table: '2.1', excluded: false });
+    expect(tw2.cm).toBeCloseTo(186.6, 1);
+    expect(f.excludedMethods).toEqual(['khamis']);
+    expect(f.postmenarcheal).toBe(false);
+    const text = C.render(boyP).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(text).toContain('TW Mark II 186,6 cm ±6,7');
+    expect(text).toContain('równania Tannera i wsp. (1983) dla chłopców, tablica 2.1 (3 zmienne: wzrost, wiek metrykalny, wiek kostny), wiersz 9 l');
+    expect(text).not.toContain('Profil po menarche:');
+  });
+});
+

@@ -1,4 +1,4 @@
-/* tw2_data.js — współczynniki prognozy wzrostu ostatecznego TW Mark II (Tanner 1983), DZIEWCZĘTA.
+/* tw2_data.js — współczynniki prognozy wzrostu ostatecznego TW Mark II (Tanner 1983), dziewczęta i chłopcy.
  *
  * ŹRÓDŁO (medycznie krytyczne):
  *   Tanner JM, Landt KW, Cameron N, Carter BS, Patel J. „Prediction of adult height from height and
@@ -25,7 +25,13 @@
  *     wiersz 16,5 (s. 775).
  *   • Poprawka na wzrost rodziców celowo USUNIĘTA przez autorów (s. 775): przy 95 % wzrostu
  *     dorosłego dodawanie za wysokich rodziców „nie ma sensu".
- *   • Chłopcy (tab. 2.1/2.2) — NIE przepisane (osobna decyzja właściciela).
+ *   • CHŁOPCY (decyzja właściciela 2026-09-12): tab. 2.1 (równanie „1", 3 zmienne, 6,0–18,5 l) —
+ *     „wszyscy chłopcy poniżej 11,0 lat i chłopcy powyżej 11 lat bez dostępnego przyrostu wzrostu".
+ *     Tab. 2.2 (4 zmienne, z przyrostem wzrostu w ostatnim roku) — NIE przepisana: aplikacja liczy
+ *     równaniem „1" bez przyrostu. Powyżej 18,5 l (opóźnienie wzrastania, nasady niezrośnięte):
+ *     ostatni wiersz tablicy (s. 775). Transkrypcja z obrazu tabeli (230 dpi, 2026-09-12);
+ *     rozbieżności OCR (9,0/9,5 SD „7941" → 4,1; 13,0 stała „93.7" → 99 i SD 3,7; 16,0 stała „8" → 80)
+ *     rozstrzygnięte na korzyść obrazu druku.
  */
 (function (w) {
   'use strict';
@@ -84,6 +90,36 @@
     [16.5, 1.03, 0.0, -2.00, 0.0, 29, 1.1, 0.99]
   ];
 
+  // [wiek wiersza, h, ca, rus, const, residualSd, r] — tab. 2.1, chłopcy
+  var BOYS_21 = [
+    [6.0, 1.28, -7.5, -0.12, 75, 4.7, 0.82],
+    [6.5, 1.25, -7.1, -0.13, 75, 4.7, 0.82],
+    [7.0, 1.24, -6.6, -0.32, 73, 4.6, 0.82],
+    [7.5, 1.28, -6.2, -0.67, 69, 4.6, 0.82],
+    [8.0, 1.30, -5.8, -1.00, 66, 4.1, 0.87],
+    [8.5, 1.27, -5.4, -1.25, 68, 4.1, 0.87],
+    [9.0, 1.16, -5.0, -1.30, 79, 4.1, 0.87],
+    [9.5, 1.13, -4.7, -1.25, 80, 4.1, 0.87],
+    [10.0, 1.12, -4.4, -1.27, 79, 4.0, 0.87],
+    [10.5, 1.12, -4.0, -1.50, 77, 4.0, 0.87],
+    [11.0, 1.11, -3.6, -1.85, 78, 3.8, 0.89],
+    [11.5, 1.09, -3.2, -2.37, 82, 3.8, 0.89],
+    [12.0, 1.07, -2.8, -2.90, 86, 3.8, 0.89],
+    [12.5, 1.04, -2.4, -3.45, 92, 3.8, 0.89],
+    [13.0, 1.01, -2.1, -3.90, 99, 3.7, 0.89],
+    [13.5, 0.98, -1.7, -4.25, 104, 3.7, 0.89],
+    [14.0, 0.94, -1.4, -4.42, 107, 3.5, 0.90],
+    [14.5, 0.87, -1.0, -4.17, 108, 3.5, 0.90],
+    [15.0, 0.81, -0.8, -3.65, 109, 3.2, 0.91],
+    [15.5, 0.80, -0.6, -3.07, 98, 3.2, 0.91],
+    [16.0, 0.85, -0.4, -2.65, 80, 2.9, 0.93],
+    [16.5, 0.90, -0.3, -2.27, 64, 2.9, 0.93],
+    [17.0, 0.94, -0.2, -2.02, 51, 2.0, 0.97],
+    [17.5, 0.96, -0.1, -1.90, 43, 2.0, 0.97],
+    [18.0, 0.98, 0.0, -1.90, 38, 1.4, 0.99],
+    [18.5, 0.98, 0.0, -1.90, 37, 1.4, 0.99]
+  ];
+
   function rows3(arr) {
     return arr.map(function (r) {
       return { rowAge: r[0], h: r[1], ca: r[2], rus: r[3], men: 0, konst: r[4], residualSdCm: r[5], r: r[6] };
@@ -110,12 +146,16 @@
       postmenarchealAboveTableRule: 'wiersz 16,5 do 17 lat (s. 775)',
       notValidatedIn: 'przedwczesne dojrzewanie, achondroplazja, choroby przewlekłe (s. 775)',
       parentalAllowance: 'usunięta przez autorów (s. 775)',
-      boysTables: 'nie przepisane (tab. 2.1/2.2) — osobna decyzja'
+      boysTable: 'tab. 2.1 (3 zmienne, 6,0–18,5 l); tab. 2.2 (z przyrostem wzrostu) nie przepisana',
+      boysAboveTableRule: 'ostatni wiersz 18,5 (s. 775: chłopcy z opóźnieniem wzrastania i niezrośniętymi nasadami)'
     },
     girls: {
       premenarcheal: { table: '3.1a', minRowAge: 5.0, maxRowAge: 14.5, rows: rows3(GIRLS_PREMENARCHEAL_31A) },
       postmenarchealMenarcheUnknown: { table: '3.1b', minRowAge: 11.5, maxRowAge: 16.5, rows: rows3(GIRLS_POSTMENARCHEAL_31B) },
       postmenarchealMenarcheKnown: { table: '3.1c', minRowAge: 11.5, maxRowAge: 16.5, rows: rows4(GIRLS_POSTMENARCHEAL_31C) }
+    },
+    boys: {
+      all: { table: '2.1', minRowAge: 6.0, maxRowAge: 18.5, rows: rows3(BOYS_21) }
     }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

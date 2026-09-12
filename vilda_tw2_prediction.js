@@ -1,10 +1,11 @@
 /* vilda_tw2_prediction.js — silnik prognozy wzrostu ostatecznego TW Mark II (Tanner 1983) dla
- * DZIEWCZĄT oraz pseudometoda „wzrost przy menarche / 0,955" (Singleton 1975, korekta Cho 2026).
+ * dziewcząt i chłopców oraz pseudometoda „wzrost przy menarche / 0,955" (Singleton 1975, korekta Cho 2026).
  *
  * ŹRÓDŁA (współczynniki w tw2_data.js):
  *   Tanner JM i wsp. Arch Dis Child 1983;58:767–776, DOI 10.1136/adc.58.10.767 — równania „1"
  *   (3 zmienne) dla dziewcząt: 3.1a przed menarche, 3.1b po menarche (wiek menarche nieznany),
- *   3.1c po menarche (wiek menarche znany).
+ *   3.1c po menarche (wiek menarche znany); dla chłopców: 2.1 (6,0–18,5 l; bez przyrostu wzrostu —
+ *   tab. 2.2 z przyrostem nie jest używana), powyżej 18,5 l ostatni wiersz (s. 775).
  *   Singleton A i wsp. Arch Fr Pediatr 1975;32:859–869 (PMID 175755): odsetek wzrostu ostatecznego
  *   osiągnięty przy menarche 95,5 ± 1,2 %, przyrost po menarche 7,3 ± 2 cm, większy przy niższym
  *   wieku kostnym przy menarche.
@@ -13,14 +14,16 @@
  *   (β = −3,13 cm na rok, SE 0,48; wielowymiarowo).
  *
  * KONTRAKT (jak calculateRWTPrediction / calculateKhamisRochePrediction):
- *   calculateTW2Prediction({ sex:'F', chronologicalAgeYears, chronologicalAgeMonths, currentHeightCm,
+ *   calculateTW2Prediction({ sex:'F'|'M', chronologicalAgeYears, chronologicalAgeMonths, currentHeightCm,
  *     boneAgeYears, boneAgeSource:'GP'|'TW2RUS', postmenarcheal:true|false|null, menarcheAgeYears })
- *   → { available:true, method:'tw2', table:'3.1a'|'3.1b'|'3.1c', rowAge, predictedAdultHeightCm,
+ *   → { available:true, method:'tw2', table:'3.1a'|'3.1b'|'3.1c'|'2.1', rowAge, predictedAdultHeightCm,
  *       predictedAdultHeightCmRaw, clampedToCurrentHeight, errorBoundHalfWidthCm (= 1,645·SD),
  *       residualSdCm, r, extrapolatedBelowTable, extrapolatedAboveTable, variants:{exactCa, clampedCa}|null,
  *       boneAgeSource, boneAgeProxyNote, menarcheStatusUnknown, notes[] }
- *     lub { available:false, reason:'boys-not-implemented'|'missing-sex'|'missing-chronological-age'|
- *           'missing-input'|'missing-bone-age'|'missing-dataset'|'out-of-range' }
+ *     lub { available:false, reason:'missing-sex'|'missing-chronological-age'|'missing-input'|
+ *           'missing-bone-age'|'missing-dataset'|'out-of-range'|'menarche-status-unknown' }
+ *   • Chłopcy: jedna tablica (2.1), status menarche nieistotny; poniżej 6,0 l poza zakresem; powyżej
+ *     18,5 l ostatni wiersz z flagą extrapolatedAboveTable (do 20 l).
  *   • Wiek: chronologicalAgeMonths (łączne miesiące) ma pierwszeństwo; lata to fallback.
  *   • Wiersz = najbliższy półroczny punkt wieku; w równaniu wiek DOKŁADNY (praca, s. 768).
  *   • Wiek kostny GP jest tylko PRZYBLIŻENIEM RUS — flaga boneAgeSource + nota; 3.1c ma mały
@@ -90,30 +93,37 @@
     if (!d) return { available: false, reason: 'missing-dataset', message: 'Brak danych TW Mark II (tw2_data.js).' };
     var sk = sexKey(input.sex);
     if (!sk) return { available: false, reason: 'missing-sex' };
-    if (sk === 'M') return { available: false, reason: 'boys-not-implemented', message: 'TW Mark II: tablice dla chłopców nie zostały jeszcze przepisane.' };
     var age = ageYearsFrom(input);
     if (age === null) return { available: false, reason: 'missing-chronological-age' };
     var h = num(input.currentHeightCm);
     if (h === null || h <= 0) return { available: false, reason: 'missing-input' };
     var ba = num(input.boneAgeYears);
     if (ba === null || ba <= 0 || ba > 20) return { available: false, reason: 'missing-bone-age' };
-    var post = input.postmenarcheal === true;
-    var menAge = num(input.menarcheAgeYears);
-    if (post && menAge !== null && menAge > age) post = false; // wiek menarche w przyszłości — sprzeczność, liczymy jak przed menarche
-    var statusUnknown = input.postmenarcheal !== true && input.postmenarcheal !== false;
-    if (statusUnknown) return { available: false, reason: 'menarche-status-unknown', message: 'TW Mark II: podaj status menarche (wiek menarche w module dojrzewania); bez niego nie wiadomo, której tablicy użyć.' };
     var src = String(input.boneAgeSource || 'GP').toUpperCase() === 'TW2RUS' ? 'TW2RUS' : 'GP';
     var notes = [];
     var table, tableKey;
-    if (post) {
-      if (menAge !== null && menAge > 0) { table = d.girls.postmenarchealMenarcheKnown; tableKey = '3.1c'; }
-      else { table = d.girls.postmenarchealMenarcheUnknown; tableKey = '3.1b'; }
+    var post = false, menAge = null, statusUnknown = false;
+    if (sk === 'M') {
+      if (!d.boys || !d.boys.all) return { available: false, reason: 'missing-dataset', message: 'Brak tablicy TW Mark II dla chłopców (tw2_data.js).' };
+      table = d.boys.all; tableKey = '2.1';
+      if (age < table.minRowAge - 0.25) return { available: false, reason: 'out-of-range', message: 'TW Mark II: równania dla chłopców od 6. roku życia.' };
+      if (age > 20) return { available: false, reason: 'out-of-range', message: 'TW Mark II: poza zakresem wieku równań.' };
+      notes.push('równanie „1" (3 zmienne, tab. 2.1) bez przyrostu wzrostu w ostatnim roku — tablica 2.2 z przyrostem nie jest używana');
     } else {
-      table = d.girls.premenarcheal; tableKey = '3.1a';
-      if (age < table.minRowAge - 0.25) return { available: false, reason: 'out-of-range', message: 'TW Mark II: równania dla dziewcząt od 5. roku życia.' };
+      post = input.postmenarcheal === true;
+      menAge = num(input.menarcheAgeYears);
+      if (post && menAge !== null && menAge > age) post = false; // wiek menarche w przyszłości — sprzeczność, liczymy jak przed menarche
+      statusUnknown = input.postmenarcheal !== true && input.postmenarcheal !== false;
+      if (statusUnknown) return { available: false, reason: 'menarche-status-unknown', message: 'TW Mark II: podaj status menarche (wiek menarche w module dojrzewania); bez niego nie wiadomo, której tablicy użyć.' };
+      if (post) {
+        if (menAge !== null && menAge > 0) { table = d.girls.postmenarchealMenarcheKnown; tableKey = '3.1c'; }
+        else { table = d.girls.postmenarchealMenarcheUnknown; tableKey = '3.1b'; }
+      } else {
+        table = d.girls.premenarcheal; tableKey = '3.1a';
+        if (age < table.minRowAge - 0.25) return { available: false, reason: 'out-of-range', message: 'TW Mark II: równania dla dziewcząt od 5. roku życia.' };
+      }
       if (age > 18.5) return { available: false, reason: 'out-of-range', message: 'TW Mark II: poza zakresem wieku równań.' };
     }
-    if (post && age > 18.5) return { available: false, reason: 'out-of-range', message: 'TW Mark II: poza zakresem wieku równań.' };
     var sel = nearestRow(table, age);
     if (!sel.row) return { available: false, reason: 'missing-dataset' };
     var row = sel.row;
@@ -130,7 +140,7 @@
       notes.push('po menarche przed ' + String(table.minRowAge).replace('.', ',') + ' r.ż.: użyto wiersza ' + String(table.minRowAge).replace('.', ',') + ' (Tanner 1983, s. 775) w dwóch wariantach — wiek dokładny ' + String(variants.exactCa).replace('.', ',') + ' cm i wiek obcięty do ' + String(table.minRowAge).replace('.', ',') + ' lat ' + String(variants.clampedCa).replace('.', ',') + ' cm; wynik = środek, przedział rozszerzony; równania nie były testowane w przedwczesnym dojrzewaniu');
     } else {
       raw = evalRow(row, h, age, ba, menAge);
-      if (sel.above) notes.push('wiek powyżej ostatniego wiersza tablicy ' + tableKey + ' — użyto wiersza ' + String(sel.rowAge).replace('.', ',') + ' (Tanner 1983, s. 775)');
+      if (sel.above) notes.push('wiek powyżej ostatniego wiersza tablicy ' + tableKey + ' — użyto wiersza ' + String(sel.rowAge).replace('.', ',') + ' (Tanner 1983, s. 775' + (sk === 'M' ? ': chłopcy z opóźnieniem wzrastania i niezrośniętymi nasadami' : '') + ')');
       if (!post && sel.below) notes.push('wiek poniżej pierwszego wiersza tablicy — użyto wiersza ' + String(sel.rowAge).replace('.', ','));
     }
     var sd = row.residualSdCm;
@@ -143,16 +153,16 @@
     return {
       available: true,
       method: 'tw2',
-      sex: 'F',
+      sex: sk,
       table: tableKey,
       rowAge: sel.rowAge,
       ageYears: age,
       boneAgeYears: ba,
       boneAgeSource: src,
       boneAgeProxyNote: src === 'GP' ? 'GP jako przybliżenie TW2 RUS' : '',
-      postmenarcheal: post,
+      postmenarcheal: sk === 'F' ? post : null,
       menarcheAgeYears: post ? menAge : null,
-      menarcheStatusUnknown: statusUnknown,
+      menarcheStatusUnknown: sk === 'F' ? statusUnknown : false,
       predictedAdultHeightCm: round1(pred),
       predictedAdultHeightCmRaw: round1(raw),
       clampedToCurrentHeight: clampedToH,
@@ -209,7 +219,7 @@
   w.calculateTW2Prediction = calculateTW2Prediction;
   w.calculateMenarcheFractionPrediction = calculateMenarcheFractionPrediction;
   w.VildaTW2Prediction = {
-    VERSION: '1',
+    VERSION: '2',
     calculateTW2Prediction: calculateTW2Prediction,
     calculateMenarcheFractionPrediction: calculateMenarcheFractionPrediction,
     MENARCHE_FRACTION: MENARCHE_FRACTION,

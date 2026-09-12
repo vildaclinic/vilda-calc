@@ -20,7 +20,7 @@
   var btn = document.getElementById('tannerToggleBtn');
   if (!wrap || !select || !btn) return;
 
-  var POLA = ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyCdgp', 'advTesticularVolume'];
+  var POLA = ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyCdgp', 'advTesticularVolume'];
 
   function pole(id) { return document.getElementById(id); }
 
@@ -38,6 +38,13 @@
       var e = document.getElementById('sex');
       return e ? e.value : '';
     } catch (err) { return ''; }
+  }
+
+  function wzrostCmFormularza() {
+    try {
+      var v = parseFloat(document.getElementById('height').value);
+      return isFinite(v) && v > 0 ? v : null;
+    } catch (err) { return null; }
   }
 
   function wiekLatFormularza() {
@@ -65,6 +72,8 @@
       jadra: jadra ? jadra.value : '',
       wiekStartuLat: (pole('pubertyOnsetAge') || {}).value,
       wiekMenarcheLat: (pole('pubertyMenarcheAge') || {}).value,
+      wzrostPrzyMenarcheCm: (pole('pubertyMenarcheHeight') || {}).value,
+      wzrostCm: wzrostCmFormularza(),
       wiekLat: wiekLatFormularza()
     });
     if (!lista.length) { slot.style.display = 'none'; slot.textContent = ''; return; }

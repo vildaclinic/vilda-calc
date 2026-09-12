@@ -14,8 +14,8 @@
  * DWA RODZAJE DANYCH, DWA MIEJSCA ZAPISU (decyzja właściciela 2026-09-09):
  *   stan na dziś  — etap Tannera, objętość jąder: zapisywane PRZY POMIARZE, z datą wpisu,
  *                   bo stadium zmienia się z wizyty na wizytę;
- *   fakt trwały   — wiek startu pokwitania, wiek menarche, deklaracja KOWD: zapisywane
- *                   W REKORDZIE (sekcja `puberty`), bo wpisane raz już się nie zmieniają.
+ *   fakt trwały   — wiek startu pokwitania, wiek menarche, wzrost przy menarche, deklaracja KOWD:
+ *                   zapisywane W REKORDZIE (sekcja `puberty`), bo wpisane raz już się nie zmieniają.
  * Panel wygląda jak jedno miejsce, ale zapisuje w dwa — dlatego karta pacjenta i formularz
  * pokazują TĘ SAMĄ wartość, a nie jej kopię.
  *
@@ -31,7 +31,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   // Ta sama liczba, co P.TANNER_FRESH_M w vilda_trajectory_analysis.js.
   var SWIEZOSC_MIES = 12;
@@ -40,6 +40,9 @@
     etap: 'tannerStage',
     start: 'pubertyOnsetAge',
     menarche: 'pubertyMenarcheAge',
+    // GROWTH-PRED-TW2B: wzrost w chwili pierwszej miesiączki (cm) — fakt trwały, do prognozy
+    // wzrostu ostatecznego (pseudometoda „wzrost przy menarche / 0,955").
+    wzrostMenarche: 'pubertyMenarcheHeight',
     kowd: 'pubertyCdgp',
     jadra: 'advTesticularVolume'
   };
@@ -122,6 +125,8 @@
     var start = liczba(i.wiekStartuLat);
     var menarche = liczba(i.wiekMenarcheLat);
     var wiek = liczba(i.wiekLat);
+    var wzrostMenarche = liczba(i.wzrostPrzyMenarcheCm);
+    var wzrost = liczba(i.wzrostCm);
 
     if (plec === 'M' && t != null) {
       if (t === 1 && (jadra === '4to6' || jadra === 'gt6')) {
@@ -146,6 +151,15 @@
     if (start != null && menarche != null && menarche < start) {
       lista.push('Wiek menarche wcześniejszy niż wiek startu pokwitania.');
     }
+    if (wzrostMenarche != null && plec === 'M') {
+      lista.push('Wzrost przy menarche wpisany u chłopca.');
+    }
+    if (wzrostMenarche != null && menarche == null && plec !== 'M') {
+      lista.push('Wpisano wzrost przy menarche bez wieku menarche — bez wieku prognoza nie wie, czy dziewczynka jest po menarche.');
+    }
+    if (wzrostMenarche != null && wzrost != null && wzrostMenarche > wzrost + 0.5) {
+      lista.push('Wzrost przy menarche (' + String(wzrostMenarche).replace('.', ',') + ' cm) większy niż wzrost obecny (' + String(wzrost).replace('.', ',') + ' cm).');
+    }
     return lista;
   }
 
@@ -166,6 +180,7 @@
     var rek = zRekordu();
     var startDom = liczba(wartosc(POLA_DOM.start));
     var menarcheDom = liczba(wartosc(POLA_DOM.menarche));
+    var wzrostMenarcheDom = liczba(wartosc(POLA_DOM.wzrostMenarche));
     var kowdDom = wartosc(POLA_DOM.kowd);
     var etap = ocenEtap({
       etapFormularz: i.etapFormularz != null ? i.etapFormularz : wartosc(POLA_DOM.etap),
@@ -180,12 +195,14 @@
       etapPominiety: etap.etapPominiety,
       wiekStartuLat: startDom != null ? startDom : (rek ? rek.wiekStartuPokwitaniaLat : null),
       wiekMenarcheLat: menarcheDom != null ? menarcheDom : (rek ? rek.wiekMenarcheLat : null),
+      wzrostPrzyMenarcheCm: wzrostMenarcheDom != null ? wzrostMenarcheDom : (rek && rek.wzrostPrzyMenarcheCm != null ? rek.wzrostPrzyMenarcheCm : null),
       kowd: kowdDom || (rek && rek.kowd ? rek.kowd : ''),
       jadra: wartosc(POLA_DOM.jadra)
     };
     out.sprzecznosci = sprzecznosci({
       etap: out.etap, plec: i.plec, jadra: out.jadra,
       wiekStartuLat: out.wiekStartuLat, wiekMenarcheLat: out.wiekMenarcheLat,
+      wzrostPrzyMenarcheCm: out.wzrostPrzyMenarcheCm, wzrostCm: i.wzrostCm,
       wiekLat: i.wiekLat
     });
     return out;
