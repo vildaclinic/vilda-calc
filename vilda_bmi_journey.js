@@ -62,10 +62,12 @@
     if (!(weeklyLossKg > 0) || !(ctx.kgToLose > 0)) return null;
     if (ctx.isChild && typeof w.energySimulateMonthsToBmiTarget === 'function') {
       try {
+        var geEl = d.getElementById('growthEndedFlag');
         var sim = w.energySimulateMonthsToBmiTarget({
           ageYears: ctx.ageYears, ageMonthsOpt: 0, sex: ctx.sex,
           weightKg: ctx.weightKg, heightCm: ctx.heightCm,
-          weeklyLossKg: weeklyLossKg, target: 'norm'
+          weeklyLossKg: weeklyLossKg, target: 'norm',
+          growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
         });
         if (sim && sim.months != null) {
           return { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm };
