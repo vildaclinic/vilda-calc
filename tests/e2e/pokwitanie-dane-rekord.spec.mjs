@@ -87,6 +87,30 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
     await expect(page.getByPlaceholder('lata, np. 12,5')).toHaveValue('12.25');
   });
 
+  test('wzrost przy menarche (GROWTH-PRED-TW2B) wchodzi do rekordu, wraca do edycji i wymaga wieku menarche', async ({ page }) => {
+    await otworzZKontem(page);
+    const patientId = await zalozPacjentke(page);
+
+    await otworzEdycje(page, patientId);
+    // Sam wzrost bez wieku menarche — odmowa z nazwanym powodem, nic nie wchodzi do rekordu.
+    await page.getByPlaceholder('cm, np. 152,5').fill('147');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await expect(page.getByText('Wzrost przy menarche wymaga wpisania wieku menarche.')).toBeVisible();
+    expect(await sekcjaRekordu(page, patientId)).toBeNull();
+
+    await page.getByPlaceholder('lata, np. 12,5').fill('10,5');
+    await page.getByPlaceholder('cm, np. 152,5').fill('147,3');
+    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
+    await page.waitForFunction(
+      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
+      patientId,
+    );
+    expect(await sekcjaRekordu(page, patientId)).toEqual({ menarcheAgeYears: 10.5, heightAtMenarcheCm: 147.3 });
+
+    await otworzEdycje(page, patientId);
+    await expect(page.getByPlaceholder('cm, np. 152,5')).toHaveValue('147.3');
+  });
+
   test('sama menarche wystarczy — start pokwitania bywa nieznany', async ({ page }) => {
     await otworzZKontem(page);
     const patientId = await zalozPacjentke(page);

@@ -150,3 +150,18 @@ describe('Objętość jąder mieszka w panelu pokwitaniowym (GROWTH-PUB-TWO)', (
     expect(inline).toMatch(/jadraWrap\.style\.display = otwarty \? '' : 'none'/);
   });
 });
+
+describe('GROWTH-PRED-TW2B — wzrost przy menarche w statusie pokwitania', () => {
+  it('POLA_DOM zna pole wzrostu przy menarche', () => {
+    expect(S.POLA_DOM.wzrostMenarche).toBe('pubertyMenarcheHeight');
+  });
+  it('sprzeczności: u chłopca, bez wieku menarche, większy niż wzrost obecny; spójny wpis nie budzi zastrzeżeń', () => {
+    expect(S.sprzecznosci({ plec: 'M', wzrostPrzyMenarcheCm: 150 })).toEqual(['Wzrost przy menarche wpisany u chłopca.']);
+    expect(S.sprzecznosci({ plec: 'F', wzrostPrzyMenarcheCm: 150 }).join(' ')).toContain('bez wieku menarche');
+    expect(S.sprzecznosci({ plec: 'F', wiekMenarcheLat: 12, wzrostPrzyMenarcheCm: 155, wzrostCm: 152 }).join(' '))
+      .toContain('Wzrost przy menarche (155 cm) większy niż wzrost obecny (152 cm)');
+    expect(S.sprzecznosci({ plec: 'F', wiekMenarcheLat: 12, wzrostPrzyMenarcheCm: 150, wzrostCm: 152 })).toEqual([]);
+    expect(S.sprzecznosci({ plec: 'F', wiekMenarcheLat: 12, wzrostPrzyMenarcheCm: 152.4, wzrostCm: 152 })).toEqual([]);
+  });
+});
+

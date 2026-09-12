@@ -23,9 +23,17 @@ function pomocniki(okno) {
 const REKORD = { puberty: { onsetAgeYears: 11.5, menarcheAgeYears: 13 } };
 
 describe('Które pola są przenoszone', () => {
-  it('dokładnie dwa: wiek startu pokwitania i wiek menarche', () => {
+  it('dokładnie trzy: wiek startu pokwitania, wiek menarche i wzrost przy menarche (GROWTH-PRED-TW2B)', () => {
     const { Bq_pola } = pomocniki({});
-    expect(Bq_pola().sort()).toEqual(['menarcheAgeYears', 'onsetAgeYears']);
+    expect(Bq_pola().sort()).toEqual(['heightAtMenarcheCm', 'menarcheAgeYears', 'onsetAgeYears']);
+  });
+
+  it('wzrost przy menarche jest zapamiętywany z rekordu i oddawany kolektorowi', () => {
+    const okno = {};
+    const { Bq0, Bq1 } = pomocniki(okno);
+    Bq0({ puberty: { menarcheAgeYears: 12.5, heightAtMenarcheCm: 152.5 } });
+    expect(okno.vildaPubertyData).toEqual({ menarcheAgeYears: 12.5, heightAtMenarcheCm: 152.5 });
+    expect(Bq1()).toEqual({ menarcheAgeYears: 12.5, heightAtMenarcheCm: 152.5 });
   });
 });
 
