@@ -253,7 +253,7 @@
       for (var i = 0; i < model.diets.length; i += 1) if (model.diets[i].key === key) av = model.diets[i];
       html += '<button type="button" data-journey="diet" data-key="' + esc(key) + '"'
         + ' aria-pressed="' + (key === model.dietKey ? 'true' : 'false') + '"'
-        + (av ? '' : ' disabled title="poniżej minimum kalorycznego dla tego pacjenta"') + '>'
+        + (av ? '' : ' disabled title="' + esc(lastEngineState && lastEngineState.dietUnavailable && lastEngineState.dietUnavailable[key] ? lastEngineState.dietUnavailable[key] : 'poniżej minimum kalorycznego dla tego pacjenta') + '"') + '>'
         + esc(cfg[key].label)
         + '<span class="bmi-journey-sub">' + (av ? '\u2212' + fmtInt(av.deficit) + '\u202Fkcal/d' : 'niedostępna') + '</span></button>';
     });
@@ -264,14 +264,20 @@
     var html = '<details class="bmi-journey-det"><summary>Szczegóły planu</summary>';
     if (model.found) {
       html += '<p class="bmi-journey-recepta">deficyt <b>\u2212' + fmtInt(model.found.deficit)
-        + '\u202Fkcal/dzień</b> · tempo ok. <b>' + fmt(model.found.weeklyLoss, 1) + '\u202Fkg/tydz.</b></p>';
+        + '\u202Fkcal/dzień</b> · tempo ok. <b>' + fmt(model.found.weeklyLoss, 1) + '\u202Fkg/tydz.</b>'
+        + (lastEngineState && lastEngineState.childObesityPlan && fin(lastEngineState.maintenanceKcal)
+          ? ' · zapotrzebowanie dla masy należnej ok. <b>' + fmtInt(lastEngineState.maintenanceKcal) + '\u202Fkcal/dzień</b>' : '')
+        + '</p>';
     }
     html += '<table class="bmi-journey-table" aria-live="polite"><thead><tr><th>Twój wybór</th><th>kcal/tydz.</th><th>kg/mies.</th></tr></thead>'
       + '<tbody>' + renderRows(model) + '</tbody></table>';
     if (model.found && w.DIET_BULLETS && w.DIET_BULLETS[model.dietKey] && w.DIET_LEVELS && w.DIET_LEVELS[model.dietKey]) {
       var extra = w.DIET_BULLETS[model.dietKey].slice(2);
-      var items = ['deficyt ok.\u202F' + Math.round(w.DIET_LEVELS[model.dietKey].deficitPct * 100)
-        + '\u202F% całkowitego wydatku energetycznego'].concat(extra);
+      var items = [(lastEngineState && lastEngineState.childObesityPlan
+        ? 'stały deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania dla masy należnej'
+          + (fin(lastEngineState.neededWeightKg) ? ' (ok.\u202F' + fmt(lastEngineState.neededWeightKg, 1) + '\u202Fkg, mediana BMI dla wieku i wzrostu)' : '')
+        : 'deficyt ok.\u202F' + Math.round(w.DIET_LEVELS[model.dietKey].deficitPct * 100)
+        + '\u202F% całkowitego wydatku energetycznego')].concat(extra);
       html += '<ul class="bmi-journey-bullets">' + items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
     }
     html += yearlyBadge(ctx) + '</details>';

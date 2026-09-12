@@ -116,7 +116,7 @@ async function setProfessionalMode(page, on) {
   }, on);
 }
 
-test('PLAN-S2-FLOOR-REE: minimum dziecka = max(1200, REE) — intensywna znika przy PAL 1,4, wraca przy 1,6', async ({ page }) => {
+test('PLAN-S2-FLOOR-CHILD: minimum 1000 kcal (<10 lat) od zapotrzebowania dla masy należnej — przy PAL 1,4 tylko lekka, przy 1,8 wszystkie', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   const diets = async (pal) => page.evaluate((pal) => {
@@ -124,15 +124,17 @@ test('PLAN-S2-FLOOR-REE: minimum dziecka = max(1200, REE) — intensywna znika p
     window.update();
     return [...document.getElementById('dietLevel').options].map((o) => o.textContent);
   }, pal);
-  await renderPlan(page, { age: 8, months: 0, sex: 'M', weight: 45, height: 130 });
-  // REE Henry'ego (chłopiec 3–9): (0,0632·45 + 1,31·1,30 + 1,28)·239 ≈ 1393 kcal.
-  // PAL 1,4 → TEE ≈ 1969; intensywna −591 → 1378 < 1393 → wypada.
+  // ENERGY-CHILD-OBESITY: dziewczynka 7 l, 118 cm, 35 kg (BMI ≥ 99c). Masa należna = mediana BMI × 1,18²
+  // ≈ 21–22 kg → REE Henry'ego (dziewczęta 3–9) ≈ 940 kcal; PAL 1,4 → baza ≈ 1320 kcal:
+  // lekka −200 → ≈1120 ≥ 1000, umiarkowana −350 → ≈970 < 1000 (wypada), intensywna −500 → wypada.
+  await renderPlan(page, { age: 7, months: 0, sex: 'F', weight: 35, height: 118 });
   const low = await diets('1.4');
   expect(low.some((t) => t.includes('lekka'))).toBe(true);
-  expect(low.some((t) => t.includes('umiarkowana'))).toBe(true);
+  expect(low.some((t) => t.includes('umiarkowana'))).toBe(false);
   expect(low.some((t) => t.includes('intensywna'))).toBe(false);
-  // PAL 1,6 → TEE ≈ 2251; intensywna −675 → 1576 ≥ 1393 → dostępna.
-  const mid = await diets('1.6');
+  // PAL 1,8 → baza ≈ 1690 kcal; intensywna −500 → ≈1190 ≥ 1000 → dostępna.
+  const mid = await diets('1.8');
+  expect(mid.some((t) => t.includes('umiarkowana'))).toBe(true);
   expect(mid.some((t) => t.includes('intensywna'))).toBe(true);
 });
 
@@ -287,10 +289,11 @@ test('PLAN-C-SEGMENTS: segmenty diety i PAL sterują ukrytymi selectami i przeli
   }));
   expect(out.pal).toBe('1.6');
   expect(out.text).toContain('−916 kcal/dzień');
-  // Niedostępna dieta (podłoga REE u dziecka przy PAL 1,4) jest wyszarzona, nie znika.
-  await renderPlan(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
+  // Niedostępna dieta (ENERGY-CHILD-OBESITY: minimum 1000 kcal u dziecka < 10 lat przy PAL 1,4)
+  // jest wyszarzona, nie znika. Dziewczynka 7 l, 118 cm, 35 kg: baza ≈ 1320 kcal → intensywna −500 wypada.
+  await renderPlan(page, { age: 7, months: 0, sex: 'F', weight: 35, height: 118 });
   const dis = await page.evaluate(() => {
-    // PAL 1,6 został z poprzedniego kroku — wróć na 1,4 (przy 1,6 intensywna jest legalna).
+    // PAL 1,6 został z poprzedniego kroku — wróć na 1,4 (przy 1,8 intensywna jest legalna).
     document.getElementById('palFactor').value = '1.4';
     window.update();
     const b = document.querySelector('#planResults [data-plan2-diet="intense"]');
@@ -385,7 +388,7 @@ test('PLAN-SYNC-TIMES: przy wyłączonym ruchu obie karty pokazują ten sam term
 // formularz dostaje 1,6 (dotąd: kliniczne 1,4 dla każdego). Jawny wybór i wartości
 // z zapisu pacjenta mają pierwszeństwo (flaga __vildaPlanPalTouched).
 
-test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,6 + dopisek o wartości domyślnej', async ({ page }) => {
+test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,4 (ENERGY-CHILD-OBESITY) + dopisek o wartości domyślnej', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
@@ -395,8 +398,8 @@ test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,6 + do
     touched: window.__vildaPlanPalTouched === true,
     note: (document.getElementById('bmiJourneyMount')?.textContent || '').includes('PAL przyjęty domyślnie dla wieku'),
   }));
-  expect(out.engineDefault).toBe(1.6);
-  expect(out.pal).toBe('1.6');
+  expect(out.engineDefault).toBe(1.4);
+  expect(out.pal).toBe('1.4');
   expect(out.touched).toBe(false);
   expect(out.note).toBe(true);
 });
@@ -413,14 +416,14 @@ test('PLAN-PAL-DEFAULT-ADULT: dorosły zostaje przy PAL 1,4 (dolna granica pasma
   expect(out.pal).toBe('1.4');
 });
 
-test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,4 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania na 1,6)', async ({ page }) => {
+test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną 1,4)', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
   const out = await page.evaluate(() => {
     const sel = document.getElementById('palFactor');
     // Świadomy wybór jak z UI: zmiana wartości + natywne zdarzenie 'change'.
-    sel.value = '1.4';
+    sel.value = '1.8';
     sel.dispatchEvent(new Event('change', { bubbles: true }));
     window.update();
     window.update(); // drugie przeliczenie — wartość ma przetrwać
@@ -431,11 +434,11 @@ test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,4 u nastolatka przeżywa kolejne prz
     };
   });
   expect(out.touched).toBe(true);
-  expect(out.pal).toBe('1.4');
+  expect(out.pal).toBe('1.8');
   expect(out.note).toBe(false);
 });
 
-test('PLAN-PAL-RESTORE-KEPT: wczytany zapis nastolatka z PAL 1,4 nie jest nadpisywany wartością domyślną', async ({ page }) => {
+test('PLAN-PAL-RESTORE-KEPT: wczytany zapis nastolatka z PAL 1,8 nie jest nadpisywany wartością domyślną 1,4', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
@@ -446,7 +449,7 @@ test('PLAN-PAL-RESTORE-KEPT: wczytany zapis nastolatka z PAL 1,4 nie jest nadpis
       version: 1,
       name: 'Testowy Pacjent',
       user: { age: 12, ageMonths: 0, sex: 'M', weight: 70, height: 150 },
-      plan: { palFactor: 1.4, dietLevel: null },
+      plan: { palFactor: 1.8, dietLevel: null },
     });
     // Dopewnij pola antropometryczne (payload testowy jest minimalny), potem przelicz.
     const set = (id, v) => { const el = document.getElementById(id); if (el && !el.value) el.value = String(v); };
@@ -458,5 +461,5 @@ test('PLAN-PAL-RESTORE-KEPT: wczytany zapis nastolatka z PAL 1,4 nie jest nadpis
     };
   });
   expect(out.touched).toBe(true);
-  expect(out.pal).toBe('1.4');
+  expect(out.pal).toBe('1.8');
 });
