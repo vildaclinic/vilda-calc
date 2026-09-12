@@ -198,12 +198,12 @@
     if (w === null) return null;
     var adultSds = adultSdsFor(w, adultLms);
     var diff = m !== null && m > 0 ? w - m : null;
-    var tier = 'w-zakresie-celu';
+    var tier = diff !== null ? 'w-zakresie-celu' : 'w-normie-doroslych';
     if (adultSds !== null && adultSds < ADULT_SHORT_SDS) tier = 'niskoroslosc-dorosla';
     else if (diff !== null && diff <= -TARGET_BELOW_CM) tier = 'ponizej-celu';
     else if (diff === null && adultSds === null) return null;
-    return { diffCm: diff, targetSd: diff !== null ? diff / MPH_SIGMA_CM : null, adultSds: adultSds, tier: tier,
-      tierLabel: tier === 'niskoroslosc-dorosla' ? 'niskorosłość dorosła' : (tier === 'ponizej-celu' ? 'poniżej celu' : 'w zakresie celu') };
+    var labels = { 'niskoroslosc-dorosla': 'niskorosłość dorosła', 'ponizej-celu': 'poniżej celu', 'w-zakresie-celu': 'w zakresie celu', 'w-normie-doroslych': 'w normie dorosłych' };
+    return { diffCm: diff, targetSd: diff !== null ? diff / MPH_SIGMA_CM : null, adultSds: adultSds, tier: tier, tierLabel: labels[tier] };
   }
 
   // Korekta błędu systematycznego dla metody `key` w profilu `ctx`
@@ -466,7 +466,8 @@
       }
       // GROWTH-PRED-PUB2: poszerzenie przedziału wg profilu pokwitaniowego (bez przesunięcia).
       var prule = profileRuleFor(key, pubRules);
-      if (prule && pm !== null && pm !== undefined) pm = pm * prule.sigmaFactor;
+      if (prule && (pm === null || pm === undefined)) prule = null; // GROWTH-PRED-PUB4: bez przedziału nie ma czego poszerzać — i nie ma o czym pisać
+      if (prule) pm = pm * prule.sigmaFactor;
       if (curH !== null && val < curH) { val = curH; clamped = true; }
       entries.push({
         key: key, label: label, value: val, pm: pm, levelKey: null,
@@ -767,7 +768,7 @@
     var parts = [];
     var show = (pp.profil && pp.profil !== 'standardowy') || (pp.dowody && pp.dowody.length) || (pp.braki && pp.braki.length);
     if (!show) return '';
-    var s = '<p><span class="vgcc-lbl">Profil pokwitaniowy:</span> ' + esc(pp.etykieta || '');
+    var s = '<p><span class="vgcc-lbl">Profil pokwitaniowy:</span> ' + esc(pp.etykieta || 'nieokreślony');
     if (pp.dowody && pp.dowody.length) s += ' — ' + pp.dowody.map(function (d) { return esc(d); }).join('; ');
     if (pp.braki && pp.braki.length) s += '. Brakuje: ' + pp.braki.map(function (d) { return esc(d); }).join('; ');
     s += '.';
@@ -783,13 +784,26 @@
     if (!r || !r.active) return '';
     var s = '<p><span class="vgcc-lbl">Reguły konsensusu w profilu ' + esc(r.label) + ':</span> RWT i Khamis–Roche poza konsensusem (Zachmann 1978' + (r.profil === 'wczesne' ? '; w profilu wczesnym jak w przedwczesnym — decyzja właściciela' : '') + ')';
     var bp = (model.entries || []).filter(function (e) { return e.key === 'bp'; })[0];
-    if (bp) s += '; Bayley–Pinneau ' + (bp.bpGroupOverride ? 'z tablicy „przeciętnej" zamiast „przyspieszonej" (Kauli 1997; Tanaka 2005; Brito 2008; Mul 2005)' + (bp.bpAutoGroupCm !== null && bp.bpAutoGroupCm !== undefined ? ' — tablica przyspieszona dałaby ' + esc(fmt1(bp.bpAutoGroupCm)) + ' cm' : '') : 'z tablicy wg rozbieżności wieku kostnego (nieprzyspieszona, więc bez zamiany)') + ', ' + esc(bp.profileNote || 'przedział ×1,3');
+    if (bp) {
+      var grp = bp.bpGroupAutoKey === 'accelerated' ? 'przyspieszona' : (bp.bpGroupAutoKey === 'retarded' ? 'opóźniona' : 'średnia');
+      s += '; Bayley–Pinneau ' + (bp.bpGroupOverride
+        ? 'z tablicy „przeciętnej" zamiast „przyspieszonej" (Kauli 1997; Tanaka 2005; Brito 2008; Mul 2005)' + (bp.bpAutoGroupCm !== null && bp.bpAutoGroupCm !== undefined ? ' — tablica przyspieszona dałaby ' + esc(fmt1(bp.bpAutoGroupCm)) + ' cm' + (bp.biasCm ? ' (przed korektą błędu systematycznego)' : '') : '')
+        : (bp.bpGroupAutoKey === 'accelerated' ? 'z tablicy przyspieszonej (zamiana na przeciętną nie zaszła)' : 'z tablicy wg rozbieżności wieku kostnego (grupa ' + grp + ', więc bez zamiany)'))
+        + (bp.profileNote ? ', ' + esc(bp.profileNote) : ' (bez przedziału błędu dla tego wieku, więc bez poszerzenia)');
+    }
     if (model.hasTw2) s += '; TW Mark II orientacyjna (tablice z dzieci o prawidłowym czasie dojrzewania)';
-    s += '; MPH jako kotwica z pełną wagą' + (model.postmenarcheal ? '' : ' (×0,25 dopiero po menarche)') + '.';
+    // GROWTH-PRED-PUB4: zdanie o MPH mówi to, co naprawdę policzono.
+    var wcm = model.weighted || {};
+    if (wcm.withMph) s += '; MPH jako kotwica ' + (wcm.mphWeightFactor === 1 ? 'z pełną wagą' + (model.postmenarcheal ? '' : ' (×0,25 dopiero po menarche)') : 'z wagą ×' + esc(fmt1(wcm.mphWeightFactor)) + (wcm.mphWeightFactor < 1 && !model.postmenarcheal ? ' (niskorosłość, Blum 2022)' : '')) + '.';
+    else s += '; MPH poza konsensusem (' + (model.mph ? 'kotwica wchodzi dopiero przy dwóch metodach' : 'brak wzrostu rodziców') + ').';
     if (r.tempo === 'wolne') s += ' Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm, a wzrost ostateczny nieleczonych zwykle mieści się w zakresie celu (Jang 2023; Palmert 1999; Léger 2000).';
     else if (r.tempo === 'szybkie') s += ' Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej celu (Kauli 1997), a prognozy z wieku kostnego zawyżają (Kauli 1997; Lazar 2001).';
     else if (r.tempo === 'nieznane') s += ' Tempo nieznane — bez wieku kostnego z dwóch wizyt nie da się odróżnić przebiegu wolnego (wzrost ostateczny ≈ cel) od szybkiego (5–8 cm poniżej celu).';
-    if (model.sexKey === 'M') s += ' U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001); po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026).';
+    if (model.sexKey === 'M') {
+      var stad = model.pubertyProfile && model.pubertyProfile.wskazniki ? num(model.pubertyProfile.wskazniki.tannerStadium) : null;
+      if (stad !== null && stad >= 3) s += ' U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001).';
+      s += ' Po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026).';
+    }
     if (r.gnrhaWTrakcie) s += ' W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie — nasady zamykają się wcześniej, niż wynika z wieku kostnego (Lazar 2007).';
     return s + '</p>';
   }
@@ -813,7 +827,8 @@
       var sg = t.adultSds < -0.005 ? '−' : (t.adultSds > 0.005 ? '+' : '');
       parts.push('wobec norm dorosłych ' + sg + esc(fmt1(Math.abs(t.adultSds))) + ' SDS');
     }
-    var lbl = model.consensus && model.consensus.count >= 2 ? 'Konsensus wobec celu rodzicielskiego: ' : 'Prognoza wobec celu rodzicielskiego: ';
+    var lbl = t.diffCm === null ? 'Prognoza wobec norm dorosłych (bez wzrostu rodziców): '
+      : (model.consensus && model.consensus.count >= 2 ? 'Konsensus wobec celu rodzicielskiego: ' : 'Prognoza wobec celu rodzicielskiego: ');
     return '<div class="vgcc-target">' + lbl + parts.join('; ') + ' — <b>' + esc(t.tierLabel) + '</b></div>';
   }
 
@@ -974,9 +989,13 @@
       parts.push('<p><span class="vgcc-lbl">Wiarygodność:</span> ' + rel + '</p>');
     }
     var profLabel = profileLabelText(model);
-    if (profLabel || model.profileSummary) {
+    // GROWTH-PRED-PUB4: zdanie modelu wiarygodności („pokazano standardowe modele BP i RWT…") nie pasuje
+    // do profili pokwitaniowych, gdzie RWT wypada — tam mówi akapit reguł.
+    var pubProf = model.pubertyProfile && model.pubertyProfile.profil ? String(model.pubertyProfile.profil) : '';
+    var summary = (model.pubertyRules && model.pubertyRules.active) || (pubProf && pubProf !== 'standardowy') ? '' : model.profileSummary;
+    if (profLabel || summary) {
       parts.push('<p><span class="vgcc-lbl">Profil predykcyjny:</span> ' + esc(profLabel) +
-        (model.profileSummary ? '. ' + esc(model.profileSummary) : '') + '</p>');
+        (summary ? '. ' + esc(summary) : '') + '</p>');
     }
     parts.push(pubertyProfileParagraph(model));
     var clampedEntries = model.entries.filter(function (e) { return e.clamped; });
@@ -1043,7 +1062,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '20',
+    version: '21',
     MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,

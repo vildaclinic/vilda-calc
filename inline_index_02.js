@@ -109,8 +109,13 @@
     if (!wrap || !st) return;
     var v = String(st.value || '');
     wrap.style.display = (otwarty && (v === 'w-trakcie' || v === 'zakonczone')) ? '' : 'none';
+    var start = pole('pubertyGnrhaStartAge');
     var stop = pole('pubertyGnrhaStopAge');
     if (stop) stop.disabled = v !== 'zakonczone';
+    // GROWTH-PRED-PUB4: pole schowane albo wyłączone nie może nieść wartości do rekordu —
+    // zmiana statusu czyści wiek, który przestał mieć sens (rekord i edytor Karty mówią to samo).
+    if (stop && v !== 'zakonczone' && stop.value !== '') stop.value = '';
+    if (start && v !== 'w-trakcie' && v !== 'zakonczone' && start.value !== '') start.value = '';
   }
 
   window.updateTannerVisibility = function () {

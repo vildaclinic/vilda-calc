@@ -93,6 +93,12 @@ test('ta sama dziewczynka w trakcie GnRHa od 7,2 l: tempo nieoceniane, nota Laza
   expect(g.cardText).toContain('W trakcie leczenia GnRHa prognoza rezydualnego wzrostu jest nierzetelna');
   expect(g.cardText).toContain('W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie');
   expect(g.fhp.excludedMethods).toEqual(expect.arrayContaining(['rwt', 'khamis']));
+  // GROWTH-PRED-PUB4: Tanner I pod leczeniem GnRHa bez wpisanego startu → przedwczesne z początku leczenia, nie „standardowy"
+  const t1 = await policz(page, { plec: 'F', lata: 8, miesiace: 0, wzrost: 132, masa: 30, ba: 10.5, tanner: '1', start: null, gnrha: 'w-trakcie', gnrhaStart: 7.0 });
+  expect(t1.profile).toMatchObject({ profil: 'przedwczesne', zrodloStartu: 'gnrha', wiekStartuLat: 7 });
+  expect(t1.cardText).toContain('Profil predykcyjny: przedwczesne pokwitanie (tempo nieoceniane), GnRHa w trakcie');
+  expect(t1.cardText).not.toContain('pokazano standardowe modele Bayley-Pinneau i RWT');
+  expect(t1.bp.reason).toContain('w profilu przedwczesnego pokwitania (leczonego GnRHa) użyto tablicy dla dzieci przeciętnych');
 
   const b = await policz(page, { plec: 'M', lata: 9, miesiace: 6, wzrost: 140, masa: 34, ba: 11, tanner: '', start: null, jadra: '4to6', gnrha: '', gnrhaStart: null });
   expect(b.profile).toMatchObject({ profil: 'wczesne', zrodloStartu: 'gorna-granica', tempo: 'wolne' });
@@ -125,4 +131,10 @@ test('bez danych pokwitaniowych profil standardowy: etykieta z modelu wiarygodno
   expect(r.fhp.excludedMethods).toEqual(['khamis']); // tylko bramka Δ +36, jak w GROWTH-PRED-DOBOR
   expect(r.fhp.infoRows).toEqual([]);
   expect(r.cardText).not.toContain('Wiersze informacyjne');
+  // GROWTH-PRED-PUB4: sam wpisany wiek startu (bez etapu Tannera) wystarcza do profilu
+  const s = await policz(page, { plec: 'F', lata: 7, miesiace: 6, wzrost: 130, masa: 28, ba: 9.5, tanner: '', start: 7.0 });
+  expect(s.profile).toMatchObject({ profil: 'przedwczesne', zrodloStartu: 'pole', tempo: 'szybkie' });
+  expect(s.fhp.pubertyRulesActive).toBe(true);
+  expect(s.bp).toMatchObject({ override: true, groupKey: 'average' });
+  expect(s.cardText).not.toContain('bez oznak pokwitania');
 });

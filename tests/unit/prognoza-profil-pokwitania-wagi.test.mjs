@@ -101,7 +101,7 @@ describe('Konsensus w profilu przedwczesnym — dziewczynka 7 l 6 mies., BA 9,5,
     expect(C._targetAssessmentFor(162.9, 168, LMS)).toMatchObject({ tier: 'ponizej-celu' });
     expect(C._targetAssessmentFor(163.1, 168, LMS)).toMatchObject({ tier: 'w-zakresie-celu' });
     expect(C._targetAssessmentFor(170, 168, LMS)).toMatchObject({ tier: 'w-zakresie-celu' });
-    expect(C._targetAssessmentFor(170, null, LMS)).toMatchObject({ tier: 'w-zakresie-celu', diffCm: null });
+    expect(C._targetAssessmentFor(170, null, LMS)).toMatchObject({ tier: 'w-normie-doroslych', tierLabel: 'w normie dorosłych', diffCm: null }); // GROWTH-PRED-PUB4: bez MPH nie ma „celu"
     expect(C._targetAssessmentFor(170, null, null)).toBeNull();
     expect(C._targetAssessmentFor(152, null, LMS)).toMatchObject({ tier: 'niskoroslosc-dorosla' });
     expect(C.TARGET_BELOW_CM).toBe(5);
@@ -134,15 +134,35 @@ describe('Karta', () => {
     expect(t).not.toContain('dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy');
   });
   it('tempo wolne i chłopiec: noty Jang 2023 i Lazar 2001 / Cho 2026; GnRHa w trakcie: ostrożność (Lazar 2007); bez profilu — bez akapitu i bez zdania wobec celu', () => {
-    const boy = text(C.render({ ...BAZA, sex: 'M', tw2: null, adultHeightLMS: { L: 1, M: 178, S: 0.038 }, mphCm: 176, pubertyProfile: { ...PROFIL, profil: 'wczesne', tempo: 'wolne', etykieta: 'wczesne pokwitanie (tempo wolne)' } }));
+    const boy = text(C.render({ ...BAZA, sex: 'M', tw2: null, adultHeightLMS: { L: 1, M: 178, S: 0.038 }, mphCm: 176, pubertyProfile: { ...PROFIL, profil: 'wczesne', tempo: 'wolne', etykieta: 'wczesne pokwitanie (tempo wolne)', wskazniki: { tannerStadium: 3 } } }));
     expect(boy).toContain('Reguły konsensusu w profilu wczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978; w profilu wczesnym jak w przedwczesnym — decyzja właściciela)');
     expect(boy).toContain('Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm, a wzrost ostateczny nieleczonych zwykle mieści się w zakresie celu (Jang 2023; Palmert 1999; Léger 2000).');
     expect(boy).toContain('U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001)');
     expect(boy).toContain('Prognoza wobec celu rodzicielskiego:'); // jedna metoda aktywna (BP) — zdanie zostaje, podpis bez słowa „konsensus"
+    expect(boy).toContain('MPH poza konsensusem (kotwica wchodzi dopiero przy dwóch metodach)'); // GROWTH-PRED-PUB4: tekst mówi, co policzono
+    const boy2 = text(C.render({ ...BAZA, sex: 'M', tw2: null, adultHeightLMS: { L: 1, M: 178, S: 0.038 }, mphCm: 176, pubertyProfile: { ...PROFIL, profil: 'wczesne', tempo: 'wolne', etykieta: 'x', wskazniki: { tannerStadium: 2 } } }));
+    expect(boy2).not.toContain('Lazar 2001'); // nota o Tanner 3 tylko w stadium ≥ 3
+    expect(boy2).toContain('Po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026)');
     const gn = text(C.render({ ...BAZA, pubertyProfile: { ...PROFIL, tempo: 'nieoceniane', gnrha: { status: 'w-trakcie', wTrakcie: true, poLeczeniu: false } } }));
     expect(gn).toContain('W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie');
     const std = text(C.render(STANDARD));
     expect(std).not.toContain('Reguły konsensusu w profilu');
+    // GROWTH-PRED-PUB4: bez MPH zdanie mówi o normach dorosłych, nie o celu; BP bez przedziału bez „×1,3"; stare zdanie modelu wiarygodności znika w profilu
+    const bezMph = C.computeFinalHeightPrediction({ ...BAZA, mphCm: null, pubertyProfile: PROFIL });
+    expect(bezMph.targetAssessment).toMatchObject({ diffCm: null, tier: 'w-normie-doroslych', tierLabel: 'w normie dorosłych' });
+    expect(text(C.render({ ...BAZA, mphCm: null, pubertyProfile: PROFIL }))).toContain('Prognoza wobec norm dorosłych (bez wzrostu rodziców): wobec norm dorosłych');
+    expect(C._targetAssessmentFor(152, null, LMS)).toMatchObject({ tier: 'niskoroslosc-dorosla' });
+    const bezPm = C.computeFinalHeightPrediction({ ...BAZA, bp: { available: true, predictedAdultHeightCm: 158.0, groupOverrideApplied: false, groupAutoKey: 'retarded' }, pubertyProfile: PROFIL });
+    expect(bezPm.methods.find((m) => m.key === 'bp')).toMatchObject({ profileSigmaFactor: 1, errorHalfWidthCm: null });
+    const bezPmTxt = text(C.render({ ...BAZA, bp: { available: true, predictedAdultHeightCm: 158.0, groupOverrideApplied: false, groupAutoKey: 'retarded' }, pubertyProfile: PROFIL }));
+    expect(bezPmTxt).toContain('Bayley–Pinneau z tablicy wg rozbieżności wieku kostnego (grupa opóźniona, więc bez zamiany) (bez przedziału błędu dla tego wieku, więc bez poszerzenia)');
+    expect(bezPmTxt).not.toContain('×1,3');
+    const zProfilem = text(C.render({ ...BAZA, pubertyProfile: PROFIL, reliabilityModel: { ...BAZA.reliabilityModel, profileStatusLabel: 'Profil standardowy', profileSummaryText: 'Dla tego profilu pokazano standardowe modele Bayley-Pinneau i RWT bez automatycznego modelu preferowanego.' } }));
+    expect(zProfilem).not.toContain('pokazano standardowe modele Bayley-Pinneau i RWT');
+    const stdSummary = text(C.render({ ...STANDARD, reliabilityModel: { ...BAZA.reliabilityModel, profileStatusLabel: 'Profil standardowy', profileSummaryText: 'Dla tego profilu pokazano standardowe modele Bayley-Pinneau i RWT bez automatycznego modelu preferowanego.' } }));
+    expect(stdSummary).toContain('Profil predykcyjny: Profil standardowy. Dla tego profilu pokazano standardowe modele');
+    const niski = text(C.render({ ...BAZA, heightSds: -2.5, pubertyProfile: PROFIL }));
+    expect(niski).toContain('MPH jako kotwica z wagą ×0,5 (niskorosłość, Blum 2022)');
     expect(std).not.toContain('Konsensus wobec celu rodzicielskiego');
     expect(std).toContain('dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy');
   });
