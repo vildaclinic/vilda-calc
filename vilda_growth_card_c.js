@@ -80,6 +80,18 @@
   var MPH_SHORT_WEIGHT = 0.5;
   var REINEHR_ERR_HALFWIDTH_CM = 6.4;
 
+  // GROWTH-PRED-TW2 (decyzja właściciela 2026-09-12): profil „po menarche" u dziewcząt.
+  //  • TW Mark II (Tanner 1983, tab. 3.1a/3.1b/3.1c) jako metoda konsensusu: poziom z resztkowego
+  //    SD tablicy (≤ 2,0 → wysoka; ≤ 3,0 → umiarkowana; wyżej → obniżona), przy ekstrapolacji poniżej
+  //    tablicy (po menarche przed 11,5 r.ż.) — orientacyjna.
+  //  • Po menarche: RWT i Khamis–Roche poza konsensusem (nie znają statusu menarche; regresje na
+  //    dzieciach rosnących), kotwica MPH ×0,25 (Tanner 1983, s. 775: przy 95 % wzrostu dorosłego
+  //    dodawanie za wysokich rodziców „nie ma sensu"), pseudometoda „wzrost przy menarche / 0,955"
+  //    (Singleton 1975; korekta wieku kostnego Cho 2026) z poziomem obniżonym.
+  //  PARAMETRY KLINICZNE — do strojenia.
+  var MPH_POSTMENARCHE_WEIGHT = 0.25;
+  var TW2_LEVEL_SD_HIGH = 2.0, TW2_LEVEL_SD_MODERATE = 3.0;
+
   // Korekta błędu systematycznego dla metody `key` w profilu `ctx`
   // ({ sexKey, deltaMonths, heightSds, boneAgeYears }) albo null.
   function biasFor(key, ctx) {
@@ -119,7 +131,11 @@
     var fromBp = num(input && input.bp && input.bp.deltaMonths);
     return fromBp;
   }
-  function gateFor(key, delta) {
+  function gateFor(key, delta, ctx) {
+    // Profil po menarche (GROWTH-PRED-TW2): RWT i KR nie modelują menarche → poza konsensusem.
+    if (ctx && ctx.postmenarcheal === true && (key === 'rwt' || key === 'khamis')) {
+      return { factor: 0, excluded: true, note: 'poza konsensusem, bo metoda nie zna statusu menarche (dziewczynka po menarche)' };
+    }
     if (delta === null || delta === undefined) return { factor: 1, excluded: false, note: '' };
     var abs = Math.abs(delta);
     var sign = delta > 0 ? '+' : '−';
@@ -267,6 +283,7 @@
     var anchor = num(opts.anchorCm); if (anchor === null || anchor <= 0) anchor = mph;
     var hsW = num(opts.heightSds);
     var mphWeightFactor = (hsW !== null && hsW <= BIAS_SHORT_SDS) ? MPH_SHORT_WEIGHT : 1;
+    if (opts.postmenarcheal === true) mphWeightFactor *= MPH_POSTMENARCHE_WEIGHT;
     if (mph !== null && mph > 0 && sw > 0 && es.length >= 2) {
       var wm = mphWeightFactor * CONSENSUS_W.mph / (MPH_SIGMA_CM * MPH_SIGMA_CM);
       sw += wm; swv += wm * anchor; withMph = true; mphShare = wm / sw;
@@ -336,7 +353,10 @@
     add('bp', 'Bayley–Pinneau', input.bp, num(input.bp && input.bp.errorBoundHalfWidthCm));
     (function () {
       var e = entries[entries.length - 1];
-      if (e && e.key === 'bp') e.levelKey = levelFor(rm, 'bayleyPinneau') || 'moderate';
+      if (e && e.key === 'bp') {
+        e.levelKey = levelFor(rm, 'bayleyPinneau') || 'moderate';
+        e.bpGroupOverride = !!(input.bp && input.bp.groupOverrideApplied === true);
+      }
     })();
     (function () {
       var r = input.khamis && typeof input.khamis === 'object' ? input.khamis : null;
@@ -395,14 +415,67 @@
         e.blumModelId = r.modelId || null;
       }
     })();
-    // Bramki stosowalności wg Δ (GROWTH-PRED-DOBOR).
+    // 6. TW Mark II (Tanner 1983) — dziewczęta; gotowy wynik z adaptera (input.tw2) albo silnik.
+    var postmenarcheal = sk === 'F' && input.postmenarcheal === true;
+    (function () {
+      if (sk !== 'F') return;
+      var r = input.tw2 && typeof input.tw2 === 'object' ? input.tw2 : null;
+      if (!r) {
+        var engine = w.calculateTW2Prediction;
+        if (typeof engine !== 'function') return;
+        try {
+          r = engine({ sex: input.sex, chronologicalAgeYears: input.ageYears, chronologicalAgeMonths: input.ageMonths,
+            currentHeightCm: input.currentHeightCm, boneAgeYears: input.boneAgeYears, boneAgeSource: input.boneAgeSource || 'GP',
+            postmenarcheal: input.postmenarcheal, menarcheAgeYears: input.menarcheAgeYears });
+        } catch (_) { r = null; }
+      }
+      if (!r || r.available !== true) return;
+      add('tw2', 'TW Mark II', r, num(r.errorBoundHalfWidthCm));
+      var e = entries[entries.length - 1];
+      if (e && e.key === 'tw2') {
+        var sd = num(r.residualSdCm);
+        e.levelKey = r.extrapolatedBelowTable === true ? 'indicative'
+          : (sd !== null && sd <= TW2_LEVEL_SD_HIGH ? 'high' : (sd !== null && sd <= TW2_LEVEL_SD_MODERATE ? 'moderate' : 'lowered'));
+        e.tw2Table = r.table || '';
+        e.tw2RowAge = r.rowAge;
+        e.tw2Extrapolated = r.extrapolatedBelowTable === true;
+        e.tw2Variants = r.variants || null;
+        e.tw2Notes = Array.isArray(r.notes) ? r.notes.slice() : [];
+        e.tw2BoneAgeSource = r.boneAgeSource || '';
+      }
+    })();
+    // 7. Wzrost przy menarche / 0,955 (Singleton 1975; korekta Cho 2026) — tylko po menarche.
+    (function () {
+      if (!postmenarcheal) return;
+      var r = input.menarche && typeof input.menarche === 'object' ? input.menarche : null;
+      if (!r) {
+        var engine = w.calculateMenarcheFractionPrediction;
+        if (typeof engine !== 'function' || num(input.heightAtMenarcheCm) === null) return;
+        try {
+          r = engine({ heightAtMenarcheCm: input.heightAtMenarcheCm, boneAgeAtMenarcheYears: input.boneAgeAtMenarcheYears,
+            menarcheAgeYears: input.menarcheAgeYears, currentHeightCm: input.currentHeightCm });
+        } catch (_) { r = null; }
+      }
+      if (!r || r.available !== true) return;
+      add('menarche', 'Wzrost przy menarche / 0,955', r, num(r.errorBoundHalfWidthCm));
+      var e = entries[entries.length - 1];
+      if (e && e.key === 'menarche') {
+        e.levelKey = 'lowered';
+        e.menarcheBaseCm = num(r.baseCm);
+        e.menarcheAdjCm = num(r.boneAgeAdjustmentCm) || 0;
+        e.menarcheNotes = Array.isArray(r.notes) ? r.notes.slice() : [];
+      }
+    })();
+    // Bramki stosowalności wg Δ (GROWTH-PRED-DOBOR) i profilu po menarche (GROWTH-PRED-TW2).
+    var gateCtx = { postmenarcheal: postmenarcheal };
     for (var gi = 0; gi < entries.length; gi++) {
-      var g = gateFor(entries[gi].key, delta);
+      var g = gateFor(entries[gi].key, delta, gateCtx);
       entries[gi].gateFactor = g.factor;
       entries[gi].excluded = g.excluded;
       entries[gi].gateNote = g.note;
     }
     entries.deltaMonths = delta;
+    entries.postmenarcheal = postmenarcheal;
     return entries;
   }
 
@@ -415,7 +488,7 @@
     input = input || {};
     var anchor = num(input.mphAnchorCm);
     if (anchor === null) anchor = mphAnchorFrom(input.mphCm, input.adultMedianHeightCm);
-    return { anchorCm: anchor, heightSds: num(input.heightSds) };
+    return { anchorCm: anchor, heightSds: num(input.heightSds), postmenarcheal: sexKey(input.sex) === 'F' && input.postmenarcheal === true };
   }
   function computeFinalHeightPrediction(input) {
     var entries = buildEntries(input || {});
@@ -461,6 +534,7 @@
       deltaMonths: entries.deltaMonths !== undefined ? entries.deltaMonths : null,
       gateFired: gateFired,
       excludedMethods: excluded,
+      postmenarcheal: entries.postmenarcheal === true,
       preferredKey: wcon.recommendedKey || null,
       preferredLabel: wcon.recommendedLabel || null,
       minCm: con.min,
@@ -469,7 +543,7 @@
       // errorHalfWidthCm: polszerokosc 90% bledu metody (pm) — ta sama, ktora karta
       // pokazuje jako „±"; konsumenci (opis pacjenta) czytaja ja stad, zeby stala
       // Khamis-Roche nie miala drugiej kopii poza ta karta.
-      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '', uncorrectedCm: e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.value, biasCm: e.biasCm || 0, biasNote: e.biasNote || '' }; })
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '', uncorrectedCm: e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.value, biasCm: e.biasCm || 0, biasNote: e.biasNote || '', levelKey: e.levelKey || null, tw2Table: e.tw2Table || '', tw2Extrapolated: e.tw2Extrapolated === true }; })
     };
   }
 
@@ -500,6 +574,10 @@
       hasBlum: entries.some(function (e) { return e.key === 'blum'; }),
       hasBp: entries.some(function (e) { return e.key === 'bp'; }),
       hasReinehr: entries.some(function (e) { return e.key === 'reinehr'; }),
+      hasTw2: entries.some(function (e) { return e.key === 'tw2'; }),
+      hasMenarche: entries.some(function (e) { return e.key === 'menarche'; }),
+      postmenarcheal: entries.postmenarcheal === true,
+      menarcheAgeYears: num(input.menarcheAgeYears),
       reinehrExtrapolated: entries.some(function (e) { return e.key === 'reinehr' && e.reinehrExtrapolated; }),
       reinehrPooled: entries.some(function (e) { return e.key === 'reinehr' && e.reinehrPooled; }),
       boneAgeMissing: boneAgeMissing,
@@ -592,8 +670,35 @@
       s += 'kotwica (udział ';
     }
     s += esc(String(Math.round((wc.mphShare || 0) * 100))) + '%';
-    if (wc.mphWeightFactor !== undefined && wc.mphWeightFactor < 1) s += '; waga ×0,5 w niskorosłości, bo dzieci ISS kończą poniżej celu, Blum 2022';
+    if (model.postmenarcheal) s += '; waga ×0,25 po menarche, bo przy ok. 95 % wzrostu dorosłego poprawka na rodziców traci sens, Tanner 1983';
+    if (wc.mphWeightFactor !== undefined && wc.mphWeightFactor < (model.postmenarcheal ? MPH_POSTMENARCHE_WEIGHT : 1)) s += '; waga ×0,5 w niskorosłości, bo dzieci ISS kończą poniżej celu, Blum 2022';
     return s + ').';
+  }
+  function tw2Paragraph(model) {
+    var e = (model.entries || []).filter(function (x) { return x.key === 'tw2'; })[0];
+    if (!e) return '';
+    var s = '<p><span class="vgcc-lbl">TW Mark II:</span> równania Tannera i wsp. (1983) dla dziewcząt, tablica ' + esc(e.tw2Table) +
+      (e.tw2Table === '3.1c' ? ' (po menarche, ze znanym wiekiem menarche)' : (e.tw2Table === '3.1b' ? ' (po menarche, wiek menarche nieznany)' : ' (przed menarche)')) +
+      ', wiersz ' + esc(String(e.tw2RowAge).replace('.', ',')) + ' l';
+    if (e.tw2Variants) s += '; warianty: wiek dokładny ' + esc(fmt1(e.tw2Variants.exactCa)) + ' cm, wiek obcięty ' + esc(fmt1(e.tw2Variants.clampedCa)) + ' cm';
+    if (e.tw2Notes && e.tw2Notes.length) s += '. ' + e.tw2Notes.map(function (n) { return esc(n); }).join('; ');
+    return s + '.</p>';
+  }
+  function menarcheParagraph(model) {
+    var parts = [];
+    if (model.postmenarcheal) {
+      parts.push('<p><span class="vgcc-lbl">Profil po menarche:</span> dziewczynka po pierwszej miesiączce' +
+        (num(model.menarcheAgeYears) !== null ? ' (menarche w wieku ' + esc(fmt1(model.menarcheAgeYears)) + ' l)' : '') +
+        ' — przy menarche osiągnięte jest ok. 95,5 % wzrostu ostatecznego (Singleton 1975), a dalszy przyrost (zwykle 5–8 cm) zależy głównie od wieku kostnego przy menarche (Cho 2026). RWT i Khamis–Roche nie modelują menarche i są poza konsensusem; największą wagę ma TW Mark II (Tanner 1983: po menarche resztkowe SD 0,9–1,9 cm).</p>');
+    }
+    var e = (model.entries || []).filter(function (x) { return x.key === 'menarche'; })[0];
+    if (e) {
+      parts.push('<p><span class="vgcc-lbl">Wzrost przy menarche / 0,955:</span> baza ' + esc(fmt1(e.menarcheBaseCm)) + ' cm' +
+        (e.menarcheAdjCm ? ', korekta ' + (e.menarcheAdjCm > 0 ? '+' : '−') + esc(fmt1(Math.abs(e.menarcheAdjCm))) + ' cm' : '') +
+        (e.menarcheNotes && e.menarcheNotes.length ? '; ' + e.menarcheNotes.map(function (n) { return esc(n); }).join('; ') : '') +
+        ' (Singleton 1975: 95,5 ± 1,2 %, n = 40; Cho 2026).</p>');
+    }
+    return parts.join('');
   }
   function biasSentence(model) {
     var corr = (model.entries || []).filter(function (e) { return e.biasCm; });
@@ -644,14 +749,18 @@
       parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> bez wieku kostnego bramki rozbieżności nie działają; wszystkie metody z pełną wagą.</p>');
     }
     parts.push(biasSentence(model));
+    parts.push(menarcheParagraph(model));
+    parts.push(tw2Paragraph(model));
     if (model.hasBlum) {
       var be = model.entries.filter(function (e) { return e.key === 'blum'; })[0];
       parts.push('<p><span class="vgcc-lbl">Blum/ISS:</span> równania dla dzieci niskorosłych (hSDS ≤ −1,28; Blum i wsp., J Endocr Soc 2022' + (be && be.blumModelId ? ', model ' + esc(String(be.blumModelId)) : '') + '); RMSE 3,2–3,7 cm, kohorta niemiecko-holenderska. Nie stosować u dzieci rosnących prawidłowo ani wysokich.</p>');
     }
     if (model.hasBp) {
       var dmb = num(model.deltaMonths);
+      var bpOv = model.entries.some(function (e) { return e.key === 'bp' && e.bpGroupOverride; });
       parts.push('<p><span class="vgcc-lbl">Bayley–Pinneau:</span> błąd odczytu wieku kostnego z RTG jest głównym źródłem błędu prognozy — autorki zalecają uśrednić kilka niezależnych odczytów.' +
-        (dmb !== null && dmb >= DELTA_GATE_MONTHS ? ' Bayley i Pinneau (1952): dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy, niż wskazują tabele.' : '') +
+        (bpOv ? ' Po menarche użyto tablicy dla dziewcząt „przeciętnych" zamiast „przyspieszonej" — w przedwczesnym dojrzewaniu jest dokładniejsza (Cho 2026); nota o dzieciach przyspieszonych dotyczy przyspieszenia konstytucjonalnego, nie dziewcząt po menarche.' : '') +
+        (dmb !== null && dmb >= DELTA_GATE_MONTHS && !bpOv ? ' Bayley i Pinneau (1952): dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy, niż wskazują tabele.' : '') +
         (dmb !== null && dmb <= -DELTA_GATE_MONTHS ? ' Bayley i Pinneau (1952): dzieci opóźnione o ponad 2 lata osiągają zwykle wzrost niższy, niż wskazują tabele.' : '') + '</p>');
     }
     if (model.hasReinehr) {
@@ -680,7 +789,8 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '13',
+    version: '14',
+    MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
     render: render,

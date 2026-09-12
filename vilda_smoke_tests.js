@@ -107,6 +107,8 @@
     'vilda_professional_module.js?v=5',
     'vilda_persist_runtime.js?v=13',
     'vilda_summary_cards.js?v=31',
+    'tw2_data.js?v=1',
+    'vilda_tw2_prediction.js?v=1',
     'vilda_diet_plan_ui.js?v=12',
     'vilda_bmi_journey.js?v=10',
     'vilda_estimated_intake_ui.js?v=1',

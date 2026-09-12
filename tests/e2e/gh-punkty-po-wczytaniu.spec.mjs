@@ -74,8 +74,10 @@ async function policzPacjentke(page) {
     if (f && getComputedStyle(f).display !== 'none') return;
     if (t) { t.disabled = false; t.click(); }
   });
-  await expect(page.locator('#advancedGrowthForm')).toBeVisible();
-  await page.waitForSelector('#advMeasurements .measure-row');
+  // Wiersz pomiaru bywa chwilowo ukryty (zwinięta analiza) — wartości wpisujemy przez DOM,
+  // więc wystarczy, że istnieje; sama karta musi być widoczna (z dłuższym limitem).
+  await expect(page.locator('#advancedGrowthForm')).toBeVisible({ timeout: 10000 });
+  await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });
   await page.evaluate(() => {
     const w = document.querySelector('#advMeasurements .measure-row');
     const set = (sel, v) => {
