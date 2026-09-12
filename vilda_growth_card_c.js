@@ -92,6 +92,71 @@
   var MPH_POSTMENARCHE_WEIGHT = 0.25;
   var TW2_LEVEL_SD_HIGH = 2.0, TW2_LEVEL_SD_MODERATE = 3.0;
 
+  // GROWTH-PRED-PUB2 (decyzja właściciela 2026-09-12): reguły wag w profilu przedwczesnego / wczesnego
+  // pokwitania (profil z vilda_puberty_profile.js; także w trakcie i po leczeniu GnRHa, bo GnRHa
+  // podaje się tylko w przedwczesnym pokwitaniu). Właściciel: profil wczesny (8–9 l dziewczęta,
+  // 9–10,5 l chłopcy) traktować jak przedwczesny.
+  //  • RWT i Khamis–Roche POZA konsensusem: regresje z dzieci o prawidłowym czasie pokwitania; RWT
+  //    i Tanner Mark I „rażąco zawyżają" w przedwczesnym pokwitaniu (Zachmann 1978), KR nie zna
+  //    wieku kostnego.
+  //  • Bayley–Pinneau z tablicy „przeciętnej" zamiast „przyspieszonej" (Kauli 1997; Tanaka 2005;
+  //    Brito 2008; Mul 2005 — adapter przekazuje groupOverride) i przedział ×1,3 (Erkko 2025: bez błędu
+  //    średniego, ale SD 6,6 cm u 6–8-latek). Nota Bayley o dzieciach przyspieszonych wyciszona.
+  //  • TW Mark II orientacyjna (tablice Tannera z dzieci o prawidłowym czasie dojrzewania).
+  //  • MPH: pełna waga kotwicy przed menarche (×0,25 zostaje tylko po menarche).
+  //  • Zdanie „konsensus wobec celu rodzicielskiego": różnica w cm i w SD celu (σ 5,1); progi:
+  //    ≥ 5 cm poniżej MPH → „poniżej celu"; konsensus < −2 SDS norm dorosłych → „niskorosłość
+  //    dorosła" (Bertelloni 2017: nieleczone wczesne FH ≈ MPH; Kauli 1997: szybkie 5–8 cm poniżej).
+  //    Bez słów o leczeniu — decyzja lekarza. PARAMETRY KLINICZNE — do strojenia.
+  var PUB_BP_SIGMA_FACTOR = 1.3;
+  var TARGET_BELOW_CM = 5;
+  var ADULT_SHORT_SDS = -2;
+
+  // Reguły profilu pokwitaniowego dla konsensusu: { active, profil, tempo, gnrhaWTrakcie, gnrhaPo, label }.
+  function pubertyRulesFor(pp) {
+    var off = { active: false, profil: pp && pp.profil ? String(pp.profil) : '', tempo: pp && pp.tempo ? String(pp.tempo) : '', kategoriaStartu: pp && pp.kategoriaStartu ? String(pp.kategoriaStartu) : '', gnrhaWTrakcie: false, gnrhaPo: false, label: '' };
+    if (!pp || typeof pp !== 'object') return off;
+    var g = pp.gnrha && typeof pp.gnrha === 'object' ? pp.gnrha : {};
+    off.gnrhaWTrakcie = g.wTrakcie === true;
+    off.gnrhaPo = g.poLeczeniu === true;
+    var profil = off.profil;
+    var treated = off.gnrhaWTrakcie || off.gnrhaPo;
+    var active = profil === 'przedwczesne' || profil === 'wczesne' || (treated && profil !== 'po-menarche');
+    if (!active) return off;
+    off.active = true;
+    off.label = profil === 'wczesne' ? 'wczesnego pokwitania' : (profil === 'przedwczesne' ? 'przedwczesnego pokwitania' : 'leczonego przedwczesnego pokwitania');
+    return off;
+  }
+  // Reguła profilu dla metody (poszerzenie przedziału) albo null.
+  function profileRuleFor(key, rules) {
+    if (!rules || !rules.active) return null;
+    if (key === 'bp') return { sigmaFactor: PUB_BP_SIGMA_FACTOR, note: 'przedział ×1,3 w profilu ' + rules.label + ' (Erkko 2025: SD 6,6 cm u 6–8-latek)' };
+    return null;
+  }
+  // SDS wzrostu wobec norm dorosłych z LMS (18 l) — null bez kompletnego LMS.
+  function adultSdsFor(cm, lms) {
+    var x = num(cm);
+    if (x === null || x <= 0 || !lms || typeof lms !== 'object') return null;
+    var L = num(lms.L), M = num(lms.M), S = num(lms.S);
+    if (M === null || M <= 0 || S === null || S <= 0) return null;
+    if (L === null) L = 1;
+    var z = Math.abs(L) < 1e-6 ? Math.log(x / M) / S : (Math.pow(x / M, L) - 1) / (L * S);
+    return isFinite(z) ? z : null;
+  }
+  // Konsensus wobec celu rodzicielskiego: różnica w cm i w SD celu, SDS wobec norm dorosłych, próg.
+  function targetAssessmentFor(weightedCm, mphCm, adultLms) {
+    var w = num(weightedCm), m = num(mphCm);
+    if (w === null) return null;
+    var adultSds = adultSdsFor(w, adultLms);
+    var diff = m !== null && m > 0 ? w - m : null;
+    var tier = 'w-zakresie-celu';
+    if (adultSds !== null && adultSds < ADULT_SHORT_SDS) tier = 'niskoroslosc-dorosla';
+    else if (diff !== null && diff <= -TARGET_BELOW_CM) tier = 'ponizej-celu';
+    else if (diff === null && adultSds === null) return null;
+    return { diffCm: diff, targetSd: diff !== null ? diff / MPH_SIGMA_CM : null, adultSds: adultSds, tier: tier,
+      tierLabel: tier === 'niskoroslosc-dorosla' ? 'niskorosłość dorosła' : (tier === 'ponizej-celu' ? 'poniżej celu' : 'w zakresie celu') };
+  }
+
   // Korekta błędu systematycznego dla metody `key` w profilu `ctx`
   // ({ sexKey, deltaMonths, heightSds, boneAgeYears }) albo null.
   function biasFor(key, ctx) {
@@ -136,6 +201,13 @@
     if (ctx && ctx.postmenarcheal === true && (key === 'rwt' || key === 'khamis')) {
       return { factor: 0, excluded: true, note: 'poza konsensusem, bo metoda nie zna statusu menarche (dziewczynka po menarche)' };
     }
+    // Profil przedwczesnego / wczesnego pokwitania (GROWTH-PRED-PUB2): RWT i KR poza konsensusem.
+    if (ctx && ctx.pubertyRules && ctx.pubertyRules.active && (key === 'rwt' || key === 'khamis')) {
+      var pl = ctx.pubertyRules.label || 'przedwczesnego pokwitania';
+      return { factor: 0, excluded: true, note: key === 'rwt'
+        ? 'poza konsensusem w profilu ' + pl + ': regresja z dzieci o prawidłowym czasie pokwitania, w przedwczesnym pokwitaniu rażąco zawyża (Zachmann 1978)' + (ctx.pubertyRules.profil === 'wczesne' ? '; w profilu wczesnym jak w przedwczesnym — decyzja właściciela' : '')
+        : 'poza konsensusem w profilu ' + pl + ': metoda nie zna wieku kostnego ani stadium pokwitania (regresja z dzieci o prawidłowym czasie pokwitania)' };
+    }
     if (delta === null || delta === undefined) return { factor: 1, excluded: false, note: '' };
     var abs = Math.abs(delta);
     var sign = delta > 0 ? '+' : '−';
@@ -170,6 +242,8 @@
     '.vgcc-mph{display:block;text-align:center;background:#fbf6ec;border:1px solid #e7d8bb;border-radius:9px;padding:.4rem .6rem;margin:.1rem 0 .5rem;font-size:.9rem;color:#6d4a11}',
     '.vgcc-mph-cent{color:#8a6a2a}',
     '.vgcc-mph b{color:#8a4b00}',
+    '.vgcc-target{display:block;text-align:center;background:#f4f8fb;border:1px solid #cfdde8;border-radius:9px;padding:.4rem .6rem;margin:.1rem 0 .5rem;font-size:.88rem;color:#2b4a63}',
+    '.vgcc-target b{color:#1d3a52}',
     '.vgcc-stats{display:flex;gap:.5rem;margin:.15rem 0 .5rem}',
     '.vgcc-stat{flex:1;background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;padding:.45rem .5rem;text-align:center}',
     '.vgcc-stat .k{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--vgcc-muted)}',
@@ -318,6 +392,7 @@
     var entries = [];
     var delta = deltaMonthsFor(input);
     var biasCtx = { sexKey: sk, deltaMonths: delta, heightSds: num(input.heightSds), boneAgeYears: num(input.boneAgeYears) };
+    var pubRules = pubertyRulesFor(input.pubertyProfile);
 
     // Wzrost ostateczny nie może być niższy niż już zmierzony: prognozę punktową
     // ogranicza się od dołu aktualnym wzrostem (surowa wartość w rawValue, flaga
@@ -336,6 +411,9 @@
         val += bias.shiftCm; raw += bias.shiftCm;
         if (pm !== null && pm !== undefined) pm = pm * bias.sigmaFactor;
       }
+      // GROWTH-PRED-PUB2: poszerzenie przedziału wg profilu pokwitaniowego (bez przesunięcia).
+      var prule = profileRuleFor(key, pubRules);
+      if (prule && pm !== null && pm !== undefined) pm = pm * prule.sigmaFactor;
       if (curH !== null && val < curH) { val = curH; clamped = true; }
       entries.push({
         key: key, label: label, value: val, pm: pm, levelKey: null,
@@ -343,6 +421,7 @@
         uncorrectedCm: uncorrected,
         biasCm: bias ? bias.shiftCm : 0, biasSigmaFactor: bias ? bias.sigmaFactor : 1,
         biasNote: bias ? bias.note : '', biasSource: bias ? bias.source : '',
+        profileSigmaFactor: prule ? prule.sigmaFactor : 1, profileNote: prule ? prule.note : '',
         loCm: pm !== null && pm !== undefined ? Math.max(val - pm, curH !== null ? curH : -Infinity) : null,
         hiCm: pm !== null && pm !== undefined ? Math.max(raw + pm, val) : null
       });
@@ -356,6 +435,8 @@
       if (e && e.key === 'bp') {
         e.levelKey = levelFor(rm, 'bayleyPinneau') || 'moderate';
         e.bpGroupOverride = !!(input.bp && input.bp.groupOverrideApplied === true);
+        e.bpGroupAutoKey = input.bp && input.bp.groupAutoKey ? String(input.bp.groupAutoKey) : '';
+        e.bpAutoGroupCm = num(input.bp && input.bp.autoGroupPredictedAdultHeightCm);
       }
     })();
     (function () {
@@ -436,6 +517,8 @@
         var sd = num(r.residualSdCm);
         e.levelKey = r.extrapolatedBelowTable === true ? 'indicative'
           : (sd !== null && sd <= TW2_LEVEL_SD_HIGH ? 'high' : (sd !== null && sd <= TW2_LEVEL_SD_MODERATE ? 'moderate' : 'lowered'));
+        // GROWTH-PRED-PUB2: w profilu przedwczesnego / wczesnego pokwitania TW2 orientacyjna.
+        if (pubRules.active) { e.tw2LevelBeforeProfile = e.levelKey; e.levelKey = 'indicative'; e.tw2ProfileNote = 'Poziom orientacyjny w profilu ' + pubRules.label + ' — tablice Tannera pochodzą z dzieci o prawidłowym czasie dojrzewania'; }
         e.tw2Table = r.table || '';
         e.tw2RowAge = r.rowAge;
         e.tw2Extrapolated = r.extrapolatedBelowTable === true;
@@ -471,7 +554,7 @@
       }
     })();
     // Bramki stosowalności wg Δ (GROWTH-PRED-DOBOR) i profilu po menarche (GROWTH-PRED-TW2).
-    var gateCtx = { postmenarcheal: postmenarcheal };
+    var gateCtx = { postmenarcheal: postmenarcheal, pubertyRules: pubRules };
     for (var gi = 0; gi < entries.length; gi++) {
       var g = gateFor(entries[gi].key, delta, gateCtx);
       entries[gi].gateFactor = g.factor;
@@ -480,6 +563,7 @@
     }
     entries.deltaMonths = delta;
     entries.postmenarcheal = postmenarcheal;
+    entries.pubertyRules = pubRules;
     return entries;
   }
 
@@ -493,6 +577,13 @@
     var anchor = num(input.mphAnchorCm);
     if (anchor === null) anchor = mphAnchorFrom(input.mphCm, input.adultMedianHeightCm);
     return { anchorCm: anchor, heightSds: num(input.heightSds), postmenarcheal: sexKey(input.sex) === 'F' && input.postmenarcheal === true };
+  }
+  // Zdanie „konsensus wobec celu" pokazujemy w profilach pokwitaniowych: przedwczesne / wczesne /
+  // leczone GnRHa, a po menarche — gdy start był przedwczesny lub wczesny.
+  function showTarget(rules, postmenarcheal) {
+    if (!rules) return false;
+    if (rules.active) return true;
+    return postmenarcheal === true && (rules.kategoriaStartu === 'przedwczesne' || rules.kategoriaStartu === 'wczesne');
   }
   function computeFinalHeightPrediction(input) {
     var entries = buildEntries(input || {});
@@ -543,6 +634,9 @@
       pubertyProfile: input.pubertyProfile && typeof input.pubertyProfile === 'object'
         ? { profil: input.pubertyProfile.profil || null, tempo: input.pubertyProfile.tempo || null, etykieta: input.pubertyProfile.etykieta || '', gnrhaStatus: input.pubertyProfile.gnrha ? (input.pubertyProfile.gnrha.status || '') : '' }
         : null,
+      // GROWTH-PRED-PUB2: czy działały reguły profilu pokwitaniowego i jak konsensus ma się do celu.
+      pubertyRulesActive: entries.pubertyRules ? entries.pubertyRules.active === true : false,
+      targetAssessment: showTarget(entries.pubertyRules, entries.postmenarcheal === true) ? targetAssessmentFor(weightedCm, num(input.mphCm), input.adultHeightLMS) : null,
       preferredKey: wcon.recommendedKey || null,
       preferredLabel: wcon.recommendedLabel || null,
       minCm: con.min,
@@ -551,7 +645,7 @@
       // errorHalfWidthCm: polszerokosc 90% bledu metody (pm) — ta sama, ktora karta
       // pokazuje jako „±"; konsumenci (opis pacjenta) czytaja ja stad, zeby stala
       // Khamis-Roche nie miala drugiej kopii poza ta karta.
-      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '', uncorrectedCm: e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.value, biasCm: e.biasCm || 0, biasNote: e.biasNote || '', levelKey: e.levelKey || null, tw2Table: e.tw2Table || '', tw2Extrapolated: e.tw2Extrapolated === true }; })
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '', uncorrectedCm: e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.value, biasCm: e.biasCm || 0, biasNote: e.biasNote || '', levelKey: e.levelKey || null, tw2Table: e.tw2Table || '', tw2Extrapolated: e.tw2Extrapolated === true, profileSigmaFactor: e.profileSigmaFactor || 1, bpGroupOverride: e.bpGroupOverride === true }; })
     };
   }
 
@@ -593,7 +687,11 @@
       profileStatus: rm && rm.profileStatusLabel ? String(rm.profileStatusLabel) : '',
       profileSummary: rm && rm.profileSummaryText ? String(rm.profileSummaryText) : '',
       // GROWTH-PRED-PUB1: profil pokwitaniowy z vilda_puberty_profile.js (adapter → input.pubertyProfile).
-      pubertyProfile: input.pubertyProfile && typeof input.pubertyProfile === 'object' ? input.pubertyProfile : null
+      pubertyProfile: input.pubertyProfile && typeof input.pubertyProfile === 'object' ? input.pubertyProfile : null,
+      // GROWTH-PRED-PUB2: reguły profilu i konsensus wobec celu rodzicielskiego.
+      pubertyRules: entries.pubertyRules || pubertyRulesFor(null),
+      targetAssessment: (con.count >= 1 && wcon.weighted !== null && showTarget(entries.pubertyRules, entries.postmenarcheal === true))
+        ? targetAssessmentFor(wcon.weighted, mphCm, input.adultHeightLMS) : null
     };
   }
 
@@ -617,9 +715,40 @@
     s += '.';
     if (pp.gnrha && pp.gnrha.wTrakcie) s += ' W trakcie leczenia GnRHa prognoza rezydualnego wzrostu jest nierzetelna — nasady zamykają się wcześniej niż wynika z wieku kostnego, zwłaszcza po rozpoznaniu po 6. r.ż. (Lazar 2007).';
     else if (pp.gnrha && pp.gnrha.poLeczeniu) s += ' Po zakończeniu GnRHa przyrost do wzrostu ostatecznego bywa mniejszy niż przewidziany w chwili odstawienia (Lazar 2007).';
-    if (pp.profil === 'przedwczesne' || pp.profil === 'wczesne') s += ' Reguły wag konsensusu dla tego profilu — w przygotowaniu (GROWTH-PRED-PUB2); dziś liczby jak w profilu standardowym.';
     parts.push(s + '</p>');
+    parts.push(pubertyRulesParagraph(model));
     return parts.join('');
+  }
+  // GROWTH-PRED-PUB2: co reguły profilu zrobiły z konsensusem i czego uczy tempo.
+  function pubertyRulesParagraph(model) {
+    var r = model.pubertyRules;
+    if (!r || !r.active) return '';
+    var s = '<p><span class="vgcc-lbl">Reguły konsensusu w profilu ' + esc(r.label) + ':</span> RWT i Khamis–Roche poza konsensusem (Zachmann 1978' + (r.profil === 'wczesne' ? '; w profilu wczesnym jak w przedwczesnym — decyzja właściciela' : '') + ')';
+    var bp = (model.entries || []).filter(function (e) { return e.key === 'bp'; })[0];
+    if (bp) s += '; Bayley–Pinneau ' + (bp.bpGroupOverride ? 'z tablicy „przeciętnej" zamiast „przyspieszonej" (Kauli 1997; Tanaka 2005; Brito 2008; Mul 2005)' + (bp.bpAutoGroupCm !== null && bp.bpAutoGroupCm !== undefined ? ' — tablica przyspieszona dałaby ' + esc(fmt1(bp.bpAutoGroupCm)) + ' cm' : '') : 'z tablicy wg rozbieżności wieku kostnego (nieprzyspieszona, więc bez zamiany)') + ', ' + esc(bp.profileNote || 'przedział ×1,3');
+    if (model.hasTw2) s += '; TW Mark II orientacyjna (tablice z dzieci o prawidłowym czasie dojrzewania)';
+    s += '; MPH jako kotwica z pełną wagą' + (model.postmenarcheal ? '' : ' (×0,25 dopiero po menarche)') + '.';
+    if (r.tempo === 'wolne') s += ' Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm, a wzrost ostateczny nieleczonych zwykle mieści się w zakresie celu (Jang 2023; Palmert 1999; Léger 2000).';
+    else if (r.tempo === 'szybkie') s += ' Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej celu (Kauli 1997), a prognozy z wieku kostnego zawyżają (Kauli 1997; Lazar 2001).';
+    else if (r.tempo === 'nieznane') s += ' Tempo nieznane — bez wieku kostnego z dwóch wizyt nie da się odróżnić przebiegu wolnego (wzrost ostateczny ≈ cel) od szybkiego (5–8 cm poniżej celu).';
+    if (model.sexKey === 'M') s += ' U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001); po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026).';
+    if (r.gnrhaWTrakcie) s += ' W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie — nasady zamykają się wcześniej, niż wynika z wieku kostnego (Lazar 2007).';
+    return s + '</p>';
+  }
+  function targetHtml(model) {
+    var t = model.targetAssessment;
+    if (!t) return '';
+    var parts = [];
+    if (t.diffCm !== null) {
+      var sign = t.diffCm < -0.05 ? '−' : (t.diffCm > 0.05 ? '+' : '');
+      parts.push('<b>' + sign + esc(fmt1(Math.abs(t.diffCm))) + ' cm</b> (' + sign + esc(fmt1(Math.abs(t.targetSd))) + ' SD celu; cel ±10 cm)');
+    }
+    if (t.adultSds !== null) {
+      var sg = t.adultSds < -0.005 ? '−' : (t.adultSds > 0.005 ? '+' : '');
+      parts.push('wobec norm dorosłych ' + sg + esc(fmt1(Math.abs(t.adultSds))) + ' SDS');
+    }
+    var lbl = model.consensus && model.consensus.count >= 2 ? 'Konsensus wobec celu rodzicielskiego: ' : 'Prognoza wobec celu rodzicielskiego: ';
+    return '<div class="vgcc-target">' + lbl + parts.join('; ') + ' — <b>' + esc(t.tierLabel) + '</b></div>';
   }
 
   function heroHtml(model) {
@@ -727,6 +856,7 @@
       ', wiersz ' + esc(String(e.tw2RowAge).replace('.', ',')) + ' l';
     if (e.tw2Variants) s += '; warianty: wiek dokładny ' + esc(fmt1(e.tw2Variants.exactCa)) + ' cm, wiek obcięty ' + esc(fmt1(e.tw2Variants.clampedCa)) + ' cm';
     if (e.tw2Notes && e.tw2Notes.length) s += '. ' + e.tw2Notes.map(function (n) { return esc(n); }).join('; ');
+    if (e.tw2ProfileNote) s += '. ' + esc(e.tw2ProfileNote);
     return s + '.</p>';
   }
   function menarcheParagraph(model) {
@@ -793,7 +923,8 @@
       parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> ' + dtxt + ' ' +
         (gated.length ? gated.join(' ') : 'Bez bramek: wszystkie metody z pełną wagą.') + '</p>');
     } else if (model.entries.length >= 2 && model.boneAgeMissing) {
-      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> bez wieku kostnego bramki rozbieżności nie działają; wszystkie metody z pełną wagą.</p>');
+      var gated0 = model.entries.filter(function (e) { return e.gateNote; }).map(function (e) { return esc(e.label) + ': ' + esc(e.gateNote) + '.'; });
+      parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> bez wieku kostnego bramki rozbieżności nie działają' + (gated0.length ? '. ' + gated0.join(' ') : '; wszystkie metody z pełną wagą.') + '</p>');
     }
     parts.push(biasSentence(model));
     parts.push(menarcheParagraph(model));
@@ -806,7 +937,8 @@
       var dmb = num(model.deltaMonths);
       var bpOv = model.entries.some(function (e) { return e.key === 'bp' && e.bpGroupOverride; });
       parts.push('<p><span class="vgcc-lbl">Bayley–Pinneau:</span> błąd odczytu wieku kostnego z RTG jest głównym źródłem błędu prognozy — autorki zalecają uśrednić kilka niezależnych odczytów.' +
-        (bpOv ? ' Po menarche użyto tablicy dla dziewcząt „przeciętnych" zamiast „przyspieszonej" — w przedwczesnym dojrzewaniu jest dokładniejsza (Cho 2026); nota o dzieciach przyspieszonych dotyczy przyspieszenia konstytucjonalnego, nie dziewcząt po menarche.' : '') +
+        (bpOv && model.postmenarcheal ? ' Po menarche użyto tablicy dla dziewcząt „przeciętnych" zamiast „przyspieszonej" — w przedwczesnym dojrzewaniu jest dokładniejsza (Cho 2026); nota o dzieciach przyspieszonych dotyczy przyspieszenia konstytucjonalnego, nie dziewcząt po menarche.' : '') +
+        (bpOv && !model.postmenarcheal ? ' W profilu przedwczesnego / wczesnego pokwitania użyto tablicy dla dzieci „przeciętnych" zamiast „przyspieszonej" — u nieleczonych i leczonych z przedwczesnym pokwitaniem jest bliższa wzrostu osiągniętego (Kauli 1997; Tanaka 2005; Brito 2008; Mul 2005); nota o dzieciach przyspieszonych dotyczy przyspieszenia konstytucjonalnego.' : '') +
         (dmb !== null && dmb >= DELTA_GATE_MONTHS && !bpOv ? ' Bayley i Pinneau (1952): dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy, niż wskazują tabele.' : '') +
         (dmb !== null && dmb <= -DELTA_GATE_MONTHS ? ' Bayley i Pinneau (1952): dzieci opóźnione o ponad 2 lata osiągają zwykle wzrost niższy, niż wskazują tabele.' : '') + '</p>');
     }
@@ -828,7 +960,7 @@
     var model;
     try { model = buildModel(input); } catch (_) { model = null; }
     if (!model) return '';
-    var html = '<div class="vgcc">' + heroHtml(model) + methodsHtml(model) + mphHtml(model) + statsHtml(model);
+    var html = '<div class="vgcc">' + heroHtml(model) + methodsHtml(model) + mphHtml(model) + targetHtml(model) + statsHtml(model);
     if (model.showBoneAgeHint) html += '<p class="vgcc-hint">Część metod (np. Bayley–Pinneau) wymaga wieku kostnego — uzupełnij go, aby sprawdzić dostępność pozostałych prognoz.</p>';
     html += detailsHtml(model);
     html += '</div>';
@@ -836,7 +968,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '18',
+    version: '19',
     MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
@@ -848,6 +980,12 @@
     _buildEntries: buildEntries,
     _gateFor: gateFor,
     _biasFor: biasFor,
+    _pubertyRulesFor: pubertyRulesFor,
+    _targetAssessmentFor: targetAssessmentFor,
+    _adultSdsFor: adultSdsFor,
+    PUB_BP_SIGMA_FACTOR: PUB_BP_SIGMA_FACTOR,
+    TARGET_BELOW_CM: TARGET_BELOW_CM,
+    ADULT_SHORT_SDS: ADULT_SHORT_SDS,
     _mphAnchor: mphAnchorFrom,
     BIAS_RULES: BIAS_RULES,
     MPH_SHRINK: MPH_SHRINK,

@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 
 // GROWTH-PRED-PUB1 — profil pokwitaniowy przez PRAWDZIWY adapter karty zaawansowanej na index.html:
 // dane z panelu „Dane pokwitaniowe" (etap, wiek startu, GnRHa) + wiek kostny bieżący i z wiersza historii
-// → adapter wyznacza profil i tempo, karta pokazuje etykietę i akapit. W tym etapie liczby prognoz
-// pozostają jak w profilu standardowym. Dane FIKCYJNE.
+// → adapter wyznacza profil i tempo, karta pokazuje etykietę i akapit. GROWTH-PRED-PUB2: w profilu
+// przedwczesnym / wczesnym działają reguły wag (RWT i KR poza, BP z tablicy przeciętnej ×1,3, TW2
+// orientacyjna) i zdanie „konsensus wobec celu rodzicielskiego". Dane FIKCYJNE.
 
 async function otworz(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
@@ -33,7 +34,10 @@ function policz(page, a) {
     const d = window.advancedGrowthData || {};
     const card = document.querySelector('.vgcc');
     const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
-    return { profile: d.pubertyProfile || null, fhp: d.finalHeightPrediction || null, cardText: norm(card ? card.textContent : '') };
+    const bp = d.bayleyPinneau || null;
+    return { profile: d.pubertyProfile || null, fhp: d.finalHeightPrediction || null, cardText: norm(card ? card.textContent : ''),
+      bp: bp ? { available: bp.available === true, cm: bp.predictedAdultHeightCm, groupKey: bp.groupKey, auto: bp.groupAutoKey, override: bp.groupOverrideApplied === true, reason: bp.groupReasonText, altCm: bp.autoGroupPredictedAdultHeightCm } : null,
+      lms: d.adultHeightLMS || null };
   }, a);
 }
 
@@ -49,7 +53,22 @@ test('dziewczynka 7 l 6 mies., Tanner II od 7,0, BA 9,5 z BA 7,5 rok wcześniej:
   expect(r.cardText).toContain('Profil predykcyjny: przedwczesne pokwitanie (tempo szybkie)');
   expect(r.cardText).toContain('Profil pokwitaniowy: przedwczesne pokwitanie (tempo szybkie) — start pokwitania w wieku 7 l — przedwczesne (próg 8/9 l); Tanner II; tempo szybkie: wiek kostny wyprzedza metrykalny o 24 mies.');
   expect(r.cardText).toContain('ΔBA/ΔCA 2 z ostatnich 12 mies.');
-  expect(r.cardText).toContain('Reguły wag konsensusu dla tego profilu — w przygotowaniu');
+  // GROWTH-PRED-PUB2: reguły wag w profilu
+  expect(r.fhp.pubertyRulesActive).toBe(true);
+  expect(r.fhp.excludedMethods).toEqual(expect.arrayContaining(['rwt', 'khamis']));
+  expect(r.bp).toMatchObject({ available: true, override: true, auto: 'accelerated', groupKey: 'average' });
+  expect(r.bp.reason).toContain('w profilu przedwczesnego / wczesnego pokwitania użyto tablicy dla dzieci przeciętnych');
+  expect(typeof r.bp.altCm).toBe('number');
+  expect(r.bp.altCm).not.toBeCloseTo(r.bp.cm, 1);
+  expect(r.fhp.methods.find((m) => m.key === 'bp')).toMatchObject({ profileSigmaFactor: 1.3, bpGroupOverride: true, excluded: false });
+  expect(r.fhp.methods.find((m) => m.key === 'rwt').gateNote).toContain('Zachmann 1978');
+  expect(r.lms).toMatchObject({ M: expect.any(Number), S: expect.any(Number) });
+  expect(r.fhp.targetAssessment).toMatchObject({ tier: expect.stringMatching(/^(w-zakresie-celu|ponizej-celu|niskoroslosc-dorosla)$/), diffCm: expect.any(Number), adultSds: expect.any(Number) });
+  expect(r.cardText).toContain('Konsensus wobec celu rodzicielskiego:');
+  expect(r.cardText).toContain('Reguły konsensusu w profilu przedwczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978); Bayley–Pinneau z tablicy „przeciętnej" zamiast „przyspieszonej"');
+  expect(r.cardText).toContain('tablica przyspieszona dałaby');
+  expect(r.cardText).toContain('Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej celu (Kauli 1997)');
+  expect(r.cardText).not.toContain('w przygotowaniu');
 });
 
 test('ta sama dziewczynka w trakcie GnRHa od 7,2 l: tempo nieoceniane, nota Lazar 2007; chłopiec 9 l 6 mies. z jądrami 4–6 ml bez wieku startu: wczesne z górnej granicy i prośba o wiek startu', async ({ page }) => {
@@ -60,12 +79,22 @@ test('ta sama dziewczynka w trakcie GnRHa od 7,2 l: tempo nieoceniane, nota Laza
   expect(g.profile.gnrha).toMatchObject({ status: 'w-trakcie', wTrakcie: true, startLat: 7.2 });
   expect(g.cardText).toContain('Profil predykcyjny: przedwczesne pokwitanie (tempo nieoceniane), GnRHa w trakcie');
   expect(g.cardText).toContain('W trakcie leczenia GnRHa prognoza rezydualnego wzrostu jest nierzetelna');
+  expect(g.cardText).toContain('W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie');
+  expect(g.fhp.excludedMethods).toEqual(expect.arrayContaining(['rwt', 'khamis']));
 
   const b = await policz(page, { plec: 'M', lata: 9, miesiace: 6, wzrost: 140, masa: 34, ba: 11, tanner: '', start: null, jadra: '4to6', gnrha: '', gnrhaStart: null });
   expect(b.profile).toMatchObject({ profil: 'wczesne', zrodloStartu: 'gorna-granica', tempo: 'wolne' });
   expect(b.profile.wiekStartuLat).toBeCloseTo(9.5, 1);
   expect(b.cardText).toContain('Profil predykcyjny: wczesne pokwitanie (tempo wolne)');
   expect(b.cardText).toContain('Brakuje: wiek startu pokwitania');
+  // profil wczesny jak przedwczesny (decyzja właściciela): RWT poza, BP z tablicy przeciętnej (Δ +18 → grupa auto „przyspieszona")
+  expect(b.fhp.pubertyRulesActive).toBe(true);
+  expect(b.fhp.excludedMethods).toEqual(expect.arrayContaining(['rwt', 'khamis']));
+  expect(b.bp).toMatchObject({ override: true, auto: 'accelerated', groupKey: 'average' });
+  expect(b.cardText).toContain('Reguły konsensusu w profilu wczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978; w profilu wczesnym jak w przedwczesnym — decyzja właściciela)');
+  expect(b.cardText).toContain('Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm');
+  expect(b.cardText).toContain('U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001)');
+  expect(b.cardText).toContain('Konsensus wobec celu rodzicielskiego:');
 });
 
 test('bez danych pokwitaniowych profil standardowy: etykieta z modelu wiarygodności bez zmian, akapit tylko z listą braków', async ({ page }) => {
@@ -75,5 +104,10 @@ test('bez danych pokwitaniowych profil standardowy: etykieta z modelu wiarygodno
   expect(r.profile).toMatchObject({ profil: 'standardowy', tempo: 'nieoceniane' });
   expect(r.cardText).toContain('Profil predykcyjny: Profil standardowy');
   expect(r.cardText).toContain('Profil pokwitaniowy: standardowy. Brakuje: brak danych pokwitaniowych (etap Tannera, wiek startu, objętość jąder)');
-  expect(r.cardText).not.toContain('Reguły wag konsensusu');
+  expect(r.cardText).not.toContain('Reguły konsensusu w profilu');
+  expect(r.cardText).not.toContain('Konsensus wobec celu rodzicielskiego');
+  expect(r.fhp.pubertyRulesActive).toBe(false);
+  expect(r.fhp.targetAssessment).toBeNull();
+  expect(r.bp).toMatchObject({ override: false, groupKey: 'accelerated' });
+  expect(r.fhp.excludedMethods).toEqual(['khamis']); // tylko bramka Δ +36, jak w GROWTH-PRED-DOBOR
 });
