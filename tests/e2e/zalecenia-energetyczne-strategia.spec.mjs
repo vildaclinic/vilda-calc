@@ -107,7 +107,7 @@ test('16-latka, jawna stabilizacja przy praktycznie zakończonym wzrastaniu → 
   const r = await run(page, { age: 16, sex: 'F', w: 90, h: 163, click: 'stabilization' });
   expect(r.outlook.practicallyEnded).toBe(true);
   expect(r.active).toBe('stabilization');
-  expect(r.text).toContain('W strategii stabilizacji nie stosuje się deficytu energetycznego');
+  expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
   expect(r.text).toContain('samo utrzymanie masy ciała nie doprowadzi do normy BMI');
   expect(r.plan).toContain('Przy praktycznie zakończonym wzrastaniu samo utrzymanie masy ciała nie doprowadzi do normy BMI');
   expect(r.journey).toContain('samo utrzymanie masy nie doprowadzi do normy BMI');
