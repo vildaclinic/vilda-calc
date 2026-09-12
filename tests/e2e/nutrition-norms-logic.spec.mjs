@@ -331,9 +331,12 @@ test('NORM-PAL14-SHARED: wspólny moduł energii — zestawy, rozwiązanie 1,4 i
   expect(out.resolved.clinicalOverride).toBe(true);
   expect(out.resolved.note || '').toBe('');
   // Select Planu odchudzania dla 13-latka zawiera 1,4 z dopiskiem i przyjmuje wybór.
+  // ENERGY-CHILD-OBESITY: w planie 1,4 jest wartością domyślną (typową przy otyłości), więc dopisek
+  // brzmi „niska aktywność – częsta przy otyłości", a nie „poza Normami 2024" (to zostaje w karcie norm).
   const opt14 = out.options.find((o) => o.value === '1.4');
   expect(opt14).toBeTruthy();
-  expect(opt14.label).toContain('poza Normami 2024');
+  expect(opt14.label).toContain('częsta przy otyłości');
+  expect(opt14.label).not.toContain('poza Normami 2024');
   expect(out.selected).toBe('1.4');
 });
 
