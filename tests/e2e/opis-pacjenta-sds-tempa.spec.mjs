@@ -63,8 +63,13 @@ async function pacjentka(page, lata, miesiace, wzrost) {
     if (f && getComputedStyle(f).display !== 'none') return;
     if (t) { t.disabled = false; t.click(); }
   });
-  await expect(page.locator('#advancedGrowthForm')).toBeVisible();
-  await page.waitForSelector('#advMeasurements .measure-row');
+  // CI (PR #264): karta bywa jeszcze ukryta przez animację wejścia (klasa `_enter`), a wiersz
+  // pomiaru może być zwinięty (`data-analysis-open="false"`) — czekamy na OBECNOŚĆ karty, potem
+  // (z dłuższym limitem) na jej widoczność; wiersz wystarczy, że istnieje w DOM, bo wartości
+  // wpisujemy przez DOM, nie klikami.
+  await page.waitForSelector('#advancedGrowthForm', { state: 'attached', timeout: 10000 });
+  await expect(page.locator('#advancedGrowthForm')).toBeVisible({ timeout: 10000 });
+  await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });
   await page.evaluate(([l, m, h]) => {
     const w = document.querySelector('#advMeasurements .measure-row');
     const set = (sel, v) => {
