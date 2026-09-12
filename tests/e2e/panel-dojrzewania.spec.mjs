@@ -45,6 +45,8 @@ test.describe('Panel jest jednym miejscem wpisu', () => {
     await expect(page.locator('#pubertyMenarcheAge')).toBeVisible();
     await expect(page.locator('#pubertyMenarcheHeight')).toBeVisible(); // GROWTH-PRED-TW2B
     await expect(page.locator('#pubertyMenarcheBoneAge')).toBeVisible(); // GROWTH-PRED-TW2C
+    await expect(page.locator('#pubertyGnrhaStatus')).toBeVisible(); // GROWTH-PRED-PUB1
+    await expect(page.locator('#pubertyGnrhaStartAge')).toBeHidden(); // wiek leczenia tylko przy statusie w trakcie/zakończone
     await expect(page.locator('#pubertyCdgp')).toBeVisible();
     await expect(page.getByRole('button', { name: '− Dane pokwitaniowe' })).toBeVisible();
   });
@@ -129,23 +131,32 @@ test.describe('Panel zapisuje do rekordu i z niego wraca', () => {
     await page.locator('#pubertyMenarcheAge').fill('12.5');
     await page.locator('#pubertyMenarcheHeight').fill('152.5');
     await page.locator('#pubertyMenarcheBoneAge').fill('13');
+    await page.locator('#pubertyGnrhaStatus').selectOption('zakonczone');
+    await expect(page.locator('#pubertyGnrhaStartAge')).toBeVisible();
+    await page.locator('#pubertyGnrhaStartAge').fill('8');
+    await page.locator('#pubertyGnrhaStopAge').fill('11');
     await page.locator('#pubertyCdgp').selectOption('tak');
 
     const zebrane = await page.evaluate(() => window.collectUserData().puberty);
     expect(zebrane).toEqual({
-      onsetAgeYears: 10.5, menarcheAgeYears: 12.5, heightAtMenarcheCm: 152.5, boneAgeAtMenarcheYears: 13, cdgpDeclared: 'tak',
+      onsetAgeYears: 10.5, menarcheAgeYears: 12.5, heightAtMenarcheCm: 152.5, boneAgeAtMenarcheYears: 13,
+      gnrhaStatus: 'zakonczone', gnrhaStartAgeYears: 8, gnrhaStopAgeYears: 11, cdgpDeclared: 'tak',
     });
 
     // Wczytanie rekordu odtwarza panel — bez tego lekarz nadpisałby własne dane pustymi polami.
     await page.evaluate(() => {
-      ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge', 'pubertyCdgp'].forEach((id) => {
+      ['pubertyOnsetAge', 'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge',
+        'pubertyGnrhaStatus', 'pubertyGnrhaStartAge', 'pubertyGnrhaStopAge', 'pubertyCdgp'].forEach((id) => {
         document.getElementById(id).value = '';
       });
       window.applyLoadedData({
         user: { age: 12, sex: 'K', height: 145, weight: 35 },
-        puberty: { onsetAgeYears: 9.8, menarcheAgeYears: 11.9, heightAtMenarcheCm: 143, boneAgeAtMenarcheYears: 12.5, cdgpDeclared: 'nie' },
+        puberty: { onsetAgeYears: 9.8, menarcheAgeYears: 11.9, heightAtMenarcheCm: 143, boneAgeAtMenarcheYears: 12.5, gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 10.2, cdgpDeclared: 'nie' },
       });
     });
+    await expect(page.locator('#pubertyGnrhaStatus')).toHaveValue('w-trakcie');
+    await expect(page.locator('#pubertyGnrhaStartAge')).toHaveValue('10.2');
+    await expect(page.locator('#pubertyGnrhaStopAge')).toBeDisabled();
     await expect(page.locator('#pubertyOnsetAge')).toHaveValue('9.8');
     await expect(page.locator('#pubertyMenarcheAge')).toHaveValue('11.9');
     await expect(page.locator('#pubertyMenarcheHeight')).toHaveValue('143');
@@ -243,6 +254,12 @@ test.describe('Wzrost przy menarche (GROWTH-PRED-TW2B) w panelu', () => {
     await page.locator('#sex').selectOption('M');
     await page.locator('#pubertyMenarcheBoneAge').fill('12.5');
     await expect(page.locator('#pubertyConflicts')).toContainText('Wiek kostny przy menarche wpisany u chłopca.');
+    // GROWTH-PRED-PUB1: sprzeczności GnRHa na żywym DOM.
+    await page.locator('#pubertyMenarcheBoneAge').fill('');
+    await page.locator('#pubertyGnrhaStatus').selectOption('zakonczone');
+    await page.locator('#pubertyGnrhaStartAge').fill('9');
+    await page.locator('#pubertyGnrhaStopAge').fill('8');
+    await expect(page.locator('#pubertyConflicts')).toContainText('Wiek zakończenia GnRHa wcześniejszy niż wiek rozpoczęcia.');
   });
 });
 
@@ -255,6 +272,8 @@ test.describe('„Wyczyść wszystkie pola” zostawia formularz w stanie wyjśc
     await page.locator('#pubertyMenarcheAge').fill('12.5');
     await page.locator('#pubertyMenarcheHeight').fill('152.5');
     await page.locator('#pubertyMenarcheBoneAge').fill('13');
+    await page.locator('#pubertyGnrhaStatus').selectOption('w-trakcie');
+    await page.locator('#pubertyGnrhaStartAge').fill('9');
     await page.locator('#pubertyCdgp').selectOption('tak');
 
     await page.locator('#clearAllDataBtn').click();
@@ -264,8 +283,8 @@ test.describe('„Wyczyść wszystkie pola” zostawia formularz w stanie wyjśc
     await expect(page.locator('#tannerStage')).toBeHidden();
     await expect(page.getByRole('button', { name: '+ Dane pokwitaniowe' })).toBeVisible();
     const wartosci = await page.evaluate(() => ['tannerStage', 'pubertyOnsetAge',
-      'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge', 'pubertyCdgp'].map((id) => document.getElementById(id).value));
-    expect(wartosci).toEqual(['', '', '', '', '', '']);
+      'pubertyMenarcheAge', 'pubertyMenarcheHeight', 'pubertyMenarcheBoneAge', 'pubertyGnrhaStatus', 'pubertyGnrhaStartAge', 'pubertyGnrhaStopAge', 'pubertyCdgp'].map((id) => document.getElementById(id).value));
+    expect(wartosci).toEqual(['', '', '', '', '', '', '', '', '']);
     expect(await page.evaluate(() => window.collectUserData().puberty)).toBeNull();
   });
 });
