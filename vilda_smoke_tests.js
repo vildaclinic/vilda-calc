@@ -107,15 +107,15 @@
     'vilda_professional_module.js?v=5',
     'vilda_persist_runtime.js?v=13',
     'vilda_summary_cards.js?v=31',
-    'vilda_diet_plan_ui.js?v=10',
-    'vilda_bmi_journey.js?v=8',
+    'vilda_diet_plan_ui.js?v=11',
+    'vilda_bmi_journey.js?v=9',
     'vilda_estimated_intake_ui.js?v=1',
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=199',
     'vilda_smoke_tests.js?v=65',
-    'vilda_diet_recommendations.js?v=18',
+    'vilda_diet_recommendations.js?v=19',
     'nutrition_norms.js?v=46',
     'nutrition_micros.js?v=26'
   ]);
@@ -535,7 +535,7 @@
     const contractDetail = checkNamedContracts(DEFAULT_DIET_PLAN_UI_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.4.0' &&
+        api.VERSION === '1.4.1' &&
         api.STEP === '8Q-5' &&
         typeof api.init === 'function' &&
         typeof api.initDietPlanUI === 'function' &&
