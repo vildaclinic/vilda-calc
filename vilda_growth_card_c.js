@@ -112,6 +112,55 @@
   var TARGET_BELOW_CM = 5;
   var ADULT_SHORT_SDS = -2;
 
+  // GROWTH-PRED-PUB3 (decyzja właściciela 2026-09-12): wiersze INFORMACYJNE poza konsensusem (bez wagi,
+  // nie wchodzą do widełek ani zgodności), pokazywane w profilach pokwitaniowych (jak zdanie wobec celu):
+  //  • „Wzrost dla wieku kostnego": SDS obecnego wzrostu wobec norm dla wieku KOSTNEGO (adapter,
+  //    te same normy co centyle) przeniesiony na normy dorosłych 18 l (LMS z adaptera). Przy
+  //    przyspieszeniu wieku kostnego bez aktywacji osi zgodny z wzrostem osiągniętym (Lazar 2010),
+  //    przy BA − CA > 1 rok zaniża (Oron 2011; Jang 2023) — skok pokwitaniowy jest jeszcze przed dzieckiem.
+  //  • Wu 2023 (Eur J Pediatr, DOI 10.1007/s00431-023-04842-3): dziewczęta z idiopatycznym CPP
+  //    leczone GnRHa, populacja chińska: AH = 1,896·hSDS + 2,299·hSDS(BA) + 0,408·cel + 100,17
+  //    (RMSE 2,2 cm w kohorcie autorów). Tylko dziewczęta. PARAMETRY KLINICZNE — do strojenia.
+  var WU2023 = { hSds: 1.896, hSdsBa: 2.299, th: 0.408, konst: 100.17 };
+  // Wzrost z SDS wobec LMS (odwrotność adultSdsFor).
+  function heightFromSds(z, lms) {
+    var zz = num(z);
+    if (zz === null || !lms || typeof lms !== 'object') return null;
+    var L = num(lms.L), M = num(lms.M), S = num(lms.S);
+    if (M === null || M <= 0 || S === null || S <= 0) return null;
+    if (L === null) L = 1;
+    var x = Math.abs(L) < 1e-6 ? M * Math.exp(S * zz) : M * Math.pow(1 + L * S * zz, 1 / L);
+    return isFinite(x) && x > 0 ? x : null;
+  }
+  function infoRowsFor(input, sk, curH) {
+    var rows = [];
+    var hBa = num(input.heightSdsForBoneAge);
+    var hCa = num(input.heightSds);
+    var mph = num(input.mphCm);
+    var lms = input.adultHeightLMS;
+    function push(key, label, cm, note, extra) {
+      var v = num(cm);
+      if (v === null) return;
+      var clamped = false;
+      if (curH !== null && v < curH) { v = curH; clamped = true; }
+      var r = { key: key, label: label, cm: v, rawCm: num(cm), clamped: clamped, note: note, infoOnly: true };
+      if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) r[k] = extra[k];
+      rows.push(r);
+    }
+    if (hBa !== null) {
+      push('hba', 'Wzrost dla wieku kostnego', heightFromSds(hBa, lms),
+        'SDS wzrostu dla wieku kostnego ' + fmtSds(hBa) + ' przeniesiony na normy dorosłych (18 l); przy przyspieszeniu wieku kostnego bez aktywacji osi zgodny z wzrostem osiągniętym (Lazar 2010), przy BA − CA > 1 rok zaniża, bo skok pokwitaniowy jest jeszcze przed dzieckiem (Oron 2011; Jang 2023)',
+        { heightSdsForBoneAge: hBa });
+    }
+    if (sk === 'F' && hBa !== null && hCa !== null && mph !== null && mph > 0) {
+      push('wu2023', 'Wu 2023 (CPP, dziewczęta)', WU2023.hSds * hCa + WU2023.hSdsBa * hBa + WU2023.th * mph + WU2023.konst,
+        'równanie 1,896·hSDS ' + fmtSds(hCa) + ' + 2,299·hSDS dla wieku kostnego ' + fmtSds(hBa) + ' + 0,408·cel ' + fmt1(mph) + ' + 100,17; model z dziewcząt z idiopatycznym CPP leczonych GnRHa, populacja chińska (RMSE 2,2 cm u autorów) — orientacyjny',
+        { heightSds: hCa, heightSdsForBoneAge: hBa, targetCm: mph });
+    }
+    return rows;
+  }
+  function fmtSds(z) { var n = num(z); if (n === null) return ''; var a = Math.abs(n).toFixed(2).replace('.', ','); return (n < -0.005 ? '−' : (n > 0.005 ? '+' : '')) + a; }
+
   // Reguły profilu pokwitaniowego dla konsensusu: { active, profil, tempo, gnrhaWTrakcie, gnrhaPo, label }.
   function pubertyRulesFor(pp) {
     var off = { active: false, profil: pp && pp.profil ? String(pp.profil) : '', tempo: pp && pp.tempo ? String(pp.tempo) : '', kategoriaStartu: pp && pp.kategoriaStartu ? String(pp.kategoriaStartu) : '', gnrhaWTrakcie: false, gnrhaPo: false, label: '' };
@@ -254,6 +303,10 @@
     '.vgcc-row.is-pref .vgcc-nm{color:#006b73}',
     '.vgcc-row.is-excl{opacity:.72}',
     '.vgcc-row.is-excl .vgcc-val{text-decoration:line-through;text-decoration-color:#b8c6c8;font-weight:600}',
+    '.vgcc-row.is-info{background:#f7f9fb;border-top:1px dashed var(--vgcc-line)}',
+    '.vgcc-row.is-info .vgcc-nm{color:#4a6270;font-weight:600}',
+    '.vgcc-row.is-info .vgcc-val{color:#4a6270;font-weight:700}',
+    '.vgcc-tag{display:inline-block;font-size:.66rem;font-weight:600;color:#5a7274;background:#eef3f5;border-radius:6px;padding:.05rem .35rem;margin-left:.3rem;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}',
     '.vgcc-hint{font-size:.78rem;color:var(--vgcc-muted);margin:.3rem 0 .4rem}',
     '.vgcc-det{background:#fff;border:1px solid var(--vgcc-line);border-radius:9px;margin-top:.1rem}',
     '.vgcc-det>summary{cursor:pointer;list-style:none;padding:.5rem .7rem;font-weight:700;color:#006b73;display:flex;justify-content:center;align-items:center;font-size:.84rem}',
@@ -564,6 +617,8 @@
     entries.deltaMonths = delta;
     entries.postmenarcheal = postmenarcheal;
     entries.pubertyRules = pubRules;
+    // GROWTH-PRED-PUB3: wiersze informacyjne poza konsensusem — tylko w profilach pokwitaniowych.
+    entries.infoRows = showTarget(pubRules, postmenarcheal) ? infoRowsFor(input, sk, curH) : [];
     return entries;
   }
 
@@ -636,6 +691,8 @@
         : null,
       // GROWTH-PRED-PUB2: czy działały reguły profilu pokwitaniowego i jak konsensus ma się do celu.
       pubertyRulesActive: entries.pubertyRules ? entries.pubertyRules.active === true : false,
+      // GROWTH-PRED-PUB3: wiersze informacyjne (poza konsensusem, bez wagi; nie ma ich w `methods`).
+      infoRows: (entries.infoRows || []).map(function (r) { return { key: r.key, label: r.label, cm: r.cm, rawCm: r.rawCm, clamped: r.clamped === true, note: r.note }; }),
       targetAssessment: showTarget(entries.pubertyRules, entries.postmenarcheal === true) ? targetAssessmentFor(weightedCm, num(input.mphCm), input.adultHeightLMS) : null,
       preferredKey: wcon.recommendedKey || null,
       preferredLabel: wcon.recommendedLabel || null,
@@ -690,6 +747,7 @@
       pubertyProfile: input.pubertyProfile && typeof input.pubertyProfile === 'object' ? input.pubertyProfile : null,
       // GROWTH-PRED-PUB2: reguły profilu i konsensus wobec celu rodzicielskiego.
       pubertyRules: entries.pubertyRules || pubertyRulesFor(null),
+      infoRows: entries.infoRows || [],
       targetAssessment: (con.count >= 1 && wcon.weighted !== null && showTarget(entries.pubertyRules, entries.postmenarcheal === true))
         ? targetAssessmentFor(wcon.weighted, mphCm, input.adultHeightLMS) : null
     };
@@ -734,6 +792,14 @@
     if (model.sexKey === 'M') s += ' U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001); po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026).';
     if (r.gnrhaWTrakcie) s += ' W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie — nasady zamykają się wcześniej, niż wynika z wieku kostnego (Lazar 2007).';
     return s + '</p>';
+  }
+  function infoRowsParagraph(model) {
+    var rows = model.infoRows || [];
+    if (!rows.length) return '';
+    var items = rows.map(function (r) {
+      return esc(r.label) + ' ' + esc(fmt1(r.cm)) + ' cm' + (r.clamped ? ' (obcięte do obecnego wzrostu; równanie dało ' + esc(fmt1(r.rawCm)) + ' cm)' : '') + ': ' + esc(r.note);
+    });
+    return '<p><span class="vgcc-lbl">Wiersze informacyjne (poza konsensusem, bez wagi):</span> ' + items.join('. ') + '.</p>';
   }
   function targetHtml(model) {
     var t = model.targetAssessment;
@@ -787,9 +853,17 @@
     return '<div class="vgcc-hero"><div class="vgcc-empty">Uzupełnij dane (wzrost, masę, wzrost rodziców, wiek kostny), aby policzyć prognozę.</div></div>';
   }
 
+  function infoRowsHtml(model) {
+    var rows = model.infoRows || [];
+    if (!rows.length) return '';
+    return rows.map(function (r) {
+      return '<div class="vgcc-row is-info"><span class="vgcc-nm">' + esc(r.label) + ' <span class="vgcc-tag">poza konsensusem</span></span><span><span class="vgcc-val">' + esc(fmt1(r.cm)) + ' cm</span></span></div>';
+    }).join('');
+  }
   function methodsHtml(model) {
     var hasExcluded = model.entries.some(function (e) { return e.excluded; });
-    if (model.consensus.count < 2 && !hasExcluded) return ''; // dla 1 metody hero wystarcza
+    var hasInfo = (model.infoRows || []).length > 0;
+    if (model.consensus.count < 2 && !hasExcluded && !hasInfo) return ''; // dla 1 metody hero wystarcza
     var prefKey = model.weighted && model.weighted.recommendedKey;
     var rows = model.entries.map(function (e) {
       var right = e.clamped
@@ -801,7 +875,7 @@
       // powody bramek (waga ×0,5 / poza konsensusem) — tylko w „Szczegóły i wiarygodność" (GROWTH-PRED-UI2)
       return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
     }).join('');
-    return '<div class="vgcc-methods">' + rows + '</div>';
+    return '<div class="vgcc-methods">' + rows + infoRowsHtml(model) + '</div>';
   }
 
   function mphHtml(model) {
@@ -927,6 +1001,7 @@
       parts.push('<p><span class="vgcc-lbl">Dobór metody:</span> bez wieku kostnego bramki rozbieżności nie działają' + (gated0.length ? '. ' + gated0.join(' ') : '; wszystkie metody z pełną wagą.') + '</p>');
     }
     parts.push(biasSentence(model));
+    parts.push(infoRowsParagraph(model));
     parts.push(menarcheParagraph(model));
     parts.push(tw2Paragraph(model));
     if (model.hasBlum) {
@@ -968,7 +1043,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '19',
+    version: '20',
     MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
@@ -983,6 +1058,9 @@
     _pubertyRulesFor: pubertyRulesFor,
     _targetAssessmentFor: targetAssessmentFor,
     _adultSdsFor: adultSdsFor,
+    _heightFromSds: heightFromSds,
+    _infoRowsFor: infoRowsFor,
+    WU2023: WU2023,
     PUB_BP_SIGMA_FACTOR: PUB_BP_SIGMA_FACTOR,
     TARGET_BELOW_CM: TARGET_BELOW_CM,
     ADULT_SHORT_SDS: ADULT_SHORT_SDS,
