@@ -116,7 +116,7 @@ async function setProfessionalMode(page, on) {
   }, on);
 }
 
-test('PLAN-S2-FLOOR-CHILD: minimum 1000 kcal (<10 lat) od zapotrzebowania dla masy należnej — przy PAL 1,4 tylko lekka, przy 1,8 wszystkie', async ({ page }) => {
+test('PLAN-S2-FLOOR-CHILD: podłoga planu dziecka = max(minimum wieku, REE po korekcie); żadna dieta nie schodzi poniżej', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   const diets = async (pal) => page.evaluate((pal) => {
@@ -124,18 +124,24 @@ test('PLAN-S2-FLOOR-CHILD: minimum 1000 kcal (<10 lat) od zapotrzebowania dla ma
     window.update();
     return [...document.getElementById('dietLevel').options].map((o) => o.textContent);
   }, pal);
-  // ENERGY-CHILD-OBESITY: dziewczynka 7 l, 118 cm, 35 kg (BMI ≥ 99c). Masa należna = mediana BMI × 1,18²
-  // ≈ 21–22 kg → REE Henry'ego (dziewczęta 3–9) ≈ 940 kcal; PAL 1,4 → baza ≈ 1320 kcal:
-  // lekka −200 → ≈1120 ≥ 1000, umiarkowana −350 → ≈970 < 1000 (wypada), intensywna −500 → wypada.
+  // ENERGY-CHILD-MID1: dziewczynka 7 l, 118 cm, 35 kg (BMI ≥ 99c). Baza = REE(35 kg) × 0,9 × PAL,
+  // deficyty z tempa 0,5 / 1 / 1,5 kg/mies. (126 / 253 / 379 kcal), podłoga = max(1000, REE × 0,9).
   await renderPlan(page, { age: 7, months: 0, sex: 'F', weight: 35, height: 118 });
   const low = await diets('1.4');
   expect(low.some((t) => t.includes('lekka'))).toBe(true);
-  expect(low.some((t) => t.includes('umiarkowana'))).toBe(false);
-  expect(low.some((t) => t.includes('intensywna'))).toBe(false);
-  // PAL 1,8 → baza ≈ 1690 kcal; intensywna −500 → ≈1190 ≥ 1000 → dostępna.
-  const mid = await diets('1.8');
-  expect(mid.some((t) => t.includes('umiarkowana'))).toBe(true);
-  expect(mid.some((t) => t.includes('intensywna'))).toBe(true);
+  const st = await page.evaluate(() => window.energyBuildPlanReductionState({
+    ageYears: 7, ageMonthsOpt: 0, sex: 'F', weightKg: 35, heightCm: 118, palInput: 1.4,
+  }));
+  expect(st.floorKcal).toBe(Math.max(1000, st.reeAdjustedKcal));
+  expect(st.diets.map((d) => d.deficit)).toEqual([126, 253, 379]);
+  expect(st.diets.map((d) => d.monthlyLossKg)).toEqual([0.5, 1, 1.5]);
+  expect(Math.min(...st.diets.map((d) => d.intake))).toBeGreaterThanOrEqual(st.floorKcal);
+  // przy wyższym PAL baza rośnie, więc kaloryczności rosną, a podłoga zostaje ta sama
+  const hi = await page.evaluate(() => window.energyBuildPlanReductionState({
+    ageYears: 7, ageMonthsOpt: 0, sex: 'F', weightKg: 35, heightCm: 118, palInput: 1.8,
+  }));
+  expect(hi.floorKcal).toBe(st.floorKcal);
+  expect(hi.diets[0].intake).toBeGreaterThan(st.diets[0].intake);
 });
 
 test('PLAN-S2-PROF-GATE: tryb profesjonalny — <2 lat plan ukryty, 2–5 lat z adnotacją kliniczną, ≥5 bez niej', async ({ page }) => {
@@ -289,9 +295,9 @@ test('PLAN-C-SEGMENTS: segmenty diety i PAL sterują ukrytymi selectami i przeli
   }));
   expect(out.pal).toBe('1.6');
   expect(out.text).toContain('−916 kcal/dzień');
-  // Niedostępna dieta (ENERGY-CHILD-OBESITY: minimum 1000 kcal u dziecka < 10 lat przy PAL 1,4)
-  // jest wyszarzona, nie znika. Dziewczynka 7 l, 118 cm, 35 kg: baza ≈ 1320 kcal → intensywna −500 wypada.
-  await renderPlan(page, { age: 7, months: 0, sex: 'F', weight: 35, height: 118 });
+  // Niedostępna dieta jest wyszarzona, nie znika (ENERGY-CHILD-MID1: chłopiec 10 l, 140 cm, 45 kg,
+  // BMI < 99c → tylko lekka 0,5 kg/mies.; umiarkowana i intensywna odpadają z powodu wieku).
+  await renderPlan(page, { age: 10, months: 0, sex: 'M', weight: 45, height: 140 });
   const dis = await page.evaluate(() => {
     // PAL 1,6 został z poprzedniego kroku — wróć na 1,4 (przy 1,8 intensywna jest legalna).
     document.getElementById('palFactor').value = '1.4';

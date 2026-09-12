@@ -10,12 +10,13 @@ const czasNarracji = (months) => {
 
 // ENERGY-CHILD-OBESITY (decyzja właściciela 2026-09-12) — łańcuch przez PRAWDZIWE window.update(),
 // kartę „Plan odchudzania", panel „Droga do normy" i generator zaleceń na index.html:
-//  • plan dziecka 2–18 lat z BMI ≥ 85c liczy się od zapotrzebowania dla masy należnej (mediana BMI
-//    dla wieku × wzrost²), bez ×1,01, ze stałym deficytem 200/350/500 kcal i minimum 1000/1200 kcal;
+//  • ENERGY-CHILD-MID1: plan dziecka 2–18 lat z BMI ≥ 85c liczy się od zapotrzebowania dla MASY AKTUALNEJ
+//    z korektą −10 % REE (Hofsteenge 2010), bez ×1,01; deficyt z bezpiecznego tempa (12–18: 1/1,5/2 kg/mies.),
+//    podłoga = max(minimum wieku, REE po korekcie); masa należna zostaje celem;
 //  • PAL domyślny planu 10–18 lat = 1,4 bez oznaczenia „poza Normami 2024" (plakietka informacyjna);
 //  • etapy wieku: 2–5 stabilizacja (bez diet, energia utrzymania), 6–11 przy BMI < 99c tylko lekka
 //    −130 kcal (0,5 kg/mies.) i domyślna strategia stabilizacji, 12–18 redukcja 200–500 kcal;
-//  • narracja: przy stabilizacji zdanie o energii dla masy należnej bez deficytu, czas do normy z tej
+//  • narracja: przy stabilizacji zdanie o energii dla obecnej masy ciała bez deficytu, czas do normy z tej
 //    samej symulacji wzrastania co karta planu, normy żywieniowe z kalorycznością planu/stabilizacji;
 //  • dziecko z BMI < 85c: brak ukrytego planu — normy „dla zapotrzebowania", nie „dla planu".
 // Dane FIKCYJNE.
@@ -66,7 +67,7 @@ function recommend(page, { strategy = null, diet = 'light', pf = false, norms = 
   }, { strategy, diet, pf, norms });
 }
 
-test('12–18 lat: PAL 1,4 bez „poza Normami", plan od masy należnej (−200/−350/−500), hero z zaokrągloną kalorycznością', async ({ page }) => {
+test('12–18 lat: PAL 1,4 bez „poza Normami", plan od masy aktualnej z korektą (−253/−379/−506 z tempa), hero z zaokrągloną kalorycznością', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 14, sex: 'M', w: 85, h: 165 });
@@ -75,49 +76,49 @@ test('12–18 lat: PAL 1,4 bez „poza Normami", plan od masy należnej (−200/
   expect(r.palOptions[0]).not.toContain('poza Normami');
   expect(r.state.ob).toBe(true);
   expect(r.state.stage).toBe('age_12_18');
-  expect(r.state.src).toBe('child_median_bmi');
+  expect(r.state.src).toBe('actual');
   expect(r.state.gm).toBe(1);
   // masa należna ≈ mediana BMI (OLAF, 14 l) × 1,65² — wyraźnie poniżej masy aktualnej 85 kg
   expect(r.state.needed).toBeGreaterThan(45);
   expect(r.state.needed).toBeLessThan(60);
-  expect(r.state.diets.map((d) => d[2])).toEqual([200, 350, 500]);
-  expect(r.state.diets[0][1]).toBe(r.state.base - 200);
+  expect(r.state.diets.map((d) => d[2])).toEqual([253, 379, 506]); // 1 / 1,5 / 2 kg/mies.
+  expect(r.state.diets[0][1]).toBe(r.state.base - 253);
   expect(r.diet).toBe('light');
   expect(r.plan).toContain('PAL 1,4 – niska aktywność');
   expect(r.plan).not.toContain('Tryb kliniczny');
-  expect(r.plan).toContain(`${Math.round((r.state.base - 200) / 100) * 100} kcal/dzień`);
-  expect(r.plan).toContain('liczone dla masy należnej ok.');
-  expect(r.plan).toContain('bez dodatku na wzrastanie; minimum 1200 kcal/dzień');
-  expect(r.plan).toContain('stały deficyt ok. 200 kcal dziennie względem zapotrzebowania dla masy należnej');
+  expect(r.plan).toContain(`${Math.round((r.state.base - 253) / 100) * 100} kcal/dzień`);
+  expect(r.plan).toContain('baza planu liczona dla obecnej masy ciała z korektą −10 % REE na otyłość (Hofsteenge 2010)');
+  expect(r.plan).toContain('cel: masa należna ok.');
+  expect(r.plan).toContain('deficyt ok. 253 kcal dziennie względem zapotrzebowania przy obecnej masie ciała, dobrany do tempa ok. 1,0 kg/mies.');
   expect(r.plan).not.toMatch(/deficyt ok\. \d+ % całkowitego wydatku/u);
-  expect(r.journey).toContain('stały deficyt ok. 200 kcal/dzień względem zapotrzebowania dla masy należnej');
-  expect(r.journey).toContain('−350 kcal/d');
+  expect(r.journey).toContain('deficyt ok. 253 kcal/dzień względem zapotrzebowania przy obecnej masie ciała, dobrany do tempa ok. 1,0 kg/mies.');
+  expect(r.journey).toContain('−379 kcal/d');
 });
 
-test('12–18 lat, narracja redukcyjna: kaloryczność od masy należnej, czas z symulacji wzrastania, normy z kalorycznością planu', async ({ page }) => {
+test('12–18 lat, narracja redukcyjna: kaloryczność od masy aktualnej z korektą, czas z symulacji wzrastania, normy z kalorycznością planu', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 14, sex: 'M', w: 85, h: 165 });
   const text = await recommend(page, { strategy: null, diet: 'moderate' });
-  const kcal = Math.round((r.state.base - 350) / 100) * 100;
-  expect(text).toContain(`dostarcza około ${kcal} kcal dziennie (zapotrzebowanie dla masy należnej ok.`);
-  expect(text).toContain('wynosi około 350 kcal');
+  const kcal = Math.round((r.state.base - 379) / 100) * 100;
+  expect(text).toContain(`dostarcza około ${kcal} kcal dziennie (zapotrzebowanie przy obecnej masie ciała pomniejszone o deficyt dobrany do bezpiecznego tempa`);
+  expect(text).toContain('wynosi około 379 kcal');
   expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
   // ENERGY-REC-4: podstawa w nawiasie zdania o normach zamiast osobnego „Przeliczenie wykonano dla…"
-  expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d (od zapotrzebowania dla masy należnej – mediany BMI dla wieku i wzrostu):`);
+  expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d (od zapotrzebowania przy obecnej masie ciała z korektą na otyłość):`);
   expect(text).not.toContain('Przeliczenie wykonano');
   // czas do granicy normy = wspólna symulacja wzrastania (jak karta planu), nie liniowe kg/tempo
-  const sim = await page.evaluate(() => window.energySimulateMonthsToBmiTarget({ ageYears: 14, ageMonthsOpt: 0, sex: 'M', weightKg: 85, heightCm: 165, weeklyLossKg: 350 * 7 / 7700, target: 'norm' }));
+  const sim = await page.evaluate(() => window.energySimulateMonthsToBmiTarget({ ageYears: 14, ageMonthsOpt: 0, sex: 'M', weightKg: 85, heightCm: 165, weeklyLossKg: 379 * 7 / 7700, target: 'norm' }));
   expect(text).toContain(`można szacować na ${czasNarracji(sim.months)}`);
   expect(text).not.toContain('stabilizacji');
 });
 
-test('6–11 lat przy BMI < 99c: tylko lekka −130 kcal, ostrzeżenie o tempie, domyślna strategia = stabilizacja bez deficytu', async ({ page }) => {
+test('6–11 lat przy BMI < 99c: tylko lekka −126 kcal (0,5 kg/mies.), ostrzeżenie o tempie, domyślna strategia = stabilizacja bez deficytu', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 10, sex: 'M', w: 55, h: 145 });
   expect(r.state.stage).toBe('age_6_11');
-  expect(r.state.diets).toEqual([['light', r.state.base - 130, 130]]);
+  expect(r.state.diets).toEqual([['light', r.state.base - 126, 126]]);
   expect(r.dietOptions.length).toBe(1);
   // ENERGY-REC-2: domyślna strategia 6–11 lat < 99c = stabilizacja → karta w trybie utrzymania masy
   expect(r.plan).toContain('energia utrzymania (stabilizacja masy ciała)');
@@ -131,18 +132,18 @@ test('6–11 lat przy BMI < 99c: tylko lekka −130 kcal, ostrzeżenie o tempie,
   });
   expect(redPlan).toContain('Wiek 6–11 lat przy BMI poniżej 99. centyla');
   expect(redPlan).toContain('tempo ograniczone do ok. 0,5 kg/mies.');
-  expect(redPlan).toContain('−130 kcal/dzień');
+  expect(redPlan).toContain('−126 kcal/dzień');
   await page.evaluate(() => { const bt = document.querySelector('[data-diet-strategy-choice="stabilization"]'); if (bt) bt.click(); window.__vildaDietStrategyTouched = false; });
   const text = await recommend(page, { strategy: null, diet: 'light' });
   const kcal = Math.round(r.state.base / 100) * 100;
   expect(text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
   expect(text).toContain(`tj. około ${kcal} kcal dziennie przy PAL 1,4, bez dodatku na wzrastanie`);
   expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
-  expect(text).toContain('(od zapotrzebowania dla masy należnej – mediany BMI dla wieku i wzrostu)');
+  expect(text).toContain('(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość)');
   expect(text).not.toMatch(/Taki plan daje deficyt|wynosi około \d+ kcal, co przekłada/u);
   // jawna redukcja: dieta lekka −130 kcal, 0,1 kg/tydz.
   const red = await recommend(page, { strategy: 'reduction', diet: 'light' });
-  expect(red).toContain('wynosi około 130 kcal');
+  expect(red).toContain('wynosi około 126 kcal');
   expect(red).not.toContain('stabilizacji nie stosuje się');
 });
 

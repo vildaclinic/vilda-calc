@@ -62,7 +62,7 @@ test('J1: 10-latek, wariant standardowy — forma bezosobowa, bez zwrotów do ro
   expect(r.text).not.toContain('na tydzień');
   expect(r.text).toContain('Deficyt kaloryczny przy tej diecie wynosi');
   expect(r.text).not.toContain('Przeliczenie wykonano');
-  expect(r.text).toMatch(/Normy żywieniowe dla planu około \d+ kcal\/d \(od zapotrzebowania dla masy należnej – mediany BMI dla wieku i wzrostu\):/u);
+  expect(r.text).toMatch(/Normy żywieniowe dla planu około \d+ kcal\/d \(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość\):/u);
 });
 
 test('J2: 18-latka w trybie „ty" — rówieśnik zamiast „dziecka", konsultacja bez rodziców i psychologa dziecięcego; standard 18-latki bez „Twoja"', async ({ page }) => {
@@ -87,15 +87,16 @@ test('J3: stabilizacja 8-latki — cel raz, „bez dodatkowego deficytu", bez �
   const r = await run(page, { age: 8, sex: 'F', w: 40, h: 130 });
   expect(r.active).toBe('stabilization');
   expect(count(r.text, 'utrzymanie obecnej masy ciała')).toBe(1);
-  expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu: podaż energii dziecka odpowiada zapotrzebowaniu dla masy należnej');
-  expect(r.text).toContain('bez dodatku na wzrastanie.');
+  expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu: podaż energii dziecka odpowiada zapotrzebowaniu przy obecnej masie ciała, z korektą −10 % REE na otyłość (Hofsteenge 2010)');
+  expect(r.text).toContain('bez dodatku na wzrastanie');
+  expect(r.text).toContain('celem pozostaje masa należna ok.');
   expect(r.text).not.toContain('Celem jest utrzymanie obecnej masy ciała przy dalszym wzrastaniu');
   expect(r.text).not.toMatch(/rosła minimalnie|rosła jak najwolniej/u);
   expect(r.text).toContain('Przy stabilnej masie ciała dziecko z czasem „wyrośnie” z otyłości');
-  expect(r.text).toMatch(/Normy żywieniowe dla planu około \d+ kcal\/d \(od zapotrzebowania dla masy należnej – mediany BMI dla wieku i wzrostu\):/u);
+  expect(r.text).toMatch(/Normy żywieniowe dla planu około \d+ kcal\/d \(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość\):/u);
   expect(r.text).not.toContain('Przeliczenie wykonano');
   const p = await run(page, { age: 8, sex: 'F', w: 40, h: 130, pf: true });
-  expect(p.text).toContain('W strategii stabilizacji nie planujemy dodatkowego deficytu: dzienna podaż energii dziecka powinna odpowiadać zapotrzebowaniu dziecka o prawidłowej masie ciała dla jego wieku i wzrostu');
+  expect(p.text).toContain('W strategii stabilizacji nie planujemy dodatkowego deficytu: dzienna podaż energii dziecka powinna odpowiadać jego zapotrzebowaniu przy obecnej masie ciała');
   expect(count(p.text, 'ajważniejsze jest utrzymanie')).toBe(1);
 });
 

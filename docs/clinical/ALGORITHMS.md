@@ -1098,6 +1098,47 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ENERGY-CHILD-MID1 — zalecenia energetyczne u dziecka z nadwagą/otyłością: baza od masy aktualnej z korektą na otyłość, deficyt z bezpiecznego tempa, podłoga względem REE (SW 1.0.907, 2026-09-12, decyzja właściciela)
+
+**Zgłoszenie.** Właściciel po wdrożeniu GROWTH/ENERGY-CHILD-OBESITY: „aplikacja proponuje za bardzo deficytowe diety, wcześniej były za bardzo kaloryczne, teraz są zbyt rygorystyczne, musimy znaleźć złoty środek". Przegląd modułu (dwie ścieżki: analiza kodu i sondy przez prawdziwy adapter) pokazał trzy rzeczy:
+
+1. **„Stabilizacja" była ukrytym deficytem.** Tekst mówił „nie planuje się dodatkowego deficytu", a liczba to zapotrzebowanie dla **masy należnej**, czyli 12 % (dz. 7 l) do 25 % (chł. 15 l) poniżej zapotrzebowania tego dziecka. Stabilizacja jest strategią domyślną dla wszystkich dzieci 2–5 lat i 6–11 lat poniżej 99. centyla, więc dotyczyła większości pacjentów.
+2. **Cztery niezależne obniżenia mnożyły się**: masa należna zamiast aktualnej (−11…−24 %), PAL 1,6 → 1,4 (−10 %), brak ×1,01 (−1 %) i dopiero na końcu stały deficyt 200/350/500 kcal. Baza spadła o 12–34 %, zanim odjęto deficyt.
+3. **Prognozy schodziły poniżej spoczynkowej przemiany materii** dla rzeczywistego ciała: dz. 12 l 70 kg dieta intensywna 1206 kcal przy REE 1494; chł. 15 l 95 kg intensywna 1895 przy REE 2247. Podłoga 1000/1200 kcal jest stałą, więc tego nie łapała. Deklarowane tempo (deficyt × 7 / 7700) liczyło się od bazy, która nie była zapotrzebowaniem dziecka, więc realna utrata masy była kilkukrotnie szybsza od pokazywanej i przekraczała sufit 1–2 kg/mies.
+
+**Podstawa piśmiennicza (PubMed).**
+- Mazur A. i wsp., Nutrients 2022;14(18):3806, [DOI 10.3390/nu14183806](https://doi.org/10.3390/nu14183806) — pełny tekst: „The daily caloric value of the diet established to the ideal body weight for the height of the child **may be reduced** by 200–500 kcal. **However, it should be noted that little to no evidence supports these specific recommendations. Rather, they represent an expert opinion.** The reduced caloric intake should not be lower than 1000 kcal/day."; „**Weight maintenance** for more than 1 year might be an appropriate goal for those children with overweight and mild obesity, because BMI will decrease as children gain height."; „In older children, weight loss is recommended **to obtain the 85th percentile BMI**. **A weight loss of up to 1–2 kg/month is safe.** Rapid weight loss is not recommended because of possible adverse effects on growth." — deficyt jest fakultatywny i oznaczony jako opinia ekspercka, a sufitem jest tempo, nie stała kcal.
+- Hofsteenge G.H. i wsp., Am J Clin Nutr 2010;91(5):1244–54, [DOI 10.3945/ajcn.2009.28330](https://doi.org/10.3945/ajcn.2009.28330): u nastolatków z otyłością równania na **masie aktualnej** zawyżają REE o ok. 10 % (Schofield-weight 10–18 lat: bias +10,7 %, RMSE 276 kcal/d). Uzasadnia korektę **×0,9 na REE dla masy aktualnej**, a nie przejście na masę należną (u chłopca 14 l 85 kg to różnica ok. 500 kcal, pięciokrotnie większa niż 10 %).
+- Abawi O. i wsp., Front Endocrinol 2022;13:862817, [DOI 10.3389/fendo.2022.862817](https://doi.org/10.3389/fendo.2022.862817): przy ciężkiej otyłości zmierzone REE jest obniżone u 21 % i **podwyższone u 24 %** dzieci — sztywne zaniżanie bazy jest ryzykowne.
+- Barlow S.E., Pediatrics 2007;120(Suppl 4):S164–S192, [DOI 10.1542/peds.2007-2329C](https://doi.org/10.1542/peds.2007-2329C): 2–5 lat utrzymanie masy; 6–11 lat przy BMI < 99c utrzymanie albo ubytek ≤ 0,5 kg/mies.; 12–18 lat ≤ 0,9 kg/tydz.
+- Golden N.H. i wsp. (AAP), Pediatrics 2016;138(3), [DOI 10.1542/peds.2016-1649](https://doi.org/10.1542/peds.2016-1649): „The focus should be on a healthy lifestyle rather than on weight"; restrykcyjne odchudzanie nastolatków jest czynnikiem ryzyka zaburzeń odżywiania.
+- Hampl S.E. i wsp. (AAP), Pediatrics 2023;151(2), [DOI 10.1542/peds.2022-060640](https://doi.org/10.1542/peds.2022-060640); Styne D.M. i wsp., J Clin Endocrinol Metab 2017;102(3):709–757, [DOI 10.1210/jc.2016-2573](https://doi.org/10.1210/jc.2016-2573); Gow M.L. i wsp., Nutr Rev 2014;72(7):453–70, [DOI 10.1111/nure.12111](https://doi.org/10.1111/nure.12111): pierwszym wyborem jest interwencja behawioralna, a efekt nie zależy od zaostrzania kaloryczności.
+
+**Zmiana (`vilda_diet_plan_ui.js` 1.4.2 → 1.5.0, `vilda_diet_recommendations.js`, `vilda_bmi_journey.js`); tylko dzieci 2–18 lat z BMI ≥ 85c, dorośli i dzieci < 85c bez zmian.**
+1. **Baza planu i stabilizacji = REE Henry'ego dla MASY AKTUALNEJ × 0,9 × PAL**, bez dodatku na wzrastanie (`CHILD_REE_OBESITY_FACTOR = 0.9`; kontekst `plan_reduction` bez `bodyOverride`). `state.reeAdjustedKcal` niesie REE po korekcie. Masa należna (mediana BMI × wzrost²) zostaje **celem** i nadal jest podawana w karcie i narracji, ale nie jest już podstawą energii.
+2. **Deficyt z bezpiecznego tempa**, nie ze stałej (`CHILD_RATE_KG_MONTH`, `DAYS_PER_MONTH = 30,4375`): 12–18 lat **1 / 1,5 / 2 kg/mies.** → 253 / 379 / 506 kcal/d; 6–11 lat ≥ 99c **0,5 / 1 / 1,5** → 126 / 253 / 379; 6–11 lat < 99c tylko lekka 0,5 kg/mies. (126 kcal, `rateCapped`); 2–5 lat bez diet. Wiersz diety niesie `monthlyLossKg` i `rateBased`, więc deklarowane tempo i deficyt pochodzą z tej samej liczby.
+3. **Podłoga = max(minimum wieku 1000/1200 kcal, REE po korekcie)** (`floorKcal`, `floorAbsoluteKcal`, `floorReeKcal`). Dieta poniżej podłogi jest niedostępna z rozróżnionym powodem: „poniżej spoczynkowej przemiany materii dla obecnej masy ciała (X kcal/dzień)" albo „poniżej minimum X kcal/dzień dla tego wieku". Podłoga obejmuje też `maintenanceKcal`, w tym w gałęzi 2–5 lat, która wcześniej wracała z funkcji przed testem podłogi.
+4. **PAL silnika zgodny z formularzem**: przy braku jawnego PAL plan dziecka z nadwagą bierze `energyDefaultPlanPal` (dziś 1,4) zamiast normatywnego 1,6 — koniec rozjazdu 14 % między silnikiem a formularzem. Dzieci bez nadwagi i dorośli: fallback normatywny bez zmian.
+5. **Teksty**: karta planu, „Droga do normy" i narracja mówią „zapotrzebowanie przy obecnej masie ciała z korektą −10 % REE na otyłość (Hofsteenge 2010)", podają tempo w kg/mies. i nazywają masę należną celem. Zdanie stabilizacji dla pacjenta: „podaż energii powinna odpowiadać Twojemu zapotrzebowaniu przy obecnej masie ciała… Masa ciała ma się utrzymać, a BMI obniży się wraz ze wzrostem".
+
+**Wyniki (dane fikcyjne, PAL 1,4, silnik przez `energyBuildPlanReductionState`).**
+
+| przypadek | baza przed | baza po | diety przed | diety po |
+|---|---|---|---|---|
+| dz. 7 l, 120 cm, 30 kg | 1338 | **1358** | lekka 1208 | lekka **1232** |
+| chł. 10 l, 140 cm, 45 kg | 1672 | **1730** | lekka 1542 | lekka **1604** |
+| dz. 12 l, 150 cm, 70 kg | 1706 | **1882** | 1506 / 1356 / 1206 | **1629 / 1503 / 1376** |
+| chł. 15 l, 175 cm, 95 kg | 2395 | **2831** | 2195 / 2045 / 1895 | **2578 / 2452 / 2325** |
+| dz. 4 l, 100 cm, 22 kg | 1128 | **1145** | brak (2–5 lat) | brak (2–5 lat) |
+
+Dla porównania stan sprzed ENERGY-CHILD-OBESITY („za wysokie"): dz. 12 l 2051 / 1883 / 1689; chł. 15 l 3130 / 2880 / 2630. Nowe wartości leżą między obiema skrajnościami, żadna nie schodzi poniżej REE dla rzeczywistego ciała, a deklarowane tempo równa się realnemu.
+
+**Parametry do strojenia:** `CHILD_REE_OBESITY_FACTOR` 0,9; `CHILD_RATE_KG_MONTH` (1/1,5/2 oraz 0,5/1/1,5); `CHILD_FLOOR_KCAL` 1000/1200.
+
+**Otwarte (kolejny PR):** masa docelowa z **85. centyla BMI** zamiast mediany (cel leczenia nazwany w Mazur 2022) oraz **PAL domyślny 1,6** dla 10–18 lat (dolna granica pasma Norm 2024). Oba podnoszą liczby dalej, więc właściciel chce je zobaczyć osobno.
+
+*Strażnicy:* `tests/unit/energy-dziecko-otylosc.test.mjs` (19: klasa BMI i masa należna jako cel, PAL i plakietka, baza od masy aktualnej ×0,9 z kontekstem `actual` i mnożnikiem 1, stabilizacja nie niższa od REE i wyższa od dawnej bazy, deficyty z tempa 1/1,5/2 i 0,5/1/1,5, podłoga z REE i jej dwa powody odmowy, etap 2–5 z podłogą, PAL silnika = PAL formularza, dorosły i dziecko < 85c bez zmian).
+
 ### ENERGY-REC-4 — audyt zaleceń energetycznych: język narracji (SW 1.0.898, 2026-09-12, decyzja właściciela)
 
 PR 4 z 4 (punkty 13–15 audytu: J1–J4). Zmiany wyłącznie w tekstach `vilda_diet_recommendations.js` (`pe()`, `yi()`, `_i()`); liczby i logika bez zmian.
