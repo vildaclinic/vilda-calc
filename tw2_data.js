@@ -25,6 +25,17 @@
  *     wiersz 16,5 (s. 775).
  *   • Poprawka na wzrost rodziców celowo USUNIĘTA przez autorów (s. 775): przy 95 % wzrostu
  *     dorosłego dodawanie za wysokich rodziców „nie ma sensu".
+ *   • DZIEWCZĘTA Z PRZYROSTAMI (decyzja właściciela 2026-09-12, GROWTH-PRED-TW2D): tab. 3.2a (przed
+ *     menarche, 8,0–12,5 l, + przyrost wzrostu), 3.2b (po menarche, 11,5–16,0 l, + przyrost wzrostu),
+ *     3.3a (przed menarche, 10,0–14,5 l, + przyrost wzrostu i wieku kostnego), 3.3b (po menarche,
+ *     11,5–13,5 l, + oba przyrosty). Przypis: przyrosty mierzone w odstępie „±6 tygodni (0,88–1,12
+ *     roku), przeliczone na tempo roczne". Drzewo doboru (s. 775, rycina): przed menarche — bez
+ *     przyrostu 3.1a; przyrost wzrostu bez przyrostu RUS: 8,0–12,5 → 3.2a, 13,0–14,5 → 3.1a (równanie
+ *     2 gorsze od 1 w 13–14 l, s. 774); oba przyrosty: 10,0–14,5 → 3.3a (w 8,0–9,5 rycina wskazuje
+ *     3.1a — silnik używa 3.2a, bo przyrost wzrostu jest dostępny; s. 774: przewaga równania 2 od
+ *     8 lat). Po menarche — bez przyrostu 3.1c/3.1b; przyrost wzrostu bez RUS → 3.2b; oba przyrosty:
+ *     11,5–13,5 → 3.3b, starsze → 3.2b (s. 774: brak poprawy w 14–15 l). Tabele 3.2b/3.3b NIE mają
+ *     członu wieku menarche. Transkrypcja z obrazu tabel 230 dpi (2026-09-12).
  *   • CHŁOPCY (decyzja właściciela 2026-09-12): tab. 2.1 (równanie „1", 3 zmienne, 6,0–18,5 l) —
  *     „wszyscy chłopcy poniżej 11,0 lat i chłopcy powyżej 11 lat bez dostępnego przyrostu wzrostu".
  *     Tab. 2.2 (równanie „2", 4 zmienne: + przyrost wzrostu w ostatnim roku, 11,0–18,0 l) — dla chłopców
@@ -141,6 +152,54 @@
     [18.0, 1.01, -0.3, -0.55, 0.0, 14, 0.7, 0.99]
   ];
 
+  // [wiek wiersza, h, ca, rus, dh, const, residualSd, r] — tab. 3.2a (przed menarche, przyrost wzrostu)
+  var GIRLS_32A = [
+    [8.0, 0.80, -3.4, -1.80, 1.1, 99, 3.2, 0.87],
+    [8.5, 0.90, -3.2, -1.95, -1.0, 98, 3.2, 0.87],
+    [9.0, 0.95, -2.9, -2.15, -2.0, 96, 3.2, 0.87],
+    [9.5, 0.97, -2.7, -2.30, -1.8, 92, 3.2, 0.87],
+    [10.0, 0.94, -2.4, -2.35, -1.6, 92, 3.2, 0.87],
+    [10.5, 0.89, -2.2, -2.40, -1.3, 95, 3.2, 0.87],
+    [11.0, 0.91, -1.9, -2.45, -1.3, 90, 2.9, 0.92],
+    [11.5, 0.94, -1.7, -2.90, -1.3, 88, 2.9, 0.92],
+    [12.0, 0.96, -1.4, -3.55, -0.9, 86, 3.0, 0.81],
+    [12.5, 0.98, -1.2, -3.80, -0.4, 80, 3.0, 0.81]
+  ];
+  // [wiek wiersza, h, ca, rus, dh, const, residualSd, r] — tab. 3.2b (po menarche, przyrost wzrostu; bez członu wieku menarche)
+  var GIRLS_32B = [
+    [11.5, 0.99, -1.5, 0.0, 0.6, 20, 1.5, 0.96],
+    [12.0, 1.05, -1.1, 0.0, 0.8, 6, 1.1, 0.98],
+    [12.5, 1.02, -0.7, 0.0, 1.0, 5, 1.1, 0.98],
+    [13.0, 1.00, -0.5, 0.0, 1.0, 6, 1.2, 0.98],
+    [13.5, 0.99, -0.2, 0.0, 1.0, 3, 1.2, 0.98],
+    [14.0, 1.00, -0.1, 0.0, 0.9, 1, 0.8, 0.99],
+    [14.5, 1.01, -0.1, -0.15, 0.8, 2, 0.8, 0.99],
+    [15.0, 1.03, 0.0, -0.50, 0.6, 3, 0.5, 0.99],
+    [15.5, 1.07, 0.0, -0.90, 0.1, 4, 0.5, 0.99],
+    [16.0, 1.10, 0.0, -1.30, 0.0, 5, 0.4, 0.99]
+  ];
+  // [wiek wiersza, h, ca, rus, dh, drus, const, residualSd, r] — tab. 3.3a (przed menarche, oba przyrosty)
+  var GIRLS_33A = [
+    [10.0, 0.92, -2.4, -2.50, -1.6, 0.3, 95, 3.0, 0.87],
+    [10.5, 0.92, -2.3, -2.75, -1.4, 0.8, 94, 3.0, 0.87],
+    [11.0, 0.91, -1.8, -2.95, -1.3, 1.2, 93, 2.7, 0.89],
+    [11.5, 0.87, -1.5, -3.20, -1.1, 1.6, 95, 2.7, 0.89],
+    [12.0, 0.85, -1.1, -3.60, -0.8, 1.9, 96, 2.6, 0.89],
+    [12.5, 0.88, -0.7, -3.90, -0.5, 2.1, 89, 2.6, 0.89],
+    [13.0, 0.97, -0.5, -4.15, -0.3, 2.2, 74, 2.1, 0.93],
+    [13.5, 1.09, -0.3, -4.35, -0.2, 2.5, 54, 2.1, 0.93],
+    [14.0, 1.21, -0.1, -4.55, -0.1, 2.6, 35, 1.8, 0.95],
+    [14.5, 1.31, 0.0, -4.75, -0.1, 2.7, 19, 1.8, 0.95]
+  ];
+  // [wiek wiersza, h, ca, rus, dh, drus, const, residualSd, r] — tab. 3.3b (po menarche, oba przyrosty)
+  var GIRLS_33B = [
+    [11.5, 1.11, 0.0, -0.50, 0.7, 2.2, -14, 1.2, 0.98],
+    [12.0, 1.07, 0.0, -0.40, 0.7, 1.5, -7, 1.1, 0.98],
+    [12.5, 1.03, 0.0, -0.40, 0.8, 0.9, -1, 1.1, 0.98],
+    [13.0, 1.00, 0.0, -0.25, 0.8, 0.5, 3, 1.1, 0.98],
+    [13.5, 0.99, 0.0, -0.20, 0.8, 0.3, 4, 1.1, 0.98]
+  ];
+
   function rows3(arr) {
     return arr.map(function (r) {
       return { rowAge: r[0], h: r[1], ca: r[2], rus: r[3], men: 0, konst: r[4], residualSdCm: r[5], r: r[6] };
@@ -154,6 +213,11 @@
   function rows4inc(arr) {
     return arr.map(function (r) {
       return { rowAge: r[0], h: r[1], ca: r[2], rus: r[3], men: 0, dh: r[4], konst: r[5], residualSdCm: r[6], r: r[7] };
+    });
+  }
+  function rows5inc(arr) {
+    return arr.map(function (r) {
+      return { rowAge: r[0], h: r[1], ca: r[2], rus: r[3], men: 0, dh: r[4], drus: r[5], konst: r[6], residualSdCm: r[7], r: r[8] };
     });
   }
 
@@ -174,13 +238,19 @@
       parentalAllowance: 'usunięta przez autorów (s. 775)',
       boysTable: 'tab. 2.1 (3 zmienne, 6,0–18,5 l) i tab. 2.2 (4 zmienne z przyrostem wzrostu, 11,0–18,0 l)',
       boysAboveTableRule: 'ostatni wiersz 18,5 (2.1) / 18,0 (2.2) (s. 775: chłopcy z opóźnieniem wzrastania i niezrośniętymi nasadami)',
-      heightIncrementWindowYears: [0.83, 1.12],
-      heightIncrementRule: 'przypis tab. 2.2: „±5 tygodni (0,83–1,12 roku), przeliczony na tempo roczne"'
+      heightIncrementWindowYears: { boys: [0.83, 1.12], girls: [0.88, 1.12] },
+      heightIncrementRule: 'przypis tab. 2.2: „±5 tygodni (0,83–1,12 roku)"; tab. 3.2/3.3: „±6 tygodni (0,88–1,12 roku)"; przeliczone na tempo roczne',
+      girlsIncrementTables: '3.2a (8,0–12,5), 3.2b (11,5–16,0), 3.3a (10,0–14,5), 3.3b (11,5–13,5); drzewo doboru s. 775'
     },
     girls: {
       premenarcheal: { table: '3.1a', minRowAge: 5.0, maxRowAge: 14.5, rows: rows3(GIRLS_PREMENARCHEAL_31A) },
       postmenarchealMenarcheUnknown: { table: '3.1b', minRowAge: 11.5, maxRowAge: 16.5, rows: rows3(GIRLS_POSTMENARCHEAL_31B) },
-      postmenarchealMenarcheKnown: { table: '3.1c', minRowAge: 11.5, maxRowAge: 16.5, rows: rows4(GIRLS_POSTMENARCHEAL_31C) }
+      postmenarchealMenarcheKnown: { table: '3.1c', minRowAge: 11.5, maxRowAge: 16.5, rows: rows4(GIRLS_POSTMENARCHEAL_31C) },
+      premenarchealHeightIncrement: { table: '3.2a', minRowAge: 8.0, maxRowAge: 12.5, rows: rows4inc(GIRLS_32A), incrementWindowYears: [0.88, 1.12] },
+      postmenarchealHeightIncrement: { table: '3.2b', minRowAge: 11.5, maxRowAge: 16.0, rows: rows4inc(GIRLS_32B), incrementWindowYears: [0.88, 1.12] },
+      premenarchealBothIncrements: { table: '3.3a', minRowAge: 10.0, maxRowAge: 14.5, rows: rows5inc(GIRLS_33A), incrementWindowYears: [0.88, 1.12] },
+      postmenarchealBothIncrements: { table: '3.3b', minRowAge: 11.5, maxRowAge: 13.5, rows: rows5inc(GIRLS_33B), incrementWindowYears: [0.88, 1.12] },
+      incrementWindowYears: [0.88, 1.12]
     },
     boys: {
       all: { table: '2.1', minRowAge: 6.0, maxRowAge: 18.5, rows: rows3(BOYS_21) },

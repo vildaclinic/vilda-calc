@@ -26,7 +26,7 @@ function policz(page, { lata, miesiace, wzrost, masa, ba, menarche, plec = 'F', 
     if (row) {
       const sr = (sel, v) => { const e = row.querySelector(sel); if (e) { e.value = v == null ? '' : String(v); e.dispatchEvent(new Event('input', { bubbles: true })); } };
       const h = historia || {};
-      sr('.adv-age-years', h.lata); sr('.adv-age-months', h.miesiace); sr('.adv-height', h.wzrost); sr('.adv-weight', h.masa);
+      sr('.adv-age-years', h.lata); sr('.adv-age-months', h.miesiace); sr('.adv-height', h.wzrost); sr('.adv-weight', h.masa); sr('.adv-bone-age', h.ba);
     }
     window.calculateGrowthAdvanced();
     const d = window.advancedGrowthData || {};
@@ -158,5 +158,34 @@ test('pole „Wiek kostny przy menarche": menarche 8,75 przy 147 cm z wiekiem ko
   expect(r.cardText).toMatch(/Wzrost przy menarche \/ 0,955\s*158,6 cm ±3,4/);
   expect(r.cardText).toContain('korekta +4,7 cm');
   expect(r.cardText).toContain('korekta na wiek kostny przy menarche 11,5 l wobec typowych 13 l: +4,7 cm (Cho 2026');
+});
+
+// GROWTH-PRED-TW2D — równania dziewcząt z przyrostami (tab. 3.2a/3.3b) przez prawdziwy adapter z wierszem historii.
+test('dziewczynka 12 l 6 mies. po menarche (11,5), 155 cm, BA 13, pomiar 11 l 6 mies. 148 cm z BA 12: TW Mark II z tab. 3.3b → 160,0 ±1,8 (bez przyrostów 3.1c 159,2)', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+  const r = await policz(page, { lata: 12, miesiace: 6, wzrost: 155, masa: 45, ba: 13, menarche: 11.5, historia: { lata: 11, miesiace: 6, wzrost: 148, masa: 40, ba: 12 } });
+  expect(r.tw2).toMatchObject({ available: true, table: '3.3b', rowAge: 12.5, heightIncrementCmPerYear: 7, boneAgeIncrementYearsPerYear: 1, heightIncrementIntervalYears: 1 });
+  expect(r.tw2.predictedAdultHeightCm).toBeCloseTo(160.0, 1);
+  expect(r.tw2.errorBoundHalfWidthCm).toBeCloseTo(1.8, 1);
+  expect(r.tw2.withoutIncrementCm).toBeCloseTo(159.2, 1);
+  expect((r.fhp.methods || []).find((m) => m.key === 'tw2')).toMatchObject({ tw2Table: '3.3b', levelKey: 'high', excluded: false });
+  expect(r.fhp.postmenarcheal).toBe(true);
+  expect(r.cardText).toMatch(/TW Mark II\s*160,0 cm ±1,8/);
+  expect(r.cardText).toContain('tablica 3.3b (po menarche; 5 zmiennych: wzrost, wiek metrykalny, wiek kostny, przyrost wzrostu i przyrost wieku kostnego w ostatnim roku), wiersz 12,5 l');
+  expect(r.cardText).toContain('przyrost wzrostu 7 cm/rok i wieku kostnego 1 roku/rok z ostatnich 12 mies. (przeliczone na rok); bez przyrostu (tab. 3.1c) byłoby 159,2 cm');
+});
+
+test('dziewczynka 9 l przed menarche, 135 cm, BA 9, pomiar 8 l 0 mies. 128 cm (bez BA): tab. 3.2a → 164,8 ±5,3 (bez przyrostu 3.1a 168,3); pomiar sprzed 10 mies. poza oknem dziewcząt → 3.1a', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+  const r = await policz(page, { lata: 9, miesiace: 0, wzrost: 135, masa: 30, ba: 9, menarche: null, historia: { lata: 8, miesiace: 0, wzrost: 128, masa: 26, ba: '' } });
+  expect(r.tw2).toMatchObject({ available: true, table: '3.2a', rowAge: 9, heightIncrementCmPerYear: 7, boneAgeIncrementYearsPerYear: null });
+  expect(r.tw2.predictedAdultHeightCm).toBeCloseTo(164.8, 1);
+  expect(r.tw2.withoutIncrementCm).toBeCloseTo(168.3, 1);
+  expect(r.cardText).toContain('tablica 3.2a (przed menarche; 4 zmienne: wzrost, wiek metrykalny, wiek kostny, przyrost wzrostu w ostatnim roku), wiersz 9 l');
+
+  const poza = await policz(page, { lata: 9, miesiace: 0, wzrost: 135, masa: 30, ba: 9, menarche: null, historia: { lata: 8, miesiace: 2, wzrost: 129, masa: 26, ba: '' } });
+  expect(poza.tw2).toMatchObject({ available: true, table: '3.1a', heightIncrementCmPerYear: null });
 });
 
