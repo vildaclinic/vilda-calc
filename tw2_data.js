@@ -27,9 +27,11 @@
  *     dorosłego dodawanie za wysokich rodziców „nie ma sensu".
  *   • CHŁOPCY (decyzja właściciela 2026-09-12): tab. 2.1 (równanie „1", 3 zmienne, 6,0–18,5 l) —
  *     „wszyscy chłopcy poniżej 11,0 lat i chłopcy powyżej 11 lat bez dostępnego przyrostu wzrostu".
- *     Tab. 2.2 (4 zmienne, z przyrostem wzrostu w ostatnim roku) — NIE przepisana: aplikacja liczy
- *     równaniem „1" bez przyrostu. Powyżej 18,5 l (opóźnienie wzrastania, nasady niezrośnięte):
- *     ostatni wiersz tablicy (s. 775). Transkrypcja z obrazu tabeli (230 dpi, 2026-09-12);
+ *     Tab. 2.2 (równanie „2", 4 zmienne: + przyrost wzrostu w ostatnim roku, 11,0–18,0 l) — dla chłopców
+ *     od 11 lat z dostępnym przyrostem (decyzja właściciela 2026-09-12, GROWTH-PRED-TW2C). Przypis
+ *     tabeli: przyrost mierzony w odstępie „±5 tygodni (0,83–1,12 roku), przeliczony na tempo roczne".
+ *     Powyżej 18,5 l (2.1) / 18,0 l (2.2) — opóźnienie wzrastania, nasady niezrośnięte: ostatni
+ *     wiersz tablicy (s. 775). Transkrypcja z obrazu tabeli (230 dpi, 2026-09-12);
  *     rozbieżności OCR (9,0/9,5 SD „7941" → 4,1; 13,0 stała „93.7" → 99 i SD 3,7; 16,0 stała „8" → 80)
  *     rozstrzygnięte na korzyść obrazu druku.
  */
@@ -120,6 +122,25 @@
     [18.5, 0.98, 0.0, -1.90, 37, 1.4, 0.99]
   ];
 
+  // [wiek wiersza, h, ca, rus, dh (przyrost wzrostu w ostatnim roku, cm/rok), const, residualSd, r] — tab. 2.2
+  var BOYS_22 = [
+    [11.0, 1.19, -3.1, -1.50, -0.3, 59, 3.8, 0.89],
+    [11.5, 1.20, -2.7, -1.92, -1.4, 62, 3.8, 0.89],
+    [12.0, 1.15, -2.3, -2.73, -1.5, 73, 3.2, 0.93],
+    [12.5, 1.09, -1.9, -3.03, -1.3, 81, 3.2, 0.93],
+    [13.0, 1.03, -1.6, -3.57, -1.0, 91, 3.1, 0.93],
+    [13.5, 0.99, -1.4, -4.17, -0.6, 100, 3.1, 0.93],
+    [14.0, 0.95, -1.1, -4.73, -0.5, 109, 3.1, 0.92],
+    [14.5, 0.92, -0.8, -4.82, -0.4, 110, 3.1, 0.92],
+    [15.0, 0.89, -0.7, -3.68, -0.2, 95, 2.5, 0.94],
+    [15.5, 0.83, -0.5, -2.58, -0.1, 84, 2.5, 0.94],
+    [16.0, 0.78, -0.4, -2.25, 0.0, 84, 2.8, 0.91],
+    [16.5, 0.85, -0.4, -2.07, 0.0, 69, 2.8, 0.91],
+    [17.0, 0.93, -0.4, -1.90, 0.0, 54, 1.6, 0.97],
+    [17.5, 0.99, -0.3, -1.45, 0.0, 38, 1.6, 0.97],
+    [18.0, 1.01, -0.3, -0.55, 0.0, 14, 0.7, 0.99]
+  ];
+
   function rows3(arr) {
     return arr.map(function (r) {
       return { rowAge: r[0], h: r[1], ca: r[2], rus: r[3], men: 0, konst: r[4], residualSdCm: r[5], r: r[6] };
@@ -128,6 +149,11 @@
   function rows4(arr) {
     return arr.map(function (r) {
       return { rowAge: r[0], h: r[1], ca: r[2], rus: r[3], men: r[4], konst: r[5], residualSdCm: r[6], r: r[7] };
+    });
+  }
+  function rows4inc(arr) {
+    return arr.map(function (r) {
+      return { rowAge: r[0], h: r[1], ca: r[2], rus: r[3], men: 0, dh: r[4], konst: r[5], residualSdCm: r[6], r: r[7] };
     });
   }
 
@@ -146,8 +172,10 @@
       postmenarchealAboveTableRule: 'wiersz 16,5 do 17 lat (s. 775)',
       notValidatedIn: 'przedwczesne dojrzewanie, achondroplazja, choroby przewlekłe (s. 775)',
       parentalAllowance: 'usunięta przez autorów (s. 775)',
-      boysTable: 'tab. 2.1 (3 zmienne, 6,0–18,5 l); tab. 2.2 (z przyrostem wzrostu) nie przepisana',
-      boysAboveTableRule: 'ostatni wiersz 18,5 (s. 775: chłopcy z opóźnieniem wzrastania i niezrośniętymi nasadami)'
+      boysTable: 'tab. 2.1 (3 zmienne, 6,0–18,5 l) i tab. 2.2 (4 zmienne z przyrostem wzrostu, 11,0–18,0 l)',
+      boysAboveTableRule: 'ostatni wiersz 18,5 (2.1) / 18,0 (2.2) (s. 775: chłopcy z opóźnieniem wzrastania i niezrośniętymi nasadami)',
+      heightIncrementWindowYears: [0.83, 1.12],
+      heightIncrementRule: 'przypis tab. 2.2: „±5 tygodni (0,83–1,12 roku), przeliczony na tempo roczne"'
     },
     girls: {
       premenarcheal: { table: '3.1a', minRowAge: 5.0, maxRowAge: 14.5, rows: rows3(GIRLS_PREMENARCHEAL_31A) },
@@ -155,7 +183,8 @@
       postmenarchealMenarcheKnown: { table: '3.1c', minRowAge: 11.5, maxRowAge: 16.5, rows: rows4(GIRLS_POSTMENARCHEAL_31C) }
     },
     boys: {
-      all: { table: '2.1', minRowAge: 6.0, maxRowAge: 18.5, rows: rows3(BOYS_21) }
+      all: { table: '2.1', minRowAge: 6.0, maxRowAge: 18.5, rows: rows3(BOYS_21) },
+      withIncrement: { table: '2.2', minRowAge: 11.0, maxRowAge: 18.0, rows: rows4inc(BOYS_22), incrementWindowYears: [0.83, 1.12] }
     }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

@@ -187,7 +187,7 @@ describe('GROWTH-PRED-TW2B — chłopcy (tab. 2.1) i wzrost przy menarche z pola
     expect(r).toMatchObject({ available: true, table: '2.1', rowAge: 9, extrapolatedBelowTable: false, extrapolatedAboveTable: false, variants: null });
     expect(r.predictedAdultHeightCm).toBeCloseTo(186.6, 1);
     expect(r.errorBoundHalfWidthCm).toBeCloseTo(6.7, 1);
-    expect(r.notes.join(' ')).toContain('tablica 2.2 z przyrostem nie jest używana');
+    expect(r.notes.join(' ')).toContain('równanie „1" (3 zmienne, tab. 2.1) bez przyrostu wzrostu w ostatnim roku (tab. 2.2 od 11. roku życia)');
     expect(r.notes.join(' ')).toContain('Greulicha');
   });
   it('brzegi chłopców: poniżej 6 lat poza zakresem; 19-latek z niezrośniętymi nasadami → ostatni wiersz 18,5 z flagą; powyżej 20 lat poza zakresem', () => {
@@ -214,6 +214,79 @@ describe('GROWTH-PRED-TW2B — chłopcy (tab. 2.1) i wzrost przy menarche z pola
     expect(text).toContain('TW Mark II 186,6 cm ±6,7');
     expect(text).toContain('równania Tannera i wsp. (1983) dla chłopców, tablica 2.1 (3 zmienne: wzrost, wiek metrykalny, wiek kostny), wiersz 9 l');
     expect(text).not.toContain('Profil po menarche:');
+  });
+});
+
+describe('GROWTH-PRED-TW2C — tab. 2.2 (4 zmienne, z przyrostem wzrostu) i dobór przyrostu z historii', () => {
+  const S = win.selectTW2HeightIncrement;
+  it('transkrypcja tab. 2.2: 15 wierszy 11,0–18,0; komórki wobec druku (11,0; 12,0; 14,5; 16,0 przyrost 0; 18,0 SD 0,7)', () => {
+    const t = D.boys.withIncrement;
+    expect(t.table).toBe('2.2');
+    expect(t.rows.length).toBe(15);
+    expect(t.incrementWindowYears).toEqual([0.83, 1.12]);
+    expect(t.rows[0]).toMatchObject({ rowAge: 11, h: 1.19, ca: -3.1, rus: -1.50, dh: -0.3, konst: 59, residualSdCm: 3.8, r: 0.89 });
+    expect(t.rows.find((r) => r.rowAge === 12)).toMatchObject({ h: 1.15, ca: -2.3, rus: -2.73, dh: -1.5, konst: 73, residualSdCm: 3.2, r: 0.93 });
+    expect(t.rows.find((r) => r.rowAge === 14.5)).toMatchObject({ h: 0.92, ca: -0.8, rus: -4.82, dh: -0.4, konst: 110, residualSdCm: 3.1, r: 0.92 });
+    expect(t.rows.find((r) => r.rowAge === 16)).toMatchObject({ h: 0.78, ca: -0.4, rus: -2.25, dh: 0, konst: 84, residualSdCm: 2.8, r: 0.91 });
+    expect(t.rows[14]).toMatchObject({ rowAge: 18, h: 1.01, ca: -0.3, rus: -0.55, dh: 0, konst: 14, residualSdCm: 0.7, r: 0.99 });
+  });
+  it('dobór przyrostu: okno 0,83–1,12 roku, pomiar najbliższy roku, tempo przeliczone na rok; poza oknem — niedostępny', () => {
+    const r = S({ measurements: [{ ageMonths: 132, height: 144 }, { ageMonths: 120, height: 138 }, { ageMonths: 138, height: 147 }], currentAgeMonths: 144, currentHeightCm: 150 });
+    expect(r).toMatchObject({ available: true, incrementCmPerYear: 6, deltaCm: 6, intervalYears: 1, intervalMonths: 12, fromAgeMonths: 132, fromHeightCm: 144 });
+    const r13 = S({ measurements: [{ ageMonths: 131, height: 143.5 }], currentAgeMonths: 144, currentHeightCm: 150 });
+    expect(r13).toMatchObject({ available: true, intervalMonths: 13, deltaCm: 6.5 });
+    expect(r13.incrementCmPerYear).toBeCloseTo(6.0, 1); // 6,5 cm / 1,083 roku
+    expect(S({ measurements: [{ ageMonths: 135, height: 146 }], currentAgeMonths: 144, currentHeightCm: 150 })).toMatchObject({ available: false, reason: 'no-measurement-in-window' });
+    expect(S({ measurements: [{ ageMonths: 129, height: 146 }], currentAgeMonths: 144, currentHeightCm: 150 })).toMatchObject({ available: false, reason: 'no-measurement-in-window' }); // 15 mies. > 1,12 roku
+    expect(S({ measurements: [], currentAgeMonths: 144, currentHeightCm: 150 })).toMatchObject({ available: false });
+    expect(S({ measurements: [{ ageMonths: 132, height: 144 }], currentAgeMonths: null, currentHeightCm: 150 })).toMatchObject({ available: false, reason: 'missing-input' });
+  });
+  it('chłopiec 12 l, 150 cm, BA 12, przyrost 6 cm/rok: tab. 2.2 → 1,15·150 − 2,3·12 − 2,73·12 − 1,5·6 + 73 = 176,1 ±5,3; bez przyrostu 178,1', () => {
+    const r = T({ sex: 'M', chronologicalAgeMonths: 144, currentHeightCm: 150, boneAgeYears: 12, heightIncrementCmPerYear: 6, heightIncrementIntervalYears: 1, heightIncrementFromAgeMonths: 132 });
+    expect(r).toMatchObject({ available: true, table: '2.2', rowAge: 12, heightIncrementCmPerYear: 6, heightIncrementIntervalYears: 1, heightIncrementFromAgeMonths: 132, extrapolatedAboveTable: false });
+    expect(r.predictedAdultHeightCm).toBeCloseTo(176.1, 1);
+    expect(r.errorBoundHalfWidthCm).toBeCloseTo(5.3, 1);
+    expect(r.withoutIncrementCm).toBeCloseTo(178.1, 1);
+    expect(r.coefficients.dh).toBe(-1.5);
+    expect(r.notes[0]).toContain('równanie „2" (4 zmienne, tab. 2.2): przyrost wzrostu 6 cm/rok z ostatnich 12 mies.');
+    expect(r.notes[0]).toContain('bez przyrostu (tab. 2.1) byłoby 178,1 cm');
+  });
+  it('brzegi tab. 2.2: przed 11 l przyrost ignorowany (2.1); 10 l 9 mies. → wiersz 11,0; 19-latek → wiersz 18,0 z flagą; bez przyrostu od 11 l nota o braku pomiaru', () => {
+    const young = T({ sex: 'M', chronologicalAgeMonths: 120, currentHeightCm: 140, boneAgeYears: 10, heightIncrementCmPerYear: 6 });
+    expect(young).toMatchObject({ table: '2.1', heightIncrementCmPerYear: null, withoutIncrementCm: null });
+    expect(young.notes[0]).toContain('tab. 2.2 od 11. roku życia');
+    const edge = T({ sex: 'M', chronologicalAgeMonths: 129, currentHeightCm: 145, boneAgeYears: 11, heightIncrementCmPerYear: 5 });
+    expect(edge).toMatchObject({ table: '2.2', rowAge: 11 });
+    const old = T({ sex: 'M', chronologicalAgeMonths: 228, currentHeightCm: 172, boneAgeYears: 17, heightIncrementCmPerYear: 2 });
+    expect(old).toMatchObject({ table: '2.2', rowAge: 18, extrapolatedAboveTable: true });
+    // 1,01·172 − 0,3·19 − 0,55·17 + 0·2 + 14 = 172,7
+    expect(old.predictedAdultHeightCm).toBeCloseTo(172.7, 1);
+    const none = T({ sex: 'M', chronologicalAgeMonths: 144, currentHeightCm: 150, boneAgeYears: 12 });
+    expect(none).toMatchObject({ table: '2.1' });
+    expect(none.notes[0]).toContain('brak pomiaru sprzed 10–13 mies.');
+  });
+  it('karta: wiersz TW Mark II z tab. 2.2, akapit nazywa 4 zmienne i przyrost', () => {
+    const boyP = { sex: 'M', ageYears: 12, ageMonths: 144, currentHeightCm: 150, boneAgeYears: 12, motherHeightCm: 165, fatherHeightCm: 185,
+      tw2: T({ sex: 'M', chronologicalAgeMonths: 144, currentHeightCm: 150, boneAgeYears: 12, heightIncrementCmPerYear: 6, heightIncrementIntervalYears: 1 }),
+      bp: { available: true, predictedAdultHeightCm: 179.4, errorBoundHalfWidthCm: 4.6 },
+      rwt: { available: true, predictedAdultHeightCm: 180.3, errorBoundHalfWidthCm: 6.1 } };
+    const f = C.computeFinalHeightPrediction(boyP);
+    expect(f.methods.find((m) => m.key === 'tw2')).toMatchObject({ tw2Table: '2.2', excluded: false });
+    const text = C.render(boyP).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(text).toContain('TW Mark II 176,1 cm ±5,3');
+    expect(text).toContain('tablica 2.2 (4 zmienne: wzrost, wiek metrykalny, wiek kostny, przyrost wzrostu w ostatnim roku), wiersz 12 l');
+    expect(text).toContain('przyrost wzrostu 6 cm/rok z ostatnich 12 mies.');
+  });
+});
+
+describe('GROWTH-PRED-TW2C — wiek kostny przy menarche z pola', () => {
+  it('pseudometoda: wzrost przy menarche 147 cm i wiek kostny przy menarche 11,5 → baza 153,9 + 4,7 = 158,6 ±3,4', () => {
+    const r = M({ heightAtMenarcheCm: 147, boneAgeAtMenarcheYears: 11.5, menarcheAgeYears: 8.75, currentHeightCm: 152 });
+    expect(r.baseCm).toBeCloseTo(153.9, 1);
+    expect(r.boneAgeAdjustmentCm).toBeCloseTo(4.7, 1);
+    expect(r.predictedAdultHeightCm).toBeCloseTo(158.6, 1);
+    expect(r.errorBoundHalfWidthCm).toBeCloseTo(3.4, 1);
+    expect(r.notes[0]).toContain('korekta na wiek kostny przy menarche 11,5 l');
   });
 });
 

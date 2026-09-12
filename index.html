@@ -245,7 +245,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="obesity_response_criteria.js?v=1"></script>
 <script defer src="gh_therapy_segments.js?v=3"></script>
 <script defer src="vilda_patient_summary_copy.js?v=2"></script>
-<script defer src="vilda_auth_ui.js?v=425"></script>
+<script defer src="vilda_auth_ui.js?v=426"></script>
 <script defer src="vilda_name_fix.js?v=2"></script>
 <script defer src="vilda_reminders_collapse.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
@@ -264,14 +264,14 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_macro_practice.js?v=2"></script>
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
-<script defer src="vilda_data_import_export.js?v=65"></script>
+<script defer src="vilda_data_import_export.js?v=66"></script>
 <script defer src="vilda_save_status_indicator.js?v=24"></script>
 <script defer src="vilda_unsaved_guard.js?v=4"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
 <script defer src="vilda_blum_iss.js?v=2"></script>
-<script defer src="tw2_data.js?v=2"></script>
-<script defer src="vilda_tw2_prediction.js?v=2"></script>
-<script defer src="vilda_growth_card_c.js?v=16"></script>
+<script defer src="tw2_data.js?v=3"></script>
+<script defer src="vilda_tw2_prediction.js?v=3"></script>
+<script defer src="vilda_growth_card_c.js?v=17"></script>
 <script defer src="vilda_trajectory_analysis.js?v=21"></script>
 <script defer src="vilda_prediction_drift.js?v=1"></script>
 <script defer src="vilda_height_velocity_sds.js?v=1"></script>
@@ -279,13 +279,13 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="hv_kelly_data.js?v=3"></script>
 <script defer src="hv_cdgp_data.js?v=2"></script>
 <script defer src="vilda_height_velocity.js?v=3"></script>
-<script defer src="vilda_puberty_source.js?v=3"></script>
-<script defer src="vilda_pubertal_status.js?v=2"></script>
+<script defer src="vilda_puberty_source.js?v=4"></script>
+<script defer src="vilda_pubertal_status.js?v=3"></script>
 <script defer src="vilda_perinatal_source.js?v=1"></script>
 <script defer src="vilda_sga_catchup.js?v=2"></script>
 <script defer src="vilda_patient_narrative.js?v=8"></script>
 <script defer src="vilda_patient_narrative_ui.js?v=7"></script>
-<script defer src="vilda_advanced_growth.js?v=44"></script>
+<script defer src="vilda_advanced_growth.js?v=45"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=9"></script>
 <!-- PERF-P2e2 (2026-06-07): przelicznik jednostek laboratoryjnych — dane (212 KB)
      + silnik ładowane LENIWIE: idle po load LUB pierwsza interakcja. Jedyny
@@ -554,6 +554,12 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
              w konsensusie prognozy wzrostu ostatecznego (Singleton 1975, Cho 2026). -->
         <label>Wzrost przy menarche (cm) <span style="font-weight:400;opacity:0.65;">(dziewczęta; wzrost w chwili pierwszej miesiączki — do prognozy wzrostu ostatecznego)</span>:
           <input type="number" id="pubertyMenarcheHeight" min="80" max="200" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+        <!-- GROWTH-PRED-TW2C: wiek kostny (GP) z RTG wykonanego przy menarche — fakt trwały (sekcja `puberty`,
+             pole boneAgeAtMenarcheYears). Korekta Cho 2026 w pseudometodzie „wzrost przy menarche / 0,955":
+             +3,1 cm na rok wieku kostnego poniżej 13 lat; bez pola korekta tylko z bieżącego RTG przy
+             menarche ≤ 12 mies. temu. -->
+        <label>Wiek kostny przy menarche (lata) <span style="font-weight:400;opacity:0.65;">(dziewczęta; z RTG wykonanego w okolicy pierwszej miesiączki — korekta prognozy wzrostu ostatecznego)</span>:
+          <input type="number" id="pubertyMenarcheBoneAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
         <label>Czy uważasz tego pacjenta za KOWD? <span style="font-weight:400;opacity:0.65;">(konstytucjonalne opóźnienie wzrastania i dojrzewania)</span>:
           <select id="pubertyCdgp" onchange="debouncedUpdate()">
             <option value="">— nie pytano —</option>
@@ -563,7 +569,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         <p id="pubertyCdgpNote" style="margin:0.15rem 0 0.4rem 0;font-size:0.85em;opacity:0.7;">To ocena lekarza, nie wynik automatu — aplikacja nie rozpoznaje KOWD samodzielnie. Odpowiedź „tak” dokłada porównanie tempa z kwartylami dzieci z rozpoznanym KOWD; niczego nie odejmuje.</p>
         <p id="pubertyConflicts" role="status" style="display:none;margin:0.15rem 0 0.4rem 0;font-size:0.85em;color:#b26a00;"></p>
       </div>
-      <script defer src="inline_index_02.js?v=8"></script>
+      <script defer src="inline_index_02.js?v=9"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>

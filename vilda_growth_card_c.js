@@ -81,7 +81,7 @@
   var REINEHR_ERR_HALFWIDTH_CM = 6.4;
 
   // GROWTH-PRED-TW2 (decyzja właściciela 2026-09-12): profil „po menarche" u dziewcząt.
-  //  • TW Mark II (Tanner 1983, tab. 3.1a/3.1b/3.1c dziewczęta, 2.1 chłopcy) jako metoda konsensusu: poziom z resztkowego
+  //  • TW Mark II (Tanner 1983, tab. 3.1a/3.1b/3.1c dziewczęta, 2.1/2.2 chłopcy) jako metoda konsensusu: poziom z resztkowego
   //    SD tablicy (≤ 2,0 → wysoka; ≤ 3,0 → umiarkowana; wyżej → obniżona), przy ekstrapolacji poniżej
   //    tablicy (po menarche przed 11,5 r.ż.) — orientacyjna.
   //  • Po menarche: RWT i Khamis–Roche poza konsensusem (nie znają statusu menarche; regresje na
@@ -442,6 +442,9 @@
         e.tw2Variants = r.variants || null;
         e.tw2Notes = Array.isArray(r.notes) ? r.notes.slice() : [];
         e.tw2BoneAgeSource = r.boneAgeSource || '';
+        e.tw2IncrementCmPerYear = num(r.heightIncrementCmPerYear);
+        e.tw2IncrementIntervalYears = num(r.heightIncrementIntervalYears);
+        e.tw2WithoutIncrementCm = num(r.withoutIncrementCm);
       }
     })();
     // 7. Wzrost przy menarche / 0,955 (Singleton 1975; korekta Cho 2026) — tylko po menarche.
@@ -677,9 +680,10 @@
   function tw2Paragraph(model) {
     var e = (model.entries || []).filter(function (x) { return x.key === 'tw2'; })[0];
     if (!e) return '';
-    var boy = e.tw2Table === '2.1';
+    var boy = e.tw2Table === '2.1' || e.tw2Table === '2.2';
     var s = '<p><span class="vgcc-lbl">TW Mark II:</span> równania Tannera i wsp. (1983) dla ' + (boy ? 'chłopców' : 'dziewcząt') + ', tablica ' + esc(e.tw2Table) +
-      (boy ? ' (3 zmienne: wzrost, wiek metrykalny, wiek kostny)' : (e.tw2Table === '3.1c' ? ' (po menarche, ze znanym wiekiem menarche)' : (e.tw2Table === '3.1b' ? ' (po menarche, wiek menarche nieznany)' : ' (przed menarche)'))) +
+      (e.tw2Table === '2.2' ? ' (4 zmienne: wzrost, wiek metrykalny, wiek kostny, przyrost wzrostu w ostatnim roku)'
+        : (boy ? ' (3 zmienne: wzrost, wiek metrykalny, wiek kostny)' : (e.tw2Table === '3.1c' ? ' (po menarche, ze znanym wiekiem menarche)' : (e.tw2Table === '3.1b' ? ' (po menarche, wiek menarche nieznany)' : ' (przed menarche)')))) +
       ', wiersz ' + esc(String(e.tw2RowAge).replace('.', ',')) + ' l';
     if (e.tw2Variants) s += '; warianty: wiek dokładny ' + esc(fmt1(e.tw2Variants.exactCa)) + ' cm, wiek obcięty ' + esc(fmt1(e.tw2Variants.clampedCa)) + ' cm';
     if (e.tw2Notes && e.tw2Notes.length) s += '. ' + e.tw2Notes.map(function (n) { return esc(n); }).join('; ');
@@ -790,7 +794,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '15',
+    version: '16',
     MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
