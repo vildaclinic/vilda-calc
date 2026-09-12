@@ -164,6 +164,22 @@ test.describe('Panel zapisuje do rekordu i z niego wraca', () => {
     await expect(page.locator('#pubertyCdgp')).toHaveValue('nie');
   });
 
+  test('GROWTH-PRED-PUB4: zmiana statusu GnRHa czyści wiek, który przestał mieć sens — do rekordu nie wchodzą ukryte pola', async ({ page }) => {
+    await otworz(page);
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();
+    await page.locator('#pubertyGnrhaStatus').selectOption('zakonczone');
+    await page.locator('#pubertyGnrhaStartAge').fill('8');
+    await page.locator('#pubertyGnrhaStopAge').fill('11');
+    expect(await page.evaluate(() => window.collectUserData().puberty)).toEqual({ gnrhaStatus: 'zakonczone', gnrhaStartAgeYears: 8, gnrhaStopAgeYears: 11 });
+    await page.locator('#pubertyGnrhaStatus').selectOption('w-trakcie');
+    await expect(page.locator('#pubertyGnrhaStopAge')).toHaveValue('');
+    await expect(page.locator('#pubertyGnrhaStopAge')).toBeDisabled();
+    expect(await page.evaluate(() => window.collectUserData().puberty)).toEqual({ gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 8 });
+    await page.locator('#pubertyGnrhaStatus').selectOption('brak');
+    await expect(page.locator('#pubertyGnrhaStartAge')).toHaveValue('');
+    expect(await page.evaluate(() => window.collectUserData().puberty)).toEqual({ gnrhaStatus: 'brak' });
+  });
+
   test('rekord bez sekcji czyści pola — nie zostaje po poprzednim pacjencie', async ({ page }) => {
     await otworz(page);
     await page.getByRole('button', { name: '+ Dane pokwitaniowe' }).click();

@@ -40,6 +40,16 @@ describe('Które pola są przenoszone', () => {
     expect(okno2.vildaPubertyData).toEqual({ onsetAgeYears: 8 });
   });
 
+  it('GROWTH-PRED-PUB4: wiek leczenia GnRHa wchodzi do rekordu tylko przy statusie w trakcie / zakończone, wiek zakończenia tylko przy zakończonym', () => {
+    const a = pomocniki({ vildaPubertyData: { onsetAgeYears: 7.2, gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 7.5, gnrhaStopAgeYears: 11 } });
+    expect(a.Bq1()).toEqual({ onsetAgeYears: 7.2, gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 7.5 });
+    const b = pomocniki({ vildaPubertyData: { onsetAgeYears: 7.2, gnrhaStatus: 'brak', gnrhaStartAgeYears: 7.5, gnrhaStopAgeYears: 11 } });
+    expect(b.Bq1()).toEqual({ onsetAgeYears: 7.2, gnrhaStatus: 'brak' });
+    const c = pomocniki({ vildaPubertyData: { gnrhaStartAgeYears: 7.5 } });
+    expect(c.Bq1()).toBeNull();
+    const d = pomocniki({ vildaPubertyData: { gnrhaStatus: 'zakonczone', gnrhaStartAgeYears: 7.5, gnrhaStopAgeYears: 11 } });
+    expect(d.Bq1()).toEqual({ gnrhaStatus: 'zakonczone', gnrhaStartAgeYears: 7.5, gnrhaStopAgeYears: 11 });
+  });
   it('wiek kostny przy menarche jest zapamiętywany z rekordu i oddawany kolektorowi (GROWTH-PRED-TW2C)', () => {
     const okno = {};
     const { Bq0, Bq1 } = pomocniki(okno);

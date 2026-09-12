@@ -114,6 +114,46 @@ describe('Tempo', () => {
     expect(z.etykieta).toContain(', po GnRHa');
     expect(ocen({ ...base, gnrha: { status: 'cos' } }).gnrha.status).toBe('');
   });
+  it('GROWTH-PRED-PUB4: wpisany wiek startu bez etapu Tannera jest oznaką pokwitania (docpro bez pola Tannera, etap przeterminowany)', () => {
+    const r = ocen({ plec: 'F', wiekLat: 7.5, wiekStartuLat: 7.0, wiekKostnyLat: 9.5 });
+    expect(r).toMatchObject({ profil: 'przedwczesne', zrodloStartu: 'pole', tempo: 'szybkie' });
+    expect(r.dowody.join(' | ')).not.toContain('bez oznak pokwitania');
+    expect(ocen({ plec: 'M', wiekLat: 9.5, wiekStartuLat: 9.2 })).toMatchObject({ profil: 'wczesne' });
+    expect(ocen({ plec: 'F', wiekLat: 11, wiekStartuLat: 10 })).toMatchObject({ profil: 'standardowy', kategoriaStartu: 'prawidlowe' });
+  });
+  it('GROWTH-PRED-PUB4: leczenie GnRHa oznacza rozpoznane przedwczesne pokwitanie — start nie później niż początek leczenia; Tanner I pod leczeniem nie robi profilu standardowego', () => {
+    const r = ocen({ plec: 'F', wiekLat: 8, etap: 1, wiekKostnyLat: 10.5, gnrha: { status: 'w-trakcie', startLat: 7.0 } });
+    expect(r).toMatchObject({ profil: 'przedwczesne', zrodloStartu: 'gnrha', wiekStartuLat: 7, tempo: 'nieoceniane' });
+    expect(r.etykieta).toBe('przedwczesne pokwitanie (tempo nieoceniane), GnRHa w trakcie');
+    expect(r.dowody.join(' | ')).toContain('start pokwitania nie później niż początek leczenia GnRHa (7 l)');
+    expect(r.braki.join(' | ')).toContain('profil oparto na początku leczenia GnRHa');
+    const bez = ocen({ plec: 'M', wiekLat: 9, wiekKostnyLat: 11, gnrha: { status: 'w-trakcie' } });
+    expect(bez).toMatchObject({ profil: 'przedwczesne', kategoriaStartu: 'przedwczesne' });
+    expect(bez.dowody.join(' | ')).toContain('leczenie GnRHa — podaje się je tylko w przedwczesnym pokwitaniu');
+    // start w polu późniejszy niż początek leczenia — sprzeczność: liczy się początek leczenia
+    const sp = ocen({ plec: 'F', wiekLat: 12, etap: 4, wiekStartuLat: 10.5, gnrha: { status: 'zakonczone', startLat: 7.5, stopLat: 10.5 } });
+    expect(sp).toMatchObject({ profil: 'przedwczesne', zrodloStartu: 'gnrha', wiekStartuLat: 7.5 });
+    expect(sp.braki.join(' | ')).toContain('wiek startu pokwitania (10,5 l) późniejszy niż początek leczenia GnRHa (7,5 l)');
+    // po menarche zostaje po menarche
+    expect(ocen({ plec: 'F', wiekLat: 14, etap: 5, postmenarcheal: true, wiekMenarcheLat: 11, gnrha: { status: 'zakonczone', startLat: 7.5, stopLat: 10.5 } })).toMatchObject({ profil: 'po-menarche', kategoriaStartu: 'przedwczesne' });
+  });
+  it('GROWTH-PRED-PUB4: start i menarche z przyszłości są pomijane (bez ujemnego odstępu → bez „tempa szybkiego"); u chłopca menarche i status po menarche ignorowane', () => {
+    const r = ocen({ plec: 'F', wiekLat: 7.0, etap: 3, wiekStartuLat: 7.5, wiekKostnyLat: 8.0 });
+    expect(r).toMatchObject({ profil: 'przedwczesne', zrodloStartu: 'gorna-granica', tempo: 'wolne' });
+    expect(r.wskazniki.tanner23Lata).toBeNull();
+    expect(r.braki.join(' | ')).toContain('wiek startu pokwitania (7,5 l) późniejszy niż wiek obecny — pominięty');
+    const m = ocen({ plec: 'F', wiekLat: 8, etap: 2, postmenarcheal: true, wiekMenarcheLat: 9 });
+    expect(m.profil).not.toBe('po-menarche');
+    expect(m.braki.join(' | ')).toContain('wiek menarche (9 l) późniejszy niż wiek obecny — pominięty');
+    expect(ocen({ plec: 'M', wiekLat: 9, etap: 2, postmenarcheal: true, wiekMenarcheLat: 8, wiekStartuLat: 8 })).toMatchObject({ profil: 'przedwczesne' });
+  });
+  it('GROWTH-PRED-PUB4: brzmienie — opóźniony wiek kostny nie „wyprzedza o −24 mies."; „1 rok po starcie"', () => {
+    const r = ocen({ plec: 'F', wiekLat: 7, etap: 2, wiekStartuLat: 6.5, wiekKostnyLat: 5 });
+    expect(r.dowody.join(' | ')).toContain('wiek kostny opóźniony względem metrykalnego o 24 mies. (< 24)');
+    expect(r.dowody.join(' | ')).not.toContain('−24');
+    expect(ocen({ plec: 'F', wiekLat: 8, etap: 3, wiekStartuLat: 7.0 }).dowody.join(' | ')).toContain('Tanner III już 1 rok po starcie');
+    expect(P.VERSION).toBe('2');
+  });
   it('wejście nietknięte', () => {
     const we = { plec: 'F', wiekLat: 7.5, etap: 2, wiekStartuLat: 7.0, historia: [{ ageMonths: 78, boneAgeYears: 7 }], gnrha: { status: 'brak' } };
     const kopia = JSON.parse(JSON.stringify(we));

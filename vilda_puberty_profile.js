@@ -40,7 +40,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   var PROGI = {
     przedwczesneF: 8.0, wczesneF: 9.0,
@@ -75,6 +75,14 @@
   }
   function f1(v) { return String(Math.round(v * 10) / 10).replace('.', ','); }
   function f2(v) { return String(Math.round(v * 100) / 100).replace('.', ','); }
+  // odmiana lat: 1 rok, 2-4 lata, 5+ lat, ulamki: 0,9 roku
+  function lataTxt(x) {
+    var n = Math.round(x * 100) / 100;
+    if (n === 1) return '1 rok';
+    if (Number.isInteger(n) && n >= 2 && n <= 4) return String(n) + ' lata';
+    if (Number.isInteger(n) && n >= 5) return String(n) + ' lat';
+    return f2(n) + ' roku';
+  }
 
   function kategoriaStartu(plec, startLat) {
     if (startLat == null) return null;
@@ -108,8 +116,19 @@
     var etap = etapLiczbowy(i.etap);
     var startPole = liczba(i.wiekStartuLat);
     var jadra = i.jadra == null ? '' : String(i.jadra);
-    var post = i.postmenarcheal === true;
-    var menarche = liczba(i.wiekMenarcheLat);
+    var dowody = [], braki = [];
+    // GROWTH-PRED-PUB4: menarche i status „po menarche" nie dotyczą chłopców; wiek startu / menarche
+    // późniejszy niż wiek obecny jest pomijany (i nazwany w brakach), żeby nie dawał ujemnych odstępów.
+    var post = i.postmenarcheal === true && plec !== 'M';
+    var menarche = plec === 'M' ? null : liczba(i.wiekMenarcheLat);
+    if (startPole != null && wiek != null && startPole > wiek + 0.05) {
+      braki.push('wiek startu pokwitania (' + f1(startPole) + ' l) późniejszy niż wiek obecny — pominięty');
+      startPole = null;
+    }
+    if (menarche != null && wiek != null && menarche > wiek + 0.05) {
+      braki.push('wiek menarche (' + f1(menarche) + ' l) późniejszy niż wiek obecny — pominięty');
+      menarche = null; post = false;
+    }
     var ba = liczba(i.wiekKostnyLat);
     var g = i.gnrha && typeof i.gnrha === 'object' ? i.gnrha : {};
     var gStatus = typeof g.status === 'string' && Object.prototype.hasOwnProperty.call(GNRHA_DOPUSZCZALNE, g.status) ? g.status : '';
@@ -120,19 +139,32 @@
       startLat: liczba(g.startLat),
       stopLat: liczba(g.stopLat)
     };
-    var dowody = [], braki = [];
+    var leczone = gnrha.wTrakcie || gnrha.poLeczeniu;
 
     // ── Oznaki pokwitania i wiek startu ──────────────────────────────────────
+    // GROWTH-PRED-PUB4: wpisany wiek startu jest sam w sobie oznaką pokwitania (lekarz stwierdza, że
+    // pokwitanie się zaczęło — etap Tannera bywa niewpisany albo przeterminowany), a leczenie GnRHa
+    // oznacza rozpoznane przedwczesne pokwitanie (start nie później niż początek leczenia).
     var jadraPokwitaniowe = jadra === '4to6' || jadra === 'gt6';
-    var oznaki = (etap != null && etap >= 2) || (plec === 'M' && jadraPokwitaniowe) || post || menarche != null;
+    var oznaki = (etap != null && etap >= 2) || (plec === 'M' && jadraPokwitaniowe) || post || menarche != null || startPole != null || leczone;
     var startLat = null, zrodloStartu = null;
+    if (startPole != null && leczone && gnrha.startLat != null && startPole > gnrha.startLat + 0.05) {
+      // start po początku leczenia to sprzeczność — GnRHa podaje się dopiero po starcie pokwitania
+      braki.push('wiek startu pokwitania (' + f1(startPole) + ' l) późniejszy niż początek leczenia GnRHa (' + f1(gnrha.startLat) + ' l) — użyto początku leczenia');
+      startPole = null;
+    }
     if (startPole != null) { startLat = startPole; zrodloStartu = 'pole'; }
-    else if (oznaki && wiek != null) {
+    else if (leczone && gnrha.startLat != null && wiek != null) {
+      startLat = Math.min(wiek, gnrha.startLat);
+      zrodloStartu = 'gnrha';
+    } else if (oznaki && wiek != null) {
       // start nie później niż teraz — górna granica; przy menarche nie później niż menarche
       startLat = menarche != null ? Math.min(wiek, menarche) : wiek;
       zrodloStartu = 'gorna-granica';
     }
     var kat = plec ? kategoriaStartu(plec, startLat) : null;
+    // leczenie GnRHa bez znanego wczesnego startu: przedwczesne z definicji wskazania
+    if (leczone && plec && wiek != null && !post && zrodloStartu !== 'pole' && zrodloStartu !== 'gnrha') kat = 'przedwczesne';
 
     var profil;
     if (!plec || wiek == null) {
@@ -148,8 +180,12 @@
       else dowody.push(etap === 1 ? 'Tanner I' : (jadra === 'lt4' ? 'jądra < 4 ml' : 'bez oznak pokwitania'));
     } else if (kat === 'przedwczesne' || kat === 'wczesne') {
       profil = kat;
-      dowody.push('start pokwitania ' + (zrodloStartu === 'pole' ? 'w wieku ' + f1(startLat) + ' l' : 'nie później niż ' + f1(startLat) + ' l (wiek startu nie wpisany)') + ' — ' + (kat === 'przedwczesne' ? 'przedwczesne' : 'wczesne') + ' (próg ' + (plec === 'M' ? f1(PROGI.przedwczesneM) + '/' + f1(PROGI.wczesneM) : f1(PROGI.przedwczesneF) + '/' + f1(PROGI.wczesneF)) + ' l)');
-      if (zrodloStartu === 'gorna-granica') braki.push('wiek startu pokwitania — wpisz go w Danych pokwitaniowych; profil oparto na górnej granicy');
+      var prog = ' (próg ' + (plec === 'M' ? f1(PROGI.przedwczesneM) + '/' + f1(PROGI.wczesneM) : f1(PROGI.przedwczesneF) + '/' + f1(PROGI.wczesneF)) + ' l)';
+      if (zrodloStartu === 'pole') dowody.push('start pokwitania w wieku ' + f1(startLat) + ' l — ' + kat + prog);
+      else if (zrodloStartu === 'gnrha') dowody.push('start pokwitania nie później niż początek leczenia GnRHa (' + f1(startLat) + ' l) — ' + kat + prog);
+      else if (zrodloStartu === 'gorna-granica' && leczone && kategoriaStartu(plec, startLat) !== kat) dowody.push('leczenie GnRHa — podaje się je tylko w przedwczesnym pokwitaniu (wiek startu nie wpisany)');
+      else dowody.push('start pokwitania nie później niż ' + f1(startLat) + ' l (wiek startu nie wpisany) — ' + kat + prog);
+      if (zrodloStartu !== 'pole') braki.push('wiek startu pokwitania — wpisz go w Danych pokwitaniowych; profil oparto na ' + (zrodloStartu === 'gnrha' ? 'początku leczenia GnRHa' : 'górnej granicy'));
       if (etap != null) dowody.push('Tanner ' + ['I', 'II', 'III', 'IV', 'V'][etap - 1]);
       if (plec === 'M' && jadraPokwitaniowe) dowody.push('jądra ' + (jadra === 'gt6' ? '> 6 ml' : '4–6 ml'));
     } else if (zrodloStartu === 'gorna-granica') {
@@ -168,7 +204,7 @@
     if (ba != null && wiek != null) {
       wsk.przyspieszenieMies = Math.round((ba - wiek) * 12);
       if (wsk.przyspieszenieMies >= PROGI.przyspieszenieMiesSzybkie) szybkie.push('wiek kostny wyprzedza metrykalny o ' + wsk.przyspieszenieMies + ' mies. (≥ ' + PROGI.przyspieszenieMiesSzybkie + '; Léger 2000)');
-      else wolne.push('wiek kostny wyprzedza metrykalny o ' + wsk.przyspieszenieMies + ' mies. (< ' + PROGI.przyspieszenieMiesSzybkie + ')');
+      else wolne.push((wsk.przyspieszenieMies < 0 ? 'wiek kostny opóźniony względem metrykalnego o ' + (-wsk.przyspieszenieMies) : 'wiek kostny wyprzedza metrykalny o ' + wsk.przyspieszenieMies) + ' mies. (< ' + PROGI.przyspieszenieMiesSzybkie + ')');
     }
     var tk = tempoKostne(i.historia, wiekMies, ba);
     if (tk) {
@@ -176,12 +212,12 @@
       if (tk.dBAdCA > PROGI.dBAdCASzybkie) szybkie.push('ΔBA/ΔCA ' + f2(tk.dBAdCA) + ' z ostatnich ' + tk.odstepMies + ' mies. (> ' + f1(PROGI.dBAdCASzybkie) + '; Helvacioglu 2026)');
       else wolne.push('ΔBA/ΔCA ' + f2(tk.dBAdCA) + ' z ostatnich ' + tk.odstepMies + ' mies. (≤ ' + f1(PROGI.dBAdCASzybkie) + ')');
     }
-    if (etap != null && etap >= 3 && startLat != null && zrodloStartu === 'pole' && wiek != null) {
+    if (etap != null && etap >= 3 && startLat != null && zrodloStartu === 'pole' && wiek != null && wiek - startLat >= 0) {
       wsk.tanner23Lata = Math.round((wiek - startLat) * 100) / 100;
-      if (wsk.tanner23Lata < PROGI.tanner23LataSzybkie) szybkie.push('Tanner ' + ['I', 'II', 'III', 'IV', 'V'][etap - 1] + ' już ' + f2(wsk.tanner23Lata) + ' roku po starcie (< ' + f1(PROGI.tanner23LataSzybkie) + '; Lazar 2002)');
+      if (wsk.tanner23Lata < PROGI.tanner23LataSzybkie) szybkie.push('Tanner ' + ['I', 'II', 'III', 'IV', 'V'][etap - 1] + ' już ' + lataTxt(wsk.tanner23Lata) + ' po starcie (< ' + f1(PROGI.tanner23LataSzybkie) + '; Lazar 2002)');
     } else if (etap === 2 && startLat != null && zrodloStartu === 'pole' && wiek != null && wiek - startLat >= PROGI.tanner23LataSzybkie) {
       wsk.tanner23Lata = Math.round((wiek - startLat) * 100) / 100;
-      wolne.push('Tanner II utrzymuje się ' + f2(wsk.tanner23Lata) + ' roku od startu (≥ ' + f1(PROGI.tanner23LataSzybkie) + ')');
+      wolne.push('Tanner II utrzymuje się ' + lataTxt(wsk.tanner23Lata) + ' od startu (≥ ' + f1(PROGI.tanner23LataSzybkie) + ')');
     }
     var profilPokwitaniowy = profil === 'przedwczesne' || profil === 'wczesne' || profil === 'po-menarche';
     if (gnrha.wTrakcie) {
