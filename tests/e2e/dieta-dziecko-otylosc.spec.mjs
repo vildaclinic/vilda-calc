@@ -110,8 +110,20 @@ test('6–11 lat przy BMI < 99c: tylko lekka −130 kcal, ostrzeżenie o tempie,
   expect(r.state.stage).toBe('age_6_11');
   expect(r.state.diets).toEqual([['light', r.state.base - 130, 130]]);
   expect(r.dietOptions.length).toBe(1);
-  expect(r.plan).toContain('Wiek 6–11 lat przy BMI poniżej 99. centyla');
-  expect(r.plan).toContain('tempo ograniczone do ok. 0,5 kg/mies.');
+  // ENERGY-REC-2: domyślna strategia 6–11 lat < 99c = stabilizacja → karta w trybie utrzymania masy
+  expect(r.plan).toContain('energia utrzymania (stabilizacja masy ciała)');
+  expect(r.plan).toContain(`${Math.round(r.state.base / 100) * 100} kcal/dzień`);
+  // jawny wybór redukcji (przycisk strategii = świadomy wybór) → dieta lekka −130 z ostrzeżeniem o tempie
+  const redPlan = await page.evaluate(() => {
+    const bt = document.querySelector('[data-diet-strategy-choice="reduction"]');
+    if (bt) bt.click();
+    window.update();
+    return (document.getElementById('planResults')?.textContent || '').replace(/\s+/g, ' ').trim();
+  });
+  expect(redPlan).toContain('Wiek 6–11 lat przy BMI poniżej 99. centyla');
+  expect(redPlan).toContain('tempo ograniczone do ok. 0,5 kg/mies.');
+  expect(redPlan).toContain('−130 kcal/dzień');
+  await page.evaluate(() => { const bt = document.querySelector('[data-diet-strategy-choice="stabilization"]'); if (bt) bt.click(); window.__vildaDietStrategyTouched = false; });
   const text = await recommend(page, { strategy: null, diet: 'light' });
   const kcal = Math.round(r.state.base / 100) * 100;
   expect(text).toContain('W strategii stabilizacji nie stosuje się deficytu energetycznego');
