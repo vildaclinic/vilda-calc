@@ -294,7 +294,7 @@ test('DIET-GROWTH-ENDED-STAB: zakończony wzrost wymusza narrację redukcyjną',
 
   const withGrowthEnded = await run(true);
   expect(withGrowthEnded.text).not.toMatch(/dalszym wzrastaniem|dalszego wzrastania/u);
-  expect(withGrowthEnded.text).toMatch(/zredukowa|redukcji/u);
+  expect(withGrowthEnded.text).toMatch(/zredukowa|redukcj/u);
   if (withGrowthEnded.stabChoiceHidden !== null) {
     expect(withGrowthEnded.stabChoiceHidden).toBe(true);
   }
@@ -344,8 +344,8 @@ test('DIET-KCAL-CONSISTENT: narracja i normy podają tę samą kaloryczność pl
   expect(narrationKcal % 100).toBe(0);
   expect(normsKcal).toBe(narrationKcal);
   // Etap 5: etykieta aktywności pochodzi ze wspólnego słownika karty planu
-  // i jest cytowana jawnie („na poziomie „X" (PAL y)"):
-  expect(text).toMatch(/deklarowaną aktywność na poziomie „[^"]+" \(PAL \d,\d\)/u);
+  // i jest cytowana jawnie („na poziomie „X” (PAL y)”; ENERGY-REC-4: polski cudzysłów zamykający):
+  expect(text).toMatch(/deklarowaną aktywność na poziomie „[^”]+” \(PAL \d,\d\)/u);
 });
 
 // DIET-SMART-PAD-TWO: pojedynczy trafiony chip nie może dawać planu z jednym
@@ -758,7 +758,9 @@ test('DIET-GROWTH-STRATEGY-TEXT: bez sprzeczności utrzymuj-vs-redukuj', async (
     flag('patientFacingToggle', false);
     return window.generateDietRecommendations().textOutput;
   });
-  expect(stab).toContain('rosła w tym czasie minimalnie');
+  // ENERGY-REC-4: stabilizacja bez „masa ma rosnąć minimalnie” — spójnie „przy stabilnej masie ciała”
+  expect(stab).toContain('Przy stabilnej masie ciała');
+  expect(stab).not.toContain('rosła w tym czasie minimalnie');
 });
 
 // DIET-ACT-UNISEX: listy aktywności bez podziału wg płci — dziewczynka i chłopiec
