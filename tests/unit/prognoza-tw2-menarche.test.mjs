@@ -290,3 +290,102 @@ describe('GROWTH-PRED-TW2C — wiek kostny przy menarche z pola', () => {
   });
 });
 
+describe('GROWTH-PRED-TW2D — równania dziewcząt z przyrostami (tab. 3.2a/3.2b/3.3a/3.3b)', () => {
+  const S = win.selectTW2HeightIncrement;
+  it('transkrypcja: rozmiary i komórki wobec druku (3.2a 8,0 i 12,5; 3.2b 11,5 i 16,0; 3.3a 10,0 i 14,5; 3.3b 11,5 i 13,5); okno 0,88–1,12 roku', () => {
+    const g = D.girls;
+    expect(g.premenarchealHeightIncrement.rows.length).toBe(10);
+    expect(g.postmenarchealHeightIncrement.rows.length).toBe(10);
+    expect(g.premenarchealBothIncrements.rows.length).toBe(10);
+    expect(g.postmenarchealBothIncrements.rows.length).toBe(5);
+    expect(g.incrementWindowYears).toEqual([0.88, 1.12]);
+    expect(g.premenarchealHeightIncrement.rows[0]).toMatchObject({ rowAge: 8, h: 0.80, ca: -3.4, rus: -1.80, dh: 1.1, konst: 99, residualSdCm: 3.2, r: 0.87 });
+    expect(g.premenarchealHeightIncrement.rows[9]).toMatchObject({ rowAge: 12.5, h: 0.98, ca: -1.2, rus: -3.80, dh: -0.4, konst: 80, residualSdCm: 3.0, r: 0.81 });
+    expect(g.postmenarchealHeightIncrement.rows[0]).toMatchObject({ rowAge: 11.5, h: 0.99, ca: -1.5, rus: 0, dh: 0.6, konst: 20, residualSdCm: 1.5, r: 0.96, men: 0 });
+    expect(g.postmenarchealHeightIncrement.rows[9]).toMatchObject({ rowAge: 16, h: 1.10, ca: 0, rus: -1.30, dh: 0, konst: 5, residualSdCm: 0.4, r: 0.99 });
+    expect(g.premenarchealBothIncrements.rows[0]).toMatchObject({ rowAge: 10, h: 0.92, ca: -2.4, rus: -2.50, dh: -1.6, drus: 0.3, konst: 95, residualSdCm: 3.0, r: 0.87 });
+    expect(g.premenarchealBothIncrements.rows[9]).toMatchObject({ rowAge: 14.5, h: 1.31, ca: 0, rus: -4.75, dh: -0.1, drus: 2.7, konst: 19, residualSdCm: 1.8, r: 0.95 });
+    expect(g.postmenarchealBothIncrements.rows[0]).toMatchObject({ rowAge: 11.5, h: 1.11, ca: 0, rus: -0.50, dh: 0.7, drus: 2.2, konst: -14, residualSdCm: 1.2, r: 0.98 });
+    expect(g.postmenarchealBothIncrements.rows[4]).toMatchObject({ rowAge: 13.5, h: 0.99, ca: 0, rus: -0.20, dh: 0.8, drus: 0.3, konst: 4, residualSdCm: 1.1, r: 0.98 });
+  });
+  it('dobór przyrostu: okno dziewcząt 0,88–1,12 (10 mies. poza, u chłopca w oknie); przyrost wieku kostnego z tego samego pomiaru', () => {
+    const r = S({ sex: 'F', measurements: [{ ageMonths: 138, height: 148, boneAgeYears: 12 }], currentAgeMonths: 150, currentHeightCm: 155, currentBoneAgeYears: 13 });
+    expect(r).toMatchObject({ available: true, incrementCmPerYear: 7, boneAgeIncrementYearsPerYear: 1, fromBoneAgeYears: 12, windowYears: [0.88, 1.12] });
+    expect(S({ sex: 'F', measurements: [{ ageMonths: 140, height: 148 }], currentAgeMonths: 150, currentHeightCm: 155 })).toMatchObject({ available: false, reason: 'no-measurement-in-window' });
+    expect(S({ sex: 'M', measurements: [{ ageMonths: 140, height: 148 }], currentAgeMonths: 150, currentHeightCm: 155 })).toMatchObject({ available: true, windowYears: [0.83, 1.12] });
+    expect(S({ sex: 'F', measurements: [{ ageMonths: 138, height: 148 }], currentAgeMonths: 150, currentHeightCm: 155, currentBoneAgeYears: 13 })).toMatchObject({ available: true, boneAgeIncrementYearsPerYear: null, fromBoneAgeYears: null });
+  });
+  it('przed menarche: 9 l z przyrostem 7 cm/rok → 3.2a 164,8 ±5,3 (bez: 3.1a 168,3); z oboma przyrostami w 9 l nadal 3.2a (nota o pominięciu RUS); 12 l z oboma → 3.3a', () => {
+    const a = T({ sex: 'F', chronologicalAgeMonths: 108, currentHeightCm: 135, boneAgeYears: 9, postmenarcheal: false, heightIncrementCmPerYear: 7, heightIncrementIntervalYears: 1 });
+    expect(a).toMatchObject({ table: '3.2a', rowAge: 9, heightIncrementCmPerYear: 7, boneAgeIncrementYearsPerYear: null });
+    // 0,95·135 − 2,9·9 − 2,15·9 − 2,0·7 + 96 = 164,8
+    expect(a.predictedAdultHeightCm).toBeCloseTo(164.8, 1);
+    expect(a.errorBoundHalfWidthCm).toBeCloseTo(5.3, 1);
+    expect(a.withoutIncrementCm).toBeCloseTo(168.3, 1);
+    expect(a.notes[0]).toContain('równanie „2" (4 zmienne, tab. 3.2a)');
+    const both9 = T({ sex: 'F', chronologicalAgeMonths: 108, currentHeightCm: 135, boneAgeYears: 9, postmenarcheal: false, heightIncrementCmPerYear: 7, boneAgeIncrementYearsPerYear: 1.2 });
+    expect(both9).toMatchObject({ table: '3.2a', boneAgeIncrementYearsPerYear: null });
+    expect(both9.notes.join(' ')).toContain('przyrost wieku kostnego (1,2 roku/rok) pominięty — tab. 3.3 obejmuje 10,0–14,5 l');
+    const b = T({ sex: 'F', chronologicalAgeMonths: 144, currentHeightCm: 150, boneAgeYears: 12, postmenarcheal: false, heightIncrementCmPerYear: 6, boneAgeIncrementYearsPerYear: 1.5, heightIncrementIntervalYears: 1 });
+    expect(b).toMatchObject({ table: '3.3a', rowAge: 12, boneAgeIncrementYearsPerYear: 1.5 });
+    // 0,85·150 − 1,1·12 − 3,60·12 − 0,8·6 + 1,9·1,5 + 96 = 165,15
+    expect(b.predictedAdultHeightCm).toBeCloseTo(165.15, 0);
+    expect(b.errorBoundHalfWidthCm).toBeCloseTo(4.3, 1);
+    expect(b.coefficients.drus).toBe(1.9);
+    expect(b.notes[0]).toContain('równanie „3" (5 zmiennych, tab. 3.3a): przyrost wzrostu 6 cm/rok i wieku kostnego 1,5 roku/rok');
+  });
+  it('przed menarche 13,5 l: sam przyrost wzrostu → 3.1a (równanie 2 gorsze, s. 774); oba przyrosty → 3.3a; 7 l → 3.1a (poza tablicami z przyrostem)', () => {
+    const only = T({ sex: 'F', chronologicalAgeMonths: 162, currentHeightCm: 158, boneAgeYears: 13, postmenarcheal: false, heightIncrementCmPerYear: 5 });
+    expect(only).toMatchObject({ table: '3.1a', rowAge: 13.5, heightIncrementCmPerYear: null });
+    expect(only.notes[0]).toContain('w 13–14,5 l równanie 2 przewiduje gorzej niż 1');
+    expect(T({ sex: 'F', chronologicalAgeMonths: 162, currentHeightCm: 158, boneAgeYears: 13, postmenarcheal: false, heightIncrementCmPerYear: 5, boneAgeIncrementYearsPerYear: 1 })).toMatchObject({ table: '3.3a', rowAge: 13.5 });
+    const young = T({ sex: 'F', chronologicalAgeMonths: 84, currentHeightCm: 122, boneAgeYears: 7, postmenarcheal: false, heightIncrementCmPerYear: 6 });
+    expect(young).toMatchObject({ table: '3.1a', rowAge: 7 });
+    expect(young.notes[0]).toContain('poza zakresem tablic z przyrostem');
+  });
+  it('po menarche: 13 l z przyrostem 4 cm/rok → 3.2b 161,5 ±2,0 (bez: 3.1c 163,1); 12,5 l z oboma → 3.3b 160,0 ±1,8; 14,5 l z oboma → 3.2b (3.3b tylko 11,5–13,5); wiek menarche nieznany → 3.2b', () => {
+    const a = T({ sex: 'F', chronologicalAgeMonths: 156, currentHeightCm: 158, boneAgeYears: 13, postmenarcheal: true, menarcheAgeYears: 12.2, heightIncrementCmPerYear: 4, heightIncrementIntervalYears: 1 });
+    expect(a).toMatchObject({ table: '3.2b', rowAge: 13, postmenarcheal: true });
+    // 1,00·158 − 0,5·13 − 0·13 + 1,0·4 + 6 = 161,5
+    expect(a.predictedAdultHeightCm).toBeCloseTo(161.5, 1);
+    expect(a.errorBoundHalfWidthCm).toBeCloseTo(2.0, 1);
+    expect(a.withoutIncrementCm).toBeCloseTo(163.1, 1);
+    expect(a.coefficients.men).toBe(0); // tab. 3.2b bez członu wieku menarche
+    const b = T({ sex: 'F', chronologicalAgeMonths: 150, currentHeightCm: 155, boneAgeYears: 13, postmenarcheal: true, menarcheAgeYears: 11.5, heightIncrementCmPerYear: 7, boneAgeIncrementYearsPerYear: 1, heightIncrementIntervalYears: 1 });
+    expect(b).toMatchObject({ table: '3.3b', rowAge: 12.5, boneAgeIncrementYearsPerYear: 1 });
+    // 1,03·155 − 0,40·13 + 0,8·7 + 0,9·1 − 1 = 160,0
+    expect(b.predictedAdultHeightCm).toBeCloseTo(160.0, 1);
+    expect(b.errorBoundHalfWidthCm).toBeCloseTo(1.8, 1);
+    expect(b.withoutIncrementCm).toBeCloseTo(159.2, 1);
+    const c = T({ sex: 'F', chronologicalAgeMonths: 174, currentHeightCm: 162, boneAgeYears: 14.5, postmenarcheal: true, menarcheAgeYears: 12, heightIncrementCmPerYear: 2, boneAgeIncrementYearsPerYear: 1 });
+    expect(c).toMatchObject({ table: '3.2b', rowAge: 14.5, boneAgeIncrementYearsPerYear: null });
+    expect(c.notes.join(' ')).toContain('pominięty — tab. 3.3 obejmuje 11,5–13,5 l');
+    expect(T({ sex: 'F', chronologicalAgeMonths: 144, currentHeightCm: 152, boneAgeYears: 12.5, postmenarcheal: true, heightIncrementCmPerYear: 5 })).toMatchObject({ table: '3.2b', rowAge: 12 });
+  });
+  it('po menarche przed 11,5 r.ż. z przyrostem (przypadek właściciela): 3.2b wiersz 11,5 w dwóch wariantach, wynik = środek, przedział rozszerzony', () => {
+    const r = T({ sex: 'F', chronologicalAgeMonths: 105, currentHeightCm: 147.3, boneAgeYears: 12, postmenarcheal: true, menarcheAgeYears: 8.75, heightIncrementCmPerYear: 8, heightIncrementIntervalYears: 1 });
+    expect(r).toMatchObject({ table: '3.2b', rowAge: 11.5, extrapolatedBelowTable: true });
+    // dokładny: 0,99·147,3 − 1,5·8,75 + 0,6·8 + 20 = 157,5; obcięty (11,5 l): 153,4 → środek 155,4
+    expect(r.variants.exactCa).toBeCloseTo(157.5, 1);
+    expect(r.variants.clampedCa).toBeCloseTo(153.4, 1);
+    expect(r.predictedAdultHeightCm).toBeCloseTo(155.4, 0);
+    expect(r.errorBoundHalfWidthCm).toBeCloseTo(4.5, 0);
+    expect(r.withoutIncrementCm).toBeCloseTo(157.9, 1); // 3.1c z tymi samymi wariantami
+  });
+  it('karta: akapit nazywa tablicę 3.3b (5 zmiennych) albo 3.2a (4 zmienne) i przyrosty', () => {
+    const girlP = { sex: 'F', ageYears: 12.5, ageMonths: 150, currentHeightCm: 155, boneAgeYears: 13, motherHeightCm: 165, fatherHeightCm: 185, postmenarcheal: true, menarcheAgeYears: 11.5,
+      tw2: T({ sex: 'F', chronologicalAgeMonths: 150, currentHeightCm: 155, boneAgeYears: 13, postmenarcheal: true, menarcheAgeYears: 11.5, heightIncrementCmPerYear: 7, boneAgeIncrementYearsPerYear: 1, heightIncrementIntervalYears: 1 }),
+      bp: { available: true, predictedAdultHeightCm: 162.0, errorBoundHalfWidthCm: 3.3 } };
+    const text = C.render(girlP).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(text).toContain('TW Mark II 160,0 cm ±1,8');
+    expect(text).toContain('tablica 3.3b (po menarche; 5 zmiennych: wzrost, wiek metrykalny, wiek kostny, przyrost wzrostu i przyrost wieku kostnego w ostatnim roku), wiersz 12,5 l');
+    expect(text).toContain('przyrost wzrostu 7 cm/rok i wieku kostnego 1 roku/rok z ostatnich 12 mies.');
+    const preP = { sex: 'F', ageYears: 9, ageMonths: 108, currentHeightCm: 135, boneAgeYears: 9, motherHeightCm: 165, fatherHeightCm: 185, postmenarcheal: false,
+      tw2: T({ sex: 'F', chronologicalAgeMonths: 108, currentHeightCm: 135, boneAgeYears: 9, postmenarcheal: false, heightIncrementCmPerYear: 7, heightIncrementIntervalYears: 1 }),
+      bp: { available: true, predictedAdultHeightCm: 166.0, errorBoundHalfWidthCm: 5.0 } };
+    const t2 = C.render(preP).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(t2).toContain('tablica 3.2a (przed menarche; 4 zmienne: wzrost, wiek metrykalny, wiek kostny, przyrost wzrostu w ostatnim roku), wiersz 9 l');
+    expect(t2).toContain('bez przyrostu (tab. 3.1a) byłoby 168,3 cm');
+  });
+});
+
