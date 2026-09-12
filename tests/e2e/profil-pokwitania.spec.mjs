@@ -58,10 +58,13 @@ test('dziewczynka 7 l 6 mies., Tanner II od 7,0, BA 9,5 z BA 7,5 rok wcześniej:
   expect(r.fhp.pubertyRulesActive).toBe(true);
   expect(r.fhp.excludedMethods).toEqual(expect.arrayContaining(['rwt', 'khamis']));
   expect(r.bp).toMatchObject({ available: true, override: true, auto: 'accelerated', groupKey: 'average' });
-  expect(r.bp.reason).toContain('w profilu przedwczesnego / wczesnego pokwitania użyto tablicy dla dzieci przeciętnych');
+  expect(r.bp.reason).toContain('w profilu przedwczesnego pokwitania użyto tablicy dla dzieci przeciętnych'); // GROWTH-PRED-PUB4: powód nazywa profil
   expect(typeof r.bp.altCm).toBe('number');
   expect(r.bp.altCm).not.toBeCloseTo(r.bp.cm, 1);
-  expect(r.fhp.methods.find((m) => m.key === 'bp')).toMatchObject({ profileSigmaFactor: 1.3, bpGroupOverride: true, excluded: false });
+  // GROWTH-PRED-PUB4: w 7,5 r.ż. tablice błędu BP nie sięgają (brak przedziału) — bez przedziału nie ma poszerzenia ×1,3 i karta to mówi
+  expect(r.fhp.methods.find((m) => m.key === 'bp')).toMatchObject({ profileSigmaFactor: 1, errorHalfWidthCm: null, bpGroupOverride: true, excluded: false });
+  expect(r.cardText).toContain('bez przedziału błędu dla tego wieku, więc bez poszerzenia');
+  expect(r.cardText).not.toContain('×1,3');
   expect(r.fhp.methods.find((m) => m.key === 'rwt').gateNote).toContain('Zachmann 1978');
   expect(r.lms).toMatchObject({ M: expect.any(Number), S: expect.any(Number) });
   expect(r.fhp.targetAssessment).toMatchObject({ tier: expect.stringMatching(/^(w-zakresie-celu|ponizej-celu|niskoroslosc-dorosla)$/), diffCm: expect.any(Number), adultSds: expect.any(Number) });
@@ -111,7 +114,8 @@ test('ta sama dziewczynka w trakcie GnRHa od 7,2 l: tempo nieoceniane, nota Laza
   expect(b.bp).toMatchObject({ override: true, auto: 'accelerated', groupKey: 'average' });
   expect(b.cardText).toContain('Reguły konsensusu w profilu wczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978; w profilu wczesnym jak w przedwczesnym — decyzja właściciela)');
   expect(b.cardText).toContain('Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm');
-  expect(b.cardText).toContain('U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001)');
+  expect(b.cardText).not.toContain('Lazar 2001'); // GROWTH-PRED-PUB4: nota o Tanner 3 tylko przy stadium ≥ 3 (tu bez etapu)
+  expect(b.cardText).toContain('Po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026)');
   expect(b.cardText).toContain('Konsensus wobec celu rodzicielskiego:');
   expect(b.fhp.infoRows.map((x) => x.key)).toEqual(['hba']); // chłopiec: bez Wu 2023
 });
