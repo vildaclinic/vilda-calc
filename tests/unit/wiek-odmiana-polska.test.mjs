@@ -179,8 +179,10 @@ describe('Zalecenia żywieniowe — „w wieku …”', () => {
     const src = zrodlo('vilda_diet_recommendations.js');
     expect(src, 'żadnego gołego „w wieku N lat”')
       .not.toMatch(/w wieku \$\{Math\.floor\(e\)\} lat/);
+    // ENERGY-REC-3: oba zdania o płynach (rodzic / standard) składają wiek w JEDNYM szablonie `wk`,
+    // więc pomocnik występuje w tym bloku raz (przedtem dwa razy, po jednym na zdanie).
     expect((src.match(/wiekLataDopelniacz\(Math\.floor\(e\)\)/g) || []).length)
-      .toBe(2);
+      .toBe(1);
   });
 
   it('zapasowa etykieta wieku odmienia się razem z wyświetlaną liczbą', () => {

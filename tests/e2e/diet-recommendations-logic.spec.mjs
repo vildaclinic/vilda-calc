@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
 //
 // Przypadki syntetyczne (wejście → oczekiwany wynik):
 //  DIET-SEX-HYDRATION: dziewczynka 10 lat z otyłością + flaga nawodnienia →
-//    norma płynów 2,00 l (nie męskie 2,5 l) i „płci żeńskiej" w tekście.
+//    norma płynów 1,9 l (nie męskie 2,1 l; pasmo 10–12 lat wg norm polskich) i „płci żeńskiej" w tekście.
 //  DIET-ADULT-UNDERWEIGHT: dorosły BMI ~17,5 z alertem WHR → zalecenia
 //    niedowagi (odżywczo gęste posiłki, ocena przyczyn), BEZ deficytu,
 //    tempa redukcji i celu „niedopuszczenie do dalszego wzrostu masy".
@@ -56,7 +56,7 @@ async function generate(page, { ageYears, ageMonths = 0, sex, weightKg, heightCm
   }, { ageYears, ageMonths, sex, weightKg, heightCm, vitD, hydration });
 }
 
-test('DIET-SEX-HYDRATION: dziewczynka 10 lat dostaje żeńską normę płynów 2,00 l', async ({ page }) => {
+test('DIET-SEX-HYDRATION: dziewczynka 10 lat dostaje żeńską normę płynów 1,9 l', async ({ page }) => {
   test.setTimeout(90_000);
   await openWithDietModule(page);
   // 10 lat, 140 cm, 50 kg → BMI ~25,5, znacznie powyżej 85c → Ze=true.
@@ -64,8 +64,9 @@ test('DIET-SEX-HYDRATION: dziewczynka 10 lat dostaje żeńską normę płynów 2
   const text = await generate(page, {
     ageYears: 10, sex: 'F', weightKg: 50, heightCm: 140, hydration: true,
   });
-  expect(text).toContain('2,00');
-  expect(text).not.toContain('2,50');
+  expect(text).toContain('1,9 l');
+  expect(text).not.toContain('2,1 l');
+  expect(text).not.toContain('30 ml');
   expect(text).toContain('żeńskiej');
   expect(text).not.toContain('męskiej');
 });
@@ -486,21 +487,22 @@ test('DIET-UNDER10-DISCLAIMER: dyskleimer poniżej 10 lat pada w trybie profesjo
   const young = await generate(page, {
     ageYears: 8, sex: 'F', weightKg: 45, heightCm: 130,
   });
-  expect(young).toContain('endokrynologiem');
+  // ENERGY-REC-3: przy nadwadze/otyłości „wymaga konsultacji dietetyka lub endokrynologa dziecięcego” (dopełniacz)
+  expect(young).toMatch(/endokrynolog(iem|a) dziecięc/u);
   expect(young).toContain('poglądowy');
   expect(young).toContain('psychologiem dziecięcym');
   const older = await generate(page, {
     ageYears: 12, sex: 'F', weightKg: 55, heightCm: 152,
   });
   expect(older).not.toContain('poglądowy');
-  expect(older).not.toContain('endokrynologiem');
+  expect(older).not.toMatch(/endokrynolog/u);
   // Uwaga z przeglądu PR #109: dziecko <10 lat z BMI w NORMIE (ścieżka WHR)
   // dostaje wariant neutralny — bez fałszywej klasyfikacji „z nadwagą lub otyłością".
   const normalBmi = await generate(page, {
     ageYears: 8, sex: 'F', weightKg: 26, heightCm: 130,
   });
   expect(normalBmi).toContain('poglądowy');
-  expect(normalBmi).toContain('endokrynologiem');
+  expect(normalBmi).toMatch(/endokrynolog(iem|a) dziecięc/u);
   expect(normalBmi).not.toContain('z nadwagą lub otyłością');
 });
 
@@ -733,8 +735,8 @@ test('DIET-ACT-ACCELERATOR: ruch skraca szacunek dietetyczny zamiast strasznych 
   const sessionKcal = Number(m[2]);
   const weeksWithActivity = Number(m[3]);
   expect(weeksWithActivity).toBeLessThan(weeksDiet);
-  // Kcal sesji z wzoru MET (rower 6, 45 min, masa 75 kg): 6×3,5×75/200×45 ≈ 354
-  expect(Math.abs(sessionKcal - 354)).toBeLessThanOrEqual(1);
+  // Kcal sesji NETTO (ENERGY-REC-3): (MET 6 − 1)×3,5×75/200×45 ≈ 295 → zaokrąglone do 10 → 300
+  expect(sessionKcal).toBe(300);
 });
 
 // DIET-GROWTH-STRATEGY-TEXT: tekst wzrostowy zależy od strategii — w redukcji
