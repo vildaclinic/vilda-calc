@@ -1054,7 +1054,7 @@
     const contractDetail = checkNamedContracts(['update-hooks-registry'], { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.7.0' &&
+        api.VERSION === '1.6.0' &&
         typeof api.registerAfterUpdateHook === 'function' &&
         typeof api.unregisterAfterUpdateHook === 'function' &&
         typeof api.runAfterUpdateHooks === 'function' &&
@@ -1108,7 +1108,7 @@
     const contractDetail = checkNamedContracts(['update-hooks-first-wrapper-bridge'], { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.7.0' &&
+        api.VERSION === '1.6.0' &&
         typeof bridgeSnapshotFn === 'function' &&
         !!(bridgeSnapshot && bridgeSnapshot.readOnly === true && bridgeSnapshot.didCallWindowUpdate === false && bridgeSnapshot.didRunHooks === false) &&
         bridgeSnapshot.bridgeInstalled === true &&
@@ -1156,7 +1156,7 @@
     const contractDetail = checkNamedContracts(['update-hooks-second-wrapper-bridge'], { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.7.0' &&
+        api.VERSION === '1.6.0' &&
         typeof bridgeSnapshotFn === 'function' &&
         !!(bridgeSnapshot && bridgeSnapshot.readOnly === true && bridgeSnapshot.didCallWindowUpdate === false && bridgeSnapshot.didRunHooks === false) &&
         bridgeSnapshot.bridgeInstalled === true &&
@@ -1213,7 +1213,7 @@
     const hookId = 'diet:recommendations-visibility-after-update';
     return {
       ok: !!api &&
-        api.VERSION === '1.7.0' &&
+        api.VERSION === '1.6.0' &&
         !!dietApi &&
         (dietApi.version === '1.1.0' || dietApi.VERSION === '1.1.0') &&
         typeof dietApi.updateVisibilityAfterUpdate === 'function' &&
@@ -1295,7 +1295,7 @@
     const hookId = 'nutrition-norms:card-render-after-update';
     return {
       ok: !!api &&
-        api.VERSION === '1.7.0' &&
+        api.VERSION === '1.6.0' &&
         typeof global.nutritionNormsRenderAfterUpdate === 'function' &&
         typeof global.nutritionNormsRegisterAfterUpdateHook === 'function' &&
         typeof global.vildaGetNutritionNormsAfterUpdateCoalescingSnapshot === 'function' &&
@@ -1385,7 +1385,7 @@
     const hookId = 'nutrition-micros:card-render-after-update';
     return {
       ok: !!api &&
-        api.VERSION === '1.7.0' &&
+        api.VERSION === '1.6.0' &&
         !!(global.VildaNutritionMicros && (global.VildaNutritionMicros.VERSION === '1.2.3' || global.VildaNutritionMicros.version === '1.2.3')) &&
         typeof global.nutritionMicrosRenderAfterUpdate === 'function' &&
         typeof global.vildaGetNutritionMicrosAfterUpdateCoalescingSnapshot === 'function' &&
@@ -1461,7 +1461,7 @@
     const contractDetail = checkNamedContracts(['update-hooks-final-chain-audit'], { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.7.0' &&
+        api.VERSION === '1.6.0' &&
         typeof api.getFinalUpdateChainAuditSnapshot === 'function' &&
         typeof snapshotFn === 'function' &&
         !!(snapshot && snapshot.readOnly === true && snapshot.didCallWindowUpdate === false && snapshot.didRunHooks === false && snapshot.didPatchWindowUpdate === false) &&

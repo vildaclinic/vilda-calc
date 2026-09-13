@@ -604,7 +604,9 @@ test('DIET-FINAL-HEIGHT-CONSENSUS: pozostały wzrost z konsensusu metod, MPH jak
   // bez nazwy metody i odsyłacza do karty — skąd liczba pochodzi, mówi karta wzrostowa.
   expect(result.withPrediction).not.toContain(result.fhp.sourceLabel);
   expect(result.withPrediction).not.toContain('karty zaawansowanych obliczeń wzrostowych');
-  expect(result.withPrediction).toContain(`prognozowany wzrost ostateczny to ok. ${result.fhp.cm.toFixed(1).replace('.', ',')}\u00A0cm`);
+  expect(result.withPrediction).toMatch(
+    new RegExp(`prognozowany wzrost ostateczny to ok\\. ${result.fhp.cm.toFixed(1).replace('.', ',')}[\\s\u00A0]cm`, 'u'),
+  );
   expect(result.withPrediction).not.toContain('na podstawie wzrostu rodziców');
   // Pozostały wzrost = prognoza − obecny wzrost (co do 0,1 cm):
   const remaining = (result.fhp.cm - 145).toFixed(1).replace('.', ',');
