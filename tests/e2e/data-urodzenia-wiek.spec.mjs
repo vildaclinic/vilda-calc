@@ -43,9 +43,22 @@ function stan(page) {
       ageAuto: q('age').classList.contains('vild-age-auto'),
       notka: widoczny(q('dobNote')) ? q('dobNote').textContent : '',
       blad: widoczny(q('dobError')) ? q('dobError').textContent : '',
-      czyscWidoczny: widoczny(q('dobClear'))
+      czyscWidoczny: widoczny(q('dobClear')),
+      tygodnieWiersz: widoczny(q('ageWeeksRow')),
+      tygodnie: q('ageWeeks') ? q('ageWeeks').value : null,
+      tygodnieReadOnly: q('ageWeeks') ? q('ageWeeks').readOnly : null,
+      tygodnieNotka: widoczny(q('ageWeeksNote')) ? q('ageWeeksNote').textContent : '',
+      tygodnieBlad: widoczny(q('ageWeeksError')) ? q('ageWeeksError').textContent : ''
     };
   });
+}
+
+/* Data urodzenia sprzed zadanej liczby dni — żeby test nie starzał się z kalendarzem. */
+function dataSprzedDni(dni) {
+  const d = new Date();
+  d.setDate(d.getDate() - dni);
+  const p = (n) => (n < 10 ? '0' + n : String(n));
+  return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear();
 }
 
 /* Ukończone pełne miesiące — liczone niezależnie od modułu, żeby test sprawdzał wynik, nie kopię wzoru. */
@@ -210,4 +223,101 @@ test('data z wczytanego rekordu jest tylko do odczytu, z odesłaniem do Karty Pa
   expect(s.czyscWidoczny).toBe(false);
   expect(s.age).toBe(String(lata));
   expect(s.ageMonths).toBe(String(mies));
+});
+
+test('niemowlę z datą urodzenia dostaje tygodnie liczone z kalendarza', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+
+  await wpisz(page, 'dobInput', dataSprzedDni(61)); // 61 dni = 8 ukończonych tygodni
+  const s = await stan(page);
+
+  expect(s.tygodnieWiersz).toBe(true);
+  expect(s.tygodnie).toBe('8');
+  expect(s.tygodnieReadOnly).toBe(true);
+  expect(s.tygodnieNotka).toContain('8 tygodni');
+  expect(s.tygodnieNotka).toContain('z daty urodzenia');
+  expect(s.age).toBe('0');
+  expect(s.ageMonths).toBe('1');
+});
+
+test('powyżej 3. miesiąca wiersz tygodni znika', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+
+  await wpisz(page, 'dobInput', dataSprzedDni(200));
+  const s = await stan(page);
+  expect(s.tygodnieWiersz).toBe(false);
+  expect(s.tygodnie).toBe('');
+});
+
+test('bez daty urodzenia tygodnie wpisuje lekarz, a miesiące liczą się z nich', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+
+  // wiersz pojawia się, gdy wpisany wiek mieści się w oknie < 3 mies.
+  await wpisz(page, 'age', '0');
+  await wpisz(page, 'ageMonths', '1');
+  expect((await stan(page)).tygodnieWiersz).toBe(true);
+
+  await wpisz(page, 'ageWeeks', '6');
+  const s = await stan(page);
+  expect(s.age).toBe('0');
+  expect(s.ageMonths).toBe('1');
+  expect(s.ageReadOnly).toBe(true);
+  expect(s.tygodnieReadOnly).toBe(false);
+  expect(s.tygodnieNotka).toContain('6 tygodni');
+  expect(s.tygodnieNotka).toContain('przybliżenie');
+
+  // 9 tygodni to już drugi ukończony miesiąc
+  await wpisz(page, 'ageWeeks', '9');
+  expect((await stan(page)).ageMonths).toBe('2');
+});
+
+test('tygodnie poza zakresem odsyłają do miesięcy i nie blokują pól wieku', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+
+  await wpisz(page, 'age', '0');
+  await wpisz(page, 'ageWeeks', '20');
+  const s = await stan(page);
+  expect(s.tygodnieBlad).toContain('miesiącach');
+  expect(s.ageReadOnly).toBe(false);
+});
+
+test('ukończone tygodnie trafiają do rekordu obok miesięcy', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+
+  await wpisz(page, 'age', '0');
+  await wpisz(page, 'ageWeeks', '6');
+  let zebrane = await page.evaluate(() => window.collectUserData());
+  expect(zebrane.user.ageWeeks).toBe(6);
+  expect(zebrane.user.ageMonths).toBe(1);
+
+  // z datą urodzenia liczbę podaje kalendarz
+  await wpisz(page, 'dobInput', dataSprzedDni(61));
+  zebrane = await page.evaluate(() => window.collectUserData());
+  expect(zebrane.user.ageWeeks).toBe(8);
+
+  // poza oknem < 3 mies. tygodnie przestają nieść informację i znikają z rekordu
+  await wpisz(page, 'dobInput', dataSprzedDni(200));
+  zebrane = await page.evaluate(() => window.collectUserData());
+  expect(zebrane.user.ageWeeks).toBeUndefined();
+});
+
+test('tygodnie z wczytanego rekordu wracają do formularza, gdy rekord nie ma daty', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+
+  await page.evaluate(() => {
+    window.lastLoadedData = { user: { ageWeeks: 6, age: 0, ageMonths: 1, sex: 'M' } };
+    document.dispatchEvent(new Event('vilda:patient-loaded'));
+  });
+  await page.waitForFunction(() => document.getElementById('ageWeeks').value !== '');
+
+  const s = await stan(page);
+  expect(s.tygodnie).toBe('6');
+  expect(s.tygodnieWiersz).toBe(true);
+  expect(s.ageMonths).toBe('1');
 });
