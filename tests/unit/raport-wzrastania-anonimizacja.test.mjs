@@ -33,13 +33,25 @@ function makeDoc() {
   };
 }
 
+let magazyn;
+
 beforeEach(() => {
   pola = { advName: 'Zofia Przykładowska' };
   anon = false;
+  magazyn = new Map();
   globalThis.document = makeDoc();
-  win = loadBrowserScript('vilda_advanced_growth.js', {});
+  // Moduł czyta `window.localStorage`, a loader podstawia przekazany obiekt jako `window`.
+  win = loadBrowserScript('vilda_advanced_growth.js', { localStorage: magazynStub() });
 });
 afterEach(() => { win = null; delete globalThis.document; });
+
+function magazynStub() {
+  return {
+    getItem: (k) => (magazyn.has(k) ? magazyn.get(k) : null),
+    setItem: (k, v) => { magazyn.set(k, String(v)); },
+    removeItem: (k) => { magazyn.delete(k); },
+  };
+}
 
 const api = () => win.VildaAdvancedGrowth;
 
@@ -126,5 +138,50 @@ describe('Reguła inicjałów — obie kopie mówią to samo', () => {
       'Zofia Przykładowska (ur. 2015-03-02)', '', '   ']) {
       expect(raport(n), `inicjały dla „${n}"`).toBe(terminarz(n));
     }
+  });
+});
+
+// ADV-REPORT-10 (decyzja właściciela 2026-09-13): stan przełącznika ma przetrwać między wydrukami.
+// To USTAWIENIE URZĄDZENIA, nie dana pacjenta — w magazynie ląduje wyłącznie „1" albo nic.
+describe('Raport wzrastania — pamięć przełącznika anonimizacji', () => {
+  it('pusty magazyn czyta się jako wyłączony, tak jak dotąd', () => {
+    expect(api().advGrowthReadAnonymizationPreference()).toBe(false);
+  });
+
+  it('włączenie zapisuje, wyłączenie kasuje wpis', () => {
+    api().advGrowthWriteAnonymizationPreference(true);
+    expect(magazyn.get('vilda-adv-report-anon-v1')).toBe('1');
+    expect(api().advGrowthReadAnonymizationPreference()).toBe(true);
+
+    api().advGrowthWriteAnonymizationPreference(false);
+    expect(magazyn.has('vilda-adv-report-anon-v1')).toBe(false);
+    expect(api().advGrowthReadAnonymizationPreference()).toBe(false);
+  });
+
+  it('w magazynie nie ląduje nic poza znacznikiem — żadnego nazwiska', () => {
+    api().advGrowthWriteAnonymizationPreference(true);
+    expect([...magazyn.keys()]).toEqual(['vilda-adv-report-anon-v1']);
+    expect([...magazyn.values()].join('')).toBe('1');
+  });
+
+  it('niedostępny magazyn nie wywraca raportu — czyta się jak wyłączony', () => {
+    // Prywatne okno albo zablokowane dane witryny: każdy dostęp rzuca wyjątkiem.
+    const w2 = loadBrowserScript('vilda_advanced_growth.js', {
+      localStorage: {
+        getItem() { throw new Error('brak dostępu'); },
+        setItem() { throw new Error('brak dostępu'); },
+        removeItem() { throw new Error('brak dostępu'); },
+      },
+    });
+    expect(w2.VildaAdvancedGrowth.advGrowthReadAnonymizationPreference()).toBe(false);
+    expect(() => w2.VildaAdvancedGrowth.advGrowthWriteAnonymizationPreference(true)).not.toThrow();
+  });
+
+  it('kontrolki raportu ustawiają przełącznik z pamięci i zapisują każdą zmianę', () => {
+    const src = fs.readFileSync(path.join(korzen, 'vilda_advanced_growth.js'), 'utf8');
+    expect(src).toMatch(/an\.checked=Anr\(\)/);
+    expect(src).toMatch(/an\.addEventListener\("change",function\(\)\{Anw\(!!an\.checked\)\}\)/);
+    // Znacznik chroni przed podwójnym nasłuchem przy ponownym wywołaniu kontrolek.
+    expect(src).toMatch(/an&&!an\.dataset\.wired/);
   });
 });

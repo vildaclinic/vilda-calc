@@ -31,11 +31,37 @@ describe('Raport wzrastania — jedno źródło dla obu dróg', () => {
     expect(przygotowania.length).toBe(1);
   });
 
-  it('okno wyboru PDF bierze dokument z karty, gdy raport jest jedynym zaznaczonym', () => {
+  it('okno wyboru PDF bierze dokument z karty, ilekroć raport wzrastania jest zaznaczony', () => {
     const src = zrodlo('vilda_patient_report.js');
     expect(src).toMatch(/patientReportBuildAdvancedGrowthVectorPdf/);
-    expect(src).toMatch(/wy\.length===1&&wy\[0\]==="growth"/);
+    expect(src).toMatch(/wy\.indexOf\("growth"\)>=0\?await patientReportBuildAdvancedGrowthVectorPdf\(\)/);
     expect(src).toMatch(/advGrowthBuildPdfDocumentBlob/);
+  });
+
+  // ADV-REPORT-10 (decyzja właściciela 2026-09-13): w pakiecie z innymi raportami raport wzrastania
+  // nie schodzi już do obrazu — wychodzi OSOBNYM, tekstowym plikiem, bo do jednego pliku składanego
+  // z obrazów stron tekstu wstawić się nie da.
+  it('w pakiecie z innymi raportami raport wzrastania idzie osobnym plikiem', () => {
+    const src = zrodlo('vilda_patient_report.js');
+    // raport wzrastania wypada ze składanego pakietu, gdy poszedł ścieżką tekstową
+    expect(src).toMatch(/const n=wy\.filter\(w=>!\(wv&&w==="growth"\)\)/);
+    // …i wraca jako plik dodatkowy
+    expect(src).toMatch(/dodatkowe:wv\?\[\{blob:wv\.blob/);
+  });
+
+  it('pobieranie oddaje oba pliki i mówi o tym jednym komunikatem', () => {
+    const src = zrodlo('vilda_patient_report.js');
+    const i = src.indexOf('async function generatePatientSelectedPdfPackage(');
+    const cialo = src.slice(i, i + 1400);
+    expect(cialo).toMatch(/i\.dodatkowe/);
+    expect(cialo).toMatch(/dod\.forEach\(w=>patientReportDownloadBlob\(w\.blob,w\.filename\)\)/);
+    expect(cialo).toContain('Wygenerowano dwa pliki');
+  });
+
+  it('gdy pdfMake nie wstanie, raport zostaje w pakiecie jako obraz — bez pliku dodatkowego', () => {
+    // `wv` jest wtedy null, więc „growth" nie wypada z listy i nie powstaje plik dodatkowy.
+    const src = zrodlo('vilda_patient_report.js');
+    expect(src).toMatch(/dodatkowe:wv\?\[[^\]]*\]:\[\]/);
   });
 
   it('ścieżka tekstowa stoi PRZED wymaganiem jsPDF', () => {

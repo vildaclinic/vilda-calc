@@ -1098,6 +1098,32 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-10 — Trzy decyzje właściciela po odchudzeniu raportu (SW 1.0.920, 2026-09-13)
+
+Trzy niezależne rozstrzygnięcia podjęte po scaleniu ADV-REPORT-9, zebrane w jedną zmianę.
+
+**1. Linia zgodności metod wraca — ale tylko przy zgodności niskiej.**
+
+ADV-REPORT-9 usunął ją z wydruku w całości. Zastrzeżenie postawione przy tamtej zmianie okazało się zasadne i właściciel zdecydował o wariancie warunkowym: przy rozjeździe metod sama liczba konsensusu z przedziałem rzędu ±5 cm **przemilcza**, że metody różniły się np. o 16,6 cm — czytelnik nie ma jak poznać, że rzeczywista niepewność jest kilkakrotnie większa od podanej.
+
+Próg jest **ten sam, którego używa karta**: `agreementLabel === 'niska'` (rozrzut powyżej `AGREE_MODERATE_CM` w `computeFinalHeightPrediction`), czyli wydruk i ekran zapalają się na tej samej wartości. Przy zgodności dobrej i umiarkowanej podsumowanie zostaje czyste, zgodnie z ADV-REPORT-9. Warunek „co najmniej dwie metody czynne" zostaje — przy jednej metodzie nie ma czego porównywać, choćby etykieta niosła „niska".
+
+**2. Pakiet PDF rozdziela się na dwa pliki.**
+
+ADV-REPORT-8 dał raport wzrastania z zaznaczalnym tekstem tylko wtedy, gdy był **jedynym** zaznaczonym elementem; w pakiecie z innymi raportami schodził do obrazu, bo pakiet jest jednym plikiem składanym z obrazów stron. Właściciel zdecydował, że raport wzrastania ma być tekstowy **zawsze**. Skoro tekstu nie da się wstawić do pliku składanego z obrazów bez sklejania dwóch dokumentów PDF po stronie przeglądarki, przycisk oddaje teraz **dwa pliki**: pakiet z pozostałymi raportami i osobny, wyszukiwalny raport wzrastania. Komunikat mówi o tym wprost.
+
+Gdy pdfMake nie wstanie, raport zostaje w pakiecie w wariancie rastrowym — tak jak dotąd, z cięciem po granicach wierszy z ADV-REPORT-8. Nazwa pakietu przestaje wtedy udawać raport wzrastania, bo ten ma własny plik.
+
+**3. Stan przełącznika anonimizacji jest zapamiętywany.**
+
+ADV-REPORT-7 wprowadził przełącznik domyślnie wyłączony, wracający do stanu wyjściowego przy każdym wejściu na stronę. Przy drukowaniu partiami do przekazania oznaczało to zaznaczanie go za każdym razem. Stan trafia teraz do `localStorage` pod kluczem `vilda-adv-report-anon-v1`, wzorcem z modułu terminarza (`vilda-wl-collapsed-v1`): try/catch, ciche wyjście na wartość domyślną.
+
+To **ustawienie urządzenia, nie dana pacjenta** — w magazynie ląduje wyłącznie `"1"` albo nic; wyłączenie **kasuje** wpis, a nie zapisuje `"0"`. Wartość domyślna pozostaje „wyłączona", więc przeglądarka bez zapisu zachowuje się dokładnie tak jak przed zmianą. Niedostępny magazyn (okno prywatne, zablokowane dane witryny) czyta się jak wyłączony i nie wywraca raportu.
+
+**Kolizja nazw — uwaga na przyszłość.** Pierwsze podejście nazwało pomocniki pamięci `Ar`/`Aw`/`As`; `Ar` **już istniał** w zminifikowanym module (`function Ar(e){return e&&e.global||i}`), a deklaracje funkcji się wynoszą, więc późniejsza przesłoniła wcześniejszą i odczyt preferencji zwracał obiekt globalny zamiast wartości logicznej. Wyłapały to testy. W tym pliku każdą nową nazwę trzeba sprawdzić przed użyciem — jednoliterowe i dwuliterowe identyfikatory są tu gęsto zajęte.
+
+*Strażnicy:* `tests/unit/raport-wzrastania-konsensus.test.mjs` (dwie linie przy zgodności niskiej, jedna przy dobrej i umiarkowanej, różnica w centymetrach w treści linii, brak linii przy jednej metodzie czynnej). `tests/unit/raport-wzrastania-sciezka-karty-pacjenta.test.mjs` (raport wypada ze składanego pakietu, wraca jako plik dodatkowy, pobranie oddaje oba pliki i mówi o tym jednym komunikatem, brak pliku dodatkowego gdy pdfMake nie wstał). `tests/unit/raport-wzrastania-anonimizacja.test.mjs` (pusty magazyn, zapis i skasowanie wpisu, **wyłącznie znacznik w magazynie**, niedostępny magazyn, wpięcie w kontrolki). **Zmierzone czerwone:** przeciwko wersji sprzed zmiany **11 z 33**. `tests/e2e/raport-wzrastania-anonimizacja.spec.mjs` (prawdziwa strona i prawdziwy `localStorage`: zaznaczenie, przeładowanie, stan zachowany, wyłączenie kasuje wpis). `tests/e2e/raport-wzrastania-tekst.spec.mjs` (pakiet z drugim raportem oddaje plik dodatkowy z krojami pisma i zerem obrazów; przypadek **wymaga jsPDF z CDN**, więc w środowisku z odciętą siecią zgłasza pominięcie zamiast udawać zieloną kontrolę).
+
 ### ADV-REPORT-9 — Raport wzrastania: podsumowanie tylko z tego, co lekarz czyta (SW 1.0.919, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Po naprawie obu ścieżek wydruku właściciel ocenił treść: „trzeba ten raport odśmiecić, tam jest za dużo zbędnych informacji" — i podał **dokładny wzorzec** podsumowania, które ma zostać. To ta sama zasada, którą przyjęliśmy wcześniej dla narracji energetycznej: „za dużo informacji też nie jest dobre, ludzie tego potem nie czytają albo czytają bez zrozumienia".

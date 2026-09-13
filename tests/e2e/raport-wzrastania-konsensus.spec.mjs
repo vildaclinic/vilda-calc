@@ -25,6 +25,7 @@ test('ADV-REPORT-3: podsumowanie raportu podaje ten sam konsensus, co karta', as
       fhpCm: fhp ? fhp.cm : null,
       fhpLabel: fhp ? fhp.sourceLabel : null,
       methodCount: fhp && Array.isArray(fhp.methods) ? fhp.methods.length : 0,
+      agreement: fhp ? fhp.agreementLabel : null,
       summary: model.summaryItems.join(' | '),
     };
   });
@@ -41,10 +42,13 @@ test('ADV-REPORT-3: podsumowanie raportu podaje ten sam konsensus, co karta', as
   expect(out.summary).not.toContain('Prognoza wzrostu ostatecznego (Bayley-Pinneau)');
   expect(out.summary).not.toContain('Prognoza wzrostu ostatecznego (RWT)');
 
-  // 3. ADV-REPORT-9 (decyzja właściciela 2026-09-13): rozpiska metod i linia zgodności znikają
-  //    z wydruku — zostaje sama liczba konsensusu. Lekarz ma szczegóły na karcie, na ekranie.
-  expect(out.summary).not.toContain('Zgodność metod:');
+  // 3. ADV-REPORT-9: rozpiska metod znika z wydruku — zostaje sama liczba konsensusu.
+  //    ADV-REPORT-10: linia zgodności wraca, ale wyłącznie przy zgodności niskiej, tym samym
+  //    progiem, którego używa karta. Test czyta etykietę z modelu, więc sprawdza REGUŁĘ,
+  //    a nie to, jak akurat wypadł ten jeden przypadek.
   expect(out.summary).not.toContain('metoda preferowana');
+  if (out.agreement === 'niska') expect(out.summary).toContain('Zgodność metod: niska');
+  else expect(out.summary).not.toContain('Zgodność metod:');
 });
 
 // ADV-REPORT-9: podsumowanie ma zawierać DOKŁADNIE to, co lekarz czyta — i nic ponadto.
@@ -55,7 +59,7 @@ test('ADV-REPORT-9: podsumowanie niesie tylko linie, które lekarz czyta', async
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function' && !!window.VildaAdvancedGrowth);
 
-  const summary = await page.evaluate(() => {
+  const wynik = await page.evaluate(() => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
     window.professionalMode = true;
     set('age', 9); set('ageMonths', 8); set('sex', 'M');
@@ -63,9 +67,14 @@ test('ADV-REPORT-9: podsumowanie niesie tylko linie, które lekarz czyta', async
     set('advMotherHeight', 170); set('advFatherHeight', 170); set('advBoneAge', 6);
     window.calculateGrowthAdvanced();
     const api = window.VildaAdvancedGrowth;
-    return api.advGrowthBuildReportPresentationModel(api.advGrowthBuildReportRows()).summaryItems;
+    const fhp = (window.advancedGrowthData || {}).finalHeightPrediction || null;
+    return {
+      items: api.advGrowthBuildReportPresentationModel(api.advGrowthBuildReportRows()).summaryItems,
+      agreement: fhp ? fhp.agreementLabel : null,
+    };
   });
 
+  const summary = wynik.items;
   const tresc = summary.join(' | ');
 
   // Zostaje:
@@ -85,10 +94,13 @@ test('ADV-REPORT-9: podsumowanie niesie tylko linie, które lekarz czyta', async
     'Preferowany model dla tego profilu:',
     'Bayley-Pinneau może zawyżać',
     'Pokwitanie:',
-    'Zgodność metod:',
     'Wiarygodność prognoz',
     'Punkty historyczne:',
   ]) expect(tresc, `usunięta linia „${usuniete}" nie wraca`).not.toContain(usuniete);
+
+  // ADV-REPORT-10: zgodność pojawia się wyłącznie przy niskiej — i tylko wtedy.
+  if (wynik.agreement === 'niska') expect(tresc).toContain('Zgodność metod: niska');
+  else expect(tresc).not.toContain('Zgodność metod:');
 
   // Rozpiska metod szła myślnikiem na początku linii — żadna linia tak się nie zaczyna.
   expect(summary.some((l) => l.trim().startsWith('–'))).toBe(false);

@@ -54,3 +54,38 @@ test('ADV-REPORT-7: przełącznik anonimizacji zdejmuje nazwisko z nagłówka i 
   // …i z nazwy pliku, bo obie idą przez ten sam punkt.
   expect(out.plikPrzed).toBe('Z.P.');
 });
+
+// ADV-REPORT-10 (decyzja właściciela 2026-09-13): stan przełącznika ma przetrwać między wydrukami.
+// Sprawdzane na prawdziwej stronie, z prawdziwym localStorage i po przeładowaniu.
+test('ADV-REPORT-10: przełącznik anonimizacji pamięta stan po przeładowaniu strony', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.VildaAdvancedGrowth);
+
+  const przed = await page.evaluate(() => {
+    window.VildaAdvancedGrowth.ensureAdvancedGrowthReportControls();
+    const chk = document.getElementById('advReportAnon');
+    const startowy = chk ? chk.checked : null;
+    if (chk) { chk.checked = true; chk.dispatchEvent(new Event('change', { bubbles: true })); }
+    return { startowy, zapis: window.localStorage.getItem('vilda-adv-report-anon-v1') };
+  });
+  expect(przed.startowy).toBe(false);
+  expect(przed.zapis).toBe('1');
+
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.VildaAdvancedGrowth);
+  const po = await page.evaluate(() => {
+    window.VildaAdvancedGrowth.ensureAdvancedGrowthReportControls();
+    const chk = document.getElementById('advReportAnon');
+    return chk ? chk.checked : null;
+  });
+  expect(po).toBe(true);
+
+  // …i z powrotem: wyłączenie kasuje wpis, a nie zostawia „0".
+  const wylaczone = await page.evaluate(() => {
+    const chk = document.getElementById('advReportAnon');
+    if (chk) { chk.checked = false; chk.dispatchEvent(new Event('change', { bubbles: true })); }
+    return window.localStorage.getItem('vilda-adv-report-anon-v1');
+  });
+  expect(wylaczone).toBeNull();
+});
