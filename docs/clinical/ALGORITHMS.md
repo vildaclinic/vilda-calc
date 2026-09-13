@@ -1098,6 +1098,33 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-6 — Raport wzrastania: dostępność offline i podział stron ścieżki zapasowej (SW 1.0.916, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Etap 6 z siedmiu. Dwa niezależne znaleziska audytu, oba o **składzie** raportu, nie o jego treści.
+
+**1. Raportu nie dało się wygenerować bez sieci.** `pdfMake` — jedyna biblioteka, którą raport składa się poprawnie (paginacja tabeli, nagłówek powtarzany na każdej stronie, numery stron w stopce) — był ładowany **wyłącznie z cdnjs, w chwili kliknięcia**. Aplikacja jest PWA, ma zainstalowany service worker i cały shell w precache, a mimo to przycisk raportu bez sieci nie dawał nic. To samo dotyczyło ścieżki zapasowej: `html2canvas` i `jsPDF` też szły z CDN.
+
+Poprawka idzie **wzorcem, który aplikacja już stosuje**: moduł epikryzy ładuje JSZip z pliku lokalnego (`jszip.min.js?v=1`, w precache), a CDN trzyma jako `onerror`. Raport robi teraz to samo dla obu plików pdfMake:
+
+```
+pdfmake.min.js?v=1        →  cdnjs .../pdfmake/0.2.10/pdfmake.min.js
+pdfmake_vfs_fonts.js?v=1  →  cdnjs .../pdfmake/0.2.10/vfs_fonts.min.js
+```
+
+Sufiks `?v=` **musi** być identyczny w kodzie i w precache — inaczej service worker ma w cache inny klucz niż ten, o który raport prosi, i offline dalej by nie działało. Pilnuje tego osobny test.
+
+**Pochodzenie plików.** Wzięte z pakietu `pdfmake@0.2.10` z rejestru npm (`build/pdfmake.min.js`, `build/vfs_fonts.js`), bo cdnjs jest niedostępny z sieci, w której powstawała ta zmiana. Że to **to samo wydanie, bajt w bajt**, dowodzi skrót SRI już przypięty w repozytorium: `cukrzyca.html` ładuje pdfMake z cdnjs z `integrity="sha384-vseuUuO/…"`, a ten sam skrót policzony z pliku lokalnego zgadza się co do znaku. Test jednostkowy liczy go przy każdym uruchomieniu, więc wyłapie podmianę przy przyszłej aktualizacji. Dla `vfs_fonts` porównania nie ma — cdnjs wydaje wersję zminifikowaną, npm niezminifikowaną — więc dowodem jest test e2e: przy **odciętym cdnjs** pdfMake składa dokument z polskimi znakami do bajtów.
+
+**Waga.** 1,4 MB + 766 KB w precache. Plik czcionek niesie cztery kroje Roboto (prosty, pogrubiony, kursywa, pogrubiona kursywa) — raport używa pogrubienia w nagłówkach, a polskie znaki diakrytyczne biorą się właśnie stąd. Dla porównania: `lucide.min.js` w precache ma 390 KB, `jsQR.min.js` 128 KB.
+
+**2. Ścieżka zapasowa przecinała wiersze w połowie.** Gdy pdfMake nie wstał, raport składał się z `html2canvas` + `jsPDF`: jedno wysokie zdjęcie całej strony, wstawiane raz na stronę z przesunięciem o wysokość arkusza. Cięcie wypadało zatem w **przypadkowym miejscu** — wiersz tabeli potrafił zostać przecięty poziomo na pół, a stron nikt nie numerował. Ścieżka główna ma i `dontBreakRows`, i numerację; zapasowa nie miała żadnego z dwojga.
+
+Teraz cięcia planuje `advGrowthPlanRasterPages` — czysta funkcja, która dostaje listę **granic bloków** (dolne krawędzie wierszy tabeli i pozycji list, przeliczone na piksele płótna), wysokość obrazu i wysokość strony, a oddaje zakresy stron. Reguła: bierz najdalszą granicę, która jeszcze mieści się na stronie; blok wyższy od strony tnij po wysokości strony, bo inaczej pętla nigdy by nie ruszyła. Każda strona dostaje własny wycinek płótna, a nie ten sam obraz z przesunięciem. Numeracja („Strona N z M") dopisywana jest po złożeniu wszystkich stron, gdy znana jest ich liczba.
+
+**Czego ten etap NIE zmienia.** Żadnej treści ani liczby — wyłącznie sposób, w jaki raport powstaje. `cukrzyca.html` nadal ładuje pdfMake z cdnjs zwykłym `<script>` z SRI; przepięcie tej strony na kopię lokalną jest oczywistym następnym krokiem, ale dotyczy innego modułu i wymaga własnej ścieżki zapasowej, więc zostaje poza tym etapem. `html2canvas` i `jsPDF` pozostają na CDN — po wendorowaniu pdfMake ścieżka zapasowa uruchamia się wyłącznie przy uszkodzonym wdrożeniu, więc jej dostępność offline ma już znikome znaczenie. Zostaje etap 7 (anonimizacja).
+
+*Strażnicy:* `tests/unit/raport-wzrastania-offline.test.mjs` (11: sześć na planistę podziału stron — cięcie na granicy zamiast w środku bloku, żadna strona nie wyższa od arkusza, pokrycie bez dziur i zakładek, blok wyższy od strony, obraz krótszy od strony, wejście bezsensowne; pięć na wpięcie źródeł — kolejność lokalne-przed-CDN, obecność plików w repozytorium, zgodność `?v=` z precache, brak adresu cdnjs w samym loaderze oraz zgodność skrótu SRI z wydaniem z CDN). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **10 z 10** (test SRI dopisany po pomiarze). `tests/e2e/raport-wzrastania-offline.spec.mjs` (prawdziwa strona z **odciętym cdnjs**: biblioteka wstaje, `vfs` niesie kroje, dokument z polskimi znakami składa się do bajtów, a CDN nie jest odpytywany ani razu) — **zmierzone czerwone**.
+
 ### ADV-REPORT-5 — Etykiety centyli: koniec „>100 centyla" (SW 1.0.915, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Etap 5 z siedmiu. Raport wzrastania drukował przy wysokich rodzicach trzy wiersze pod rząd z etykietą „>100 centyla". Taka etykieta **nie istnieje**: centyl mieści się w zakresie 0–100, a „powyżej setnego" nie znaczy nic. Właściciel zdecydował naprawić to **globalnie**, nie tylko w raporcie.
