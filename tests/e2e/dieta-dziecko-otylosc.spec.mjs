@@ -114,8 +114,9 @@ test('12–18 lat, narracja redukcyjna: kaloryczność od masy aktualnej z korek
   expect(text).not.toMatch(/kcal dziennie \(zapotrzebowanie/u);
   expect(text).toContain('wynosi około 379 kcal');
   expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
-  // ENERGY-REC-4: podstawa w nawiasie zdania o normach zamiast osobnego „Przeliczenie wykonano dla…"
-  expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d (od zapotrzebowania przy obecnej masie ciała z korektą na otyłość):`);
+  // ENERGY-REC-KROTKO2: zdanie o normach bez nawiasu z podstawą (podstawę podaje karta planu)
+  expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d:`);
+  expect(text).not.toContain('z korektą na otyłość');
   expect(text).not.toContain('Przeliczenie wykonano');
   // czas do granicy normy = wspólna symulacja wzrastania (jak karta planu), nie liniowe kg/tempo
   const sim = await page.evaluate(() => window.energySimulateMonthsToBmiTarget({ ageYears: 14, ageMonthsOpt: 0, sex: 'M', weightKg: 85, heightCm: 165, weeklyLossKg: 379 * 7 / 7700, target: 'norm' }));
@@ -147,9 +148,12 @@ test('6–11 lat przy BMI < 99c: tylko lekka −126 kcal (0,5 kg/mies.), ostrze�
   const text = await recommend(page, { strategy: null, diet: 'light' });
   const kcal = Math.round(r.state.base / 100) * 100;
   expect(text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
-  expect(text).toContain(`tj. około ${kcal} kcal dziennie przy PAL 1,4, bez dodatku na wzrastanie`);
+  // ENERGY-REC-KROTKO2: zdanie stabilizacji bez PAL, źródła i powtórzonego celu
+  expect(text).toContain(`tj. około ${kcal} kcal dziennie.`);
+  expect(text).not.toMatch(/przy PAL \d/u);
+  expect(text).not.toContain('Hofsteenge');
   expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
-  expect(text).toContain('(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość)');
+  expect(text).not.toContain('z korektą na otyłość');
   expect(text).not.toMatch(/Taki plan daje deficyt|wynosi około \d+ kcal, co przekłada/u);
   // jawna redukcja: dieta lekka −130 kcal, 0,1 kg/tydz.
   const red = await recommend(page, { strategy: 'reduction', diet: 'light' });
