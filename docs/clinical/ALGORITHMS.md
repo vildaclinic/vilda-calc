@@ -1098,6 +1098,23 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ENERGY-REC-KROTKO2 — narracja energetyczna bez wyjaśnień technicznych (SW 1.0.910, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Właściciel po ENERGY-CHILD-MID3: uciąć także dwa zdania zostawione tam do decyzji i przejrzeć resztę komunikatów pod kątem zbędnych wyjaśnień technicznych.
+
+**Kryterium cięcia.** Zostaje liczba, na której lekarz działa; znika opis, skąd się wzięła. Konkretnie: nazwy metod, cytowania źródeł, nazwy parametrów wewnętrznych (PAL, REE, wielkość korekty), powtórzenia wartości podanej już w innym punkcie i wielkości pochodne, które nie są celem planowania. Zostają: BMI, centyl, z-score, kaloryczność, gramatury, deficyt, tempo, czas dojścia, masa docelowa i porównawcza.
+
+**Cięcia (`vilda_diet_recommendations.js`).**
+1. **Zdanie stabilizacji** (oba warianty, standardowy i „dziecka"): „…odpowiada zapotrzebowaniu przy obecnej masie ciała, ~~z korektą −10 % REE na otyłość (Hofsteenge 2010)~~, tj. około X kcal dziennie ~~przy PAL 1,4, bez dodatku na wzrastanie~~~~; celem pozostaje masa docelowa ok. Y kg (85. centyl BMI)~~." Cel jest już podany w punkcie 2 narracji, więc było to powtórzenie. Wariant dla pacjenta był krótki od MID1 i zostaje bez zmian.
+2. **Zdanie o normach żywieniowych**: skasowany nawias z podstawą („od zapotrzebowania przy obecnej masie ciała z korektą na otyłość", pole `basisLabelOverride`). Przy okazji znika **nieścisłość**: nawias mówił „z korektą na otyłość" także u dziecka z samą **nadwagą**, gdzie korekta owszem działa, ale nazwa wprowadzała w błąd co do rozpoznania.
+3. **Zdanie o kaloryczności diety** (rejestr standardowy): „Optymalna dieta ~~dostosowana do wieku, wzrostu, masy ciała i poziomu aktywności~~ dostarcza X kcal dziennie" oraz wariant dziecięcy „Optymalna dieta dla dziecka~~, uwzględniająca wiek, wzrost, masę ciała i deklarowany poziom aktywności,~~ dostarcza…". Wyliczanka opisywała sposób liczenia, nie zalecenie.
+4. **Linia norm żywieniowych**: skasowana wielkość pochodna „EAR/RDA odpowiada N % energii" (oba rejestry). Relacja między dwiema liczbami wydrukowanymi obok siebie; same RDA i EAR zostają, bo są wartościami odniesienia z Norm 2024.
+5. **Zdanie o limicie tempa 6–11 lat**: skasowane „zgodnie z zaleceniami dla tego wieku" — puste odesłanie; uzasadnienie niesie dalsza część zdania („szybsza redukcja nie jest wskazana przy trwającym wzrastaniu").
+
+**Gdzie podstawa metody nadal stoi.** W **karcie planu** (`vilda_diet_plan_ui.js`), która jest narzędziem pracy lekarza: „baza planu liczona dla obecnej masy ciała z korektą −10 % REE na otyłość (Hofsteenge 2010)", minimum kaloryczne, tempo w kg/mies. i cel z 85. centyla. Narracja jest tekstem do dokumentacji i dla pacjenta, więc powtarzanie tam metodologii nie dodaje nic, czego karta nie mówi lepiej. Pełne uzasadnienie liczbowe pozostaje w tym rejestrze (MID1–MID3).
+
+*Strażnicy:* `tests/e2e/zalecenia-energetyczne-jezyk.spec.mjs` (zdanie stabilizacji w nowym brzmieniu plus kontrole negatywne na „Hofsteenge", „REE", „przy PAL N", „bez dodatku na wzrastanie" i powtórzony cel), `tests/e2e/zalecenia-energetyczne-krytyczne.spec.mjs` i `tests/e2e/dieta-dziecko-otylosc.spec.mjs` (linia norm bez nawiasu z podstawą; zdanie stabilizacji bez PAL i źródła).
+
 ### ENERGY-CHILD-MID3 — domyślny PAL planu zależny od klasy BMI i skrócenie narracji energetycznej (SW 1.0.909, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Po ENERGY-CHILD-MID2 właściciel podjął decyzję w sprawie zostawioną w tamtym wpisie („1,6 przy nadwadze, 1,4 przy otyłości") i osobno zgłosił, że narracja zaleceń energetycznych jest przeładowana: „za dużo informacji też nie jest dobre, ludzie tego potem nie czytają albo czytają bez zrozumienia".

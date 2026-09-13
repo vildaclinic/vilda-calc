@@ -109,7 +109,8 @@ test('K2b: dziecko z otyłością, jawna redukcja, żadna dieta nie spełnia min
   expect(r.text).toContain('Żadna dieta redukcyjna nie spełnia minimum kalorycznego dla wieku (1000 kcal/dzień), dlatego zalecana jest stabilizacja masy ciała.');
   expect(r.text).toContain(`tj. około ${kcal} kcal dziennie`);
   expect(r.text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
-  expect(r.text).toContain('(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość)');
+  // ENERGY-REC-KROTKO2: bez nawiasu z podstawą — narracja podaje samą kaloryczność
+  expect(r.text).not.toContain('z korektą na otyłość');
   expect(r.plan).toContain('Brak diety');
 });
 
