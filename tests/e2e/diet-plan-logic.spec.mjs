@@ -391,10 +391,10 @@ test('PLAN-SYNC-TIMES: przy wyłączonym ruchu obie karty pokazują ten sam term
 
 // --- Domyślny PAL wg pasma normatywnego dla wieku (2026-08-13) -----------------
 // Nastolatek 10–18 lat: pasmo normatywne Norm 2024 to 1,6–2,0, więc nietknięty
-// formularz dostaje 1,6 (dotąd: kliniczne 1,4 dla każdego). Jawny wybór i wartości
-// z zapisu pacjenta mają pierwszeństwo (flaga __vildaPlanPalTouched).
+// formularz dostaje 1,6 (ENERGY-CHILD-MID2; w MID1 było przejściowo 1,4). Jawny wybór
+// i wartości z zapisu pacjenta mają pierwszeństwo (flaga __vildaPlanPalTouched).
 
-test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,4 (ENERGY-CHILD-OBESITY) + dopisek o wartości domyślnej', async ({ page }) => {
+test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,6 (ENERGY-CHILD-MID2) + dopisek o wartości domyślnej', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
@@ -404,8 +404,8 @@ test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,4 (ENE
     touched: window.__vildaPlanPalTouched === true,
     note: (document.getElementById('bmiJourneyMount')?.textContent || '').includes('PAL przyjęty domyślnie dla wieku'),
   }));
-  expect(out.engineDefault).toBe(1.4);
-  expect(out.pal).toBe('1.4');
+  expect(out.engineDefault).toBe(1.6);
+  expect(out.pal).toBe('1.6');
   expect(out.touched).toBe(false);
   expect(out.note).toBe(true);
 });
@@ -422,7 +422,7 @@ test('PLAN-PAL-DEFAULT-ADULT: dorosły zostaje przy PAL 1,4 (dolna granica pasma
   expect(out.pal).toBe('1.4');
 });
 
-test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną 1,4)', async ({ page }) => {
+test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną 1,6)', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });

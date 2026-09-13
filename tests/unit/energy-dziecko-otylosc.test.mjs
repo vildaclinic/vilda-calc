@@ -47,6 +47,12 @@ describe('Klasa BMI i masa należna (mediana BMI × wzrost²)', () => {
     expect(c.obese).toBe(true);
     expect(c.severe).toBe(true);
     expect(c.neededWeightKg).toBeCloseTo(19.2 * 1.65 ** 2, 6);
+    // ENERGY-CHILD-MID2: cel leczenia to 85. centyl BMI (Mazur 2022), nie mediana — wyżej niż masa należna
+    const [L2, M2, S2] = LMS['M-168'];
+    const bmi85 = L2 !== 0 ? M2 * (1 + L2 * S2 * 1.036) ** (1 / L2) : M2 * Math.exp(S2 * 1.036);
+    expect(c.targetBmi).toBeCloseTo(bmi85, 6);
+    expect(c.targetWeightKg).toBeCloseTo(bmi85 * 1.65 ** 2, 6);
+    expect(c.targetWeightKg).toBeGreaterThan(c.neededWeightKg);
   });
   it('chłopiec 10 l, 140 cm, 33 kg → BMI poniżej mediany: nie nadwaga', () => {
     const c = win.energyChildBmiClass({ sex: 'M', ageYears: 10, weightKg: 33, heightCm: 140 });
@@ -58,9 +64,10 @@ describe('Klasa BMI i masa należna (mediana BMI × wzrost²)', () => {
   });
 });
 
-describe('Domyślny PAL planu: 1,4 także dla 10–18 lat (typowy przy otyłości)', () => {
-  it('energyDefaultPlanPal: 14 l → 1,4; 8 l → 1,4; 30 l → 1,4', () => {
-    expect(win.energyDefaultPlanPal(14, 0)).toBe(1.4);
+describe('Domyślny PAL planu: 1,6 dla 10–18 lat (dolna granica pasma Norm 2024), 1,4 poniżej', () => {
+  it('energyDefaultPlanPal: 14 l → 1,6; 10 l → 1,6; 8 l → 1,4; 30 l → 1,4', () => {
+    expect(win.energyDefaultPlanPal(14, 0)).toBe(1.6);
+    expect(win.energyDefaultPlanPal(10, 0)).toBe(1.6);
     expect(win.energyDefaultPlanPal(8, 0)).toBe(1.4);
     expect(win.energyDefaultPlanPal(30, 0)).toBe(1.4);
   });
@@ -97,6 +104,10 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, be
     expect(st.reeKcal).toBeCloseTo(reeAct, 3);
     expect(st.reeAdjustedKcal).toBe(Math.round(reeAct * REE_ADJ));
     expect(st.neededWeightKg).toBeCloseTo(needed, 6);
+    // ENERGY-CHILD-MID2: stan planu niesie też cel leczenia z 85. centyla BMI
+    const cls = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
+    expect(st.targetWeightKg).toBeCloseTo(cls.targetWeightKg, 6);
+    expect(st.targetWeightKg).toBeGreaterThan(st.neededWeightKg);
     expect(st.maintenanceKcal).toBe(Math.round(base));
   });
   it('stabilizacja nie jest ukrytym deficytem: baza ≥ REE po korekcie i wyżej niż dawna baza od masy należnej', () => {
@@ -122,10 +133,10 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, be
     expect(ctx.energy.growthMultiplier).toBe(1.01);
     expect(ctx.anthropometry.weightUsedKg).toBe(85);
   });
-  it('ENERGY-CHILD-MID1: chłopiec 14 l bez podanego PAL → silnik bierze tę samą wartość co formularz (1,4), koniec rozjazdu 14 %', () => {
+  it('ENERGY-CHILD-MID1/MID2: chłopiec 14 l bez podanego PAL → silnik bierze tę samą wartość co formularz (po MID2: 1,6)', () => {
     const s2 = plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null });
     expect(s2.palUsed).toBe(win.energyDefaultPlanPal(14, 0));
-    expect(s2.palUsed).toBe(1.4);
+    expect(s2.palUsed).toBe(1.6);
     // u dziecka bez nadwagi fallback pozostaje normatywny (stara ścieżka)
     expect(plan({ sex: 'M', ageYears: 10, weightKg: 33, heightCm: 140, palInput: null }).palUsed).toBe(1.6);
   });

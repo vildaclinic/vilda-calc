@@ -49,7 +49,7 @@ function fill(page, { age, sex, w, h, pro = true }) {
       planVisible: (document.getElementById('planCard') || {}).style?.display !== 'none',
       plan: norm(document.getElementById('planResults')?.textContent),
       journey: norm(document.getElementById('bmiJourneyMount')?.textContent),
-      state: { ob: st.childObesityPlan, stage: st.childPlanStage, needed: st.neededWeightKg, base: st.maintenanceKcal, diets: st.diets.map((d) => [d.key, d.intake, d.deficit]), gm: st.context.energy.growthMultiplier, src: st.context.anthropometry.source },
+      state: { ob: st.childObesityPlan, stage: st.childPlanStage, needed: st.neededWeightKg, target: st.targetWeightKg, base: st.maintenanceKcal, diets: st.diets.map((d) => [d.key, d.intake, d.deficit]), gm: st.context.energy.growthMultiplier, src: st.context.anthropometry.source },
     };
   }, { age, sex, w, h, pro });
 }
@@ -67,11 +67,13 @@ function recommend(page, { strategy = null, diet = 'light', pf = false, norms = 
   }, { strategy, diet, pf, norms });
 }
 
-test('12–18 lat: PAL 1,4 bez „poza Normami", plan od masy aktualnej z korektą (−253/−379/−506 z tempa), hero z zaokrągloną kalorycznością', async ({ page }) => {
+test('12–18 lat: PAL domyślnie 1,6 (MID2), plan od masy aktualnej z korektą (−253/−379/−506 z tempa), hero z zaokrągloną kalorycznością', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 14, sex: 'M', w: 85, h: 165 });
-  expect(r.pal).toBe('1.4');
+  // ENERGY-CHILD-MID2: domyślny PAL planu 10–18 lat = 1,6 (dolna granica pasma Norm 2024);
+  // 1,4 zostaje na liście z etykietą o niskiej aktywności, bez „poza Normami".
+  expect(r.pal).toBe('1.6');
   expect(r.palOptions[0]).toContain('częsta przy otyłości');
   expect(r.palOptions[0]).not.toContain('poza Normami');
   expect(r.state.ob).toBe(true);
@@ -81,14 +83,18 @@ test('12–18 lat: PAL 1,4 bez „poza Normami", plan od masy aktualnej z korekt
   // masa należna ≈ mediana BMI (OLAF, 14 l) × 1,65² — wyraźnie poniżej masy aktualnej 85 kg
   expect(r.state.needed).toBeGreaterThan(45);
   expect(r.state.needed).toBeLessThan(60);
+  // ENERGY-CHILD-MID2: celem leczenia jest 85. centyl BMI — wyżej niż masa należna, wciąż poniżej 85 kg
+  expect(r.state.target).toBeGreaterThan(r.state.needed);
+  expect(r.state.target).toBeLessThan(85);
   expect(r.state.diets.map((d) => d[2])).toEqual([253, 379, 506]); // 1 / 1,5 / 2 kg/mies.
   expect(r.state.diets[0][1]).toBe(r.state.base - 253);
   expect(r.diet).toBe('light');
-  expect(r.plan).toContain('PAL 1,4 – niska aktywność');
+  expect(r.plan).toContain('PAL 1,6');
   expect(r.plan).not.toContain('Tryb kliniczny');
   expect(r.plan).toContain(`${Math.round((r.state.base - 253) / 100) * 100} kcal/dzień`);
   expect(r.plan).toContain('baza planu liczona dla obecnej masy ciała z korektą −10 % REE na otyłość (Hofsteenge 2010)');
-  expect(r.plan).toContain('cel: masa należna ok.');
+  expect(r.plan).toContain('cel: masa docelowa ok.');
+  expect(r.plan).toContain('85. centyl BMI');
   expect(r.plan).toContain('deficyt ok. 253 kcal dziennie względem zapotrzebowania przy obecnej masie ciała, dobrany do tempa ok. 1,0 kg/mies.');
   expect(r.plan).not.toMatch(/deficyt ok\. \d+ % całkowitego wydatku/u);
   expect(r.journey).toContain('deficyt ok. 253 kcal/dzień względem zapotrzebowania przy obecnej masie ciała, dobrany do tempa ok. 1,0 kg/mies.');
@@ -137,7 +143,7 @@ test('6–11 lat przy BMI < 99c: tylko lekka −126 kcal (0,5 kg/mies.), ostrze�
   const text = await recommend(page, { strategy: null, diet: 'light' });
   const kcal = Math.round(r.state.base / 100) * 100;
   expect(text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
-  expect(text).toContain(`tj. około ${kcal} kcal dziennie przy PAL 1,4, bez dodatku na wzrastanie`);
+  expect(text).toContain(`tj. około ${kcal} kcal dziennie przy PAL 1,6, bez dodatku na wzrastanie`);
   expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
   expect(text).toContain('(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość)');
   expect(text).not.toMatch(/Taki plan daje deficyt|wynosi około \d+ kcal, co przekłada/u);

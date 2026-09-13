@@ -1098,6 +1098,36 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ENERGY-CHILD-MID2 — cel leczenia z 85. centyla BMI i domyślny PAL 1,6 dla 10–18 lat (SW 1.0.908, 2026-09-13, decyzja właściciela)
+
+**Kontekst.** Drugi z dwóch PR zapowiedzianych w ENERGY-CHILD-MID1. Oba punkty właściciel wskazał z góry; ten wpis opisuje, co się zmieniło i jaki jest łączny skutek obu PR.
+
+**1. Cel leczenia = 85. centyl BMI, nie mediana.** Mazur A. i wsp., Nutrients 2022;14(18):3806, [DOI 10.3390/nu14183806](https://doi.org/10.3390/nu14183806): „In older children, weight loss is recommended **to obtain the 85th percentile BMI**." Aplikacja podawała jako cel masę należną z **mediany** BMI, czyli wartość znacznie niższą niż cel leczenia (chł. 14 l 165 cm: 52,3 kg wobec 61,5 kg; chł. 15 l 175 cm 95 kg: 60,6 kg wobec 71,5 kg). `childBmiClass` zwraca teraz `targetBmi` i `targetWeightKg`, a stan planu — `targetWeightKg`; wszystkie teksty (karta planu, „Droga do normy", narracja) mówią „masa docelowa ok. X kg (85. centyl BMI)". Pole `neededWeightKg` (mediana) zostaje w stanie jako odniesienie, ale nie pojawia się już w treści.
+
+- **Ścieżka LMS:** BMI celu z odwrotnego LMS przy `Z85 = 1,036` — tej samej stałej, której używa `toNormalBMITarget` w `app.js` dla górnej granicy normy. Cel jest więc dokładnie granicą, do której liczy się „czas dojścia do normy BMI"; przedtem karta obiecywała jeden punkt, a mierzyła czas do innego.
+- **Ścieżka Palczewskiej:** tablice mają kolumny p3/p10/p25/p50/p75/p90/p97, **nie mają p85**. Wartość interpoluje się między p75 i p90 po **skali z** (`Z_OF_P75 = 0,6745`, `Z_OF_P90 = 1,2816`), tak jak robi to `calcPercentileStatsPal`. Interpolacja liniowa po numerach centyli zaniżyłaby cel, bo odstępy centyli nie są równe w z.
+- **Kaloryczności ten punkt nie zmienia wcale** — cel jest liczbą docelową, nie podstawą energii (tę ENERGY-CHILD-MID1 przestawił na masę aktualną z korektą −10 % REE).
+
+**2. Domyślny PAL planu 1,6 dla 10–18 lat.** `energyDefaultPlanPal` zwracało 1,4 dla pasma `child_10_18`; teraz zwraca pierwszą wartość normatywną, czyli **1,6** (dolna granica pasma Norm 2024). 1,4 zostaje do wyboru z etykietą „niska aktywność – częsta przy otyłości", a wybór lekarza jest chroniony nasłuchem `change` na `#palFactor` (`__vildaPlanPalTouched`) i jawną flagą przy odtworzeniu z rekordu. Poniżej 10 lat pasmo normatywne zaczyna się od 1,4, więc tam nic się nie zmienia.
+
+**Wyniki (dane fikcyjne, silnik przez `energyBuildPlanReductionState`, bez jawnego PAL).**
+
+| przypadek | PAL | baza planu MID1 | baza planu MID2 | diety MID1 | diety MID2 |
+|---|---|---|---|---|---|
+| dz. 7 l, 120 cm, 30 kg | 1,4 | 1358 | **1358** | lekka 1232 | lekka **1232** |
+| chł. 10 l, 140 cm, 45 kg | 1,4 → **1,6** | 1730 | **1978** | lekka 1604 | lekka **1852** |
+| dz. 12 l, 150 cm, 70 kg | 1,4 → **1,6** | 1882 | **2151** | 1629 / 1503 / 1376 | **1898 / 1772 / 1645** |
+| chł. 15 l, 175 cm, 95 kg | 1,4 → **1,6** | 2831 | **3235** | 2578 / 2452 / 2325 | **2982 / 2856 / 2729** |
+| dz. 4 l, 100 cm, 22 kg | 1,4 | 1145 | **1145** | brak (2–5 lat) | brak (2–5 lat) |
+
+Masa docelowa (85. centyl) wobec dawnej masy należnej (mediana): dz. 7 l 26,3 wobec 22,8 kg; chł. 10 l 40,3 wobec 33,5; dz. 12 l 49,3 wobec 40,7; chł. 15 l 71,5 wobec 60,6.
+
+**Skutek łączny do świadomej decyzji.** Korekta −10 % REE z MID1 i podniesienie PAL z 1,4 na 1,6 działają przeciwstawnie i prawie się znoszą: 0,9 × 1,6/1,4 = **1,03**. Dla 12–18 lat prognozy z MID2 wracają w okolice stanu sprzed ENERGY-CHILD-OBESITY, który właściciel nazwał „za bardzo kalorycznym": chł. 15 l MID2 2982 / 2856 / 2729 wobec 3130 / 2880 / 2630 przed OBESITY. Baza planu zostaje niżej (3235 wobec 3630, −11 %), bo korekta na otyłość działa; zbiega się natomiast poziom samych diet, bo deficyty z bezpiecznego tempa (253 / 379 / 506) są mniejsze od dawnych 500 / 750 / 1000. Poniżej 10. roku życia nic się nie zmienia, bo tam domyślny PAL pozostaje 1,4.
+
+**Wariant pośredni, gdyby to było za dużo:** domyślny PAL 1,6 tylko przy nadwadze (85–97c), a 1,4 przy otyłości (≥ 97c), gdzie niska aktywność jest regułą (Hofsteenge 2010 badała właśnie tę grupę). Dotknęłoby to wyłącznie wartości domyślnej; lekarz i tak wybiera PAL ręcznie.
+
+*Strażnicy:* `tests/unit/energy-dziecko-otylosc.test.mjs` — cel z 85. centyla liczony odwrotnym LMS i wyższy od masy należnej, `targetWeightKg` w stanie planu, `energyDefaultPlanPal` 1,6 od 10 lat i 1,4 poniżej, PAL silnika równy PAL formularza.
+
 ### ENERGY-CHILD-MID1 — zalecenia energetyczne u dziecka z nadwagą/otyłością: baza od masy aktualnej z korektą na otyłość, deficyt z bezpiecznego tempa, podłoga względem REE (SW 1.0.907, 2026-09-12, decyzja właściciela)
 
 **Zgłoszenie.** Właściciel po wdrożeniu GROWTH/ENERGY-CHILD-OBESITY: „aplikacja proponuje za bardzo deficytowe diety, wcześniej były za bardzo kaloryczne, teraz są zbyt rygorystyczne, musimy znaleźć złoty środek". Przegląd modułu (dwie ścieżki: analiza kodu i sondy przez prawdziwy adapter) pokazał trzy rzeczy:
