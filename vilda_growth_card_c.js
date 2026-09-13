@@ -221,6 +221,37 @@
     }
     return r ? { shiftCm: r.shift, sigmaFactor: r.sigma, note: r.note, source: r.source } : null;
   }
+
+  // GROWTH-PRED-BP-DZIEWCZETA (decyzja wlasciciela 2026-09-13): ostrzezenie o prognozie
+  // Bayleya-Pinneau przy opoznieniu wieku kostnego >= 2 lata obejmuje takze dziewczeta. Dotad
+  // bylo WYLACZNIE dla chlopcow (zdanie modulu KOWD, dzis w karcie niewidoczne, oraz korekta
+  // -2,0 cm z BIAS_RULES.bpDelayBoys); dziewczeta dostawaly tylko note Bayley 1952 schowana
+  // w „Szczegolach”, choc degradacja wiarygodnosci prognoz dziala u obu plci (delta <= -24).
+  //
+  // U DZIEWCZAT NIE MA KOREKTY LICZBOWEJ i ostrzezenie jej nie sugeruje. Powod jest w danych:
+  // jedyna praca obejmujaca obie plcie — Bramswig 1990 (37 chlopcow / 32 dziewczeta z KOWD,
+  // J Pediatr 1990;117:886-91, DOI 10.1016/s0022-3476(05)80127-1) — daje blad BP +3,1 cm
+  // u chlopcow i -0,8 cm u dziewczat; Reinehr 2019 (DOI 10.1159/000499712) i Akin Kagizmanli
+  // 2025 (DOI 10.4274/jcrpe.galenos.2025.2024-11-6), z ktorych pochodzi wielkosc -2,0 cm,
+  // liczyly WYLACZNIE chlopcow. Ostrzezenie u dziewczat mowi wiec o NIEPEWNOSCI prognozy
+  // (tabele bledu nie byly kalibrowane dla tak duzego opoznienia), nie o kierunku bledu.
+  // Zwraca sam tekst, bez wplywu na cm, +- i wagi — to komunikat, nie regula liczbowa.
+  function bpDelayCautionFor(sk, deltaMonths, hasBp) {
+    var d = num(deltaMonths);
+    if (hasBp !== true || d === null || d > -DELTA_GATE_MONTHS) return '';
+    var msc = String(Math.abs(Math.round(d)));
+    if (sk === 'M') {
+      return 'wiek kostny opóźniony o ' + msc + ' mies. — Bayley–Pinneau w tej sytuacji zawyża u chłopców, '
+        + 'dlatego prognozę tej metody skorygowano o −2,0 cm (Reinehr 2019; Brämswig 1990).';
+    }
+    if (sk === 'F') {
+      return 'wiek kostny opóźniony o ' + msc + ' mies. — prognozę Bayleya-Pinneau traktuj ostrożnie, bo tabele '
+        + 'błędu metody nie były kalibrowane dla tak dużego opóźnienia. Korekty liczbowej u dziewcząt nie '
+        + 'zastosowano: dane obejmujące obie płcie nie potwierdzają u nich zawyżania opisanego u chłopców '
+        + '(Brämswig 1990: błąd +3,1 cm u chłopców, −0,8 cm u dziewcząt).';
+    }
+    return '';
+  }
   // Cel warunkowy z MPH: regresja do średniej wzrostu dorosłego danej płci (Luo 1998).
   function mphAnchorFrom(mphCm, adultMedianCm) {
     var m = num(mphCm), med = num(adultMedianCm);
@@ -645,6 +676,7 @@
     var entries = buildEntries(input || {});
     var active = activeEntries(entries);
     if (!active.length) return null;
+    var skFhp = sexKey(input && input.sex);
     var wcon = weightedConsensus(entries, num(input && input.mphCm), mphOpts(input));
     var weightedCm = num(wcon.weighted);
     if (weightedCm === null) return null;
@@ -682,6 +714,8 @@
       mphAnchorCm: wcon.mphAnchorCm !== undefined ? wcon.mphAnchorCm : null,
       mphWeightFactor: wcon.mphWeightFactor !== undefined ? wcon.mphWeightFactor : 1,
       biasApplied: entries.filter(function (e) { return e.biasCm; }).map(function (e) { return e.key; }),
+      // GROWTH-PRED-BP-DZIEWCZETA: tekst ostrzezenia dla konsumentow modelu (karta rysuje go sama).
+      bpDelayCaution: bpDelayCautionFor(skFhp, entries.deltaMonths !== undefined ? entries.deltaMonths : null, entries.some(function (e) { return e.key === 'bp'; })),
       deltaMonths: entries.deltaMonths !== undefined ? entries.deltaMonths : null,
       gateFired: gateFired,
       excludedMethods: excluded,
@@ -733,6 +767,8 @@
       hasKhamis: entries.some(function (e) { return e.key === 'khamis'; }),
       hasBlum: entries.some(function (e) { return e.key === 'blum'; }),
       hasBp: entries.some(function (e) { return e.key === 'bp'; }),
+      // GROWTH-PRED-BP-DZIEWCZETA: widoczne ostrzezenie przy opoznieniu wieku kostnego >= 2 lata (obie plcie).
+      bpDelayCaution: bpDelayCautionFor(sk, entries.deltaMonths !== undefined ? entries.deltaMonths : null, entries.some(function (e) { return e.key === 'bp'; })),
       hasReinehr: entries.some(function (e) { return e.key === 'reinehr'; }),
       hasTw2: entries.some(function (e) { return e.key === 'tw2'; }),
       hasMenarche: entries.some(function (e) { return e.key === 'menarche'; }),
@@ -1055,6 +1091,7 @@
     try { model = buildModel(input); } catch (_) { model = null; }
     if (!model) return '';
     var html = '<div class="vgcc">' + heroHtml(model) + methodsHtml(model) + mphHtml(model) + targetHtml(model) + statsHtml(model);
+    if (model.bpDelayCaution) html += '<p class="vgcc-hint"><span class="vgcc-warn">Uwaga:</span> ' + esc(model.bpDelayCaution) + '</p>';
     if (model.showBoneAgeHint) html += '<p class="vgcc-hint">Część metod (np. Bayley–Pinneau) wymaga wieku kostnego — uzupełnij go, aby sprawdzić dostępność pozostałych prognoz.</p>';
     html += detailsHtml(model);
     html += '</div>';
@@ -1062,7 +1099,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '21',
+    version: '22',
     MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
@@ -1074,6 +1111,7 @@
     _buildEntries: buildEntries,
     _gateFor: gateFor,
     _biasFor: biasFor,
+    _bpDelayCautionFor: bpDelayCautionFor,
     _pubertyRulesFor: pubertyRulesFor,
     _targetAssessmentFor: targetAssessmentFor,
     _adultSdsFor: adultSdsFor,
