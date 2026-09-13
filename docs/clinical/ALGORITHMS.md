@@ -1098,6 +1098,24 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-3 — Raport wzrastania: podsumowanie jako widok modelu prognozy z karty (SW 1.0.913, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Etap 3 z siedmiu i największy. Audyt podsumował sedno jednym zdaniem: sekcja PODSUMOWANIE **nie była widokiem modelu prognozy**, którym żyje reszta aplikacji, tylko niezależnym, równoległym opisem zbudowanym z surowych wyjść dwóch–trzech silników. Z tego jednego faktu wynikały cztery osobne znaleziska, więc naprawa jest jedna: raport przestaje mieć własne zdanie i zaczyna czytać `finalHeightPrediction` publikowane przez kartę (`computeFinalHeightPrediction` w `vilda_growth_card_c.js`) — to samo źródło, z którego liczą zalecenia dietetyczne i opis pacjenta.
+
+**Co znika razem z tą zmianą.**
+1. **Brak konsensusu.** Karta pokazuje w nagłówku ważony konsensus („konsensus N metod i MPH"), zalecenia cytują tę samą liczbę, a raport drukował **wyłącznie** pojedyncze metody i żadnej liczby wynikowej. Ten sam pacjent miał trzy różne liczby w trzech miejscach. Teraz pierwsza linia podsumowania to konsensus z etykietą i przedziałem.
+2. **Wartości sprzed korekty błędu systematycznego.** Karta przesuwa punktową prognozę regułami `BIAS_RULES` (m.in. Bayley–Pinneau u chłopca z opóźnieniem kostnym ≥ 2 lata: −2,0 cm, σ ×1,2), a raport drukował `predictedAdultHeightCm` **prosto z silnika**, czyli wartość sprzed przesunięcia — i to akurat w sytuacji, o której sam ostrzegał wiersz wyżej. Teraz drukuje `methods[].cm`, czyli liczbę karty, i nazywa korektę, gdy zadziałała.
+3. **Metody wykluczone drukowane jako równorzędne.** `gateFor` wyrzuca RWT i Khamis–Roche z konsensusu u dziewczynki po menarche oraz w profilu przedwczesnego i wczesnego pokwitania („regresja z dzieci o prawidłowym czasie pokwitania, w przedwczesnym pokwitaniu rażąco zawyża"). Raport nie sprawdzał żadnej flagi wykluczenia. Teraz wykluczenie jest wypisane wraz z powodem z bramki.
+4. **Brakujące metody.** Podsumowanie znało tylko Bayley–Pinneau, RWT i Reinehr. Khamis–Roche, Blum/ISS i TW Mark II nie miały żadnego odpowiednika, więc **dziecko bez wieku kostnego nie dostawało w PDF ani jednej prognozy**, choć karta pokazywała liczbę. Teraz lista bierze się z `methods`, czyli obejmuje wszystko, co liczy karta.
+
+**Dodatkowo:** linia **„Zgodność metod"** z różnicą w centymetrach, której raport nie miał wcale, choć model ją niesie (`agreementLabel`, `minCm`, `maxCm`) i choć to najważniejsza informacja przy rozjeździe metod. **Kolejność** pozycji idzie teraz za kartą, więc metoda preferowana nie stoi już za tą, którą raport odradza; preferowana jest nazwana wprost.
+
+**Zapas.** Gdy karta nie opublikowała modelu (brak modułu karty na stronie, brak aktywnych metod), podsumowanie wraca do dotychczasowych linii pojedynczych silników — raport nie traci treści na żadnej stronie. Przy dostępnym konsensusie stare linie **znikają**, żeby ta sama metoda nie występowała dwa razy z dwiema różnymi liczbami.
+
+**Czego ten etap NIE zmienia** (etapy 4–7): wiek kostny i jego opóźnienie, przedział wzrostu docelowego i ocena wobec celu, blok pokwitaniowy (w tym leczenie GnRHa), wiersze informacyjne `infoRows`, etykiety „> 100 centyla", zależność od bibliotek PDF z sieci, anonimizacja. Nie zmienia też żadnego **wzoru ani wagi** — liczby pochodzą z modelu karty bez przeliczania.
+
+*Strażnicy:* `tests/unit/raport-wzrastania-konsensus.test.mjs` (7: konsensus w pierwszej linii z etykietą i przedziałem; kolejność karty z nazwaną metodą preferowaną; wartość po korekcie zamiast surowej z silnika; wykluczenie z powodem i bez dublowania zwrotu „poza konsensusem"; linia zgodności z różnicą w cm; pojedyncza metoda bez wieku kostnego nadal w wydruku i bez linii zgodności; brak modelu → zero linii, czyli zapas oddaje pole starym liniom). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **7 z 7**. `tests/e2e/raport-wzrastania-konsensus.spec.mjs` (1, prawdziwa strona: liczba w podsumowaniu równa konsensusowi karty co do 0,1 cm, brak starego formatu linii pojedynczych metod, obecna linia zgodności).
+
 ### ADV-REPORT-2 — Raport wzrastania: widoczna siatka norm w wierszu, ΔhSDS przez granicę siatek oznaczone, mpSDS zgodne z nagłówkiem (SW 1.0.912, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Etap 2 z siedmiu. Audyt wskazał mieszanie siatek norm w kolumnach hSDS i ΔhSDS jako **najgroźniejsze** znalezisko całego raportu, a rozjazd mpSDS między kolumną a nagłówkiem jako wysokie.
