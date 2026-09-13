@@ -1098,6 +1098,24 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-2 — Raport wzrastania: widoczna siatka norm w wierszu, ΔhSDS przez granicę siatek oznaczone, mpSDS zgodne z nagłówkiem (SW 1.0.912, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Etap 2 z siedmiu. Audyt wskazał mieszanie siatek norm w kolumnach hSDS i ΔhSDS jako **najgroźniejsze** znalezisko całego raportu, a rozjazd mpSDS między kolumną a nagłówkiem jako wysokie.
+
+**1. Dlaczego mieszanie siatek jest niebezpieczne.** `advHistoryMetricCandidates` buduje łańcuch kandydatów zależny od wieku: przy wybranym źródle **OLAF** pomiar poniżej 3. roku życia idzie na **Palczewską** (`n < OLAF_DATA_MIN_AGE ? (l("PALCZEWSKA"), l("WHO"), l("OLAF")) : …`), a powyżej wraca na OLAF. Dziecko z pomiarami po obu stronach tej granicy dostawało więc hSDS z dwóch różnych siatek w sąsiednich wierszach, a **ΔhSDS między nimi jest w dużej części artefaktem zmiany siatki**, nie zmianą tempa wzrastania. W tej aplikacji ΔhSDS na poziomie −1 jest progiem alarmu deceleracji, więc artefakt czytał się jak objaw. Raport miał informację o źródle każdego wiersza (`sourceSummary`, `rowFallbackUsed`) i **nie drukował jej wcale**; jedynym śladem była ogólnikowa nota o fallbacku.
+
+**Decyzja właściciela: oznaczyć, nie ukrywać.** Ukrycie delty gubiłoby informację, której lekarz nie ma skąd odtworzyć.
+
+- Wiersz, w którym **wzrost** policzono z innej siatki niż wybrana, dostaje w komórce hSDS znacznik `*`; model niesie `heightSource`, `heightSourceFallback` i agregat `hasHeightSourceFallback` oraz listę faktycznie użytych siatek (`heightSourcesUsed`).
+- ΔhSDS policzone **między wierszami z różnych siatek** dostaje znacznik `†` (pole `deltaAcrossSourceChange`, agregat `hasDeltaAcrossSourceChange`). Nota mówi wprost: „część różnicy wynika ze zmiany siatki, a nie ze zmiany tempa wzrastania. Takiej różnicy nie należy czytać jako deceleracji ani akceleracji."
+- Znaczniki pojawiają się **tylko wtedy, gdy naprawdę doszło do zmiany siatki** — przy jednorodnym źródle tabela wygląda jak dotąd.
+
+**2. mpSDS liczone raz i z tego samego źródła co nagłówek.** Kolumna brała źródło **wiersza** (`yn(a, n, N, r)`, gdzie `N` to źródło rozstrzygnięte dla wzrostu w tym wierszu, bez łańcucha fallbacku), a linia „MPH (mid-parental height)" w podsumowaniu — źródło **preferowane** z pełnym łańcuchem (`advHistoryResolveMetric("HT", …, 18, preferred)`). Liczb z nagłówka nie dało się odjąć od hSDS z tabeli, bo mpSDS w obu miejscach było inne. Teraz `advGrowthBuildReportRows` rozstrzyga mpSDS **raz**, tym samym resolverem i tym samym źródłem, co nagłówek (pola `mpSdsSd`, `mpSdsSource`), a nota pod tabelą mówi o tej zgodności. Przy okazji poprawka brzmienia: kolumna pozostaje pusta, gdy nie wpisano wzrostu **obojga** rodziców — wystarczy brak jednego, a dotychczasowa nota tego nie mówiła.
+
+**Czego ten etap NIE zmienia** (etapy 3–7): braku konsensusu prognozy w podsumowaniu, rozjazdu wartości metod między kartą a raportem, drukowania metod wykluczonych z konsensusu, etykiet „> 100 centyla", braku wieku kostnego i przedziału celu rodzicielskiego, zależności od bibliotek PDF z sieci oraz anonimizacji. Nie zmienia też **algorytmu** doboru siatki — raport pokazuje teraz to, co silnik i tak robił.
+
+*Strażnicy:* `tests/unit/raport-wzrastania-siatki.test.mjs` (4: znacznik przy ΔhSDS przez granicę siatek i agregaty modelu; kontrola negatywna przy jednorodnym źródle; mpSDS rozstrzygnięte raz, w wieku 18 lat i ze źródła preferowanego, z odejmowaniem od tej samej wartości w każdym wierszu; treść obu not). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **4 z 4**.
+
 ### ADV-REPORT-1 — Raport wzrastania: prognozy z tych samych danych co tabela, punkt aktualny bez duplikatu (SW 1.0.911, 2026-09-13, decyzja właściciela)
 
 **Kontekst.** Pierwszy wpis rejestru o Raporcie wzrastania (PDF z karty „Zaawansowane obliczenia wzrostowe"). Audyt na zlecenie właściciela pokazał, że generator nie miał **ani jednego testu** i **ani jednego wpisu** w rejestrze, mimo że drukuje liczby kliniczne dla rodzica i do dokumentacji. Etap 1 z siedmiu naprawia to, co może dać w wydruku liczbę z innego pacjenta albo wiersz, którego nie ma.
