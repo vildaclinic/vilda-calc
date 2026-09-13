@@ -2016,7 +2016,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         #obesityMonitorSection .obm-date{font-size:.68rem;color:#5a7274;margin-top:2px}
         #obesityMonitorSection .obm-red.good{color:#1a8f5c;font-weight:800}
         #obesityMonitorSection .obm-red.bad{color:#c0453b;font-weight:800}
-        #obesityMonitorSection .obm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}
+        #obesityMonitorSection .obm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}.obm-edit{color:#1a6b7a;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem;margin-right:6px}.obm-edit:hover,.obm-edit:focus-visible{color:#0f4a55;text-decoration:underline}.obm-edit-bar{margin:.9rem 0 .2rem;padding:.55rem .7rem;border:1px solid rgba(26,107,122,.35);background:rgba(26,107,122,.07);border-radius:10px;font-size:.82rem;color:#1f3b41;display:flex;align-items:center;flex-wrap:wrap;gap:.25rem}.obm-edit-bar .obm-edit-hint{color:#54707a}
         #obesityMonitorSection .obm-empty{text-align:center;color:#5a7274;font-size:.85rem;padding:18px;border:1px dashed #e0eef0;border-radius:10px}
       </style>
       <p style="text-align:center; font-size:0.82rem; color:#5a7274; margin:0 0 0.8rem;">
@@ -2043,12 +2043,14 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button>
         <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button>
       </div>
+            <!-- OBESITY-EDIT-1: pasek trybu edycji — wypełnia go monitor, gdy wczytasz punkt ołówkiem. -->
+      <div id="obesityEditBar" class="obm-edit-bar" style="display:none;"></div>
       <h4 style="margin:1rem 0 0.4rem;">Punkty terapii (<span id="obesityTherapyCount">0</span>)</h4>
       <div id="obesityTherapyEmpty" class="obm-empty">Brak punktów. Dodaj „Włączenie leczenia" — to baseline, od którego liczymy redukcję i odpowiedź na leczenie.</div>
       <div id="obesityTherapyTableWrap" style="display:none; overflow-x:auto;">
         <table>
           <thead><tr>
-            <th>Rodzaj wizyty</th><th>Wiek</th><th>Masa (kg)</th><th>Wzrost (cm)</th><th>BMI</th><th>BMI-SDS</th><th>Dawka</th><th>Redukcja masy</th><th>Redukcja BMI</th><th>Usuń</th>
+            <th>Rodzaj wizyty</th><th>Wiek</th><th>Masa (kg)</th><th>Wzrost (cm)</th><th>BMI</th><th>BMI-SDS</th><th>Dawka</th><th>Redukcja masy</th><th>Redukcja BMI</th><th>Akcje</th>
           </tr></thead>
           <tbody id="obesityTherapyTbody"></tbody>
         </table>
@@ -3911,7 +3913,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
          aby korzystał z już zainicjowanych elementów DOM (np. pola wagi i wieku). -->
     <script src="flu_therapy.js?v=7" defer></script>
 <script src="obesity_therapy.js?v=9" defer></script>
-<script src="obesity_therapy_monitor.js?v=15" defer></script>
+<script src="obesity_therapy_monitor.js?v=16" defer></script>
 <script src="hypertension_therapy.js?v=6" defer></script>
 <script src="thyroid_cancer_kids.js?v=4" defer></script>
 
