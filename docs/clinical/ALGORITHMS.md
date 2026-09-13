@@ -1098,6 +1098,35 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-9 — Raport wzrastania: podsumowanie tylko z tego, co lekarz czyta (SW 1.0.919, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Po naprawie obu ścieżek wydruku właściciel ocenił treść: „trzeba ten raport odśmiecić, tam jest za dużo zbędnych informacji" — i podał **dokładny wzorzec** podsumowania, które ma zostać. To ta sama zasada, którą przyjęliśmy wcześniej dla narracji energetycznej: „za dużo informacji też nie jest dobre, ludzie tego potem nie czytają albo czytają bez zrozumienia".
+
+**Co znika z wydruku.**
+
+| usunięta linia | skąd pochodziła | dlaczego znika |
+|---|---|---|
+| „Profil predykcyjny: …" i „Preferowany model dla tego profilu: …" | moduł KOWD | bez rozpiski metod nie ma czego wskazywać jako preferowane |
+| „Bayley-Pinneau może zawyżać przy opóźnieniu wieku kostnego przekraczającym 2 lata." | moduł KOWD | ostrzeżenie o metodzie, której liczby wydruk już nie podaje |
+| rozpiska metod („– RWT: …", „– Bayley–Pinneau: …" itd.) wraz z adnotacjami o korekcie błędu systematycznego i o wykluczeniu z konsensusu | ADV-REPORT-3 | lekarz ma to na karcie, na ekranie, w pełnej postaci |
+| „Zgodność metod: …" | ADV-REPORT-3 | jw. |
+| „Pokwitanie: …" (rutynowa etykieta) | ADV-REPORT-4 | przy profilu standardowym nie wnosi nic |
+| „Wiarygodność prognoz wzrostu: …" | `predictionReliability` | jw. |
+| „Punkty historyczne: N + aktualny pomiar" | podsumowanie | tabela wyżej wypisuje je co do jednego |
+
+**Co zostaje.** Pacjent, płeć, wzrost matki i ojca z centylem i Z-score, MPH, wiek kostny z wielkością opóźnienia, wzrost docelowy z pasmem celu, **jedna** liczba prognozy z etykietą źródła, źródło norm i data wygenerowania.
+
+**Dwie rzeczy zachowane wbrew literalnemu cięciu.**
+
+1. **Ostrzeżenie o leczeniu GnRHa zostaje.** Usunięta została rutynowa etykieta pokwitania, ale nie zdanie „W trakcie leczenia GnRHa prognoza rezydualnego wzrostu jest nierzetelna…". Pojawia się ono **wyłącznie** u dziecka w trakcie leczenia, a jego brak był najpoważniejszym znaleziskiem etapu 4: wydruk z prognozami i zerową informacją o leczeniu, przy którym aplikacja sama uznaje prognozę za nierzetelną. Wzorzec podany przez właściciela dotyczył chłopca z profilem standardowym, więc tego zdania w ogóle nie zawierał — usunięcie go byłoby rozszerzeniem decyzji na przypadek, o którym nie było mowy.
+2. **Etykieta źródła w linii prognozy zostaje** („konsensus 4 metod i MPH"), bo mówi, ile metod złożyło się na liczbę — bez tego pojedyncza liczba wyglądałaby na pomiar.
+
+**Sedno ADV-REPORT-3 zostaje nienaruszone.** Raport nadal podaje **tę samą liczbę, co karta i zalecenia dietetyczne**, a nie surowe wyjścia silników; znika wyłącznie rozpiska, która do tej liczby prowadziła.
+
+**Zastrzeżenie zgłoszone właścicielowi.** Wraz z linią „Zgodność metod" znika z wydruku informacja, że metody rozjechały się np. o 16,6 cm. Czytelnik widzi wtedy „175,5 cm ±5,3 cm" i nie ma jak poznać, że rozrzut był trzykrotnie większy od podanego przedziału. Właściciel zna ten skutek; przywrócenie jednej linii **tylko przy niskiej zgodności** pozostaje otwartą opcją.
+
+*Strażnicy:* `tests/unit/raport-wzrastania-konsensus.test.mjs` (7, przepisane na nowy kontrakt: linia konsensusu jest **jedyna**, żadna metoda nie jest wypisana z osobna, znikają adnotacje o korekcie i wykluczeniu, znika linia zgodności mimo że model ją niesie, zostaje etykieta źródła, brak modelu nadal nie produkuje żadnej linii). `tests/unit/raport-wzrastania-dane-kliniczne.test.mjs` (7, dwa przypadki przepisane: ostrzeżenie o GnRHa zostaje, rutynowa etykieta pokwitania znika w obu wariantach). `tests/e2e/raport-wzrastania-konsensus.spec.mjs` (nowy przypadek: podsumowanie wyliczone **z obu stron** — dziewięć linii, które mają zostać, i siedem, które mają zniknąć, plus kontrola, że żadna linia nie zaczyna się myślnikiem rozpiski). `tests/e2e/raport-wzrastania-swiezosc.spec.mjs` (brama świeżości pilnowana dziś liniami kontekstu klinicznego, bo linia wiarygodności zniknęła).
+
 ### ADV-REPORT-8 — Raport wzrastania: druga droga do tego samego raportu (SW 1.0.918, 2026-09-13, zgłoszenie właściciela)
 
 **Zgłoszenie.** Właściciel wygenerował raport po wdrożeniu etapów 1–7 i dostał plik **pocięty w poprzek wiersza**, w którym w dodatku **nie dało się zaznaczyć ani wyszukać tekstu**. Wskazał drogę: przycisk **„Raport PDF dla pacjenta" w karcie „Podsumowanie wyników"**.
