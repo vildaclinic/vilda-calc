@@ -1098,6 +1098,35 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### OBESITY-PREFILL-1 i OBESITY-EDIT-2 — Monitor otyłości: uzupełnianie z formularza i ostrzeżenia przy czyszczeniu pól (SW 1.0.922, 2026-09-13, decyzje właściciela)
+
+Dwie zmiany w tej samej zakładce, obie zgłoszone po wdrożeniu edycji punktów (OBESITY-EDIT-1).
+
+**1. Przycisk „Uzupełnij z formularza" (OBESITY-PREFILL-1).**
+
+Wiek, masa i wzrost są wpisane w formularzu głównym aplikacji, a monitor kazał je wklepywać drugi raz. Przycisk nad siatką pól przepisuje je jednym kliknięciem wraz z **dzisiejszą datą wizyty**. Dawki **nie** zgaduje — przy titracji zmienia się z wizyty na wizytę, a podstawiona wartość byłaby myląca właśnie tam, gdzie decyduje o ocenie odpowiedzi.
+
+**Reguła preparatu jest decyzją właściciela:** przy **kontynuacji** podstawiamy lek z **poprzedniego punktu kontrolnego**, przy **włączeniu leczenia** zostawiamy wybór lekarzowi — to on decyduje, czym zaczyna. Pusta lista punktów znaczy właśnie włączenie, więc `Eo()` oddaje wtedy `null`, a lista wyboru zostaje nietknięta.
+
+**Kolejność „poprzedni" jest ta sama, co w tabeli:** po datach, gdy mają je wszystkie punkty, a w przeciwnym razie po wieku. Inaczej przy niekompletnych datach podstawialibyśmy lek z innego punktu niż ten, który lekarz widzi na dole tabeli.
+
+**Data liczona w czasie LOKALNYM.** `toISOString()` dałby UTC, a to wieczorem potrafi wskazać jutro albo wczoraj. Przy oknach oceny 12/16 tygodni taki błąd jest realny, nie teoretyczny.
+
+Obie reguły — wybór preparatu i dzisiejsza data — są **czystymi funkcjami** (`Eo`, `Et`), żeby dało się je zmierzyć bez przeglądarki.
+
+**2. Ostrzeżenia przy czyszczeniu dawki albo daty w edycji (OBESITY-EDIT-2).**
+
+Przy wprowadzaniu edycji punktów wypisaliśmy dwa ciche skutki uboczne; właściciel zdecydował, żeby o nie pytać. Pytamy **tylko o usunięcie wartości, która była** — punkt dodany bez tych pól zachowuje się jak dotąd, więc nikomu nie przybywa okienek tam, gdzie nic nie znika.
+
+| wyczyszczone pole | skutek, o którym mówi ostrzeżenie |
+|---|---|
+| dawka | wpis o leku **znika z osi czasu Karty Pacjenta** — tamten kod pomija punkty bez czytelnej dawki |
+| data | sortowanie **całej** tabeli przestawia się z dat na wiek, a okno oceny 12/16 tyg. liczy się w przybliżeniu z wieku (dokładność ~miesiąc) |
+
+Gdy zniknęły obie, komunikat wymienia oba skutki naraz. Odmowa zostawia punkt nietknięty.
+
+*Strażnicy:* `tests/unit/otylosc-edycja-punktu.test.mjs` (8 nowych: pusta lista bez podpowiedzi, lek z ostatniego punktu wg dat, kolejność po wieku przy niekompletnych datach, pominięcie ogonów bez leku, „– wybierz –" nie jest lekiem, sama substancja wystarcza; data lokalna o 23:30 ostatniego dnia roku i dopełnianie zerem). `tests/e2e/otylosc-edycja-punktu.spec.mjs` (4 nowe, prawdziwy DocPro: przepisanie wieku, masy, wzrostu i dzisiejszej daty z nietkniętą dawką; lek z poprzedniego punktu przy kontynuacji i wolny wybór przy włączeniu; ostrzeżenie o obu skutkach z odmową zostawiającą dane; kontrola negatywna — edycja bez ruszania dawki i daty nie zadaje dodatkowych pytań). **Zmierzone czerwone:** e2e **3 z 4** (czwarty to kontrola negatywna, zielona także przed zmianą — i taka ma być), plik jednostkowy przeciwko wersji sprzed zmiany **nie startuje**, bo mierzonych funkcji nie ma w module.
+
 ### OBESITY-EDIT-1 — Monitor leczenia otyłości: edycja punktu terapii (SW 1.0.921, 2026-09-13, zgłoszenie właściciela)
 
 **Zgłoszenie.** W zakładce „Monitorowanie leczenia" modułu „Leczenie otyłości" punkt terapii dało się tylko **dodać albo usunąć**. Poprawka literówki w masie oznaczała skasowanie wizyty i wpisanie jej od nowa.
