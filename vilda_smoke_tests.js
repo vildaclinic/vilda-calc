@@ -538,7 +538,7 @@
     const contractDetail = checkNamedContracts(DEFAULT_DIET_PLAN_UI_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
     return {
       ok: !!api &&
-        api.VERSION === '1.4.2' &&
+        api.VERSION === '1.5.0' &&
         api.STEP === '8Q-5' &&
         typeof api.init === 'function' &&
         typeof api.initDietPlanUI === 'function' &&
