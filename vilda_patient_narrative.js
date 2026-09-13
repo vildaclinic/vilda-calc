@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '6';
+  var VERSION = '7';
 
   // Progi UJAWNIANIA, nie progi kliniczne. Bramkuja wylacznie zdania o wieku danych,
   // czyli decyduja o tym, KIEDY opis przyznaje sie do starych danych — nigdy o tym, jak
@@ -129,6 +129,27 @@
     var l = a.y ? a.y + ' ' + (a.y === 1 ? 'roku' : 'lat') : '';
     var r = a.m ? a.m + ' ' + (a.m === 1 ? 'miesiąca' : 'miesięcy') : '';
     return l && r ? l + ' i ' + r : (l || r || '0 miesięcy');
+  }
+
+  // DOB-AGE-3: ponizej 3. miesiaca zycia miesiac jest za gruba jednostka — „w wieku
+  // 1 miesiaca" opisuje tak samo czterotygodniowe i osmiotygodniowe niemowle. Tygodnie
+  // przychodza z ZEWNATRZ (zna je formularz), bo ten modul z zalozenia niczego nie liczy.
+  //
+  // Uzywane WYLACZNIE w zdaniu o stanie biezacym. Punkty historyczne nie niosa tygodni —
+  // rekord trzyma `ageWeeks` tylko dla biezacej wizyty — a podstawienie dzisiejszej
+  // liczby pod pomiar sprzed roku byloby zmyslaniem, nie uscisleniem.
+  function tygodnieDop(t) {
+    return t + ' ' + (t === 1 ? 'tygodnia' : 'tygodni');
+  }
+
+  // Bramka ostatniej instancji: tygodnie wolno wstawic tylko w oknie < 3 mies. i tylko
+  // w sensownym zakresie (13 tyg. to juz okolice 3. miesiaca). Zgodnosc liczby tygodni
+  // z miesiacami sprawdza warstwa UI, ktora ma dostep do VildaDobAge — tutaj zostaje
+  // tania kontrola, ktora nie wymaga zadnych stalych spoza tego modulu.
+  function wiekDopTyg(mo, t) {
+    if (typeof mo !== 'number' || !isFinite(mo) || mo < 0 || mo >= 3) return wiekDop(mo);
+    if (typeof t !== 'number' || !isFinite(t) || t < 0 || t > 13) return wiekDop(mo);
+    return tygodnieDop(Math.floor(t));
   }
 
   // Zakres wieku: „w wieku od 5 do 6 lat" dla pelnych lat, inaczej pelna forma obu koncow.
@@ -288,7 +309,7 @@
   // ── Zdania ──────────────────────────────────────────────────────────────────
 
   // 1. Stan biezacy — pomiar zapisany jednym zdaniem, z wiekiem i osoba.
-  function zdanieStan(model) {
+  function zdanieStan(model, extra) {
     var h = metryka(model, 'height'), wt = metryka(model, 'weight'), b = metryka(model, 'bmi');
     var ost = (h && h.last) || (wt && wt.last) || (b && b.last);
     if (!ost) return null;
@@ -305,7 +326,8 @@
       var kw = kanal(wt.last.c);
       czesci.push('waży ' + fmt(wt.last.value, 1) + ' kg' + (kw ? ' (' + kw + ')' : ''));
     }
-    var txt = 'W wieku ' + wiekDop(ost.ageMonths) + ' ' + o.kto;
+    var tyg = extra && typeof extra.ageWeeks === 'number' ? extra.ageWeeks : null;
+    var txt = 'W wieku ' + wiekDopTyg(ost.ageMonths, tyg) + ' ' + o.kto;
     if (czesci.length) txt += ' ' + czesci.join(' i ');
     if (b && b.last) {
       var kb = kanal(b.last.c);
@@ -662,7 +684,7 @@
     if (!model) return null;
     var e = extra && typeof extra === 'object' ? extra : {};
     var zdania = [
-      zdanieStan(model),
+      zdanieStan(model, e),
       zdanieCatchUp(e),
       zdaniePrzebieg(model),
       zdanieOdcinek(model),
@@ -700,6 +722,7 @@
     // Udostepnione testom i przyszlemu UI: jak opis wprowadza etykiete karty do zdania.
     konkluzja: konkluzja,
     formatAge: wiekDop,
+    formatAgeWithWeeks: wiekDopTyg,
     formatDuration: trwanie,
     formatSds: fmtSds
   };

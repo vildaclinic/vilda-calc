@@ -819,3 +819,72 @@ describe('SDS tempa wzrastania w opisie', () => {
     expect(zdanie(wynik, 'tempo'), 'reszta opisu bez zmian').toBeTruthy();
   });
 });
+
+describe('DOB-AGE-3 — niemowlę opisane w tygodniach, nie w miesiącach', () => {
+  // Sześciotygodniowe i czterotygodniowe niemowlę to dla opisu ten sam „1 miesiąc",
+  // a klinicznie zupełnie inne dziecko. Tygodnie przychodzą z formularza (VildaDobAge);
+  // silnik opisu ich nie liczy, tylko wstawia w dopełniaczu.
+  const NIEMOWLE = {
+    tabela: { 'HT|0': -0.2, 'HT|1': -0.3, 'WT|1': -0.1 },
+    wejscie: {
+      measurements: [{ ageMonths: 0, height: 50 }],
+      currentAgeMonths: 1,
+      currentHeight: 55,
+      currentWeight: 4.4,
+      sex: 'M',
+      source: 'OLAF',
+    },
+  };
+
+  it('z tygodniami zdanie mówi „w wieku 6 tygodni", nie „1 miesiąca"', () => {
+    const g = srodowisko(NIEMOWLE.tabela);
+    const { wynik } = opis(g, NIEMOWLE.wejscie, { ageWeeks: 6 });
+    const t = zdanie(wynik, 'stan');
+    expect(t).toMatch(/^W wieku 6 tygodni chłopiec/);
+    expect(t).not.toMatch(/miesiąca/);
+  });
+
+  it('bez tygodni zostaje dotychczasowe brzmienie w miesiącach', () => {
+    const g = srodowisko(NIEMOWLE.tabela);
+    const { wynik } = opis(g, NIEMOWLE.wejscie, {});
+    expect(zdanie(wynik, 'stan')).toMatch(/^W wieku 1 miesiąca chłopiec/);
+  });
+
+  it('jeden tydzień ma własną formę dopełniacza', () => {
+    const g = srodowisko(NIEMOWLE.tabela);
+    const { wynik } = opis(g, NIEMOWLE.wejscie, { ageWeeks: 1 });
+    expect(zdanie(wynik, 'stan')).toMatch(/^W wieku 1 tygodnia chłopiec/);
+  });
+
+  it('powyżej 3. miesiąca tygodnie są ignorowane — miesiąc jest już dobrą jednostką', () => {
+    const g = srodowisko({ 'HT|72': -0.3, 'HT|84': -0.4 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 72, height: 113 }],
+      currentAgeMonths: 84,
+      currentHeight: 118,
+      sex: 'M',
+      source: 'OLAF',
+    }, { ageWeeks: 6 });
+    expect(zdanie(wynik, 'stan')).toMatch(/^W wieku 7 lat chłopiec/);
+  });
+
+  it('liczba tygodni spoza sensownego zakresu nie wchodzi do zdania', () => {
+    const g = srodowisko(NIEMOWLE.tabela);
+    for (const zla of [40, -2, Number.NaN, Infinity]) {
+      const { wynik } = opis(g, NIEMOWLE.wejscie, { ageWeeks: zla });
+      expect(zdanie(wynik, 'stan'), String(zla)).toMatch(/^W wieku 1 miesiąca/);
+    }
+  });
+
+  it('formatAgeWithWeeks jest czysty i sam pilnuje okna', () => {
+    const g = srodowisko(NIEMOWLE.tabela);
+    const f = g.VildaPatientNarrative.formatAgeWithWeeks;
+    expect(f(1, 6)).toBe('6 tygodni');
+    expect(f(0, 2)).toBe('2 tygodni');
+    expect(f(2, 13)).toBe('13 tygodni');
+    expect(f(3, 13)).toBe('3 miesięcy');
+    expect(f(1, 14)).toBe('1 miesiąca');
+    expect(f(1, null)).toBe('1 miesiąca');
+  });
+});
+

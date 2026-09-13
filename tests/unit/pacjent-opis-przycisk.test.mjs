@@ -211,3 +211,59 @@ describe('buildInput — ocena SGA bez catch-upu', () => {
     expect(g.VildaPatientNarrativeUI.buildInput({}, MODEL_Z_WZROSTEM).sgaCatchUp).toBeNull();
   });
 });
+
+describe('DOB-AGE-3 — tygodnie wchodzą do opisu tylko wtedy, gdy pasują do pomiaru', () => {
+  // Warstwa UI jest jedynym miejscem, które zna i formularz (VildaDobAge), i wiek
+  // opisywanego pomiaru. Dlatego to ona pilnuje, żeby liczba tygodni z dzisiejszego
+  // formularza nie trafiła do zdania o pomiarze sprzed roku.
+  function oknoZTygodniami(tygodnie) {
+    const g = { document: null, navigator: {} };
+    loadBrowserScript('vilda_dob_age.js', g); // prawdziwy przelicznik, nie atrapa
+    loadBrowserScript('vilda_patient_narrative_ui.js', g);
+    g.VildaDobAge.readWeeks = () => tygodnie;
+    return g;
+  }
+
+  const model = (ageMonths) => ({ metrics: [{ metric: 'height', last: { ageMonths } }] });
+
+  it('tygodnie zgodne z wiekiem pomiaru przechodzą', () => {
+    expect(oknoZTygodniami(6).VildaPatientNarrativeUI._weeksForNarrative(model(1))).toBe(6);
+    expect(oknoZTygodniami(2).VildaPatientNarrativeUI._weeksForNarrative(model(0))).toBe(2);
+  });
+
+  it('tolerancja jednego miesiąca — kalendarz i przelicznik legalnie się o tyle różnią', () => {
+    // 8 tygodni to 1 albo 2 pełne miesiące, zależnie od długości miesięcy (DOB-AGE-2).
+    expect(oknoZTygodniami(8).VildaPatientNarrativeUI._weeksForNarrative(model(1))).toBe(8);
+    expect(oknoZTygodniami(8).VildaPatientNarrativeUI._weeksForNarrative(model(2))).toBe(8);
+  });
+
+  it('tygodnie sprzeczne z wiekiem pomiaru są odrzucane', () => {
+    // 2 tygodnie przy dwumiesięcznym pomiarze to liczba z innej wizyty.
+    expect(oknoZTygodniami(2).VildaPatientNarrativeUI._weeksForNarrative(model(2))).toBeNull();
+    expect(oknoZTygodniami(13).VildaPatientNarrativeUI._weeksForNarrative(model(0))).toBeNull();
+  });
+
+  it('pomiar spoza okna < 3 mies. nigdy nie dostaje tygodni', () => {
+    expect(oknoZTygodniami(6).VildaPatientNarrativeUI._weeksForNarrative(model(3))).toBeNull();
+    expect(oknoZTygodniami(6).VildaPatientNarrativeUI._weeksForNarrative(model(84))).toBeNull();
+  });
+
+  it('brak tygodni, brak modułu formularza i brak pomiaru dają null, nie wyjątek', () => {
+    expect(oknoZTygodniami(null).VildaPatientNarrativeUI._weeksForNarrative(model(1))).toBeNull();
+    expect(oknoZTygodniami(6).VildaPatientNarrativeUI._weeksForNarrative({ metrics: [] })).toBeNull();
+
+    const bezModulu = { document: null, navigator: {} };
+    loadBrowserScript('vilda_patient_narrative_ui.js', bezModulu);
+    expect(bezModulu.VildaPatientNarrativeUI._weeksForNarrative(model(1))).toBeNull();
+  });
+
+  it('buildInput niesie ageWeeks do silnika opisu', () => {
+    const g = oknoZTygodniami(6);
+    const wejscie = g.VildaPatientNarrativeUI.buildInput({}, model(1));
+    expect(wejscie.ageWeeks).toBe(6);
+
+    const stary = oknoZTygodniami(6);
+    expect(stary.VildaPatientNarrativeUI.buildInput({}, model(84)).ageWeeks).toBeNull();
+  });
+});
+
