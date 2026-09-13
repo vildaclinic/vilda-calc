@@ -1098,6 +1098,20 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-7 — Raport wzrastania: anonimizacja wydruku (SW 1.0.917, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Etap 7 i ostatni. Raport niesie imię i nazwisko pacjenta w **dwóch** miejscach: w nagłówku podsumowania („Pacjent: …") oraz w **nazwie pliku** (`Raport_wzrastania_Zofia_Przykladowska.pdf`). To drugie jest poważniejsze, bo nazwa pliku żyje dalej niż treść: zostaje w katalogu Pobrane, w historii przeglądarki, w nazwie załącznika wiadomości i na zrzucie ekranu z listą plików — nawet gdy sam wydruk nigdy nikomu nie trafił do ręki.
+
+**Rozwiązanie.** W kontrolkach raportu staje pole wyboru „Anonimizuj — tylko inicjały (np. »N.F.«)". Po zaznaczeniu nazwisko zamienia się w inicjały **równocześnie w nagłówku i w nazwie pliku** — bo oba miejsca czytają je teraz z **jednego punktu** (`advGrowthResolveReportPatientName`). Gdyby nazwa pliku liczyła sama, przełącznik anonimizowałby wydruk, a PDF i tak leżałby na dysku z nazwiskiem w nazwie, czyli nie dawałby nic; strukturalny test pilnuje, że odczyt pola `advName` występuje w module **dokładnie raz**.
+
+**Domyślnie WYŁĄCZONA** (decyzja właściciela). Właściciel drukuje zwykle dla siebie i do dokumentacji, gdzie pełne dane są potrzebne; ciche skracanie nazwiska byłoby zmianą zachowania bez pytania. Przełącznik jest dostępny, gdy wydruk ma iść dalej.
+
+**Reguła inicjałów.** Przeniesiona z modułu terminarza (`Na()` w `vilda_terminarz.js`), gdzie ta sama potrzeba została rozwiązana wcześniej: odcina nawias z datą urodzenia (Karta Pacjenta dopisuje „(ur. 2015-03-02)" — bez odcięcia wyszłoby „Z.P.(."), bierze pierwszą literę każdego członu i wielkoliterzy ją, obsługując polskie znaki. Kopia jest **świadoma** — moduły ładują się niezależnie i nie mają wspólnego globalu, tak samo jak przy `wiekLataMianownik` — a wspólny test porównuje obie funkcje na tym samym zestawie nazwisk, żeby nie rozjechały się w czasie.
+
+**Czego ten etap NIE zmienia.** Żadnej liczby ani wiersza tabeli. Anonimizacja dotyczy **wyłącznie** nazwiska: data wygenerowania, płeć, wiek i wszystkie pomiary zostają, bo bez nich raport przestałby być raportem. Nie jest to też pseudonimizacja w rozumieniu RODO — inicjały w połączeniu z datą urodzenia i pomiarami nadal mogą wskazać osobę; to zmniejszenie widoczności danych przy przekazywaniu wydruku, nie ich usunięcie.
+
+*Strażnicy:* `tests/unit/raport-wzrastania-anonimizacja.test.mjs` (9: stan domyślny wyłączony; inicjały po włączeniu; brak przełącznika na stronie czytany jak wyłączony, a nie jak błąd; polskie znaki i nazwisko wieloczłonowe; data urodzenia w nawiasie nie staje się inicjałem; puste nazwisko zostaje puste; strukturalny test jednego punktu odczytu nazwiska; przełącznik obecny i niezaznaczony; zgodność obu kopii reguły inicjałów). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **9 z 9**. `tests/e2e/raport-wzrastania-anonimizacja.spec.mjs` (prawdziwa strona: przełącznik istnieje, jest domyślnie wyłączony, a po zaznaczeniu nazwisko znika z nagłówka i z nazwy pliku) — **zmierzone czerwone**.
+
 ### ADV-REPORT-6 — Raport wzrastania: dostępność offline i podział stron ścieżki zapasowej (SW 1.0.916, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Etap 6 z siedmiu. Dwa niezależne znaleziska audytu, oba o **składzie** raportu, nie o jego treści.
