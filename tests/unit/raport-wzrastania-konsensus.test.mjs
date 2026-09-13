@@ -48,9 +48,22 @@ describe('Raport wzrastania — podsumowanie jako widok modelu prognozy z karty'
   // samą liczbę, co karta i zalecenia, a nie surowe wyjścia silników. Poniższe testy pilnują obu
   // rzeczy naraz: że liczba jest ta właściwa i że reszta naprawdę zniknęła.
 
-  it('to JEDYNA linia — rozpiska metod nie trafia do wydruku', () => {
+  // ADV-REPORT-10 (decyzja właściciela 2026-09-13): linia zgodności wraca, ale TYLKO przy zgodności
+  // niskiej — wtedy sama liczba konsensusu z przedziałem ±5 cm przemilczałaby rozjazd rzędu 17 cm.
+  // FHP w tym pliku ma zgodność „niska", więc linie są dwie; przy zgodności dobrej zostaje jedna.
+  it('przy niskiej zgodności są DWIE linie: konsensus i zgodność', () => {
     const out = lines(FHP);
-    expect(out.length).toBe(1);
+    expect(out.length).toBe(2);
+    expect(out[0]).toContain('Prognoza wzrostu ostatecznego');
+    expect(out[1]).toContain('Zgodność metod:');
+  });
+
+  it('przy zgodności dobrej i umiarkowanej zostaje sama liczba konsensusu', () => {
+    for (const label of ['dobra', 'umiarkowana']) {
+      const out = lines(Object.assign({}, FHP, { agreementLabel: label }));
+      expect(out.length, `zgodność „${label}"`).toBe(1);
+      expect(out[0]).toContain('Prognoza wzrostu ostatecznego');
+    }
   });
 
   it('żadna pojedyncza metoda nie jest wypisana z osobna', () => {
@@ -69,10 +82,20 @@ describe('Raport wzrastania — podsumowanie jako widok modelu prognozy z karty'
     expect(out).not.toContain('poza konsensusem');
   });
 
-  it('linia zgodności metod znika, mimo że model ją niesie', () => {
-    const out = lines(FHP);
+  it('linia zgodności podaje różnicę w centymetrach, a nie samą etykietę', () => {
     expect(FHP.agreementLabel).toBe('niska');
-    expect(out.some((l) => l.startsWith('Zgodność metod'))).toBe(false);
+    const out = lines(FHP).join(' | ');
+    // min 169,0 i max 186,0 z modelu → 17,0 cm; bez tej liczby etykieta „niska" nic nie mówi.
+    expect(out.replace(/\u00A0/g, ' ')).toContain('Zgodność metod: niska (różnica 17,0 cm)');
+  });
+
+  it('jedna metoda czynna nie produkuje linii zgodności, choćby etykieta była niska', () => {
+    const out = lines({
+      cm: 176.2, halfWidthCm: 4.1, sourceLabel: 'Khamis-Roche', agreementLabel: 'niska',
+      minCm: 170, maxCm: 186,
+      methods: [{ key: 'khamis', label: 'Khamis-Roche', cm: 176.2, errorHalfWidthCm: 4.1 }],
+    });
+    expect(out.length).toBe(1);
   });
 
   it('etykieta źródła zostaje, bo mówi, ile metod złożyło się na liczbę', () => {
