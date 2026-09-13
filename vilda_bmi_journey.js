@@ -296,7 +296,7 @@
       html += '<p class="bmi-journey-recepta">deficyt <b>\u2212' + fmtInt(model.found.deficit)
         + '\u202Fkcal/dzień</b> · tempo ok. <b>' + fmt(model.found.weeklyLoss, 1) + '\u202Fkg/tydz.</b>'
         + (lastEngineState && lastEngineState.childObesityPlan && fin(lastEngineState.maintenanceKcal)
-          ? ' · zapotrzebowanie dla masy należnej ok. <b>' + fmtInt(lastEngineState.maintenanceKcal) + '\u202Fkcal/dzień</b>' : '')
+          ? ' · zapotrzebowanie przy obecnej masie ciała ok. <b>' + fmtInt(lastEngineState.maintenanceKcal) + '\u202Fkcal/dzień</b>' : '')
         + '</p>';
     }
     html += '<table class="bmi-journey-table" aria-live="polite"><thead><tr><th>Twój wybór</th><th>kcal/tydz.</th><th>kg/mies.</th></tr></thead>'
@@ -304,8 +304,8 @@
     if (model.found && w.DIET_BULLETS && w.DIET_BULLETS[model.dietKey] && w.DIET_LEVELS && w.DIET_LEVELS[model.dietKey]) {
       var extra = typeof w.energyDietBulletsExtra === 'function' ? w.energyDietBulletsExtra(model.dietKey, lastEngineState) : w.DIET_BULLETS[model.dietKey].slice(2);
       var items = [(lastEngineState && lastEngineState.childObesityPlan
-        ? 'stały deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania dla masy należnej'
-          + (fin(lastEngineState.neededWeightKg) ? ' (ok.\u202F' + fmt(lastEngineState.neededWeightKg, 1) + '\u202Fkg, mediana BMI dla wieku i wzrostu)' : '')
+        ? 'deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania przy obecnej masie ciała'
+          + (fin(model.found.monthlyLossKg) ? ', dobrany do tempa ok.\u202F' + fmt(model.found.monthlyLossKg, 1) + '\u202Fkg/mies.' : '')
         : 'deficyt ok.\u202F' + Math.round(w.DIET_LEVELS[model.dietKey].deficitPct * 100)
         + '\u202F% całkowitego wydatku energetycznego')].concat(extra);
       html += '<ul class="bmi-journey-bullets">' + items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
@@ -364,7 +364,7 @@
     var kcal = model.stabMode
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.maintenanceKcal / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
-        + '<div class="bmi-journey-kcalcap">energia utrzymania (stabilizacja masy ciała' + (fin(model.neededWeightKg) ? ', masa należna ok. ' + fmt(model.neededWeightKg, 1) + '\u202Fkg' : '') + ')</div></div>'
+        + '<div class="bmi-journey-kcalcap">energia utrzymania (stabilizacja masy ciała' + (fin(model.neededWeightKg) ? ', cel: masa należna ok. ' + fmt(model.neededWeightKg, 1) + '\u202Fkg' : '') + ')</div></div>'
       : model.found
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'

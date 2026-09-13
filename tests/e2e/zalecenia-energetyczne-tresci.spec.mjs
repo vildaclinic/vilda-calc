@@ -115,17 +115,17 @@ test('11-latek z otyłością (Cole ≥ 120 %): zdanie o konsultacji bez trenera
   expect(r12.text).toContain('a w razie potrzeby także wsparcie trenera personalnego.');
 });
 
-test('8-latka 97–99c z jawną redukcją: uzasadnienie limitu tempa (0,5 kg/mies., deficyt 130 kcal) w obu rejestrach, kcal sesji netto 160, płyny 1,75 l', async ({ page }) => {
+test('8-latka 97–99c z jawną redukcją: uzasadnienie limitu tempa (0,5 kg/mies., deficyt 126 kcal) w obu rejestrach, kcal sesji netto 160, płyny 1,75 l', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await run(page, { age: 8, sex: 'F', w: 40, h: 130, click: 'reduction' });
   expect(r.active).toBe('reduction');
-  expect(r.text).toContain('W wieku 6–11 lat przy BMI poniżej 99. centyla tempo ubytku masy ograniczono do ok. 0,5 kg/mies. (deficyt ok. 130 kcal/dzień)');
+  expect(r.text).toContain('W wieku 6–11 lat przy BMI poniżej 99. centyla tempo ubytku masy ograniczono do ok. 0,5 kg/mies. (deficyt ok. 126 kcal/dzień)');
   expect(r.text).toContain('(ok. 160 kcal każda)');
   expect(r.text).toContain('około 1,75 l dziennie');
   expect(r.text).toContain('w wieku 4–10 lat 600–1000 IU dziennie, przy otyłości dawka podwojona – 1200–2000 IU dziennie');
 
   const p = await run(page, { age: 8, sex: 'F', w: 40, h: 130, click: 'reduction', pf: true });
-  expect(p.text).toContain('Tempo odchudzania jest u dziecka w wieku 6–11 lat celowo ograniczone do ok. 0,5 kg miesięcznie, aby nie zaburzyć wzrastania – dlatego deficyt planu wynosi ok. 130 kcal dziennie.');
+  expect(p.text).toContain('Tempo odchudzania jest u dziecka w wieku 6–11 lat celowo ograniczone do ok. 0,5 kg miesięcznie, aby nie zaburzyć wzrastania – dlatego deficyt planu wynosi ok. 126 kcal dziennie.');
   expect(p.text).toContain('U dziecka poniżej 10. roku życia taki plan należy traktować wyłącznie orientacyjnie');
 });

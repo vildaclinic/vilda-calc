@@ -48,8 +48,8 @@ function generate(page, { age, sex, w, h, growthEnded = false, strategy = null, 
     const text = norm(res.innerHTML.replace(/<\/(li|p|div|h3)>/g, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' '));
     const ge = document.getElementById('growthEndedFlag');
     const st = window.energyBuildPlanReductionState({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, palInput: parseFloat(document.getElementById('palFactor').value) });
-    const simEnded = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: 200 * 7 / 7700, target: 'norm', growthEnded: true });
-    const simGrow = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: 200 * 7 / 7700, target: 'norm' });
+    const simEnded = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: 253 * 7 / 7700, target: 'norm', growthEnded: true });
+    const simGrow = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: 253 * 7 / 7700, target: 'norm' });
     return {
       text,
       geChecked: ge.checked, geDisabled: ge.disabled,
@@ -99,15 +99,17 @@ test('K2: 3-latek — flaga „Wzrost zakończony" wyłączona i ignorowana, nar
 test('K2b: dziecko z otyłością, jawna redukcja, żadna dieta nie spełnia minimum → zdanie z powodem i energią utrzymania', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
-  // dziewczynka 6 l, 105 cm, 25 kg: masa należna ≈ 17 kg → baza ≈ 1180 kcal, lekka −200 < 1000 → brak diet
-  const r = await generate(page, { age: 6, sex: 'F', w: 25, h: 105, strategy: 'reduction' });
+  // ENERGY-CHILD-MID1: skrajny przypadek pilnujący twardego minimum wieku — dziewczynka 6 l, 95 cm, 21 kg
+  // (z ≈ 2,5, ≥ 99c, więc redukcja zostaje wybrana): REE ≈ 882, po korekcie ≈ 794, baza ≈ 1112 kcal;
+  // nawet najlżejsza dieta (−126 kcal, 0,5 kg/mies.) daje < 1000 kcal → brak diet, zostaje stabilizacja.
+  const r = await generate(page, { age: 6, sex: 'F', w: 21, h: 95, strategy: 'reduction' });
   expect(r.diets).toEqual([]);
   expect(r.floor).toBe(1000);
   const kcal = Math.round(r.maint / 100) * 100;
   expect(r.text).toContain('Żadna dieta redukcyjna nie spełnia minimum kalorycznego dla wieku (1000 kcal/dzień), dlatego zalecana jest stabilizacja masy ciała.');
   expect(r.text).toContain(`tj. około ${kcal} kcal dziennie`);
   expect(r.text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
-  expect(r.text).toContain('(od zapotrzebowania dla masy należnej – mediany BMI dla wieku i wzrostu)');
+  expect(r.text).toContain('(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość)');
   expect(r.plan).toContain('Brak diety');
 });
 

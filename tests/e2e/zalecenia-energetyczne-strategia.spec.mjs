@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 // ENERGY-REC-2 — strategia i wzrastanie w jednym miejscu (decyzja właściciela 2026-09-12), łańcuch przez
 // PRAWDZIWY przycisk „Generuj zalecenia energetyczne", kartę planu i „Drogę do normy" na index.html:
 //  • 8-latka (BMI 97–99c): domyślna stabilizacja → karta i panel w trybie utrzymania masy, ta sama kaloryczność
-//    i ten sam termin co w narracji; klik „Redukcja masy" (świadomy wybór) → dieta lekka −130 wszędzie;
+//    i ten sam termin co w narracji; klik „Redukcja masy" (świadomy wybór) → dieta lekka −126 wszędzie;
 //  • 18-latka: tempo wzrastania 0 → bez „Wzrastanie nadal trwa", bez dopisku o wzrastaniu, domyślna redukcja;
 //  • 16-latka z jawną stabilizacją przy praktycznie zakończonym wzrastaniu → komunikat w narracji i na karcie;
 //  • niemowlę → wynik z powodem zamiast pustej listy.
@@ -70,7 +70,7 @@ test('8-latka (97–99c): domyślna stabilizacja — karta i Droga w trybie utrz
   expect(r.plan).toContain('Utrzymując obecną masę ciała osiągniesz górną granicę normy BMI dzięki dalszemu wzrastaniu');
   expect(r.plan).toContain(`${String(r.stabMonths).replace('.', ',')} mies.`);
   expect(r.plan).toContain('bez deficytu · utrzymanie masy ciała');
-  expect(r.plan).not.toContain('−130 kcal/dzień · ok.');
+  expect(r.plan).not.toContain('−126 kcal/dzień · ok.');
   expect(r.journey).toContain('utrzymanie masy + wzrastanie');
   expect(r.journey).toContain('Cel: utrzymanie masy ok. 40,0 kg');
   expect(r.journey).not.toContain('Cel: −');
@@ -80,12 +80,12 @@ test('8-latka (97–99c): domyślna stabilizacja — karta i Droga w trybie utrz
   const red = await run(page, { age: 8, sex: 'F', w: 40, h: 130, click: 'reduction' });
   expect(red.touched).toBe(true);
   expect(red.active).toBe('reduction');
-  expect(red.diets).toEqual([['light', red.maint - 130, 130]]);
-  expect(red.text).toContain('wynosi około 130 kcal');
-  expect(red.plan).toContain('−130 kcal/dzień · ok. 0,1 kg/tydz.');
+  expect(red.diets).toEqual([['light', red.maint - 126, 126]]);
+  expect(red.text).toContain('wynosi około 126 kcal');
+  expect(red.plan).toContain('−126 kcal/dzień · ok. 0,1 kg/tydz.');
   expect(red.plan).toContain('zalecana kaloryczność diety');
   expect(red.journey).toContain('Cel: −8,4 kg');
-  expect(red.journey).toContain('−130 kcal/d');
+  expect(red.journey).toContain('−126 kcal/d');
 });
 
 test('18-latka: tempo wzrastania 0 → bez „Wzrastanie nadal trwa" i bez dopisku o wzrastaniu; domyślnie redukcja', async ({ page }) => {
