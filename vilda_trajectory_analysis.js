@@ -802,12 +802,15 @@
    */
   /* Centyl HV-SDS do jednosci (decyzja wlasciciela 2026-09-09): „21,7 centyl" to pozorna
    * dokladnosc — SDS tempa u tego samego zdrowego dziecka waha sie o ok. 2,8 SD.
-   * Skrajne wartosci nie zaokraglaja sie do 0 ani 100: „<1" i „>99" mowia prawde. */
+   * Skrajne wartosci nie zaokraglaja sie do 0 ani 100: „<1" i „>99" mowia prawde.
+   * ADV-REPORT-5 (2026-09-13): prog jest SUROWY, nie „co by sie zaokraglilo". Centyl 0,8
+   * to naprawde ponizej 1. centyla, a 99,3 naprawde powyzej 99. — etykieta nie moze
+   * przeczyc wartosci. Ta sama regula stoi teraz w app.js, Karcie Pacjenta i epikryzie. */
   function fmtCentyl(c) {
     var v = num(c);
     if (v == null) return '—';
-    if (v < 0.5) return '<1';
-    if (v >= 99.5) return '>99';
+    if (v < 1) return '<1';
+    if (v > 99) return '>99';
     return String(Math.round(v));
   }
 

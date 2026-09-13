@@ -74,3 +74,42 @@ test('ADV-REPORT-4: podsumowanie podaje wiek kostny i pasmo celu rodzicielskiego
   expect(out.summary).toContain('pasmo celu');
 });
 
+
+// ADV-REPORT-5: etykiety centyli. Na prawdziwej stronie sprawdzamy dwie rzeczy naraz —
+// że „>100 centyla" nie powstaje nawet przy dziecku poza górnym krańcem siatki, i że
+// podsumowanie mówi o centylu jednym formatem (linia MPH miała własny „– centyl: N",
+// sąsiednie linie wzrostu rodziców „165 cm, 45 centyl"). Dane wyłącznie FIKCYJNE.
+test('ADV-REPORT-5: raport nie mówi „>100 centyla" i ma jeden format centyla', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function' && !!window.VildaAdvancedGrowth);
+
+  const out = await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+    window.professionalMode = true;
+    set('age', 10); set('ageMonths', 0); set('sex', 'M');
+    set('height', 145); set('weight', 35);
+    // Rodzice skrajnie wysocy — MPH ląduje poza górnym krańcem siatki dorosłych,
+    // czyli dokładnie w miejscu, w którym raport drukował dotąd „>100 centyla".
+    set('advMotherHeight', 190); set('advFatherHeight', 205); set('advBoneAge', 10);
+    window.calculateGrowthAdvanced();
+    const api = window.VildaAdvancedGrowth;
+    const model = api.advGrowthBuildReportPresentationModel(api.advGrowthBuildReportRows());
+    return {
+      summary: model.summaryItems.join(' | '),
+      notes: (model.noteItems || []).join(' | '),
+      formatCentile99: typeof window.formatCentile === 'function' ? window.formatCentile(99.95) : null,
+    };
+  });
+
+  const caly = `${out.summary} | ${out.notes}`;
+  expect(caly).not.toContain('>100');
+  expect(caly).not.toContain('&gt;100');
+  expect(caly).not.toMatch(/\b100 centyl/);
+  // Górna skrajność ma brzmieć „>99", i tak samo w pomocniku, z którego raport ją bierze.
+  expect(out.formatCentile99).toBe('&gt;99');
+  expect(out.summary).toContain('MPH (mid-parental height):');
+  // Jeden format: linia MPH nie ma już własnej etykiety „centyl: N".
+  expect(out.summary).not.toContain('centyl:');
+  expect(out.summary).toMatch(/MPH \(mid-parental height\): [\d,]+ cm, (?:>99|<1|\d+) centyl/);
+});

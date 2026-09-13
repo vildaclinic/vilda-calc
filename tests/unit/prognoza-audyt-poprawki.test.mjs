@@ -171,13 +171,16 @@ describe('7. Blum i karta: dolna granica przedziału nie niżej niż obecny wzro
   });
 });
 
-describe('8. Drobne: centyl MPH „<1"/„>100", wiek kostny w RWT, ostatni węzeł BP, stała KR', () => {
+describe('8. Drobne: centyl MPH „<1"/„>99", wiek kostny w RWT, ostatni węzeł BP, stała KR', () => {
   const { A, C } = loadAll();
-  it('centyl MPH: „&lt;1" → „<1. centyla", „&gt;100" → „>100. centyla", „49" → „49. centyl"', () => {
+  // ADV-REPORT-5 (2026-09-13): górną skrajność aplikacja nazywa dziś „>99", nie „>100" —
+  // ten drugi napis nie istnieje i nie powstaje już nigdzie. Karta nadal odmienia rzeczownik
+  // po znaku nierówności („centyla", nie „centyl"), i to zostaje przedmiotem tego testu.
+  it('centyl MPH: „&lt;1" → „<1. centyla", „&gt;99" → „>99. centyla", „49" → „49. centyl"', () => {
     const base = { sex: 'M', ageYears: 10, ageMonths: 120, currentHeightCm: 140, mphCm: 178.5, bp: { available: true, predictedAdultHeightCm: 176, errorBoundHalfWidthCm: 5 } };
     expect(C.render({ ...base, mphCentileText: '&lt;1' })).toContain('&lt;1. centyla');
     expect(C.render({ ...base, mphCentileText: '<1' })).toContain('&lt;1. centyla');
-    expect(C.render({ ...base, mphCentileText: '&gt;100' })).toContain('&gt;100. centyla');
+    expect(C.render({ ...base, mphCentileText: '&gt;99' })).toContain('&gt;99. centyla');
     expect(C.render({ ...base, mphCentileText: '49' })).toContain('49. centyl</span>');
     expect(C.render({ ...base, mphCentileText: '49' })).not.toContain('49. centyla');
   });
