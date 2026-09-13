@@ -1098,6 +1098,26 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### DOB-AGE-2 — wiek w ukończonych tygodniach do 3. miesiąca życia (SW 1.0.925, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Rata 2 z planu DOB-AGE: „u małych dzieci do 3 miesiąca życia powinna być też możliwość wpisania wieku w tygodniach (ukończonych)". Poniżej 3. miesiąca „1 miesiąc" jest złym opisem sześciotygodniowego niemowlęcia.
+
+**Decyzja właściciela o źródle prawdy.** Tygodnie są **osobnym, trwałym polem rekordu** (`user.ageWeeks`) obok miesięcy, a nie tylko sposobem wpisania miesięcy. Gdyby żyły wyłącznie jako miesiące, precyzja ginęłaby przy pierwszym przeliczeniu: 6 tygodni → 1 mies. → 4 tygodnie.
+
+**Zmiany.**
+
+1. **`vilda_dob_age.js` (1 → 2)** — nowe czyste funkcje `weeksApplicable`, `monthsFromWeeks`, `parseWeeksInput`, `describeWeeks`, `readWeeks`, `setWeeksFromRecord`. Kontroler dostał zaporę wejścia (`wTrakcie`), bo od tej raty moduł nasłuchuje także na `#age` i `#ageMonths` — bez daty urodzenia to one decydują, czy dziecko jest w oknie i czy wiersz tygodni ma się pokazać, a własne zapisy modułu wysyłają `input`, który wróciłby do niego pętlą.
+2. **`index.html` / `docpro.html`** — wiersz `#ageWeeksRow` (pole `#ageWeeks` 0–13, notka, komunikat) pod wierszem wieku, **domyślnie ukryty**.
+3. **`vilda_data_import_export.js` 1.16.0 → 1.17.0** — `user.ageWeeks` w kolektorze, z tą samą ochroną co data: strona bez tego pola (kalkulator klirensu dzieli kolektor) nie kasuje wartości z rekordu.
+
+**Zachowanie.** Z datą urodzenia tygodnie liczy **kalendarz** (`ageFromDobISO().weeks`), pole jest tylko do odczytu i nic nie jest przybliżane. Bez daty lekarz wpisuje tygodnie, a lata i miesiące stają się polami pochodnymi (zablokowanymi), z notką nazywającą przybliżenie. Powyżej 13. tygodnia pole odmawia i odsyła do miesięcy. Poza oknem < 3 mies. wiersz znika, a `ageWeeks` wypada z rekordu — tygodnie przestają wtedy nieść informację, której nie ma już w miesiącach.
+
+**Dlaczego przelicznik jest przybliżeniem — i dlaczego to jest w kodzie napisane wprost.** „Tydzień → miesiąc" **nie jest funkcją**: dziecko w 8. tygodniu życia ma 1 albo 2 pełne miesiące zależnie od długości miesięcy, przez które przeszło (14.07 → 13.09: 61 dni, 8 tyg., **1** mies.; 01.01 → 01.03: 59 dni, 8 tyg., **2** mies.). Przy ręcznym wpisie przyjmujemy miesiąc = 30,4375 dnia, co daje tabelę 0–4 tyg. → 0 mies., 5–8 → 1, 9–13 → 2. Z datą urodzenia oba wyniki liczy ten sam kalendarz i żadne przybliżenie nie zachodzi — to kolejny powód, by wpisywać datę zamiast tygodni.
+
+**Czego ta rata NIE robi.** Nie zmienia **rozdzielczości siatek centylowych**: `getChildLMS` zaokrągla wiek do pełnych miesięcy i poniżej 36 mies. czyta tablicę indeksowaną miesiącami, bez interpolacji — ośmiotygodniowe i dwumiesięczne niemowlę nadal trafiają w ten sam wiersz. To rata 3 (tablice WHO w rozdzielczości dziennej), zmiana kliniczna wg AGENTS.md §3. Nie zmienia też opisu pacjenta (`vilda_patient_narrative.js` przyjmuje wiek w łącznych miesiącach i nic sam nie liczy — wpięcie tygodni to osobna, mała zmiana), kalkulatora klirensu ani zapisu do `sharedUserData`.
+
+*Strażnicy:* `tests/unit/data-urodzenia-wiek.test.mjs` (+8, razem 24: granica okna 0/1/2 vs 3 i odmowa dla `null`, tabela przeliczeń 0–13, brak zgadywania przy pustym wejściu, zakres 0–13 z odmową ułamków i liczb ujemnych, komunikaty, polska odmiana „tydzień/tygodnie/tygodni", tygodnie z kalendarza przy dacie urodzenia oraz **jawny przypadek rozjazdu kalendarz ↔ przelicznik** 01.01 → 01.03). `tests/e2e/data-urodzenia-wiek.spec.mjs` (+6, razem 14 na prawdziwej stronie: niemowlę z datą dostaje 8 tygodni tylko do odczytu, powyżej 3. miesiąca wiersz znika, ręczny wpis 6 → 1 mies. i 9 → 2 mies., 20 tygodni odsyła do miesięcy bez blokowania pól, `ageWeeks` w rekordzie z kalendarza i z wpisu oraz jego zniknięcie poza oknem, tygodnie z wczytanego rekordu bez daty).
+
 ### DOB-AGE-1 — data urodzenia w formularzu głównym, wiek liczony automatycznie (SW 1.0.924, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** „Data urodzenia siedzi w Karcie pacjenta, ale chciałbym mieć ją też w formularzu głównym jako dodatkowe pole… Jeżeli lekarz wpisze tą datę, to pole wiek w latach i miesiącach uzupełnia się automatycznie przy aktualnej wizycie oraz przy każdej kolejnej wizycie licząc ukończone pełne miesiące." Zakres po analizie i decyzjach właściciela: **rata 1** — pole i automat, tylko `index.html` i `docpro.html`; tygodnie dla niemowląt to rata 2.

@@ -1,5 +1,5 @@
 /*
- * Vilda Smoke Regression Suite v2.38.0
+ * Vilda Smoke Regression Suite v2.39.0
  *
  * Stały, read-only zestaw smoke testów regresyjnych dodany w kroku 8O-T1 i rozszerzony w 8O-10a/8O-10b/8O-10c/8O-10d-a/8O-10e/8O-10d-b/8O-10d-c/8O-10d-d/8O-10d-e/8O-10d-f/8O-10d-g/8O-11a-a/8O-11a-b/8O-11a-c/8O-11b/8O-11c/8O-11d/8O-11e/8O-11f/8O-11g/8O-11h/8O-11i/8O-11j/8O-11k/8O-11l/8P-1/8P-2/8P-3/8P-4/8P-5/8P-6/8P-7/8P-8/8P-9/8P-10/8P-11/8P-12/8P-13/8P-14/8Q-1/8Q-2/8Q-3/8Q-4/8Q-5/8Q-6/8Q-7/8Q-8/8Q-9.
  * Moduł nie uruchamia calcEstimatedIntake(), nie renderuje DOM i nie zapisuje window.*.
@@ -12,7 +12,7 @@
     return;
   }
 
-  const VERSION = '2.38.0';
+  const VERSION = '2.39.0';
   const STEP = '8Q-9';
   const DEFAULT_ESTIMATED_INTAKE_CONTRACTS = Object.freeze([
     'estimated-intake-card-audit',
@@ -99,8 +99,8 @@
     'vilda_gh_therapy_resource_audit.js?v=31',
     'vilda_app_helpers.js?v=2',
     'vilda_macro_practice.js?v=2',
-    'vilda_data_import_export.js?v=69',
-    'vilda_dob_age.js?v=1',
+    'vilda_data_import_export.js?v=70',
+    'vilda_dob_age.js?v=2',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
     'vilda_update_prep.js?v=74',
@@ -118,7 +118,7 @@
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=200',
-    'vilda_smoke_tests.js?v=66',
+    'vilda_smoke_tests.js?v=67',
     'vilda_diet_recommendations.js?v=26',
     'nutrition_norms.js?v=46',
     'nutrition_micros.js?v=26'
@@ -916,7 +916,7 @@
         typeof auditFn === 'function' &&
         typeof anthroFn === 'function' &&
         !!(updateApi && typeof updateApi.getNumericValidationSnapshot === 'function') &&
-        !!(dataApi && dataApi.version === '1.16.0') &&
+        !!(dataApi && dataApi.version === '1.17.0') &&
         Object.keys(pureChecks).every(function (key) { return pureChecks[key] === true; }) &&
         contractDetail.ok === true,
       pureChecks,

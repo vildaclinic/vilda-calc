@@ -165,3 +165,75 @@ describe('DOB-AGE-1 — doba lokalna, nie UTC', () => {
     expect(wSStrefie('Pacific/Kiritimati', PROG2)).toBe('7:0');
   });
 });
+
+describe('DOB-AGE-2 — wiek w ukończonych tygodniach', () => {
+  const D = zaladujModul();
+
+  it('okno tygodni sięga 3. miesiąca życia i ani dnia dalej', () => {
+    expect(D.WEEKS_MONTH_LIMIT).toBe(3);
+    expect([0, 1, 2].map((m) => D.weeksApplicable(m))).toEqual([true, true, true]);
+    expect(D.weeksApplicable(3)).toBe(false);
+    expect(D.weeksApplicable(-1)).toBe(false);
+    expect(D.weeksApplicable(null)).toBe(false);
+  });
+
+  it('przelicza tygodnie na ukończone miesiące wg tabeli 0–4 → 0, 5–8 → 1, 9–13 → 2', () => {
+    expect([0, 1, 2, 3, 4].map((t) => D.monthsFromWeeks(t))).toEqual([0, 0, 0, 0, 0]);
+    expect([5, 6, 7, 8].map((t) => D.monthsFromWeeks(t))).toEqual([1, 1, 1, 1]);
+    expect([9, 10, 11, 12, 13].map((t) => D.monthsFromWeeks(t))).toEqual([2, 2, 2, 2, 2]);
+  });
+
+  it('nie udaje, że zna miesiące, gdy tygodni nie podano', () => {
+    expect(D.monthsFromWeeks('')).toBeNull();
+    expect(D.monthsFromWeeks(null)).toBeNull();
+    expect(D.monthsFromWeeks(undefined)).toBeNull();
+    expect(D.monthsFromWeeks('abc')).toBeNull();
+    expect(D.monthsFromWeeks(-1)).toBeNull();
+  });
+
+  it('przyjmuje tylko całkowite tygodnie z zakresu 0–13', () => {
+    expect(D.parseWeeksInput('0')).toEqual({ status: 'ok', weeks: 0 });
+    expect(D.parseWeeksInput('13')).toEqual({ status: 'ok', weeks: 13 });
+    expect(D.parseWeeksInput('14').status).toBe('range');
+    expect(D.parseWeeksInput('52').status).toBe('range');
+    expect(D.parseWeeksInput('7,5').status).toBe('format');
+    expect(D.parseWeeksInput('7.5').status).toBe('format');
+    expect(D.parseWeeksInput('-2').status).toBe('format');
+    expect(D.parseWeeksInput('abc').status).toBe('format');
+    expect(D.parseWeeksInput('').status).toBe('empty');
+    expect(D.parseWeeksInput(null).status).toBe('empty');
+  });
+
+  it('każda odmowa tygodni ma komunikat, a zakres mówi, co zrobić zamiast tego', () => {
+    expect(String(D.weekMessages.format).length).toBeGreaterThan(10);
+    expect(D.weekMessages.range).toContain('miesiącach');
+  });
+
+  it('opis tygodni ma polską odmianę liczebnika', () => {
+    expect(D.describeWeeks(1)).toBe('1 tydzień');
+    expect(D.describeWeeks(2)).toBe('2 tygodnie');
+    expect(D.describeWeeks(4)).toBe('4 tygodnie');
+    expect(D.describeWeeks(5)).toBe('5 tygodni');
+    expect(D.describeWeeks(12)).toBe('12 tygodni');
+    expect(D.describeWeeks(0)).toBe('0 tygodni');
+  });
+
+  it('z datą urodzenia tygodnie liczy kalendarz, a nie przelicznik', () => {
+    // 14.07.2026 → 13.09.2026: 61 dni = 8 ukończonych tygodni i 1 pełny miesiąc.
+    const wiek = D.ageFromDobISO('2026-07-14', DZIS);
+    expect(wiek.days).toBe(61);
+    expect(wiek.weeks).toBe(8);
+    expect(wiek.ageMonths).toBe(1);
+    // przelicznik ręczny z tych samych 8 tygodni daje ten sam miesiąc
+    expect(D.monthsFromWeeks(wiek.weeks)).toBe(1);
+  });
+
+  it('przelicznik jest przybliżeniem — kalendarz potrafi dać miesiąc więcej', () => {
+    // 01.01 → 01.03 (rok nieprzestępny): 59 dni = 8 tygodni, ale DWA pełne miesiące.
+    const wiek = D.ageFromDobISO('2026-01-01', new Date(2026, 2, 1));
+    expect(wiek.weeks).toBe(8);
+    expect(wiek.ageMonths).toBe(2);
+    expect(D.monthsFromWeeks(8)).toBe(1);
+    // dlatego z datą urodzenia nic nie jest przeliczane — oba wyniki liczy kalendarz
+  });
+});
