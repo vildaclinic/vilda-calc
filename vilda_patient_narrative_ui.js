@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '4';
+  var VERSION = '5';
   var ATTR = 'data-patient-narrative-copy-btn';
   var ETYKIETA = 'Kopiuj opis pacjenta';
 
@@ -120,6 +120,30 @@
       if (model.metrics[i].metric === 'height') return model.metrics[i].last || null;
     }
     return null;
+  }
+
+  // DOB-AGE-3: ukonczone tygodnie do zdania o stanie biezacym. Zna je formularz
+  // (VildaDobAge), nie karta — dlatego wchodza tedy, a nie przez model trajektorii.
+  //
+  // ZGODNOSC, nie zaufanie: zanim liczba pojedzie do opisu, sprawdzamy, czy pasuje do
+  // wieku OPISYWANEGO pomiaru. Bez tego zdanie o dziecku, ktorego ostatni pomiar jest
+  // sprzed roku, dostaloby liczbe tygodni z dzisiejszego formularza. Tolerancja jednego
+  // miesiaca jest konieczna, bo kalendarz i przelicznik legalnie sie o tyle roznia —
+  // 8 tygodni to 1 albo 2 pelne miesiace, zaleznie od dlugosci miesiecy (DOB-AGE-2).
+  function tygodnieDlaOpisu(model) {
+    var api = w.VildaDobAge;
+    if (!api || typeof api.readWeeks !== 'function' || typeof api.monthsFromWeeks !== 'function') return null;
+    var tyg;
+    try { tyg = api.readWeeks(); } catch (e) { return null; }
+    if (typeof tyg !== 'number' || !isFinite(tyg) || tyg < 0) return null;
+
+    var ost = metrykaWzrostu(model);
+    var mo = ost && typeof ost.ageMonths === 'number' && isFinite(ost.ageMonths) ? ost.ageMonths : null;
+    if (mo === null || mo < 0 || mo >= 3) return null;
+
+    var zPrzelicznika = api.monthsFromWeeks(tyg);
+    if (typeof zPrzelicznika !== 'number') return null;
+    return Math.abs(zPrzelicznika - Math.round(mo)) <= 1 ? tyg : null;
   }
 
   // Wejscie „extra" dla VildaPatientNarrative.compose — czysta funkcja na obiekcie
@@ -233,7 +257,9 @@
       predictions: prognozy(d),
       predictionAgreement: zgodnosc || null,
       predictionDrift: dryfPrognozy(d, model),
-      sgaCatchUp: sgaCatchUp(model)
+      sgaCatchUp: sgaCatchUp(model),
+      // DOB-AGE-3: null, gdy tygodni nie znamy albo nie pasuja do opisywanego pomiaru.
+      ageWeeks: tygodnieDlaOpisu(model)
     };
   }
 
@@ -420,6 +446,7 @@
   w.VildaPatientNarrativeUI = {
     version: VERSION,
     buildInput: buildInput,
+    _weeksForNarrative: tygodnieDlaOpisu,
     describeCurrent: describeCurrent,
     copyCurrent: copyCurrent,
     attach: dolozPrzycisk

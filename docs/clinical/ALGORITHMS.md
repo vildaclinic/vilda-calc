@@ -1098,6 +1098,25 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### DOB-AGE-3 — opis pacjenta mówi o niemowlęciu w tygodniach (SW 1.0.926, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Po wdrożeniu raty 2 opis pacjenta nadal podawał wiek wyłącznie w miesiącach, więc sześciotygodniowe niemowlę opisywał tak samo jak czterotygodniowe: „W wieku 1 miesiąca chłopiec mierzy…". Właściciel: „zrób to".
+
+**Gdzie leżał problem.** `vilda_patient_narrative.js` ma `wiekDop(mo)` — dopełniacz po „w wieku" — przyjmujący **wyłącznie łączne miesiące**. Zdanie o stanie bieżącym brzmiało `'W wieku ' + wiekDop(ost.ageMonths) + ' ' + o.kto`.
+
+**Zmiana.**
+
+1. **`vilda_patient_narrative.js` (6 → 7)** — `tygodnieDop` (dopełniacz: „1 tygodnia", „6 tygodni") i `wiekDopTyg(mo, tyg)`, użyte **tylko** w zdaniu o stanie bieżącym; `zdanieStan` przyjmuje odtąd `extra` i czyta z niego `ageWeeks`. Moduł **nadal niczego nie liczy** — tygodnie dostaje z zewnątrz, jak wszystkie pozostałe liczby.
+2. **`vilda_patient_narrative_ui.js` (4 → 5)** — `tygodnieDlaOpisu(model)` czyta `VildaDobAge.readWeeks()` i dokłada wynik do `buildInput` jako `ageWeeks`.
+
+**Punkty historyczne zostają w miesiącach — świadomie.** Rekord trzyma `ageWeeks` tylko dla **bieżącej** wizyty, więc o pomiarze sprzed roku nie wiemy, ile dziecko miało wtedy tygodni. Podstawienie dzisiejszej liczby pod tamten pomiar byłoby zmyślaniem, nie uściśleniem.
+
+**Dwie bramki, każda w swojej warstwie.** UI sprawdza **zgodność**: liczba tygodni wchodzi do opisu tylko wtedy, gdy pasuje do wieku **opisywanego** pomiaru (`|monthsFromWeeks(tyg) − mies.| ≤ 1`). Bez tego zdanie o dziecku, którego ostatni pomiar jest sprzed roku, dostałoby liczbę tygodni z dzisiejszego formularza. Tolerancja jednego miesiąca jest konieczna, bo kalendarz i przelicznik legalnie się o tyle różnią (DOB-AGE-2: 8 tygodni to 1 albo 2 pełne miesiące). Silnik opisu ma własną, tanią bramkę ostatniej instancji: okno < 3 mies. i zakres 0–13 tygodni — bez sięgania po stałe spoza modułu.
+
+**Czego ta zmiana NIE robi.** Nie zmienia żadnej oceny, progu ani liczby — wyłącznie **jednostkę, w której podany jest wiek** w jednym zdaniu. Nie rusza epikryzy (`vilda_epicrisis.js`), zdań o przebiegu, odcinkach, tempie i masie (te opisują **pomiary historyczne**, dla których tygodni nie ma), ani rozdzielczości siatek centylowych.
+
+*Strażnicy:* `tests/unit/pacjent-opis-silnik.test.mjs` (+6, razem 50: zdanie z tygodniami zamiast miesięcy, brzmienie bez tygodni bez zmian, forma „1 tygodnia", ignorowanie tygodni powyżej 3. miesiąca, odrzucenie liczb spoza zakresu wraz z `NaN` i `Infinity`, czysta `formatAgeWithWeeks`). `tests/unit/pacjent-opis-przycisk.test.mjs` (+6, razem 18: zgodność przechodzi, tolerancja jednego miesiąca w obie strony, sprzeczna liczba odrzucona, pomiar spoza okna, brak tygodni / brak modułu / brak pomiaru bez wyjątku, `ageWeeks` w `buildInput`). **Zmierzone czerwone:** przeciwko wersji sprzed zmiany **9 z 13** — pozostałe cztery to strażniki brzmienia, które ma zostać nietknięte.
+
 ### DOB-AGE-2 — wiek w ukończonych tygodniach do 3. miesiąca życia (SW 1.0.925, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Rata 2 z planu DOB-AGE: „u małych dzieci do 3 miesiąca życia powinna być też możliwość wpisania wieku w tygodniach (ukończonych)". Poniżej 3. miesiąca „1 miesiąc" jest złym opisem sześciotygodniowego niemowlęcia.
