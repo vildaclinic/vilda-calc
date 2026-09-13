@@ -1098,6 +1098,24 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-4 — Raport wzrastania: wiek kostny, pasmo celu rodzicielskiego i blok pokwitaniowy w podsumowaniu (SW 1.0.914, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Etap 4 z siedmiu. Audyt wskazał trzy zestawy danych, które raport **ma pod ręką w `advancedGrowthData` i pomija**.
+
+**1. Wiek kostny i wielkość jego opóźnienia.** Raport drukował ostrzeżenie „Bayley-Pinneau może zawyżać przy opóźnieniu wieku kostnego przekraczającym 2 lata", ale **nigdzie nie podawał ani wieku kostnego, ani opóźnienia** — czytelnik nie wiedział, czy ostrzeżenie dotyczy go w stopniu granicznym (2,0 roku), czy skrajnym (4 lata). Dane były w `boneAgeMonths` i `currentAgeMonths`. Podsumowanie podaje teraz: „Wiek kostny: 7 lat 6 mies. wobec metrykalnego 9 lat 8 mies. — opóźniony o 26 mies.", z rozróżnieniem przyspieszenia i zgodności (próg 6 miesięcy).
+
+**2. Pasmo celu rodzicielskiego i odniesienie prognozy do celu.** MPH stało jako pojedyncza liczba, bez pasma i bez zestawienia z prognozą, choć karta liczy to w `targetAssessmentFor` i pokazuje („cel ±10 cm", etykiety „niskorosłość dorosła / poniżej celu / w zakresie celu / w normie dorosłych"). Podsumowanie podaje teraz pasmo ±10 cm wokół MPH oraz odległość prognozy od celu wraz z etykietą, czytając `targetAssessment` z modelu karty — bez własnego liczenia. Kierunek jest **nazwany słowem** („2,4 cm poniżej celu" / „6,1 cm powyżej celu"), a nie liczbą ze znakiem.
+
+**3. Blok pokwitaniowy.** `pubertyProfile` (z `vilda_puberty_profile.js`) nie trafiał do raportu wcale. Najpoważniejszy skutek: **dziecko leczone analogiem GnRH dostawało wydruk z prognozami i zerową informacją o leczeniu**, przy którym sama aplikacja uznaje prognozę rezydualnego wzrostu za nierzetelną (karta ma to zdanie w `pubertyProfileParagraph`). Podsumowanie podaje teraz etykietę profilu, a przy statusie „w trakcie" dokłada ostrzeżenie o nierzetelności prognozy. Zgodnie z zasadą przyjętą dla narracji energetycznej ostrzeżenie **nie niesie cytowania źródła** — zostaje treść kliniczna, znika aparat.
+
+**Kolejność.** Wiek kostny, cel i pokwitanie stoją **przed** prognozami, bo to kontekst, w którym prognozy należy czytać.
+
+**Świeżość.** Linie powstają tylko przy aktualnych prognozach (brama z ADV-REPORT-1), żeby raport nie pokazał wieku kostnego poprzedniego pacjenta.
+
+**Czego ten etap NIE zmienia.** Ostrzeżenie o zawyżaniu przez Bayleya-Pinneau nadal pochodzi z modułu KOWD i jest **wyłącznie dla chłopców**, choć degradacja wiarygodności w karcie działa u obu płci (`deltaMonths <= -24`, bez podziału). Etap 4 usuwa praktyczny skutek tej asymetrii, bo **wielkość opóźnienia jest teraz podana u obu płci** i czytelnik sam widzi, czego dotyczy ostrzeżenie; rozszerzenie samego zdania na dziewczęta to zmiana reguły klinicznej i osobna decyzja właściciela. Poza tym bez zmian zostają wiersze informacyjne `infoRows`, etykiety „> 100 centyla" (etap 5), skład i dostępność offline (etap 6) oraz anonimizacja (etap 7).
+
+*Strażnicy:* `tests/unit/raport-wzrastania-dane-kliniczne.test.mjs` (7: wiek kostny z opóźnieniem w miesiącach; rozróżnienie przyspieszenia i zgodności; pasmo celu z odległością prognozy; kierunek nazwany słowem zamiast liczby ze znakiem; ostrzeżenie przy GnRHa w trakcie; kontrola negatywna przy leczeniu zakończonym; brak danych → zero linii, czyli raport nie zgaduje). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **7 z 7**. `tests/e2e/raport-wzrastania-konsensus.spec.mjs` (drugi przypadek, prawdziwa strona: wiek kostny 8 lat przy metrykalnym 10 lat daje „opóźniony o 24 mies." i pasmo celu w podsumowaniu).
+
 ### ADV-REPORT-3 — Raport wzrastania: podsumowanie jako widok modelu prognozy z karty (SW 1.0.913, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Etap 3 z siedmiu i największy. Audyt podsumował sedno jednym zdaniem: sekcja PODSUMOWANIE **nie była widokiem modelu prognozy**, którym żyje reszta aplikacji, tylko niezależnym, równoległym opisem zbudowanym z surowych wyjść dwóch–trzech silników. Z tego jednego faktu wynikały cztery osobne znaleziska, więc naprawa jest jedna: raport przestaje mieć własne zdanie i zaczyna czytać `finalHeightPrediction` publikowane przez kartę (`computeFinalHeightPrediction` w `vilda_growth_card_c.js`) — to samo źródło, z którego liczą zalecenia dietetyczne i opis pacjenta.
