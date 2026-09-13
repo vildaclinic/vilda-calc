@@ -41,8 +41,57 @@ test('ADV-REPORT-3: podsumowanie raportu podaje ten sam konsensus, co karta', as
   expect(out.summary).not.toContain('Prognoza wzrostu ostatecznego (Bayley-Pinneau)');
   expect(out.summary).not.toContain('Prognoza wzrostu ostatecznego (RWT)');
 
-  // 3. zgodność metod — informacja, której raport nie miał wcale
-  expect(out.summary).toContain('Zgodność metod:');
+  // 3. ADV-REPORT-9 (decyzja właściciela 2026-09-13): rozpiska metod i linia zgodności znikają
+  //    z wydruku — zostaje sama liczba konsensusu. Lekarz ma szczegóły na karcie, na ekranie.
+  expect(out.summary).not.toContain('Zgodność metod:');
+  expect(out.summary).not.toContain('metoda preferowana');
+});
+
+// ADV-REPORT-9: podsumowanie ma zawierać DOKŁADNIE to, co lekarz czyta — i nic ponadto.
+// Zgłoszenie właściciela: „za dużo zbędnych informacji". Test wylicza jedno i drugie, więc
+// wyłapie zarówno powrót usuniętej linii, jak i zniknięcie potrzebnej.
+test('ADV-REPORT-9: podsumowanie niesie tylko linie, które lekarz czyta', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function' && !!window.VildaAdvancedGrowth);
+
+  const summary = await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+    window.professionalMode = true;
+    set('age', 9); set('ageMonths', 8); set('sex', 'M');
+    set('height', 130); set('weight', 28);
+    set('advMotherHeight', 170); set('advFatherHeight', 170); set('advBoneAge', 6);
+    window.calculateGrowthAdvanced();
+    const api = window.VildaAdvancedGrowth;
+    return api.advGrowthBuildReportPresentationModel(api.advGrowthBuildReportRows()).summaryItems;
+  });
+
+  const tresc = summary.join(' | ');
+
+  // Zostaje:
+  expect(tresc).toContain('Płeć:');
+  expect(tresc).toContain('Wzrost Mamy:');
+  expect(tresc).toContain('Wzrost Taty:');
+  expect(tresc).toContain('MPH (mid-parental height):');
+  expect(tresc).toContain('Wiek kostny:');
+  expect(tresc).toContain('Wzrost docelowy (potencjał rodzicielski):');
+  expect(tresc).toContain('Prognoza wzrostu ostatecznego (');
+  expect(tresc).toContain('Obliczenia wykonano na podstawie danych:');
+  expect(tresc).toContain('Wygenerowano:');
+
+  // Znika:
+  for (const usuniete of [
+    'Profil predykcyjny:',
+    'Preferowany model dla tego profilu:',
+    'Bayley-Pinneau może zawyżać',
+    'Pokwitanie:',
+    'Zgodność metod:',
+    'Wiarygodność prognoz',
+    'Punkty historyczne:',
+  ]) expect(tresc, `usunięta linia „${usuniete}" nie wraca`).not.toContain(usuniete);
+
+  // Rozpiska metod szła myślnikiem na początku linii — żadna linia tak się nie zaczyna.
+  expect(summary.some((l) => l.trim().startsWith('–'))).toBe(false);
 });
 
 // ADV-REPORT-4: dane kliniczne, które raport miał pod ręką i pomijał — wiek kostny wraz

@@ -43,16 +43,20 @@ describe('Raport wzrastania — wiek kostny, pasmo celu i pokwitanie w podsumowa
     expect(out[0]).not.toContain('-6,1');
   });
 
+  // ADV-REPORT-9 (decyzja właściciela 2026-09-13): rutynowa etykieta pokwitania znika z wydruku,
+  // bo przy profilu standardowym nic nie wnosi. Ostrzeżenie o GnRHa ZOSTAJE — pojawia się tylko
+  // u dziecka w trakcie leczenia, a jego brak był najpoważniejszym znaleziskiem etapu 4.
   it('leczenie GnRHa w trakcie daje ostrzeżenie o nierzetelności prognozy', () => {
     const out = lines({ pubertyProfile: { etykieta: 'przedwczesne pokwitanie (tempo szybkie)', gnrha: { status: 'w-trakcie' } } }, null, null);
-    expect(out.join(' | ')).toContain('Pokwitanie: przedwczesne pokwitanie (tempo szybkie)');
     expect(out.join(' | ')).toContain('prognoza rezydualnego wzrostu jest nierzetelna');
+    expect(out.join(' | ')).not.toContain('Pokwitanie:');
   });
 
   it('leczenie zakończone nie wywołuje ostrzeżenia o trwającym leczeniu (kontrola negatywna)', () => {
     const out = lines({ pubertyProfile: { etykieta: 'wczesne pokwitanie', gnrha: { status: 'zakonczone' } } }, null, null);
-    expect(out.join(' | ')).toContain('Pokwitanie: wczesne pokwitanie');
     expect(out.join(' | ')).not.toContain('nierzetelna');
+    // Profil bez trwającego leczenia nie dokłada do podsumowania ani jednej linii.
+    expect(out.join(' | ')).not.toContain('Pokwitanie:');
   });
 
   it('brak danych nie produkuje żadnej linii — raport nie zgaduje', () => {

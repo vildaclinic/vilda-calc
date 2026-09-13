@@ -42,42 +42,46 @@ describe('Raport wzrastania — podsumowanie jako widok modelu prognozy z karty'
     expect(out[0]).toBe('Prognoza wzrostu ostatecznego (konsensus 3 metod i MPH): 174,1 cm ±5,3 cm');
   });
 
-  it('metody idą w kolejności karty, a preferowana jest nazwana', () => {
+  // ADV-REPORT-9 (decyzja właściciela 2026-09-13): podsumowanie schudło do tego, co lekarz czyta.
+  // Rozpiska metod, adnotacje o wykluczeniach i korektach oraz linia zgodności znikają z WYDRUKU —
+  // lekarz ma je na karcie, na ekranie. Sedno ADV-REPORT-3 zostaje nienaruszone: raport podaje tę
+  // samą liczbę, co karta i zalecenia, a nie surowe wyjścia silników. Poniższe testy pilnują obu
+  // rzeczy naraz: że liczba jest ta właściwa i że reszta naprawdę zniknęła.
+
+  it('to JEDYNA linia — rozpiska metod nie trafia do wydruku', () => {
     const out = lines(FHP);
-    expect(out[1]).toContain('RWT');
-    expect(out[1]).toContain('metoda preferowana');
-    expect(out[2]).toContain('Bayley-Pinneau'); // mniej wiarygodna NIE stoi przed preferowaną
+    expect(out.length).toBe(1);
   });
 
-  it('drukuje wartość po korekcie błędu systematycznego, nie surową z silnika', () => {
+  it('żadna pojedyncza metoda nie jest wypisana z osobna', () => {
     const out = lines(FHP).join(' | ');
-    expect(out).toContain('189,1'); // wartość karty
-    expect(out).not.toContain('191,1'); // surowa wartość silnika nie trafia do wydruku
-    expect(out).toContain('po korekcie błędu systematycznego');
+    expect(out).not.toContain('– RWT');
+    expect(out).not.toContain('Bayley-Pinneau');
+    expect(out).not.toContain('Khamis-Roche');
+    expect(out).not.toContain('metoda preferowana');
   });
 
-  it('metoda wykluczona z konsensusu jest oznaczona wraz z powodem, nie podana jako równorzędna', () => {
+  it('znikają też adnotacje o korekcie i o wykluczeniu z konsensusu', () => {
     const out = lines(FHP).join(' | ');
-    expect(out).toContain('Khamis-Roche');
-    expect(out).toContain('poza konsensusem w profilu przedwczesnym');
-    // powód zaczyna się od „poza konsensusem", więc nie dublujemy tego zwrotu
-    expect(out).not.toContain('poza konsensusem: poza konsensusem');
+    // Surowa wartość silnika nie trafiała do wydruku wcześniej i nie trafia teraz.
+    expect(out).not.toContain('191,1');
+    expect(out).not.toContain('po korekcie błędu systematycznego');
+    expect(out).not.toContain('poza konsensusem');
   });
 
-  it('podaje zgodność metod z różnicą w centymetrach — tego raport nie miał wcale', () => {
+  it('linia zgodności metod znika, mimo że model ją niesie', () => {
     const out = lines(FHP);
-    expect(out[out.length - 1]).toBe('Zgodność metod: niska (różnica 17,0 cm)');
+    expect(FHP.agreementLabel).toBe('niska');
+    expect(out.some((l) => l.startsWith('Zgodność metod'))).toBe(false);
   });
 
-  it('metoda bez wieku kostnego (Khamis–Roche jako jedyna) też trafia do wydruku', () => {
+  it('etykieta źródła zostaje, bo mówi, ile metod złożyło się na liczbę', () => {
     const out = lines({
       cm: 176.2, halfWidthCm: 4.1, sourceLabel: 'Khamis-Roche', preferredKey: 'khamis',
       methods: [{ key: 'khamis', label: 'Khamis-Roche', cm: 176.2, errorHalfWidthCm: 4.1 }],
     });
-    expect(out[0]).toContain('Khamis-Roche');
-    expect(out.some((l) => l.includes('Khamis-Roche: 176,2'))).toBe(true);
-    // jedna metoda → bez linii o zgodności
-    expect(out.some((l) => l.startsWith('Zgodność metod'))).toBe(false);
+    expect(out.length).toBe(1);
+    expect(out[0].replace(/\u00A0/g, ' ')).toBe('Prognoza wzrostu ostatecznego (Khamis-Roche): 176,2 cm ±4,1 cm');
   });
 
   it('brak modelu konsensusu nie produkuje żadnej linii (zapas zostaje surowym liniom silników)', () => {
