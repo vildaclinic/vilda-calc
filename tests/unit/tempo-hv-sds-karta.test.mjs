@@ -186,10 +186,13 @@ describe('Zdanie do karty „Podsumowanie wyników”', () => {
   it('jest tekstem, nie HTML-em — tamta karta składa wiersze przez textContent', () => {
     const { hvSdsPodsumowanie } = karta();
     const z = hvSdsPodsumowanie({ sex: 'K', cmPerYear: 3, gapM: 12, currentAgeMonths: 120 });
-    expect(z).not.toMatch(/[<>]/);
+    // ADV-REPORT-5 (2026-09-13): strażnik pilnuje ZNACZNIKÓW, nie każdego znaku mniejszości.
+    // Po ujednoliceniu etykiet centylowych SDS −2,4 (centyl 0,82) brzmi „<1 centyl" — to
+    // matematyka, nie tag. Wcześniejsze /[<>]/ było przybliżeniem, które tę prawdę blokowało.
+    expect(z).not.toMatch(/<\/?[a-z]/i);
     expect(z).toContain('SDS tempa:');
     expect(z).toContain('−2,4');
-    expect(z).toContain('1 centyl');
+    expect(z).toContain('<1 centyl');
     expect(z).toMatch(/wg Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
   });
 
@@ -233,11 +236,12 @@ describe('Liczby dla opisu pacjenta (hvSdsDlaOpisu)', () => {
     const d = hvSdsDlaOpisu(VEL, MODEL);
     expect(d).toBeTruthy();
     expect(d.sds).toBeCloseTo(-2.4, 1);
-    expect(d.centylTekst).toBe('1');
+    // ADV-REPORT-5: centyl 0,82 to „<1", nie „1" — etykieta nie ma zaniżać wyniku.
+    expect(d.centylTekst).toBe('<1');
     expect(d.zrodlo).toMatch(/Duran i wsp\., J Pediatr Endocrinol Metab 2025/);
     expect(typeof d.medianaCmRok).toBe('number');
     // Podpis źródła jest atrybucją, nie ozdobnikiem — bez niego opis cytowałby liczbę znikąd.
-    expect(JSON.stringify(d)).not.toMatch(/[<>]/);
+    expect(JSON.stringify(d)).not.toMatch(/<\/?[a-z]/i);
   });
 
   it('ta sama liczba, co w zdaniu podsumowania — jedno liczenie, dwie prezentacje', () => {

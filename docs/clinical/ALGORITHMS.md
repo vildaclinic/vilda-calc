@@ -1098,6 +1098,42 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-5 — Etykiety centyli: koniec „>100 centyla" (SW 1.0.915, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Etap 5 z siedmiu. Raport wzrastania drukował przy wysokich rodzicach trzy wiersze pod rząd z etykietą „>100 centyla". Taka etykieta **nie istnieje**: centyl mieści się w zakresie 0–100, a „powyżej setnego" nie znaczy nic. Właściciel zdecydował naprawić to **globalnie**, nie tylko w raporcie.
+
+**Skąd się brała.** Z jednego miejsca — `formatCentile()` w `app.js`:
+
+```js
+e >= 99.9 ? "&gt;100" : e < 1 ? "&lt;1" : Math.round(e)
+```
+
+Dwie nieistniejące etykiety w jednej linijce: „>100" powyżej 99,9 oraz „100 centyl" dla 99,5–99,89, gdzie zaokrąglenie samo wychodziło poza siatkę. Raport bierze centyle wyłącznie stąd, więc jedna poprawka w `app.js` naprawia go w całości.
+
+**Trzy reguły w jednej aplikacji.** Audyt znalazł trzy niezgodne warianty tej samej decyzji:
+
+| moduł | próg dolny | próg górny | co mówił dla centyla 0,8 / 99,3 |
+|---|---|---|---|
+| `vilda_epicrisis.js`, `bp_module.js` | surowy `< 1` | surowy `> 99` | „<1" / „>99" |
+| `vilda_auth_ui.js` (Karta Pacjenta), `vilda_trajectory_analysis.js` | po zaokrągleniu | po zaokrągleniu | „1. centyl" / „99" |
+| `app.js` | surowy `< 1` | `>= 99,9` → „>100" | „<1" / „100" |
+
+**Reguła przyjęta dla całej aplikacji** to wariant epikryzy — jedyny, który nigdy nie przeczy wartości:
+
+> centyl **< 1** → „<1"; centyl **> 99** → „>99"; w pozostałych przypadkach zaokrąglenie do jedności.
+
+Zaokrąglenie nigdy nie daje „0" ani „100", a etykieta nigdy nie mówi czegoś innego niż liczba: 0,8 jest **naprawdę** poniżej 1. centyla, a 99,3 **naprawdę** powyżej 99. Wariant „po zaokrągleniu" zaniżał skrajności w drugą stronę — SDS tempa −2,4 (centyl 0,82) czytało się jako „1 centyl", choć dziecko jest poniżej 1. centyla.
+
+**Zaokrąglenie do jedności zostaje.** Decyzja właściciela z 2026-09-09 (centyl HV-SDS bez miejsc po przecinku, bo „21,7 centyl" to pozorna dokładność przy wahaniu ok. 2,8 SD) obowiązuje dalej — ten etap zmienia wyłącznie **próg**, przy którym liczba ustępuje miejsca nierówności.
+
+**Drugi rozjazd, wewnątrz samego raportu.** Linie wzrostu rodziców mówiły „190 cm, >99 centyla, Z-score: +4,22", a sąsiednia linia MPH — „204,0 cm – centyl: >99, Z-score: +3,97". Dwa formaty obok siebie w jednym podsumowaniu, bo linia MPH (`kn`) jako jedyna omijała wspólnego pomocnika `pt()` (percentileText) i sama sklejała etykietę. Teraz idzie przez niego jak reszta.
+
+**Bezpieczeństwo znaku.** „<1" trafia do HTML-a tylko przez `esc()` (kafelek i akapit trajektorii) albo jako encja `&lt;` (`app.js` → `innerHTML`). Zdanie do karty „Podsumowanie wyników" i liczby dla opisu pacjenta są **czystym tekstem** i tak zostają — strażnik w `tempo-hv-sds-karta.test.mjs` pilnuje dziś **znaczników** (`/<\/?[a-z]/i`), a nie każdego znaku mniejszości, bo ten w „<1" jest matematyką, nie tagiem.
+
+**Czego ten etap NIE zmienia.** Żadnej liczby — zmieniają się wyłącznie etykiety skrajności. Pozostają etapy 6 (skład i dostępność offline: pdfmake ładowany z CDN w chwili kliknięcia, więc raportu nie ma bez sieci; ścieżka zapasowa html2canvas tnie wiersze i nie numeruje stron) i 7 (anonimizacja).
+
+*Strażnicy:* `tests/unit/etykiety-centyli.test.mjs` (15: po trzy przypadki na każdą z czterech kopii reguły — górna skrajność, dolna skrajność i środek zakresu — wycinane wprost z plików produkcyjnych; strażnik strukturalny „żaden plik aplikacji nie składa etykiety »>100«", który wyłapie piątą kopię dopisaną gdzie indziej; oraz dwa testy jednego formatu w raporcie). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **8 z 15** (zielone zostają kopia epikryzy, czyli wzorzec, i przypadki środka zakresu, których poprawka nie dotyka). `tests/e2e/raport-wzrastania-konsensus.spec.mjs` (trzeci przypadek, prawdziwa strona: rodzice 190/205 cm dawali „>100 centyla" w trzech wierszach pod rząd — **zmierzone czerwone**).
+
 ### ADV-REPORT-4 — Raport wzrastania: wiek kostny, pasmo celu rodzicielskiego i blok pokwitaniowy w podsumowaniu (SW 1.0.914, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Etap 4 z siedmiu. Audyt wskazał trzy zestawy danych, które raport **ma pod ręką w `advancedGrowthData` i pomija**.
