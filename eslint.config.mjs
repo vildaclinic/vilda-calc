@@ -66,6 +66,8 @@ export default defineConfig([
       'jsQR.min.js',
       'jszip.min.js',
       'lucide.min.js',
+      'pdfmake.min.js',
+      'pdfmake_vfs_fonts.js',
       'qrcode.min.js'
     ]
   },
