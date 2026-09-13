@@ -1098,6 +1098,36 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ADV-REPORT-8 — Raport wzrastania: druga droga do tego samego raportu (SW 1.0.918, 2026-09-13, zgłoszenie właściciela)
+
+**Zgłoszenie.** Właściciel wygenerował raport po wdrożeniu etapów 1–7 i dostał plik **pocięty w poprzek wiersza**, w którym w dodatku **nie dało się zaznaczyć ani wyszukać tekstu**. Wskazał drogę: przycisk **„Raport PDF dla pacjenta" w karcie „Podsumowanie wyników"**.
+
+**Rozpoznanie z samego pliku.** Metadane przesłanego PDF-a rozstrzygnęły sprawę, zanim padło jedno przypuszczenie:
+
+| ślad w pliku | co znaczy |
+|---|---|
+| `Producer: jsPDF 2.5.1` | dokument **nie** powstał pdfMakiem, czyli nie ścieżką naprawianą w etapie 6 |
+| `Title/Subject: „Raport wzrastania", Author: wagaiwzrost.pl` | `setProperties()` — a tego wywołania nie ma w module karty wzrostowej; jest w `vilda_patient_report.js` |
+| po jednym obrazie na stronę, 2200×1555 i 2200×823 px | strony **cięte z jednego wysokiego zdjęcia**, krokiem równym wysokości arkusza |
+| strumienie treści zawierają wyłącznie `/I0 Do`, zero operatorów tekstu | cała strona jest **obrazem**; nie ma czego zaznaczyć ani wyszukać |
+
+**Sedno.** Ten sam „Raport wzrastania" powstawał **dwiema niezależnymi drogami**, a etapy 1–7 naprawiały tylko jedną:
+
+1. **Przycisk „Generuj raport" na karcie wzrostowej** → `generateAdvancedGrowthPdfReport` → pdfMake: prawdziwy tekst, nagłówek tabeli powtarzany na każdej stronie, `dontBreakRows`, numeracja stron w stopce.
+2. **Przycisk „Raport PDF dla pacjenta" w Podsumowaniu wyników** → okno wyboru PDF → `patientReportCollectAdvancedGrowthPdfPages`: **ten sam HTML**, ale rasteryzowany `html2canvas` i cięty `patientReportSliceCanvasToPageSpecs` stałym krokiem `for(c+=o)`, bez oglądania się na wiersze.
+
+Obie drogi dawały plik o tej samej nazwie `Raport_wzrastania_<pacjent>.pdf`, więc z zewnątrz nie było jak ich odróżnić.
+
+**Naprawa.**
+
+- **Jedno źródło.** Z `generateAdvancedGrowthPdfReport` wydzielone zostało przygotowanie raportu (`advGrowthPrepareReportPayload`: brama świeżości z ADV-REPORT-1, wiersze, nazwa pliku z anonimizacją z ADV-REPORT-7) oraz nowy `advGrowthBuildPdfDocumentBlob`, który oddaje **ten sam dokument pdfMake jako blob**. Brama świeżości liczona jest w jednym miejscu — gdyby każda droga liczyła ją u siebie, jedna mogłaby wydrukować prognozy, których druga by odmówiła.
+- **Okno wyboru PDF** przy zaznaczonym **wyłącznie** raporcie wzrastania pobiera ten gotowy dokument. Skrót stoi **przed** kontraktem na jsPDF, bo jsPDF jest potrzebny tylko wariantowi rastrowemu; inaczej brak tej biblioteki blokowałby raport, który jej nie używa.
+- **Pakiet z innymi raportami** zostaje rastrowy — pakiet jest jednym plikiem składanym z obrazów stron i nie da się w niego wstawić tekstu bez sklejania dwóch dokumentów PDF po stronie przeglądarki. Ale **cięcie przestaje być ślepe**: krajacz przyjmuje granice bloków i przekazuje je planiście `advGrowthPlanRasterPages` z etapu 6, czyli obie drogi tną tak samo. Bez podanych granic krajacz zachowuje się jak dotąd.
+
+**Czego ta poprawka NIE zmienia.** Żadnej liczby ani treści. W pakiecie z innymi raportami tekst raportu wzrastania nadal jest obrazem — żeby dostać plik z zaznaczalnym tekstem, raport wzrastania trzeba zaznaczyć **sam**. Rozdzielenie pakietu na dwa pliki (pozostałe raporty + osobny, tekstowy raport wzrastania) to zmiana zachowania przycisku i osobna decyzja właściciela.
+
+*Strażnicy:* `tests/unit/raport-wzrastania-sciezka-karty-pacjenta.test.mjs` (7: obecność wspólnego przygotowania i budowniczego bloba; brama świeżości liczona **dokładnie raz** w całym module; skrót w oknie wyboru; kolejność skrótu przed kontraktem jsPDF; krajacz przyjmujący granice i planista z etapu 6; zbieracz podający granice; zachowanie zapasowe bez granic). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **5 z 7** (zielone zostają dwa testy strukturalne, które opisują stan zastany i mają go pilnować dalej). `tests/e2e/raport-wzrastania-tekst.spec.mjs` (prawdziwa strona: dokument z karty i dokument z okna wyboru niosą **kroje pisma i zero obrazów stron**, a w pliku nie ma śladu po jsPDF) — **zmierzone czerwone 2 z 2**.
+
 ### ADV-REPORT-7 — Raport wzrastania: anonimizacja wydruku (SW 1.0.917, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Etap 7 i ostatni. Raport niesie imię i nazwisko pacjenta w **dwóch** miejscach: w nagłówku podsumowania („Pacjent: …") oraz w **nazwie pliku** (`Raport_wzrastania_Zofia_Przykladowska.pdf`). To drugie jest poważniejsze, bo nazwa pliku żyje dalej niż treść: zostaje w katalogu Pobrane, w historii przeglądarki, w nazwie załącznika wiadomości i na zrzucie ekranu z listą plików — nawet gdy sam wydruk nigdy nikomu nie trafił do ręki.
