@@ -599,9 +599,12 @@ test('DIET-FINAL-HEIGHT-CONSENSUS: pozostały wzrost z konsensusu metod, MPH jak
   expect(result.withPrediction).toContain('prognozowany wzrost ostateczny');
   // GROWTH-PRED-DOBOR/UI2: etykieta źródła to konsensus („konsensus N metod i MPH"); od 2026-09-11
   // nagłówek i `cm` to zawsze konsensus ważony (metoda preferowana nie zastępuje nagłówka).
-  // Tekst zaleceń ma cytować dokładnie tę etykietę, którą publikuje karta.
   expect(result.fhp.sourceLabel).toMatch(/^konsensus \d+ metod/);
-  expect(result.withPrediction).toContain(result.fhp.sourceLabel);
+  // ENERGY-REC-KROTKO (2026-09-13, decyzja właściciela): narracja podaje samą prognozę,
+  // bez nazwy metody i odsyłacza do karty — skąd liczba pochodzi, mówi karta wzrostowa.
+  expect(result.withPrediction).not.toContain(result.fhp.sourceLabel);
+  expect(result.withPrediction).not.toContain('karty zaawansowanych obliczeń wzrostowych');
+  expect(result.withPrediction).toContain(`prognozowany wzrost ostateczny to ok. ${result.fhp.cm.toFixed(1).replace('.', ',')}\u00A0cm`);
   expect(result.withPrediction).not.toContain('na podstawie wzrostu rodziców');
   // Pozostały wzrost = prognoza − obecny wzrost (co do 0,1 cm):
   const remaining = (result.fhp.cm - 145).toFixed(1).replace('.', ',');

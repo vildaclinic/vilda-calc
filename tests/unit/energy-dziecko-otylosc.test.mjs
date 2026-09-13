@@ -8,7 +8,8 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // 6–11 lat ≥ 99c 0,5 / 1 / 1,5, 6–11 lat < 99c tylko 0,5 (Barlow 2007), 2–5 lat brak diet.
 // Podłoga = max(minimum wieku 1000/1200 kcal, REE po korekcie) — żaden plan nie schodzi poniżej
 // spoczynkowej przemiany materii. Masa należna (mediana BMI) zostaje CELEM, nie podstawą energii.
-// PAL domyślny planu 10–18 lat: 1,4; silnik bez podanego PAL używa tej samej wartości co formularz.
+// PAL domyślny planu 10–18 lat (MID2/MID3): 1,6 przy nadwadze, 1,4 przy otyłości; silnik bez podanego
+// PAL używa tej samej wartości co formularz.
 // Dorośli i dzieci z BMI < 85c: bez zmian merytorycznych (deficyt procentowy / brak planu).
 // Dane FIKCYJNE; LMS BMI to uproszczone stałe testowe (nie tabele OLAF/WHO).
 
@@ -64,12 +65,32 @@ describe('Klasa BMI i masa należna (mediana BMI × wzrost²)', () => {
   });
 });
 
-describe('Domyślny PAL planu: 1,6 dla 10–18 lat (dolna granica pasma Norm 2024), 1,4 poniżej', () => {
-  it('energyDefaultPlanPal: 14 l → 1,6; 10 l → 1,6; 8 l → 1,4; 30 l → 1,4', () => {
+describe('Domyślny PAL planu: 1,6 przy nadwadze, 1,4 przy otyłości (10–18 lat); 1,4 poniżej 10 lat', () => {
+  it('energyDefaultPlanPal bez antropometrii: 14 l → 1,6; 10 l → 1,6; 8 l → 1,4; 30 l → 1,4', () => {
     expect(win.energyDefaultPlanPal(14, 0)).toBe(1.6);
     expect(win.energyDefaultPlanPal(10, 0)).toBe(1.6);
     expect(win.energyDefaultPlanPal(8, 0)).toBe(1.4);
     expect(win.energyDefaultPlanPal(30, 0)).toBe(1.4);
+  });
+  it('ENERGY-CHILD-MID3: nastolatek z otyłością (≥ 97c) → 1,4; z samą nadwagą (85–97c) → 1,6', () => {
+    // chłopiec 14 l, 165 cm: 85 kg to z ≥ 1,88 (otyłość), 66 kg to nadwaga bez otyłości (z ≈ 1,47)
+    const otyly = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
+    const nadwaga = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165 });
+    expect(otyly.obese).toBe(true);
+    expect(nadwaga.overweight).toBe(true);
+    expect(nadwaga.obese).toBe(false);
+    // klasa BMI podana wprost
+    expect(win.energyDefaultPlanPal(14, 0, otyly)).toBe(1.4);
+    expect(win.energyDefaultPlanPal(14, 0, nadwaga)).toBe(1.6);
+    // albo sama antropometria — moduł liczy klasę sam (ścieżka formularza)
+    expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 85, heightCm: 165 })).toBe(1.4);
+    expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 66, heightCm: 165 })).toBe(1.6);
+    // poniżej 10 lat pasmo normatywne zaczyna się od 1,4 — otyłość niczego nie zmienia
+    expect(win.energyDefaultPlanPal(8, 0, { sex: 'M', weightKg: 45, heightCm: 130 })).toBe(1.4);
+  });
+  it('ENERGY-CHILD-MID3: silnik bez jawnego PAL bierze wartość zależną od klasy BMI', () => {
+    expect(plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null }).palUsed).toBe(1.4);
+    expect(plan({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165, palInput: null }).palUsed).toBe(1.6);
   });
   it('etykieta opcji 1,4 w selekcie planu 10–18 lat: „częsta przy otyłości", bez „poza Normami 2024"', () => {
     const el = { value: '', innerHTML: '' };
@@ -133,10 +154,11 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, be
     expect(ctx.energy.growthMultiplier).toBe(1.01);
     expect(ctx.anthropometry.weightUsedKg).toBe(85);
   });
-  it('ENERGY-CHILD-MID1/MID2: chłopiec 14 l bez podanego PAL → silnik bierze tę samą wartość co formularz (po MID2: 1,6)', () => {
+  it('ENERGY-CHILD-MID1/MID3: chłopiec 14 l z otyłością bez podanego PAL → silnik bierze tę samą wartość co formularz (1,4)', () => {
     const s2 = plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null });
-    expect(s2.palUsed).toBe(win.energyDefaultPlanPal(14, 0));
-    expect(s2.palUsed).toBe(1.6);
+    const cls2 = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
+    expect(s2.palUsed).toBe(win.energyDefaultPlanPal(14, 0, cls2));
+    expect(s2.palUsed).toBe(1.4);
     // u dziecka bez nadwagi fallback pozostaje normatywny (stara ścieżka)
     expect(plan({ sex: 'M', ageYears: 10, weightKg: 33, heightCm: 140, palInput: null }).palUsed).toBe(1.6);
   });

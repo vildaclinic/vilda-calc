@@ -1098,6 +1098,25 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### ENERGY-CHILD-MID3 — domyślny PAL planu zależny od klasy BMI i skrócenie narracji energetycznej (SW 1.0.909, 2026-09-13, decyzja właściciela)
+
+**Zgłoszenie.** Po ENERGY-CHILD-MID2 właściciel podjął decyzję w sprawie zostawioną w tamtym wpisie („1,6 przy nadwadze, 1,4 przy otyłości") i osobno zgłosił, że narracja zaleceń energetycznych jest przeładowana: „za dużo informacji też nie jest dobre, ludzie tego potem nie czytają albo czytają bez zrozumienia".
+
+**1. Domyślny PAL planu zależy od klasy BMI.** `energyDefaultPlanPal(ageYears, ageMonthsOpt, bodyOrClass)` przyjmuje trzeci argument: gotową klasę BMI z `childBmiClass` albo antropometrię `{sex, weightKg, heightCm}`, z której klasę liczy sam. W paśmie `child_10_18` zwraca **1,4 przy otyłości (BMI ≥ 97c)** i **1,6 przy samej nadwadze (85–97c)**; bez antropometrii zostaje wartość normatywna 1,6. Poniżej 10 lat pasmo normatywne zaczyna się od 1,4, więc tam nic się nie zmienia. Uzasadnienie: Hofsteenge G.H. i wsp., Am J Clin Nutr 2010;91(5):1244–54, [DOI 10.3945/ajcn.2009.28330](https://doi.org/10.3945/ajcn.2009.28330) — pomiary prowadzono u nastolatków **z otyłością**, i to w tej grupie niska aktywność jest regułą; Normy Żywienia 2024 dają pasmo 1,6–2,0 jako normatywne dla zdrowej populacji 10–18 lat.
+
+Obie ścieżki podają teraz antropometrię: silnik (`energyBuildPlanReductionState`) przekazuje policzoną już klasę BMI, a formularz (`vildaUpdatePrepResolvePlanPalValue` w `vilda_update_prep.js`) czyta masę, wzrost i płeć ze stanu wejściowego, a gdy go nie ma — bezpośrednio z pól. Dzięki temu wartość domyślna w selekcie i wartość używana przez silnik pozostają tą samą liczbą (zasada z MID1). Wybór lekarza nadal wygrywa: nasłuch `change` na `#palFactor`, jawna flaga w segmencie karty „Droga do normy" i flaga przy odtworzeniu z rekordu.
+
+**Skutek liczbowy.** Dla pacjentów **z otyłością** — czyli dla większości tych, którym aplikacja układa plan — wartości wracają do stanu z MID1: chł. 15 l 175 cm 95 kg baza 2831, diety 2578 / 2452 / 2325. Podniesienie z MID2 zostaje wyłącznie dla nastolatków z samą nadwagą, gdzie plan i tak jest łagodniejszy. Tym samym korekta −10 % REE z MID1 nie jest już znoszona przez PAL tam, gdzie miała działać.
+
+**2. Skrócenie dwóch zdań narracji.** Reguła: liczba zostaje, metodologia znika — od tego jest karta i rejestr.
+
+- Prognoza wzrostu: „(prognozowany wzrost ostateczny — konsensus N metod i MPH z karty zaawansowanych obliczeń wzrostowych — to ok. X cm ±Y cm)" → **„(prognozowany wzrost ostateczny to ok. X cm ±Y cm)"**. Etykieta źródła (`sourceLabel`) nadal jest publikowana przez kartę wzrostową i tam widoczna; narracja jej nie powtarza.
+- Kaloryczność planu: „podaży energii rzędu około N kcal dziennie (zapotrzebowanie przy obecnej masie ciała pomniejszone o deficyt dobrany do bezpiecznego tempa; cel: masa docelowa ok. M kg (85. centyl BMI))" → **„podaży energii rzędu około N kcal dziennie"**. Podstawa i cel zostają w karcie planu, gdzie są opisane raz i w jednym miejscu; w narracji powtarzały się obok zdania o deficycie i tempie, które i tak następuje zaraz potem.
+
+**Czego nie skrócono** (bez decyzji właściciela): zdania stabilizacji („zapotrzebowanie przy obecnej masie ciała, z korektą −10 % REE na otyłość (Hofsteenge 2010) … celem pozostaje masa docelowa ok. X kg (85. centyl BMI)") ani nawiasu w zdaniu o normach żywieniowych („od zapotrzebowania przy obecnej masie ciała z korektą na otyłość"). Oba mają tę samą wadę co zdania wyżej i są kandydatami na kolejne cięcie.
+
+*Strażnicy:* `tests/unit/energy-dziecko-otylosc.test.mjs` (21: PAL 1,4 przy otyłości i 1,6 przy nadwadze — z klasy BMI podanej wprost i z samej antropometrii, poniżej 10 lat bez zmian, silnik bierze tę samą wartość co formularz); `tests/e2e/diet-plan-logic.spec.mjs` (PLAN-PAL-DEFAULT-TEEN dla otyłości i PLAN-PAL-DEFAULT-TEEN-OVERWEIGHT dla nadwagi — ten drugi sprawdza ścieżkę formularza, czyli przekazanie antropometrii przez `vilda_update_prep`); `tests/e2e/diet-recommendations-logic.spec.mjs` i `tests/e2e/dieta-dziecko-otylosc.spec.mjs` (skrócone zdania: brak etykiety metody i brak nawiasu z metodologią przy kaloryczności).
+
 ### ENERGY-CHILD-MID2 — cel leczenia z 85. centyla BMI i domyślny PAL 1,6 dla 10–18 lat (SW 1.0.908, 2026-09-13, decyzja właściciela)
 
 **Kontekst.** Drugi z dwóch PR zapowiedzianych w ENERGY-CHILD-MID1. Oba punkty właściciel wskazał z góry; ten wpis opisuje, co się zmieniło i jaki jest łączny skutek obu PR.

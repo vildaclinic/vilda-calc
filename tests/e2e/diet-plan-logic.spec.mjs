@@ -390,24 +390,51 @@ test('PLAN-SYNC-TIMES: przy wyłączonym ruchu obie karty pokazują ten sam term
 });
 
 // --- Domyślny PAL wg pasma normatywnego dla wieku (2026-08-13) -----------------
-// Nastolatek 10–18 lat: pasmo normatywne Norm 2024 to 1,6–2,0, więc nietknięty
-// formularz dostaje 1,6 (ENERGY-CHILD-MID2; w MID1 było przejściowo 1,4). Jawny wybór
-// i wartości z zapisu pacjenta mają pierwszeństwo (flaga __vildaPlanPalTouched).
+// Nastolatek 10–18 lat: pasmo normatywne Norm 2024 to 1,6–2,0, więc nietknięty formularz
+// dostaje 1,6 przy samej NADWADZE, ale 1,4 przy OTYŁOŚCI (ENERGY-CHILD-MID3), gdzie niska
+// aktywność jest regułą. Jawny wybór i wartości z zapisu pacjenta mają pierwszeństwo
+// (flaga __vildaPlanPalTouched).
 
-test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka dostaje PAL 1,6 (ENERGY-CHILD-MID2) + dopisek o wartości domyślnej', async ({ page }) => {
+test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka z otyłością dostaje PAL 1,4 (ENERGY-CHILD-MID3) + dopisek o wartości domyślnej', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
   const out = await page.evaluate(() => ({
     pal: document.getElementById('palFactor').value,
-    engineDefault: typeof energyDefaultPlanPal === 'function' ? energyDefaultPlanPal(12, 0) : null,
+    cls: energyChildBmiClass({ sex: 'M', ageYears: 12, weightKg: 70, heightCm: 150 }),
+    engineDefault: typeof energyDefaultPlanPal === 'function'
+      ? energyDefaultPlanPal(12, 0, energyChildBmiClass({ sex: 'M', ageYears: 12, weightKg: 70, heightCm: 150 }))
+      : null,
     touched: window.__vildaPlanPalTouched === true,
     note: (document.getElementById('bmiJourneyMount')?.textContent || '').includes('PAL przyjęty domyślnie dla wieku'),
   }));
-  expect(out.engineDefault).toBe(1.6);
-  expect(out.pal).toBe('1.6');
+  // 12 l, 150 cm, 70 kg → z ≈ 2,19, czyli otyłość: wartość domyślna 1,4
+  expect(out.cls.obese).toBe(true);
+  expect(out.engineDefault).toBe(1.4);
+  expect(out.pal).toBe('1.4');
   expect(out.touched).toBe(false);
   expect(out.note).toBe(true);
+});
+
+// ENERGY-CHILD-MID3: ten sam formularz przy samej nadwadze (bez otyłości) dostaje 1,6.
+// Sprawdza ścieżkę formularza: vilda_update_prep przekazuje antropometrię do energyDefaultPlanPal.
+test('PLAN-PAL-DEFAULT-TEEN-OVERWEIGHT: nietknięty formularz 14-latka z samą nadwagą dostaje PAL 1,6', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openIndex(page);
+  await renderPlan(page, { age: 14, months: 0, sex: 'M', weight: 68, height: 165 });
+  const out = await page.evaluate(() => {
+    const cls = energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 68, heightCm: 165 });
+    return {
+      pal: document.getElementById('palFactor').value,
+      engineDefault: typeof energyDefaultPlanPal === 'function' ? energyDefaultPlanPal(14, 0, cls) : null,
+      overweight: cls.overweight,
+      obese: cls.obese,
+    };
+  });
+  expect(out.overweight).toBe(true);
+  expect(out.obese).toBe(false);
+  expect(out.engineDefault).toBe(1.6);
+  expect(out.pal).toBe('1.6');
 });
 
 test('PLAN-PAL-DEFAULT-ADULT: dorosły zostaje przy PAL 1,4 (dolna granica pasma normatywnego)', async ({ page }) => {
@@ -422,7 +449,7 @@ test('PLAN-PAL-DEFAULT-ADULT: dorosły zostaje przy PAL 1,4 (dolna granica pasma
   expect(out.pal).toBe('1.4');
 });
 
-test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną 1,6)', async ({ page }) => {
+test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną)', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 12, months: 0, sex: 'M', weight: 70, height: 150 });
