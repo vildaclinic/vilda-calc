@@ -89,7 +89,7 @@ test('J3: stabilizacja 8-latki — cel raz, „bez dodatkowego deficytu", bez �
   expect(count(r.text, 'utrzymanie obecnej masy ciała')).toBe(1);
   expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu: podaż energii dziecka odpowiada zapotrzebowaniu przy obecnej masie ciała, z korektą −10 % REE na otyłość (Hofsteenge 2010)');
   expect(r.text).toContain('bez dodatku na wzrastanie');
-  expect(r.text).toContain('celem pozostaje masa należna ok.');
+  expect(r.text).toContain('celem pozostaje masa docelowa ok.');
   expect(r.text).not.toContain('Celem jest utrzymanie obecnej masy ciała przy dalszym wzrastaniu');
   expect(r.text).not.toMatch(/rosła minimalnie|rosła jak najwolniej/u);
   expect(r.text).toContain('Przy stabilnej masie ciała dziecko z czasem „wyrośnie” z otyłości');

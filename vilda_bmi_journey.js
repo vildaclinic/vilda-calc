@@ -203,7 +203,7 @@
         rows: [], moveWeek: 0, totalWeek: 0,
         monthsCombo: stabT ? stabT.months : null, monthsDiet: null,
         growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null,
-        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, neededWeightKg: lastEngineState.neededWeightKg
+        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, targetWeightKg: lastEngineState.targetWeightKg
       };
     }
     return {
@@ -364,7 +364,7 @@
     var kcal = model.stabMode
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.maintenanceKcal / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
-        + '<div class="bmi-journey-kcalcap">energia utrzymania (stabilizacja masy ciała' + (fin(model.neededWeightKg) ? ', cel: masa należna ok. ' + fmt(model.neededWeightKg, 1) + '\u202Fkg' : '') + ')</div></div>'
+        + '<div class="bmi-journey-kcalcap">energia utrzymania (stabilizacja masy ciała' + (fin(model.targetWeightKg) ? ', cel: masa docelowa ok. ' + fmt(model.targetWeightKg, 1) + '\u202Fkg (85. centyl BMI)' : '') + ')</div></div>'
       : model.found
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'

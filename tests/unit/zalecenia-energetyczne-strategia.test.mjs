@@ -86,13 +86,25 @@ describe('Klasa BMI przy źródle Palczewskiej — z jej centyli, mediana z cent
     globalThis.bmiSource = 'PALCZEWSKA';
     let pctStub = 96;
     globalThis.bmiPercentileChildPal = () => pctStub;
-    globalThis.getPalCentile = (sex, months, p, type) => (type === 'BMI' && p === 50 ? 17.2 : null);
+    globalThis.getPalCentile = (sex, months, p, type) => {
+      if (type !== 'BMI') return null;
+      // ENERGY-CHILD-MID2: tablice Palczewskiej nie mają p85 — cel interpoluje się z p75 i p90 po skali z.
+      if (p === 50) return 17.2;
+      if (p === 75) return 19;
+      if (p === 90) return 21;
+      return null;
+    };
     const c = win.energyChildBmiClass({ sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 });
     expect(c.source).toBe('PALCZEWSKA');
     expect(c.overweight).toBe(true);
     expect(c.obese).toBe(false);
     expect(c.medianBmi).toBe(17.2);
     expect(c.neededWeightKg).toBeCloseTo(17.2 * 1.45 * 1.45, 6);
+    // cel z 85. centyla: interpolacja po z między p75 (z 0,6745) i p90 (z 1,2816), nie po numerach centyli
+    const frac = (1.036 - 0.6745) / (1.2816 - 0.6745);
+    expect(c.targetBmi).toBeCloseTo(19 + (21 - 19) * frac, 6);
+    expect(c.targetWeightKg).toBeCloseTo((19 + (21 - 19) * frac) * 1.45 * 1.45, 6);
+    expect(c.targetBmi).toBeLessThan(19 + (21 - 19) * 0.6667); // liniowo po centylach (85 z 75→90) byłoby wyżej
     expect(c.z).toBeGreaterThan(1.6);
     expect(c.z).toBeLessThan(1.9);
     pctStub = 98;
