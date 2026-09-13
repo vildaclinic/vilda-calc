@@ -1098,6 +1098,33 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### OBESITY-EDIT-1 — Monitor leczenia otyłości: edycja punktu terapii (SW 1.0.921, 2026-09-13, zgłoszenie właściciela)
+
+**Zgłoszenie.** W zakładce „Monitorowanie leczenia" modułu „Leczenie otyłości" punkt terapii dało się tylko **dodać albo usunąć**. Poprawka literówki w masie oznaczała skasowanie wizyty i wpisanie jej od nowa.
+
+**Dlaczego to nie było równoważne.** Punkt terapii nie jest wierszem w tabeli — jest **rekordem, do którego przypięte są inne dane**. Skarbiec buduje z każdego punktu z czytelną dawką wpis na oś czasu Karty Pacjenta, podpięty przez **`obesityPointId`**, z akcją `start`/`change`/`stop` i dawką w miligramach; terminarz odsiewa po tym identyfikatorze wpisy, które już z punktu powstały. Usunięcie i dodanie na nowo daje **nowe `id`**, więc zrywa to powiązanie. Dlatego edycja musiała zachować tożsamość rekordu, a nie tylko jego wartości.
+
+**Co czyta te punkty.** Karta Pacjenta (pasmo leczenia na osi czasu plus sekcje „Przebieg leczenia otyłości" i „Odpowiedź na leczenie"), skarbiec (oś czasu i normalizacja), eksport/import, historia wersji (liczy punkty, oceniając czy migawka jest pusta) oraz licznik na zakładce.
+
+**Najpoważniejszy skutek edycji — i stąd potwierdzenie.** Cała ocena odpowiedzi na leczenie stoi na **dwóch** punktach: „Włączenie" i najnowszym. Z nich Karta liczy redukcję masy, redukcję BMI, ΔBMI-SDS i liczbę tygodni, a potem podaje to do progów ChPL (`ObesityResponseCriteria.evaluate`) i wypisuje werdykt — „spełnione", „niespełnione: odstawić i ponownie ocenić", „przed oknem oceny". Edycja punktu odniesienia **przepisuje wniosek kliniczny**, nie tylko liczbę w tabeli. Dlatego zapis zmian w punkcie, który jest baseline'em (albo nadanie rodzaju „Włączenie"), prosi o potwierdzenie nazywające ten skutek wprost.
+
+**Reguły edycji.** Sedno wydzielone jako **czysta funkcja** `Ed(punkty, id, łata)` → `{ok, points, point, wasBaseline}` albo `{ok:false, reason}`, żeby dało się ją zmierzyć bez przeglądarki:
+
+| reguła | powód |
+|---|---|
+| `id` przenoszone bez zmian | po nim skarbiec wiąże wpis na osi czasu Karty Pacjenta |
+| komplet wiek/masa/wzrost | ta sama walidacja, co przy dodawaniu |
+| poprawny rodzaj wizyty | `start`/`continue`/`end` |
+| **brak drugiego „Włączenia"** | kod bierze **pierwszy** `start` jako baseline — dwa starty po cichu przestawiłyby punkt odniesienia całej oceny |
+| przeliczenie zapisanego `bmi` | tabela liczy BMI w locie, ale w rekordzie siedzi też `bmi` i to ono jedzie w **eksporcie** |
+| lista oryginalna nietknięta | funkcja oddaje nową tablicę, pozostałe punkty tą samą referencją |
+
+**Obsługa w interfejsie.** Ołówek w wierszu wczytuje punkt do **tego samego formularza**, którym się punkty dodaje — te same pola i ta sama walidacja, żaden drugi ekran do nauki. Nad tabelą staje pasek „Edytujesz punkt: …" z przyciskiem „Anuluj edycję", a trzy przyciski rodzaju wizyty **zapisują zmiany** zamiast dodawać nowy punkt; dzięki temu rodzaj wizyty poprawia się tym samym gestem, którym się go nadaje, i nie da się przez pomyłkę dodać duplikatu. Usunięcie edytowanego punktu kończy tryb edycji. Zapis zgłasza się jako `obesity-point-edited` do wskaźnika stanu zapisu.
+
+**Skutki uboczne, o których warto wiedzieć** (zachowanie zastane, nie zmienione tą poprawką): wyczyszczenie daty w którymkolwiek punkcie przestawia sortowanie **całej** tabeli z dat na wiek, a okno oceny 12/16 tygodni schodzi na przybliżenie z wieku; wyczyszczenie dawki sprawia, że wpis o leku **znika** z osi czasu Karty Pacjenta, bo tamten kod pomija punkty bez czytelnej dawki. Data z przyszłości pyta o potwierdzenie tak samo jak przy dodawaniu.
+
+*Strażnicy:* `tests/unit/otylosc-edycja-punktu.test.mjs` (14: zachowanie `id`, nietknięta lista oryginalna, przeliczenie BMI, rozkład wieku na lata i miesiące, odrzucenie drugiego startu, dozwolony zapis startu jako startu, braki, zły rodzaj, punkt spoza listy, sygnał `wasBaseline`, puste pola tekstowe, normalizacja leku i substancji, pominięte pola bez zmian). **Zmierzone czerwone:** przeciwko wersji sprzed poprawki **cały plik nie startuje** — mierzonej funkcji nie ma w module. `tests/e2e/otylosc-edycja-punktu.spec.mjs` (3, prawdziwy DocPro: ołówek w każdym wierszu, wczytanie wartości do formularza, zapis bez duplikatu z zachowanym `id` i przeliczonym BMI; odrzucenie drugiego „Włączenia" z komunikatem i utrzymaniem trybu edycji; potwierdzenie przy ruszaniu punktu odniesienia, a odmowa zostawia dane nietknięte). **Zmierzone czerwone: 3 z 3.**
+
 ### ADV-REPORT-10 — Trzy decyzje właściciela po odchudzeniu raportu (SW 1.0.920, 2026-09-13)
 
 Trzy niezależne rozstrzygnięcia podjęte po scaleniu ADV-REPORT-9, zebrane w jedną zmianę.
