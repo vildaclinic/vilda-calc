@@ -67,13 +67,13 @@ function recommend(page, { strategy = null, diet = 'light', pf = false, norms = 
   }, { strategy, diet, pf, norms });
 }
 
-test('12–18 lat: PAL domyślnie 1,6 (MID2), plan od masy aktualnej z korektą (−253/−379/−506 z tempa), hero z zaokrągloną kalorycznością', async ({ page }) => {
+test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktualnej z korektą (−253/−379/−506 z tempa), hero z zaokrągloną kalorycznością', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 14, sex: 'M', w: 85, h: 165 });
-  // ENERGY-CHILD-MID2: domyślny PAL planu 10–18 lat = 1,6 (dolna granica pasma Norm 2024);
-  // 1,4 zostaje na liście z etykietą o niskiej aktywności, bez „poza Normami".
-  expect(r.pal).toBe('1.6');
+  // ENERGY-CHILD-MID3: 10–18 lat dostaje 1,6 przy nadwadze, ale 1,4 przy otyłości (ten pacjent: z ≈ 2,26);
+  // 1,4 jest na liście z etykietą o niskiej aktywności, bez „poza Normami".
+  expect(r.pal).toBe('1.4');
   expect(r.palOptions[0]).toContain('częsta przy otyłości');
   expect(r.palOptions[0]).not.toContain('poza Normami');
   expect(r.state.ob).toBe(true);
@@ -89,7 +89,7 @@ test('12–18 lat: PAL domyślnie 1,6 (MID2), plan od masy aktualnej z korektą 
   expect(r.state.diets.map((d) => d[2])).toEqual([253, 379, 506]); // 1 / 1,5 / 2 kg/mies.
   expect(r.state.diets[0][1]).toBe(r.state.base - 253);
   expect(r.diet).toBe('light');
-  expect(r.plan).toContain('PAL 1,6');
+  expect(r.plan).toContain('PAL 1,4 – niska aktywność');
   expect(r.plan).not.toContain('Tryb kliniczny');
   expect(r.plan).toContain(`${Math.round((r.state.base - 253) / 100) * 100} kcal/dzień`);
   expect(r.plan).toContain('baza planu liczona dla obecnej masy ciała z korektą −10 % REE na otyłość (Hofsteenge 2010)');
@@ -107,7 +107,11 @@ test('12–18 lat, narracja redukcyjna: kaloryczność od masy aktualnej z korek
   const r = await fill(page, { age: 14, sex: 'M', w: 85, h: 165 });
   const text = await recommend(page, { strategy: null, diet: 'moderate' });
   const kcal = Math.round((r.state.base - 379) / 100) * 100;
-  expect(text).toContain(`dostarcza około ${kcal} kcal dziennie (zapotrzebowanie przy obecnej masie ciała pomniejszone o deficyt dobrany do bezpiecznego tempa`);
+  // ENERGY-REC-KROTKO (2026-09-13, decyzja właściciela): zdanie o kaloryczności bez nawiasu
+  // z metodologią — sama liczba; podstawa i cel zostają w karcie planu.
+  expect(text).toContain(`dostarcza około ${kcal} kcal dziennie`);
+  expect(text).not.toContain('pomniejszone o deficyt dobrany do bezpiecznego tempa');
+  expect(text).not.toMatch(/kcal dziennie \(zapotrzebowanie/u);
   expect(text).toContain('wynosi około 379 kcal');
   expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
   // ENERGY-REC-4: podstawa w nawiasie zdania o normach zamiast osobnego „Przeliczenie wykonano dla…"
@@ -143,7 +147,7 @@ test('6–11 lat przy BMI < 99c: tylko lekka −126 kcal (0,5 kg/mies.), ostrze�
   const text = await recommend(page, { strategy: null, diet: 'light' });
   const kcal = Math.round(r.state.base / 100) * 100;
   expect(text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
-  expect(text).toContain(`tj. około ${kcal} kcal dziennie przy PAL 1,6, bez dodatku na wzrastanie`);
+  expect(text).toContain(`tj. około ${kcal} kcal dziennie przy PAL 1,4, bez dodatku na wzrastanie`);
   expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
   expect(text).toContain('(od zapotrzebowania przy obecnej masie ciała z korektą na otyłość)');
   expect(text).not.toMatch(/Taki plan daje deficyt|wynosi około \d+ kcal, co przekłada/u);
