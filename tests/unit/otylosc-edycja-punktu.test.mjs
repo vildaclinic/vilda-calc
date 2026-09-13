@@ -137,3 +137,84 @@ describe('Monitor otyłości — pola tekstowe punktu', () => {
     expect(w.point.substance).toBe('liraglutide');
   });
 });
+
+// OBESITY-PREFILL-1 (zgłoszenie właściciela 2026-09-13): wiek, masa i wzrost są już wpisane
+// w formularzu głównym aplikacji, a monitor kazał je wklepywać drugi raz. Przycisk przepisuje je
+// jednym klikiem wraz z dzisiejszą datą. Regułę wyboru preparatu podał właściciel: przy
+// KONTYNUACJI bierzemy lek z poprzedniego punktu kontrolnego, przy WŁĄCZENIU zostawiamy wybór
+// lekarzowi. Tu mierzymy obie czyste funkcje wycięte z pliku produkcyjnego.
+
+function pomocnikPrefill() {
+  const src = zrodlo('obesity_therapy_monitor.js');
+  const odciecie = (od, doTekstu) => {
+    const a = src.indexOf(od);
+    expect(a, `nie znaleziono ${od}`).toBeGreaterThan(-1);
+    const b = src.indexOf(doTekstu, a);
+    expect(b, `nie znaleziono końca po ${od}`).toBeGreaterThan(a);
+    return src.slice(a, b);
+  };
+  // Eo() sortuje jak tabela: po datach (A, H, K) albo po wieku (D); nazwy leków normalizuje f().
+  const daty = odciecie('function H(t)', 'function st(t)');
+  const wiek = odciecie('function D(t)', 'function dt(t)');
+  const f = odciecie('var ft="', 'function R(t)');
+  const Eo = odciecie('function Eo(t)', 'function Et(t)');
+  const Et = odciecie('function Et(t)', 'function Ek(t,e)');
+  const mod = new Function(`${daty}\n${wiek}\n${f}\n${Eo}\n${Et}\nreturn { Eo, Et };`)();
+  return mod;
+}
+
+const { Eo, Et } = pomocnikPrefill();
+
+describe('Monitor otyłości — przepisanie leku przy kontynuacji', () => {
+  it('pusta lista to włączenie leczenia — wyboru nie podpowiadamy', () => {
+    expect(Eo([])).toBeNull();
+    expect(Eo(null)).toBeNull();
+  });
+
+  it('bierze lek z ostatniego punktu wg dat, gdy daty mają wszystkie punkty', () => {
+    const w = Eo([
+      { id: 'a', type: 'start', dateISO: '2026-01-10', ageYears: 13, ageMonths: 0, drug: 'Saxenda', substance: 'liraglutyd' },
+      { id: 'b', type: 'continue', dateISO: '2026-06-02', ageYears: 13, ageMonths: 5, drug: 'Wegovy', substance: 'semaglutyd' },
+      { id: 'c', type: 'continue', dateISO: '2026-03-14', ageYears: 13, ageMonths: 2, drug: 'Saxenda', substance: 'liraglutyd' },
+    ]);
+    expect(w).toEqual({ drug: 'Wegovy', substance: 'semaglutyd' });
+  });
+
+  it('przy niekompletnych datach idzie po wieku — tak jak sortuje tabela', () => {
+    const w = Eo([
+      { id: 'a', type: 'start', dateISO: '2026-01-10', ageYears: 13, ageMonths: 0, drug: 'Saxenda', substance: 'liraglutyd' },
+      { id: 'b', type: 'continue', dateISO: '', ageYears: 14, ageMonths: 6, drug: 'Mounjaro', substance: 'tirzepatyd' },
+    ]);
+    expect(w.drug).toBe('Mounjaro');
+  });
+
+  it('pomija ogony bez leku i sięga do ostatniego punktu, który lek niesie', () => {
+    const w = Eo([
+      { id: 'a', type: 'start', dateISO: '2026-01-10', ageYears: 13, ageMonths: 0, drug: 'Saxenda', substance: 'liraglutyd' },
+      { id: 'b', type: 'continue', dateISO: '2026-06-02', ageYears: 13, ageMonths: 5, drug: '', substance: '' },
+    ]);
+    expect(w.drug).toBe('Saxenda');
+  });
+
+  it('„– wybierz –" nie jest lekiem — ta sama normalizacja co przy zapisie punktu', () => {
+    const w = Eo([{ id: 'a', type: 'start', dateISO: '2026-01-10', ageYears: 13, ageMonths: 0, drug: '– wybierz –', substance: '' }]);
+    expect(w).toBeNull();
+  });
+
+  it('sama substancja bez nazwy handlowej też wystarcza do podpowiedzi', () => {
+    const w = Eo([{ id: 'a', type: 'start', dateISO: '2026-01-10', ageYears: 13, ageMonths: 0, drug: '', substance: 'liraglutyd' }]);
+    expect(w).toEqual({ drug: '', substance: 'liraglutyd' });
+  });
+});
+
+describe('Monitor otyłości — dzisiejsza data', () => {
+  it('jest datą LOKALNĄ, nie UTC — wieczorem UTC wskazuje już jutro', () => {
+    // 31 grudnia 2026, 23:30 czasu lokalnego strefy dodatniej: w UTC to już 1 stycznia.
+    const wieczor = new Date(2026, 11, 31, 23, 30, 0);
+    expect(Et(wieczor)).toBe('2026-12-31');
+  });
+
+  it('dopełnia miesiąc i dzień zerem', () => {
+    expect(Et(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+});
