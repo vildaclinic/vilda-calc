@@ -44,3 +44,33 @@ test('ADV-REPORT-3: podsumowanie raportu podaje ten sam konsensus, co karta', as
   // 3. zgodność metod — informacja, której raport nie miał wcale
   expect(out.summary).toContain('Zgodność metod:');
 });
+
+// ADV-REPORT-4: dane kliniczne, które raport miał pod ręką i pomijał — wiek kostny wraz
+// z wielkością opóźnienia, pasmo celu rodzicielskiego z odniesieniem prognozy do celu
+// oraz blok pokwitaniowy. Sprawdza WPIĘCIE na prawdziwej stronie, nie sam budowniczy.
+test('ADV-REPORT-4: podsumowanie podaje wiek kostny i pasmo celu rodzicielskiego', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/index.html', { waitUntil: 'load' });
+  await page.waitForFunction(() => typeof window.calculateGrowthAdvanced === 'function' && !!window.VildaAdvancedGrowth);
+
+  const out = await page.evaluate(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+    window.professionalMode = true;
+    set('age', 10); set('ageMonths', 0); set('sex', 'F');
+    set('height', 145); set('weight', 55);
+    set('advMotherHeight', 165); set('advFatherHeight', 178); set('advBoneAge', 8); // wiek kostny 2 lata niżej
+    window.calculateGrowthAdvanced();
+    const api = window.VildaAdvancedGrowth;
+    const d = window.advancedGrowthData || {};
+    const model = api.advGrowthBuildReportPresentationModel(api.advGrowthBuildReportRows());
+    return { boneAgeMonths: d.boneAgeMonths, summary: model.summaryItems.join(' | ') };
+  });
+
+  expect(out.boneAgeMonths).toBe(96);
+  // wiek kostny z wielkością opóźnienia — dotąd raport ostrzegał przed skutkiem, nie podając przyczyny
+  expect(out.summary).toContain('Wiek kostny: 8 lat');
+  expect(out.summary).toContain('opóźniony o 24 mies.');
+  // pasmo celu rodzicielskiego zamiast samej liczby MPH
+  expect(out.summary).toContain('pasmo celu');
+});
+
