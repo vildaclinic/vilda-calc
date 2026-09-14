@@ -1,0 +1,48 @@
+Vilda — wagaiwzrost.pl
+Copyright 2025-2026 Vilda Clinic sp. z o.o.
+
+This product includes software developed by Vilda Clinic sp. z o.o.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License. You may obtain a copy of
+the License in the LICENSE file at the root of this repository or at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations under
+the License.
+
+--------------------------------------------------------------------------------
+
+This repository bundles third-party components that are NOT covered by the
+Apache License, Version 2.0 grant above. They remain subject to their own
+licenses, copyright notices and terms:
+
+  - pdfmake (MIT)
+  - pdfmake standard fonts — Roboto (Apache-2.0)
+  - jsQR (Apache-2.0)
+  - JSZip (MIT)
+  - Lucide (ISC; some icons MIT, derived from Feather)
+  - QRCode.js (MIT)
+
+Full texts, versions, upstream sources and copyright holders are listed in
+THIRD_PARTY_NOTICES.md. Copies of the referenced license texts are in the
+LICENSES/ directory.
+
+--------------------------------------------------------------------------------
+
+Clinical reference data (growth charts, LMS tables, bone-age and prediction
+tables and similar material) reproduced or derived from published sources is
+not original work of Vilda Clinic sp. z o.o. and may be subject to separate
+rights held by its publishers. The Apache-2.0 grant covers the source code of
+this project; it is not a grant of rights in third-party reference data. See
+docs/clinical/ALGORITHMS.md for the source of each algorithm and data set.
+
+--------------------------------------------------------------------------------
+
+"Vilda", "Vilda Clinic", "wagaiwzrost.pl", and the associated logos and marks
+are not licensed under the Apache License, Version 2.0. Section 6 of the
+License applies: no trademark rights are granted.
