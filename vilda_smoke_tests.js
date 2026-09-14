@@ -99,7 +99,7 @@
     'vilda_gh_therapy_resource_audit.js?v=31',
     'vilda_app_helpers.js?v=2',
     'vilda_macro_practice.js?v=2',
-    'vilda_data_import_export.js?v=74',
+    'vilda_data_import_export.js?v=75',
     'vilda_dob_age.js?v=5',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
@@ -118,7 +118,7 @@
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=203',
-    'vilda_smoke_tests.js?v=72',
+    'vilda_smoke_tests.js?v=73',
     'vilda_diet_recommendations.js?v=26',
     'nutrition_norms.js?v=46',
     'nutrition_micros.js?v=26'
