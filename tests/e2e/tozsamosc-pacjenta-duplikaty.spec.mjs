@@ -11,6 +11,14 @@ import { expect, test } from '../support/test-czas.mjs';
 // co karta-pacjenta-centyl-wieku-pomiaru.spec.mjs). Nie dotyka żadnego prawdziwego sejfu ani
 // żadnych prawdziwych danych. Wszystkie dane są jednoznacznie fikcyjne.
 //
+// DLACZEGO TYLE POTWIERDZANIA. Formularz dochodzi do stanu ustalonego ASYNCHRONICZNIE: wczytanie
+// pacjenta uruchamia kaskadę zerowania pól z opóźnieniami, a imię i nazwisko spływają do pola
+// `#name` (to ono jest nazwą rekordu) też z opóźnieniem. Człowiek tego nie zauważy — zanim zdąży
+// cokolwiek napisać, kaskada dawno się skończyła. Test pisze natychmiast, więc bez potwierdzania
+// migotał: raz kasowało mu świeżo wpisaną datę, raz zapisywał jeszcze pod starą nazwą. Dlatego
+// każdy zapis poprzedzamy sprawdzeniem, że KOLEKTOR widzi dokładnie to, co zamierzamy zapisać.
+// To nie jest obchodzenie usterki produktu, tylko dostrojenie testu do tempa maszyny.
+//
 // Service worker zablokowany: przy pierwszej wizycie instaluje się i robi `location.reload()`
 // na `controllerchange`, co przerywa nawigację testu.
 test.use({ serviceWorkers: 'block' });
@@ -18,7 +26,6 @@ test.use({ serviceWorkers: 'block' });
 const HASLO = 'E2e#Duplikaty!26b';
 const IMIE = 'Testowy';
 const NAZWISKO = 'Fikcyjny-Duplikat';
-const PELNE = `${NAZWISKO} ${IMIE}`;
 
 async function otworzZKontem(page) {
   await page.addInitScript(() => {
@@ -43,11 +50,12 @@ async function otworzZKontem(page) {
   await page.waitForFunction(
     () => typeof window.saveUserData === 'function'
       && typeof window.applyLoadedData === 'function'
+      && typeof window.collectUserData === 'function'
       && Boolean(window.VildaDobAge),
   );
 }
 
-function ustaw(page, pola) {
+function wpiszPola(page, pola) {
   return page.evaluate((p) => {
     Object.keys(p).forEach((id) => {
       const el = document.getElementById(id);
@@ -59,14 +67,37 @@ function ustaw(page, pola) {
   }, pola);
 }
 
-function zapisz(page) {
-  return page.evaluate(async () => {
-    await window.saveUserData();
-    return true;
+function zebrane(page) {
+  return page.evaluate(() => {
+    const d = window.collectUserData() || {};
+    return { name: d.name || null, user: d.user || {} };
   });
 }
 
-function pacjenci(page) {
+/* Wpisuje pola i powtarza wpis, dopóki kolektor nie potwierdzi oczekiwanego stanu. Zwraca to,
+   co kolektor ostatecznie zobaczył — czyli dokładnie to, co pójdzie do zapisu. */
+async function wpiszIPotwierdz(page, pola, warunek, opis) {
+  let ostatnie = null;
+  for (let proba = 0; proba < 15; proba += 1) {
+    await wpiszPola(page, pola);
+    ostatnie = await zebrane(page);
+    if (warunek(ostatnie)) return ostatnie;
+    await page.waitForTimeout(200);
+  }
+  throw new Error(`formularz nie ustalił się na: ${opis} (ostatnio: ${JSON.stringify(ostatnie)})`);
+}
+
+/* Zapis, który nie może po cichu nie dojść do skutku: `saveUserData()` przy niekompletnym
+   formularzu po prostu zwraca null, więc test przechodziłby pozornie. */
+async function zapiszPewnie(page) {
+  const stan = await zebrane(page);
+  expect(stan.user.age, 'wiek w kolektorze przed zapisem').not.toBeNull();
+  expect(stan.user.weight, 'waga w kolektorze przed zapisem').not.toBeNull();
+  expect(stan.user.height, 'wzrost w kolektorze przed zapisem').not.toBeNull();
+  await page.evaluate(async () => { await window.saveUserData(); });
+}
+
+async function pacjenci(page) {
   return page.evaluate(async () => {
     const lista = await window.VildaVault.listPatients();
     const out = [];
@@ -83,13 +114,10 @@ function pacjenci(page) {
   });
 }
 
-/* Wczytanie pacjenta tak, jak robi to zakładka Pacjenci: treść do formularza + zdarzenie
-   z identyfikatorem, z którego `custom-fixes.js` ustawia bieżącego pacjenta.
-
-   Wczytanie ZERUJE pola liczbowe formularza asynchronicznie (zachowanie sprzed tej zmiany —
-   sprawdzone także na wersji z HEAD). Dlatego czekamy, aż to zerowanie się wykona, zanim test
-   wpisze cokolwiek: bez tego wpisane wartości bywały kasowane tuż po wpisaniu i zapis w ogóle
-   nie dochodził do skutku. Czekamy też na identyfikator bieżącego pacjenta. */
+/* Wczytanie pacjenta tak, jak robi to zakładka Pacjenci: treść do formularza przez
+   `applyLoadedData` + zdarzenie z identyfikatorem, z którego `custom-fixes.js` ustawia bieżącego
+   pacjenta. Prawdziwy przycisk „Wczytaj tego pacjenta" siedzi w domknięciu `vilda_auth_ui.js`
+   i nie da się go wywołać z testu, ale obie ścieżki przechodzą przez te same funkcje. */
 async function wczytaj(page, patientId) {
   await page.evaluate(async (pid) => {
     const p = await window.VildaVault.getPatient(pid);
@@ -102,75 +130,72 @@ async function wczytaj(page, patientId) {
     return true;
   }, patientId);
   await page.waitForFunction(() => typeof window._vildaCurrentPatientId === 'string');
-  await page.waitForFunction(() => {
-    const w = document.getElementById('weight');
-    return Boolean(w) && String(w.value).trim() === '';
-  });
   return true;
 }
 
-/* Zapis, który nie może po cichu nie dojść do skutku: najpierw upewniamy się, że kolektor
-   widzi komplet wymaganych pól (wiek, waga, wzrost), bo bez nich `saveUserData()` po prostu
-   zwraca null i test przechodziłby pozornie. */
-async function zapiszPewnie(page) {
-  const user = await page.evaluate(() => (window.collectUserData() || {}).user || {});
-  expect(user.age, 'wiek w kolektorze przed zapisem').not.toBeNull();
-  expect(user.weight, 'waga w kolektorze przed zapisem').not.toBeNull();
-  expect(user.height, 'wzrost w kolektorze przed zapisem').not.toBeNull();
-  await zapisz(page);
+/* Pierwsza wizyta: komplet danych, zapis i oczekiwanie, aż rekord naprawdę pojawi się w bazie. */
+async function pierwszaWizyta(page) {
+  await wpiszIPotwierdz(
+    page,
+    { firstName: IMIE, lastName: NAZWISKO, sex: 'M', age: '4', ageMonths: '3', weight: '17.5', height: '104' },
+    (s) => String(s.name || '').includes(NAZWISKO) && s.user.weight === 17.5 && s.user.age === 4,
+    'komplet danych pierwszej wizyty',
+  );
+  await zapiszPewnie(page);
+  await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
+  const lista = await pacjenci(page);
+  expect(lista).toHaveLength(1);
+  return lista[0];
 }
 
 test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
   test('wczytany pacjent + data urodzenia + nowe pomiary = ten sam rekord', async ({ page }) => {
+    test.setTimeout(120_000);
     await otworzZKontem(page);
 
     // 1. Pierwsza wizyta — pacjent BEZ daty urodzenia, tak jak rekordy sprzed tej funkcji.
-    await ustaw(page, {
-      firstName: IMIE, lastName: NAZWISKO, sex: 'M', age: '4', ageMonths: '3',
-      weight: '17.5', height: '104',
-    });
-    await zapisz(page);
-
-    let lista = await pacjenci(page);
-    expect(lista).toHaveLength(1);
-    expect(lista[0].dobISO).toBeFalsy();
-    const pid = lista[0].patientId;
+    const pierwszy = await pierwszaWizyta(page);
+    expect(pierwszy.dobISO).toBeFalsy();
+    const pid = pierwszy.patientId;
 
     // 2. Kolejna wizyta: wczytujemy tego pacjenta, dopisujemy datę urodzenia i nowe pomiary.
     await wczytaj(page, pid);
-
     const dataUr = await page.evaluate(() => {
       const d = new Date();
       const ur = new Date(d.getFullYear() - 4, d.getMonth() - 3, d.getDate());
       const dwa = (n) => String(n).padStart(2, '0');
       return `${dwa(ur.getDate())}.${dwa(ur.getMonth() + 1)}.${ur.getFullYear()}`;
     });
-    await ustaw(page, { dobInput: dataUr });
-    await ustaw(page, { weight: '18.2', height: '106' });
+    await wpiszIPotwierdz(
+      page,
+      { dobInput: dataUr, weight: '18.2', height: '106' },
+      (s) => Boolean(s.user.dobISO) && s.user.weight === 18.2 && s.user.height === 106,
+      'data urodzenia i nowe pomiary',
+    );
     await zapiszPewnie(page);
 
     // 3. NADAL jeden pacjent — i to ten sam, wzbogacony o datę urodzenia.
-    lista = await pacjenci(page);
+    const lista = await pacjenci(page);
     expect(lista).toHaveLength(1);
     expect(lista[0].patientId).toBe(pid);
     expect(lista[0].dobISO).toBeTruthy();
     expect(lista[0].snapshotCount).toBeGreaterThan(1);
   });
 
-  test('kolejny zapis wczytanego pacjenta też nie mnoży rekordów', async ({ page }) => {
+  test('kolejne wizyty wczytanego pacjenta nie mnożą rekordów', async ({ page }) => {
+    test.setTimeout(120_000);
     await otworzZKontem(page);
+    const pid = (await pierwszaWizyta(page)).patientId;
 
-    await ustaw(page, {
-      firstName: IMIE, lastName: NAZWISKO, sex: 'M', age: '4', ageMonths: '3',
-      weight: '17.5', height: '104',
-    });
-    await zapisz(page);
-    const pid = (await pacjenci(page))[0].patientId;
-
-    for (const [wiek, mies, waga, wzrost] of [['4', '6', '18.0', '105'], ['4', '9', '18.4', '106'], ['5', '0', '18.9', '107']]) {
+    const wizyty = [['4', '6', '18.0', '105'], ['4', '9', '18.4', '106'], ['5', '0', '18.9', '107']];
+    for (const [wiek, mies, waga, wzrost] of wizyty) {
       await wczytaj(page, pid);
-      // Kolejna wizyta: lekarz wpisuje aktualny wiek i świeże pomiary.
-      await ustaw(page, { age: wiek, ageMonths: mies, weight: waga, height: wzrost });
+      await wpiszIPotwierdz(
+        page,
+        { age: wiek, ageMonths: mies, weight: waga, height: wzrost },
+        (s) => s.user.weight === Number(waga) && s.user.age === Number(wiek),
+        `wizyta ${wiek}/${mies}`,
+      );
       await zapiszPewnie(page);
     }
 
@@ -178,27 +203,31 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
     expect(lista).toHaveLength(1);
     expect(lista[0].patientId).toBe(pid);
     // Bez tego warunku test przechodziłby także wtedy, gdyby zapisy w ogóle się nie wykonały —
-    // a tak właśnie było w pierwszej wersji tego testu. Nie sprawdzamy dokładnej liczby zapisów:
-    // sejf potrafi scalić zapis, który niczego nie zmienia, więc liczba bywa mniejsza niż liczba
-    // kliknięć. Istotne jest, że zapisy trafiły do JEDNEGO rekordu.
+    // a tak właśnie było w pierwszej wersji tego testu. Nie sprawdzamy dokładnej liczby: sejf
+    // potrafi scalić zapis, który niczego nie zmienia.
     expect(lista[0].snapshotCount).toBeGreaterThan(1);
   });
 
   test('inne nazwisko w formularzu zakłada nowego pacjenta, nie nadpisuje wczytanego', async ({ page }) => {
+    test.setTimeout(120_000);
     await otworzZKontem(page);
-
-    await ustaw(page, {
-      firstName: IMIE, lastName: NAZWISKO, sex: 'M', age: '4', ageMonths: '3',
-      weight: '17.5', height: '104',
-    });
-    await zapisz(page);
-    const pid = (await pacjenci(page))[0].patientId;
+    const pid = (await pierwszaWizyta(page)).patientId;
 
     // Lekarz nie czyści formularza i wpisuje dane INNEGO dziecka. Zmiana nazwiska czyści pola
-    // wieku (zachowanie aplikacji sprzed tej zmiany), więc lekarz wpisuje wiek na nowo.
+    // wieku (zachowanie aplikacji sprzed tej zmiany), więc wiek wpisuje na nowo.
     await wczytaj(page, pid);
-    await ustaw(page, { firstName: 'Drugi', lastName: 'Inny-Fikcyjny' });
-    await ustaw(page, { age: '7', ageMonths: '1', weight: '20.1', height: '110' });
+    await wpiszIPotwierdz(
+      page,
+      { firstName: 'Drugi', lastName: 'Inny-Fikcyjny' },
+      (s) => String(s.name || '').includes('Inny-Fikcyjny'),
+      'nowe nazwisko w kolektorze',
+    );
+    await wpiszIPotwierdz(
+      page,
+      { age: '7', ageMonths: '1', weight: '20.1', height: '110' },
+      (s) => String(s.name || '').includes('Inny-Fikcyjny') && s.user.weight === 20.1 && s.user.age === 7,
+      'dane drugiego dziecka',
+    );
     await zapiszPewnie(page);
 
     const lista = await pacjenci(page);
