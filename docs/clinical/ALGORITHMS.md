@@ -1098,6 +1098,41 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
+
+**Stan przed zmianą.** Wszystkie komunikaty zapisu — **piętnaście** różnych zdań, od „Nie zapisano — uzupełnij…" po „Nie udało się zapisać pacjenta" — szły przez `showTooltip()`: dymek przy przycisku, gasnący po **2500 ms** i znikający z DOM bez śladu. Trzy wady naraz:
+
+1. **Kotwica była przypadkowa.** Dymek wisiał przy przycisku w menu bocznym, a `Bwskaz()` równocześnie przewijał ekran do brakującego pola — dwie pomocne funkcje pracowały przeciwko sobie.
+2. **2,5 s to za mało** na zdanie „nie zapisano". Kto odwrócił wzrok, był przekonany, że zapis się udał. (Wcześniej naprawiono już przypadek, w którym licznik *starszego* dymka gasił *nowszy* — `P-CICHY-ZAPIS`.)
+3. **Nie było historii.** Żadnego miejsca, w którym da się sprawdzić, co aplikacja przed chwilą powiedziała.
+
+**Decyzja właściciela po obejrzeniu makiety czterech wariantów:** *„wariant D na desktop i B na telefonie, tylko na index.html"*.
+
+| szerokość | gdzie stoi | dlaczego |
+| --- | --- | --- |
+| od 700 px | prawa kolumna, nad „Podsumowaniem wyników" | tam aplikacja **już** mówi na stałe (`#infoMessages` / `#errorBox`) — nowa treść w istniejącej ramce, bez wydłużania formularza |
+| poniżej 700 px | góra formularza, nad polem „Nazwisko" | przy zwiniętych kolumnach prawa spada pod cały formularz i byłaby najdalej od pól |
+
+Próg **700 px** jest ten sam, na którym `#calcForm` przechodzi z jednej kolumny na dwie — inaczej pasek znikałby albo dublował się w pasie pośrednim. Obydwa pojemniki dostają treść; o widoczności rozstrzyga wyłącznie CSS. Węzła **nie przenosimy** przy zmianie szerokości: przenoszenie gubi stan i bije się z odczytem dla czytników ekranu.
+
+**Jedne drzwi zostają.** Wszystkie komunikaty i tak przechodziły przez `O()` w kolektorze — zmieniło się tylko jej wnętrze, więc wszystkie piętnaście zyskuje naraz. Kolejność: **pasek → dymek → `alert()`**. `pokaz()` zwraca `false`, gdy nie było gdzie pokazać, więc strona bez paska (DocPro, Klirens) zachowuje się dokładnie jak wcześniej.
+
+**Trzy wywołania zostają przy dymku celowo** (`dymek:!0`): podpowiedzi wygaszonego przycisku, zaczepione o ten właśnie przycisk. Nie są wynikiem zapisu i nie mają po co stać na ekranie.
+
+**`alert()` zostaje** jako ostatnia deska ratunku. Jego usunięcie to osobna decyzja, bo tylko on zatrzymuje pracę.
+
+**Ton niesie znaczenie, nie kolor.** Każde z wywołań dostało jawny ton (`ok` / `uwaga` / `blad` / `info` / `nowy`) zamiast zgadywania z treści. Meldunek po zapisie jest wyliczany: nierozstrzygnięty duplikat → `uwaga`, nowy pacjent → `nowy`, dopisany pomiar → `ok`.
+
+**Brakujące pola stają się odnośnikami.** Kolektor zna listę braków (`Bbraki()`), więc podaje ją paskowi razem z komunikatem; pasek zamienia nazwy pól w zdaniu na przyciski skaczące do pola. Dzięki temu `Bwskaz()` nie musi porywać przewijania w chwili, gdy lekarz patrzy gdzie indziej. Dopasowanie nazw idzie PO KOLEI, od miejsca poprzedniego trafienia — powtórzona nazwa nie jest podmieniana dwa razy w tym samym miejscu.
+
+**Martwy stan „błąd" wreszcie żyje.** `vilda_save_status_indicator.js` od początku miał stan `ERROR` — czerwony gradient w CSS, gotowe zdanie, pole na przyczynę — ale **`c(i.ERROR)` nie było wołane ani razu w całym repozytorium**: nieudany zapis nie zmieniał nawet koloru chipa. Moduł dostał publiczne `notifySaveFailed(powod)`, wołane z jedynego miejsca, które o awarii wie. To druga w tym tygodniu naprawa tej samej gatunkowo usterki (po `etapRekord` w `P-DOCPRO-POKWITANIE`): gotowy mechanizm, którego nikt nie podłączył.
+
+**Znalezione przez obejrzenie ekranu, nie przez test.** Przy komunikacie łamiącym się na dwie linie (telefon) znak `✕` odklejał się w górę i wyglądał, jakby wisiał nad paskiem — inna interlinia znaku niż tekstu. Wyrównane.
+
+*Strażnicy:* `tests/unit/pasek-statusu.test.mjs` (15) — warstwa wyświetlania na własnym, minimalnym DOM-ie: treść do obu pojemników, podmiana komunikatu zamiast doklejania, nieznany ton wpada na `info`, znak ukryty przed czytnikiem ekranu, **`false` gdy nie ma gdzie pokazać** (to po tym wołający poznaje, że ma sięgnąć po dymek), odnośniki do pól wraz z przypadkami granicznymi. `tests/e2e/pasek-statusu.spec.mjs` (6) — żywa strona: który z dwóch paska jest widoczny przy danej szerokości (przełączane samym `setViewportSize`, bez przeładowania), braki z odnośnikiem prowadzącym wprost do pola, **osobny pomiar zegarem, że po 4 s komunikat nadal stoi** (to jest cała przyczyna tej zmiany), ton `uwaga` przy braku sesji, ton `blad` plus czerwony chip przy awarii sejfu, oraz kontrola negatywna: podpowiedź wygaszonego przycisku nie trafia na pasek.
+
+**Pułapka warta zapamiętania przy pisaniu testów e2e dla `index.html`:** dopóki nikt nie jest zalogowany, cała treść strony stoi pod `visibility:hidden` (brama logowania), więc Playwright uznaje **każdy** element za niewidoczny — także działający poprawnie. Testy widoczności muszą założyć własne, fikcyjne konto sejfu; pierwsza wersja tego pliku mierzyła bramę zamiast paska.
+
 ### P-TOZSAMOSC-PYTAJ — sejf pyta, kim jest pacjent, zamiast zgadywać (SW 1.0.933, 2026-09-14, zlecenie właściciela)
 
 **Stan przed zmianą.** Sejf dopasowuje pacjenta po znormalizowanym nazwisku (`Wa()`). Dwa układy zostawiały go bez rozstrzygnięcia: zapisywany ma datę urodzenia, ale **któryś imiennik w bazie jej nie ma**; albo daty **nie ma nigdzie**, a imienników jest więcej niż jeden. W obu sejf sam wybierał „nowy pacjent", a o tym, że w ogóle było co rozstrzygać, informował **po fakcie** — dymkiem gasnącym po 2,5 s.

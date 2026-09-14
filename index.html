@@ -92,6 +92,7 @@
 <link href="vilda_chrome.css?v=36" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=68" rel="stylesheet">
 <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet">
+<link href="vilda_status_bar.css?v=1" rel="stylesheet">
 <link href="vilda_obesity_banner.css?v=3" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
@@ -265,8 +266,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
 <script defer src="vilda_dob_age.js?v=5"></script>
-<script defer src="vilda_data_import_export.js?v=75"></script>
-<script defer src="vilda_save_status_indicator.js?v=25"></script>
+<script defer src="vilda_status_bar.js?v=1"></script>
+<script defer src="vilda_data_import_export.js?v=76"></script>
+<script defer src="vilda_save_status_indicator.js?v=26"></script>
 <script defer src="vilda_unsaved_guard.js?v=5"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
 <script defer src="vilda_blum_iss.js?v=2"></script>
@@ -447,6 +449,12 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <form id="calcForm" onsubmit="return false;">
   <div class="half">
     <fieldset class="user-card">
+      <!-- P-PASEK-STATUSU (decyzja właściciela 2026-09-14) — wariant B: pasek statusu zapisu
+           na górze formularza. Widoczny TYLKO przy zwiniętych kolumnach (poniżej 700 px),
+           bo wtedy prawa kolumna spada pod cały formularz i byłaby najdalej od pól.
+           Bliźniak dla szerokiego ekranu stoi w prawej kolumnie (#vildaStatusSide).
+           Treść wpisuje vilda_status_bar.js; pusty pasek jest ukryty. -->
+      <div id="vildaStatusForm" data-vilda-status role="status" aria-live="polite" hidden></div>
       <!-- Zmodyfikowane pole wieku: lata oraz opcjonalnie miesiące -->
       <!-- P-SPLIT (2026-06-23): rozdzielone Nazwisko/Imię. #name pozostaje UKRYTYM
            „kanonem" (czyta je kolektor, restore, autosave i wspólne sharedUserData oraz
@@ -659,6 +667,11 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 
   <!-- Pole dla lekarzy: kontrolka wejścia do modułu lekarskiego oraz weryfikacja numeru PWZ -->
   <div class="half">
+    <!-- P-PASEK-STATUSU (decyzja właściciela 2026-09-14) — wariant D: pasek statusu zapisu
+         w prawej kolumnie, czyli tam, gdzie aplikacja już mówi na stałe (#infoMessages).
+         Widoczny TYLKO przy dwóch kolumnach (od 700 px). Bliźniak dla wąskiego ekranu stoi
+         na górze formularza (#vildaStatusForm). -->
+    <div id="vildaStatusSide" data-vilda-status role="status" aria-live="polite" hidden></div>
     <!-- Przeniesione podsumowanie poprzednich pomiarów nad sekcję modułu lekarskiego.
          Karta jest domyślnie ukryta, a jej elementy są uporządkowane tutaj,
          dzięki czemu pojawia się przed przyciskiem „Przejdź do modułu lekarskiego”. -->

@@ -1,0 +1,72 @@
+/* vilda_status_bar.css — stały pasek statusu zapisu (P-PASEK-STATUSU, 2026-09-14).
+
+   Rozmieszczenie wybrane przez właściciela: wariant D na desktopie, B na telefonie.
+   Próg 700 px jest TEN SAM, na którym `#calcForm` przechodzi z jednej kolumny na dwie
+   (style.css) — inaczej pasek znikałby albo dublował się w pasie pośrednim. */
+
+[data-vilda-status] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius, 8px);
+  border-left: 4px solid var(--vilda-status-ton, #00838d);
+  background: #fff;
+  color: #2c3838;
+  box-shadow: var(--shadow, 0 2px 6px rgba(0, 0, 0, .08));
+}
+[data-vilda-status][hidden] { display: none !important; }
+
+[data-vilda-status][data-ton="ok"] { --vilda-status-ton: #15803d; background: #f2fbf5; }
+[data-vilda-status][data-ton="uwaga"] { --vilda-status-ton: #b45309; background: #fffaf1; }
+[data-vilda-status][data-ton="blad"] { --vilda-status-ton: #c62828; background: #fdf4f4; }
+[data-vilda-status][data-ton="info"] { --vilda-status-ton: #00838d; background: #f3fafa; }
+[data-vilda-status][data-ton="nowy"] { --vilda-status-ton: #6d28d9; background: #f9f5ff; }
+
+.vilda-status-znak {
+  flex: 0 0 auto;
+  font-weight: 700;
+  /* Ta sama interlinia co tekst — inaczej przy komunikacie łamiącym się na dwie linie
+     (telefon) znak odkleja się w górę i wygląda, jakby wisiał nad paskiem. */
+  line-height: 1.45;
+  color: var(--vilda-status-ton, #00838d);
+}
+.vilda-status-tresc { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.vilda-status-tekst { overflow-wrap: anywhere; }
+.vilda-status-meta {
+  font-size: 0.76rem;
+  color: #5c6d6d;
+  font-variant-numeric: tabular-nums;
+}
+
+.vilda-status-link {
+  font: inherit;
+  color: var(--vilda-status-ton, #00838d);
+  background: none;
+  border: 0;
+  padding: 0;
+  width: auto;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.vilda-status-link:hover { text-decoration-thickness: 2px; }
+.vilda-status-link:focus-visible {
+  outline: 2px solid var(--vilda-status-ton, #00838d);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Wariant B — góra formularza. Widoczny TYLKO przy zwiniętych kolumnach. */
+#vildaStatusForm { margin-bottom: 0.8rem; }
+/* Wariant D — prawa kolumna. Widoczny TYLKO przy dwóch kolumnach. */
+#vildaStatusSide { margin-bottom: 0.8rem; }
+
+@media (min-width: 700px) {
+  #vildaStatusForm { display: none !important; }
+}
+@media (max-width: 699px) {
+  #vildaStatusSide { display: none !important; }
+}

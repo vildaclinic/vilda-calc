@@ -151,7 +151,11 @@ describe('Okablowanie', () => {
   });
 
   it('zablokowany zapis nazywa braki i wskazuje pierwsze pole', () => {
-    expect(src).toContain('const Bb=Bbraki(a);if(Bb.length)return O(o,Bkomunikat(Bb),t),Bwskaz(Bb),null;');
+    // P-PASEK-STATUSU (2026-09-14): to samo wywołanie niesie teraz ton i LISTĘ braków —
+    // pasek robi z nich odnośniki do pól. Reszta twierdzenia bez zmian: zapis się nie
+    // odbywa (`null`), komunikat nazywa braki, a kursor ląduje na pierwszym z nich.
+    expect(src).toContain('const Bb=Bbraki(a);if(Bb.length)return O(o,Bkomunikat(Bb),t,');
+    expect(src).toContain('{ton:"blad",pola:Bb}),Bwskaz(Bb),null;');
   });
 
   it('timer wygaszania dymka rusza wyłącznie swój własny dymek', () => {
