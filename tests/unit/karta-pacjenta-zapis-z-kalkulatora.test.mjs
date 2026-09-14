@@ -506,7 +506,11 @@ describe('P14b — okablowanie aplikacji', () => {
   it('główny „Zapisz" deklaruje sejfowi wczytaną kopię', () => {
     const kod = zrodlo('vilda_data_import_export.js');
     expect(kod.includes('return n.savePatient(a)'), 'zapis bez żadnej deklaracji').toBe(false);
-    expect(kod, 'zapis przekazuje baselinePayload').toContain('n.savePatient(a,{baselinePayload:');
+    // P-DUP (2026-09-14) przeniósł opcje zapisu do zmiennej, bo doszło do nich `patientId`
+    // wczytanego pacjenta. Deklaracja kopii bazowej ma zostać nietknięta — pilnujemy jej
+    // w nowym kształcie, zamiast pinować literał, który już nie istnieje.
+    expect(kod, 'opcje zapisu nadal niosą baselinePayload').toContain('{baselinePayload:Bb0');
+    expect(kod, 'opcje trafiają do savePatient').toContain('n.savePatient(a,Be4)');
     expect(kod, 'kopia bierze się z lastLoadedData').toContain('r.lastLoadedData&&typeof r.lastLoadedData=="object"');
   });
 

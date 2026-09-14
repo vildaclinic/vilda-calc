@@ -1098,6 +1098,40 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-DUP — ten sam pacjent zapisywał się jako nowy; „Wyczyść wszystkie pola" zostawiało datę urodzenia (SW 1.0.928, 2026-09-14, zgłoszenie właściciela)
+
+**Zgłoszenie.** Lekarz wczytał pacjenta z bazy, dopisał w formularzu głównym datę urodzenia, dodał nowe pomiary i zapisał. Aplikacja zapisała go jako **nowego** pacjenta, a zakładka Pacjenci pokazała duplikat („różni pacjenci — rozróżnij datą urodzenia, scalanie niemożliwe"). Od tej chwili **każdy** kolejny zapis tego pacjenta tworzył następną kopię — po czterech zapisach w bazie były cztery kopie tego samego dziecka, niezależnie od tego, czy szło się przez „Odtwórz zapis", czy „Nowy pomiar".
+
+**Mechanizm.** Główny „Zapisz" wołał `savePatient(payload, …)` **bez `patientId`**, więc sejf wyprowadzał tożsamość z pary (nazwisko, `dobISO`) w `Wa()`:
+
+- **z datą urodzenia** — szuka rekordu o tym samym nazwisku *i* tej samej dacie. Stary rekord daty nie miał, więc dopasowanie nie zachodziło; skoro nie wszyscy kandydaci mają datę, wynik to `ambiguous`, a `savePatient` przy `ambiguous` generuje **nowe id**;
+- **bez daty urodzenia** — dopasowuje tylko wtedy, gdy kandydat jest **dokładnie jeden**. Po powstaniu pierwszego duplikatu kandydatów było dwóch, więc znów `ambiguous` → nowe id.
+
+Stąd kumulacja: pierwszy błąd tworzył warunki dla wszystkich następnych. Data urodzenia w formularzu głównym (DOB-AGE-1) nie stworzyła tej wady — **ujawniła** ją, bo dopiero ona pozwala dopisać datę do istniejącego rekordu.
+
+**Tożsamość była pod ręką.** `custom-fixes.js` ustawia `window._vildaCurrentPatientId` oraz `sessionStorage.vildaCurrentPatientId` ze zdarzenia `vilda:patient-loaded`. Zapis po prostu z tego nie korzystał — w kodzie stał nawet komentarz „Główny «Zapisz» nie zna wersji rekordu, na której pracuje lekarz".
+
+**Zmiana.**
+
+1. **`vilda_data_import_export.js` (1.17.0 → 1.18.0)** — `BdupId()` podaje id wczytanego pacjenta jako `opts.patientId`. Rekord aktualizuje się w miejscu, a `Nn()` i tak przepisuje całą główkę, więc przy okazji trafia do niej data urodzenia.
+2. **`vilda_vault.js` (178 → 179)** — publiczne `normalizePatientName` (dotąd wewnętrzne `Ne`). Bez zmiany zachowania.
+
+**Bramka jest tu istotniejsza niż sama poprawka.** Id niesiemy **tylko** gdy jest wczytany rekord (`lastLoadedData`) **i** zgadza się znormalizowane nazwisko. Bez niej lekarz, który po wczytaniu pacjenta A wpisałby do formularza dane dziecka B, **nadpisałby rekord A**. Duplikat jest kłopotliwy; ciche nadpisanie cudzego rekordu jest groźne — przy każdej wątpliwości wracamy do zachowania sprzed zmiany. Normalizację bierzemy z sejfu, żeby obie strony liczyły dokładnie to samo, zamiast trzymać drugą kopię reguły.
+
+**Czego ta zmiana NIE robi.** Nie scala duplikatów, które już powstały — zatrzymuje ich mnożenie. Nie rusza `Wa()` w sejfie: kuszące „jeden kandydat o tym samym nazwisku bez daty = ten sam pacjent, uzupełnij datę" scalałoby po cichu **dwoje różnych dzieci** o tym samym nazwisku, gdy lekarz nie wczytał rekordu. Nie zmienia też tego, że `ambiguous` kończy się utworzeniem nowego pacjenta zamiast zapytaniem — to decyzja do osobnego rozstrzygnięcia. Nie rusza zmiany nazwiska: do tego jest `vilda_name_fix.js`.
+
+### P-DOB-CLR — „Wyczyść wszystkie pola" zostawiało datę urodzenia (część tej samej zmiany)
+
+**Zgłoszenie.** Przycisk „Wyczyść wszystkie pola" nie kasował nowego pola z datą urodzenia, więc kolejny pacjent zaczynał z datą poprzedniego — a data blokuje pola wieku, więc formularz zostawał zablokowany na cudzej dacie.
+
+**Gdzie leżał problem.** Moduł daty **umie** się wyczyścić: `odblokujPoWyczyszczeniuPacjenta()` zdejmuje blokadę, kasuje datę i tygodnie, i nasłuchuje `vilda:user-state-cleared`. Tyle że `clearAllData` tego zdarzenia **nie wysyła** (wysyła je wylogowanie i kilka innych ścieżek).
+
+**Zmiana.** `vilda_dob_age.js` (3 → 4) udostępnia `clearAll`, a `clearAllData` woła je wprost. Świadomie **nie** rozgłaszamy `vilda:user-state-cleared` z przycisku czyszczenia: słuchają go także antybiotyki, cukrzyca, obwody, karty podsumowań i monitory terapii, więc wyczyszczenie formularza zresetowałoby przy okazji połowę aplikacji. `clearAll` różni się od `clear()` (przycisk „×" przy polu), który celowo nie rusza daty pochodzącej z rekordu i oddaje fokus do pola.
+
+*Strażnicy:* `tests/unit/tozsamosc-pacjenta-przy-zapisie.test.mjs` (14: niesienie id, odczyt z `sessionStorage`, odporność normalizacji na wielkość liter i ogonki, bramka nazwiska, brak wczytanego rekordu, puste nazwy, brak sejfu, sejf bez `normalizePatientName`, `sessionStorage` rzucający wyjątkiem, brak okna, okablowanie zapisu). `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` (3: odtworzenie zgłoszonego przebiegu, powtarzane zapisy, bramka przy zmianie nazwiska). `tests/e2e/data-urodzenia-wiek.spec.mjs` (+1: czyszczenie daty, tygodni i blokady wieku). **Zmierzone czerwone:** 14/14 jednostkowych oraz test czyszczenia pól.
+
+*Uwaga o teście e2e:* prawdziwa ścieżka „Wczytaj tego pacjenta" siedzi w domknięciu `vilda_auth_ui.js` i nie da się jej wywołać z testu, więc wczytanie odtwarzamy przez `applyLoadedData` + zdarzenie `vilda:patient-loaded` — czyli te same funkcje produkcyjne, których używa aplikacja. Przy takim wywołaniu pola liczbowe formularza są zerowane asynchronicznie (zachowanie sprzed tej zmiany, sprawdzone na wersji z HEAD), dlatego test czeka na to zerowanie, zanim cokolwiek wpisze.
+
 ### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
 
 **Zgłoszenie.** Przy pracy nad datą urodzenia wyszedł defekt istniejący od dawna, niezależny od rat 1–3. Właściciel poprosił o poszukanie tablic WHO w rozdzielczości dziennej, „żeby tygodnie realnie zmieniały centyl"; po zmierzeniu skali problemu okazało się, że tablice dzienne nie są do tego potrzebne. Właściciel: „ruszaj".
