@@ -1098,6 +1098,31 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-TOZSAMOSC-PYTAJ — sejf pyta, kim jest pacjent, zamiast zgadywać (SW 1.0.933, 2026-09-14, zlecenie właściciela)
+
+**Stan przed zmianą.** Sejf dopasowuje pacjenta po znormalizowanym nazwisku (`Wa()`). Dwa układy zostawiały go bez rozstrzygnięcia: zapisywany ma datę urodzenia, ale **któryś imiennik w bazie jej nie ma**; albo daty **nie ma nigdzie**, a imienników jest więcej niż jeden. W obu sejf sam wybierał „nowy pacjent", a o tym, że w ogóle było co rozstrzygać, informował **po fakcie** — dymkiem gasnącym po 2,5 s.
+
+**Dlaczego to nie była kosmetyka.** Oba możliwe wyjścia są błędami **przeciwnymi**, a automat nie ma jak zgadnąć, który zachodzi:
+
+| co naprawdę zachodzi | skutek wyboru „nowy pacjent" | skutek scalenia |
+| --- | --- | --- |
+| to samo dziecko (stary rekord bez daty urodzenia) | historia rozjeżdża się na dwa rekordy — ta sama klasa usterki co `P-DUP` | prawidłowo |
+| dwóch imienników | prawidłowo | jedna siatka wzrastania z pomiarami dwojga dzieci |
+
+Dlatego decyzja należy do lekarza. Aplikacja o nią pyta i niczego nie scala sama.
+
+**Umowa — ta sama, co przy bramce wierszy pomiarowych.** Sejf nie zna interfejsu; woła zarejestrowaną funkcję (`setPatientIdentityResolver`, wzorzec przepisany z `setSaveConflictResolver`) i przyjmuje `{akcja:"dopisz",patientId}` | `{akcja:"nowy"}` | `{akcja:"anuluj"}`. **Brak resolvera, wyjątek w nim, odpowiedź nieznana albo `patientId` spoza listy kandydatów zostawiają DOTYCHCZASOWE zachowanie** — nowy pacjent z ostrzeżeniem. Strona, która nie zarejestrowała okna, działa jak wcześniej. `anuluj` rzuca ten sam błąd z flagą `vildaSaveAborted`, którą kolektor już obsługuje.
+
+**Okno.** `Gz2()` w `vilda_auth_ui.js`, w tym samym arkuszu i CSS, co pytanie o zapis na starszej kopii. Każdy kandydat to osobny przycisk: nazwisko, a pod nim to, po czym lekarz naprawdę ich rozróżnia — data urodzenia **albo słowo „bez daty urodzenia"** (bo to właśnie jej brak wywołuje pytanie), wiek, płeć, data ostatniego zapisu i liczba wersji.
+
+**Znalezione przez obejrzenie okna, nie przez test.** Dwie karty potrafią mieć **identyczny opis**: to samo nazwisko, ten sam wiek, ta sama płeć, obie bez daty urodzenia. Wtedy pytanie „który to pacjent?" jest nie do odpowiedzenia. Dlatego kandydat niesie też krótki skrót identyfikatora (`shortHashOfPatientId`) — jedyną rzecz, która różni ich zawsze.
+
+**Odmiana liczebników jest częścią poprawności.** „jest już 1 pacjent", „są już 2 pacjenci", „jest już 5 pacjentów"; „1 wersja", „3 wersje", „5 wersji", „12 wersji", „22 wersje". Zdanie, które się nie odmienia, czyta się jak automat — a to jest komunikat, na podstawie którego lekarz podejmuje decyzję o tożsamości pacjenta.
+
+**Komunikat po zapisie.** Ostrzeżenie „Uwaga: istnieje już pacjent o tym nazwisku…" należy się **tylko wtedy, gdy o nowym pacjencie zdecydował automat**. Gdy lekarz sam wybrał w oknie, kolektor melduje „Zapisano jako nowego pacjenta: X — zgodnie z Twoim wyborem." Strofowanie za własną decyzję nie jest informacją.
+
+*Strażnicy:* `tests/unit/tozsamosc-pacjenta-pytanie.test.mjs` (20) — zachowaniowe, na prawdziwym sejfie z magazynem w pamięci: kiedy pyta, a kiedy nie (nowe nazwisko, ta sama data, różne daty, `patientId`, `forceNew`, `dedup:false`, `pytajOTozsamosc:false`), co robi każda z trzech odpowiedzi, cztery drogi awaryjne (brak okna, wyjątek, odpowiedź nieznana, `patientId` spoza kandydatów), zawartość kandydata oraz odmiana liczebników. `tests/e2e/tozsamosc-pacjenta-pytanie.spec.mjs` (4) — żywe okno na `index.html`: klik w kandydata dopisuje do jego karty, „To inne dziecko" zakłada drugą, „Anuluj zapis" nie zapisuje nic, a przy zgodnych datach okno nie pojawia się wcale. **Zmierzona czerwień:** jednostkowo **18 z 20**, e2e **3 z 4** przeciwko wersji sprzed zmiany; testy, które przechodzą po obu stronach, pilnują BRAKU zmiany tam, gdzie zmiany być nie miało.
+
 ### P-DOCPRO-POKWITANIE — DocPro liczył bez danych pokwitaniowych (SW 1.0.932, 2026-09-14, zlecenie właściciela)
 
 **Zgłoszenie i kierunek.** Przy przeglądzie połączeń między formularzem głównym a Kartą Pacjenta wyszło, że `docpro.html` ma pełną kartę „Zaawansowane obliczenia wzrostowe", ale **ani jednego pola pokwitaniowego**: nie ma tam `tannerStage`, `advTesticularVolume`, `advFamilyDelayedPuberty` ani `advGrowthExclusion`. Ten sam pacjent dostawał więc na DocPro uboższy wynik niż na stronie głównej. Właściciel wskazał kierunek: *„docpro po prostu może dziedziczyć [...] ze strony głównej, tak żeby nie mnożyć obliczeń, jak strona docpro będzie czegoś potrzebować to niech «zapyta o to albo weźmie to» ze strony głównej serwisu"*.
