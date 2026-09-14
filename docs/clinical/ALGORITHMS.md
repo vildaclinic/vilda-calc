@@ -1098,6 +1098,28 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-KOLEJNOSC-WERSJI — o tym, która wersja rekordu jest bieżąca, rozstrzygał los (SW 1.0.935, 2026-09-14, zlecenie właściciela)
+
+**Skąd się wzięło.** Nie ze zgłoszenia, tylko z **czerwonego przebiegu CI**: mój własny test twierdził „pomiar trafił do tej karty", a sprawdzał to przez `snapshots[0]`. Lokalnie przechodził 5/5, na CI padł. Przyczyną nie był test.
+
+**Usterka.** Sejf sortuje wersje malejąco: `savedAtISO` → `updatedAtISO` → `rev` → `snapshotId`. `savedAtISO` ma rozdzielczość **milisekundy**, a świeżo utworzona wersja ma zawsze `rev: 0`. Dwa zapisy tego samego pacjenta w tej samej milisekundzie schodziły więc do ostatniego kryterium — **losowego UUID-a**. Zmierzone: na CI druga wersja lądowała na liście **pierwsza**; w pomiarze powtórzonym pięć razy kolejność wychodziła raz `[30, 31, 32]`, raz `[31, 32, 30]`.
+
+**Dlaczego to nie jest drobiazg.** `snapshots[0]` to jest to, co Karta Pacjenta pokazuje jako **aktualne dane pacjenta** i co zwraca `getLatestSnapshot()`. Dla klikającego człowieka dwa zapisy w jednej milisekundzie są nieosiągalne — ale import, synchronizacja, moduł GH i każdy automat robią to bez trudu.
+
+**Poprawka.** `seq` — numer kolejny wersji **w obrębie pacjenta**, nadawany przy tworzeniu. Nie zastępuje żadnego z dotychczasowych kryteriów: wchodzi dokładnie tam, gdzie dotąd decydował los (przed `snapshotId`), i **tylko wtedy, gdy obie porównywane wersje go mają**. Dzięki temu dane sprzed tej zmiany zachowują się identycznie jak wcześniej.
+
+**Numer nie kosztuje odczytu.** Bierze się z głowy rekordu, którą sejf i tak już czyta (`Bc0`). Głowa zawsze ma numer najwyższy: przy różnych znacznikach czasu nowsza wersja jest i późniejsza, i utworzona później, a przy równych to właśnie numer rozstrzyga, która jest głową. **Pierwsza wersja tej poprawki czytała historię drugi raz — i złapał to strażnik `K2` („brama nie podwaja odczytów historii rekordu"), postawiony przy wcześniejszym audycie.** Test miał rację, implementacja nie.
+
+**Samo się leczy.** Rekord sprzed tej zmiany nie ma numeru w głowie: nowa wersja dostaje wtedy 1, kolejna 2 i tak dalej. Stare wersje zostają bez numeru, a że porównanie wymaga numeru po obu stronach, mieszanka zachowuje się jak wcześniej — pary, o które chodzi, i tak są zawsze dwiema **nowymi** wersjami.
+
+**Numer trzeba przenosić.** Rekord wersji jest przepisywany w ośmiu miejscach — edycja treści, synchronizacja (dwie gałęzie), import z koperty, odtworzenie kopii zapasowej (dwie gałęzie). Pominięcie choćby jednego kasowałoby numer **po cichu**, a wersja wracałaby do losowania; żaden test zachowaniowy by tego nie zauważył, dopóki nie trafiłby akurat w tę samą milisekundę. Stąd osobny strażnik spisowy.
+
+**Czego to NIE rozwiązuje** (powiedziane wprost, bo łatwo o złudzenie kompletności): dwóch **równoległych** zapisów tego samego pacjenta z dwóch kart naraz. Obie odczytałyby tę samą głowę i dostały ten sam numer — wtedy zostaje stara, losowa rozstrzygalność. Kolejność między urządzeniami i tak nie ma lokalnego sensu, a prawdziwe rozwiązanie wymagałoby transakcji.
+
+**Zaobserwowane przy okazji, nietknięte:** edycja starszej wersji przesuwa ją na czoło listy, bo `updatedAtISO` jest kryterium wyższym niż numer. To reguła sprzed tej zmiany; zapisana tutaj, żeby nie wyglądała na skutek uboczny.
+
+*Strażnicy:* `tests/unit/kolejnosc-wersji.test.mjs` (9) — zachowaniowe, na prawdziwym sejfie z magazynem w pamięci: numery rosną i są osobne dla każdego pacjenta, **zamrożony zegar stawia trzy zapisy w tej samej milisekundzie** i bieżącą zostaje najnowsza, wynik jest powtarzalny w pięciu próbach, edycja nie kasuje numeru, plus spis pilnujący, że żadne z ośmiu miejsc zapisu wersji numeru nie gubi. **Zmierzona czerwień: 8 z 9** przeciwko wersji sprzed zmiany, z kolejnością wychodzącą za każdym razem inaczej.
+
 ### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
 
 **Stan przed zmianą.** Wszystkie komunikaty zapisu — **piętnaście** różnych zdań, od „Nie zapisano — uzupełnij…" po „Nie udało się zapisać pacjenta" — szły przez `showTooltip()`: dymek przy przycisku, gasnący po **2500 ms** i znikający z DOM bez śladu. Trzy wady naraz:
