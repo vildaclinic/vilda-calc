@@ -1098,6 +1098,38 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-CICHY-ZAPIS — nieudany zapis nie mówił nic (SW 1.0.930, 2026-09-14, zgłoszenie właściciela)
+
+**Zgłoszenie.** „`saveUserData()` zwraca null przy niekompletnym formularzu, komunikat tylko przy przycisku. Dziś potknąłem się o to dwa razy przy pisaniu testów; Ciebie przy pracy też może to minąć."
+
+**Znalezisko okazało się szersze niż zgłoszenie.** Komunikat nie był „tylko przy przycisku" — **nie było go w ogóle**. Wszystkie **11** komunikatów tego modułu wisiało na `f("saveDataBtn")` albo `f("loadDataBtn")`, a **obu tych przycisków dawno nie ma w HTML**: opcje zapisu i wczytywania przeniesiono do menu, co `index.html` mówi wprost w komentarzu. `showTooltip(el, tekst)` zaczyna się od `if (!el || !tekst) return;`, więc przy pustej kotwicy milczy — a `O()` i tak meldowało sukces (`return o(e,t),!0`), więc awaryjny `alert` nigdy nie miał szansy się odezwać.
+
+Ciche były zatem także: „Zaloguj się, aby zapisać dane pacjentów", „Brak modułu zapisu — odśwież stronę", „Zapis anulowany — nic nie zmieniono" oraz **„Nie udało się zapisać pacjenta: …"** — czyli komunikat o prawdziwym błędzie zapisu.
+
+Zmierzone w przeglądarce **przed** poprawką, formularz bez wieku i wagi:
+
+```
+saveUserData() → null · .menu-tooltip → 0 sztuk · alert → brak
+```
+
+**Zmiana.**
+
+1. **`vilda_data_import_export.js` (1.19.0 → 1.20.0)** — `Bkotw()` wybiera kotwicę spośród elementów, które **naprawdę istnieją i są widoczne** (`saveDataBtn` → `saveDataBtnSidebar` → `loadDataBtn` → `clearAllDataBtn`); gdy nie ma żadnej, `O()` schodzi do `alert`, bo błąd zapisu danych pacjenta nie może zginąć po cichu. To naprawia **wszystkie 11** komunikatów naraz, nie tylko zapis;
+2. **tamże** — przy zablokowanym zapisie `Bbraki()` wylicza **konkretne** braki zamiast wymieniać za każdym razem wszystkie trzy pola, `Bkomunikat()` składa z nich zdanie, a `Bwskaz()` przewija do pierwszego brakującego pola i stawia w nim kursor: komunikat mówi **czego** brakuje, kursor pokazuje **gdzie**;
+3. **`app.js`** — timer wygaszania dymka działał na zmiennej globalnej, więc licznik **starego** dymka gasił **nowszy**: dwa komunikaty pod rząd w ciągu 2,5 s i drugi znikał niemal natychmiast. Teraz każdy timer rusza wyłącznie swój własny dymek.
+
+Zmierzone **po** poprawce, trzy różne braki pod rząd:
+
+| formularz | komunikat | kursor |
+| --- | --- | --- |
+| bez wieku i wagi | „Nie zapisano — uzupełnij: wiek i masę ciała." | `#age` |
+| bez samej wagi | „Nie zapisano — uzupełnij: masę ciała." | `#weight` |
+| bez nazwiska | „Nie zapisano — uzupełnij: imię i nazwisko." | `#lastName` |
+
+**Czego ta zmiana NIE robi.** Nie zmienia **kiedy** zapis jest dozwolony — te same warunki, te same progi. Nie dodaje nowego elementu do stron; kotwicą bywa przycisk czyszczenia pól, bo stoi w formularzu obok miejsca, w które lekarz i tak patrzy. Nie rusza wskaźnika stanu zapisu (`VildaSaveStatusIndicator`), który pokazuje powodzenie.
+
+*Strażnicy:* `tests/unit/nieudany-zapis-mowi-dlaczego.test.mjs` (16: komplet bez komunikatu, jeden/dwa/trzy braki i ich odmiana, brak nazwiska, kolejność braków za kolejnością pól, wiek zero dozwolony a masa i wzrost nie, brak sekcji `user`, wybór kotwicy z pominięciem ukrytej i nieistniejącej, brak kotwicy → null, widoczność po wymiarach, wyjątek przy odczycie, okablowanie `O()` i timera dymka). `tests/e2e/nieudany-zapis-mowi-dlaczego.spec.mjs` (2: trzy braki pod rząd z kursorem na właściwym polu, komplet danych bez straszenia brakami). **Zmierzone czerwone:** 16/16 jednostkowych i 2/2 e2e.
+
 ### P-PERINATAL — zapis z formularza głównego kasował „Dane okołoporodowe" (SW 1.0.929, 2026-09-14, zgłoszenie właściciela)
 
 **Zgłoszenie.** Właściciel poprosił o analizę, czy „Dane pokwitaniowe" z formularza głównego oraz „Dane okołoporodowe" i „Dojrzewanie płciowe" z Karty Pacjenta są ze sobą prawidłowo połączone i czy jednakowo wpływają na obliczenia, zwłaszcza w karcie „Zaawansowane obliczenia wzrostowe".
