@@ -25,6 +25,14 @@
  * trajektorii; tutaj ta sama reguła obowiązuje wszystkich konsumentów. Etap wpisany w bieżącym
  * formularzu nie ma daty i jest zawsze traktowany jako aktualny.
  *
+ * STRONY BEZ FORMULARZA GŁÓWNEGO (zgłoszenie właściciela 2026-09-14): DocPro ma kartę
+ * „Zaawansowane obliczenia wzrostowe", ale nie ma ANI JEDNEGO pola pokwitaniowego — temu
+ * samemu pacjentowi dawała więc uboższy wynik niż strona główna. Zamiast powielać tam pola
+ * i obliczenia, moduł bierze brakujące wartości z rekordu pacjenta, przez jedne drzwi
+ * (`VildaPubertySource.zPolaLubRekordu`). Rozstrzyga OBECNOŚĆ pola, nie jego wypełnienie:
+ * puste pole na stronie, która je ma, znaczy „dziś nie oceniono" i rekord go nie nadpisuje.
+ * Dlatego na stronie głównej ta zmiana nie przestawia niczego.
+ *
  * CZEGO TU NIE MA: żadnego zgadywania. Moduł nie podstawia etapu z wieku (opcja
  * „automatycznie z wieku" nigdy niczego nie podstawiała — etykieta obiecywała coś,
  * czego kod nie robił) i nie przelicza menarche na wiek startu pokwitania.
@@ -32,7 +40,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '4';
+  var VERSION = '5';
 
   // Ta sama liczba, co P.TANNER_FRESH_M w vilda_trajectory_analysis.js.
   var SWIEZOSC_MIES = 12;
@@ -87,6 +95,41 @@
     if (t === 'K' || t === 'F' || t === 'FEMALE' || t === 'GIRL') return 'F';
     if (t === 'M' || t === 'MALE' || t === 'BOY') return 'M';
     return '';
+  }
+
+  function zrodlo() {
+    try { return w.VildaPubertySource || null; } catch (e) { return null; }
+  }
+
+  /* Wartość pola „stanu na dziś" — z ekranu tam, gdzie pole jest, z rekordu tam, gdzie go
+   * nie ma. Sama reguła mieszka w `vilda_puberty_source.js`; tutaj tylko z niej korzystamy,
+   * żeby obie karty czytały przez te same drzwi. Bez modułu źródłowego (strona, która go nie
+   * ładuje) zostaje zwykły odczyt z ekranu — czyli dzisiejsze zachowanie. */
+  function stanPola(id) {
+    var p = zrodlo();
+    if (p && typeof p.zPolaLubRekordu === 'function') {
+      try { return String(p.zPolaLubRekordu(id) || '').trim(); } catch (e) { /* poniżej */ }
+    }
+    return wartosc(id);
+  }
+
+  function wiekWpisuZRekordu() {
+    var p = zrodlo();
+    try {
+      return p && typeof p.wiekStanuMies === 'function' ? p.wiekStanuMies() : null;
+    } catch (e) { return null; }
+  }
+
+  /* Wiek bieżący w miesiącach — potrzebny WYŁĄCZNIE po to, żeby dało się zmierzyć wiek
+   * stadium wziętego z rekordu. Najpierw to, co podał konsument, potem pola wieku, które
+   * ma i formularz główny, i DocPro. */
+  function wiekTerazZEkranu(i) {
+    var lat = liczba(i.wiekLat);
+    if (lat != null) return lat * 12;
+    var l = liczba(wartosc('age'));
+    var m = liczba(wartosc('ageMonths'));
+    if (l == null && m == null) return null;
+    return (l == null ? 0 : l) * 12 + (m == null ? 0 : m);
   }
 
   /* Rozstrzygnięcie etapu wobec reguły świeżości. Czysta funkcja — bez DOM, żeby dało się
@@ -218,11 +261,18 @@
     var gnrhaStartDom = liczba(wartosc(POLA_DOM.gnrhaStart));
     var gnrhaStopDom = liczba(wartosc(POLA_DOM.gnrhaStop));
     var kowdDom = wartosc(POLA_DOM.kowd);
+    // Etap Tannera jest „stanem na dziś", nie faktem trwałym — o tym, czy wolno sięgnąć po
+    // zapamiętany, rozstrzyga OBECNOŚĆ pola na stronie. Jest pole (formularz główny) →
+    // liczy się to, co widać, także gdy jest puste. Nie ma pola (DocPro) → wchodzi rekord,
+    // ale przez `ocenEtap`, czyli z regułą świeżości i z uczciwym `etapZrodlo: 'rekord'`.
+    var maPoleEtapu = !!el(POLA_DOM.etap);
     var etap = ocenEtap({
-      etapFormularz: i.etapFormularz != null ? i.etapFormularz : wartosc(POLA_DOM.etap),
-      etapRekord: i.etapRekord,
-      wiekWpisuMies: i.wiekWpisuMies,
-      wiekTerazMies: i.wiekTerazMies
+      etapFormularz: i.etapFormularz != null ? i.etapFormularz
+        : (maPoleEtapu ? wartosc(POLA_DOM.etap) : ''),
+      etapRekord: i.etapRekord != null ? i.etapRekord
+        : (maPoleEtapu ? null : stanPola(POLA_DOM.etap)),
+      wiekWpisuMies: i.wiekWpisuMies != null ? i.wiekWpisuMies : wiekWpisuZRekordu(),
+      wiekTerazMies: i.wiekTerazMies != null ? i.wiekTerazMies : wiekTerazZEkranu(i)
     });
     var out = {
       etap: etap.etap,
@@ -237,7 +287,7 @@
       gnrhaStartLat: gnrhaStartDom != null ? gnrhaStartDom : (rek && rek.gnrhaStartLat != null ? rek.gnrhaStartLat : null),
       gnrhaStopLat: gnrhaStopDom != null ? gnrhaStopDom : (rek && rek.gnrhaStopLat != null ? rek.gnrhaStopLat : null),
       kowd: kowdDom || (rek && rek.kowd ? rek.kowd : ''),
-      jadra: wartosc(POLA_DOM.jadra)
+      jadra: stanPola(POLA_DOM.jadra)
     };
     out.sprzecznosci = sprzecznosci({
       etap: out.etap, plec: i.plec, jadra: out.jadra,

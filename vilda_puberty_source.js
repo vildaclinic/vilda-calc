@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '5';
+  var VERSION = '6';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -41,6 +41,23 @@
   // Deklaracja KOWD jest odpowiedzia lekarza, nie wynikiem automatu — dopuszczalne sa
   // wylacznie te dwie wartosci, brak odpowiedzi zostaje brakiem odpowiedzi.
   var KOWD_DOPUSZCZALNE = { tak: 1, nie: 1 };
+
+  /* STAN NA DZIEŃ POMIARU — cztery pola, których sekcja `puberty` nie zawiera, bo to nie są
+   * fakty trwałe: etap Tannera i objętość jąder zmieniają się z wizyty na wizytę, a wywiad
+   * o rodzinnym opóźnieniu pokwitania i wykluczenie przyczyn wtórnych są oceną z tej wizyty.
+   * Zapisuje je POMIAR — leżą w `user.tannerStage` i w `advanced.*`.
+   *
+   * PO CO TU SĄ: strona bez formularza głównego (DocPro w powłoce `app.html`) nie ma tych
+   * pól w ogóle, a liczy z nich to samo, co strona główna — i bez nich dawała temu samemu
+   * pacjentowi uboższy wynik. Zamiast powielać pola i obliczenia, bierze wartości stąd.
+   * Klucze to identyfikatory pól formularza głównego, żeby konsument nie musiał znać
+   * kształtu rekordu. */
+  var POLA_STANU = {
+    tannerStage: 'etap',
+    advTesticularVolume: 'jadra',
+    advFamilyDelayedPuberty: 'wywiadOpoznienie',
+    advGrowthExclusion: 'wykluczenie'
+  };
 
   function liczba(x) {
     if (typeof x === 'number') return isFinite(x) ? x : null;
@@ -89,6 +106,39 @@
     };
   }
 
+  function tekst(x) {
+    return x == null ? '' : String(x).trim();
+  }
+
+  /* Wiek pomiaru w miesiącach — potrzebny WYŁĄCZNIE do reguły świeżości etapu. Rekord trzyma
+   * go rozbitego na lata i miesiące; brak obu znaczy „nie wiadomo kiedy", a nie „w zerowym
+   * miesiącu życia", więc wtedy zwracamy null i świeżości nie da się ocenić. */
+  function wiekPomiaruMies(user) {
+    if (!user || typeof user !== 'object') return null;
+    var lat = liczba(user.age);
+    var mies = liczba(user.ageMonths);
+    if (lat == null && mies == null) return null;
+    return (lat == null ? 0 : lat) * 12 + (mies == null ? 0 : mies);
+  }
+
+  /* Czysta zamiana payloadu na „stan na dzień pomiaru". Zwraca null, gdy nie ma ANI JEDNEJ
+   * z czterech wartości — sam wiek pomiaru niczego nie niesie. */
+  function stanZPayloadu(payload) {
+    var p = payload && typeof payload === 'object' ? payload : null;
+    if (!p) return null;
+    var u = p.user && typeof p.user === 'object' ? p.user : null;
+    var a = p.advanced && typeof p.advanced === 'object' ? p.advanced : null;
+    var s = {
+      etap: tekst(u ? u.tannerStage : null),
+      jadra: tekst(a ? a.testicularVolume : null),
+      wywiadOpoznienie: tekst(a ? a.familyDelayedPuberty : null),
+      wykluczenie: tekst(a ? a.growthExclusion : null),
+      wiekWpisuMies: wiekPomiaruMies(u)
+    };
+    if (!s.etap && !s.jadra && !s.wywiadOpoznienie && !s.wykluczenie) return null;
+    return s;
+  }
+
   function niesieDane(s) {
     return !!(s && typeof s === 'object'
       && (s.wiekStartuPokwitaniaLat != null || s.wiekMenarcheLat != null
@@ -108,8 +158,9 @@
     var p = payload && typeof payload === 'object' && payload.puberty
       && typeof payload.puberty === 'object' ? payload.puberty : null;
     var we = naWejscie(p);
-    zapamietane = we
-      ? { we: we, plec: plec(payload.user ? payload.user.sex : null) }
+    var stan = stanZPayloadu(payload);
+    zapamietane = (we || stan)
+      ? { we: we, stan: stan, plec: plec(payload && payload.user ? payload.user.sex : null) }
       : null;
     return zapamietane;
   }
@@ -120,6 +171,39 @@
 
   function zKartyPacjenta() {
     return zapamietane ? zapamietane.we : null;
+  }
+
+  function stanBiezacy() {
+    return zapamietane ? zapamietane.stan : null;
+  }
+
+  function pole(id) {
+    try {
+      return w.document && typeof w.document.getElementById === 'function'
+        ? w.document.getElementById(id) : null;
+    } catch (e) { return null; }
+  }
+
+  /* JEDNE DRZWI dla obu konsumentów (statusu pokwitania i karty zaawansowanej): wartość
+   * pola tam, gdzie pole JEST, a wartość z rekordu tam, gdzie pola NIE MA.
+   *
+   * Rozstrzyga OBECNOŚĆ pola, nie jego wypełnienie — i to jest cała reguła. Puste pole na
+   * stronie, która je ma, jest zdaniem lekarza „dziś nie oceniono" i rekord go nie
+   * nadpisuje; strona bez tego pola nie mówi nic i dopiero tam wchodzi rekord. Dzięki temu
+   * na stronie głównej nie zmienia się nic, a DocPro przestaje liczyć bez danych. */
+  function zPolaLubRekordu(id) {
+    var e = pole(id);
+    if (e) return e.value == null ? '' : String(e.value);
+    if (!Object.prototype.hasOwnProperty.call(POLA_STANU, id)) return '';
+    var s = stanBiezacy();
+    return s && s[POLA_STANU[id]] ? s[POLA_STANU[id]] : '';
+  }
+
+  /* Wiek pomiaru, z którego pochodzi zapamiętany stan — konsument porównuje go z wiekiem
+   * bieżącym, żeby zastosować regułę świeżości. */
+  function wiekStanuMies() {
+    var s = stanBiezacy();
+    return s && s.wiekWpisuMies != null ? s.wiekWpisuMies : null;
   }
 
   function plecRekordu() {
@@ -202,6 +286,11 @@
     zapomnij: zapomnij,
     zKartyPacjenta: zKartyPacjenta,
     biezace: biezace,
-    ocenStart: ocenStart
+    ocenStart: ocenStart,
+    POLA_STANU: POLA_STANU,
+    stanZPayloadu: stanZPayloadu,
+    stanBiezacy: stanBiezacy,
+    zPolaLubRekordu: zPolaLubRekordu,
+    wiekStanuMies: wiekStanuMies
   };
 }(typeof window !== 'undefined' ? window : this));

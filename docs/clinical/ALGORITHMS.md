@@ -1098,6 +1098,32 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-DOCPRO-POKWITANIE — DocPro liczył bez danych pokwitaniowych (SW 1.0.932, 2026-09-14, zlecenie właściciela)
+
+**Zgłoszenie i kierunek.** Przy przeglądzie połączeń między formularzem głównym a Kartą Pacjenta wyszło, że `docpro.html` ma pełną kartę „Zaawansowane obliczenia wzrostowe", ale **ani jednego pola pokwitaniowego**: nie ma tam `tannerStage`, `advTesticularVolume`, `advFamilyDelayedPuberty` ani `advGrowthExclusion`. Ten sam pacjent dostawał więc na DocPro uboższy wynik niż na stronie głównej. Właściciel wskazał kierunek: *„docpro po prostu może dziedziczyć [...] ze strony głównej, tak żeby nie mnożyć obliczeń, jak strona docpro będzie czegoś potrzebować to niech «zapyta o to albo weźmie to» ze strony głównej serwisu"*.
+
+**Co brało, a czego nie.** DocPro ładuje te same moduły co strona główna, więc **fakty trwałe** (wiek startu pokwitania, wiek i wzrost przy menarche, wiek kostny przy menarche, GnRHa, deklaracja KOWD) już wcześniej wchodziły z sekcji `puberty` rekordu — `VildaPubertalStatus.dane()` miało dla nich zapas. Brakowało **„stanu na dziś"**: etapu Tannera i objętości jąder. Te nie leżą w sekcji `puberty`, bo nie są faktami trwałymi — zapisuje je POMIAR, w `user.tannerStage` i `advanced.*`.
+
+**Sedno: to był martwy kod.** `ocenEtap()` od początku miało gałąź „weź z rekordu" razem z regułą świeżości (`SWIEZOSC_MIES = 12`), a komentarz modułu opisywał dokładnie ten zamysł („rekord wchodzi tam, gdzie pola nie ma — na stronach bez formularza głównego, np. w karcie DocPro"). **Nikt nigdy nie podawał `etapRekord`** — sprawdzone: jedyne wystąpienia tej nazwy były wewnątrz samego modułu. Gałąź i reguła świeżości nigdy się nie wykonały. `jadra` było jedynym polem w `dane()` **bez żadnego zapasu z rekordu**.
+
+**Reguła: rozstrzyga OBECNOŚĆ pola, nie jego wypełnienie.**
+
+| sytuacja | co wygrywa | dlaczego |
+| --- | --- | --- |
+| pole jest i jest wypełnione (formularz główny) | pole | lekarz widzi tę wartość na ekranie |
+| pole jest i jest puste (formularz główny) | pole | puste pole to odpowiedź „dziś nie oceniono", a nie brak odpowiedzi; rekord sprzed roku nie ma prawa go nadpisać |
+| pola nie ma wcale (DocPro) | rekord | strona nic nie mówi, więc dopiero tu wchodzi pamięć — ale przez `ocenEtap`, czyli z regułą świeżości i z jawnym `etapZrodlo: 'rekord'` |
+
+Z tej reguły wynika własność, na której zależało najbardziej: **na `index.html` nie zmienia się nic.** Dla faktów trwałych zostaje dotychczasowe pierwszeństwo „puste pole → rekord" — tam pusta wartość i zapamiętana nie mogą sobie przeczyć, bo fakt trwały się nie zmienia. Dla „stanu na dziś" przeczyć sobie mogą, i dlatego reguła jest inna. Ten sam podział zastosowano wcześniej w kolektorze (`Bk_POLA`) dla ZAPISU; teraz obowiązuje tak samo przy LICZENIU.
+
+**Jedne drzwi.** Reguła ma jedną implementację — `VildaPubertySource.zPolaLubRekordu(id)`, z mapą `POLA_STANU` kluczowaną identyfikatorami pól formularza głównego. Korzystają z niej dwaj konsumenci: `VildaPubertalStatus.dane()` (etap i jądra) oraz adapter wejścia karty zaawansowanej w `vilda_advanced_growth.js` (jądra, wywiad o rodzinnym opóźnieniu pokwitania, wykluczenie przyczyn wtórnych). Przy okazji kontekst trajektorii w tej karcie przestał czytać `#tannerStage` wprost z DOM i idzie przez te same drzwi — czyli także z regułą świeżości.
+
+**Świeżość wreszcie żyje.** Wiek pomiaru, z którego pochodzi zapamiętany stan, liczony jest z `user.age`/`user.ageMonths` rekordu; wiek bieżący bierze się z tego, co poda konsument, a w drugiej kolejności z pól `#age`/`#ageMonths` (ma je i formularz główny, i DocPro). Etap starszy niż 12 miesięcy jest **ignorowany**, nie tylko oznaczany — i lekarz dostaje `etapPominiety`, żeby wiedzieć, co pominięto.
+
+**Czego świadomie NIE zrobiono.** Nie zaimplementowano dosłownego „dziedziczenia karty Podsumowanie wyników" — DocPro nie renderuje karty ze strony głównej przez granicę ramek powłoki `app.html`. Zrealizowano zasadę, którą właściciel opisał (brać, nie powielać), najtańszą i najmniej ryzykowną drogą: wspólnym źródłem danych wejściowych jest rekord pacjenta, a obliczenie zostaje tam, gdzie było. Rysowanie karty przez ramki to osobna, znacznie większa zmiana.
+
+*Strażnicy:* `tests/unit/docpro-dziedziczy-pokwitanie.test.mjs` (20) — czysta zamiana rekordu na „stan na dzień pomiaru", niezależność obu pamięci (fakt trwały bez stanu i odwrotnie), obie strony reguły obecności pola, granica świeżości, wiek bieżący z pól wieku oraz dowód, że wartość z rekordu **naprawdę wchodzi do obliczeń** (wykrywa sprzeczność „Tanner I wyklucza objętość jąder ≥ 4 ml"). `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs` (2) — pełna droga: własne, fikcyjne konto sejfu, zapis pacjenta, `vilda:patient-loaded`, a potem **zatwierdzony wynik karty** (`window.advancedGrowthData`), nie stan pośredni. **Zmierzona czerwień:** jednostkowo **15 z 20** przeciwko wersji sprzed zmiany; e2e — test DocPro czerwony (`etap` null zamiast 3), a test strony głównej **zielony także przed zmianą**, bo jego zadaniem jest pilnowanie BRAKU zmiany.
+
 ### P-MARTWE-PRZYCISKI — przegląd i sprzątanie odwołań do nieistniejących przycisków (SW 1.0.931, 2026-09-14, zlecenie właściciela)
 
 **Zlecenie.** Po naprawie cichego zapisu zgłosiłem, że martwych identyfikatorów szuka jeszcze sześć innych modułów i że nie wiem, czy tam też coś milczy. Właściciel: „zrób to", a po przeglądzie: „posprzątaj martwe odwołania".
