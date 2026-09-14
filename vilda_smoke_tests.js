@@ -916,7 +916,7 @@
         typeof auditFn === 'function' &&
         typeof anthroFn === 'function' &&
         !!(updateApi && typeof updateApi.getNumericValidationSnapshot === 'function') &&
-        !!(dataApi && dataApi.version === '1.21.0') &&
+        !!(dataApi && dataApi.version === '1.22.0') &&
         Object.keys(pureChecks).every(function (key) { return pureChecks[key] === true; }) &&
         contractDetail.ok === true,
       pureChecks,
