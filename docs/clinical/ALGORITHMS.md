@@ -1098,6 +1098,30 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-ZAPIS-BEZ-OBIETNICY — `saveUserData()` nie pozwala poczekać na zapis (bez zmian w kodzie aplikacji, 2026-09-14, znalezione przy czerwonym CI)
+
+**Jak wyszło.** Odłamek E2E 3/3 zapalił się na czerwono: `tozsamosc-pacjenta-duplikaty.spec.mjs` twierdził, że po dopisaniu daty urodzenia rekord ją ma — a `dobISO` w nagłówku było `null`. Padło dwa razy z rzędu, w pliku dotykającym ścieżki zapisu, którą właśnie zmieniałem. Pierwszym odruchem było „to moje".
+
+**Pomiar rozstrzygnął inaczej.** Ten sam plik, cztery workery, cztery powtórzenia, trzy wersje `vilda_vault.js`:
+
+| wersja sejfu | czerwone |
+| --- | --- |
+| sprzed `P-TOZSAMOSC-PYTAJ` (bez okna, bez numeru wersji) | 2/4 |
+| z oknem, bez numeru wersji | 3/4 |
+| z oknem i numerem wersji | 1/4 |
+
+Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. Ale „flake" to nie jest przyczyna, więc szukałem dalej.
+
+**Przyczyna, zmierzona.** W przebiegach czerwonych rekord miał `snapshotCount: 1` przy komplecie danych w kolektorze (`kolektorDob: "2022-03-17"`), z `lastLoadedData` na miejscu i **bez** okna wyboru pacjenta na ekranie. Zapis po prostu jeszcze się nie odbył.
+
+`saveUserData()` **nie zwraca obietnicy zapisu** — buduje payload, odpala łańcuch `.then(...)` z `savePatient` i oddaje sam payload (`return a`). `await window.saveUserData()` nie czeka więc na nic. Kto zaraz potem czyta sejf, ściga się z zapisem — i przy czterech workerach przegrywał ten wyścig co drugi przebieg.
+
+**Poprawka po stronie testu.** `zapiszPewnie()` czeka teraz na **skutek w rekordzie** (`expect.poll` na liście pacjentów), a nie na powrót z funkcji. Wszystkie dotychczasowe twierdzenia zostają; doszło tylko czekanie na to, co test i tak sprawdza. Zmierzone po poprawce: **15/15** przy tej samej konfiguracji, która wcześniej padała.
+
+**Czego NIE zrobiono, a warto rozważyć.** Sam `saveUserData()` nadal nie daje wołającemu sposobu, żeby poczekać na zapis. Dla lekarza klikającego „Zapisz" to bez znaczenia — meldunek i tak przychodzi z łańcucha — ale każdy automat (import, moduł GH, test, przyszła synchronizacja) ma ten sam problem co ten test i nie ma jak go obejść inaczej niż odpytywaniem sejfu. Zwrócenie obietnicy byłoby zmianą małą i wstecznie zgodną (dziś nikt nie korzysta ze zwracanego payloadu), ale dotyka funkcji wołanej z kilkunastu miejsc — **decyzja właściciela**.
+
+*Strażnik:* `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` (3) — bez zmian w twierdzeniach, z czekaniem na skutek. Komentarz w pliku nazywa obie pułapki tej funkcji: ciche `null` przy niekompletnym formularzu i brak obietnicy zapisu.
+
 ### P-KOLEJNOSC-WERSJI — o tym, która wersja rekordu jest bieżąca, rozstrzygał los (SW 1.0.935, 2026-09-14, zlecenie właściciela)
 
 **Skąd się wzięło.** Nie ze zgłoszenia, tylko z **czerwonego przebiegu CI**: mój własny test twierdził „pomiar trafił do tej karty", a sprawdzał to przez `snapshots[0]`. Lokalnie przechodził 5/5, na CI padł. Przyczyną nie był test.
