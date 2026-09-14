@@ -551,6 +551,10 @@
     return wynik.status === 'ok' ? wynik.weeks : null;
   }
 
+  /* Pełne czyszczenie pola: zdejmuje blokadę, kasuje datę i tygodnie. Używane przez
+     „Wyczyść wszystkie pola" w formularzu głównym oraz przez zdarzenie
+     `vilda:user-state-cleared`. Różni się od `clear()` (przycisk „×" przy polu), który
+     celowo NIE rusza daty pochodzącej z rekordu i oddaje fokus do pola. */
   function odblokujPoWyczyszczeniuPacjenta() {
     var wejscie = pole(ID.dob);
     if (!wejscie) return;
@@ -685,6 +689,7 @@
     setFromRecord: setFromRecord,
     setWeeksFromRecord: setWeeksFromRecord,
     clear: clear,
+    clearAll: odblokujPoWyczyszczeniuPacjenta,
     readISO: readISO,
     readWeeks: readWeeks,
     readExactAge: readExactAge,

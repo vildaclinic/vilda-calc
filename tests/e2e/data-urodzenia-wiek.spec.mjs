@@ -321,3 +321,31 @@ test('tygodnie z wczytanego rekordu wracają do formularza, gdy rekord nie ma da
   expect(s.tygodnieWiersz).toBe(true);
   expect(s.ageMonths).toBe('1');
 });
+
+// P-DOB-CLR (zgłoszenie właściciela 2026-09-14): „Wyczyść wszystkie pola" zostawiało datę
+// urodzenia w formularzu, więc kolejny pacjent zaczynał z datą poprzedniego. Moduł daty umiał
+// się wyczyścić (nasłuchuje `vilda:user-state-cleared`), ale główny przycisk czyszczenia tego
+// zdarzenia nie wysyła — nikt go o to nie prosił.
+test('„Wyczyść wszystkie pola" kasuje datę urodzenia, tygodnie i odblokowuje wiek', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworz(page);
+
+  await wpisz(page, 'dobInput', dataSprzedDni(40));
+  let s = await stan(page);
+  expect(s.dob).not.toBe('');
+  expect(s.ageReadOnly, 'data urodzenia blokuje pole wieku').toBe(true);
+  expect(s.tygodnieWiersz, 'poniżej 3 mies. widać wiersz tygodni').toBe(true);
+
+  await page.evaluate(() => {
+    const b = document.getElementById('clearAllDataBtn');
+    if (!b) throw new Error('brak przycisku clearAllDataBtn');
+    b.click();
+  });
+  await page.waitForFunction(() => document.getElementById('dobInput').value === '');
+
+  s = await stan(page);
+  expect(s.dob).toBe('');
+  expect(s.tygodnie).toBe('');
+  expect(s.ageReadOnly, 'po wyczyszczeniu wiek znowu jest do wpisania ręcznie').toBe(false);
+  expect(s.ageMonthsReadOnly).toBe(false);
+});
