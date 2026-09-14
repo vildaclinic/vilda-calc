@@ -37,19 +37,34 @@
  *   nie jest przybliżane — oba wyniki liczy ten sam kalendarz. To kolejny powód, by
  *   wpisywać datę zamiast tygodni.
  *
+ * DOKŁADNY WIEK DLA SIATEK CENTYLOWYCH (DOB-AGE-4)
+ *   `readExactAge()` oddaje wiek w miesiącach UŁAMKOWYCH — w tej samej skali, w której
+ *   indeksowane są tablice WHO (miesiąc = 30,4375 dnia). Czyta je `getChildLMS` w app.js,
+ *   żeby poniżej 36 mies. interpolować między wierszami zamiast czytać wiersz ukończonego
+ *   miesiąca. Powód jest kliniczny: dziecko w 29. dobie życia, leżące DOKŁADNIE na medianie
+ *   WHO, było oceniane wierszem urodzeniowym i wychodziło na 99. centylu (z = +2,44 dla
+ *   długości chłopców). Błąd jest jednostronny — zawsze zawyża — i znika dopiero około
+ *   pierwszych urodzin.
+ *
+ *   Zwracamy też `totalMonths`, czyli wiek w pełnych miesiącach wyliczony przez TEN moduł.
+ *   Odbiorca ma obowiązek sprawdzić, że zgadza się z wiekiem, który sam trzyma. Bez tego
+ *   „Nowy pomiar" i rekordy historyczne dostałyby dzisiejszy wiek dziecka doklejony do
+ *   pomiaru sprzed roku. Niezgodność = brak uściślenia, czyli zachowanie jak dotąd.
+ *
+ *   Uściślamy WYŁĄCZNIE z daty urodzenia, nigdy z ręcznie wpisanych tygodni. Tygodnie
+ *   niosą przedział („ukończone 4 tygodnie" to doba 28–34), więc trzeba by zgadywać punkt
+ *   w środku przedziału i wprowadzać własne obciążenie. Data urodzenia nie wymaga
+ *   zgadywania niczego.
+ *
  * CZEGO TU NIE MA
- *   Rozdzielczości tygodniowej w SIATKACH CENTYLOWYCH. `getChildLMS` zaokrągla wiek do
- *   pełnych miesięcy i poniżej 36 mies. czyta tablicę indeksowaną miesiącami, bez
- *   interpolacji — ośmiotygodniowe i dwumiesięczne niemowlę trafiają w ten sam wiersz.
- *   Zmiana wymaga tablic WHO w rozdzielczości dziennej (rata 3, osobna decyzja).
- *   Nie ma tu też zapisu daty do `sharedUserData` — data urodzenia jest daną
- *   identyfikującą, a wspólny stan stron leży w niezaszyfrowanym magazynie przeglądarki.
- *   Między stronami wędruje sam wiek.
+ *   Zapisu daty do `sharedUserData` — data urodzenia jest daną identyfikującą, a wspólny
+ *   stan stron leży w niezaszyfrowanym magazynie przeglądarki. Między stronami wędruje
+ *   sam wiek.
  */
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
 
   /* Pola formularza. `dobInput` to jedyne nowe; reszta istnieje od zawsze. */
   var ID = {
@@ -220,6 +235,17 @@
     var t = Number(tygodnie);
     if (!Number.isFinite(t) || t < 0) return null;
     return Math.floor((Math.floor(t) * 7) / DNI_W_MIESIACU);
+  }
+
+  /* Doby życia → miesiące UŁAMKOWE w skali tablic WHO (miesiąc = 30,4375 dnia).
+     To jest ta sama skala, w której indeksowane są LMS_INFANT_*: wiersz `m` odpowiada
+     dobie m × 30,4375. Dlatego dzielimy przez długość miesiąca, a nie liczymy miesięcy
+     kalendarzowych — inaczej interpolacja trafiałaby obok własnej siatki. */
+  function exactMonthsFromDays(dni) {
+    if (dni === '' || dni === null || dni === undefined) return null;
+    var d = Number(dni);
+    if (!Number.isFinite(d) || d < 0) return null;
+    return d / DNI_W_MIESIACU;
   }
 
   /* Zwraca {status, weeks}: 'empty', 'format', 'range' albo 'ok'. */
@@ -495,6 +521,20 @@
     return wynik.status === 'ok' ? wynik.iso : null;
   }
 
+  /* Dokładny wiek z daty urodzenia — dla siatek centylowych (DOB-AGE-4).
+     Zwraca null, gdy daty nie ma albo jest niepoprawna; wtedy odbiorca ma działać jak
+     dotąd. `totalMonths` jest po to, żeby odbiorca mógł sprawdzić, że patrzy na ten sam
+     wiek, który sam trzyma — patrz nagłówek modułu. */
+  function readExactAge() {
+    var iso = readISO();
+    if (!iso) return null;
+    var wiek = ageFromDobISO(iso, null);
+    if (!wiek) return null;
+    var ulamkowe = exactMonthsFromDays(wiek.days);
+    if (ulamkowe === null) return null;
+    return { totalMonths: wiek.totalMonths, days: wiek.days, exactMonths: ulamkowe };
+  }
+
   /* Ukończone tygodnie do zapisu w rekordzie: z daty urodzenia, gdy jest,
      inaczej z ręcznego wpisu. Poza oknem < 3 mies. — null, bo tygodnie
      przestają nieść informację, której nie ma już w miesiącach. */
@@ -639,6 +679,7 @@
     weekMessages: KOMUNIKAT_TYGODNI,
     parseWeeksInput: parseWeeksInput,
     monthsFromWeeks: monthsFromWeeks,
+    exactMonthsFromDays: exactMonthsFromDays,
     weeksApplicable: weeksApplicable,
     refresh: odswiez,
     setFromRecord: setFromRecord,
@@ -646,6 +687,7 @@
     clear: clear,
     readISO: readISO,
     readWeeks: readWeeks,
+    readExactAge: readExactAge,
     mount: mount
   };
 

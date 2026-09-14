@@ -1098,6 +1098,42 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### DOB-AGE-4 — centyle niemowlęce liczone na dokładnym wieku, nie na wierszu ukończonego miesiąca (SW 1.0.927, 2026-09-14, decyzja właściciela)
+
+**Zgłoszenie.** Przy pracy nad datą urodzenia wyszedł defekt istniejący od dawna, niezależny od rat 1–3. Właściciel poprosił o poszukanie tablic WHO w rozdzielczości dziennej, „żeby tygodnie realnie zmieniały centyl"; po zmierzeniu skali problemu okazało się, że tablice dzienne nie są do tego potrzebne. Właściciel: „ruszaj".
+
+**Defekt.** `getChildLMS` poniżej 36 miesięcy czytało tablicę WHO **wierszem ukończonego miesiąca**, bez interpolacji (`a = Math.round(t*12)`, potem bezpośredni odczyt po kluczu całkowitym). Formularz podaje wiek w pełnych miesiącach, więc **przez całą pierwszą dobę życia aż do 29. włącznie dziecko było oceniane wierszem urodzeniowym**.
+
+Skala, policzona na tablicach, które aplikacja sama wozi — niemowlę w 29. dobie leżące **dokładnie na medianie WHO**:
+
+| tablica | z-score | raportowany centyl |
+| --- | --- | --- |
+| długość, chłopcy | +2,44 | 99,3 |
+| długość, dziewczęta | +2,32 | 99,0 |
+| masa, chłopcy | +2,00 | 97,7 |
+| masa, dziewczęta | +1,84 | 96,7 |
+
+Błąd jest **jednostronny — zawsze zawyża** — i gaśnie dopiero około pierwszych urodzin (w 364. dobie wciąż z ≈ +0,5). Gałąź powyżej 36 miesięcy w tej samej funkcji interpolowała od zawsze; tak samo `getLMSFromDataset` w modułach wykresów. Gałąź niemowlęca była jedynym wyjątkiem.
+
+**Zmiana.**
+
+1. **`vilda_dob_age.js` (2 → 3)** — `exactMonthsFromDays(dni)` (doby → miesiące ułamkowe w skali tablic WHO, miesiąc = 30,4375 dnia) i `readExactAge()` zwracające `{ totalMonths, days, exactMonths }` z pola daty urodzenia albo `null`.
+2. **`app.js`** — gałąź `a < 36` w `getChildLMS` interpoluje L, M i S między sąsiednimi wierszami, **tym samym mechanizmem, którego ta funkcja używa powyżej 36 miesięcy**. Bez daty urodzenia czyta wiersz jak dotąd.
+
+**Dlaczego nie tablice WHO w rozdzielczości dziennej.** Zmierzone na tych samych tablicach: test samospójności — interpolacja wiersza *m* z wierszy *m−1* i *m+1*, więc na **dwukrotnie większej rozpiętości niż w praktyce** — zostawia najwyżej |Δz| ≈ 0,30, czyli **≈ 0,075 na rozpiętości jednego miesiąca**. Sprawdzone także przy z = ±2, gdzie błędy L i S biją najmocniej. Dla porównania: pomyłka 0,5 cm przy pomiarze długości w 1. miesiącu to z ≈ 0,26, czyli **ponad trzy razy więcej**. Reszta po interpolacji ginie w błędzie taśmy.
+
+Do tego status prawny tablic dziennych jest sporny: `WorldHealthOrganization/smart-ccc` deklaruje `license: CC0-1.0` (tablice dzienne, doby 0–1856, obie płcie; wiersz zerowy chłopców jest co do bitu identyczny z `LMS_INFANT_HEIGHT_BOYS[0]` w tym repozytorium), ale ten sam pakiet ma klauzulę Third Party IP i status `draft 0.1.0`, a celowo napisane „Terms of Use" przy `mnf-anthro-analyzer-offline` zastrzegają **wszystkie prawa do Reference Data** i wprost mówią, że WHO **nie** publikuje ich na licencji otwartej. Konkretne zastrzeżenie bije ogólną deklarację na szkicu. Sprawa zostaje otwarta — gdyby kiedyś schodzić z 0,075 do zera, najpierw zapytać WHO.
+
+**Uściślamy wyłącznie z daty urodzenia, nigdy z ręcznie wpisanych tygodni.** Tygodnie niosą przedział („ukończone 4 tygodnie" to doba 28–34), więc trzeba by zgadywać punkt w środku przedziału i wprowadzać własne obciążenie. Data urodzenia nie wymaga zgadywania niczego. Bez daty formularz działa dokładnie jak dotąd — zgodnie z regułą z DOB-AGE-1.
+
+**Bramka tożsamości pomiaru.** `readExactAge()` oddaje też `totalMonths`, a `getChildLMS` uściśla **tylko wtedy, gdy ta liczba zgadza się z wiekiem, który sam dostał**. Bez tego „Nowy pomiar" i punkty historyczne dostałyby dzisiejszy wiek dziecka doklejony do pomiaru sprzed roku. Niezgodność, brak modułu albo wyjątek z modułu = brak uściślenia, czyli zachowanie jak dotąd.
+
+**Punkty historyczne zostają z dawnym centylem — świadomie.** Rekord trzyma wiek pomiaru w **pełnych miesiącach**, więc o pomiarze sprzed roku nie wiemy, w której dobie miesiąca został zrobiony. Bramka tożsamości słusznie go wtedy nie uściśla, co znaczy, że **zapisany punkt niemowlęcy zachowuje stary, zawyżony centyl**. Poprawka działa na pomiarze bieżącym, nie wstecz. Tak samo jak tygodnie w DOB-AGE-3: podstawienie dzisiejszej doby pod tamten pomiar byłoby zmyślaniem. Wsteczne uściślenie wymagałoby zapisania w rekordzie doby pomiaru — osobna zmiana, osobna decyzja.
+
+**Czego ta zmiana NIE robi.** Nie rusza modułów wykresów (`getLMSFromDataset`, `getLMSHeightHybrid`, `getAnthroLMSForChartSource` w `inline_index_03/04`, `inline_docpro_01/02`) — one interpolują od zawsze, ale też dostają wiek w pełnych miesiącach; doprowadzenie do nich dokładnego wieku to osobna zmiana. Nie dodaje żadnych danych referencyjnych.
+
+*Strażnicy:* `tests/unit/centyle-niemowlece-interpolacja.test.mjs` (16: cztery tablice × 29. doba, cztery × 59. doba, bramka tożsamości pomiaru, brak modułu, moduł bez `readExactAge`, wyjątek z modułu, doba 0 bez dryfu, ostatni wiersz niemowlęcy, ścieżka powyżej 36 miesięcy nietknięta, monotoniczność mediany przez pierwszy miesiąc). **Zmierzone czerwone:** przeciwko wersji sprzed zmiany **16 z 16**. Sam test niesie też pomiar przed/po w jednym przebiegu: ta sama mediana bez daty urodzenia daje z > 1,5, z datą |z| < 0,08.
+
 ### DOB-AGE-3 — opis pacjenta mówi o niemowlęciu w tygodniach (SW 1.0.926, 2026-09-13, decyzja właściciela)
 
 **Zgłoszenie.** Po wdrożeniu raty 2 opis pacjenta nadal podawał wiek wyłącznie w miesiącach, więc sześciotygodniowe niemowlę opisywał tak samo jak czterotygodniowe: „W wieku 1 miesiąca chłopiec mierzy…". Właściciel: „zrób to".
