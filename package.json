@@ -2,6 +2,7 @@
   "name": "vilda-calc-quality",
   "version": "1.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Narzędzia jakości i testy regresyjne dla statycznej aplikacji vilda-calc.",
   "scripts": {
     "test:repo": "node tests/scripts/check-repository-policy.mjs",

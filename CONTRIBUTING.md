@@ -2,7 +2,7 @@
 
 Ten dokument określa proces pracy właściciela, współpracowników i agentów nad Vilda. To aplikacja medyczna, dlatego proces jest bardziej rygorystyczny niż w typowej stronie internetowej.
 
-Do czasu zatwierdzenia licencji projektu oraz zasad prawnych dla wkładu zewnętrznego publiczne pull requesty od osób trzecich nie są przyjmowane do scalenia. Można zgłaszać błędy i propozycje przez formularze Issues, bez danych pacjenta. Nieoczekiwany PR może zostać zamknięty bez wykorzystania jego kodu.
+Kod projektu jest udostępniany na licencji [Apache License 2.0](LICENSE); zakres licencji opisuje sekcja „Licencja” w [README.md](README.md). Do czasu ustalenia zasad prawnych dla wkładu zewnętrznego (DCO lub CLA) publiczne pull requesty od osób trzecich nie są przyjmowane do scalenia. Można zgłaszać błędy i propozycje przez formularze Issues, bez danych pacjenta. Nieoczekiwany PR może zostać zamknięty bez wykorzystania jego kodu.
 
 ## Zanim utworzysz zgłoszenie
 

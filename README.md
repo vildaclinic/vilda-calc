@@ -12,7 +12,7 @@ To publiczne repozytorium zawiera aktualne pliki statycznej aplikacji wdrożenio
 
 Aktywną bazą rozwoju jest gałąź `audyt`. Historyczna gałąź `main` nie powinna być używana jako podstawa nowych zmian. Do czasu zakończenia migracji ustawień GitHuba może ona nadal być wyświetlana jako gałąź domyślna.
 
-Projekt nie ma obecnie licencji open source. Publiczna widoczność kodu nie oznacza zgody na jego dalsze rozpowszechnianie lub wykorzystanie poza zakresem wynikającym z prawa.
+Kod źródłowy projektu jest udostępniany na licencji [Apache License 2.0](LICENSE). Szczegóły, w tym zakres licencji i składniki obce, opisuje sekcja [Licencja](#licencja).
 
 ## Architektura w skrócie
 
@@ -71,6 +71,18 @@ Nigdy nie umieszczaj w repozytorium, Issue, pull requeście ani artefakcie CI:
 
 Zasady pracy z danymi: [docs/DATA_PROTECTION.md](docs/DATA_PROTECTION.md). Podatności zgłaszaj zgodnie z [SECURITY.md](SECURITY.md), a nie w publicznym Issue.
 
+## Licencja
+
+Kod źródłowy tego projektu jest udostępniany na licencji **Apache License, Version 2.0** — pełny tekst w pliku [LICENSE](LICENSE), informacja o autorstwie w pliku [NOTICE](NOTICE).
+
+Licencja Apache-2.0 **nie obejmuje**:
+
+- **składników obcych** dołączonych do repozytorium (pdfmake, czcionki Roboto, jsQR, JSZip, Lucide, QRCode.js) — każdy pozostaje na własnej licencji; zestawienie i teksty licencji: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) oraz katalog [LICENSES/](LICENSES);
+- **klinicznych danych referencyjnych** (siatki centylowe, tablice LMS, tablice wieku kostnego i prognozy wzrostu końcowego) pochodzących z publikacji obcych — prawa do nich pozostają przy ich wydawcach; źródło każdego zbioru wskazuje [docs/clinical/ALGORITHMS.md](docs/clinical/ALGORITHMS.md);
+- **znaków towarowych** „Vilda”, „Vilda Clinic”, „wagaiwzrost.pl” oraz związanych z nimi logotypów — zgodnie z sekcją 6 licencji Apache-2.0 nie są one objęte udzielonym zezwoleniem.
+
+Licencja nie udziela żadnych gwarancji. Aplikacja ma charakter pomocniczy i edukacyjny; nie jest wyrobem medycznym i nie zastępuje oceny klinicznej.
+
 ## Dokumentacja projektu
 
 - [Proces pracy na GitHubie](docs/GITHUB_WORKFLOW.md)
@@ -80,5 +92,7 @@ Zasady pracy z danymi: [docs/DATA_PROTECTION.md](docs/DATA_PROTECTION.md). Podat
 - [Testowanie](TESTING.md)
 - [Zasady współtworzenia](CONTRIBUTING.md)
 - [Polityka bezpieczeństwa](SECURITY.md)
+- [Licencja Apache-2.0](LICENSE) i [nota autorska](NOTICE)
+- [Noty licencyjne składników obcych](THIRD_PARTY_NOTICES.md)
 
 <!-- redeploy 2026-08-07: ponowne wyzwolenie wdrożenia GitHub Pages po awarii GitHub Actions (run #2503 utknął w kolejce, brak przycisku anulowania dla workflow zarządzanego). Treść aplikacji bez zmian — wdraża scalone poprawki v374/SW 1.0.681. -->
