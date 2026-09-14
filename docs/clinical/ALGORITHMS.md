@@ -1098,6 +1098,31 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-MARTWE-PRZYCISKI — przegląd pozostałych odwołań do `saveDataBtn` i `loadDataBtn` (2026-09-14, zlecenie właściciela)
+
+**Zlecenie.** Po naprawie cichego zapisu zgłosiłem, że martwych identyfikatorów szuka jeszcze sześć innych modułów i że nie wiem, czy tam też coś milczy. Właściciel: „zrób to".
+
+**Wynik przeglądu: nic więcej nie milczy.** Żaden inny moduł nie ma tej wady. To nie jest naprawa, tylko udokumentowany przegląd — dlatego ta zmiana **nie rusza kodu aplikacji**.
+
+Stan wyjściowy potwierdzony pomiarem: **żadna strona nie ma `id="saveDataBtn"` ani `id="loadDataBtn"`** w markupie; jedyny istniejący przycisk zapisu to `saveDataBtnSidebar`, tworzony w runtime przez `vilda_chrome.js`.
+
+| moduł | odwołania | dlaczego jest bezpieczny |
+| --- | --- | --- |
+| `app.js` | 1 + 1 | obie ścieżki kończą się zapasowym `alert(...)` — komunikat dociera |
+| `cukrzyca.js` | 1 + 1 | tylko wygaszanie przycisków; na tej stronie **nie ma modułu zapisu** (`saveUserData` niezdefiniowane — sprawdzone w przeglądarce) |
+| `custom-fixes.js` | 2 | wygasza **istniejący** `saveDataBtnSidebar` i dokleja powód w `data-tip` |
+| `gh_igf_therapy.js` | 1 | sidebar, a w razie braku — bezpośrednie `VildaDataImportExport.saveUserData()` |
+| `vilda_save_status_indicator.js` | 2 | wiąże też `saveDataBtnSidebar` i niezależnie nasłuchuje na dokumencie |
+| `vilda_unsaved_guard.js` | 1 | **wzorcowo**: przy braku przycisku mówi „Nie znaleziono przycisku zapisu", a dalej przepuszcza dopiero po potwierdzeniu z sejfu (`onPatientSaved`), nie po samym kliknięciu |
+| `vilda_update_prep.js` | 2 + 4 | wyłącznie manifest dokumentacyjny, bez odczytu z DOM |
+| `vilda_data_import_export.js` | 6 + 9 | naprawione w P-CICHY-ZAPIS: komunikaty przechodzą przez `Bkotw()` |
+
+**Ciekawy kontrast.** `app.js` od początku miał to dobrze (`… ? showTooltip(w,v) : alert(v)`), a `vilda_data_import_export.js` — nie (`return o(e,t),!0`, czyli meldunek sukcesu niezależnie od tego, czy dymek się pokazał). Ta sama sytuacja, dwa różne rozwiązania w jednym repozytorium; wygrało to gorsze, bo nikt go nie testował.
+
+**Drobiazg bez naprawy.** Na `cukrzyca.html` wygaszony przycisk niesie podpowiedź „Aby zapisać dane, wprowadź imię, wiek, wzrost i wagę" — domyślny tekst z `vilda_chrome.js`, mylący na stronie, na której takiego formularza nie ma. Nie zmieniam, bo to decyzja o treści interfejsu, nie usterka.
+
+*Strażnik:* `tests/unit/martwe-przyciski-zapisu.test.mjs` (10). Test utrwala wynik przeglądu: pilnuje, że przyciski nie wróciły do markupu, że odwołują się do nich **wyłącznie** moduły z listy i w znanej liczbie, że każdy ma zapisany powód, oraz że zabezpieczenia, na których te powody się opierają, nadal istnieją. **Nie ma tu „zmierzonej czerwieni"** — to nie jest naprawa defektu, tylko utrwalenie przeglądu. Zmiana liczb w spisie nie jest sama w sobie błędem; jest sygnałem „przeczytaj powód jeszcze raz".
+
 ### P-CICHY-ZAPIS — nieudany zapis nie mówił nic (SW 1.0.930, 2026-09-14, zgłoszenie właściciela)
 
 **Zgłoszenie.** „`saveUserData()` zwraca null przy niekompletnym formularzu, komunikat tylko przy przycisku. Dziś potknąłem się o to dwa razy przy pisaniu testów; Ciebie przy pracy też może to minąć."
