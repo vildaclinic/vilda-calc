@@ -190,7 +190,13 @@ describe('Co robi odpowiedź lekarza', () => {
 
     const rek = await v.getPatient(stary.patientId);
     expect(rek.snapshotCount).toBe(2);
-    expect(rek.snapshots[0].payload.user.weight).toBe(31);
+    // Nie przez `snapshots[0]`: sejf sortuje wersje po `savedAtISO` z dokładnością do
+    // milisekundy, a dwa zapisy z rzędu potrafią się w nią zmieścić (tak padło na CI,
+    // lokalnie nie). Twierdzenie tego testu brzmi „pomiar trafił do TEJ karty", nie
+    // „jest pierwszy na liście" — i tak właśnie jest sprawdzane.
+    const wagi = rek.snapshots.map((x) => x.payload && x.payload.user && x.payload.user.weight);
+    expect(wagi).toContain(31);
+    expect(wagi).toContain(30);
   });
 
   it('„nowy" zakłada osobną kartę i zapisuje, że to była decyzja lekarza', async () => {
