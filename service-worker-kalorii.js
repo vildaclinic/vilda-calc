@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.930';
+const SW_VERSION = '1.0.931';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1287,10 +1287,12 @@ const CORE_SHELL_URLS = [
   '/vilda_save_status_indicator.js?v=22',
   '/vilda_save_status_indicator.js?v=23',
   '/vilda_save_status_indicator.js?v=24',
+  '/vilda_save_status_indicator.js?v=25',
   '/vilda_unsaved_guard.js?v=1',
   '/vilda_unsaved_guard.js?v=2',
   '/vilda_unsaved_guard.js?v=3',
   '/vilda_unsaved_guard.js?v=4',
+  '/vilda_unsaved_guard.js?v=5',
   '/vilda_diet_recommendations.js',
   '/vilda_diet_recommendations.js?v=3',
   '/vilda_diet_recommendations.js?v=4',
@@ -1345,6 +1347,7 @@ const CORE_SHELL_URLS = [
   '/gh_igf_therapy.js?v=23',
   '/gh_igf_therapy.js?v=24',
   '/gh_igf_therapy.js?v=25',
+  '/gh_igf_therapy.js?v=26',
   '/antibiotic_therapy.js',
   '/antibiotic_therapy.js?v=10',
   '/antibiotic_therapy.js?v=11',
@@ -1484,6 +1487,7 @@ const OPTIONAL_DOCUMENTS = [
 const OPTIONAL_ASSETS = [
   '/cukrzyca.js',
   '/cukrzyca.js?v=29',
+  '/cukrzyca.js?v=30',
   '/gh_therapy_monitor.js',
   '/gh_therapy_monitor.js?v=13',
   '/gh_therapy_monitor.js?v=14',
@@ -1778,6 +1782,7 @@ const OPTIONAL_ASSETS = [
   '/app.js?v=200',
   '/app.js?v=201',
   '/app.js?v=202',
+  '/app.js?v=203',
   '/vilda_diet_plan_ui.js?v=4',
   '/vilda_diet_plan_ui.js?v=5',
   '/vilda_update_prep.js?v=70',
@@ -1826,6 +1831,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_update_prep.js?v=74',
   '/custom-fixes.js?v=58',
   '/custom-fixes.js?v=59',
+  '/custom-fixes.js?v=60',
   '/reposition.js?v=7',
   '/vilda_patient_report.js?v=10',
   '/vilda_summary_cards.js?v=26',
@@ -2032,6 +2038,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=71',
   '/vilda_data_import_export.js?v=72',
   '/vilda_data_import_export.js?v=73',
+  '/vilda_data_import_export.js?v=74',
   '/inline_index_02.js?v=11',
   '/vilda_diet_plan_ui.js?v=13',
   '/vilda_diet_plan_ui.js?v=14',
