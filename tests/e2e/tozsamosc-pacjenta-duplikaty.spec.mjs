@@ -87,14 +87,27 @@ async function wpiszIPotwierdz(page, pola, warunek, opis) {
   throw new Error(`formularz nie ustalił się na: ${opis} (ostatnio: ${JSON.stringify(ostatnie)})`);
 }
 
-/* Zapis, który nie może po cichu nie dojść do skutku: `saveUserData()` przy niekompletnym
-   formularzu po prostu zwraca null, więc test przechodziłby pozornie. */
-async function zapiszPewnie(page) {
+/* Zapis, który nie może po cichu nie dojść do skutku.
+   Dwa powody, oba zmierzone:
+   1. `saveUserData()` przy niekompletnym formularzu po prostu zwraca null — test
+      przechodziłby pozornie. Stąd sprawdzenie kolektora przed zapisem.
+   2. `saveUserData()` NIE ZWRACA obietnicy zapisu: oddaje payload i zostawia zapis w tle
+      (`return a` po łańcuchu `.then`). `await` na nim niczego więc nie czeka, a odczyt sejfu
+      zaraz potem bywa szybszy niż sam zapis. Przy czterech workerach ten wyścig przegrywał
+      co drugi przebieg — z rekordem `snapshotCount: 1` przy komplecie danych w kolektorze
+      i bez żadnego komunikatu. Dlatego czekamy na SKUTEK w rekordzie, nie na powrót
+      z funkcji. */
+async function zapiszPewnie(page, potwierdz) {
   const stan = await zebrane(page);
   expect(stan.user.age, 'wiek w kolektorze przed zapisem').not.toBeNull();
   expect(stan.user.weight, 'waga w kolektorze przed zapisem').not.toBeNull();
   expect(stan.user.height, 'wzrost w kolektorze przed zapisem').not.toBeNull();
   await page.evaluate(async () => { await window.saveUserData(); });
+  if (typeof potwierdz !== 'function') return;
+  await expect.poll(async () => potwierdz(await pacjenci(page)), {
+    message: 'zapis nie odbił się w rekordzie',
+    timeout: 20_000,
+  }).toBe(true);
 }
 
 async function pacjenci(page) {
@@ -172,7 +185,7 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
       (s) => Boolean(s.user.dobISO) && s.user.weight === 18.2 && s.user.height === 106,
       'data urodzenia i nowe pomiary',
     );
-    await zapiszPewnie(page);
+    await zapiszPewnie(page, (l) => l.length === 1 && Boolean(l[0].dobISO));
 
     // 3. NADAL jeden pacjent — i to ten sam, wzbogacony o datę urodzenia.
     const lista = await pacjenci(page);
@@ -189,6 +202,7 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
 
     const wizyty = [['4', '6', '18.0', '105'], ['4', '9', '18.4', '106'], ['5', '0', '18.9', '107']];
     for (const [wiek, mies, waga, wzrost] of wizyty) {
+      const wersjiPrzed = (await pacjenci(page))[0].snapshotCount;
       await wczytaj(page, pid);
       await wpiszIPotwierdz(
         page,
@@ -196,7 +210,7 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
         (s) => s.user.weight === Number(waga) && s.user.age === Number(wiek),
         `wizyta ${wiek}/${mies}`,
       );
-      await zapiszPewnie(page);
+      await zapiszPewnie(page, (l) => l.length === 1 && l[0].snapshotCount > wersjiPrzed);
     }
 
     const lista = await pacjenci(page);
@@ -228,7 +242,7 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
       (s) => String(s.name || '').includes('Inny-Fikcyjny') && s.user.weight === 20.1 && s.user.age === 7,
       'dane drugiego dziecka',
     );
-    await zapiszPewnie(page);
+    await zapiszPewnie(page, (l) => l.length === 2);
 
     const lista = await pacjenci(page);
     expect(lista).toHaveLength(2);

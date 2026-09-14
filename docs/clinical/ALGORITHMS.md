@@ -1098,6 +1098,87 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-ZAPIS-BEZ-OBIETNICY — `saveUserData()` nie pozwala poczekać na zapis (bez zmian w kodzie aplikacji, 2026-09-14, znalezione przy czerwonym CI)
+
+**Jak wyszło.** Odłamek E2E 3/3 zapalił się na czerwono: `tozsamosc-pacjenta-duplikaty.spec.mjs` twierdził, że po dopisaniu daty urodzenia rekord ją ma — a `dobISO` w nagłówku było `null`. Padło dwa razy z rzędu, w pliku dotykającym ścieżki zapisu, którą właśnie zmieniałem. Pierwszym odruchem było „to moje".
+
+**Pomiar rozstrzygnął inaczej.** Ten sam plik, cztery workery, cztery powtórzenia, trzy wersje `vilda_vault.js`:
+
+| wersja sejfu | czerwone |
+| --- | --- |
+| sprzed `P-TOZSAMOSC-PYTAJ` (bez okna, bez numeru wersji) | 2/4 |
+| z oknem, bez numeru wersji | 3/4 |
+| z oknem i numerem wersji | 1/4 |
+
+Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. Ale „flake" to nie jest przyczyna, więc szukałem dalej.
+
+**Przyczyna, zmierzona.** W przebiegach czerwonych rekord miał `snapshotCount: 1` przy komplecie danych w kolektorze (`kolektorDob: "2022-03-17"`), z `lastLoadedData` na miejscu i **bez** okna wyboru pacjenta na ekranie. Zapis po prostu jeszcze się nie odbył.
+
+`saveUserData()` **nie zwraca obietnicy zapisu** — buduje payload, odpala łańcuch `.then(...)` z `savePatient` i oddaje sam payload (`return a`). `await window.saveUserData()` nie czeka więc na nic. Kto zaraz potem czyta sejf, ściga się z zapisem — i przy czterech workerach przegrywał ten wyścig co drugi przebieg.
+
+**Poprawka po stronie testu.** `zapiszPewnie()` czeka teraz na **skutek w rekordzie** (`expect.poll` na liście pacjentów), a nie na powrót z funkcji. Wszystkie dotychczasowe twierdzenia zostają; doszło tylko czekanie na to, co test i tak sprawdza. Zmierzone po poprawce: **15/15** przy tej samej konfiguracji, która wcześniej padała.
+
+**Czego NIE zrobiono, a warto rozważyć.** Sam `saveUserData()` nadal nie daje wołającemu sposobu, żeby poczekać na zapis. Dla lekarza klikającego „Zapisz" to bez znaczenia — meldunek i tak przychodzi z łańcucha — ale każdy automat (import, moduł GH, test, przyszła synchronizacja) ma ten sam problem co ten test i nie ma jak go obejść inaczej niż odpytywaniem sejfu. Zwrócenie obietnicy byłoby zmianą małą i wstecznie zgodną (dziś nikt nie korzysta ze zwracanego payloadu), ale dotyka funkcji wołanej z kilkunastu miejsc — **decyzja właściciela**.
+
+*Strażnik:* `tests/e2e/tozsamosc-pacjenta-duplikaty.spec.mjs` (3) — bez zmian w twierdzeniach, z czekaniem na skutek. Komentarz w pliku nazywa obie pułapki tej funkcji: ciche `null` przy niekompletnym formularzu i brak obietnicy zapisu.
+
+### P-KOLEJNOSC-WERSJI — o tym, która wersja rekordu jest bieżąca, rozstrzygał los (SW 1.0.935, 2026-09-14, zlecenie właściciela)
+
+**Skąd się wzięło.** Nie ze zgłoszenia, tylko z **czerwonego przebiegu CI**: mój własny test twierdził „pomiar trafił do tej karty", a sprawdzał to przez `snapshots[0]`. Lokalnie przechodził 5/5, na CI padł. Przyczyną nie był test.
+
+**Usterka.** Sejf sortuje wersje malejąco: `savedAtISO` → `updatedAtISO` → `rev` → `snapshotId`. `savedAtISO` ma rozdzielczość **milisekundy**, a świeżo utworzona wersja ma zawsze `rev: 0`. Dwa zapisy tego samego pacjenta w tej samej milisekundzie schodziły więc do ostatniego kryterium — **losowego UUID-a**. Zmierzone: na CI druga wersja lądowała na liście **pierwsza**; w pomiarze powtórzonym pięć razy kolejność wychodziła raz `[30, 31, 32]`, raz `[31, 32, 30]`.
+
+**Dlaczego to nie jest drobiazg.** `snapshots[0]` to jest to, co Karta Pacjenta pokazuje jako **aktualne dane pacjenta** i co zwraca `getLatestSnapshot()`. Dla klikającego człowieka dwa zapisy w jednej milisekundzie są nieosiągalne — ale import, synchronizacja, moduł GH i każdy automat robią to bez trudu.
+
+**Poprawka.** `seq` — numer kolejny wersji **w obrębie pacjenta**, nadawany przy tworzeniu. Nie zastępuje żadnego z dotychczasowych kryteriów: wchodzi dokładnie tam, gdzie dotąd decydował los (przed `snapshotId`), i **tylko wtedy, gdy obie porównywane wersje go mają**. Dzięki temu dane sprzed tej zmiany zachowują się identycznie jak wcześniej.
+
+**Numer nie kosztuje odczytu.** Bierze się z głowy rekordu, którą sejf i tak już czyta (`Bc0`). Głowa zawsze ma numer najwyższy: przy różnych znacznikach czasu nowsza wersja jest i późniejsza, i utworzona później, a przy równych to właśnie numer rozstrzyga, która jest głową. **Pierwsza wersja tej poprawki czytała historię drugi raz — i złapał to strażnik `K2` („brama nie podwaja odczytów historii rekordu"), postawiony przy wcześniejszym audycie.** Test miał rację, implementacja nie.
+
+**Samo się leczy.** Rekord sprzed tej zmiany nie ma numeru w głowie: nowa wersja dostaje wtedy 1, kolejna 2 i tak dalej. Stare wersje zostają bez numeru, a że porównanie wymaga numeru po obu stronach, mieszanka zachowuje się jak wcześniej — pary, o które chodzi, i tak są zawsze dwiema **nowymi** wersjami.
+
+**Numer trzeba przenosić.** Rekord wersji jest przepisywany w ośmiu miejscach — edycja treści, synchronizacja (dwie gałęzie), import z koperty, odtworzenie kopii zapasowej (dwie gałęzie). Pominięcie choćby jednego kasowałoby numer **po cichu**, a wersja wracałaby do losowania; żaden test zachowaniowy by tego nie zauważył, dopóki nie trafiłby akurat w tę samą milisekundę. Stąd osobny strażnik spisowy.
+
+**Czego to NIE rozwiązuje** (powiedziane wprost, bo łatwo o złudzenie kompletności): dwóch **równoległych** zapisów tego samego pacjenta z dwóch kart naraz. Obie odczytałyby tę samą głowę i dostały ten sam numer — wtedy zostaje stara, losowa rozstrzygalność. Kolejność między urządzeniami i tak nie ma lokalnego sensu, a prawdziwe rozwiązanie wymagałoby transakcji.
+
+**Zaobserwowane przy okazji, nietknięte:** edycja starszej wersji przesuwa ją na czoło listy, bo `updatedAtISO` jest kryterium wyższym niż numer. To reguła sprzed tej zmiany; zapisana tutaj, żeby nie wyglądała na skutek uboczny.
+
+*Strażnicy:* `tests/unit/kolejnosc-wersji.test.mjs` (9) — zachowaniowe, na prawdziwym sejfie z magazynem w pamięci: numery rosną i są osobne dla każdego pacjenta, **zamrożony zegar stawia trzy zapisy w tej samej milisekundzie** i bieżącą zostaje najnowsza, wynik jest powtarzalny w pięciu próbach, edycja nie kasuje numeru, plus spis pilnujący, że żadne z ośmiu miejsc zapisu wersji numeru nie gubi. **Zmierzona czerwień: 8 z 9** przeciwko wersji sprzed zmiany, z kolejnością wychodzącą za każdym razem inaczej.
+
+### P-PASEK-STATUSU — stały pasek zamiast dymka gasnącego po 2,5 s (SW 1.0.934, 2026-09-14, decyzja właściciela)
+
+**Stan przed zmianą.** Wszystkie komunikaty zapisu — **piętnaście** różnych zdań, od „Nie zapisano — uzupełnij…" po „Nie udało się zapisać pacjenta" — szły przez `showTooltip()`: dymek przy przycisku, gasnący po **2500 ms** i znikający z DOM bez śladu. Trzy wady naraz:
+
+1. **Kotwica była przypadkowa.** Dymek wisiał przy przycisku w menu bocznym, a `Bwskaz()` równocześnie przewijał ekran do brakującego pola — dwie pomocne funkcje pracowały przeciwko sobie.
+2. **2,5 s to za mało** na zdanie „nie zapisano". Kto odwrócił wzrok, był przekonany, że zapis się udał. (Wcześniej naprawiono już przypadek, w którym licznik *starszego* dymka gasił *nowszy* — `P-CICHY-ZAPIS`.)
+3. **Nie było historii.** Żadnego miejsca, w którym da się sprawdzić, co aplikacja przed chwilą powiedziała.
+
+**Decyzja właściciela po obejrzeniu makiety czterech wariantów:** *„wariant D na desktop i B na telefonie, tylko na index.html"*.
+
+| szerokość | gdzie stoi | dlaczego |
+| --- | --- | --- |
+| od 700 px | prawa kolumna, nad „Podsumowaniem wyników" | tam aplikacja **już** mówi na stałe (`#infoMessages` / `#errorBox`) — nowa treść w istniejącej ramce, bez wydłużania formularza |
+| poniżej 700 px | góra formularza, nad polem „Nazwisko" | przy zwiniętych kolumnach prawa spada pod cały formularz i byłaby najdalej od pól |
+
+Próg **700 px** jest ten sam, na którym `#calcForm` przechodzi z jednej kolumny na dwie — inaczej pasek znikałby albo dublował się w pasie pośrednim. Obydwa pojemniki dostają treść; o widoczności rozstrzyga wyłącznie CSS. Węzła **nie przenosimy** przy zmianie szerokości: przenoszenie gubi stan i bije się z odczytem dla czytników ekranu.
+
+**Jedne drzwi zostają.** Wszystkie komunikaty i tak przechodziły przez `O()` w kolektorze — zmieniło się tylko jej wnętrze, więc wszystkie piętnaście zyskuje naraz. Kolejność: **pasek → dymek → `alert()`**. `pokaz()` zwraca `false`, gdy nie było gdzie pokazać, więc strona bez paska (DocPro, Klirens) zachowuje się dokładnie jak wcześniej.
+
+**Trzy wywołania zostają przy dymku celowo** (`dymek:!0`): podpowiedzi wygaszonego przycisku, zaczepione o ten właśnie przycisk. Nie są wynikiem zapisu i nie mają po co stać na ekranie.
+
+**`alert()` zostaje** jako ostatnia deska ratunku. Jego usunięcie to osobna decyzja, bo tylko on zatrzymuje pracę.
+
+**Ton niesie znaczenie, nie kolor.** Każde z wywołań dostało jawny ton (`ok` / `uwaga` / `blad` / `info` / `nowy`) zamiast zgadywania z treści. Meldunek po zapisie jest wyliczany: nierozstrzygnięty duplikat → `uwaga`, nowy pacjent → `nowy`, dopisany pomiar → `ok`.
+
+**Brakujące pola stają się odnośnikami.** Kolektor zna listę braków (`Bbraki()`), więc podaje ją paskowi razem z komunikatem; pasek zamienia nazwy pól w zdaniu na przyciski skaczące do pola. Dzięki temu `Bwskaz()` nie musi porywać przewijania w chwili, gdy lekarz patrzy gdzie indziej. Dopasowanie nazw idzie PO KOLEI, od miejsca poprzedniego trafienia — powtórzona nazwa nie jest podmieniana dwa razy w tym samym miejscu.
+
+**Martwy stan „błąd" wreszcie żyje.** `vilda_save_status_indicator.js` od początku miał stan `ERROR` — czerwony gradient w CSS, gotowe zdanie, pole na przyczynę — ale **`c(i.ERROR)` nie było wołane ani razu w całym repozytorium**: nieudany zapis nie zmieniał nawet koloru chipa. Moduł dostał publiczne `notifySaveFailed(powod)`, wołane z jedynego miejsca, które o awarii wie. To druga w tym tygodniu naprawa tej samej gatunkowo usterki (po `etapRekord` w `P-DOCPRO-POKWITANIE`): gotowy mechanizm, którego nikt nie podłączył.
+
+**Znalezione przez obejrzenie ekranu, nie przez test.** Przy komunikacie łamiącym się na dwie linie (telefon) znak `✕` odklejał się w górę i wyglądał, jakby wisiał nad paskiem — inna interlinia znaku niż tekstu. Wyrównane.
+
+*Strażnicy:* `tests/unit/pasek-statusu.test.mjs` (15) — warstwa wyświetlania na własnym, minimalnym DOM-ie: treść do obu pojemników, podmiana komunikatu zamiast doklejania, nieznany ton wpada na `info`, znak ukryty przed czytnikiem ekranu, **`false` gdy nie ma gdzie pokazać** (to po tym wołający poznaje, że ma sięgnąć po dymek), odnośniki do pól wraz z przypadkami granicznymi. `tests/e2e/pasek-statusu.spec.mjs` (6) — żywa strona: który z dwóch paska jest widoczny przy danej szerokości (przełączane samym `setViewportSize`, bez przeładowania), braki z odnośnikiem prowadzącym wprost do pola, **osobny pomiar zegarem, że po 4 s komunikat nadal stoi** (to jest cała przyczyna tej zmiany), ton `uwaga` przy braku sesji, ton `blad` plus czerwony chip przy awarii sejfu, oraz kontrola negatywna: podpowiedź wygaszonego przycisku nie trafia na pasek.
+
+**Pułapka warta zapamiętania przy pisaniu testów e2e dla `index.html`:** dopóki nikt nie jest zalogowany, cała treść strony stoi pod `visibility:hidden` (brama logowania), więc Playwright uznaje **każdy** element za niewidoczny — także działający poprawnie. Testy widoczności muszą założyć własne, fikcyjne konto sejfu; pierwsza wersja tego pliku mierzyła bramę zamiast paska.
+
 ### P-TOZSAMOSC-PYTAJ — sejf pyta, kim jest pacjent, zamiast zgadywać (SW 1.0.933, 2026-09-14, zlecenie właściciela)
 
 **Stan przed zmianą.** Sejf dopasowuje pacjenta po znormalizowanym nazwisku (`Wa()`). Dwa układy zostawiały go bez rozstrzygnięcia: zapisywany ma datę urodzenia, ale **któryś imiennik w bazie jej nie ma**; albo daty **nie ma nigdzie**, a imienników jest więcej niż jeden. W obu sejf sam wybierał „nowy pacjent", a o tym, że w ogóle było co rozstrzygać, informował **po fakcie** — dymkiem gasnącym po 2,5 s.
