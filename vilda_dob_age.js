@@ -64,7 +64,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '3';
+  var VERSION = '5';
 
   /* Pola formularza. `dobInput` to jedyne nowe; reszta istnieje od zawsze. */
   var ID = {
@@ -572,20 +572,85 @@
 
   /* Dane z rekordu, który aplikacja właśnie wczytała. Gdy ich nie ma, zostaje to,
      co lekarz wpisał ręcznie — wczytanie pacjenta bez daty niczego nie kasuje. */
-  function przyjmijZWczytanego() {
-    var iso = null;
-    var tygodnie = null;
+  /* P-DOB-LOAD (zgłoszenie właściciela 2026-09-14): wypełnianie wieku po wczytaniu pacjenta
+     nie może uchodzić za edycję lekarza.
+
+     ZNALEZISKO. Po wczytaniu rekordu aplikacja pokazuje „Odtwórz zapisany stan" i zakłada
+     JEDNORAZOWY nasłuch `input`/`change` w fazie przechwytywania. Pierwsze takie zdarzenie
+     chowa przycisk, ustawia `hasUserModifiedAfterLoad` i WYREJESTROWUJE nasłuch — bo z punktu
+     widzenia aplikacji lekarz właśnie zaczął zmieniać formularz. Ten moduł zaraz po wczytaniu
+     wpisuje wiek wyliczony z daty urodzenia i wysyła `input`, więc u pacjenta z datą urodzenia
+     przycisk znikał, zanim lekarz zdążył go zobaczyć: wybór „Nowy pomiar / Odtwórz zapisany
+     stan" nie pojawiał się wcale, a wizyta zaczynała się tak, jakby wybrano „Nowy pomiar".
+
+     POPRAWKA. Wokół WŁASNEGO, programowego wpisu zachowujemy stan sprzed niego: flagę edycji
+     i widoczność przycisku. Samo przywrócenie widoczności nie wystarcza — nasłuch już się
+     wyrejestrował, więc pierwsza PRAWDZIWA edycja lekarza nie schowałaby przycisku. Dlatego
+     uzbrajamy go ponownie przez `showRestoreButton()`, czyli funkcję samej aplikacji: ona
+     pokazuje przycisk i zakłada świeży nasłuch. Ten sam wzorzec (zapamiętaj flagę i stan
+     przycisku, przywróć po swojej robocie) stosuje już `ghReimport` w kolektorze.
+
+     Wpisu ręcznego to nie dotyczy: tam lekarz naprawdę edytuje formularz i flaga ma się
+     ustawić. Obejmujemy wyłącznie ścieżkę po zdarzeniu wczytania rekordu. */
+  function bezZnaczaniaEdycji(robota) {
+    var flagaPrzed;
+    var mialFlage = false;
     try {
-      var wczytane = w.lastLoadedData;
-      var uzytkownik = wczytane && wczytane.user ? wczytane.user : null;
-      if (uzytkownik && typeof uzytkownik.dobISO === 'string') iso = uzytkownik.dobISO;
-      if (uzytkownik && uzytkownik.ageWeeks != null) tygodnie = uzytkownik.ageWeeks;
+      flagaPrzed = w.hasUserModifiedAfterLoad;
+      mialFlage = true;
     } catch (e) {
-      zgloc('lastLoadedData', e);
+      zgloc('flaga-odczyt', e);
     }
-    if (iso && setFromRecord(iso)) return;
-    if (tygodnie != null && setWeeksFromRecord(tygodnie)) return;
-    odswiez();
+
+    var przycisk = null;
+    var widocznoscPrzed = null;
+    try {
+      var d = dok();
+      przycisk = d ? d.getElementById('restoreStateBtn') : null;
+      if (przycisk && przycisk.style) widocznoscPrzed = przycisk.style.display;
+    } catch (e) {
+      zgloc('przycisk-odczyt', e);
+    }
+
+    try {
+      robota();
+    } finally {
+      if (mialFlage) {
+        try {
+          w.hasUserModifiedAfterLoad = flagaPrzed;
+        } catch (e) {
+          zgloc('flaga-edycji', e);
+        }
+      }
+      /* Przycisk był widoczny, a nasz wpis go schował — przywracamy razem z nasłuchem. */
+      if (przycisk && przycisk.style && widocznoscPrzed !== null
+        && widocznoscPrzed !== 'none' && przycisk.style.display === 'none') {
+        try {
+          if (typeof w.showRestoreButton === 'function') w.showRestoreButton();
+          else przycisk.style.display = widocznoscPrzed;
+        } catch (e) {
+          zgloc('przycisk-odtworz', e);
+        }
+      }
+    }
+  }
+
+  function przyjmijZWczytanego() {
+    bezZnaczaniaEdycji(function () {
+      var iso = null;
+      var tygodnie = null;
+      try {
+        var wczytane = w.lastLoadedData;
+        var uzytkownik = wczytane && wczytane.user ? wczytane.user : null;
+        if (uzytkownik && typeof uzytkownik.dobISO === 'string') iso = uzytkownik.dobISO;
+        if (uzytkownik && uzytkownik.ageWeeks != null) tygodnie = uzytkownik.ageWeeks;
+      } catch (e) {
+        zgloc('lastLoadedData', e);
+      }
+      if (iso && setFromRecord(iso)) return;
+      if (tygodnie != null && setWeeksFromRecord(tygodnie)) return;
+      odswiez();
+    });
   }
 
   var zamontowano = false;

@@ -1098,6 +1098,55 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-PERINATAL — zapis z formularza głównego kasował „Dane okołoporodowe" (SW 1.0.929, 2026-09-14, zgłoszenie właściciela)
+
+**Zgłoszenie.** Właściciel poprosił o analizę, czy „Dane pokwitaniowe" z formularza głównego oraz „Dane okołoporodowe" i „Dojrzewanie płciowe" z Karty Pacjenta są ze sobą prawidłowo połączone i czy jednakowo wpływają na obliczenia, zwłaszcza w karcie „Zaawansowane obliczenia wzrostowe".
+
+**Znalezisko.** Kolektor `collectUserData()` buduje payload z **nazwanych** sekcji: `user`, `advanced`, `growthBasic`, `intake`, `birth`, `puberty`, `chartCreator` i dalszych. **Sekcji `perinatal` nie było wśród nich w ogóle**, a `savePatient` zapisuje payload taki, jaki dostał. Wystarczał więc **jeden** zapis z formularza głównego, żeby sekcja zniknęła z rekordu.
+
+Zmierzone w przeglądarce, pełny obieg:
+
+```
+SEJF PRZED:  perinatal = {gestationalAgeWeeks:39, birthWeight:3200, birthLength:52, parity:"1"}
+KOLEKTOR:    perinatal = (BRAK W KOLEKTORZE)
+SEJF PO:     perinatal = (USUNIĘTE)
+```
+
+**Dlaczego to boli klinicznie.** Karta „Zaawansowane obliczenia wzrostowe" czyta stamtąd **masę urodzeniową do prognozy Bluma dla ISS** (`VildaPerinatalSource.biezace()` → `calculateBlumIssPrediction`). Ta sama sekcja jest trzecim źródłem dla zdania o braku catch-upu (SGA) i dla ściągi B.64. **Na `index.html` karty SGA nie ma wcale**, więc Karta Pacjenta jest tam jedynym miejscem wpisu tych danych.
+
+Utrata jest **natychmiastowa i cicha**: zapis sam rozgłasza `vilda:patient-loaded`, a `VildaPerinatalSource` na to zdarzenie przeładowuje dane z rekordu — czyli z nowego zapisu, w którym `perinatal` już nie ma. Cache w pamięci nie ratuje sytuacji nawet na chwilę.
+
+**Zmiana.** `vilda_data_import_export.js` (1.18.0 → 1.19.0) — `Bper0()` przenosi sekcję z `lastLoadedData`, tym samym wzorcem co `dobISO` i `ageWeeks`. Formularz główny nie ma pól okołoporodowych, więc nie ma czego czytać z DOM; to czyste przeniesienie. Gdy lekarz skasuje te dane w Karcie Pacjenta, `applyLoadedData` odświeża `lastLoadedData` i przenoszenie samo przestaje działać.
+
+**Dlaczego `birth` tego problemu nie miało.** Sekcja urodzeniowa ma własny zapas (`window.vildaBirthData`), więc brak karty SGA na stronie jej nie kasuje. `perinatal` po prostu nikt nie podpiął.
+
+*Strażnicy:* `tests/unit/dane-okoloporodowe-kolektor.test.mjs` (9: przeniesienie kompletu i pojedynczego pola, kopia zamiast referencji, brak rekordu, rekord bez sekcji, pusty obiekt, złe typy, niedostępne `lastLoadedData`, okablowanie kolektora). `tests/e2e/dane-okoloporodowe-przezywaja-zapis.spec.mjs` (3: sekcja przeżywa zapis pomiaru, pacjent bez niej nie dostaje pustej, skasowanie w Karcie Pacjenta nie jest cofane). **Zmierzone czerwone:** 9/9 jednostkowych.
+
+### P-DOB-LOAD — u pacjenta z datą urodzenia znikał wybór „Nowy pomiar / Odtwórz zapisany stan" (część tej samej zmiany)
+
+**Zgłoszenie.** „Jak klikniemy u tego pacjenta w karcie pacjenta «Wczytaj tego pacjenta», to on się nie wczytuje poprawnie — nie ma wyboru Nowy pomiar / Odtwórz zapisany stan, tylko od razu wczytuje się jakby wersja Nowy pomiar".
+
+**Mechanizm.** Po wczytaniu rekordu aplikacja pokazuje przycisk „Odtwórz zapisany stan" i zakłada **jednorazowy** nasłuch `input`/`change` w fazie przechwytywania (`at()` w kolektorze). Pierwsze takie zdarzenie robi trzy rzeczy naraz: chowa przycisk, ustawia `hasUserModifiedAfterLoad` i **wyrejestrowuje nasłuch** — bo z punktu widzenia aplikacji lekarz zaczął edytować formularz. Markup mówi to wprost: „Przycisk zostanie automatycznie ukryty po użyciu lub po pierwszej edycji formularza przez użytkownika".
+
+`vilda_dob_age.js` zaraz po wczytaniu wpisuje wiek wyliczony z daty urodzenia i wysyła `input`. U pacjenta **z datą urodzenia** przycisk znikał więc, zanim lekarz zdążył go zobaczyć. To regresja wprowadzona przez DOB-AGE-1.
+
+Zmierzone przed poprawką, dwa osobne przebiegi na czystej stronie:
+
+| rekord | `hasUserModifiedAfterLoad` po wczytaniu |
+| --- | --- |
+| bez daty urodzenia | `false` |
+| z datą urodzenia | **`true`** |
+
+**Zmiana.** `vilda_dob_age.js` (3 → 5) — `bezZnaczaniaEdycji()` zachowuje wokół własnego, programowego wpisu stan sprzed niego: flagę edycji i widoczność przycisku. **Samo przywrócenie widoczności nie wystarcza** — nasłuch już się wyrejestrował, więc pierwsza prawdziwa edycja lekarza nie schowałaby przycisku. Dlatego uzbrajamy go ponownie przez `showRestoreButton()`, czyli funkcję samej aplikacji: ona pokazuje przycisk i zakłada świeży nasłuch. Wzorzec „zapamiętaj flagę i stan przycisku, przywróć po swojej robocie" stosuje już `ghReimport` w kolektorze — z tą różnicą, że nie uzbraja nasłuchu ponownie.
+
+Wpisu ręcznego to nie dotyczy: tam lekarz naprawdę edytuje formularz i flaga ma się ustawić. Obejmujemy wyłącznie ścieżkę po zdarzeniu wczytania rekordu.
+
+**Numer wersji modułu.** Przy P-DOB-CLR pin `?v=` poszedł na 4, ale stała `VERSION` w module została na 3. Tu zrównane: `VERSION = '5'` i `?v=5`.
+
+*Strażnicy:* `tests/unit/wczytanie-nie-udaje-edycji.test.mjs` (9: flaga wraca, przycisk zostaje widoczny, nasłuch uzbrajany ponownie, brak `showRestoreButton`, przycisk ukryty przed wpisem zostaje ukryty, flaga ustawiona wcześniej zostaje, brak przycisku w dokumencie, wyjątek w środku nie gubi przywrócenia, okablowanie). **Zmierzone czerwone:** 9/9.
+
+*Czego NIE dowodzą testy:* prawdziwa ścieżka „Wczytaj tego pacjenta" siedzi w domknięciu `vilda_auth_ui.js` i nie da się jej wywołać z testu, więc **potwierdzenie, że wybór wrócił, musi przyjść z kliknięcia w aplikacji**. Testy pilnują mechanizmu, nie całej ścieżki UI.
+
 ### P-DUP — ten sam pacjent zapisywał się jako nowy; „Wyczyść wszystkie pola" zostawiało datę urodzenia (SW 1.0.928, 2026-09-14, zgłoszenie właściciela)
 
 **Zgłoszenie.** Lekarz wczytał pacjenta z bazy, dopisał w formularzu głównym datę urodzenia, dodał nowe pomiary i zapisał. Aplikacja zapisała go jako **nowego** pacjenta, a zakładka Pacjenci pokazała duplikat („różni pacjenci — rozróżnij datą urodzenia, scalanie niemożliwe"). Od tej chwili **każdy** kolejny zapis tego pacjenta tworzył następną kopię — po czterech zapisach w bazie były cztery kopie tego samego dziecka, niezależnie od tego, czy szło się przez „Odtwórz zapis", czy „Nowy pomiar".
