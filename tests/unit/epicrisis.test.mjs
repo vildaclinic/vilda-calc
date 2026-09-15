@@ -262,7 +262,8 @@ describe('epikryza — tempo wzrastania: trzy stany zamiast fałszywego „w nor
       { sex: 'F', ageYears: 13, ageMonths: 6, growthVelocity: 3.0, growthVelocityMonths: 12, growthVelocityLow: null },
       {}
     );
-    expect(t).toContain('Aktualne tempo wzrastania wynosi 3,0 cm/rok (z 12-miesięcznej obserwacji).');
+    expect(t).toContain('Tempo wzrastania wynosi 3,0 cm/rok (z 12-miesięcznej obserwacji).');
+    expect(t, 'P-TEMPO: bez „Aktualne"').not.toContain('Aktualne tempo');
     expect(t).not.toContain('w normie');
     expect(t).not.toContain('poniżej normy');
   });
@@ -290,9 +291,13 @@ describe('epikryza — kolektor UI liczy flagę tempa hierarchią modułu trajek
     expect(uiSource).toContain('baMonths:e.boneAgeMonths');
   });
 
-  it('stan „nieoceniono” (null) gdy brak okna rocznego lub normy; stary próg tylko jako fallback bez modułu', () => {
-    expect(uiSource).toContain('Va9.usedLastYear&&Va9.normLabel?!!Va9.slow:null');
-    expect(uiSource).toContain('ye!=null&&i>=4&&i<=12&&(ve=ye<4.5)');
+  it('stan „nieoceniono” (null) gdy brak okna rocznego lub normy; bez własnego progu zapasowego', () => {
+    // P-TEMPO etap 2: sztywne 4,5 cm/rok dla 4–12 lat (nieudokumentowane, sprzeczne z drabinką
+    // karty: 6 cm/rok w 3–5 lat, 5 cm/rok w 5–10 lat) usunięte — siedmiolatek z 4,8 cm/rok
+    // dostawał „w normie" w epikryzie i „poniżej normy" na karcie.
+    expect(uiSource).toContain('Tm9.usedLastYear&&Tm9.normLabel?!!Tm9.slow:null');
+    expect(uiSource).not.toContain('ve=ye<4.5');
+    expect(uiSource, 'model z karty ma pierwszeństwo').toContain('e.tempo&&typeof e.tempo.cmPerYear=="number"');
   });
 });
 
