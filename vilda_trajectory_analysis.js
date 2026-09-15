@@ -14,17 +14,16 @@
  *    parytet pilnowany testem tests/unit/trajectory-analysis.test.mjs na realnym verdictCh;
  *  - opis strefy/kanału: identyczny z interpCh panelu (kanały 3/10/25/50/75/90/97);
  *  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 od pierwszego pomiaru z wieku ≥24 mies. (PR #64);
- *  - tempo wzrastania: window.pickPrevForLastYear / pickPrevFallback / velocityCmPerYear /
- *    getVelocityThreshold — identycznie jak karta „Zaawansowane obliczenia wzrostowe";
- *    dla wieku >10 lat hierarchia okołopokwitaniowa wg dostępnych danych (Tanner → wiek kostny →
- *    reguła generyczna) — parametry i źródła w P (akceptacja właściciela 2026-08-08).
+ *  - tempo wzrastania: od SW 1.0.944 liczy je WYŁĄCZNIE vilda_tempo_wzrastania.js
+ *    (window.VildaTempoWzrastania, P-TEMPO) — dobór pary, wzór, drabinka wiekowa i hierarchia
+ *    okołopokwitaniowa (Tanner → wiek kostny → reguła generyczna) są tam, ten plik tylko woła.
  * Jedyny własny parametr to strażnik jakości danych SEGMENT_MIN_GAP_M (odcinki krótsze niż 3 mies.
  * są pokazywane, ale bez werdyktu — annualizacja/ocena tak krótkich odstępów jest niestabilna).
  */
 (function (w) {
   'use strict';
 
-  var VERSION = '19';
+  var VERSION = '20';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -33,16 +32,8 @@
     REDFLAG_BASE_MIN_M: 24,
     CLINES: [3, 10, 25, 50, 75, 90, 97],
     CHN: ['<3', '3–10', '10–25', '25–50', '50–75', '75–90', '90–97', '>97'],
-    // ── Ocena tempa wzrastania >10 r.ż. (PARAMETRY KLINICZNE, akceptacja właściciela 2026-08-08) ──
-    // Źródła: Tanner & Whitehouse, Arch Dis Child 1976;51:170-9 (PMID 952550, doi:10.1136/adc.51.3.170)
-    // — centyle tempa dla wcześnie/przeciętnie/późno dojrzewających; Tanner & Davies, J Pediatr
-    // 1985;107:317-29 (PMID 3875704, doi:10.1016/s0022-3476(85)80501-1). 4 cm/rok ≈ dolna granica
-    // nadiru przedpokwitaniowego u późno dojrzewających. Reguła przesiewowa, nie diagnostyczna.
-    PUB_VELO_MIN: 4,            // cm/rok — próg okołopokwitaniowy (<4 alarmuje/ostrzega wg kontekstu)
-    PUB_AGE_MIN_M: 120,         // od 10 lat (poniżej działa getVelocityThreshold)
-    PUB_AGE_MAX_F_M: 156,       // dziewczęta: okno generyczne do 13 lat
-    PUB_AGE_MAX_M_M: 180,       // chłopcy: okno generyczne do 15 lat
-    BONE_AGE_FRESH_M: 18,       // wiek kostny użyty tylko, gdy oznaczony w ciągu ostatnich 18 mies.
+    // Progi oceny tempa (drabinka wiekowa, PUB_VELO_MIN 4 cm/rok, okna wieku, świeżość wieku
+    // kostnego) mieszkają od SW 1.0.944 w vilda_tempo_wzrastania.js (VildaTempoWzrastania.P).
     TANNER_FRESH_M: 12,         // etap Tannera z rekordu pacjenta użyty tylko, gdy zapisany w ciągu
                                 // ostatnich 12 mies. (stadium zmienia się w czasie — strażnik jakości danych)
     // Opóźnione dojrzewanie (Palmert & Dunkel, N Engl J Med 2012;366:443-53, PMID 22296078,
@@ -465,158 +456,35 @@
     };
   }
 
-  // ── Tempo wzrastania — identyczna logika doboru okna i progu jak karta zaawansowana ──
+  // ── Tempo wzrastania — liczy WYŁĄCZNIE vilda_tempo_wzrastania.js (P-TEMPO, 2026-09-15) ──
+  // Do SW 1.0.943 ten plik miał własną kopię doboru pary i hierarchii norm (identyczną z kartą
+  // zaawansowaną i podstawową). Trzy kopie tej samej logiki to trzy miejsca, w których mogła się
+  // rozjechać — audyt znalazł czternaście liczących tempo fragmentów. Tu zostaje sam adapter.
+
+  function tempoModul() {
+    var T = w.VildaTempoWzrastania;
+    return T && typeof T.policz === 'function' ? T : null;
+  }
 
   function heightVelocity(pts, currentAgeMonths, sex, ctx) {
     try {
+      var T = tempoModul();
+      if (!T) return null;
       var hp = pts.filter(function (p) { return p.height != null; });
       if (hp.length < 2) return null;
       var cur = hp[hp.length - 1];
       var hist = hp.slice(0, hp.length - 1).map(function (p) { return { ageMonths: p.ageMonths, height: p.height }; });
       var target = num(currentAgeMonths) != null ? num(currentAgeMonths) : cur.ageMonths;
-      if (typeof w.velocityCmPerYear !== 'function') return null;
-      var v = null, usedLastYear = false, gapM = null;
-      var prev = typeof w.pickPrevForLastYear === 'function' ? w.pickPrevForLastYear(hist, target, 6, 12, 3) : null;
-      if (prev) {
-        v = w.velocityCmPerYear(prev.height, prev.ageMonths, cur.height, target);
-        if (v != null) { usedLastYear = true; gapM = target - prev.ageMonths; }
-      }
-      if (v == null && typeof w.pickPrevFallback === 'function') {
-        var fb = w.pickPrevFallback(hist, target, 6);
-        if (fb) {
-          v = w.velocityCmPerYear(fb.height, fb.ageMonths, cur.height, target);
-          if (v != null) { gapM = target - fb.ageMonths; usedLastYear = gapM >= 6 && gapM <= 8; }
-        }
-      }
-      if (v == null || !isFinite(v)) return null;
-      var out = {
-        cmPerYear: v, gapM: gapM, usedLastYear: usedLastYear,
-        // Srodek przedzialu, bo normy HV-SDS sa nim indeksowane (tak zbudowano oba zrodla LMS).
-        wiekSrodekMies: gapM != null ? target - gapM / 2 : null,
-        plec: sex,
-        threshold: null, slow: false, alarm: false,
-        severity: null, basis: null, normLabel: null, note: null,
-        aboveNormAge: false
-      };
-      applyVelocityNorms(out, target, sex, ctx);
-      return out;
+      return T.policz(hist, { ageMonths: target, height: cur.height }, sex, ctx);
     } catch (e) {
       return null;
     }
   }
 
-  function applyVelocityNorms(out, target, sex, ctx) {
-    var v = out.cmPerYear, usedLastYear = out.usedLastYear;
-    var thr = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(target) : null;
-    if (thr) {
-      // <10 lat: normy wg wieku metrykalnego (poziom alarmowy jak dotąd). Do SW 1.0.866 kontekst
-      // nie był tu czytany W OGÓLE — dziecko po skoku pokwitaniowym dostawało za fizjologiczną
-      // decelerację alarm „poniżej normy ≥5 cm/rok", nawet z ręcznie wpisanym Tannerem V
-      // (GROWTH-VELO-TANNER-U10, zgłoszenie właściciela). Reguła dla Tannera IV–V nie jest nowa:
-      // obowiązuje powyżej 10 lat od 2026-08-08. Znosimy tylko granicę wieku, która ją odcinała.
-      var ts = ctx && ctx.tannerStage != null ? ctx.tannerStage : null;
-      if (ts === 4 || ts === 5) {
-        out.basis = 'tanner45';
-        out.note = 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V')
-          + ') — deceleracja fizjologiczna; norma tempa dla wieku ' + fmtAgeM(target)
-          + ' nie ma tu zastosowania';
-        return out;
-      }
-      // Tanner I–III potwierdza, że norma dla wieku obowiązuje. Próg ANI poziom alarmu nie
-      // zmieniają się: w trakcie skoku oczekiwanie jest WYŻSZE, nie niższe, więc łagodniejszy
-      // próg okołopokwitaniowy (PUB_VELO_MIN) świadomie tu nie wchodzi.
-      out.threshold = thr;
-      out.basis = ts != null ? 'ageTanner' : 'age';
-      out.normLabel = thr.label || null;
-      out.slow = !!(usedLastYear && v < thr.threshold);
-      out.severity = out.slow ? 'danger' : null;
-      out.alarm = out.slow;
-      return out;
-    }
-    if (target / 12 < 10) return out; // brak progu poniżej 1 r.ż. itp. — bez oceny
-    // ── >10 lat: hierarchia wg dostępnych danych (akceptacja właściciela 2026-08-08) ──
-    assessPubertalVelocity(out, target, sex, ctx);
-    return out;
-  }
-
-  // Ocena już policzonej wartości tempa (np. z karty zaawansowanej) tą samą hierarchią norm,
-  // której używa heightVelocity(). usedLastYear odtwarzane z odstępu pomiarów: pickPrevForLastYear
-  // akceptuje odstęp 9–15 mies., pickPrevFallback liczy się jako okno roczne przy 6–8 mies.,
-  // więc łącznie ocena względem normy obowiązuje dla odstępu 6–15 mies.
+  // Ocena już policzonej wartości tempa (np. z zapisanego rekordu) tą samą hierarchią norm.
   function assessVelocityValue(v, gapM, ageMonths, sex, ctx) {
-    var vv = num(v);
-    var target = num(ageMonths);
-    if (vv == null || !isFinite(vv) || target == null) return null;
-    var g = num(gapM);
-    var out = {
-      cmPerYear: vv, gapM: g, usedLastYear: g != null && g >= 6 && g <= 15,
-      threshold: null, slow: false, alarm: false,
-      severity: null, basis: null, normLabel: null, note: null,
-      aboveNormAge: false
-    };
-    applyVelocityNorms(out, target, sexMK(sex), ctx);
-    return out;
-  }
-
-  // Ocena tempa >10 r.ż.: Tanner (poziom 1) → wiek kostny (poziom 2) → reguła generyczna (poziom 3).
-  // Ocenia tylko przy oknie rocznym/awaryjnym (usedLastYear) — jak dotychczasowe normy.
-  function assessPubertalVelocity(out, targetAgeM, sex, ctx) {
-    var v = out.cmPerYear;
-    var isM = sexMK(sex) === 'M';
-    var genMax = isM ? P.PUB_AGE_MAX_M_M : P.PUB_AGE_MAX_F_M;
-    var ts = ctx && ctx.tannerStage != null ? ctx.tannerStage : null;
-    if (ts != null) {
-      if (ts === 1) {
-        // Badaniem wykluczono skok — obowiązuje norma przedpokwitaniowa.
-        out.basis = 'tanner1';
-        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok przed skokiem (Tanner I)';
-        out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
-        out.severity = out.slow ? 'danger' : null;
-        out.alarm = out.slow;
-        return;
-      }
-      if (ts === 2 || ts === 3) {
-        out.basis = 'tanner23';
-        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok w trakcie pokwitania (Tanner ' + (ts === 2 ? 'II' : 'III') + ')';
-        out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
-        out.severity = out.slow ? 'warn' : null;
-        return;
-      }
-      // Tanner IV–V: fizjologiczna deceleracja po skoku — bez oceny automatycznej.
-      out.basis = 'tanner45';
-      out.note = 'po skoku pokwitaniowym (Tanner ' + (ts === 4 ? 'IV' : 'V') + ') — deceleracja fizjologiczna';
-      return;
-    }
-    var ba = ctx && ctx.boneAge ? ctx.boneAge : null;
-    var baFresh = ba && (ba.atAgeMonths == null || (targetAgeM - ba.atAgeMonths) <= P.BONE_AGE_FRESH_M);
-    if (ba && baFresh) {
-      var thrBA = typeof w.getVelocityThreshold === 'function' ? w.getVelocityThreshold(ba.baMonths) : null;
-      if (thrBA) {
-        // Norma dobrana wg wieku kostnego; poziom czujność (błąd oceny BA ~±1 rok).
-        out.basis = 'boneAge';
-        out.normLabel = (thrBA.label || '') + ' — wg wieku kostnego ' + fmtAgeM(ba.baMonths);
-        out.slow = !!(out.usedLastYear && v < thrBA.threshold);
-        out.severity = out.slow ? 'warn' : null;
-        return;
-      }
-      if (ba.baMonths >= P.PUB_AGE_MIN_M && ba.baMonths <= genMax) {
-        out.basis = 'boneAgeGeneric';
-        out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok — wg wieku kostnego ' + fmtAgeM(ba.baMonths) + ' (okres okołopokwitaniowy)';
-        out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
-        out.severity = out.slow ? 'warn' : null;
-        return;
-      }
-      out.aboveNormAge = true; // wiek kostny powyżej okna — bez oceny
-      return;
-    }
-    if (targetAgeM <= genMax) {
-      out.basis = 'generic';
-      out.normLabel = '≥' + P.PUB_VELO_MIN + ' cm/rok (okres okołopokwitaniowy — możliwy późny skok)';
-      out.slow = !!(out.usedLastYear && v < P.PUB_VELO_MIN);
-      out.severity = out.slow ? 'warn' : null;
-      return;
-    }
-    out.aboveNormAge = true;
+    var T = tempoModul();
+    return T ? T.ocenWartosc(v, gapM, ageMonths, sex, ctx) : null;
   }
 
   // ── Analiza całości ──
@@ -700,7 +568,7 @@
 
   // ── Czerwone banery kart wzrostowych — JEDYNE źródło treści alarmów (wariant 1, decyzja
   // właściciela 2026-08-08): karty renderują wynik tej funkcji zamiast własnych kopii komunikatów.
-  // Progi bez zmian (flaga: reguła PR #64; tempo: getVelocityThreshold).
+  // Progi bez zmian (flaga: reguła PR #64; tempo: VildaTempoWzrastania).
 
   var CARD_ALERT_LINK = ', wskazana konsultacja endokrynologiczna, <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" style="color: var(--danger); text-decoration: underline;">umów wizytę</a>';
 
@@ -756,16 +624,8 @@
   // belki Tempo makiety B: `short` (krótki werdykt do chipa) i `note` (norma/kontekst do
   // wyciszonej dopiski) — usuwa zagnieżdżone nawiasy typu „w normie (≥4 cm/rok (…))".
   function velocityAssessment(vel) {
-    if (!vel) return null;
-    if (vel.slow && vel.severity === 'danger') {
-      return { cls: 'bad', text: 'poniżej normy dla wieku' + (vel.normLabel ? ' (' + vel.normLabel + ')' : ''), short: 'poniżej normy dla wieku', note: vel.normLabel ? 'norma ' + vel.normLabel : null };
-    }
-    if (vel.slow) return { cls: 'warn', text: 'do oceny — ' + (vel.normLabel || 'poniżej progu przesiewowego'), short: 'do oceny', note: vel.normLabel ? 'norma ' + vel.normLabel : 'poniżej progu przesiewowego' };
-    if (vel.note) return { cls: 'stable', text: vel.note, short: vel.note, note: null };
-    if (vel.basis && vel.usedLastYear) return { cls: 'good', text: 'w normie' + (vel.normLabel ? ' (' + vel.normLabel + ')' : ''), short: 'w normie', note: vel.normLabel ? 'norma ' + vel.normLabel : null };
-    if (vel.aboveNormAge) return { cls: 'stable', text: 'poza oknem automatycznej oceny normy tempa', short: 'poza oknem automatycznej oceny normy tempa', note: null };
-    if (!vel.usedLastYear) return { cls: 'stable', text: 'odstęp pomiarów poza oknem oceny, bez porównania z normą', short: 'odstęp pomiarów poza oknem oceny, bez porównania z normą', note: null };
-    return null;
+    var T = tempoModul();
+    return T ? T.ocenaTekst(vel) : null;
   }
 
   var NAZWA_PODGRUPY = {
@@ -1065,10 +925,13 @@
 
   function velocityHtml(vel, model) {
     if (!vel) return '';
-    var ctx = vel.gapM != null ? ' (ostatnich ' + Math.round(vel.gapM) + ' mies.)' : '';
-    var txt = '<span class="vta-lbl">Tempo wzrastania:</span> ' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok' + esc(ctx);
-    var a = velocityAssessment(vel);
-    if (a) txt += ' — <span class="vta-' + a.cls + '">' + esc(a.text) + '</span>';
+    var T = tempoModul();
+    var f = T ? T.formatuj(vel) : null;
+    if (!f) return '';
+    var nawias = f.odstep ? ' (' + f.odstep + (f.pozaOknem ? ', poza oknem oceny normy' : '') + ')'
+      : (f.pozaOknem ? ' (poza oknem oceny normy)' : '');
+    var txt = '<span class="vta-lbl">' + esc(f.etykieta) + ':</span> ' + esc(f.wartosc) + esc(nawias);
+    if (f.ocena) txt += ' — <span class="vta-' + esc(f.ocena.cls) + '">' + esc(f.ocena.zdanie) + '</span>';
     return '<p>' + txt + '</p>' + hvSdsHtml(vel, model);
   }
 
@@ -1298,12 +1161,15 @@
   // pokwitaniowy w wyciszonej dopisce — bez zagnieżdżonych nawiasów.
   function patientVelocityRowHtml(vel) {
     if (!vel) return '';
-    var a = velocityAssessment(vel);
+    var T = tempoModul();
+    var f = T ? T.formatuj(vel) : null;
+    if (!f) return '';
+    var a = f.ocena;
     var chip = a ? '<span class="vtap-chip ' + (CHIP_BY_CLS[a.cls] || 'vs') + '">' + esc(a.short) + '</span>'
       : '<span class="vtap-chip vs">poza oknem oceny normy</span>';
     return '<div class="vtap-tempo"><span class="nm">Tempo</span>'
-      + '<span class="v">' + esc(fmt(vel.cmPerYear, 1)) + ' cm/rok</span>'
-      + (vel.gapM != null ? '<span class="mut">ostatnich ' + Math.round(vel.gapM) + ' mies.</span>' : '')
+      + '<span class="v">' + esc(f.wartosc) + '</span>'
+      + (f.odstep ? '<span class="mut">' + esc(f.odstep) + '</span>' : '')
       + chip
       + (a && a.note ? '<span class="note">' + esc(a.note) + '</span>' : '')
       + '</div>';

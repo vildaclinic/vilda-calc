@@ -22,7 +22,7 @@ function karta(dodatkoweOkno) {
 
   const okno = Object.assign({}, dodatkoweOkno);
   for (const plik of ['hv_donald_data.js', 'hv_kelly_data.js', 'hv_cdgp_data.js',
-    'vilda_height_velocity.js']) {
+    'vilda_height_velocity.js', 'vilda_tempo_wzrastania.js']) {
     new Function('window', fs.readFileSync(path.join(korzen, plik), 'utf8'))(okno);
   }
   const esc = (x) => String(x)
@@ -38,10 +38,14 @@ function karta(dodatkoweOkno) {
     : (isFinite(parseFloat(String(v).replace(',', '.'))) ? parseFloat(String(v).replace(',', '.')) : null)));
   const sexMK = (v) => (String(v || '').toUpperCase().startsWith('M') ? 'M' : 'F');
   const fmtAgeM = (mo) => `${Math.floor(mo / 12)} lat ${Math.round(mo % 12)} mies.`;
+  // P-TEMPO: wiersz tempa składa VildaTempoWzrastania.formatuj(); werdykt w słowach
+  // (ocenaTekst) zostaje tu ZASTUBOWANY tak samo, jak dotąd velocityAssessment — test
+  // sprawdza, że blok HV-SDS werdyktu nie dotyka, nie to, jak werdykt brzmi.
+  const tempoModul = () => Object.assign({}, okno.VildaTempoWzrastania, { ocenaTekst: velocityAssessment });
   return new Function(
-    'w', 'esc', 'fmt', 'fmtS', 'velocityAssessment', 'num', 'sexMK', 'fmtAgeM',
+    'w', 'esc', 'fmt', 'fmtS', 'velocityAssessment', 'tempoModul', 'num', 'sexMK', 'fmtAgeM',
     `${src.slice(start, end)}\nreturn { hvSdsHtml, velocityHtml, patientHvCardHtml, hvSdsPodsumowanie, hvSdsDlaOpisu: typeof hvSdsDlaOpisu === 'function' ? hvSdsDlaOpisu : null };`,
-  )(okno, esc, fmt, fmtS, velocityAssessment, num, sexMK, fmtAgeM);
+  )(okno, esc, fmt, fmtS, velocityAssessment, tempoModul, num, sexMK, fmtAgeM);
 }
 
 // Dziewczynka 9,5 r.ż. w środku przedziału, 3,0 cm/rok, odstęp 12 mies.
@@ -75,9 +79,12 @@ describe('Liczba opisowa w karcie', () => {
 
   it('werdykt tempa zostaje nietknięty obok HV-SDS', () => {
     const { velocityHtml } = karta();
-    const html = velocityHtml(VEL, MODEL);
+    // P-TEMPO: werdykt w słowach składa prawdziwy silnik z pól modelu, więc model niesie
+    // alarm wprost (3,0 cm/rok przy normie ≥5 cm/rok) zamiast atrapy velocityAssessment.
+    const html = velocityHtml(Object.assign({}, VEL, { slow: true, alarm: true, severity: 'danger', basis: 'age', normLabel: '≥5 cm/rok' }), MODEL);
     expect(html).toContain('Tempo wzrastania:');
-    expect(html).toContain('<span class="vta-bad">poniżej normy dla wieku</span>');
+    expect(html).toContain('3,0 cm/rok (z 12 mies.)');
+    expect(html).toContain('<span class="vta-bad">poniżej normy dla wieku (norma ≥5 cm/rok)</span>');
     expect(html).toContain('SDS tempa:');
   });
 
@@ -85,10 +92,13 @@ describe('Liczba opisowa w karcie', () => {
     const src = fs.readFileSync(path.join(korzen, 'vilda_trajectory_analysis.js'), 'utf8');
     const start = src.indexOf('  var NAZWA_PODGRUPY = {');
     const end = src.indexOf('  function delayedPubertyHtml(');
-    const puste = new Function('w', 'esc', 'fmt', 'fmtS', 'velocityAssessment', 'num', 'sexMK', 'fmtAgeM',
+    const okno = {};
+    new Function('window', fs.readFileSync(path.join(korzen, 'vilda_tempo_wzrastania.js'), 'utf8'))(okno);
+    const stub = () => ({ cls: 'bad', text: 'poniżej normy' });
+    const puste = new Function('w', 'esc', 'fmt', 'fmtS', 'velocityAssessment', 'tempoModul', 'num', 'sexMK', 'fmtAgeM',
       `${src.slice(start, end)}\nreturn { velocityHtml };`)(
       {}, (x) => String(x), (v, d) => v.toFixed(d), (v) => String(v),
-      () => ({ cls: 'bad', text: 'poniżej normy' }), (v) => v, (v) => v, (v) => String(v));
+      stub, () => Object.assign({}, okno.VildaTempoWzrastania, { ocenaTekst: stub }), (v) => v, (v) => v, (v) => String(v));
     const html = puste.velocityHtml(VEL, MODEL);
     expect(html).toContain('Tempo wzrastania:');
     expect(html).not.toContain('SDS tempa:');
