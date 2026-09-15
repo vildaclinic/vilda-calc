@@ -665,6 +665,8 @@ Właściciel poprosił o znalezienie norm, które domknęłyby kryterium 4. **Ni
 
 ### GROWTH-HV-SDS — SDS tempa wzrastania wg Rikkena i Wita (SW 1.0.860, 2026-09-08)
 
+> **Uwaga (P-TEMPO-5, SW 1.0.948):** moduł `vilda_height_velocity_sds.js` został usunięty — od GROWTH-HV-MULTI nie miał konsumenta (aplikacja liczy SDS tempa silnikiem DONALD/Kelly/KOWD). Wpis zostaje jako historia i dokumentacja weryfikacji równań.
+
 Nowy czytelny moduł `vilda_height_velocity_sds.js`. Aplikacja umiała dotąd powiedzieć „4,1 cm/rok"; teraz umie powiedzieć, jak to tempo wypada wobec rówieśników. Źródło: **Rikken B, Wit JM. Prepubertal height velocity references over a wide age range. *Arch Dis Child* 1992;67:1277–80**, [DOI](https://doi.org/10.1136/adc.67.10.1277) — model ICP dopasowany do **szwedzkiego** badania podłużnego.
 
 **To NIE domyka kryterium 4 programu B.64.** Program wymaga norm dla populacji **polskiej**, a te nie istnieją w żadnym zweryfikowanym źródle (patrz GROWTH-B64 i sprostowanie niżej). Wynik tego modułu jest informacją kliniczną z **jawnie nazwaną populacją odniesienia**, nie spełnieniem kryterium — i tak musi być prezentowany.
@@ -1097,6 +1099,17 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 ### GROWTH-LMS — kompletność cytowań
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
+
+### P-TEMPO-5 — sprzątanie i strażnik: martwe silniki usunięte, własne wzory tempa zakazane testem (SW 1.0.948, 2026-09-15)
+
+Ostatni etap planu z P-TEMPO-1. Po etapach 1–4 tempo liczy wyłącznie `vilda_tempo_wzrastania.js`; ten etap usuwa to, co zostało obok, i stawia strażnika, żeby chaos nie odrósł.
+
+- **Usunięty `vilda_height_velocity_sds.js`** (SDS tempa wg Rikkena i Wita, GROWTH-HV-SDS): ładowany na obu stronach i w cache PWA, ale **bez żadnego konsumenta** od chwili, gdy GROWTH-HV-MULTI wprowadził silnik DONALD/Kelly/KOWD (`vilda_height_velocity.js`). Do przeglądarki jechały dwa sprzeczne zestawy norm (okno 12 ± 1 mies. i wiek końca przedziału vs 6–18 mies. i wiek środka), z których działał jeden. Wpis GROWTH-HV-SDS zostaje w rejestrze jako historia (równania i tabela 3 pracy źródłowej były zweryfikowane); publikacja Rikken & Wit 1992 nadal jest cytowana w GROWTH-HV-MULTI jako kontekst. Razem z modułem usunięty jego test `tempo-wzrastania-sds.test.mjs`.
+- **Usunięty `vilda_summary_inline.js`** (konsolidacja D5): czytał pole `advancedGrowthData.currentVelocity`, którego nikt nigdy nie zapisywał, a jego obsługę kliknięcia przechwytywał `vilda_summary_cards.js` (`stopImmediatePropagation`) — cały plik był martwy. Jeden builder „Podsumowania wyników" zamiast dwóch.
+- **`app.js`**: usunięte `pickPrevForLastYear`, `pickPrevFallback`, `velocityCmPerYear`, `getVelocityThreshold` (wraz z wpisami w mapie zależności karty zaawansowanej); „średnie tempo wg okresów" liczy `VildaTempoWzrastania.predkosc()`. `formatVelocityContext` zostaje dla `growthVelocityContext` (pole zgodności). Kolumna „Tempo wzrastania" w PDF karty zaawansowanej liczy `odcinek()` (nadal tylko dla odstępu ≥ 6 mies., jak mówi przypis).
+- **Strażnik `tests/unit/tempo-straznik.test.mjs`**: dla każdego pliku `*.js` w katalogu głównym (poza bibliotekami `*.min.js`, fontami, service workerem i testami dymnymi) zakazane są odciski usuniętych implementacji: wywołania `pickPrev*(`, `velocityCmPerYear(`, `getVelocityThreshold(`, ogólny kształt `(Δwzrost)/((Δmies.)/12)`, ciało dawnego adaptera, własne tempo monitora GH, sejfu i segmentów, próg 4,5 cm/rok epikryzy, heurystyka „spadek o 20 %" i dawne słownictwo wiersza („Aktualne tempo wzrastania", „obliczono jako średnią"). Dodatnio: silnik istnieje bez DOM, każdy z dwunastu konsumentów woła `VildaTempoWzrastania`, każda strona ładuje silnik przed konsumentem, cache PWA go ma, a martwe moduły nie wracają.
+- Wersje: `app.js?v=` 205 → 206, `vilda_advanced_growth.js?v=` 62 → 63; z cache PWA usunięte wpisy `vilda_summary_inline.js?v=1/2` i `vilda_height_velocity_sds.js?v=1` (pliki nie istnieją — precache by się wywrócił); `SW_VERSION` 1.0.948.
+- **Bilans P-TEMPO (etapy 1–5):** czternaście miejsc liczących tempo → jeden silnik i jedenaście konsumentów, które czytają; trzy jawne pojęcia (roczne / ostatni odcinek / odcinek); jedno słownictwo; próg alarmu równy wyświetlanej normie; B.64 bez werdyktu poniżej 180 dni; segmenty po pełnej nazwie preparatu; obserwacje Historii na normie wiekowej zamiast heurystyki; dwa martwe moduły mniej.
 
 ### P-TEMPO-4 — leczenie GH, segmenty, panel porównania i dietetyka na tym samym silniku (SW 1.0.947, 2026-09-15)
 
