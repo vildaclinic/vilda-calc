@@ -137,11 +137,74 @@ describe('Kolumny metod', () => {
     });
   });
 
-  it('metody wąskiego wskazania dochodzą dopiero, gdy się policzą', () => {
+  // P-WALIDACJA-DECYZJE, decyzja 3 (2026-09-15): metoda wąskiego wskazania stoi, gdy PROFIL
+  // pacjenta jej dotyczy — także gdy się nie policzyła — a pusta komórka niesie powód silnika.
+  it('metody wąskiego wskazania stoją, gdy profil pacjenta ich dotyczy', () => {
     const m = M.policzDlaPayloadu(KOWD);
     const klucze = m.methods.map((x) => x.key);
     expect(klucze).toContain('tw2'); // chłopiec z wiekiem kostnym — tablica 2.1 Tannera
     expect(klucze).not.toContain('menarche'); // chłopiec
+    expect(klucze).not.toContain('blum'); // bez siatek hSDS jest null → profil nieznany
+  });
+
+  it('bez profilu nie ma trzech pustych kolumn — dziewczynka bez wieku kostnego i bez menarche', () => {
+    const m = M.policzDlaPayloadu({
+      user: { sex: 'F', age: 9, ageMonths: 0, height: 130, weight: 28 },
+      advanced: { motherHeight: 160, fatherHeight: 175, data: { measurements: [
+        { ageMonths: 84, height: 118, weight: 21 }, { ageMonths: 96, height: 124, weight: 24 }] } },
+    });
+    expect(m.methods.map((x) => x.key).sort()).toEqual(['bp', 'khamis', 'mph', 'reinehr', 'rwt']);
+  });
+
+  it('wzrost przy menarche: kolumna stoi u dziewczynki z wiekiem menarche, a komórki mówią „przed menarche" i „brak wzrostu przy menarche"', () => {
+    const m = M.policzDlaPayloadu({
+      user: { sex: 'F', age: 17, ageMonths: 0, height: 163, weight: 55 },
+      puberty: { menarcheAgeYears: 12.5 },
+      advanced: { motherHeight: 162, fatherHeight: 176, data: { measurements: [
+        { ageMonths: 132, height: 143, weight: 36, boneAgeYears: 11 },
+        { ageMonths: 156, height: 156, weight: 46 },
+        { ageMonths: 180, height: 161.5, weight: 52, boneAgeYears: 14.5 }] } },
+    });
+    expect(m.ok).toBe(true);
+    expect(m.methods.map((x) => x.key)).toContain('menarche');
+    expect(punkt(m, 132).preds.menarche.reason).toBe('before-menarche');
+    expect(punkt(m, 156).preds.menarche.reason).toBe('missing-menarche-height');
+    expect(punkt(m, 156).preds.menarche.publikacja).toBeNull();
+    // TW Mark II: punkt bez wieku kostnego dostaje powód, punkt z wiekiem — liczbę.
+    expect(punkt(m, 156).preds.tw2.reason).toBe('missing-bone-age');
+    expect(typeof punkt(m, 132).preds.tw2.publikacja).toBe('number');
+    // Metryki liczą tylko z liczb — puste komórki ich nie psują.
+    expect(m.summary.tw2.n).toBe(2);
+  });
+
+  it('Blum/ISS: kolumna stoi u dziecka niskiego, a punkt poza zakresem wieku modelu dostaje powód silnika', () => {
+    const poprzednie = win.calcPercentileStats;
+    win.calcPercentileStats = () => ({ sd: -2.0 }); // niskorosłość we wszystkich punktach
+    try {
+      const m = M.policzDlaPayloadu({
+        user: { sex: 'M', age: 18, ageMonths: 0, height: 168, weight: 60 },
+        advanced: { motherHeight: 158, fatherHeight: 170, data: { measurements: [
+          { ageMonths: 24, height: 82, weight: 11, boneAgeYears: 1.5 },
+          { ageMonths: 120, height: 125, weight: 25, boneAgeYears: 8 },
+          { ageMonths: 168, height: 148, weight: 40, boneAgeYears: 12 }] } },
+      });
+      expect(m.methods.map((x) => x.key)).toContain('blum');
+      expect(punkt(m, 24).preds.blum.reason, 'dwulatek jest poniżej zakresu kohorty Bluma').toBe('out-of-range');
+      expect(typeof punkt(m, 120).preds.blum.publikacja).toBe('number');
+    } finally {
+      if (poprzednie === undefined) delete win.calcPercentileStats; else win.calcPercentileStats = poprzednie;
+    }
+  });
+
+  it('dziecko o prawidłowym wzroście nie dostaje kolumny Blum/ISS — profil jej nie dotyczy', () => {
+    const poprzednie = win.calcPercentileStats;
+    win.calcPercentileStats = () => ({ sd: 0.3 });
+    try {
+      const m = M.policzDlaPayloadu(KOWD);
+      expect(m.methods.map((x) => x.key)).not.toContain('blum');
+    } finally {
+      if (poprzednie === undefined) delete win.calcPercentileStats; else win.calcPercentileStats = poprzednie;
+    }
   });
 
   it('MPH jest na liście jako cel, nie jako prognoza', () => {

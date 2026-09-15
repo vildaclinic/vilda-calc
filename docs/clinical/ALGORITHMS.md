@@ -1098,6 +1098,27 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-WALIDACJA-DECYZJE — cztery otwarte pytania z etapów 2a/2b rozstrzygnięte (SW 1.0.943, 2026-09-15, zlecenie właściciela „zajmij się punktami 1–4")
+
+Po scaleniu `P-WALIDACJA-MODEL` (#306) i `P-WALIDACJA-WIDOK` (#307) zostały cztery pytania. Właściciel zlecił ich rozstrzygnięcie; decyzje poniżej są decyzjami wykonawcy z uzasadnieniem — każdą da się odwrócić osobno.
+
+**1. Domyślny tryb przełącznika — zostaje „Z publikacji".** Tryb „W konsensusie" pokazałby dla tej samej metody inną liczbę niż karta zaawansowana i „Podsumowanie wyników" (te pokazują wartości z publikacji od `GROWTH-PRED-PUBLIKACJA`) — czyli dokładnie tę sytuację „dwie liczby dla jednej metody", którą właściciel kazał usunąć. Tryb konsensusu jest świadomym wejściem w naszą warstwę, jedno kliknięcie dalej; kafelek podaje MAE dla obu trybów bez przełączania. Bez zmian w kodzie.
+
+**2. Ranking „najbliżej FH" — zostaje po wartościach w konsensusie.** Pytanie rankingu brzmi „która metoda, tak jak aplikacja jej użyła, trafiała najlepiej"; publikacyjne MAE stoi obok w kolumnie i w kafelku, więc porównanie „nasza korekta vs autorzy" jest widoczne bez rankingu. Ranking po publikacji nagradzałby metodę, której aplikacja w tej postaci nie użyła. Bez zmian w kodzie.
+
+**3. Metody wąskiego wskazania — stoją, gdy PROFIL pacjenta ich dotyczy** (zmiana). Dotąd Blum/ISS, TW Mark II i „wzrost przy menarche" pojawiały się dopiero, gdy się policzyły; brak kolumny nie mówił lekarzowi, że dopisanie jednej liczby (wzrost przy menarche, wiek kostny) włączyłoby metodę. Zasada „zawsze" dałaby z kolei trzy puste kolumny u każdego pacjenta bez znaczenia klinicznego. Stąd warunek profilu (`vilda_growth_prediction_validation_model.js` 1 → 2, `METODY_WASKIE`, `profilDotyczy`):
+- **Blum/ISS** — jest punkt z hSDS ≤ −1,28 (kryterium kohorty Bluma; stała brana z silnika `VildaBlumIss.SHORT_STATURE_SDS`);
+- **TW Mark II** — jest punkt z wiekiem kostnym;
+- **wzrost przy menarche** — dziewczynka z zapisanym wiekiem menarche albo wzrostem przy menarche.
+
+Pusta komórka niesie powód **silnika**: model woła `calculateBlumIssPrediction` / `calculateTW2Prediction` tym samym wejściem, którym woła je karta C, i oddaje ich `reason` (`out-of-range`, `missing-input`, `missing-dataset`, `no-measurement-in-window`, …); powody strukturalne nazywa sam: `missing-height-sds`, `not-short-stature`, `before-menarche`, `missing-menarche-height`. Widok (`vilda_growth_prediction_validation.js` 11 → 12) tłumaczy je po polsku. Metryki liczą wyłącznie z liczb, więc puste komórki nie zmieniają MAE ani rankingu. U chłopca nadal nie ma kolumny menarche; u dziecka o prawidłowym wzroście nie ma Blum/ISS; u dziewczynki bez wieku kostnego i bez menarche tabela ma dokładnie cztery metody podstawowe i MPH.
+
+**4. Powody bramek `GROWTH-PRED-DOBOR` w wierszu karty zaawansowanej — bez zmian.** Właściciel zdecydował w `GROWTH-PRED-UI2`, że wiersz karty ma zostać czysty, a powody idą do „Szczegółów"; od etapu 2a te same powody stoją w komórkach „Walidacji prognoz" (znacznik „poza konsensusem" z notą). Odwracanie decyzji właściciela na własną rękę nie mieści się w zleceniu „zajmij się".
+
+**Co się NIE zmienia.** Żaden wzór, próg, korekta ani bramka; konsensus; karty kliniczne; eksport (puste komórki metod wąskich idą do pliku z nazwanym powodem tak jak dotąd metody podstawowe).
+
+*Strażnicy:* `tests/unit/walidacja-prognoz-model.test.mjs` (+4: profil → kolumna, brak profilu → brak trzech pustych kolumn, menarche z powodami „przed menarche" / „brak wzrostu przy menarche" i TW2 z „brak wieku kostnego" w punkcie bez wieku, Blum/ISS u dziecka niskiego z powodem `out-of-range` w punkcie dwulatka i brak kolumny u dziecka o prawidłowym wzroście). `tests/e2e/walidacja-metody-waskie.spec.mjs` (1) — na prawdziwej stronie: nagłówki „Wzrost przy menarche" i „TW Mark II" u dziewczynki z wiekiem menarche bez wzrostu przy menarche, komórki z trzema powodami. **Zmierzona czerwień:** e2e **1 z 1** (nagłówki bez „Wzrost przy menarche"), jednostkowo **2 z 4** — dwa czerwone to nowe zachowanie (kolumna menarche z powodami, Blum/ISS z powodem silnika), dwa zielone to niezmienniki, które miały nadal obowiązywać (chłopiec bez kolumny menarche, dziecko o prawidłowym wzroście bez Blum/ISS, brak profilu → brak pustych kolumn).
+
 ### P-SCALANIE — scalanie duplikatów z bazy na życzenie lekarza; Nazwisko i Imię w dwóch polach na docpro (SW 1.0.942, 2026-09-15, zlecenie właściciela)
 
 **Zlecenie.** Po `P-DUP` i `P-ODSWIEZENIE` duplikaty przestały się mnożyć, ale te, które już powstały (to samo dziecko raz bez daty urodzenia, raz z datą — każdy rekord z własną historią), zostawały w bazie na zawsze: widok „Duplikaty" w zakładce Pacjenci pokazywał grupę „różni pacjenci o tym samym nazwisku" wyłącznie do oglądania (scalanie niedostępne). Właściciel zlecił narzędzie do scalania oraz rozdzielenie pola nazwy na `docpro.html`.
