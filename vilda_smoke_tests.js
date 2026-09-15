@@ -106,7 +106,7 @@
     'vilda_estimated_intake.js?v=3',
     'vilda_update_prep.js?v=75',
     'vilda_growth_reference_data.js?v=1',
-    'vilda_professional_module.js?v=5',
+    'vilda_professional_module.js?v=6',
     'vilda_persist_runtime.js?v=13',
     'vilda_growth_prediction_lines.js?v=1',
     'vilda_summary_cards.js?v=34',

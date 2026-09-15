@@ -1100,6 +1100,19 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-SDS-4 — ciśnienie, nadciśnienie i wsad XLSX na silniku: jedna siatka wzrostu dla NHBPEP, jawny komunikat zamiast z = 0 (SW 1.0.953, 2026-09-15, decyzja właściciela nr 5)
+
+Etap 4 planu z P-SDS-1.
+
+- **Moduł ciśnienia** (`bp_module.js`, ?v 9 → 10): SDS wzrostu do wielomianu NHBPEP (`re()`) liczy `VildaSdsWzrostu.policz()` ze źródłem siatek aplikacji (dotąd własny wzór na `getLMSHeightHybrid`, zawsze OLAF, ignorujący wybór użytkownika); stara ścieżka zostaje zapasem bez silnika (etap 5). Brak SDS wzrostu blokuje **tylko** normy NHBPEP i mówi wprost: „Nie policzono SDS wzrostu (wzrost lub wiek poza zakresem siatek) — normy NHBPEP wymagają SDS wzrostu, więc centyla ciśnienia nie obliczono"; gałąź OLAF (Kułaga) SDS wzrostu nie używa i nie jest już blokowana „błędem wzrostu".
+- **Moduł nadciśnienia** (`hypertension_therapy.js`, ?v 6 → 7): `Se()` bierze SDS wzrostu z rdzenia (ta sama siatka, co moduł ciśnienia i karta; dotąd zawsze Palczewska), Palczewska tylko zapasem; **koniec cichego z = 0** — bez SDS wzrostu progi NHBPEP (`Re()`) nie są liczone, a podsumowanie dostaje jawny punkt z powodem. Zapis „hSDS −1,23" (dotąd „Height‑Z≈−1.23"), etykieta centyla wg ADV-REPORT-5 (dotąd `toFixed(0)` mogło dać „100. centyl").
+- **Wsad XLSX** (`vilda_professional_module.js`, ?v 5 → 6): kolumna `Z_wzrost` liczona silnikiem z **dokładnym wiekiem wiersza** (lata z daty urodzenia × 12) i źródłem wsadu — WHO osiągalne (dotąd wymuszone OLAF), bez przecieku uściślenia wieku z formularza (`calcPercentileStats` bierze je z `VildaDobAge`, gdy wiek w miesiącach się zgadza — wsad go omija). Masa i BMI bez zmian.
+- Populacje specjalne bez zmian: zespół Downa (Zemel 2015) i SGA (Niklasson, Intergrowth) to osobne siatki poza zakresem planu; etykiety „<3. centyla / >97. centyla" w module Downa to kategorie ogonów (jak obwody), nie zaokrąglenie — nie mogą dać „0" ani „100".
+
+**Uwaga kliniczna (bez zmian względem audytu):** wielomian NHBPEP wyprowadzono na CDC 2000, którego aplikacja nie ma; SDS wzrostu z OLAF/WHO/Palczewskiej jest przybliżeniem — teraz przynajmniej jednym, tym samym w obu modułach i na karcie.
+
+*Strażnicy:* `tests/e2e/cisnienie-sds-wzrostu.spec.mjs` (1: `zht` modułu ciśnienia równa się hSDS karty przy OLAF i przy PALCZEWSKA — dwie siatki, dwie liczby). `tests/unit/sds-cisnienie-i-wsad.test.mjs` (6: `re()` przez silnik ze źródłem aplikacji i zapas bez silnika; blokada tylko NHBPEP z jawnym komunikatem; `Se()` przez rdzeń z Palczewską w zapasie; koniec z = 0 i progów bez SDS; zapis hSDS i etykieta centyla; wsad z dokładnym wiekiem i źródłem, masa przez rdzeń). Wersje jak wyżej; `SW_VERSION` 1.0.953.
+
 ### P-SDS-3 — Karta pacjenta, panel porównania, trajektoria, narracja, B.64 i dietetyka na silniku; SDS pozycji z dwoma miejscami, SDS tempa z jednym (SW 1.0.952, 2026-09-15, decyzje właściciela)
 
 Etap 3 planu z P-SDS-1.
