@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '20';
+  var VERSION = '21';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -881,8 +881,17 @@
    */
   function hvSdsKafelek(input) {
     var model = analyze(input);
-    if (!model || !model.velocity) return null;
-    var d = hvSdsDane(model.velocity, model);
+    /* P-TEMPO etap 3: Karta pacjenta podaje zapisany model tempa (`tempo`) — ten sam, który
+     * stoi w kafelku „Tempo wzrastania" obok. Dotąd kafelek SDS liczył tempo z osi czasu
+     * sejfu, czyli z innego zestawu punktów niż sąsiedni kafelek. Bez modelu — jak dotąd. */
+    var t = input && input.tempo;
+    var vel = t && num(t.cmPerYear) != null && num(t.gapM) != null ? t : (model ? model.velocity : null);
+    if (!vel) return null;
+    if (vel.wiekSrodekMies == null && num(input.currentAgeMonths) != null) {
+      vel = Object.assign({}, vel, { wiekSrodekMies: num(input.currentAgeMonths) - num(vel.gapM) / 2 });
+    }
+    if (!vel.plec) vel = Object.assign({}, vel, { plec: sexMK(input.sex) });
+    var d = hvSdsDane(vel, model || { sex: sexMK(input.sex) });
     if (!d) return null;
     var r = d.r;
     if (r.sds == null) {
@@ -911,7 +920,7 @@
       'Norma: ' + r.zrodlo.cytowanie + ' PMID ' + r.zrodlo.pmid
         + '. Populacja odniesienia: ' + r.zrodlo.populacja + '.',
       'Odstęp pomiarów: ' + fmt(r.oknoMies, 0) + ' mies. Wiek środkowy przedziału: '
-        + fmtAgeM(model.velocity.wiekSrodekMies) + '. Tempo: ' + fmt(r.cmPerYear, 1) + ' cm/rok.'
+        + fmtAgeM(vel.wiekSrodekMies) + '. Tempo: ' + fmt(r.cmPerYear, 1) + ' cm/rok.'
     ].concat(r.zastrzezenia || []);
     return {
       etykieta: 'SDS tempa',

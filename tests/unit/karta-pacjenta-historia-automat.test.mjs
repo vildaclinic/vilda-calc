@@ -48,6 +48,8 @@ function loadDevice() {
   };
   win.window = win; win.self = win; win.top = win;
   loadBrowserScript('vilda_crypto.js', win);
+  // P-TEMPO etap 3: tempo wierszy i obserwacje automatyczne liczy silnik tempa.
+  loadBrowserScript('vilda_tempo_wzrastania.js', win);
   loadBrowserScript('vilda_vault.js', win);
   const vault = win.VildaVault;
   vault.setStorageAdapter(vault.createInMemoryAdapter());
@@ -120,15 +122,30 @@ describe('H1 — zatrzymanie wzrastania przestaje być przemilczane', () => {
     expect(predkosc(e, 84), 'ujemna prędkość jest widoczna, a nie chowana').toBe(-3);
   });
 
-  it('kontrola negatywna: zwykłe spowolnienie nadal opisane jak dotąd', async () => {
+  it('spowolnienie poniżej normy wieku: werdykt karty słowo w słowo, z poprzednim tempem', async () => {
+    // P-TEMPO etap 3: 3,0 cm/rok u siedmiolatki (norma ≥5 cm/rok). Do SW 1.0.945 sejf
+    // liczył własną heurystykę „spadek o 20%" — teraz stoi na modelu karty.
     const v = await sejf();
     const e = await osCzasu(v, [[60, 110], [72, 115], [84, 118]]);
 
     const o = obserwacje(e, 'growth-slowdown');
     expect(o.length).toBe(1);
     expect(o[0].title).toBe('Spowolnienie wzrastania');
-    expect(o[0].description).toBe('Prędkość spadła o 40% (z 5,0 do 3,0 cm/rok).');
+    expect(o[0].description).toBe('Tempo wzrastania 3,0 cm/rok (z 12 mies.) — poniżej normy dla wieku (norma ≥5 cm/rok); wcześniej 5,0 cm/rok.');
+    expect(o[0].speedBefore).toBe(5);
+    expect(o[0].speedAfter).toBe(3);
+    expect(o[0].tempo.rodzaj).toBe('roczne');
     expect(predkosc(e, 84)).toBe(3);
+  });
+
+  it('fizjologiczna deceleracja w normie wieku NIE zapala „Spowolnienia"', async () => {
+    // 9 → 7 cm/rok między 3. a 4. rokiem życia to spadek o 22%: stara heurystyka 20%
+    // alarmowała, a 7 cm/rok w wieku 4 lat mieści się w normie (≥6 cm/rok).
+    const v = await sejf();
+    const e = await osCzasu(v, [[24, 87], [36, 96], [48, 103]]);
+    expect(obserwacje(e, 'growth-slowdown').length, 'w normie — cisza').toBe(0);
+    expect(obserwacje(e, 'growth-arrest').length).toBe(0);
+    expect(predkosc(e, 48)).toBe(7);
   });
 
   it('kontrola negatywna: koniec wzrastania u nastolatka nie zapala alarmu', async () => {
@@ -151,17 +168,23 @@ describe('H2 — kontrolny pomiar nie kasuje ostrzeżenia', () => {
 
     const o = obserwacje(e, 'growth-slowdown');
     expect(o.length, 'ostrzeżenie przeżywa kontrolę').toBe(1);
-    expect(o[0].description).toBe('Prędkość spadła o 42% (z 5,0 do 2,9 cm/rok).');
-    expect(predkosc(e, 86), 'nowy wiersz liczy prędkość od pomiaru sprzed 14 miesięcy').toBe(2.9);
+    expect(o[0].description).toBe('Tempo wzrastania 2,9 cm/rok (z 14 mies.) — poniżej normy dla wieku (norma ≥5 cm/rok); wcześniej 5,0 cm/rok.');
+    expect(predkosc(e, 86), 'nowy wiersz liczy tempo od pomiaru sprzed 14 miesięcy').toBe(2.9);
+    const w86 = e.filter((x) => x.type === 'measurement' && x.ageMonths === 86)[0];
+    expect(w86.growthVelocityGapM).toBe(14);
+    expect(w86.growthVelocityKrotki).toBe(false);
   });
 
-  it('kontrola negatywna: bez punktu odniesienia prędkości nie ma', async () => {
-    // Dwa pomiary w odstępie miesiąca i nic wcześniej — z takiego odstępu nie da się
-    // uczciwie policzyć cm/rok i sejf nie ma niczego zmyślać.
+  it('krótki odstęp bez punktu odniesienia: tempo z flagą krótkiego odstępu, bez werdyktu i bez obserwacji', async () => {
+    // Dwa pomiary w odstępie miesiąca i nic wcześniej. Decyzja właściciela 2026-09-15:
+    // odstępy krótsze niż 6 mies. pokazywać z oznaczeniem, bez porównania z normą.
     const v = await sejf();
     const e = await osCzasu(v, [[84, 118], [85, 118.3]]);
 
-    expect(predkosc(e, 85)).toBeNull();
+    expect(predkosc(e, 85)).toBe(3.6);
+    const w85 = e.filter((x) => x.type === 'measurement' && x.ageMonths === 85)[0];
+    expect(w85.growthVelocityGapM).toBe(1);
+    expect(w85.growthVelocityKrotki, 'flaga krótkiego odstępu').toBe(true);
     expect(obserwacje(e).filter((o) => o.observationType !== 'measurement-gap').length).toBe(0);
   });
 });
