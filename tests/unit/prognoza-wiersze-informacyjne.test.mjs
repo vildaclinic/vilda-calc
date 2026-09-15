@@ -8,6 +8,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 function load() {
   const win = {};
+  loadBrowserScript('vilda_sds_wzrostu.js', win); // P-SDS-5: karta C liczy przez prymitywy silnika
   loadBrowserScript('vilda_blum_iss.js', win);
   loadBrowserScript('vilda_growth_card_c.js', win);
   return win.VildaGrowthCardC;

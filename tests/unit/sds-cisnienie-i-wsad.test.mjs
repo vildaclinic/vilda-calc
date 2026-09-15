@@ -26,7 +26,7 @@ function wytnij(src, od) {
 describe('Moduł ciśnienia (bp_module.js)', () => {
   const src = zrodlo('bp_module.js');
 
-  it('re(): SDS wzrostu z silnika ze źródłem siatek aplikacji; bez silnika stara ścieżka (OLAF)', () => {
+  it('re(): SDS wzrostu z silnika ze źródłem siatek aplikacji; bez silnika brak wyniku', () => {
     const i = src.indexOf('function re(t,n,e)');
     expect(i).toBeGreaterThan(-1);
     const log = [];
@@ -36,8 +36,10 @@ describe('Moduł ciśnienia (bp_module.js)', () => {
     );
     expect(zSilnikiem('M', 150, 155)).toBe(-0.75);
     expect(log).toEqual([{ wzrost: 155, plec: 'M', wiekMies: 150, zrodlo: 'PALCZEWSKA' }]);
-    const bez = new Function('window', 'getLMSHeightHybrid', `${wytnij(src, i)}return re;`)({}, () => [1, 155, 0.04]);
-    expect(bez('M', 150, 155)).toBeCloseTo(0, 9);
+    // P-SDS-5: bez silnika nie ma wyniku — zadnej kopii wzoru na getLMSHeightHybrid.
+    const bez = new Function('window', `${wytnij(src, i)}return re;`)({});
+    expect(bez('M', 150, 155)).toBeUndefined();
+    expect(src).not.toContain('getLMSHeightHybrid');
   });
 
   it('brak SDS blokuje tylko normy NHBPEP i mówi wprost dlaczego; gałąź OLAF (Kułaga) liczy dalej', () => {
@@ -50,7 +52,7 @@ describe('Moduł ciśnienia (bp_module.js)', () => {
 describe('Moduł nadciśnienia (hypertension_therapy.js)', () => {
   const src = zrodlo('hypertension_therapy.js');
 
-  it('Se(): SDS wzrostu z rdzenia (ta sama siatka, co moduł ciśnienia), Palczewska tylko zapasem', () => {
+  it('Se(): SDS wzrostu z rdzenia (ta sama siatka, co moduł ciśnienia), bez rdzenia brak wyniku', () => {
     const i = src.indexOf('function Se(e)');
     const log = [];
     const Se = new Function('calcPercentileStats', 'calcPercentileStatsPal', `${wytnij(src, i)}return Se;`)(
@@ -59,8 +61,9 @@ describe('Moduł nadciśnienia (hypertension_therapy.js)', () => {
     );
     expect(Se({ heightCm: 140, sex: 'F', ageYears: 11 })).toEqual({ sd: -1.1, percentile: 13.6 });
     expect(log).toEqual([{ h: 140, s: 'F', y: 11, k: 'HT' }]);
+    // P-SDS-5: bez rdzenia nie ma wyniku — Palczewska nie jest juz zapasem.
     const bezRdzenia = new Function('calcPercentileStatsPal', `${wytnij(src, i)}return Se;`)(() => ({ sd: -0.3, percentile: 38 }));
-    expect(bezRdzenia({ heightCm: 140, sex: 'F', ageYears: 11 })).toEqual({ sd: -0.3, percentile: 38 });
+    expect(bezRdzenia({ heightCm: 140, sex: 'F', ageYears: 11 })).toBeNull();
   });
 
   it('bez SDS wzrostu: nie ma cichego z = 0 — jawny komunikat, normy NHBPEP nieliczone', () => {

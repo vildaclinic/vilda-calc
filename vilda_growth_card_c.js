@@ -129,16 +129,18 @@
     var eng = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
     return eng && lms && typeof lms === 'object' && lms.zrodlo && lms.sex && typeof eng.policz === 'function' ? eng : null;
   }
+  // P-SDS-5: zadnej kopii wzoru LMS — bez silnika nie ma wyniku. Jawne LMS (testy, dane bez
+  // zrodla) ida przez prymitywy silnika xLms/zLms.
   function heightFromSds(z, lms) {
     var zz = num(z);
     if (zz === null || !lms || typeof lms !== 'object') return null;
     var eng = sdsEngineFor(lms);
     if (eng) { var w = eng.wartoscDlaSds({ sds: zz, plec: lms.sex, wiekMies: 216, zrodlo: lms.zrodlo }); if (w && isFinite(w.wzrost) && w.wzrost > 0) return w.wzrost; }
+    var prim = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
     var L = num(lms.L), M = num(lms.M), S = num(lms.S);
-    if (M === null || M <= 0 || S === null || S <= 0) return null;
-    if (L === null) L = 1;
-    var x = Math.abs(L) < 1e-6 ? M * Math.exp(S * zz) : M * Math.pow(1 + L * S * zz, 1 / L);
-    return isFinite(x) && x > 0 ? x : null;
+    if (!prim || typeof prim.xLms !== 'function' || M === null || M <= 0 || S === null || S <= 0) return null;
+    var x = prim.xLms(zz, [L === null ? 1 : L, M, S]);
+    return typeof x === 'number' && isFinite(x) && x > 0 ? x : null;
   }
   function infoRowsFor(input, sk, curH) {
     var rows = [];
@@ -196,11 +198,11 @@
     if (x === null || x <= 0 || !lms || typeof lms !== 'object') return null;
     var eng = sdsEngineFor(lms);
     if (eng) { var r = eng.policz({ wzrost: x, plec: lms.sex, wiekMies: 216, zrodlo: lms.zrodlo }); if (r && typeof r.sds === 'number' && isFinite(r.sds)) return r.sds; }
+    var prim = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
     var L = num(lms.L), M = num(lms.M), S = num(lms.S);
-    if (M === null || M <= 0 || S === null || S <= 0) return null;
-    if (L === null) L = 1;
-    var z = Math.abs(L) < 1e-6 ? Math.log(x / M) / S : (Math.pow(x / M, L) - 1) / (L * S);
-    return isFinite(z) ? z : null;
+    if (!prim || typeof prim.zLms !== 'function' || M === null || M <= 0 || S === null || S <= 0) return null;
+    var z = prim.zLms(x, [L === null ? 1 : L, M, S]);
+    return typeof z === 'number' && isFinite(z) ? z : null;
   }
   // Konsensus wobec celu rodzicielskiego: różnica w cm i w SD celu, SDS wobec norm dorosłych, próg.
   function targetAssessmentFor(weightedCm, mphCm, adultLms) {

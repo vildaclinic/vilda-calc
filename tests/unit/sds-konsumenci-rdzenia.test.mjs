@@ -35,6 +35,8 @@ function atrapaSilnika(log = []) {
   return {
     fmtSds: fmt,
     sdsZCentyla: (p) => (p === 3 ? -1.8808 : p === 97 ? 1.8808 : 0),
+    zLms: (x, l) => (l[0] !== 0 ? (Math.pow(x / l[1], l[0]) - 1) / (l[0] * l[2]) : Math.log(x / l[1]) / l[2]),
+    xLms: (z, l) => (l[0] !== 0 ? l[1] * Math.pow(1 + l[0] * l[2] * z, 1 / l[0]) : l[1] * Math.exp(l[2] * z)),
     policz(o) { log.push({ f: 'policz', ...o }); return { sds: (o.wzrost - 100) / 10, centyl: 50, siatka: o.zrodlo, mediana: 100, fallback: false, powod: '' }; },
     wartoscDlaSds(o) { log.push({ f: 'wartoscDlaSds', ...o }); return { wzrost: 100 + 10 * o.sds, siatka: o.zrodlo || o.siatka, fallback: false }; },
     mediana(plec, wiekMies, zrodlo) { log.push({ f: 'mediana', plec, wiekMies, zrodlo }); return { mediana: 171.5, siatka: zrodlo, fallback: false }; },
@@ -47,7 +49,7 @@ describe('Ręczne kopie reguły siatki zniknęły z konsumentów rdzenia', () =>
     expect(adv).not.toMatch(/tt==="PALCZEWSKA"\|\|tt==="OLAF"&&(te|se|Y0)<sa\)\?y\(/);
     expect(adv, 'mpSDS z rdzenia z jawnym rodzajem HT').toContain('const C=u(Me,ae,18,"HT");C&&(ge=C)');
     expect(adv, 'normy dorosłych z silnika (mediana w 216. mies.)').toContain('Ts.mediana(ae,216,typeof tt<"u"?tt:null)');
-    expect(adv, 'adultHeightLMS niesie płeć i źródło dla karty C').toContain('S:s0,sex:ae,zrodlo:typeof tt<"u"&&tt?String(tt):null}');
+    expect(adv, 'adultHeightLMS niesie płeć i źródło dla karty C').toContain('sex:ae,zrodlo:zr,siatka:md.siatka}');
     // W module podstawowym zostaje tylko wybór siatki DO RYSOWANIA (krzywe LMS OLAF/WHO), nie do SDS.
     expect(zrodlo('growth-basic-module.js')).not.toContain('calcPercentileStatsPal(hv,a,ay,"HT")');
     expect(zrodlo('growth-basic-module.js')).toContain('const st=window.calcPercentileStats(hv,a,ay,"HT")');
