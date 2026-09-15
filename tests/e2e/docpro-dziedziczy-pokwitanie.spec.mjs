@@ -1,12 +1,11 @@
 import { expect, test } from '../support/test-czas.mjs';
 
 // P-DOCPRO-POKWITANIE (zgłoszenie właściciela 2026-09-14) — DocPro ma kartę „Zaawansowane
-// obliczenia wzrostowe", ale nie ma ANI JEDNEGO pola pokwitaniowego: ani etapu Tannera,
-// ani objętości jąder, ani wywiadu o rodzinnym opóźnieniu pokwitania, ani wykluczenia
-// przyczyn wtórnych. Ten sam pacjent dostawał tam więc uboższy wynik niż na stronie głównej.
-//
-// Kierunek właściciela: nie mnożyć pól ani obliczeń — strona, która czegoś potrzebuje, ma
-// to WZIĄĆ z tego samego miejsca, co strona główna. Tym miejscem jest rekord pacjenta.
+// obliczenia wzrostowe", ale nie miał ANI JEDNEGO pola pokwitaniowego. Pierwsza poprawka
+// brała etap i jądra z rekordu. P-TOZSAMOSC (2026-09-15): właściciel zobaczył, że tempo na
+// docpro nadal liczy wg wieku kostnego (rekord nie zawsze dochodzi, np. po przejściu ze strony
+// głównej bez `vilda:patient-loaded`) i zlecił IDENTYCZNY formularz główny — docpro ma dziś ten
+// sam panel „Dane pokwitaniowe". Reguła „pole albo rekord" zostaje dla stron bez panelu.
 //
 // Ten plik mierzy to, czego nie da się zmierzyć testem jednostkowym: czy wartości z rekordu
 // naprawdę dochodzą do KARTY, a nie tylko do modułu statusu. Obserwujemy zatwierdzony
@@ -90,25 +89,39 @@ function policz(page) {
   });
 }
 
-test('docpro.html: karta bierze etap i jądra z rekordu, bo własnych pól nie ma', async ({ page }) => {
+test('docpro.html: panel pokwitaniowy jest, rekord wypełnia etap i jądra, karta liczy z pól', async ({ page }) => {
   test.setTimeout(120_000);
   await otworzZKontem(page, '/docpro.html');
 
-  // Kontrola pozytywna: tych pól na DocPro naprawdę nie ma — inaczej test mierzyłby co innego.
-  const polaIstnieja = await page.evaluate(() => ['tannerStage', 'advTesticularVolume',
-    'advFamilyDelayedPuberty', 'advGrowthExclusion'].map((id) => Boolean(document.getElementById(id))));
-  expect(polaIstnieja).toEqual([false, false, false, false]);
+  // P-TOZSAMOSC (zlecenie właściciela 2026-09-15): docpro ma TEN SAM panel „Dane pokwitaniowe",
+  // co strona główna — formularz główny obu stron jest identyczny. Reguła „pole albo rekord"
+  // zostaje (tests/unit/docpro-dziedziczy-pokwitanie.test.mjs) jako zabezpieczenie dla stron
+  // bez panelu; tutaj mierzymy, że pole naprawdę jest i naprawdę wygrywa.
+  const polaIstnieja = await page.evaluate(() => ['tannerStage', 'advTesticularVolume', 'tannerToggleBtn',
+    'pubertyOnsetAge', 'pubertyCdgp'].map((id) => Boolean(document.getElementById(id))));
+  expect(polaIstnieja).toEqual([true, true, true, true, true]);
 
   await wczytajPacjenta(page);
 
+  const pola = await page.evaluate(() => ({
+    etap: document.getElementById('tannerStage').value,
+    jadra: document.getElementById('advTesticularVolume').value,
+    onset: document.getElementById('pubertyOnsetAge').value,
+    panelOtwarty: document.getElementById('tannerStageWrap').style.display !== 'none',
+  }));
+  expect(pola.etap, 'etap z rekordu trafia do pola').toBe('3');
+  expect(pola.jadra).toBe('4to6');
+  expect(pola.onset, 'fakt trwały z sekcji puberty').toBe('11');
+  expect(pola.panelOtwarty, 'panel odsłania się sam, bo ma wartości').toBe(true);
+
   const status = await page.evaluate(() => window.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 }));
-  expect(status.etap, 'etap z rekordu, bo pola nie ma').toBe(3);
-  expect(status.etapZrodlo, 'źródło nazwane uczciwie').toBe('rekord');
+  expect(status.etap).toBe(3);
+  expect(status.etapZrodlo, 'źródłem jest pole, tak jak na stronie głównej').toBe('formularz');
   expect(status.jadra).toBe('4to6');
 
   const wynik = await policz(page);
   expect(wynik.testicularVolume, 'karta dostaje objętość jąder').toBe('4to6');
-  expect(wynik.familyDelayedPuberty).toBe('yes');
+  expect(wynik.familyDelayedPuberty, 'wywiad rodzinny nadal z rekordu (pola nie ma w formularzu głównym)').toBe('yes');
   expect(wynik.growthExclusion).toBe('no');
   expect(wynik.profilJest, 'profil pokwitania powstaje, a nie jest pomijany').toBe(true);
 });

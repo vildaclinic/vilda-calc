@@ -93,13 +93,13 @@
     'advanced-growth-intake-sync-final-validation'
   ]);
   const EXPECTED_BROWSER_SCRIPTS = Object.freeze([
-    'vilda_deps.js?v=92',
+    'vilda_deps.js?v=93',
     'vilda_update_hooks.js?v=7',
     'vilda_centile_chart_header.js?v=1',
     'vilda_gh_therapy_resource_audit.js?v=31',
     'vilda_app_helpers.js?v=2',
     'vilda_macro_practice.js?v=2',
-    'vilda_data_import_export.js?v=78',
+    'vilda_data_import_export.js?v=79',
     'vilda_baseline_pacjenta.js?v=1',
     'vilda_dob_age.js?v=6',
     'vilda_food_summary.js?v=2',
@@ -107,7 +107,7 @@
     'vilda_update_prep.js?v=76',
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=6',
-    'vilda_persist_runtime.js?v=13',
+    'vilda_persist_runtime.js?v=14',
     'vilda_growth_prediction_lines.js?v=1',
     'vilda_summary_cards.js?v=35',
     'tw2_data.js?v=4',
@@ -119,7 +119,7 @@
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
-    'app.js?v=209',
+    'app.js?v=210',
     'vilda_smoke_tests.js?v=77',
     'vilda_diet_recommendations.js?v=27',
     'nutrition_norms.js?v=46',
