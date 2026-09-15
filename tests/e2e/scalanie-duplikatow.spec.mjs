@@ -47,17 +47,30 @@ async function paraDuplikatow(page) {
   });
 }
 
+/* Odczyt w trakcie scalania może trafić na rekord, którego wersje już przepięto (snapshots puste)
+   albo nagłówek już usunięty — taki rekord pomijamy, zamiast wywracać test na `undefined.payload`. */
 const pacjenci = (page) => page.evaluate(async () => {
   const l = await window.VildaVault.listPatients();
   const out = [];
   for (const p of l) {
     const f = await window.VildaVault.getPatient(p.patientId);
+    const glowa = f && Array.isArray(f.snapshots) ? f.snapshots[0] : null;
+    if (!f || !f.header || !glowa || !glowa.payload) continue;
+    const pom = ((glowa.payload.advanced || {}).data || {}).measurements || [];
     out.push({ id: p.patientId, dob: f.header.dobISO || null, n: f.snapshotCount,
-      rows: f.snapshots[0].payload.advanced.data.measurements.map((m) => m.ageMonths).sort((x, y) => x - y),
+      rows: pom.map((m) => m.ageMonths).sort((x, y) => x - y),
       notatki: (await window.VildaVault.listPatientNotesForPatient(p.patientId)).length });
   }
   return out;
 });
+
+/* Czeka, aż lista pacjentów ustabilizuje się na zadanej liczbie (koniec scalania). */
+async function czekajNaLiczbe(page, n) {
+  await page.waitForFunction(async (oczekiwane) => {
+    const l = await window.VildaVault.listPatients();
+    return l.length === oczekiwane;
+  }, n, { timeout: 15000 });
+}
 
 async function otworzDuplikaty(page) {
   await page.evaluate(() => window.VildaAuthUI.showPatientsList(() => {}));
@@ -92,6 +105,7 @@ test.describe('Duplikaty z bazy — scalanie na życzenie lekarza', () => {
     await expect(arkusz).toContainText('nie można cofnąć');
     await arkusz.locator('button', { hasText: 'Scal w jeden rekord' }).click();
 
+    await czekajNaLiczbe(page, 1);
     await expect.poll(async () => (await pacjenci(page)).length, { timeout: 15000 }).toBe(1);
     const [p] = await pacjenci(page);
     expect(p.id).toBe(nowy);
