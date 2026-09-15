@@ -135,8 +135,14 @@ test('zablokowane pole tożsamości nie otwiera podpowiedzi pacjenta; wolne pole
   await expect(lista(page).locator('.vilda-ac-row').first()).toContainText('Fikcyjna Ewa');
 
   // Wybór z podpowiedzi wczytuje pacjentkę — od tej chwili pola są zablokowane i lista znika.
+  // Formularz ma niezapisane liczby, więc aplikacja może najpierw zapytać strażnikiem niezapisanych
+  // zmian (okno .vug); na CI pytała, lokalnie nie — odpowiadamy „Odrzuć … i wczytaj", jak lekarz.
   await lista(page).locator('.vilda-ac-row').first().click();
-  await expect.poll(async () => (await stan(page)).pid, { message: 'wybór z listy wczytuje pacjentkę' }).toBeTruthy();
+  const straznik = page.locator('.vug-backdrop .vug-btn.vug-danger');
+  await expect.poll(async () => {
+    if (await straznik.isVisible()) await straznik.click();
+    return (await stan(page)).pid;
+  }, { message: 'wybór z listy wczytuje pacjentkę', timeout: 10000 }).toBeTruthy();
   await expect(page.locator('#vildaLoadChoiceModal'), 'pytanie „Nowy pomiar / Odtwórz zapis"').toBeVisible({ timeout: 5000 });
   await page.locator('#vildaLcmNew').click();
   await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
