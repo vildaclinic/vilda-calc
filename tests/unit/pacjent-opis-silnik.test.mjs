@@ -122,7 +122,7 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     const h = model.metrics.filter((m) => m.metric === 'height')[0];
     expect(h.worst.verdict.l, 'karta daje etykietę w mianowniku').toBe('istotna deceleracja wzrastania');
     expect(zdanie(wynik, 'odcinek'))
-      .toBe('Istotną decelerację wzrastania zaobserwowano w wieku od 5 do 6 lat (ΔhSDS −1,2).');
+      .toBe('Istotną decelerację wzrastania zaobserwowano w wieku od 5 do 6 lat (ΔhSDS −1,20).');
   });
 
   it('przebieg całości jest zdaniem z orzeczeniem, a wniosek wisi na spójniku', () => {
@@ -136,7 +136,7 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     });
 
     expect(zdanie(wynik, 'przebieg'))
-      .toBe('Z analizy siatki centylowej wynika, że wzrost chłopca w wieku od 7 do 9 lat mieści się w kanale 50–75 c. (ΔhSDS +0,1), co wskazuje na stabilny tor wzrastania.');
+      .toBe('Z analizy siatki centylowej wynika, że wzrost chłopca w wieku od 7 do 9 lat mieści się w kanale 50–75 c. (ΔhSDS +0,10), co wskazuje na stabilny tor wzrastania.');
   });
 
   it('wiek kostny opisany różnicą, bez oceny', () => {
@@ -169,7 +169,7 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
     // MPH to potencjał genetyczny z przedziałem ±8,5 cm (Tanner 1970), nie „wzrost
     // docelowy" — obok prognozy czytałby się jak druga prognoza (uwaga właściciela
     // 2026-09-07). To samo słowo, którego używa epikryza.
-    expect(t).toContain('Wzrost matki wynosi 160 cm, ojca 175 cm; potencjał genetyczny wzrostu (MPH) oceniono na 161 cm (±8,5 cm, mpSDS +0,8).');
+    expect(t).toContain('Wzrost matki wynosi 160 cm, ojca 175 cm; potencjał genetyczny wzrostu (MPH) oceniono na 161 cm (±8,5 cm, mpSDS +0,80).');
     expect(t).toContain('Aktualny wzrost dziecka znajduje się 1,2 SD poniżej potencjału genetycznego.');
     expect(t, 'MPH nie jest prognozą ani celem').not.toMatch(/docelow|prognoz/);
     // Progu „poniżej potencjału” aplikacja nie ma — opis nie może go wprowadzać tylnymi
@@ -309,10 +309,11 @@ describe('Kontrola końcowa 2026-09-07 — usterki składu znalezione na siatce'
   it('zero SDS bez znaku, minus typograficzny w liczbach', () => {
     const N = srodowisko({}).VildaPatientNarrative;
     // Znak dopiero po zaokrągleniu: −0,04 to „0,0", nie „−0,0".
-    expect(N.formatSds(-0.04)).toBe('0,0');
-    expect(N.formatSds(0.04)).toBe('0,0');
-    expect(N.formatSds(-0.06)).toBe('−0,1');
-    expect(N.formatSds(0.06)).toBe('+0,1');
+    // P-SDS etap 3 (decyzja 4): dwa miejsca po przecinku.
+    expect(N.formatSds(-0.004)).toBe('0,00');
+    expect(N.formatSds(0.004)).toBe('0,00');
+    expect(N.formatSds(-0.06)).toBe('−0,06');
+    expect(N.formatSds(0.06)).toBe('+0,06');
     // Ujemne tempo (błąd pomiaru) — łącznik ASCII nie jest minusem.
     const g = srodowisko({ 'HT|72': -0.4, 'HT|84': -0.9 });
     const { wynik } = opis(g, {

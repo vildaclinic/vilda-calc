@@ -68,9 +68,10 @@
   }
 
   // Formaty identyczne z panelem porównania (fmtC/fmtS).
+  // Etykieta centyla wg ADV-REPORT-5 (jedna reguła w całej aplikacji): „<1", „>99", inaczej do jedności.
   function fmtC(c) {
     if (c == null || !isFinite(c)) return '—';
-    return c <= 3 ? '<3' : c >= 97 ? '>97' : String(Math.round(c));
+    return c < 1 ? '<1' : c > 99 ? '>99' : String(Math.round(c));
   }
 
   // Znak nadawany PO zaokragleniu wartosci bezwzglednej. Wczesniej znak szedl z surowej
@@ -78,9 +79,19 @@
   // sugeruje spadek tam, gdzie zadnego kierunku nie ma. Samo zaokraglanie bez zmian
   // (toFixed na wartosci bezwzglednej, jak dotad); zmienia sie wylacznie to, czy zero
   // dostaje znak. Parytet z panelem porownania i epikryza pilnuje format-sds-zero.test.mjs.
+  // SDS TEMPA (GROWTH-HV-UI4): 1 miejsce — inna wielkość, format ustalony osobną decyzją właściciela.
   function fmtS(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
     var t = Math.abs(s).toFixed(1);
+    return (parseFloat(t) === 0 ? '' : (s > 0 ? '+' : '−')) + t.replace('.', ',');
+  }
+  // P-SDS etap 3 (decyzja 4): SDS POZYCJI (wzrost, masa, BMI, MPH) zawsze „−1,23" — 2 miejsca,
+  // znak, przecinek — tym samym formaterem, co silnik SDS wzrostu (zapas lokalny bez silnika).
+  function fmtP(s) {
+    if (typeof s !== 'number' || !isFinite(s)) return '—';
+    var eng = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
+    if (eng && typeof eng.fmtSds === 'function') return eng.fmtSds(s);
+    var t = Math.abs(s).toFixed(2);
     return (parseFloat(t) === 0 ? '' : (s > 0 ? '+' : '−')) + t.replace('.', ',');
   }
 
@@ -586,7 +597,7 @@
     var rf = heightRedFlagOf(model);
     if (rf) {
       out += '<p style="color: var(--danger); font-weight:600;">Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu (zmiana hSDS: '
-        + esc(fmtS(rf.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(rf.baseAgeMonths))
+        + esc(fmtP(rf.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(rf.baseAgeMonths))
         + ') — obraz deceleracji wzrastania' + CARD_ALERT_LINK + '</p>';
     }
     // Czerwony baner tempa tylko dla poziomu alarmowego (danger); poziom „czujność" (warn,
@@ -605,16 +616,16 @@
       + esc(fmt(m.first.value, m.dec) + (m.unit ? ' ' + m.unit : '') + ' → ' + fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
       + ' · ' + esc(fmtC(m.first.c) + 'c → ' + fmtC(m.last.c) + 'c')
       + ' (' + esc(zoneForPair(m.first.c, m.last.c, m.first.sd, m.last.sd)) + ')'
-      + ' · SDS ' + esc(fmtS(m.first.sd) + ' → ' + fmtS(m.last.sd))
+      + ' · SDS ' + esc(fmtP(m.first.sd) + ' → ' + fmtP(m.last.sd))
       + ' — ' + vSpan(m.total) + '</p>';
     if (m.redFlag) {
       line += '<p class="vta-red">⚠ Istotne obniżenie pozycji centylowej wzrostu '
-        + '(ΔhSDS ' + esc(fmtS(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
+        + '(ΔhSDS ' + esc(fmtP(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
         + ') — obraz deceleracji wzrastania</p>';
     }
     if (m.worst && m.worst.verdict && (m.worst.verdict.t === 'bad' || m.worst.verdict.t === 'warn') && m.segments.length > 1) {
       line += '<p>↳ najpoważniejszy odcinek: ' + esc(fmtAgeM(m.worst.a.ageMonths)) + ' → ' + esc(fmtAgeM(m.worst.b.ageMonths))
-        + ' (ΔSDS ' + esc(fmtS(m.worst.dSds)) + ') — ' + vSpan(m.worst.verdict) + '</p>';
+        + ' (ΔSDS ' + esc(fmtP(m.worst.dSds)) + ') — ' + vSpan(m.worst.verdict) + '</p>';
     }
     return line;
   }
@@ -957,7 +968,7 @@
         rows += '<tr><td>' + esc(m.title) + '</td>'
           + '<td>' + esc(fmtAgeM(s.a.ageMonths) + ' → ' + fmtAgeM(s.b.ageMonths)) + '</td>'
           + '<td>' + esc(fmtC(s.a.c) + 'c → ' + fmtC(s.b.c) + 'c') + '</td>'
-          + '<td>' + esc(fmtS(s.a.sd) + ' → ' + fmtS(s.b.sd)) + '</td>'
+          + '<td>' + esc(fmtP(s.a.sd) + ' → ' + fmtP(s.b.sd)) + '</td>'
           + '<td>' + (s.verdict ? vSpan(s.verdict) : '<span class="vta-stable">odstęp <' + P.SEGMENT_MIN_GAP_M + ' mies. — bez werdyktu</span>') + '</td></tr>';
       });
     });
@@ -1085,7 +1096,7 @@
     if (model.source) items.push(mchip('źródło', model.source));
     var ctx = model.context;
     if (ctx) {
-      if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push(mchip('🧬 MPH', 'SDS ' + fmtS(ctx.mpSds), 'kanał rodzicielski (MPH)'));
+      if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push(mchip('🧬 MPH', 'SDS ' + fmtP(ctx.mpSds), 'kanał rodzicielski (MPH)'));
       if (ctx.gh) items.push(mchip('💉 GH', 'od ' + fmtAgeM(ctx.gh.a) + (ctx.gh.b != null ? ' do ' + fmtAgeM(ctx.gh.b) : ' — nadal'), 'terapia GH (oznaczone odcinki: 💉)'));
       if (ctx.red) items.push(mchip('⬇ redukcja', (ctx.red.label ? ctx.red.label + ' · ' : '') + 'od ' + fmtAgeM(ctx.red.a) + (ctx.red.b != null ? ' do ' + fmtAgeM(ctx.red.b) : ' — nadal'),
         'zamierzona redukcja' + (ctx.red.label ? ' (' + ctx.red.label + ')' : '') + ' (oznaczone odcinki: ⬇)'));
@@ -1149,17 +1160,17 @@
       + '<div class="top"><span class="nm">' + esc(m.title) + '</span>'
       + '<span class="sp">' + sparklineSvg(m.series, rowTone(m)) + '</span></div>'
       + '<div class="big">' + esc(fmtC(m.first.c)) + 'c<span aria-hidden="true"> → </span>' + esc(fmtC(m.last.c)) + 'c'
-      + '<span class="d ' + tCls + '">ΔSDS ' + esc(fmtS(m.last.sd - m.first.sd)) + '</span></div>'
+      + '<span class="d ' + tCls + '">ΔSDS ' + esc(fmtP(m.last.sd - m.first.sd)) + '</span></div>'
       + '<div class="sub">' + esc(fmt(m.first.value, m.dec)) + ' → ' + esc(fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
-      + ' · SDS ' + esc(fmtS(m.first.sd) + ' → ' + fmtS(m.last.sd)) + '</div>';
+      + ' · SDS ' + esc(fmtP(m.first.sd) + ' → ' + fmtP(m.last.sd)) + '</div>';
     if (v) html += '<div class="vdt ' + tCls + '">' + esc(v.l) + '</div>';
     if (m.treatment) {
       html += '<div class="vtap-seg">↳ okres leczenia (od ' + esc(fmtAgeM(m.treatment.a.ageMonths)) + '): ΔSDS '
-        + esc(fmtS(m.treatment.dSds)) + ' — ' + esc(m.treatment.verdict.l) + '</div>';
+        + esc(fmtP(m.treatment.dSds)) + ' — ' + esc(m.treatment.verdict.l) + '</div>';
     }
     if (m.worst && m.worst.verdict && (m.worst.verdict.t === 'bad' || m.worst.verdict.t === 'warn') && m.segments.length > 1) {
       html += '<div class="vtap-seg">↳ najpoważniejszy odcinek: ' + esc(fmtAgeM(m.worst.a.ageMonths)) + ' → '
-        + esc(fmtAgeM(m.worst.b.ageMonths)) + ' (ΔSDS ' + esc(fmtS(m.worst.dSds)) + ') — ' + esc(m.worst.verdict.l) + '</div>';
+        + esc(fmtAgeM(m.worst.b.ageMonths)) + ' (ΔSDS ' + esc(fmtP(m.worst.dSds)) + ') — ' + esc(m.worst.verdict.l) + '</div>';
     }
     return html + '</div>';
   }
@@ -1193,7 +1204,7 @@
         rows += '<tr><td>' + esc(m.title) + '</td>'
           + '<td>' + esc(fmtAgeM(s.a.ageMonths) + ' → ' + fmtAgeM(s.b.ageMonths)) + mark + '</td>'
           + '<td>' + esc(fmtC(s.a.c) + 'c → ' + fmtC(s.b.c) + 'c') + '</td>'
-          + '<td>' + esc(fmtS(s.a.sd) + ' → ' + fmtS(s.b.sd)) + '</td>'
+          + '<td>' + esc(fmtP(s.a.sd) + ' → ' + fmtP(s.b.sd)) + '</td>'
           + '<td>' + (s.verdict ? chipHtml(s.verdict) : '<span class="vtap-chip vs">odstęp &lt;' + P.SEGMENT_MIN_GAP_M + ' mies.</span>') + '</td></tr>';
       });
     });
@@ -1214,7 +1225,7 @@
     hideRedFlag || model.metrics.forEach(function (m) {
       if (m.redFlag) {
         html += '<div class="vtap-flag">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS '
-          + esc(fmtS(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
+          + esc(fmtP(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
           + ') — obraz deceleracji wzrastania, wskazana ocena endokrynologiczna</div>';
       }
     });

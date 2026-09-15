@@ -1100,6 +1100,20 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-SDS-3 — Karta pacjenta, panel porównania, trajektoria, narracja, B.64 i dietetyka na silniku; SDS pozycji z dwoma miejscami, SDS tempa z jednym (SW 1.0.952, 2026-09-15, decyzje właściciela)
+
+Etap 3 planu z P-SDS-1.
+
+- **Karta pacjenta** (`vilda_auth_ui.js`, ?v 432 → 433): `En()` liczy wzrost zawsze przez `calcPercentileStats` (reguła siatki w silniku; masa zostaje przy Palczewskiej z rekordu); granica wieku jak w rdzeniu — 216 mies. włącznie (dotąd warstwa GH i Status ucinały już 18,0 lat, a monitor GH nie: ten sam punkt terapii miał hSDS w monitorze i „—" na Karcie); żeton „hSDS −1,23" i ΔhSDS warstwy GH z dwoma miejscami (dotąd jedno); **panel porównania** liczy wzrost przez `VildaSdsWzrostu.policz()` z płcią i źródłem siatki (`_vildaScale.sex/param`), a własny wzór LMS z lokalnym `ncdf` zostaje tylko dla masy (etap 5 go usunie); SDS panelu z dwoma miejscami, centyl wg ADV-REPORT-5 („<1", „>99"; dotąd „<3/>97").
+- **Trajektoria** (`vilda_trajectory_analysis.js`, ?v 24 → 25): SDS pozycji (wzrost, masa, BMI, MPH, ΔSDS odcinków, czerwona flaga) przez `fmtP` — dwa miejsca formaterem silnika (dotąd jedno; próg −1,0 liczono na dwóch miejscach, a pokazywano na jednym); **SDS tempa zostaje przy jednym miejscu** (`fmtS`, GROWTH-HV-UI4 — osobna decyzja właściciela); `fmtC` wg ADV-REPORT-5.
+- **Opis pacjenta** (`vilda_patient_narrative.js`, ?v 8 → 9): `formatSds` (hSDS, ΔhSDS, mpSDS, ΔBMI-SDS) dwa miejsca; SDS tempa, SDS urodzeniowe SGA i progi konsensusu („poniżej progu −2,0 SD") przez `fmtSds1` — jedno miejsce, bo to inne wielkości i progi czytane jako liczby całkowite z dziesiątką.
+- **Ściąga B.64** (`vilda_b64_checklist.js`, ?v 3 → 4): hSDS formaterem silnika. **Dietetyka** (`vilda_diet_plan_ui.js`, ?v 16 → 17): mediany wzrostu i masy „typowych dla wieku" ze źródła aplikacji, nie z siatki narzuconej wiekiem (`<3 lat → WHO`); regułę wieku ma silnik.
+- Bez zmian (świadomie): Historia w Karcie pacjenta nadal nie pokazuje hSDS pomiarów (to nowa funkcja, nie ujednolicenie — do decyzji właściciela); sejf nie generuje obserwacji z ΔhSDS.
+
+**Skutek kliniczny:** liczby hSDS na Karcie, w panelu porównania, trajektorii i opisie pochodzą z tej samej reguły siatki, co karta i raport (przy OLAF poniżej 3 lat — Palczewska); zapis „−1,23" wszędzie poza SDS tempa; punkt terapii w wieku 18,0 lat ma hSDS także na Karcie.
+
+*Strażnicy:* `tests/unit/sds-karta-i-trajektoria.test.mjs` (8: `En()` dla wzrostu, granice 216 mies., panel przez `policz()` z zapasem tylko dla masy, żeton i ΔhSDS 2 miejsca, `fmtS/fmtC` panelu, `fmtP/fmtS/fmtC` trajektorii z kontrolą, że blok SDS tempa woła wyłącznie `fmtS`, narracja 2/1 miejsca, ściąga B.64, dietetyka). Dopasowane: `format-sds-zero` (karta = `fmtP`, parytet panel/narracja/monitor kości na dwóch miejscach), `pacjent-opis-silnik`, `trajectory-analysis`. Wersje jak wyżej; `SW_VERSION` 1.0.952.
+
 ### P-SDS-2 — konsumenci rdzenia bez własnej reguły siatki; mpSDS, wiek kostny i normy dorosłych z silnika; jeden zapis „hSDS −1,23" (SW 1.0.951, 2026-09-15, decyzje właściciela)
 
 Etap 2 planu z P-SDS-1. Po etapie 1 rdzeń (`calcPercentileStats`) stosuje regułę siatki silnika, więc ręczne kopie warunku „PALCZEWSKA || OLAF && wiek < 3" w konsumentach stały się zbędne, a tam, gdzie ich brakowało — szkodliwe (mpSDS liczone z OLAF/WHO obok hSDS z Palczewskiej).
