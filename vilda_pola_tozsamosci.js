@@ -19,6 +19,7 @@
  *
  * CO ROBI
  *   #lastName, #firstName → readOnly (tekst zostaje czytelny i do skopiowania, jak data);
+ *   #advName, #basicGrowthName (kopie nazwy w kartach) → readOnly tak samo;
  *   #sex → disabled (select nie ma readOnly; aplikacja i tak wyłącza go przy wczytaniu);
  *   #tozsamoscNote → jedno zdanie „skąd i gdzie zmienić". Zdejmuje tylko to, co sam nałożył
  *   (znacznik data-z-kartoteki), więc nie walczy z innymi modułami o pola.
@@ -42,6 +43,9 @@
   if (w.VildaPolaTozsamosci && w.VildaPolaTozsamosci.__init) return;
 
   var ID = { nazwisko: 'lastName', imie: 'firstName', kanon: 'name', plec: 'sex', notka: 'tozsamoscNote' };
+  /* Kopie nazwy w kartach (karta zaawansowana, karta podstawowa) — po wczytaniu wyłącza je sama
+     aplikacja, po zapisie zostawały wolne z tym samym nazwiskiem (przegląd 2026-09-15). */
+  var KOPIE_NAZWY = ['advName', 'basicGrowthName'];
   var KLASA = 'vild-pole-z-kartoteki';
   var NOTKA = 'Nazwisko, imię i płeć z kartoteki. Zmiana w Karcie Pacjenta.';
   var ZNACZNIK = 'zKartoteki';
@@ -124,6 +128,7 @@
     try {
       nalozTekst(pole(ID.nazwisko), tak);
       nalozTekst(pole(ID.imie), tak);
+      KOPIE_NAZWY.forEach(function (id) { nalozTekst(pole(id), tak); });
       nalozPlec(pole(ID.plec), tak);
       var n = pole(ID.notka);
       if (n) {
@@ -173,8 +178,9 @@
 
   w.VildaPolaTozsamosci = {
     __init: true,
-    version: '2',
+    version: '3',
     ID: ID,
+    KOPIE_NAZWY: KOPIE_NAZWY,
     KLASA: KLASA,
     NOTKA: NOTKA,
     klucz: klucz,

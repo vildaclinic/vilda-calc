@@ -27,7 +27,7 @@ function atrapa(id) {
 
 function srodowisko({ bez = [] } = {}) {
   const pola = {};
-  ['lastName', 'firstName', 'name', 'sex', 'tozsamoscNote'].filter((id) => !bez.includes(id)).forEach((id) => { pola[id] = atrapa(id); });
+  ['lastName', 'firstName', 'name', 'sex', 'tozsamoscNote', 'advName', 'basicGrowthName'].filter((id) => !bez.includes(id)).forEach((id) => { pola[id] = atrapa(id); });
   const nasluchy = { doc: {}, win: {} };
   const win = {
     document: {
@@ -61,6 +61,9 @@ describe('vilda_pola_tozsamosci.js — reguła blokady', () => {
     expect(pola.lastName.readOnly).toBe(true);
     expect(pola.firstName.readOnly).toBe(true);
     expect(pola.sex.disabled).toBe(true);
+    // Kopie nazwy w kartach — po zapisie zostawały wolne z tym samym nazwiskiem (przegląd 2026-09-15).
+    expect(pola.advName.readOnly).toBe(true);
+    expect(pola.basicGrowthName.readOnly).toBe(true);
     expect(pola.lastName.klasy.has(M.KLASA)).toBe(true);
     expect(pola.sex.klasy.has(M.KLASA)).toBe(true);
     expect(pola.tozsamoscNote.hidden).toBe(false);
@@ -125,7 +128,7 @@ describe('vilda_pola_tozsamosci.js — reguła blokady', () => {
   });
 
   it('strona bez pól tożsamości: brak nasłuchów, brak wyjątku', () => {
-    const { nasluchy, M } = srodowisko({ bez: ['lastName', 'firstName', 'sex', 'name', 'tozsamoscNote'] });
+    const { nasluchy, M } = srodowisko({ bez: ['lastName', 'firstName', 'sex', 'name', 'tozsamoscNote', 'advName', 'basicGrowthName'] });
     expect(M.__init).toBe(true);
     expect(Object.keys(nasluchy.doc)).toEqual([]);
   });
@@ -162,7 +165,7 @@ describe('Obie strony mają ten sam formularz główny i tę samą blokadę', ()
   });
 
   it('service worker i rejestr zależności znają moduł', () => {
-    expect(zrodlo('service-worker-kalorii.js')).toContain("'/vilda_pola_tozsamosci.js?v=2',");
+    expect(zrodlo('service-worker-kalorii.js')).toContain("'/vilda_pola_tozsamosci.js?v=3',");
     expect(zrodlo('vilda_deps.js')).toContain('VildaPolaTozsamosci:');
   });
 });
@@ -181,9 +184,9 @@ describe('Podpowiedź pacjenta przy zablokowanym polu tożsamości (P-TOZSAMOSC-
     throw new Error('niezbalansowane nawiasy');
   }
 
-  const Bz0 = (pola) => new Function('i', 'mo', `${wytnij('Bz0')}return Bz0;`)(
+  // Bz0 zależy tylko od `i` (okna z dokumentem) — bez ręcznej kopii żadnej tablicy z pliku.
+  const Bz0 = (pola) => new Function('i', `${wytnij('Bz0')}return Bz0;`)(
     { document: { getElementById: (id) => pola[id] || null } },
-    { firstName: 1, lastName: 1 },
   );
 
   it('pole readOnly, disabled albo ze znacznikiem z kartoteki blokuje podpowiedź', () => {
@@ -194,12 +197,19 @@ describe('Podpowiedź pacjenta przy zablokowanym polu tożsamości (P-TOZSAMOSC-
     expect(b(null)).toBe(false);
   });
 
-  it('para Nazwisko/Imię: blokada jednego pola z pary wystarcza; wolna para podpowiada', () => {
+  it('zablokowana para Nazwisko/Imię gasi podpowiedź w każdym polu nazwy (także advName); wolna para podpowiada', () => {
     const zablokowana = Bz0({ lastName: { readOnly: true }, firstName: { readOnly: false } });
     expect(zablokowana({ id: 'firstName', readOnly: false, dataset: {} })).toBe(true);
+    // Przegląd 2026-09-15: po zapisie #advName bywało wolne, wstępnie wypełnione tym samym
+    // nazwiskiem, i otwierało listę — tożsamość jest jedna, więc bramka patrzy na parę.
+    expect(zablokowana({ id: 'advName', readOnly: false, dataset: {} })).toBe(true);
+    expect(zablokowana({ id: 'basicGrowthName', readOnly: false, dataset: {} })).toBe(true);
     const wolna = Bz0({ lastName: { readOnly: false }, firstName: { readOnly: false } });
     expect(wolna({ id: 'firstName', readOnly: false, dataset: {} })).toBe(false);
     expect(wolna({ id: 'basicGrowthName', readOnly: false, dataset: {} })).toBe(false);
+    // Strona bez pary (tylko pole nazwy): decyduje samo pole.
+    const bezPary = Bz0({});
+    expect(bezPary({ id: 'advName', readOnly: false, dataset: {} })).toBe(false);
   });
 
   it('Pi() pyta o blokadę przed budową listy i chowa ją', () => {
