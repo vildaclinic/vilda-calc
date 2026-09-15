@@ -107,7 +107,8 @@
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=5',
     'vilda_persist_runtime.js?v=13',
-    'vilda_summary_cards.js?v=31',
+    'vilda_growth_prediction_lines.js?v=1',
+    'vilda_summary_cards.js?v=32',
     'tw2_data.js?v=4',
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=2',
@@ -118,7 +119,7 @@
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=203',
-    'vilda_smoke_tests.js?v=75',
+    'vilda_smoke_tests.js?v=76',
     'vilda_diet_recommendations.js?v=26',
     'nutrition_norms.js?v=46',
     'nutrition_micros.js?v=26'

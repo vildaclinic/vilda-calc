@@ -1098,6 +1098,24 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-PROGNOZA-KONSENSUS — w „Podsumowaniu wyników" jedna prognoza zamiast czterech (SW 1.0.937, 2026-09-15, zlecenie właściciela)
+
+**Stan przed zmianą.** Karta „Podsumowanie wyników" wypisywała jako prognozę wzrostu ostatecznego **cztery równorzędne wiersze** — Bayley–Pinneau, RWT, Khamis–Roche, Reinehr 2019 — każdy z własnym przedziałem i bez jednego słowa o tym, który jest odpowiedzią aplikacji. Na fikcyjnym przypadku z tej zmiany (dziewczynka 10 lat, 145 cm, 38,5 kg, wiek kostny 9 lat, rodzice 165/178 cm) rozstrzał wynosił **168,9–173,7 cm**.
+
+Aplikacja ma swoją odpowiedź i miała ją także wtedy: **ważony konsensus metod** liczony przez kartę zaawansowaną (`GROWTH-PRED-DOBOR`, `vilda_growth_card_c.js` → `computeFinalHeightPrediction`). Żyje nim raport PDF (`ADV-REPORT-3`) i zalecenia dietetyczne. Sam ekran główny — nie. Cztery liczby różniące się o kilka centymetrów to nie jest „więcej informacji"; to pytanie „na którą patrzeć", zadawane przy każdym przeliczeniu karty.
+
+**Po zmianie.** W karcie stoi **jeden** wiersz prognozy — konsensus, w tym samym brzmieniu, w jakim drukuje go raport (`Prognoza wzrostu ostatecznego (konsensus 3 metod i MPH): 170,7 cm ±5,4 cm`), a przy niskiej zgodności metod nadal towarzyszy mu wiersz `Zgodność metod` (`ADV-REPORT-10`). Prognozy pojedynczych metod **nie znikają**: zostają w tej samej karcie, w zwiniętym bloku `Pozostałe metody prognozy (N)`, dokładnie w takiej postaci jak dotąd. **Do schowka idzie tylko konsensus** — pozostałe lekarz kopiuje ręcznie, zaznaczając je w karcie.
+
+**Czego zmiana NIE rusza.** Wzorów, korekt błędu systematycznego, bramek stosowalności ani samego konsensusu — liczby są co do znaku te same, co przed zmianą. `MPH` i `hSDS − mpSDS` zostają widoczne: MPH jest **celem genetycznym, nie prognozą** (kotwicą konsensusu, nie metodą). Raport PDF i opis pacjenta zostają bez zmian — one już mówiły konsensusem.
+
+**Jak rozpoznajemy linię konsensusu.** Nie po słowie „konsensus" w treści: przy **jednej** dostępnej metodzie `sourceLabel` jest nazwą tej metody, więc linia konsensusu wygląda wtedy jak linia metody. Moduł `vilda_growth_prediction_lines.js` woła **tę samą funkcję produkcyjną**, która zbudowała linię konsensusu (`advGrowthBuildConsensusSummaryLines`), i porównuje napisy — odpornie na twardą spację. Co się zgadza, zostaje widoczne; każda inna linia zaczynająca się od „Prognoza wzrostu ostatecznego" idzie za przycisk.
+
+**Bezpiecznik.** Gdy konsensusu nie ma (brak modułu karty, nieprzeliczona prognoza), **nic nie znika** — karta pokazuje wszystko jak dotąd. Karta bez prognozy wyglądałaby jak brak danych, a dane są.
+
+**Stan „rozwinięte" przeżywa przeliczenie.** Karta przebudowuje się przy każdym ruchu w formularzu; blok odczytuje swój stan z poprzedniego węzła, zanim ten zniknie. Bez tego zamykałby się lekarzowi pod palcami przy pierwszej poprawce wagi.
+
+*Strażnicy:* `tests/unit/prognoza-konsensus-karta.test.mjs` (9) — podział linii, MPH po stronie widocznej, wiersz zgodności po stronie widocznej, brak konsensusu = brak chowania, przypadek jednej metody (linia bez słowa „konsensus"), twarda spacja, kolejność, jawnie podany konsensus dla ścieżki kopiowania z zapisanego pomiaru. `tests/e2e/prognoza-konsensus-karta.spec.mjs` (6) — dokładnie jedna prognoza w kolumnach karty i jest to konsensus, pozostałe w bloku z licznikiem, blok domyślnie zwinięty i rozwijalny, stan rozwinięcia przeżywa przeliczenie, schowek z jedną prognozą, oraz **kontrola pozytywna** na MPH. **Zmierzona czerwień: 5 z 6** — szósty (kontrola) jest zielony przed i po.
+
 ### P-PINY-WERSJI — rytuał wydania pilnuje się sam (2026-09-14, zlecenie właściciela)
 
 **Po co.** Rytuał wydania wymaga zgodności kilku list, których nic dotąd nie porównywało. W ciągu jednego dnia potknąłem się o to **trzy razy**, za każdym razem dowiadując się z czerwonego CI, nie od siebie: dwukrotnie `SW_VERSION` podbity w service workerze, ale nie w pinie `klirens-ui-model.test.mjs`; raz `?v=` podbity na stronach, ale nie w `EXPECTED_BROWSER_SCRIPTS`.

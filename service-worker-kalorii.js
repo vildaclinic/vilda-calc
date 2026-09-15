@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.936';
+const SW_VERSION = '1.0.937';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -117,6 +117,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=64',
   '/style.css?v=65',
   '/style.css?v=66',
+  '/style.css?v=67',
   '/lab_clinical_panels.js?v=141',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
   '/inline_docpro_00.js?v=1',
@@ -791,6 +792,8 @@ const CORE_SHELL_URLS = [
   '/vilda_growth_card_c.js?v=5',
   '/vilda_patient_summary_copy.js?v=1',
   '/vilda_patient_summary_copy.js?v=2',
+  '/vilda_patient_summary_copy.js?v=3',
+  '/vilda_growth_prediction_lines.js?v=1',
   '/vilda_version_history_ui.js?v=1',
   '/vilda_version_history_ui.js?v=2',
   '/vilda_version_history_ui.js?v=3',
@@ -1877,6 +1880,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_report.js?v=13',
   '/vilda_patient_report.js?v=14',
   '/vilda_patient_report.js?v=15',
+  '/vilda_patient_report.js?v=16',
   '/vilda_patient_narrative_ui.js?v=3',
   '/vilda_trajectory_analysis.js?v=12',
   '/vilda_auth_ui.js?v=413',
@@ -1954,6 +1958,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_trajectory_analysis.js?v=18',
   '/vilda_summary_cards.js?v=29',
   '/vilda_summary_cards.js?v=31',
+  '/vilda_summary_cards.js?v=32',
   '/vilda_trajectory_analysis.js?v=19',
   '/vilda_trajectory_analysis.js?v=20',
   '/vilda_trajectory_analysis.js?v=21',
