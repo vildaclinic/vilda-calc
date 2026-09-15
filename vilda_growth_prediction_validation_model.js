@@ -42,7 +42,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var MIN_PUNKTOW_RANKINGU = 3;
 
   /* Metody, których kolumna stoi ZAWSZE — także gdy u tego pacjenta nic nie policzyły. Pusta
@@ -56,6 +56,20 @@
     { key: 'bp', label: 'Bayley–Pinneau' },
     { key: 'khamis', label: 'Khamis–Roche' },
     { key: 'reinehr', label: 'Reinehr/CDGP' }
+  ];
+
+  /* P-WALIDACJA-DECYZJE, decyzja 3 (2026-09-15): metoda wąskiego wskazania stoi w tabeli, gdy
+   * PROFIL PACJENTA jej dotyczy — także wtedy, gdy się nie policzyła; komórka mówi wtedy, czego
+   * brakuje (tak jak przy czterech podstawowych). Zniknięcie kolumny nie mówi nic, ale trzy
+   * puste kolumny u każdego pacjenta też nie — stąd warunek profilu zamiast „zawsze":
+   *   • Blum/ISS — jest punkt z hSDS ≤ −1,28 (kryterium kohorty Bluma, ta sama stała co w silniku);
+   *   • TW Mark II — jest punkt z wiekiem kostnym;
+   *   • wzrost przy menarche — dziewczynka z zapisanym wiekiem menarche albo wzrostem przy menarche.
+   * Etykiety jak w karcie C; gdy metoda się policzy, etykieta z niej wygrywa. */
+  var METODY_WASKIE = [
+    { key: 'blum', label: 'Blum/ISS' },
+    { key: 'tw2', label: 'TW Mark II' },
+    { key: 'menarche', label: 'Wzrost przy menarche / 0,955' }
   ];
 
   // Wiek, od którego uznajemy wzrost za prawdopodobnie zakończony — te same progi, których
@@ -278,6 +292,64 @@
     try { return api.computeFinalHeightPrediction(wejscie); } catch (e) { return null; }
   }
 
+  function progBlum() {
+    var api = w.VildaBlumIss;
+    return api && typeof api.SHORT_STATURE_SDS === 'number' ? api.SHORT_STATURE_SDS : -1.28;
+  }
+
+  function profilDotyczy(klucz, punkty, ctx) {
+    var zwykle = punkty.filter(function (p) { return !p.isFH; });
+    if (klucz === 'blum') {
+      return zwykle.some(function (p) { return typeof p.heightSds === 'number' && p.heightSds <= progBlum(); });
+    }
+    if (klucz === 'tw2') return zwykle.some(function (p) { return p.boneAgeYears !== null; });
+    if (klucz === 'menarche') return ctx.plec === 'F' && (ctx.wiekMenarche !== null || ctx.wzrostPrzyMenarche !== null);
+    return false;
+  }
+
+  /* Powód pustej komórki metody wąskiej. Pytamy SAM SILNIK — tym samym wejściem, którym woła go
+   * karta C — więc powód jest jego powodem, nie naszym domysłem; powody strukturalne (przed
+   * menarche, brak wzrostu przy menarche, hSDS powyżej progu) nazywamy tutaj, bo silnik ich nie
+   * rozróżnia albo nie jest wołany. */
+  function powodBraku(klucz, punkt, ctx) {
+    if (klucz === 'blum') {
+      if (typeof punkt.heightSds !== 'number') return 'missing-height-sds';
+      if (punkt.heightSds > progBlum()) return 'not-short-stature';
+      var fb = fun('calculateBlumIssPrediction');
+      if (!fb) return 'no-engine';
+      try {
+        var rb = fb({ sex: ctx.plec, chronologicalAgeYears: punkt.ageYears, chronologicalAgeMonths: punkt.ageMonths,
+          currentHeightCm: punkt.height, heightSds: punkt.heightSds, boneAgeYears: punkt.boneAgeYears,
+          motherHeightCm: ctx.matka, fatherHeightCm: ctx.ojciec });
+        return rb && rb.available !== true ? (rb.reason || 'no-value') : 'no-value';
+      } catch (e) { return 'no-value'; }
+    }
+    if (klucz === 'tw2') {
+      if (punkt.boneAgeYears === null) return 'missing-bone-age';
+      var ft = fun('calculateTW2Prediction');
+      if (!ft) return 'no-engine';
+      try {
+        var rt = ft({ sex: ctx.plec, chronologicalAgeYears: punkt.ageYears, chronologicalAgeMonths: punkt.ageMonths,
+          currentHeightCm: punkt.height, boneAgeYears: punkt.boneAgeYears, boneAgeSource: ctx.zrodloWiekuKostnego || 'GP',
+          postmenarcheal: poMenarche(punkt, ctx), menarcheAgeYears: ctx.wiekMenarche });
+        return rt && rt.available !== true ? (rt.reason || 'no-value') : 'no-value';
+      } catch (e) { return 'no-value'; }
+    }
+    if (klucz === 'menarche') {
+      if (!poMenarche(punkt, ctx)) return 'before-menarche';
+      if (ctx.wzrostPrzyMenarche === null) return 'missing-menarche-height';
+      return 'no-value';
+    }
+    return 'unavailable';
+  }
+
+  function pustaPrognoza(powod) {
+    return {
+      publikacja: null, konsensus: null, errPub: null, errKons: null, absErrPub: null, absErrKons: null,
+      excluded: false, gateNote: '', biasCm: 0, errorHalfWidthCm: null, reason: powod || 'unavailable'
+    };
+  }
+
   /* ——— metryki ——— */
 
   function srednia(lista) {
@@ -427,6 +499,17 @@
       }
     });
 
+    // Metody wąskiego wskazania: w tabeli, gdy profil ich dotyczy; puste komórki z powodem silnika.
+    METODY_WASKIE.forEach(function (m) {
+      var jest = kolejnosc.indexOf(m.key) >= 0;
+      if (!jest && !profilDotyczy(m.key, punkty, ctx)) return;
+      if (!jest) { kolejnosc.push(m.key); etykiety[m.key] = m.label; }
+      punkty.forEach(function (p) {
+        if (p.isFH || (p.preds && p.preds[m.key])) return;
+        p.preds[m.key] = pustaPrognoza(powodBraku(m.key, p, ctx));
+      });
+    });
+
     var metody = kolejnosc.map(function (k) { return { key: k, label: etykiety[k], pred: true }; });
     if (ctx.mph !== null) metody.push({ key: 'mph', label: 'MPH (cel)', pred: false, cel: true });
 
@@ -470,6 +553,9 @@
     _wzrostZakonczony: wzrostZakonczony,
     _hSds: hSds,
     METODY_PODSTAWOWE: METODY_PODSTAWOWE,
+    METODY_WASKIE: METODY_WASKIE,
+    _profilDotyczy: profilDotyczy,
+    _powodBraku: powodBraku,
     _mph: mphZRodzicow
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = w.VildaGrowthPredictionValidationModel;
