@@ -64,7 +64,7 @@ function wytnijWyrazenie(plik, od, doTekstu, parametr) {
 // Pozostałe miejsca tej samej rodziny, znalezione dopiero pełnym przemiatem plików
 // (poprzednie wyszukiwanie miało za wąski wzorzec i je przeoczyło).
 const pozostale = () => ({
-  // Etykieta „(zmiana hSDS: ±x,x)" w alercie karty — ścieżka zapasowa, używana gdy moduł
+  // Etykieta „(zmiana hSDS: ±x,xx)" w alercie karty — ścieżka zapasowa, używana gdy moduł
   // trajektorii nie jest załadowany, więc nie da się jej oddelegować do fmtS karty.
   alertBasic: wytnijWyrazenie('growth-basic-module.js', 'const q0=', ',q1=', 'Lx'),
   alertAdv: wytnijWyrazenie('vilda_advanced_growth.js', 'const q0=', ',q1=', 'Kd'),
@@ -88,11 +88,12 @@ const pozostale = () => ({
 describe('Pozostałe miejsca rodziny wzrostowej — domknięcie przemiatu', () => {
   it('etykieta „zmiana hSDS" w alercie karty nie pokazuje „−0,0"', () => {
     const p = pozostale();
-    expect(p.alertBasic(-0.04)).toBe('0,0');
-    expect(p.alertAdv(-0.04)).toBe('0,0');
+    // P-SDS-2 (decyzja 4): dwa miejsca po przecinku, jak kazdy inny zapis SDS wzrostu.
+    expect(p.alertBasic(-0.004)).toBe('0,00');
+    expect(p.alertAdv(-0.004)).toBe('0,00');
     // Kontrola pozytywna: prawdziwa zmiana bez zmian.
-    expect(p.alertBasic(-1.3)).toBe('−1,3');
-    expect(p.alertAdv(0.8)).toBe('+0,8');
+    expect(p.alertBasic(-1.3)).toBe('−1,30');
+    expect(p.alertAdv(0.8)).toBe('+0,80');
     expect(p.alertBasic(null)).toBeNull();
   });
 

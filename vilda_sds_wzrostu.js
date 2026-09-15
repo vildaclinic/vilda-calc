@@ -292,6 +292,20 @@
     return wynikPusty(o, 'brak siatek wzrostu dla tego wieku');
   }
 
+  /* Mediana wzrostu dla wieku na siatce wynikającej z tej samej reguły (np. normy w 18. r.ż.). */
+  function mediana(plec, wiekMies, zrodlo) {
+    var wiek = Number(wiekMies), p = plec === 'M' ? 'M' : 'F';
+    if (!isFinite(wiek) || wiek < 0 || wiek > G.PAL_MAX_M) return null;
+    var lista = kandydaci(zrodlo, wiek);
+    for (var i = 0; i < lista.length; i++) {
+      var s = lista[i], m;
+      if (s === 'PALCZEWSKA') m = wiek >= G.PAL_MIN_M ? medianaPal(p, wiek) : null;
+      else { var t = lms(p, wiek, s); m = t ? t[1] : null; }
+      if (typeof m === 'number' && isFinite(m) && m > 0) return { mediana: m, siatka: s, fallback: s !== normZrodlo(zrodlo) };
+    }
+    return null;
+  }
+
   /* Wzrost (cm) odpowiadający SDS na siatce wynikającej z tej samej reguły (odwrotność). */
   function wartoscDlaSds(opts) {
     var o = opts || {};
@@ -338,7 +352,7 @@
   root.VildaSdsWzrostu = Object.freeze({
     version: WERSJA, ZRODLA: ZRODLA.slice(), G: G, CENTYLE_PAL: CENTYLE_PAL.slice(),
     ustawDane: ustawDane, kandydaci: kandydaci, lms: lms, interpoluj: interpoluj,
-    zLms: zLms, xLms: xLms, policz: policz, policzNaSiatce: policzNaSiatce, wartoscDlaSds: wartoscDlaSds,
+    zLms: zLms, xLms: xLms, policz: policz, policzNaSiatce: policzNaSiatce, wartoscDlaSds: wartoscDlaSds, mediana: mediana,
     centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,
     fmtSds: fmtSds, fmtCentyl: fmtCentyl, formatuj: formatuj, etykieta: etykieta,
   });

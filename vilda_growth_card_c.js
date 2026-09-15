@@ -123,9 +123,17 @@
   //    (RMSE 2,2 cm w kohorcie autorów). Tylko dziewczęta. PARAMETRY KLINICZNE — do strojenia.
   var WU2023 = { hSds: 1.896, hSdsBa: 2.299, th: 0.408, konst: 100.17 };
   // Wzrost z SDS wobec LMS (odwrotność adultSdsFor).
+  // P-SDS-2: gdy adultHeightLMS niesie płeć i źródło siatek, SDS i odwrotność liczy silnik
+  // vilda_sds_wzrostu.js w 216. mies. (na PALCZEWSKA z Palczewskiej — LMS jest wtedy tylko zapasem).
+  function sdsEngineFor(lms) {
+    var eng = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
+    return eng && lms && typeof lms === 'object' && lms.zrodlo && lms.sex && typeof eng.policz === 'function' ? eng : null;
+  }
   function heightFromSds(z, lms) {
     var zz = num(z);
     if (zz === null || !lms || typeof lms !== 'object') return null;
+    var eng = sdsEngineFor(lms);
+    if (eng) { var w = eng.wartoscDlaSds({ sds: zz, plec: lms.sex, wiekMies: 216, zrodlo: lms.zrodlo }); if (w && isFinite(w.wzrost) && w.wzrost > 0) return w.wzrost; }
     var L = num(lms.L), M = num(lms.M), S = num(lms.S);
     if (M === null || M <= 0 || S === null || S <= 0) return null;
     if (L === null) L = 1;
@@ -186,6 +194,8 @@
   function adultSdsFor(cm, lms) {
     var x = num(cm);
     if (x === null || x <= 0 || !lms || typeof lms !== 'object') return null;
+    var eng = sdsEngineFor(lms);
+    if (eng) { var r = eng.policz({ wzrost: x, plec: lms.sex, wiekMies: 216, zrodlo: lms.zrodlo }); if (r && typeof r.sds === 'number' && isFinite(r.sds)) return r.sds; }
     var L = num(lms.L), M = num(lms.M), S = num(lms.S);
     if (M === null || M <= 0 || S === null || S <= 0) return null;
     if (L === null) L = 1;
