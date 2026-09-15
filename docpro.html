@@ -204,7 +204,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
 <script defer src="vilda_cloud_cache_warm.js?v=2"></script>
-<script defer src="vilda_vault.js?v=181"></script>
+<script defer src="vilda_vault.js?v=182"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=31"></script>
 <script defer src="vilda_sync_integration.js?v=44"></script>
@@ -214,7 +214,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="gh_therapy_segments.js?v=3"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
 <script defer src="vilda_patient_summary_copy.js?v=3"></script>
-<script defer src="vilda_auth_ui.js?v=429"></script>
+<script defer src="vilda_auth_ui.js?v=430"></script>
+<script defer src="vilda_name_fix.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
@@ -1434,10 +1435,41 @@ html.vilda-pro-active   #proGateBanner { display: none; }
          aby dane były synchronizowane pomiędzy stronami. -->
     <fieldset class="user-card">
       <!-- Zmodyfikowane pole wieku: lata oraz opcjonalnie miesiące -->
-      <!-- Nowe pole imię i nazwisko -->
-      <label>Imię i&nbsp;Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
-        <input type="text" id="name">
+      <!-- P-SPLIT na docpro (zlecenie właściciela 2026-09-15): tak jak na stronie głównej —
+           widoczne Nazwisko/Imię, ukryte #name jako kanon „Nazwisko Imię" (czyta je kolektor,
+           restore, autosave i wspólne sharedUserData). Jedno pole gubiło jawne części nazwiska
+           w rekordzie i przy następnym wczytaniu aplikacja pytała, które słowo jest nazwiskiem. -->
+      <label>Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+        <input type="text" id="lastName" autocomplete="off">
       </label>
+      <label>Imię <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+        <input type="text" id="firstName" autocomplete="off">
+      </label>
+      <input type="hidden" id="name">
+      <script>
+      /* P-SPLIT: synchronizacja Nazwisko/Imię ⇄ ukryte #name (kanon) — kopia skryptu ze strony
+         głównej. Hook na setterze .value pola #name łapie także zapisy ZEWNĘTRZNE
+         (restore/import/sharedUserData), więc widoczne pola zawsze odzwierciedlają #name. */
+      (function(){
+        function $(id){return document.getElementById(id);}
+        var nm=$('name'), fn=$('firstName'), ln=$('lastName');
+        if(!nm||!fn||!ln) return;
+        var syncing=false;
+        function combine(){ return [(ln.value||'').trim(),(fn.value||'').trim()].filter(Boolean).join(' '); }
+        function splitName(full){ var s=(full==null?'':String(full)).trim().replace(/\s+/g,' '); if(!s) return {f:'',l:''}; var p=s.split(' '); if(p.length===1) return {f:'',l:p[0]}; var l=p.shift(); return {f:p.join(' '),l:l}; }
+        function toName(){ if(syncing) return; syncing=true; nm.value=combine(); try{ nm.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){ } syncing=false; }
+        function fromName(){ if(syncing) return; syncing=true; var s=splitName(nm.value); fn.value=s.f; ln.value=s.l; syncing=false; }
+        fn.addEventListener('input', toName);
+        ln.addEventListener('input', toName);
+        try{
+          var proto=Object.getPrototypeOf(nm), d=Object.getOwnPropertyDescriptor(proto,'value');
+          if(d&&d.configurable){ Object.defineProperty(nm,'value',{ configurable:true, enumerable:d.enumerable,
+            get:function(){ return d.get.call(this); },
+            set:function(v){ d.set.call(this,v); if(!syncing){ fromName(); } } }); }
+        }catch(_){ }
+        fromName();
+      })();
+      </script>
       <!-- DOB-AGE-1 (decyzja właściciela 2026-09-13): data urodzenia w formularzu głównym.
            Pole OPCJONALNE; po wpisaniu poprawnej daty wiek w latach i miesiącach wypełnia się
            sam (ukończone pełne miesiące) i staje się tylko do odczytu. Logika: vilda_dob_age.js. -->
