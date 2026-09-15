@@ -1098,6 +1098,46 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-PINY-WERSJI — rytuał wydania pilnuje się sam (2026-09-14, zlecenie właściciela)
+
+**Po co.** Rytuał wydania wymaga zgodności kilku list, których nic dotąd nie porównywało. W ciągu jednego dnia potknąłem się o to **trzy razy**, za każdym razem dowiadując się z czerwonego CI, nie od siebie: dwukrotnie `SW_VERSION` podbity w service workerze, ale nie w pinie `klirens-ui-model.test.mjs`; raz `?v=` podbity na stronach, ale nie w `EXPECTED_BROWSER_SCRIPTS`.
+
+**Czwarta usterka, starsza, znaleziona przy pisaniu testu.** Rytuał podbijał wyłącznie trzy „główne" strony — `index.html`, `docpro.html`, `kalkulator-klirens.html` — a `app.html`, `ustawienia.html`, `terminarz.html`, `notatki.html`, `subskrypcja.html` i strony statyczne zostawały w tyle. **Piętnaście plików było ładowanych w dwóch wersjach naraz**: `vilda_vault.js` jako `?v=178` na pięciu stronach i `?v=181` na trzech, `vilda_auth_ui.js` jako 424 i 429, `style.css` jako 65 i 66, `bp_module.js` jako 4 i 9.
+
+Ten sam plik pod dwoma kluczami cache. Nie jest to awaria — service worker odświeża całą tablicę przy każdym wydaniu, a cache czasu działania łata resztę — ale między wydaniami przeglądarka mogła podawać jednej stronie świeży moduł, a drugiej ten sam moduł sprzed kilku wersji. Przy module sejfu to jest ryzyko, na które nie ma powodu się godzić. **Wyrównane: 67 podbić na 21 stronach**, każda do wersji już obecnej w tablicy service workera (żadnego nowego zasobu).
+
+**Co pilnuje test** (`tests/unit/piny-wersji.test.mjs`, 7):
+
+| twierdzenie | co łapie |
+| --- | --- |
+| jeden plik — jedna wersja na wszystkich stronach | podbicie na części stron (usterka wyżej) |
+| każdy zapinowany plik istnieje na dysku | literówkę i zmianę nazwy |
+| `EXPECTED_BROWSER_SCRIPTS` zgadza się z `index.html` | potknięcie z tego dnia |
+| zestaw smoke dokładany w wersji, którą pinuje | rozjazd z `application.spec.mjs` |
+| `SW_VERSION` zgadza się z pinem Klirensu | potknięcie z tego dnia, dwukrotne |
+| wersja kolektora zgadza się z pinem w smoke | rozjazd stałej modułu |
+| lista plików bez wstępnego pobrania nie rośnie | zasób dołożony do strony i pominięty w tablicy SW |
+
+**Sprawdzone na sobie.** Przy najbliższym wydaniu podbiłem `?v=` celowo tylko w `index.html`. Test zapalił się na czerwono i **nazwał obie pominięte strony** — `docpro.html` i `kalkulator-klirens.html`.
+
+**Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła.
+
+### P-ZAPIS-OBIETNICA — `saveUserData()` pozwala poczekać na zapis (SW 1.0.936, 2026-09-14, zlecenie właściciela)
+
+**Stan przed zmianą.** Funkcja kończyła się wyrażeniem `return <łańcuch>, a` — przecinek odpalał zapis i **natychmiast** oddawał payload. `await window.saveUserData()` nie czekał więc na nic; kto zaraz potem czytał sejf, ścigał się z zapisem.
+
+Potknął się o to test tożsamości pacjenta (`P-ZAPIS-BEZ-OBIETNICY`): rekord ze `snapshotCount: 1` przy komplecie danych w kolektorze, bez żadnego komunikatu. Ale tak samo potknąłby się import, moduł GH i każdy automat — bez sposobu obejścia poza odpytywaniem sejfu.
+
+**Poprawka.** Funkcja oddaje **obietnicę rozwiązaną tym samym payloadem, co wcześniej**, dopiero gdy zapis się domknie — a domknięcie obejmuje cały ciąg po zapisie: komunikat, zdarzenie `vilda:patient-loaded`, pamięć przyjętych wierszy.
+
+**Obietnica nigdy nie jest odrzucana.** Błąd jest już obsłużony wyżej (komunikat plus czerwony chip), a odrzucenie byłoby **nowym trybem awarii** dla wołających, którzy wyniku nie czytają — a takich jest większość (`custom-fixes.js`, `gh_igf_therapy.js`). Nieobsłużone odrzucenie w konsoli lekarza nie jest ulepszeniem.
+
+**Wczesne wyjścia zostają synchroniczne** i nadal oddają `null` (niekompletny formularz, brak sesji, brak modułu sejfu). `await` radzi sobie z jednym i z drugim, więc wołający ma jednolity sposób użycia, a „nie zapisano" nadal znaczy `null`, nie obietnicę udanego zapisu.
+
+**Sprawdzone, że nikt nie ucierpi.** Żaden wołający w repozytorium nie badał prawdziwości zwracanej wartości — trzy miejsca wynik ignorują, jedno (`app.js`) przekazuje go dalej bez sprawdzania. Gdyby ktoś pisał `if (!saveUserData())`, obietnica zawsze byłaby prawdziwa; takiego kodu nie ma i test to utrwala.
+
+*Strażnik:* `tests/e2e/zapis-obietnica.spec.mjs` (4) — po `await` rekord jest w sejfie **bez żadnego czekania ani odpytywania** (to jest cała treść zmiany), drugi zapis tak samo, niekompletny formularz nadal oddaje `null`, a awaria sejfu nie odrzuca obietnicy i nie zostawia nieobsłużonego błędu na stronie. **Zmierzona czerwień: 2 z 4** przeciwko wersji sprzed zmiany; dwa pozostałe pilnują BRAKU zmiany tam, gdzie zmiany być nie miało.
+
 ### P-ZAPIS-BEZ-OBIETNICY — `saveUserData()` nie pozwala poczekać na zapis (bez zmian w kodzie aplikacji, 2026-09-14, znalezione przy czerwonym CI)
 
 **Jak wyszło.** Odłamek E2E 3/3 zapalił się na czerwono: `tozsamosc-pacjenta-duplikaty.spec.mjs` twierdził, że po dopisaniu daty urodzenia rekord ją ma — a `dobISO` w nagłówku było `null`. Padło dwa razy z rzędu, w pliku dotykającym ścieżki zapisu, którą właśnie zmieniałem. Pierwszym odruchem było „to moje".

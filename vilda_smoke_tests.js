@@ -99,7 +99,7 @@
     'vilda_gh_therapy_resource_audit.js?v=31',
     'vilda_app_helpers.js?v=2',
     'vilda_macro_practice.js?v=2',
-    'vilda_data_import_export.js?v=76',
+    'vilda_data_import_export.js?v=77',
     'vilda_dob_age.js?v=5',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
@@ -118,7 +118,7 @@
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=203',
-    'vilda_smoke_tests.js?v=74',
+    'vilda_smoke_tests.js?v=75',
     'vilda_diet_recommendations.js?v=26',
     'nutrition_norms.js?v=46',
     'nutrition_micros.js?v=26'
@@ -916,7 +916,7 @@
         typeof auditFn === 'function' &&
         typeof anthroFn === 'function' &&
         !!(updateApi && typeof updateApi.getNumericValidationSnapshot === 'function') &&
-        !!(dataApi && dataApi.version === '1.23.0') &&
+        !!(dataApi && dataApi.version === '1.24.0') &&
         Object.keys(pureChecks).every(function (key) { return pureChecks[key] === true; }) &&
         contractDetail.ok === true,
       pureChecks,
