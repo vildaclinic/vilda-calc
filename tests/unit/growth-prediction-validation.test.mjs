@@ -11,6 +11,12 @@ function load(krValue = 162) {
     inp && inp.motherHeightCm > 0 && inp.fatherHeightCm > 0 && inp.currentWeightKg > 0
       ? { available: true, predictedAdultHeightCm: krValue }
       : { available: false, reason: 'missing-input' };
+  // Od etapu 2a model liczy `vilda_growth_prediction_validation_model.js`, a ten woła kartę C
+  // (`computeFinalHeightPrediction`) — tę samą ścieżkę, którą liczy karta zaawansowana i raport.
+  // Obie zależności są zarejestrowane na stronach i w service workerze; test musi je wczytać tak samo.
+  loadBrowserScript('vilda_blum_iss.js', win);
+  loadBrowserScript('vilda_growth_card_c.js', win);
+  loadBrowserScript('vilda_growth_prediction_validation_model.js', win);
   loadBrowserScript('vilda_growth_prediction_validation.js', win);
   return win.VildaGrowthPredictionValidation;
 }

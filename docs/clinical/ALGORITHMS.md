@@ -1098,6 +1098,33 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-WALIDACJA-MODEL — „Walidacja prognoz" liczy tą samą ścieżką, co karta i raport (SW 1.0.939, 2026-09-15, zlecenie właściciela, etap 2a)
+
+**Stan przed zmianą.** Karta „Walidacja prognoz" w Karcie pacjenta liczyła prognozy dla punktów historycznych, wołając **cztery surowe silniki** wprost i omijając całą warstwę decyzyjną karty „Zaawansowane obliczenia wzrostowe". Cztery skutki:
+
+1. **Oceniała cztery metody, a aplikacja liczy siedem plus konsensus.** Blum/ISS, TW Mark II i „wzrost przy menarche / 0,955" nie były mierzone wcale — mimo że dane do nich (`puberty.menarcheAgeYears`, `heightAtMenarcheCm`, `boneAgeAtMenarcheYears`) leżą w rekordzie od `GROWTH-PRED-TW2`.
+2. **Nie mierzyła KONSENSUSU** — czyli dokładnie tej liczby, którą aplikacja podaje jako prognozę i którą drukuje raport. Karta odpowiadała na wszystko oprócz pytania, po które powstała.
+3. **Pomijała korekty** (`GROWTH-PRED-BIAS`) **i bramki** (`GROWTH-PRED-DOBOR`): Khamis–Roche wykluczona z konsensusu przy rozbieżności wieku kostnego ≥ 24 mies. była tu liczona jako równorzędna, a Bayley–Pinneau bez korekty −2 / −4 cm. Skala kolorów karty to „≤ 2 cm / ≤ 4 cm / > 4 cm", więc korekta 4 cm przesuwała metodę o dwie klasy.
+4. **Kolumna Reinehr/CDGP nigdy się nie wypełniała.** Silnik startuje dopiero po otrzymaniu `profileModel.shouldShowReinehr`, którego karta nie przekazywała — a opóźnienie wieku kostnego liczyła jako `wiek kostny − metrykalny`, czyli z **odwrotnym znakiem** względem tego, czego silnik oczekuje. Dwie usterki jedna na drugiej: lekarz widział cztery kolumny, a metody były trzy.
+
+**Po zmianie.** Nowy czytelny moduł `vilda_growth_prediction_validation_model.js` (AGENTS.md §2) składa dla każdego punktu wejście karty C i woła `computeFinalHeightPrediction` — tę samą funkcję, którą liczy karta, raport i zalecenia. Nie zna żadnego wzoru medycznego: profil KOWD bierze z produkcyjnego `advGrowthBuildKowdProfileModel`, profil pokwitaniowy z `VildaPubertyProfile.ocenProfil`, hSDS punktu ze zwykłej ścieżki centylowej aplikacji. Stary plik zostaje **powłoką widoku**; `computeForPayload` jest teraz adapterem modelu na kształt, którego używa tabela.
+
+**Dwa zestawy liczb.** Każda metoda niesie `publikacja` (to, co widać na obu kartach klinicznych — `GROWTH-PRED-PUBLIKACJA`) i `konsensus` (wartość po naszych korektach, którą algorytm naprawdę policzył). Kafelek podaje MAE dla obu. **Różnica między nimi to jedyne miejsce w aplikacji, w którym widać, czy nasze własne korekty pomagają, czy szkodzą.**
+
+**Ranking „najbliżej FH"** (decyzja właściciela): minimum **trzy** punkty (dotąd wystarczał jeden), liczony z wartości **w konsensusie** — bo tych aplikacja użyła — a metoda musi w co najmniej trzech punktach naprawdę wejść do konsensusu. Bez drugiego warunku pastylkę mogłaby dostać metoda wykluczona bramką we wszystkich punktach. **Konsensus dostaje własny, wyróżniony kafelek, ale w rankingu nie startuje**: jest metodą pochodną i wygrana nad własnymi składowymi nie byłaby niezależnym dowodem.
+
+**Kolumny.** Cztery metody podstawowe (RWT, Bayley–Pinneau, Khamis–Roche, Reinehr/CDGP) stoją **zawsze**, także gdy u danego pacjenta nic nie policzyły — pusta kolumna z nazwanym powodem mówi, że metoda istnieje i czego jej brakuje; zniknięcie kolumny nie mówi nic. Metody wąskiego wskazania (Blum/ISS, TW Mark II, wzrost przy menarche) dochodzą dopiero, gdy się policzą. Kolumna konsensusu stoi **przed** metodami: tabela ma ich razem osiem i na węższym ekranie ostatnia wypadała poza kadr — sprawdzone na zrzucie, nie w teście.
+
+**Powody w komórkach.** Funkcja tłumacząca powody („brak wieku kostnego", „poza zakresem tablic") istniała i szła **wyłącznie do eksportu**; na ekranie zostawało gołe „—". Teraz powód stoi w komórce, a metoda wykluczona bramką dostaje znacznik „poza konsensusem" z notą bramki w `title`.
+
+**Jedno źródło metod.** Tabela, eksport pacjenta i eksport zbiorczy szły dotąd po **dwóch** osobno zaszytych listach; dodanie metody wymagało edycji w dwóch miejscach i nic tego nie pilnowało. Wszystkie trzy czytają teraz listę z modelu, a eksport pacjenta dostał kolumny konsensusu.
+
+**Co się NIE zmienia.** Żaden wzór, próg, korekta ani bramka. Karta zaawansowana, „Podsumowanie wyników", raport i opis pacjenta liczą i drukują bez zmian.
+
+**Czego świadomie nie zrobiono (etap 2b).** Przełącznika „publikacja / konsensus" nad tabelą, kart punktów na telefonie zamiast przewijania w bok, metryczki modyfikacji metod w panelu i kolumny `korekta_aplikacji_cm` w eksporcie zbiorczym. Powód rozbicia na dwa PR-y: etap 2a zmienia **skąd biorą się liczby**, 2b **jak się je ogląda** — i każdy da się wycofać osobno.
+
+*Strażnicy:* `tests/unit/walidacja-prognoz-model.test.mjs` (16) — konsensus policzony dla każdego punktu, Reinehr wypełniony tam i tylko tam, gdzie model jest stosowalny, profil KOWD z funkcji produkcyjnej, obie liczby z różnicą równą korekcie, metoda wykluczona oznaczona z powodem, ranking od trzech punktów i tylko „w konsensusie", konsensus poza rankingiem, kolumny podstawowe zawsze, metody wąskie warunkowo, MPH jako cel bez metryk, scalanie osi czasu z punktami GH, FH bez prognoz, tryb prognozy bez FH, status po menarche z wieku menarche, odmowy z powodem. `tests/e2e/walidacja-prognoz-model.spec.mjs` (5) — hSDS liczony na prawdziwych siatkach (w teście jednostkowym siatek nie ma, więc korekty i Blum/ISS milczą), Reinehr z liczbą, konsensus mierzony i poza rankingiem, panel z kolumną konsensusu i więcej niż czterema metodami, znaczniki i powody w komórkach. **Zmierzona czerwień: 5 z 5.** Zaktualizowane, nie osłabione: `growth-prediction-validation`, `khamis-roche-integration`, `growth-history-gh-merge` — dociągnięte o nowe zależności modelu.
+
 ### GROWTH-PRED-PUBLIKACJA — karty kliniczne pokazują metodę tak, jak podali ją autorzy (SW 1.0.938, 2026-09-15, decyzja właściciela)
 
 **Stan przed zmianą.** Ta sama metoda miała w aplikacji **dwie różne liczby**. Chłopiec 12 lat, 165 cm, wiek kostny 10 lat — Bayley–Pinneau:

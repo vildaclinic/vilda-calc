@@ -10,6 +10,12 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 function loadWired() {
   const win = {};
   loadBrowserScript('vilda_khamis_roche.js', win);
+  // Od etapu 2a model liczy `vilda_growth_prediction_validation_model.js`, a ten woła kartę C
+  // (`computeFinalHeightPrediction`) — tę samą ścieżkę, którą liczy karta zaawansowana i raport.
+  // Obie zależności są zarejestrowane na stronach i w service workerze; test musi je wczytać tak samo.
+  loadBrowserScript('vilda_blum_iss.js', win);
+  loadBrowserScript('vilda_growth_card_c.js', win);
+  loadBrowserScript('vilda_growth_prediction_validation_model.js', win);
   loadBrowserScript('vilda_growth_prediction_validation.js', win);
   return win.VildaGrowthPredictionValidation;
 }

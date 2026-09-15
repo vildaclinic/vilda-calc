@@ -12,7 +12,12 @@ function loadVault() {
 }
 
 function loadGpv() {
-  return loadBrowserScript('vilda_growth_prediction_validation.js').VildaGrowthPredictionValidation;
+  // Zależności modelu (etap 2a) — ta sama kolejność, w jakiej ładują je strony.
+  const win = {};
+  loadBrowserScript('vilda_blum_iss.js', win);
+  loadBrowserScript('vilda_growth_card_c.js', win);
+  loadBrowserScript('vilda_growth_prediction_validation_model.js', win);
+  return loadBrowserScript('vilda_growth_prediction_validation.js', win).VildaGrowthPredictionValidation;
 }
 
 function ghPatientPayload() {
