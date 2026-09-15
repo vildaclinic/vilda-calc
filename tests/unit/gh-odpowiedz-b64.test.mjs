@@ -53,18 +53,27 @@ describe('Ocena względem progu', () => {
 });
 
 describe('Okno obserwacji', () => {
-  it('krótsze niż 180 dni programu jest nazwane, ale nie zmienia oceny', () => {
+  it('krótsze niż 180 dni programu to ODMOWA werdyktu, nazwana wprost (P-TEMPO etap 4)', () => {
+    // Decyzja właściciela 2026-09-15: kryterium formalne programu nie jest stosowane do tempa
+    // przeliczonego z okresu krótszego, niż program przewiduje. Do SW 1.0.946 moduł tylko
+    // dopisywał uwagę o krótkim oknie, a werdykt „poniżej progu" i tak padał.
     const w = B.ocen({ tempoCmRok: 1.5, oknoLat: 4 / 12 });
     expect(w.oknoKrotkie).toBe(true);
     expect(w.oknoMies).toBe(4);
-    expect(w.tekst).toMatch(/180 dni/);
-    expect(w.ponizejProgu, 'krótkie okno nie kasuje oceny').toBe(true);
+    expect(w.odmowa).toBe(true);
+    expect(w.ponizejProgu, 'bez werdyktu').toBeNull();
+    expect(w.tekst).toMatch(/policzono z 4 mies\., czyli krócej niż 180 dni/);
+    expect(w.tekst).toMatch(/kryterium 2 cm\/rok nie zostało zastosowane/);
+    expect(w.tekst).not.toMatch(/niezadowalający/);
+    expect(w.tekst).toMatch(/Zespół Koordynacyjny/);
   });
 
-  it('kontrola pozytywna: równo pół roku i dłużej to już nie jest krótkie okno', () => {
+  it('kontrola pozytywna: równo pół roku i dłużej to już nie jest krótkie okno — werdykt pada, z odstępem w zdaniu', () => {
     expect(B.ocen({ tempoCmRok: 1.5, oknoLat: 0.5 }).oknoKrotkie).toBe(false);
+    expect(B.ocen({ tempoCmRok: 1.5, oknoLat: 0.5 }).ponizejProgu).toBe(true);
     expect(B.ocen({ tempoCmRok: 1.5, oknoLat: 1 }).oknoKrotkie).toBe(false);
     expect(B.ocen({ tempoCmRok: 1.5, oknoLat: 1 }).tekst).not.toMatch(/180 dni/);
+    expect(B.ocen({ tempoCmRok: 1.5, oknoLat: 1 }).tekst).toMatch(/1,5 cm\/rok \(z 12 mies\.\) — poniżej progu/);
   });
 
   it('nieznane okno nie produkuje ostrzeżenia o krótkim oknie', () => {
@@ -96,7 +105,7 @@ describe('Brak danych', () => {
     expect(B.ocen(null)).toBeNull();
   });
 
-  it('z punktów monitora bierze ostatni, który w ogóle ma policzone tempo', () => {
+  it('z punktów monitora bierze ostatni, który ma tempo z okna programu (≥ 180 dni)', () => {
     const punkty = [
       { ageMonths: 60, gv_abs: null, gvOknoLat: null },
       { ageMonths: 72, gv_abs: 8.1, gvOknoLat: 1 },
@@ -106,6 +115,14 @@ describe('Brak danych', () => {
     // Punkt włączenia nie ma tempa — schodzimy do wcześniejszego, który ma.
     expect(B.ocenOstatni([punkty[0], punkty[1], { ageMonths: 96, gv_abs: null }]).tempoCmRok)
       .toBe(8.1);
+    // Kontrola po 2 mies. (krótkie okno) nie zastępuje werdyktu z pełnego okna sprzed niej.
+    const zKontrola = B.ocenOstatni([...punkty, { ageMonths: 86, gv_abs: 3.6, gvOknoLat: 2 / 12 }]);
+    expect(zKontrola.tempoCmRok).toBe(1.4);
+    expect(zKontrola.odmowa).toBe(false);
+    // Same krótkie okna — odmowa na ostatnim, nazwana.
+    const tylkoKrotkie = B.ocenOstatni([punkty[0], { ageMonths: 63, gv_abs: 6, gvOknoLat: 3 / 12 }]);
+    expect(tylkoKrotkie.odmowa).toBe(true);
+    expect(tylkoKrotkie.tempoCmRok).toBe(6);
     expect(B.ocenOstatni([punkty[0]])).toBeNull();
     expect(B.ocenOstatni([])).toBeNull();
     expect(B.ocenOstatni(null)).toBeNull();
