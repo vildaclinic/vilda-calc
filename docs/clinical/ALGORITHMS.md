@@ -1100,6 +1100,14 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### KARTA-SCHOWEK-WIEK — „Skopiuj podsumowanie wyników" liczy centyle w wieku pomiaru, nie w wieku dzisiejszym (SW 1.0.949, 2026-09-15, decyzja właściciela)
+
+**Zgłoszenie.** Audyt SDS wzrostu 2026-09-15, znalezisko 6. `vilda_patient_summary_copy.js` brał wiek rekordu (`age/ageMonths`), a potem nadpisywał go wynikiem `VildaVault.calcAgeFromDOB(dobISO)` wołanym **bez daty odniesienia**, czyli wiekiem dzisiejszym. Dla rekordu sprzed roku schowek liczył centyl wzrostu i masy na dzisiejszym wieku i starym pomiarze — ten sam błąd, który Rata B (`tests/e2e/karta-pacjenta-centyl-wieku-pomiaru.spec.mjs`) usunęła z kafelków Karty. Kafelek „Wzrost" i schowek obok mówiły dwiema liczbami.
+
+**Reguła.** Wzrost i masę znamy wyłącznie z chwili pomiaru, więc jedyny uczciwy wiek do siatek to wiek zapisany w rekordzie. Data urodzenia służy do podpowiadania wieku w formularzu przy kolejnym pomiarze, nie do przeliczania starych pomiarów. Nadpisanie usunięte; rekord bez wieku daje pusty schowek (jak dotąd przy braku danych), a nie wiek z daty urodzenia w zastępstwie.
+
+*Strażnicy:* `tests/unit/schowek-wiek-pomiaru.test.mjs` (2: sejf podaje wiek o 9 mies. starszy, a do siatek idzie wiek rekordu; rekord bez wieku → pusty schowek, zero wywołań siatek). Wersje: `vilda_patient_summary_copy.js?v=` 4 → 5, `SW_VERSION` 1.0.949.
+
 ### P-TEMPO-5 — sprzątanie i strażnik: martwe silniki usunięte, własne wzory tempa zakazane testem (SW 1.0.948, 2026-09-15)
 
 Ostatni etap planu z P-TEMPO-1. Po etapach 1–4 tempo liczy wyłącznie `vilda_tempo_wzrastania.js`; ten etap usuwa to, co zostało obok, i stawia strażnika, żeby chaos nie odrósł.
