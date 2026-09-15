@@ -64,7 +64,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '5';
+  var VERSION = '6';
 
   /* Pola formularza. `dobInput` to jedyne nowe; reszta istnieje od zawsze. */
   var ID = {
@@ -486,6 +486,32 @@
     return true;
   }
 
+  /* P-ODSWIEZENIE (zgłoszenie właściciela 2026-09-15): data z bloba sesji po odświeżeniu strony
+     albo po przejściu na inną stronę. Odtworzenie sesji NIE jest wczytaniem rekordu ani nową
+     wizytą — pole ma wrócić dokładnie w stanie sprzed odświeżenia: z kartoteki (tylko do
+     odczytu, poprawka przez „Edytuj") albo wpisane ręcznie (edytowalne). Sam blob tego nie
+     rozróżnia, więc decyduje wołający (`opcje.zRekordu` — porównanie z wczytanym rekordem).
+     Programowy wpis nie może uchodzić za edycję lekarza, stąd `bezZnaczaniaEdycji`. */
+  function setFromSession(iso, opcje) {
+    var wejscie = pole(ID.dob);
+    if (!wejscie) return false;
+    var czysta = parseDobInput(iso, null);
+    if (czysta.status !== 'ok') return false;
+    var zRek = !!(opcje && opcje.zRekordu);
+    bezZnaczaniaEdycji(function () {
+      wejscie.value = formatDobDisplay(czysta.iso);
+      try {
+        wejscie.readOnly = zRek;
+        if (zRek) wejscie.dataset.dobSource = 'record';
+        else delete wejscie.dataset.dobSource;
+      } catch (e) {
+        zgloc('setFromSession', e);
+      }
+      odswiez();
+    });
+    return true;
+  }
+
   /* Tygodnie z rekordu — używane tylko wtedy, gdy rekord nie ma daty urodzenia.
      Z datą liczy je kalendarz i zapisana liczba nie ma nic do powiedzenia. */
   function setWeeksFromRecord(tygodnie) {
@@ -752,6 +778,7 @@
     weeksApplicable: weeksApplicable,
     refresh: odswiez,
     setFromRecord: setFromRecord,
+    setFromSession: setFromSession,
     setWeeksFromRecord: setWeeksFromRecord,
     clear: clear,
     clearAll: odblokujPoWyczyszczeniuPacjenta,
