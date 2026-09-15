@@ -10,6 +10,8 @@ import { expect, test } from '../support/test-czas.mjs';
 //      name/age/ageMonths/weight/height/sex/tannerStage/advMotherHeight/advFatherHeight.
 //   2. docpro.html — tych pól nie ma w ogóle w DOM, a kolektor czyta je przez
 //      `E(id) || null`, więc każdy zapis pacjenta z DocPro wpisuje null.
+//      (Od P-TOZSAMOSC docpro ma panel pokwitaniowy, więc objętość jąder jest już polem;
+//      wywiad rodzinny i wykluczenia nadal wchodzą z rekordu.)
 //
 // W obu wypadkach jeden cykl „wczytaj → zapisz" niszczy komplet wejścia KOWD:
 // wiek kostny, objętość jąder, wywiad rodzinny i wykluczenia.
@@ -110,8 +112,10 @@ test('docpro.html: zapis ze strony BEZ tych pól nie kasuje ich z rekordu', asyn
     };
   }, REKORD);
 
-  // Kontrola pozytywna: na DocPro tych pól naprawdę nie ma — dlatego potrzebne przeniesienie.
-  expect(wynik.polaIstnieja).toEqual([true, false, false, false]);
+  // Kontrola pozytywna: na DocPro wywiadu rodzinnego i wykluczeń naprawdę nie ma — dlatego
+  // potrzebne przeniesienie. Objętość jąder od P-TOZSAMOSC (2026-09-15) mieszka w panelu
+  // pokwitaniowym, który docpro ma tak samo jak strona główna — wchodzi więc z pola.
+  expect(wynik.polaIstnieja).toEqual([true, true, false, false]);
   expect(kowd(wynik.zebrane)).toEqual({
     boneAgeYears: 10.5,
     testicularVolume: '4to6',

@@ -257,7 +257,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_pro_access.js?v=10"></script>
 <script defer src="vilda_pro_ui.js?v=3"></script>
 <script defer src="vilda_file_export.js?v=8"></script>
-<script defer src="vilda_deps.js?v=92"></script>
+<script defer src="vilda_deps.js?v=93"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
 <script src="vilda_gh_therapy_resource_audit.js?v=31" defer></script>
@@ -268,8 +268,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_food_summary.js?v=2"></script>
 <script defer src="vilda_dob_age.js?v=6"></script>
 <script defer src="vilda_status_bar.js?v=1"></script>
-<script defer src="vilda_data_import_export.js?v=78"></script>
+<script defer src="vilda_data_import_export.js?v=79"></script>
 <script defer src="vilda_baseline_pacjenta.js?v=1"></script>
+<script defer src="vilda_pola_tozsamosci.js?v=1"></script>
 <script defer src="vilda_save_status_indicator.js?v=26"></script>
 <script defer src="vilda_unsaved_guard.js?v=5"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
@@ -471,6 +472,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         <input type="text" id="firstName" autocomplete="off">
       </label>
       <input type="hidden" id="name">
+      <!-- P-TOZSAMOSC (zlecenie właściciela 2026-09-15): po wczytaniu pacjenta nazwisko, imię
+           i płeć są tylko do odczytu (edycja w Karcie Pacjenta) — logika: vilda_pola_tozsamosci.js. -->
+      <div id="tozsamoscNote" class="vild-dob-note" hidden></div>
       <script>
       /* P-SPLIT: synchronizacja Nazwisko/Imię ⇄ ukryte #name (kanon). Hook na setterze
          .value pola #name łapie także zapisy ZEWNĘTRZNE (restore/import/sharedUserData),
@@ -514,6 +518,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         .vild-age-row input.vild-age-auto,
         input#dobInput[readonly]{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;}
         .vild-dob-note{margin-top:5px;font-size:.78rem;line-height:1.35;color:#0f6e56;}
+        /* P-TOZSAMOSC: pola tożsamości z kartoteki — wygląd „tylko do odczytu" jak data urodzenia. */
+        input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;opacity:1;}
         .vild-dob-error{margin-top:5px;font-size:.78rem;line-height:1.35;color:#a32d2d;}
         .vild-dob-clear{margin-top:6px;padding:0;background:none;border:0;box-shadow:none;
           font-family:inherit;font-size:.78rem;color:#00838d;text-decoration:underline;cursor:pointer;}
@@ -1799,7 +1805,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script src="adult_vitals.js?v=5" defer></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=6"></script>
-<script defer src="vilda_persist_runtime.js?v=13"></script>
+<script defer src="vilda_persist_runtime.js?v=14"></script>
 <script defer src="vilda_summary_cards.js?v=35"></script>
 <script defer src="vilda_diet_plan_ui.js?v=17"></script>
 <script defer src="vilda_bmi_journey.js?v=12"></script>
@@ -1808,7 +1814,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script defer src="vilda_terms_gate.js?v=1"></script>
-<script src="app.js?v=209" defer></script>
+<script src="app.js?v=210" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport

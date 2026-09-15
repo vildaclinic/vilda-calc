@@ -223,7 +223,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_pro_access.js?v=10"></script>
 <script defer src="vilda_pro_ui.js?v=3"></script>
 <script defer src="vilda_file_export.js?v=8"></script>
-<script defer src="vilda_deps.js?v=92"></script>
+<script defer src="vilda_deps.js?v=93"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
 <!-- Kreator siatek (moduł pasywny bez UI na tej stronie): dostarcza bramki
@@ -238,8 +238,9 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
 <script defer src="vilda_dob_age.js?v=6"></script>
-<script defer src="vilda_data_import_export.js?v=78"></script>
+<script defer src="vilda_data_import_export.js?v=79"></script>
 <script defer src="vilda_baseline_pacjenta.js?v=1"></script>
+<script defer src="vilda_pola_tozsamosci.js?v=1"></script>
 <script defer src="vilda_save_status_indicator.js?v=26"></script>
 <script defer src="vilda_unsaved_guard.js?v=5"></script>
 <script defer src="vilda_khamis_roche.js?v=2"></script>
@@ -1447,6 +1448,9 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         <input type="text" id="firstName" autocomplete="off">
       </label>
       <input type="hidden" id="name">
+      <!-- P-TOZSAMOSC (zlecenie właściciela 2026-09-15): po wczytaniu pacjenta nazwisko, imię
+           i płeć są tylko do odczytu (edycja w Karcie Pacjenta) — logika: vilda_pola_tozsamosci.js. -->
+      <div id="tozsamoscNote" class="vild-dob-note" hidden></div>
       <script>
       /* P-SPLIT: synchronizacja Nazwisko/Imię ⇄ ukryte #name (kanon) — kopia skryptu ze strony
          głównej. Hook na setterze .value pola #name łapie także zapisy ZEWNĘTRZNE
@@ -1478,11 +1482,28 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         input#dobInput[readonly],
         input#age.vild-age-auto, input#ageMonths.vild-age-auto{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;}
         .vild-dob-note{margin-top:5px;font-size:.78rem;line-height:1.35;color:#0f6e56;}
+        /* P-TOZSAMOSC: pola tożsamości z kartoteki — wygląd „tylko do odczytu" jak data urodzenia. */
+        input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;opacity:1;}
         .vild-dob-error{margin-top:5px;font-size:.78rem;line-height:1.35;color:#a32d2d;}
         .vild-dob-clear{margin-top:6px;padding:0;background:none;border:0;box-shadow:none;
           font-family:inherit;font-size:.78rem;color:#00838d;text-decoration:underline;cursor:pointer;}
         .vild-weeks-row{margin-top:.7rem;padding:9px 10px;background:#eaf4f5;border:1px solid #cfe3e5;border-radius:6px;}
         .vild-weeks-row > label{margin-top:0;}
+        /* Tanner toggle — wygląd jak makieta. !important + prefiks .liquid-ios26, bo motyw
+           liquid glass nadpisuje `button` (background/border/box-shadow) z !important. */
+        .vild-tanner-toggle,
+        .liquid-ios26 .vild-tanner-toggle{
+          /* blok o szerokości treści, w rytmie formularza: 0.7rem nad i (przez margin-top
+             następnej etykiety) 0.7rem pod → symetrycznie między Płcią a Wagą.
+             Wyśrodkowany (margin auto) — decyzja właściciela 2026-09-09. */
+          display:block!important;width:fit-content!important;margin:0.7rem auto 0!important;
+          padding:8px 12px!important;font-size:.82rem!important;font-weight:600!important;
+          background:transparent!important;border:1px solid #cfe0e3!important;border-radius:9px!important;
+          color:#5a7274!important;cursor:pointer!important;font-family:inherit!important;line-height:1.2!important;
+          height:auto!important;min-height:0!important;
+          box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;text-align:center!important;}
+        .vild-tanner-toggle:hover,
+        .liquid-ios26 .vild-tanner-toggle:hover{border-color:#00838d!important;color:#00838d!important;background:transparent!important;}
       </style>
       <label>Data urodzenia <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
         <input type="text" id="dobInput" inputmode="numeric" maxlength="10" placeholder="DD-MM-RRRR" autocomplete="bday">
@@ -1518,6 +1539,80 @@ html.vilda-pro-active   #proGateBanner { display: none; }
           <option value="M">Mężczyzna</option>
           <option value="F">Kobieta</option>
         </select></label>
+      <!-- Dojrzewanie płciowe — progressive disclosure (2026-06-23), rozszerzone 2026-09-09
+           (decyzja właściciela). Panel jest JEDYNYM miejscem wpisu danych pokwitaniowych;
+           reszta aplikacji już tylko czyta, przez vilda_pubertal_status.js. Dwa rodzaje
+           danych, dwa miejsca zapisu: etap Tannera to stan na dziś (idzie z pomiarem),
+           wiek startu pokwitania, wiek menarche i deklaracja KOWD to fakty trwałe (idą do
+           sekcji `puberty` rekordu, tej samej, którą pokazuje Karta Pacjenta).
+           Logika ujawniania w inline_index_02.js.
+           P-TOZSAMOSC (zlecenie właściciela 2026-09-15): ten sam panel na docpro — formularz
+           główny obu stron jest identyczny, więc tempo i profil liczą z tych samych pól. -->
+      <button type="button" id="tannerToggleBtn" class="vild-tanner-toggle">+ Dane pokwitaniowe</button>
+      <label id="tannerStageWrap" style="display:none;">Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
+        <select id="tannerStage" onchange="debouncedUpdate(); if (typeof updateTannerVisibility === 'function') updateTannerVisibility();">
+          <option value="">— nieznany —</option>
+          <option value="1">Tanner I — przedpokwitaniowy</option>
+          <option value="2">Tanner II — wczesne pokwitanie</option>
+          <option value="3">Tanner III — środek pokwitania</option>
+          <option value="4">Tanner IV — późne pokwitanie</option>
+          <option value="5">Tanner V — dojrzałość pełna</option>
+        </select></label>
+      <!-- Objętość jąder: stan na dziś obok stadium, zapisywana z pomiarem. Kontener zwija
+           się z panelem; wewnętrzną etykietę chowa dla dziewcząt ta sama funkcja, która
+           dotąd robiła to w karcie zaawansowanej (updateAdvancedGrowthSexSpecificFields). -->
+      <div id="testicularVolumeWrap" style="display:none;">
+        <label>Objętość jąder <span style="font-weight:400;opacity:0.65;">(chłopcy; stan na dziś — u chłopców 4 ml to początek pokwitania)</span>:
+          <select id="advTesticularVolume" onchange="debouncedUpdate()">
+            <option value="">Wybierz</option>
+            <option value="lt4">&lt;4 ml</option>
+            <option value="4to6">4–6 ml</option>
+            <option value="gt6">&gt;6 ml</option>
+            <option value="unknown">nie wiem</option>
+          </select></label>
+      </div>
+      <div id="pubertyExtraWrap" style="display:none;">
+        <label>Wiek startu pokwitania (lata) <span style="font-weight:400;opacity:0.65;">(u dziewcząt stadium B2, u chłopców objętość jąder 4 ml)</span>:
+          <input type="number" id="pubertyOnsetAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+        <label>Wiek menarche (lata) <span style="font-weight:400;opacity:0.65;">(dziewczęta)</span>:
+          <input type="number" id="pubertyMenarcheAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+        <!-- GROWTH-PRED-TW2B: wzrost w chwili pierwszej miesiączki — fakt trwały (sekcja `puberty`
+             rekordu, pole heightAtMenarcheCm). Zasila pseudometodę „wzrost przy menarche / 0,955"
+             w konsensusie prognozy wzrostu ostatecznego (Singleton 1975, Cho 2026). -->
+        <label>Wzrost przy menarche (cm) <span style="font-weight:400;opacity:0.65;">(dziewczęta; wzrost w chwili pierwszej miesiączki — do prognozy wzrostu ostatecznego)</span>:
+          <input type="number" id="pubertyMenarcheHeight" min="80" max="200" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+        <!-- GROWTH-PRED-TW2C: wiek kostny (GP) z RTG wykonanego przy menarche — fakt trwały (sekcja `puberty`,
+             pole boneAgeAtMenarcheYears). Korekta Cho 2026 w pseudometodzie „wzrost przy menarche / 0,955":
+             +3,1 cm na rok wieku kostnego poniżej 13 lat; bez pola korekta tylko z bieżącego RTG przy
+             menarche ≤ 12 mies. temu. -->
+        <label>Wiek kostny przy menarche (lata) <span style="font-weight:400;opacity:0.65;">(dziewczęta; z RTG wykonanego w okolicy pierwszej miesiączki — korekta prognozy wzrostu ostatecznego)</span>:
+          <input type="number" id="pubertyMenarcheBoneAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+        <!-- GROWTH-PRED-PUB1: leczenie GnRHa — fakt trwały (sekcja `puberty`: gnrhaStatus, gnrhaStartAgeYears,
+             gnrhaStopAgeYears). W trakcie leczenia tempo pokwitania nie jest oceniane, a prognoza rezydualnego
+             wzrostu jest nierzetelna (Lazar 2007). -->
+        <label>Leczenie analogiem GnRH <span style="font-weight:400;opacity:0.65;">(hamowanie pokwitania)</span>:
+          <select id="pubertyGnrhaStatus" onchange="debouncedUpdate()">
+            <option value="">— nie pytano —</option>
+            <option value="brak">nie leczono</option>
+            <option value="w-trakcie">w trakcie leczenia</option>
+            <option value="zakonczone">leczenie zakończone</option>
+          </select></label>
+        <div id="pubertyGnrhaAgesWrap" style="display:none;">
+          <label>Wiek rozpoczęcia GnRHa (lata):
+            <input type="number" id="pubertyGnrhaStartAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+          <label>Wiek zakończenia GnRHa (lata) <span style="font-weight:400;opacity:0.65;">(gdy zakończone)</span>:
+            <input type="number" id="pubertyGnrhaStopAge" min="2" max="20" step="0.1" inputmode="decimal" oninput="debouncedUpdate()"></label>
+        </div>
+        <label>Czy uważasz tego pacjenta za KOWD? <span style="font-weight:400;opacity:0.65;">(konstytucjonalne opóźnienie wzrastania i dojrzewania)</span>:
+          <select id="pubertyCdgp" onchange="debouncedUpdate()">
+            <option value="">— nie pytano —</option>
+            <option value="tak">tak</option>
+            <option value="nie">nie</option>
+          </select></label>
+        <p id="pubertyCdgpNote" style="margin:0.15rem 0 0.4rem 0;font-size:0.85em;opacity:0.7;">To ocena lekarza, nie wynik automatu — aplikacja nie rozpoznaje KOWD samodzielnie. Odpowiedź „tak” dokłada porównanie tempa z kwartylami dzieci z rozpoznanym KOWD; niczego nie odejmuje.</p>
+        <p id="pubertyConflicts" role="status" style="display:none;margin:0.15rem 0 0.4rem 0;font-size:0.85em;color:#b26a00;"></p>
+      </div>
+      <script defer src="inline_index_02.js?v=11"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
@@ -3962,14 +4057,14 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      w vilda_professional_module.js (cdn.sheetjs.com xlsx-0.20.3; aktualizacja 2026-06-14 z 0.18.5 — CVE). -->
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=6"></script>
-<script defer src="vilda_persist_runtime.js?v=13"></script>
+<script defer src="vilda_persist_runtime.js?v=14"></script>
 <script defer src="vilda_summary_cards.js?v=35"></script>
 <script defer src="vilda_diet_plan_ui.js?v=17"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=209" defer></script>
+<script src="app.js?v=210" defer></script>
 <script src="vilda_diet_recommendations.js?v=27" defer></script>
 <script src="vilda_patient_report.js?v=20" defer></script>
 <!-- po app.js -->
