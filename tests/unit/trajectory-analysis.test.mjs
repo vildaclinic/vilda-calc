@@ -324,27 +324,8 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
   });
 
   it('tempo wzrastania używa produkcyjnych funkcji okna i progu (norma 5–10 lat)', () => {
-    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
-    const cut = (name) => {
-      const i = appSource.indexOf(`function ${name}(`);
-      expect(i).toBeGreaterThan(-1);
-      let depth = 0;
-      for (let k = appSource.indexOf('{', i); k < appSource.length; k++) {
-        if (appSource[k] === '{') depth += 1;
-        else if (appSource[k] === '}') {
-          depth -= 1;
-          if (depth === 0) return appSource.slice(i, k + 1);
-        }
-      }
-      throw new Error(`niezbalansowana funkcja ${name}`);
-    };
-    const helpers = new Function(`
-      ${cut('pickPrevForLastYear')}
-      ${cut('pickPrevFallback')}
-      ${cut('velocityCmPerYear')}
-      ${cut('getVelocityThreshold')}
-      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
-    `)();
+    // P-TEMPO etap 5: pomocnicze funkcje tempa z app.js nie istnieja — silnik laduje loadTrajectory().
+    const helpers = {};
     const browserGlobal = {
       bmiSource: 'OLAF',
       ...helpers,
@@ -739,23 +720,8 @@ describe('banery kart wzrostowych z modelu (wariant 1 konsolidacji)', () => {
       const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
       return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
     };
-    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
-    const cut = (name) => {
-      const i = appSource.indexOf(`function ${name}(`);
-      let depth = 0;
-      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
-        if (appSource[k] === '{') depth += 1;
-        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
-      }
-      throw new Error(name);
-    };
-    const helpers = new Function(`
-      ${cut('pickPrevForLastYear')}
-      ${cut('pickPrevFallback')}
-      ${cut('velocityCmPerYear')}
-      ${cut('getVelocityThreshold')}
-      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
-    `)();
+    // P-TEMPO etap 5: pomocnicze funkcje tempa z app.js nie istnieja — silnik laduje loadTrajectory().
+    const helpers = {};
     return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
@@ -819,23 +785,8 @@ describe('ocena tempa >10 lat: hierarchia Tanner → wiek kostny → reguła gen
       const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
       return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
     };
-    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
-    const cut = (name) => {
-      const i = appSource.indexOf(`function ${name}(`);
-      let depth = 0;
-      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
-        if (appSource[k] === '{') depth += 1;
-        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
-      }
-      throw new Error(name);
-    };
-    const helpers = new Function(`
-      ${cut('pickPrevForLastYear')}
-      ${cut('pickPrevFallback')}
-      ${cut('velocityCmPerYear')}
-      ${cut('getVelocityThreshold')}
-      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
-    `)();
+    // P-TEMPO etap 5: pomocnicze funkcje tempa z app.js nie istnieja — silnik laduje loadTrajectory().
+    const helpers = {};
     return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
@@ -957,23 +908,8 @@ describe('etap Tannera z rekordu pacjenta (świeżość TANNER_FRESH_M)', () => 
       const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
       return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
     };
-    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
-    const cut = (name) => {
-      const i = appSource.indexOf(`function ${name}(`);
-      let depth = 0;
-      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
-        if (appSource[k] === '{') depth += 1;
-        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
-      }
-      throw new Error(name);
-    };
-    const helpers = new Function(`
-      ${cut('pickPrevForLastYear')}
-      ${cut('pickPrevFallback')}
-      ${cut('velocityCmPerYear')}
-      ${cut('getVelocityThreshold')}
-      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
-    `)();
+    // P-TEMPO etap 5: pomocnicze funkcje tempa z app.js nie istnieja — silnik laduje loadTrajectory().
+    const helpers = {};
     return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
@@ -1101,23 +1037,8 @@ describe('panel trajektorii w karcie zaawansowanej (buildCardPanelHtml, hybryda)
 
 describe('assessVelocityValue — ocena gotowej wartości tempa tą samą hierarchią norm', () => {
   function makeVta() {
-    const appSource = fs.readFileSync(path.join(repositoryRoot, 'app.js'), 'utf8');
-    const cut = (name) => {
-      const i = appSource.indexOf(`function ${name}(`);
-      let depth = 0;
-      for (let k = appSource.indexOf('{', i); k < appSource.length; k += 1) {
-        if (appSource[k] === '{') depth += 1;
-        else if (appSource[k] === '}') { depth -= 1; if (depth === 0) return appSource.slice(i, k + 1); }
-      }
-      throw new Error(name);
-    };
-    const helpers = new Function(`
-      ${cut('pickPrevForLastYear')}
-      ${cut('pickPrevFallback')}
-      ${cut('velocityCmPerYear')}
-      ${cut('getVelocityThreshold')}
-      return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
-    `)();
+    // P-TEMPO etap 5: pomocnicze funkcje tempa z app.js nie istnieja — silnik laduje loadTrajectory().
+    const helpers = {};
     return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
