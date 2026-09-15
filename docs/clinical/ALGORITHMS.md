@@ -1100,6 +1100,14 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-TEMPO-6 — kafelek „Tempo wzrastania" w warstwie GH Karty pacjenta przy odstępie < 6 mies. (SW 1.0.956, 2026-09-15, zgłoszenie właściciela)
+
+**Zgłoszenie.** U pacjenta leczonego hormonem wzrostu od 5 miesięcy zakładka „Dane analityczne" pokazywała „Przyrost całkowity +5,0 cm przez 5 mies.", a obok kafelek „Tempo wzrastania —". Nota panelu mówiła „Tempo — między punktami odległymi ≥ 6 mies.", więc kafelek był pusty zgodnie z własną regułą — ale wbrew **decyzji 1 z P-TEMPO-4** („krótkie odstępy pokazywać z oznaczeniem, bez werdyktu"), którą monitor GH, panel porównania i analiza wiersza historii już stosują. Kafelek był ostatnim miejscem, które krótki odstęp przemilczało.
+
+**Poprawka** (`vilda_auth_ui.js`, ?v 433 → 434). Para punktów bez zmian, gdy jest punkt ≥ 6 mies. wstecz (albo włączenie ≥ 6 mies. temu). Gdy takiego nie ma, tempo liczy `odcinek()` z **ostatniego dostępnego odcinka** (poprzedni punkt z wysokością, a przy dwóch punktach — od włączenia), a podpis mówi wprost: „od włączenia (z 5 mies., krótki odstęp)". Kafelek nie dostaje wtedy zielonego koloru — liczba opisowa, bez oceny, dokładnie jak w monitorze GH. Nota panelu opisuje tę regułę. Wzór i silnik bez zmian.
+
+*Strażnicy:* `tests/unit/tempo-gh-porownanie.test.mjs` — kotwice zapasowego odcinka, podpisu z oznaczeniem, braku werdyktu i noty. `tests/e2e/karta-gh-tempo-krotki-odstep.spec.mjs` (1) — prawdziwa Karta pacjenta z punktami „Rozpoczęcie" (9 l. 7 mies., 122 cm) i „Kontynuacja" (10 l. 0 mies., 127 cm): kafelek „12 cm/rok, od włączenia (z 5 mies., krótki odstęp)" zamiast „—"; te same liczby hSDS (−2,56 → −2,08, ΔhSDS +0,48), co w zgłoszeniu.
+
 ### P-TOZSAMOSC — pola tożsamości tylko do odczytu po wczytaniu, identyczny formularz główny na docpro, „Odtwórz zapisany stan" bez utraty bazy (SW 1.0.955, 2026-09-15, zgłoszenie właściciela)
 
 **Zgłoszenie.** (a) DocPro nie ma pól pokwitaniowych, więc ten sam pacjent dostaje inną normę tempa: strona główna „norma ≥4 cm/rok przed skokiem (Tanner I)", DocPro „norma ≥5 cm/rok — wg wieku kostnego"; właściciel: formularz główny na obu stronach ma być identyczny. (b) Po wczytaniu pacjenta nazwisko i imię są edytowalne na obu stronach, a na DocPro także data urodzenia — te rzeczy się nie zmieniają, edycja ma być tylko w Karcie Pacjenta, bo inaczej powstają konflikty zapisu. (c) Po „Odtwórz zapisany" na stronie głównej DocPro nie pokazuje daty urodzenia; po odświeżeniu pole daty się odblokowuje; „Odtwórz zapisany stan" bywa martwe albo działa jak „Nowy pomiar"; po wczytaniu i przeładowaniu strony wraca przycisk „Odtwórz zapisany stan".

@@ -78,7 +78,13 @@ describe('Panel porównania i warstwa GH Karty pacjenta liczą przez odcinek()',
 
   it('kafelek „Tempo wzrastania" w warstwie GH: odcinek() i odstęp w podpisie, bez velocityCmPerYear', () => {
     expect(src).toContain('Tq.odcinek({ageMonths:Se(M),height:M.height},{ageMonths:D,height:p.height})');
-    expect(src).toContain('(M?"ost. okres":"od w\\u0142\\u0105czenia")+" (z "+Math.round(Fo.gapM)+" mies.)"');
+    expect(src).toContain('(M||Mk&&Mk!==c?"ost. okres":"od w\\u0142\\u0105czenia")+" (z "+Math.round(Fo.gapM)+" mies."+(Fo.krotki?", kr\\u00F3tki odst\\u0119p":"")+")"');
+    // P-TEMPO decyzja 1 (zgłoszenie właściciela 2026-09-15): pacjent leczony 5 mies. miał pusty
+    // kafelek „—", choć przyrost całkowity był liczony. Bez punktu ≥ 6 mies. wstecz tempo idzie
+    // z ostatniego dostępnego odcinka, z oznaczeniem i bez zielonego werdyktu.
+    expect(src).toContain('var Mk=null;if(!Fo){for(var bk=d.length-2;bk>=0;bk--)if(typeof d[bk].height=="number"&&isFinite(d[bk].height)&&D-Se(d[bk])>0){Mk=d[bk];break}');
+    expect(src).toContain('fe(F!=null&&!(Fo&&Fo.krotki)?"good":"","Tempo wzrastania"');
+    expect(src, 'nota panelu mówi, jak liczony jest krótki odstęp').toContain('przy kr\\u00F3tszym odst\\u0119pie liczone z ostatniego odcinka');
     expect(src, 'stare wywołanie adaptera app.js zniknęło').not.toContain('velocityCmPerYear(M.height');
   });
 });
