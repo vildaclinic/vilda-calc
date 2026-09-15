@@ -11,13 +11,16 @@
  *
  * ZADNEGO NOWEGO PROGU: 2 cm/rok pochodzi doslownie z zalacznika. Drugi prog uzyty
  * w module — 180 dni — tez jest z zalacznika: to przewidziany w nim odstep monitorowania.
- * Sluzy wylacznie do oznaczenia, ze tempo policzono z krotszego okresu niz sam program
- * zaklada; NIE zmienia oceny wzgledem 2 cm/rok.
+ * Do SW 1.0.946 sluzyl wylacznie do oznaczenia krotszego okresu i NIE zmienial oceny.
+ * Od P-TEMPO etap 4 (decyzja wlasciciela 2026-09-15): odstep krotszy niz 180 dni to ODMOWA
+ * werdyktu — kryterium formalne programu nie jest stosowane do tempa przeliczonego z okresu
+ * krotszego, niz program przewiduje; modul mowi, ze nie zastosowal kryterium, i dlaczego.
+ * `ocenOstatni` bierze ostatni punkt z oknem >= 180 dni; gdy zadnego nie ma — odmowa.
  */
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   var PROG_CM_ROK = 2;        // B.64, kryteria wylaczenia
   var OKNO_PROGRAMU_LAT = 0.5; // B.64, monitorowanie co 180 dni
@@ -60,21 +63,35 @@
     var v = num(i.tempoCmRok);
     if (v == null) return null;
     var okno = num(i.oknoLat);
-    var ponizej = v < PROG_CM_ROK;
     var oknoKrotkie = okno != null && okno < OKNO_PROGRAMU_LAT;
 
+    if (oknoKrotkie) {
+      return {
+        version: VERSION,
+        tempoCmRok: v,
+        prog: PROG_CM_ROK,
+        ponizejProgu: null,
+        odmowa: true,
+        oknoLat: okno,
+        oknoMies: miesiace(okno),
+        oknoKrotkie: true,
+        tekst: 'Tempo wzrastania w trakcie leczenia hormonem wzrostu (' + fmt(v, 1)
+          + ' cm/rok) policzono z ' + miesiace(okno) + ' mies., czyli krócej niż 180 dni '
+          + 'monitorowania przewidziane w programie lekowym B.64 — kryterium ' + PROG_CM_ROK
+          + ' cm/rok nie zostało zastosowane. ' + ZASTRZEZENIE
+      };
+    }
+
+    var ponizej = v < PROG_CM_ROK;
     var zdanie = 'Tempo wzrastania w trakcie leczenia hormonem wzrostu wynosi '
-      + fmt(v, 1) + ' cm/rok — ';
+      + fmt(v, 1) + ' cm/rok';
+    if (okno != null) zdanie += ' (z ' + miesiace(okno) + ' mies.)';
+    zdanie += ' — ';
     zdanie += ponizej
       ? 'poniżej progu ' + PROG_CM_ROK + ' cm/rok, przy którym program lekowy B.64 '
         + 'definiuje efekt leczenia jako niezadowalający.'
       : 'powyżej progu ' + PROG_CM_ROK + ' cm/rok, poniżej którego program lekowy B.64 '
         + 'uznaje efekt leczenia za niezadowalający.';
-    if (oknoKrotkie) {
-      zdanie += ' Odstęp między pomiarami to ' + miesiace(okno) + ' mies., czyli krócej niż '
-        + '180 dni monitorowania przewidziane w programie — tempo w cm/rok jest przeliczone '
-        + 'z krótszego okresu.';
-    }
     zdanie += ' ' + ZASTRZEZENIE;
 
     return {
@@ -82,16 +99,29 @@
       tempoCmRok: v,
       prog: PROG_CM_ROK,
       ponizejProgu: ponizej,
+      odmowa: false,
       oknoLat: okno,
       oknoMies: miesiace(okno),
-      oknoKrotkie: oknoKrotkie,
+      oknoKrotkie: false,
       tekst: zdanie
     };
   }
 
-  /* Wygoda dla monitora: bierze tablice punktow metryk i ocenia ostatni z policzonym tempem. */
+  /* Ostatni punkt z tempem policzonym z okna >= 180 dni; gdy takiego nie ma — ostatni
+   * z jakimkolwiek tempem (wtedy ocen() odmawia werdyktu i mowi dlaczego). */
+  function ostatniZOknemProgramu(punkty) {
+    if (!Array.isArray(punkty)) return null;
+    for (var i = punkty.length - 1; i >= 0; i -= 1) {
+      var p = punkty[i];
+      if (p && num(p.gv_abs) != null && num(p.gvOknoLat) != null && num(p.gvOknoLat) >= OKNO_PROGRAMU_LAT) return p;
+    }
+    return null;
+  }
+
+  /* Wygoda dla monitora: bierze tablice punktow metryk i ocenia ostatni z policzonym tempem
+   * z okna programu; bez takiego punktu — odmowa na ostatnim krotkim. */
   function ocenOstatni(punkty) {
-    var p = ostatniZTempem(punkty);
+    var p = ostatniZOknemProgramu(punkty) || ostatniZTempem(punkty);
     if (!p) return null;
     return ocen({ tempoCmRok: p.gv_abs, oknoLat: p.gvOknoLat });
   }
@@ -102,6 +132,7 @@
     OKNO_PROGRAMU_LAT: OKNO_PROGRAMU_LAT,
     ZASTRZEZENIE: ZASTRZEZENIE,
     ostatniZTempem: ostatniZTempem,
+    ostatniZOknemProgramu: ostatniZOknemProgramu,
     ocen: ocen,
     ocenOstatni: ocenOstatni
   };

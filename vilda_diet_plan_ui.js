@@ -111,7 +111,9 @@ typeof a<"u"&&a&&a.VildaBmiJourney&&typeof a.VildaBmiJourney.refresh=="function"
 function childGrowthOutlook({ageYears:e,sex:l,heightCm:n}={}){
   const age0=Number(e)||0,sx=xe(l),h0=Number(n),agd=typeof a<"u"&&a?a.advancedGrowthData:null;
   let g=null,observed=false,source="fallback";
-  if(agd&&typeof agd.growthVelocity=="number"&&isFinite(agd.growthVelocity)&&agd.growthVelocity>0){g=agd.growthVelocity;observed=true;source="observed"}
+  /* P-TEMPO etap 4: obserwowane tempo z modelu karty (advancedGrowthData.tempo), w zapasie z pola growthVelocity. */
+  const tv=agd&&agd.tempo&&typeof agd.tempo.cmPerYear=="number"&&isFinite(agd.tempo.cmPerYear)?agd.tempo.cmPerYear:(agd&&typeof agd.growthVelocity=="number"&&isFinite(agd.growthVelocity)?agd.growthVelocity:null);
+  if(tv!=null&&tv>0){g=tv;observed=true;source="observed"}
   if(g==null&&typeof medianHeightForAgeMonths=="function"){try{
     const m0=Math.round(age0*12),h1=medianHeightForAgeMonths(sx,m0),h2=medianHeightForAgeMonths(sx,Math.min(k*12,m0+12));
     if(isFinite(h1)&&isFinite(h2)){g=Math.max(0,h2-h1);source="median"}
