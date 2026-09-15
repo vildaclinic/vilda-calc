@@ -24,10 +24,12 @@
  *   (znacznik data-z-kartoteki), więc nie walczy z innymi modułami o pola.
  *
  * KIEDY
- *   Po zdarzeniach aplikacji (wczytanie, odtworzenie stanu, import, odświeżenie bazy,
+ *   Po zdarzeniach aplikacji (wczytanie, zapis, odtworzenie stanu, import, odświeżenie bazy,
  *   wyczyszczenie) oraz po każdym `input`/`change` w dokumencie (odtworzenie sesji po F5
  *   i synchronizacja między stronami nie wysyłają własnego zdarzenia). Ocena jest tania
- *   i idempotentna, więc częste wołanie nic nie psuje.
+ *   i idempotentna, więc częste wołanie nic nie psuje. Każda ZMIANA stanu blokady idzie
+ *   jako `vilda:tozsamosc-zmiana` (detail.zablokowane) — P-TOZSAMOSC-2: podpowiedź pacjenta
+ *   chowa listę otwartą tuż przed blokadą, bo sama ocenia tylko przy otwieraniu.
  *
  * BEZPIECZNIKI
  *   Bez pól (strona bez formularza głównego) moduł nic nie robi. Nie zmienia wartości pól,
@@ -102,6 +104,20 @@
     }
   }
 
+  /* Ostatnio nałożony stan — zmiana idzie jako zdarzenie do modułów, które trzymają własny
+     widok pól (podpowiedź pacjenta chowa listę otwartą tuż przed blokadą). */
+  var poprzednio = null;
+
+  function ogłosZmiane(tak) {
+    if (poprzednio === tak) return;
+    poprzednio = tak;
+    try {
+      if (typeof w.CustomEvent === 'function') {
+        d.dispatchEvent(new w.CustomEvent('vilda:tozsamosc-zmiana', { detail: { zablokowane: tak } }));
+      }
+    } catch (e) { zgloc('zdarzenie', e); }
+  }
+
   function zastosuj() {
     var tak;
     try { tak = zablokowane(); } catch (e) { zgloc('ocena', e); tak = false; }
@@ -115,6 +131,7 @@
         n.hidden = !tak;
       }
     } catch (e) { zgloc('zastosuj', e); }
+    ogłosZmiane(tak);
     return tak;
   }
 
@@ -128,8 +145,8 @@
   }
 
   function podepnij() {
-    ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:json-imported', 'vilda:baseline-refreshed',
-      'vilda:user-state-cleared'].forEach(function (nazwa) {
+    ['vilda:patient-loaded', 'vilda:patient-saved', 'vilda:state-restored', 'vilda:json-imported',
+      'vilda:baseline-refreshed', 'vilda:user-state-cleared'].forEach(function (nazwa) {
       d.addEventListener(nazwa, zaplanuj);
     });
     /* Wylogowanie i kasowanie stanu lecą na WINDOW (userData.js, vilda_persist_runtime.js). */
@@ -156,7 +173,7 @@
 
   w.VildaPolaTozsamosci = {
     __init: true,
-    version: '1',
+    version: '2',
     ID: ID,
     KLASA: KLASA,
     NOTKA: NOTKA,

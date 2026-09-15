@@ -101,11 +101,27 @@ describe('vilda_pola_tozsamosci.js — reguła blokady', () => {
     expect(obce.pola.sex.disabled).toBe(true);
   });
 
-  it('nasłuchuje zdarzeń wczytania, odtworzenia, bazy, wyczyszczenia oraz input/change', () => {
+  it('nasłuchuje zdarzeń wczytania, zapisu, odtworzenia, bazy, wyczyszczenia oraz input/change', () => {
     const { nasluchy } = srodowisko();
-    ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:json-imported', 'vilda:baseline-refreshed',
-      'vilda:user-state-cleared', 'input', 'change'].forEach((n) => expect(nasluchy.doc[n], n).toBeTruthy());
+    ['vilda:patient-loaded', 'vilda:patient-saved', 'vilda:state-restored', 'vilda:json-imported',
+      'vilda:baseline-refreshed', 'vilda:user-state-cleared', 'input', 'change'].forEach((n) => expect(nasluchy.doc[n], n).toBeTruthy());
     expect(nasluchy.win['vilda:user-state-cleared']).toBeTruthy();
+  });
+
+  it('każda ZMIANA stanu blokady idzie jako vilda:tozsamosc-zmiana; powtórna ocena bez zmiany milczy', () => {
+    const { win, pola, M } = srodowisko();
+    const zdarzenia = [];
+    win.CustomEvent = function (typ, init) { this.type = typ; this.detail = init && init.detail; };
+    win.document.dispatchEvent = (ev) => { zdarzenia.push(ev); return true; };
+    win.lastLoadedData = { name: 'Fikcyjna Ewa' };
+    pola.name.value = 'Fikcyjna Ewa';
+    M.odswiez();
+    M.odswiez();
+    expect(zdarzenia.map((e) => [e.type, e.detail.zablokowane])).toEqual([['vilda:tozsamosc-zmiana', true]]);
+    win.lastLoadedData = null;
+    M.odswiez();
+    expect(zdarzenia.length).toBe(2);
+    expect(zdarzenia[1].detail.zablokowane).toBe(false);
   });
 
   it('strona bez pól tożsamości: brak nasłuchów, brak wyjątku', () => {
@@ -146,8 +162,57 @@ describe('Obie strony mają ten sam formularz główny i tę samą blokadę', ()
   });
 
   it('service worker i rejestr zależności znają moduł', () => {
-    expect(zrodlo('service-worker-kalorii.js')).toContain("'/vilda_pola_tozsamosci.js?v=1',");
+    expect(zrodlo('service-worker-kalorii.js')).toContain("'/vilda_pola_tozsamosci.js?v=2',");
     expect(zrodlo('vilda_deps.js')).toContain('VildaPolaTozsamosci:');
+  });
+});
+
+describe('Podpowiedź pacjenta przy zablokowanym polu tożsamości (P-TOZSAMOSC-2)', () => {
+  const src = zrodlo('vilda_auth_ui.js');
+
+  function wytnij(nazwa) {
+    const i = src.indexOf(`function ${nazwa}(`);
+    expect(i, `vilda_auth_ui.js ma ${nazwa}()`).toBeGreaterThan(-1);
+    let d = 0;
+    for (let k = src.indexOf('{', i); k < src.length; k += 1) {
+      if (src[k] === '{') d += 1;
+      else if (src[k] === '}') { d -= 1; if (d === 0) return src.slice(i, k + 1); }
+    }
+    throw new Error('niezbalansowane nawiasy');
+  }
+
+  const Bz0 = (pola) => new Function('i', 'mo', `${wytnij('Bz0')}return Bz0;`)(
+    { document: { getElementById: (id) => pola[id] || null } },
+    { firstName: 1, lastName: 1 },
+  );
+
+  it('pole readOnly, disabled albo ze znacznikiem z kartoteki blokuje podpowiedź', () => {
+    const b = Bz0({});
+    expect(b({ id: 'lastName', readOnly: true })).toBe(true);
+    expect(b({ id: 'advName', disabled: true })).toBe(true);
+    expect(b({ id: 'firstName', dataset: { zKartoteki: '1' } })).toBe(true);
+    expect(b(null)).toBe(false);
+  });
+
+  it('para Nazwisko/Imię: blokada jednego pola z pary wystarcza; wolna para podpowiada', () => {
+    const zablokowana = Bz0({ lastName: { readOnly: true }, firstName: { readOnly: false } });
+    expect(zablokowana({ id: 'firstName', readOnly: false, dataset: {} })).toBe(true);
+    const wolna = Bz0({ lastName: { readOnly: false }, firstName: { readOnly: false } });
+    expect(wolna({ id: 'firstName', readOnly: false, dataset: {} })).toBe(false);
+    expect(wolna({ id: 'basicGrowthName', readOnly: false, dataset: {} })).toBe(false);
+  });
+
+  it('Pi() pyta o blokadę przed budową listy i chowa ją', () => {
+    expect(src).toContain('if(Bz0(t)){Ua();return}var a=vs(t);if(!a){Ua();return}');
+  });
+
+  it('lista otwarta tuż przed blokadą znika: wczytanie, zapis i zmiana blokady chowają ją; klawiatura na zablokowanym polu nie wybiera', () => {
+    // Przegląd adwersaryjny (2026-09-15): bramka w Pi() działa tylko przy OTWIERANIU listy — lista
+    // otwarta w oknie przed blokadą zostawała na ekranie i reagowała na Enter. Stąd trzy zamknięcia.
+    expect(src).toContain('i.document.addEventListener("vilda:patient-loaded",function(){Qe=null,Ua()})');
+    expect(src).toContain('i.document.addEventListener("vilda:patient-saved",function(){Qe=null,Ua()})');
+    expect(src).toContain('i.document.addEventListener("vilda:tozsamosc-zmiana",function(n){n&&n.detail&&n.detail.zablokowane&&Ua()})');
+    expect(src).toContain('function bs(t){if(t&&Bz0(t.target)){Ua();return}');
   });
 });
 
