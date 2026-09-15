@@ -376,7 +376,7 @@ describe('Kafelek stoi w rzędzie kart, nie w martwej gałęzi', () => {
     const sum = fs.readFileSync(path.join(korzen, 'vilda_summary_cards.js'), 'utf8');
     expect(sum).toContain('qHvSdsPush(e,C)');
     expect(sum).toContain('T.hvSdsPodsumowanie(');
-    expect(sum.indexOf('Aktualne tempo wzrastania'), 'zdanie idzie PO tempie')
+    expect(sum.indexOf('e.push(qVeloLinia(C))'), 'zdanie idzie PO tempie')
       .toBeLessThan(sum.indexOf('qHvSdsPush(e,C)'));
   });
 });
@@ -547,7 +547,7 @@ describe('Ten sam pacjent — ta sama liczba w podsumowaniu i w kafelku', () => 
   it('karta podsumowania przekazuje dzisiejszy pomiar osobno, a nie dokleja go do historii', () => {
     const sum = fs.readFileSync(path.join(korzen, 'vilda_summary_cards.js'), 'utf8');
     const i = sum.indexOf('function qPomiaryZKarty');
-    const j = sum.indexOf('function qVeloSuffix', i);
+    const j = sum.indexOf('function qVeloModel', i);
     expect(i).toBeGreaterThan(-1);
     expect(j).toBeGreaterThan(i);
     const wejscia = [];
@@ -611,16 +611,14 @@ describe('Zdanie stoi pod KAŻDYM wierszem tempa (GROWTH-HV-UI5)', () => {
   // N mies.)". To druga gałąź, ta bez HV-SDS.
   const sum = fs.readFileSync(path.join(korzen, 'vilda_summary_cards.js'), 'utf8');
 
-  it('obie gałęzie wiersza tempa wołają qHvSdsPush', () => {
-    const i = sum.indexOf('if(C.growthVelocity&&!isNaN(C.growthVelocity))');
+  it('wiersz tempa (od P-TEMPO etap 2 jeden, nie dwie gałęzie) zawsze woła qHvSdsPush', () => {
+    const i = sum.indexOf('if(C.growthVelocity!==null&&!isNaN(C.growthVelocity))');
     const j = sum.indexOf('if(C.targetHeight', i);
     expect(i, 'znaleziono blok tempa').toBeGreaterThan(-1);
     const blok = sum.slice(i, j);
-    expect(blok.split('qHvSdsPush(e,C)').length - 1, 'jedno wywołanie na gałąź').toBe(2);
-    // Kontrola kierunkowa: gałąź „obliczono jako średnią" też je ma.
-    const k = blok.indexOf('Tempo wzrastania: ');
-    expect(blok.slice(k).indexOf('qHvSdsPush(e,C)'), 'wywołanie po wierszu drugiej gałęzi')
-      .toBeGreaterThan(-1);
+    expect(blok.split('qHvSdsPush(e,C)').length - 1, 'jedno wywołanie, bezwarunkowe').toBe(1);
+    expect(blok, 'wiersz składa jeden model przez qVeloLinia').toContain('e.push(qVeloLinia(C)),qHvSdsPush(e,C)');
+    expect(blok, 'druga gałąź z „obliczono jako średnią" zniknęła').not.toMatch(/obliczono jako|Aktualne tempo/);
   });
 
   it('okno normy tempa i okno HV-SDS to dwie różne reguły', () => {

@@ -60,70 +60,69 @@ const DANGER_VELOCITY = Object.freeze({
   slow: true, alarm: true, severity: 'danger', normLabel: '≥5 cm/rok',
 });
 
-describe('Podsumowanie wyników — dopisek werdyktu tempa (vilda_summary_cards.js)', () => {
-  function loadSuffix(win) {
+describe('Podsumowanie wyników — wiersz tempa z jednego modelu (vilda_summary_cards.js)', () => {
+  // P-TEMPO etap 2: wiersz składa VildaTempoWzrastania.formatuj() z modelu zapisanego przez
+  // kartę (advancedGrowthData.tempo). Dopisek „— poniżej normy (norma: …)" z SW 1.0.8xx
+  // zastąpiło jedno zdanie karty; kolejność źródeł: model karty → model trajektorii →
+  // ocena gotowej liczby tą samą hierarchią (rekordy sprzed zapisu modelu).
+  function loadLine(win, zSilnikiem = true) {
     globalThis.document = win.document;
+    if (zSilnikiem) loadBrowserScript('vilda_tempo_wzrastania.js', win);
     loadBrowserScript('vilda_summary_cards.js', win);
-    expect(typeof win.__velocitySummarySuffix).toBe('function');
-    return win.__velocitySummarySuffix;
+    expect(typeof win.__velocitySummaryLine).toBe('function');
+    return win.__velocitySummaryLine;
   }
 
-  it('alarm (danger) z modelu trajektorii → „— poniżej normy (norma: …)"', () => {
+  it('model karty (tempo) z alarmem → zdanie karty słowo w słowo', () => {
     const win = makeWindow();
-    const suffix = loadSuffix(win);
-    win.advancedGrowthTrajectory = { velocity: { ...DANGER_VELOCITY } };
-    const s = suffix({ growthVelocity: 3.8, growthVelocityGapM: 12, currentAgeMonths: 110, sex: 'M' });
-    expect(s).toBe(' — poniżej normy (norma: ≥5 cm/rok)');
+    const line = loadLine(win);
+    const s = line({ growthVelocity: 3.8, growthVelocityGapM: 12, currentAgeMonths: 110, sex: 'M',
+      tempo: { ...DANGER_VELOCITY, basis: 'age' } });
+    expect(s).toBe('Tempo wzrastania: 3,8 cm/rok (z 12 mies.) — poniżej normy dla wieku (norma ≥5 cm/rok)');
   });
 
-  it('poziom czujności (warn, np. Tanner II/III) → „— do oceny (…)" bez słowa „norma"', () => {
+  it('poziom czujności (warn, Tanner II) → „do oceny", norma bez nawiasu w nawiasie', () => {
     const win = makeWindow();
-    const suffix = loadSuffix(win);
+    const line = loadLine(win);
     win.advancedGrowthTrajectory = {
-      velocity: { cmPerYear: 4.2, slow: true, alarm: false, severity: 'warn', normLabel: '≥4 cm/rok w trakcie pokwitania (Tanner II)' },
+      velocity: { cmPerYear: 4.2, gapM: 12, usedLastYear: true, slow: true, alarm: false, severity: 'warn', basis: 'tanner23', normLabel: '≥4 cm/rok w trakcie pokwitania (Tanner II)' },
     };
-    const s = suffix({ growthVelocity: 4.2 });
-    expect(s).toBe(' — do oceny (≥4 cm/rok w trakcie pokwitania (Tanner II))');
+    const s = line({ growthVelocity: 4.2 });
+    expect(s).toBe('Tempo wzrastania: 4,2 cm/rok (z 12 mies.) — do oceny, norma ≥4 cm/rok w trakcie pokwitania (Tanner II)');
   });
 
-  it('tempo w normie → bez dopisku (linia bez zmian)', () => {
+  it('tempo w normie → „w normie (norma …)"', () => {
     const win = makeWindow();
-    const suffix = loadSuffix(win);
-    win.advancedGrowthTrajectory = { velocity: { cmPerYear: 6.1, slow: false, alarm: false, severity: null, normLabel: '≥5 cm/rok' } };
-    expect(suffix({ growthVelocity: 6.1 })).toBe('');
+    const line = loadLine(win);
+    win.advancedGrowthTrajectory = { velocity: { cmPerYear: 6.1, gapM: 11, usedLastYear: true, slow: false, alarm: false, severity: null, basis: 'age', normLabel: '≥5 cm/rok' } };
+    expect(line({ growthVelocity: 6.1 })).toBe('Tempo wzrastania: 6,1 cm/rok (z 11 mies.) — w normie (norma ≥5 cm/rok)');
   });
 
-  it('brak modelu trajektorii i brak modułu oceny → bez dopisku (bezpieczny fallback)', () => {
+  it('bez silnika i bez modelu → sama liczba z odstępem (bezpieczny fallback)', () => {
     const win = makeWindow();
-    const suffix = loadSuffix(win);
-    expect(suffix({ growthVelocity: 3.8, growthVelocityGapM: 12, currentAgeMonths: 110, sex: 'M' })).toBe('');
+    const line = loadLine(win, false);
+    expect(line({ growthVelocity: 3.8, growthVelocityGapM: 12, currentAgeMonths: 110, sex: 'M' }))
+      .toBe('Tempo wzrastania: 3,8 cm/rok (z 12 mies.)');
   });
 
-  it('rozjazd wartości tempa z modelem trajektorii → fallback do REALNEGO assessVelocityValue', () => {
+  it('rozjazd wartości z modelem trajektorii → ocena gotowej liczby REALNĄ hierarchią', () => {
     const win = makeWindow();
-    const suffix = loadSuffix(win);
-    // Prawdziwy moduł trajektorii + produkcyjna tabela progów <10 lat (kształt z app.js).
-    loadBrowserScript('vilda_tempo_wzrastania.js', win);
+    const line = loadLine(win);
     loadBrowserScript('vilda_trajectory_analysis.js', win);
-    win.getVelocityThreshold = (ageMonths) => {
-      const t = ageMonths / 12;
-      return t >= 5 && t < 10 ? { threshold: 5, label: '≥5 cm/rok' } : null;
-    };
     // Model trajektorii mówi o innej wartości (np. stary render) — nie wolno go użyć.
     win.advancedGrowthTrajectory = { velocity: { cmPerYear: 9.9, slow: false, alarm: false } };
-    const s = suffix({ growthVelocity: 3.8, growthVelocityGapM: 12, currentAgeMonths: 110, sex: 'M' });
-    expect(s).toBe(' — poniżej normy (norma: ≥5 cm/rok)');
+    const s = line({ growthVelocity: 3.8, growthVelocityGapM: 12, currentAgeMonths: 110, sex: 'M' });
+    expect(s).toBe('Tempo wzrastania: 3,8 cm/rok (z 12 mies.) — poniżej normy dla wieku (norma ≥5 cm/rok)');
   });
 
-  it('odstęp pomiarów poza oknem oceny (usedLastYear=false) → bez dopisku', () => {
+  it('odstęp pomiarów poza oknem oceny → liczba opisowa, bez werdyktu, bez „średniej"', () => {
     const win = makeWindow();
-    const suffix = loadSuffix(win);
-    loadBrowserScript('vilda_tempo_wzrastania.js', win);
+    const line = loadLine(win);
     loadBrowserScript('vilda_trajectory_analysis.js', win);
-    win.getVelocityThreshold = () => ({ threshold: 5, label: '≥5 cm/rok' });
     // gap 24 mies. — poza oknem 6–15 mies., norma nie obowiązuje.
-    const s = suffix({ growthVelocity: 3.8, growthVelocityGapM: 24, currentAgeMonths: 110, sex: 'M' });
-    expect(s).toBe('');
+    const s = line({ growthVelocity: 3.8, growthVelocityGapM: 24, currentAgeMonths: 110, sex: 'M' });
+    expect(s).toBe('Tempo wzrastania: 3,8 cm/rok (z 24 mies., poza oknem oceny normy)');
+    expect(s).not.toMatch(/obliczono jako średnią|Aktualne/);
   });
 });
 
@@ -140,25 +139,32 @@ describe('Podsumowanie wyników — kolor wiersza tempa (vilda_patient_report.js
 
   it('linia z „poniżej normy" → danger (czerwień, jak baner karty zaawansowanej)', () => {
     const tone = loadTone(CHILD_DOM);
-    expect(tone('Aktualne tempo wzrastania (z ostatnich 12 mies.): 3,8 cm/rok — poniżej normy (norma: ≥5 cm/rok)')).toBe('danger');
+    expect(tone('Tempo wzrastania: 3,8 cm/rok (z 12 mies.) — poniżej normy dla wieku (norma ≥5 cm/rok)')).toBe('danger');
   });
 
   it('linia z „do oceny" → warn (pomarańcz, poziom czujności okołopokwitaniowej)', () => {
     const tone = loadTone(CHILD_DOM);
-    expect(tone('Aktualne tempo wzrastania (z ostatnich 12 mies.): 4,2 cm/rok — do oceny (≥4 cm/rok w trakcie pokwitania (Tanner II))')).toBe('warn');
+    expect(tone('Tempo wzrastania: 4,2 cm/rok (z 12 mies.) — do oceny, norma ≥4 cm/rok w trakcie pokwitania (Tanner II)')).toBe('warn');
   });
 
   it('linia bez dopisku → normal (obie odmiany etykiety)', () => {
     const tone = loadTone(CHILD_DOM);
-    expect(tone('Aktualne tempo wzrastania (z ostatnich 12 mies.): 6,1 cm/rok')).toBe('normal');
-    expect(tone('Tempo wzrastania: 5,5 cm/rok (obliczono jako średnią z 2 ostatnich odcinków)')).toBe('normal');
+    expect(tone('Tempo wzrastania: 6,1 cm/rok (z 11 mies.) — w normie (norma ≥5 cm/rok)')).toBe('normal');
+    expect(tone('Tempo wzrastania: 5,5 cm/rok (z 36 mies., poza oknem oceny normy)')).toBe('normal');
+  });
+
+  it('linia „SDS tempa" → normal: liczba opisowa, nie alarm, choć niesie centyl', () => {
+    // P-TEMPO etap 2: dotąd linia wpadała w ogólną regułę centylową i „<1 centyl" robił ją czerwoną.
+    const tone = loadTone(CHILD_DOM);
+    expect(tone('SDS tempa: −2,3 (<1 centyl) — wg Duran i wsp., J Pediatr Endocrinol Metab 2025')).toBe('normal');
+    expect(tone('SDS tempa: +2,2 (99 centyl) — wg Duran i wsp., J Pediatr Endocrinol Metab 2025')).toBe('normal');
   });
 
   it('dorosły → normal nawet z dopiskiem (ocena tempa nie dotyczy dorosłych)', () => {
     const tone = loadTone({ weight: '70', height: '175', age: '30', ageMonths: '0', sex: 'M' });
     globalThis.getAgeDecimal = () => 30;
     try {
-      expect(tone('Aktualne tempo wzrastania (z ostatnich 12 mies.): 3,8 cm/rok — poniżej normy (norma: ≥5 cm/rok)')).toBe('normal');
+      expect(tone('Tempo wzrastania: 3,8 cm/rok (z 12 mies.) — poniżej normy dla wieku (norma ≥5 cm/rok)')).toBe('normal');
     } finally {
       delete globalThis.getAgeDecimal;
     }

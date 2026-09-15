@@ -558,13 +558,11 @@ test.describe('Zdanie stoi także pod drugą gałęzią wiersza tempa', () => {
     const iTempo = l.findIndex((t) => /^Tempo wzrastania:/.test(t));
     expect(iTempo, 'to jest ta druga gałąź — bez niej test nie mierzy zgłoszonej usterki')
       .toBeGreaterThan(-1);
-    expect(l[iTempo], 'brzmienie drugiej gałęzi').toMatch(/obliczono jako średnią/);
-    // Zgłoszenie właściciela (SW 1.0.881): odstęp 16 mies. brzmiał „z ostatnich 1 lat" —
-    // nie po polsku, a przy okazji zaokrąglenie gubiło cztery miesiące. Okres stoi w
-    // dopełniaczu, bo zdanie zaczyna się od „z", i podaje odstęp, który naprawdę policzono.
-    expect(l[iTempo], 'okres po polsku i bez zaokrąglania w dół')
-      .toContain('obliczono jako średnią z ostatnich 16 miesięcy');
-    expect(l[iTempo]).not.toMatch(/ostatnich 1 lat/);
+    // P-TEMPO etap 2: druga gałąź to „ostatni odcinek" — liczba opisowa z odstępem, bez
+    // „obliczono jako średnią" (to nachylenie z dwóch punktów) i bez porównania z normą.
+    // Odstęp podany co do miesiąca (zgłoszenie SW 1.0.881: „z ostatnich 1 lat").
+    expect(l[iTempo], 'brzmienie drugiej gałęzi').toContain('(z 16 mies., poza oknem oceny normy)');
+    expect(l[iTempo]).not.toMatch(/obliczono jako średnią|ostatnich 1 lat|Aktualne/);
 
     const iHv = l.findIndex((t) => /^SDS tempa/.test(t));
     expect(iHv, 'zdanie o SDS tempa jest obecne').toBeGreaterThan(-1);
