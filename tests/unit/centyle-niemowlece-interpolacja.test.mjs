@@ -74,10 +74,19 @@ const TABLICE = [
 ].map(tablica).join(';\n');
 
 // `lmsNiemowleWiek` sięga po `window.VildaDobAge`, więc podajemy je jako parametr fabryki.
+// P-SDS-5: wzrost liczy WYLACZNIE silnik vilda_sds_wzrostu.js (calcPercentileStats deleguje, bez zapasu),
+// wiec harness laduje prawdziwy silnik z tablicami app.js; zrodlo WHO — test mierzy interpolacje WHO 2006.
+const silnikSrc = fs.readFileSync(path.join(korzen, 'vilda_sds_wzrostu.js'), 'utf8');
 function silnik(dobAge) {
+  const win = dobAge ? { VildaDobAge: dobAge } : {};
+  win.VildaWzrostLMS = {};
+  for (const n of ['LMS_INFANT_HEIGHT_BOYS', 'LMS_INFANT_HEIGHT_GIRLS', 'LMS_HEIGHT_WHO_BOYS', 'LMS_HEIGHT_WHO_GIRLS', 'LMS_HEIGHT_BOYS', 'LMS_HEIGHT_GIRLS']) {
+    win.VildaWzrostLMS[n] = new Function(`${tablica(n)}; return ${n};`)();
+  }
+  new Function('window', 'globalThis', silnikSrc)(win, win);
   const kod = `
     ${TABLICE};
-    let weightUsedFallback = false;
+    let weightUsedFallback = false; const bmiSource = 'WHO';
     ${funkcja('erf')}
     ${funkcja('normalCDF')}
     ${funkcja('lmsNiemowleWiek')}
@@ -86,7 +95,7 @@ function silnik(dobAge) {
     ${funkcja('calcPercentileStats')}
     return { getChildLMS, calcPercentileStats, lmsNiemowle };
   `;
-  return new Function('window', kod)(dobAge ? { VildaDobAge: dobAge } : {});
+  return new Function('window', kod)(win);
 }
 
 const DNI_W_MIESIACU = 30.4375;

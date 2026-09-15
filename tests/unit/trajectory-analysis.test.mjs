@@ -681,7 +681,7 @@ describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
     // Karty statusu: pasek koloru werdyktu (warn ×3), przejście centylowe + ΔSDS, werdykt zdaniem.
     expect(html).toContain('vtap-cards');
     expect((html.match(/vtap-card cw/g) || []).length).toBe(3);
-    expect(html).toContain('ΔSDS +0,4');
+    expect(html).toContain('ΔSDS +0,40');
     expect(html).toContain('progresja nadwagi (BMI w paśmie 85.–97. centyla)');
     expect(html).not.toContain('vtap-ft');
     // Bez zagnieżdżonych nawiasów w całym panelu (stub nie liczy tempa — belkę Tempo

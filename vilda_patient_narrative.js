@@ -73,7 +73,18 @@
   // tylko wtedy, gdy wynik nie jest zerem. Poprzednia wersja zaokraglala PRZED nadaniem
   // znaku, przez co −0,05 dawalo „0,0", a +0,05 „+0,1" — ta sama odleglosc od zera, dwa
   // rozne wyniki. Parytet z karta pilnuje format-sds-zero.test.mjs.
+  // P-SDS etap 3 (decyzja 4): „hSDS −1,23" — 2 miejsca, znak, przecinek, jak silnik SDS wzrostu.
   function fmtSds(s) {
+    if (typeof s !== 'number' || !isFinite(s)) return '—';
+    var eng = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
+    if (eng && typeof eng.fmtSds === 'function') return eng.fmtSds(s);
+    var t = Math.abs(s).toFixed(2);
+    return (parseFloat(t) === 0 ? '' : (s > 0 ? '+' : '−')) + t.replace('.', ',');
+  }
+
+  // Jedno miejsce: SDS TEMPA (GROWTH-HV-UI4, osobna decyzja właściciela), SDS urodzeniowe SGA i progi
+  // konsensusu („poniżej progu −2,0 SD") — inne wielkości niż hSDS pozycji, czytelniejsze bez setnych.
+  function fmtSds1(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
     var t = Math.abs(s).toFixed(1);
     return (parseFloat(t) === 0 ? '' : (s > 0 ? '+' : '−')) + t.replace('.', ',');
@@ -355,13 +366,13 @@
       kons = { prog: c.prog };
     }
     var opis = [];
-    if (c.masaSdsUr != null) opis.push('masa urodzeniowa ' + fmtSds(c.masaSdsUr) + ' SD');
-    if (c.dlugoscSdsUr != null) opis.push('długość urodzeniowa ' + fmtSds(c.dlugoscSdsUr) + ' SD');
+    if (c.masaSdsUr != null) opis.push('masa urodzeniowa ' + fmtSds1(c.masaSdsUr) + ' SD');
+    if (c.dlugoscSdsUr != null) opis.push('długość urodzeniowa ' + fmtSds1(c.dlugoscSdsUr) + ' SD');
     if (c.tygodnie != null) opis.push(c.tygodnie + (c.dni ? '+' + c.dni : '') + ' tc');
     var nawias = opis.length ? ' (' + opis.join(', ') + ')' : '';
 
     var progKons = kons
-      ? 'poniżej progu ' + fmtSds(kons.prog)
+      ? 'poniżej progu ' + fmtSds1(kons.prog)
         + ' SD, przy którym konsensus międzynarodowy z 2023 roku zaleca u dzieci urodzonych'
         + ' jako SGA diagnostykę utrwalonej niskorosłości'
       : null;
@@ -498,10 +509,10 @@
     var h;
     try { h = t.hvSdsDlaOpisu(v, model); } catch (e) { return null; }
     if (!h || typeof h.sds !== 'number' || !isFinite(h.sds)) return null;
-    var txt = 'SDS tempa wzrastania dla wieku i płci wynosi ' + fmtSds(h.sds)
+    var txt = 'SDS tempa wzrastania dla wieku i płci wynosi ' + fmtSds1(h.sds)
       + ' (' + h.centylTekst + ' centyl) — wg ' + h.zrodlo;
     if (h.kelly) {
-      txt += '; wg czasu pokwitania ' + fmtSds(h.kelly.sds) + ' (' + h.kelly.podgrupa + ')';
+      txt += '; wg czasu pokwitania ' + fmtSds1(h.kelly.sds) + ' (' + h.kelly.podgrupa + ')';
     }
     if (h.kowd) {
       txt += '; w odniesieniu do dzieci z rozpoznanym KOWD tempo leży ' + h.kowd.polozenie;

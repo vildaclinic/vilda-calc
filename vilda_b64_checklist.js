@@ -61,6 +61,8 @@
   function fmtSds(s) {
     var x = num(s);
     if (x == null) return '—';
+    var eng = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
+    if (eng && typeof eng.fmtSds === 'function') return eng.fmtSds(x);
     var t = Math.abs(x).toFixed(2);
     return (parseFloat(t) === 0 ? '' : (x > 0 ? '+' : '−')) + t.replace('.', ',');
   }

@@ -30,7 +30,7 @@ function wytnij(plik, od, doTekstu) {
 
 const formatery = () => ({
   // Karta „Zaawansowane obliczenia wzrostowe" — plik czytelny, funkcja modułowa.
-  karta: wytnij('vilda_trajectory_analysis.js', 'function fmtS(s)', 'function fmtAgeM('),
+  karta: wytnij('vilda_trajectory_analysis.js', 'function fmtP(s)', 'function fmtAgeM('),
   // Panel porównania — źródło parytetu deklarowanego w karcie.
   panel: wytnij('vilda_auth_ui.js', 'function fmtS(s)', 'function ageStr('),
   // Żeton „hSDS ±x,x" w karcie pacjenta.
@@ -154,7 +154,7 @@ describe('Monitory terapii — ta sama reguła co w rodzinie wzrostowej', () => 
     const f = formatery();
     const m = monitory();
     for (const v of [-3.14, -1.6, -0.5, -0.05, -0.04, 0, 0.04, 0.05, 0.5, 1.4]) {
-      expect(m.kosci(v, 1), `rozjazd monitor kości ↔ karta dla ${v}`).toBe(f.karta(v));
+      expect(m.kosci(v, 2), `rozjazd monitor kości ↔ karta dla ${v}`).toBe(f.karta(v));
     }
   });
 });
@@ -163,15 +163,16 @@ describe('Zapis SDS blisko zera — jedna reguła w całej aplikacji', () => {
   it('wartość zaokrąglająca się do zera nie dostaje znaku', () => {
     const f = formatery();
     // −0,04 SD to brak zmiany. „−0,0" czytałoby się jak spadek.
-    expect(f.karta(-0.04)).toBe('0,0');
-    expect(f.panel(-0.04)).toBe('0,0');
-    expect(f.zeton(-0.04)).toBe('hSDS 0,0');
+    // P-SDS etap 3 (decyzja 4): SDS pozycji z dwoma miejscami — zero po zaokrągleniu bez znaku.
+    expect(f.karta(-0.004)).toBe('0,00');
+    expect(f.panel(-0.004)).toBe('0,00');
+    expect(f.zeton(-0.004)).toBe('hSDS 0,00');
     expect(f.epiDelta(-0.004)).toBe('0,00');
     expect(f.epiSds(-0.004)).toBe('SDS = 0,00');
     // Dodatnie zero tak samo — bez „+0,0".
-    expect(f.karta(0.04)).toBe('0,0');
-    expect(f.karta(0)).toBe('0,0');
-    expect(f.panel(0)).toBe('0,0');
+    expect(f.karta(0.004)).toBe('0,00');
+    expect(f.karta(0)).toBe('0,00');
+    expect(f.panel(0)).toBe('0,00');
     expect(f.epiDelta(0)).toBe('0,00');
   });
 
@@ -179,20 +180,20 @@ describe('Zapis SDS blisko zera — jedna reguła w całej aplikacji', () => {
     const f = formatery();
     // Przed poprawką: +0,05 → „+0,1", a −0,05 → „−0,0". Ta sama odległość od zera,
     // dwa różne wyniki — zaokrąglamy wartość bezwzględną i dopiero potem dajemy znak.
-    expect(f.karta(0.05)).toBe('+0,1');
-    expect(f.karta(-0.05)).toBe('−0,1');
-    expect(f.panel(-0.05)).toBe('−0,1');
+    expect(f.karta(0.005)).toBe('+0,01');
+    expect(f.karta(-0.005)).toBe('−0,01');
+    expect(f.panel(-0.005)).toBe('−0,01');
     expect(f.epiDelta(-0.005)).toBe('−0,01');
   });
 
   it('kontrola pozytywna: prawdziwe wartości bez zmian', () => {
     const f = formatery();
-    expect(f.karta(-0.5)).toBe('−0,5');
-    expect(f.karta(1.4)).toBe('+1,4');
-    expect(f.karta(-2.35)).toBe('−2,4');
-    expect(f.panel(-0.5)).toBe('−0,5');
-    expect(f.panel(1.4)).toBe('+1,4');
-    expect(f.zeton(-1.6)).toBe('hSDS −1,6');
+    expect(f.karta(-0.5)).toBe('−0,50');
+    expect(f.karta(1.4)).toBe('+1,40');
+    expect(f.karta(-2.345)).toBe('−2,35');
+    expect(f.panel(-0.5)).toBe('−0,50');
+    expect(f.panel(1.4)).toBe('+1,40');
+    expect(f.zeton(-1.6)).toBe('hSDS −1,60');
     expect(f.epiDelta(-0.72)).toBe('−0,72');
     expect(f.epiSds(1.25)).toBe('SDS = +1,25');
     // Brak danych nadal daje myślnik/null tam, gdzie dawał.

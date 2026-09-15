@@ -47,12 +47,14 @@ function silnik() {
   return { win, T };
 }
 
-// Stara ścieżka app.js (bez silnika) jako wyrocznia parzystości dla wieku ≥ 36 mies.
+// Wyrocznia parzystości: produkcyjny wzór LMS app.js (advHistoryCalcLmsStats, dziś tylko dla masy)
+// na tablicach z getChildLMS — ta sama liczba, którą dawał rdzeń przed etapem 1.
 function staryRdzen(bmiSource) {
   const kod = `
     ${TABLICE.map((n) => `const ${n}=window.${n};`).join('')}
     let weightUsedFallback=false; const bmiSource=${JSON.stringify(bmiSource)};
-    ${funkcja('erf')}${funkcja('normalCDF')}${funkcja('lmsNiemowleWiek')}${funkcja('lmsNiemowle')}${funkcja('getChildLMS')}${funkcja('calcPercentileStats')}
+    ${funkcja('erf')}${funkcja('normalCDF')}${funkcja('lmsNiemowleWiek')}${funkcja('lmsNiemowle')}${funkcja('getChildLMS')}${funkcja('advHistoryCalcLmsStats')}
+    function calcPercentileStats(e,t,n,a){const r=advHistoryCalcLmsStats(e,getChildLMS(t,n,a));return r?{percentile:r.percentile,sd:r.sd}:null}
     return { calcPercentileStats, getChildLMS };`;
   const win = {};
   for (const n of TABLICE) win[n] = tablica(n);
@@ -160,7 +162,7 @@ describe('Silnik SDS wzrostu — parzystość z dotychczasowym rdzeniem tam, gdz
     const { T, win } = silnik();
     const kod = `${funkcja('erf')}${funkcja('normalCDF')}${funkcja('normInv')}
       function getPalCentile(e,t,n,a){return window.VildaCentileInterp.palCentileValue(e,Math.round(t),n,a)}
-      ${funkcja('calcPercentileStatsPal').replace('if(a==="HT"){const T=typeof window<"u"&&window.VildaSdsWzrostu;if(T&&typeof T.policzNaSiatce=="function"){const r=T.policzNaSiatce({wzrost:e,plec:t,wiekMies:Math.round(n*12),siatka:"PALCZEWSKA"});return r?{percentile:r.centyl,sd:r.sds}:null}}', '')}
+      ${funkcja('calcPercentileStatsPal').replace('if(a==="HT"){const T=typeof window<"u"&&window.VildaSdsWzrostu;if(T&&typeof T.policzNaSiatce=="function"){const r=T.policzNaSiatce({wzrost:e,plec:t,wiekMies:Math.round(n*12),siatka:"PALCZEWSKA"});return r?{percentile:r.centyl,sd:r.sds}:null}return null}', '')}
       return calcPercentileStatsPal;`;
     const staryPal = new Function('window', kod)(win);
     for (const [plec, mies, cm] of [['M', 24, 84], ['F', 24, 81], ['M', 120, 138], ['F', 150, 160], ['M', 216, 176], ['F', 12, 70]]) {
