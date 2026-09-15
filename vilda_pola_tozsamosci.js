@@ -19,15 +19,18 @@
  *
  * CO ROBI
  *   #lastName, #firstName → readOnly (tekst zostaje czytelny i do skopiowania, jak data);
+ *   #advName, #basicGrowthName (kopie nazwy w kartach) → readOnly tak samo;
  *   #sex → disabled (select nie ma readOnly; aplikacja i tak wyłącza go przy wczytaniu);
  *   #tozsamoscNote → jedno zdanie „skąd i gdzie zmienić". Zdejmuje tylko to, co sam nałożył
  *   (znacznik data-z-kartoteki), więc nie walczy z innymi modułami o pola.
  *
  * KIEDY
- *   Po zdarzeniach aplikacji (wczytanie, odtworzenie stanu, import, odświeżenie bazy,
+ *   Po zdarzeniach aplikacji (wczytanie, zapis, odtworzenie stanu, import, odświeżenie bazy,
  *   wyczyszczenie) oraz po każdym `input`/`change` w dokumencie (odtworzenie sesji po F5
  *   i synchronizacja między stronami nie wysyłają własnego zdarzenia). Ocena jest tania
- *   i idempotentna, więc częste wołanie nic nie psuje.
+ *   i idempotentna, więc częste wołanie nic nie psuje. Każda ZMIANA stanu blokady idzie
+ *   jako `vilda:tozsamosc-zmiana` (detail.zablokowane) — P-TOZSAMOSC-2: podpowiedź pacjenta
+ *   chowa listę otwartą tuż przed blokadą, bo sama ocenia tylko przy otwieraniu.
  *
  * BEZPIECZNIKI
  *   Bez pól (strona bez formularza głównego) moduł nic nie robi. Nie zmienia wartości pól,
@@ -40,6 +43,9 @@
   if (w.VildaPolaTozsamosci && w.VildaPolaTozsamosci.__init) return;
 
   var ID = { nazwisko: 'lastName', imie: 'firstName', kanon: 'name', plec: 'sex', notka: 'tozsamoscNote' };
+  /* Kopie nazwy w kartach (karta zaawansowana, karta podstawowa) — po wczytaniu wyłącza je sama
+     aplikacja, po zapisie zostawały wolne z tym samym nazwiskiem (przegląd 2026-09-15). */
+  var KOPIE_NAZWY = ['advName', 'basicGrowthName'];
   var KLASA = 'vild-pole-z-kartoteki';
   var NOTKA = 'Nazwisko, imię i płeć z kartoteki. Zmiana w Karcie Pacjenta.';
   var ZNACZNIK = 'zKartoteki';
@@ -102,12 +108,27 @@
     }
   }
 
+  /* Ostatnio nałożony stan — zmiana idzie jako zdarzenie do modułów, które trzymają własny
+     widok pól (podpowiedź pacjenta chowa listę otwartą tuż przed blokadą). */
+  var poprzednio = null;
+
+  function ogłosZmiane(tak) {
+    if (poprzednio === tak) return;
+    poprzednio = tak;
+    try {
+      if (typeof w.CustomEvent === 'function') {
+        d.dispatchEvent(new w.CustomEvent('vilda:tozsamosc-zmiana', { detail: { zablokowane: tak } }));
+      }
+    } catch (e) { zgloc('zdarzenie', e); }
+  }
+
   function zastosuj() {
     var tak;
     try { tak = zablokowane(); } catch (e) { zgloc('ocena', e); tak = false; }
     try {
       nalozTekst(pole(ID.nazwisko), tak);
       nalozTekst(pole(ID.imie), tak);
+      KOPIE_NAZWY.forEach(function (id) { nalozTekst(pole(id), tak); });
       nalozPlec(pole(ID.plec), tak);
       var n = pole(ID.notka);
       if (n) {
@@ -115,6 +136,7 @@
         n.hidden = !tak;
       }
     } catch (e) { zgloc('zastosuj', e); }
+    ogłosZmiane(tak);
     return tak;
   }
 
@@ -128,8 +150,8 @@
   }
 
   function podepnij() {
-    ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:json-imported', 'vilda:baseline-refreshed',
-      'vilda:user-state-cleared'].forEach(function (nazwa) {
+    ['vilda:patient-loaded', 'vilda:patient-saved', 'vilda:state-restored', 'vilda:json-imported',
+      'vilda:baseline-refreshed', 'vilda:user-state-cleared'].forEach(function (nazwa) {
       d.addEventListener(nazwa, zaplanuj);
     });
     /* Wylogowanie i kasowanie stanu lecą na WINDOW (userData.js, vilda_persist_runtime.js). */
@@ -156,8 +178,9 @@
 
   w.VildaPolaTozsamosci = {
     __init: true,
-    version: '1',
+    version: '3',
     ID: ID,
+    KOPIE_NAZWY: KOPIE_NAZWY,
     KLASA: KLASA,
     NOTKA: NOTKA,
     klucz: klucz,
