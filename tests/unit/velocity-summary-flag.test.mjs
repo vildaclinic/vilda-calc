@@ -103,6 +103,7 @@ describe('Podsumowanie wyników — dopisek werdyktu tempa (vilda_summary_cards.
     const win = makeWindow();
     const suffix = loadSuffix(win);
     // Prawdziwy moduł trajektorii + produkcyjna tabela progów <10 lat (kształt z app.js).
+    loadBrowserScript('vilda_tempo_wzrastania.js', win);
     loadBrowserScript('vilda_trajectory_analysis.js', win);
     win.getVelocityThreshold = (ageMonths) => {
       const t = ageMonths / 12;
@@ -117,6 +118,7 @@ describe('Podsumowanie wyników — dopisek werdyktu tempa (vilda_summary_cards.
   it('odstęp pomiarów poza oknem oceny (usedLastYear=false) → bez dopisku', () => {
     const win = makeWindow();
     const suffix = loadSuffix(win);
+    loadBrowserScript('vilda_tempo_wzrastania.js', win);
     loadBrowserScript('vilda_trajectory_analysis.js', win);
     win.getVelocityThreshold = () => ({ threshold: 5, label: '≥5 cm/rok' });
     // gap 24 mies. — poza oknem 6–15 mies., norma nie obowiązuje.

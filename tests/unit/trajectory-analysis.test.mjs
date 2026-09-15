@@ -9,8 +9,15 @@ const repositoryRoot = path.resolve(
   '../..'
 );
 
-function loadModule(browserGlobal = {}) {
+// P-TEMPO: tempo liczy vilda_tempo_wzrastania.js — analiza trajektorii bez niego oddaje
+// velocity=null, więc każdy harness ładuje najpierw silnik tempa.
+function loadTrajectory(browserGlobal = {}) {
+  loadBrowserScript('vilda_tempo_wzrastania.js', browserGlobal);
   return loadBrowserScript('vilda_trajectory_analysis.js', browserGlobal);
+}
+
+function loadModule(browserGlobal = {}) {
+  return loadTrajectory(browserGlobal);
 }
 
 // Realny verdictCh wycięty z produkcyjnego vilda_auth_ui.js (test parytetu wg AGENTS.md §3.5 —
@@ -459,7 +466,7 @@ describe('renderer Karty pacjenta (buildPatientHtml)', () => {
       const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
       return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
     };
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       advHistoryResolveMetric(param, value, sex, ageYears) {
         const key = `${param}|${Math.round(ageYears * 12)}`;
@@ -579,7 +586,7 @@ describe('kontekst kliniczny w silniku (nakładanie per odcinek)', () => {
       const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
       return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
     };
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       advHistoryResolveMetric(param, value, sex, ageYears) {
         const key = `${param}|${Math.round(ageYears * 12)}`;
@@ -749,7 +756,7 @@ describe('banery kart wzrostowych z modelu (wariant 1 konsolidacji)', () => {
       ${cut('getVelocityThreshold')}
       return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
     `)();
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
       advHistoryResolveMetric(param, value, sex, ageYears) {
@@ -829,7 +836,7 @@ describe('ocena tempa >10 lat: hierarchia Tanner → wiek kostny → reguła gen
       ${cut('getVelocityThreshold')}
       return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
     `)();
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
       advHistoryResolveMetric(param, value, sex, ageYears) {
@@ -967,7 +974,7 @@ describe('etap Tannera z rekordu pacjenta (świeżość TANNER_FRESH_M)', () => 
       ${cut('getVelocityThreshold')}
       return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
     `)();
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
       advHistoryResolveMetric(param, value, sex, ageYears) {
@@ -1027,7 +1034,7 @@ describe('panel trajektorii w karcie zaawansowanej (buildCardPanelHtml, hybryda)
       const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
       return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
     };
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       ...browserExtra,
       advHistoryResolveMetric(param, value, sex, ageYears) {
@@ -1111,7 +1118,7 @@ describe('assessVelocityValue — ocena gotowej wartości tempa tą samą hierar
       ${cut('getVelocityThreshold')}
       return { pickPrevForLastYear, pickPrevFallback, velocityCmPerYear, getVelocityThreshold };
     `)();
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       ...helpers,
       advHistoryResolveMetric() {
@@ -1316,7 +1323,7 @@ describe('BMI >97. centyla nigdy „stabilny tor BMI” (decyzja właściciela 2
 describe('chip odpowiedzi na leczenie (para od startu zamierzonej redukcji)', () => {
   function makeVta(table) {
     const centileFromSds = (sds) => Math.min(99.9, Math.max(0.1, 100 * (0.5 * (1 + Math.tanh(sds * 0.79)))));
-    return loadBrowserScript('vilda_trajectory_analysis.js', {
+    return loadTrajectory({
       bmiSource: 'OLAF',
       advHistoryResolveMetric(param, value, sex, ageYears) {
         const key = `${param}|${Math.round(ageYears * 12)}`;

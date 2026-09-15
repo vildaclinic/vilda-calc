@@ -36,27 +36,9 @@ function srodowisko(tabela, opcje) {
       const sd = tabela[key];
       return { result: { percentile: centileFromSds(sd), sd }, source, reason: '' };
     },
-    // Karta liczy tempo przez te trzy funkcje globalne aplikacji — atrapy odwzorowują
-    // ich kontrakt, żeby test szedł prawdziwą ścieżką velocityAssessment, a nie obok niej.
-    velocityCmPerYear(h1, m1, h2, m2) {
-      const lata = (m2 - m1) / 12;
-      return lata > 0 ? Math.round(((h2 - h1) / lata) * 10) / 10 : null;
-    },
-    pickPrevForLastYear(hist, target, minM, idealM, tolM) {
-      const ok = hist.filter((p) => target - p.ageMonths >= minM
-        && Math.abs(target - p.ageMonths - idealM) <= Math.max(idealM - minM, tolM));
-      return ok.length ? ok[ok.length - 1] : null;
-    },
-    pickPrevFallback(hist, target, minM) {
-      const ok = hist.filter((p) => target - p.ageMonths >= minM);
-      return ok.length ? ok[ok.length - 1] : null;
-    },
-    // Norma tempa dla wieku metrykalnego <10 lat — atrapa oddaje kontrakt aplikacji
-    // {threshold, label}; wartość dobrana pod scenariusz testu, nie jest progiem klinicznym.
-    getVelocityThreshold(ageMonths) {
-      if (ageMonths >= 120) return null;
-      return { threshold: 5.5, label: '≥5,5 cm/rok' };
-    },
+    // P-TEMPO: tempo, dobór pary i normę liczy prawdziwy vilda_tempo_wzrastania.js
+    // (ładowany niżej) — bez atrap; do SW 1.0.943 stały tu trzy atrapy funkcji app.js
+    // i sztuczny próg 5,5 cm/rok.
   };
   // Normy prędkości wzrastania (HV-SDS) ładujemy TYLKO na życzenie. Bez nich karta oddaje
   // null i zdania „tempo-sds" po prostu nie ma — dokładnie tak, jak na stronie bez tych
@@ -67,6 +49,7 @@ function srodowisko(tabela, opcje) {
       loadBrowserScript(plik, g);
     }
   }
+  loadBrowserScript('vilda_tempo_wzrastania.js', g);
   loadBrowserScript('vilda_trajectory_analysis.js', g);
   loadBrowserScript('vilda_patient_narrative.js', g);
   return g;
@@ -234,7 +217,7 @@ describe('Parytet z kartą — opis nie mówi nic od siebie', () => {
     expect(zdanie(wynik, 'tempo'), 'opis podaje normę karty').toContain(zKarty.note);
     // Pełne brzmienie właściciela (2026-09-07), słowo w słowo.
     expect(zdanie(wynik, 'tempo'))
-      .toBe('Tempo wzrastania liczone z ostatnich 12 miesięcy obserwacji wynosi 4,0 cm/rok i znajduje się poniżej normy dla wieku (norma ≥5,5 cm/rok).');
+      .toBe('Tempo wzrastania liczone z ostatnich 12 miesięcy obserwacji wynosi 4,0 cm/rok i znajduje się poniżej normy dla wieku (norma ≥5 cm/rok).');
   });
 
   it('zdanie o tempie nie ma nawiasu w nawiasie', () => {
