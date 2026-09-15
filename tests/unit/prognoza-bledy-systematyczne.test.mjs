@@ -84,17 +84,33 @@ describe('GROWTH-PRED-BIAS — chłopiec KOWD (Δ −30, hSDS −2,1)', () => {
     expect(r.cm).toBeCloseTo(expected, 3);
     expect(r.preferredKey).toBe('rwt'); // po A1 Reinehr nie dominuje już „z urzędu"
   });
-  it('karta: wiersz pokazuje wartość skorygowaną, Szczegóły mają surową, korektę, źródło i cel warunkowy', () => {
+  // GROWTH-PRED-PUBLIKACJA (decyzja właściciela 2026-09-15). Do tej daty wiersz pokazywał wartość
+  // PO naszej korekcie, a surowa siedziała w Szczegółach. Właściciel odwrócił regułę: karty
+  // kliniczne mają pokazywać metodę tak, jak podali ją autorzy, a nasze korekty mają żyć wyłącznie
+  // wewnątrz konsensusu. Wiersz musi więc nazwać korektę osobno — inaczej nagłówek konsensusu nie
+  // daje się pogodzić z wierszami (tu: konsensus poniżej trzech z czterech metod).
+  // Przedział „±" NIE wraca do wersji z publikacji: to ostrzeżenie o niepewności, nie liczba
+  // prognozy — BP zostaje z ±6,8 (5,7 × 1,2), a nie z ±5,7.
+  it('karta: wiersz pokazuje wartość z publikacji, a korektę nazywa w nocie obok', () => {
     const html = C.render(KOWD);
     const rows = html.slice(html.indexOf('vgcc-methods'), html.indexOf('vgcc-mph'));
-    expect(rows).toContain('Bayley–Pinneau</span><span><span class="vgcc-val">174,0 cm</span> <span class="vgcc-pm">±6,8</span>');
-    expect(rows).toContain('RWT</span><span><span class="vgcc-val">170,7 cm</span>');
-    expect(rows).not.toContain('176,0');
+    expect(rows).toContain('<span class="vgcc-val">176,0 cm</span> <span class="vgcc-pm">±6,8</span>');
+    expect(rows).toContain('<span class="vgcc-val">172,0 cm</span>');
+    expect(rows).toContain('do konsensusu wchodzi 174,0 cm (−2,0 cm): Bayley–Pinneau przy opóźnieniu kostnym ≥ 2 lata zawyża u chłopców');
+    expect(rows).toContain('do konsensusu wchodzi 170,7 cm (−1,3 cm): RWT w niskorosłości (hSDS ≤ −2) zawyża');
+    // Reinehr nie ma reguły korekty — jego wiersz zostaje bez noty.
+    expect(rows).toContain('Reinehr/CDGP</span><span><span class="vgcc-val">173,0 cm</span>');
+    expect(rows.slice(rows.indexOf('Reinehr/CDGP'))).not.toContain('do konsensusu wchodzi');
+    // Wartość konsensusu NIE zmienia się przez tę zmianę — liczy się nadal ze skorygowanych.
     expect(html).toContain('Cel rodzicielski (MPH): <b>181,0 cm</b>'); // kafel bez zmian
     const det = html.slice(html.indexOf('vgcc-det'));
     expect(det).toContain('Korekta błędu systematycznego:</span> RWT 172,0 → 170,7 cm (−1,3 cm): RWT w niskorosłości (hSDS ≤ −2) zawyża (Blum 2022); Bayley–Pinneau 176,0 → 174,0 cm (−2,0 cm, σ ×1,2): Bayley–Pinneau przy opóźnieniu kostnym ≥ 2 lata zawyża u chłopców (Reinehr 2019; Brämswig 1990).');
     expect(det).toContain('MPH w konsensusie jako cel warunkowy 180,6 cm (regresja do średniej 0,78, Luo 1998; udział ');
     expect(det).toContain('waga ×0,5 w niskorosłości');
+    // Karta mówi wprost, którą wersję liczby pokazuje i co jeszcze na nią działa.
+    expect(det).toContain('Skąd te liczby:');
+    expect(det).toContain('tak, jak podają go autorzy');
+    expect(det).toContain('Konsensus liczy się z wartości <b>po korekcie</b>');
   });
   it('bez korekt (dziecko przeciętne, Δ 0, hSDS 0) Szczegóły nie mają akapitu o korekcie, MPH pozostaje „kotwicą"', () => {
     const html = C.render({ ...KOWD, boneAgeYears: 14, heightSds: 0, mphCm: 179.0, reinehr: { available: false } });

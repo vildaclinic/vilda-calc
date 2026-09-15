@@ -333,6 +333,8 @@
     '.vgcc-row.is-pref{border-left:3px solid var(--vgcc-brand);padding-left:.5rem;background:#ecf7f7;border-radius:0 7px 7px 0}',
     '.vgcc-row.is-pref .vgcc-nm{color:#006b73}',
     '.vgcc-row.is-excl{opacity:.72}',
+    '.vgcc-row.has-korekta{align-items:flex-start}',
+    '.vgcc-korekta{display:block;font-weight:400;font-size:.76rem;line-height:1.35;color:#8a5a12;margin-top:.15rem;max-width:44ch}',
     '.vgcc-row.is-excl .vgcc-val{text-decoration:line-through;text-decoration-color:#b8c6c8;font-weight:600}',
     '.vgcc-row.is-info{background:#f7f9fb;border-top:1px dashed var(--vgcc-line)}',
     '.vgcc-row.is-info .vgcc-nm{color:#4a6270;font-weight:600}',
@@ -491,6 +493,16 @@
       // GROWTH-PRED-BIAS: korekta błędu systematycznego PRZED clampem; surowa wartość zostaje.
       var bias = biasFor(key, biasCtx);
       var uncorrected = raw; // to, co metoda wskazała — przed clampem silnika i przed korektą profilu
+      // GROWTH-PRED-PUBLIKACJA (decyzja właściciela 2026-09-15): karty kliniczne pokazują metodę
+      // TAK, JAK PODALI JĄ AUTORZY — czyli wartość silnika (wraz z korektą błędu z pracy źródłowej,
+      // jeśli praca taką podaje) i z clampem do zmierzonego wzrostu, ale BEZ naszej korekty
+      // `GROWTH-PRED-BIAS` i bez naszych mnożników σ. Nasza korekta zostaje wyłącznie wewnątrz
+      // konsensusu; wiersz karty nazywa ją osobno, żeby nagłówek dał się pogodzić z wierszami.
+      // Przedział „±" NIE jest liczbą prognozy, tylko ostrzeżeniem o niepewności — nasze
+      // poszerzenia (σ × korekta, σ × profil pokwitaniowy) zostają, bo ich zwężenie do wersji
+      // z publikacji ukrywałoby ostrzeżenie. Z publikacji bierzemy samą WARTOŚĆ.
+      var pubVal = val, pubClamped = clamped;
+      if (curH !== null && pubVal < curH) { pubVal = curH; pubClamped = true; }
       if (bias) {
         val += bias.shiftCm; raw += bias.shiftCm;
         if (pm !== null && pm !== undefined) pm = pm * bias.sigmaFactor;
@@ -504,6 +516,7 @@
         key: key, label: label, value: val, pm: pm, levelKey: null,
         rawValue: raw, clamped: clamped,
         uncorrectedCm: uncorrected,
+        publikacjaCm: pubVal, publikacjaClamped: pubClamped,
         biasCm: bias ? bias.shiftCm : 0, biasSigmaFactor: bias ? bias.sigmaFactor : 1,
         biasNote: bias ? bias.note : '', biasSource: bias ? bias.source : '',
         profileSigmaFactor: prule ? prule.sigmaFactor : 1, profileNote: prule ? prule.note : '',
@@ -544,6 +557,7 @@
       if (curH !== null && val < curH) { val = curH; clamped = true; }
       entries.push({ key: 'khamis', label: 'Khamis–Roche', value: val, pm: pm, levelKey: 'indicative', noBoneAge: true,
         rawValue: raw, clamped: clamped, uncorrectedCm: raw, biasCm: 0, biasSigmaFactor: 1, biasNote: '', biasSource: '',
+        publikacjaCm: val, publikacjaClamped: clamped,
         loCm: Math.max(val - pm, curH !== null ? curH : -Infinity), hiCm: Math.max(raw + pm, val) });
     })();
     // Reinehr: własny przedział błędu, a gdy silnik go nie podaje — ±6,4 (GROWTH-PRED-REINEHR).
@@ -737,7 +751,7 @@
       // errorHalfWidthCm: polszerokosc 90% bledu metody (pm) — ta sama, ktora karta
       // pokazuje jako „±"; konsumenci (opis pacjenta) czytaja ja stad, zeby stala
       // Khamis-Roche nie miala drugiej kopii poza ta karta.
-      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '', uncorrectedCm: e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.value, biasCm: e.biasCm || 0, biasNote: e.biasNote || '', levelKey: e.levelKey || null, tw2Table: e.tw2Table || '', tw2Extrapolated: e.tw2Extrapolated === true, profileSigmaFactor: e.profileSigmaFactor || 1, bpGroupOverride: e.bpGroupOverride === true }; })
+      methods: entries.map(function (e) { return { key: e.key, label: e.label, cm: e.value, publikacjaCm: (e.publikacjaCm !== undefined ? e.publikacjaCm : e.value), rawCm: e.rawValue, clamped: e.clamped === true, errorHalfWidthCm: (e.pm !== null && e.pm !== undefined) ? e.pm : null, excluded: e.excluded === true, gateFactor: typeof e.gateFactor === 'number' ? e.gateFactor : 1, gateNote: e.gateNote || '', uncorrectedCm: e.uncorrectedCm !== undefined ? e.uncorrectedCm : e.value, biasCm: e.biasCm || 0, biasNote: e.biasNote || '', levelKey: e.levelKey || null, tw2Table: e.tw2Table || '', tw2Extrapolated: e.tw2Extrapolated === true, profileSigmaFactor: e.profileSigmaFactor || 1, bpGroupOverride: e.bpGroupOverride === true }; })
     };
   }
 
@@ -917,14 +931,33 @@
     if (model.consensus.count < 2 && !hasExcluded && !hasInfo) return ''; // dla 1 metody hero wystarcza
     var prefKey = model.weighted && model.weighted.recommendedKey;
     var rows = model.entries.map(function (e) {
-      var right = e.clamped
-        ? '<span class="vgcc-val">' + (e.hiCm !== null && e.hiCm !== undefined && e.hiCm > e.value + 0.049
-            ? esc(fmt1(e.value)) + '–' + esc(fmt1(e.hiCm)) : esc(fmt1(e.value))) + ' cm</span>'
-        : '<span class="vgcc-val">' + esc(fmt1(e.value)) + ' cm</span>' +
-          (e.pm !== null && e.pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(e.pm)) + '</span>' : '');
+      // GROWTH-PRED-PUBLIKACJA: wiersz pokazuje wartość z publikacji; nasza korekta idzie do noty.
+      var maPub = e.publikacjaCm !== null && e.publikacjaCm !== undefined;
+      var wart = maPub ? e.publikacjaCm : e.value;
+      var pm = e.pm;
+      var obciete = maPub ? e.publikacjaClamped : e.clamped;
+      var hi = e.hiCm;
+      if (maPub && pm !== null && pm !== undefined) {
+        var bazaHi = num(e.uncorrectedCm);
+        if (bazaHi === null) bazaHi = wart;
+        hi = Math.max(bazaHi + pm, wart);
+      }
+      var right = obciete
+        ? '<span class="vgcc-val">' + (hi !== null && hi !== undefined && hi > wart + 0.049
+            ? esc(fmt1(wart)) + '–' + esc(fmt1(hi)) : esc(fmt1(wart))) + ' cm</span>'
+        : '<span class="vgcc-val">' + esc(fmt1(wart)) + ' cm</span>' +
+          (pm !== null && pm !== undefined ? ' <span class="vgcc-pm">±' + esc(fmt1(pm)) + '</span>' : '');
       var cls = (prefKey && e.key === prefKey) ? ' is-pref' : (e.excluded ? ' is-excl' : '');
+      // Nota korekty: bez niej nagłówek konsensusu nie daje się pogodzić z wierszami — liczba
+      // w wierszu jest z publikacji, a konsensus liczy się z wartości po korekcie.
+      var nota = '';
+      if (e.biasCm) {
+        cls += ' has-korekta';
+        nota = '<span class="vgcc-korekta">do konsensusu wchodzi ' + esc(fmt1(e.value)) + ' cm ('
+          + (e.biasCm > 0 ? '+' : '−') + esc(fmt1(Math.abs(e.biasCm))) + ' cm): ' + esc(e.biasNote) + '</span>';
+      }
       // powody bramek (waga ×0,5 / poza konsensusem) — tylko w „Szczegóły i wiarygodność" (GROWTH-PRED-UI2)
-      return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + '</span><span>' + right + '</span></div>';
+      return '<div class="vgcc-row' + cls + '"><span class="vgcc-nm">' + esc(e.label) + nota + '</span><span>' + right + '</span></div>';
     }).join('');
     return '<div class="vgcc-methods">' + rows + infoRowsHtml(model) + '</div>';
   }
@@ -1011,8 +1044,32 @@
     });
     return '<p><span class="vgcc-lbl">Korekta błędu systematycznego:</span> ' + items.join('; ') + '.</p>';
   }
+  /* GROWTH-PRED-PUBLIKACJA (decyzja właściciela 2026-09-15): skoro wiersze niosą wartości
+     z publikacji, karta musi powiedzieć wprost, co jeszcze na nie działa i czego NIE zawierają.
+     Clamp zostaje (decyzja właściciela 2026-09-15) — nie jest korektą trafności metody, tylko
+     zabezpieczeniem przed liczbą fizycznie niemożliwą: prognoza wzrostu ostatecznego niższa niż
+     wzrost już zmierzony. */
+  function publikacjaSentence(model) {
+    var maClamp = (model.entries || []).some(function (e) { return e.publikacjaClamped || e.clamped; });
+    var maKorekte = (model.entries || []).some(function (e) { return e.biasCm; });
+    var s = '<p><span class="vgcc-lbl">Skąd te liczby:</span> wiersze metod pokazują wynik <b>tak, jak podają go autorzy</b>'
+      + ' — razem z korektą błędu, jeśli praca źródłowa taką publikuje (np. próba walidacyjna Bayley–Pinneau),'
+      + ' ale bez korekt aplikacji.';
+    if (maKorekte) {
+      s += ' Konsensus liczy się z wartości <b>po korekcie</b>, dlatego nie jest średnią wierszy —'
+        + ' różnicę nazywa nota przy wierszu i akapit „Korekta błędu systematycznego" niżej.';
+    }
+    if (maClamp) {
+      s += ' <b>Ograniczenie do zmierzonego wzrostu:</b> prognoza nie może być niższa niż wzrost już osiągnięty,'
+        + ' więc wartość poniżej niego jest podnoszona do niego, a zamiast „±" pokazujemy widełki obcięte od dołu'
+        + ' (górna granica liczona od wartości surowej). To nie jest korekta trafności metody, tylko'
+        + ' zabezpieczenie przed liczbą fizycznie niemożliwą — zostaje także w wartościach z publikacji.';
+    }
+    return s + '</p>';
+  }
   function detailsHtml(model) {
     var parts = [];
+    parts.push(publikacjaSentence(model));
     if (model.consensus && model.consensus.count >= 2 && model.weighted && model.weighted.weighted !== null) {
       parts.push('<p><span class="vgcc-lbl">Konsensus:</span> ' + esc(String(model.consensus.count)) + (model.weighted.withMph ? ' metody i MPH' : ' metody') +
         ', ważony wiarygodnością ' + esc(fmt1(model.weighted.weighted)) + ' cm; widełki metod ' + esc(fmt1(model.consensus.min)) + '–' + esc(fmt1(model.consensus.max)) +
@@ -1099,7 +1156,7 @@
   }
 
   w.VildaGrowthCardC = {
-    version: '22',
+    version: '23',
     MPH_POSTMENARCHE_WEIGHT: MPH_POSTMENARCHE_WEIGHT,
     KR_ERR_HALFWIDTH_CM: KR_ERR_HALFWIDTH_CM,
     CONSENSUS_W: CONSENSUS_W,
