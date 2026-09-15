@@ -149,6 +149,20 @@ test.describe('Karta „Podsumowanie wyników" — jedna prognoza, reszta pod pr
     expect(prognozy[0]).not.toContain('(RWT)');
   });
 
+  // GROWTH-PRED-PUBLIKACJA (2026-09-15): wiersze metod niosą wartości z publikacji, a konsensus
+  // liczy się z wartości po korektach — bez tej linijki rozwinięty blok nie daje się pogodzić
+  // arytmetycznie z wierszem konsensusu stojącym wyżej.
+  test('rozwinięty blok mówi, dlaczego konsensus nie jest średnią metod', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworzPro(page);
+    await expect(blok(page)).toHaveCount(1, { timeout: 20000 });
+
+    const nota = blok(page).locator('.current-summary-prognosis-nota');
+    await expect(nota).toHaveCount(1);
+    await expect(nota).toContainText('Wartości metod jak w publikacjach');
+    await expect(nota).toContainText('nie jest ich średnią');
+  });
+
   // KONTROLA POZYTYWNA — celowo nie czeka na nowy blok, żeby była zielona także PRZED
   // zmianą. Mierzy, że ruszam wyłącznie prognozami: MPH to cel genetyczny, nie prognoza,
   // i musi zostać w kolumnach karty oraz w schowku.

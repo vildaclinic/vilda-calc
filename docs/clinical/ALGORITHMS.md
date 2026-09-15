@@ -1098,6 +1098,33 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### GROWTH-PRED-PUBLIKACJA — karty kliniczne pokazują metodę tak, jak podali ją autorzy (SW 1.0.938, 2026-09-15, decyzja właściciela)
+
+**Stan przed zmianą.** Ta sama metoda miała w aplikacji **dwie różne liczby**. Chłopiec 12 lat, 165 cm, wiek kostny 10 lat — Bayley–Pinneau:
+
+| poziom | wartość | gdzie widoczna |
+| --- | --- | --- |
+| sam wzór (wzrost ÷ % dojrzałości z tablicy) | 203,2 cm | nigdzie — silnik trzyma ją w `predictedAdultHeightCmUncorrected` |
+| wyjście silnika: − średni błąd z **próby walidacyjnej autorów** | 202,8 cm | „Podsumowanie wyników" |
+| + nasza korekta `GROWTH-PRED-BIAS` (−2,0 cm) | 200,8 cm | „Zaawansowane obliczenia wzrostowe" |
+
+Dwie karty, ten sam pacjent, ten sam dzień, różnica 2,0 cm. Nikt tego nie zaprojektował — wzięło się stąd, że „Podsumowanie" czyta silniki wprost, a karta zaawansowana przepuszcza je przez `computeFinalHeightPrediction`.
+
+**Decyzja właściciela.** Karty kliniczne pokazują metodę **tak, jak podali ją autorzy** — czyli wyjście silnika, razem z korektą błędu, jeśli praca źródłowa taką publikuje (jak Bayley i Pinneau), ale **bez naszej**. Nasze korekty żyją wyłącznie wewnątrz konsensusu i w karcie „Walidacja prognoz". Konsekwencja: „Podsumowanie wyników" **nie wymaga zmiany** — spełniało tę regułę od początku; zmienia się karta zaawansowana.
+
+**Problem, który to tworzy, i jego rozwiązanie.** Skoro wiersze niosą wartości z publikacji, a nagłówek liczy się ze skorygowanych, **karta przestaje się dodawać**: przy chłopcu 12 l wiersze mówią 196,3 / 202,8 / 191,8 / 200,0, a nagłówek ≈ 197 cm — konsensus poniżej trzech z czterech metod. Dwie przyczyny są niewidoczne (Khamis–Roche wykluczona bramką, Bayley–Pinneau obniżona o 2 cm). Dlatego **wiersz z korektą dostaje drugą linijkę**: „do konsensusu wchodzi 200,8 cm (−2,0 cm): Bayley–Pinneau przy opóźnieniu kostnym ≥ 2 lata zawyża u chłopców". Mechanizm istniał — karta miała to zdanie w „Szczegółach"; zmiana wyciąga je do wiersza. Wiersze wykluczone bramką pozostają oznaczone tak jak dotąd (przygaszone, wartość przekreślona; powody w Szczegółach wg `GROWTH-PRED-UI2`).
+
+**Dwie rzeczy świadomie wyłączone z reguły:**
+
+- **Przedział „±" zostaje nasz.** To ostrzeżenie o niepewności, nie liczba prognozy. Zwężenie go do wersji z publikacji (BP ±5,7 zamiast ±6,8, a w profilu pokwitaniowym ±5,7 zamiast ±7,4) ukrywałoby ostrzeżenie, które sami postawiliśmy. Nasze mnożniki σ (korekta ×1,2/×1,3, profil ×1,3) zostają.
+- **Ograniczenie do zmierzonego wzrostu (clamp) zostaje** (decyzja właściciela 2026-09-15). Nie jest korektą trafności metody, tylko zabezpieczeniem przed liczbą fizycznie niemożliwą — bez niego 17-latek mierzący 180 cm zobaczyłby prognozę 178 cm. Dotyczy też konsumentów, którzy liczą na `prognoza > wzrost` (zalecenia dietetyczne, symulacja wzrastania). Karta **opisuje go wprost** w Szczegółach, w nowym akapicie „Skąd te liczby".
+
+**Co się NIE zmienia.** Liczba, którą aplikacja podaje jako prognozę — konsensus — nie rusza się ani o 0,01 cm: liczy się nadal z wartości po korektach. Nie zmieniają się wzory, progi, bramki, MPH ani raport PDF.
+
+**Zakres:** `vilda_growth_card_c.js` 22 → 23 (`publikacjaCm` na wpisach metod i w publicznym `methods[]`, wiersz z wartością z publikacji i notą korekty, akapit „Skąd te liczby" z opisem clampu), `vilda_patient_report.js` (linijka w rozwiniętym bloku „Pozostałe metody prognozy": „Wartości metod jak w publikacjach. Konsensus powyżej liczony jest z wartości po korektach aplikacji, dlatego nie jest ich średnią."), `style.css`.
+
+*Strażnicy:* `tests/unit/prognoza-wartosc-z-publikacji.test.mjs` (13) — obie liczby w `methods[]` i ich różnica równa korekcie, metoda bez reguły z liczbami równymi, przypadek bez żadnej korekty, **pin liczby konsensusu**, wiersz z wartością z publikacji, nota z kwotą i powodem, brak noty bez korekty, przedział NIE zwężony, clamp działa także na wartości z publikacji, akapit „Skąd te liczby" z opisem clampu i bez niego. `tests/e2e/prognoza-wartosc-z-publikacji.spec.mjs` (2) — obie karty na prawdziwej stronie podają **tę samą liczbę**, wiersz nazywa korektę; **zmierzona czerwień 2 z 2**. Zaktualizowany `tests/unit/prognoza-bledy-systematyczne.test.mjs` (odwrócona reguła wiersza, dołożone twierdzenia o nocie i akapicie). Nowy test w `tests/e2e/prognoza-konsensus-karta.spec.mjs` (nota w rozwiniętym bloku).
+
 ### P-PROGNOZA-KONSENSUS — w „Podsumowaniu wyników" jedna prognoza zamiast czterech (SW 1.0.937, 2026-09-15, zlecenie właściciela)
 
 **Stan przed zmianą.** Karta „Podsumowanie wyników" wypisywała jako prognozę wzrostu ostatecznego **cztery równorzędne wiersze** — Bayley–Pinneau, RWT, Khamis–Roche, Reinehr 2019 — każdy z własnym przedziałem i bez jednego słowa o tym, który jest odpowiedzią aplikacji. Na fikcyjnym przypadku z tej zmiany (dziewczynka 10 lat, 145 cm, 38,5 kg, wiek kostny 9 lat, rodzice 165/178 cm) rozstrzał wynosił **168,9–173,7 cm**.
