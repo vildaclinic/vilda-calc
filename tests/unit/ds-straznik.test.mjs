@@ -339,7 +339,8 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
       ['vilda_summary_cards.js', 'Bsi==="DS"', true],
       // epikryza rozdziela role: UI tylko PRZEKAZUJE siatkę, zdanie składa vilda_epicrisis.js
       ['vilda_epicrisis_ui.js', 'bmiCategoryKey:Bk,bmiSiatka:Bsi', false],
-      ['vilda_epicrisis.js', 'e.bmiSiatka==="DS"', true],
+      // P-DS-5: epikryza nazywa siatkę RAZ dla całego bloku antropometrii, nie przy samym BMI
+      ['vilda_epicrisis.js', 'e.bmiSiatka==="DS"||e.populacjaDs===!0', true],
       ['vilda_patient_report.js', 'Bm&&Bm.siatka==="DS"', true],
     ]) {
       const src = zrodlo(plik);
@@ -439,6 +440,74 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     // karta główna: nota przy masie i przy wzroście, nie tylko przy BMI
     const src = zrodlo('vilda_update_prep.js');
     expect((src.match(/vildaUpdatePrepNotaSiatki\(a\.siatka\)/g) || []).length, 'masa i wzrost').toBe(2);
+  });
+
+  it('etap 5: raport pacjenta liczy masę na siatce DS i ją nazywa (D2 + D4)', () => {
+    const win = oknoZSilnikiem();
+    win.VildaPopulacjaPacjenta = () => 'DS';
+    const kod = `${funkcjaZ(appSrc, 'vildaDsTablica')}${funkcjaZ(appSrc, 'vildaPopulacjaDs')}${funkcjaZ(appSrc, 'vildaDsWiersz')}`
+      + `${funkcjaZ(appSrc, 'advHistoryGetChildLMSForSource')}${funkcjaZ(appSrc, 'advHistoryMetricCandidates')}`
+      + `${funkcjaZ(appSrc, 'advHistoryMetricFallbackReason')}`
+      + 'return { lms: advHistoryGetChildLMSForSource, kand: advHistoryMetricCandidates, powod: advHistoryMetricFallbackReason };';
+    const r = new Function('window', 'OLAF_DATA_MIN_AGE', kod)(win, 3);
+    const L = win.VildaDsLMS;
+
+    // decyzja D2: rozpoznanie zastępuje wybór źródła — jedna siatka, bez łańcucha zastępczego
+    expect(r.kand('OLAF', 'WT', 10)).toEqual(['DS']);
+    expect(r.kand('WHO', 'BMI', 10)).toEqual(['DS']);
+    // wzrost ma własną oś populacji w silniku, wskaźnik Cole’a zostaje przy IOTF
+    expect(r.kand('OLAF', 'HT', 10)).not.toEqual(['DS']);
+    expect(r.kand('OLAF', 'COLE', 10)).not.toEqual(['DS']);
+    // ten sam zestaw tablic i ten sam interpolator, co karta główna
+    expect(r.lms('DS', 'M', 10, 'WT')).toEqual(L.DZIECKO.WT.M['120']);
+    expect(r.lms('DS', 'F', 1, 'WT')).toEqual(L.NIEMOWLE.WT.F['12']);
+    expect(r.lms('DS', 'M', 10, 'HT'), 'wzrost czyta wyłącznie silnik SDS').toBeNull();
+    expect(r.lms('DS', 'M', 20, 'WT'), '20 lat mieści się w siatce DS, choć nie w populacyjnej').not.toBeNull();
+    expect(r.lms('DS', 'M', 21, 'WT'), 'poza 240 mies. brak wiersza').toBeNull();
+    // DS nie jest „zejsciem zastepczym" — powód nazywa rozpoznanie, nie brak danych w źródle
+    expect(r.powod('OLAF', 'DS', 'WT', 10)).toContain('rozpoznanie zespołu Downa');
+    delete win.VildaPopulacjaPacjenta;
+    expect(r.kand('OLAF', 'WT', 10), 'bez rozpoznania — zwykły łańcuch źródeł').not.toEqual(['DS']);
+
+    const raport = zrodlo('vilda_patient_report.js');
+    expect(raport, 'masa nazywa siatkę').toContain('k&&k.source==="DS"?patientReportAppendSentence(L,');
+    expect(raport, 'wzrost nazywa siatkę').toContain('m&&m.source==="DS"?patientReportAppendSentence(L,');
+  });
+
+  it('etap 5: generator siatki PDF nie ma już własnej matematyki', () => {
+    for (const plik of ['inline_index_05.js', 'inline_docpro_03.js']) {
+      const src = bezKomentarzy(zrodlo(plik));
+      expect(src, `${plik}: wiersz z jednego interpolatora silnika`).toContain('T.interpoluj(e,m)');
+      expect(src, `${plik}: wartość dla SDS z silnika`).toContain('T.xLms(i,[e,n,t])');
+      expect(src, `${plik}: dane z jednego znormalizowanego zestawu`).toContain('window.VildaDsLMS');
+      expect(src, `${plik}: bez własnego wzoru LMS`).not.toMatch(/Math\.pow\([^)]*1\s*\/\s*[a-zA-Z]/);
+      expect(src, `${plik}: bez własnej surowej tablicy DS`).not.toContain('window.DS');
+    }
+  });
+
+  it('etap 5 (decyzja D5): obwód głowy świadomie zostaje poza zakresem planu', () => {
+    // Moduł obwodu głowy liczy na WHO INNYM modelem (średnia ± z·SD, 0–5 lat), a nie łańcuchem LMS,
+    // więc nie jest kopią wzoru i nie wchodzi w tę unifikację. Siatka HC dla DS jest dostępna w karcie
+    // modułu DS. Ten test PILNUJE ZAKRESU: gdyby ktoś dorobił tu DS po cichu, różnica modeli zostałaby
+    // ukryta. Zmiana wymaga osobnego zadania i decyzji właściciela.
+    const src = zrodlo('circumference_module.js');
+    expect(src).toContain('WHO_HEAD_LMS');
+    expect(src, 'brak cichego DS w module obwodu głowy').not.toContain('VildaPopulacjaPacjenta');
+    expect(src, 'brak cichego DS w module obwodu głowy').not.toContain('VildaDsLMS');
+    // a zestaw DS ma obwód głowy — gdyby zniknął, karta modułu DS przestałaby go pokazywać
+    const win = oknoZSilnikiem();
+    expect(Object.keys(win.VildaDsLMS.DZIECKO.HC)).toEqual(['M', 'F']);
+  });
+
+  it('etap 5: nota siatki brzmi wszędzie tak samo', () => {
+    const NOTA = 'u Downa (Zemel 2015)';
+    const pliki = ['vilda_update_prep.js', 'vilda_patient_summary_copy.js', 'vilda_summary_cards.js',
+      'vilda_patient_report.js', 'vilda_epicrisis.js', 'vilda_bmi.js'];
+    for (const plik of pliki) {
+      const src = zrodlo(plik);
+      expect(src, `${plik}: nota siatki DS`).toContain(NOTA);
+      expect(src, `${plik}: bez innego rocznika publikacji`).not.toMatch(/Zemel\s+(?!2015)\d{4}/);
+    }
   });
 
   it('cytowanie (decyzja 11): silnik nazywa źródło siatek DS z PMID i DOI', () => {

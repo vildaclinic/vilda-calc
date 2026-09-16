@@ -26,8 +26,6 @@ const WZOR_DOZWOLONY = {
   'vilda_bmi.js': 'silnik BMI (P-BMI-1: jedyne miejsce wzoru LMS dla BMI)',
   'app.js': 'masa, BMI, masa-do-długości (calcPercentileStats WT, bmiZscore, computeWflZScore, lmsToValue)',
   'inline_index_03.js': 'chip masy na siatce (getCentilePercentileStatsForSource WT) i rysowanie krzywych (valueFromLMS)',
-  'inline_index_05.js': 'siatka zespołu Downa (Zemel 2015)',
-  'inline_docpro_03.js': 'siatka zespołu Downa (Zemel 2015)',
   'vilda_auth_ui.js': 'panel porównania — masa (sc.param!=="HT")',
   'wfh_module.js': 'masa do długości (WHO)',
   'vilda_epicrisis_ui.js': 'granice 3./97. centyla masy (q, G!=="HT")',

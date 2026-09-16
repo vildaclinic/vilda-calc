@@ -212,10 +212,55 @@ describe('etap 4 naprawy: siatka PDF bez wygładzania, spójna granica 36 mies.'
   });
 
   it('granica niemowlę/dziecko jest jednolita: <=36 mies. dla wagi i wzrostu', () => {
+    // P-DS-5: generator czyta wspólny zestaw (VildaDsLMS) i wybiera tabelę tym samym warunkiem
+    // dla masy i wzrostu. Granica 36 mies. jest tu CELOWO inna niż 24 mies. w kartach — patrz
+    // wpis P-DS-5 w ALGORITHMS (różnica zgłoszona właścicielowi, nie zmieniana po cichu).
     for (const f of ['inline_index_05.js', 'inline_docpro_03.js']) {
       const src = zrodlo(f);
-      expect(src, f).toContain('if(n<=36){');
-      expect(src, f).not.toContain('if(n<36){');
+      expect((src.match(/n<=36\?y\(u\./g) || []).length, `${f}: masa i wzrost tą samą granicą`).toBe(2);
+      expect(src, f).not.toContain('n<36?');
     }
+  });
+
+  it('P-DS-5: różnica granic 24 vs 36 mies. jest klinicznie nieistotna przy masie i wzroście', () => {
+    // Karty przechodzą z tabeli niemowlęcej na dziecięcą przy 24 mies., generator siatki PDF przy 36.
+    // Obie tabele Zemel POKRYWAJĄ 24–36 mies., więc wybór granicy w ogóle nie musił być obojętny.
+    // Jest, bo w kotwicach wspólnych (24, 30, 36 mies.) obie dają IDENTYCZNE L/M/S, a między nimi
+    // różnią się tylko krokiem interpolacji (tabela niemowlęca jest miesięczna, dziecięca półroczna).
+    // Ten test MIERZY tę różnicę zamiast jej zakładać — gdyby przyszła edycja danych ją rozsunęła,
+    // karta i wydruk zaczęłyby się rozjeżdżać po cichu. Obwód głowy różni się tu znacznie mocniej
+    // (do ~0,74 SD w kotwicach) — dlatego generator siatki PDF go NIE rysuje.
+    const L = g.VildaDsLMS, T = g.VildaBmi;
+    const z = (v, [l, m, s]) => (l !== 0 ? (Math.pow(v / m, l) - 1) / (l * s) : Math.log(v / m) / s);
+    const val = (zz, [l, m, s]) => (l !== 0 ? m * Math.pow(1 + l * s * zz, 1 / l) : m * Math.exp(s * zz));
+
+    for (const miara of ['WT', 'HT']) {
+      for (const plec of ['M', 'F']) {
+        // kotwice wspólne — co do bitu ta sama krzywa
+        for (const mies of ['24', '30', '36']) {
+          const niem = L.NIEMOWLE[miara][plec][mies], dziec = L.DZIECKO[miara][plec][mies];
+          expect(niem, `${miara} ${plec} ${mies}`).toBeTruthy();
+          expect(dziec, `${miara} ${plec} ${mies}`).toEqual(niem);
+        }
+        // między kotwicami — różnica poniżej 0,1 SD w całym zakresie −3…+3 SD
+        for (let mies = 24; mies <= 36; mies += 0.5) {
+          const a = T.interpoluj(L.NIEMOWLE[miara][plec], mies);
+          const b = T.interpoluj(L.DZIECKO[miara][plec], mies);
+          for (let zz = -3; zz <= 3; zz += 0.5) {
+            expect(Math.abs(z(val(zz, a), b) - zz), `${miara} ${plec} ${mies} mies., z=${zz}`).toBeLessThan(0.1);
+          }
+        }
+      }
+    }
+
+    // kontrola negatywna: obwód głowy NIE jest ten sam — test wyżej nie jest trywialny
+    const roznice = [];
+    for (const plec of ['M', 'F']) {
+      for (const mies of ['24', '30', '36']) {
+        const a = L.NIEMOWLE.HC[plec][mies], b = L.DZIECKO.HC[plec][mies];
+        if (a && b && JSON.stringify(a) !== JSON.stringify(b)) roznice.push(`${plec}/${mies}`);
+      }
+    }
+    expect(roznice.length, 'obwód głowy różni się między tabelami w 24–36 mies.').toBeGreaterThan(0);
   });
 });
