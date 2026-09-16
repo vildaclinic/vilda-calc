@@ -44,12 +44,19 @@
 
   var WERSJA = 1;
   var ZRODLA = ['PALCZEWSKA', 'OLAF', 'WHO'];
+  /* P-DS-4b: siatki, na których silnik umie liczyć. DS nie jest wyborem użytkownika
+     (bmiSource), tylko skutkiem rozpoznania pacjenta — dlatego stoi obok ZRODLA, nie w nich.
+     Reguła i jej uzasadnienie jak w vilda_bmi.js (decyzje D1–D3). */
+  var SIATKI = ['PALCZEWSKA', 'OLAF', 'WHO', 'DS'];
   var G = Object.freeze({
     OLAF_MIN_M: 36,     // OLAF od 3. roku życia
     LMS_MAX_M: 216,     // WHO 2007 i OLAF do 18 lat
     WHO_INFANT_MAX_M: 35,
     PAL_MIN_M: 1,       // Palczewska od 1. miesiąca
     PAL_MAX_M: 222,     // Palczewska do 18,5 roku
+    DS_MIN_M: 1,        // długość DS od 1. miesiąca (tabela niemowlęca Zemel)
+    DS_DZIECKO_M: 24,   // od 2 lat tabela dziecięca DS
+    DS_MAX_M: 240,      // siatki DS do 20 lat
   });
   var CENTYLE_PAL = [3, 10, 25, 50, 75, 90, 97];
 
@@ -143,6 +150,12 @@
       if (wiekMies < G.OLAF_MIN_M) return null;
       return dana(m ? 'LMS_HEIGHT_BOYS' : 'LMS_HEIGHT_GIRLS');
     }
+    if (siatka === 'DS') {
+      if (wiekMies < G.DS_MIN_M || wiekMies > G.DS_MAX_M) return null;
+      /* ta sama granica, co w karcie modułu DS: poniżej 2 lat długość niemowlęca, od 2 lat wzrost */
+      if (wiekMies < G.DS_DZIECKO_M) return dana(m ? 'LMS_HEIGHT_DS_INFANT_BOYS' : 'LMS_HEIGHT_DS_INFANT_GIRLS');
+      return dana(m ? 'LMS_HEIGHT_DS_BOYS' : 'LMS_HEIGHT_DS_GIRLS');
+    }
     return null;
   }
 
@@ -150,7 +163,9 @@
      Wiek 35,5 mies. na WHO: interpolacja między wierszem 35 (niemowlęcym) a 36 (WHO 2007). */
   function lms(plec, wiekMies, siatka) {
     var s = String(siatka || '').toUpperCase();
-    if (typeof wiekMies !== 'number' || !isFinite(wiekMies) || wiekMies < 0 || wiekMies > G.LMS_MAX_M) return null;
+    if (typeof wiekMies !== 'number' || !isFinite(wiekMies) || wiekMies < 0) return null;
+    if (s === 'DS') return interpoluj(tablicaLms(plec, wiekMies, s), wiekMies);
+    if (wiekMies > G.LMS_MAX_M) return null;
     if (s === 'WHO' && wiekMies > G.WHO_INFANT_MAX_M && wiekMies < G.OLAF_MIN_M) {
       var a = interpoluj(dana(plec === 'M' ? 'LMS_INFANT_HEIGHT_BOYS' : 'LMS_INFANT_HEIGHT_GIRLS'), G.WHO_INFANT_MAX_M);
       var b = interpoluj(dana(plec === 'M' ? 'LMS_HEIGHT_WHO_BOYS' : 'LMS_HEIGHT_WHO_GIRLS'), G.OLAF_MIN_M);
@@ -205,13 +220,42 @@
   function medianaPal(plec, wiekMies) { return palCentyl(plec, wiekMies, 50); }
 
   /* ---------- reguła wyboru siatki ---------- */
+  /* Populacja odniesienia — ta sama reguła i ten sam resolver, co w silniku BMI
+     (vilda_ds_source.js wystawia window.VildaPopulacjaPacjenta). Jawna opcja wygrywa. */
+  function normPopulacja(p) {
+    return String(p || '').toUpperCase() === 'DS' ? 'DS' : 'OGOLNA';
+  }
+  function resolverPopulacji() {
+    if (typeof dane.populacjaDomyslna === 'function') return dane.populacjaDomyslna;
+    try { var f = root.VildaPopulacjaPacjenta; if (typeof f === 'function') return f; } catch (e) { /* brak resolvera */ }
+    return null;
+  }
+  function populacjaZOpcji(o) {
+    if (o && o.populacja != null) return normPopulacja(o.populacja);
+    try {
+      var f = resolverPopulacji();
+      if (f) return normPopulacja(f());
+    } catch (e) { /* resolver odmowil — populacja ogolna */ }
+    return 'OGOLNA';
+  }
+  function maxWiek(populacja) {
+    return normPopulacja(populacja) === 'DS' ? G.DS_MAX_M : G.PAL_MAX_M;
+  }
+  function powodDs(wiekMies) {
+    if (typeof wiekMies !== 'number' || !isFinite(wiekMies)) return 'brak wieku dla siatki DS';
+    if (wiekMies < G.DS_MIN_M) return 'siatka długości zespołu Downa zaczyna się od 1. miesiąca';
+    return 'siatka zespołu Downa kończy się na 20 latach';
+  }
+
   function normZrodlo(z) {
     var s = String(z || '').toUpperCase();
     return ZRODLA.indexOf(s) >= 0 ? s : 'OLAF';
   }
 
   /* Kolejność siatek do sprawdzenia dla zadanego źródła i wieku. Pierwsza z danymi wygrywa. */
-  function kandydaci(zrodlo, wiekMies) {
+  function kandydaci(zrodlo, wiekMies, populacja) {
+    /* decyzja D2: przy DS nie ma łańcucha zastępczego — albo siatka DS, albo nic. */
+    if (normPopulacja(populacja) === 'DS') return ['DS'];
     var z = normZrodlo(zrodlo);
     var noworodek = typeof wiekMies === 'number' && wiekMies < G.PAL_MIN_M;
     var maly = typeof wiekMies === 'number' && wiekMies < G.OLAF_MIN_M;
@@ -232,6 +276,7 @@
     return 'brak danych ' + etykieta(zadane) + ' dla tego wieku';
   }
   function etykieta(z) {
+    if (String(z || '').toUpperCase() === 'DS') return 'siatka DS (Zemel 2015)';
     var s = normZrodlo(z);
     return s === 'PALCZEWSKA' ? 'Palczewska' : s === 'WHO' ? 'WHO' : 'OLAF';
   }
@@ -239,7 +284,8 @@
   function wynikPusty(opts, powod) {
     return {
       wersja: WERSJA, sds: null, centyl: null, siatka: null,
-      zrodloZadane: normZrodlo(opts && opts.zrodlo), fallback: false, powod: powod || '',
+      zrodloZadane: normZrodlo(opts && opts.zrodlo),
+      populacja: normPopulacja(opts && opts.populacja), fallback: false, powod: powod || '',
       pozaZakresem: true, mediana: null, lms: null,
       wiekMies: opts ? opts.wiekMies : null, plec: opts ? opts.plec : null,
     };
@@ -250,7 +296,7 @@
     var o = opts || {};
     var siatka = String(o.siatka || '').toUpperCase();
     var wiek = Number(o.wiekMies), x = Number(o.wzrost), plec = o.plec === 'M' ? 'M' : 'F';
-    if (!isFinite(wiek) || wiek < 0 || !isFinite(x) || x <= 0 || ZRODLA.indexOf(siatka) < 0) return null;
+    if (!isFinite(wiek) || wiek < 0 || !isFinite(x) || x <= 0 || SIATKI.indexOf(siatka) < 0) return null;
     var z, mediana, tab = null;
     if (siatka === 'PALCZEWSKA') {
       var w = wezlyPal(plec, wiek);
@@ -266,7 +312,8 @@
     if (typeof z !== 'number' || !isFinite(z)) return null;
     return {
       wersja: WERSJA, sds: z, centyl: centylZSds(z), siatka: siatka,
-      zrodloZadane: normZrodlo(o.zrodlo != null ? o.zrodlo : siatka), fallback: false, powod: '',
+      zrodloZadane: normZrodlo(o.zrodlo != null ? o.zrodlo : siatka),
+      populacja: siatka === 'DS' ? 'DS' : normPopulacja(o.populacja), fallback: false, powod: '',
       pozaZakresem: false, mediana: mediana, lms: tab, wiekMies: wiek, plec: plec,
     };
   }
@@ -276,32 +323,33 @@
   function policz(opts) {
     var o = opts || {};
     var wiek = Number(o.wiekMies), x = Number(o.wzrost);
-    var zadane = normZrodlo(o.zrodlo);
-    if (!isFinite(wiek) || wiek < 0) return wynikPusty(o, 'brak wieku');
-    if (!isFinite(x) || x <= 0) return wynikPusty(o, 'brak wzrostu');
-    if (wiek > G.PAL_MAX_M) return wynikPusty(o, 'wiek poza zakresem siatek (powyżej 18,5 roku)');
-    var lista = kandydaci(zadane, wiek);
+    var zadane = normZrodlo(o.zrodlo), pop = populacjaZOpcji(o);
+    var baza = { zrodlo: zadane, populacja: pop, wiekMies: o.wiekMies, plec: o.plec };
+    if (!isFinite(wiek) || wiek < 0) return wynikPusty(baza, 'brak wieku');
+    if (!isFinite(x) || x <= 0) return wynikPusty(baza, 'brak wzrostu');
+    if (wiek > maxWiek(pop)) return wynikPusty(baza, pop === 'DS' ? powodDs(wiek) : 'wiek poza zakresem siatek (powyżej 18,5 roku)');
+    var lista = kandydaci(zadane, wiek, pop);
     for (var i = 0; i < lista.length; i++) {
-      var r = policzNaSiatce({ wzrost: x, plec: o.plec, wiekMies: wiek, siatka: lista[i], zrodlo: zadane });
+      var r = policzNaSiatce({ wzrost: x, plec: o.plec, wiekMies: wiek, siatka: lista[i], zrodlo: zadane, populacja: pop });
       if (r) {
-        r.fallback = lista[i] !== zadane;
-        r.powod = powodZmiany(zadane, lista[i], wiek);
+        r.fallback = pop !== 'DS' && lista[i] !== zadane;
+        r.powod = pop === 'DS' ? '' : powodZmiany(zadane, lista[i], wiek);
         return r;
       }
     }
-    return wynikPusty(o, 'brak siatek wzrostu dla tego wieku');
+    return wynikPusty(baza, pop === 'DS' ? powodDs(wiek) : 'brak siatek wzrostu dla tego wieku');
   }
 
   /* Mediana wzrostu dla wieku na siatce wynikającej z tej samej reguły (np. normy w 18. r.ż.). */
-  function mediana(plec, wiekMies, zrodlo) {
-    var wiek = Number(wiekMies), p = plec === 'M' ? 'M' : 'F';
-    if (!isFinite(wiek) || wiek < 0 || wiek > G.PAL_MAX_M) return null;
-    var lista = kandydaci(zrodlo, wiek);
+  function mediana(plec, wiekMies, zrodlo, populacja) {
+    var wiek = Number(wiekMies), p = plec === 'M' ? 'M' : 'F', pop = populacjaZOpcji({ populacja: populacja });
+    if (!isFinite(wiek) || wiek < 0 || wiek > maxWiek(pop)) return null;
+    var lista = kandydaci(zrodlo, wiek, pop);
     for (var i = 0; i < lista.length; i++) {
       var s = lista[i], m;
       if (s === 'PALCZEWSKA') m = wiek >= G.PAL_MIN_M ? medianaPal(p, wiek) : null;
       else { var t = lms(p, wiek, s); m = t ? t[1] : null; }
-      if (typeof m === 'number' && isFinite(m) && m > 0) return { mediana: m, siatka: s, fallback: s !== normZrodlo(zrodlo) };
+      if (typeof m === 'number' && isFinite(m) && m > 0) return { mediana: m, siatka: s, populacja: pop, fallback: pop !== 'DS' && s !== normZrodlo(zrodlo) };
     }
     return null;
   }
@@ -310,13 +358,14 @@
   function wartoscDlaSds(opts) {
     var o = opts || {};
     var wiek = Number(o.wiekMies), z = Number(o.sds), plec = o.plec === 'M' ? 'M' : 'F';
-    if (!isFinite(wiek) || wiek < 0 || !isFinite(z) || wiek > G.PAL_MAX_M) return null;
-    var lista = o.siatka ? [String(o.siatka).toUpperCase()] : kandydaci(o.zrodlo, wiek);
+    var pop = populacjaZOpcji(o);
+    if (!isFinite(wiek) || wiek < 0 || !isFinite(z) || wiek > maxWiek(pop)) return null;
+    var lista = o.siatka ? [String(o.siatka).toUpperCase()] : kandydaci(o.zrodlo, wiek, pop);
     for (var i = 0; i < lista.length; i++) {
       var s = lista[i], x;
       if (s === 'PALCZEWSKA') x = xPal(z, wezlyPal(plec, wiek));
       else x = xLms(z, lms(plec, wiek, s));
-      if (typeof x === 'number' && isFinite(x)) return { wzrost: x, siatka: s, fallback: s !== normZrodlo(o.zrodlo != null ? o.zrodlo : s) };
+      if (typeof x === 'number' && isFinite(x)) return { wzrost: x, siatka: s, populacja: s === 'DS' ? 'DS' : 'OGOLNA', fallback: s !== 'DS' && s !== normZrodlo(o.zrodlo != null ? o.zrodlo : s) };
     }
     return null;
   }
@@ -350,8 +399,8 @@
   }
 
   root.VildaSdsWzrostu = Object.freeze({
-    version: WERSJA, ZRODLA: ZRODLA.slice(), G: G, CENTYLE_PAL: CENTYLE_PAL.slice(),
-    ustawDane: ustawDane, kandydaci: kandydaci, lms: lms, interpoluj: interpoluj,
+    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), G: G, CENTYLE_PAL: CENTYLE_PAL.slice(),
+    ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, populacjaZOpcji: populacjaZOpcji, lms: lms, interpoluj: interpoluj,
     zLms: zLms, xLms: xLms, policz: policz, policzNaSiatce: policzNaSiatce, wartoscDlaSds: wartoscDlaSds, mediana: mediana,
     centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,
     fmtSds: fmtSds, fmtCentyl: fmtCentyl, formatuj: formatuj, etykieta: etykieta,

@@ -53,7 +53,7 @@ function staryRdzen(bmiSource) {
   const kod = `
     ${TABLICE.map((n) => `const ${n}=window.${n};`).join('')}
     let weightUsedFallback=false; const bmiSource=${JSON.stringify(bmiSource)};
-    ${funkcja('erf')}${funkcja('normalCDF')}${funkcja('lmsNiemowleWiek')}${funkcja('lmsNiemowle')}${funkcja('getChildLMS')}${funkcja('advHistoryCalcLmsStats')}
+    ${funkcja('erf')}${funkcja('normalCDF')}${funkcja('lmsNiemowleWiek')}${funkcja('lmsNiemowle')}${funkcja('vildaDsTablica')}${funkcja('vildaPopulacjaDs')}${funkcja('vildaDsWiersz')}${funkcja('getChildLMS')}${funkcja('advHistoryCalcLmsStats')}
     function calcPercentileStats(e,t,n,a){const r=advHistoryCalcLmsStats(e,getChildLMS(t,n,a));return r?{percentile:r.percentile,sd:r.sd}:null}
     return { calcPercentileStats, getChildLMS };`;
   const win = {};
@@ -208,7 +208,7 @@ describe('Silnik SDS wzrostu — odwrotność i format', () => {
     expect(src).not.toMatch(/document\.|getElementById|localStorage/);
     expect(src).not.toMatch(/new Function|\beval\(/);
     expect(src).not.toMatch(/cm\/rok/);
-    expect(appSrc).toContain('window.VildaWzrostLMS=Object.freeze({LMS_INFANT_HEIGHT_BOYS,LMS_INFANT_HEIGHT_GIRLS,LMS_HEIGHT_WHO_BOYS,LMS_HEIGHT_WHO_GIRLS,LMS_HEIGHT_BOYS,LMS_HEIGHT_GIRLS})');
+    expect(appSrc).toContain('window.VildaWzrostLMS=Object.freeze({LMS_INFANT_HEIGHT_BOYS,LMS_INFANT_HEIGHT_GIRLS,LMS_HEIGHT_WHO_BOYS,LMS_HEIGHT_WHO_GIRLS,LMS_HEIGHT_BOYS,LMS_HEIGHT_GIRLS,');
     // Silnik czyta pakiet z window, gdy tablic nie ma wprost na window ani we wstrzyknięciu.
     const win = { VildaWzrostLMS: {} };
     for (const n of TABLICE) win.VildaWzrostLMS[n] = tablica(n);
@@ -223,7 +223,7 @@ describe('Rdzeń app.js deleguje wzrost do silnika', () => {
       ${TABLICE.map((n) => `const ${n}=window.${n};`).join('')}
       let weightUsedFallback=false; const bmiSource=${JSON.stringify(bmiSource)}; const OLAF_DATA_MIN_AGE=3;
       const LMS_INFANT_WEIGHT_BOYS={},LMS_INFANT_WEIGHT_GIRLS={},LMS_WEIGHT_BOYS={},LMS_WEIGHT_GIRLS={},LMS_WEIGHT_WHO_BOYS={},LMS_WEIGHT_WHO_GIRLS={};
-      ${funkcja('erf')}${funkcja('normalCDF')}${funkcja('normInv')}${funkcja('lmsNiemowleWiek')}${funkcja('lmsNiemowle')}${funkcja('getChildLMS')}${funkcja('calcPercentileStats')}
+      ${funkcja('erf')}${funkcja('normalCDF')}${funkcja('normInv')}${funkcja('lmsNiemowleWiek')}${funkcja('lmsNiemowle')}${funkcja('vildaDsTablica')}${funkcja('vildaPopulacjaDs')}${funkcja('vildaDsWiersz')}${funkcja('getChildLMS')}${funkcja('calcPercentileStats')}
       function getPalCentile(){return null}
       ${funkcja('calcPercentileStatsPal')}
       function advHistoryMetricCandidates(){throw new Error('nie powinno być wołane dla HT')}
@@ -261,7 +261,7 @@ describe('Rdzeń app.js deleguje wzrost do silnika', () => {
       const win = { VildaSdsWzrostu: atrapa };
       for (const n of TABLICE) win[n] = tablica(n);
       new Function('window', kod)(win);
-      return new Function('window', `const bmiSource="WHO";${funkcja('lmsNiemowleWiek')}${funkcja('getChildLMS')}${funkcja('calcPercentileStats')}return calcPercentileStats;`)(win);
+      return new Function('window', `const bmiSource="WHO";${funkcja('lmsNiemowleWiek')}${funkcja('vildaDsTablica')}${funkcja('vildaPopulacjaDs')}${funkcja('vildaDsWiersz')}${funkcja('getChildLMS')}${funkcja('calcPercentileStats')}return calcPercentileStats;`)(win);
     })();
     r(54.5, 'M', 0, 'HT');
     expect(wywolania[0].wiekMies).toBeCloseTo(29 / 30.4375, 9);

@@ -1100,6 +1100,26 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-DS-4b — masa, wzrost/długość i masa do długości na siatkach DS (SW 1.0.971, 2026-09-16, plan P-DS)
+
+Domknięcie etapu 4. P-DS-4 przestawił na siatkę DS **BMI**; tu dochodzą pozostałe miary antropometryczne.
+
+**1. Silnik SDS wzrostu (`vilda_sds_wzrostu.js` ?v 12) dostaje tę samą oś populacji, co silnik BMI** — `SIATKI` obok `ZRODLA`, `populacjaZOpcji()` z tym samym resolverem (`window.VildaPopulacjaPacjenta`), `kandydaci()` przy DS zwracające **tylko** `['DS']` (decyzja D2). Granica wieku jak w karcie modułu: poniżej 2 lat tabela **długości** niemowlęcej (od 1. miesiąca), od 2 lat tabela **wzrostu** (do 20 lat); poza tym zakresem wynik pusty z powodem, nigdy ciche zejście na OLAF/WHO. Tablice podaje `app.js` w pakiecie `window.VildaWzrostLMS` — z tego samego znormalizowanego zestawu `VildaDsLMS`, co BMI.
+
+**2. Masa i obwód głowy — `getChildLMS` w `app.js` (?v 216).** To jedyny czytnik tablic masy w rdzeniu, więc wystarczyła w nim jedna gałąź: przy rozpoznaniu wiersz L/M/S pochodzi z `VildaDsLMS` (`NIEMOWLE` poniżej 24 mies., `DZIECKO` od 24 do 240) i jest interpolowany **interpolatorem silnika** (`VildaBmi.interpoluj`), bez własnej kopii. Rdzeń nie ma też własnego pytania o populację — `vildaPopulacjaDs()` pyta ten sam resolver.
+
+**3. Masa do długości (WFL) — `getWflLMS`.** Przy rozpoznaniu tablice `DS_WFL_*` (Zemel) zamiast populacyjnych; klucz to długość w cm, więc ten sam interpolator liczy po kluczu, nie po wieku.
+
+**4. Wsad XLSX wypisany także przy wzroście.** `vilda_professional_module.js` (?v 11) podaje `populacja:"OGOLNA"` w **obu** wywołaniach (BMI i wzrost). Arkusz liczy dla swoich wierszy, nie dla wczytanego pacjenta — strażnik liczy te wystąpienia, żeby przy kolejnej mierze nikt nie zapomniał.
+
+**5. Siatka nazwana także przy masie i wzroście (decyzja D4).** Wynik masy z rdzenia niesie teraz `siatka`, a wynik wzrostu ma je od silnika, więc notę „wg siatki dla zespołu Downa (Zemel 2015)" drukują wiersze masy i wzrostu w karcie głównej (`vilda_update_prep.js` ?v 81), w schowku Karty pacjenta (`vilda_patient_summary_copy.js` ?v 12) i w karcie „Podsumowanie wyników" (`vilda_summary_cards.js` ?v 40). **Powód, dla którego to nie mogło poczekać:** po tym etapie centyl masy i wzrostu pacjenta z DS pochodzi z innej siatki, a nieoznaczona liczba obok oznaczonego BMI byłaby gorsza niż brak oznaczeń w ogóle.
+
+**Skutek liczbowy.** Wzrost DS z silnika jest **identyczny co do bitu** z wynikiem karty modułu (zero różnic na 3360 punktach: obie płcie × 1–240 mies. × siedem wartości); wiersze masy i WFL to te same tablice, które karta modułu czyta od P-DS-3. Pacjent bez rozpoznania — **bez zmian**. Arkusz wsadowy — **bez zmian**.
+
+**Czego nadal nie ma.** Obwód głowy ma w rdzeniu gałąź DS (`getChildLMS` obsługuje `HC`), ale jego karta liczy się w module obwodów po staremu — osobna ścieżka poza `getChildLMS`; to zostaje do przeglądu przy etapie 5. Generator siatki PDF (trzecia kopia wzoru) — etap 5.
+
+*Strażnicy:* `tests/unit/ds-straznik.test.mjs` (21): parytet wzrostu silnik ↔ karta modułu **co do zera** na 1000+ punktach, brak łańcucha zastępczego i bramki 1/240 mies., granica 2 lat (długość vs wzrost), resolver działa jak w silniku BMI; rdzeń `app.js` bierze wiersz masy/HC z `VildaDsLMS` przez interpolator silnika i zwraca nazwę siatki, WFL idzie na tablice DS; wsad XLSX ma **dwa** jawne `populacja:"OGOLNA"`; nota przy masie i wzroście w karcie głównej (dokładnie dwa wystąpienia), w schowku i w podsumowaniu.
+
 ### P-DS-4 — BMI pacjenta z zespołem Downa na siatce DS w całej aplikacji, z nazwaną siatką (SW 1.0.970, 2026-09-16, plan P-DS, decyzja D4)
 
 Czwarty etap planu P-DS — ten, który **zmienia liczby w dokumentach**. Etapy 1–3 zbudowały jedno miejsce, w którym DS się liczy; ten etap sprawia, że korzysta z niego cała aplikacja, a każde wyjście nazywa siatkę.

@@ -105,7 +105,7 @@ describe('Strażnik P-SDS: jedno miejsce liczenia SDS wzrostu', () => {
     }
     expect(src).not.toMatch(/document\.|getElementById|localStorage|new Function|\beval\(/);
     const app = fs.readFileSync(path.join(korzen, 'app.js'), 'utf8');
-    expect(app).toContain('window.VildaWzrostLMS=Object.freeze({LMS_INFANT_HEIGHT_BOYS,LMS_INFANT_HEIGHT_GIRLS,LMS_HEIGHT_WHO_BOYS,LMS_HEIGHT_WHO_GIRLS,LMS_HEIGHT_BOYS,LMS_HEIGHT_GIRLS})');
+    expect(app).toContain('window.VildaWzrostLMS=Object.freeze({LMS_INFANT_HEIGHT_BOYS,LMS_INFANT_HEIGHT_GIRLS,LMS_HEIGHT_WHO_BOYS,LMS_HEIGHT_WHO_GIRLS,LMS_HEIGHT_BOYS,LMS_HEIGHT_GIRLS,');
     // Rdzeń: wzrost bez silnika nie ma wyniku — żadnej cichej kopii.
     expect(app).toContain('/* P-SDS-5: bez silnika wzrost nie ma wyniku — zadnej cichej kopii wzoru. */return null}');
     expect(app).toContain('if(l==="HT")return null;return i==="PALCZEWSKA"?null:');
