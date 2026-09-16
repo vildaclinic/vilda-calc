@@ -485,18 +485,77 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     }
   });
 
-  it('etap 5 (decyzja D5): obwód głowy świadomie zostaje poza zakresem planu', () => {
-    // Moduł obwodu głowy liczy na WHO INNYM modelem (średnia ± z·SD, 0–5 lat), a nie łańcuchem LMS,
-    // więc nie jest kopią wzoru i nie wchodzi w tę unifikację. Siatka HC dla DS jest dostępna w karcie
-    // modułu DS. Ten test PILNUJE ZAKRESU: gdyby ktoś dorobił tu DS po cichu, różnica modeli zostałaby
-    // ukryta. Zmiana wymaga osobnego zadania i decyzji właściciela.
+  it('etap 5 (D5): moduł obwodu głowy jest DOKŁADNY na WHO, ale skrót po 7 liniach nie przenosi się na DS', () => {
+    // SPROSTOWANIE względem pierwszej wersji tego etapu. Napisałem właścicielowi, że moduł liczy
+    // „innym modelem: średnia ± z·SD, a nie łańcuchem LMS". To było NIEPRAWDĄ: WHO publikuje obwód
+    // głowy z L = 1 w KAŻDYM wierszu, a wtedy M·(1+z·S) JEST łańcuchem LMS. Moduł idzie jeszcze
+    // krok dalej — z liczy interpolacją między siedmioma liniami centylowymi (`zc`) — i przy L = 1
+    // też wychodzi dokładnie, bo linie są wtedy LINIOWE w z. Zero różnicy, nie „inny model".
+    //
+    // Ale ta dokładność jest właściwością danych, nie kodu. Tablice DS mają L ≈ 1,8–3,9, więc ich
+    // linie NIE są liniowe w z i ten sam skrót dałby przybliżenie. Ten test trzyma oba fakty naraz,
+    // żeby P-DS-6 (obwód głowy na siatce DS) nie wpiął tablic DS w istniejącą maszynerię 7 linii.
+    const win = oknoZSilnikiem();
+    new Function('window', 'globalThis', zrodlo('who_head_data.js'))(win, win);
+    const WHO = win.WHO_HEAD_LMS, L = win.VildaDsLMS;
+    const Z = [-1.881, -1.282, -0.674, 0, 0.674, 1.282, 1.881];
+    const lin = (t, a, b, za, zb) => (a === b ? za : za + ((t - a) / (b - a)) * (zb - za));
+    const z7 = (x, linie) => {
+      if (x <= linie[0]) return lin(x, linie[0], linie[1], Z[0], Z[1]);
+      for (let i = 0; i < 6; i += 1) if (x <= linie[i + 1]) return lin(x, linie[i], linie[i + 1], Z[i], Z[i + 1]);
+      return lin(x, linie[5], linie[6], Z[5], Z[6]);
+    };
+    const wartosc = (z, [l, m, s]) => (l !== 0 ? m * Math.pow(1 + l * s * z, 1 / l) : m * Math.exp(s * z));
+
+    // 1. WHO: interpolacja po 7 liniach == łańcuch LMS, CO DO ZERA (bo L = 1)
+    let maxWho = 0;
+    for (const plec of ['male', 'female']) {
+      for (let mies = 0; mies <= 60; mies += 1) {
+        const [M, S] = WHO[plec][mies];
+        const linie = Z.map((z) => M * (1 + z * S));
+        for (let z = -3; z <= 3.0001; z += 0.25) maxWho = Math.max(maxWho, Math.abs(z7(M * (1 + z * S), linie) - z));
+      }
+    }
+    expect(maxWho, 'WHO: skrót po liniach jest dokładny, bo L = 1').toBeLessThan(1e-9);
+
+    // 2. DS: te same tablice mają L daleko od 1, więc ten skrót przestaje być dokładny
+    let maxDs = 0, lMin = Infinity, lMax = -Infinity;
+    for (const grupa of ['NIEMOWLE', 'DZIECKO']) {
+      for (const plec of ['M', 'F']) {
+        const tab = L[grupa].HC[plec];
+        for (const klucz of Object.keys(tab)) {
+          const wiersz = tab[klucz];
+          lMin = Math.min(lMin, wiersz[0]); lMax = Math.max(lMax, wiersz[0]);
+          const linie = Z.map((z) => wartosc(z, wiersz));
+          for (let z = -3; z <= 3.0001; z += 0.25) maxDs = Math.max(maxDs, Math.abs(z7(wartosc(z, wiersz), linie) - z));
+        }
+      }
+    }
+    expect(lMin, 'tablice DS nie są grid-em o L = 1').toBeGreaterThan(1.5);
+    expect(lMax).toBeLessThan(4);
+    expect(maxDs, 'DS: skrót po liniach już NIE jest dokładny — P-DS-6 musi liczyć łańcuchem LMS').toBeGreaterThan(0.05);
+
+    // 3. Powodem klinicznym P-DS-6 jest to, że dziecko NA MEDIANIE DS czyta się na WHO jako ~2. centyl,
+    //    czyli typowy pacjent z zespołem Downa dostaje fałszywy alarm małogłowia.
+    const cdf = (z) => {
+      const t = z >= 0 ? 1 : -1, x = Math.abs(z) / Math.SQRT2, u = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * u - 1.453152027) * u + 1.421413741) * u - 0.284496736) * u + 0.254829592) * u * Math.exp(-x * x);
+      return 0.5 * (1 + t * y);
+    };
+    for (const [plec, who] of [['M', 'male'], ['F', 'female']]) {
+      for (const mies of [36, 48, 60]) {
+        const medDs = L.DZIECKO.HC[plec][String(mies)][1];
+        const [M, S] = who === 'male' ? WHO.male[mies] : WHO.female[mies];
+        const centyl = cdf((medDs - M) / (M * S)) * 100;
+        expect(centyl, `${plec} ${mies} mies.: mediana DS na siatce WHO`).toBeLessThan(5);
+      }
+    }
+
+    // zakres na dziś: moduł nadal czyta WHO/IMiD, bez DS — zmiana to P-DS-6, nie cicha poprawka
     const src = zrodlo('circumference_module.js');
     expect(src).toContain('WHO_HEAD_LMS');
-    expect(src, 'brak cichego DS w module obwodu głowy').not.toContain('VildaPopulacjaPacjenta');
-    expect(src, 'brak cichego DS w module obwodu głowy').not.toContain('VildaDsLMS');
-    // a zestaw DS ma obwód głowy — gdyby zniknął, karta modułu DS przestałaby go pokazywać
-    const win = oknoZSilnikiem();
-    expect(Object.keys(win.VildaDsLMS.DZIECKO.HC)).toEqual(['M', 'F']);
+    expect(src, 'DS w module obwodu głowy dopiero w P-DS-6').not.toContain('VildaDsLMS');
+    expect(Object.keys(L.DZIECKO.HC), 'zestaw DS ma obwód głowy gotowy dla P-DS-6').toEqual(['M', 'F']);
   });
 
   it('etap 5: nota siatki brzmi wszędzie tak samo', () => {
