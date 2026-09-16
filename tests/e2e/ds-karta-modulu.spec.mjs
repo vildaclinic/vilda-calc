@@ -67,3 +67,44 @@ test('karta DS liczy centyle silnikiem — ta sama liczba, co VildaBmi na siatce
   const olaf = await page.evaluate(() => Math.round(window.VildaBmi.policz({ bmi: 45 / 1.35 ** 2, plec: 'M', wiekMies: 120, zrodlo: 'OLAF' }).centyl));
   expect(zKarty).not.toBe(olaf);
 });
+
+test('rozpoznanie z rekordu przestawia siatki całej strony; sama rozwinięta karta — niczego', async ({ page }) => {
+  await otworz(page);
+  await wypelnij(page, { sex: 'M', age: '10', ageMonths: '0', weight: '45', height: '135' });
+  const wiersz = page.locator('#bmiResult');
+  await expect(wiersz).toBeVisible({ timeout: 15000 });
+
+  const centyl = async () => wiersz.evaluate((el) => {
+    const m = el.textContent.match(/(\d+)\s*centyl/);
+    return m ? Number(m[1]) : null;
+  });
+  await expect(wiersz, 'bez rozpoznania — bez noty o siatce DS').not.toContainText('Downa');
+  const przed = await centyl();
+  expect(przed).toBeGreaterThan(0);
+
+  // rozwinięcie karty informacyjnej NIE jest rozpoznaniem (P-DS-4: zaostrzona decyzja D1)
+  await page.locator('#toggleDownSyndrome').click();
+  await expect(page.locator('#downSyndromeCard')).toBeVisible();
+  await wypelnij(page, { weight: '45' });
+  await expect(wiersz).not.toContainText('Downa');
+  expect(await centyl(), 'centyl karty głównej bez zmian po rozwinięciu karty').toBe(przed);
+
+  // rozpoznanie w rekordzie przestawia wynik i NAZYWA siatkę (decyzja D4)
+  await page.evaluate(() => window.VildaDsSource.zapamietaj({ clinical: { downSyndrome: true } }));
+  await wypelnij(page, { weight: '45' });
+  await expect(wiersz).toContainText('Downa', { timeout: 10_000 });
+
+  const zKarty = await centyl();
+  const oczekiwane = await page.evaluate(() => {
+    const r = window.VildaBmi.policz({ bmi: 45 / 1.35 ** 2, plec: 'M', wiekMies: 120, zrodlo: 'OLAF', populacja: 'DS' });
+    const o = window.VildaBmi.policz({ bmi: 45 / 1.35 ** 2, plec: 'M', wiekMies: 120, zrodlo: 'OLAF', populacja: 'OGOLNA' });
+    return { ds: Math.round(r.centyl), ogolna: Math.round(o.centyl) };
+  });
+  expect(zKarty).toBe(oczekiwane.ds);
+  expect(oczekiwane.ds, 'kontrola: siatka DS naprawdę daje inną liczbę').not.toBe(oczekiwane.ogolna);
+
+  // i wraca po wyczyszczeniu stanu (wylogowanie / inny pacjent)
+  await page.evaluate(() => window.VildaDsSource.zapomnij());
+  await wypelnij(page, { weight: '45' });
+  await expect(wiersz).not.toContainText('Downa');
+});

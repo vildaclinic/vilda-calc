@@ -27,6 +27,11 @@
  *     z jawnym powodem. Poniżej 2 lat BMI zastępuje masa do długości (WFL DS) poza tym modułem.
  *     Granica dorosłości dla DS to 20 lat (240 mies.), nie 18 — siatki DS sięgają 20 lat i centyl
  *     DS niesie więcej niż próg dorosłego (decyzja D3).
+ *     P-DS-4: populacja jest AMBIENTNA tak samo jak źródło siatek (`bmiSource`) — konsument, który
+ *     opisuje wczytanego pacjenta, nie musi jej podawać. Aplikacja wstrzykuje resolver przez
+ *     ustawDane({populacjaDomyslna}) i to on (vilda_ds_source.js) odpowiada, czy pacjent ma DS.
+ *     Jawne `populacja` w opcjach ZAWSZE wygrywa — i tak właśnie moduły liczące dla KOGOŚ INNEGO
+ *     niż wczytany pacjent (wsad XLSX) wypisują się z reguły, podając 'OGOLNA'.
  *
  * SIATKI: OLAF BMI 36–216 mies. (tablice OLAF_LMS_* z app.js), WHO 2006 0–60 mies. (LMS_INFANT_*),
  * WHO 2006/2007 24–228 mies. (LMS_BOYS/GIRLS; powyżej 60. mies. czytamy stąd), Palczewska 1–222 mies.
@@ -94,6 +99,8 @@
   });
   var BRAK_KLASYFIKACJI = 'Brak klasyfikacji pediatrycznej — brak danych referencyjnych';
   var CENTYLE_PAL = [3, 10, 25, 50, 75, 90, 97];
+  /* Jedno brzmienie noty o siatce DS dla wszystkich wyjść (decyzja D4). */
+  var NOTA_DS = 'wg siatki dla zespołu Downa (Zemel 2015)';
 
   var dane = {};
   function dana(nazwa) {
@@ -235,6 +242,25 @@
   function normPopulacja(p) {
     return String(p || '').toUpperCase() === 'DS' ? 'DS' : 'OGOLNA';
   }
+  /* Resolver populacji — tą samą drogą, co tablice (dana()): najpierw jawnie wstrzyknięty przez
+     ustawDane(), potem dobrze znana globalna funkcja aplikacji. Silnik nie zna DOM ani sejfu;
+     odpowiada mu vilda_ds_source.js. */
+  function resolverPopulacji() {
+    if (typeof dane.populacjaDomyslna === 'function') return dane.populacjaDomyslna;
+    try { var f = root.VildaPopulacjaPacjenta; if (typeof f === 'function') return f; } catch (e) { /* brak resolvera */ }
+    return null;
+  }
+
+  /* Populacja z opcji, a gdy jej nie ma — z resolvera. Wyjątek resolvera znaczy „ogólna". */
+  function populacjaZOpcji(o) {
+    if (o && o.populacja != null) return normPopulacja(o.populacja);
+    try {
+      var f = resolverPopulacji();
+      if (f) return normPopulacja(f());
+    } catch (e) { /* resolver odmowil — populacja ogolna */ }
+    return 'OGOLNA';
+  }
+
   function maxWiek(populacja) {
     return normPopulacja(populacja) === 'DS' ? G.DS_MAX_M : G.WHO_MAX_M;
   }
@@ -311,6 +337,7 @@
     return {
       wersja: WERSJA, bmi: x, sds: z, centyl: centylZSds(z), siatka: siatka,
       zrodloZadane: normZrodlo(o.zrodlo), populacja: siatka === 'DS' ? 'DS' : normPopulacja(o.populacja), fallback: false, powod: '',
+      siatkaOpis: etykieta(siatka),
       pozaZakresem: false, mediana: mediana, lms: tab, wiekMies: wiek, plec: plec,
     };
   }
@@ -320,7 +347,7 @@
   function liczba(v) { return v == null || v === '' ? NaN : Number(v); }
   function policz(opts) {
     var o = opts || {};
-    var wiek = liczba(o.wiekMies), x = wejscieBmi(o), zadane = normZrodlo(o.zrodlo), pop = normPopulacja(o.populacja);
+    var wiek = liczba(o.wiekMies), x = wejscieBmi(o), zadane = normZrodlo(o.zrodlo), pop = populacjaZOpcji(o);
     var baza = { bmi: x, zrodlo: zadane, populacja: pop, wiekMies: isFinite(wiek) ? wiek : null, plec: o.plec === 'M' ? 'M' : 'F' };
     if (!isFinite(wiek) || wiek < 0) return wynikPusty(baza, 'brak wieku');
     if (x == null) return wynikPusty(baza, 'brak masy lub wzrostu');
@@ -346,7 +373,7 @@
     return t && t[1] > 0 ? t[1] : null;
   }
   function mediana(plec, wiekMies, zrodlo, populacja) {
-    var w = liczba(wiekMies), pop = normPopulacja(populacja);
+    var w = liczba(wiekMies), pop = populacjaZOpcji({ populacja: populacja });
     if (!isFinite(w) || w < 0 || w > maxWiek(pop)) return null;
     var lista = kandydaci(zrodlo, w, pop);
     for (var i = 0; i < lista.length; i++) {
@@ -363,7 +390,7 @@
   function wartoscDlaSds(opts) {
     var o = opts || {};
     var w = liczba(o.wiekMies), z = liczba(o.sds), plec = o.plec === 'M' ? 'M' : 'F';
-    var pop = normPopulacja(o.populacja);
+    var pop = populacjaZOpcji(o);
     if (!isFinite(w) || w < 0 || !isFinite(z) || w > maxWiek(pop)) return null;
     var lista = o.siatka ? [String(o.siatka).toUpperCase()] : kandydaci(o.zrodlo, w, pop);
     for (var i = 0; i < lista.length; i++) {
@@ -412,7 +439,7 @@
   /* opts: { bmi, centyl, sds, wiekMies, dorosly? } — dorosły od 216 mies. (lub jawnie). */
   function kategoria(opts) {
     var o = opts || {};
-    var jestDorosly = o.dorosly != null ? !!o.dorosly : dorosly(liczba(o.wiekMies), o.populacja);
+    var jestDorosly = o.dorosly != null ? !!o.dorosly : dorosly(liczba(o.wiekMies), populacjaZOpcji(o));
     if (jestDorosly) return kategoriaDorosly(o.bmi);
     return kategoriaDziecko(o.centyl, o.sds, o.wiekMies);
   }
@@ -438,7 +465,7 @@
     var o = opts || {};
     var x = wejscieBmi(o), w = liczba(o.wiekMies);
     if (x == null || !isFinite(w) || w < 0) return null;
-    var m = o.siatka ? (function () { var v = medianaNaSiatce(o.plec, w, o.siatka); return v ? { mediana: v, siatka: String(o.siatka).toUpperCase(), fallback: false, powod: '' } : null; })() : mediana(o.plec, w, o.zrodlo, o.populacja);
+    var m = o.siatka ? (function () { var v = medianaNaSiatce(o.plec, w, o.siatka); return v ? { mediana: v, siatka: String(o.siatka).toUpperCase(), fallback: false, powod: '' } : null; })() : mediana(o.plec, w, o.zrodlo, populacjaZOpcji(o));
     if (!m) return null;
     var c = x / m.mediana * 100;
     return { cole: c, mediana: m.mediana, siatka: m.siatka, fallback: m.fallback, powod: m.powod, kategoria: kategoriaCole(c) };
@@ -449,8 +476,9 @@
     var o = opts || {};
     var w = liczba(o.wiekMies), h = liczba(o.wzrostCm);
     var masa = function (b) { return isFinite(h) && h > 0 && b != null ? b * Math.pow(h / 100, 2) : null; };
-    if (o.dorosly === true || dorosly(w, o.populacja)) return { bmiCel: PROGI.DOROSLY.CEL, masaCel: masa(PROGI.DOROSLY.CEL), rodzaj: 'dorosly-24.9', siatka: null, fallback: false };
-    var r = wartoscDlaSds({ sds: G.Z_P85, plec: o.plec, wiekMies: w, zrodlo: o.zrodlo, siatka: o.siatka, populacja: o.populacja });
+    var pop = populacjaZOpcji(o);
+    if (o.dorosly === true || dorosly(w, pop)) return { bmiCel: PROGI.DOROSLY.CEL, masaCel: masa(PROGI.DOROSLY.CEL), rodzaj: 'dorosly-24.9', siatka: null, fallback: false };
+    var r = wartoscDlaSds({ sds: G.Z_P85, plec: o.plec, wiekMies: w, zrodlo: o.zrodlo, siatka: o.siatka, populacja: pop });
     if (!r) return null;
     return { bmiCel: r.bmi, masaCel: masa(r.bmi), rodzaj: 'dziecko-P85', siatka: r.siatka, fallback: r.fallback };
   }
@@ -491,14 +519,17 @@
       kategoria: kat ? kat.etykieta : '',
       kolor: kat ? kat.kolor : null,
       siatka: m.siatka ? etykieta(m.siatka) : '',
+      /* decyzja D4: siatka specjalnej populacji musi być NAZWANA w każdym wyjściu tekstowym —
+         centyl DS nie znaczy tego samego, co centyl populacyjny. */
+      siatkaNota: m.siatka === 'DS' ? NOTA_DS : '',
       fallback: !!m.fallback,
       powod: m.powod || '',
     };
   }
 
   root.VildaBmi = Object.freeze({
-    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), G: G, PROGI: PROGI, CENTYLE_PAL: CENTYLE_PAL.slice(), BRAK_KLASYFIKACJI: BRAK_KLASYFIKACJI,
-    ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, lms: lms, interpoluj: interpoluj, zLms: zLms, xLms: xLms,
+    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), NOTA_DS: NOTA_DS, G: G, PROGI: PROGI, CENTYLE_PAL: CENTYLE_PAL.slice(), BRAK_KLASYFIKACJI: BRAK_KLASYFIKACJI,
+    ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, populacjaZOpcji: populacjaZOpcji, lms: lms, interpoluj: interpoluj, zLms: zLms, xLms: xLms,
     bmi: bmi, policz: policz, policzNaSiatce: policzNaSiatce, ocen: ocen,
     mediana: mediana, medianaNaSiatce: medianaNaSiatce, wartoscDlaSds: wartoscDlaSds, wartoscDlaCentyla: wartoscDlaCentyla,
     kategoria: kategoria, kategoriaDziecko: kategoriaDziecko, kategoriaDorosly: kategoriaDorosly, dorosly: dorosly,
