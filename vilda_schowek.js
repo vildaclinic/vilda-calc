@@ -1,30 +1,34 @@
 /* vilda_schowek.js — JEDNO miejsce, w którym aplikacja pisze tekst do schowka.
  *
- * PO CO TO JEST: zgłoszenie z iOS (2026-09-16). Przycisk „Podsumowanie wyników — kliknij
- * i skopiuj" kopiował treść, ale po wklejeniu w Notatkach i Wiadomościach tekst zamieniał się
- * w łącza. W polu przyjmującym czysty tekst ta sama zawartość wklejała się poprawnie, a inne
- * przyciski aplikacji (np. zalecenia antybiotykoterapii) działały bez zarzutu.
+ * PO CO TO JEST: zgłoszenie z iOS (2026-09-16). Treść skopiowana przyciskiem „Podsumowanie
+ * wyników" wklejała się w Notatkach i Wiadomościach jako JEDNO ŁĄCZE obejmujące cały blok.
+ * W polu przyjmującym czysty tekst ta sama zawartość wklejała się poprawnie, a inne przyciski
+ * aplikacji (np. zalecenia antybiotykoterapii) działały bez zarzutu.
  *
- * DIAGNOZA (druga, po pierwszej BŁĘDNEJ — patrz niżej). Na schowku iOS leżą OBOK SIEBIE różne
- * warianty tej samej treści. `navigator.clipboard.writeText` zapisuje wyłącznie czysty tekst —
- * i dokładnie tak kopiują te przyciski, które działają. `document.execCommand('copy')` z pola
- * oznaczonego `contentEditable` dokłada do tego wariant HTML, a Notatki i Wiadomości wolą wariant
- * bogaty od czystego tekstu. Dlatego wklejały łącza, a pole czystotekstowe pokazywało tekst
- * poprawnie: każda aplikacja brała inny wariant z tego samego schowka.
+ * PRZYCZYNA — POTWIERDZONA NA URZĄDZENIU (właściciel przytrzymał łącze: pokazywało adres
+ * zaczynający się od „waga:"). Podsumowanie zaczyna się od wiersza „Waga: 63,4 kg…", a człon
+ * „Waga:" ma dokładnie kształt SCHEMATU ADRESU — litera, potem litery/cyfry, potem dwukropek,
+ * jak „mailto:" czy „tel:". WebKit, kładąc tekst na schowku, dokłada wariant „adres", gdy tekst
+ * daje się przeczytać jako URL; Notatki wolą ten wariant i renderują CAŁOŚĆ jako jedno łącze.
+ * Zalecenia antybiotykoterapii zaczynają się od nazwy leku i myślnika („Augmentin – lek
+ * podajemy…"), więc nie dają się tak przeczytać — i dlatego tam problemu nie było.
  *
- * CO BYŁO BŁĘDNE W PIERWSZEJ DIAGNOZIE: przyjąłem, że do schowka nic nie trafia i użytkownik
- * wkleja jego poprzednią zawartość. Obaliło to jedno zdanie właściciela — wkleił skopiowaną
- * treść i była poprawna. Pierwsza wersja tego modułu uruchamiała obie drogi naraz i dokładała
- * `contentEditable`, czyli utrwalała wariant HTML na schowku przy KAŻDYM kopiowaniu. To nie
- * naprawiało błędu, tylko czyniło go powtarzalnym.
+ * DWIE WCZEŚNIEJSZE PRÓBY BYŁY CHYBIONE, bo szukały winy w SPOSOBIE kopiowania:
+ *   1.0.974 — założyłem, że do schowka nic nie trafia i użytkownik wkleja poprzednią zawartość.
+ *             Obaliło to jedno zdanie właściciela: wkleił treść i była poprawna. Ta wersja
+ *             dokładała na schowek wariant HTML (execCommand z pola `contentEditable`), czyli
+ *             pogarszała sprawę zamiast ją naprawiać.
+ *   1.0.975 — sprowadziłem zapis do samego `writeText` (jeden wariant, czysty tekst). Słuszne
+ *             samo w sobie, ale objawu nie usunęło: wariant „adres" bierze się z TREŚCI, nie
+ *             z drogi zapisu.
+ * Zapis obu ślepych zaułków zostaje tutaj celowo — kosztowały dwa wydania i są najlepszym
+ * ostrzeżeniem przed naprawianiem bez odtworzenia objawu.
  *
- * ZASADA: zapisujemy CZYSTY TEKST i nic poza nim. `navigator.clipboard.writeText` jest drogą
- * pierwszą i jedyną tam, gdzie istnieje — bo tylko ona gwarantuje pojedynczy wariant na schowku.
- * Ścieżka przez `execCommand` zostaje wyłącznie dla przeglądarek bez Clipboard API i kopiuje
- * ze zwykłego pola tekstowego, BEZ `contentEditable`, żeby nie dokładać wariantu HTML.
+ * ZASADA: na schowek idzie JEDEN wariant — czysty tekst (`navigator.clipboard.writeText`) —
+ * a tekst nie może zaczynać się czymś, co przeglądarka przeczyta jako adres. Pilnuje tego
+ * `bezSchematuNaPoczatku()`.
  *
- * CZEGO TU NIE MA: żadnych powiadomień ani tekstów interfejsu. Moduł zwraca obietnicę i tyle —
- * co pokazać użytkownikowi, decyduje strona wywołująca. Nie rozpoznajemy też przeglądarki.
+ * CZEGO TU NIE MA: żadnych powiadomień ani tekstów interfejsu. Moduł zwraca obietnicę i tyle.
  */
 (function (root) {
   'use strict';
@@ -116,6 +120,21 @@
     return null;
   }
 
+  /* Łącznik wyrazów U+2060: zero szerokości, nic nie widać po wklejeniu, a NIE jest znakiem
+     odstępu — więc nie zostanie obcięty tak, jak spacja czy znak nowej linii (standard adresów
+     każe obciąć wiodące odstępy przed próbą odczytania adresu, więc pusta linia by nie pomogła).
+     Dzięki niemu tekst przestaje zaczynać się od czegoś o kształcie „schemat:", a treść, format
+     wierszy i liczby zostają nietknięte. */
+  var LACZNIK = '\u2060';
+  var SCHEMAT = /^[A-Za-z][A-Za-z0-9+.-]*:/;
+
+  /* Dokłada łącznik TYLKO wtedy, gdy tekst faktycznie zaczyna się jak adres. Gdyby kiedyś
+     pierwszy wiersz przestał być etykietą z dwukropkiem, do schowka nie trafi żaden dodatkowy
+     znak — zabezpieczenie znika samo, zamiast zostać na zawsze. */
+  function bezSchematuNaPoczatku(tekst) {
+    return SCHEMAT.test(tekst) ? LACZNIK + tekst : tekst;
+  }
+
   /* Kopiuje tekst do schowka. Musi być wywołane W GEŚCIE UŻYTKOWNIKA (obsługa kliknięcia).
      Zwraca obietnicę: spełnioną, gdy tekst NAPRAWDĘ trafił do schowka, odrzuconą, gdy nie.
 
@@ -126,6 +145,8 @@
   function kopiuj(tekst) {
     var t = typeof tekst === 'string' ? tekst : String(tekst == null ? '' : tekst);
     if (!t) return Promise.reject(new Error('Brak tekstu do skopiowania.'));
+
+    t = bezSchematuNaPoczatku(t);
 
     var obietnica = asynchronicznie(t);
     if (obietnica && typeof obietnica.then === 'function') {
