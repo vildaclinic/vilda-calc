@@ -59,25 +59,24 @@ describe('Plan dietetyczny (vilda_diet_plan_ui.js) — klasa BMI dziecka z silni
     expect(c.targetBmi).toBeCloseTo(24.9, 9);
     expect(win.energyChildMedianBmi('M', 10)).toBeCloseTo(win.VildaBmi.mediana('M', 120, 'OLAF').mediana, 9);
   });
-  it('decyzja 12: otwarta karta modułu zespołu Downa → klasa BMI na siatce DS (Zemel), z i P85 tym samym wzorem LMS silnika', () => {
+  // Decyzja 12 (siatki DS przy rozpoznaniu) przeniesiona w P-DS-1 do silnika i do rekordu pacjenta;
+  // pełny zestaw testów ma tests/unit/ds-straznik.test.mjs. Tu zostaje kontrola, że moduł diety
+  // tylko PYTA o populację i nie ma dla DS własnej ścieżki.
+  it('P-DS-1: populacja z rekordu (VildaDsSource) przestawia klasę BMI na siatkę DS — moduł nie liczy jej sam', () => {
     const win = dieta();
-    ustawGlobal('document', { getElementById: (id) => (id === 'downSyndromeCard' ? { style: { display: 'block' } } : null) });
-    const wiersz = [-1.1, 18.4, 0.14];
-    ustawGlobal('__ds_getLMS', (sex, age, metric) => (metric === 'BMI' && age >= 2 ? wiersz : null));
-    win.DS = { fikcyjne: true };
-    const c = win.energyChildBmiClass({ sex: 'M', ageYears: 10, weightKg: 45, heightCm: 135 });
-    const bmi = 45 / 1.35 ** 2;
+    const pacjent = { sex: 'M', ageYears: 10, weightKg: 45, heightCm: 135 };
+    win.VildaDsSource = { populacja: () => 'DS' };
+    const c = win.energyChildBmiClass(pacjent);
+    const r = win.VildaBmi.ocen({ bmi: 45 / 1.35 ** 2, plec: 'M', wiekMies: 120, zrodlo: 'OLAF', populacja: 'DS' });
     expect(c.source).toBe('DS');
-    expect(c.z).toBeCloseTo(win.VildaBmi.zLms(bmi, wiersz), 9);
-    expect(c.percentile).toBeCloseTo(win.VildaBmi.centylZSds(win.VildaBmi.zLms(bmi, wiersz)), 9);
-    expect(c.targetBmi).toBeCloseTo(win.VildaBmi.xLms(win.VildaBmi.G.Z_P85, wiersz), 9);
-    expect(c.medianBmi).toBe(18.4);
-    // poniżej 2 lat siatki DS BMI nie ma — zwykła reguła
-    const maly = win.energyChildBmiClass({ sex: 'M', ageYears: 1.5, weightKg: 11, heightCm: 80 });
-    expect(maly.source).not.toBe('DS');
-    // moduł wyłączony → zwykła reguła
-    ustawGlobal('document', { getElementById: (id) => (id === 'downSyndromeCard' ? { style: { display: 'none' } } : null) });
-    expect(win.energyChildBmiClass({ sex: 'M', ageYears: 10, weightKg: 45, heightCm: 135 }).source).toBe('OLAF');
+    expect(c.z).toBeCloseTo(r.sds, 12);
+    expect(c.medianBmi).toBeCloseTo(r.mediana, 12);
+    // poniżej 2 lat siatki DS BMI nie ma — i nie ma cichego zejścia na siatkę populacyjną
+    expect(win.energyChildBmiClass({ sex: 'M', ageYears: 1.5, ageMonthsOpt: 18, weightKg: 11, heightCm: 80 })).toBeNull();
+    // bez rozpoznania w rekordzie — zwykła reguła, choćby karta modułu była rozwinięta
+    win.VildaDsSource = { populacja: () => 'OGOLNA' };
+    ustawGlobal('document', { getElementById: (id) => (id === 'downSyndromeCard' ? { style: { display: 'block' } } : null) });
+    expect(win.energyChildBmiClass(pacjent).source).toBe('OLAF');
   });
 });
 
