@@ -97,6 +97,8 @@ describe('Jeden zapis SDS: „hSDS", „wSDS", „bmiSDS"', () => {
       ${funkcja(src, 'vildaUpdatePrepFmtSds')}
       ${funkcja(src, 'vildaUpdatePrepBuildWeightCentileLine')}
       ${funkcja(src, 'vildaUpdatePrepBuildHeightCentileLine')}
+      ${funkcja(src, 'vildaUpdatePrepBmiSilnik')}
+      ${funkcja(src, 'vildaUpdatePrepNotaSiatki')}
       ${funkcja(src, 'vildaUpdatePrepBuildBmiLine')}
       return { waga: vildaUpdatePrepBuildWeightCentileLine, wzrost: vildaUpdatePrepBuildHeightCentileLine, bmi: vildaUpdatePrepBuildBmiLine };`;
     const f = new Function('window', kod)({});

@@ -8,13 +8,16 @@
  * nie wiedział w ogóle. P-DS-1 przenosi rozpoznanie do rekordu (sekcja `clinical`), a ten
  * moduł jest jedynym miejscem, które łączy oba źródła.
  *
- * ZASADA (decyzja właściciela D1): ten moduł niczego nie liczy i niczego nie zapisuje.
- *  - Jest wczytany pacjent → decyduje WYŁĄCZNIE pole w rekordzie (brak pola = brak DS,
- *    więc stare rekordy czytają się bez migracji).
- *  - Nie ma wczytanego pacjenta (użycie doraźne, np. kalkulator na index.html) → decyduje
- *    stan karty modułu, tak jak dotąd.
- * Nigdy odwrotnie: rozwinięcie karty nie „dodaje" DS pacjentowi, który go w rekordzie
- * nie ma — inaczej wróciłby dokładnie ten błąd, który ten etap usuwa.
+ * ZASADA (decyzja właściciela D1, zaostrzona w P-DS-4): ten moduł niczego nie liczy i niczego
+ * nie zapisuje. Rozpoznanie pochodzi WYŁĄCZNIE z rekordu pacjenta — brak pola albo brak
+ * wczytanego pacjenta znaczy „bez DS" (stare rekordy czytają się bez migracji).
+ *
+ * Dlaczego bez furtki dla stanu karty: w etapie 1 flaga sterowała tylko planem diety, więc
+ * „nie ma pacjenta → decyduje rozwinięta karta modułu" było wygodnym skrótem dla użycia
+ * doraźnego. Od P-DS-4 ta sama flaga przestawia siatki CAŁEJ strony — karty głównej, schowka,
+ * epikryzy, raportu. Przy starej regule rozwinięcie karty informacyjnej u pacjenta BEZ zespołu
+ * Downa po cichu przeklasyfikowałoby wszystkie wyniki. Karta modułu DS nadal pokazuje swoje
+ * centyle niezależnie od tej flagi, więc użycie doraźne niczego nie traci.
  *
  * CZEGO TU NIE MA: siatek, wzoru i progów. Populację dostaje silnik (`vilda_bmi.js`)
  * jako `populacja: 'DS'` i to on decyduje, co z nią zrobić.
@@ -33,13 +36,12 @@
     return !!(k && typeof k === 'object' && k.downSyndrome === true);
   }
 
-  /* Pierwszeństwo źródeł. `maRekord` mówi, czy w ogóle jest wczytany pacjent — bez tego
-   * nie dałoby się odróżnić „rekord mówi nie" od „nie ma rekordu".
+  /* Pierwszeństwo źródeł. `maRekord` mówi, czy w ogóle jest wczytany pacjent; bez rekordu
+   * nie ma rozpoznania, a stan interfejsu nigdy go nie zastępuje (P-DS-4).
    */
   function wybierz(z) {
     var s = z && typeof z === 'object' ? z : {};
-    if (s.maRekord === true) return s.rekord === true;
-    return s.karta === true;
+    return s.maRekord === true && s.rekord === true;
   }
 
   function populacjaZFlagi(flaga) {
@@ -61,26 +63,11 @@
     zapamietane = null;
   }
 
-  /* ── stan karty modułu (użycie doraźne, bez wczytanego pacjenta) ─────────────── */
-
-  function zKarty() {
-    try {
-      if (!w || !w.document || !w.DS) return false;
-      var k = w.document.getElementById('downSyndromeCard');
-      if (!k) return false;
-      var st = typeof w.getComputedStyle === 'function' ? w.getComputedStyle(k) : k.style;
-      return !!(st && st.display !== 'none' && st.display !== '');
-    } catch (e) {
-      return false;
-    }
-  }
-
   // Odpowiedź dla reszty aplikacji.
   function maFlage() {
     return wybierz({
       maRekord: !!zapamietane,
-      rekord: !!(zapamietane && zapamietane.ds),
-      karta: zKarty()
+      rekord: !!(zapamietane && zapamietane.ds)
     });
   }
 
@@ -137,6 +124,12 @@
 
   podepnij();
 
+  /* P-DS-4: dobrze znana globalna funkcja, po którą sięga silnik BMI, gdy konsument nie poda
+     populacji jawnie. Tą samą drogą silnik bierze tablice (window.VildaBmiLMS) — nie zna DOM
+     ani sejfu, pyta aplikację. Moduł liczący dla KOGOŚ INNEGO niż wczytany pacjent (wsad XLSX)
+     podaje populację jawnie i tym samym wypisuje się z tej reguły. */
+  w.VildaPopulacjaPacjenta = populacja;
+
   w.VildaDsSource = {
     VERSION: VERSION,
     zRekordu: zRekordu,
@@ -144,7 +137,6 @@
     populacjaZFlagi: populacjaZFlagi,
     zapamietaj: zapamietaj,
     zapomnij: zapomnij,
-    zKarty: zKarty,
     maFlage: maFlage,
     populacja: populacja
   };

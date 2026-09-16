@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { appSrc, korzen, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
+import { appSrc, funkcjaZ, korzen, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 
 // P-DS etapy 1–2 — STRAŻNIK: zespół Downa to CECHA PACJENTA (pole w rekordzie), nie stan interfejsu,
 // a siatki DS (Zemel 2015) liczy ten sam silnik, co wszystkie pozostałe. Do 1.0.966 jedyną flagą DS
@@ -184,19 +184,22 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     expect(T.celNormy({ wiekMies: 228, wzrostCm: 160, plec: 'M', zrodlo: 'OLAF' }).rodzaj).toBe('dorosly-24.9');
   });
 
-  it('decyzja D1: rekord wygrywa z kartą, brak pola znaczy brak DS, karta działa tylko bez wczytanego pacjenta', () => {
+  it('decyzja D1 (zaostrzona w P-DS-4): rozpoznanie tylko z rekordu — stan interfejsu nigdy go nie zastępuje', () => {
     const S = resolver();
     expect(S.zRekordu({ clinical: { downSyndrome: true } })).toBe(true);
     expect(S.zRekordu({ clinical: { downSyndrome: 'tak' } }), 'tylko jawne true').toBe(false);
     expect(S.zRekordu({ clinical: {} })).toBe(false);
     expect(S.zRekordu({}), 'stary rekord bez sekcji clinical').toBe(false);
     expect(S.zRekordu(null)).toBe(false);
-    // rozwinięta karta nie dodaje DS pacjentowi, który go w rekordzie nie ma
+    // rozwinięta karta nie dodaje DS pacjentowi, który go w rekordzie nie ma…
     expect(S.wybierz({ maRekord: true, rekord: false, karta: true })).toBe(false);
     expect(S.wybierz({ maRekord: true, rekord: true, karta: false })).toBe(true);
-    // bez wczytanego pacjenta zostaje użycie doraźne
-    expect(S.wybierz({ maRekord: false, karta: true })).toBe(true);
+    // …ani pacjentowi, którego w ogóle nie ma. Od P-DS-4 ta flaga przestawia siatki CAŁEJ strony,
+    // więc rozwinięcie karty informacyjnej nie może po cichu przeklasyfikować wyników.
+    expect(S.wybierz({ maRekord: false, karta: true }), 'stan karty nie jest rozpoznaniem').toBe(false);
     expect(S.wybierz({ maRekord: false, karta: false })).toBe(false);
+    expect(S.zKarty, 'czytnik stanu karty usunięty razem z furtką').toBeUndefined();
+    expect(zrodlo('vilda_ds_source.js'), 'moduł nie zagląda już do DOM po flagę').not.toContain("getElementById('downSyndromeCard')");
     expect(S.populacjaZFlagi(true)).toBe('DS');
     expect(S.populacjaZFlagi(false)).toBe('OGOLNA');
     // pamięć rekordu: wczytanie i kasowanie stanu
@@ -205,7 +208,7 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     S.zapamietaj({ user: { sex: 'M' } });
     expect(S.maFlage(), 'inny pacjent bez DS').toBe(false);
     S.zapomnij();
-    expect(S.maFlage(), 'po wylogowaniu zostaje sam stan karty (tu: brak DOM)').toBe(false);
+    expect(S.maFlage(), 'po wylogowaniu nie ma rozpoznania').toBe(false);
   });
 
   it('moduł diety nie ma już własnej flagi DS, własnego czytnika LMS ani własnych progów — pyta silnik o populację', () => {
@@ -286,6 +289,76 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     // wiersz z silnika to dokładnie wiersz z tablicy (bez interpolacji na węźle)
     expect(win.VildaBmi.lms('M', 120, 'DS')).toEqual(win.DS.DS_CHILD_BMI_BOYS['10']);
     expect(win.VildaBmi.lms('F', 30, 'DS')).toEqual(win.DS.DS_CHILD_BMI_GIRLS['2.5']);
+  });
+
+  it('etap 4: populacja jest ambientna — resolver aplikacji działa bez zmiany 27 wywołań, a jawna opcja go bije', () => {
+    const win = oknoZSilnikiem(), T = win.VildaBmi;
+    const bmi = 45 / 1.35 ** 2, p = { bmi, plec: 'M', wiekMies: 120, zrodlo: 'OLAF' };
+    expect(T.policz(p).siatka, 'bez resolvera — populacja ogólna').toBe('OLAF');
+    win.VildaPopulacjaPacjenta = () => 'DS';
+    expect(T.policz(p).siatka, 'resolver przez dobrze znaną globalną').toBe('DS');
+    expect(T.mediana('M', 120, 'OLAF').siatka).toBe('DS');
+    expect(T.celNormy({ wiekMies: 120, wzrostCm: 135, plec: 'M', zrodlo: 'OLAF' }).siatka).toBe('DS');
+    expect(T.cole(p).siatka).toBe('DS');
+    expect(T.ocen({ bmi: 26, plec: 'M', wiekMies: 228, zrodlo: 'OLAF' }).kategoria.dorosly, 'decyzja D3 też przez resolver').toBe(false);
+    // jawna opcja zawsze wygrywa — tak wypisuje się wsad XLSX
+    expect(T.policz({ ...p, populacja: 'OGOLNA' }).siatka).toBe('OLAF');
+    expect(T.mediana('M', 120, 'OLAF', 'OGOLNA').siatka).toBe('OLAF');
+    // wstrzyknięcie przez ustawDane bije globalną (droga testów)
+    T.ustawDane({ populacjaDomyslna: () => 'OGOLNA' });
+    expect(T.policz(p).siatka).toBe('OLAF');
+    // resolver, który rzuca, znaczy „populacja ogólna", a nie wywrócenie wyniku
+    T.ustawDane({ populacjaDomyslna: () => { throw new Error('sejf zamkniety'); } });
+    expect(T.policz(p).siatka).toBe('OLAF');
+    T.ustawDane({ populacjaDomyslna: null });
+    delete win.VildaPopulacjaPacjenta;
+  });
+
+  it('etap 4: vilda_ds_source.js wystawia resolver, a wsad XLSX jawnie się z niego wypisuje', () => {
+    const S = resolver();
+    expect(typeof S.populacja).toBe('function');
+    expect(zrodlo('vilda_ds_source.js')).toContain('w.VildaPopulacjaPacjenta = populacja;');
+    // wsad liczy dla wierszy arkusza, nie dla wczytanego pacjenta
+    const wsad = zrodlo('vilda_professional_module.js');
+    expect(wsad, 'wsad XLSX nie może iść za rozpoznaniem wczytanego pacjenta').toContain('zrodlo:zz,populacja:"OGOLNA"');
+  });
+
+  it('etap 4 (decyzja D4): każde wyjście z centylem BMI nazywa siatkę DS — jedno brzmienie noty', () => {
+    const win = oknoZSilnikiem();
+    expect(win.VildaBmi.NOTA_DS).toBe('wg siatki dla zespołu Downa (Zemel 2015)');
+    const f = win.VildaBmi.formatuj(win.VildaBmi.ocen({ bmi: 45 / 1.35 ** 2, plec: 'M', wiekMies: 120, zrodlo: 'OLAF', populacja: 'DS' }));
+    expect(f.siatkaNota).toBe(win.VildaBmi.NOTA_DS);
+    expect(win.VildaBmi.formatuj(win.VildaBmi.ocen({ bmi: 17, plec: 'M', wiekMies: 120, zrodlo: 'OLAF' })).siatkaNota).toBe('');
+    // konsumenci: nota przy wyniku BMI, zawsze tym samym zdaniem
+    // Pliki minifikowane trzymaja polskie znaki jako \uXXXX, wiec porownujemy fragmenty bez nich —
+    // inaczej test przechodzilby albo nie w zaleznosci od zapisu, a nie od tresci.
+    const NOTA_POCZ = 'wg siatki dla zespo', NOTA_KON = 'u Downa (Zemel 2015)';
+    for (const [plik, odcisk, drukuje] of [
+      ['vilda_update_prep.js', 'function vildaUpdatePrepNotaSiatki(', true],
+      ['vilda_patient_summary_copy.js', 'Bo&&Bo.siatka==="DS"', true],
+      ['vilda_summary_cards.js', 'Bsi==="DS"', true],
+      // epikryza rozdziela role: UI tylko PRZEKAZUJE siatkę, zdanie składa vilda_epicrisis.js
+      ['vilda_epicrisis_ui.js', 'bmiCategoryKey:Bk,bmiSiatka:Bsi', false],
+      ['vilda_epicrisis.js', 'e.bmiSiatka==="DS"', true],
+      ['vilda_patient_report.js', 'Bm&&Bm.siatka==="DS"', true],
+    ]) {
+      const src = zrodlo(plik);
+      expect(src, `${plik}: rozpoznaje siatkę DS`).toContain(odcisk);
+      if (!drukuje) continue;
+      expect(src, `${plik}: to samo brzmienie noty`).toContain(NOTA_POCZ);
+      expect(src, `${plik}: to samo brzmienie noty`).toContain(NOTA_KON);
+    }
+  });
+
+  it('karta główna: wiersz BMI nazywa siatkę DS i tylko ją', () => {
+    const src = zrodlo('vilda_update_prep.js');
+    const linia = new Function('window', 'formatCentile', 'centylWord', `${funkcjaZ(src, 'vildaUpdatePrepBmiSilnik')}${funkcjaZ(src, 'vildaUpdatePrepFmtSds')}${funkcjaZ(src, 'vildaUpdatePrepNotaSiatki')}${funkcjaZ(src, 'vildaUpdatePrepBuildBmiLine')}return vildaUpdatePrepBuildBmiLine;`)({}, (c) => String(Math.round(c)), () => 'centyl');
+    const stan = { bmiReady: true, bmiText: '22,8', bmi: 22.8, bmiPercentile: 68, bmiZVal: 0.48, proActive: true, age: 10, bmiCat: 'Prawidłowe' };
+    const zDs = linia({ ...stan, bmiSiatka: 'DS' });
+    expect(zDs).toContain('68 centyl');
+    expect(zDs, 'nota po kategorii').toContain('u Downa (Zemel 2015)');
+    expect(linia({ ...stan, bmiSiatka: 'OLAF' }), 'siatka populacyjna bez noty').not.toContain('Downa');
+    expect(linia(stan), 'brak informacji o siatce — bez noty').not.toContain('Downa');
   });
 
   it('cytowanie (decyzja 11): silnik nazywa źródło siatek DS z PMID i DOI', () => {
