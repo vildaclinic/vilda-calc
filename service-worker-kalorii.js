@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.971';
+const SW_VERSION = '1.0.972';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1340,7 +1340,9 @@ const CORE_SHELL_URLS = [
   '/vilda_down_syndrome.js?v=3',
   '/vilda_down_syndrome.js?v=4',
   '/inline_index_05.js?v=4',
+  '/inline_index_05.js?v=5',
   '/inline_docpro_03.js?v=2',
+  '/inline_docpro_03.js?v=3',
   '/vilda_down_syndrome.js',
   '/vilda_down_syndrome.js?v=1',
   '/vilda_anorexia_risk.js',
@@ -2149,18 +2151,21 @@ const OPTIONAL_ASSETS = [
   '/vilda_epicrisis.js?v=20',
   '/vilda_epicrisis.js?v=21',
   '/vilda_epicrisis.js?v=22',
+  '/vilda_epicrisis.js?v=23',
   '/vilda_epicrisis_ui.js?v=16',
   '/vilda_epicrisis_ui.js?v=17',
   '/vilda_epicrisis_ui.js?v=18',
   '/vilda_epicrisis_ui.js?v=19',
   '/vilda_epicrisis_ui.js?v=20',
   '/vilda_epicrisis_ui.js?v=21',
+  '/vilda_epicrisis_ui.js?v=22',
   '/vilda_patient_report.js?v=18',
   '/vilda_patient_report.js?v=19',
   '/vilda_patient_report.js?v=20',
   '/vilda_patient_report.js?v=21',
   '/vilda_patient_report.js?v=22',
   '/vilda_patient_report.js?v=23',
+  '/vilda_patient_report.js?v=24',
   '/vilda_vault.js?v=183',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
@@ -2186,6 +2191,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=438',
   '/vilda_auth_ui.js?v=439',
   '/vilda_auth_ui.js?v=440',
+  '/vilda_auth_ui.js?v=441',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -2198,9 +2204,11 @@ const OPTIONAL_ASSETS = [
   '/app.js?v=214',
   '/app.js?v=215',
   '/app.js?v=216',
+  '/app.js?v=217',
   '/vilda_advanced_growth.js?v=63',
   '/vilda_advanced_growth.js?v=64',
   '/vilda_advanced_growth.js?v=65',
+  '/vilda_advanced_growth.js?v=66',
   '/inline_index_02.js?v=11',
   '/inline_index_02.js?v=12',
   '/vilda_diet_plan_ui.js?v=13',
