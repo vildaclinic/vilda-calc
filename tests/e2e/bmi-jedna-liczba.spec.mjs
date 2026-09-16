@@ -19,6 +19,10 @@ async function openIndex(page) {
         JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
     } catch (_) { /* brak storage — pomiń */ }
   });
+  // Schowek pod kontrolą testu (jak w podsumowanie-opis-schowek): „Kopiuj podsumowanie" ląduje w window.__schowek.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: (t) => { window.__schowek = t; return Promise.resolve(); } }, configurable: true });
+  });
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.update === 'function' && Boolean(window.VildaBmi)
     && typeof window.bmiPercentileChild === 'function' && typeof window.advHistoryResolveMetric === 'function');
@@ -116,4 +120,35 @@ test('granica dorosłości 18 lat na karcie; Cole i mediana przy Palczewskiej z 
   expect(r.silnik.cole).toBeCloseTo(r.oczekiwany, 6);
   expect(r.palBmiStats.sd, 'calcPercentileStatsPal BMI = silnik').toBeCloseTo(r.silnikPal.sds, 9);
   expect(r.palBmiStats.median).toBeCloseTo(r.silnikPal.mediana, 9);
+});
+
+// P-BMI-2 — wyjścia tekstowe na prawdziwej stronie: „Kopiuj podsumowanie" z karty „Podsumowanie
+// wyników" (tryb PRO) mówi liczbami silnika, w formacie decyzji 10 („BMI: 18,3 kg/m² – N centyl
+// (bmiSDS ±x,xx)"), a centyl BMI w schowku jest tym samym centylem, co na karcie głównej.
+// Mini‑podsumowanie paska bocznego żyje tylko w powłoce app.html — jego mapowanie koloru
+// z kategorii silnika pilnuje tests/unit/bmi-wyjscia-tekstowe.test.mjs.
+test('etap 2: „Kopiuj podsumowanie" (PRO) liczbami silnika, format „BMI: … kg/m²", „bmiSDS"', async ({ page }) => {
+  test.setTimeout(120_000);
+  await openIndex(page);
+  await page.evaluate(() => {
+    const pro = document.getElementById('resultsModeToggle');
+    if (pro && !pro.checked) { pro.checked = true; pro.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+  const k = await pacjent(page, { age: 9, months: 3, sex: 'M', weight: 28, height: 123.8, zrodlo: 'OLAF' });
+  expect(k.zrodlo).toBe('OLAF');
+  const r = await page.evaluate(() => {
+    const bmi = 28 / Math.pow(1.238, 2);
+    const o = window.VildaBmi.ocen({ bmi, plec: 'M', wiekMies: 111, zrodlo: 'OLAF' });
+    const c = window.VildaBmi.cole({ bmi, plec: 'M', wiekMies: 111, zrodlo: 'OLAF' });
+    window.__schowek = '';
+    document.getElementById('metabolicSummaryBtn').click();
+    return { centyl: o.centyl, sds: window.VildaBmi.fmtSds(o.sds), cole: c.cole, pro: window.professionalMode };
+  });
+  await page.waitForFunction(() => typeof window.__schowek === 'string' && window.__schowek.includes('BMI'));
+  r.karta = await page.evaluate(() => window.__schowek);
+  expect(r.pro, 'tryb PRO włączony prawdziwym przełącznikiem').toBe(true);
+  expect(r.karta).toContain(`BMI: 18,3 kg/m² – ${Math.round(r.centyl)} centyl (bmiSDS ${r.sds})`);
+  expect(r.karta).toContain(`Wskaźnik Cole’a: ${r.cole.toFixed(1).replace('.', ',')}%`);
+  expect(r.karta, 'centyl BMI karty = centyl karty głównej').toContain(`${Math.round(k.centylKarty)} centyl`);
+  expect(k.centylKarty).toBeCloseTo(r.centyl, 6);
 });

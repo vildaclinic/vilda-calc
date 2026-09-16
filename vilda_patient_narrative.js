@@ -76,7 +76,7 @@
   // P-SDS etap 3 (decyzja 4): „hSDS −1,23" — 2 miejsca, znak, przecinek, jak silnik SDS wzrostu.
   function fmtSds(s) {
     if (typeof s !== 'number' || !isFinite(s)) return '—';
-    var eng = typeof window !== 'undefined' ? window.VildaSdsWzrostu : null;
+    var eng = typeof window !== 'undefined' ? (window.VildaSdsWzrostu || window.VildaBmi) : null;
     if (eng && typeof eng.fmtSds === 'function') return eng.fmtSds(s);
     var t = Math.abs(s).toFixed(2);
     return (parseFloat(t) === 0 ? '' : (s > 0 ? '+' : '−')) + t.replace('.', ',');
@@ -342,7 +342,8 @@
     if (czesci.length) txt += ' ' + czesci.join(' i ');
     if (b && b.last) {
       var kb = kanal(b.last.c);
-      var bmi = fmt(b.last.value, 1) + (kb ? ' (' + kb + ')' : '');
+      // P-BMI-2 (decyzja 10): BMI z jednostka — „BMI 17,3 kg/m²".
+      var bmi = fmt(b.last.value, 1) + ' kg/m²' + (kb ? ' (' + kb + ')' : '');
       txt += czesci.length ? '; BMI wynosi ' + bmi : ' ma BMI ' + bmi;
     }
     return { id: 'stan', tone: 'plain', text: kropka(txt) };
@@ -534,7 +535,7 @@
       id: 'masa',
       tone: m.total.t === 'bad' ? 'bad' : 'warn',
       text: kropka('Od pomiaru w wieku ' + wiekDop(m.first.ageMonths) + ' BMI' + ruch
-        + (dSds != null ? ' (ΔBMI-SDS ' + fmtSds(dSds) + ')' : '')
+        + (dSds != null ? ' (ΔbmiSDS ' + fmtSds(dSds) + ')' : '')
         + konkluzja(m.total.l, 'teraz'))
     };
   }
