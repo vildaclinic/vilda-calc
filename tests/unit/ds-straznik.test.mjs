@@ -485,7 +485,7 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     }
   });
 
-  it('etap 5 (D5): moduł obwodu głowy jest DOKŁADNY na WHO, ale skrót po 7 liniach nie przenosi się na DS', () => {
+  it('D5/P-DS-6: moduł obwodu głowy jest DOKŁADNY na WHO, ale skrót po 7 liniach nie przenosi się na DS', () => {
     // SPROSTOWANIE względem pierwszej wersji tego etapu. Napisałem właścicielowi, że moduł liczy
     // „innym modelem: średnia ± z·SD, a nie łańcuchem LMS". To było NIEPRAWDĄ: WHO publikuje obwód
     // głowy z L = 1 w KAŻDYM wierszu, a wtedy M·(1+z·S) JEST łańcuchem LMS. Moduł idzie jeszcze
@@ -494,7 +494,8 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     //
     // Ale ta dokładność jest właściwością danych, nie kodu. Tablice DS mają L ≈ 1,8–3,9, więc ich
     // linie NIE są liniowe w z i ten sam skrót dałby przybliżenie. Ten test trzyma oba fakty naraz,
-    // żeby P-DS-6 (obwód głowy na siatce DS) nie wpiął tablic DS w istniejącą maszynerię 7 linii.
+    // żeby P-DS-6 (obwód głowy na siatce DS) nie wpiął tablic DS w istniejącą maszynerię 7 linii — i żeby nikt
+    // nie cofnął tego później. Zachowanie sprawdza tests/unit/ds-obwod-glowy.test.mjs.
     const win = oknoZSilnikiem();
     new Function('window', 'globalThis', zrodlo('who_head_data.js'))(win, win);
     const WHO = win.WHO_HEAD_LMS, L = win.VildaDsLMS;
@@ -551,11 +552,15 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
       }
     }
 
-    // zakres na dziś: moduł nadal czyta WHO/IMiD, bez DS — zmiana to P-DS-6, nie cicha poprawka
+    // P-DS-6 to wykorzystał: moduł czyta teraz tablice DS przez JEDYNY czytnik (vildaDsWiersz)
+    // i liczy łańcuchem LMS silnika, a nie skrótem `zc`. Ścieżka WHO/IMiD zostaje dla reszty pacjentów.
     const src = zrodlo('circumference_module.js');
     expect(src).toContain('WHO_HEAD_LMS');
-    expect(src, 'DS w module obwodu głowy dopiero w P-DS-6').not.toContain('VildaDsLMS');
-    expect(Object.keys(L.DZIECKO.HC), 'zestaw DS ma obwód głowy gotowy dla P-DS-6').toEqual(['M', 'F']);
+    expect(src, 'DS przez jedyny czytnik tablic').toContain('f("HC"');
+    expect(src, 'z z łańcucha LMS silnika').toContain('T0.zLms(n,L0)');
+    // Że to NIE jest skrót po liniach, dowodzi pomiar w ds-obwod-glowy.test.mjs — asercja tekstowa
+    // na brak `zc(` w tej gałęzi byłaby atrapą (skrót da się zapisać na dziesiątki sposobów).
+    expect(Object.keys(L.DZIECKO.HC), 'zestaw DS ma obwód głowy').toEqual(['M', 'F']);
   });
 
   it('etap 5: nota siatki brzmi wszędzie tak samo', () => {
