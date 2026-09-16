@@ -361,6 +361,86 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     expect(linia(stan), 'brak informacji o siatce — bez noty').not.toContain('Downa');
   });
 
+  it('etap 4b: silnik SDS wzrostu liczy DS tą samą drogą, co karta modułu — i bez łańcucha zastępczego', () => {
+    const doc = { getElementById: () => null, addEventListener() {} };
+    const win = oknoZSilnikiem({ document: doc, vildaAppOnReady: () => {} });
+    new Function('window', 'globalThis', zrodlo('vilda_sds_wzrostu.js'))(win, win);
+    const L = win.VildaDsLMS;
+    win.VildaSdsWzrostu.ustawDane({
+      LMS_HEIGHT_DS_INFANT_BOYS: L.NIEMOWLE.HT.M, LMS_HEIGHT_DS_INFANT_GIRLS: L.NIEMOWLE.HT.F,
+      LMS_HEIGHT_DS_BOYS: L.DZIECKO.HT.M, LMS_HEIGHT_DS_GIRLS: L.DZIECKO.HT.F,
+    });
+    const modul = modulDs(win, { document: doc });
+    const T = win.VildaSdsWzrostu;
+
+    let maxZ = 0, n = 0;
+    for (const plec of ['M', 'F']) for (let m = 1; m <= 240; m += 3) for (const cm of [50, 65, 80, 100, 120, 140, 155]) {
+      const r = T.policz({ wzrost: cm, plec, wiekMies: m, zrodlo: 'OLAF', populacja: 'DS' });
+      expect(r.siatka, `${plec} ${m} mies.`).toBe('DS');
+      maxZ = Math.max(maxZ, Math.abs(r.sds - modul.zFor(plec, m / 12, 'HT', cm)));
+      n += 1;
+    }
+    expect(n).toBeGreaterThan(1000);
+    expect(maxZ, 'wzrost DS: silnik i karta modułu liczą TĘ SAMĄ liczbę').toBe(0);
+
+    // decyzja D2 — żadnego cichego zejścia na siatkę populacyjną
+    expect(T.kandydaci('OLAF', 120, 'DS')).toEqual(['DS']);
+    for (const [m, fragment] of [[0, 'od 1. miesiąca'], [241, '20 latach']]) {
+      const r = T.policz({ wzrost: 100, plec: 'M', wiekMies: m, zrodlo: 'OLAF', populacja: 'DS' });
+      expect(r.siatka, `${m} mies.`).toBeNull();
+      expect(r.powod, `${m} mies.`).toContain(fragment);
+    }
+    // granica 2 lat jak w karcie modułu: poniżej — długość niemowlęca, od 2 lat — wzrost
+    expect(T.lms('M', 12, 'DS')).toEqual(L.NIEMOWLE.HT.M['12']);
+    expect(T.lms('M', 120, 'DS')).toEqual(L.DZIECKO.HT.M['120']);
+    // resolver działa tak samo, jak w silniku BMI
+    win.VildaPopulacjaPacjenta = () => 'DS';
+    expect(T.policz({ wzrost: 120, plec: 'M', wiekMies: 120, zrodlo: 'OLAF' }).siatka).toBe('DS');
+    expect(T.policz({ wzrost: 120, plec: 'M', wiekMies: 120, zrodlo: 'OLAF', populacja: 'OGOLNA' }).siatka).not.toBe('DS');
+    expect(T.mediana('M', 120, 'OLAF').siatka).toBe('DS');
+    delete win.VildaPopulacjaPacjenta;
+  });
+
+  it('etap 4b: masa i masa do długości w rdzeniu app.js biorą wiersz z tego samego zestawu DS', () => {
+    const win = oknoZSilnikiem();
+    const kod = `${funkcjaZ(appSrc, 'vildaDsTablica')}${funkcjaZ(appSrc, 'vildaPopulacjaDs')}${funkcjaZ(appSrc, 'vildaDsWiersz')}return { wiersz: vildaDsWiersz, ds: vildaPopulacjaDs };`;
+    const rdzen = new Function('window', kod)(win);
+    const L = win.VildaDsLMS;
+    expect(rdzen.ds(), 'bez resolvera — populacja ogólna').toBe(false);
+    win.VildaPopulacjaPacjenta = () => 'DS';
+    expect(rdzen.ds()).toBe(true);
+    expect(rdzen.wiersz('WT', 'M', 120)).toEqual(L.DZIECKO.WT.M['120']);
+    expect(rdzen.wiersz('WT', 'F', 12)).toEqual(L.NIEMOWLE.WT.F['12']);
+    expect(rdzen.wiersz('WT', 'M', 241), 'poza zakresem siatki DS brak wiersza').toBeNull();
+    expect(rdzen.wiersz('HC', 'M', 24)).toEqual(L.DZIECKO.HC.M['24']);
+    delete win.VildaPopulacjaPacjenta;
+    // rdzeń nie ma własnej kopii wzoru ani własnego interpolatora dla DS
+    expect(appSrc).toContain('T.interpoluj(tab,Math.max(');
+    expect(appSrc).toContain('if(vildaPopulacjaDs()){const Td=vildaDsWiersz(');
+    expect(appSrc, 'masa do długości też idzie na tablice DS').toContain('L.WFL?L.WFL[e==="M"?"M":"F"]:null');
+    expect(appSrc, 'wynik masy niesie nazwę siatki').toContain('siatka:vildaPopulacjaDs()?"DS":null');
+  });
+
+  it('etap 4b: wsad XLSX wypisuje się z ambientnej populacji także przy wzroście', () => {
+    const wsad = zrodlo('vilda_professional_module.js');
+    expect(wsad).toContain('zrodlo:zz,populacja:"OGOLNA"});if(q&&typeof q.sds');
+    expect((wsad.match(/populacja:"OGOLNA"/g) || []).length, 'BMI i wzrost — oba wypisane').toBe(2);
+  });
+
+  it('etap 4b (decyzja D4): masa i wzrost też nazywają siatkę DS w karcie głównej i wyjściach', () => {
+    for (const [plik, odciski] of [
+      ['vilda_update_prep.js', ['vildaUpdatePrepNotaSiatki(a.siatka)']],
+      ['vilda_patient_summary_copy.js', ['s&&s.siatka==="DS"', 'v&&v.siatka==="DS"']],
+      ['vilda_summary_cards.js', ['g&&g.siatka==="DS"', '_&&_.siatka==="DS"']],
+    ]) {
+      const src = zrodlo(plik);
+      for (const o of odciski) expect(src, `${plik}: ${o}`).toContain(o);
+    }
+    // karta główna: nota przy masie i przy wzroście, nie tylko przy BMI
+    const src = zrodlo('vilda_update_prep.js');
+    expect((src.match(/vildaUpdatePrepNotaSiatki\(a\.siatka\)/g) || []).length, 'masa i wzrost').toBe(2);
+  });
+
   it('cytowanie (decyzja 11): silnik nazywa źródło siatek DS z PMID i DOI', () => {
     const s = zrodlo('vilda_bmi.js');
     expect(s).toContain('PMID 26504127');

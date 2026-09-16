@@ -91,7 +91,7 @@ function silnik(dobAge) {
     ${funkcja('normalCDF')}
     ${funkcja('lmsNiemowleWiek')}
     ${funkcja('lmsNiemowle')}
-    ${funkcja('getChildLMS')}
+    ${funkcja('vildaDsTablica')}${funkcja('vildaPopulacjaDs')}${funkcja('vildaDsWiersz')}${funkcja('getChildLMS')}
     ${funkcja('calcPercentileStats')}
     return { getChildLMS, calcPercentileStats, lmsNiemowle };
   `;

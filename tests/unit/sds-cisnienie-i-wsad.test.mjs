@@ -90,7 +90,8 @@ describe('Moduł nadciśnienia (hypertension_therapy.js)', () => {
 describe('Wsad XLSX (vilda_professional_module.js)', () => {
   it('SDS wzrostu wiersza liczy silnik z dokładnym wiekiem wiersza i źródłem wsadu (także WHO), bez przecieku wieku z formularza', () => {
     const src = zrodlo('vilda_professional_module.js');
-    expect(src).toContain('const q=Ts.policz({wzrost:hh,plec:pp,wiekMies:yy*12,zrodlo:zz})');
+    expect(src, 'P-DS-4b: wsad liczy dla wierszy arkusza, nie dla wczytanego pacjenta')
+      .toContain('const q=Ts.policz({wzrost:hh,plec:pp,wiekMies:yy*12,zrodlo:zz,populacja:"OGOLNA"})');
     expect(src).toContain('Ne=Zw(ae,r,re,"PALCZEWSKA");');
     expect(src).toContain('Ne=Zw(ae,r,re,t);');
     expect(src, 'masa nadal przez rdzeń (poza zakresem planu)').toContain('const y=calcPercentileStats(P,r,re,"WT");We=y?y.sd:null;');
