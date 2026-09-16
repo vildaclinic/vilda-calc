@@ -151,4 +151,13 @@ test('etap 2: „Kopiuj podsumowanie" (PRO) liczbami silnika, format „BMI: …
   expect(r.karta).toContain(`Wskaźnik Cole’a: ${r.cole.toFixed(1).replace('.', ',')}%`);
   expect(r.karta, 'centyl BMI karty = centyl karty głównej').toContain(`${Math.round(k.centylKarty)} centyl`);
   expect(k.centylKarty).toBeCloseTo(r.centyl, 6);
+  // P-WSDS: masa mówi „wSDS" jak wzrost „hSDS" i BMI „bmiSDS" — w schowku i na karcie głównej.
+  expect(r.karta).toMatch(/Waga:[^\n]*\(wSDS [−+]?\d,\d\d\)/);
+  expect(r.karta).toMatch(/Wzrost:[^\n]*\(hSDS [−+]?\d,\d\d\)/);
+  expect(r.karta, 'koniec „Z‑score" przy masie').not.toMatch(/Waga:[^\n]*Z.score/);
+  // Liczba na karcie dolicza się animacją (animateValue w app.js), więc czekamy na wartość ustaloną.
+  await expect.poll(
+    () => page.evaluate(() => (document.getElementById('bmiResult') || {}).textContent || ''),
+    { timeout: 10_000, message: 'karta główna: jednostka i bmiSDS (decyzja 10)' },
+  ).toMatch(/BMI: 18,3 kg\/m² – \d+ centyl \(bmiSDS [−+]?\d,\d\d\)/);
 });

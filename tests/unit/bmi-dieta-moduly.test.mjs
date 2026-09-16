@@ -188,6 +188,6 @@ describe('Wsad XLSX (vilda_professional_module.js) — BMI-SDS ze źródłem wsa
     expect(src).toContain('Ae=Zb(Je,r,Ce,"PALCZEWSKA")}else{');
     expect(src, 'P-BMI-5: bez zapasowego bmiZscore').not.toContain('bmiZscore(');
     expect(src).toContain('dpK=ue(M[0],U,["data pomiaru","datapomiaru","data badania","data wizyty","pomiaru"])');
-    expect(src).toContain('re=((dpD&&dpD.getTime()>p.getTime()?dpD:new Date()).getTime()-p.getTime())/(365.25*24*3600*1e3)');
+    expect(src).toContain('dpOk=!!(dpD&&dpD.getTime()>p.getTime()),re=((dpOk?dpD:new Date()).getTime()-p.getTime())/(365.25*24*3600*1e3)');
   });
 });

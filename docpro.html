@@ -213,7 +213,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="obesity_response_criteria.js?v=2"></script>
 <script defer src="gh_therapy_segments.js?v=4"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
-<script defer src="vilda_patient_summary_copy.js?v=9"></script>
+<script defer src="vilda_patient_summary_copy.js?v=10"></script>
 <script defer src="vilda_auth_ui.js?v=439"></script>
 <script defer src="vilda_name_fix.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
@@ -265,14 +265,14 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_b64_checklist_ui.js?v=2"></script>
 <script defer src="vilda_perinatal_source.js?v=1"></script>
 <script defer src="vilda_sga_catchup.js?v=2"></script>
-<script defer src="vilda_patient_narrative.js?v=11"></script>
+<script defer src="vilda_patient_narrative.js?v=12"></script>
 <script defer src="vilda_patient_narrative_ui.js?v=8"></script>
 <script defer src="vilda_advanced_growth.js?v=65"></script>
 <script defer src="vilda_growth_method_ledger.js?v=1"></script>
 <script defer src="vilda_growth_prediction_validation_model.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=12"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=78" defer></script>
+<script src="vilda_update_prep.js?v=79" defer></script>
 
 <script defer src="inline_docpro_00.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -3469,6 +3469,10 @@ html.vilda-pro-active   #proGateBanner { display: none; }
       demonstrujące prawidłowy układ kolumn wymagany przez aplikację.  Kolumny powinny
       nosić nazwy: „Lp.” lub „Pacjent” (numer porządkowy lub imię i nazwisko),
       „Płeć” (M/K), „Data urodzenia” (w formacie YYYY‑MM‑DD), „waga (kg)” oraz „wzrost (cm)”.
+      Kolumna „Data pomiaru” jest OPCJONALNA: gdy jest, wiek każdego wiersza liczy się na dzień
+      pomiaru (a nie na dziś), więc stare arkusze nie zmieniają wyników.  Rozpoznawane nagłówki
+      tej kolumny: „data pomiaru”, „data badania”, „data wizyty”.  Wynik zawiera kolumnę
+      „Wiek_lata” — wiek użyty do centyli.
     -->
     <!-- Instrukcja dla użytkownika korzystającego z kalkulatora Z‑score (batch).
          Aby była bardziej zrozumiała, dzielimy ją na dwa zdania i zwiększamy
@@ -3476,7 +3480,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
          wizualnie od pozostałych elementów formularza. -->
     <p style="text-align:center; font-size:1.15rem; margin-top:0.8rem; line-height:1.4;">
       Przygotuj arkusz Excel (.xlsx) z kolumnami: imię i nazwisko (lub numer porządkowy), płeć (M/K),
-      data urodzenia, waga (kg) i wzrost (cm).<br>
+      data urodzenia, waga (kg) i wzrost (cm). Możesz dodać kolumnę „Data pomiaru” — wtedy wiek
+      każdego wiersza liczy się na dzień pomiaru, a bez niej na dziś.<br>
       Upewnij się, że liczba wierszy nie przekracza 250. Następnie wybierz odpowiedni zestaw
       danych (Palczewska lub OLAF) i kliknij „Oblicz Z‑score”.
     </p>
@@ -4058,15 +4063,15 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      dopiero przy pierwszym uruchomieniu tej akcji — patrz vildaEnsureXlsxLibrary()
      w vilda_professional_module.js (cdn.sheetjs.com xlsx-0.20.3; aktualizacja 2026-06-14 z 0.18.5 — CVE). -->
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
-<script defer src="vilda_professional_module.js?v=8"></script>
+<script defer src="vilda_professional_module.js?v=9"></script>
 <script defer src="vilda_persist_runtime.js?v=15"></script>
-<script defer src="vilda_summary_cards.js?v=37"></script>
+<script defer src="vilda_summary_cards.js?v=38"></script>
 <script defer src="vilda_diet_plan_ui.js?v=18"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=212" defer></script>
+<script src="app.js?v=213" defer></script>
 <script src="vilda_diet_recommendations.js?v=28" defer></script>
 <script src="vilda_patient_report.js?v=22" defer></script>
 <!-- po app.js -->

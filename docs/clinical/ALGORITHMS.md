@@ -1100,6 +1100,28 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-WSDS — „wSDS" dla masy i opcjonalna kolumna „Data pomiaru" w szablonie wsadu XLSX (SW 1.0.965, 2026-09-16, zlecenie właściciela po zamknięciu planu P-BMI)
+
+Dwie sprawy zostawione jako otwarte w P-BMI-4 i P-BMI-5.
+
+**1. Jeden zapis SDS dla trzech miar.** Wzrost mówił „hSDS −1,23" (P-SDS-2), BMI „bmiSDS +1,20" (P-BMI-2), a masa jako jedyna zostawała przy „(Z‑score = -0,25)" — inna nazwa tej samej wielkości, minus ASCII zamiast typograficznego i brak plusa przy dodatnich. Odtąd **masa mówi „wSDS"** tym samym formaterem (`VildaSdsWzrostu.fmtSds`: dwa miejsca, znak, przecinek):
+- karta główna `vilda_update_prep.js` (?v 78 → 79): wiersz masy „(wSDS −0,25)", wiersz BMI „(bmiSDS +1,20)" zamiast „Z‑score" i — domknięcie **decyzji 10**, którą P-BMI-2 zostawił na karcie — **jednostka „kg/m²"** przy wartości BMI („BMI: 17,3 kg/m² – 89 centyl (bmiSDS +1,20) (Prawidłowe)"; audyt, znalezisko 17). Jeden formater `vildaUpdatePrepFmtSds` obsługuje trzy miary, więc hSDS nie ma już własnej kopii warunku.
+- karta „Podsumowanie wyników" i „Kopiuj podsumowanie" (`vilda_summary_cards.js` ?v 37 → 38), schowek Karty pacjenta (`vilda_patient_summary_copy.js` ?v 9 → 10) — wiersz „Waga: 40 centyl (wSDS −0,25)".
+- epikryza (`vilda_epicrisis.js` ?v 20 → 21): badanie przedmiotowe „masa ciała 28 kg (40. centyl, wSDS −0,25)", a przy niedoborze „2,4 kg poniżej 3. centyla, wSDS −2,60" — dokładnie jak wzrost z hSDS.
+- opis pacjenta (`vilda_patient_narrative.js` ?v 11 → 12): „waży 22,5 kg (25.–50. c., wSDS −0,20)".
+- analiza punktu pomiarowego w raporcie zaawansowanym (`app.js` ?v 212 → 213, `advHistorySdsLabel`): „wSDS", „hSDS", „bmiSDS" wg miary.
+
+**Pozostałe miary zostają przy „Z-score"** — obwody głowy i klatki, masa do wysokości, ciśnienie i tętno mają własne siatki i własne decyzje; ta zmiana ich nie dotyka. Liczby nie drgnęły: zmienia się wyłącznie nazwa i zapis (znak, minus typograficzny).
+
+**2. Kolumna „Data pomiaru" w szablonie wsadu XLSX** (`vilda_professional_module.js` ?v 8 → 9, `docpro.html`, oba przykładowe arkusze). Od P-BMI-4 moduł potrafił liczyć wiek wiersza na datę pomiaru, ale szablon i instrukcja o tym nie mówiły, więc funkcja była niewidoczna. Odtąd:
+- **oba szablony do pobrania** (`zscore_przyklad_palczewska.xlsx`, `zscore_przyklad_olaf.xlsx`) mają siódmą kolumnę **„Data pomiaru"** wypełnioną w każdym wierszu (dwie różne daty — kolumna jest per wiersz, nie per plik);
+- instrukcja w karcie „Kalkulator Z‑score (batch)" nazywa kolumnę i jej działanie: z nią wiek liczy się na dzień pomiaru, bez niej — na dziś (stare arkusze dają te same liczby, co dotąd);
+- komunikat o brakujących kolumnach dopowiada, że kolumna jest opcjonalna;
+- **wynik wsadu niesie kolumnę `Wiek_lata`** — wiek użyty do centyli, żeby lekarz widział, czy policzono na datę pomiaru, czy na dziś; data pomiaru wraca w wyniku jako tekst, tak jak data urodzenia (Excel nie przerabia jej na liczbę).
+Rozpoznawane nagłówki: „data pomiaru", „data badania", „data wizyty" (dopasowanie po fragmencie, wielkość liter bez znaczenia). Kolumna daty urodzenia jest szukana **z pominięciem** kolumny pomiaru, więc generyczne „data" jej nie przechwytuje. Data pomiaru wcześniejsza niż urodzenia jest ignorowana (wiek liczy się na dziś).
+
+*Strażnicy:* `tests/unit/wsad-data-pomiaru-i-wsds.test.mjs` (9: oba arkusze czytane naprawdę przez JSZip — nagłówek, data w każdym wierszu, data po urodzeniu, zakres A1:G6; instrukcja i linki w DocPro; rozpoznawanie nagłówków i wiek na datę pomiaru w module; prawdziwe wiersze karty głównej dla masy, wzrostu i BMI; prawdziwa epikryza; formatery schowka i podsumowania; opis pacjenta; `advHistorySdsLabel` dla pięciu miar z prawdziwymi formaterami silników i bez nich). Zaktualizowane pod nowy zapis: `sds-konsumenci-rdzenia` (dwa miejsca), `bmi-dieta-moduly` (strażnik źródła wsadu). `tests/e2e/bmi-jedna-liczba.spec.mjs` sprawdza na żywej stronie wiersz „Waga: … (wSDS …)" w schowku i „BMI: 18,3 kg/m² – N centyl (bmiSDS …)" na karcie głównej. `SW_VERSION` 1.0.965 (przykładowe arkusze są w precache bez `?v=`, więc odświeża je nazwa cache'u zależna od SW_VERSION).
+
 ### P-BMI-5 — sprzątanie i strażnik: koniec zapasowych kopii wzoru i progów dla BMI, martwe funkcje usunięte, cytowania i kotwice tablic (SW 1.0.964, 2026-09-16)
 
 Ostatni etap planu P-BMI (audyt `docs/clinical/AUDYT-BMI.md`). Po etapach 1–4 BMI liczy wyłącznie `vilda_bmi.js`; ten etap usuwa ścieżki „zapasowe bez silnika", które od etapu 1 były martwe na każdej stronie z `app.js`, a bez strażnika mogłyby po cichu odżyć (jak P-SDS-5 dla wzrostu).

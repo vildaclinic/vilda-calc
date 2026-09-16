@@ -334,8 +334,12 @@
       czesci.push('mierzy ' + fmt(h.last.value, 0) + ' cm' + (w2.length ? ' (' + w2.join(', ') + ')' : ''));
     }
     if (wt && wt.last) {
+      // P-WSDS: masa mowi wSDS tak samo, jak wzrost hSDS i BMI bmiSDS.
+      var w3 = [];
       var kw = kanal(wt.last.c);
-      czesci.push('waży ' + fmt(wt.last.value, 1) + ' kg' + (kw ? ' (' + kw + ')' : ''));
+      if (kw) w3.push(kw);
+      if (wt.last.sd != null) w3.push('wSDS ' + fmtSds(wt.last.sd));
+      czesci.push('waży ' + fmt(wt.last.value, 1) + ' kg' + (w3.length ? ' (' + w3.join(', ') + ')' : ''));
     }
     var tyg = extra && typeof extra.ageWeeks === 'number' ? extra.ageWeeks : null;
     var txt = 'W wieku ' + wiekDopTyg(ost.ageMonths, tyg) + ' ' + o.kto;
