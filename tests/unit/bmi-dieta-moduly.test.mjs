@@ -150,7 +150,7 @@ describe('Żywienie — mikroskładniki (nutrition_micros.js): klasa BMI z jedne
     expect(Gn({ ageMonths: 240, bmi: 24.9 })).toBe('normal');
     expect(Gn({ ageMonths: 216, bmi: 18.4 })).toBe('underweight');
     const bez = new Function('window', `${funkcjaZ(src, 'Gn')}return Gn;`)({});
-    expect(bez({ ageMonths: 120, bmi: 14, bmiPercentile: 4 }), 'zapas bez silnika: stary próg 3').toBe('normal');
+    expect(bez({ ageMonths: 120, bmi: 14, bmiPercentile: 4 }), 'P-BMI-5: bez silnika brak klasy (koniec zapasowych progów)').toBe('unknown');
   });
   it('Jn: centyl BMI z policz() na źródle rekordu, bez podmiany bmiSource', () => {
     expect(src).toContain('const rb=Tb.policz({bmi:a,plec:t,wiekMies:n,zrodlo:i||');
@@ -175,7 +175,8 @@ describe('Anoreksja (vilda_anorexia_risk.js) i nadciśnienie (hypertension_thera
     expect(r.source).toBe('WHO');
     expect(r.percentile).toBeCloseTo(who.centyl, 9);
     expect(Math.abs(r.percentile - pal.centyl), 'to nie jest już zawsze Palczewska').toBeGreaterThan(0.01);
-    expect(src).toContain('P<97?g="Nadwaga":g="Oty\\u0142o\\u015B\\u0107"');
+    expect(src, 'P-BMI-5: kategoria wyłącznie z bmiCategoryChildExact (silnik), bez literałów progów').toContain('typeof bmiCategoryChildExact=="function"&&P!=null&&(g=bmiCategoryChildExact(P));');
+    expect(src).not.toMatch(/P<9[57]\?g=/);
     expect(src).toContain('${i.bmi.toFixed(1).replace(".",",")} kg/m\\xB2');
   });
 });
@@ -183,8 +184,9 @@ describe('Anoreksja (vilda_anorexia_risk.js) i nadciśnienie (hypertension_thera
 describe('Wsad XLSX (vilda_professional_module.js) — BMI-SDS ze źródłem wsadu i wiekiem na datę pomiaru', () => {
   it('strażnik źródła: Zb ze źródłem wiersza (WHO honorowane), kolumna „data pomiaru" liczona do wieku', () => {
     const src = zrodlo('vilda_professional_module.js');
-    expect(src).toContain('Ae=Zb(Je,r,Ce,t);Ae==null&&(Ae=bmiZscore(Je,r,Ce))');
-    expect(src).toContain('Ae=Zb(Je,r,Ce,"PALCZEWSKA")');
+    expect(src).toContain('Ae=Zb(Je,r,Ce,t)}finally{bmiSource=x}');
+    expect(src).toContain('Ae=Zb(Je,r,Ce,"PALCZEWSKA")}else{');
+    expect(src, 'P-BMI-5: bez zapasowego bmiZscore').not.toContain('bmiZscore(');
     expect(src).toContain('dpK=ue(M[0],U,["data pomiaru","datapomiaru","data badania","data wizyty","pomiaru"])');
     expect(src).toContain('re=((dpD&&dpD.getTime()>p.getTime()?dpD:new Date()).getTime()-p.getTime())/(365.25*24*3600*1e3)');
   });

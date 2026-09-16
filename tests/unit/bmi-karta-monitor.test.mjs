@@ -149,7 +149,7 @@ describe('Kafelki, dymek siatki i oś czasu Karty — strażnicy źródła i kol
     expect(toneCent('bmi', 88)).toBe('warn');
     expect(toneCent('bmi', 98)).toBe('danger');
     const bez = new Function('window', `${funkcjaZ(karta, 'toneCent')}return toneCent;`)({});
-    expect(bez('bmi', 4), 'zapas bez silnika: dotychczasowe 5 c').toBe('warn');
+    expect(bez('bmi', 4), 'P-BMI-5: bez silnika brak tonu (koniec zapasowych progów)').toBeNull();
     expect(toneCent('height', 2), 'wzrost bez zmian').toBe('danger');
   });
 });

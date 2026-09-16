@@ -106,7 +106,7 @@ describe('Schowek Karty pacjenta (vilda_patient_summary_copy.js) — BMI z silni
     expect(l2.find((s) => s.startsWith('BMI:'))).toContain(`– ${Math.round(r2.centyl)} centyl (bmiSDS`);
   });
 
-  it('bez silnika stara droga zostaje (fallback), z jednostką w wierszu', () => {
+  it('bez silnika wiersz BMI ma tylko wartość z jednostką — żadnej zapasowej kopii wzoru (P-BMI-5)', () => {
     const doc = stubDocument();
     globalThis.document = doc;
     const win = {
@@ -117,7 +117,9 @@ describe('Schowek Karty pacjenta (vilda_patient_summary_copy.js) — BMI z silni
     };
     loadBrowserScript('vilda_patient_summary_copy.js', win);
     const txt = win.VildaPatientSummaryCopy.buildSummaryTextFromPayload({ user: { sex: 'M', age: 9, ageMonths: 0, weight: 28, height: 123.8 } }, {});
-    expect(String(txt).split('\n').map((s) => s.trim()).find((s) => s.startsWith('BMI:'))).toBe('BMI: 18,3 kg/m² – 61 centyl (Z‑score = 0,28)');
+    const l = String(txt).split('\n').map((s) => s.trim());
+    expect(l.find((s) => s.startsWith('BMI:'))).toBe('BMI: 18,3 kg/m²');
+    expect(l.find((s) => s.startsWith('Wskaźnik Cole’a:'))).toBeUndefined();
   });
 });
 
@@ -174,21 +176,21 @@ describe('Raport PDF (vilda_patient_report.js) — opis BMI i klasa Cole’a', (
     expect(f.patientReportDescribeBmi('Otyłość olbrzymia')).toBe('BMI wyraźnie powyżej typowego zakresu');
     expect(f.patientReportDescribeBmi('Otyłość I stopnia')).toBe('BMI wyraźnie powyżej typowego zakresu');
   });
-  it('klasa Cole’a z kategoriaCole silnika daje te same progi co dotąd (90 / 110 / 120), bez silnika — te same literały', () => {
+  it('klasa Cole’a z kategoriaCole silnika: progi 90 / 110 / 120; bez silnika „Brak danych" (P-BMI-5: koniec literałów)', () => {
     const zS = fn(oknoZSilnikiem()), bez = fn({});
-    for (const c of [70, 89.9, 90, 100, 110, 110.1, 119.9, 120, 150]) {
-      expect(zS.patientReportClassifyCole(c).category, `Cole ${c}`).toBe(bez.patientReportClassifyCole(c).category);
-      expect(zS.patientReportClassifyCole(c).tone).toBe(bez.patientReportClassifyCole(c).tone);
-    }
     expect(zS.patientReportClassifyCole(89.9).category).toBe('Niedowaga');
+    expect(zS.patientReportClassifyCole(90).category).toBe('W normie');
     expect(zS.patientReportClassifyCole(110).category).toBe('W normie');
     expect(zS.patientReportClassifyCole(110.1).category).toBe('Nadwaga');
+    expect(zS.patientReportClassifyCole(119.9).category).toBe('Nadwaga');
     expect(zS.patientReportClassifyCole(120).category).toBe('Otyłość');
+    expect(zS.patientReportClassifyCole(120).tone).toBe('danger');
+    for (const c of [70, 100, 115, 150]) expect(bez.patientReportClassifyCole(c).category, `Cole ${c} bez silnika`).toBe('Brak danych');
   });
   it('karta BMI raportu liczy jeden wynik ocen() (wiek ułamkowy, źródło preferowane); Cole i mediana z silnika', () => {
     expect(src).toContain('Bm=l&&typeof n=="number"&&isFinite(n)&&patientReportBmiSilnik()?patientReportBmiSilnik().ocen({bmi:n,plec:t,wiekMies:e*12,zrodlo:r})');
     expect(src).toContain('C0=T0?T0.cole({bmi:e.bmi,plec:e.sex,wiekMies:e.ageYears*12,zrodlo:t})');
-    expect(src).toContain('if(e==="BMI"){const T0=patientReportBmiSilnik();if(T0){const m=T0.mediana(t,i*12,r)');
+    expect(src).toContain('if(e==="BMI"){const T0=patientReportBmiSilnik(),m=T0?T0.mediana(t,i*12,r):null;');
     expect(src, 'kolor karty z kategorii silnika (niedowaga <3 c = alarm)').toContain('Bm.kategoria.kolor==="alert"?"danger":Bm.kategoria.kolor==="improve"?"warn":"normal"');
   });
 });
