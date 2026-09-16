@@ -29,7 +29,7 @@ function czytaj(wzgledna) {
 }
 
 /* Tokeny `plik?v=N` ze wszystkich stron. Łapiemy oba rodzaje cudzysłowów, bo część stron
- * dokłada skrypty z wnętrza `<script>` (np. `var SRC_MICROS = 'nutrition_micros.js?v=26'`). */
+ * dokłada skrypty z wnętrza `<script>` (np. `var SRC_MICROS = 'nutrition_micros.js?v=27'`). */
 function tokenyStron() {
   const out = [];
   for (const strona of HTML) {
