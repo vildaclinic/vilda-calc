@@ -1,15 +1,17 @@
 /* Panel „Dojrzewanie płciowe" w formularzu głównym — ujawnianie i kontrola spójności.
  *
  * Panel jest jedynym miejscem wpisu danych pokwitaniowych (decyzja właściciela 2026-09-09);
- * reszta aplikacji czyta je przez vilda_pubertal_status.js. Pole pokazuje się samo, gdy
- * którakolwiek wartość jest już wpisana — po wczytaniu rekordu albo autozapisie.
+ * reszta aplikacji czyta je przez vilda_pubertal_status.js. Ten sam skrypt obsługuje panel
+ * na index.html i docpro.html (P-TOZSAMOSC, 2026-09-15).
+ *
+ * P-PANEL-ZWINIETY (decyzja właściciela 2026-09-16): panel jest DOMYŚLNIE ZWINIĘTY — także
+ * wtedy, gdy pola niosą wartości (wczytany pacjent obiema drogami „Nowy pomiar" i „Odtwórz
+ * zapisany stan", autozapis, odtworzenie sesji). Otwiera go wyłącznie lekarz przyciskiem.
+ * Żeby wartości nie były niewidoczne bez śladu, przycisk zwiniętego panelu z danymi mówi
+ * „+ Dane pokwitaniowe (wpisane)". Do 2026-09-16 panel otwierał się sam przy każdej wartości.
  */
 (function () {
   var otwarty = false;
-  // Panel odsłania się SAM, gdy rekord albo autozapis przyniósł jakąkolwiek wartość — ale
-  // tylko dopóki lekarz sam o tym nie zdecydował. Bez tej pamięci sekcji nie dawało się
-  // zwinąć: każde odświeżenie widoczności otwierało ją z powrotem, bo pole było wypełnione.
-  var decyzjaUzytkownika = false;
   var wrap = document.getElementById('tannerStageWrap');
   var extra = document.getElementById('pubertyExtraWrap');
   // Objętość jąder mieszka w panelu od SW 1.0.876 (decyzja właściciela): stan na dziś,
@@ -119,28 +121,28 @@
   }
 
   window.updateTannerVisibility = function () {
-    if (!decyzjaUzytkownika && cokolwiekWpisane()) otwarty = true;
+    // Stan otwarcia zmienia tylko lekarz (przycisk) albo „Wyczyść" — wartości w polach
+    // nie otwierają panelu (P-PANEL-ZWINIETY). Odświeżenie tylko rysuje bieżący stan.
     wrap.style.display = otwarty ? '' : 'none';
     if (extra) extra.style.display = otwarty ? '' : 'none';
     if (jadraWrap) jadraWrap.style.display = otwarty ? '' : 'none';
     pokazJadraWgPlci();
     btn.style.display = '';
-    btn.textContent = otwarty ? '− Dane pokwitaniowe' : '+ Dane pokwitaniowe';
+    btn.textContent = otwarty
+      ? '− Dane pokwitaniowe'
+      : (cokolwiekWpisane() ? '+ Dane pokwitaniowe (wpisane)' : '+ Dane pokwitaniowe');
     pokazWiekGnrha();
     pokazSprzecznosci();
   };
 
   /* Zwinięcie na żądanie — „Wyczyść wszystkie pola" ma zostawić formularz w stanie
-   * wyjściowym, a więc także z zamkniętym panelem. Kasujemy przy tym pamięć decyzji
-   * lekarza: po wyczyszczeniu nie ma czego pamiętać. */
+   * wyjściowym, a więc także z zamkniętym panelem. */
   window.vildaZwinDanePokwitaniowe = function () {
-    decyzjaUzytkownika = false;
     otwarty = false;
     window.updateTannerVisibility();
   };
 
   btn.addEventListener('click', function () {
-    decyzjaUzytkownika = true;
     otwarty = !otwarty;
     window.updateTannerVisibility();
     if (otwarty) {

@@ -86,14 +86,21 @@ test.describe('Panel jest jednym miejscem wpisu', () => {
       .toBeLessThan(2);
   });
 
-  test('panel otwiera się sam, gdy rekord niesie dane pokwitaniowe', async ({ page }) => {
+  test('panel z danymi zostaje zwinięty, a przycisk mówi, że są wpisane (P-PANEL-ZWINIETY)', async ({ page }) => {
+    // Do 2026-09-16 panel otwierał się sam przy każdej wartości; właściciel zdecydował, że ma być
+    // domyślnie zwinięty także z danymi — otwiera go tylko lekarz.
     await otworz(page);
     await page.evaluate(() => {
       document.getElementById('pubertyOnsetAge').value = '10.5';
       window.updateTannerVisibility();
     });
+    await expect(page.locator('#pubertyOnsetAge')).toBeHidden();
+    const przycisk = page.getByRole('button', { name: '+ Dane pokwitaniowe (wpisane)', exact: true });
+    await expect(przycisk).toBeVisible();
+    await przycisk.click();
     await expect(page.locator('#pubertyOnsetAge')).toBeVisible();
-    await expect(page.getByRole('button', { name: '− Dane pokwitaniowe' })).toBeVisible();
+    await expect(page.locator('#pubertyOnsetAge')).toHaveValue('10.5');
+    await expect(page.getByRole('button', { name: '− Dane pokwitaniowe', exact: true })).toBeVisible();
   });
 });
 
@@ -342,15 +349,19 @@ test.describe('Objętość jąder mieszka w panelu, nie w karcie zaawansowanej',
     await expect(page.locator('#advTesticularVolume')).toBeVisible();
   });
 
-  test('rekord z objętością jąder otwiera panel, a wartość nadal wchodzi do rekordu (KOWD)', async ({ page }) => {
+  test('rekord z objętością jąder nie otwiera panelu (zostaje zwinięty), a wartość nadal wchodzi do rekordu (KOWD)', async ({ page }) => {
     await otworz(page);
     await expect(page.locator('#advTesticularVolume')).toBeHidden();
     await page.evaluate(() => window.applyLoadedData({
       user: { age: 13, sex: 'M', height: 150, weight: 40 },
       advanced: { testicularVolume: '4to6' },
     }));
-    await expect(page.locator('#advTesticularVolume')).toBeVisible();
+    // P-PANEL-ZWINIETY (2026-09-16): wczytany rekord nie odsłania panelu; wartość jest w polu i w rekordzie.
+    await expect(page.locator('#advTesticularVolume')).toBeHidden();
+    await expect(page.getByRole('button', { name: '+ Dane pokwitaniowe (wpisane)', exact: true })).toBeVisible();
     await expect(page.locator('#advTesticularVolume')).toHaveValue('4to6');
     expect(await page.evaluate(() => window.collectUserData().advanced.testicularVolume)).toBe('4to6');
+    await page.getByRole('button', { name: '+ Dane pokwitaniowe (wpisane)', exact: true }).click();
+    await expect(page.locator('#advTesticularVolume')).toBeVisible();
   });
 });

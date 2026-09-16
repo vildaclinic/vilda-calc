@@ -507,8 +507,9 @@ describe('Czyszczenie formularza', () => {
     expect(io).toContain('vildaZwinDanePokwitaniowe');
     const inline = fs.readFileSync(path.join(korzen, 'inline_index_02.js'), 'utf8');
     expect(inline).toContain('window.vildaZwinDanePokwitaniowe');
-    expect(inline, 'zwinięcie kasuje też pamięć decyzji lekarza')
-      .toMatch(/vildaZwinDanePokwitaniowe = function \(\) \{\s*decyzjaUzytkownika = false;/);
+    // P-PANEL-ZWINIETY (2026-09-16): panel nie pamięta już decyzji lekarza — zwinięcie to po prostu otwarty = false.
+    expect(inline, 'zwinięcie zamyka panel')
+      .toMatch(/vildaZwinDanePokwitaniowe = function \(\) \{\s*otwarty = false;/);
   });
 });
 
