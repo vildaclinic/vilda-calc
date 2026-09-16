@@ -10,8 +10,14 @@
 // (__ds_zFromLMS) i własne przybliżenie dystrybuanty (Zelen–Severo), przez co centyle DS
 // różniły się na siódmym miejscu od wszystkich pozostałych centyli w aplikacji. Wiek liczy
 // się wspólnym czytnikiem: z daty urodzenia, ułamkowo (decyzja 8, DOB-AGE-4), a dopiero
-// w jej braku z pól „wiek". Tablice DS (ds_lms.js) czyta jeszcze ten moduł — masa, wzrost,
-// obwód głowy i WFL wejdą do silników w etapie 3 planu P-DS.
+// w jej braku z pól „wiek".
+//
+// P-DS-3: moduł nie ma też własnych interpolatorów. Wiersz L/M/S bierze z JEDNEGO
+// znormalizowanego zestawu tablic (window.VildaDsLMS z ds_lms.js — wszystko po miesiącach)
+// jednym interpolatorem silnika (VildaBmi.interpoluj). Do 1.0.968 moduł miał dwa własne
+// (__ds_interpMonths po miesiącach, __ds_interpYears po latach), więc ten sam wiersz BMI
+// powstawał tu i w silniku dwiema drogami; teraz jest bitowo ten sam. Reguła wieku bez zmian:
+// poniżej 2 lat tabele niemowlęce (0–36 mies.), od 2 lat dziecięce (24–240 mies.).
 
 function __ds_readAgeYears() {
   // P-DS-2 / decyzja 8 (DOB-AGE-4): jest data urodzenia — wiek jest UŁAMKOWY i liczy się z niej,
@@ -90,44 +96,32 @@ function __ds_isPro() {
   return false;
 }
 
-function __ds_interpMonths(n, e) {
-  const t = Object.keys(n).map(Number).sort((u, _) => u - _);
-  if (e <= t[0]) return n[String(t[0])];
-  if (e >= t[t.length - 1]) return n[String(t[t.length - 1])];
-  const i = Math.floor(e), s = Math.ceil(e), d = n[String(i)], r = n[String(s)];
-  if (!d || !r || i === s) return d || r || null;
-  const o = (e - i) / (s - i);
-  return [d[0] + o * (r[0] - d[0]), d[1] + o * (r[1] - d[1]), d[2] + o * (r[2] - d[2])];
+// Jeden lookup do znormalizowanych tablic + jeden interpolator silnika.
+function __ds_tablice() {
+  return typeof window !== "undefined" ? window.VildaDsLMS : null;
 }
-function __ds_interpYears(n, e) {
-  const t = Object.keys(n).map(Number).sort((u, _) => u - _);
-  if (e <= t[0]) return n[String(t[0])];
-  if (e >= t[t.length - 1]) return n[String(t[t.length - 1])];
-  let i = t[0], s = t[t.length - 1];
-  for (let u = 1; u < t.length; u++) if (t[u] >= e) { s = t[u]; i = t[u - 1]; break; }
-  const d = n[String(i)], r = n[String(s)];
-  if (!d || !r || i === s) return d || r || null;
-  const o = (e - i) / (s - i);
-  return [d[0] + o * (r[0] - d[0]), d[1] + o * (r[1] - d[1]), d[2] + o * (r[2] - d[2])];
+function __ds_wiersz(tab, wiekMies) {
+  const T = __ds_silnik();
+  if (!tab || !T || typeof T.interpoluj !== "function") return null;
+  return T.interpoluj(tab, wiekMies) || null;
 }
-
 function __ds_getLMS(n, e, t) {
-  if (!window.DS) return null;
-  const i = window.DS;
+  const L = __ds_tablice();
+  if (!L) return null;
+  const plec = n === "M" ? "M" : "F";
   if (e < 2) {
-    const s = Math.max(0, Math.min(36, e * 12));
-    if (t === "WT") return __ds_interpMonths(n === "M" ? i.DS_INFANT_WEIGHT_BOYS : i.DS_INFANT_WEIGHT_GIRLS, s);
-    if (t === "HT") return __ds_interpMonths(n === "M" ? i.DS_INFANT_LENGTH_BOYS : i.DS_INFANT_LENGTH_GIRLS, Math.max(1, s));
-    if (t === "HC") return __ds_interpMonths(n === "M" ? i.DS_INFANT_HEAD_BOYS : i.DS_INFANT_HEAD_GIRLS, Math.max(1, s));
+    // 0–36 mies.; długość i obwód głowy startują od 1. miesiąca
+    const mies = Math.max(0, Math.min(36, e * 12));
+    const grupa = L.NIEMOWLE;
+    if (t === "WT") return __ds_wiersz(grupa.WT[plec], mies);
+    if (t === "HT") return __ds_wiersz(grupa.HT[plec], Math.max(1, mies));
+    if (t === "HC") return __ds_wiersz(grupa.HC[plec], Math.max(1, mies));
     return null;
-  } else {
-    const s = Math.min(20, Math.max(2, e));
-    return t === "WT" ? __ds_interpYears(n === "M" ? i.DS_CHILD_WEIGHT_BOYS : i.DS_CHILD_WEIGHT_GIRLS, s)
-      : t === "HT" ? __ds_interpYears(n === "M" ? i.DS_CHILD_HEIGHT_BOYS : i.DS_CHILD_HEIGHT_GIRLS, s)
-      : t === "HC" ? __ds_interpYears(n === "M" ? i.DS_CHILD_HEAD_BOYS : i.DS_CHILD_HEAD_GIRLS, s)
-      : t === "BMI" ? __ds_interpYears(n === "M" ? i.DS_CHILD_BMI_BOYS : i.DS_CHILD_BMI_GIRLS, s)
-      : null;
   }
+  // 2–20 lat = 24–240 mies.
+  const mies = Math.min(240, Math.max(24, e * 12));
+  const grupa = L.DZIECKO;
+  return grupa[t] ? __ds_wiersz(grupa[t][plec], mies) : null;
 }
 function __ds_percentile(n, e, t, i) {
   const s = __ds_getLMS(n, e, t);
@@ -138,12 +132,11 @@ function __ds_percentile(n, e, t, i) {
 // Etap 3: proporcja masy do długości (weight-for-length DS, Zemel 0–36 mies.) —
 // wiersz LMS interpolowany liniowo po DŁUGOŚCI (klucze cm; poza pokryciem → null).
 function __ds_wflLMS(n, e) {
-  if (!window.DS) return null;
-  const t = n === "M" ? window.DS.DS_WFL_BOYS : window.DS.DS_WFL_GIRLS;
+  const L = __ds_tablice();
+  const t = L && L.WFL ? L.WFL[n === "M" ? "M" : "F"] : null;
   if (!t) return null;
-  const i = Object.keys(t).map(Number).sort((u, _) => u - _);
-  if (!isFinite(e) || e < i[0] || e > i[i.length - 1]) return null;
-  return __ds_interpMonths(t, e); // te same klucze całkowite co miesiące — interpolacja identyczna
+  // klucz to DŁUGOŚĆ w cm; interpolator silnika jest ten sam, bo liczy po kluczu, nie po wieku
+  return __ds_wiersz(t, e);
 }
 function __ds_wflPercentile(n, e, t) {
   const i = __ds_wflLMS(n, e);
@@ -151,8 +144,8 @@ function __ds_wflPercentile(n, e, t) {
   return __ds_centyl(__ds_z(i, t));
 }
 function __ds_wflRange(n) {
-  if (!window.DS) return null;
-  const t = n === "M" ? window.DS.DS_WFL_BOYS : window.DS.DS_WFL_GIRLS;
+  const L = __ds_tablice();
+  const t = L && L.WFL ? L.WFL[n === "M" ? "M" : "F"] : null;
   if (!t) return null;
   const i = Object.keys(t).map(Number).sort((u, _) => u - _);
   return [i[0], i[i.length - 1]];

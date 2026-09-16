@@ -1783,8 +1783,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <!-- === PATCH 2025‑07‑01 – Small 50 and full time animation === -->
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
-<script src="ds_lms.js?v=3" defer></script>
-<script defer src="vilda_down_syndrome.js?v=3"></script>
+<script src="ds_lms.js?v=4" defer></script>
+<script defer src="vilda_down_syndrome.js?v=4"></script>
 <script defer src="vilda_anorexia_risk.js?v=3"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js" defer></script>
@@ -1816,7 +1816,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script defer src="vilda_terms_gate.js?v=1"></script>
-<script src="app.js?v=214" defer></script>
+<script src="app.js?v=215" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport
