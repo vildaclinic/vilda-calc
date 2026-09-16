@@ -123,7 +123,7 @@ describe('Jeden zapis SDS wzrostu: „hSDS −1,23"', () => {
     }, {});
     const l = String(txt).split('\n').map((s) => s.trim());
     expect(l.find((s) => s.startsWith('Wzrost:'))).toBe('Wzrost: 123,8 cm, 11 centyl (hSDS −1,23)');
-    expect(l.find((s) => s.startsWith('Waga:')), 'masa zostaje przy Z‑score').toContain('(Z‑score = -0,25)');
+    expect(l.find((s) => s.startsWith('Waga:')), 'P-WSDS: masa mówi wSDS, jak wzrost hSDS').toContain('(wSDS −0,25)');
     expect(l.find((s) => s.startsWith('MPH'))).toBe('MPH: 176,0 cm – centyl: 11, mpSDS +0,31');
     expect(l.find((s) => s.startsWith('hSDS - mpSDS'))).toBe('hSDS - mpSDS: −1,54');
     expect(l.find((s) => s.startsWith('Wzrost:'))).not.toMatch(/Z‑score/);
@@ -139,7 +139,7 @@ describe('Jeden zapis SDS wzrostu: „hSDS −1,23"', () => {
     expect(t).not.toMatch(/SDS = [−+]?\d,\d\d\)/);
   });
 
-  it('analiza punktu pomiarowego (app.js): wzrost mówi „hSDS −0,12", masa i BMI zostają przy „Z-score"', () => {
+  it('analiza punktu pomiarowego (app.js): „hSDS −0,12", „wSDS −0,25", „bmiSDS +1,20" — jeden zapis na miarę (P-WSDS)', () => {
     const src = zrodlo('app.js');
     const kod = `
       function advHistoryFormatNumber(v,n){return Number(v).toFixed(n).replace('.',',')}
@@ -150,7 +150,9 @@ describe('Jeden zapis SDS wzrostu: „hSDS −1,23"', () => {
       return advHistoryBuildTextMetricLine;`;
     const f = new Function('window', kod)({ VildaSdsWzrostu: atrapaSilnika() });
     expect(f('Wzrost', '130 cm', { result: { percentile: 25.2, sd: -0.12 } })).toBe('Wzrost: 130 cm — 25. centyl,\nhSDS −0,12');
-    expect(f('Waga', '30 kg', { result: { percentile: 40, sd: -0.25 } })).toBe('Waga: 30 kg — 40. centyl,\nZ-score: -0,25');
+    expect(f('Waga', '30 kg', { result: { percentile: 40, sd: -0.25 } })).toBe('Waga: 30 kg — 40. centyl,\nwSDS −0,25');
+    expect(f('BMI', '17,3 kg/m²', { result: { percentile: 89, sd: 1.2 } })).toBe('BMI: 17,3 kg/m² — 89. centyl,\nbmiSDS +1,20');
+    expect(f('Obwód głowy', '50 cm', { result: { percentile: 40, sd: -0.25 } }), 'pozostałe miary zostają przy „Z-score"').toContain('Z-score: -0,25');
   });
 
   it('raport pacjenta: linie „hSDS - mpSDS" i „mpSDS" z minusem typograficznym kolorują się jak dotąd', () => {
