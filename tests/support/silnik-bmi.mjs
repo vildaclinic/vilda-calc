@@ -38,21 +38,17 @@ export function funkcjaZ(src, nazwa) {
   return wytnij(src, i);
 }
 
-/** Przeliczenie kluczy tablic DS z lat na miesiące — PRODUKCYJNĄ funkcją z app.js. */
-export function dsNaMiesiace(tab) {
-  const f = new Function(`${funkcjaZ(appSrc, 'vildaBmiDsMiesiace')}return vildaBmiDsMiesiace;`)();
-  return f(tab);
-}
-
-/** Tablice LMS BMI dla VildaBmi.ustawDane() — prosto z produkcyjnych plików. */
+/** Tablice LMS BMI dla VildaBmi.ustawDane() — prosto z produkcyjnych plików.
+ *  P-DS-3: tablice DS bierzemy ze znormalizowanego zestawu z ds_lms.js (window.VildaDsLMS),
+ *  tak samo jak robi to app.js — test nie przelicza kluczy po swojemu. */
 export function daneSilnika(win) {
   const R = win.VildaGrowthReferenceData.getData();
-  const DS = win.DS || {};
+  const DS = (win.VildaDsLMS && win.VildaDsLMS.DZIECKO && win.VildaDsLMS.DZIECKO.BMI) || {};
   return {
     LMS_BMI_OLAF_BOYS: tablica('OLAF_LMS_BOYS'), LMS_BMI_OLAF_GIRLS: tablica('OLAF_LMS_GIRLS'),
     LMS_BMI_WHO_INFANT_BOYS: R.LMS_INFANT_BOYS, LMS_BMI_WHO_INFANT_GIRLS: R.LMS_INFANT_GIRLS,
     LMS_BMI_WHO_BOYS: R.LMS_BOYS, LMS_BMI_WHO_GIRLS: R.LMS_GIRLS,
-    LMS_BMI_DS_BOYS: dsNaMiesiace(DS.DS_CHILD_BMI_BOYS), LMS_BMI_DS_GIRLS: dsNaMiesiace(DS.DS_CHILD_BMI_GIRLS),
+    LMS_BMI_DS_BOYS: DS.M || null, LMS_BMI_DS_GIRLS: DS.F || null,
   };
 }
 

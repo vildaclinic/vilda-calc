@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.968';
+const SW_VERSION = '1.0.969';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1333,8 +1333,10 @@ const CORE_SHELL_URLS = [
   '/ds_lms.js',
   '/ds_lms.js?v=2',
   '/ds_lms.js?v=3',
+  '/ds_lms.js?v=4',
   '/vilda_down_syndrome.js?v=2',
   '/vilda_down_syndrome.js?v=3',
+  '/vilda_down_syndrome.js?v=4',
   '/inline_index_05.js?v=4',
   '/inline_docpro_03.js?v=2',
   '/vilda_down_syndrome.js',
@@ -2180,6 +2182,7 @@ const OPTIONAL_ASSETS = [
   '/app.js?v=212',
   '/app.js?v=213',
   '/app.js?v=214',
+  '/app.js?v=215',
   '/vilda_advanced_growth.js?v=63',
   '/vilda_advanced_growth.js?v=64',
   '/vilda_advanced_growth.js?v=65',

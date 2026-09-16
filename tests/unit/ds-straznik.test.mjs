@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { appSrc, dsNaMiesiace, funkcjaZ, korzen, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
+import { appSrc, korzen, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 
 // P-DS etapy 1–2 — STRAŻNIK: zespół Downa to CECHA PACJENTA (pole w rekordzie), nie stan interfejsu,
 // a siatki DS (Zemel 2015) liczy ten sam silnik, co wszystkie pozostałe. Do 1.0.966 jedyną flagą DS
@@ -10,7 +10,9 @@ import { appSrc, dsNaMiesiace, funkcjaZ, korzen, oknoZSilnikiem, zrodlo } from '
 // brak łańcucha zastępczego przy DS (decyzja D2), granica dorosłości 20 lat przy DS (decyzja D3)
 // i pierwszeństwo rekordu nad kartą (decyzja D1). Etap 2 dołożył: moduł DS bez własnego wzoru LMS
 // i bez własnej dystrybuanty (do 1.0.967 miał obie — centyle DS różniły się na siódmym miejscu od
-// wszystkich innych w aplikacji), wspólny czytnik wieku i odmowa liczenia bez silnika.
+// wszystkich innych w aplikacji), wspólny czytnik wieku i odmowa liczenia bez silnika. Etap 3:
+// JEDEN znormalizowany zestaw tablic (window.VildaDsLMS z ds_lms.js) i JEDEN interpolator
+// (VildaBmi.interpoluj) — koniec dwóch własnych interpolatorów modułu i konwersji kluczy w app.js.
 // Dane pacjentów FIKCYJNE.
 
 const dietaSrc = zrodlo('vilda_diet_plan_ui.js');
@@ -23,7 +25,7 @@ function modulDs(win, { document: doc = { getElementById: () => null, addEventLi
   const g = win;
   g.document = doc;
   if (typeof g.vildaAppOnReady !== 'function') g.vildaAppOnReady = () => {};
-  const kod = `${zrodlo('vilda_down_syndrome.js')}\n;window.__dsTest={zFor:__ds_zFor,pct:__ds_percentile,karta:__ds_buildResultsHTML,wiek:__ds_readAgeYears,silnik:__ds_silnik};`;
+  const kod = `${zrodlo('vilda_down_syndrome.js')}\n;window.__dsTest={zFor:__ds_zFor,pct:__ds_percentile,karta:__ds_buildResultsHTML,wiek:__ds_readAgeYears,silnik:__ds_silnik,getLMS:__ds_getLMS};`;
   new Function('window', 'globalThis', 'document', kod)(g, g, doc);
   return g.__dsTest;
 }
@@ -73,16 +75,16 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
       n += 1;
     }
     expect(n).toBeGreaterThan(800);
-    // Nie zero bitowo, bo ten sam wiersz LMS interpolują jeszcze dwa czytniki tablic: silnik po
-    // MIESIĄCACH, moduł po LATACH. Wzór i dystrybuanta są już jedne — zostaje szum zmiennoprzecinkowy
-    // rzędu 1e-16, który zniknie w etapie 3 razem z drugim czytnikiem tablic.
-    expect(maxZ, 'BMI-SDS: silnik i moduł liczą tym samym wzorem').toBeLessThan(1e-12);
-    expect(maxP, 'centyl: koniec drugiego przybliżenia dystrybuanty w module').toBeLessThan(1e-12);
+    // P-DS-3: zero BITOWO. Wzór, dystrybuanta, zestaw tablic i interpolator są już jedne, więc
+    // nie ma gdzie powstać nawet szumowi zmiennoprzecinkowemu.
+    expect(maxZ, 'BMI-SDS: silnik i moduł liczą tym samym wzorem na tym samym wierszu').toBe(0);
+    expect(maxP, 'centyl: jedna dystrybuanta i jeden interpolator').toBe(0);
   });
 
-  it('etap 2: moduł DS nie ma własnego wzoru LMS ani własnej dystrybuanty (asercja po odcięciu komentarzy)', () => {
+  it('etapy 2–3: moduł DS nie ma własnego wzoru LMS, własnej dystrybuanty ani własnych interpolatorów (asercja po odcięciu komentarzy)', () => {
     const kod = bezKomentarzy(dsSrc);
-    for (const odcisk of ['__ds_zFromLMS', '__ds_cdf', '__ds_phi', '0.31938153', '2.3263', 'Math.sqrt(2 * Math.PI)']) {
+    for (const odcisk of ['__ds_zFromLMS', '__ds_cdf', '__ds_phi', '0.31938153', '2.3263', 'Math.sqrt(2 * Math.PI)',
+      '__ds_interpMonths', '__ds_interpYears', 'window.DS.DS_', 'Math.floor(e), s = Math.ceil(e)']) {
       expect(kod, `vilda_down_syndrome.js: ${odcisk}`).not.toContain(odcisk);
     }
     expect(kod, 'kontrola negatywna: komentarz naprawy nadal cytuje usuniętą nazwę').not.toBe(dsSrc);
@@ -90,6 +92,29 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     expect(kod).toContain('function __ds_silnik()');
     expect(kod).toContain('T.zLms(value, lms)');
     expect(kod).toContain('T.centylZSds(z)');
+    expect(kod, 'jeden interpolator — silnika').toContain('T.interpoluj(tab, wiekMies)');
+    expect(kod, 'jeden zestaw tablic').toContain('window.VildaDsLMS');
+  });
+
+  it('etap 3: wiersz LMS modułu i wiersz silnika są BITOWO ten sam (jeden zestaw tablic, jeden interpolator)', () => {
+    const win = oknoZSilnikiem();
+    const modul = modulDs(win);
+    let n = 0;
+    for (const plec of ['M', 'F']) for (let mies = 24; mies <= 240; mies += 1) {
+      const a = modul.getLMS(plec, mies / 12, 'BMI'), b = win.VildaBmi.lms(plec, mies, 'DS');
+      expect(a, `${plec} ${mies}`).not.toBeNull();
+      expect(a, `${plec} ${mies} mies.: wiersz modułu == wiersz silnika`).toEqual(b);
+      n += 1;
+    }
+    expect(n).toBe(434);
+    // reguła wieku bez zmian: poniżej 2 lat tabele niemowlęce, BMI dopiero od 2 lat
+    expect(modul.getLMS('M', 1, 'BMI'), 'BMI DS dopiero od 2 lat').toBeNull();
+    expect(modul.getLMS('M', 1, 'WT'), 'masa niemowlęca z tabel 0–36 mies.').toEqual(win.VildaDsLMS.NIEMOWLE.WT.M['12']);
+    expect(modul.getLMS('M', 10, 'WT')).toEqual(win.VildaDsLMS.DZIECKO.WT.M['120']);
+    // klamry brzegowe zostają: poza zakresem tabel bierzemy wiersz skrajny, nie null
+    expect(modul.getLMS('M', 25, 'HT'), 'powyżej 20 lat — wiersz 20 lat').toEqual(win.VildaDsLMS.DZIECKO.HT.M['240']);
+    // bez zestawu tablic nie ma wiersza
+    expect(modulDs({ addEventListener() {}, window: null }).getLMS('M', 10, 'BMI')).toBeNull();
   });
 
   it('etap 2: bez silnika karta DS odmawia liczenia zamiast liczyć po swojemu', () => {
@@ -233,10 +258,11 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     expect(kartaSrc).toContain('vePatientDownSyndrome');
   });
 
-  it('wpięcie: tablice DS idą do silnika z app.js w miesiącach, resolver jest na stronach, w precache i w mapie zależności', () => {
-    expect(appSrc).toContain('function vildaBmiDsMiesiace(');
-    expect(appSrc).toContain('LMS_BMI_DS_BOYS:vildaBmiDsMiesiace(window.DS&&window.DS.DS_CHILD_BMI_BOYS)');
-    expect(appSrc).toContain('LMS_BMI_DS_GIRLS:vildaBmiDsMiesiace(window.DS&&window.DS.DS_CHILD_BMI_GIRLS)');
+  it('wpięcie: tablice DS idą do silnika ze wspólnego zestawu, resolver jest na stronach, w precache i w mapie zależności', () => {
+    expect(appSrc, 'P-DS-3: app.js nie przelicza już kluczy sam').not.toContain('function vildaBmiDsMiesiace(');
+    expect(appSrc).toContain('function vildaBmiDsTablica(');
+    expect(appSrc).toContain('LMS_BMI_DS_BOYS:vildaBmiDsTablica("M")');
+    expect(appSrc).toContain('LMS_BMI_DS_GIRLS:vildaBmiDsTablica("F")');
     for (const strona of ['index.html', 'docpro.html', 'kalkulator-klirens.html']) {
       const html = zrodlo(strona);
       expect(html, `${strona}: resolver flagi DS`).toContain('vilda_ds_source.js?v=');
@@ -248,11 +274,15 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
     expect(zrodlo('vilda_deps.js')).toContain('VildaDsSource:');
     // przeliczenie kluczy: lata → miesiące, bez gubienia wiersza
     const win = oknoZSilnikiem();
-    const wMiesiacach = dsNaMiesiace(win.DS.DS_CHILD_BMI_BOYS);
-    expect(Object.keys(wMiesiacach).length, 'żaden wiersz nie ginie przy przeliczeniu').toBe(Object.keys(win.DS.DS_CHILD_BMI_BOYS).length);
-    expect(wMiesiacach['120']).toEqual(win.DS.DS_CHILD_BMI_BOYS['10']);
-    expect(wMiesiacach['30']).toEqual(win.DS.DS_CHILD_BMI_BOYS['2.5']);
-    expect(dsNaMiesiace(null), 'brak ds_lms.js na stronie → brak siatki, nie pusty obiekt').toBeNull();
+    const L = win.VildaDsLMS;
+    expect(L.wersja).toBe(1);
+    // normalizacja: żaden wiersz nie ginie, a surowe tablice zostają nietknięte (na nich stoją kotwice)
+    expect(Object.keys(L.DZIECKO.BMI.M).length).toBe(Object.keys(win.DS.DS_CHILD_BMI_BOYS).length);
+    expect(L.DZIECKO.BMI.M['120']).toEqual(win.DS.DS_CHILD_BMI_BOYS['10']);
+    expect(L.DZIECKO.BMI.F['30']).toEqual(win.DS.DS_CHILD_BMI_GIRLS['2.5']);
+    expect(L.NIEMOWLE.WT.M['12'], 'tablice niemowlęce już były w miesiącach').toEqual(win.DS.DS_INFANT_WEIGHT_BOYS['12']);
+    expect(L.WFL.M['70'], 'WFL zostaje przy kluczu długości w cm').toEqual(win.DS.DS_WFL_BOYS['70']);
+    expect(win.DS.DS_CHILD_BMI_BOYS['10'], 'surowe tablice bez zmian').toBeTruthy();
     // wiersz z silnika to dokładnie wiersz z tablicy (bez interpolacji na węźle)
     expect(win.VildaBmi.lms('M', 120, 'DS')).toEqual(win.DS.DS_CHILD_BMI_BOYS['10']);
     expect(win.VildaBmi.lms('F', 30, 'DS')).toEqual(win.DS.DS_CHILD_BMI_GIRLS['2.5']);

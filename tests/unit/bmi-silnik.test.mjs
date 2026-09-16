@@ -254,7 +254,7 @@ describe('Higiena i wpięcie', () => {
     const src = fs.readFileSync(path.join(korzen, 'vilda_bmi.js'), 'utf8');
     expect(src).not.toMatch(/document\./);
     expect(src).not.toMatch(/new Function|\beval\(/);
-    expect(appSrc).toContain('window.VildaBmiLMS=Object.freeze({LMS_BMI_OLAF_BOYS:OLAF_LMS_BOYS,LMS_BMI_OLAF_GIRLS:OLAF_LMS_GIRLS,LMS_BMI_WHO_INFANT_BOYS:LMS_INFANT_BOYS,LMS_BMI_WHO_INFANT_GIRLS:LMS_INFANT_GIRLS,LMS_BMI_WHO_BOYS:LMS_BOYS,LMS_BMI_WHO_GIRLS:LMS_GIRLS,LMS_BMI_DS_BOYS:vildaBmiDsMiesiace(window.DS&&window.DS.DS_CHILD_BMI_BOYS),LMS_BMI_DS_GIRLS:vildaBmiDsMiesiace(window.DS&&window.DS.DS_CHILD_BMI_GIRLS)})');
+    expect(appSrc).toContain('window.VildaBmiLMS=Object.freeze({LMS_BMI_OLAF_BOYS:OLAF_LMS_BOYS,LMS_BMI_OLAF_GIRLS:OLAF_LMS_GIRLS,LMS_BMI_WHO_INFANT_BOYS:LMS_INFANT_BOYS,LMS_BMI_WHO_INFANT_GIRLS:LMS_INFANT_GIRLS,LMS_BMI_WHO_BOYS:LMS_BOYS,LMS_BMI_WHO_GIRLS:LMS_GIRLS,LMS_BMI_DS_BOYS:vildaBmiDsTablica("M"),LMS_BMI_DS_GIRLS:vildaBmiDsTablica("F")})');
     // bez wstrzykniętych danych silnik czyta pakiet z okna
     const win = okno();
     win.VildaBmiLMS = dane(win);

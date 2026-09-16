@@ -1100,6 +1100,24 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-DS-3 — jeden zestaw tablic DS i jeden interpolator (SW 1.0.969, 2026-09-16, plan P-DS)
+
+Trzeci etap planu P-DS. Etap 2 zabrał modułowi `vilda_down_syndrome.js` wzór LMS i dystrybuantę; ten etap zabiera mu **czytanie tablic**.
+
+**Skąd problem.** Tabele w `ds_lms.js` mają klucze w dwóch skalach: niemowlęce po **miesiącach** (0–36), dziecięce po **latach** (2–20). Każdy konsument radził sobie z tym sam: `app.js` przeliczał klucze BMI na miesiące dla silnika (`vildaBmiDsMiesiace`), a moduł DS miał **dwa własne interpolatory** — `__ds_interpMonths` i `__ds_interpYears`. Ten sam wiersz L/M/S powstawał więc dwiema drogami i różnił się szumem zmiennoprzecinkowym rzędu 1e-16 (strażnik pilnował progu 1e-12).
+
+**1. Normalizacja przy danych.** `ds_lms.js` (?v 3 → 4) wystawia obok surowego `window.DS` **jeden znormalizowany zestaw `window.VildaDsLMS`**: wszystkie tablice wiekowe po **miesiącach** (`NIEMOWLE.{WT,HT,HC}` 0–36; `DZIECKO.{WT,HT,HC,BMI}` 24–240), a masa do długości (`WFL`) zostaje przy kluczu długości w cm. **Surowe `window.DS` nie zmienia się** — to na nim stoją kotwice z publikacji w `tests/unit/ds-lms.test.mjs`.
+
+**2. `app.js` (?v 214 → 215) przestaje przeliczać klucze.** `vildaBmiDsMiesiace` usunięta; zostaje `vildaBmiDsTablica('M'|'F')`, która tylko podaje silnikowi gotową tablicę ze wspólnego zestawu. Brak `ds_lms.js` na stronie nadal daje `null`, czyli brak siatki DS, a nie pusty obiekt.
+
+**3. Moduł DS (?v 3 → 4) bez własnych interpolatorów.** `__ds_interpMonths` i `__ds_interpYears` **usunięte**; `__ds_getLMS` to jeden lookup do `VildaDsLMS` plus `VildaBmi.interpoluj`, a `__ds_wflLMS` i `__ds_wflRange` czytają z tego samego zestawu. Reguła wieku bez zmian (poniżej 2 lat tabele niemowlęce, od 2 lat dziecięce; BMI DS dopiero od 2 lat) i klamry brzegowe też: poza zakresem tabel bierze się wiersz skrajny, nie `null` — tak jak dotąd, bo karta i tak jest ograniczona do 0–20 lat.
+
+**Skutek liczbowy.** Wiersz BMI z modułu jest teraz **bitowo identyczny** z wierszem silnika (434 punkty, obie płcie × 24–240 mies.), więc strażnik zaostrzony z progu 1e-12 do **dokładnego zera**. Wobec poprzedniego wydania centyle przesuwają się o ≤ 1,7·10⁻¹² punktu (interpolacja liniowa w miesiącach zamiast w latach — matematycznie ta sama), a WFL nie zmienia się wcale (0 różnic na 420 porównaniach). Dla lekarza: **żadna liczba się nie zmienia**.
+
+**Czego ten etap NIE robi.** Nie dodaje osi populacji do silnika SDS wzrostu — masa, wzrost i obwód głowy nadal liczą się dla DS tylko w karcie modułu. To wchodzi razem z kartą główną i wyjściami tekstowymi w kolejnym wydaniu (dawny etap 4, po zmianie kolejności opisanej w P-DS-2), bo dopiero tam pojawia się konsument, który tej osi potrzebuje. Trzecia kopia wzoru — generator siatki PDF w `inline_index_05.js` / `inline_docpro_03.js` — zostaje na etap 5.
+
+*Strażnicy:* `tests/unit/ds-straznik.test.mjs` (13): wiersz modułu **równy co do bitu** wierszowi silnika na 434 punktach; brak odcisków `__ds_interpMonths` / `__ds_interpYears` / `window.DS.DS_` i wzorca `Math.floor(e), s = Math.ceil(e)` **po odcięciu komentarzy**; obecność `T.interpoluj(tab, wiekMies)` i `window.VildaDsLMS` w kodzie; normalizacja nie gubi wiersza i nie rusza surowych tablic; reguła wieku i klamry brzegowe; brak wiersza bez zestawu tablic; `app.js` bez własnej konwersji kluczy. Wspólne rusztowanie `tests/support/silnik-bmi.mjs` bierze tablice DS z tego samego zestawu, co produkcja — test nie przelicza kluczy po swojemu.
+
 ### P-DS-2 — moduł zespołu Downa bez własnej matematyki: jeden wzór LMS, jedna dystrybuanta, wspólny wiek (SW 1.0.968, 2026-09-16, plan P-DS)
 
 Drugi etap planu P-DS. Etap 1 przeniósł **rozpoznanie** do rekordu i **siatkę BMI DS** do silnika; ten etap zabiera modułowi `vilda_down_syndrome.js` resztę własnej matematyki.
