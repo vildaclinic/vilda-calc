@@ -132,13 +132,18 @@ test('TONORM-S2-ADULT-NEAR-LIMIT: BMI 24,9–25 → komunikat o górnej granicy 
   expect(over.text).toContain('do górnej granicy normy BMI');
 });
 
-test('TONORM-S2-TEEN-18-UNDER: 18-latek z niskim BMI oceniany centylem, nie progiem dorosłych', async ({ page }) => {
+test('TONORM-S2-TEEN-18-UNDER (P-BMI-1, decyzja 5): 17-latek z niskim BMI oceniany centylem; od 18 lat progiem dorosłych 18,5', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
-  // 18 lat, BMI 18,2 — u dorosłych „niedowaga", ale centylowo w normie (> 5c).
-  const out = await renderToNorm(page, { age: 18, months: 0, sex: 'M', weight: 57.7, height: 178 });
-  expect(out.visible).toBe(true);
-  expect(out.text.toLowerCase()).not.toContain('niedowag');
+  // 17 lat, BMI 18,2 — centylowo w normie (> 5c), więc bez niedowagi.
+  const teen = await renderToNorm(page, { age: 17, months: 0, sex: 'M', weight: 57.7, height: 178 });
+  expect(teen.visible).toBe(true);
+  expect(teen.text.toLowerCase()).not.toContain('niedowag');
+  // 18 lat — dorosły (jedna granica 18 lat we wszystkich miejscach): BMI 18,2 < 18,5 → niedowaga i brakujące kilogramy.
+  const adult = await renderToNorm(page, { age: 18, months: 0, sex: 'M', weight: 57.7, height: 178 });
+  expect(adult.visible).toBe(true);
+  expect(adult.text.toLowerCase()).toContain('niedowag');
+  expect(adult.text).toContain('Brakuje ok.');
 });
 
 test('TONORM-S3-SEVERE-LABEL: „Otyłość olbrzymia" (z ≥ +3) dopiero od 5. roku życia', async ({ page }) => {

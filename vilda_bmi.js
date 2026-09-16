@@ -1,0 +1,445 @@
+/*
+ * vilda_bmi.js (v1) — JEDYNE miejsce, w którym aplikacja liczy BMI, BMI-SDS (z-score), centyl BMI,
+ * kategorię BMI, wskaźnik Cole'a i cel „normy" BMI. Wszyscy inni czytają, formatują i pokazują.
+ *
+ * P-BMI etap 1 (audyt 2026-09-16 — docs/clinical/AUDYT-BMI.md; decyzje właściciela 2026-09-16:
+ * „akceptuję wszystkie rekomendacje"). Dotąd wzór BMI żył w ~40 kopiach w 17 plikach, SDS/centyl
+ * szedł pięcioma drogami (bmiZscore/getLMS z cichym przejściem na WHO poza 36–216 mies. przy OLAF,
+ * łańcuch historii, Palczewska, karta główna z własną regułą, własne LMS w modułach), a kategorię
+ * rozstrzygało co najmniej dziewięć zestawów progów. Ten moduł zamyka regułę w jednym miejscu.
+ *
+ * REGUŁY (decyzje właściciela, numeracja jak w §5 audytu):
+ *  1. Źródło OLAF: od 36. do 216. miesiąca siatki OLAF (LMS); poniżej 3 lat — siatka
+ *     Palczewskiej (spójnie ze wzrostem, P-SDS-1); WHO 2006 tylko dla źródła WHO.
+ *  2. Powyżej 216 mies. przy OLAF — jawny łańcuch zastępczy Palczewska (do 222 mies.) → WHO 2007
+ *     (do 228 mies.), z powodem w wyniku; nigdy cicha zmiana siatki.
+ *  3. Niedowaga dziecka: centyl < 5 (kanon BMI-TONORM-S1). Kolor: ostrzeżenie < 5, alarm < 3.
+ *  4. „Otyłość olbrzymia": BMI-SDS ≥ 3 i wiek ≥ 60 mies. Przy nieznanym wieku bramka nie blokuje
+ *     (kontrakt resolvera 8O-10b, test TONORM-S3-SEVERE-LABEL) — konsumenci rdzenia wiek podają.
+ *  5. Granica dziecko/dorosły dla BMI: 18 lat (216 mies.). Od 216 mies. kategoria dorosła
+ *     (18,5 / 25 / 30 / 35 / 40), SDS i centyl nadal liczone informacyjnie, dopóki są siatki.
+ *  6. Dorośli: norma < 25 (klasyfikacja); cel „normy" do redukcji = 24,9 (liczba, nie kategoria).
+ *  8. Wiek jest UŁAMKOWY w miesiącach i tak trafia do interpolacji L/M/S (DOB-AGE-4 także dla BMI).
+ * 10. Format: „BMI 17,3 kg/m²", „bmiSDS +1,20" (2 miejsca, znak, przecinek), centyl wg ADV-REPORT-5.
+ *
+ * SIATKI: OLAF BMI 36–216 mies. (tablice OLAF_LMS_* z app.js), WHO 2006 0–60 mies. (LMS_INFANT_*),
+ * WHO 2006/2007 24–228 mies. (LMS_BOYS/GIRLS; powyżej 60. mies. czytamy stąd), Palczewska 1–222 mies.
+ * (centyle 3/10/25/50/75/90/97 przez interpolator vilda_centile_interpolation.js; z liczymy
+ * interpolacją liniową między z-wartościami sąsiednich centyli, jak dla wzrostu). Dane wystawia
+ * app.js pakietem window.VildaBmiLMS (CSP zakazuje eval), testy podają je przez ustawDane().
+ *
+ * WZÓR LMS: z = ((x/M)^L − 1)/(L·S), dla L = 0: z = ln(x/M)/S (Cole & Green 1992). Statystyka
+ * (erf A&S 7.1.26, Acklam) identyczna z vilda_sds_wzrostu.js — do wyniesienia do wspólnego
+ * modułu w etapie 5.
+ *
+ * WSKAŹNIK COLE'A: BMI / mediana BMI dla wieku i płci × 100 z tej samej siatki, co SDS
+ * (p50 Palczewskiej przy Palczewskiej); progi 90 / 110 / 120.
+ * CEL NORMY: dziecko — 85. centyl (z = 1,036, ENERGY-CHILD-MID2), dorosły — 24,9.
+ * Moduł nie ma zależności od DOM ani od eval.
+ */
+(function (root) {
+  'use strict';
+  if (!root) return;
+
+  var WERSJA = 1;
+  var ZRODLA = ['PALCZEWSKA', 'OLAF', 'WHO'];
+  var G = Object.freeze({
+    OLAF_MIN_M: 36,        // OLAF BMI od 3. roku życia
+    OLAF_MAX_M: 216,       // OLAF BMI do 18 lat
+    WHO_INFANT_MAX_M: 60,  // WHO 2006 BMI 0–60 mies.
+    WHO_MAX_M: 228,        // WHO 2007 BMI do 19 lat
+    PAL_MIN_M: 1,          // Palczewska od 1. miesiąca
+    PAL_MAX_M: 222,        // Palczewska do 18,5 roku
+    DOROSLY_M: 216,        // decyzja 5: dorosły od 18 lat
+    OLBRZYMIA_MIN_M: 60,   // decyzja 4
+    Z_P85: 1.036,          // cel normy dziecka (ENERGY-CHILD-MID2, jak Z85 w app.js)
+  });
+  var PROGI = Object.freeze({
+    DZIECKO: Object.freeze({ NIEDOWAGA: 5, NADWAGA: 85, OTYLOSC: 97, OLBRZYMIA_SDS: 3, ALARM_NISKI: 3 }),
+    DOROSLY: Object.freeze({ NIEDOWAGA: 18.5, NADWAGA: 25, OTYLOSC_1: 30, OTYLOSC_2: 35, OTYLOSC_3: 40, CEL: 24.9 }),
+    COLE: Object.freeze({ NIEDOWAGA: 90, NADWAGA: 110, OTYLOSC: 120 }),
+  });
+  var BRAK_KLASYFIKACJI = 'Brak klasyfikacji pediatrycznej — brak danych referencyjnych';
+  var CENTYLE_PAL = [3, 10, 25, 50, 75, 90, 97];
+
+  var dane = {};
+  function dana(nazwa) {
+    if (Object.prototype.hasOwnProperty.call(dane, nazwa)) return dane[nazwa];
+    try { var pak = root.VildaBmiLMS; if (pak && pak[nazwa] != null) return pak[nazwa]; } catch (e) { /* brak */ }
+    try { if (root[nazwa] != null) return root[nazwa]; } catch (e) { /* brak */ }
+    return null;
+  }
+  function ustawDane(obj) { dane = Object.assign({}, dane, obj || {}); }
+
+  /* ---------- statystyka: identyczna z app.js i vilda_sds_wzrostu.js ---------- */
+  function erf(x) {
+    var t = x >= 0 ? 1 : -1;
+    x = Math.abs(x);
+    var a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+    var p = 1 / (1 + 0.3275911 * x);
+    var y = 1 - ((((a5 * p + a4) * p + a3) * p + a2) * p + a1) * p * Math.exp(-x * x);
+    return t * y;
+  }
+  function normalCDF(z) { return 0.5 * (1 + erf(z / Math.SQRT2)); }
+  function normInv(p) {
+    if (!(p > 0 && p < 1)) return p <= 0 ? -Infinity : Infinity;
+    var a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    var b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    var c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    var d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    var pl = 0.02425, ph = 1 - pl, q, r;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p > ph) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    q = p - 0.5; r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+  function centylZSds(z) { return typeof z === 'number' && isFinite(z) ? normalCDF(z) * 100 : null; }
+  function sdsZCentyla(p) { return typeof p === 'number' && p > 0 && p < 100 ? normInv(p / 100) : null; }
+
+  /* ---------- wzór BMI ---------- */
+  function bmi(opts) {
+    var o = opts || {};
+    var m = Number(o.masaKg), h = Number(o.wzrostCm);
+    if (!isFinite(m) || m <= 0 || !isFinite(h) || h <= 0) return null;
+    var v = m / Math.pow(h / 100, 2);
+    return isFinite(v) ? v : null;
+  }
+
+  /* ---------- LMS ---------- */
+  function zLms(x, lmsRow) {
+    if (!lmsRow || typeof x !== 'number' || !isFinite(x) || x <= 0) return null;
+    var L = lmsRow[0], M = lmsRow[1], S = lmsRow[2];
+    if (![L, M, S].every(function (v) { return typeof v === 'number' && isFinite(v); }) || M <= 0 || S <= 0) return null;
+    return L !== 0 ? (Math.pow(x / M, L) - 1) / (L * S) : Math.log(x / M) / S;
+  }
+  function xLms(z, lmsRow) {
+    if (!lmsRow || typeof z !== 'number' || !isFinite(z)) return null;
+    var L = lmsRow[0], M = lmsRow[1], S = lmsRow[2];
+    var v = L !== 0 ? M * Math.pow(1 + L * S * z, 1 / L) : M * Math.exp(S * z);
+    return typeof v === 'number' && isFinite(v) && v > 0 ? v : null;
+  }
+  function interpoluj(tablica, wiekMies) {
+    if (!tablica || typeof wiekMies !== 'number' || !isFinite(wiekMies)) return null;
+    var klucze = Object.keys(tablica).map(Number).filter(function (k) { return !isNaN(k); }).sort(function (a, b) { return a - b; });
+    if (!klucze.length || wiekMies < klucze[0] || wiekMies > klucze[klucze.length - 1]) return null;
+    var lo = klucze[0], hi = klucze[klucze.length - 1];
+    for (var i = 0; i < klucze.length; i++) {
+      if (klucze[i] <= wiekMies) lo = klucze[i];
+      if (klucze[i] >= wiekMies) { hi = klucze[i]; break; }
+    }
+    var a = tablica[String(lo)], b = tablica[String(hi)];
+    if (!a || !b) return null;
+    if (lo === hi) return [a[0], a[1], a[2]];
+    var f = (wiekMies - lo) / (hi - lo);
+    return [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2])];
+  }
+  function tablicaLms(plec, wiekMies, siatka) {
+    var m = plec === 'M';
+    if (siatka === 'WHO') {
+      if (wiekMies <= G.WHO_INFANT_MAX_M) return dana(m ? 'LMS_BMI_WHO_INFANT_BOYS' : 'LMS_BMI_WHO_INFANT_GIRLS');
+      return dana(m ? 'LMS_BMI_WHO_BOYS' : 'LMS_BMI_WHO_GIRLS');
+    }
+    if (siatka === 'OLAF') {
+      if (wiekMies < G.OLAF_MIN_M || wiekMies > G.OLAF_MAX_M) return null;
+      return dana(m ? 'LMS_BMI_OLAF_BOYS' : 'LMS_BMI_OLAF_GIRLS');
+    }
+    return null;
+  }
+  /* L, M, S BMI dla wieku ułamkowego na zadanej siatce (WHO / OLAF); Palczewska nie ma LMS → null. */
+  function lms(plec, wiekMies, siatka) {
+    var s = String(siatka || '').toUpperCase();
+    if (typeof wiekMies !== 'number' || !isFinite(wiekMies) || wiekMies < 0) return null;
+    if (s === 'WHO' && wiekMies > G.WHO_MAX_M) return null;
+    return interpoluj(tablicaLms(plec === 'M' ? 'M' : 'F', wiekMies, s), wiekMies);
+  }
+
+  /* ---------- Palczewska ---------- */
+  function palCentyl(plec, wiekMies, centyl) {
+    var f = dana('palCentyl');
+    if (typeof f !== 'function') f = dana('getPalReferenceCentileInterpolated');
+    if (typeof f !== 'function') return null;
+    var v;
+    try { v = f(plec, wiekMies, centyl, 'BMI'); } catch (e) { return null; }
+    return typeof v === 'number' && isFinite(v) && v > 0 ? v : null;
+  }
+  function wezlyPal(plec, wiekMies) {
+    if (typeof wiekMies !== 'number' || !isFinite(wiekMies) || wiekMies < G.PAL_MIN_M || wiekMies > G.PAL_MAX_M) return null;
+    var w = [];
+    for (var i = 0; i < CENTYLE_PAL.length; i++) {
+      var v = palCentyl(plec, wiekMies, CENTYLE_PAL[i]);
+      if (v != null) w.push({ z: normInv(CENTYLE_PAL[i] / 100), x: v });
+    }
+    if (w.length < 2) return null;
+    w.sort(function (a, b) { return a.x - b.x; });
+    return w;
+  }
+  function zPal(x, w) {
+    if (!w || typeof x !== 'number' || !isFinite(x) || x <= 0) return null;
+    var n = w.length, a, b;
+    if (x <= w[0].x) { a = w[0]; b = w[1]; }
+    else if (x >= w[n - 1].x) { a = w[n - 2]; b = w[n - 1]; }
+    else { for (var i = 0; i < n - 1; i++) if (x >= w[i].x && x <= w[i + 1].x) { a = w[i]; b = w[i + 1]; break; } }
+    if (!a || !b || b.x === a.x) return null;
+    return a.z + (x - a.x) * (b.z - a.z) / (b.x - a.x);
+  }
+  function xPal(z, w) {
+    if (!w || typeof z !== 'number' || !isFinite(z)) return null;
+    var n = w.length, a, b;
+    if (z <= w[0].z) { a = w[0]; b = w[1]; }
+    else if (z >= w[n - 1].z) { a = w[n - 2]; b = w[n - 1]; }
+    else { for (var i = 0; i < n - 1; i++) if (z >= w[i].z && z <= w[i + 1].z) { a = w[i]; b = w[i + 1]; break; } }
+    if (!a || !b || b.z === a.z) return null;
+    return a.x + (z - a.z) * (b.x - a.x) / (b.z - a.z);
+  }
+
+  /* ---------- reguła wyboru siatki ---------- */
+  function normZrodlo(z) {
+    var s = String(z || '').toUpperCase();
+    return ZRODLA.indexOf(s) >= 0 ? s : 'OLAF';
+  }
+  function etykieta(z) {
+    var s = normZrodlo(z);
+    return s === 'PALCZEWSKA' ? 'Palczewska' : s === 'WHO' ? 'WHO' : 'OLAF';
+  }
+  /* Kolejność siatek dla zadanego źródła i wieku; pierwsza z danymi wygrywa (decyzje 1–2). */
+  function kandydaci(zrodlo, wiekMies) {
+    var z = normZrodlo(zrodlo);
+    var noworodek = typeof wiekMies === 'number' && wiekMies < G.PAL_MIN_M;
+    var maly = typeof wiekMies === 'number' && wiekMies < G.OLAF_MIN_M;
+    if (z === 'PALCZEWSKA') return noworodek ? ['WHO', 'PALCZEWSKA', 'OLAF'] : ['PALCZEWSKA', 'WHO', 'OLAF'];
+    if (z === 'OLAF') {
+      if (noworodek) return ['WHO', 'PALCZEWSKA', 'OLAF'];
+      if (maly) return ['PALCZEWSKA', 'WHO', 'OLAF'];
+      return ['OLAF', 'PALCZEWSKA', 'WHO'];
+    }
+    return ['WHO', 'PALCZEWSKA', 'OLAF'];
+  }
+  function powodZmiany(zadane, uzyta, wiekMies) {
+    if (!uzyta || zadane === uzyta) return '';
+    if (typeof wiekMies === 'number' && wiekMies < G.PAL_MIN_M && uzyta === 'WHO') return 'noworodek poniżej 1. miesiąca — siatka Palczewskiej zaczyna się od 1. miesiąca, użyto WHO 2006';
+    if (zadane === 'OLAF' && typeof wiekMies === 'number' && wiekMies < G.OLAF_MIN_M) return 'brak danych OLAF dla wieku poniżej 3 lat';
+    if (typeof wiekMies === 'number' && wiekMies > G.OLAF_MAX_M) return 'brak siatek ' + etykieta(zadane) + ' powyżej 18 lat';
+    return 'brak danych ' + etykieta(zadane) + ' dla tego wieku';
+  }
+
+  function wynikPusty(o, powod) {
+    return {
+      wersja: WERSJA, bmi: typeof o.bmi === 'number' && isFinite(o.bmi) ? o.bmi : null,
+      sds: null, centyl: null, siatka: null, zrodloZadane: normZrodlo(o.zrodlo), fallback: false,
+      powod: powod || '', pozaZakresem: true, mediana: null, lms: null, wiekMies: o.wiekMies, plec: o.plec,
+    };
+  }
+  function wejscieBmi(o) {
+    if (typeof o.bmi === 'number' && isFinite(o.bmi) && o.bmi > 0) return o.bmi;
+    return bmi({ masaKg: o.masaKg, wzrostCm: o.wzrostCm });
+  }
+
+  /* BMI-SDS na JEDNEJ, wskazanej siatce (bez łańcucha zastępczego). */
+  function policzNaSiatce(opts) {
+    var o = opts || {};
+    var siatka = String(o.siatka || '').toUpperCase();
+    var wiek = liczba(o.wiekMies), x = wejscieBmi(o), plec = o.plec === 'M' ? 'M' : 'F';
+    if (!isFinite(wiek) || wiek < 0 || x == null || ZRODLA.indexOf(siatka) < 0) return null;
+    var z, mediana, tab = null;
+    if (siatka === 'PALCZEWSKA') {
+      var w = wezlyPal(plec, wiek);
+      if (!w) return null;
+      z = zPal(x, w);
+      mediana = palCentyl(plec, wiek, 50);
+    } else {
+      tab = lms(plec, wiek, siatka);
+      if (!tab) return null;
+      z = zLms(x, tab);
+      mediana = tab[1];
+    }
+    if (typeof z !== 'number' || !isFinite(z)) return null;
+    return {
+      wersja: WERSJA, bmi: x, sds: z, centyl: centylZSds(z), siatka: siatka,
+      zrodloZadane: normZrodlo(o.zrodlo != null ? o.zrodlo : siatka), fallback: false, powod: '',
+      pozaZakresem: false, mediana: mediana, lms: tab, wiekMies: wiek, plec: plec,
+    };
+  }
+
+  /* BMI-SDS z regułą wyboru siatki i jawnym łańcuchem zastępczym.
+     opts: { bmi | (masaKg, wzrostCm), plec ('M'|'F'), wiekMies (ułamkowe), zrodlo ('OLAF'|'WHO'|'PALCZEWSKA') } */
+  function liczba(v) { return v == null || v === '' ? NaN : Number(v); }
+  function policz(opts) {
+    var o = opts || {};
+    var wiek = liczba(o.wiekMies), x = wejscieBmi(o), zadane = normZrodlo(o.zrodlo);
+    var baza = { bmi: x, zrodlo: zadane, wiekMies: isFinite(wiek) ? wiek : null, plec: o.plec === 'M' ? 'M' : 'F' };
+    if (!isFinite(wiek) || wiek < 0) return wynikPusty(baza, 'brak wieku');
+    if (x == null) return wynikPusty(baza, 'brak masy lub wzrostu');
+    if (wiek > G.WHO_MAX_M) return wynikPusty(baza, 'wiek poza zakresem siatek BMI (powyżej 19 lat)');
+    var lista = kandydaci(zadane, wiek);
+    for (var i = 0; i < lista.length; i++) {
+      var r = policzNaSiatce({ bmi: x, plec: o.plec, wiekMies: wiek, siatka: lista[i], zrodlo: zadane });
+      if (r) {
+        r.fallback = lista[i] !== zadane;
+        r.powod = powodZmiany(zadane, lista[i], wiek);
+        return r;
+      }
+    }
+    return wynikPusty(baza, 'brak siatek BMI dla tego wieku');
+  }
+
+  /* Mediana BMI (P50) dla wieku na siatce z tej samej reguły — do Cole'a, masy należnej, „50. centyla BMI". */
+  function medianaNaSiatce(plec, wiekMies, siatka) {
+    var s = String(siatka || '').toUpperCase(), p = plec === 'M' ? 'M' : 'F', w = liczba(wiekMies);
+    if (!isFinite(w) || w < 0) return null;
+    if (s === 'PALCZEWSKA') return w >= G.PAL_MIN_M && w <= G.PAL_MAX_M ? palCentyl(p, w, 50) : null;
+    var t = lms(p, w, s);
+    return t && t[1] > 0 ? t[1] : null;
+  }
+  function mediana(plec, wiekMies, zrodlo) {
+    var w = liczba(wiekMies);
+    if (!isFinite(w) || w < 0 || w > G.WHO_MAX_M) return null;
+    var lista = kandydaci(zrodlo, w);
+    for (var i = 0; i < lista.length; i++) {
+      var m = medianaNaSiatce(plec, w, lista[i]);
+      if (typeof m === 'number' && isFinite(m) && m > 0) return { mediana: m, siatka: lista[i], fallback: lista[i] !== normZrodlo(zrodlo), powod: powodZmiany(normZrodlo(zrodlo), lista[i], w) };
+    }
+    return null;
+  }
+
+  /* BMI odpowiadające SDS / centylowi na siatce z tej samej reguły (odwrotność) — P85 celu, P5 niedowagi, P50. */
+  function wartoscDlaSds(opts) {
+    var o = opts || {};
+    var w = liczba(o.wiekMies), z = liczba(o.sds), plec = o.plec === 'M' ? 'M' : 'F';
+    if (!isFinite(w) || w < 0 || !isFinite(z) || w > G.WHO_MAX_M) return null;
+    var lista = o.siatka ? [String(o.siatka).toUpperCase()] : kandydaci(o.zrodlo, w);
+    for (var i = 0; i < lista.length; i++) {
+      var s = lista[i], x;
+      if (s === 'PALCZEWSKA') x = xPal(z, wezlyPal(plec, w));
+      else x = xLms(z, lms(plec, w, s));
+      if (typeof x === 'number' && isFinite(x) && x > 0) return { bmi: x, siatka: s, fallback: s !== normZrodlo(o.zrodlo != null ? o.zrodlo : s) };
+    }
+    return null;
+  }
+  function wartoscDlaCentyla(opts) {
+    var o = opts || {};
+    var z = sdsZCentyla(Number(o.centyl));
+    if (z == null) return null;
+    return wartoscDlaSds({ sds: z, plec: o.plec, wiekMies: o.wiekMies, zrodlo: o.zrodlo, siatka: o.siatka });
+  }
+
+  /* ---------- kategoria (jedna tablica progów; decyzje 3–6) ---------- */
+  function dorosly(wiekMies) { return typeof wiekMies === 'number' && isFinite(wiekMies) && wiekMies >= G.DOROSLY_M; }
+  function kategoriaDorosly(x) {
+    var v = Number(x), P = PROGI.DOROSLY;
+    if (!isFinite(v) || v <= 0) return { etykieta: '', klucz: 'brak', kolor: null, dorosly: true };
+    if (v < P.NIEDOWAGA) return { etykieta: 'Niedowaga', klucz: 'niedowaga', kolor: 'alert', dorosly: true };
+    if (v < P.NADWAGA) return { etykieta: 'Prawidłowe', klucz: 'prawidlowe', kolor: null, dorosly: true };
+    if (v < P.OTYLOSC_1) return { etykieta: 'Nadwaga', klucz: 'nadwaga', kolor: 'improve', dorosly: true };
+    if (v < P.OTYLOSC_2) return { etykieta: 'Otyłość I stopnia', klucz: 'otylosc-1', kolor: 'alert', dorosly: true };
+    if (v < P.OTYLOSC_3) return { etykieta: 'Otyłość II stopnia', klucz: 'otylosc-2', kolor: 'alert', dorosly: true };
+    return { etykieta: 'Otyłość III stopnia', klucz: 'otylosc-3', kolor: 'alert', dorosly: true };
+  }
+  /* Dziecko: z centyla (i SDS dla „olbrzymiej"). Kolor: alert = otyłość / < 3 c; improve = nadwaga / niedowaga 3–5 c. */
+  function kategoriaDziecko(centyl, sds, wiekMies) {
+    var c = liczba(centyl), z = liczba(sds), w = liczba(wiekMies), P = PROGI.DZIECKO;
+    if (centyl == null || !isFinite(c)) return { etykieta: BRAK_KLASYFIKACJI, klucz: 'brak', kolor: null, dorosly: false };
+    var bramkaWieku = !isFinite(w) || w >= G.OLBRZYMIA_MIN_M;
+    if (isFinite(z) && z >= P.OLBRZYMIA_SDS && bramkaWieku) return { etykieta: 'Otyłość olbrzymia', klucz: 'olbrzymia', kolor: 'alert', dorosly: false };
+    if (c < P.NIEDOWAGA) return { etykieta: 'Niedowaga', klucz: 'niedowaga', kolor: c < P.ALARM_NISKI ? 'alert' : 'improve', dorosly: false };
+    if (c < P.NADWAGA) return { etykieta: 'Prawidłowe', klucz: 'prawidlowe', kolor: null, dorosly: false };
+    if (c < P.OTYLOSC) return { etykieta: 'Nadwaga', klucz: 'nadwaga', kolor: 'improve', dorosly: false };
+    return { etykieta: 'Otyłość', klucz: 'otylosc', kolor: 'alert', dorosly: false };
+  }
+  /* opts: { bmi, centyl, sds, wiekMies, dorosly? } — dorosły od 216 mies. (lub jawnie). */
+  function kategoria(opts) {
+    var o = opts || {};
+    var jestDorosly = o.dorosly != null ? !!o.dorosly : dorosly(liczba(o.wiekMies));
+    if (jestDorosly) return kategoriaDorosly(o.bmi);
+    return kategoriaDziecko(o.centyl, o.sds, o.wiekMies);
+  }
+  /* Wynik `policz` + kategoria w jednym kroku. */
+  function ocen(opts) {
+    var o = opts || {};
+    var r = policz(o);
+    r.kategoria = kategoria({ bmi: r.bmi, centyl: r.centyl, sds: r.sds, wiekMies: r.wiekMies, dorosly: o.dorosly });
+    return r;
+  }
+
+  /* ---------- wskaźnik Cole'a ---------- */
+  function kategoriaCole(c) {
+    var v = Number(c), P = PROGI.COLE;
+    if (!isFinite(v)) return { etykieta: '', klucz: 'brak', kolor: null };
+    if (v < P.NIEDOWAGA) return { etykieta: 'Niedowaga', klucz: 'niedowaga', kolor: 'alert' };
+    if (v <= P.NADWAGA) return { etykieta: 'W normie', klucz: 'norma', kolor: null };
+    if (v < P.OTYLOSC) return { etykieta: 'Nadwaga', klucz: 'nadwaga', kolor: 'improve' };
+    return { etykieta: 'Otyłość', klucz: 'otylosc', kolor: 'alert' };
+  }
+  /* opts: { bmi | (masaKg, wzrostCm), plec, wiekMies, zrodlo, siatka? } */
+  function cole(opts) {
+    var o = opts || {};
+    var x = wejscieBmi(o), w = liczba(o.wiekMies);
+    if (x == null || !isFinite(w) || w < 0) return null;
+    var m = o.siatka ? (function () { var v = medianaNaSiatce(o.plec, w, o.siatka); return v ? { mediana: v, siatka: String(o.siatka).toUpperCase(), fallback: false, powod: '' } : null; })() : mediana(o.plec, w, o.zrodlo);
+    if (!m) return null;
+    var c = x / m.mediana * 100;
+    return { cole: c, mediana: m.mediana, siatka: m.siatka, fallback: m.fallback, powod: m.powod, kategoria: kategoriaCole(c) };
+  }
+
+  /* ---------- cel „normy" (decyzja 6; dziecko P85) ---------- */
+  function celNormy(opts) {
+    var o = opts || {};
+    var w = liczba(o.wiekMies), h = liczba(o.wzrostCm);
+    var masa = function (b) { return isFinite(h) && h > 0 && b != null ? b * Math.pow(h / 100, 2) : null; };
+    if (o.dorosly === true || dorosly(w)) return { bmiCel: PROGI.DOROSLY.CEL, masaCel: masa(PROGI.DOROSLY.CEL), rodzaj: 'dorosly-24.9', siatka: null, fallback: false };
+    var r = wartoscDlaSds({ sds: G.Z_P85, plec: o.plec, wiekMies: w, zrodlo: o.zrodlo, siatka: o.siatka });
+    if (!r) return null;
+    return { bmiCel: r.bmi, masaCel: masa(r.bmi), rodzaj: 'dziecko-P85', siatka: r.siatka, fallback: r.fallback };
+  }
+
+  /* ---------- format (decyzja 10) ---------- */
+  function fmtBmi(v) {
+    if (typeof v !== 'number' || !isFinite(v)) return '—';
+    return v.toFixed(1).replace('.', ',');
+  }
+  function fmtSds(z, miejsca) {
+    if (typeof z !== 'number' || !isFinite(z)) return '—';
+    var n = miejsca == null ? 2 : miejsca;
+    var v = Math.round(z * Math.pow(10, n)) / Math.pow(10, n);
+    var abs = Math.abs(v).toFixed(n).replace('.', ',');
+    if (v === 0) return abs;
+    return (v < 0 ? '−' : '+') + abs;
+  }
+  function fmtCentyl(p) {
+    if (typeof p !== 'number' || !isFinite(p)) return '—';
+    return p < 1 ? '<1' : p > 99 ? '>99' : String(Math.round(p));
+  }
+  function fmtCole(c) {
+    if (typeof c !== 'number' || !isFinite(c)) return '—';
+    return c.toFixed(1).replace('.', ',') + ' %';
+  }
+  function formatuj(model) {
+    var m = model || {};
+    var maSds = typeof m.sds === 'number' && isFinite(m.sds);
+    var kat = m.kategoria || kategoria({ bmi: m.bmi, centyl: m.centyl, sds: m.sds, wiekMies: m.wiekMies });
+    return {
+      etykieta: 'bmiSDS',
+      bmi: fmtBmi(m.bmi),
+      bmiZdanie: typeof m.bmi === 'number' && isFinite(m.bmi) ? 'BMI ' + fmtBmi(m.bmi) + ' kg/m²' : '',
+      sds: maSds ? fmtSds(m.sds) : '—',
+      zdanie: maSds ? 'bmiSDS ' + fmtSds(m.sds) : '',
+      centyl: maSds ? fmtCentyl(m.centyl) : '—',
+      centylZdanie: maSds ? (m.centyl < 1 || m.centyl > 99 ? fmtCentyl(m.centyl) + '. centyla' : fmtCentyl(m.centyl) + '. centyl') : '',
+      kategoria: kat ? kat.etykieta : '',
+      kolor: kat ? kat.kolor : null,
+      siatka: m.siatka ? etykieta(m.siatka) : '',
+      fallback: !!m.fallback,
+      powod: m.powod || '',
+    };
+  }
+
+  root.VildaBmi = Object.freeze({
+    version: WERSJA, ZRODLA: ZRODLA.slice(), G: G, PROGI: PROGI, CENTYLE_PAL: CENTYLE_PAL.slice(), BRAK_KLASYFIKACJI: BRAK_KLASYFIKACJI,
+    ustawDane: ustawDane, kandydaci: kandydaci, lms: lms, interpoluj: interpoluj, zLms: zLms, xLms: xLms,
+    bmi: bmi, policz: policz, policzNaSiatce: policzNaSiatce, ocen: ocen,
+    mediana: mediana, medianaNaSiatce: medianaNaSiatce, wartoscDlaSds: wartoscDlaSds, wartoscDlaCentyla: wartoscDlaCentyla,
+    kategoria: kategoria, kategoriaDziecko: kategoriaDziecko, kategoriaDorosly: kategoriaDorosly, dorosly: dorosly,
+    cole: cole, kategoriaCole: kategoriaCole, celNormy: celNormy,
+    centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,
+    fmtBmi: fmtBmi, fmtSds: fmtSds, fmtCentyl: fmtCentyl, fmtCole: fmtCole, formatuj: formatuj, etykieta: etykieta,
+  });
+})(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null);

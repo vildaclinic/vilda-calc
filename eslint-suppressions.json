@@ -312,11 +312,6 @@
       "count": 3
     }
   },
-  "vilda_update_prep.js": {
-    "no-useless-assignment": {
-      "count": 3
-    }
-  },
   "vilda_vault.js": {
     "no-control-regex": {
       "count": 1
