@@ -53,16 +53,31 @@ function stan(page) {
   });
 }
 
-/* Data urodzenia sprzed zadanej liczby dni — żeby test nie starzał się z kalendarzem. */
-function dataSprzedDni(dni) {
-  const d = new Date();
+/* „Dziś" według zegara STRONY. Proces testu chodzi w UTC, a strona w Europe/Warsaw (playwright.config),
+   więc między 22:00 a 24:00 UTC Node ma jeszcze wczorajszą datę — data „sprzed 61 dni" liczona w Node
+   była wtedy o dzień starsza niż dla strony i wiek w miesiącach wychodził 2 zamiast 1. Złapane na CI
+   2026-09-15 22:24 UTC (PR #322), odtworzone lokalnie o tej samej porze. Kalendarz jeden: strony. */
+async function dzisStrony(page) {
+  const [r, m, d] = await page.evaluate(() => {
+    const t = new Date();
+    return [t.getFullYear(), t.getMonth(), t.getDate()];
+  });
+  return new Date(r, m, d);
+}
+
+/* Data urodzenia sprzed zadanej liczby dni (wg zegara strony) — żeby test nie starzał się z kalendarzem. */
+async function dataSprzedDni(page, dni) {
+  const d = await dzisStrony(page);
   d.setDate(d.getDate() - dni);
   const p = (n) => (n < 10 ? '0' + n : String(n));
-  return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear();
+  return {
+    pole: p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear(),
+    iso: d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()),
+  };
 }
 
 /* Ukończone pełne miesiące — liczone niezależnie od modułu, żeby test sprawdzał wynik, nie kopię wzoru. */
-function oczekiwanyWiek(dobISO, dzis = new Date()) {
+function oczekiwanyWiek(dobISO, dzis) {
   const [r, m, d] = dobISO.split('-').map(Number);
   const ur = new Date(r, m - 1, d);
   const dz = new Date(dzis.getFullYear(), dzis.getMonth(), dzis.getDate());
@@ -79,7 +94,7 @@ test('wpisana data wypełnia wiek, blokuje pola i pokazuje notkę', async ({ pag
 
   await wpisz(page, 'dobInput', '11.04/2025');
   const s = await stan(page);
-  const { lata, mies } = oczekiwanyWiek('2025-04-11');
+  const { lata, mies } = oczekiwanyWiek('2025-04-11', await dzisStrony(page));
 
   expect(s.age).toBe(String(lata));
   expect(s.ageMonths).toBe(String(mies));
@@ -182,7 +197,7 @@ test('data urodzenia trafia do rekordu razem z policzonym wiekiem', async ({ pag
   await wpisz(page, 'height', '120');
   await wpisz(page, 'weight', '25');
 
-  const { lata, mies } = oczekiwanyWiek('2019-08-20');
+  const { lata, mies } = oczekiwanyWiek('2019-08-20', await dzisStrony(page));
   const zebrane = await page.evaluate(() => window.collectUserData());
   expect(zebrane.user.dobISO).toBe('2019-08-20');
   expect(zebrane.user.age).toBe(lata);
@@ -215,7 +230,7 @@ test('data z wczytanego rekordu jest tylko do odczytu, z odesłaniem do Karty Pa
   await page.waitForFunction(() => document.getElementById('dobInput').value !== '');
 
   const s = await stan(page);
-  const { lata, mies } = oczekiwanyWiek('2012-02-03');
+  const { lata, mies } = oczekiwanyWiek('2012-02-03', await dzisStrony(page));
 
   expect(s.dob).toBe('03-02-2012');
   expect(s.dobReadOnly).toBe(true);
@@ -229,7 +244,8 @@ test('niemowlę z datą urodzenia dostaje tygodnie liczone z kalendarza', async 
   test.setTimeout(120_000);
   await otworz(page);
 
-  await wpisz(page, 'dobInput', dataSprzedDni(61)); // 61 dni = 8 ukończonych tygodni
+  const ur = await dataSprzedDni(page, 61); // 61 dni = 8 ukończonych tygodni; miesięcy 1 albo 2 wg kalendarza
+  await wpisz(page, 'dobInput', ur.pole);
   const s = await stan(page);
 
   expect(s.tygodnieWiersz).toBe(true);
@@ -238,14 +254,14 @@ test('niemowlę z datą urodzenia dostaje tygodnie liczone z kalendarza', async 
   expect(s.tygodnieNotka).toContain('8 tygodni');
   expect(s.tygodnieNotka).toContain('z daty urodzenia');
   expect(s.age).toBe('0');
-  expect(s.ageMonths).toBe('1');
+  expect(s.ageMonths).toBe(String(oczekiwanyWiek(ur.iso, await dzisStrony(page)).mies));
 });
 
 test('powyżej 3. miesiąca wiersz tygodni znika', async ({ page }) => {
   test.setTimeout(120_000);
   await otworz(page);
 
-  await wpisz(page, 'dobInput', dataSprzedDni(200));
+  await wpisz(page, 'dobInput', (await dataSprzedDni(page, 200)).pole);
   const s = await stan(page);
   expect(s.tygodnieWiersz).toBe(false);
   expect(s.tygodnie).toBe('');
@@ -296,12 +312,12 @@ test('ukończone tygodnie trafiają do rekordu obok miesięcy', async ({ page })
   expect(zebrane.user.ageMonths).toBe(1);
 
   // z datą urodzenia liczbę podaje kalendarz
-  await wpisz(page, 'dobInput', dataSprzedDni(61));
+  await wpisz(page, 'dobInput', (await dataSprzedDni(page, 61)).pole);
   zebrane = await page.evaluate(() => window.collectUserData());
   expect(zebrane.user.ageWeeks).toBe(8);
 
   // poza oknem < 3 mies. tygodnie przestają nieść informację i znikają z rekordu
-  await wpisz(page, 'dobInput', dataSprzedDni(200));
+  await wpisz(page, 'dobInput', (await dataSprzedDni(page, 200)).pole);
   zebrane = await page.evaluate(() => window.collectUserData());
   expect(zebrane.user.ageWeeks).toBeUndefined();
 });
@@ -330,7 +346,7 @@ test('„Wyczyść wszystkie pola" kasuje datę urodzenia, tygodnie i odblokowuj
   test.setTimeout(120_000);
   await otworz(page);
 
-  await wpisz(page, 'dobInput', dataSprzedDni(40));
+  await wpisz(page, 'dobInput', (await dataSprzedDni(page, 40)).pole);
   let s = await stan(page);
   expect(s.dob).not.toBe('');
   expect(s.ageReadOnly, 'data urodzenia blokuje pole wieku').toBe(true);
