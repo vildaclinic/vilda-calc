@@ -1100,6 +1100,32 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-IOS-SCHOWEK — kopiowanie podsumowania do schowka na iOS (SW 1.0.974, 2026-09-16)
+
+**Zgłoszenie właściciela.** Przycisk „Podsumowanie wyników — kliknij i skopiuj" na iPhonie pokazywał „Dane zostały skopiowane do schowka", ale po wklejeniu w Wiadomościach pojawiał się bezsensowny ciąg znaków, a w Notatkach — łącze. Na komputerze to samo kopiowanie działało poprawnie.
+
+**Diagnoza.** Do schowka **nic nie trafiało**, a lekarz wklejał jego **poprzednią zawartość**. To tłumaczy oba objawy naraz: Notatki zamieniają wklejony adres w łącze, Wiadomości pokazują go surowo — jedna przyczyna, dwa różne obrazy. Stara ścieżka kopiowania (własna kopia logiki w `vilda_summary_cards.js`) łamała **cztery** reguły WebKita naraz:
+
+1. **Pole `readonly` bez `contentEditable`** — na iOS `select()` nie ustawia wtedy zaznaczenia, więc `execCommand('copy')` nie ma czego skopiować.
+2. **Pole odsunięte na `left:-9999px`** — elementu poza widokiem iOS nie zaznaczy.
+3. **Ścieżka zapasowa uruchamiana w `.catch()`** obietnicy — czyli **już poza gestem użytkownika**, a iOS pozwala pisać do schowka wyłącznie w geście.
+4. **Zaufanie wartości zwróconej przez `execCommand('copy')`** — WebKit potrafi zwrócić `true`, nie kopiując niczego. **To jest właściwa przyczyna fałszywego komunikatu o sukcesie.**
+
+**Rozwiązanie — `vilda_schowek.js` (?v 1), jedno miejsce zapisu do schowka.** Moduł niczego nie wyświetla; zwraca obietnicę spełnioną tylko wtedy, gdy tekst **naprawdę** trafił do schowka.
+
+- **Obie drogi w TYM SAMYM geście.** Synchroniczna (`execCommand`) i asynchroniczna (`navigator.clipboard.writeText`) startują razem, a nie jedna po porażce drugiej. Powód jest twardy: nie da się z kodu rozstrzygnąć, która z nich zawodzi na konkretnym iPhonie, a odpalenie drugiej **po** porażce pierwszej jest niemożliwe, bo dzieje się już poza gestem. Wystarczy, że zadziała którakolwiek; ten sam tekst zapisany dwa razy nie szkodzi. Nie rozpoznajemy przeglądarki po `userAgent` — kolejność jest poprawna wszędzie, więc nie ma czego zgadywać.
+- **Sukces potwierdzany POMIAREM, nie deklaracją.** Po `setSelectionRange` sprawdzamy, czy zaznaczenie obejmuje cały nasz tekst (`selectionEnd - selectionStart`). Jeśli nie — kopiowanie na pewno go nie wzięło, niezależnie od tego, co zwróciło `execCommand`. Bez tej kontroli przycisk melduje sukces przy pustym strzale.
+- **Pole pomocnicze wg reguł iOS:** `readOnly` (trzyma klawiaturę ekranową z daleka) **razem z** `contentEditable` (pozwala iOS mimo to zaznaczyć), w widoku zamiast poza ekranem, `font-size:16px` (mniejsza czcionka każe iOS przybliżyć stronę), przezroczyste i wielkości piksela. Zaznaczenie i fokus użytkownika są przywracane.
+- **Porażka mówi prawdę.** Zamiast ogólnego „nie udało się" komunikat mówi wprost, że **schowek został bez zmian**, i proponuje zaznaczenie ręczne. To ta informacja, której brakowało: lekarz wkleił starą treść w przekonaniu, że to nowa.
+
+**Czego świadomie NIE zrobiono w tym kroku.** Identyczną własną kopię tej logiki mają jeszcze **dziesięć** miejsc (`app.js`, `vilda_auth_ui.js`, `vilda_epicrisis_ui.js`, `vilda_diet_recommendations.js`, `inline_notatki_00.js`, `gh_igf_therapy.js`, `antibiotic_therapy.js`, `hypertension_therapy.js`, `obesity_therapy.js`, `thyroid_cancer_kids.js`) — wszystkie z tym samym błędem i wszystkie zapewne tak samo zepsute na iOS. Przestawienie ich na `VildaSchowek` jest mechaniczne, ale rusza dziesięć modułów naraz, więc czeka na osobną decyzję i osobny przegląd. **Zgłoszenie dotyczyło jednego przycisku i ten jeden został naprawiony.**
+
+**Ograniczenie dowodu — ważne.** W repozytorium nie ma WebKita ani iOS (Playwright ma tu tylko Chromium), więc **naprawa nie została potwierdzona na iPhonie**. Testy dowodzą tego, co da się udowodnić bez tamtej platformy: że tekst ląduje w **systemowym** schowku (odczyt przez wklejenie z klawiatury, nie przez podmieniony `writeText`), że ścieżka synchroniczna działa **bez** `navigator.clipboard`, i że nieudane kopiowanie nie pokazuje już „skopiowane". Potwierdzenie na sprzęcie należy do właściciela.
+
+**Nie liczymy na nowszą wersję systemu.** Pytanie, czy pomoże iOS 27, zostawiamy bez znaczenia dla tej naprawy: kod łamał udokumentowane reguły Safari niezależnie od wersji i psułby się na każdym starszym iPhonie, który lekarz może mieć w gabinecie.
+
+*Strażnicy:* `tests/unit/schowek.test.mjs` (7) — m.in. **regresja kluczowa**: `execCommand` zwracające `true` przy pustym zaznaczeniu **nie jest** sukcesem; obie drogi ruszały w tym samym geście (`writeText` wywołany mimo udanego `execCommand`); pole spełnia reguły iOS; brak własnej kopii logiki w karcie podsumowania. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku, ze znacznikiem poprzedniej zawartości (dokładnie ten scenariusz ze zgłoszenia). Obie kluczowe asercje sprawdzone kontrolą negatywną: po usunięciu kontroli zaznaczenia test jednostkowy i e2e **padają**.
+
 ### P-DS-6 — obwód głowy pacjenta z zespołem Downa na siatce Zemel 2015 (SW 1.0.973, 2026-09-16, plan P-DS)
 
 Zaległość wskazana w sprostowaniu do P-DS-5 pkt 6 — i **jedyna miara antropometryczna, która po zamknięciu planu czytała się jeszcze z siatki populacyjnej**.

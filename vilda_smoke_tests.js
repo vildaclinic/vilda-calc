@@ -109,7 +109,7 @@
     'vilda_professional_module.js?v=11',
     'vilda_persist_runtime.js?v=15',
     'vilda_growth_prediction_lines.js?v=1',
-    'vilda_summary_cards.js?v=41',
+    'vilda_summary_cards.js?v=42',
     'tw2_data.js?v=4',
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=2',
