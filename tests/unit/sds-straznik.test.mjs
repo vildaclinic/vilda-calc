@@ -29,8 +29,6 @@ const WZOR_DOZWOLONY = {
   'inline_index_05.js': 'siatka zespołu Downa (Zemel 2015)',
   'inline_docpro_03.js': 'siatka zespołu Downa (Zemel 2015)',
   'vilda_auth_ui.js': 'panel porównania — masa (sc.param!=="HT")',
-  'vilda_diet_plan_ui.js': 'BMI (cel 85. centyla)',
-  'vilda_diet_recommendations.js': 'BMI (odwrotność dla celu)',
   'vilda_down_syndrome.js': 'zespół Downa (Zemel 2015)',
   'wfh_module.js': 'masa do długości (WHO)',
   'vilda_epicrisis_ui.js': 'granice 3./97. centyla masy (q, G!=="HT")',

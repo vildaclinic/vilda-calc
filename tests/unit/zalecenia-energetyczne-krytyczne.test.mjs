@@ -1,19 +1,27 @@
-import { describe, expect, it } from 'vitest';
-import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { oknoZSilnikiem, wczytajDoOkna } from '../support/silnik-bmi.mjs';
 
 // ENERGY-REC-1 (decyzja właściciela 2026-09-12, audyt zaleceń energetycznych, błędy krytyczne):
 //  K1 — dorosły z BMI < 25 nie dostaje diet redukcyjnych z silnika planu (reductionNotIndicated),
 //  K3 — symulacja czasu do celu BMI zna flagę „wzrost zakończony" (tempo wzrastania 0, growthAware false),
 //       więc termin liczy się jak dla dorosłego (liniowo), a nie z domyślnym tempem wzrastania.
-// Dane FIKCYJNE; LMS BMI to uproszczone stałe testowe.
+// P-DIETA-SILNIK: klasę BMI liczy PRAWDZIWY silnik vilda_bmi.js na PRAWDZIWYCH tablicach OLAF/WHO.
+// Dane FIKCYJNE.
 
-const LMS = { 'M-168': [-1.8, 19.2, 0.13] };
-globalThis.KCAL_PER_KG = 7700;
-globalThis.CHILD_AGE_MIN = 0.25;
-globalThis.getLMS = (sex, months) => LMS[`${sex}-${months}`] || null;
-// cel BMI stały (22) — izoluje test od tabel centylowych; liczy się różnica: z wzrastaniem vs bez
-globalThis.toNormalBMITarget = () => 22;
-const win = loadBrowserScript('vilda_diet_plan_ui.js', {});
+const zapisane = {};
+function ustawGlobal(k, v) { if (!(k in zapisane)) zapisane[k] = globalThis[k]; globalThis[k] = v; }
+afterAll(() => {
+  for (const k of Object.keys(zapisane)) {
+    if (zapisane[k] === undefined) delete globalThis[k]; else globalThis[k] = zapisane[k];
+  }
+});
+
+ustawGlobal('KCAL_PER_KG', 7700);
+ustawGlobal('CHILD_AGE_MIN', 0.25);
+// cel BMI stały (22) zamiast app.js — K3 pyta o RÓŻNICĘ „z wzrastaniem vs bez", nie o wartość celu;
+// sam cel z siatek sprawdza tests/unit/energy-dziecko-otylosc.test.mjs na silniku.
+ustawGlobal('toNormalBMITarget', () => 22);
+const win = wczytajDoOkna(oknoZSilnikiem(), 'vilda_diet_plan_ui.js');
 
 describe('K1 — dorosły z BMI w normie bez diet redukcyjnych', () => {
   it('28 l, 165 cm, 62 kg (BMI 22,8) → diets [], reductionNotIndicated; 35 l, 175 cm, 105 kg → trzy diety jak dotąd', () => {

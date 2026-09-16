@@ -1,13 +1,9 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { funkcjaZ, korzen, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
-const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const appSrc = fs.readFileSync(path.join(korzen, 'app.js'), 'utf8');
-const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 
 // P-BMI etap 2 — wyjścia tekstowe (schowek Karty, karta „Podsumowanie wyników", podsumowanie
 // poprzedniego pomiaru, raport PDF, epikryza, opis pacjenta, mini‑podsumowanie) mówią o BMI
@@ -15,40 +11,6 @@ const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 // co karta główna po etapie 1. Format wg decyzji 10: „BMI 17,3 kg/m²", „bmiSDS +1,20".
 // Silnik dostaje PRAWDZIWE tablice z app.js i vilda_growth_reference_data.js. Dane FIKCYJNE.
 
-function wytnij(src, od) {
-  let d = 0;
-  for (let k = src.indexOf('{', od); k < src.length; k += 1) {
-    if (src[k] === '{') d += 1;
-    else if (src[k] === '}') { d -= 1; if (d === 0) return src.slice(od, k + 1); }
-  }
-  throw new Error('niezbalansowane nawiasy');
-}
-function tablica(nazwa) {
-  const i = appSrc.indexOf(`${nazwa}={`);
-  expect(i, `app.js ma tablicę ${nazwa}`).toBeGreaterThan(-1);
-  return new Function(`return ${wytnij(appSrc, i).slice(nazwa.length + 1)}`)();
-}
-function funkcjaZ(src, nazwa) {
-  const i = src.indexOf(`function ${nazwa}(`);
-  expect(i, `źródło ma funkcję ${nazwa}()`).toBeGreaterThan(-1);
-  return wytnij(src, i);
-}
-/* Okno z prawdziwym silnikiem BMI i prawdziwymi tablicami. */
-function oknoZSilnikiem(extra = {}) {
-  const win = Object.assign({ addEventListener() {}, location: { pathname: '/' }, navigator: {} }, extra);
-  win.window = win;
-  for (const f of ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', 'vilda_bmi.js']) {
-    new Function('window', 'globalThis', zrodlo(f))(win, win);
-  }
-  const R = win.VildaGrowthReferenceData.getData();
-  win.VildaBmi.ustawDane({
-    palCentyl: (p, m, c, t) => win.VildaCentileInterp.palCentileValue(p, m, c, t),
-    LMS_BMI_OLAF_BOYS: tablica('OLAF_LMS_BOYS'), LMS_BMI_OLAF_GIRLS: tablica('OLAF_LMS_GIRLS'),
-    LMS_BMI_WHO_INFANT_BOYS: R.LMS_INFANT_BOYS, LMS_BMI_WHO_INFANT_GIRLS: R.LMS_INFANT_GIRLS,
-    LMS_BMI_WHO_BOYS: R.LMS_BOYS, LMS_BMI_WHO_GIRLS: R.LMS_GIRLS,
-  });
-  return win;
-}
 function stubDocument() {
   return {
     getElementById: () => null, addEventListener() {}, querySelectorAll() { return []; }, querySelector() { return null; },
