@@ -12,7 +12,7 @@ export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 export const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 export const appSrc = zrodlo('app.js');
 
-const PLIKI_SILNIKA = ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', 'vilda_bmi.js'];
+const PLIKI_SILNIKA = ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', 'ds_lms.js', 'vilda_bmi.js'];
 
 /** Wycina zbalansowany blok { … } zaczynający się od pierwszego „{" za pozycją `od`. */
 export function wytnij(src, od) {
@@ -38,13 +38,21 @@ export function funkcjaZ(src, nazwa) {
   return wytnij(src, i);
 }
 
+/** Przeliczenie kluczy tablic DS z lat na miesiące — PRODUKCYJNĄ funkcją z app.js. */
+export function dsNaMiesiace(tab) {
+  const f = new Function(`${funkcjaZ(appSrc, 'vildaBmiDsMiesiace')}return vildaBmiDsMiesiace;`)();
+  return f(tab);
+}
+
 /** Tablice LMS BMI dla VildaBmi.ustawDane() — prosto z produkcyjnych plików. */
 export function daneSilnika(win) {
   const R = win.VildaGrowthReferenceData.getData();
+  const DS = win.DS || {};
   return {
     LMS_BMI_OLAF_BOYS: tablica('OLAF_LMS_BOYS'), LMS_BMI_OLAF_GIRLS: tablica('OLAF_LMS_GIRLS'),
     LMS_BMI_WHO_INFANT_BOYS: R.LMS_INFANT_BOYS, LMS_BMI_WHO_INFANT_GIRLS: R.LMS_INFANT_GIRLS,
     LMS_BMI_WHO_BOYS: R.LMS_BOYS, LMS_BMI_WHO_GIRLS: R.LMS_GIRLS,
+    LMS_BMI_DS_BOYS: dsNaMiesiace(DS.DS_CHILD_BMI_BOYS), LMS_BMI_DS_GIRLS: dsNaMiesiace(DS.DS_CHILD_BMI_GIRLS),
   };
 }
 

@@ -21,6 +21,12 @@
  *  6. Dorośli: norma < 25 (klasyfikacja); cel „normy" do redukcji = 24,9 (liczba, nie kategoria).
  *  8. Wiek jest UŁAMKOWY w miesiącach i tak trafia do interpolacji L/M/S (DOB-AGE-4 także dla BMI).
  * 10. Format: „BMI 17,3 kg/m²", „bmiSDS +1,20" (2 miejsca, znak, przecinek), centyl wg ADV-REPORT-5.
+ * 12. POPULACJA (P-DS-1, decyzje D1–D3): zespół Downa to cecha PACJENTA, nie wybór siatki. Gdy
+ *     populacja = 'DS', BMI liczy się WYŁĄCZNIE na siatce DS (Zemel 2015) — bez cichego zejścia na
+ *     OLAF/WHO/Palczewską; poza zakresem siatki DS (poniżej 2 lat, powyżej 20 lat) wynik jest pusty
+ *     z jawnym powodem. Poniżej 2 lat BMI zastępuje masa do długości (WFL DS) poza tym modułem.
+ *     Granica dorosłości dla DS to 20 lat (240 mies.), nie 18 — siatki DS sięgają 20 lat i centyl
+ *     DS niesie więcej niż próg dorosłego (decyzja D3).
  *
  * SIATKI: OLAF BMI 36–216 mies. (tablice OLAF_LMS_* z app.js), WHO 2006 0–60 mies. (LMS_INFANT_*),
  * WHO 2006/2007 24–228 mies. (LMS_BOYS/GIRLS; powyżej 60. mies. czytamy stąd), Palczewska 1–222 mies.
@@ -47,6 +53,10 @@
  *  - WHO 2007 (BMI 61–228 mies., LMS): de Onis M i wsp. „Development of a WHO growth reference for
  *    school-aged children and adolescents", Bull World Health Organ 2007;85(9):660–667,
  *    PMID 18026621, DOI 10.2471/blt.07.043497.
+ *  - Zespół Downa (BMI 24–240 mies., LMS): Zemel BS, Pipan M, Stallings VA i wsp. „Growth Charts
+ *    for Children With Down Syndrome in the United States", Pediatrics 2015;136(5):e1204–e1211,
+ *    PMID 26504127, DOI 10.1542/peds.2015-1652 (siatki DSGS/AAP; tablice w ds_lms.js, klucze
+ *    przeliczone na miesiące w app.js, żeby wszystkie siatki silnika miały tę samą oś wieku).
  *  - Palczewska (centyle 3–97 BMI, 1–222 mies.): Palczewska I, Niedźwiecka Z. „Wskaźniki rozwoju
  *    somatycznego dzieci i młodzieży warszawskiej", Med Wieku Rozwoj 2001;5(2 Supl. 1):18–118,
  *    PMID 11675534 (bez DOI w PubMed).
@@ -61,6 +71,9 @@
 
   var WERSJA = 1;
   var ZRODLA = ['PALCZEWSKA', 'OLAF', 'WHO'];
+  /* P-DS-1: siatki, na których silnik umie liczyć. DS nie jest wyborem użytkownika (bmiSource),
+     tylko skutkiem populacji pacjenta — dlatego stoi obok ZRODLA, a nie w nich. */
+  var SIATKI = ['PALCZEWSKA', 'OLAF', 'WHO', 'DS'];
   var G = Object.freeze({
     OLAF_MIN_M: 36,        // OLAF BMI od 3. roku życia
     OLAF_MAX_M: 216,       // OLAF BMI do 18 lat
@@ -71,6 +84,8 @@
     DOROSLY_M: 216,        // decyzja 5: dorosły od 18 lat
     OLBRZYMIA_MIN_M: 60,   // decyzja 4
     Z_P85: 1.036,          // cel normy dziecka (ENERGY-CHILD-MID2, jak Z85 w app.js)
+    DS_MIN_M: 24,          // siatka BMI DS od 2 lat (poniżej: masa do długości WFL DS)
+    DS_MAX_M: 240,         // siatka DS do 20 lat; decyzja D3: do tego wieku DS wygrywa z progiem dorosłego
   });
   var PROGI = Object.freeze({
     DZIECKO: Object.freeze({ NIEDOWAGA: 5, NADWAGA: 85, OTYLOSC: 97, OLBRZYMIA_SDS: 3, ALARM_NISKI: 3 }),
@@ -161,6 +176,10 @@
       if (wiekMies < G.OLAF_MIN_M || wiekMies > G.OLAF_MAX_M) return null;
       return dana(m ? 'LMS_BMI_OLAF_BOYS' : 'LMS_BMI_OLAF_GIRLS');
     }
+    if (siatka === 'DS') {
+      if (wiekMies < G.DS_MIN_M || wiekMies > G.DS_MAX_M) return null;
+      return dana(m ? 'LMS_BMI_DS_BOYS' : 'LMS_BMI_DS_GIRLS');
+    }
     return null;
   }
   /* L, M, S BMI dla wieku ułamkowego na zadanej siatce (WHO / OLAF); Palczewska nie ma LMS → null. */
@@ -211,16 +230,28 @@
   }
 
   /* ---------- reguła wyboru siatki ---------- */
+  /* P-DS-1: populacja odniesienia. 'DS' = pacjent z zespołem Downa; wszystko inne to populacja
+     ogólna. Flagę rozstrzyga vilda_ds_source.js — silnik jej nie szuka i nie zna DOM. */
+  function normPopulacja(p) {
+    return String(p || '').toUpperCase() === 'DS' ? 'DS' : 'OGOLNA';
+  }
+  function maxWiek(populacja) {
+    return normPopulacja(populacja) === 'DS' ? G.DS_MAX_M : G.WHO_MAX_M;
+  }
+
   function normZrodlo(z) {
     var s = String(z || '').toUpperCase();
     return ZRODLA.indexOf(s) >= 0 ? s : 'OLAF';
   }
   function etykieta(z) {
+    if (String(z || '').toUpperCase() === 'DS') return 'siatka DS (Zemel 2015)';
     var s = normZrodlo(z);
     return s === 'PALCZEWSKA' ? 'Palczewska' : s === 'WHO' ? 'WHO' : 'OLAF';
   }
   /* Kolejność siatek dla zadanego źródła i wieku; pierwsza z danymi wygrywa (decyzje 1–2). */
-  function kandydaci(zrodlo, wiekMies) {
+  function kandydaci(zrodlo, wiekMies, populacja) {
+    /* decyzja D2: przy DS nie ma łańcucha zastępczego — albo siatka DS, albo nic. */
+    if (normPopulacja(populacja) === 'DS') return ['DS'];
     var z = normZrodlo(zrodlo);
     var noworodek = typeof wiekMies === 'number' && wiekMies < G.PAL_MIN_M;
     var maly = typeof wiekMies === 'number' && wiekMies < G.OLAF_MIN_M;
@@ -232,6 +263,12 @@
     }
     return ['WHO', 'PALCZEWSKA', 'OLAF'];
   }
+  function powodDs(wiekMies) {
+    if (typeof wiekMies !== 'number' || !isFinite(wiekMies)) return 'brak wieku dla siatki DS';
+    if (wiekMies < G.DS_MIN_M) return 'siatka BMI zespołu Downa zaczyna się od 2 lat — poniżej stosuje się masę do długości (WFL DS)';
+    return 'siatka zespołu Downa kończy się na 20 latach';
+  }
+
   function powodZmiany(zadane, uzyta, wiekMies) {
     if (!uzyta || zadane === uzyta) return '';
     if (typeof wiekMies === 'number' && wiekMies < G.PAL_MIN_M && uzyta === 'WHO') return 'noworodek poniżej 1. miesiąca — siatka Palczewskiej zaczyna się od 1. miesiąca, użyto WHO 2006';
@@ -243,7 +280,7 @@
   function wynikPusty(o, powod) {
     return {
       wersja: WERSJA, bmi: typeof o.bmi === 'number' && isFinite(o.bmi) ? o.bmi : null,
-      sds: null, centyl: null, siatka: null, zrodloZadane: normZrodlo(o.zrodlo), fallback: false,
+      sds: null, centyl: null, siatka: null, zrodloZadane: normZrodlo(o.zrodlo), populacja: normPopulacja(o.populacja), fallback: false,
       powod: powod || '', pozaZakresem: true, mediana: null, lms: null, wiekMies: o.wiekMies, plec: o.plec,
     };
   }
@@ -257,7 +294,7 @@
     var o = opts || {};
     var siatka = String(o.siatka || '').toUpperCase();
     var wiek = liczba(o.wiekMies), x = wejscieBmi(o), plec = o.plec === 'M' ? 'M' : 'F';
-    if (!isFinite(wiek) || wiek < 0 || x == null || ZRODLA.indexOf(siatka) < 0) return null;
+    if (!isFinite(wiek) || wiek < 0 || x == null || SIATKI.indexOf(siatka) < 0) return null;
     var z, mediana, tab = null;
     if (siatka === 'PALCZEWSKA') {
       var w = wezlyPal(plec, wiek);
@@ -273,7 +310,7 @@
     if (typeof z !== 'number' || !isFinite(z)) return null;
     return {
       wersja: WERSJA, bmi: x, sds: z, centyl: centylZSds(z), siatka: siatka,
-      zrodloZadane: normZrodlo(o.zrodlo != null ? o.zrodlo : siatka), fallback: false, powod: '',
+      zrodloZadane: normZrodlo(o.zrodlo), populacja: siatka === 'DS' ? 'DS' : normPopulacja(o.populacja), fallback: false, powod: '',
       pozaZakresem: false, mediana: mediana, lms: tab, wiekMies: wiek, plec: plec,
     };
   }
@@ -283,21 +320,21 @@
   function liczba(v) { return v == null || v === '' ? NaN : Number(v); }
   function policz(opts) {
     var o = opts || {};
-    var wiek = liczba(o.wiekMies), x = wejscieBmi(o), zadane = normZrodlo(o.zrodlo);
-    var baza = { bmi: x, zrodlo: zadane, wiekMies: isFinite(wiek) ? wiek : null, plec: o.plec === 'M' ? 'M' : 'F' };
+    var wiek = liczba(o.wiekMies), x = wejscieBmi(o), zadane = normZrodlo(o.zrodlo), pop = normPopulacja(o.populacja);
+    var baza = { bmi: x, zrodlo: zadane, populacja: pop, wiekMies: isFinite(wiek) ? wiek : null, plec: o.plec === 'M' ? 'M' : 'F' };
     if (!isFinite(wiek) || wiek < 0) return wynikPusty(baza, 'brak wieku');
     if (x == null) return wynikPusty(baza, 'brak masy lub wzrostu');
-    if (wiek > G.WHO_MAX_M) return wynikPusty(baza, 'wiek poza zakresem siatek BMI (powyżej 19 lat)');
-    var lista = kandydaci(zadane, wiek);
+    if (wiek > maxWiek(pop)) return wynikPusty(baza, pop === 'DS' ? powodDs(wiek) : 'wiek poza zakresem siatek BMI (powyżej 19 lat)');
+    var lista = kandydaci(zadane, wiek, pop);
     for (var i = 0; i < lista.length; i++) {
-      var r = policzNaSiatce({ bmi: x, plec: o.plec, wiekMies: wiek, siatka: lista[i], zrodlo: zadane });
+      var r = policzNaSiatce({ bmi: x, plec: o.plec, wiekMies: wiek, siatka: lista[i], zrodlo: zadane, populacja: pop });
       if (r) {
-        r.fallback = lista[i] !== zadane;
-        r.powod = powodZmiany(zadane, lista[i], wiek);
+        r.fallback = pop !== 'DS' && lista[i] !== zadane;
+        r.powod = pop === 'DS' ? '' : powodZmiany(zadane, lista[i], wiek);
         return r;
       }
     }
-    return wynikPusty(baza, 'brak siatek BMI dla tego wieku');
+    return wynikPusty(baza, pop === 'DS' ? powodDs(wiek) : 'brak siatek BMI dla tego wieku');
   }
 
   /* Mediana BMI (P50) dla wieku na siatce z tej samej reguły — do Cole'a, masy należnej, „50. centyla BMI". */
@@ -308,13 +345,16 @@
     var t = lms(p, w, s);
     return t && t[1] > 0 ? t[1] : null;
   }
-  function mediana(plec, wiekMies, zrodlo) {
-    var w = liczba(wiekMies);
-    if (!isFinite(w) || w < 0 || w > G.WHO_MAX_M) return null;
-    var lista = kandydaci(zrodlo, w);
+  function mediana(plec, wiekMies, zrodlo, populacja) {
+    var w = liczba(wiekMies), pop = normPopulacja(populacja);
+    if (!isFinite(w) || w < 0 || w > maxWiek(pop)) return null;
+    var lista = kandydaci(zrodlo, w, pop);
     for (var i = 0; i < lista.length; i++) {
       var m = medianaNaSiatce(plec, w, lista[i]);
-      if (typeof m === 'number' && isFinite(m) && m > 0) return { mediana: m, siatka: lista[i], fallback: lista[i] !== normZrodlo(zrodlo), powod: powodZmiany(normZrodlo(zrodlo), lista[i], w) };
+      if (typeof m === 'number' && isFinite(m) && m > 0) {
+        if (pop === 'DS') return { mediana: m, siatka: lista[i], populacja: 'DS', fallback: false, powod: '' };
+        return { mediana: m, siatka: lista[i], populacja: 'OGOLNA', fallback: lista[i] !== normZrodlo(zrodlo), powod: powodZmiany(normZrodlo(zrodlo), lista[i], w) };
+      }
     }
     return null;
   }
@@ -323,13 +363,14 @@
   function wartoscDlaSds(opts) {
     var o = opts || {};
     var w = liczba(o.wiekMies), z = liczba(o.sds), plec = o.plec === 'M' ? 'M' : 'F';
-    if (!isFinite(w) || w < 0 || !isFinite(z) || w > G.WHO_MAX_M) return null;
-    var lista = o.siatka ? [String(o.siatka).toUpperCase()] : kandydaci(o.zrodlo, w);
+    var pop = normPopulacja(o.populacja);
+    if (!isFinite(w) || w < 0 || !isFinite(z) || w > maxWiek(pop)) return null;
+    var lista = o.siatka ? [String(o.siatka).toUpperCase()] : kandydaci(o.zrodlo, w, pop);
     for (var i = 0; i < lista.length; i++) {
       var s = lista[i], x;
       if (s === 'PALCZEWSKA') x = xPal(z, wezlyPal(plec, w));
       else x = xLms(z, lms(plec, w, s));
-      if (typeof x === 'number' && isFinite(x) && x > 0) return { bmi: x, siatka: s, fallback: s !== normZrodlo(o.zrodlo != null ? o.zrodlo : s) };
+      if (typeof x === 'number' && isFinite(x) && x > 0) return { bmi: x, siatka: s, populacja: s === 'DS' ? 'DS' : 'OGOLNA', fallback: s !== 'DS' && s !== normZrodlo(o.zrodlo != null ? o.zrodlo : s) };
     }
     return null;
   }
@@ -337,11 +378,16 @@
     var o = opts || {};
     var z = sdsZCentyla(Number(o.centyl));
     if (z == null) return null;
-    return wartoscDlaSds({ sds: z, plec: o.plec, wiekMies: o.wiekMies, zrodlo: o.zrodlo, siatka: o.siatka });
+    return wartoscDlaSds({ sds: z, plec: o.plec, wiekMies: o.wiekMies, zrodlo: o.zrodlo, siatka: o.siatka, populacja: o.populacja });
   }
 
   /* ---------- kategoria (jedna tablica progów; decyzje 3–6) ---------- */
-  function dorosly(wiekMies) { return typeof wiekMies === 'number' && isFinite(wiekMies) && wiekMies >= G.DOROSLY_M; }
+  /* decyzja 5: dorosły od 18 lat. Decyzja D3: u pacjenta z DS siatki sięgają 20 lat i do tego wieku
+     centyl DS wygrywa z progiem dorosłego. */
+  function dorosly(wiekMies, populacja) {
+    var prog = normPopulacja(populacja) === 'DS' ? G.DS_MAX_M : G.DOROSLY_M;
+    return typeof wiekMies === 'number' && isFinite(wiekMies) && wiekMies >= prog;
+  }
   function kategoriaDorosly(x) {
     var v = Number(x), P = PROGI.DOROSLY;
     if (!isFinite(v) || v <= 0) return { etykieta: '', klucz: 'brak', kolor: null, dorosly: true };
@@ -366,7 +412,7 @@
   /* opts: { bmi, centyl, sds, wiekMies, dorosly? } — dorosły od 216 mies. (lub jawnie). */
   function kategoria(opts) {
     var o = opts || {};
-    var jestDorosly = o.dorosly != null ? !!o.dorosly : dorosly(liczba(o.wiekMies));
+    var jestDorosly = o.dorosly != null ? !!o.dorosly : dorosly(liczba(o.wiekMies), o.populacja);
     if (jestDorosly) return kategoriaDorosly(o.bmi);
     return kategoriaDziecko(o.centyl, o.sds, o.wiekMies);
   }
@@ -374,7 +420,7 @@
   function ocen(opts) {
     var o = opts || {};
     var r = policz(o);
-    r.kategoria = kategoria({ bmi: r.bmi, centyl: r.centyl, sds: r.sds, wiekMies: r.wiekMies, dorosly: o.dorosly });
+    r.kategoria = kategoria({ bmi: r.bmi, centyl: r.centyl, sds: r.sds, wiekMies: r.wiekMies, dorosly: o.dorosly, populacja: r.populacja });
     return r;
   }
 
@@ -392,7 +438,7 @@
     var o = opts || {};
     var x = wejscieBmi(o), w = liczba(o.wiekMies);
     if (x == null || !isFinite(w) || w < 0) return null;
-    var m = o.siatka ? (function () { var v = medianaNaSiatce(o.plec, w, o.siatka); return v ? { mediana: v, siatka: String(o.siatka).toUpperCase(), fallback: false, powod: '' } : null; })() : mediana(o.plec, w, o.zrodlo);
+    var m = o.siatka ? (function () { var v = medianaNaSiatce(o.plec, w, o.siatka); return v ? { mediana: v, siatka: String(o.siatka).toUpperCase(), fallback: false, powod: '' } : null; })() : mediana(o.plec, w, o.zrodlo, o.populacja);
     if (!m) return null;
     var c = x / m.mediana * 100;
     return { cole: c, mediana: m.mediana, siatka: m.siatka, fallback: m.fallback, powod: m.powod, kategoria: kategoriaCole(c) };
@@ -403,8 +449,8 @@
     var o = opts || {};
     var w = liczba(o.wiekMies), h = liczba(o.wzrostCm);
     var masa = function (b) { return isFinite(h) && h > 0 && b != null ? b * Math.pow(h / 100, 2) : null; };
-    if (o.dorosly === true || dorosly(w)) return { bmiCel: PROGI.DOROSLY.CEL, masaCel: masa(PROGI.DOROSLY.CEL), rodzaj: 'dorosly-24.9', siatka: null, fallback: false };
-    var r = wartoscDlaSds({ sds: G.Z_P85, plec: o.plec, wiekMies: w, zrodlo: o.zrodlo, siatka: o.siatka });
+    if (o.dorosly === true || dorosly(w, o.populacja)) return { bmiCel: PROGI.DOROSLY.CEL, masaCel: masa(PROGI.DOROSLY.CEL), rodzaj: 'dorosly-24.9', siatka: null, fallback: false };
+    var r = wartoscDlaSds({ sds: G.Z_P85, plec: o.plec, wiekMies: w, zrodlo: o.zrodlo, siatka: o.siatka, populacja: o.populacja });
     if (!r) return null;
     return { bmiCel: r.bmi, masaCel: masa(r.bmi), rodzaj: 'dziecko-P85', siatka: r.siatka, fallback: r.fallback };
   }
@@ -451,8 +497,8 @@
   }
 
   root.VildaBmi = Object.freeze({
-    version: WERSJA, ZRODLA: ZRODLA.slice(), G: G, PROGI: PROGI, CENTYLE_PAL: CENTYLE_PAL.slice(), BRAK_KLASYFIKACJI: BRAK_KLASYFIKACJI,
-    ustawDane: ustawDane, kandydaci: kandydaci, lms: lms, interpoluj: interpoluj, zLms: zLms, xLms: xLms,
+    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), G: G, PROGI: PROGI, CENTYLE_PAL: CENTYLE_PAL.slice(), BRAK_KLASYFIKACJI: BRAK_KLASYFIKACJI,
+    ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, lms: lms, interpoluj: interpoluj, zLms: zLms, xLms: xLms,
     bmi: bmi, policz: policz, policzNaSiatce: policzNaSiatce, ocen: ocen,
     mediana: mediana, medianaNaSiatce: medianaNaSiatce, wartoscDlaSds: wartoscDlaSds, wartoscDlaCentyla: wartoscDlaCentyla,
     kategoria: kategoria, kategoriaDziecko: kategoriaDziecko, kategoriaDorosly: kategoriaDorosly, dorosly: dorosly,

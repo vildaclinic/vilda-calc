@@ -1100,6 +1100,46 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+### P-DS-1 — zespół Downa jako cecha pacjenta: siatka DS w silniku BMI, rozpoznanie w rekordzie (SW 1.0.967, 2026-09-16, plan P-DS, decyzje właściciela D1–D5)
+
+Pierwszy z pięciu etapów planu P-DS. Do 1.0.966 jedyną „flagą DS" w aplikacji był **stan interfejsu** — czy karta modułu „Obliczenia dla dzieci z zespołem Downa" jest rozwinięta (`#downSyndromeCard`). Skutki: zwinięcie karty zmieniało klasyfikację BMI w planie diety, wczytanie pacjenta z sejfu / F5 / przejście `index` ↔ `docpro` gubiło rozpoznanie, powyżej 20 lat karta znikała razem z flagą, a rekord pacjenta o DS nie wiedział w ogóle. Do tego klasę BMI dla DS składał sobie **sam moduł diety**: własny czytnik wiersza LMS (`__ds_getLMS`, wiek w latach), własne złożenie wyniku i **własne progi** `overweight ≥ 85 / obese ≥ 97 / severe ≥ 99` wpisane w konsumenta — czyli dokładnie ten kształt, który zamknęły etapy P-BMI.
+
+**1. Silnik BMI (`vilda_bmi.js` ?v 2 → 3) dostaje trzecią oś: POPULACJĘ.** Obok miary i źródła (`bmiSource`: OLAF / WHO / Palczewska) stoi teraz `populacja` — `'DS'` albo populacja ogólna. DS **nie jest** wartością `bmiSource`: to nie wybór użytkownika, tylko skutek rozpoznania, dlatego siatka `DS` żyje w osobnej liście `SIATKI`, a `ZRODLA` zostaje nietknięte.
+- `kandydaci(zrodlo, wiekMies, populacja)` przy DS zwraca **wyłącznie** `['DS']` — **decyzja D2: żadnego łańcucha zastępczego**. Poza zakresem siatki wynik jest pusty z jawnym powodem („siatka BMI zespołu Downa zaczyna się od 2 lat — poniżej stosuje się masę do długości (WFL DS)" / „siatka zespołu Downa kończy się na 20 latach"), nigdy cichy OLAF/WHO.
+- `policz`, `ocen`, `mediana`, `wartoscDlaSds`, `wartoscDlaCentyla`, `celNormy` i `cole` przyjmują populację; wynik niesie `siatka: 'DS'` i nowe pole `populacja`, więc każdy konsument wie, na czym liczono.
+- **Decyzja D3 — granica dorosłości przy DS to 20 lat**, nie 18: `dorosly(wiekMies, populacja)` bierze `G.DS_MAX_M` (240 mies.) zamiast `G.DOROSLY_M` (216). Siatki DS sięgają 20 lat i centyl DS niesie więcej niż próg dorosłego; 19-latek z DS dostaje kategorię dziecka z siatki DS i cel z 85. centyla, a bez DS — kategorię dorosłą i cel 24,9.
+- **Progi zostają jedne.** Kategorię DS rozstrzyga ta sama `kategoriaDziecko` (niedowaga < 5 c, nadwaga ≥ 85 c, otyłość ≥ 97 c, olbrzymia SDS ≥ 3 od 60 mies.), więc `overweight` / `obese` / `severe` z modułu diety wychodzą **identyczne co do liczby**, ale już z jednego miejsca.
+
+**2. Tablice.** `app.js` (?v 213 → 214) przelicza klucze `DS_CHILD_BMI_*` z **lat na miesiące** (`vildaBmiDsMiesiace`) i dokłada je do pakietu `window.VildaBmiLMS`. Powód: wszystkie siatki silnika chodzą po miesiącach i mają jeden interpolator — DS nie dostaje drugiego. Brak `ds_lms.js` na stronie daje `null`, czyli brak siatki DS, a nie pusty obiekt. `ds_lms.js` dołożony do `kalkulator-klirens.html`, żeby wszystkie trzy strony z modułem diety liczyły tak samo.
+
+**3. Rozpoznanie w rekordzie.** Karta Pacjenta (`vilda_auth_ui.js` ?v 439 → 440) dostaje sekcję **„Populacja odniesienia siatek"** z jednym polem — „Zespół Downa (siatki Zemel 2015)". Zapisuje się w rekordzie jako `clinical.downSyndrome`; **brak sekcji znaczy brak DS**, więc stare rekordy czytają się bez migracji, a odznaczenie pola sekcję usuwa.
+
+**4. `vilda_ds_source.js` (nowy, ?v 1) — jedyne miejsce, które rozstrzyga flagę** (wzorem `vilda_perinatal_source.js`: nic nie liczy, nic nie zapisuje). **Decyzja D1:**
+- jest wczytany pacjent → decyduje **wyłącznie** pole w rekordzie;
+- nie ma wczytanego pacjenta (użycie doraźne) → decyduje stan karty modułu, jak dotąd.
+Nigdy odwrotnie: rozwinięcie karty **nie dodaje** DS pacjentowi, który go w rekordzie nie ma — inaczej wróciłby ten sam błąd. Moduł słucha `vilda:patient-loaded`, `vilda:auth-hidden`, `vilda:sync-status-changed` (document) i `vilda:user-state-cleared` (**window**, bo tam to zdarzenie leci).
+
+**5. Moduł diety (`vilda_diet_plan_ui.js` ?v 19 → 20) bez własnej gałęzi DS.** `dietDsFlag` i `dietDsBmiClass` **usunięte**; zostaje `dietPopulacja()`, która pyta resolver i przekazuje wynik silnikowi. Moduł nie czyta już DOM w sprawie DS, nie zna `__ds_getLMS` i nie ma własnych progów.
+
+**Skutek kliniczny (zamierzony).** Rozpoznanie przeżywa zapis, wczytanie i F5; zwinięcie karty informacyjnej nie zmienia żadnej liczby; pacjent z DS i wpisanym rozpoznaniem ma klasę BMI z siatki DS na każdej z trzech stron. Liczby dla DS **nie drgnęły**: BMI-SDS z silnika jest identyczny z dotychczasowym (parytet < 1e-10 na 1500 punktach), centyl różni się o < 1e-5 punktu — wyłącznie dlatego, że moduł DS ma jeszcze własne przybliżenie dystrybuanty (Zelen–Severo), a silnik używa wspólnego dla całej aplikacji (erf A&S 7.1.26). Ta różnica znika w etapie 2 razem z własnym Φ modułu. Pacjenci bez DS: bez zmian.
+
+**Poza zakresem etapu (świadomie):** karta główna, wyjścia tekstowe, masa, wzrost, obwód głowy i siatka PDF nadal liczą jak dotąd — to etapy 2–4. **Poza zakresem całego planu P-DS:** prognozy wzrostu ostatecznego (MPH, Bayley-Pinneau, Khamis-Roche, KOWD, B.64, monitor GH), ciśnienie tętnicze i kwalifikacja do GH — metody walidowane na populacji ogólnej, siatka DS nie ma tam pokrycia w piśmiennictwie.
+
+*Strażnik:* `tests/unit/ds-straznik.test.mjs` (9): parytet z dotychczasową drogą jako **wyrocznia** (funkcje `__ds_*` wycięte ze źródła i uruchomione bez DOM), brak łańcucha zastępczego i bramki 24/240 mies. dla `policz`/`mediana`/`celNormy`/`cole`, decyzja D3 na 19-latku, czyste funkcje resolvera (rekord wygrywa, `'tak'` to nie `true`, karta tylko bez rekordu, kasowanie stanu), brak odcisków `dietDsFlag` / `dietDsBmiClass` / `__ds_getLMS` / `downSyndromeCard` i własnych progów w module diety, zgodność klasy BMI z modułu diety z silnikiem co do 12 miejsc, sekcja `clinical` w Karcie Pacjenta, wpięcie (strony, kolejność `ds_lms.js` przed `app.js`, precache, mapa zależności, przeliczenie kluczy bez gubienia wiersza) i cytowanie. Wspólne rusztowanie `tests/support/silnik-bmi.mjs` ładuje teraz także `ds_lms.js` i podaje silnikowi tablice DS **produkcyjną** funkcją z `app.js`.
+
+### GROWTH-LMS-DS — siatki zespołu Downa (Zemel 2015)
+
+| Pozycja | Wartość |
+|---|---|
+| **Źródło** | Zemel BS, Pipan M, Stallings VA i wsp., „Growth Charts for Children With Down Syndrome in the United States", *Pediatrics* 2015;136(5):e1204–e1211, PMID 26504127, [DOI 10.1542/peds.2015-1652](https://doi.org/10.1542/peds.2015-1652) (siatki DSGS/AAP, przyjęte przez CDC) |
+| **Zakres (BMI)** | 2–20 lat (24–240 mies.), obie płcie, parametry L/M/S co pół roku |
+| **Jednostki** | BMI w kg/m²; wiek w latach w tablicy źródłowej, przeliczany na miesiące w `app.js` |
+| **Interpolacja** | liniowa per parametr L, M, S po wieku — ten sam interpolator, co dla OLAF i WHO; poza zakresem **brak wyniku**, bez klamry i bez ekstrapolacji |
+| **Zasada wyboru** | populacja pacjenta (`clinical.downSyndrome` w rekordzie), nie `bmiSource`; przy DS siatka DS jest jedyna (decyzja D2) |
+| **Granica dorosłości** | 20 lat (decyzja D3), nie 18 jak w populacji ogólnej |
+| **Pozostałe miary** | masa, wzrost/długość, obwód głowy i WFL DS — te same tablice (`ds_lms.js`), ale liczone jeszcze w `vilda_down_syndrome.js`; wejdą do silników w etapach 2–3 planu P-DS |
+| **Kontrola danych** | `tests/unit/ds-lms.test.mjs` — kotwice median z publikacji, monotoniczność, ciągłość granicy 2 lat (audyt 2026-09-01, cztery tablice przepisane z publikacji) |
+
 ### P-DIETA-SILNIK — dietetyka bez zapasów: ostatnie kopie wzoru LMS wycięte, testy dietetyczne na prawdziwym silniku BMI (SW 1.0.966, 2026-09-16, dług jawnie zostawiony w P-BMI-5)
 
 P-BMI-4 przestawił moduły dietetyczne na silnik `vilda_bmi.js`, ale zostawił w nich **gałęzie zapasowe** na wypadek braku silnika — i to one, a nie silnik, były tym, co naprawdę sprawdzały testy jednostkowe dietetyki: trzy pliki podstawiały atrapę `globalThis.getLMS` z sześcioma zmyślonymi wierszami LMS („M-168": [-1,8; 19,2; 0,13]) i sprawdzały arytmetykę na tych stałych. Zielone testy nie mówiły więc nic o tym, co robi aplikacja na tablicach OLAF. Ten krok zamyka jedno i drugie.
