@@ -3,9 +3,26 @@
 // Dane: window.DS z ds_lms.js — Zemel BS i wsp., Pediatrics 2015;136(5):e1204 (siatki DSGS/AAP).
 // Naprawa etapów 2–3 po audycie (2026-09-01): bramka pustego wieku, walidacje pomiarów,
 // Z-score w trybie PRO, tony i ogony 3/10/90/97 jak w całej aplikacji, nota źródłowa w karcie,
-// ocena WFL DS zamiast noty „stosuj WFL". Silnik LMS bez zmian merytorycznych (etap 1 = dane).
+// ocena WFL DS zamiast noty „stosuj WFL".
+//
+// P-DS-2: moduł NIE MA już własnej matematyki. Wzór LMS i dystrybuanta normalna pochodzą
+// z silnika (vilda_bmi.js: zLms, centylZSds) — do 1.0.967 moduł niósł własną kopię wzoru
+// (__ds_zFromLMS) i własne przybliżenie dystrybuanty (Zelen–Severo), przez co centyle DS
+// różniły się na siódmym miejscu od wszystkich pozostałych centyli w aplikacji. Wiek liczy
+// się wspólnym czytnikiem: z daty urodzenia, ułamkowo (decyzja 8, DOB-AGE-4), a dopiero
+// w jej braku z pól „wiek". Tablice DS (ds_lms.js) czyta jeszcze ten moduł — masa, wzrost,
+// obwód głowy i WFL wejdą do silników w etapie 3 planu P-DS.
 
 function __ds_readAgeYears() {
+  // P-DS-2 / decyzja 8 (DOB-AGE-4): jest data urodzenia — wiek jest UŁAMKOWY i liczy się z niej,
+  // tym samym czytnikiem, co reszta aplikacji. Dopiero bez niej wracamy do pól „wiek".
+  try {
+    const A = typeof window !== "undefined" ? window.VildaDobAge : null;
+    if (A && typeof A.readExactAge === "function") {
+      const w = A.readExactAge();
+      if (w && typeof w.exactMonths === "number" && isFinite(w.exactMonths)) return w.exactMonths / 12;
+    }
+  } catch (e) { /* brak modulu daty urodzenia — zostaja pola wieku */ }
   const n = document.getElementById("age"), e = document.getElementById("ageMonths");
   const a = n ? String(n.value).trim() : "", m = e ? String(e.value).trim() : "";
   if (a === "" && m === "") return NaN; // puste pola ≠ noworodek (bramka etapu 2)
@@ -25,16 +42,23 @@ function __ds_readHeightCm() {
   return parseFloat(n && n.value);
 }
 
-function __ds_zFromLMS(n, e, t, i) {
-  return !(e > 0) || !(t > 0) || !(i > 0) ? NaN : n === 0 ? Math.log(i / e) / t : (Math.pow(i / e, n) - 1) / (n * t);
+// P-DS-2: silnik BMI jest jedynym miejscem wzoru LMS i dystrybuanty. Bez niego moduł nie
+// liczy niczego po swojemu — karta mówi o braku wprost (patrz __ds_buildResultsHTML).
+function __ds_silnik() {
+  const T = typeof window !== "undefined" ? window.VildaBmi : null;
+  return T && typeof T.zLms === "function" && typeof T.centylZSds === "function" ? T : null;
 }
-function __ds_phi(n) { return Math.exp(-0.5 * n * n) / Math.sqrt(2 * Math.PI); }
-function __ds_cdf(n) {
-  const e = 0.31938153, t = -0.356563782, i = 1.781477937, s = -1.821255978, d = 1.330274429,
-    o = 1 / (1 + 0.2316419 * Math.abs(n)),
-    u = ((((d * o + s) * o + i) * o + t) * o + e) * o,
-    _ = 1 - __ds_phi(Math.abs(n)) * u;
-  return n >= 0 ? _ : 1 - _;
+function __ds_z(lms, value) {
+  const T = __ds_silnik();
+  if (!T || !lms) return NaN;
+  const z = T.zLms(value, lms);
+  return typeof z === "number" && isFinite(z) ? z : NaN;
+}
+function __ds_centyl(z) {
+  const T = __ds_silnik();
+  if (!T || typeof z !== "number" || !isFinite(z)) return null;
+  const c = T.centylZSds(z);
+  return typeof c === "number" && isFinite(c) ? c : null;
 }
 
 // Klasyfikacja i format ogonów spójne z resztą aplikacji (obwody, proporcja masy): 3/10/90/97.
@@ -108,8 +132,7 @@ function __ds_getLMS(n, e, t) {
 function __ds_percentile(n, e, t, i) {
   const s = __ds_getLMS(n, e, t);
   if (!s) return null;
-  const d = __ds_zFromLMS(s[0], s[1], s[2], i);
-  return isFinite(d) ? __ds_cdf(d) * 100 : null;
+  return __ds_centyl(__ds_z(s, i));
 }
 
 // Etap 3: proporcja masy do długości (weight-for-length DS, Zemel 0–36 mies.) —
@@ -125,8 +148,7 @@ function __ds_wflLMS(n, e) {
 function __ds_wflPercentile(n, e, t) {
   const i = __ds_wflLMS(n, e);
   if (!i) return null;
-  const s = __ds_zFromLMS(i[0], i[1], i[2], t);
-  return isFinite(s) ? __ds_cdf(s) * 100 : null;
+  return __ds_centyl(__ds_z(i, t));
 }
 function __ds_wflRange(n) {
   if (!window.DS) return null;
@@ -148,8 +170,7 @@ function __ds_lineHtml(label, valueTxt, perc, z, pro) {
   return html + "</div>";
 }
 function __ds_zFor(sex, age, metric, value) {
-  const s = __ds_getLMS(sex, age, metric);
-  return s ? __ds_zFromLMS(s[0], s[1], s[2], value) : NaN;
+  return __ds_z(__ds_getLMS(sex, age, metric), value);
 }
 
 const __DS_SOURCE_NOTE = '<div class="source-note" style="text-align:left;font-size:.8rem;margin-top:.6rem;">Źr\xF3dło referencyjne: Zemel i wsp., „Growth Charts for Children With Down Syndrome in the United States”, Pediatrics 2015 (siatki DSGS/AAP przyjęte przez CDC) — waga/długość/głowa/WFL 0–36 mies., waga/wzrost/BMI/głowa 2–20 lat.</div>';
@@ -157,6 +178,10 @@ const __DS_SOURCE_NOTE = '<div class="source-note" style="text-align:left;font-s
 function __ds_buildResultsHTML() {
   const n = __ds_readAgeYears(), e = __ds_readSex(), t = __ds_readWeight(), i = __ds_readHeightCm();
   const _ = [];
+  if (!__ds_silnik()) {
+    /* P-DS-2: bez silnika BMI nie ma centyli DS — zadnej wlasnej kopii wzoru ani dystrybuanty. */
+    return { html: '<div class="muted">Centyle DS wymagaj\u0105 silnika BMI (vilda_bmi.js) \u2014 od\u015Bwie\u017C stron\u0119.</div>', severity: "" };
+  }
   if (!isFinite(n)) {
     return { html: '<div class="muted">Podaj wiek pacjenta w formularzu, aby obliczyć centyle DS.</div>', severity: "" };
   }
@@ -188,7 +213,7 @@ function __ds_buildResultsHTML() {
       const w = __ds_wflPercentile(e, i, t);
       if (w != null) {
         const lms = __ds_wflLMS(e, i);
-        const z = lms ? __ds_zFromLMS(lms[0], lms[1], lms[2], t) : NaN;
+        const z = __ds_z(lms, t);
         _.push(__ds_lineHtml("Masa do długości (WFL DS)", __ds_round1(t) + " kg / " + __ds_round1(i) + " cm", w, z, pro)); bump(w);
       } else {
         const rng = __ds_wflRange(e);
@@ -278,7 +303,9 @@ window.vildaAppOnReady("app:down-syndrome-module", function () {
     __ds_updateSectionVisibility();
     t && t.style.display === "block" && (__ds_computeAndRender(), __ds_updateHeadCirc());
   };
-  ["age", "ageMonths", "weight", "height", "sex"].forEach(function (s) {
+  // P-DS-2: „dobInput" na liście, bo od tego etapu wiek karty może pochodzić z daty urodzenia —
+  // bez tego nowa ścieżka byłaby nieosiągalna bez ponownego otwarcia karty.
+  ["age", "ageMonths", "weight", "height", "sex", "dobInput"].forEach(function (s) {
     const d = document.getElementById(s);
     d && d.addEventListener("input", refresh);
   });
