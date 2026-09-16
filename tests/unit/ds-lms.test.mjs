@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+import { oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 
 // Tabele LMS modułu zespołu Downa — źródło: Zemel BS i wsp., Pediatrics 2015;136(5):e1204
 // (siatki DSGS/AAP). Naprawa etapu 1 po audycie 2026-09-01: cztery tabele (wzrost K 2–20,
@@ -12,13 +8,14 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 // Ten test pilnuje kotwic z publikacji i niezmienników struktury, żeby ta klasa błędu
 // (syntetycznie dorobione krzywe) nie wróciła przy żadnej przyszłej edycji danych.
 
+// P-DS-2: moduł nie ma już własnego wzoru LMS ani własnej dystrybuanty — okno musi nieść silnik
+// (oknoZSilnikiem ładuje też ds_lms.js), inaczej karta odmawia liczenia zamiast liczyć po swojemu.
 function loadDs(extraGlobals = {}) {
-  const src =
-    fs.readFileSync(path.join(repoRoot, 'ds_lms.js'), 'utf8') + '\n' +
-    fs.readFileSync(path.join(repoRoot, 'vilda_down_syndrome.js'), 'utf8') + '\n' +
-    ';window.__dsTest={percentile:__ds_percentile,getLMS:__ds_getLMS,cdf:__ds_cdf,zFromLMS:__ds_zFromLMS};';
   const doc = { getElementById: () => null, addEventListener() {} };
-  const g = Object.assign({ vildaAppOnReady: () => {}, document: doc }, extraGlobals);
+  const g = oknoZSilnikiem(Object.assign({ vildaAppOnReady: () => {}, document: doc }, extraGlobals));
+  g.document = doc;
+  const src = zrodlo('vilda_down_syndrome.js')
+    + '\n;window.__dsTest={percentile:__ds_percentile,getLMS:__ds_getLMS,zFor:__ds_zFor,silnik:__ds_silnik};';
   new Function('window', 'globalThis', 'document', src)(g, g, doc);
   return g;
 }
@@ -124,15 +121,16 @@ describe('silnik DS: centyle na naprawionych danych', () => {
 });
 
 describe('etapy 2–3 naprawy: bramki, walidacje, tony, Z-score PRO, WFL DS', () => {
-  function loadDsDom(values = {}, { pro = false } = {}) {
-    const src =
-      fs.readFileSync(path.join(repoRoot, 'ds_lms.js'), 'utf8') + '\n' +
-      fs.readFileSync(path.join(repoRoot, 'vilda_down_syndrome.js'), 'utf8') + '\n' +
-      ';window.__dsTest={buildResultsHTML:__ds_buildResultsHTML,wflPercentile:__ds_wflPercentile,classify:__ds_classify,fmtPerc:__ds_fmtPerc};';
+  function loadDsDom(values = {}, { pro = false, silnik = true } = {}) {
     const els = { resultsModeToggle: { checked: pro } };
     for (const [k, v] of Object.entries(values)) els[k] = { value: String(v) };
     const doc = { getElementById: (id) => els[id] || null, addEventListener() {} };
-    const g = { vildaAppOnReady: () => {}, document: doc };
+    const g = silnik
+      ? oknoZSilnikiem({ vildaAppOnReady: () => {}, document: doc })
+      : (() => { const w = { vildaAppOnReady: () => {}, document: doc, addEventListener() {} }; w.window = w; new Function('window', 'globalThis', zrodlo('ds_lms.js'))(w, w); return w; })();
+    g.document = doc;
+    const src = zrodlo('vilda_down_syndrome.js')
+      + '\n;window.__dsTest={buildResultsHTML:__ds_buildResultsHTML,wflPercentile:__ds_wflPercentile,classify:__ds_classify,fmtPerc:__ds_fmtPerc,readAgeYears:__ds_readAgeYears};';
     new Function('window', 'globalThis', 'document', src)(g, g, doc);
     return g.__dsTest;
   }
@@ -207,7 +205,7 @@ describe('etapy 2–3 naprawy: bramki, walidacje, tony, Z-score PRO, WFL DS', ()
 describe('etap 4 naprawy: siatka PDF bez wygładzania, spójna granica 36 mies.', () => {
   it('generator nie wygładza już krzywych centylowych (usunięta 6× średnia ruchoma)', () => {
     for (const f of ['inline_index_05.js', 'inline_docpro_03.js']) {
-      const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+      const src = zrodlo(f);
       expect(src, f).not.toContain('L(p[g],6)');
       expect(src, f).not.toContain('function L(e,n=6)');
     }
@@ -215,7 +213,7 @@ describe('etap 4 naprawy: siatka PDF bez wygładzania, spójna granica 36 mies.'
 
   it('granica niemowlę/dziecko jest jednolita: <=36 mies. dla wagi i wzrostu', () => {
     for (const f of ['inline_index_05.js', 'inline_docpro_03.js']) {
-      const src = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+      const src = zrodlo(f);
       expect(src, f).toContain('if(n<=36){');
       expect(src, f).not.toContain('if(n<36){');
     }

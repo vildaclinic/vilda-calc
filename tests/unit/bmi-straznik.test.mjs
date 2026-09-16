@@ -22,7 +22,7 @@ const ZAKAZANE = [
   [/\(k-x\)\/x\*100|bmiZscorePct[:=]/, 'względna zmiana BMI-SDS w % (kryteria Saxendy) — decyzja 9: bezwzględna ΔbmiSDS', []],
   [/getPalCentile\([^)]*,50,"BMI"\)/, 'mediana BMI prosto z p50 Palczewskiej obok silnika — użyj VildaBmi.mediana()/cole()', ['app.js']],
   [/getPalCentile\([^)]*"BMI"\)/, 'centyl BMI Palczewskiej czytany obok silnika — użyj VildaBmi.wartoscDlaCentyla()', ['app.js']],
-  [/\bgetLMS\(/, 'odczyt wiersza LMS BMI obok silnika — użyj VildaBmi.policz()/lms()', ['app.js', 'vilda_auth_ui.js', 'vilda_down_syndrome.js']],
+  [/\bgetLMS\(/, 'odczyt wiersza LMS BMI obok silnika — użyj VildaBmi.policz()/lms()', ['app.js', 'vilda_auth_ui.js']],
   [/\bbmiPercentileChild\(/, 'centyl BMI przez rdzeń zamiast silnika w konsumencie', ['app.js']],
   [/\bbmiZscore\(/, 'SDS BMI przez rdzeń zamiast silnika w konsumencie', ['app.js', 'vilda_update_prep.js']],
   [/Z\\u2011score = \$\{r\.toFixed\(2\)|\(Z\\u2011score = "\+c\(ie,2\)/, 'dawny zapis „Z‑score" dla BMI — jeden zapis to „bmiSDS +1,20"', []],

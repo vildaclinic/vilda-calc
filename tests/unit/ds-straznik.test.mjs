@@ -3,24 +3,54 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { appSrc, dsNaMiesiace, funkcjaZ, korzen, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 
-// P-DS etap 1 — STRAŻNIK: zespół Downa to CECHA PACJENTA (pole w rekordzie), nie stan interfejsu,
+// P-DS etapy 1–2 — STRAŻNIK: zespół Downa to CECHA PACJENTA (pole w rekordzie), nie stan interfejsu,
 // a siatki DS (Zemel 2015) liczy ten sam silnik, co wszystkie pozostałe. Do 1.0.966 jedyną flagą DS
 // był rozwinięty `#downSyndromeCard`, a klasę BMI składał sobie sam moduł diety — z własnym
 // czytnikiem wiersza LMS i własnymi progami 85/97/99. Ten plik pilnuje, żeby to nie wróciło:
-// parytet z dotychczasową drogą (wyrocznia), brak łańcucha zastępczego przy DS (decyzja D2),
-// granica dorosłości 20 lat przy DS (decyzja D3) i pierwszeństwo rekordu nad kartą (decyzja D1).
+// brak łańcucha zastępczego przy DS (decyzja D2), granica dorosłości 20 lat przy DS (decyzja D3)
+// i pierwszeństwo rekordu nad kartą (decyzja D1). Etap 2 dołożył: moduł DS bez własnego wzoru LMS
+// i bez własnej dystrybuanty (do 1.0.967 miał obie — centyle DS różniły się na siódmym miejscu od
+// wszystkich innych w aplikacji), wspólny czytnik wieku i odmowa liczenia bez silnika.
 // Dane pacjentów FIKCYJNE.
 
 const dietaSrc = zrodlo('vilda_diet_plan_ui.js');
 const dsSrc = zrodlo('vilda_down_syndrome.js');
 const kartaSrc = zrodlo('vilda_auth_ui.js');
 
-/* Wyrocznia: dotychczasowa droga DS z vilda_down_syndrome.js, wycięta ze źródła i uruchomiona
-   bez DOM. Po etapie 2 moduł zacznie wołać silnik — wtedy ta wyrocznia zniknie razem z własnym Φ. */
-function staraDroga(win) {
-  const kod = ['__ds_interpYears', '__ds_interpMonths', '__ds_getLMS', '__ds_zFromLMS', '__ds_phi', '__ds_cdf', '__ds_zFor', '__ds_percentile']
-    .map((n) => funkcjaZ(dsSrc, n)).join('\n');
-  return new Function('window', `${kod}\nreturn { zFor: __ds_zFor, pct: __ds_percentile };`)(win);
+/* Moduł DS załadowany do okna z silnikiem — po etapie 2 nie ma własnego wzoru ani własnego Φ,
+   więc to już nie jest niezależna wyrocznia, tylko druga droga do TEJ SAMEJ liczby. */
+function modulDs(win, { document: doc = { getElementById: () => null, addEventListener() {} } } = {}) {
+  const g = win;
+  g.document = doc;
+  if (typeof g.vildaAppOnReady !== 'function') g.vildaAppOnReady = () => {};
+  const kod = `${zrodlo('vilda_down_syndrome.js')}\n;window.__dsTest={zFor:__ds_zFor,pct:__ds_percentile,karta:__ds_buildResultsHTML,wiek:__ds_readAgeYears,silnik:__ds_silnik};`;
+  new Function('window', 'globalThis', 'document', kod)(g, g, doc);
+  return g.__dsTest;
+}
+
+/* Asercje o kodzie muszą najpierw odciąć komentarze: komentarz naprawy cytuje usuniętą nazwę
+   (__ds_zFromLMS), więc test bez tego czytałby własną dokumentację i przechodził z niewłaściwego
+   powodu. Ta sama pułapka, co przy U6 w „Ustawieniach". */
+function bezKomentarzy(src) {
+  let out = '', i = 0, stan = 'kod', cudzyslow = '';
+  while (i < src.length) {
+    const c = src[i], d = src[i + 1];
+    if (stan === 'kod') {
+      if (c === '/' && d === '*') { stan = 'blok'; i += 2; continue; }
+      if (c === '/' && d === '/') { stan = 'linia'; i += 2; continue; }
+      if (c === '"' || c === "'" || c === '`') { stan = 'tekst'; cudzyslow = c; }
+      out += c; i += 1; continue;
+    }
+    if (stan === 'tekst') {
+      if (c === '\\') { out += c + (d || ''); i += 2; continue; }
+      if (c === cudzyslow) stan = 'kod';
+      out += c; i += 1; continue;
+    }
+    if (stan === 'blok') { if (c === '*' && d === '/') { stan = 'kod'; i += 2; } else i += 1; continue; }
+    if (c === '\n') { stan = 'kod'; out += c; }
+    i += 1;
+  }
+  return out;
 }
 
 function resolver() {
@@ -31,20 +61,62 @@ function resolver() {
 }
 
 describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
-  it('parytet z dotychczasową drogą: BMI-SDS co do liczby, centyl co do 1e-5 punktu (różni się tylko Φ, do usunięcia w etapie 2)', () => {
+  it('etap 2: karta modułu DS i silnik dają DOKŁADNIE tę samą liczbę — jeden wzór, jedna dystrybuanta', () => {
     const win = oknoZSilnikiem();
-    const stary = staraDroga(win);
+    const modul = modulDs(win);
     let maxZ = 0, maxP = 0, n = 0;
     for (const plec of ['M', 'F']) for (let mies = 24; mies <= 240; mies += 3) for (const bmi of [13, 16.5, 19, 22.4, 27, 33]) {
       const r = win.VildaBmi.policz({ bmi, plec, wiekMies: mies, zrodlo: 'OLAF', populacja: 'DS' });
       expect(r.siatka, `${plec} ${mies} mies.`).toBe('DS');
-      maxZ = Math.max(maxZ, Math.abs(r.sds - stary.zFor(plec, mies / 12, 'BMI', bmi)));
-      maxP = Math.max(maxP, Math.abs(r.centyl - stary.pct(plec, mies / 12, 'BMI', bmi)));
+      maxZ = Math.max(maxZ, Math.abs(r.sds - modul.zFor(plec, mies / 12, 'BMI', bmi)));
+      maxP = Math.max(maxP, Math.abs(r.centyl - modul.pct(plec, mies / 12, 'BMI', bmi)));
       n += 1;
     }
     expect(n).toBeGreaterThan(800);
-    expect(maxZ, 'BMI-SDS na siatce DS musi być IDENTYCZNY z dotychczasowym').toBeLessThan(1e-10);
-    expect(maxP, 'centyl: różnica wyłącznie z dwóch przybliżeń dystrybuanty').toBeLessThan(1e-5);
+    // Nie zero bitowo, bo ten sam wiersz LMS interpolują jeszcze dwa czytniki tablic: silnik po
+    // MIESIĄCACH, moduł po LATACH. Wzór i dystrybuanta są już jedne — zostaje szum zmiennoprzecinkowy
+    // rzędu 1e-16, który zniknie w etapie 3 razem z drugim czytnikiem tablic.
+    expect(maxZ, 'BMI-SDS: silnik i moduł liczą tym samym wzorem').toBeLessThan(1e-12);
+    expect(maxP, 'centyl: koniec drugiego przybliżenia dystrybuanty w module').toBeLessThan(1e-12);
+  });
+
+  it('etap 2: moduł DS nie ma własnego wzoru LMS ani własnej dystrybuanty (asercja po odcięciu komentarzy)', () => {
+    const kod = bezKomentarzy(dsSrc);
+    for (const odcisk of ['__ds_zFromLMS', '__ds_cdf', '__ds_phi', '0.31938153', '2.3263', 'Math.sqrt(2 * Math.PI)']) {
+      expect(kod, `vilda_down_syndrome.js: ${odcisk}`).not.toContain(odcisk);
+    }
+    expect(kod, 'kontrola negatywna: komentarz naprawy nadal cytuje usuniętą nazwę').not.toBe(dsSrc);
+    expect(dsSrc, 'komentarz naprawy zostaje w pliku').toContain('__ds_zFromLMS');
+    expect(kod).toContain('function __ds_silnik()');
+    expect(kod).toContain('T.zLms(value, lms)');
+    expect(kod).toContain('T.centylZSds(z)');
+  });
+
+  it('etap 2: bez silnika karta DS odmawia liczenia zamiast liczyć po swojemu', () => {
+    const doc = { getElementById: () => null, addEventListener() {} };
+    const bez = { vildaAppOnReady: () => {}, document: doc, addEventListener() {} };
+    bez.window = bez;
+    new Function('window', 'globalThis', zrodlo('ds_lms.js'))(bez, bez);
+    const modul = modulDs(bez, { document: doc });
+    expect(modul.silnik()).toBeNull();
+    expect(modul.pct('M', 10, 'BMI', 20)).toBeNull();
+    expect(modul.zFor('M', 10, 'BMI', 20)).toBeNaN();
+    expect(modul.karta().html).toContain('wymagaj');
+    expect(modul.karta().html).toContain('vilda_bmi.js');
+  });
+
+  it('etap 2 / decyzja 8: wiek karty DS liczy się z daty urodzenia ułamkowo, a bez niej z pól wieku', () => {
+    const win = oknoZSilnikiem();
+    const els = { age: { value: '7' }, ageMonths: { value: '6' } };
+    const doc = { getElementById: (id) => els[id] || null, addEventListener() {} };
+    const modul = modulDs(win, { document: doc });
+    expect(modul.wiek(), 'bez daty urodzenia — pola wieku').toBeCloseTo(7.5, 12);
+    win.VildaDobAge = { readExactAge: () => ({ totalMonths: 123, days: 3745, exactMonths: 123.07 }) };
+    expect(modul.wiek(), 'z datą urodzenia — wiek ułamkowy, nie 7,5').toBeCloseTo(123.07 / 12, 12);
+    win.VildaDobAge = { readExactAge: () => null };
+    expect(modul.wiek(), 'pusta data urodzenia nie kasuje pól wieku').toBeCloseTo(7.5, 12);
+    els.age.value = ''; els.ageMonths.value = '';
+    expect(Number.isNaN(modul.wiek()), 'puste pola ≠ noworodek').toBe(true);
   });
 
   it('decyzja D2: przy DS nie ma łańcucha zastępczego — poza 2–20 lat wynik jest pusty z powodem, nigdy OLAF/WHO', () => {
