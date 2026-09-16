@@ -1,31 +1,30 @@
 /* vilda_schowek.js — JEDNO miejsce, w którym aplikacja pisze tekst do schowka.
  *
  * PO CO TO JEST: zgłoszenie z iOS (2026-09-16). Przycisk „Podsumowanie wyników — kliknij
- * i skopiuj" meldował sukces, ale po wklejeniu w Wiadomościach pojawiał się bezsensowny ciąg
- * znaków, a w Notatkach — łącze. Na komputerze to samo kopiowanie działało poprawnie.
+ * i skopiuj" kopiował treść, ale po wklejeniu w Notatkach i Wiadomościach tekst zamieniał się
+ * w łącza. W polu przyjmującym czysty tekst ta sama zawartość wklejała się poprawnie, a inne
+ * przyciski aplikacji (np. zalecenia antybiotykoterapii) działały bez zarzutu.
  *
- * DIAGNOZA: do schowka NIC nie trafiało, a użytkownik wklejał jego poprzednią zawartość.
- * Notatki zamieniają wklejony adres w łącze, Wiadomości pokazują go surowo — stąd dwa różne
- * objawy z jednej przyczyny. Stara ścieżka kopiowania łamała cztery reguły WebKita naraz:
+ * DIAGNOZA (druga, po pierwszej BŁĘDNEJ — patrz niżej). Na schowku iOS leżą OBOK SIEBIE różne
+ * warianty tej samej treści. `navigator.clipboard.writeText` zapisuje wyłącznie czysty tekst —
+ * i dokładnie tak kopiują te przyciski, które działają. `document.execCommand('copy')` z pola
+ * oznaczonego `contentEditable` dokłada do tego wariant HTML, a Notatki i Wiadomości wolą wariant
+ * bogaty od czystego tekstu. Dlatego wklejały łącza, a pole czystotekstowe pokazywało tekst
+ * poprawnie: każda aplikacja brała inny wariant z tego samego schowka.
  *
- *   1. Pole `readonly` BEZ `contentEditable` — na iOS `select()` nie ustawia wtedy zaznaczenia,
- *      więc `execCommand('copy')` nie ma czego kopiować.
- *   2. Pole odsunięte na `left:-9999px` — elementu poza widokiem iOS nie zaznaczy.
- *   3. Kopiowanie zapasowe uruchamiane w `.catch()` obietnicy — czyli JUŻ POZA gestem
- *      użytkownika, a iOS pozwala pisać do schowka wyłącznie w geście.
- *   4. Ufanie wartości zwróconej przez `execCommand('copy')` — WebKit potrafi zwrócić `true`,
- *      nie kopiując niczego. To dlatego przycisk pokazywał „skopiowane", a schowek zostawał stary.
+ * CO BYŁO BŁĘDNE W PIERWSZEJ DIAGNOZIE: przyjąłem, że do schowka nic nie trafia i użytkownik
+ * wkleja jego poprzednią zawartość. Obaliło to jedno zdanie właściciela — wkleił skopiowaną
+ * treść i była poprawna. Pierwsza wersja tego modułu uruchamiała obie drogi naraz i dokładała
+ * `contentEditable`, czyli utrwalała wariant HTML na schowku przy KAŻDYM kopiowaniu. To nie
+ * naprawiało błędu, tylko czyniło go powtarzalnym.
  *
- * ZASADA: obie drogi zapisu uruchamiamy W TYM SAMYM GEŚCIE użytkownika — synchroniczną
- * (`execCommand`) i asynchroniczną (`navigator.clipboard`) — a sukces POTWIERDZAMY pomiarem
- * (czy nasz tekst jest naprawdę zaznaczony), zamiast wierzyć przeglądarce na słowo. Nie da się
- * stąd rozstrzygnąć, która z dróg zawodzi na konkretnym iPhonie, a odpalenie drugiej dopiero
- * po porażce pierwszej jest niemożliwe: byłoby już poza gestem. Wystarczy, że zadziała
- * którakolwiek; ten sam tekst zapisany dwa razy nikomu nie szkodzi.
+ * ZASADA: zapisujemy CZYSTY TEKST i nic poza nim. `navigator.clipboard.writeText` jest drogą
+ * pierwszą i jedyną tam, gdzie istnieje — bo tylko ona gwarantuje pojedynczy wariant na schowku.
+ * Ścieżka przez `execCommand` zostaje wyłącznie dla przeglądarek bez Clipboard API i kopiuje
+ * ze zwykłego pola tekstowego, BEZ `contentEditable`, żeby nie dokładać wariantu HTML.
  *
  * CZEGO TU NIE MA: żadnych powiadomień ani tekstów interfejsu. Moduł zwraca obietnicę i tyle —
- * co pokazać użytkownikowi, decyduje strona wywołująca. Nie rozpoznajemy też przeglądarki:
- * kolejność prób jest poprawna wszędzie, więc nie ma czego zgadywać po `userAgent`.
+ * co pokazać użytkownikowi, decyduje strona wywołująca. Nie rozpoznajemy też przeglądarki.
  */
 (function (root) {
   'use strict';
@@ -65,10 +64,10 @@
 
     var pole = doc.createElement('textarea');
     pole.value = tekst;
-    /* `readOnly` trzyma klawiaturę ekranową z daleka, `contentEditable` pozwala iOS mimo to
-       zaznaczyć zawartość. Dopiero OBA naraz dają na iPhonie działające kopiowanie. */
+    /* BEZ `contentEditable`: to ono kazało WebKitowi potraktować zaznaczenie jak treść bogatą
+       i dołożyć na schowek wariant HTML, przez który Notatki wklejały łącza zamiast tekstu.
+       Zwykłe pole tekstowe kopiuje czysty tekst — i tylko o to nam chodzi. */
     pole.readOnly = true;
-    pole.contentEditable = 'true';
     pole.setAttribute('aria-hidden', 'true');
     pole.setAttribute('tabindex', '-1');
     /* Pole musi stać w widoku (iOS nie zaznaczy elementu odsuniętego poza ekran), więc jest
@@ -117,33 +116,22 @@
     return null;
   }
 
-  /* Kopiuje tekst do schowka. Musi być wywołane W GEŚCIE UŻYTKOWNIKA (obsługa kliknięcia),
-     inaczej iOS odmówi i żadna z dróg nie zadziała. Zwraca obietnicę: spełnioną, gdy tekst
-     NAPRAWDĘ trafił do schowka, odrzuconą, gdy nie — nigdy „pewnie się udało".
+  /* Kopiuje tekst do schowka. Musi być wywołane W GEŚCIE UŻYTKOWNIKA (obsługa kliknięcia).
+     Zwraca obietnicę: spełnioną, gdy tekst NAPRAWDĘ trafił do schowka, odrzuconą, gdy nie.
 
-     Dlaczego OBIE drogi, a nie jedna po drugiej: nie da się stąd sprawdzić, która z nich
-     zawodzi na iOS — `navigator.clipboard.writeText` bywa tam odrzucane (wygasły gest przy
-     wolnym budowaniu tekstu), a ścieżka zapasowa i tak nie zadziała później, bo `.catch()`
-     obietnicy wykonuje się już poza gestem. Uruchomienie obu W TYM SAMYM geście usuwa ten
-     wybór: wystarczy, że zadziała którakolwiek. Zapis tego samego tekstu dwa razy jest
-     nieszkodliwy, a rozpoznawanie przeglądarki po `userAgent` byłoby zgadywaniem. */
+     Kolejność jest tu istotna klinicznie, nie estetycznie. `writeText` kładzie na schowku JEDEN
+     wariant — czysty tekst — więc każda aplikacja wkleja to samo. Uruchomienie obok niego
+     `execCommand` dokładałoby drugi wariant i to on wygrywałby w Notatkach i Wiadomościach.
+     Dlatego droga zapasowa rusza WYŁĄCZNIE wtedy, gdy Clipboard API w ogóle nie ma. */
   function kopiuj(tekst) {
     var t = typeof tekst === 'string' ? tekst : String(tekst == null ? '' : tekst);
     if (!t) return Promise.reject(new Error('Brak tekstu do skopiowania.'));
 
-    var synchroniczna = kopiujSynchronicznie(t);
     var obietnica = asynchronicznie(t);
-
     if (obietnica && typeof obietnica.then === 'function') {
-      return obietnica.then(
-        function () { return { droga: synchroniczna ? 'obie' : 'clipboard' }; },
-        function (blad) {
-          if (synchroniczna) return { droga: 'execCommand' };
-          throw blad instanceof Error ? blad : new Error('Przeglądarka odmówiła zapisu do schowka.');
-        }
-      );
+      return obietnica.then(function () { return { droga: 'clipboard' }; });
     }
-    if (synchroniczna) return Promise.resolve({ droga: 'execCommand' });
+    if (kopiujSynchronicznie(t)) return Promise.resolve({ droga: 'execCommand' });
     return Promise.reject(new Error('Przeglądarka nie pozwoliła zapisać do schowka.'));
   }
 

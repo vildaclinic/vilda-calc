@@ -2,27 +2,37 @@ import { expect, test } from '../support/test-czas.mjs';
 
 // P-IOS-SCHOWEK na PRAWDZIWEJ stronie i PRAWDZIWYM schowku systemowym.
 //
-// Zgłoszenie z iOS (2026-09-16): „Podsumowanie wyników — kliknij i skopiuj" meldowało sukces,
-// ale w Wiadomościach wklejał się bezsensowny ciąg znaków, a w Notatkach — łącze. Na komputerze
-// działało. Przyczyna: do schowka NIC nie trafiało i wklejała się jego poprzednia zawartość.
+// Zgłoszenie z iOS (2026-09-16): treść skopiowana przyciskiem „Podsumowanie wyników" wklejała się
+// w Notatkach i Wiadomościach JAKO ŁĄCZA, choć w polu przyjmującym czysty tekst ta sama zawartość
+// była poprawna, a inne przyciski aplikacji działały. Przyczyna: na schowku iOS leżą obok siebie
+// różne warianty tej samej treści — `writeText` zapisuje wyłącznie czysty tekst, a `execCommand`
+// z pola `contentEditable` dokłada wariant HTML, który Notatki wolą od tekstu.
 //
-// UWAGA CO DO ZAKRESU: to Chromium, nie WebKit — ten plik NIE dowodzi, że naprawa działa na
-// iPhonie. Dowodzi trzech rzeczy, których stary kod nie spełniał i które były warunkiem błędu:
-// tekst faktycznie ląduje w schowku systemowym (a nie tylko w podmienionym `writeText`),
-// ścieżka zapasowa działa BEZ `navigator.clipboard`, a nieudane kopiowanie mówi prawdę
-// zamiast pokazywać „skopiowane". Dane FIKCYJNE.
+// UWAGA CO DO ZAKRESU: to Chromium, nie WebKit — ten plik NIE dowodzi zachowania na iPhonie.
+// Dowodzi tego, co da się sprawdzić bez tamtej platformy: że tekst ląduje w systemowym schowku
+// i że przy dostępnym Clipboard API druga droga zapisu w ogóle nie rusza. Dane FIKCYJNE.
 test.use({ serviceWorkers: 'block', permissions: ['clipboard-read', 'clipboard-write'] });
 
 const ZNACZNIK = 'POPRZEDNIA-ZAWARTOSC-SCHOWKA-1234';
 const HASLO = 'E2e#Schowek!26a';
 
-async function otworz(page, { bezApiSchowka = false, zepsuteZaznaczenie = false } = {}) {
+async function otworz(page, { bezApiSchowka = false, zepsuteZaznaczenie = false, podgladExec = false } = {}) {
   await page.addInitScript(() => {
     try {
       window.localStorage.setItem('vilda-terms-accepted-v1',
         JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
     } catch (_) { /* brak storage — pomiń */ }
   });
+  if (podgladExec) {
+    await page.addInitScript(() => {
+      window.__execCopy = 0;
+      const orig = document.execCommand ? document.execCommand.bind(document) : null;
+      document.execCommand = function (cmd) {
+        if (cmd === 'copy') window.__execCopy += 1;
+        return orig ? orig(cmd) : false;
+      };
+    });
+  }
   if (bezApiSchowka) {
     // Tak wygląda świat, w którym zostaje wyłącznie ścieżka synchroniczna — czyli ta,
     // która na iOS była zepsuta.
@@ -97,13 +107,19 @@ async function zasiejZnacznik(page, znacznik) {
   await page.evaluate(async (z) => { await navigator.clipboard.writeText(z); }, znacznik);
 }
 
-test('tekst ląduje w SYSTEMOWYM schowku, a nie zostaje po nim poprzednia zawartość', async ({ page }) => {
-  await otworz(page);
+test('tekst ląduje w SYSTEMOWYM schowku, a druga droga zapisu nie rusza', async ({ page }) => {
+  await otworz(page, { podgladExec: true });
   await wpiszPacjenta(page);
   await zasiejZnacznik(page, ZNACZNIK);
 
   await page.locator('#metabolicSummaryBtn').click();
   await expect(page.locator('#metabolicSummaryCopyToast')).toBeVisible({ timeout: 10000 });
+
+  // istota naprawy: skoro Clipboard API jest dostępne, execCommand NIE ma prawa się uruchomić
+  // — inaczej dołożyłby na schowek wariant HTML, przez który Notatki wklejają łącza
+  // najpierw upewniamy się, że podgląd w ogóle stoi — inaczej zero poniżej nic nie znaczy
+  expect(await page.evaluate(() => typeof window.__execCopy), 'podgląd execCommand zainstalowany').toBe('number');
+  expect(await page.evaluate(() => window.__execCopy), 'żadnego execCommand obok writeText').toBe(0);
 
   const wklejone = await wklejZeSchowka(page);
   expect(wklejone, 'schowek nie może zostać z poprzednią zawartością').not.toContain(ZNACZNIK);
@@ -112,14 +128,18 @@ test('tekst ląduje w SYSTEMOWYM schowku, a nie zostaje po nim poprzednia zawart
   expect(wklejone).toContain('Wzrost:');
 });
 
-test('ścieżka zapasowa działa BEZ navigator.clipboard — to ta, która na iOS była zepsuta', async ({ page }) => {
-  await otworz(page, { bezApiSchowka: true });
+test('bez Clipboard API rusza ścieżka zapasowa — i wtedy podgląd faktycznie ją widzi', async ({ page }) => {
+  await otworz(page, { bezApiSchowka: true, podgladExec: true });
   await wpiszPacjenta(page);
   const brakApi = await page.evaluate(() => !navigator.clipboard);
   test.skip(!brakApi, 'nie udało się wyłączyć navigator.clipboard w tej przeglądarce');
 
   await page.locator('#metabolicSummaryBtn').click();
   await expect(page.locator('#metabolicSummaryCopyToast')).toBeVisible({ timeout: 10000 });
+
+  // kontrola DODATNIA dla testu wyżej: ten sam podgląd tutaj liczy wywołania, więc zero
+  // w tamtym teście jest wynikiem pomiaru, a nie niedziałającego podglądu
+  expect(await page.evaluate(() => window.__execCopy), 'tu droga zapasowa musi ruszyć').toBeGreaterThan(0);
 
   const wklejone = await wklejZeSchowka(page);
   expect(wklejone, 'sam execCommand musi wystarczyć').toContain('BMI:');
