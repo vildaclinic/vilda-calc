@@ -213,8 +213,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="obesity_response_criteria.js?v=2"></script>
 <script defer src="gh_therapy_segments.js?v=4"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
-<script defer src="vilda_patient_summary_copy.js?v=8"></script>
-<script defer src="vilda_auth_ui.js?v=438"></script>
+<script defer src="vilda_patient_summary_copy.js?v=9"></script>
+<script defer src="vilda_auth_ui.js?v=439"></script>
 <script defer src="vilda_name_fix.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
@@ -223,7 +223,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_pro_access.js?v=10"></script>
 <script defer src="vilda_pro_ui.js?v=3"></script>
 <script defer src="vilda_file_export.js?v=8"></script>
-<script defer src="vilda_deps.js?v=93"></script>
+<script defer src="vilda_deps.js?v=94"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
 <!-- Kreator siatek (moduł pasywny bez UI na tej stronie): dostarcza bramki
@@ -250,7 +250,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_puberty_profile.js?v=2"></script>
 <script defer src="vilda_growth_card_c.js?v=26"></script>
 <script defer src="vilda_sds_wzrostu.js?v=2"></script>
-<script defer src="vilda_bmi.js?v=1"></script>
+<script defer src="vilda_bmi.js?v=2"></script>
 <script defer src="vilda_tempo_wzrastania.js?v=1"></script>
 <script defer src="vilda_trajectory_analysis.js?v=25"></script>
 <script defer src="vilda_prediction_drift.js?v=1"></script>
@@ -272,7 +272,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_growth_prediction_validation_model.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=12"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=77" defer></script>
+<script src="vilda_update_prep.js?v=78" defer></script>
 
 <script defer src="inline_docpro_00.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -4045,7 +4045,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
 <script src="ds_lms.js?v=3" defer></script>
 <script defer src="vilda_down_syndrome.js?v=2"></script>
-<script defer src="vilda_anorexia_risk.js?v=2"></script>
+<script defer src="vilda_anorexia_risk.js?v=3"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js" defer></script>
 <!-- Wspólny interpolator PCHIP krzywych centylowych Palczewskiej (ten sam moduł co na index.html).
@@ -4058,17 +4058,17 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      dopiero przy pierwszym uruchomieniu tej akcji — patrz vildaEnsureXlsxLibrary()
      w vilda_professional_module.js (cdn.sheetjs.com xlsx-0.20.3; aktualizacja 2026-06-14 z 0.18.5 — CVE). -->
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
-<script defer src="vilda_professional_module.js?v=7"></script>
+<script defer src="vilda_professional_module.js?v=8"></script>
 <script defer src="vilda_persist_runtime.js?v=15"></script>
-<script defer src="vilda_summary_cards.js?v=36"></script>
+<script defer src="vilda_summary_cards.js?v=37"></script>
 <script defer src="vilda_diet_plan_ui.js?v=18"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=211" defer></script>
+<script src="app.js?v=212" defer></script>
 <script src="vilda_diet_recommendations.js?v=28" defer></script>
-<script src="vilda_patient_report.js?v=21" defer></script>
+<script src="vilda_patient_report.js?v=22" defer></script>
 <!-- po app.js -->
 <script src="vilda_module_monitor_badges.js?v=1" defer></script>
 <script src="gh_igf_therapy.js?v=26" defer></script>
@@ -4085,8 +4085,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
          aby korzystał z już zainicjowanych elementów DOM (np. pola wagi i wieku). -->
     <script src="flu_therapy.js?v=7" defer></script>
 <script src="obesity_therapy.js?v=9" defer></script>
-<script src="obesity_therapy_monitor.js?v=18" defer></script>
-<script src="hypertension_therapy.js?v=9" defer></script>
+<script src="obesity_therapy_monitor.js?v=19" defer></script>
+<script src="hypertension_therapy.js?v=10" defer></script>
 <script src="thyroid_cancer_kids.js?v=4" defer></script>
 
     <!-- Skrypt kalkulatora leczenia bisfosfonianami.  
@@ -4229,7 +4229,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=63" defer></script>
+  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=64" defer></script>
   <script src="docpro_state_persist.js?v=5" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts

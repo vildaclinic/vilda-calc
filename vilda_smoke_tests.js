@@ -93,7 +93,7 @@
     'advanced-growth-intake-sync-final-validation'
   ]);
   const EXPECTED_BROWSER_SCRIPTS = Object.freeze([
-    'vilda_deps.js?v=93',
+    'vilda_deps.js?v=94',
     'vilda_update_hooks.js?v=7',
     'vilda_centile_chart_header.js?v=1',
     'vilda_gh_therapy_resource_audit.js?v=31',
@@ -104,12 +104,12 @@
     'vilda_dob_age.js?v=7',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
-    'vilda_update_prep.js?v=77',
+    'vilda_update_prep.js?v=78',
     'vilda_growth_reference_data.js?v=1',
-    'vilda_professional_module.js?v=7',
+    'vilda_professional_module.js?v=8',
     'vilda_persist_runtime.js?v=15',
     'vilda_growth_prediction_lines.js?v=1',
-    'vilda_summary_cards.js?v=36',
+    'vilda_summary_cards.js?v=37',
     'tw2_data.js?v=4',
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=2',
@@ -119,11 +119,11 @@
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
-    'app.js?v=211',
+    'app.js?v=212',
     'vilda_smoke_tests.js?v=77',
     'vilda_diet_recommendations.js?v=28',
     'nutrition_norms.js?v=46',
-    'nutrition_micros.js?v=27'
+    'nutrition_micros.js?v=28'
   ]);
   const MANIFEST = Object.freeze([
     Object.freeze({ id: 'smoke-suite-api', group: 'smoke-suite', required: true, description: 'API VildaSmokeTests i aliasy konsolowe są dostępne.' }),

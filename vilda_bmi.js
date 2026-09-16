@@ -35,6 +35,24 @@
  * WSKAŹNIK COLE'A: BMI / mediana BMI dla wieku i płci × 100 z tej samej siatki, co SDS
  * (p50 Palczewskiej przy Palczewskiej); progi 90 / 110 / 120.
  * CEL NORMY: dziecko — 85. centyl (z = 1,036, ENERGY-CHILD-MID2), dorosły — 24,9.
+ * ŹRÓDŁA TABLIC (P-BMI-5, decyzja 11; cytowania zweryfikowane w PubMed 2026-09-16):
+ *  - OLAF (BMI 36–216 mies., LMS): Kułaga Z i wsp. „Polish 2010 growth references for school-aged
+ *    children and adolescents", Eur J Pediatr 2011;170(5):599–609, PMID 20972688,
+ *    DOI 10.1007/s00431-010-1329-x — dzieci szkolne 7–18 lat (OLAF); 3–6 lat: Kułaga Z i wsp.
+ *    „Polish 2012 growth references for preschool children", Eur J Pediatr 2013;172(6):753–761,
+ *    PMID 23371392, DOI 10.1007/s00431-013-1954-2 (OLA).
+ *  - WHO 2006 (BMI 0–60 mies., LMS): WHO Multicentre Growth Reference Study Group, „WHO Child Growth
+ *    Standards based on length/height, weight and age", Acta Paediatr Suppl 2006;450:76–85,
+ *    PMID 16817681, DOI 10.1111/j.1651-2227.2006.tb02378.x.
+ *  - WHO 2007 (BMI 61–228 mies., LMS): de Onis M i wsp. „Development of a WHO growth reference for
+ *    school-aged children and adolescents", Bull World Health Organ 2007;85(9):660–667,
+ *    PMID 18026621, DOI 10.2471/blt.07.043497.
+ *  - Palczewska (centyle 3–97 BMI, 1–222 mies.): Palczewska I, Niedźwiecka Z. „Wskaźniki rozwoju
+ *    somatycznego dzieci i młodzieży warszawskiej", Med Wieku Rozwoj 2001;5(2 Supl. 1):18–118,
+ *    PMID 11675534 (bez DOI w PubMed).
+ *  Wartości tablic w app.js / vilda_growth_reference_data.js / centile_data.js — kotwice spójności
+ *  między tablicami pilnuje tests/unit/bmi-straznik.test.mjs.
+ *
  * Moduł nie ma zależności od DOM ani od eval.
  */
 (function (root) {
