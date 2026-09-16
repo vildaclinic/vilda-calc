@@ -108,11 +108,14 @@ test('docpro.html: panel pokwitaniowy jest, rekord wypełnia etap i jądra, kart
     jadra: document.getElementById('advTesticularVolume').value,
     onset: document.getElementById('pubertyOnsetAge').value,
     panelOtwarty: document.getElementById('tannerStageWrap').style.display !== 'none',
+    przycisk: document.getElementById('tannerToggleBtn').textContent,
   }));
   expect(pola.etap, 'etap z rekordu trafia do pola').toBe('3');
   expect(pola.jadra).toBe('4to6');
   expect(pola.onset, 'fakt trwały z sekcji puberty').toBe('11');
-  expect(pola.panelOtwarty, 'panel odsłania się sam, bo ma wartości').toBe(true);
+  // P-PANEL-ZWINIETY (decyzja właściciela 2026-09-16): panel zostaje zwinięty także z danymi.
+  expect(pola.panelOtwarty, 'panel nie odsłania się sam').toBe(false);
+  expect(pola.przycisk, 'przycisk sygnalizuje wpisane dane').toBe('+ Dane pokwitaniowe (wpisane)');
 
   const status = await page.evaluate(() => window.VildaPubertalStatus.dane({ plec: 'M', wiekLat: 12 }));
   expect(status.etap).toBe(3);

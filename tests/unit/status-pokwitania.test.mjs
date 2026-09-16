@@ -143,7 +143,7 @@ describe('Objętość jąder mieszka w panelu pokwitaniowym (GROWTH-PUB-TWO)', (
     expect(pole, 'przed kartą zaawansowaną, nie w niej').toBeLessThan(karta);
   });
 
-  it('panel otwiera się sam, gdy rekord niesie objętość jąder', () => {
+  it('panel zna pole objętości jąder i zwija je razem ze sobą (od P-PANEL-ZWINIETY nie otwiera się sam)', () => {
     const inline = fs.readFileSync(path.join(korzen, 'inline_index_02.js'), 'utf8');
     expect(inline).toMatch(/var POLA = \[[^\]]*'advTesticularVolume'[^\]]*\]/);
     expect(inline).toContain("getElementById('testicularVolumeWrap')");

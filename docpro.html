@@ -214,7 +214,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="gh_therapy_segments.js?v=4"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
 <script defer src="vilda_patient_summary_copy.js?v=7"></script>
-<script defer src="vilda_auth_ui.js?v=436"></script>
+<script defer src="vilda_auth_ui.js?v=437"></script>
 <script defer src="vilda_name_fix.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
@@ -1479,6 +1479,10 @@ html.vilda-pro-active   #proGateBanner { display: none; }
            Pole OPCJONALNE; po wpisaniu poprawnej daty wiek w latach i miesiącach wypełnia się
            sam (ukończone pełne miesiące) i staje się tylko do odczytu. Logika: vilda_dob_age.js. -->
       <style>
+        .vild-age-row{display:flex;gap:12px;align-items:flex-start;}
+        .vild-age-row > label{flex:1 1 0;min-width:0;}
+        .vild-age-row > label.vild-age-years{flex:1.1 1 0;}
+        @media (max-width:360px){ .vild-age-row{flex-direction:column;gap:0;} }
         input#dobInput[readonly],
         input#age.vild-age-auto, input#ageMonths.vild-age-auto{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;}
         .vild-dob-note{margin-top:5px;font-size:.78rem;line-height:1.35;color:#0f6e56;}
@@ -1511,17 +1515,14 @@ html.vilda-pro-active   #proGateBanner { display: none; }
       <div id="dobNote" class="vild-dob-note" hidden></div>
       <div id="dobError" class="vild-dob-error" role="alert" hidden></div>
       <button type="button" id="dobClear" class="vild-dob-clear" hidden>Wyczyść datę, aby wpisać wiek ręcznie</button>
-      <label>Wiek (lata):
-        <!-- Pozwalamy podać wiek w latach od 0 do 130; lata są wymagane -->
-        <input type="number" id="age" min="0" max="130" oninput="debouncedUpdate()" required></label>
-      <!-- Nowe pole na wiek w miesiącach; zakres 1–11, opcjonalne -->
-      <label>Wiek <span style="font-weight:400;opacity:0.65;">(miesiące – opcjonalnie)</span>:
-        <!--
-          Umożliwiamy wpisywanie jedynie wartości od 1 do 11 (pełne miesiące).
-          Pole pozostawione puste jest interpretowane jako brak dodatkowych miesięcy.
-          Ustawiamy atrybut step="1" aby wymusić podawanie tylko liczb całkowitych.
-        -->
-        <input type="number" id="ageMonths" min="0" max="11" step="1" oninput="debouncedUpdate()"></label>
+      <!-- Wiek: lata + miesiące w JEDNYM wierszu — ten sam układ, co na stronie głównej
+           (P-PANEL-ZWINIETY, decyzja właściciela 2026-09-16: formularz główny identyczny). -->
+      <div class="vild-age-row">
+        <label class="vild-age-years">Wiek (lata):
+          <input type="number" id="age" min="0" max="130" oninput="debouncedUpdate()" required></label>
+        <label>Wiek (miesiące):
+          <input type="number" id="ageMonths" min="0" max="11" step="1" oninput="debouncedUpdate()"></label>
+      </div>
       <!-- DOB-AGE-2 (decyzja właściciela 2026-09-13): wiek w ukończonych tygodniach.
            Wiersz pokazuje się TYLKO poniżej 3. miesiąca życia, bo wyżej miesiąc jest
            już dobrą jednostką. Z datą urodzenia liczy go kalendarz (pole tylko do
@@ -1612,7 +1613,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
         <p id="pubertyCdgpNote" style="margin:0.15rem 0 0.4rem 0;font-size:0.85em;opacity:0.7;">To ocena lekarza, nie wynik automatu — aplikacja nie rozpoznaje KOWD samodzielnie. Odpowiedź „tak” dokłada porównanie tempa z kwartylami dzieci z rozpoznanym KOWD; niczego nie odejmuje.</p>
         <p id="pubertyConflicts" role="status" style="display:none;margin:0.15rem 0 0.4rem 0;font-size:0.85em;color:#b26a00;"></p>
       </div>
-      <script defer src="inline_index_02.js?v=11"></script>
+      <script defer src="inline_index_02.js?v=12"></script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>

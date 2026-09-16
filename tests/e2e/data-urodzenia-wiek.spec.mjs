@@ -13,6 +13,18 @@ async function otworz(page) {
   await page.waitForFunction(
     () => Boolean(window.VildaDobAge) && typeof window.collectUserData === 'function'
   );
+  /* Po starcie strony moduł trwałości planuje autozapis (debounce 250 ms); pusty formularz
+     kończy się zerowaniem `window.lastLoadedData`. Testy, które same podstawiają
+     `lastLoadedData` i wysyłają `vilda:patient-loaded`, ścigały się z tym zapisem: pod
+     obciążeniem CI (2 workery) odpalał się między zdarzeniem a `setTimeout(0)` modułu daty
+     i data z rekordu nigdy nie trafiała do pola. Czekamy, aż kaskada startowa ucichnie. */
+  await page.waitForTimeout(1000);
+  await page.waitForFunction(() => {
+    const f = window.vildaGetPersistAutosaveCoalescingSnapshot;
+    if (typeof f !== 'function') return true;
+    const s = f();
+    return !s.hasPendingSaveTimer && !s.hasPendingForceSaveTimer && !s.hasPendingElementRefreshTimer;
+  });
 }
 
 /* Wpisuje wartość tak, jak zrobiłby to lekarz: wartość + zdarzenia pola. */
