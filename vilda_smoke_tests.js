@@ -123,7 +123,7 @@
     'vilda_smoke_tests.js?v=77',
     'vilda_diet_recommendations.js?v=28',
     'nutrition_norms.js?v=46',
-    'nutrition_micros.js?v=26'
+    'nutrition_micros.js?v=27'
   ]);
   const MANIFEST = Object.freeze([
     Object.freeze({ id: 'smoke-suite-api', group: 'smoke-suite', required: true, description: 'API VildaSmokeTests i aliasy konsolowe są dostępne.' }),
