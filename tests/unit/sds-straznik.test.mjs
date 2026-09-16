@@ -23,6 +23,7 @@ const WZOR_ODWROTNY = /Math\.pow\(1\s*\+[^()]{1,50},\s*1\s*\/[^()]{1,20}\)/;
 // Pliki, w których wzór LMS ma prawo istnieć, i po co (masa, BMI, WFL, osobne populacje, silnik).
 const WZOR_DOZWOLONY = {
   'vilda_sds_wzrostu.js': 'silnik',
+  'vilda_bmi.js': 'silnik BMI (P-BMI-1: jedyne miejsce wzoru LMS dla BMI)',
   'app.js': 'masa, BMI, masa-do-długości (calcPercentileStats WT, bmiZscore, computeWflZScore, lmsToValue)',
   'inline_index_03.js': 'chip masy na siatce (getCentilePercentileStatsForSource WT) i rysowanie krzywych (valueFromLMS)',
   'inline_index_05.js': 'siatka zespołu Downa (Zemel 2015)',

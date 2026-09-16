@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.959';
+const SW_VERSION = '1.0.960';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1841,6 +1841,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_update_prep.js?v=74',
   '/vilda_update_prep.js?v=75',
   '/vilda_update_prep.js?v=76',
+  '/vilda_update_prep.js?v=77',
   '/custom-fixes.js?v=58',
   '/custom-fixes.js?v=59',
   '/custom-fixes.js?v=60',
@@ -2086,6 +2087,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_pola_tozsamosci.js?v=4',
   '/vilda_sds_wzrostu.js?v=1',
   '/vilda_sds_wzrostu.js?v=2',
+  '/vilda_bmi.js?v=1',
   '/vilda_tempo_wzrastania.js?v=1',
   '/vilda_trajectory_analysis.js?v=23',
   '/vilda_advanced_growth.js?v=62',
@@ -2130,6 +2132,7 @@ const OPTIONAL_ASSETS = [
   '/app.js?v=208',
   '/app.js?v=209',
   '/app.js?v=210',
+  '/app.js?v=211',
   '/vilda_advanced_growth.js?v=63',
   '/vilda_advanced_growth.js?v=64',
   '/vilda_advanced_growth.js?v=65',
