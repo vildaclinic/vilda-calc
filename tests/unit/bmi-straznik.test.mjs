@@ -1,11 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { oknoZSilnikiem, appSrc, korzen, zrodlo } from '../support/silnik-bmi.mjs';
 
-const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const appSrc = fs.readFileSync(path.join(korzen, 'app.js'), 'utf8');
-const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 
 // P-BMI etap 5 — STRAŻNIK: SDS, centyl, kategoria, cel normy i mediana BMI liczy wyłącznie
 // vilda_bmi.js. Audyt 2026-09-16 (docs/clinical/AUDYT-BMI.md) znalazł pięć dróg do centyla BMI,
@@ -24,8 +21,8 @@ const ZAKAZANE = [
   [/CHILD_THRESH_(WHO|OLAF)/, 'własna tablica progów 85/97 — progi ma silnik (VildaBmi.PROGI)', []],
   [/\(k-x\)\/x\*100|bmiZscorePct[:=]/, 'względna zmiana BMI-SDS w % (kryteria Saxendy) — decyzja 9: bezwzględna ΔbmiSDS', []],
   [/getPalCentile\([^)]*,50,"BMI"\)/, 'mediana BMI prosto z p50 Palczewskiej obok silnika — użyj VildaBmi.mediana()/cole()', ['app.js']],
-  [/getPalCentile\([^)]*"BMI"\)/, 'centyl BMI Palczewskiej czytany obok silnika — użyj VildaBmi.wartoscDlaCentyla()', ['app.js', 'vilda_diet_recommendations.js']],
-  [/\bgetLMS\(/, 'odczyt wiersza LMS BMI obok silnika — użyj VildaBmi.policz()/lms()', ['app.js', 'vilda_auth_ui.js', 'vilda_diet_plan_ui.js', 'vilda_diet_recommendations.js', 'vilda_down_syndrome.js']],
+  [/getPalCentile\([^)]*"BMI"\)/, 'centyl BMI Palczewskiej czytany obok silnika — użyj VildaBmi.wartoscDlaCentyla()', ['app.js']],
+  [/\bgetLMS\(/, 'odczyt wiersza LMS BMI obok silnika — użyj VildaBmi.policz()/lms()', ['app.js', 'vilda_auth_ui.js', 'vilda_down_syndrome.js']],
   [/\bbmiPercentileChild\(/, 'centyl BMI przez rdzeń zamiast silnika w konsumencie', ['app.js']],
   [/\bbmiZscore\(/, 'SDS BMI przez rdzeń zamiast silnika w konsumencie', ['app.js', 'vilda_update_prep.js']],
   [/Z\\u2011score = \$\{r\.toFixed\(2\)|\(Z\\u2011score = "\+c\(ie,2\)/, 'dawny zapis „Z‑score" dla BMI — jeden zapis to „bmiSDS +1,20"', []],
@@ -48,33 +45,9 @@ const plikiProdukcyjne = () => fs.readdirSync(korzen)
   .filter((f) => f.endsWith('.js') && !WYKLUCZONE.test(f) && f !== SILNIK)
   .sort();
 
-function wytnij(src, od) {
-  let d = 0;
-  for (let k = src.indexOf('{', od); k < src.length; k += 1) {
-    if (src[k] === '{') d += 1;
-    else if (src[k] === '}') { d -= 1; if (d === 0) return src.slice(od, k + 1); }
-  }
-  throw new Error('niezbalansowane nawiasy');
-}
-function tablica(nazwa) {
-  const i = appSrc.indexOf(`${nazwa}={`);
-  expect(i, `app.js ma tablicę ${nazwa}`).toBeGreaterThan(-1);
-  return new Function(`return ${wytnij(appSrc, i).slice(nazwa.length + 1)}`)();
-}
 function silnik() {
-  const win = { addEventListener() {}, location: { pathname: '/' }, navigator: {} };
-  win.window = win;
-  for (const f of ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', SILNIK]) {
-    new Function('window', 'globalThis', zrodlo(f))(win, win);
-  }
-  const R = win.VildaGrowthReferenceData.getData();
-  win.VildaBmi.ustawDane({
-    palCentyl: (p, m, c, t) => win.VildaCentileInterp.palCentileValue(p, m, c, t),
-    LMS_BMI_OLAF_BOYS: tablica('OLAF_LMS_BOYS'), LMS_BMI_OLAF_GIRLS: tablica('OLAF_LMS_GIRLS'),
-    LMS_BMI_WHO_INFANT_BOYS: R.LMS_INFANT_BOYS, LMS_BMI_WHO_INFANT_GIRLS: R.LMS_INFANT_GIRLS,
-    LMS_BMI_WHO_BOYS: R.LMS_BOYS, LMS_BMI_WHO_GIRLS: R.LMS_GIRLS,
-  });
-  return { T: win.VildaBmi, R };
+  const win = oknoZSilnikiem();
+  return { T: win.VildaBmi, R: win.VildaGrowthReferenceData.getData() };
 }
 
 describe('Strażnik P-BMI: jedno miejsce liczenia BMI', () => {

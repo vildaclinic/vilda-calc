@@ -1,50 +1,12 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { funkcjaZ, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 
-const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const appSrc = fs.readFileSync(path.join(korzen, 'app.js'), 'utf8');
-const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 
 // P-BMI etap 4 — dieta/plan, zalecenia, żywienie (mikroskładniki), anoreksja, nadciśnienie i wsad
 // XLSX liczą BMI silnikiem vilda_bmi.js: jedna reguła siatek (Palczewska < 3 lat przy OLAF, WHO przy
 // WHO), wiek ułamkowy, jedna tablica progów (niedowaga < 5 c, dorosły od 18 lat), cel P85 / 24,9
 // z jednego miejsca. Silnik dostaje PRAWDZIWE tablice z app.js. Dane FIKCYJNE.
 
-function wytnij(src, od) {
-  let d = 0;
-  for (let k = src.indexOf('{', od); k < src.length; k += 1) {
-    if (src[k] === '{') d += 1;
-    else if (src[k] === '}') { d -= 1; if (d === 0) return src.slice(od, k + 1); }
-  }
-  throw new Error('niezbalansowane nawiasy');
-}
-function tablica(nazwa) {
-  const i = appSrc.indexOf(`${nazwa}={`);
-  expect(i, `app.js ma tablicę ${nazwa}`).toBeGreaterThan(-1);
-  return new Function(`return ${wytnij(appSrc, i).slice(nazwa.length + 1)}`)();
-}
-function funkcjaZ(src, nazwa) {
-  const i = src.indexOf(`function ${nazwa}(`);
-  expect(i, `źródło ma funkcję ${nazwa}()`).toBeGreaterThan(-1);
-  return wytnij(src, i);
-}
-function oknoZSilnikiem(extra = {}) {
-  const win = Object.assign({ addEventListener() {}, location: { pathname: '/' }, navigator: {} }, extra);
-  win.window = win;
-  for (const f of ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', 'vilda_bmi.js']) {
-    new Function('window', 'globalThis', zrodlo(f))(win, win);
-  }
-  const R = win.VildaGrowthReferenceData.getData();
-  win.VildaBmi.ustawDane({
-    palCentyl: (p, m, c, t) => win.VildaCentileInterp.palCentileValue(p, m, c, t),
-    LMS_BMI_OLAF_BOYS: tablica('OLAF_LMS_BOYS'), LMS_BMI_OLAF_GIRLS: tablica('OLAF_LMS_GIRLS'),
-    LMS_BMI_WHO_INFANT_BOYS: R.LMS_INFANT_BOYS, LMS_BMI_WHO_INFANT_GIRLS: R.LMS_INFANT_GIRLS,
-    LMS_BMI_WHO_BOYS: R.LMS_BOYS, LMS_BMI_WHO_GIRLS: R.LMS_GIRLS,
-  });
-  return win;
-}
 const globalne = ['document', '__ds_getLMS', 'KCAL_PER_KG', 'CHILD_AGE_MIN', 'vildaAppSetTrustedHtml', 'vildaAppClearHtml', 'advHistoryGetPreferredSource'];
 const zapisane = {};
 afterEach(() => {
@@ -121,11 +83,11 @@ describe('Plan dietetyczny (vilda_diet_plan_ui.js) — klasa BMI dziecka z silni
 
 describe('Zalecenia dietetyczne (vilda_diet_recommendations.js) — progi P85/P97 i mediana z silnika', () => {
   const src = zrodlo('vilda_diet_recommendations.js');
-  it('te(): BMI dla centyla Palczewskiej to dokładna odwrotność silnika (odwrócenie wraca na centyl)', () => {
+  it('P-DIETA-SILNIK: własna bisekcja po centylu Palczewskiej (te()) wycięta — BMI centyla daje silnik i wraca na centyl', () => {
+    expect(src, 'pomocnik te() usunięty').not.toMatch(/function te\(/);
+    expect(src).toContain('P-DIETA-SILNIK: pomocnik te()');
     const win = oknoZSilnikiem();
-    const te = new Function('window', `${funkcjaZ(src, 'te')}return te;`)(win);
-    const b85 = te('M', 120, 85);
-    expect(b85).toBeCloseTo(win.VildaBmi.wartoscDlaCentyla({ centyl: 85, plec: 'M', wiekMies: 120, siatka: 'PALCZEWSKA' }).bmi, 9);
+    const b85 = win.VildaBmi.wartoscDlaCentyla({ centyl: 85, plec: 'M', wiekMies: 120, siatka: 'PALCZEWSKA' }).bmi;
     expect(win.VildaBmi.policzNaSiatce({ bmi: b85, plec: 'M', wiekMies: 120, siatka: 'PALCZEWSKA' }).centyl).toBeCloseTo(85, 4);
   });
   it('strażnik źródła: bramka przycisku, Cole, progi 85/97 i cel P85 / mediana z silnika', () => {

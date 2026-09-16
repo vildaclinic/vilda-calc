@@ -1,12 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { funkcjaZ, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
-const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const appSrc = fs.readFileSync(path.join(korzen, 'app.js'), 'utf8');
-const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 
 // P-BMI etap 3 — Karta pacjenta (kafelki, dymek siatki, panel otyłości), monitor otyłości DocPro
 // i kryteria odpowiedzi na leczenie liczą BMI jednym silnikiem (vilda_bmi.js). Panel Karty (Mn)
@@ -14,39 +9,6 @@ const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 // OLAF < 3 lat pusta); „bmiZscorePct" (względna zmiana SDS w %) ustępuje bezwzględnej ΔbmiSDS
 // (decyzja 9). Silnik dostaje PRAWDZIWE tablice. Dane FIKCYJNE.
 
-function wytnij(src, od) {
-  let d = 0;
-  for (let k = src.indexOf('{', od); k < src.length; k += 1) {
-    if (src[k] === '{') d += 1;
-    else if (src[k] === '}') { d -= 1; if (d === 0) return src.slice(od, k + 1); }
-  }
-  throw new Error('niezbalansowane nawiasy');
-}
-function tablica(nazwa) {
-  const i = appSrc.indexOf(`${nazwa}={`);
-  expect(i, `app.js ma tablicę ${nazwa}`).toBeGreaterThan(-1);
-  return new Function(`return ${wytnij(appSrc, i).slice(nazwa.length + 1)}`)();
-}
-function funkcjaZ(src, nazwa) {
-  const i = src.indexOf(`function ${nazwa}(`);
-  expect(i, `źródło ma funkcję ${nazwa}()`).toBeGreaterThan(-1);
-  return wytnij(src, i);
-}
-function oknoZSilnikiem(extra = {}) {
-  const win = Object.assign({ addEventListener() {}, location: { pathname: '/' }, navigator: {} }, extra);
-  win.window = win;
-  for (const f of ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', 'vilda_bmi.js']) {
-    new Function('window', 'globalThis', zrodlo(f))(win, win);
-  }
-  const R = win.VildaGrowthReferenceData.getData();
-  win.VildaBmi.ustawDane({
-    palCentyl: (p, m, c, t) => win.VildaCentileInterp.palCentileValue(p, m, c, t),
-    LMS_BMI_OLAF_BOYS: tablica('OLAF_LMS_BOYS'), LMS_BMI_OLAF_GIRLS: tablica('OLAF_LMS_GIRLS'),
-    LMS_BMI_WHO_INFANT_BOYS: R.LMS_INFANT_BOYS, LMS_BMI_WHO_INFANT_GIRLS: R.LMS_INFANT_GIRLS,
-    LMS_BMI_WHO_BOYS: R.LMS_BOYS, LMS_BMI_WHO_GIRLS: R.LMS_GIRLS,
-  });
-  return win;
-}
 
 describe('Panel otyłości Karty (Mn) i monitor DocPro (ut) — jedna droga do BMI-SDS punktu', () => {
   const karta = zrodlo('vilda_auth_ui.js');

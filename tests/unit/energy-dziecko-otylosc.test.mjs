@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { oknoZSilnikiem, wczytajDoOkna } from '../support/silnik-bmi.mjs';
 
 // ENERGY-CHILD-MID1 (decyzja właściciela 2026-09-12, po przeglądzie „diety zbyt rygorystyczne"):
 // plan i stabilizacja u dziecka 2–18 lat z BMI ≥ 85c liczą się od zapotrzebowania dla MASY AKTUALNEJ
@@ -11,24 +11,33 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // PAL domyślny planu 10–18 lat (MID2/MID3): 1,6 przy nadwadze, 1,4 przy otyłości; silnik bez podanego
 // PAL używa tej samej wartości co formularz.
 // Dorośli i dzieci z BMI < 85c: bez zmian merytorycznych (deficyt procentowy / brak planu).
-// Dane FIKCYJNE; LMS BMI to uproszczone stałe testowe (nie tabele OLAF/WHO).
+// P-DIETA-SILNIK: klasa BMI, mediana i cel 85. centyla pochodzą z PRAWDZIWEGO silnika vilda_bmi.js
+// na PRAWDZIWYCH tablicach OLAF — koniec atrap getLMS. Dane pacjentów FIKCYJNE.
 
-const LMS = {
-  'M-36': [-1.2, 15.9, 0.08],
-  'M-96': [-2.0, 16.0, 0.13],
-  'M-120': [-1.9, 16.9, 0.13],
-  'M-168': [-1.8, 19.2, 0.13],
-  'F-84': [-1.9, 15.6, 0.12],
-  'F-144': [-1.9, 18.0, 0.13],
-};
+const zapisane = {};
+function ustawGlobal(k, v) { if (!(k in zapisane)) zapisane[k] = globalThis[k]; globalThis[k] = v; }
+afterAll(() => {
+  for (const k of Object.keys(zapisane)) {
+    if (zapisane[k] === undefined) delete globalThis[k]; else globalThis[k] = zapisane[k];
+  }
+});
 
 // Ładowanie synchroniczne na poziomie modułu: describe() korzysta ze stanu silnika już przy zbieraniu testów.
-globalThis.KCAL_PER_KG = 7700;
-globalThis.CHILD_AGE_MIN = 0.25;
-globalThis.getLMS = (sex, months) => LMS[`${sex}-${months}`] || null;
-globalThis.vildaAppSetTrustedHtml = (el, html) => { el.innerHTML = html; };
-globalThis.vildaAppClearHtml = (el) => { el.innerHTML = ''; };
-const win = loadBrowserScript('vilda_diet_plan_ui.js', {});
+ustawGlobal('KCAL_PER_KG', 7700);
+ustawGlobal('CHILD_AGE_MIN', 0.25);
+ustawGlobal('vildaAppSetTrustedHtml', (el, html) => { el.innerHTML = html; });
+ustawGlobal('vildaAppClearHtml', (el) => { el.innerHTML = ''; });
+const win = wczytajDoOkna(oknoZSilnikiem(), 'vilda_diet_plan_ui.js');
+const T = win.VildaBmi;
+
+/** Wyrocznia: to samo pytanie zadane wprost silnikowi (bez przechodzenia przez moduł diety). */
+function zSilnika({ sex, ageYears, weightKg, heightCm }) {
+  const h2 = (heightCm / 100) ** 2;
+  const mies = ageYears * 12;
+  const r = T.ocen({ bmi: weightKg / h2, plec: sex, wiekMies: mies, zrodlo: 'OLAF' });
+  const cel = T.celNormy({ wiekMies: mies, wzrostCm: heightCm, plec: sex, zrodlo: 'OLAF' });
+  return { h2, r, cel, needed: r.mediana * h2, target: cel.bmiCel * h2 };
+}
 
 const henryBoy10_17 = (w, hM) => 15.6 * w + 266 * hM + 299;
 const henryBoy3_9 = (w, hM) => (0.0632 * w + 1.31 * hM + 1.28) * 239;
@@ -37,22 +46,26 @@ const plan = (o) => win.energyBuildPlanReductionState({ ageMonthsOpt: 0, palInpu
 const REE_ADJ = 0.9;                       // Hofsteenge 2010: równania na masie aktualnej zawyżają REE o ~10 %
 const defFor = (kgPerMonth) => Math.round(kgPerMonth * 7700 / 30.4375); // 0,5→126; 1→253; 1,5→379; 2→506
 
-describe('Klasa BMI i masa należna (mediana BMI × wzrost²)', () => {
-  it('chłopiec 14 l, 165 cm, 85 kg → z ≥ 1,036 (nadwaga), ≥ 1,8808 (otyłość), ≥ 2,3263 (≥99c); masa należna 52,3 kg', () => {
-    const c = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
-    const bmi = 85 / 1.65 ** 2;
-    const [L, M, S] = LMS['M-168'];
-    expect(c.bmi).toBeCloseTo(bmi, 6);
-    expect(c.z).toBeCloseTo(((bmi / M) ** L - 1) / (L * S), 6);
+describe('Klasa BMI i masa należna (mediana BMI × wzrost²) — z silnika, nie z atrapy', () => {
+  it('chłopiec 14 l, 165 cm, 85 kg (OLAF): z, centyl, kategoria, mediana i cel P85 równe wynikom silnika', () => {
+    const p = { sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 };
+    const c = win.energyChildBmiClass(p);
+    const { r, cel, needed, target } = zSilnika(p);
+    expect(r.siatka).toBe('OLAF');
+    expect(c.bmi).toBeCloseTo(85 / 1.65 ** 2, 9);
+    expect(c.z).toBeCloseTo(r.sds, 9);
+    expect(c.percentile).toBeCloseTo(r.centyl, 9);
+    expect(c.source).toBe('OLAF');
     expect(c.overweight).toBe(true);
     expect(c.obese).toBe(true);
-    expect(c.severe).toBe(true);
-    expect(c.neededWeightKg).toBeCloseTo(19.2 * 1.65 ** 2, 6);
+    expect(r.kategoria.klucz).toBe('otylosc');
+    // „severe" to ≥ 99. centyl (Barlow 2007) — jedna granica, prosto z centyla silnika
+    expect(c.severe).toBe(r.centyl >= 99);
+    expect(c.medianBmi).toBeCloseTo(r.mediana, 9);
+    expect(c.neededWeightKg).toBeCloseTo(needed, 9);
     // ENERGY-CHILD-MID2: cel leczenia to 85. centyl BMI (Mazur 2022), nie mediana — wyżej niż masa należna
-    const [L2, M2, S2] = LMS['M-168'];
-    const bmi85 = L2 !== 0 ? M2 * (1 + L2 * S2 * 1.036) ** (1 / L2) : M2 * Math.exp(S2 * 1.036);
-    expect(c.targetBmi).toBeCloseTo(bmi85, 6);
-    expect(c.targetWeightKg).toBeCloseTo(bmi85 * 1.65 ** 2, 6);
+    expect(c.targetBmi).toBeCloseTo(cel.bmiCel, 9);
+    expect(c.targetWeightKg).toBeCloseTo(target, 9);
     expect(c.targetWeightKg).toBeGreaterThan(c.neededWeightKg);
   });
   it('chłopiec 10 l, 140 cm, 33 kg → BMI poniżej mediany: nie nadwaga', () => {
@@ -60,8 +73,18 @@ describe('Klasa BMI i masa należna (mediana BMI × wzrost²)', () => {
     expect(c.z).toBeLessThan(0);
     expect(c.overweight).toBe(false);
   });
-  it('brak LMS dla wieku → null (silnik wraca do starej ścieżki)', () => {
-    expect(win.energyChildBmiClass({ sex: 'M', ageYears: 11, weightKg: 50, heightCm: 150 })).toBeNull();
+  it('bez silnika BMI klasa nie powstaje — moduł nie ma własnego wzoru LMS ani zapasowej interpolacji', () => {
+    const bez = wczytajDoOkna(Object.assign({ addEventListener() {}, location: { pathname: '/' }, navigator: {}, window: null }, {}), 'vilda_diet_plan_ui.js');
+    expect(bez.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 })).toBeNull();
+    expect(bez.energyBuildPlanReductionState({ ageYears: 14, ageMonthsOpt: 0, sex: 'M', weightKg: 85, heightCm: 165, palInput: 1.4 }).childObesityPlan).toBe(false);
+  });
+  it('decyzja 1: przy OLAF poniżej 3 lat klasa idzie z Palczewskiej (tablice OLAF zaczynają się od 36 mies.)', () => {
+    const c = win.energyChildBmiClass({ sex: 'M', ageYears: 1, ageMonthsOpt: 12, weightKg: 14, heightCm: 78 });
+    const r = T.ocen({ bmi: 14 / 0.78 ** 2, plec: 'M', wiekMies: 12, zrodlo: 'OLAF' });
+    expect(r.siatka).toBe('PALCZEWSKA');
+    expect(c.source).toBe('PALCZEWSKA');
+    expect(c.z).toBeCloseTo(r.sds, 9);
+    expect(T.lms('M', 12, 'OLAF'), 'tablice OLAF nie sięgają 12 mies.').toBeNull();
   });
 });
 
@@ -73,7 +96,7 @@ describe('Domyślny PAL planu: 1,6 przy nadwadze, 1,4 przy otyłości (10–18 l
     expect(win.energyDefaultPlanPal(30, 0)).toBe(1.4);
   });
   it('ENERGY-CHILD-MID3: nastolatek z otyłością (≥ 97c) → 1,4; z samą nadwagą (85–97c) → 1,6', () => {
-    // chłopiec 14 l, 165 cm: 85 kg to z ≥ 1,88 (otyłość), 66 kg to nadwaga bez otyłości (z ≈ 1,47)
+    // chłopiec 14 l, 165 cm: 85 kg to otyłość wg OLAF, 66 kg to nadwaga bez otyłości
     const otyly = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
     const nadwaga = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165 });
     expect(otyly.obese).toBe(true);
@@ -112,8 +135,9 @@ describe('Domyślny PAL planu: 1,6 przy nadwadze, 1,4 przy otyłości (10–18 l
 });
 
 describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, bez ×1,01; deficyt z tempa 1/1,5/2 kg/mies.', () => {
-  const st = plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: 1.4 });
-  const needed = 19.2 * 1.65 ** 2;
+  const pacjent = { sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 };
+  const st = plan({ ...pacjent, palInput: 1.4 });
+  const needed = zSilnika(pacjent).needed;
   const reeAct = henryBoy10_17(85, 1.65);
   const base = reeAct * REE_ADJ * 1.4;
   it('stan: childObesityPlan, etap 12–18, kontekst na masie aktualnej z mnożnikiem 1; masa należna zostaje celem', () => {
@@ -124,10 +148,10 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, be
     expect(st.context.energy.growthMultiplier).toBe(1);
     expect(st.reeKcal).toBeCloseTo(reeAct, 3);
     expect(st.reeAdjustedKcal).toBe(Math.round(reeAct * REE_ADJ));
-    expect(st.neededWeightKg).toBeCloseTo(needed, 6);
+    expect(st.neededWeightKg).toBeCloseTo(needed, 9);
     // ENERGY-CHILD-MID2: stan planu niesie też cel leczenia z 85. centyla BMI
-    const cls = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
-    expect(st.targetWeightKg).toBeCloseTo(cls.targetWeightKg, 6);
+    const cls = win.energyChildBmiClass(pacjent);
+    expect(st.targetWeightKg).toBeCloseTo(cls.targetWeightKg, 9);
     expect(st.targetWeightKg).toBeGreaterThan(st.neededWeightKg);
     expect(st.maintenanceKcal).toBe(Math.round(base));
   });
@@ -155,8 +179,8 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, be
     expect(ctx.anthropometry.weightUsedKg).toBe(85);
   });
   it('ENERGY-CHILD-MID1/MID3: chłopiec 14 l z otyłością bez podanego PAL → silnik bierze tę samą wartość co formularz (1,4)', () => {
-    const s2 = plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null });
-    const cls2 = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
+    const s2 = plan({ ...pacjent, palInput: null });
+    const cls2 = win.energyChildBmiClass(pacjent);
     expect(s2.palUsed).toBe(win.energyDefaultPlanPal(14, 0, cls2));
     expect(s2.palUsed).toBe(1.4);
     // u dziecka bez nadwagi fallback pozostaje normatywny (stara ścieżka)
@@ -165,9 +189,11 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, be
 });
 
 describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mies.', () => {
-  it('chłopiec 10 l, 145 cm, 55 kg (z < 2,33) → tylko lekka z tempem 0,5 kg/mies. (126 kcal), reszta z powodem', () => {
-    const st = plan({ sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145, palInput: 1.4 });
+  it('chłopiec 10 l, 145 cm, 55 kg (otyłość, ale < 99c wg OLAF) → tylko lekka z tempem 0,5 kg/mies. (126 kcal), reszta z powodem', () => {
+    const pacjent = { sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 };
+    const st = plan({ ...pacjent, palInput: 1.4 });
     const base = henryBoy10_17(55, 1.45) * REE_ADJ * 1.4;
+    expect(zSilnika(pacjent).r.centyl).toBeLessThan(99);
     expect(st.childPlanStage).toBe('age_6_11');
     expect(st.bmiClass.overweight).toBe(true);
     expect(st.bmiClass.severe).toBe(false);
@@ -179,10 +205,12 @@ describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mi
     expect(st.dietUnavailable.moderate).toContain('0,5 kg/mies.');
     expect(st.dietUnavailable.intense).toContain('6–11 lat');
   });
-  it('chłopiec 8 l, 130 cm, 45 kg (z ≥ 2,33) → trzy diety 0,5 / 1 / 1,5 kg/mies., podłoga z REE (> 1000 kcal)', () => {
-    const st = plan({ sex: 'M', ageYears: 8, weightKg: 45, heightCm: 130, palInput: 1.4 });
+  it('chłopiec 8 l, 130 cm, 45 kg (≥ 99c wg OLAF) → trzy diety 0,5 / 1 / 1,5 kg/mies., podłoga z REE (> 1000 kcal)', () => {
+    const pacjent = { sex: 'M', ageYears: 8, weightKg: 45, heightCm: 130 };
+    const st = plan({ ...pacjent, palInput: 1.4 });
     const ree = henryBoy3_9(45, 1.3);
     const base = ree * REE_ADJ * 1.4;
+    expect(zSilnika(pacjent).r.centyl).toBeGreaterThanOrEqual(99);
     expect(st.bmiClass.severe).toBe(true);
     expect(st.diets.map((d) => d.monthlyLossKg)).toEqual([0.5, 1, 1.5]);
     expect(st.diets.map((d) => d.deficit)).toEqual([0.5, 1, 1.5].map(defFor));
@@ -191,9 +219,11 @@ describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mi
     expect(st.floorKcal).toBeGreaterThan(1000);
     expect(st.diets.every((d) => d.rateCapped === false)).toBe(true);
   });
-  it('dziewczynka 7 l, 118 cm, 35 kg (z ≥ 2,33): trzy diety, każda powyżej REE po korekcie', () => {
-    const st = plan({ sex: 'F', ageYears: 7, weightKg: 35, heightCm: 118, palInput: 1.4 });
+  it('dziewczynka 7 l, 118 cm, 35 kg (≥ 99c): trzy diety, każda powyżej REE po korekcie', () => {
+    const pacjent = { sex: 'F', ageYears: 7, weightKg: 35, heightCm: 118 };
+    const st = plan({ ...pacjent, palInput: 1.4 });
     const ree = henryGirl3_9(35, 1.18);
+    expect(zSilnika(pacjent).r.centyl).toBeGreaterThanOrEqual(99);
     expect(st.bmiClass.severe).toBe(true);
     expect(st.diets.map((d) => d.key)).toEqual(['light', 'moderate', 'intense']);
     expect(st.floorKcal).toBe(Math.max(1000, Math.round(ree * REE_ADJ)));

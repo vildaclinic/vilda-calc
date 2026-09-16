@@ -1,17 +1,35 @@
-import { describe, expect, it } from 'vitest';
-import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { oknoZSilnikiem, wczytajDoOkna } from '../support/silnik-bmi.mjs';
 
 // ENERGY-REC-2 (decyzja właściciela 2026-09-12): jedna prognoza wzrastania (energyChildGrowthOutlook),
 // jeden resolver strategii (energyResolveStrategy), symulacja przy tempie 0 (stabilizacja) i opisy diet
-// wg klasy BMI. Dane FIKCYJNE; LMS BMI to uproszczone stałe testowe; brak medianHeightForAgeMonths
-// (jak w izolowanym module) → tabela wiekowa wg płci.
+// wg klasy BMI. Brak medianHeightForAgeMonths (jak w izolowanym module) → tabela wiekowa wg płci.
+// P-DIETA-SILNIK: klasa BMI (także przy źródle Palczewskiej) pochodzi z PRAWDZIWEGO silnika
+// vilda_bmi.js na PRAWDZIWYCH tablicach — koniec atrap getLMS / bmiPercentileChildPal / getPalCentile.
+// Dane FIKCYJNE.
 
-const LMS = { 'M-168': [-1.8, 19.2, 0.13], 'F-216': [-1.9, 21.3, 0.13], 'M-96': [-2.0, 16.0, 0.13], 'F-96': [-2.0, 15.9, 0.13] };
-globalThis.KCAL_PER_KG = 7700;
-globalThis.CHILD_AGE_MIN = 0.25;
-globalThis.getLMS = (sex, months) => LMS[`${sex}-${months}`] || null;
-globalThis.toNormalBMITarget = () => 22;
-const win = loadBrowserScript('vilda_diet_plan_ui.js', {});
+const zapisane = {};
+function ustawGlobal(k, v) { if (!(k in zapisane)) zapisane[k] = globalThis[k]; globalThis[k] = v; }
+afterAll(() => {
+  for (const k of Object.keys(zapisane)) {
+    if (zapisane[k] === undefined) delete globalThis[k]; else globalThis[k] = zapisane[k];
+  }
+});
+
+/** Źródło siatek tylko na czas jednego wywołania — moduł czyta globalne `bmiSource` jak w przeglądarce. */
+function zZrodlem(zr, fn) {
+  const bylo = 'bmiSource' in globalThis, poprzednie = globalThis.bmiSource;
+  globalThis.bmiSource = zr;
+  try { return fn(); } finally { if (bylo) globalThis.bmiSource = poprzednie; else delete globalThis.bmiSource; }
+}
+
+ustawGlobal('KCAL_PER_KG', 7700);
+ustawGlobal('CHILD_AGE_MIN', 0.25);
+// cel BMI stały (22) zamiast app.js — ten plik pyta o RÓŻNICĘ „z wzrastaniem vs bez", nie o wartość
+// celu; cel z siatek sprawdza tests/unit/energy-dziecko-otylosc.test.mjs wprost na silniku.
+ustawGlobal('toNormalBMITarget', () => 22);
+const win = wczytajDoOkna(oknoZSilnikiem(), 'vilda_diet_plan_ui.js');
+const T = win.VildaBmi;
 
 describe('Prognoza wzrastania (fallback tabelaryczny wg płci i wieku)', () => {
   it('dziewczynka 16 l → 3,5 cm/rok; 17 l → 0 (praktycznie zakończone); chłopiec 17 l → 2; 18 l → 0', () => {
@@ -71,6 +89,7 @@ describe('Symulacja przy tempie 0 (stabilizacja) i opisy diet wg klasy BMI', () 
   });
   it('dieta lekka przy ≥ 99c (dziecko) i BMI ≥ 30 (dorosły) opisana jako etap wstępny; przy nadwadze bez zmian', () => {
     const severe = win.energyBuildPlanReductionState({ ageYears: 8, ageMonthsOpt: 0, sex: 'M', weightKg: 45, heightCm: 130, palInput: 1.4 });
+    expect(T.ocen({ bmi: 45 / 1.3 ** 2, plec: 'M', wiekMies: 96, zrodlo: 'OLAF' }).centyl).toBeGreaterThanOrEqual(99);
     expect(severe.bmiClass.severe).toBe(true);
     expect(win.energyDietBulletsExtra('light', severe)[0]).toContain('etap wstępny');
     const adult = win.energyBuildPlanReductionState({ ageYears: 35, ageMonthsOpt: 0, sex: 'M', weightKg: 105, heightCm: 175, palInput: 1.4 });
@@ -81,38 +100,48 @@ describe('Symulacja przy tempie 0 (stabilizacja) i opisy diet wg klasy BMI', () 
   });
 });
 
-describe('Klasa BMI przy źródle Palczewskiej — z jej centyli, mediana z centyla 50', () => {
-  it('pct 96 → nadwaga bez otyłości; pct 98 → otyłość; masa należna z centyla 50; po powrocie do OLAF — LMS', () => {
-    globalThis.bmiSource = 'PALCZEWSKA';
-    let pctStub = 96;
-    globalThis.bmiPercentileChildPal = () => pctStub;
-    globalThis.getPalCentile = (sex, months, p, type) => {
-      if (type !== 'BMI') return null;
-      // ENERGY-CHILD-MID2: tablice Palczewskiej nie mają p85 — cel interpoluje się z p75 i p90 po skali z.
-      if (p === 50) return 17.2;
-      if (p === 75) return 19;
-      if (p === 90) return 21;
-      return null;
-    };
-    const c = win.energyChildBmiClass({ sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 });
+describe('Klasa BMI przy źródle Palczewskiej — wszystko z silnika, cel P85 po skali z', () => {
+  const przyZrodle = (zr, pacjent) => zZrodlem(zr, () => win.energyChildBmiClass(pacjent));
+  it('chłopiec 10 l, 145 cm: 45 kg → nadwaga bez otyłości, 55 kg → otyłość; masa należna z mediany Palczewskiej', () => {
+    const lekki = { sex: 'M', ageYears: 10, weightKg: 45, heightCm: 145 };
+    const c = przyZrodle('PALCZEWSKA', lekki);
+    const r = T.ocen({ bmi: 45 / 1.45 ** 2, plec: 'M', wiekMies: 120, zrodlo: 'PALCZEWSKA' });
     expect(c.source).toBe('PALCZEWSKA');
     expect(c.overweight).toBe(true);
     expect(c.obese).toBe(false);
-    expect(c.medianBmi).toBe(17.2);
-    expect(c.neededWeightKg).toBeCloseTo(17.2 * 1.45 * 1.45, 6);
-    // cel z 85. centyla: interpolacja po z między p75 (z 0,6745) i p90 (z 1,2816), nie po numerach centyli
-    const frac = (1.036 - 0.6745) / (1.2816 - 0.6745);
-    expect(c.targetBmi).toBeCloseTo(19 + (21 - 19) * frac, 6);
-    expect(c.targetWeightKg).toBeCloseTo((19 + (21 - 19) * frac) * 1.45 * 1.45, 6);
-    expect(c.targetBmi).toBeLessThan(19 + (21 - 19) * 0.6667); // liniowo po centylach (85 z 75→90) byłoby wyżej
-    expect(c.z).toBeGreaterThan(1.6);
-    expect(c.z).toBeLessThan(1.9);
-    pctStub = 98;
-    expect(win.energyChildBmiClass({ sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 }).obese).toBe(true);
-    const st = win.energyBuildPlanReductionState({ ageYears: 10, ageMonthsOpt: 0, sex: 'M', weightKg: 55, heightCm: 145, palInput: 1.4 });
-    expect(st.neededWeightKg).toBeCloseTo(17.2 * 1.45 * 1.45, 6);
-    globalThis.bmiSource = 'OLAF';
-    expect(win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 }).source).toBeUndefined();
-    delete globalThis.bmiPercentileChildPal; delete globalThis.getPalCentile; delete globalThis.bmiSource;
+    expect(c.z).toBeCloseTo(r.sds, 9);
+    expect(c.percentile).toBeCloseTo(r.centyl, 9);
+    expect(c.medianBmi).toBeCloseTo(r.mediana, 9);
+    expect(c.neededWeightKg).toBeCloseTo(r.mediana * 1.45 ** 2, 9);
+    expect(przyZrodle('PALCZEWSKA', { ...lekki, weightKg: 55 }).obese).toBe(true);
+  });
+  it('cel leczenia to 85. centyl interpolowany po skali z (tablice Palczewskiej nie mają p85), nie liniowo po numerach centyli', () => {
+    const c = przyZrodle('PALCZEWSKA', { sex: 'M', ageYears: 10, weightKg: 45, heightCm: 145 });
+    const cel = T.celNormy({ wiekMies: 120, wzrostCm: 145, plec: 'M', zrodlo: 'PALCZEWSKA' });
+    expect(cel.siatka).toBe('PALCZEWSKA');
+    expect(c.targetBmi).toBeCloseTo(cel.bmiCel, 9);
+    expect(c.targetWeightKg).toBeCloseTo(cel.masaCel, 9);
+    const p75 = T.wartoscDlaCentyla({ centyl: 75, plec: 'M', wiekMies: 120, zrodlo: 'PALCZEWSKA' }).bmi;
+    const p90 = T.wartoscDlaCentyla({ centyl: 90, plec: 'M', wiekMies: 120, zrodlo: 'PALCZEWSKA' }).bmi;
+    expect(c.targetBmi).toBeGreaterThan(p75);
+    expect(c.targetBmi).toBeLessThan(p90);
+    expect(c.targetBmi).toBeLessThan(p75 + (p90 - p75) * (85 - 75) / (90 - 75)); // liniowo po centylach byłoby wyżej
+  });
+  it('powrót do OLAF zmienia siatkę i wynik — źródło nie zostaje przyklejone do modułu', () => {
+    const pacjent = { sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 };
+    const pal = przyZrodle('PALCZEWSKA', pacjent);
+    const olaf = przyZrodle('OLAF', pacjent);
+    expect(olaf.source).toBe('OLAF');
+    expect(olaf.z).toBeCloseTo(T.ocen({ bmi: 55 / 1.45 ** 2, plec: 'M', wiekMies: 120, zrodlo: 'OLAF' }).sds, 9);
+    expect(olaf.z).not.toBeCloseTo(pal.z, 2);
+    expect(olaf.medianBmi).not.toBeCloseTo(pal.medianBmi, 3);
+  });
+  it('stan planu bierze tę samą masę należną, co klasa BMI (jedna mediana, nie dwie)', () => {
+    zZrodlem('PALCZEWSKA', () => {
+      const c = win.energyChildBmiClass({ sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 });
+      const st = win.energyBuildPlanReductionState({ ageYears: 10, ageMonthsOpt: 0, sex: 'M', weightKg: 55, heightCm: 145, palInput: 1.4 });
+      expect(st.neededWeightKg).toBeCloseTo(c.neededWeightKg, 9);
+      expect(st.targetWeightKg).toBeCloseTo(c.targetWeightKg, 9);
+    });
   });
 });
