@@ -150,8 +150,10 @@
   }
 
   function podepnij() {
+    /* P-ODTWORZ-ZYWO (2026-09-16): `vilda:persist-restored` — odtworzenie „na żywo” w panelu
+       powłoki (vilda_persist_runtime.js), które nie wysyła żadnego z pozostałych zdarzeń. */
     ['vilda:patient-loaded', 'vilda:patient-saved', 'vilda:state-restored', 'vilda:json-imported',
-      'vilda:baseline-refreshed', 'vilda:user-state-cleared'].forEach(function (nazwa) {
+      'vilda:baseline-refreshed', 'vilda:user-state-cleared', 'vilda:persist-restored'].forEach(function (nazwa) {
       d.addEventListener(nazwa, zaplanuj);
     });
     /* Wylogowanie i kasowanie stanu lecą na WINDOW (userData.js, vilda_persist_runtime.js). */

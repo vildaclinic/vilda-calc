@@ -64,7 +64,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '6';
+  var VERSION = '7';
 
   /* Pola formularza. `dobInput` to jedyne nowe; reszta istnieje od zawsze. */
   var ID = {
@@ -730,8 +730,13 @@
     /* Rekord wczytuje się trzema drogami („Odtwórz zapis”, „Nowy pomiar”, wejście
        z Karty Pacjenta) i żadna nie wysyła zdarzenia `input`. Zamiast dopisywać się
        do każdej z nich, po zdarzeniu aplikacji czytamy datę wprost z wczytanego
-       rekordu — jedno miejsce zamiast trzech. */
-    ['vilda:patient-loaded', 'vilda:state-restored'].forEach(function (nazwa) {
+       rekordu — jedno miejsce zamiast trzech.
+       P-ODTWORZ-ZYWO (2026-09-16): czwarta droga to odtworzenie „na żywo” w panelu
+       powłoki (app.html trzyma DocPro w ramce; po wczytaniu pacjenta na Start dostaje
+       vildaPersistRestoreAll bez żadnego z powyższych zdarzeń). Data nie wędruje przez
+       sharedUserData (patrz nagłówek), więc bez sygnału pole zostawało puste —
+       vilda_persist_runtime.js wysyła teraz `vilda:persist-restored`. */
+    ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored'].forEach(function (nazwa) {
       d.addEventListener(nazwa, function () {
         try {
           if (w.setTimeout) w.setTimeout(przyjmijZWczytanego, 0);
