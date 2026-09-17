@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '21';
+  var VERSION = '22';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -310,6 +310,120 @@
     return { mpSds: mp, gh: gh, red: red, tannerStage: ts, tannerAtAgeMonths: tsAt, tannerStale: false, boneAge: ba };
   }
 
+  // ── Kontekst kliniczny — JEDEN budowniczy dla wszystkich kart (P-OSTATNI-2b, 2026-09-17) ──
+  // Transkrypcja 1:1 tego, co Karta pacjenta liczyla dotad inline (vilda_auth_ui.js, `_vildaCmpCtx`),
+  // a strona glowna i karta porownania z poprzednim pomiarem nie liczyly wcale:
+  //  - odcinek terapii GH / leczenia otylosci z punktow monitora (typy start/continue/end; wiek punktu
+  //    = ageYears*12 + ageMonths; start = pierwszy punkt „start" albo najmlodszy; koniec = ostatni
+  //    „end", a bez „end" terapia trwa — b = null);
+  //  - etykieta redukcji: nazwa preparatu z ostatniego punktu (lub pierwszego „start"), bez dopisku
+  //    w nawiasie / po mysliniku; bez preparatu — „otyłość";
+  //  - mpSDS: MPH z wzrostow rodzicow (Tanner 1970: dziewczeta (ojciec − 13 + matka)/2, chlopcy
+  //    (matka + 13 + ojciec)/2) na siatce zrodla w wieku 18 lat — ta sama sciezka, co Karta pacjenta
+  //    (advHistoryCalcAnthroStatsForSource), z zapasem w statFor tego modulu.
+  function therapyAgeM(p) { return Math.round((num(p.ageYears) || 0) * 12 + (num(p.ageMonths) || 0)); }
+  function therapyPointsOf(points) {
+    return (Array.isArray(points) ? points : []).filter(function (p) {
+      return p && (p.type === 'start' || p.type === 'continue' || p.type === 'end');
+    });
+  }
+  function therapyInterval(points) {
+    try {
+      var pts = therapyPointsOf(points);
+      if (!pts.length) return null;
+      var ages = pts.map(therapyAgeM).filter(function (a) { return a > 0; });
+      if (!ages.length) return null;
+      var st = null, en = null;
+      for (var i = 0; i < pts.length; i++) {
+        if (pts[i].type === 'start' && !st) st = pts[i];
+        if (pts[i].type === 'end') en = pts[i];
+      }
+      return { a: st ? therapyAgeM(st) : Math.min.apply(null, ages), b: en ? therapyAgeM(en) : null, active: !en };
+    } catch (e) { return null; }
+  }
+  function drugShortName(drug) {
+    var a = String(drug == null ? '' : drug).trim();
+    if (a === '– wybierz –') a = '';
+    if (!a) return '';
+    var n = a.split(' (')[0].split(' –')[0].split(' - ')[0].trim();
+    return n || a;
+  }
+  function reductionLabel(points) {
+    try {
+      var pts = therapyPointsOf(points);
+      if (!pts.length) return 'otyłość';
+      var last = pts.slice().sort(function (x, y) { return therapyAgeM(x) - therapyAgeM(y); }).pop();
+      var first = null;
+      for (var i = 0; i < pts.length; i++) if (pts[i].type === 'start') { first = pts[i]; break; }
+      return drugShortName(last && last.drug) || drugShortName(first && first.drug) || 'otyłość';
+    } catch (e) { return 'otyłość'; }
+  }
+  function sexFM(s) {
+    var t = String(s == null ? '' : s).trim().toUpperCase();
+    return t === 'M' ? 'M' : t === 'F' || t === 'K' ? 'F' : null;
+  }
+  function mphFromParents(motherCm, fatherCm, sex) {
+    var m = num(motherCm), f = num(fatherCm), g = sexFM(sex);
+    if (m == null || f == null || !g) return null;
+    return g === 'F' ? (f - 13 + m) / 2 : (m + 13 + f) / 2;
+  }
+  function mphStats(mph, sex, source) {
+    var v = num(mph);
+    if (v == null || v <= 0) return null;
+    var g = sexFM(sex) || 'F';
+    var src = source != null && String(source).trim() !== '' ? String(source).toUpperCase() : null;
+    var st = null;
+    try {
+      if (typeof w.advHistoryCalcAnthroStatsForSource === 'function') st = w.advHistoryCalcAnthroStatsForSource(v, g, 18, 'HT', src || 'OLAF');
+    } catch (e) { st = null; }
+    if (!st) st = statFor('HT', v, g, 18, src);
+    if (!st || typeof st.sd !== 'number' || !isFinite(st.sd)) return null;
+    return { sd: st.sd, c: typeof st.percentile === 'number' && isFinite(st.percentile) ? st.percentile : null };
+  }
+  // input: { ghTherapyPoints, obesityTherapyPoints, mpSds?, motherHeightCm?, fatherHeightCm?, sex, source,
+  //          tannerStage?, boneAge? } → { mpSds, mph, mphC, gh:{a,b}|null, red:{a,b,label}|null, ... } | null
+  function buildClinicalContext(input) {
+    var inp = input && typeof input === 'object' ? input : {};
+    var out = { mpSds: null, mph: null, mphC: null, gh: null, red: null };
+    var gh = therapyInterval(inp.ghTherapyPoints);
+    if (gh) out.gh = { a: gh.a, b: gh.b };
+    var rd = therapyInterval(inp.obesityTherapyPoints);
+    if (rd) out.red = { a: rd.a, b: rd.b, label: reductionLabel(inp.obesityTherapyPoints) };
+    var mp = num(inp.mpSds);
+    if (mp != null) out.mpSds = mp;
+    else {
+      var mph = mphFromParents(inp.motherHeightCm, inp.fatherHeightCm, inp.sex);
+      if (mph != null) {
+        out.mph = mph;
+        var st = mphStats(mph, inp.sex, inp.source);
+        if (st) { out.mpSds = st.sd; out.mphC = st.c; }
+      }
+    }
+    var ts = num(inp.tannerStage);
+    if (ts != null) out.tannerStage = ts;
+    if (inp.boneAge && typeof inp.boneAge === 'object') out.boneAge = inp.boneAge;
+    if (out.mpSds == null && !out.gh && !out.red && out.tannerStage == null && !out.boneAge) return null;
+    return out;
+  }
+  // Werdykt pary w kontekscie — JEDNA sciezka dla odcinkow trajektorii, Karty pacjenta i karty
+  // porownania z poprzednim pomiarem. a/b: {sd, c, ageMonths}. GH liczone tylko dla wzrostu (odpowiedz
+  // na terapie przy >=6 mies. nakladania w odcinku), redukcja tylko dla wagi/BMI (nakladanie >=3 mies.),
+  // nakladka pozycyjna wzrostu poza GH. Zwraca {v, ghOn, rdOn, ghM, mphOn}.
+  function pairVerdictInContext(met, a, b, ctx) {
+    var cx = ctx && typeof ctx === 'object' ? ctx : null;
+    if (!cx) {
+      var v0 = verdictForPair(met, a.sd, b.sd, a.c, b.c);
+      if (met === 'height') v0 = heightPositionOverlayVerdict(v0, b.c, null, a.sd, false);
+      return { v: v0, ghOn: false, rdOn: false, ghM: 0, mphOn: false };
+    }
+    var ghM = met === 'height' ? overlapM(cx.gh, a.ageMonths, b.ageMonths) : 0;
+    var rdOn = met !== 'height' && overlapM(cx.red, a.ageMonths, b.ageMonths) >= 3;
+    var mp = typeof cx.mpSds === 'number' && isFinite(cx.mpSds) ? cx.mpSds : null;
+    var v = verdictForPairCtx(met, a.sd, b.sd, a.c, b.c, ghM, mp, rdOn);
+    if (met === 'height') v = heightPositionOverlayVerdict(v, b.c, mp, a.sd, ghM >= 6);
+    return { v: v, ghOn: ghM >= 6, rdOn: rdOn && a.c >= 10, ghM: ghM, mphOn: met === 'height' && ghM < 6 && mp != null };
+  }
+
   // Opis strefy dla pary — transkrypcja interpCh panelu (zwraca sam tekst strefy).
   function zoneForPair(ca, cb, sa, sb) {
     var a = chan(ca), b = chan(cb);
@@ -383,20 +497,9 @@
     // Werdykt pary z kontekstem klinicznym (jak panel porównania): GH liczone tylko dla wzrostu,
     // redukcja tylko dla wagi/BMI przy nakładaniu >=3 mies. w danym odcinku.
     function pairVerdict(a0, b0) {
-      if (!ctx) {
-        var v0 = verdictForPair(met.key, a0.sd, b0.sd, a0.c, b0.c);
-        if (met.key === 'height') v0 = heightPositionOverlayVerdict(v0, b0.c, null, a0.sd, false);
-        return { v: v0, ghOn: false, rdOn: false };
-      }
-      var ghM = met.key === 'height' ? overlapM(ctx.gh, a0.ageMonths, b0.ageMonths) : 0;
-      var rdOn = met.key !== 'height' && overlapM(ctx.red, a0.ageMonths, b0.ageMonths) >= 3;
-      var v = verdictForPairCtx(met.key, a0.sd, b0.sd, a0.c, b0.c, ghM, ctx.mpSds, rdOn);
-      if (met.key === 'height') v = heightPositionOverlayVerdict(v, b0.c, ctx.mpSds, a0.sd, ghM >= 6);
-      return {
-        v: v,
-        ghOn: ghM >= 6,
-        rdOn: rdOn && a0.c >= 10
-      };
+      // P-OSTATNI-2b: ta sama funkcja, ktorej uzywa karta porownania z poprzednim pomiarem.
+      var r = pairVerdictInContext(met.key, a0, b0, ctx);
+      return { v: r.v, ghOn: r.ghOn, rdOn: r.rdOn };
     }
 
     var segments = [];
@@ -1316,6 +1419,12 @@
     statFor: statFor,
     verdictForPair: verdictForPair,
     verdictForPairCtx: verdictForPairCtx,
+    pairVerdictInContext: pairVerdictInContext,
+    buildClinicalContext: buildClinicalContext,
+    therapyInterval: therapyInterval,
+    reductionLabel: reductionLabel,
+    mphFromParents: mphFromParents,
+    overlapM: overlapM,
     weightBmiOverlayVerdict: weightBmiOverlayVerdict,
     heightPositionOverlayVerdict: heightPositionOverlayVerdict,
     zoneForPair: zoneForPair,

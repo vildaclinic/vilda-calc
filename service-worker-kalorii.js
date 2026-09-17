@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.980';
+const SW_VERSION = '1.0.981';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -122,6 +122,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=69',
   '/style.css?v=70',
   '/style.css?v=71',
+  '/style.css?v=72',
   '/lab_clinical_panels.js?v=141',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
   '/inline_docpro_00.js?v=1',
@@ -2153,6 +2154,7 @@ const OPTIONAL_ASSETS = [
   '/app.js?v=204',
   '/growth-basic-module.js?v=15',
   '/growth-basic-module.js?v=16',
+  '/growth-basic-module.js?v=17',
   '/vilda_summary_cards.js?v=33',
   '/vilda_summary_cards.js?v=34',
   '/vilda_summary_cards.js?v=35',
@@ -2166,6 +2168,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_summary_cards.js?v=43',
   '/vilda_summary_cards.js?v=44',
   '/vilda_summary_cards.js?v=45',
+  '/vilda_summary_cards.js?v=46',
   '/vilda_schowek.js?v=1',
   '/vilda_schowek.js?v=2',
   '/vilda_schowek.js?v=3',
@@ -2204,6 +2207,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
+  '/vilda_trajectory_analysis.js?v=26',
   '/gh_therapy_monitor.js?v=40',
   '/gh_therapy_monitor.js?v=41',
   '/gh_therapy_segments.js?v=4',
@@ -2228,6 +2232,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=440',
   '/vilda_auth_ui.js?v=441',
   '/vilda_auth_ui.js?v=442',
+  '/vilda_auth_ui.js?v=443',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -2247,6 +2252,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=64',
   '/vilda_advanced_growth.js?v=65',
   '/vilda_advanced_growth.js?v=66',
+  '/vilda_advanced_growth.js?v=67',
   '/inline_index_02.js?v=11',
   '/inline_index_02.js?v=12',
   '/vilda_diet_plan_ui.js?v=13',
