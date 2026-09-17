@@ -86,6 +86,31 @@ async function pierwszaWizytaIWczytanie(page, pierwszy) {
 const DZIECKO_1 = { sex: 'M', age: '8', ageMonths: '2', weight: '26', height: '126', waistCm: '58', hipCm: '66' };
 const DZIECKO_2 = { age: '8', ageMonths: '9', weight: '29.5', height: '129', waistCm: '61', hipCm: '68' };
 
+// P-OSTATNI-3: rytm pionowy kart to 1rem — karta porównania ma mieć TEN SAM odstęp od karty
+// formularza (i od karty „Przypomnienia") u góry, co od kart Centyle/BMI i przycisku Podsumowania u dołu,
+// równy odstępowi między innymi kartami wyników. Do SW 1.0.983 było 2rem u góry i 0 u dołu (desktop)
+// oraz ~10 px / ~21 px (telefon).
+async function odstepy(page) {
+  return page.evaluate(() => {
+    const r = (sel) => { const el = document.querySelector(sel); if (!el) return null; const cs = getComputedStyle(el); const b = el.getBoundingClientRect(); return cs.display === 'none' || b.height === 0 ? null : { top: b.top + scrollY, bottom: b.bottom + scrollY }; };
+    const f = r('#userSection fieldset.user-card'), k = r('#prevSummaryCard'), rem = r('#remindersInline');
+    const nizej = ['#metabolicSummarySection', '#results', '#bmiCard'].map(r).filter(Boolean).map((x) => x.top);
+    // wzorzec: odstęp między dwiema kolejnymi WIDOCZNYMI kartami lewej kolumny wyników (rytm 1rem)
+    const dzieci = Array.from(document.querySelectorAll('#leftColumnWrap > *')).map((el) => { const cs = getComputedStyle(el); const b = el.getBoundingClientRect(); return cs.display === 'none' || b.height === 0 ? null : { top: b.top + scrollY, bottom: b.bottom + scrollY }; }).filter(Boolean);
+    const wzorzec = dzieci.length >= 2 ? dzieci[1].top - dzieci[0].bottom : null;
+    return { gora: k.top - f.bottom, dol: Math.min(...nizej) - k.bottom, przypomnienia: rem ? k.top - rem.bottom : null, wzorzec };
+  });
+}
+
+async function sprawdzOdstepy(page) {
+  const o = await odstepy(page);
+  expect(o.wzorzec, 'wzorzec: odstęp między kartami wyników').toBeGreaterThan(0);
+  expect(Math.abs(o.gora - o.wzorzec), `odstęp nad kartą (${o.gora}) = wzorzec (${o.wzorzec})`).toBeLessThanOrEqual(1);
+  expect(Math.abs(o.dol - o.wzorzec), `odstęp pod kartą (${o.dol}) = wzorzec (${o.wzorzec})`).toBeLessThanOrEqual(1);
+  expect(Math.abs(o.wzorzec - 16), 'wzorzec to 1rem').toBeLessThanOrEqual(1);
+  return o;
+}
+
 async function sprawdzWspolne(page) {
   const karta = page.locator('#prevSummaryCard');
   const tabela = karta.locator('.porownanie-tabela');
@@ -132,6 +157,7 @@ test.describe('telefon', () => {
     await pierwszaWizytaIWczytanie(page, DZIECKO_1);
     await wpisz(page, DZIECKO_2);
     await sprawdzWspolne(page);
+    await sprawdzOdstepy(page);
     const wzrost = page.locator('#prevSummaryCard tr[data-klucz="wzrost"]');
     await expect(wzrost.locator('.pt-kol-poprzednio')).toBeHidden();
     await expect(wzrost.locator('.pt-byl')).toBeVisible();
@@ -149,6 +175,7 @@ test.describe('desktop', () => {
     await pierwszaWizytaIWczytanie(page, DZIECKO_1);
     await wpisz(page, DZIECKO_2);
     await sprawdzWspolne(page);
+    await sprawdzOdstepy(page);
     const wzrost = page.locator('#prevSummaryCard tr[data-klucz="wzrost"]');
     await expect(wzrost.locator('.pt-kol-poprzednio')).toBeVisible();
     await expect(wzrost.locator('.pt-byl')).toBeHidden();
@@ -174,6 +201,25 @@ test.describe('desktop', () => {
     await expect(page.locator('#currentSummaryCard')).toBeHidden();
     await expect(page.locator('#porownanieTempo')).toBeVisible();
     await zrzut(page.locator('#prevSummaryCard'), 'porownanie-karta-desktop-bez-pro.png');
+  });
+
+  test('z kartą „Przypomnienia" w prawej kolumnie: ten sam odstęp od niej, co od formularza', async ({ page }) => {
+    test.setTimeout(150_000);
+    const pid = await pierwszaWizytaIWczytanie(page, DZIECKO_1);
+    await wpisz(page, DZIECKO_2);
+    // wpis „na dziś" + PRO (jak w przypomnienia-karta.spec) → karta Przypomnienia w prawej kolumnie
+    await page.evaluate(async (id) => {
+      const V = window.VildaVault, d = new Date(), p = (n) => String(n).padStart(2, '0');
+      await V.savePatientNote({ patientId: id, title: 'Kontrola wzrostu', body: '', category: 'followup', dueDateISO: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` });
+      window.VildaProAccess.hasAccess = () => true;
+      window.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    }, pid);
+    await page.waitForFunction(() => { const el = document.getElementById('remindersInline'); return !!el && el.style.display !== 'none' && el.textContent.includes('Przypomnienia'); }, null, { timeout: 20000 });
+    await expect(page.locator('#prevSummaryCard')).toBeVisible();
+    const o = await sprawdzOdstepy(page);
+    expect(o.przypomnienia, 'karta Przypomnienia jest widoczna').not.toBeNull();
+    expect(Math.abs(o.przypomnienia - o.wzorzec), `odstęp od Przypomnień (${o.przypomnienia}) = wzorzec (${o.wzorzec})`).toBeLessThanOrEqual(1);
+    await zrzut(page, 'porownanie-strona-desktop-przypomnienia.png');
   });
 
   test('dorosły: różnice i kategoria BMI, bez paska tempa', async ({ page }) => {
