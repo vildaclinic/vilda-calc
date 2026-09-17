@@ -12,7 +12,7 @@ import { appSrc, funkcjaZ, tablica, zrodlo } from '../support/silnik-bmi.mjs';
 const TABLICE = ['LMS_INFANT_HEIGHT_BOYS', 'LMS_INFANT_HEIGHT_GIRLS', 'LMS_HEIGHT_WHO_BOYS', 'LMS_HEIGHT_WHO_GIRLS', 'LMS_HEIGHT_BOYS', 'LMS_HEIGHT_GIRLS'];
 
 // Rdzeń app.js wycięty do izolowanego okna: prawdziwy silnik SDS + prawdziwe funkcje rdzenia.
-function rdzen(bmiSource = 'OLAF', dataSourceRadio = null) {
+function rdzen(bmiSource = 'OLAF', dataSourceRadio = null, populacjaDs = false) {
   const win = { document: { querySelector: () => (dataSourceRadio ? { value: dataSourceRadio } : null) } };
   for (const n of TABLICE) win[n] = tablica(n);
   loadBrowserScript('centile_data.js', win);
@@ -20,7 +20,7 @@ function rdzen(bmiSource = 'OLAF', dataSourceRadio = null) {
   loadBrowserScript('vilda_sds_wzrostu.js', win);
   win.VildaSdsWzrostu.ustawDane({ palCentyl: (plec, mies, c) => win.VildaCentileInterp.palCentileValue(plec, mies, c, 'HT') });
   const kod = `
-    const document=window.document; let bmiSource=${JSON.stringify(bmiSource)};
+    const document=window.document; let bmiSource=${JSON.stringify(bmiSource)}; function vildaPopulacjaDs(){return ${populacjaDs ? 'true' : 'false'}}
     ${['erf', 'normalCDF', 'lmsNiemowleWiek', 'calcPercentileStats', 'advHistoryCalcAnthroStatsForSource', 'advHistoryResolveMetric', 'advHistoryGetPreferredSource', 'vildaMpSdsStats'].map((n) => funkcjaZ(appSrc, n)).join('\n')}
     return { calcPercentileStats, advHistoryCalcAnthroStatsForSource, advHistoryResolveMetric, vildaMpSdsStats, advHistoryGetPreferredSource };`;
   return { win, R: new Function('window', kod)(win) };
@@ -75,6 +75,34 @@ describe('vildaMpSdsStats — parytet z dotychczasowymi drogami (populacja ogól
   });
 });
 
+describe('P-OSTATNI-2d: u pacjenta z zespołem Downa mpSDS nie jest podawany (decyzja właściciela)', () => {
+  it('populacja DS → null mimo poprawnego MPH; populacja ogólna w tym samym rdzeniu → liczba', () => {
+    const { R } = rdzen('OLAF', null, true);
+    expect(R.vildaMpSdsStats(171.5, 'M', 'OLAF')).toBeNull();
+    expect(R.vildaMpSdsStats(158.5, 'F', null)).toBeNull();
+    const { R: R0 } = rdzen('OLAF', null, false);
+    expect(R0.vildaMpSdsStats(171.5, 'M', 'OLAF')).not.toBeNull();
+  });
+
+  it('budowniczy kontekstu nie obchodzi tej reguły zapasem: null z rdzenia = brak kanału rodzicielskiego', () => {
+    const win = {
+      addEventListener() {}, location: { pathname: '/' },
+      vildaMpSdsStats: () => null,
+      advHistoryCalcAnthroStatsForSource() { throw new Error('zapas nie może być wołany, gdy rdzeń odpowiedział'); },
+      advHistoryResolveMetric() { throw new Error('statFor nie może być wołany, gdy rdzeń odpowiedział'); },
+    };
+    loadBrowserScript('vilda_tempo_wzrastania.js', win);
+    const J = loadBrowserScript('vilda_trajectory_analysis.js', win).VildaTrajectoryAnalysis;
+    const c = J.buildClinicalContext({ motherHeightCm: 160, fatherHeightCm: 170, sex: 'M', source: 'OLAF', ghTherapyPoints: [{ type: 'start', ageYears: 5, ageMonths: 0 }] });
+    expect(c.mpSds).toBeNull();
+    expect(c.mph).toBe(171.5);
+    expect(c.gh).toEqual({ a: 60, b: null });
+    const r = J.pairVerdictInContext('height', { sd: -0.99, c: 16, ageMonths: 98 }, { sd: -1.0, c: 16, ageMonths: 105 }, J.buildClinicalContext({ motherHeightCm: 160, fatherHeightCm: 170, sex: 'M' }) || {});
+    expect(r.mphOn).toBe(false);
+    expect(r.v.l).toBe('stabilny tor wzrastania');
+  });
+});
+
 describe('budowniczy kontekstu (Karta pacjenta, karta porównania, trajektoria) woli funkcję rdzenia', () => {
   it('buildClinicalContext → vildaMpSdsStats(mph, płeć F/M, źródło); starsze drogi tylko jako zapas', () => {
     const wywolania = [];
@@ -114,6 +142,7 @@ describe('strażnik: każdy konsument mpSDS woła vildaMpSdsStats (zapas tylko b
     expect(gh).toContain('vildaMpSdsStats(b,t,null)');
     expect(zrodlo('vilda_patient_summary_copy.js')).toContain('t.vildaMpSdsStats(M(n.targetHeight),p,u)');
     const traj = zrodlo('vilda_trajectory_analysis.js');
-    expect(traj).toContain("if (typeof w.vildaMpSdsStats === 'function') st = w.vildaMpSdsStats(v, g, src);");
+    expect(traj).toContain("try { st = w.vildaMpSdsStats(v, g, src); } catch (e) { st = null; }");
+    expect(appSrc).toContain('if(typeof vildaPopulacjaDs=="function"&&vildaPopulacjaDs())return null');
   });
 });
