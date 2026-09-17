@@ -89,7 +89,7 @@ async function wypelnij(page, { zHistoria = true } = {}) {
 }
 
 const przycisk = (page) => page.locator('.current-summary-actions [data-patient-narrative-copy-btn]');
-const toast = (page) => page.locator('#patientReportPdfToast, #patientNarrativeToast');
+const toast = (page) => page.locator('#vildaDymek');
 
 // Etap 4: przebieg prognozy w czasie. Ten test sprawdza PRAWDZIWY łańcuch — eksport
 // silnika Bayleya-Pinneau z vilda_advanced_growth.js, wczytanie jego tabel, adapter

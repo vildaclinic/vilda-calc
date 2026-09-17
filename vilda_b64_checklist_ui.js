@@ -234,19 +234,11 @@
   }
 
   function komunikat(t) {
-    var doc = w.document;
-    if (!doc || !doc.body) return;
-    var stary = doc.getElementById('b64ChecklistToast');
-    if (stary) stary.remove();
-    var el = doc.createElement('div');
-    el.id = 'b64ChecklistToast';
-    el.setAttribute('role', 'status');
-    el.textContent = t;
-    el.style.cssText = 'position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);'
-      + 'background:#00838d;color:#fff;padding:.65rem 1.25rem;border-radius:10px;'
-      + 'font-size:.98rem;z-index:99999;box-shadow:0 10px 24px rgba(0,0,0,.18)';
-    doc.body.appendChild(el);
-    setTimeout(function () { try { el.remove(); } catch (e) { /* juz zdjety */ } }, 3600);
+    // P-DYMKI: dymek przez jeden modul (vilda_dymek.js); pozycje wzgledem docka i strzalki
+    // daje klasa .vilda-dymek, nie style inline.
+    var D = w.VildaDymek;
+    if (D && typeof D.pokaz === 'function') { D.pokaz(t, { czas: 3600 }); return; }
+    if (typeof w.vildaLogAppWarn === 'function') w.vildaLogAppWarn('dymki', 'Brak modu\u0142u dymk\u00F3w (vilda_dymek.js) \u2014 komunikat nie zosta\u0142 pokazany', null, { tekst: t });
   }
 
   function kopiujTeraz() {
