@@ -465,13 +465,14 @@ describe('Klirens — centralny model przepływu UI', () => {
       'utf8'
     );
 
-    expect(html).toContain('clcr_ui_workflow.css?v=2');
+    expect(html).toContain('clcr_ui_workflow.css?v=3');
     expect(html).toContain('clcr_ui_workflow.js?v=3');
     expect(html).toContain('inline_kalkulator_klirens_02.js?v=5');
     expect(html).toContain('inline_kalkulator_klirens_04.js?v=7');
-    expect(serviceWorker).toContain("const SW_VERSION = '1.0.977'");
+    expect(serviceWorker).toContain("const SW_VERSION = '1.0.978'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=1'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=2'");
+    expect(serviceWorker).toContain("'/clcr_ui_workflow.css?v=3'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=1'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=2'");
     expect(serviceWorker).toContain("'/clcr_ui_workflow.js?v=3'");
