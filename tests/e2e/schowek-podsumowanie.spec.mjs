@@ -123,6 +123,10 @@ test('tekst ląduje w SYSTEMOWYM schowku, a druga droga zapisu nie rusza', async
 
   const wklejone = await wklejZeSchowka(page);
   expect(wklejone, 'schowek nie może zostać z poprzednią zawartością').not.toContain(ZNACZNIK);
+  // potwierdzone na iPhonie: bez tego znaku tekst zaczyna się od „Waga:", co WebKit czyta jako
+  // schemat adresu i Notatki wklejają CAŁOŚĆ jako jedno łącze
+  expect(wklejone.charCodeAt(0), 'na początku łącznik wyrazów U+2060').toBe(0x2060);
+  expect(wklejone.slice(1), 'zaraz za nim właściwa treść').toMatch(/^Waga:/);
   expect(wklejone).toContain('BMI:');
   expect(wklejone).toContain('Waga:');
   expect(wklejone).toContain('Wzrost:');

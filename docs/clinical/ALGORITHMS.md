@@ -1100,41 +1100,40 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
-### P-IOS-SCHOWEK — kopiowanie podsumowania do schowka na iOS (SW 1.0.974 → 1.0.975, 2026-09-16)
+### P-IOS-SCHOWEK — podsumowanie wklejało się na iOS jako jedno łącze (SW 1.0.974 → 1.0.976, 2026-09-16)
 
-**Zgłoszenie właściciela.** Treść skopiowana przyciskiem „Podsumowanie wyników — kliknij i skopiuj" wklejała się na iPhonie w Notatkach i Wiadomościach **jako łącza**. W polu przyjmującym czysty tekst ta sama zawartość wklejała się **poprawnie**, a inne przyciski aplikacji (np. zalecenia antybiotykoterapii) działały bez zarzutu. Na komputerze — bez zarzutu.
+**Zgłoszenie właściciela.** Treść skopiowana przyciskiem „Podsumowanie wyników — kliknij i skopiuj" wklejała się na iPhonie w Notatkach i Wiadomościach jako **jedno łącze obejmujące cały blok**. W polu przyjmującym czysty tekst ta sama zawartość wklejała się **poprawnie**, a inne przyciski aplikacji (np. zalecenia antybiotykoterapii) działały bez zarzutu. Na komputerze — bez zarzutu.
 
-#### Pierwsza diagnoza była BŁĘDNA (1.0.974)
+#### Przyczyna — potwierdzona na urządzeniu
 
-Przyjąłem, że do schowka nic nie trafia i lekarz wkleja jego poprzednią zawartość. Zbudowałem na tym moduł, który uruchamiał **obie** drogi zapisu naraz i dodawał polu pomocniczemu `contentEditable`. **Obaliło to jedno zdanie właściciela:** wkleił skopiowaną treść i była poprawna. Skoro tekst jest w schowku, „schowek jest pusty" nie mogło być przyczyną.
+Właściciel przytrzymał łącze w Notatkach: pokazywało adres zaczynający się od **`waga:`**.
 
-Co gorsza, tamta wersja **pogarszała sprawę**: `execCommand` uruchamiany zawsze, na dodatek z pola `contentEditable`, utrwalał wariant HTML na schowku przy **każdym** kopiowaniu — czyli czynił błąd powtarzalnym zamiast go usunąć. Zapis tego omyłkowego kroku zostaje tutaj celowo: kosztował jedno wydanie i jest najlepszym ostrzeżeniem przed „naprawianiem" bez odtworzenia objawu.
+Podsumowanie zaczyna się od wiersza `Waga: 63,4 kg…`, a człon **`Waga:` ma dokładnie kształt schematu adresu** — litera, potem litery/cyfry, potem dwukropek, jak `mailto:` czy `tel:`. WebKit, kładąc tekst na schowku, dokłada wariant „adres", gdy tekst daje się przeczytać jako URL; Notatki i Wiadomości wolą ten wariant od czystego tekstu i renderują **całość** jako jedno łącze. Pole czystotekstowe brało wariant tekstowy — dlatego tam wszystko wyglądało dobrze.
 
-#### Właściwa przyczyna
+**Dlaczego tylko ta karta.** Zalecenia antybiotykoterapii zaczynają się od nazwy leku i myślnika (`Augmentin – lek podajemy…`), więc nie dają się przeczytać jako adres. Ten sam test przechodzą `Pow. ciała:` (spacja przed dwukropkiem) i `Wskaźnik Cole'a:` (znak „ź" nie należy do schematu). Niebezpieczne są wyłącznie wiersze, w których pierwsze słowo styka się z dwukropkiem: `Waga:`, `Wzrost:`, `BMI:`, `MPH:`.
 
-Na schowku iOS leżą **obok siebie różne warianty tej samej treści**, a aplikacja wklejająca wybiera ten, który woli:
+#### Dwie wcześniejsze próby były chybione
 
-- `navigator.clipboard.writeText` zapisuje **wyłącznie czysty tekst** — i dokładnie tak kopiują te przyciski aplikacji, które na iPhonie działają poprawnie (`antibiotic_therapy.js`: `navigator.clipboard.writeText(T)` i nic poza tym).
-- `document.execCommand('copy')` z pola oznaczonego `contentEditable` dokłada do tego **wariant HTML**. Notatki i Wiadomości wolą wariant bogaty od czystego tekstu — stąd łącza. Pole przyjmujące czysty tekst brało wariant tekstowy, więc tam wszystko wyglądało dobrze.
+Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celowo — kosztowały dwa wydania:
 
-**To dlatego objaw dotyczył jednej karty.** Karta podsumowania była jedynym miejscem, które obok `writeText` uruchamiało drugą drogę zapisu.
+- **1.0.974** — założyłem, że do schowka nic nie trafia i lekarz wkleja jego poprzednią zawartość. Obaliło to jedno zdanie właściciela: wkleił skopiowaną treść i **była poprawna**. Ta wersja dokładała na schowek wariant HTML (`execCommand` z pola `contentEditable`), czyli **pogarszała sprawę**.
+- **1.0.975** — sprowadziłem zapis do samego `writeText` (jeden wariant, czysty tekst). Słuszne samo w sobie i zostaje, ale objawu nie usunęło: wariant „adres" bierze się z **treści**, nie z drogi zapisu.
 
-#### Rozwiązanie (1.0.975)
+**Wniosek metodyczny:** przy błędzie, którego nie da się odtworzyć u siebie, pierwsze pytanie brzmi „co odróżnia przypadek zepsuty od działającego", a nie „co jest nie tak z moim kodem". Porównanie z działającym przyciskiem dało odpowiedź w jednym kroku; dwie rundy zgadywania nie dały żadnej.
 
-`vilda_schowek.js` (?v 2) — jedno miejsce zapisu do schowka, z jedną zasadą: **na schowek trafia jeden wariant, czysty tekst**.
+#### Rozwiązanie (1.0.976)
 
-- `navigator.clipboard.writeText` jest drogą **pierwszą i jedyną** wszędzie, gdzie istnieje. Tylko ona gwarantuje pojedynczy wariant.
-- Ścieżka przez `execCommand` zostaje **wyłącznie** dla przeglądarek bez Clipboard API i kopiuje ze **zwykłego pola tekstowego, bez `contentEditable`**, żeby nie dokładać wariantu HTML.
-- Odmowa Clipboard API **nie** uruchamia drogi zapasowej: lepiej powiedzieć „nie udało się", niż położyć na schowku drugi wariant i zepsuć wklejanie w Notatkach.
-- Sukces drogi zapasowej nadal potwierdzamy pomiarem zaznaczenia, a porażka mówi wprost, że schowek został bez zmian.
+`vilda_schowek.js` (?v 3) — obok zasady „na schowek idzie jeden wariant, czysty tekst" dochodzi `bezSchematuNaPoczatku()`:
 
-**Czego to NIE zmienia.** Treść podsumowania jest bez zmian — sprawdzone zrzutem pełnego tekstu: żadnych adresów, domen ani DOI, które mogłyby się linkować same. Liczby i format bez zmian.
+- Gdy tekst zaczyna się wzorcem `^[A-Za-z][A-Za-z0-9+.-]*:`, na jego początek trafia **łącznik wyrazów U+2060**.
+- U+2060 ma **zero szerokości** (po wklejeniu nic nie widać) i **nie jest znakiem odstępu** — to drugie jest tu istotne: standard adresów każe obciąć wiodące odstępy przed próbą odczytania adresu, więc pusta linia ani spacja **nie zadziałałyby**.
+- Znak dokładany jest **warunkowo**. Gdyby pierwszy wiersz przestał kiedyś być etykietą z dwukropkiem, do schowka nie trafi żaden dodatkowy znak — zabezpieczenie znika samo, zamiast zostać na zawsze.
 
-**Czego świadomie nie zrobiono.** Pozostałe dziesięć miejsc z własną kopią logiki schowka (`app.js`, `vilda_auth_ui.js`, `vilda_epicrisis_ui.js`, `vilda_diet_recommendations.js`, `inline_notatki_00.js`, `gh_igf_therapy.js`, `antibiotic_therapy.js`, `hypertension_therapy.js`, `obesity_therapy.js`, `thyroid_cancer_kids.js`) zostaje bez zmian. Po tej diagnozie wiadomo, że **nie są zepsute** — kopiują samym `writeText`, czyli tak, jak trzeba. Ujednolicenie ich przez `VildaSchowek` jest porządkowaniem, nie naprawą, i nie ma już pilności, którą mu wcześniej przypisałem.
+**Decyzja właściciela:** bez nagłówka na początku bloku. Rozważane było dopisanie wiersza tytułowego (`Podsumowanie wyników`), który też złamałby wzorzec — właściciel go nie chciał, więc treść, kolejność wierszy, format i liczby zostają **nietknięte**.
 
-**Ograniczenie dowodu.** W repozytorium nie ma WebKita ani iOS (Playwright ma tu tylko Chromium), więc naprawa **nie została potwierdzona na iPhonie**. Testy dowodzą tego, co da się bez tamtej platformy: że tekst ląduje w **systemowym** schowku i że przy dostępnym Clipboard API druga droga zapisu **w ogóle nie rusza**. Potwierdzenie na sprzęcie należy do właściciela.
+**Ograniczenie dowodu.** W repozytorium nie ma WebKita ani iOS, więc skuteczność potwierdza dopiero próba na urządzeniu. Sama **przyczyna** jest natomiast potwierdzona na urządzeniu (adres `waga:` pod łączem), a nie wydedukowana.
 
-*Strażnicy:* `tests/unit/schowek.test.mjs` (8) — **regresja kluczowa**: przy dostępnym Clipboard API `execCommand` nie jest wołane ani razu i nie powstaje żadne pole pomocnicze; pole zapasowe **nie** jest `contentEditable`; odmowa API nie schodzi po cichu na drugą drogę; strażnik źródła pilnuje, że moduł nigdzie nie ustawia `contentEditable`. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku, z podglądem `execCommand`: w teście z Clipboard API licznik musi wynosić **0**, a w teście bez API **>0** (kontrola dodatnia — bez niej zero nic by nie znaczyło).
+*Strażnicy:* `tests/unit/schowek.test.mjs` (12) — tekst zaczynający się od `Waga:` dostaje **dokładnie jeden** U+2060, a reszta treści zostaje bit w bit; U+2060 nie jest odstępem i przeżywa `trim()`; teksty, które nie wyglądają jak adres (`Augmentin –`, `Pow. ciała:`, `Wskaźnik Cole'a:`, `63,4 kg`) **nie** dostają nic; ścieżka zapasowa kopiuje tę samą zabezpieczoną treść; przy dostępnym Clipboard API `execCommand` nie rusza ani razu. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku: pierwszy znak wklejonej treści to U+2060, zaraz za nim `Waga:`.
 
 ### P-DS-6 — obwód głowy pacjenta z zespołem Downa na siatce Zemel 2015 (SW 1.0.973, 2026-09-16, plan P-DS)
 
