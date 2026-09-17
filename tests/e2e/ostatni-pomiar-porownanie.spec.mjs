@@ -72,14 +72,16 @@ async function pierwszaWizytaIWczytanie(page) {
   return pid;
 }
 
-const sekcja = (page) => page.locator('#prevSummaryContent .diff-section');
+// P-OSTATNI-2a: porównanie to tabela (kolumny Dziś / Zmiana) + pasek tempa w karcie „Porównanie z poprzednim pomiarem".
+const sekcja = (page) => page.locator('#prevSummaryContent .porownanie-tabela');
+const tekstPorownania = async (page) => (await sekcja(page).innerText()) + '\n' + (await page.locator('#porownanieTempo').innerText());
 
 test('po 7 miesiącach: zdanie tempa i werdykty pary są słowo w słowo tym, co liczą silniki', async ({ page }) => {
   test.setTimeout(150_000);
   await pierwszaWizytaIWczytanie(page);
   await wpisz(page, { age: '8', ageMonths: '9', weight: '29.5', height: '129' });
   await expect(sekcja(page)).toBeVisible({ timeout: 10000 });
-  const tekst = await sekcja(page).innerText();
+  const tekst = await tekstPorownania(page);
 
   // oczekiwania policzone W TEJ SAMEJ STRONIE przez silniki, z tych samych liczb
   const oczek = await page.evaluate(() => {
@@ -114,7 +116,7 @@ test('po 7 miesiącach: zdanie tempa i werdykty pary są słowo w słowo tym, co
   // ten przypadek to trzy „stabilne tory" — stary model dawał tu trzy alerty
   expect(oczek.masa).toBe('stabilny tor masy ciała');
   expect(oczek.bmi).toBe('stabilny tor BMI');
-  await expect(page.locator('#prevSummaryContent .diff-row .result-val.status-alert')).toHaveCount(0);
+  await expect(page.locator('#prevSummaryContent .pt-zmiana .status-alert')).toHaveCount(0);
 });
 
 test('kontrola negatywna: po 2 miesiącach tempo jest z oznaczeniem „krótki odstęp" i BEZ oceny normy', async ({ page }) => {
@@ -122,7 +124,7 @@ test('kontrola negatywna: po 2 miesiącach tempo jest z oznaczeniem „krótki o
   await pierwszaWizytaIWczytanie(page);
   await wpisz(page, { age: '8', ageMonths: '4', weight: '26.8', height: '127' });
   await expect(sekcja(page)).toBeVisible({ timeout: 10000 });
-  const tekst = await sekcja(page).innerText();
+  const tekst = await tekstPorownania(page);
   expect(tekst).toMatch(/Tempo wzrastania: .* cm\/rok \(z 2 mies\., krótki odstęp — bez oceny\)/);
   expect(tekst).not.toMatch(/norma/);
   expect(tekst).not.toMatch(/oczekiwanie/);

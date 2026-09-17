@@ -86,7 +86,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
-<link href="style.css?v=70" rel="stylesheet" />
+<link href="style.css?v=71" rel="stylesheet" />
 <link href="ios26-v2.css?v=19" rel="stylesheet" />
 <link href="sidebar.css" rel="stylesheet" />
 <link href="vilda_chrome.css?v=36" rel="stylesheet">
@@ -214,7 +214,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="gh_therapy_segments.js?v=4"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
 <script defer src="vilda_patient_summary_copy.js?v=12"></script>
-<script defer src="vilda_auth_ui.js?v=441"></script>
+<script defer src="vilda_auth_ui.js?v=442"></script>
 <script defer src="vilda_name_fix.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
@@ -239,7 +239,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_activity_burn.js?v=1"></script>
 <script defer src="vilda_food_summary.js?v=2"></script>
 <script defer src="vilda_dob_age.js?v=7"></script>
-<script defer src="vilda_data_import_export.js?v=79"></script>
+<script defer src="vilda_data_import_export.js?v=80"></script>
 <script defer src="vilda_baseline_pacjenta.js?v=1"></script>
 <script defer src="vilda_pola_tozsamosci.js?v=4"></script>
 <script defer src="vilda_save_status_indicator.js?v=26"></script>
@@ -274,7 +274,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_growth_prediction_validation_model.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=13"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=81" defer></script>
+<script src="vilda_update_prep.js?v=82" defer></script>
 
 <script defer src="inline_docpro_00.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -1649,34 +1649,26 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 
   <!-- Pole dla lekarzy: kontrolka wejścia do modułu lekarskiego oraz weryfikacja numeru PWZ
        Umieszczamy sekcję lekarską w prawej kolumnie układu dwukolumnowego, tak jak na stronie głównej. -->
-  <div id="doctorSection" class="half">
-    <!-- Przeniesione podsumowanie poprzednich pomiarów nad sekcję modułu lekarskiego.
-         Karta jest domyślnie ukryta, a jej elementy są uporządkowane tutaj,
-         dzięki czemu pojawia się przed przyciskiem „Przejdź do modułu lekarskiego”. -->
-    <div id="prevSummaryWrap" aria-live="polite" style="display:none; width:100%;">
-      <div id="prevSummaryCard" class="card summary-card" style="display:none;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-          <h3 style="margin:0;">Ostatni pomiar</h3>
-          <!-- przycisk ukrywania karty pozostaje w DOM, ale jest domyślnie niewidoczny,
-               aby karta nie zwijała się automatycznie -->
-          <button type="button" id="hidePrevSummary" class="secondary-btn" style="font-size:0.9rem; display:none;">Ukryj tę kartę</button>
-        </div>
-        <div id="prevSummaryContent" class="summary-grid" style="margin-top:0.6rem;"></div>
-      </div>
-      <!-- Przycisk rozwijający podsumowanie. Ukrywamy go na stałe, ponieważ karta jest zawsze widoczna. -->
-      <button type="button" id="togglePrevSummary" class="primary-btn" style="display:none; margin-top:0.5rem; width:100%;">
-        Podsumowanie poprzednich pomiarów
-      </button>
+  <!-- P-OSTATNI-2a (decyzja właściciela 2026-09-17, wariant A na pełną szerokość): karta
+       „Porównanie z poprzednim pomiarem” stoi jako bezpośrednie dziecko #calcForm MIĘDZY
+       kolumnami — od 700 px zajmuje oba tory siatki (grid-column: 1 / -1, wiersz pod kolumnami),
+       poniżej 700 px trafia z kolejności DOM zaraz pod formularz. Węzeł przeniesiony w całości
+       (te same id: czytają je ustawienia widoczności kart i flaga dataset.loaded). Martwe przyciski
+       „Ukryj tę kartę” / „Podsumowanie poprzednich pomiarów” usunięte razem z bramkami w JS. -->
+  <div id="prevSummaryWrap" aria-live="polite" style="display:none; width:100%;">
+    <div id="prevSummaryCard" class="card summary-card porownanie-karta" style="display:none;">
+      <h3 style="margin:0;">Porównanie z poprzednim pomiarem</h3>
+      <div id="prevSummaryContent" class="porownanie"></div>
     </div>
-
-    <!-- Karta „Podsumowanie wyników” – generowana dynamicznie w JS.
-         W normalnym trybie (gdy nie wczytano poprzedniego pomiaru) karta
-         pojawia się w prawej kolumnie obok danych użytkownika. Gdy wczytano
-         poprzedni pomiar, karta zostanie przeniesiona pod obie kolumny i
-         podzielona na dwie kolumny o równej szerokości. -->
+  </div>
+  <div id="doctorSection" class="half">
+    <!-- Karta „Podsumowanie wyników” – generowana dynamicznie w JS. W ścieżce bez poprzedniego
+         pomiaru stoi tutaj; gdy widać „Porównanie z poprzednim pomiarem” (P-OSTATNI-2a), jest ukryta,
+         a jej treść idzie do tabeli porównania i sekcji „Pozostałe wyniki”. Plakietka PRO jak na index. -->
     <div id="currentSummaryWrap" style="display:none;">
-      <div id="currentSummaryCard" class="card summary-card current-summary-card" style="display:none;">
+      <div id="currentSummaryCard" class="card summary-card current-summary-card" style="display:none; position: relative;">
         <h3 style="margin:0;">Podsumowanie wyników</h3>
+        <div class="pro-summary-label" style="display:none;">PRO</div>
         <div id="currentSummaryContent" class="summary-content"></div>
       </div>
     </div>
@@ -1721,9 +1713,6 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     </div>
   </div>
 
-  <!-- Pełno-szerokościowy pojemnik na kartę podsumowania wyników.  
-       Używany w sytuacji, gdy widoczna jest karta „Ostatni pomiar”. -->
-  <div id="currentSummaryFullWrap" style="display:none;"></div>
   <!-- Główne przyciski modułu lekarskiego – pojawiają się po pozytywnej weryfikacji numeru PWZ.
        Przycisk „Testy w endokrynologii” będzie służyć do rozwijania listy testów GH/OGTT/ACTH,
        a przycisk „Leczenie hormonem wzrostu / IGF-1” otworzy listę dodatkowych opcji IGF-1.
@@ -4066,17 +4055,17 @@ html.vilda-pro-active   #proGateBanner { display: none; }
      w vilda_professional_module.js (cdn.sheetjs.com xlsx-0.20.3; aktualizacja 2026-06-14 z 0.18.5 — CVE). -->
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=11"></script>
-<script defer src="vilda_persist_runtime.js?v=15"></script>
+<script defer src="vilda_persist_runtime.js?v=16"></script>
 <script defer src="vilda_schowek.js?v=3"></script>
-<script defer src="vilda_summary_cards.js?v=44"></script>
+<script defer src="vilda_summary_cards.js?v=45"></script>
 <script defer src="vilda_diet_plan_ui.js?v=20"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=218" defer></script>
+<script src="app.js?v=219" defer></script>
 <script src="vilda_diet_recommendations.js?v=30" defer></script>
-<script src="vilda_patient_report.js?v=25" defer></script>
+<script src="vilda_patient_report.js?v=26" defer></script>
 <!-- po app.js -->
 <script src="vilda_module_monitor_badges.js?v=1" defer></script>
 <script src="gh_igf_therapy.js?v=27" defer></script>
@@ -4237,7 +4226,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=64" defer></script>
+  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=65" defer></script>
   <script src="docpro_state_persist.js?v=5" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts
