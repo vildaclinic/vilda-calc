@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '23';
+  var VERSION = '24';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -374,14 +374,16 @@
     var src = source != null && String(source).trim() !== '' ? String(source).toUpperCase() : null;
     var st = null;
     // P-OSTATNI-2c: mpSDS ma JEDNA sciezke w rdzeniu (vildaMpSdsStats — regula siatek, jak kolumna
-    // „hSDS − mpSDS" i targetStats karty); starsze drogi zostaja zapasem na stronach bez app.js.
-    try {
-      if (typeof w.vildaMpSdsStats === 'function') st = w.vildaMpSdsStats(v, g, src);
-    } catch (e) { st = null; }
-    try {
-      if (!st && typeof w.advHistoryCalcAnthroStatsForSource === 'function') st = w.advHistoryCalcAnthroStatsForSource(v, g, 18, 'HT', src || 'OLAF');
-    } catch (e2) { st = null; }
-    if (!st) st = statFor('HT', v, g, 18, src);
+    // „hSDS − mpSDS" i targetStats karty). Jej wynik jest OSTATECZNY — takze null (P-OSTATNI-2d:
+    // brak mpSDS u pacjenta z zespolem Downa); starsze drogi to zapas tylko na stronach bez app.js.
+    if (typeof w.vildaMpSdsStats === 'function') {
+      try { st = w.vildaMpSdsStats(v, g, src); } catch (e) { st = null; }
+    } else {
+      try {
+        if (typeof w.advHistoryCalcAnthroStatsForSource === 'function') st = w.advHistoryCalcAnthroStatsForSource(v, g, 18, 'HT', src || 'OLAF');
+      } catch (e2) { st = null; }
+      if (!st) st = statFor('HT', v, g, 18, src);
+    }
     if (!st || typeof st.sd !== 'number' || !isFinite(st.sd)) return null;
     return { sd: st.sd, c: typeof st.percentile === 'number' && isFinite(st.percentile) ? st.percentile : null };
   }
