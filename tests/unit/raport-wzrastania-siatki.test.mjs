@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
+import { appSrc, funkcjaZ } from '../support/silnik-bmi.mjs';
 
 // ADV-REPORT-2 (decyzja właściciela 2026-09-13), etap 2 naprawy Raportu wzrastania.
 // Najgroźniejsze znalezisko audytu: kolumny hSDS i ΔhSDS mieszają siatki norm bez
@@ -35,6 +36,9 @@ function installResolver(preferred = 'OLAF') {
     resolved.push({ metric, ageYears, source });
     return { result: { sd: value / 100, percentile: 50 }, source, reason: '' };
   };
+  // P-OSTATNI-2c: kolumna mpSDS idzie przez PRAWDZIWĄ funkcję rdzenia vildaMpSdsStats (wycięta
+  // z app.js), która woła ten sam stubowany resolver — test dalej mierzy wiek 18 lat i źródło.
+  globalThis.vildaMpSdsStats = new Function(`${funkcjaZ(appSrc, 'vildaMpSdsStats')}; return vildaMpSdsStats;`)();
   globalThis.advHistoryBuildSourceSummary = () => '';
   globalThis.BMI = (w, h) => w / ((h / 100) ** 2);
   globalThis.velocityCmPerYear = (h1, m1, h2, m2) => ((h2 - h1) / ((m2 - m1) / 12));
@@ -54,7 +58,7 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const k of ['document', 'collectAdvancedMeasurements', 'getAgeDecimal', 'advHistoryGetPreferredSource',
-    'advHistoryResolveMetric', 'advHistoryBuildSourceSummary', 'BMI', 'velocityCmPerYear',
+    'advHistoryResolveMetric', 'vildaMpSdsStats', 'advHistoryBuildSourceSummary', 'BMI', 'velocityCmPerYear',
     'formatCentile', 'centylWord']) delete globalThis[k];
 });
 

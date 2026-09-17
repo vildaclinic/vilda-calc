@@ -47,7 +47,7 @@ describe('Ręczne kopie reguły siatki zniknęły z konsumentów rdzenia', () =>
   it('karta zaawansowana, karta podstawowa, monitor GH, epikryza (wzrost), podsumowanie, schowek — bez własnego przełącznika dla wzrostu', () => {
     const adv = zrodlo('vilda_advanced_growth.js');
     expect(adv).not.toMatch(/tt==="PALCZEWSKA"\|\|tt==="OLAF"&&(te|se|Y0)<sa\)\?y\(/);
-    expect(adv, 'mpSDS z rdzenia z jawnym rodzajem HT').toContain('const C=u(Me,ae,18,"HT");C&&(ge=C)');
+    expect(adv, 'mpSDS z jednej funkcji rdzenia (P-OSTATNI-2c), zapas z jawnym rodzajem HT').toContain('const C=typeof vildaMpSdsStats=="function"?vildaMpSdsStats(Me,ae,typeof tt<"u"?tt:null):u(Me,ae,18,"HT");C&&(ge=C)');
     expect(adv, 'normy dorosłych z silnika (mediana w 216. mies.)').toContain('Ts.mediana(ae,216,typeof tt<"u"?tt:null)');
     expect(adv, 'adultHeightLMS niesie płeć i źródło dla karty C').toContain('sex:ae,zrodlo:zr,siatka:md.siatka}');
     // W module podstawowym zostaje tylko wybór siatki DO RYSOWANIA (krzywe LMS OLAF/WHO), nie do SDS.
@@ -61,9 +61,9 @@ describe('Ręczne kopie reguły siatki zniknęły z konsumentów rdzenia', () =>
   });
 
   it('mpSDS wszędzie z rdzenia — koniec „zawsze OLAF/WHO" przy wybranej Palczewskiej', () => {
-    expect(zrodlo('gh_therapy_monitor.js')).toContain('const m=calcPercentileStats(b,t,18,"HT")');
-    expect(zrodlo('vilda_epicrisis_ui.js')).toContain('g=typeof s.calcPercentileStats=="function"?s.calcPercentileStats(m,n,18,"HT"):null');
-    expect(zrodlo('vilda_summary_cards.js')).toContain('N=typeof calcPercentileStats=="function"?calcPercentileStats(C.targetHeight,o,18,"HT"):null');
+    expect(zrodlo('gh_therapy_monitor.js')).toContain('const m=typeof vildaMpSdsStats=="function"?vildaMpSdsStats(b,t,null):calcPercentileStats(b,t,18,"HT")');
+    expect(zrodlo('vilda_epicrisis_ui.js')).toContain('g=typeof s.vildaMpSdsStats=="function"?s.vildaMpSdsStats(m,n,u):typeof s.calcPercentileStats=="function"?s.calcPercentileStats(m,n,18,"HT"):null');
+    expect(zrodlo('vilda_summary_cards.js')).toContain('N=typeof vildaMpSdsStats=="function"?vildaMpSdsStats(C.targetHeight,o,null):typeof calcPercentileStats=="function"?calcPercentileStats(C.targetHeight,o,18,"HT"):null');
     expect(zrodlo('vilda_summary_cards.js')).not.toContain('bmiSource==="PALCZEWSKA";let N=null');
   });
 });
