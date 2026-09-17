@@ -19,6 +19,21 @@ async function otworz(page) {
       window.localStorage.setItem('vilda-terms-accepted-v1',
         JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
     } catch (_) { /* brak storage — pomiń */ }
+    // Schowek pod kontrolą testu — jak w podsumowanie-akcje-klikniecie.spec.mjs. Na CI (headless,
+    // emulacja iPhone'a) `navigator.clipboard.writeText` odrzuca bez uprawnień, a wtedy przycisk
+    // idzie w `alert(...)` zamiast w dymek i test mierzyłby pustkę. Prawdziwą drogę schowka
+    // sprawdza schowek-podsumowanie.spec.mjs; tu przedmiotem jest GEOMETRIA dymka.
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: (t) => { window.__schowek = t; return Promise.resolve(); } },
+      configurable: true,
+    });
+  });
+  // Gdyby kopiowanie mimo to padło, przycisk woła `alert` — łapiemy go, żeby błąd mówił
+  // o przyczynie, a nie o „nie znaleziono #vildaDymek".
+  page.on('dialog', async (d) => {
+    const tresc = d.message();
+    await d.dismiss();
+    throw new Error('Nieoczekiwane okno dialogowe zamiast dymka: ' + tresc);
   });
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
@@ -83,6 +98,8 @@ test('dymek po „Podsumowanie wyników" stoi NAD dockiem i strzałką, w cało�
   await page.locator('#metabolicSummaryBtn').click();
   const dymek = page.locator('#vildaDymek');
   await expect(dymek).toBeVisible({ timeout: 10000 });
+  expect(await page.evaluate(() => typeof window.__schowek === 'string' && window.__schowek.length > 0),
+    'kontrola: dymek pokazał się PO udanym zapisie do schowka').toBe(true);
   const rDymek = await prostokat(dymek);
   const okno = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
 
