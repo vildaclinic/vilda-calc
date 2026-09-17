@@ -113,7 +113,7 @@ test('tekst ląduje w SYSTEMOWYM schowku, a druga droga zapisu nie rusza', async
   await zasiejZnacznik(page, ZNACZNIK);
 
   await page.locator('#metabolicSummaryBtn').click();
-  await expect(page.locator('#metabolicSummaryCopyToast')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#vildaDymek')).toBeVisible({ timeout: 10000 });
 
   // istota naprawy: skoro Clipboard API jest dostępne, execCommand NIE ma prawa się uruchomić
   // — inaczej dołożyłby na schowek wariant HTML, przez który Notatki wklejają łącza
@@ -139,7 +139,7 @@ test('bez Clipboard API rusza ścieżka zapasowa — i wtedy podgląd faktycznie
   test.skip(!brakApi, 'nie udało się wyłączyć navigator.clipboard w tej przeglądarce');
 
   await page.locator('#metabolicSummaryBtn').click();
-  await expect(page.locator('#metabolicSummaryCopyToast')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#vildaDymek')).toBeVisible({ timeout: 10000 });
 
   // kontrola DODATNIA dla testu wyżej: ten sam podgląd tutaj liczy wywołania, więc zero
   // w tamtym teście jest wynikiem pomiaru, a nie niedziałającego podglądu
@@ -161,5 +161,5 @@ test('gdy kopiowanie się nie uda, przycisk mówi prawdę zamiast pokazywać „
   await page.waitForTimeout(1500);
 
   expect(komunikaty.join(' '), 'lekarz musi wiedzieć, że schowek został bez zmian').toMatch(/nie uda/i);
-  await expect(page.locator('#metabolicSummaryCopyToast'), 'żadnego fałszywego „skopiowane"').toHaveCount(0);
+  await expect(page.locator('#vildaDymek'), 'żadnego fałszywego „skopiowane"').toHaveCount(0);
 });

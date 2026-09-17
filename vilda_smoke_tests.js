@@ -93,11 +93,11 @@
     'advanced-growth-intake-sync-final-validation'
   ]);
   const EXPECTED_BROWSER_SCRIPTS = Object.freeze([
-    'vilda_deps.js?v=95',
+    'vilda_deps.js?v=96',
     'vilda_update_hooks.js?v=7',
     'vilda_centile_chart_header.js?v=1',
     'vilda_gh_therapy_resource_audit.js?v=31',
-    'vilda_app_helpers.js?v=2',
+    'vilda_app_helpers.js?v=3',
     'vilda_macro_practice.js?v=2',
     'vilda_data_import_export.js?v=79',
     'vilda_baseline_pacjenta.js?v=1',
@@ -109,7 +109,7 @@
     'vilda_professional_module.js?v=11',
     'vilda_persist_runtime.js?v=15',
     'vilda_growth_prediction_lines.js?v=1',
-    'vilda_summary_cards.js?v=42',
+    'vilda_summary_cards.js?v=43',
     'tw2_data.js?v=4',
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=2',
@@ -119,9 +119,9 @@
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
-    'app.js?v=217',
+    'app.js?v=218',
     'vilda_smoke_tests.js?v=77',
-    'vilda_diet_recommendations.js?v=29',
+    'vilda_diet_recommendations.js?v=30',
     'nutrition_norms.js?v=46',
     'nutrition_micros.js?v=28'
   ]);

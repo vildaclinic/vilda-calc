@@ -97,7 +97,7 @@ test.describe('Karta podsumowania — pierwsze kliknięcie po wpisaniu wartości
     await opisBtn(page).click();
     // Bez historii pomiarów opis nie powstanie — liczy się to, że KLIKNIĘCIE DOSZŁO,
     // czyli że pojawia się jakikolwiek komunikat z obsługi przycisku.
-    await expect(page.locator('#patientReportPdfToast, #patientNarrativeToast'))
+    await expect(page.locator('#vildaDymek'))
       .toBeVisible({ timeout: 10000 });
   });
 

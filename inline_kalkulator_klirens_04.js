@@ -3050,19 +3050,13 @@ function showClcrDependencyNotice(e, n) {
       return;
     }
   } catch {}
+  // P-DYMKI: dymek przez jeden modul (vilda_dymek.js); pozycje wzgledem docka daje klasa .vilda-dymek.
   try {
-    const o = document.createElement("div");
-    (o.setAttribute("role", "status"),
-      o.setAttribute("aria-live", "polite"),
-      (o.textContent = t),
-      (o.style.cssText =
-        'position:fixed;right:16px;bottom:16px;z-index:2147483647;max-width:min(420px,calc(100vw - 32px));background:#fff;color:#2f3137;border:1px solid rgba(211,47,47,.28);border-left:4px solid #d32f2f;border-radius:14px;box-shadow:0 18px 45px rgba(0,0,0,.16);padding:12px 14px;font:500 14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'),
-      document.body.appendChild(o),
-      setTimeout(() => {
-        try {
-          o.remove();
-        } catch {}
-      }, 9e3));
+    const D = typeof window < "u" ? window.VildaDymek : null;
+    if (D && typeof D.pokaz === "function") {
+      D.pokaz(t, { ton: "blad", poz: "prawo", czas: 9e3 });
+      return;
+    }
   } catch {}
 }
 function getClcrFormattedAge() {
