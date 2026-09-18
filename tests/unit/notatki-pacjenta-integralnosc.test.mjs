@@ -168,7 +168,7 @@ describe('G5 — scalenie duplikatów kontra równoległa edycja notatki', () =>
     // B (offline, bez wiedzy o scaleniu) przesuwa termin w tej samej notatce.
     // Odstęp 5 ms: obie strony kończą na tym samym `rev`, więc rozstrzyga `updatedAtISO`,
     // a znacznik ma rozdzielczość milisekundy — bez odstępu wynik zależałby od obciążenia maszyny.
-    await new Promise((r) => setTimeout(r, 5));
+    await new Promise((r) => { setTimeout(r, 5); });
     await B.vault.savePatientNote({ id: n.id, patientId: zrodlo, title: 'Kontrola za 6 mies.', dueDateISO: '2027-04-01' });
     await sync(A, B);
 
