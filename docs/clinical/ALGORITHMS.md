@@ -4002,6 +4002,62 @@ Każde pozostałe dopasowanie etykiety w `vilda_update_prep.js` — jest ich **p
 
 Werdykt i widoczność w ścieżce BMI / Cole / masa opierają się na **kluczu i kolorze silnika**, nie na brzmieniu tekstu. Poza tą ścieżką tekst czytają jeszcze: obwód głowy, obwód klatki piersiowej, proporcja masy do wysokości, hSDS−mpSDS, MPH i tempo wzrastania — miary, których surowa wartość nie jest nigdzie wystawiona. To zakres ewentualnej raty 4.
 
+## Słownictwo werdyktów: to samo słowo, różne miary (P-SLOWA, punkt 4, SW 1.1.1, 2026-09-18)
+
+Ostatni punkt audytu werdyktów: **„stabilny", „istotne" i „nadwaga" znaczyły w różnych miejscach różne rzeczy.**
+
+### „Nadwaga" — trzy miary, jedno słowo, trzech różnych specjalistów
+
+Zmierzone w `vilda_update_prep.js` — trzy rodziny ostrzeżeń używały **identycznego słowa**:
+
+| komunikat (przed) | miara | próg | kieruje do |
+|---|---|---|---|
+| „⚠ Nadwaga – zalecana konsultacja dietetyczna" | centyl BMI dziecka | ≥ 85 | dietetyk |
+| „⚠ Nadwaga – zalecana konsultacja z pediatrą" | masa do długości ciała (z-score) | > 2 | pediatra |
+| „⚠ Nadwaga." | BMI dorosłego | ≥ 25 | dietetyk |
+
+Dziecko poniżej 2. roku życia dostawało więc „⚠ Nadwaga" z odesłaniem do pediatry, a starsze — „⚠ Nadwaga" z odesłaniem do dietetyka, przy zupełnie innej ocenie i innym progu. Nic w tekście nie mówiło, **z czego** ten werdykt wynika.
+
+**Poprawka:** każde z dziesięciu ostrzeżeń z kategorią masy ciała nazywa teraz swoją miarę — „**wg BMI**" albo „**wg masy do długości ciała**". Progi, kategorie i adresaci skierowań zostają bez zmian; zmienia się wyłącznie to, że komunikat mówi, skąd się wziął.
+
+**Dlaczego dopiero teraz.** Do serii P-TON zmiana brzmienia etykiety **łamała logikę** — dziesiątki bramek porównywały wyświetlany napis, więc dopisanie dwóch słów cicho wyłączyłoby kartę planu redukcji albo baner badań. Dopiero po przepięciu wszystkiego na klucze silnika tekst stał się swobodny. To bezpośredni zysk z punktu 3.
+
+### „Istotny" — dwie wielkości pod jednym słowem
+
+W `vilda_trajectory_analysis.js`:
+
+| zwrot | miara | próg |
+|---|---|---|
+| „istotna deceleracja wzrastania" | wzrost | ΔSDS ≤ **−1,0** |
+| „istotne przesunięcie centylowe w górę / w dół" | masa i BMI | \|ΔSDS\| ≥ **0,5** |
+
+Obie liczby były wpisane wprost w warunki, a reguła wzrostu w **dwóch osobnych gałęziach** (ogólnej i kanału rodzicielskiego) miała `-1` przepisane dwa razy. Dostały nazwy: `ISTOTNA_DECELERACJA_DSDS` i `ISTOTNE_PRZESUNIECIE_DSDS`, z komentarzem nazywającym rozbieżność.
+
+**Spójność, która już jest:** próg „istotnej deceleracji" (−1,0) równa się `REDFLAG_DSDS`, więc epikryza („pozycja centylowa wzrostu obniżyła się istotnie") i trajektoria mówią o wzroście **jedną liczbą**. Strażnik porównuje obie stałe, żeby rozjazd nie powstał przy przyszłej korekcie jednej z nich.
+
+**Czego nie zmieniono.** Czy „istotny" ma oznaczać jedną liczbę dla wzrostu i dla masy, jest pytaniem klinicznym — próg to zmiana kliniczna w rozumieniu AGENTS.md §3 i nie zapada bez decyzji właściciela.
+
+### „Stabilny" — pasmo zależne od miejsca na skali
+
+Zmierzone pasma `d` (zmiana SDS), przy których trajektoria mówi „stabilny":
+
+| kontekst | pasmo |
+|---|---|
+| niski centyl (< 10), każda miara | −0,2 … +0,2 |
+| wysoki centyl, masa i BMI | −0,2 … +0,2 |
+| środek skali, masa i BMI | −0,5 … +0,5 |
+| wysoki centyl, wzrost | −0,2 … +0,5 (asymetryczne) |
+
+**Środek skali ma pasmo 2,5× szersze niż skraje**, a przy wzroście jest ono dodatkowo asymetryczne. To może być świadome — przy skrajnych centylach mały dryf znaczy więcej — ale nigdzie nie było zapisane. Test utrwala zmierzony stan, żeby przyszła zmiana któregoś pasma była widoczna jako zmiana, a nie przeoczenie.
+
+Pozostałe użycia słowa są **poprawnie różnymi przedmiotami** i nie są rozjazdem: „stabilizacja masy ciała" to strategia diety (`vilda_bmi_journey.js`), „annualizacja niestabilna" to własność statystyczna krótkiego odstępu (`vilda_tempo_wzrastania.js`), a „stabilna prognoza" w `vilda_prediction_drift.js` ma w źródle wprost zapisane, że **nie** jest orzeczeniem o istotności statystycznej.
+
+### Walidacja
+
+`tests/unit/slownictwo-werdyktow.test.mjs` — **11 testów**: wszystkie dziesięć ostrzeżeń nazywa miarę, każda z trzech miar ma własne określenie, adresaci skierowań bez zmian, nazwane progi „istotności" w obu gałęziach, równość progu z `REDFLAG_DSDS`, utrwalone pasma „stabilny" z asymetrią wzrostu. Pełny przebieg: **2626 testów w 156 plikach**, lint, składnia (476 plików), polityka repozytorium (585 plików) — zielone. E2E BMI i centyli niemowlęcych: 8 zdanych.
+
+**Wpływ kliniczny: żaden werdykt, próg ani adresat skierowania się nie zmienia.** Zmienia się wyłącznie to, że komunikat nazywa miarę, a liczby mają w kodzie nazwy.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

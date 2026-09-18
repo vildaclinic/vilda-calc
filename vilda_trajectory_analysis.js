@@ -30,6 +30,15 @@
     SEGMENT_MIN_GAP_M: 3,
     REDFLAG_DSDS: -1.0,
     REDFLAG_BASE_MIN_M: 24,
+    // P-SLOWA (audyt werdyktów, punkt 4): słowo „istotny" niesie w tym pliku DWIE różne
+    // wielkości i obie były dotąd liczbami wpisanymi wprost w warunek. Nazwane, żeby różnica
+    // była widoczna w źródle, a nie do odkrycia przy czytaniu gałęzi:
+    //   wzrost   — „istotna deceleracja wzrastania"  przy ΔSDS ≤ −1,0 (tyle samo co REDFLAG_DSDS,
+    //              więc epikryza i trajektoria mówią o wzroście jedną liczbą — to jest spójne),
+    //   masa/BMI — „istotne przesunięcie centylowe"  przy |ΔSDS| ≥ 0,5.
+    // Czy mają być JEDNĄ liczbą, jest pytaniem klinicznym i nie zapada tutaj.
+    ISTOTNA_DECELERACJA_DSDS: -1.0,
+    ISTOTNE_PRZESUNIECIE_DSDS: 0.5,
     CLINES: [3, 10, 25, 50, 75, 90, 97],
     CHN: ['<3', '3–10', '10–25', '25–50', '50–75', '75–90', '90–97', '>97'],
     // Progi oceny tempa (drabinka wiekowa, PUB_VELO_MIN 4 cm/rok, okna wieku, świeżość wieku
@@ -181,8 +190,8 @@
       if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: B ? (cb >= 97 ? (ca >= 97 ? 'progresja otyłości' : 'przekroczenie progu otyłości (≥97c)') : 'szybka progresja nadwagi (BMI)') : (cb >= 97 ? (ca >= 97 ? 'progresja nadmiaru masy (>97. centyla)' : 'przekroczenie 97. centyla masy ciała') : 'nasilony przyrost masy ciała') };
       return d >= 0.2 ? { t: 'warn', l: B ? 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' : 'narastanie nadmiaru masy ciała' } : B && cb >= 97 ? { t: 'warn', l: 'utrzymująca się otyłość (>97c)' } : { t: 'stable', l: ST };
     }
-    if (W) return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: ST };
-    if (Math.abs(d) >= 0.5) {
+    if (W) return d <= P.ISTOTNA_DECELERACJA_DSDS ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: ST };
+    if (Math.abs(d) >= P.ISTOTNE_PRZESUNIECIE_DSDS) {
       var al = B ? (cb >= 97 || cb < 5) : (cb <= 3 || cb >= 97);
       return al ? { t: 'bad', l: d > 0 ? (B ? 'przekroczenie progu otyłości (≥97c)' : 'przekroczenie 97. centyla masy ciała') : (B ? 'przekroczenie progu niedowagi (<5c)' : 'obniżenie masy ciała poniżej 3. centyla') } : { t: 'warn', l: d > 0 ? 'istotne przesunięcie centylowe w górę' : 'istotne przesunięcie centylowe w dół' };
     }
@@ -207,7 +216,7 @@
           if (d <= -0.5) return { t: 'bad', l: 'pogłębianie niedoboru wzrostu' };
           if (d <= -0.2) return { t: 'warn', l: 'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl) — do obserwacji' };
         }
-        return d <= -1 ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: 'w kanale rodzicielskim' };
+        return d <= P.ISTOTNA_DECELERACJA_DSDS ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: 'w kanale rodzicielskim' };
       }
       return v1;
     }
