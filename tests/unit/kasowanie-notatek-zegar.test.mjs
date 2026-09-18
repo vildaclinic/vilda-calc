@@ -45,6 +45,42 @@ function zZegarem(przesuniecieMs, fn){
   return Promise.resolve().then(fn).finally(()=>{ globalThis.Date = OrgDate; });
 }
 
+// P-NOTATKI rata 2 (G13, audyt „Dodaj notatkę do wizyty" 2026-09-18): ten plik jest w
+// ALGORITHMS.md wskazany jako strażnik poprawki zegara dla OBU rodzajów notatek, a sprawdzał
+// wyłącznie bibliotekę szablonów (saveNote/removeNote). Zmierzone: z `Eb` (removePatientNote)
+// cofniętym do surowego „teraz" cały pakiet przechodził na zielono, a notatka pacjenta
+// skasowana na urządzeniu z prawidłowym zegarem wracała. Poniżej ta sama pętla przesunięć
+// dla savePatientNote/removePatientNote/listAllPatientNotes.
+const notatkiPacjenta = async (v) => (await v.listAllPatientNotes()).map((x) => x.title).sort();
+
+describe('kasowanie notatki PACJENTA kontra zegar drugiego urzadzenia', () => {
+  for (const przesuniecieS of [300, 60, 10, 2]) {
+    it(`przesuniecie zegara ${przesuniecieS} s`, async () => {
+      const A = await dev('PA' + przesuniecieS), B = await dev('PB' + przesuniecieS);
+      const pacjent = await B.savePatient({ name: 'Fikcyjny Pacjent', sex: 'K', age: 7, height: 122, weight: 24 });
+      let id = null;
+      await zZegarem(przesuniecieS * 1000, async () => {
+        id = (await B.savePatientNote({
+          patientId: pacjent.patientId, title: 'Notatka Z', body: 'tresc', category: 'observation',
+        })).id;
+      });
+      await syncTo(A, B);
+      expect(await notatkiPacjenta(A)).toEqual(['Notatka Z']);
+
+      await A.removePatientNote(id);                // kasowanie na urzadzeniu z prawidlowym zegarem
+      const uB = await B.mergeSyncPayload(await A.exportSyncPayload());
+      const uA = await A.mergeSyncPayload(await B.exportSyncPayload());
+      console.log(`   pacjent, przesuniecie ${String(przesuniecieS).padStart(4)} s ->`,
+        'deletedPatientNoteCount u B =', uB.deletedPatientNoteCount,
+        '| notatka u B:', (await notatkiPacjenta(B)).length,
+        '| notatka WRACA u A:', (await notatkiPacjenta(A)).length > 0,
+        '| uA:', uA.deletedPatientNoteCount);
+      expect(await notatkiPacjenta(B), 'kasowanie ma dotrzec do B').toEqual([]);
+      expect(await notatkiPacjenta(A), 'notatka nie moze wrocic u A').toEqual([]);
+    });
+  }
+});
+
 describe('kasowanie kontra zegar drugiego urzadzenia', () => {
   for (const przesuniecieS of [300, 60, 10, 2]) {
     it(`przesuniecie zegara ${przesuniecieS} s`, async () => {

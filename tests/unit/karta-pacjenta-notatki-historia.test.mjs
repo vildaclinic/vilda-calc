@@ -77,3 +77,28 @@ describe('P9/P10 — Historia w widoku domyślnym', () => {
       .toContain('q.clinicalDateISO?q.clinicalDateISO.length===10?q.clinicalDateISO+"T00:00:00.000Z":q.clinicalDateISO:q.dateISO||q.updatedAtISO||""');
   });
 });
+
+// P-NOTATKI rata 2 (G10, decyzja właściciela D9, audyt 2026-09-18).
+// Edytor obiecywał: „Notatka ogólna … nie w Historii", a Historia od Raty C pokazuje ją
+// w sekcji „Bez przypisanego pomiaru" (asercje wyżej). Lekarz wybierał więc „ogólną",
+// żeby nie zaśmiecać Historii, i trafiał dokładnie tam, gdzie nie chciał. Skoro to Historia
+// ma rację (P9/P10 utrwaliły widok domyślny ze wszystkimi wpisami), poprawiamy teksty.
+describe('G10 — teksty edytora zgadzają się z tym, co robi Historia', () => {
+  it('nie twierdzi już, że notatka ogólna nie trafia do Historii', () => {
+    expect(kod).not.toContain('Pojawi si\\u0119 w zak\\u0142adce Notatki, nie w Historii.');
+    expect(kod).not.toContain('Notatki og\\xF3lne nie pojawiaj\\u0105 si\\u0119 w Historii.');
+  });
+
+  it('kieruje do właściwej sekcji Historii', () => {
+    expect(kod, 'podpis opcji „Notatka ogólna"')
+      .toContain('Pojawi si\\u0119 w zak\\u0142adce Notatki i w Historii \\u2014 w sekcji \\u201EBez przypisanego pomiaru\\u201D.');
+    expect(kod, 'żółta podpowiedź pod opcją')
+      .toContain('Notatka og\\xF3lna trafi w Historii do sekcji \\u201EBez przypisanego pomiaru\\u201D.');
+  });
+
+  it('Historia odróżnia usunięty pomiar od nigdy niezapisanego (G8)', () => {
+    expect(kod).toContain('text:Qdel?"Pomiar usuni\\u0119ty":"Brak zapisanego pomiaru"');
+    expect(kod, 'etykieta bierze się z listy wieków usuniętych z rekordu')
+      .toContain('bt.appendChild(_(G,Qrm.indexOf(G)>=0))');
+  });
+});
