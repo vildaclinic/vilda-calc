@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.0.985';
+const SW_VERSION = '1.0.986';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -875,6 +875,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=71',
   '/vilda_chrome.js?v=72',
   '/vilda_chrome.js?v=73',
+  '/vilda_chrome.js?v=74',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1731,6 +1732,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=53',
   '/vilda_shell.js?v=54',
   '/vilda_shell.js?v=55',
+  '/vilda_shell.js?v=56',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -1895,6 +1897,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=64',
   '/custom-fixes.js?v=65',
   '/custom-fixes.js?v=66',
+  '/custom-fixes.js?v=67',
   '/reposition.js?v=7',
   '/vilda_patient_report.js?v=10',
   '/vilda_summary_cards.js?v=26',
@@ -2210,6 +2213,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_report.js?v=26',
   '/vilda_vault.js?v=183',
   '/vilda_vault.js?v=184',
+  '/vilda_vault.js?v=185',
   '/vilda_auth_ui.js?v=431',
   '/vilda_trajectory_analysis.js?v=24',
   '/vilda_trajectory_analysis.js?v=25',
@@ -2245,6 +2249,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=443',
   '/vilda_auth_ui.js?v=444',
   '/vilda_auth_ui.js?v=445',
+  '/vilda_auth_ui.js?v=446',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
