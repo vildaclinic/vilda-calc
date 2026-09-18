@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadBrowserScript } from './load-browser-script.mjs';
 
 // Wspólne rusztowanie testów BMI: PRAWDZIWY silnik vilda_bmi.js z PRAWDZIWYMI tablicami
 // (OLAF z app.js, WHO 2006/2007 z vilda_growth_reference_data.js, Palczewska przez
@@ -79,8 +80,9 @@ export function oknoZSilnikiem(extra = {}) {
   return win;
 }
 
-/** Ładuje plik produkcyjny do okna z silnikiem (kolejność jak w HTML: silnik przed konsumentem). */
+/** Ładuje plik produkcyjny do okna z silnikiem (kolejność jak w HTML: silnik przed konsumentem).
+ *  Twarde zależności modułu (np. silnik werdyktu pod trajektorią) dokłada loadBrowserScript —
+ *  jedna lista zależności dla obu rusztowań testowych. */
 export function wczytajDoOkna(win, plik) {
-  new Function('window', 'globalThis', zrodlo(plik))(win, win);
-  return win;
+  return loadBrowserScript(plik, win);
 }

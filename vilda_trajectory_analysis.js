@@ -10,8 +10,9 @@
  * z istniejących, przyjętych miejsc aplikacji:
  *  - statystyka punktu (centyl/SDS): ta sama ścieżka co „Podsumowanie wyników" i panel porównania A→B
  *    (window.advHistoryResolveMetric z fallbackiem Palczewskiej — jak tabStatsAt, PR #59/v386);
- *  - werdykt pary punktów: słownik i progi ΔSDS identyczne z verdictCh panelu porównania (PR #63/v388);
- *    parytet pilnowany testem tests/unit/trajectory-analysis.test.mjs na realnym verdictCh;
+ *  - werdykt pary punktów: od SW 1.1.3 (P-WERDYKT rata 1) liczy go WYŁĄCZNIE vilda_werdykt.js
+ *    (window.VildaWerdykt) — ten sam kod, który woła panel porównania w vilda_auth_ui.js,
+ *    więc słownik i progi ΔSDS nie mogą się już rozjechać między tymi dwoma powierzchniami;
  *  - opis strefy/kanału: identyczny z interpCh panelu (kanały 3/10/25/50/75/90/97);
  *  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 od pierwszego pomiaru z wieku ≥24 mies. (PR #64);
  *  - tempo wzrastania: od SW 1.0.944 liczy je WYŁĄCZNIE vilda_tempo_wzrastania.js
@@ -30,15 +31,12 @@
     SEGMENT_MIN_GAP_M: 3,
     REDFLAG_DSDS: -1.0,
     REDFLAG_BASE_MIN_M: 24,
-    // P-SLOWA (audyt werdyktów, punkt 4): słowo „istotny" niesie w tym pliku DWIE różne
-    // wielkości i obie były dotąd liczbami wpisanymi wprost w warunek. Nazwane, żeby różnica
-    // była widoczna w źródle, a nie do odkrycia przy czytaniu gałęzi:
-    //   wzrost   — „istotna deceleracja wzrastania"  przy ΔSDS ≤ −1,0 (tyle samo co REDFLAG_DSDS,
-    //              więc epikryza i trajektoria mówią o wzroście jedną liczbą — to jest spójne),
-    //   masa/BMI — „istotne przesunięcie centylowe"  przy |ΔSDS| ≥ 0,5.
-    // Czy mają być JEDNĄ liczbą, jest pytaniem klinicznym i nie zapada tutaj.
-    ISTOTNA_DECELERACJA_DSDS: -1.0,
-    ISTOTNE_PRZESUNIECIE_DSDS: 0.5,
+    // P-SLOWA (punkt 4 audytu) nazwał dwie różne wielkości chodzące pod jednym słowem
+    // „istotny"; P-WERDYKT rata 1 przeniósł je razem z regułą werdyktu do vilda_werdykt.js
+    // (VildaWerdykt.PROGI.ISTOTNA_DECELERACJA_DSDS = −1,0 dla wzrostu i
+    // ISTOTNE_PRZESUNIECIE_DSDS = 0,5 dla masy i BMI). REDFLAG_DSDS poniżej jest z pierwszą
+    // z nich celowo równy — epikryza i trajektoria mówią o wzroście jedną liczbą; pilnuje
+    // tego tests/unit/slownictwo-werdyktow.test.mjs, już między plikami.
     CLINES: [3, 10, 25, 50, 75, 90, 97],
     CHN: ['<3', '3–10', '10–25', '25–50', '50–75', '75–90', '90–97', '>97'],
     // Progi oceny tempa (drabinka wiekowa, PUB_VELO_MIN 4 cm/rok, okna wieku, świeżość wieku
@@ -161,95 +159,40 @@
     }
   }
 
-  // ── Werdykt pary punktów — transkrypcja 1:1 verdictCh panelu porównania (v388) ──
-  // Nie zmieniaj progów ani etykiet bez zmiany verdictCh — parytet pilnuje test jednostkowy.
+  // ── Werdykt pary punktów ─────────────────────────────────────────────────────────────
+  // P-WERDYKT rata 1: reguła werdyktu nie mieszka już tutaj. Mieszka w vilda_werdykt.js
+  // (window.VildaWerdykt) i jest JEDNA dla całej aplikacji — ten moduł i panel „Porównanie
+  // z poprzednim pomiarem" w vilda_auth_ui.js wołają dokładnie ten sam kod, zamiast trzymać
+  // dwie transkrypcje pilnowane komentarzem „nie zmieniaj bez zmiany tej drugiej".
+  //
+  // Silnik jest WYMAGANY, bez kopii zapasowej: gdyby go zabrakło, odcinek pokazuje same liczby
+  // (ΔSDS, centyle, pasmo) i to jest uczciwsze niż druga kopia reguły, która po pierwszej
+  // zmianie klinicznej znowu rozjechałaby się z pierwszą. Nakładki przy braku silnika oddają
+  // werdykt nietknięty — ich zadaniem jest tylko zaostrzać, nie tworzyć werdykt.
+  // Progi, etykiety i uzasadnienia kliniczne: vilda_werdykt.js i docs/clinical/ALGORITHMS.md.
+  function silnikWerdyktu() { return w.VildaWerdykt || null; }
 
   function verdictForPair(met, sa0, sb0, ca, cb) {
-    if (typeof sa0 !== 'number' || typeof sb0 !== 'number' || !isFinite(sa0) || !isFinite(sb0) || ca == null || cb == null) return null;
-    var d = Math.round(100 * (sb0 - sa0)) / 100, W = met === 'height', B = met === 'bmi', low = ca < 10, high = W ? ca > 90 : ca >= (B ? 85 : 90);
-    var ST = W ? 'stabilny tor wzrastania' : B ? 'stabilny tor BMI' : 'stabilny tor masy ciała';
-    var ND = W ? 'pogłębianie niedoboru wzrostu' : 'pogłębianie niedoboru masy ciała';
-    if (low) {
-      if (d >= 0.2) {
-        // Start z niedoboru (<10c): etykietę różnicuje centyl końcowy (decyzja właściciela 2026-08-09).
-        if (W) return { t: 'good', l: 'wyrównywanie niedoboru wzrostu (catch-up)' };
-        if (cb < 10) return { t: 'good', l: 'wyrównywanie niedoboru masy ciała' };
-        if (B) return cb >= 97 ? { t: 'bad', l: 'przekroczenie progu otyłości (≥97c)' }
-          : cb >= 85 ? { t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem BMI — do obserwacji' }
-          : { t: 'good', l: 'wyrównanie niedoboru (BMI)' };
-        return cb >= 90 ? { t: 'bad', l: 'przekroczenie 90. centyla masy ciała po wyrównaniu niedoboru' }
-          : cb >= 75 ? { t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem masy ciała — do obserwacji' }
-          : { t: 'good', l: 'wyrównanie niedoboru masy ciała' };
-      }
-      return d <= -0.5 ? { t: 'bad', l: ND } : d <= -0.2 ? { t: 'warn', l: ND } : { t: 'stable', l: ST };
-    }
-    if (high) {
-      if (W) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja z wysokich centyli' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja pozycji centylowej' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja wzrastania' } : { t: 'stable', l: ST };
-      if (d <= -1.5) return { t: 'warn', l: B ? 'szybki spadek BMI — wskazana ocena' : 'szybka utrata masy — wskazana ocena' };
-      if (d <= -0.2) return { t: 'good', l: B ? 'redukcja BMI' : 'redukcja nadmiaru masy ciała' };
-      if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: B ? (cb >= 97 ? (ca >= 97 ? 'progresja otyłości' : 'przekroczenie progu otyłości (≥97c)') : 'szybka progresja nadwagi (BMI)') : (cb >= 97 ? (ca >= 97 ? 'progresja nadmiaru masy (>97. centyla)' : 'przekroczenie 97. centyla masy ciała') : 'nasilony przyrost masy ciała') };
-      return d >= 0.2 ? { t: 'warn', l: B ? 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' : 'narastanie nadmiaru masy ciała' } : B && cb >= 97 ? { t: 'warn', l: 'utrzymująca się otyłość (>97c)' } : { t: 'stable', l: ST };
-    }
-    if (W) return d <= P.ISTOTNA_DECELERACJA_DSDS ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: ST };
-    if (Math.abs(d) >= P.ISTOTNE_PRZESUNIECIE_DSDS) {
-      var al = B ? (cb >= 97 || cb < 5) : (cb <= 3 || cb >= 97);
-      return al ? { t: 'bad', l: d > 0 ? (B ? 'przekroczenie progu otyłości (≥97c)' : 'przekroczenie 97. centyla masy ciała') : (B ? 'przekroczenie progu niedowagi (<5c)' : 'obniżenie masy ciała poniżej 3. centyla') } : { t: 'warn', l: d > 0 ? 'istotne przesunięcie centylowe w górę' : 'istotne przesunięcie centylowe w dół' };
-    }
-    return { t: 'stable', l: ST };
+    var S = silnikWerdyktu();
+    return S ? S.para(met, sa0, sb0, ca, cb) : null;
   }
 
-  // Nakładka kontekstu klinicznego — transkrypcja 1:1 verdictCh2 panelu porównania.
-  // gm: miesiące terapii GH w odcinku (ocena odpowiedzi od gm>=6); mp: SDS kanału rodzicielskiego (MPH);
-  // rd: zamierzona redukcja aktywna w odcinku (panel: nakładanie >=3 mies.; nigdy przy niedoborze ca<10).
-  // Parytet z realnym verdictCh2 pilnowany testem trajectory-analysis.test.mjs.
+  // gm: miesiące terapii GH w odcinku (ocena odpowiedzi od gm>=6); mp: SDS kanału rodzicielskiego
+  // (MPH); rd: zamierzona redukcja aktywna w odcinku (panel: nakładanie >=3 mies.; nigdy przy
+  // niedoborze ca<10).
   function verdictForPairCtx(met, sa0, sb0, ca, cb, gm, mp, rd) {
-    var v1 = verdictForPair(met, sa0, sb0, ca, cb);
-    if (!v1) return null;
-    var d = Math.round(100 * (sb0 - sa0)) / 100;
-    if (met === 'height') {
-      if (gm >= 6) return d >= 0.3 ? { t: 'good', l: 'dobra odpowiedź na GH' } : d < 0.1 ? { t: 'warn', l: 'słaba odpowiedź na GH — do oceny' } : { t: 'stable', l: 'odpowiedź umiarkowana (GH)' };
-      if (typeof mp === 'number' && isFinite(mp)) {
-        var e0 = Math.round(100 * (sa0 - mp)) / 100;
-        if (e0 <= -1.5) return d >= 0.2 ? { t: 'good', l: 'nadrabia względem kanału rodzicielskiego' } : d <= -0.5 ? { t: 'bad', l: 'oddala się od kanału rodzicielskiego' } : d <= -0.2 ? { t: 'warn', l: 'oddala się od kanału rodzicielskiego' } : { t: 'stable', l: 'stabilnie (poniżej kanału rodzicielskiego)' };
-        if (e0 >= 1.5) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja wzrastania' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja do kanału rodzicielskiego' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja ponad kanał rodzicielski' } : { t: 'stable', l: 'stabilny tor wzrastania' };
-        if (ca < 10) {
-          if (d <= -0.5) return { t: 'bad', l: 'pogłębianie niedoboru wzrostu' };
-          if (d <= -0.2) return { t: 'warn', l: 'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl) — do obserwacji' };
-        }
-        return d <= P.ISTOTNA_DECELERACJA_DSDS ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: 'w kanale rodzicielskim' };
-      }
-      return v1;
-    }
-    if (rd && ca >= 10) {
-      if (d <= -1.5) return { t: 'warn', l: 'redukcja bardzo szybka — do kontroli' };
-      if (d <= -0.2) return { t: 'good', l: 'redukcja w trakcie leczenia' };
-      if (d >= 0.2) return { t: v1.t === 'bad' ? 'bad' : 'warn', l: 'przyrost masy mimo leczenia redukcyjnego' };
-    }
-    return v1;
+    var S = silnikWerdyktu();
+    return S ? S.zKontekstem(met, sa0, sb0, ca, cb, gm, mp, rd) : null;
   }
 
-  // ── Nakładka spójności waga↔BMI — transkrypcja 1:1 verdictWtBmi panelu porównania. ──
-  // „Stabilna" waga (ΔSDS ≥ +0,2, poniżej własnego progu ostrzeżenia) przy BMI warn/bad
-  // w kierunku nadmiaru (ΔSDS BMI ≥ +0,2) w tym samym odcinku nie jest stabilna klinicznie:
-  // masa-do-wieku maskuje nadmiar, gdy wzrost odstaje w dół (decyzja właściciela 2026-08-14).
-  // Nie zmieniaj reguły bez zmiany verdictWtBmi — parytet pilnuje trajectory-analysis.test.mjs.
   function weightBmiOverlayVerdict(v, dW, vB, dB) {
-    if (!v || v.t !== 'stable' || !(dW >= 0.2)) return v;
-    if (!vB || (vB.t !== 'warn' && vB.t !== 'bad') || !(dB >= 0.2)) return v;
-    return { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
+    var S = silnikWerdyktu();
+    return S ? S.nakladkaMasaBmi(v, dW, vB, dB) : v;
   }
 
-  // ── Nakładka pozycyjna wzrostu — transkrypcja 1:1 verdictHtPos panelu porównania. ──
-  // „Stabilny" tor nie jest uspokajający, gdy pozycja tego nie uzasadnia: <3c zawsze (niedobór
-  // wzrostu z definicji, poza normą populacyjną 3–97c), 3–10c tylko przy torze poniżej kanału
-  // rodzicielskiego (≥1,5 SDS pod MPH). Pasmo 3–10c samo w sobie to DOLNE PASMO NORMY, nie brak
-  // normy (decyzja właściciela 2026-08-14). Nie stosuje się przy aktywnej ocenie odpowiedzi na GH.
   function heightPositionOverlayVerdict(v, cb, mp, sa0, ghOn) {
-    if (!v || v.t !== 'stable' || ghOn) return v;
-    if (cb < 3) return { t: 'warn', l: 'tor stabilny, ale poniżej 3. centyla — niedobór wzrostu' };
-    if (cb < 10 && typeof mp === 'number' && isFinite(mp) && Math.round(100 * (sa0 - mp)) / 100 <= -1.5)
-      return { t: 'warn', l: 'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego — do obserwacji' };
-    return v;
+    var S = silnikWerdyktu();
+    return S ? S.nakladkaPozycjaWzrostu(v, cb, mp, sa0, ghOn) : v;
   }
 
   // Zastosowanie nakładki do gotowych metryk: odcinki wagi parowane z odcinkami BMI po wieku

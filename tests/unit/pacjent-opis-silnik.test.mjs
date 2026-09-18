@@ -11,9 +11,9 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 //
 // Testy pilnują trzech rzeczy:
 //  1. brzmienia — zdania mają czytać się jak wpis lekarza, nie jak zrzut z tabeli;
-//  2. parytetu — ocena tempa i etykiety werdyktów pochodzą DOSŁOWNIE z karty
-//     (vilda_trajectory_analysis.js), więc opis nie może powiedzieć czegoś innego
-//     niż karta o tym samym pacjencie;
+//  2. parytetu — ocena tempa pochodzi DOSŁOWNIE z karty (vilda_trajectory_analysis.js),
+//     a etykiety werdyktów odcinka z silnika werdyktu (vilda_werdykt.js), więc opis nie
+//     może powiedzieć czegoś innego niż karta o tym samym pacjencie;
 //  3. milczenia — brak danych i dane nieaktualne mają być nazwane, a nie pominięte.
 
 // CDF rozkładu normalnego (Abramowitz–Stegun, jak normalCDF w app.js) — do zamiany SDS
@@ -259,7 +259,11 @@ describe('Parytet z kartą — opis nie mówi nic od siebie', () => {
   it('każda etykieta słownika karty ma formę zdaniową, żadna nie spada do ramki awaryjnej', () => {
     // Etykiety czytane wprost ze źródła karty — to lista słów, nie kształt logiki.
     // Gdy ktoś dopisze etykietę w karcie, ten test powie, że opis jej nie odmienia.
-    const zrodlo = fs.readFileSync(path.join(korzen, 'vilda_trajectory_analysis.js'), 'utf8');
+    // P-WERDYKT rata 1: etykiety werdyktu odcinka mieszkają w silniku (vilda_werdykt.js),
+    // reszta (tempo, przebieg) nadal w karcie — opis musi odmieniać jedne i drugie.
+    const zrodlo = ['vilda_werdykt.js', 'vilda_trajectory_analysis.js']
+      .map((f) => fs.readFileSync(path.join(korzen, f), 'utf8'))
+      .join('\n');
     const etykiety = new Set();
     // Etykiety stoją po `l:` wprost albo w wyrażeniu warunkowym (`l: B ? '…' : '…'`),
     // a dwie wspólne (`ST`, `ND`) są zmiennymi — stąd dwa przebiegi.
