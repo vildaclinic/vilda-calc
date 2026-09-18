@@ -57,11 +57,21 @@ async function otworzPanel(page) {
   // z tym nic wspólnego (2000 i 600 iteracji dają ten sam czas). Blokada sieci zewnętrznej
   // też niczego nie zmienia (39,7 / 40,2 / 40,2 s w trzech wariantach). Przez te ~40 s
   // nakładka pokazuje ekran powitalny „Witamy…", mimo że sejf jest odblokowany od pierwszej
-  // sekundy, po czym element znika z DOM-u w całości. Dzieje się tak, bo konto zakładamy
-  // PROGRAMOWO (`VildaVault.createUser`), z pominięciem formularza — interfejs logowania nie
-  // dostaje więc sygnału i nadrabia to dopiero własnym, powolnym torem. Czy ta sama zwłoka
-  // dotyka lekarza zakładającego konto przez formularz — NIE USTALONO; to osobne pytanie,
-  // nie do rozstrzygnięcia w tym pliku.
+  // sekundy, po czym element znika z DOM-u w całości.
+  //
+  // ROZSTRZYGNIĘTE (pomiar tego samego dnia, na żądanie właściciela): lekarza to NIE dotyczy.
+  // Kreator przeprowadzony tak, jak robi to człowiek — „Załóż konto", imię i hasło, „Dalej",
+  // zaznaczenie „Zapisałem klucz odzyskiwania", „Dalej", „Nie, tylko to urządzenie",
+  // „Przejdź do aplikacji" — trwa **2378 ms**, a nakładka znika **86 ms** po ostatnim
+  // kliknięciu. Powrót na stronę z odtworzoną sesją: **474 ms**. Sejf jest odblokowany już
+  // na kroku 3 z 4, w ok. 1,5 s od startu.
+  //
+  // Te ~40 s pojawiają się WYŁĄCZNIE wtedy, gdy sejf zostanie odblokowany za plecami nakładki:
+  // wtedy zostaje ona na ekranie, na którym stała (powitalnym albo nieodpowiedzianym kroku
+  // kreatora), i zamyka się dopiero automatycznie po ok. 38–40 s. Zmierzone w obu wariantach:
+  // przy programowym `createUser` (ekran powitalny) i przy kreatorze zatrzymanym na
+  // nieodpowiedzianym kroku 3 (38,0 s). W produkcie nie ma tu nic do naprawy — jest to koszt
+  // wyłącznie testowej ścieżki na skróty, którą ten plik świadomie wybiera.
   //
   // Skutek dla testów był taki, że każdy z ośmiu zjadał ~41 s z budżetu 120 s, a na obciążonym
   // runnerze losowo jeden z nich w ten budżet nie trafiał — za każdym razem inny (zmierzone:
