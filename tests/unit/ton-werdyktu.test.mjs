@@ -363,3 +363,56 @@ describe('P-TON-3b — nagłówek raportu zgadza się z kafelkiem Cole\'a', () =
     expect(f, 'regex odpala się dopiero, gdy wartości nie ma').toContain('cv0===null?o.line.match');
   });
 });
+
+describe('P-TON-3c — cztery bramki widoczności przestają zależeć od napisu', () => {
+  it('karta planu redukcji: bramka z klucza kategorii', () => {
+    // Ta jedna bramka steruje CAŁĄ kartą planu redukcji, kartą konsultacji dziecięcej
+    // i ostrzeżeniami 5–9 lat. Liczona z etykiety: zmiana brzmienia ukryłaby wszystko naraz,
+    // bez żadnego sygnału błędu — gałąź else po prostu chowa elementy.
+    const f = kod(funkcjaZ(PREP, 'vildaUpdatePrepRenderReductionPlanUi'));
+    expect(f).toContain('kn=a.kategoria&&a.kategoria.klucz');
+    expect(f).toContain('kn==="nadwaga"||kn==="olbrzymia"||kn.indexOf("otylosc")===0');
+    expect(PREP, 'obiekt kategorii dociera do karty').toContain('kategoria:p.kategoria');
+    expect(PREP).toContain('function vildaUpdatePrepKategoriaNormalizacji(e,a,t)');
+  });
+
+  it('bramka niedowagi przy normalizacji BMI też z klucza', () => {
+    expect(PREP).toContain('p.kategoria.klucz==="niedowaga"');
+  });
+
+  it('karta masa-do-długości: koniec pętli napis→napis w jednej funkcji', () => {
+    // Etykieta powstawała tu z z-score, a kilka instrukcji niżej była dopasowywana z powrotem,
+    // żeby wybrać treść ostrzeżenia. Teraz klucz liczy się raz i to on wybiera treść.
+    const f = kod(funkcjaZ(PREP, 'vildaUpdatePrepComputeWflState'));
+    expect(f).toContain('const kw=r<-2?"niedowaga":r<=2?"norma":r<=3?"nadwaga":"otylosc"');
+    expect(f).toContain('kw==="niedowaga"?w=');
+    expect(f, 'treść ostrzeżenia nie jest już wybierana po etykiecie').not.toContain('l==="Niedowaga"');
+    expect(f, 'klucz idzie dalej w stanie karty').toContain('n.klucz=kw');
+  });
+
+  it('sugestia WHR dostaje klucz kategorii Cole\'a, nie napis', () => {
+    expect(PREP, 'klucz jest wystawiony globalnie obok etykiety').toContain('window.coleKluczValue=o.coleKategoria&&o.coleKategoria.klucz');
+    expect(PREP).toContain('window.coleKluczValue=="string"&&window.coleKluczValue');
+    const f = kod(funkcjaZ(APP, 'shouldSuggestWHR'));
+    expect(f).toContain('ok==="nadwaga"||ok==="otylosc"');
+  });
+
+  it('wiersz BMI dorosłego: nawias pomijany wg klucza', () => {
+    expect(PREP).toContain('nadm=kbl?kbl==="nadwaga"||kbl==="olbrzymia"||kbl.indexOf("otylosc")===0');
+  });
+
+  it('każde pozostałe dopasowanie etykiety jest już tylko zapasem', () => {
+    // Po tej racie napis czyta się WYŁĄCZNIE wtedy, gdy obiektu kategorii brakuje.
+    // Ten strażnik pilnuje, że każde takie dopasowanie stoi po prawej stronie operatora „?:",
+    // czyli w gałęzi zapasowej — nigdy jako główny warunek.
+    const czysty = kod(PREP);
+    const wzorzec = /(?:==="Nadwaga"|==="Niedowaga"|==="W normie"|startsWith\("Oty)/g;
+    const trafienia = [...czysty.matchAll(wzorzec)];
+    expect(trafienia.length, 'liczba dopasowań etykiety w pliku').toBe(5);
+    for (const t of trafienia) {
+      const przed = czysty.slice(Math.max(0, t.index - 260), t.index);
+      const zapas = przed.includes('klucz') || przed.includes('kbl') || przed.includes('kn?') || przed.includes('kategoria');
+      expect(zapas, `dopasowanie przy pozycji ${t.index} musi być gałęzią zapasową`).toBe(true);
+    }
+  });
+});

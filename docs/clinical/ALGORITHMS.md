@@ -3966,6 +3966,42 @@ Klasyfikator bierze teraz ton z `kategoriaCole(v).kolor` we wszystkich trzech pa
 
 **Wniosek metodyczny.** Przepięcie jednej powierzchni na silnik może rozjechać ją z drugą, która pyta silnik tylko o część odpowiedzi. Przy każdej kolejnej racie warto sprawdzić nie tylko „czy ta powierzchnia pyta silnik", ale „czy pyta go o **wszystko**, co pokazuje" — klucz i kolor, nie sam klucz.
 
+## Bramki widoczności przestają zależeć od napisu (P-TON rata 3c, SW 1.1.0, 2026-09-18)
+
+Ostatnie cztery miejsca, w których **o tym, co lekarz w ogóle zobaczy**, decydowało porównanie wyświetlanej etykiety.
+
+### 1. Karta planu redukcji — najpoważniejsza
+
+`vildaUpdatePrepRenderReductionPlanUi` liczyła flagę `overweightOrObesity` jako `i==="Nadwaga" || String(i).startsWith("Otyłość")`. Ta jedna flaga steruje **całą kartą planu redukcji, kartą konsultacji dziecięcej i ostrzeżeniami dla 5–9 lat**. Zmiana brzmienia etykiety ukryłaby to wszystko naraz — bez żadnego sygnału błędu, bo gałąź `else` po prostu chowa elementy.
+
+Dodano `vildaUpdatePrepKategoriaNormalizacji`, która oddaje **obiekt** kategorii; obiekt wędruje do karty jako `a.kategoria`, a flaga idzie z `klucz`. Bramka niedowagi przy normalizacji BMI (`p.category==="Niedowaga"`) również.
+
+### 2. Karta masa-do-długości — pętla napis→napis w jednej funkcji
+
+W `vildaUpdatePrepComputeWflState` etykieta (`Niedowaga` / `W normie` / `Nadwaga` / `Otyłość`) powstawała z z-score, a **kilka instrukcji niżej była dopasowywana z powrotem**, żeby wybrać treść ostrzeżenia i skierowanie. Klucz liczy się teraz raz (`kw`) prosto z z-score, wybiera treść i idzie dalej w stanie karty jako `n.klucz`.
+
+### 3. Sugestia WHR
+
+`shouldSuggestWHR` w ścieżce dziecka mieszała surowy centyl BMI (≥ 85) z **etykietą** kategorii Cole'a — to obsługa przypadku wysokiego dziecka z prawidłowym BMI, ale wskaźnikiem Cole'a ponad normą. Klucz kategorii Cole'a jest teraz wystawiony globalnie (`window.coleKluczValue`) obok etykiety i to on trafia do bramki.
+
+### 4. Wiersz BMI dorosłego
+
+Nawias z kategorią jest u dorosłego z nadmiarem masy pomijany (mówi o tym osobna karta). Warunek idzie z klucza.
+
+### Wpływ kliniczny
+
+**Żaden werdykt się nie zmienia.** Wszystkie cztery bramki dostają ten sam zestaw przypadków co dotąd — klucze `nadwaga` / `otylosc*` / `olbrzymia` / `niedowaga` odpowiadają dokładnie etykietom, które dopasowywano. Zmienia się wyłącznie **odporność**: brzmienie etykiety przestaje sterować widocznością kart klinicznych.
+
+### Zapasy
+
+Każde pozostałe dopasowanie etykiety w `vilda_update_prep.js` — jest ich **pięć** — stoi po prawej stronie operatora warunkowego, czyli odpala się wyłącznie wtedy, gdy obiektu kategorii brakuje. Strażnik sprawdza to pozycyjnie: dla każdego trafienia czyta 260 znaków przed nim i wymaga, żeby był tam klucz albo obiekt kategorii. Liczba jest przypięta, więc nowe dopasowanie w roli głównego warunku zaczerwieni test.
+
+**Walidacja.** `tests/unit/ton-werdyktu.test.mjs` — 35 testów (29 z rat 1–3b + 6 nowych). Pełny przebieg: **2615 testów w 156 plikach**, lint, składnia (476 plików), polityka repozytorium (585 plików) — zielone. E2E kart pacjenta, modułu DS, podsumowania i centyli niemowlęcych: 16 zdanych.
+
+### Stan punktu 3 po tej racie
+
+Werdykt i widoczność w ścieżce BMI / Cole / masa opierają się na **kluczu i kolorze silnika**, nie na brzmieniu tekstu. Poza tą ścieżką tekst czytają jeszcze: obwód głowy, obwód klatki piersiowej, proporcja masy do wysokości, hSDS−mpSDS, MPH i tempo wzrastania — miary, których surowa wartość nie jest nigdzie wystawiona. To zakres ewentualnej raty 4.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
