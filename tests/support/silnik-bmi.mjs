@@ -15,9 +15,9 @@ export const appSrc = zrodlo('app.js');
 const PLIKI_SILNIKA = ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', 'ds_lms.js', 'vilda_bmi.js'];
 
 /** Wycina zbalansowany blok { … } zaczynający się od pierwszego „{" za pozycją `od`. */
-export function wytnij(src, od) {
+export function wytnij(src, od, ciałoOd) {
   let d = 0;
-  for (let k = src.indexOf('{', od); k < src.length; k += 1) {
+  for (let k = src.indexOf('{', typeof ciałoOd === 'number' ? ciałoOd : od); k < src.length; k += 1) {
     if (src[k] === '{') d += 1;
     else if (src[k] === '}') { d -= 1; if (d === 0) return src.slice(od, k + 1); }
   }
@@ -31,11 +31,20 @@ export function tablica(nazwa) {
   return new Function(`return ${wytnij(appSrc, i).slice(nazwa.length + 1)}`)();
 }
 
-/** Źródło funkcji `nazwa` wycięte z podanego pliku (do izolowanego uruchomienia). */
+/** Źródło funkcji `nazwa` wycięte z podanego pliku (do izolowanego uruchomienia).
+ *  Lista parametrów jest pomijana ŚWIADOMIE: przy domyślnej wartości `(e = {})` naiwne
+ *  liczenie klamer od pierwszego „{" kończyło się na tym domyślnym obiekcie i zwracało
+ *  samą sygnaturę (45 znaków zamiast całej funkcji), a test cicho sprawdzał pustkę.
+ *  Dlatego najpierw domykamy nawias okrągły parametrów, a dopiero potem liczymy klamry. */
 export function funkcjaZ(src, nazwa) {
   const i = src.indexOf(`function ${nazwa}(`);
   if (i < 0) throw new Error(`źródło nie ma funkcji ${nazwa}()`);
-  return wytnij(src, i);
+  let n = 0;
+  for (let k = src.indexOf('(', i); k < src.length; k += 1) {
+    if (src[k] === '(') n += 1;
+    else if (src[k] === ')') { n -= 1; if (n === 0) return wytnij(src, i, k + 1); }
+  }
+  throw new Error(`niezbalansowana lista parametrów ${nazwa}()`);
 }
 
 /** Tablice LMS BMI dla VildaBmi.ustawDane() — prosto z produkcyjnych plików.
