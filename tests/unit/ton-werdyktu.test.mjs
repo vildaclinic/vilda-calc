@@ -336,3 +336,30 @@ describe('P-TON-3 — co jeszcze czyta tekst (dług przypięty, żeby nie rósł
     expect(f).toContain('centyl');
   });
 });
+
+describe('P-TON-3b — nagłówek raportu zgadza się z kafelkiem Cole\'a', () => {
+  const RAPORT = zrodlo('vilda_patient_report.js');
+
+  it('klasyfikator Cole\'a w raporcie bierze ton z koloru silnika', () => {
+    // Rata 2 przepięła kafelek Cole'a na kolor silnika (niedowaga = alert), a ten
+    // klasyfikator został przy zaszytym "warn" — przez chwilę karta i nagłówek raportu
+    // mówiły o tym samym dziecku co innego. Rozbieżność powstała w racie 2, tu jest domykana.
+    const f = kod(funkcjaZ(RAPORT, 'patientReportClassifyCole'));
+    expect(f).toContain('KC.kolor==="alert"?"danger"');
+    expect(f, 'żadnego tonu zaszytego na sztywno').not.toMatch(/tone:"(warn|danger)"/);
+    expect((f.match(/tone:T/g) || []).length, 'trzy pasma biorą ton z silnika').toBe(3);
+  });
+
+  it('niedowaga Cole\'a mówi to samo w obu miejscach', () => {
+    const kolor = win.VildaBmi.kategoriaCole(85).kolor;
+    expect(kolor).toBe('alert');
+    const ton = kolor === 'alert' ? 'danger' : kolor === 'improve' ? 'warn' : 'normal';
+    expect(ton, 'kafelek po racie 2 i nagłówek po racie 3b').toBe('danger');
+  });
+
+  it('wartość do nagłówka pochodzi z wyniku, a tekst jest już tylko zapasem', () => {
+    const f = kod(funkcjaZ(RAPORT, 'patientReportBuildFlaggedSummaryHeadline'));
+    expect(f).toContain('window.colePercentValue');
+    expect(f, 'regex odpala się dopiero, gdy wartości nie ma').toContain('cv0===null?o.line.match');
+  });
+});

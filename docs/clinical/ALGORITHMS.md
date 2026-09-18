@@ -3952,6 +3952,20 @@ Tekst czytają jeszcze tylko miary, których surowa wartość nie jest nigdzie w
 
 **Baseline ESLint zmniejszony o jeden** (`no-useless-escape` w `vilda_patient_report.js`: 6 → 5) — usunięte wyrażenie regularne wyciągające procent z tekstu było jednym z wyciszonych naruszeń.
 
+## Nagłówek raportu dogania kafelek Cole'a (P-TON rata 3b, SW 1.0.999, 2026-09-18)
+
+**To jest domknięcie rozbieżności, którą wprowadziła rata 2 tej samej serii** — odnotowane wprost, bo powstała po naszej stronie.
+
+Rata 2 przepięła kafelek wskaźnika Cole'a na kolor silnika, przez co **niedowaga Cole'a (poniżej 90 % mediany BMI) przeszła z tonu ostrzegawczego na alarmowy**. Osobny klasyfikator w raporcie, `patientReportClassifyCole`, pytał wprawdzie silnik o **klucz**, ale ton mapował sobie sam i przy niedowadze zwracał `warn`. Przez jedną ratę karta główna i nagłówek raportu mówiły więc o tym samym dziecku co innego.
+
+Klasyfikator bierze teraz ton z `kategoriaCole(v).kolor` we wszystkich trzech pasmach; w funkcji nie ma już ani jednego tonu zaszytego na sztywno.
+
+**Druga poprawka w tej racie.** `patientReportBuildFlaggedSummaryHeadline` wyciągało procent wskaźnika z **wydrukowanego wiersza** (`o.line.match(/…%/)`) — to samo, co rata 3 usunęła z `getProfessionalSummaryLineTone`, tylko w innej funkcji. Wartość pochodzi teraz z `window.colePercentValue`, a wyrażenie regularne odpala się wyłącznie wtedy, gdy tej wartości nie ma.
+
+**Walidacja.** `tests/unit/ton-werdyktu.test.mjs` — 29 testów (26 z rat 1–3 + 3 nowe): ton z koloru silnika, brak tonów zaszytych na sztywno, zgodność kafelka i nagłówka dla niedowagi Cole'a, wartość z wyniku z tekstem jako zapasem. Pełny przebieg: **2609 testów w 156 plikach**, lint, składnia (476 plików), polityka repozytorium (585 plików) — zielone.
+
+**Wniosek metodyczny.** Przepięcie jednej powierzchni na silnik może rozjechać ją z drugą, która pyta silnik tylko o część odpowiedzi. Przy każdej kolejnej racie warto sprawdzić nie tylko „czy ta powierzchnia pyta silnik", ale „czy pyta go o **wszystko**, co pokazuje" — klucz i kolor, nie sam klucz.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
