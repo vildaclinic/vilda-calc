@@ -4058,6 +4058,27 @@ Pozostałe użycia słowa są **poprawnie różnymi przedmiotami** i nie są roz
 
 **Wpływ kliniczny: żaden werdykt, próg ani adresat skierowania się nie zmienia.** Zmienia się wyłącznie to, że komunikat nazywa miarę, a liczby mają w kodzie nazwy.
 
+## Edycja punktu leczenia nie nadpisuje już leku (P-LEK, SW 1.1.2, 2026-09-18)
+
+**Skąd znalezisko.** Wyszło z rozpoznania punktu 3 audytu werdyktów — agenci mieli szukać werdyktów liczonych z parsowanego napisu i przy okazji trafili na defekt integralności danych w monitorze terapii otyłości. Zweryfikowałem go osobiście, zanim go zgłosiłem i naprawiłem.
+
+**Defekt.** `Ee()` (wczytanie punktu do edycji) wypełniało wiek, masę, wzrost, dawkę i datę, **ale nie listę „obesityMonDrug"**. `Eb()` (zapis edycji) bezwarunkowo czytało bieżący stan tej listy i zapisywało go jako `drug`/`substance` punktu. Lista mogła w tym momencie pokazywać inny preparat albo podpowiedź — lekarz poprawiał masę w istniejącym punkcie, a zapis **po cichu podmieniał lek**.
+
+`Es` (identyfikator edytowanego punktu) jest ustawiane wyłącznie w `Ee()`, a `Eb()` bez niego nie działa — **błąd odpalał się przy każdym zapisie edycji**, nie w rzadkim wariancie.
+
+**Dlaczego to nie kosmetyka.** Kryteria odpowiedzi wg ChPL **różnią się między preparatami**: liraglutyd 4 % po 12 tyg., semaglutyd 5 %, naltrekson + bupropion 5 % po 16 tyg. Podmieniony lek zmienia więc próg, według którego aplikacja ocenia skuteczność terapii — i robi to bez śladu w interfejsie.
+
+**Poprawka.**
+- `Eg(drug, substance)` — jeden dopasowywacz opcji listy, wydzielony z pętli, którą miało wcześniej `Ep()` (podpowiedź kontynuacji). Obie ścieżki używają teraz tej samej reguły.
+- `Ee()` woła `Eg()` **przed** `Eu()`, żeby przeliczenie widziało właściwy lek.
+- `Eh()` — lek do zapisu: z listy, a gdy lista nic nie pokazuje przy edycji (np. etykieta preparatu zmieniła brzmienie i dopasowanie nie znalazło opcji), **z punktu, który właśnie edytujemy**. Bez tego poprawka masy kasowałaby preparat.
+
+**Pomyłka po drodze, warta zapisania.** Pierwsza wersja poprawki nazwała dopasowywacz `Ew` — a `Ew()` **już istniało** w tym pliku i wpina przycisk podpowiedzi. Nowa definicja przesłoniła starą, więc przycisk przestał działać. Złapał to e2e `OBESITY-PREFILL-1`; jednostkowe testy przechodziły, bo sprawdzały treść pliku, nie zachowanie. Plik używa krótkich nazw `E*` i **przed dodaniem nowej trzeba sprawdzić, czy jest wolna**. Strażnik pilnuje teraz, że oryginalne `Ew()` żyje i jest wołane przy starcie modułu.
+
+**Walidacja.** `tests/unit/monitor-otylosci-lek.test.mjs` — 7 testów. **Czerwień przed poprawką zmierzona: 4/6 na kodzie z `audyt`**, przy dwóch kontrolnych zielonych w obie strony (kryteria ChPL różnią się między preparatami; punkt nadal niesie preparat i substancję osobno). Pełny przebieg: **2633 testy w 156 plikach**, lint, składnia (478 plików), polityka repozytorium (587 plików) — zielone. E2E monitora otyłości i diety: **12 zdanych**.
+
+**Wspólny pomocnik testowy.** `bezKomentarzy` trafił do `tests/support/silnik-bmi.mjs`. Strażnik „tego już tu nie ma" musi patrzeć na kod, bo komentarz wyjaśniający usuniętą regułę cytuje ją dosłownie — w seriach P-TON i P-SLOWA test zaczerwienił się na własnej prozie **czterokrotnie**, zanim pomocnik stał się wspólny.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
