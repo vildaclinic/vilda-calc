@@ -1100,6 +1100,32 @@ Nowy czytelny moduł **`vilda_perinatal_source.js`** (obie strony). Niczego nie 
 
 Każdy zbiór OLAF/OLA, WHO, Palczewska, zespół Downa i inne populacje specjalne powinny otrzymać osobny wpis ze źródłem, zakresem wieku, płcią, jednostkami i zasadą wyboru zbioru. Ogólna bibliografia strony nie wystarcza do prześledzenia pojedynczej stałej.
 
+## Audyt funkcji „Dodaj notatkę do wizyty" (2026-09-18)
+
+Notatka PACJENTA powiązana z wizytą: przycisk `addVisitNoteBtnSidebar` w menu → bramka w `custom-fixes.js` → edytor `showPatientNoteEditor` w `vilda_auth_ui.js` → `savePatientNote` w sejfie → synchronizacja (delta + pełny push) → konsumenci: Karta pacjenta (Notatki i Historia), Przypomnienia, Terminarz. Audyt (pięć soczewek, weryfikacja adwersaryjna, pomiary na prawdziwym sejfie): 50 znalezisk surowych → 34 usterki po scaleniu → 28 potwierdzonych, 6 obalonych.
+
+### P-NOTATKI rata 1 — integralność i prywatność notatek pacjenta (SW 1.0.985, 2026-09-18, decyzje właściciela D1–D6)
+
+**G2 — usunięcie pacjenta zabiera jego notatki (D1: tak).** `removePatient` (`_n`) kasował pacjenta i migawki, ale nie notatki: zostawały w IndexedDB na każdym urządzeniu i w chmurze, jechały w każdym pełnym pushu, były niewidoczne w Przypomnieniach i Terminarzu i wracały w komplecie przy ponownym zapisie pacjenta o tym samym `patientId` — mimo że okno potwierdzenia obiecuje usunięcie „wraz z całą historią pomiarów i notatek". Teraz `_n` przechodzi notatki tego pacjenta i kasuje każdą przez `removePatientNote` (nagrobek `max(teraz, updatedAtISO)`), więc kasowanie propaguje się na inne urządzenia. Notatki modułów (pseudopacjenci `__vilda_activity__`, `__vilda_external__`) są nietknięte, bo mają własny `patientId`.
+
+**D2 — notatka nie trafia do usuniętego pacjenta.** `savePatientNote` odrzuca zapis, gdy `patientId` ma wygrywający nagrobek (usunięty tu albo na innym urządzeniu); pseudopacjenci modułów (`__vilda*`) są wyłączeni z reguły. Celowo **nie** odrzucamy zapisu dla samego „braku rekordu": notatka może powstać, zanim pacjent dojedzie synchronizacją.
+
+**G3 — re-import karty `.wiw` po usunięciu.** `importPatientFromEnvelope` (`ns`) nie kasował nagrobka pacjenta, więc własne scalanie usuwało go zaraz po imporcie albo przy pierwszym pobraniu (pomiar: `isNew:true, addedSnapshots:1`, a `listPatients()` puste). Import kasuje teraz nagrobek pacjenta (jak `savePatient`) **oraz nagrobki importowanych notatek** — bez tego drugiego kroku, po naprawie G2, wracał sam pacjent, bez wyników i zaleceń (zmierzone regresem `tests/e2e/klirens-faza6.spec.mjs`).
+
+**G6 — wskrzeszenie notatki nie cofa wersji (D3: nowsza treść wygrywa).** Ścieżka P5 („Zostaw notatkę") zapisywała wskrzeszoną notatkę z `rev:1`, a scalanie rozstrzyga najpierw po `rev` — dopisek z urządzenia wskrzeszającego przegrywał ze starszą edycją z innego urządzenia, bez błędu (pomiar: A `rev 3` wygrywało z wskrzeszeniem 40 ms późniejszym). Nagrobek notatki niesie teraz `rev` kasowanej wersji (**oba adaptery**, IndexedDB i pamięciowy, zapisywały dotąd tylko `{id, deletedAtISO}`), `savePatientNote` startuje przy wskrzeszeniu od tego `rev`, a scalanie przenosi najwyższy znany `rev` do nagrobka. Świadomie **nie** zmieniono reguły dla ładunku bez pola `rev` (podpunkt E7 audytu — sceptyk miał do niego zastrzeżenie; zostaje do raty 2).
+
+**G12 — nieodszyfrowalna notatka zostaje na urządzeniu (D4: tak, jak w bibliotece).** `buildNoteDelta` (`cs`) i `exportSyncPayload` (`is`) mapowały notatkę przez `Ft`, który przy nieudanym odszyfrowaniu oddaje `{title:"(błąd odczytu)", body:""}` **z oryginalnym `rev`** — atrapa nadpisywała czytelną treść na drugim urządzeniu (zmierzone: „Dobra treść" → „(błąd odczytu)"). Biblioteka szablonów miała tę bramkę od 1.0.833 (`Qb0`); notatki pacjenta dostają ją teraz w obu miejscach.
+
+**G5 — scalenie duplikatów kontra równoległa edycja (D6: przynależność od celu).** `mergePatients` przepina notatki zwykłym zapisem (rev+1), a scalanie zapisywało `patientId` **nadawcy**: notatka edytowana równolegle na drugim urządzeniu wracała pod usunięte źródło i znikała z Karty, Przypomnień i Terminarza (pomiar: `notatki celu na B: 0`). Teraz, gdy `patientId` z ładunku ma wygrywający nagrobek (lokalny albo z tego ładunku), a lokalny rekord notatki ma inny `patientId`, zostaje **lokalna przynależność**; treść dalej rozstrzyga „ostatni zapis wygrywa".
+
+**G7 — edytor notatki nie przeżywa blokady sejfu (D5: nakładka znika).** `showPatientNoteEditor` nie rejestrował `onLock`, a auto-blokada nie usuwa nakładek: na wspólnym komputerze po zalogowaniu drugiego lekarza wracał szkic poprzednika (dane pacjenta), a „Zapisz" wpisywał cudzą notatkę do jego sejfu. Edytor rejestruje teraz raz na okno `onLock`, który usuwa wszystkie nakładki `.vilda-patient-note-editor-overlay` (`onLock` nie ma wyrejestrowania, stąd jedna rejestracja globalna).
+
+**G4 — bramka przycisku po usunięciu pacjenta.** `custom-fixes.js` zerował `_vildaCurrentPatientId` tylko przy blokadzie sejfu i `vilda:user-state-cleared`; po usunięciu wczytanego pacjenta przycisk zostawał aktywny. Bramka nasłuchuje teraz `onPatientDeleted` i gasi się, gdy usunięto właśnie wczytanego pacjenta (razem z D2 zamyka drogę do notatki-sieroty).
+
+**G27 — skok z monitora GH.** Skok do punktu GH innego pacjenta ustawiał tylko `window._vildaCurrentPatientId`; `sessionStorage` zostawał przy poprzednim, więc chip „Otwórz kartę", bramka notatki i inne strony w tej samej karcie pracowały na dwóch różnych pacjentach. Skok zapisuje teraz oba magazyny. Pełne rozgłoszenie `vilda:patient-loaded` (23 nasłuchy, m.in. modal „Co chcesz zrobić?") świadomie **odłożone do raty 2** — to zmiana zachowania wielu modułów, nie sam rozjazd stanu.
+
+**Testy.** `tests/unit/notatki-pacjenta-integralnosc.test.mjs` — 12 testów na PRAWDZIWYM sejfie (dwa urządzenia, adapter pamięciowy): G2 (z kontrolą, że notatki modułów zostają), G3 (import + pierwsze pobranie, notatki wracają), D2, G6, G12 (z kontrolą pozytywną), G5 oraz strażniki źródeł dla G7/G4/G27 i `rev` w obu adapterach. **Zmierzone czerwone przed poprawką: 7 z 8 testów sejfu**, przy zielonej kontroli pozytywnej.
+
 ### P-OSTATNI-3 — odstępy wokół karty „Porównanie z poprzednim pomiarem" (SW 1.0.984, 2026-09-17, zgłoszenie właściciela)
 
 **Zgłoszenie.** Karta na dole dotykała kart „Centyle i BMI" i przycisku „Podsumowanie wyników — kliknij i skopiuj", a u góry miała za duży odstęp od karty formularza i od karty „Przypomnienia"; wszystko ma być równe jak między innymi kartami („chyba 1 rem, ale sprawdź").
