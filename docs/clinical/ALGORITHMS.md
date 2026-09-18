@@ -3768,6 +3768,52 @@ Wpięcie: karta „Masa ciała" w `vilda_patient_report.js`, przez `patientRepor
 - `tests/unit/masa-silnik.test.mjs` — **32 testy**: 25 na silnik (progi, pasma, SDS/centyl, granice siatek, jawny fallback, brak łańcucha dla DS, pomiar rozbieżności wieku) i 7 na wpięcie. **Czerwień przed poprawką zmierzona: 4/32 czerwone po cofnięciu `vilda_patient_report.js` do stanu z `audyt`, pozostałe 28 zielonych.**
 - Pełny przebieg: **2558 testów jednostkowych w 154 plikach**, lint, składnia (474 pliki), polityka repozytorium (583 pliki) — wszystko zielone. E2E kart pacjenta i raportu: 9 zdanych, 1 pominięty.
 
+## Karta główna: jedno pasmo masy dla koloru, zdania i pulsu (P-MASA rata 3, SW 1.0.994, 2026-09-18)
+
+**Pytanie właściciela, od którego to się zaczęło.** W PR #359 napisałem, że karta główna „mówi tylko przy skrajnościach, pasmo ciszy praktycznie 10–97". Właściciel zapytał wprost: *„co tutaj masz na myśli, jak ta karta się »odzywa«?"*. Odpowiedź wymagała przeczytania kodu, a nie parafrazy — i okazała się bogatsza, niż zakładałem.
+
+**Sprostowanie do PR #359.** Zdanie „90.–97. centyl nie dostaje żadnego sygnału" było prawdziwe **tylko w trybie standardowym**. W trybie profesjonalnym to pasmo od dawna dostawało kolor i puls. Rejestr odnotowuje to, bo na tej niepełnej diagnozie oparta była pierwotna propozycja.
+
+### Co karta robiła: trzy kanały, które się wykluczały
+
+| kanał | postać | warunek |
+|---|---|---|
+| kolor liczby | klasa `pro-warning` / `pro-danger` | **tylko** tryb profesjonalny |
+| zdanie pod kartą | akapit, czasem z linkiem „Umów wizytę" | **tylko** tryb standardowy i **tylko** od 2. roku życia |
+| puls ramki | pulsujące obramowanie `whResult` | **tylko** tryb profesjonalny |
+
+Lekarz w trybie profesjonalnym **nigdy nie widział zdania** o masie; lekarz w trybie standardowym — **nigdy koloru ani pulsu**. Każdy kanał trzymał własną kopię progów, więc rozjeżdżały się na granicach.
+
+### Cztery zmiany (decyzja właściciela: „dopisz zdanie dla 90-97 i ruszaj z punktami 1-3")
+
+- **Zdanie dla 90–97.** Pasmo dostaje po raz pierwszy słowa: *„Regularnie monitoruj masę ciała dziecka – waga w górnym zakresie normy (90–97 centyl)."* Ton łagodny, klasa `centile-monitor-warning`, bez ostrzegawczego trójkąta i bez skierowania — **lustro istniejącego zdania dla pasma 3–10**. Z definicji skali centylowej dotyczy to **7 % dzieci** populacji odniesienia, symetrycznie do 7 %, które już dostawały zdanie na dole.
+- **Punkt 1 — koniec zaokrąglania.** Dolne progi liczyły `Math.round(centyl) < 3`, więc alarm zaczynał się faktycznie od **2,5 centyla**, a górny porównywał wartość surową. Efekt uboczny był gorszy niż sama asymetria: dziecko na 2,7 centyla dostawało komunikat z nawiasem **„(3–10 centyl)"**, czyli zdanie przeczyło własnej etykiecie. To samo na górze pasma — 10,3 centyla też dostawał „(3–10 centyl)". Teraz oba końce biorą pasmo wprost z progów silnika.
+- **Punkt 2 — kolor i zdanie z jednego źródła.** Kolor używał `≥97`, zdanie `>97`: dziecko dokładnie na 97,0 centyla dostawało w trybie profesjonalnym czerwień, a w standardowym ciszę. Wszystkie trzy kanały pytają teraz `vildaUpdatePrepPasmoMasy`, która pyta `VildaMasa.kategoria`.
+- **Punkt 3 — niemowlęta.** Bramka `age>=2` wycinała zdania o masie **dla wieku** poniżej 2. roku życia. Nie było to jednak pełne milczenie, jak pierwotnie zapisałem: dzieci 0–2 lat mają osobną kartę **masa-do-długości** (WFL) z własnymi werdyktami. Luka dotyczyła innego przypadku — **dziecka proporcjonalnie małego**: niski centyl masy dla wieku przy prawidłowej proporcji masa-do-długości. WFL milczy (bo proporcja jest dobra), a bramka wieku wycinała drugi sygnał. To typowy obraz zahamowania przyrostu masy i dotąd nie dostawał nic. Zdanie o masie dla wieku obowiązuje teraz od pierwszego miesiąca, **ale milknie, gdy karta WFL już ostrzega** — żeby nie dublować tego samego skierowania. Reguła wzrostu zostaje bez zmian (nadal od 2. roku życia, nadal na zaokrąglonym centylu): to nie należy do tej raty.
+
+### Zmierzony wpływ (przemiatanie co 0,1 centyla, 1001 punktów, tryb standardowy)
+
+**81 punktów z 1001 zmienia komunikat.** W rozbiciu:
+
+| zakres | było | jest | dlaczego |
+|---|---|---|---|
+| 2,5–2,9 | „monitoruj (3–10 centyl)" | ⚠ alarm „poniżej 3 centyla" | zdanie przeczyło własnej etykiecie |
+| 10,0–10,4 | „monitoruj (3–10 centyl)" | cisza | j.w., z drugiej strony pasma |
+| 90,0–96,9 | cisza | „monitoruj (90–97 centyl)" | nowe zdanie |
+| 97,0 | cisza | ⚠ alarm „powyżej 97 centyla" | zrównanie z progiem koloru |
+
+Kolor liczby zmienia się w **jednym punkcie**: centyl dokładnie 3,0 przechodzi z `danger` na `warning`. Silnik traktuje 3. centyl jako **dolną granicę normy** (`<3` to niedobór), a nie jako wartość już nieprawidłową; karta była dotąd niezgodna sama ze sobą, bo tekst raportu dla 3,0 mówił „poniżej typowego zakresu" przy kolorze alarmowym.
+
+### Zapas i dlaczego istnieje
+
+`vildaUpdatePrepPasmoMasy` pyta `window.VildaMasa`, a gdy silnik nie jest załadowany — sięga po **lustro** jego progów (`<3 / <10 / <90 / <97`). Cichy powrót do bezpasmowej ciszy byłby gorszy: alarm „masa poniżej 3 centyla" jest klinicznie istotny i nie może zniknąć dlatego, że skrypt się nie wczytał. Żeby kopia nie mogła się rozjechać, strażnik **przemiata cały zakres 0–100 co 0,1** i porównuje lustro z silnikiem punkt po punkcie.
+
+### Walidacja
+
+- `tests/unit/masa-karta-glowna.test.mjs` — **16 testów**: zgodność lustra z silnikiem na całym zakresie, granice pasm bez zaokrąglania, kolor z tego samego pasma, zdania we wszystkich pięciu pasmach, tryb profesjonalny nadal bez zdań, cztery scenariusze niemowlęce (WFL milczy / WFL ostrzega / powyżej 2 lat / reguła wzrostu nietknięta), koniec trzech kopii progów.
+- **Czerwień przed poprawką:** cały plik nie startuje na kodzie z `audyt` (`źródło nie ma funkcji vildaUpdatePrepPasmoMasy()`); różnicę zachowania zmierzono osobno, uruchamiając stare i nowe funkcje obok siebie — liczby w tabeli wyżej.
+- Pełny przebieg: **2574 testy jednostkowe w 155 plikach**, lint, składnia (475 plików), polityka repozytorium (584 pliki) — zielone. E2E kart i raportu: 9 zdanych, 1 pominięty.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

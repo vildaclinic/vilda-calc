@@ -92,6 +92,7 @@ describe('Jeden zapis SDS: „hSDS", „wSDS", „bmiSDS"', () => {
     const kod = `
       function formatCentile(p){return p<1?'&lt;1':p>99?'&gt;99':String(Math.round(p))}
       function centylWord(c){return c.includes('&lt;')||c.includes('&gt;')?'centyla':'centyl'}
+      ${funkcja(src, 'vildaUpdatePrepPasmoMasy')}
       ${funkcja(src, 'vildaUpdatePrepResolveCentileSeverity')}
       ${funkcja(src, 'vildaUpdatePrepResolveProClass')}
       ${funkcja(src, 'vildaUpdatePrepFmtSds')}
