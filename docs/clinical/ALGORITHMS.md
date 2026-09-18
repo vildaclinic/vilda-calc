@@ -3814,6 +3814,31 @@ Kolor liczby zmienia się w **jednym punkcie**: centyl dokładnie 3,0 przechodzi
 - **Czerwień przed poprawką:** cały plik nie startuje na kodzie z `audyt` (`źródło nie ma funkcji vildaUpdatePrepPasmoMasy()`); różnicę zachowania zmierzono osobno, uruchamiając stare i nowe funkcje obok siebie — liczby w tabeli wyżej.
 - Pełny przebieg: **2574 testy jednostkowe w 155 plikach**, lint, składnia (475 plików), polityka repozytorium (584 pliki) — zielone. E2E kart i raportu: 9 zdanych, 1 pominięty.
 
+## Raport pacjenta: czwarta i ostatnia kopia progów masy (P-MASA rata 3b, SW 1.0.995, 2026-09-18)
+
+**Skąd to znalezisko.** Wyszło z adwersaryjnego sprawdzenia odczytów zrobionych na potrzeby raty 3 — agenci mieli obalać moje twierdzenia o pasmach, a przy okazji znaleźli defekt w miejscu, którego rata 3 nie dotykała. Zweryfikowałem go osobiście przed zgłoszeniem.
+
+**Defekt.** Karta „Masa ciała" w raporcie pacjenta liczyła tekst i kolor z dwóch różnych zestawów progów:
+
+- tekst — `patientReportDescribeWeight`: progi **ostre**, `e<3 / e<10 / e<90 / e<97`;
+- kolor kafelka — osobne wyrażenie: `x<=3||x>=97 ? "danger" : x>3&&x<10||x>=90&&x<97 ? "warn" : "normal"`, próg dolny **nieostry**.
+
+Skutek: dziecko z centylem masy **dokładnie 3,0** czytało łagodne „poniżej typowego zakresu" przy **czerwonej** ramce i czerwonej plakietce. To ten sam rodzaj rozjazdu, co punkt 2 na karcie głównej, tylko w innym pliku.
+
+**Zakres rozjazdu jest wąski i został zmierzony, a nie oszacowany.** Przemiatanie co 0,05 centyla na całym zakresie 0–100 (2001 punktów): **tekst nie zmienia się w żadnym punkcie** — ani w wariancie dziecięcym, ani w odniesieniu dla dorosłych — a **ton zmienia się w dokładnie jednym**: centyl 3,0 przechodzi z `danger` na `warn`. Przy centylach liczonych zmiennoprzecinkowo (`normalCDF`) trafienie dokładnie w 3,0 jest praktycznie nieosiągalne, więc defekt był niewidoczny w użyciu. Naprawiony został nie dlatego, że bolał, lecz dlatego, że był **czwartym, niezależnym zestawem progów masy** w aplikacji.
+
+**Poprawka.** `patientReportPasmoMasy` pyta `window.VildaMasa.kategoria`, a `patientReportTonMasy` mapuje pasmo na słownik tonów raportu (`alert`→`danger`, `improve`→`warn`, `ok`→`normal`). Tekst i kolor wychodzą odtąd z jednego pasma. Kierunek rozstrzygnięcia w spornym punkcie idzie za silnikiem: **3. centyl to dolna granica normy**, a nie wartość już nieprawidłowa — więc tekst zostaje łagodny, a kolor przestaje krzyczeć.
+
+Zapas (lustro progów silnika) istnieje z tego samego powodu i na tych samych zasadach, co w karcie głównej; osobny strażnik przemiata cały zakres i porównuje lustro z silnikiem.
+
+**Czego celowo nie zmieniono (decyzja właściciela).** Tryb profesjonalny nadal nie pokazuje zdań o masie — dostaje kolor i puls. To zamierzona cisza tego trybu, nie niespójność; pytanie zostało postawione i odpowiedź brzmiała „zostaw".
+
+**Stan po tej racie: progi masy w jednym miejscu.** `PROGI` w `vilda_masa.js` są jedynym źródłem dla wszystkich znanych powierzchni werdyktu o masie — koloru liczby, zdania pod kartą główną, pulsu ramki oraz tekstu i tonu karty w raporcie. Pozostałe dwa lustra (karta główna, raport) są jawnie oznaczone i pilnowane testami porównującymi je z silnikiem punkt po punkcie.
+
+**Walidacja.** `tests/unit/masa-silnik.test.mjs` — **38 testów** (25 silnik, 7 wpięcie zdania, 6 nowych na raport): zgodność lustra z silnikiem na całym zakresie, punkt 3,0 z tekstem i tonem naraz, wszystkie pięć pasm, brzmienie odniesienia dla dorosłych, brak centyla, zniknięcie czwartej kopii progów. Pełny przebieg: **2580 testów w 155 plikach**, lint, składnia (475 plików), polityka repozytorium (584 pliki) — zielone. E2E kart pacjenta i raportu: 18 zdanych, 1 pominięty.
+
+*Uwaga metodyczna:* strażnik z raty 1–2 („reguła rozstrzyga silnik, nie raport") zaczął po tej zmianie czerwienić się na **komentarzu** wyjaśniającym usunięte progi, bo wycinał kod do następnej funkcji zamiast do końca ciała. Zastąpiono go `funkcjaZ` z `tests/support/silnik-bmi.mjs`, który tnie po zbalansowanych nawiasach — repozytorium miało już właściwe narzędzie.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { oknoZSilnikiem, tablica, zrodlo } from '../support/silnik-bmi.mjs';
+import { funkcjaZ, oknoZSilnikiem, tablica, zrodlo } from '../support/silnik-bmi.mjs';
 
 // P-MASA etap 1 (audyt werdyktów 2026-09-18, decyzja właściciela „ruszaj z 1 i 2").
 //
@@ -162,16 +162,6 @@ describe('P-MASA punkt 2 — zdanie tłumaczące rozjazd masa↔BMI', () => {
   });
 });
 
-// Wycina ciało jednej funkcji z zminifikowanego pliku: od jej nagłówka do nagłówka
-// następnej funkcji (albo do końca pliku). Cięcie na stałą liczbę znaków wciąga kod
-// sąsiada i test czerwieni się na cudzych progach.
-function cialoFunkcji(zrodloPliku, nazwa) {
-  const start = zrodloPliku.indexOf('function ' + nazwa + '(');
-  expect(start, `nie znaleziono funkcji ${nazwa}`).toBeGreaterThan(-1);
-  const nastepna = zrodloPliku.indexOf('\nfunction ', start + 1);
-  return nastepna === -1 ? zrodloPliku.slice(start) : zrodloPliku.slice(start, nastepna);
-}
-
 describe('P-MASA — wpięcie silnika i zdania w raporcie', () => {
   const RAPORT = zrodlo('vilda_patient_report.js');
 
@@ -185,14 +175,14 @@ describe('P-MASA — wpięcie silnika i zdania w raporcie', () => {
     // funkcji w pliku. Stała długość cięcia (np. 600 znaków) wchodziła w
     // patientReportDescribeWeight, gdzie "e<3?" to próg TAMTEJ funkcji — test
     // czerwienił się na cudzym kodzie zamiast pilnować swojego.
-    const cialo = cialoFunkcji(RAPORT, 'patientReportMasaWobecBmi');
+    const cialo = funkcjaZ(RAPORT, 'patientReportMasaWobecBmi');
     expect(cialo).toContain('window.VildaMasa');
     expect(cialo).toContain('wyjasnienieWzgledemBmi');
     expect(cialo, 'żadnych własnych progów w raporcie').not.toMatch(/[<>]=?\s*(90|97|10|3)\b/);
   });
 
   it('dorosły jest pominięty — tam ton masy i BMI pochodzi z jednej oceny', () => {
-    expect(cialoFunkcji(RAPORT, 'patientReportMasaWobecBmi')).toContain('if(dorosly)return nota');
+    expect(funkcjaZ(RAPORT, 'patientReportMasaWobecBmi')).toContain('if(dorosly)return nota');
   });
 
   it('awaria silnika nie psuje noty — raport oddaje ją bez zmian', () => {
@@ -218,5 +208,79 @@ describe('P-MASA — wpięcie silnika i zdania w raporcie', () => {
 
   it('silnik jest we wstępnym pobraniu PWA', () => {
     expect(zrodlo('service-worker-kalorii.js')).toContain("'/vilda_masa.js?v=1',");
+  });
+});
+
+describe('P-MASA-3b — karta „Masa ciała" w raporcie na tym samym paśmie', () => {
+  const RAPORT2 = zrodlo('vilda_patient_report.js');
+
+  /** Buduje opis i ton raportu w izolacji. `okno` decyduje, czy silnik jest widoczny. */
+  const raport = (okno) => new Function('window', [
+    funkcjaZ(RAPORT2, 'patientReportPasmoMasy'),
+    funkcjaZ(RAPORT2, 'patientReportTonMasy'),
+    funkcjaZ(RAPORT2, 'patientReportDescribeWeight'),
+    'return { pasmo: patientReportPasmoMasy, ton: patientReportTonMasy, opis: patientReportDescribeWeight };',
+  ].join('\n'))(okno);
+
+  it('lustro w raporcie i silnik dają to samo pasmo na całym zakresie', () => {
+    const lustro = raport({}).pasmo;
+    const zSilnikiem = raport(win).pasmo;
+    const rozjazdy = [];
+    for (let p = 0; p <= 100.0001; p += 0.1) {
+      const c = Math.round(p * 10) / 10;
+      if (lustro(c) !== zSilnikiem(c)) rozjazdy.push(`${c}: zapas=${lustro(c)} silnik=${zSilnikiem(c)}`);
+    }
+    expect(rozjazdy).toEqual([]);
+  });
+
+  it('centyl dokładnie 3,0: tekst i kolor wreszcie mówią to samo', () => {
+    // Dotąd tekst zmieniał się przy e<3, a ton przy x<=3 — dziecko na 3,0 czytało łagodne
+    // „poniżej typowego zakresu" przy czerwonej ramce. To był jedyny punkt rozjazdu.
+    const { opis, ton } = raport(win);
+    expect(opis(3, null)).toBe('poni\u017Cej typowego zakresu');
+    expect(ton(3), 'ton idzie za tekstem, nie przeciw niemu').toBe('warn');
+    // Sąsiedztwo bez zmian.
+    expect(opis(2.99, null)).toBe('znacznie poni\u017Cej typowego zakresu');
+    expect(ton(2.99)).toBe('danger');
+    expect(ton(3.01)).toBe('warn');
+  });
+
+  it('wszystkie pięć pasm: tekst i ton z jednego źródła', () => {
+    const { opis, ton } = raport(win);
+    const oczekiwane = [
+      [1, 'danger', 'znacznie poni\u017Cej typowego zakresu'],
+      [5, 'warn', 'poni\u017Cej typowego zakresu'],
+      [50, 'normal', 'w typowym zakresie dla wieku'],
+      [93, 'warn', 'powy\u017Cej typowego zakresu'],
+      [98, 'danger', 'wyra\u017Anie powy\u017Cej typowego zakresu'],
+    ];
+    for (const [centyl, t, tekst] of oczekiwane) {
+      expect(ton(centyl), `centyl ${centyl}: ton`).toBe(t);
+      expect(opis(centyl, null), `centyl ${centyl}: tekst`).toBe(tekst);
+    }
+  });
+
+  it('odniesienie dla dorosłych zachowuje swoje brzmienie', () => {
+    const { opis } = raport(win);
+    const d = { adultReference: true };
+    expect(opis(1, d)).toBe('znacznie poni\u017Cej typowego zakresu w przyj\u0119tym odniesieniu centylowym');
+    expect(opis(50, d), 'dorosły nie mówi „dla wieku"').toBe('w typowym zakresie w przyj\u0119tym odniesieniu centylowym');
+    expect(opis(98, d)).toBe('wyra\u017Anie powy\u017Cej typowego zakresu w przyj\u0119tym odniesieniu centylowym');
+  });
+
+  it('brak centyla nadal nie zgaduje', () => {
+    const { opis, ton } = raport(win);
+    for (const brak of [null, undefined, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(opis(brak, null)).toBe('bez por\u00F3wnania centylowego');
+      expect(ton(brak)).toBe('normal');
+    }
+  });
+
+  it('czwarta kopia progów zniknęła — raport pyta silnik', () => {
+    expect(funkcjaZ(RAPORT2, 'patientReportPasmoMasy')).toContain('window.VildaMasa');
+    expect(RAPORT2, 'koniec osobnego wyrażenia tonu masy').not.toContain('x<=3||x>=97?"danger"');
+    const opis = funkcjaZ(RAPORT2, 'patientReportDescribeWeight');
+    expect(opis, 'opis pyta o pasmo').toContain('patientReportPasmoMasy(e)');
+    expect(opis, 'opis nie ma już własnych progów').not.toMatch(/e<(3|10|90|97)\?/);
   });
 });
