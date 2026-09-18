@@ -31,6 +31,12 @@ export function tablica(nazwa) {
   return new Function(`return ${wytnij(appSrc, i).slice(nazwa.length + 1)}`)();
 }
 
+/** Kod bez komentarzy. Strażnik „tego już tu nie ma" MUSI patrzeć na kod: komentarz
+ *  wyjaśniający usuniętą regułę cytuje ją dosłownie, więc bez tego cięcia test czerwieni
+ *  się na własnej prozie. Zdarzyło się to czterokrotnie w serii P-TON/P-SLOWA — stąd
+ *  jeden pomocnik tutaj, zamiast kopii w każdym pliku testowym. */
+export const bezKomentarzy = (src) => String(src).replace(/\/\*[\s\S]*?\*\//g, ' ');
+
 /** Źródło funkcji `nazwa` wycięte z podanego pliku (do izolowanego uruchomienia).
  *  Lista parametrów jest pomijana ŚWIADOMIE: przy domyślnej wartości `(e = {})` naiwne
  *  liczenie klamer od pierwszego „{" kończyło się na tym domyślnym obiekcie i zwracało

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { funkcjaZ, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
+import { bezKomentarzy, funkcjaZ, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 
 // P-TON rata 1 (audyt werdyktów, punkt 3 — decyzja właściciela „ruszaj z punktami 3 i 4").
 //
@@ -12,10 +12,7 @@ import { funkcjaZ, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 const APP = zrodlo('app.js');
 const PREP = zrodlo('vilda_update_prep.js');
 
-/** Kod bez komentarzy. Strażnik „tego już tu nie ma" MUSI patrzeć na kod: komentarz
- *  wyjaśniający usunięty fragment cytuje go dosłownie, więc bez tego cięcia test
- *  czerwieniłby się na własnej prozie. (Trzeci raz w tej serii — stąd jeden pomocnik.) */
-const kod = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ');
+const kod = bezKomentarzy;
 
 const win = oknoZSilnikiem();
 
