@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { extname, posix } from 'node:path';
+// P-NOTATKI rata 3 (G30): dane testowe nie mogą brzmieć jak prawdziwy pacjent.
+import { znajdzNaruszenia as naruszeniaNazwisk } from './regula-nazwisk-testowych.mjs';
 
 const repositoryFiles = execFileSync(
   'git',
@@ -154,6 +156,7 @@ for (const file of repositoryFiles) {
   for (const [label, pattern] of secretRules) {
     if (pattern.test(content)) violations.push(`${file}: wykryto ${label}`);
   }
+  violations.push(...naruszeniaNazwisk(file, content));
 }
 
 if (violations.length) {

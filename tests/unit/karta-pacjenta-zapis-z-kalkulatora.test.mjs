@@ -82,8 +82,8 @@ const pomiar = (ageMonths, extra) => Object.assign({
 
 function payload(gdzie, wieki) {
   const p = {
-    name: 'Kowalski Jan',
-    user: { lastName: 'Kowalski', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
+    name: 'Testowy Jan',
+    user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 6, height: 110, weight: 19 },
   };
   p[gdzie] = { data: { measurements: wieki.map((w) => (typeof w === 'number' ? pomiar(w) : w)) } };
   return p;

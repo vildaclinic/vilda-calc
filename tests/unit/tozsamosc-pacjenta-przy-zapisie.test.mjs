@@ -67,7 +67,7 @@ function normalizatorZSejfu() {
   return new Function(`${ne}\nreturn Ne;`)();
 }
 
-const PACJENT = 'Kowalski Testowy Fikcyjny';
+const PACJENT = 'Testowy Jan Fikcyjny';
 
 /* Atrapa okna: wczytany pacjent o id `pid` i nazwisku `wczytaneNazwisko`. */
 function okno({ pid = 'pat_fikcyjny_1', sesja = null, wczytane = { name: PACJENT }, sejf = true } = {}) {
@@ -101,7 +101,7 @@ describe('Zapis trafia w ten sam rekord, gdy formularz opisuje tę samą osobę'
 describe('Bramka: nigdy nie nadpisuj rekordu innej osoby', () => {
   it('inne nazwisko w formularzu → brak uściślenia', () => {
     const w = okno();
-    expect(silnik()({ name: 'Nowak Inny Fikcyjny' }, w)).toBeNull();
+    expect(silnik()({ name: 'Probny Inny Fikcyjny' }, w)).toBeNull();
   });
 
   it('brak wczytanego rekordu → brak uściślenia', () => {

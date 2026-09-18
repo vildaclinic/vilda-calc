@@ -76,10 +76,10 @@ test('OLD dwuczłonowy rekord (bez części) — prompt, wybór, i UTRWALENIE ko
   const setup = await createSyntheticVault(page);
   expect(setup.unlocked).toBe(true);
 
-  // Stary rekord: tylko wspólna nazwa „Szymon Surdyk” (Szymon = imię), user BEZ firstName/lastName.
+  // Stary rekord: tylko wspólna nazwa „Szymon Fikcyjny” (Szymon = imię), user BEZ firstName/lastName.
   // Dokładamy nietypowe pola payloadu, aby udowodnić, że korekta ich NIE gubi.
   const { patientId } = await saveAndLoad(page, {
-    name: 'Szymon Surdyk',
+    name: 'Szymon Fikcyjny',
     user: { age: 40, sex: 'M' },
     clcr: { marker: 'ZACHOWAJ-MNIE-123' },
     growthBasic: { note: 'nietkniete' },
@@ -94,27 +94,27 @@ test('OLD dwuczłonowy rekord (bez części) — prompt, wybór, i UTRWALENIE ko
   const fix = page.locator('#vnfFix');
   await expect(fix).toBeVisible();
   await expect(fix).toContainText('Rozdziel imię i nazwisko');
-  await expect(fix).toContainText('Szymon Surdyk');
+  await expect(fix).toContainText('Szymon Fikcyjny');
 
   // Stan przejściowy: całość w Nazwisko, Imię puste.
-  await expect(page.locator('#lastName')).toHaveValue('Szymon Surdyk');
+  await expect(page.locator('#lastName')).toHaveValue('Szymon Fikcyjny');
   await expect(page.locator('#firstName')).toHaveValue('');
 
-  // Pierwsza interpretacja: Nazwisko = Surdyk, Imię = Szymon.
+  // Pierwsza interpretacja: Nazwisko = Fikcyjny, Imię = Szymon.
   const choice0 = page.locator('#vnfChoice0');
-  await expect(choice0).toHaveAttribute('data-vnf-ln', 'Surdyk');
+  await expect(choice0).toHaveAttribute('data-vnf-ln', 'Fikcyjny');
   await expect(choice0).toHaveAttribute('data-vnf-fn', 'Szymon');
   await choice0.click();
 
   // Pola ustawione poprawnie; prompt zamknięty; potwierdzenie „Zapisano”.
-  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+  await expect(page.locator('#lastName')).toHaveValue('Fikcyjny');
   await expect(page.locator('#firstName')).toHaveValue('Szymon');
   await expect(fix).toBeHidden();
   await expect(page.locator('#vnfDone')).toBeVisible();
   await expect(page.locator('#vnfDone')).toContainText('Zapisano');
 
   // Kanon #name = „Nazwisko Imię”.
-  await expect(page.locator('#name')).toHaveValue('Surdyk Szymon');
+  await expect(page.locator('#name')).toHaveValue('Fikcyjny Szymon');
 
   // UTRWALENIE: czekamy aż zapis dotrze do sejfu, potem weryfikujemy nagłówek.
   await expect
@@ -126,8 +126,8 @@ test('OLD dwuczłonowy rekord (bez części) — prompt, wybór, i UTRWALENIE ko
 
   const after = await readHeader(page, patientId);
   expect(after.header.firstName).toBe('Szymon');
-  expect(after.header.lastName).toBe('Surdyk');
-  expect(after.header.name).toBe('Surdyk Szymon'); // kanon „Nazwisko Imię”
+  expect(after.header.lastName).toBe('Fikcyjny');
+  expect(after.header.name).toBe('Fikcyjny Szymon'); // kanon „Nazwisko Imię”
 
   // KONTRAKT ZAPISU (siatka bezpieczeństwa dla użycia updateSnapshotPayload):
   // 1) historia NIE naruszona — brak nowego snapshotu.
@@ -135,8 +135,8 @@ test('OLD dwuczłonowy rekord (bez części) — prompt, wybór, i UTRWALENIE ko
   expect(after.snapshotsLength).toBe(1);
   // 2) payload zaktualizowany o jawne części (user.firstName/lastName).
   expect(after.latestPayload.user.firstName).toBe('Szymon');
-  expect(after.latestPayload.user.lastName).toBe('Surdyk');
-  expect(after.latestPayload.name).toBe('Surdyk Szymon');
+  expect(after.latestPayload.user.lastName).toBe('Fikcyjny');
+  expect(after.latestPayload.name).toBe('Fikcyjny Szymon');
   // 3) niepowiązane dane payloadu ZACHOWANE.
   expect(after.latestPayload.clcr.marker).toBe('ZACHOWAJ-MNIE-123');
   expect(after.latestPayload.growthBasic.note).toBe('nietkniete');
@@ -150,15 +150,15 @@ test('Rekord Z JAWNYMI częściami — bez promptu; pola z części nawet gdy ko
 
   // name podane „Imię Nazwisko”, ale JAWNE części w user.* są autorytatywne.
   const { patientId } = await saveAndLoad(page, {
-    name: 'Szymon Surdyk',
-    user: { firstName: 'Szymon', lastName: 'Surdyk', age: 40, sex: 'M' },
+    name: 'Szymon Fikcyjny',
+    user: { firstName: 'Szymon', lastName: 'Fikcyjny', age: 40, sex: 'M' },
   });
   expect(patientId.length).toBeGreaterThan(0);
 
   // Ustawienie pól z części jest asynchroniczne (getPatient) — poczekaj na wynik.
-  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+  await expect(page.locator('#lastName')).toHaveValue('Fikcyjny');
   await expect(page.locator('#firstName')).toHaveValue('Szymon');
-  await expect(page.locator('#name')).toHaveValue('Surdyk Szymon');
+  await expect(page.locator('#name')).toHaveValue('Fikcyjny Szymon');
 
   // Brak promptu i brak potwierdzenia (nic do rozstrzygania).
   await expect(page.locator('#vnfFix')).toBeHidden();
@@ -175,10 +175,10 @@ test('Payload TRWALE niedostępny — bez promptu i bez ruszania pól (mimo pono
 
   // Pacjent zapisany wzorcowo, z jawnymi częściami.
   const { patientId } = await saveAndLoad(page, {
-    name: 'Surdyk Szymon',
-    user: { firstName: 'Szymon', lastName: 'Surdyk', age: 9, sex: 'M' },
+    name: 'Fikcyjny Szymon',
+    user: { firstName: 'Szymon', lastName: 'Fikcyjny', age: 9, sex: 'M' },
   });
-  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+  await expect(page.locator('#lastName')).toHaveValue('Fikcyjny');
 
   // Od teraz każdy odczyt zwraca snapshoty BEZ payloadu (dokładnie jak sejf po
   // nieudanym odszyfrowaniu) — obejmuje to także ponowną próbę modułu.
@@ -198,8 +198,8 @@ test('Payload TRWALE niedostępny — bez promptu i bez ruszania pól (mimo pono
 
   // Symulacja stanu pól po zwykłym wczytaniu (P-SPLIT rozdzielił kanon „Nazwisko Imię").
   await page.evaluate((pid) => {
-    document.getElementById('name').value = 'Surdyk Szymon';
-    document.getElementById('lastName').value = 'Surdyk';
+    document.getElementById('name').value = 'Fikcyjny Szymon';
+    document.getElementById('lastName').value = 'Fikcyjny';
     document.getElementById('firstName').value = 'Szymon';
     document.dispatchEvent(
       new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid } }),
@@ -217,7 +217,7 @@ test('Payload TRWALE niedostępny — bez promptu i bez ruszania pól (mimo pono
   // Bez promptu, bez potwierdzenia, pola nietknięte.
   await expect(page.locator('#vnfFix')).toBeHidden();
   await expect(page.locator('#vnfDone')).toBeHidden();
-  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+  await expect(page.locator('#lastName')).toHaveValue('Fikcyjny');
   await expect(page.locator('#firstName')).toHaveValue('Szymon');
 });
 
@@ -226,10 +226,10 @@ test('Payload CHWILOWO niedostępny — ponowna próba trafia, części zastosow
   await createSyntheticVault(page);
 
   const { patientId } = await saveAndLoad(page, {
-    name: 'Surdyk Szymon',
-    user: { firstName: 'Szymon', lastName: 'Surdyk', age: 9, sex: 'M' },
+    name: 'Fikcyjny Szymon',
+    user: { firstName: 'Szymon', lastName: 'Fikcyjny', age: 9, sex: 'M' },
   });
-  await expect(page.locator('#lastName')).toHaveValue('Surdyk');
+  await expect(page.locator('#lastName')).toHaveValue('Fikcyjny');
 
   // PIERWSZY kolejny odczyt zwraca payload:null (chwilowy zator), następne działają normalnie.
   await page.evaluate((pid) => {
@@ -257,9 +257,9 @@ test('Payload CHWILOWO niedostępny — ponowna próba trafia, części zastosow
   }, patientId);
 
   // Po ponownej próbie (ok. 1,2 s) pola ustawione z JAWNYCH części, bez promptu.
-  await expect(page.locator('#lastName')).toHaveValue('Surdyk', { timeout: 15000 });
+  await expect(page.locator('#lastName')).toHaveValue('Fikcyjny', { timeout: 15000 });
   await expect(page.locator('#firstName')).toHaveValue('Szymon');
-  await expect(page.locator('#name')).toHaveValue('Surdyk Szymon');
+  await expect(page.locator('#name')).toHaveValue('Fikcyjny Szymon');
   await expect(page.locator('#vnfFix')).toBeHidden();
   await expect(page.locator('#vnfDone')).toBeHidden();
 });
@@ -269,12 +269,12 @@ test('Rekord JEDNOTOKENOWY — całość w Nazwisko, Imię puste, bez promptu', 
   await createSyntheticVault(page);
 
   const { patientId } = await saveAndLoad(page, {
-    name: 'Kowalski',
+    name: 'Testowy',
     user: { age: 55, sex: 'M' },
   });
   expect(patientId.length).toBeGreaterThan(0);
 
-  await expect(page.locator('#lastName')).toHaveValue('Kowalski');
+  await expect(page.locator('#lastName')).toHaveValue('Testowy');
   await expect(page.locator('#firstName')).toHaveValue('');
   await expect(page.locator('#vnfFix')).toBeHidden();
   await expect(page.locator('#vnfDone')).toBeHidden();

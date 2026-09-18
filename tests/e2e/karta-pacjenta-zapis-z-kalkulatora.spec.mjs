@@ -46,9 +46,9 @@ const czekajNaRezolwer = (page) => page.waitForFunction(
 );
 
 const REKORD = {
-  name: 'Kowalski Jan',
+  name: 'Testowy Jan',
   user: {
-    lastName: 'Kowalski',
+    lastName: 'Testowy',
     firstName: 'Jan',
     sex: 'M',
     age: 5,

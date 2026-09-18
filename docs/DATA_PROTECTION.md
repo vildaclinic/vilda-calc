@@ -37,6 +37,8 @@ Dane syntetyczne:
 4. nie powinny używać prawdziwego numeru PESEL, adresu ani danych kontaktowych;
 5. muszą być bezpieczne także po opublikowaniu logu, screenshotu lub raportu testowego.
 
+Punktu 2 pilnuje maszyna: `tests/scripts/regula-nazwisk-testowych.mjs`, wpięta w `npm run test:repo`, odrzuca w `tests/**/*.mjs` wartości kluczy `name`, `lastName` i `firstName`, które brzmią jak pospolite polskie nazwisko bez znacznika syntetycznego (Testowy, Fikcyjna, Próbna, Przykład, Demo). Reguła celowo nie zagląda do komentarzy, nazw scenariuszy ani bibliografii — nazwiska autorów tablic (Palczewska, Kułaga, Mazur, Khamis, Tanner) mają w testach prawo występować. Fałszywy alarm zgłasza się do `WYJATKI` w tym samym pliku, a nie przez skracanie listy nazwisk.
+
 Zastąpienie nazwiska inicjałami albo wizualne zamazanie fragmentu ekranu nie zawsze jest anonimizacją. Plik może nadal zawierać dane w metadanych, warstwie tekstowej, nazwie, adresie URL lub załączonym stanie aplikacji.
 
 ## Przed commitem lub zgłoszeniem
