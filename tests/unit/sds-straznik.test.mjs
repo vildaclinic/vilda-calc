@@ -24,6 +24,7 @@ const WZOR_ODWROTNY = /Math\.pow\(1\s*\+[^()]{1,50},\s*1\s*\/[^()]{1,20}\)/;
 const WZOR_DOZWOLONY = {
   'vilda_sds_wzrostu.js': 'silnik',
   'vilda_bmi.js': 'silnik BMI (P-BMI-1: jedyne miejsce wzoru LMS dla BMI)',
+  'vilda_masa.js': 'silnik MASY (P-MASA-1: jedyne miejsce wzoru LMS dla masy dla wieku)',
   'app.js': 'masa, BMI, masa-do-długości (calcPercentileStats WT, bmiZscore, computeWflZScore, lmsToValue)',
   'inline_index_03.js': 'chip masy na siatce (getCentilePercentileStatsForSource WT) i rysowanie krzywych (valueFromLMS)',
   'vilda_auth_ui.js': 'panel porównania — masa (sc.param!=="HT")',

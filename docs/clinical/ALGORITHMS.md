@@ -3722,6 +3722,52 @@ Zmiana to jedna linia wyboru wieku, ale płynie w karcie wszędzie: centyle wzro
 
 **Czego nie ustalono.** Numery **H4 i H5** nie występują nigdzie w repozytorium — ani w kodzie, ani w testach, ani w opisach commitów; nie wiadomo, czy zostały odrzucone, scalone z innymi, czy po prostu pominięte w numeracji. Sam dokument audytu sekcji „Pacjenci" nie zachował się, więc oryginalne sformułowania znalezisk P1–P14 i K1–K4 pozostają nieznane — powyższe odtworzenie opisuje, **co zdecydowano i co robi kod**, nie jak brzmiało zgłoszenie.
 
+## Masa ciała dostaje silnik; zdanie o rozjeździe masa↔BMI (P-MASA etapy 1–2, SW 1.0.993, 2026-09-18)
+
+**Skąd to się wzięło.** Audyt spójności werdyktów (zakres wybrany przez właściciela: „Narracja i karty podsumowania" × „Spójność między miejscami") rozłożył wyniki aplikacji na rodziny pytań klinicznych. Właściciel zauważył brak: *„a dlaczego w tych rodzinach nie ma wymienionej wagi? werdykt wagi często jest w konflikcie z werdyktem BMI"*. To trafiło w sedno — **masa była jedyną z czterech miar antropometrycznych bez silnika.** Wzrost ma `vilda_sds_wzrostu.js`, BMI ma `vilda_bmi.js`, tempo ma `vilda_tempo_wzrastania.js`; masa liczyła się w pięciu miejscach, każde ze swoim pasmem normy.
+
+**Przykład, na którym stoi całe znalezisko (dane fikcyjne, policzone przeze mnie na prawdziwych tablicach).** Chłopiec 10 lat, 140 cm, 40,5 kg:
+
+| wynik | liczba | werdykt |
+|---|---|---|
+| SDS masy (OLAF) | +0,747 | — |
+| centyl masy | 77,24 | **Masa w typowym zakresie dla wieku** |
+| BMI | 20,66 kg/m² | — |
+| centyl BMI (OLAF) | 85,59 | **Nadwaga** |
+| Cole (% mediany BMI) | 120,84 % | **Otyłość** |
+
+Trzy różne werdykty o tej samej masie ciała, bez jednego zdania, które by je pogodziło. Żaden z nich nie jest błędny — i właśnie dlatego milczenie było najgorszym możliwym wyjściem.
+
+### Etap 1 — `vilda_masa.js`
+
+Silnik zbudowany dokładnie tak jak dwa poprzednie: czytelny (niezminifikowany) IIFE, `ustawDane()` na tablice, matematyka LMS (`zLms`, `xLms`, `interpoluj`), łańcuch zastępczy w `kandydaci()`, `policz()`, jedna tablica `PROGI`, `formatuj()`. Tablice zostają tam, gdzie były — w `app.js` — i są wystawiane jako `window.VildaMasaLMS`, tym samym wzorem co `window.VildaDsLMS`.
+
+- **Siatki i ich zakresy:** OLAF 36–216 mies., WHO 2006 niemowlęce 0–35 mies., WHO 2007 36–120 mies., DS (Zemel 2015) 1–240 mies. Poza zakresem silnik zwraca `null` **z powodem**, nigdy cichej wartości z ostatniego wiersza tablicy.
+- **Zamiana siatki jest jawna.** WHO nie ma masy powyżej 10 lat; przy takim zapytaniu silnik wraca na OLAF i mówi o tym w polu `powod`, z `fallback: true`.
+- **Populacja DS nie ma łańcucha zastępczego** — decyzja D2 z serii P-DS, przeniesiona tu bez zmian: `kandydaci('OLAF', 96, 'DS') === ['DS']`.
+- **Jedna tablica progów:** `PROGI = {NIEDOBOR: 3, NISKA: 10, PODWYZSZONA: 90, WYSOKA: 97}`. Te same liczby, które `app.js` trzyma od lat jako `PERCENTILE_EXTREME_LOW=3` / `PERCENTILE_EXTREME_HIGH=97` — strażnik sprawdza obie stałe, żeby rozjazd nie mógł wrócić po cichu.
+- **Pasma:** `<3` niedobór (alert) · `3–10` niska (improve) · `10–90` typowa (ok) · `90–97` podwyższona (improve) · `≥97` wysoka (alert). Brak centyla daje `klucz: 'brak'` — silnik nie zgaduje kategorii.
+- **Wzór LMS masy jest odtąd tylko tutaj:** `vilda_masa.js` dopisany do `WZOR_DOZWOLONY` w `tests/unit/sds-straznik.test.mjs`.
+
+**Wiek ułamkowy kontra zaokrąglony — różnica zmierzona, nie oszacowana.** Dzisiejsza ścieżka masy w `app.js` (`advHistoryInterpolateLmsDataSet`) robi `Math.round(wiek)` **przed** interpolacją. Silnik wzrostu ma regułę odwrotną i udokumentowaną („wiek jest ułamkowy w miesiącach i tak trafia do interpolacji — wszędzie"), więc silnik masy idzie za wzrostem. **Największa rozbieżność na całym zakresie OLAF: 1,863 punktu centylowego, przy wieku 36,5 mies.** (przemiatanie co 0,5 mies. od 36 do 216). Etap 1 **niczego nie zmienia w wynikach** — silnik jest nowy i jedynym jego konsumentem jest zdanie z etapu 2; różnica zacznie się liczyć dopiero przy przepięciu istniejących konsumentów, i to jest jedna z dwóch decyzji oddanych właścicielowi.
+
+### Etap 2 — zdanie tłumaczące rozjazd masa↔BMI
+
+Regułę rozstrzyga **silnik**, nie raport. `VildaMasa.wyjasnienieWzgledemBmi({centylMasy, kategoriaBmi})` porównuje kierunek obu werdyktów (niedobór/norma/nadmiar) i odzywa się **tylko wtedy, gdy się różnią**. Zdanie ma stały rdzeń:
+
+> Masa ciała i BMI oceniają co innego: centyl masy odnosi masę do WIEKU dziecka, a BMI — do jego WZROSTU.
+
+i człon zależny od kierunku rozjazdu: dziecko **niższe** od rówieśników ma przy tej samej masie **wyższe** BMI (masa w normie, BMI ponad nią), dziecko **wyższe** — **niższe** BMI (masa ponad normą, BMI w normie). Oba warianty kończą się tak samo: **„Oba werdykty są poprawne i nie znoszą się nawzajem"** — zdanie tłumaczy rozjazd, a nie unieważnia którąkolwiek z ocen.
+
+Milczy, gdy: oba werdykty wskazują w tę samą stronę; kategorii BMI nie da się odczytać (`null`, `'brak'`); pacjent jest dorosły (tam ton masy i BMI pochodzi z jednej oceny).
+
+Wpięcie: karta „Masa ciała" w `vilda_patient_report.js`, przez `patientReportMasaWobecBmi()`. Helper **tylko pyta silnik** — nie ma własnych progów (pilnuje tego strażnik) — a awaria silnika oddaje notę bez zmian zamiast wywalić raport.
+
+### Walidacja
+
+- `tests/unit/masa-silnik.test.mjs` — **32 testy**: 25 na silnik (progi, pasma, SDS/centyl, granice siatek, jawny fallback, brak łańcucha dla DS, pomiar rozbieżności wieku) i 7 na wpięcie. **Czerwień przed poprawką zmierzona: 4/32 czerwone po cofnięciu `vilda_patient_report.js` do stanu z `audyt`, pozostałe 28 zielonych.**
+- Pełny przebieg: **2558 testów jednostkowych w 154 plikach**, lint, składnia (474 pliki), polityka repozytorium (583 pliki) — wszystko zielone. E2E kart pacjenta i raportu: 9 zdanych, 1 pominięty.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
