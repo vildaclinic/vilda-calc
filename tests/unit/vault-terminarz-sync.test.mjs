@@ -286,7 +286,7 @@ describe('VildaVault.savePatientNote — payload statusu nie cofa danych z synch
     const B = await createDevice('I1B');
 
     const created = await A.vault.savePatientNote({
-      patientId: 'pat-jan-kowalski',
+      patientId: 'pat-jan-testowy',
       title: 'Kontrola wzrostu',
       body: '',
       category: 'followup',

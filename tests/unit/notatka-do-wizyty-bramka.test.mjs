@@ -148,7 +148,7 @@ describe('bramka „Dodaj notatkę do wizyty" (G11)', () => {
     expect(pasek({ patientId: 'p1', age: '', ageMonths: '', height: '110', weight: '19' }).tip)
       .toMatch(/Wpisz wiek/);
     expect(pasek({ patientId: 'p1', age: '5', height: '', weight: '' }).tip)
-      .toMatch(/wzrost lub wag/);
+      .toMatch(/wzrost lub masę ciała/);
   });
 
   it('na stronie bez formularza pacjenta podpowiedź kieruje na Start/DocPro (G20, D11)', () => {
@@ -307,7 +307,7 @@ describe('G19 — wyłączony przycisk nie przekazuje kliknięcia dalej', () => 
 
   it('teksty podpowiedzi mają jedno źródło w VildaSession.TOOLTIPS.visitNote', () => {
     const bridge = zrodlo('vilda_session_bridge.js');
-    ['notLoggedIn', 'noPatient', 'noAge', 'noMeasure', 'notOnThisPage', 'badAge', 'unavailable']
+    ['notLoggedIn', 'noPatient', 'noAge', 'noMeasure', 'noAgeOrMeasure', 'notOnThisPage', 'badAge', 'unavailable']
       .forEach((klucz) => expect(bridge, `TOOLTIPS.visitNote.${klucz}`).toContain(`${klucz}:`));
     expect(zrodlo('custom-fixes.js')).toContain('window.VildaSession.TOOLTIPS.visitNote||{}');
   });

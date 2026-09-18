@@ -45,8 +45,8 @@ async function otworzZKontem(page) {
 
 const zalozPacjenta = (page) => page.evaluate(async () => {
   const wynik = await window.VildaVault.savePatient({
-    name: 'Kowalski Jan',
-    user: { lastName: 'Kowalski', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 0, height: 110, weight: 19 },
+    name: 'Testowy Jan',
+    user: { lastName: 'Testowy', firstName: 'Jan', sex: 'M', age: 5, ageMonths: 0, height: 110, weight: 19 },
   }, { dedup: false });
   return wynik.patientId;
 });

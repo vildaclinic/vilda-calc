@@ -40,7 +40,7 @@ async function otworzZKontem(page) {
   await page.waitForFunction(() => Boolean(window.VildaAuthUI));
 }
 
-const zalozPacjenta = (page, nazwisko = 'Kowalski') => page.evaluate(async (n) => {
+const zalozPacjenta = (page, nazwisko = 'Testowy') => page.evaluate(async (n) => {
   const wynik = await window.VildaVault.savePatient({
     name: n + ' Jan',
     user: { lastName: n, firstName: 'Jan', sex: 'M', age: 5, ageMonths: 0, height: 110, weight: 19 },
@@ -60,21 +60,21 @@ test.describe('P1 + P4 — karta reaguje na zmianę z innego urządzenia', () =>
     await otworzZKontem(page);
     const patientId = await zalozPacjenta(page);
     await otworzKarte(page, patientId);
-    await expect(page.locator('.vilda-patient-hero-name')).toHaveText('Kowalski Jan');
+    await expect(page.locator('.vilda-patient-hero-name')).toHaveText('Testowy Jan');
 
     // Drugie urządzenie zmienia rekord, po czym przychodzi sygnał synchronizacji.
     // Zdarzenie leci na `document` z `bubbles:false` — dokładnie tak, jak wysyła je vilda_sync.js.
     await page.evaluate(async (id) => {
       const rekord = await window.VildaVault.getPatient(id);
       const p = JSON.parse(JSON.stringify(rekord.snapshots[0].payload));
-      p.name = 'Nowak-Kowalska Jan';
-      p.user.lastName = 'Nowak-Kowalska';
+      p.name = 'Fikcyjna-Testowa Jan';
+      p.user.lastName = 'Fikcyjna-Testowa';
       await window.VildaVault.savePatient(p, { patientId: id, dedup: false });
       document.dispatchEvent(new CustomEvent('vilda:sync-merged', { bubbles: false }));
     }, patientId);
 
     await expect(page.locator('.vilda-patient-hero-name'),
-      'karta nie może pokazywać stanu sprzed synchronizacji').toHaveText('Nowak-Kowalska Jan');
+      'karta nie może pokazywać stanu sprzed synchronizacji').toHaveText('Fikcyjna-Testowa Jan');
   });
 
   test('otwarte okno dialogowe nie jest przerywane renderem', async ({ page }) => {

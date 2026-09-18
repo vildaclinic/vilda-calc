@@ -50,9 +50,9 @@ async function zalozPacjenta(page) {
     const ur = new Date(Date.UTC(dzis.getFullYear(), dzis.getMonth() - 80, 12));
     const dobISO = ur.toISOString().slice(0, 10);
     const wynik = await window.VildaVault.savePatient({
-      name: 'Kowalski Jan',
+      name: 'Testowy Jan',
       user: {
-        lastName: 'Kowalski',
+        lastName: 'Testowy',
         firstName: 'Jan',
         sex: 'M',
         dobISO,
@@ -131,7 +131,7 @@ test.describe('P13b — rozjazd z innym urządzeniem', () => {
       await window.VildaVault.savePatient(p, { patientId: id, dedup: false });
     }, patientId);
 
-    await page.getByPlaceholder('Nazwisko', { exact: true }).fill('Kowalska-Nowak');
+    await page.getByPlaceholder('Nazwisko', { exact: true }).fill('Testowa-Fikcyjna');
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
 
     const modal = page.getByRole('alertdialog');
@@ -148,7 +148,7 @@ test.describe('P13b — rozjazd z innym urządzeniem', () => {
     const po = await stanRekordu(page, patientId);
     expect(po.historia.map((m) => m.ageMonths).sort((a, b) => a - b),
       'pomiar z drugiego urządzenia zostaje').toEqual([60, 72]);
-    expect(po.user.lastName, 'zmiana z formularza też wchodzi').toBe('Kowalska-Nowak');
+    expect(po.user.lastName, 'zmiana z formularza też wchodzi').toBe('Testowa-Fikcyjna');
   });
 
   test('„Wróć do formularza" niczego nie zapisuje', async ({ page }) => {

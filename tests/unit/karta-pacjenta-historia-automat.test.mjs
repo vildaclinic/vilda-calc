@@ -68,9 +68,9 @@ async function sejf() {
 async function osCzasu(v, pary) {
   const ostatni = pary[pary.length - 1];
   const wynik = await v.savePatient({
-    name: 'Nowak Ala',
+    name: 'Testowa Ala',
     user: {
-      lastName: 'Nowak',
+      lastName: 'Testowa',
       firstName: 'Ala',
       sex: 'K',
       age: Math.floor(ostatni[0] / 12),
@@ -247,8 +247,8 @@ describe('H6 — wpisy leczenia mają jednolite tytuły', () => {
     // dopasowuje, więc poprawka jest bezpieczna.
     const v = await sejf();
     const wynik = await v.savePatient({
-      name: 'Nowak Ala',
-      user: { lastName: 'Nowak', firstName: 'Ala', sex: 'K', age: 7, ageMonths: 0, height: 118, weight: 20 },
+      name: 'Testowa Ala',
+      user: { lastName: 'Testowa', firstName: 'Ala', sex: 'K', age: 7, ageMonths: 0, height: 118, weight: 20 },
       advanced: { data: { measurements: [
         { ageMonths: 72, ageYears: 6, height: 115, weight: 19 },
         { ageMonths: 84, ageYears: 7, height: 118, weight: 20 },
@@ -269,8 +269,8 @@ describe('H6 — wpisy leczenia mają jednolite tytuły', () => {
     // syntetyzowane z punktów terapii, więc nie ma czego wskazywać w zakładce Notatki.
     const v = await sejf();
     const wynik = await v.savePatient({
-      name: 'Nowak Ala',
-      user: { lastName: 'Nowak', firstName: 'Ala', sex: 'K', age: 6, ageMonths: 0, height: 115, weight: 19 },
+      name: 'Testowa Ala',
+      user: { lastName: 'Testowa', firstName: 'Ala', sex: 'K', age: 6, ageMonths: 0, height: 115, weight: 19 },
       advanced: { data: { measurements: [{ ageMonths: 72, ageYears: 6, height: 115, weight: 19 }] } },
       ghTherapyPoints: [{ id: 'g1', type: 'start', ageYears: 6, ageMonths: 0, dose: 0.033, doseUnit: 'mg/kg/d', weight: 19 }],
     }, { dedup: false });
