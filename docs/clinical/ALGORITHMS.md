@@ -3872,6 +3872,48 @@ Reszta skali bez zmian: nadwaga → `warning`, otyłość (każdego stopnia, tak
 
 **Kotwice strażnika P-BMI.** `tests/unit/bmi-straznik.test.mjs` trzymał dosłowne brzmienie `bmiCategoryChild` i `bmiCategory`; kotwice przesunięto na nowe funkcje, zachowując warunek, którego strzegą — **bez silnika nie ma wyniku**.
 
+## Kategoria Cole'a i bramki karty z klucza silnika (P-TON rata 2, SW 1.0.997, 2026-09-18)
+
+**Pytanie właściciela:** *„wydaje mi się, że silnik BMI aplikacja miała już gotowy i on miał już ustalone progi — sprawdź to, żeby nie było konfliktów albo sprzecznych komunikatów."*
+
+**Odpowiedź: tak.** `vilda_bmi.js` ma zamrożoną, kompletną tablicę `PROGI`:
+
+| grupa | progi |
+|---|---|
+| `DZIECKO` | niedowaga 5, nadwaga 85, otyłość 97, olbrzymia SDS 3, alarm niski 3 |
+| `DOROSLY` | niedowaga 18,5, nadwaga 25, otyłość I/II/III 30/35/40, cel 24,9 |
+| `COLE` | niedowaga 90, nadwaga 110, otyłość 120 |
+
+**Sprzecznych liczb dziś nie ma** — każda ręczna kopia progów, którą znaleziono w kodzie, zgadza się co do wartości z `PROGI`. Problemem jest więc nie konflikt, lecz **liczba niezależnych kopii**, z których każda może się rozjechać przy pierwszej korekcie.
+
+### Co poprawiono w tej racie
+
+Karta wołała `VildaBmi.cole(...)`, które zwraca `{cole, kategoria}`, brała **samą liczbę** i przeklasyfikowywała ją własnym wyrażeniem `c<90 / c>110&&c<120 / c>=120` — **czwartą kopią progów Cole'a stojącą obok silnika, który tę kategorię właśnie policzył**. Sześć flag porównania BMI↔Cole (`y`, `w`, `h`, `f`, `g`, `k`) porównywało następnie **etykiety**. Wszystko to idzie teraz z kluczy: `KC.klucz`, `KB.klucz`.
+
+Dwie bramki, które na tym wisiały:
+- **Baner z zalecanymi badaniami pierwszego rzutu** u dziecka z otyłością (TSH, 25-OHD, glukoza/oGTT 75 g/HbA1c, lipidogram, ALT/AST, ciśnienie — treść zależna od wieku) był włączany przez `o.coleCat==="Nadwaga" || String(o.coleCat).startsWith("Otyłość")`. Rozbicie etykiety na stopnie, dopisek „(Cole)", mała litera albo tłumaczenie **cicho wyłączyłoby całe zalecenie badań**.
+- **Kolor i puls kafelka Cole'a** — dopasowanie trzech etykiet.
+
+### Zmierzone skutki (przemiatanie co 0,1 % mediany, zakres 60–200)
+
+| co | różnic |
+|---|---|
+| pasma kategorii Cole'a | **0** — ręczna kopia zgadzała się z silnikiem, przepięcie niczego nie zmienia |
+| zestaw wyzwalający baner badań | **0** |
+| kolor kafelka Cole'a | **300 punktów**, wyłącznie pasmo niedowagi (Cole < 90 %): `warning` → `danger` |
+
+Ta jedna zmiana bierze się stąd, że dawna reguła trzymała **niedowagę w tej samej gałęzi co nadwagę**, więc wychudzone dziecko dostawało ton pomarańczowy. Silnik klasyfikuje niedowagę Cole'a jako `alert` — tak samo jak niedowagę BMI.
+
+### Co pozostaje: ton całego podsumowania czytany z wydrukowanego tekstu
+
+`getProfessionalSummaryLineTone` w `vilda_patient_report.js` (≈6000 znaków) dostaje **gotowy wiersz tekstu podsumowania**, rozpoznaje miarę przez dopasowanie **26 polskich prefiksów etykiet** (`"wskaźnik cole"`, `"wzrost"`, `"tempo wzrastania"`, `"ciśnienie"`, `"tętno"`, `"waga"`, `"bmi"`, `"obwód głowy"`, …), **wyciąga liczbę z powrotem wyrażeniem regularnym** i zwraca jeden z 21 tonów.
+
+To jest punkt 3 w najczystszej i największej postaci — i dotyczy **wszystkich miar naraz**, nie tylko BMI. Każda korekta brzmienia wiersza podsumowania może po cichu zmienić albo zgasić kolor. Rata 3 tej serii ma to zastąpić przekazywaniem tonu razem z wartością, zamiast odzyskiwaniem go z napisu.
+
+**Walidacja.** `tests/unit/ton-werdyktu.test.mjs` — 18 testów (11 z raty 1 + 7 nowych). Pełny przebieg: **2598 testów w 156 plikach**, lint, składnia (476 plików), polityka repozytorium (585 plików) — zielone.
+
+**Naprawa w rusztowaniu testów.** `funkcjaZ` w `tests/support/silnik-bmi.mjs` liczyła klamry od pierwszego `{`, więc dla funkcji z domyślnym parametrem — `vildaUpdatePrepComputeColeState(e={})` — wycinała **45 znaków samej sygnatury** zamiast całego ciała, a test cicho sprawdzał pustkę. Pomocnik domyka teraz najpierw listę parametrów. To był latentny błąd rusztowania, nie tej raty.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

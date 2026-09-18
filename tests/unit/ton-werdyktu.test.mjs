@@ -12,6 +12,11 @@ import { funkcjaZ, oknoZSilnikiem, zrodlo } from '../support/silnik-bmi.mjs';
 const APP = zrodlo('app.js');
 const PREP = zrodlo('vilda_update_prep.js');
 
+/** Kod bez komentarzy. Strażnik „tego już tu nie ma" MUSI patrzeć na kod: komentarz
+ *  wyjaśniający usunięty fragment cytuje go dosłownie, więc bez tego cięcia test
+ *  czerwieniłby się na własnej prozie. (Trzeci raz w tej serii — stąd jeden pomocnik.) */
+const kod = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ');
+
 const win = oknoZSilnikiem();
 
 describe('P-TON-1 — silnik oddaje kategorię, nie sam napis', () => {
@@ -40,8 +45,7 @@ describe('P-TON-1 — silnik oddaje kategorię, nie sam napis', () => {
 
 describe('P-TON-1 — koniec czytania werdyktu z etykiety', () => {
   /** Ciało applyProModePulse BEZ komentarzy — strażnik ma sprawdzać kod, nie prozę. */
-  const puls = () => APP.slice(APP.indexOf('function applyProModePulse('), APP.indexOf('window.setPulseMode'))
-    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const puls = () => kod(APP.slice(APP.indexOf('function applyProModePulse('), APP.indexOf('window.setPulseMode')));
   const severity = new Function('window', [
     funkcjaZ(PREP, 'vildaUpdatePrepResolveBmiSeverity'),
     'return vildaUpdatePrepResolveBmiSeverity;',
@@ -67,7 +71,7 @@ describe('P-TON-1 — koniec czytania werdyktu z etykiety', () => {
     for (const odcisk of ['includes("oty', 'includes("nadwaga")', 'includes("niedowaga")', 'obesity', 'overweight', 'underweight']) {
       expect(puls(), `puls nie czyta etykiety: ${odcisk}`).not.toContain(odcisk);
     }
-    const ton = funkcjaZ(PREP, 'vildaUpdatePrepResolveBmiSeverity');
+    const ton = kod(funkcjaZ(PREP, 'vildaUpdatePrepResolveBmiSeverity'));
     for (const odcisk of ['toLowerCase', 'includes(', 'obesity', 'overweight', 'underweight']) {
       expect(ton, `ton nie czyta etykiety: ${odcisk}`).not.toContain(odcisk);
     }
@@ -80,7 +84,7 @@ describe('P-TON-1 — koniec czytania werdyktu z etykiety', () => {
     // Strażnik patrzy na KOD z wyciętymi komentarzami: komentarz wyjaśniający usunięty
     // fragment cytuje go dosłownie i bez tego cięcia test czerwieniłby się na własnej prozie.
     expect(puls()).not.toContain('<=5,s="warning"');
-    expect(funkcjaZ(PREP, 'vildaUpdatePrepResolveBmiSeverity')).not.toContain('<=5,"warning"');
+    expect(kod(funkcjaZ(PREP, 'vildaUpdatePrepResolveBmiSeverity'))).not.toContain('<=5,"warning"');
   });
 });
 
@@ -130,5 +134,90 @@ describe('P-TON-1 — zmierzone różnice wobec dawnego czytania etykiety', () =
     for (const [etykieta, kolor] of pary) {
       expect(nowy(kolor), etykieta).toBe(dawny(etykieta, 50));
     }
+  });
+});
+
+describe('P-TON-2 — kategoria Cole\'a i bramki karty też z klucza', () => {
+  const stan = () => kod(funkcjaZ(PREP, 'vildaUpdatePrepComputeColeState'));
+
+  it('kategoria Cole\'a pochodzi z silnika, nie z ręcznej kopii progów', () => {
+    // Karta wołała T0.cole(...), brała SAMĄ LICZBĘ i przeklasyfikowywała ją własnym
+    // wyrażeniem `c<90 / c>110&&c<120 / c>=120` — czwarta kopia progów Cole'a, stojąca
+    // obok silnika, który tę kategorię właśnie policzył.
+    const c = stan();
+    expect(c, 'kategoria z silnika').toContain('KC=q0&&q0.kategoria||null');
+    expect(c, 'koniec ręcznej kopii progów').not.toContain('c<90?m=');
+    expect(c, 'koniec ręcznej kopii progów').not.toContain('c>=120&&');
+  });
+
+  it('sześć flag porównania BMI↔Cole idzie z kluczy, nie z etykiet', () => {
+    const c = stan();
+    expect(c).toContain('kb=KB&&KB.klucz||""');
+    expect(c).toContain('kc=KC&&KC.klucz||""');
+    for (const odcisk of ['==="Nadwaga"', '==="Niedowaga"', '==="W normie"', 'startsWith("Oty']) {
+      expect(c, `flaga nie czyta etykiety: ${odcisk}`).not.toContain(odcisk);
+    }
+  });
+
+  it('baner z zalecanymi badaniami pierwszego rzutu nie wisi już na napisie', () => {
+    // Zalecenie TSH / 25-OHD / oGTT / lipidogramu dla dziecka z otyłością było włączane
+    // przez dopasowanie etykiety Cole'a. Zmiana jej brzmienia wyłączała całe zalecenie.
+    const r = kod(funkcjaZ(PREP, 'vildaUpdatePrepRenderColeMetrics'));
+    expect(r).toContain('coleObesityKidsBanner');
+    expect(r).toContain('o.coleKategoria&&o.coleKategoria.klucz');
+    expect(r, 'żadna bramka tej karty nie czyta już etykiety').not.toContain('o.coleCat===');
+  });
+
+  it('kolor kafelka Cole\'a z koloru silnika', () => {
+    const r = kod(funkcjaZ(PREP, 'vildaUpdatePrepRenderColeMetrics'));
+    expect(r).toContain('clearPulse(i.coleInfoEl)');
+    expect(r).toContain('o.coleKategoria&&o.coleKategoria.kolor');
+  });
+});
+
+describe('P-TON-2 — zmierzone skutki przepięcia Cole\'a', () => {
+  // Progi silnika Cole'a (PROGI.COLE) kontra dawne ręczne wyrażenie w karcie.
+  const silnik = (c) => (!isFinite(c) ? { e: '', k: 'brak', kolor: null }
+    : c < 90 ? { e: 'Niedowaga', k: 'niedowaga', kolor: 'alert' }
+      : c <= 110 ? { e: 'W normie', k: 'norma', kolor: null }
+        : c < 120 ? { e: 'Nadwaga', k: 'nadwaga', kolor: 'improve' }
+          : { e: 'Otyłość', k: 'otylosc', kolor: 'alert' });
+  const reczna = (c) => {
+    let m = 'W normie';
+    if (c < 90) m = 'Niedowaga'; else if (c > 110 && c < 120) m = 'Nadwaga'; else if (c >= 120) m = 'Otyłość';
+    return m;
+  };
+  const przemiataj = (fn) => {
+    const rozne = [];
+    for (let c = 60; c <= 200.0001; c += 0.1) { const x = Math.round(c * 10) / 10; if (fn(x)) rozne.push(x); }
+    return rozne;
+  };
+
+  it('pasma kategorii bez zmian — ręczna kopia zgadzała się z silnikiem', () => {
+    expect(przemiataj((x) => silnik(x).e !== reczna(x))).toEqual([]);
+  });
+
+  it('zestaw wyzwalający baner badań bez zmian', () => {
+    expect(przemiataj((x) => {
+      const dawny = reczna(x) === 'Nadwaga' || String(reczna(x)).startsWith('Otyłość');
+      const nowy = silnik(x).k === 'nadwaga' || silnik(x).k === 'otylosc';
+      return dawny !== nowy;
+    })).toEqual([]);
+  });
+
+  it('kolor kafelka: niedowaga Cole\'a przechodzi z ostrzeżenia na alarm', () => {
+    // Dawna reguła stawiała niedowagę w tej samej gałęzi co nadwagę, więc Cole poniżej 90 %
+    // mediany dostawał ton pomarańczowy. Silnik klasyfikuje niedowagę jako alert — tak samo
+    // jak niedowagę BMI. To jedyna zmiana zachowania w tym przepięciu.
+    const dawny = (x) => (reczna(x) === 'Otyłość' ? 'danger' : (reczna(x) === 'Nadwaga' || reczna(x) === 'Niedowaga') ? 'warning' : null);
+    const nowy = (x) => (silnik(x).kolor === 'alert' ? 'danger' : silnik(x).kolor === 'improve' ? 'warning' : null);
+    const rozne = przemiataj((x) => dawny(x) !== nowy(x));
+    expect(rozne.length, 'wyłącznie pasmo niedowagi').toBe(300);
+    expect(Math.min(...rozne)).toBe(60);
+    expect(Math.max(...rozne)).toBeLessThan(90);
+    expect(dawny(85)).toBe('warning');
+    expect(nowy(85)).toBe('danger');
+    // Powyżej 90 % mediany nic się nie zmienia.
+    for (const x of [90, 100, 110, 115, 125]) expect(nowy(x), `Cole ${x}`).toBe(dawny(x));
   });
 });
