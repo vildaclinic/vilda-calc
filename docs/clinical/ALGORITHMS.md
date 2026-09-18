@@ -3722,6 +3722,123 @@ Zmiana to jedna linia wyboru wieku, ale płynie w karcie wszędzie: centyle wzro
 
 **Czego nie ustalono.** Numery **H4 i H5** nie występują nigdzie w repozytorium — ani w kodzie, ani w testach, ani w opisach commitów; nie wiadomo, czy zostały odrzucone, scalone z innymi, czy po prostu pominięte w numeracji. Sam dokument audytu sekcji „Pacjenci" nie zachował się, więc oryginalne sformułowania znalezisk P1–P14 i K1–K4 pozostają nieznane — powyższe odtworzenie opisuje, **co zdecydowano i co robi kod**, nie jak brzmiało zgłoszenie.
 
+## Masa ciała dostaje silnik; zdanie o rozjeździe masa↔BMI (P-MASA etapy 1–2, SW 1.0.993, 2026-09-18)
+
+**Skąd to się wzięło.** Audyt spójności werdyktów (zakres wybrany przez właściciela: „Narracja i karty podsumowania" × „Spójność między miejscami") rozłożył wyniki aplikacji na rodziny pytań klinicznych. Właściciel zauważył brak: *„a dlaczego w tych rodzinach nie ma wymienionej wagi? werdykt wagi często jest w konflikcie z werdyktem BMI"*. To trafiło w sedno — **masa była jedyną z czterech miar antropometrycznych bez silnika.** Wzrost ma `vilda_sds_wzrostu.js`, BMI ma `vilda_bmi.js`, tempo ma `vilda_tempo_wzrastania.js`; masa liczyła się w pięciu miejscach, każde ze swoim pasmem normy.
+
+**Przykład, na którym stoi całe znalezisko (dane fikcyjne, policzone przeze mnie na prawdziwych tablicach).** Chłopiec 10 lat, 140 cm, 40,5 kg:
+
+| wynik | liczba | werdykt |
+|---|---|---|
+| SDS masy (OLAF) | +0,747 | — |
+| centyl masy | 77,24 | **Masa w typowym zakresie dla wieku** |
+| BMI | 20,66 kg/m² | — |
+| centyl BMI (OLAF) | 85,59 | **Nadwaga** |
+| Cole (% mediany BMI) | 120,84 % | **Otyłość** |
+
+Trzy różne werdykty o tej samej masie ciała, bez jednego zdania, które by je pogodziło. Żaden z nich nie jest błędny — i właśnie dlatego milczenie było najgorszym możliwym wyjściem.
+
+### Etap 1 — `vilda_masa.js`
+
+Silnik zbudowany dokładnie tak jak dwa poprzednie: czytelny (niezminifikowany) IIFE, `ustawDane()` na tablice, matematyka LMS (`zLms`, `xLms`, `interpoluj`), łańcuch zastępczy w `kandydaci()`, `policz()`, jedna tablica `PROGI`, `formatuj()`. Tablice zostają tam, gdzie były — w `app.js` — i są wystawiane jako `window.VildaMasaLMS`, tym samym wzorem co `window.VildaDsLMS`.
+
+- **Siatki i ich zakresy:** OLAF 36–216 mies., WHO 2006 niemowlęce 0–35 mies., WHO 2007 36–120 mies., DS (Zemel 2015) 1–240 mies. Poza zakresem silnik zwraca `null` **z powodem**, nigdy cichej wartości z ostatniego wiersza tablicy.
+- **Zamiana siatki jest jawna.** WHO nie ma masy powyżej 10 lat; przy takim zapytaniu silnik wraca na OLAF i mówi o tym w polu `powod`, z `fallback: true`.
+- **Populacja DS nie ma łańcucha zastępczego** — decyzja D2 z serii P-DS, przeniesiona tu bez zmian: `kandydaci('OLAF', 96, 'DS') === ['DS']`.
+- **Jedna tablica progów:** `PROGI = {NIEDOBOR: 3, NISKA: 10, PODWYZSZONA: 90, WYSOKA: 97}`. Te same liczby, które `app.js` trzyma od lat jako `PERCENTILE_EXTREME_LOW=3` / `PERCENTILE_EXTREME_HIGH=97` — strażnik sprawdza obie stałe, żeby rozjazd nie mógł wrócić po cichu.
+- **Pasma:** `<3` niedobór (alert) · `3–10` niska (improve) · `10–90` typowa (ok) · `90–97` podwyższona (improve) · `≥97` wysoka (alert). Brak centyla daje `klucz: 'brak'` — silnik nie zgaduje kategorii.
+- **Wzór LMS masy jest odtąd tylko tutaj:** `vilda_masa.js` dopisany do `WZOR_DOZWOLONY` w `tests/unit/sds-straznik.test.mjs`.
+
+**Wiek ułamkowy kontra zaokrąglony — różnica zmierzona, nie oszacowana.** Dzisiejsza ścieżka masy w `app.js` (`advHistoryInterpolateLmsDataSet`) robi `Math.round(wiek)` **przed** interpolacją. Silnik wzrostu ma regułę odwrotną i udokumentowaną („wiek jest ułamkowy w miesiącach i tak trafia do interpolacji — wszędzie"), więc silnik masy idzie za wzrostem. **Największa rozbieżność na całym zakresie OLAF: 1,863 punktu centylowego, przy wieku 36,5 mies.** (przemiatanie co 0,5 mies. od 36 do 216). Etap 1 **niczego nie zmienia w wynikach** — silnik jest nowy i jedynym jego konsumentem jest zdanie z etapu 2; różnica zacznie się liczyć dopiero przy przepięciu istniejących konsumentów, i to jest jedna z dwóch decyzji oddanych właścicielowi.
+
+### Etap 2 — zdanie tłumaczące rozjazd masa↔BMI
+
+Regułę rozstrzyga **silnik**, nie raport. `VildaMasa.wyjasnienieWzgledemBmi({centylMasy, kategoriaBmi})` porównuje kierunek obu werdyktów (niedobór/norma/nadmiar) i odzywa się **tylko wtedy, gdy się różnią**. Zdanie ma stały rdzeń:
+
+> Masa ciała i BMI oceniają co innego: centyl masy odnosi masę do WIEKU dziecka, a BMI — do jego WZROSTU.
+
+i człon zależny od kierunku rozjazdu: dziecko **niższe** od rówieśników ma przy tej samej masie **wyższe** BMI (masa w normie, BMI ponad nią), dziecko **wyższe** — **niższe** BMI (masa ponad normą, BMI w normie). Oba warianty kończą się tak samo: **„Oba werdykty są poprawne i nie znoszą się nawzajem"** — zdanie tłumaczy rozjazd, a nie unieważnia którąkolwiek z ocen.
+
+Milczy, gdy: oba werdykty wskazują w tę samą stronę; kategorii BMI nie da się odczytać (`null`, `'brak'`); pacjent jest dorosły (tam ton masy i BMI pochodzi z jednej oceny).
+
+Wpięcie: karta „Masa ciała" w `vilda_patient_report.js`, przez `patientReportMasaWobecBmi()`. Helper **tylko pyta silnik** — nie ma własnych progów (pilnuje tego strażnik) — a awaria silnika oddaje notę bez zmian zamiast wywalić raport.
+
+### Walidacja
+
+- `tests/unit/masa-silnik.test.mjs` — **32 testy**: 25 na silnik (progi, pasma, SDS/centyl, granice siatek, jawny fallback, brak łańcucha dla DS, pomiar rozbieżności wieku) i 7 na wpięcie. **Czerwień przed poprawką zmierzona: 4/32 czerwone po cofnięciu `vilda_patient_report.js` do stanu z `audyt`, pozostałe 28 zielonych.**
+- Pełny przebieg: **2558 testów jednostkowych w 154 plikach**, lint, składnia (474 pliki), polityka repozytorium (583 pliki) — wszystko zielone. E2E kart pacjenta i raportu: 9 zdanych, 1 pominięty.
+
+## Karta główna: jedno pasmo masy dla koloru, zdania i pulsu (P-MASA rata 3, SW 1.0.994, 2026-09-18)
+
+**Pytanie właściciela, od którego to się zaczęło.** W PR #359 napisałem, że karta główna „mówi tylko przy skrajnościach, pasmo ciszy praktycznie 10–97". Właściciel zapytał wprost: *„co tutaj masz na myśli, jak ta karta się »odzywa«?"*. Odpowiedź wymagała przeczytania kodu, a nie parafrazy — i okazała się bogatsza, niż zakładałem.
+
+**Sprostowanie do PR #359.** Zdanie „90.–97. centyl nie dostaje żadnego sygnału" było prawdziwe **tylko w trybie standardowym**. W trybie profesjonalnym to pasmo od dawna dostawało kolor i puls. Rejestr odnotowuje to, bo na tej niepełnej diagnozie oparta była pierwotna propozycja.
+
+### Co karta robiła: trzy kanały, które się wykluczały
+
+| kanał | postać | warunek |
+|---|---|---|
+| kolor liczby | klasa `pro-warning` / `pro-danger` | **tylko** tryb profesjonalny |
+| zdanie pod kartą | akapit, czasem z linkiem „Umów wizytę" | **tylko** tryb standardowy i **tylko** od 2. roku życia |
+| puls ramki | pulsujące obramowanie `whResult` | **tylko** tryb profesjonalny |
+
+Lekarz w trybie profesjonalnym **nigdy nie widział zdania** o masie; lekarz w trybie standardowym — **nigdy koloru ani pulsu**. Każdy kanał trzymał własną kopię progów, więc rozjeżdżały się na granicach.
+
+### Cztery zmiany (decyzja właściciela: „dopisz zdanie dla 90-97 i ruszaj z punktami 1-3")
+
+- **Zdanie dla 90–97.** Pasmo dostaje po raz pierwszy słowa: *„Regularnie monitoruj masę ciała dziecka – waga w górnym zakresie normy (90–97 centyl)."* Ton łagodny, klasa `centile-monitor-warning`, bez ostrzegawczego trójkąta i bez skierowania — **lustro istniejącego zdania dla pasma 3–10**. Z definicji skali centylowej dotyczy to **7 % dzieci** populacji odniesienia, symetrycznie do 7 %, które już dostawały zdanie na dole.
+- **Punkt 1 — koniec zaokrąglania.** Dolne progi liczyły `Math.round(centyl) < 3`, więc alarm zaczynał się faktycznie od **2,5 centyla**, a górny porównywał wartość surową. Efekt uboczny był gorszy niż sama asymetria: dziecko na 2,7 centyla dostawało komunikat z nawiasem **„(3–10 centyl)"**, czyli zdanie przeczyło własnej etykiecie. To samo na górze pasma — 10,3 centyla też dostawał „(3–10 centyl)". Teraz oba końce biorą pasmo wprost z progów silnika.
+- **Punkt 2 — kolor i zdanie z jednego źródła.** Kolor używał `≥97`, zdanie `>97`: dziecko dokładnie na 97,0 centyla dostawało w trybie profesjonalnym czerwień, a w standardowym ciszę. Wszystkie trzy kanały pytają teraz `vildaUpdatePrepPasmoMasy`, która pyta `VildaMasa.kategoria`.
+- **Punkt 3 — niemowlęta.** Bramka `age>=2` wycinała zdania o masie **dla wieku** poniżej 2. roku życia. Nie było to jednak pełne milczenie, jak pierwotnie zapisałem: dzieci 0–2 lat mają osobną kartę **masa-do-długości** (WFL) z własnymi werdyktami. Luka dotyczyła innego przypadku — **dziecka proporcjonalnie małego**: niski centyl masy dla wieku przy prawidłowej proporcji masa-do-długości. WFL milczy (bo proporcja jest dobra), a bramka wieku wycinała drugi sygnał. To typowy obraz zahamowania przyrostu masy i dotąd nie dostawał nic. Zdanie o masie dla wieku obowiązuje teraz od pierwszego miesiąca, **ale milknie, gdy karta WFL już ostrzega** — żeby nie dublować tego samego skierowania. Reguła wzrostu zostaje bez zmian (nadal od 2. roku życia, nadal na zaokrąglonym centylu): to nie należy do tej raty.
+
+### Zmierzony wpływ (przemiatanie co 0,1 centyla, 1001 punktów, tryb standardowy)
+
+**81 punktów z 1001 zmienia komunikat.** W rozbiciu:
+
+| zakres | było | jest | dlaczego |
+|---|---|---|---|
+| 2,5–2,9 | „monitoruj (3–10 centyl)" | ⚠ alarm „poniżej 3 centyla" | zdanie przeczyło własnej etykiecie |
+| 10,0–10,4 | „monitoruj (3–10 centyl)" | cisza | j.w., z drugiej strony pasma |
+| 90,0–96,9 | cisza | „monitoruj (90–97 centyl)" | nowe zdanie |
+| 97,0 | cisza | ⚠ alarm „powyżej 97 centyla" | zrównanie z progiem koloru |
+
+Kolor liczby zmienia się w **jednym punkcie**: centyl dokładnie 3,0 przechodzi z `danger` na `warning`. Silnik traktuje 3. centyl jako **dolną granicę normy** (`<3` to niedobór), a nie jako wartość już nieprawidłową; karta była dotąd niezgodna sama ze sobą, bo tekst raportu dla 3,0 mówił „poniżej typowego zakresu" przy kolorze alarmowym.
+
+### Zapas i dlaczego istnieje
+
+`vildaUpdatePrepPasmoMasy` pyta `window.VildaMasa`, a gdy silnik nie jest załadowany — sięga po **lustro** jego progów (`<3 / <10 / <90 / <97`). Cichy powrót do bezpasmowej ciszy byłby gorszy: alarm „masa poniżej 3 centyla" jest klinicznie istotny i nie może zniknąć dlatego, że skrypt się nie wczytał. Żeby kopia nie mogła się rozjechać, strażnik **przemiata cały zakres 0–100 co 0,1** i porównuje lustro z silnikiem punkt po punkcie.
+
+### Walidacja
+
+- `tests/unit/masa-karta-glowna.test.mjs` — **16 testów**: zgodność lustra z silnikiem na całym zakresie, granice pasm bez zaokrąglania, kolor z tego samego pasma, zdania we wszystkich pięciu pasmach, tryb profesjonalny nadal bez zdań, cztery scenariusze niemowlęce (WFL milczy / WFL ostrzega / powyżej 2 lat / reguła wzrostu nietknięta), koniec trzech kopii progów.
+- **Czerwień przed poprawką:** cały plik nie startuje na kodzie z `audyt` (`źródło nie ma funkcji vildaUpdatePrepPasmoMasy()`); różnicę zachowania zmierzono osobno, uruchamiając stare i nowe funkcje obok siebie — liczby w tabeli wyżej.
+- Pełny przebieg: **2574 testy jednostkowe w 155 plikach**, lint, składnia (475 plików), polityka repozytorium (584 pliki) — zielone. E2E kart i raportu: 9 zdanych, 1 pominięty.
+
+## Raport pacjenta: czwarta i ostatnia kopia progów masy (P-MASA rata 3b, SW 1.0.995, 2026-09-18)
+
+**Skąd to znalezisko.** Wyszło z adwersaryjnego sprawdzenia odczytów zrobionych na potrzeby raty 3 — agenci mieli obalać moje twierdzenia o pasmach, a przy okazji znaleźli defekt w miejscu, którego rata 3 nie dotykała. Zweryfikowałem go osobiście przed zgłoszeniem.
+
+**Defekt.** Karta „Masa ciała" w raporcie pacjenta liczyła tekst i kolor z dwóch różnych zestawów progów:
+
+- tekst — `patientReportDescribeWeight`: progi **ostre**, `e<3 / e<10 / e<90 / e<97`;
+- kolor kafelka — osobne wyrażenie: `x<=3||x>=97 ? "danger" : x>3&&x<10||x>=90&&x<97 ? "warn" : "normal"`, próg dolny **nieostry**.
+
+Skutek: dziecko z centylem masy **dokładnie 3,0** czytało łagodne „poniżej typowego zakresu" przy **czerwonej** ramce i czerwonej plakietce. To ten sam rodzaj rozjazdu, co punkt 2 na karcie głównej, tylko w innym pliku.
+
+**Zakres rozjazdu jest wąski i został zmierzony, a nie oszacowany.** Przemiatanie co 0,05 centyla na całym zakresie 0–100 (2001 punktów): **tekst nie zmienia się w żadnym punkcie** — ani w wariancie dziecięcym, ani w odniesieniu dla dorosłych — a **ton zmienia się w dokładnie jednym**: centyl 3,0 przechodzi z `danger` na `warn`. Przy centylach liczonych zmiennoprzecinkowo (`normalCDF`) trafienie dokładnie w 3,0 jest praktycznie nieosiągalne, więc defekt był niewidoczny w użyciu. Naprawiony został nie dlatego, że bolał, lecz dlatego, że był **czwartym, niezależnym zestawem progów masy** w aplikacji.
+
+**Poprawka.** `patientReportPasmoMasy` pyta `window.VildaMasa.kategoria`, a `patientReportTonMasy` mapuje pasmo na słownik tonów raportu (`alert`→`danger`, `improve`→`warn`, `ok`→`normal`). Tekst i kolor wychodzą odtąd z jednego pasma. Kierunek rozstrzygnięcia w spornym punkcie idzie za silnikiem: **3. centyl to dolna granica normy**, a nie wartość już nieprawidłowa — więc tekst zostaje łagodny, a kolor przestaje krzyczeć.
+
+Zapas (lustro progów silnika) istnieje z tego samego powodu i na tych samych zasadach, co w karcie głównej; osobny strażnik przemiata cały zakres i porównuje lustro z silnikiem.
+
+**Czego celowo nie zmieniono (decyzja właściciela).** Tryb profesjonalny nadal nie pokazuje zdań o masie — dostaje kolor i puls. To zamierzona cisza tego trybu, nie niespójność; pytanie zostało postawione i odpowiedź brzmiała „zostaw".
+
+**Stan po tej racie: progi masy w jednym miejscu.** `PROGI` w `vilda_masa.js` są jedynym źródłem dla wszystkich znanych powierzchni werdyktu o masie — koloru liczby, zdania pod kartą główną, pulsu ramki oraz tekstu i tonu karty w raporcie. Pozostałe dwa lustra (karta główna, raport) są jawnie oznaczone i pilnowane testami porównującymi je z silnikiem punkt po punkcie.
+
+**Walidacja.** `tests/unit/masa-silnik.test.mjs` — **38 testów** (25 silnik, 7 wpięcie zdania, 6 nowych na raport): zgodność lustra z silnikiem na całym zakresie, punkt 3,0 z tekstem i tonem naraz, wszystkie pięć pasm, brzmienie odniesienia dla dorosłych, brak centyla, zniknięcie czwartej kopii progów. Pełny przebieg: **2580 testów w 155 plikach**, lint, składnia (475 plików), polityka repozytorium (584 pliki) — zielone. E2E kart pacjenta i raportu: 18 zdanych, 1 pominięty.
+
+*Uwaga metodyczna:* strażnik z raty 1–2 („reguła rozstrzyga silnik, nie raport") zaczął po tej zmianie czerwienić się na **komentarzu** wyjaśniającym usunięte progi, bo wycinał kod do następnej funkcji zamiast do końca ciała. Zastąpiono go `funkcjaZ` z `tests/support/silnik-bmi.mjs`, który tnie po zbalansowanych nawiasach — repozytorium miało już właściwe narzędzie.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
