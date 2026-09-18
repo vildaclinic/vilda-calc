@@ -67,9 +67,13 @@ describe('Strażnik P-BMI: jedno miejsce liczenia BMI', () => {
   it('rdzeń app.js bez silnika nie daje wyniku — żadnej cichej kopii wzoru ani progów', () => {
     expect(appSrc).toContain('/* P-BMI-5: bez silnika BMI nie ma wyniku');
     for (const f of ['function bmiZscore(e,t,n){const T0=vildaBmiSilnik();if(!T0)return null;', 'function bmiPercentileChild(e,t,n){const T0=vildaBmiSilnik();if(!T0)return null;',
-      'function bmiCategoryChild(e,t,n){const T0=vildaBmiSilnik();if(!T0)return PEDIATRIC_BMI_CLASSIFICATION_UNAVAILABLE_LABEL;',
+      // P-TON-1: etykieta jest widokiem na obiekt kategorii z silnika. Warunek strażnika
+      // zostaje ten sam — bez silnika nie ma wyniku — tylko przeniósł się o funkcję niżej.
+      'function bmiKategoriaChild(e,t,n){const T0=vildaBmiSilnik();if(!T0)return null;',
+      'function bmiKategoriaDorosly(e){const T0=vildaBmiSilnik();return T0?T0.kategoriaDorosly(e):null}',
+      'function bmiCategoryChild(e,t,n){const r=bmiKategoriaChild(e,t,n);return r?r.etykieta:PEDIATRIC_BMI_CLASSIFICATION_UNAVAILABLE_LABEL}',
       'function getLMS(e,t){const T0=vildaBmiSilnik();if(!T0)return null;', 'function toNormalBMITarget(e,t,n,a){const T0=vildaBmiSilnik();if(!T0)return null;',
-      'function bmiCategory(e){const T0=vildaBmiSilnik();return T0?T0.kategoriaDorosly(e).etykieta:""}',
+      'function bmiCategory(e){const r=bmiKategoriaDorosly(e);return r?r.etykieta:""}',
       'function advHistoryCalcBmiStatsForSource(e,t,n,a){const T0=vildaBmiSilnik();if(!T0)return null;']) {
       expect(appSrc, f).toContain(f);
     }

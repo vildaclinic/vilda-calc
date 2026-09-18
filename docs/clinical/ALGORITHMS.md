@@ -3839,6 +3839,39 @@ Zapas (lustro progów silnika) istnieje z tego samego powodu i na tych samych za
 
 *Uwaga metodyczna:* strażnik z raty 1–2 („reguła rozstrzyga silnik, nie raport") zaczął po tej zmianie czerwienić się na **komentarzu** wyjaśniającym usunięte progi, bo wycinał kod do następnej funkcji zamiast do końca ciała. Zastąpiono go `funkcjaZ` z `tests/support/silnik-bmi.mjs`, który tnie po zbalansowanych nawiasach — repozytorium miało już właściwe narzędzie.
 
+## Ton werdyktu BMI przestaje zależeć od brzmienia napisu (P-TON rata 1, SW 1.0.996, 2026-09-18)
+
+**Punkt 3 audytu werdyktów** brzmiał: *jedno wejście tonu — surowy centyl albo klucz z silnika, nigdy liczba ani kategoria wyparsowana z wydrukowanego tekstu.*
+
+**Co było.** Silnik BMI liczy komplet `{etykieta, klucz, kolor}`. Trzy miejsca wołały go, **brały samą `etykietę` i wyrzucały resztę**, a potem odtwarzały kolor przez dopasowanie napisu:
+
+```
+h.includes("otyłość") || h.includes("obesity")   → danger
+h.includes("nadwaga") || h.includes("overweight") → warning
+h.includes("niedowaga") …                         → danger/warning wg centyla
+```
+
+Werdykt kliniczny zależał więc od brzmienia tekstu **dla człowieka**: zmiana jednego słowa, wielkiej litery, tłumaczenia albo dodanie stopnia otyłości cicho przestawiłaby logikę. Ta sama logika istniała w **dwóch kopiach** (`applyProModePulse` w `app.js`, `vildaUpdatePrepResolveBmiSeverity` w `vilda_update_prep.js`), a klasyfikator (`vildaUpdatePrepClassifyBmi`) był trzecim miejscem, które gubiło obiekt.
+
+**Martwa gałąź w obu kopiach.** Przy niedowadze kod brzmiał `n<=3 ? "danger" : (n<=5, "warning")`. Operator przecinka odrzuca wynik lewej strony — **próg 5 nie robił nic**. Dwie kopie, ten sam martwy fragment: ślad po ręcznym skopiowaniu logiki.
+
+**Co jest.** `bmiKategoriaChild` / `bmiKategoriaDorosly` (w `app.js`) oraz `vildaUpdatePrepKategoriaBmi` oddają **cały obiekt kategorii**; dawne `bmiCategoryChild` / `bmiCategory` / `vildaUpdatePrepClassifyBmi` zostają jako cienka warstwa na `etykietę`, żeby nie ruszać konsumentów samego tekstu. Obiekt wędruje przez stan karty (`c.bmiKategoria`) i jest wystawiany jako `window.lastBmiKategoria`, więc puls też pyta o `kolor`, a nie o napis.
+
+### Zmierzone różnice (tylko tryb profesjonalny — poza nim ton nie powstaje)
+
+| przypadek | było | jest | dlaczego |
+|---|---|---|---|
+| dziecko, niedowaga, centyl BMI **3–3,49** | `danger` | `warning` | dawny próg zaokrąglał (`Math.round(centyl) <= 3`), więc alarm sięgał do 3,49; silnik ma próg ostry (`alert` poniżej 3. centyla) |
+| **dorosły z BMI < 18,5** | `warning` | `danger` | dorosły nie ma centyla BMI, więc gałąź niedowagi spadała do wartości domyślnej. To był skutek implementacji, nie decyzja — silnik klasyfikuje niedowagę dorosłego jako `alert` |
+
+Reszta skali bez zmian: nadwaga → `warning`, otyłość (każdego stopnia, także „olbrzymia") → `danger`, prawidłowe → brak tonu. Druga różnica jest **eskalacją sygnału** i została wskazana właścicielowi osobno.
+
+**Walidacja.** `tests/unit/ton-werdyktu.test.mjs` — 11 testów: obiekt kategorii niesie klucz i kolor, obiekt idzie przez stan i globalne, ton wyłącznie z koloru, brak tonu poza trybem profesjonalnym, brak zgadywania przy braku kategorii, zniknięcie odcisków etykiet w obu kopiach, zniknięcie martwej gałęzi, oraz obie zmierzone różnice przypięte jako celowe. Pełny przebieg: **2591 testów w 156 plikach**, lint, składnia (476 plików), polityka repozytorium (585 plików) — zielone.
+
+*Uwaga metodyczna (drugi raz w tej serii):* strażnik „martwa gałąź zniknęła" zaczerwienił się na **własnym komentarzu**, który cytuje usunięty kod dosłownie. Sprawdza teraz ciało funkcji z wyciętymi komentarzami — guard ma patrzeć na kod, nie na prozę.
+
+**Kotwice strażnika P-BMI.** `tests/unit/bmi-straznik.test.mjs` trzymał dosłowne brzmienie `bmiCategoryChild` i `bmiCategory`; kotwice przesunięto na nowe funkcje, zachowując warunek, którego strzegą — **bez silnika nie ma wyniku**.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
