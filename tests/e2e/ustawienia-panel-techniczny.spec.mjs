@@ -19,16 +19,16 @@ import { expect, test } from '../support/test-czas.mjs';
 
 // Budżet czasu na test podniesiony z domyślnych 60 s.
 //
-// Ten plik jest kosztowny SAM Z SIEBIE: każdy z ośmiu testów zakłada konto sejfu (PBKDF2),
-// czeka na zniknięcie nakładki logowania i w pętli otwiera akordeon. Na CI przy jednym wątku
-// pojedynczy test zajmował 43-50 s, czyli zjadał ponad trzy czwarte budżetu — zanim
-// cokolwiek zaczęło chodzić równolegle. Odkąd workery biorą po pliku, ten plik dzieli rdzenie
-// z trzema innymi i tamten zapas przestał istnieć.
+// HISTORIA (2026-09-18): ten plik był kosztowny nie z własnej winy — 99% czasu zjadało jedno
+// czekanie w `otworzPanel` na zniknięcie nakładki logowania (~40 s na test, rozbicie w komentarzu
+// przy tamtym miejscu). Osiem testów po ~41 s ocierało się o budżet i na obciążonym runnerze
+// losowo jeden z nich w niego nie trafiał — za każdym razem inny. Po zdjęciu nakładki z drogi
+// cały plik chodzi ~15 s (zmierzone trzykrotnie: 14,7 / 15,3 / 14,7 s).
 //
-// Zmierzone: przy próbie puszczenia jego testów RÓWNOLEGLE względem siebie wszystkie
-// przekraczały 60 s („Test timeout of 60000ms exceeded"). Tej próby nie wdrożyliśmy, ale
-// liczba pokazuje, jak cienki był margines. 120 s to zapas, nie zamiatanie problemu: żaden
-// z tych testów nie zbliża się do tej wartości, gdy maszyna nie jest przeciążona.
+// Podwyższony budżet ZOSTAJE mimo to: kosztuje zero, gdy testy są zielone, a jest zapasem dla
+// prawdziwie obciążonego runnera. Poprzednia treść tego komentarza mówiła, że „120 s to zapas,
+// nie zamiatanie problemu" — było to prawdą co do intencji, ale problem leżał gdzie indziej
+// i zapas go tylko maskował.
 test.describe.configure({ timeout: 120_000 });
 
 const POLE = '#centileLineSettingsGrid .tech-chart-setting-row';
@@ -47,12 +47,42 @@ async function otworzPanel(page) {
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
-  // Sama klasa nie wystarcza: nakładka logowania znika chwilę później i do tego czasu
-  // przechwytuje kliknięcia (klawiatura by przeszła, mysz nie). Czekamy na realny warunek,
-  // a nie na odmierzony czas.
-  await page.waitForFunction(() => {
+  // Nakładka logowania przechwytuje kliknięcia myszą, więc trzeba ją usunąć z drogi. Do
+  // 2026-09-18 czekaliśmy, aż zniknie sama — i to była najdroższa linijka w całym pliku.
+  //
+  // ZMIERZONE (rozbicie czasu jednego `otworzPanel`, Chromium, ten sam kod na origin/audyt):
+  //   goto 464 ms · createUser (10 000 iteracji PBKDF2) 156 ms · odblokowanie sejfu 95 ms ·
+  //   akordeon 121 ms · **zniknięcie nakładki 39 914 ms**.
+  // Czyli 99% kosztu to jedno czekanie, a PBKDF2 — wbrew pierwszemu przypuszczeniu — nie ma
+  // z tym nic wspólnego (2000 i 600 iteracji dają ten sam czas). Blokada sieci zewnętrznej
+  // też niczego nie zmienia (39,7 / 40,2 / 40,2 s w trzech wariantach). Przez te ~40 s
+  // nakładka pokazuje ekran powitalny „Witamy…", mimo że sejf jest odblokowany od pierwszej
+  // sekundy, po czym element znika z DOM-u w całości.
+  //
+  // ROZSTRZYGNIĘTE (pomiar tego samego dnia, na żądanie właściciela): lekarza to NIE dotyczy.
+  // Kreator przeprowadzony tak, jak robi to człowiek — „Załóż konto", imię i hasło, „Dalej",
+  // zaznaczenie „Zapisałem klucz odzyskiwania", „Dalej", „Nie, tylko to urządzenie",
+  // „Przejdź do aplikacji" — trwa **2378 ms**, a nakładka znika **86 ms** po ostatnim
+  // kliknięciu. Powrót na stronę z odtworzoną sesją: **474 ms**. Sejf jest odblokowany już
+  // na kroku 3 z 4, w ok. 1,5 s od startu.
+  //
+  // Te ~40 s pojawiają się WYŁĄCZNIE wtedy, gdy sejf zostanie odblokowany za plecami nakładki:
+  // wtedy zostaje ona na ekranie, na którym stała (powitalnym albo nieodpowiedzianym kroku
+  // kreatora), i zamyka się dopiero automatycznie po ok. 38–40 s. Zmierzone w obu wariantach:
+  // przy programowym `createUser` (ekran powitalny) i przy kreatorze zatrzymanym na
+  // nieodpowiedzianym kroku 3 (38,0 s). W produkcie nie ma tu nic do naprawy — jest to koszt
+  // wyłącznie testowej ścieżki na skróty, którą ten plik świadomie wybiera.
+  //
+  // Skutek dla testów był taki, że każdy z ośmiu zjadał ~41 s z budżetu 120 s, a na obciążonym
+  // runnerze losowo jeden z nich w ten budżet nie trafiał — za każdym razem inny (zmierzone:
+  // pięć różnych testów w sześciu przebiegach, w tym raz na czystym origin/audyt).
+  //
+  // Te testy sprawdzają panel siatek, nie nakładkę logowania, więc zdejmujemy ją z drogi tak
+  // samo, jak robią to specy Terminarza (`terminarz-transakcje.spec.mjs`): jedna linijka
+  // stylu, bez czekania.
+  await page.evaluate(() => {
     const root = document.getElementById('vilda-auth-ui-root');
-    return !root || window.getComputedStyle(root).display === 'none';
+    if (root) root.style.display = 'none';
   });
 
   // Akordeony są zamykane przez bootstrap strony (blok `sections.forEach(s => s.open = false)`
