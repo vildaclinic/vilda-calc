@@ -169,3 +169,22 @@ test('G20 — na stronie bez formularza pacjenta podpowiedź kieruje na Start/Do
   await klik(page);
   await expect(page.locator('.vilda-patient-note-editor-overlay')).toHaveCount(0);
 });
+
+// Kolejność walidacji jest częścią umowy: błędna WARTOŚĆ idzie przed regułą „to pole wymaga daty".
+// Bez tego lekarz, który wpisał 3 minuty, słyszał o brakującej dacie przypomnienia zamiast
+// o liczbie, którą właśnie wpisał (regres złapany przez P7 w karta-pacjenta-porzadki.spec.mjs).
+test('G24 — długość wizyty spoza zakresu wygrywa z regułą „wymaga daty"', async ({ page }) => {
+  await przygotuj(page, '/index.html');
+  await wczytajPacjenta(page);
+  await expect.poll(async () => (await stanPrzycisku(page)).wylaczony).toBe(false);
+  await klik(page);
+  const arkusz = page.locator('.vilda-patient-note-editor-overlay .vilda-pne');
+  await expect(arkusz).toBeVisible();
+
+  await arkusz.locator('textarea').first().fill('Notatka z błędną długością wizyty');
+  await arkusz.locator('input[type="number"][max="1440"]').fill('3');
+  await arkusz.getByRole('button', { name: 'Dodaj notatkę' }).click();
+
+  await expect(arkusz).toContainText('od 5 do 1440');
+  await expect(arkusz).not.toContainText('ustaw datę albo wyczyść te pola');
+});
