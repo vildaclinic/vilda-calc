@@ -3914,6 +3914,44 @@ To jest punkt 3 w najczystszej i największej postaci — i dotyczy **wszystkich
 
 **Naprawa w rusztowaniu testów.** `funkcjaZ` w `tests/support/silnik-bmi.mjs` liczyła klamry od pierwszego `{`, więc dla funkcji z domyślnym parametrem — `vildaUpdatePrepComputeColeState(e={})` — wycinała **45 znaków samej sygnatury** zamiast całego ciała, a test cicho sprawdzał pustkę. Pomocnik domyka teraz najpierw listę parametrów. To był latentny błąd rusztowania, nie tej raty.
 
+## Ton podsumowania profesjonalnego przestaje czytać wydrukowany tekst (P-TON rata 3, SW 1.0.998, 2026-09-18)
+
+**Co to było.** `getProfessionalSummaryLineTone` w `vilda_patient_report.js` (≈6000 znaków) dostawała **gotowy wiersz tekstu** podsumowania, rozpoznawała miarę przez dopasowanie **26 polskich prefiksów etykiet** (`"wskaźnik cole"`, `"wzrost"`, `"tempo wzrastania"`, `"ciśnienie"`, `"tętno"`, `"waga"`, `"bmi"`, `"obwód głowy"`, …), **wyciągała liczbę z powrotem wyrażeniem regularnym** i zwracała jeden z 21 tonów. Kolor każdej miary w podsumowaniu był więc odzyskiwany z napisu, zamiast towarzyszyć wartości.
+
+Część gałęzi robiła to już poprawnie — ciśnienie pytało `adultVitalsApi.classifyBloodPressure(...).tone`, tętno `classifyHeartRate(...).tone`, WHR `interpretWHR(...).state`. Ta rata dokłada do nich trzy najważniejsze miary.
+
+### Trzy gałęzie przepięte na wartość i silnik
+
+| miara | skąd wartość | skąd ton |
+|---|---|---|
+| **wskaźnik Cole'a** | `window.colePercentValue` — ta sama liczba, z której zbudowano wiersz | `VildaBmi.kategoriaCole(v).kolor` |
+| **BMI** | wyliczone z pól formularza (jak dotąd) | `bmiKategoriaChild/Dorosly(...).kolor` zamiast dopasowania etykiety |
+| **waga / wzrost** | `window.lastWeightPercentile` / `lastHeightPercentile` | masa: `VildaMasa.kategoria(...)` (progi 3/10/90/97, te same co obie karty); wzrost zachowuje własną regułę |
+
+### Zmierzony wpływ
+
+**Wskaźnik Cole'a: 0 różnic.** Progi były i są 90/110/120 — zmienia się wyłącznie źródło liczby.
+
+**Waga: 20 punktów na 1001 — i wszystkie są artefaktami zaokrąglenia.** Wiersz podsumowania niesie centyl przepuszczony przez `formatCentile` (zaokrąglony do liczby całkowitej), więc ton liczył się na **innej liczbie niż ta, z której wiersz powstał**:
+
+| zakres | było | jest | co się działo |
+|---|---|---|---|
+| 3,0–3,4 i 96,5–96,9 | `danger` | `warn` | zaokrąglenie wpychało wartość na próg 3 albo 97 |
+| 9,5–9,9 | `normal` | `warn` | zaokrąglało do 10, więc wypadało z pasma 3–10 |
+| 89,5–89,9 | `warn` | `normal` | zaokrąglało do 90, więc wpadało w pasmo 90–97 |
+
+Każdy z tych 20 punktów leży w odległości ≤ 0,5 centyla od granicy pasma — czyli dokładnie tam, gdzie zaokrąglenie przerzuca wartość na drugą stronę. **To jest sedno „spójności między miejscami":** dziecko z centylem masy 3,4 miało na karcie głównej i w karcie raportu ostrzeżenie, a w podsumowaniu alarm — bo podsumowanie czytało „3".
+
+**BMI: niedowaga przestaje być w podsumowaniu łagodniejsza niż na karcie.** Dopasowanie etykiety dawało `Niedowaga` → ton ostrzegawczy, podczas gdy silnik klasyfikuje niedowagę dziecka poniżej 3. centyla i niedowagę dorosłego jako `alert`. Podsumowanie mówi teraz to samo, co karta główna po P-TON racie 1. Reszta skali bez zmian.
+
+### Dług przypięty, żeby nie rósł
+
+Tekst czytają jeszcze tylko miary, których surowa wartość nie jest nigdzie wystawiona: **obwód głowy, obwód klatki piersiowej, proporcja masy do wysokości** (generyczny czytnik centyla), **hSDS−mpSDS** i **MPH** (liczba z wiersza), **tempo wzrastania** (dopasowanie zwrotów „poniżej normy" / „do oceny") oraz **zapasowa ścieżka WHR** (główna pyta `interpretWHR`). Strażnik liczy pozostałe wyrażenia regularne — **jest ich trzy** — i pilnuje, żeby kolejna rata tę liczbę zmniejszała, a nie zwiększała.
+
+**Walidacja.** `tests/unit/ton-werdyktu.test.mjs` — 26 testów (18 z rat 1–2 + 8 nowych). Pełny przebieg: **2606 testów w 156 plikach**, lint, składnia (476 plików), polityka repozytorium (585 plików) — zielone. E2E podsumowania profesjonalnego i raportu: 24 zdane, 1 pominięty.
+
+**Baseline ESLint zmniejszony o jeden** (`no-useless-escape` w `vilda_patient_report.js`: 6 → 5) — usunięte wyrażenie regularne wyciągające procent z tekstu było jednym z wyciszonych naruszeń.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

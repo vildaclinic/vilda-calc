@@ -221,3 +221,118 @@ describe('P-TON-2 — zmierzone skutki przepięcia Cole\'a', () => {
     for (const x of [90, 100, 110, 115, 125]) expect(nowy(x), `Cole ${x}`).toBe(dawny(x));
   });
 });
+
+describe('P-TON-3 — ton podsumowania przestaje czytać wydrukowany tekst', () => {
+  const RAPORT = zrodlo('vilda_patient_report.js');
+  const ton = () => kod(funkcjaZ(RAPORT, 'getProfessionalSummaryLineTone'));
+
+  it('wskaźnik Cole\'a: wartość z wyniku, kategoria z silnika', () => {
+    const f = ton();
+    expect(f).toContain('window.colePercentValue');
+    expect(f).toContain('CB.kategoriaCole(cv)');
+    expect(f, 'koniec wyciągania procentu z tekstu wiersza').not.toContain('\\s*%/');
+  });
+
+  it('BMI: ton z koloru silnika, nie z dopasowania etykiety', () => {
+    const f = ton();
+    expect(f).toContain('bmiKategoriaChild');
+    expect(f).toContain('bmiKategoriaDorosly');
+    expect(f, 'koniec dopasowania etykiety').not.toContain('b.includes("Oty');
+  });
+
+  it('waga i wzrost: centyl z wyniku, pasmo masy z silnika', () => {
+    const f = ton();
+    expect(f).toContain('window.lastWeightPercentile');
+    expect(f).toContain('window.lastHeightPercentile');
+    expect(f).toContain('MS.kategoria(wv)');
+  });
+});
+
+describe('P-TON-3 — zmierzone skutki odejścia od wydrukowanej liczby', () => {
+  // Wiersz podsumowania niesie centyl ZAOKRĄGLONY (formatCentile), więc odczytywanie go
+  // z tekstu dawało ton liczony na innej liczbie niż ta, z której wiersz powstał.
+  const formatCentile = (e) => (e < 1 ? '<1' : e > 99 ? '>99' : String(Math.round(e)));
+  const dawnyWaga = (raw) => {
+    const t = formatCentile(raw);
+    const s = t === '<1' ? 0 : t === '>99' ? 100 : parseFloat(t);
+    return s <= 3 || s >= 97 ? 'danger' : (s > 3 && s < 10) || (s >= 90 && s < 97) ? 'warn' : 'normal';
+  };
+  const nowyWaga = (raw) => {
+    const k = raw < 3 ? 'alert' : raw < 10 ? 'improve' : raw < 90 ? null : raw < 97 ? 'improve' : 'alert';
+    return k === 'alert' ? 'danger' : k === 'improve' ? 'warn' : 'normal';
+  };
+
+  it('waga: 20 punktów na 1001 — wszystkie to artefakty zaokrąglenia', () => {
+    const rozne = [];
+    for (let x = 0; x <= 100.0001; x += 0.1) {
+      const c = Math.round(x * 10) / 10;
+      if (dawnyWaga(c) !== nowyWaga(c)) rozne.push([c, dawnyWaga(c), nowyWaga(c)]);
+    }
+    expect(rozne.length).toBe(20);
+    const grupy = {};
+    for (const [, a, b] of rozne) { const k = `${a}->${b}`; grupy[k] = (grupy[k] || 0) + 1; }
+    expect(grupy).toEqual({ 'danger->warn': 10, 'normal->warn': 5, 'warn->normal': 5 });
+    // Każda różnica leży tuż przy granicy pasma, po stronie, którą zaokrąglenie przerzucało.
+    for (const [c] of rozne) {
+      const przyGranicy = [3, 10, 90, 97].some((g) => Math.abs(c - g) <= 0.5);
+      expect(przyGranicy, `centyl ${c} powinien leżeć przy granicy pasma`).toBe(true);
+    }
+  });
+
+  it('waga: ton podsumowania zgadza się teraz z kartą główną i kartą raportu', () => {
+    // To jest sedno „spójności między miejscami": przed tą ratą dziecko z centylem masy 3,4
+    // miało na kartach ostrzeżenie, a w podsumowaniu alarm — bo podsumowanie czytało „3".
+    expect(dawnyWaga(3.4)).toBe('danger');
+    expect(nowyWaga(3.4)).toBe('warn');
+    expect(dawnyWaga(9.7)).toBe('normal');
+    expect(nowyWaga(9.7)).toBe('warn');
+    expect(dawnyWaga(89.7)).toBe('warn');
+    expect(nowyWaga(89.7)).toBe('normal');
+  });
+
+  it('wskaźnik Cole\'a: żadnej zmiany werdyktu — te same progi 90/110/120', () => {
+    const dawny = (p) => (p < 90 || p >= 120 ? 'danger' : p > 110 && p < 120 ? 'warn' : 'normal');
+    const nowy = (p) => {
+      const k = p < 90 ? 'alert' : p <= 110 ? null : p < 120 ? 'improve' : 'alert';
+      return k === 'alert' ? 'danger' : k === 'improve' ? 'warn' : 'normal';
+    };
+    const rozne = [];
+    for (let x = 60; x <= 200.0001; x += 0.1) { const c = Math.round(x * 10) / 10; if (dawny(c) !== nowy(c)) rozne.push(c); }
+    expect(rozne).toEqual([]);
+  });
+
+  it('BMI: niedowaga przestaje być łagodniejsza w podsumowaniu niż na karcie', () => {
+    const dawny = (etykieta) => (String(etykieta).includes('Otyłość') ? 'danger'
+      : etykieta === 'Niedowaga' || etykieta === 'Nadwaga' ? 'warn' : 'normal');
+    const nowy = (kolor) => (kolor === 'alert' ? 'danger' : kolor === 'improve' ? 'warn' : 'normal');
+    // Dziecko z centylem BMI poniżej 3 — silnik daje alert.
+    expect(dawny('Niedowaga')).toBe('warn');
+    expect(nowy('alert')).toBe('danger');
+    // Dorosły z BMI < 18,5 — tak samo.
+    expect(nowy(win.VildaBmi.kategoriaDorosly(17.2).kolor)).toBe('danger');
+    // Reszta skali bez zmian.
+    expect(nowy(win.VildaBmi.kategoriaDorosly(27).kolor)).toBe(dawny('Nadwaga'));
+    expect(nowy(win.VildaBmi.kategoriaDorosly(32).kolor)).toBe(dawny('Otyłość I stopnia'));
+    expect(nowy(win.VildaBmi.kategoriaDorosly(22).kolor)).toBe(dawny('Prawidłowe'));
+  });
+});
+
+describe('P-TON-3 — co jeszcze czyta tekst (dług przypięty, żeby nie rósł)', () => {
+  const RAPORT = zrodlo('vilda_patient_report.js');
+
+  it('pozostałe gałęzie parsujące tekst są policzone i nie przybywa ich', () => {
+    // Po tej racie tekst czytają już tylko miary, których surowa wartość nie jest nigdzie
+    // wystawiona: obwód głowy, obwód klatki, proporcja masy do wysokości, hSDS−mpSDS i MPH
+    // (liczba z wiersza) oraz tempo wzrastania (dopasowanie polskich zwrotów).
+    // Ten strażnik pilnuje LICZBY takich miejsc — kolejna rata ma ją zmniejszać, nie zwiększać.
+    const f = kod(funkcjaZ(RAPORT, 'getProfessionalSummaryLineTone'));
+    // Trzy: hSDS−mpSDS, MPH i ZAPASOWA ścieżka WHR (główna pyta interpretWHR).
+    const regexy = (f.match(/e\.match\(/g) || []).length;
+    expect(regexy, 'wyrażenia regularne na wierszu podsumowania').toBe(3);
+    expect(f, 'hSDS−mpSDS nadal z tekstu').toContain('hsds');
+    expect(f, 'MPH nadal z tekstu').toContain('mpsds');
+    expect(f, 'tempo nadal po zwrocie').toContain('poni\u017Cej normy');
+    // Generyczny czytnik centyla zostaje dla obwodów i proporcji masa-do-wysokości.
+    expect(f).toContain('centyl');
+  });
+});
