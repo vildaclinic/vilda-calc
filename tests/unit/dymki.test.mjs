@@ -155,8 +155,12 @@ describe('P-DYMKI — strażnik: jeden dół dla wszystkich dymków', () => {
   });
 
   it('każda strona z modułem wołającym VildaDymek ładuje vilda_dymek.js — bez tego komunikat by przepadł', () => {
+    // P-NOTATKI rata 3 (G18): custom-fixes.js potwierdza zapis notatki z menu dymkiem aplikacji,
+    // więc dołącza do tej listy — razem z dwiema stronami, które go ładują, a dymka dotąd nie miały
+    // (homa-ir.html, steroidy.html). Bez tego reguła cicho przestałaby być kompletna.
     const wolajace = ['vilda_summary_cards.js', 'app.js', 'vilda_diet_recommendations.js', 'gh_igf_therapy.js', 'vilda_patient_report.js',
-      'vilda_patient_narrative_ui.js', 'vilda_b64_checklist_ui.js', 'vilda_app_helpers.js', 'inline_kalkulator_klirens_04.js'];
+      'vilda_patient_narrative_ui.js', 'vilda_b64_checklist_ui.js', 'vilda_app_helpers.js', 'inline_kalkulator_klirens_04.js',
+      'custom-fixes.js'];
     const strony = fs.readdirSync(korzen).filter((f) => f.endsWith('.html'));
     let sprawdzono = 0;
     for (const strona of strony) {
