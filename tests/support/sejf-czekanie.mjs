@@ -30,6 +30,27 @@ export async function czekajNaPacjentow(page, ile, opcje = {}) {
     .toBe(ile);
 }
 
+/**
+ * Czeka, aż sejf zgłosi dokładnie `ile` notatek pacjenta.
+ *
+ * Ta sama pułapka, inny zapis: predykat `(id) => V.listPatientNotesForPatient(id).then(…)`
+ * NIE jest `async`, ale oddaje `Promise` — a `Promise` jest zawsze prawdziwy, więc bramka
+ * przepuszcza od razu tak samo. Zmierzone (2026-09-19, Chromium 1194): predykat
+ * `() => Promise.resolve(false).then((v) => v)` przeszedł po 56 ms, `async () => false`
+ * po 4 ms, a synchroniczny `() => false` poprawnie doczekał timeoutu 3006 ms.
+ */
+export async function czekajNaNotatkiPacjenta(page, patientId, ile, opcje = {}) {
+  await expect
+    .poll(async () => page.evaluate(
+      async (id) => (await window.VildaVault.listPatientNotesForPatient(id)).length,
+      patientId,
+    ), {
+      timeout: opcje.timeout || DOMYSLNY_TIMEOUT,
+      message: `sejf miał zgłosić ${ile} notatek pacjenta`,
+    })
+    .toBe(ile);
+}
+
 /** Czeka, aż rekord przestanie istnieć (np. po scaleniu — to OSTATNI krok mergePatients). */
 export async function czekajNaZnikniecieRekordu(page, patientId, opcje = {}) {
   await expect

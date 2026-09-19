@@ -4601,6 +4601,64 @@ Pacjent dorosły, 175 cm, 95 → 84 kg → zdarzenie `wyjscie-z-otylosci` (otył
 
 **Ta rata nie zmienia żadnego wyniku widocznego dziś w aplikacji** — nowe pliki nie są ładowane przez żadną stronę. Zmienia natomiast to, co aplikacja **zacznie pokazywać** w ratach 2–4, więc drabinki pasm, definicja punktu odniesienia i parametr korytarza wymagają akceptacji klinicznej właściciela przed ratą 2.
 
+## Bramka na leniwym renderze Historii (P-BRAMKI-2, 2026-09-19)
+
+**Skąd znalezisko.** Zgłoszenie właściciela: `karta-pacjenta-notatki-historia.spec.mjs` — test „filtr niczego nie odsłania, bo nic nie było ukryte" (P9/P10) padł raz w pełnym przebiegu `--project=desktop-chromium` przy 6 workerach z `Expected: 3, Received: 0` i przeszedł przy ponowieniu. W CI (trzy odłamki) był zielony. **Nie jest to usterka produktu** — to brakująca bramka w samym teście, z tej samej rodziny co P-BRAMKI (#370).
+
+### Przyczyna: zakładka odsłania się natychmiast, sekcja renderuje się później
+
+Sekcja „Historia" powstaje **leniwie**: dopiero kliknięcie zakładki woła `renderTimelineSection` (`Xl` w `vilda_auth_ui.js`). Sam render jest **asynchroniczny** — zanim dołoży listę wpisów, czeka na trzy odczyty sejfu (wykres trendu badań, `listPatientTimelineEvents`, `getPatient`). Przełączenie zakładki jest natomiast synchroniczne: kontener `[data-tab="timeline"]` przestaje być ukryty od razu, **jeszcze pusty**.
+
+Test miał bramkę dokładnie na tym kontenerze, a potem czytał DOM gołym `page.evaluate` — a `page.evaluate` nie ponawia się tak, jak asercja Playwrighta. Odczyt wyprzedzał render i `przed` wychodziło pustą tablicą.
+
+### Zmierzone odtworzenie
+
+Wyścig odtworzony deterministycznie: `listPatientTimelineEvents` opóźniony o 1,2 s (tyle, ile daje obciążona maszyna przy 6 workerach), reszta testu bez zmian.
+
+| bramka przed odczytem | wynik `page.evaluate` |
+|---|---|
+| `[data-tab="timeline"]` widoczny (stan sprzed poprawki) | `[]` — czyli zgłoszone „Received: 0" |
+| `.vilda-patient-timeline-list` widoczna (po poprawce) | trzy tytuły, komplet |
+
+### Druga fałszywa bramka w tym samym pliku
+
+Przy okazji znaleziona w `„Usuń ponownie" domyka skasowanie`:
+
+```js
+await page.waitForFunction(
+  (id) => window.VildaVault.listPatientNotesForPatient(id).then((l) => l.length === 0),
+  patientId,
+);   // NIE CZEKA
+```
+
+To ten sam błąd co w #370, tylko bez słowa `async`: predykat oddaje `Promise`, a `Promise` jest zawsze prawdziwy. Zmierzone osobnym eksperymentem (Chromium 1194, timeout 3000 ms):
+
+| predykat | wynik |
+|---|---|
+| `() => Promise.resolve(false).then((v) => v)` | **przeszedł po 56 ms** |
+| `async () => false` | **przeszedł po 4 ms** |
+| `() => false` (synchroniczny) | poprawny timeout po 3006 ms |
+
+Strażnik `tests/unit/straznik-bramek-testowych.test.mjs` łapie dziś tylko wariant ze słowem `async`, więc tego zapisu nie widział.
+
+### Poprawka
+
+- `tests/support/karta-czekanie.mjs` (nowy) — `czekajNaHistorie(page)` czeka na `.vilda-patient-timeline-list`, czyli na element dokładany **po** wszystkich odczytach sejfu.
+- `karta-pacjenta-notatki-historia` — `otworzHistorie` używa tej bramki; test P9/P10 dodatkowo czeka na **trzy tytuły**, zanim po raz pierwszy czyta DOM.
+- `karta-pacjenta-porzadki` — te same trzy wejścia w Historię (P11, H7, P12) dostają tę samą bramkę. Filtry kategorii są dokładane **przed** listą wpisów, a ich obsługa kliknięcia sięga po listę (`bt.childNodes`), której w tym momencie jeszcze nie ma.
+- `tests/support/sejf-czekanie.mjs` — `czekajNaNotatkiPacjenta(page, id, ile)` zastępuje bramkę z `.then(…)`.
+
+**Asercje bez zmian.** Liczba 3 i porównanie zbioru po filtrze z widokiem domyślnym zostają; bramka pilnuje tylko, żeby porównanie dotyczyło wyrenderowanego widoku, a nie wyścigu.
+
+**Walidacja.** `karta-pacjenta-notatki-historia` przy 6 workerach i 6 powtórzeniach: **30/30 zdanych**. `karta-pacjenta-porzadki` w tych samych warunkach: **52/52 zdane**. Pełny `npm test`: polityka repozytorium, lint, składnia, 2740 testów jednostkowych w 163 plikach, regresja PRO (43 + 32 + 44).
+
+**Bez zmian w produkcie** — żaden plik aplikacji nie był ruszany, więc bez podbicia `?v=` i `SW_VERSION`.
+
+**Do odnotowania, nie do naprawy teraz.** Dwie rzeczy zostają dla właściciela:
+
+1. Wzorzec `waitForFunction(… .then(…))` siedzi jeszcze w trzech innych plikach e2e — `karta-pacjenta-zapis` (2 miejsca), `pokwitanie-dane-rekord` (7 miejsc). Każda z tych bramek przepuszcza od razu. Poprawka jest mechaniczna (przeniesienie czekania do `expect.poll` po stronie Node) i warta osobnej raty razem z rozszerzeniem strażnika — tutaj byłaby poszerzeniem zlecenia.
+2. `karta-pacjenta-porzadki` ma flaka niezależnego od tej poprawki: dzienny arkusz przypomnień (`.vilda-reminders-modal-overlay`) potrafi stanąć nad otwartą Kartą Pacjenta i przejąć kliknięcie w zakładkę. Odtworzone przy 6 workerach i 6 powtórzeniach **zarówno na HEAD bez poprawki** (1 flaky, P12), **jak i z poprawką** (P2 i P12) — ten sam komunikat: „subtree intercepts pointer events". Pacjent testowy ma zaległy termin z 2020 r., więc arkusz ma co pokazać. To pytanie o zachowanie produktu (czy arkusz ma przykrywać właśnie otwartą kartę), nie o test.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
