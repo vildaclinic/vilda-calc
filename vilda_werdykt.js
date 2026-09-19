@@ -16,11 +16,13 @@
  * musiała być wpisana ręcznie w dwóch plikach, z których jeden jest zminifikowany.
  * Od tej wersji obie powierzchnie wołają ten moduł, a kopie są cienkimi delegacjami.
  *
- * ZAKRES RATY 1: wyłącznie przeniesienie. ZERO zmian zachowania — te same progi, te same
- * etykiety, ta sama kolejność gałęzi. Równoważność jest udowodniona przemiataniem pełnej
- * siatki wejść w tests/unit/werdykt-silnik.test.mjs, a nie deklaracją w komentarzu.
- * Zmiany merytoryczne werdyktów (poziom po obu stronach, gate catch-upu, prędkość BMI wobec
- * tempa wzrastania) są osobnymi ratami i wymagają akceptacji klinicznej właściciela.
+ * HISTORIA ZMIAN MERYTORYCZNYCH. Rata 1 była wyłącznie przeniesieniem — zero zmian
+ * zachowania, udowodnione odciskiem pełnej siatki wejść, a nie deklaracją w komentarzu.
+ * Rata 2 dołożyła gałąź POZIOMU dla masy i BMI (poziomMasyBmi) i jest jedyną zmianą
+ * zachowania w tym module; tamten odcisk nadal obowiązuje po odwzorowaniu nowych etykiet
+ * z powrotem na „stabilny tor" — pilnuje tego tests/unit/werdykt-silnik.test.mjs.
+ * Kolejne zmiany merytoryczne (gate catch-upu, prędkość BMI wobec tempa wzrastania) są
+ * osobnymi ratami i wymagają akceptacji klinicznej właściciela.
  *
  * WARSTWY. Werdykt powstaje w trzech krokach i to jest cała architektura tego modułu:
  *   1. para()                  — werdykt bazowy z samych liczb: ΔSDS + pozycja centylowa.
@@ -47,7 +49,7 @@
 
   if (!root) return;
 
-  var WERSJA = '1';
+  var WERSJA = '2';
 
   // Progi nazwane. Reszta liczb w gałęziach jest celowo zostawiona dokładnie tam, gdzie była
   // przed przeniesieniem — rata 1 ma być czytelna jako przeniesienie, a nie jako przepisanie.
@@ -58,17 +60,62 @@
     //   masa/BMI — „istotne przesunięcie centylowe" przy |ΔSDS| ≥ 0,5.
     // Czy mają być JEDNĄ liczbą, jest pytaniem klinicznym i nie zapada tutaj.
     ISTOTNA_DECELERACJA_DSDS: -1.0,
-    ISTOTNE_PRZESUNIECIE_DSDS: 0.5
+    ISTOTNE_PRZESUNIECIE_DSDS: 0.5,
+    // Strefy alarmowe pozycji (P-WERDYKT rata 2). To NIE są nowe liczby: dokładnie te same
+    // progi silnik traktował już jako alarmowe w gałęzi środkowego pasma (zmienna `al`).
+    // Rata 2 nadała im nazwy i użyła ich w drugim miejscu — przy stabilnym torze.
+    MASA_WYSOKA_C: 97,
+    MASA_NISKA_C: 3,
+    BMI_OTYLOSC_C: 97,
+    BMI_NIEDOWAGA_C: 5
   });
 
   function dSds(sa0, sb0) {
     return Math.round(100 * (sb0 - sa0)) / 100;
   }
 
+  // ── Poziom miary przy stabilnym torze (P-WERDYKT rata 2) ─────────────────────────────
+  // „Stabilny tor" mówił dotąd o KIERUNKU i milczał o POZIOMIE. Odcinek dziecka, które stoi
+  // na 99. centylu masy i na nim zostaje, brzmiał tak samo uspokajająco jak odcinek dziecka
+  // w środku siatki — a to jest inna sytuacja kliniczna (usterki A i C audytu 2026-09-18).
+  // Wzrost dostał tę gałąź wcześniej (nakladkaPozycjaWzrostu); tu dostają ją masa i BMI.
+  //
+  // TON NIE JEST SYMETRYCZNY I TO JEST ZMIERZONE, NIE PRZEOCZONE. Ostrzeżenie (`warn`)
+  // stawiamy tylko tam, gdzie SAMA miara wystarcza, żeby orzec nadmiar albo niedobór:
+  //  - BMI jest skorygowane o wzrost, więc rozstrzyga po obu stronach;
+  //  - masa-do-wieku rozstrzyga tylko u góry. Na tablicach OLAF najwyższy centyl masy
+  //    osiągalny przy BMI poniżej progu nadwagi to 96,4–98,5 (zależnie od wieku), więc masa
+  //    ≥97c praktycznie wymusza BMI ≥85c. U dołu jest odwrotnie: dziecko niskie i
+  //    proporcjonalne ma masę-do-wieku nawet w 0. centylu przy CAŁKOWICIE prawidłowym BMI
+  //    (zmierzone w każdym badanym wieku). Żółty alarm byłby tam fałszywy, więc dolny koniec
+  //    masy DOSTAJE ZDANIE, ale NIE dostaje ostrzeżenia — nazywa pozycję, nie orzeka choroby.
+  // Brzmienie „znacznie powyżej/poniżej typowego zakresu" — decyzja właściciela 2026-09-18.
+  function poziomMasyBmi(B, cb) {
+    if (typeof cb !== 'number' || !isFinite(cb)) return null;
+    if (B) {
+      // Górny koniec BMI ma własną, mocniejszą etykietę w gałęzi wysokich centyli
+      // („utrzymująca się otyłość (>97c)") — rata 2 jej nie dubluje i nie zmienia.
+      if (cb < PROGI.BMI_NIEDOWAGA_C) return { t: 'warn', l: 'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)' };
+      return null;
+    }
+    if (cb >= PROGI.MASA_WYSOKA_C) return { t: 'warn', l: 'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)' };
+    if (cb <= PROGI.MASA_NISKA_C) return { t: 'stable', l: 'tor stabilny, masa ciała poniżej 3. centyla' };
+    return null;
+  }
+
+  // Jedyne miejsce, w którym werdykt „stabilny" powstaje dla masy i BMI — dzięki temu gałąź
+  // poziomu nie może ominąć żadnej ze ścieżek. Wzrost przechodzi tędy bez zmiany: ma własną
+  // nakładkę pozycyjną, która widzi kanał rodzicielski i terapię GH, a tych tu nie ma.
+  function stabilny(W, B, ST, cb) {
+    if (W) return { t: 'stable', l: ST };
+    return poziomMasyBmi(B, cb) || { t: 'stable', l: ST };
+  }
+
   // ── 1. Werdykt bazowy pary punktów ────────────────────────────────────────────────────
-  // Transkrypcja 1:1 dotychczasowych verdictCh (vilda_auth_ui.js) i verdictForPair
-  // (vilda_trajectory_analysis.js). met: 'height' | 'weight' | 'bmi'; sa0/sb0: SDS punktu A/B;
-  // ca/cb: centyl punktu A/B.
+  // Rdzeń przeniesiony 1:1 z dotychczasowych verdictCh (vilda_auth_ui.js) i verdictForPair
+  // (vilda_trajectory_analysis.js); jedyne odstępstwo to gałąź poziomu przy stabilnym torze
+  // masy i BMI (rata 2, patrz stabilny() wyżej).
+  // met: 'height' | 'weight' | 'bmi'; sa0/sb0: SDS punktu A/B; ca/cb: centyl punktu A/B.
   function para(met, sa0, sb0, ca, cb) {
     if (typeof sa0 !== 'number' || typeof sb0 !== 'number' || !isFinite(sa0) || !isFinite(sb0) || ca == null || cb == null) return null;
     var d = dSds(sa0, sb0), W = met === 'height', B = met === 'bmi', low = ca < 10, high = W ? ca > 90 : ca >= (B ? 85 : 90);
@@ -86,21 +133,21 @@
           : cb >= 75 ? { t: 'warn', l: 'wyrównanie niedoboru z szybkim przyrostem masy ciała — do obserwacji' }
           : { t: 'good', l: 'wyrównanie niedoboru masy ciała' };
       }
-      return d <= -0.5 ? { t: 'bad', l: ND } : d <= -0.2 ? { t: 'warn', l: ND } : { t: 'stable', l: ST };
+      return d <= -0.5 ? { t: 'bad', l: ND } : d <= -0.2 ? { t: 'warn', l: ND } : stabilny(W, B, ST, cb);
     }
     if (high) {
       if (W) return d <= -1 ? { t: 'warn', l: 'szybka deceleracja z wysokich centyli' } : d <= -0.2 ? { t: 'stable', l: 'normalizacja pozycji centylowej' } : d >= 0.5 ? { t: 'warn', l: 'dalsza akceleracja wzrastania' } : { t: 'stable', l: ST };
       if (d <= -1.5) return { t: 'warn', l: B ? 'szybki spadek BMI — wskazana ocena' : 'szybka utrata masy — wskazana ocena' };
       if (d <= -0.2) return { t: 'good', l: B ? 'redukcja BMI' : 'redukcja nadmiaru masy ciała' };
       if (d >= 0.5 || (d >= 0.2 && cb >= 97)) return { t: 'bad', l: B ? (cb >= 97 ? (ca >= 97 ? 'progresja otyłości' : 'przekroczenie progu otyłości (≥97c)') : 'szybka progresja nadwagi (BMI)') : (cb >= 97 ? (ca >= 97 ? 'progresja nadmiaru masy (>97. centyla)' : 'przekroczenie 97. centyla masy ciała') : 'nasilony przyrost masy ciała') };
-      return d >= 0.2 ? { t: 'warn', l: B ? 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' : 'narastanie nadmiaru masy ciała' } : B && cb >= 97 ? { t: 'warn', l: 'utrzymująca się otyłość (>97c)' } : { t: 'stable', l: ST };
+      return d >= 0.2 ? { t: 'warn', l: B ? 'progresja nadwagi (BMI w paśmie 85.–97. centyla)' : 'narastanie nadmiaru masy ciała' } : B && cb >= PROGI.BMI_OTYLOSC_C ? { t: 'warn', l: 'utrzymująca się otyłość (>97c)' } : stabilny(W, B, ST, cb);
     }
     if (W) return d <= PROGI.ISTOTNA_DECELERACJA_DSDS ? { t: 'bad', l: 'istotna deceleracja wzrastania' } : d <= -0.5 ? { t: 'warn', l: 'deceleracja toru wzrastania' } : (d >= 0.5 && cb > 97) ? { t: 'warn', l: 'akceleracja z przekroczeniem 97. centyla' } : { t: 'stable', l: ST };
     if (Math.abs(d) >= PROGI.ISTOTNE_PRZESUNIECIE_DSDS) {
-      var al = B ? (cb >= 97 || cb < 5) : (cb <= 3 || cb >= 97);
+      var al = B ? (cb >= PROGI.BMI_OTYLOSC_C || cb < PROGI.BMI_NIEDOWAGA_C) : (cb <= PROGI.MASA_NISKA_C || cb >= PROGI.MASA_WYSOKA_C);
       return al ? { t: 'bad', l: d > 0 ? (B ? 'przekroczenie progu otyłości (≥97c)' : 'przekroczenie 97. centyla masy ciała') : (B ? 'przekroczenie progu niedowagi (<5c)' : 'obniżenie masy ciała poniżej 3. centyla') } : { t: 'warn', l: d > 0 ? 'istotne przesunięcie centylowe w górę' : 'istotne przesunięcie centylowe w dół' };
     }
-    return { t: 'stable', l: ST };
+    return stabilny(W, B, ST, cb);
   }
 
   // ── 2. Ten sam odcinek widziany przez kontekst leczenia i pochodzenia ─────────────────
@@ -163,6 +210,7 @@
     version: WERSJA,
     PROGI: PROGI,
     dSds: dSds,
+    poziomMasyBmi: poziomMasyBmi,
     para: para,
     zKontekstem: zKontekstem,
     nakladkaMasaBmi: nakladkaMasaBmi,

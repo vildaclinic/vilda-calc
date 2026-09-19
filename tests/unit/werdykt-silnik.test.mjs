@@ -32,7 +32,10 @@ describe('silnik werdyktu — kształt modułu', () => {
     expect(typeof W.nakladkaPozycjaWzrostu).toBe('function');
     expect(Object.isFrozen(W)).toBe(true);
     expect(Object.isFrozen(W.PROGI)).toBe(true);
-    expect(W.PROGI).toEqual({ ISTOTNA_DECELERACJA_DSDS: -1.0, ISTOTNE_PRZESUNIECIE_DSDS: 0.5 });
+    expect(W.PROGI).toEqual({
+      ISTOTNA_DECELERACJA_DSDS: -1.0, ISTOTNE_PRZESUNIECIE_DSDS: 0.5,
+      MASA_WYSOKA_C: 97, MASA_NISKA_C: 3, BMI_OTYLOSC_C: 97, BMI_NIEDOWAGA_C: 5,
+    });
   });
 
   it('bez danych nie zgaduje: null to „brak werdyktu", nie „stabilnie"', () => {
@@ -124,30 +127,121 @@ describe('silnik jest podany wszędzie, gdzie werdykt jest potrzebny', () => {
   });
 });
 
-describe('rata 1 nie zmieniła ani jednego werdyktu', () => {
+describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () => {
   // Odcisk policzony na kodzie SPRZED wydzielenia silnika (commit 7355953e, SW 1.1.2)
   // tą samą funkcją tests/support/siatka-werdyktow.mjs. Siatka celuje w granice reguł:
   // przy każdym progu ΔSDS i każdym progu centylowym stoi sąsiad po obu stronach, więc
   // przesunięcie dowolnej nierówności o jeden krok zmienia odcisk.
-  const ODCISK_PRZED_WYDZIELENIEM = 'a9a60858e6926c878cf06b8869a0df725be82a592581320f52fdf71e16d7a93d';
+  const ODCISK_RATA_1 = 'a9a60858e6926c878cf06b8869a0df725be82a592581320f52fdf71e16d7a93d';
+  const ODCISK_RATA_2 = '62fa83552244e0565ce60b42beabbf9b033d794131553abcbe6e71eee2f8e15d';
   const PRZYPADKOW = 6280776;
 
-  it(`silnik oddaje dokładnie to, co karta przed rozdzieleniem (${PRZYPADKOW} przypadków)`, () => {
+  // Trzy etykiety, które wprowadziła rata 2 — i nic poza nimi.
+  const ETYKIETY_POZIOMU = [
+    'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)',
+    'tor stabilny, masa ciała poniżej 3. centyla',
+    'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)',
+  ];
+  const ST = {
+    height: 'stabilny tor wzrastania',
+    weight: 'stabilny tor masy ciała',
+    bmi: 'stabilny tor BMI',
+  };
+
+  it(`odcisk bieżącego silnika jest zamrożony (${PRZYPADKOW} przypadków)`, () => {
     const wynik = odciskSiatki(silnik());
     expect(wynik.przypadkow, 'rozmiar siatki').toBe(PRZYPADKOW);
-    expect(wynik.odcisk).toBe(ODCISK_PRZED_WYDZIELENIEM);
+    expect(wynik.odcisk).toBe(ODCISK_RATA_2);
+  });
+
+  it('rata 2 odezwała się WYŁĄCZNIE tam, gdzie silnik dotąd milczał — dowód, nie deklaracja', () => {
+    // Zamieniamy każdą etykietę poziomu z powrotem na „stabilny tor" tej miary. Jeżeli rata 2
+    // niczego poza stabilnymi werdyktami nie ruszyła, po takim odwzorowaniu MUSI wyjść
+    // dokładnie odcisk raty 1 — bez sięgania po nieistniejący już stary kod.
+    const W = silnik();
+    const cofnij = (met, v) => (v && ETYKIETY_POZIOMU.indexOf(v.l) >= 0 ? { t: 'stable', l: ST[met] } : v);
+    const jakPrzed = {
+      para: (m, a, b, c, d) => cofnij(m, W.para(m, a, b, c, d)),
+      zKontekstem: (m, a, b, c, d, g, p, r) => cofnij(m, W.zKontekstem(m, a, b, c, d, g, p, r)),
+      nakladkaMasaBmi: W.nakladkaMasaBmi,
+      nakladkaPozycjaWzrostu: W.nakladkaPozycjaWzrostu,
+    };
+    const wynik = odciskSiatki(jakPrzed);
+    expect(wynik.przypadkow).toBe(PRZYPADKOW);
+    expect(wynik.odcisk, 'rata 2 ruszyła coś poza werdyktami „stabilny"').toBe(ODCISK_RATA_1);
   });
 });
 
-describe('dwa przypadki z audytu 2026-09-18 — stan przed ratami 2–4', () => {
+describe('P-WERDYKT rata 2 — „stabilny tor" przestaje milczeć o poziomie', () => {
+  // Usterki A i C audytu 2026-09-18: werdykt mówił o KIERUNKU i nic o POZIOMIE, więc
+  // odcinek dziecka stojącego na 99. centylu masy brzmiał jak odcinek dziecka ze środka
+  // siatki. Ton jest celowo NIEsymetryczny — patrz komentarz przy poziomMasyBmi().
+
+  it('masa ≥97c przy stabilnym torze ostrzega i nazywa poziom', () => {
+    const W = silnik();
+    expect(W.para('weight', 2.33, 2.29, 99, 99))
+      .toEqual({ t: 'warn', l: 'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)' });
+    expect(W.para('weight', 1.9, 1.92, 97, 97.3).t).toBe('warn');
+    expect(W.para('weight', 1.8, 1.82, 96.4, 96.5), 'poniżej progu — bez zmian')
+      .toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
+  });
+
+  it('masa ≤3c nazywa poziom, ale NIE stawia alarmu — bo sama miara go nie uzasadnia', () => {
+    // Zmierzone na tablicach OLAF: przy BMI ≥5c masa-do-wieku sięga 0. centyla w każdym
+    // badanym wieku, czyli niskie proporcjonalne dziecko mieszka w tym paśmie z prawidłowym
+    // BMI. Żółty byłby tam fałszywym alarmem; zdanie — nie jest.
+    const W = silnik();
+    expect(W.para('weight', -2.1, -2.12, 2, 1.9))
+      .toEqual({ t: 'stable', l: 'tor stabilny, masa ciała poniżej 3. centyla' });
+    expect(W.para('weight', -1.9, -1.92, 3, 3), 'próg domknięty od góry').toEqual({
+      t: 'stable', l: 'tor stabilny, masa ciała poniżej 3. centyla',
+    });
+    expect(W.para('weight', -1.8, -1.82, 3.5, 3.4), 'powyżej progu — bez zmian')
+      .toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
+  });
+
+  it('BMI ostrzega po OBU stronach — jest skorygowane o wzrost, więc rozstrzyga samo', () => {
+    const W = silnik();
+    expect(W.para('bmi', -2.1, -2.12, 4, 3.9))
+      .toEqual({ t: 'warn', l: 'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)' });
+    expect(W.para('bmi', -1.7, -1.72, 5, 5), 'próg otwarty od góry: 5c to już nie niedowaga')
+      .toEqual({ t: 'stable', l: 'stabilny tor BMI' });
+    // Górny koniec BMI mówił już wcześniej — rata 2 go nie dubluje ani nie zmienia.
+    expect(W.para('bmi', 2.05, 1.89, 98, 97)).toEqual({ t: 'warn', l: 'utrzymująca się otyłość (>97c)' });
+  });
+
+  it('wzrost zostaje nietknięty — ma własną nakładkę pozycyjną', () => {
+    const W = silnik();
+    expect(W.para('height', 2.33, 2.29, 99, 99)).toEqual({ t: 'stable', l: 'stabilny tor wzrastania' });
+    expect(W.para('height', -2.1, -2.12, 2, 1.9)).toEqual({ t: 'stable', l: 'stabilny tor wzrastania' });
+  });
+
+  it('gałąź poziomu nie odbiera komórek nakładce waga↔BMI', () => {
+    // Nakładka wpuszcza tylko werdykty „stable" przy ΔSDS ≥ 0,2. Masa ≥97c z takim
+    // przyrostem trafia w gałąź wysokich centyli i nigdy nie była „stabilna", więc
+    // ostrzeżenie poziomu nie ma czego przesłonić. Kontrola wprost:
+    const W = silnik();
+    const v = W.para('weight', 1.5, 1.8, 93, 96);
+    expect(v.t, 'przyrost przy wysokim centylu to nie „stabilny"').toBe('warn');
+    const stabilna = W.para('weight', -0.25, 0.13, 40, 55);
+    expect(stabilna.t).toBe('stable');
+    expect(W.nakladkaMasaBmi(stabilna, 0.38, { t: 'warn', l: 'x' }, 0.3))
+      .toEqual({ t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' });
+  });
+});
+
+describe('dwa przypadki z audytu 2026-09-18', () => {
   // Właściciel pokazał dwa prawdziwe ekrany, na których werdykty brzmiały spójnie
   // z regułą, a nie z sytuacją kliniczną. Te testy UTRWALAJĄ stan dzisiejszy, żeby
   // kolejne raty widać było jako zmianę, a nie jako przypadek. Dane są syntetyczne —
   // odtworzone z opisanych liczb, bez żadnych danych pacjenta.
 
-  it('ekran 1 (trajektoria): waga 99c→99c mówi „stabilny tor masy ciała"', () => {
+  it('ekran 1 (trajektoria): waga 99c→99c nazywa już poziom (naprawione w racie 2)', () => {
     const W = silnik();
-    expect(W.para('weight', 2.33, 2.29, 99, 99)).toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
+    // Tu był rdzeń usterki A: wiersz wagi brzmiał uspokajająco obok wiersza BMI mówiącego
+    // o utrzymującej się otyłości. Po racie 2 oba wiersze mówią o tym samym dziecku zgodnie.
+    expect(W.para('weight', 2.33, 2.29, 99, 99))
+      .toEqual({ t: 'warn', l: 'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)' });
     expect(W.para('bmi', 2.05, 1.89, 98, 97)).toEqual({ t: 'warn', l: 'utrzymująca się otyłość (>97c)' });
     // Wzrost w kanale rodzicielskim: kontekst wycisza gałąź populacyjną.
     expect(W.zKontekstem('height', 2.05, 2.34, 98, 99.5, 0, 1.6, false))

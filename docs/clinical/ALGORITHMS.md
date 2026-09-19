@@ -4120,6 +4120,78 @@ Nakładki zostały **osobno**, a nie wewnątrz `para()`, bo wołający widzący 
 
 **Do zapamiętania przy racie 2.** Etykiety werdyktu są odmieniane przez `vilda_patient_narrative.js` (słownik `BEZ_ODMIANY` i tablica przypadków). Zmiana brzmienia etykiety bez dopisania jej tam sprawia, że opis pacjenta spada do bezpiecznej ramki „ — <etykieta>". Pilnuje tego `tests/unit/pacjent-opis-silnik.test.mjs`, który od tej raty zbiera etykiety **z obu plików** — silnika i karty.
 
+## „Stabilny tor" przestaje milczeć o poziomie (P-WERDYKT rata 2, SW 1.1.4, 2026-09-18)
+
+**Decyzja właściciela.** „Ruszaj z ratą 2"; brzmienie „znacznie powyżej / poniżej typowego zakresu" zaakceptowane wcześniej.
+
+**Usterki A i C z audytu 2026-09-18.** Werdykt odcinka mówił o KIERUNKU zmiany i nie mówił nic o POZIOMIE. Odcinek dziecka, które stoi na 99. centylu masy i na nim zostaje, brzmiał „stabilny tor masy ciała" — dokładnie tak samo jak odcinek dziecka ze środka siatki. Na ekranie właściciela wiersz wagi brzmiał uspokajająco tuż obok wiersza BMI mówiącego „utrzymująca się otyłość (>97c)". Wzrost dostał tę gałąź wcześniej (nakładka pozycyjna, decyzja właściciela 2026-08-14); masa i BMI jej nie miały. BMI miało tylko górny koniec (`cb ≥ 97`), dolnego nie miało wcale.
+
+**Co zrobiono.** Wszystkie ścieżki `para()` dla masy i BMI, które kończyły się werdyktem „stabilny tor", przechodzą teraz przez jedną funkcję `stabilny()`, a ta pyta `poziomMasyBmi()` o pozycję centylową końcową:
+
+| miara | pasmo | ton | etykieta |
+|---|---|---|---|
+| masa | `cb ≥ 97` | **warn** | „tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)" |
+| masa | `cb ≤ 3` | **stable** | „tor stabilny, masa ciała poniżej 3. centyla" |
+| BMI | `cb < 5` | **warn** | „tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)" |
+| BMI | `cb ≥ 97` | warn | bez zmian — „utrzymująca się otyłość (>97c)" |
+
+**Progi nie są nowe.** 97 / 3 dla masy i 97 / 5 dla BMI to dokładnie te liczby, które silnik traktował już jako alarmowe w gałęzi środkowego pasma (zmienna `al`). Rata 2 nadała im nazwy w `PROGI` i użyła ich w drugim miejscu; gałąź `al` czyta teraz te same stałe, więc liczba istnieje w repozytorium raz.
+
+### Dlaczego ton nie jest symetryczny — to jest zmierzone, nie przeoczone
+
+Ostrzeżenie (`warn`) stawiamy tylko tam, gdzie **sama miara** wystarcza, żeby orzec nadmiar albo niedobór. Sprawdzone na produkcyjnych tablicach OLAF (przemiatanie wzrost SDS −3,5…+3,5 × BMI SDS −3…+3, masa liczona z BMI i wzrostu, centyl masy z `VildaMasa`):
+
+| wiek / płeć | **maks.** centyl masy-do-wieku przy BMI **<85c** | **min.** centyl masy przy BMI **≥5c** |
+|---|---|---|
+| chłopiec 3 l. | 98,3 | **0,0** |
+| chłopiec 5 l. | 98,5 | **0,0** |
+| chłopiec 8 l. | 96,4 | **0,0** |
+| chłopiec 10 l. | 96,7 | **0,0** |
+| chłopiec 12 l. | 97,2 | **0,0** |
+| dziewczynka 14 l. | 97,9 | **0,0** |
+| dziewczynka 16 l. | 98,2 | **0,0** |
+
+Czyta się to tak:
+
+- **góra masy rozstrzyga.** Żeby mieć masę-do-wieku ≥97c przy BMI poniżej progu nadwagi, trzeba być na skraju siatki wzrostu; poza tym wąskim pasem masa ≥97c wymusza BMI ≥85c. Ostrzeżenie jest tam uczciwe, a wiersz BMI stoi obok i rozstrzyga resztę.
+- **dół masy nie rozstrzyga w ogóle.** Przy prawidłowym BMI masa-do-wieku sięga **0. centyla w każdym badanym wieku** — tam mieszka niskie, proporcjonalne dziecko. Żółty byłby fałszywym alarmem, czyli dokładnie tym, co ten audyt ma usuwać. Dolny koniec masy dostaje więc **zdanie, ale nie alarm**: nazywa pozycję, nie orzeka choroby.
+- **BMI rozstrzyga po obu stronach**, bo jest skorygowane o wzrost — stąd `warn` i u góry, i u dołu.
+
+### Zmierzony wpływ
+
+Siatka realistyczna (centyl końcowy wynika z wyjściowego i ΔSDS, nie jest niezależny; SDS −4…+4 co 0,05, ΔSDS −1…+1 co 0,01; **64 722** komórki dla masy i BMI razem):
+
+| | komórek |
+|---|---|
+| masa ≥97c — odzywa się ostrzeżeniem | 1 669 |
+| masa ≤3c — odzywa się zdaniem, bez alarmu | 1 669 |
+| BMI <5c — odzywa się ostrzeżeniem | 1 871 |
+| **razem przestało milczeć** | **5 209** |
+| nadal „stabilny tor" (środek siatki — i tak ma być) | 11 500 |
+| komórek odebranych nakładce waga↔BMI | **0** |
+
+Zero kolizji z nakładką waga↔BMI nie jest przypadkiem: nakładka wpuszcza wyłącznie werdykty „stable" przy ΔSDS ≥ 0,2, a masa ≥97c z takim przyrostem trafia w gałąź wysokich centyli i nigdy nie była „stabilna". Dolny koniec masy zachowuje ton `stable`, więc nakładka nadal może go zaostrzyć.
+
+### Dowód, że rata 2 nie ruszyła niczego poza ciszą
+
+Test nie porównuje się ze starym kodem, bo starego kodu już nie ma. Zamiast tego odwzorowuje trzy nowe etykiety z powrotem na „stabilny tor" danej miary i liczy odcisk pełnej siatki: wychodzi **dokładnie odcisk raty 1** (`a9a60858…7a93d`, 6 280 776 przypadków). Gdyby gałąź poziomu zmieniła choć jedną komórkę, która wcześniej nie była „stabilna", odcisk by się rozjechał. Odcisk bieżącego silnika (`62fa8355…8e15d`) jest zamrożony osobno.
+
+### Odmiana w opisie pacjenta
+
+Trzy nowe etykiety trafiły do słownika `ZDANIOWE` w `vilda_patient_narrative.js` — jako STAN, nie zdarzenie, tak samo jak nakładki pozycyjne:
+
+- „tor jest stabilny, ale masa ciała utrzymuje się znacznie powyżej typowego zakresu (>97c)" / „…utrzymywała się…";
+- „tor jest stabilny, a masa ciała pozostaje poniżej 3. centyla" / „…pozostawała…";
+- „tor jest stabilny, ale BMI utrzymuje się znacznie poniżej typowego zakresu (<5c)" / „…utrzymywało się…".
+
+Bez tego opis spadłby do bezpiecznej ramki „ — <etykieta>"; pilnuje tego `tests/unit/pacjent-opis-silnik.test.mjs`. Epikryza (`vilda_epicrisis.js`) odmienia wyłącznie etykiety toru WZROSTU i ma fallback dla nieznanych, więc jej ta rata nie dotyczy.
+
+### Zmieniony test kontrastowy
+
+`tests/unit/trajectory-analysis.test.mjs` trzymał od 2026-08-09 asercję „waga 98,9c → 99,2c = stabilny tor masy ciała" jako **kontrast** do BMI, które przy >97c już się odzywało. To była dokumentacja asymetrii, nie jej uzasadnienie — rata 2 asymetrię domyka, więc asercja mówi teraz to, co mówi aplikacja, z komentarzem wyjaśniającym zmianę.
+
+**Walidacja.** `tests/unit/werdykt-silnik.test.mjs` — 18 testów. Pełny przebieg: **2651 testów w 159 plikach**, lint, składnia (481 plików), polityka repozytorium (590 plików) — zielone.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
