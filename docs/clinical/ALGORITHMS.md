@@ -4404,6 +4404,29 @@ Ten sam zapis siedział w **trzech** plikach e2e: `scalanie-duplikatow`, `tozsam
 
 **Do odnotowania, nie do naprawy teraz.** W trakcie scalania rekord źródłowy przez chwilę istnieje bez wersji. Kolejność jest bezpieczna, więc nic nie ginie, ale lista pacjentów narysowana dokładnie w tym momencie pokazałaby pacjenta bez zapisów.
 
+## Rozpoznanie z Karty Pacjenta trafia na ekran bez przeładowania (P-ZRODLA, SW 1.1.8, 2026-09-19)
+
+**Skąd znalezisko.** Zgłoszenie właściciela: „trzeba go zaznaczyć, potem jak się wróci na stronę główną, to trzeba ją przeładować, żeby ta funkcja zaczęła działać" — o przełączniku „Zespół Downa" w Karcie Pacjenta, który przestawia siatki odniesienia całej strony.
+
+**Bez zmiany klinicznej.** Żaden wzór, próg, współczynnik ani tablica nie został ruszony. Zmienia się wyłącznie to, czy zatwierdzona wcześniej siatka DS (Zemel 2015) realnie dociera na ekran bez przeładowania strony.
+
+### Przyczyna: wyścig, nie opóźnienie
+
+`vilda_ds_source.js` odświeża flagę asynchronicznie (`VildaVault.getPatient(...).then(...)`) i **nikomu tego nie ogłaszał** — zero `dispatchEvent` w pliku; tak samo `vilda_perinatal_source.js` i `vilda_puberty_source.js`. Karta główna przemalowywała się po zapisie **przypadkiem**: ścieżka zapisu wpisuje dane z powrotem do formularza, co wywołuje `input` i przeliczenie. Pomiar na żywej stronie: klik „Zapisz zmiany" w t=931 ms, zamknięcie Karty w t=1053 ms, przemalowanie dopiero w **t=3319 ms** (stos: `HTMLInputElement.calculateGrowthAdvanced`) — czyli nawet gdy działało, działało nie z powodu zmiany flagi.
+
+Rozstrzygający eksperyment: przy sztucznie spowolnionym o 6 s odczycie sejfu strona **20 s po zapisie** nadal pokazywała siatkę populacyjną (centyl 96, bez noty o siatce DS), mimo że flaga miała już wartość `DS`. Po ręcznym wywołaniu publicznego przeliczenia w tej samej sesji: centyl 94 i nota „wg siatki dla zespołu Downa (Zemel 2015)". Dane i silnik były poprawne — brakowało sygnału „przelicz". Testowy sejf (10 000 iteracji PBKDF2, pusty rekord) ten wyścig wygrywa prawie zawsze, sejf lekarza — nie.
+
+### Poprawka
+
+- `vilda_zrodla_pacjenta.js` (nowy) — jeden wspólny sygnał dla wszystkich trzech źródeł. Porównuje odcisk zapamiętanego stanu (klucze sortowane, więc sama kolejność pól nie udaje zmiany) i **tylko przy faktycznej zmianie** ogłasza `vilda:zrodlo-pacjenta-zmienione` oraz zamawia jedno przeliczenie strony publicznym `window.debouncedUpdate()`. Porównanie odcisków jest zarazem bezpiecznikiem przed pętlą; trzy źródła zmienione po jednym odczycie rekordu dają jedno przeliczenie.
+- `vilda_ds_source.js`, `vilda_perinatal_source.js`, `vilda_puberty_source.js` — wołają sygnał w `zapamietaj()` i `zapomnij()`. Nadal niczego nie liczą i niczego nie zapisują; bez wspólnego modułu na stronie działają jak dotąd.
+
+### Dlaczego stary test tego nie łapał
+
+`tests/e2e/ds-karta-modulu.spec.mjs:93` omija ścieżkę produkcyjną: ustawia flagę synchronicznie przez `VildaDsSource.zapamietaj(...)` i sam dostarcza przeliczenie, dopisując wartość do pola formularza. Sprawdza silnik i siatki — nie obieg „zaznacz w Karcie → wróć na stronę główną". Nowy `tests/e2e/ds-przelacznik-karta-pacjenta.spec.mjs` idzie całą ścieżką i **spowalnia odczyt sejfu o 6 s**, żeby nie mógł przejść dzięki wygranemu wyścigowi. Kontrola negatywna: po wyłączeniu ogłoszenia w `vilda_ds_source.js` test pada (oba przebiegi), po przywróceniu przechodzi.
+
+**Zasięg.** Zmierzony kierunek OGOLNA → DS na `index.html`. Ta sama poprawka obejmuje kierunek odwrotny, wczytanie innego pacjenta oraz dane okołoporodowe i pokwitaniowe — te same trzy moduły, ten sam wzorzec odczytu.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
