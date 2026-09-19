@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaPacjentow, czekajNaZnikniecieRekordu } from '../support/sejf-czekanie.mjs';
 
 // P-SCALANIE (zlecenie właściciela 2026-09-15): widok „Duplikaty" w zakładce Pacjenci scala
 // rekordy Z BAZY o tym samym nazwisku — na życzenie lekarza, po potwierdzeniu, nigdy sam.
@@ -64,12 +65,17 @@ const pacjenci = (page) => page.evaluate(async () => {
   return out;
 });
 
-/* Czeka, aż lista pacjentów ustabilizuje się na zadanej liczbie (koniec scalania). */
-async function czekajNaLiczbe(page, n) {
-  await page.waitForFunction(async (oczekiwane) => {
-    const l = await window.VildaVault.listPatients();
-    return l.length === oczekiwane;
-  }, n, { timeout: 15000 });
+/* Koniec scalania poznajemy po ZNIKNIĘCIU rekordu źródłowego — to ostatni krok mergePatients,
+   po nim wszystko inne (przepięcie wersji, scalona głowa, poprawka licznika, notatki) jest już
+   zrobione. Dotychczasowa bramka na samej długości listy była podwójnie zawodna: liczyła przez
+   page.waitForFunction z predykatem `async` (Promise jest zawsze prawdziwy, więc przepuszczała
+   od razu), a helper `pacjenci` niżej celowo POMIJA rekord bez poprawnej głowy — czyli źródło
+   w trakcie scalania — więc i on pokazywał 1, zanim scalanie się skończyło. */
+async function czekajNaKoniecScalania(page, zrodlowyId) {
+  await czekajNaZnikniecieRekordu(page, zrodlowyId);
+  await expect
+    .poll(async () => page.evaluate(() => window.__alerty.some((a) => /Scalono/.test(a))), { timeout: 15000 })
+    .toBe(true);
 }
 
 async function otworzDuplikaty(page) {
@@ -105,7 +111,8 @@ test.describe('Duplikaty z bazy — scalanie na życzenie lekarza', () => {
     await expect(arkusz).toContainText('nie można cofnąć');
     await arkusz.locator('button', { hasText: 'Scal w jeden rekord' }).click();
 
-    await czekajNaLiczbe(page, 1);
+    await czekajNaKoniecScalania(page, stary);
+    await czekajNaPacjentow(page, 1);
     await expect.poll(async () => (await pacjenci(page)).length, { timeout: 15000 }).toBe(1);
     const [p] = await pacjenci(page);
     expect(p.id).toBe(nowy);

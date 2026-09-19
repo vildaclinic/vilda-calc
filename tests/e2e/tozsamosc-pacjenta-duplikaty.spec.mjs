@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaPacjentow } from '../support/sejf-czekanie.mjs';
 
 // P-DUP (zgłoszenie właściciela 2026-09-14) — odtworzenie zgłoszonego przebiegu na PRAWDZIWEJ
 // stronie: pacjent z bazy + dopisana data urodzenia w formularzu głównym = NOWY pacjent.
@@ -155,7 +156,7 @@ async function pierwszaWizyta(page) {
     'komplet danych pierwszej wizyty',
   );
   await zapiszPewnie(page);
-  await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
+  await czekajNaPacjentow(page, 1);
   const lista = await pacjenci(page);
   expect(lista).toHaveLength(1);
   return lista[0];

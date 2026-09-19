@@ -4361,6 +4361,49 @@ Odcisk pełnej siatki wejść **bez zmian** (`62fa8355…8e15d`): nakładka jest
 
 Cztery raty zamykają wszystkie usterki opisane w audycie: jeden silnik zamiast dwóch kopii (rata 1), „stabilny tor" nazywa poziom (rata 2, usterki A i C), hamulec catch-upu (rata 3, usterka B) i prędkość BMI w środkowym paśmie (rata 4). Otwarte pozostają dwa pytania o progi z PR #363 — czy „istotny" ma być jedną liczbą i czy „stabilny" ma przestać zależeć od pozycji; rekomendacja bez zmian: zostawić oba.
 
+## Bramka, która nie czekała (P-BRAMKI, 2026-09-19)
+
+**Skąd znalezisko.** Ze zleconej analizy porażki `scalanie-duplikatow.spec.mjs:84`, która w pełnych przebiegach oddawała „1 wersja zamiast 4" i wyglądała jak utrata danych pacjenta przy scalaniu kartotek. **Nie jest to usterka produktu.**
+
+### Sejf jest poprawny — sprawdzone osobno
+
+`mergePatients` wywołany bezpośrednio, 5 przebiegów z rzędu: nagłówek **4**, faktycznie **4** wersje, wiersze **[84, 96, 106]**. Kolejność operacji jest bezpieczna i nie wymaga zmiany: wersje źródła są **przepinane do rekordu docelowego jako pierwsze**, nagłówek źródła kasowany **jako ostatni**. Awaria w środku zostawia dane na rekordzie docelowym — nic nie ginie.
+
+### Przyczyna: `waitForFunction` z predykatem `async` nie czeka
+
+```js
+await page.waitForFunction(async () => (await V.listPatients()).length === n);   // NIE CZEKA
+```
+
+Predykat `async` oddaje `Promise`, a `Promise` jest zawsze prawdziwy, więc bramka przepuszcza na pierwszym sprawdzeniu. Zmierzone osobnym eksperymentem w Chromium:
+
+| predykat | wynik |
+|---|---|
+| `async () => { … ; return false }` | **przeszedł po 341 ms** |
+| `() => false` (synchroniczny) | poprawny timeout po 3026 ms |
+
+**Druga bramka tego samego testu też była dziurawa.** `expect.poll(pacjenci().length === 1)` opierała się na pomocniku, który **celowo pomija** rekordy bez poprawnej głowy — czyli rekord źródłowy w trakcie scalania, gdy jego wersje są już przepięte. Helper pokazywał więc 1, zanim scalanie się skończyło.
+
+### Zmierzone odtworzenie
+
+6 powtórzeń spec-a przy 6 workerach: **3 razy bramka puściła, gdy na liście były wciąż 2 rekordy**, rekord źródłowy żył, a alert scalania jeszcze nie padł (nagłówek celu 1, faktycznie 1 albo 3). Wszystkie przebiegi dochodziły do stanu poprawnego (nagłówek 4, faktycznie 4, źródło skasowane) w ciągu 2,5 s — test po prostu czytał za wcześnie.
+
+### Skala
+
+Ten sam zapis siedział w **trzech** plikach e2e: `scalanie-duplikatow`, `tozsamosc-pacjenta-duplikaty`, `gh-punkt-a-reczny-wiersz`. We wszystkich trzech bramka była pusta, a testy przechodziły przypadkiem.
+
+### Poprawka
+
+- `tests/support/sejf-czekanie.mjs` — `czekajNaPacjentow(page, ile)` i `czekajNaZnikniecieRekordu(page, id)`; czekanie wykonuje `expect.poll` **po stronie Node**, gdzie `await` działa.
+- `scalanie-duplikatow` czeka teraz na **zniknięcie rekordu źródłowego** (ostatni krok `mergePatients`, po nim wszystko inne jest już zrobione) **i** na alert „Scalono" — czyli na koniec łańcucha UI, a nie na pochodną, którą widać w połowie roboty.
+- `tests/unit/straznik-bramek-testowych.test.mjs` — skanuje wszystkie pliki `.mjs` w `tests/` (z pominięciem prozy komentarzy) i nie przepuszcza powrotu wzorca. Próbki kontrolne są w nim składane z kawałków, żeby strażnik obejmował także **samego siebie**.
+
+**Walidacja.** Te same trzy pliki przy 6 workerach i 6 powtórzeniach: **54/54 zdane** (przed poprawką: 1 porażka i 2 flaky na 6 powtórzeń samego scalania). Pełny przebieg: 2672 testy w 160 plikach, lint, składnia (483 pliki), polityka repozytorium (592 pliki).
+
+**Bez zmian w produkcie** — żaden plik aplikacji nie był ruszany, więc bez podbicia `?v=` i `SW_VERSION`.
+
+**Do odnotowania, nie do naprawy teraz.** W trakcie scalania rekord źródłowy przez chwilę istnieje bez wersji. Kolejność jest bezpieczna, więc nic nie ginie, ale lista pacjentów narysowana dokładnie w tym momencie pokazałaby pacjenta bez zapisów.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
