@@ -208,6 +208,11 @@
     return { centyl: centyl, cole: cole };
   }
 
+  function bmiSpeedOverlayVerdict(v, d, gapM) {
+    var S = silnikWerdyktu();
+    return S ? S.nakladkaPredkosciBmi(v, d, gapM) : v;
+  }
+
   function heightPositionOverlayVerdict(v, cb, mp, sa0, ghOn) {
     var S = silnikWerdyktu();
     return S ? S.nakladkaPozycjaWzrostu(v, cb, mp, sa0, ghOn) : v;
@@ -501,6 +506,17 @@
     var first = series[0], last = series[series.length - 1];
     var totalPv = (last.ageMonths - first.ageMonths) >= P.SEGMENT_MIN_GAP_M ? pairVerdict(first, last) : null;
     var total = totalPv ? totalPv.v : null;
+
+    // P-WERDYKT rata 4: przyspieszenie BMI w paśmie typowym. Tylko dla BMI — dla masy-do-wieku
+    // ten sam dryf w górę może znaczyć po prostu, że dziecko rośnie. Nakładka odzywa się
+    // wyłącznie tam, gdzie werdykt jest „stabilny", więc niczego mocniejszego nie nadpisze.
+    if (met.key === 'bmi') {
+      segments.forEach(function (sg) {
+        sg.verdict = bmiSpeedOverlayVerdict(sg.verdict, sg.dSds, sg.gapM);
+      });
+      total = bmiSpeedOverlayVerdict(total,
+        Math.round(100 * (last.sd - first.sd)) / 100, last.ageMonths - first.ageMonths);
+    }
 
     // najpoważniejszy odcinek: bad > warn, potem największe |ΔSDS|
     var sev = { bad: 2, warn: 1 };
@@ -1406,6 +1422,7 @@
     overlapM: overlapM,
     weightBmiOverlayVerdict: weightBmiOverlayVerdict,
     heightPositionOverlayVerdict: heightPositionOverlayVerdict,
+    bmiSpeedOverlayVerdict: bmiSpeedOverlayVerdict,
     zoneForPair: zoneForPair,
     zoneLabel: zoneLabel,
     chan: chan,

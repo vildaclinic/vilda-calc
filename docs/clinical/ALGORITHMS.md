@@ -4292,6 +4292,75 @@ Czytnik etykiet w `tests/unit/pacjent-opis-silnik.test.mjs` wycinał literały w
 
 **Walidacja.** `tests/unit/werdykt-silnik.test.mjs` — 27 testów (było 18): oba ramiona z progami domkniętymi od właściwej strony, pierwszeństwo BMI, milczenie bez danych, redukcja nietknięta, reguła ruchu nietknięta, brak drugiej bramki w panelu porównania i w module trajektorii. Pełny przebieg: 2651 testów w 159 plikach, lint, składnia (481 plików), polityka repozytorium (590 plików).
 
+## Przyspieszenie BMI w paśmie typowym (P-WERDYKT rata 4, SW 1.1.7, 2026-09-19)
+
+**Decyzja właściciela.** „Ruszaj z ratą 4, 0,3 jest ok" — próg **+0,30 ΔbmiSDS** wybrany z przedstawionych wariantów.
+
+**Skąd wzięło się pytanie.** Z uwagi właściciela przy otwarciu audytu: *„ważna jest też prędkość zmiany BMI — aplikacja mogłaby ostrzegać, że dziecko tyje za szybko w stosunku do tempa wzrastania; zwłaszcza w tych środkowych przedziałach centylowych jest dużo miejsca i takie przesunięcia mogą zostać niezauważone"*. Sprawdzenie potwierdziło, że reguły takiej nie było.
+
+### Zmierzona cisza
+
+W środkowym paśmie siatki BMI mogło się przesuwać, nie uruchamiając **żadnej** reguły: powyżej 85. centyla silnik odzywa się od ΔSDS ≥ 0,2, „istotne przesunięcie centylowe" dopiero od 0,5 — a między nimi nic.
+
+| | przed ratą 4 |
+|---|---|
+| komórek siatki, w których BMI rośnie, a werdykt brzmi „stabilny tor BMI" | **4546** |
+| największy niezauważony przyrost | **+0,49 ΔbmiSDS** |
+| największy niezauważony przeskok centylowy | **19,4 punktu centylowego** |
+
+### Wybór progu
+
+Cztery warianty przemiecione przed decyzją:
+
+| próg | łapie komórek | % ciszy | z tego kończy **poniżej 85c** | mediana przeskoku |
+|---|---|---|---|---|
+| 0,25 SDS | 1925 | 42 % | 1617 (84 %) | 11,7 pkt |
+| **0,30 SDS** | **1540** | **34 %** | **1277 (83 %)** | **12,7 pkt** |
+| 0,35 SDS | 1155 | 25 % | 945 (82 %) | 13,8 pkt |
+| 0,40 SDS | 770 | 17 % | 622 (81 %) | 14,8 pkt |
+
+Trzecia kolumna jest tu najważniejsza: **ponad 80 % łapanych przypadków kończy poniżej 85. centyla**, czyli poza zasięgiem hamulca catch-upu z raty 3 i wszystkich pozostałych reguł — o tych dzieciach aplikacja nie powiedziałaby nic.
+
+Co próg znaczy przy łóżku (dziecko startujące z danego centyla):
+
+| start | +0,25 SDS | **+0,30 SDS** | +0,35 SDS |
+|---|---|---|---|
+| 25c | 33,6c | 35,4c | 37,3c |
+| 50c | 59,9c | **61,8c** | 63,7c |
+| 70c | 78,1c | **79,5c** | 80,9c |
+| 75c | 82,2c | 83,5c | 84,7c |
+
+0,25 łapie najwięcej, ale mediana przeskoku 11,7 punktu centylowego zbliża się do szumu pomiarowego na krótkich odstępach. 0,35 i 0,40 przepuszczają od połowy do trzech czwartych problemu. **0,30** trafia w jedną trzecią ciszy, siedzi wyraźnie poniżej progu 0,5 (więc go nie dubluje), a pasmo, które pokrywa, czyta się klinicznie: „dziecko przeszło z 70. na blisko 80. centyl w jednym odcinku".
+
+### Reguła
+
+`nakladkaPredkosciBmi(v, d, gapM)` — trzecia nakładka silnika, obok spójności waga↔BMI i pozycyjnej wzrostu:
+
+- odzywa się **wyłącznie** przy werdykcie `stable`, czyli dokładnie tam, gdzie silnik dotąd milczał — nigdy nie nadpisuje mocniejszego werdyktu;
+- wymaga `ΔbmiSDS ≥ +0,30` (spadek BMI nie jest przyspieszeniem);
+- wymaga odstępu **≥ 3 mies.** (`PREDKOSC_MIN_ODSTEP_M`) — krótki odcinek to szum pomiarowy, nie przyspieszenie. Ta sama liczba i to samo uzasadnienie, co `SEGMENT_MIN_GAP_M` w module trajektorii; równości pilnuje test **między plikami**;
+- daje `{ t: 'warn', l: 'BMI rośnie szybciej niż wzrastanie — do obserwacji' }`.
+
+**Dlaczego akurat BMI, a nie masa.** Rosnący bmiSDS **to jest** „przyrost masy szybszy niż wzrastanie": BMI jest już skorygowane o wzrost, więc jego dodatni dryf oznacza dokładnie to, o co pytał właściciel. Dla masy-do-wieku ten sam dryf znaczy co innego — dziecko może po prostu rosnąć — więc nakładki do niej się nie stosuje. Pilnuje tego test obu konsumentów.
+
+**Dlaczego nakładka, a nie gałąź w `para()`.** Reguła potrzebuje **odstępu między pomiarami**, a `para()` widzi tylko SDS i centyle. Odstęp ma konsument, więc reguła mieszka tam, gdzie mieszkają pozostałe nakładki — i tak jak one nie zmienia werdyktu bazowego.
+
+### Zmierzony skutek
+
+| | po racie 4 |
+|---|---|
+| komórek, które przestały milczeć | **1540 z 4546 (33,9 %)** |
+| z tego poza zasięgiem hamulca z raty 3 (kończą < 85c) | **1277 (83 %)** |
+| największy przeskok centylowy pozostający w ciszy | **11,5** zamiast 19,4 punktu centylowego |
+
+Odcisk pełnej siatki wejść **bez zmian** (`62fa8355…8e15d`): nakładka jest osobną funkcją, a przemiatanie odciska `para`, `zKontekstem` i dwie wcześniejsze nakładki.
+
+**Walidacja.** `tests/unit/werdykt-silnik.test.mjs` — 36 testów (było 27): oba progi domknięte od właściwej strony (0,30 tak / 0,29 nie; 3 mies. tak / 2,9 nie), spadek BMI nie jest przyspieszeniem, brak nadpisywania werdyktów warn/bad/good, wypełnianie szczeliny pod progiem 0,5, równość progu odstępu z modułem trajektorii, obaj konsumenci stosują nakładkę wyłącznie do BMI. Pełny przebieg: 2660 testów w 159 plikach, lint, składnia (481 plików), polityka repozytorium (590 plików).
+
+### Domknięcie audytu werdyktów 2026-09-18
+
+Cztery raty zamykają wszystkie usterki opisane w audycie: jeden silnik zamiast dwóch kopii (rata 1), „stabilny tor" nazywa poziom (rata 2, usterki A i C), hamulec catch-upu (rata 3, usterka B) i prędkość BMI w środkowym paśmie (rata 4). Otwarte pozostają dwa pytania o progi z PR #363 — czy „istotny" ma być jedną liczbą i czy „stabilny" ma przestać zależeć od pozycji; rekomendacja bez zmian: zostawić oba.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

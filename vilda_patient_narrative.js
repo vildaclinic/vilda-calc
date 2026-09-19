@@ -294,6 +294,11 @@
     'wyrównanie niedoboru masy, ale wskaźnik Cole\'a sięgnął już 110%': {
       teraz: 'masa wyrównała niedobór, ale wskaźnik Cole\'a sięgnął już 110%',
       wtedy: 'masa wyrównała niedobór, a wskaźnik Cole\'a sięgnął wtedy 110%'
+    },
+    // Przyspieszenie BMI w pasmie typowym (P-WERDYKT rata 4).
+    'BMI rośnie szybciej niż wzrastanie': {
+      teraz: 'BMI rośnie szybciej niż wzrastanie',
+      wtedy: 'BMI rosło szybciej niż wzrastanie'
     }
   };
 

@@ -30,12 +30,14 @@ describe('silnik werdyktu — kształt modułu', () => {
     expect(typeof W.zKontekstem).toBe('function');
     expect(typeof W.nakladkaMasaBmi).toBe('function');
     expect(typeof W.nakladkaPozycjaWzrostu).toBe('function');
+    expect(typeof W.nakladkaPredkosciBmi).toBe('function');
     expect(Object.isFrozen(W)).toBe(true);
     expect(Object.isFrozen(W.PROGI)).toBe(true);
     expect(W.PROGI).toEqual({
       ISTOTNA_DECELERACJA_DSDS: -1.0, ISTOTNE_PRZESUNIECIE_DSDS: 0.5,
       MASA_WYSOKA_C: 97, MASA_NISKA_C: 3, BMI_OTYLOSC_C: 97, BMI_NIEDOWAGA_C: 5,
       BMI_NADWAGA_C: 85, COLE_NADWAGA_PCT: 110,
+      PRZYSPIESZENIE_BMI_DSDS: 0.3, PREDKOSC_MIN_ODSTEP_M: 3,
     });
   });
 
@@ -347,5 +349,81 @@ describe('P-WERDYKT rata 3 — hamulec catch-upu masy', () => {
     expect(TRAJ).toContain('poziomBmiPunktu(bs.b, sex, source)');
     expect(TRAJ).toContain('poziomBmiPunktu(bm.last, sex, source)');
     expect(TRAJ, 'Cole z silnika BMI').toContain('B.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source })');
+  });
+});
+
+describe('P-WERDYKT rata 4 — przyspieszenie BMI w paśmie typowym', () => {
+  // Decyzja właściciela 2026-09-19: „0,3 jest ok". Reguła wypełnia zmierzoną szczelinę:
+  // powyżej 85. centyla silnik odzywa się już od ΔSDS ≥ 0,2, „istotne przesunięcie" dopiero
+  // od 0,5, a w środku siatki — cisza.
+  const STABILNY = { t: 'stable', l: 'stabilny tor BMI' };
+  const GLOS = { t: 'warn', l: 'BMI rośnie szybciej niż wzrastanie — do obserwacji' };
+
+  it('próg domknięty od dołu na +0,30 ΔbmiSDS', () => {
+    const W = silnik();
+    expect(W.nakladkaPredkosciBmi(STABILNY, 0.3, 6)).toEqual(GLOS);
+    expect(W.nakladkaPredkosciBmi(STABILNY, 0.29, 6)).toBe(STABILNY);
+  });
+
+  it('krótki odcinek to szum, nie przyspieszenie — próg odstępu domknięty na 3 miesiącach', () => {
+    const W = silnik();
+    expect(W.nakladkaPredkosciBmi(STABILNY, 0.45, 3)).toEqual(GLOS);
+    expect(W.nakladkaPredkosciBmi(STABILNY, 0.45, 2.9)).toBe(STABILNY);
+    expect(W.nakladkaPredkosciBmi(STABILNY, 0.45, null)).toBe(STABILNY);
+    expect(W.nakladkaPredkosciBmi(STABILNY, 0.45)).toBe(STABILNY);
+  });
+
+  it('spadek BMI nie jest przyspieszeniem', () => {
+    const W = silnik();
+    expect(W.nakladkaPredkosciBmi(STABILNY, -0.45, 12)).toBe(STABILNY);
+    expect(W.nakladkaPredkosciBmi(STABILNY, 0, 12)).toBe(STABILNY);
+  });
+
+  it('odzywa się WYŁĄCZNIE tam, gdzie silnik milczał — nigdy nie nadpisuje mocniejszego werdyktu', () => {
+    const W = silnik();
+    for (const t of ['warn', 'bad', 'good']) {
+      const v = { t, l: 'x' };
+      expect(W.nakladkaPredkosciBmi(v, 0.45, 12), `nadpisała werdykt ${t}`).toBe(v);
+    }
+    expect(W.nakladkaPredkosciBmi(null, 0.45, 12)).toBeNull();
+  });
+
+  it('wypełnia szczelinę POD progiem „istotnego przesunięcia", a nie dubluje go', () => {
+    const W = silnik();
+    expect(W.PROGI.PRZYSPIESZENIE_BMI_DSDS).toBeLessThan(W.PROGI.ISTOTNE_PRZESUNIECIE_DSDS);
+    // Przy ΔSDS ≥ 0,5 werdykt bazowy już mówi sam, więc nakładka nie ma czego zaostrzać.
+    const przyPelnym = W.para('bmi', 0.3, 0.85, 62, 80);
+    expect(przyPelnym).toEqual({ t: 'warn', l: 'istotne przesunięcie centylowe w górę' });
+    expect(W.nakladkaPredkosciBmi(przyPelnym, 0.55, 12)).toBe(przyPelnym);
+  });
+
+  it('realny odcinek ze środka siatki: 70c → 80,7c przestał być „stabilnym torem BMI"', () => {
+    const W = silnik();
+    const v = W.para('bmi', 0.52, 0.87, 70, 80.7);
+    expect(v, 'werdykt bazowy nadal milczy — to nakładka mówi').toEqual(STABILNY);
+    expect(W.nakladkaPredkosciBmi(v, 0.35, 6)).toEqual(GLOS);
+  });
+
+  it('próg krótkiego odstępu to ta sama liczba, co strażnik odcinków w module trajektorii', () => {
+    const W = silnik();
+    const seg = TRAJ.match(/SEGMENT_MIN_GAP_M:\s*(\d+(?:\.\d+)?)/);
+    expect(seg).toBeTruthy();
+    expect(Number(seg[1]), 'dwie liczby o tym samym uzasadnieniu muszą być równe')
+      .toBe(W.PROGI.PREDKOSC_MIN_ODSTEP_M);
+  });
+
+  it('obaj konsumenci stosują nakładkę tylko do BMI', () => {
+    expect(TRAJ).toContain("if (met.key === 'bmi') {");
+    expect(TRAJ).toContain('sg.verdict = bmiSpeedOverlayVerdict(sg.verdict, sg.dSds, sg.gapM);');
+    expect(AUTH).toContain('"bmi"===m.metric&&(v=verdictBmiSpd(v,Math.round(100*(sb.sd-sa.sd))/100,dt));');
+  });
+
+  it('masa-do-wieku zostaje nietknięta — ten sam dryf znaczy tam co innego', () => {
+    const W = silnik();
+    const masa = W.para('weight', 0.3, 0.65, 62, 74);
+    expect(masa).toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
+    // Nakładki prędkości nie stosuje się do masy; gdyby ktoś ją tam wpiął, ten test nie
+    // zaświeci się sam — pilnuje tego asercja o konsumentach wyżej.
+    expect(TRAJ).not.toContain("met.key === 'weight'ovl");
   });
 });
