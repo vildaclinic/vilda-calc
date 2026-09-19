@@ -172,6 +172,7 @@ function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var W=window.VildaWerdykt;return
 // Nakładka spójności waga↔BMI (decyzja właściciela 2026-08-14) — reguła w silniku (nakladkaMasaBmi).
 function verdictWtBmi(v,dW,vB,dB,pb){var W=window.VildaWerdykt;return W?W.nakladkaMasaBmi(v,dW,vB,dB,pb):v}
 // Nakładka pozycyjna wzrostu (decyzja właściciela 2026-08-14) — reguła w silniku (nakladkaPozycjaWzrostu).
+function verdictBmiSpd(v,d,gapM){var W=window.VildaWerdykt;return W?W.nakladkaPredkosciBmi(v,d,gapM):v}
 function verdictHtPos(v,cb,mp,sa0,ghOn){var W=window.VildaWerdykt;return W?W.nakladkaPozycjaWzrostu(v,cb,mp,sa0,ghOn):v}
 function ctxClean(x){return String(x==null?"":x).replace(/[<>]/g,"")}
 function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(b)-ageOf(a),tr="",cards="";
@@ -185,6 +186,9 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
     var dv=sb.val-sa.val,dyr=dt/12,ca=sa.c,cb=sb.c,ip=ca!=null&&cb!=null?interpCh(ca,cb,sa.sd,sb.sd):["flat","",""];
     var v=verdictCh2(m.metric,sa.sd,sb.sd,ca,cb,ghM,cx?cx.mpSds:null,rdOn);
     "height"===m.metric&&(v=verdictHtPos(v,cb,cx?cx.mpSds:null,sa.sd,ghM>=6));
+    // P-WERDYKT rata 4: przyspieszenie BMI w pasmie typowym. Odstep `dt` jest w miesiacach
+    // (ageOf zwraca miesiace) — nakladka sama pilnuje progu krotkiego odcinka.
+    "bmi"===m.metric&&(v=verdictBmiSpd(v,Math.round(100*(sb.sd-sa.sd))/100,dt));
     // Strażnik TEMPA redukcji (nie osłabia 🔴): odstęp ≥2 mies., start ≥10c, spadek — 🟠 gdy
     // ≤−1,5 SDS/rok lub (waga) ubytek >1 kg/mies. u dziecka <12 lat / >~0,9 kg/tydz. (≈3,9 kg/mies.) u ≥12 lat.
     if(v&&v.t!=="bad"&&("weight"===m.metric||"bmi"===m.metric)&&ca!=null&&ca>=10&&sa.sd!=null&&sb.sd!=null&&dt>=2){

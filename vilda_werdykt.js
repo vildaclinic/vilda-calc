@@ -49,7 +49,7 @@
 
   if (!root) return;
 
-  var WERSJA = '3';
+  var WERSJA = '4';
 
   // Progi nazwane. Reszta liczb w gałęziach jest celowo zostawiona dokładnie tam, gdzie była
   // przed przeniesieniem — rata 1 ma być czytelna jako przeniesienie, a nie jako przepisanie.
@@ -72,7 +72,15 @@
     // Te same liczby, których używa już silnik BMI: VildaBmi.PROGI.DZIECKO.NADWAGA = 85
     // i VildaBmi.PROGI.COLE.NADWAGA = 110. Nie są nowe i nie zapadają tutaj.
     BMI_NADWAGA_C: 85,
-    COLE_NADWAGA_PCT: 110
+    COLE_NADWAGA_PCT: 110,
+    // Przyspieszenie BMI w paśmie typowym (P-WERDYKT rata 4, decyzja właściciela 2026-09-19:
+    // „0,3 jest ok"). Liczba wybrana po przemiataniu: przy 0,30 reguła obejmuje trzecią część
+    // dotychczasowej ciszy, mediana przeskoku to 12,7 punktu centylowego, a próg siedzi
+    // wyraźnie poniżej ISTOTNE_PRZESUNIECIE_DSDS (0,5), więc go nie dubluje.
+    PRZYSPIESZENIE_BMI_DSDS: 0.3,
+    // Krótki odcinek to szum pomiarowy, nie przyspieszenie. Ta sama liczba i ten sam powód,
+    // co SEGMENT_MIN_GAP_M w vilda_trajectory_analysis.js — pilnuje tego test między plikami.
+    PREDKOSC_MIN_ODSTEP_M: 3
   });
 
   function dSds(sa0, sb0) {
@@ -228,6 +236,28 @@
     return { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
   }
 
+  // ── 3c. Nakładka przyspieszenia BMI ──────────────────────────────────────────────────
+  // P-WERDYKT rata 4. W środkowym paśmie siatki jest dużo miejsca i BMI może się po nim
+  // przesuwać, nie uruchamiając żadnej reguły: wysokie centyle odzywają się od ΔSDS ≥ 0,2,
+  // „istotne przesunięcie" dopiero od 0,5, a między nimi — cisza. Zmierzone przed tą ratą:
+  // 4546 komórek siatki, w których BMI rośnie, a werdykt brzmi „stabilny tor BMI";
+  // największy niezauważony przyrost to +0,49 ΔbmiSDS, czyli skok o 19,4 punktu centylowego.
+  // Ponad 80 % z nich kończy poniżej 85. centyla, więc nie złapie ich ani hamulec catch-upu,
+  // ani gałąź poziomu — nikt o nich nie powie nic.
+  //
+  // Rosnący bmiSDS TO JEST „przyrost masy szybszy niż wzrastanie": BMI jest już skorygowane
+  // o wzrost, więc jego dodatni dryf oznacza, że masa idzie w górę szybciej niż wysokość.
+  //
+  // Nakładka odzywa się WYŁĄCZNIE tam, gdzie silnik dotąd milczał (`stable`) — nigdy nie
+  // nadpisuje mocniejszego werdyktu. Stosuje się ją tylko do BMI; dla masy-do-wieku ten sam
+  // dryf znaczy co innego (dziecko może po prostu rosnąć).
+  function nakladkaPredkosciBmi(v, d, gapM) {
+    if (!v || v.t !== 'stable') return v;
+    if (typeof d !== 'number' || !isFinite(d) || !(d >= PROGI.PRZYSPIESZENIE_BMI_DSDS)) return v;
+    if (typeof gapM !== 'number' || !isFinite(gapM) || !(gapM >= PROGI.PREDKOSC_MIN_ODSTEP_M)) return v;
+    return { t: 'warn', l: 'BMI rośnie szybciej niż wzrastanie — do obserwacji' };
+  }
+
   // ── 3b. Nakładka pozycyjna wzrostu ───────────────────────────────────────────────────
   // Transkrypcja 1:1 dotychczasowych verdictHtPos / heightPositionOverlayVerdict.
   // „Stabilny" tor nie jest uspokajający, gdy pozycja tego nie uzasadnia: <3c zawsze (niedobór
@@ -251,6 +281,7 @@
     zKontekstem: zKontekstem,
     hamulecCatchUp: hamulecCatchUp,
     nakladkaMasaBmi: nakladkaMasaBmi,
+    nakladkaPredkosciBmi: nakladkaPredkosciBmi,
     nakladkaPozycjaWzrostu: nakladkaPozycjaWzrostu
   });
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null);
