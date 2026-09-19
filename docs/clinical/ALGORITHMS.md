@@ -4427,6 +4427,33 @@ Rozstrzygający eksperyment: przy sztucznie spowolnionym o 6 s odczycie sejfu st
 
 **Zasięg.** Zmierzony kierunek OGOLNA → DS na `index.html`. Ta sama poprawka obejmuje kierunek odwrotny, wczytanie innego pacjenta oraz dane okołoporodowe i pokwitaniowe — te same trzy moduły, ten sam wzorzec odczytu.
 
+## Dzienny arkusz przypomnień nie przerywa otwartej Karty (P-ARKUSZ, SW 1.1.9, 2026-09-19)
+
+**Skąd znalezisko.** Pytanie właściciela o zaległy punkt z mojej listy. Wcześniejszy opis („powtarzalna porażka e2e") nie miał pokrycia — dwa pełne przebiegi e2e i CI były zielone, żadna porażka nie dotyczyła przypomnień. Została sama kwestia projektowa i ta okazała się prawdziwa.
+
+**Bez zmiany klinicznej.** Zmienia się wyłącznie MOMENT pokazania arkusza. Treść przypomnień, reguła doboru notatek (`listPatientNotesDueByDate`) i bramka dobowa pozostają bez zmian.
+
+### Co robił arkusz
+
+Zegar rusza **3 s po odblokowaniu sejfu** (`onUnlock`) oraz **800 ms po `vilda:sync-merged`**; przed pokazaniem czeka jeszcze do 2,5 s na `syncPull`. Bramkował się wyłącznie datą — `remindersLastShownDate` w stanie konta oraz dobowe znaczniki `vilda-reminders-shown-v1` i `vilda-reminders-closed-v1` w `localStorage`. **Nie pytał, co jest na ekranie.**
+
+Zmierzone przed poprawką (odtworzenie na żywej stronie): Karta Pacjenta otwarta w **t=219 ms**, arkusz wszedł do DOM w **t=2648 ms** i został tam — pełnoekranowy (≥90 % wysokości okna), `z-index: 1000001`, nieprzezroczyste tło `rgb(247,250,251)`, a `document.elementFromPoint` w środku ekranu trafiał w arkusz, nie w Kartę. Karta czekała pod spodem, więc nic nie ginęło, ale praca była przerwana.
+
+### Poprawka (decyzja właściciela: „odłóż, nie porzuć")
+
+`vilda_auth_ui.js` — tuż przed pokazaniem arkusza sprawdzane jest, czy nakładka konta (`#vilda-auth-ui-root`, w niej Karta Pacjenta) jest otwarta. Jeżeli tak, arkusz **nie pokazuje się i nie przepada**: moduł podpina się jednorazowo pod `vilda:auth-hidden` i ponawia próbę 400 ms po zamknięciu nakładki. Bramka dobowa zostaje nienaruszona, bo datę zapisuje dopiero `onClose`. Wywołanie wymuszone (`force`, czyli kliknięcie w dzwoneczek) omija tę regułę — świadome kliknięcie nie jest przerwaniem pracy.
+
+**Zakres:** wyłącznie nakładka konta. Inne nakładki (wylogowanie, `.vds-overlay`, `.vcs-overlay`) nie były przedmiotem decyzji i arkusz nadal ich nie sprawdza.
+
+### Walidacja
+
+`tests/e2e/przypomnienia-nad-karta.spec.mjs` — dwa testy na prawdziwej stronie, z prawdziwym zegarem arkusza i notatką z terminem na dziś:
+
+1. przy otwartej Karcie arkusza nie ma przez 12 s (zegar 3 s + `syncPull` 2,5 s + zapas), środek ekranu należy do Karty, a po `hide()` arkusz **wraca sam**;
+2. **kontrola:** bez otwartej Karty arkusz nadal pokazuje się sam — bez niej ciche wyłączenie funkcji przeszłoby test pierwszy.
+
+Kontrola negatywna: po usunięciu samej bramki test pierwszy pada na asercji „arkusz nie wchodzi na otwartą Kartę", po przywróceniu przechodzi.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
