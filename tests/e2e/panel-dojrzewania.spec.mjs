@@ -357,11 +357,97 @@ test.describe('Objętość jąder mieszka w panelu, nie w karcie zaawansowanej',
       advanced: { testicularVolume: '4to6' },
     }));
     // P-PANEL-ZWINIETY (2026-09-16): wczytany rekord nie odsłania panelu; wartość jest w polu i w rekordzie.
+    // Kotwicą jest WARTOŚĆ, nie zwinięcie: panel jest zwinięty także PRZED wczytaniem, więc samo
+    // toBeHidden() przepuszczało test dalej, zanim rekord zdążył się zastosować (P-PANEL-NAPIS).
+    await expect(page.locator('#advTesticularVolume')).toHaveValue('4to6');
     await expect(page.locator('#advTesticularVolume')).toBeHidden();
     await expect(page.getByRole('button', { name: '+ Dane pokwitaniowe (wpisane)', exact: true })).toBeVisible();
-    await expect(page.locator('#advTesticularVolume')).toHaveValue('4to6');
     expect(await page.evaluate(() => window.collectUserData().advanced.testicularVolume)).toBe('4to6');
     await page.getByRole('button', { name: '+ Dane pokwitaniowe (wpisane)', exact: true }).click();
     await expect(page.locator('#advTesticularVolume')).toBeVisible();
+  });
+});
+
+test.describe('Napis na zwiniętym panelu nie zależy od tego, kiedy wypełniono pole', () => {
+  // P-PANEL-NAPIS (2026-09-19). Zwinięty panel mówi „(wpisane)", żeby lekarz wiedział, że
+  // pod spodem coś jest. Napis przeliczało WYŁĄCZNIE updateTannerVisibility(), a nasłuchy na
+  // polach panelu wołały tylko pokazSprzecznosci — więc wpis do pola nigdy sam napisu nie
+  // odświeżał. applyLoadedData woła updateTannerVisibility PRZED blokiem, który wypełnia
+  // advTesticularVolume, i po wypełnieniu już nic go nie odświeżało.
+  //
+  // Test istniejący wyżej przechodził PRZYPADKIEM: inline_index_02.js miał po zdarzeniu
+  // `load` trzy timery (0/200/800 ms), a przy małym obciążeniu ostatni z nich odpalał się
+  // PO wywołaniu applyLoadedData i naprawiał napis. W pełnym przebiegu na 6 workerach
+  // timery zdążały wcześniej i test wywalał się powtarzalnie.
+  //
+  // Dlatego tutaj najpierw PRZEWIJAMY zegar poza te timery, a dopiero potem wczytujemy
+  // rekord: sprawdzamy regułę, nie wyścig.
+  async function poTimerachStartowych(page) {
+    await page.clock.runFor(1500);
+  }
+
+  test('rekord z samą objętością jąder zapala „(wpisane)" także wtedy, gdy timery startowe już minęły', async ({ page }) => {
+    await otworz(page);
+    await poTimerachStartowych(page);
+    await page.evaluate(() => window.applyLoadedData({
+      user: { age: 13, sex: 'M', height: 150, weight: 40 },
+      advanced: { testicularVolume: '4to6' },
+    }));
+    await expect(page.locator('#advTesticularVolume')).toHaveValue('4to6');
+    await expect(page.locator('#advTesticularVolume')).toBeHidden();
+    await expect(page.locator('#tannerToggleBtn')).toHaveText('+ Dane pokwitaniowe (wpisane)');
+  });
+
+  test('rekord ze stadium Tannera też, i po tej samej ścieżce', async ({ page }) => {
+    await otworz(page);
+    await poTimerachStartowych(page);
+    await page.evaluate(() => window.applyLoadedData({
+      user: { age: 13, sex: 'M', height: 150, weight: 40 },
+      puberty: { onsetAgeYears: 11.5 },
+    }));
+    await expect(page.locator('#pubertyOnsetAge')).toHaveValue('11.5');
+    await expect(page.locator('#tannerToggleBtn')).toHaveText('+ Dane pokwitaniowe (wpisane)');
+  });
+
+  test('kontrola negatywna: rekord bez danych pokwitaniowych zostawia goły napis', async ({ page }) => {
+    await otworz(page);
+    await poTimerachStartowych(page);
+    await page.evaluate(() => window.applyLoadedData({
+      user: { age: 13, sex: 'M', height: 150, weight: 40 },
+    }));
+    await expect(page.locator('#tannerToggleBtn')).toHaveText('+ Dane pokwitaniowe');
+  });
+
+  test('samo wypełnienie pola przelicza napis — bez kliknięcia w przycisk i bez wczytywania rekordu', async ({ page }) => {
+    // Sedno reguły: napis zależy od WARTOŚCI pól, a nie od tego, która ścieżka je wypełniła.
+    // Ustawiamy pole przy ZWINIĘTYM panelu (jak robi to kod wczytujący rekord) i patrzymy,
+    // czy napis nadąża. Bez nasłuchu na polu napis zostawał stary.
+    await otworz(page);
+    await poTimerachStartowych(page);
+    await expect(page.locator('#tannerToggleBtn')).toHaveText('+ Dane pokwitaniowe');
+    await page.evaluate(() => {
+      const e = document.getElementById('advTesticularVolume');
+      e.value = '4to6';
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(page.locator('#tannerToggleBtn')).toHaveText('+ Dane pokwitaniowe (wpisane)');
+    await page.evaluate(() => {
+      const e = document.getElementById('advTesticularVolume');
+      e.value = '';
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(page.locator('#tannerToggleBtn')).toHaveText('+ Dane pokwitaniowe');
+  });
+
+  test('wiek GnRHa nie znika przy pisaniu w innym polu — napis odświeża się bez reszty rutyny', async ({ page }) => {
+    // Kontrola do poprawki: napis wydzielono z updateTannerVisibility celowo, bo pełna rutyna
+    // woła pokazWiekGnrha(), a ta CZYŚCI wiek GnRHa. Gdyby nasłuch pola uruchamiał całą rutynę,
+    // wpis w sąsiednim polu kasowałby lekarzowi wpisany wiek.
+    await otworz(page);
+    await page.getByRole('button', { name: /Dane pokwitaniowe/, exact: false }).click();
+    await page.locator('#pubertyGnrhaStatus').selectOption('w-trakcie');
+    await page.locator('#pubertyGnrhaStartAge').fill('11.2');
+    await page.locator('#pubertyOnsetAge').fill('10.5');
+    await expect(page.locator('#pubertyGnrhaStartAge')).toHaveValue('11.2');
   });
 });
