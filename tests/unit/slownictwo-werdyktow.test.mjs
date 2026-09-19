@@ -9,6 +9,10 @@ import { zrodlo } from '../support/silnik-bmi.mjs';
 
 const PREP = zrodlo('vilda_update_prep.js');
 const TRAJ = zrodlo('vilda_trajectory_analysis.js');
+// P-WERDYKT rata 1: reguła werdyktu odcinka wyprowadziła się z karty do silnika. Progi
+// „istotności" sprawdzamy tam, gdzie teraz mieszkają; równość z progiem czerwonej flagi
+// wzrostu (REDFLAG_DSDS w karcie) jest od tej pory sprawdzana MIĘDZY plikami.
+const WERD = zrodlo('vilda_werdykt.js');
 
 /** Odkodowane komunikaty ostrzegawcze z kategorią masy ciała. */
 const ostrzezenia = () => {
@@ -51,17 +55,17 @@ describe('P-SLOWA — „nadwaga" zawsze mówi, wg czego', () => {
 
 describe('P-SLOWA — „istotny" ma nazwane liczby', () => {
   it('dwie różne wielkości pod jednym słowem są nazwane, nie wpisane w warunek', () => {
-    expect(TRAJ).toContain('ISTOTNA_DECELERACJA_DSDS: -1.0');
-    expect(TRAJ).toContain('ISTOTNE_PRZESUNIECIE_DSDS: 0.5');
-    expect(TRAJ).toContain('d <= P.ISTOTNA_DECELERACJA_DSDS');
-    expect(TRAJ).toContain('Math.abs(d) >= P.ISTOTNE_PRZESUNIECIE_DSDS');
+    expect(WERD).toContain('ISTOTNA_DECELERACJA_DSDS: -1.0');
+    expect(WERD).toContain('ISTOTNE_PRZESUNIECIE_DSDS: 0.5');
+    expect(WERD).toContain('d <= PROGI.ISTOTNA_DECELERACJA_DSDS');
+    expect(WERD).toContain('Math.abs(d) >= PROGI.ISTOTNE_PRZESUNIECIE_DSDS');
   });
 
   it('obie gałęzie wzrostu biorą tę samą nazwaną liczbę', () => {
     // Reguła „istotnej deceleracji" występuje w dwóch gałęziach: ogólnej i kanału
     // rodzicielskiego. Dotąd obie miały wpisane -1 osobno.
-    expect((TRAJ.match(/d <= P\.ISTOTNA_DECELERACJA_DSDS/g) || []).length).toBe(2);
-    expect(TRAJ, 'żadnej gołej liczby przy tej etykiecie')
+    expect((WERD.match(/d <= PROGI\.ISTOTNA_DECELERACJA_DSDS/g) || []).length).toBe(2);
+    expect(WERD, 'żadnej gołej liczby przy tej etykiecie')
       .not.toMatch(/d <= -1 \? \{ t: 'bad', l: 'istotna deceleracja/);
   });
 
@@ -70,7 +74,7 @@ describe('P-SLOWA — „istotny" ma nazwane liczby', () => {
     // redFlag, który ma próg REDFLAG_DSDS. Obie liczby są równe i to jest spójne —
     // test pilnuje, żeby rozjazd nie powstał przy przyszłej korekcie jednej z nich.
     const red = TRAJ.match(/REDFLAG_DSDS:\s*(-?\d+(?:\.\d+)?)/);
-    const ist = TRAJ.match(/ISTOTNA_DECELERACJA_DSDS:\s*(-?\d+(?:\.\d+)?)/);
+    const ist = WERD.match(/ISTOTNA_DECELERACJA_DSDS:\s*(-?\d+(?:\.\d+)?)/);
     expect(red).toBeTruthy();
     expect(ist).toBeTruthy();
     expect(Number(ist[1]), 'próg „istotnej deceleracji" = próg czerwonej flagi wzrostu').toBe(Number(red[1]));
@@ -97,6 +101,6 @@ describe('P-SLOWA — „stabilny" zmierzony, nie zgadnięty', () => {
   });
 
   it('wysoki centyl przy wzroście jest asymetryczny: −0,2 w dół, +0,5 w górę', () => {
-    expect(TRAJ).toContain("d <= -0.2 ? { t: 'stable', l: 'normalizacja pozycji centylowej' } : d >= 0.5");
+    expect(WERD).toContain("d <= -0.2 ? { t: 'stable', l: 'normalizacja pozycji centylowej' } : d >= 0.5");
   });
 });

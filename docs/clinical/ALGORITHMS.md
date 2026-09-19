@@ -4079,6 +4079,47 @@ Pozostałe użycia słowa są **poprawnie różnymi przedmiotami** i nie są roz
 
 **Wspólny pomocnik testowy.** `bezKomentarzy` trafił do `tests/support/silnik-bmi.mjs`. Strażnik „tego już tu nie ma" musi patrzeć na kod, bo komentarz wyjaśniający usuniętą regułę cytuje ją dosłownie — w seriach P-TON i P-SLOWA test zaczerwienił się na własnej prozie **czterokrotnie**, zanim pomocnik stał się wspólny.
 
+## Jeden silnik werdyktu odcinka (P-WERDYKT rata 1, SW 1.1.3, 2026-09-18)
+
+**Decyzja właściciela.** „1. robimy silnik" — odpowiedź na dwa ekrany aplikacji, na których werdykty brzmiały spójnie z regułą, ale nie z sytuacją kliniczną, i na pytanie, czy da się mieć jeden silnik komunikatów, który w różnych miejscach aplikacji mówi to samo.
+
+**Stan zastany.** Werdykt odcinka A→B (wzrost, masa, BMI) istniał w **dwóch pełnych kopiach**:
+
+| rola | `vilda_auth_ui.js` (panel „Porównanie z poprzednim pomiarem") | `vilda_trajectory_analysis.js` (moduł trajektorii) |
+|---|---|---|
+| werdykt bazowy | `verdictCh` | `verdictForPair` |
+| kontekst GH / kanał / redukcja | `verdictCh2` | `verdictForPairCtx` |
+| nakładka waga↔BMI | `verdictWtBmi` | `weightBmiOverlayVerdict` |
+| nakładka pozycyjna wzrostu | `verdictHtPos` | `heightPositionOverlayVerdict` |
+
+Parytet trzymał się na teście jednostkowym i na komentarzach „nie zmieniaj bez zmiany tej drugiej". To wystarcza do pierwszego przeoczenia: każda zmiana kliniczna musiała być wpisana ręcznie w dwóch plikach, z których jeden jest zminifikowany.
+
+**Co zrobiono.** Powstał `vilda_werdykt.js` (`window.VildaWerdykt`) — jedyne miejsce, w którym powstaje werdykt odcinka. Obie powierzchnie są od tej wersji **cienkimi delegacjami**; osiem funkcji zamieniło się w osiem jednolinijkowych wywołań. Silnik ma trzy warstwy, świadomie rozdzielone:
+
+1. `para()` — werdykt z samych liczb: ΔSDS i pozycja centylowa;
+2. `zKontekstem()` — ta sama para widziana przez leczenie i pochodzenie (GH ≥6 mies. w odcinku → kanał rodzicielski MPH → populacja; dla masy i BMI zamierzona redukcja);
+3. `nakladkaMasaBmi()` i `nakladkaPozycjaWzrostu()` — spójność wagi z BMI oraz „stabilnego" toru z pozycją centylową.
+
+Nakładki zostały **osobno**, a nie wewnątrz `para()`, bo wołający widzący tylko jedną miarę nie ma czym ich nakarmić i ma prawo ich nie stosować.
+
+**Brak kopii zapasowej — świadomie.** Silnik jest wymagany: bez niego werdykt to `null`, a odcinek pokazuje same liczby. To inna decyzja niż przy silniku masy (P-MASA), gdzie zapasowe pasmo zostało, bo utrata alertu klinicznego byłaby szkodliwa. Tu utrata werdyktu nie wprowadza w błąd, a druga kopia reguły rozjechałaby się po pierwszej zmianie klinicznej — czyli odtworzyłaby dokładnie ten dług, który ta rata kasuje.
+
+**Wpływ kliniczny: żaden — i to jest zmierzone, nie zadeklarowane.** `tests/support/siatka-werdyktow.mjs` przemiata deterministyczną siatkę wejść (przy każdym progu ΔSDS i każdym progu centylowym stoi sąsiad po obu stronach) i liczy SHA-256 wszystkich wyników. Odcisk policzony na kodzie **sprzed** wydzielenia (commit `7355953e`, SW 1.1.2) i na silniku jest **identyczny**: `a9a60858…7a93d`, **6 280 776 przypadków**. Ta sama siatka przepuszczona przez realne `verdictCh`/`verdictCh2`/`verdictWtBmi`/`verdictHtPos` wycięte z `vilda_auth_ui.js` sprzed zmiany dała **0 rozbieżności** — obie kopie były do tego momentu zgodne, więc unifikacja nie musiała rozstrzygać żadnego sporu.
+
+**Progi.** Rata nie nazywa nowych liczb. Do silnika przeniosły się dwie już nazwane w P-SLOWA: `ISTOTNA_DECELERACJA_DSDS` = −1,0 (wzrost) i `ISTOTNE_PRZESUNIECIE_DSDS` = 0,5 (masa i BMI). Równość pierwszej z `REDFLAG_DSDS` modułu trajektorii jest od tej pory pilnowana **między plikami**. Pozostałe liczby zostały dokładnie tam, gdzie były w gałęziach — rata ma się czytać jako przeniesienie, nie jako przepisanie; nazywanie progów należy do rat, które je ruszają.
+
+**Rusztowanie testowe.** `loadBrowserScript` dostał krótką listę twardych zależności (`vilda_trajectory_analysis.js` → `vilda_werdykt.js`), a `wczytajDoOkna` z `tests/support/silnik-bmi.mjs` przez nią przechodzi — jedna lista dla obu rusztowań. Powód jest konkretny: brak silnika **nie wywala** testu, tylko cicho zmienia werdykt na `null`, co czyta się jak regresja produktu, a jest brakiem wsadu.
+
+**Walidacja.** `tests/unit/werdykt-silnik.test.mjs` — 12 testów: kształt modułu, odcisk siatki, strażnicy „kopii już nie ma" (żadnej etykiety werdyktu w obu konsumentach, każda strona z konsumentem ładuje silnik, service worker go precachuje), zachowanie bez silnika oraz **dwa przypadki z audytu utrwalone jako stan przed ratami 2–4** (dane syntetyczne, odtworzone z opisanych liczb). Pełny przebieg: **2645 testów w 159 plikach**, lint, składnia (481 plików), polityka repozytorium (590 plików) — zielone.
+
+**Czego ta rata NIE robi.** Nie zmienia ani jednego werdyktu. Cztery usterki merytoryczne opisane w audycie 2026-09-18 zostają otwarte i mają własne raty:
+
+- **rata 2** — gałąź poziomu po obu stronach dla masy i BMI, brzmienie „znacznie powyżej / poniżej typowego zakresu" (właściciel zaakceptował brzmienie);
+- **rata 3** — nakładka waga↔BMI obejmie też werdykty `good`, a catch-up masy dostanie hamulec przy **BMI ≥ 85c albo Cole ≥ 110 %** (właściciel zaakceptował próg). Dziś nakładka wpuszcza wyłącznie `stable` i to jest cała przyczyna usterki B;
+- **rata 4** — prędkość BMI wobec tempa wzrastania w środkowym paśmie centylowym; **próg jest decyzją właściciela** i zapada po pomiarze wariantów 0,25 / 0,30 / 0,35 SDS.
+
+**Do zapamiętania przy racie 2.** Etykiety werdyktu są odmieniane przez `vilda_patient_narrative.js` (słownik `BEZ_ODMIANY` i tablica przypadków). Zmiana brzmienia etykiety bez dopisania jej tam sprawia, że opis pacjenta spada do bezpiecznej ramki „ — <etykieta>". Pilnuje tego `tests/unit/pacjent-opis-silnik.test.mjs`, który od tej raty zbiera etykiety **z obu plików** — silnika i karty.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

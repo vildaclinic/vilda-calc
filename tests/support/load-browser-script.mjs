@@ -4,7 +4,25 @@ import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
+// Twarde zależności modułów przeglądarkowych — ładowane przed plikiem docelowym, tak jak
+// na stronie robi to kolejność tagów <script defer>. Lista jest krótka celowo: trafia tu
+// tylko zależność, której BRAK nie wywala testu, lecz cicho zmienia wynik na „brak danych"
+// — czyli taka, której przeoczenie czyta się jak regresja produktu, a jest brakiem wsadu.
+//
+// vilda_werdykt.js (P-WERDYKT rata 1) jest jedynym miejscem, w którym powstaje werdykt
+// odcinka. Bez niego vilda_trajectory_analysis.js oddaje verdict = null dla każdej pary.
+const ZALEZNOSCI = {
+  'vilda_trajectory_analysis.js': ['vilda_werdykt.js'],
+};
+
 export function loadBrowserScript(relativePath, browserGlobal = {}) {
+  for (const dep of ZALEZNOSCI[relativePath] || []) {
+    wykonaj(dep, browserGlobal);
+  }
+  return wykonaj(relativePath, browserGlobal);
+}
+
+function wykonaj(relativePath, browserGlobal) {
   const absolutePath = path.join(repositoryRoot, relativePath);
   const source = fs.readFileSync(absolutePath, 'utf8');
   const execute = new Function('window', 'globalThis', source);

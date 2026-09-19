@@ -20,59 +20,49 @@ function loadModule(browserGlobal = {}) {
   return loadTrajectory(browserGlobal);
 }
 
-// Realny verdictCh wycięty z produkcyjnego vilda_auth_ui.js (test parytetu wg AGENTS.md §3.5 —
-// wywołujemy rzeczywistą funkcję, nie kopię wzoru).
-function extractRealVerdictCh() {
+// Realne funkcje werdyktu wycięte z produkcyjnego vilda_auth_ui.js (test parytetu wg
+// AGENTS.md §3.5 — wywołujemy rzeczywistą funkcję, nie kopię wzoru).
+//
+// P-WERDYKT rata 1: te cztery funkcje są od tej wersji CIENKIMI DELEGACJAMI do
+// window.VildaWerdykt (vilda_werdykt.js). Wycinek dostaje więc `window` z załadowanym
+// silnikiem — i dzięki temu test nadal sprawdza to, co naprawdę wykonuje przeglądarka:
+// czy panel porównania pyta o werdykt silnik i czy silnik odpowiada tak, jak oczekujemy.
+// Gdyby ktoś przywrócił w panelu własną kopię reguły, ten sam test złapie jej rozjazd.
+function oknoZeSilnikiem() {
+  return loadBrowserScript('vilda_werdykt.js', {});
+}
+
+function wytnijZAuthUi(odKotwicy, doKotwicy) {
   const source = fs.readFileSync(
     path.join(repositoryRoot, 'vilda_auth_ui.js'),
     'utf8'
   );
-  const start = source.indexOf('function verdictCh(met,');
-  const end = source.indexOf('var VCHIP=', start);
-  expect(start).toBeGreaterThan(-1);
+  const start = source.indexOf(odKotwicy);
+  const end = source.indexOf(doKotwicy, start);
+  expect(start, odKotwicy).toBeGreaterThan(-1);
   expect(end).toBeGreaterThan(start);
-  const fnSource = source.slice(start, end);
-  return new Function(`return (${fnSource.replace(/^function verdictCh/, 'function')})`)();
+  return source.slice(start, end);
+}
+
+function funkcjaZAuthUi(nazwa, odKotwicy, doKotwicy) {
+  const zrodlo = wytnijZAuthUi(odKotwicy, doKotwicy);
+  return new Function('window', `${zrodlo}\nreturn ${nazwa};`)(oknoZeSilnikiem());
+}
+
+function extractRealVerdictCh() {
+  return funkcjaZAuthUi('verdictCh', 'function verdictCh(met,', 'var VCHIP=');
 }
 
 function extractRealVerdictCh2() {
-  const source = fs.readFileSync(
-    path.join(repositoryRoot, 'vilda_auth_ui.js'),
-    'utf8'
-  );
-  const v1 = source.slice(
-    source.indexOf('function verdictCh(met,'),
-    source.indexOf('var VCHIP=')
-  );
-  const v2 = source.slice(
-    source.indexOf('function verdictCh2('),
-    source.indexOf('function ctxClean(')
-  );
-  return new Function(`${v1}\n${v2}\nreturn verdictCh2;`)();
+  return funkcjaZAuthUi('verdictCh2', 'function verdictCh2(', 'function ctxClean(');
 }
 
 function extractRealVerdictWtBmi() {
-  const source = fs.readFileSync(
-    path.join(repositoryRoot, 'vilda_auth_ui.js'),
-    'utf8'
-  );
-  const start = source.indexOf('function verdictWtBmi(');
-  const end = source.indexOf('function ctxClean(', start);
-  expect(start).toBeGreaterThan(-1);
-  expect(end).toBeGreaterThan(start);
-  return new Function(`${source.slice(start, end)}\nreturn verdictWtBmi;`)();
+  return funkcjaZAuthUi('verdictWtBmi', 'function verdictWtBmi(', 'function ctxClean(');
 }
 
 function extractRealVerdictHtPos() {
-  const source = fs.readFileSync(
-    path.join(repositoryRoot, 'vilda_auth_ui.js'),
-    'utf8'
-  );
-  const start = source.indexOf('function verdictHtPos(');
-  const end = source.indexOf('function ctxClean(', start);
-  expect(start).toBeGreaterThan(-1);
-  expect(end).toBeGreaterThan(start);
-  return new Function(`${source.slice(start, end)}\nreturn verdictHtPos;`)();
+  return funkcjaZAuthUi('verdictHtPos', 'function verdictHtPos(', 'function ctxClean(');
 }
 
 function extractRealInterpCh() {

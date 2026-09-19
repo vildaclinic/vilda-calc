@@ -158,60 +158,21 @@ function toneMax(t1,t2){return t1==null?t2:t2==null?t1:t1==="danger"||t2==="dang
 function tSpan(t,h){return t?'<span class="vilda-tone-'+t+'">'+h+"</span>":"<span>"+h+"</span>"}
 function cmpValHtml(m,st){var dec="height"===m.metric?0:1;return tSpan(toneCent(m.metric,st.c),fmt(st.val,dec)+" "+(m.unit||"")+' <span class="c">('+(st.c!=null?fmtC(st.c)+"c":"—")+")</span>")}
 function cmpSdsHtml(sa,sb,v){if(sa.sd==null||sb.sd==null)return"—";var h=(sa.approx?"≈":"")+fmtS(sa.sd)+" → "+(sb.approx?"≈":"")+fmtS(sb.sd);return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":tSpan(toneMax(toneSds(sa.sd),toneSds(sb.sd)),h)}
-// Werdykt korzystności ZMIANY A→B: kierunek oceniany względem pozycji wyjściowej.
-// Niedobór (<10c): ruch do mediany = poprawa, dalej w dół = pogorszenie. Nadmiar (waga ≥90c, BMI ≥85c):
-// redukcja = poprawa, dalej w górę = pogorszenie. Wysoki wzrost (>90c): spadek ku medianie = neutralna
-// „normalizacja" (wysoki wzrost to nie choroba). Norma: |ΔSDS|<0,5 stabilnie; ≥0,5 czujność,
-// alarm gdy B wchodzi w strefę alarmową. Progi: |ΔSDS|<0,2 zawsze stabilnie (spójnie z interpCh).
-// Słownik etykiet w rejestrze lekarskim (decyzja właściciela 2026-08-08) — wspólny z modułem
-// VildaTrajectoryAnalysis (parytet pilnowany testem trajectory-analysis.test.mjs).
-function verdictCh(met,sa0,sb0,ca,cb){if(typeof sa0!="number"||typeof sb0!="number"||!isFinite(sa0)||!isFinite(sb0)||ca==null||cb==null)return null;
-  var d=Math.round(100*(sb0-sa0))/100,W="height"===met,B="bmi"===met,low=ca<10,high=W?ca>90:ca>=(B?85:90);
-  var ST=W?"stabilny tor wzrastania":B?"stabilny tor BMI":"stabilny tor masy ciała",ND=W?"pogłębianie niedoboru wzrostu":"pogłębianie niedoboru masy ciała";
-  if(low){if(d>=0.2){if(W)return{t:"good",l:"wyrównywanie niedoboru wzrostu (catch-up)"};if(cb<10)return{t:"good",l:"wyrównywanie niedoboru masy ciała"};if(B)return cb>=97?{t:"bad",l:"przekroczenie progu otyłości (≥97c)"}:cb>=85?{t:"warn",l:"wyrównanie niedoboru z szybkim przyrostem BMI — do obserwacji"}:{t:"good",l:"wyrównanie niedoboru (BMI)"};return cb>=90?{t:"bad",l:"przekroczenie 90. centyla masy ciała po wyrównaniu niedoboru"}:cb>=75?{t:"warn",l:"wyrównanie niedoboru z szybkim przyrostem masy ciała — do obserwacji"}:{t:"good",l:"wyrównanie niedoboru masy ciała"}}return d<=-0.5?{t:"bad",l:ND}:d<=-0.2?{t:"warn",l:ND}:{t:"stable",l:ST}}
-  if(high){if(W)return d<=-1?{t:"warn",l:"szybka deceleracja z wysokich centyli"}:d<=-0.2?{t:"stable",l:"normalizacja pozycji centylowej"}:d>=0.5?{t:"warn",l:"dalsza akceleracja wzrastania"}:{t:"stable",l:ST};
-    if(d<=-1.5)return{t:"warn",l:B?"szybki spadek BMI — wskazana ocena":"szybka utrata masy — wskazana ocena"};if(d<=-0.2)return{t:"good",l:B?"redukcja BMI":"redukcja nadmiaru masy ciała"};
-    if(d>=0.5||d>=0.2&&cb>=97)return{t:"bad",l:B?(cb>=97?(ca>=97?"progresja otyłości":"przekroczenie progu otyłości (≥97c)"):"szybka progresja nadwagi (BMI)"):cb>=97?(ca>=97?"progresja nadmiaru masy (>97. centyla)":"przekroczenie 97. centyla masy ciała"):"nasilony przyrost masy ciała"};
-    return d>=0.2?{t:"warn",l:B?"progresja nadwagi (BMI w paśmie 85.–97. centyla)":"narastanie nadmiaru masy ciała"}:B&&cb>=97?{t:"warn",l:"utrzymująca się otyłość (>97c)"}:{t:"stable",l:ST}}
-  if(W)return d<=-1?{t:"bad",l:"istotna deceleracja wzrastania"}:d<=-0.5?{t:"warn",l:"deceleracja toru wzrastania"}:d>=0.5&&cb>97?{t:"warn",l:"akceleracja z przekroczeniem 97. centyla"}:{t:"stable",l:ST};
-  if(Math.abs(d)>=0.5){var al=B?cb>=97||cb<5:cb<=3||cb>=97;
-    return al?{t:"bad",l:d>0?(B?"przekroczenie progu otyłości (≥97c)":"przekroczenie 97. centyla masy ciała"):(B?"przekroczenie progu niedowagi (<5c)":"obniżenie masy ciała poniżej 3. centyla")}:{t:"warn",l:d>0?"istotne przesunięcie centylowe w górę":"istotne przesunięcie centylowe w dół"}}
-  return{t:"stable",l:ST}}
+// Werdykt korzystności ZMIANY A→B. P-WERDYKT rata 1: reguła nie mieszka już tutaj — liczy ją
+// vilda_werdykt.js (window.VildaWerdykt), ten sam kod, który woła moduł trajektorii. Progi, etykiety
+// i uzasadnienia kliniczne (decyzje właściciela 2026-08-08 / 08-09 / 08-14) są opisane w silniku
+// i w docs/clinical/ALGORITHMS.md. Cztery funkcje poniżej to wyłącznie delegacje — nie dopisuj tu
+// warunków, bo natychmiast wracamy do dwóch kopii reguły, które ta rata skasowała.
+// Bez silnika werdykt nie powstaje (null): panel pokazuje wtedy same liczby.
+function verdictCh(met,sa0,sb0,ca,cb){var W=window.VildaWerdykt;return W?W.para(met,sa0,sb0,ca,cb):null}
 var VCHIP={good:"vg",stable:"vs",warn:"vw",bad:"vb"};
-// Werdykt v2 — kontekst pacjenta (host._vildaCmpCtx wstrzykiwany przy renderze siatek).
-// Priorytet dla wzrostu: GH ≥6 mies. w A–B (ocena odpowiedzi) → kanał rodzicielski (MPH) → populacja (v1).
-// Waga/BMI: zamierzona redukcja (leczenie otyłości ≥3 mies. w A–B) — nigdy przy niedoborze (<10c).
-function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var v1=verdictCh(met,sa0,sb0,ca,cb);if(!v1)return null;
-  var d=Math.round(100*(sb0-sa0))/100;
-  if("height"===met){
-    if(gm>=6)return d>=0.3?{t:"good",l:"dobra odpowiedź na GH"}:d<0.1?{t:"warn",l:"słaba odpowiedź na GH — do oceny"}:{t:"stable",l:"odpowiedź umiarkowana (GH)"};
-    if(typeof mp=="number"&&isFinite(mp)){var e0=Math.round(100*(sa0-mp))/100;
-      if(e0<=-1.5)return d>=0.2?{t:"good",l:"nadrabia względem kanału rodzicielskiego"}:d<=-0.5?{t:"bad",l:"oddala się od kanału rodzicielskiego"}:d<=-0.2?{t:"warn",l:"oddala się od kanału rodzicielskiego"}:{t:"stable",l:"stabilnie (poniżej kanału rodzicielskiego)"};
-      if(e0>=1.5)return d<=-1?{t:"warn",l:"szybka deceleracja wzrastania"}:d<=-0.2?{t:"stable",l:"normalizacja do kanału rodzicielskiego"}:d>=0.5?{t:"warn",l:"dalsza akceleracja ponad kanał rodzicielski"}:{t:"stable",l:"stabilny tor wzrastania"};
-      if(ca<10){if(d<=-0.5)return{t:"bad",l:"pogłębianie niedoboru wzrostu"};if(d<=-0.2)return{t:"warn",l:"obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl) — do obserwacji"}}
-      return d<=-1?{t:"bad",l:"istotna deceleracja wzrastania"}:d<=-0.5?{t:"warn",l:"deceleracja toru wzrastania"}:d>=0.5&&cb>97?{t:"warn",l:"akceleracja z przekroczeniem 97. centyla"}:{t:"stable",l:"w kanale rodzicielskim"}}
-    return v1}
-  if(rd&&ca>=10){
-    if(d<=-1.5)return{t:"warn",l:"redukcja bardzo szybka — do kontroli"};
-    if(d<=-0.2)return{t:"good",l:"redukcja w trakcie leczenia"};
-    if(d>=0.2)return{t:v1.t==="bad"?"bad":"warn",l:"przyrost masy mimo leczenia redukcyjnego"}}
-  return v1}
-// Nakładka spójności waga↔BMI (decyzja właściciela 2026-08-14): „stabilna" waga rosnąca ≥0,2 SDS
-// przy BMI ostrzegającym o narastaniu nadmiaru (ΔSDS BMI ≥0,2, warn/bad) w tym samym odcinku
-// nie jest stabilna klinicznie — masa-do-wieku maskuje nadmiar, gdy wzrost odstaje w dół.
-// Transkrypcja 1:1 w vilda_trajectory_analysis.js (weightBmiOverlayVerdict) — parytet pilnuje test.
-function verdictWtBmi(v,dW,vB,dB){if(!v||"stable"!==v.t||!(dW>=0.2))return v;
-  if(!vB||"warn"!==vB.t&&"bad"!==vB.t||!(dB>=0.2))return v;
-  return{t:"warn",l:"przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI"}}
-// Nakładka pozycyjna wzrostu (decyzja właściciela 2026-08-14): „stabilny" tor nie jest uspokajający,
-// gdy pozycja tego nie uzasadnia — <3c zawsze (niedobór wzrostu z definicji, poza normą 3–97c),
-// 3–10c tylko poniżej kanału rodzicielskiego (≥1,5 SDS pod MPH). Nie stosuje się przy aktywnej
-// ocenie odpowiedzi na GH (etykiety GH adresują problem). Transkrypcja 1:1 w module trajektorii.
-function verdictHtPos(v,cb,mp,sa0,ghOn){if(!v||"stable"!==v.t||ghOn)return v;
-  if(cb<3)return{t:"warn",l:"tor stabilny, ale poniżej 3. centyla — niedobór wzrostu"};
-  if(cb<10&&typeof mp=="number"&&isFinite(mp)&&Math.round(100*(sa0-mp))/100<=-1.5)
-    return{t:"warn",l:"tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego — do obserwacji"};
-  return v}
+// Werdykt v2 — kontekst pacjenta (host._vildaCmpCtx wstrzykiwany przy renderze siatek): GH ≥6 mies.
+// w A–B → kanał rodzicielski (MPH) → populacja; dla masy i BMI zamierzona redukcja. Reguła w silniku.
+function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var W=window.VildaWerdykt;return W?W.zKontekstem(met,sa0,sb0,ca,cb,gm,mp,rd):null}
+// Nakładka spójności waga↔BMI (decyzja właściciela 2026-08-14) — reguła w silniku (nakladkaMasaBmi).
+function verdictWtBmi(v,dW,vB,dB){var W=window.VildaWerdykt;return W?W.nakladkaMasaBmi(v,dW,vB,dB):v}
+// Nakładka pozycyjna wzrostu (decyzja właściciela 2026-08-14) — reguła w silniku (nakladkaPozycjaWzrostu).
+function verdictHtPos(v,cb,mp,sa0,ghOn){var W=window.VildaWerdykt;return W?W.nakladkaPozycjaWzrostu(v,cb,mp,sa0,ghOn):v}
 function ctxClean(x){return String(x==null?"":x).replace(/[<>]/g,"")}
 function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(b)-ageOf(a),tr="",cards="";
   var cx=null;try{cx=host._vildaCmpCtx||null}catch(eC){}
