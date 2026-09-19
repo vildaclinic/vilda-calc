@@ -1222,7 +1222,11 @@ describe('BMI >97. centyla nigdy „stabilny tor BMI” (decyzja właściciela 2
     const vta = loadModule().VildaTrajectoryAnalysis;
     expect(vta.verdictForPair('bmi', 2.3, 2.4, 98.9, 99.2)).toEqual({ t: 'warn', l: 'utrzymująca się otyłość (>97c)' });
     expect(vta.verdictForPair('bmi', 2.4, 2.4, 99.2, 99.2)).toEqual({ t: 'warn', l: 'utrzymująca się otyłość (>97c)' });
-    expect(vta.verdictForPair('weight', 2.3, 2.4, 98.9, 99.2)).toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
+    // Do SW 1.1.3 waga w tej samej sytuacji mówiła „stabilny tor masy ciała" — i to był
+    // KONTRAST wpisany tu w 2026-08-09: BMI odzywało się przy >97c, masa nie. P-WERDYKT
+    // rata 2 domknęła tę asymetrię, więc waga też nazywa teraz poziom.
+    expect(vta.verdictForPair('weight', 2.3, 2.4, 98.9, 99.2))
+      .toEqual({ t: 'warn', l: 'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)' });
     expect(vta.verdictForPair('bmi', 1.2, 1.3, 88, 90)).toEqual({ t: 'stable', l: 'stabilny tor BMI' });
     const real = extractRealVerdictCh();
     for (const [sa, sb, ca, cb] of [[2.3, 2.4, 98.9, 99.2], [2.4, 2.4, 99.2, 99.2], [2.4, 2.3, 99.2, 98.9]]) {

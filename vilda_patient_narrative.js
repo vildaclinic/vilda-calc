@@ -269,6 +269,20 @@
     'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego': {
       teraz: 'tor jest stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego',
       wtedy: 'tor był stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego'
+    },
+    // Galaz poziomu masy i BMI przy stabilnym torze (P-WERDYKT rata 2). Tak samo jak
+    // nakladki powyzej: to STAN, nie zdarzenie — stad wlasne orzeczenie, a nie „zaobserwowano".
+    'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)': {
+      teraz: 'tor jest stabilny, ale masa ciała utrzymuje się znacznie powyżej typowego zakresu (>97c)',
+      wtedy: 'tor był stabilny, ale masa ciała utrzymywała się znacznie powyżej typowego zakresu (>97c)'
+    },
+    'tor stabilny, masa ciała poniżej 3. centyla': {
+      teraz: 'tor jest stabilny, a masa ciała pozostaje poniżej 3. centyla',
+      wtedy: 'tor był stabilny, a masa ciała pozostawała poniżej 3. centyla'
+    },
+    'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)': {
+      teraz: 'tor jest stabilny, ale BMI utrzymuje się znacznie poniżej typowego zakresu (<5c)',
+      wtedy: 'tor był stabilny, ale BMI utrzymywało się znacznie poniżej typowego zakresu (<5c)'
     }
   };
 
