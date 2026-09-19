@@ -4066,7 +4066,7 @@ Pozostałe użycia słowa są **poprawnie różnymi przedmiotami** i nie są roz
 
 `Es` (identyfikator edytowanego punktu) jest ustawiane wyłącznie w `Ee()`, a `Eb()` bez niego nie działa — **błąd odpalał się przy każdym zapisie edycji**, nie w rzadkim wariancie.
 
-**Dlaczego to nie kosmetyka.** Kryteria odpowiedzi wg ChPL **różnią się między preparatami**: liraglutyd 4 % po 12 tyg., semaglutyd 5 %, naltrekson + bupropion 5 % po 16 tyg. Podmieniony lek zmienia więc próg, według którego aplikacja ocenia skuteczność terapii — i robi to bez śladu w interfejsie.
+**Dlaczego to nie kosmetyka.** Kryteria odpowiedzi wg ChPL **różnią się między preparatami**: liraglutyd 4 % po 12 tyg., semaglutyd 5 %, naltrekson + bupropion 5 % po 16 tyg.  **[Sprostowanie P-CHPL, SW 1.1.10, 2026-09-19: to zdanie pomija grupy wieku i w tej postaci wprowadza w błąd. Próg 5 % dla semaglutydu dotyczy WYŁĄCZNIE młodzieży 12–17 lat i mierzy BMI; dla dorosłych ChPL Wegovy nie podaje ani progu, ani terminu oceny. Pełne zestawienie w niżej położonym wpisie „Kryteria odpowiedzi sprawdzone wobec ChPL”.]** Podmieniony lek zmienia więc próg, według którego aplikacja ocenia skuteczność terapii — i robi to bez śladu w interfejsie.
 
 **Poprawka.**
 - `Eg(drug, substance)` — jeden dopasowywacz opcji listy, wydzielony z pętli, którą miało wcześniej `Ep()` (podpowiedź kontynuacji). Obie ścieżki używają teraz tej samej reguły.
@@ -4453,6 +4453,58 @@ Zmierzone przed poprawką (odtworzenie na żywej stronie): Karta Pacjenta otwart
 2. **kontrola:** bez otwartej Karty arkusz nadal pokazuje się sam — bez niej ciche wyłączenie funkcji przeszłoby test pierwszy.
 
 Kontrola negatywna: po usunięciu samej bramki test pierwszy pada na asercji „arkusz nie wchodzi na otwartą Kartę", po przywróceniu przechodzi.
+
+## Kryteria odpowiedzi sprawdzone wobec ChPL (P-CHPL, SW 1.1.10, 2026-09-19)
+
+**Skąd znalezisko.** Przy projektowaniu wizualizacji postępów leczenia otyłości u dorosłych trzeba było ustalić, skąd biorą się progi %TBWL. Właściciel udostępnił charakterystyki produktów leczniczych. Zestawienie ich z kodem ujawniło cztery rozbieżności, w tym dwie zmieniające to, co aplikacja mówi lekarzowi o **odstawieniu leku**.
+
+**Zmiana kliniczna.** Tak — zmieniają się progi i interpretacja dla dwóch preparatów. Akceptacja właściciela: 2026-09-19.
+
+### Co mówią ChPL
+
+| Lek | Ocena odpowiedzi u dorosłych | Metryka | Kotwica okna | Siła |
+|---|---|---|---|---|
+| Wegovy (semaglutyd) | **brak progu i brak terminu** | — | — | ocena kliniczna |
+| Saxenda/Triglyva (liraglutyd 3,0 mg) | <5 % początkowej masy po 12 tyg. | masa ciała | dawka podtrzymująca 3,0 mg/dobę | **„Należy przerwać leczenie"** |
+| Mysimba (naltrekson/bupropion) | <5 % początkowej masy po 16 tyg. | masa ciała | rozpoczęcie leczenia | **„należy odstawić"**; dalej weryfikacja raz w roku |
+| Mounjaro (tirzepatyd) | **brak progu i brak terminu** | — | — | ocena kliniczna |
+
+Kryteria pediatryczne bez zmian: semaglutyd 12–17 lat — BMI ≥5 % po 12 tyg. dawki 2,4 mg; liraglutyd 6–11 i 12–17 lat — BMI albo Z-score/BMI-SD ≥4 % po 12 tyg. dawki 3,0 mg/dobę.
+
+**Kotwica okna** jest faktem z ChPL, nie naszą interpretacją: punkt 5.1 liraglutydu definiuje wczesną odpowiedź jako ≥5 % „po 12 tygodniach leczenia (…) w dawce terapeutycznej (zwiększanie dawki przez 4 tygodnie, a następnie stosowanie dawki terapeutycznej przez 12 tygodni)" — czyli 16. tydzień od rozpoczęcia. Mysimba liczy 16 tygodni od rozpoczęcia.
+
+### Cztery poprawki
+
+1. **Tirzepatyd — usunięto regułę, której w ChPL nie ma.** Aplikacja podawała „ocena odpowiedzi po 6 miesiącach: przy redukcji <5 % rozważyć kontynuację **(wg ChPL)**". Przeszukanie całego dokumentu: w punktach 4.1 i 4.2 dla wskazania „Kontrola masy ciała" nie ma progu, terminu ani kryterium odstawienia; jedyne trafienia na „6 miesięcy" dotyczą badania rakotwórczości u myszy i terminu złożenia PSUR. Reguła pochodziła najprawdopodobniej z brytyjskiej oceny refundacyjnej NICE TA1026, a nie z ChPL. Grupa `mounjaro-adult` ma teraz `metric: "clinical"`, `thresholdPct: null`, `windowWeeks: null`.
+2. **Liraglutyd — przywrócono siłę nakazu.** `obesity_therapy.js` mówił „Rozważyć przerwanie leczenia", ChPL mówi „Należy przerwać leczenie". `obesity_response_criteria.js` miał poprawnie `hardStop: true` — dwie warstwy mówiły lekarzowi co innego.
+3. **Naltrekson/bupropion — usunięto nadinterpretację reguły rocznej.** Aplikacja dokładała próg „odstawić, jeśli redukcja nie jest utrzymana ≥5 %". ChPL mówi wyłącznie: „Konieczność dalszego stosowania (…) należy zweryfikować po 16 tygodniach (…), a następnie weryfikować raz w roku" — bez progu.
+4. **Semaglutyd — dodano dawkę 7,2 mg.** ChPL z 14.07.2026: u dorosłych z wyjściowym BMI ≥30 kg/m² dawkę można zwiększyć do 7,2 mg raz na tydzień po co najmniej 4 tyg. stosowania 2,4 mg; przy braku poprawy klinicznej dotyczącej masy ciała podczas stosowania 7,2 mg dawkę należy zmniejszyć do 2,4 mg. U młodzieży dawki większe niż 2,4 mg nie są zalecane. Zaktualizowano też zdanie o nietolerancji, zgodnie z obecnym brzmieniem punktu 4.2.
+
+### Jedna warstwa prawdy
+
+`obesity_response_criteria.js` jest odtąd **jedynym** miejscem, w którym żyją progi i zdania o ocenie odpowiedzi. Moduł wystawia `zdaniaLeku(nazwa)` i `zdanieGrupy(nazwa, wiek)`; `obesity_therapy.js` czyta stamtąd teksty zamiast trzymać własne kopie. Brak modułu kryteriów oznacza **brak zdania**, nigdy starą kopię. Strażnik w testach nie przepuści powrotu kopii ani żadnej własnej reguły do warstwy UI.
+
+### Przypadki `wejście → oczekiwany wynik`
+
+- liraglutyd, dorosły, 12 tyg., −5,0 % masy → `pass`; −4,9 % → `fail-stop`; 11 tyg. → `before-window`
+- naltrekson/bupropion, dorosły, 16 tyg., −6 % → `pass`; −4 % → `fail-stop`
+- semaglutyd i tirzepatyd, dorosły, dowolne tygodnie i dowolny ubytek → `clinical` (próg w interfejsie pozostaje pusty)
+- semaglutyd 15 lat, 12 tyg., BMI −5 % → `pass`; −4 % → `fail-stop`
+
+### Walidacja
+
+`tests/unit/kryteria-odpowiedzi-chpl.test.mjs` — 18 testów na rzeczywistej funkcji `ObesityResponseCriteria.evaluate`, w tym strażnik warstwy UI z kontrolą pozytywną. Kontrola negatywna: po przywróceniu reguły „26 tyg./5 %" dla tirzepatydu pada 5 testów; po cofnięciu zmiany przechodzi 18/18.
+
+### Źródła
+
+Charakterystyki produktów leczniczych przekazane przez właściciela 2026-09-19. Dokumentów nie dołączono do repozytorium (prawa autorskie podmiotów odpowiedzialnych); poniżej wyłącznie identyfikacja wersji.
+
+- **Wegovy** (semaglutyd) — ChPL, Aneks I, punkty 4.1, 4.2 i 5.1; wersja dokumentu `20260714_Wegovy_EU-PI-PL_cl`, 14.07.2026.
+- **Triglyva** (liraglutyd 6 mg/mL) — ChPL, punkty 4.1, 4.2 i 5.1; wersja z 10.04.2026 (plik z 30.04.2026). **Uwaga:** aplikacja nazywa ten preparat „Saxenda"; ChPL samej Saxendy nie została odczytana. Substancja, dawka podtrzymująca i wskazanie są te same, ale zgodność brzmienia punktu 4.1 wymaga potwierdzenia na dokumencie Saxendy.
+- **Mysimba** (naltrekson/bupropion) — ChPL, Aneks I, punkty 4.1 i 4.2 oraz Aneks II (przewodnik dla osoby przepisującej). Data zatwierdzenia tekstu nieodczytana z przekazanego pliku.
+- **Mounjaro** (tirzepatyd) — ChPL, Aneks I, punkty 4.1, 4.2 i 5.1. Data zatwierdzenia tekstu nieobecna w przekazanym wyciągu.
+
+**Do uzupełnienia przez właściciela:** daty zatwierdzenia ChPL Mysimby i Mounjaro oraz potwierdzenie punktu 4.1 na ChPL Saxendy.
 
 ## Zasady aktualizacji rejestru
 
