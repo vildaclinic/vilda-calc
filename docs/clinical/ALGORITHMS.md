@@ -4192,6 +4192,39 @@ Bez tego opis spadłby do bezpiecznej ramki „ — <etykieta>"; pilnuje tego `t
 
 **Walidacja.** `tests/unit/werdykt-silnik.test.mjs` — 18 testów. Pełny przebieg: **2651 testów w 159 plikach**, lint, składnia (481 plików), polityka repozytorium (590 plików) — zielone.
 
+## Napis zwiniętego panelu pokwitaniowego przestaje zależeć od wyścigu (P-PANEL-NAPIS, SW 1.1.5, 2026-09-19)
+
+**Skąd znalezisko.** Z diagnozy porażki e2e, która wyszła przy okazji P-WERDYKT. Nie była to „niestabilność testu": test maskował prawdziwą usterkę i przechodził przypadkiem.
+
+**Usterka.** P-PANEL-ZWINIETY (SW 1.0.958) ustalił, że panel „Dane pokwitaniowe" zostaje zwinięty także wtedy, gdy niesie wartości, a żeby dane nie były niewidoczne bez śladu, przycisk zwiniętego panelu brzmi **„+ Dane pokwitaniowe (wpisane)"**. Ten napis potrafił nie zapalić się po wczytaniu pacjenta — zwinięty panel pisał „+ Dane pokwitaniowe", choć dane w środku były. Lekarz nie miał skąd wiedzieć, że coś jest schowane.
+
+**Przyczyna, ustalona w źródle.** Dwa niezależne braki, które dopiero razem dawały objaw:
+
+1. `inline_index_02.js` — napis przeliczało **wyłącznie** `updateTannerVisibility()`. Nasłuchy na polach panelu (`POLA.forEach(… addEventListener('input'/'change', pokazSprzecznosci))`) wołały tylko `pokazSprzecznosci`, więc **wypełnienie pola nigdy samo napisu nie odświeżało**.
+2. `vilda_data_import_export.js`, `applyLoadedData` — wywołuje `updateTannerVisibility` w bloku `puberty`, czyli **przed** blokiem `advanced`, który wypełnia `advTesticularVolume`. Po wypełnieniu pola nic już napisu nie ruszało.
+
+Stąd asymetria objawu, potwierdzona testem: rekord ze **stadium Tannera** zapalał napis (pole z bloku `puberty` jest wypełniane przed wywołaniem), a rekord, w którym jedyną daną pokwitaniową była **objętość jąder**, nie zapalał.
+
+**Dlaczego testy tego nie łapały.** `inline_index_02.js` miał po zdarzeniu `load` trzy timery `setTimeout(window.updateTannerVisibility, 0 / 200 / 800)`. Przy małym obciążeniu ostatni z nich odpalał się **po** tym, jak test zawołał `applyLoadedData`, i przypadkiem naprawiał napis. Test `tests/e2e/panel-dojrzewania.spec.mjs` („rekord z objętością jąder…") przechodził więc dzięki wyścigowi. W pełnym przebiegu `--project=desktop-chromium` przy 6 workerach timery zdążały wcześniej i test wywalał się **powtarzalnie, razem z retry, w trzech niezależnych przebiegach**; solo przechodził 18/18. CI tego nie widziała, bo dzieli suite na 3 odłamki.
+
+Test miał też słabą kotwicę: pierwsza asercja `toBeHidden()` przechodziła trywialnie, bo panel jest zwinięty **także przed** wczytaniem — test ruszał dalej, zanim rekord się zastosował.
+
+**Poprawka.** Napis wydzielony do `odswiezNapisPrzycisku()` i wołany z `updateTannerVisibility()` **oraz** z nasłuchów `input`/`change` na wszystkich polach panelu i na selektorze stadium. Napis jest odtąd funkcją **wartości pól**, a nie zapamiętanego miejsca w sekwencji ładowania.
+
+Wydzielenie jest celowe i nie jest kosmetyką: nasłuch pola **nie może** wołać całego `updateTannerVisibility()`, bo ta rutyna woła `pokazWiekGnrha()`, a ta **czyści** `pubertyGnrhaStartAge` i `pubertyGnrhaStopAge`, gdy status nie jest „w trakcie"/„zakończone". Podpięcie pełnej rutyny pod każde zdarzenie `input` kasowałoby lekarzowi wpisany wiek GnRHa w trakcie pisania w sąsiednim polu. Osobny test pilnuje, że tak się nie dzieje.
+
+**Trzy timery zostają.** Odpowiadają nie tylko za napis — pełna rutyna rysuje też widoczność pola objętości jąder wg płci i pól wieku GnRHa, a te mogą zależeć od późnego odtworzenia sesji. Po tej poprawce są dla napisu zbędne, ale usunięcie ich wymaga własnego dowodu, że nic innego na nich nie stoi; zielone testy takim dowodem nie są dla timera, który istnieje właśnie po to, by pokryć nieprzetestowane momenty.
+
+**Wpływ kliniczny.** Żaden na obliczenia. Zmienia się wyłącznie to, czy przycisk mówi prawdę o zawartości zwiniętego panelu. Ocena tempa, profil pokwitania i zapis rekordu czytały i czytają pola niezależnie od widoczności.
+
+**Walidacja.** `tests/e2e/panel-dojrzewania.spec.mjs`:
+- **czerwień przed poprawką zmierzona** — nowy test „rekord z samą objętością jąder…" wywalał się na kodzie z `audyt`, przy trzech pozostałych zielonych w tym samym bloku (to właśnie ta asymetria wskazała przyczynę);
+- pięć testów w nowym bloku: rekord z samą objętością jąder, rekord ze stadium Tannera, kontrola negatywna (rekord bez danych pokwitaniowych zostawia goły napis), samo wypełnienie pola przy zwiniętym panelu, oraz kontrola, że wiek GnRHa nie znika przy pisaniu w innym polu;
+- nowe testy **przewijają zegar strony poza timery startowe** (`page.clock.runFor(1500)`), zanim wczytają rekord — sprawdzają regułę, nie wyścig;
+- istniejący test z 2026-09-16 dostał kotwicę na **wartości** pola przed sprawdzeniem napisu, więc nie rusza dalej przed zastosowaniem rekordu.
+
+Pełny przebieg: 2651 testów w 159 plikach, lint, składnia (481 plików), polityka repozytorium (590 plików), e2e desktop w pełnym przebiegu przy 6 workerach.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

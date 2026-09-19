@@ -120,6 +120,17 @@
     if (start && v !== 'w-trakcie' && v !== 'zakonczone' && start.value !== '') start.value = '';
   }
 
+  /* P-PANEL-NAPIS (2026-09-19): napis na przycisku jest funkcją WARTOŚCI pól, więc musi się
+     przeliczać przy KAŻDEJ ich zmianie — obojętne, czy wpisał je lekarz, czy wczytanie rekordu.
+     Wydzielony z updateTannerVisibility celowo: nasłuch pola nie może uruchamiać całej reszty,
+     bo pokazWiekGnrha() CZYŚCI wiek GnRHa, a to należy do zmiany statusu, nie do przepisania
+     napisu. Patrz komentarz przy nasłuchach niżej. */
+  function odswiezNapisPrzycisku() {
+    btn.textContent = otwarty
+      ? '− Dane pokwitaniowe'
+      : (cokolwiekWpisane() ? '+ Dane pokwitaniowe (wpisane)' : '+ Dane pokwitaniowe');
+  }
+
   window.updateTannerVisibility = function () {
     // Stan otwarcia zmienia tylko lekarz (przycisk) albo „Wyczyść" — wartości w polach
     // nie otwierają panelu (P-PANEL-ZWINIETY). Odświeżenie tylko rysuje bieżący stan.
@@ -128,9 +139,7 @@
     if (jadraWrap) jadraWrap.style.display = otwarty ? '' : 'none';
     pokazJadraWgPlci();
     btn.style.display = '';
-    btn.textContent = otwarty
-      ? '− Dane pokwitaniowe'
-      : (cokolwiekWpisane() ? '+ Dane pokwitaniowe (wpisane)' : '+ Dane pokwitaniowe');
+    odswiezNapisPrzycisku();
     pokazWiekGnrha();
     pokazSprzecznosci();
   };
@@ -150,16 +159,27 @@
     }
   });
 
+  /* Napis na przycisku przeliczało dotąd WYŁĄCZNIE updateTannerVisibility(), a te nasłuchy
+     wołały samo pokazSprzecznosci — więc wypełnienie pola nigdy samo napisu nie odświeżało.
+     Przy wczytaniu rekordu było to widać: applyLoadedData woła updateTannerVisibility PRZED
+     blokiem, który wypełnia advTesticularVolume, i po wypełnieniu nic już napisu nie ruszało.
+     Zwinięty panel pisał wtedy „+ Dane pokwitaniowe", choć dane w środku były — lekarz nie
+     miał skąd wiedzieć, że coś jest schowane. Pilnuje tego P-PANEL-NAPIS w e2e. */
+  function poZmianiePola() {
+    pokazSprzecznosci();
+    odswiezNapisPrzycisku();
+  }
+
   POLA.forEach(function (id) {
     var e = pole(id);
-    if (e) e.addEventListener('input', pokazSprzecznosci);
-    if (e) e.addEventListener('change', pokazSprzecznosci);
+    if (e) e.addEventListener('input', poZmianiePola);
+    if (e) e.addEventListener('change', poZmianiePola);
   });
   (function () {
     var st = pole('pubertyGnrhaStatus');
     if (st) st.addEventListener('change', pokazWiekGnrha);
   }());
-  select.addEventListener('change', pokazSprzecznosci);
+  select.addEventListener('change', poZmianiePola);
   (function () {
     var plec = document.getElementById('sex');
     if (plec) plec.addEventListener('change', function () { pokazJadraWgPlci(); pokazSprzecznosci(); });
