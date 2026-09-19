@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaPacjentow } from '../support/sejf-czekanie.mjs';
 
 // GROWTH-HV-UI10 — ręczny wiersz w karcie zaawansowanej i identyczny punkt terapii GH
 // pokazywały się podwójnie (2026-09-11, zgłoszenie właściciela).
@@ -95,7 +96,7 @@ async function wpiszPunktyTerapii(page, punkty) {
 
 async function zapiszWczytajOdtworz(page) {
   await page.locator('#saveDataBtnSidebar').click();
-  await page.waitForFunction(async () => (await window.VildaVault.listPatients()).length === 1);
+  await czekajNaPacjentow(page, 1);
   const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
   await page.evaluate(() => window.clearAllData());
   await page.evaluate(
