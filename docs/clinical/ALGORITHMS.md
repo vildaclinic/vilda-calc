@@ -4506,6 +4506,101 @@ Charakterystyki produktów leczniczych przekazane przez właściciela 2026-09-19
 
 **Do uzupełnienia przez właściciela:** daty zatwierdzenia ChPL Mysimby i Mounjaro oraz potwierdzenie punktu 4.1 na ChPL Saxendy.
 
+## Postępy redukcji masy ciała u dorosłego — silnik (P-POSTEPY rata 1, 2026-09-19)
+
+**Decyzja właściciela 2026-09-19:** „1. każdemu dorosłemu z dwoma pomiarami, 2. poproszę dwa warianty do wyboru, 3. zostaw poza zestawem. Koduj." — czyli: zakładka należy się każdemu dorosłemu z dwoma pomiarami (nie tylko leczonemu farmakologicznie), wydruk ma mieć dwa warianty do wyboru (rata 4), a pasma **−3 %** nie dokładamy.
+
+**Skąd potrzeba.** Dziecko ma w Karcie Pacjenta siatki centylowe. Dorosły ma tę samą zakładkę pustą, z komunikatem „Siatki centylowe dostępne tylko dla dzieci i młodzieży (< 18 lat)". Pacjent leczony z powodu otyłości nie ma więc czym zobaczyć własnego postępu — a to jest obraz, który w gabinecie działa najmocniej.
+
+**Co obejmuje ta rata.** Wyłącznie silnik i dane. Żaden widok, żadna strona nie ładuje jeszcze tych plików; zakładka, wykres, kamienie milowe i wydruk to raty 2–4.
+
+### Pliki i podział odpowiedzialności
+
+| plik | rola |
+|---|---|
+| `vilda_postepy_doroslego_dane.js` | drabinki pasm %TBWL i parametr korytarza utrzymania — **dane**, nie kod liczący |
+| `vilda_postepy_doroslego.js` | czysty silnik (`window.VildaPostepyDoroslego`): seria, przekroczenia, nadir, korytarz, klasy BMI, zdarzenia |
+
+Silnik **nie zna** trzech rzeczy i to jest jego architektura, nie niedoróbka:
+
+1. **progów klas BMI** — pyta o nie `VildaBmi.kategoriaDorosly()`; bez silnika BMI klasy milkną, a procenty liczą się dalej;
+2. **kryteriów odstawienia leku** — punkt decyzyjny ChPL czyta z `obesity_response_criteria.js` (P-CHPL, SW 1.1.10) i **przepuszcza dalej bez przeliczania**;
+3. **drabinki pasm** — bierze ją jako argument z pliku danych i niesie jej nazwę oraz źródło w wyniku (AGENTS.md §3, `docs/ARCHITECTURE.md` „Kierunek: wielopopulacyjność").
+
+### Pasma %TBWL — skąd liczby
+
+| zestaw | progi | źródło |
+|---|---|---|
+| `OGOLNY` | 5 / 10 / 15 / 20 % | kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1 |
+| `LIRAGLUTYD` | 5 / 10 % | kategorie odpowiedzi raportowane w ChPL liraglutydu (Triglyva), pkt 5.1 |
+
+Dobór wg substancji: semaglutyd i tirzepatyd → `OGOLNY`; liraglutyd → `LIRAGLUTYD`; naltrekson z bupropionem → `OGOLNY`; **brak leku → `OGOLNY`**, bo wykres należy się także pacjentowi nieleczonemu farmakologicznie.
+
+**Progu ≥25 % nie ma w żadnej z czterech ChPL** przekazanych 2026-09-19 — dlatego nie ma go w żadnym zestawie. Progu **−3 %** nie dokładamy (decyzja właściciela).
+
+**Ograniczenie nazwane wprost:** punkt 5.1 ChPL Mysimby nie został odczytany pod kątem kategorii odpowiedzi. Dla naltreksonu z bupropionem drabinka `OGOLNY` jest więc **konwencją prezentacyjną aplikacji**, nie cytatem z tego dokumentu — i tak jest opisana w polu `uwaga` zestawu.
+
+Identyfikacja wersji czterech ChPL: wpis „Kryteria odpowiedzi sprawdzone wobec ChPL (P-CHPL)" wyżej w tym pliku. Dokumentów nie dołączono do repozytorium (prawa autorskie podmiotów odpowiedzialnych).
+
+### Definicje, od których zależy każda liczba na wykresie
+
+- **punkt odniesienia** — masa, od której liczone są procenty: masa w punkcie „Włączenie" leczenia, a gdy leczenia nie ma — pierwszy pomiar serii. Wynik **mówi, który** (`punktOdniesienia.zrodlo`), bo od tego zależy każdy procent.
+- **`ubytekPct`** — dodatni odsetek ubytku wobec punktu odniesienia (0 przy przyroście); **`zmianaMasyPct`** — ta sama wielkość ze znakiem.
+- **tydzień** — pełne tygodnie od punktu odniesienia, ujemne dla pomiarów sprzed niego. Z dat, a gdy dat brak — z wieku (miesiąc ÷ 7 × 30,4375), z flagą `czasZWieku` i ostrzeżeniem, bo miesiąc kalendarzowy nie jest całkowitą liczbą tygodni.
+- **przekroczenie pasma** — **pierwszy pomiar**, w którym ubytek sięgnął pasma. **Bez interpolacji między wizytami**: data między pomiarami byłaby zmyślona.
+- **nadir** — najmniejsza masa **od punktu odniesienia wzwyż**. Pomiar sprzed włączenia leczenia, choćby był najlżejszy w całej serii, nie jest nadirem — inaczej „największy ubytek" opisywałby masę sprzed leczenia.
+- **`utrzymane`** — jaka część ubytku z nadiru jest utrzymana w ostatnim pomiarze (surowa frakcja, zawsze w wyniku).
+
+### Parametr do akceptacji klinicznej: korytarz utrzymania 0,80
+
+`UTRZYMANIE.frakcja = 0,80` w pliku danych. To **konwencja prezentacyjna tej aplikacji, nie reguła z ChPL ani z wytycznych** — i tak jest opisana w polu `zrodlo`. Służy wyłącznie do zaznaczenia na wykresie momentu, w którym pacjent utrzymuje mniej niż 80 % uzyskanego ubytku. Silnik **zawsze** oddaje surową frakcję, więc lekarz widzi liczbę niezależnie od tego, gdzie postawiona jest linia; zmiana linii to zmiana jednej liczby w pliku danych.
+
+**Status: czeka na akceptację kliniczną właściciela.** Do czasu akceptacji jest to parametr wyświetlania, a nie kryterium kliniczne.
+
+### Czego silnik świadomie nie robi
+
+**Nie osadza na osi punktu decyzyjnego zakotwiczonego w dawce podtrzymującej.** ChPL liraglutydu liczy 12 tygodni **od dawki podtrzymującej 3,0 mg/dobę**, a momentu dojścia do tej dawki rekord pacjenta nie zapisuje. Silnik oddaje więc kotwicę pod nazwą (`kotwica: "dawka-podtrzymujaca"`, `tygodnie: 12`) i zostawia `tydzienOdOdniesienia` pusty. Mysimba kotwiczy w rozpoczęciu leczenia, więc jej punkt (16 tyg.) wolno osadzić. **Otwarte:** czy rekord ma zacząć zapisywać moment osiągnięcia dawki podtrzymującej — to decyzja właściciela.
+
+Dla semaglutydu i tirzepatydu **punktu decyzyjnego nie ma i to jest poprawny wynik**, a nie brak danych (P-CHPL: ChPL nie podaje dla dorosłych ani progu, ani terminu oceny).
+
+### Przypadki `wejście → oczekiwany wynik` (dane fikcyjne)
+
+Pacjent dorosły, 167 cm, punkt „Włączenie" 8.01.2026 przy 112,4 kg, tirzepatyd:
+
+| data | masa | ubytek | tydzień | klasa BMI |
+|---|---|---|---|---|
+| 8.01.2026 | 112,4 kg | 0 % | 0 | otyłość III |
+| 5.03.2026 | 104,1 kg | 7,4 % | 8 | otyłość II |
+| 14.05.2026 | 96,2 kg | 14,4 % | 18 | otyłość I |
+| 10.09.2026 | 88,6 kg | 21,2 % | 35 | otyłość I |
+
+→ pasma zaliczone: 5 % w dniu 5.03, 10 % w dniu 14.05, 15 % i 20 % dopiero 10.09 (14,4 % w maju nie sięga pasma 15 % — bez interpolacji między wizytami); nadir = ostatni pomiar; `utrzymane` = 1,00; punkt decyzyjny: **brak** (ocena kliniczna).
+
+Pacjent dorosły, 170 cm, bez punktu „Włączenie", liraglutyd: 120 → 108 → 100 → 114 kg. → drabinka 5/10; oba pasma zaliczone w 13. tygodniu; nadir 100 kg w 26. tygodniu; `utrzymane` = 0,30 → **poza korytarzem**; zdarzenia: `pasmo-utracone` (10 %) i `poza-korytarzem` w 39. tygodniu.
+
+Pacjent dorosły, 175 cm, 95 → 84 kg → zdarzenie `wyjscie-z-otylosci` (otyłość I → nadwaga).
+
+### Walidacja
+
+`tests/unit/postepy-doroslego-silnik.test.mjs` — **27 testów na rzeczywistych funkcjach** `VildaPostepyDoroslego.analizuj` i `.dostepne`. Strażnicy granic warstw są **zachowaniowe, nie tekstowe**: atrapa silnika BMI i atrapa modułu kryteriów ChPL podstawiane pod moduł, a wynik musi iść za atrapą.
+
+**Kontrole negatywne — sześć mutacji, każda zaczerwienia test:**
+
+| mutacja | złapana przez |
+|---|---|
+| pasmo 25 % dołożone do danych | 2 testy |
+| własna kopia progu klasy BMI w silniku | strażnik warstwy BMI |
+| zaszyte „dla liraglutydu okno 12 tyg." zamiast odczytu | strażnik warstwy ChPL |
+| punkt odniesienia zawsze pierwszy pomiar | test punktu sprzed włączenia |
+| nadir liczony z całej serii, także sprzed włączenia | test punktu sprzed włączenia |
+| korytarz liczony od punktu odniesienia zamiast od nadiru | 2 testy |
+
+**Dwie z tych mutacji przeszły pierwszą wersję testów** i to jest najważniejszy wynik tej raty: strażnik warstwy BMI miał serię wyłącznie z BMI ≥ 30, więc kopia progu „poniżej 30 nazwę sam" nigdy nie wchodziła w grę; strażnik warstwy ChPL używał leku spoza rejestru, więc zaszyta gałąź „dla liraglutydu" nie trafiała w swój warunek, a wartość produkcyjna akurat jest taka sama (12). Oba testy zostały przepisane tak, żeby mutacja padała — i dopiero wtedy uznane za strażników.
+
+### Wpływ kliniczny
+
+**Ta rata nie zmienia żadnego wyniku widocznego dziś w aplikacji** — nowe pliki nie są ładowane przez żadną stronę. Zmienia natomiast to, co aplikacja **zacznie pokazywać** w ratach 2–4, więc drabinki pasm, definicja punktu odniesienia i parametr korytarza wymagają akceptacji klinicznej właściciela przed ratą 2.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

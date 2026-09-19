@@ -11,8 +11,17 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 //
 // vilda_werdykt.js (P-WERDYKT rata 1) jest jedynym miejscem, w którym powstaje werdykt
 // odcinka. Bez niego vilda_trajectory_analysis.js oddaje verdict = null dla każdej pary.
+// vilda_postepy_doroslego.js (P-POSTEPY rata 1) liczy postępy redukcji masy u dorosłego.
+// Bez pliku danych pasma znikają, bez silnika BMI znikają klasy, bez kryteriów ChPL znika
+// punkt decyzyjny — w każdym z tych przypadków wynik jest UBOŻSZY, a nie błędny, więc brak
+// zależności czytałby się jak regresja produktu.
 const ZALEZNOSCI = {
   'vilda_trajectory_analysis.js': ['vilda_werdykt.js'],
+  'vilda_postepy_doroslego.js': [
+    'vilda_bmi.js',
+    'obesity_response_criteria.js',
+    'vilda_postepy_doroslego_dane.js',
+  ],
 };
 
 export function loadBrowserScript(relativePath, browserGlobal = {}) {
