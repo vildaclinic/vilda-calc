@@ -149,6 +149,7 @@ CodeQL jest osobnym skanem bezpieczeństwa. Jego alert nie potwierdza podatnośc
 6. Test odwołuje się do kodu produkcyjnego, a nie duplikuje jego implementacji.
 7. Zmiana PWA uwzględnia migrację istniejącego cache i scenariusz offline.
 8. Przed wdrożeniem publiczny artefakt musi przejść kontrolę kompletności „na czysto”, bez polegania na plikach pozostałych z poprzedniej wersji. Obecny proces nie potwierdza tego jeszcze automatycznie.
+9. Źródło danych pacjenta, które odświeża swoją pamięć asynchronicznie, ogłasza zmianę wspólnym sygnałem `vilda:zrodlo-pacjenta-zmienione` (`vilda_zrodla_pacjenta.js`). Ciche odświeżenie pamięci to wyścig z przypadkowym przemalowaniem strony, a przegrany wyścig zostawia na ekranie wynik z niewłaściwej siatki aż do przeładowania.
 
 ## Kierunek: wielopopulacyjność (decyzja właściciela 2026-09-09)
 

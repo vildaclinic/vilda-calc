@@ -25,7 +25,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   /* ── czyste funkcje (mierzalne bez przeglądarki) ─────────────────────────────── */
 
@@ -52,15 +52,28 @@
 
   var zapamietane = null;
 
+  /* Wspólny sygnał zmiany źródeł pacjenta (vilda_zrodla_pacjenta.js). Odczyt rekordu z
+   * sejfu jest asynchroniczny, a strona nie miała powodu policzyć się drugi raz — stąd
+   * wynik z siatki populacyjnej u pacjenta z rozpoznaniem aż do przeładowania strony.
+   * Moduł nadal niczego nie liczy: mówi tylko, że jego stan jest inny niż przed chwilą. */
+  function oglos() {
+    try {
+      var Z = w.VildaZrodlaPacjenta;
+      if (Z && typeof Z.ogloszJesliInne === 'function') Z.ogloszJesliInne('ds', zapamietane);
+    } catch (e) { /* brak wspolnego sygnalu — modul dziala jak dotad */ }
+  }
+
   function zapamietaj(payload) {
     zapamietane = payload && typeof payload === 'object'
       ? { maRekord: true, ds: zRekordu(payload) }
       : null;
+    oglos();
     return zapamietane;
   }
 
   function zapomnij() {
     zapamietane = null;
+    oglos();
   }
 
   // Odpowiedź dla reszty aplikacji.

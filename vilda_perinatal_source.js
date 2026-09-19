@@ -27,7 +27,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
 
   function tekst(x) {
     return x == null ? '' : String(x).trim();
@@ -94,17 +94,29 @@
 
   var zapamietane = null;
 
+  /* Wspólny sygnał zmiany źródeł pacjenta (vilda_zrodla_pacjenta.js) — patrz opis w tamtym
+   * pliku. Odczyt rekordu z sejfu jest asynchroniczny; bez ogłoszenia strona liczy dalej na
+   * danych sprzed odczytu. Moduł nadal niczego nie liczy. */
+  function oglos() {
+    try {
+      var Z = w.VildaZrodlaPacjenta;
+      if (Z && typeof Z.ogloszJesliInne === 'function') Z.ogloszJesliInne('perinatal', zapamietane);
+    } catch (e) { /* brak wspolnego sygnalu — modul dziala jak dotad */ }
+  }
+
   function zapamietaj(payload) {
     var p = payload && typeof payload === 'object' && payload.perinatal
       && typeof payload.perinatal === 'object' ? payload.perinatal : null;
     zapamietane = p
       ? { perinatal: p, plec: plec(payload.user ? payload.user.sex : null) }
       : null;
+    oglos();
     return zapamietane;
   }
 
   function zapomnij() {
     zapamietane = null;
+    oglos();
   }
 
   // Sekcja „Dane okołoporodowe" w kształcie karty SGA albo null.

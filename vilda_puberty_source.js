@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '6';
+  var VERSION = '7';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -154,6 +154,16 @@
 
   var zapamietane = null;
 
+  /* Wspólny sygnał zmiany źródeł pacjenta (vilda_zrodla_pacjenta.js) — patrz opis w tamtym
+   * pliku. Odczyt rekordu z sejfu jest asynchroniczny; bez ogłoszenia strona liczy dalej na
+   * danych sprzed odczytu. Moduł nadal niczego nie liczy. */
+  function oglos() {
+    try {
+      var Z = w.VildaZrodlaPacjenta;
+      if (Z && typeof Z.ogloszJesliInne === 'function') Z.ogloszJesliInne('puberty', zapamietane);
+    } catch (e) { /* brak wspolnego sygnalu — modul dziala jak dotad */ }
+  }
+
   function zapamietaj(payload) {
     var p = payload && typeof payload === 'object' && payload.puberty
       && typeof payload.puberty === 'object' ? payload.puberty : null;
@@ -162,11 +172,13 @@
     zapamietane = (we || stan)
       ? { we: we, stan: stan, plec: plec(payload && payload.user ? payload.user.sex : null) }
       : null;
+    oglos();
     return zapamietane;
   }
 
   function zapomnij() {
     zapamietane = null;
+    oglos();
   }
 
   function zKartyPacjenta() {
