@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bezKomentarzy, funkcjaZ, zrodlo } from '../support/silnik-bmi.mjs';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // P-LEK (2026-09-18, decyzja właściciela „napraw to").
 //
@@ -57,8 +58,23 @@ describe('P-LEK — dlaczego to jest błąd kliniczny, a nie kosmetyczny', () =>
   it('kryteria odpowiedzi wg ChPL różnią się między preparatami', () => {
     // Gdyby wszystkie leki miały ten sam próg, podmiana preparatu nie zmieniałaby oceny.
     // Ten test utrwala, że tak NIE jest — i dlatego integralność zapisu ma znaczenie.
-    const progi = new Set((TER.match(/(\d+)\s*%\s*po\s*1[26]\s*tyg/g) || []).map((t) => t.match(/\d+/)[0]));
+    //
+    // P-CHPL (2026-09-19): do SW 1.1.9 test wyłuskiwał progi regexem z tekstu
+    // `obesity_therapy.js`, bo warstwa UI trzymała tam własne kopie reguł. Kopie zniknęły
+    // (jedynym źródłem jest `obesity_response_criteria.js`), więc ta sama teza jest teraz
+    // sprawdzana na danych produkcyjnych zamiast na zminifikowanym napisie.
+    const K = loadBrowserScript('obesity_response_criteria.js', {}).ObesityResponseCriteria;
+    const dorosli = ['Wegovy', 'Saxenda', 'Mysimba', 'Mounjaro']
+      .map((nazwa) => K.getCriterion(nazwa, '', 40).group);
+
+    const progi = new Set(dorosli.map((g) => String(g.thresholdPct)));
     expect(progi.size, 'co najmniej dwa różne progi odpowiedzi').toBeGreaterThanOrEqual(2);
+    const okna = new Set(dorosli.map((g) => String(g.windowWeeks)));
+    expect(okna.size, 'co najmniej dwa różne okna oceny').toBeGreaterThanOrEqual(2);
+    // Dwa preparaty nie mają w ChPL progu w ogóle — podmiana leku potrafi więc nie tylko
+    // przesunąć próg, ale całkiem zdjąć ocenę automatyczną. Tym bardziej zapis musi trzymać lek.
+    expect(dorosli.filter((g) => g.thresholdPct === null), 'Wegovy i Mounjaro bez progu').toHaveLength(2);
+
     expect(TER, 'liraglutyd').toContain('Liraglutyd');
     expect(TER, 'semaglutyd').toContain('Semaglutyd');
   });
