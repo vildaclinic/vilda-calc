@@ -283,6 +283,17 @@
     'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)': {
       teraz: 'tor jest stabilny, ale BMI utrzymuje się znacznie poniżej typowego zakresu (<5c)',
       wtedy: 'tor był stabilny, ale BMI utrzymywało się znacznie poniżej typowego zakresu (<5c)'
+    },
+    // Hamulec catch-upu masy (P-WERDYKT rata 3): doganianie niedoboru przestaje byc dobra
+    // wiadomoscia, gdy dojechalo do pasma nadmiaru. Miara nazwana, bo BMI i wskaznik Cole'a
+    // to dwa rozne odczyty (P-SLOWA).
+    'wyrównanie niedoboru masy, ale BMI jest już w paśmie nadwagi (≥85c)': {
+      teraz: 'masa wyrównała niedobór, ale BMI jest już w paśmie nadwagi (≥85c)',
+      wtedy: 'masa wyrównała niedobór, ale BMI było już w paśmie nadwagi (≥85c)'
+    },
+    'wyrównanie niedoboru masy, ale wskaźnik Cole\'a sięgnął już 110%': {
+      teraz: 'masa wyrównała niedobór, ale wskaźnik Cole\'a sięgnął już 110%',
+      wtedy: 'masa wyrównała niedobór, a wskaźnik Cole\'a sięgnął wtedy 110%'
     }
   };
 

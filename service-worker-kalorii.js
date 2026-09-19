@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.5';
+const SW_VERSION = '1.1.6';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2005,6 +2005,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_narrative.js?v=11',
   '/vilda_patient_narrative.js?v=12',
   '/vilda_patient_narrative.js?v=13',
+  '/vilda_patient_narrative.js?v=14',
   '/vilda_patient_narrative_ui.js?v=7',
   '/vilda_patient_narrative_ui.js?v=8',
   '/vilda_patient_narrative_ui.js?v=9',
@@ -2170,6 +2171,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_masa.js?v=1',
   '/vilda_werdykt.js?v=1',
   '/vilda_werdykt.js?v=2',
+  '/vilda_werdykt.js?v=3',
   '/vilda_tempo_wzrastania.js?v=1',
   '/vilda_trajectory_analysis.js?v=23',
   '/vilda_advanced_growth.js?v=62',
@@ -2245,6 +2247,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_trajectory_analysis.js?v=28',
   '/vilda_trajectory_analysis.js?v=29',
   '/vilda_trajectory_analysis.js?v=30',
+  '/vilda_trajectory_analysis.js?v=31',
   '/gh_therapy_monitor.js?v=40',
   '/gh_therapy_monitor.js?v=41',
   '/gh_therapy_monitor.js?v=42',
@@ -2282,6 +2285,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=450',
   '/vilda_auth_ui.js?v=451',
   '/vilda_auth_ui.js?v=452',
+  '/vilda_auth_ui.js?v=453',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',

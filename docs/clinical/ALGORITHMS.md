@@ -4225,6 +4225,73 @@ Wydzielenie jest celowe i nie jest kosmetyką: nasłuch pola **nie może** woła
 
 Pełny przebieg: 2651 testów w 159 plikach, lint, składnia (481 plików), polityka repozytorium (590 plików), e2e desktop w pełnym przebiegu przy 6 workerach.
 
+## Hamulec catch-upu masy (P-WERDYKT rata 3, SW 1.1.6, 2026-09-19)
+
+**Decyzja właściciela.** „Ruszaj z ratą 3"; próg **BMI ≥ 85c albo Cole ≥ 110 %** zaakceptowany 2026-09-19.
+
+**Usterka B z audytu 2026-09-18.** Na ekranie „Porównanie z poprzednim pomiarem" odcinek masy 9c → 24c (ΔwSDS +0,62) dostawał werdykt **„wyrównanie niedoboru masy ciała"** z tonem `good` — czysta dobra wiadomość — podczas gdy BMI w tym samym odcinku szło **66c → 85c**, czyli wchodziło w pasmo nadwagi. Werdykt był zgodny z regułą i niezgodny z sytuacją.
+
+**Dwie bramki, nie jedna.** Nakładka spójności waga↔BMI istniała od 2026-08-14, ale:
+
+1. w silniku wpuszczała wyłącznie werdykty `stable` (`v.t !== 'stable' → zwróć bez zmian`);
+2. **panel porównania miał DRUGĄ bramkę u siebie** — `if ("weight" === m.metric && v && "stable" === v.t)` — czyli catch-up nie docierał do nakładki nawet po zmianie w silniku.
+
+Obie zniknęły. O tym, co nakładka robi z werdyktem, decyduje teraz wyłącznie silnik; konsument podaje dane i pyta.
+
+### Reguła
+
+`nakladkaMasaBmi(v, dW, vB, dB, poziomBmi)` rozgałęzia się według tonu werdyktu masy:
+
+| werdykt masy | reguła | warunek | wynik |
+|---|---|---|---|
+| `good` (catch-up, ΔwSDS ≥ +0,2) | **poziom** | centyl BMI ≥ 85 | warn — „wyrównanie niedoboru masy, ale BMI jest już w paśmie nadwagi (≥85c)" |
+| `good` (jw.) | **poziom** | Cole ≥ 110 % | warn — „wyrównanie niedoboru masy, ale wskaźnik Cole'a sięgnął już 110%" |
+| `stable` (ΔwSDS ≥ +0,2) | **ruch** (bez zmian od 2026-08-14) | BMI warn/bad i ΔbmiSDS ≥ +0,2 | warn — „przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI" |
+
+**Dlaczego to dwie różne reguły, a nie jedna rozszerzona.** Etykieta reguły ruchu mówi „nadmiar ujawnia się w BMI". Przy catch-upie, który dojechał dopiero do środka siatki (BMI 55c, ale ruszyło się o 0,5 SDS), byłaby to **nieprawda** — nadmiaru tam nie ma. Dlatego catch-up ocenia próg POZIOMU: liczy się, **dokąd** doganianie dojechało, a nie czy BMI akurat też się rusza. Reguła ruchu dla „stabilnego" toru została nietknięta.
+
+**Miara jest nazwana w etykiecie** (P-SLOWA): BMI i wskaźnik Cole'a to dwa różne odczyty i lekarz ma widzieć, który zadziałał. Gdy trafiają oba, mówi BMI — bo to miara, którą karta pokazuje w wierszu obok.
+
+### Cole ≥ 110 % NIE jest tym samym progiem co BMI ≥ 85c
+
+To był moment, w którym pomiar zmienił projekt raty. Cole = BMI / mediana BMI dla wieku × 100, więc oba progi są odczytami tej samej liczby — ale wypadają w różnych miejscach siatki. Zmierzone na produkcyjnych tablicach OLAF:
+
+| wiek | centyl BMI przy Cole 110 % | odsetek dzieci łapanych: sam BMI ≥85c → z ramieniem Cole'a |
+|---|---|---|
+| 3 l. | 85,0 | 15,0 % → 15,0 % |
+| 5 l. | 80,4 | 15,0 % → 19,6 % |
+| 7 l. | 76,5 | 15,0 % → 23,5 % |
+| 9 l. | 73,1 | 15,0 % → 26,9 % |
+| 10 l. | 72,1 | 15,0 % → 27,9 % |
+| 12 l. | 71,3 | 15,0 % → **28,7 %** |
+| 14 l. | 72,6 | 15,0 % → 27,4 % |
+| 16 l. | 74,3 | 15,0 % → 25,7 % |
+
+(chłopcy; u dziewcząt różnice poniżej 1 punktu centylowego)
+
+**Powyżej 3. roku życia to ramię Cole'a jest wiążące** — sam próg BMI ≥ 85c wyrzuciłby po cichu połowę tego, co właściciel zaakceptował. Średnio w badanych wiekach hamulec obejmuje **24,2 % zamiast 15,0 %** populacji, czyli ramię Cole'a poszerza zasięg **1,61×**.
+
+### Skąd bierze się Cole
+
+Wzór zna **wyłącznie silnik BMI** (`VildaBmi.cole`, P-BMI). Silnik werdyktu trzyma tylko PRÓG, a konsumenci podają gotową liczbę:
+
+- `vilda_trajectory_analysis.js` — `poziomBmiPunktu(pt, sex, source)` woła `VildaBmi.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source })`;
+- `vilda_auth_ui.js` — to samo wywołanie z `_b2.val`, `_bit.sc.sex` i `i.bmiSource`, czyli identycznymi źródłami, z których korzysta już `statAt` w tym samym pliku.
+
+Brak silnika BMI albo brak danych wycisza **wyłącznie ramię Cole'a**; ramię centyla działa dalej. Silnik nigdy nie zgaduje.
+
+**Progi nie są nowe:** 85 to `VildaBmi.PROGI.DZIECKO.NADWAGA`, 110 to `VildaBmi.PROGI.COLE.NADWAGA`.
+
+### Co się NIE zmieniło
+
+Odcisk pełnej siatki wejść jest **bez zmian** (`62fa8355…8e15d`, 6 280 776 przypadków): w przemiataniu nakładka dostaje syntetyczne werdykty bez `poziomBmi`, a bez danych o poziomie hamulec nie rusza. Reguła ruchu, obie nakładki wzrostu, warstwa kontekstu i werdykt bazowy — nietknięte.
+
+### Poprawka w narzędziu testowym
+
+Czytnik etykiet w `tests/unit/pacjent-opis-silnik.test.mjs` wycinał literały wyrażeniem `/'([^']+)'/g` i **urywał się na ucieczce** — etykieta z „Cole\'a" trafiała do testu jako ogryzek. Aplikacja ma takich etykiet więcej, więc poprawiony został czytnik, nie brzmienie.
+
+**Walidacja.** `tests/unit/werdykt-silnik.test.mjs` — 27 testów (było 18): oba ramiona z progami domkniętymi od właściwej strony, pierwszeństwo BMI, milczenie bez danych, redukcja nietknięta, reguła ruchu nietknięta, brak drugiej bramki w panelu porównania i w module trajektorii. Pełny przebieg: 2651 testów w 159 plikach, lint, składnia (481 plików), polityka repozytorium (590 plików).
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

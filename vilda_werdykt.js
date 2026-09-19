@@ -49,7 +49,7 @@
 
   if (!root) return;
 
-  var WERSJA = '2';
+  var WERSJA = '3';
 
   // Progi nazwane. Reszta liczb w gałęziach jest celowo zostawiona dokładnie tam, gdzie była
   // przed przeniesieniem — rata 1 ma być czytelna jako przeniesienie, a nie jako przepisanie.
@@ -67,7 +67,12 @@
     MASA_WYSOKA_C: 97,
     MASA_NISKA_C: 3,
     BMI_OTYLOSC_C: 97,
-    BMI_NIEDOWAGA_C: 5
+    BMI_NIEDOWAGA_C: 5,
+    // Hamulec catch-upu masy (P-WERDYKT rata 3, decyzja właściciela 2026-09-19).
+    // Te same liczby, których używa już silnik BMI: VildaBmi.PROGI.DZIECKO.NADWAGA = 85
+    // i VildaBmi.PROGI.COLE.NADWAGA = 110. Nie są nowe i nie zapadają tutaj.
+    BMI_NADWAGA_C: 85,
+    COLE_NADWAGA_PCT: 110
   });
 
   function dSds(sa0, sb0) {
@@ -186,8 +191,39 @@
   // „Stabilna" waga (ΔSDS ≥ +0,2, poniżej własnego progu ostrzeżenia) przy BMI warn/bad
   // w kierunku nadmiaru (ΔSDS BMI ≥ +0,2) w tym samym odcinku nie jest stabilna klinicznie:
   // masa-do-wieku maskuje nadmiar, gdy wzrost odstaje w dół (decyzja właściciela 2026-08-14).
-  function nakladkaMasaBmi(v, dW, vB, dB) {
-    if (!v || v.t !== 'stable' || !(dW >= 0.2)) return v;
+  // Hamulec catch-upu (rata 3). Werdykt „wyrównanie niedoboru masy ciała" to dobra
+  // wiadomość dopóty, dopóki doganianie nie zawiozło dziecka w pasmo nadmiaru. Odcinek
+  // z audytu 2026-09-18: masa 9c→24c (ΔwSDS +0,62) chwalona jako wyrównanie niedoboru,
+  // podczas gdy BMI szło 66c→85c i wchodziło w pasmo nadwagi. Werdykt był zgodny z regułą
+  // i niezgodny z sytuacją.
+  //
+  // To jest próg POZIOMU, nie ruchu: liczy się to, DOKĄD catch-up dojechał, a nie czy BMI
+  // akurat też się rusza. Dlatego nie korzysta z werdyktu BMI ani z jego ΔSDS.
+  // Miara jest nazwana w etykiecie (P-SLOWA), bo BMI i wskaźnik Cole'a to dwa różne odczyty
+  // i lekarz ma widzieć, który z nich zadziałał.
+  //
+  // `poziomBmi`: { centyl, cole } z tego samego punktu B, co werdykt. Brak którejkolwiek
+  // wartości wycisza wyłącznie jej własne ramię — nigdy nie zgaduje.
+  function hamulecCatchUp(poziomBmi) {
+    var p = poziomBmi || {};
+    var c = typeof p.centyl === 'number' && isFinite(p.centyl) ? p.centyl : null;
+    var cole = typeof p.cole === 'number' && isFinite(p.cole) ? p.cole : null;
+    if (c != null && c >= PROGI.BMI_NADWAGA_C) {
+      return { t: 'warn', l: 'wyrównanie niedoboru masy, ale BMI jest już w paśmie nadwagi (≥85c)' };
+    }
+    if (cole != null && cole >= PROGI.COLE_NADWAGA_PCT) {
+      return { t: 'warn', l: 'wyrównanie niedoboru masy, ale wskaźnik Cole\'a sięgnął już 110%' };
+    }
+    return null;
+  }
+
+  function nakladkaMasaBmi(v, dW, vB, dB, poziomBmi) {
+    if (!v || !(dW >= 0.2)) return v;
+    // Catch-up (`good`) ocenia hamulec poziomu; „stabilny" tor — reguła ruchu poniżej.
+    // Rozdział jest celowy: etykieta reguły ruchu mówi „nadmiar ujawnia się w BMI",
+    // a to byłaby nieprawda przy catch-upie, który dojechał dopiero do środka siatki.
+    if (v.t === 'good') return hamulecCatchUp(poziomBmi) || v;
+    if (v.t !== 'stable') return v;
     if (!vB || (vB.t !== 'warn' && vB.t !== 'bad') || !(dB >= 0.2)) return v;
     return { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
   }
@@ -213,6 +249,7 @@
     poziomMasyBmi: poziomMasyBmi,
     para: para,
     zKontekstem: zKontekstem,
+    hamulecCatchUp: hamulecCatchUp,
     nakladkaMasaBmi: nakladkaMasaBmi,
     nakladkaPozycjaWzrostu: nakladkaPozycjaWzrostu
   });

@@ -170,7 +170,7 @@ var VCHIP={good:"vg",stable:"vs",warn:"vw",bad:"vb"};
 // w A–B → kanał rodzicielski (MPH) → populacja; dla masy i BMI zamierzona redukcja. Reguła w silniku.
 function verdictCh2(met,sa0,sb0,ca,cb,gm,mp,rd){var W=window.VildaWerdykt;return W?W.zKontekstem(met,sa0,sb0,ca,cb,gm,mp,rd):null}
 // Nakładka spójności waga↔BMI (decyzja właściciela 2026-08-14) — reguła w silniku (nakladkaMasaBmi).
-function verdictWtBmi(v,dW,vB,dB){var W=window.VildaWerdykt;return W?W.nakladkaMasaBmi(v,dW,vB,dB):v}
+function verdictWtBmi(v,dW,vB,dB,pb){var W=window.VildaWerdykt;return W?W.nakladkaMasaBmi(v,dW,vB,dB,pb):v}
 // Nakładka pozycyjna wzrostu (decyzja właściciela 2026-08-14) — reguła w silniku (nakladkaPozycjaWzrostu).
 function verdictHtPos(v,cb,mp,sa0,ghOn){var W=window.VildaWerdykt;return W?W.nakladkaPozycjaWzrostu(v,cb,mp,sa0,ghOn):v}
 function ctxClean(x){return String(x==null?"":x).replace(/[<>]/g,"")}
@@ -192,11 +192,18 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
       if(_dS<=-0.2){var _fast=_dS/(dt/12)<=-1.5;
         if(!_fast&&"weight"===m.metric){var _km=dv/dt;_fast=agB<144?_km<=-1:_km<=-3.9}
         _fast&&(v={t:"warn",l:"redukcja bardzo szybka — do kontroli"})}}
-    if("weight"===m.metric&&v&&"stable"===v.t){var _bit=null;items.forEach(function(x){x.sc&&"bmi"===x.sc.metric&&(_bit=x)});
+    if("weight"===m.metric&&v&&("stable"===v.t||"good"===v.t)){var _bit=null;items.forEach(function(x){x.sc&&"bmi"===x.sc.metric&&(_bit=x)});
       var _b1=_bit?statAt(_bit,a):null,_b2=_bit?statAt(_bit,b):null;
       if(_b1&&_b2&&typeof _b1.sd=="number"&&typeof _b2.sd=="number"){
         var _vb=verdictCh2("bmi",_b1.sd,_b2.sd,_b1.c,_b2.c,ghM,cx?cx.mpSds:null,rdOn);
-        v=verdictWtBmi(v,Math.round(100*(sb.sd-sa.sd))/100,_vb,Math.round(100*(_b2.sd-_b1.sd))/100)}}
+        // Poziom BMI punktu B — wsad hamulca catch-upu. Wskaznik Cole'a liczy WYLACZNIE
+        // silnik BMI (P-BMI); tu podajemy mu tylko wartosc, wiek, plec i zrodlo, tak samo
+        // jak robi to statAt wyzej. Brak silnika = milczy samo ramie Cole'a.
+        var _pb={centyl:typeof _b2.c=="number"?_b2.c:null,cole:null};
+        try{if(_bit&&_bit.sc&&i.VildaBmi&&typeof i.VildaBmi.cole=="function"&&typeof _b2.val=="number"&&isFinite(_b2.val)){
+          var _cr=i.VildaBmi.cole({bmi:_b2.val,plec:_bit.sc.sex,wiekMies:agB,zrodlo:i.bmiSource});
+          if(_cr&&typeof _cr.cole=="number"&&isFinite(_cr.cole))_pb.cole=_cr.cole}}catch(_ce){}
+        v=verdictWtBmi(v,Math.round(100*(sb.sd-sa.sd))/100,_vb,Math.round(100*(_b2.sd-_b1.sd))/100,_pb)}}
     var vW=function(h){return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":h};
     var _vv2=velMo?(dt>0?dv/dt:0):(dyr>0?dv/dyr:0),_tk=false,_Tq=i.VildaTempoWzrastania;
     // P-TEMPO etap 4: tempo wzrostu miedzy dwoma pomiarami liczy odcinek() silnika; odstep < 6 mies. jest oznaczony (bez werdyktu).

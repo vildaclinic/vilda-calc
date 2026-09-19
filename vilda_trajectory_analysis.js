@@ -185,9 +185,27 @@
     return S ? S.zKontekstem(met, sa0, sb0, ca, cb, gm, mp, rd) : null;
   }
 
-  function weightBmiOverlayVerdict(v, dW, vB, dB) {
+  function weightBmiOverlayVerdict(v, dW, vB, dB, poziomBmi) {
     var S = silnikWerdyktu();
-    return S ? S.nakladkaMasaBmi(v, dW, vB, dB) : v;
+    return S ? S.nakladkaMasaBmi(v, dW, vB, dB, poziomBmi) : v;
+  }
+
+  // Poziom BMI w punkcie końcowym odcinka — wsad hamulca catch-upu (P-WERDYKT rata 3).
+  // Wskaźnik Cole'a liczy WYŁĄCZNIE silnik BMI (VildaBmi.cole, P-BMI): ten moduł podaje mu
+  // wartość BMI i wiek punktu, a sam wzoru nie zna. Brak silnika albo brak danych = null,
+  // czyli ramię Cole'a milczy; ramię centyla działa dalej.
+  function poziomBmiPunktu(pt, sex, source) {
+    if (!pt) return null;
+    var centyl = typeof pt.c === 'number' && isFinite(pt.c) ? pt.c : null;
+    var cole = null;
+    try {
+      var B = w.VildaBmi;
+      if (B && typeof B.cole === 'function' && typeof pt.value === 'number' && isFinite(pt.value)) {
+        var r = B.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source });
+        if (r && typeof r.cole === 'number' && isFinite(r.cole)) cole = r.cole;
+      }
+    } catch (e) { cole = null; }
+    return { centyl: centyl, cole: cole };
   }
 
   function heightPositionOverlayVerdict(v, cb, mp, sa0, ghOn) {
@@ -199,7 +217,7 @@
   // granic; po zmianach przeliczany jest najpoważniejszy odcinek wagi (ta sama reguła co
   // w analyzeMetric). Werdykty chipu leczenia (redukcja) pozostają nietknięte — ścieżka rd
   // nie zwraca „stabilnych" werdyktów przy ΔSDS ≥ 0,2, więc warunek nakładki ich nie obejmuje.
-  function applyWeightBmiConsistency(metrics) {
+  function applyWeightBmiConsistency(metrics, sex, source) {
     var wt = null, bm = null;
     metrics.forEach(function (m) {
       if (m.metric === 'weight') wt = m;
@@ -218,14 +236,16 @@
       if (!s.verdict) return;
       var bs = bmiSegFor(s.a.ageMonths, s.b.ageMonths);
       if (!bs || !bs.verdict) return;
-      var nv = weightBmiOverlayVerdict(s.verdict, s.dSds, bs.verdict, bs.dSds);
+      var nv = weightBmiOverlayVerdict(s.verdict, s.dSds, bs.verdict, bs.dSds,
+        poziomBmiPunktu(bs.b, sex, source));
       if (nv !== s.verdict) { s.verdict = nv; changed = true; }
     });
     if (wt.total && bm.total
       && wt.first.ageMonths === bm.first.ageMonths && wt.last.ageMonths === bm.last.ageMonths) {
       var dW = Math.round(100 * (wt.last.sd - wt.first.sd)) / 100;
       var dB = Math.round(100 * (bm.last.sd - bm.first.sd)) / 100;
-      wt.total = weightBmiOverlayVerdict(wt.total, dW, bm.total, dB);
+      wt.total = weightBmiOverlayVerdict(wt.total, dW, bm.total, dB,
+        poziomBmiPunktu(bm.last, sex, source));
     }
     if (changed) {
       var sev = { bad: 2, warn: 1 }, worst = null;
@@ -586,7 +606,7 @@
       if (m) metrics.push(m);
     });
     if (!metrics.length) return null;
-    applyWeightBmiConsistency(metrics);
+    applyWeightBmiConsistency(metrics, sex, source);
     var lastAgeM = pts[pts.length - 1].ageMonths;
     // Opóźnione dojrzewanie (Palmert & Dunkel 2012): Tanner I u dziewcząt >13 lat / chłopców >14 lat.
     var delayedPuberty = !!(ctx && ctx.tannerStage === 1

@@ -35,6 +35,7 @@ describe('silnik werdyktu — kształt modułu', () => {
     expect(W.PROGI).toEqual({
       ISTOTNA_DECELERACJA_DSDS: -1.0, ISTOTNE_PRZESUNIECIE_DSDS: 0.5,
       MASA_WYSOKA_C: 97, MASA_NISKA_C: 3, BMI_OTYLOSC_C: 97, BMI_NIEDOWAGA_C: 5,
+      BMI_NADWAGA_C: 85, COLE_NADWAGA_PCT: 110,
     });
   });
 
@@ -248,16 +249,17 @@ describe('dwa przypadki z audytu 2026-09-18', () => {
       .toEqual({ t: 'stable', l: 'w kanale rodzicielskim' });
   });
 
-  it('ekran 2 (porównanie): catch-up masy nie ma hamulca przy BMI wchodzącym w 85c', () => {
+  it('ekran 2 (porównanie): catch-up masy dostał hamulec przy BMI w paśmie nadwagi (rata 3)', () => {
     const W = silnik();
     const waga = W.para('weight', -1.34, -0.72, 9, 24);
-    expect(waga, 'dziś: sam catch-up, bez słowa o BMI')
+    expect(waga, 'sam werdykt pary nadal mówi o wyrównaniu niedoboru')
       .toEqual({ t: 'good', l: 'wyrównanie niedoboru masy ciała' });
     const bmi = W.para('bmi', 0.41, 1.03, 66, 85);
     expect(bmi).toEqual({ t: 'warn', l: 'istotne przesunięcie centylowe w górę' });
-    // Nakładka waga↔BMI istnieje, ale wpuszcza tylko werdykty „stable" — dlatego ten
-    // odcinek jej nie dotyka. To jest cała przyczyna usterki B z audytu (rata 3).
-    expect(W.nakladkaMasaBmi(waga, 0.62, bmi, 0.62)).toBe(waga);
+    // Usterka B: do SW 1.1.5 nakładka wpuszczała wyłącznie werdykty „stable", więc ten
+    // odcinek jej nie dotykał i catch-up brzmiał jak czysta dobra wiadomość.
+    expect(W.nakladkaMasaBmi(waga, 0.62, bmi, 0.62, { centyl: 85, cole: null }))
+      .toEqual({ t: 'warn', l: 'wyrównanie niedoboru masy, ale BMI jest już w paśmie nadwagi (≥85c)' });
     expect(W.nakladkaMasaBmi({ t: 'stable', l: 'stabilny tor masy ciała' }, 0.62, bmi, 0.62))
       .toEqual({ t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' });
   });
@@ -268,5 +270,82 @@ describe('dwa przypadki z audytu 2026-09-18', () => {
     expect(v).toEqual({ t: 'stable', l: 'stabilny tor wzrastania' });
     expect(W.nakladkaPozycjaWzrostu(v, 0.1, null, -3.2, false))
       .toEqual({ t: 'warn', l: 'tor stabilny, ale poniżej 3. centyla — niedobór wzrostu' });
+  });
+});
+
+describe('P-WERDYKT rata 3 — hamulec catch-upu masy', () => {
+  // Decyzja właściciela 2026-09-19: „BMI ≥ 85c albo Cole ≥ 110 %". To PRÓG POZIOMU — liczy
+  // się, dokąd doganianie dojechało, a nie czy BMI akurat też się rusza.
+  const CATCH_UP = { t: 'good', l: 'wyrównanie niedoboru masy ciała' };
+  const BMI85 = 'wyrównanie niedoboru masy, ale BMI jest już w paśmie nadwagi (≥85c)';
+  const COLE110 = 'wyrównanie niedoboru masy, ale wskaźnik Cole\'a sięgnął już 110%';
+
+  it('ramię BMI: próg domknięty od dołu na 85. centylu', () => {
+    const W = silnik();
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, { centyl: 85, cole: null }))
+      .toEqual({ t: 'warn', l: BMI85 });
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, { centyl: 84.9, cole: null }))
+      .toBe(CATCH_UP);
+  });
+
+  it('ramię Cole’a: próg domknięty od dołu na 110 % i działa, gdy BMI jeszcze nie sięga 85c', () => {
+    const W = silnik();
+    // To NIE jest ten sam próg co BMI ≥85c: na tablicach OLAF Cole 110 % wypada na centylu
+    // 71–85 zależnie od wieku, więc powyżej 3. roku życia to ramię Cole’a jest wiążące.
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, { centyl: 72, cole: 110 }))
+      .toEqual({ t: 'warn', l: COLE110 });
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, { centyl: 72, cole: 109.9 }))
+      .toBe(CATCH_UP);
+  });
+
+  it('gdy trafiają oba, mówi BMI — bo to miara, którą karta pokazuje w wierszu obok', () => {
+    const W = silnik();
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, { centyl: 92, cole: 125 }).l).toBe(BMI85);
+  });
+
+  it('bez danych o poziomie nie zgaduje — catch-up zostaje nietknięty', () => {
+    const W = silnik();
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0)).toBe(CATCH_UP);
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, {})).toBe(CATCH_UP);
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, { centyl: null, cole: null })).toBe(CATCH_UP);
+    expect(W.nakladkaMasaBmi(CATCH_UP, 0.4, null, 0, { centyl: NaN, cole: NaN })).toBe(CATCH_UP);
+  });
+
+  it('hamulec dotyczy DOGANIANIA, nie redukcji: przy spadku masy nakładka w ogóle nie rusza', () => {
+    const W = silnik();
+    const redukcja = { t: 'good', l: 'redukcja nadmiaru masy ciała' };
+    expect(W.nakladkaMasaBmi(redukcja, -0.4, null, 0, { centyl: 95, cole: 130 })).toBe(redukcja);
+  });
+
+  it('reguła ruchu dla „stabilnego" toru została nietknięta', () => {
+    const W = silnik();
+    const stabilna = { t: 'stable', l: 'stabilny tor masy ciała' };
+    expect(W.nakladkaMasaBmi(stabilna, 0.3, { t: 'warn', l: 'x' }, 0.3, { centyl: 92, cole: 130 }))
+      .toEqual({ t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' });
+    expect(W.nakladkaMasaBmi(stabilna, 0.3, { t: 'warn', l: 'x' }, 0.1, { centyl: 92, cole: 130 }))
+      .toBe(stabilna);
+  });
+
+  it('werdykty spoza pary „stable"/„good" nakładka przepuszcza bez zmian', () => {
+    const W = silnik();
+    for (const t of ['warn', 'bad']) {
+      const v = { t, l: 'x' };
+      expect(W.nakladkaMasaBmi(v, 0.4, { t: 'bad', l: 'y' }, 0.4, { centyl: 99, cole: 140 })).toBe(v);
+    }
+  });
+
+  it('panel porównania nie ma już własnej bramki „tylko stabilny"', () => {
+    // Bramka siedziała W KONSUMENCIE, poza silnikiem: catch-up nigdy nie docierał do nakładki.
+    // O tym, co nakładka robi z werdyktem, decyduje teraz wyłącznie silnik.
+    expect(AUTH).toContain('"weight"===m.metric&&v&&("stable"===v.t||"good"===v.t)');
+    expect(AUTH, 'stara bramka zniknęła').not.toContain('"weight"===m.metric&&v&&"stable"===v.t');
+    expect(AUTH, 'panel podaje poziom BMI punktu B').toContain('v=verdictWtBmi(v,Math.round(100*(sb.sd-sa.sd))/100,_vb,Math.round(100*(_b2.sd-_b1.sd))/100,_pb)');
+    expect(AUTH, 'wskaźnik Cole\'a liczy silnik BMI, nie panel').toContain('i.VildaBmi.cole({bmi:_b2.val');
+  });
+
+  it('moduł trajektorii podaje ten sam wsad i też nie liczy Cole’a sam', () => {
+    expect(TRAJ).toContain('poziomBmiPunktu(bs.b, sex, source)');
+    expect(TRAJ).toContain('poziomBmiPunktu(bm.last, sex, source)');
+    expect(TRAJ, 'Cole z silnika BMI').toContain('B.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source })');
   });
 });

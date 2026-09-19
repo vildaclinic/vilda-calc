@@ -267,11 +267,16 @@ describe('Parytet z kartą — opis nie mówi nic od siebie', () => {
     const etykiety = new Set();
     // Etykiety stoją po `l:` wprost albo w wyrażeniu warunkowym (`l: B ? '…' : '…'`),
     // a dwie wspólne (`ST`, `ND`) są zmiennymi — stąd dwa przebiegi.
+    // Literał w pojedynczych cudzysłowach z UWZGLĘDNIENIEM ucieczek: etykieta „wskaźnik
+    // Cole\'a" urywała się dotąd na odwrotnym ukośniku i test sprawdzał ogryzek zamiast
+    // pełnego napisu. Aplikacja ma takich etykiet więcej, więc poprawka jest w czytniku.
+    const LITERAL = /'((?:[^'\\]|\\.)*)'/g;
+    const odkoduj = (t) => t.replace(/\\(.)/g, '$1');
     for (const m of zrodlo.matchAll(/\bl:\s*([^}]*)\}/g)) {
-      for (const q of m[1].matchAll(/'([^']+)'/g)) etykiety.add(q[1]);
+      for (const q of m[1].matchAll(LITERAL)) etykiety.add(odkoduj(q[1]));
     }
     for (const m of zrodlo.matchAll(/\b(?:ST|ND)\s*=\s*([^;]*);/g)) {
-      for (const q of m[1].matchAll(/'([^']+)'/g)) etykiety.add(q[1]);
+      for (const q of m[1].matchAll(LITERAL)) etykiety.add(odkoduj(q[1]));
     }
     expect(etykiety.size, 'regex znalazł słownik, a nie pustkę').toBeGreaterThanOrEqual(50);
 
