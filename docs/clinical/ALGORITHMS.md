@@ -5573,6 +5573,105 @@ SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`
 Poprawka odniesienia: SW 1.1.22 → **1.1.23**; `vilda_auth_ui.js?v=459→460`,
 `vilda_sds_wzrostu.js?v=3→4`.
 
+## Szczeble pośrednie w drodze do normy BMI (P-SZCZEBLE, SW 1.1.24, 2026-09-20)
+
+**Skąd potrzeba.** Karta „Droga do normy BMI" pokazywała jeden cel i nic pomiędzy: dziecko
+85. centyl, dorosły BMI 24,9. Pacjentowi z BMI 42 zdanie „do normy brakuje 50 kg" odbiera
+sens startu, a „15 kg i wychodzisz z otyłości II stopnia" — nie. Decyzja właściciela
+2026-09-20 po analizie piśmiennictwa: wchodzi pełny zestaw szczebli, z BMI 35 u dorosłego,
+najpierw w tej jednej karcie.
+
+**Szczeble to nie cel leczenia.** Cel pozostaje bez zmian; szczebel jest bliższym słupkiem
+na tej samej drodze.
+
+### Silnik — jedno miejsce obliczeń (polecenie właściciela)
+
+`VildaBmi.drabinkaCelow({ wzrostCm, masaKg, wiekMies, plec, zrodlo })` zwraca komplet:
+kategorię, cel, `szczeble` (od najbliższego), `najblizszy`, `wszystkie` (także odfiltrowane),
+`zakresNormy`, a u dziecka `sds`, `centyl` i `siatka`. Karty **nie liczą progów** — czytają
+gotowy wynik. `celMasyDorosly()` (kafelek Statusu, P-STATUS-DOROSLY) przestał być drugą
+implementacją i jest teraz widokiem tej samej drabinki; kształt wyniku i zachowanie bez
+zmian, pilnują tego testy Statusu.
+
+| Kto | Szczeble | Skąd próg |
+|---|---|---|
+| dorosły | BMI 35 → wyjście z otyłości II stopnia; BMI 30 → koniec otyłości | `PROGI.DOROSLY` — bez nowych progów |
+| dziecko | SDS 3 → wyjście z otyłości olbrzymiej (od `OLBRZYMIA_MIN_M`); 97. centyl → koniec otyłości | `PROGI.DZIECKO` — bez nowych progów |
+| dziecko | **−0,25 BMI-SDS → próg poprawy** | **nowy próg, akceptacja kliniczna właściciela** |
+
+### Jedyny nowy próg: −0,25 BMI-SDS (akceptacja kliniczna właściciela 2026-09-20)
+
+**Źródło.** Reinehr T., Lass N., Toschke C., Rothermel J., Lanzinger S., Holl R.W.,
+*Which Amount of BMI-SDS Reduction Is Necessary to Improve Cardiovascular Risk Factors in
+Overweight Children?*, J Clin Endocrinol Metab 2016;101(8):3171–9,
+[doi:10.1210/jc.2016-1885](https://doi.org/10.1210/jc.2016-1885), PMID 27285295 (dane za
+PubMed).
+
+**Populacja i metoda.** 1388 dzieci z nadwagą i otyłością, średni wiek 11,4 roku, średnie
+BMI 27,9 kg/m², 45,5 % przed pokwitaniem; roczna interwencja behawioralna w poradni;
+zmiana stanu odżywienia liczona jako δBMI-SDS na percentylach IOTF.
+
+**Wynik.** Redukcja 0,25–0,5 BMI-SDS wiązała się ze spadkiem ciśnienia skurczowego
+o 3,2 mm Hg, rozkurczowego o 2,2 mm Hg, trójglicerydów o 6,9 mg/dl i HOMA o 0,5 oraz
+wzrostem HDL o 1,3 mg/dl. Redukcja > 0,5 BMI-SDS podwajała efekt (SBP −6,0; DBP −5,1;
+TG −16,4; HOMA −0,9). Wniosek pracy: redukcja ≥ 0,25 BMI-SDS istotnie poprawia nadciśnienie,
+hipertrójglicerydemię i niskie HDL.
+
+**Jednostki i sposób liczenia.** Szczebel to BMI odpowiadające `SDS(dziś) − 0,25` na siatce
+tego pacjenta, przeliczone na masę przy obecnym wzroście. **Nie liczymy 0,25 SDS liniowo po
+BMI** — wracamy na siatkę przez `wartoscDlaSds`; pilnuje tego test, który bierze BMI szczebla
+i sprawdza, że jego SDS jest dokładnie o 0,25 niższy.
+
+**Ograniczenie zapisane w wyniku.** BMI-SDS jest złym miernikiem przy skrajnych wartościach:
+teoretyczne maksimum z-score zmienia się ponad trzykrotnie z wiekiem, a u dzieci z otyłością
+ciężką z-score koreluje z odsetkiem 95. centyla tylko na poziomie r ≈ 0,5 (Freedman D.S.
+i wsp., *The Limitations of Transforming Very High Body Mass Indexes into z-Scores among
+8.7 Million 2- to 4-Year-Old Children*, J Pediatr 2017;188:50–56,
+[doi:10.1016/j.jpeds.2017.03.039](https://doi.org/10.1016/j.jpeds.2017.03.039); kohorta
+2–4 lata, siatki CDC — **uczciwie: to nie jest wiek naszych pacjentów**, ale mechanizm
+kompresji jest ten sam). Stąd stała `SDS_KOMPRESJA = 1,88`, wprost z pracy („powyżej
+97. centyla, z = 1,88"), i flaga `sdsPrzyEkstremum` przy szczeblu Reinehra. Karta i tak
+podaje szczebel w kilogramach, nie w SDS.
+
+**Czego świadomie NIE zrobiono.** Odsetek 95. centyla z klasami I/II/III (Black W.R. i wsp.,
+Children 2021;8(4):303, [doi:10.3390/children8040303](https://doi.org/10.3390/children8040303))
+jest zdefiniowany na siatkach CDC. Aplikacja liczy na OLAF, WHO i Palczewskiej — przeniesienie
+tamtych granic na te siatki byłoby wymyślaniem progu, nie cytowaniem. Nie wprowadzono też
+żadnych szczebli typu „połowa drogi": brak źródła.
+
+### Błąd znaleziony przez test przed wdrożeniem
+
+Pierwsza wersja filtrowała szczeble tylko warunkiem „poniżej dzisiejszej masy". Dziecko
+z **BMI w normie** dostawało więc próg Reinehra, czyli aplikacja podpowiadała zdrowemu
+dziecku, żeby schudło kilogram. Bramka jest teraz w silniku: bez celu redukcyjnego nie ma
+żadnych szczebli. Przy okazji poprawiono drugą rzecz tej samej rodziny — u dziecka `cel`
+powstawał zawsze i przy BMI w normie dawał kierunek „przyrost", czyli zalecenie przytycia
+do górnej granicy normy; teraz cel istnieje tylko poza normą, tak samo jak u dorosłego.
+
+### Co ta rata zmienia, a czego nie
+
+Zmienia **wyłącznie treść karty „Droga do normy BMI"**: pod celem pojawiają się co najwyżej
+dwa wiersze „Po drodze". Cel, kaloryka, tempo, czas dojścia i wszystkie dotychczasowe liczby
+— bez zmian. Wydruk PDF raportu nadal pokazuje sam cel (układ liczony jest w `app.js` ze
+stałej wysokości ramki) — dołożenie szczebli do PDF to osobna decyzja. „Zalecenia
+dietetyczne" i kafelek Statusu mogą sięgnąć po tę samą drabinkę jednym wywołaniem; w tej
+racie ich nie ruszano, zgodnie z kolejnością wskazaną przez właściciela.
+
+### Walidacja
+
+- `tests/unit/szczeble-celow.test.mjs` — **18 testów** na prawdziwym silniku i prawdziwych
+  tablicach; funkcje karty wycięte z pliku produkcyjnego. Progi czytane z `VildaBmi.PROGI`,
+  żeby test nie zzieleniał na własnej liczbie.
+- `tests/e2e/szczeble-celow.spec.mjs` — **5 testów** przez `window.update()` na index.html,
+  w tym widok 390 px i kontrola negatywna na dziecku w normie.
+- **Sześć kontroli negatywnych** na kodzie produkcyjnym: bez bramki celu redukcyjnego, próg
+  0,5 zamiast 0,25, bez bramki wieku dla otyłości olbrzymiej, odwrócona kolejność szczebli,
+  bez limitu dwóch wierszy, kilogramy w trybie stabilizacji. Każda zaczerwienia zestaw.
+- Makieta desktopowa i mobilna złożona z **prawdziwego HTML i CSS karty** (nie rysunku)
+  i przedstawiona właścicielowi.
+
+SW 1.1.23 → **1.1.24**; `vilda_bmi.js?v=5→6`, `vilda_bmi_journey.js?v=12→13`.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
