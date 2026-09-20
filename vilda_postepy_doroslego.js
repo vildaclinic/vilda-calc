@@ -52,6 +52,13 @@
   var MS_TYDZIEN = 7 * 24 * 60 * 60 * 1000;
   var MIES_NA_TYDZ = 30.4375 / 7;   // średni miesiąc gregoriański w tygodniach
 
+  /* Rozpiętość serii, powyżej której wykres przestaje cokolwiek pokazywać (audyt 2026-09-20, F9).
+     Jedna literówka w roku — 2199 zamiast 2019 — dawała tydzień 9026 i spłaszczała wszystkie
+     prawdziwe wizyty do jednego piksela, bez słowa ostrzeżenia. 2600 tygodni to pół wieku
+     obserwacji: więcej znaczy błąd w danych, nie długowieczność. Ostrzegamy, ale NIE
+     wyrzucamy pomiaru — który z nich jest zepsuty, wie lekarz, nie silnik. */
+  var MAX_ROZPIETOSC_TYG = 2600;
+
   /* Drabinka klas dorosłego — WYŁĄCZNIE do orzekania, czy przejście jest poprawą, czy
      pogorszeniem. Progi liczbowe zostają w `vilda_bmi.js`; tu jest tylko kolejność kluczy. */
   var KOLEJNOSC_KLAS = ['niedowaga', 'prawidlowe', 'nadwaga', 'otylosc-1', 'otylosc-2', 'otylosc-3'];
@@ -253,7 +260,9 @@
       if (z.typ === 'wyjscie-z-otylosci') return;   /* to samo mówi już „zmiana-klasy" */
       out.push({
         typ: z.typ, tydzien: z.tydzien, dateISO: z.dateISO, prog: z.prog,
-        waga: z.typ === 'istotny-odzysk' ? 'alarm' : 'uwaga',
+        /* Waga przychodzi ZE ZDARZENIA (audyt F8). Wcześniej wyprowadzało się ją tutaj z typu,
+           a widok — niezależnie — kolorował kropkę też po typie. Dwie kopie jednej decyzji. */
+        waga: z.waga || 'uwaga',
         opis: z.opis,
       });
     });
@@ -632,6 +641,18 @@
       });
     }
 
+    /* Rozpiętość serii — czysta sanity, bez wyrzucania danych (audyt F9). */
+    var tygodnie = wynik.seria.map(function (s) { return s.tydzienDokladny; })
+      .filter(function (t) { return typeof t === 'number' && isFinite(t); });
+    if (tygodnie.length > 1) {
+      var rozpietosc = Math.max.apply(null, tygodnie) - Math.min.apply(null, tygodnie);
+      if (rozpietosc > MAX_ROZPIETOSC_TYG) {
+        wynik.ostrzezenia.push('Pomiary rozciągają się na ponad '
+          + Math.round(MAX_ROZPIETOSC_TYG / 52) + ' lat — sprawdź daty, bo w tej skali '
+          + 'wszystkie wizyty ścisną się na wykresie w jeden punkt.');
+      }
+    }
+
     var poOdniesieniu = wynik.seria.filter(function (s) { return !s.przedOdniesieniem; });
 
     /* Stan leczenia. „brak-danych” NIE znaczy „nie leczony” — zakładka należy się każdemu
@@ -730,7 +751,8 @@
         /* Wyjście z otyłości — moment, który na wykresie ma własny kolor (makieta 2026-09-19). */
         if (!przedOdn && KLASY_OTYLOSCI[poprzednia.klasa.klucz] && !KLASY_OTYLOSCI[kl.klucz]) {
           wynik.zdarzenia.push({
-            typ: 'wyjscie-z-otylosci', tydzien: wynik.seria[c].tydzien, dateISO: wynik.seria[c].dateISO,
+            typ: 'wyjscie-z-otylosci', waga: 'dobrze',
+            tydzien: wynik.seria[c].tydzien, dateISO: wynik.seria[c].dateISO,
             opis: 'Pacjent wyszedł z zakresu otyłości: ' + poprzednia.klasa.etykieta + ' → ' + kl.etykieta + '.',
           });
         }
@@ -749,7 +771,7 @@
           if (!poTrafieniu) { if (s.ubytekPct >= pz.prog) poTrafieniu = true; continue; }
           if (s.ubytekPct < pz.prog) {
             wynik.zdarzenia.push({
-              typ: 'pasmo-utracone', prog: pz.prog, tydzien: s.tydzien, dateISO: s.dateISO,
+              typ: 'pasmo-utracone', waga: 'uwaga', prog: pz.prog, tydzien: s.tydzien, dateISO: s.dateISO,
               opis: 'Ubytek spadł poniżej osiągniętego wcześniej pasma ' + pz.prog + ' %.',
             });
             break;
@@ -768,7 +790,7 @@
         if (!poNadirze) { if (t === nadir) poNadirze = true; continue; }
         if (nadir.ubytekPct > 0 && (t.ubytekPct / nadir.ubytekPct) < wynik.odzysk.frakcja) {
           wynik.zdarzenia.push({
-            typ: 'istotny-odzysk', tydzien: t.tydzien, dateISO: t.dateISO,
+            typ: 'istotny-odzysk', waga: 'alarm', tydzien: t.tydzien, dateISO: t.dateISO,
             opis: 'Odzyskano ponad ' + Math.round((1 - wynik.odzysk.frakcja) * 100)
               + ' % uzyskanego ubytku masy.',
           });

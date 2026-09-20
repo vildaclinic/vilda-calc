@@ -320,3 +320,79 @@ describe('P-POSTEPY rata 3 — kamienie milowe', () => {
     expect(h, 'istotny odzysk na czerwono').toContain('border-left-color:' + KOLORY.alarm);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// AUDYT 2026-09-20, znalezisko F8 po stronie widoku, oraz F7 po stronie pliku danych.
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+describe('P-POSTEPY audyt F8 — kolor kropki wg ciężaru, nie wg kolejności', () => {
+  // Pacjent z odzyskiem: w jednym tygodniu wypada i utrata pasm, i istotny odzysk.
+  const SERIA_KOLIZJA = [
+    { dateISO: '2026-01-05', weight: 120, height: 170 },
+    { dateISO: '2026-04-06', weight: 100, height: 170 },
+    { dateISO: '2026-07-06', weight: 117, height: 170 },
+  ];
+
+  /** Kolory kropek serii — bez linii, pasm i reszty, które też mają `fill`. */
+  const kropki = (svg) => (svg.match(/<circle [^>]*\/>/g) || [])
+    .map((c) => (c.match(/fill="([^"]+)"/) || [])[1]);
+
+  it('kolizja zdarzeń w prawdziwym modelu daje kropkę alarmową', () => {
+    const m = model({ wiekLat: 52, pomiary: SERIA_KOLIZJA });
+    const tydzienKolizji = m.zdarzenia[0].tydzien;
+    const wTygodniu = m.zdarzenia.filter((z) => z.tydzien === tydzienKolizji);
+    expect(wTygodniu.length, 'kolizja naprawdę zachodzi').toBeGreaterThan(1);
+    expect(wTygodniu.some((z) => z.waga === 'alarm')).toBe(true);
+    expect(wTygodniu.some((z) => z.waga === 'uwaga')).toBe(true);
+    expect(kropki(moduly().U.wykresMasy(m))).toContain('#c2271d');
+  });
+
+  it('cięższe zdarzenie wygrywa NAWET gdy przyszło pierwsze', () => {
+    // Sedno F8. W prawdziwym modelu alarm jest wstawiany ostatni, więc kolejność wstawiania
+    // daje przypadkiem ten sam wynik co ocena wagi — i test na prawdziwej serii przepuszcza
+    // powrót do starej reguły (kontrola negatywna M4 przeszła na zielono, zanim powstał ten
+    // przypadek). Odwracamy więc kolejność: gdyby widok brał ostatnie wstawione, kropka
+    // wyszłaby bursztynowa.
+    const m = model({ wiekLat: 52, pomiary: SERIA_KOLIZJA });
+    const t = m.seria[1].tydzien;
+    m.odzysk = null;   // żeby w SVG nie było innych elementów w kolorze „uwaga"
+    m.zdarzenia = [
+      { typ: 'a', waga: 'alarm', tydzien: t },
+      { typ: 'b', waga: 'uwaga', tydzien: t },
+    ];
+    const k = kropki(moduly().U.wykresMasy(m));
+    expect(k, 'alarm mimo że wstawiony pierwszy').toContain('#c2271d');
+    expect(k, 'i żadnej kropki bursztynowej').not.toContain('#b5731a');
+  });
+
+  it('widok nie zna nazw typów zdarzeń — dobiera kolor po wadze z modelu', () => {
+    // Strażnik warstwy. Atrapa zdarzenia o TYPIE, którego widok nigdy nie widział: skoro
+    // niesie wagę „alarm", ma dostać kolor alarmowy bez żadnej zmiany w tym pliku.
+    const m = model({ wiekLat: 52, pomiary: SERIA_KOLIZJA });
+    m.zdarzenia = [{ typ: 'zupelnie-nowy-typ-zdarzenia', waga: 'alarm', tydzien: m.seria[1].tydzien }];
+    const svg = moduly().U.wykresMasy(m);
+    expect(svg, 'nieznany typ też dostaje kolor').toContain('fill="#c2271d"');
+
+    const kod = zrodlo('vilda_postepy_doroslego_ui.js');
+    for (const typ of ['istotny-odzysk', 'pasmo-utracone', 'wyjscie-z-otylosci']) {
+      expect(kod, `widok rozgałęzia się po typie „${typ}"`).not.toContain("'" + typ + "'");
+    }
+  });
+});
+
+describe('P-POSTEPY audyt F7 — normy jako dane znaczy: dane nie do ruszenia w locie', () => {
+  it('progu odzysku ani drabinki nie da się podmienić bez zmiany pliku', () => {
+    // `Object.freeze` jest płytkie, więc do audytu `ODZYSK.frakcja = 0.5` i
+    // `ZESTAWY.OGOLNY.progi.push(99)` przechodziły — próg kliniczny dawał się zmienić
+    // z konsoli, bez śladu. Zmiana normy ma być zmianą pliku, widoczną w historii repo.
+    const D = loadBrowserScript('vilda_postepy_doroslego_dane.js', {}).VildaPostepyDoroslegoDane;
+    expect(Object.isFrozen(D.ODZYSK), 'próg odzysku zamrożony').toBe(true);
+    expect(Object.isFrozen(D.ZESTAWY.OGOLNY), 'zestaw pasm zamrożony').toBe(true);
+    expect(Object.isFrozen(D.ZESTAWY.OGOLNY.progi), 'sama tablica progów też').toBe(true);
+
+    expect(() => { D.ODZYSK.frakcja = 0.5; }).toThrow();
+    expect(() => { D.ZESTAWY.OGOLNY.progi.push(99); }).toThrow();
+    expect(D.ODZYSK.frakcja, 'wartość nietknięta').toBe(0.75);
+    expect(D.ZESTAWY.OGOLNY.progi).toEqual([5, 10, 15, 20, 25]);
+  });
+});

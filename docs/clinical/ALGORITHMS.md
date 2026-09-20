@@ -5230,6 +5230,53 @@ SW 1.1.15 → **1.1.16**; `vilda_postepy_doroslego.js?v=3→4`.
 
 Rata C: ostrzeżenie o osi z wieku na kartce pacjenta (F5), łamanie stron w wydruku (F6), głębokie zamrożenie pliku danych (F7), kolor kropki wg ciężaru zdarzenia (F8), sanity bound na datach (F9). Do decyzji właściciela: F12 i F13.
 
+## Wydruk, dane i wykres po audycie (P-POSTEPY-FIX rata C, SW 1.1.17, 2026-09-20)
+
+Trzecia i ostatnia rata naprawcza po audycie funkcji postępów. Znaleziska F5–F9 — żadne z nich nie zmienia liczby ani progu; zmieniają to, **co kartka mówi o sobie samej**, jak się drukuje i czego nie da się podmienić w locie.
+
+### F5 — kartka dla pacjenta przyznaje, że oś tygodni bywa przybliżona
+
+Gdy przy pomiarach brakuje kompletu dat, silnik liczy tygodnie z wieku w miesiącach i oznacza to ostrzeżeniem. Panel na ekranie i wariant kliniczny to ostrzeżenie pokazywały; **stopka wariantu dla pacjenta miała treść stałą**, więc pacjent czytał „12. tydz.” jako datę co do dnia, choć oś z wieku myli się o około dwa tygodnie na każdy miesiąc. Stopka dostaje jedno zdanie zwykłym językiem, wyłącznie gdy `czasZWieku` — z kompletem dat nie pojawia się nic.
+
+### F6 — wydruk kliniczny daje się wydrukować
+
+CSS wydruku nie miał **żadnej reguły łamania stron**. Wariant kliniczny to dwa wykresy plus tabela pomiarów; przy dwudziestu kilku wizytach nie mieści się na jednej kartce A4, a przeglądarka tnie wiersz w pół i zostawia nagłówek sekcji sam na dole strony. Dołożone: `break-inside: avoid` dla wykresów, kafelków, wierszy tabeli, pozycji kamieni i stopki; `break-after: avoid` dla nagłówków sekcji; `display: table-header-group` dla `thead`, żeby nagłówek tabeli powtarzał się na każdej stronie.
+
+### F7 — „normy jako dane” znaczy: dane nie do ruszenia w locie
+
+`Object.freeze(API)` w pliku danych jest **płytkie**. Do tej poprawki `ODZYSK.frakcja = 0.5` i `ZESTAWY.OGOLNY.progi.push(99)` przechodziły — próg kliniczny dawał się zmienić z dowolnego skryptu albo z konsoli, bez śladu. Dla modułu, którego cała racja bytu to zasada z AGENTS.md §3 („normy zawsze jako dane, nigdy jako założenie wbudowane w silnik”), to było za mało: zmiana normy ma być **zmianą tego pliku, widoczną w historii repozytorium**. Zamrożenie jest teraz rekurencyjne.
+
+### F8 — kolor kropki wg ciężaru zdarzenia, nie wg kolejności wstawiania
+
+Widok trzymał zdarzenia w mapie `tydzień → typ`, więc przy kilku zdarzeniach w jednym tygodniu wygrywało **ostatnie wstawione**. Odzysk masy niemal zawsze idzie w parze z utratą pasma, więc kolizja jest regułą, nie wyjątkiem. Wychodziło poprawnie — ale przez kolejność `push` w silniku, nie przez ocenę wagi.
+
+Dwie zmiany, obie po linii warstw:
+
+1. **Zdarzenia niosą własną wagę** (`dobrze` / `uwaga` / `alarm`) prosto z silnika. Wcześniej waga powstawała w dwóch miejscach: `kamienie()` wyprowadzała ją z typu, a widok — niezależnie — kolorował kropkę też po typie. Jedna decyzja kliniczna, dwie kopie.
+2. **Widok dobiera kolor i pierwszeństwo po wadze**, nie po nazwie typu. Nie zna już ani jednej nazwy zdarzenia; nowy typ dostaje kolor sam, bez tknięcia pliku widoku. Pilnuje tego strażnik warstwy.
+
+### F9 — bzdurna data nie ucieka po cichu
+
+Literówka w roku (2199 zamiast 2019) dawała tydzień 9026 i spłaszczała wszystkie prawdziwe wizyty do jednego piksela, **bez słowa ostrzeżenia**. Rozpiętość serii powyżej 2600 tygodni (pół wieku obserwacji) daje teraz ostrzeżenie. Pomiaru **nie wyrzucamy** — który z nich jest zepsuty, wie lekarz, nie silnik.
+
+### Walidacja
+
+- `postepy-doroslego-silnik.test.mjs` — **63 testy** (było 59): waga każdego zdarzenia i jej przepuszczanie do kamieni, ostrzeżenie o rozpiętości plus kontrola, że normalna seria go nie dostaje.
+- `postepy-doroslego-widok.test.mjs` — **38 testów** (było 34): kolizja zdarzeń, cięższe wygrywa nawet gdy przyszło pierwsze, strażnik „widok nie zna nazw typów”, głębokie zamrożenie pliku danych.
+- `postepy-doroslego-wydruk.test.mjs` — **23 testy** (było 20): stopka pacjenta ostrzega tylko z powodu, reguły łamania stron.
+- **Osiem kontroli negatywnych**, każda zaczerwienia testy, w tym dwie kontrole nadgorliwości (ostrzeżenie o rozpiętości zawsze; stopka pacjenta strasząca zawsze).
+
+**Jedna kontrola negatywna przeszła najpierw na zielono i wymusiła przepisanie testu.** Powrót do kolorowania kropki po kolejności wstawiania nie zaczerwieniał niczego, bo w prawdziwym modelu alarm jest wstawiany ostatni — obie reguły dawały ten sam wynik. Test dostał więc przypadek z odwróconą kolejnością: cięższe zdarzenie przychodzi pierwsze, a kropka i tak ma być alarmowa.
+
+SW 1.1.16 → **1.1.17**; `vilda_postepy_doroslego.js?v=4→5`, `vilda_postepy_doroslego_ui.js?v=3→4`, `vilda_postepy_doroslego_dane.js?v=2→3`, `vilda_postepy_doroslego_wydruk.js?v=1→2`.
+
+### Co zostaje właścicielowi
+
+Audyt zamknięty w zakresie kodu. Otwarte pozostają dwie pozycje, które wymagają jego decyzji albo dokumentu:
+
+- **F12** — `titrationWeeksNominal: 4` dla pediatrycznych grup liraglutydu (`saxenda-6-11`, `saxenda-12-17`) to wartość przeniesiona z dorosłych. Dla dorosłych zweryfikowana na ChPL Triglyva; dla dzieci **nie** — nie osobno, przeciw sekcji pediatrycznej. Grupy te mają `hardStop: true`, więc zaniżony czas zwiększania dawki stawia punkt oceny za wcześnie, czyli odtwarza błąd, który P-KOTWICA usunęła u dorosłych.
+- **F13** — „Pobierz” zapisuje nieszyfrowany plik HTML z nazwiskiem i całą historią pomiarów poza sejfem, a nazwa pliku niesie nazwisko. To wynika wprost z funkcji, ale katalog Pobrane bywa synchronizowany do chmury, a nazwisko widać w liście plików bez otwierania. Do rozważenia nazwa bez nazwiska.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

@@ -792,3 +792,73 @@ describe('P-POSTEPY audyt F4 — kamienie opisują okres od punktu odniesienia',
     expect(m.zdarzenia.filter((z) => z.typ === 'wyjscie-z-otylosci'), 'sprzed włączenia — nie').toHaveLength(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// AUDYT 2026-09-20, znaleziska F8 i F9 po stronie silnika.
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+describe('P-POSTEPY audyt F8 — ciężar zdarzenia jest własnością modelu', () => {
+  it('każde zdarzenie niesie własną wagę, a kamienie ją przepuszczają', () => {
+    // Do audytu waga powstawała w DWÓCH miejscach: `kamienie()` wyprowadzała ją z typu,
+    // a widok — niezależnie — kolorował kropkę też po typie. Ocena, że odzysk masy jest
+    // cięższy od utraty pasma, jest kliniczna i ma mieszkać w jednym miejscu.
+    const m = silnik().analizuj({
+      wiekMies: 624,
+      pomiary: [
+        { ageMonthsTotal: 624, weight: 120, height: 170, dateISO: '2026-01-05' },
+        { ageMonthsTotal: 627, weight: 100, height: 170, dateISO: '2026-04-06' },
+        { ageMonthsTotal: 630, weight: 117, height: 170, dateISO: '2026-07-06' },
+      ],
+    });
+    const wg = {};
+    m.zdarzenia.forEach((z) => { wg[z.typ] = z.waga; });
+    expect(wg['pasmo-utracone']).toBe('uwaga');
+    expect(wg['istotny-odzysk']).toBe('alarm');
+    expect(m.zdarzenia.every((z) => typeof z.waga === 'string' && z.waga),
+      'żadne zdarzenie bez wagi').toBe(true);
+
+    const kam = m.kamienie.find((k) => k.typ === 'istotny-odzysk');
+    expect(kam.waga, 'kamień bierze wagę ze zdarzenia').toBe('alarm');
+  });
+
+  it('wyjście z otyłości niesie wagę „dobrze"', () => {
+    const m = silnik().analizuj({
+      wiekMies: 624,
+      pomiary: [
+        { ageMonthsTotal: 624, weight: 95, height: 170, dateISO: '2026-01-05' },
+        { ageMonthsTotal: 630, weight: 84, height: 170, dateISO: '2026-07-06' },
+      ],
+    });
+    const z = m.zdarzenia.find((e) => e.typ === 'wyjscie-z-otylosci');
+    expect(z, 'zdarzenie powstało').toBeTruthy();
+    expect(z.waga).toBe('dobrze');
+  });
+});
+
+describe('P-POSTEPY audyt F9 — bzdurna data nie ucieka po cichu', () => {
+  it('seria rozciągnięta na pół wieku dostaje ostrzeżenie', () => {
+    // Literówka w roku (2199 zamiast 2019) dawała tydzień 9026 i spłaszczała wszystkie
+    // prawdziwe wizyty do jednego piksela, bez słowa. Ostrzegamy — ale danych nie kasujemy,
+    // bo który pomiar jest zepsuty, wie lekarz, nie silnik.
+    const m = silnik().analizuj({
+      wiekMies: 624,
+      pomiary: [
+        { ageMonthsTotal: 624, weight: 120, height: 170, dateISO: '2026-01-05' },
+        { ageMonthsTotal: 630, weight: 110, height: 170, dateISO: '2199-01-01' },
+      ],
+    });
+    expect(m.ostrzezenia.join(' ')).toContain('rozciągają się na ponad');
+    expect(m.seria, 'żaden pomiar nie wyleciał').toHaveLength(2);
+  });
+
+  it('normalna seria nie dostaje tego ostrzeżenia', () => {
+    const m = silnik().analizuj({
+      wiekMies: 624,
+      pomiary: [
+        { ageMonthsTotal: 624, weight: 120, height: 170, dateISO: '2026-01-05' },
+        { ageMonthsTotal: 630, weight: 110, height: 170, dateISO: '2026-07-06' },
+      ],
+    });
+    expect(m.ostrzezenia.join(' ')).not.toContain('rozciągają się');
+  });
+});

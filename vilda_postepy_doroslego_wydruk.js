@@ -81,6 +81,15 @@
     + 'table.vw-tab td.num{text-align:right;font-variant-numeric:tabular-nums;}'
     + '.vw-foot{font-size:7.5pt;color:#5a6b72;line-height:1.4;border-top:0.8pt solid #d7e9ec;padding-top:2.5mm;margin-top:4mm;}'
     + '.vw-zacheta{font-size:10.5pt;background:#eef7f2;border-radius:2mm;padding:3mm 4mm;margin:0 0 5mm;}'
+    /* ŁAMANIE STRON (audyt 2026-09-20, F6). Wariant kliniczny to dwa wykresy plus tabela
+       pomiarów — przy dłuższej serii nie mieści się na jednej kartce, a bez tych reguł
+       przeglądarka tnie wiersz w pół i zostawia nagłówek sekcji na dole strony. Nagłówek
+       tabeli powtarza się na każdej stronie, żeby kolumny dało się czytać bez wracania. */
+    + '.vw-chart,.vw-tiles,.vw-mile,.vw-zacheta{break-inside:avoid;page-break-inside:avoid;}'
+    + '.vw-h2{break-after:avoid;page-break-after:avoid;}'
+    + 'table.vw-tab thead{display:table-header-group;}'
+    + 'table.vw-tab tr{break-inside:avoid;page-break-inside:avoid;}'
+    + '.vw-foot{break-inside:avoid;page-break-inside:avoid;}'
     + '@media print{.vw-noprint{display:none!important;}}';
 
   function liczbaPl(v, dec) {
@@ -180,8 +189,16 @@
 
   function stopka(model, wariant) {
     if (wariant === 'pacjent') {
+      /* Kartka dla pacjenta też musi powiedzieć, że oś tygodni bywa przybliżona (audyt F5).
+         Panel na ekranie i wariant kliniczny mówiły to przez `ostrzezenia`; tutaj stopka miała
+         treść stałą, więc pacjent czytał „12. tydz." jako datę co do dnia — a oś liczona
+         z wieku w miesiącach myli się o około dwa tygodnie na każdy miesiąc.
+         Zdanie jest zwykłym językiem: to kartka dla pacjenta, nie dla recenzenta. */
+      var dop = model.czasZWieku
+        ? ' Tygodnie na wykresie są przybliżone, bo przy części pomiarów nie zapisano dokładnej daty.'
+        : '';
       return '<p class="vw-foot">Wydruk z aplikacji Vilda. Wykres przedstawia zapisane pomiary '
-        + 'masy ciała i nie zastępuje porady lekarskiej.</p>';
+        + 'masy ciała i nie zastępuje porady lekarskiej.' + dop + '</p>';
     }
     var cz = [];
     if (model.zestaw) cz.push('Pasma: ' + esc(model.zestaw.nazwa) + '. ' + esc(model.zestaw.zrodlo));

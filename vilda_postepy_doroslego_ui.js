@@ -194,10 +194,14 @@
       + '" font-size="13" fill="' + C.uwaga + '">istotny odzysk</text>';
   }
 
-  function kolorZdarzenia(typ) {
-    if (typ === 'wyjscie-z-otylosci') return C.dobrze;
-    if (typ === 'istotny-odzysk') return C.alarm;
-    return C.uwaga;
+  /* Kolor i pierwszeństwo zdarzeń — po WADZE z modelu, nie po nazwie typu (audyt 2026-09-20, F8).
+     Widok nie ma wiedzieć, że odzysk jest cięższy od utraty pasma; to ocena kliniczna i mieszka
+     w silniku. Nowy typ zdarzenia dostaje kolor sam, bez tknięcia tego pliku. */
+  var WAGA_KOLOR = { dobrze: C.dobrze, uwaga: C.uwaga, alarm: C.alarm };
+  var WAGA_RANGA = { dobrze: 1, uwaga: 2, alarm: 3 };
+
+  function kolorZdarzenia(waga) {
+    return WAGA_KOLOR[waga] || C.uwaga;
   }
 
   function liniaPacjenta(model, S) {
@@ -210,15 +214,22 @@
     }).join(' ');
     var out = ['<path d="' + d + '" fill="none" stroke="' + C.pacjent + '" stroke-width="2.5" stroke-linejoin="round"/>'];
 
+    /* Gdy w jednym tygodniu wypadnie kilka zdarzeń — a odzysk masy niemal zawsze idzie w parze
+       z utratą pasma — kropka bierze kolor NAJCIĘŻSZEGO. Do audytu wygrywało po prostu
+       ostatnie wstawione: wychodziło poprawnie, ale przez kolejność `push` w silniku, nie
+       przez ocenę wagi. */
     var wgTygodnia = {};
     (model.zdarzenia || []).forEach(function (z) {
-      if (typeof z.tydzien === 'number') wgTygodnia[z.tydzien] = z.typ;
+      if (typeof z.tydzien !== 'number') return;
+      var waga = z.waga || 'uwaga';
+      var byla = wgTygodnia[z.tydzien];
+      if (!byla || (WAGA_RANGA[waga] || 0) > (WAGA_RANGA[byla] || 0)) wgTygodnia[z.tydzien] = waga;
     });
     seria.forEach(function (p) {
-      var typ = Object.prototype.hasOwnProperty.call(wgTygodnia, p.tydzien) ? wgTygodnia[p.tydzien] : null;
-      var kolor = typ ? kolorZdarzenia(typ) : C.pacjent;
+      var waga = Object.prototype.hasOwnProperty.call(wgTygodnia, p.tydzien) ? wgTygodnia[p.tydzien] : null;
+      var kolor = waga ? kolorZdarzenia(waga) : C.pacjent;
       out.push('<circle cx="' + S.x(p.tydzien).toFixed(1) + '" cy="' + S.y(p.masa).toFixed(1)
-        + '" r="' + (typ ? 6 : 4) + '" fill="' + kolor + '"/>');
+        + '" r="' + (waga ? 6 : 4) + '" fill="' + kolor + '"/>');
     });
 
     /* Podpis ostatniej masy POD punktem i wyrównany do prawej krawędzi obszaru — nigdy
