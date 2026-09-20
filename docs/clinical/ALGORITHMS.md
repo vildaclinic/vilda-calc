@@ -5362,6 +5362,13 @@ Rata 4 usunęła punkt oceny wg ChPL z listy kamieni milowych pacjenta, ale na w
 
 `punktOdniesienia.bmi`, `seria[].zmianaBmi`, `seria[].zmianaBmiPct`, `doNastepnegoPasma`, `wskazniki`, `zestaw.opisSzczebli`.
 
+### Weryfikacja na urządzeniu i offline — POTWIERDZONA przez właściciela 2026-09-20
+
+Dwie rzeczy, których to środowisko sprawdzić nie mogło, zostały sprawdzone przez właściciela:
+
+- **Czytelność wariantu wąskiego na iPhonie w trybie PWA.** To była jedyna część P-WIZUAL bez weryfikacji na prawdziwym urządzeniu, a zarazem ta, od której zaczęło się zgłoszenie („w wersji mobile te etykiety przy wykresach są tak małe, że ich nie można przeczytać"). Potwierdzone: czytelne. Rozwiązanie strukturalne — osobna geometria viewBox 380 plus przeniesienie nazw pasm i klas do legendy HTML — działa na docelowym sprzęcie, nie tylko w symulacji szerokości okna.
+- **Scenariusz offline po bumpie service workera** `1.1.19` → `1.1.20` (AGENTS.md §6): instalacja, aktywacja, aktualizacja i ponowne uruchomienie bez sieci. Potwierdzone: działa.
+
 ### Walidacja
 
 17 kontroli negatywnych, każda zaczerwienia testy. Dwie pierwsze wersje kontroli przeszły na zielono i obie coś naprawiły — jedna pokazała, że test osi nie pilnował **precyzji etykiety** (czyli dokładnie tego, co psuło oś), druga że szukanie koloru po całym HTML nic nie dowodzi, bo `#0f6e56` jest też kolorem kropki zdarzenia.
@@ -5426,7 +5433,7 @@ Każde kliknięcie kończy się komunikatem w panelu (`role="status"`, `aria-liv
 
 **Dwie kontrole negatywne przeszły najpierw na zielono i obie coś naprawiły.** Pierwsza pokazała, że test „zwykłej przeglądarki" przechodził z właściwego wyniku, ale z niewłaściwego powodu — w oknie testowym nie było `navigator`, więc wykrywanie iOS padało na wyjątku. Druga doprowadziła do wykrycia realnej luki w produkcie: desktopowej PWA.
 
-**Czego nie dało się sprawdzić w tym środowisku:** zachowania na prawdziwym iPhonie. Arkusz udostępniania, `navigator.share` z plikiem i tryb standalone są zasymulowane w testach, ale ostateczna weryfikacja należy do właściciela.
+**Weryfikacja na urządzeniu — POTWIERDZONA przez właściciela 2026-09-20.** W środowisku, w którym powstawała ta zmiana, nie dało się sprawdzić zachowania na prawdziwym iPhonie: arkusz udostępniania, `navigator.share` z plikiem i tryb standalone były w testach wyłącznie zasymulowane. Właściciel sprawdził to na swoim urządzeniu — aplikacja zainstalowana z ekranu głównego, zapis PDF przez arkusz udostępniania **działa**. Tym samym domknięta jest ta część zgłoszenia, od której P-PDF się zaczęło („klikam Drukuj albo Pobierz i nic się nie dzieje").
 
 SW 1.1.18 → **1.1.19**; `vilda_postepy_doroslego_ui.js?v=5→6`, `vilda_postepy_doroslego_wydruk.js?v=2→3`. Pliki pdfmake były już w precache i nie wymagały zmiany.
 
