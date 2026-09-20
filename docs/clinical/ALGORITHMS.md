@@ -5573,6 +5573,102 @@ SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`
 Poprawka odniesienia: SW 1.1.22 → **1.1.23**; `vilda_auth_ui.js?v=459→460`,
 `vilda_sds_wzrostu.js?v=3→4`.
 
+## Kwalifikacja do leczenia farmakologicznego choroby otyłościowej (P-FARMAKOTERAPIA, SW 1.1.26, 2026-09-20)
+
+**Status: ZMIANA KLINICZNA.** Nowe progi i nowa interpretacja. Kryteria zaakceptowane przez
+właściciela 2026-09-20 („kryteria akceptuję"). Moduł jest na razie **silnikiem bez konsumenta** —
+żadna karta ani raport jeszcze go nie woła, więc dla użytkownika nic się nie zmienia do czasu
+wdrożenia bloku w raporcie (rata 4).
+
+**Skąd potrzeba.** Decyzja właściciela 2026-09-20: raport pacjenta ma napisać, że przy takiej
+otyłości należy rozważyć leczenie farmakologiczne, ale „aplikacja musi sprawdzić, czy pacjent
+kwalifikuje się na taką terapię, czy spełnia kryteria włączenia takiego leczenia". Druga decyzja
+z tego samego dnia: „leków nie nazywaj, pisz o leczeniu farmakologicznym".
+
+**Co moduł ocenia, a czego nie.** Ocenia **wyłącznie kryterium antropometryczne**: wiek, BMI,
+centyl BMI i masę ciała. Nie zna przeciwwskazań, chorób współistniejących, ciąży, wcześniejszego
+leczenia ani wyników badań — i tego nie udaje. Każdy wynik, niezależnie od rozstrzygnięcia, niesie
+listę `czegoNieSprawdza` (pięć pozycji) oraz zdanie „O włączeniu leczenia farmakologicznego
+decyduje lekarz." Moduł nie nazywa leku w żadnym wyjściu; pilnuje tego test skanujący wszystkie
+łańcuchy znaków w wynikach i w danych kryteriów.
+
+**Źródło.** Charakterystyka Produktu Leczniczego analogu GLP-1 zarejestrowanego we wskazaniu
+leczenia otyłości, **wersja dokumentu z 26.06.2025**. Dokumentu nie ma w repozytorium — jest objęty
+prawem autorskim; przechowujemy wyłącznie identyfikację wersji (identyfikator zestawu kryteriów
+w kodzie: `chpl-2025-06-26`).
+
+**Kryteria (jako DANE, nie jako gałęzie `if`).** Zgodnie z AGENTS.md §3 i decyzją właściciela
+z 2026-09-09 o wielopopulacyjności zestaw kryteriów jest osobną zamrożoną strukturą przyjmowaną
+argumentem `kryteria`, a wynik NAZYWA użyty zestaw i użytą siatkę centylową.
+
+| Grupa | Wiek | Kryterium |
+| --- | --- | --- |
+| Dorosły | ≥ 18 lat | BMI ≥ 30 → **spełnione**; 27 ≤ BMI < 30 → **warunkowe** („kryterium BMI spełnione warunkowo, decyduje obecność chorób współistniejących" — brzmienie ustalone przez właściciela); BMI < 27 → niespełnione |
+| Młodzież | ≥ 12 i < 18 lat | BMI ≥ równoważnika BMI 30 u dorosłego (punkt odcięcia IOTF) **oraz** masa ciała > 60 kg |
+| Dziecko | ≥ 6 i < 12 lat | BMI ≥ 95. centyla **oraz** masa ciała ≥ 45 kg |
+| Poniżej 6 lat | — | kryteria włączenia nie obejmują tego wieku |
+
+Oba kryteria w grupach pediatrycznych muszą być spełnione **naraz** — to pilnują dwie kontrole
+ujemne (wysoki centyl przy niskiej masie, wysoka masa przy centylu w normie).
+
+**Uwaga na 95. centyl.** To próg kryterium rejestracyjnego, a **nie** próg otyłości używany
+w reszcie aplikacji (97. centyl, kanon P-BMI). Dlatego stoi w danych kryteriów, a nie
+w `VildaBmi.PROGI` — te dwie liczby odpowiadają na dwa różne pytania i nie wolno ich zlepić
+w jedną stałą. Test tego pilnuje wprost.
+
+**LUKA ZNANA I JAWNA: punkt odcięcia IOTF dla młodzieży.** Kryterium „BMI odpowiadające
+30 kg/m² u dorosłego" to punkt odcięcia IOTF dla wieku i płci. Aplikacja **nie ma tablic IOTF**.
+Moduł nie przybliża tego progu centylem z siatki OLAF ani WHO, bo podmiana odniesienia zmienia,
+kto kwalifikuje się do leczenia. Dopóki tablicy nie ma, wynik dla grupy 12–18 lat to
+`nieocenione` z powodem `brak tablicy odniesienia IOTF dla równoważnika BMI 30 u dorosłego`,
+przy czym **kryterium masy ciała jest oceniane normalnie** i komunikat mówi, które kryterium
+zostało sprawdzone, a które nie. Tablicę wstrzykuje się przez `ustawTablice()`.
+
+Źródła punktów odcięcia IOTF (według PubMed; pełnych tablic nie udało się pobrać przez PMC —
+dostępny jest tam wyłącznie abstrakt):
+
+- Cole TJ, Bellizzi MC, Flegal KM, Dietz WH. „Establishing a standard definition for child
+  overweight and obesity worldwide: international survey." BMJ 2000;320(7244):1240–3.
+  PMID 10797032, DOI 10.1136/bmj.320.7244.1240. Krzywe centylowe przechodzące w wieku 18 lat
+  przez 25 i 30 kg/m², uśrednione z sześciu badań (Brazylia, Wielka Brytania, Hongkong,
+  Holandia, Singapur, USA; 97 876 chłopców i 94 851 dziewcząt), punkty odcięcia dla 2–18 lat.
+- Cole TJ, Lobstein T. „Extended international (IOTF) body mass index cut-offs for thinness,
+  overweight and obesity." Pediatr Obes 2012;7(4):284–94. PMID 22715120,
+  DOI 10.1111/j.2047-6310.2012.00064.x. Publikacja uśrednionych krzywych L, M, S, z których
+  da się wyprowadzić dowolny próg i wyrazić go jako centyl (otyłość u chłopców = 98,9. centyl).
+
+**Decyzja do podjęcia przez właściciela:** albo wprowadzamy tablicę IOTF jako osobny plik danych
+z pełnym cytowaniem (zgodnie z zasadą „normy zawsze jako dane"), albo świadomie i jawnie
+podstawiamy inne odniesienie — to drugie zmienia, kto się kwalifikuje, więc wymaga osobnej
+akceptacji klinicznej i wpisu tutaj.
+
+**Przypadki syntetyczne (dane fikcyjne) — wejście → oczekiwany wynik.**
+
+| Wejście | Wynik |
+| --- | --- |
+| M, 40 lat, 178 cm, 108 kg (BMI 34,1) | `spelnione`; „BMI 34,1 spełnia kryterium włączenia leczenia farmakologicznego choroby otyłościowej." |
+| K, 40 lat, 162 cm, 74 kg (BMI 28,2) | `warunkowe`; „…kryterium BMI spełnione warunkowo, decyduje obecność chorób współistniejących." |
+| M, 30 lat, 180 cm, 72 kg (BMI 22,2) | `niespelnione` |
+| K, 9 lat, 140 cm, 50 kg | `spelnione`, z nazwą siatki w komunikacie |
+| K, 9 lat, 115 cm, 44 kg (centyl ≥ 95, masa < 45 kg) | `niespelnione`, powód: masa ciała poniżej 45 kg |
+| M, 9 lat, 160 cm, 46 kg (masa ≥ 45 kg, centyl < 95) | `niespelnione`, powód: centyl BMI poniżej 95. |
+| K, 14,5 roku, 150 cm, 75 kg | `nieocenione` (brak tablicy IOTF); kryterium masy ciała spełnione |
+| M, 3 lata 4 mies., 100 cm, 22 kg | `niespelnione`; „Kryteria włączenia […] nie obejmują tego wieku." |
+
+**Testy.** `tests/unit/farmakoterapia-kwalifikacja.test.mjs` (23 testy) wołają **prawdziwy silnik**
+`VildaFarmakoterapia` na **prawdziwych tablicach** OLAF/WHO wczytanych przez rusztowanie
+`oknoZSilnikiem()`; progi czytane są z `KRYTERIA_DOMYSLNE`, żeby test nie zzieleniał na własnej
+liczbie po zmianie progu w danych. `tests/e2e/farmakoterapia-modul.spec.mjs` sprawdza, że moduł
+jest realnie wczytany na `index.html` i `docpro.html` i liczy na siatkach wczytanych przez stronę.
+
+Pięć mutacji produkcyjnego kodu, każda zapala testy: rozciągnięcie pasma warunkowego w dół,
+zamiana „oba kryteria naraz" na „wystarczy jedno" u dziecka, uznanie młodzieży za spełniającą
+kryteria mimo braku tablicy IOTF, wstawienie nazwy leku do komunikatu, zamiana „masa powyżej
+60 kg" na „masa co najmniej 60 kg".
+
+SW 1.1.25 → **1.1.26**; nowy plik `vilda_farmakoterapia.js?v=1` na `index.html`, `docpro.html`
+i `kalkulator-klirens.html`, dopisany do precache.
+
 ## Dane strukturalne generatora zaleceń energetycznych (P-RAPORT-DANE, SW 1.1.25, 2026-09-20)
 
 **Status:** zmiana techniczna, nie kliniczna. Żaden wzór, próg, jednostka ani zaokrąglenie
