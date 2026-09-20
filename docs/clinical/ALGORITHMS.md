@@ -5573,6 +5573,66 @@ SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`
 Poprawka odniesienia: SW 1.1.22 → **1.1.23**; `vilda_auth_ui.js?v=459→460`,
 `vilda_sds_wzrostu.js?v=3→4`.
 
+## Zdania generatora z podziałem na role (P-RAPORT-ZDANIA, SW 1.1.27, 2026-09-20)
+
+**Status:** zmiana techniczna, nie kliniczna. Żadnego zdania, wzoru, progu ani liczby nie
+ruszono. Zmierzone: teksty i HTML generatora są bit w bit identyczne przed i po zmianie
+w **15 scenariuszach** (dorosły z otyłością I st., nadwagą, w normie i z niedowagą, oba
+rejestry, nastolatka, dziecko 6–11 lat, 3-latek w obu rejestrach, nastolatek z nadwagą,
+dziecko w normie, stabilizacja, wzrost zakończony, plan bez opcji dodatkowych).
+
+**Skąd potrzeba.** Zatwierdzona makieta nowego raportu pacjenta ma na dole trzy kolumny:
+„Na talerzu", „Ruch" i „Kontrola". Gdyby ich treść była wpisana na sztywno jako dwie listy
+(dla dorosłego i dla dziecka), nowy raport zacząłby **przeczyć raportowi tekstowemu tej samej
+aplikacji, z tej samej wizyty**, na krańcach wieku. Konkret zmierzony na produkcyjnym silniku:
+
+| Pacjent | Zdanie generatora o ruchu |
+| --- | --- |
+| 3-latka z otyłością | „W wieku 2–4 lat zalecana jest aktywność ruchowa przez **co najmniej 180 minut dziennie** […] oraz ograniczenie czasu przed ekranem do 1 godziny dziennie (zalecenia WHO dla dzieci do 5. roku życia)" |
+| Nastolatka 14,5 roku | „Wskazana jest aktywność fizyczna przez **co najmniej 60 minut każdego dnia** […]" |
+| Dorosły z otyłością | „Wskazana jest aktywność fizyczna przez **150–300 minut tygodniowo** oraz 2–3 sesje treningu oporowego […]" |
+
+Jedna statyczna lista w raporcie skłamałaby przynajmniej jednemu z tych pacjentów. To samo
+dotyczy zaleceń żywieniowych (2–5 lat, 6–11 lat i młodzież mają różne brzmienia) oraz
+kolumny „Kontrola" (poniżej 10 lat generator dokłada zdanie o konsultacji).
+
+**Co robi.** `dane.zdania` niesie zdania generatora z podziałem na role: `talerz`, `ruch`,
+`kontrola`. Raport ma je **cytować**, a nie przepisywać. Rola, dla której generator nie
+wypisał zdania, w ogóle nie pojawia się w obiekcie — np. dorosły z prawidłowym BMI nie
+dostaje od generatora ani zdania o talerzu, ani o ruchu, więc `zdania` jest puste i raport
+nie ma czego pokazać. To jest zamierzone: brak zalecenia nie może zamienić się w zalecenie.
+
+**Jak zrobione.** Piętnaście znaczników przy wywołaniach `push` budujących zdania (trzy
+warianty „talerza" i po dwa „ruchu" i „kontroli" u dorosłego, dwa „talerza", cztery „ruchu"
+i dwa „kontroli" u dziecka — tyle, ile jest gałęzi wieku i rejestru). Znacznik zapisuje
+indeks, pod którym za chwilę stanie zdanie danej roli.
+
+Zapis jest odporny na priorytety operatorów: identyfikator tablicy zastąpiono wyrażeniem
+z przecinkiem —
+
+```js
+(vildaRola(x, "ruch"), x).push(…)   // zamiast  x.push(…)
+```
+
+— dzięki czemu `warunek && x.push(…)` zachowuje się dokładnie tak jak przedtem, a znacznik
+wykonuje się wtedy i tylko wtedy, kiedy wykonuje się `push`. Zbiornik ról jest czyszczony
+na każde wywołanie generatora, razem z resztą danych.
+
+**Testy.** `tests/e2e/zdania-rol-zalecen.spec.mjs` (5 testów). Kluczowa asercja: **każde
+zdanie każdej roli musi być dosłownie obecne w `textOutput`** — rola nie może nieść tekstu,
+którego pacjent nie dostał na piśmie. Osobny test porównuje 3-latkę z nastolatką i wymaga,
+żeby ich zdania o ruchu były różne oraz żeby żadne nie zawierało liczby z drugiego pasma.
+
+Cztery mutacje produkcyjnego kodu, każda zapala testy: zdjęcie znacznika ze zdania dla
+2–4 lat (rozjazd pasm wieku), przeniesienie ról z poprzedniego pacjenta, przesunięcie indeksu
+roli o jeden (cytat spoza roli), podmiana roli „ruch" na „talerz" u dorosłego.
+
+**Czego to nie zmienia.** Żadnego zdania w zaleceniach, żadnej liczby, żadnego zapisu,
+autosave'u ani synchronizacji. Raport, który będzie z tego korzystał, powstaje w następnej
+racie.
+
+SW 1.1.26 → **1.1.27**; `vilda_diet_recommendations.js?v=31→32`.
+
 ## Kwalifikacja do leczenia farmakologicznego choroby otyłościowej (P-FARMAKOTERAPIA, SW 1.1.26, 2026-09-20)
 
 **Status: ZMIANA KLINICZNA.** Nowe progi i nowa interpretacja. Kryteria zaakceptowane przez
