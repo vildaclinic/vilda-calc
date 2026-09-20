@@ -483,6 +483,52 @@
     return { bmiCel: r.bmi, masaCel: masa(r.bmi), rodzaj: 'dziecko-P85', siatka: r.siatka, fallback: r.fallback };
   }
 
+  /* ---------- masa docelowa dorosłego (P-STATUS-DOROSLY; decyzja właściciela 2026-09-20) ----------
+   *
+   * Kafelek „Masa ciała docelowa" w Statusie Karty pacjenta pyta o jedno: ile kilogramów
+   * dzieli pacjenta od granicy, do której idzie. Wszystkie liczby biorą się z PROGI.DOROSLY,
+   * więc zmiana progu w jednym miejscu przestawia kafelek — Karta nie zna progów BMI
+   * dorosłego i nie liczy ich po swojemu.
+   *
+   * Kierunek wybiera kategoria, nie znak różnicy:
+   *   BMI < 18,5  → cel = dolna granica normy, różnica dodatnia (przytyć);
+   *   BMI ≥ 25    → cel = górna granica normy (CEL = 24,9), różnica ujemna (schudnąć);
+   *   w normie    → celu nie ma, jest zakres.
+   *
+   * PRÓG POŚREDNI (decyzja właściciela 2026-09-20). Pacjentowi z BMI 42 zdanie „do normy
+   * brakuje 50 kg" odbiera sens startu, a „12 kg i wychodzisz z otyłości III stopnia" — nie.
+   * Dlatego przy otyłości wynik niesie także masę przy BMI 30, czyli pierwszą granicę, za
+   * którą otyłość się kończy. To NIE jest cel leczenia ani kryterium odpowiedzi na lek,
+   * tylko bliższy słupek na tej samej drodze.
+   *
+   * `roznica` zawsze znaczy „o tyle ma się zmienić masa": ujemna — ubytek, dodatnia — przyrost.
+   */
+  function celMasyDorosly(opts) {
+    var o = opts || {}, P = PROGI.DOROSLY;
+    var h = liczba(o.wzrostCm), m = liczba(o.masaKg);
+    if (!isFinite(h) || h <= 0) return null;
+    var masaDla = function (b) { return b * Math.pow(h / 100, 2); };
+    var x = isFinite(m) && m > 0 ? m / Math.pow(h / 100, 2) : liczba(o.bmi);
+    if (!isFinite(x) || x <= 0) return null;
+    var masa = isFinite(m) && m > 0 ? m : masaDla(x);
+    var kat = kategoriaDorosly(x);
+    var cel = null;
+    if (x < P.NIEDOWAGA) cel = { bmi: P.NIEDOWAGA, masa: masaDla(P.NIEDOWAGA), granica: 'dolna' };
+    else if (x >= P.NADWAGA) cel = { bmi: P.CEL, masa: masaDla(P.CEL), granica: 'gorna' };
+    if (cel) cel.roznica = cel.masa - masa;
+    var posredni = null;
+    if (x >= P.OTYLOSC_1) {
+      posredni = { bmi: P.OTYLOSC_1, masa: masaDla(P.OTYLOSC_1), granica: 'otylosc' };
+      posredni.roznica = posredni.masa - masa;
+    }
+    return {
+      bmi: x, masa: masa, kategoria: kat,
+      kierunek: cel ? (cel.roznica > 0 ? 'przyrost' : 'redukcja') : 'w-normie',
+      cel: cel, posredni: posredni,
+      zakresNormy: { odBmi: P.NIEDOWAGA, doBmi: P.CEL, odMasa: masaDla(P.NIEDOWAGA), doMasa: masaDla(P.CEL) },
+    };
+  }
+
   /* ---------- format (decyzja 10) ---------- */
   function fmtBmi(v) {
     if (typeof v !== 'number' || !isFinite(v)) return '—';
@@ -533,7 +579,7 @@
     bmi: bmi, policz: policz, policzNaSiatce: policzNaSiatce, ocen: ocen,
     mediana: mediana, medianaNaSiatce: medianaNaSiatce, wartoscDlaSds: wartoscDlaSds, wartoscDlaCentyla: wartoscDlaCentyla,
     kategoria: kategoria, kategoriaDziecko: kategoriaDziecko, kategoriaDorosly: kategoriaDorosly, dorosly: dorosly,
-    cole: cole, kategoriaCole: kategoriaCole, celNormy: celNormy,
+    cole: cole, kategoriaCole: kategoriaCole, celNormy: celNormy, celMasyDorosly: celMasyDorosly,
     centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,
     fmtBmi: fmtBmi, fmtSds: fmtSds, fmtCentyl: fmtCentyl, fmtCole: fmtCole, formatuj: formatuj, etykieta: etykieta,
   });

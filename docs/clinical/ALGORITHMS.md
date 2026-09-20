@@ -5451,6 +5451,112 @@ Każde kliknięcie kończy się komunikatem w panelu (`role="status"`, `aria-liv
 
 SW 1.1.18 → **1.1.19**; `vilda_postepy_doroslego_ui.js?v=5→6`, `vilda_postepy_doroslego_wydruk.js?v=2→3`. Pliki pdfmake były już w precache i nie wymagały zmiany.
 
+## Status dorosłego w Karcie pacjenta (P-STATUS-DOROSLY, SW 1.1.22, 2026-09-20)
+
+**Skąd potrzeba.** Zgłoszenie właściciela: w zakładce „Status" u osoby dorosłej wszystkie
+kafelki były turkusowe, a turkus w tej aplikacji znaczy „ok". Karta mówiła więc „ok" do wagi
+112 kg. Przyczyna w kodzie: funkcja koloru zwracała dorosłemu `null` dla wzrostu i wagi,
+a budowniczy kafelka przy braku koloru dokleja klasę `--ok`. Brak werdyktu i pochwała były
+tym samym stanem.
+
+### Co się zmienia
+
+| Kafelek | Było | Jest |
+|---|---|---|
+| Waga | zawsze turkus | kolor z `VildaBmi.kategoriaDorosly(BMI)`; podpis „ocena wg BMI" |
+| BMI | kolor był, podpisu nie | dodatkowo stopień otyłości wprost (`kategoria.etykieta`) |
+| Wzrost | turkus | **neutralny**, centyl na siatce 18-latków, nazwa siatki w kafelku |
+| — | — | nowy kafelek **„Masa ciała docelowa"** z różnicą ± i progiem pośrednim |
+| „Siatki centylowe" | nazwa siatki pediatrycznej | kafelek **„Skale odniesienia"** |
+| „Wzrastanie i genetyka rodzinna" | tempo, MPH, SDS tempa, walidacja prognoz | u dorosłego sekcja nie powstaje |
+
+**Nowy klucz koloru `neutral`.** Do tej wersji budowniczy kafelka znał trzy stany: alarm,
+ostrzeżenie i „wszystko inne", które malował na turkusowo. Klucz `neutral` rozdziela „nie
+oceniamy tego" od „oceniliśmy i jest dobrze". Dzieci nie są nim objęte — ich kafelki działają
+bez zmian, co pilnuje kontrola negatywna.
+
+### Wzrost dorosłego — centyl tak, kolor nie (decyzja właściciela 2026-09-20)
+
+Centyl liczy `VildaSdsWzrostu.policz({ wiekMies: 216 })`, czyli to samo odniesienie, które
+Karta stosuje już do MPH (P-MPH-KOLOR). Siatka bierze się z rekordu (`zscore.dataSource`),
+domyślnie OLAF, a jej nazwa idzie do kafelka — „5. centyl" bez populacji odniesienia znaczy
+co innego, niż przeczyta pacjent.
+
+**Kolorowania świadomie NIE wprowadzono**, mimo że pierwotna propozycja je zakładała
+(< 3. centyla czerwony, 3–10 i 90–97 pomarańczowy). Powód jest populacyjny: średni wzrost
+19-letnich polskich poborowych wzrósł z **170,5 cm w roczniku 1965 do 178,3 cm w 2010**
+(Kołodziej H. i wsp., *Secular trends in body height and body mass in 19-year-old Polish men
+based on six national surveys from 1965 to 2010*, Am J Hum Biol 2015;27(5):704–9,
+[doi:10.1002/ajhb.22694](https://doi.org/10.1002/ajhb.22694); ten sam trend u Bielickiego
+i Szklarskiej, Ann Hum Biol 1999;26(3):251–8,
+[doi:10.1080/030144699282750](https://doi.org/10.1080/030144699282750); dane za PubMed),
+a siatki OLAF powstały na próbce z lat 2007–2012. Na tym odniesieniu mężczyzna 170 cm wypada
+na 8,7. centyla, 166 cm na 2,3.; kobieta 155 cm na 4,4., 152 cm na 1,4. W poradni otyłości,
+gdzie znaczna część pacjentów ma 50+, reguła zapalałaby się systematycznie na ludziach
+zdrowych — częściej u kobiet i u starszych roczników. Do tego dorosły traci wzrost z wiekiem.
+Kolor w tej aplikacji znaczy „zrób coś", a niskiego wzrostu dorosłego się nie leczy, więc
+liczbę pokazujemy, alarmu nie stawiamy.
+
+**Otwarte (nie wchodzi w tej racie):** u dorosłego klinicznie nośny jest **ubytek wzrostu
+w czasie** (trop złamania kręgu / osteoporozy), a nie centyl. Sejf ma serie pomiarów, więc
+jest to wykonalne — wymaga źródła progu i osobnej akceptacji.
+
+### Masa ciała docelowa i próg pośredni (decyzja właściciela 2026-09-20)
+
+`VildaBmi.celMasyDorosly({ wzrostCm, masaKg })` — **żadnego nowego progu**, wszystkie liczby
+z `PROGI.DOROSLY` (18,5 / 25 / 30 / 35 / 40; cel normy 24,9), przemnożone przez kwadrat
+wzrostu tego pacjenta. Karta formatuje, nie liczy.
+
+- BMI < 18,5 → cel = **dolna** granica normy, różnica dodatnia (przytyć);
+- BMI ≥ 25 → cel = **górna** granica normy (24,9), różnica ujemna (schudnąć);
+- w normie → celu nie ma, jest zakres masy.
+
+**Próg pośredni.** Przy BMI ≥ 30 kafelek niesie dodatkowo masę przy BMI 30, w trzecim
+wierszu, mniejszą czcionką. Powód jest praktyczny, nie wytyczny: pacjentowi z BMI 42 zdanie
+„do normy brakuje 50 kg" odbiera sens startu, a „12 kg i wychodzisz z otyłości" — nie.
+**To nie jest cel leczenia ani kryterium odpowiedzi na lek**; kryteria ChPL opisuje osobny
+wpis o kotwicy odpowiedzi. Kafelek celu jest neutralny — cel to plan, nie werdykt.
+
+Odłożone do osobnej decyzji: ten sam próg pośredni w karcie „Zalecenia dietetyczne"
+i w „Drodze do normy BMI"; obwód talii / WHtR u dorosłego (rekord ma `user.waist`
+i `user.hip`, dziś u dorosłego nieużywane — wymaga źródła progów).
+
+### Czego ta rata NIE zmienia
+
+Progów BMI, wzoru BMI, kategorii pediatrycznych, siatek, zapisu rekordu, synchronizacji ani
+zakładki „Postępy". Żaden wynik liczbowy pokazywany dotąd nie zmienia wartości — zmienia się
+kolor, podpis i to, które kafelki w ogóle powstają.
+
+### Walidacja
+
+- `tests/unit/status-doroslego.test.mjs` — **11 testów**. `Y` (kolor) i `xt` (kafelek) są
+  **wycinane z pliku produkcyjnego** po pełnej sygnaturze i uruchamiane na prawdziwym silniku
+  BMI; `celMasyDorosly` testowany wprost, z asercją, że masa celu to dokładnie próg
+  z `PROGI.DOROSLY` przemnożony przez kwadrat wzrostu.
+- `tests/e2e/status-doroslego.spec.mjs` — **6 testów** na prawdziwej stronie, bo zgłoszenie
+  dotyczyło widoku: kolory kafelków, kafelek celu z różnicą i progiem pośrednim, znikająca
+  sekcja pediatryczna, widok 390 px bez poziomego przewijania, rekord bez pomiaru oraz
+  kontrola negatywna na dziecku.
+- **Sześć kontroli negatywnych** na kodzie produkcyjnym (waga bez koloru, `xt` bez klucza
+  `neutral`, wzrost bez klucza `neutral`, cel wpisany na sztywno zamiast z progów, kafelki
+  pediatryczne bez bramki wieku, kafelek skal bez bramki na pusty pomiar) — każda
+  zaczerwienia zestaw.
+- Kontrola negatywna na dziecku dobrana tak, by **centyl masy i kategoria BMI dawały różne
+  kolory** (40 kg przy 128 cm, 9 lat: 87. centyl masy → bez koloru, BMI 24,4 → nadwaga).
+  Gdyby reguła dorosłego przeciekła do dzieci, oba kafelki byłyby żółte.
+
+**Znalezione przy przeglądzie własnej zmiany:** kafelek „Skale odniesienia" pokazywał się
+u dorosłego także wtedy, gdy rekord nie ma ani wzrostu, ani masy — mówił więc o siatkach
+wzrostu, których nie ma do czego przyłożyć. Zabramkowany na `D != null || BMI != null`.
+
+**Dwie pomyłki po drodze, obie po stronie testu, nie produktu.** Pierwsza: wzrost rodziców
+w atrapie rekordu wylądował w `advanced.data`, a Karta czyta `advanced.motherHeight` — kafelek
+MPH nigdy się nie liczył, więc kontrola „MPH znika u dorosłego" przechodziła z niewłaściwego
+powodu. Druga: pierwotny pomiar dziecka dawał ten sam kolor w obu kanałach, więc nie
+rozróżniał reguły dziecięcej od dorosłej. Oba fixture'y poprawione.
+
+SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

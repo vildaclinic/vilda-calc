@@ -85,7 +85,11 @@ describe('Kafelek MPH w Karcie pacjenta kolorowany regułą wzrostu (vilda_auth_
   it('kafelek MPH dostaje klasę koloru z Y("height", …) — tej samej, co kafelek wzrostu', () => {
     expect(src).toContain('ce.push(xt("MPH",St(rt)+" cm",Oe,Y("height",rt,vt)))');
     expect(src).not.toContain('ce.push(xt("MPH",St(rt)+" cm",Oe,null))');
-    expect(src).toContain('At.push(xt("Wzrost",St(D)+" cm",ne,Dt,zt))');
+    // P-STATUS-DOROSLY (2026-09-20): kafelek wzrostu dostał trzeci wiersz (`nz` zamiast
+    // stałego `zt`) — u dorosłego niesie nazwę siatki odniesienia. Reguła koloru bez zmian.
+    expect(src).toContain('At.push(xt("Wzrost",St(D)+" cm",ne,Dt,nz))');
+    // MPH jest pojęciem o rosnącym dziecku — u dorosłego kafelek w ogóle nie powstaje.
+    expect(src).toContain('if(!tt&&rt!=null){var Oe=');
   });
 
   it('reguła Y dla wzrostu: < 3 lub > 97 → alarm, 3–10 lub 90–97 → ostrzeżenie, inaczej neutralny', () => {
@@ -100,8 +104,12 @@ describe('Kafelek MPH w Karcie pacjenta kolorowany regułą wzrostu (vilda_auth_
     expect(Y('height', 160, 93)).toBe('improve');
     expect(Y('height', 160, 98)).toBe('alert');
     expect(Y('height', 160, null)).toBeNull();
-    // Dorosły (tt = true): reguła wzrostu nie koloruje — jak dla kafelka wzrostu.
+    // Dorosły (tt = true): reguła wzrostu nadal NIE koloruje, ale od P-STATUS-DOROSLY
+    // mówi to wprost kluczem `neutral` zamiast `null`. Rozróżnienie jest potrzebne, bo
+    // budowniczy kafelka przy `null` doklejał klasę --ok, czyli turkus znaczący „ok".
     const Ydorosly = new Function('tt', `${src.slice(i, koniec)}return Y;`)(true);
-    expect(Ydorosly('height', 160, 2)).toBeNull();
+    expect(Ydorosly('height', 160, 2)).toBe('neutral');
+    expect(['alert', 'improve'], 'neutral to brak werdyktu, nie kolor')
+      .not.toContain(Ydorosly('height', 160, 2));
   });
 });
