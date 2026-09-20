@@ -5309,6 +5309,60 @@ Pod nagłówkiem „Wydruk” dochodzi jedno zdanie: gdzie szukać PDF-a („w o
 
 SW 1.1.17 → **1.1.18**; `vilda_postepy_doroslego_ui.js?v=4→5`.
 
+## Projekt wizualny postępów dorosłego (P-WIZUAL, SW 1.1.20, 2026-09-20)
+
+**Zmiana kliniczna: żadna.** Nie zmienia się żaden próg, wzór, jednostka, populacja ani interpretacja. Zmienia się rysowanie, układ kafelków, język opisu i to, gdzie który tekst stoi.
+
+**Skąd.** Zgłoszenie właściciela 2026-09-20 do dwóch wygenerowanych kartek oraz do ekranu telefonu. Po obejrzeniu plików lista urosła z trzech pozycji do sześciu — trzy dalsze wyszły dlatego, że zgłoszony przypadek był „chudy" (dwa pomiary, cztery tygodnie, 2 kg), a fixture, na którym pracowałem wcześniej, je zasłaniał.
+
+### Co było nie tak i co to naprawia
+
+1. **Oś Y miała nierówny krok i powtórzone etykiety** — masa 119/117/116/115/114, BMI 35/34/**34**/33/32. Powód: podziałki liczyły się jako `zakres/4`, a etykiety były zaokrąglane do całości niezależnie od kroku. Teraz krok pochodzi z rodziny 1/2/2,5/5/10 × 10^k, dziedzina jest do niego przyciągnięta, a precyzja etykiety wynika z kroku.
+2. **Jednostka osi wchodziła na najwyższą wartość** („kg" na „119", „BMI" na „35"). Poprzednia poprawka odsunęła napis o kilka jednostek, czyli zmniejszyła prawdopodobieństwo kolizji zamiast ją usunąć. Teraz jednostka jest obróconym podpisem osi i kolidować nie ma z czym.
+3. **Trzy doraźne przesunięcia etykiet zastąpiła jedna reguła** (`rozsun`): etykiety prawego marginesu są sortowane, rozsuwane o minimalny odstęp i dociskane do granic obszaru. Działa dla dowolnej liczby etykiet, w tym gdy próg odzysku wypada dokładnie na paśmie.
+4. **Pasma poza zakresem osi**: zamiast milczenia silnik oddaje `doNastepnegoPasma` (najniższy nieosiągnięty próg i dystans do niego), a obie kartki i panel to pokazują. To jest też jedyny kanał informacji o postępie PONIŻEJ progu werdyktu.
+5. **Strefy BMI**: granice klas są rysowane i podpisane, a intensywność wypełnienia rośnie z odległością od pasma prawidłowego. Widok nie zna kolejności klas — bierze ją z pozycji strefy względem pasma o `kolor === null`, a tę kolejność ustala silnik (`KOLEJNOSC_KLAS`).
+6. **Telefon**: tekst w SVG skaluje się razem z wykresem, więc przy 340 px i viewBox 720 `font-size="15"` dawał realnie ~7 px. Powstał drugi wariant geometrii (viewBox 380), który nie pisze nazw pasm ani klas w obszarze rysowania — idą one do legendy HTML w prawdziwym rozmiarze tekstu strony. Oba warianty powstają w JEDNYM generatorze.
+7. **Wysokość wykresu zależy od liczby pomiarów** — dwa punkty nie zajmują pół kartki A4. Moduł wydruku pyta o wymiary tego modelu (`wymiary(model)`), nie bierze ich ze stałej.
+
+### Kafelki (decyzje właściciela 2026-09-20)
+
+- „Masa" → **„Masa ciała"** we wszystkich kafelkach, obu wydrukach i nagłówku tabeli.
+- Każdy kafelek ma dwa kanały: wartość mówi STAN, podpis pod nią mówi ZMIANĘ. **Werdykt należy do zmiany**, więc „na początku" i „dzisiaj" są zawsze neutralne.
+- **Kolory są kanonem aplikacji**, nie nową konwencją: `good #0f6e56`, `stable #3f5459`, `warn #c75d00`, `bad #c62828` — te same wartości, którymi `vilda_auth_ui.js` maluje panel „Porównanie z poprzednim pomiarem". Pilnuje tego test porównujący oba pliki.
+- **Klucz werdyktu liczy silnik** (`wskazniki`), progi stoją w pliku danych. Widok dobiera wyłącznie odcień i nigdy nie decyduje, co jest dobrym wynikiem.
+- **Progi werdyktu:** ubytek ≥ 5 % → `dobrze`; mniejszy → `neutralnie`; przyrost → `uwaga`; przyrost > 5 % masy początkowej → `alarm`. Zaakceptowane przez właściciela 2026-09-20. **Dla BMI obowiązuje ten sam próg 5 % — i jest to DECYZJA PREZENTACYJNA APLIKACJI, nie próg z piśmiennictwa.** Ugruntowane 5 % dotyczy masy ciała; dla BMI przyjęto tę samą liczbę, bo to ta sama wielkość mierzona dwiema miarami, a jeden próg jest czytelniejszy niż dwa. Zapisane jawnie w `vilda_postepy_doroslego_dane.js`.
+- **Kafelek BMI** ma liczbę neutralną, a pod nią deltę wobec wartości wyjściowej. Procentu nie ma: przy stałym wzroście procentowa zmiana BMI jest co do cyfry zmianą masy z kafelka obok. Etykieta klasy zeszła z kafelka — stoi na wykresie BMI i w tabeli pomiarów.
+- **BMI jest na OBU kartkach**, także dla pacjenta. Do raty 4 wariant pacjenta pokazywał zamiast BMI najniższą masę; to było zawężenie bez podstawy klinicznej.
+- Kafelek „Najniższa masa ciała" znika, gdy najniższa masa JEST dzisiejszym pomiarem.
+
+### BMI w punkcie odniesienia — ograniczenie, które trzeba znać
+
+Wpis „Włączenie leczenia" jest zdarzeniem terapii, nie pomiarem antropometrycznym: niesie masę, ale nie musi nieść wzrostu. Dlatego `punktOdniesienia.wzrost` bywa `null` dokładnie u pacjentów, u których odniesieniem jest włączenie leku — czyli w przypadku typowym. Wyjściowe BMI bierzemy wtedy z pierwszego POMIARU od punktu odniesienia. Gdy i on nie ma wzrostu, **delty BMI nie ma** i aplikacja mówi o tym wprost zamiast cokolwiek podstawiać.
+
+### Opis pasm
+
+- Z obu wydruków **znika akapit o źródłach** (decyzja właściciela). Na wydruku właściciela bywał on nie tylko nieczytelny, ale **nieprawdziwy wobec obrazka**: opisywał drabinkę 5/10/15/20/25 %, podczas gdy przy krótkiej obserwacji żadne pasmo nie mieściło się w zakresie osi i na wykresie nie było ani jednego.
+- Na kartce **do dokumentacji** zostaje jedna linijka brzmieniem właściciela: „Pasma X/Y % — podziałka prezentacyjna aplikacji, nie kryterium odstawienia leku", z listą progów **wziętą z modelu**, nie wpisaną na sztywno — drabinka liraglutydu ma dwa szczeble i zdanie o pięciu byłoby u takiego pacjenta fałszem w kartotece.
+- W aplikacji pełny opis stoi pod rozwijaniem, przepisany na bloki. **Treść merytoryczna jest co do faktu ta sama** — nie ubył ani nie przybył żaden próg, źródło ani zastrzeżenie. Pola `zrodlo` i `uwaga` zestawów zostają nietknięte jako cytowalny zapis.
+- **Opis szczebli należy do DRABINKI**, nie jest wspólnym akapitem: pacjent na liraglutydzie czyta o progach 5/10 %, a nie o 15/20/25 %, których na jego wykresie nie ma.
+
+### Co NIE poszło pod rozwijanie
+
+Ostrzeżenia silnika zostają widoczne, w osobnej ramce. Schowanie ich razem z opisem źródeł cofnęłoby poprawkę F1 z audytu: komunikat „punktu oceny wg ChPL nie postawiono na wykresie" to nie bibliografia, tylko informacja, że procenty liczą się od innej masy, niż lekarz zakłada.
+
+### Znacznik ChPL znika z wykresu pacjenta
+
+Rata 4 usunęła punkt oceny wg ChPL z listy kamieni milowych pacjenta, ale na wykresie ten sam znacznik zostawał — pacjent dostawał pionową kreskę bez słowa wyjaśnienia. Teraz obowiązuje jedna decyzja w obu miejscach.
+
+### Nowe pola modelu
+
+`punktOdniesienia.bmi`, `seria[].zmianaBmi`, `seria[].zmianaBmiPct`, `doNastepnegoPasma`, `wskazniki`, `zestaw.opisSzczebli`.
+
+### Walidacja
+
+17 kontroli negatywnych, każda zaczerwienia testy. Dwie pierwsze wersje kontroli przeszły na zielono i obie coś naprawiły — jedna pokazała, że test osi nie pilnował **precyzji etykiety** (czyli dokładnie tego, co psuło oś), druga że szukanie koloru po całym HTML nic nie dowodzi, bo `#0f6e56` jest też kolorem kropki zdarzenia.
+
 ## Wydruk postępów jako prawdziwy PDF (P-PDF, SW 1.1.19, 2026-09-20)
 
 **Zgłoszenie właściciela:** „Testuję to na iPhonie, apka zainstalowana jako PWA, klikam na Drukuj lub PDF i Pobierz HTML i nic się nie dzieje, zero reakcji."

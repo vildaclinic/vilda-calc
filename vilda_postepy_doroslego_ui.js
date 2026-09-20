@@ -32,22 +32,80 @@
     os: '#41555d',
     linia: '#d7e9ec',
     pacjent: '#b71c1c',
-    pasmo: '#eef5f6',
     pasmoTekst: '#6b7c83',
+    titracja: '#f3f7f8',
+    siatka: '#eef4f5',
+    strefaTekst: '#8a969c',
+    /* Kolory zdarzeń na wykresie — historyczne, jaśniejsze od werdyktowych, bo kropka
+       na krzywej ma być czytelna na jasnym tle pasma, a nie krzyczeć jak liczba w kafelku. */
     dobrze: '#0f6e56',
     uwaga: '#b5731a',
     alarm: '#c2271d',
-    titracja: '#f3f7f8',
-    /* Strefy klas BMI. Kolor dobieramy po KLUCZU KOLORU z silnika BMI (`alert` / `improve` /
-       null), a nie po nazwie klasy — dzięki temu nowa klasa albo zmiana kategorii nie wymaga
-       tknięcia widoku. Makieta: wykres BMI dostaje kolorowe strefy, pasma %TBWL zostają
-       neutralne, żeby kolor znaczył jedną rzecz naraz. */
-    strefa: { alert: '#fdeeec', improve: '#fdf5e8', norma: '#eef7f2' },
-    strefaTekst: '#8a969c',
   };
 
-  /* Geometria w jednostkach viewBox — nie w pikselach ekranu. */
-  var G = { szer: 720, wys: 360, wysBmi: 300, lewy: 58, prawy: 116, gora: 22, dol: 46 };
+  /* WERDYKTY KAFELKÓW — SŁOWNIK I KOLORY Z APLIKACJI, NIE WYMYŚLONE TUTAJ (P-WIZUAL 2026-09-20).
+   *
+   * `vilda_auth_ui.js` maluje werdykty odcinka w panelu „Porównanie z poprzednim pomiarem”:
+   *   .vilda-v-good #0f6e56 · .vilda-v-stable #3f5459 · .vilda-v-warn #c75d00 · .vilda-v-bad #c62828
+   * Postępy mówią dokładnie tymi wartościami. Gdyby dobrać własne, ten sam sygnał znaczyłby
+   * w dwóch miejscach aplikacji dwie różne rzeczy — a lekarz czyta obie karty tego samego dnia.
+   *
+   * KLUCZ PRZYCHODZI Z SILNIKA (`model.wskazniki`). Widok dobiera odcień, nigdy sens. */
+  var WERDYKT = {
+    dobrze: '#0f6e56',
+    neutralnie: null,        /* null = bez koloru, czyli domyślny kolor tekstu kafelka */
+    uwaga: '#c75d00',
+    alarm: '#c62828',
+  };
+
+  function kolorWerdyktu(klucz) {
+    return Object.prototype.hasOwnProperty.call(WERDYKT, klucz) ? WERDYKT[klucz] : null;
+  }
+
+  /* GRADIENT STREF BMI — INTENSYWNOŚĆ Z ODLEGŁOŚCI OD PASMA PRAWIDŁOWEGO.
+   *
+   * Do tej wersji wszystkie trzy stopnie otyłości miały ten sam odcień, bo silnik BMI nadaje
+   * im ten sam klucz koloru `alert`. Wykres nie różnicował tego, co klinicznie jest różne.
+   *
+   * Widok NADAL nie wie, że „Otyłość III stopnia” jest cięższa od „II”. Wie tylko, którą
+   * pozycję strefa zajmuje względem pasma o `kolor === null` — a tę kolejność ustala silnik
+   * (`KOLEJNOSC_KLAS`). Nowa klasa albo zmiana kategorii dostanie odcień sama, bez tknięcia
+   * tego pliku. Rampa jest celowo płytka: linia pacjenta ma zostać najmocniejszym elementem
+   * wykresu, a głębsze odcienie odbierały jej kontrast. */
+  var RAMPA = {
+    alert: ['#fdeeec', '#fbe3df', '#f8d4ce', '#f5c5bd'],
+    improve: ['#fdf5e8', '#fbeeda', '#f9e6c8'],
+    norma: ['#eef7f2'],
+  };
+
+  function odcienStrefy(kluczKoloru, glebokosc) {
+    var r = RAMPA[kluczKoloru === 'alert' ? 'alert' : (kluczKoloru === 'improve' ? 'improve' : 'norma')];
+    var i = glebokosc < 0 ? 0 : (glebokosc > r.length - 1 ? r.length - 1 : glebokosc);
+    return r[i];
+  }
+
+  /* DWIE GEOMETRIE, JEDEN GENERATOR (P-WIZUAL 2026-09-20).
+   *
+   * Zgłoszenie właściciela: na telefonie etykiety są nieczytelne. Przyczyna jest strukturalna,
+   * nie kosmetyczna — TEKST W SVG SKALUJE SIĘ RAZEM Z WYKRESEM. Przy 340 px ekranu i szerokości
+   * viewBox 720 jednostek `font-size="15"` daje realnie około 7 px. Powiększenie czcionki
+   * naprawiłoby telefon i zepsuło desktop.
+   *
+   * Wariant wąski NIE JEST przeskalowanym szerokim: ma mniej jednostek viewBox, więc ta sama
+   * wartość `font-size` daje dwa razy większy tekst, i ma węższe marginesy. Dodatkowo nie pisze
+   * NICZEGO w obszarze rysowania — nazwy pasm i klas wychodzą do legendy HTML pod wykresem,
+   * gdzie mają prawdziwy rozmiar tekstu strony i skalują się z ustawieniami dostępności
+   * telefonu, czego tekst w SVG nie robi.
+   *
+   * W PDF używamy zawsze szerokiego. */
+  var GEO = {
+    szeroki: { szer: 720, lewy: 64, prawy: 152, gora: 26, dol: 50, fontOs: 15, fontMaly: 13, tytulX: 16 },
+    waski: { szer: 380, lewy: 56, prawy: 12, gora: 22, dol: 44, fontOs: 13, fontMaly: 11, tytulX: 12 },
+  };
+
+  function geo(opcje) {
+    return (opcje && opcje.wariant === 'waski') ? GEO.waski : GEO.szeroki;
+  }
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -72,188 +130,135 @@
     return s.slice(8, 10) + '.' + s.slice(5, 7) + '.' + s.slice(0, 4);
   }
 
+  /* ---------- podziałki osi ---------- */
+
+  /* KROK „ŁADNY” — z rodziny 1/2/2,5/5/10 × 10^k.
+   *
+   * Do tej wersji podziałki liczyły się jako `zakres/4`, a etykiety były zaokrąglane do
+   * całości. Na prawdziwym wydruku właściciela dało to oś masy 119, 117, 116, 115, 114
+   * (skok 2, potem 1) i oś BMI 35, 34, 34, 33, 32 — z „34” DWA RAZY. To nie jest kwestia
+   * estetyki: powtórzona etykieta na osi wygląda jak błąd rachunku, bo nim jest. */
+  function krokNice(rozpietosc, ile) {
+    if (!(rozpietosc > 0)) return 1;
+    var surowy = rozpietosc / Math.max(1, ile);
+    var rzad = Math.pow(10, Math.floor(Math.log(surowy) / Math.LN10));
+    var z = surowy / rzad;
+    var k = z <= 1 ? 1 : (z <= 2 ? 2 : (z <= 2.5 ? 2.5 : (z <= 5 ? 5 : 10)));
+    return k * rzad;
+  }
+
+  /** Dziedzina przyciągnięta do kroku plus lista podziałek. Etykiety nigdy się nie powtórzą. */
+  function osNice(min, max, ile) {
+    var krok = krokNice(max - min, ile);
+    var od = Math.floor(min / krok) * krok;
+    var doo = Math.ceil(max / krok) * krok;
+    var dec = krok >= 1 ? 0 : (krok >= 0.1 ? 1 : 2);
+    var ticks = [];
+    /* Pętla po INDEKSIE, nie przez dodawanie kroku: 0,1 + 0,2 zostawia ogon binarny,
+       a ten wychodzi potem w etykiecie jako 33,499999999. */
+    var n = Math.round((doo - od) / krok);
+    for (var i = 0; i <= n; i++) ticks.push(od + i * krok);
+    return { od: od, do: doo, krok: krok, dec: dec, ticks: ticks };
+  }
+
+  /* Krok osi czasu z zestawu klinicznie czytelnego: tydzień, dwa, miesiąc, kwartał, rok. */
+  var KROKI_TYG = [1, 2, 4, 7, 13, 26, 52, 104];
+
+  function krokTygodni(rozpietosc) {
+    for (var i = 0; i < KROKI_TYG.length; i++) {
+      if (rozpietosc / KROKI_TYG[i] <= 6) return KROKI_TYG[i];
+    }
+    return KROKI_TYG[KROKI_TYG.length - 1];
+  }
+
+  /* ---------- rozsuwanie etykiet ---------- */
+
+  /* JEDNA REGUŁA ZAMIAST TRZECH DORAŹNYCH PRZESUNIĘĆ.
+   *
+   * Etykiety prawego marginesu — pasma, próg odzysku, nazwy stref — potrafią wypaść na tej
+   * samej wysokości. Do tej wersji każdą kolizję gasiło osobne przesunięcie „o kilka pikseli
+   * w górę”, dobrane pod jeden zaobserwowany przypadek. Przy progu odzysku równym dokładnie
+   * paśmu −10 % (a tak wychodzi, gdy pacjent odzyskał ćwierć ubytku) podpisy i tak lądowały
+   * w jednym wierszu.
+   *
+   * Tu jest jedna reguła: posortuj po wysokości, rozsuń o minimalny odstęp, dociśnij całość
+   * do granic obszaru. Kolejność zachowana, ruch minimalny, działa dla dowolnej liczby etykiet. */
+  function rozsun(pozycje, minOdstep, gMin, gMax) {
+    var ord = pozycje.map(function (p, i) { return { i: i, y: p.y }; })
+      .sort(function (a, b) { return a.y - b.y; });
+    for (var i = 1; i < ord.length; i++) {
+      if (ord[i].y - ord[i - 1].y < minOdstep) ord[i].y = ord[i - 1].y + minOdstep;
+    }
+    var nadmiar = ord.length ? ord[ord.length - 1].y - gMax : 0;
+    if (nadmiar > 0) for (var j = 0; j < ord.length; j++) ord[j].y -= nadmiar;
+    if (ord.length && ord[0].y < gMin) {
+      var brak = gMin - ord[0].y;
+      for (var k = 0; k < ord.length; k++) ord[k].y += brak;
+    }
+    var wynik = pozycje.slice();
+    for (var m = 0; m < ord.length; m++) {
+      var kopia = {};
+      for (var pole in pozycje[ord[m].i]) kopia[pole] = pozycje[ord[m].i][pole];
+      kopia.y = ord[m].y;
+      wynik[ord[m].i] = kopia;
+    }
+    return wynik;
+  }
+
   /* ---------- skala ---------- */
 
-  function skala(model) {
-    var seria = model.seria || [];
-    var tyg = seria.map(function (p) { return p.tydzien; })
-      .filter(function (t) { return typeof t === 'number' && isFinite(t); });
+  /* Wysokość zależna od liczby punktów. Dwa pomiary nie mają prawa zająć pół kartki A4 —
+     na wydruku właściciela jedna krótka kreska zajmowała połowę strony. */
+  function wysokoscMasy(model, G) {
+    var n = (model.seria || []).length;
+    var podstawa = n <= 2 ? 240 : (n <= 4 ? 300 : 340);
+    return G === GEO.waski ? Math.round(podstawa * 0.82) : podstawa;
+  }
+
+  function wysokoscBmi(model, G) {
+    var n = (model.seria || []).length;
+    var podstawa = n <= 2 ? 220 : 270;
+    return G === GEO.waski ? Math.round(podstawa * 0.85) : podstawa;
+  }
+
+  function skala(model, G, wys, bezChPL) {
+    var seria = (model.seria || []).filter(function (p) {
+      return typeof p.tydzien === 'number' && isFinite(p.tydzien);
+    });
+    if (!seria.length) return null;
+    var tyg = seria.map(function (p) { return p.tydzien; });
     var masy = seria.map(function (p) { return p.masa; });
-    if (!tyg.length || !masy.length) return null;
 
     var tMin = Math.min.apply(null, tyg);
     var tMax = Math.max.apply(null, tyg);
     /* Punkt decyzyjny ChPL bywa dalej niż ostatnia wizyta — oś ma go zmieścić, inaczej
        znacznik wylądowałby poza obszarem rysowania i zniknąłby bez śladu. */
+    /* Oś rozciągamy do znacznika ChPL tylko wtedy, gdy znacznik naprawdę będzie narysowany.
+       Na kartce dla pacjenta go nie ma, więc rozciąganie osi zostawiałoby pusty ogon. */
     var pd = model.punktDecyzyjny;
-    if (pd && pd.jest && typeof pd.tydzienOdOdniesienia === 'number') {
+    if (!bezChPL && pd && pd.jest && typeof pd.tydzienOdOdniesienia === 'number') {
       tMax = Math.max(tMax, pd.tydzienOdOdniesienia);
     }
     if (tMax - tMin < 4) tMax = tMin + 4;
 
-    var mMin = Math.min.apply(null, masy);
-    var mMax = Math.max.apply(null, masy);
-    var odn = model.punktOdniesienia ? model.punktOdniesienia.masa : mMax;
-    mMax = Math.max(mMax, odn);
-    var zapas = Math.max(1.5, (mMax - mMin) * 0.12);
-    mMin -= zapas;
-    mMax += zapas;
+    var odn = model.punktOdniesienia ? model.punktOdniesienia.masa : Math.max.apply(null, masy);
+    var surMin = Math.min.apply(null, masy);
+    var surMax = Math.max(Math.max.apply(null, masy), odn);
+    var zapas = Math.max(0.6, (surMax - surMin) * 0.14);
+    var osY = osNice(surMin - zapas, surMax + zapas, 5);
 
     var szerRys = G.szer - G.lewy - G.prawy;
-    var wysRys = G.wys - G.gora - G.dol;
+    var wysRys = wys - G.gora - G.dol;
     return {
-      tMin: tMin, tMax: tMax, mMin: mMin, mMax: mMax,
+      seria: seria, tMin: tMin, tMax: tMax, osY: osY, wys: wys, G: G,
+      mMin: osY.od, mMax: osY.do,
       x: function (t) { return G.lewy + (t - tMin) / (tMax - tMin) * szerRys; },
-      y: function (m) { return G.gora + (mMax - m) / (mMax - mMin) * wysRys; },
+      y: function (m) { return G.gora + (osY.do - m) / (osY.do - osY.od) * wysRys; },
       szerRys: szerRys, wysRys: wysRys,
     };
   }
 
-  /* ---------- części wykresu ---------- */
-
-  function pasma(model, S) {
-    if (!model.zestaw || !model.punktOdniesienia) return '';
-    var odn = model.punktOdniesienia.masa;
-    var out = [];
-    var progi = model.zestaw.progi || [];
-    for (var i = 0; i < progi.length; i++) {
-      var masaProgu = odn * (1 - progi[i] / 100);
-      if (masaProgu < S.mMin || masaProgu > S.mMax) continue;
-      var y = S.y(masaProgu);
-      out.push('<line x1="' + G.lewy + '" y1="' + y.toFixed(1) + '" x2="' + (G.szer - G.prawy)
-        + '" y2="' + y.toFixed(1) + '" stroke="' + C.linia + '" stroke-width="1" stroke-dasharray="4 4"/>');
-      /* Etykieta pasma na PRAWYM marginesie, poza obszarem rysowania — w makiecie linia
-         pacjenta przecinała podpisy i to była pierwsza uwaga właściciela. */
-      out.push('<text x="' + (G.szer - G.prawy + 8) + '" y="' + (y + 4).toFixed(1)
-        + '" font-size="14" fill="' + C.pasmoTekst + '">−' + progi[i] + '% · '
-        + liczbaPl(masaProgu, 1) + ' kg</text>');
-    }
-    return out.join('');
-  }
-
-  function osie(model, S) {
-    var out = [];
-    out.push('<line x1="' + G.lewy + '" y1="' + (G.wys - G.dol) + '" x2="' + (G.szer - G.prawy)
-      + '" y2="' + (G.wys - G.dol) + '" stroke="' + C.os + '" stroke-width="1.5"/>');
-    out.push('<line x1="' + G.lewy + '" y1="' + G.gora + '" x2="' + G.lewy + '" y2="'
-      + (G.wys - G.dol) + '" stroke="' + C.os + '" stroke-width="1.5"/>');
-
-    var krok = Math.max(1, Math.ceil((S.tMax - S.tMin) / 6));
-    for (var t = Math.max(0, S.tMin); t <= S.tMax; t += krok) {
-      var x = S.x(t);
-      out.push('<line x1="' + x.toFixed(1) + '" y1="' + (G.wys - G.dol) + '" x2="' + x.toFixed(1)
-        + '" y2="' + (G.wys - G.dol + 5) + '" stroke="' + C.os + '" stroke-width="1"/>');
-      out.push('<text x="' + x.toFixed(1) + '" y="' + (G.wys - G.dol + 22)
-        + '" font-size="15" fill="' + C.os + '" text-anchor="middle">' + t + '</text>');
-    }
-    out.push('<text x="' + ((G.lewy + G.szer - G.prawy) / 2) + '" y="' + (G.wys - 8)
-      + '" font-size="15" fill="' + C.os + '" text-anchor="middle">tygodnie od '
-      + (model.punktOdniesienia && model.punktOdniesienia.zrodlo === 'start-leczenia'
-        ? 'włączenia leczenia' : 'pierwszego pomiaru') + '</text>');
-
-    var kroky = (S.mMax - S.mMin) / 4;
-    for (var i = 0; i <= 4; i++) {
-      var m = S.mMin + kroky * i;
-      var y = S.y(m);
-      out.push('<text x="' + (G.lewy - 8) + '" y="' + (y + 5).toFixed(1)
-        + '" font-size="15" fill="' + C.os + '" text-anchor="end">' + liczbaPl(m, 0) + '</text>');
-    }
-    /* Jednostka NAD obszarem rysowania, nie w jego lewym górnym rogu: tam wchodziła na
-       najwyższą etykietę wartości („kg" na „122"). Widać to dopiero na wydruku o stałej
-       szerokości, ale kolizja istniała też na ekranie (P-PDF 2026-09-20). */
-    out.push('<text x="' + (G.lewy - 8) + '" y="' + (G.gora - 6) + '" font-size="14" fill="'
-      + C.os + '" text-anchor="end">kg</text>');
-    return out.join('');
-  }
-
-  function titracja(model, S) {
-    var pd = model.punktDecyzyjny;
-    if (!pd || !pd.jest || !pd.nominalna || typeof pd.titracjaNominalnaTyg !== 'number') return '';
-    var x0 = S.x(Math.max(S.tMin, 0));
-    var x1 = S.x(Math.min(S.tMax, pd.titracjaNominalnaTyg));
-    if (!(x1 > x0)) return '';
-    return '<rect x="' + x0.toFixed(1) + '" y="' + G.gora + '" width="' + (x1 - x0).toFixed(1)
-      + '" height="' + S.wysRys + '" fill="' + C.titracja + '"/>'
-      /* Podpis od LEWEJ krawędzi pasa, nie od jego środka: pas titracji zaczyna się przy
-         osi, więc wyśrodkowany podpis wychodził poza obszar rysowania na etykiety wartości. */
-      + '<text x="' + (x0 + 4).toFixed(1) + '" y="' + (G.gora + 14)
-      + '" font-size="13" fill="' + C.pasmoTekst + '">zwiększanie dawki</text>';
-  }
-
-  function punktChPL(model, S) {
-    var pd = model.punktDecyzyjny;
-    if (!pd || !pd.jest || typeof pd.tydzienOdOdniesienia !== 'number') return '';
-    var x = S.x(pd.tydzienOdOdniesienia);
-    return '<line x1="' + x.toFixed(1) + '" y1="' + G.gora + '" x2="' + x.toFixed(1)
-      + '" y2="' + (G.wys - G.dol) + '" stroke="' + C.teal + '" stroke-width="1.5" stroke-dasharray="2 3"/>'
-      + '<circle cx="' + x.toFixed(1) + '" cy="' + (G.gora + 6) + '" r="4" fill="' + C.teal + '"/>';
-  }
-
-  function liniaOdzysku(model, S) {
-    var o = model.odzysk;
-    if (!o || !o.liniaDoPokazania || typeof o.masaGraniczna !== 'number') return '';
-    if (o.masaGraniczna < S.mMin || o.masaGraniczna > S.mMax) return '';
-    var y = S.y(o.masaGraniczna);
-    return '<line x1="' + G.lewy + '" y1="' + y.toFixed(1) + '" x2="' + (G.szer - G.prawy)
-      + '" y2="' + y.toFixed(1) + '" stroke="' + C.uwaga + '" stroke-width="1.5" stroke-dasharray="6 3"/>'
-      /* NAD linią, gdy podpisy pasm siedzą POD swoimi. Próg odzysku potrafi wypaść na tej
-         samej masie co pasmo (widziane na wydruku: „istotny odzysk" na „−10 % · 108,0 kg"),
-         a wtedy oba podpisy lądowały w jednym wierszu. Różne strony linii rozsuwają je
-         zawsze, nie tylko w tym jednym przypadku. */
-      + '<text x="' + (G.szer - G.prawy + 8) + '" y="' + (y - 6).toFixed(1)
-      + '" font-size="13" fill="' + C.uwaga + '">istotny odzysk</text>';
-  }
-
-  /* Kolor i pierwszeństwo zdarzeń — po WADZE z modelu, nie po nazwie typu (audyt 2026-09-20, F8).
-     Widok nie ma wiedzieć, że odzysk jest cięższy od utraty pasma; to ocena kliniczna i mieszka
-     w silniku. Nowy typ zdarzenia dostaje kolor sam, bez tknięcia tego pliku. */
-  var WAGA_KOLOR = { dobrze: C.dobrze, uwaga: C.uwaga, alarm: C.alarm };
-  var WAGA_RANGA = { dobrze: 1, uwaga: 2, alarm: 3 };
-
-  function kolorZdarzenia(waga) {
-    return WAGA_KOLOR[waga] || C.uwaga;
-  }
-
-  function liniaPacjenta(model, S) {
-    var seria = (model.seria || []).filter(function (p) {
-      return typeof p.tydzien === 'number' && isFinite(p.tydzien);
-    });
-    if (!seria.length) return '';
-    var d = seria.map(function (p, i) {
-      return (i === 0 ? 'M' : 'L') + S.x(p.tydzien).toFixed(1) + ' ' + S.y(p.masa).toFixed(1);
-    }).join(' ');
-    var out = ['<path d="' + d + '" fill="none" stroke="' + C.pacjent + '" stroke-width="2.5" stroke-linejoin="round"/>'];
-
-    /* Gdy w jednym tygodniu wypadnie kilka zdarzeń — a odzysk masy niemal zawsze idzie w parze
-       z utratą pasma — kropka bierze kolor NAJCIĘŻSZEGO. Do audytu wygrywało po prostu
-       ostatnie wstawione: wychodziło poprawnie, ale przez kolejność `push` w silniku, nie
-       przez ocenę wagi. */
-    var wgTygodnia = {};
-    (model.zdarzenia || []).forEach(function (z) {
-      if (typeof z.tydzien !== 'number') return;
-      var waga = z.waga || 'uwaga';
-      var byla = wgTygodnia[z.tydzien];
-      if (!byla || (WAGA_RANGA[waga] || 0) > (WAGA_RANGA[byla] || 0)) wgTygodnia[z.tydzien] = waga;
-    });
-    seria.forEach(function (p) {
-      var waga = Object.prototype.hasOwnProperty.call(wgTygodnia, p.tydzien) ? wgTygodnia[p.tydzien] : null;
-      var kolor = waga ? kolorZdarzenia(waga) : C.pacjent;
-      out.push('<circle cx="' + S.x(p.tydzien).toFixed(1) + '" cy="' + S.y(p.masa).toFixed(1)
-        + '" r="' + (waga ? 6 : 4) + '" fill="' + kolor + '"/>');
-    });
-
-    /* Podpis ostatniej masy POD punktem i wyrównany do prawej krawędzi obszaru — nigdy
-       na linii. To była druga uwaga właściciela do makiety. */
-    var ost = seria[seria.length - 1];
-    out.push('<text x="' + (S.x(ost.tydzien) - 6).toFixed(1) + '" y="' + (S.y(ost.masa) - 12).toFixed(1)
-      + '" font-size="15" font-weight="600" fill="' + C.pacjent + '" text-anchor="end">'
-      + liczbaPl(ost.masa, 1) + ' kg</text>');
-    return out.join('');
-  }
-
-  /* ---------- wykres BMI ze strefami klas (rata 3) ---------- */
-
-  function skalaBmi(model) {
+  function skalaBmi(model, G, wys) {
     var seria = (model.seria || []).filter(function (p) {
       return typeof p.bmi === 'number' && isFinite(p.bmi)
         && typeof p.tydzien === 'number' && isFinite(p.tydzien);
@@ -267,111 +272,353 @@
     var tMin = Math.min.apply(null, tyg);
     var tMax = Math.max.apply(null, tyg);
     if (tMax - tMin < 4) tMax = tMin + 4;
-    var bMin = Math.min.apply(null, bmi) - 1.5;
-    var bMax = Math.max.apply(null, bmi) + 1.5;
+    var zapas = Math.max(0.4, (Math.max.apply(null, bmi) - Math.min.apply(null, bmi)) * 0.25);
+    var osY = osNice(Math.min.apply(null, bmi) - zapas, Math.max.apply(null, bmi) + zapas, 5);
 
     var szerRys = G.szer - G.lewy - G.prawy;
-    var wysRys = G.wysBmi - G.gora - G.dol;
+    var wysRys = wys - G.gora - G.dol;
     return {
-      seria: seria, tMin: tMin, tMax: tMax, bMin: bMin, bMax: bMax,
+      seria: seria, tMin: tMin, tMax: tMax, osY: osY, wys: wys, G: G,
+      mMin: osY.od, mMax: osY.do,
       x: function (t) { return G.lewy + (t - tMin) / (tMax - tMin) * szerRys; },
-      y: function (b) { return G.gora + (bMax - b) / (bMax - bMin) * wysRys; },
+      y: function (b) { return G.gora + (osY.do - b) / (osY.do - osY.od) * wysRys; },
       szerRys: szerRys, wysRys: wysRys,
     };
   }
 
-  /* Strefy przychodzą GOTOWE z modelu (`strefyBmi`), razem z etykietą i kluczem koloru
-     wziętymi z silnika BMI. Widok wybiera tylko odcień — progów ani nazw klas nie zna. */
-  function strefy(model, S) {
-    var strefyModelu = model.strefyBmi || [];
-    if (!strefyModelu.length) return '';
+  /* ---------- części wspólne wykresów ---------- */
+
+  function siatkaPozioma(S) {
+    return S.osY.ticks.map(function (m) {
+      return '<line x1="' + S.G.lewy + '" y1="' + S.y(m).toFixed(1) + '" x2="'
+        + (S.G.szer - S.G.prawy) + '" y2="' + S.y(m).toFixed(1)
+        + '" stroke="' + C.siatka + '" stroke-width="1"/>';
+    }).join('');
+  }
+
+  /* PODPIS OSI Y OBRÓCONY PRZY KRAWĘDZI.
+     Napis „kg” w lewym górnym rogu obszaru wchodził na najwyższą etykietę wartości — na
+     wydruku właściciela „kg” leżało wprost na „119”, a „BMI” na „35”. Poprzednia poprawka
+     odsunęła napis o kilka jednostek, czyli zmniejszyła prawdopodobieństwo kolizji zamiast
+     ją usunąć. Obrócony podpis osi stoi poza kolumną etykiet i kolidować nie ma z czym. */
+  function tytulOsiY(S, tekst) {
+    var yS = S.G.gora + S.wysRys / 2;
+    var x = S.G.tytulX;
+    return '<text x="' + x + '" y="' + yS.toFixed(1) + '" font-size="' + S.G.fontMaly
+      + '" fill="' + C.opis + '" text-anchor="middle" transform="rotate(-90 ' + x + ' '
+      + yS.toFixed(1) + ')">' + esc(tekst) + '</text>';
+  }
+
+  function osX(S, podpis) {
     var out = [];
-    for (var i = 0; i < strefyModelu.length; i++) {
-      var z = strefyModelu[i];
-      var doB = z.do == null ? S.bMax : Math.min(z.do, S.bMax);
-      var odB = z.od == null ? S.bMin : Math.max(z.od, S.bMin);
-      if (!(doB > odB)) continue;
-      var yGora = S.y(doB);
-      var wys = S.y(odB) - yGora;
-      var kolor = z.kolor === 'alert' ? C.strefa.alert
-        : (z.kolor === 'improve' ? C.strefa.improve : C.strefa.norma);
-      out.push('<rect x="' + G.lewy + '" y="' + yGora.toFixed(1) + '" width="' + S.szerRys
-        + '" height="' + wys.toFixed(1) + '" fill="' + kolor + '"/>');
-      /* Podpis strefy tylko wtedy, gdy się mieści — inaczej etykiety nachodzą na siebie. */
-      if (wys >= 16) {
-        out.push('<text x="' + (G.szer - G.prawy + 8) + '" y="' + (yGora + wys / 2 + 4).toFixed(1)
-          + '" font-size="13" fill="' + C.strefaTekst + '">' + esc(z.etykieta) + '</text>');
-      }
+    out.push('<line x1="' + S.G.lewy + '" y1="' + (S.wys - S.G.dol).toFixed(1) + '" x2="'
+      + (S.G.szer - S.G.prawy) + '" y2="' + (S.wys - S.G.dol).toFixed(1)
+      + '" stroke="' + C.os + '" stroke-width="1.2"/>');
+    var krok = krokTygodni(S.tMax - S.tMin);
+    for (var t = Math.ceil(S.tMin / krok) * krok; t <= S.tMax + 1e-9; t += krok) {
+      var x = S.x(t);
+      out.push('<line x1="' + x.toFixed(1) + '" y1="' + (S.wys - S.G.dol).toFixed(1)
+        + '" x2="' + x.toFixed(1) + '" y2="' + (S.wys - S.G.dol + 4).toFixed(1)
+        + '" stroke="' + C.os + '" stroke-width="1"/>');
+      out.push('<text x="' + x.toFixed(1) + '" y="' + (S.wys - S.G.dol + 18).toFixed(1)
+        + '" font-size="' + S.G.fontOs + '" fill="' + C.os + '" text-anchor="middle">' + t + '</text>');
+    }
+    if (podpis) {
+      out.push('<text x="' + ((S.G.lewy + S.G.szer - S.G.prawy) / 2).toFixed(1) + '" y="'
+        + (S.wys - 10).toFixed(1) + '" font-size="' + S.G.fontMaly + '" fill="' + C.opis
+        + '" text-anchor="middle">' + esc(podpis) + '</text>');
     }
     return out.join('');
   }
 
-  function osieBmi(model, S) {
-    var out = [];
-    out.push('<line x1="' + G.lewy + '" y1="' + (G.wysBmi - G.dol) + '" x2="' + (G.szer - G.prawy)
-      + '" y2="' + (G.wysBmi - G.dol) + '" stroke="' + C.os + '" stroke-width="1.5"/>');
-    out.push('<line x1="' + G.lewy + '" y1="' + G.gora + '" x2="' + G.lewy + '" y2="'
-      + (G.wysBmi - G.dol) + '" stroke="' + C.os + '" stroke-width="1.5"/>');
-
-    var krok = Math.max(1, Math.ceil((S.tMax - S.tMin) / 6));
-    for (var t = Math.max(0, S.tMin); t <= S.tMax; t += krok) {
-      out.push('<text x="' + S.x(t).toFixed(1) + '" y="' + (G.wysBmi - G.dol + 22)
-        + '" font-size="15" fill="' + C.os + '" text-anchor="middle">' + t + '</text>');
-    }
-    var krokB = (S.bMax - S.bMin) / 4;
-    for (var i = 0; i <= 4; i++) {
-      var b = S.bMin + krokB * i;
-      out.push('<text x="' + (G.lewy - 8) + '" y="' + (S.y(b) + 5).toFixed(1)
-        + '" font-size="15" fill="' + C.os + '" text-anchor="end">' + liczbaPl(b, 0) + '</text>');
-    }
-    out.push('<text x="' + (G.lewy - 8) + '" y="' + (G.gora - 6) + '" font-size="14" fill="'
-      + C.os + '" text-anchor="end">BMI</text>');
-    return out.join('');
+  function osYPodzialki(S) {
+    return S.osY.ticks.map(function (m) {
+      return '<text x="' + (S.G.lewy - 7) + '" y="' + (S.y(m) + 4).toFixed(1) + '" font-size="'
+        + S.G.fontOs + '" fill="' + C.os + '" text-anchor="end">' + liczbaPl(m, S.osY.dec) + '</text>';
+    }).join('');
   }
 
-  function liniaBmi(S) {
+  /* ---------- wykres masy ---------- */
+
+  /** Pasma i linia odzysku jako JEDNA rodzina etykiet — dlatego nigdy na siebie nie wchodzą. */
+  function pasmaIOdzysk(model, S, waski) {
+    if (!model.punktOdniesienia) return { svg: '', legenda: [] };
+    var odn = model.punktOdniesienia.masa;
+    var progi = (model.zestaw && model.zestaw.progi) || [];
+    var linie = [];
+    var etyk = [];
+
+    for (var i = 0; i < progi.length; i++) {
+      var masaProgu = odn * (1 - progi[i] / 100);
+      if (masaProgu < S.mMin || masaProgu > S.mMax) continue;
+      var y = S.y(masaProgu);
+      linie.push('<line x1="' + S.G.lewy + '" y1="' + y.toFixed(1) + '" x2="'
+        + (S.G.szer - S.G.prawy) + '" y2="' + y.toFixed(1) + '" stroke="' + C.linia
+        + '" stroke-width="1" stroke-dasharray="4 4"/>');
+      etyk.push({
+        y: y,
+        tekst: '−' + progi[i] + ' % · ' + liczbaPl(masaProgu, 1) + ' kg',
+        pelny: '−' + progi[i] + ' % = ' + liczbaPl(masaProgu, 1) + ' kg',
+        kolor: C.pasmoTekst, mocny: false,
+      });
+    }
+
+    var o = model.odzysk;
+    if (o && o.liniaDoPokazania && typeof o.masaGraniczna === 'number'
+        && o.masaGraniczna >= S.mMin && o.masaGraniczna <= S.mMax) {
+      var yo = S.y(o.masaGraniczna);
+      linie.push('<line x1="' + S.G.lewy + '" y1="' + yo.toFixed(1) + '" x2="'
+        + (S.G.szer - S.G.prawy) + '" y2="' + yo.toFixed(1) + '" stroke="' + C.uwaga
+        + '" stroke-width="1.5" stroke-dasharray="6 3"/>');
+      etyk.push({
+        y: yo, tekst: 'istotny odzysk',
+        pelny: 'istotny odzysk = ' + liczbaPl(o.masaGraniczna, 1) + ' kg',
+        kolor: C.uwaga, mocny: true,
+      });
+    }
+
+    var svgEtyk = '';
+    if (!waski) {
+      var roz = rozsun(etyk, S.G.fontMaly + 5, S.G.gora + 6, S.wys - S.G.dol);
+      svgEtyk = roz.map(function (e) {
+        return '<text x="' + (S.G.szer - S.G.prawy + 8) + '" y="' + (e.y + 4).toFixed(1)
+          + '" font-size="' + S.G.fontMaly + '" fill="' + e.kolor + '"'
+          + (e.mocny ? ' font-weight="600"' : '') + '>' + esc(e.tekst) + '</text>';
+      }).join('');
+    }
+
+    return {
+      svg: linie.join('') + svgEtyk,
+      legenda: etyk.map(function (e) {
+        return { tekst: e.pelny, kolor: e.kolor, mocny: e.mocny, kreska: true };
+      }),
+    };
+  }
+
+  function titracja(model, S, waski) {
+    var pd = model.punktDecyzyjny;
+    if (!pd || !pd.jest || !pd.nominalna || typeof pd.titracjaNominalnaTyg !== 'number') return '';
+    var x0 = S.x(Math.max(S.tMin, 0));
+    var x1 = S.x(Math.min(S.tMax, pd.titracjaNominalnaTyg));
+    if (!(x1 > x0)) return '';
+    return '<rect x="' + x0.toFixed(1) + '" y="' + S.G.gora + '" width="' + (x1 - x0).toFixed(1)
+      + '" height="' + S.wysRys.toFixed(1) + '" fill="' + C.titracja + '"/>'
+      + (waski ? '' : '<text x="' + (x0 + 4).toFixed(1) + '" y="' + (S.G.gora + 12).toFixed(1)
+        + '" font-size="' + (S.G.fontMaly - 1) + '" fill="' + C.pasmoTekst + '">zwiększanie dawki</text>');
+  }
+
+  /* Znacznik ChPL można WYŁĄCZYĆ — i kartka dla pacjenta tak robi (P-WIZUAL 2026-09-20).
+     Rata 4 usunęła punkt oceny wg ChPL z listy kamieni milowych pacjenta, bo to reguła decyzji
+     lekarza o leku, nie informacja, z którą pacjent ma wyjść z gabinetu. Na WYKRESIE ten sam
+     znacznik zostawał — pacjent dostawał pionową kreskę w 16. tygodniu bez jednego słowa
+     wyjaśnienia. Albo się go tłumaczy, albo nie rysuje; tu obowiązuje decyzja z raty 4. */
+  function punktChPL(model, S, opcje) {
+    if (opcje && opcje.bezPunktuChPL) return '';
+    var pd = model.punktDecyzyjny;
+    if (!pd || !pd.jest || typeof pd.tydzienOdOdniesienia !== 'number') return '';
+    var x = S.x(pd.tydzienOdOdniesienia);
+    return '<line x1="' + x.toFixed(1) + '" y1="' + S.G.gora + '" x2="' + x.toFixed(1) + '" y2="'
+      + (S.wys - S.G.dol).toFixed(1) + '" stroke="' + C.teal
+      + '" stroke-width="1.5" stroke-dasharray="2 3"/>'
+      + '<circle cx="' + x.toFixed(1) + '" cy="' + (S.G.gora + 5) + '" r="4" fill="' + C.teal + '"/>';
+  }
+
+  /* Kolor i pierwszeństwo zdarzeń — po WADZE z modelu, nie po nazwie typu (audyt 2026-09-20, F8). */
+  var WAGA_KOLOR = { dobrze: C.dobrze, uwaga: C.uwaga, alarm: C.alarm };
+  var WAGA_RANGA = { dobrze: 1, uwaga: 2, alarm: 3 };
+
+  function kolorZdarzenia(waga) {
+    return WAGA_KOLOR[waga] || C.uwaga;
+  }
+
+  function linia(S, pole, kolorKropki, dec, jednostka) {
     var d = S.seria.map(function (p, i) {
-      return (i === 0 ? 'M' : 'L') + S.x(p.tydzien).toFixed(1) + ' ' + S.y(p.bmi).toFixed(1);
+      return (i === 0 ? 'M' : 'L') + S.x(p.tydzien).toFixed(1) + ' ' + S.y(p[pole]).toFixed(1);
     }).join(' ');
     var out = ['<path d="' + d + '" fill="none" stroke="' + C.pacjent
-      + '" stroke-width="2.5" stroke-linejoin="round"/>'];
+      + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'];
     S.seria.forEach(function (p) {
-      out.push('<circle cx="' + S.x(p.tydzien).toFixed(1) + '" cy="' + S.y(p.bmi).toFixed(1)
-        + '" r="4" fill="' + C.pacjent + '"/>');
+      var kolor = kolorKropki ? kolorKropki(p) : null;
+      out.push('<circle cx="' + S.x(p.tydzien).toFixed(1) + '" cy="' + S.y(p[pole]).toFixed(1)
+        + '" r="' + (kolor ? 5.5 : 4) + '" fill="' + (kolor || C.pacjent)
+        + '" stroke="#fff" stroke-width="1.5"/>');
     });
+
+    /* Podpis ostatniej wartości po stronie PRZECIWNEJ do kierunku krzywej, plus biała otoczka.
+       Wartość bywa dokładnie na linii pasma (108,0 kg to jednocześnie −10 % i próg odzysku),
+       a wtedy kreska przechodziła przez cyfry. Prostokąt jest tańszy niż ręczne unikanie. */
     var ost = S.seria[S.seria.length - 1];
-    out.push('<text x="' + (S.x(ost.tydzien) - 6).toFixed(1) + '" y="' + (S.y(ost.bmi) - 12).toFixed(1)
-      + '" font-size="15" font-weight="600" fill="' + C.pacjent + '" text-anchor="end">'
-      + liczbaPl(ost.bmi, 1) + '</text>');
+    var przed = S.seria.length > 1 ? S.seria[S.seria.length - 2] : ost;
+    var opada = S.y(ost[pole]) > S.y(przed[pole]);
+    var napis = liczbaPl(ost[pole], dec) + (jednostka ? ' ' + jednostka : '');
+    var xN = S.x(ost.tydzien) - 8;
+    var yN = S.y(ost[pole]) + (opada ? 17 : -13);
+    var szerN = napis.length * S.G.fontOs * 0.55;
+    out.push('<rect x="' + (xN - szerN).toFixed(1) + '" y="' + (yN - S.G.fontOs + 1).toFixed(1)
+      + '" width="' + szerN.toFixed(1) + '" height="' + (S.G.fontOs + 4).toFixed(1)
+      + '" fill="#fff" opacity="0.88" rx="3"/>');
+    out.push('<text x="' + xN.toFixed(1) + '" y="' + yN.toFixed(1) + '" font-size="' + S.G.fontOs
+      + '" font-weight="700" fill="' + C.pacjent + '" text-anchor="end">' + esc(napis) + '</text>');
     return out.join('');
   }
+
+  /* ---------- strefy BMI ---------- */
+
+  function strefy(model, S, waski) {
+    var lista = model.strefyBmi || [];
+    var out = [];
+    var widoczne = [];
+    /* Pasmo prawidłowe to jedyne o `kolor === null` — punkt zerowy skali intensywności. */
+    var iNorma = -1;
+    for (var n = 0; n < lista.length; n++) if (!lista[n].kolor) { iNorma = n; break; }
+
+    for (var i = 0; i < lista.length; i++) {
+      var z = lista[i];
+      var doB = z.do == null ? S.mMax : Math.min(z.do, S.mMax);
+      var odB = z.od == null ? S.mMin : Math.max(z.od, S.mMin);
+      if (!(doB > odB)) continue;
+      var yG = S.y(doB);
+      var wysZ = S.y(odB) - yG;
+      var glebokosc = iNorma < 0 ? 0 : Math.abs(i - iNorma) - 1;
+      out.push('<rect x="' + S.G.lewy + '" y="' + yG.toFixed(1) + '" width="' + S.szerRys.toFixed(1)
+        + '" height="' + wysZ.toFixed(1) + '" fill="' + odcienStrefy(z.kolor, glebokosc) + '"/>');
+      widoczne.push({ z: z, yG: yG, wysZ: wysZ, glebokosc: glebokosc });
+      /* GRANICA KLASY JAKO WIDOCZNA LINIA. Do tej wersji strefy niosło samo wypełnienie:
+         przy pacjencie mieszczącym się w jednej klasie wykres był jednym różowym prostokątem
+         i nie dało się zobaczyć, gdzie granica w ogóle przebiega. */
+      if (z.od != null && z.od > S.mMin && z.od < S.mMax) {
+        var yGr = S.y(z.od);
+        out.push('<line x1="' + S.G.lewy + '" y1="' + yGr.toFixed(1) + '" x2="'
+          + (S.G.szer - S.G.prawy) + '" y2="' + yGr.toFixed(1) + '" stroke="' + C.strefaTekst
+          + '" stroke-width="1" stroke-dasharray="3 3"/>');
+      }
+    }
+
+    if (!waski) {
+      var etyk = widoczne.filter(function (v) { return v.wysZ >= 14; })
+        .map(function (v) { return { y: v.yG + v.wysZ / 2, tekst: v.z.etykieta }; });
+      var roz = rozsun(etyk, S.G.fontMaly + 4, S.G.gora + 6, S.wys - S.G.dol);
+      out.push(roz.map(function (e) {
+        return '<text x="' + (S.G.szer - S.G.prawy + 8) + '" y="' + (e.y + 4).toFixed(1)
+          + '" font-size="' + S.G.fontMaly + '" fill="' + C.strefaTekst + '">' + esc(e.tekst) + '</text>';
+      }).join(''));
+    }
+
+    function zakres(z) {
+      if (z.od != null && z.do != null) return 'BMI ' + liczbaPl(z.od, 1) + '–' + liczbaPl(z.do, 1);
+      if (z.od != null) return 'BMI od ' + liczbaPl(z.od, 1);
+      if (z.do != null) return 'BMI do ' + liczbaPl(z.do, 1);
+      return '';
+    }
+
+    return {
+      svg: out.join(''),
+      legenda: widoczne.map(function (v) {
+        var zk = zakres(v.z);
+        return { tekst: v.z.etykieta + (zk ? ' · ' + zk : ''), plama: odcienStrefy(v.z.kolor, v.glebokosc) };
+      }),
+    };
+  }
+
+  /* ---------- korzeń SVG ---------- */
 
   /* KORZEŃ SVG W DWÓCH SMAKACH (P-PDF 2026-09-20).
    *
    * Na ekranie wykres ma być elastyczny: `width="100%"` plus `max-width`/`height:auto` sprawiają,
    * że skaluje się do szerokości karty i nie wywołuje poziomego przewijania na telefonie.
    * W PDF te same atrybuty są nie tylko zbędne, ale SZKODLIWE: pdfmake liczy wtedy wysokość
-   * węzła z „100 %" i rozdmuchuje jedną kartkę na trzy (sprawdzone). `font-family:inherit`
-   * też nie ma w PDF czego dziedziczyć.
-   *
-   * Dlatego opcja `doPdf` zdejmuje z korzenia wszystko, co dotyczy układu na ekranie, i zostawia
-   * sam `viewBox` — czyli geometrię. To wciąż JEDEN generator wykresu, nie dwa: różni się
-   * wyłącznie opakowanie, a każda linia, oś i podpis powstają w tym samym kodzie. */
-  function korzenSvg(klasa, wys, etykieta, opcje) {
+   * węzła z „100 %” i rozdmuchuje jedną kartkę na trzy (sprawdzone). `font-family:inherit`
+   * też nie ma w PDF czego dziedziczyć. */
+  function korzenSvg(klasa, G, wys, etykieta, opcje) {
     var wspolne = '<svg class="vilda-pd-svg ' + klasa + '" viewBox="0 0 ' + G.szer + ' ' + wys + '" '
       + 'role="img" aria-label="' + esc(etykieta) + '"';
     if (opcje && opcje.doPdf) return wspolne + '>';
     return wspolne + ' width="100%" style="display:block;max-width:100%;height:auto;font-family:inherit;">';
   }
 
-  /** Wykres BMI ze strefami klas. Pusty napis, gdy mniej niż dwa pomiary niosą wzrost. */
-  function wykresBmi(model, opcje) {
-    var S = skalaBmi(model);
+  /** Wykres masy. Oddaje sam SVG — legendę bierze się osobno przez `legendaMasy`. */
+  function wykresMasy(model, opcje) {
+    var G = geo(opcje);
+    var wys = wysokoscMasy(model, G);
+    var S = skala(model, G, wys, !!(opcje && opcje.bezPunktuChPL));
     if (!S) return '';
-    return korzenSvg('vilda-pd-svg-bmi', G.wysBmi, 'Wykres BMI w czasie ze strefami klas masy ciała', opcje)
-      + strefy(model, S) + osieBmi(model, S) + liniaBmi(S)
+    var waski = G === GEO.waski;
+
+    var wgTyg = {};
+    (model.zdarzenia || []).forEach(function (z) {
+      if (typeof z.tydzien !== 'number') return;
+      var waga = z.waga || 'uwaga';
+      var byla = wgTyg[z.tydzien];
+      if (!byla || (WAGA_RANGA[waga] || 0) > (WAGA_RANGA[byla] || 0)) wgTyg[z.tydzien] = waga;
+    });
+
+    var pas = pasmaIOdzysk(model, S, waski);
+    var podpisX = 'tygodnie od ' + (model.punktOdniesienia
+      && model.punktOdniesienia.zrodlo === 'start-leczenia'
+      ? 'włączenia leczenia' : 'pierwszego pomiaru');
+
+    return korzenSvg('vilda-pd-svg-masa', G, wys, 'Wykres masy ciała w czasie', opcje)
+      + titracja(model, S, waski) + siatkaPozioma(S) + pas.svg
+      + osX(S, podpisX) + osYPodzialki(S) + tytulOsiY(S, 'masa [kg]')
+      + punktChPL(model, S, opcje)
+      + linia(S, 'masa', function (p) {
+        return Object.prototype.hasOwnProperty.call(wgTyg, p.tydzien)
+          ? kolorZdarzenia(wgTyg[p.tydzien]) : null;
+      }, 1, 'kg')
       + '</svg>';
   }
+
+  /** Wykres BMI ze strefami klas. Pusty napis, gdy mniej niż dwa pomiary niosą wzrost. */
+  function wykresBmi(model, opcje) {
+    var G = geo(opcje);
+    var wys = wysokoscBmi(model, G);
+    var S = skalaBmi(model, G, wys);
+    if (!S) return '';
+    var waski = G === GEO.waski;
+    var st = strefy(model, S, waski);
+    return korzenSvg('vilda-pd-svg-bmi', G, wys, 'Wykres BMI w czasie ze strefami klas masy ciała', opcje)
+      + st.svg + osX(S, 'tygodnie') + osYPodzialki(S) + tytulOsiY(S, 'BMI [kg/m²]')
+      + linia(S, 'bmi', null, 1, '')
+      + '</svg>';
+  }
+
+  /* LEGENDY. Na wariancie wąskim niosą to, czego wykres nie pisze; na szerokim są zbędne
+     i wołający ich nie rysuje. Powstają z TEJ SAMEJ rodziny etykiet, co podpisy na wykresie,
+     więc nie mogą się z nim rozjechać. */
+  function legendaMasy(model) {
+    var G = GEO.waski;
+    var S = skala(model, G, wysokoscMasy(model, G));
+    if (!S) return [];
+    var poz = pasmaIOdzysk(model, S, true).legenda;
+    var pd = model.punktDecyzyjny;
+    if (pd && pd.jest && pd.nominalna && typeof pd.titracjaNominalnaTyg === 'number') {
+      poz = poz.concat([{ tekst: 'zwiększanie dawki (0–' + pd.titracjaNominalnaTyg + ' tydz.)', plama: C.titracja }]);
+    }
+    if (pd && pd.jest && typeof pd.tydzienOdOdniesienia === 'number') {
+      poz = poz.concat([{ tekst: 'ocena wg ChPL (' + pd.tydzienOdOdniesienia + '. tydz.)', kolor: C.teal, kreska: true }]);
+    }
+    return poz;
+  }
+
+  function legendaBmi(model) {
+    var G = GEO.waski;
+    var S = skalaBmi(model, G, wysokoscBmi(model, G));
+    if (!S) return [];
+    return strefy(model, S, true).legenda;
+  }
+
+  function legendaHtml(poz) {
+    if (!poz || !poz.length) return '';
+    var li = poz.map(function (e) {
+      var znak = e.plama
+        ? '<i class="vilda-pd-leg-p" style="background:' + esc(e.plama) + ';"></i>'
+        : '<i class="vilda-pd-leg-k" style="border-top-color:' + esc(e.kolor || C.pasmoTekst) + ';"></i>';
+      return '<li>' + znak + '<span' + (e.mocny ? ' class="vilda-pd-leg-m"' : '') + '>'
+        + esc(e.tekst) + '</span></li>';
+    });
+    return '<ul class="vilda-pd-leg">' + li.join('') + '</ul>';
+  }
+
 
   /* ---------- kamienie milowe (rata 3) ---------- */
 
@@ -403,22 +650,23 @@
 
   /* ---------- składanie ---------- */
 
-
-  function wykresMasy(model, opcje) {
-    var S = skala(model);
-    if (!S) return '';
-    return korzenSvg('vilda-pd-svg-masa', G.wys, 'Wykres masy ciała w czasie', opcje)
-      + titracja(model, S) + pasma(model, S) + liniaOdzysku(model, S)
-      + osie(model, S) + punktChPL(model, S) + liniaPacjenta(model, S)
-      + '</svg>';
-  }
-
-  function kafelek(etykieta, wartosc, jednostka, pod) {
+  /* KAFELKI.
+   *
+   * „Masa” → „Masa ciała” wszędzie (właściciel 2026-09-20: samo „Masa” brzmi nieprofesjonalnie).
+   *
+   * KAŻDY KAFELEK MA DWA KANAŁY: wartość u góry mówi STAN, podpis pod nią mówi ZMIANĘ.
+   * Werdykt — czyli kolor — należy do ZMIANY, nie do stanu. Dlatego „Masa ciała na początku”
+   * i „Masa ciała dzisiaj” są zawsze neutralne, a kolor niosą „Zmiana masy ciała” oraz delta
+   * pod BMI. Klucz werdyktu przychodzi z `model.wskazniki`; widok dobiera wyłącznie odcień. */
+  function kafelek(etykieta, wartosc, jednostka, pod, waga, wagaPod) {
+    var kv = kolorWerdyktu(waga);
+    var ks = kolorWerdyktu(wagaPod);
     return '<div class="vilda-pd-tile">'
       + '<div class="vilda-pd-tile-l">' + esc(etykieta) + '</div>'
-      + '<div class="vilda-pd-tile-v">' + esc(wartosc)
+      + '<div class="vilda-pd-tile-v"' + (kv ? ' style="color:' + kv + ';"' : '') + '>' + esc(wartosc)
       + (jednostka ? '<span class="vilda-pd-tile-u"> ' + esc(jednostka) + '</span>' : '') + '</div>'
-      + (pod ? '<div class="vilda-pd-tile-s">' + esc(pod) + '</div>' : '')
+      + (pod ? '<div class="vilda-pd-tile-s"' + (ks ? ' style="color:' + ks + ';font-weight:700;"' : '')
+        + '>' + esc(pod) + '</div>' : '')
       + '</div>';
   }
 
@@ -427,61 +675,148 @@
     if (!seria.length) return '';
     var odn = model.punktOdniesienia;
     var ost = seria[seria.length - 1];
+    var W = model.wskazniki || {};
     var out = [];
-    out.push(kafelek('Masa przy punkcie odniesienia', liczbaPl(odn.masa, 1), 'kg',
-      odn.zrodlo === 'start-leczenia' ? 'włączenie leczenia' + (odn.dateISO ? ' · ' + dataPl(odn.dateISO) : '')
-        : 'pierwszy pomiar' + (odn.dateISO ? ' · ' + dataPl(odn.dateISO) : '')));
-    out.push(kafelek('Masa ostatnia', liczbaPl(ost.masa, 1), 'kg',
-      (ost.dateISO ? dataPl(ost.dateISO) + ' · ' : '') + ost.tydzien + '. tydz.'));
-    out.push(kafelek('Zmiana masy', zeZnakiem(ost.zmianaMasyKg, 1), 'kg',
-      zeZnakiem(ost.zmianaMasyPct, 1) + '%'));
-    if (model.nadir) {
-      out.push(kafelek('Najniższa masa (nadir)', liczbaPl(model.nadir.masa, 1), 'kg',
-        model.nadir.ostatni ? 'to ostatni pomiar'
-          : (model.nadir.tydzien + '. tydz. · utrzymane '
-            + liczbaPl((model.odzysk ? model.odzysk.utrzymane : 1) * 100, 0) + '%')));
+
+    out.push(kafelek('Masa ciała na początku', liczbaPl(odn.masa, 1), 'kg', dataPl(odn.dateISO)));
+    out.push(kafelek('Masa ciała dzisiaj', liczbaPl(ost.masa, 1), 'kg', dataPl(ost.dateISO)));
+    out.push(kafelek('Zmiana masy ciała', zeZnakiem(ost.zmianaMasyKg, 1), 'kg',
+      zeZnakiem(ost.zmianaMasyPct, 1) + ' %', W.zmianaMasy, W.zmianaMasy));
+
+    /* BMI JEST W OBU WARIANTACH, także na kartce dla pacjenta (właściciel 2026-09-20).
+       Do raty 4 wariant pacjenta pokazywał zamiast BMI najniższą masę — to było zawężenie
+       bez podstawy klinicznej: BMI nie jest pojęciem zarezerwowanym dla lekarza.
+
+       Procentu tu NIE MA celowo. BMI to masa przez kwadrat wzrostu, a wzrost dorosłego się
+       nie zmienia, więc procentowa zmiana BMI jest CO DO CYFRY tą samą liczbą, co procentowa
+       zmiana masy w kafelku obok. Zostaje delta bezwzględna, która niesie coś nowego. */
+    if (typeof ost.bmi === 'number' && isFinite(ost.bmi)) {
+      out.push(kafelek('BMI dzisiaj', liczbaPl(ost.bmi, 1), 'kg/m²',
+        typeof ost.zmianaBmi === 'number' ? zeZnakiem(ost.zmianaBmi, 1) + ' kg/m²' : 'brak wyjściowego BMI',
+        null, typeof ost.zmianaBmi === 'number' ? W.bmi : null));
     }
-    return '<div class="vilda-pd-tiles">' + out.join('') + '</div>';
+
+    /* Najniższa masa jako kafelek dodatkowy — ale tylko gdy NIE jest dzisiejszym pomiarem,
+       bo wtedy powtarzałaby sąsiada słowo w słowo. */
+    if (model.nadir && !model.nadir.ostatni) {
+      out.push(kafelek('Najniższa masa ciała', liczbaPl(model.nadir.masa, 1), 'kg',
+        model.nadir.tydzien + '. tydz.', W.nadir));
+    }
+    return '<div class="vilda-pd-tiles">' + out.join('') + '</div>' + odniesienieOpis(model);
+  }
+
+  /* ODPOWIEDŹ NA PYTANIE „WZGLĘDEM CZEGO?”, POSTAWIONA RAZ (właściciel 2026-09-20).
+   *
+   * Wszystkie procenty i delty liczą się od PUNKTU ODNIESIENIA, nie od poprzedniej wizyty —
+   * w silniku `zmianaMasyKg = p.masa - masaOdn`. Bez tego zdania kafelek „Zmiana masy ciała”
+   * da się przeczytać na dwa sposoby, a przy pacjencie po nadirze te dwa odczyty mówią coś
+   * przeciwnego. Treść zależy od `punktOdniesienia.zrodlo`, więc mówi prawdę także wtedy,
+   * gdy pacjenta przejęto w trakcie terapii i punktu „Włączenie” w rekordzie nie ma. */
+  function odniesienieOpis(model) {
+    var o = model.punktOdniesienia;
+    if (!o) return '';
+    var co = o.zrodlo === 'start-leczenia'
+      ? 'masy ciała przy włączeniu leczenia (' + liczbaPl(o.masa, 1) + ' kg'
+        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')'
+      : 'pierwszego zapisanego pomiaru (' + liczbaPl(o.masa, 1) + ' kg'
+        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')';
+    var dop = o.zrodlo === 'start-leczenia' ? ''
+      : ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    return '<p class="vilda-pd-odn">Wszystkie zmiany liczone od ' + esc(co) + esc(dop)
+      + ', nie od poprzedniej wizyty.</p>';
+  }
+
+  /* ILE BRAKUJE DO NAJBLIŻSZEGO PASMA — liczba z SILNIKA (`doNastepnegoPasma`).
+     Właściciel 2026-09-20: „to jest ważna informacja dla pacjenta”, więc idzie też na wykres
+     w panelu i na obie kartki. Widok jej nie liczy, tylko formatuje. */
+  function notaPasma(model) {
+    var d = model.doNastepnegoPasma;
+    if (!d || typeof d.brakujeKg !== 'number' || !(d.brakujeKg > 0)) return '';
+    return '<p class="vilda-pd-nota">Do pierwszego progu (−' + d.prog + ' % masy, czyli '
+      + liczbaPl(d.masaProgu, 1) + ' kg) brakuje jeszcze <b>' + liczbaPl(d.brakujeKg, 1) + ' kg</b>.</p>';
   }
 
   function zdarzeniaLista(model) {
     var z = model.zdarzenia || [];
     if (!z.length) return '';
     var out = z.map(function (e) {
-      return '<li style="color:' + kolorZdarzenia(e.typ) + ';">'
+      return '<li style="color:' + kolorZdarzenia(e.waga) + ';">'
         + (typeof e.tydzien === 'number' ? '<b>' + e.tydzien + '. tydz.</b> — ' : '')
         + esc(e.opis) + '</li>';
     });
     return '<ul class="vilda-pd-events">' + out.join('') + '</ul>';
   }
 
-  function stopka(model) {
-    var out = [];
-    if (model.zestaw) {
-      out.push('Pasma: ' + esc(model.zestaw.nazwa) + '. ' + esc(model.zestaw.zrodlo)
-        + (model.zestaw.uwaga ? ' ' + esc(model.zestaw.uwaga) : ''));
-    }
-    if (model.odzysk && model.odzysk.liniaDoPokazania && model.odzysk.nazwa) {
-      out.push(esc(model.odzysk.nazwa) + (model.odzysk.zrodlo ? '. ' + esc(model.odzysk.zrodlo) : '.'));
-    }
+  /* OSTRZEŻENIA ZOSTAJĄ WIDOCZNE — nie wchodzą do rozwijanego opisu (P-WIZUAL 2026-09-20).
+   *
+   * Do tej wersji stopka sklejała w jeden akapit DWIE różne rzeczy: opis źródeł pasm
+   * (dokąd sięga drabinka, z czego pochodzi) oraz ostrzeżenia silnika. Schowanie ostrzeżeń
+   * pod przyciskiem cofnęłoby poprawkę F1 z audytu: komunikat „punktu oceny wg ChPL nie
+   * postawiono na wykresie, bo brak punktu Włączenie” to nie jest opis bibliografii, tylko
+   * informacja, że procenty liczą się od innej masy, niż lekarz zakłada. */
+  function ostrzezenia(model) {
+    var cz = [];
     var pd = model.punktDecyzyjny;
     if (pd && pd.jest && pd.nominalna) {
-      out.push('Punkt oceny wg ChPL postawiony przy nominalnym czasie zwiększania dawki ('
+      cz.push('Punkt oceny wg ChPL postawiony przy nominalnym czasie zwiększania dawki ('
         + pd.titracjaNominalnaTyg + ' tyg.); rzeczywista data osiągnięcia dawki '
         + 'podtrzymującej nie jest zapisana w rekordzie.');
-    } else if (pd && !pd.jest && pd.zdanie) {
-      out.push(esc(pd.zdanie));
     }
-    (model.ostrzezenia || []).forEach(function (o) { out.push(esc(o)); });
+    (model.ostrzezenia || []).forEach(function (o) { cz.push(o); });
     if (model.leczenie && model.leczenie.stan === 'odstawione') {
-      out.push('Leczenie odstawione' + (model.leczenie.odstawienieTydzien != null
+      cz.push('Leczenie odstawione' + (model.leczenie.odstawienieTydzien != null
         ? ' w ' + model.leczenie.odstawienieTydzien + '. tygodniu' : '')
         + ' — po odstawieniu odzysk masy jest zjawiskiem typowym, więc tę samą '
         + 'liczbę czyta się inaczej niż w trakcie leczenia.');
     }
-    out = out.filter(function (t) { return String(t).trim().length > 1; });
-    if (!out.length) return '';
-    return '<p class="vilda-pd-foot">' + out.join(' ') + '</p>';
+    cz = cz.filter(function (t) { return String(t).trim().length > 1; });
+    if (!cz.length) return '';
+    return '<p class="vilda-pd-ostrz" role="note">' + cz.map(esc).join(' ') + '</p>';
+  }
+
+  /* ROZWIJANY OPIS PASM (właściciel 2026-09-20: „trzeba ukryć pod jakimś przyciskiem
+     szczegóły i rozpisać to bardziej po ludzku”).
+     Treść przychodzi GOTOWA z pliku danych (`OPIS_PASM`) — widok jej nie pisze i nie skraca. */
+  function opisPasmHtml(model) {
+    var D = (w && w.VildaPostepyDoroslegoDane) || null;
+    var O = D && D.OPIS_PASM;
+    if (!O || !Array.isArray(O.bloki)) return '';
+
+    var bloki = O.bloki.map(function (b) {
+      var srodek = '';
+      if (b.akapit) srodek = '<p>' + esc(b.akapit) + '</p>';
+      if (Array.isArray(b.punkty)) {
+        srodek += '<ul>' + b.punkty.map(function (p) {
+          return '<li><b>' + esc(p.mocne) + '</b> ' + esc(p.tresc) + '</li>';
+        }).join('') + '</ul>';
+      }
+      return '<h4>' + esc(b.tytul) + '</h4>' + srodek;
+    });
+
+    /* Szczeble opisuje DRABINKA TEGO PACJENTA, nie wspólny akapit — inaczej pacjent na
+       liraglutydzie (progi 5/10 %) czytałby o progach 15/20/25 %, których na jego wykresie
+       nie ma. To ta sama wada, przez którą stary akapit wyleciał z wydruków. */
+    var sz = (model.zestaw && model.zestaw.opisSzczebli) || [];
+    if (sz.length) {
+      bloki.push('<h4>' + esc(O.tytulSzczebli || 'Na czym stoją') + '</h4><ul>'
+        + sz.map(function (pk) {
+          return '<li><b>' + esc(pk.mocne) + '</b> ' + esc(pk.tresc) + '</li>';
+        }).join('') + '</ul>');
+    }
+
+    /* Ostatni blok jest ZAWSZE o tym pacjencie: jaki lek i co o nim mówi ChPL. Bez tego
+       opis byłby ogólną notką, a lekarz ma zobaczyć regułę, która dotyczy jego chorego. */
+    var dla = [];
+    if (model.leczenie && model.leczenie.lek) dla.push('Lek: <b>' + esc(model.leczenie.lek) + '</b>.');
+    var pd = model.punktDecyzyjny;
+    if (pd && pd.zdanie) dla.push(esc(pd.zdanie));
+    if (model.zestaw) {
+      dla.push('Drabinka na wykresie: <b>' + esc(model.zestaw.nazwa) + '</b>.');
+    }
+    if (dla.length) bloki.push('<h4>Dla tego pacjenta</h4><p>' + dla.join(' ') + '</p>');
+
+    return '<details class="vilda-pd-det"><summary>' + esc(O.naglowek) + '</summary>'
+      + '<div class="vilda-pd-det-tresc">' + bloki.join('') + '</div></details>';
   }
 
   /* Przyciski wydruku. Widok tylko je RYSUJE — efekt (druk, pobranie) należy do
@@ -537,18 +872,44 @@
   }
 
   /** Cały widok postępów. Oddaje '' gdy model mówi, że nie ma czego pokazać. */
+  /* OBA WARIANTY WYKRESU SIEDZĄ W DOM, PRZEŁĄCZA JE CSS.
+   *
+   * Widok powstaje raz i nie obsługuje zmiany rozmiaru okna — gdyby wariant wybierał JavaScript
+   * przy montażu, obrót telefonu albo zmiana szerokości okna zostawiałaby wykres w złym wariancie
+   * do następnego przeładowania. Dwa SVG w drzewie kosztują kilka kilobajtów i są zawsze zgodne
+   * z faktyczną szerokością. Do PDF idzie wyłącznie szeroki, wołany osobno z `doPdf`. */
+  function paraWykresow(model, klasaDodatkowa) {
+    var szeroki = wykresMasy(model, { wariant: 'szeroki' });
+    if (!szeroki) return '';
+    var waski = wykresMasy(model, { wariant: 'waski' });
+    return '<div class="vilda-pd-chart' + (klasaDodatkowa ? ' ' + klasaDodatkowa : '') + '">'
+      + '<div class="vilda-pd-tylko-szer">' + szeroki + '</div>'
+      + '<div class="vilda-pd-tylko-was">' + waski + legendaHtml(legendaMasy(model)) + '</div>'
+      + '</div>';
+  }
+
+  function paraWykresowBmi(model) {
+    var szeroki = wykresBmi(model, { wariant: 'szeroki' });
+    if (!szeroki) return '';
+    var waski = wykresBmi(model, { wariant: 'waski' });
+    return '<div class="vilda-pd-chart vilda-pd-chart-bmi">'
+      + '<div class="vilda-pd-tylko-szer">' + szeroki + '</div>'
+      + '<div class="vilda-pd-tylko-was">' + waski + legendaHtml(legendaBmi(model)) + '</div>'
+      + '</div>';
+  }
+
   function buildHtml(model) {
     if (!model || !model.dostepne || !model.dostepne.ok) return '';
-    var wykres = wykresMasy(model);
+    var wykres = paraWykresow(model);
     if (!wykres) return '';
-    var bmi = wykresBmi(model);
+    var bmi = paraWykresowBmi(model);
     return '<div class="vilda-pd">'
       + '<p class="vilda-patient-section-h">Postępy redukcji masy ciała</p>'
-      + kafelki(model) + '<div class="vilda-pd-chart">' + wykres + '</div>'
+      + kafelki(model) + wykres + notaPasma(model)
       + (bmi ? '<p class="vilda-patient-section-h vilda-patient-section-h--secondary">'
-        + 'BMI i klasy masy ciała</p><div class="vilda-pd-chart vilda-pd-chart-bmi">'
-        + bmi + '</div>' : '')
-      + kamienieHtml(model) + akcjeHtml() + stopka(model) + '</div>';
+        + 'BMI i klasy masy ciała</p>' + bmi : '')
+      + kamienieHtml(model) + akcjeHtml()
+      + ostrzezenia(model) + opisPasmHtml(model) + '</div>';
   }
 
   /** Komunikat dla dorosłego, któremu wykres się jeszcze nie należy. */
@@ -558,16 +919,35 @@
       || 'Brak danych do wyświetlenia postępów.') + '</p>';
   }
 
+  /* RAMKI KAFELKÓW NIEZALEŻNE OD ZAWIJANIA (właściciel 2026-09-20).
+     `border` na kafelku z wyjątkiem pierwszego działa wyłącznie w JEDNYM rzędzie: po zawinięciu
+     pierwszy kafelek drugiego rzędu dostaje kreskę z lewej, a między rzędami nie ma żadnej.
+     `box-shadow: 0 0 0 1px` daje każdemu pełną obwódkę; sąsiednie nakładają się na siebie,
+     więc widać jedną włosową kreskę, a niepełny rząd nie zostawia dziury. */
   var CSS = '.vilda-pd{margin-top:6px;}'
-    + '.vilda-pd-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0 14px;}'
-    + '.vilda-pd-tile{background:#f7fbfc;border:1px solid ' + C.linia + ';border-radius:12px;padding:10px 12px;min-width:0;}'
+    + '.vilda-pd-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));'
+    + 'border-radius:12px;overflow:hidden;margin:10px 0 6px;background:#fff;'
+    + 'box-shadow:0 0 0 1px ' + C.linia + ';}'
+    + '.vilda-pd-tile{background:#fff;padding:10px 12px;min-width:0;box-shadow:0 0 0 1px ' + C.linia + ';}'
     + '.vilda-pd-tile-l{font-size:.76rem;font-weight:600;color:' + C.opis + ';margin-bottom:4px;}'
     + '.vilda-pd-tile-v{font-size:1.18rem;font-weight:700;color:' + C.ink + ';line-height:1.2;}'
     + '.vilda-pd-tile-u{font-size:.82rem;font-weight:600;color:' + C.opis + ';}'
     + '.vilda-pd-tile-s{font-size:.74rem;color:' + C.opis + ';margin-top:3px;}'
+    + '.vilda-pd-odn{font-size:.74rem;color:' + C.opis + ';margin:0 0 12px;line-height:1.45;}'
+    + '.vilda-pd-nota{font-size:.8rem;color:' + C.ink + ';margin:8px 0 0;padding:8px 10px;'
+    + 'background:#eef5f6;border-radius:8px;line-height:1.45;}'
     + '.vilda-pd-chart{background:#fff;border:1px solid ' + C.linia + ';border-radius:12px;padding:8px;overflow:hidden;}'
     + '.vilda-pd-events{margin:12px 0 0;padding-left:18px;font-size:.84rem;line-height:1.5;}'
     + '.vilda-pd-chart-bmi{margin-top:4px;}'
+    /* Przełącznik wariantów: szeroki domyślnie, wąski od progu telefonu. */
+    + '.vilda-pd-tylko-was{display:none;}'
+    + '.vilda-pd-leg{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;'
+    + 'gap:5px 14px;font-size:.8rem;color:' + C.opis + ';}'
+    + '.vilda-pd-leg li{display:flex;align-items:center;gap:6px;}'
+    + '.vilda-pd-leg-k{width:16px;height:0;border-top:2px dashed ' + C.pasmoTekst + ';display:inline-block;flex:none;}'
+    + '.vilda-pd-leg-p{width:13px;height:13px;border-radius:3px;display:inline-block;flex:none;'
+    + 'border:1px solid rgba(15,43,51,.12);}'
+    + '.vilda-pd-leg-m{font-weight:700;color:' + C.uwaga + ';}'
     + '.vilda-pd-akcje-stan{font-size:13px;margin:8px 0 0;min-height:1.2em;color:' + C.opis + ';}'
     + '.vilda-pd-akcje-stan[data-rodzaj="ok"]{color:' + C.dobrze + ';}'
     + '.vilda-pd-akcje-stan[data-rodzaj="blad"]{color:' + C.alarm + ';font-weight:600;}'
@@ -585,8 +965,26 @@
     + '.vilda-pd-mile{border-left:3px solid ' + C.opis + ';padding:4px 0 4px 10px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;}'
     + '.vilda-pd-mile-w{font-size:.74rem;font-weight:700;color:' + C.opis + ';white-space:nowrap;min-width:96px;}'
     + '.vilda-pd-mile-t{font-size:.84rem;color:' + C.ink + ';line-height:1.45;flex:1 1 180px;min-width:0;}'
-    + '.vilda-pd-foot{margin:10px 0 0;font-size:.72rem;color:' + C.opis + ';line-height:1.45;}'
-    + '@media (max-width:480px){.vilda-pd-tiles{grid-template-columns:1fr 1fr;}}';
+    /* Ostrzeżenia zostają WIDOCZNE i wyróżnione — nie wchodzą pod rozwijanie. */
+    + '.vilda-pd-ostrz{margin:12px 0 0;font-size:.78rem;color:' + C.ink + ';line-height:1.5;'
+    + 'padding:9px 11px;background:#fdf5e8;border-left:3px solid ' + C.uwaga + ';border-radius:8px;}'
+    + '.vilda-pd-det{margin:12px 0 0;border:1px solid ' + C.linia + ';border-radius:12px;background:#fff;overflow:hidden;}'
+    + '.vilda-pd-det summary{cursor:pointer;padding:10px 13px;font-weight:700;font-size:.85rem;'
+    + 'color:' + C.teal + ';list-style:none;display:flex;align-items:center;gap:8px;}'
+    + '.vilda-pd-det summary::-webkit-details-marker{display:none;}'
+    + '.vilda-pd-det summary::before{content:"\\203A";font-size:1.2em;line-height:1;display:inline-block;transition:transform .18s;}'
+    + '.vilda-pd-det[open] summary::before{transform:rotate(90deg);}'
+    + '.vilda-pd-det-tresc{padding:0 13px 13px;font-size:.84rem;color:' + C.ink + ';line-height:1.55;}'
+    + '.vilda-pd-det-tresc h4{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;'
+    + 'color:' + C.teal + ';margin:14px 0 4px;}'
+    + '.vilda-pd-det-tresc ul{margin:4px 0;padding-left:20px;}'
+    + '.vilda-pd-det-tresc li{margin:5px 0;}'
+    + '.vilda-pd-det-tresc p{margin:4px 0;}'
+    + '@media (max-width:560px){'
+    + '.vilda-pd-tiles{grid-template-columns:1fr 1fr;}'
+    + '.vilda-pd-tylko-szer{display:none;}'
+    + '.vilda-pd-tylko-was{display:block;}'
+    + '}';
 
   /* Jednorazowe wstrzyknięcie stylów — tak jak robi to Karta dla własnych ekranów. */
   function wstrzyknijCss(doc) {
@@ -679,9 +1077,24 @@
     buildPustyHtml: buildPustyHtml,
     wykresMasy: wykresMasy,
     wykresBmi: wykresBmi,
-    /* Geometria viewBox — moduł wydruku musi znać proporcje, żeby dobrać ramkę w PDF
-       bez zgadywania i bez własnej kopii wymiarów. */
-    GEOMETRIA: { szer: G.szer, wys: G.wys, wysBmi: G.wysBmi },
+    legendaMasy: legendaMasy,
+    legendaBmi: legendaBmi,
+    legendaHtml: legendaHtml,
+    notaPasma: notaPasma,
+    /* WYMIARY viewBox DLA KONKRETNEGO MODELU.
+       Wysokość wykresu zależy od liczby punktów (dwa pomiary nie mają prawa zająć pół kartki),
+       więc moduł wydruku nie może jej wziąć ze stałej — musi zapytać o ten model. Stała
+       `GEOMETRIA` zostaje dla zgodności i niesie już tylko szerokość, która jest niezmienna. */
+    wymiary: function (model) {
+      var G = GEO.szeroki;
+      return { szer: G.szer, wysMasy: wysokoscMasy(model || {}, G), wysBmi: wysokoscBmi(model || {}, G) };
+    },
+    GEOMETRIA: { szer: GEO.szeroki.szer },
+    /* Wystawione do testów: to są reguły, które mają własne strażniki. */
+    osNice: osNice,
+    rozsun: rozsun,
+    odcienStrefy: odcienStrefy,
+    WERDYKT: WERDYKT,
   };
 
   try { Object.freeze(API); } catch (e) { /* zamrożenie jest miłe, nie konieczne */ }

@@ -34,6 +34,16 @@
  *   przekroczenie     — PIERWSZY pomiar, w którym ubytek sięgnął pasma. Bez interpolacji między
  *                       pomiarami: data między wizytami byłaby zmyślona.
  *   nadir             — najmniejsza masa od punktu odniesienia wzwyż.
+ *   zmianaBmi         — różnica BMI wobec BMI w punkcie odniesienia (`punktOdniesienia.bmi`).
+ *                       `null`, gdy wyjściowego BMI nie da się ustalić: wpis „Włączenie” niesie
+ *                       masę, ale nie musi nieść wzrostu, a bez wzrostu nie ma BMI. Wtedy
+ *                       bierzemy je z pierwszego pomiaru od odniesienia, a gdy i tam go nie ma —
+ *                       delty nie ma i widok ma to powiedzieć, nie podstawiać.
+ *   doNastepnegoPasma — ile kilogramów dzieli dzisiejszą masę od najniższego NIEOSIĄGNIĘTEGO
+ *                       pasma. `null`, gdy wszystkie pasma już zaliczone — to poprawny wynik.
+ *   wskazniki         — klucz werdyktu dla kafelków (`dobrze/neutralnie/uwaga/alarm`), liczony
+ *                       z progów w pliku danych. Ten sam słownik, którym mówi panel „Porównanie
+ *                       z poprzednim pomiarem”. Widok dobiera wyłącznie odcień, nigdy sens.
  *   utrzymane         — jaka część ubytku z nadiru jest utrzymana dzisiaj (surowa frakcja);
  *                       w piśmiennictwie ta metryka nazywa się %MWL i liczy się od nadiru.
  *                       Próg „istotnego odzysku” (0,75) jest LINIĄ NA WYKRESIE z pliku danych,
@@ -511,7 +521,11 @@
     var wynik = {
       wersja: WERSJA,
       dostepne: brama,
-      zestaw: zestaw ? { id: zestaw.id, nazwa: zestaw.nazwa, progi: zestaw.progi.slice(), zrodlo: zestaw.zrodlo, uwaga: zestaw.uwaga || '' } : null,
+      zestaw: zestaw ? { id: zestaw.id, nazwa: zestaw.nazwa, progi: zestaw.progi.slice(),
+        zrodlo: zestaw.zrodlo, uwaga: zestaw.uwaga || '',
+        /* Opis szczebli jedzie razem z drabinką — widok nie ma go skąd wziąć inaczej,
+           a doklejanie mu dostępu do modułu danych rozmyłoby granicę warstw. */
+        opisSzczebli: Array.isArray(zestaw.opisSzczebli) ? zestaw.opisSzczebli.slice() : [] } : null,
       osCzasu: null,
       czasZWieku: false,
       punktOdniesienia: null,
@@ -519,6 +533,10 @@
       przekroczenia: [],
       nadir: null,
       odzysk: null,
+      /* Kształt wyniku jest STAŁY także wtedy, gdy brama odetnie liczenie — wołający nie
+         ma sprawdzać, czy pole w ogóle istnieje, tylko czy jest `null`. */
+      doNastepnegoPasma: null,
+      wskazniki: null,
       leczenie: null,
       klasy: [],
       strefyBmi: [],
@@ -637,6 +655,10 @@
         zmianaMasyKg: p.masa - masaOdn,
         zmianaMasyPct: zmiana,
         ubytekPct: zmiana < 0 ? -zmiana : 0,
+        /* Delta BMI dopisywana NIŻEJ, gdy znane jest wyjściowe BMI — a to bywa niemożliwe
+           do ustalenia z samego punktu odniesienia (patrz `bmiOdniesienia`). */
+        zmianaBmi: null,
+        zmianaBmiPct: null,
         klasa: klasaZ(bmi),
       });
     }
@@ -798,6 +820,92 @@
         }
       }
     }
+
+    /* BMI W PUNKCIE ODNIESIENIA — i dlaczego to nie jest jedna linijka (P-WIZUAL 2026-09-20).
+     *
+     * Wpis „Włączenie leczenia” niesie MASĘ, ale nie musi nieść WZROSTU: w rekordzie jest
+     * zdarzeniem terapii, nie pomiarem antropometrycznym. Dlatego `punktOdniesienia.wzrost`
+     * bywa `null` dokładnie u tych pacjentów, u których odniesieniem jest włączenie leku —
+     * czyli w przypadku typowym. Wyjściowe BMI bierzemy wtedy z PIERWSZEGO POMIARU od punktu
+     * odniesienia, bo dopiero pomiar ma wzrost.
+     *
+     * Gdy i on go nie ma, wyjściowego BMI NIE MA i wszystkie delty zostają `null`. Widok ma
+     * wtedy powiedzieć, że ich nie ma — podstawienie czegokolwiek dałoby liczbę, której nikt
+     * nie zmierzył, a ta trafiłaby na kartkę do dokumentacji. */
+    var bmiOdn = bmiZ(odniesienie.masa, odniesienie.wzrost);
+    if (bmiOdn == null) {
+      for (var q = 0; q < poOdniesieniu.length; q++) {
+        if (typeof poOdniesieniu[q].bmi === 'number' && isFinite(poOdniesieniu[q].bmi)) {
+          bmiOdn = poOdniesieniu[q].bmi;
+          break;
+        }
+      }
+    }
+    wynik.punktOdniesienia.bmi = bmiOdn;
+    if (bmiOdn != null && bmiOdn > 0) {
+      for (var z = 0; z < wynik.seria.length; z++) {
+        var sb = wynik.seria[z];
+        if (typeof sb.bmi !== 'number' || !isFinite(sb.bmi)) continue;
+        sb.zmianaBmi = sb.bmi - bmiOdn;
+        sb.zmianaBmiPct = (sb.bmi - bmiOdn) / bmiOdn * 100;
+      }
+    }
+
+    /* ILE BRAKUJE DO NAJBLIŻSZEGO NIEOSIĄGNIĘTEGO PASMA (właściciel 2026-09-20: „to jest
+     * ważna informacja dla pacjenta”).
+     *
+     * Liczy SILNIK, nie widok — to liczba kliniczna, nie ozdoba wykresu (AGENTS.md §5).
+     * Bierzemy najniższy próg, którego pacjent jeszcze nie sięgnął, i odległość dzisiejszej
+     * masy od masy tego progu. Gdy wszystkie pasma są osiągnięte, pole zostaje `null`
+     * i widok nie ma czego pokazać — to poprawny wynik, nie brak danych. */
+    if (zestaw && ostatni) {
+      var kolejne = null;
+      for (var g = 0; g < wynik.przekroczenia.length; g++) {
+        var px = wynik.przekroczenia[g];
+        if (px.osiagniety) continue;
+        if (kolejne == null || px.prog < kolejne.prog) kolejne = px;
+      }
+      if (kolejne) {
+        var masaProgu = masaOdn * (1 - kolejne.prog / 100);
+        wynik.doNastepnegoPasma = {
+          prog: kolejne.prog,
+          masaProgu: masaProgu,
+          brakujeKg: ostatni.masa - masaProgu,
+        };
+      }
+    }
+
+    /* WSKAŹNIKI KAFELKÓW — klucz werdyktu dla każdej wartości, którą widok pokazuje jako kafelek.
+     *
+     * Widok NIE MA PRAWA decydować, że ubytek 5 % to „dobrze”, a przyrost to „uwaga”: to ocena
+     * kliniczna i mieszka tutaj, a progi mieszkają w pliku danych (AGENTS.md §3 i §5).
+     * Słownik jest ten sam, którym mówi reszta aplikacji — `vilda_auth_ui.js` maluje
+     * `good/stable/warn/bad` w panelu „Porównanie z poprzednim pomiarem”. Widok dobiera
+     * wyłącznie odcień.
+     *
+     * Kafelki „na początku” i „dzisiaj” świadomie NIE mają werdyktu: to wartości stanu,
+     * a nie zmiany. Werdykt należy do różnicy. */
+    var PW = (D && D.WERDYKT) || { ubytekDobrzePct: 5, przyrostAlarmPct: 5 };
+    function wagaZmianyPct(pct) {
+      if (typeof pct !== 'number' || !isFinite(pct)) return null;
+      if (pct <= -PW.ubytekDobrzePct) return 'dobrze';
+      if (pct < 0) return 'neutralnie';
+      if (pct === 0) return 'neutralnie';
+      return pct > PW.przyrostAlarmPct ? 'alarm' : 'uwaga';
+    }
+    wynik.wskazniki = {
+      progUbytkuPct: PW.ubytekDobrzePct,
+      progPrzyrostuPct: PW.przyrostAlarmPct,
+      zmianaMasy: ostatni ? wagaZmianyPct(ostatni.zmianaMasyPct) : null,
+      /* Ten sam próg na BMI — decyzja prezentacyjna aplikacji, nie próg z piśmiennictwa.
+         Zapisane wprost w `dane.js` i w docs/clinical/ALGORITHMS.md. */
+      bmi: ostatni ? wagaZmianyPct(ostatni.zmianaBmiPct) : null,
+      /* Najniższa masa dostaje „uwagę” dopiero wtedy, gdy dzisiejsza masa wróciła na próg
+         istotnego odzysku albo powyżej — sam nadir nie jest niczym złym. */
+      nadir: (wynik.odzysk && wynik.odzysk.liniaDoPokazania && ostatni
+        && typeof wynik.odzysk.masaGraniczna === 'number'
+        && ostatni.masa >= wynik.odzysk.masaGraniczna) ? 'uwaga' : 'neutralnie',
+    };
 
     wynik.strefyBmi = strefyBmi();
     wynik.kamienie = kamienie(wynik);

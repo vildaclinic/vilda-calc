@@ -115,13 +115,19 @@ describe('P-PDF — dokument powstaje i trzyma format', () => {
     expect(masa, 'geometria zostaje').toContain('viewBox=');
   });
 
-  it('ramka wykresu liczona z proporcji viewBox, nie zgadywana', () => {
+  it('ramka wykresu liczona z proporcji viewBox TEGO modelu, nie ze stałej', () => {
     const { U } = moduly();
+    const m = model();
     const d = dok('pacjent');
     const wezel = d.content.find((x) => x && typeof x.svg === 'string');
     expect(Array.isArray(wezel.fit), 'podana ramka, nie sama szerokość').toBe(true);
     const [szer, wys] = wezel.fit;
-    expect(Math.round(szer * (U.GEOMETRIA.wys / U.GEOMETRIA.szer))).toBe(wys);
+    /* Wysokość wykresu zależy od liczby pomiarów, więc wydruk MUSI pytać o wymiary tego
+       modelu. Wcześniej brał je ze stałej `GEOMETRIA` i przy krótkiej serii ramka byłaby
+       wyższa niż rysunek — pdfmake rozciągnąłby go albo zostawił puste pole. */
+    const G = U.wymiary(m);
+    expect(Math.round(szer * (G.wysMasy / G.szer))).toBe(wys);
+    expect(G.wysMasy, 'wymiary są policzone, nie odziedziczone').toBeGreaterThan(0);
   });
 });
 
@@ -353,5 +359,88 @@ describe('P-PDF — wpięcie w strony i Kartę Pacjenta', () => {
     const karta = zrodlo('vilda_auth_ui.js');
     expect(karta).toContain('_pdU.renderPanel(Ct,_pdM,{pacjent:w');
     expect(karta, 'data wydruku liczona lokalnie, nie po UTC').toContain('getTimezoneOffset');
+  });
+});
+
+/* ───────────────────────────────────────────────────────────────────────────────────────
+   P-WIZUAL — co zniknęło z kartek i co się na nich pojawiło (decyzje właściciela 20.09.2026).
+   ─────────────────────────────────────────────────────────────────────────────────────── */
+describe('P-WIZUAL — treść obu kartek', () => {
+  const tekstem = (d) => JSON.stringify(d);
+
+  it('akapit o pasmach ZNIKA z obu kartek', () => {
+    const m = model();
+    /* Na wydruku właściciela ten akapit bywał NIEPRAWDZIWY wobec obrazka: opisywał drabinkę
+       5/10/15/20/25 %, a przy krótkiej obserwacji na wykresie nie było ani jednego pasma. */
+    expect(m.zestaw.zrodlo.length, 'mamy czym się pomylić').toBeGreaterThan(50);
+    for (const w of ['pacjent', 'kliniczny']) {
+      const t = tekstem(dok(w));
+      expect(t, `${w}: brak pełnego opisu źródła`).not.toContain(m.zestaw.zrodlo.slice(0, 60));
+      expect(t, `${w}: brak pola uwaga`).not.toContain((m.zestaw.uwaga || 'xxxx').slice(0, 40));
+    }
+  });
+
+  it('kartka do dokumentacji zostawia JEDNĄ linijkę, z progami wziętymi z modelu', () => {
+    const m = model();
+    const t = tekstem(dok('kliniczny'));
+    expect(t).toContain('Pasma ' + m.zestaw.progi.join('/') + ' %');
+    expect(t).toContain('podziałka prezentacyjna aplikacji, nie kryterium odstawienia leku');
+    /* Progi z MODELU, nie wpisane na sztywno: drabinka liraglutydu ma dwa szczeble
+       i zdanie „Pasma 5/10/15/20/25 %" byłoby u takiego pacjenta fałszem w kartotece. */
+    const lira = moduly().W.buildDokument(
+      moduly().P.analizuj({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA }),
+      { ...OPCJE, wariant: 'kliniczny' });
+    expect(tekstem(lira)).toContain('Pasma 5/10 %');
+    expect(tekstem(lira)).not.toContain('Pasma 5/10/15/20/25 %');
+  });
+
+  it('kartka dla pacjenta NIE dostaje tej linijki — ona jest dla dokumentacji', () => {
+    expect(tekstem(dok('pacjent'))).not.toContain('podziałka prezentacyjna aplikacji');
+  });
+
+  it('OSTRZEŻENIA zostają na kartce do dokumentacji — to nie jest bibliografia', () => {
+    const m = model();
+    m.ostrzezenia.push('OSTRZEZENIE-TESTOWE');
+    const d = moduly().W.buildDokument(m, { ...OPCJE, wariant: 'kliniczny' });
+    expect(tekstem(d)).toContain('OSTRZEZENIE-TESTOWE');
+  });
+
+  it('BMI jest na OBU kartkach, z deltą zamiast etykiety klasy', () => {
+    for (const w of ['pacjent', 'kliniczny']) {
+      const t = tekstem(dok(w));
+      expect(t, `${w}: kafelek BMI`).toContain('BMI dzisiaj');
+      expect(t, `${w}: delta BMI`).toMatch(/kg\/m²/);
+    }
+  });
+
+  it('każdy kafelek mówi „Masa ciała”, nie samo „Masa”', () => {
+    for (const w of ['pacjent', 'kliniczny']) {
+      const t = tekstem(dok(w));
+      expect(t).toContain('Masa ciała na początku');
+      expect(t).toContain('Masa ciała dzisiaj');
+      expect(t).toContain('Zmiana masy ciała');
+      expect(t, `${w}: żadnej etykiety „Masa na”`).not.toContain('"Masa na');
+    }
+  });
+
+  it('obie kartki mówią, od czego liczone są procenty', () => {
+    for (const w of ['pacjent', 'kliniczny']) {
+      expect(tekstem(dok(w)), w).toContain('nie od poprzedniej wizyty');
+    }
+  });
+
+  it('znacznik ChPL NIE trafia na wykres pacjenta — rata 4 usunęła go z kamieni milowych', () => {
+    /* Bez tego pacjent dostawał pionową kreskę w 16. tygodniu bez słowa wyjaśnienia:
+       reguła decyzji lekarza o leku, narysowana na kartce dla chorego. */
+    const m = moduly().P.analizuj({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA,
+      punktyLeczenia: [{ ...SERIA[0], type: 'start', drug: 'Saxenda', substance: 'liraglutide' }] });
+    expect(m.punktDecyzyjny.jest, 'liraglutyd ma punkt oceny').toBe(true);
+    const W = moduly().W;
+    const svgP = tekstem(W.buildDokument(m, { ...OPCJE, wariant: 'pacjent' }));
+    const svgK = tekstem(W.buildDokument(m, { ...OPCJE, wariant: 'kliniczny' }));
+    const teal = moduly().U.KOLORY.teal;
+    const kreski = (t) => (t.match(new RegExp('stroke=\\\\"' + teal + '\\\\"', 'g')) || []).length;
+    expect(kreski(svgK), 'na kartce do dokumentacji znacznik jest').toBeGreaterThan(0);
+    expect(kreski(svgP), 'na kartce dla pacjenta go nie ma').toBe(0);
   });
 });

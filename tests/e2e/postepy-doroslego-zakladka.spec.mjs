@@ -66,6 +66,11 @@ const POMIARY_DOROSLY = [
   { ageYears: 47.7, ageMonths: 572, height: 167, weight: 88.6, dateISO: '2026-09-10' },
 ];
 
+/* OD P-WIZUAL OBA WARIANTY WYKRESU SIEDZĄ W DOM, a przełącza je CSS — dzięki temu obrót
+   telefonu nie zostawia wykresu w złym wariancie do przeładowania. Selektor po klasie SVG
+   łapie więc dwa elementy; testy pytają o ten WIDOCZNY, bo o niego chodzi. */
+const widoczny = (page, sel) => page.locator(sel).locator('visible=true');
+
 test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatkach', () => {
   test('POSTEPY-1: zakładka nazywa się „Postępy" i pokazuje wykres masy', async ({ page }) => {
     await otworzZKontem(page);
@@ -76,7 +81,8 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
 
     const panel = page.locator('.vilda-pd-host');
     await expect(panel, 'panel postępów jest w karcie').toBeVisible();
-    await expect(panel.locator('svg.vilda-pd-svg-masa'), 'z wykresem masy').toBeVisible();
+    await expect(widoczny(page, '.vilda-pd-host svg.vilda-pd-svg-masa'), 'z wykresem masy')
+      .toHaveCount(1);
     await expect(page.locator('.vilda-patient-tab-content[data-tab="traj"]'))
       .not.toContainText('Siatki centylowe dostępne tylko dla dzieci');
 
@@ -150,8 +156,17 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
     await otworzZKontem(page);
     const pid = await zalozPacjenta(page, { imie: 'Postepy-Mobile', wiekLat: 47, pomiary: POMIARY_DOROSLY });
     await otworzZakladkeTraj(page, pid);
-    await expect(page.locator('.vilda-pd-host svg.vilda-pd-svg-masa')).toBeVisible();
-    await expect(page.locator('.vilda-pd-host svg.vilda-pd-svg-bmi')).toBeVisible();
+    /* Dokładnie JEDEN wariant każdego wykresu jest widoczny — nie zero i nie dwa. */
+    await expect(widoczny(page, '.vilda-pd-host svg.vilda-pd-svg-masa')).toHaveCount(1);
+    await expect(widoczny(page, '.vilda-pd-host svg.vilda-pd-svg-bmi')).toHaveCount(1);
+
+    /* A na telefonie to ma być wariant WĄSKI — inaczej etykiety zjeżdżają do ~7 px
+       i wracamy do zgłoszenia właściciela o nieczytelnych podpisach. */
+    const szerViewBox = await widoczny(page, '.vilda-pd-host svg.vilda-pd-svg-masa')
+      .first().getAttribute('viewBox');
+    expect(Number(szerViewBox.split(' ')[2]), 'wąski viewBox na telefonie').toBeLessThan(720);
+    await expect(widoczny(page, '.vilda-pd-host .vilda-pd-leg'), 'z legendą pod wykresem')
+      .not.toHaveCount(0);
 
     const przewija = await page.evaluate(() =>
       document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
@@ -175,8 +190,9 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
 
     const panel = page.locator('.vilda-pd-host');
     await expect(panel).toBeVisible();
-    await expect(panel.locator('svg.vilda-pd-svg'), 'dwa wykresy: masa i BMI').toHaveCount(2);
-    await expect(panel.locator('svg.vilda-pd-svg-bmi')).toBeVisible();
+    await expect(widoczny(page, '.vilda-pd-host svg.vilda-pd-svg'), 'dwa wykresy: masa i BMI')
+      .toHaveCount(2);
+    await expect(widoczny(page, '.vilda-pd-host svg.vilda-pd-svg-bmi')).toHaveCount(1);
     await expect(panel, 'nagłówek wykresu BMI').toContainText('BMI i klasy masy ciała');
 
     const tekst = (await panel.textContent()) || '';
@@ -205,9 +221,10 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
 
     const panel = page.locator('.vilda-pd-host');
     await expect(panel).toBeVisible();
-    await expect(panel.locator('svg.vilda-pd-svg'), 'tylko wykres masy').toHaveCount(1);
-    await expect(panel.locator('svg.vilda-pd-svg-masa')).toHaveCount(1);
-    await expect(panel.locator('svg.vilda-pd-svg-bmi')).toHaveCount(0);
+    await expect(widoczny(page, '.vilda-pd-host svg.vilda-pd-svg'), 'tylko wykres masy').toHaveCount(1);
+    await expect(widoczny(page, '.vilda-pd-host svg.vilda-pd-svg-masa')).toHaveCount(1);
+    await expect(panel.locator('svg.vilda-pd-svg-bmi'), 'BMI nie ma w ogóle, w żadnym wariancie')
+      .toHaveCount(0);
     await expect(panel).not.toContainText('BMI i klasy masy ciała');
   });
 });
