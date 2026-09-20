@@ -5277,6 +5277,38 @@ Audyt zamknięty w zakresie kodu. Otwarte pozostają dwie pozycje, które wymaga
 - **F12** — `titrationWeeksNominal: 4` dla pediatrycznych grup liraglutydu (`saxenda-6-11`, `saxenda-12-17`) to wartość przeniesiona z dorosłych. Dla dorosłych zweryfikowana na ChPL Triglyva; dla dzieci **nie** — nie osobno, przeciw sekcji pediatrycznej. Grupy te mają `hardStop: true`, więc zaniżony czas zwiększania dawki stawia punkt oceny za wcześnie, czyli odtwarza błąd, który P-KOTWICA usunęła u dorosłych.
 - **F13** — „Pobierz” zapisuje nieszyfrowany plik HTML z nazwiskiem i całą historią pomiarów poza sejfem, a nazwa pliku niesie nazwisko. To wynika wprost z funkcji, ale katalog Pobrane bywa synchronizowany do chmury, a nazwisko widać w liście plików bez otwierania. Do rozważenia nazwa bez nazwiska.
 
+## Przyciski wydruku mówią, co dają (P-POSTEPY-FIX rata D, SW 1.1.18, 2026-09-20)
+
+**Uwaga właściciela 2026-09-20:** „czemu jak klikam pobierz (czy to Dla pacjenta czy Do dokumentacji) to pobiera mi się plik html?”.
+
+**Zmiana kliniczna: żadna. Zmiana zachowania: żadna.** Zmieniają się wyłącznie napisy na dwóch przyciskach i dochodzi jedno zdanie podpowiedzi.
+
+### Co było nie tak
+
+Rata 4 świadomie odrzuciła jsPDF i html2canvas, bo w tym repozytorium obie ładują się leniwie z CDN, a Vilda ma działać bez sieci. „Pobierz” zapisuje więc samodzielny dokument HTML, a PDF powstaje w oknie druku przeglądarki, pod przyciskiem „Drukuj”, przez wybór „Zapisz jako PDF” zamiast drukarki. Decyzja stoi — ale **żaden z przycisków tego nie mówił**. „Pobierz” obiecywał plik i dawał format, którego lekarz się nie spodziewa, a PDF, po który sięga się najczęściej, był schowany pod sąsiednim guzikiem.
+
+To nie był błąd inżynierski, tylko błąd nazewniczy: interfejs nie ujawniał własnego projektu. Dobra decyzja techniczna bez czytelnej etykiety wygląda jak usterka.
+
+### Co się zmieniło
+
+| przed | po |
+|---|---|
+| `⎙ Drukuj` | `⎙ Drukuj lub PDF` |
+| `⬇ Pobierz` | `⬇ Pobierz HTML` |
+
+Pod nagłówkiem „Wydruk” dochodzi jedno zdanie: gdzie szukać PDF-a („w oknie druku — wybierz «Zapisz jako PDF» zamiast drukarki”) i po co komu plik HTML („otwiera się i drukuje bez aplikacji i bez internetu”). Tłumaczy drogę **raz**, zamiast rozdymać oba przyciski.
+
+**Decyzja właściciela co do zakresu:** same etykiety. Rozważane i odrzucone: wgranie jsPDF + svg2pdf.js do repozytorium, żeby dać jednoklikowy PDF offline (koszt: dwie biblioteki w repo i nowe wpisy w precache), oraz usunięcie pobierania HTML w ogóle. Okno druku daje wektorowy PDF lepszej jakości niż którakolwiek biblioteka, więc kosztem jednego kliknięcia zostaje rozwiązanie bez zależności.
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-wydruk.test.mjs` — **25 testów** (było 23): etykieta druku wymienia PDF, etykieta pobierania wymienia HTML i **nie** obiecuje PDF; podpowiedź niesie drogę do PDF-a i naturę pliku HTML.
+- Przypadek stoi w pliku testów **wydruku**, nie widoku: `akcjeHtml()` rysuje przyciski tylko gdy moduł wydruku jest w oknie, a łańcuch zależności ładuje go dopiero tam. Pierwsza wersja testu wylądowała w złym pliku i natychmiast to pokazała.
+- **Pięć kontroli negatywnych**, każda zaczerwienia testy: powrót obu dwuznacznych etykiet, zniknięcie całej podpowiedzi, podpowiedź bez drogi do PDF-a, podpowiedź milcząca o offline.
+- Pierwsze podejście do kontroli podpowiedzi przeszło na zielono — mutacja podmieniała tylko początek zdania, zostawiając nietknięte frazy, których test pilnuje. Wina mutacji, nie testu; przecelowana i zaczerwieniła.
+
+SW 1.1.17 → **1.1.18**; `vilda_postepy_doroslego_ui.js?v=4→5`.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
