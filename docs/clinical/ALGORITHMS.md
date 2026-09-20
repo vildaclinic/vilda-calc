@@ -5573,6 +5573,73 @@ SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`
 Poprawka odniesienia: SW 1.1.22 → **1.1.23**; `vilda_auth_ui.js?v=459→460`,
 `vilda_sds_wzrostu.js?v=3→4`.
 
+## Jednostronicowy raport pacjenta zamiast raportu klasycznego (P-RAPORT-PLAN, SW 1.1.29, 2026-09-20)
+
+**Status:** zmiana prezentacji, nie kliniczna. Raport klasyczny („Raport energetyczny i zalecenia
+podstawowe") był ponumerowaną listą zdań generatora. Zastępuje go jedna strona A4 zbudowana
+z tych samych zdań i tych samych liczb. Makieta zatwierdzona przez właściciela 2026-09-20.
+Generator zaleceń, jego zdania i wszystkie wyniki liczbowe pozostają nietknięte.
+
+**Żelazna zasada modułu `vilda_raport_plan.js`: niczego nie liczy i niczego nie pisze od siebie.**
+
+| Element kartki | Skąd pochodzi |
+| --- | --- |
+| kafle kcal, deficyt, tempo | `dane.energia` (P-RAPORT-DANE) |
+| pierwszy cel, drabinka, cel końcowy | `VildaBmi.drabinkaCelow` (P-SZCZEBLE) |
+| czas dojścia do normy | `dane.czasDoNormy` + `formatujCzasDojscia` z modułu zaleceń |
+| normy, płyny, witamina D | `dane.normy`, `dane.plyny`, `dane.witD` |
+| kolumny „Na talerzu", „Ruch", „Kontrola" | `dane.zdania` — **cytat zdania generatora** (P-RAPORT-ZDANIA) |
+| blok o leczeniu farmakologicznym | `VildaFarmakoterapia.ocen` (P-FARMAKOTERAPIA) |
+| zadeklarowany plan (dieta i ruch) | `VildaBmiJourney.getPdfModel()` |
+
+Czego nie ma w danych, tego nie ma na kartce. Sekcja bez danych znika w całości; **brak zalecenia
+nie zamienia się w zalecenie**.
+
+**Decyzje właściciela wbudowane w widok (2026-09-20).** Tytuł „Twój plan redukcji masy ciała";
+bez zdania o przeciętnej masie rówieśnika (działa demotywująco); bez zwrotów „skonsultuj się
+z lekarzem", bo raport generuje lekarz w trakcie wizyty; kolumna „Kontrola" wyłącznie ze zdań
+silnika („zostaw jak jest" — dwie linijki z makiety nie istnieją w aplikacji i nie zostały
+dopisane); leku nie nazywamy.
+
+**Tytuł jest warunkowy.** „Twój plan redukcji masy ciała" pojawia się tylko wtedy, gdy redukcja
+jest w ogóle wskazana (`dane.masa.docelowaKg != null`). W pozostałych przypadkach — przede
+wszystkim przy **niedowadze**, gdzie silnik wyznacza kierunek `przyrost` — tytuł brzmi
+„Twój plan żywieniowy", a sekcja „Twoja droga" nie pojawia się wcale. Pacjent z niedowagą nie
+może dostać kartki zatytułowanej planem redukcji; pilnuje tego osobna kontrola ujemna.
+
+**Dopasowanie do jednej strony A4.** Wszystkie wymiary są wielokrotnością zmiennej `--s`.
+`dopasuj()` najpierw schodzi skokami po 2 % aż treść zmieści się nad stopką (podłoga 0,74 —
+niżej druk przestaje być czytelny), a potem rozdaje pozostałe wolne miejsce na odstępy między
+blokami (`--luz`, maksymalnie 22 px na porcję), żeby kartka była wypełniona, a nie kończyła się
+w dwóch trzecich. Zmierzone przy komplecie opcji dodatkowych: skala pozostaje 1,0, a zapas nad
+stopką wynosi 39–175 px zależnie od pacjenta.
+
+**Naprawiony przy okazji błąd danych (rata 2).** `dane.pacjent.wiekMies` niosło pole „miesiące"
+z formularza (0–11), a nie wiek w miesiącach. Konsument — drabinka celów — dostawał dla
+14,5-latki wartość **6** i liczył centyle jak dla niemowlęcia, przez co cel końcowy wychodził
+40,5 kg zamiast 52,1 kg. Pole niesie teraz wiek całkowity w miesiącach (`wiekLat × 12`)
+w obu gałęziach. Błąd nie dotknął żadnego wyjścia tekstowego — pole nie miało do tej pory
+konsumenta poza nowym raportem.
+
+**Szew.** Gałąź klasyczna w `Dt(e)` woła `vildaStronaPlanu(e, chipy, klasaChipow)`, która
+próbuje `VildaRaportPlan.html(e)`, a **przy braku modułu lub danych wraca do dotychczasowego
+układu** — lekarz nigdy nie dostaje pustej strony. Skalowanie odpala się w `di()` obok
+istniejącego `Ft(u)`, tylko dla trybu klasycznego.
+
+**Testy.** `tests/e2e/raport-plan.spec.mjs` (8 testów). Asercje nie mają wpisanych liczb:
+składają oczekiwany napis z `dane` i szukają go w wyrenderowanym HTML. Pokryte: zgodność
+każdej liczby z danymi, cytowanie zdań co do znaku w trzech grupach wieku, pasma wieku na
+kartce (3-latka 180 minut vs nastolatka 60), brak nazwy leku i obecność zastrzeżeń, brak
+sekcji „Twoja droga" bez wskazań do redukcji, znikanie odznaczonych opcji, niedowaga bez planu
+redukcji, mieszczenie się na jednej A4 w czterech scenariuszach.
+
+Cztery mutacje produkcyjnego kodu, każda zapala testy: kolumna z własnej listy zamiast ze zdań
+silnika, blok farmakoterapii przy niespełnionych kryteriach, pierwszy cel liczony do celu
+końcowego zamiast do pierwszego szczebla, opcje dodatkowe wypełniane mimo braku danych.
+
+SW 1.1.28 → **1.1.29**; nowy plik `vilda_raport_plan.js?v=1` na trzech stronach,
+`vilda_diet_recommendations.js?v=33→34`.
+
 ## Zalecenie ruchu dla 2–4 lat: kontekst przy liczbie i ogólny limit ekranu (P-RUCH-2-4, SW 1.1.28, 2026-09-20)
 
 **Status: ZMIANA KLINICZNA (brzmienie zalecenia).** Decyzja właściciela 2026-09-20.
