@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaHistorie } from '../support/karta-czekanie.mjs';
 
 // Rata D z audytu sekcji „Pacjenci" — reszta znalezisk, porządkowa.
 //
@@ -177,6 +178,7 @@ test.describe('P2 + P11 + P12 — Notatki i Historia', () => {
     const { patientId } = await pacjentZNotatkami(page);
     await otworzKarte(page, patientId);
     await zakladka(page, 'timeline').click();
+    await czekajNaHistorie(page);
 
     const historia = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
     const chip = historia.getByRole('button', { name: 'Klirens', exact: true });
@@ -206,6 +208,7 @@ test.describe('P2 + P11 + P12 — Notatki i Historia', () => {
     });
     await otworzKarte(page, patientId);
     await zakladka(page, 'timeline').click();
+    await czekajNaHistorie(page);
 
     const historia = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
     await historia.getByText('Leczenie rhGH').first().click();
@@ -223,6 +226,7 @@ test.describe('P2 + P11 + P12 — Notatki i Historia', () => {
     const { patientId, klirensId } = await pacjentZNotatkami(page);
     await otworzKarte(page, patientId);
     await zakladka(page, 'timeline').click();
+    await czekajNaHistorie(page);
 
     const historia = page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
     await historia.getByText('eGFR').first().click();

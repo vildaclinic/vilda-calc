@@ -4601,6 +4601,136 @@ Pacjent dorosły, 175 cm, 95 → 84 kg → zdarzenie `wyjscie-z-otylosci` (otył
 
 **Ta rata nie zmienia żadnego wyniku widocznego dziś w aplikacji** — nowe pliki nie są ładowane przez żadną stronę. Zmienia natomiast to, co aplikacja **zacznie pokazywać** w ratach 2–4, więc drabinki pasm, definicja punktu odniesienia i parametr korytarza wymagają akceptacji klinicznej właściciela przed ratą 2.
 
+## Bramka na leniwym renderze Historii (P-BRAMKI-2, 2026-09-19)
+
+**Skąd znalezisko.** Zgłoszenie właściciela: `karta-pacjenta-notatki-historia.spec.mjs` — test „filtr niczego nie odsłania, bo nic nie było ukryte" (P9/P10) padł raz w pełnym przebiegu `--project=desktop-chromium` przy 6 workerach z `Expected: 3, Received: 0` i przeszedł przy ponowieniu. W CI (trzy odłamki) był zielony. **Nie jest to usterka produktu** — to brakująca bramka w samym teście, z tej samej rodziny co P-BRAMKI (#370).
+
+### Przyczyna: zakładka odsłania się natychmiast, sekcja renderuje się później
+
+Sekcja „Historia" powstaje **leniwie**: dopiero kliknięcie zakładki woła `renderTimelineSection` (`Xl` w `vilda_auth_ui.js`). Sam render jest **asynchroniczny** — zanim dołoży listę wpisów, czeka na trzy odczyty sejfu (wykres trendu badań, `listPatientTimelineEvents`, `getPatient`). Przełączenie zakładki jest natomiast synchroniczne: kontener `[data-tab="timeline"]` przestaje być ukryty od razu, **jeszcze pusty**.
+
+Test miał bramkę dokładnie na tym kontenerze, a potem czytał DOM gołym `page.evaluate` — a `page.evaluate` nie ponawia się tak, jak asercja Playwrighta. Odczyt wyprzedzał render i `przed` wychodziło pustą tablicą.
+
+### Zmierzone odtworzenie
+
+Wyścig odtworzony deterministycznie: `listPatientTimelineEvents` opóźniony o 1,2 s (tyle, ile daje obciążona maszyna przy 6 workerach), reszta testu bez zmian.
+
+| bramka przed odczytem | wynik `page.evaluate` |
+|---|---|
+| `[data-tab="timeline"]` widoczny (stan sprzed poprawki) | `[]` — czyli zgłoszone „Received: 0" |
+| `.vilda-patient-timeline-list` widoczna (po poprawce) | trzy tytuły, komplet |
+
+### Druga fałszywa bramka w tym samym pliku
+
+Przy okazji znaleziona w `„Usuń ponownie" domyka skasowanie`:
+
+```js
+await page.waitForFunction(
+  (id) => window.VildaVault.listPatientNotesForPatient(id).then((l) => l.length === 0),
+  patientId,
+);   // NIE CZEKA
+```
+
+To ten sam błąd co w #370, tylko bez słowa `async`: predykat oddaje `Promise`, a `Promise` jest zawsze prawdziwy. Zmierzone osobnym eksperymentem (Chromium 1194, timeout 3000 ms):
+
+| predykat | wynik |
+|---|---|
+| `() => Promise.resolve(false).then((v) => v)` | **przeszedł po 56 ms** |
+| `async () => false` | **przeszedł po 4 ms** |
+| `() => false` (synchroniczny) | poprawny timeout po 3006 ms |
+
+Strażnik `tests/unit/straznik-bramek-testowych.test.mjs` łapie dziś tylko wariant ze słowem `async`, więc tego zapisu nie widział.
+
+### Poprawka
+
+- `tests/support/karta-czekanie.mjs` (nowy) — `czekajNaHistorie(page)` czeka na `.vilda-patient-timeline-list`, czyli na element dokładany **po** wszystkich odczytach sejfu.
+- `karta-pacjenta-notatki-historia` — `otworzHistorie` używa tej bramki; test P9/P10 dodatkowo czeka na **trzy tytuły**, zanim po raz pierwszy czyta DOM.
+- `karta-pacjenta-porzadki` — te same trzy wejścia w Historię (P11, H7, P12) dostają tę samą bramkę. Filtry kategorii są dokładane **przed** listą wpisów, a ich obsługa kliknięcia sięga po listę (`bt.childNodes`), której w tym momencie jeszcze nie ma.
+- `tests/support/sejf-czekanie.mjs` — `czekajNaNotatkiPacjenta(page, id, ile)` zastępuje bramkę z `.then(…)`.
+
+**Asercje bez zmian.** Liczba 3 i porównanie zbioru po filtrze z widokiem domyślnym zostają; bramka pilnuje tylko, żeby porównanie dotyczyło wyrenderowanego widoku, a nie wyścigu.
+
+**Walidacja.** `karta-pacjenta-notatki-historia` przy 6 workerach i 6 powtórzeniach: **30/30 zdanych**. `karta-pacjenta-porzadki` w tych samych warunkach: **52/52 zdane**. Pełny `npm test`: polityka repozytorium, lint, składnia, 2740 testów jednostkowych w 163 plikach, regresja PRO (43 + 32 + 44).
+
+**Bez zmian w produkcie** — żaden plik aplikacji nie był ruszany, więc bez podbicia `?v=` i `SW_VERSION`.
+
+**Do odnotowania, nie do naprawy teraz.** Dwie rzeczy zostają dla właściciela:
+
+1. Wzorzec `waitForFunction(… .then(…))` siedzi jeszcze w trzech innych plikach e2e — `karta-pacjenta-zapis` (2 miejsca), `pokwitanie-dane-rekord` (7 miejsc). Każda z tych bramek przepuszcza od razu. Poprawka jest mechaniczna (przeniesienie czekania do `expect.poll` po stronie Node) i warta osobnej raty razem z rozszerzeniem strażnika — tutaj byłaby poszerzeniem zlecenia. **Zamknięte w P-BRAMKI-3 (wpis niżej): wszystkie 9 miejsc poprawionych, strażnik rozszerzony o ten wariant.**
+2. `karta-pacjenta-porzadki` ma flaka niezależnego od tej poprawki: dzienny arkusz przypomnień (`.vilda-reminders-modal-overlay`) potrafi stanąć nad otwartą Kartą Pacjenta i przejąć kliknięcie w zakładkę. Odtworzone przy 6 workerach i 6 powtórzeniach **zarówno na HEAD bez poprawki** (1 flaky, P12), **jak i z poprawką** (P2 i P12) — ten sam komunikat: „subtree intercepts pointer events". Pacjent testowy ma zaległy termin z 2020 r., więc arkusz ma co pokazać. To pytanie o zachowanie produktu (czy arkusz ma przykrywać właśnie otwartą kartę), nie o test.
+
+## Bramki oddające Promise — dziewięć ostatnich miejsc (P-BRAMKI-3, 2026-09-20)
+
+**Skąd znalezisko.** Punkt „do odnotowania, nie do naprawy teraz" z P-BRAMKI-2 (PR #375): wzorzec `waitForFunction(… .then(…))` został jeszcze w dwóch plikach e2e — `karta-pacjenta-zapis` (2 miejsca) i `pokwitanie-dane-rekord` (7 miejsc). **Nie jest to usterka produktu** — żaden plik aplikacji nie był ruszany.
+
+### Przyczyna: ta sama co w #370 i #375, tylko bez słowa `async`
+
+`page.waitForFunction` nie czeka, gdy predykat oddaje `Promise`: `Promise` jest zawsze prawdziwy, więc bramka przepuszcza na pierwszym sprawdzeniu. Łańcuch `.then(…)` oddaje `Promise` dokładnie tak samo jak predykat ze słowem `async`:
+
+```js
+await page.waitForFunction(
+  (id) => window.VildaVault.getPatient(id).then((r) => r.snapshots.length > 1),
+  patientId,
+);   // NIE CZEKA
+```
+
+Zmierzone osobnym eksperymentem (Chromium 141.0.7390.37 = build Playwrighta 1194, `page.setContent('<div/>')`, `timeout: 3000` ms):
+
+| predykat | wynik |
+|---|---|
+| `() => Promise.resolve(false).then((v) => v)` | **przeszedł po 58 ms** |
+| `async () => false` | **przeszedł po 3 ms** |
+| `(id) => getPatient(id).then((r) => r.snapshots.length > 1)` (odpowiednik z testu, zawsze `false`) | **przeszedł po 3 ms** |
+| `(id) => getPatient(id).then((r) => Boolean(r.payload.puberty))` (odpowiednik z testu, zawsze `false`) | **przeszedł po 3 ms** |
+| `() => false` (synchroniczny) | poprawny timeout po 3005 ms |
+
+Pomiary zgodne z tabelą z P-BRAMKI-2 (56 ms / 4 ms / 3006 ms).
+
+### Zmierzone odtworzenie na żywym ekranie
+
+Na nieobciążonej maszynie te bramki przechodziły „z łutem szczęścia": zapis do sejfu zdążał wylądować, zanim test zdążył go przeczytać. Wyścig odtworzony deterministycznie — `VildaVault.savePatient` opóźniony o 1,2 s (tyle, ile daje obciążona maszyna przy 6 workerach), reszta testu bez zmian:
+
+| moment odczytu | stan rekordu |
+|---|---|
+| stara bramka wróciła (25–86 ms po kliknięciu „Zapisz zmiany") | `snapshots.length = 1`, `payload.puberty = false` — czyli stan **sprzed** zapisu |
+| nowa bramka wróciła (1,98–2,04 s) | `snapshots.length = 2`, `payload.puberty = true` |
+
+Pełne pliki e2e w tym samym warunku, jeden przebieg każdy:
+
+| wersja plików | wynik |
+|---|---|
+| przed poprawką (`origin/audyt`) | **7 padło, 6 zdało** z 13 |
+| po poprawce | **13 zdało** z 13 |
+
+Padały asercje treści rekordu, a nie same bramki. Sześć razy w `pokwitanie-dane-rekord`, zawsze `Received: null` z odczytu `payload.puberty` — przy oczekiwaniach `{"menarcheAgeYears": 12.25, "onsetAgeYears": 9.8}`, `{"heightAtMenarcheCm": 147.3, "menarcheAgeYears": 10.5}`, `{"boneAgeAtMenarcheYears": 12.5, "menarcheAgeYears": 10.5}`, `{"gnrhaStartAgeYears": 7.5, "gnrhaStatus": "w-trakcie"}`, `{"menarcheAgeYears": 13}` i `{"onsetAgeYears": 9.8}`. Raz w `karta-pacjenta-zapis`: `Expected: "Testowa-Fikcyjna" / Received: "Testowy"` (P13b — test czytał rekord, zanim weszła do niego zmiana z formularza).
+
+Bramek było dziewięć, a padło siedem testów: pozostałe dwa przeszły mimo stanu sprzed zapisu, bo ich asercje na taki stan nie reagują — P13a porównuje się z odczytem sprzed zapisu, a „kontrola negatywna: pusta sekcja" i tak oczekuje `null`. To właśnie dlatego dziewięć pustych bramek dało się przeoczyć.
+
+### Poprawka
+
+- `tests/support/sejf-czekanie.mjs` — dwa nowe pomocniki obok `czekajNaPacjentow`, `czekajNaZnikniecieRekordu` i `czekajNaNotatkiPacjenta`:
+  - `czekajNaWersjeRekordu(page, id, ile)` — rekord ma co najmniej `ile` wersji;
+  - `czekajNaSekcjePayloadu(page, id, klucz)` — najnowsza wersja rekordu ma niepustą sekcję (tu: `puberty`).
+
+  Oba czekają przez `expect.poll` po stronie Node, gdzie `await` działa. Próg „co najmniej" jest celowy: tyle znaczył pierwotny predykat (`> 1` to `>= 2`), więc bramka pilnuje momentu odczytu, a nie zaostrza asercji.
+- `karta-pacjenta-zapis` — 2 bramki (P13a i P13b) na `czekajNaWersjeRekordu`.
+- `pokwitanie-dane-rekord` — 7 bramek: 6 na `czekajNaSekcjePayloadu(…, 'puberty')`, 1 na `czekajNaWersjeRekordu`.
+
+**Asercje bez zmian.** Żadna liczba, żadne oczekiwanie i żaden przypadek nie zostały zdjęte ani osłabione; doszły wyłącznie bramki przed odczytem rekordu.
+
+### Strażnik
+
+`tests/unit/straznik-bramek-testowych.test.mjs` łapał dotąd tylko wariant ze słowem `async`, i to wiersz po wierszu — a wywołanie `waitForFunction` bywa łamane na kilka wierszy. Teraz skan idzie po **całym pliku naraz**, z komentarzami wygaszonymi spacjami (znak po znaku, żeby `\n` zostały na miejscu i zgłaszane numery wierszy wskazywały prawdziwe miejsce; `bezKomentarzy` z `tests/support/silnik-bmi.mjs` zwija komentarz blokowy do jednej spacji, więc do tego nie wystarcza).
+
+Drugi wzorzec dopuszcza między `waitForFunction(` a `.then(` wyłącznie **zbalansowane** nawiasy (do dwóch poziomów), więc pierwszy nawias zamykający bez pary kończy dopasowanie. Dzięki temu skan nie przeskakuje z poprawnej bramki do stojącego niżej w pliku `page.evaluate(… .then(…))` — a `evaluate` **poprawnie czeka** na `Promise` i taki zapis jest w porządku (np. `karta-pacjenta-porzadki` ok. linii 130, `karta-pacjenta-zapis` ok. linii 162).
+
+Sprawdzone na plikach sprzed poprawki: nowy wzorzec wskazał **dokładnie te 9 miejsc** (`karta-pacjenta-zapis:98,143`; `pokwitanie-dane-rekord:75,104,131,160,177,189,230`) i ani jednego więcej — w szczególności nie tknął `evaluate(… .then(…))`. Kontrole negatywne w samym strażniku: zapis jednowierszowy i złamany na kilka wierszy muszą być łapane, a bramka synchroniczna, bramka z zagnieżdżonymi nawiasami i `evaluate` pod bramką — nie. Próbki składane z kawałków, bo strażnik skanuje także sam siebie.
+
+**Walidacja.** `CI=1 PLAYWRIGHT_WORKERS=6 --repeat-each=6` na obu plikach: **78/78 zdanych**, zero flaków (2,8 min). Pełny `npm test`: polityka repozytorium, lint, składnia, **2742 testy jednostkowe w 163 plikach**, regresja PRO (43 + 32 + 44). Przeglądarka: Chromium z `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` (build 1194) — `npx playwright install chromium` nie miał dostępu do sieci w tym środowisku, a konfiguracja przewiduje tę zmienną.
+
+**Bez zmian w produkcie** — żaden plik aplikacji nie był ruszany, więc bez podbicia `?v=` i `SW_VERSION`.
+
+**Zamknięcie tematu.** Po tej racie wzorzec `waitForFunction` oddający `Promise` nie występuje już w `tests/` w żadnej z dwóch postaci, a strażnik pilnuje obu. Otwarty zostaje drugi punkt z P-BRAMKI-2, niezwiązany z bramkami: dzienny arkusz przypomnień potrafi przykryć otwartą Kartę Pacjenta — to pytanie o zachowanie produktu, nie o test.
 ## Okno oceny odpowiedzi liczone od kotwicy ChPL (P-KOTWICA, SW 1.1.11, 2026-09-20)
 
 **Zmiana kliniczna. Tak — zmienia się MOMENT, w którym aplikacja orzeka o odstawieniu leku. Akceptacja właściciela: 2026-09-20.**

@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaSekcjePayloadu, czekajNaWersjeRekordu } from '../support/sejf-czekanie.mjs';
 
 // GROWTH-PUB-REC — wiek startu pokwitania i wiek menarche jako dane rekordu pacjenta.
 //
@@ -72,10 +73,7 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
     await page.getByPlaceholder('lata, np. 11,5').fill('9,8');
     await page.getByPlaceholder('lata, np. 12,5').fill('12,25');
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
-      patientId,
-    );
+    await czekajNaSekcjePayloadu(page, patientId, 'puberty');
 
     expect(await sekcjaRekordu(page, patientId), 'liczby w rekordzie, nie tylko na ekranie')
       .toEqual({ onsetAgeYears: 9.8, menarcheAgeYears: 12.25 });
@@ -101,10 +99,7 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
     await page.getByPlaceholder('lata, np. 12,5').fill('10,5');
     await page.getByPlaceholder('cm, np. 152,5').fill('147,3');
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
-      patientId,
-    );
+    await czekajNaSekcjePayloadu(page, patientId, 'puberty');
     expect(await sekcjaRekordu(page, patientId)).toEqual({ menarcheAgeYears: 10.5, heightAtMenarcheCm: 147.3 });
 
     await otworzEdycje(page, patientId);
@@ -128,10 +123,7 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
 
     await page.getByPlaceholder('lata, np. 13,0').fill('12,5');
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
-      patientId,
-    );
+    await czekajNaSekcjePayloadu(page, patientId, 'puberty');
     expect(await sekcjaRekordu(page, patientId)).toEqual({ menarcheAgeYears: 10.5, boneAgeAtMenarcheYears: 12.5 });
 
     await otworzEdycje(page, patientId);
@@ -157,10 +149,7 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
 
     await page.getByPlaceholder('lata, np. 11,0').fill('');
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
-      patientId,
-    );
+    await czekajNaSekcjePayloadu(page, patientId, 'puberty');
     expect(await sekcjaRekordu(page, patientId)).toEqual({ gnrhaStatus: 'w-trakcie', gnrhaStartAgeYears: 7.5 });
 
     await otworzEdycje(page, patientId);
@@ -174,10 +163,7 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
     await otworzEdycje(page, patientId);
     await page.getByPlaceholder('lata, np. 12,5').fill('13');
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
-      patientId,
-    );
+    await czekajNaSekcjePayloadu(page, patientId, 'puberty');
     expect(await sekcjaRekordu(page, patientId)).toEqual({ menarcheAgeYears: 13 });
   });
 
@@ -186,10 +172,7 @@ test.describe('Dwie liczby wchodzą do rekordu i z niego wracają', () => {
     const patientId = await zalozPacjentke(page);
     await otworzEdycje(page, patientId);
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => r.snapshots.length > 1),
-      patientId,
-    );
+    await czekajNaWersjeRekordu(page, patientId, 2);
     expect(await sekcjaRekordu(page, patientId)).toBeNull();
   });
 });
@@ -227,10 +210,7 @@ test.describe('Rekord przeżywa zapis z kalkulatora', () => {
     await otworzEdycje(page, patientId);
     await page.getByPlaceholder('lata, np. 11,5').fill('9,8');
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => Boolean(r.snapshots[0].payload.puberty)),
-      patientId,
-    );
+    await czekajNaSekcjePayloadu(page, patientId, 'puberty');
 
     // Kalkulator buduje snapshot wyłącznie z kolektora — bez przeniesienia sekcja
     // zniknęłaby z najnowszej wersji rekordu przy pierwszym zapisie.

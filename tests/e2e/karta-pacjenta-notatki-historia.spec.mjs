@@ -1,4 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaNotatkiPacjenta } from '../support/sejf-czekanie.mjs';
+import { czekajNaHistorie } from '../support/karta-czekanie.mjs';
 
 // Rata C z audytu sekcji „Pacjenci": znaleziska P5 (Notatki) oraz P9/P10 (Historia).
 //
@@ -100,10 +102,9 @@ test.describe('P5 — zapis wskrzeszający notatkę skasowaną na innym urządze
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
     await page.getByRole('button', { name: 'Usuń ponownie' }).click();
 
-    await page.waitForFunction(
-      (id) => window.VildaVault.listPatientNotesForPatient(id).then((l) => l.length === 0),
-      patientId,
-    );
+    // Bramka po stronie Node: predykat `page.waitForFunction` zwracający `Promise` (także
+    // bez słowa `async`, przez `.then(…)`) przepuszcza od razu — `Promise` jest prawdziwy.
+    await czekajNaNotatkiPacjenta(page, patientId, 0);
     await expect(page.getByRole('button', { name: 'Zostaw notatkę' })).toHaveCount(0);
   });
 
@@ -144,7 +145,9 @@ test.describe('P9/P10 — Historia nie chowa wpisów bez powiązania z pomiarem'
   async function otworzHistorie(page, patientId) {
     await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
     await page.locator('.vilda-patient-tab[data-tab="timeline"]').click();
-    await expect(page.locator('.vilda-patient-tab-content[data-tab="timeline"]')).toBeVisible();
+    // Kontener zakładki odsłania się NATYCHMIAST, jeszcze pusty — sama Historia powstaje
+    // leniwie i asynchronicznie. Czekamy na listę wpisów, nie na kontener.
+    await czekajNaHistorie(page);
   }
 
   const historia = (page) => page.locator('.vilda-patient-tab-content[data-tab="timeline"]');
@@ -179,6 +182,16 @@ test.describe('P9/P10 — Historia nie chowa wpisów bez powiązania z pomiarem'
       });
       return [...znalezione].sort();
     }, SZUKANE);
+
+    // BRAMKA PRZED PIERWSZYM ODCZYTEM. `tytuly()` to goły page.evaluate — nie ponawia się jak
+    // asercja Playwrighta, więc bez czekania potrafi wyprzedzić leniwy render Historii i oddać
+    // pustą tablicę (zmierzone: „Expected: 3, Received: 0" w pełnym przebiegu przy 6 workerach,
+    // odtworzone opóźnieniem listPatientTimelineEvents o 1,2 s). Czekamy na WPISY, nie na samą
+    // sekcję: to one są przedmiotem odczytu. Asercje niżej zostają bez zmian — bramka pilnuje,
+    // żeby porównywały wyrenderowany widok, a nie wyścig.
+    for (const tytul of SZUKANE) {
+      await expect(historia(page).getByText(tytul), `${tytul} wyrenderowany przed odczytem`).toBeVisible();
+    }
     const przed = await tytuly();
 
     await historia(page).getByRole('button', { name: 'Obserwacja', exact: true }).click();
