@@ -277,8 +277,19 @@ test.describe('P-PDF — wydruk postępów jako prawdziwy PDF', () => {
     await kartaZWydrukiem(page, 'Postepy-PDF-Zapis');
     const panel = page.locator('.vilda-pd-host');
 
+    /* CZEKAMY NA POBRANIE PDF-a, NIE NA „JAKIEKOLWIEK POBRANIE".
+       Pierwsza wersja tego testu brała pierwsze zdarzenie `download` i padała w pełnym
+       zestawie e2e (dwa razy pod rząd, więc nie był to przypadek). Odtworzone: aplikacja
+       sama z siebie zapisuje po każdym zapisie pacjenta zaszyfrowaną kopię konta
+       `wagaiwzrost_konto_<imię>.wiw` — to udokumentowana funkcja z ustawień, nie usterka.
+       Przy obciążonej maszynie to pobranie wpadało w okno pomiaru przed PDF-em i test
+       sprawdzał nazwę kopii sejfu zamiast nazwy wydruku. Predykat usuwa wyścig całkowicie,
+       zamiast go wyciszać dłuższym limitem czasu. */
     const [pobranie] = await Promise.all([
-      page.waitForEvent('download', { timeout: 30000 }),
+      page.waitForEvent('download', {
+        timeout: 30000,
+        predicate: (d) => /\.pdf$/i.test(d.suggestedFilename()),
+      }),
       panel.locator('[data-akcja="zapisz"][data-wariant="kliniczny"]').click(),
     ]);
     const nazwa = pobranie.suggestedFilename();
@@ -293,6 +304,32 @@ test.describe('P-PDF — wydruk postępów jako prawdziwy PDF', () => {
 
     await expect(panel.locator('.vilda-pd-akcje-stan'), 'i panel mówi, że się udało')
       .toContainText('Zapisano');
+  });
+
+  test('POSTEPY-9b: obce pobranie w tle nie podszywa się pod wydruk', async ({ page }) => {
+    /* KONTROLA NEGATYWNA do POSTEPY-9, wymuszająca wyścig zamiast czekania na pecha.
+       W pełnym zestawie e2e automatyczna kopia sejfu (.wiw) potrafiła wpaść w okno pomiaru
+       przed PDF-em. Tu wywołujemy dokładnie taką sytuację: tuż przed kliknięciem startuje
+       pobranie o nazwie kopii konta, a test ma je przepuścić i doczekać się wydruku. */
+    await kartaZWydrukiem(page, 'Postepy-PDF-Wyscig');
+    const panel = page.locator('.vilda-pd-host');
+
+    const [pobranie] = await Promise.all([
+      page.waitForEvent('download', {
+        timeout: 30000,
+        predicate: (d) => /\.pdf$/i.test(d.suggestedFilename()),
+      }),
+      page.evaluate(() => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob(['x'], { type: 'application/octet-stream' }));
+        a.download = 'wagaiwzrost_konto_e2e.wiw';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }).then(() => panel.locator('[data-akcja="zapisz"][data-wariant="pacjent"]').click()),
+    ]);
+    expect(pobranie.suggestedFilename(), 'doczekaliśmy się PDF-a, nie kopii sejfu')
+      .toMatch(/^postepy_pacjent_.*\.pdf$/);
   });
 
   test('POSTEPY-11: gdy biblioteka nie wstanie, panel MÓWI dlaczego — cisza była sednem usterki', async ({ page }) => {
