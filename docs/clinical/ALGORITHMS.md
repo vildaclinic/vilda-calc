@@ -4871,6 +4871,74 @@ Rekord pacjenta nadal **nie zapisuje rzeczywistej daty osiągnięcia dawki podtr
 
 `tests/unit/postepy-doroslego-silnik.test.mjs` — **31 testów** (było 27) na rzeczywistych funkcjach produkcyjnych. **Cztery kontrole negatywne, każda zaczerwienia test:** próg z powrotem na 0,80; usunięte pasmo 25 %; linia rysowana zawsze; stan leczenia zgadujący „odstawione" przy braku punktów terapii.
 
+## Zakładka postępów dla dorosłego (P-POSTEPY rata 2, SW 1.1.12, 2026-09-20)
+
+**Decyzja właściciela.** „Koduj." — rata 2 planu przedstawionego przy racie 1: zakładka i wykres masy. Widoczność: **każdy dorosły z dwoma pomiarami**, także nieleczony farmakologicznie (decyzja z 2026-09-19).
+
+**Co się zmienia dla lekarza.** Dorosły w Karcie Pacjenta miał dotąd w zakładce „Siatki centylowe" jedno zdanie: „Siatki centylowe dostępne tylko dla dzieci i młodzieży (< 18 lat)". Teraz zakładka nazywa się dla niego **„Postępy"** i pokazuje wykres masy ciała z pasmami %TBWL, punktem oceny wg ChPL, okresem zwiększania dawki i kamieniami zdarzeń.
+
+### Warstwy
+
+| plik | rola |
+|---|---|
+| `vilda_postepy_doroslego_dane.js` | pasma i próg odzysku — dane (rata 1) |
+| `vilda_postepy_doroslego.js` | silnik + **nowa reguła `scalSerie`** (rata 1 + 2) |
+| `vilda_postepy_doroslego_ui.js` | **nowy** — widok SVG, czysty, bez DOM-owych zapytań |
+| `vilda_auth_ui.js` | wyłącznie montaż: `_pdU.renderPanel(Ct, _pdM)` |
+
+### Skąd bierze się seria pomiarowa — i dlaczego z dwóch miejsc
+
+**Oś czasu pacjenta nie zna punktów leczenia otyłości.** `_extractSnapshotMeasurements` w sejfie czyta pomiary karty zaawansowanej, karty podstawowej i **punkty terapii GH**; `obesityTherapyPoints` na tej liście nie ma. Dla dorosłego leczonego z powodu otyłości najlepsze dane, jakie aplikacja ma o jego masie — z datą kliniczną — żyją wyłącznie w `payload.obesityTherapyPoints`.
+
+Do tego zakładka „traj" budowała serię z filtrem `height != null` i mapowała ją **bez daty**. Wizyta, na której pacjent się zważył, a nie zmierzył, znikała — dla wykresu masy to błąd.
+
+`scalSerie()` scala oba źródła, deduplikując kluczem **tym samym, którego używa sejf** (`wiekMies | wzrost | masa`, dwa miejsca po przecinku). Przy kolizji wygrywa wpis **z datą**. Wzrost jest opcjonalny: wizyta z samą masą trafia na wykres, po prostu nie policzy się dla niej BMI.
+
+### Pułapka, która nie wywala się głośno: dwie konwencje wieku pod tymi samymi nazwami
+
+| źródło | `ageYears` | `ageMonths` |
+|---|---|---|
+| punkt monitora otyłości (`Ed` w `obesity_therapy_monitor.js`) | pełne lata | **reszta 0–11** |
+| zdarzenie osi czasu (`listPatientTimelineEvents`) | `ageMonths / 12` | **całość** |
+| wiersz `advanced.data.measurements` czytany przez sejf | — | **całość** (`Math.round`) |
+
+Dodanie `ageYears * 12 + ageMonths` jest poprawne dla pierwszej konwencji i **zawyża wiek dwukrotnie** dla pozostałych. Wykres rysuje się mimo to — po prostu z pomiarami wiszącymi przy ok. 94 latach. Rozstrzyga zgodność obu pól: gdy `ageYears * 12` równa się `ageMonths` z dokładnością do miesiąca, `ageMonths` **jest** już całością.
+
+Ta sama pułapka trafiła potem w dane testowe e2e i dała pomiar w wieku 0 miesięcy — złapane dopiero uruchomieniem, nie lekturą.
+
+### Lek znajduje się sam
+
+Zestaw pasm i punkt decyzyjny ChPL zależą od leku, a lek jest zapisany w punktach leczenia. Pierwsza wersja montażu wołała silnik z `lek: null` i **pacjent na liraglutydzie dostawał drabinkę ogólną zamiast swojej oraz żaden punkt oceny**. Reguła trafiła do silnika: bez jawnego argumentu lek bierze się z punktu „Włączenie" (a gdy go nie ma — z pierwszego punktu, który go niesie). Jawny argument nadal wygrywa. Złapane przez e2e, nie przez testy jednostkowe — widok był poprawny, model był ubogi.
+
+### Co widok rysuje i czego nie narysuje
+
+Widok **nie zna żadnego progu ani pasma** — wszystko przychodzi z modelu, i to jest jedyny sposób, w jaki cokolwiek może zniknąć z wykresu:
+
+- pasma z `zestaw.progi`, etykiety na prawym marginesie **poza obszarem rysowania** (w makiecie linia pacjenta przecinała podpisy — pierwsza uwaga właściciela);
+- linia istotnego odzysku **wyłącznie** przy `odzysk.liniaDoPokazania`;
+- punkt oceny ChPL **wyłącznie** przy `punktDecyzyjny.tydzienOdOdniesienia`, a przy kotwicy nominalnej stopka mówi o założeniu wprost;
+- okres zwiększania dawki jako zacieniony pas;
+- kolor niosą **zdarzenia**, nie pasma: zielony — wyjście z otyłości, czerwony — istotny odzysk, bursztynowy — utrata pasma.
+
+Typografia i kolor z aplikacji: Inter, teal `#00838d`, tekst `#0f2b33`, opis `#5a6b72`, linie `#d7e9ec`, pacjent `#b71c1c`. Etykiety osi 15 px w `#41555d` — w makiecie 11 px okazało się nieczytelne. SVG ma `viewBox` i `width:100%`, bez sztywnej szerokości.
+
+### Poprawka w rusztowaniu testowym
+
+`loadBrowserScript` ładował zależności, ale **nie zależności zależności** — wołał `wykonaj(dep)` zamiast rekurencji. Widok dostawał silnik bez pliku danych pasm i bez kryteriów ChPL i rysował wykres bez pasm i bez punktu oceny, **cicho**. Zależności są teraz przechodnie i wykonywane raz na okno; dedup jest konieczny, bo ponowne wykonanie pliku wyzerowałoby stan ustawiony po jego załadowaniu (np. `VildaBmi.ustawDane`).
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-widok.test.mjs` — **24 testy** widoku na modelach z prawdziwego `analizuj`, w tym strażniki granic warstwy, escapowanie i wpięcie w osiem stron oraz w service worker.
+- `tests/unit/postepy-doroslego-silnik.test.mjs` — **46 testów** (było 31): doszły scalanie serii, obie konwencje wieku i dobór leku.
+- `tests/e2e/postepy-doroslego-zakladka.spec.mjs` — **5 testów na prawdziwej stronie**: etykieta zakładki, wykres, dziecko bez zmian, pacjent z pomiarami wyłącznie w monitorze, dorosły z jednym pomiarem, brak poziomego przewijania przy 390 px.
+- **Sześć kontroli negatywnych:** sumowanie lat i miesięcy; brak deduplikacji; odsiewanie wizyt bez wzrostu; lek nieszukający się sam; karta bez montażu (jednostkowo **i** e2e); etykieta zakładki znów obiecująca siatki.
+
+SW 1.1.11 → **1.1.12**; trzy nowe pliki na ośmiu stronach i w precache, `vilda_auth_ui.js?v=456→457`.
+
+### Czego ta rata NIE robi
+
+Wykres BMI ze strefami klas i kamienie milowe to **rata 3**; dwa warianty wydruku — **rata 4**. Punkt decyzyjny liraglutydu nadal stoi na kotwicy nominalnej, bo rekord nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej (otwarte od P-KOTWICA).
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

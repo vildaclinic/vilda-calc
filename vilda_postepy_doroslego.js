@@ -105,6 +105,30 @@
 
   /* ---------- normalizacja wejścia ---------- */
 
+  /* DWIE KONWENCJE POD TYMI SAMYMI NAZWAMI PÓL — pułapka, która nie wywala się głośno.
+   *
+   *   punkt monitora otyłości (`obesity_therapy_monitor.js`, funkcja `Ed`):
+   *       ageYears = pełne lata, ageMonths = RESZTA 0..11  (47 lat 2 mies. → 47 / 2)
+   *   zdarzenie osi czasu pacjenta (`VildaVault.listPatientTimelineEvents`):
+   *       ageMonths = CAŁOŚĆ, ageYears = ageMonths / 12    (566 mies. → 566 / 47,17)
+   *
+   * Dodanie `ageYears * 12 + ageMonths` jest poprawne dla pierwszej konwencji i zawyża wiek
+   * dwukrotnie dla drugiej. Wykres narysowałby się mimo to — po prostu z pomiarami wiszącymi
+   * przy ok. 94 latach. Rozstrzyga zgodność obu pól: gdy `ageYears * 12` równa się `ageMonths`
+   * (z dokładnością do miesiąca), to `ageMonths` JEST już całością.
+   */
+  function wiekWMiesiacach(p) {
+    var suma = liczba(p.ageMonthsTotal);
+    if (suma != null) return suma;
+    var lata = liczba(p.ageYears);
+    var mies = liczba(p.ageMonths);
+    if (lata == null && mies == null) return null;
+    if (mies == null) return lata * 12;
+    if (lata == null) return mies;
+    if (Math.abs(lata * 12 - mies) < 1) return mies;
+    return lata * 12 + mies;
+  }
+
   /* Pomiar → { masa, wzrost, dateISO, wiekMies, ms, klucz } albo null. Masa jest wymagana:
      bez niej punkt nie mówi nic o postępie i tylko udawałby daną. */
   function normPomiar(p) {
@@ -113,12 +137,7 @@
     if (masa == null || !(masa > 0)) return null;
     var wzrost = liczba(p.height != null ? p.height : p.wzrost);
     if (wzrost != null && !(wzrost > 0)) wzrost = null;
-    var wiekMies = liczba(p.ageMonthsTotal);
-    if (wiekMies == null) {
-      var lata = liczba(p.ageYears);
-      var mies = liczba(p.ageMonths);
-      if (lata != null || mies != null) wiekMies = (lata || 0) * 12 + (mies || 0);
-    }
+    var wiekMies = wiekWMiesiacach(p);
     var dateISO = String(p.dateISO != null ? p.dateISO : (p.date != null ? p.date : '')).trim();
     return {
       masa: masa,
@@ -166,6 +185,84 @@
     if (ka == null || kb == null) return null;
     if (os === 'daty') return (kb - ka) / MS_TYDZIEN;
     return (kb - ka) * MIES_NA_TYDZ;
+  }
+
+  /* ---------- scalanie serii z dwóch źródeł ---------- */
+
+  /* SKĄD SIĘ BIERZE SERIA POMIAROWA DOROSŁEGO — i dlaczego z dwóch miejsc.
+   *
+   * 1. Oś czasu pacjenta (`VildaVault.listPatientTimelineEvents`) zna pomiary z karty
+   *    zaawansowanej, podstawowej i punkty terapii GH. NIE zna punktów leczenia otyłości:
+   *    `_extractSnapshotMeasurements` czyta `ghTherapyPoints`, a `obesityTherapyPoints` nie.
+   * 2. Punkty leczenia otyłości (`payload.obesityTherapyPoints`) są dla pacjenta leczonego
+   *    NAJLEPSZYM źródłem, jakie aplikacja ma: monitor zapisuje przy nich masę, wzrost ORAZ
+   *    datę kliniczną, której pomiary z osi czasu często nie mają.
+   *
+   * Dlatego scalamy oba. Klucz deduplikacji jest DOKŁADNIE ten, którego używa sejf
+   * (`wiekMies | wzrost | masa`, dwa miejsca po przecinku) — jedna wizyta zapisana obiema
+   * drogami zlicza się raz, a nie dwa. Przy kolizji wygrywa wpis Z DATĄ: ta sama wizyta
+   * opisana dokładniej jest lepsza od tej samej wizyty opisanej zgrubnie.
+   *
+   * Czego tu NIE MA i nie będzie: dorabiania brakujących dat z daty urodzenia i wieku
+   * w miesiącach. Taka data wygląda precyzyjnie, a niesie rozdzielczość miesiąca — czyli
+   * dokładnie tyle, co oś wieku, którą silnik umie narysować i OZNACZYĆ jako przybliżoną.
+   *
+   * Wzrost jest opcjonalny. Wizyta z samą masą trafia na wykres masy (nie policzy się dla
+   * niej BMI) — zakładka „traj" odsiewa dziś takie wizyty i dla wykresu masy jest to błąd.
+   */
+  function kluczPomiaru(p) {
+    var m = liczba(p.wiekMies);
+    var h = p.wzrost;
+    return (m == null ? '_' : Math.round(m)) + '|'
+      + (h != null ? h.toFixed(2) : '_') + '|'
+      + p.masa.toFixed(2);
+  }
+
+  function scalSerie(opts) {
+    var o = opts || {};
+    var zOsi = normSeria(o.pomiary);
+    var zLeczenia = normSeria(o.punktyLeczenia).filter(function (p) {
+      return p.typ === 'start' || p.typ === 'continue' || p.typ === 'end';
+    });
+
+    var mapa = {};
+    var kolejnosc = [];
+    var scalone = 0;
+
+    function dodaj(p, zrodlo) {
+      var k = kluczPomiaru(p);
+      if (!Object.prototype.hasOwnProperty.call(mapa, k)) {
+        var kopia = {};
+        for (var pole in p) kopia[pole] = p[pole];
+        kopia.zrodlo = zrodlo;
+        mapa[k] = kopia;
+        kolejnosc.push(k);
+        return;
+      }
+      /* Ta sama wizyta z drugiego źródła — uzupełniamy, nie dublujemy. */
+      var byl = mapa[k];
+      scalone += 1;
+      if (!byl.dateISO && p.dateISO) { byl.dateISO = p.dateISO; byl.ms = p.ms; }
+      if (byl.wzrost == null && p.wzrost != null) byl.wzrost = p.wzrost;
+      if (byl.wiekMies == null && p.wiekMies != null) byl.wiekMies = p.wiekMies;
+      if (!byl.lek && p.lek) { byl.lek = p.lek; byl.substancja = p.substancja; }
+      if (byl.zrodlo !== zrodlo) byl.zrodlo = 'oba';
+    }
+
+    for (var i = 0; i < zOsi.length; i++) dodaj(zOsi[i], 'os-czasu');
+    for (var j = 0; j < zLeczenia.length; j++) dodaj(zLeczenia[j], 'punkt-leczenia');
+
+    var wynik = [];
+    for (var k2 = 0; k2 < kolejnosc.length; k2++) wynik.push(mapa[kolejnosc[k2]]);
+    return {
+      pomiary: wynik,
+      zrodla: {
+        osCzasu: zOsi.length,
+        punktyLeczenia: zLeczenia.length,
+        scalone: scalone,
+        zDatami: wynik.filter(function (p) { return !!p.dateISO; }).length,
+      },
+    };
   }
 
   /* ---------- reguła widoczności ---------- */
@@ -252,6 +349,26 @@
     if (wiekMies == null && liczba(o.wiekLat) != null) wiekMies = liczba(o.wiekLat) * 12;
     var wiekLat = wiekMies != null ? wiekMies / 12 : null;
 
+    /* LEK SAM SIĘ ZNAJDUJE. Zestaw pasm i punkt decyzyjny ChPL zależą od leku, a lek jest
+       zapisany w punktach leczenia — wołający nie powinien musieć go stamtąd wyłuskiwać
+       i podawać osobno. Do rata 2 Karta Pacjenta wołała z `lek: null` i pacjent na
+       liraglutydzie dostawał drabinkę ogólną zamiast swojej oraz żadnego punktu oceny.
+       Jawny argument nadal wygrywa — wołający może chcieć porównania „co gdyby”. */
+    var lek = o.lek != null && String(o.lek).trim() ? o.lek : null;
+    var substancja = o.substancja != null && String(o.substancja).trim() ? o.substancja : null;
+    if (lek == null && substancja == null) {
+      var zPunktu = null;
+      for (var d0 = 0; d0 < punkty.length; d0++) {
+        if (punkty[d0].typ === 'start' && (punkty[d0].lek || punkty[d0].substancja)) { zPunktu = punkty[d0]; break; }
+      }
+      if (!zPunktu) {
+        for (var d1 = 0; d1 < punkty.length; d1++) {
+          if (punkty[d1].lek || punkty[d1].substancja) { zPunktu = punkty[d1]; break; }
+        }
+      }
+      if (zPunktu) { lek = zPunktu.lek; substancja = zPunktu.substancja; }
+    }
+
     /* Zestaw pasm: jawny argument wygrywa; inaczej dobór wg leku; inaczej zestaw ogólny. */
     var zestaw = null;
     var nieznanyZestaw = null;
@@ -260,7 +377,7 @@
     } else if (D) {
       var nazwany = typeof o.zestaw === 'string' && o.zestaw ? D.zestaw(o.zestaw) : null;
       if (typeof o.zestaw === 'string' && o.zestaw && !nazwany) nieznanyZestaw = String(o.zestaw);
-      zestaw = nazwany || D.zestawDlaLeku(o.lek, o.substancja);
+      zestaw = nazwany || D.zestawDlaLeku(lek, substancja);
     }
 
     var wynik = {
@@ -277,7 +394,7 @@
       leczenie: null,
       klasy: [],
       zdarzenia: [],
-      punktDecyzyjny: punktDecyzyjny(o.lek, o.substancja, wiekLat),
+      punktDecyzyjny: punktDecyzyjny(lek, substancja, wiekLat),
       ostrzezenia: [],
     };
 
@@ -485,6 +602,7 @@
     version: WERSJA,
     KOLEJNOSC_KLAS: KOLEJNOSC_KLAS.slice(),
     dostepne: dostepne,
+    scalSerie: scalSerie,
     analizuj: analizuj,
     punktDecyzyjny: punktDecyzyjny,
   };

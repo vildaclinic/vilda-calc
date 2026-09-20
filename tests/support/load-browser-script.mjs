@@ -22,11 +22,27 @@ const ZALEZNOSCI = {
     'obesity_response_criteria.js',
     'vilda_postepy_doroslego_dane.js',
   ],
+  // Widok sam z siebie nic nie liczy — bez silnika nie ma czego narysowac, wiec jego brak
+  // dalby pusty HTML zamiast bledu, czyli znowu cicha zmiane wyniku zamiast glosnej awarii.
+  'vilda_postepy_doroslego_ui.js': ['vilda_postepy_doroslego.js'],
 };
 
+// Zaleznosci sa PRZECHODNIE i wykonywane RAZ na dane okno.
+//
+// Do 2026-09-20 petla wolala `wykonaj(dep)` zamiast rekurencji, wiec zaleznosc zaleznosci
+// nie ladowala sie wcale: widok postepow dostawal silnik bez pliku danych pasm i bez
+// kryteriow ChPL, i rysowal wykres bez pasm i bez punktu oceny — cicho, bez bledu.
+// Dedup po `wykonane` jest tu konieczny, a nie kosmetyczny: ponowne wykonanie pliku
+// wyzerowaloby stan ustawiony po jego zaladowaniu (np. VildaBmi.ustawDane).
+const wykonane = new WeakMap();
+
 export function loadBrowserScript(relativePath, browserGlobal = {}) {
+  if (!wykonane.has(browserGlobal)) wykonane.set(browserGlobal, new Set());
+  const juz = wykonane.get(browserGlobal);
+  if (juz.has(relativePath)) return browserGlobal;
+  juz.add(relativePath);
   for (const dep of ZALEZNOSCI[relativePath] || []) {
-    wykonaj(dep, browserGlobal);
+    loadBrowserScript(dep, browserGlobal);
   }
   return wykonaj(relativePath, browserGlobal);
 }

@@ -425,3 +425,134 @@ describe('P-POSTEPY — granice warstw (strażnicy zachowaniowe)', () => {
     }
   });
 });
+
+describe('P-POSTEPY rata 2 — seria pomiarowa scalana z dwóch źródeł', () => {
+  // Oś czasu pacjenta NIE zna punktów leczenia otyłości: `_extractSnapshotMeasurements`
+  // w sejfie czyta `ghTherapyPoints`, a `obesityTherapyPoints` pomija. Dla dorosłego
+  // leczonego najlepsze dane o masie — z datą kliniczną — są właśnie w tych punktach.
+  const OS = [
+    { ageMonths: 564, ageYears: 564 / 12, height: 167, weight: 112.4 },
+    { ageMonths: 566, ageYears: 566 / 12, height: 167, weight: 104.1 },
+    { ageMonths: 570, ageYears: 570 / 12, weight: 96.2 },
+  ];
+  const PUNKTY = [
+    { id: 1, type: 'start', ageYears: 47, ageMonths: 0, height: 167, weight: 112.4, dateISO: '2026-01-08', drug: 'Mounjaro', substance: 'tirzepatide' },
+    { id: 2, type: 'continue', ageYears: 47, ageMonths: 2, height: 167, weight: 104.1, dateISO: '2026-03-05' },
+  ];
+
+  it('ta sama wizyta z obu źródeł liczy się RAZ', () => {
+    const s = silnik().scalSerie({ pomiary: OS, punktyLeczenia: PUNKTY });
+    expect(s.pomiary, 'trzy wizyty, nie pięć').toHaveLength(3);
+    expect(s.zrodla.scalone).toBe(2);
+    expect(s.pomiary.filter((p) => p.zrodlo === 'oba')).toHaveLength(2);
+  });
+
+  it('data z punktu leczenia uzupełnia pomiar z osi czasu', () => {
+    // Oś czasu często nie niesie daty; monitor otyłości niesie ją zawsze, gdy lekarz ją wpisał.
+    const s = silnik().scalSerie({ pomiary: OS, punktyLeczenia: PUNKTY });
+    expect(s.pomiary[0].dateISO).toBe('2026-01-08');
+    expect(s.pomiary[1].dateISO).toBe('2026-03-05');
+    expect(s.zrodla.zDatami).toBe(2);
+  });
+
+  it('wizyta z samą masą zostaje w serii — wykres masy nie potrzebuje wzrostu', () => {
+    // Zakładka „traj" odsiewa dziś pomiary bez wzrostu (`height != null`). Dla wykresu
+    // masy to błąd: gubi wizytę, na której pacjent się ważył, a nie mierzył.
+    const s = silnik().scalSerie({ pomiary: OS, punktyLeczenia: [] });
+    expect(s.pomiary).toHaveLength(3);
+    expect(s.pomiary[2].masa).toBe(96.2);
+    expect(s.pomiary[2].wzrost).toBeNull();
+  });
+
+  it('dwie konwencje wieku pod tymi samymi nazwami pól nie sumują się', () => {
+    // NAJWAŻNIEJSZY test tej raty. Punkt monitora: ageYears = pełne lata, ageMonths = reszta.
+    // Zdarzenie osi czasu: ageMonths = CAŁOŚĆ, ageYears = ageMonths/12. Dodanie jednego do
+    // drugiego zawyża wiek dwukrotnie — a wykres rysuje się mimo to, tylko z pomiarami
+    // wiszącymi przy ok. 94 latach. Znalezione pomiarem scalania, nie lekturą.
+    const s = silnik().scalSerie({
+      pomiary: [{ ageMonths: 566, ageYears: 566 / 12, height: 167, weight: 104.1 }],
+      punktyLeczenia: [{ id: 2, type: 'continue', ageYears: 47, ageMonths: 2, height: 167, weight: 104.1, dateISO: '2026-03-05' }],
+    });
+    expect(s.pomiary, 'obie konwencje dają ten sam wiek, więc to jedna wizyta').toHaveLength(1);
+    expect(s.pomiary[0].wiekMies).toBe(566);
+  });
+
+  it.each([
+    ['oś czasu, 566 mies.', { ageMonths: 566, ageYears: 566 / 12, weight: 100 }, 566],
+    ['monitor, 47 lat 2 mies.', { ageYears: 47, ageMonths: 2, weight: 100 }, 566],
+    ['monitor, 47 lat 0 mies.', { ageYears: 47, ageMonths: 0, weight: 100 }, 564],
+    ['tylko wiek całkowity', { ageMonthsTotal: 566, weight: 100 }, 566],
+    ['tylko lata', { ageYears: 47, weight: 100 }, 564],
+    ['tylko miesiące', { ageMonths: 566, weight: 100 }, 566],
+  ])('wiek z „%s" wychodzi poprawnie', (_opis, wejscie, oczekiwane) => {
+    const s = silnik().scalSerie({ pomiary: [wejscie] });
+    expect(s.pomiary[0].wiekMies).toBe(oczekiwane);
+  });
+
+  it('scalona seria przechodzi przez analizuj bez zmiany reguł', () => {
+    const scalona = silnik().scalSerie({ pomiary: OS, punktyLeczenia: PUNKTY });
+    const m = silnik().analizuj({
+      wiekLat: 47, lek: 'Mounjaro',
+      pomiary: scalona.pomiary.map((p) => ({
+        ageMonthsTotal: p.wiekMies, weight: p.masa, height: p.wzrost, dateISO: p.dateISO,
+      })),
+      punktyLeczenia: PUNKTY,
+    });
+    expect(m.dostepne.ok).toBe(true);
+    expect(m.seria).toHaveLength(3);
+    expect(m.punktOdniesienia.zrodlo).toBe('start-leczenia');
+    expect(m.osCzasu, 'jeden pomiar bez daty → cała oś z wieku, i to jest oznaczone').toBe('wiek');
+    expect(m.czasZWieku).toBe(true);
+  });
+});
+
+describe('P-POSTEPY rata 2 — lek znajduje się sam w punktach leczenia', () => {
+  // Zestaw pasm i punkt decyzyjny ChPL zależą od leku, a lek jest w punktach leczenia.
+  // Do raty 2 Karta Pacjenta wołała silnik bez leku i pacjent na liraglutydzie dostawał
+  // drabinkę ogólną zamiast swojej oraz żaden punkt oceny. Złapane dopiero na e2e.
+  const pkt = (drug, substance) => ({
+    id: 'p1', type: 'start', dateISO: '2026-01-08', weight: 112.4, height: 167,
+    ageYears: 47, ageMonths: 0, drug, substance,
+  });
+  const SERIA = [
+    { dateISO: '2026-01-08', weight: 112.4, height: 167 },
+    { dateISO: '2026-05-14', weight: 96.2, height: 167 },
+  ];
+
+  it('bez jawnego leku zestaw i punkt oceny biorą się z punktu „Włączenie"', () => {
+    const m = silnik().analizuj({
+      wiekLat: 47, pomiary: SERIA,
+      punktyLeczenia: [pkt('Saxenda (liraglutyd) – s.c. 1×/dobę', 'liraglutide')],
+    });
+    expect(m.zestaw.id, 'drabinka liraglutydu, nie ogólna').toBe('LIRAGLUTYD');
+    expect(m.punktDecyzyjny.jest).toBe(true);
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+  });
+
+  it('jawny lek nadal wygrywa z tym z punktu', () => {
+    const m = silnik().analizuj({
+      wiekLat: 47, lek: 'Mounjaro', pomiary: SERIA,
+      punktyLeczenia: [pkt('Saxenda', 'liraglutide')],
+    });
+    expect(m.zestaw.id).toBe('OGOLNY');
+    expect(m.punktDecyzyjny.jest, 'ChPL tirzepatydu nie podaje progu').toBe(false);
+  });
+
+  it('bez punktów leczenia zostaje zestaw ogólny i brak punktu oceny', () => {
+    const m = silnik().analizuj({ wiekLat: 47, pomiary: SERIA });
+    expect(m.zestaw.id).toBe('OGOLNY');
+    expect(m.punktDecyzyjny).toBeNull();
+  });
+
+  it('punkt „Włączenie" wygrywa z późniejszym punktem o innym leku', () => {
+    // Zmiana preparatu w trakcie leczenia: odniesieniem jest włączenie, więc i lek stamtąd.
+    const m = silnik().analizuj({
+      wiekLat: 47, pomiary: SERIA,
+      punktyLeczenia: [
+        { id: 'p2', type: 'continue', dateISO: '2026-05-14', weight: 96.2, height: 167, ageYears: 47, ageMonths: 4, drug: 'Mounjaro', substance: 'tirzepatide' },
+        pkt('Saxenda', 'liraglutide'),
+      ],
+    });
+    expect(m.zestaw.id).toBe('LIRAGLUTYD');
+  });
+});
