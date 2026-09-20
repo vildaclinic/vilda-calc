@@ -50,6 +50,22 @@
       uwaga: 'Pasmo 25 % dołożone 2026-09-20: przy tirzepatydzie i przy semaglutydzie 7,2 mg pasmo 20 % '
         + 'przestaje różnicować, bo przekracza je duża część pacjentów. W żadnej z czterech ChPL progu '
         + '25 % nie ma — jest w literaturze rejestracyjnej (STEP UP, SURMOUNT-5).',
+      /* OPIS SZCZEBLI NALEŻY DO DRABINKI, NIE JEST WSPÓLNY (P-WIZUAL 2026-09-20).
+         Wspólny opis tłumaczyłby pacjentowi na liraglutydzie progi 15/20/25 %, których na jego
+         wykresie NIE MA — a to dokładnie ta wada, przez którą stary akapit wyleciał z PDF-ów:
+         tekst opisywał coś, czego na obrazku nie widać. */
+      opisSzczebli: [
+        { mocne: 'Próg 5 % jest ugruntowany.', tresc: 'To kryterium skuteczności przyjmowane przy '
+          + 'rejestracji leków przeciwotyłościowych, a cel 5–10 % stoi w wytycznych leczenia '
+          + 'otyłości u dorosłych.' },
+        { mocne: 'Progi 10–25 % nie mają jednego wspólnego źródła.', tresc: 'Każde badanie fazy 3 '
+          + 'dobierało własne szczeble pod moc leku: SCALE 5/10, STEP 3 5/10/15, SURMOUNT-1 do 20 %, '
+          + 'STEP UP 5/10/15/20/25, SURMOUNT-5 10/15/20/25. Żaden pojedynczy dokument nie zawiera '
+          + 'całej drabinki.' },
+        { mocne: 'Progu 25 % nie ma w żadnej ChPL.', tresc: 'Pochodzi z literatury rejestracyjnej '
+          + '(STEP UP, SURMOUNT-5). Dołożony 20.09.2026, bo przy tirzepatydzie i semaglutydzie '
+          + '7,2 mg próg 20 % przestał różnicować — przekracza go duża część leczonych.' },
+      ],
     },
     LIRAGLUTYD: {
       id: 'LIRAGLUTYD',
@@ -59,6 +75,14 @@
         + 'te same dwa szczeble są współpierwszorzędowymi punktami końcowymi programu SCALE.',
       uwaga: 'ChPL liraglutydu raportuje wyłącznie ≥5 % i >10 % — wyższych kategorii ten dokument nie podaje, '
         + 'a sam lek rzadko do nich prowadzi. Krótsza drabinka nie jest gorszą drabinką.',
+      opisSzczebli: [
+        { mocne: 'Oba progi pochodzą wprost z ChPL liraglutydu.', tresc: 'Punkt 5.1 raportuje '
+          + 'kategorie odpowiedzi ≥5 % i >10 %; te same dwa szczeble były współpierwszorzędowymi '
+          + 'punktami końcowymi programu badań SCALE.' },
+        { mocne: 'Wyższych szczebli tu nie ma i to nie jest brak.', tresc: 'ChPL liraglutydu ich '
+          + 'nie podaje, a sam lek rzadko do nich prowadzi. Krótsza drabinka nie jest gorszą '
+          + 'drabinką — jest drabinką tego leku.' },
+      ],
     },
   };
 
@@ -122,6 +146,71 @@
       + 'nie ma uzgodnionego progu %MWL. To linia na wykresie, nie kryterium kliniczne.',
   };
 
+  /* PROGI WERDYKTU KAFELKÓW — decyzja właściciela 2026-09-20.
+   *
+   * Kafelek zmienia kolor dopiero po przekroczeniu progu; poniżej jest celowo neutralny.
+   * Gdyby każdy ubytek świecił na zielono, kolor przestałby znaczyć „to już jest wynik".
+   *
+   * SKĄD 5 %. To ten sam, jedyny ugruntowany szczebel drabinki, którego używają pasma:
+   * kryterium skuteczności przyjmowane przy rejestracji leków przeciwotyłościowych, cel
+   * 5–10 % w wytycznych postępowania w otyłości u dorosłych.
+   *
+   * DLA BMI TEN PRÓG JEST DECYZJĄ APLIKACJI, NIE CYTATEM ZE ŹRÓDŁA (właściciel, 2026-09-20).
+   * Ugruntowane 5 % dotyczy MASY CIAŁA. Dla BMI przyjmujemy tę samą liczbę, bo to ta sama
+   * wielkość mierzona dwiema miarami, a jeden próg jest czytelniejszy niż dwa — ale nie ma
+   * za tym osobnego piśmiennictwa i nie wolno tego tak przedstawiać. Zmiana = zmiana tego pliku.
+   *
+   * Symetria przyrostu jest celowa: +5 % masy początkowej u pacjenta leczonego z powodu
+   * otyłości to sygnał tej samej wagi, co −5 % w drugą stronę. */
+  var WERDYKT = {
+    ubytekDobrzePct: 5,
+    przyrostAlarmPct: 5,
+    uwaga: 'Dla BMI próg 5 % jest decyzją prezentacyjną aplikacji, nie progiem z piśmiennictwa. '
+      + 'Ugruntowane 5 % dotyczy masy ciała.',
+  };
+
+  /* OPIS PASM DLA CZŁOWIEKA — rozbity na bloki, bo jednym akapitem był nieczytelny
+   * (uwaga właściciela 2026-09-20: „ciężko to się czyta i nie wiadomo o co chodzi").
+   *
+   * TREŚĆ MERYTORYCZNA JEST TA SAMA, co w polach `zrodlo` i `uwaga` zestawów: nie ubył ani
+   * nie przybył żaden próg, żadne źródło i żadne zastrzeżenie. Zmienił się układ i język.
+   * Pola `zrodlo`/`uwaga` ZOSTAJĄ nietknięte — są cytowalnym zapisem dla dokumentacji,
+   * a to jest ich przekład na zdania, które czyta się w gabinecie.
+   *
+   * Objaśnienie linii odzysku celowo prowadzi przez liczby, a nie przez definicję: „ponad
+   * jedna czwarta zrzuconych kilogramów" jest zrozumiałe, „%MWL < 0,75" nie jest. */
+  var OPIS_PASM = {
+    naglowek: 'Co oznaczają linie na wykresie',
+    /* Bloku o szczeblach TUTAJ NIE MA: należy do konkretnej drabinki (`opisSzczebli`),
+       bo inaczej opisywałby progi, których dany pacjent na wykresie nie ma. */
+    tytulSzczebli: 'Na czym stoją',
+    bloki: [
+      {
+        tytul: 'Co widać',
+        punkty: [
+          { mocne: 'Szare linie przerywane', tresc: '— kolejne progi ubytku masy. Liczone od masy '
+            + 'ciała przy włączeniu leczenia, a gdy w rekordzie nie ma punktu „Włączenie” — od '
+            + 'pierwszego zapisanego pomiaru. Nie od poprzedniej wizyty. To, który punkt jest '
+            + 'odniesieniem, aplikacja pisze pod kafelkami.' },
+          { mocne: 'Pomarańczowa linia', tresc: '— poziom, powyżej którego uznajemy, że pacjent '
+            + 'odzyskał istotną część tego, co schudł. Bierzemy najniższą masę, jaką osiągnął '
+            + 'w trakcie obserwacji, i pytamy, ile z uzyskanego ubytku nadal utrzymuje. Gdy wróciła '
+            + 'ponad jedna czwarta zrzuconych kilogramów, masa przekracza tę linię. Przykład: ze '
+            + '120 kg spadł do 104 kg, czyli schudł 16 kg; jedna czwarta z 16 kg to 4 kg, więc linia '
+            + 'stoi na 108 kg. Nie jest to cel terapeutyczny ani powód do odstawienia leku — to '
+            + 'sygnał, że warto przyjrzeć się, co się zmieniło.' },
+          { mocne: 'Pionowa linia z kropką', tresc: '— termin oceny odpowiedzi według ChPL. Pojawia '
+            + 'się tylko dla leków, dla których ChPL taki termin podaje.' },
+        ],
+      },
+      {
+        tytul: 'Czym te progi nie są',
+        akapit: 'To podziałka na wykresie, nie kryterium odstawienia leku. Mają pokazać, jak daleko '
+          + 'zaszła redukcja — nie podpowiadać decyzji. Decyzja o kontynuacji należy do oceny klinicznej.',
+      },
+    ],
+  };
+
   function zestaw(id) {
     var k = String(id == null ? '' : id).toUpperCase();
     return Object.prototype.hasOwnProperty.call(ZESTAWY, k) ? ZESTAWY[k] : null;
@@ -154,6 +243,8 @@
     ZESTAW_DOMYSLNY: ZESTAW_DOMYSLNY,
     ZESTAW_WG_SUBSTANCJI: ZESTAW_WG_SUBSTANCJI,
     ODZYSK: ODZYSK,
+    WERDYKT: WERDYKT,
+    OPIS_PASM: OPIS_PASM,
     zestaw: zestaw,
     zestawDlaLeku: zestawDlaLeku,
     substancja: substancja,

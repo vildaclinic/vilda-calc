@@ -862,3 +862,82 @@ describe('P-POSTEPY audyt F9 — bzdurna data nie ucieka po cichu', () => {
     expect(m.ostrzezenia.join(' ')).not.toContain('rozciągają się');
   });
 });
+
+/* ───────────────────────────────────────────────────────────────────────────────────────
+   P-WIZUAL — nowe liczby, które MUSZĄ powstawać w silniku, a nie w widoku (AGENTS.md §5).
+   ─────────────────────────────────────────────────────────────────────────────────────── */
+describe('P-WIZUAL — BMI odniesienia, wskaźniki i dystans do pasma', () => {
+  const P = () => silnik();
+
+  it('wyjściowe BMI bierze się z POMIARU, gdy punkt „Włączenie” nie niesie wzrostu', () => {
+    /* Wpis „Włączenie leczenia” jest zdarzeniem terapii, nie pomiarem antropometrycznym:
+       ma masę, nie musi mieć wzrostu. To przypadek TYPOWY, nie brzegowy — dotyczy każdego
+       pacjenta, u którego odniesieniem jest włączenie leku. */
+    const m = P().analizuj({
+      ...DOROSLY,
+      punktyLeczenia: [{ dateISO: '2026-01-08', weight: 112.4, type: 'start', drug: 'Wegovy' }],
+      pomiary: SERIA_4,
+    });
+    expect(m.punktOdniesienia.zrodlo).toBe('start-leczenia');
+    expect(m.punktOdniesienia.wzrost, 'punkt włączenia nie ma wzrostu').toBe(null);
+    expect(m.punktOdniesienia.bmi, 'a wyjściowe BMI mimo to jest').toBeCloseTo(SERIA_4[0].weight / (1.67 ** 2), 2);
+    const ost = m.seria[m.seria.length - 1];
+    expect(ost.zmianaBmi).toBeCloseTo(ost.bmi - m.punktOdniesienia.bmi, 6);
+  });
+
+  it('bez żadnego wzrostu w serii delty BMI NIE MA — i nie jest podstawiana', () => {
+    const bezWzrostu = SERIA_4.map(({ dateISO, weight }) => ({ dateISO, weight }));
+    const m = P().analizuj({ ...DOROSLY, pomiary: bezWzrostu });
+    expect(m.punktOdniesienia.bmi, 'nie ma z czego policzyć').toBe(null);
+    for (const p of m.seria) {
+      expect(p.zmianaBmi, 'żadna delta nie jest zmyślona').toBe(null);
+      expect(p.zmianaBmiPct).toBe(null);
+    }
+  });
+
+  it('wskaźniki kafelków liczą się z PROGÓW W PLIKU DANYCH, nie z liczb w silniku', () => {
+    /* Strażnik zachowaniowy: podmieniamy moduł danych na atrapę z innym progiem i sprawdzamy,
+       że werdykt idzie za atrapą. Gdyby silnik trzymał własną kopię „5”, atrapa nie miałaby
+       na co wpłynąć — i ten test by to pokazał. */
+    const dane = loadBrowserScript('vilda_postepy_doroslego_dane.js', {}).VildaPostepyDoroslegoDane;
+    const atrapa = {
+      ...dane,
+      WERDYKT: { ubytekDobrzePct: 40, przyrostAlarmPct: 40 },
+    };
+    const win = { VildaPostepyDoroslegoDane: atrapa };
+    win.window = win;
+    new Function('window', 'globalThis', zrodlo('vilda_postepy_doroslego.js'))(win, win);
+    const m = win.VildaPostepyDoroslego.analizuj({ ...DOROSLY, pomiary: SERIA_4 });
+    const ubytek = -m.seria[m.seria.length - 1].zmianaMasyPct;
+    expect(ubytek, 'pacjent schudł ponad 20 %').toBeGreaterThan(20);
+    expect(ubytek, 'ale mniej niż próg atrapy').toBeLessThan(40);
+    expect(m.wskazniki.zmianaMasy, 'przy progu 40 % ten ubytek jest neutralny').toBe('neutralnie');
+    expect(m.wskazniki.progUbytkuPct, 'wynik niesie użyty próg').toBe(40);
+
+    /* Z prawdziwym plikiem danych ten sam pacjent dostaje „dobrze”. */
+    const prawdziwy = P().analizuj({ ...DOROSLY, pomiary: SERIA_4 });
+    expect(prawdziwy.wskazniki.zmianaMasy).toBe('dobrze');
+    expect(prawdziwy.wskazniki.progUbytkuPct).toBe(5);
+  });
+
+  it('„ile brakuje do pasma” liczy silnik i milczy, gdy wszystkie pasma są zaliczone', () => {
+    const blisko = P().analizuj({ ...DOROSLY, lek: 'Wegovy', pomiary: [
+      { dateISO: '2026-01-05', weight: 117, height: 186 },
+      { dateISO: '2026-02-05', weight: 115, height: 186 },
+    ] });
+    expect(blisko.doNastepnegoPasma.prog, 'najniższy nieosiągnięty próg').toBe(5);
+    expect(blisko.doNastepnegoPasma.masaProgu).toBeCloseTo(117 * 0.95, 6);
+    expect(blisko.doNastepnegoPasma.brakujeKg).toBeCloseTo(115 - 117 * 0.95, 6);
+
+    const daleko = P().analizuj({ ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4 });
+    expect(daleko.przekroczenia.every((p) => p.osiagniety), 'obie poprzeczki 5/10 % wzięte').toBe(true);
+    expect(daleko.doNastepnegoPasma, 'nie ma czego liczyć — i to jest poprawny wynik').toBe(null);
+  });
+
+  it('kształt wyniku jest stały także wtedy, gdy brama odetnie liczenie', () => {
+    const m = P().analizuj({ wiekLat: 47, pomiary: [SERIA_4[0]] });
+    expect(m.dostepne.ok).toBe(false);
+    expect(m).toHaveProperty('doNastepnegoPasma', null);
+    expect(m).toHaveProperty('wskazniki', null);
+  });
+});

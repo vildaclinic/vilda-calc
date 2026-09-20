@@ -38,6 +38,13 @@ const WLACZENIE = (p) => ({
 const model = (opts) => moduly().P.analizuj(opts);
 const html = (opts) => moduly().U.buildHtml(model(opts));
 
+/* Oba warianty wykresu (szeroki i wąski) siedzą naraz w DOM, a przełącza je CSS — inaczej
+   obrót telefonu zostawiałby wykres w złym wariancie do przeładowania. Liczymy więc SVG
+   w kontenerze SZEROKIM, bo o niego chodzi w testach „ile wykresów". */
+function svgiSzerokie(h) {
+  return (h.match(/vilda-pd-tylko-szer">\s*<svg/g) || []);
+}
+
 describe('P-POSTEPY widok — co się rysuje', () => {
   it('dorosły z serią dostaje SVG, kafelki i stopkę', () => {
     const h = html({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_REDUKCJA });
@@ -49,10 +56,21 @@ describe('P-POSTEPY widok — co się rysuje', () => {
 
   it('SVG skaluje się do szerokości rodzica — bez poziomego przewijania na telefonie', () => {
     const h = html({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_REDUKCJA });
-    expect(h).toContain('viewBox="0 0 720 360"');
+    /* Szerokość viewBox jest stała (720 dla wariantu szerokiego, 380 dla wąskiego),
+       WYSOKOŚĆ zależy od liczby punktów — dlatego nie przypinamy jej tutaj na sztywno.
+       Pilnuje jej osobny test „wysokość wykresu zależy od liczby pomiarów”. */
+    expect(h).toMatch(/viewBox="0 0 720 \d+"/);
     expect(h).toContain('width="100%"');
     expect(h).toContain('max-width:100%');
     expect(h, 'żadnej sztywnej szerokości w pikselach').not.toMatch(/<svg[^>]*width="\d+"/);
+  });
+
+  it('wysokość wykresu zależy od liczby pomiarów — dwa punkty nie zajmują pół kartki', () => {
+    const { U } = moduly();
+    const dwa = U.wymiary(model({ wiekLat: 47, pomiary: SERIA_REDUKCJA.slice(0, 2) }));
+    const duzo = U.wymiary(model({ wiekLat: 47, pomiary: SERIA_REDUKCJA }));
+    expect(dwa.wysMasy, 'przy dwóch pomiarach wykres jest niższy').toBeLessThan(duzo.wysMasy);
+    expect(dwa.szer, 'szerokość zostaje stała').toBe(duzo.szer);
   });
 
   it('brama zamknięta → pusto, a nie połowa wykresu', () => {
@@ -150,7 +168,7 @@ describe('P-POSTEPY widok — granice warstwy', () => {
     const { U } = moduly();
     const wlasny = { id: 'TEST', nazwa: 'Zestaw testowy', progi: [7], zrodlo: 'dane testowe' };
     const h = U.buildHtml(model({ wiekLat: 47, zestaw: wlasny, pomiary: SERIA_REDUKCJA }));
-    expect(h).toContain('−7%');
+    expect(h).toContain('\u22127\u00a0%');
     expect(h).toContain('Zestaw testowy');
     expect(h).not.toContain('−10%');
   });
@@ -164,11 +182,30 @@ describe('P-POSTEPY widok — granice warstwy', () => {
 
   it('teksty z modelu są escapowane', () => {
     const { U } = moduly();
-    const wlasny = { id: 'X', nazwa: '<script>alert(1)</script>', progi: [5], zrodlo: 'a & b' };
+    /* Pole `zrodlo` NIE jest już renderowane w panelu — jego miejsce zajął `opisSzczebli`.
+       Test celuje więc w pola, które naprawdę trafiają do HTML: nazwę drabinki i opis szczebli. */
+    const wlasny = {
+      id: 'X', nazwa: '<script>alert(1)</script> a & b', progi: [5], zrodlo: 'nieużywane',
+      opisSzczebli: [{ mocne: '<b>x</b>', tresc: 'y & z' }],
+    };
     const h = U.buildHtml(model({ wiekLat: 47, zestaw: wlasny, pomiary: SERIA_REDUKCJA }));
     expect(h).not.toContain('<script>alert(1)</script>');
     expect(h).toContain('&lt;script&gt;');
     expect(h).toContain('a &amp; b');
+    expect(h, 'opis szczebli też przechodzi przez escape').toContain('&lt;b&gt;x&lt;/b&gt;');
+    expect(h).toContain('y &amp; z');
+  });
+
+  it('pole `zrodlo` drabinki nie trafia już do panelu — zastąpił je opis szczebli', () => {
+    const { U } = moduly();
+    const wlasny = {
+      id: 'X', nazwa: 'Drabinka testowa', progi: [5],
+      zrodlo: 'ZRODLO-KTORE-NIE-MA-PRAWA-BYC-W-PANELU',
+      opisSzczebli: [{ mocne: 'Próg 5 %.', tresc: 'Opis szczebla.' }],
+    };
+    const h = U.buildHtml(model({ wiekLat: 47, zestaw: wlasny, pomiary: SERIA_REDUKCJA }));
+    expect(h).not.toContain('ZRODLO-KTORE-NIE-MA-PRAWA-BYC-W-PANELU');
+    expect(h, 'ale opis szczebli tej drabinki jest').toContain('Opis szczebla.');
   });
 });
 
@@ -212,7 +249,7 @@ describe('P-POSTEPY rata 2 — wpięcie w strony i service worker', () => {
 describe('P-POSTEPY rata 3 — wykres BMI ze strefami klas', () => {
   it('dorosły z pomiarami wzrostu dostaje DRUGI wykres', () => {
     const h = html({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
-    expect((h.match(/<svg/g) || []), 'masa + BMI').toHaveLength(2);
+    expect(svgiSzerokie(h), 'masa + BMI').toHaveLength(2);
     expect(h).toContain('BMI i klasy masy cia\u0142a');
     expect(h).toContain('vilda-pd-svg-bmi');
     expect(h, 'każdy wykres ma własną klasę — testy nie muszą liczyć po kolejności')
@@ -226,7 +263,7 @@ describe('P-POSTEPY rata 3 — wykres BMI ze strefami klas', () => {
       wiekLat: 47,
       pomiary: [{ dateISO: '2026-01-01', weight: 100 }, { dateISO: '2026-06-01', weight: 94 }],
     });
-    expect((h.match(/<svg/g) || []), 'tylko masa').toHaveLength(1);
+    expect(svgiSzerokie(h), 'tylko masa').toHaveLength(1);
     expect(h).not.toContain('BMI i klasy masy cia\u0142a');
   });
 
@@ -263,7 +300,7 @@ describe('P-POSTEPY rata 3 — wykres BMI ze strefami klas', () => {
 
     const g = loadBrowserScript('vilda_postepy_doroslego_ui.js', {});
     const h = g.VildaPostepyDoroslegoUI.buildHtml(m);
-    expect((h.match(/<svg/g) || []), 'zostaje sam wykres masy').toHaveLength(1);
+    expect(svgiSzerokie(h), 'zostaje sam wykres masy').toHaveLength(1);
     expect(h).not.toContain('BMI i klasy masy cia\u0142a');
   });
 });
@@ -394,5 +431,194 @@ describe('P-POSTEPY audyt F7 — normy jako dane znaczy: dane nie do ruszenia w 
     expect(() => { D.ZESTAWY.OGOLNY.progi.push(99); }).toThrow();
     expect(D.ODZYSK.frakcja, 'wartość nietknięta').toBe(0.75);
     expect(D.ZESTAWY.OGOLNY.progi).toEqual([5, 10, 15, 20, 25]);
+  });
+});
+
+/* ───────────────────────────────────────────────────────────────────────────────────────
+   P-WIZUAL — reguły rysowania, które mają własnych strażników.
+   Każda z nich powstała z usterki widocznej na PRAWDZIWYM wydruku właściciela (20.09.2026).
+   ─────────────────────────────────────────────────────────────────────────────────────── */
+describe('P-WIZUAL — oś, etykiety i warianty', () => {
+  it('podziałki osi są UNIKALNE i równo odległe — to jest ten test na „34, 34”', () => {
+    const { U } = moduly();
+    /* Zakresy dobrane tak, by trafić w przypadki, które psuł stary `zakres/4` + zaokrąglenie
+       do całości: wąski zakres masy i wąski zakres BMI z wydruku właściciela. */
+    const przypadki = [[114.4, 117.6], [32.8, 34.2], [101.8, 122.2], [34.6, 42.9], [0.02, 0.09]];
+    for (const [min, max] of przypadki) {
+      const o = U.osNice(min, max, 5);
+      const etykiety = o.ticks.map((t) => t.toFixed(o.dec));
+      expect(new Set(etykiety).size, `unikalne dla ${min}–${max}: ${etykiety.join(' ')}`)
+        .toBe(etykiety.length);
+      const roznice = o.ticks.slice(1).map((t, i) => Number((t - o.ticks[i]).toFixed(6)));
+      expect(new Set(roznice).size, `równy krok dla ${min}–${max}: ${roznice.join(' ')}`).toBe(1);
+      expect(o.od, 'dziedzina obejmuje dane').toBeLessThanOrEqual(min);
+      expect(o.do).toBeGreaterThanOrEqual(max);
+
+      /* SEDNO REGUŁY: krok pochodzi z rodziny 1/2/2,5/5/10 × 10^k, a PRECYZJA ETYKIETY
+         wynika z kroku. Oryginalna usterka („34, 34") brała się właśnie z rozjazdu tych
+         dwóch rzeczy: krok był dowolny (zakres/4), a etykieta zaokrąglana do całości. */
+      const mantysa = o.krok / Math.pow(10, Math.floor(Math.log10(o.krok)));
+      expect([1, 2, 2.5, 5, 10], `krok ${o.krok} z ładnej rodziny (mantysa ${mantysa})`)
+        .toContainEqual(Number(mantysa.toFixed(10)));
+      const potrzebne = Math.max(0, -Math.floor(Math.log10(o.krok)));
+      expect(o.dec, `precyzja etykiety nadąża za krokiem ${o.krok}`).toBeGreaterThanOrEqual(potrzebne);
+    }
+  });
+
+  it('jednostka osi jest OBRÓCONYM podpisem, a nie napisem w rogu nad wartościami', () => {
+    const h = html({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_REDUKCJA });
+    expect(h, 'podpis osi obrócony').toMatch(/transform="rotate\(-90 /);
+    expect(h).toContain('masa [kg]');
+    /* Kontrola nadgorliwości: nie chodzi o usunięcie jednostki, tylko o jej miejsce. */
+    expect(h, 'jednostka nadal jest na wykresie').toContain('kg]');
+  });
+
+  it('etykiety prawego marginesu nigdy na siebie nie wchodzą', () => {
+    const { U } = moduly();
+    /* Wejście z celowo zlepionymi pozycjami — tak wypada, gdy próg odzysku pokrywa się
+       z pasmem −10 %, a to się zdarza przy odzysku ćwierci ubytku. */
+    const wejscie = [{ y: 100 }, { y: 100 }, { y: 101 }, { y: 250 }];
+    const roz = U.rozsun(wejscie, 18, 20, 300);
+    const ys = roz.map((e) => e.y).sort((a, b) => a - b);
+    for (let i = 1; i < ys.length; i++) {
+      expect(ys[i] - ys[i - 1], `odstęp ${ys[i - 1]}→${ys[i]}`).toBeGreaterThanOrEqual(18 - 1e-9);
+    }
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(20 - 1e-9);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(300 + 1e-9);
+  });
+
+  it('wariant wąski NIE pisze nazw pasm w obszarze rysowania — idą do legendy HTML', () => {
+    const { U } = moduly();
+    const m = model({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_ODZYSK });
+    const szeroki = U.wykresMasy(m, { wariant: 'szeroki' });
+    const waski = U.wykresMasy(m, { wariant: 'waski' });
+    expect(szeroki, 'szeroki podpisuje pasma na wykresie').toContain('−');
+    const ileTekstu = (s) => (s.match(/<text/g) || []).length;
+    expect(ileTekstu(waski), 'wąski ma mniej napisów').toBeLessThan(ileTekstu(szeroki));
+    expect(waski, 'wąski nie zawiera podpisu pasma').not.toContain('istotny odzysk');
+    /* …ale ta sama informacja MUSI być dostępna — w legendzie, w prawdziwym rozmiarze tekstu. */
+    const leg = U.legendaHtml(U.legendaMasy(m));
+    expect(leg, 'legenda niesie to, czego wykres nie pisze').toContain('istotny odzysk');
+    expect(leg, 'legenda podaje kilogramy, nie sam procent').toMatch(/kg/);
+  });
+
+  it('wąski viewBox jest WĘŻSZY, więc ten sam font-size daje większy tekst', () => {
+    const { U } = moduly();
+    const m = model({ wiekLat: 47, pomiary: SERIA_REDUKCJA });
+    const szer = (s) => Number(/viewBox="0 0 (\d+) /.exec(s)[1]);
+    expect(szer(U.wykresMasy(m, { wariant: 'waski' })))
+      .toBeLessThan(szer(U.wykresMasy(m, { wariant: 'szeroki' })));
+  });
+
+  it('stopnie otyłości różnią się odcieniem, a odcień liczy się z POZYCJI, nie z klucza', () => {
+    const { U } = moduly();
+    /* Silnik nadaje wszystkim stopniom otyłości ten sam klucz `alert` — gdyby widok dobierał
+       odcień z klucza, wszystkie trzy byłyby identyczne i wykres nie różnicowałby tego,
+       co klinicznie jest różne. */
+    const odcienie = [0, 1, 2].map((g) => U.odcienStrefy('alert', g));
+    expect(new Set(odcienie).size, `trzy różne odcienie: ${odcienie.join(' ')}`).toBe(3);
+    /* Na konkretnym wykresie widać tylko te strefy, które mieszczą się w zakresie osi —
+       dlatego nie żądamy konkretnego odcienia, tylko tego, żeby rysunek NAPRAWDĘ użył
+       więcej niż jednego. Przed tą zmianą wszystkie strefy miały jeden i ten sam. */
+    const h = html({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_ODZYSK });
+    const uzyte = odcienie.filter((o) => h.includes(o));
+    expect(uzyte.length, `wykres używa kilku odcieni, użył: ${uzyte.join(' ') || 'żadnego'}`)
+      .toBeGreaterThan(1);
+  });
+});
+
+describe('P-WIZUAL — kafelki i opis', () => {
+  it('każda etykieta kafelka mówi „Masa ciała”, nie samo „Masa”', () => {
+    const h = html({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_ODZYSK });
+    const etykiety = [...h.matchAll(/vilda-pd-tile-l">([^<]+)</g)].map((m) => m[1]);
+    expect(etykiety.length).toBeGreaterThan(2);
+    for (const e of etykiety) {
+      if (/masa/i.test(e)) expect(e, `etykieta „${e}”`).toMatch(/masa ciała/i);
+    }
+  });
+
+  it('kolor kafelka bierze się z `model.wskazniki`, a nie z oceny widoku', () => {
+    const { U } = moduly();
+    const m = model({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_ODZYSK });
+    expect(m.wskazniki, 'silnik oddaje wskaźniki').toBeTruthy();
+    const zielony = U.WERDYKT.dobrze;
+    const pomaranczowy = U.WERDYKT.uwaga;
+
+    /* Szukamy w SAMYM KAFELKU, nie w całym HTML: `#0f6e56` to jednocześnie kolor werdyktu
+       i kolor kropki zdarzenia „dobrze” na krzywej, więc wyszukiwanie po całym dokumencie
+       przechodziłoby zawsze i nie dowodziło niczego. */
+    const kafelekZmiany = (h) => {
+      const i = h.indexOf('Zmiana masy ciała');
+      return i < 0 ? '' : h.slice(i, h.indexOf('</div></div>', i));
+    };
+    const zWskaznikiem = (waga) => {
+      const kopia = JSON.parse(JSON.stringify(m));
+      kopia.wskazniki.zmianaMasy = waga;
+      return kafelekZmiany(U.buildHtml(kopia));
+    };
+    expect(zWskaznikiem('dobrze'), 'klucz „dobrze” maluje na zielono').toContain(zielony);
+    expect(zWskaznikiem('uwaga'), 'klucz „uwaga” maluje na pomarańczowo').toContain(pomaranczowy);
+    const neutralny = zWskaznikiem('neutralnie');
+    expect(neutralny, 'klucz „neutralnie” nie maluje kafelka').not.toContain(zielony);
+    expect(neutralny).not.toContain(pomaranczowy);
+  });
+
+  it('kolory są kanonem aplikacji z panelu „Porównanie z poprzednim pomiarem”', () => {
+    const { U } = moduly();
+    /* Gdyby Postępy dobrały własne odcienie, ten sam sygnał znaczyłby w dwóch miejscach
+       aplikacji dwie różne rzeczy — a lekarz czyta obie karty tego samego dnia. */
+    const kanon = zrodlo('vilda_auth_ui.js');
+    expect(kanon).toContain('.vilda-v-good{color:' + U.WERDYKT.dobrze + '}');
+    expect(kanon).toContain('.vilda-v-warn{color:' + U.WERDYKT.uwaga + '}');
+    expect(kanon).toContain('.vilda-v-bad{color:' + U.WERDYKT.alarm + '}');
+  });
+
+  it('panel mówi WPROST, od czego liczone są procenty — i mówi prawdę w obu przypadkach', () => {
+    const zLeczeniem = html({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_REDUKCJA,
+      punktyLeczenia: [WLACZENIE(SERIA_REDUKCJA[0])] });
+    expect(zLeczeniem).toContain('przy włączeniu leczenia');
+    expect(zLeczeniem).toContain('nie od poprzedniej wizyty');
+
+    const bezLeczenia = html({ wiekLat: 47, pomiary: SERIA_REDUKCJA });
+    expect(bezLeczenia).toContain('pierwszego zapisanego pomiaru');
+    expect(bezLeczenia, 'i mówi, czego brakuje').toContain('nie ma punktu „Włączenie”');
+  });
+
+  it('„ile brakuje do pasma” pochodzi z silnika i znika, gdy pasma są osiągnięte', () => {
+    const { U } = moduly();
+    const blisko = model({ wiekLat: 47, lek: 'Wegovy', pomiary: [
+      { dateISO: '2026-01-05', weight: 117, height: 186 },
+      { dateISO: '2026-02-05', weight: 115, height: 186 },
+    ] });
+    expect(blisko.doNastepnegoPasma, 'silnik policzył dystans').toBeTruthy();
+    expect(U.buildHtml(blisko)).toContain('brakuje jeszcze');
+
+    const daleko = model({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
+    expect(daleko.doNastepnegoPasma, 'wszystkie pasma zaliczone — nie ma czego liczyć').toBe(null);
+    expect(U.buildHtml(daleko)).not.toContain('brakuje jeszcze');
+  });
+
+  it('OSTRZEŻENIA zostają widoczne — nie wchodzą pod rozwijanie', () => {
+    const { U } = moduly();
+    /* Schowanie ostrzeżeń razem z opisem źródeł cofnęłoby poprawkę F1 z audytu: komunikat
+       „punktu ChPL nie postawiono na wykresie” to nie bibliografia, tylko informacja,
+       że procenty liczą się od innej masy, niż lekarz zakłada. */
+    const m = model({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_REDUKCJA });
+    m.ostrzezenia.push('OSTRZEZENIE-TESTOWE');
+    const h = U.buildHtml(m);
+    expect(h).toContain('OSTRZEZENIE-TESTOWE');
+    const det = h.slice(h.indexOf('<details'));
+    expect(det, 'ostrzeżenie NIE jest wewnątrz <details>').not.toContain('OSTRZEZENIE-TESTOWE');
+  });
+
+  it('opis szczebli należy do DRABINKI pacjenta, a nie jest wspólnym akapitem', () => {
+    const { U, P } = moduly();
+    const lira = U.buildHtml(P.analizuj({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_REDUKCJA }));
+    expect(lira, 'liraglutyd: drabinka 5/10 %').toContain('ChPL liraglutydu');
+    expect(lira, 'i nie czyta o progach, których na jego wykresie nie ma')
+      .not.toContain('Progu 25 % nie ma w żadnej ChPL');
+
+    const ogol = U.buildHtml(P.analizuj({ wiekLat: 47, lek: 'Wegovy', pomiary: SERIA_REDUKCJA }));
+    expect(ogol, 'drabinka ogólna: pełne uzasadnienie szczebli').toContain('Progu 25 % nie ma w żadnej ChPL');
   });
 });

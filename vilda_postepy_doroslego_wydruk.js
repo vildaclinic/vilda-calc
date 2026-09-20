@@ -178,50 +178,119 @@
     return o;
   }
 
+  /* KAFELKI NA KARTCE.
+   *
+   * „Masa” → „Masa ciała” wszędzie (właściciel 2026-09-20). Werdykt — czyli kolor — należy
+   * do ZMIANY, nie do stanu: wartości „na początku” i „dzisiaj” są zawsze neutralne, kolor
+   * niosą „Zmiana masy ciała” oraz delta pod BMI. Klucz przychodzi z `model.wskazniki`,
+   * kolory są kanonem aplikacji z `vilda_auth_ui.js`.
+   *
+   * W PDF wszystkie kafelki stoją w JEDNYM rzędzie tabeli, więc — inaczej niż w panelu —
+   * nie ma tu w ogóle problemu niepełnego rzędu i pustych komórek. */
+  var WERDYKT_PDF = { dobrze: '#0f6e56', neutralnie: null, uwaga: '#c75d00', alarm: '#c62828' };
+
+  function kolorW(klucz) {
+    return Object.prototype.hasOwnProperty.call(WERDYKT_PDF, klucz) ? WERDYKT_PDF[klucz] : null;
+  }
+
   function kafelki(model, wariant) {
     var seria = model.seria || [];
     if (!seria.length) return null;
     var odn = model.punktOdniesienia;
     var ost = seria[seria.length - 1];
+    var W = model.wskazniki || {};
     var pola = [];
-    function pole(etykieta, wartosc, jednostka, pod) {
+
+    function pole(etykieta, wartosc, jednostka, pod, waga, wagaPod) {
+      var kv = kolorW(waga);
+      var ks = kolorW(wagaPod);
+      var wartoscStyl = { fontSize: 14, bold: true };
+      if (kv) wartoscStyl.color = kv;
+      var podStyl = { fontSize: 7.5, color: ks || C.opis };
+      if (ks) podStyl.bold = true;
       return {
         stack: [
           tekst(etykieta, { fontSize: 7.5, bold: true, color: C.opis }),
           {
-            text: [tekst(wartosc, { fontSize: 14, bold: true }),
+            text: [tekst(wartosc, wartoscStyl),
               jednostka ? tekst(' ' + jednostka, { fontSize: 8.5, bold: true, color: C.opis }) : tekst('')],
           },
-          tekst(pod || '', { fontSize: 7.5, color: C.opis }),
+          tekst(pod || '', podStyl),
         ],
         margin: [4, 4, 4, 4],
       };
     }
-    pola.push(pole('Masa na początku', liczbaPl(odn.masa, 1), 'kg', dataPl(odn.dateISO)));
-    pola.push(pole('Masa dzisiaj', liczbaPl(ost.masa, 1), 'kg', dataPl(ost.dateISO)));
-    pola.push(pole('Zmiana', zeZnakiem(ost.zmianaMasyKg, 1), 'kg', zeZnakiem(ost.zmianaMasyPct, 1) + ' %'));
-    if (wariant === 'kliniczny' && ost.bmi != null) {
-      pola.push(pole('BMI dzisiaj', liczbaPl(ost.bmi, 1), 'kg/m²', ost.klasa ? ost.klasa.etykieta : ''));
-    } else if (model.nadir) {
-      pola.push(pole('Najniższa masa', liczbaPl(model.nadir.masa, 1), 'kg',
-        model.nadir.ostatni ? 'to dzisiaj' : (model.nadir.tydzien + '. tydz.')));
+
+    pola.push(pole('Masa ciała na początku', liczbaPl(odn.masa, 1), 'kg', dataPl(odn.dateISO)));
+    pola.push(pole('Masa ciała dzisiaj', liczbaPl(ost.masa, 1), 'kg', dataPl(ost.dateISO)));
+    pola.push(pole('Zmiana masy ciała', zeZnakiem(ost.zmianaMasyKg, 1), 'kg',
+      zeZnakiem(ost.zmianaMasyPct, 1) + ' %', W.zmianaMasy, W.zmianaMasy));
+
+    /* BMI JEST NA OBU KARTKACH, także dla pacjenta (właściciel 2026-09-20). Procentu nie ma:
+       przy stałym wzroście procentowa zmiana BMI jest co do cyfry zmianą masy z kafelka obok. */
+    if (typeof ost.bmi === 'number' && isFinite(ost.bmi)) {
+      pola.push(pole('BMI dzisiaj', liczbaPl(ost.bmi, 1), 'kg/m²',
+        typeof ost.zmianaBmi === 'number' ? zeZnakiem(ost.zmianaBmi, 1) + ' kg/m²' : 'brak wyjściowego BMI',
+        null, typeof ost.zmianaBmi === 'number' ? W.bmi : null));
     }
+    if (model.nadir && !model.nadir.ostatni) {
+      pola.push(pole('Najniższa masa ciała', liczbaPl(model.nadir.masa, 1), 'kg',
+        model.nadir.tydzien + '. tydz.', W.nadir));
+    }
+
+    var szerokosci = pola.map(function () { return '*'; });
     return {
-      table: { widths: ['*', '*', '*', '*'], body: [pola] },
+      table: { widths: szerokosci, body: [pola] },
       layout: {
         hLineWidth: function () { return 0.6; }, vLineWidth: function () { return 0.6; },
         hLineColor: function () { return C.linia; }, vLineColor: function () { return C.linia; },
+      },
+      margin: [0, 0, 0, 3],
+    };
+  }
+
+  /* WZGLĘDEM CZEGO LICZĄ SIĘ TE LICZBY — postawione raz, pod kafelkami (właściciel 2026-09-20).
+     Wszystkie procenty i delty idą od punktu odniesienia, nie od poprzedniej wizyty. Na kartce
+     do dokumentacji to nie jest ozdoba: za rok nikt nie odtworzy, od czego liczono te procenty. */
+  function odniesienieOpis(model) {
+    var o = model.punktOdniesienia;
+    if (!o) return null;
+    var co = o.zrodlo === 'start-leczenia'
+      ? 'masy ciała przy włączeniu leczenia (' + liczbaPl(o.masa, 1) + ' kg'
+        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')'
+      : 'pierwszego zapisanego pomiaru (' + liczbaPl(o.masa, 1) + ' kg'
+        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')';
+    var dop = o.zrodlo === 'start-leczenia' ? ''
+      : ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    return tekst('Wszystkie zmiany liczone od ' + co + dop + ', nie od poprzedniej wizyty.',
+      { fontSize: 7.5, color: C.opis, margin: [0, 0, 0, 10] });
+  }
+
+  /* ILE BRAKUJE DO NAJBLIŻSZEGO PASMA — liczy SILNIK (`doNastepnegoPasma`).
+     Idzie na OBIE kartki: właściciel 2026-09-20 — „to jest ważna informacja dla pacjenta”.
+     To także jedyny kanał dla postępu PONIŻEJ progu, gdzie kafelki są celowo bezbarwne. */
+  function notaPasma(model) {
+    var d = model.doNastepnegoPasma;
+    if (!d || typeof d.brakujeKg !== 'number' || !(d.brakujeKg > 0)) return null;
+    return {
+      table: {
+        widths: ['*'],
+        body: [[tekst('Do pierwszego progu (−' + d.prog + ' % masy, czyli ' + liczbaPl(d.masaProgu, 1)
+          + ' kg) brakuje jeszcze ' + liczbaPl(d.brakujeKg, 1) + ' kg.',
+        { fontSize: 9, margin: [6, 5, 6, 5] })]],
+      },
+      layout: {
+        hLineWidth: function () { return 0; }, vLineWidth: function () { return 0; },
+        fillColor: function () { return '#eef5f6'; },
       },
       margin: [0, 0, 0, 10],
     };
   }
 
   /** Wykres jako WEKTOR. Ramkę liczymy z proporcji viewBox, które oddaje warstwa widoku. */
-  function wykres(svg, wysViewBox) {
-    var U = ui();
-    var G = (U && U.GEOMETRIA) || { szer: 720 };
+  function wykres(svg, wysViewBox, szerViewBox) {
     var szerNaStronie = 515;      /* A4 minus marginesy z `pageMargins` niżej */
-    var wys = Math.round(szerNaStronie * (wysViewBox / G.szer));
+    var wys = Math.round(szerNaStronie * (wysViewBox / (szerViewBox || 720)));
     return { svg: svg, fit: [szerNaStronie, wys], margin: [0, 0, 0, 10] };
   }
 
@@ -272,7 +341,15 @@
        Przy tabeli wielostronicowej powtórzy się razem z nazwami kolumn, co dla dokumentacji
        jest zaletą: na każdej kartce widać, co się czyta. */
     var tytul = [{ text: 'Pomiary', fontSize: 11, bold: true, colSpan: 6, margin: [0, 0, 0, 4] }, {}, {}, {}, {}, {}];
+    /* KRÓTKA TABELA WĘDRUJE W CAŁOŚCI, DŁUGA DZIELI SIĘ NORMALNIE.
+       Bez tego czteropomiarowy przebieg zostawiał na pierwszej stronie JEDEN wiersz, a resztę
+       przenosił — wygląda to jak usterka składu, choć nagłówek poprawnie się powtarza.
+       Przy długiej serii `unbreakable` byłoby szkodliwe: tabela dłuższa niż strona nie ma
+       gdzie „w całości" się zmieścić i pdfmake i tak musiałby ją złamać. Próg 10 wierszy to
+       mniej więcej pół kartki A4 przy tym stopniu pisma. */
+    var krotka = body.length <= 11;
     return [{
+      unbreakable: krotka,
       table: { headerRows: 2, widths: ['auto', 'auto', 'auto', 'auto', 'auto', '*'], body: [tytul].concat(body) },
       layout: {
         hLineWidth: function (i) { return i === 2 ? 0.8 : 0.3; },
@@ -304,18 +381,36 @@
     }];
   }
 
+  /* STOPKA.
+   *
+   * AKAPIT O PASMACH ZNIKA Z OBU KARTEK (właściciel 2026-09-20: „z tych PDF-ów trzeba to
+   * całkiem usunąć"). Na wydruku właściciela ten akapit był nie tylko nieczytelny — bywał
+   * NIEPRAWDZIWY wobec obrazka: opisywał drabinkę 5/10/15/20/25 %, podczas gdy przy krótkiej
+   * obserwacji żadne pasmo nie mieściło się w zakresie osi i na wykresie nie było ani jednego.
+   * Pełny opis źródeł żyje teraz w aplikacji, pod rozwijaniem.
+   *
+   * ZOSTAJE JEDNA LINIJKA — brzmienie właściciela, z jedną zmianą: lista progów bierze się
+   * Z MODELU, a nie jest wpisana na sztywno. Drabinka liraglutydu ma dwa szczeble, więc
+   * zdanie „Pasma 5/10/15/20/25 %" byłoby u takiego pacjenta fałszem na kartce w kartotece.
+   *
+   * OSTRZEŻENIA ZOSTAJĄ. To nie jest opis bibliografii, tylko informacja, że coś na wykresie
+   * nie znaczy tego, co się wydaje — np. że punktu oceny wg ChPL nie postawiono, bo brak
+   * punktu „Włączenie". Usunięcie ich razem z akapitem cofnęłoby poprawkę F1 z audytu. */
   function stopka(model, wariant) {
-    if (wariant === 'pacjent') {
-      var dop = model.czasZWieku
-        ? ' Tygodnie na wykresie są przybliżone, bo przy części pomiarów nie zapisano dokładnej daty.'
-        : '';
-      return tekst('Wydruk z aplikacji Vilda. Wykres przedstawia zapisane pomiary masy ciała '
-        + 'i nie zastępuje porady lekarskiej.' + dop, { fontSize: 7.5, color: C.opis });
-    }
     var cz = [];
-    if (model.zestaw) cz.push('Pasma: ' + model.zestaw.nazwa + '. ' + model.zestaw.zrodlo);
-    if (model.odzysk && model.odzysk.liniaDoPokazania && model.odzysk.nazwa) {
-      cz.push(model.odzysk.nazwa + '. ' + model.odzysk.zrodlo);
+    if (wariant === 'pacjent') {
+      cz.push('Wydruk z aplikacji Vilda. Wykres przedstawia zapisane pomiary masy ciała '
+        + 'i nie zastępuje porady lekarskiej.');
+      if (model.czasZWieku) {
+        cz.push('Tygodnie na wykresie są przybliżone, bo przy części pomiarów nie zapisano dokładnej daty.');
+      }
+      return tekst(cz.join(' '), { fontSize: 7.5, color: C.opis });
+    }
+
+    cz.push('Wydruk z aplikacji Vilda.');
+    if (model.zestaw && model.zestaw.progi && model.zestaw.progi.length) {
+      cz.push('Pasma ' + model.zestaw.progi.join('/') + ' % — podziałka prezentacyjna aplikacji, '
+        + 'nie kryterium odstawienia leku.');
     }
     var pd = model.punktDecyzyjny;
     if (pd && pd.jest && pd.nominalna) {
@@ -366,18 +461,25 @@
     var wariant = o.wariant === 'kliniczny' ? 'kliniczny' : 'pacjent';
     var U = ui();
     if (!model || !model.dostepne || !model.dostepne.ok || !U) return null;
-    var G = U.GEOMETRIA || { wys: 360, wysBmi: 300 };
-    var svgMasy = U.wykresMasy(model, { doPdf: true });
+    /* WYMIARY PYTAMY O TEN MODEL, nie bierzemy ze stałej: wysokość wykresu zależy od liczby
+       punktów, bo dwa pomiary nie mają prawa zająć pół kartki (P-WIZUAL 2026-09-20). */
+    var G = typeof U.wymiary === 'function' ? U.wymiary(model) : { szer: 720, wysMasy: 360, wysBmi: 300 };
+    /* Do PDF zawsze wariant SZEROKI — wąski jest dla telefonu i nie pisze podpisów w obszarze. */
+    var svgMasy = U.wykresMasy(model, { doPdf: true, wariant: 'szeroki', bezPunktuChPL: wariant === 'pacjent' });
     if (!svgMasy) return null;
-    var svgBmi = wariant === 'kliniczny' ? U.wykresBmi(model, { doPdf: true }) : '';
+    var svgBmi = wariant === 'kliniczny' ? U.wykresBmi(model, { doPdf: true, wariant: 'szeroki' }) : '';
 
     var tresc = []
       .concat(naglowek(model, wariant, o))
       .concat(wariant === 'pacjent' ? zachetaDlaPacjenta(model) : []);
     var kaf = kafelki(model, wariant);
     if (kaf) tresc.push(kaf);
-    tresc.push(wykres(svgMasy, G.wys));
-    if (svgBmi) tresc.push(wykres(svgBmi, G.wysBmi));
+    var odn = odniesienieOpis(model);
+    if (odn) tresc.push(odn);
+    tresc.push(wykres(svgMasy, G.wysMasy, G.szer));
+    if (svgBmi) tresc.push(wykres(svgBmi, G.wysBmi, G.szer));
+    var nota = notaPasma(model);
+    if (nota) tresc.push(nota);
     tresc = tresc.concat(kamienie(model, wariant));
     if (wariant === 'kliniczny') tresc = tresc.concat(tabela(model));
     tresc.push(stopka(model, wariant));
