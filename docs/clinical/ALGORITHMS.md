@@ -5573,6 +5573,82 @@ SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`
 Poprawka odniesienia: SW 1.1.22 → **1.1.23**; `vilda_auth_ui.js?v=459→460`,
 `vilda_sds_wzrostu.js?v=3→4`.
 
+## Dane strukturalne generatora zaleceń energetycznych (P-RAPORT-DANE, SW 1.1.25, 2026-09-20)
+
+**Status:** zmiana techniczna, nie kliniczna. Żaden wzór, próg, jednostka ani zaokrąglenie
+nie zostały ruszone. Zmierzone: teksty i HTML generatora są bit w bit identyczne przed i po
+zmianie w 13 scenariuszach (dorosły z otyłością I st., dorosły z nadwagą, dorosły w normie,
+dorosły i dziecko w rejestrze „Dla pacjenta", nastolatka z otyłością, dziecko 6–11 lat,
+dziecko 3-letnie, nastolatek z nadwagą, dziecko w normie, strategia stabilizacji, wzrost
+zakończony, plan bez opcji dodatkowych). Zrzut przed/po został porównany znak po znaku.
+
+**Skąd potrzeba.** `generateRecommendations()` liczył komplet liczb planu — kaloryczność,
+deficyt, tempo, masę docelową, normy żywienia, dawkę witaminy D, płyny, czas dojścia do
+normy — a na zewnątrz oddawał wyłącznie gotowe polskie zdania (`textOutput`, `htmlOutput`).
+Każdy odbiorca, który potrzebował samych liczb (raport pacjenta, kafelki Statusu, karta
+„Droga do normy BMI"), musiałby albo liczyć je po raz drugi własnym kodem, albo wyłuskiwać
+z tekstu wyrażeniem regularnym. Pierwsze grozi rozjazdem dwóch wyników na jednym ekranie,
+drugie jest kruche i w aplikacji medycznej niedopuszczalne. Decyzja właściciela z 2026-09-20:
+„koduj tak, żeby inne elementy aplikacji mogły potem korzystać z obliczeń […] żeby inne
+elementy aplikacji nie musiały już liczyć tego, co zostało policzone".
+
+**Co robi.** `generateRecommendations()` zwraca dodatkowe pole `dane`; przepuszcza je dalej
+`buildEnergyRecommendationResult()`. Pole jest zawsze obecne (`null`, gdy planu nie da się
+zbudować — np. u niemowląt albo przy braku masy lub wzrostu).
+
+Zasada nadrzędna: **w `dane` nic nie jest liczone od nowa.** Każda wartość jest zapisywana
+dokładnie w tym miejscu kodu, które buduje odpowiadające jej zdanie, i jest tą samą liczbą,
+którą zobaczył pacjent. Dlatego np. masa docelowa dziecka to liczba użyta w zdaniu „górna
+granica normy […] odpowiada masie ok. X kg", a nie `bmiClass.targetWeightKg` — obie są
+poprawne, ale różnią się o kilka gramów i raport ma pokazywać tę, którą widać w zaleceniach.
+
+**Kształt pola `dane` (wersja 1).**
+
+| Klucz | Zawartość |
+| --- | --- |
+| `wersja` | `1` — numer kontraktu; podbijany przy zmianie kształtu |
+| `dorosly`, `trybPacjenta`, `strategia` | gałąź generatora, rejestr „Dla pacjenta", `reduction` / `stabilization` / `null` |
+| `pacjent` | `wiekLat`, `wiekMies`, `plec`, `masaKg`, `wzrostCm`, `bmi` |
+| `klasyfikacja` | `klucz` i `etykieta` (dorosły), `nadwaga`, `otylosc`, `nadmiar`, `niedowaga`, `klasaBmi` (pełna klasa z silnika BMI u dziecka) |
+| `energia` | `reeKcal`, `teeBazowyKcal`, `palUzyty`, `podazKcal`, `podazZaokrKcal`, `deficytKcal`, `tempoKgTydz`, `dietaKlucz`, `dietaNazwa`, `tempoOgraniczone`, `utrzymanieKcal` |
+| `masa` | `docelowaKg`, `doRedukcjiKg`, `gornaNormaKg`, `dolnaNormaKg` |
+| `normy` | liczby norm żywienia (białko RDA/EAR i zakres do planowania, tłuszcz, węglowodany) + `zrodlo`; **bez** modelu karty i stanu UI |
+| `witD` | `pasmo`, `std`, `podwojona`, `ul` |
+| `plyny` | `litry` |
+| `czasDoNormy` | `tygodnie`, `miesiaceLabel`, `zRuchemTygodnie`, `sesjaKcal` |
+| `wzrastanie` | tempo cm/rok, czy z obserwacji, kamienie milowe (gałąź stabilizacji) |
+
+Dodatkowo eksport `formatujCzasDojscia(tygodnie, etykietaMiesiecy)` — ten sam formater,
+którego używają zdania. Odbiorca składa frazę „około X tygodni (ok. Y)" modułem, zamiast
+odtwarzać regułę progu 52 tygodni u siebie.
+
+**Bramki, które mają znaczenie kliniczne.**
+
+- `masa.docelowaKg` i `masa.doRedukcjiKg` są `null`, gdy redukcja nie jest wskazana.
+  `gornaNormaKg` zostaje zawsze, bo to cecha wieku i wzrostu, a nie cel terapii. Bez tej
+  bramki odbiorca pokazałby pacjentowi w normie „cel" niższy od obecnej masy — ten sam błąd,
+  który wyszedł w P-SZCZEBLE.
+- `energia.tempoOgraniczone` jest prawdziwe tylko wtedy, gdy zdanie o limicie 0,5 kg/mies.
+  naprawdę poszło do zaleceń. Sama właściwość diety (`rateCapped`) nie wystarcza: w strategii
+  stabilizacji limit nie jest wypisywany, więc raport nie ma prawa o nim pisać.
+- Opcje dodatkowe (normy, witamina D, płyny, czas do normy) są `null`, gdy lekarz ich nie
+  zaznaczył. Zbiornik danych jest czyszczony na każde wywołanie generatora, żeby wynik
+  poprzedniego pacjenta nie przeciekł do następnego.
+
+**Testy.** `tests/e2e/dane-zalecen-energetycznych.spec.mjs` (6 testów) nie sprawdza liczb
+w oderwaniu od tekstu — dla każdego scenariusza składa napis z wartości w `dane` i wymaga,
+żeby dokładnie ten napis był w `textOutput`. Cztery kontrole ujemne zweryfikowane mutacjami
+produkcyjnego kodu (każda mutacja zapala test): masa docelowa dziecka wzięta z mediany
+zamiast z górnej granicy normy, flaga limitu tempa bez bramki strategii, cel redukcji u
+dorosłego w normie, przeciek zbiornika między wywołaniami.
+
+**Czego to nie zmienia.** Żadnego zdania, żadnej liczby w zaleceniach, żadnego zapisu,
+autosave'u ani synchronizacji. U dorosłego generator nadal nie pisze o witaminie D ani o
+płynach, więc `witD` i `plyny` są tam `null` — dane nie uzupełniają tego, czego nie ma
+w zaleceniach.
+
+SW 1.1.24 → **1.1.25**; `vilda_diet_recommendations.js?v=30→31`.
+
 ## Szczeble pośrednie w drodze do normy BMI (P-SZCZEBLE, SW 1.1.24, 2026-09-20)
 
 **Skąd potrzeba.** Karta „Droga do normy BMI" pokazywała jeden cel i nic pomiędzy: dziecko
