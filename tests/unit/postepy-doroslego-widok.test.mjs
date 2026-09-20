@@ -24,6 +24,17 @@ const SERIA_ODZYSK = [
   { dateISO: '2026-10-01', weight: 114, height: 170 },
 ];
 
+/* Punkt „Włączenie" z datą, dopasowany do pierwszego pomiaru serii.
+ *
+ * WPROWADZONY PO AUDYCIE 2026-09-20 (F1). Wcześniej testy znacznika ChPL podawały sam `lek:`
+ * bez jednego punktu leczenia — czyli sytuację, w której oś NIE MA zera leczenia i silnik
+ * (od tej poprawki) znacznika nie stawia. Asercje zostają co do joty; zmienia się wsad, żeby
+ * opisywał pacjenta, który to leczenie faktycznie zaczął. */
+const WLACZENIE = (p) => ({
+  id: 'w', type: 'start', dateISO: p.dateISO, weight: p.weight, height: p.height,
+  ageYears: 47, ageMonths: 0,
+});
+
 const model = (opts) => moduly().P.analizuj(opts);
 const html = (opts) => moduly().U.buildHtml(model(opts));
 
@@ -68,7 +79,7 @@ describe('P-POSTEPY widok — nic nie pojawia się bez pokrycia w modelu', () =>
   });
 
   it('punkt decyzyjny ChPL tylko dla leku, który go ma', () => {
-    const lira = html({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_REDUKCJA });
+    const lira = html({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_REDUKCJA, punktyLeczenia: [WLACZENIE(SERIA_REDUKCJA[0])] });
     expect(lira, 'liraglutyd: 16. tydzień').toContain('stroke-dasharray="2 3"');
     expect(lira, 'i zaznaczony okres zwiększania dawki').toContain('zwiększanie dawki');
 
@@ -78,9 +89,19 @@ describe('P-POSTEPY widok — nic nie pojawia się bez pokrycia w modelu', () =>
   });
 
   it('stopka nazywa założenie kotwicy nominalnej', () => {
-    const h = html({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_REDUKCJA });
+    const h = html({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_REDUKCJA, punktyLeczenia: [WLACZENIE(SERIA_REDUKCJA[0])] });
     expect(h).toContain('nominalnym czasie zwiększania dawki');
     expect(h).toContain('4 tyg.');
+  });
+
+  it('bez punktu „Włączenie" widok nie rysuje ani znacznika ChPL, ani pasa titracji (audyt F1)', () => {
+    // Strażnik na poziomie WIDOKU dla znaleziska F1: silnik gasi `tydzienOdOdniesienia`
+    // i `nominalna`, a widok ma za tym pójść bez własnej gałęzi. Ten sam lek, ta sama seria —
+    // różni się wyłącznie tym, że nie wiadomo, kiedy leczenie się zaczęło.
+    const bez = html({ wiekLat: 47, lek: 'Saxenda', pomiary: SERIA_REDUKCJA });
+    expect(bez, 'znacznika ChPL nie ma').not.toContain('stroke-dasharray="2 3"');
+    expect(bez, 'pasa „zwiększanie dawki" też nie').not.toContain('zwiększanie dawki');
+    expect(bez, 'ale lekarz czyta, dlaczego go nie ma').toContain('nie ma wspólnego zera z leczeniem');
   });
 
   it('stopka niesie nazwę i źródło zestawu pasm', () => {
@@ -259,7 +280,7 @@ describe('P-POSTEPY rata 3 — kamienie milowe', () => {
   });
 
   it('kamienie pokrywają pasma, klasy, nadir, odzysk i punkt ChPL', () => {
-    const m = model({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
+    const m = model({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK, punktyLeczenia: [WLACZENIE(SERIA_ODZYSK[0])] });
     const typy = m.kamienie.map((k) => k.typ);
     expect(typy).toContain('pasmo-osiagniete');
     expect(typy).toContain('zmiana-klasy');

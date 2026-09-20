@@ -15,11 +15,20 @@
  * i rysuje go jako PUNKT — dla semaglutydu i tirzepatydu ChPL nie podaje ani progu, ani
  * terminu, więc dla nich punktu nie ma i to jest poprawny wynik, nie brak danych.
  *
- * SKĄD LICZBY W DRABINKACH. Z punktu 5.1 charakterystyk produktów leczniczych przekazanych
- * przez właściciela 2026-09-19 — to kategorie odpowiedzi, w których te dokumenty RAPORTUJĄ
- * odsetki pacjentów. Dokumentów nie dołączono do repozytorium (prawa autorskie podmiotów
- * odpowiedzialnych); identyfikacja wersji jest w docs/clinical/ALGORITHMS.md, wpis P-CHPL.
- * Progu ≥25 % nie ma w żadnym z czterech dokumentów — dlatego nie ma go tutaj.
+ * SKĄD LICZBY W DRABINKACH — i czym one NIE SĄ.
+ *
+ * Drabinka LIRAGLUTYD (5/10 %) to kategorie odpowiedzi raportowane w punkcie 5.1 ChPL
+ * liraglutydu (Triglyva, dokument z 10.04.2026). Dokumentów nie dołączono do repozytorium
+ * (prawa autorskie podmiotów odpowiedzialnych); identyfikacja wersji jest w
+ * docs/clinical/ALGORITHMS.md, wpis P-CHPL.
+ *
+ * Drabinka OGÓLNA (5/10/15/20/25 %) NIE JEST cytatem z żadnej ChPL — i to była moja pomyłka
+ * w racie 1, skorygowana w racie 1b po przeglądzie piśmiennictwa (ten nagłówek doprowadzony
+ * do zgodności z danymi w audycie 2026-09-20). Ugruntowany jest wyłącznie najniższy szczebel
+ * 5 %; wyższe szczeble badania fazy 3 dobierają osobno pod moc leku i ŻADEN pojedynczy
+ * dokument nie zawiera tej drabinki w całości. Progu 25 % nie ma w żadnej z czterech ChPL —
+ * jest w literaturze rejestracyjnej (STEP UP, SURMOUNT-5). Pełne uzasadnienie każdego
+ * szczebla stoi w polu `zrodlo` zestawu niżej i trafia pod wykres, gdzie lekarz je zobaczy.
  */
 (function (w) {
   'use strict';

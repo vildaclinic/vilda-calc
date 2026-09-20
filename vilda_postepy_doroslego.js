@@ -506,10 +506,33 @@
       return klucz(a, os) - klucz(b, os);
     });
 
-    /* Punkt odniesienia: masa w punkcie „Włączenie”, a gdy go nie ma — pierwszy pomiar. */
+    /* Punkt odniesienia: masa w punkcie „Włączenie”, a gdy go nie ma — pierwszy pomiar.
+     *
+     * ODZYSK PUNKTU „WŁĄCZENIE” BEZ WŁASNEJ DATY (audyt 2026-09-20). Monitor otyłości wymusza
+     * masę, wzrost i wiek, ale daty klinicznej NIE — `Ed()` przyjmuje pusty `dateISO`. Na osi
+     * datowej taki punkt nie ma klucza i do tej poprawki po prostu wypadał z wyboru, choć ta
+     * sama wizyta siedziała już w serii (scalona po kluczu sejfu) i datę miała. Silnik
+     * wyrzucał dane, które trzymał w ręku. Szukamy więc bliźniaczki po DOKŁADNIE tym kluczu,
+     * którego używa scalanie, i pożyczamy od niej oś czasu. Gdy bliźniaczki nie ma —
+     * zostaje pierwszy pomiar, a punkt oceny wg ChPL traci pozycję na wykresie (niżej). */
     var start = null;
+    var dataOdzyskana = false;
     for (var i = 0; i < punkty.length; i++) {
-      if (punkty[i].typ === 'start' && klucz(punkty[i], os) != null) { start = punkty[i]; break; }
+      if (punkty[i].typ !== 'start') continue;
+      if (klucz(punkty[i], os) != null) { start = punkty[i]; break; }
+      var kw = kluczPomiaru(punkty[i]);
+      for (var i2 = 0; i2 < uporzadkowane.length; i2++) {
+        if (kluczPomiaru(uporzadkowane[i2]) !== kw) continue;
+        if (klucz(uporzadkowane[i2], os) == null) continue;
+        start = {};
+        for (var pole in punkty[i]) start[pole] = punkty[i][pole];
+        start.dateISO = uporzadkowane[i2].dateISO;
+        start.ms = uporzadkowane[i2].ms;
+        start.wiekMies = uporzadkowane[i2].wiekMies;
+        dataOdzyskana = true;
+        break;
+      }
+      break;
     }
     var odniesienie = start || uporzadkowane[0];
     wynik.punktOdniesienia = {
@@ -518,12 +541,37 @@
       wzrost: odniesienie.wzrost,
       dateISO: odniesienie.dateISO,
       wiekMies: odniesienie.wiekMies,
+      dataOdzyskana: dataOdzyskana,
       lek: start ? start.lek : null,
       substancja: start ? start.substancja : null,
       opis: start
         ? 'Procenty liczone od masy w punkcie „Włączenie” leczenia.'
         : 'Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.',
     };
+    if (dataOdzyskana) {
+      wynik.ostrzezenia.push('Punkt „Włączenie” nie ma własnej daty — oś czasu wzięta z pokrywającego się pomiaru w serii.');
+    }
+
+    /* PUNKT OCENY WG ChPL MA WŁASNE ZERO — I MUSI TO BYĆ ZERO LECZENIA (audyt 2026-09-20).
+     *
+     * `punktDecyzyjny()` zna tylko LEK: oddaje okno i kotwicę z ChPL, nie wiedząc, od czego
+     * ten wykres liczy tygodnie. Lek rozpoznaje się z dowolnego punktu leczenia, więc pacjent
+     * BEZ punktu „Włączenie” (przejęty w trakcie terapii) albo z punktem bez daty dostawał
+     * znacznik ChPL osadzony na osi liczonej OD PIERWSZEGO POMIARU. Przy obserwacji sprzed
+     * leczenia znacznik lądował o miesiące za wcześnie — czasem przed pierwszą dawką — a
+     * lekarz czytał go jako niespełnione kryterium 5 % i wskazanie do odstawienia. To ta sama
+     * klasa usterki, którą kasowała P-KOTWICA; tam chodziło o arytmetykę kotwicy, tu o zero osi.
+     *
+     * Reguła z ChPL ZOSTAJE w wyniku (zdanie, próg, okno, kotwica) — znika wyłącznie jej
+     * POZYCJA na wykresie. `nominalna` gaśnie razem z nią, więc widok przestaje rysować i
+     * znacznik, i pas „zwiększanie dawki”: jedna flaga w silniku, zero zmian w warstwie widoku. */
+    if (wynik.punktDecyzyjny && wynik.punktDecyzyjny.jest
+        && wynik.punktOdniesienia.zrodlo !== 'start-leczenia') {
+      wynik.punktDecyzyjny.tydzienOdOdniesienia = null;
+      wynik.punktDecyzyjny.nominalna = false;
+      wynik.punktDecyzyjny.bezOsi = 'brak-punktu-wlaczenia';
+      wynik.ostrzezenia.push('Punktu oceny wg ChPL nie postawiono na wykresie: bez punktu „Włączenie” oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru, nie od masy początkowej z ChPL.');
+    }
 
     var masaOdn = odniesienie.masa;
 
@@ -562,8 +610,13 @@
       stan: punkty.length === 0 ? 'brak-danych' : (koniec ? 'odstawione' : 'na-leczeniu'),
       odstawienieDateISO: koniec ? koniec.dateISO : null,
       odstawienieTydzien: koniec ? zaokraglTydzien(tygodnieMiedzy(odniesienie, koniec, os)) : null,
-      lek: wynik.punktOdniesienia.lek,
-      substancja: wynik.punktOdniesienia.substancja,
+      /* Lek bierzemy z punktu odniesienia, a gdy tam go nie ma — z leku ROZPOZNANEGO wyżej
+         (audyt 2026-09-20). Do tej poprawki pacjent bez datowanego punktu „Włączenie” miał
+         `lek: null`, choć silnik wiedział, czym jest leczony: dobrał mu drabinkę i punkt
+         oceny wg ChPL. Nagłówek kartki do dokumentacji gubił wtedy nazwę leku dokładnie
+         tam, gdzie reszta kartki mówiła o jego ChPL. */
+      lek: wynik.punktOdniesienia.lek || (lek != null ? String(lek) : null),
+      substancja: wynik.punktOdniesienia.substancja || (substancja != null ? String(substancja) : null),
     };
 
     /* Przekroczenia pasm — pierwszy pomiar, który sięgnął pasma. Bez interpolacji. */

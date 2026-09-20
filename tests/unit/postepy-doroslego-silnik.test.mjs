@@ -388,14 +388,21 @@ describe('P-POSTEPY — granice warstw (strażnicy zachowaniowe)', () => {
     // P-KOTWICA (2026-09-20): rekord nadal nie zapisuje momentu dojścia do dawki podtrzymującej,
     // ale nominalny czas zwiększania dawki jest faktem z ChPL i mieszka w danych grupy.
     // Punkt wolno więc osadzić — pod warunkiem, że wynik NAZYWA to założeniem (`nominalna`).
-    const lira = silnik().analizuj({ ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4 });
+    //
+    // WSAD POPRAWIONY PO AUDYCIE 2026-09-20 (F1), asercje bez zmian. Wcześniej ten przypadek
+    // podawał sam `lek:` i ANI JEDNEGO punktu leczenia — czyli sytuację, w której oś nie ma
+    // zera leczenia i znacznika nie wolno stawiać. Arytmetyka kotwicy była sprawdzana na
+    // wsadzie, który sam był scenariuszem usterki. Punkt „Włączenie" z datą czyni przypadek
+    // klinicznie sensownym; liczby, których ten test pilnuje, zostają te same.
+    const WLACZENIE = { id: 'w', type: 'start', dateISO: '2026-01-08', weight: 112.4, height: 167, ageYears: 47, ageMonths: 0 };
+    const lira = silnik().analizuj({ ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4, punktyLeczenia: [WLACZENIE] });
     expect(lira.punktDecyzyjny.kotwica).toBe('dawka-podtrzymujaca');
     expect(lira.punktDecyzyjny.tygodnie, 'okno ChPL bez zmian').toBe(12);
     expect(lira.punktDecyzyjny.titracjaNominalnaTyg, 'liraglutyd: 4 tyg. zwiększania dawki').toBe(4);
     expect(lira.punktDecyzyjny.tydzienOdOdniesienia, '4 + 12').toBe(16);
     expect(lira.punktDecyzyjny.nominalna, 'założenie, nie odczyt z rekordu').toBe(true);
 
-    const mysimba = silnik().analizuj({ wiekLat: 40, lek: 'Mysimba', pomiary: SERIA_4 });
+    const mysimba = silnik().analizuj({ wiekLat: 40, lek: 'Mysimba', pomiary: SERIA_4, punktyLeczenia: [WLACZENIE] });
     expect(mysimba.punktDecyzyjny.kotwica, 'Mysimba liczy od rozpoczęcia').toBe('start');
     expect(mysimba.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
     expect(mysimba.punktDecyzyjny.nominalna, 'nic tu nie jest zakładane').toBe(false);
@@ -554,5 +561,126 @@ describe('P-POSTEPY rata 2 — lek znajduje się sam w punktach leczenia', () =>
       ],
     });
     expect(m.zestaw.id).toBe('LIRAGLUTYD');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// AUDYT 2026-09-20, znalezisko F1/F2: ZERO OSI I LEK W WYNIKU
+//
+// Punkt oceny wg ChPL stoi na osi liczonej OD WŁĄCZENIA LECZENIA. `punktDecyzyjny()` zna
+// jednak tylko LEK — a lek rozpoznaje się z DOWOLNEGO punktu leczenia. Pacjent bez punktu
+// „Włączenie" (przejęty w trakcie terapii) albo z punktem bez daty dostawał więc znacznik
+// ChPL osadzony na osi liczonej od PIERWSZEGO POMIARU. Przy obserwacji sprzed leczenia
+// znacznik lądował o miesiące za wcześnie — w odtworzonym przypadku na 27.04, choć lek
+// włączono 06.07 — i czytał się jak niespełnione kryterium 5 % oraz wskazanie do odstawienia.
+//
+// Te testy odtwarzają OBA przypadki z audytu na prawdziwym silniku.
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+describe('P-POSTEPY audyt F1 — punkt ChPL nie stoi na cudzym zerze', () => {
+  const LEK = { drug: 'Saxenda (liraglutyd)', substance: 'liraglutide' };
+  // Pacjent obserwowany od stycznia; lek włączony 06.07.2026 przy 120 kg.
+  const POMIARY = [
+    { ageMonthsTotal: 624, weight: 118, height: 170, dateISO: '2026-01-05' },
+    { ageMonthsTotal: 627, weight: 120, height: 170, dateISO: '2026-04-06' },
+    { ageMonthsTotal: 630, weight: 120, height: 170, dateISO: '2026-07-06' },
+    { ageMonthsTotal: 633, weight: 110, height: 170, dateISO: '2026-10-05' },
+  ];
+
+  it('punkt „Włączenie" BEZ własnej daty odzyskuje oś z pokrywającego się pomiaru', () => {
+    // `obesity_therapy_monitor.js` (funkcja `Ed`) wymusza masę, wzrost i wiek, ale dateISO
+    // zostawia opcjonalne. Ta sama wizyta siedzi już w serii i datę ma — silnik nie może
+    // jej wyrzucać, skoro trzyma ją w ręku.
+    const m = silnik().analizuj({
+      wiekMies: 624, pomiary: POMIARY,
+      punktyLeczenia: [{ id: 's', type: 'start', ageYears: 52, ageMonths: 6, weight: 120, height: 170, ...LEK }],
+    });
+    expect(m.punktOdniesienia.zrodlo, 'włączenie zostaje odniesieniem').toBe('start-leczenia');
+    expect(m.punktOdniesienia.masa, 'procenty od masy z włączenia, nie od 118 kg').toBe(120);
+    expect(m.punktOdniesienia.dateISO).toBe('2026-07-06');
+    expect(m.punktOdniesienia.dataOdzyskana, 'i mówimy, że data jest pożyczona').toBe(true);
+    expect(m.ostrzezenia.join(' ')).toContain('nie ma własnej daty');
+    // Pomiary sprzed leczenia mają teraz ujemne tygodnie i nie udają jego efektu.
+    expect(m.seria.map((s) => s.tydzien)).toEqual([-26, -13, 0, 13]);
+    // 12 tyg. dawki podtrzymującej + 4 tyg. nominalnego zwiększania = 16. tydzień OD WŁĄCZENIA.
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+  });
+
+  it('bez punktu „Włączenie" znacznik ChPL znika z wykresu, a reguła zostaje w wyniku', () => {
+    // Pacjent przejęty w trakcie terapii: same wpisy „kontynuacja". Silnik zna lek (dobiera
+    // drabinkę), ale NIE zna zera osi leczenia — więc nie wolno mu nic na tej osi stawiać.
+    const m = silnik().analizuj({
+      wiekMies: 624, pomiary: POMIARY,
+      punktyLeczenia: [{ id: 'c', type: 'continue', ageYears: 52, ageMonths: 9, weight: 110, height: 170, dateISO: '2026-10-05', ...LEK }],
+    });
+    expect(m.punktOdniesienia.zrodlo).toBe('pierwszy-pomiar');
+    expect(m.zestaw.id, 'lek nadal rozpoznany — drabinka jego').toBe('LIRAGLUTYD');
+
+    expect(m.punktDecyzyjny.jest, 'ChPL ma dla tego leku kryterium i to zostaje').toBe(true);
+    expect(m.punktDecyzyjny.zdanie).toContain('12 tyg.');
+    expect(m.punktDecyzyjny.tygodnie, 'okno z ChPL zostaje nietknięte').toBe(12);
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia, 'znika tylko POZYCJA na wykresie').toBeNull();
+    expect(m.punktDecyzyjny.bezOsi).toBe('brak-punktu-wlaczenia');
+    expect(m.punktDecyzyjny.nominalna, 'razem ze znacznikiem gaśnie pas „zwiększanie dawki"').toBe(false);
+
+    expect(m.kamienie.filter((k) => k.typ === 'punkt-chpl'), 'i żadnego kamienia milowego').toHaveLength(0);
+    expect(m.ostrzezenia.join(' '), 'a lekarz dowiaduje się dlaczego').toContain('nie ma wspólnego zera z leczeniem');
+  });
+
+  it('z datowanym punktem „Włączenie" wszystko stoi tam, gdzie stało', () => {
+    // Kontrola pozytywna: poprawka nie może zabrać znacznika tam, gdzie był poprawny.
+    const m = silnik().analizuj({
+      wiekMies: 624, pomiary: POMIARY,
+      punktyLeczenia: [{ id: 's', type: 'start', ageYears: 52, ageMonths: 6, weight: 120, height: 170, dateISO: '2026-07-06', ...LEK }],
+    });
+    expect(m.punktOdniesienia.zrodlo).toBe('start-leczenia');
+    expect(m.punktOdniesienia.dataOdzyskana, 'data własna, nic nie pożyczamy').toBe(false);
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+    expect(m.punktDecyzyjny.nominalna).toBe(true);
+    expect(m.punktDecyzyjny.bezOsi).toBeUndefined();
+  });
+
+  it('pacjent bez leczenia nie dostaje ani znacznika, ani ostrzeżenia o nim', () => {
+    // Brak leku to brak kryterium — i to było poprawne od raty 1. Ostrzeżenie o braku zera
+    // nie ma prawa się pojawić, bo nie ma czego stawiać.
+    const m = silnik().analizuj({ wiekMies: 624, pomiary: POMIARY });
+    expect(m.punktDecyzyjny).toBeNull();
+    expect(m.ostrzezenia.join(' ')).not.toContain('wspólnego zera');
+  });
+});
+
+describe('P-POSTEPY audyt F2 — lek w wyniku, gdy silnik go zna', () => {
+  it('leczenie.lek bierze lek rozpoznany, nie tylko lek z punktu odniesienia', () => {
+    // Do poprawki: `lek: null`, choć silnik dobrał drabinkę liraglutydu i punkt oceny ChPL.
+    // Nagłówek kartki do dokumentacji gubił przez to nazwę leku.
+    const m = silnik().analizuj({
+      wiekMies: 624,
+      pomiary: [
+        { ageMonthsTotal: 624, weight: 118, height: 170, dateISO: '2026-01-05' },
+        { ageMonthsTotal: 633, weight: 110, height: 170, dateISO: '2026-10-05' },
+      ],
+      punktyLeczenia: [{
+        id: 'c', type: 'continue', ageYears: 52, ageMonths: 9, weight: 110, height: 170,
+        dateISO: '2026-10-05', drug: 'Saxenda (liraglutyd)', substance: 'liraglutide',
+      }],
+    });
+    expect(m.punktOdniesienia.zrodlo).toBe('pierwszy-pomiar');
+    expect(m.punktOdniesienia.lek, 'punkt odniesienia leku nie niesie i nie ma udawać').toBeNull();
+    expect(m.leczenie.lek, 'ale wynik niesie — silnik ten lek zna').toBe('Saxenda (liraglutyd)');
+    expect(m.leczenie.substancja).toBe('liraglutide');
+    expect(m.leczenie.stan).toBe('na-leczeniu');
+  });
+
+  it('bez jakiegokolwiek punktu leczenia lek zostaje pusty', () => {
+    // Kontrola negatywna do powyższego: nie wolno dorabiać leku z niczego.
+    const m = silnik().analizuj({
+      wiekMies: 624,
+      pomiary: [
+        { ageMonthsTotal: 624, weight: 118, height: 170, dateISO: '2026-01-05' },
+        { ageMonthsTotal: 633, weight: 110, height: 170, dateISO: '2026-10-05' },
+      ],
+    });
+    expect(m.leczenie.lek).toBeNull();
+    expect(m.leczenie.stan).toBe('brak-danych');
   });
 });
