@@ -5312,6 +5312,20 @@ Pod nagłówkiem „Wydruk” dochodzi jedno zdanie: gdzie szukać PDF-a („w o
 
 SW 1.1.17 → **1.1.18**; `vilda_postepy_doroslego_ui.js?v=4→5`.
 
+## Inicjały zamiast nazwiska w nazwie pobieranego pliku (F13, SW 1.1.21, 2026-09-20)
+
+**Zmiana kliniczna: żadna.** Treść obu wydruków jest nietknięta.
+
+**Problem.** Plik nazywał się `postepy_kliniczny_Jan-Kowalski_2026-09-20.pdf`. Treść wydruku jest dokumentem medycznym i nazwisko w nagłówku ma tam być — ale **nazwa pliku pokazuje się w zupełnie innych miejscach**: na liście Pobranych, w oknie wyboru pliku, w podglądzie arkusza udostępniania na telefonie i w każdym menedżerze plików. Plik trafia przy tym do katalogu Pobrane, który — inaczej niż sejf aplikacji — **nie jest zaszyfrowany**. Tożsamość pacjenta była więc czytelna przy samym przewijaniu listy plików, bez otwierania czegokolwiek.
+
+**Rozwiązanie (decyzja właściciela 2026-09-20).** Nazwa niesie **inicjały**: `postepy_kliniczny_JK_2026-09-20.pdf`. Inicjały wystarczą, żeby odróżnić wydruki dwóch pacjentów z tego samego dnia — a po to ten człon w nazwie w ogóle jest.
+
+**Reguła.** Rozdzielamy po **wszystkich** znakach niebędących literami, nie tylko po spacji, więc nazwisko dwuczłonowe daje trzy inicjały (`Anna Kowalska-Nowak` → `AKN`). Polskie litery zostają (`Łukasz Żółć` → `ŁŻ`). Limit **czterech** liter trzyma nazwę krótką i zarazem nie pozwala odtworzyć z niej pełnej listy członów. Brak nazwiska — człon po prostu znika, zamiast zostawiać puste podkreślenie.
+
+**Skutek uboczny, który jest zaletą.** Ochrona przed ścieżką w polu nazwiska jest teraz mocniejsza niż wcześniej: do nazwy przechodzą **wyłącznie pierwsze litery członów**, więc `../../etc/passwd` daje `EP`, a nie `etc-passwd`.
+
+**Strażnik sformułowany jako ZAKAZ, nie jako oczekiwany napis:** test sprawdza, że w nazwie pliku nie ma **ani jednego pełnego członu** nazwiska — dla obu wariantów wydruku i dla kilku kształtów nazwiska. Dzięki temu złapie także przyszłą zmianę formatu nazwy, która znowu wpuściłaby tam człon nazwiska. Kontrola negatywna (powrót do pełnego nazwiska) czerwieni trzy testy.
+
 ## Projekt wizualny postępów dorosłego (P-WIZUAL, SW 1.1.20, 2026-09-20)
 
 **Zmiana kliniczna: żadna.** Nie zmienia się żaden próg, wzór, jednostka, populacja ani interpretacja. Zmienia się rysowanie, układ kafelków, język opisu i to, gdzie który tekst stoi.
