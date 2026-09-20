@@ -314,6 +314,48 @@
     return html;
   }
 
+  /* SZCZEBLE POŚREDNIE (P-SZCZEBLE, decyzje właściciela 2026-09-20).
+   *
+   * Karta NIE liczy progów — pyta silnik (`VildaBmi.drabinkaCelow`) i formatuje wynik.
+   * Dzięki temu ta sama drabinka jest do wzięcia przez Zalecenia dietetyczne, Status
+   * i wydruki, bez powtarzania arytmetyki w każdym module.
+   *
+   * Po co to jest: karta pokazywała jeden cel i nic pomiędzy. Pacjentowi z BMI 42 zdanie
+   * „do normy brakuje 50 kg" odbiera sens startu, a „15 kg i wychodzisz z otyłości II
+   * stopnia" — nie. Szczebel NIE jest celem leczenia; cel zostaje ten sam.
+   */
+  var SZCZEBLE_MAX = 2;
+
+  function drabinka(ctx) {
+    if (!ctx || !w.VildaBmi || typeof w.VildaBmi.drabinkaCelow !== 'function') return null;
+    if (!fin(ctx.weightKg) || !fin(ctx.heightCm) || !(ctx.heightCm > 0)) return null;
+    try {
+      return w.VildaBmi.drabinkaCelow({
+        wzrostCm: ctx.heightCm, masaKg: ctx.weightKg,
+        wiekMies: fin(ctx.ageYears) ? Math.round(ctx.ageYears * 12) : null,
+        plec: ctx.sex === 'F' ? 'F' : 'M',
+        zrodlo: typeof w.bmiSource === 'string' ? w.bmiSource : null,
+        dorosly: ctx.isChild ? false : true
+      });
+    } catch (e) { return null; }
+  }
+
+  /* W trybie STABILIZACJI masa się nie zmienia — szczebel przekracza się wzrastaniem,
+     więc kilogramy byłyby kłamstwem. Wtedy nazywamy sam próg, bez „−X kg". */
+  function szczebleHtml(ctx, model) {
+    var dr = drabinka(ctx);
+    if (!dr || !dr.szczeble.length) return '';
+    var out = dr.szczeble.slice(0, SZCZEBLE_MAX).map(function (p) {
+      var glowna = model && model.stabMode
+        ? '<b>' + esc(p.etykieta) + '</b>'
+        : '<b>\u2212' + fmt(Math.abs(p.roznica), 1) + '\u202Fkg</b> \u2192 ' + esc(p.etykieta);
+      return '<div class="bmi-journey-g4">Po drodze: ' + glowna + ' \u2014 ' + esc(p.opis)
+        + (p.zrodlo ? ' <span class="bmi-journey-src">(' + esc(p.zrodlo.split(',')[0]) + ')</span>' : '')
+        + '</div>';
+    });
+    return out.join('');
+  }
+
   function warningsSection(ctx, model) {
     var html = '';
     if (ctx.ageYears >= 5 && ctx.ageYears < 10) {
@@ -355,11 +397,13 @@
         + '<div class="bmi-journey-g1">Cel: <b>utrzymanie masy ok. ' + fmt(ctx.weightKg, 1) + '\u202Fkg</b></div>'
         + '<div class="bmi-journey-g2">BMI obniży się dzięki dalszemu wzrastaniu — ' + targetLabel + '</div>'
         + '<div class="bmi-journey-g3">Górna granica normy przy obecnym wzroście: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
+        + szczebleHtml(ctx, model)
         + '</div>'
       : '<div class="bmi-journey-goalbox">'
         + '<div class="bmi-journey-g1">Cel: <b>\u2212' + fmt(ctx.kgToLose, 1) + '\u202Fkg</b></div>'
         + '<div class="bmi-journey-g2">' + targetLabel + '</div>'
         + '<div class="bmi-journey-g3">Start: <b>' + fmt(ctx.weightKg, 1) + '\u202Fkg</b> \u2192 Cel: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
+        + szczebleHtml(ctx, model)
         + '</div>';
     var kcal = model.stabMode
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.maintenanceKcal / 100) * 100)
@@ -405,7 +449,7 @@
       + '.bmi-journey-g1 b{font-size:1.4rem;font-weight:750;color:var(--bj-num)}'
       + '.bmi-journey-g2{font-size:.78rem;color:var(--bj-muted);margin-top:.08rem}'
       + '.bmi-journey-g3{font-size:.85rem;margin-top:.28rem}'
-      + '.bmi-journey-g3 b{color:var(--bj-num)}'
+      + '.bmi-journey-g3 b{color:var(--bj-num)}.bmi-journey-g4{font-size:.8rem;margin-top:.26rem;color:var(--bj-muted)}.bmi-journey-g4 b{color:var(--bj-num);font-weight:700}.bmi-journey-src{font-size:.72rem;opacity:.8}'
       /* kaloryczność — hero na zielonym tle (wariant C1 makiety) */
       + '.bmi-journey-kcal{text-align:center;margin:.75rem .3rem .1rem;padding:.5rem .4rem .55rem;background:var(--bj-kcalbg);border-radius:12px}'
       + '.bmi-journey-kcaln{font-size:1.9rem;font-weight:750;color:var(--bj-green);line-height:1.1}'

@@ -483,6 +483,152 @@
     return { bmiCel: r.bmi, masaCel: masa(r.bmi), rodzaj: 'dziecko-P85', siatka: r.siatka, fallback: r.fallback };
   }
 
+  /* ---------- drabinka celów: szczeble pośrednie w drodze do normy ----------
+   * P-SZCZEBLE (decyzje właściciela 2026-09-20). JEDNO miejsce, w którym aplikacja liczy
+   * „ile brakuje i dokąd". Karty tego nie liczą — czytają gotowy wynik.
+   *
+   * SKĄD POTRZEBA. Obie karty („Droga do normy BMI", „Zalecenia dietetyczne") pokazywały
+   * jeden cel i nic pomiędzy: dziecko 85. centyl, dorosły BMI 24,9. Pacjentowi z BMI 42
+   * zdanie „do normy brakuje 50 kg" odbiera sens startu. Szczeble są bliższymi słupkami
+   * na tej samej drodze — NIE są celem leczenia i nie zastępują celu.
+   *
+   * SZCZEBLE DOROSŁEGO (bez nowych progów — wszystkie z PROGI.DOROSLY):
+   *   BMI 35 → wyjście z otyłości II stopnia;
+   *   BMI 30 → koniec otyłości.
+   *
+   * SZCZEBLE DZIECKA (bez nowych progów — z PROGI.DZIECKO):
+   *   SDS 3  → wyjście z otyłości olbrzymiej (tylko od OLBRZYMIA_MIN_M, jak w kategorii);
+   *   97. centyl → koniec otyłości.
+   *
+   * SZCZEBEL DOWODOWY DZIECKA — JEDYNY NOWY PRÓG W TYM WPISIE (akceptacja kliniczna
+   * właściciela 2026-09-20): redukcja BMI-SDS o 0,25 od wartości wyjściowej.
+   * Reinehr T. i wsp., „Which Amount of BMI-SDS Reduction Is Necessary to Improve
+   * Cardiovascular Risk Factors in Overweight Children?", J Clin Endocrinol Metab
+   * 2016;101(8):3171–9, doi:10.1210/jc.2016-1885 (PMID 27285295): 1388 dzieci, średnia
+   * wieku 11,4 roku, roczna interwencja behawioralna, percentyle IOTF. Redukcja 0,25–0,5
+   * BMI-SDS wiązała się ze spadkiem ciśnienia skurczowego o 3,2 mm Hg, rozkurczowego
+   * o 2,2 mm Hg, trójglicerydów o 6,9 mg/dl i HOMA o 0,5 oraz wzrostem HDL o 1,3 mg/dl;
+   * redukcja > 0,5 podwajała efekt. To jest PRÓG POPRAWY METABOLICZNEJ, nie cel terapii.
+   *
+   * OGRANICZENIE, KTÓRE MUSI BYĆ WIDOCZNE W WYNIKU. BMI-SDS jest złym miernikiem przy
+   * skrajnych wartościach: teoretyczne maksimum z-score zmienia się ponad trzykrotnie
+   * z wiekiem, a u dzieci z otyłością ciężką z-score koreluje z odsetkiem 95. centyla
+   * tylko na poziomie r ≈ 0,5 (Freedman D.S. i wsp., J Pediatr 2017;188:50–56,
+   * doi:10.1016/j.jpeds.2017.03.039; kohorta 2–4 lata, siatki CDC). Dlatego szczebel
+   * Reinehra niesie flagę `ostrzezenieSds`, gdy SDS wyjściowy przekracza OLBRZYMIA_SDS —
+   * wtedy karta ma się opierać na kilogramach i granicy centylowej, nie na samym SDS.
+   *
+   * FILTR. Szczebel wchodzi do `szczeble` tylko wtedy, gdy LEŻY MIĘDZY dzisiejszą masą
+   * a celem. Inaczej pokazywalibyśmy pacjentowi z BMI 26 „do BMI 30", czyli w stronę,
+   * z której właśnie wyszedł. `wszystkie` niesie komplet kandydatów (także odfiltrowanych),
+   * żeby konsument, który pyta o konkretny próg, nie musiał liczyć go po swojemu.
+   *
+   * KIERUNEK. Drabinka dotyczy REDUKCJI. Przy niedowadze `szczeble` jest puste, a `cel`
+   * wskazuje dolną granicę normy — decyzja o szczeblach „w górę" nie zapadła i nie ma
+   * dla nich źródła.
+   */
+  var SZCZEBEL_SDS_REINEHR = 0.25;
+  /* Powyżej tego SDS z-score przestaje wiernie oddawać BMI — liczba wprost z Freedmana:
+     „BMIz i centyle mogą się istotnie różnić od obserwowanych dla BMI powyżej 97. centyla
+     (z = 1,88)". Konsument, który dostanie tę flagę, ma się opierać na kilogramach
+     i granicy centylowej, nie na samym SDS. */
+  var SDS_KOMPRESJA = 1.88;
+  var EPS_KG = 0.05;   // poniżej tego „brakuje 0,0 kg" — szczebel nie niesie informacji
+
+  function drabinkaCelow(opts) {
+    var o = opts || {};
+    var h = liczba(o.wzrostCm), m = liczba(o.masaKg), wiek = liczba(o.wiekMies);
+    if (!isFinite(h) || h <= 0 || !isFinite(m) || m <= 0) return null;
+    var pop = populacjaZOpcji(o);
+    var jestDorosly = o.dorosly != null ? !!o.dorosly : dorosly(wiek, pop);
+    var masaDla = function (b) { return typeof b === 'number' && isFinite(b) && b > 0 ? b * Math.pow(h / 100, 2) : null; };
+    var x = m / Math.pow(h / 100, 2);
+    var wszystkie = [];
+    var cel = null, kat, zakresNormy, sds = null, centyl = null, siatka = null;
+
+    function dodaj(klucz, bmi, etykieta, opis, extra) {
+      var masa = masaDla(bmi);
+      if (masa == null) return;
+      var poz = { klucz: klucz, bmi: bmi, masa: masa, roznica: masa - m, etykieta: etykieta, opis: opis };
+      if (extra) { Object.keys(extra).forEach(function (k) { poz[k] = extra[k]; }); }
+      wszystkie.push(poz);
+    }
+
+    if (jestDorosly) {
+      var P = PROGI.DOROSLY;
+      kat = kategoriaDorosly(x);
+      zakresNormy = { odBmi: P.NIEDOWAGA, doBmi: P.CEL, odMasa: masaDla(P.NIEDOWAGA), doMasa: masaDla(P.CEL) };
+      if (x < P.NIEDOWAGA) {
+        cel = { klucz: 'norma-dol', bmi: P.NIEDOWAGA, masa: masaDla(P.NIEDOWAGA), granica: 'dolna',
+          etykieta: 'BMI ' + P.NIEDOWAGA, opis: 'dolna granica normy' };
+      } else if (x >= P.NADWAGA) {
+        cel = { klucz: 'norma', bmi: P.CEL, masa: masaDla(P.CEL), granica: 'gorna',
+          etykieta: 'BMI ' + P.CEL, opis: 'górna granica normy' };
+      }
+      dodaj('otylosc-2', P.OTYLOSC_2, 'BMI ' + P.OTYLOSC_2, 'wyjście z otyłości II stopnia');
+      dodaj('otylosc-1', P.OTYLOSC_1, 'BMI ' + P.OTYLOSC_1, 'koniec otyłości');
+    } else {
+      var D = PROGI.DZIECKO;
+      var r = policz({ bmi: x, plec: o.plec, wiekMies: wiek, zrodlo: o.zrodlo, siatka: o.siatka, populacja: pop });
+      if (!r || typeof r.sds !== 'number' || !isFinite(r.sds)) return null;
+      sds = r.sds; centyl = r.centyl; siatka = r.siatka;
+      kat = kategoriaDziecko(r.centyl, r.sds, wiek);
+      var naSds = function (z) {
+        var v = wartoscDlaSds({ sds: z, plec: o.plec, wiekMies: wiek, zrodlo: o.zrodlo, siatka: o.siatka, populacja: pop });
+        return v && isFinite(v.bmi) ? v.bmi : null;
+      };
+      var naCentylu = function (c) {
+        var v = wartoscDlaCentyla({ centyl: c, plec: o.plec, wiekMies: wiek, zrodlo: o.zrodlo, siatka: o.siatka, populacja: pop });
+        return v && isFinite(v.bmi) ? v.bmi : null;
+      };
+      /* Cel TYLKO wtedy, gdy dziecko jest poza normą — tak samo jak u dorosłego.
+         Bez tej bramki dziecko z BMI w normie dostawało „cel 85. centyl" i kierunek
+         „przyrost", czyli zalecenie tycia do górnej granicy normy. */
+      var bmiGora = naSds(G.Z_P85), bmiDol = naCentylu(D.NIEDOWAGA);
+      zakresNormy = { odCentyl: D.NIEDOWAGA, doCentyl: D.NADWAGA,
+        odBmi: bmiDol, doBmi: bmiGora, odMasa: masaDla(bmiDol), doMasa: masaDla(bmiGora) };
+      if (isFinite(r.centyl) && r.centyl >= D.NADWAGA && bmiGora != null) {
+        cel = { klucz: 'norma', bmi: bmiGora, masa: masaDla(bmiGora), granica: 'gorna',
+          etykieta: '85. centyl', opis: 'górna granica normy dla wieku' };
+      } else if (isFinite(r.centyl) && r.centyl < D.NIEDOWAGA && bmiDol != null) {
+        cel = { klucz: 'norma-dol', bmi: bmiDol, masa: masaDla(bmiDol), granica: 'dolna',
+          etykieta: D.NIEDOWAGA + '. centyl', opis: 'dolna granica normy dla wieku' };
+      }
+      if (isFinite(wiek) && wiek >= G.OLBRZYMIA_MIN_M) {
+        dodaj('olbrzymia', naSds(D.OLBRZYMIA_SDS), 'SDS ' + D.OLBRZYMIA_SDS, 'wyjście z otyłości olbrzymiej');
+      }
+      dodaj('otylosc', naCentylu(D.OTYLOSC), D.OTYLOSC + '. centyl', 'koniec otyłości');
+      dodaj('reinehr', naSds(r.sds - SZCZEBEL_SDS_REINEHR),
+        '\u2212' + String(SZCZEBEL_SDS_REINEHR).replace('.', ',') + ' BMI-SDS',
+        'próg poprawy: ciśnienie, trójglicerydy, HDL',
+        { sdsDocelowy: r.sds - SZCZEBEL_SDS_REINEHR, deltaSds: SZCZEBEL_SDS_REINEHR,
+          zrodlo: 'Reinehr 2016, doi:10.1210/jc.2016-1885',
+          sdsPrzyEkstremum: r.sds > SDS_KOMPRESJA });
+    }
+
+    /* Tylko szczeble LEŻĄCE MIĘDZY dzisiejszą masą a celem, od najbliższego.
+       BEZ CELU REDUKCYJNEGO NIE MA ŻADNYCH SZCZEBLI — drabinka jest drogą do celu, a bez
+       celu nie ma drogi. Bramka jest tu, nie w widoku, bo pierwsza wersja filtrowała tylko
+       „poniżej dzisiejszej masy" i dziecko z BMI w normie dostawało próg Reinehra, czyli
+       aplikacja podpowiadała zdrowemu dziecku, żeby schudło kilogram. */
+    var redukcja = cel != null && isFinite(cel.masa) && cel.masa < m;
+    var masaCelu = redukcja ? cel.masa : null;
+    var szczeble = !redukcja ? [] : wszystkie.filter(function (p) {
+      if (!isFinite(p.masa)) return false;
+      if (p.masa >= m - EPS_KG) return false;
+      return p.masa > masaCelu + EPS_KG;
+    }).sort(function (a, b) { return b.masa - a.masa; });
+
+    return {
+      dorosly: jestDorosly, wzrostCm: h, masa: m, bmi: x, kategoria: kat,
+      sds: sds, centyl: centyl, siatka: siatka,
+      kierunek: cel == null ? 'w-normie' : (cel.masa > m ? 'przyrost' : 'redukcja'),
+      cel: cel && isFinite(cel.masa) ? Object.assign({}, cel, { roznica: cel.masa - m }) : null,
+      szczeble: szczeble, najblizszy: szczeble.length ? szczeble[0] : null,
+      wszystkie: wszystkie, zakresNormy: zakresNormy,
+    };
+  }
+
   /* ---------- masa docelowa dorosłego (P-STATUS-DOROSLY; decyzja właściciela 2026-09-20) ----------
    *
    * Kafelek „Masa ciała docelowa" w Statusie Karty pacjenta pyta o jedno: ile kilogramów
@@ -504,28 +650,35 @@
    * `roznica` zawsze znaczy „o tyle ma się zmienić masa": ujemna — ubytek, dodatnia — przyrost.
    */
   function celMasyDorosly(opts) {
-    var o = opts || {}, P = PROGI.DOROSLY;
-    var h = liczba(o.wzrostCm), m = liczba(o.masaKg);
-    if (!isFinite(h) || h <= 0) return null;
-    var masaDla = function (b) { return b * Math.pow(h / 100, 2); };
-    var x = isFinite(m) && m > 0 ? m / Math.pow(h / 100, 2) : liczba(o.bmi);
-    if (!isFinite(x) || x <= 0) return null;
-    var masa = isFinite(m) && m > 0 ? m : masaDla(x);
-    var kat = kategoriaDorosly(x);
-    var cel = null;
-    if (x < P.NIEDOWAGA) cel = { bmi: P.NIEDOWAGA, masa: masaDla(P.NIEDOWAGA), granica: 'dolna' };
-    else if (x >= P.NADWAGA) cel = { bmi: P.CEL, masa: masaDla(P.CEL), granica: 'gorna' };
-    if (cel) cel.roznica = cel.masa - masa;
-    var posredni = null;
-    if (x >= P.OTYLOSC_1) {
-      posredni = { bmi: P.OTYLOSC_1, masa: masaDla(P.OTYLOSC_1), granica: 'otylosc' };
-      posredni.roznica = posredni.masa - masa;
+    /* P-SZCZEBLE: ta funkcja NIE liczy już progów po swojemu — jest widokiem drabinki
+       (`drabinkaCelow`) w kształcie, którego oczekuje kafelek Statusu. Dzięki temu próg
+       BMI 30 istnieje w silniku raz, a nie w dwóch miejscach, które mogą się rozjechać.
+       Kształt wyniku i zachowanie bez zmian; pilnują tego testy Statusu. */
+    var o = opts || {};
+    var d = drabinkaCelow({
+      wzrostCm: o.wzrostCm, masaKg: o.masaKg, wiekMies: o.wiekMies,
+      plec: o.plec, zrodlo: o.zrodlo, siatka: o.siatka, populacja: o.populacja, dorosly: true,
+    });
+    if (!d) {
+      /* Bez masy, ale z BMI i wzrostem — stara ścieżka wołających, którzy podają samo BMI. */
+      var h = liczba(o.wzrostCm), b = liczba(o.bmi);
+      if (!isFinite(h) || h <= 0 || !isFinite(b) || b <= 0) return null;
+      d = drabinkaCelow({ wzrostCm: h, masaKg: b * Math.pow(h / 100, 2), wiekMies: o.wiekMies,
+        plec: o.plec, zrodlo: o.zrodlo, siatka: o.siatka, populacja: o.populacja, dorosly: true });
+      if (!d) return null;
+    }
+    var prog = null;
+    if (d.bmi >= PROGI.DOROSLY.OTYLOSC_1) {
+      d.wszystkie.forEach(function (p) {
+        if (p.klucz === 'otylosc-1') prog = { bmi: p.bmi, masa: p.masa, granica: 'otylosc', roznica: p.roznica };
+      });
     }
     return {
-      bmi: x, masa: masa, kategoria: kat,
-      kierunek: cel ? (cel.roznica > 0 ? 'przyrost' : 'redukcja') : 'w-normie',
-      cel: cel, posredni: posredni,
-      zakresNormy: { odBmi: P.NIEDOWAGA, doBmi: P.CEL, odMasa: masaDla(P.NIEDOWAGA), doMasa: masaDla(P.CEL) },
+      bmi: d.bmi, masa: d.masa, kategoria: d.kategoria, kierunek: d.kierunek,
+      cel: d.cel ? { bmi: d.cel.bmi, masa: d.cel.masa, granica: d.cel.granica, roznica: d.cel.roznica } : null,
+      posredni: prog, zakresNormy: d.zakresNormy,
+      /* Pełna drabinka dla konsumentów, którzy chcą najbliższy szczebel, a nie sam BMI 30. */
+      szczeble: d.szczeble, najblizszy: d.najblizszy,
     };
   }
 
@@ -579,7 +732,7 @@
     bmi: bmi, policz: policz, policzNaSiatce: policzNaSiatce, ocen: ocen,
     mediana: mediana, medianaNaSiatce: medianaNaSiatce, wartoscDlaSds: wartoscDlaSds, wartoscDlaCentyla: wartoscDlaCentyla,
     kategoria: kategoria, kategoriaDziecko: kategoriaDziecko, kategoriaDorosly: kategoriaDorosly, dorosly: dorosly,
-    cole: cole, kategoriaCole: kategoriaCole, celNormy: celNormy, celMasyDorosly: celMasyDorosly,
+    cole: cole, kategoriaCole: kategoriaCole, celNormy: celNormy, celMasyDorosly: celMasyDorosly, drabinkaCelow: drabinkaCelow, SZCZEBEL_SDS_REINEHR: SZCZEBEL_SDS_REINEHR, SDS_KOMPRESJA: SDS_KOMPRESJA,
     centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,
     fmtBmi: fmtBmi, fmtSds: fmtSds, fmtCentyl: fmtCentyl, fmtCole: fmtCole, formatuj: formatuj, etykieta: etykieta,
   });
