@@ -299,19 +299,27 @@ test.describe('P-PDF — wydruk postępów jako prawdziwy PDF', () => {
       'przycisk wraca do użycia').toBeEnabled();
   });
 
-  test('POSTEPY-10: pdfmake wstaje z plików repozytorium, nie z sieci', async ({ page }) => {
-    // Gwarancja offline: żądania muszą iść do lokalnych adresów, które service worker
-    // trzyma w precache. Jedno żądanie do CDN i wydruk przestaje działać bez internetu.
+  test('POSTEPY-10: pdfmake wstaje z plików aplikacji, nie z CDN', async ({ page }) => {
+    // Gwarancja offline: biblioteka ma się doładować z adresów, które service worker trzyma
+    // w precache. Jedno żądanie do CDN i wydruk przestaje działać bez internetu.
+    //
+    // PIERWSZA WERSJA TEGO TESTU BYŁA ZA SZEROKA i padała w CI: zbierała WSZYSTKIE żądania
+    // spoza serwera testowego, a aplikacja sama z siebie odpytuje w tle status slotu
+    // synchronizacji. To żądanie nie ma nic wspólnego z wydrukiem, raz zdąży w oknie pomiaru,
+    // raz nie — stąd zielono lokalnie i czerwono w CI. Pytamy więc wyłącznie o żądania
+    // dotyczące pdfmake, bo tylko o nie w tym teście chodzi.
     await kartaZWydrukiem(page, 'Postepy-PDF-Offline');
-    const zewnetrzne = [];
-    page.on('request', (r) => {
-      const u = r.url();
-      if (!u.startsWith('http://localhost') && !u.startsWith('http://127.0.0.1')) zewnetrzne.push(u);
-    });
+    const zadaniaPdfmake = [];
+    page.on('request', (r) => { if (/pdfmake/i.test(r.url())) zadaniaPdfmake.push(r.url()); });
+
     await page.locator('.vilda-pd-host [data-akcja="zapisz"][data-wariant="pacjent"]').click()
       .catch(() => { /* pobranie obsłuży przeglądarka */ });
     await expect.poll(() => page.evaluate(() => Boolean(window.pdfMake && window.pdfMake.vfs)),
       { timeout: 30000 }).toBe(true);
-    expect(zewnetrzne, 'nic spoza serwera testowego').toEqual([]);
+
+    expect(zadaniaPdfmake.length, 'biblioteka naprawdę się doładowała').toBeGreaterThan(0);
+    for (const u of zadaniaPdfmake) {
+      expect(u, 'z serwera aplikacji, nie z CDN').toMatch(/^http:\/\/(localhost|127\.0\.0\.1)[:/]/);
+    }
   });
 });
