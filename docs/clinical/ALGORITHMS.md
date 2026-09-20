@@ -4939,6 +4939,66 @@ SW 1.1.11 → **1.1.12**; trzy nowe pliki na ośmiu stronach i w precache, `vild
 
 Wykres BMI ze strefami klas i kamienie milowe to **rata 3**; dwa warianty wydruku — **rata 4**. Punkt decyzyjny liraglutydu nadal stoi na kotwicy nominalnej, bo rekord nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej (otwarte od P-KOTWICA).
 
+## Wykres BMI ze strefami klas i kamienie milowe (P-POSTEPY rata 3, SW 1.1.13, 2026-09-20)
+
+**Decyzja właściciela.** „Ruszaj z ratą 3" — trzecia rata planu: wykres BMI ze strefami klas i oś kamieni milowych.
+
+**Zmiana kliniczna: żadna.** Nie powstaje ani jeden nowy próg, wzór czy interpretacja. Wszystkie liczby pochodzą z silników, które już je miały: klasy BMI z `vilda_bmi.js`, pasma i próg odzysku z pliku danych, punkt oceny z `obesity_response_criteria.js`. Rata składa i rysuje to, co było policzone.
+
+### Strefy klas BMI powstają w silniku, nie w widoku
+
+Widok nie zna i nie ma znać progów — pilnuje tego strażnik warstwy z raty 2. Nowa funkcja `strefyBmi()` bierze granice z `VildaBmi.PROGI.DOROSLY`, a **etykiety i klucz koloru wypytuje z `kategoriaDorosly()` w środku każdego przedziału**. Żadna nazwa klasy ani żaden próg nie jest tu przepisany z drugiej ręki:
+
+| strefa | od | do |
+|---|---|---|
+| Niedowaga | — | 18,5 |
+| Prawidłowe | 18,5 | 25 |
+| Nadwaga | 25 | 30 |
+| Otyłość I stopnia | 30 | 35 |
+| Otyłość II stopnia | 35 | 40 |
+| Otyłość III stopnia | 40 | — |
+
+Zmiana kategorii w silniku BMI przechodzi na wykres sama, a rozjazd nazw między kartą a wykresem jest niemożliwy. **Bez silnika BMI** stref nie ma i wykresu BMI też nie — zapasowej kopii progów świadomie nie zrobiono, bo rozjechałaby się po pierwszej zmianie klinicznej.
+
+Kolor dobierany jest po **kluczu koloru** (`alert` / `improve` / null), a nie po nazwie klasy, więc nowa klasa nie wymaga tknięcia widoku. Zgodnie z makietą wykres BMI dostaje kolorowe strefy, a pasma %TBWL na wykresie masy zostają neutralne — kolor ma znaczyć jedną rzecz naraz.
+
+### Pacjent bez wzrostu
+
+Wizyta z samą masą zostaje w serii (rata 2) i jest na wykresie masy. BMI dla niej nie istnieje, więc na wykresie BMI jej nie ma; przy mniej niż dwóch punktach z BMI **drugiego wykresu nie ma wcale** — zamiast pustej ramki albo osi bez linii.
+
+### Kamienie milowe
+
+Jedna uporządkowana lista (`kamienie`), składana z tego, co policzyły wcześniejsze kroki — nic nowego się nie liczy:
+
+| typ | waga | skąd |
+|---|---|---|
+| `pasmo-osiagniete` | dobrze | `przekroczenia` |
+| `zmiana-klasy` | dobrze / uwaga wg kierunku | `klasy` |
+| `nadir` | neutralnie | `nadir` (tylko gdy nie jest ostatnim pomiarem) |
+| `pasmo-utracone` | uwaga | `zdarzenia` |
+| `istotny-odzysk` | alarm | `zdarzenia` |
+| `punkt-chpl` | neutralnie | `punktDecyzyjny` (tylko gdy osadzony na osi) |
+
+Sortowane po tygodniu. **`wyjscie-z-otylosci` nie trafia na listę** — na wykresie masy koloruje punkt, ale jako wiersz byłby tym samym faktem co `zmiana-klasy`, powiedzianym dwa razy.
+
+**Liczby zostają w modelu surowe.** Nadir niesie `masa: 100`, a nie `„100,0 kg"`: formatowanie po polsku (przecinek, U+2212) należy do widoku. Inaczej silnik zacząłby decydować o wyglądzie i dwie warstwy formatowałyby inaczej.
+
+### Drobiazg, który usunął dwuznaczność w testach
+
+Wykres masy dostał własną klasę `vilda-pd-svg-masa` obok `vilda-pd-svg-bmi`. Po dołożeniu drugiego SVG selektor z raty 2 zaczął trafiać w dwa elementy i test padł na „strict mode violation" — nie z powodu produktu, tylko dlatego, że adresował wykres pozycją, nie nazwą. Oba wykresy są teraz adresowalne wprost.
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-widok.test.mjs` — **33 testy** (było 24): strefy, brak wykresu BMI bez wzrostu, pochodzenie stref z silnika BMI (atrapa z własnymi nazwami klas), kamienie i ich kolejność, formatowanie po stronie widoku.
+- `tests/e2e/postepy-doroslego-zakladka.spec.mjs` — **7 testów** (było 5): doszły wykres BMI ze strefami plus lista kamieni na prawdziwej stronie oraz pacjent bez wzrostu.
+- **Cztery kontrole negatywne:** strefy z nazw przepisanych na sztywno zamiast z silnika BMI; `wyjscie-z-otylosci` znów dublujące wiersz o zmianie klasy; kamienie nieposortowane; silnik formatujący masę zamiast oddać surową. Każda zaczerwienia test.
+
+SW 1.1.12 → **1.1.13**; `vilda_postepy_doroslego.js?v=1→2`, `vilda_postepy_doroslego_ui.js?v=1→2` na ośmiu stronach i w precache.
+
+### Co zostaje
+
+Rata 4: dwa warianty wydruku do wyboru. Otwarte od P-KOTWICA: rekord nadal nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej, więc punkt oceny liraglutydu stoi na kotwicy nominalnej — nazwanej w interfejsie.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

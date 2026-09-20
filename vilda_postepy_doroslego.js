@@ -187,6 +187,92 @@
     return (kb - ka) * MIES_NA_TYDZ;
   }
 
+  /* ---------- strefy klas BMI (rata 3) ---------- */
+
+  /* Strefy dla wykresu BMI powstają TU, a nie w widoku — widok nie zna i nie ma znać progów.
+     Granice bierzemy z `VildaBmi.PROGI.DOROSLY`, a etykiety i kolor WYPYTUJEMY z
+     `kategoriaDorosly()` w środku każdego przedziału. Dzięki temu żadna nazwa klasy ani żaden
+     próg nie jest tu przepisany z drugiej ręki: zmiana w silniku BMI przechodzi na wykres sama,
+     a rozjazd nazw między kartą a wykresem jest niemożliwy. */
+  function strefyBmi() {
+    var B = w && w.VildaBmi;
+    if (!B || !B.PROGI || !B.PROGI.DOROSLY || typeof B.kategoriaDorosly !== 'function') return [];
+    var P = B.PROGI.DOROSLY;
+    var granice = [P.NIEDOWAGA, P.NADWAGA, P.OTYLOSC_1, P.OTYLOSC_2, P.OTYLOSC_3];
+    for (var g = 0; g < granice.length; g++) if (liczba(granice[g]) == null) return [];
+
+    var out = [];
+    var poprz = null;
+    for (var i = 0; i <= granice.length; i++) {
+      var od = poprz;
+      var doG = i < granice.length ? granice[i] : null;
+      /* Środek przedziału; dla skrajnych bierzemy punkt o krok od granicy. */
+      var srodek = od == null ? doG - 1 : (doG == null ? od + 5 : (od + doG) / 2);
+      var kat = B.kategoriaDorosly(srodek);
+      if (kat && kat.klucz && kat.klucz !== 'brak') {
+        out.push({ klucz: kat.klucz, etykieta: kat.etykieta, kolor: kat.kolor, od: od, do: doG });
+      }
+      poprz = doG;
+    }
+    return out;
+  }
+
+  /* ---------- kamienie milowe (rata 3) ---------- */
+
+  /* Jedna uporządkowana lista tego, co na osi czasu warto pokazać lekarzowi i pacjentowi.
+     Nie liczy niczego nowego — składa to, co już policzyły wcześniejsze kroki, żeby widok
+     nie musiał sam decydować, co jest wydarzeniem, a co szczegółem. */
+  function kamienie(wynik) {
+    var out = [];
+    (wynik.przekroczenia || []).forEach(function (p) {
+      if (!p.osiagniety) return;
+      out.push({
+        typ: 'pasmo-osiagniete', tydzien: p.tydzien, dateISO: p.dateISO, prog: p.prog,
+        waga: 'dobrze',
+        opis: 'Ubytek si\u0119gn\u0105\u0142 ' + p.prog + ' % masy z punktu odniesienia.',
+      });
+    });
+    (wynik.klasy || []).forEach(function (k) {
+      out.push({
+        typ: 'zmiana-klasy', tydzien: k.tydzien, dateISO: k.dateISO,
+        waga: k.kierunek === 'poprawa' ? 'dobrze' : 'uwaga',
+        opis: k.od.etykieta + ' \u2192 ' + k.do.etykieta + '.',
+      });
+    });
+    if (wynik.nadir && !wynik.nadir.ostatni) {
+      out.push({
+        /* Liczba zostaje SUROWA: formatowanie po polsku (przecinek, U+2212) należy do widoku,
+           inaczej silnik zacząłby decydować o wyglądzie i dwie warstwy formatowałyby inaczej. */
+        typ: 'nadir', tydzien: wynik.nadir.tydzien, dateISO: wynik.nadir.dateISO,
+        waga: 'neutralnie', masa: wynik.nadir.masa,
+        opis: 'Najni\u017Csza masa w serii.',
+      });
+    }
+    (wynik.zdarzenia || []).forEach(function (z) {
+      if (z.typ === 'wyjscie-z-otylosci') return;   /* to samo mówi już „zmiana-klasy" */
+      out.push({
+        typ: z.typ, tydzien: z.tydzien, dateISO: z.dateISO, prog: z.prog,
+        waga: z.typ === 'istotny-odzysk' ? 'alarm' : 'uwaga',
+        opis: z.opis,
+      });
+    });
+    var pd = wynik.punktDecyzyjny;
+    if (pd && pd.jest && typeof pd.tydzienOdOdniesienia === 'number') {
+      out.push({
+        typ: 'punkt-chpl', tydzien: pd.tydzienOdOdniesienia, dateISO: null,
+        waga: 'neutralnie', nominalna: !!pd.nominalna,
+        opis: 'Punkt oceny odpowiedzi wg ChPL'
+          + (pd.nominalna ? ' (kotwica nominalna)' : '') + '.',
+      });
+    }
+    out.sort(function (a, b) {
+      var ta = typeof a.tydzien === 'number' ? a.tydzien : 1e9;
+      var tb = typeof b.tydzien === 'number' ? b.tydzien : 1e9;
+      return ta - tb;
+    });
+    return out;
+  }
+
   /* ---------- scalanie serii z dwóch źródeł ---------- */
 
   /* SKĄD SIĘ BIERZE SERIA POMIAROWA DOROSŁEGO — i dlaczego z dwóch miejsc.
@@ -393,6 +479,8 @@
       odzysk: null,
       leczenie: null,
       klasy: [],
+      strefyBmi: [],
+      kamienie: [],
       zdarzenia: [],
       punktDecyzyjny: punktDecyzyjny(lek, substancja, wiekLat),
       ostrzezenia: [],
@@ -595,6 +683,8 @@
       }
     }
 
+    wynik.strefyBmi = strefyBmi();
+    wynik.kamienie = kamienie(wynik);
     return wynik;
   }
 
@@ -603,6 +693,7 @@
     KOLEJNOSC_KLAS: KOLEJNOSC_KLAS.slice(),
     dostepne: dostepne,
     scalSerie: scalSerie,
+    strefyBmi: strefyBmi,
     analizuj: analizuj,
     punktDecyzyjny: punktDecyzyjny,
   };
