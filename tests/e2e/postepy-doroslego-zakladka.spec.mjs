@@ -212,9 +212,13 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
   });
 });
 
-test.describe('P-POSTEPY rata 4 — dwa warianty wydruku', () => {
-  // Pacjent na liraglutydzie: wariant kliniczny ma co pokazać (nazwa leku, punkt oceny
-  // wg ChPL), a wariant dla pacjenta ma co ukryć. Dane FIKCYJNE.
+test.describe('P-PDF — wydruk postępów jako prawdziwy PDF', () => {
+  // Po zgłoszeniu właściciela: na iPhonie w trybie PWA oba przyciski nie robiły nic, bo iOS
+  // w trybie standalone ignoruje `<a download>` i nie ma okna druku. Wydruk idzie teraz przez
+  // pdfmake ładowany LENIWIE z plików w repozytorium (są w precache, więc działa offline).
+  //
+  // Ten test na prawdziwej stronie dowodzi trzech rzeczy naraz: że biblioteka wstaje z tych
+  // plików, że powstaje plik PDF, i że trafia do pobrania pod właściwą nazwą.
   const PUNKT = (typ, dateISO, masa, mies) => ({
     id: typ + dateISO, type: typ, ageYears: 52, ageMonths: mies,
     weight: masa, height: 170, bmi: +(masa / 2.89).toFixed(1),
@@ -226,7 +230,7 @@ test.describe('P-POSTEPY rata 4 — dwa warianty wydruku', () => {
     await otworzZKontem(page);
     const pid = await zalozPacjenta(page, {
       imie, wiekLat: 52,
-      pomiary: [{ ageYears: 52, ageMonths: 624, height: 170, weight: 120 }],
+      pomiary: [{ ageYears: 52, ageMonths: 624, height: 170, weight: 120, dateISO: '2026-01-05' }],
       punkty: [
         PUNKT('start', '2026-01-05', 120, 0),
         PUNKT('continue', '2026-04-27', 110, 3),
@@ -238,82 +242,84 @@ test.describe('P-POSTEPY rata 4 — dwa warianty wydruku', () => {
     return pid;
   }
 
-  /** Treść dokumentu z ukrytej ramki druku — czytana wprost, bo ramka ma 0×0 px. */
-  const dokumentZRamki = (page) => page.evaluate(() => {
-    const f = document.getElementById('vilda-pd-wydruk-frame');
-    const d = f && f.contentWindow ? f.contentWindow.document : null;
-    if (!d || !d.documentElement) return null;
-    return {
-      tytul: d.title,
-      tekst: d.body ? d.body.textContent || '' : '',
-      html: d.documentElement.outerHTML,
-      svg: d.querySelectorAll('svg').length,
-      tabele: d.querySelectorAll('table').length,
-    };
-  });
-
-  test('POSTEPY-8: oba warianty są do wyboru i dają dwa różne dokumenty', async ({ page }) => {
-    await kartaZWydrukiem(page, 'Postepy-Wydruk');
+  test('POSTEPY-8: oba warianty mają przyciski opisujące, co naprawdę zrobią', async ({ page }) => {
+    await kartaZWydrukiem(page, 'Postepy-PDF');
     const panel = page.locator('.vilda-pd-host');
 
-    await expect(panel, 'nagłówek sekcji wydruku').toContainText('Wydruk');
-    await expect(panel.locator('[data-akcja="drukuj"]'), 'Drukuj dla obu wariantów').toHaveCount(2);
-    await expect(panel.locator('[data-akcja="pobierz"]'), 'Pobierz dla obu wariantów').toHaveCount(2);
+    await expect(panel).toContainText('Wydruk');
     await expect(panel).toContainText('Dla pacjenta');
     await expect(panel).toContainText('Do dokumentacji');
-
-    await panel.locator('[data-akcja="drukuj"][data-wariant="pacjent"]').click();
-    await expect.poll(() => page.locator('#vilda-pd-wydruk-frame').count()).toBe(1);
-    const pac = await dokumentZRamki(page);
-    expect(pac, 'ramka druku niesie dokument').not.toBeNull();
-    expect(pac.tytul).toBe('Moje postępy');
-    expect(pac.svg, 'kartka dla pacjenta: jeden wykres').toBe(1);
-    expect(pac.tabele, 'bez tabeli pomiarów').toBe(0);
-    expect(pac.tekst, 'bez nazwy leku').not.toContain('Saxenda');
-    expect(pac.tekst, 'bez reguły ChPL').not.toContain('ChPL');
-    expect(pac.tekst, 'te same liczby co w panelu').toContain('120,0');
-    expect(pac.tekst).toContain('104,0');
-    expect(pac.html, 'dokument samodzielny — nic z sieci').not.toMatch(/https?:\/\//);
-    expect(pac.html, 'i bez skryptów').not.toMatch(/<script/i);
-
-    await panel.locator('[data-akcja="drukuj"][data-wariant="kliniczny"]').click();
-    await expect.poll(async () => (await dokumentZRamki(page) || {}).tytul)
-      .toBe('Postępy redukcji masy ciała');
-    const kli = await dokumentZRamki(page);
-    expect(kli.svg, 'dokumentacja: masa i BMI').toBe(2);
-    expect(kli.tabele, 'z tabelą pomiarów').toBe(1);
-    expect(kli.tekst, 'z nazwą leku').toContain('Saxenda');
-    expect(kli.tekst, 'z punktem oceny wg ChPL').toContain('ChPL');
-    expect(kli.tekst, 'i z tymi samymi liczbami').toContain('120,0');
-    expect(kli.tekst).toContain('104,0');
-    expect(kli.html).not.toMatch(/https?:\/\//);
-
-    // Stara ramka nie zostaje obok nowej — inaczej drukowałaby się poprzednia wersja.
-    await expect(page.locator('#vilda-pd-wydruk-frame')).toHaveCount(1);
+    await expect(panel.locator('[data-akcja="zapisz"]'), 'zapis dla obu wariantów').toHaveCount(2);
+    await expect(panel.locator('[data-akcja="drukuj"]'), 'druk dla obu wariantów').toHaveCount(2);
+    await expect(panel.locator('[data-akcja="zapisz"]').first()).toContainText('PDF');
+    await expect(panel, 'podpowiedź prowadzi do PDF').toContainText('Zapisz jako PDF');
+    await expect(panel.locator('.vilda-pd-akcje-stan'), 'jest gdzie napisać, co się stało').toHaveCount(1);
   });
 
-  test('POSTEPY-9: „Pobierz" zapisuje samodzielny plik HTML wybranego wariantu', async ({ page }) => {
-    await kartaZWydrukiem(page, 'Postepy-Pobranie');
+  test('POSTEPY-9: „Zapisz PDF" pobiera prawdziwy plik PDF', async ({ page }) => {
+    await kartaZWydrukiem(page, 'Postepy-PDF-Zapis');
     const panel = page.locator('.vilda-pd-host');
 
     const [pobranie] = await Promise.all([
-      page.waitForEvent('download'),
-      panel.locator('[data-akcja="pobierz"][data-wariant="kliniczny"]').click(),
+      page.waitForEvent('download', { timeout: 30000 }),
+      panel.locator('[data-akcja="zapisz"][data-wariant="kliniczny"]').click(),
     ]);
     const nazwa = pobranie.suggestedFilename();
-    expect(nazwa, 'nazwa pliku niesie wariant').toContain('kliniczny');
-    expect(nazwa).toMatch(/^postepy_kliniczny_.*\.html$/);
+    expect(nazwa, 'wariant i rozszerzenie w nazwie').toMatch(/^postepy_kliniczny_.*\.pdf$/);
 
     const strumien = await pobranie.createReadStream();
     const kawalki = [];
     for await (const k of strumien) kawalki.push(k);
-    const tresc = Buffer.concat(kawalki).toString('utf8');
+    const plik = Buffer.concat(kawalki);
+    expect(plik.slice(0, 5).toString(), 'to naprawdę PDF').toBe('%PDF-');
+    expect(plik.length, 'z treścią, nie pusty').toBeGreaterThan(5000);
 
-    expect(tresc.startsWith('<!DOCTYPE html>'), 'kompletny dokument').toBe(true);
-    expect(tresc, 'wektorowy wykres w pliku').toContain('<svg');
-    expect(tresc, 'bez pobierania czegokolwiek z sieci').not.toMatch(/https?:\/\//);
-    expect(tresc, 'bez skryptów').not.toMatch(/<script/i);
-    expect(tresc, 'układ A4').toContain('@page');
-    expect(tresc, 'liczby z modelu').toContain('120,0');
+    await expect(panel.locator('.vilda-pd-akcje-stan'), 'i panel mówi, że się udało')
+      .toContainText('Zapisano');
+  });
+
+  test('POSTEPY-11: gdy biblioteka nie wstanie, panel MÓWI dlaczego — cisza była sednem usterki', async ({ page }) => {
+    // Na iPhonie przyciski nie robiły nic i nic nie mówiły: funkcje zwracały `false`, a
+    // wiązanie połykało wyjątki. Nawet gdy coś się nie uda, lekarz ma to przeczytać, a nie
+    // zastanawiać się, czy w ogóle kliknął.
+    //
+    // Awarię wymuszamy REALNĄ drogą — blokadą żądań do plików pdfmake, czyli dokładnie tym,
+    // co się dzieje bez sieci i bez precache. Podmiana API nie wchodzi w grę i nie powinna:
+    // moduł jest zamrożony (`Object.freeze`), więc test nie ma jak oszukać produktu.
+    await kartaZWydrukiem(page, 'Postepy-PDF-Cisza');
+    await page.route('**/pdfmake*', (r) => r.abort());
+
+    const panel = page.locator('.vilda-pd-host');
+    const stan = panel.locator('.vilda-pd-akcje-stan');
+    await panel.locator('[data-akcja="zapisz"][data-wariant="pacjent"]').click();
+
+    await expect(stan, 'powód widoczny na ekranie').toContainText('Nie udało się wczytać', { timeout: 20000 });
+    await expect(stan, 'i oznaczony jako błąd').toHaveAttribute('data-rodzaj', 'blad');
+    await expect(panel.locator('[data-akcja="zapisz"][data-wariant="pacjent"]'),
+      'przycisk wraca do użycia').toBeEnabled();
+  });
+
+  test('POSTEPY-10: pdfmake wstaje z plików aplikacji, nie z CDN', async ({ page }) => {
+    // Gwarancja offline: biblioteka ma się doładować z adresów, które service worker trzyma
+    // w precache. Jedno żądanie do CDN i wydruk przestaje działać bez internetu.
+    //
+    // PIERWSZA WERSJA TEGO TESTU BYŁA ZA SZEROKA i padała w CI: zbierała WSZYSTKIE żądania
+    // spoza serwera testowego, a aplikacja sama z siebie odpytuje w tle status slotu
+    // synchronizacji. To żądanie nie ma nic wspólnego z wydrukiem, raz zdąży w oknie pomiaru,
+    // raz nie — stąd zielono lokalnie i czerwono w CI. Pytamy więc wyłącznie o żądania
+    // dotyczące pdfmake, bo tylko o nie w tym teście chodzi.
+    await kartaZWydrukiem(page, 'Postepy-PDF-Offline');
+    const zadaniaPdfmake = [];
+    page.on('request', (r) => { if (/pdfmake/i.test(r.url())) zadaniaPdfmake.push(r.url()); });
+
+    await page.locator('.vilda-pd-host [data-akcja="zapisz"][data-wariant="pacjent"]').click()
+      .catch(() => { /* pobranie obsłuży przeglądarka */ });
+    await expect.poll(() => page.evaluate(() => Boolean(window.pdfMake && window.pdfMake.vfs)),
+      { timeout: 30000 }).toBe(true);
+
+    expect(zadaniaPdfmake.length, 'biblioteka naprawdę się doładowała').toBeGreaterThan(0);
+    for (const u of zadaniaPdfmake) {
+      expect(u, 'z serwera aplikacji, nie z CDN').toMatch(/^http:\/\/(localhost|127\.0\.0\.1)[:/]/);
+    }
   });
 });

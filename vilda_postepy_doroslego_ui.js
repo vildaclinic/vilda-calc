@@ -158,7 +158,11 @@
       out.push('<text x="' + (G.lewy - 8) + '" y="' + (y + 5).toFixed(1)
         + '" font-size="15" fill="' + C.os + '" text-anchor="end">' + liczbaPl(m, 0) + '</text>');
     }
-    out.push('<text x="14" y="' + (G.gora + 10) + '" font-size="15" fill="' + C.os + '">kg</text>');
+    /* Jednostka NAD obszarem rysowania, nie w jego lewym górnym rogu: tam wchodziła na
+       najwyższą etykietę wartości („kg" na „122"). Widać to dopiero na wydruku o stałej
+       szerokości, ale kolizja istniała też na ekranie (P-PDF 2026-09-20). */
+    out.push('<text x="' + (G.lewy - 8) + '" y="' + (G.gora - 6) + '" font-size="14" fill="'
+      + C.os + '" text-anchor="end">kg</text>');
     return out.join('');
   }
 
@@ -170,8 +174,10 @@
     if (!(x1 > x0)) return '';
     return '<rect x="' + x0.toFixed(1) + '" y="' + G.gora + '" width="' + (x1 - x0).toFixed(1)
       + '" height="' + S.wysRys + '" fill="' + C.titracja + '"/>'
-      + '<text x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (G.gora + 14)
-      + '" font-size="13" fill="' + C.pasmoTekst + '" text-anchor="middle">zwiększanie dawki</text>';
+      /* Podpis od LEWEJ krawędzi pasa, nie od jego środka: pas titracji zaczyna się przy
+         osi, więc wyśrodkowany podpis wychodził poza obszar rysowania na etykiety wartości. */
+      + '<text x="' + (x0 + 4).toFixed(1) + '" y="' + (G.gora + 14)
+      + '" font-size="13" fill="' + C.pasmoTekst + '">zwiększanie dawki</text>';
   }
 
   function punktChPL(model, S) {
@@ -190,7 +196,11 @@
     var y = S.y(o.masaGraniczna);
     return '<line x1="' + G.lewy + '" y1="' + y.toFixed(1) + '" x2="' + (G.szer - G.prawy)
       + '" y2="' + y.toFixed(1) + '" stroke="' + C.uwaga + '" stroke-width="1.5" stroke-dasharray="6 3"/>'
-      + '<text x="' + (G.szer - G.prawy + 8) + '" y="' + (y + 4).toFixed(1)
+      /* NAD linią, gdy podpisy pasm siedzą POD swoimi. Próg odzysku potrafi wypaść na tej
+         samej masie co pasmo (widziane na wydruku: „istotny odzysk" na „−10 % · 108,0 kg"),
+         a wtedy oba podpisy lądowały w jednym wierszu. Różne strony linii rozsuwają je
+         zawsze, nie tylko w tym jednym przypadku. */
+      + '<text x="' + (G.szer - G.prawy + 8) + '" y="' + (y - 6).toFixed(1)
       + '" font-size="13" fill="' + C.uwaga + '">istotny odzysk</text>';
   }
 
@@ -314,7 +324,8 @@
       out.push('<text x="' + (G.lewy - 8) + '" y="' + (S.y(b) + 5).toFixed(1)
         + '" font-size="15" fill="' + C.os + '" text-anchor="end">' + liczbaPl(b, 0) + '</text>');
     }
-    out.push('<text x="10" y="' + (G.gora + 10) + '" font-size="15" fill="' + C.os + '">BMI</text>');
+    out.push('<text x="' + (G.lewy - 8) + '" y="' + (G.gora - 6) + '" font-size="14" fill="'
+      + C.os + '" text-anchor="end">BMI</text>');
     return out.join('');
   }
 
@@ -335,13 +346,29 @@
     return out.join('');
   }
 
+  /* KORZEŃ SVG W DWÓCH SMAKACH (P-PDF 2026-09-20).
+   *
+   * Na ekranie wykres ma być elastyczny: `width="100%"` plus `max-width`/`height:auto` sprawiają,
+   * że skaluje się do szerokości karty i nie wywołuje poziomego przewijania na telefonie.
+   * W PDF te same atrybuty są nie tylko zbędne, ale SZKODLIWE: pdfmake liczy wtedy wysokość
+   * węzła z „100 %" i rozdmuchuje jedną kartkę na trzy (sprawdzone). `font-family:inherit`
+   * też nie ma w PDF czego dziedziczyć.
+   *
+   * Dlatego opcja `doPdf` zdejmuje z korzenia wszystko, co dotyczy układu na ekranie, i zostawia
+   * sam `viewBox` — czyli geometrię. To wciąż JEDEN generator wykresu, nie dwa: różni się
+   * wyłącznie opakowanie, a każda linia, oś i podpis powstają w tym samym kodzie. */
+  function korzenSvg(klasa, wys, etykieta, opcje) {
+    var wspolne = '<svg class="vilda-pd-svg ' + klasa + '" viewBox="0 0 ' + G.szer + ' ' + wys + '" '
+      + 'role="img" aria-label="' + esc(etykieta) + '"';
+    if (opcje && opcje.doPdf) return wspolne + '>';
+    return wspolne + ' width="100%" style="display:block;max-width:100%;height:auto;font-family:inherit;">';
+  }
+
   /** Wykres BMI ze strefami klas. Pusty napis, gdy mniej niż dwa pomiary niosą wzrost. */
-  function wykresBmi(model) {
+  function wykresBmi(model, opcje) {
     var S = skalaBmi(model);
     if (!S) return '';
-    return '<svg class="vilda-pd-svg vilda-pd-svg-bmi" viewBox="0 0 ' + G.szer + ' ' + G.wysBmi + '" '
-      + 'width="100%" role="img" aria-label="Wykres BMI w czasie ze strefami klas masy ciała" '
-      + 'style="display:block;max-width:100%;height:auto;font-family:inherit;">'
+    return korzenSvg('vilda-pd-svg-bmi', G.wysBmi, 'Wykres BMI w czasie ze strefami klas masy ciała', opcje)
       + strefy(model, S) + osieBmi(model, S) + liniaBmi(S)
       + '</svg>';
   }
@@ -377,12 +404,10 @@
   /* ---------- składanie ---------- */
 
 
-  function wykresMasy(model) {
+  function wykresMasy(model, opcje) {
     var S = skala(model);
     if (!S) return '';
-    return '<svg class="vilda-pd-svg vilda-pd-svg-masa" viewBox="0 0 ' + G.szer + ' ' + G.wys
-      + '" width="100%" role="img" aria-label="Wykres masy ciała w czasie" '
-      + 'style="display:block;max-width:100%;height:auto;font-family:inherit;">'
+    return korzenSvg('vilda-pd-svg-masa', G.wys, 'Wykres masy ciała w czasie', opcje)
       + titracja(model, S) + pasma(model, S) + liniaOdzysku(model, S)
       + osie(model, S) + punktChPL(model, S) + liniaPacjenta(model, S)
       + '</svg>';
@@ -462,29 +487,53 @@
   /* Przyciski wydruku. Widok tylko je RYSUJE — efekt (druk, pobranie) należy do
      `vilda_postepy_doroslego_wydruk.js`, a wpięcie zdarzeń do `renderPanel` niżej.
      Warianty przychodzą z modułu wydruku, żeby ich lista żyła w jednym miejscu. */
+  /* PRZYCISKI OPISUJĄ TO, CO TA PRZEGLĄDARKA NAPRAWDĘ ZROBI (P-PDF 2026-09-20).
+   *
+   * Zgłoszenie właściciela: na iPhonie w trybie PWA oba przyciski nie robiły NIC. Poza samą
+   * niemożnością (iOS w trybie standalone ignoruje `download` i nie ma okna druku) osobnym
+   * błędem było MILCZENIE — funkcje zwracały `false`, a wiązanie połykało wyjątki.
+   *
+   * Dlatego widok pyta moduł wydruku o `mozliwosci()` i rysuje wyłącznie te przyciski, które
+   * mają pokrycie, a każde kliknięcie kończy się komunikatem: co się udało albo dlaczego nie.
+   * Widok nadal niczego nie decyduje o platformie — tylko czyta odpowiedź. */
   function akcjeHtml() {
     var W = (w && w.VildaPostepyDoroslegoWydruk) || null;
     if (!W || !Array.isArray(W.WARIANTY) || !W.WARIANTY.length) return '';
+    var m = typeof W.mozliwosci === 'function' ? W.mozliwosci() : { drogaZapisu: 'pobierz', druk: true };
+    var zapisNapis = m.drogaZapisu === 'udostepnij' ? '\u21AA Udost\u0119pnij PDF' : '\u2b07 Zapisz PDF';
+
     var grupy = W.WARIANTY.map(function (v) {
+      var guziki = '';
+      if (m.drogaZapisu !== 'brak') {
+        guziki += '<button type="button" class="vilda-pd-btn" data-akcja="zapisz" data-wariant="'
+          + esc(v.id) + '">' + zapisNapis + '</button>';
+      }
+      if (m.druk) {
+        guziki += '<button type="button" class="vilda-pd-btn vilda-pd-btn-ghost" data-akcja="drukuj" '
+          + 'data-wariant="' + esc(v.id) + '">\u2399 Drukuj</button>';
+      }
       return '<div class="vilda-pd-akcja">'
         + '<div class="vilda-pd-akcja-n">' + esc(v.nazwa) + '</div>'
         + '<div class="vilda-pd-akcja-o">' + esc(v.opis) + '</div>'
-        + '<div class="vilda-pd-akcja-b">'
-        + '<button type="button" class="vilda-pd-btn" data-akcja="drukuj" data-wariant="'
-        + esc(v.id) + '">\u2399 Drukuj lub PDF</button>'
-        + '<button type="button" class="vilda-pd-btn vilda-pd-btn-ghost" data-akcja="pobierz" data-wariant="'
-        + esc(v.id) + '">\u2b07 Pobierz HTML</button>'
-        + '</div></div>';
+        + '<div class="vilda-pd-akcja-b">' + guziki + '</div></div>';
     });
-    /* ETYKIETY MÓWIĄ, CO DAJĄ (uwaga właściciela 2026-09-20). Przyciski brzmiały „Drukuj"
-       i „Pobierz", więc „Pobierz" obiecywał plik, a dawał HTML — a PDF, którego lekarz
-       rozsądnie się spodziewa, siedział pod sąsiednim guzikiem, w oknie druku przeglądarki.
-       Nie zmienia się ani jedno zachowanie: zmienia się to, co przycisk o sobie mówi.
-       Podpowiedź pod nagłówkiem tłumaczy drogę do PDF-a raz, zamiast w obu przyciskach. */
+
+    var podpowiedz;
+    if (m.drogaZapisu === 'udostepnij') {
+      podpowiedz = 'PDF trafi do arkusza udost\u0119pniania \u2014 stamt\u0105d zapiszesz go w Plikach, '
+        + 'wy\u015blesz mailem albo wydrukujesz. Okna druku przegl\u0105darki nie ma w trybie aplikacji.';
+    } else if (m.drogaZapisu === 'brak') {
+      podpowiedz = 'Ta przegl\u0105darka nie pozwala zapisa\u0107 pliku z poziomu aplikacji. '
+        + 'Otw\u00f3rz Vild\u0119 w Safari albo Chrome, tam wydruk zadzia\u0142a.';
+    } else {
+      podpowiedz = 'PDF zapisze si\u0119 jako plik. \u201eDrukuj\u201d otwiera okno druku przegl\u0105darki, '
+        + 'w kt\u00f3rym mo\u017cesz te\u017c wybra\u0107 \u201eZapisz jako PDF\u201d.';
+    }
+
     return '<p class="vilda-patient-section-h vilda-patient-section-h--secondary">Wydruk</p>'
-      + '<p class="vilda-pd-akcje-hint">PDF zapiszesz w oknie druku — wybierz „Zapisz jako PDF” '
-      + 'zamiast drukarki. Pobrany plik HTML otwiera się i drukuje bez aplikacji i bez internetu.</p>'
-      + '<div class="vilda-pd-akcje">' + grupy.join('') + '</div>';
+      + '<p class="vilda-pd-akcje-hint">' + podpowiedz + '</p>'
+      + '<div class="vilda-pd-akcje">' + grupy.join('') + '</div>'
+      + '<p class="vilda-pd-akcje-stan" role="status" aria-live="polite"></p>';
   }
 
   /** Cały widok postępów. Oddaje '' gdy model mówi, że nie ma czego pokazać. */
@@ -519,6 +568,10 @@
     + '.vilda-pd-chart{background:#fff;border:1px solid ' + C.linia + ';border-radius:12px;padding:8px;overflow:hidden;}'
     + '.vilda-pd-events{margin:12px 0 0;padding-left:18px;font-size:.84rem;line-height:1.5;}'
     + '.vilda-pd-chart-bmi{margin-top:4px;}'
+    + '.vilda-pd-akcje-stan{font-size:13px;margin:8px 0 0;min-height:1.2em;color:' + C.opis + ';}'
+    + '.vilda-pd-akcje-stan[data-rodzaj="ok"]{color:' + C.dobrze + ';}'
+    + '.vilda-pd-akcje-stan[data-rodzaj="blad"]{color:' + C.alarm + ';font-weight:600;}'
+    + '.vilda-pd-btn[disabled]{opacity:.55;cursor:default;}'
     + '.vilda-pd-akcje-hint{font-size:13px;color:' + C.opis + ';margin:2px 0 10px;line-height:1.45;}'
     + '.vilda-pd-akcje{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:8px 0 0;}'
     + '.vilda-pd-akcja{border:1px solid ' + C.linia + ';border-radius:12px;padding:10px 12px;background:#fff;min-width:0;}'
@@ -551,19 +604,42 @@
   function wepnijWydruk(host, model, opcje) {
     var W = (w && w.VildaPostepyDoroslegoWydruk) || null;
     if (!W || !host || typeof host.querySelectorAll !== 'function') return;
+    var stan = host.querySelector ? host.querySelector('.vilda-pd-akcje-stan') : null;
+
+    function powiedz(tekst, rodzaj) {
+      if (!stan) return;
+      stan.textContent = tekst || '';
+      stan.setAttribute('data-rodzaj', rodzaj || '');
+    }
+
     var guziki = host.querySelectorAll('[data-akcja][data-wariant]');
     for (var i = 0; i < guziki.length; i++) {
       (function (b) {
         b.addEventListener('click', function () {
           var akcja = b.getAttribute('data-akcja');
-          var wariant = b.getAttribute('data-wariant');
           var o = {};
           for (var k in (opcje || {})) o[k] = opcje[k];
-          o.wariant = wariant;
+          o.wariant = b.getAttribute('data-wariant');
+
+          b.disabled = true;
+          powiedz('Sk\u0142adam PDF\u2026', 'praca');
+          var robota;
           try {
-            if (akcja === 'pobierz') W.pobierz(model, o);
-            else W.drukuj(model, o);
-          } catch (e) { /* druk odwołany albo zablokowany — nic więcej tu nie zrobimy */ }
+            robota = akcja === 'drukuj' ? W.drukuj(model, o) : W.zapisz(model, o);
+          } catch (e) {
+            robota = Promise.reject(e);
+          }
+          Promise.resolve(robota).then(function (r) {
+            /* Zamknięcie arkusza udostępniania to decyzja użytkownika, nie awaria. */
+            if (r && r.droga === 'anulowane') { powiedz('', ''); return; }
+            if (r && r.droga === 'druk') { powiedz('Otwarto okno druku.', 'ok'); return; }
+            if (r && r.droga === 'udostepnij') { powiedz('Przekazano do udost\u0119pnienia: ' + r.nazwa, 'ok'); return; }
+            powiedz('Zapisano plik ' + ((r && r.nazwa) || 'PDF') + '.', 'ok');
+          }).catch(function (e) {
+            /* CISZA JEST TU BŁĘDEM. Nawet gdy przeglądarka czegoś nie potrafi, lekarz ma
+               wiedzieć, co się stało — a nie zastanawiać się, czy w ogóle kliknął. */
+            powiedz((e && e.message) || 'Nie uda\u0142o si\u0119 przygotowa\u0107 wydruku.', 'blad');
+          }).then(function () { b.disabled = false; });
         });
       })(guziki[i]);
     }
@@ -603,6 +679,9 @@
     buildPustyHtml: buildPustyHtml,
     wykresMasy: wykresMasy,
     wykresBmi: wykresBmi,
+    /* Geometria viewBox — moduł wydruku musi znać proporcje, żeby dobrać ramkę w PDF
+       bez zgadywania i bez własnej kopii wymiarów. */
+    GEOMETRIA: { szer: G.szer, wys: G.wys, wysBmi: G.wysBmi },
   };
 
   try { Object.freeze(API); } catch (e) { /* zamrożenie jest miłe, nie konieczne */ }
