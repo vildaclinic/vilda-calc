@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 // CYTOWAL zalecenia, a nie pisal wlasnej parafrazy.
 //
 // Po co: zalecenia ruchowe i zywieniowe roznia sie pasmami wieku. 2–4 lata maja 180 minut
-// ruchu dziennie i limit czasu przed ekranem, starsze dzieci 60 minut, dorosli 150–300 minut
+// ruchu rozlozone w ciagu dnia i ograniczenie ekranu, starsze dzieci 60 minut, dorosli 150–300 minut
 // tygodniowo z treningiem oporowym. Gdyby raport mial te listy wpisane na sztywno, na krancach
 // wieku pokazalby pacjentowi inne zalecenie niz raport tekstowy tej samej aplikacji, z tej samej
 // wizyty. Te testy pilnuja, ze kazde zdanie w `dane.zdania` jest DOKLADNIE zdaniem, ktore poszlo
@@ -73,15 +73,15 @@ test('dorosly z otyloscia: trzy role cytuja zdania z tekstu', async ({ page }) =
   expect(norm(w.zdania.talerz[0])).not.toContain('minut');
 });
 
-test('pasma wieku: 3-latka dostaje 180 minut i limit ekranu, nastolatka 60 minut', async ({ page }) => {
+test('pasma wieku: 3-latka dostaje 180 minut rozłożone w ciągu dnia, nastolatka 60 minut', async ({ page }) => {
   test.setTimeout(120_000);
   await otworz(page);
 
   const male = await policz(page, { age: 3, sex: 'F', w: 22, h: 100 });
   rolePokrywajaTekst(male);
   const ruchMale = norm(male.zdania.ruch[0]);
-  expect(ruchMale).toContain('co najmniej 180 minut dziennie');
-  expect(ruchMale).toContain('czasu przed ekranem do 1 godziny');
+  expect(ruchMale).toContain('co najmniej 180 minut dziennie, rozłożona w ciągu dnia');
+  expect(ruchMale).toContain('maksymalne ograniczenie czasu przed ekranem');
 
   const nasto = await policz(page, { age: 14, months: 6, sex: 'F', w: 75, h: 150 });
   rolePokrywajaTekst(nasto);
