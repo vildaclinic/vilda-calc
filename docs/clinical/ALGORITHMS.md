@@ -4999,6 +4999,60 @@ SW 1.1.12 → **1.1.13**; `vilda_postepy_doroslego.js?v=1→2`, `vilda_postepy_d
 
 Rata 4: dwa warianty wydruku do wyboru. Otwarte od P-KOTWICA: rekord nadal nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej, więc punkt oceny liraglutydu stoi na kotwicy nominalnej — nazwanej w interfejsie.
 
+## Dwa warianty wydruku postępów (P-POSTEPY rata 4, SW 1.1.14, 2026-09-20)
+
+**Decyzja właściciela.** „Ruszaj z ratą 4", a wcześniej, przy pytaniu o kształt wydruku: „2. poproszę dwa warianty do wyboru".
+
+**Zmiana kliniczna: żadna.** Nie powstaje ani jeden nowy próg, wzór, jednostka czy interpretacja. Wydruk **nie liczy niczego** — bierze gotowy model z `vilda_postepy_doroslego.js` i gotowe wykresy z `vilda_postepy_doroslego_ui.js`, i układa je na kartce. Strażnik warstwy w testach pilnuje, że plik wydruku nie zawiera ani `thresholdPct`, ani `windowWeeks`, ani `PROGI`, ani `kategoriaDorosly`, ani progu odzysku `0.75`.
+
+### Dwa warianty to profile treści, nie dwie technologie
+
+| | `pacjent` — „Dla pacjenta" | `kliniczny` — „Do dokumentacji" |
+|---|---|---|
+| tytuł | Moje postępy | Postępy redukcji masy ciała |
+| wykresy | tylko masa | masa + BMI ze strefami klas |
+| kafelki | masa początkowa, dzisiejsza, zmiana, najniższa masa | masa początkowa, dzisiejsza, zmiana, BMI dzisiaj z klasą |
+| tabela pomiarów | nie | tak |
+| kamienie milowe | tak, **bez punktu oceny wg ChPL** | tak, komplet |
+| nazwa leku, wiek | nie | tak |
+| stopka | jedno zdanie, że wykres nie zastępuje porady | pasma i ich źródło, próg odzysku, zastrzeżenie o kotwicy nominalnej, ostrzeżenia modelu |
+
+**Dlaczego pacjent nie dostaje punktu ChPL.** „Po 12 tygodniach dawki podtrzymującej ocenić, czy ubytek sięgnął 5 % — inaczej odstawić" to reguła decyzji lekarza o leku, nie informacja, z którą pacjent ma wyjść z gabinetu. Kartka dla pacjenta pokazuje jego własne liczby; kartka do dokumentacji pokazuje także, na jakiej podstawie lekarz decyduje.
+
+**Przyrost masy opisywany tak samo rzeczowo jak ubytek.** Jeżeli ostatni pomiar jest wyższy od punktu odniesienia, kartka dla pacjenta mówi wprost, o ile masa wzrosła. Wykres i tak to pokazuje; ominięcie tematu czytałoby się jak unik.
+
+### Dlaczego bez bibliotek PDF
+
+Repozytorium ma dojrzały wzorzec `html2canvas` + `jsPDF` (`vilda_patient_report.js`) i rozpoznanie sugerowało rozdzielić warianty na dwa generatory (canvas → jsPDF dla pacjenta, DOM → html2canvas → jsPDF do dokumentacji). Odrzucone świadomie, z trzech powodów:
+
+1. **Obie biblioteki ładują się leniwie z CDN** (`VildaDeps.ensurePdfLibraries`, jspdf@2.5.1 + html2canvas@1.4.1). Vilda jest PWA i ma działać bez sieci; wydruk, który bez internetu nie powstaje, jest wydrukiem tylko z nazwy.
+2. **Wykres postępów to czysty SVG** — czyli dokładnie to, co `html2canvas` rasteryzuje najsłabiej. Dokument HTML zostaje wektorowy i drukuje się ostro w każdej rozdzielczości.
+3. **Dwa generatory dla jednej funkcji to dwa miejsca, w których te same liczby mogą się rozjechać** — czyli ten sam dług, który skasowało P-CHPL. Jeden model, jeden budowniczy, dwa profile.
+
+Zamiast tego `buildDokument()` składa **samodzielny dokument HTML**: `<!DOCTYPE html>`, inline CSS z `@page{size:A4 portrait}` i `print-color-adjust:exact`, wklejone SVG. Bez jednego `<script>` i bez jednego adresu `http(s)://`. „Drukuj" otwiera ukrytą ramkę i woła `print()` — to samo okno przeglądarki, którego lekarz już używa, z pozycją „Zapisz jako PDF". „Pobierz" zapisuje ten sam dokument jako plik `.html`, który otwiera się i drukuje bez aplikacji i bez sieci.
+
+Nazwa pliku: `postepy_<wariant>_<Imię-Nazwisko>_<data>.html`, z nazwiska usunięte wszystko poza literami i cyframi (`\p{L}\p{N}`), żeby nie psuć zapisu na dysku.
+
+### Warstwy
+
+- `vilda_postepy_doroslego_wydruk.js` — **efekty**: dokument, druk, pobranie. Nie liczy i nie rysuje wykresów.
+- `vilda_postepy_doroslego_ui.js` — dokłada `akcjeHtml()` (przyciski, lista wariantów czytana z modułu wydruku, żeby żyła w jednym miejscu) i `wepnijWydruk()` (wpięcie zdarzeń). **Gdy modułu wydruku nie ma, przyciski w ogóle nie powstają** — zamiast guzika, który nic nie robi.
+- `vilda_auth_ui.js` — podaje do `renderPanel` tylko kontekst identyfikacyjny: `{pacjent, wiekLat, dataWydruku}`.
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-wydruk.test.mjs` — **20 testów**: kompletność dokumentu; brak `<script>`, brak `http(s)://`, brak `<link>` (gwarancja offline); SVG zostaje wektorowe (brak `data:image`); A4 i `print-color-adjust`; profil pacjenta (jeden wykres, bez tabeli, bez ChPL, bez nazwy leku) i profil kliniczny (dwa wykresy, tabela, ChPL, lek); **oba warianty pokazują te same liczby**; nieznany wariant spada na pacjenta; zamknięta bramka modelu → pusty dokument; przyrost masy opisany rzeczowo; odkażanie nazwy pliku; strażnik warstwy; wpięcie w osiem stron i precache.
+- `tests/e2e/postepy-doroslego-zakladka.spec.mjs` — **9 testów** (było 7): oba warianty do wyboru na prawdziwej stronie, klik „Drukuj" daje dwa różne dokumenty w ramce druku, klik „Pobierz" zapisuje samodzielny plik HTML.
+- **Siedem kontroli negatywnych:** punkt ChPL przepuszczony do wariantu pacjenta; dokument ciągnący skrypt z CDN; zniknięcie wariantu klinicznego z listy; wariant pacjenta dostający treść kliniczną; nazwa pliku bez odkażania; wykres podmieniony na rastrowy obrazek; przyciski narysowane, ale niewpięte. Każda zaczerwienia testy (sześć pierwszych jednostkowe, siódma e2e).
+
+SW 1.1.13 → **1.1.14**; nowy `vilda_postepy_doroslego_wydruk.js?v=1`, `vilda_postepy_doroslego_ui.js?v=2→3`, `vilda_auth_ui.js?v=457→458` na ośmiu stronach i w precache.
+
+### Co zostaje decyzją właściciela
+
+- **Rekord nadal nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej.** Punkt oceny liraglutydu stoi na kotwicy nominalnej — nazwanej i w interfejsie, i w stopce wariantu klinicznego. Dopisanie tej daty do monitora otyłości to osobna decyzja.
+- **Akceptacja kliniczna treści obu kartek** — zwłaszcza tego, że wariant dla pacjenta świadomie pomija regułę ChPL.
+- Plan P-POSTEPY po tej racie jest zamknięty.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

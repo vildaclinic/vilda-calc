@@ -178,7 +178,9 @@ describe('P-POSTEPY rata 2 — wpięcie w strony i service worker', () => {
 
   it('Karta Pacjenta montuje panel i nazywa zakładkę dla dorosłego', () => {
     const karta = zrodlo('vilda_auth_ui.js');
-    expect(karta, 'montaż przez moduł widoku').toContain('_pdU.renderPanel(Ct,_pdM)');
+    // Rata 4 dołożyła trzeci argument (kontekst wydruku), więc guard kończy się przecinkiem:
+    // montaż nadal ma iść przez moduł widoku i nadal ma dostawać model z silnika.
+    expect(karta, 'montaż przez moduł widoku').toContain('_pdU.renderPanel(Ct,_pdM,');
     expect(karta, 'seria scalana regułą z silnika').toContain('_pdE.scalSerie(');
     expect(karta, 'etykieta zakładki zależy od dorosłości').toContain('at(It,tt?"Post\\u0119py":"Siatki centylowe")');
     expect(karta, 'stary komunikat o siatkach tylko dla dzieci już nie stoi sam')
