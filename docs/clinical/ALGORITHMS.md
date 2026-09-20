@@ -4531,12 +4531,12 @@ Silnik **nie zna** trzech rzeczy i to jest jego architektura, nie niedoróbka:
 
 | zestaw | progi | źródło |
 |---|---|---|
-| `OGOLNY` | 5 / 10 / 15 / 20 % | kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1 |
+| `OGOLNY` | 5 / 10 / 15 / 20 % **[rata 1b: 5/10/15/20/25 %]** | kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1 **[rata 1b: to uzasadnienie okazało się nieścisłe — żaden pojedynczy dokument nie zawiera tej drabinki w całości; zestaw jest konwencją prezentacyjną aplikacji]** |
 | `LIRAGLUTYD` | 5 / 10 % | kategorie odpowiedzi raportowane w ChPL liraglutydu (Triglyva), pkt 5.1 |
 
 Dobór wg substancji: semaglutyd i tirzepatyd → `OGOLNY`; liraglutyd → `LIRAGLUTYD`; naltrekson z bupropionem → `OGOLNY`; **brak leku → `OGOLNY`**, bo wykres należy się także pacjentowi nieleczonemu farmakologicznie.
 
-**Progu ≥25 % nie ma w żadnej z czterech ChPL** przekazanych 2026-09-19 — dlatego nie ma go w żadnym zestawie. Progu **−3 %** nie dokładamy (decyzja właściciela).
+**Progu ≥25 % nie ma w żadnej z czterech ChPL** przekazanych 2026-09-19 — dlatego nie ma go w żadnym zestawie. **[ZASTĄPIONE przez P-POSTEPY rata 1b, 2026-09-20: pasmo 25 % zostało dołożone do zestawu ogólnego. Zdanie o ChPL pozostaje prawdziwe, ale w literaturze rejestracyjnej próg 25 % występuje (STEP UP, SURMOUNT-5).]** Progu **−3 %** nie dokładamy (decyzja właściciela).
 
 **Ograniczenie nazwane wprost:** punkt 5.1 ChPL Mysimby nie został odczytany pod kątem kategorii odpowiedzi. Dla naltreksonu z bupropionem drabinka `OGOLNY` jest więc **konwencją prezentacyjną aplikacji**, nie cytatem z tego dokumentu — i tak jest opisana w polu `uwaga` zestawu.
 
@@ -4551,7 +4551,7 @@ Identyfikacja wersji czterech ChPL: wpis „Kryteria odpowiedzi sprawdzone wobec
 - **nadir** — najmniejsza masa **od punktu odniesienia wzwyż**. Pomiar sprzed włączenia leczenia, choćby był najlżejszy w całej serii, nie jest nadirem — inaczej „największy ubytek" opisywałby masę sprzed leczenia.
 - **`utrzymane`** — jaka część ubytku z nadiru jest utrzymana w ostatnim pomiarze (surowa frakcja, zawsze w wyniku).
 
-### Parametr do akceptacji klinicznej: korytarz utrzymania 0,80
+### Parametr do akceptacji klinicznej: korytarz utrzymania 0,80 **[ZASTĄPIONE przez P-POSTEPY rata 1b, 2026-09-20: próg wynosi 0,75, pojęcie nazywa się „istotny odzysk masy”, a opis „konwencja prezentacyjna aplikacji” był nieścisły — metryka ma w piśmiennictwie nazwę %MWL. Sekcja poniżej opisuje stan z raty 1.]**
 
 `UTRZYMANIE.frakcja = 0,80` w pliku danych. To **konwencja prezentacyjna tej aplikacji, nie reguła z ChPL ani z wytycznych** — i tak jest opisana w polu `zrodlo`. Służy wyłącznie do zaznaczenia na wykresie momentu, w którym pacjent utrzymuje mniej niż 80 % uzyskanego ubytku. Silnik **zawsze** oddaje surową frakcję, więc lekarz widzi liczbę niezależnie od tego, gdzie postawiona jest linia; zmiana linii to zmiana jednej liczby w pliku danych.
 
@@ -4559,7 +4559,7 @@ Identyfikacja wersji czterech ChPL: wpis „Kryteria odpowiedzi sprawdzone wobec
 
 ### Czego silnik świadomie nie robi
 
-**Nie osadza na osi punktu decyzyjnego zakotwiczonego w dawce podtrzymującej.** ChPL liraglutydu liczy 12 tygodni **od dawki podtrzymującej 3,0 mg/dobę**, a momentu dojścia do tej dawki rekord pacjenta nie zapisuje. Silnik oddaje więc kotwicę pod nazwą (`kotwica: "dawka-podtrzymujaca"`, `tygodnie: 12`) i zostawia `tydzienOdOdniesienia` pusty. Mysimba kotwiczy w rozpoczęciu leczenia, więc jej punkt (16 tyg.) wolno osadzić. **Otwarte:** czy rekord ma zacząć zapisywać moment osiągnięcia dawki podtrzymującej — to decyzja właściciela.
+**[Zastąpione przez P-KOTWICA, SW 1.1.11, 2026-09-20: punkt jest już osadzany przez NOMINALNY czas zwiększania dawki z danych grupy (`titrationWeeksNominal`), z flagą `nominalna: true`. Akapit poniżej opisuje stan z raty 1.]** **Nie osadza na osi punktu decyzyjnego zakotwiczonego w dawce podtrzymującej.** ChPL liraglutydu liczy 12 tygodni **od dawki podtrzymującej 3,0 mg/dobę**, a momentu dojścia do tej dawki rekord pacjenta nie zapisuje. Silnik oddaje więc kotwicę pod nazwą (`kotwica: "dawka-podtrzymujaca"`, `tygodnie: 12`) i zostawia `tydzienOdOdniesienia` pusty. Mysimba kotwiczy w rozpoczęciu leczenia, więc jej punkt (16 tyg.) wolno osadzić. **Otwarte:** czy rekord ma zacząć zapisywać moment osiągnięcia dawki podtrzymującej — to decyzja właściciela.
 
 Dla semaglutydu i tirzepatydu **punktu decyzyjnego nie ma i to jest poprawny wynik**, a nie brak danych (P-CHPL: ChPL nie podaje dla dorosłych ani progu, ani terminu oceny).
 
@@ -4731,6 +4731,145 @@ Sprawdzone na plikach sprzed poprawki: nowy wzorzec wskazał **dokładnie te 9 m
 **Bez zmian w produkcie** — żaden plik aplikacji nie był ruszany, więc bez podbicia `?v=` i `SW_VERSION`.
 
 **Zamknięcie tematu.** Po tej racie wzorzec `waitForFunction` oddający `Promise` nie występuje już w `tests/` w żadnej z dwóch postaci, a strażnik pilnuje obu. Otwarty zostaje drugi punkt z P-BRAMKI-2, niezwiązany z bramkami: dzienny arkusz przypomnień potrafi przykryć otwartą Kartę Pacjenta — to pytanie o zachowanie produktu, nie o test.
+## Okno oceny odpowiedzi liczone od kotwicy ChPL (P-KOTWICA, SW 1.1.11, 2026-09-20)
+
+**Zmiana kliniczna. Tak — zmienia się MOMENT, w którym aplikacja orzeka o odstawieniu leku. Akceptacja właściciela: 2026-09-20.**
+
+### Defekt
+
+P-CHPL (SW 1.1.10) wpisał do danych pole `windowAnchor` — informację, **od czego ChPL liczy okno oceny odpowiedzi**. Funkcja `evaluate()` tego pola **nigdy nie czytała**: brała `weeks` od wołającego i porównywała wprost z `windowWeeks`. Jedyny wołający w całym repozytorium — panel „Dane analityczne — otyłość" w Karcie Pacjenta (`vilda_auth_ui.js`, funkcja `Ml()`) — liczy tygodnie **od punktu „Włączenie"** (etykieta w kodzie: „od włączenia (z dat wizyt)”).
+
+Skutkiem był twardy werdykt `fail-stop`, renderowany jako czerwone **„Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić"**, wydawany za wcześnie:
+
+| grupa | ChPL mówi | aplikacja orzekała | o ile za wcześnie |
+|---|---|---|---|
+| `saxenda-adult` | 12 tyg. stosowania dawki 3,0 mg/dobę | 12. tydzień od włączenia | **4 tygodnie** |
+| `saxenda-12-17`, `saxenda-6-11` | j.w. | j.w. | **4 tygodnie** |
+| `wegovy-12-17` | 12 tyg. stosowania dawki 2,4 mg | 12. tydzień od włączenia | **16 tygodni** |
+
+Grupy kotwiczone w rozpoczęciu leczenia (`mysimba-adult`) i grupy bez progu (`wegovy-adult`, `mounjaro-adult`) były i pozostają nietknięte.
+
+**To nie jest teza z lektury kodu — to zmierzone na żywej stronie.** Kontrola negatywna: po cofnięciu poprawki e2e `KOTWICA-1` odczytuje z Karty Pacjenta dosłownie tytuł „Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić" u pacjenta w 12. tygodniu leczenia liraglutydem.
+
+### Poprawka
+
+`evaluate()` rozstrzyga kotwicę przed porównaniem z oknem (funkcja `ka()`), w kolejności:
+
+1. **kotwica rzeczywista** — wołający podaje `weeksFromAnchor`, czyli liczbę tygodni stosowania dawki podtrzymującej. Wygrywa zawsze. `anchorMode: "rzeczywista"`.
+2. **kotwica nominalna** — bez tej danej używamy **nominalnego czasu zwiększania dawki** z pola `titrationWeeksNominal` grupy: `weeks − titrationWeeksNominal`. `anchorMode: "nominalna"`.
+3. **brak kotwicy** — grupa kotwiczona w dawce podtrzymującej bez nominalnej titracji daje `insufficient-data` z powodem nazywającym kotwicę. **Nigdy cichego powrotu do liczenia od włączenia.**
+
+Wynik niesie odtąd `windowAnchor`, `anchorMode`, `weeksFromStart` i `titrationWeeksNominal`, a `weeks` oznacza tygodnie **od kotwicy** (podczas zwiększania dawki jest ujemne → `before-window`).
+
+### Nominalny czas zwiększania dawki — skąd liczby
+
+| grupa | `titrationWeeksNominal` | podstawa |
+|---|---|---|
+| `wegovy-12-17` | 16 tyg. | ChPL pkt 4.2: 0,25 → 0,5 → 1,0 → 1,7 mg co 4 tyg., dawka podtrzymująca 2,4 mg od 17. tygodnia |
+| `saxenda-adult`, `saxenda-12-17`, `saxenda-6-11` | 4 tyg. | ChPL pkt 4.2: 0,6 → 1,2 → 1,8 → 2,4 mg co tydzień, dawka podtrzymująca 3,0 mg/dobę od 5. tygodnia |
+
+Obie wartości są **już zapisane w aplikacji** jako tabele dawkowania w `obesity_therapy.js`. Nie powstała druga kopia: test `P-KOTWICA — nominalny czas titracji zgadza się z tabelą dawkowania` parsuje tamtą tabelę, znajduje wiersz z adnotacją „dawka podtrzymująca” i sprawdza, że numer tygodnia minus jeden równa się `titrationWeeksNominal`. Rozjazd między plikami nie przeszedłby żadnego przeglądu, bo zaczerwieniłby test.
+
+Okno liraglutydu 4 + 12 = 16 tygodni zgadza się z odczytem punktu 5.1 zapisanym w P-CHPL („zwiększanie dawki przez 4 tygodnie, a następnie stosowanie dawki terapeutycznej przez 12 tygodni”). Okno semaglutydu u młodzieży 16 + 12 = 28 tygodni wynika z tego samego rozumowania zastosowanego do harmonogramu semaglutydu.
+
+**Ograniczenie nazwane wprost:** ChPL dopuszcza ocenę na dawce „**lub maksymalnej tolerowanej**”. U pacjenta, który przestał zwiększać dawkę wcześniej, kotwica rzeczywista jest **wcześniejsza** niż nominalna — czyli kotwica nominalna myli się w stronę ostrożniejszą (ocenia później, nigdy wcześniej). W drugą stronę, przy titracji opóźnionej lub przerwanej, kotwica nominalna byłaby za wczesna — dlatego rzeczywista data ma pierwszeństwo, a jej brak jest w interfejsie **nazwany**.
+
+### Co widzi lekarz
+
+Karta Pacjenta przestaje pokazywać goły numer tygodnia, bo po tej zmianie `weeks` znaczy co innego:
+
+- fraza o tygodniach brzmi „**N tyg. stosowania dawki podtrzymującej**”;
+- w trakcie zwiększania dawki zamiast ujemnego numeru pada „**Trwa zwiększanie dawki — okno oceny otwiera się po 12 tyg. stosowania dawki podtrzymującej.**”;
+- przy kotwicy nominalnej do opisu werdyktu dokleja się zdanie: „**Okno liczone od nominalnego czasu zwiększania dawki wg ChPL (N tyg. od włączenia); jeśli zwiększanie dawki przebiegało inaczej, ocena wymaga rzeczywistej daty osiągnięcia dawki podtrzymującej.**”
+
+Bez tego ostatniego zdania werdykt wyglądałby na twardy fakt z rekordu pacjenta, a jest odczytem harmonogramu z ChPL.
+
+### Silnik postępów
+
+`vilda_postepy_doroslego.js` (P-POSTEPY rata 1) deklarował, że punktu decyzyjnego kotwiczonego w dawce podtrzymującej **nie osadza na osi**, bo nie ma z czego. Od tej raty osadza go z sumy `windowWeeks + titrationWeeksNominal` (liraglutyd → 16. tydzień, semaglutyd u młodzieży → 28.) i **znaczy to flagą `nominalna: true`**. Bez nominalnej titracji punkt nadal nie powstaje.
+
+### Przypadki `wejście → oczekiwany wynik` (dane fikcyjne)
+
+Dorosły, liraglutyd, masa wyjściowa 100 kg, redukcja 3 % (poniżej progu 5 %):
+
+| tygodnie od włączenia | przed poprawką | po poprawce |
+|---|---|---|
+| 12 | `fail-stop` — „odstawić” | `before-window` (8 tyg. od kotwicy) |
+| 15 | `fail-stop` | `before-window` |
+| 16 | `fail-stop` | `fail-stop` — teraz zgodnie z ChPL |
+
+Ten sam pacjent z redukcją 7 % w 16. tygodniu → `pass`. Ten sam pacjent z podaną rzeczywistą kotwicą (`weeksFromAnchor: 12`) w 20. tygodniu od włączenia → `fail-stop`, `anchorMode: "rzeczywista"`. Młodzież, semaglutyd, redukcja BMI 3 %: 12. i 27. tydzień → `before-window`, 28. → `fail-stop`. Mysimba w 16. tygodniu od włączenia → `fail-stop` (bez zmian).
+
+### Walidacja
+
+- `tests/unit/kotwica-okna-chpl.test.mjs` — **17 testów** na rzeczywistych `ObesityResponseCriteria.evaluate` i `.getCriterion`, w tym strażnik międzyplikowy wiążący `titrationWeeksNominal` z tabelami dawkowania.
+- `tests/e2e/kotwica-okna-chpl.spec.mjs` — **3 testy na prawdziwej stronie**: panel „Dane analityczne — otyłość" w Karcie Pacjenta, werdykt czytany z DOM.
+- **Cztery kontrole negatywne, każda zaczerwienia testy:** cofnięcie poprawki `evaluate()` → 12 z 17 testów jednostkowych i e2e `KOTWICA-1` (z dosłownym tytułem „odstawić” w wyniku); zła nominalna titracja liraglutydu (4 → 6) → 4 testy, w tym strażnik tabeli dawkowania; cofnięcie zmian w warstwie UI → 3 testy.
+
+### Co pozostaje otwarte
+
+Rekord pacjenta nadal **nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej**. Warstwa UI mogłaby ją wypełniać z istniejącej osi zdarzeń dawkowych (`VildaVault.listPatientTreatmentPeriods`, pola `doseNum`/`doseUnit`/`fromISO`) — bez nowego pola i bez migracji. To osobna rata; do jej czasu obowiązuje kotwica nominalna, nazwana w interfejsie.
+
+## Korekta pasm i progu odzysku po przeglądzie piśmiennictwa (P-POSTEPY rata 1b, 2026-09-20)
+
+**Decyzja właściciela 2026-09-20:** „zgadzam się z twoimi rekomendacjami, ruszaj" — w odpowiedzi na rekomendacje oparte na przeglądzie PubMed. Wszystkie ustalenia literaturowe poniżej pochodzą **z PubMed**.
+
+**Zmiana kliniczna.** Zmienia się próg zdarzenia i najwyższe pasmo wykresu. Silnik nadal nie jest ładowany przez żadną stronę, więc dziś nic się w aplikacji nie zmienia — zmienia się to, co pokaże rata 2.
+
+### 1. Korytarz utrzymania 0,80 → istotny odzysk masy 0,75
+
+**Rata 1 opisała ten próg jako „konwencję prezentacyjną aplikacji, nieznaną wytycznym". To było nieprawdziwe w obie strony** i jedno i drugie trzeba sprostować.
+
+**Metryka ma nazwę.** Frakcja maksymalnego ubytku liczona od nadiru to w piśmiennictwie **%MWL — *percentage of maximum weight lost*** — i jest miarą rekomendowaną: King i wsp. porównali pięć miar odzysku po chirurgii bariatrycznej (n = 1406, mediana obserwacji 6,6 roku) i %MWL miała najsilniejszy związek z progresją cukrzycy, nadciśnienia i dyslipidemii oraz najlepsze dopasowanie modelu (*JAMA* 2018;320(15):1560–9, PMID 30326125, [DOI](https://doi.org/10.1001/jama.2018.14433)). Niezależnie potwierdzone w innej populacji: Si i wsp., n = 249, Chińczycy z otyłością i cukrzycą typu 2 (*Obesity* 2023;31(6):1538–46, PMID 37133427, [DOI](https://doi.org/10.1002/oby.23764)).
+
+**Ale konkretna wartość 0,80 nie ma wyróżnionego statusu.** Publikowane progi rozjeżdżają się:
+
+| próg | odpowiada `utrzymane` | co za nim stoi | populacja |
+|---|---|---|---|
+| odzysk ≥10 % | 0,90 | Chin i wsp.: **NIE** wiązał się z progresją żadnej choroby | bariatria |
+| odzysk ≥20 % | **0,80** | King 2018, Si 2023 — najlepszy próg dychotomiczny / optymalny punkt odcięcia; Chin 2024 — związek z progresją nadciśnienia i dyslipidemii | **wyłącznie bariatria** |
+| odzysk >25 % | **0,75** | Delphi 2026 — konsensus 66 ekspertów; **SURMOUNT-4 post hoc — przy odzysku <25 % zachowana poprawa obwodu talii, TG, nie-HDL-C, insuliny na czczo i HOMA2-IR** | konsensus bariatryczny + **farmakoterapia** |
+| odzysk >30 % | 0,70 | IFSO Delphi — konsensus na wszystkich 15 zdaniach definicyjnych, średnio 90,1 % | bariatria |
+
+Źródła: Chin i wsp., *Obes Surg* 2024;34(7):2347–55, PMID 38771478, [DOI](https://doi.org/10.1007/s11695-024-07282-6); Wills i wsp., *Surg Obes Relat Dis* 2026;22(7):753–61, PMID 41963214, [DOI](https://doi.org/10.1016/j.soard.2026.03.006); Salminen i wsp., *Obes Surg* 2024;34(1):30–42, PMID 37999891, [DOI](https://doi.org/10.1007/s11695-023-06913-8); analiza post hoc SURMOUNT-4, *JAMA Intern Med*, PMID 41284285, [DOI](https://doi.org/10.1001/jamainternmed.2025.6112).
+
+**Dlaczego 0,75.** To jedyna wartość, która ma jednocześnie formalny konsensus ekspercki i zakotwiczenie w twardych parametrach kardiometabolicznych **w populacji leczonej farmakologicznie** — czyli w populacji tego modułu. Poparcie dla 0,80 jest w całości bariatryczne. Dodatkowo 0,75 odpala się później, więc rzadziej alarmuje bez powodu.
+
+**Sprostowanie w sprawie SURMOUNT-4.** Liczba 80 % rzeczywiście jest prespecyfikowanym kluczowym drugorzędowym punktem końcowym tego badania — „*the proportion of participants at week 88 who maintained at least 80% of the weight loss during the lead-in period*", 89,5 % vs 16,6 % (Aronne i wsp., *JAMA* 2024;331(1):38–48, PMID 38078870, [DOI](https://doi.org/10.1001/jama.2023.24945)). Ale **mianownik jest tam inny**: ubytek z okresu wprowadzającego (tydzień 36), a nie z nadiru. To punkt końcowy wybrany przez sponsora, nie niezależna walidacja progu — i nie wolno go cytować jako poparcia dla 0,80 w naszej metryce.
+
+**Wynik negatywny, mocny i zapisany w danych:** dla farmakoterapii otyłości **nie istnieje żaden uzgodniony próg %MWL liczony od nadiru**. Całe piśmiennictwo progowe pochodzi z chirurgii bariatrycznej. Dlatego silnik zawsze oddaje surową frakcję, a próg jest linią na wykresie, nie kryterium klinicznym.
+
+**Nazwa.** „Korytarz utrzymania" sugerował cel terapeutyczny, w którym pacjent ma się mieścić. Literatura mówi o czymś innym: to próg, od którego pojawia się związek z progresją chorób towarzyszących. Pole nazywa się odtąd `odzysk`, zdarzenie `istotny-odzysk`, etykieta „**Istotny odzysk masy (≥25 % uzyskanego ubytku)**".
+
+**Linia rysuje się dopiero, gdy jest co mierzyć.** Dopóki nadirem jest ostatni pomiar, `utrzymane` wynosi z definicji 1,00. Rata 1 liczyła i pokazywała tę wartość przez cały okres redukcji — narysowana wtedy linia sugerowałaby, że coś jest monitorowane. Nowe pole `odzysk.liniaDoPokazania` jest wtedy `false`.
+
+**Stan leczenia w wyniku (`leczenie.stan`).** Ta sama frakcja znaczy dwie różne rzeczy: u pacjenta **kontynuującego** leczenie spadek poniżej progu dotyczy mniej więcej 1 na 10 i jest realnym sygnałem (SURMOUNT-4: 89,5 % powyżej 0,80 w 88. tygodniu), a **po odstawieniu** przeciętna trajektoria przekracza ten próg w ciągu kwartału — alarm, który odpala się u prawie każdego, przestaje nieść informację. Silnik tego nie interpretuje; oddaje stan (`na-leczeniu` / `odstawione` / `brak-danych`), żeby widok mógł. **`brak-danych` nie znaczy „nie leczony"** — zakładka należy się każdemu dorosłemu z dwoma pomiarami, więc brak punktów terapii może oznaczać i pacjenta bez farmakoterapii, i pacjenta, u którego jej nie wpisano.
+
+### 2. Drabinka pasm — uczciwy opis i piąty szczebel
+
+**Rata 1 opisała drabinkę jako „kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1". To nie jest prawdziwe uzasadnienie zestawu jako całości.** Ugruntowany jest **wyłącznie najniższy szczebel 5 %** — kryterium skuteczności przyjmowane przy rejestracji leków przeciwotyłościowych i cel 5–10 % w wytycznych postępowania w otyłości u dorosłych. Szczeble wyższe są w badaniach fazy 3 dobierane osobno pod moc leku i pytanie badawcze:
+
+| badanie | drabinka |
+|---|---|
+| SCALE (liraglutyd) | 5 / 10 |
+| STEP 3 (semaglutyd) | 5 / 10 / 15 |
+| SURMOUNT-1 (tirzepatyd) | 5 / … / 20 |
+| STEP UP (semaglutyd 7,2 mg) | 5 / 10 / 15 / 20 / **25** |
+| SURMOUNT-5 | 10 / 15 / 20 / **25** (bez 5 %) |
+
+**Żaden pojedynczy dokument nie zawiera drabinki 5/10/15/20 w całości.** Zestaw zostaje — jest wewnętrznie spójny — ale pole `zrodlo` mówi odtąd wprost, że jest **konwencją prezentacyjną aplikacji**, i wymienia, skąd pochodzą poszczególne szczeble.
+
+**Znika też zastrzeżenie o Mysimbie** wpisane w racie 1 („dla naltreksonu z bupropionem drabinka jest konwencją, a nie cytatem"). Było oparte na fałszywym założeniu, że dla pozostałych leków drabinka jest skądś cytowana. Skoro nie jest — zastrzeżenie nie ma przedmiotu.
+
+**Pasmo 25 % dołożone — cofnięcie rekomendacji z raty 1.** Rata 1 wykluczyła je zdaniem „progu ≥25 % nie ma w żadnej z czterech ChPL". To prawda o ChPL, ale nie o literaturze: 25 % jest konfirmacyjnym punktem końcowym STEP UP (semaglutyd 7,2 mg — dawka, którą aplikacja zna od P-CHPL) i kluczowym drugorzędowym SURMOUNT-5. Argument praktyczny: przy tirzepatydzie **57 % pacjentów przekracza 20 %** (SURMOUNT-1, PMID 35658024, [DOI](https://doi.org/10.1056/NEJMoa2206038)), więc najwyższe pasmo przestaje cokolwiek różnicować, a pacjent „wychodzi poza skalę". Powyżej 25 % nie ma już nic — sprawdza to test.
+
+**Drabinka liraglutydu zostaje na 5/10** i to nadal jest cytat: ChPL pkt 5.1 raportuje wyłącznie te dwie kategorie, a te same dwa szczeble są współpierwszorzędowymi punktami końcowymi programu SCALE.
+
+**Punkt odniesienia** (masa w dniu włączenia, a bez leczenia pierwszy pomiar) — **potwierdzony bez zmian**.
+
+### Walidacja
+
+`tests/unit/postepy-doroslego-silnik.test.mjs` — **31 testów** (było 27) na rzeczywistych funkcjach produkcyjnych. **Cztery kontrole negatywne, każda zaczerwienia test:** próg z powrotem na 0,80; usunięte pasmo 25 %; linia rysowana zawsze; stan leczenia zgadujący „odstawione" przy braku punktów terapii.
 
 ## Zasady aktualizacji rejestru
 

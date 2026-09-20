@@ -34,8 +34,15 @@
  *   przekroczenie     — PIERWSZY pomiar, w którym ubytek sięgnął pasma. Bez interpolacji między
  *                       pomiarami: data między wizytami byłaby zmyślona.
  *   nadir             — najmniejsza masa od punktu odniesienia wzwyż.
- *   utrzymane         — jaka część ubytku z nadiru jest utrzymana dzisiaj (surowa frakcja).
- *                       Linia korytarza (0,80) jest konwencją prezentacyjną z pliku danych.
+ *   utrzymane         — jaka część ubytku z nadiru jest utrzymana dzisiaj (surowa frakcja);
+ *                       w piśmiennictwie ta metryka nazywa się %MWL i liczy się od nadiru.
+ *                       Próg „istotnego odzysku” (0,75) jest LINIĄ NA WYKRESIE z pliku danych,
+ *                       nie kryterium klinicznym — dla farmakoterapii otyłości nie ma
+ *                       uzgodnionego progu %MWL. Surowa frakcja jest w wyniku zawsze.
+ *   leczenie          — czy pacjent jest na leku. Ta sama frakcja znaczy co innego na leczeniu
+ *                       (spadek poniżej progu to rzadkie zdarzenie i realny sygnał) i po jego
+ *                       odstawieniu (przeciętna trajektoria przekracza próg w ciągu kwartału).
+ *                       Silnik tego nie interpretuje — oddaje stan, żeby widok mógł.
  */
 (function (w) {
   'use strict';
@@ -49,6 +56,10 @@
      pogorszeniem. Progi liczbowe zostają w `vilda_bmi.js`; tu jest tylko kolejność kluczy. */
   var KOLEJNOSC_KLAS = ['niedowaga', 'prawidlowe', 'nadwaga', 'otylosc-1', 'otylosc-2', 'otylosc-3'];
   var KLASY_OTYLOSCI = { 'otylosc-1': 1, 'otylosc-2': 1, 'otylosc-3': 1 };
+
+  function zaokraglTydzien(t) {
+    return typeof t === 'number' && isFinite(t) ? Math.round(t) : null;
+  }
 
   function liczba(x) {
     var v = typeof x === 'number' ? x : parseFloat(x);
@@ -180,6 +191,20 @@
 
   /* ---------- punkt decyzyjny ChPL (przepuszczony, nie przeliczony) ---------- */
 
+  /* Tydzień punktu decyzyjnego na osi liczonej od punktu odniesienia. Dla kotwicy w starcie to
+     wprost okno ChPL; dla kotwicy w dawce podtrzymującej — okno powiększone o nominalny czas
+     zwiększania dawki (liraglutyd 4 tyg. → 16.; semaglutyd 16 tyg. → 28.). */
+  function osadzNaOsi(g) {
+    if (!g) return null;
+    if (g.windowAnchor === 'start') return liczba(g.windowWeeks);
+    if (g.windowAnchor === 'dawka-podtrzymujaca') {
+      var okno = liczba(g.windowWeeks);
+      var tit = liczba(g.titrationWeeksNominal);
+      if (okno != null && tit != null) return okno + tit;
+    }
+    return null;
+  }
+
   function punktDecyzyjny(lek, substancja, wiekLat) {
     var K = w && w.ObesityResponseCriteria;
     if (!K || typeof K.getCriterion !== 'function') return null;
@@ -191,10 +216,12 @@
       /* ChPL nie podaje progu ani terminu — brak punktu jest WYNIKIEM, nie brakiem danych. */
       return { jest: false, lek: kryt.drugKey, metryka: g.metric, zdanie: g.zdanie || '', kotwica: null, tygodnie: null, progPct: null, tydzienOdOdniesienia: null };
     }
-    /* Kotwica „dawka-podtrzymująca” nie jest tym samym co start leczenia, a momentu dojścia do
-       dawki podtrzymującej rekord pacjenta nie zapisuje. Nie zgadujemy okresu zwiększania dawki
-       — oddajemy kotwicę pod nazwą i zostawiamy `tydzienOdOdniesienia` pusty. Osadzenie tego
-       punktu na osi wymaga danych, których dziś nie ma (otwarte, patrz ALGORITHMS.md). */
+    /* Kotwica „dawka-podtrzymująca” nie jest tym samym co start leczenia. Rekord pacjenta nie
+       zapisuje jeszcze momentu dojścia do dawki podtrzymującej, ale NOMINALNY czas zwiększania
+       dawki jest faktem z ChPL i od P-KOTWICA (2026-09-20) mieszka w danych grupy jako
+       `titrationWeeksNominal`. Punkt na osi osadzamy więc z sumy i ZNACZYMY to flagą
+       `nominalna` — to założenie, nie odczyt z rekordu, i widok musi je nazwać.
+       Bez nominalnego czasu punktu nie stawiamy wcale: zgadywanie dałoby datę z powietrza. */
     return {
       jest: true,
       lek: kryt.drugKey,
@@ -203,7 +230,9 @@
       kotwica: g.windowAnchor || null,
       tygodnie: g.windowWeeks,
       progPct: g.thresholdPct,
-      tydzienOdOdniesienia: g.windowAnchor === 'start' ? g.windowWeeks : null,
+      tydzienOdOdniesienia: osadzNaOsi(g),
+      nominalna: g.windowAnchor === 'dawka-podtrzymujaca' && osadzNaOsi(g) != null,
+      titracjaNominalnaTyg: liczba(g.titrationWeeksNominal),
     };
   }
 
@@ -244,7 +273,8 @@
       seria: [],
       przekroczenia: [],
       nadir: null,
-      korytarz: null,
+      odzysk: null,
+      leczenie: null,
       klasy: [],
       zdarzenia: [],
       punktDecyzyjny: punktDecyzyjny(o.lek, o.substancja, wiekLat),
@@ -318,6 +348,19 @@
 
     var poOdniesieniu = wynik.seria.filter(function (s) { return !s.przedOdniesieniem; });
 
+    /* Stan leczenia. „brak-danych” NIE znaczy „nie leczony” — zakładka należy się każdemu
+       dorosłemu z dwoma pomiarami, więc brak punktów terapii może oznaczać i pacjenta bez
+       farmakoterapii, i pacjenta, u którego jej po prostu nie wpisano. Nie zgadujemy. */
+    var koniec = null;
+    for (var e = 0; e < punkty.length; e++) if (punkty[e].typ === 'end') koniec = punkty[e];
+    wynik.leczenie = {
+      stan: punkty.length === 0 ? 'brak-danych' : (koniec ? 'odstawione' : 'na-leczeniu'),
+      odstawienieDateISO: koniec ? koniec.dateISO : null,
+      odstawienieTydzien: koniec ? zaokraglTydzien(tygodnieMiedzy(odniesienie, koniec, os)) : null,
+      lek: wynik.punktOdniesienia.lek,
+      substancja: wynik.punktOdniesienia.substancja,
+    };
+
     /* Przekroczenia pasm — pierwszy pomiar, który sięgnął pasma. Bez interpolacji. */
     if (zestaw) {
       for (var b = 0; b < zestaw.progi.length; b++) {
@@ -349,19 +392,26 @@
       };
     }
 
-    /* Korytarz utrzymania. Surowa frakcja zawsze; linia 0,80 z pliku danych. */
+    /* Odzysk masy po nadirze. Surowa frakcja ZAWSZE — próg z pliku danych jest linią na
+       wykresie, nie kryterium klinicznym (dla farmakoterapii nie ma uzgodnionego progu %MWL).
+
+       `liniaDoPokazania` = false, dopóki nadirem jest ostatni pomiar. W trakcie redukcji
+       `utrzymane` wynosi wtedy z definicji 1,00 i pole niczego nie mierzy; narysowana wtedy
+       linia sugerowałaby lekarzowi, że coś jest monitorowane, choć nie ma jeszcze czego. */
     var ostatni = poOdniesieniu.length ? poOdniesieniu[poOdniesieniu.length - 1] : null;
     if (nadir && ostatni && nadir.ubytekPct > 0) {
-      var U = (D && D.UTRZYMANIE) || { frakcja: 0.80, nazwa: '', zrodlo: '' };
+      var U = (D && D.ODZYSK) || { frakcja: 0.75, nazwa: '', metryka: '', zrodlo: '' };
       var utrzymane = ostatni.ubytekPct / nadir.ubytekPct;
-      wynik.korytarz = {
+      wynik.odzysk = {
         frakcja: U.frakcja,
         nazwa: U.nazwa,
+        metryka: U.metryka,
         zrodlo: U.zrodlo,
         utrzymane: utrzymane,
-        wKorytarzu: utrzymane >= U.frakcja,
+        istotny: utrzymane < U.frakcja,
         masaGraniczna: masaOdn - U.frakcja * (masaOdn - nadir.masa),
         odzyskKg: ostatni.masa - nadir.masa,
+        liniaDoPokazania: nadir !== ostatni,
       };
     }
 
@@ -409,16 +459,19 @@
       }
     }
 
-    /* Wyjście z korytarza utrzymania — pierwszy pomiar po nadirze poniżej linii. */
-    if (wynik.korytarz && wynik.nadir && !wynik.nadir.ostatni) {
+    /* Istotny odzysk masy — pierwszy pomiar po nadirze poniżej progu. To ZDARZENIE, nie
+       „wypadnięcie z korytarza”: próg oznacza moment, od którego piśmiennictwo wiąże odzysk
+       z progresją chorób towarzyszących, a nie cel, w którym pacjent ma się mieścić. */
+    if (wynik.odzysk && wynik.nadir && !wynik.nadir.ostatni) {
       var poNadirze = false;
       for (var r = 0; r < poOdniesieniu.length; r++) {
         var t = poOdniesieniu[r];
         if (!poNadirze) { if (t === nadir) poNadirze = true; continue; }
-        if (nadir.ubytekPct > 0 && (t.ubytekPct / nadir.ubytekPct) < wynik.korytarz.frakcja) {
+        if (nadir.ubytekPct > 0 && (t.ubytekPct / nadir.ubytekPct) < wynik.odzysk.frakcja) {
           wynik.zdarzenia.push({
-            typ: 'poza-korytarzem', tydzien: t.tydzien, dateISO: t.dateISO,
-            opis: 'Utrzymane poniżej ' + Math.round(wynik.korytarz.frakcja * 100) + ' % maksymalnego ubytku.',
+            typ: 'istotny-odzysk', tydzien: t.tydzien, dateISO: t.dateISO,
+            opis: 'Odzyskano ponad ' + Math.round((1 - wynik.odzysk.frakcja) * 100)
+              + ' % uzyskanego ubytku masy.',
           });
           break;
         }

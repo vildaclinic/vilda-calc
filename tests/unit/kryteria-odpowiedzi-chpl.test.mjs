@@ -69,9 +69,15 @@ describe('Leki z TWARDYM nakazem odstawienia', () => {
     expect(g.metric).toBe('massPct');
     expect(g.hardStop, 'ChPL: „Należy przerwać leczenie" — nie „rozważyć"').toBe(true);
 
-    expect(ocen('Saxenda', 40, { weeks: 12, massPct: -5.0 }).status).toBe('pass');
-    expect(ocen('Saxenda', 40, { weeks: 12, massPct: -4.9 }).status).toBe('fail-stop');
-    expect(ocen('Saxenda', 40, { weeks: 11, massPct: -1 }).status).toBe('before-window');
+    // P-KOTWICA (SW 1.1.11): ChPL liczy te 12 tygodni OD DAWKI PODTRZYMUJACEJ 3,0 mg/dobe,
+    // a nie od wlaczenia leczenia — stad `weeksFromAnchor`.
+    expect(g.windowAnchor).toBe('dawka-podtrzymujaca');
+    expect(ocen('Saxenda', 40, { weeksFromAnchor: 12, massPct: -5.0 }).status).toBe('pass');
+    expect(ocen('Saxenda', 40, { weeksFromAnchor: 12, massPct: -4.9 }).status).toBe('fail-stop');
+    expect(ocen('Saxenda', 40, { weeksFromAnchor: 11, massPct: -1 }).status).toBe('before-window');
+    // Te same 12 tygodni liczone od wlaczenia to jeszcze nie okno (4 tyg. zwiekszania dawki).
+    expect(ocen('Saxenda', 40, { weeks: 12, massPct: -4.9 }).status).toBe('before-window');
+    expect(ocen('Saxenda', 40, { weeks: 16, massPct: -4.9 }).status).toBe('fail-stop');
   });
 
   it('naltrekson/bupropion: 16 tyg., ≥5 % początkowej masy, twardy stop', () => {
@@ -101,8 +107,12 @@ describe('Kryteria pediatryczne zostają nietknięte', () => {
     expect(g.metric, 'ChPL mierzy u młodzieży BMI, nie masę ciała').toBe('bmiPct');
     expect(g.windowWeeks).toBe(12);
     expect(g.hardStop).toBe(true);
-    expect(ocen('Wegovy', 15, { weeks: 12, bmiPct: -5 }).status).toBe('pass');
-    expect(ocen('Wegovy', 15, { weeks: 12, bmiPct: -4 }).status).toBe('fail-stop');
+    // P-KOTWICA: 12 tygodni STOSOWANIA DAWKI 2,4 mg, czyli 28. tydzien od wlaczenia.
+    expect(g.windowAnchor).toBe('dawka-podtrzymujaca');
+    expect(ocen('Wegovy', 15, { weeksFromAnchor: 12, bmiPct: -5 }).status).toBe('pass');
+    expect(ocen('Wegovy', 15, { weeksFromAnchor: 12, bmiPct: -4 }).status).toBe('fail-stop');
+    expect(ocen('Wegovy', 15, { weeks: 12, bmiPct: -4 }).status).toBe('before-window');
+    expect(ocen('Wegovy', 15, { weeks: 28, bmiPct: -4 }).status).toBe('fail-stop');
   });
 
   it.each([[8, 'saxenda-6-11'], [15, 'saxenda-12-17']])(

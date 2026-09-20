@@ -115,9 +115,14 @@ describe('P-POSTEPY — punkt odniesienia decyduje o każdym procencie na wykres
 
 describe('P-POSTEPY — pasma są danymi, nie założeniem silnika', () => {
   it('wynik niesie nazwę i źródło zestawu (AGENTS.md §3)', () => {
-    const m = silnik().analizuj({ ...DOROSLY, lek: 'Wegovy', pomiary: SERIA_4 });
-    expect(m.zestaw.nazwa).toBeTruthy();
-    expect(m.zestaw.zrodlo, 'skąd drabinka').toContain('ChPL');
+    // Każdy zestaw musi powiedzieć, skąd jest — i zestaw liraglutydu rzeczywiście cytuje ChPL,
+    // a zestaw ogólny rzeczywiście przyznaje, że jest konwencją. To nie to samo zdanie.
+    const sema = silnik().analizuj({ ...DOROSLY, lek: 'Wegovy', pomiary: SERIA_4 });
+    expect(sema.zestaw.nazwa).toBeTruthy();
+    expect(sema.zestaw.zrodlo.length, 'źródło nie jest puste').toBeGreaterThan(40);
+
+    const lira = silnik().analizuj({ ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4 });
+    expect(lira.zestaw.zrodlo, 'ten akurat jest cytatem').toContain('ChPL');
   });
 
   it('liraglutyd dostaje własną, krótszą drabinkę', () => {
@@ -125,15 +130,29 @@ describe('P-POSTEPY — pasma są danymi, nie założeniem silnika', () => {
     const lira = silnik().analizuj({ ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4 });
     const sema = silnik().analizuj({ ...DOROSLY, lek: 'Wegovy', pomiary: SERIA_4 });
     expect(lira.zestaw.progi).toEqual([5, 10]);
-    expect(sema.zestaw.progi).toEqual([5, 10, 15, 20]);
+    expect(sema.zestaw.progi).toEqual([5, 10, 15, 20, 25]);
     expect(lira.zestaw.id).not.toBe(sema.zestaw.id);
   });
 
-  it('nigdzie nie ma pasma 25 % — żadna z czterech ChPL go nie raportuje', () => {
+  it('drabinka ogólna sięga 25 %, bo przy 20 % przestaje różnicować', () => {
+    // Rata 1 wykluczyła 25 % z uzasadnieniem „nie ma go w żadnej z czterech ChPL". To prawda
+    // o ChPL, ale nie o literaturze: 25 % jest konfirmacyjnym punktem końcowym STEP UP
+    // (semaglutyd 7,2 mg — dawka, którą aplikacja zna od P-CHPL) i kluczowym drugorzędowym
+    // SURMOUNT-5. Decyzja właściciela 2026-09-20: dołożyć.
     const D = loadBrowserScript('vilda_postepy_doroslego_dane.js', {}).VildaPostepyDoroslegoDane;
+    expect(D.ZESTAWY.OGOLNY.progi).toContain(25);
     const wszystkie = Object.keys(D.ZESTAWY).flatMap((k) => D.ZESTAWY[k].progi);
-    expect(wszystkie).not.toContain(25);
-    expect(Math.max(...wszystkie)).toBe(20);
+    expect(Math.max(...wszystkie), 'wyżej niż 25 % już nic nie stoi').toBe(25);
+    expect(D.ZESTAWY.OGOLNY.uwaga, 'i wiadomo, że to nie jest cytat z ChPL').toContain('W żadnej z czterech ChPL');
+  });
+
+  it('opis drabinki nie udaje cytatu z ChPL', () => {
+    // Rata 1 pisała „Kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1".
+    // Sprawdzenie źródeł pokazało, że żaden pojedynczy dokument nie zawiera tej drabinki
+    // w całości — ugruntowany jest tylko szczebel 5 %.
+    const D = loadBrowserScript('vilda_postepy_doroslego_dane.js', {}).VildaPostepyDoroslegoDane;
+    expect(D.ZESTAWY.OGOLNY.zrodlo).toContain('Konwencja prezentacyjna aplikacji');
+    expect(D.ZESTAWY.OGOLNY.zrodlo).toContain('ŻADEN pojedynczy dokument');
   });
 
   it('nieznana nazwa zestawu nie podmienia wykresu po cichu', () => {
@@ -186,20 +205,60 @@ describe('P-POSTEPY — liczby', () => {
     });
     expect(m.nadir.masa).toBe(100);
     expect(m.nadir.ostatni).toBe(false);
-    expect(m.korytarz.utrzymane, '6 z 20 kg utrzymane = 0,30').toBeCloseTo(0.3, 6);
-    expect(m.korytarz.wKorytarzu).toBe(false);
-    expect(m.korytarz.masaGraniczna, '80 % z 20 kg ubytku').toBeCloseTo(104, 6);
-    expect(m.korytarz.odzyskKg).toBeCloseTo(14, 6);
+    expect(m.odzysk.utrzymane, '6 z 20 kg utrzymane = 0,30').toBeCloseTo(0.3, 6);
+    expect(m.odzysk.frakcja, 'próg z konsensusu Delphi 2026 i post hoc SURMOUNT-4').toBe(0.75);
+    expect(m.odzysk.istotny).toBe(true);
+    expect(m.odzysk.masaGraniczna, '75 % z 20 kg ubytku').toBeCloseTo(105, 6);
+    expect(m.odzysk.odzyskKg).toBeCloseTo(14, 6);
+    expect(m.odzysk.liniaDoPokazania, 'nadir już za nami — jest co mierzyć').toBe(true);
     const typy = m.zdarzenia.map((z) => z.typ);
     expect(typy).toContain('pasmo-utracone');
-    expect(typy).toContain('poza-korytarzem');
+    expect(typy).toContain('istotny-odzysk');
   });
 
-  it('utrzymany efekt nie produkuje zdarzenia „poza korytarzem"', () => {
+  it('dopóki nadirem jest ostatni pomiar, linia odzysku się nie rysuje', () => {
+    // `utrzymane` wynosi wtedy z definicji 1,00 i nic nie mierzy. Narysowana linia
+    // sugerowałaby, że coś jest monitorowane, choć nie ma jeszcze czego.
     const m = silnik().analizuj({ ...DOROSLY, lek: 'Wegovy', pomiary: SERIA_4 });
-    expect(m.korytarz.utrzymane).toBe(1);
-    expect(m.korytarz.wKorytarzu).toBe(true);
-    expect(m.zdarzenia.map((z) => z.typ)).not.toContain('poza-korytarzem');
+    expect(m.nadir.ostatni).toBe(true);
+    expect(m.odzysk.utrzymane).toBe(1);
+    expect(m.odzysk.istotny).toBe(false);
+    expect(m.odzysk.liniaDoPokazania).toBe(false);
+    expect(m.zdarzenia.map((z) => z.typ)).not.toContain('istotny-odzysk');
+  });
+
+  it('próg odzysku niesie metrykę i uczciwe źródło', () => {
+    // Dla farmakoterapii otyłości nie ma uzgodnionego progu %MWL — to musi być widoczne
+    // w wyniku, a nie tylko w komentarzu w kodzie.
+    const m = silnik().analizuj({ ...DOROSLY, lek: 'Wegovy', pomiary: SERIA_4 });
+    expect(m.odzysk.metryka).toContain('%MWL');
+    expect(m.odzysk.zrodlo).toContain('nie ma uzgodnionego progu');
+    expect(m.odzysk.nazwa).toContain('odzysk');
+    expect(m.odzysk.nazwa, 'nie „korytarz" — to zdarzenie, nie cel').not.toContain('orytarz');
+  });
+
+  it('stan leczenia jest w wyniku, bo ta sama frakcja znaczy co innego na leku i po nim', () => {
+    const pkt = (typ, dateISO, masa) => ({
+      id: typ, type: typ, dateISO, weight: masa, height: 167,
+      ageYears: 47, ageMonths: 0, drug: 'Saxenda', substance: 'liraglutide',
+    });
+    const bez = silnik().analizuj({ ...DOROSLY, pomiary: SERIA_4 });
+    expect(bez.leczenie.stan, 'brak punktów to nie to samo co brak leczenia').toBe('brak-danych');
+
+    const na = silnik().analizuj({
+      ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4,
+      punktyLeczenia: [pkt('start', '2026-01-08', 112.4)],
+    });
+    expect(na.leczenie.stan).toBe('na-leczeniu');
+    expect(na.leczenie.odstawienieTydzien).toBeNull();
+
+    const po = silnik().analizuj({
+      ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4,
+      punktyLeczenia: [pkt('start', '2026-01-08', 112.4), pkt('end', '2026-05-14', 96.2)],
+    });
+    expect(po.leczenie.stan).toBe('odstawione');
+    expect(po.leczenie.odstawienieTydzien).toBe(18);
+    expect(po.leczenie.odstawienieDateISO).toBe('2026-05-14');
   });
 
   it('wyjście z otyłości jest osobnym zdarzeniem — to ten moment ma kolor na wykresie', () => {
@@ -325,17 +384,38 @@ describe('P-POSTEPY — granice warstw (strażnicy zachowaniowe)', () => {
     }
   });
 
-  it('kotwica „dawka podtrzymująca" nie jest zgadywana jako tydzień od włączenia', () => {
-    // Momentu dojścia do dawki podtrzymującej rekord pacjenta nie zapisuje. Zgadnięcie okresu
-    // zwiększania dawki postawiłoby punkt decyzyjny na osi w miejscu wziętym z powietrza.
+  it('kotwica „dawka podtrzymująca" osadza punkt przez NOMINALNY czas zwiększania dawki', () => {
+    // P-KOTWICA (2026-09-20): rekord nadal nie zapisuje momentu dojścia do dawki podtrzymującej,
+    // ale nominalny czas zwiększania dawki jest faktem z ChPL i mieszka w danych grupy.
+    // Punkt wolno więc osadzić — pod warunkiem, że wynik NAZYWA to założeniem (`nominalna`).
     const lira = silnik().analizuj({ ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4 });
     expect(lira.punktDecyzyjny.kotwica).toBe('dawka-podtrzymujaca');
-    expect(lira.punktDecyzyjny.tygodnie).toBe(12);
-    expect(lira.punktDecyzyjny.tydzienOdOdniesienia, 'nie osadzamy go na osi bez danych').toBeNull();
+    expect(lira.punktDecyzyjny.tygodnie, 'okno ChPL bez zmian').toBe(12);
+    expect(lira.punktDecyzyjny.titracjaNominalnaTyg, 'liraglutyd: 4 tyg. zwiększania dawki').toBe(4);
+    expect(lira.punktDecyzyjny.tydzienOdOdniesienia, '4 + 12').toBe(16);
+    expect(lira.punktDecyzyjny.nominalna, 'założenie, nie odczyt z rekordu').toBe(true);
 
     const mysimba = silnik().analizuj({ wiekLat: 40, lek: 'Mysimba', pomiary: SERIA_4 });
-    expect(mysimba.punktDecyzyjny.kotwica, 'Mysimba liczy od rozpoczęcia — ten punkt wolno osadzić').toBe('start');
+    expect(mysimba.punktDecyzyjny.kotwica, 'Mysimba liczy od rozpoczęcia').toBe('start');
     expect(mysimba.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+    expect(mysimba.punktDecyzyjny.nominalna, 'nic tu nie jest zakładane').toBe(false);
+  });
+
+  it('bez nominalnego czasu zwiększania dawki punkt NIE jest stawiany', () => {
+    // Zgadywanie dałoby datę z powietrza. Atrapa ma kotwicę w dawce podtrzymującej i nie ma
+    // `titrationWeeksNominal` — silnik musi wtedy zostawić oś pustą, a nie podstawić okno.
+    const atrapa = {
+      ObesityResponseCriteria: {
+        getCriterion: () => ({
+          drugKey: 'atrapa',
+          group: { metric: 'massPct', windowWeeks: 12, thresholdPct: 5, windowAnchor: 'dawka-podtrzymujaca', zdanie: 'x' },
+        }),
+      },
+    };
+    const m = okno(atrapa).analizuj({ ...DOROSLY, lek: 'Cokolwiek', pomiary: SERIA_4 });
+    expect(m.punktDecyzyjny.jest).toBe(true);
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBeNull();
+    expect(m.punktDecyzyjny.nominalna).toBe(false);
   });
 
   it('silnik nie ma DOM-u ani zapisu (AGENTS.md §2 i §5)', () => {

@@ -47,16 +47,19 @@ describe('Kryteria odpowiedzi (obesity_response_criteria.js) — ramię z-score 
     return win.ObesityResponseCriteria;
   }
   const saxenda = (K) => K.getCriterion('Saxenda', 'liraglutide', 13);
+  // P-KOTWICA (SW 1.1.11): okno liraglutydu i semaglutydu kotwiczy sie w DAWCE PODTRZYMUJACEJ,
+  // wiec „12 tygodni okna" podajemy przez `weeksFromAnchor`. Pole `weeks` znaczy tygodnie od
+  // wlaczenia leczenia i dla tych grup jest o nominalny czas zwiekszania dawki wieksze.
   it('BMI −5 % po 12 tyg.: pass przez bmiPct (ramię BMI bez zmian)', () => {
     const K = kryteria();
-    const r = K.evaluate(saxenda(K), { weeks: 12, bmiPct: -5, bmiSdsDelta: -0.3 });
+    const r = K.evaluate(saxenda(K), { weeksFromAnchor: 12, bmiPct: -5, bmiSdsDelta: -0.3 });
     expect(r.status).toBe('pass');
     expect(r.metVia).toBe('bmiPct');
     expect(r.achievedSdsDelta).toBeCloseTo(-0.3, 9);
   });
   it('BMI −2 %, bmiSDS spada o 0,3: „clinical-zscore" — nie automatyczny pass ani stop (ChPL bez progu bezwzględnego)', () => {
     const K = kryteria();
-    const r = K.evaluate(saxenda(K), { weeks: 12, bmiPct: -2, bmiSdsDelta: -0.3 });
+    const r = K.evaluate(saxenda(K), { weeksFromAnchor: 12, bmiPct: -2, bmiSdsDelta: -0.3 });
     expect(r.status).toBe('clinical-zscore');
     expect(r.metVia).toBe('bmiSdsDelta');
     expect(r.achievedSdsDelta).toBeCloseTo(-0.3, 9);
@@ -64,18 +67,22 @@ describe('Kryteria odpowiedzi (obesity_response_criteria.js) — ramię z-score 
   });
   it('BMI −2 %, bmiSDS rośnie: fail-stop; sam ΔbmiSDS bez BMI: clinical-zscore; stare bmiZscorePct nie daje już „pass"', () => {
     const K = kryteria();
-    expect(K.evaluate(saxenda(K), { weeks: 12, bmiPct: -2, bmiSdsDelta: 0.1 }).status).toBe('fail-stop');
-    expect(K.evaluate(saxenda(K), { weeks: 12, bmiSdsDelta: -0.05 }).status).toBe('clinical-zscore');
+    expect(K.evaluate(saxenda(K), { weeksFromAnchor: 12, bmiPct: -2, bmiSdsDelta: 0.1 }).status).toBe('fail-stop');
+    expect(K.evaluate(saxenda(K), { weeksFromAnchor: 12, bmiSdsDelta: -0.05 }).status).toBe('clinical-zscore');
     // spadek z +0,20 do +0,10 to było „−50 %" i automatyczny pass — nieinterpretowalne przy SDS bliskim 0
-    const stare = K.evaluate(saxenda(K), { weeks: 12, bmiPct: -2, bmiZscorePct: -50 });
+    const stare = K.evaluate(saxenda(K), { weeksFromAnchor: 12, bmiPct: -2, bmiZscorePct: -50 });
     expect(stare.status).toBe('fail-stop');
-    expect(K.evaluate(saxenda(K), { weeks: 12 }).status).toBe('insufficient-data');
-    expect(K.evaluate(saxenda(K), { weeks: 4, bmiPct: -2 }).status).toBe('before-window');
+    expect(K.evaluate(saxenda(K), { weeksFromAnchor: 12 }).status).toBe('insufficient-data');
+    expect(K.evaluate(saxenda(K), { weeksFromAnchor: 4, bmiPct: -2 }).status).toBe('before-window');
   });
   it('Wegovy 12–17 (samo bmiPct) i dorośli (masa) bez zmian', () => {
     const K = kryteria();
-    expect(K.evaluate(K.getCriterion('Wegovy', 'semaglutide', 14), { weeks: 12, bmiPct: -5 }).status).toBe('pass');
-    expect(K.evaluate(K.getCriterion('Saxenda', 'liraglutide', 30), { weeks: 12, massPct: -3 }).status).toBe('fail-stop');
+    expect(K.evaluate(K.getCriterion('Wegovy', 'semaglutide', 14), { weeksFromAnchor: 12, bmiPct: -5 }).status).toBe('pass');
+    expect(K.evaluate(K.getCriterion('Saxenda', 'liraglutide', 30), { weeksFromAnchor: 12, massPct: -3 }).status).toBe('fail-stop');
+    // P-KOTWICA: te same 12 tygodni liczone OD WLACZENIA to jeszcze nie okno — przed poprawka
+    // aplikacja orzekala tu „odstawic".
+    expect(K.evaluate(K.getCriterion('Saxenda', 'liraglutide', 30), { weeks: 12, massPct: -3 }).status).toBe('before-window');
+    expect(K.evaluate(K.getCriterion('Wegovy', 'semaglutide', 14), { weeks: 12, bmiPct: -5 }).status).toBe('before-window');
   });
 });
 
