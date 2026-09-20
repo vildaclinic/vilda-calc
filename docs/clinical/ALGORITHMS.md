@@ -5573,6 +5573,62 @@ SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`
 Poprawka odniesienia: SW 1.1.22 → **1.1.23**; `vilda_auth_ui.js?v=459→460`,
 `vilda_sds_wzrostu.js?v=3→4`.
 
+## Zalecenie ruchu dla 2–4 lat: kontekst przy liczbie i ogólny limit ekranu (P-RUCH-2-4, SW 1.1.28, 2026-09-20)
+
+**Status: ZMIANA KLINICZNA (brzmienie zalecenia).** Decyzja właściciela 2026-09-20.
+
+**Skąd potrzeba.** Właściciel, czytając zdanie dla 2–4 lat, zapytał wprost: „3 godz. ruchu
+dziennie?". To jest dokładnie ta reakcja, którą będzie miał rodzic, gdy zobaczy liczbę
+180 minut w jednostronicowym raporcie i przeleci go wzrokiem. Zalecenie merytorycznie
+poprawne, ale przeczytane jako „trzy godziny ćwiczeń" zostaje odrzucone razem z całą kartką —
+efekt odwrotny do zamierzonego.
+
+W wytycznych WHO te 180 minut to aktywność **o dowolnej intensywności, rozłożona w ciągu
+całego dnia** (zwykła zabawa, spacer, ruch przy codziennych czynnościach), z czego dopiero
+od 3. roku życia co najmniej 60 minut ma być o umiarkowanej lub dużej intensywności.
+Dotychczasowemu zdaniu brakowało właśnie zwrotu, który w oryginale odbiera liczbie dramatyzm.
+
+**Co zmienione.** Dwa zdania w `vilda_diet_recommendations.js`, w obu rejestrach:
+
+| | Przed | Po |
+| --- | --- | --- |
+| standardowy | „…aktywność ruchowa przez co najmniej 180 minut dziennie w różnych formach zabawy…" | „…aktywność ruchowa przez co najmniej 180 minut dziennie, **rozłożona w ciągu dnia**, w różnych formach zabawy…" |
+| „Dla pacjenta" | „…aktywne przez co najmniej 180 minut dziennie w różnych formach zabawy ruchowej…" | „…aktywne przez co najmniej 180 minut dziennie, **z ruchem rozłożonym w ciągu dnia**, w różnych formach zabawy ruchowej…" |
+| standardowy | „…oraz ograniczenie czasu przed ekranem **do 1 godziny dziennie**" | „…oraz **maksymalne ograniczenie czasu przed ekranem**" |
+| „Dla pacjenta" | „…a czas przed ekranem **nie przekraczał 1 godziny dziennie**" | „…i aby czas przed ekranem **był maksymalnie ograniczony**" |
+
+Część o 60 minutach o umiarkowanej lub dużej intensywności od 3. roku życia zostaje bez zmian.
+
+**Rozbieżność ze źródłem — świadoma i nazwana.** WHO podaje dla 2–4 lat konkretny limit
+czasu siedzącego przed ekranem: **nie więcej niż 1 godzina dziennie, „less is better"**.
+Aplikacja po tej zmianie nie cytuje już tej liczby, tylko zaleca maksymalne ograniczenie —
+czyli **zalecenie jest ostrzejsze i mniej precyzyjne niż źródło**. To decyzja właściciela
+z 2026-09-20, podjęta dla dzieci z nadwagą i otyłością, u których zdanie to w ogóle się
+pojawia. Gdyby kiedyś trzeba było wrócić do brzmienia liczbowego, wystarczy odwrócić tę
+jedną zmianę.
+
+**Źródło.** WHO, *Guidelines on physical activity, sedentary behaviour and sleep for children
+under 5 years of age*, 2019 (pasmo i liczby przyjęte w ENERGY-REC-3, SW 1.0.897). Proces
+powstania wytycznych opisują — według PubMed — Willumsen J., Bull F., *Development of WHO
+Guidelines on Physical Activity, Sedentary Behavior, and Sleep for Children Less Than 5 Years
+of Age*, J Phys Act Health 2020;17(1):96–100, PMID 31877559,
+DOI [10.1123/jpah.2019-0457](https://doi.org/10.1123/jpah.2019-0457). Pierwsze globalne
+wytyczne WHO dla niemowląt, dzieci 1–2,9 roku i przedszkolaków 3–4,9 roku, zbudowane na
+przeglądach systematycznych w ramach GRADE.
+
+**Wpływ kliniczny.** Zmienia się **brzmienie** zalecenia dla dzieci 2–4 lat z nadwagą lub
+otyłością w obu rejestrach. Nie zmienia się ani jedna liczba dotycząca aktywności (180 i 60
+minut zostają), nie zmienia się żaden wzór, próg, dawka ani wynik obliczeniowy. Znika
+liczbowy limit ekranu — patrz rozbieżność wyżej.
+
+**Testy.** Zaktualizowane, bez osłabiania: `tests/e2e/zalecenia-energetyczne-tresci.spec.mjs`
+(3-latka, oba rejestry) wymaga teraz frazy „180 minut dziennie, rozłożona w ciągu dnia"
+i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** starych fraz
+„do 1 godziny dziennie" i „nie przekraczał 1 godziny" — czyli asercji przybyło, nie ubyło.
+`tests/e2e/zdania-rol-zalecen.spec.mjs` sprawdza to samo przez rolę „ruch".
+
+SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
+
 ## Zdania generatora z podziałem na role (P-RAPORT-ZDANIA, SW 1.1.27, 2026-09-20)
 
 **Status:** zmiana techniczna, nie kliniczna. Żadnego zdania, wzoru, progu ani liczby nie

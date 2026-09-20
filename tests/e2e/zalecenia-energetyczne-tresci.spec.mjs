@@ -53,13 +53,16 @@ function run(page, { age, months = 0, sex, w, h, click = null, pf = false }) {
   }, { age, months, sex, w, h, click, pf });
 }
 
-test('3-latka z otyłością: aktywność ≥ 180 min i ekran ≤ 1 h, witamina D 600 → 1200 IU (UL 2000), płyny 1,25 l, zdanie z BMI i klasą', async ({ page }) => {
+test('3-latka z otyłością: aktywność ≥ 180 min rozłożona w ciągu dnia i maksymalne ograniczenie ekranu, witamina D 600 → 1200 IU (UL 2000), płyny 1,25 l, zdanie z BMI i klasą', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await run(page, { age: 3, sex: 'F', w: 22, h: 100 });
   expect(r.cls.severe).toBe(true);
-  expect(r.text).toContain('co najmniej 180 minut dziennie');
-  expect(r.text).toContain('czasu przed ekranem do 1 godziny dziennie');
+  // P-RUCH-2-4 (decyzja właściciela 2026-09-20): liczba 180 minut nie może wisieć bez kontekstu
+  // („3 godziny ćwiczeń?”), a limit ekranu jest ogólny zamiast liczbowego.
+  expect(r.text).toContain('co najmniej 180 minut dziennie, rozłożona w ciągu dnia');
+  expect(r.text).toContain('maksymalne ograniczenie czasu przed ekranem');
+  expect(r.text).not.toContain('do 1 godziny dziennie');
   expect(r.text).not.toContain('gry zespołowe');
   expect(r.text).toContain('w wieku 1–3 lat 600 IU dziennie, przy otyłości dawka podwojona – 1200 IU dziennie');
   expect(r.text).toContain('Dawki powyżej 2000 IU dziennie');
@@ -71,7 +74,9 @@ test('3-latka z otyłością: aktywność ≥ 180 min i ekran ≤ 1 h, witamina 
   expect(r.text).toContain(`BMI 22,0 kg/m², powyżej 99. centyla dla wieku i płci, z-score ${r.zS} – otyłość (≥ 99. centyla).`);
 
   const p = await run(page, { age: 3, sex: 'F', w: 22, h: 100, pf: true });
-  expect(p.text).toContain('Proszę zadbać, aby dziecko było aktywne przez co najmniej 180 minut dziennie');
+  expect(p.text).toContain('aktywne przez co najmniej 180 minut dziennie, z ruchem rozłożonym w ciągu dnia');
+  expect(p.text).toContain('czas przed ekranem był maksymalnie ograniczony');
+  expect(p.text).not.toContain('nie przekraczał 1 godziny');
   expect(p.text).toContain('W wieku 1–3 lat standardowa dawka to 600 IU dziennie, a przy otyłości zaleca się dawkę podwojoną: 1200 IU dziennie');
   expect(p.text).toContain(`BMI dziecka wynosi 22,0 kg/m² i przekracza 99. centyl dla wieku i płci (z-score ${p.zS}), co oznacza otyłość.`);
   expect(p.text).toContain('około 1,25 l płynów dziennie');
