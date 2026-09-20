@@ -5125,6 +5125,111 @@ Trzy testy, które właściciel widział jako flaki, to dokładnie te trzy, któ
 1. `html,body{scroll-behavior:smooth}` w `style.css` obowiązuje **bez** `@media (prefers-reduced-motion: reduce)`. To pytanie o dostępność produktu, nie o test, i osobna decyzja — dlatego poprawka siedzi w teście, a nie w CSS. Gdyby ta reguła dostała warunek, pozostałe pliki e2e też przestałyby płacić za animowane przewijanie.
 2. Ten sam wzorzec — `click()`/`check()` bez upewnienia się, że element stoi — jest w innych plikach e2e dotykających `kalkulator-klirens.html`. Tutaj byłoby to poszerzeniem zlecenia; moduł `uklad-czekanie.mjs` jest gotowy do ponownego użycia.
 
+## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
+
+**Skąd to się wzięło.** Audyt całej funkcji postępów, zlecony przez właściciela po zamknięciu planu P-POSTEPY. Znalezisko F1 — najpoważniejsze w audycie.
+
+**Zmiana kliniczna: TAK — zmienia się to, co lekarz widzi na wykresie i na wydruku.** Żaden próg, wzór ani jednostka się nie zmienia; zmienia się natomiast **umiejscowienie punktu oceny odpowiedzi wg ChPL** i **masa, od której liczone są procenty**, w opisanych niżej przypadkach. Kierunek zmiany jest jednoznaczny: usuwamy wskazanie, które mogło pojawiać się za wcześnie.
+
+### Na czym polegał błąd
+
+Punkt oceny wg ChPL stoi na osi liczonej **od włączenia leczenia**. `punktDecyzyjny()` zna jednak wyłącznie **lek** — oddaje okno i kotwicę z ChPL, nie wiedząc, od czego dany wykres liczy tygodnie. Lek rozpoznaje się z **dowolnego** punktu leczenia. Punkt odniesienia wymagał natomiast punktu „Włączenie” **z kluczem na wybranej osi**, czyli z datą, gdy oś jest datowa.
+
+Te dwa warunki nigdy nie zostały ze sobą związane. Gdy odniesienie spadało na pierwszy pomiar, znacznik ChPL i tak się rysował — na osi o innym zerze.
+
+Oba warunki są osiągalne w normalnym użyciu:
+
+- `obesity_therapy_monitor.js` (funkcja `Ed`) wymusza masę, wzrost i wiek, ale `dateISO` przyjmuje puste;
+- pacjent przejęty w trakcie terapii ma same wpisy „kontynuacja”, bez „Włączenia”.
+
+**Odtworzony przypadek** (dane fikcyjne, ścieżka `scalSerie → analizuj` jak w Karcie Pacjenta). Pacjent obserwowany od 05.01.2026, lek włączony 06.07.2026 przy 120 kg:
+
+| | przed poprawką | po poprawce |
+|---|---|---|
+| punkt odniesienia | pierwszy pomiar, 118 kg | włączenie, 120 kg |
+| punkt oceny wg ChPL | 16. tydz. → **27.04.2026** | 16. tydz. → **26.10.2026** |
+| ostrzeżenia | **brak** | jawne |
+
+Znacznik lądował **przed podaniem pierwszej dawki**, w miejscu, gdzie pacjent miał przyrost +1,7 %. Czytało się to jak niespełnione kryterium 5 % i wskazanie do odstawienia. Dodatkowo procenty szły od 118 kg, a ChPL mówi o „początkowej masie ciała”, czyli masie z włączenia — liczba na kartce i kryterium narysowane obok niej mierzyły co innego.
+
+To ta sama klasa usterki, którą kasowała P-KOTWICA (SW 1.1.11). Tam poprawiona została arytmetyka kotwicy; tutaj okazało się, że samo **zero osi** potrafi się przesunąć.
+
+### Poprawka — dwa ruchy
+
+**1. Odzysk punktu „Włączenie” bez własnej daty.** Gdy punkt „Włączenie” nie ma klucza na wybranej osi, silnik szuka w serii bliźniaczki po **dokładnie tym kluczu, którego używa scalanie** (`wiekMies | wzrost | masa`) i pożycza od niej oś czasu. Ta sama wizyta zwykle już w serii jest — scalanie wpisuje ją tam z datą — więc silnik przestaje wyrzucać dane, które trzyma w ręku. Fakt pożyczki niesie `punktOdniesienia.dataOdzyskana` i osobne ostrzeżenie. Zgadywania nie ma: bez bliźniaczki nie dzieje się nic.
+
+**2. Bez zera leczenia — bez znacznika.** Gdy odniesieniem zostaje pierwszy pomiar, `tydzienOdOdniesienia` gaśnie, `nominalna` gaśnie razem z nim, a wynik niesie `bezOsi: 'brak-punktu-wlaczenia'` i ostrzeżenie mówiące lekarzowi, **dlaczego** znacznika nie ma i że procenty liczą się od pierwszego pomiaru, nie od masy początkowej z ChPL.
+
+**Reguła z ChPL zostaje w wyniku w całości** — zdanie, próg, okno, kotwica. Znika wyłącznie jej **pozycja na wykresie**. Warstwa widoku nie dostała ani jednej nowej gałęzi: gaśnięcie `nominalna` zabiera zarówno znacznik, jak i pas „zwiększanie dawki”, bo widok od początku czytał tę flagę.
+
+### Przy okazji: lek w wyniku (F2)
+
+`leczenie.lek` czytał wyłącznie z punktu odniesienia, więc pacjent bez datowanego punktu „Włączenie” miał `lek: null` — choć silnik ten lek znał i dobrał mu drabinkę oraz punkt oceny. Nagłówek kartki do dokumentacji gubił przez to nazwę leku dokładnie tam, gdzie reszta kartki mówiła o jego ChPL. Teraz `leczenie.lek` spada na lek rozpoznany przez silnik; bez jakiegokolwiek punktu leczenia zostaje pusty.
+
+### Przy okazji: nagłówek pliku danych (F10)
+
+Nagłówek `vilda_postepy_doroslego_dane.js` twierdził, że drabinki pochodzą z punktu 5.1 ChPL i że „progu ≥25 % nie ma w żadnym z czterech dokumentów — dlatego nie ma go tutaj”, podczas gdy w danych stało `progi: [5, 10, 15, 20, 25]`. Zostało to po korekcie z raty 1b, która poprawiła pola `zrodlo`, ale nie nagłówek. Czytelnik ufający nagłówkowi dostawał fałszywą proweniencję całej drabinki. Nagłówek doprowadzony do zgodności z danymi; rozdzielone, co jest cytatem z ChPL (drabinka liraglutydu), a co konwencją prezentacyjną aplikacji (drabinka ogólna).
+
+### Przy okazji: wersjonowanie pliku danych (F11)
+
+`vilda_postepy_doroslego_dane.js` zmienił treść w racie 1b (`[5,10,15,20]` → `[5,10,15,20,25]`) **bez podbicia `?v=`** — wbrew AGENTS.md §6. Skutek praktyczny był bliski zeru, bo rata 1b podbiła `SW_VERSION`, a precache pobiera z `cache: 'reload'`, więc nowa treść do użytkowników dotarła. Ale jeden adres `?v=1` wskazywał na dwie różne treści. Plik dostaje teraz `?v=2`.
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-silnik.test.mjs` — **52 testy** (było 46): sześć nowych odtwarza oba przypadki F1 na prawdziwym silniku plus kontrolę pozytywną („z datowanym punktem wszystko stoi tam, gdzie stało”) i oba przypadki F2.
+- `tests/unit/postepy-doroslego-widok.test.mjs` — **34 testy** (było 33): strażnik na poziomie widoku, że bez punktu „Włączenie” nie ma ani znacznika, ani pasa titracji, ale jest wyjaśnienie.
+- **Wsad trzech istniejących testów poprawiony, ani jedna asercja nie osłabiona.** Podawały sam `lek:` bez jednego punktu leczenia — czyli sytuację, w której oś nie ma zera leczenia i (od tej poprawki) znacznika stawiać nie wolno. Arytmetyka kotwicy była w nich sprawdzana na wsadzie, który sam był scenariuszem usterki. Punkt „Włączenie” z datą czyni te przypadki klinicznie sensownymi; pilnowane liczby zostają te same.
+- **Sześć kontroli negatywnych**, każda zaczerwienia testy: zniknięcie wygaszania znacznika; zniknięcie odzysku daty; powrót leku tylko z punktu odniesienia; wygaszanie znacznika **zawsze** (nadgorliwość — łapie kontrola pozytywna); zniknięcie ostrzeżenia; flaga `dataOdzyskana` na sztywno `false`.
+
+SW 1.1.14 → **1.1.15**; `vilda_postepy_doroslego.js?v=2→3`, `vilda_postepy_doroslego_dane.js?v=1→2` na ośmiu stronach i w precache.
+
+### Co zostaje
+
+Rata B audytu: klucz scalania ignorujący datę (F3) i kamienie milowe sprzed punktu odniesienia (F4). Rata C: ostrzeżenie o osi z wieku na kartce pacjenta, łamanie stron w wydruku, głębokie zamrożenie pliku danych, kolor kropki wg ciężaru zdarzenia, sanity bound na datach. Do decyzji właściciela: weryfikacja pediatrycznego czasu zwiększania dawki liraglutydu wobec dokumentu (F12) i polityka nazwy pobieranego pliku (F13).
+
+## Scalanie wizyt i zakres kamieni milowych (P-POSTEPY-FIX rata B, SW 1.1.16, 2026-09-20)
+
+Druga rata naprawcza po audycie funkcji postępów. Znaleziska F3 i F4.
+
+**Zmiana kliniczna: TAK, w zakresie tego, co widać na wykresie i wydruku.** Żaden próg ani wzór się nie zmienia. Zmienia się **liczba punktów na wykresie** (F3) i **zawartość listy kamieni milowych** (F4).
+
+### F3 — klucz scalania nie znał daty
+
+Seria pomiarowa dorosłego powstaje z dwóch źródeł: osi czasu pacjenta i punktów leczenia otyłości. Deduplikacja używała klucza `wiekMies | wzrost | masa` — tego samego, którego używa sejf. Argumentem było, że jedna wizyta zapisana dwiema drogami ma liczyć się raz.
+
+Klucz nie znał jednak daty, więc **dwie RÓŻNE wizyty** o tej samej masie i wzroście w tym samym miesiącu też zlewały się w jedną, a druga data przepadała bez śladu. Dla pacjenta na plateau to nie egzotyka — to definicja plateau. Odtworzone: trzy wizyty na wejściu (05.01, 28.01, 06.07), dwie na wyjściu.
+
+**Poprawka — trzy reguły dopasowania**, zamiast jednego klucza:
+
+| sytuacja | rozstrzygnięcie |
+|---|---|
+| ten sam klucz bazowy **i ta sama data** | ta sama wizyta → scalamy |
+| ten sam klucz bazowy, a **jedna ze stron daty nie ma** | punkt monitora bez daty klinicznej dołącza do datowanej bliźniaczki (i odwrotnie) |
+| ten sam klucz bazowy, **obie daty są i są różne** | dwie osobne wizyty → nie scalamy |
+
+Dopasowanie patrzy na **żywą datę wpisu, nie na jego klucz**: wpis bez daty mógł już ją dostać od poprzedniego scalenia, a klucza wtedy nie przepisujemy. Bez tego trzeci zapis tej samej wizyty (oś czasu bez daty → monitor z datą → oś czasu z datą) zakładałby duplikat.
+
+### F4 — kamienie milowe sprzed punktu odniesienia
+
+Pętla przejść klas BMI szła po **całej serii**, podczas gdy reszta modelu — pasma, nadir, odzysk, utrata pasma — liczy się z `poOdniesieniu`. Pacjent, który tył przez rok przed włączeniem leku, dostawał przez to na kartce `−26. tydz. Nadwaga → Otyłość II stopnia` z wagą „uwaga”, pomiędzy kamieniami z okresu terapii. To prawdziwy fakt z jego historii, ale w tym miejscu czyta się jak przebieg leczenia.
+
+To samo dotyczyło zdarzenia `wyjscie-z-otylosci`, które na wykresie ma własny kolor „dobrze” — sprzed włączenia przypisywałoby lekowi cudzy efekt.
+
+**Poprawka.** Przejście, którego **choć jeden koniec** leży przed punktem odniesienia, dostaje flagę `przedOdniesieniem`. Zostaje w `wynik.klasy` jako fakt z historii — danych nie kasujemy — ale nie idzie na oś kamieni i nie wywołuje zdarzenia kolorującego kropkę. Reguła w jednym zdaniu: **kamienie i zdarzenia opisują okres od punktu odniesienia; to, co przed nim, jest kontekstem, nie narracją.**
+
+Warunek obejmuje oba końce przejścia świadomie: zmiana zarejestrowana przy samym punkcie odniesienia (tydzień 0), ale poprzedzona pomiarem sprzed leczenia, wydarzyła się w całości przed terapią.
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-silnik.test.mjs` — **59 testów** (było 52): cztery dla F3 (dwie różne wizyty zostają dwiema; ta sama wizyta z dwóch źródeł nadal liczy się raz; punkt monitora bez daty dołącza do bliźniaczki; trzeci zapis nie zakłada duplikatu) i trzy dla F4 (przejście sprzed włączenia poza osią kamieni; zostaje w `klasy` z flagą; „wyjście z otyłości” sprzed włączenia nie koloruje wykresu).
+- **Sześć kontroli negatywnych**, każda zaczerwienia testy — w tym **dwie kontrole nadgorliwości**: klucz aż nadto ostry (nic się nie scala) i kamienie gaszone także w okresie leczenia.
+
+SW 1.1.15 → **1.1.16**; `vilda_postepy_doroslego.js?v=3→4`.
+
+### Co zostaje
+
+Rata C: ostrzeżenie o osi z wieku na kartce pacjenta (F5), łamanie stron w wydruku (F6), głębokie zamrożenie pliku danych (F7), kolor kropki wg ciężaru zdarzenia (F8), sanity bound na datach (F9). Do decyzji właściciela: F12 i F13.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

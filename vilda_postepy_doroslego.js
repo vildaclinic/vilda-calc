@@ -233,6 +233,7 @@
       });
     });
     (wynik.klasy || []).forEach(function (k) {
+      if (k.przedOdniesieniem) return;   /* zmiana sprzed leczenia to kontekst, nie kamień */
       out.push({
         typ: 'zmiana-klasy', tydzien: k.tydzien, dateISO: k.dateISO,
         waga: k.kierunek === 'poprawa' ? 'dobrze' : 'uwaga',
@@ -304,6 +305,15 @@
       + p.masa.toFixed(2);
   }
 
+  /* Klucz z datą. Klucz bazowy wyżej celowo daty nie zna — rozstrzyga o tym, czy DWA WPISY
+     opisują tę samą wizytę — ale sam w sobie nie wystarcza do scalania (audyt 2026-09-20, F3).
+     Dwie RÓŻNE wizyty o tej samej masie i wzroście w tym samym miesiącu miały identyczny klucz
+     bazowy i zlewały się w jedną, gubiąc drugą datę. Dla pacjenta na plateau to nie egzotyka,
+     tylko definicja plateau. */
+  function kluczZData(p) {
+    return kluczPomiaru(p) + '|' + (p.dateISO || '');
+  }
+
   function scalSerie(opts) {
     var o = opts || {};
     var zOsi = normSeria(o.pomiary);
@@ -315,9 +325,32 @@
     var kolejnosc = [];
     var scalone = 0;
 
+    /* Do którego wpisu dołączyć nowy pomiar — albo `null`, gdy to osobna wizyta.
+     *
+     * Scalanie istnieje po to, żeby JEDNA wizyta zapisana dwiema drogami (oś czasu + monitor
+     * otyłości) liczyła się raz. Nie po to, żeby zlewać dwie różne wizyty. Stąd trzy reguły:
+     *   1. ten sam klucz I ta sama data  → ta sama wizyta, scalamy;
+     *   2. ten sam klucz, a jedna ze stron daty NIE MA → punkt monitora bez daty klinicznej
+     *      dołącza do swojej datowanej bliźniaczki (i odwrotnie);
+     *   3. ten sam klucz, obie strony mają daty, ale RÓŻNE → dwie osobne wizyty. */
+    function dopasuj(p) {
+      var kb = kluczPomiaru(p);
+      for (var i = 0; i < kolejnosc.length; i++) {
+        var e = mapa[kolejnosc[i]];
+        if (kluczPomiaru(e) !== kb) continue;
+        /* Porównujemy ŻYWE daty wpisu, nie jego klucz: wpis bez daty mógł już ją dostać
+           od poprzedniego scalenia, a klucza wtedy nie przepisujemy. Bez tego trzeci zapis
+           tej samej wizyty (oś czasu bez daty → monitor z datą → oś czasu z datą) zakładałby
+           duplikat. */
+        if (!e.dateISO || !p.dateISO || e.dateISO === p.dateISO) return kolejnosc[i];
+      }
+      return null;
+    }
+
     function dodaj(p, zrodlo) {
-      var k = kluczPomiaru(p);
-      if (!Object.prototype.hasOwnProperty.call(mapa, k)) {
+      var k = dopasuj(p);
+      if (k === null) {
+        k = kluczZData(p);
         var kopia = {};
         for (var pole in p) kopia[pole] = p[pole];
         kopia.zrodlo = zrodlo;
@@ -506,10 +539,33 @@
       return klucz(a, os) - klucz(b, os);
     });
 
-    /* Punkt odniesienia: masa w punkcie „Włączenie”, a gdy go nie ma — pierwszy pomiar. */
+    /* Punkt odniesienia: masa w punkcie „Włączenie”, a gdy go nie ma — pierwszy pomiar.
+     *
+     * ODZYSK PUNKTU „WŁĄCZENIE” BEZ WŁASNEJ DATY (audyt 2026-09-20). Monitor otyłości wymusza
+     * masę, wzrost i wiek, ale daty klinicznej NIE — `Ed()` przyjmuje pusty `dateISO`. Na osi
+     * datowej taki punkt nie ma klucza i do tej poprawki po prostu wypadał z wyboru, choć ta
+     * sama wizyta siedziała już w serii (scalona po kluczu sejfu) i datę miała. Silnik
+     * wyrzucał dane, które trzymał w ręku. Szukamy więc bliźniaczki po DOKŁADNIE tym kluczu,
+     * którego używa scalanie, i pożyczamy od niej oś czasu. Gdy bliźniaczki nie ma —
+     * zostaje pierwszy pomiar, a punkt oceny wg ChPL traci pozycję na wykresie (niżej). */
     var start = null;
+    var dataOdzyskana = false;
     for (var i = 0; i < punkty.length; i++) {
-      if (punkty[i].typ === 'start' && klucz(punkty[i], os) != null) { start = punkty[i]; break; }
+      if (punkty[i].typ !== 'start') continue;
+      if (klucz(punkty[i], os) != null) { start = punkty[i]; break; }
+      var kw = kluczPomiaru(punkty[i]);
+      for (var i2 = 0; i2 < uporzadkowane.length; i2++) {
+        if (kluczPomiaru(uporzadkowane[i2]) !== kw) continue;
+        if (klucz(uporzadkowane[i2], os) == null) continue;
+        start = {};
+        for (var pole in punkty[i]) start[pole] = punkty[i][pole];
+        start.dateISO = uporzadkowane[i2].dateISO;
+        start.ms = uporzadkowane[i2].ms;
+        start.wiekMies = uporzadkowane[i2].wiekMies;
+        dataOdzyskana = true;
+        break;
+      }
+      break;
     }
     var odniesienie = start || uporzadkowane[0];
     wynik.punktOdniesienia = {
@@ -518,12 +574,37 @@
       wzrost: odniesienie.wzrost,
       dateISO: odniesienie.dateISO,
       wiekMies: odniesienie.wiekMies,
+      dataOdzyskana: dataOdzyskana,
       lek: start ? start.lek : null,
       substancja: start ? start.substancja : null,
       opis: start
         ? 'Procenty liczone od masy w punkcie „Włączenie” leczenia.'
         : 'Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.',
     };
+    if (dataOdzyskana) {
+      wynik.ostrzezenia.push('Punkt „Włączenie” nie ma własnej daty — oś czasu wzięta z pokrywającego się pomiaru w serii.');
+    }
+
+    /* PUNKT OCENY WG ChPL MA WŁASNE ZERO — I MUSI TO BYĆ ZERO LECZENIA (audyt 2026-09-20).
+     *
+     * `punktDecyzyjny()` zna tylko LEK: oddaje okno i kotwicę z ChPL, nie wiedząc, od czego
+     * ten wykres liczy tygodnie. Lek rozpoznaje się z dowolnego punktu leczenia, więc pacjent
+     * BEZ punktu „Włączenie” (przejęty w trakcie terapii) albo z punktem bez daty dostawał
+     * znacznik ChPL osadzony na osi liczonej OD PIERWSZEGO POMIARU. Przy obserwacji sprzed
+     * leczenia znacznik lądował o miesiące za wcześnie — czasem przed pierwszą dawką — a
+     * lekarz czytał go jako niespełnione kryterium 5 % i wskazanie do odstawienia. To ta sama
+     * klasa usterki, którą kasowała P-KOTWICA; tam chodziło o arytmetykę kotwicy, tu o zero osi.
+     *
+     * Reguła z ChPL ZOSTAJE w wyniku (zdanie, próg, okno, kotwica) — znika wyłącznie jej
+     * POZYCJA na wykresie. `nominalna` gaśnie razem z nią, więc widok przestaje rysować i
+     * znacznik, i pas „zwiększanie dawki”: jedna flaga w silniku, zero zmian w warstwie widoku. */
+    if (wynik.punktDecyzyjny && wynik.punktDecyzyjny.jest
+        && wynik.punktOdniesienia.zrodlo !== 'start-leczenia') {
+      wynik.punktDecyzyjny.tydzienOdOdniesienia = null;
+      wynik.punktDecyzyjny.nominalna = false;
+      wynik.punktDecyzyjny.bezOsi = 'brak-punktu-wlaczenia';
+      wynik.ostrzezenia.push('Punktu oceny wg ChPL nie postawiono na wykresie: bez punktu „Włączenie” oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru, nie od masy początkowej z ChPL.');
+    }
 
     var masaOdn = odniesienie.masa;
 
@@ -562,8 +643,13 @@
       stan: punkty.length === 0 ? 'brak-danych' : (koniec ? 'odstawione' : 'na-leczeniu'),
       odstawienieDateISO: koniec ? koniec.dateISO : null,
       odstawienieTydzien: koniec ? zaokraglTydzien(tygodnieMiedzy(odniesienie, koniec, os)) : null,
-      lek: wynik.punktOdniesienia.lek,
-      substancja: wynik.punktOdniesienia.substancja,
+      /* Lek bierzemy z punktu odniesienia, a gdy tam go nie ma — z leku ROZPOZNANEGO wyżej
+         (audyt 2026-09-20). Do tej poprawki pacjent bez datowanego punktu „Włączenie” miał
+         `lek: null`, choć silnik wiedział, czym jest leczony: dobrał mu drabinkę i punkt
+         oceny wg ChPL. Nagłówek kartki do dokumentacji gubił wtedy nazwę leku dokładnie
+         tam, gdzie reszta kartki mówiła o jego ChPL. */
+      lek: wynik.punktOdniesienia.lek || (lek != null ? String(lek) : null),
+      substancja: wynik.punktOdniesienia.substancja || (substancja != null ? String(substancja) : null),
     };
 
     /* Przekroczenia pasm — pierwszy pomiar, który sięgnął pasma. Bez interpolacji. */
@@ -629,12 +715,20 @@
         var iOd = KOLEJNOSC_KLAS.indexOf(poprzednia.klasa.klucz);
         var iDo = KOLEJNOSC_KLAS.indexOf(kl.klucz);
         var kierunek = iOd < 0 || iDo < 0 ? null : (iDo < iOd ? 'poprawa' : 'pogorszenie');
+        /* Przejście, którego CHOĆ JEDEN koniec leży przed punktem odniesienia, wydarzyło się
+           przed leczeniem (audyt 2026-09-20, F4). Zostaje w `klasy` jako fakt z historii, ale
+           nie idzie na oś kamieni i nie koloruje kropki: reszta modelu — pasma, nadir, odzysk,
+           utrata pasma — liczy się z `poOdniesieniu`, a ta jedna pętla szła po całej serii.
+           Pacjent, który tył rok przed lekiem, dostawał przez to „Nadwaga → Otyłość II stopnia"
+           z wagą „uwaga" pomiędzy kamieniami terapii. */
+        var przedOdn = !!(poprzednia.przedOdniesieniem || wynik.seria[c].przedOdniesieniem);
         wynik.klasy.push({
           od: poprzednia.klasa, do: kl, kierunek: kierunek,
           tydzien: wynik.seria[c].tydzien, dateISO: wynik.seria[c].dateISO,
+          przedOdniesieniem: przedOdn,
         });
         /* Wyjście z otyłości — moment, który na wykresie ma własny kolor (makieta 2026-09-19). */
-        if (KLASY_OTYLOSCI[poprzednia.klasa.klucz] && !KLASY_OTYLOSCI[kl.klucz]) {
+        if (!przedOdn && KLASY_OTYLOSCI[poprzednia.klasa.klucz] && !KLASY_OTYLOSCI[kl.klucz]) {
           wynik.zdarzenia.push({
             typ: 'wyjscie-z-otylosci', tydzien: wynik.seria[c].tydzien, dateISO: wynik.seria[c].dateISO,
             opis: 'Pacjent wyszedł z zakresu otyłości: ' + poprzednia.klasa.etykieta + ' → ' + kl.etykieta + '.',
