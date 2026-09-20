@@ -291,19 +291,30 @@
   }
 
   /* Trzy kolumny — WYŁĄCZNIE zdania generatora. Kolumna bez zdania nie pojawia się wcale. */
+  /* Trzy dolne kolumny biora PUNKTY z silnika (`dane.punkty`), bo zatwierdzona makieta ma
+     tu krotkie hasla, a generator mowi pelnymi zdaniami. Punkty przychodza z zamknietej
+     tablicy VILDA_PUNKTY w silniku i sa rozpisaniem TEGO SAMEGO zdania, w tym samym
+     rejestrze — raport nie tnie zdania klinicznego po przecinkach i nic nie dopisuje.
+     Gdy silnik punktow nie odda (starszy zrzut danych), kolumna pokazuje pelne zdanie. */
+  function pozycjeRoli(dane, rola) {
+    var p = dane.punkty && dane.punkty[rola];
+    if (p && p.length) return p;
+    var z = dane.zdania && dane.zdania[rola];
+    return z && z.length ? z : null;
+  }
+
   function sekcjaCodzien(dane) {
-    var z = dane.zdania || {};
     var kolumny = [
-      ['Na talerzu', z.talerz],
-      ['Ruch', z.ruch],
-      ['Kontrola', z.kontrola]
+      ['Na talerzu', pozycjeRoli(dane, 'talerz')],
+      ['Ruch', pozycjeRoli(dane, 'ruch')],
+      ['Kontrola', pozycjeRoli(dane, 'kontrola')]
     ].filter(function (k) { return k[1] && k[1].length; });
     if (!kolumny.length) return '';
     return '<section class="vrp-blok">'
       + '<div class="vrp-nag-blok">CO ROBIĆ NA CO DZIEŃ</div>'
       + '<div class="vrp-kolumny vrp-kol-' + kolumny.length + '">' + kolumny.map(function (k) {
-          return '<div class="vrp-kol"><h3>' + esc(k[0]) + '</h3>'
-            + k[1].map(function (t) { return '<p>' + esc(t) + '</p>'; }).join('') + '</div>';
+          return '<div class="vrp-kol"><h3>' + esc(k[0]) + '</h3><ul>'
+            + k[1].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
         }).join('') + '</div></section>';
   }
 
@@ -444,7 +455,9 @@
       '.vrp-kol-2{grid-template-columns:repeat(2,1fr);}',
       '.vrp-kol-1{grid-template-columns:1fr;}',
       '.vrp-kol h3{margin:0 0 ' + u(5) + ';font-size:' + u(16) + ';color:' + K.teal2 + ';}',
-      '.vrp-kol p{margin:0 0 ' + u(5) + ';font-size:' + u(14) + ';line-height:1.36;}',
+      '.vrp-kol ul{margin:0;padding:0;list-style:none;}',
+      '.vrp-kol li{position:relative;margin:0 0 ' + u(5) + ';padding-left:' + u(13) + ';font-size:' + u(14) + ';line-height:1.36;}',
+      '.vrp-kol li::before{content:"";position:absolute;left:0;top:' + u(7) + ';width:' + u(5) + ';height:' + u(5) + ';border-radius:50%;background:' + K.teal + ';}',
       '.vrp-farma{border:1px solid ' + K.linia + ';border-left:' + u(6) + ' solid ' + K.teal + ';border-radius:' + u(14) + ';padding:calc(' + u(10) + ' + var(--luz)) ' + u(14) + ';background:' + K.tlo + ';}',
       '.vrp-farma-warunkowe{border-left-color:' + K.bursz + ';}',
       '.vrp-farma-nag{font-size:' + u(13) + ';letter-spacing:.1em;font-weight:800;color:' + K.teal2 + ';}',

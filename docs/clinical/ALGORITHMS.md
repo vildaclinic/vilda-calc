@@ -5588,7 +5588,7 @@ Generator zaleceń, jego zdania i wszystkie wyniki liczbowe pozostają nietknię
 | pierwszy cel, drabinka, cel końcowy | `VildaBmi.drabinkaCelow` (P-SZCZEBLE) |
 | czas dojścia do normy | `dane.czasDoNormy` + `formatujCzasDojscia` z modułu zaleceń |
 | normy, płyny, witamina D | `dane.normy`, `dane.plyny`, `dane.witD` |
-| kolumny „Na talerzu", „Ruch", „Kontrola" | `dane.zdania` — **cytat zdania generatora** (P-RAPORT-ZDANIA) |
+| kolumny „Na talerzu", „Ruch", „Kontrola" | `dane.punkty` — **rozpisanie zdania generatora** (P-RAPORT-PUNKTY), z zapasowym `dane.zdania` |
 | blok o leczeniu farmakologicznym | `VildaFarmakoterapia.ocen` (P-FARMAKOTERAPIA) |
 | zadeklarowany plan (dieta i ruch) | `VildaBmiJourney.getPdfModel()` |
 
@@ -5695,6 +5695,53 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 `tests/e2e/zdania-rol-zalecen.spec.mjs` sprawdza to samo przez rolę „ruch".
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
+
+## Punktowa wersja zaleceń obok pełnego zdania (P-RAPORT-PUNKTY, SW 1.1.30, 2026-09-20)
+
+**Status:** zmiana prezentacji, nie kliniczna. Raport tekstowy (`textOutput`, `htmlOutput`) jest
+bit w bit ten sam — sprawdzone na 16 scenariuszach w obu rejestrach, przed zmianą i po niej.
+
+**Problem.** Zatwierdzona makieta ma w trzech dolnych kolumnach krótkie hasła, a generator mówi
+pełnymi zdaniami klinicznymi („Zalecane jest regularne spożywanie 4–5 niewielkich posiłków
+dziennie, z warzywami lub owocami w każdym posiłku…"). Trzy wyjścia były możliwe:
+
+1. przepisać zdania generatora na krótkie — to zmiana treści raportu tekstowego, więc zmiana kliniczna;
+2. ciąć zdanie w widoku po przecinkach — samowolka warstwy prezentacji nad treścią kliniczną, a przy
+   zdaniu z nawiasem („od 3. roku życia w tym co najmniej 60 minut…") cięcie gubi warunek;
+3. **wybrane przez właściciela:** silnik oddaje osobno wersję punktową obok pełnej.
+
+**Rozwiązanie.** Zamknięta tablica `VILDA_PUNKTY` w `vilda_diet_recommendations.js` trzyma rozpisanie
+dla 11 kluczy. Znacznik roli (P-RAPORT-ZDANIA) zapisuje przy indeksie zdania jego klucz, a
+`vildaPunktyZRol()` składa z tego `dane.punkty` o tych samych rolach co `dane.zdania`.
+
+**Każdy klucz ma dwie listy: `pro` i `pac`.** Generator mówi w dwóch rejestrach i ich treść bywa
+różna — np. „3–5 regularnych posiłków dziennie" pada **tylko** w trybie „Dla pacjenta"; zdanie
+zawodowe liczby posiłków nie podaje. Jedna wspólna lista dopisałaby lekarzowi fakt, którego jego
+własny raport nie zawiera. Pierwsza wersja tej raty miała jedną listę na klucz i właśnie ten błąd
+wyłapał strażnik liczb, zanim cokolwiek poszło dalej.
+
+**Reguła.** Punkt nie wnosi żadnego nowego faktu ani żadnej nowej liczby: każda liczba i każde
+słowo znaczące z punktu musi występować w zdaniu tej samej roli u tego samego pacjenta.
+Wyjątkiem jest zamknięta lista sześciu słów ramujących (`więcej`, `mniej`, `zamiast`,
+`codziennie`, `notowanie`, `obserwacja`), które oddają kierunek wyrażony już czasownikiem zdania
+(„należy ograniczyć" → „mniej:"). Rozszerzenie tej listy to furtka na dopisywanie treści i wymaga
+osobnej decyzji.
+
+**Zdania krótkie i jednoczłonowe nie mają rozpisania** — ostrzeżenie przy niedowadze i dwa zdania
+o konsultacji. Dla nich punktem jest całe zdanie i kartka pokazuje je w całości; urwany kawałek
+zdania o konsultacji byłby gorszy niż zdanie długie.
+
+**Testy (`tests/e2e/punkty-zalecen.spec.mjs`, 5 testów).** Strażnik liczb i słów na 12 przypadkach
+w obu rejestrach; osobność rejestrów; pasma wieku (2–4 lata mają 180 minut, starsze 60 —
+i nie odwrotnie); rola bez rozpisania oddaje całe zdanie; brak zaleceń to brak punktów; punkty
+nie przeciekają między pacjentami ani do raportu tekstowego (liczba pozycji `<li>` w raporcie
+klasycznym nadal równa liczbie punktów numerowanych w tekście, brak `<ul>`).
+
+**Mutacje (6, wszystkie czerwone).** Dopisana liczba w punkcie; dopisane słowo; zamienione
+rejestry; lista 60-minutowa podstawiona dziecku 2–4 lat; zdanie bez rozpisania przycięte do
+40 znaków; punkty doklejone do raportu tekstowego przed złożeniem listy.
+
+SW 1.1.29 → **1.1.30**; `vilda_diet_recommendations.js?v=34→35`, `vilda_raport_plan.js?v=1→2`.
 
 ## Zdania generatora z podziałem na role (P-RAPORT-ZDANIA, SW 1.1.27, 2026-09-20)
 
