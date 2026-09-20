@@ -5309,6 +5309,70 @@ Pod nagłówkiem „Wydruk” dochodzi jedno zdanie: gdzie szukać PDF-a („w o
 
 SW 1.1.17 → **1.1.18**; `vilda_postepy_doroslego_ui.js?v=4→5`.
 
+## Wydruk postępów jako prawdziwy PDF (P-PDF, SW 1.1.19, 2026-09-20)
+
+**Zgłoszenie właściciela:** „Testuję to na iPhonie, apka zainstalowana jako PWA, klikam na Drukuj lub PDF i Pobierz HTML i nic się nie dzieje, zero reakcji."
+
+**Zmiana kliniczna: żadna** — ani jeden próg, wzór, jednostka ani interpretacja się nie zmienia. Zmienia się **format i droga wydruku**.
+
+### Dlaczego nic się nie działo
+
+Obie funkcje opierały się o mechanizmy, których iOS w aplikacji z ekranu głównego nie wykonuje:
+
+- **„Pobierz"** klikał programowo `<a download>`, a iOS w trybie standalone ten atrybut **ignoruje**;
+- **„Drukuj"** wołał `print()` z ukrytej ramki 0×0, a w trybie standalone **nie ma okna druku**.
+
+Osobnym błędem — niezależnym od platformy — było **milczenie**: obie funkcje zwracały `false`, a warstwa wiążąca przyciski połykała wyjątki. Nawet gdy przeglądarka czegoś nie potrafi, aplikacja ma to powiedzieć.
+
+### Błąd w rozpoznaniu z raty 4, który to spowodował
+
+Rata 4 odrzuciła biblioteki PDF z uzasadnieniem „obie ładują się leniwie z CDN, a Vilda ma działać bez sieci". To była prawda o jsPDF i html2canvas — **i na tym rozpoznanie się skończyło**. Tymczasem w repozytorium leżą od dawna `pdfmake.min.js` (1,4 MB) i `pdfmake_vfs_fonts.js` (783 kB), **wpisane do precache service workera**, tyle że nieużywane: jedyny konsument, `cukrzyca.html`, ciągnie pdfmake z cdnjs. Offline'owy generator PDF był na wyciągnięcie ręki, a powstało obejście przez HTML, uzasadnione nieistniejącym brakiem.
+
+### Co jest teraz
+
+Jeden dokument **pdfmake**, składany przez `buildDokument()` jako czysta definicja (bez DOM, w pełni testowalna), ładowany **leniwie z tych dwóch plików**. Ponieważ są w precache, wydruk działa bez sieci — pilnuje tego test porównujący listę plików modułu z listą precache.
+
+| własność | jak sprawdzone |
+|---|---|
+| wykres zostaje **wektorem** | wygenerowany PDF: 97 krzywych, 42 odcinki, **zero** obrazów rastrowych i XObject |
+| tekst zostaje tekstem | 112 operatorów `Tj`, zaznaczalny i przeszukiwalny |
+| polskie znaki | osadzone podzbiory Roboto-Regular i Roboto-Medium |
+| kartka dla pacjenta | jedna strona A4 |
+
+**Droga zapisu zależy od tego, co przeglądarka potrafi**, i moduł mówi to wprost przez `mozliwosci()`:
+
+| środowisko | zapis | druk |
+|---|---|---|
+| iPhone z ekranu głównego | arkusz udostępniania (`navigator.share` z plikiem) | brak — przycisku nie ma |
+| zwykła przeglądarka | pobranie pliku | okno druku |
+| Vilda jako aplikacja na komputerze | pobranie pliku | okno druku |
+
+Ostatni wiersz wyszedł z kontroli negatywnej: desktopowa PWA też ma `display-mode: standalone`, więc gdyby wykrywanie pytało wyłącznie o tryb aplikacji, lekarz z Vildą przypiętą do paska zadań straciłby oba przyciski bez powodu. Warunek jest dwuczłonowy: iOS **i** tryb aplikacji.
+
+Każde kliknięcie kończy się komunikatem w panelu (`role="status"`, `aria-live="polite"`): co się udało albo dlaczego nie. Zamknięcie arkusza udostępniania nie jest traktowane jak awaria.
+
+### Cztery usterki, które widać było dopiero na wygenerowanej kartce
+
+Żadnej z nich nie wyłapałby test tekstowy — wyszły z obejrzenia PDF-a:
+
+1. **Strzałka U+2192 wychodziła jako pusty prostokąt.** Dołączony Roboto jej nie ma (ani U+27A1); minus U+2212, półpauza, kropka środkowa i komplet polskich znaków — ma. Podmiana siedzi w warstwie wydruku, nie w silniku: model niesie poprawną typografię, na ekranie strzałka wygląda dobrze, a ograniczenie należy do czcionki tego wydruku. Tabela podmian jest jawna i pilnowana testem, żeby nie zamaskowała następnego brakującego glifu.
+2. **`width="100%"` na korzeniu SVG rozdmuchiwał jedną kartkę na trzy** — pdfmake liczył z tego wysokość węzła. Widok dostał wariant `doPdf`, który zdejmuje atrybuty czysto ekranowe i zostawia sam `viewBox`. To wciąż **jeden** generator wykresu: różni się opakowanie, nie treść.
+3. **Trzy podpisy nachodziły na siebie**: jednostka osi na najwyższej wartości („kg" na „122"), podpis pasa titracji wyśrodkowany w pasie przy lewej krawędzi, oraz „istotny odzysk" na podpisie pasma, gdy obie linie wypadały na tej samej masie. Wszystkie trzy istniały też na ekranie — wydruk o stałej szerokości tylko je ujawnił.
+4. **Nagłówek sekcji zostawał sam na dole strony.** Prześledzenie `pageBreakBefore` pokazało, dlaczego żadne „złam, gdy nic po nim nie ma" nie działa: razem z tytułem zostaje jeszcze wiersz nagłówkowy tabeli, więc tytuł nigdy nie jest ostatni. Tytuł wciągnięty do `headerRows` usuwa całą klasę problemu — jest częścią tabeli, więc wędruje z nią zawsze, bez heurystyki.
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-wydruk.test.mjs` — **24 testy**, przepisane z dokumentu HTML na definicję pdfmake. Każda asercja starej wersji ma następczynię o tym samym sensie; gwarancja offline zmieniła postać z „żadnego http w dokumencie" na „biblioteka z plików, które są w precache".
+- `tests/e2e/postepy-doroslego-zakladka.spec.mjs` — **11 testów** (było 9): przyciski wg możliwości, **pobranie prawdziwego pliku `%PDF-`**, brak żądań spoza serwera testowego przy generowaniu, oraz komunikat o błędzie przy zablokowanych plikach biblioteki.
+- **Dziesięć kontroli negatywnych**, każda zaczerwienia testy, w tym trzy kontrole nadgorliwości.
+- Test „cichej awarii" wymusza błąd **realną drogą** — blokadą żądań do plików pdfmake. Podmiana API nie wchodziła w grę i nie powinna: moduł jest zamrożony, więc test nie ma jak oszukać produktu.
+
+**Dwie kontrole negatywne przeszły najpierw na zielono i obie coś naprawiły.** Pierwsza pokazała, że test „zwykłej przeglądarki" przechodził z właściwego wyniku, ale z niewłaściwego powodu — w oknie testowym nie było `navigator`, więc wykrywanie iOS padało na wyjątku. Druga doprowadziła do wykrycia realnej luki w produkcie: desktopowej PWA.
+
+**Czego nie dało się sprawdzić w tym środowisku:** zachowania na prawdziwym iPhonie. Arkusz udostępniania, `navigator.share` z plikiem i tryb standalone są zasymulowane w testach, ale ostateczna weryfikacja należy do właściciela.
+
+SW 1.1.18 → **1.1.19**; `vilda_postepy_doroslego_ui.js?v=5→6`, `vilda_postepy_doroslego_wydruk.js?v=2→3`. Pliki pdfmake były już w precache i nie wymagały zmiany.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
