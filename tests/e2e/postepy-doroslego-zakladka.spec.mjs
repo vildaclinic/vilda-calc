@@ -76,7 +76,7 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
 
     const panel = page.locator('.vilda-pd-host');
     await expect(panel, 'panel postępów jest w karcie').toBeVisible();
-    await expect(panel.locator('svg.vilda-pd-svg'), 'z wykresem').toBeVisible();
+    await expect(panel.locator('svg.vilda-pd-svg-masa'), 'z wykresem masy').toBeVisible();
     await expect(page.locator('.vilda-patient-tab-content[data-tab="traj"]'))
       .not.toContainText('Siatki centylowe dostępne tylko dla dzieci');
 
@@ -150,10 +150,64 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
     await otworzZKontem(page);
     const pid = await zalozPacjenta(page, { imie: 'Postepy-Mobile', wiekLat: 47, pomiary: POMIARY_DOROSLY });
     await otworzZakladkeTraj(page, pid);
-    await expect(page.locator('.vilda-pd-host svg.vilda-pd-svg')).toBeVisible();
+    await expect(page.locator('.vilda-pd-host svg.vilda-pd-svg-masa')).toBeVisible();
+    await expect(page.locator('.vilda-pd-host svg.vilda-pd-svg-bmi')).toBeVisible();
 
     const przewija = await page.evaluate(() =>
       document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
     expect(przewija, 'brak poziomego przewijania (AGENTS.md §6)').toBe(false);
+  });
+
+  test('POSTEPY-6: wykres BMI ze strefami klas i lista kamieni milowych', async ({ page }) => {
+    // Rata 3 na prawdziwej stronie. Pacjent z odzyskiem masy, żeby kamienie objęły
+    // i poprawę, i pogorszenie.
+    await otworzZKontem(page);
+    const pid = await zalozPacjenta(page, {
+      imie: 'Postepy-BMI', wiekLat: 52,
+      pomiary: [
+        { ageYears: 52, ageMonths: 624, height: 170, weight: 120, dateISO: '2026-01-01' },
+        { ageYears: 52.3, ageMonths: 627, height: 170, weight: 108, dateISO: '2026-04-02' },
+        { ageYears: 52.5, ageMonths: 630, height: 170, weight: 100, dateISO: '2026-07-02' },
+        { ageYears: 52.8, ageMonths: 633, height: 170, weight: 114, dateISO: '2026-10-01' },
+      ],
+    });
+    await otworzZakladkeTraj(page, pid);
+
+    const panel = page.locator('.vilda-pd-host');
+    await expect(panel).toBeVisible();
+    await expect(panel.locator('svg.vilda-pd-svg'), 'dwa wykresy: masa i BMI').toHaveCount(2);
+    await expect(panel.locator('svg.vilda-pd-svg-bmi')).toBeVisible();
+    await expect(panel, 'nagłówek wykresu BMI').toContainText('BMI i klasy masy ciała');
+
+    const tekst = (await panel.textContent()) || '';
+    expect(tekst, 'nazwa klasy ze strefy').toContain('Otyłość');
+    expect(tekst, 'lista kamieni').toContain('Kamienie milowe');
+    expect(tekst, 'osiągnięte pasmo').toContain('Ubytek sięgnął 5 % masy');
+    expect(tekst, 'nadir z liczbą sformatowaną po polsku').toContain('100,0 kg');
+    expect(tekst, 'i odzysk').toContain('Odzyskano ponad 25 %');
+
+    const kamieni = await panel.locator('.vilda-pd-mile').count();
+    expect(kamieni, 'kilka wierszy na osi wydarzeń').toBeGreaterThan(3);
+  });
+
+  test('POSTEPY-7: pacjent bez wzrostu dostaje wykres masy, ale nie BMI', async ({ page }) => {
+    // Wizyta z samą masą zostaje w serii (rata 2). BMI dla niej nie istnieje, więc drugiego
+    // wykresu nie ma — zamiast pustej ramki albo osi bez linii.
+    await otworzZKontem(page);
+    const pid = await zalozPacjenta(page, {
+      imie: 'Postepy-BezWzrostu', wiekLat: 47,
+      pomiary: [
+        { ageYears: 47, ageMonths: 564, weight: 112.4, dateISO: '2026-01-08' },
+        { ageYears: 47.7, ageMonths: 572, weight: 101.0, dateISO: '2026-09-10' },
+      ],
+    });
+    await otworzZakladkeTraj(page, pid);
+
+    const panel = page.locator('.vilda-pd-host');
+    await expect(panel).toBeVisible();
+    await expect(panel.locator('svg.vilda-pd-svg'), 'tylko wykres masy').toHaveCount(1);
+    await expect(panel.locator('svg.vilda-pd-svg-masa')).toHaveCount(1);
+    await expect(panel.locator('svg.vilda-pd-svg-bmi')).toHaveCount(0);
+    await expect(panel).not.toContainText('BMI i klasy masy ciała');
   });
 });

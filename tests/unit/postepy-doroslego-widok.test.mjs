@@ -185,3 +185,115 @@ describe('P-POSTEPY rata 2 — wpięcie w strony i service worker', () => {
       .not.toContain('text:tt?"Siatki centylowe dost\\u0119pne tylko dla dzieci');
   });
 });
+
+describe('P-POSTEPY rata 3 — wykres BMI ze strefami klas', () => {
+  it('dorosły z pomiarami wzrostu dostaje DRUGI wykres', () => {
+    const h = html({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
+    expect((h.match(/<svg/g) || []), 'masa + BMI').toHaveLength(2);
+    expect(h).toContain('BMI i klasy masy cia\u0142a');
+    expect(h).toContain('vilda-pd-svg-bmi');
+    expect(h, 'każdy wykres ma własną klasę — testy nie muszą liczyć po kolejności')
+      .toContain('vilda-pd-svg-masa');
+  });
+
+  it('bez wzrostu nie ma wykresu BMI, ale wykres masy zostaje', () => {
+    // Wizyta z samą masą trafia na wykres masy (rata 2). BMI dla niej nie istnieje,
+    // więc drugiego wykresu po prostu nie ma — zamiast pustej ramki albo zera.
+    const h = html({
+      wiekLat: 47,
+      pomiary: [{ dateISO: '2026-01-01', weight: 100 }, { dateISO: '2026-06-01', weight: 94 }],
+    });
+    expect((h.match(/<svg/g) || []), 'tylko masa').toHaveLength(1);
+    expect(h).not.toContain('BMI i klasy masy cia\u0142a');
+  });
+
+  it('strefy i ich nazwy pochodzą z silnika BMI, nie z widoku', () => {
+    // Kontrola pozytywna do strażnika warstw: podstawiamy atrapę silnika BMI z własnymi
+    // nazwami klas i wynik musi iść za nią.
+    const g = loadBrowserScript('vilda_postepy_doroslego_ui.js', {});
+    const oknoAtrapy = {
+      VildaBmi: {
+        bmi: (o) => o.masaKg / Math.pow(o.wzrostCm / 100, 2),
+        dorosly: (mies) => mies >= 216,
+        PROGI: { DOROSLY: { NIEDOWAGA: 18.5, NADWAGA: 25, OTYLOSC_1: 30, OTYLOSC_2: 35, OTYLOSC_3: 40 } },
+        kategoriaDorosly: (v) => ({ klucz: 'k' + Math.floor(v), etykieta: 'ATRAPA ' + Math.floor(v), kolor: 'alert' }),
+      },
+    };
+    oknoAtrapy.window = oknoAtrapy;
+    new Function('window', 'globalThis', zrodlo('vilda_postepy_doroslego.js'))(oknoAtrapy, oknoAtrapy);
+    const m = oknoAtrapy.VildaPostepyDoroslego.analizuj({ wiekLat: 52, pomiary: SERIA_ODZYSK });
+    const h = g.VildaPostepyDoroslegoUI.buildHtml(m);
+    expect(m.strefyBmi.length, 'sześć klas dorosłego').toBe(6);
+    expect(h, 'etykieta strefy z atrapy').toMatch(/ATRAPA \d+/);
+    expect(h, 'a nie nazwa produkcyjna').not.toContain('Otyłość III stopnia');
+  });
+
+  it('bez silnika BMI nie ma stref ani wykresu BMI — i nic się nie wywraca', () => {
+    // Utrata stref nie wprowadza w błąd; własna kopia progów klas rozjechałaby się
+    // po pierwszej zmianie klinicznej. Dlatego zapasu świadomie nie ma.
+    const bezBmi = {};
+    bezBmi.window = bezBmi;
+    new Function('window', 'globalThis', zrodlo('vilda_postepy_doroslego.js'))(bezBmi, bezBmi);
+    const m = bezBmi.VildaPostepyDoroslego.analizuj({ wiekLat: 52, pomiary: SERIA_ODZYSK });
+    expect(m.strefyBmi, 'bez silnika BMI nie ma z czego zrobić stref').toEqual([]);
+    expect(m.seria[0].bmi, 'ani BMI').toBeNull();
+
+    const g = loadBrowserScript('vilda_postepy_doroslego_ui.js', {});
+    const h = g.VildaPostepyDoroslegoUI.buildHtml(m);
+    expect((h.match(/<svg/g) || []), 'zostaje sam wykres masy').toHaveLength(1);
+    expect(h).not.toContain('BMI i klasy masy cia\u0142a');
+  });
+});
+
+describe('P-POSTEPY rata 3 — kamienie milowe', () => {
+  it('lista niesie wszystko, co model uznał za wydarzenie, w kolejności tygodni', () => {
+    const m = model({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
+    const h = moduly().U.buildHtml(m);
+    expect(h).toContain('Kamienie milowe');
+    expect((h.match(/vilda-pd-mile"/g) || []), 'tyle wierszy, ile kamieni')
+      .toHaveLength(m.kamienie.length);
+    const tygodnie = m.kamienie.map((k) => k.tydzien);
+    expect(tygodnie, 'posortowane').toEqual([...tygodnie].sort((a, b) => a - b));
+  });
+
+  it('kamienie pokrywają pasma, klasy, nadir, odzysk i punkt ChPL', () => {
+    const m = model({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
+    const typy = m.kamienie.map((k) => k.typ);
+    expect(typy).toContain('pasmo-osiagniete');
+    expect(typy).toContain('zmiana-klasy');
+    expect(typy).toContain('nadir');
+    expect(typy).toContain('istotny-odzysk');
+    expect(typy).toContain('punkt-chpl');
+  });
+
+  it('„wyjście z otyłości" nie dubluje wiersza o zmianie klasy', () => {
+    // Model niesie je jako osobne zdarzenie, bo wykres masy koloruje nim punkt. Na liście
+    // kamieni byłby to ten sam fakt powiedziany dwa razy.
+    const m = model({
+      wiekLat: 45,
+      pomiary: [
+        { dateISO: '2026-01-01', weight: 95, height: 175 },
+        { dateISO: '2026-08-01', weight: 84, height: 175 },
+      ],
+    });
+    expect(m.zdarzenia.map((z) => z.typ), 'zdarzenie zostaje').toContain('wyjscie-z-otylosci');
+    expect(m.kamienie.map((k) => k.typ), 'ale nie jako osobny kamień').not.toContain('wyjscie-z-otylosci');
+    expect(m.kamienie.filter((k) => k.typ === 'zmiana-klasy'), 'jest jako zmiana klasy').toHaveLength(1);
+  });
+
+  it('liczby w kamieniach formatuje widok, nie silnik', () => {
+    const m = model({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
+    const nadir = m.kamienie.find((k) => k.typ === 'nadir');
+    expect(nadir.masa, 'model oddaje surową liczbę').toBe(100);
+    expect(nadir.opis, 'i nie formatuje jej sam').not.toMatch(/100/);
+    expect(moduly().U.buildHtml(m), 'po polsku dopiero na ekranie').toContain('100,0 kg');
+  });
+
+  it('waga kamienia decyduje o kolorze, a nie jego typ', () => {
+    const m = model({ wiekLat: 52, lek: 'Saxenda', pomiary: SERIA_ODZYSK });
+    const h = moduly().U.buildHtml(m);
+    const { KOLORY } = moduly().U;
+    expect(h, 'osiągnięte pasmo na zielono').toContain('border-left-color:' + KOLORY.dobrze);
+    expect(h, 'istotny odzysk na czerwono').toContain('border-left-color:' + KOLORY.alarm);
+  });
+});
