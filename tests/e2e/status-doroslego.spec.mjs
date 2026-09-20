@@ -36,7 +36,7 @@ async function zalozIOtworz(page, dane) {
         lastName: 'Testowy', firstName: d.imie, sex: d.plec,
         age: d.wiekLat, ageMonths: 0, height: d.wzrost, weight: d.masa,
       },
-      zscore: { dataSource: 'OLAF' },
+      zscore: { dataSource: d.zrodlo || 'OLAF' },
       // UWAGA: wzrost rodziców Karta czyta z `advanced.motherHeight`, NIE z `advanced.data`.
       // Przy `data` kafelek MPH w ogóle się nie liczy, więc kontrola negatywna przechodziłaby
       // z niewłaściwego powodu — MPH nie znikałby, tylko nigdy by się nie pojawił.
@@ -136,6 +136,28 @@ test.describe('P-STATUS-DOROSLY — Status dorosłego w Karcie pacjenta', () => 
 
     await expect(kafelek(page, 'Skale odniesienia')).toHaveCount(0);
     await expect(kafelek(page, 'Masa ciała docelowa')).toHaveCount(0);
+  });
+
+  test('STATUS-7: wzrost dorosłego liczy się na OLAF także przy rekordzie na WHO', async ({ page }) => {
+    // Poprawka 2026-09-20. Pierwsza wersja brała siatkę z `zscore.dataSource`, więc pacjent
+    // z ustawieniem WHO widział centyl wobec siatki WHO. Właściciel wskazał OLAF jako
+    // populację odniesienia dla dorosłego i to jest wiążące.
+    //
+    // 186 cm u mężczyzny: OLAF daje 87. centyl, WHO 91. — liczby są różne, więc test
+    // odróżnia „liczymy na OLAF" od „liczymy na czymkolwiek".
+    await otworzZKontem(page);
+    await zalozIOtworz(page, {
+      imie: 'Status-G', plec: 'M', wiekLat: 44, wzrost: 186, masa: 115, zrodlo: 'WHO',
+    });
+
+    const wzrost = kafelek(page, 'Wzrost');
+    await expect(wzrost).toContainText('87. centyl');
+    await expect(wzrost).toContainText('odniesienie: 18-latkowie, OLAF');
+    await expect(wzrost, 'siatka z rekordu nie może tu przeciekać').not.toContainText('WHO');
+
+    const skale = kafelek(page, 'Skale odniesienia');
+    await expect(skale).toContainText('siatki OLAF (18 lat)');
+    await expect(skale).not.toContainText('WHO');
   });
 
   test('STATUS-4: kontrola negatywna — u dziecka Status bez zmian', async ({ page }) => {

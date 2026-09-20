@@ -58,6 +58,21 @@
     DS_DZIECKO_M: 24,   // od 2 lat tabela dziecięca DS
     DS_MAX_M: 240,      // siatki DS do 20 lat
   });
+  /* ODNIESIENIE DLA DOROSŁEGO (P-STATUS-DOROSLY-OLAF; decyzja właściciela 2026-09-20).
+   *
+   * Karta pacjenta pokazuje dorosłemu centyl wzrostu odniesiony do 18-latków. Populacja
+   * odniesienia jest DANĄ, nie założeniem rozsianym po widoku: stoi tutaj, jest nazwana
+   * i wraca w wyniku przez `policz().siatka`, więc przy przejściu na wielopopulacyjność
+   * zmienia się w jednym miejscu (`docs/ARCHITECTURE.md`, „Kierunek: wielopopulacyjność").
+   *
+   * Dlaczego OLAF, a nie siatka wybrana w rekordzie pacjenta: u dorosłego centyl wzrostu
+   * jest JEDYNĄ liczbą liczoną z siatki — BMI idzie z progów dla dorosłych, masa z BMI.
+   * Nie ma więc czego z czym uzgadniać, a odniesieniem ma być populacja polska.
+   * Pierwsza wersja brała tu `zscore.dataSource` rekordu i pacjent z ustawieniem WHO
+   * dostawał centyl wobec siatki WHO — to było odstępstwo od decyzji właściciela.
+   */
+  var DOROSLY_ODNIESIENIE = Object.freeze({ wiekMies: 216, zrodlo: 'OLAF' });
+
   var CENTYLE_PAL = [3, 10, 25, 50, 75, 90, 97];
 
   var dane = {};
@@ -399,7 +414,7 @@
   }
 
   root.VildaSdsWzrostu = Object.freeze({
-    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), G: G, CENTYLE_PAL: CENTYLE_PAL.slice(),
+    version: WERSJA, ZRODLA: ZRODLA.slice(), SIATKI: SIATKI.slice(), G: G, DOROSLY_ODNIESIENIE: DOROSLY_ODNIESIENIE, CENTYLE_PAL: CENTYLE_PAL.slice(),
     ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, populacjaZOpcji: populacjaZOpcji, lms: lms, interpoluj: interpoluj,
     zLms: zLms, xLms: xLms, policz: policz, policzNaSiatce: policzNaSiatce, wartoscDlaSds: wartoscDlaSds, mediana: mediana,
     centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,

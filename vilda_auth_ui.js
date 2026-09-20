@@ -495,8 +495,15 @@ var H=[];try{var V=await o.listPatientTimelineEvents(t);H=(V||[]).filter(functio
    „zrob cos". Niskiego wzrostu doroslego sie nie leczy, wiec liczbe pokazujemy, alarmu
    nie stawiamy. Nazwa siatki idzie do kafelka, bo „5. centyl" bez populacji odniesienia
    znaczy co innego, niz czyta pacjent.
-   Zrodlo siatki bierzemy z rekordu (`h`), nie na sztywno — karta nie miesza siatek. */
-var SDc=null,SDsiatka=null;try{if(tt&&D!=null&&i.VildaSdsWzrostu&&typeof i.VildaSdsWzrostu.policz=="function"){var SDr=i.VildaSdsWzrostu.policz({wzrost:D,plec:it,wiekMies:216,zrodlo:h||"OLAF"});SDr&&typeof SDr.centyl=="number"&&isFinite(SDr.centyl)&&(SDc=SDr.centyl,SDsiatka=SDr.siatka||null)}}catch{SDc=null,SDsiatka=null}
+   POPULACJA ODNIESIENIA TO OLAF, NIEZALEZNIE OD `zscore.dataSource` REKORDU (decyzja
+   wlasciciela 2026-09-20, poprawka P-STATUS-DOROSLY-OLAF). Pierwsza wersja brala siatke
+   z rekordu, wiec pacjent z ustawieniem WHO dostawal centyl wobec siatki WHO — to bylo
+   odstepstwo od decyzji. Argument, ze „karta nie miesza siatek", nie broni sie: u doroslego
+   centyl wzrostu jest JEDYNA liczba liczona z siatki, bo BMI idzie z progow dla doroslych,
+   a masa z BMI. Sama wartosc odniesienia siedzi w silniku wzrostu jako nazwana dana
+   (`VildaSdsWzrostu.DOROSLY_ODNIESIENIE`), nie jako liczba wpisana tutaj. */
+var SDo=(i.VildaSdsWzrostu&&i.VildaSdsWzrostu.DOROSLY_ODNIESIENIE)||{wiekMies:216,zrodlo:"OLAF"};
+var SDc=null,SDsiatka=null;try{if(tt&&D!=null&&i.VildaSdsWzrostu&&typeof i.VildaSdsWzrostu.policz=="function"){var SDr=i.VildaSdsWzrostu.policz({wzrost:D,plec:it,wiekMies:SDo.wiekMies,zrodlo:SDo.zrodlo});SDr&&typeof SDr.centyl=="number"&&isFinite(SDr.centyl)&&(SDc=SDr.centyl,SDsiatka=SDr.siatka||null)}}catch{SDc=null,SDsiatka=null}
 /* Masa docelowa i prog posredni licza sie w silniku (VildaBmi.celMasyDorosly) — Karta nie
    zna progow BMI doroslego. */
 var SMc=null;try{if(tt&&Tb&&typeof Tb.celMasyDorosly=="function"&&D!=null&&M!=null)SMc=Tb.celMasyDorosly({wzrostCm:D,masaKg:M})}catch{SMc=null}
@@ -523,7 +530,7 @@ else At.push(xt("Masa cia\u0142a w normie",St(SMc.zakresNormy.odMasa,1)+"\u2013"
 /* SKALE ODNIESIENIA zamiast kafelka „Siatki centylowe" (wlasciciel 2026-09-20). Doroslemu
    nazwa siatki pediatrycznej nic nie mowila — mowi mu, CZYM mierzymy jedno i drugie. */
 /* Kafelek tlumaczy DWIE skale, wiec ma sens tylko wtedy, gdy jest co nimi zmierzyc. Rekord doroslego bez wzrostu i bez masy dostawal wczesniej zdanie o siatkach wzrostu, ktorych nie ma do czego przylozyc. */
-if(tt&&(D!=null||$!=null)){var SN=SDsiatka||"OLAF";At.push(xt("Skale odniesienia",SN+" \xB7 BMI","wzrost \u2014 siatki "+SN+" (18 lat)","neutral","masa cia\u0142a \u2014 standardy BMI dla doros\u0142ych"))}
+if(tt&&(D!=null||$!=null)){var SN=SDsiatka||SDo.zrodlo;At.push(xt("Skale odniesienia",SN+" \xB7 BMI","wzrost \u2014 siatki "+SN+" (18 lat)","neutral","masa cia\u0142a \u2014 standardy BMI dla doros\u0142ych"))}
 // Rata B: skoro nic juz nie przeliczamy, karta musi powiedziec wprost, z jakiej chwili sa dane.
 var Gb3="";try{if(R&&I!=null&&z&&isFinite(z.totalMonths)){var Gb4=String(S||"").trim().toUpperCase().charAt(0)==="K"?"pacjentka ma ":"pacjent ma ";Gb3="Dane z wieku "+Le(I)+" (aktualnie "+Gb4+Le(z.totalMonths)+")."}}catch{Gb3=""}
 At.length>0&&(Nt.appendChild(e("p",{class:"vilda-patient-section-h",text:"Pomiar"})),Gb3&&Nt.appendChild(e("p",{class:"vilda-patient-age-note",text:Gb3})),Nt.appendChild(e("div",{class:"vilda-patient-stats-grid"},At)));var ce=[];/* P-STATUS-DOROSLY (wlasciciel 2026-09-20): u doroslego nie ma tempa wzrastania, MPH, SDS tempa ani walidacji prognoz koncowego wzrostu — to pojecia o rosnacym dziecku. Bramka `!tt` zostawia `ce` puste, wiec naglowek „Wzrastanie i genetyka rodzinna" znika sam, bez wycinania go osobno. */if(!tt&&ut!=null){var Ee=wt?"\u26A0 deceleracja wzrastania":bt?"\u26A0 tempo poni\u017Cej normy":Tf&&Tf.ocena&&Tf.ocena.cls==="warn"?"\u26A0 do oceny":null,Ie=Ee?"improve":null,Tw=Tf?Tf.wartosc+(Tf.odstep?" ("+Tf.odstep+(Tf.pozaOknem?", poza oknem oceny normy":"")+")":""):St(ut)+" cm/rok";ce.push(xt("Tempo wzrastania",Tw,Ee,Ie))}if(!tt&&rt!=null){var Oe=vt!=null?et(vt):null;/* P-MPH-KOLOR (decyzja wlasciciela 2026-09-16): kafelek MPH podlega tej samej regule kolorow, co kafelek wzrostu — centyl MPH (na 18 lat) < 3 lub > 97 alarm, 3-10 lub 90-97 ostrzezenie. */ce.push(xt("MPH",St(rt)+" cm",Oe,Y("height",rt,vt)))}/* Kafelek „Siatki centylowe" zostaje dzieciom; doroslemu zastapil go kafelek „Skale odniesienia" w siatce pomiaru wyzej. */!tt&&lt&&ce.push(xt("Siatki centylowe",lt,null,null));
