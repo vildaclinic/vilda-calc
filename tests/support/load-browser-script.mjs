@@ -25,6 +25,9 @@ const ZALEZNOSCI = {
   // Widok sam z siebie nic nie liczy — bez silnika nie ma czego narysowac, wiec jego brak
   // dalby pusty HTML zamiast bledu, czyli znowu cicha zmiane wyniku zamiast glosnej awarii.
   'vilda_postepy_doroslego_ui.js': ['vilda_postepy_doroslego.js'],
+  // Modul wydruku sklada dokument z tego, co narysowal widok; bez widoku oddaje pusty napis,
+  // czyli znowu cicha zmiane wyniku zamiast glosnej awarii.
+  'vilda_postepy_doroslego_wydruk.js': ['vilda_postepy_doroslego_ui.js'],
 };
 
 // Zaleznosci sa PRZECHODNIE i wykonywane RAZ na dane okno.

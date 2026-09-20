@@ -448,6 +448,27 @@
     return '<p class="vilda-pd-foot">' + out.join(' ') + '</p>';
   }
 
+  /* Przyciski wydruku. Widok tylko je RYSUJE — efekt (druk, pobranie) należy do
+     `vilda_postepy_doroslego_wydruk.js`, a wpięcie zdarzeń do `renderPanel` niżej.
+     Warianty przychodzą z modułu wydruku, żeby ich lista żyła w jednym miejscu. */
+  function akcjeHtml() {
+    var W = (w && w.VildaPostepyDoroslegoWydruk) || null;
+    if (!W || !Array.isArray(W.WARIANTY) || !W.WARIANTY.length) return '';
+    var grupy = W.WARIANTY.map(function (v) {
+      return '<div class="vilda-pd-akcja">'
+        + '<div class="vilda-pd-akcja-n">' + esc(v.nazwa) + '</div>'
+        + '<div class="vilda-pd-akcja-o">' + esc(v.opis) + '</div>'
+        + '<div class="vilda-pd-akcja-b">'
+        + '<button type="button" class="vilda-pd-btn" data-akcja="drukuj" data-wariant="'
+        + esc(v.id) + '">\u2399 Drukuj</button>'
+        + '<button type="button" class="vilda-pd-btn vilda-pd-btn-ghost" data-akcja="pobierz" data-wariant="'
+        + esc(v.id) + '">\u2b07 Pobierz</button>'
+        + '</div></div>';
+    });
+    return '<p class="vilda-patient-section-h vilda-patient-section-h--secondary">Wydruk</p>'
+      + '<div class="vilda-pd-akcje">' + grupy.join('') + '</div>';
+  }
+
   /** Cały widok postępów. Oddaje '' gdy model mówi, że nie ma czego pokazać. */
   function buildHtml(model) {
     if (!model || !model.dostepne || !model.dostepne.ok) return '';
@@ -460,7 +481,7 @@
       + (bmi ? '<p class="vilda-patient-section-h vilda-patient-section-h--secondary">'
         + 'BMI i klasy masy ciała</p><div class="vilda-pd-chart vilda-pd-chart-bmi">'
         + bmi + '</div>' : '')
-      + kamienieHtml(model) + stopka(model) + '</div>';
+      + kamienieHtml(model) + akcjeHtml() + stopka(model) + '</div>';
   }
 
   /** Komunikat dla dorosłego, któremu wykres się jeszcze nie należy. */
@@ -480,6 +501,14 @@
     + '.vilda-pd-chart{background:#fff;border:1px solid ' + C.linia + ';border-radius:12px;padding:8px;overflow:hidden;}'
     + '.vilda-pd-events{margin:12px 0 0;padding-left:18px;font-size:.84rem;line-height:1.5;}'
     + '.vilda-pd-chart-bmi{margin-top:4px;}'
+    + '.vilda-pd-akcje{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:8px 0 0;}'
+    + '.vilda-pd-akcja{border:1px solid ' + C.linia + ';border-radius:12px;padding:10px 12px;background:#fff;min-width:0;}'
+    + '.vilda-pd-akcja-n{font-size:.88rem;font-weight:700;color:' + C.ink + ';}'
+    + '.vilda-pd-akcja-o{font-size:.75rem;color:' + C.opis + ';margin:3px 0 8px;line-height:1.4;}'
+    + '.vilda-pd-akcja-b{display:flex;gap:8px;flex-wrap:wrap;}'
+    + '.vilda-pd-btn{border:1.5px solid ' + C.teal + ';background:' + C.teal + ';color:#fff;border-radius:10px;'
+    + 'padding:7px 13px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;}'
+    + '.vilda-pd-btn-ghost{background:#fff;color:' + C.teal + ';}'
     + '.vilda-pd-miles{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}'
     + '.vilda-pd-mile{border-left:3px solid ' + C.opis + ';padding:4px 0 4px 10px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;}'
     + '.vilda-pd-mile-w{font-size:.74rem;font-weight:700;color:' + C.opis + ';white-space:nowrap;min-width:96px;}'
@@ -498,10 +527,33 @@
     return true;
   }
 
+  /* Wpięcie przycisków wydruku. Widok nie drukuje sam — woła moduł wydruku, a gdy go nie ma,
+     przyciski po prostu nie powstają (patrz `akcjeHtml`), więc tu nie ma czego wiązać. */
+  function wepnijWydruk(host, model, opcje) {
+    var W = (w && w.VildaPostepyDoroslegoWydruk) || null;
+    if (!W || !host || typeof host.querySelectorAll !== 'function') return;
+    var guziki = host.querySelectorAll('[data-akcja][data-wariant]');
+    for (var i = 0; i < guziki.length; i++) {
+      (function (b) {
+        b.addEventListener('click', function () {
+          var akcja = b.getAttribute('data-akcja');
+          var wariant = b.getAttribute('data-wariant');
+          var o = {};
+          for (var k in (opcje || {})) o[k] = opcje[k];
+          o.wariant = wariant;
+          try {
+            if (akcja === 'pobierz') W.pobierz(model, o);
+            else W.drukuj(model, o);
+          } catch (e) { /* druk odwołany albo zablokowany — nic więcej tu nie zrobimy */ }
+        });
+      })(guziki[i]);
+    }
+  }
+
   /* Montaż panelu w podanym kontenerze. Wzorowany na
      `VildaTrajectoryAnalysis.renderPatientPanel`: moduł sam tworzy host i sam się sprząta,
      a wołający podaje tylko miejsce. Oddaje host albo null, gdy nie ma czego pokazać. */
-  function renderPanel(container, model) {
+  function renderPanel(container, model, opcje) {
     try {
       if (!container || typeof container.appendChild !== 'function') return null;
       var doc = container.ownerDocument || (w && w.document) || null;
@@ -515,6 +567,7 @@
       host.className = 'vilda-pd-host';
       host.innerHTML = html;
       container.appendChild(host);
+      wepnijWydruk(host, model, opcje);
       return host;
     } catch (e) {
       return null;

@@ -211,3 +211,109 @@ test.describe('P-POSTEPY — dorosły dostaje wykres zamiast komunikatu o siatka
     await expect(panel).not.toContainText('BMI i klasy masy ciała');
   });
 });
+
+test.describe('P-POSTEPY rata 4 — dwa warianty wydruku', () => {
+  // Pacjent na liraglutydzie: wariant kliniczny ma co pokazać (nazwa leku, punkt oceny
+  // wg ChPL), a wariant dla pacjenta ma co ukryć. Dane FIKCYJNE.
+  const PUNKT = (typ, dateISO, masa, mies) => ({
+    id: typ + dateISO, type: typ, ageYears: 52, ageMonths: mies,
+    weight: masa, height: 170, bmi: +(masa / 2.89).toFixed(1),
+    dose: '3,0 mg / dobę', dateISO,
+    drug: 'Saxenda (liraglutyd) – s.c. 1×/dobę', substance: 'liraglutide',
+  });
+
+  async function kartaZWydrukiem(page, imie) {
+    await otworzZKontem(page);
+    const pid = await zalozPacjenta(page, {
+      imie, wiekLat: 52,
+      pomiary: [{ ageYears: 52, ageMonths: 624, height: 170, weight: 120 }],
+      punkty: [
+        PUNKT('start', '2026-01-05', 120, 0),
+        PUNKT('continue', '2026-04-27', 110, 3),
+        PUNKT('continue', '2026-07-20', 104, 6),
+      ],
+    });
+    await otworzZakladkeTraj(page, pid);
+    await expect(page.locator('.vilda-pd-host')).toBeVisible();
+    return pid;
+  }
+
+  /** Treść dokumentu z ukrytej ramki druku — czytana wprost, bo ramka ma 0×0 px. */
+  const dokumentZRamki = (page) => page.evaluate(() => {
+    const f = document.getElementById('vilda-pd-wydruk-frame');
+    const d = f && f.contentWindow ? f.contentWindow.document : null;
+    if (!d || !d.documentElement) return null;
+    return {
+      tytul: d.title,
+      tekst: d.body ? d.body.textContent || '' : '',
+      html: d.documentElement.outerHTML,
+      svg: d.querySelectorAll('svg').length,
+      tabele: d.querySelectorAll('table').length,
+    };
+  });
+
+  test('POSTEPY-8: oba warianty są do wyboru i dają dwa różne dokumenty', async ({ page }) => {
+    await kartaZWydrukiem(page, 'Postepy-Wydruk');
+    const panel = page.locator('.vilda-pd-host');
+
+    await expect(panel, 'nagłówek sekcji wydruku').toContainText('Wydruk');
+    await expect(panel.locator('[data-akcja="drukuj"]'), 'Drukuj dla obu wariantów').toHaveCount(2);
+    await expect(panel.locator('[data-akcja="pobierz"]'), 'Pobierz dla obu wariantów').toHaveCount(2);
+    await expect(panel).toContainText('Dla pacjenta');
+    await expect(panel).toContainText('Do dokumentacji');
+
+    await panel.locator('[data-akcja="drukuj"][data-wariant="pacjent"]').click();
+    await expect.poll(() => page.locator('#vilda-pd-wydruk-frame').count()).toBe(1);
+    const pac = await dokumentZRamki(page);
+    expect(pac, 'ramka druku niesie dokument').not.toBeNull();
+    expect(pac.tytul).toBe('Moje postępy');
+    expect(pac.svg, 'kartka dla pacjenta: jeden wykres').toBe(1);
+    expect(pac.tabele, 'bez tabeli pomiarów').toBe(0);
+    expect(pac.tekst, 'bez nazwy leku').not.toContain('Saxenda');
+    expect(pac.tekst, 'bez reguły ChPL').not.toContain('ChPL');
+    expect(pac.tekst, 'te same liczby co w panelu').toContain('120,0');
+    expect(pac.tekst).toContain('104,0');
+    expect(pac.html, 'dokument samodzielny — nic z sieci').not.toMatch(/https?:\/\//);
+    expect(pac.html, 'i bez skryptów').not.toMatch(/<script/i);
+
+    await panel.locator('[data-akcja="drukuj"][data-wariant="kliniczny"]').click();
+    await expect.poll(async () => (await dokumentZRamki(page) || {}).tytul)
+      .toBe('Postępy redukcji masy ciała');
+    const kli = await dokumentZRamki(page);
+    expect(kli.svg, 'dokumentacja: masa i BMI').toBe(2);
+    expect(kli.tabele, 'z tabelą pomiarów').toBe(1);
+    expect(kli.tekst, 'z nazwą leku').toContain('Saxenda');
+    expect(kli.tekst, 'z punktem oceny wg ChPL').toContain('ChPL');
+    expect(kli.tekst, 'i z tymi samymi liczbami').toContain('120,0');
+    expect(kli.tekst).toContain('104,0');
+    expect(kli.html).not.toMatch(/https?:\/\//);
+
+    // Stara ramka nie zostaje obok nowej — inaczej drukowałaby się poprzednia wersja.
+    await expect(page.locator('#vilda-pd-wydruk-frame')).toHaveCount(1);
+  });
+
+  test('POSTEPY-9: „Pobierz" zapisuje samodzielny plik HTML wybranego wariantu', async ({ page }) => {
+    await kartaZWydrukiem(page, 'Postepy-Pobranie');
+    const panel = page.locator('.vilda-pd-host');
+
+    const [pobranie] = await Promise.all([
+      page.waitForEvent('download'),
+      panel.locator('[data-akcja="pobierz"][data-wariant="kliniczny"]').click(),
+    ]);
+    const nazwa = pobranie.suggestedFilename();
+    expect(nazwa, 'nazwa pliku niesie wariant').toContain('kliniczny');
+    expect(nazwa).toMatch(/^postepy_kliniczny_.*\.html$/);
+
+    const strumien = await pobranie.createReadStream();
+    const kawalki = [];
+    for await (const k of strumien) kawalki.push(k);
+    const tresc = Buffer.concat(kawalki).toString('utf8');
+
+    expect(tresc.startsWith('<!DOCTYPE html>'), 'kompletny dokument').toBe(true);
+    expect(tresc, 'wektorowy wykres w pliku').toContain('<svg');
+    expect(tresc, 'bez pobierania czegokolwiek z sieci').not.toMatch(/https?:\/\//);
+    expect(tresc, 'bez skryptów').not.toMatch(/<script/i);
+    expect(tresc, 'układ A4').toContain('@page');
+    expect(tresc, 'liczby z modelu').toContain('120,0');
+  });
+});
