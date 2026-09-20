@@ -5533,16 +5533,21 @@ kolor, podpis i to, które kafelki w ogóle powstają.
   **wycinane z pliku produkcyjnego** po pełnej sygnaturze i uruchamiane na prawdziwym silniku
   BMI; `celMasyDorosly` testowany wprost, z asercją, że masa celu to dokładnie próg
   z `PROGI.DOROSLY` przemnożony przez kwadrat wzrostu.
-- `tests/e2e/status-doroslego.spec.mjs` — **5 testów** na prawdziwej stronie, bo zgłoszenie
+- `tests/e2e/status-doroslego.spec.mjs` — **6 testów** na prawdziwej stronie, bo zgłoszenie
   dotyczyło widoku: kolory kafelków, kafelek celu z różnicą i progiem pośrednim, znikająca
-  sekcja pediatryczna, widok 390 px bez poziomego przewijania oraz kontrola negatywna
-  na dziecku.
-- **Pięć kontroli negatywnych** na kodzie produkcyjnym (waga bez koloru, `xt` bez klucza
+  sekcja pediatryczna, widok 390 px bez poziomego przewijania, rekord bez pomiaru oraz
+  kontrola negatywna na dziecku.
+- **Sześć kontroli negatywnych** na kodzie produkcyjnym (waga bez koloru, `xt` bez klucza
   `neutral`, wzrost bez klucza `neutral`, cel wpisany na sztywno zamiast z progów, kafelki
-  pediatryczne bez bramki wieku) — każda zaczerwienia zestaw.
+  pediatryczne bez bramki wieku, kafelek skal bez bramki na pusty pomiar) — każda
+  zaczerwienia zestaw.
 - Kontrola negatywna na dziecku dobrana tak, by **centyl masy i kategoria BMI dawały różne
   kolory** (40 kg przy 128 cm, 9 lat: 87. centyl masy → bez koloru, BMI 24,4 → nadwaga).
   Gdyby reguła dorosłego przeciekła do dzieci, oba kafelki byłyby żółte.
+
+**Znalezione przy przeglądzie własnej zmiany:** kafelek „Skale odniesienia" pokazywał się
+u dorosłego także wtedy, gdy rekord nie ma ani wzrostu, ani masy — mówił więc o siatkach
+wzrostu, których nie ma do czego przyłożyć. Zabramkowany na `D != null || BMI != null`.
 
 **Dwie pomyłki po drodze, obie po stronie testu, nie produktu.** Pierwsza: wzrost rodziców
 w atrapie rekordu wylądował w `advanced.data`, a Karta czyta `advanced.motherHeight` — kafelek

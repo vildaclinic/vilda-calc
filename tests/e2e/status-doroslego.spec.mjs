@@ -127,6 +127,17 @@ test.describe('P-STATUS-DOROSLY — Status dorosłego w Karcie pacjenta', () => 
     expect(przewija, 'brak poziomego przewijania').toBeLessThanOrEqual(1);
   });
 
+  test('STATUS-6: dorosły bez pomiaru nie dostaje kafelka o skalach', async ({ page }) => {
+    // Kafelek „Skale odniesienia" tłumaczy dwie skale, więc ma sens tylko wtedy, gdy jest
+    // co nimi zmierzyć. Rekord bez wzrostu i bez masy dostawał zdanie o siatkach wzrostu,
+    // których nie ma do czego przyłożyć.
+    await otworzZKontem(page);
+    await zalozIOtworz(page, { imie: 'Status-F', plec: 'M', wiekLat: 47, wzrost: null, masa: null });
+
+    await expect(kafelek(page, 'Skale odniesienia')).toHaveCount(0);
+    await expect(kafelek(page, 'Masa ciała docelowa')).toHaveCount(0);
+  });
+
   test('STATUS-4: kontrola negatywna — u dziecka Status bez zmian', async ({ page }) => {
     await otworzZKontem(page);
     await zalozIOtworz(page, {
