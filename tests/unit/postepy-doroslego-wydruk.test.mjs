@@ -308,12 +308,48 @@ describe('P-PDF — przyciski nie obiecują tego, czego przeglądarka nie zrobi'
 });
 
 describe('P-PDF — nazwa pliku i granica warstw', () => {
-  it('nazwa pliku niesie wariant, nazwisko bez znaków psujących zapis, i rozszerzenie pdf', () => {
+  it('nazwa pliku niesie wariant, INICJAŁY i rozszerzenie pdf — nie imię i nazwisko', () => {
     const { W } = moduly();
-    expect(W.nazwaPliku('kliniczny', OPCJE)).toBe('postepy_kliniczny_Testowy-Fikcyjny_2026-09-20.pdf');
-    expect(W.nazwaPliku('pacjent', { pacjent: '../../etc/passwd', dataWydruku: '2026-09-20' }))
-      .toBe('postepy_pacjent_etc-passwd_2026-09-20.pdf');
+    const nazwa = (kto) => W.nazwaPliku('kliniczny', { pacjent: kto, dataWydruku: '2026-09-20' });
+
+    expect(W.nazwaPliku('kliniczny', OPCJE)).toBe('postepy_kliniczny_TF_2026-09-20.pdf');
+    expect(nazwa('Jan Kowalski')).toBe('postepy_kliniczny_JK_2026-09-20.pdf');
+    // Nazwisko dwuczłonowe daje trzy inicjały — rozdzielamy po wszystkich znakach
+    // niebędących literami, nie tylko po spacji.
+    expect(nazwa('Anna Kowalska-Nowak')).toBe('postepy_kliniczny_AKN_2026-09-20.pdf');
+    expect(nazwa('Łukasz Żółć'), 'polskie litery zostają').toBe('postepy_kliniczny_ŁŻ_2026-09-20.pdf');
+    // Limit czterech liter: krótka nazwa i brak pełnej listy członów.
+    expect(nazwa('Maria Anna Zofia Katarzyna Nowak')).toBe('postepy_kliniczny_MAZK_2026-09-20.pdf');
+    // Brak nazwiska: człon po prostu znika, zamiast zostawiać puste podkreślenie.
     expect(W.nazwaPliku('pacjent', {})).toBe('postepy_pacjent_wydruk.pdf');
+    expect(nazwa('')).toBe('postepy_kliniczny_2026-09-20.pdf');
+  });
+
+  it('F13: w nazwie pliku nie ma ani jednego pełnego członu nazwiska', () => {
+    const { W } = moduly();
+    /* SEDNO POPRAWKI (decyzja właściciela 2026-09-20). Treść wydruku jest dokumentem
+       medycznym i nazwisko w nagłówku ma tam być — ale NAZWA PLIKU pokazuje się na liście
+       Pobranych, w oknie wyboru pliku, w podglądzie arkusza udostępniania i w każdym
+       menedżerze plików, a katalog Pobrane nie jest zaszyfrowany.
+       Test jest sformułowany jako zakaz, nie jako oczekiwany napis: łapie także przyszłą
+       zmianę formatu, która znowu wpuściłaby tam człon nazwiska. */
+    for (const kto of ['Jan Kowalski', 'Anna Kowalska-Nowak', 'Łukasz Żółć']) {
+      for (const wariant of ['pacjent', 'kliniczny']) {
+        const nazwa = W.nazwaPliku(wariant, { pacjent: kto, dataWydruku: '2026-09-20' });
+        for (const czlon of kto.split(/[^\p{L}]+/u).filter(Boolean)) {
+          expect(nazwa.toLowerCase(), `„${czlon}" nie ma prawa być w „${nazwa}"`)
+            .not.toContain(czlon.toLowerCase());
+        }
+      }
+    }
+  });
+
+  it('ścieżka w polu nazwiska nie przeżywa w nazwie pliku', () => {
+    const { W } = moduly();
+    const nazwa = W.nazwaPliku('pacjent', { pacjent: '../../etc/passwd', dataWydruku: '2026-09-20' });
+    expect(nazwa).toBe('postepy_pacjent_EP_2026-09-20.pdf');
+    for (const znak of ['/', '.', '\\']) expect(nazwa, znak).not.toContain(znak + znak);
+    expect(nazwa.startsWith('postepy_'), 'nazwa zawsze zaczyna się od prefiksu').toBe(true);
   });
 
   it('moduł wydruku nie zna progów, okien ani kategorii BMI', () => {

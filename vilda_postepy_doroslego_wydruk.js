@@ -495,10 +495,33 @@
   }
 
   /** Nazwa pliku: bez znaków, które psują zapis na dysku. */
+  /* NAZWA PLIKU NIESIE INICJAŁY, NIE IMIĘ I NAZWISKO (F13, decyzja właściciela 2026-09-20).
+   *
+   * Do tej wersji plik nazywał się `postepy_kliniczny_Jan-Kowalski_2026-09-20.pdf`. Sama
+   * treść wydruku jest dokumentem medycznym i nazwisko w nagłówku ma tam być — ale NAZWA
+   * PLIKU pokazuje się w zupełnie innych miejscach: na liście Pobranych, w oknie wyboru
+   * pliku, w podglądzie arkusza udostępniania na telefonie i w każdym menedżerze plików.
+   * Plik trafia przy tym do katalogu Pobrane, który — inaczej niż sejf aplikacji — nie jest
+   * zaszyfrowany. Inicjały wystarczą, żeby odróżnić wydruki dwóch pacjentów z tego samego
+   * dnia, a nie wystawiają tożsamości na widok przy samym przewijaniu listy plików.
+   *
+   * Rozdzielamy po WSZYSTKICH znakach niebędących literami, więc nazwisko dwuczłonowe daje
+   * trzy inicjały („Anna Kowalska-Nowak" → `AKN`). Limit czterech liter trzyma nazwę krótką
+   * i zarazem nie pozwala odtworzyć z niej pełnej listy członów. */
+  function inicjaly(kto) {
+    var czesci = String(kto == null ? '' : kto).split(/[^\p{L}]+/u);
+    var out = '';
+    for (var i = 0; i < czesci.length && out.length < 4; i++) {
+      if (!czesci[i]) continue;
+      out += czesci[i].charAt(0).toUpperCase();
+    }
+    return out;
+  }
+
   function nazwaPliku(wariant, opcje) {
     var o = opcje || {};
     var data = String(o.dataWydruku || '').slice(0, 10) || 'wydruk';
-    var kto = String(o.pacjent || '').trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    var kto = inicjaly(o.pacjent);
     return ['postepy', wariant, kto, data].filter(Boolean).join('_') + '.pdf';
   }
 
