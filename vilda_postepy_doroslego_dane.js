@@ -30,19 +30,26 @@
   var ZESTAWY = {
     OGOLNY: {
       id: 'OGOLNY',
-      nazwa: 'Drabinka ogólna 5/10/15/20 %',
-      progi: [5, 10, 15, 20],
-      zrodlo: 'Kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1 (dokumenty z 2026-09-19).',
-      /* Dla naltreksonu z bupropionem punkt 5.1 nie został odczytany pod kątem drabinki —
-         zestaw ogólny jest tam konwencją prezentacyjną aplikacji, nie cytatem z tego dokumentu. */
-      uwaga: 'Dla naltreksonu z bupropionem drabinka jest konwencją prezentacyjną aplikacji — punktu 5.1 ChPL Mysimby nie odczytano pod kątem kategorii odpowiedzi.',
+      nazwa: 'Drabinka ogólna 5/10/15/20/25 %',
+      progi: [5, 10, 15, 20, 25],
+      zrodlo: 'Konwencja prezentacyjna aplikacji. Ugruntowany jest wyłącznie najniższy szczebel 5 % '
+        + '(kryterium skuteczności przyjmowane przy rejestracji leków przeciwotyłościowych; cel 5–10 % '
+        + 'w wytycznych postępowania w otyłości u dorosłych). Szczeble wyższe są w badaniach fazy 3 '
+        + 'dobierane osobno pod moc leku: SCALE 5/10, STEP 3 5/10/15, SURMOUNT-1 5/…/20, '
+        + 'STEP UP 5/10/15/20/25, SURMOUNT-5 10/15/20/25. ŻADEN pojedynczy dokument nie zawiera '
+        + 'tej drabinki w całości.',
+      uwaga: 'Pasmo 25 % dołożone 2026-09-20: przy tirzepatydzie i przy semaglutydzie 7,2 mg pasmo 20 % '
+        + 'przestaje różnicować, bo przekracza je duża część pacjentów. W żadnej z czterech ChPL progu '
+        + '25 % nie ma — jest w literaturze rejestracyjnej (STEP UP, SURMOUNT-5).',
     },
     LIRAGLUTYD: {
       id: 'LIRAGLUTYD',
       nazwa: 'Drabinka liraglutydu 5/10 %',
       progi: [5, 10],
-      zrodlo: 'Kategorie odpowiedzi raportowane w ChPL liraglutydu (Triglyva), pkt 5.1 (dokument z 10.04.2026).',
-      uwaga: 'ChPL liraglutydu raportuje wyłącznie ≥5 % i >10 % — wyższych kategorii ten dokument nie podaje.',
+      zrodlo: 'Kategorie odpowiedzi raportowane w ChPL liraglutydu (Triglyva), pkt 5.1 (dokument z 10.04.2026); '
+        + 'te same dwa szczeble są współpierwszorzędowymi punktami końcowymi programu SCALE.',
+      uwaga: 'ChPL liraglutydu raportuje wyłącznie ≥5 % i >10 % — wyższych kategorii ten dokument nie podaje, '
+        + 'a sam lek rzadko do nich prowadzi. Krótsza drabinka nie jest gorszą drabinką.',
     },
   };
 
@@ -64,19 +71,46 @@
     { re: /mounjaro|tirzepatyd|tirzepatide|zepbound/i, substancja: 'tirzepatide' },
   ];
 
-  /* UTRZYMANIE EFEKTU — parametr prezentacyjny, NIE reguła z wytycznych.
+  /* ISTOTNY ODZYSK MASY — próg zdarzenia, NIE cel terapeutyczny.
    *
-   * Po osiągnięciu nadiru masy pytanie brzmi: ile z uzyskanego ubytku pacjent utrzymuje.
-   * Silnik ZAWSZE oddaje surową frakcję (`korytarz.utrzymane`), więc lekarz widzi liczbę
-   * niezależnie od tego, gdzie postawimy linię. Sama linia 0,80 jest konwencją tej aplikacji
-   * przyjętą po to, żeby wykres mógł zaznaczyć moment wyjścia z korytarza — i jako konwencja
-   * czeka na akceptację kliniczną właściciela. Trzymamy ją w danych, żeby jej zmiana była
-   * zmianą jednej liczby w pliku danych, a nie poprawką w silniku.
+   * Metryka: po osiągnięciu nadiru masy pytamy, jaką część maksymalnego ubytku pacjent
+   * utrzymuje. W piśmiennictwie ta wielkość ma własną nazwę — %MWL, „percentage of maximum
+   * weight lost”, liczona od nadiru — i jest rekomendowana jako najlepiej wypadająca spośród
+   * miar odzysku (King i wsp., JAMA 2018;320:1560-9, PMID 30326125, doi:10.1001/jama.2018.14433;
+   * Si i wsp., Obesity 2023;31:1538-46, PMID 37133427, doi:10.1002/oby.23764).
+   *
+   * Próg 0,75 (odzysk ≥25 % uzyskanego ubytku) — decyzja właściciela 2026-09-20. Wybrany jako
+   * jedyna wartość, która ma JEDNOCZEŚNIE:
+   *   - formalny konsensus ekspercki: Delphi 2026, 66 ekspertów, „recurrent weight gain as >25%
+   *     of lost weight from nadir” (Wills i wsp., Surg Obes Relat Dis 2026;22:753-61,
+   *     PMID 41963214, doi:10.1016/j.soard.2026.03.006);
+   *   - zakotwiczenie kardiometaboliczne W POPULACJI LECZONEJ FARMAKOLOGICZNIE: w analizie post
+   *     hoc SURMOUNT-4 pacjenci z odzyskiem <25 % zachowali poprawę obwodu talii, triglicerydów,
+   *     nie-HDL-C, insuliny na czczo i HOMA2-IR (JAMA Intern Med, PMID 41284285,
+   *     doi:10.1001/jamainternmed.2025.6112).
+   *
+   * DLACZEGO NIE 0,80. Próg 20 % odzysku ma poparcie w asocjacjach z punktami końcowymi
+   * (King 2018; Si 2023; Chin i wsp., Obes Surg 2024;34:2347-55, PMID 38771478,
+   * doi:10.1007/s11695-024-07282-6 — gdzie próg 10 % NIE wiązał się z progresją niczego),
+   * ale to poparcie jest w całości bariatryczne, a wysiłki standaryzacyjne wskazują wartości
+   * niższe: IFSO 2024 >30 % (Salminen i wsp., Obes Surg 2024;34:30-42, PMID 37999891,
+   * doi:10.1007/s11695-023-06913-8), Delphi 2026 >25 %. Liczba 80 % z SURMOUNT-4 (Aronne i wsp.,
+   * JAMA 2024;331:38-48, PMID 38078870, doi:10.1001/jama.2023.24945) to punkt końcowy wybrany
+   * przez sponsora, o INNYM MIANOWNIKU — ubytku z okresu wprowadzającego, nie z nadiru.
+   *
+   * WYNIK NEGATYWNY, KTÓRY MUSI BYĆ WIDOCZNY: dla farmakoterapii otyłości NIE ISTNIEJE żaden
+   * uzgodniony próg %MWL liczony od nadiru. Całe piśmiennictwo progowe pochodzi z chirurgii
+   * bariatrycznej. Dlatego silnik ZAWSZE oddaje surową frakcję — próg jest linią na wykresie,
+   * nie kryterium klinicznym — a zmiana progu to zmiana jednej liczby w tym pliku.
    */
-  var UTRZYMANIE = {
-    frakcja: 0.80,
-    nazwa: 'Korytarz utrzymania 80 % maksymalnego ubytku',
-    zrodlo: 'Konwencja prezentacyjna aplikacji (do akceptacji klinicznej właściciela) — nie pochodzi z ChPL ani z wytycznych.',
+  var ODZYSK = {
+    frakcja: 0.75,
+    nazwa: 'Istotny odzysk masy (≥25 % uzyskanego ubytku)',
+    metryka: '%MWL — odsetek maksymalnego ubytku masy, liczony od nadiru',
+    zrodlo: 'Próg: konsensus Delphi 2026 (PMID 41963214) + analiza post hoc SURMOUNT-4 (PMID 41284285). '
+      + 'Metryka: King 2018 (PMID 30326125), Si 2023 (PMID 37133427). '
+      + 'UWAGA: wszystkie progi pochodzą z chirurgii bariatrycznej — dla farmakoterapii otyłości '
+      + 'nie ma uzgodnionego progu %MWL. To linia na wykresie, nie kryterium kliniczne.',
   };
 
   function zestaw(id) {
@@ -110,7 +144,7 @@
     ZESTAWY: ZESTAWY,
     ZESTAW_DOMYSLNY: ZESTAW_DOMYSLNY,
     ZESTAW_WG_SUBSTANCJI: ZESTAW_WG_SUBSTANCJI,
-    UTRZYMANIE: UTRZYMANIE,
+    ODZYSK: ODZYSK,
     zestaw: zestaw,
     zestawDlaLeku: zestawDlaLeku,
     substancja: substancja,

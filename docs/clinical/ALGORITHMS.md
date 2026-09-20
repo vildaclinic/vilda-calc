@@ -4531,12 +4531,12 @@ Silnik **nie zna** trzech rzeczy i to jest jego architektura, nie niedoróbka:
 
 | zestaw | progi | źródło |
 |---|---|---|
-| `OGOLNY` | 5 / 10 / 15 / 20 % | kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1 |
+| `OGOLNY` | 5 / 10 / 15 / 20 % **[rata 1b: 5/10/15/20/25 %]** | kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1 **[rata 1b: to uzasadnienie okazało się nieścisłe — żaden pojedynczy dokument nie zawiera tej drabinki w całości; zestaw jest konwencją prezentacyjną aplikacji]** |
 | `LIRAGLUTYD` | 5 / 10 % | kategorie odpowiedzi raportowane w ChPL liraglutydu (Triglyva), pkt 5.1 |
 
 Dobór wg substancji: semaglutyd i tirzepatyd → `OGOLNY`; liraglutyd → `LIRAGLUTYD`; naltrekson z bupropionem → `OGOLNY`; **brak leku → `OGOLNY`**, bo wykres należy się także pacjentowi nieleczonemu farmakologicznie.
 
-**Progu ≥25 % nie ma w żadnej z czterech ChPL** przekazanych 2026-09-19 — dlatego nie ma go w żadnym zestawie. Progu **−3 %** nie dokładamy (decyzja właściciela).
+**Progu ≥25 % nie ma w żadnej z czterech ChPL** przekazanych 2026-09-19 — dlatego nie ma go w żadnym zestawie. **[ZASTĄPIONE przez P-POSTEPY rata 1b, 2026-09-20: pasmo 25 % zostało dołożone do zestawu ogólnego. Zdanie o ChPL pozostaje prawdziwe, ale w literaturze rejestracyjnej próg 25 % występuje (STEP UP, SURMOUNT-5).]** Progu **−3 %** nie dokładamy (decyzja właściciela).
 
 **Ograniczenie nazwane wprost:** punkt 5.1 ChPL Mysimby nie został odczytany pod kątem kategorii odpowiedzi. Dla naltreksonu z bupropionem drabinka `OGOLNY` jest więc **konwencją prezentacyjną aplikacji**, nie cytatem z tego dokumentu — i tak jest opisana w polu `uwaga` zestawu.
 
@@ -4551,7 +4551,7 @@ Identyfikacja wersji czterech ChPL: wpis „Kryteria odpowiedzi sprawdzone wobec
 - **nadir** — najmniejsza masa **od punktu odniesienia wzwyż**. Pomiar sprzed włączenia leczenia, choćby był najlżejszy w całej serii, nie jest nadirem — inaczej „największy ubytek" opisywałby masę sprzed leczenia.
 - **`utrzymane`** — jaka część ubytku z nadiru jest utrzymana w ostatnim pomiarze (surowa frakcja, zawsze w wyniku).
 
-### Parametr do akceptacji klinicznej: korytarz utrzymania 0,80
+### Parametr do akceptacji klinicznej: korytarz utrzymania 0,80 **[ZASTĄPIONE przez P-POSTEPY rata 1b, 2026-09-20: próg wynosi 0,75, pojęcie nazywa się „istotny odzysk masy”, a opis „konwencja prezentacyjna aplikacji” był nieścisły — metryka ma w piśmiennictwie nazwę %MWL. Sekcja poniżej opisuje stan z raty 1.]**
 
 `UTRZYMANIE.frakcja = 0,80` w pliku danych. To **konwencja prezentacyjna tej aplikacji, nie reguła z ChPL ani z wytycznych** — i tak jest opisana w polu `zrodlo`. Służy wyłącznie do zaznaczenia na wykresie momentu, w którym pacjent utrzymuje mniej niż 80 % uzyskanego ubytku. Silnik **zawsze** oddaje surową frakcję, więc lekarz widzi liczbę niezależnie od tego, gdzie postawiona jest linia; zmiana linii to zmiana jednej liczby w pliku danych.
 
@@ -4679,6 +4679,67 @@ Ten sam pacjent z redukcją 7 % w 16. tygodniu → `pass`. Ten sam pacjent z pod
 ### Co pozostaje otwarte
 
 Rekord pacjenta nadal **nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej**. Warstwa UI mogłaby ją wypełniać z istniejącej osi zdarzeń dawkowych (`VildaVault.listPatientTreatmentPeriods`, pola `doseNum`/`doseUnit`/`fromISO`) — bez nowego pola i bez migracji. To osobna rata; do jej czasu obowiązuje kotwica nominalna, nazwana w interfejsie.
+
+## Korekta pasm i progu odzysku po przeglądzie piśmiennictwa (P-POSTEPY rata 1b, 2026-09-20)
+
+**Decyzja właściciela 2026-09-20:** „zgadzam się z twoimi rekomendacjami, ruszaj" — w odpowiedzi na rekomendacje oparte na przeglądzie PubMed. Wszystkie ustalenia literaturowe poniżej pochodzą **z PubMed**.
+
+**Zmiana kliniczna.** Zmienia się próg zdarzenia i najwyższe pasmo wykresu. Silnik nadal nie jest ładowany przez żadną stronę, więc dziś nic się w aplikacji nie zmienia — zmienia się to, co pokaże rata 2.
+
+### 1. Korytarz utrzymania 0,80 → istotny odzysk masy 0,75
+
+**Rata 1 opisała ten próg jako „konwencję prezentacyjną aplikacji, nieznaną wytycznym". To było nieprawdziwe w obie strony** i jedno i drugie trzeba sprostować.
+
+**Metryka ma nazwę.** Frakcja maksymalnego ubytku liczona od nadiru to w piśmiennictwie **%MWL — *percentage of maximum weight lost*** — i jest miarą rekomendowaną: King i wsp. porównali pięć miar odzysku po chirurgii bariatrycznej (n = 1406, mediana obserwacji 6,6 roku) i %MWL miała najsilniejszy związek z progresją cukrzycy, nadciśnienia i dyslipidemii oraz najlepsze dopasowanie modelu (*JAMA* 2018;320(15):1560–9, PMID 30326125, [DOI](https://doi.org/10.1001/jama.2018.14433)). Niezależnie potwierdzone w innej populacji: Si i wsp., n = 249, Chińczycy z otyłością i cukrzycą typu 2 (*Obesity* 2023;31(6):1538–46, PMID 37133427, [DOI](https://doi.org/10.1002/oby.23764)).
+
+**Ale konkretna wartość 0,80 nie ma wyróżnionego statusu.** Publikowane progi rozjeżdżają się:
+
+| próg | odpowiada `utrzymane` | co za nim stoi | populacja |
+|---|---|---|---|
+| odzysk ≥10 % | 0,90 | Chin i wsp.: **NIE** wiązał się z progresją żadnej choroby | bariatria |
+| odzysk ≥20 % | **0,80** | King 2018, Si 2023 — najlepszy próg dychotomiczny / optymalny punkt odcięcia; Chin 2024 — związek z progresją nadciśnienia i dyslipidemii | **wyłącznie bariatria** |
+| odzysk >25 % | **0,75** | Delphi 2026 — konsensus 66 ekspertów; **SURMOUNT-4 post hoc — przy odzysku <25 % zachowana poprawa obwodu talii, TG, nie-HDL-C, insuliny na czczo i HOMA2-IR** | konsensus bariatryczny + **farmakoterapia** |
+| odzysk >30 % | 0,70 | IFSO Delphi — konsensus na wszystkich 15 zdaniach definicyjnych, średnio 90,1 % | bariatria |
+
+Źródła: Chin i wsp., *Obes Surg* 2024;34(7):2347–55, PMID 38771478, [DOI](https://doi.org/10.1007/s11695-024-07282-6); Wills i wsp., *Surg Obes Relat Dis* 2026;22(7):753–61, PMID 41963214, [DOI](https://doi.org/10.1016/j.soard.2026.03.006); Salminen i wsp., *Obes Surg* 2024;34(1):30–42, PMID 37999891, [DOI](https://doi.org/10.1007/s11695-023-06913-8); analiza post hoc SURMOUNT-4, *JAMA Intern Med*, PMID 41284285, [DOI](https://doi.org/10.1001/jamainternmed.2025.6112).
+
+**Dlaczego 0,75.** To jedyna wartość, która ma jednocześnie formalny konsensus ekspercki i zakotwiczenie w twardych parametrach kardiometabolicznych **w populacji leczonej farmakologicznie** — czyli w populacji tego modułu. Poparcie dla 0,80 jest w całości bariatryczne. Dodatkowo 0,75 odpala się później, więc rzadziej alarmuje bez powodu.
+
+**Sprostowanie w sprawie SURMOUNT-4.** Liczba 80 % rzeczywiście jest prespecyfikowanym kluczowym drugorzędowym punktem końcowym tego badania — „*the proportion of participants at week 88 who maintained at least 80% of the weight loss during the lead-in period*", 89,5 % vs 16,6 % (Aronne i wsp., *JAMA* 2024;331(1):38–48, PMID 38078870, [DOI](https://doi.org/10.1001/jama.2023.24945)). Ale **mianownik jest tam inny**: ubytek z okresu wprowadzającego (tydzień 36), a nie z nadiru. To punkt końcowy wybrany przez sponsora, nie niezależna walidacja progu — i nie wolno go cytować jako poparcia dla 0,80 w naszej metryce.
+
+**Wynik negatywny, mocny i zapisany w danych:** dla farmakoterapii otyłości **nie istnieje żaden uzgodniony próg %MWL liczony od nadiru**. Całe piśmiennictwo progowe pochodzi z chirurgii bariatrycznej. Dlatego silnik zawsze oddaje surową frakcję, a próg jest linią na wykresie, nie kryterium klinicznym.
+
+**Nazwa.** „Korytarz utrzymania" sugerował cel terapeutyczny, w którym pacjent ma się mieścić. Literatura mówi o czymś innym: to próg, od którego pojawia się związek z progresją chorób towarzyszących. Pole nazywa się odtąd `odzysk`, zdarzenie `istotny-odzysk`, etykieta „**Istotny odzysk masy (≥25 % uzyskanego ubytku)**".
+
+**Linia rysuje się dopiero, gdy jest co mierzyć.** Dopóki nadirem jest ostatni pomiar, `utrzymane` wynosi z definicji 1,00. Rata 1 liczyła i pokazywała tę wartość przez cały okres redukcji — narysowana wtedy linia sugerowałaby, że coś jest monitorowane. Nowe pole `odzysk.liniaDoPokazania` jest wtedy `false`.
+
+**Stan leczenia w wyniku (`leczenie.stan`).** Ta sama frakcja znaczy dwie różne rzeczy: u pacjenta **kontynuującego** leczenie spadek poniżej progu dotyczy mniej więcej 1 na 10 i jest realnym sygnałem (SURMOUNT-4: 89,5 % powyżej 0,80 w 88. tygodniu), a **po odstawieniu** przeciętna trajektoria przekracza ten próg w ciągu kwartału — alarm, który odpala się u prawie każdego, przestaje nieść informację. Silnik tego nie interpretuje; oddaje stan (`na-leczeniu` / `odstawione` / `brak-danych`), żeby widok mógł. **`brak-danych` nie znaczy „nie leczony"** — zakładka należy się każdemu dorosłemu z dwoma pomiarami, więc brak punktów terapii może oznaczać i pacjenta bez farmakoterapii, i pacjenta, u którego jej nie wpisano.
+
+### 2. Drabinka pasm — uczciwy opis i piąty szczebel
+
+**Rata 1 opisała drabinkę jako „kategorie odpowiedzi raportowane w ChPL Wegovy i Mounjaro, pkt 5.1". To nie jest prawdziwe uzasadnienie zestawu jako całości.** Ugruntowany jest **wyłącznie najniższy szczebel 5 %** — kryterium skuteczności przyjmowane przy rejestracji leków przeciwotyłościowych i cel 5–10 % w wytycznych postępowania w otyłości u dorosłych. Szczeble wyższe są w badaniach fazy 3 dobierane osobno pod moc leku i pytanie badawcze:
+
+| badanie | drabinka |
+|---|---|
+| SCALE (liraglutyd) | 5 / 10 |
+| STEP 3 (semaglutyd) | 5 / 10 / 15 |
+| SURMOUNT-1 (tirzepatyd) | 5 / … / 20 |
+| STEP UP (semaglutyd 7,2 mg) | 5 / 10 / 15 / 20 / **25** |
+| SURMOUNT-5 | 10 / 15 / 20 / **25** (bez 5 %) |
+
+**Żaden pojedynczy dokument nie zawiera drabinki 5/10/15/20 w całości.** Zestaw zostaje — jest wewnętrznie spójny — ale pole `zrodlo` mówi odtąd wprost, że jest **konwencją prezentacyjną aplikacji**, i wymienia, skąd pochodzą poszczególne szczeble.
+
+**Znika też zastrzeżenie o Mysimbie** wpisane w racie 1 („dla naltreksonu z bupropionem drabinka jest konwencją, a nie cytatem"). Było oparte na fałszywym założeniu, że dla pozostałych leków drabinka jest skądś cytowana. Skoro nie jest — zastrzeżenie nie ma przedmiotu.
+
+**Pasmo 25 % dołożone — cofnięcie rekomendacji z raty 1.** Rata 1 wykluczyła je zdaniem „progu ≥25 % nie ma w żadnej z czterech ChPL". To prawda o ChPL, ale nie o literaturze: 25 % jest konfirmacyjnym punktem końcowym STEP UP (semaglutyd 7,2 mg — dawka, którą aplikacja zna od P-CHPL) i kluczowym drugorzędowym SURMOUNT-5. Argument praktyczny: przy tirzepatydzie **57 % pacjentów przekracza 20 %** (SURMOUNT-1, PMID 35658024, [DOI](https://doi.org/10.1056/NEJMoa2206038)), więc najwyższe pasmo przestaje cokolwiek różnicować, a pacjent „wychodzi poza skalę". Powyżej 25 % nie ma już nic — sprawdza to test.
+
+**Drabinka liraglutydu zostaje na 5/10** i to nadal jest cytat: ChPL pkt 5.1 raportuje wyłącznie te dwie kategorie, a te same dwa szczeble są współpierwszorzędowymi punktami końcowymi programu SCALE.
+
+**Punkt odniesienia** (masa w dniu włączenia, a bez leczenia pierwszy pomiar) — **potwierdzony bez zmian**.
+
+### Walidacja
+
+`tests/unit/postepy-doroslego-silnik.test.mjs` — **31 testów** (było 27) na rzeczywistych funkcjach produkcyjnych. **Cztery kontrole negatywne, każda zaczerwienia test:** próg z powrotem na 0,80; usunięte pasmo 25 %; linia rysowana zawsze; stan leczenia zgadujący „odstawione" przy braku punktów terapii.
 
 ## Zasady aktualizacji rejestru
 
