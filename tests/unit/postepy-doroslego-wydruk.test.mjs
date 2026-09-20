@@ -231,3 +231,29 @@ describe('P-POSTEPY audyt F5/F6 — kartka mówi prawdę i daje się wydrukować
       .toContain('.vw-h2{break-after:avoid');
   });
 });
+
+describe('P-POSTEPY — przyciski wydruku mówią, co dają', () => {
+  // Uwaga właściciela 2026-09-20: „czemu jak klikam pobierz to pobiera mi się plik html?".
+  // Przyciski brzmiały „Drukuj" i „Pobierz": drugi obiecywał plik, a dawał HTML, podczas gdy
+  // PDF — którego lekarz rozsądnie się spodziewa — siedzi w oknie druku pod pierwszym.
+  // Zachowanie zostaje bez zmian; ten test pilnuje, żeby etykiety nie wróciły do dwuznacznych.
+  //
+  // Ten przypadek MUSI stać w tym pliku, nie w testach widoku: `akcjeHtml()` rysuje przyciski
+  // tylko wtedy, gdy moduł wydruku jest w oknie, a łańcuch zależności ładuje go dopiero tutaj.
+  const panelHtml = () => moduly().U.buildHtml(model());
+
+  it('etykieta druku wymienia PDF, etykieta pobierania wymienia HTML', () => {
+    const h = panelHtml();
+    const drukuj = (h.match(/data-akcja="drukuj"[^>]*>([^<]*)</) || [])[1] || '';
+    const pobierz = (h.match(/data-akcja="pobierz"[^>]*>([^<]*)</) || [])[1] || '';
+    expect(drukuj, 'przycisk druku prowadzi też do PDF').toContain('PDF');
+    expect(pobierz, 'przycisk pobierania nazywa format').toContain('HTML');
+    expect(pobierz, 'i nie obiecuje PDF, bo go nie daje').not.toContain('PDF');
+  });
+
+  it('podpowiedź tłumaczy drogę do PDF-a i naturę pliku HTML', () => {
+    const h = panelHtml();
+    expect(h, 'gdzie szukać PDF').toContain('Zapisz jako PDF');
+    expect(h, 'i po co komu ten HTML').toContain('bez internetu');
+  });
+});

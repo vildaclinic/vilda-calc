@@ -471,12 +471,19 @@
         + '<div class="vilda-pd-akcja-o">' + esc(v.opis) + '</div>'
         + '<div class="vilda-pd-akcja-b">'
         + '<button type="button" class="vilda-pd-btn" data-akcja="drukuj" data-wariant="'
-        + esc(v.id) + '">\u2399 Drukuj</button>'
+        + esc(v.id) + '">\u2399 Drukuj lub PDF</button>'
         + '<button type="button" class="vilda-pd-btn vilda-pd-btn-ghost" data-akcja="pobierz" data-wariant="'
-        + esc(v.id) + '">\u2b07 Pobierz</button>'
+        + esc(v.id) + '">\u2b07 Pobierz HTML</button>'
         + '</div></div>';
     });
+    /* ETYKIETY MÓWIĄ, CO DAJĄ (uwaga właściciela 2026-09-20). Przyciski brzmiały „Drukuj"
+       i „Pobierz", więc „Pobierz" obiecywał plik, a dawał HTML — a PDF, którego lekarz
+       rozsądnie się spodziewa, siedział pod sąsiednim guzikiem, w oknie druku przeglądarki.
+       Nie zmienia się ani jedno zachowanie: zmienia się to, co przycisk o sobie mówi.
+       Podpowiedź pod nagłówkiem tłumaczy drogę do PDF-a raz, zamiast w obu przyciskach. */
     return '<p class="vilda-patient-section-h vilda-patient-section-h--secondary">Wydruk</p>'
+      + '<p class="vilda-pd-akcje-hint">PDF zapiszesz w oknie druku — wybierz „Zapisz jako PDF” '
+      + 'zamiast drukarki. Pobrany plik HTML otwiera się i drukuje bez aplikacji i bez internetu.</p>'
       + '<div class="vilda-pd-akcje">' + grupy.join('') + '</div>';
   }
 
@@ -512,6 +519,7 @@
     + '.vilda-pd-chart{background:#fff;border:1px solid ' + C.linia + ';border-radius:12px;padding:8px;overflow:hidden;}'
     + '.vilda-pd-events{margin:12px 0 0;padding-left:18px;font-size:.84rem;line-height:1.5;}'
     + '.vilda-pd-chart-bmi{margin-top:4px;}'
+    + '.vilda-pd-akcje-hint{font-size:13px;color:' + C.opis + ';margin:2px 0 10px;line-height:1.45;}'
     + '.vilda-pd-akcje{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:8px 0 0;}'
     + '.vilda-pd-akcja{border:1px solid ' + C.linia + ';border-radius:12px;padding:10px 12px;background:#fff;min-width:0;}'
     + '.vilda-pd-akcja-n{font-size:.88rem;font-weight:700;color:' + C.ink + ';}'
