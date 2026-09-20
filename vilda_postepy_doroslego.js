@@ -180,6 +180,20 @@
 
   /* ---------- punkt decyzyjny ChPL (przepuszczony, nie przeliczony) ---------- */
 
+  /* Tydzień punktu decyzyjnego na osi liczonej od punktu odniesienia. Dla kotwicy w starcie to
+     wprost okno ChPL; dla kotwicy w dawce podtrzymującej — okno powiększone o nominalny czas
+     zwiększania dawki (liraglutyd 4 tyg. → 16.; semaglutyd 16 tyg. → 28.). */
+  function osadzNaOsi(g) {
+    if (!g) return null;
+    if (g.windowAnchor === 'start') return liczba(g.windowWeeks);
+    if (g.windowAnchor === 'dawka-podtrzymujaca') {
+      var okno = liczba(g.windowWeeks);
+      var tit = liczba(g.titrationWeeksNominal);
+      if (okno != null && tit != null) return okno + tit;
+    }
+    return null;
+  }
+
   function punktDecyzyjny(lek, substancja, wiekLat) {
     var K = w && w.ObesityResponseCriteria;
     if (!K || typeof K.getCriterion !== 'function') return null;
@@ -191,10 +205,12 @@
       /* ChPL nie podaje progu ani terminu — brak punktu jest WYNIKIEM, nie brakiem danych. */
       return { jest: false, lek: kryt.drugKey, metryka: g.metric, zdanie: g.zdanie || '', kotwica: null, tygodnie: null, progPct: null, tydzienOdOdniesienia: null };
     }
-    /* Kotwica „dawka-podtrzymująca” nie jest tym samym co start leczenia, a momentu dojścia do
-       dawki podtrzymującej rekord pacjenta nie zapisuje. Nie zgadujemy okresu zwiększania dawki
-       — oddajemy kotwicę pod nazwą i zostawiamy `tydzienOdOdniesienia` pusty. Osadzenie tego
-       punktu na osi wymaga danych, których dziś nie ma (otwarte, patrz ALGORITHMS.md). */
+    /* Kotwica „dawka-podtrzymująca” nie jest tym samym co start leczenia. Rekord pacjenta nie
+       zapisuje jeszcze momentu dojścia do dawki podtrzymującej, ale NOMINALNY czas zwiększania
+       dawki jest faktem z ChPL i od P-KOTWICA (2026-09-20) mieszka w danych grupy jako
+       `titrationWeeksNominal`. Punkt na osi osadzamy więc z sumy i ZNACZYMY to flagą
+       `nominalna` — to założenie, nie odczyt z rekordu, i widok musi je nazwać.
+       Bez nominalnego czasu punktu nie stawiamy wcale: zgadywanie dałoby datę z powietrza. */
     return {
       jest: true,
       lek: kryt.drugKey,
@@ -203,7 +219,9 @@
       kotwica: g.windowAnchor || null,
       tygodnie: g.windowWeeks,
       progPct: g.thresholdPct,
-      tydzienOdOdniesienia: g.windowAnchor === 'start' ? g.windowWeeks : null,
+      tydzienOdOdniesienia: osadzNaOsi(g),
+      nominalna: g.windowAnchor === 'dawka-podtrzymujaca' && osadzNaOsi(g) != null,
+      titracjaNominalnaTyg: liczba(g.titrationWeeksNominal),
     };
   }
 

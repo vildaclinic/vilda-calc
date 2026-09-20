@@ -325,17 +325,38 @@ describe('P-POSTEPY — granice warstw (strażnicy zachowaniowe)', () => {
     }
   });
 
-  it('kotwica „dawka podtrzymująca" nie jest zgadywana jako tydzień od włączenia', () => {
-    // Momentu dojścia do dawki podtrzymującej rekord pacjenta nie zapisuje. Zgadnięcie okresu
-    // zwiększania dawki postawiłoby punkt decyzyjny na osi w miejscu wziętym z powietrza.
+  it('kotwica „dawka podtrzymująca" osadza punkt przez NOMINALNY czas zwiększania dawki', () => {
+    // P-KOTWICA (2026-09-20): rekord nadal nie zapisuje momentu dojścia do dawki podtrzymującej,
+    // ale nominalny czas zwiększania dawki jest faktem z ChPL i mieszka w danych grupy.
+    // Punkt wolno więc osadzić — pod warunkiem, że wynik NAZYWA to założeniem (`nominalna`).
     const lira = silnik().analizuj({ ...DOROSLY, lek: 'Saxenda', pomiary: SERIA_4 });
     expect(lira.punktDecyzyjny.kotwica).toBe('dawka-podtrzymujaca');
-    expect(lira.punktDecyzyjny.tygodnie).toBe(12);
-    expect(lira.punktDecyzyjny.tydzienOdOdniesienia, 'nie osadzamy go na osi bez danych').toBeNull();
+    expect(lira.punktDecyzyjny.tygodnie, 'okno ChPL bez zmian').toBe(12);
+    expect(lira.punktDecyzyjny.titracjaNominalnaTyg, 'liraglutyd: 4 tyg. zwiększania dawki').toBe(4);
+    expect(lira.punktDecyzyjny.tydzienOdOdniesienia, '4 + 12').toBe(16);
+    expect(lira.punktDecyzyjny.nominalna, 'założenie, nie odczyt z rekordu').toBe(true);
 
     const mysimba = silnik().analizuj({ wiekLat: 40, lek: 'Mysimba', pomiary: SERIA_4 });
-    expect(mysimba.punktDecyzyjny.kotwica, 'Mysimba liczy od rozpoczęcia — ten punkt wolno osadzić').toBe('start');
+    expect(mysimba.punktDecyzyjny.kotwica, 'Mysimba liczy od rozpoczęcia').toBe('start');
     expect(mysimba.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+    expect(mysimba.punktDecyzyjny.nominalna, 'nic tu nie jest zakładane').toBe(false);
+  });
+
+  it('bez nominalnego czasu zwiększania dawki punkt NIE jest stawiany', () => {
+    // Zgadywanie dałoby datę z powietrza. Atrapa ma kotwicę w dawce podtrzymującej i nie ma
+    // `titrationWeeksNominal` — silnik musi wtedy zostawić oś pustą, a nie podstawić okno.
+    const atrapa = {
+      ObesityResponseCriteria: {
+        getCriterion: () => ({
+          drugKey: 'atrapa',
+          group: { metric: 'massPct', windowWeeks: 12, thresholdPct: 5, windowAnchor: 'dawka-podtrzymujaca', zdanie: 'x' },
+        }),
+      },
+    };
+    const m = okno(atrapa).analizuj({ ...DOROSLY, lek: 'Cokolwiek', pomiary: SERIA_4 });
+    expect(m.punktDecyzyjny.jest).toBe(true);
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBeNull();
+    expect(m.punktDecyzyjny.nominalna).toBe(false);
   });
 
   it('silnik nie ma DOM-u ani zapisu (AGENTS.md §2 i §5)', () => {

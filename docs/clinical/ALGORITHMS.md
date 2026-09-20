@@ -4559,7 +4559,7 @@ Identyfikacja wersji czterech ChPL: wpis „Kryteria odpowiedzi sprawdzone wobec
 
 ### Czego silnik świadomie nie robi
 
-**Nie osadza na osi punktu decyzyjnego zakotwiczonego w dawce podtrzymującej.** ChPL liraglutydu liczy 12 tygodni **od dawki podtrzymującej 3,0 mg/dobę**, a momentu dojścia do tej dawki rekord pacjenta nie zapisuje. Silnik oddaje więc kotwicę pod nazwą (`kotwica: "dawka-podtrzymujaca"`, `tygodnie: 12`) i zostawia `tydzienOdOdniesienia` pusty. Mysimba kotwiczy w rozpoczęciu leczenia, więc jej punkt (16 tyg.) wolno osadzić. **Otwarte:** czy rekord ma zacząć zapisywać moment osiągnięcia dawki podtrzymującej — to decyzja właściciela.
+**[Zastąpione przez P-KOTWICA, SW 1.1.11, 2026-09-20: punkt jest już osadzany przez NOMINALNY czas zwiększania dawki z danych grupy (`titrationWeeksNominal`), z flagą `nominalna: true`. Akapit poniżej opisuje stan z raty 1.]** **Nie osadza na osi punktu decyzyjnego zakotwiczonego w dawce podtrzymującej.** ChPL liraglutydu liczy 12 tygodni **od dawki podtrzymującej 3,0 mg/dobę**, a momentu dojścia do tej dawki rekord pacjenta nie zapisuje. Silnik oddaje więc kotwicę pod nazwą (`kotwica: "dawka-podtrzymujaca"`, `tygodnie: 12`) i zostawia `tydzienOdOdniesienia` pusty. Mysimba kotwiczy w rozpoczęciu leczenia, więc jej punkt (16 tyg.) wolno osadzić. **Otwarte:** czy rekord ma zacząć zapisywać moment osiągnięcia dawki podtrzymującej — to decyzja właściciela.
 
 Dla semaglutydu i tirzepatydu **punktu decyzyjnego nie ma i to jest poprawny wynik**, a nie brak danych (P-CHPL: ChPL nie podaje dla dorosłych ani progu, ani terminu oceny).
 
@@ -4600,6 +4600,85 @@ Pacjent dorosły, 175 cm, 95 → 84 kg → zdarzenie `wyjscie-z-otylosci` (otył
 ### Wpływ kliniczny
 
 **Ta rata nie zmienia żadnego wyniku widocznego dziś w aplikacji** — nowe pliki nie są ładowane przez żadną stronę. Zmienia natomiast to, co aplikacja **zacznie pokazywać** w ratach 2–4, więc drabinki pasm, definicja punktu odniesienia i parametr korytarza wymagają akceptacji klinicznej właściciela przed ratą 2.
+
+## Okno oceny odpowiedzi liczone od kotwicy ChPL (P-KOTWICA, SW 1.1.11, 2026-09-20)
+
+**Zmiana kliniczna. Tak — zmienia się MOMENT, w którym aplikacja orzeka o odstawieniu leku. Akceptacja właściciela: 2026-09-20.**
+
+### Defekt
+
+P-CHPL (SW 1.1.10) wpisał do danych pole `windowAnchor` — informację, **od czego ChPL liczy okno oceny odpowiedzi**. Funkcja `evaluate()` tego pola **nigdy nie czytała**: brała `weeks` od wołającego i porównywała wprost z `windowWeeks`. Jedyny wołający w całym repozytorium — panel „Dane analityczne — otyłość" w Karcie Pacjenta (`vilda_auth_ui.js`, funkcja `Ml()`) — liczy tygodnie **od punktu „Włączenie"** (etykieta w kodzie: „od włączenia (z dat wizyt)”).
+
+Skutkiem był twardy werdykt `fail-stop`, renderowany jako czerwone **„Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić"**, wydawany za wcześnie:
+
+| grupa | ChPL mówi | aplikacja orzekała | o ile za wcześnie |
+|---|---|---|---|
+| `saxenda-adult` | 12 tyg. stosowania dawki 3,0 mg/dobę | 12. tydzień od włączenia | **4 tygodnie** |
+| `saxenda-12-17`, `saxenda-6-11` | j.w. | j.w. | **4 tygodnie** |
+| `wegovy-12-17` | 12 tyg. stosowania dawki 2,4 mg | 12. tydzień od włączenia | **16 tygodni** |
+
+Grupy kotwiczone w rozpoczęciu leczenia (`mysimba-adult`) i grupy bez progu (`wegovy-adult`, `mounjaro-adult`) były i pozostają nietknięte.
+
+**To nie jest teza z lektury kodu — to zmierzone na żywej stronie.** Kontrola negatywna: po cofnięciu poprawki e2e `KOTWICA-1` odczytuje z Karty Pacjenta dosłownie tytuł „Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić" u pacjenta w 12. tygodniu leczenia liraglutydem.
+
+### Poprawka
+
+`evaluate()` rozstrzyga kotwicę przed porównaniem z oknem (funkcja `ka()`), w kolejności:
+
+1. **kotwica rzeczywista** — wołający podaje `weeksFromAnchor`, czyli liczbę tygodni stosowania dawki podtrzymującej. Wygrywa zawsze. `anchorMode: "rzeczywista"`.
+2. **kotwica nominalna** — bez tej danej używamy **nominalnego czasu zwiększania dawki** z pola `titrationWeeksNominal` grupy: `weeks − titrationWeeksNominal`. `anchorMode: "nominalna"`.
+3. **brak kotwicy** — grupa kotwiczona w dawce podtrzymującej bez nominalnej titracji daje `insufficient-data` z powodem nazywającym kotwicę. **Nigdy cichego powrotu do liczenia od włączenia.**
+
+Wynik niesie odtąd `windowAnchor`, `anchorMode`, `weeksFromStart` i `titrationWeeksNominal`, a `weeks` oznacza tygodnie **od kotwicy** (podczas zwiększania dawki jest ujemne → `before-window`).
+
+### Nominalny czas zwiększania dawki — skąd liczby
+
+| grupa | `titrationWeeksNominal` | podstawa |
+|---|---|---|
+| `wegovy-12-17` | 16 tyg. | ChPL pkt 4.2: 0,25 → 0,5 → 1,0 → 1,7 mg co 4 tyg., dawka podtrzymująca 2,4 mg od 17. tygodnia |
+| `saxenda-adult`, `saxenda-12-17`, `saxenda-6-11` | 4 tyg. | ChPL pkt 4.2: 0,6 → 1,2 → 1,8 → 2,4 mg co tydzień, dawka podtrzymująca 3,0 mg/dobę od 5. tygodnia |
+
+Obie wartości są **już zapisane w aplikacji** jako tabele dawkowania w `obesity_therapy.js`. Nie powstała druga kopia: test `P-KOTWICA — nominalny czas titracji zgadza się z tabelą dawkowania` parsuje tamtą tabelę, znajduje wiersz z adnotacją „dawka podtrzymująca” i sprawdza, że numer tygodnia minus jeden równa się `titrationWeeksNominal`. Rozjazd między plikami nie przeszedłby żadnego przeglądu, bo zaczerwieniłby test.
+
+Okno liraglutydu 4 + 12 = 16 tygodni zgadza się z odczytem punktu 5.1 zapisanym w P-CHPL („zwiększanie dawki przez 4 tygodnie, a następnie stosowanie dawki terapeutycznej przez 12 tygodni”). Okno semaglutydu u młodzieży 16 + 12 = 28 tygodni wynika z tego samego rozumowania zastosowanego do harmonogramu semaglutydu.
+
+**Ograniczenie nazwane wprost:** ChPL dopuszcza ocenę na dawce „**lub maksymalnej tolerowanej**”. U pacjenta, który przestał zwiększać dawkę wcześniej, kotwica rzeczywista jest **wcześniejsza** niż nominalna — czyli kotwica nominalna myli się w stronę ostrożniejszą (ocenia później, nigdy wcześniej). W drugą stronę, przy titracji opóźnionej lub przerwanej, kotwica nominalna byłaby za wczesna — dlatego rzeczywista data ma pierwszeństwo, a jej brak jest w interfejsie **nazwany**.
+
+### Co widzi lekarz
+
+Karta Pacjenta przestaje pokazywać goły numer tygodnia, bo po tej zmianie `weeks` znaczy co innego:
+
+- fraza o tygodniach brzmi „**N tyg. stosowania dawki podtrzymującej**”;
+- w trakcie zwiększania dawki zamiast ujemnego numeru pada „**Trwa zwiększanie dawki — okno oceny otwiera się po 12 tyg. stosowania dawki podtrzymującej.**”;
+- przy kotwicy nominalnej do opisu werdyktu dokleja się zdanie: „**Okno liczone od nominalnego czasu zwiększania dawki wg ChPL (N tyg. od włączenia); jeśli zwiększanie dawki przebiegało inaczej, ocena wymaga rzeczywistej daty osiągnięcia dawki podtrzymującej.**”
+
+Bez tego ostatniego zdania werdykt wyglądałby na twardy fakt z rekordu pacjenta, a jest odczytem harmonogramu z ChPL.
+
+### Silnik postępów
+
+`vilda_postepy_doroslego.js` (P-POSTEPY rata 1) deklarował, że punktu decyzyjnego kotwiczonego w dawce podtrzymującej **nie osadza na osi**, bo nie ma z czego. Od tej raty osadza go z sumy `windowWeeks + titrationWeeksNominal` (liraglutyd → 16. tydzień, semaglutyd u młodzieży → 28.) i **znaczy to flagą `nominalna: true`**. Bez nominalnej titracji punkt nadal nie powstaje.
+
+### Przypadki `wejście → oczekiwany wynik` (dane fikcyjne)
+
+Dorosły, liraglutyd, masa wyjściowa 100 kg, redukcja 3 % (poniżej progu 5 %):
+
+| tygodnie od włączenia | przed poprawką | po poprawce |
+|---|---|---|
+| 12 | `fail-stop` — „odstawić” | `before-window` (8 tyg. od kotwicy) |
+| 15 | `fail-stop` | `before-window` |
+| 16 | `fail-stop` | `fail-stop` — teraz zgodnie z ChPL |
+
+Ten sam pacjent z redukcją 7 % w 16. tygodniu → `pass`. Ten sam pacjent z podaną rzeczywistą kotwicą (`weeksFromAnchor: 12`) w 20. tygodniu od włączenia → `fail-stop`, `anchorMode: "rzeczywista"`. Młodzież, semaglutyd, redukcja BMI 3 %: 12. i 27. tydzień → `before-window`, 28. → `fail-stop`. Mysimba w 16. tygodniu od włączenia → `fail-stop` (bez zmian).
+
+### Walidacja
+
+- `tests/unit/kotwica-okna-chpl.test.mjs` — **17 testów** na rzeczywistych `ObesityResponseCriteria.evaluate` i `.getCriterion`, w tym strażnik międzyplikowy wiążący `titrationWeeksNominal` z tabelami dawkowania.
+- `tests/e2e/kotwica-okna-chpl.spec.mjs` — **3 testy na prawdziwej stronie**: panel „Dane analityczne — otyłość" w Karcie Pacjenta, werdykt czytany z DOM.
+- **Cztery kontrole negatywne, każda zaczerwienia testy:** cofnięcie poprawki `evaluate()` → 12 z 17 testów jednostkowych i e2e `KOTWICA-1` (z dosłownym tytułem „odstawić” w wyniku); zła nominalna titracja liraglutydu (4 → 6) → 4 testy, w tym strażnik tabeli dawkowania; cofnięcie zmian w warstwie UI → 3 testy.
+
+### Co pozostaje otwarte
+
+Rekord pacjenta nadal **nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej**. Warstwa UI mogłaby ją wypełniać z istniejącej osi zdarzeń dawkowych (`VildaVault.listPatientTreatmentPeriods`, pola `doseNum`/`doseUnit`/`fromISO`) — bez nowego pola i bez migracji. To osobna rata; do jej czasu obowiązuje kotwica nominalna, nazwana w interfejsie.
 
 ## Zasady aktualizacji rejestru
 
