@@ -159,7 +159,21 @@
     substancja: substancja,
   };
 
-  try { Object.freeze(API); } catch (e) { /* starsze silniki JS — zamrożenie jest miłe, nie konieczne */ }
+  /* ZAMROŻENIE GŁĘBOKIE (audyt 2026-09-20, F7). `Object.freeze` jest płytkie, więc do tej
+     poprawki `ODZYSK.frakcja = 0.5` i `ZESTAWY.OGOLNY.progi.push(99)` przechodziły — próg
+     kliniczny dawał się podmienić w locie z dowolnego skryptu albo konsoli, bez śladu.
+     Dla modułu, którego cała racja bytu to „normy zawsze jako dane" (AGENTS.md §3), to było
+     za mało. Zmiana normy ma być zmianą TEGO PLIKU, widoczną w historii repozytorium. */
+  function zamrozGleboko(o) {
+    if (!o || (typeof o !== 'object' && typeof o !== 'function')) return o;
+    Object.getOwnPropertyNames(o).forEach(function (k) {
+      var v = o[k];
+      if (v && (typeof v === 'object' || typeof v === 'function')) zamrozGleboko(v);
+    });
+    return Object.freeze(o);
+  }
+
+  try { zamrozGleboko(API); } catch (e) { /* starsze silniki JS — zamrożenie jest miłe, nie konieczne */ }
 
   if (w) w.VildaPostepyDoroslegoDane = API;
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null);

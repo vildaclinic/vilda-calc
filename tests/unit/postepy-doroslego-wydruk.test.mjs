@@ -194,3 +194,40 @@ describe('P-POSTEPY wydruk — granice warstw i wpięcie', () => {
     expect(zrodlo('service-worker-kalorii.js')).toContain("'/vilda_postepy_doroslego_wydruk.js?v=1'");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// AUDYT 2026-09-20, znaleziska F5 i F6 po stronie wydruku.
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+const BEZ_DAT = [
+  { ageYears: 52, ageMonths: 0, weight: 120, height: 170 },
+  { ageYears: 52, ageMonths: 6, weight: 110, height: 170 },
+];
+
+describe('P-POSTEPY audyt F5/F6 — kartka mówi prawdę i daje się wydrukować', () => {
+  it('kartka DLA PACJENTA przyznaje, że oś tygodni jest przybliżona', () => {
+    // Panel na ekranie i wariant kliniczny mówiły to przez `ostrzezenia`; stopka wariantu
+    // pacjenta miała treść stałą, więc pacjent czytał „12. tydz." jako datę co do dnia.
+    // Oś liczona z wieku w miesiącach myli się o około dwa tygodnie na miesiąc.
+    expect(model({ pomiary: BEZ_DAT }).czasZWieku, 'model wie, że oś jest z wieku').toBe(true);
+    expect(dok('pacjent', { pomiary: BEZ_DAT })).toContain('przybliżone');
+  });
+
+  it('przy komplecie dat kartka pacjenta NIE straszy przybliżeniem', () => {
+    // Kontrola negatywna: zdanie ma się pojawiać z powodu, nie zawsze.
+    expect(model().czasZWieku).toBe(false);
+    expect(dok('pacjent')).not.toContain('przybliżone');
+  });
+
+  it('CSS wydruku nie pozwala rozciąć wykresu ani wiersza tabeli między stronami', () => {
+    // Wariant kliniczny to dwa wykresy plus tabela pomiarów — przy dłuższej serii nie mieści
+    // się na jednej kartce A4, a bez tych reguł przeglądarka tnie wiersz w pół.
+    const d = dok('kliniczny');
+    expect(d, 'wykres w całości').toMatch(/\.vw-chart[^}]*break-inside:avoid/);
+    expect(d, 'wiersz tabeli w całości').toContain('table.vw-tab tr{break-inside:avoid');
+    expect(d, 'nagłówek tabeli powtarzany na każdej stronie')
+      .toContain('table.vw-tab thead{display:table-header-group;}');
+    expect(d, 'nagłówek sekcji nie zostaje sam na dole strony')
+      .toContain('.vw-h2{break-after:avoid');
+  });
+});

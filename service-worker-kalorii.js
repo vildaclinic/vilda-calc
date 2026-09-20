@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.16';
+const SW_VERSION = '1.1.17';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2183,14 +2183,18 @@ const OPTIONAL_ASSETS = [
   '/vilda_werdykt.js?v=4',
   '/vilda_postepy_doroslego_dane.js?v=1',
   '/vilda_postepy_doroslego_dane.js?v=2',
+  '/vilda_postepy_doroslego_dane.js?v=3',
   '/vilda_postepy_doroslego.js?v=1',
   '/vilda_postepy_doroslego.js?v=2',
   '/vilda_postepy_doroslego.js?v=3',
   '/vilda_postepy_doroslego.js?v=4',
+  '/vilda_postepy_doroslego.js?v=5',
   '/vilda_postepy_doroslego_ui.js?v=1',
   '/vilda_postepy_doroslego_ui.js?v=2',
   '/vilda_postepy_doroslego_ui.js?v=3',
+  '/vilda_postepy_doroslego_ui.js?v=4',
   '/vilda_postepy_doroslego_wydruk.js?v=1',
+  '/vilda_postepy_doroslego_wydruk.js?v=2',
   '/vilda_tempo_wzrastania.js?v=1',
   '/vilda_trajectory_analysis.js?v=23',
   '/vilda_advanced_growth.js?v=62',
