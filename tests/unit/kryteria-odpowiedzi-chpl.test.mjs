@@ -118,11 +118,29 @@ describe('Kryteria pediatryczne zostają nietknięte', () => {
   it.each([[8, 'saxenda-6-11'], [15, 'saxenda-12-17']])(
     'liraglutyd, wiek %i: BMI albo Z-score ≥4 %% po 12 tyg.',
     (wiek, id) => {
+      // Zweryfikowane na ChPL SAMEJ SAXENDY (EU-PI PL, 26.06.2025), pkt 4.1 — dokument
+      // przekazany przez właściciela 2026-09-20. Do tej weryfikacji podstawą była ChPL
+      // Triglyvy (inny preparat liraglutydu 6 mg/mL), a zgodność brzmienia punktu 4.1
+      // dla dzieci była ZAŁOŻENIEM. Teraz jest odczytana:
+      //   dzieci 6–<12 l.: „zmniejszenia wartości wskaźnika BMI lub Z-score BMI o co
+      //     najmniej 4% po 12 tygodniach stosowania produktu w dawce 3,0 mg na dobę
+      //     lub w maksymalnej dawce tolerowanej przez pacjenta";
+      //   młodzież ≥12 l.: „zmniejszenia wartości wskaźnika BMI lub BMI z jednym
+      //     odchyleniem standardowym o co najmniej 4% po 12 tygodniach [...]".
+      // Stąd metryka, próg 4 %, okno 12 tygodni i kotwica w dawce podtrzymującej.
       const g = grupa('Saxenda', wiek).group;
       expect(g.id).toBe(id);
       expect(g.thresholdPct).toBe(4);
       expect(g.metric).toBe('bmiPctOrZscore');
       expect(g.hardStop).toBe(true);
+      expect(g.windowWeeks, 'ChPL: „po 12 tygodniach stosowania"').toBe(12);
+      expect(g.windowAnchor, 'ChPL: „w dawce 3,0 mg na dobę lub maks. tolerowanej"')
+        .toBe('dawka-podtrzymujaca');
+      // Kontrola negatywna wobec dorosłych: to NIE jest ta sama reguła. U dorosłych
+      // ChPL mówi o 5 % POCZĄTKOWEJ MASY CIAŁA, u dzieci o 4 % BMI albo Z-score.
+      const dorosly = grupa('Saxenda', 40).group;
+      expect(dorosly.metric).toBe('massPct');
+      expect(dorosly.thresholdPct).toBe(5);
     },
   );
 });
