@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { korzen } from '../support/silnik-bmi.mjs';
+import { korzen, tablica } from '../support/silnik-bmi.mjs';
 
 // P-STATUS-DOROSLY — zakładka „Status" Karty pacjenta u osoby dorosłej.
 //
@@ -17,6 +17,16 @@ import { korzen } from '../support/silnik-bmi.mjs';
 // wzorze, gdy produkcja się rozjedzie.
 
 const zrodloUi = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
+
+/** Prawdziwy silnik wzrostu z PRAWDZIWYMI tablicami OLAF i WHO 2007 z app.js. */
+function silnikWzrostu() {
+  const okno = {
+    LMS_HEIGHT_BOYS: tablica('LMS_HEIGHT_BOYS'), LMS_HEIGHT_GIRLS: tablica('LMS_HEIGHT_GIRLS'),
+    LMS_HEIGHT_WHO_BOYS: tablica('LMS_HEIGHT_WHO_BOYS'), LMS_HEIGHT_WHO_GIRLS: tablica('LMS_HEIGHT_WHO_GIRLS'),
+  };
+  new Function('window', 'globalThis', fs.readFileSync(path.join(korzen, 'vilda_sds_wzrostu.js'), 'utf8'))(okno, okno);
+  return okno.VildaSdsWzrostu;
+}
 
 function silnikBmi() {
   const okno = {};
@@ -153,6 +163,43 @@ describe('P-STATUS-DOROSLY — masa ciała docelowa z silnika', () => {
     const r = B.celMasyDorosly({ wzrostCm: 182, masaKg: 130 });
     expect(r.cel.masa / 1.82 ** 2).toBeCloseTo(P.CEL, 9);
     expect(r.posredni.masa / 1.82 ** 2).toBeCloseTo(P.OTYLOSC_1, 9);
+  });
+});
+
+describe('P-STATUS-DOROSLY-OLAF — populacja odniesienia wzrostu dorosłego', () => {
+  // Poprawka 2026-09-20. Pierwsza wersja brała siatkę z rekordu (`zscore.dataSource`),
+  // więc pacjent z ustawieniem WHO dostawał centyl wobec siatki WHO. Właściciel wskazał
+  // OLAF i to jest wiążące; argument o „niemieszaniu siatek" nie bronił się, bo u dorosłego
+  // centyl wzrostu jest jedyną liczbą liczoną z siatki.
+
+  it('silnik wzrostu deklaruje odniesienie jako nazwaną, zamrożoną daną: 18 lat, OLAF', () => {
+    const S = silnikWzrostu();
+    expect(S.DOROSLY_ODNIESIENIE).toEqual({ wiekMies: 216, zrodlo: 'OLAF' });
+    expect(Object.isFrozen(S.DOROSLY_ODNIESIENIE), 'norma jako dana, nie do nadpisania w locie')
+      .toBe(true);
+  });
+
+  it('Karta czyta odniesienie z silnika, a nie źródło z rekordu pacjenta', () => {
+    const src = zrodloUi.replace(/\/\*[\s\S]*?\*\//g, ' ');
+    expect(src).toContain('i.VildaSdsWzrostu.DOROSLY_ODNIESIENIE');
+    expect(src).toContain('wiekMies:SDo.wiekMies,zrodlo:SDo.zrodlo');
+    expect(src, 'stara wersja brała siatkę z rekordu').not.toContain('zrodlo:h||"OLAF"');
+    expect(src, 'nazwa siatki w kafelku też nie wraca do literału').not.toContain('SDsiatka||"OLAF"');
+  });
+
+  it('wybór siatki zmienia liczbę, którą zobaczy lekarz — więc nie jest kosmetyczny', () => {
+    // 186 cm, mężczyzna: OLAF 87. centyl, WHO 91. Gdyby te dwie siatki dawały to samo,
+    // test niczego by nie pilnował — stąd jawna asercja różnicy.
+    const S = silnikWzrostu();
+    const o = S.DOROSLY_ODNIESIENIE;
+    const olaf = S.policz({ wzrost: 186, plec: 'M', wiekMies: o.wiekMies, zrodlo: o.zrodlo });
+    expect(olaf.siatka).toBe('OLAF');
+    expect(olaf.fallback, 'OLAF sięga 216 mies., więc żadnego zastępstwa nie ma').toBe(false);
+    expect(Math.round(olaf.centyl)).toBe(87);
+
+    const who = S.policz({ wzrost: 186, plec: 'M', wiekMies: o.wiekMies, zrodlo: 'WHO' });
+    expect(who.siatka).toBe('WHO');
+    expect(Math.round(who.centyl)).not.toBe(Math.round(olaf.centyl));
   });
 });
 

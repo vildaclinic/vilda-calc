@@ -5477,10 +5477,22 @@ bez zmian, co pilnuje kontrola negatywna.
 
 ### Wzrost dorosłego — centyl tak, kolor nie (decyzja właściciela 2026-09-20)
 
-Centyl liczy `VildaSdsWzrostu.policz({ wiekMies: 216 })`, czyli to samo odniesienie, które
-Karta stosuje już do MPH (P-MPH-KOLOR). Siatka bierze się z rekordu (`zscore.dataSource`),
-domyślnie OLAF, a jej nazwa idzie do kafelka — „5. centyl" bez populacji odniesienia znaczy
-co innego, niż przeczyta pacjent.
+Centyl liczy `VildaSdsWzrostu.policz()` na odniesieniu zadeklarowanym w silniku wzrostu jako
+`DOROSLY_ODNIESIENIE = { wiekMies: 216, zrodlo: 'OLAF' }` — ten sam wiek odniesienia, którego
+Karta używa już do MPH (P-MPH-KOLOR). Nazwa użytej siatki wraca w wyniku (`policz().siatka`)
+i idzie do kafelka, bo „5. centyl" bez populacji odniesienia znaczy co innego, niż przeczyta
+pacjent.
+
+**Poprawka P-STATUS-DOROSLY-OLAF (SW 1.1.23, 2026-09-20).** Pierwsza wersja brała siatkę
+z rekordu pacjenta (`zscore.dataSource`, w zapasie OLAF), więc dorosły z ustawieniem WHO
+dostawał centyl wobec siatki WHO — 186 cm u mężczyzny to 91. centyl na WHO i 87. na OLAF.
+To było odstępstwo od decyzji właściciela, który wskazał OLAF, a uzasadnienie („karta nie
+miesza siatek") nie broniło się: u dorosłego centyl wzrostu jest JEDYNĄ liczbą liczoną
+z siatki, bo BMI idzie z progów dla dorosłych, a masa z BMI. Odniesienie jest teraz nazwaną,
+zamrożoną daną w `vilda_sds_wzrostu.js`, więc przy przejściu na wielopopulacyjność zmienia
+się w jednym miejscu — zgodnie z regułą „normy zawsze jako dane" (`AGENTS.md` §3). Reguła
+dziecięca i kafelek MPH zostają bez zmian: tam siatka rekordu jest właściwa, bo cała karta
+dziecka liczy na niej.
 
 **Kolorowania świadomie NIE wprowadzono**, mimo że pierwotna propozycja je zakładała
 (< 3. centyla czerwony, 3–10 i 90–97 pomarańczowy). Powód jest populacyjny: średni wzrost
@@ -5529,18 +5541,20 @@ kolor, podpis i to, które kafelki w ogóle powstają.
 
 ### Walidacja
 
-- `tests/unit/status-doroslego.test.mjs` — **11 testów**. `Y` (kolor) i `xt` (kafelek) są
+- `tests/unit/status-doroslego.test.mjs` — **14 testów**. `Y` (kolor) i `xt` (kafelek) są
   **wycinane z pliku produkcyjnego** po pełnej sygnaturze i uruchamiane na prawdziwym silniku
   BMI; `celMasyDorosly` testowany wprost, z asercją, że masa celu to dokładnie próg
   z `PROGI.DOROSLY` przemnożony przez kwadrat wzrostu.
-- `tests/e2e/status-doroslego.spec.mjs` — **6 testów** na prawdziwej stronie, bo zgłoszenie
+- `tests/e2e/status-doroslego.spec.mjs` — **7 testów** na prawdziwej stronie, bo zgłoszenie
   dotyczyło widoku: kolory kafelków, kafelek celu z różnicą i progiem pośrednim, znikająca
-  sekcja pediatryczna, widok 390 px bez poziomego przewijania, rekord bez pomiaru oraz
-  kontrola negatywna na dziecku.
-- **Sześć kontroli negatywnych** na kodzie produkcyjnym (waga bez koloru, `xt` bez klucza
+  sekcja pediatryczna, widok 390 px bez poziomego przewijania, rekord bez pomiaru, rekord
+  ustawiony na WHO (centyl i tak z OLAF) oraz kontrola negatywna na dziecku.
+- **Siedem kontroli negatywnych** na kodzie produkcyjnym (waga bez koloru, `xt` bez klucza
   `neutral`, wzrost bez klucza `neutral`, cel wpisany na sztywno zamiast z progów, kafelki
-  pediatryczne bez bramki wieku, kafelek skal bez bramki na pusty pomiar) — każda
-  zaczerwienia zestaw.
+  pediatryczne bez bramki wieku, kafelek skal bez bramki na pusty pomiar, powrót do siatki
+  z rekordu zamiast OLAF) — każda zaczerwienia zestaw.
+- Test odniesienia pilnuje też, że wybór siatki **zmienia liczbę** (OLAF 87. vs WHO 91.
+  centyl dla 186 cm). Gdyby obie siatki dawały to samo, asercja niczego by nie broniła.
 - Kontrola negatywna na dziecku dobrana tak, by **centyl masy i kategoria BMI dawały różne
   kolory** (40 kg przy 128 cm, 9 lat: 87. centyl masy → bez koloru, BMI 24,4 → nadwaga).
   Gdyby reguła dorosłego przeciekła do dzieci, oba kafelki byłyby żółte.
@@ -5556,6 +5570,8 @@ powodu. Druga: pierwotny pomiar dziecka dawał ten sam kolor w obu kanałach, wi
 rozróżniał reguły dziecięcej od dorosłej. Oba fixture'y poprawione.
 
 SW 1.1.21 → **1.1.22**; `vilda_auth_ui.js?v=458→459`, `vilda_bmi.js?v=4→5`.
+Poprawka odniesienia: SW 1.1.22 → **1.1.23**; `vilda_auth_ui.js?v=459→460`,
+`vilda_sds_wzrostu.js?v=3→4`.
 
 ## Zasady aktualizacji rejestru
 
