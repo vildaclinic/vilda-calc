@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaWersjeRekordu } from '../support/sejf-czekanie.mjs';
 
 // Rata A z audytu sekcji „Pacjenci" — pomiar na żywym ekranie „Edytuj pacjenta".
 //
@@ -95,10 +96,7 @@ test.describe('P13a — zapis edycji nie przestawia wieku pomiaru na dzisiejszy'
 
     await otworzEdycje(page, patientId);
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => r.snapshots.length > 1),
-      patientId,
-    );
+    await czekajNaWersjeRekordu(page, patientId, 2);
 
     const po = await stanRekordu(page, patientId);
     expect(po.user.age, 'lata pomiaru bez zmian').toBe(5);
@@ -140,10 +138,7 @@ test.describe('P13b — rozjazd z innym urządzeniem', () => {
     await expect(modal).toContainText('Pomiary w historii (podstawowe): 1 → 2');
 
     await modal.getByRole('button', { name: 'Zapisz moje zmiany na aktualnych danych' }).click();
-    await page.waitForFunction(
-      (id) => window.VildaVault.getPatient(id).then((r) => r.snapshots.length > 2),
-      patientId,
-    );
+    await czekajNaWersjeRekordu(page, patientId, 3);
 
     const po = await stanRekordu(page, patientId);
     expect(po.historia.map((m) => m.ageMonths).sort((a, b) => a - b),
