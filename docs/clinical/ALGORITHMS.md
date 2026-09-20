@@ -5115,6 +5115,49 @@ SW 1.1.14 → **1.1.15**; `vilda_postepy_doroslego.js?v=2→3`, `vilda_postepy_d
 
 Rata B audytu: klucz scalania ignorujący datę (F3) i kamienie milowe sprzed punktu odniesienia (F4). Rata C: ostrzeżenie o osi z wieku na kartce pacjenta, łamanie stron w wydruku, głębokie zamrożenie pliku danych, kolor kropki wg ciężaru zdarzenia, sanity bound na datach. Do decyzji właściciela: weryfikacja pediatrycznego czasu zwiększania dawki liraglutydu wobec dokumentu (F12) i polityka nazwy pobieranego pliku (F13).
 
+## Scalanie wizyt i zakres kamieni milowych (P-POSTEPY-FIX rata B, SW 1.1.16, 2026-09-20)
+
+Druga rata naprawcza po audycie funkcji postępów. Znaleziska F3 i F4.
+
+**Zmiana kliniczna: TAK, w zakresie tego, co widać na wykresie i wydruku.** Żaden próg ani wzór się nie zmienia. Zmienia się **liczba punktów na wykresie** (F3) i **zawartość listy kamieni milowych** (F4).
+
+### F3 — klucz scalania nie znał daty
+
+Seria pomiarowa dorosłego powstaje z dwóch źródeł: osi czasu pacjenta i punktów leczenia otyłości. Deduplikacja używała klucza `wiekMies | wzrost | masa` — tego samego, którego używa sejf. Argumentem było, że jedna wizyta zapisana dwiema drogami ma liczyć się raz.
+
+Klucz nie znał jednak daty, więc **dwie RÓŻNE wizyty** o tej samej masie i wzroście w tym samym miesiącu też zlewały się w jedną, a druga data przepadała bez śladu. Dla pacjenta na plateau to nie egzotyka — to definicja plateau. Odtworzone: trzy wizyty na wejściu (05.01, 28.01, 06.07), dwie na wyjściu.
+
+**Poprawka — trzy reguły dopasowania**, zamiast jednego klucza:
+
+| sytuacja | rozstrzygnięcie |
+|---|---|
+| ten sam klucz bazowy **i ta sama data** | ta sama wizyta → scalamy |
+| ten sam klucz bazowy, a **jedna ze stron daty nie ma** | punkt monitora bez daty klinicznej dołącza do datowanej bliźniaczki (i odwrotnie) |
+| ten sam klucz bazowy, **obie daty są i są różne** | dwie osobne wizyty → nie scalamy |
+
+Dopasowanie patrzy na **żywą datę wpisu, nie na jego klucz**: wpis bez daty mógł już ją dostać od poprzedniego scalenia, a klucza wtedy nie przepisujemy. Bez tego trzeci zapis tej samej wizyty (oś czasu bez daty → monitor z datą → oś czasu z datą) zakładałby duplikat.
+
+### F4 — kamienie milowe sprzed punktu odniesienia
+
+Pętla przejść klas BMI szła po **całej serii**, podczas gdy reszta modelu — pasma, nadir, odzysk, utrata pasma — liczy się z `poOdniesieniu`. Pacjent, który tył przez rok przed włączeniem leku, dostawał przez to na kartce `−26. tydz. Nadwaga → Otyłość II stopnia` z wagą „uwaga”, pomiędzy kamieniami z okresu terapii. To prawdziwy fakt z jego historii, ale w tym miejscu czyta się jak przebieg leczenia.
+
+To samo dotyczyło zdarzenia `wyjscie-z-otylosci`, które na wykresie ma własny kolor „dobrze” — sprzed włączenia przypisywałoby lekowi cudzy efekt.
+
+**Poprawka.** Przejście, którego **choć jeden koniec** leży przed punktem odniesienia, dostaje flagę `przedOdniesieniem`. Zostaje w `wynik.klasy` jako fakt z historii — danych nie kasujemy — ale nie idzie na oś kamieni i nie wywołuje zdarzenia kolorującego kropkę. Reguła w jednym zdaniu: **kamienie i zdarzenia opisują okres od punktu odniesienia; to, co przed nim, jest kontekstem, nie narracją.**
+
+Warunek obejmuje oba końce przejścia świadomie: zmiana zarejestrowana przy samym punkcie odniesienia (tydzień 0), ale poprzedzona pomiarem sprzed leczenia, wydarzyła się w całości przed terapią.
+
+### Walidacja
+
+- `tests/unit/postepy-doroslego-silnik.test.mjs` — **59 testów** (było 52): cztery dla F3 (dwie różne wizyty zostają dwiema; ta sama wizyta z dwóch źródeł nadal liczy się raz; punkt monitora bez daty dołącza do bliźniaczki; trzeci zapis nie zakłada duplikatu) i trzy dla F4 (przejście sprzed włączenia poza osią kamieni; zostaje w `klasy` z flagą; „wyjście z otyłości” sprzed włączenia nie koloruje wykresu).
+- **Sześć kontroli negatywnych**, każda zaczerwienia testy — w tym **dwie kontrole nadgorliwości**: klucz aż nadto ostry (nic się nie scala) i kamienie gaszone także w okresie leczenia.
+
+SW 1.1.15 → **1.1.16**; `vilda_postepy_doroslego.js?v=3→4`.
+
+### Co zostaje
+
+Rata C: ostrzeżenie o osi z wieku na kartce pacjenta (F5), łamanie stron w wydruku (F6), głębokie zamrożenie pliku danych (F7), kolor kropki wg ciężaru zdarzenia (F8), sanity bound na datach (F9). Do decyzji właściciela: F12 i F13.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

@@ -233,6 +233,7 @@
       });
     });
     (wynik.klasy || []).forEach(function (k) {
+      if (k.przedOdniesieniem) return;   /* zmiana sprzed leczenia to kontekst, nie kamień */
       out.push({
         typ: 'zmiana-klasy', tydzien: k.tydzien, dateISO: k.dateISO,
         waga: k.kierunek === 'poprawa' ? 'dobrze' : 'uwaga',
@@ -304,6 +305,15 @@
       + p.masa.toFixed(2);
   }
 
+  /* Klucz z datą. Klucz bazowy wyżej celowo daty nie zna — rozstrzyga o tym, czy DWA WPISY
+     opisują tę samą wizytę — ale sam w sobie nie wystarcza do scalania (audyt 2026-09-20, F3).
+     Dwie RÓŻNE wizyty o tej samej masie i wzroście w tym samym miesiącu miały identyczny klucz
+     bazowy i zlewały się w jedną, gubiąc drugą datę. Dla pacjenta na plateau to nie egzotyka,
+     tylko definicja plateau. */
+  function kluczZData(p) {
+    return kluczPomiaru(p) + '|' + (p.dateISO || '');
+  }
+
   function scalSerie(opts) {
     var o = opts || {};
     var zOsi = normSeria(o.pomiary);
@@ -315,9 +325,32 @@
     var kolejnosc = [];
     var scalone = 0;
 
+    /* Do którego wpisu dołączyć nowy pomiar — albo `null`, gdy to osobna wizyta.
+     *
+     * Scalanie istnieje po to, żeby JEDNA wizyta zapisana dwiema drogami (oś czasu + monitor
+     * otyłości) liczyła się raz. Nie po to, żeby zlewać dwie różne wizyty. Stąd trzy reguły:
+     *   1. ten sam klucz I ta sama data  → ta sama wizyta, scalamy;
+     *   2. ten sam klucz, a jedna ze stron daty NIE MA → punkt monitora bez daty klinicznej
+     *      dołącza do swojej datowanej bliźniaczki (i odwrotnie);
+     *   3. ten sam klucz, obie strony mają daty, ale RÓŻNE → dwie osobne wizyty. */
+    function dopasuj(p) {
+      var kb = kluczPomiaru(p);
+      for (var i = 0; i < kolejnosc.length; i++) {
+        var e = mapa[kolejnosc[i]];
+        if (kluczPomiaru(e) !== kb) continue;
+        /* Porównujemy ŻYWE daty wpisu, nie jego klucz: wpis bez daty mógł już ją dostać
+           od poprzedniego scalenia, a klucza wtedy nie przepisujemy. Bez tego trzeci zapis
+           tej samej wizyty (oś czasu bez daty → monitor z datą → oś czasu z datą) zakładałby
+           duplikat. */
+        if (!e.dateISO || !p.dateISO || e.dateISO === p.dateISO) return kolejnosc[i];
+      }
+      return null;
+    }
+
     function dodaj(p, zrodlo) {
-      var k = kluczPomiaru(p);
-      if (!Object.prototype.hasOwnProperty.call(mapa, k)) {
+      var k = dopasuj(p);
+      if (k === null) {
+        k = kluczZData(p);
         var kopia = {};
         for (var pole in p) kopia[pole] = p[pole];
         kopia.zrodlo = zrodlo;
@@ -682,12 +715,20 @@
         var iOd = KOLEJNOSC_KLAS.indexOf(poprzednia.klasa.klucz);
         var iDo = KOLEJNOSC_KLAS.indexOf(kl.klucz);
         var kierunek = iOd < 0 || iDo < 0 ? null : (iDo < iOd ? 'poprawa' : 'pogorszenie');
+        /* Przejście, którego CHOĆ JEDEN koniec leży przed punktem odniesienia, wydarzyło się
+           przed leczeniem (audyt 2026-09-20, F4). Zostaje w `klasy` jako fakt z historii, ale
+           nie idzie na oś kamieni i nie koloruje kropki: reszta modelu — pasma, nadir, odzysk,
+           utrata pasma — liczy się z `poOdniesieniu`, a ta jedna pętla szła po całej serii.
+           Pacjent, który tył rok przed lekiem, dostawał przez to „Nadwaga → Otyłość II stopnia"
+           z wagą „uwaga" pomiędzy kamieniami terapii. */
+        var przedOdn = !!(poprzednia.przedOdniesieniem || wynik.seria[c].przedOdniesieniem);
         wynik.klasy.push({
           od: poprzednia.klasa, do: kl, kierunek: kierunek,
           tydzien: wynik.seria[c].tydzien, dateISO: wynik.seria[c].dateISO,
+          przedOdniesieniem: przedOdn,
         });
         /* Wyjście z otyłości — moment, który na wykresie ma własny kolor (makieta 2026-09-19). */
-        if (KLASY_OTYLOSCI[poprzednia.klasa.klucz] && !KLASY_OTYLOSCI[kl.klucz]) {
+        if (!przedOdn && KLASY_OTYLOSCI[poprzednia.klasa.klucz] && !KLASY_OTYLOSCI[kl.klucz]) {
           wynik.zdarzenia.push({
             typ: 'wyjscie-z-otylosci', tydzien: wynik.seria[c].tydzien, dateISO: wynik.seria[c].dateISO,
             opis: 'Pacjent wyszedł z zakresu otyłości: ' + poprzednia.klasa.etykieta + ' → ' + kl.etykieta + '.',

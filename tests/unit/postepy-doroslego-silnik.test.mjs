@@ -684,3 +684,111 @@ describe('P-POSTEPY audyt F2 — lek w wyniku, gdy silnik go zna', () => {
     expect(m.leczenie.stan).toBe('brak-danych');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────
+// AUDYT 2026-09-20, znaleziska F3 i F4: SCALANIE I KAMIENIE
+//
+// F3: klucz scalania (`wiekMies | wzrost | masa`) nie znał daty, więc dwie RÓŻNE wizyty o tej
+//     samej masie i wzroście w tym samym miesiącu zlewały się w jedną i druga data przepadała.
+//     Dla pacjenta na plateau to nie egzotyka, tylko definicja plateau.
+// F4: pętla przejść klas BMI szła po CAŁEJ serii, gdy reszta modelu — pasma, nadir, odzysk,
+//     utrata pasma — liczy się z `poOdniesieniu`. Pacjent, który tył rok przed włączeniem leku,
+//     dostawał przez to „Nadwaga → Otyłość II stopnia" z wagą „uwaga" między kamieniami terapii.
+// ─────────────────────────────────────────────────────────────────────────────────────────
+
+describe('P-POSTEPY audyt F3 — scalanie nie zlewa dwóch różnych wizyt', () => {
+  const W = (dateISO, weight) => ({ ageMonths: 624, ageYears: 52, height: 170, weight, dateISO });
+
+  it('dwie wizyty o tej samej masie w tym samym miesiącu zostają dwiema wizytami', () => {
+    const ser = silnik().scalSerie({
+      pomiary: [W('2026-01-05', 120), W('2026-01-28', 120), W('2026-07-06', 110)],
+      punktyLeczenia: [],
+    });
+    expect(ser.pomiary, 'plateau to nie duplikat').toHaveLength(3);
+    expect(ser.zrodla.scalone).toBe(0);
+    expect(ser.pomiary.map((p) => p.dateISO)).toEqual(['2026-01-05', '2026-01-28', '2026-07-06']);
+  });
+
+  it('ta sama wizyta z dwóch źródeł nadal liczy się raz — po to scalanie istnieje', () => {
+    // Kontrola pozytywna: gdyby klucz stał się zbyt ostry, wróciłby problem, który scalanie
+    // rozwiązuje — jedna wizyta zapisana i w osi czasu, i w monitorze otyłości.
+    const ser = silnik().scalSerie({
+      pomiary: [W('2026-01-05', 120)],
+      punktyLeczenia: [{ id: 's', type: 'start', ageYears: 52, ageMonths: 0, height: 170, weight: 120, dateISO: '2026-01-05' }],
+    });
+    expect(ser.pomiary).toHaveLength(1);
+    expect(ser.zrodla.scalone).toBe(1);
+    expect(ser.pomiary[0].zrodlo).toBe('oba');
+  });
+
+  it('punkt monitora BEZ daty dołącza do swojej datowanej bliźniaczki', () => {
+    // Druga reguła scalania: gdy jedna ze stron daty nie ma, to wciąż ta sama wizyta.
+    const ser = silnik().scalSerie({
+      pomiary: [W('2026-01-05', 120)],
+      punktyLeczenia: [{ id: 's', type: 'start', ageYears: 52, ageMonths: 0, height: 170, weight: 120 }],
+    });
+    expect(ser.pomiary).toHaveLength(1);
+    expect(ser.pomiary[0].dateISO, 'data z wpisu, który ją miał').toBe('2026-01-05');
+  });
+
+  it('trzeci zapis tej samej wizyty nie zakłada duplikatu', () => {
+    // Wpis bez daty dostaje ją przy pierwszym scaleniu, ale klucza nie przepisujemy — więc
+    // dopasowanie musi patrzeć na ŻYWĄ datę wpisu, nie na jego klucz.
+    const bezDaty = { ageMonths: 624, ageYears: 52, height: 170, weight: 120 };
+    const ser = silnik().scalSerie({
+      pomiary: [bezDaty, W('2026-01-05', 120)],
+      punktyLeczenia: [{ id: 's', type: 'start', ageYears: 52, ageMonths: 0, height: 170, weight: 120, dateISO: '2026-01-05' }],
+    });
+    expect(ser.pomiary).toHaveLength(1);
+    expect(ser.zrodla.scalone).toBe(2);
+  });
+});
+
+describe('P-POSTEPY audyt F4 — kamienie opisują okres od punktu odniesienia', () => {
+  // Pacjent tył przez rok, potem włączono lek. Przejścia klas sprzed włączenia to jego
+  // historia, a nie przebieg terapii.
+  const MODEL = () => silnik().analizuj({
+    wiekMies: 624,
+    punktyLeczenia: [{ id: 's', type: 'start', ageYears: 52, ageMonths: 6, weight: 120, height: 170, dateISO: '2026-07-06' }],
+    pomiary: [
+      { ageMonthsTotal: 618, weight: 85, height: 170, dateISO: '2025-07-06' },   // nadwaga
+      { ageMonthsTotal: 624, weight: 105, height: 170, dateISO: '2026-01-05' },  // otyłość I
+      { ageMonthsTotal: 630, weight: 120, height: 170, dateISO: '2026-07-06' },  // włączenie
+      { ageMonthsTotal: 633, weight: 110, height: 170, dateISO: '2026-10-05' },
+    ],
+  });
+
+  it('przejście klasy sprzed włączenia nie trafia na oś kamieni', () => {
+    const m = MODEL();
+    const przed = m.kamienie.filter((k) => typeof k.tydzien === 'number' && k.tydzien < 0);
+    expect(przed, 'nic przed zerem osi').toHaveLength(0);
+    expect(m.kamienie.map((k) => k.opis).join(' '))
+      .not.toContain('Nadwaga → Otyłość II stopnia');
+    // Poprawa z okresu leczenia zostaje.
+    expect(m.kamienie.map((k) => k.opis).join(' ')).toContain('Otyłość III stopnia → Otyłość II stopnia');
+  });
+
+  it('ale przejście zostaje w `klasy` jako fakt z historii, oznaczone flagą', () => {
+    // Nie kasujemy danych — odmawiamy tylko opowiadania nimi historii terapii.
+    const m = MODEL();
+    const historyczne = m.klasy.filter((k) => k.przedOdniesieniem);
+    expect(historyczne.length, 'przejścia sprzed włączenia są w modelu').toBeGreaterThan(0);
+    expect(m.klasy.some((k) => !k.przedOdniesieniem), 'i te z okresu leczenia też').toBe(true);
+  });
+
+  it('„wyjście z otyłości" sprzed włączenia nie koloruje wykresu na zielono', () => {
+    // To zdarzenie ma na wykresie własny kolor „dobrze". Sprzed leczenia przypisywałoby
+    // lekowi cudzy efekt.
+    const m = silnik().analizuj({
+      wiekMies: 624,
+      punktyLeczenia: [{ id: 's', type: 'start', ageYears: 52, ageMonths: 6, weight: 95, height: 170, dateISO: '2026-07-06' }],
+      pomiary: [
+        { ageMonthsTotal: 618, weight: 95, height: 170, dateISO: '2025-07-06' },  // otyłość I
+        { ageMonthsTotal: 624, weight: 84, height: 170, dateISO: '2026-01-05' },  // nadwaga — wyjście
+        { ageMonthsTotal: 630, weight: 95, height: 170, dateISO: '2026-07-06' },  // włączenie
+        { ageMonthsTotal: 633, weight: 90, height: 170, dateISO: '2026-10-05' },
+      ],
+    });
+    expect(m.zdarzenia.filter((z) => z.typ === 'wyjscie-z-otylosci'), 'sprzed włączenia — nie').toHaveLength(0);
+  });
+});
