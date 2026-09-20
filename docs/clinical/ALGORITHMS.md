@@ -5052,6 +5052,78 @@ SW 1.1.13 → **1.1.14**; nowy `vilda_postepy_doroslego_wydruk.js?v=1`, `vilda_p
 - **Rekord nadal nie zapisuje rzeczywistej daty osiągnięcia dawki podtrzymującej.** Punkt oceny liraglutydu stoi na kotwicy nominalnej — nazwanej i w interfejsie, i w stopce wariantu klinicznego. Dopisanie tej daty do monitora otyłości to osobna decyzja.
 - **Akceptacja kliniczna treści obu kartek** — zwłaszcza tego, że wariant dla pacjenta świadomie pomija regułę ChPL.
 - Plan P-POSTEPY po tej racie jest zamknięty.
+## Kliknięcie ściga się z płynnym przewijaniem i z domykaniem układu (P-BRAMKI-4, 2026-09-20)
+
+**Skąd znalezisko.** Zgłoszenie właściciela: `tests/e2e/klirens-stage0.spec.mjs` przy `--project=desktop-chromium --repeat-each=12 --workers=6` (84 przebiegi) daje około **1 flaky na przebieg zestawu**, za każdym razem w **innym teście tego pliku** — „element is not stable" na `check()`, zielono przy ponowieniu. Kontrolowane A/B właściciela wykluczyło dołożenie trzech tagów `<script defer>` do `kalkulator-klirens.html`: 1 flaky na 84 przebiegi po obu stronach. **Nie jest to usterka produktu** — żaden plik aplikacji nie był ruszany.
+
+`click()` i `check()` wymagają od Playwrighta stanu „stable": ten sam prostokąt elementu w dwóch kolejnych klatkach. Dopóki go nie ma, akcja nie pada od razu — idzie w pętlę ponowień i **zjada budżet testu**, aż zostanie przerwana tym komunikatem. Dwie rzeczy w tym pliku ruszają elementem akurat wtedy, gdy pada pierwsze kliknięcie.
+
+### Przyczyna pierwsza: każde przewinięcie jest animowane
+
+`style.css` ustawia `html,body{scroll-behavior:smooth}` — bez warunku `prefers-reduced-motion`. Zanim Playwright sprawdzi stabilność, sam sprowadza cel kliknięcia do widoku, a strona rozkłada to przewinięcie na kilkadziesiąt klatek. Elementy formularza klirensu stoją nisko (`#ktvToggle` na ~10 951 px), więc przejazd jest długi.
+
+Zmierzone (2026-09-20, desktop-chromium, Chromium 1194, jeden worker, maszyna bezczynna) — `check(#ktvToggle)` po `openCalculator` i trzech `fill`:
+
+| wariant | czas akcji |
+|---|---|
+| kod sprzed poprawki | **2677 ms** |
+| `page.emulateMedia({ reducedMotion: 'reduce' })` | **2702 ms** — Chromium tym tego przewijania nie wyłącza |
+| natychmiastowy `scrollIntoView` + cisza trzech klatek (poprawka) | **111 ms** |
+
+Ślad `scrollY` klatka po klatce w pierwszym wariancie: ciągły przejazd 0 → 10 632 px przez ~2,8 s. Przy sześciu workerach klatki są rzadsze, a ponowienia dłuższe — wtedy 60-sekundowy budżet testu potrafi się w tej pętli skończyć.
+
+### Przyczyna druga: układ domyka się po bramkach `openCalculator`
+
+Strona dociąga arkusz Google Fonts linkiem `media="print" onload="this.media='all'"`, czyli **celowo poza ścieżką renderu**; plik fontu Inter przychodzi jeszcze później i podmienia krój w całym dokumencie (`display=swap`). `openCalculator` czeka tylko na globalne funkcje kalkulatora — a te pochodzą ze skryptów `defer` i bywają gotowe wcześniej.
+
+Zmierzone (2026-09-20, plik fontu opóźniony o 3 s przez `page.route`, reszta testu bez zmian):
+
+| moment | stan strony | `#ktvToggle` | wysokość dokumentu |
+|---|---|---|---|
+| zaraz po `openCalculator` | `readyState: "interactive"`, `fonts.status: "loading"` | 10 951 px | 13 553 px |
+| 2357 ms później | `readyState: "complete"`, `fonts.status: "loaded"` | **10 735 px** | **13 337 px** |
+
+Kliknięcie wysłane w to okno trafia w element, który za chwilę przeskoczy o 216 px.
+
+### Poprawka
+
+- `tests/support/uklad-czekanie.mjs` (nowy). Sprawdzone najpierw, czy wystarczą istniejące pomocniki: `karta-czekanie.mjs` pilnuje leniwego renderu zakładki „Historia", `sejf-czekanie.mjs` czeka na stan sejfu — żaden nie dotyczy układu strony, więc moduł jest nowy, w tej samej konwencji.
+  - `czekajNaUstabilizowanyUklad(page)` — `readyState === "complete"` (to obejmuje odroczony arkusz) **i** `fonts.status === "loaded"` (to obejmuje podmianę kroju) **i** niezmieniony przepływ dokumentu przez trzy kolejne klatki.
+  - `ustawNaMiejscu(locator)` — przewija element na środek widoku `behavior: "instant"` (unieważnia trwającą animację i zdejmuje z Playwrighta potrzebę przewijania), potem czeka, aż jego prostokąt i pozycja przewinięcia będą identyczne przez trzy klatki.
+  - `zaznacz(locator)` / `kliknij(locator)` — `check()` / `click()` poprzedzone tą bramką.
+- `klirens-stage0` — **wszystkie** akcje wymagające stabilności przechodzą przez bramkę, nie tylko zgłoszony test: kliknięcie „Korzystaj bez logowania" (arkusz autoryzacji wjeżdża animacją 0,26 s), bramka układu na końcu `openCalculator`, sześć potwierdzeń zbiórki moczu, próbka surowicy, trzy potwierdzenia Kt/V, trzy `#ktvToggle` i `#suspectedAKI`.
+
+Bramki czekają na **warunek**, nie na zegar: `waitForFunction` odpytywane co klatkę (domyślne `polling: "raf"`) liczy kolejne klatki o identycznym prostokącie — to ta sama definicja stabilności, której używa sam Playwright, tylko postawiona **przed** akcją, a nie w jej budżecie. Predykaty są synchroniczne, więc strażnik z P-BRAMKI-3 zostaje spełniony.
+
+**Asercje bez zmian.** Żaden `expect` nie został ruszony, dodany ani osłabiony; `check()` i `click()` nadal przechodzą pełną kontrolę „actionability" Playwrighta. Bramka pilnuje tylko, żeby kliknięcie trafiało w element stojący w miejscu.
+
+### Walidacja
+
+`CI=1 PLAYWRIGHT_WORKERS=6 npx playwright test --project=desktop-chromium tests/e2e/klirens-stage0.spec.mjs --repeat-each=12` — **84/84 zdane, 0 flaky**, kod wyjścia 0. Pełny `npm test`: polityka repozytorium, lint, składnia, **2815 testów jednostkowych w 165 plikach** (w tym strażnik bramek), regresja PRO — zielone.
+
+Uczciwie: na maszynie, na której to naprawiano, samego flaka **nie udało się odtworzyć** — przebieg 84/84 był zielony także przed poprawką (cztery rdzenie, zablokowane wyjście do `fonts.googleapis.com`, więc druga przyczyna tam w ogóle nie występuje). Dowodem nie jest więc zielony przebieg, tylko pomiar pojedynczej akcji (2677 ms → 111 ms) i odtworzony przeskok układu po podstawieniu pliku fontu.
+
+Ubocznie plik jest szybszy — jeden worker, maszyna bezczynna, te same siedem testów:
+
+| test | przed | po |
+|---|---|---|
+| filtruje wzory na granicach wieku | 2,3 s | 2,4 s |
+| nie przypisuje kategorii G | 2,4 s | 2,4 s |
+| prezentuje białko, Pᵢ i lukę anionową | **7,1 s** | 3,6 s |
+| przelicza cystynę | **5,8 s** | 3,2 s |
+| Daugirdas II | **5,6 s** | 3,5 s |
+| Kt/V u dziecka 2–17 lat | **8,2 s** | 3,3 s |
+| opuszczenie PRO usuwa Kt/V | 2,7 s | 3,0 s |
+| **cały plik** | **35,3 s** | **22,9 s** |
+
+Trzy testy, które właściciel widział jako flaki, to dokładnie te trzy, które traciły najwięcej czasu w pętli ponowień. Jedyny, który nieznacznie zwolnił, to „opuszczenie PRO" — koszt samych bramek.
+
+**Bez zmian w produkcie** — żaden plik aplikacji nie był ruszany, więc bez podbicia `?v=` i `SW_VERSION`.
+
+**Do odnotowania, nie do naprawy tutaj.** Dwie rzeczy dla właściciela:
+
+1. `html,body{scroll-behavior:smooth}` w `style.css` obowiązuje **bez** `@media (prefers-reduced-motion: reduce)`. To pytanie o dostępność produktu, nie o test, i osobna decyzja — dlatego poprawka siedzi w teście, a nie w CSS. Gdyby ta reguła dostała warunek, pozostałe pliki e2e też przestałyby płacić za animowane przewijanie.
+2. Ten sam wzorzec — `click()`/`check()` bez upewnienia się, że element stoi — jest w innych plikach e2e dotykających `kalkulator-klirens.html`. Tutaj byłoby to poszerzeniem zlecenia; moduł `uklad-czekanie.mjs` jest gotowy do ponownego użycia.
 
 ## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
 

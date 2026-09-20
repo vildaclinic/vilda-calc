@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { czekajNaUstabilizowanyUklad, zaznacz, kliknij } from '../support/uklad-czekanie.mjs';
 
 async function openCalculator(page, version = 'basic') {
   await page.addInitScript(() => {
@@ -10,7 +11,7 @@ async function openCalculator(page, version = 'basic') {
     exact: true
   });
   await guestButton.waitFor({ state: 'visible' });
-  await guestButton.click();
+  await kliknij(guestButton);
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked')
   );
@@ -27,6 +28,9 @@ async function openCalculator(page, version = 'basic') {
     selectedVersion => window.currentVersion === selectedVersion,
     version
   );
+  // Globalne funkcje kalkulatora bywają gotowe, zanim dojdzie odroczony arkusz Google Fonts
+  // i plik fontu Inter — podmiana kroju przesuwa wtedy cały przepływ dokumentu.
+  await czekajNaUstabilizowanyUklad(page);
 }
 
 async function setPatient(page, {
@@ -60,13 +64,13 @@ async function confirmUrineCollectionProtocol(page) {
     'collectionNoExtraVoids',
     'collectionStorageFollowed'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
 }
 
 async function confirmTimedCollectionProtocol(page) {
   await confirmUrineCollectionProtocol(page);
-  await page.locator('#serumSampleDuringCollection').check();
+  await zaznacz(page.locator('#serumSampleDuringCollection'));
   await page.locator('#serumSampleAt').fill('2026-07-27T12:00');
 }
 
@@ -99,7 +103,7 @@ async function fillValidAdultKtv(page, overrides = {}) {
     'ktvPreBeforeDialysis',
     'ktvPreNoDilution'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
 }
 
@@ -176,7 +180,7 @@ test('nie przypisuje kategorii G bez stabilnej kreatyniny i blokuje wynik przy A
   await expect(page.locator('#clcrInfo')).toContainText('G1');
   await expect(page.locator('#clcrInfo')).not.toContainText('Klasyfikacja PChN');
 
-  await page.locator('#suspectedAKI').check();
+  await zaznacz(page.locator('#suspectedAKI'));
   expect(await page.evaluate(() => window.canComputeFormula('egfr'))).toBe(false);
   await expect(page.locator('#clcrInfo')).toContainText('Nie obliczono');
   await expect(page.locator('#clcrInfo')).not.toContainText('Kategoria GFR');
@@ -230,7 +234,7 @@ test('przelicza cystynę w spójnych jednostkach i nie stawia rozpoznania', asyn
 test('Daugirdas II dopuszcza UF=0, dobiera exact GFAC i czyści stary wynik', async ({ page }) => {
   await openCalculator(page, 'pro');
   await setPatient(page, { age: 50 });
-  await page.locator('#ktvToggle').check();
+  await zaznacz(page.locator('#ktvToggle'));
   await fillValidAdultKtv(page);
 
   await expect(page.locator('#ktvResult')).toBeVisible();
@@ -263,7 +267,7 @@ test('Kt/V u dziecka 2–17 lat pozostaje wynikiem technicznym bez dorosłych pr
   );
   expect(options).toContain('KTV');
 
-  await page.locator('#ktvToggle').check();
+  await zaznacz(page.locator('#ktvToggle'));
   await fillValidAdultKtv(page, { weight: 30 });
 
   await expect(page.locator('#ktvResult')).toBeVisible();
@@ -275,7 +279,7 @@ test('Kt/V u dziecka 2–17 lat pozostaje wynikiem technicznym bez dorosłych pr
 test('opuszczenie PRO bezwarunkowo usuwa Kt/V', async ({ page }) => {
   await openCalculator(page, 'pro');
   await setPatient(page, { age: 50 });
-  await page.locator('#ktvToggle').check();
+  await zaznacz(page.locator('#ktvToggle'));
   await fillValidAdultKtv(page);
   await expect(page.locator('#ktvResult')).toBeVisible();
 
