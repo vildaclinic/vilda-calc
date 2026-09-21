@@ -43,7 +43,6 @@ function policz(page, s) {
     window.ensureDietRecommendationsElements();
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', s.flaga !== false);
     flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 160); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -127,12 +126,11 @@ test('silnik: pasmo P75–P85, flaga obowiązkowa, cel ≥ P50, tempo 1 kg/mies.
   expect(norm(osiemnascie.text)).toContain('cel uzgodniony z pacjentem.');
 });
 
-test('generator: zdania Z1–Z6 nastolatka w obu rejestrach, liczby z silnika, talerz raty B bez zmian', async ({ page }) => {
+test('generator: zdania Z1–Z6 nastolatka, liczby z silnika, talerz raty B bez zmian', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   for (const s of [
     { age: 17, sex: 'F', h: 165, centyl: 80, celCentyl: 60 },
-    { age: 17, sex: 'F', h: 165, centyl: 80, celCentyl: 60, pf: true },
     { age: 16, sex: 'M', h: 176, centyl: 78, celCentyl: 55, pal: '1.6' }
   ]) {
     const w = await policz(page, s);
@@ -142,18 +140,17 @@ test('generator: zdania Z1–Z6 nastolatka w obu rejestrach, liczby z silnika, t
     expect(w.energia.dietaKlucz).toBe('light'); expect(w.energia.deficytKcal).toBe(Math.round(7700 / 30.4375));
     const kg = (w.w - w.cel).toFixed(1).replace('.', ',');
     // Z1
-    expect(t).toMatch(s.pf ? /^1\. Twój wzrost jest już zakończony, a BMI/u : /^1\. Wzrastanie zostało zakończone\. BMI/u);
+    expect(t).toMatch(/^1\. Wzrastanie zostało zakończone\. BMI/u);
     expect(t).toContain(`${w.cel.toFixed(1).replace('.', ',')} kg (BMI`);
     expect(t).toContain(`${kg} kg`);
-    expect(t).toMatch(s.pf ? /ustalony z rodzicami i lekarzem, a nie zalecenie lekarskie/u : /cel uzgodniony z pacjent(ką|em) i rodzicami/u);
+    expect(t).toMatch(/cel uzgodniony z pacjent(ką|em) i rodzicami/u);
     // Z2 — tempo 1 kg/mies., deficyt i kaloryczność z diety
     expect(t).toMatch(/1 kg miesięcznie/u);
     expect(t).toContain(`${w.energia.deficytKcal} kcal dziennie`);
     expect(t).toContain(`${w.energia.podazZaokrKcal} kcal dziennie`);
     expect(t).not.toContain('kg na tydzień'); expect(t).not.toMatch(/spoczynkow/u);
-    if (s.pf) expect(t).toContain('czyli jedzenie ok.');
     // normy liczone dla planu, nie dla utrzymania
-    expect(t).toMatch(s.pf ? /Przy kaloryczności planu około/u : /Normy żywieniowe dla planu około/u);
+    expect(t).toMatch(/Normy żywieniowe dla planu około/u);
     // Z3
     expect(w.czas.tygodnie).toBe(Math.max(1, Math.ceil((w.w - w.cel) / w.energia.tempoKgTydz)));
     expect(t).toMatch(/orientacyjnie około/u);
@@ -162,11 +159,11 @@ test('generator: zdania Z1–Z6 nastolatka w obu rejestrach, liczby z silnika, t
     // Z5 ruch: 60 minut + wzmacnianie mięśni 3 dni
     expect(w.zdania.ruch).toHaveLength(2);
     expect(zl(w, 'ruch')).toContain('60 minut'); expect(zl(w, 'ruch')).toMatch(/co najmniej 3 (dni|razy) w tygodniu ćwiczenia wzmacniające mięśnie|ćwiczenia wzmacniające mięśnie co najmniej 3 dni/u);
-    expect(zl(w, 'ruch')).toMatch(s.pf ? /^.*Kiedy jesteś na diecie redukcyjnej/u : /Podczas stosowania diety redukcyjnej/u);
+    expect(zl(w, 'ruch')).toMatch(/Podczas stosowania diety redukcyjnej/u);
     // Z6 kontrola
     expect(w.zdania.kontrola).toHaveLength(1);
     expect(zl(w, 'kontrola')).toContain('50. centyl'); expect(zl(w, 'kontrola')).toContain('4–6 tygodni');
-    expect(zl(w, 'kontrola')).toMatch(s.pf ? /powiedz o tym rodzicom lub lekarzowi/u : /zaburzeń odżywiania/u);
+    expect(zl(w, 'kontrola')).toMatch(/zaburzeń odżywiania/u);
     expect(w.punkty.kontrola.join(' ')).toContain('50. centyl'); expect(w.punkty.ruch.join(' ')).toMatch(/wzmacniające/u);
     for (const rola of Object.keys(w.zdania)) for (const zd of w.zdania[rola]) expect(t).toContain(norm(zd));
   }

@@ -30,7 +30,7 @@ function run(page, { age, months = 0, sex, w, h, click = null }) {
     window.ensureDietRecommendationsElements();
     const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
-    flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', false); flag('hydrationFlag', false); flag('patientFacingToggle', false);
+    flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', false); flag('hydrationFlag', false);
     if (click) { const bt = document.querySelector(`[data-diet-strategy-choice="${click}"]`); if (bt) bt.click(); }
     window.update();
     document.getElementById('generateEnergyDietBtn').click();

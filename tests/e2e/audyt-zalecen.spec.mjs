@@ -14,6 +14,7 @@ import { expect, test } from '@playwright/test';
 // (AAP 2021, Hornberger i Lane, doi 10.1542/peds.2020-040279); przy niedowadze bez ryzyka (≥ 5 lat)
 // ruch dla przyjemności bez wyczerpujących treningów; dorosły bez planu liczbowego (Z6) — ruch wg lekarza.
 // Dane FIKCYJNE.
+// P-DIETA-REJESTR rata G (2026-09-21): tryb „Dla pacjenta" usunięty — zostaje jeden, standardowy rejestr.
 
 async function otworz(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
@@ -27,7 +28,7 @@ async function otworz(page) {
 const norm = (v) => String(v == null ? '' : v).replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim();
 const zl = (w, rola) => norm((w.zdania[rola] || []).join(' '));
 
-/** Ustawia pacjenta (masa wprost albo z centyla BMI silnika) i rejestr; zwraca tekst, role, punkty i stan ryzyka. */
+/** Ustawia pacjenta (masa wprost albo z centyla BMI silnika); zwraca tekst, role, punkty i stan ryzyka. */
 function policz(page, s) {
   return page.evaluate(async (s) => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : String(v); };
@@ -45,7 +46,6 @@ function policz(page, s) {
     window.ensureDietRecommendationsElements();
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 160); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -56,14 +56,11 @@ function policz(page, s) {
 }
 
 const NADZOR_PRO_13 = 'Niedowaga z cechami ryzyka zaburzeń odżywiania (masa poniżej 85 % należnej; BMI poniżej 2. centyla) wymaga pilnej oceny przyczyn klinicznych i trajektorii wzrastania. Plan żywieniowy dla przyrostu masy ciała musi nadzorować lekarz z dietetykiem klinicznym; nie zaleca się ograniczania energii ani produktów. Do rozważenia konsultacja psychologiczna.';
-const NADZOR_PAC = 'Twoja masa ciała jest wyraźnie za niska albo szybko spadła – potrzebna jest szybka wizyta u lekarza, który razem z dietetykiem klinicznym ustali z Tobą plan jedzenia. Nie ograniczaj jedzenia i nie pomijaj posiłków; pomocna może być też rozmowa z psychologiem.';
 const RUCH_RYZ_PRO = 'Do czasu oceny klinicznej nie zaleca się zwiększania aktywności fizycznej; jej zakres ustala lekarz prowadzący.';
-const RUCH_RYZ_PAC = 'Nie zwiększaj teraz ilości ćwiczeń – o tym, ile ruchu jest dla Ciebie bezpieczne, zdecyduje lekarz.';
 const TERMIN_PRO = 'Termin i częstość kontroli masy ciała i wzrostu ustala lekarz prowadzący; brak przyrostu lub dalszy spadek masy ciała wymaga wcześniejszej wizyty.';
-const TERMIN_PAC = 'O tym, jak często się ważyć, zdecyduje lekarz; jeśli masa ciała nie rośnie albo dalej spada, powiedz o tym rodzicom lub lekarzowi.';
 const RUCH_PRZ_PRO = 'Aktywność fizyczna w zwykłym zakresie dla wieku pozostaje wskazana, najlepiej jako zabawa i sport dla przyjemności; przy niedowadze należy unikać długich, wyczerpujących treningów wytrzymałościowych.';
 
-test('ryzyko ZO u 13‑latka: jedno zdanie o nadzorze z powodami modułu ryzyka, bez „60 minut”, ruch i kontrola wg lekarza (oba rejestry)', async ({ page }) => {
+test('ryzyko ZO u 13‑latka: jedno zdanie o nadzorze z powodami modułu ryzyka, bez „60 minut”, ruch i kontrola wg lekarza', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const pro = await policz(page, { age: 13, sex: 'M', h: 158, centyl: 1 });
@@ -85,17 +82,6 @@ test('ryzyko ZO u 13‑latka: jedno zdanie o nadzorze z powodami modułu ryzyka,
   // Z5 i kontrola A scalone: o nadzorze mówi dokładnie jedno zdanie
   expect((norm(pro.text).match(/dietetykiem klinicznym|dietetyka klinicznego/g) || []).length).toBe(1);
 
-  const pac = await policz(page, { age: 13, sex: 'M', h: 158, centyl: 1, pf: true });
-  const tp = norm(pac.text);
-  expect(tp).toContain(NADZOR_PAC);
-  for (const zakazane of ['60 minut', 'psychodietetyk', 'co 4–6 tygodni', 'Twoja masa ciała jest poniżej normy dla wieku', 'gry zespołowe']) expect(tp).not.toContain(zakazane);
-  expect(zl(pac, 'ruch')).toBe(RUCH_RYZ_PAC);
-  expect(pac.zdania.kontrola.length).toBe(2);
-  expect(norm(pac.zdania.kontrola[0])).toBe(NADZOR_PAC);
-  expect(norm(pac.zdania.kontrola[1])).toBe(TERMIN_PAC);
-  expect(pac.punkty.kontrola[0]).toBe('szybka wizyta u lekarza');
-  expect(pac.punkty.ruch).toEqual(['nie zwiększaj teraz ilości ćwiczeń', 'ile ruchu jest bezpieczne – zdecyduje lekarz']);
-
   // 15‑latka: tylko EBW < 85 % → w nawiasie jeden powód
   const n15 = await policz(page, { age: 15, sex: 'F', h: 160, centyl: 4 });
   expect(norm(n15.text)).toContain('Niedowaga z cechami ryzyka zaburzeń odżywiania (masa poniżej 85 % należnej) wymaga');
@@ -110,14 +96,9 @@ test('niedowaga bez cech ryzyka: ruch dla przyjemności bez wyczerpujących tren
   expect(norm(d8.text)).not.toContain('60 minut');
   expect(norm(d8.zdania.kontrola[1])).toContain('co 4–6 tygodni'); // bez ryzyka kontrola raty D bez zmian
   expect(d8.punkty.ruch).toEqual(['ruch w zwykłym zakresie dla wieku – zabawa i sport dla przyjemności', 'bez długich, wyczerpujących treningów wytrzymałościowych']);
-  const d8p = await policz(page, { age: 8, sex: 'F', h: 128, centyl: 4, pf: true });
-  expect(zl(d8p, 'ruch')).toBe('Ruch dla przyjemności pozostaje wskazany – zabawa, sport, spacery; przy niedowadze proszę unikać długich, wyczerpujących treningów wytrzymałościowych dziecka.');
   const n12 = await policz(page, { age: 12, sex: 'F', h: 150, centyl: 4 });
   expect(n12.risk.any).toBe(false);
   expect(zl(n12, 'ruch')).toBe(RUCH_PRZ_PRO);
-  const n12p = await policz(page, { age: 12, sex: 'F', h: 150, centyl: 4, pf: true });
-  expect(zl(n12p, 'ruch')).toBe('Ruch dla przyjemności jest nadal wskazany – sport, zabawa, spacery. Unikaj jednak długich, wyczerpujących treningów i nie ćwicz po to, żeby «spalić» posiłek.');
-  expect(n12p.punkty.ruch).toEqual(['ruch dla przyjemności – sport, zabawa, spacery', 'bez długich, wyczerpujących treningów', 'nie ćwicz po to, żeby «spalić» posiłek']);
   // maluch: bez zmian (rata E)
   const m3 = await policz(page, { age: 3, sex: 'F', h: 100, w: 12 });
   expect(zl(m3, 'ruch')).toContain('180 minut');
@@ -135,8 +116,6 @@ test('dorosły: bez planu liczbowego (Z6) ruch wg lekarza; z planem liczbowym ć
   expect(zl(z6, 'ruch')).toBe(RUCH_RYZ_PRO);
   expect(norm(z6.text)).not.toContain('oporowych');
   expect(z6.punkty.ruch).toEqual(['bez zwiększania aktywności fizycznej do czasu oceny klinicznej', 'zakres aktywności ustala lekarz prowadzący']);
-  const z6p = await policz(page, { age: 30, sex: 'F', h: 168, w: 44, pf: true });
-  expect(zl(z6p, 'ruch')).toBe(RUCH_RYZ_PAC);
   const plan = await policz(page, { age: 28, sex: 'F', h: 168, w: 50 });
   expect(plan.gp && plan.gp.available).toBe(true);
   expect(zl(plan, 'ruch')).toContain('ćwiczeniach oporowych 2–3 razy w tygodniu');
@@ -154,6 +133,7 @@ test('plan SMART usunięty: brak zakładek, ankiety, budowniczego i wariantów; 
       survey: q('[data-diet-survey-key]'), mythNext: q('[data-diet-myth-next]'),
       directButtons: Array.from(document.querySelectorAll('[data-diet-report-direct]')).map((b) => b.getAttribute('data-diet-report-direct')),
       energyBtn: q('#generateEnergyDietBtn'), copyBtn: q('[data-diet-copy-result="energy"]'),
+      audience: q('[data-diet-audience-choice]'), pfToggle: q('#patientFacingToggle'),
       builder: typeof window.buildDietSmartRecommendationResult, myth: typeof window.dietRecommendationsRequestNewMyth, mythLib: typeof window.dietMythLibrary,
       apiSmart: typeof api.buildSmartRecommendationResult, apiMode: typeof api.getActiveMode, apiEnergy: typeof api.buildEnergyRecommendationResult,
       intro: (document.querySelector('#dietRecommendationsContent .diet-card-intro p') || {}).textContent || '',
@@ -161,6 +141,7 @@ test('plan SMART usunięty: brak zakładek, ankiety, budowniczego i wariantów; 
   });
   expect(dom.tabs).toBe(0); expect(dom.smartPanel).toBe(0); expect(dom.pdfPanel).toBe(0); expect(dom.smartBtn).toBe(0);
   expect(dom.survey).toBe(0); expect(dom.mythNext).toBe(0);
+  expect(dom.audience).toBe(0); expect(dom.pfToggle).toBe(0); // rata G: bez trybu „Dla pacjenta"
   expect(dom.directButtons).toEqual(['classic']);
   expect(dom.energyBtn).toBe(1); expect(dom.copyBtn).toBe(1);
   expect(dom.builder).toBe('undefined'); expect(dom.myth).toBe('undefined'); expect(dom.mythLib).toBe('undefined');

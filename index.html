@@ -1361,14 +1361,6 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
                 <p class="diet-control-hint" data-diet-goal-hint></p>
               </div>
 
-              <div class="diet-energy-control-card">
-                <span class="diet-control-title">Język zaleceń</span>
-                <div class="diet-segmented-control" data-diet-audience-proxy>
-                  <button type="button" data-diet-audience-choice="patient">Dla pacjenta</button>
-                  <button type="button" data-diet-audience-choice="specialist" class="is-active">Standardowy</button>
-                </div>
-                <p class="diet-control-hint" id="dietAudienceHint">Neutralny, standardowy język zaleceń.</p>
-              </div>
             </div>
 
             <div class="diet-legacy-hidden-controls" aria-hidden="true">
@@ -1379,10 +1371,6 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
               <div class="diet-toggle-group" id="stabilizationGroup">
                 <span class="toggle-label" id="stabilizationToggleLabel">Stabilizacja masy</span>
                 <label class="switch-diet"><input type="checkbox" id="stabilizationToggle"><span class="slider"></span></label>
-              </div>
-              <div class="diet-toggle-group">
-                <span class="toggle-label" id="patientFacingToggleLabel">Standardowy</span>
-                <label class="switch-diet"><input type="checkbox" id="patientFacingToggle"><span class="slider"></span></label>
               </div>
             </div>
 
@@ -1795,7 +1783,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_DIET = 'vilda_diet_recommendations.js?v=42';
+  var SRC_DIET = 'vilda_diet_recommendations.js?v=43';
   var SRC_PR = 'vilda_patient_report.js?v=31';
   var started = false;
   function inject(src, onload) {

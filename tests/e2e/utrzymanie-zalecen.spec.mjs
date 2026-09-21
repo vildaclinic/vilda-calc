@@ -45,7 +45,6 @@ function policz(page, s) {
     window.ensureDietRecommendationsElements();
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 140); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -70,12 +69,11 @@ const ALKOHOL = /alkohol (jest kaloryczny|też ma kalorie), ale przede wszystkim
 const PLATKI = /granole i musli typu „crunchy”.*syrop glukozowo-fruktozowy.*płatki naturalne bez dodatku cukru/iu;
 const PRZEDMOWA = /charakter poglądowy/u;
 
-test('dorosły w normie: talerz utrzymaniowy, osobne zdanie o alkoholu, ruch, bez kontroli — oba rejestry', async ({ page }) => {
+test('dorosły w normie: talerz utrzymaniowy, osobne zdanie o alkoholu, ruch, bez kontroli', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   for (const s of [
     { age: 30, sex: 'M', h: 180, w: 72 },
-    { age: 30, sex: 'M', h: 180, w: 72, pf: true },
     { age: 45, sex: 'F', h: 165, w: 51 },                 // BMI 18,7 — tuż nad dolną granicą normy
     { age: 24, sex: 'F', h: 170, w: 65.5 }                // BMI 22,7 — poniżej górnej normy (23,0)
   ]) {
@@ -102,17 +100,15 @@ test('dorosły w normie: talerz utrzymaniowy, osobne zdanie o alkoholu, ruch, be
     // punkty raportu: talerz i ruch mają wersję punktową
     expect(Array.isArray(w.punkty.talerz) && w.punkty.talerz.length >= 4).toBe(true);
     expect(Array.isArray(w.punkty.ruch) && w.punkty.ruch.length >= 1).toBe(true);
-    if (s.pf) expect(zl(w, 'talerz')).toMatch(/^Proszę jeść regularnie/u);
-    else expect(zl(w, 'talerz')).toMatch(/^Warto opierać jadłospis/u);
+    expect(zl(w, 'talerz')).toMatch(/^Warto opierać jadłospis/u);
   }
 });
 
-test('nastolatek w normie (11–17 lat): talerz + płatki „crunchy", bez alkoholu, bez kontroli — oba rejestry', async ({ page }) => {
+test('nastolatek w normie (11–17 lat): talerz + płatki „crunchy", bez alkoholu, bez kontroli', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   for (const s of [
     { age: 12, sex: 'F', h: 150, w: 40 },
-    { age: 12, sex: 'F', h: 150, w: 40, pf: true },
     { age: 17, sex: 'M', h: 178, w: 68 },
     { age: 11, sex: 'M', h: 145, centyl: 50 }
   ]) {
@@ -131,8 +127,7 @@ test('nastolatek w normie (11–17 lat): talerz + płatki „crunchy", bez alkoh
     for (const r of RESTRYKCJE) expect(t, 'restrykcja u nastolatka w normie: ' + r).not.toContain(r);
     expect(t).not.toMatch(PRZEDMOWA);
     for (const rola of Object.keys(w.zdania)) for (const zd of w.zdania[rola]) expect(t).toContain(norm(zd));
-    if (s.pf) expect(zl(w, 'talerz')).toMatch(/^Jedz regularnie, ze śniadaniem/u);
-    else expect(zl(w, 'talerz')).toMatch(/^Zalecane są regularne posiłki \(w tym śniadanie\)/u);
+    expect(zl(w, 'talerz')).toMatch(/^Zalecane są regularne posiłki \(w tym śniadanie\)/u);
   }
 });
 
@@ -141,7 +136,6 @@ test('dziecko 5–10 lat w normie: talerz w spokojnej atmosferze, bez płatków,
   await otworz(page);
   for (const s of [
     { age: 8, sex: 'F', h: 128, w: 25 },
-    { age: 8, sex: 'F', h: 128, w: 25, pf: true },
     { age: 5, months: 6, sex: 'M', h: 112, w: 19 },
     { age: 10, months: 11, sex: 'M', h: 142, centyl: 50 }   // ostatni miesiąc przed pasmem nastolatka
   ]) {
@@ -161,7 +155,6 @@ test('dziecko 5–10 lat w normie: talerz w spokojnej atmosferze, bez płatków,
     expect(t).not.toMatch(PRZEDMOWA);
     expect(t).not.toMatch(/wymaga konsultacji/u);
     for (const rola of Object.keys(w.zdania)) for (const zd of w.zdania[rola]) expect(t).toContain(norm(zd));
-    if (s.pf) expect(zl(w, 'talerz')).toMatch(/^Proszę podawać dziecku regularne posiłki/u);
   }
   // 2–4 lata: strategia „utrzymanie", ruch WHO 180 minut; talerz małego dziecka od raty E (P-DIETA-MALUCH)
   const maly = await policz(page, { age: 3, sex: 'F', h: 100, w: 15.5 });

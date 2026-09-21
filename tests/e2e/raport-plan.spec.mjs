@@ -32,7 +32,7 @@ function zbuduj(page, s) {
     set('name', 'Jan Testowy');
     set('age', s.age); set('ageMonths', s.months || 0); set('sex', s.sex); set('weight', s.w); set('height', s.h);
     window.ensureDietRecommendationsElements();
-    ['reduceToggle', 'stabilizationToggle', 'growthEndedFlag', 'patientFacingToggle'].forEach((id) => flag(id, false));
+    ['reduceToggle', 'stabilizationToggle', 'growthEndedFlag'].forEach((id) => flag(id, false));
     ['nutritionNormsFlag', 'journeyFlag', 'vitDSuppFlag', 'hydrationFlag'].forEach((id) => flag(id, s.opcje !== false));
     window.update();
     await new Promise((r) => { setTimeout(r, 180); });

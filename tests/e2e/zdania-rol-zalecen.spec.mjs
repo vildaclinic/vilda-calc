@@ -37,7 +37,6 @@ function policz(page, s) {
     const opcje = s.opcje !== false;
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('nutritionNormsFlag', opcje); flag('journeyFlag', opcje); flag('vitDSuppFlag', opcje); flag('hydrationFlag', opcje);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 120); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -95,19 +94,7 @@ test('pasma wieku: 3-latka dostaje 180 minut rozłożone w ciągu dnia, nastolat
   expect(ruchMale).not.toContain('60 minut każdego dnia');
 });
 
-test('rejestr „Dla pacjenta" zmienia brzmienie ról, a nie ich przypisanie', async ({ page }) => {
-  test.setTimeout(120_000);
-  await otworz(page);
-  const pro = await policz(page, { age: 14, months: 6, sex: 'F', w: 75, h: 150, pf: false });
-  const pac = await policz(page, { age: 14, months: 6, sex: 'F', w: 75, h: 150, pf: true });
-
-  rolePokrywajaTekst(pro);
-  rolePokrywajaTekst(pac);
-  expect(Object.keys(pro.zdania).sort()).toEqual(Object.keys(pac.zdania).sort());
-  // inne brzmienie (rejestr osobowy), ta sama rola
-  expect(norm(pro.zdania.ruch[0])).not.toBe(norm(pac.zdania.ruch[0]));
-  expect(norm(pac.zdania.ruch[0])).toContain('minut');
-});
+// (test rejestru „Dla pacjenta" usuniety w P-DIETA-REJESTR rata G: zostal jeden rejestr)
 
 test('kontrole ujemne: brak zdania to brak roli, a role nie przeciekaja miedzy pacjentami', async ({ page }) => {
   test.setTimeout(120_000);
