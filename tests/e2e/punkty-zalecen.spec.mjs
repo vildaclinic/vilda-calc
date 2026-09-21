@@ -176,8 +176,12 @@ test('kontrola ujemna: brak zalecen to brak punktow, i punkty nie przeciekaja mi
   const zPunktami = await policz(page, { age: 42, sex: 'M', w: 108, h: 178 });
   expect(Object.keys(zPunktami.punkty).sort()).toEqual(['kontrola', 'ruch', 'talerz']);
 
+  // P-DIETA-UTRZYMANIE rata B: dorosly w normie ma WLASNE punkty talerza i ruchu, ale nie ma kontroli;
+  // punkty talerza roznia sie od punktow otylosci — przeciek zbiornika pokazalby liste otylosci.
   const wNormie = await policz(page, { age: 30, sex: 'M', w: 72, h: 180 });
-  expect(wNormie.punkty).toEqual({});
+  expect(Object.keys(wNormie.punkty).sort()).toEqual(['ruch', 'talerz']);
+  expect(wNormie.punkty.kontrola).toBeUndefined();
+  expect(wNormie.punkty.talerz).not.toEqual(zPunktami.punkty.talerz);
 
   const znowu = await policz(page, { age: 42, sex: 'M', w: 108, h: 178 });
   expect(znowu.punkty).toEqual(zPunktami.punkty);

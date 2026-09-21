@@ -115,10 +115,11 @@ test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjn
   expect(text).not.toMatch(/wyrośnie|wyrosn/u);
   expect(text).not.toContain('deficyt');
   // P-DIETA-NIEDOWAGA rata A (decyzja właściciela 2026-09-21): lista „na talerzu" to lista
-  // restrykcyjna dla otyłości („należy ograniczać…") i pada WYŁĄCZNIE przy nadmiarze. Dziecko
-  // w normie dostaje ruch; łagodne zdania o talerzu dla normy to rata B („utrzymanie").
+  // restrykcyjna dla otyłości („należy ograniczać…") i pada WYŁĄCZNIE przy nadmiarze.
+  // P-DIETA-UTRZYMANIE rata B: dziecko w normie dostaje łagodny talerz (regularne posiłki) i ruch.
   expect(text).not.toMatch(/ogranicza(ć|j) (tłuste|fast)/u);
   expect(text).not.toContain('żółty ser');
+  expect(text).toMatch(/regularne posiłki/u);
   expect(text).toMatch(/60 minut/);
 });
 
@@ -499,14 +500,18 @@ test('DIET-UNDER10-DISCLAIMER: dyskleimer poniżej 10 lat pada w trybie profesjo
   });
   expect(older).not.toContain('poglądowy');
   expect(older).not.toMatch(/endokrynolog/u);
-  // Uwaga z przeglądu PR #109: dziecko <10 lat z BMI w NORMIE (ścieżka WHR)
-  // dostaje wariant neutralny — bez fałszywej klasyfikacji „z nadwagą lub otyłością".
+  // Uwaga z przeglądu PR #109: dziecko <10 lat z BMI w NORMIE nie dostaje fałszywej klasyfikacji
+  // „z nadwagą lub otyłością". P-DIETA-UTRZYMANIE rata B (decyzja właściciela 2026-09-21): dziecko
+  // w normie nie dostaje też dyskleimera „plan ma charakter poglądowy" ani zalecenia konsultacji —
+  // przedmowa pada tylko przy nadmiarze i niedowadze.
   const normalBmi = await generate(page, {
     ageYears: 8, sex: 'F', weightKg: 26, heightCm: 130,
   });
-  expect(normalBmi).toContain('poglądowy');
-  expect(normalBmi).toMatch(/endokrynolog(iem|a) dziecięc/u);
+  expect(normalBmi).not.toContain('poglądowy');
+  expect(normalBmi).not.toMatch(/endokrynolog/u);
   expect(normalBmi).not.toContain('z nadwagą lub otyłością');
+  expect(normalBmi).toContain('w granicach normy');
+  expect(normalBmi).toContain('spokojnej atmosferze');
 });
 
 // DIET-PAL-P97-BOUNDARY: regresja brzegowa progu otyłości 97c po ujednoliceniu
