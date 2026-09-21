@@ -5742,7 +5742,7 @@ rodzic dostaje ten sam tekst, który widzi lekarz. Treść merytoryczna, liczby 
   `punkty-zalecen` „rozpisanie jest osobne dla kazdego rejestru", `zdania-rol-zalecen` „rejestr «Dla pacjenta»
   zmienia brzmienie ról". `audyt-zalecen.spec` sprawdza dodatkowo brak kontrolki i przełącznika w DOM.
 - Smoke `rataF/smoke3.mjs` po zmianie: przełącznik nieobecny, wszystkie 25 scenariuszy w brzmieniu
-  standardowym. Pełny zestaw e2e desktop: WYNIK_E2E_G.
+  standardowym. Pełny zestaw e2e desktop: 644 passed, 1 skipped, 0 failed (14,8 min).
 
 ### Długi po racie G
 
