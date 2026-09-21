@@ -4,8 +4,9 @@ import { expect, test } from '@playwright/test';
 //
 // Testy pilnują jednej rzeczy: raport NICZEGO NIE WYMYŚLA. Każda liczba na kartce musi być
 // tą samą liczbą, którą oddał generator (`dane`) albo drabinka celów, a każde zalecenie —
-// zdaniem generatora (`dane.zdania`). Dlatego asercje nie mają wpisanych wartości: budują
-// oczekiwany napis z danych i szukają go w wyrenderowanym HTML.
+// punktem generatora (`dane.punkty`, rozpisanie tego samego zdania — P-RAPORT-PUNKTY).
+// Dlatego asercje nie mają wpisanych wartości: budują oczekiwany napis z danych i szukają
+// go w wyrenderowanym HTML.
 //
 // Dane FIKCYJNE.
 
@@ -78,7 +79,7 @@ test('dorosły z otyłością: każda liczba raportu pochodzi z danych generator
   expect(t).toContain(d.normy.zrodlo.replace(/\s+/g, ' '));
 });
 
-test('trzy kolumny cytują zdania generatora co do znaku', async ({ page }) => {
+test('trzy kolumny cytują punkty generatora co do znaku', async ({ page }) => {
   test.setTimeout(120_000);
   await otworz(page);
   for (const s of [
@@ -88,13 +89,16 @@ test('trzy kolumny cytują zdania generatora co do znaku', async ({ page }) => {
   ]) {
     const w = await zbuduj(page, s);
     const t = tekstZHtml(w.html);
-    const z = w.dane.zdania || {};
+    const z = w.dane.punkty || {};
     expect(Object.keys(z).length).toBeGreaterThan(0);
+    // kolumny pokazują PUNKTY, a nie pełne zdania — ale punkty są rozpisaniem tych samych
+    // zdań i podlegają P-RAPORT-PUNKTY, więc kartka nadal nie mówi nic od siebie
     Object.keys(z).forEach((rola) => {
       z[rola].forEach((zd) => {
         expect(t, 'rola ' + rola + ' u pacjenta ' + s.age + ' lat').toContain(norm(zd));
       });
     });
+    expect(w.html, 'kolumny nie są listą punktów').toContain('<li>');
   }
 });
 
@@ -103,9 +107,9 @@ test('pasma wieku docierają na kartkę: 3-latka ma 180 minut, nastolatka 60', a
   await otworz(page);
   const male = tekstZHtml((await zbuduj(page, { age: 3, sex: 'F', w: 22, h: 100 })).html);
   const nasto = tekstZHtml((await zbuduj(page, { age: 14, months: 6, sex: 'F', w: 75, h: 150 })).html);
-  expect(male).toContain('co najmniej 180 minut dziennie, rozłożona w ciągu dnia');
+  expect(male).toContain('co najmniej 180 minut aktywności ruchowej dziennie, rozłożonej w ciągu dnia');
   expect(male).toContain('maksymalne ograniczenie czasu przed ekranem');
-  expect(nasto).toContain('co najmniej 60 minut każdego dnia');
+  expect(nasto).toContain('co najmniej 60 minut aktywności fizycznej każdego dnia');
   // kontrola ujemna: pasma wieku nie mogą się przemieszać na kartce
   expect(nasto).not.toContain('180 minut');
   expect(male).not.toContain('60 minut każdego dnia');
@@ -163,7 +167,7 @@ test('kontrola ujemna: pacjent z niedowagą nie dostaje planu redukcji', async (
   expect(t).not.toContain('TWOJA DROGA');
   expect(t).not.toContain('tempo redukcji');
   // ale zalecenia żywieniowe dla niedowagi zostają — to jest sedno tego raportu
-  const z = w.dane.zdania || {};
+  const z = w.dane.punkty || {};
   expect(Object.keys(z).length).toBeGreaterThan(0);
   Object.keys(z).forEach((rola) => { z[rola].forEach((zd) => { expect(t).toContain(norm(zd)); }); });
 });
