@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.33';
+const SW_VERSION = '1.1.34';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -124,6 +124,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=71',
   '/style.css?v=72',
   '/style.css?v=73',
+  '/style.css?v=74',
   '/lab_clinical_panels.js?v=141',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
   '/inline_docpro_00.js?v=1',
@@ -1900,6 +1901,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_update_prep.js?v=86',
   '/vilda_update_prep.js?v=87',
   '/vilda_update_prep.js?v=88',
+  '/vilda_update_prep.js?v=89',
   '/custom-fixes.js?v=58',
   '/custom-fixes.js?v=59',
   '/custom-fixes.js?v=60',

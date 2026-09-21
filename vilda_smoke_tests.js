@@ -104,7 +104,7 @@
     'vilda_dob_age.js?v=7',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
-    'vilda_update_prep.js?v=88',
+    'vilda_update_prep.js?v=89',
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=11',
     'vilda_persist_runtime.js?v=16',

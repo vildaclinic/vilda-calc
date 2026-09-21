@@ -5768,6 +5768,12 @@ tryb pacjenta + blokada; nagłówki raportu). Mutacje (8, wszystkie czerwone): p
 blokady ryzyka; bez dolnej granicy; dieta umiarkowana; strategia „utrzymanie" zamiast celu; pole poza
 trybem pro; karta „Cel" od 25.
 
+**Rata C-ui (SW 1.1.34, 2026-09-21; uwaga właściciela do zrzutów).** Sekcja celu w karcie „Droga do normy BMI"
+przeniesiona **nad wynik** (wejście steruje panelem poniżej) i przerysowana w stylu segmentów panelu drogi:
+etykieta „CEL", segment „Utrzymanie / Cel własny", pole „Masa docelowa … kg" widoczne po wyborze celu,
+podpowiedź kursywą (blokada z historii masy jako bursztynowa nota). Ten sam stan i ta sama wartość co w karcie
+„Cel" w Zaleceniach energetycznych (`#customGoalKg`). Bez zmian w silniku i zdaniach.
+
 **Znane ograniczenia.** Cel nie jest zapisywany w rekordzie pacjenta (żyje w stanie sesji jak PAL);
 klasyczny PDF „Droga do normy" nie ma sekcji panelu przy celu własnym (używa `distanceToNormalBMI`).
 
