@@ -112,7 +112,8 @@ test('dorosly z prawidlowym BMI: brak celu redukcji zamiast celu rownego normie'
   const dane = w.dane;
 
   expect(dane.klasyfikacja.nadmiar).toBe(false);
-  expect(dane.strategia).toBeNull();
+  // P-DIETA-UTRZYMANIE rata B: norma dostaje strategie „utrzymanie" (bez celu redukcji, bez deficytu)
+  expect(dane.strategia).toBe('utrzymanie');
   // kontrola ujemna: pacjentowi w normie nie wolno podac „masy docelowej" nizszej od obecnej
   expect(dane.masa.docelowaKg).toBeNull();
   expect(dane.masa.doRedukcjiKg).toBeNull();

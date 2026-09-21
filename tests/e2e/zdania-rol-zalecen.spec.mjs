@@ -117,12 +117,15 @@ test('kontrole ujemne: brak zdania to brak roli, a role nie przeciekaja miedzy p
   const zRolami = await policz(page, { age: 42, sex: 'M', w: 108, h: 178 });
   expect(Object.keys(zRolami.zdania).sort()).toEqual(['kontrola', 'ruch', 'talerz']);
 
-  // to samo okno, dorosly w normie: generator nie pisze o talerzu ani o ruchu, wiec rol NIE MA.
-  // Gdyby zbiornik przeciekal, raport pokazalby zdrowemu pacjentowi zalecenia poprzedniego.
+  // to samo okno, dorosly w normie (P-DIETA-UTRZYMANIE rata B): generator pisze WLASNY, lagodny
+  // talerz i ruch, ale NIE pisze o kontroli. Gdyby zbiornik przeciekal, raport pokazalby zdrowemu
+  // pacjentowi role poprzedniego pacjenta: kontrole i restrykcyjny talerz otylosci.
   const wNormie = await policz(page, { age: 30, sex: 'M', w: 72, h: 180 });
-  expect(wNormie.zdania.talerz).toBeUndefined();
-  expect(wNormie.zdania.ruch).toBeUndefined();
+  expect(Object.keys(wNormie.zdania).sort()).toEqual(['ruch', 'talerz']);
   expect(wNormie.zdania.kontrola).toBeUndefined();
+  expect(wNormie.zdania.talerz).not.toEqual(zRolami.zdania.talerz);
+  expect(norm(wNormie.zdania.talerz.join(' '))).not.toMatch(/ogranicz(ać|yć) (tłuste|słodkie napoje, alkohol)/u);
+  rolePokrywajaTekst(wNormie);
   expect(norm(wNormie.text)).toContain('mieści się w zakresie prawidłowym');
 
   // i z powrotem — role wracaja dla pacjenta, ktory je ma

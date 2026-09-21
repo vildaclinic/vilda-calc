@@ -5696,6 +5696,82 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Strategia „utrzymanie" i otwarcie modułu dla prawidłowego BMI (P-DIETA-UTRZYMANIE rata B, SW 1.1.32, 2026-09-21)
+
+**Status:** zmiana kliniczna — nowy stan generatora zaleceń energetycznych i nowa reguła bramki widoczności
+modułu „Zalecenia dietetyczne" (`vilda_diet_recommendations.js`). Decyzja właściciela 2026-09-21: moduł ma
+być dostępny dla wszystkich pacjentów, „z głową"; zestaw zdań zatwierdzony przez właściciela z poprawkami
+(osobne zdanie o alkoholu, zdanie o płatkach „crunchy" z ogonem o płatkach naturalnych, bez przedmowy
+„plan ma charakter poglądowy" u dziecka w normie, bez „zmuszania do dojadania"). Wyniki liczbowe (energia
+utrzymania, normy, deficyt przy nadmiarze, masa docelowa) bez zmian.
+
+**Dotąd.** Bramka (P-DIETA-BRAMKA) otwierała moduł dorosłemu dopiero od BMI 25, dziecku od P85 (albo przy
+alarmie WHR). Generator dla normy pisał tylko zdanie klasyfikacji, normy żywieniowe i ruch; dorosły
+w górnej normie dostawał listę „ograniczyć słodkie napoje, alkohol…" wspólną z nadwagą; `dane.strategia`
+dla normy było `null`, więc raport pacjenta nie miał kafelka energii.
+
+**Zmiana.**
+1. **Bramka.** Przycisk widoczny, gdy dorosły ma BMI ≥ `ADULT_BMI.UNDER` (18,5) albo dziecko BMI ≥ P5
+   (`VildaBmi.wartoscDlaCentyla({centyl: 5})` — ten sam silnik i próg, co klasyfikacja `niedowaga`;
+   żadnej kopii progu). Niedowaga pozostaje zamknięta do raty D, wiek ≤ 5,0 lat do raty E. Karta wyboru
+   strategii (redukcja/stabilizacja) w panelu pokazuje się TYLKO przy nadmiarze (`nadm`: dorosły ≥ 25,
+   dziecko ≥ P85); dla normy jest ukryta, bo żadna z tych strategii nie ma zastosowania.
+2. **Dorosły w normie (`f.state === 'normal'`)**: talerz „utrzymaniowy" — zawodowo: „Warto opierać
+   jadłospis na warzywach i owocach, produktach pełnoziarnistych, roślinach strączkowych, nabiale
+   i chudym lub średniotłustym białku, z regularnymi posiłkami i wodą jako podstawowym napojem; słodkie
+   napoje i żywność wysoko przetworzona powinny pozostać dodatkiem, nie podstawą."; osobne zdanie
+   o alkoholu: „Alkohol jest kaloryczny, ale przede wszystkim szkodliwy dla zdrowia – zwiększa m.in.
+   ryzyko nowotworów; nie ma bezpiecznej ilości spożycia." (rejestr pacjenta: „Alkohol też ma kalorie,
+   ale przede wszystkim szkodzi zdrowiu i zwiększa ryzyko nowotworów – nie ma bezpiecznej ilości, im
+   mniej, tym lepiej."); ruch — to samo zdanie 150 min/tydz., co w górnej normie. Bez roli „kontrola".
+   Górna norma (BMI 23,0–24,9) i niedowaga — bez zmian.
+3. **Nastolatek 11–17 lat w normie**: talerz — „Zalecane są regularne posiłki (w tym śniadanie), warzywa
+   lub owoce w każdym posiłku, produkty pełnoziarniste, nabiał i źródła białka; podstawowym napojem
+   powinna być woda, a napoje słodzone i słone przekąski — okazjonalnym dodatkiem." (pacjent per „ty":
+   „Jedz regularnie, ze śniadaniem…") oraz zdanie o płatkach: „Granole i musli typu „crunchy" często
+   zawierają syrop glukozowo-fruktozowy, dużo tłuszczu i zbędne kalorie – lepszym wyborem są płatki
+   naturalne bez dodatku cukru." Bez alkoholu.
+4. **Dziecko 5–10 lat w normie**: „Zalecane są regularne posiłki w spokojnej atmosferze, warzywa lub
+   owoce w każdym posiłku, produkty pełnoziarniste, nabiał i źródła białka, w porcjach dopasowanych do
+   wieku i apetytu dziecka; podstawowym napojem powinna być woda lub mleko, a napoje słodzone —
+   wyjątkiem." (pacjent: „Proszę podawać dziecku…"). Bez płatków, bez alkoholu; przedmowa „plan ma
+   charakter poglądowy; wskazana konsultacja" pada odtąd wyłącznie przy nadmiarze i niedowadze.
+5. **2–4 lata w normie**: bez talerza (zestaw zdań to rata E), ruch WHO 180 min bez zmian.
+6. **Dane raportu**: `dane.strategia = 'utrzymanie'` dla normy (dorosły: `normal` i `upper-normal`;
+   dziecko: bez nadmiaru i bez niedowagi), `dane.energia.utrzymanieKcal` u dziecka niesie TEE bazowe
+   (`teeBaselineKcal`), więc raport pacjenta pokazuje kafelek „zapotrzebowanie energetyczne" bez celu
+   redukcji. Niedowaga nadal `strategia: null` (do raty D). Nowe klucze punktów raportu:
+   `d-talerz-norma`, `dz-talerz-nastolatek-norma`, `dz-talerz-dziecko-norma` (pro/pac).
+
+**Źródła.** Zdania o talerzu są redakcją zaleceń ogólnopopulacyjnych, bez liczb: Normy żywienia dla
+populacji Polski (NIZP PZH–PIB, 2024, wydanie aktualne w module norm); zalecenia dietetyczne dla dzieci
+od 2. roku życia AHA/AAP — Gidding SS i wsp., Pediatrics 2006, [DOI 10.1542/peds.2005-2374](https://doi.org/10.1542/peds.2005-2374)
+(regularne posiłki ze śniadaniem, warzywa i owoce, produkty pełnoziarniste, mleko/nabiał, ograniczenie
+napojów słodzonych; dane za PubMed). Zdanie o alkoholu: stanowisko WHO „no level of alcohol consumption
+is safe for health" — Anderson BO i wsp., Lancet Public Health 2023, [DOI 10.1016/S2468-2667(22)00317-6](https://doi.org/10.1016/S2468-2667(22)00317-6)
+(dane za PubMed); alkohol jako karcynogen grupy 1 IARC. Zdanie o płatkach: decyzja właściciela
+(obserwacja kliniczna; bez liczb). Ruch bez zmian (WHO 2020).
+
+**Wpływ na wyniki.** Zrzut silnika HEAD vs po zmianie (25 scenariuszy, oba rejestry): 16 identycznych
+(każdy nadmiar u dziecka i dorosłego, niedowaga, górna norma, 3 lata z otyłością), 9 zmienionych —
+wyłącznie norma (dorosły, 12 i 17 lat, 8 i 5,5 roku, 3 lata): nowe zdania talerza/alkoholu/płatków,
+`strategia null → utrzymanie`, dla dziecka `utrzymanieKcal` zamiast `null`; żadna liczba, jednostka ani
+próg nie zmieniły się. Testy: `tests/e2e/utrzymanie-zalecen.spec.mjs` (5 testów: dorosły, nastolatek,
+dziecko 5–10 i 2–4, kontrole ujemne, sonda bramki i karty strategii z masą liczoną z centyla silnika,
+w tym P4 vs P6 i BMI 18,44 vs 18,51); zaktualizowane oczekiwania w `niedowaga-dziecka`,
+`zdania-rol-zalecen`, `punkty-zalecen`, `dane-zalecen-energetycznych`, `diet-recommendations-logic`
+(DIET-CHILD-NORM-WHR, DIET-UNDER10-DISCLAIMER). Mutacje (5, wszystkie czerwone): bramka dziecka
+w normie zamknięta; karta strategii zawsze widoczna; zdanie o alkoholu pominięte; `strategia` dziecka
+w normie `null`; bramka dorosłego od 25.
+
+**Co zostaje otwarte.** C — „cel własny" u dorosłych od BMI 23,0; C′ — nastolatek ≥ 16 lat po
+zakończeniu wzrastania (P75–P85, cel ≥ P50, ≤ 1 kg/mies., flaga „Wzrost zakończony" obowiązkowa);
+D — „przyrost" przy niedowadze (dorośli +200–400 kcal/d); E — bramka od 2 lat i zdania dla 2–4 lat.
+Nagłówek sekcji energii raportu pacjenta („KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI…") przy strategii
+„utrzymanie" nadal mówi o redukcji — do decyzji właściciela przy racie C.
+
+SW 1.1.31 → **1.1.32**; `vilda_diet_recommendations.js?v=36→37`.
+
 ## Niedowaga u dziecka nazwana po imieniu; restrykcje tylko przy nadmiarze (P-DIETA-NIEDOWAGA rata A, SW 1.1.31, 2026-09-21)
 
 **Status:** zmiana kliniczna — korekta błędu bezpieczeństwa w generatorze zaleceń energetycznych

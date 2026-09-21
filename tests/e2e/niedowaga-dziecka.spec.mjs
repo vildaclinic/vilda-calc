@@ -50,7 +50,9 @@ function policz(page, s) {
   }, s);
 }
 
-const RESTRYKCJE = ['ograniczać tłuste potrawy', 'żółty ser', 'słone przekąski', 'fast\u2011foody', 'Ogranicz fast foody'];
+// „słone przekąski" celowo w kontekście listy otyłości: łagodny talerz nastolatka w normie (rata B) też
+// wspomina słone przekąski, ale jako „okazjonalny dodatek", nie jako restrykcję.
+const RESTRYKCJE = ['ograniczać tłuste potrawy', 'żółty ser', 'słone przekąski oraz fast', 'słone przekąski i fast', 'fast\u2011foody', 'Ogranicz fast foody'];
 
 test('niedowaga u dziecka jest nazwana, a nie schowana pod „w normie" — oba rejestry, trzy pasma wieku', async ({ page }) => {
   test.setTimeout(180_000);
@@ -100,7 +102,7 @@ test('pasmo 3–5 c. formatuje centyl z jednym miejscem po przecinku, a <0,5 c. 
   expect(norm(glebokie.text)).not.toContain('z nadwagą lub otyłością wymaga konsultacji');
 });
 
-test('dziecko w normie: bez listy restrykcyjnej, bez strategii redukcji, ruch zostaje', async ({ page }) => {
+test('dziecko w normie: bez listy restrykcyjnej, bez strategii redukcji, ruch zostaje, talerz lagodny (rata B)', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   for (const s of [
@@ -116,10 +118,17 @@ test('dziecko w normie: bez listy restrykcyjnej, bez strategii redukcji, ruch zo
     expect(w.niedowaga).toBe(false); expect(w.nadmiar).toBe(false);
     expect(t).toContain('w granicach normy');
     for (const r of RESTRYKCJE) expect(t, 'restrykcja u dziecka w normie: ' + r).not.toContain(r);
-    expect(w.zdania.talerz).toBeUndefined();
+    // P-DIETA-UTRZYMANIE rata B: norma od 5 lat dostaje lagodny „talerz" (bez restrykcji), 2–4 lata
+    // nadal bez talerza (rata E), kontroli nadal nie ma, strategia to „utrzymanie" zamiast null.
+    if (s.age >= 5) {
+      expect(w.zdania.talerz, JSON.stringify(s)).toBeDefined();
+      for (const r of RESTRYKCJE) expect(norm(w.zdania.talerz.join(' '))).not.toContain(r);
+    } else {
+      expect(w.zdania.talerz, JSON.stringify(s)).toBeUndefined();
+    }
     expect(w.zdania.kontrola).toBeUndefined();
     expect(w.zdania.ruch).toBeDefined();
-    expect(w.strategia).toBeNull();
+    expect(w.strategia).toBe('utrzymanie');
   }
 });
 
