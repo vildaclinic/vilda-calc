@@ -128,7 +128,9 @@ test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjn
 // 3 strony, a przechwycony markup hosta zawiera stronę „Komplet zaleceń"
 // z dawkowaniem witaminy D (przedtem: 2 strony, wit. D gubione w sekcji
 // `other`). Tryb „classic" nadal 1 strona.
-test('DIET-PDF-FULL-COMPLETE: pełny raport PDF zawiera komplet zaleceń z witaminą D', async ({ page }) => {
+test('DIET-PDF-ONE-VARIANT: każda dawna nazwa trybu raportu daje ten sam jednostronicowy plan pacjenta', async ({ page }) => {
+  // P-DIETA-AUDYT rata F: tryby „full"/„personalized" (plan SMART) usunięte — wołający je kod
+  // (np. pakiet „Raport pacjenta") dostaje jednostronicowy plan z vilda_raport_plan.js.
   test.setTimeout(180_000);
   await openWithDietModule(page);
   await page.addScriptTag({ url: '/vilda_patient_report.js' });
@@ -162,109 +164,33 @@ test('DIET-PDF-FULL-COMPLETE: pełny raport PDF zawiera komplet zaleceń z witam
     observer.observe(document.body, { childList: true, subtree: true });
     const full = await window.dietRecommendationsCollectPdfPages({ mode: 'full' });
     const classic = await window.dietRecommendationsCollectPdfPages({ mode: 'classic' });
+    const personalized = await window.dietRecommendationsCollectPdfPages({ mode: 'personalized' });
     observer.disconnect();
+    const txt = captured.html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
     return {
       fullPages: full && full.pages ? full.pages.length : 0,
       classicPages: classic && classic.pages ? classic.pages.length : 0,
+      personalizedPages: personalized && personalized.pages ? personalized.pages.length : 0,
+      modes: [full.mode, classic.mode, personalized.mode],
       hasKomplet: captured.html.includes('Komplet zalece'),
-      hasVitD: /witamin/i.test(captured.html),
-      hasIU: captured.html.includes('IU'),
+      hasSmart: /Plan na 14 dni|80\/20|Mit kontra fakt|cele bazowe/.test(txt),
+      hasPlanHeading: /ZAPOTRZEBOWANIE ENERGETYCZNE|KALORYCZNO/.test(txt),
+      hasVitD: /witamin/i.test(txt),
     };
   });
-  expect(result.fullPages).toBe(3);
+  expect(result.fullPages).toBe(1);
   expect(result.classicPages).toBe(1);
-  expect(result.hasKomplet).toBe(true);
+  expect(result.personalizedPages).toBe(1);
+  expect(result.modes).toEqual(['classic', 'classic', 'classic']);
+  expect(result.hasKomplet).toBe(false);
+  expect(result.hasSmart).toBe(false);
+  expect(result.hasPlanHeading).toBe(true);
   expect(result.hasVitD).toBe(true);
-  expect(result.hasIU).toBe(true);
 });
 
-// ── Etap 3: plan SMART — warianty dziecięce, fallback bazowy, chipy, rotacja mitów ──
-
-async function buildSmart(page, { ageYears, sex, weightKg, heightCm, checkedKeys }) {
-  return page.evaluate(({ ageYears, sex, weightKg, heightCm, checkedKeys }) => {
-    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
-    window.professionalMode = true;
-    set('age', ageYears); set('ageMonths', 0); set('sex', sex);
-    set('weight', weightKg); set('height', heightCm);
-    window.ensureDietRecommendationsElements();
-    document.querySelectorAll('[data-diet-survey-key]').forEach((el) => {
-      el.checked = checkedKeys.includes(el.getAttribute('data-diet-survey-key'));
-    });
-    const result = window.buildDietSmartRecommendationResult();
-    return {
-      text: result && result.textOutput ? result.textOutput : '',
-      surveyCompleted: !!(result && result.surveyCompleted),
-    };
-  }, { ageYears, sex, weightKg, heightCm, checkedKeys });
-}
-
-// DIET-SMART-CHILD-BASE: dziecko 6 lat, w ankiecie zaznaczone tylko „alergie
-// lub nietolerancje" (chip bez własnego celu) → fallback bazowy musi dać cele
-// DZIECIĘCE (woda, warzywa, posiłek bez ekranu), nie dorosłą triadę z metodą
-// talerza; przypomnienie honoruje chip alergii (przedtem martwy).
-test('DIET-SMART-CHILD-BASE: fallback bazowy dziecka + aktywny chip alergii', async ({ page }) => {
-  test.setTimeout(90_000);
-  await openWithDietModule(page);
-  const result = await buildSmart(page, {
-    ageYears: 6, sex: 'M', weightKg: 28, heightCm: 118,
-    checkedKeys: ['allergiesOrIntolerances'],
-  });
-  expect(result.surveyCompleted).toBe(true);
-  expect(result.text).toContain('Woda jako podstawowy nap');
-  expect(result.text).toContain('bez ekranu');
-  expect(result.text).not.toContain('Talerz zdrowego żywienia');
-  expect(result.text).not.toContain('redukcji masy');
-  // Chip „alergie lub nietolerancje" ma realny efekt w przypomnieniu:
-  expect(result.text).toContain('alergiach lub nietolerancjach');
-  expect(result.text).toContain('zamienników bezpiecznych dla pacjenta');
-});
-
-// DIET-SMART-CHILD-PROTEIN: dziecko szkolne z „mało białka" + „nie lubi ryb"
-// → cel białkowy w brzmieniu dziecięcym (rozwój, nie „redukcja masy"),
-// a lista produktów respektuje chip dislikesFish (przedtem martwy).
-test('DIET-SMART-CHILD-PROTEIN: cel białkowy dziecka bez narracji redukcyjnej i bez ryb', async ({ page }) => {
-  test.setTimeout(90_000);
-  await openWithDietModule(page);
-  const result = await buildSmart(page, {
-    ageYears: 8, sex: 'F', weightKg: 38, heightCm: 132,
-    checkedKeys: ['lowProtein', 'dislikesFish'],
-  });
-  expect(result.text).toContain('głównych posiłkach dziecka');
-  expect(result.text).toContain('prawidłowy rozwój');
-  expect(result.text).toContain('zamiast ryb wybierz inne akceptowane');
-  expect(result.text).not.toContain('redukcji masy');
-  expect(result.text).not.toContain('jaja, ryby,');
-});
-
-// DIET-MYTH-ROTATION: nastolatek z zaznaczonym tylko „mało białka" zawęża pulę
-// mitów tagami do jednej pozycji (perfect_diet, tag „teen"). Prośba o nowy mit
-// musi sięgnąć do pełnej puli wiekowej (fallback rAll) — przedtem rotacja
-// utykała i zwracała wciąż ten sam mit.
-test('DIET-MYTH-ROTATION: nowy mit przy zawężonej puli tagów faktycznie się zmienia', async ({ page }) => {
-  test.setTimeout(90_000);
-  await openWithDietModule(page);
-  const result = await page.evaluate(() => {
-    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = String(value); };
-    window.professionalMode = true;
-    set('age', 14); set('ageMonths', 0); set('sex', 'M');
-    set('weight', 75); set('height', 165);
-    window.ensureDietRecommendationsElements();
-    document.querySelectorAll('[data-diet-survey-key]').forEach((el) => {
-      el.checked = el.getAttribute('data-diet-survey-key') === 'lowProtein';
-    });
-    const mythOf = (text) => (text.split('\n').find((l) => l.startsWith('Mit / popularne przekonanie:')) || '').trim();
-    const first = window.buildDietSmartRecommendationResult();
-    window.dietRecommendationsRequestNewMyth();
-    const second = window.buildDietSmartRecommendationResult();
-    return {
-      firstMyth: mythOf(first && first.textOutput ? first.textOutput : ''),
-      secondMyth: mythOf(second && second.textOutput ? second.textOutput : ''),
-    };
-  });
-  expect(result.firstMyth).not.toBe('');
-  expect(result.secondMyth).not.toBe('');
-  expect(result.secondMyth).not.toBe(result.firstMyth);
-});
+// ── Etap 3 (plan SMART, mity) usunięty w P-DIETA-AUDYT rata F (2026-09-21): plan SMART i jego raporty
+//    zniknęły z aplikacji (generowały zalecenia otyłościowe niezależnie od stanu odżywienia).
+//    Strażnicy nowego stanu: tests/e2e/audyt-zalecen.spec.mjs.
 
 // ── Etap 4: growthEnded a stabilizacja, spójność kcal, dopełnienie planu do 2 celów ──
 
@@ -287,8 +213,8 @@ test('DIET-GROWTH-ENDED-STAB: zakończony wzrost wymusza narrację redukcyjną',
     flag('growthEndedFlag', ge);
     const result = window.generateDietRecommendations();
     // Odśwież nowoczesne UI strategii (we() → Te()) tak, jak robi to moduł
-    // po każdej przebudowie wyniku SMART:
-    window.buildDietSmartRecommendationResult();
+    // po każdej przebudowie wyniku energetycznego (rata F: plan SMART usunięty):
+    window.buildDietEnergyRecommendationResult();
     const btn = document.querySelector('[data-diet-strategy-choice="stabilization"]');
     return {
       text: result && result.textOutput ? result.textOutput : '',
@@ -350,24 +276,6 @@ test('DIET-KCAL-CONSISTENT: narracja i normy podają tę samą kaloryczność pl
   // Etap 5: etykieta aktywności pochodzi ze wspólnego słownika karty planu
   // i jest cytowana jawnie („na poziomie „X” (PAL y)”; ENERGY-REC-4: polski cudzysłów zamykający):
   expect(text).toMatch(/deklarowaną aktywność na poziomie „[^”]+” \(PAL \d,\d\)/u);
-});
-
-// DIET-SMART-PAD-TWO: pojedynczy trafiony chip nie może dawać planu z jednym
-// celem (obietnica „2–3 małe kroki") — plan jest dopełniany celem z triady
-// bazowej właściwej dla wieku.
-test('DIET-SMART-PAD-TWO: plan z jednym trafionym chipem dostaje drugi cel bazowy', async ({ page }) => {
-  test.setTimeout(90_000);
-  await openWithDietModule(page);
-  const result = await buildSmart(page, {
-    ageYears: 8, sex: 'M', weightKg: 40, heightCm: 132,
-    checkedKeys: ['lowProtein'],
-  });
-  expect(result.text).toContain('1. ');
-  expect(result.text).toContain('\n2. ');
-  // Cel trafiony chipem pozostaje pierwszy (wyższy priorytet):
-  expect(result.text).toMatch(/1\. Źródło białka/u);
-  // Dopełnienie z triady dziecięcej:
-  expect(result.text).toContain('Woda jako podstawowy nap');
 });
 
 // ── Etap 5: walidacja danych wejściowych PDF i transliteracja nazw plików ──

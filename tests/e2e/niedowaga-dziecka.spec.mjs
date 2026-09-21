@@ -81,8 +81,15 @@ test('niedowaga u dziecka jest nazwana, a nie schowana pod „w normie" — oba 
     expect(norm(w.zdania.talerz.join(' ')), JSON.stringify(s)).toMatch(/nie należy ograniczać jakichkolwiek grup produktów|nie ograniczaj jedzenia|Nie należy ograniczać żadnych grup produktów/u);
     // rola kontroli mówi wprost: nie ograniczać, ocenić przyczyny
     expect(w.zdania.kontrola, JSON.stringify(s)).toBeDefined();
-    expect(norm(w.zdania.kontrola[0])).toMatch(/nie ogranicza|nie zaleca się ograniczania/);
-    expect(norm(w.zdania.kontrola[0])).toMatch(/przyczyn/);
+    const k0 = norm(w.zdania.kontrola[0]);
+    if (/ryzyka zaburzeń odżywiania|szybka wizyta u lekarza/.test(k0)) {
+      // P-DIETA-AUDYT rata F: przy cechach ryzyka ZO (nastolatka 14 lat, z ≈ −3,2) zdanie o nadzorze zastępuje kontrolę A
+      expect(k0).toMatch(/nie ograniczaj|nie zaleca się ograniczania/i);
+      expect(k0).toMatch(/lekarz/);
+    } else {
+      expect(k0).toMatch(/nie ogranicza|nie zaleca się ograniczania/);
+      expect(k0).toMatch(/przyczyn/);
+    }
     // ruch zostaje (zalecenie uniwersalne), bez deficytu, bez celu redukcji; strategia „przyrost” (rata D; do niej: null)
     expect(w.zdania.ruch).toBeDefined();
     expect(w.strategia).toBe('przyrost');

@@ -3033,7 +3033,7 @@ Przypadki syntetyczne i test wywołujący rzeczywistą funkcję produkcyjną (`w
 
 **Etap 2 (2026-08-11) — kompletność PDF „Pełny raport":** dwustronicowy układ zintegrowany trybu `full` przycinał sekcje do 1–2 pozycji i gubił bez śladu zalecenia sklasyfikowane poza czterema kartami (m.in. dawkowanie witaminy D oraz każdą pozycję z sekcji `other`, wypieraną przez zalecenie aktywności). Po poprawce tryb `full` dokłada trzecią stronę „Komplet zaleceń" z pełną listą numerowaną (mechanizm dopasowania gęstości i skali `It()` przypisany do klasy strony `diet-pdf-page-classic-single`, nie do trybu — co naprawia także brak dopasowania w zdegradowanej ścieżce `full` z jedną stroną klasyczną). Dodatkowo placeholder pustej sekcji „Energia" nie mówi już o deficycie („Podaż energii powinna wspierać…") — poprzedni tekst był mylący w planie stabilizacyjnym, który celowo deficytu nie ma. Test: DIET-PDF-FULL-COMPLETE (tryb `full` = 3 strony, markup zawiera „Komplet zaleceń" i dawkowanie witaminy D w IU; tryb `classic` = 1 strona), z hermetycznymi stubami jsPDF/html2canvas. Znane ograniczenie (poza zakresem etapu 1): przy niedowadze z alertem WHR pozostaje zdanie o „dodatkowym celu zmniejszenia obwodu talii" (fenotyp centralnej adipozji przy niskim BMI); ocena, czy je warunkować, należy do właściciela.
 
-**Etap 3 (2026-08-11) — plan SMART dla dzieci, fallback bazowy, martwe chipy ankiety, rotacja mitów:** poprawki wyłącznie w warstwie doboru i brzmienia zaleceń SMART (bez zmiany wzorów energetycznych ani progów):
+**Etap 3 (2026-08-11; HISTORYCZNE — plan SMART, ankieta i mity usunięte w P-DIETA-AUDYT rata F, SW 1.1.38) — plan SMART dla dzieci, fallback bazowy, martwe chipy ankiety, rotacja mitów:** poprawki wyłącznie w warstwie doboru i brzmienia zaleceń SMART (bez zmiany wzorów energetycznych ani progów):
 
 1. **Warianty dziecięce celów SMART** — cele `plateMethod`, `eveningSnacking`, `energyDensity`, `simplePlanning`, `fiberWholeGrains` i `proteinAtMeals` miały wyłącznie brzmienie dorosłe/redukcyjne (m.in. uzasadnienie „białko … podczas redukcji masy" trafiało do planu dziecka). Po poprawce grupy `youngChild`/`schoolChild` otrzymują warianty dziecięce (środowisko domowe, bez presji i bez narracji redukcyjnej; uzasadnienie białka mówi o sytości i prawidłowym rozwoju).
 2. **Fallback bazowy w ścieżce ankiety** — gdy ankieta była wypełniona, ale żaden zaznaczony chip nie mapował się na cel (np. wyłącznie „alergie lub nietolerancje"), moduł zawsze podstawiał dorosłą triadę (metoda talerza / regularność / warzywa). Po poprawce fallback jest rozgałęziony wiekowo tak samo jak ścieżka „bez ankiety": dziecko → woda / warzywa / posiłek bez ekranu, nastolatek → regularność / warzywa / tempo jedzenia i sytość.
@@ -5695,6 +5695,142 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 `tests/e2e/zdania-rol-zalecen.spec.mjs` sprawdza to samo przez rolę „ruch".
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
+
+## Audyt mieszania zaleceń: koniec planu SMART, jedno źródło treści, ryzyko ZO (P-DIETA-AUDYT rata F, SW 1.1.38, 2026-09-21)
+
+**Status:** zmiana kliniczna (zdania przy ryzyku zaburzeń odżywiania i ruch przy niedowadze) połączona
+z usunięciem funkcji (plan SMART i jego raporty). Powód: właściciel wpisał fikcyjnego 13‑latka z niedowagą
+i dostał w „Wygeneruj PDF z planem SMART" cele otyłościowe (regularność, 400 g warzyw, „kontrola sytości",
+model talerza ½/¼/¼, zamiany, mit/fakt, 80/20), a w „Pełnym raporcie" te same cele sklejone ze zdaniami
+niedowagi i z 60 min ruchu. Audyt (2026-09-21) wykazał:
+
+1. **Cztery ścieżki generowania**, nie trzy: przycisk „Generuj zalecenia energetyczne" (generator `pe()`),
+   „Generuj plan SMART" + „Wygeneruj PDF z planem SMART" (tryb `personalized`), „Generuj pełny raport PDF"
+   (tryb `full`) oraz opcja „Raport zaleceń dietetycznych" w pakiecie **Raport pacjenta**
+   (`vilda_patient_report.js`, wołała tryb `full`). Tylko ścieżka przycisku (i jej PDF „classic" =
+   jednostronicowy plan z `vilda_raport_plan.js`) była spójna.
+2. **Plan SMART był osobnym silnikiem** (ankieta nawyków → 2–3 „małe kroki"; bez ankiety zestaw bazowy
+   wyłącznie wg grupy wieku). Nigdzie nie sprawdzał BMI, centyla, niedowagi ani strategii; cel główny
+   nastolatka był wpisany na sztywno („poprawa kontroli sytości"). Tryb `full` kleił strony SMART ze zdaniami
+   przycisku posortowanymi regexami do kafli (zdanie o ryzyku ZO trafiało do kafla „Energia i tempo zmian").
+3. **Ruch 60 min był bezwarunkowy** w gałęzi dziecięcej (nadmiar, norma i niedowaga dostawały to samo
+   zdanie), także przy cechach ryzyka ZO; raty A–E tego nie dotknęły. U dorosłego z Z6 (bez planu liczbowego)
+   padało zdanie o ćwiczeniach oporowych.
+4. **Trzy osobne zdania o nadzorze** przy ryzyku ZO u dziecka: Z5 („Cechy ryzyka…"), kontrola A raty A
+   („Niedowaga u dziecka wymaga oceny przyczyn…") i kontrola D raty D („ważenie co 4–6 tygodni").
+
+**Decyzje właściciela (2026-09-21, wszystkie rekomendacje przyjęte):** plan SMART, ankieta nawyków, mity/fakty,
+oba PDF‑y SMART, okno wyboru wariantu raportu i zakładki modułu **usunięte**; moduł ma jeden panel (opcje,
+„Generuj zalecenia energetyczne", „Kopiuj", „Wygeneruj raport PDF dla pacjenta"); **jedno źródło treści** —
+generator — dla ekranu, schowka, PDF i pakietu „Raport pacjenta"; dawne nazwy trybów (`full`, `personalized`,
+`smart`) mapują się na jednostronicowy plan (`ve()` zwraca zawsze `classic`), żeby żaden wołający kod nie
+dostał pustej strony. Zdania SMART warte zachowania (woda jako napój, posiłek bez ekranu, jedzenie nie jako
+nagroda, wieczorne podjadanie, elastyczność 80/20) **nie** weszły do generatora w tej racie — kandydaci na
+osobną ratę G dla nadmiaru u nastolatków i dorosłych (lista w sekcji „Długi" niżej).
+
+### Zdania (zatwierdzone przez właściciela)
+
+**Ryzyko ZO u dziecka/nastolatka** (`ndRisk` raty D: moduł `vilda_anorexia_risk.js` zgłasza cechy u ≥ 11 lat;
+18‑latek z samym progiem BMI < 18,5 nadal bez Z5). Jedno zdanie zastępuje Z5 i kontrolę A, pozycja 2, rola
+`kontrola`, klucz `dz-kontrola-ryzyko`; **powody w nawiasie pochodzą z modułu ryzyka** przez
+`vildaPowodyRyzykaZO(reasons)` (mapowanie tekstów modułu na frazy: „masa poniżej N % należnej",
+„BMI poniżej 2. centyla", „szybka utrata masy ciała", „BMI poniżej 17,5", „skrajnie niskie BMI",
+„BMI poniżej 85 % mediany dla wieku"; żadnego progu w generatorze):
+
+- pro: „Niedowaga z cechami ryzyka zaburzeń odżywiania (masa poniżej 85 % należnej; BMI poniżej 2. centyla)
+  wymaga pilnej oceny przyczyn klinicznych i trajektorii wzrastania. Plan żywieniowy dla przyrostu masy ciała
+  musi nadzorować lekarz z dietetykiem klinicznym; nie zaleca się ograniczania energii ani produktów.
+  Do rozważenia konsultacja psychologiczna."
+- pacjent (nastolatek): „Twoja masa ciała jest wyraźnie za niska albo szybko spadła – potrzebna jest szybka
+  wizyta u lekarza, który razem z dietetykiem klinicznym ustali z Tobą plan jedzenia. Nie ograniczaj jedzenia
+  i nie pomijaj posiłków; pomocna może być też rozmowa z psychologiem."
+
+**Kontrola D przy ryzyku ZO** (zamiast „co 4–6 tygodni", klucz `dz-kontrola-ryzyko-termin`): pro „Termin i
+częstość kontroli masy ciała i wzrostu ustala lekarz prowadzący; brak przyrostu lub dalszy spadek masy ciała
+wymaga wcześniejszej wizyty."; pacjent „O tym, jak często się ważyć, zdecyduje lekarz; jeśli masa ciała nie
+rośnie albo dalej spada, powiedz o tym rodzicom lub lekarzowi."
+
+**Ruch przy ryzyku ZO** (dziecko `dz-ruch-ryzyko`, dorosły bez planu liczbowego `d-ruch-ryzyko`, czyli Z6:
+BMI < 17,5 lub cechy ryzyka — `gainPlan.available === false`): zdanie o 60 min / ćwiczeniach oporowych
+**nie pada**. Zamiast niego pro „Do czasu oceny klinicznej nie zaleca się zwiększania aktywności fizycznej;
+jej zakres ustala lekarz prowadzący."; pacjent „Nie zwiększaj teraz ilości ćwiczeń – o tym, ile ruchu jest
+dla Ciebie bezpieczne, zdecyduje lekarz." Uzasadnienie: nadmierny wysiłek jest zachowaniem kompensacyjnym
+w zaburzeniach odżywiania, a zakres aktywności u pacjenta z podejrzeniem ZO ustala zespół leczący po ocenie
+stanu somatycznego. Źródło (wg PubMed): Hornberger LL, Lane MA; AAP Committee on Adolescence.
+*Identification and Management of Eating Disorders in Children and Adolescents.* Pediatrics 2021;147(1):
+e2020040279, [DOI 10.1542/peds.2020-040279](https://doi.org/10.1542/peds.2020-040279) (raport kliniczny AAP,
+przegląd).
+
+**Ruch przy niedowadze bez cech ryzyka** (≥ 5 lat; klucze `dz-ruch-przyrost` nastolatek, `dz-ruch-przyrost-dziecko`
+5–10 lat), spójnie z `d-ruch-przyrost` dorosłego: pro „Aktywność fizyczna w zwykłym zakresie dla wieku
+pozostaje wskazana, najlepiej jako zabawa i sport dla przyjemności; przy niedowadze należy unikać długich,
+wyczerpujących treningów wytrzymałościowych."; pacjent‑nastolatek „Ruch dla przyjemności jest nadal wskazany
+– sport, zabawa, spacery. Unikaj jednak długich, wyczerpujących treningów i nie ćwicz po to, żeby «spalić»
+posiłek."; rodzic (5–10 lat, rejestr „Dla pacjenta") „Ruch dla przyjemności pozostaje wskazany – zabawa,
+sport, spacery; przy niedowadze proszę unikać długich, wyczerpujących treningów wytrzymałościowych dziecka."
+(brzmienie rodzicielskie pochodne od zatwierdzonego — do akceptacji przy przeglądzie PR). Maluch 2–4 lata
+bez zmian (180 min WHO, rata E). **Nadmiar i norma bez zmian** (60 min).
+
+**Punkty raportu** (`VILDA_PUNKTY`, reguły P-RAPORT-PUNKTY): nowe klucze `dz-kontrola-ryzyko`,
+`dz-kontrola-ryzyko-termin`, `dz-ruch-ryzyko`, `d-ruch-ryzyko`, `dz-ruch-przyrost`, `dz-ruch-przyrost-dziecko`
+— punkty cytują tylko słowa zdania (strażnik `punkty-zalecen.spec` wymusił „zakres aktywności" zamiast
+„zakres ruchu").
+
+### Kod
+
+- `vilda_diet_recommendations.js` (v42): usunięte ~70 deklaracji (silnik SMART `st/ct/lt/…/ai/Ti/Ai/Oe`,
+  ankieta `ot/De/ii/Fe/rt/$e`, biblioteka mitów `ei/ji/tt/…`, strony PDF `full`/`personalized`
+  `$t/Pt/Nt/Fi/Ii/Di/Tt/Ft`, okno wyboru `Bt/Bi/Lt`, przełącznik trybów `he/Ee/_e`) — wycięte narzędziem
+  AST (espree) po nazwach deklaracji w ciele IIFE, a nie „ręcznie" w zminifikowanym tekście; ESLint
+  (`no-unused-vars`/`no-undef`) jako strażnik kompletności. Publiczne API: zniknęły
+  `window.buildDietSmartRecommendationResult`, `window.dietRecommendationsRequestNewMyth`,
+  `window.dietMythLibrary`, `VildaDietRecommendations.buildSmartRecommendationResult/buildRecommendationResult/
+  getActiveMode/setActiveMode/requestNewMyth/resetMythSelection`; zostają `generateRecommendations`,
+  `buildEnergyRecommendationResult`, `collectPdfPages/buildPdfPackage/generatePdfReport/hasPdfAvailable`
+  (każdy tryb → `classic`), `dietTherapeuticDietProfiles` (nieużywane flagi, zostawione jako API).
+  Nazwa pliku PDF bez sufiksu trybu: `Raport_zalecen_dietetycznych_<pacjent>.pdf`. Usunięta nieaktualna
+  notka „dla dorosłych domyślnie pozostaje włączona redukcja".
+- `index.html`: jeden panel modułu (bez zakładek, panelu SMART i panelu wariantów PDF); przycisk
+  „Wygeneruj raport PDF dla pacjenta" (`data-diet-report-direct="classic"`). `docpro.html` tylko bump.
+- `vilda_patient_report.js` (v31): pakiet „Raport pacjenta" woła tryb `classic`; opis opcji zaktualizowany.
+- PWA: SW **1.1.38**, cache append-only.
+
+### Wpływ kliniczny
+
+Zmienia się **treść** zaleceń wyłącznie w trzech sytuacjach: (1) dziecko/nastolatek z cechami ryzyka ZO
+(jedno zdanie o nadzorze z powodami, termin kontroli wg lekarza, brak 60 min ruchu), (2) dziecko 5–17 lat
+z niedowagą bez cech ryzyka (ruch dla przyjemności zamiast zdania z listy otyłościowej), (3) dorosły bez
+planu liczbowego (ruch wg lekarza zamiast ćwiczeń oporowych). Liczby, progi i strategie bez zmian.
+Znika cały plan SMART — dla pacjentów z nadmiarem masy ciała oznacza to brak dokumentu „2–3 małe kroki";
+zalecenia energetyczne i jednostronicowy plan zostają. Pakiet „Raport pacjenta" zamiast trzech stron
+z SMART daje jedną stronę planu.
+
+### Walidacja
+
+`tests/e2e/audyt-zalecen.spec.mjs` (4 testy): 13‑latek P1 (EBW < 85 %, BMI < 2. c.) w obu rejestrach —
+jedno zdanie o nadzorze z dwoma powodami, role i punkty, zakazane frazy („Cechy ryzyka", „60 minut",
+„co 4–6 tygodni", „gry zespołowe", „psychodietetyk"); 15‑latka z jednym powodem; 8‑ i 12‑latka bez ryzyka
+(ruch przyrostowy, kontrola raty D bez zmian), maluch 180 min, kontrola pozytywna nadmiaru (60 min zostaje);
+dorosły Z6 vs plan liczbowy; DOM bez zakładek/ankiety/buildera; każda nazwa trybu PDF → 1 strona `classic`
+z punktami generatora i bez treści SMART. Zaktualizowane: `przyrost-zalecen.spec` (Z5 → zdanie scalone,
+ruch Z6), `niedowaga-dziecka.spec` (przy ryzyku kontrola[0] = zdanie o nadzorze), `diet-recommendations-logic.spec`
+(4 testy SMART/mitów usunięte za zgodą właściciela; `DIET-PDF-FULL-COMPLETE` → `DIET-PDF-ONE-VARIANT`;
+`DIET-GROWTH-ENDED-STAB` odświeża UI przez builder energetyczny), pięć specyfikacji bez martwego kliku
+zakładki. Smoke (scratchpad `rataF/smoke2.mjs`, 10 fikcyjnych przypadków) odtworzył wszystkie cztery wady
+przed patchem i ich brak po nim.
+
+### Długi po racie F
+
+- Szablon PDF (`Dt`) niesie nadal CSS dawnych stron SMART (~25 KB w template string) — martwe, nieszkodliwe;
+  do wycięcia przy P-RAPORT rata 5 (#69, raport bez CDN).
+- Kandydaci do raty G (nadmiar, nastolatek/dorosły, jako zdania generatora z rolą): woda jako podstawowy
+  napój, jeden posiłek dziennie bez ekranu, jedzenie nie jako nagroda/pocieszenie (dziecko), wieczorne
+  podjadanie tylko zaplanowane i na talerzu, elastyczność 80/20 (bez „wszystko albo nic"). Wymagają
+  zestawu zdań do akceptacji.
+- Dorosły pacjent bez planu liczbowego nadal dostaje „Waż się co 2–4 tygodnie" (kontrola raty D); właściciel
+  nie zlecał zmiany dla dorosłych poza ruchem.
+- Rejestr rodzicielski zdania o ruchu 5–10 lat (`dz-ruch-przyrost-dziecko`, pac) — brzmienie pochodne,
+  do potwierdzenia.
 
 ## Bramka od 2 lat i zdania dla 2–4 lat (P-DIETA-MALUCH rata E, SW 1.1.37, 2026-09-21)
 
