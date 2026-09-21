@@ -114,8 +114,11 @@ test('DIET-CHILD-NORM-WHR: dziecko z BMI w normie nie dostaje narracji redukcyjn
   expect(text).not.toContain('0,0 kg');
   expect(text).not.toMatch(/wyrośnie|wyrosn/u);
   expect(text).not.toContain('deficyt');
-  // Zalecenia stylu życia pozostają:
-  expect(text).toMatch(/posiłk/);
+  // P-DIETA-NIEDOWAGA rata A (decyzja właściciela 2026-09-21): lista „na talerzu" to lista
+  // restrykcyjna dla otyłości („należy ograniczać…") i pada WYŁĄCZNIE przy nadmiarze. Dziecko
+  // w normie dostaje ruch; łagodne zdania o talerzu dla normy to rata B („utrzymanie").
+  expect(text).not.toMatch(/ogranicza(ć|j) (tłuste|fast)/u);
+  expect(text).not.toContain('żółty ser');
   expect(text).toMatch(/60 minut/);
 });
 
