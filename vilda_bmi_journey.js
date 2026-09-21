@@ -80,7 +80,7 @@
         var sim = w.energySimulateMonthsToBmiTarget({
           ageYears: ctx.ageYears, ageMonthsOpt: 0, sex: ctx.sex,
           weightKg: ctx.weightKg, heightCm: ctx.heightCm,
-          weeklyLossKg: weeklyLossKg, target: 'norm',
+          weeklyLossKg: weeklyLossKg, target: ctx.customGoal && fin(ctx.targetBmi) ? ctx.targetBmi : 'norm',
           growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
         });
         if (sim && sim.months != null) {
@@ -303,7 +303,7 @@
       + '<tbody>' + renderRows(model) + '</tbody></table>';
     if (model.found && w.DIET_BULLETS && w.DIET_BULLETS[model.dietKey] && w.DIET_LEVELS && w.DIET_LEVELS[model.dietKey]) {
       var extra = typeof w.energyDietBulletsExtra === 'function' ? w.energyDietBulletsExtra(model.dietKey, lastEngineState) : w.DIET_BULLETS[model.dietKey].slice(2);
-      var items = [(lastEngineState && lastEngineState.childObesityPlan
+      var items = [((lastEngineState && lastEngineState.childObesityPlan) || (model.found && model.found.fixedDeficit)
         ? 'deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania przy obecnej masie ciała'
           + (fin(model.found.monthlyLossKg) ? ', dobrany do tempa ok.\u202F' + fmt(model.found.monthlyLossKg, 1) + '\u202Fkg/mies.' : '')
         : 'deficyt ok.\u202F' + Math.round(w.DIET_LEVELS[model.dietKey].deficitPct * 100)
