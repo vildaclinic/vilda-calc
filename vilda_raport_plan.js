@@ -253,7 +253,7 @@
       : 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
     return '<section class="vrp-blok">'
       + '<div class="vrp-nag-blok">' + esc(naglowek) + '</div>'
-      + '<div class="vrp-kafle">' + kafle.map(function (k) {
+      + '<div class="vrp-kafle' + (kafle.length === 4 ? ' vrp-kafle-4' : '') + '">' + kafle.map(function (k) {
           return '<div class="vrp-kafel"><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span><i>' + esc(k[2]) + '</i></div>';
         }).join('') + '</div>'
       + (podpis ? '<div class="vrp-podkafle">' + podpis + '</div>' : '')
@@ -448,6 +448,9 @@
       '.vrp-pd{font-size:' + u(12.5) + ';color:' + K.mut + ';line-height:1.25;}',
       '.vrp-stopa{margin-top:' + u(8) + ';font-size:' + u(15) + ';color:' + K.ciemny + ';text-align:center;}',
       '.vrp-kafle{display:grid;grid-template-columns:repeat(3,1fr);gap:' + u(12) + ';}',
+      /* P-DIETA-PRZYROST rata D: cztery kafle (zapotrzebowanie, nadwyżka, podaż, tempo) w jednym rzędzie. */
+      '.vrp-kafle-4{grid-template-columns:repeat(4,1fr);gap:' + u(10) + ';}',
+      '.vrp-kafle-4 .vrp-kafel b{font-size:' + u(27) + ';}',
       '.vrp-kafel{border:1px solid ' + K.linia + ';border-radius:' + u(14) + ';padding:' + u(10) + ' ' + u(12) + ';background:' + K.tlo + ';text-align:center;}',
       '.vrp-kafel b{display:block;font-size:' + u(34) + ';line-height:1.05;font-weight:800;color:' + K.teal2 + ';}',
       '.vrp-kafel span{display:block;font-size:' + u(15) + ';font-weight:700;}',

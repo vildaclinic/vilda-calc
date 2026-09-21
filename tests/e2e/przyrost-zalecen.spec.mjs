@@ -292,7 +292,7 @@ test('raport pacjenta: nagłówek „przyrost” i kafle nadwyżki; bez planu li
     const baseResult = window.VildaDietRecommendations.buildEnergyRecommendationResult();
     const ctx = { patient: { name: 'Anna Testowa', ageLabel: s.age + ' lat', sexLabel: s.sex === 'F' ? 'żeńska' : 'męska', weightLabel: s.w + ',0 kg', heightLabel: s.h + ',0 cm' }, baseResult };
     const html = window.VildaRaportPlan.html(ctx);
-    const m = html.match(/vrp-nag-blok">([^<]*)<\/div><div class="vrp-kafle">([\s\S]*?)<\/div><\/div>/);
+    const m = html.match(/vrp-nag-blok">([^<]*)<\/div><div class="vrp-kafle[^"]*">([\s\S]*?)<\/div><\/div>/);
     return { strategia: baseResult.dane && baseResult.dane.strategia, naglowek: m && m[1], kafle: m ? m[2].replace(/<[^>]+>/g, '|').replace(/\|+/g, '|') : '', html };
   }, s);
   const a = await raport({ age: 28, sex: 'F', h: 168, w: 50 });
