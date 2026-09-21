@@ -128,7 +128,7 @@ test('niedowaga 2–4 lata: Z2 bez liczb, talerz malucha, kontrola co 4–6 tygo
   expect(u3.niedowaga).toBe(true);
   expect(u3.strategia).toBe('przyrost');
   const t = norm(u3.text);
-  expect(t).toContain('Przy niedowadze u dziecka aplikacja nie wyznacza liczbowej nadwyżki energetycznej');
+  expect(t).toContain('Przy niedowadze u dziecka nie wyznacza się liczbowej nadwyżki energetycznej');
   expect(t).toContain('z niedowagą wymaga oceny pediatrycznej');
   expect(zl(u3, 'talerz')).toBe('Zalecane jest 5 posiłków dziennie o stałych porach, w spokojnej atmosferze i bez presji przy jedzeniu, z pełnotłustym nabiałem i dodatkami zwiększającymi kaloryczność w małej objętości (masło, oliwa, pasty orzechowe); mleko i soki nie powinny zastępować posiłków ani zaspokajać głodu między nimi; nie należy ograniczać jakichkolwiek grup produktów.');
   expect(u3.zdania.kontrola.length).toBe(2);

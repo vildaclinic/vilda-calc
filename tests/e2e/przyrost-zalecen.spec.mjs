@@ -152,7 +152,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   // Z6: BMI 15,6 — bez planu liczbowego, ale talerz, ruch i kontrola zostają
   const z6 = await policz(page, { age: 28, sex: 'F', h: 168, w: 44 });
   expect(z6.strategia).toBe('przyrost');
-  expect(norm(z6.text)).toContain('Przy BMI poniżej 17,5 lub cechach ryzyka zaburzeń odżywiania aplikacja nie podaje planu liczbowego; wskazana ocena kliniczna, w tym ryzyka zespołu ponownego odżywienia, i prowadzenie żywienia pod nadzorem lekarza i dietetyka klinicznego.');
+  expect(norm(z6.text)).toContain('Przy BMI poniżej 17,5 lub cechach ryzyka zaburzeń odżywiania nie ustala się planu liczbowego; wskazana ocena kliniczna, w tym ryzyka zespołu ponownego odżywienia, i prowadzenie żywienia pod nadzorem lekarza i dietetyka klinicznego.');
   expect(norm(z6.text)).not.toContain('nadwyżka');
   expect(norm(z6.text)).toContain('Normy żywieniowe dla zapotrzebowania około 1700 kcal/d');
   expect(z6.energia.nadwyzkaKcal).toBeNull(); expect(z6.energia.podazZakresKcal).toBeNull(); expect(z6.czas).toBeNull();
@@ -161,7 +161,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   // Z6 także z historii (BMI 18,1, szybka utrata masy)
   const teraz = Date.now();
   const ryz = await policz(page, { age: 28, sex: 'F', h: 168, w: 51, historia: [{ t: teraz - 30 * DZIEN, weight: 56 }, { t: teraz, weight: 51 }] });
-  expect(norm(ryz.text)).toContain('aplikacja nie podaje planu liczbowego');
+  expect(norm(ryz.text)).toContain('nie ustala się planu liczbowego');
   expect(ryz.energia.nadwyzkaKcal).toBeNull();
   // rata F: bez planu liczbowego (Z6) ruch ustala lekarz — bez ćwiczeń oporowych i bez „2–3 razy w tygodniu”
   expect(zl(z6, 'ruch')).toBe('Do czasu oceny klinicznej nie zaleca się zwiększania aktywności fizycznej; jej zakres ustala lekarz prowadzący.');
@@ -183,7 +183,7 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   expect(d8.strategia).toBe('przyrost');
   expect(d8.gp).toBeNull();
   const t8 = norm(d8.text);
-  expect(t8).toContain('Przy niedowadze u dziecka aplikacja nie wyznacza liczbowej nadwyżki energetycznej; podstawą jest ocena przyczyn, regularne i energetycznie gęste posiłki oraz obserwacja przyrostów masy ciała i wzrostu.');
+  expect(t8).toContain('Przy niedowadze u dziecka nie wyznacza się liczbowej nadwyżki energetycznej; podstawą jest ocena przyczyn, regularne i energetycznie gęste posiłki oraz obserwacja przyrostów masy ciała i wzrostu.');
   expect(t8).toContain('z niedowagą wymaga oceny pediatrycznej');
   expect(zl(d8, 'talerz')).toBe('Zalecane jest 5 regularnych posiłków dziennie w spokojnej atmosferze, bez presji przy jedzeniu, z dodatkami zwiększającymi kaloryczność w małej objętości (oliwa, masło, pasty orzechowe, pełnotłusty nabiał); nie należy ograniczać jakichkolwiek grup produktów.');
   expect(d8.zdania.kontrola.length).toBe(2);
@@ -195,7 +195,7 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   const n12 = await policz(page, { age: 12, sex: 'F', h: 150, centyl: 4 });
   expect(n12.risk.any).toBe(false);
   expect(n12.strategia).toBe('przyrost');
-  expect(norm(n12.text)).toContain('aplikacja nie wyznacza liczbowej nadwyżki energetycznej');
+  expect(norm(n12.text)).toContain('nie wyznacza się liczbowej nadwyżki energetycznej');
   expect(norm(n12.text)).not.toContain('pilna ocena kliniczna');
   expect(zl(n12, 'talerz')).toBe('Zalecane są regularne posiłki (5 dziennie, w tym śniadanie i przekąski) o zwiększonej gęstości energetycznej – z dodatkiem orzechów, nasion, oliwy, pełnotłustego nabiału i awokado; nie należy ograniczać jakichkolwiek grup produktów.');
   expect(norm(n12.zdania.kontrola[1])).toContain('cechy zaburzeń odżywiania u nastolatka wymagają wcześniejszej oceny');
@@ -217,7 +217,7 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   expect(n18.risk.isAdult).toBe(true);
   expect(n18.bmi).toBeGreaterThanOrEqual(17.5); expect(n18.bmi).toBeLessThan(18.5);
   expect(n18.strategia).toBe('przyrost');
-  expect(norm(n18.text)).toContain('aplikacja nie wyznacza liczbowej nadwyżki energetycznej');
+  expect(norm(n18.text)).toContain('nie wyznacza się liczbowej nadwyżki energetycznej');
   expect(norm(n18.text)).not.toContain('Niedowaga z cechami ryzyka');
   expect(norm(n18.zdania.kontrola[1])).toMatch(/wymagają wcześniejszej oceny\.$/u);
   expect(norm(n18.zdania.kontrola[1])).not.toContain('rodzic');
