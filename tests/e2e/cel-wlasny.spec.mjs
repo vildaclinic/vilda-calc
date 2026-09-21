@@ -108,8 +108,9 @@ test('silnik planu: strażniki celu własnego i dieta wyłącznie lekka z podło
   const nadmiar = await policz(page, { age: 35, sex: 'F', h: 164, w: 67.8, cel: 62 }); // BMI 25,2
   expect(nadmiar.cg.available).toBe(false); expect(nadmiar.cg.reason).toBe('nadmiar');
   expect(nadmiar.diety.map((d) => d.key)).toEqual(['light', 'moderate', 'intense']); expect(nadmiar.strategia).toBe('reduction');
+  // 18 lat → gałąź nastolatka (rata C′): bez zaznaczonego „Wzrost zakończony” cel zablokowany
   const osiemnascie = await policz(page, { age: 18, sex: 'F', h: 164, w: 66, cel: 62 });
-  expect(osiemnascie.cg).toBeNull(); expect(osiemnascie.strategia).toBe('utrzymanie');
+  expect(osiemnascie.cg.teen).toBe(true); expect(osiemnascie.cg.reason).toBe('wzrastanie'); expect(osiemnascie.strategia).toBe('utrzymanie');
 
   // blokada z historii masy: 70 → 66 kg w 4 tygodnie (≈ 1,4 %/tydz.)
   const now = Date.now();

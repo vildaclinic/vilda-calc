@@ -5696,6 +5696,75 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## „Cel własny" nastolatka po zakończeniu wzrastania (P-DIETA-CEL-WLASNY rata C′, SW 1.1.35, 2026-09-21)
+
+**Status:** zmiana kliniczna — rozszerzenie strategii `cel-wlasny` (rata C) na nastolatka. Decyzje
+właściciela 2026-09-21: wiek **≥ 16 lat**; dostępność w paśmie **P75–P85** BMI dla wieku i płci;
+**zaznaczone „Wzrost zakończony" obowiązkowe** (prognoza „praktycznie zakończone" tylko podpowiada —
+wariant A); cel **≥ masa dla P50 BMI** i ≤ masa − 0,5 kg; tempo **≤ 1 kg/miesiąc**; ćwiczenia
+wzmacniające mięśnie ≥ 3 dni/tydz.; kontrola co 4–6 tygodni ze zdaniem o objawach zaburzeń odżywiania;
+„ustalony z rodzicami" wypada od 18 lat; blokada z historii masy zostaje. Zestaw zdań zatwierdzony
+z poprawkami (bez „(flaga)", „jedzenie ok. … kcal dziennie", bez wzmianki o spoczynkowej przemianie
+materii, „Podczas stosowania diety redukcyjnej…", „Masa docelowa nie powinna być niższa niż…").
+
+**Silnik (`vilda_diet_plan_ui.js`; progi jako dane w `ENERGY_CUSTOM_GOAL`: `teenAgeFrom: 16`,
+`teenBandFromCentyl: 75`, `teenBandToCentyl: 85`, `teenTargetCentyl: 50`, `teenRateKgMonth: 1`):**
+1. `energyCustomGoalAssessTeen({ageYears, ageMonthsOpt, sex, weightKg, heightCm, targetKg, risk,
+   growthEnded, bmiClass})` — P50/P75/P85 z `VildaBmi.wartoscDlaCentyla` (ta sama reguła siatek co
+   klasyfikacja), centyl celu z `VildaBmi.policz`; powody niedostępności: `wiek` (< 16), `dane` (brak
+   silnika lub klasy), `nadmiar` (klasa nadwaga/otyłość → zwykła ścieżka), `bmi-ponizej` (< P75),
+   `wzrastanie` (bez zaznaczenia; `practicallyEnded` z `childGrowthOutlook` niesie podpowiedź),
+   `ryzyko` (`risk.any`: u 13–17 lat masa < 85 % należnej lub szybka utrata masy). Błędy celu jak
+   u dorosłego (`brak`, `za-wysoki`, `za-niski` = poniżej P50, `minimum`).
+2. `energyBuildPlanReductionState` liczy `customGoal` także dla dziecka ≥ 16 lat (`growthEnded` z
+   argumentu albo z `#growthEndedFlag`); przy aktywnym celu jedna dieta (`Gcwt`): deficyt z tempa
+   1 kg/mies. = round(7700/30,4375) = 253 kcal/d, podłoga jak w drabince dziecięcej (max(1200 kcal,
+   REE)); poniżej podłogi cel dezaktywowany (`targetError: "minimum"`).
+3. Podpowiedzi nastolatka w `energyCustomGoalHint` (m.in. „…zaznacz „Wzrost zakończony" w opcjach
+   dodatkowych Zaleceń energetycznych", „…poniżej 75. centyla celem jest utrzymanie masy ciała").
+
+**UI.** Pole celu w „Drodze do normy BMI" i karta „Cel" w Zaleceniach energetycznych pokazują się u
+nastolatka ≥ 16 lat także z powodami `wzrastanie` i `bmi-ponizej` (przyciski wyłączone, podpowiedź
+z powodem). Panel „Droga do normy" w trybie `customGoal` u dziecka: czas z symulacji przy zakończonym
+wzrastaniu i liczbowym BMI celu; opis diety z tempa (`fixedDeficit`).
+
+**Generator (`vilda_diet_recommendations.js`, gałąź dziecięca, tylko `E && e ≥ 16 && !nadmiar &&
+!niedowaga`):** Z1 pro „Wzrastanie zostało zakończone. BMI 23,1 (ok. 80. centyl) mieści się w normie
+dla wieku i płci, w jej górnym paśmie. Przyjęty cel własny to ok. 59,0 kg (BMI 21,7, ok. 60. centyl),
+czyli redukcja o ok. 4,0 kg; nie jest to wskazanie medyczne, lecz cel uzgodniony z pacjentką
+i rodzicami." (od 18 lat bez rodziców; „pacjentem" u chłopca) / pac „Twój wzrost jest już zakończony,
+a BMI 23,1 jest w normie dla Twojego wieku, blisko jej górnej granicy. Ustalony cel to ok. 59,0 kg
+(BMI 21,7) – o ok. 4,0 kg mniej niż teraz. To Twój własny cel, ustalony z rodzicami i lekarzem, a nie
+zalecenie lekarskie."; Z2 pro „Zapotrzebowanie energetyczne przy deklarowanej aktywności … wynosi ok.
+2400 kcal/dzień. Do osiągnięcia zadeklarowanego celu własnego (redukcja o ok. 4,0 kg) tempo spadku
+masy ciała nie powinno być większe niż 1 kg miesięcznie, co odpowiada deficytowi ok. 253 kcal dziennie
+i kaloryczności diety ok. 2150 kcal dziennie." / pac „…nie chudnij szybciej niż 1 kg miesięcznie – to
+deficyt ok. 253 kcal dziennie, czyli jedzenie ok. 2150 kcal dziennie."; normy liczone dla planu; Z3 czas
+(`czasDoNormy`); Z4 talerz nastolatka z raty B bez zmian; Z5 ruch (`dz-ruch-cel-nastolatek`: „Podczas
+stosowania diety redukcyjnej warto dołożyć ćwiczenia wzmacniające mięśnie co najmniej 3 dni
+w tygodniu…"); Z6 kontrola (`dz-kontrola-cel-nastolatek` / `-18`: „Masa docelowa nie powinna być niższa
+niż masa odpowiadająca 50. centylowi BMI dla wieku i płci (tu ok. 55,0 kg); po osiągnięciu celu należy
+wrócić do jedzenia na poziomie zapotrzebowania. Wskazana kontrola masy ciała co 4–6 tygodni oraz
+czujność na objawy zaburzeń odżywiania…"). `dane.strategia = 'cel-wlasny'`, `masa.docelowaKg`,
+`masa.doRedukcjiKg` z celu.
+
+**Źródła.** Tempo 1 kg/mies. i podłoga jak w istniejącej drabince 12–18 lat (Mazur i wsp., Nutrients
+2022, 14:3806 — jak we wpisie ENERGY-CHILD); ćwiczenia wzmacniające mięśnie ≥ 3 dni/tydz. dla 5–17 lat:
+WHO 2020; blokada: `vilda_anorexia_risk.js` (progi bez zmian). Dla prawidłowego BMI żadne wytyczne nie
+zalecają redukcji — stąd „cel własny", pasmo P75–P85 i cel nie niżej niż P50.
+
+**Wpływ na wyniki.** Bez wpisanego celu: nic się nie zmienia (norma nastolatka jak w racie B; 113 testów
+sąsiednich zielone bez zmian oczekiwań). Testy: `tests/e2e/cel-wlasny-nastolatek.spec.mjs` (3 testy;
+masy z centyli silnika, nie zgadywane). Mutacje (8, wszystkie czerwone): wiek 17; pasmo od P80; bez
+flagi; cel poniżej P50; tempo 2 kg; rodzice u 18-latka; pole bez powodów; bez blokady ryzyka.
+
+**Uwaga.** `childGrowthOutlook` bez danych karty zaawansowanej uznaje wzrastanie dziewczyny ≥ 17 lat
+(chłopca ≥ 18) za praktycznie zakończone z mediany — wtedy podpowiedź „Według prognozy…" pada u każdej
+17-latki bez zaznaczenia; nie odblokowuje celu.
+
+SW 1.1.34 → **1.1.35**; `vilda_diet_plan_ui.js?v=21→22`, `vilda_bmi_journey.js?v=14→15`,
+`vilda_update_prep.js?v=89→90`, `vilda_diet_recommendations.js?v=38→39`.
+
 ## „Cel własny" dorosłego z BMI 23,0–24,9 (P-DIETA-CEL-WLASNY rata C, SW 1.1.33, 2026-09-21)
 
 **Status:** zmiana kliniczna — nowa strategia generatora zaleceń energetycznych (`cel-wlasny`), nowe pole
@@ -5767,6 +5836,12 @@ podłogą w silniku; generator w obu rejestrach dla normy i górnej normy; Droga
 tryb pacjenta + blokada; nagłówki raportu). Mutacje (8, wszystkie czerwone): próg 24; bez podłogi; bez
 blokady ryzyka; bez dolnej granicy; dieta umiarkowana; strategia „utrzymanie" zamiast celu; pole poza
 trybem pro; karta „Cel" od 25.
+
+**Rata C-ui (SW 1.1.34, 2026-09-21; uwaga właściciela do zrzutów).** Sekcja celu w karcie „Droga do normy BMI"
+przeniesiona **nad wynik** (wejście steruje panelem poniżej) i przerysowana w stylu segmentów panelu drogi:
+etykieta „CEL", segment „Utrzymanie / Cel własny", pole „Masa docelowa … kg" widoczne po wyborze celu,
+podpowiedź kursywą (blokada z historii masy jako bursztynowa nota). Ten sam stan i ta sama wartość co w karcie
+„Cel" w Zaleceniach energetycznych (`#customGoalKg`). Bez zmian w silniku i zdaniach.
 
 **Znane ograniczenia.** Cel nie jest zapisywany w rekordzie pacjenta (żyje w stanie sesji jak PAL);
 klasyczny PDF „Droga do normy" nie ma sekcji panelu przy celu własnym (używa `distanceToNormalBMI`).

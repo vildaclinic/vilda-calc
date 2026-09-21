@@ -86,7 +86,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
-<link href="style.css?v=73" rel="stylesheet" />
+<link href="style.css?v=74" rel="stylesheet" />
 <link href="ios26-v2.css?v=19" rel="stylesheet" />
 <link href="sidebar.css" rel="stylesheet" />
 <link href="vilda_chrome.css?v=36" rel="stylesheet">
@@ -280,7 +280,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_growth_prediction_validation_model.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=13"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=88" defer></script>
+<script src="vilda_update_prep.js?v=90" defer></script>
 
 <script defer src="inline_docpro_00.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -3932,13 +3932,21 @@ html.vilda-pro-active   #proGateBanner { display: none; }
     <!-- Karta „Droga do normy BMI” – zachowana oryginalna struktura -->
     <div class="card" id="toNormCard" style="display:none;">
       <h2>Droga do normy BMI</h2>
-      <div id="toNormInfo"></div>
-      <!-- P-DIETA-CEL-WLASNY rata C: cel własny dorosłego z BMI 23,0–24,9 (tryb profesjonalny); wartość czyta silnik planu (energyBuildPlanReductionState) -->
-      <div id="customGoalWrap" style="display:none; margin-top:0.5rem; text-align:center;">
-        <label for="customGoalKg">Cel własny – masa docelowa (kg):</label>
-        <input type="number" id="customGoalKg" step="0.1" min="0" inputmode="decimal" autocomplete="off" style="width:6em; margin-left:0.35rem;">
-        <small id="customGoalHint" style="display:block; margin-top:0.3rem;"></small>
+      <!-- P-DIETA-CEL-WLASNY rata C: cel własny dorosłego z BMI 23,0–24,9 (tryb profesjonalny). Wejście stoi NAD wynikiem, bo steruje panelem
+           poniżej; wygląd jak segmenty panelu drogi (PAL / Dieta). Wartość czyta silnik planu (energyBuildPlanReductionState); stan i podpowiedź
+           rysuje vilda_update_prep.js. To samo pole lustrzanie: karta „Cel” w Zaleceniach energetycznych. -->
+      <div id="customGoalWrap" class="cel-wlasny" style="display:none;">
+        <span class="cel-wlasny-lbl">Cel</span>
+        <div class="cel-wlasny-seg" role="group" aria-label="Cel masy ciała">
+          <button type="button" data-cel-wlasny-choice="maintain" aria-pressed="true">Utrzymanie</button>
+          <button type="button" data-cel-wlasny-choice="custom" aria-pressed="false">Cel własny</button>
+        </div>
+        <label class="cel-wlasny-pole" data-cel-wlasny-input-wrap style="display:none;">Masa docelowa
+          <input type="number" id="customGoalKg" step="0.1" min="0" inputmode="decimal" autocomplete="off"> kg
+        </label>
+        <small id="customGoalHint" class="cel-wlasny-nota"></small>
       </div>
+      <div id="toNormInfo"></div>
       <!-- Kontener na przycisk i wynik idealnej wagi. Pokazywany tylko, gdy BMI jest w normie. -->
       <div id="idealWeightWrap" style="display:none; margin-top:0.5rem; text-align:center;">
         <button type="button" id="idealWeightBtn">
@@ -4069,13 +4077,13 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script defer src="vilda_persist_runtime.js?v=16"></script>
 <script defer src="vilda_schowek.js?v=3"></script>
 <script defer src="vilda_summary_cards.js?v=47"></script>
-<script defer src="vilda_diet_plan_ui.js?v=21"></script>
+<script defer src="vilda_diet_plan_ui.js?v=22"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script src="app.js?v=226" defer></script>
-<script src="vilda_diet_recommendations.js?v=38" defer></script>
+<script src="vilda_diet_recommendations.js?v=39" defer></script>
 <script src="vilda_patient_report.js?v=30" defer></script>
 <!-- po app.js -->
 <script src="vilda_module_monitor_badges.js?v=1" defer></script>
