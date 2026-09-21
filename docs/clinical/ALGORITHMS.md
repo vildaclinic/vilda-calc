@@ -5751,7 +5751,7 @@ odrębnie zbadane interwencje — zdania nie obiecują efektu liczbowego.
 nastolatek redukcja i stabilizacja, dziecko stabilizacja i jawna redukcja, 5‑latek) — zdanie jako drugie
 zdanie talerza, w tekście i w punktach, punkty cytują zdanie; 10 kontroli ujemnych (norma, niedowaga, cel
 własny, maluch). Zestaw specyfikacji modułu diety (18 plików): 95 testów zielonych, w tym dopasowanie
-jednostronicowego planu do A4 z kompletem opcji. Pełny zestaw e2e desktop: WYNIK_E2E_H.
+jednostronicowego planu do A4 z kompletem opcji. Pełny zestaw e2e desktop: 645 zielonych, 2 pominięte, 0 błędów (14,7 min).
 `vilda_diet_recommendations.js` v45, SW 1.1.41.
 
 ## Bez słowa „aplikacja" w zdaniach dla pacjenta (P-DIETA-REJESTR rata G′, SW 1.1.40, 2026-09-21)
