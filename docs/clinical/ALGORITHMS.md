@@ -5696,6 +5696,137 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Strategia „przyrost" przy niedowadze (P-DIETA-PRZYROST rata D, SW 1.1.36, 2026-09-21)
+
+**Status:** zmiana kliniczna — otwarcie modułu „Zalecenia dietetyczne" dla niedowagi i nowa strategia
+generatora `przyrost` (do raty D: bramka zamknięta, `strategia: null`, brak zdania o energii). Decyzje
+właściciela 2026-09-21: nadwyżka **300–500 kcal/d** (rekomendacja po weryfikacji w PubMed; pierwotne
+200–400 nie miało źródła); podstawą **TEE bez korekty na ryzyko**; plan liczbowy u dorosłego tylko od
+**BMI 17,5** (próg AN modułu ryzyka) i bez cech ryzyka spoza samego BMI; tempo i czas pokazywane;
+zdanie o ruchu u dorosłego zostaje; kontrola dorośli co 2–4 tyg., dzieci co 4–6 tyg.; **dziecko
+i nastolatek bez liczb — opcja A**: także ≥ 16 lat po zakończeniu wzrastania; do czasu dojścia dopisana
+uwaga, że z badań naukowych wynika wolniejszy przyrost w praktyce. Zestaw zdań zatwierdzony z poprawkami
+(„masa ciała rośnie", „aplikacja nie wyznacza…", „pod nadzorem lekarza i dietetyka klinicznego",
+„ze specjalistą (dietetykiem klinicznym, psychodietetykiem)", „unikasz jedzenia lub boisz się przybrać
+na wadze" zamiast „trudno Ci jeść").
+
+**Silnik (`vilda_diet_plan_ui.js`; dane w `ENERGY_GAIN_PLAN = {surplusMinKcal: 300, surplusMaxKcal: 500,
+bmiPlanFromFallback: 17.5}`):**
+1. `energyGainAssess({ageYears, ageMonthsOpt, sex, weightKg, heightCm, teeRawKcal, risk})` — tylko dorosły
+   (≥ 19 lat) z BMI < `ADULT_BMI.UNDER` (18,5). Próg planu liczbowego czytany z
+   `window.VildaAnorexiaRisk.thresholds.adult.bmiAN` (moduł ryzyka wystawia od tej raty swoje progi jako
+   dane tylko do odczytu; kopii progu nie ma, 17,5 jest wyłącznie zapasem bez modułu). Cechy ryzyka spoza
+   BMI: `detectAnRisk` z historią i spożyciem vs ten sam `detectAnRisk` bez nich — powody, których nie ma
+   w ocenie z samego BMI (szybka utrata masy, bardzo niskie spożycie), to `riskReasons`/`riskExtra`.
+   Powody niedostępności: `wiek`, `dane`, `bmi-w-normie` (silnik nie oddaje `gainPlan`), `bmi-ponizej`
+   (< 17,5), `ryzyko`. Gdy dostępne: `intakeMin/Max = round100(TEE_raw + 300/500)`, `intakeMid`
+   (TEE_raw + 400, podstawa norm żywieniowych), `rateMin/MaxKgWeek = 300·7/7700, 500·7/7700`
+   (0,27–0,45 kg/tydz.), `weeksMin = round(kgDoNormy / rateMax)`, `weeksMax = round(kgDoNormy / rateMin)`,
+   `lowerWeightKg`, `kgToLower`.
+2. `energyBuildPlanReductionState` oddaje `gainPlan` (null poza niedowagą dorosłego); TEE bierze
+   z `teeRawKcal`, nie z `teeBaselineKcal` (moduł ryzyka obniża baseline o 15 % przy BMI < 18,5).
+3. `energyCustomGoalAssessTeen`: klasa `niedowaga` dostaje powód `niedowaga` (przedtem `bmi-ponizej`),
+   więc pole celu własnego w „Drodze do normy" nie pokazuje się z podpowiedzią „celem jest utrzymanie".
+4. Karta „Bez planu redukcji" w panelu planu u dorosłego z niedowagą mówi „BMI poniżej 18,5 (niedowaga)"
+   i odsyła do Zaleceń dietetycznych (przedtem: „BMI w zakresie prawidłowym").
+
+**Bramka (`updateDietRecommendationsVisibility`).** Tryb profesjonalny, wiek > 5 lat: dorosły każde BMI;
+dziecko — gdy jest silnik BMI (bez niego przycisku nie ma, jak dotąd). Karta strategii nadal tylko przy
+nadmiarze; karta „Cel" i pole celu własnego ukryte przy niedowadze.
+
+**Generator (`vilda_diet_recommendations.js`), dorosły z niedowagą, `strategia: 'przyrost'`:**
+Z1 klasyfikacja bez zmian; **Z2** (plan dostępny) pro „Zapotrzebowanie energetyczne przy deklarowanej
+aktywności … wynosi ok. 1800 kcal/dzień. Dla przyrostu masy ciała proponowana jest nadwyżka 300–500 kcal
+dziennie, czyli podaż ok. 2100–2300 kcal dziennie; odpowiada to tempu ok. 0,3–0,5 kg tygodniowo,
+a dojście do dolnej granicy normy można orientacyjnie szacować na ok. 5–8 tygodni; z badań naukowych
+wynika, że w praktyce przyrost bywa wolniejszy niż z tego rachunku, dlatego o postępie decyduje kontrola
+masy ciała." / pac „Przy Twojej aktywności … potrzebujesz ok. 1800 kcal dziennie. Żeby przybierać na
+wadze, jedz ok. 300–500 kcal więcej, czyli ok. 2100–2300 kcal dziennie. To przyrost ok. 0,3–0,5 kg
+tygodniowo; do dolnej granicy normy dojdziesz orientacyjnie za ok. 5–8 tygodni. Z badań naukowych wynika,
+że w praktyce przyrost bywa wolniejszy, niż wychodzi z rachunku – dlatego ważne jest regularne ważenie.";
+**Z6** (BMI < 17,5 albo ryzyko; zamiast Z2) pro „Przy BMI poniżej 17,5 lub cechach ryzyka zaburzeń
+odżywiania aplikacja nie podaje planu liczbowego; wskazana ocena kliniczna, w tym ryzyka zespołu ponownego
+odżywienia, i prowadzenie żywienia pod nadzorem lekarza i dietetyka klinicznego." / pac „Przy tak niskiej
+masie ciała aplikacja nie podaje planu liczbowego – potrzebna jest ocena lekarska, a plan jedzenia ustala
+się razem ze specjalistą (dietetykiem klinicznym, psychodietetykiem)."; normy żywieniowe dla planu
+(`intakeMid`) albo dla zapotrzebowania (Z6); **Z3** talerz (istniejące zdanie + `d-talerz-przyrost`:
+„Kaloryczność posiłków warto zwiększać dodatkami o dużej gęstości energetycznej – oliwą, orzechami,
+nasionami, pełnotłustym nabiałem i awokado – oraz przekąskami między posiłkami, zamiast powiększania
+objętości porcji."); **Z4** ruch (`d-ruch-przyrost`: „…ćwiczeniach oporowych 2–3 razy w tygodniu i unikać
+długich treningów wytrzymałościowych o dużym wydatku energetycznym."); **Z5** kontrola (istniejące zdanie
++ `d-kontrola-przyrost`: „Wskazana kontrola masy ciała co 2–4 tygodnie; brak przyrostu mimo zwiększonej
+podaży, niezamierzona utrata masy ciała, dolegliwości ze strony przewodu pokarmowego lub cechy zaburzeń
+odżywiania wymagają diagnostyki." / pac „Waż się co 2–4 tygodnie. Jeśli mimo jedzenia więcej masa ciała
+nie rośnie, chudniesz bez powodu, masz dolegliwości brzuszne albo zauważasz, że unikasz jedzenia lub
+boisz się przybrać na wadze – zgłoś to lekarzowi."). `dane.energia`: `utrzymanieKcal` = TEE bez korekty,
+nowe `nadwyzkaKcal [300, 500]`, `podazZakresKcal`, `tempoZakresKgTydz`; `dane.masa`: `docelowaKg`
+= masa dla BMI 18,5, nowe `doPrzyrostuKg`; `czasDoNormy = {tygodnie: weeksMax, tygodnieOd: weeksMin}`.
+
+**Generator, dziecko i nastolatek z niedowagą (≥ 5 lat; 2–4 lata: tylko `strategia: 'przyrost'`, zdania
+w racie E):** **Z2** pro „Przy niedowadze u dziecka aplikacja nie wyznacza liczbowej nadwyżki
+energetycznej; podstawą jest ocena przyczyn, regularne i energetycznie gęste posiłki oraz obserwacja
+przyrostów masy ciała i wzrostu." / pac nastolatek „Aplikacja nie wyznacza Ci dodatkowych kalorii do
+zjedzenia – ważne są regularne, pożywne posiłki i sprawdzanie, czy masa ciała rośnie." / pac rodzic
+„Aplikacja nie wyznacza dziecku dodatkowych kalorii – … czy masa ciała i wzrost rosną."; **Z5** (zamiast
+Z2, nastolatek ≥ 11 lat, gdy `risk.any` z `vilda_anorexia_risk.js`: masa < 85 % należnej u 13–17 lat,
+BMI < 2. centyla, szybka utrata masy) pro „Cechy ryzyka zaburzeń odżywiania (masa poniżej 85 % należnej
+lub szybka utrata masy ciała) – wskazana pilna ocena kliniczna; plan żywieniowy wyłącznie pod nadzorem
+lekarza i dietetyka klinicznego." / pac „Twoja masa ciała jest wyraźnie za niska albo szybko spadła –
+potrzebna jest szybka wizyta u lekarza, a plan jedzenia ustala się razem ze specjalistą (dietetykiem
+klinicznym, psychodietetykiem)."; **Z3** talerz (`dz-talerz-nastolatek-przyrost`: „Zalecane są regularne
+posiłki (5 dziennie, w tym śniadanie i przekąski) o zwiększonej gęstości energetycznej – z dodatkiem
+orzechów, nasion, oliwy, pełnotłustego nabiału i awokado – bez ograniczania jakichkolwiek grup
+produktów." / `dz-talerz-dziecko-przyrost`: „Zalecane jest 5 regularnych posiłków dziennie w spokojnej
+atmosferze, bez presji przy jedzeniu, z dodatkami zwiększającymi kaloryczność w małej objętości (oliwa,
+masło, pasty orzechowe, pełnotłusty nabiał) i bez ograniczania jakichkolwiek grup produktów."); **Z4**
+kontrola (istniejące zdanie raty A + `dz-kontrola-przyrost-nastolatek` / `-18` / `-dziecko`: „Wskazana
+kontrola masy ciała i wzrostu co 4–6 tygodni na siatkach centylowych; brak przyrostu, spadek centyla lub
+cechy zaburzeń odżywiania[ u nastolatka] wymagają wcześniejszej oceny." / pac nastolatek „Ważenie
+i mierzenie co 4–6 tygodni; jeśli masa ciała nie rośnie albo zauważasz, że unikasz jedzenia lub boisz się
+przybrać na wadze, powiedz o tym rodzicom lub lekarzowi." (od 18 lat: „lekarzowi") / pac rodzic „Proszę
+kontrolować masę ciała i wzrost dziecka co 4–6 tygodni; brak przyrostu lub spadek na siatce wymaga
+wcześniejszej wizyty."). `dane.energia.utrzymanieKcal` = TEE bez korekty (kafelek zapotrzebowania).
+**18-latek** pozostaje w gałęzi dziecięcej (granica dorosłego w aplikacji to 19 lat): moduł ryzyka liczy go
+progami dorosłego, więc sam powód „BMI < 18,5" nie uruchamia Z5 — Z5 od BMI < 17,5 (próg z danych modułu)
+albo przy dodatkowych powodach; plan liczbowy dopiero od 19 lat.
+
+**Raport pacjenta (`vilda_raport_plan.js`).** Nagłówek „ZAPOTRZEBOWANIE ENERGETYCZNE I PRZYROST MASY
+CIAŁA"; kafle: zapotrzebowanie, a przy planie liczbowym dorosłego także „300–500 kcal na dobę / nadwyżka
+energetyczna", „2 100–2 300 kcal dziennie / zalecana podaż energii", „0,3–0,5 kg tygodniowo / spodziewane
+tempo przyrostu". Sekcja „Twoja droga" (redukcja) nie pojawia się.
+
+**Źródła (dane bibliograficzne za PubMed).** Larson-Meyer DE i wsp., *Weight Gain Recommendations for
+Athletes and Military Personnel: a Critical Review of the Evidence*, Curr Nutr Rep 2022 —
+nadwyżka ~300–500 kcal/d, ~0,45 kg/tydz. trudne do osiągnięcia, [DOI 10.1007/s13668-022-00395-3](https://doi.org/10.1007/s13668-022-00395-3);
+Marzola E i wsp., *Nutritional rehabilitation in anorexia nervosa: review of the literature and
+implications for treatment*, BMC Psychiatry 2013 — NICE 2004: 0,5 kg/tydz. ambulatoryjnie = ok.
+3500–7000 kcal ekstra tygodniowo; APA 2006: 0,23–0,45 kg/tydz.; koszt 1 kg 5000–10 000 kcal (śr. ok. 7500),
+[DOI 10.1186/1471-244X-13-290](https://doi.org/10.1186/1471-244X-13-290); Hall KD, *What is the required
+energy deficit per unit weight loss?*, Int J Obes 2008 — 7700 kcal/kg jako środek (u szczupłych część
+przyrostu to masa beztłuszczowa), [DOI 10.1038/sj.ijo.0803720](https://doi.org/10.1038/sj.ijo.0803720);
+Hatami A i wsp., RCT u dorosłych z BMI < 18,5 na diecie +500 kcal/d, J Diet Suppl 2025 — grupa placebo
++0,44 kg w 8 tygodni (stąd zdanie o wolniejszym przyroście w praktyce),
+[DOI 10.1080/19390211.2025.2561132](https://doi.org/10.1080/19390211.2025.2561132); Garber AK i wsp.,
+StRONG (JAMA Pediatr 2021) — jedyne liczby u nastolatków to szpitalne żywienie w AN, stąd u dzieci
+i nastolatków bez liczb, [DOI 10.1001/jamapediatrics.2020.3359](https://doi.org/10.1001/jamapediatrics.2020.3359).
+Progi ryzyka: `vilda_anorexia_risk.js` bez zmian (wystawione jako dane). Ćwiczenia oporowe: jak
+w istniejących zdaniach o ruchu (WHO 2020). MEED 2022 nie jest indeksowane w PubMed jako dokument.
+
+**Wpływ na wyniki.** Norma, górna norma, nadmiar: bez zmian (zdania, liczby, `strategia`). Niedowaga:
+moduł widoczny, `strategia null → 'przyrost'`, nowe zdania jak wyżej; klasyfikacja i istniejące zdania
+niedowagi (talerz dorosłego, kontrola raty A, przedmowa < 10 lat) bez zmian. Testy:
+`tests/e2e/przyrost-zalecen.spec.mjs` (5 testów; masy dzieci z centyli silnika; liczby liczone z
+`teeRawKcal` stanu silnika, nie kopiowane); zaktualizowane oczekiwania: `utrzymanie-zalecen` (bramka
+i strategia niedowagi), `niedowaga-dziecka` (talerz i strategia), `punkty-zalecen` (drugie zdanie kontroli
+ma rozpisanie; nowe przypadki niedowagi w strażniku punktów).
+
+**Uwaga.** U nastolatków 13–17 lat niedowaga < P5 niemal zawsze oznacza masę < 85 % należnej, więc
+w tym paśmie pada Z5 (pilna ocena), a Z2 praktycznie tylko u 11–12 lat i u 18-latków — do decyzji
+właściciela, czy próg 85 % modułu ryzyka ma tu zostać.
+
+SW 1.1.35 → **1.1.36**; `vilda_diet_plan_ui.js?v=22→23`, `vilda_diet_recommendations.js?v=39→40`,
+`vilda_raport_plan.js?v=3→4`, `vilda_anorexia_risk.js?v=3→4`.
+
 ## „Cel własny" nastolatka po zakończeniu wzrastania (P-DIETA-CEL-WLASNY rata C′, SW 1.1.35, 2026-09-21)
 
 **Status:** zmiana kliniczna — rozszerzenie strategii `cel-wlasny` (rata C) na nastolatka. Decyzje

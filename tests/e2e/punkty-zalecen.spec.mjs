@@ -86,6 +86,13 @@ test('punkty cytuja zdania: dorosli i dzieci, oba rejestry', async ({ page }) =>
     ['dorosla z nadwaga', { age: 35, sex: 'F', w: 78, h: 165 }],
     ['dorosla z niedowaga', { age: 28, sex: 'F', w: 44, h: 168 }],
     ['dorosla z niedowaga, rejestr pacjenta', { age: 28, sex: 'F', w: 44, h: 168, pf: true }],
+    ['dorosla z niedowaga i planem przyrostu (rata D)', { age: 28, sex: 'F', w: 50, h: 168 }],
+    ['dorosla z niedowaga i planem przyrostu, rejestr pacjenta', { age: 28, sex: 'F', w: 50, h: 168, pf: true }],
+    ['8-latka z niedowaga (rata D)', { age: 8, sex: 'F', w: 21.7, h: 128 }],
+    ['8-latka z niedowaga, rejestr pacjenta', { age: 8, sex: 'F', w: 21.7, h: 128, pf: true }],
+    ['12-latka z niedowaga', { age: 12, sex: 'F', w: 32.4, h: 150 }],
+    ['12-latka z niedowaga, rejestr pacjenta', { age: 12, sex: 'F', w: 32.4, h: 150, pf: true }],
+    ['18-latek z niedowaga, rejestr pacjenta', { age: 18, sex: 'M', w: 56.4, h: 178, pf: true }],
     ['nastolatka 14 lat', { age: 14, months: 6, sex: 'F', w: 75, h: 150 }],
     ['nastolatka 14 lat, rejestr pacjenta', { age: 14, months: 6, sex: 'F', w: 75, h: 150, pf: true }],
     ['3-latka', { age: 3, sex: 'F', w: 22, h: 100 }],
@@ -158,8 +165,11 @@ test('rola bez rozpisania pokazuje cale zdanie, a nie jego kawalek', async ({ pa
 
   // zdania krotkie i jednoclonowe nie maja rozpisania: punktem jest samo zdanie
   const niedowaga = await policz(page, { age: 28, sex: 'F', w: 44, h: 168 });
-  expect(niedowaga.punkty.kontrola).toEqual(niedowaga.zdania.kontrola);
+  // pierwsze zdanie kontroli nie ma rozpisania → jest punktem w całości; drugie (rata D) ma rozpisanie
+  expect(niedowaga.punkty.kontrola[0]).toBe(niedowaga.zdania.kontrola[0]);
   expect(norm(niedowaga.punkty.kontrola[0])).toContain('Niedowaga wymaga oceny przyczyn klinicznych');
+  expect(niedowaga.zdania.kontrola.length).toBe(2);
+  expect(niedowaga.punkty.kontrola.length).toBe(3);
 
   const dziecko = await policz(page, { age: 3, sex: 'F', w: 22, h: 100 });
   expect(dziecko.punkty.kontrola).toEqual(dziecko.zdania.kontrola);
