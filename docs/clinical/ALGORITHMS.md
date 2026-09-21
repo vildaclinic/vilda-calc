@@ -5696,6 +5696,24 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Bez słowa „aplikacja" w zdaniach dla pacjenta (P-DIETA-REJESTR rata G′, SW 1.1.40, 2026-09-21)
+
+**Status:** zmiana brzmienia dwóch zdań rejestru standardowego (treść merytoryczna bez zmian), na polecenie
+właściciela po racie G — dokument, który pacjent dostaje od lekarza, nie powinien mówić o „aplikacji".
+
+- dorosły bez planu liczbowego (Z6): „Przy BMI poniżej 17,5 lub cechach ryzyka zaburzeń odżywiania **nie ustala
+  się** planu liczbowego; wskazana ocena kliniczna, w tym ryzyka zespołu ponownego odżywienia, i prowadzenie
+  żywienia pod nadzorem lekarza i dietetyka klinicznego." (było: „aplikacja nie podaje planu liczbowego");
+- dziecko/nastolatek z niedowagą bez cech ryzyka (Z2): „Przy niedowadze u dziecka **nie wyznacza się** liczbowej
+  nadwyżki energetycznej; podstawą jest ocena przyczyn, regularne i energetycznie gęste posiłki oraz obserwacja
+  przyrostów masy ciała i wzrostu." (było: „aplikacja nie wyznacza").
+
+Poza generatorem słowo zostaje tam, gdzie mówi do lekarza: etykieta źródła w kontekście PDF („Na podstawie
+obliczeń energetycznych aplikacji", nieużywana przez jednostronicowy plan) i raport kwalifikacji do
+farmakoterapii („Aplikacja nie sprawdza…", P-RAPORT rata 3 — lista tego, czego nie zweryfikowano, celowo
+adresowana do lekarza). Testy: `przyrost-zalecen.spec`, `maluch-zalecen.spec` (asercje na nowe brzmienie).
+`vilda_diet_recommendations.js` v44, SW 1.1.40.
+
 ## Jeden rejestr zaleceń: tryb „Dla pacjenta" usunięty (P-DIETA-REJESTR rata G, SW 1.1.39, 2026-09-21)
 
 **Status:** usunięcie funkcji o skutku klinicznym (znika cały drugi wariant brzmienia zaleceń). Po racie F
