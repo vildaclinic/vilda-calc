@@ -5696,6 +5696,63 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Niedowaga u dziecka nazwana po imieniu; restrykcje tylko przy nadmiarze (P-DIETA-NIEDOWAGA rata A, SW 1.1.31, 2026-09-21)
+
+**Status:** zmiana kliniczna — korekta błędu bezpieczeństwa w generatorze zaleceń energetycznych
+(`vilda_diet_recommendations.js`, gałąź dziecięca). Decyzja właściciela 2026-09-21: „ruszaj od A"
+w ramach otwierania modułu „Zalecenia dietetyczne" dla wszystkich pacjentów (analiza i plan rat A–E
+w PR). Wyniki liczbowe (energia, normy, deficyt przy nadmiarze) bez zmian.
+
+**Błąd.** Gałąź dziecięca była binarna: `if (nadmiar) … else „Masa ciała dziecka mieści się w granicach
+normy dla jego wieku"`. Dziecko z BMI poniżej 5. centyla — zmierzone: 8-latka 18 kg / 128 cm, z-score
+−4,28, 0,001. centyl; 14-latka 35 kg / 160 cm, z-score −3,19 — dostawało zdanie o normie, a po nim tę
+samą listę restrykcyjną co dziecko z otyłością („należy ograniczać tłuste potrawy, żółty ser, słone
+przekąski…"). Dziecko w normie dostawało tę samą listę i `dane.strategia = 'reduction'`. Silnik BMI
+(`VildaBmi`, `PROGI.DZIECKO.NIEDOWAGA = 5`) próg zna; generator go nie czytał. Do dziś błąd nie był
+widoczny w UI, bo przycisk modułu otwiera się dopiero od P85 (P-DIETA-BRAMKA) — wychodzi na jaw przy
+otwarciu modułu dla normy i niedowagi, dlatego to rata A.
+
+**Zmiana (same wstawki i strażniki, bez edycji zdań nadmiaru):**
+1. `nd` = klucz kategorii `niedowaga` z `childBmiClass` (P-BMI-4: ten sam silnik i próg co karta
+   główna) — żadnej kopii progu w generatorze (mutacja M4 pilnuje, że kopia progu 3 c. jest czerwona).
+2. Zdanie klasyfikacji przy niedowadze, w formacie zdania o nadwadze: rejestr zawodowy „BMI 11,0 kg/m²,
+   poniżej 1. centyla dla wieku i płci, z-score −4,28 – niedowaga (< 5. centyla)"; pasmo 3–5 c.:
+   „centyl ok. 4,1" (jedno miejsce), < 0,5 c.: „poniżej 1. centyla"; rejestr pacjenta „BMI dziecka wynosi
+   11,0 kg/m² i jest poniżej 1. centyla dla wieku i płci (z-score −4,28), co oznacza niedowagę."
+3. Lista „na talerzu" (obie wersje wiekowe, oba rejestry) wyłącznie przy nadmiarze (`(Ze||ye)&&`).
+4. Rola „kontrola": przy niedowadze nowe zdanie (zawodowe: „Niedowaga u dziecka wymaga oceny przyczyn
+   klinicznych i trajektorii wzrastania; nie zaleca się ograniczania energii ani produktów, a plan
+   żywieniowy dla przyrostu masy ciała ustala się po konsultacji z pediatrą lub dietetykiem."; pacjenta:
+   nastolatek — „…nie ograniczaj jedzenia; porozmawiaj z rodzicami i lekarzem o ocenie przyczyn…",
+   dziecko — „…proszę nie ograniczać jedzenia; wskazana jest ocena przyczyn u pediatry…"); w normie bez
+   zdania kontroli (zdanie o „utrzymaniu zasad" zakładało plan, którego nie ma); nadmiar bez zmian.
+5. Przedmowa < 10 lat przy niedowadze: „Dziecko poniżej 10 lat z niedowagą wymaga oceny pediatrycznej;
+   proponowane zestawienie ma charakter poglądowy" (pacjent: „…wskazana jest ocena pediatryczna; to
+   zestawienie ma charakter orientacyjny i nie zastępuje jej") zamiast zdania o nadwadze/otyłości.
+6. `dane.strategia` = `null` bez nadmiaru (jak u dorosłego w normie); `dane.klasyfikacja.niedowaga`
+   niesie prawdę (dotąd stałe `false` u dzieci).
+
+**Co zostaje bez zmian, świadomie.** Ruch (zalecenie uniwersalne WHO 5–17 lat i 2–4 lata), normy
+żywieniowe dla wieku (liczone dla energii utrzymania — plan „przyrost" z nadwyżką to rata D), witamina
+D i płyny. Bez planu liczbowego dla dziecka z niedowagą: NICE — zahamowanie wzrastania u dzieci
+(Gonzalez-Viana i wsp., BMJ 2017, [DOI 10.1136/bmj.j4219](https://doi.org/10.1136/bmj.j4219)) — ocena
+i zachowania żywieniowe, nie samo dokładanie kalorii.
+
+**Wpływ na wyniki.** Zmienia się tekst dla dziecka w normie i z niedowagą (10 z 24 scenariuszy);
+dorośli i każdy nadmiar u dziecka — identyczne co do znaku (14 scenariuszy, zrzut silnika HEAD vs po
+zmianie, oba rejestry). Testy: `tests/e2e/niedowaga-dziecka.spec.mjs` (4 testy; masa dla pasma 3–5 c.
+i 5–6 c. liczona z `VildaBmi.wartoscDlaCentyla`, nie zgadywana). Mutacje (6, wszystkie czerwone):
+`nd` zawsze fałsz; lista restrykcyjna dla wszystkich; strategia redukcji w normie; własna kopia progu
+3 c.; brak zdania kontroli; flaga niedowagi nie trafia do `dane`.
+
+**Otwarte (kolejne raty, decyzje właściciela z 2026-09-21):** B — strategia „utrzymanie" i otwarcie
+bramki dla normy; C — „cel własny" u dorosłych od BMI 23,0; C′ — „cel własny po zakończeniu
+wzrastania" u nastolatków ≥ 16 lat, P75–P85, cel ≥ P50 BMI, ≤ 1 kg/mies., flaga „Wzrost zakończony"
+obowiązkowa; D — „przyrost" u dorosłych z nadwyżką 200–400 kcal/d, dzieci bez liczb; E — bramka od
+2 lat i zestaw zdań dla 2–4 lat (2–5 lat z otyłością: stabilizacja, bez wyjątku Barlowa).
+
+SW 1.1.30 → **1.1.31**; `vilda_diet_recommendations.js?v=35→36`.
+
 ## Punktowa wersja zaleceń obok pełnego zdania (P-RAPORT-PUNKTY, SW 1.1.30, 2026-09-20)
 
 **Status:** zmiana prezentacji, nie kliniczna. Raport tekstowy (`textOutput`, `htmlOutput`) jest
