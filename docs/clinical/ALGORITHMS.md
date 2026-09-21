@@ -5696,6 +5696,64 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Zdania nawyków przy nadmiarze masy ciała (P-DIETA-NAWYKI rata H, SW 1.1.41, 2026-09-21)
+
+**Status:** zmiana kliniczna (nowa treść zaleceń); zdania i rekomendacje zatwierdzone przez właściciela
+2026-09-21. Dobre treści usuniętego w racie F planu SMART (stałe pory posiłków, woda jako napój, posiłek
+powoli i bez ekranu, zaplanowana kolacja zamiast wieczornego podjadania, elastyczność zamiast „wszystko albo
+nic", zmiana dla całej rodziny, jedzenie nie jako nagroda) wracają jako **jedno zdanie generatora na pasmo
+wieku**, z rolą `talerz` (kolumna „Na talerzu" jednostronicowego planu). Zakres: **wyłącznie nadmiar masy
+ciała** (strategie redukcji i stabilizacji) u dorosłego, nastolatka 11–17 lat i dziecka 5–10 lat. Nic przy
+normie, niedowadze i celu własnym (decyzja właściciela: cel własny to plan pacjenta, nie leczenie nadmiaru);
+maluch 2–4 lata bez zmian (rata E ma już ekran, stałe pory i nagrodę). Bez nowych liczb i progów.
+
+### Zdania (rejestr standardowy)
+
+- dorosły (`d-nawyki-nadmiar`): „Utrzymaniu planu sprzyjają stałe pory 3–4 posiłków bez podjadania między
+  nimi, woda jako podstawowy napój, co najmniej jeden posiłek dziennie zjedzony powoli i bez ekranu oraz
+  zaplanowana kolacja zamiast wieczornego podjadania; plan nie musi być idealny – pojedyncze odstępstwa nie
+  przekreślają efektu, a podejście „wszystko albo nic" sprzyja porzucaniu zmian."
+- nastolatek 11–17 lat (`dz-nawyki-nastolatek`): „Pomaga stały rytm posiłków ze śniadaniem, woda jako
+  podstawowy napój, jeden posiłek dziennie bez telefonu i ekranu, jedzony powoli, oraz zaplanowana kolacja
+  zamiast wieczornego podjadania; pojedyncze odstępstwo nie przekreśla planu – lepsze są rozsądne porcje niż
+  zasada „nigdy więcej"."
+- dziecko 5–10 lat (`dz-nawyki-dziecko`): „Zmiany powinny obejmować całą rodzinę i środowisko domowe: stałe
+  pory posiłków, co najmniej jeden posiłek dziennie wspólnie przy stole i bez ekranu, przekąski tylko
+  zaplanowane i podane na talerzu, jedzenie nie jako nagroda ani pocieszenie, bez komentowania wyglądu
+  dziecka i porównywania go z rówieśnikami."
+
+Umiejscowienie: drugie zdanie roli `talerz`, bezpośrednio po talerzu nadmiaru (`d-talerz-nadmiar`,
+`dz-talerz-nastolatek`, `dz-talerz-dziecko`). Punkty raportu (`VILDA_PUNKTY`) cytują zdania zgodnie z regułami
+P-RAPORT-PUNKTY (strażnik `punkty-zalecen.spec` i własny w `nawyki-zalecen.spec`).
+
+### Źródła (wg PubMed)
+
+- Jedzenie z rozproszoną uwagą zwiększa spożycie bieżące i późniejsze; uważne jedzenie wspiera redukcję
+  i utrzymanie masy bez liczenia kalorii — Robinson E i wsp., *Eating attentively: a systematic review and
+  meta-analysis…*, Am J Clin Nutr 2013;97(4):728–742,
+  [DOI 10.3945/ajcn.112.045245](https://doi.org/10.3945/ajcn.112.045245).
+- Wolniejsze tempo jedzenia wiąże się z mniejszym spożyciem energii (SMD 0,45) — Robinson E i wsp.,
+  *A systematic review and meta-analysis examining the effect of eating rate on energy intake and hunger*,
+  Am J Clin Nutr 2014;100(1):123–151, [DOI 10.3945/ajcn.113.081745](https://doi.org/10.3945/ajcn.113.081745).
+- Myślenie dychotomiczne („wszystko albo nic") jest prospektywnym predyktorem nawrotu masy po redukcji —
+  Byrne SM, Cooper Z, Fairburn CG, *Psychological predictors of weight regain in obesity*, Behav Res Ther
+  2004;42(11):1341–1356, [DOI 10.1016/j.brat.2003.09.004](https://doi.org/10.1016/j.brat.2003.09.004).
+- Podejście rodzinne, bez stygmatyzacji, u dzieci z otyłością — AAP, Hampl SE i wsp., Pediatrics 2023,
+  [DOI 10.1542/peds.2022-060640](https://doi.org/10.1542/peds.2022-060640) (cytowane w racie E).
+
+Ograniczenia: metaanalizy Robinsona dotyczą głównie badań eksperymentalnych u dorosłych; „zaplanowana
+kolacja zamiast wieczornego podjadania" i „stałe pory posiłków" to elementy praktyki klinicznej, a nie
+odrębnie zbadane interwencje — zdania nie obiecują efektu liczbowego.
+
+### Walidacja
+
+`tests/e2e/nawyki-zalecen.spec.mjs` (2 testy, dane fikcyjne): 7 przypadków nadmiaru (dorosły otyłość i nadwaga,
+nastolatek redukcja i stabilizacja, dziecko stabilizacja i jawna redukcja, 5‑latek) — zdanie jako drugie
+zdanie talerza, w tekście i w punktach, punkty cytują zdanie; 10 kontroli ujemnych (norma, niedowaga, cel
+własny, maluch). Zestaw specyfikacji modułu diety (18 plików): 95 testów zielonych, w tym dopasowanie
+jednostronicowego planu do A4 z kompletem opcji. Pełny zestaw e2e desktop: WYNIK_E2E_H.
+`vilda_diet_recommendations.js` v45, SW 1.1.41.
+
 ## Bez słowa „aplikacja" w zdaniach dla pacjenta (P-DIETA-REJESTR rata G′, SW 1.1.40, 2026-09-21)
 
 **Status:** zmiana brzmienia dwóch zdań rejestru standardowego (treść merytoryczna bez zmian), na polecenie
