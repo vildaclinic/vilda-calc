@@ -194,7 +194,7 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   const t8 = norm(d8.text);
   expect(t8).toContain('Przy niedowadze u dziecka aplikacja nie wyznacza liczbowej nadwyżki energetycznej; podstawą jest ocena przyczyn, regularne i energetycznie gęste posiłki oraz obserwacja przyrostów masy ciała i wzrostu.');
   expect(t8).toContain('z niedowagą wymaga oceny pediatrycznej');
-  expect(zl(d8, 'talerz')).toBe('Zalecane jest 5 regularnych posiłków dziennie w spokojnej atmosferze, bez presji przy jedzeniu, z dodatkami zwiększającymi kaloryczność w małej objętości (oliwa, masło, pasty orzechowe, pełnotłusty nabiał) i bez ograniczania jakichkolwiek grup produktów.');
+  expect(zl(d8, 'talerz')).toBe('Zalecane jest 5 regularnych posiłków dziennie w spokojnej atmosferze, bez presji przy jedzeniu, z dodatkami zwiększającymi kaloryczność w małej objętości (oliwa, masło, pasty orzechowe, pełnotłusty nabiał); nie należy ograniczać jakichkolwiek grup produktów.');
   expect(d8.zdania.kontrola.length).toBe(2);
   expect(norm(d8.zdania.kontrola[1])).toBe('Wskazana kontrola masy ciała i wzrostu co 4–6 tygodni na siatkach centylowych; brak przyrostu, spadek centyla lub cechy zaburzeń odżywiania wymagają wcześniejszej oceny.');
   expect(t8).not.toMatch(/nadwyżk[aę] \d|kcal więcej|kg tygodniowo/u);
@@ -210,7 +210,7 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   expect(n12.strategia).toBe('przyrost');
   expect(norm(n12.text)).toContain('aplikacja nie wyznacza liczbowej nadwyżki energetycznej');
   expect(norm(n12.text)).not.toContain('pilna ocena kliniczna');
-  expect(zl(n12, 'talerz')).toBe('Zalecane są regularne posiłki (5 dziennie, w tym śniadanie i przekąski) o zwiększonej gęstości energetycznej – z dodatkiem orzechów, nasion, oliwy, pełnotłustego nabiału i awokado – bez ograniczania jakichkolwiek grup produktów.');
+  expect(zl(n12, 'talerz')).toBe('Zalecane są regularne posiłki (5 dziennie, w tym śniadanie i przekąski) o zwiększonej gęstości energetycznej – z dodatkiem orzechów, nasion, oliwy, pełnotłustego nabiału i awokado; nie należy ograniczać jakichkolwiek grup produktów.');
   expect(norm(n12.zdania.kontrola[1])).toContain('cechy zaburzeń odżywiania u nastolatka wymagają wcześniejszej oceny');
   const n12p = await policz(page, { age: 12, sex: 'F', h: 150, centyl: 4, pf: true });
   expect(norm(n12p.text)).toContain('Aplikacja nie wyznacza Ci dodatkowych kalorii do zjedzenia – ważne są regularne, pożywne posiłki i sprawdzanie, czy masa ciała rośnie.');
@@ -247,16 +247,16 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   expect(n16.gp).toBeNull(); expect(n16.cgReason).toBe('niedowaga'); expect(n16.poleCelu).toBe(false);
   expect(norm(n16.text)).not.toMatch(/kcal więcej|nadwyżka \d/u);
 
-  // 3 lata: strategia „przyrost”, ale zdania raty D dopiero od 5 lat (rata E)
+  // 3 lata: strategia „przyrost”; zdania dla 2–4 lat doszły w racie E (talerz malucha, kontrola malucha) — patrz maluch-zalecen.spec
   const m3 = await policz(page, { age: 3, sex: 'F', h: 100, w: 12 });
   expect(m3.strategia).toBe('przyrost');
-  expect(m3.zdania.talerz).toBeUndefined();
-  expect(m3.zdania.kontrola.length).toBe(1);
-  expect(norm(m3.text)).not.toContain('nie wyznacza');
+  expect(zl(m3, 'talerz')).toMatch(/^Zalecane jest 5 posiłków dziennie o stałych porach/u);
+  expect(m3.zdania.kontrola.length).toBe(2);
+  expect(norm(m3.text)).toContain('nie wyznacza');
   expect(zl(m3, 'ruch')).toContain('180 minut');
 });
 
-test('bramka: przycisk przy niedowadze dorosłego i dziecka > 5 lat; karta strategii, karta „Cel” i pole celu ukryte; ≤ 5 lat nadal zamknięte', async ({ page }) => {
+test('bramka: przycisk przy niedowadze dorosłego i dziecka od 2 lat (rata E); karta strategii, karta „Cel” i pole celu ukryte; < 2 lat zamknięte', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const oczekiwania = [
@@ -264,7 +264,8 @@ test('bramka: przycisk przy niedowadze dorosłego i dziecka > 5 lat; karta strat
     [{ age: 28, sex: 'F', h: 168, w: 44 }, true],     // BMI 15,6 — bez planu liczbowego, moduł otwarty
     [{ age: 8, sex: 'F', h: 128, centyl: 4 }, true],  // tuż pod P5 (do raty D ukryty)
     [{ age: 14, sex: 'F', h: 160, w: 35 }, true],
-    [{ age: 4, months: 11, sex: 'F', h: 108, w: 12 }, false], // < 5 lat: rata E
+    [{ age: 4, months: 11, sex: 'F', h: 108, w: 12 }, true],  // 2–4 lata: od raty E otwarta
+    [{ age: 1, months: 11, sex: 'F', h: 86, w: 9 }, false],    // < 2 lat: zamknięta
     [{ age: 5, months: 1, sex: 'F', h: 110, centyl: 4 }, true]
   ];
   for (const [s, exp] of oczekiwania) {
