@@ -77,14 +77,16 @@ test('niedowaga u dziecka jest nazwana, a nie schowana pod „w normie" — oba 
     expect(t).toMatch(/z-score −\d,\d\d/);
     // żadnej restrykcji dla dziecka z niedowagą
     for (const r of RESTRYKCJE) expect(t, 'restrykcja u dziecka z niedowagą: ' + r).not.toContain(r);
-    expect(w.zdania.talerz).toBeUndefined();
+    // P-DIETA-PRZYROST rata D: talerz „przyrostowy” od 5 lat (bez ograniczania grup produktów); 2–4 lata bez talerza (rata E)
+    if (s.age >= 5) expect(norm(w.zdania.talerz.join(' ')), JSON.stringify(s)).toMatch(/bez ograniczania jakichkolwiek grup produktów|nie ograniczaj jedzenia|Nie należy ograniczać żadnych grup produktów/u);
+    else expect(w.zdania.talerz).toBeUndefined();
     // rola kontroli mówi wprost: nie ograniczać, ocenić przyczyny
     expect(w.zdania.kontrola, JSON.stringify(s)).toBeDefined();
     expect(norm(w.zdania.kontrola[0])).toMatch(/nie ogranicza|nie zaleca się ograniczania/);
     expect(norm(w.zdania.kontrola[0])).toMatch(/przyczyn/);
-    // ruch zostaje (zalecenie uniwersalne), bez deficytu, bez celu redukcji, bez strategii redukcji
+    // ruch zostaje (zalecenie uniwersalne), bez deficytu, bez celu redukcji; strategia „przyrost” (rata D; do niej: null)
     expect(w.zdania.ruch).toBeDefined();
-    expect(w.strategia).toBeNull();
+    expect(w.strategia).toBe('przyrost');
     expect(w.docelowaKg).toBeNull();
   }
 });

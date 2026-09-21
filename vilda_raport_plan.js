@@ -209,6 +209,14 @@
     var kafle = [];
     if (liczba(e.podazZaokrKcal) != null) kafle.push([calk(e.podazZaokrKcal), 'kcal dziennie', 'zalecana kaloryczność diety']);
     else if (liczba(e.utrzymanieKcal) != null) kafle.push([calk(e.utrzymanieKcal), 'kcal dziennie', 'zapotrzebowanie energetyczne']);
+    /* P-DIETA-PRZYROST rata D: przy strategii „przyrost" kafle nadwyżki, podaży i tempa przyrostu — zakresy z generatora, nic tu nie jest liczone. */
+    var zakres = function (v) { return Array.isArray(v) && v.length === 2 && liczba(v[0]) != null && liczba(v[1]) != null ? v : null; };
+    if (dane.strategia === 'przyrost') {
+      var nad = zakres(e.nadwyzkaKcal), pod = zakres(e.podazZakresKcal), tem = zakres(e.tempoZakresKgTydz);
+      if (nad) kafle.push([calk(nad[0]) + '–' + calk(nad[1]), 'kcal na dobę', 'nadwyżka energetyczna']);
+      if (pod) kafle.push([calk(pod[0]) + '–' + calk(pod[1]), 'kcal dziennie', 'zalecana podaż energii']);
+      if (tem) kafle.push([fmt(tem[0], 1) + '–' + fmt(tem[1], 1), 'kg tygodniowo', 'spodziewane tempo przyrostu']);
+    }
     if (liczba(e.deficytKcal) != null && e.deficytKcal > 0) kafle.push([calk(e.deficytKcal), 'kcal na dobę', 'deficyt energetyczny']);
     if (liczba(e.tempoKgTydz) != null && e.tempoKgTydz > 0) kafle.push([fmt(e.tempoKgTydz, 1), 'kg tygodniowo', 'spodziewane tempo redukcji']);
     if (!kafle.length) return '';
@@ -240,11 +248,12 @@
 
     // P-DIETA-CEL-WLASNY rata C: nagłówek sekcji wg strategii generatora — bez „redukcji” przy utrzymaniu.
     var naglowek = dane.strategia === 'utrzymanie' ? 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)'
+      : dane.strategia === 'przyrost' ? 'ZAPOTRZEBOWANIE ENERGETYCZNE I PRZYROST MASY CIAŁA'
       : dane.strategia === 'cel-wlasny' ? 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI DO CELU WŁASNEGO'
       : 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
     return '<section class="vrp-blok">'
       + '<div class="vrp-nag-blok">' + esc(naglowek) + '</div>'
-      + '<div class="vrp-kafle">' + kafle.map(function (k) {
+      + '<div class="vrp-kafle' + (kafle.length === 4 ? ' vrp-kafle-4' : '') + '">' + kafle.map(function (k) {
           return '<div class="vrp-kafel"><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span><i>' + esc(k[2]) + '</i></div>';
         }).join('') + '</div>'
       + (podpis ? '<div class="vrp-podkafle">' + podpis + '</div>' : '')
@@ -439,6 +448,9 @@
       '.vrp-pd{font-size:' + u(12.5) + ';color:' + K.mut + ';line-height:1.25;}',
       '.vrp-stopa{margin-top:' + u(8) + ';font-size:' + u(15) + ';color:' + K.ciemny + ';text-align:center;}',
       '.vrp-kafle{display:grid;grid-template-columns:repeat(3,1fr);gap:' + u(12) + ';}',
+      /* P-DIETA-PRZYROST rata D: cztery kafle (zapotrzebowanie, nadwyżka, podaż, tempo) w jednym rzędzie. */
+      '.vrp-kafle-4{grid-template-columns:repeat(4,1fr);gap:' + u(10) + ';}',
+      '.vrp-kafle-4 .vrp-kafel b{font-size:' + u(27) + ';}',
       '.vrp-kafel{border:1px solid ' + K.linia + ';border-radius:' + u(14) + ';padding:' + u(10) + ' ' + u(12) + ';background:' + K.tlo + ';text-align:center;}',
       '.vrp-kafel b{display:block;font-size:' + u(34) + ';line-height:1.05;font-weight:800;color:' + K.teal2 + ';}',
       '.vrp-kafel span{display:block;font-size:' + u(15) + ';font-weight:700;}',

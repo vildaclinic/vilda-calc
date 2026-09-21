@@ -171,7 +171,7 @@ test('dziecko 5–10 lat w normie: talerz w spokojnej atmosferze, bez płatków,
   expect(zl(maly, 'ruch')).toContain('180 minut');
 });
 
-test('kontrole ujemne: nadmiar, górna norma i niedowaga bez nowych zdań; alkohol tylko u dorosłego w normie', async ({ page }) => {
+test('kontrole ujemne: nadmiar, górna norma i niedowaga bez zdań normy; alkohol tylko u dorosłego w normie', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const otyly = await policz(page, { age: 42, sex: 'M', h: 178, w: 108 });
@@ -186,9 +186,10 @@ test('kontrole ujemne: nadmiar, górna norma i niedowaga bez nowych zdań; alkoh
   expect(zl(gornaNorma, 'talerz')).toMatch(/^Warto uporządkować regularność posiłków/u);
   expect(zl(gornaNorma, 'talerz')).not.toMatch(ALKOHOL);
 
+  // P-DIETA-PRZYROST rata D: niedowaga ma własną strategię „przyrost” (do raty D: null)
   const niedowaga = await policz(page, { age: 28, sex: 'F', h: 168, w: 44 });
   expect(niedowaga.niedowaga).toBe(true);
-  expect(niedowaga.strategia).toBeNull();
+  expect(niedowaga.strategia).toBe('przyrost');
   expect(zl(niedowaga, 'talerz')).not.toMatch(ALKOHOL);
   expect(zl(niedowaga, 'kontrola')).toContain('Niedowaga wymaga oceny przyczyn klinicznych');
 
@@ -199,22 +200,24 @@ test('kontrole ujemne: nadmiar, górna norma i niedowaga bez nowych zdań; alkoh
 
   const dzieckoNiedowaga = await policz(page, { age: 8, sex: 'F', h: 128, w: 18 });
   expect(dzieckoNiedowaga.niedowaga).toBe(true);
-  expect(dzieckoNiedowaga.strategia).toBeNull();
-  expect(zl(dzieckoNiedowaga, 'talerz')).not.toMatch(/spokojnej atmosferze/u);
+  expect(dzieckoNiedowaga.strategia).toBe('przyrost');
+  // talerz niedowagi (rata D), nie talerz normy z raty B
+  expect(zl(dzieckoNiedowaga, 'talerz')).not.toMatch(/porcjach dopasowanych do wieku i apetytu/u);
+  expect(zl(dzieckoNiedowaga, 'talerz')).toMatch(/bez presji przy jedzeniu/u);
 });
 
-test('bramka: przycisk dla normy i nadmiaru, ukryty przy niedowadze i do 5 lat; karta strategii tylko przy nadmiarze', async ({ page }) => {
+test('bramka: przycisk dla normy, nadmiaru i niedowagi (rata D), ukryty do 5 lat; karta strategii tylko przy nadmiarze', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const oczekiwania = [
     [{ age: 30, sex: 'M', h: 180, w: 72 }, { przycisk: true, kartaStrategii: false }],   // dorosły w normie
     [{ age: 45, sex: 'F', h: 165, w: 50.4 }, { przycisk: true, kartaStrategii: false }], // BMI 18,51 — na progu normy
-    [{ age: 45, sex: 'F', h: 165, w: 50.2 }, { przycisk: false, kartaStrategii: false }], // BMI 18,44 — niedowaga
+    [{ age: 45, sex: 'F', h: 165, w: 50.2 }, { przycisk: true, kartaStrategii: false }],  // BMI 18,44 — niedowaga (od raty D otwarta)
     [{ age: 42, sex: 'M', h: 178, w: 108 }, { przycisk: true, kartaStrategii: true }],   // otyłość
     [{ age: 35, sex: 'F', h: 165, w: 70 }, { przycisk: true, kartaStrategii: true }],    // BMI 25,7 — nadwaga
     [{ age: 8, sex: 'F', h: 128, w: 25 }, { przycisk: true, kartaStrategii: false }],    // dziecko w normie
     [{ age: 8, sex: 'F', h: 128, centyl: 6 }, { przycisk: true, kartaStrategii: false }], // tuż nad P5
-    [{ age: 8, sex: 'F', h: 128, centyl: 4 }, { przycisk: false, kartaStrategii: false }], // tuż pod P5
+    [{ age: 8, sex: 'F', h: 128, centyl: 4 }, { przycisk: true, kartaStrategii: false }],  // tuż pod P5 (od raty D otwarta)
     [{ age: 8, sex: 'F', h: 130, w: 40 }, { przycisk: true, kartaStrategii: true }],     // dziecko z otyłością
     [{ age: 14, months: 6, sex: 'F', h: 150, w: 75 }, { przycisk: true, kartaStrategii: true }],
     [{ age: 17, sex: 'M', h: 178, w: 68 }, { przycisk: true, kartaStrategii: false }],   // nastolatek w normie
