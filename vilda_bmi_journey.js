@@ -234,7 +234,7 @@
     return html;
   }
 
-  function gainPill(model) {
+  function gainPill(model, ctx) {
     var mc = model.monthsCombo, md = model.monthsDiet;
     var gain = '';
     if (md != null && mc != null && md > mc) {
@@ -243,7 +243,7 @@
         ? 'Dzięki ruchowi o ' + monthsWord(diff) + ' szybciej'
         : 'Dzięki ruchowi nieznacznie szybciej';
     } else if (mc != null && model.moveWeek === 0) {
-      gain = 'Dołóż ruch, żeby osiągnąć normę szybciej';
+      gain = 'Dołóż ruch, żeby osiągnąć ' + (ctx && ctx.customGoal ? 'cel' : 'normę') + ' szybciej';
     } else if (mc == null) {
       gain = 'Zaznacz dietę lub ruch, żeby zobaczyć przewidywany termin';
     }
@@ -343,6 +343,7 @@
   /* W trybie STABILIZACJI masa się nie zmienia — szczebel przekracza się wzrastaniem,
      więc kilogramy byłyby kłamstwem. Wtedy nazywamy sam próg, bez „−X kg". */
   function szczebleHtml(ctx, model) {
+    if (ctx && ctx.customGoal) return '';
     var dr = drabinka(ctx);
     if (!dr || !dr.szczeble.length) return '';
     var out = dr.szczeble.slice(0, SZCZEBLE_MAX).map(function (p) {
@@ -370,7 +371,9 @@
   function renderPanel(ctx) {
     var model = computeModel(ctx);
     var goalKg = ctx.weightKg - ctx.kgToLose;
-    var targetLabel = ctx.isChild
+    var targetLabel = ctx.customGoal
+      ? 'do celu własnego (BMI ' + fmt(ctx.targetBmi, 1) + ')'
+      : ctx.isChild
       ? 'do górnej granicy normy BMI (85. centyl dla wieku)'
       : 'do górnej granicy normy BMI (' + fmt(ctx.targetBmi, 1) + ')';
     var mc = model.monthsCombo;
@@ -400,7 +403,7 @@
         + szczebleHtml(ctx, model)
         + '</div>'
       : '<div class="bmi-journey-goalbox">'
-        + '<div class="bmi-journey-g1">Cel: <b>\u2212' + fmt(ctx.kgToLose, 1) + '\u202Fkg</b></div>'
+        + '<div class="bmi-journey-g1">' + (ctx.customGoal ? 'Cel własny' : 'Cel') + ': <b>\u2212' + fmt(ctx.kgToLose, 1) + '\u202Fkg</b></div>'
         + '<div class="bmi-journey-g2">' + targetLabel + '</div>'
         + '<div class="bmi-journey-g3">Start: <b>' + fmt(ctx.weightKg, 1) + '\u202Fkg</b> \u2192 Cel: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
         + szczebleHtml(ctx, model)
@@ -412,7 +415,7 @@
       : model.found
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
-        + '<div class="bmi-journey-kcalcap">' + ((ctx.isChild ? 'light' : 'moderate') === model.dietKey ? 'zalecana kaloryczność diety' : 'kaloryczność wybranej diety') + '</div></div>'
+        + '<div class="bmi-journey-kcalcap">' + (ctx.customGoal ? 'kaloryczność diety — cel własny (dieta lekka)' : (ctx.isChild ? 'light' : 'moderate') === model.dietKey ? 'zalecana kaloryczność diety' : 'kaloryczność wybranej diety') + '</div></div>'
       : '';
     var moveChips = '<span class="bmi-journey-lbl">Ruch — przyspiesz osiągnięcie celu</span><div class="bmi-journey-chips">';
     for (var m = 0; m < MOVES.length; m += 1) {
@@ -424,8 +427,10 @@
       var stabNote = '<div class="bmi-journey-pal-note">Strategia: stabilizacja masy ciała — bez deficytu energetycznego; diety redukcyjne nieaktywne. Strategię zmienisz w Zaleceniach energetycznych.</div>';
       return badge + hero + growth + horizon + goalbox + kcal + palSegment() + stabNote + warningsSection(ctx, model);
     }
-    return badge + hero + growth + horizon + gainPill(model) + goalbox + kcal
-      + palSegment() + dietSegment(model) + moveChips
+    return badge + hero + growth + horizon + gainPill(model, ctx) + goalbox + kcal
+      + palSegment() + dietSegment(model)
+      + (ctx.customGoal ? '<div class="bmi-journey-pal-note">Cel własny nie jest wskazaniem medycznym: tylko dieta lekka (deficyt do 15\u202F%, maks. 500\u202Fkcal/d); podaż nie schodzi poniżej minimum kalorycznego.</div>' : '')
+      + moveChips
       + detailsSection(ctx, model) + warningsSection(ctx, model);
   }
 
@@ -550,6 +555,8 @@
       sex: ctx.sex === 'F' ? 'F' : 'M',
       isChild: !!ctx.isChild,
       targetBmi: fin(ctx.targetBmi) ? Number(ctx.targetBmi) : 25,
+      // P-DIETA-CEL-WLASNY rata C: cel własny dorosłego (BMI 23,0–24,9) zamiast górnej granicy normy
+      customGoal: !!ctx.customGoal,
       metTableHtml: typeof ctx.metTableHtml === 'string' ? ctx.metTableHtml : ''
     };
     if (!host.dataset.journeyWired) {
@@ -591,13 +598,15 @@
     return {
       available: true,
       goalMain: 'Twój cel: -' + fmt(lastCtx.kgToLose, 1) + ' kg',
-      goalSub: lastCtx.isChild
+      goalSub: lastCtx.customGoal
+        ? 'do celu własnego (BMI ' + fmt(lastCtx.targetBmi, 1) + ')'
+        : lastCtx.isChild
         ? 'do górnej granicy normy BMI (85. centyl dla wieku)'
         : 'do górnej granicy normy BMI (' + fmt(lastCtx.targetBmi, 1) + ')',
       startCel: 'Start: ' + fmt(lastCtx.weightKg, 1) + ' kg · Cel: ' + fmt(lastCtx.weightKg - lastCtx.kgToLose, 1) + ' kg',
       rows: rows,
       totalRow: ['Razem', 'ok. ' + fmtInt(model.totalWeek), '-' + fmt(model.totalWeek * 52 / 12 / kk, 2)],
-      whenText: 'Przy tym planie osiągniesz normę BMI ' + dateAfterMonths(mc)
+      whenText: 'Przy tym planie osiągniesz ' + (lastCtx.customGoal ? 'cel własny ' : 'normę BMI ') + dateAfterMonths(mc)
         + ' (za ok. ' + monthsWord(mc)
         + (model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
           ? '; uwzględnia dalsze wzrastanie ok. ' + fmt(model.annualGrowthCm, 1) + ' cm/rok'

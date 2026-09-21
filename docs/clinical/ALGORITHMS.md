@@ -5696,6 +5696,85 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## „Cel własny" dorosłego z BMI 23,0–24,9 (P-DIETA-CEL-WLASNY rata C, SW 1.1.33, 2026-09-21)
+
+**Status:** zmiana kliniczna — nowa strategia generatora zaleceń energetycznych (`cel-wlasny`), nowe pole
+wejściowe i nowy tryb karty „Droga do normy BMI". Decyzje właściciela 2026-09-21: cel własny dostępny od
+BMI **23,0** (wariant A — etykieta „górna norma" i plakietka „Do obserwacji" w raporcie pacjenta i Karcie
+pacjenta zostają od 24,0; zmienia się wyłącznie dostępność celu); dolna granica celu **BMI 18,5**
+(twardy strażnik) plus zdanie o BMI 20; pole w **obu** miejscach (Droga do normy i karta „Cel" w
+Zaleceniach energetycznych); zdanie o treningu oporowym zostaje; blokada z historii masy zostaje;
+18-latek trafia do raty C′ (gałąź dorosła modułu od 19 lat).
+
+**Po co.** Pacjent z prawidłowym BMI przy górnej granicy chce schudnąć np. 4 kg. Żadne wytyczne nie
+zalecają redukcji przy prawidłowym BMI, więc aplikacja nazywa to **celem własnym, nie wskazaniem**, i
+ogranicza go strażnikami, zamiast odmawiać albo udawać, że to leczenie nadwagi.
+
+**Silnik (`vilda_diet_plan_ui.js`, jedno miejsce reguł; progi jako dane `ENERGY_CUSTOM_GOAL`):**
+1. `energyCustomGoalAssess({ageYears, weightKg, heightCm, targetKg, risk})` → `{available, active, reason,
+   targetError, bmi, bmiFrom: 23, bmiTo: ADULT_BMI.OVER, bmiUnder: ADULT_BMI.UNDER, minTargetKg,
+   maxTargetKg, targetKg, targetBmi, kgToTarget}`. Powody niedostępności: `wiek` (< 19 lat),
+   `nadmiar` (BMI ≥ 25 — zwykła drabinka redukcji), `bmi-ponizej` (< 23,0), `ryzyko` (moduł ryzyka
+   zaburzeń odżywiania, `risk.any` — u dorosłego z BMI ≥ 23 tylko gałąź historii masy: spadek
+   ≥ 0,5 %/tydz. lub ≥ 3 %/mies.). Błędy celu: `brak`, `za-wysoki` (cel > masa − 0,5 kg), `za-niski`
+   (cel < masa dla BMI 18,5), `minimum` (patrz 3).
+2. `energyBuildPlanReductionState` przyjmuje `customGoalKg` (bez argumentu czyta `#customGoalKg`) i przy
+   aktywnym celu zwraca **wyłącznie dietę lekką**: deficyt = min(15 % TEE, 500 kcal), umiarkowana i
+   intensywna „niedostępne: cel własny — tylko dieta lekka". `customGoal` w stanie; `reductionNotIndicated`
+   tylko bez aktywnego celu.
+3. **Podłoga** (1600 kcal M / 1200 kcal K, jak w drabince): zamiast wyciąć dietę (jak `G()`), deficyt
+   obcina się do podłogi (`floorHit`); gdy zostaje mniej niż 100 kcal — diety nie ma, cel dezaktywowany
+   (`targetError: "minimum"`), generator wraca do „utrzymania".
+4. `energySimulateMonthsToBmiTarget` przyjmuje liczbowe BMI celu (`target: 23.1`) obok `norm`/`median`.
+5. `energyCustomGoalHint(cg)` — jeden tekst podpowiedzi dla obu pól.
+
+**UI.** `#customGoalKg` w karcie „Droga do normy BMI" (index, docpro), widoczne tylko w trybie
+profesjonalnym dla dorosłego z BMI 23,0–24,9 (przy ryzyku: pole wyłączone z powodem). Karta „Cel"
+(`[data-diet-goal-card]`, index) w Zaleceniach energetycznych: segmenty „Utrzymanie" / „Cel własny",
+pole `#customGoalKgProxy` lustrzane do `#customGoalKg` (jedno źródło wartości; „Utrzymanie" czyści cel).
+Przy aktywnym celu `vilda_update_prep.js` montuje panel „Droga do normy" (`vilda_bmi_journey.js`) w
+trybie `customGoal`: „Cel własny: −4,0 kg", „do celu własnego (BMI 23,1)", tylko dieta lekka, bez
+szczebli, nota „nie jest wskazaniem medycznym"; karta planu scalona z panelem jak przy redukcji
+(`distanceToCustomGoal` w `app.js` daje tę samą tabelę MET). Raport pacjenta: nagłówek sekcji energii
+„KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI DO CELU WŁASNEGO"; przy „utrzymaniu" — „ZAPOTRZEBOWANIE
+ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)" (dotąd zawsze „…TEMPO REDUKCJI MASY CIAŁA").
+
+**Generator (`vilda_diet_recommendations.js`, tylko stan `normal`/`upper-normal`, liczby z silnika):**
+Z1 pro „Przyjęty cel własny to ok. 62,0 kg (BMI 23,1), czyli redukcja o ok. 4,0 kg; nie jest to wskazanie
+medyczne, lecz cel uzgodniony z pacjentem." / pac „Ustalony cel to ok. 62,0 kg (BMI 23,1) – o ok. 4,0 kg
+mniej niż teraz. To Twój własny cel, a nie zalecenie lekarskie."; Z2 energia („…Dla celu własnego przyjęto
+wyłącznie łagodny deficyt ok. 15% (nie więcej niż 500 kcal/dobę): podaż ok. 1600 kcal/dzień i spodziewane
+tempo ok. 0,3 kg/tydzień."; przy podłodze „deficyt ok. N kcal/dobę"); Z3 przy podłodze („Podaż energii
+nie schodzi poniżej 1200 kcal/dzień; przy tym zapotrzebowaniu deficyt został odpowiednio zmniejszony.");
+Z4 czas („Przy takim tempie osiągnięcie celu zajmie orientacyjnie około 15 tygodni (ok. 3,5 miesiąca);
+wartości szacunkowe." — `czasDoNormy` z tych samych liczb; w rejestrze pacjenta „kg tygodniowo" zamiast zatwierdzonego „kg na tydzień", bo strażnik językowy J4 zakazuje tej kalki); Z6 ruch (rola `ruch`, klucz
+`d-ruch-cel-wlasny`: ćwiczenia oporowe ≥ 2 dni/tydz.); Z5 kontrola (`d-kontrola-cel-wlasny`: po
+osiągnięciu celu powrót do podaży równej zapotrzebowaniu; dalsza redukcja poniżej BMI 20 bez uzasadnienia
+zdrowotnego). Talerz per stan bez zmian (norma: rata B + alkohol; górna norma: obecny). `dane.strategia =
+'cel-wlasny'`, `masa.docelowaKg` = cel, `masa.doRedukcjiKg` = masa − cel, energia z diety lekkiej.
+
+**Źródła.** Dolne granice kaloryczności i deficyt: AHA/ACC/TOS 2013 (za PubMed: Jensen MD i wsp.,
+Circulation 2014, [DOI 10.1161/01.cir.0000437739.71477.ee](https://doi.org/10.1161/01.cir.0000437739.71477.ee));
+NICE CG189 (deficyt ok. 600 kcal/d, tempo 0,5–1 kg/tydz. jako górne widełki dla nadwagi — tu celowo
+połowa: ≤ 500 kcal/d, ≤ ok. 0,5 kg/tydz.). Trening oporowy ≥ 2 dni/tydz.: WHO 2020. Dla prawidłowego
+BMI żadne wytyczne nie zalecają redukcji — stąd „cel własny" i strażniki. Blokada: moduł
+`vilda_anorexia_risk.js` (progi utraty masy jak dotąd).
+
+**Wpływ na wyniki.** Bez celu własnego (pole puste) nic się nie zmienia poza nagłówkiem sekcji energii
+raportu przy „utrzymaniu"; nadmiar, niedowaga, dzieci — identyczne (113 testów sąsiednich specyfikacji
+zielone bez zmian oczekiwań). Testy: `tests/e2e/cel-wlasny.spec.mjs` (4 testy: strażniki i dieta z
+podłogą w silniku; generator w obu rejestrach dla normy i górnej normy; Droga do normy + karta „Cel" +
+tryb pacjenta + blokada; nagłówki raportu). Mutacje (8, wszystkie czerwone): próg 24; bez podłogi; bez
+blokady ryzyka; bez dolnej granicy; dieta umiarkowana; strategia „utrzymanie" zamiast celu; pole poza
+trybem pro; karta „Cel" od 25.
+
+**Znane ograniczenia.** Cel nie jest zapisywany w rekordzie pacjenta (żyje w stanie sesji jak PAL);
+klasyczny PDF „Droga do normy" nie ma sekcji panelu przy celu własnym (używa `distanceToNormalBMI`).
+
+SW 1.1.32 → **1.1.33**; `vilda_diet_plan_ui.js?v=20→21`, `vilda_bmi_journey.js?v=13→14`,
+`vilda_update_prep.js?v=87→88`, `vilda_diet_recommendations.js?v=37→38`, `vilda_raport_plan.js?v=2→3`,
+`app.js?v=225→226`.
+
 ## Strategia „utrzymanie" i otwarcie modułu dla prawidłowego BMI (P-DIETA-UTRZYMANIE rata B, SW 1.1.32, 2026-09-21)
 
 **Status:** zmiana kliniczna — nowy stan generatora zaleceń energetycznych i nowa reguła bramki widoczności

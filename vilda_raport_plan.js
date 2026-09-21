@@ -238,8 +238,12 @@
         + '</div>';
     }
 
+    // P-DIETA-CEL-WLASNY rata C: nagłówek sekcji wg strategii generatora — bez „redukcji” przy utrzymaniu.
+    var naglowek = dane.strategia === 'utrzymanie' ? 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)'
+      : dane.strategia === 'cel-wlasny' ? 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI DO CELU WŁASNEGO'
+      : 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
     return '<section class="vrp-blok">'
-      + '<div class="vrp-nag-blok">KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA</div>'
+      + '<div class="vrp-nag-blok">' + esc(naglowek) + '</div>'
       + '<div class="vrp-kafle">' + kafle.map(function (k) {
           return '<div class="vrp-kafel"><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span><i>' + esc(k[2]) + '</i></div>';
         }).join('') + '</div>'

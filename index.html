@@ -286,7 +286,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_puberty_profile.js?v=2"></script>
 <script defer src="vilda_growth_card_c.js?v=26"></script>
 <script defer src="vilda_sds_wzrostu.js?v=4"></script>
-<script defer src="vilda_bmi.js?v=6"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=2"></script>
+<script defer src="vilda_bmi.js?v=6"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=3"></script>
 <script defer src="vilda_tempo_wzrastania.js?v=1"></script>
 <script defer src="vilda_trajectory_analysis.js?v=32"></script>
 <script defer src="vilda_prediction_drift.js?v=1"></script>
@@ -345,7 +345,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_epicrisis_ui.js?v=23"></script>
 <script defer src="vilda_publication_creator.js?v=20"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=87" defer></script>
+<script src="vilda_update_prep.js?v=88" defer></script>
 
 <script defer src="inline_index_01.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -1377,6 +1377,17 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
                 <span id="stabilizationInfoIcon" class="info-icon diet-stabilization-info" style="display:none;cursor:pointer;">ℹ</span>
               </div>
 
+              <!-- P-DIETA-CEL-WLASNY rata C: cel własny dorosłego z BMI 23,0–24,9 — drugie miejsce wpisu tej samej wartości (#customGoalKg w karcie „Droga do normy BMI”) -->
+              <div class="diet-energy-control-card" data-diet-goal-card style="display:none">
+                <span class="diet-control-title">Cel</span>
+                <div class="diet-segmented-control" data-diet-goal-proxy>
+                  <button type="button" data-diet-goal-choice="maintain" class="is-active">Utrzymanie</button>
+                  <button type="button" data-diet-goal-choice="custom">Cel własny</button>
+                </div>
+                <label class="diet-control-hint" data-diet-goal-input-wrap style="display:none">Masa docelowa (kg): <input type="number" id="customGoalKgProxy" step="0.1" min="0" inputmode="decimal" autocomplete="off" style="width:5.5em"></label>
+                <p class="diet-control-hint" data-diet-goal-hint></p>
+              </div>
+
               <div class="diet-energy-control-card">
                 <span class="diet-control-title">Język zaleceń</span>
                 <div class="diet-segmented-control" data-diet-audience-proxy>
@@ -1618,6 +1629,12 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
     <div class="card" id="toNormCard" style="display:none;">
       <h2>Droga do normy BMI</h2>
       <div id="toNormInfo"></div>
+      <!-- P-DIETA-CEL-WLASNY rata C: cel własny dorosłego z BMI 23,0–24,9 (tryb profesjonalny); wartość czyta silnik planu (energyBuildPlanReductionState) -->
+      <div id="customGoalWrap" style="display:none; margin-top:0.5rem; text-align:center;">
+        <label for="customGoalKg">Cel własny – masa docelowa (kg):</label>
+        <input type="number" id="customGoalKg" step="0.1" min="0" inputmode="decimal" autocomplete="off" style="width:6em; margin-left:0.35rem;">
+        <small id="customGoalHint" style="display:block; margin-top:0.3rem;"></small>
+      </div>
       <!-- Kontener na przycisk i wynik idealnej wagi. Pokazywany tylko, gdy BMI jest w normie. -->
       <div id="idealWeightWrap" style="display:none; margin-top:0.5rem; text-align:center;">
         <button type="button" id="idealWeightBtn">
@@ -1801,14 +1818,14 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_persist_runtime.js?v=16"></script>
 <script defer src="vilda_schowek.js?v=3"></script>
 <script defer src="vilda_summary_cards.js?v=47"></script>
-<script defer src="vilda_diet_plan_ui.js?v=20"></script>
-<script defer src="vilda_bmi_journey.js?v=13"></script>
+<script defer src="vilda_diet_plan_ui.js?v=21"></script>
+<script defer src="vilda_bmi_journey.js?v=14"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script defer src="vilda_terms_gate.js?v=1"></script>
-<script src="app.js?v=225" defer></script>
+<script src="app.js?v=226" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport
@@ -1821,7 +1838,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_DIET = 'vilda_diet_recommendations.js?v=37';
+  var SRC_DIET = 'vilda_diet_recommendations.js?v=38';
   var SRC_PR = 'vilda_patient_report.js?v=30';
   var started = false;
   function inject(src, onload) {
