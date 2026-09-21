@@ -34,8 +34,6 @@ function run(page, { age, months = 0, sex, w, h, click = null, pf = false }) {
     flag('nutritionNormsFlag', false); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true); flag('patientFacingToggle', !!pf);
     if (click) { const bt = document.querySelector(`[data-diet-strategy-choice="${click}"]`); if (bt) bt.click(); }
     window.update();
-    const tab = document.querySelector('[data-diet-mode="energy"]');
-    if (tab && !tab.classList.contains('is-active')) tab.click();
     document.getElementById('generateEnergyDietBtn').click();
     await new Promise((res) => { setTimeout(res, 150); });
     const norm = (s) => (s || '').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim();

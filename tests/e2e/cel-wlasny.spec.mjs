@@ -209,7 +209,7 @@ test('Droga do normy i karta „Cel”: jedno źródło wartości, panel do celu
 
   // klik „Utrzymanie” w karcie modułu czyści cel w Drodze do normy i zdejmuje panel
   // (panel modułu otwieramy jak inne testy: przycisk i zakładka „energia”, klik przez DOM)
-  await page.evaluate(() => { document.getElementById('dietRecommendationsBtn').click(); const tab = document.querySelector('[data-diet-mode="energy"]'); if (tab && !tab.classList.contains('is-active')) tab.click(); });
+  await page.evaluate(() => { document.getElementById('dietRecommendationsBtn').click(); });
   await page.evaluate(() => document.querySelector('[data-diet-goal-choice="maintain"]').click());
   await page.waitForFunction(() => !document.getElementById('bmiJourneyMount'));
   const po = await page.evaluate(() => ({ cel: document.getElementById('customGoalKg').value, custom: document.querySelector('[data-diet-goal-choice="custom"]').getAttribute('aria-pressed'), toNorm: (document.getElementById('toNormInfo') || {}).textContent || '' }));

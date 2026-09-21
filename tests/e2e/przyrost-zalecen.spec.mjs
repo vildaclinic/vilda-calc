@@ -174,8 +174,13 @@ test('generator dorosły: Z1–Z6 w obu rejestrach, strategia „przyrost”, ro
   const ryz = await policz(page, { age: 28, sex: 'F', h: 168, w: 51, historia: [{ t: teraz - 30 * DZIEN, weight: 56 }, { t: teraz, weight: 51 }] });
   expect(norm(ryz.text)).toContain('aplikacja nie podaje planu liczbowego');
   expect(ryz.energia.nadwyzkaKcal).toBeNull();
+  // rata F: bez planu liczbowego (Z6) ruch ustala lekarz — bez ćwiczeń oporowych i bez „2–3 razy w tygodniu”
+  expect(zl(z6, 'ruch')).toBe('Do czasu oceny klinicznej nie zaleca się zwiększania aktywności fizycznej; jej zakres ustala lekarz prowadzący.');
+  expect(zl(z6p, 'ruch')).toBe('Nie zwiększaj teraz ilości ćwiczeń – o tym, ile ruchu jest dla Ciebie bezpieczne, zdecyduje lekarz.');
+  expect(z6p.punkty.ruch.join(' ')).toContain('zdecyduje lekarz');
+  expect(z6p.punkty.kontrola.length).toBe(3);
   // punkty: nowe klucze cytują zdania (liczby i słowa) — ta sama reguła co w punkty-zalecen
-  for (const w of [pro, pac, z6p]) {
+  for (const w of [pro, pac]) {
     expect(Object.keys(w.punkty).sort()).toEqual(Object.keys(w.zdania).sort());
     expect(w.punkty.ruch.join(' ')).toMatch(/2–3 razy w tygodniu/);
     expect(w.punkty.kontrola[0]).toBe(w.zdania.kontrola[0]);
@@ -221,10 +226,14 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   const n15 = await policz(page, { age: 15, sex: 'F', h: 160, centyl: 4 });
   expect(n15.risk.any).toBe(true);
   expect(n15.risk.reasons.join(' ')).toMatch(/85%/);
-  expect(norm(n15.text)).toContain('Cechy ryzyka zaburzeń odżywiania (masa poniżej 85 % należnej lub szybka utrata masy ciała) – wskazana pilna ocena kliniczna; plan żywieniowy wyłącznie pod nadzorem lekarza i dietetyka klinicznego.');
+  // rata F: Z5 i kontrola A scalone w jedno zdanie o nadzorze (powody z modułu ryzyka), ruch i termin kontroli wg lekarza — szczegóły w audyt-zalecen.spec
+  expect(norm(n15.text)).toContain('Niedowaga z cechami ryzyka zaburzeń odżywiania (masa poniżej 85 % należnej) wymaga pilnej oceny przyczyn klinicznych i trajektorii wzrastania. Plan żywieniowy dla przyrostu masy ciała musi nadzorować lekarz z dietetykiem klinicznym; nie zaleca się ograniczania energii ani produktów. Do rozważenia konsultacja psychologiczna.');
   expect(norm(n15.text)).not.toContain('nie wyznacza liczbowej nadwyżki');
+  expect(norm(n15.text)).not.toContain('Cechy ryzyka');
+  expect(norm(n15.text)).not.toContain('60 minut');
+  expect(n15.zdania.kontrola.length).toBe(2);
   const n15p = await policz(page, { age: 15, sex: 'F', h: 160, centyl: 4, pf: true });
-  expect(norm(n15p.text)).toContain('Twoja masa ciała jest wyraźnie za niska albo szybko spadła – potrzebna jest szybka wizyta u lekarza, a plan jedzenia ustala się razem ze specjalistą (dietetykiem klinicznym, psychodietetykiem).');
+  expect(norm(n15p.text)).toContain('Twoja masa ciała jest wyraźnie za niska albo szybko spadła – potrzebna jest szybka wizyta u lekarza, który razem z dietetykiem klinicznym ustali z Tobą plan jedzenia. Nie ograniczaj jedzenia i nie pomijaj posiłków; pomocna może być też rozmowa z psychologiem.');
 
   // 18 lat (gałąź dziecięca, moduł ryzyka liczy jak dorosłego): sam próg BMI < 18,5 to nie cecha ryzyka → Z2;
   // BMI < 17,5 → Z5; bez „rodzicom”

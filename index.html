@@ -1323,43 +1323,16 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
       <div id="dietRecommendationsContent" class="result-box diet-card-modern" style="display:none;margin-top:0.6rem;text-align:left;font-size:0.875rem;">
         <header class="diet-card-intro">
           <h3>Zalecenia dietetyczne</h3>
-          <p>Wybierz, co chcesz przygotować dla pacjenta: krótki plan zmiany nawyków, zalecenia energetyczne albo raport PDF po wizycie.</p>
+          <p>Zalecenia energetyczne i żywieniowe dla pacjenta: na ekranie, do skopiowania i jako jednostronicowy raport PDF po wizycie.</p>
         </header>
+        <!-- P-DIETA-AUDYT rata F (2026-09-21): moduł ma jeden panel. Zakładki „Plan SMART i nawyki" / „Raport PDF",
+             ankieta nawyków i dwa warianty raportu SMART zostały usunięte — generowały zalecenia otyłościowe
+             niezależnie od stanu odżywienia (decyzja właściciela). Jedyne źródło treści: generator zaleceń. -->
 
-        <div class="diet-mode-switch" role="tablist" aria-label="Typ zaleceń dietetycznych">
-          <button type="button" class="diet-mode-tab is-active" data-diet-mode="smart" role="tab" aria-selected="true" aria-controls="dietSmartPanel">
-            <strong>Plan SMART i nawyki</strong>
-            <span>2–3 małe kroki na 14 dni</span>
-          </button>
-          <button type="button" class="diet-mode-tab" data-diet-mode="energy" role="tab" aria-selected="false" aria-controls="dietEnergyPanel">
-            <strong>Zalecenia energetyczne</strong>
-            <span>energia, masa, deficyt, aktywność</span>
-          </button>
-          <button type="button" class="diet-mode-tab" data-diet-mode="pdf" role="tab" aria-selected="false" aria-controls="dietPdfPanel">
-            <strong>Raport PDF</strong>
-            <span>dokument po wizycie</span>
-          </button>
-        </div>
-
-        <section id="dietSmartPanel" class="diet-mode-panel is-active" data-diet-panel="smart" role="tabpanel">
-          <div class="diet-panel-lead">
-            <h4>Plan SMART i nawyki</h4>
-            <p>Ten wariant pomaga wybrać maksymalnie 2–3 realistyczne cele na najbliższe 14 dni. Najlepiej sprawdza się, gdy chcesz omówić z pacjentem konkretne zachowania, a nie tylko kalorie.</p>
-          </div>
-          <button type="button" id="generateDietBtn" class="diet-primary-action diet-primary-action--smart">
-            Generuj plan SMART
-          </button>
-          <div id="dietRecommendationsResult" class="diet-mode-result" style="margin-top:0.6rem;"></div>
-          <div class="diet-result-actions" data-diet-smart-actions hidden>
-            <button type="button" class="diet-secondary-action" data-diet-copy-result="smart">Kopiuj plan SMART</button>
-            <button type="button" class="diet-secondary-action" data-diet-report-direct="personalized">Wygeneruj PDF z planem SMART</button>
-          </div>
-        </section>
-
-        <section id="dietEnergyPanel" class="diet-mode-panel" data-diet-panel="energy" role="tabpanel" hidden>
+        <section id="dietEnergyPanel" class="diet-mode-panel is-active" data-diet-panel="energy">
           <div class="diet-panel-lead">
             <h4>Zalecenia energetyczne</h4>
-            <p>Ten wariant wykorzystuje dane pacjenta, BMI lub centyle, masę ciała, poziom aktywności oraz wybraną strategię redukcji lub stabilizacji masy.</p>
+            <p>Zalecenia wynikają z danych pacjenta: wieku, BMI lub centyli, masy ciała, poziomu aktywności oraz strategii dobranej do stanu odżywienia.</p>
           </div>
           <div id="dietStrategyOptions" class="diet-energy-options-panel">
             <div class="diet-info-note" id="dietInfoNote">
@@ -1430,34 +1403,10 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <div id="dietEnergyResult" class="diet-mode-result" style="margin-top:0.6rem;"></div>
           <div class="diet-result-actions" data-diet-energy-actions hidden>
             <button type="button" class="diet-secondary-action" data-diet-copy-result="energy">Kopiuj zalecenia energetyczne</button>
-            <button type="button" class="diet-secondary-action" data-diet-report-direct="classic">Wygeneruj raport energetyczny PDF</button>
+            <button type="button" class="diet-secondary-action" data-diet-report-direct="classic">Wygeneruj raport PDF dla pacjenta</button>
           </div>
         </section>
 
-        <section id="dietPdfPanel" class="diet-mode-panel" data-diet-panel="pdf" role="tabpanel" hidden>
-          <div class="diet-panel-lead">
-            <h4>Raport PDF dla pacjenta</h4>
-            <p>Wybierz dokument do wydruku lub wysłania po wizycie. Najczęściej rekomendowany jest pełny raport, który łączy obliczenia energetyczne z praktycznym planem zmiany nawyków.</p>
-          </div>
-          <div class="diet-pdf-variant-grid">
-            <article class="diet-pdf-variant-card diet-pdf-variant-card--recommended">
-              <span class="diet-recommended-badge">Rekomendowany</span>
-              <h4>Pełny raport zaleceń</h4>
-              <p>Łączy obliczenia energetyczne, cel masy ciała, 2–3 cele SMART, model talerza, praktyczne zamiany, mit kontra fakt i zasadę 80/20.</p>
-              <button type="button" class="diet-primary-action" data-diet-report-direct="full">Generuj pełny raport PDF</button>
-            </article>
-            <article class="diet-pdf-variant-card">
-              <h4>Plan SMART i nawyki</h4>
-              <p>Krótki dokument z celami na 14 dni, praktycznymi zamianami i wskazówkami dotyczącymi codziennych zachowań.</p>
-              <button type="button" class="diet-secondary-action" data-diet-report-direct="personalized">Generuj PDF: Plan SMART</button>
-            </article>
-            <article class="diet-pdf-variant-card">
-              <h4>Raport energetyczny i zalecenia podstawowe</h4>
-              <p>Jednostronicowy raport z najważniejszymi obliczeniami, energią, strategią redukcji lub stabilizacji i zaleceniami podstawowymi.</p>
-              <button type="button" class="diet-secondary-action" data-diet-report-direct="classic">Generuj raport energetyczny PDF</button>
-            </article>
-          </div>
-        </section>
       </div>
     </div>
 
@@ -1846,8 +1795,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_DIET = 'vilda_diet_recommendations.js?v=41';
-  var SRC_PR = 'vilda_patient_report.js?v=30';
+  var SRC_DIET = 'vilda_diet_recommendations.js?v=42';
+  var SRC_PR = 'vilda_patient_report.js?v=31';
   var started = false;
   function inject(src, onload) {
     var s = document.createElement('script');
