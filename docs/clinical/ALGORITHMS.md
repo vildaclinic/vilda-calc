@@ -5696,6 +5696,98 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Bramka od 2 lat i zdania dla 2–4 lat (P-DIETA-MALUCH rata E, SW 1.1.37, 2026-09-21)
+
+**Status:** zmiana kliniczna — ostatnia rata planu „moduł «Zalecenia dietetyczne» zawsze dostępny"
+(A #398, B #399, C #400, C-ui + C′ #401, D #402). Do raty E moduł był zamknięty do 5,0 lat; dziecko
+2–4 lata w normie nie miało talerza, przy nadmiarze dostawało talerz dziecka szkolnego („chude mięso,
+żółty ser, słone przekąski, fast‑foody"), a przy niedowadze nic z raty D. Decyzje właściciela 2026-09-21
+(wszystkie rekomendacje przyjęte): bramka od **2,0 lat**, poniżej 2 lat nadal zamknięta; **karta strategii
+ukryta w stadium 2–5 lat** (silnik wymusza stabilizację, „Redukcja" nic nie zmieniała — dotyczy też
+5‑latków); sok **„pół szklanki (ok. 120 ml)"**; mleko **bez liczby porcji** (polski standard 1–3 lat nie jest
+w PubMed); **ekran ≤ 1 h i sen** 10–13 h (3–4 lata) / 11–14 h (2 lata) jako osobne zdanie; bez wzmianki
+o tłuszczu mleka przy nadmiarze; kontrola przy niedowadze **co 4–6 tygodni** jak u starszych. Zdania
+nadmiaru przeredagowane po uwagach właściciela (duży apetyt u małych dzieci z otyłością: porcje do wieku,
+dokładka z warzyw, bez „zmuszania do dojadania", bez „od święta", bez „dziecko samo decyduje"); w niedowadze
+„nie należy ograniczać jakichkolwiek grup produktów" — to samo brzmienie wprowadzone do talerzy raty D.
+
+**Bramka (`updateDietRecommendationsVisibility`):** `d < 2 → return` (przedtem `d <= 5`). Karta strategii:
+`nadm && !(dziecko && energyChildPlanStage(d) === "age_2_5")` — granica stadium (6 lat) czytana z silnika
+planu, nie kopiowana.
+
+**Generator (`vilda_diet_recommendations.js`, gałąź dziecięca, 2,0 ≤ wiek < 5):**
+- **Norma** — talerz `dz-talerz-maluch-norma`: pro „Zalecane są 4–5 posiłków dziennie o stałych porach,
+  bez podjadania między nimi: codziennie warzywa i owoce, produkty zbożowe, mleko i przetwory mleczne,
+  mięso, ryby, jaja lub nasiona roślin strączkowych; do picia woda, bez napojów słodzonych, sok najwyżej pół
+  szklanki (ok. 120 ml) dziennie. Rodzic decyduje, co i kiedy dziecko je, dziecko – ile zje; bez nagradzania
+  i pocieszania jedzeniem." / rodzic „Proszę podawać dziecku 4–5 posiłków dziennie o stałych porach i nie
+  dokarmiać między nimi. Codziennie warzywa i owoce, produkty zbożowe, mleko lub jogurt, mięso, ryby, jaja
+  lub strączki; do picia woda, bez słodzonych napojów, sok najwyżej pół szklanki dziennie. To rodzic
+  decyduje, co i kiedy dziecko je, a dziecko – ile zje; proszę nie nagradzać ani nie pocieszać jedzeniem."
+  `strategia: 'utrzymanie'` (rata B), bez kontroli, bez przedmowy.
+- **Nadmiar** — talerz `dz-talerz-maluch-nadmiar` zamiast `dz-talerz-dziecko`: pro „W wieku 2–4 lat nie
+  stosuje się diety redukcyjnej. Zalecane są 4–5 posiłków o stałych porach, przy stole i bez ekranu,
+  w porcjach odpowiednich do wieku; przy dużym apetycie dokładką mogą być warzywa, nie kolejna porcja dania.
+  Między posiłkami tylko woda – bez podjadania, napojów słodzonych i soków; słodycze, słodkie płatki
+  i wędliny rzadko i w małych ilościach. Jedzenie nie powinno służyć jako nagroda ani pocieszenie." / rodzic
+  „W tym wieku nie stosujemy diety odchudzającej – dziecko ma nie chudnąć, tylko „dorosnąć" do swojej wagi.
+  Proszę podawać 4–5 posiłków o stałych porach, przy stole i bez ekranu, w porcjach odpowiednich do wieku;
+  jeśli dziecko prosi o więcej, dokładką mogą być warzywa, nie kolejna porcja dania. Między posiłkami tylko
+  woda – bez podjadania, słodzonych napojów i soków; słodycze, słodkie płatki i wędliny rzadko i w małych
+  ilościach. Jedzenie nie powinno być nagrodą ani pocieszeniem." Pozostałe zdania stabilizacji (cel
+  utrzymania masy, energia utrzymania, normy, witamina D, płyny, kamienie milowe, konsultacja, przedmowa)
+  bez zmian.
+- **Niedowaga** — Z2 z raty D od 2 lat (pro „…aplikacja nie wyznacza liczbowej nadwyżki energetycznej…",
+  rodzic „Aplikacja nie wyznacza dziecku dodatkowych kalorii…"); talerz `dz-talerz-maluch-przyrost`: pro
+  „Zalecane jest 5 posiłków dziennie o stałych porach, w spokojnej atmosferze i bez presji przy jedzeniu,
+  z pełnotłustym nabiałem i dodatkami zwiększającymi kaloryczność w małej objętości (masło, oliwa, pasty
+  orzechowe); mleko i soki nie powinny zastępować posiłków ani zaspokajać głodu między nimi; nie należy
+  ograniczać jakichkolwiek grup produktów." / rodzic „Proszę podawać dziecku 5 posiłków dziennie o stałych
+  porach, w spokojnej atmosferze i bez presji, z pełnotłustym nabiałem i dodatkami zwiększającymi
+  kaloryczność w małej objętości: masłem, oliwą, pastami orzechowymi. Mleko i soki nie mogą zastępować
+  posiłków ani „zapychać" między nimi. Nie należy ograniczać żadnych grup produktów."; kontrola
+  `dz-kontrola-przyrost-maluch`: pro „Wskazana kontrola masy ciała i wzrostu co 4–6 tygodni na siatkach
+  centylowych; brak przyrostu, spadek centyla lub narastające trudności z karmieniem wymagają wcześniejszej
+  oceny." / rodzic „Proszę kontrolować masę ciała i wzrost dziecka co 4–6 tygodni; brak przyrostu, spadek
+  na siatce lub narastające trudności z karmieniem wymagają wcześniejszej wizyty." Zdanie kontroli raty A
+  i przedmowa bez zmian; `strategia: 'przyrost'` (rata D).
+- **Ekran i sen** (wszystkie stany, rola ruch, klucze `dz-ruch-maluch-ekran-sen` / `-2`): pro „Zgodnie
+  z zaleceniami WHO dla dzieci do 5 lat czas przed ekranem nie powinien przekraczać 1 godziny dziennie (im
+  mniej, tym lepiej), a sen powinien trwać 10–13 godzin na dobę łącznie z drzemkami." (poniżej 3 lat:
+  „11–14 godzin") / rodzic „Ekran (telewizor, telefon, tablet) najwyżej 1 godzinę dziennie, a najlepiej
+  mniej. Sen z drzemkami: 10–13 godzin na dobę." Pasmo snu dobierane z wieku (zatwierdzone zdanie niosło
+  obie liczby w nawiasie; w wyjściu pada jedna, właściwa dla wieku). Zdanie o ruchu 180 min bez zmian.
+- **Rata D, zmiana brzmienia** (`dz-talerz-nastolatek-przyrost`, `dz-talerz-dziecko-przyrost`): „…awokado;
+  nie należy ograniczać jakichkolwiek grup produktów." / „…pełnotłusty nabiał); nie należy ograniczać
+  jakichkolwiek grup produktów." (przedtem „bez ograniczania…"); punkt „nie ograniczać grup produktów".
+
+**Czego rata E nie zmienia.** Poniżej 2 lat: bramka zamknięta, zdania jak dotąd (w tym etykieta „W wieku
+2–4 lat" w zdaniu o ruchu, którą trzeba poprawić przy otwieraniu tego wieku). Dzieci ≥ 5 lat: talerze
+rat B i D bez zmian, bez zdania o ekranie i śnie. Liczby energii, normy, witamina D, płyny, progi BMI
+i strategie — bez zmian. Raport pacjenta bez zmian.
+
+**Źródła (dane bibliograficzne za PubMed).** WHO 2019, wytyczne aktywności, zachowań sedenteryjnych i snu
+dla dzieci do 5 lat — ekran ≤ 1 h, sen 10–13 h (3–4 lata), 11–14 h (1–2 lata): streszczenie Sommer i wsp.
+2021, [DOI 10.1055/a-1489-8049](https://doi.org/10.1055/a-1489-8049); progi cytowane u Okely i wsp. 2021,
+[DOI 10.1186/s12889-021-10852-3](https://doi.org/10.1186/s12889-021-10852-3) (11–14 h dla 2 lat z dokumentu
+WHO, nie z abstraktów). Sok ≤ 120 ml/d u 1–3 lat: AAP, Heyman i Abrams 2017,
+[DOI 10.1542/peds.2017-0967](https://doi.org/10.1542/peds.2017-0967). Bez diety redukcyjnej i utrzymanie
+masy u 2–5 lat: AAP CPG 2023, Hampl i wsp., [DOI 10.1542/peds.2022-060640](https://doi.org/10.1542/peds.2022-060640);
+Barlow 2007, [DOI 10.1542/peds.2007-2329C](https://doi.org/10.1542/peds.2007-2329C). Karmienie responsywne
+(bez presji, bez nagradzania jedzeniem, dziecko decyduje ile): Heller i Mobley 2019,
+[DOI 10.1016/j.appet.2019.03.006](https://doi.org/10.1016/j.appet.2019.03.006). Polskie dane o dzieciach 1–3
+lat z nadmiarem (za mało warzyw i owoców, cukier z napojów, słodyczy i soków, wędliny): PITNUTS 2016, Weker
+i wsp., [DOI 10.34763/devperiodmed.20172103.272285](https://doi.org/10.34763/devperiodmed.20172103.272285).
+
+**Wpływ na wyniki.** Zmiana tekstu i widoczności modułu u dzieci 2–4 lat (trzy stany) oraz 5‑latków
+(ukryta karta strategii; wynik bez zmian, bo stabilizacja była wymuszona); końcówka dwóch talerzy raty D.
+Testy: `tests/e2e/maluch-zalecen.spec.mjs` (5 testów); zaktualizowane oczekiwania: `utrzymanie-zalecen`
+(talerz 3‑latki, bramka 4 lata 11 mies. i 1 rok 11 mies., karta strategii u 3‑latki z otyłością),
+`niedowaga-dziecka` (talerz od 2 lat), `przyrost-zalecen` (3‑latka, brzmienie raty D), `punkty-zalecen`
+(5 nowych przypadków 2–4 lat w strażniku punktów).
+
+SW 1.1.36 → **1.1.37**; `vilda_diet_recommendations.js?v=40→41`.
+
 ## Strategia „przyrost" przy niedowadze (P-DIETA-PRZYROST rata D, SW 1.1.36, 2026-09-21)
 
 **Status:** zmiana kliniczna — otwarcie modułu „Zalecenia dietetyczne" dla niedowagi i nowa strategia

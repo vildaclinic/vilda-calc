@@ -97,6 +97,11 @@ test('punkty cytuja zdania: dorosli i dzieci, oba rejestry', async ({ page }) =>
     ['nastolatka 14 lat, rejestr pacjenta', { age: 14, months: 6, sex: 'F', w: 75, h: 150, pf: true }],
     ['3-latka', { age: 3, sex: 'F', w: 22, h: 100 }],
     ['3-latka, rejestr pacjenta', { age: 3, sex: 'F', w: 22, h: 100, pf: true }],
+    ['3-latka w normie (rata E)', { age: 3, sex: 'F', w: 15.5, h: 100 }],
+    ['3-latka w normie, rejestr pacjenta', { age: 3, sex: 'F', w: 15.5, h: 100, pf: true }],
+    ['3-latka z niedowaga (rata E)', { age: 3, sex: 'F', w: 12, h: 100 }],
+    ['3-latka z niedowaga, rejestr pacjenta', { age: 3, sex: 'F', w: 12, h: 100, pf: true }],
+    ['2-latek w normie', { age: 2, sex: 'M', w: 12.5, h: 88 }],
     ['16-latek z nadwaga', { age: 16, sex: 'M', w: 82, h: 176 }],
     ['11-latek z otyloscia', { age: 11, sex: 'M', w: 70, h: 150 }],
     ['8-latka, jawna redukcja', { age: 8, sex: 'F', w: 40, h: 130, click: 'reduction' }]

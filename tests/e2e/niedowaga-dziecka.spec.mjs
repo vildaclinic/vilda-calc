@@ -77,9 +77,8 @@ test('niedowaga u dziecka jest nazwana, a nie schowana pod „w normie" — oba 
     expect(t).toMatch(/z-score −\d,\d\d/);
     // żadnej restrykcji dla dziecka z niedowagą
     for (const r of RESTRYKCJE) expect(t, 'restrykcja u dziecka z niedowagą: ' + r).not.toContain(r);
-    // P-DIETA-PRZYROST rata D: talerz „przyrostowy” od 5 lat (bez ograniczania grup produktów); 2–4 lata bez talerza (rata E)
-    if (s.age >= 5) expect(norm(w.zdania.talerz.join(' ')), JSON.stringify(s)).toMatch(/bez ograniczania jakichkolwiek grup produktów|nie ograniczaj jedzenia|Nie należy ograniczać żadnych grup produktów/u);
-    else expect(w.zdania.talerz).toBeUndefined();
+    // P-DIETA-PRZYROST rata D: talerz „przyrostowy” od 5 lat; P-DIETA-MALUCH rata E: także 2–4 lata (nie należy ograniczać grup produktów)
+    expect(norm(w.zdania.talerz.join(' ')), JSON.stringify(s)).toMatch(/nie należy ograniczać jakichkolwiek grup produktów|nie ograniczaj jedzenia|Nie należy ograniczać żadnych grup produktów/u);
     // rola kontroli mówi wprost: nie ograniczać, ocenić przyczyny
     expect(w.zdania.kontrola, JSON.stringify(s)).toBeDefined();
     expect(norm(w.zdania.kontrola[0])).toMatch(/nie ogranicza|nie zaleca się ograniczania/);
@@ -120,14 +119,11 @@ test('dziecko w normie: bez listy restrykcyjnej, bez strategii redukcji, ruch zo
     expect(w.niedowaga).toBe(false); expect(w.nadmiar).toBe(false);
     expect(t).toContain('w granicach normy');
     for (const r of RESTRYKCJE) expect(t, 'restrykcja u dziecka w normie: ' + r).not.toContain(r);
-    // P-DIETA-UTRZYMANIE rata B: norma od 5 lat dostaje lagodny „talerz" (bez restrykcji), 2–4 lata
-    // nadal bez talerza (rata E), kontroli nadal nie ma, strategia to „utrzymanie" zamiast null.
-    if (s.age >= 5) {
-      expect(w.zdania.talerz, JSON.stringify(s)).toBeDefined();
-      for (const r of RESTRYKCJE) expect(norm(w.zdania.talerz.join(' '))).not.toContain(r);
-    } else {
-      expect(w.zdania.talerz, JSON.stringify(s)).toBeUndefined();
-    }
+    // P-DIETA-UTRZYMANIE rata B: norma od 5 lat dostaje lagodny „talerz" (bez restrykcji); P-DIETA-MALUCH
+    // rata E: 2–4 lata talerz malego dziecka; kontroli nadal nie ma, strategia to „utrzymanie" zamiast null.
+    expect(w.zdania.talerz, JSON.stringify(s)).toBeDefined();
+    for (const r of RESTRYKCJE) expect(norm(w.zdania.talerz.join(' '))).not.toContain(r);
+    if (s.age < 5) expect(norm(w.zdania.talerz.join(' '))).toMatch(/^Zalecane są 4–5 posiłków dziennie o stałych porach/u);
     expect(w.zdania.kontrola).toBeUndefined();
     expect(w.zdania.ruch).toBeDefined();
     expect(w.strategia).toBe('utrzymanie');

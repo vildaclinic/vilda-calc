@@ -163,11 +163,12 @@ test('dziecko 5–10 lat w normie: talerz w spokojnej atmosferze, bez płatków,
     for (const rola of Object.keys(w.zdania)) for (const zd of w.zdania[rola]) expect(t).toContain(norm(zd));
     if (s.pf) expect(zl(w, 'talerz')).toMatch(/^Proszę podawać dziecku regularne posiłki/u);
   }
-  // 2–4 lata: strategia „utrzymanie", ruch WHO 180 minut, ale talerz dopiero w racie E
+  // 2–4 lata: strategia „utrzymanie", ruch WHO 180 minut; talerz małego dziecka od raty E (P-DIETA-MALUCH)
   const maly = await policz(page, { age: 3, sex: 'F', h: 100, w: 15.5 });
   expect(maly.kat).toBe('prawidlowe');
   expect(maly.strategia).toBe('utrzymanie');
-  expect(maly.zdania.talerz).toBeUndefined();
+  expect(zl(maly, 'talerz')).toMatch(/^Zalecane są 4–5 posiłków dziennie o stałych porach/u);
+  expect(zl(maly, 'talerz')).not.toMatch(/porcjach dopasowanych do wieku i apetytu/u);
   expect(zl(maly, 'ruch')).toContain('180 minut');
 });
 
@@ -206,7 +207,7 @@ test('kontrole ujemne: nadmiar, górna norma i niedowaga bez zdań normy; alkoho
   expect(zl(dzieckoNiedowaga, 'talerz')).toMatch(/bez presji przy jedzeniu/u);
 });
 
-test('bramka: przycisk dla normy, nadmiaru i niedowagi (rata D), ukryty do 5 lat; karta strategii tylko przy nadmiarze', async ({ page }) => {
+test('bramka: przycisk dla normy, nadmiaru i niedowagi (rata D) od 2 lat (rata E); karta strategii tylko przy nadmiarze od 6 lat', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const oczekiwania = [
@@ -221,7 +222,9 @@ test('bramka: przycisk dla normy, nadmiaru i niedowagi (rata D), ukryty do 5 lat
     [{ age: 8, sex: 'F', h: 130, w: 40 }, { przycisk: true, kartaStrategii: true }],     // dziecko z otyłością
     [{ age: 14, months: 6, sex: 'F', h: 150, w: 75 }, { przycisk: true, kartaStrategii: true }],
     [{ age: 17, sex: 'M', h: 178, w: 68 }, { przycisk: true, kartaStrategii: false }],   // nastolatek w normie
-    [{ age: 4, months: 11, sex: 'F', h: 108, w: 18 }, { przycisk: false, kartaStrategii: false }], // < 5 lat: rata E
+    [{ age: 4, months: 11, sex: 'F', h: 108, w: 18 }, { przycisk: true, kartaStrategii: false }],  // 2–4 lata: od raty E otwarta
+    [{ age: 1, months: 11, sex: 'F', h: 86, w: 12 }, { przycisk: false, kartaStrategii: false }],  // < 2 lat: nadal zamknięta
+    [{ age: 3, sex: 'F', h: 100, w: 22 }, { przycisk: true, kartaStrategii: false }],           // otyłość 3 lata: stabilizacja wymuszona, karta ukryta (rata E)
     [{ age: 5, months: 1, sex: 'F', h: 110, w: 18.5 }, { przycisk: true, kartaStrategii: false }]  // > 5,0 lat
   ];
   for (const [s, exp] of oczekiwania) {
