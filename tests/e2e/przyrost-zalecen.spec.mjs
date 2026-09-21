@@ -46,7 +46,6 @@ function policz(page, s) {
     window.ensureDietRecommendationsElements();
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', !!s.wzrostZakonczony);
     flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 160); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -117,7 +116,7 @@ test('silnik planu: gainPlan — nadwyżka na TEE bez korekty, tempo z 7700 kcal
   expect(dziecko.gp).toBeNull();
 });
 
-test('generator dorosły: Z1–Z6 w obu rejestrach, strategia „przyrost”, role, dane strukturalne, bez treści redukcyjnych', async ({ page }) => {
+test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane strukturalne, bez treści redukcyjnych', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const pro = await policz(page, { age: 28, sex: 'F', h: 168, w: 50 });
@@ -149,14 +148,6 @@ test('generator dorosły: Z1–Z6 w obu rejestrach, strategia „przyrost”, ro
   // nic z redukcji
   for (const zakazane of ['tempu redukcji', 'deficyt', 'redukcj', 'obwodu talii', 'Dodatkowym celem']) expect(t).not.toContain(zakazane);
 
-  const pac = await policz(page, { age: 28, sex: 'F', h: 168, w: 50, pf: true });
-  expect(pac.strategia).toBe('przyrost');
-  const tp = norm(pac.text);
-  expect(tp).toContain('Przy Twojej aktywności na poziomie „mała aktywność” (PAL 1,4) potrzebujesz ok. 1800 kcal dziennie. Żeby przybierać na wadze, jedz ok. 300–500 kcal więcej, czyli ok. 2100–2300 kcal dziennie. To przyrost ok. 0,3–0,5 kg tygodniowo; do dolnej granicy normy dojdziesz orientacyjnie za ok. 5–8 tygodni. Z badań naukowych wynika, że w praktyce przyrost bywa wolniejszy, niż wychodzi z rachunku – dlatego ważne jest regularne ważenie.');
-  expect(norm(pac.zdania.talerz[1])).toBe('Dokładaj kalorie w małej objętości: oliwa, orzechy, nasiona, pełnotłusty nabiał, awokado, i jedz przekąski między posiłkami – zamiast zwiększać porcje.');
-  expect(zl(pac, 'ruch')).toBe('Ruch jest nadal wskazany – najlepiej ćwiczenia siłowe 2–3 razy w tygodniu. Unikaj długich, wyczerpujących treningów wytrzymałościowych.');
-  expect(norm(pac.zdania.kontrola[1])).toBe('Waż się co 2–4 tygodnie. Jeśli mimo jedzenia więcej masa ciała nie rośnie, chudniesz bez powodu, masz dolegliwości brzuszne albo zauważasz, że unikasz jedzenia lub boisz się przybrać na wadze – zgłoś to lekarzowi.');
-  expect(tp).not.toContain('kg na tydzień');
 
   // Z6: BMI 15,6 — bez planu liczbowego, ale talerz, ruch i kontrola zostają
   const z6 = await policz(page, { age: 28, sex: 'F', h: 168, w: 44 });
@@ -167,8 +158,6 @@ test('generator dorosły: Z1–Z6 w obu rejestrach, strategia „przyrost”, ro
   expect(z6.energia.nadwyzkaKcal).toBeNull(); expect(z6.energia.podazZakresKcal).toBeNull(); expect(z6.czas).toBeNull();
   expect(z6.energia.utrzymanieKcal).toBe(Math.round(z6.teeRaw));
   expect(z6.zdania.talerz.length).toBe(2); expect(z6.zdania.ruch.length).toBe(1); expect(z6.zdania.kontrola.length).toBe(2);
-  const z6p = await policz(page, { age: 28, sex: 'F', h: 168, w: 44, pf: true });
-  expect(norm(z6p.text)).toContain('Przy tak niskiej masie ciała aplikacja nie podaje planu liczbowego – potrzebna jest ocena lekarska, a plan jedzenia ustala się razem ze specjalistą (dietetykiem klinicznym, psychodietetykiem).');
   // Z6 także z historii (BMI 18,1, szybka utrata masy)
   const teraz = Date.now();
   const ryz = await policz(page, { age: 28, sex: 'F', h: 168, w: 51, historia: [{ t: teraz - 30 * DZIEN, weight: 56 }, { t: teraz, weight: 51 }] });
@@ -176,11 +165,8 @@ test('generator dorosły: Z1–Z6 w obu rejestrach, strategia „przyrost”, ro
   expect(ryz.energia.nadwyzkaKcal).toBeNull();
   // rata F: bez planu liczbowego (Z6) ruch ustala lekarz — bez ćwiczeń oporowych i bez „2–3 razy w tygodniu”
   expect(zl(z6, 'ruch')).toBe('Do czasu oceny klinicznej nie zaleca się zwiększania aktywności fizycznej; jej zakres ustala lekarz prowadzący.');
-  expect(zl(z6p, 'ruch')).toBe('Nie zwiększaj teraz ilości ćwiczeń – o tym, ile ruchu jest dla Ciebie bezpieczne, zdecyduje lekarz.');
-  expect(z6p.punkty.ruch.join(' ')).toContain('zdecyduje lekarz');
-  expect(z6p.punkty.kontrola.length).toBe(3);
   // punkty: nowe klucze cytują zdania (liczby i słowa) — ta sama reguła co w punkty-zalecen
-  for (const w of [pro, pac]) {
+  for (const w of [pro]) {
     expect(Object.keys(w.punkty).sort()).toEqual(Object.keys(w.zdania).sort());
     expect(w.punkty.ruch.join(' ')).toMatch(/2–3 razy w tygodniu/);
     expect(w.punkty.kontrola[0]).toBe(w.zdania.kontrola[0]);
@@ -204,10 +190,6 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   expect(norm(d8.zdania.kontrola[1])).toBe('Wskazana kontrola masy ciała i wzrostu co 4–6 tygodni na siatkach centylowych; brak przyrostu, spadek centyla lub cechy zaburzeń odżywiania wymagają wcześniejszej oceny.');
   expect(t8).not.toMatch(/nadwyżk[aę] \d|kcal więcej|kg tygodniowo/u);
   expect(d8.energia.nadwyzkaKcal).toBeNull(); expect(d8.energia.utrzymanieKcal).toBeCloseTo(d8.teeRaw, 3);
-  const d8p = await policz(page, { age: 8, sex: 'F', h: 128, centyl: 4, pf: true });
-  expect(norm(d8p.text)).toContain('Aplikacja nie wyznacza dziecku dodatkowych kalorii – ważne są regularne, pożywne posiłki i sprawdzanie, czy masa ciała i wzrost rosną.');
-  expect(zl(d8p, 'talerz')).toBe('Proszę podawać dziecku 5 regularnych posiłków dziennie, w spokojnej atmosferze i bez presji przy jedzeniu, z dodatkami zwiększającymi kaloryczność w małej objętości: oliwą, masłem, pastami orzechowymi, pełnotłustym nabiałem. Nie należy ograniczać żadnych grup produktów.');
-  expect(norm(d8p.zdania.kontrola[1])).toBe('Proszę kontrolować masę ciała i wzrost dziecka co 4–6 tygodni; brak przyrostu lub spadek na siatce wymaga wcześniejszej wizyty.');
 
   // 12 lat, P4: nastolatka bez cech ryzyka (EBW liczone od 13 lat) → Z2
   const n12 = await policz(page, { age: 12, sex: 'F', h: 150, centyl: 4 });
@@ -217,10 +199,6 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   expect(norm(n12.text)).not.toContain('pilna ocena kliniczna');
   expect(zl(n12, 'talerz')).toBe('Zalecane są regularne posiłki (5 dziennie, w tym śniadanie i przekąski) o zwiększonej gęstości energetycznej – z dodatkiem orzechów, nasion, oliwy, pełnotłustego nabiału i awokado; nie należy ograniczać jakichkolwiek grup produktów.');
   expect(norm(n12.zdania.kontrola[1])).toContain('cechy zaburzeń odżywiania u nastolatka wymagają wcześniejszej oceny');
-  const n12p = await policz(page, { age: 12, sex: 'F', h: 150, centyl: 4, pf: true });
-  expect(norm(n12p.text)).toContain('Aplikacja nie wyznacza Ci dodatkowych kalorii do zjedzenia – ważne są regularne, pożywne posiłki i sprawdzanie, czy masa ciała rośnie.');
-  expect(zl(n12p, 'talerz')).toBe('Jedz regularnie 5 posiłków dziennie, ze śniadaniem, i dokładaj do nich pożywne produkty w małej objętości: orzechy, nasiona, oliwę, pełnotłusty nabiał, awokado. Nie pomijaj posiłków i nie ograniczaj jedzenia.');
-  expect(norm(n12p.zdania.kontrola[1])).toBe('Ważenie i mierzenie co 4–6 tygodni; jeśli masa ciała nie rośnie albo zauważasz, że unikasz jedzenia lub boisz się przybrać na wadze, powiedz o tym rodzicom lub lekarzowi.');
 
   // 15 lat, P4: masa < 85 % należnej (moduł ryzyka) → Z5 zamiast Z2
   const n15 = await policz(page, { age: 15, sex: 'F', h: 160, centyl: 4 });
@@ -232,24 +210,22 @@ test('generator dziecko i nastolatek: bez liczb, Z2 albo Z5 z modułu ryzyka, ta
   expect(norm(n15.text)).not.toContain('Cechy ryzyka');
   expect(norm(n15.text)).not.toContain('60 minut');
   expect(n15.zdania.kontrola.length).toBe(2);
-  const n15p = await policz(page, { age: 15, sex: 'F', h: 160, centyl: 4, pf: true });
-  expect(norm(n15p.text)).toContain('Twoja masa ciała jest wyraźnie za niska albo szybko spadła – potrzebna jest szybka wizyta u lekarza, który razem z dietetykiem klinicznym ustali z Tobą plan jedzenia. Nie ograniczaj jedzenia i nie pomijaj posiłków; pomocna może być też rozmowa z psychologiem.');
 
   // 18 lat (gałąź dziecięca, moduł ryzyka liczy jak dorosłego): sam próg BMI < 18,5 to nie cecha ryzyka → Z2;
   // BMI < 17,5 → Z5; bez „rodzicom”
-  const n18 = await policz(page, { age: 18, sex: 'M', h: 178, centyl: 4, pf: true });
+  const n18 = await policz(page, { age: 18, sex: 'M', h: 178, centyl: 4 });
   expect(n18.risk.isAdult).toBe(true);
   expect(n18.bmi).toBeGreaterThanOrEqual(17.5); expect(n18.bmi).toBeLessThan(18.5);
   expect(n18.strategia).toBe('przyrost');
-  expect(norm(n18.text)).toContain('Aplikacja nie wyznacza Ci dodatkowych kalorii');
-  expect(norm(n18.text)).not.toContain('szybka wizyta u lekarza');
-  expect(norm(n18.zdania.kontrola[1])).toMatch(/powiedz o tym lekarzowi\.$/u);
-  expect(norm(n18.zdania.kontrola[1])).not.toContain('rodzicom');
+  expect(norm(n18.text)).toContain('aplikacja nie wyznacza liczbowej nadwyżki energetycznej');
+  expect(norm(n18.text)).not.toContain('Niedowaga z cechami ryzyka');
+  expect(norm(n18.zdania.kontrola[1])).toMatch(/wymagają wcześniejszej oceny\.$/u);
+  expect(norm(n18.zdania.kontrola[1])).not.toContain('rodzic');
   expect(n18.cgReason).toBe('niedowaga'); // pole celu własnego nie pokazuje się z podpowiedzią o utrzymaniu
   expect(n18.poleCelu).toBe(false);
-  const n18n = await policz(page, { age: 18, sex: 'M', h: 178, w: 53.9, pf: true }); // BMI 17,0
+  const n18n = await policz(page, { age: 18, sex: 'M', h: 178, w: 53.9 }); // BMI 17,0
   expect(n18n.bmi).toBeLessThan(17.5);
-  expect(norm(n18n.text)).toContain('szybka wizyta u lekarza');
+  expect(norm(n18n.text)).toContain('Niedowaga z cechami ryzyka zaburzeń odżywiania (BMI poniżej 17,5)');
 
   // 16 lat po zakończeniu wzrastania: nadal bez liczb (opcja A), pole celu ukryte z powodem „niedowaga”
   const n16 = await policz(page, { age: 16, sex: 'M', h: 176, centyl: 4, wzrostZakonczony: true });
@@ -295,7 +271,7 @@ test('raport pacjenta: nagłówek „przyrost” i kafle nadwyżki; bez planu li
     window.professionalMode = true; window.intakeHistory = null;
     set('age', s.age); set('ageMonths', 0); set('sex', s.sex); set('weight', s.w); set('height', s.h); set('customGoalKg', '');
     window.ensureDietRecommendationsElements();
-    ['reduceToggle', 'stabilizationToggle', 'growthEndedFlag', 'patientFacingToggle'].forEach((id) => { const el = document.getElementById(id); if (el) el.checked = false; });
+    ['reduceToggle', 'stabilizationToggle', 'growthEndedFlag'].forEach((id) => { const el = document.getElementById(id); if (el) el.checked = false; });
     ['nutritionNormsFlag', 'journeyFlag', 'vitDSuppFlag', 'hydrationFlag'].forEach((id) => { const el = document.getElementById(id); if (el) el.checked = true; });
     window.update();
     await new Promise((r) => { setTimeout(r, 180); });

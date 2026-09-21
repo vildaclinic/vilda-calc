@@ -49,11 +49,14 @@ describe('J1 — rejestr standardowy u dzieci < 11 lat bez „Proszę / ty / wy"
   });
 });
 
-describe('J2 — zwroty wg wieku w trybie „ty"', () => {
-  it('rówieśnik zamiast „dziecka w Twoim wieku"; ≥ 18 lat bez rodziców i psychologa dziecięcego', () => {
+describe('J2 — tryb „ty" usunięty (P-DIETA-REJESTR rata G, 2026-09-21); ≥ 18 lat bez psychologa dziecięcego', () => {
+  it('żadnej formy „ty"/„Proszę" w pliku; wariant konsultacji dla 18+ zostaje w rejestrze standardowym', () => {
     expect(zawiera('dziecka w Twoim wieku')).toBe(false);
-    expect(zawiera('osoby w Twoim wieku i o Twoim wzroście')).toBe(true);
-    expect(zawiera('e>=18?"Jeżeli wdrożenie zaleceń okaże się trudne, rozważ konsultację z dietetykiem lub psychologiem."')).toBe(true);
+    expect(zawiera('osoby w Twoim wieku i o Twoim wzroście')).toBe(false);
+    expect(zawiera('Twoja')).toBe(false);
+    expect(zawiera('Twoje')).toBe(false);
+    expect(zawiera('Proszę')).toBe(false);
+    expect(zawiera('patientFacing')).toBe(false);
     expect(zawiera('psychologiem"+(e>=18?"":" dziecięcym")')).toBe(true);
     expect(zawiera('"Twoja masa ciała mieści się w granicach normy dla Twojego wieku."')).toBe(false);
   });

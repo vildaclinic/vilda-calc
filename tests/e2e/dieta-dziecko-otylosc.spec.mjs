@@ -54,17 +54,17 @@ function fill(page, { age, sex, w, h, pro = true }) {
   }, { age, sex, w, h, pro });
 }
 
-function recommend(page, { strategy = null, diet = 'light', pf = false, norms = true }) {
-  return page.evaluate(({ strategy, diet, pf, norms }) => {
+function recommend(page, { strategy = null, diet = 'light', norms = true }) {
+  return page.evaluate(({ strategy, diet, norms }) => {
     window.ensureDietRecommendationsElements();
     const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
     flag('reduceToggle', strategy === 'reduction'); flag('stabilizationToggle', strategy === 'stabilization');
     flag('growthEndedFlag', false); flag('journeyFlag', true); flag('nutritionNormsFlag', norms);
-    flag('patientFacingToggle', pf); flag('vitDSuppFlag', false); flag('hydrationFlag', false);
+    flag('vitDSuppFlag', false); flag('hydrationFlag', false);
     const dl = document.getElementById('dietLevel'); if (dl) dl.value = diet;
     const r = window.generateDietRecommendations();
     return r && r.textOutput ? r.textOutput : '';
-  }, { strategy, diet, pf, norms });
+  }, { strategy, diet, norms });
 }
 
 test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktualnej z korektą (−253/−379/−506 z tempa), hero z zaokrągloną kalorycznością', async ({ page }) => {
@@ -171,8 +171,8 @@ test('2–5 lat (tryb profesjonalny): karta stabilizacji z energią utrzymania; 
   expect(r.plan).toContain('Stabilizacja masy ciała');
   expect(r.plan).toContain('W wieku 2–5 lat nie zaleca się deficytu energetycznego');
   expect(r.plan).toContain(`${Math.round(r.state.base / 100) * 100} kcal/dzień`);
-  const text = await recommend(page, { strategy: 'reduction', diet: 'light', pf: true });
-  expect(text).toContain('W strategii stabilizacji nie planujemy dodatkowego deficytu');
+  const text = await recommend(page, { strategy: 'reduction', diet: 'light' });
+  expect(text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
   expect(text).not.toMatch(/potrzebę redukcji|Deficyt kaloryczny/u);
 });
 

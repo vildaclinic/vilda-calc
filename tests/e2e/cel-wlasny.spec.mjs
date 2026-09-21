@@ -43,7 +43,6 @@ function policz(page, s) {
     window.ensureDietRecommendationsElements();
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 160); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -144,14 +143,12 @@ test('silnik planu: strażniki celu własnego i dieta wyłącznie lekka z podło
   expect(sim.months).toBeCloseTo(Math.ceil(4 / (0.3 * 52 / 12) * 2) / 2, 0);
 });
 
-test('generator: zdania celu własnego w obu rejestrach, liczby z silnika, talerz stanu bez zmian', async ({ page }) => {
+test('generator: zdania celu własnego, liczby z silnika, talerz stanu bez zmian', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   for (const s of [
     { age: 35, sex: 'F', h: 164, w: 66, cel: 62 },              // górna norma (≥ 24): „Priorytetem…”, talerz utrzymania
-    { age: 35, sex: 'F', h: 164, w: 66, cel: 62, pf: true },
-    { age: 30, sex: 'M', h: 180, w: 76, cel: 72 },              // norma (23,5): talerz raty B + alkohol
-    { age: 30, sex: 'M', h: 180, w: 76, cel: 72, pf: true }
+    { age: 30, sex: 'M', h: 180, w: 76, cel: 72 }               // norma (23,5): talerz raty B + alkohol
   ]) {
     const w = await policz(page, s);
     const t = norm(w.text);
@@ -165,7 +162,7 @@ test('generator: zdania celu własnego w obu rejestrach, liczby z silnika, taler
     // Z1: cel nazwany celem własnym, z BMI celu i kilogramami z silnika
     const bmiCel = (s.cel / (s.h / 100) ** 2).toFixed(1).replace('.', ',');
     expect(t).toContain(`${s.cel},0 kg (BMI ${bmiCel})`);
-    expect(t).toMatch(s.pf ? /To Twój własny cel, a nie zalecenie lekarskie/u : /nie jest to wskazanie medyczne, lecz cel uzgodniony z pacjentem/u);
+    expect(t).toMatch(/nie jest to wskazanie medyczne, lecz cel uzgodniony z pacjentem/u);
     // Z2: energia — 15 %, maks. 500, podaż i tempo z silnika
     expect(t).toMatch(/15%/u); expect(t).toContain('500 kcal');
     expect(t).toContain(`ok. ${w.energia.podazZaokrKcal} kcal`);
@@ -176,7 +173,7 @@ test('generator: zdania celu własnego w obu rejestrach, liczby z silnika, taler
     expect(t).toMatch(/orientacyjnie około/u);
     // Z6 i Z5: role ruch (2 zdania) i kontrola
     expect(w.zdania.ruch).toHaveLength(2);
-    expect(zl(w, 'ruch')).toMatch(s.pf ? /ćwiczenia siłowe/u : /ćwiczenia oporowe/u);
+    expect(zl(w, 'ruch')).toMatch(/ćwiczenia oporowe/u);
     expect(zl(w, 'ruch')).toContain('150 minut');
     expect(w.zdania.kontrola).toHaveLength(1);
     expect(zl(w, 'kontrola')).toContain('BMI 20');
@@ -251,7 +248,7 @@ test('raport pacjenta: nagłówek sekcji energii wg strategii', async ({ page })
     window.professionalMode = true; window.intakeHistory = null;
     set('age', s.age); set('ageMonths', 0); set('sex', s.sex); set('weight', s.w); set('height', s.h); set('customGoalKg', s.cel == null ? '' : s.cel);
     window.ensureDietRecommendationsElements();
-    ['reduceToggle', 'stabilizationToggle', 'growthEndedFlag', 'patientFacingToggle'].forEach((id) => { const el = document.getElementById(id); if (el) el.checked = false; });
+    ['reduceToggle', 'stabilizationToggle', 'growthEndedFlag'].forEach((id) => { const el = document.getElementById(id); if (el) el.checked = false; });
     ['nutritionNormsFlag', 'journeyFlag', 'vitDSuppFlag', 'hydrationFlag'].forEach((id) => { const el = document.getElementById(id); if (el) el.checked = true; });
     window.update();
     await new Promise((r) => { setTimeout(r, 180); });

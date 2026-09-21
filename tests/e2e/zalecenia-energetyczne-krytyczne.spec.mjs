@@ -25,8 +25,8 @@ async function openAll(page) {
   await page.waitForFunction(() => typeof window.patientReportFormatIssueList === 'function');
 }
 
-function generate(page, { age, sex, w, h, growthEnded = false, strategy = null, patient = false }) {
-  return page.evaluate(async ({ age, sex, w, h, growthEnded, strategy, patient }) => {
+function generate(page, { age, sex, w, h, growthEnded = false, strategy = null }) {
+  return page.evaluate(async ({ age, sex, w, h, growthEnded, strategy }) => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
     const tgl = document.getElementById('resultsModeToggle');
     if (tgl && !tgl.checked) { tgl.checked = true; tgl.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -37,7 +37,7 @@ function generate(page, { age, sex, w, h, growthEnded = false, strategy = null, 
     const flag = (id, on) => { const el = document.getElementById(id); if (el) { el.disabled = false; el.checked = on; } };
     flag('reduceToggle', strategy === 'reduction'); flag('stabilizationToggle', strategy === 'stabilization');
     flag('growthEndedFlag', growthEnded); flag('nutritionNormsFlag', true); flag('journeyFlag', true);
-    flag('vitDSuppFlag', false); flag('hydrationFlag', false); flag('patientFacingToggle', patient);
+    flag('vitDSuppFlag', false); flag('hydrationFlag', false);
     window.update();
     document.getElementById('generateEnergyDietBtn').click();
     await new Promise((res) => { setTimeout(res, 150); });
@@ -56,7 +56,7 @@ function generate(page, { age, sex, w, h, growthEnded = false, strategy = null, 
       plan: norm(document.getElementById('planResults')?.textContent),
       journey: norm(document.getElementById('bmiJourneyMount')?.textContent),
     };
-  }, { age, sex, w, h, growthEnded, strategy, patient });
+  }, { age, sex, w, h, growthEnded, strategy });
 }
 
 test('K1: dorosła z BMI 22,8 — bez planu redukcyjnego, zapotrzebowanie i utrzymanie masy, normy „dla zapotrzebowania"', async ({ page }) => {
@@ -70,10 +70,6 @@ test('K1: dorosła z BMI 22,8 — bez planu redukcyjnego, zapotrzebowanie i utrz
   expect(r.text).toContain(`wynosi ok. ${kcal} kcal/dzień; brak wskazań do deficytu energetycznego – celem jest utrzymanie masy ciała`);
   expect(r.text).not.toMatch(/deficytowi energetycznemu|tempu redukcji|Plan zakłada dietę/u);
   expect(r.text).toContain(`Normy żywieniowe dla zapotrzebowania około ${kcal} kcal/d`);
-  const pat = await generate(page, { age: 28, sex: 'F', w: 62, h: 165, patient: true });
-  expect(pat.text).toContain('nie ma wskazań do deficytu energetycznego');
-  expect(pat.text).toContain(`Przy zapotrzebowaniu około ${kcal} kcal/d`);
-  expect(pat.text).not.toContain('Proponowany plan zakłada');
   // dorosły z otyłością bez zmian
   const ob = await generate(page, { age: 35, sex: 'M', w: 105, h: 175 });
   expect(ob.diets.length).toBe(3);

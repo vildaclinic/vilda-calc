@@ -20,8 +20,8 @@ async function openAll(page) {
   await page.waitForFunction(() => typeof window.patientReportFormatIssueList === 'function');
 }
 
-function run(page, { age, months = 0, sex, w, h, click = null, pf = false, norms = true }) {
-  return page.evaluate(async ({ age, months, sex, w, h, click, pf, norms }) => {
+function run(page, { age, months = 0, sex, w, h, click = null, norms = true }) {
+  return page.evaluate(async ({ age, months, sex, w, h, click, norms }) => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
     const tgl = document.getElementById('resultsModeToggle');
     if (tgl && !tgl.checked) { tgl.checked = true; tgl.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -32,7 +32,7 @@ function run(page, { age, months = 0, sex, w, h, click = null, pf = false, norms
     window.ensureDietRecommendationsElements();
     const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
-    flag('nutritionNormsFlag', !!norms); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true); flag('patientFacingToggle', !!pf);
+    flag('nutritionNormsFlag', !!norms); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
     if (click) { const bt = document.querySelector(`[data-diet-strategy-choice="${click}"]`); if (bt) bt.click(); }
     window.update();
     document.getElementById('generateEnergyDietBtn').click();
@@ -41,7 +41,7 @@ function run(page, { age, months = 0, sex, w, h, click = null, pf = false, norms
     const res = document.getElementById('dietEnergyResult');
     const text = norm(res.innerHTML.replace(/<\/(li|p|div|h3)>/g, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' '));
     return { text, active: document.querySelector('[data-diet-strategy-choice].is-active')?.getAttribute('data-diet-strategy-choice') || null };
-  }, { age, months, sex, w, h, click, pf, norms });
+  }, { age, months, sex, w, h, click, norms });
 }
 
 const count = (text, needle) => text.split(needle).length - 1;
@@ -66,16 +66,12 @@ test('J1: 10-latek, wariant standardowy — forma bezosobowa, bez zwrotów do ro
   expect(r.text).not.toContain('z korektą na otyłość');
 });
 
-test('J2: 18-latka w trybie „ty" — rówieśnik zamiast „dziecka", konsultacja bez rodziców i psychologa dziecięcego; standard 18-latki bez „Twoja"', async ({ page }) => {
+test('J2: 18-latka — konsultacja bez rodziców i psychologa dziecięcego, bez „Twoja"; 14-latek z psychologiem dziecięcym', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
-  const p = await run(page, { age: 18, sex: 'F', w: 80, h: 165, pf: true });
-  expect(p.text).toContain('Przeciętna masa ciała osoby w Twoim wieku i o Twoim wzroście');
-  expect(p.text).not.toContain('dziecka w Twoim wieku');
-  expect(p.text).toContain('Jeżeli wdrożenie zaleceń okaże się trudne, rozważ konsultację z dietetykiem lub psychologiem.');
-  expect(p.text).not.toContain('rodzicami');
-  expect(p.text).not.toContain('dziecięcym');
   const s = await run(page, { age: 18, sex: 'F', w: 80, h: 165 });
+  expect(s.text).not.toContain('rodzicami');
+  expect(s.text).not.toContain('dziecięcym');
   expect(s.text).toContain('wskazana jest konsultacja z dietetykiem lub psychologiem, a w razie potrzeby także wsparcie trenera personalnego.');
   expect(s.text).not.toContain('Twoja');
   const s14 = await run(page, { age: 14, sex: 'M', w: 85, h: 165 });
@@ -101,9 +97,6 @@ test('J3: stabilizacja 8-latki — cel raz, „bez dodatkowego deficytu", bez �
   expect(r.text).toContain('Przy stabilnej masie ciała dziecko z czasem „wyrośnie” z otyłości');
   expect(r.text).toMatch(/Normy żywieniowe dla planu około \d+ kcal\/d:/u);
   expect(r.text).not.toContain('Przeliczenie wykonano');
-  const p = await run(page, { age: 8, sex: 'F', w: 40, h: 130, pf: true });
-  expect(p.text).toContain('W strategii stabilizacji nie planujemy dodatkowego deficytu: dzienna podaż energii dziecka powinna odpowiadać jego zapotrzebowaniu przy obecnej masie ciała');
-  expect(count(p.text, 'ajważniejsze jest utrzymanie')).toBe(1);
 });
 
 test('J4: czas dojścia — 14-latek ≤ 52 tyg. „około N tygodni (ok. X miesiąca)", 3-latka > roku tylko miesiące, dorosły z cudzysłowem polskim', async ({ page }) => {

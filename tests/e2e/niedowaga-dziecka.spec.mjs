@@ -39,7 +39,6 @@ function policz(page, s) {
     window.ensureDietRecommendationsElements();
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 140); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -54,14 +53,12 @@ function policz(page, s) {
 // wspomina słone przekąski, ale jako „okazjonalny dodatek", nie jako restrykcję.
 const RESTRYKCJE = ['ograniczać tłuste potrawy', 'żółty ser', 'słone przekąski oraz fast', 'słone przekąski i fast', 'fast\u2011foody', 'Ogranicz fast foody'];
 
-test('niedowaga u dziecka jest nazwana, a nie schowana pod „w normie" — oba rejestry, trzy pasma wieku', async ({ page }) => {
+test('niedowaga u dziecka jest nazwana, a nie schowana pod „w normie" — trzy pasma wieku', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   for (const s of [
     { age: 8, sex: 'F', h: 128, w: 18 },                 // z ≈ −4,3 — daleko poniżej 1. centyla
-    { age: 8, sex: 'F', h: 128, w: 18, pf: true },
     { age: 14, sex: 'F', h: 160, w: 35 },                // nastolatka, z ≈ −3,2
-    { age: 14, sex: 'F', h: 160, w: 35, pf: true },
     { age: 3, sex: 'F', h: 100, w: 12 },                 // 2–4 lata
     { age: 8, sex: 'F', h: 128, centyl: 4 }              // pasmo 3–5 c.: jeszcze niedowaga wg progu silnika
   ]) {
@@ -81,15 +78,9 @@ test('niedowaga u dziecka jest nazwana, a nie schowana pod „w normie" — oba 
     expect(norm(w.zdania.talerz.join(' ')), JSON.stringify(s)).toMatch(/nie należy ograniczać jakichkolwiek grup produktów|nie ograniczaj jedzenia|Nie należy ograniczać żadnych grup produktów/u);
     // rola kontroli mówi wprost: nie ograniczać, ocenić przyczyny
     expect(w.zdania.kontrola, JSON.stringify(s)).toBeDefined();
-    const k0 = norm(w.zdania.kontrola[0]);
-    if (/ryzyka zaburzeń odżywiania|szybka wizyta u lekarza/.test(k0)) {
-      // P-DIETA-AUDYT rata F: przy cechach ryzyka ZO (nastolatka 14 lat, z ≈ −3,2) zdanie o nadzorze zastępuje kontrolę A
-      expect(k0).toMatch(/nie ograniczaj|nie zaleca się ograniczania/i);
-      expect(k0).toMatch(/lekarz/);
-    } else {
-      expect(k0).toMatch(/nie ogranicza|nie zaleca się ograniczania/);
-      expect(k0).toMatch(/przyczyn/);
-    }
+    // (rata F: przy cechach ryzyka ZO — nastolatka 14 lat, z ≈ −3,2 — zdanie o nadzorze zastępuje kontrolę A; oba mówią o przyczynach i o nieograniczaniu)
+    expect(norm(w.zdania.kontrola[0])).toMatch(/nie ogranicza|nie zaleca się ograniczania/);
+    expect(norm(w.zdania.kontrola[0])).toMatch(/przyczyn/);
     // ruch zostaje (zalecenie uniwersalne), bez deficytu, bez celu redukcji; strategia „przyrost” (rata D; do niej: null)
     expect(w.zdania.ruch).toBeDefined();
     expect(w.strategia).toBe('przyrost');
@@ -115,7 +106,6 @@ test('dziecko w normie: bez listy restrykcyjnej, bez strategii redukcji, ruch zo
   await otworz(page);
   for (const s of [
     { age: 8, sex: 'F', h: 128, w: 25 },
-    { age: 8, sex: 'F', h: 128, w: 25, pf: true },
     { age: 12, sex: 'F', h: 150, w: 40 },
     { age: 3, sex: 'F', h: 100, w: 15.5 },
     { age: 8, sex: 'F', h: 128, centyl: 6 }              // tuż nad progiem: to już norma, nie niedowaga

@@ -38,7 +38,6 @@ function policz(page, s) {
     const opcje = s.opcje !== false;
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('nutritionNormsFlag', opcje); flag('journeyFlag', opcje); flag('vitDSuppFlag', opcje); flag('hydrationFlag', opcje);
-    flag('patientFacingToggle', !!s.pf);
     if (s.strategia) {
       const bt = document.querySelector('[data-diet-strategy-choice="' + s.strategia + '"]');
       if (bt) bt.click();

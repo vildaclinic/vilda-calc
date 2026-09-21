@@ -5696,6 +5696,62 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Jeden rejestr zaleceń: tryb „Dla pacjenta" usunięty (P-DIETA-REJESTR rata G, SW 1.1.39, 2026-09-21)
+
+**Status:** usunięcie funkcji o skutku klinicznym (znika cały drugi wariant brzmienia zaleceń). Po racie F
+właściciel obejrzał zalecenia w trybie „Dla pacjenta" u nastolatka z ryzykiem ZO i zwrócił uwagę, że lekarz
+klikający ten tryb dostaje tekst, w którym on sam występuje jako osoba trzecia („potrzebna jest szybka wizyta
+u lekarza, który…", „o tym … zdecyduje lekarz"). Audyt rejestru pacjenta na 25 fikcyjnych scenariuszach
+(scratchpad `rataF/smoke3.mjs`) potwierdził trzy wady tego rodzaju: lekarz jako osoba trzecia (niedowaga
+z ryzykiem i bez, dorosły bez planu liczbowego, kontrola dziecka), słowo „aplikacja" w zaleceniach pisanych
+przez lekarza („Aplikacja nie wyznacza Ci dodatkowych kalorii") oraz wstępy dla dzieci < 10 lat („wskazana
+jest ocena pediatryczna; to zestawienie nie zastępuje jej") będące zastrzeżeniem dla lekarza, nie zaleceniem
+dla rodzica. Propozycja przeredagowania (konwencja „ustalimy / ocenimy / na kontroli") została odrzucona:
+**decyzja właściciela 2026-09-21 — cały tryb „Dla pacjenta" usunąć, zostaje wyłącznie rejestr standardowy**,
+który właściciel ocenia jako dobrze zrobiony.
+
+### Co znika
+
+- Kontrolka „Język zaleceń" (Dla pacjenta / Standardowy) w panelu modułu i ukryty przełącznik
+  `patientFacingToggle` (`index.html`).
+- W generatorze `vilda_diet_recommendations.js` (v43) wszystkie gałęzie rejestru pacjenta: 92 wyrażenia
+  warunkowe `flaga ? zdanie pacjenta : zdanie standardowe` w `pe()` (dziecko/nastolatek, 58) i `yi()`
+  (dorosły, 34), blok `if (flaga) {…}` w budowniczym norm żywieniowych, gałęzie etykiet w `pi()`; funkcja
+  odczytu przełącznika `Xe()`; pole `patientFacing` stanu i `dane.trybPacjenta`; listy punktów `pac`
+  w `VILDA_PUNKTY` (31 kluczy) i parametr rejestru w `vildaPunktyZRol`. Wycinanie zrobiło narzędzie AST
+  (espree): każde wyrażenie warunkowe z flagą zastąpiono jego gałęzią standardową (rekurencyjnie, także
+  w szablonach), a ESLint (`no-undef`/`no-unused-vars`) i parsowanie pliku były strażnikami kompletności.
+  Zdania rejestru standardowego, liczby, progi i strategie **nie zmieniły się**.
+- Zdania rejestru pacjenta zatwierdzone w ratach A–F (m.in. „Twoja masa ciała jest wyraźnie za niska…",
+  „Nie zwiększaj teraz ilości ćwiczeń…", „O tym, jak często się ważyć, zdecyduje lekarz…", talerze
+  „Jedz regularnie…", „Proszę podawać dziecku…") — historyczne; ich brzmienie zostaje w wpisach
+  poprzednich rat jako zapis decyzji.
+
+### Wpływ kliniczny
+
+Każdy dokument (ekran, schowek, jednostronicowy plan PDF, pakiet „Raport pacjenta") ma teraz jedno
+brzmienie: standardowy, neutralny zapis kliniczny (formy bezosobowe, bez „ty", bez „Proszę"). Pacjent lub
+rodzic dostaje ten sam tekst, który widzi lekarz. Treść merytoryczna, liczby i progi bez zmian.
+
+### Walidacja
+
+- `tests/unit/zalecenia-energetyczne-jezyk.test.mjs` J2 przepisany na strażnika negatywnego: w pliku nie ma
+  „Twoja/Twoje/Proszę/patientFacing"; wariant konsultacji 18+ zostaje w rejestrze standardowym.
+- 17 specyfikacji e2e bez przypadków `pf: true` / `patient: true` (przypadki rejestru pacjenta usunięte, asercje
+  warunkowe sprowadzone do gałęzi standardowej); usunięte testy istniejące tylko dla drugiego rejestru:
+  `punkty-zalecen` „rozpisanie jest osobne dla kazdego rejestru", `zdania-rol-zalecen` „rejestr «Dla pacjenta»
+  zmienia brzmienie ról". `audyt-zalecen.spec` sprawdza dodatkowo brak kontrolki i przełącznika w DOM.
+- Smoke `rataF/smoke3.mjs` po zmianie: przełącznik nieobecny, wszystkie 25 scenariuszy w brzmieniu
+  standardowym. Pełny zestaw e2e desktop: WYNIK_E2E_G.
+
+### Długi po racie G
+
+- Rejestr standardowy nadal używa u dorosłego bez planu liczbowego zdania „aplikacja nie podaje planu
+  liczbowego" i u dziecka „aplikacja nie wyznacza liczbowej nadwyżki energetycznej" — słowo „aplikacja" w
+  dokumencie, który pacjent dostaje od lekarza; do rozważenia przy kolejnym przeglądzie brzmienia.
+- Wstępy dla dzieci < 10 lat („…proponowany plan ma charakter poglądowy") trafiają teraz także na wydruk
+  dla rodzica — właściciel może chcieć je ograniczyć do ekranu.
+
 ## Audyt mieszania zaleceń: koniec planu SMART, jedno źródło treści, ryzyko ZO (P-DIETA-AUDYT rata F, SW 1.1.38, 2026-09-21)
 
 **Status:** zmiana kliniczna (zdania przy ryzyku zaburzeń odżywiania i ruch przy niedowadze) połączona

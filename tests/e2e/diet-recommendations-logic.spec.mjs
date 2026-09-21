@@ -252,7 +252,7 @@ test('DIET-KCAL-CONSISTENT: narracja i normy podają tę samą kaloryczność pl
     window.ensureDietRecommendationsElements();
     const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
     flag('reduceToggle', true); flag('stabilizationToggle', false);
-    flag('nutritionNormsFlag', true); flag('patientFacingToggle', false);
+    flag('nutritionNormsFlag', true);
     const dl = document.getElementById('dietLevel');
     if (dl && !Array.from(dl.options).some((o) => o.value === 'moderate')) {
       const opt = document.createElement('option');
@@ -570,13 +570,11 @@ test('DIET-STAB-FINAL-HEIGHT: prognoza ostateczna steruje dostępnością stabil
   expect(result.mphOnly.disabled).toBe(true);
 });
 
-// ── Język zaleceń energetycznych: spójny rejestr wg adresata (2026-08-12) ──
-// „Dla pacjenta": dorosły/rodzic — konsekwentne „Proszę…"; nastolatek —
-// konsekwentna forma „ty" (bez „Proszę + bezokolicznik"). „Standardowy"
-// nastolatka wyrównany do neutralnego zapisu klinicznego (decyzja właściciela).
+// ── Język zaleceń energetycznych (2026-08-12; P-DIETA-REJESTR rata G 2026-09-21: tryb „Dla pacjenta"
+//    usunięty, zostaje standardowy, neutralny zapis kliniczny) ──
 
-async function genEnergyText(page, { age, sex, w, h, pf }) {
-  return page.evaluate(({ age, sex, w, h, pf }) => {
+async function genEnergyText(page, { age, sex, w, h }) {
+  return page.evaluate(({ age, sex, w, h }) => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
     const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
     window.professionalMode = true;
@@ -590,21 +588,14 @@ async function genEnergyText(page, { age, sex, w, h, pf }) {
     flag('reduceToggle', true); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('vitDSuppFlag', true); flag('hydrationFlag', true);
     flag('journeyFlag', true); flag('nutritionNormsFlag', true);
-    flag('patientFacingToggle', pf);
     return window.generateDietRecommendations().textOutput;
-  }, { age, sex, w, h, pf });
+  }, { age, sex, w, h });
 }
 
-test('DIET-LANG-TEEN: nastolatek — pacjent per „ty", standard neutralnie klinicznie', async ({ page }) => {
+test('DIET-LANG-TEEN: nastolatek — standard neutralnie klinicznie, bez form „ty"', async ({ page }) => {
   test.setTimeout(120_000);
   await openWithDietModule(page);
-  const pac = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: true });
-  // Tryb pacjencki: bez formalnego „Proszę + bezokolicznik", konsekwentne „ty":
-  expect(pac).not.toMatch(/Proszę (jeść|planować|pamiętać)/u);
-  expect(pac).toContain('Jedz regularnie');
-  expect(pac).toContain('Twoja obecna masa ciała');
-  expect(pac).toContain('Pamiętaj o regularnym piciu wody');
-  const std = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  const std = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165 });
   // Standard: zero form „ty", neutralny zapis kliniczny:
   expect(std).not.toMatch(/\bTwoj|\bmusisz\b|\bPostaraj\b|\bStaraj\b|\bporozmawiaj\b|zajmie Ci/u);
   expect(std).toContain('Obecna masa ciała wynosi');
@@ -612,28 +603,28 @@ test('DIET-LANG-TEEN: nastolatek — pacjent per „ty", standard neutralnie kli
   expect(std).toContain('wskazana jest konsultacja z dietetykiem lub psychologiem dziecięcym');
 });
 
-test('DIET-LANG-ADULT: dorosły pacjent — gramatyka klasy BMI i plan bez kancelaryzmów', async ({ page }) => {
+test('DIET-LANG-ADULT: dorosły — gramatyka klasy BMI i plan bez kancelaryzmów, bez zwrotów „ty"', async ({ page }) => {
   test.setTimeout(120_000);
   await openWithDietModule(page);
-  const pac = await genEnergyText(page, { age: 35, sex: 'M', w: 105, h: 175, pf: true });
-  expect(pac).toContain('co oznacza otyłość');
-  expect(pac).not.toContain('co odpowiada otyłość');
-  expect(pac).toContain('Proponowany plan zakłada');
-  expect(pac).not.toContain('W proponowanym planie przyjęto');
+  const std = await genEnergyText(page, { age: 35, sex: 'M', w: 105, h: 175 });
+  expect(std).toContain('otyłość');
+  expect(std).not.toContain('co odpowiada otyłość');
+  expect(std).not.toContain('W proponowanym planie przyjęto');
+  expect(std).not.toMatch(/\bTwoj|\bTwoja\b|\bmusisz\b/u);
 });
 
 test('DIET-LANG-ARTIFACTS: bez „miesiąca/miesięcy", minutowej precyzji spalania i „uzyskujemy"', async ({ page }) => {
   test.setTimeout(120_000);
   await openWithDietModule(page);
-  const std = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  const std = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165 });
   expect(std).not.toContain('miesiąca/miesięcy');
   expect(std).toMatch(/ok\. \d+,\d miesiąca|ok\. \d+ miesięcy/u);
   // Godzinowe totale spalania usunięte w całości (patrz DIET-ACT-ACCELERATOR):
   expect(std).not.toMatch(/\d+ h \d+ min/u);
   expect(std).not.toMatch(/około \d{2,} godzin/u);
-  const childPac = await genEnergyText(page, { age: 8, sex: 'F', w: 45, h: 130, pf: true });
-  expect(childPac).not.toContain('uzyskujemy');
-  expect(childPac).toContain('Taki plan daje deficyt');
+  const child = await genEnergyText(page, { age: 8, sex: 'F', w: 45, h: 130 });
+  expect(child).not.toContain('uzyskujemy');
+  expect(child).toContain('Deficyt kaloryczny przy tej diecie wynosi');
 });
 
 // ── Ruch jako akcelerator + spójność wzrost/redukcja (2026-08-12, decyzje właściciela) ──
@@ -644,7 +635,7 @@ test('DIET-LANG-ARTIFACTS: bez „miesiąca/miesięcy", minutowej precyzji spala
 test('DIET-ACT-ACCELERATOR: ruch skraca szacunek dietetyczny zamiast strasznych totali', async ({ page }) => {
   test.setTimeout(120_000);
   await openWithDietModule(page);
-  const text = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  const text = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165 });
   // Totale i mecze zniknęły:
   expect(text).not.toMatch(/około \d{2,} godzin/u);
   expect(text).not.toContain('meczów');
@@ -666,7 +657,7 @@ test('DIET-ACT-ACCELERATOR: ruch skraca szacunek dietetyczny zamiast strasznych 
 test('DIET-GROWTH-STRATEGY-TEXT: bez sprzeczności utrzymuj-vs-redukuj', async ({ page }) => {
   test.setTimeout(120_000);
   await openWithDietModule(page);
-  const red = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  const red = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165 });
   expect(red).not.toMatch(/rosła w tym czasie minimalnie|rosła jak najwolniej|pozostała zbliżona do obecnej/u);
   expect(red).toContain('przyspiesza wychodzenie z');
   const stab = await page.evaluate(() => {
@@ -676,7 +667,6 @@ test('DIET-GROWTH-STRATEGY-TEXT: bez sprzeczności utrzymuj-vs-redukuj', async (
     set('age', 14); set('ageMonths', 0); set('sex', 'M');
     set('weight', 75); set('height', 165);
     flag('reduceToggle', false); flag('stabilizationToggle', true); flag('growthEndedFlag', false);
-    flag('patientFacingToggle', false);
     return window.generateDietRecommendations().textOutput;
   });
   // ENERGY-REC-4: stabilizacja bez „masa ma rosnąć minimalnie” — spójnie „przy stabilnej masie ciała”
@@ -689,11 +679,11 @@ test('DIET-GROWTH-STRATEGY-TEXT: bez sprzeczności utrzymuj-vs-redukuj', async (
 test('DIET-ACT-UNISEX: wspólne listy aktywności dla obu płci', async ({ page }) => {
   test.setTimeout(120_000);
   await openWithDietModule(page);
-  const boy = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165, pf: false });
+  const boy = await genEnergyText(page, { age: 14, sex: 'M', w: 75, h: 165 });
   expect(boy).toContain('taniec');
   expect(boy).not.toContain('piłka nożna');
   const boyActivityLines = boy.split('\n').filter((l) => l.includes('taniec')).map((l) => l.replace(/^\d+\. /, ''));
-  const girl = await genEnergyText(page, { age: 14, sex: 'F', w: 75, h: 165, pf: false });
+  const girl = await genEnergyText(page, { age: 14, sex: 'F', w: 75, h: 165 });
   for (const line of boyActivityLines.filter((l) => l.startsWith('Wskazana jest aktywność'))) {
     expect(girl).toContain(line);
   }

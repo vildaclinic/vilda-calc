@@ -41,7 +41,6 @@ function policz(page, s) {
     window.ensureDietRecommendationsElements();
     flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
     flag('nutritionNormsFlag', true); flag('journeyFlag', true); flag('vitDSuppFlag', true); flag('hydrationFlag', true);
-    flag('patientFacingToggle', !!s.pf);
     window.update();
     await new Promise((res) => { setTimeout(res, 160); });
     const r = window.VildaDietRecommendations.generateRecommendations();
@@ -73,7 +72,7 @@ test('bramka: od 2,0 lat; 1 rok 11 mies. zamknięta; karta strategii ukryta w st
   }
 });
 
-test('norma 2–4 lata: talerz małego dziecka, ekran i sen WHO z pasmem wieku, oba rejestry; 5 lat bez zmian', async ({ page }) => {
+test('norma 2–4 lata: talerz małego dziecka, ekran i sen WHO z pasmem wieku; 5 lat bez zmian', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const n3 = await policz(page, { age: 3, sex: 'F', h: 100, w: 15.5 });
@@ -86,14 +85,9 @@ test('norma 2–4 lata: talerz małego dziecka, ekran i sen WHO z pasmem wieku, 
   expect(n3.zdania.kontrola).toBeUndefined();
   for (const r of SZKOLNY) expect(norm(n3.text)).not.toContain(r);
   expect(norm(n3.text)).not.toMatch(/przedmow|charakter poglądowy/u);
-  const n3p = await policz(page, { age: 3, sex: 'F', h: 100, w: 15.5, pf: true });
-  expect(zl(n3p, 'talerz')).toBe('Proszę podawać dziecku 4–5 posiłków dziennie o stałych porach i nie dokarmiać między nimi. Codziennie warzywa i owoce, produkty zbożowe, mleko lub jogurt, mięso, ryby, jaja lub strączki; do picia woda, bez słodzonych napojów, sok najwyżej pół szklanki dziennie. To rodzic decyduje, co i kiedy dziecko je, a dziecko – ile zje; proszę nie nagradzać ani nie pocieszać jedzeniem.');
-  expect(norm(n3p.zdania.ruch[1])).toBe('Ekran (telewizor, telefon, tablet) najwyżej 1 godzinę dziennie, a najlepiej mniej. Sen z drzemkami: 10–13 godzin na dobę.');
   // 2-latek: pasmo snu 11–14 h
   const n2 = await policz(page, { age: 2, sex: 'M', h: 88, w: 12.5 });
   expect(norm(n2.zdania.ruch[1])).toContain('11–14 godzin');
-  const n2p = await policz(page, { age: 2, months: 11, sex: 'M', h: 95, w: 14, pf: true });
-  expect(norm(n2p.zdania.ruch[1])).toContain('Sen z drzemkami: 11–14 godzin');
   const n4 = await policz(page, { age: 4, months: 11, sex: 'F', h: 108, w: 17 });
   expect(norm(n4.zdania.ruch[1])).toContain('10–13 godzin');
   // 5 lat: talerz raty B, bez zdania o ekranie i śnie
@@ -119,10 +113,6 @@ test('nadmiar 2–4 lata: talerz małego dziecka zamiast szkolnego, reszta zdań
   expect(t).toMatch(/1,25 l dziennie/u);
   expect(t).toContain('z nadwagą lub otyłością wymaga konsultacji');
   expect(norm(o3.zdania.ruch[1])).toContain('10–13 godzin');
-  const o3p = await policz(page, { age: 3, sex: 'F', h: 100, w: 22, pf: true });
-  expect(zl(o3p, 'talerz')).toBe('W tym wieku nie stosujemy diety odchudzającej – dziecko ma nie chudnąć, tylko „dorosnąć” do swojej wagi. Proszę podawać 4–5 posiłków o stałych porach, przy stole i bez ekranu, w porcjach odpowiednich do wieku; jeśli dziecko prosi o więcej, dokładką mogą być warzywa, nie kolejna porcja dania. Między posiłkami tylko woda – bez podjadania, słodzonych napojów i soków; słodycze, słodkie płatki i wędliny rzadko i w małych ilościach. Jedzenie nie powinno być nagrodą ani pocieszeniem.');
-  for (const r of SZKOLNY) expect(norm(o3p.text)).not.toContain(r);
-  expect(norm(o3p.text)).not.toMatch(/zmuszania do dojadania|od święta|samo decyduje/u);
   // nadwaga 4 lat (P90): ten sam talerz; 6 lat z otyłością: talerz szkolny jak dotąd
   const w4 = await policz(page, { age: 4, sex: 'M', h: 105, centyl: 90 });
   expect(w4.nadmiar).toBe(true);
@@ -146,10 +136,6 @@ test('niedowaga 2–4 lata: Z2 bez liczb, talerz malucha, kontrola co 4–6 tygo
   expect(norm(u3.zdania.kontrola[1])).toBe('Wskazana kontrola masy ciała i wzrostu co 4–6 tygodni na siatkach centylowych; brak przyrostu, spadek centyla lub narastające trudności z karmieniem wymagają wcześniejszej oceny.');
   expect(t).not.toContain('zaburzeń odżywiania');
   expect(t).not.toMatch(/nadwyżk[aę] \d|kcal więcej/u);
-  const u3p = await policz(page, { age: 3, sex: 'F', h: 100, w: 12, pf: true });
-  expect(norm(u3p.text)).toContain('Aplikacja nie wyznacza dziecku dodatkowych kalorii – ważne są regularne, pożywne posiłki i sprawdzanie, czy masa ciała i wzrost rosną.');
-  expect(zl(u3p, 'talerz')).toBe('Proszę podawać dziecku 5 posiłków dziennie o stałych porach, w spokojnej atmosferze i bez presji, z pełnotłustym nabiałem i dodatkami zwiększającymi kaloryczność w małej objętości: masłem, oliwą, pastami orzechowymi. Mleko i soki nie mogą zastępować posiłków ani „zapychać” między nimi. Nie należy ograniczać żadnych grup produktów.');
-  expect(norm(u3p.zdania.kontrola[1])).toBe('Proszę kontrolować masę ciała i wzrost dziecka co 4–6 tygodni; brak przyrostu, spadek na siatce lub narastające trudności z karmieniem wymagają wcześniejszej wizyty.');
   // 2 lata 0 mies. też dostaje komplet; 1 rok 11 mies. — jak przed ratą E (tylko klasyfikacja, normy, ruch, kontrola raty A)
   const u2 = await policz(page, { age: 2, sex: 'M', h: 88, w: 9.5 });
   expect(u2.niedowaga).toBe(true);
@@ -169,17 +155,17 @@ test('niedowaga 2–4 lata: Z2 bez liczb, talerz malucha, kontrola co 4–6 tygo
   expect(d8.punkty.talerz).toContain('nie ograniczać grup produktów');
 });
 
-test('punkty: nowe klucze 2–4 lat cytują zdania (liczby i słowa), oba rejestry', async ({ page }) => {
+test('punkty: nowe klucze 2–4 lat cytują zdania (liczby i słowa)', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const zloz = (s) => norm(s).toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]);
   const LICZBY = /\d+(?:[.,]\d+)?/g; const SLOWA = /[0-9a-z-]+/g;
   const RAMA = new Set(['wiecej', 'mniej', 'zamiast', 'codziennie', 'notowanie', 'obserwacja']);
   const przypadki = [
-    { age: 3, sex: 'F', h: 100, w: 15.5 }, { age: 3, sex: 'F', h: 100, w: 15.5, pf: true },
-    { age: 3, sex: 'F', h: 100, w: 22 }, { age: 3, sex: 'F', h: 100, w: 22, pf: true },
-    { age: 3, sex: 'F', h: 100, w: 12 }, { age: 3, sex: 'F', h: 100, w: 12, pf: true },
-    { age: 2, sex: 'M', h: 88, w: 12.5 }, { age: 2, sex: 'M', h: 88, w: 12.5, pf: true }
+    { age: 3, sex: 'F', h: 100, w: 15.5 },
+    { age: 3, sex: 'F', h: 100, w: 22 },
+    { age: 3, sex: 'F', h: 100, w: 12 },
+    { age: 2, sex: 'M', h: 88, w: 12.5 }
   ];
   for (const s of przypadki) {
     const w = await policz(page, s);
