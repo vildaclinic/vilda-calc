@@ -2,24 +2,24 @@
       ${t}
       <ol class="diet-pdf-classic-list">
         ${a.map(function(o){return`<li><span>${w(o.text)}</span></li>`}).join("")}
-      </ol>`:t||'<div class="diet-pdf-empty">Brak zalece\u0144 energetycznych do pokazania.</div>'}function Pe(e,i,t){const a=e.subtitle?`<p>${w(e.subtitle)}</p>`:"";return`
+      </ol>`:t||'<div class="diet-pdf-empty">Brak zalece\u0144 energetycznych do pokazania.</div>'}/* P-RAPORT rata M (2026-09-22): ramka strony bez znacznikow header i footer (zwykle div). Globalne reguly aplikacji dla elementu header (ios26-v2.css, vilda_chrome.css, style.css) wchodzily do hosta PDF: overflow:hidden ucinal ogonki liter tytulu, tlo dawalo biale pole, position:sticky zalezalo od szerokosci okna, a kolor tytulu bral sie z motywu. Teraz ramka to zwykle div z wlasnymi klasami, wiec wyglad PDF nie zalezy od motywu ani rozmiaru okna. Tytul w teal jawnie (decyzja wlasciciela). */function Pe(e,i,t){const a=e.subtitle?`<p>${w(e.subtitle)}</p>`:"";return`
       <section class="diet-pdf-page ${t||""}">
-        <header class="diet-pdf-header">
+        <div class="diet-pdf-header">
           <div class="diet-pdf-header-title">
             <div class="diet-pdf-brand">wagaiwzrost.pl</div>
             <h1>${w(e.title)}</h1>
             ${a}
           </div>
           <div class="diet-pdf-date">${w(e.patient.generatedLabel||"")}</div>
-        </header>
+        </div>
         ${i}
-        <footer class="diet-pdf-footer">
+        <div class="diet-pdf-footer">
           <div class="diet-pdf-footer-note">
             <span class="diet-pdf-footer-dot" aria-hidden="true"></span>
             <span>Raport edukacyjny. Zalecenia uzupe\u0142niaj\u0105 konsultacj\u0119 i nie zast\u0119puj\u0105 indywidualnej opieki medycznej lub dietetycznej.</span>
           </div>
           <div class="diet-pdf-footer-brand" aria-label="wagaiwzrost.pl">wagaiwzrost.pl</div>
-        </footer>
+        </div>
       </section>`}/* P-RAPORT rata 4b (2026-09-20): raport klasyczny zastapiony jednostronicowym planem
    pacjenta (vilda_raport_plan.js). Stara postac zostaje jako AWARYJNA — gdyby modul nie
    byl wczytany albo nie mial danych, lekarz dostaje raport w dotychczasowej formie,
@@ -55,10 +55,10 @@ function Dt(e){const i=vt(e),t=(i.match(/class=\"diet-pdf-chip\"/g)||[]).length,
           .diet-pdf-page::before { content:""; position:absolute; top:-190px; right:-190px; width:460px; height:460px; border-radius:999px; background:rgba(0,131,141,0.08); }
           .diet-pdf-page::after { content:""; position:absolute; left:-160px; bottom:-190px; width:420px; height:420px; border-radius:999px; background:rgba(242,151,39,0.11); }
           .diet-pdf-page > * { position:relative; z-index:1; }
-          .diet-pdf-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:28px; text-align:left; }
+          .diet-pdf-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:28px; text-align:left; position:static; overflow:visible; background:none; }
           .diet-pdf-header-title { text-align:left; max-width:900px; }
           .diet-pdf-brand { color:#007a83; font-size:24px; font-weight:900; letter-spacing:.01em; text-transform:uppercase; text-align:left; }
-          .diet-pdf-header h1 { margin:14px 0 0; font-size:44px; line-height:1.06; color:#10292a; font-weight:900; text-align:left; }
+          .diet-pdf-header h1 { margin:14px 0 0; font-size:44px; line-height:1.15; color:#00838d; font-weight:900; text-align:left; }
           .diet-pdf-header p { margin:10px 0 0; max-width:780px; color:#50696a; font-size:21px; line-height:1.38; }
           .diet-pdf-date { flex:0 0 auto; border:1px solid #d6e8e8; background:#fff; border-radius:18px; padding:13px 16px; color:#365454; font-size:17px; font-weight:700; box-shadow:0 10px 24px rgba(15,77,84,.07); }
           .diet-pdf-hero { border-radius:30px; padding:30px 34px; color:#fff; background:linear-gradient(135deg,#087b85 0%,#0f9ca6 100%); box-shadow:0 24px 50px rgba(0,131,141,.18); }
