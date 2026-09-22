@@ -5758,7 +5758,8 @@ Ciśnienie tętnicze jest wysokie: 130/50 mm Hg. / Ciśnienie skurczowe powyżej
 niskie …”. Chłopiec 1,5 r. z obwodem głowy 43 cm → „Obwód głowy jest mały jak na wiek: 43,0 cm, poniżej 3. centyla.”
 Testy: `tests/unit/raport-naglowek.test.mjs` (moduł na fixture faktów, strażnik: żadnego „Równocześnie” ani „jeszcze jeden
 parametr” w źródle), `tests/e2e/raport-wizyta-rata-r.spec.mjs` (prawdziwa strona). `npm test` zielony. Pełny zestaw e2e
-desktop: w toku w chwili tego commita — wynik dopisany w kolejnym commicie tej raty.
+desktop: 687 zaliczonych, 0 niestabilnych, 1 błąd — `bmi-jedna-liczba.spec` przypinał „149,1%” bez spacji; po
+poprawce oczekiwania (twarda lub zwykła spacja) 3/3, całość zielona. Unit 3046/3046.
 
 **Akceptacja kliniczna właściciela:** decyzje 1–7 i brzmienia zdań zaakceptowane 2026-09-22 (przed kodowaniem). Status
 „zwalidowany klinicznie” nie jest nadawany przez agenta.
