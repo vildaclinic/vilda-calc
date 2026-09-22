@@ -90,7 +90,7 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     await otworz(page);
     const r = await model(page, { age: 9, sex: 'M', w: 41.5, h: 123.9 });
     expect(r.h.badge).toBe('Niski wzrost');
-    expect(r.h.title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, poniżej 3. centyla.`);
+    expect(r.h.title).toMatch(new RegExp(`^Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, (poniżej 1\\. centyla|[12]\\. centyl)\\.$`)); // P8 (rata S): etykieta jak w kartach
     expect(r.h.text).toContain('Dodatkowo masa ciała i BMI są wyraźnie powyżej typowych wartości dla wieku');
     expect(r.h.text).toContain(`Pierwszy krok to ok. ${f1(r.pierwszy)}${NB}kg`);
     expect(r.h.subtext).toContain('tempa wzrastania');
@@ -118,7 +118,7 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     const w = await model(page, { age: 9, sex: 'M', w: 31, h: 136.3, extra: { bpSystolic: 130, bpDiastolic: 50 } });
     expect(w.h.badge).toBe('Ciśnienie wysokie'); expect(w.h.tone).toBe('danger');
     expect(w.h.title).toBe(`Ciśnienie tętnicze jest wysokie: 130/50${NB}mm${NB}Hg.`);
-    expect(w.h.text).toMatch(/^Ciśnienie skurczowe (powyżej 97\. centyla|na 9\d\. centylu) dla wieku, płci i wzrostu\. Pojedynczy pomiar wymaga potwierdzenia/);
+    expect(w.h.text).toMatch(/^Ciśnienie skurczowe (powyżej 99\. centyla|na 9\d\. centylu) dla wieku, płci i wzrostu\. Pojedynczy pomiar wymaga potwierdzenia/);
     const n = await model(page, { age: 9, sex: 'M', w: 31, h: 136.3, extra: { bpSystolic: 78, bpDiastolic: 40 } });
     expect(n.h.badge).toBe('Ciśnienie niskie'); expect(n.h.tone).toBe('warn');
     expect(n.h.title).toBe(`Ciśnienie tętnicze jest niskie: 78/40${NB}mm${NB}Hg.`);
@@ -129,7 +129,7 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     await otworz(page);
     const g = await model(page, { age: 1, months: 6, sex: 'M', w: 10.9, h: 82.3, extra: { headCircumference: 43 } });
     expect(g.h.badge).toBe('Obwód głowy'); expect(g.h.tone).toBe('danger');
-    expect(g.h.title).toBe(`Obwód głowy jest mały jak na wiek: 43,0${NB}cm, poniżej 3. centyla.`);
+    expect(g.h.title).toMatch(new RegExp(`^Obwód głowy jest mały jak na wiek: 43,0${NB}cm, (poniżej 1\\. centyla|[12]\\. centyl)\\.$`));
     expect(g.html).not.toContain('Szczególnej uwagi wymaga parametr');
     const t = await model(page, { age: 15, sex: 'M', w: 58.9, h: 172.5, extra: { waistCm: 80, hipCm: 115 } });
     expect(t.h.badge).toBe('Obwód talii'); expect(t.h.tone).toBe('warn');

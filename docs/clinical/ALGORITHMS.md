@@ -5696,6 +5696,77 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## „Raport po wizycie”: nagłówek bez dublowania osi wzrostu, odniesienia kart bez „0,0” (P-RAPORT rata S, SW 1.1.53, 2026-09-22)
+
+**Zgłoszenie i decyzje właściciela (2026-09-22).** W raporcie rocznego chłopca (11,8 kg na 93. centylu, 83,0 cm powyżej
+99. centyla, BMI prawidłowe) nagłówek mówił o wysokim wzroście dwa razy („Wynika to z wysokiego wzrostu; …” + „Dodatkowo
+wzrost jest wysoki jak na wiek (83,0 cm, powyżej 97. centyla).”), a karta BMI „Przeciętne BMI dla tego wieku 17,2. To o 0,0 pkt
+poniżej tej wartości.” Przegląd 836 fikcyjnych scenariuszy na prawdziwej stronie (dzieci 0,5–16 lat × płeć × 6 centyli
+wzrostu × 8 centyli masy, przesunięcia ±0,04…±1,1 kg/cm od mediany, dorośli przy granicach BMI) wykazał ponadto:
+„Wynika to z wysokiego wzrostu” także przy wzroście 92–93 c bez liczby; przy nadwadze < 2 lat dwa zdania o tym samym;
+„Masa ciała jest na granicy normy” u dziecka z otyłością (u 2-latka szczebel −0,25 BMI-SDS to 0,4 kg, a strażnik < 0,5 kg
+z raty R nie patrzył, jaki to szczebel; 52 scenariusze); karty dziecka bez tolerancji („To o 0,1 cm powyżej”, „To o 0,3 pkt
+poniżej” przy Cole’u 99,7 %), u dorosłego BMI 24,93 → „0,0 pkt powyżej górnej granicy”; nota karty masy bez kropki przed
+doklejonym zdaniem P-MASA-2; dwie reguły etykiety centyla w jednym dokumencie (karta „>99 centyla”, nagłówek „powyżej
+97. centyla”). Właściciel odrzucił pierwszą wersję P2 („co wynika z niskiego wzrostu”): centyl masy porównuje z rówieśnikami,
+BMI z własnym wzrostem — niska masa nie „wynika” z niskiego wzrostu, dziecko jest proporcjonalnie mniejsze. Ta sama wada
+siedziała w tekście raty R „Wynika to z wysokiego wzrostu”. Decyzje: P1 (zdanie o proporcji z wartością wzrostu), P2 w wersji
+„ale proporcjonalna do wzrostu”, P3–P8 przyjęte.
+
+**Zmiana (kliniczna: brzmienie zdań w dokumencie dla pacjenta; progi i liczby bez zmian).**
+- **P1** (`vilda_raport_naglowek.js` v2, gałąź „masa poza zakresem przy prawidłowym BMI”): tytuł bez zmian; zdanie drugie
+  stawia oba fakty obok siebie bez przyczyny: wzrost > 97 c „Wzrost jest również wysoki (83,0 cm, powyżej 99. centyla); masa
+  ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.”; 90–97 c „Wzrost jest również powyżej
+  przeciętnej (…)”; ≤ 10 c „również niski” (≤ 3 c „wyraźnie niski”); 10–90 c „Masa ciała jest proporcjonalna do wzrostu
+  (X cm, N. centyl); BMI mieści się w typowym zakresie.” Kandydat wzrostu jest WCHŁONIĘTY (`wchlania: ['wzrost']`), więc
+  „Dodatkowo wzrost…” się nie dokleja; jego zdanie („Sam wysoki wzrost nie jest nieprawidłowością…” / podtytuł o tempie)
+  przechodzi do podtytułu. Wchłanianie działa też, gdy masa jest zdaniem dodatkowym (tytuł np. ciśnienie).
+- **P2**: przy tytule „niski wzrost” doklejka „Dodatkowo masa ciała jest niska jak na wiek (8,1 kg, 6. centyl), ale
+  proporcjonalna do wzrostu; BMI mieści się w typowym zakresie.” (dotąd „…, choć w stosunku do wzrostu pozostaje prawidłowa”).
+- **P3**: nadwaga < 2 lat — tylko zdanie „U małych dzieci nie stosuje się odchudzania; celem jest, aby masa ciała rosła
+  wolniej niż wzrost.”; zdanie „Najważniejsze jest, aby w kolejnych pomiarach…” tylko od 2 lat albo gdy nie ma kroku.
+- **P4**: szczebel bliżej niż 0,5 kg nazywa szczebel: „Do końca otyłości brakuje mniej niż 0,5 kg; celem jest, aby masa ciała
+  przestała rosnąć szybciej niż wzrost.” / „Do górnej granicy normy dla wieku …” / „Do wyjścia z otyłości III stopnia …”;
+  szczebel −0,25 BMI-SDS: „Pierwszy krok to ok. 15,9 kg, czyli mniej niż 0,5 kg; celem …”; dorosły: „…celem jest, aby masa
+  ciała dalej nie rosła.” Słowa „granica normy” tylko wtedy, gdy szczebel nią jest.
+- **P5** (`vilda_patient_report.js` v35, `patientReportBuildMedianReference`): różnica po zaokrągleniu „0,0” to brak
+  odchylenia (gałąź „bez odchylenia”), niezależnie od tego, jak zaokrągliły się obie liczby. `patientReportAdultBmiRangeReference`:
+  przy różnicy „0,0” pkt „BMI jest na górnej/dolnej granicy zakresu.” zamiast „To o 0,0 pkt …”.
+- **P6**: tolerancje kart dziecka jako DANE w `PATIENT_REPORT_REFERENCE_NEAR_TOLERANCE.DZIECKO`: BMI ±0,2 pkt, wskaźnik
+  Cole’a ±1 pkt, wzrost ±1 cm, masa ±2 % wartości odniesienia (0,2 kg u 10 kg, 0,6 kg u 30 kg, 1,4 kg u 70 kg). W tolerancji
+  i przy równości jedno zdanie: „Wynik mieści się w wartościach przeciętnych dla wieku.” (Cole: „…dla wieku i płci.”). Poza
+  tolerancją bez zmian: „To o X … tej wartości.” Karty dorosłego bez zmian (własne tolerancje 1 kg / 1 cm / 0,2 BMI).
+- **P7**: nota karty masy: kropka przed doklejonym zdaniem P-MASA-2 („powyżej typowego zakresu. Masa ciała i BMI oceniają co
+  innego: …”).
+- **P8**: etykieta centyla w nagłówku wg reguły aplikacji ADV-REPORT-5 (jak karty raportu): < 1 → „poniżej 1. centyla”,
+  > 99 → „powyżej 99. centyla”, inaczej zaokrąglenie („2. centyl”, „98. centyl”). Progi decyzji (≤ 3, ≤ 10, > 97, centyle
+  ciśnienia, obwodów, talii) bez zmian — zmienia się wyłącznie etykieta.
+- Strony `index`, `docpro`, `kalkulator-klirens`: `vilda_raport_naglowek.js?v=2`, `vilda_patient_report.js?v=35`;
+  `service-worker-kalorii.js` SW 1.1.52 → 1.1.53, precache append-only.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne, prawdziwy kod, także e2e `raport-wizyta-rata-s`):**
+- chłopiec 1 r., 11,8 kg / 83,0 cm → „Wysoka masa ciała / Masa ciała jest wysoka jak na wiek (11,8 kg, 93. centyl), ale w
+  stosunku do wzrostu pozostaje prawidłowa. / Wzrost jest również wysoki (83,0 cm, powyżej 99. centyla); masa ciała jest
+  proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.”; karta wzrostu „>99 centyla”; BMI 17,1 vs 17,2 →
+  „Wynik mieści się w wartościach przeciętnych dla wieku.”; Cole 99,7 % → „…dla wieku i płci.”;
+- chłopiec 1 r., 8,1 kg / 70,2 cm → „Niski wzrost / Wzrost jest wyraźnie niski jak na wiek: 70,2 cm, poniżej 1. centyla. /
+  Dodatkowo masa ciała jest niska jak na wiek (8,1 kg, 6. centyl), ale proporcjonalna do wzrostu; BMI mieści się w typowym
+  zakresie.”;
+- chłopiec 6 m., 8,9 kg / 67,6 cm (nadwaga) → jedno zdanie „U małych dzieci nie stosuje się odchudzania…”;
+- chłopiec 2 l., 16,3 kg / 80,0 cm (BMI 25,5) → „Pierwszy krok to ok. 15,9 kg, czyli mniej niż 0,5 kg; celem jest, aby masa
+  ciała przestała rosnąć szybciej niż wzrost.”; 12,2 kg / 80,0 cm → „Do końca otyłości brakuje mniej niż 0,5 kg; …”;
+- dziewczynka 1 r. na medianie, wzrost −0,2 cm → BMI „Wynik mieści się…” (dotąd „To o 0,0 pkt poniżej”); wzrost +0,9 cm →
+  „Wynik mieści się…”, +1,1 cm → „To o 1,1 cm powyżej tej wartości.”;
+- mężczyzna 47 l., 72,05 kg / 170 cm (BMI 24,93) → „BMI jest na górnej granicy zakresu.”; BMI 27 → „To o 2,1 pkt powyżej
+  górnej granicy.”
+
+**Walidacja.** Unit `raport-naglowek` 20/20 (13 z raty R po aktualizacji etykiet + 7 nowych), nowy unit
+`raport-odniesienia-rata-s`, e2e `raport-wizyta-rata-s` (6) i `raport-wizyta-rata-r` (7, etykiety centyla jako wyrażenia
+regularne). Pełny `npm test` i pełny zestaw e2e desktop: wynik w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna brzmień (P1–P8 zaakceptowane 2026-09-22 przed kodowaniem);
+scalenie i wdrożenie.
+
 ## „Raport po wizycie”: nagłówek z faktów zamiast ogólników, karta energii bez noty, odstęp przed % (P-RAPORT rata R, SW 1.1.52, 2026-09-22)
 
 **Zgłoszenie i decyzje właściciela (2026-09-22).** W nagłówku raportu dziecka z otyłością pojawiło się zdanie

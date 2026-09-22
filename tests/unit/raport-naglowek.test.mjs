@@ -60,7 +60,7 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     const h = N.zbuduj({ ...DZIECKO_OTYLOSC, wiekLat: 9, historia: true, masa: { kg: 41.5, centyl: 95, kolor: 'alert' }, bmi: { wartosc: 27, klucz: 'otylosc', kolor: 'alert' },
       wzrost: { cm: 123.9, centyl: 2 }, krok: { masaKg: 38, roznicaKg: 3.5, opis: '', jestSzczebel: true, korzysc: true, klucz: 'reinehr' } });
     expect(h.badge).toBe('Niski wzrost');
-    expect(h.title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, poniżej 3. centyla.`);
+    expect(h.title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`); // P8 (rata S): etykieta jak w kartach
     expect(h.text).toBe(`Dodatkowo masa ciała i BMI są wyraźnie powyżej typowych wartości dla wieku (41,5${NB}kg, BMI 27,0). Pierwszy krok to ok. 38,0${NB}kg, czyli około 3,5${NB}kg mniej; już ta zmiana poprawia ciśnienie i wyniki badań krwi.`);
     expect(h.subtext).toBe('Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania. Wynik warto interpretować także w odniesieniu do wzrostu rodziców i całego obrazu klinicznego.');
   });
@@ -71,7 +71,7 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     expect(niemowle.text).not.toMatch(/kg mniej|poprawia ciśnienie/);
     const granica = N.zbuduj({ dorosly: false, wiekLat: 4, masa: { kg: 22.5, centyl: 80, kolor: 'ok' }, bmi: { wartosc: 17.4, klucz: 'nadwaga', kolor: 'improve' },
       krok: { masaKg: 22.45, roznicaKg: 0.05, opis: 'górna granica normy dla wieku', jestSzczebel: false, korzysc: false, klucz: 'norma' } });
-    expect(granica.text).toBe('Masa ciała jest na granicy normy; celem jest, aby przestała rosnąć szybciej niż wzrost. Najważniejsze jest, aby w kolejnych pomiarach masa ciała rosła wolniej niż wzrost.');
+    expect(granica.text).toBe(`Do górnej granicy normy dla wieku brakuje mniej niż 0,5${NB}kg; celem jest, aby masa ciała przestała rosnąć szybciej niż wzrost. Najważniejsze jest, aby w kolejnych pomiarach masa ciała rosła wolniej niż wzrost.`); // P4 (rata S)
     expect(granica.text).not.toContain('0,1');
   });
 
@@ -79,7 +79,7 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     const wysoki = N.zbuduj({ dorosly: false, wiekLat: 4, masa: { kg: 22.5, centyl: 92, kolor: 'improve' }, bmi: { wartosc: 17.4, klucz: 'nadwaga', kolor: 'improve' }, wzrost: { cm: 113.8, centyl: 98 },
       krok: { masaKg: 21, roznicaKg: 1.5, opis: 'górna granica normy dla wieku', jestSzczebel: false, korzysc: false, klucz: 'norma' } });
     expect(wysoki.badge).toBe('Nadwaga');
-    expect(wysoki.text).toContain(`Dodatkowo wzrost jest wysoki jak na wiek (113,8${NB}cm, powyżej 97. centyla).`);
+    expect(wysoki.text).toContain(`Dodatkowo wzrost jest wysoki jak na wiek (113,8${NB}cm, 98. centyl).`);
     const niski = N.zbuduj({ ...DZIECKO_OTYLOSC, wzrost: { cm: 128.5, centyl: 6 } });
     expect(niski.badge).toBe('Otyłość');
     expect(niski.text).toContain(`Dodatkowo wzrost jest niski jak na wiek (128,5${NB}cm, 6. centyl).`);
@@ -98,14 +98,14 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     const wys = N.zbuduj({ dorosly: false, wiekLat: 9, bmi: { klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, cisnienie: { dziecko: true, sk: 130, roz: 50, centylSk: 99, centylRoz: 40, klasa: 'wysokie', ton: 'danger' } });
     expect(wys.badge).toBe('Ciśnienie wysokie'); expect(wys.tone).toBe('danger');
     expect(wys.title).toBe(`Ciśnienie tętnicze jest wysokie: 130/50${NB}mm${NB}Hg.`);
-    expect(wys.text).toBe('Ciśnienie skurczowe powyżej 97. centyla dla wieku, płci i wzrostu. Pojedynczy pomiar wymaga potwierdzenia w kolejnych pomiarach w spokoju.');
+    expect(wys.text).toBe('Ciśnienie skurczowe na 99. centylu dla wieku, płci i wzrostu. Pojedynczy pomiar wymaga potwierdzenia w kolejnych pomiarach w spokoju.');
     const nis = N.zbuduj({ dorosly: false, wiekLat: 9, bmi: { klucz: 'prawidlowe', kolor: 'ok' }, cisnienie: { dziecko: true, sk: 78, roz: 40, centylSk: 1, centylRoz: 2, klasa: 'niskie', ton: 'warn' } });
     expect(nis.badge).toBe('Ciśnienie niskie'); expect(nis.tone).toBe('warn');
-    expect(nis.text).toContain('skurczowe poniżej 3. centyla i rozkurczowe poniżej 3. centyla');
+    expect(nis.text).toContain('skurczowe na 1. centylu i rozkurczowe na 2. centylu');
     // to samo jako zdanie dodatkowe przy otyłości
     const razem = N.zbuduj({ ...DZIECKO_OTYLOSC, cisnienie: { dziecko: true, sk: 130, roz: 50, centylSk: 99, centylRoz: 40, klasa: 'wysokie', ton: 'danger' } });
     expect(razem.badge).toBe('Otyłość');
-    expect(razem.text).toContain(`Dodatkowo ciśnienie tętnicze jest wysokie: 130/50${NB}mm${NB}Hg (skurczowe powyżej 97. centyla dla wieku, płci i wzrostu).`);
+    expect(razem.text).toContain(`Dodatkowo ciśnienie tętnicze jest wysokie: 130/50${NB}mm${NB}Hg (skurczowe na 99. centylu dla wieku, płci i wzrostu).`);
     const razem93 = N.zbuduj({ ...DZIECKO_OTYLOSC, cisnienie: { dziecko: true, sk: 118, roz: 50, centylSk: 93, centylRoz: 40, klasa: 'podwyzszone', ton: 'warn' } });
     expect(razem93.text).toContain(`Dodatkowo ciśnienie tętnicze jest podwyższone: 118/50${NB}mm${NB}Hg (skurczowe na 93. centylu dla wieku, płci i wzrostu).`);
   });
@@ -124,8 +124,9 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
   it('dziecko: talia, obwód głowy, klatka, tempo wzrastania, MPH — zawsze parametr, kierunek, wartość', () => {
     const baza = { dorosly: false, wiekLat: 9, masa: { kg: 31, centyl: 50, kolor: 'ok' }, bmi: { wartosc: 16.7, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, wzrost: { cm: 136.3, centyl: 50 } };
     expect(N.zbuduj({ ...baza, talia: { cm: 80, centyl: 86, stan: 'warn', dorosly: false } })).toMatchObject({ badge: 'Obwód talii', tone: 'warn', title: `Obwód talii jest duży jak na wiek: 80,0${NB}cm, 86. centyl.` });
-    expect(N.zbuduj({ ...baza, glowa: { cm: 43, centyl: 0.4 } })).toMatchObject({ badge: 'Obwód głowy', tone: 'danger', title: `Obwód głowy jest mały jak na wiek: 43,0${NB}cm, poniżej 3. centyla.` });
-    expect(N.zbuduj({ ...baza, klatka: { cm: 70, centyl: 99 } }).title).toBe(`Obwód klatki piersiowej jest duży jak na wiek: 70,0${NB}cm, powyżej 97. centyla.`);
+    expect(N.zbuduj({ ...baza, glowa: { cm: 43, centyl: 0.4 } })).toMatchObject({ badge: 'Obwód głowy', tone: 'danger', title: `Obwód głowy jest mały jak na wiek: 43,0${NB}cm, poniżej 1. centyla.` });
+    expect(N.zbuduj({ ...baza, klatka: { cm: 70, centyl: 99 } }).title).toBe(`Obwód klatki piersiowej jest duży jak na wiek: 70,0${NB}cm, 99. centyl.`);
+    expect(N.zbuduj({ ...baza, klatka: { cm: 72, centyl: 99.4 } }).title).toBe(`Obwód klatki piersiowej jest duży jak na wiek: 72,0${NB}cm, powyżej 99. centyla.`);
     expect(N.zbuduj({ ...baza, glowa: { cm: 50, centyl: 50 } }).tone).toBe('normal'); // obwód w normie nie tworzy faktu
     expect(N.zbuduj({ ...baza, tempo: { cmRok: 2, ton: 'danger', norma: '≥4 cm/rok' } })).toMatchObject({ badge: 'Wolne tempo wzrastania', tone: 'danger', title: `Tempo wzrastania jest wolne: 2,0${NB}cm/rok (norma ≥4 cm/rok).` });
     expect(N.zbuduj({ ...baza, tempo: { cmRok: 3, ton: 'warn', norma: null } }).title).toBe(`Tempo wzrastania wymaga oceny: 3,0${NB}cm/rok.`);
@@ -144,7 +145,7 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     expect(nadw.badge).toBe('Nadwaga'); expect(nadw.tone).toBe('warn');
     const masa = N.zbuduj({ ...baza, masa: { kg: 41.5, centyl: 90, kolor: 'improve' }, wzrost: { cm: 147, centyl: 80 } });
     expect(masa.title).toBe(`Masa ciała jest wysoka jak na wiek (41,5${NB}kg, 90. centyl), ale w stosunku do wzrostu pozostaje prawidłowa.`);
-    expect(masa.text).toBe('Wynika to z wysokiego wzrostu; BMI mieści się w typowym zakresie.');
+    expect(masa.text).toBe(`Masa ciała jest proporcjonalna do wzrostu (147,0${NB}cm, 80. centyl); BMI mieści się w typowym zakresie.`); // P1 (rata S): pasmo 10–90 c
     // Cole + otyłość BMI = jedna oś, jedno zdanie
     expect(N.zbuduj(DZIECKO_OTYLOSC).text).not.toMatch(/Cole/);
   });
@@ -165,3 +166,82 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     expect(N.LIMIT_DODATKOWO).toBe(2); expect(N.KROK_OD_LAT).toBe(2);
   });
 });
+
+// P-RAPORT rata S (decyzje właściciela 2026-09-22): bez dublowania osi wzrostu, strażnik < 0,5 kg nazywa
+// szczebel, jedno zdanie o nadwadze < 2 lat, etykieta centyla jak w kartach. Dane FIKCYJNE.
+describe('Nagłówek z faktów — rata S', () => {
+  const BAZA_NORMA_BMI = { dorosly: false, wiekLat: 1, historia: false, bmi: { wartosc: 17.1, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, cole: { proc: 99.7, klucz: 'norma', kolor: 'ok' } };
+
+  it('P1: wysoka masa przy prawidłowym BMI i wzrost > 97 c — wzrost w zdaniu masy, bez „Dodatkowo wzrost”, zdanie o wzroście w podtytule', () => {
+    const h = N.zbuduj({ ...BAZA_NORMA_BMI, masa: { kg: 11.8, centyl: 93, kolor: 'improve' }, wzrost: { cm: 83, centyl: 99.6 } });
+    expect(h.badge).toBe('Wysoka masa ciała'); expect(h.tone).toBe('warn');
+    expect(h.title).toBe(`Masa ciała jest wysoka jak na wiek (11,8${NB}kg, 93. centyl), ale w stosunku do wzrostu pozostaje prawidłowa.`);
+    expect(h.text).toBe(`Wzrost jest również wysoki (83,0${NB}cm, powyżej 99. centyla); masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.`);
+    expect(h.subtext).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.');
+    expect(h.dodatkowe).toEqual([]);
+    expect(h.text).not.toMatch(/Wynika to|Dodatkowo wzrost/);
+  });
+
+  it('P1: pasma wzrostu 90–97 c („powyżej przeciętnej”) i 3–10 c („niski”); bez wzrostu — samo zdanie o proporcji', () => {
+    const p93 = N.zbuduj({ ...BAZA_NORMA_BMI, masa: { kg: 11.3, centyl: 93, kolor: 'improve' }, wzrost: { cm: 79.3, centyl: 93 } });
+    expect(p93.text).toBe(`Wzrost jest również powyżej przeciętnej (79,3${NB}cm, 93. centyl); masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.`);
+    expect(p93.subtext).toBe('');
+    const n5 = N.zbuduj({ ...BAZA_NORMA_BMI, masa: { kg: 7.2, centyl: 1.5, kolor: 'alert' }, wzrost: { cm: 71.8, centyl: 5 } });
+    expect(n5.badge).toBe('Niska masa ciała'); // masa < 3 c (alarm) wygrywa z wzrostem 5 c (ostrzeżenie)
+    expect(n5.text).toBe(`Wzrost jest również niski (71,8${NB}cm, 5. centyl); masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.`);
+    expect(n5.subtext).toContain('tempa wzrastania');
+    expect(n5.dodatkowe).toEqual([]);
+    const bez = N.zbuduj({ ...BAZA_NORMA_BMI, masa: { kg: 11.3, centyl: 93, kolor: 'improve' } });
+    expect(bez.text).toBe('Masa ciała jest proporcjonalna do wzrostu; BMI mieści się w typowym zakresie.');
+  });
+
+  it('P2: niski wzrost w tytule, masa niska przy prawidłowym BMI w „Dodatkowo” — proporcja, nie przyczyna', () => {
+    const h = N.zbuduj({ ...BAZA_NORMA_BMI, masa: { kg: 8.1, centyl: 6, kolor: 'improve' }, wzrost: { cm: 70.2, centyl: 0.6 } });
+    expect(h.badge).toBe('Niski wzrost');
+    expect(h.title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 70,2${NB}cm, poniżej 1. centyla.`);
+    expect(h.text).toBe(`Dodatkowo masa ciała jest niska jak na wiek (8,1${NB}kg, 6. centyl), ale proporcjonalna do wzrostu; BMI mieści się w typowym zakresie.`);
+    expect(h.text).not.toMatch(/wynika|choć/);
+  });
+
+  it('wchłonięta oś nie wraca także wtedy, gdy masa jest zdaniem dodatkowym (tytuł: ciśnienie)', () => {
+    const h = N.zbuduj({ ...BAZA_NORMA_BMI, wiekLat: 9, masa: { kg: 41.5, centyl: 93, kolor: 'improve' }, wzrost: { cm: 150, centyl: 99 },
+      cisnienie: { dziecko: true, sk: 130, roz: 50, centylSk: 98, centylRoz: 40, klasa: 'wysokie', ton: 'danger' } });
+    expect(h.badge).toBe('Ciśnienie wysokie');
+    expect(h.dodatkowe.map((d) => d.os)).toEqual(['masa']);
+    expect(h.text).toContain('ale proporcjonalna do wzrostu; BMI mieści się w typowym zakresie.');
+    expect(h.text).not.toContain('Dodatkowo wzrost');
+  });
+
+  it('P3: nadwaga poniżej 2 lat — jedno zdanie o wolniejszym przyroście; od 2 lat krok + zdanie o kolejnych pomiarach', () => {
+    const krok = { masaKg: 8.6, roznicaKg: 0.3, opis: 'górna granica normy dla wieku', jestSzczebel: false, korzysc: false, klucz: 'norma' };
+    const maly = N.zbuduj({ dorosly: false, wiekLat: 0.5, masa: { kg: 8.9, centyl: 85, kolor: 'ok' }, bmi: { wartosc: 19.5, klucz: 'nadwaga', etykieta: 'Nadwaga', kolor: 'improve' }, krok });
+    expect(maly.text).toBe('U małych dzieci nie stosuje się odchudzania; celem jest, aby masa ciała rosła wolniej niż wzrost.');
+    expect((maly.text.match(/rosła wolniej niż wzrost/g) || []).length).toBe(1);
+    const bezKroku = N.zbuduj({ dorosly: false, wiekLat: 0.5, masa: { kg: 8.9, centyl: 85, kolor: 'ok' }, bmi: { wartosc: 19.5, klucz: 'nadwaga', etykieta: 'Nadwaga', kolor: 'improve' } });
+    expect(bezKroku.text).toBe('Najważniejsze jest, aby w kolejnych pomiarach masa ciała rosła wolniej niż wzrost.');
+  });
+
+  it('P4: szczebel bliżej niż 0,5 kg nazywa szczebel — koniec otyłości, próg −0,25 BMI-SDS, otyłość III stopnia u dorosłego', () => {
+    const baza = { dorosly: false, wiekLat: 2, masa: { kg: 16.3, centyl: 99, kolor: 'alert' }, bmi: { wartosc: 25.5, klucz: 'otylosc', etykieta: 'Otyłość', kolor: 'alert' } };
+    const reinehr = N.zbuduj({ ...baza, krok: { masaKg: 15.886, roznicaKg: 0.414, opis: '', jestSzczebel: true, korzysc: true, klucz: 'reinehr' } });
+    expect(reinehr.title).toBe('Masa ciała i BMI są obecnie wyraźnie powyżej typowych wartości dla wieku.');
+    expect(reinehr.text).toBe(`Pierwszy krok to ok. 15,9${NB}kg, czyli mniej niż 0,5${NB}kg; celem jest, aby masa ciała przestała rosnąć szybciej niż wzrost.`);
+    expect(reinehr.text).not.toMatch(/granicy normy|poprawia ciśnienie/);
+    const koniec = N.zbuduj({ ...baza, masa: { kg: 12.2, centyl: 90, kolor: 'improve' }, bmi: { wartosc: 19.1, klucz: 'otylosc', etykieta: 'Otyłość', kolor: 'alert' }, krok: { masaKg: 11.95, roznicaKg: 0.25, opis: 'koniec otyłości', jestSzczebel: true, korzysc: false, klucz: 'otylosc' } });
+    expect(koniec.text).toBe(`Do końca otyłości brakuje mniej niż 0,5${NB}kg; celem jest, aby masa ciała przestała rosnąć szybciej niż wzrost.`);
+    const dorosly = N.zbuduj({ dorosly: true, wiekLat: 47, masa: { kg: 101.5 }, bmi: { wartosc: 40.1, klucz: 'obesity-3', etykieta: 'Otyłość III stopnia', kolor: 'alert' },
+      krok: { masaKg: 101.2, roznicaKg: 0.3, opis: 'wyjście z otyłości II stopnia', jestSzczebel: true, korzysc: true, klucz: 'otylosc-2' } });
+    expect(dorosly.text).toContain(`Do wyjścia z otyłości III stopnia brakuje mniej niż 0,5${NB}kg; celem jest, aby masa ciała dalej nie rosła.`);
+    expect(dorosly.text).not.toContain('szybciej niż wzrost');
+  });
+
+  it('P8: etykieta centyla jak w kartach raportu — „poniżej 1. centyla”, „powyżej 99. centyla”, inaczej zaokrąglenie', () => {
+    const baza = { dorosly: false, wiekLat: 9, masa: { kg: 31, centyl: 50, kolor: 'ok' }, bmi: { wartosc: 16.7, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' } };
+    expect(N.zbuduj({ ...baza, wzrost: { cm: 118, centyl: 0.3 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 118,0${NB}cm, poniżej 1. centyla.`);
+    expect(N.zbuduj({ ...baza, wzrost: { cm: 123.9, centyl: 2.4 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`);
+    expect(N.zbuduj({ ...baza, wzrost: { cm: 152, centyl: 98.2 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 152,0${NB}cm, 98. centyl.`);
+    expect(N.zbuduj({ ...baza, wzrost: { cm: 156, centyl: 99.7 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 156,0${NB}cm, powyżej 99. centyla.`);
+    expect(N.WERSJA).toBe(2);
+  });
+});
+
