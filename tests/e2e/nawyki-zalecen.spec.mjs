@@ -81,7 +81,10 @@ test('nadmiar: dorosły, nastolatek i dziecko 5–10 lat dostają zdanie nawykó
   for (const [opis, s, zdanie, punkt] of przypadki) {
     const w = await policz(page, s);
     expect(['reduction', 'stabilization'], opis).toContain(w.strategia);
-    expect(w.zdania.talerz, opis).toHaveLength(2);
+    // rata J (2026-09-22): u dorosłego trzecim zdaniem talerza jest osobne zdanie o alkoholu; nawyki zostają drugim
+    const dorosly = s.age >= 19;
+    expect(w.zdania.talerz, opis).toHaveLength(dorosly ? 3 : 2);
+    if (dorosly) expect(norm(w.zdania.talerz[2]), opis).toMatch(/^Alkohol jest kaloryczny/u);
     expect(norm(w.zdania.talerz[1]), opis).toBe(zdanie);
     expect(norm(w.text), opis).toContain(zdanie);
     expect(w.punkty.talerz, opis).toContain(punkt);

@@ -52,7 +52,7 @@ test('J1: 10-latek, wariant standardowy — forma bezosobowa, bez zwrotów do ro
   const r = await run(page, { age: 10, sex: 'M', w: 55, h: 145, click: 'reduction' });
   expect(r.text).toContain('Zalecane jest regularne spożywanie przez dziecko 4–5 zdrowych posiłków dziennie');
   expect(r.text).toContain('Zalecana jest codzienna aktywność fizyczna dziecka przez co najmniej 60 minut');
-  expect(r.text).toContain('Zalecane jest odpowiednie nawodnienie dziecka: zgodnie z polskimi normami');
+  expect(r.text).toContain('Zalecane jest odpowiednie nawodnienie dziecka: według polskich norm');
   for (const zly of ['Proszę', 'Wybieraj', 'podawaj', 'Ograniczajcie', 'skonsultujcie', 'Rodzice powinni', 'unikaj', 'Nie podawaj', 'grzanek']) {
     expect(r.text, zly).not.toContain(zly);
   }
