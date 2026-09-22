@@ -5696,6 +5696,75 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## „Raport po wizycie”: zapotrzebowanie energetyczne z generatora zaleceń, odniesienia masy, ton i data pomiaru (P-RAPORT rata Q, SW 1.1.51, 2026-09-22)
+
+**Audyt i decyzje właściciela (2026-09-22).** Audyt raportu dla dziecka i dorosłego (sześć fikcyjnych scenariuszy,
+render prawdziwym kodem) potwierdził podejrzenie właściciela: sekcja „Normy żywieniowe” pokazywała szacowane
+całkowite zapotrzebowanie energetyczne liczone z MASY AKTUALNEJ (Henry × PAL z karty norm, domyślnie 1,6, u dzieci
+× 1,01) i nazywała je „Normą”. Dziewczynka 9 lat, 52,6 kg / 146,2 cm (otyłość): 2412 kcal „normy” obok 1800 kcal
+planu na sąsiedniej kartce (1828 kcal dla masy referencyjnej 29,9 kg); mężczyzna 47 lat, 112 kg / 167 cm: 3269 kcal
+(plan 2400); nastolatka 15 lat, 40 kg / 165 cm (niedowaga): 2018 kcal, czyli MNIEJ niż dla masy referencyjnej (2225).
+Białko „10–20 % energii” dziedziczyło błąd (60–121 g/d u 9-latki). PAL karty (1,6) różnił się od PAL planu (1,4).
+Decyzje: wariant A karty energii; dziecko — odniesienie masy do wzrostu; dorosły — usunąć BMI 22 i średnie
+populacyjne; niedowaga dorosłego — dolna granica 18,5; poprawki treści i tonu; data pomiaru.
+
+**Zmiana (kliniczna: inne liczby i inne odniesienia w dokumencie dla pacjenta).**
+- **Karta „Zapotrzebowanie energetyczne”** (`patientReportBuildEnergyCard`, zamiast karty norm): cytuje
+  `dane.energia` generatora zaleceń (`buildDietEnergyRecommendationResult().dane`, ten sam PAL z formularza, co plan
+  żywieniowy). Wiersze: „Przy obecnej masie” (`utrzymanieKcal`) — WYŁĄCZNIE przy BMI w normie (bez nadmiaru
+  i niedowagi w `dane.klasyfikacja`); „Dla masy prawidłowej (X kg)” — energia policzona funkcją produkcyjną
+  `energyBuildPlanReductionState` dla masy docelowej generatora (`dane.masa.docelowaKg`; u dziecka z niedowagą, gdzie
+  generator masy docelowej nie oddaje — cel z `VildaBmi.drabinkaCelow`), `teeRawKcal` (REE × PAL × wzrastanie, bez
+  korekty ryzyka zaburzeń odżywiania, która dotyczy planu); „Plan: dieta …” (`podazZaokrKcal` albo zakres
+  `podazZakresKcal` przy przyroście) — wyróżniony, i on jest wartością główną karty; „Białko” — RDA g/kg z silnika norm
+  (`nutritionNormsBuildCardModel().protein.targets.rda_g_per_kg`) × masa referencyjna: u dziecka masa referencyjna dla
+  wieku z tabeli norm, u dorosłego poza normą masa docelowa, w normie masa obecna; węglowodany i tłuszcze tylko jako
+  udział energii (AMDR z silnika norm). Odznaka: „PAL 1,4”, nigdy „Normy”. Dawna karta norm i jej funkcje zostają
+  (wiersze „Normy żywieniowe” w podsumowaniu profesjonalnym bez zmian).
+- **Dziecko — odniesienie masy:** „Przeciętna masa dla tego wzrostu i wieku” = mediana BMI dla wieku i płci
+  (`VildaBmi.mediana`, siatka wg `bmiSource`) × wzrost² — zamiast mediany masy dla wieku (dziewczynka na 94. centylu
+  wzrostu: 35,3 kg zamiast 30,8 kg). Drugie pole: „Pierwszy krok” — pierwszy szczebel `drabinkaCelow` (ta sama reguła,
+  co plan PDF, sekcja „Twoja droga”); przy niedowadze „Cel: dolna granica normy”.
+- **Dorosły — odniesienia:** karta masy — „Prawidłowa masa dla tego wzrostu – górna granica (BMI 24,9)” (przy
+  niedowadze dolna, BMI 18,5) z `patientReportGetAdultBmiWeightDelta` (te same progi, co Status i drabinka) oraz
+  „Pierwszy krok” z drabinki (BMI 35 → „wyjście z otyłości II stopnia”, BMI 30 → „koniec otyłości”); karta wzrostu —
+  bez centyla populacyjnego, zakres prawidłowej masy dla wzrostu (BMI 18,5–24,9); karta BMI — zakres 18,5–24,9 i
+  różnica do granicy. Usunięte: „idealna” masa przy BMI 22, przeciętna masa/wzrost/BMI Polaków (NIZP PZH 2021),
+  centyle wzrostu dorosłych, „Główny box / Drugi box”, druga osoba. Źródła w stopce dorosłego: Normy 2024 i
+  klasyfikacja BMI WHO.
+- **Nagłówek:** dziecko z otyłością/nadwagą i dorosły z nadmiarem masy dostają zdanie „Pierwszy krok to ok. X kg
+  (…), czyli około Y kg mniej” z drabinki; zdanie o korzyści („już ta zmiana poprawia ciśnienie i wyniki badań krwi”)
+  u dziecka TYLKO przy progu Reinehra (−0,5 BMI-SDS; nie przy kroku „97. centyl”), u dorosłego przy każdym szczeblu
+  (jak zdanie A generatora, rata O). Teksty oceny dorosłego: „wymaga pilnej konsultacji lekarskiej” / „Zalecana
+  konsultacja lekarska” → „Wynik wymaga leczenia i regularnej kontroli zgodnie z ustaleniami z wizyty.”; otyłość I° →
+  „Wynik wymaga zmiany nawyków i regularnej kontroli masy ciała zgodnie z ustaleniami z wizyty.”
+- **Data pomiaru:** czip „Pomiar: DD.MM.RRRR” + „Raport: DD.MM.RRRR, HH:MM”, a gdy ten sam dzień — jeden czip
+  „Pomiar i raport: …”. Data pomiaru z wczytanego rekordu sejfu (`window.lastLoadedData.user.measuredAtISO`), jeśli
+  formularza nie zmieniono po wczytaniu (`hasUserModifiedAfterLoad`); inaczej dzień raportu.
+- Układ: tabela karty energii z zawijanymi etykietami (`--energy`); dół strony 130 px pod stopką pozycjonowaną
+  absolutnie (u dorosłego treść wchodziła pod stopkę). Ciśnienie/tętno, Cole, skale centylowe bez zmian.
+
+**Ograniczenia.** RDA białka dorosłego w silniku norm wynosi 0,83 g/kg (dane silnika, nie zmieniane w tej racie;
+Normy 2024 dla dorosłych podają 0,9 g/kg — do osobnej weryfikacji NUTRITION). Wyróżnienia (`highlights`) nie są
+drukowane w PDF — ich ogólnikowe teksty zostają jako sygnał tonu nagłówka. Wiersze podsumowania dorosłego
+z „przy Twoim wzroście…” nie trafiają do PDF (zostają w modelu).
+
+**Przypadki syntetyczne (wejście → wynik, wartości z renderu prawdziwym kodem).** Dziewczynka 9 l. 3 m., 52,6 kg,
+146,2 cm, PAL 1,4: karta „PAL 1,4” 1800 kcal/d; „Dla masy prawidłowej (41,8 kg): 1866 kcal/d”; „Plan: dieta lekka:
+1800 kcal/d”; „Białko: 0,92 g/kg × 30 kg ≈ 28 g/d”; masa: 35,3 kg (+17,3), pierwszy krok do 50,4 kg (koniec
+otyłości, bez zdania o korzyści). Mężczyzna 47 l., 112 kg, 167 cm: 2400 kcal/d; „Dla masy prawidłowej (69,4 kg):
+2181 kcal/d”; masa: górna granica 69,4 kg (+42,6), pierwszy krok do 97,6 kg (wyjście z otyłości II stopnia; korzyść);
+wzrost: 51,6–69,4 kg; BMI: 18,5–24,9, +15,3 pkt. Kobieta 28 l., 48 kg, 170 cm: dolna granica 53,5 kg (−5,5), cel do
+53,5 kg; energia dla 53,5 kg 1847 kcal/d, bez wiersza „przy obecnej masie”. Kobieta 34 l., 62 kg, 169 cm: „Przy
+obecnej masie: 1882 kcal/d”, białko z 62 kg. Nastolatka 15 l., 40 kg, 165 cm: cel z drabinki 44,7 kg, energia
+dla 44,7 kg, „Cel: dolna granica normy”. Testy: `tests/unit/raport-wizyta-rata-q.test.mjs` (15 przypadków na
+eksportowanych funkcjach raportu i strażnik źródła), `tests/e2e/raport-wizyta-rata-q.spec.mjs` (6 testów na prawdziwej
+stronie: liczby porównane z generatorem, `energyBuildPlanReductionState` i `VildaBmi` policzonymi w tej samej stronie;
+data z rekordu sejfu; PDF „Raport po wizycie” nadal powstaje). `npm test` zielony. Pełny zestaw e2e desktop: 680 zaliczonych, 1 niestabilny (`pwa.spec` offline przy 6 równoległych procesach, zaliczony przy powtórce), 0 błędów. Unit 3031/3031 (dwa testy `werdykt-silnik` przekroczyły limit czasu wyłącznie przy równoległym e2e; osobno 36/36).
+
+**Akceptacja kliniczna właściciela:** wariant A i decyzje 1–3 zaakceptowane 2026-09-22 (przed kodowaniem). Status
+„zwalidowany klinicznie” nie jest nadawany przez agenta.
+
 ## Obwód talii i stosunek talii do wzrostu u dorosłego w Statusie Karty pacjenta (P-TALIA rata P, SW 1.1.50, 2026-09-22)
 
 **Decyzje właściciela (2026-09-22):** akceptacja progów i źródeł; dwa kafelki; dorosły od 19 lat; werdykt kolorem jak BMI.
