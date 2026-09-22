@@ -148,7 +148,8 @@ test('etap 2: „Kopiuj podsumowanie" (PRO) liczbami silnika, format „BMI: …
   r.karta = await page.evaluate(() => window.__schowek);
   expect(r.pro, 'tryb PRO włączony prawdziwym przełącznikiem').toBe(true);
   expect(r.karta).toContain(`BMI: 18,3 kg/m² – ${Math.round(r.centyl)} centyl (bmiSDS ${r.sds})`);
-  expect(r.karta).toContain(`Wskaźnik Cole’a: ${r.cole.toFixed(1).replace('.', ',')}%`);
+  // P-RAPORT rata R: twarda spacja przed znakiem procentu („149,1 %”), schowek może ją znormalizować do zwykłej.
+  expect(r.karta).toMatch(new RegExp(`Wskaźnik Cole’a: ${r.cole.toFixed(1).replace('.', ',')}[ \\u00A0]%`));
   expect(r.karta, 'centyl BMI karty = centyl karty głównej').toContain(`${Math.round(k.centylKarty)} centyl`);
   expect(k.centylKarty).toBeCloseTo(r.centyl, 6);
   // P-WSDS: masa mówi „wSDS" jak wzrost „hSDS" i BMI „bmiSDS" — w schowku i na karcie głównej.
