@@ -5755,7 +5755,7 @@ zmienia się. Wyniki i interpretacje kliniczne są identyczne jak w SW 1.1.41.
 kontrole ujemne, geometria osi dla 2/3/4 punktów, dopasowanie skali) i
 `tests/e2e/karta-zalecen-zwijanie.spec.mjs` (3 testy: zmiany formularza, wpis celu, flaga wzrostu);
 `raport-plan.spec`, `cel-wlasny.spec`, `cel-wlasny-nastolatek.spec` zielone. `npm test` zielony.
-Pełny zestaw e2e desktop: WYNIK_E2E_I.
+Pełny zestaw e2e desktop (6 workerów): 653 zielone, 1 pominięty, 1 błąd — `pwa.spec` „strona główna offline” przekroczył 60 s przy obciążeniu; sam i w CI GitHub na tym samym commicie zielony.
 
 ## Zdania nawyków przy nadmiarze masy ciała (P-DIETA-NAWYKI rata H, SW 1.1.41, 2026-09-21)
 
