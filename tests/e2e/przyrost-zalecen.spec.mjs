@@ -125,7 +125,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   expect(t).toContain('BMI wynosi 17,7 (niedowaga)');
   expect(t).toContain('Dla przyrostu masy ciała proponowana jest nadwyżka 300–500 kcal dziennie, czyli podaż ok. 2100–2300 kcal dziennie; odpowiada to tempu ok. 0,3–0,5 kg tygodniowo, a dojście do dolnej granicy normy można orientacyjnie szacować na ok. 5–8 tygodni; z badań naukowych wynika, że w praktyce przyrost bywa wolniejszy niż z tego rachunku, dlatego o postępie decyduje kontrola masy ciała.');
   expect(t).toContain('wynosi ok. 1800 kcal/dzień');
-  expect(t).toContain('Normy żywieniowe dla planu około 2200 kcal/d');
+  expect(t).toContain('Przy planie żywieniowym zakładającym około 2200 kcal dziennie');
   expect(Object.keys(pro.zdania).sort()).toEqual(['kontrola', 'ruch', 'talerz']);
   expect(pro.zdania.talerz.length).toBe(2);
   expect(norm(pro.zdania.talerz[0])).toMatch(/^Warto zadbać o 4–5 regularnych/);
@@ -154,7 +154,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   expect(z6.strategia).toBe('przyrost');
   expect(norm(z6.text)).toContain('Przy BMI poniżej 17,5 lub cechach ryzyka zaburzeń odżywiania nie ustala się planu liczbowego; wskazana ocena kliniczna, w tym ryzyka zespołu ponownego odżywienia, i prowadzenie żywienia pod nadzorem lekarza i dietetyka klinicznego.');
   expect(norm(z6.text)).not.toContain('nadwyżka');
-  expect(norm(z6.text)).toContain('Normy żywieniowe dla zapotrzebowania około 1700 kcal/d');
+  expect(norm(z6.text)).toContain('Przy zapotrzebowaniu około 1700 kcal dziennie');
   expect(z6.energia.nadwyzkaKcal).toBeNull(); expect(z6.energia.podazZakresKcal).toBeNull(); expect(z6.czas).toBeNull();
   expect(z6.energia.utrzymanieKcal).toBe(Math.round(z6.teeRaw));
   expect(z6.zdania.talerz.length).toBe(2); expect(z6.zdania.ruch.length).toBe(1); expect(z6.zdania.kontrola.length).toBe(2);

@@ -150,7 +150,8 @@ test('generator: zdania Z1–Z6 nastolatka, liczby z silnika, talerz raty B bez 
     expect(t).toContain(`${w.energia.podazZaokrKcal} kcal dziennie`);
     expect(t).not.toContain('kg na tydzień'); expect(t).not.toMatch(/spoczynkow/u);
     // normy liczone dla planu, nie dla utrzymania
-    expect(t).toMatch(/Normy żywieniowe dla planu około/u);
+    // rata K: nowe brzmienie — „planie żywieniowym” (plan), nie „zapotrzebowaniu” (utrzymanie)
+    expect(t).toMatch(/Przy planie żywieniowym zakładającym około/u);
     // Z3
     expect(w.czas.tygodnie).toBe(Math.max(1, Math.ceil((w.w - w.cel) / w.energia.tempoKgTydz)));
     expect(t).toMatch(/orientacyjnie około/u);
