@@ -1,6 +1,8 @@
 /* =====================================================================================
    vilda_raport_naglowek.js — nagłówek (hero) „Raportu po wizycie” składany z FAKTÓW.
-   P-RAPORT rata R (decyzje właściciela 2026-09-22).
+   P-RAPORT rata R (decyzje właściciela 2026-09-22); rata S (2026-09-22): bez dublowania osi
+   wzrostu przy masie poza zakresem (P1/P2), jedno zdanie o nadwadze < 2 lat (P3), strażnik
+   < 0,5 kg nazywa szczebel (P4), etykieta centyla jak w kartach raportu (P8).
 
    Dlaczego osobny plik: dawny nagłówek powstawał z PREFIKSÓW linii podsumowania
    profesjonalnego („Waga:”, „Obwód głowy:” …) i dla każdej linii bez znanej grupy
@@ -50,7 +52,7 @@
    ===================================================================================== */
 (function (root) {
   'use strict';
-  var WERSJA = 1;
+  var WERSJA = 2;
   var NBSP = ' ';
   var LIMIT_DODATKOWO = 2;
   var KROK_OD_LAT = 2;
@@ -64,18 +66,21 @@
   }
   function kg(v, m) { return fmt(v, m == null ? 1 : m) + NBSP + 'kg'; }
   function cm(v) { return fmt(v, 1) + NBSP + 'cm'; }
+  /* P8 (rata S): ta sama reguła etykiety, co karty raportu i cała aplikacja (ADV-REPORT-5):
+     poniżej 1 → „poniżej 1. centyla”, powyżej 99 → „powyżej 99. centyla”, w środku zaokrąglenie.
+     Progi decyzji (≤ 3, ≤ 10, > 97) zostają — zmienia się tylko etykieta. */
   function centylTekst(c) {
     var n = liczba(c);
     if (n == null) return '';
-    if (n < 3) return 'poniżej 3. centyla';
-    if (n > 97) return 'powyżej 97. centyla';
+    if (n < 1) return 'poniżej 1. centyla';
+    if (n > 99) return 'powyżej 99. centyla';
     return Math.round(n) + '. centyl';
   }
   function centylNa(c) {
     var n = liczba(c);
     if (n == null) return '';
-    if (n < 3) return 'poniżej 3. centyla';
-    if (n > 97) return 'powyżej 97. centyla';
+    if (n < 1) return 'poniżej 1. centyla';
+    if (n > 99) return 'powyżej 99. centyla';
     return 'na ' + Math.round(n) + '. centylu';
   }
   function kolorCiezkosc(k) { return k === 'alert' ? 2 : k === 'improve' ? 1 : 0; }
@@ -99,16 +104,31 @@
     if (f.wiekLat != null && !f.dorosly && f.wiekLat < KROK_OD_LAT) {
       return 'U małych dzieci nie stosuje się odchudzania; celem jest, aby masa ciała rosła wolniej niż wzrost.';
     }
-    if (k.roznicaKg < 0.5) {
-      return 'Masa ciała jest na granicy normy; celem jest, aby przestała rosnąć szybciej niż wzrost.';
-    }
     var opis = k.opis || '';
     /* K1: szczebel BMI 35 u pacjenta z BMI ≥ 40 to wyjście z otyłości III, nie II stopnia. */
     if (f.bmi && f.bmi.klucz === 'obesity-3' && k.klucz === 'otylosc-2') opis = 'wyjście z otyłości III stopnia';
+    if (k.roznicaKg < 0.5) return zdanieGranicy(f, k, opis);
     var nawias = opis ? ' (' + opis + ')' : '';
     var korpus = kg(k.masaKg) + nawias + ', czyli około ' + kg(k.roznicaKg) + ' mniej';
     if (k.jestSzczebel) return 'Pierwszy krok to ok. ' + korpus + (k.korzysc ? '; ' + KORZYSC + '.' : '.');
     return 'Cel to ok. ' + korpus + '.';
+  }
+  /* P4 (rata S): szczebel bliżej niż 0,5 kg. Dawne „Masa ciała jest na granicy normy” padało też przy
+     otyłości (u 2-latka szczebel −0,25 BMI-SDS to 0,4 kg) — zdanie nazywa szczebel, słowa „granica normy”
+     tylko wtedy, gdy szczebel nią jest. */
+  var DOPELNIACZ_SZCZEBLA = {
+    'koniec otyłości': 'końca otyłości',
+    'górna granica normy dla wieku': 'górnej granicy normy dla wieku',
+    'górna granica normy': 'górnej granicy normy',
+    'wyjście z otyłości olbrzymiej': 'wyjścia z otyłości olbrzymiej',
+    'wyjście z otyłości II stopnia': 'wyjścia z otyłości II stopnia',
+    'wyjście z otyłości III stopnia': 'wyjścia z otyłości III stopnia'
+  };
+  function zdanieGranicy(f, k, opis) {
+    var cel = f.dorosly ? 'celem jest, aby masa ciała dalej nie rosła' : 'celem jest, aby masa ciała przestała rosnąć szybciej niż wzrost';
+    var dop = DOPELNIACZ_SZCZEBLA[opis || ''];
+    if (dop) return 'Do ' + dop + ' brakuje mniej niż 0,5' + NBSP + 'kg; ' + cel + '.';
+    return 'Pierwszy krok to ok. ' + kg(k.masaKg) + ', czyli mniej niż 0,5' + NBSP + 'kg; ' + cel + '.';
   }
   function zdaniePrzyrostu(f) {
     var c = f.celPrzyrost;
@@ -117,7 +137,7 @@
   }
 
   /* ---------- fakty → kandydaci na tytuł / zdania dodatkowe ---------- */
-  /* Każdy kandydat: { os, ciezkosc, badge, title, text, subtext, dodatkowo, pilne } */
+  /* Każdy kandydat: { os, ciezkosc, badge, title, text, subtext, dodatkowo, wchlania (osie opowiedziane) } */
 
   function podmiotMasy(f, kierunek) {
     var m = f.masa || {}, mc = liczba(m.centyl);
@@ -137,9 +157,12 @@
     }
     if (k === 'nadwaga') {
       var s2 = podmiotMasy(f, 'gora');
+      var krokN = zdanieKroku(f);
+      /* P3 (rata S): poniżej 2 lat zdanie kroku już mówi o wolniejszym przyroście — bez powtórki. */
+      var malyKrok = !!krokN && f.wiekLat != null && !f.dorosly && f.wiekLat < KROK_OD_LAT;
       return { os: 'masa', ciezkosc: Math.max(1, c), badge: 'Nadwaga',
         title: s2.p + ' obecnie powyżej typowego zakresu dla wieku.',
-        text: zlacz(zdanieKroku(f), 'Najważniejsze jest, aby w kolejnych pomiarach masa ciała rosła wolniej niż wzrost.'),
+        text: malyKrok ? krokN : zlacz(krokN, 'Najważniejsze jest, aby w kolejnych pomiarach masa ciała rosła wolniej niż wzrost.'),
         dodatkowo: 'Dodatkowo ' + s2.d + ' powyżej typowego zakresu dla wieku (' + kg(m.kg) + ', BMI ' + fmt(b.wartosc, 1) + '). ' + zdanieKroku(f) };
     }
     if (k === 'niedowaga') {
@@ -165,10 +188,27 @@
     var mc = liczba(m.centyl);
     if (mc != null && kolorCiezkosc(m.kolor) > 0) {
       var wysoka = mc >= 50;
+      var kier = wysoka ? 'wysoka' : 'niska';
+      var nawiasM = '(' + kg(m.kg) + ', ' + centylTekst(mc) + ')';
+      /* P1 (rata S): centyl masy porównuje z rówieśnikami, BMI — z własnym wzrostem. Zdanie stawia oba fakty
+         obok siebie (wzrost z wartością i centylem) i mówi o proporcji, nie o przyczynie; kandydat wzrostu jest
+         wchłonięty, więc „Dodatkowo wzrost…” już się nie dokleja, a jego zdanie idzie do podtytułu. */
+      var wz = kandydatWzrostu(f);
+      var hc = f.wzrost ? liczba(f.wzrost.centyl) : null;
+      var nawiasW = hc != null && liczba(f.wzrost.cm) != null ? ' (' + cm(f.wzrost.cm) + ', ' + centylTekst(hc) + ')' : '';
+      var proporcja = 'masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.';
+      var tekst;
+      if (hc != null && hc > 97) tekst = 'Wzrost jest również wysoki' + nawiasW + '; ' + proporcja;
+      else if (hc != null && hc <= 10) tekst = 'Wzrost jest również ' + (hc <= 3 ? 'wyraźnie niski' : 'niski') + nawiasW + '; ' + proporcja;
+      else if (hc != null && hc > 90) tekst = 'Wzrost jest również powyżej przeciętnej' + nawiasW + '; ' + proporcja;
+      else tekst = 'Masa ciała jest proporcjonalna do wzrostu' + nawiasW + '; BMI mieści się w typowym zakresie.';
       return { os: 'masa', ciezkosc: kolorCiezkosc(m.kolor), badge: wysoka ? 'Wysoka masa ciała' : 'Niska masa ciała',
-        title: 'Masa ciała jest ' + (wysoka ? 'wysoka' : 'niska') + ' jak na wiek (' + kg(m.kg) + ', ' + centylTekst(mc) + '), ale w stosunku do wzrostu pozostaje prawidłowa.',
-        text: 'Wynika to z ' + (wysoka ? 'wysokiego' : 'niskiego') + ' wzrostu; BMI mieści się w typowym zakresie.',
-        dodatkowo: 'Dodatkowo masa ciała jest ' + (wysoka ? 'wysoka' : 'niska') + ' jak na wiek (' + kg(m.kg) + ', ' + centylTekst(mc) + '), choć w stosunku do wzrostu pozostaje prawidłowa.' };
+        title: 'Masa ciała jest ' + kier + ' jak na wiek ' + nawiasM + ', ale w stosunku do wzrostu pozostaje prawidłowa.',
+        text: tekst,
+        subtext: wz ? (wz.subtext || wz.text || '') : '',
+        wchlania: ['wzrost'],
+        /* P2 (rata S): bez „wynika z” — proporcja i wynik BMI. */
+        dodatkowo: 'Dodatkowo masa ciała jest ' + kier + ' jak na wiek ' + nawiasM + ', ale proporcjonalna do wzrostu; BMI mieści się w typowym zakresie.' };
     }
     return null;
   }
@@ -392,9 +432,15 @@
     }
     var glowny = lista[0];
     var dodatkowe = [];
+    /* Oś już opowiedziana przez wybranego kandydata (wchlania) nie wraca jako „Dodatkowo …”. */
+    var pomin = {};
+    pomin[glowny.os] = true;
+    (glowny.wchlania || []).forEach(function (o) { pomin[o] = true; });
     for (var i = 1; i < lista.length && dodatkowe.length < LIMIT_DODATKOWO; i++) {
-      if (lista[i].os === glowny.os) continue;
+      if (pomin[lista[i].os]) continue;
       dodatkowe.push(lista[i]);
+      pomin[lista[i].os] = true;
+      (lista[i].wchlania || []).forEach(function (o) { pomin[o] = true; });
     }
     var text = zlacz.apply(null, [glowny.text].concat(dodatkowe.map(function (d) { return d.dodatkowo; })).concat(uwagi));
     return {
