@@ -565,7 +565,10 @@
         cel = { klucz: 'norma', bmi: P.CEL, masa: masaDla(P.CEL), granica: 'gorna',
           etykieta: 'BMI ' + P.CEL, opis: 'górna granica normy' };
       }
-      dodaj('otylosc-2', P.OTYLOSC_2, 'BMI ' + P.OTYLOSC_2, 'wyjście z otyłości II stopnia');
+      /* P-RAPORT rata R (K1, decyzja właściciela 2026-09-22): szczebel BMI 35 to dla pacjenta z BMI ≥ 40
+         wyjście z otyłości III stopnia, nie II — etykieta zależy od stanu wyjściowego. */
+      dodaj('otylosc-2', P.OTYLOSC_2, 'BMI ' + P.OTYLOSC_2,
+        x >= P.OTYLOSC_3 ? 'wyjście z otyłości III stopnia' : 'wyjście z otyłości II stopnia');
       dodaj('otylosc-1', P.OTYLOSC_1, 'BMI ' + P.OTYLOSC_1, 'koniec otyłości');
     } else {
       var D = PROGI.DZIECKO;

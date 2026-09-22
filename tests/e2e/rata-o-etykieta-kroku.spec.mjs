@@ -46,9 +46,10 @@ test('etykieta pierwszego kroku: dziecko, dorosły, cel własny — prostym jęz
 
   const a = await plan(page, { age: 47, sex: 'M', w: 112, h: 167 });
   expect(a.masa).toMatch(/^do \d+,\d kg$/);
-  expect(a.podpis).toBe('pierwszy krok: wyjście z otyłości II stopnia');
-  expect(a.os).toContain('wyjście z otyłości II stopnia');
-  expect(a.tekst).toContain('wyjście z otyłości II stopnia; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).');
+  // rata R (K1): przy BMI ≥ 40 szczebel BMI 35 to wyjscie z otylosci III stopnia
+  expect(a.podpis).toBe('pierwszy krok: wyjście z otyłości III stopnia');
+  expect(a.os).toContain('wyjście z otyłości III stopnia');
+  expect(a.tekst).toContain('wyjście z otyłości III stopnia; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).');
   expect(a.tekst).not.toContain('HDL');
 
   const b = await plan(page, { age: 40, sex: 'F', w: 90, h: 165 });

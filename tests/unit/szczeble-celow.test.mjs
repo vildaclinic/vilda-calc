@@ -175,7 +175,7 @@ describe('P-SZCZEBLE — karta „Droga do normy BMI"', () => {
     expect(html).toContain('Po drodze:');
     expect(html).toContain('14,8');
     expect(html).toContain('BMI 35');
-    expect(html).toContain('wyjście z otyłości II stopnia');
+    expect(html).toContain('wyjście z otyłości III stopnia'); // rata R (K1): BMI 40,3 → szczebel BMI 35 wyprowadza z III stopnia
   });
 
   it('dziecko dostaje próg Reinehra z podanym źródłem', () => {

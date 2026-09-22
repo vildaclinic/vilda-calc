@@ -67,7 +67,7 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.dane.nadmiar).toBe(true);
     expect(r.nut.kind).toBe('energy-demand');
     expect(r.nut.title).toBe('Zapotrzebowanie energetyczne');
-    expect(r.nut.badge).toBe(`PAL ${String(r.dane.pal).replace('.', ',')}`);
+    expect(r.nut.badge).toBe(r.dane.pal === 1.4 ? 'mała aktywność' : 'umiarkowana aktywność'); // rata R
     expect(r.nut.badge).not.toBe('Normy');
     // wartość główna = zalecana kaloryczność planu; wiersz celu = funkcja produkcyjna dla masy docelowej generatora
     expect(r.nut.value).toBe(kcal(r.dane.podaz));
@@ -77,7 +77,7 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.rows.join(' ')).not.toContain('Przy obecnej masie');
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.tee));
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.utrzymanie));
-    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/^Białko: \d,\d\d g\/kg × \d+ kg ≈ \d+ g\/d$/);
+    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/^Białko: \d,\d\d g\/kg × \d+ kg \(masa referencyjna\) ≈ \d+ g\/d$/);
     expect(r.nut.rows.find((x) => x.startsWith('Węglowodany'))).toBe('Węglowodany: 45–65\u00A0% energii');
     expect(r.nut.rows.find((x) => x.startsWith('Tłuszcze'))).toBe('Tłuszcze: 30–40\u00A0% energii');
     // stara karta: 2412 kcal (masa aktualna × PAL 1,6) — nie ma prawa się pojawić
@@ -167,8 +167,8 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.rows[0]).toBe(`Przy obecnej masie: ${kcal(r.dane.utrzymanie)}`);
     expect(r.nut.value).toBe(kcal(r.dane.utrzymanie));
     expect(r.nut.rows.join(' ')).not.toMatch(/Dla masy|Plan/);
-    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/× 62 kg/);
-    expect(r.nut.note).toContain('(obecna masa)');
+    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/× 62 kg \(obecna masa\)/);
+    expect(r.nut.note).toBe('');
     expect(r.cards.find((c) => c.key === 'HT').ref.diffText).toBe('Obecna masa mieści się w tym zakresie.');
     expect(r.cards.find((c) => c.key === 'BMI').ref.diffText).toBe('BMI mieści się w tym zakresie.');
   });

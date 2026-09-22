@@ -43,16 +43,16 @@ const kg = (v) => v.toFixed(1).replace('.', ',') + ' kg';
 test('dorosły z otyłością: zdanie o pierwszym celu z drabinki silnika; przy nadwadze bez zmian', async ({ page }) => {
   test.setTimeout(150_000);
   await otworz(page);
-  // otyłość III stopnia → pierwszy szczebel BMI 35 (wyjście z otyłości II stopnia)
+  // otyłość III stopnia → pierwszy szczebel BMI 35 (rata R, K1: „wyjście z otyłości III stopnia”)
   const a = await ustaw(page, { age: 47, sex: 'M', w: 112, h: 167 });
   expect(a.szczebel && a.szczebel.bmi).toBe(35);
-  expect(a.tekst).toContain('BMI wynosi 40,2 (otyłość III stopnia). Pierwszy cel to ok. ' + kg(a.szczebel.masa) + ' (BMI 35), czyli około ' + kg(112 - a.szczebel.masa) + ' mniej – wyjście z otyłości II stopnia; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy). Górna granica normy (BMI 24,9) odpowiada masie ok. ' + kg(a.docelowaKg) + ', do której dochodzi się stopniowo, etapami.');
+  expect(a.tekst).toContain('BMI wynosi 40,2 (otyłość III stopnia). Pierwszy cel to ok. ' + kg(a.szczebel.masa) + ' (BMI 35), czyli około ' + kg(112 - a.szczebel.masa) + ' mniej – wyjście z otyłości III stopnia; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy). Górna granica normy (BMI 24,9) odpowiada masie ok. ' + kg(a.docelowaKg) + ', do której dochodzi się stopniowo, etapami.');
   expect(a.tekst).not.toContain('Do uzyskania zakresu prawidłowego BMI');
   expect(a.pierwszyCel).toBeTruthy();
   expect(a.pierwszyCel.bmi).toBe(35);
   expect(Math.abs(a.pierwszyCel.masaKg - a.szczebel.masa)).toBeLessThan(0.01);
   expect(Math.abs(a.pierwszyCel.doRedukcjiKg - (112 - a.szczebel.masa))).toBeLessThan(0.01);
-  expect(a.pierwszyCel.opis).toBe('wyjście z otyłości II stopnia');
+  expect(a.pierwszyCel.opis).toBe('wyjście z otyłości III stopnia');
   // otyłość I stopnia → pierwszy szczebel BMI 30 (koniec otyłości)
   const b = await ustaw(page, { age: 40, sex: 'F', w: 90, h: 165 });
   expect(b.szczebel && b.szczebel.bmi).toBe(30);
