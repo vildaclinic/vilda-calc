@@ -46,10 +46,10 @@ test('PLAN-S1-ADULT-TARGET: dorosły dostaje liczbowy czas do granicy normy (cel
   // Karta scalona: planCard ukryty, silnik renderuje do ukrytego planResults
   // (selecty, autosave, integracje) — asercje liczbowe pozostają ważne.
   expect(out.visible).toBe(false);
-  // PAL 1,4, dieta umiarkowana (−588 kcal → 0,5345 kg/tydz.), cel 24,9 → 78,87 kg:
-  // 16,13 kg / 2,32 kg/mies. → 7 mies. (siatka 0,5).
-  expect(out.text).toMatch(/Stosując dietę umiarkowaną osiągniesz górną granicę normy BMI (w|we) \S+ \d{4} \(za ok\. 7 miesięcy\)/u);
-  expect(out.text).toMatch(/7 mies\.\s*granica normy/u);
+  // P-PAL rata 1: dorosły bez otyłości (BMI 29,98) dostaje PAL 1,6; dieta umiarkowana (−672 kcal → 0,61 kg/tydz.),
+  // cel 24,9 → 78,87 kg: 16,13 kg / 2,65 kg/mies. → 6,5 mies. (siatka 0,5).
+  expect(out.text).toMatch(/Stosując dietę umiarkowaną osiągniesz górną granicę normy BMI (w|we) \S+ \d{4} \(za ok\. 6,5 miesiąca\)/u);
+  expect(out.text).toMatch(/6,5 mies\.\s*granica normy/u);
   expect(out.text).not.toContain('– mies.');
   expect(out.text).not.toContain('tyg.');
 });
@@ -177,9 +177,9 @@ test('PLAN-S2-BULLETS: opis wybranej diety podaje realny deficyt i tempo pacjent
   test.setTimeout(90_000);
   await openIndex(page);
   const out = await renderPlan(page, { age: 40, months: 0, sex: 'M', weight: 95, height: 178 });
-  // Dorosły, dieta umiarkowana: deficyt 22% z TEE 2676 → 588 kcal, 0,5 kg/tydz.
-  expect(out.text).toContain('ok. 588 kcal dziennie');
-  expect(out.text).toContain('przewidywana utrata ok. 0,5 kg tygodniowo');
+  // Dorosły, dieta umiarkowana: deficyt 22% z TEE 3058 (PAL 1,6 od P-PAL rata 1) → 672 kcal, 0,6 kg/tydz.
+  expect(out.text).toContain('ok. 672 kcal dziennie');
+  expect(out.text).toContain('przewidywana utrata ok. 0,6 kg tygodniowo');
   expect(out.text).not.toContain('500–750 kcal dziennie');
 });
 
@@ -286,15 +286,15 @@ test('PLAN-C-SEGMENTS: segmenty diety i PAL sterują ukrytymi selectami i przeli
   }));
   expect(out.diet).toBe('intense');
   expect(out.text).toContain('Stosując dietę intensywną');
-  expect(out.text).toContain('−802 kcal/dzień');
-  await page.evaluate(() => document.querySelector('#planResults [data-plan2-pal="1.6"]').click());
+  expect(out.text).toContain('−916 kcal/dzień'); // P-PAL rata 1: domyślnie PAL 1,6
+  await page.evaluate(() => document.querySelector('#planResults [data-plan2-pal="1.4"]').click());
   await page.waitForTimeout(900); // debouncedUpdate
   out = await page.evaluate(() => ({
     pal: document.getElementById('palFactor').value,
     text: (document.getElementById('planResults').textContent || '').replace(/\s+/g, ' '),
   }));
-  expect(out.pal).toBe('1.6');
-  expect(out.text).toContain('−916 kcal/dzień');
+  expect(out.pal).toBe('1.4');
+  expect(out.text).toContain('−802 kcal/dzień');
   // Niedostępna dieta jest wyszarzona, nie znika (ENERGY-CHILD-MID1: chłopiec 10 l, 140 cm, 45 kg,
   // BMI < 99c → tylko lekka 0,5 kg/mies.; umiarkowana i intensywna odpadają z powodu wieku).
   await renderPlan(page, { age: 10, months: 0, sex: 'M', weight: 45, height: 140 });
@@ -437,16 +437,18 @@ test('PLAN-PAL-DEFAULT-TEEN-OVERWEIGHT: nietknięty formularz 14-latka z samą n
   expect(out.pal).toBe('1.6');
 });
 
-test('PLAN-PAL-DEFAULT-ADULT: dorosły zostaje przy PAL 1,4 (dolna granica pasma normatywnego)', async ({ page }) => {
+// P-PAL rata 1 (decyzja właściciela 2026-09-22): dorosły bez otyłości dostaje 1,6 (umiarkowana aktywność);
+// 95 kg / 178 cm to BMI 29,98, czyli jeszcze nadwaga.
+test('PLAN-PAL-DEFAULT-ADULT: dorosły bez otyłości dostaje PAL 1,6 z jednej tabeli wg wieku', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 30, months: 0, sex: 'M', weight: 95, height: 178 });
   const out = await page.evaluate(() => ({
     pal: document.getElementById('palFactor').value,
-    engineDefault: typeof energyDefaultPlanPal === 'function' ? energyDefaultPlanPal(30, 0) : null,
+    engineDefault: typeof energyDefaultPlanPal === 'function' ? energyDefaultPlanPal(30, 0, { sex: 'M', weightKg: 95, heightCm: 178 }) : null,
   }));
-  expect(out.engineDefault).toBe(1.4);
-  expect(out.pal).toBe('1.4');
+  expect(out.engineDefault).toBe(1.6);
+  expect(out.pal).toBe('1.6');
 });
 
 test('PLAN-PAL-TOUCHED-KEPT: jawny wybór 1,8 u nastolatka przeżywa kolejne przeliczenia (bez nadpisania wartością domyślną)', async ({ page }) => {

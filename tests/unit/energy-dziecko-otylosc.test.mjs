@@ -43,7 +43,7 @@ const henryBoy10_17 = (w, hM) => 15.6 * w + 266 * hM + 299;
 const henryBoy3_9 = (w, hM) => (0.0632 * w + 1.31 * hM + 1.28) * 239;
 const henryGirl3_9 = (w, hM) => 15.9 * w + 210 * hM + 349;
 const plan = (o) => win.energyBuildPlanReductionState({ ageMonthsOpt: 0, palInput: null, ...o });
-const REE_ADJ = 0.9;                       // Hofsteenge 2010: równania na masie aktualnej zawyżają REE o ~10 %
+const REE_ADJ = win.CHILD_REE_OBESITY_FACTOR; // P-PAL rata 1 (decyzja właściciela 2026-09-22): jeden rabat u dziecka z otyłością (PAL 1,4), korekta REE ×0,9 z MID1 wyłączona (= 1)
 const defFor = (kgPerMonth) => Math.round(kgPerMonth * 7700 / 30.4375); // 0,5→126; 1→253; 1,5→379; 2→506
 
 describe('Klasa BMI i masa należna (mediana BMI × wzrost²) — z silnika, nie z atrapy', () => {
@@ -88,12 +88,42 @@ describe('Klasa BMI i masa należna (mediana BMI × wzrost²) — z silnika, nie
   });
 });
 
-describe('Domyślny PAL planu: 1,6 przy nadwadze, 1,4 przy otyłości (10–18 lat); 1,4 poniżej 10 lat', () => {
-  it('energyDefaultPlanPal bez antropometrii: 14 l → 1,6; 10 l → 1,6; 8 l → 1,4; 30 l → 1,4', () => {
+describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 1,6 / 1,6; otyłość −1 stopień tylko 10–18 lat i dorośli', () => {
+  it('energyDefaultPlanPal bez antropometrii: 14 l → 1,6; 10 l → 1,6; 8 l → 1,6; 2 l → 1,4; 30 l → 1,6', () => {
     expect(win.energyDefaultPlanPal(14, 0)).toBe(1.6);
     expect(win.energyDefaultPlanPal(10, 0)).toBe(1.6);
-    expect(win.energyDefaultPlanPal(8, 0)).toBe(1.4);
-    expect(win.energyDefaultPlanPal(30, 0)).toBe(1.4);
+    expect(win.energyDefaultPlanPal(8, 0)).toBe(1.6);
+    expect(win.energyDefaultPlanPal(2, 0)).toBe(1.4);
+    expect(win.energyDefaultPlanPal(30, 0)).toBe(1.6);
+  });
+  it('tabela jako dane (ENERGY_PAL_DOMYSLNY) — normy nie są założeniem wbudowanym w silnik', () => {
+    expect(win.ENERGY_PAL_DOMYSLNY).toEqual({ child_1_3: 1.4, child_4_9: 1.6, child_10_18: 1.6, adult: 1.6, otylosc: { child_10_18: 1.4, adult: 1.4 } });
+    expect(Object.isFrozen(win.ENERGY_PAL_DOMYSLNY)).toBe(true);
+  });
+  it('dorosły: otyłość (BMI ≥ 30) → 1,4; nadwaga, norma i NIEDOWAGA → 1,6 (niedowaga nigdy nie obniża PAL)', () => {
+    expect(win.energyDefaultPlanPal(30, 0, { sex: 'M', weightKg: 100, heightCm: 170 })).toBe(1.4); // BMI 34,6
+    expect(win.energyDefaultPlanPal(30, 0, { sex: 'M', weightKg: 86.7, heightCm: 170 })).toBe(1.4); // BMI 30,0
+    expect(win.energyDefaultPlanPal(30, 0, { sex: 'M', weightKg: 86.4, heightCm: 170 })).toBe(1.6); // BMI 29,9
+    expect(win.energyDefaultPlanPal(30, 0, { sex: 'F', weightKg: 50, heightCm: 170 })).toBe(1.6); // BMI 17,3
+    expect(win.energyDefaultPlanPal(30, 0, { obese: true })).toBe(1.4);
+    expect(win.energyDefaultPlanPal(30, 0, { obese: false })).toBe(1.6);
+    // silnik bez jawnego PAL bierze tę samą wartość, także u dorosłego
+    expect(plan({ sex: 'M', ageYears: 30, weightKg: 100, heightCm: 170, palInput: null }).palUsed).toBe(1.4);
+    expect(plan({ sex: 'M', ageYears: 30, weightKg: 70, heightCm: 170, palInput: null }).palUsed).toBe(1.6);
+    expect(plan({ sex: 'F', ageYears: 30, weightKg: 50, heightCm: 170, palInput: null }).palUsed).toBe(1.6);
+  });
+  it('dziecko 4–9 lat z otyłością zostaje przy 1,6; nastolatek z niedowagą 1,6; 2-latek 1,4', () => {
+    expect(plan({ sex: 'M', ageYears: 8, weightKg: 45, heightCm: 130, palInput: null }).palUsed).toBe(1.6);
+    expect(plan({ sex: 'M', ageYears: 7, weightKg: 24, heightCm: 122, palInput: null }).palUsed).toBe(1.6);
+    expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 40, heightCm: 165 })).toBe(1.6);
+    expect(win.energyDefaultPlanPal(2, 6, { sex: 'M', weightKg: 18, heightCm: 90 })).toBe(1.4);
+  });
+  it('jeden rabat u dziecka z otyłością: CHILD_REE_OBESITY_FACTOR = 1 (bez REE × 0,9), PAL 1,4 zostaje jedyną obniżką', () => {
+    expect(win.CHILD_REE_OBESITY_FACTOR).toBe(1);
+    const st = plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null });
+    expect(st.palUsed).toBe(1.4);
+    expect(st.reeAdjustedKcal).toBe(Math.round(st.reeKcal));
+    expect(st.maintenanceKcal).toBe(Math.round(st.reeKcal * 1.4));
   });
   it('ENERGY-CHILD-MID3: nastolatek z otyłością (≥ 97c) → 1,4; z samą nadwagą (85–97c) → 1,6', () => {
     // chłopiec 14 l, 165 cm: 85 kg to otyłość wg OLAF, 66 kg to nadwaga bez otyłości
@@ -108,8 +138,8 @@ describe('Domyślny PAL planu: 1,6 przy nadwadze, 1,4 przy otyłości (10–18 l
     // albo sama antropometria — moduł liczy klasę sam (ścieżka formularza)
     expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 85, heightCm: 165 })).toBe(1.4);
     expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 66, heightCm: 165 })).toBe(1.6);
-    // poniżej 10 lat pasmo normatywne zaczyna się od 1,4 — otyłość niczego nie zmienia
-    expect(win.energyDefaultPlanPal(8, 0, { sex: 'M', weightKg: 45, heightCm: 130 })).toBe(1.4);
+    // poniżej 10 lat otyłość niczego nie zmienia — pomiary DLW nie pokazują niższego PAL (P-PAL rata 1: 1,6)
+    expect(win.energyDefaultPlanPal(8, 0, { sex: 'M', weightKg: 45, heightCm: 130 })).toBe(1.6);
   });
   it('ENERGY-CHILD-MID3: silnik bez jawnego PAL bierze wartość zależną od klasy BMI', () => {
     expect(plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null }).palUsed).toBe(1.4);
@@ -134,7 +164,7 @@ describe('Domyślny PAL planu: 1,6 przy nadwadze, 1,4 przy otyłości (10–18 l
   });
 });
 
-describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × 0,9 × PAL, bez ×1,01; deficyt z tempa 1/1,5/2 kg/mies.', () => {
+describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × CHILD_REE_OBESITY_FACTOR (od P-PAL rata 1: 1) × PAL, bez ×1,01; deficyt z tempa 1/1,5/2 kg/mies.', () => {
   const pacjent = { sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 };
   const st = plan({ ...pacjent, palInput: 1.4 });
   const needed = zSilnika(pacjent).needed;
@@ -245,7 +275,7 @@ describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mi
 });
 
 describe('Etap 2–5 lat: bez diet (stabilizacja) i energia utrzymania dla masy aktualnej', () => {
-  it('chłopiec 3 l, 98 cm, 20 kg → diets [], powody „2–5 lat", maintenanceKcal = REE(masa aktualna) × 0,9 × PAL, nie mniej niż 1000', () => {
+  it('chłopiec 3 l, 98 cm, 20 kg → diets [], powody „2–5 lat", maintenanceKcal = REE(masa aktualna) × CHILD_REE_OBESITY_FACTOR × PAL, nie mniej niż 1000', () => {
     const st = plan({ sex: 'M', ageYears: 3, weightKg: 20, heightCm: 98, palInput: 1.4 });
     const base = henryBoy3_9(20, 0.98) * REE_ADJ * 1.4;
     expect(st.childObesityPlan).toBe(true);

@@ -5696,6 +5696,88 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## ENERGY-PAL-TABELA — jedna tabela domyślnego PAL wg wieku, otyłość −1 stopień tylko 10–18 lat i dorośli, niedowaga bez obniżki, karta norm z PAL planu, jeden rabat u dziecka z otyłością (P-PAL rata 1, SW 1.1.54, 2026-09-22)
+
+**Pytanie właściciela (2026-09-22).** Jaki PAL przyjmować dla małych dzieci, nastolatków i dorosłych; czy przy otyłości
+mniejszy (1,4) a standardowo 1,6; jaki przy niedowadze; jak aplikacja zachowuje się dziś w kartach „Normy żywieniowe”
+i „Droga do normy” oraz skąd raport bierze sekcję „Zapotrzebowanie energetyczne”.
+
+**Stan przed zmianą (dwa niezależne domyślne PAL).** Karta „Normy żywieniowe” miała własny selektor z domyślnym 1,6
+(1–3 lata 1,4), bez wpływu BMI i bez przejmowania PAL planu (ścieżka „inherit” była martwa, wbrew wpisowi Etap 4 z
+2026-08-11). Plan, „Droga do normy”, generator zaleceń i raport dzieliły `#palFactor` z `energyDefaultPlanPal`: 1–3 lata
+1,4; 4–9 lat 1,4; 10–18 lat 1,4 przy otyłości (≥ 97 c), inaczej 1,6; dorośli 1,4 (także z niedowagą). U dziecka
+z otyłością plan obniżał REE o 10 % (`CHILD_REE_OBESITY_FACTOR` 0,9, MID1) i jednocześnie brał PAL 1,4 — dwa rabaty.
+Sekcja „Zapotrzebowanie energetyczne” raportu bierze wszystko z generatora zaleceń
+(`buildDietEnergyRecommendationResult().dane.energia`: PAL planu, REE Henry’ego, plan diety) i liczy ponownie tym samym
+PAL dla masy docelowej.
+
+**Wytyczne i pomiary (przegląd 2026-09-22).** Normy żywienia 2024 (NIZP PZH-PIB): 1–3 lata tylko 1,4; 4–9 lat
+1,4/1,6/1,8; 10–18 lat 1,6/1,8/2,0; dorośli 1,4/1,6/1,8/2,0; normy dla osób zdrowych, bez osobnego PAL dla otyłości
+ani niedowagi. EFSA 2013 (doi:10.2903/j.efsa.2013.3005): te same poziomy, REE wg Henry’ego, +1 % na wzrastanie;
+EU Menu przy braku danych: 1–3 lata 1,4, 4–9 lat 1,6, 10–17 lat 1,8. Podwójnie znakowana woda: przegląd 63 badań
+dzieci 1–18 lat — PAL rośnie z wiekiem (chłopcy ≈ 1,39 + 0,027 × wiek, dziewczęta ≈ 1,40 + 0,020 × wiek), nachylenie
+TEE u otyłych i szczupłych takie samo (Kim & Park 2022, doi:10.3345/cep.2022.00472); nastolatki z otyłością PAL
+1,37 ± 0,13 (Elliott 2014, doi:10.1155/2014/808659); chłopcy 9–12 lat z nadwagą — PAL bez różnicy (Park 2017,
+doi:10.1016/j.jshs.2017.01.008); kobiety z otyłością olbrzymią PAL 1,64 (Das 2004, doi:10.1093/jn/134.6.1412);
+młodzi dorośli deklarujący 1,53 mieli zmierzone 1,35 (Sinha 2020, doi:10.1038/s41430-020-00790-5). PTLO 2024:
+deficyt 500–600 kcal/d, nie poniżej PPM, przeliczenie po redukcji 10 %; jawnej reguły PAL w dostępnych streszczeniach
+brak (pełny tekst niedostępny w tej sesji). Niedowaga: żadne wytyczne nie obniżają PAL (dzieci: masa należna + koszt
+doganiania; dorośli ESPEN 30–35 kcal/kg).
+
+**Decyzje właściciela (2026-09-22).** (1) Jedna tabela domyślnego PAL wg wieku, wspólna dla karty norm, planu
+i raportu: 1–3 lata 1,4; 4–9 lat 1,6; 10–18 lat 1,6; dorośli 1,6. (2) Otyłość obniża o jeden stopień tylko tam, gdzie
+pomiary pokazują niższy PAL: 10–18 lat 1,4 (jak dotąd) i dorośli 1,4 (BMI ≥ 30); u dzieci 4–9 lat zostaje 1,6.
+(3) Niedowaga nigdy nie obniża PAL. (4) Karta „Normy żywieniowe” przejmuje PAL planu — jedna liczba w dokumencie.
+(5) U dziecka z otyłością jeden rabat: PAL 1,4, bez korekty REE × 0,9. (6) PAL w raporcie zawsze słowami i oznaczony
+jako przyjęty domyślnie, dopóki lekarz go nie zmieni.
+
+**Zmiana (kliniczna: inne domyślne zapotrzebowanie energetyczne; progi BMI i deficyty bez zmian).**
+- `vilda_diet_plan_ui.js`: tabela jako dane `ENERGY_PAL_DOMYSLNY = {child_1_3: 1,4; child_4_9: 1,6; child_10_18: 1,6;
+  adult: 1,6; otylosc: {child_10_18: 1,4; adult: 1,4}}` (eksport na `window`). `energyDefaultPlanPal(wiek, mies,
+  klasa|antropometria)`: dorosły z BMI ≥ `ADULT_BMI.OBESE` (30) → 1,4; dziecko wg `childBmiClass` (`obese`); bez
+  antropometrii wartość wiekowa; nigdy poniżej wartości wiekowej przy niedowadze. Silnik planu
+  (`energyBuildPlanReductionState`) bez jawnego PAL bierze `energyDefaultPlanPal` dla KAŻDEGO pacjenta (dotąd tylko
+  dziecko z nadmiarem; reszta dostawała pierwszą wartość normatywną, np. 1,4 u dorosłych i 4–9 lat).
+  `CHILD_REE_OBESITY_FACTOR` 0,9 → 1 (stała zostaje w kodzie); trzy zdania planu/„Drogi do normy” o „korekcie −10 %
+  REE na otyłość (Hofsteenge 2010)” zastąpione opisem „REE Henry’ego × PAL, bez dodatku na wzrastanie”.
+- `vilda_update_prep.js`: za wybór użytkownika uznaje się tylko odejście od OSTATNIEJ wartości domyślnej (dotąd
+  „różne od 1,4”, co przy nowej domyślnej 1,6 oznaczałoby fałszywe „dotknięcie”).
+- `nutrition_norms.js` (1.2.0): domyślny selektor karty „inherit” = PAL z `#palFactor` (jeśli w zestawie normatywnym
+  albo klinicznym pasma; inaczej dotychczasowe 1,6); opcja „Jak w planie (PAL X)” jako pierwsza; `palNote`
+  „z formularza / planu”; użytkownik nadal może wybrać w karcie inny poziom albo „pełen zakres”.
+- `vilda_diet_recommendations.js`: zdanie o normach liczone tym samym PAL, co plan (`n.palUsed`, koniec zapasu
+  „pierwsza wartość normatywna”); `dane.energia.palDomyslny` (true, dopóki `__vildaPlanPalTouched` nie jest ustawione
+  przez zmianę w UI, segment „Drogi do normy” albo wczytany zapis).
+- `vilda_patient_report.js`: karta „Zapotrzebowanie energetyczne” — odznaka słowami jak dotąd; nota „Poziom
+  aktywności przyjęto domyślnie dla wieku, dopóki lekarz go nie zmieni.” gdy `palDomyslny`, inaczej bez noty.
+- `vilda_bmi_journey.js`: dorosły dostaje czas do granicy normy z tej samej symulacji, co plan
+  (`energySimulateMonthsToBmiTarget`, krok 0,5 mies. w górę); dawna matematyka liniowa zaokrąglała do najbliższego pół
+  miesiąca (6,07 → 6 wobec 6,5 w planie) — przy PAL 1,4 obie karty zbiegały się przypadkiem, przy 1,6 rozjechały
+  (test PLAN-SYNC-TIMES).
+- Strony i SW: bumpy `vilda_diet_plan_ui.js`, `vilda_update_prep.js`, `nutrition_norms.js`,
+  `vilda_diet_recommendations.js`, `vilda_patient_report.js`, `vilda_bmi_journey.js`; SW 1.1.53 → 1.1.54, precache
+  append-only.
+
+**Skutki liczbowe do świadomości właściciela.** Dorosły bez otyłości i dziecko 4–9 lat: domyślne zapotrzebowanie
+rośnie o 1,6/1,4 = +14 % (dotąd 1,4). Dziecko 4–9 lat z otyłością: baza planu rośnie z REE × 0,9 × 1,4 do REE × 1,6,
+czyli o ok. +27 % (bez rabatu REE i z PAL 1,6 wg decyzji 2 i 5). Nastolatek z samą nadwagą (85–97 c): baza z
+REE × 0,9 × 1,6 do REE × 1,6 (+11 %). Nastolatek z otyłością: z REE × 0,9 × 1,4 do REE × 1,4 (+11 %). Deficyty
+z tempa (kg/mies.) bez zmian, więc o tyle samo rośnie zalecana podaż planu. Jeżeli właściciel uzna to za zbyt dużo
+u dzieci 4–9 lat z otyłością, do rozważenia osobna decyzja (np. 1,4 także w tym paśmie albo powrót rabatu REE).
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne, prawdziwy kod; unit `energy-dziecko-otylosc`, e2e
+`pal-jedna-tabela`, `diet-plan-logic`):** dziewczynka 7 l., 24 kg / 122 cm → PAL 1,6 w planie, karcie norm („Jak
+w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 kg / 170 cm (BMI 34,6) → 1,4; 85 kg (BMI
+29,4) → 1,6; kobieta 40 l., 50 kg / 170 cm (BMI 17,3) → 1,6; chłopiec 14 l., 85 kg / 165 cm (otyłość) → 1,4,
+`reeAdjustedKcal` = REE (bez × 0,9), utrzymanie = REE × 1,4; po wyborze 1,8 przez lekarza: karta norm 1,8, raport
+„aktywny tryb życia” bez noty; chłopiec 8 l., 45 kg / 130 cm (otyłość) → 1,6; chłopiec 2 l. → 1,4; dorosły 30 l.,
+95 kg / 178 cm (BMI 29,98) → 1,6.
+
+**Walidacja.** Wynik `npm test` i e2e w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
+osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
+
 ## „Raport po wizycie”: nagłówek bez dublowania osi wzrostu, odniesienia kart bez „0,0” (P-RAPORT rata S, SW 1.1.53, 2026-09-22)
 
 **Zgłoszenie i decyzje właściciela (2026-09-22).** W raporcie rocznego chłopca (11,8 kg na 93. centylu, 83,0 cm powyżej

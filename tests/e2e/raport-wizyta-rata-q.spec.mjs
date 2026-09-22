@@ -168,7 +168,7 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.value).toBe(kcal(r.dane.utrzymanie));
     expect(r.nut.rows.join(' ')).not.toMatch(/Dla masy|Plan/);
     expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/× 62 kg \(obecna masa\)/);
-    expect(r.nut.note).toBe('');
+    expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku, dopóki lekarz go nie zmieni.'); // P-PAL rata 1
     expect(r.cards.find((c) => c.key === 'HT').ref.diffText).toBe('Obecna masa mieści się w tym zakresie.');
     expect(r.cards.find((c) => c.key === 'BMI').ref.diffText).toBe('BMI mieści się w tym zakresie.');
   });
