@@ -133,7 +133,13 @@ test('nastolatka z otyloscia: masa docelowa, redukcja, witamina D, plyny i czas 
   expect(dane.klasyfikacja.klasaBmi.source).toBeTruthy();
 
   expect(text).toContain(norm('odpowiada masie ok. ' + przecinek(dane.masa.docelowaKg, 1) + ' kg'));
-  expect(text).toContain(norm('redukcji o około ' + przecinek(dane.masa.doRedukcjiKg, 1) + ' kg'));
+  // rata J: gdy silnik BMI daje szczebel drabinki, akapit mówi o pierwszym celu i o dochodzeniu do normy
+  // etapami; łączna redukcja zostaje liczbą w dane.masa (sprawdzana niżej). Bez szczebla — zdanie jak dotąd.
+  if (/Pierwszy cel/u.test(text)) {
+    expect(text).toContain('do której dochodzi się stopniowo, etapami');
+  } else {
+    expect(text).toContain(norm('redukcji o około ' + przecinek(dane.masa.doRedukcjiKg, 1) + ' kg'));
+  }
 
   // kontrola ujemna: masa docelowa to gorna granica normy, a NIE masa przy medianie BMI
   // (mediana to liczba z sasiedniego zdania o przecietnej masie rowiesnika; pomylenie ich

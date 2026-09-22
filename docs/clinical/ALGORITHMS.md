@@ -5717,8 +5717,9 @@ zamiast krótkiej jazdy autem, przerwy od siedzenia.” Punkty raportu cytują z
 (150–300 min, 2–3 sesje — dotychczasowe źródła zalecenia).
 
 **4. Alkohol u dorosłego.** Osobne zdanie („Alkohol jest kaloryczny, ale przede wszystkim szkodliwy…”)
-pada teraz także przy nadmiarze (rola talerz), a z wyliczanek talerza przy nadmiarze i przy utrzymaniu
-z ryzykiem talii znika słowo „alkohol”, żeby nie dublować treści. Punkty raportu odpowiednio.
+pada teraz także przy nadmiarze (rola talerz, po zdaniu nawyków z raty H, które zostaje drugim zdaniem
+talerza), a z wyliczanek talerza przy nadmiarze i przy utrzymaniu z ryzykiem talii znika słowo „alkohol”,
+żeby nie dublować treści. Punkty raportu odpowiednio.
 
 **5. Akapit o masie dziecka.** Zamiast od razu odległości od średniej rówieśnika akapit podaje pierwszy
 szczebel drabinki celów silnika BMI (`VildaBmi.drabinkaCelow`, szczebel Reinehr 2016: −0,25 BMI-SDS,
