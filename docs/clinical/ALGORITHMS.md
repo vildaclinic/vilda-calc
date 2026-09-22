@@ -5696,6 +5696,44 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Plan PDF: nagłówki sekcji, ramka strony i zdania planu (P-RAPORT rata M, SW 1.1.47, 2026-09-22)
+
+**Zgłoszenie właściciela (2026-09-22, PDF-y z PC i Maca, oba Chrome):** w nagłówkach sekcji planu brak polskich
+znaków i przestawione litery („T WOJAD ROGA”, „N ORMY,P ŁYNYI S UPLEMENTACJA”); tytuł „Twój plan redukcji masy ciała”
+w za małym polu (ucięte ogonki j, p, y); chip z datą bez marginesu od krawędzi pola; na Macu w ogóle brak nagłówka
+strony (marka, tytuł, data); zdanie „Wyliczone dla diety … PAL 1,4. Zmiana aktywności zmienia te liczby.” do usunięcia;
+„Spacer” z dużej litery w środku zdania; „Dzięki ruchowi o 6,5 miesiąca szybciej niż na samej diecie.” niepoprawne.
+
+**Decyzje właściciela:** zdanie o ograniczonym tempie u dzieci zostaje; tytuł w kolorze teal; „koduj ratę M”.
+
+**Przyczyny (odtworzone w prawdziwym renderze html2canvas, nie w makiecie).**
+1. Nagłówki sekcji (`.vrp-nag-blok`) to kontenery `display:flex` z `letter-spacing`, a tekst leżał w nich gołym węzłem.
+   html2canvas 1.4.1 rysuje taki tekst znak po znaku od pozycji liczonych dla anonimowego elementu flex, stąd przestawione
+   i gubione litery. Pozostałe teksty z `letter-spacing` (bloki, nie flex) renderowały się poprawnie.
+2. Ramka strony PDF używała znaczników `<header>` i `<footer>`. Aplikacja ma globalne reguły dla elementu `header`
+   (`ios26-v2.css`: tło gradientowe, `overflow:hidden`, zaokrąglenia; `vilda_chrome.css`: `position:sticky` przy oknie
+   ≥ 992 px; `style.css`: tło i obramowanie; `.liquid-ios26 header h1` w kolorze motywu). Wchodziły one do hosta PDF,
+   więc wygląd nagłówka strony zależał od motywu i szerokości okna: białe pole ucinało ogonki liter tytułu
+   (`line-height:1.06` + `overflow:hidden`), chip z datą przylegał do rogu tego pola, a przy szerokim oknie nagłówek był
+   `sticky`, co w Chrome na Macu kończyło się jego brakiem w obrazie strony.
+
+**Zmiana (bez wpływu klinicznego).**
+- `vilda_raport_plan.js` (WERSJA 5): tekst pięciu nagłówków sekcji w `<span>`; pod kaflami zostaje tylko zdanie
+  „Tempo jest w tym wieku celowo ograniczone, aby nie zaburzyć wzrastania.” (u dzieci); pozycje zadeklarowanego planu
+  w środku zdania małą literą („dieta lekka i spacer 30 min/d”).
+- `vilda_bmi_journey.js` (model PDF): „Dzięki ruchowi dojdziesz do celu o X wcześniej niż na samej diecie.” /
+  „… nieco wcześniej …”. Karta w aplikacji („Dzięki ruchowi o X szybciej”) bez zmian.
+- `vilda_diet_recommendations.js`: ramka strony PDF na `div` z dotychczasowymi klasami, `.diet-pdf-header` jawnie
+  `position:static; overflow:visible; background:none`, tytuł `line-height:1.15`, kolor `#00838d` (teal, jak dotąd
+  widziany, tylko teraz niezależnie od motywu).
+
+**Walidacja.** `tests/unit/raport-plan-rata-m.test.mjs` (źródła: ramka bez header/footer, każdy nagłówek w span,
+brak zdania o diecie/PAL, brzmienie zdania o ruchu). `tests/e2e/raport-plan-rata-m.spec.mjs` (prawdziwy host PDF przy
+oknie 1728 px i przewiniętej stronie: brak gołego tekstu w kontenerach flex/grid, nagłówki w span, ramka statyczna
+bez overflow i tła, tytuł teal i nieucięty, chip ≥ 40 px od krawędzi strony; próbka kontrolna: prawdziwy `<header>`
+w tym samym miejscu wciąż dostaje sticky/overflow hidden; zdania planu). `tests/e2e/przyrost-zalecen.spec.mjs`
+dopasowany do span. `npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_M.
+
 ## Raporty PDF bez CDN: jsPDF i html2canvas w aplikacji (P-RAPORT rata 5, SW 1.1.46, 2026-09-22)
 
 **Decyzja właściciela (2026-09-22):** wariant z lokalnymi bibliotekami (plan zaakceptowany); wariant

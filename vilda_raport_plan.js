@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 4;
+  var WERSJA = 5;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -201,7 +201,7 @@
     }
 
     return '<section class="vrp-blok vrp-droga">'
-      + '<div class="vrp-nag-blok">TWOJA DROGA</div>'
+      + '<div class="vrp-nag-blok"><span>TWOJA DROGA</span></div>'
       + '<div class="vrp-krok">'
       + '<div class="vrp-krok-lbl">PIERWSZY CEL</div>'
       + '<div class="vrp-krok-n">−' + esc(fmt(doPierwszego, 1)) + ' kg</div>'
@@ -240,7 +240,7 @@
     }
 
     return '<section class="vrp-blok vrp-droga">'
-      + '<div class="vrp-nag-blok">TWOJA DROGA</div>'
+      + '<div class="vrp-nag-blok"><span>TWOJA DROGA</span></div>'
       + '<div class="vrp-krok">'
       + '<div class="vrp-krok-lbl">CEL WŁASNY</div>'
       + '<div class="vrp-krok-n">−' + esc(fmt(doCelu, 1)) + ' kg</div>'
@@ -268,19 +268,20 @@
     if (liczba(e.tempoKgTydz) != null && e.tempoKgTydz > 0) kafle.push([fmt(e.tempoKgTydz, 1), 'kg tygodniowo', 'spodziewane tempo redukcji']);
     if (!kafle.length) return '';
 
-    var pod = [];
-    if (e.dietaNazwa) pod.push('Wyliczone dla diety ' + esc(e.dietaNazwa));
-    if (liczba(e.palUzyty) != null) pod.push('przy deklarowanej aktywności PAL ' + esc(fmt(e.palUzyty, 1)));
-    var podpis = pod.length ? pod.join(' ') + '. Zmiana aktywności zmienia te liczby.' : '';
-    if (e.tempoOgraniczone) {
-      podpis += ' Tempo jest w tym wieku celowo ograniczone, aby nie zaburzyć wzrastania.';
-    }
+    /* rata M (decyzja właściciela 2026-09-22): bez zdania „Wyliczone dla diety … PAL … Zmiana aktywności
+       zmienia te liczby.” — nic nie wnosiło pacjentowi. Zdanie o ograniczonym tempie u dzieci zostaje. */
+    var podpis = e.tempoOgraniczone
+      ? 'Tempo jest w tym wieku celowo ograniczone, aby nie zaburzyć wzrastania.'
+      : '';
 
     var blokRuchu = '';
     if (ruch) {
       /* Jedno zdanie w ramce — jak w zatwierdzonej makiecie. Nazwy pozycji i suma tygodniowa
          pochodzą z karty „Droga do normy BMI"; nic tu nie jest przeliczane. */
-      var nazwy = ruch.rows.map(function (r) { return String(r[0]); });
+      /* rata M: nazwy pozycji z karty zaczynają się wielką literą („Dieta lekka”, „Spacer 30 min/d”);
+         w środku zdania piszemy je małą literą. */
+      var malaLitera = function (t) { return t ? t.charAt(0).toLowerCase() + t.slice(1) : t; };
+      var nazwy = ruch.rows.map(function (r) { return malaLitera(String(r[0])); });
       var lista = nazwy.length > 1
         ? nazwy.slice(0, -1).join(', ') + ' i ' + nazwy[nazwy.length - 1]
         : nazwy[0];
@@ -299,7 +300,7 @@
       : dane.strategia === 'cel-wlasny' ? 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI DO CELU WŁASNEGO'
       : 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
     return '<section class="vrp-blok">'
-      + '<div class="vrp-nag-blok">' + esc(naglowek) + '</div>'
+      + '<div class="vrp-nag-blok"><span>' + esc(naglowek) + '</span></div>'
       + '<div class="vrp-kafle' + (kafle.length === 4 ? ' vrp-kafle-4' : '') + '">' + kafle.map(function (k) {
           return '<div class="vrp-kafel"><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span><i>' + esc(k[2]) + '</i></div>';
         }).join('') + '</div>'
@@ -350,7 +351,7 @@
     if (!kol.length) return '';
     var naglowek = kol.length === 1 ? 'NORMY ŻYWIENIOWE' : 'NORMY, PŁYNY I SUPLEMENTACJA';
     return '<section class="vrp-blok">'
-      + '<div class="vrp-nag-blok">' + naglowek + '</div>'
+      + '<div class="vrp-nag-blok"><span>' + naglowek + '</span></div>'
       + '<div class="vrp-dodatki vrp-dod-' + kol.length + '">' + kol.join('') + '</div></section>';
   }
 
@@ -375,7 +376,7 @@
     ].filter(function (k) { return k[1] && k[1].length; });
     if (!kolumny.length) return '';
     return '<section class="vrp-blok">'
-      + '<div class="vrp-nag-blok">CO ROBIĆ NA CO DZIEŃ</div>'
+      + '<div class="vrp-nag-blok"><span>CO ROBIĆ NA CO DZIEŃ</span></div>'
       + '<div class="vrp-kolumny vrp-kol-' + kolumny.length + '">' + kolumny.map(function (k) {
           return '<div class="vrp-kol"><h3>' + esc(k[0]) + '</h3><ul>'
             + k[1].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
@@ -504,6 +505,7 @@
       '.vrp-bmi i{font-style:normal;font-size:' + ug(16) + ';font-weight:650;color:' + K.ciemny + ';line-height:1.2;}',
       '.vrp-bmi u{text-decoration:none;font-size:' + ug(12.5) + ';color:' + K.mut + ';}',
       '.vrp-blok{border:1px solid ' + K.linia + ';border-radius:' + u(18) + ';padding:calc(' + u(14) + ' + var(--luz)) ' + u(16) + ' calc(' + u(12) + ' + var(--luz));background:#fff;}',
+      /* rata M: tekst naglowka siedzi w <span>, nie golym wezlem w flexie — html2canvas rysuje goly tekst w kontenerze flex z letter-spacing od zlych pozycji („T WOJAD ROGA"). */
       '.vrp-nag-blok{display:flex;align-items:center;gap:' + u(8) + ';font-size:' + u(13) + ';letter-spacing:.14em;font-weight:800;color:' + K.teal2 + ';margin-bottom:' + u(10) + ';}',
       '.vrp-nag-blok::before{content:"";display:inline-block;width:' + u(5) + ';height:' + u(15) + ';border-radius:999px;background:' + K.teal + ';}',
       '.vrp-droga{background:linear-gradient(180deg,' + K.tlo + ' 0%,#fff 60%);}',

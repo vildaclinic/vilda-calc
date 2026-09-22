@@ -591,9 +591,10 @@
     var gainText = '';
     if (model.monthsDiet != null && model.monthsDiet > model.monthsCombo) {
       var diff = Math.round((model.monthsDiet - mc) * 2) / 2;
+      /* P-RAPORT rata M (2026-09-22): brzmienie po polsku — „dojdziesz do celu o X wcześniej”. */
       gainText = diff >= 0.5
-        ? 'Dzięki ruchowi o ' + monthsWord(diff) + ' szybciej niż na samej diecie.'
-        : 'Dzięki ruchowi nieznacznie szybciej niż na samej diecie.';
+        ? 'Dzięki ruchowi dojdziesz do celu o ' + monthsWord(diff) + ' wcześniej niż na samej diecie.'
+        : 'Dzięki ruchowi dojdziesz do celu nieco wcześniej niż na samej diecie.';
     }
     return {
       available: true,
