@@ -138,7 +138,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   // dane strukturalne = to, co poszło do zdań
   expect(pro.energia.utrzymanieKcal).toBe(pro.gp.teeKcal);
   expect(pro.energia.nadwyzkaKcal).toEqual([300, 500]);
-  expect(pro.energia.podazZakresKcal).toEqual([2100, 2300]);
+  expect(pro.energia.podazZakresKcal).toEqual([2300, 2500]); // P-PAL rata 1: PAL 1,6
   expect(pro.energia.tempoZakresKgTydz[0]).toBeCloseTo(300 * 7 / 7700, 6);
   expect(pro.energia.tempoZakresKgTydz[1]).toBeCloseTo(500 * 7 / 7700, 6);
   expect(pro.energia.deficytKcal).toBe(0); expect(pro.energia.tempoKgTydz).toBe(0); expect(pro.energia.podazZaokrKcal).toBeNull();
@@ -155,7 +155,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   expect(z6.strategia).toBe('przyrost');
   expect(norm(z6.text)).toContain('Przy BMI poniżej 17,5 lub cechach ryzyka zaburzeń odżywiania nie ustala się planu liczbowego; wskazana ocena kliniczna, w tym ryzyka zespołu ponownego odżywienia, i prowadzenie żywienia pod nadzorem lekarza i dietetyka klinicznego.');
   expect(norm(z6.text)).not.toContain('nadwyżka');
-  expect(norm(z6.text)).toContain('Przy zapotrzebowaniu około 1700 kcal dziennie');
+  expect(norm(z6.text)).toContain('Przy zapotrzebowaniu około 1900 kcal dziennie'); // P-PAL rata 1: PAL 1,6 (REE 1209 × 1,6 = 1934)
   expect(z6.energia.nadwyzkaKcal).toBeNull(); expect(z6.energia.podazZakresKcal).toBeNull(); expect(z6.czas).toBeNull();
   expect(z6.energia.utrzymanieKcal).toBe(Math.round(z6.teeRaw));
   expect(z6.zdania.talerz.length).toBe(2); expect(z6.zdania.ruch.length).toBe(1); expect(z6.zdania.kontrola.length).toBe(2);
