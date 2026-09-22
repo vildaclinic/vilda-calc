@@ -29,8 +29,10 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 1;
+  var WERSJA = 2;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
+  var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
+  var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
   var SKALA_KROK = 0.02;
 
   /* ---------- pomocniki formatu (bez własnej arytmetyki klinicznej) ---------- */
@@ -132,11 +134,12 @@
   }
 
   /* Pasek drogi: start (dziś) → szczeble pośrednie → cel. Pozycja liniowo po masie ciała. */
-  function pasek(dane, drab) {
-    if (!drab || !drab.cel || drab.kierunek !== 'redukcja') return '';
+  /* Punkty osi z drabinki celów (redukcja do normy): dziś → szczeble → norma BMI. */
+  function punktyDrabinki(dane, drab) {
+    if (!drab || !drab.cel || drab.kierunek !== 'redukcja') return null;
     var teraz = liczba((dane.pacjent || {}).masaKg);
     var cel = liczba(drab.cel.masa);
-    if (teraz == null || cel == null || !(teraz > cel)) return '';
+    if (teraz == null || cel == null || !(teraz > cel)) return null;
     var krotko = function (t) { return String(t || '').split(':')[0].trim(); };
     var punkty = [{ masa: teraz, pod: 'dziś', typ: 'start' }];
     (drab.szczeble || []).forEach(function (s, i) {
@@ -144,12 +147,20 @@
       if (m != null && m < teraz && m > cel) punkty.push({ masa: m, pod: krotko(s.opis) || s.etykieta || '', typ: i === 0 ? 'krok' : 'etap' });
     });
     punkty.push({ masa: cel, pod: 'norma BMI', typ: 'cel' });
+    return punkty;
+  }
+
+  /* P-RAPORT rata I: oś drogi rysowana z listy punktów, żeby ta sama oś służyła drabince
+     i celowi własnemu. Wszystkie znaczniki mają jeden rozmiar, a tor biegnie przez ich środki
+     (pozycja toru liczona z rozmiaru znacznika w CSS, nie „na oko"). */
+  function pasek(punkty) {
+    if (!punkty || punkty.length < 2) return '';
     var max = punkty[0].masa, min = punkty[punkty.length - 1].masa;
     var rozpietosc = max - min || 1;
     return '<div class="vrp-pasek"><div class="vrp-tor"></div>' + punkty.map(function (p) {
       var lewo = ((max - p.masa) / rozpietosc) * 100;
       return '<div class="vrp-zn vrp-t-' + p.typ + '" style="left:' + lewo.toFixed(2) + '%">'
-        + '<div class="vrp-kr"></div><div class="vrp-kg">' + esc(fmt(p.masa, 1)) + '</div>'
+        + '<div class="vrp-kr"></div><div class="vrp-kg">' + esc(fmt(p.masa, 1)) + '<small> kg</small></div>'
         + '<div class="vrp-pd">' + esc(p.pod) + '</div></div>';
     }).join('') + '</div>';
   }
@@ -199,8 +210,44 @@
       + (zacheta ? '<div class="vrp-krok-z">' + zacheta + '</div>' : '')
       + zrodlo
       + '</div>'
-      + pasek(dane, drab)
+      + pasek(punktyDrabinki(dane, drab))
       + (stopka.length ? '<div class="vrp-stopa">' + stopka.join(' ') + '</div>' : '')
+      + '</section>';
+  }
+
+  /* P-RAPORT rata I: droga do celu własnego (dorosły BMI 23,0–24,9; nastolatek po zakończeniu
+     wzrastania). Drabinka celów tu nie działa (kierunek „w-normie"), więc oś ma dwa punkty:
+     dziś → cel własny. Liczby wyłącznie z `dane` generatora: masa docelowa, kg do redukcji,
+     BMI celu (`masa.docelowaBmi`) i orientacyjny czas (`czasDoNormy`). Raport nic nie liczy. */
+  function sekcjaCelWlasny(dane) {
+    if (!dane || dane.strategia !== 'cel-wlasny') return '';
+    var m = dane.masa || {};
+    var teraz = liczba((dane.pacjent || {}).masaKg);
+    var cel = liczba(m.docelowaKg);
+    var doCelu = liczba(m.doRedukcjiKg);
+    if (teraz == null || cel == null || doCelu == null || !(doCelu > 0) || !(teraz > cel)) return '';
+    var bmiCelu = liczba(m.docelowaBmi);
+    var opisCelu = 'cel własny' + (bmiCelu != null ? ' (BMI ' + fmt(bmiCelu, 1) + ')' : '');
+
+    var stopka = ['Masa docelowa: <b>' + esc(fmt(cel, 1)) + ' kg</b>'
+      + (bmiCelu != null ? ' (BMI ' + esc(fmt(bmiCelu, 1)) + ')' : '')
+      + ' – cel uzgodniony z pacjentem, nie wskazanie medyczne.'];
+    var cz = dane.czasDoNormy;
+    var F = root.VildaDietRecommendations;
+    if (cz && F && typeof F.formatujCzasDojscia === 'function') {
+      var fraza = bezpiecznie(function () { return F.formatujCzasDojscia(cz.tygodnie, cz.miesiaceLabel); }, '');
+      if (fraza) stopka.push('Orientacyjny czas: <b>' + esc(fraza) + '</b>.');
+    }
+
+    return '<section class="vrp-blok vrp-droga">'
+      + '<div class="vrp-nag-blok">TWOJA DROGA</div>'
+      + '<div class="vrp-krok">'
+      + '<div class="vrp-krok-lbl">CEL WŁASNY</div>'
+      + '<div class="vrp-krok-n">−' + esc(fmt(doCelu, 1)) + ' kg</div>'
+      + '<div class="vrp-krok-s">do ' + esc(fmt(cel, 1)) + ' kg &nbsp;|&nbsp; ' + esc(opisCelu) + '</div>'
+      + '</div>'
+      + pasek([{ masa: teraz, pod: 'dziś', typ: 'start' }, { masa: cel, pod: 'cel własny', typ: 'cel' }])
+      + '<div class="vrp-stopa">' + stopka.join(' ') + '</div>'
       + '</section>';
   }
 
@@ -356,7 +403,7 @@
     var ruch = ruchZadeklarowany();
     var kwal = kwalifikacja(dane);
 
-    var tresc = sekcjaDroga(dane, drab)
+    var tresc = (sekcjaDroga(dane, drab) || sekcjaCelWlasny(dane))
       + sekcjaEnergia(dane, ruch)
       + sekcjaDodatki(dane)
       + sekcjaCodzien(dane)
@@ -372,21 +419,39 @@
 
   /* ---------- dopasowanie do jednej strony ---------- */
 
+  /* P-RAPORT rata I: skala działa w obie strony. Gdy treści jest mało (norma, cel własny bez
+     opcji), pismo rośnie krokami do SKALA_MAX, dopóki strona się mieści; gdy jest jej dużo —
+     maleje do SKALA_MIN jak dotąd. Resztę wolnego miejsca rozdaje rozlozLuz(). */
   function dopasuj(strona) {
     if (!strona || !strona.querySelector) return 1;
     var el = strona.querySelector('.vrp');
     if (!el) return 1;
     el.style.setProperty('--s', '1');
+    el.style.setProperty('--sg', '1');
+    el.style.setProperty('--luz', '0px');
     var stopka = strona.querySelector('.diet-pdf-footer');
     var doStopki = stopka ? stopka.getBoundingClientRect().top : null;
+    var granica = function () { return doStopki != null ? doStopki - 14 : strona.getBoundingClientRect().bottom - 80; };
+    var miesci = function () { return el.getBoundingClientRect().bottom <= granica(); };
     var s = 1;
-    for (var i = 0; i < 40; i += 1) {
-      var g = el.getBoundingClientRect();
-      var granica = doStopki != null ? doStopki - 14 : strona.getBoundingClientRect().bottom - 80;
-      if (g.bottom <= granica) break;
-      s = Math.round((s - SKALA_KROK) * 1000) / 1000;
-      if (s < SKALA_MIN) { s = SKALA_MIN; el.style.setProperty('--s', String(s)); break; }
+    var ustaw = function (v) {
+      s = Math.round(v * 1000) / 1000;
       el.style.setProperty('--s', String(s));
+      el.style.setProperty('--sg', String(Math.min(SKALA_MAX_GORA, s)));
+    };
+    var i;
+    if (miesci()) {
+      for (i = 0; i < 40; i += 1) {
+        if (s >= SKALA_MAX) break;
+        ustaw(Math.min(SKALA_MAX, s + SKALA_KROK));
+        if (!miesci()) { ustaw(s - SKALA_KROK); break; }
+      }
+    } else {
+      for (i = 0; i < 40; i += 1) {
+        ustaw(s - SKALA_KROK);
+        if (s <= SKALA_MIN) { ustaw(SKALA_MIN); break; }
+        if (miesci()) break;
+      }
     }
     rozlozLuz(el, strona, doStopki);
     return s;
@@ -403,7 +468,9 @@
     if (!(wolne > 8)) return;
     /* przerw jest o jedną mniej niż elementów w kolumnie, plus po dwa marginesy w bloku */
     var porcji = bloki.length * 2 + (bloki.length + 1);
-    var luz = Math.min(22, Math.floor(wolne / porcji));
+    /* górna granica luzu rośnie ze skalą, żeby proporcje strony zostały te same */
+    var skala = parseFloat(el.style.getPropertyValue('--s')) || 1;
+    var luz = Math.min(Math.round(26 * skala), Math.floor(wolne / porcji));
     if (luz < 1) return;
     el.style.setProperty('--luz', luz + 'px');
   }
@@ -416,21 +483,25 @@
       linia: '#d8e7e8', tlo: '#f6fafa', ziel: '#1e6f43', bursz: '#b5731a'
     };
     var u = function (n) { return 'calc(' + n + 'px * var(--s))'; };
+    var ug = function (n) { return 'calc(' + n + 'px * var(--sg))'; }; /* nagłówek: skala ograniczona */
+    var ZN = 18, TOR = 5;
     return [
-      '.vrp{--s:1;--luz:0px;display:flex;flex-direction:column;gap:calc(' + u(14) + ' + var(--luz));color:' + K.ciemny + ';}',
+      '.vrp{--s:1;--sg:1;--luz:0px;display:flex;flex-direction:column;gap:calc(' + u(14) + ' + var(--luz));color:' + K.ciemny + ';}',
       '.vrp *{box-sizing:border-box;}',
-      '.vrp-gora{display:flex;align-items:stretch;gap:' + u(14) + ';}',
-      '.vrp-chipy{flex:1;display:flex;flex-wrap:wrap;gap:' + u(8) + ';align-content:center;}',
-      '.vrp-chipy span{display:flex;flex-direction:column;border:1px solid ' + K.linia + ';border-radius:' + u(12) + ';padding:' + u(7) + ' ' + u(12) + ';background:#fff;}',
-      '.vrp-chipy i{font-style:normal;font-size:' + u(13) + ';color:' + K.mut + ';letter-spacing:.02em;}',
-      '.vrp-chipy b{font-size:' + u(19) + ';font-weight:750;}',
-      '.vrp-bmi{min-width:' + u(200) + ';display:flex;flex-direction:column;justify-content:center;align-items:flex-end;text-align:right;}',
-      '.vrp-bmi span{font-size:' + u(13) + ';letter-spacing:.14em;color:' + K.mut + ';}',
-      '.vrp-bmi b{font-size:' + u(44) + ';line-height:1;font-weight:800;color:' + K.teal + ';}',
-      '.vrp-bmi i{font-style:normal;font-size:' + u(16) + ';font-weight:650;color:' + K.ciemny + ';}',
-      '.vrp-bmi u{text-decoration:none;font-size:' + u(12.5) + ';color:' + K.mut + ';}',
+      '.vrp-gora{display:flex;align-items:stretch;gap:' + ug(14) + ';}',
+      '.vrp-chipy{flex:1;display:flex;flex-wrap:wrap;gap:' + ug(8) + ';align-content:center;}',
+      '.vrp-chipy span{display:flex;flex-direction:column;border:1px solid ' + K.linia + ';border-radius:' + ug(12) + ';padding:' + ug(7) + ' ' + ug(12) + ';background:#fff;}',
+      '.vrp-chipy i{font-style:normal;font-size:' + ug(13) + ';color:' + K.mut + ';letter-spacing:.02em;}',
+      '.vrp-chipy b{font-size:' + ug(19) + ';font-weight:750;}',
+      /* rata I: blok BMI może się zwęzić (etykieta łamie się na dwie linie), żeby chipy zostały w jednym rzędzie także przy skali nagłówka 1,1 */
+      '.vrp-bmi{flex:0 1 auto;min-width:' + ug(200) + ';max-width:' + ug(270) + ';display:flex;flex-direction:column;justify-content:center;align-items:flex-end;text-align:right;}',
+      '.vrp-bmi span{font-size:' + ug(13) + ';letter-spacing:.14em;color:' + K.mut + ';}',
+      '.vrp-bmi b{font-size:' + ug(44) + ';line-height:1;font-weight:800;color:' + K.teal + ';}',
+      '.vrp-bmi i{font-style:normal;font-size:' + ug(16) + ';font-weight:650;color:' + K.ciemny + ';line-height:1.2;}',
+      '.vrp-bmi u{text-decoration:none;font-size:' + ug(12.5) + ';color:' + K.mut + ';}',
       '.vrp-blok{border:1px solid ' + K.linia + ';border-radius:' + u(18) + ';padding:calc(' + u(14) + ' + var(--luz)) ' + u(16) + ' calc(' + u(12) + ' + var(--luz));background:#fff;}',
-      '.vrp-nag-blok{font-size:' + u(13) + ';letter-spacing:.14em;font-weight:800;color:' + K.teal2 + ';margin-bottom:' + u(10) + ';}',
+      '.vrp-nag-blok{display:flex;align-items:center;gap:' + u(8) + ';font-size:' + u(13) + ';letter-spacing:.14em;font-weight:800;color:' + K.teal2 + ';margin-bottom:' + u(10) + ';}',
+      '.vrp-nag-blok::before{content:"";display:inline-block;width:' + u(5) + ';height:' + u(15) + ';border-radius:999px;background:' + K.teal + ';}',
       '.vrp-droga{background:linear-gradient(180deg,' + K.tlo + ' 0%,#fff 60%);}',
       '.vrp-krok{text-align:center;}',
       '.vrp-krok-lbl{font-size:' + u(12) + ';letter-spacing:.14em;font-weight:800;color:' + K.mut + ';}',
@@ -438,13 +509,15 @@
       '.vrp-krok-s{font-size:' + u(19) + ';font-weight:650;margin-top:' + u(2) + ';}',
       '.vrp-krok-z{font-size:' + u(15.5) + ';color:' + K.mut + ';line-height:1.35;margin-top:' + u(4) + ';}',
       '.vrp-krok .vrp-zrodlo{text-align:center;}',
-      '.vrp-pasek{position:relative;height:' + u(74) + ';margin:' + u(16) + ' ' + u(28) + ' 0;}',
-      '.vrp-tor{position:absolute;left:0;right:0;top:' + u(9) + ';height:' + u(5) + ';border-radius:999px;background:linear-gradient(90deg,' + K.bursz + ',' + K.teal + ');}',
-      '.vrp-zn{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:' + u(150) + ';}',
-      '.vrp-kr{width:' + u(15) + ';height:' + u(15) + ';border-radius:999px;background:#fff;border:' + u(4) + ' solid ' + K.teal + ';margin:0 auto ' + u(5) + ';}',
-      '.vrp-t-start .vrp-kr{border-color:' + K.bursz + ';}',
-      '.vrp-t-cel .vrp-kr{border-color:' + K.ziel + ';width:' + u(19) + ';height:' + u(19) + ';}',
-      '.vrp-kg{font-size:' + u(17) + ';font-weight:800;}',
+      /* oś: znacznik ma ZN px, tor TOR px; tor zaczyna się w (ZN−TOR)/2, więc przechodzi przez środki kółek */
+      '.vrp-pasek{position:relative;height:' + u(80) + ';margin:' + u(18) + ' ' + u(40) + ' 0;}',
+      '.vrp-tor{position:absolute;left:0;right:0;top:' + u((ZN - TOR) / 2) + ';height:' + u(TOR) + ';border-radius:999px;background:linear-gradient(90deg,' + K.bursz + ',' + K.teal + ' 60%,' + K.ziel + ');}',
+      '.vrp-zn{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:' + u(170) + ';}',
+      '.vrp-kr{width:' + u(ZN) + ';height:' + u(ZN) + ';border-radius:999px;background:#fff;border:' + u(4) + ' solid ' + K.teal + ';margin:0 auto ' + u(6) + ';box-shadow:0 0 0 ' + u(3) + ' #fff;}',
+      '.vrp-t-start .vrp-kr{border-color:' + K.bursz + ';background:' + K.bursz + ';}',
+      '.vrp-t-cel .vrp-kr{border-color:' + K.ziel + ';background:' + K.ziel + ';}',
+      '.vrp-kg{font-size:' + u(17) + ';font-weight:800;white-space:nowrap;}',
+      '.vrp-kg small{font-size:' + u(12.5) + ';font-weight:650;color:' + K.mut + ';}',
       '.vrp-pd{font-size:' + u(12.5) + ';color:' + K.mut + ';line-height:1.25;}',
       '.vrp-stopa{margin-top:' + u(8) + ';font-size:' + u(15) + ';color:' + K.ciemny + ';text-align:center;}',
       '.vrp-kafle{display:grid;grid-template-columns:repeat(3,1fr);gap:' + u(12) + ';}',
@@ -488,6 +561,8 @@
   root.VildaRaportPlan = Object.freeze({
     version: WERSJA,
     SKALA_MIN: SKALA_MIN,
+    SKALA_MAX: SKALA_MAX,
+    SKALA_MAX_GORA: SKALA_MAX_GORA,
     html: html,
     css: css,
     dopasuj: dopasuj
