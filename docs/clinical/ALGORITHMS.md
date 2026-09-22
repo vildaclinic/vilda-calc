@@ -5696,7 +5696,7 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
-## Raporty PDF bez CDN: jsPDF i html2canvas w aplikacji (P-RAPORT rata 5, SW 1.1.45, 2026-09-22)
+## Raporty PDF bez CDN: jsPDF i html2canvas w aplikacji (P-RAPORT rata 5, SW 1.1.46, 2026-09-22)
 
 **Decyzja właściciela (2026-09-22):** wariant z lokalnymi bibliotekami (plan zaakceptowany); wariant
 z pdfmake dla samego planu jednostronicowego zostaje opcją na później.
@@ -5710,17 +5710,20 @@ głównego bez sieci każdy przycisk PDF kończył się toastem o braku bibliote
 - `jspdf.umd.min.js` (364 KB) i `html2canvas.min.js` (199 KB) z paczek npm `jspdf@2.5.1` i `html2canvas@1.4.1`
   w katalogu głównym, jak pdfmake. Sumy sha384 obu plików są identyczne z podpisami SRI używanymi dotąd dla kopii
   z cdnjs, czyli pliki są bajt w bajt tym, co przychodziło z sieci. Licencje MIT w `THIRD_PARTY_NOTICES.md`.
-- Ładowarka `vilda_deps.js` v97: najpierw plik lokalny (`/jspdf.umd.min.js?v=1`, `/html2canvas.min.js?v=1`)
+- Ładowarka `vilda_deps.js` v98: najpierw plik lokalny (`jspdf.umd.min.js?v=1`, `html2canvas.min.js?v=1`; ścieżki
+  względne jak w ładowarce pdfmake, bo na GitHub Pages pod `/vilda-calc/` ścieżka od korzenia hosta wypadałaby poza
+  zakres service workera — uwaga z przeglądu PR #410)
   z tym samym atrybutem `integrity` (przeglądarka weryfikuje sumę także dla odpowiedzi z cache service
   workera), CDN tylko jako zapas po błędzie pliku lokalnego; bez żadnego źródła obietnica jest odrzucana
   z komunikatem. Znacznik `data-vilda-pdf-src` (`local`/`cdn`) mówi, skąd biblioteka przyszła.
-- Service worker 1.1.45: oba pliki dopisane na końcu listy wstępnego pobierania (append-only). CSP bez zmian
+- Service worker 1.1.46: oba pliki dopisane na końcu listy wstępnego pobierania (append-only). CSP bez zmian
   (`'self'` już dozwolone). Instalacja PWA rośnie o ok. 563 KB.
 
 **Walidacja.** `tests/unit/biblioteki-pdf-lokalne.test.mjs` (ładowarka lokalnie przed CDN; sha384 plików =
 SRI; precache i noty licencyjne); `tests/e2e/pdf-bez-cdn.spec.mjs` (3 testy: z zablokowanym cdnjs biblioteki
 z aplikacji i raport zaleceń składa prawdziwy PDF; zapas CDN po braku pliku lokalnego; odrzucenie bez źródła).
-`npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_L.
+`npm test` zielony. Pełny zestaw e2e desktop (przed poprawką ścieżek): 666/666 zaliczonych; po poprawce
+`npm test` i `pdf-bez-cdn.spec.mjs` ponownie zielone.
 
 ## Opcja „Alkohol” u dorosłych i zdanie o normach bez skrótów (P-DIETA-NORMY rata K, SW 1.1.44, 2026-09-22)
 

@@ -15,7 +15,7 @@ const czytaj = (p) => fs.readFileSync(path.join(korzen, p), 'utf8');
 const deps = czytaj('vilda_deps.js');
 
 function biblioteka(nazwa) {
-  const re = new RegExp(nazwa + ':\\{test:function\\(\\)\\{[^}]*\\},src:"\\/([^"?]+)\\?v=(\\d+)",fallback:"(https:\\/\\/cdnjs\\.cloudflare\\.com\\/[^"]+)",integrity:"(sha384-[^"]+)"\\}');
+  const re = new RegExp(nazwa + ':\\{test:function\\(\\)\\{[^}]*\\},src:"([^"?/]+)\\?v=(\\d+)",fallback:"(https:\\/\\/cdnjs\\.cloudflare\\.com\\/[^"]+)",integrity:"(sha384-[^"]+)"\\}');
   const m = re.exec(deps);
   expect(m, 'wpis ładowarki dla ' + nazwa).toBeTruthy();
   return { plik: m[1], token: m[1] + '?v=' + m[2], cdn: m[3], sri: m[4] };

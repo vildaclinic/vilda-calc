@@ -93,7 +93,7 @@
     'advanced-growth-intake-sync-final-validation'
   ]);
   const EXPECTED_BROWSER_SCRIPTS = Object.freeze([
-    'vilda_deps.js?v=97',
+    'vilda_deps.js?v=98',
     'vilda_update_hooks.js?v=7',
     'vilda_centile_chart_header.js?v=1',
     'vilda_gh_therapy_resource_audit.js?v=31',
