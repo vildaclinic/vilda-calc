@@ -35,7 +35,7 @@ describe('P-RAPORT rata M: ramka PDF, nagłówki sekcji, zdania planu', () => {
     const wSpanie = plan.match(/class="vrp-nag-blok"><span>/g) || [];
     expect(wszystkie.length).toBeGreaterThanOrEqual(5);
     expect(wSpanie.length).toBe(wszystkie.length);
-    expect(plan).toContain('WERSJA = 5');
+    expect(plan).toMatch(/WERSJA = ([5-9]|\d{2,});/); // rata M wprowadziła 5; kolejne raty podnoszą
   });
 
   it('bez zdania o diecie/PAL pod kaflami; zdanie o tempie u dzieci zostaje', () => {
