@@ -13,6 +13,8 @@ subject to its own license and copyright notice. Full license texts are in the
 | `jszip.min.js` | [JSZip](https://github.com/Stuk/jszip) | 3.10.1 | `MIT` | 2009–2016 Stuart Knightley and JSZip contributors |
 | `lucide.min.js` | [Lucide](https://github.com/lucide-icons/lucide) | — | `ISC` (some icons `MIT`) | Lucide Icons and Contributors; Cole Bemis (Feather-derived icons) |
 | `qrcode.min.js` | [QRCode.js](https://github.com/davidshimjs/qrcodejs) | — | `MIT` | Sangmin Shim (davidshimjs) |
+| `jspdf.umd.min.js` | [jsPDF](https://github.com/parallax/jsPDF) | 2.5.1 | `MIT` | 2010–2021 James Hall; 2015–2021 yWorks GmbH |
+| `html2canvas.min.js` | [html2canvas](https://github.com/niklasvh/html2canvas) | 1.4.1 | `MIT` | 2012 Niklas von Hertzen |
 
 A dash in the *Version* column means the bundled build carries no version
 string; the component was identified from its upstream source.
@@ -55,6 +57,23 @@ Identified from the upstream source as `davidshimjs/qrcodejs`.
 
 License text: [`LICENSES/MIT.txt`](LICENSES/MIT.txt), with
 `Copyright (c) 2012 davidshimjs`.
+
+## jsPDF — MIT
+
+Bundled build `dist/jspdf.umd.min.js` from the npm package `jspdf@2.5.1`; its SHA-384
+matches the Subresource Integrity hash previously used for the cdnjs copy.
+
+License text: [`LICENSES/MIT.txt`](LICENSES/MIT.txt), with
+`Copyright (c) 2010-2021 James Hall, https://github.com/MrRio/jsPDF` and
+`(c) 2015-2021 yWorks GmbH, https://www.yworks.com/`.
+
+## html2canvas — MIT
+
+Bundled build `dist/html2canvas.min.js` from the npm package `html2canvas@1.4.1`; its SHA-384
+matches the Subresource Integrity hash previously used for the cdnjs copy.
+
+License text: [`LICENSES/MIT.txt`](LICENSES/MIT.txt), with
+`Copyright (c) 2012 Niklas von Hertzen`.
 
 ## Lucide — ISC, with MIT for Feather-derived icons
 
