@@ -527,6 +527,11 @@ if(f!=null){var de=Tb&&!tt?Ck:Y("cole",f,null);At.push(xt("Wska\u017Anik Cole'a"
 if(SMc){var MZ=function(v){return(v>0?"+":"\u2212")+St(Math.abs(v),1)};
 if(SMc.cel){var Mr=MZ(SMc.cel.roznica)+" kg do "+(SMc.cel.granica==="dolna"?"dolnej":"g\xF3rnej")+" granicy normy",Mq=SMc.posredni&&Math.abs(SMc.posredni.roznica)>=.05?MZ(SMc.posredni.roznica)+" kg do BMI 30 \u2014 koniec oty\u0142o\u015Bci":null;At.push(xt("Masa cia\u0142a docelowa",St(SMc.cel.masa,1)+" kg",Mr,"neutral",Mq))}
 else At.push(xt("Masa cia\u0142a w normie",St(SMc.zakresNormy.odMasa,1)+"\u2013"+St(SMc.zakresNormy.doMasa,1)+" kg","masa cia\u0142a w tym zakresie","neutral"))}
+/* P-TALIA rata P (wlasciciel 2026-09-22): OBWOD TALII i TALIA/WZROST u doroslego od 19 lat, gdy rekord ma obwod talii.
+   Dwa kafelki z werdyktem kolorem jak BMI. Progi i zrodla NIE SA tu wpisane — czyta je silnik vilda_obwod_talii.js
+   z pliku danych vilda_obwod_talii_dane.js (WHO 2008 populacja europejska; NICE NG246 dla BMI < 35), a wynik niesie
+   nazwe populacji. Dorosly liczony od 19 lat (228 mies.) jak w dietetyce, nie od 18 jak `tt` — decyzja wlasciciela. */
+if(I!=null&&I>=228&&typeof i.VildaObwodTalii=="object"&&i.VildaObwodTalii&&m.waist!=null){var TWc=parseFloat(m.waist);if(isFinite(TWc)&&TWc>0){var TWt,TWh;try{TWt=i.VildaObwodTalii.ocenTalie({obwodCm:TWc,plec:S})}catch{TWt=null}try{TWh=D!=null?i.VildaObwodTalii.ocenWHtR({obwodCm:TWc,wzrostCm:D,bmi:$}):null}catch{TWh=null}TWt&&At.push(xt("Obw\u00f3d talii",St(TWc,1)+" cm",TWt.etykieta+" ("+TWt.opisProgu+")",TWt.kolor,"progi WHO, "+TWt.zrodlo.populacjaOpis));TWh&&At.push(xt("Talia / wzrost",TWh.wartoscLabel,TWh.etykieta,TWh.kolor,TWh.nota))}}
 /* SKALE ODNIESIENIA zamiast kafelka „Siatki centylowe" (wlasciciel 2026-09-20). Doroslemu
    nazwa siatki pediatrycznej nic nie mowila — mowi mu, CZYM mierzymy jedno i drugie. */
 /* Kafelek tlumaczy DWIE skale, wiec ma sens tylko wtedy, gdy jest co nimi zmierzyc. Rekord doroslego bez wzrostu i bez masy dostawal wczesniej zdanie o siatkach wzrostu, ktorych nie ma do czego przylozyc. */

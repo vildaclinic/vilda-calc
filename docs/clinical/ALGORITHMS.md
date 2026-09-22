@@ -5696,6 +5696,48 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Obwód talii i stosunek talii do wzrostu u dorosłego w Statusie Karty pacjenta (P-TALIA rata P, SW 1.1.50, 2026-09-22)
+
+**Decyzje właściciela (2026-09-22):** akceptacja progów i źródeł; dwa kafelki; dorosły od 19 lat; werdykt kolorem jak BMI.
+
+**Problem.** Rekord ma obwód talii i bioder, ale u dorosłego aplikacja liczyła z nich tylko WHR (karta „WHR”,
+próg WHO 0,90/0,85). Sam obwód talii i stosunek talii do wzrostu (WHtR) — u osób z BMI 25–35 lepsze wskaźniki
+ryzyka kardiometabolicznego niż BMI — nie miały żadnej oceny, a Status Karty pacjenta o nich milczał.
+
+**Zmiana (kliniczna: nowe interpretacje).**
+- **Dane:** `vilda_obwod_talii_dane.js` — rejestr zestawów z populacją, wiekiem i cytowaniem; silnik nie ma progów
+  wbudowanych (docs/ARCHITECTURE.md „Kierunek: wielopopulacyjność”). Zestawy:
+  - `WHO_EUROPID` (obwód talii, populacja europejska): mężczyźni ≥ 94 cm podwyższone, ≥ 102 cm znacznie podwyższone
+    ryzyko; kobiety ≥ 80 / ≥ 88 cm. Źródło: World Health Organization, *Waist circumference and waist–hip ratio:
+    report of a WHO expert consultation, Geneva 8–11 December 2008*, WHO 2011. Ograniczenie: progi dla populacji
+    europejskiej; dla populacji azjatyckich WHO/IDF podają niższe (M ≥ 90, K ≥ 80) — osobny zestaw do dopisania.
+  - `NICE_WHTR` (talia/wzrost, niezależnie od pochodzenia): 0,4–0,49 zdrowy rozkład; 0,5–0,59 podwyższone;
+    ≥ 0,6 wysokie ryzyko; klasyfikacja dla BMI < 35, przy BMI ≥ 35 wartość bez werdyktu. Źródło: NICE guideline
+    NG246 *Overweight and obesity management* (2025; klasyfikacja WHtR wprowadzona w aktualizacji CG189, 2022).
+    Piśmiennictwo uzupełniające (według PubMed, metadane zweryfikowane 2026-09-22): Ashwell M, Gibson S, BMJ Open
+    2016;6:e010159, doi:10.1136/bmjopen-2015-010159, PMID 26975935 (granica 0,5 wykrywa „wczesne ryzyko” także przy
+    prawidłowym BMI); Ross R i wsp., Nat Rev Endocrinol 2020;16:177–189, doi:10.1038/s41574-019-0310-7,
+    PMID 32020062 (konsensus IAS/ICCR: obwód talii jako „parametr życiowy” obok BMI).
+- **Silnik:** `vilda_obwod_talii.js` — `ocenTalie({obwodCm, plec, zrodlo})` i `ocenWHtR({obwodCm, wzrostCm, bmi,
+  zrodlo})`, bezpaństwowe, zestaw jako argument (domyślne z rejestru), wynik z nazwą zestawu i populacji; kolory
+  `ok` / `improve` / `alert` / `neutral` jak kafelek BMI.
+- **Status dorosłego (`vilda_auth_ui.js`):** dwa kafelki po „Masa ciała docelowa”, tylko gdy wiek ≥ 19 lat
+  (228 mies.) i rekord ma obwód talii: „Obwód talii” — `96,0 cm` / „podwyższone ryzyko (mężczyźni ≥ 94 cm)” /
+  „progi WHO, populacja europejska”; „Talia / wzrost” — `0,54` / „podwyższone ryzyko (0,5–0,59)” / „wg NICE; ocena
+  dla BMI < 35”; przy BMI ≥ 35: „przy BMI ≥ 35 wskaźnik nie różnicuje ryzyka”, bez koloru.
+- Populacja i wiek: dorośli ≥ 19 lat (jak reszta Statusu i dietetyki; WHO/NICE mówią o ≥ 18). Karta „WHR”,
+  dietetyka, PDF i zapis danych bez zmian.
+
+**Przypadki syntetyczne (wejście → wynik).** M 178 cm, talia 93 → w normie; 94 → podwyższone (improve);
+102 → znacznie podwyższone (alert). K 165 cm, talia 79 → norma; 80 → podwyższone; 88 → znacznie. WHtR 88,2/180 =
+0,49 → zdrowy; 90/180 = 0,50 → podwyższone; 108/180 = 0,60 → wysokie; 120/170 = 0,71 przy BMI 36 → bez werdyktu;
+przy BMI 34,9 → wysokie. Test: `tests/unit/obwod-talii.test.mjs` (progi czytane z pliku danych),
+`tests/e2e/talia-whtr-status.spec.mjs` (prawdziwa Karta pacjenta: cztery pacjentki/pacjenci fikcyjni, kolory kafelków,
+brak kafelków bez talii i poniżej 19 lat). `npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_P.
+
+**Akceptacja kliniczna właściciela:** progi i źródła zaakceptowane 2026-09-22 (przed kodowaniem). Status
+„zwalidowany klinicznie” nie jest nadawany przez agenta.
+
 ## Etykieta pierwszego kroku w planie PDF i jedno brzmienie zdania o korzyści (P-RAPORT rata O, SW 1.1.49, 2026-09-22)
 
 **Zgłoszenie i decyzja właściciela (2026-09-22):** pod „−5,6 kg” stało „do 89,2 kg | próg poprawy: ciśnienie,
@@ -5718,7 +5760,7 @@ zna HDL ani trójglicerydów. Wybrana opcja O1; zdania w tekście ujednolicone.
 **Walidacja.** `tests/unit/rata-o-etykieta-kroku.test.mjs` (źródła), `tests/e2e/rata-o-etykieta-kroku.spec.mjs`
 (prawdziwy generator i szablon planu: dziecko, dorosły BMI 40,2 i 33,1, cel własny; oś; brak „Reinehr”/„doi:”/„|”;
 zdania tekstu). `poprawki-zalecen-rata-j`, `rata-n-prog-posredni`, `raport-rata-i` dopasowane. `npm test` zielony.
-Pełny zestaw e2e desktop: WYNIK_E2E_O.
+Pełny zestaw e2e desktop: 671/671 zaliczonych, 0 niestabilnych.
 
 ## Próg pośredni u dorosłego w tekście zaleceń i poprawki planu PDF (P-DIETA-PROG rata N, SW 1.1.48, 2026-09-22)
 
