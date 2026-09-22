@@ -5696,6 +5696,67 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Raport jednostronicowy: droga do celu własnego, oś, skala; karta zaleceń bez zwijania (P-RAPORT rata I, SW 1.1.42, 2026-09-22)
+
+**Zakres.** Zmiana prezentacji i naprawa UI; żaden wzór, próg, tabela, jednostka ani zaokrąglenie nie
+zmienia się. Wyniki i interpretacje kliniczne są identyczne jak w SW 1.1.41.
+
+**Ustalenia audytu (2026-09-22, na podstawie trzech raportów właściciela i przeglądu kodu).**
+1. Karta „Zalecenia dietetyczne” zwijała się po każdej zmianie formularza: bramka widoczności
+   (`updateDietRecommendationsVisibility`, wołana z `update()`) zaczynała od ukrycia treści karty
+   i nigdy tego nie cofała; odświeżenie wyniku wracało od razu jako „treść ukryta”, a ponowne
+   rozwinięcie czyściło wynik.
+2. Zaznaczenie „Wzrost zakończony” nie odblokowywało celu własnego nastolatka: silnik planu
+   (`energyCustomGoalAssessTeen`) dawał `available:true`, ale listener flagi odświeżał tylko wynik,
+   a stan przycisków karty „Cel” ustawia bramka. Przyciski odblokowywały się dopiero przy kolejnej
+   zmianie formularza, która zwijała kartę (punkt 1).
+3. Wpis masy docelowej w karcie „Cel” dorosłego wyzwalał `update()`, więc karta zwijała się zaraz
+   po wpisie (punkt 1). Sam mechanizm celu własnego (BMI 23,0–24,9, strażniki, dieta lekka) działał
+   zgodnie z ratą C.
+4. Raport PDF dla celu własnego nie miał sekcji „Twoja droga”: sekcja rysowała się wyłącznie
+   z drabinki celów `VildaBmi.drabinkaCelow`, która przy prawidłowym BMI zwraca kierunek „w-normie”.
+5. Znaczniki osi drogi (15 px, cel 19 px) nie leżały na torze o stałym `top:9px`.
+6. Dopasowanie do A4 tylko zmniejszało skalę; przy krótkiej treści zostawało 394–814 px pustej
+   strony (pomiar dla celu własnego z opcjami i bez oraz dla normy bez opcji).
+
+**Generator (`vilda_diet_recommendations.js` v46).**
+- `dane.masa.docelowaBmi` — BMI celu własnego z silnika planu (`customGoal.targetBmi`) dla dorosłego
+  i nastolatka; `null` poza strategią „cel-wlasny”. Raport nadal niczego nie liczy.
+- Bramka zapamiętuje, czy karta była rozwinięta, i przywraca ten stan, gdy moduł pozostaje dostępny;
+  gdy moduł przestaje być dostępny (tryb pacjenta, brak danych, wiek < 2 lat), karta jest zamykana
+  jak dotąd i nie otwiera się sama po powrocie.
+- Zmiana flagi `growthEndedFlag` odświeża bramkę (karta „Cel”), pozostałe flagi — jak dotąd tylko wynik.
+  Flaga zostaje w rozwijanych „opcjach dodatkowych” (decyzja właściciela 2026-09-22).
+
+**Raport (`vilda_raport_plan.js` v5, WERSJA 2).**
+- Sekcja „TWOJA DROGA — CEL WŁASNY” dla `dane.strategia === 'cel-wlasny'`: kg do redukcji
+  (`masa.doRedukcjiKg`), masa docelowa (`masa.docelowaKg`), BMI celu (`masa.docelowaBmi`), oś
+  dziś → cel własny, stopka: „Masa docelowa: X kg (BMI Y) – cel uzgodniony z pacjentem, nie wskazanie
+  medyczne. Orientacyjny czas: …” (czas z `czasDoNormy` przez `formatujCzasDojscia`; brzmienie
+  zatwierdzone przez właściciela 2026-09-22). Drabinka redukcji (nadmiar) bez zmian.
+- Oś: jedna wielkość znaczników (18 px), tor o wysokości 5 px pozycjonowany z tych rozmiarów, więc
+  przechodzi przez środki; start i cel wypełnione kolorem; jednostka „kg” przy wartościach.
+- Skala w obie strony: `SKALA_MAX = 1,4` przy krótkiej treści, nagłówek z chipami i BMI najwyżej
+  `SKALA_MAX_GORA = 1,1` (osobna zmienna `--sg`; blok BMI może się zwęzić do 270 px, żeby chipy
+  zostały w jednym rzędzie); w dół do `SKALA_MIN = 0,74` jak dotąd; luz między blokami rośnie ze skalą
+  (maks. 26 px × skala). Akcent barwny przy nagłówkach bloków.
+
+**Przypadki syntetyczne (dane fikcyjne; liczby z silnika, nie z raportu).**
+- Dorosła 34 lata, 68 kg, 169 cm, cel 63 kg → strategia „cel-wlasny”, `docelowaBmi` = 22,06, droga
+  „−5,0 kg, do 63,0 kg | cel własny (BMI 22,1)”, orientacyjny czas „około 19 tygodni (ok. 4,4 miesiąca)”.
+- Chłopiec 17 lat 2 mies., 76 kg, 176 cm (83,8. centyl, pasmo P75–P85), flaga wzrostu, cel 68 kg →
+  „cel-wlasny”, `docelowaBmi` = 21,95; bez flagi: brak celu i brak drogi.
+- Dorosły 40 lat, 70 kg, 178 cm bez opcji → skala 1,4, `--sg` 1,1, treść nad stopką, chipy w jednym
+  rzędzie; dorosły 47 lat, 112 kg, 167 cm z kompletem opcji → mieści się, skala ≤ 1,4.
+- Dorosły 42 lata, 108 kg → 104 kg / 179 cm, PAL 1,6: karta rozwinięta po każdej zmianie, wynik
+  przeliczony (BMI 34,1 → 32,5).
+
+**Walidacja.** `tests/e2e/raport-rata-i.spec.mjs` (5 testów: droga celu własnego dorosłego i nastolatka,
+kontrole ujemne, geometria osi dla 2/3/4 punktów, dopasowanie skali) i
+`tests/e2e/karta-zalecen-zwijanie.spec.mjs` (3 testy: zmiany formularza, wpis celu, flaga wzrostu);
+`raport-plan.spec`, `cel-wlasny.spec`, `cel-wlasny-nastolatek.spec` zielone. `npm test` zielony.
+Pełny zestaw e2e desktop: WYNIK_E2E_I.
+
 ## Zdania nawyków przy nadmiarze masy ciała (P-DIETA-NAWYKI rata H, SW 1.1.41, 2026-09-21)
 
 **Status:** zmiana kliniczna (nowa treść zaleceń); zdania i rekomendacje zatwierdzone przez właściciela
