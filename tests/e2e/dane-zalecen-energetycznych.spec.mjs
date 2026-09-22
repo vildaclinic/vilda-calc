@@ -89,7 +89,8 @@ test('dorosly z otyloscia: kazda liczba z dane wraca w zdaniach', async ({ page 
 
   // normy zywieniowe: zakres bialka do planowania
   expect(dane.normy).toBeTruthy();
-  expect(text).toContain(norm('białko do planowania ' + Math.round(dane.normy.proteinPlanningGramRange[0]) + '–' + Math.round(dane.normy.proteinPlanningGramRange[1]) + ' g/d'));
+  // rata K: zdanie bez „do planowania” i bez „g/d” — te same gramy z dane.normy
+  expect(text).toContain(norm('białko ' + Math.round(dane.normy.proteinPlanningGramRange[0]) + '–' + Math.round(dane.normy.proteinPlanningGramRange[1]) + ' g ('));
   expect(dane.normy.zrodlo).toContain('Normy żywienia dla populacji Polski');
   // dane niosa liczby, a nie caly model karty norm ze stanem UI
   expect(dane.normy.model).toBeUndefined();

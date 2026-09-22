@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 3;
+  var WERSJA = 4;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -315,8 +315,9 @@
     if (n) {
       var wiersze = [];
       if (n.proteinPlanningGramRange) {
+        /* rata K: bez skrótu RDA na kartce dla pacjenta — trzecia kolumna to pasmo energii, jak przy tłuszczach i węglowodanach */
         wiersze.push(['białko', calk(n.proteinPlanningGramRange[0]) + '–' + calk(n.proteinPlanningGramRange[1]) + ' g/d',
-          liczba(n.proteinRdaG) != null ? 'RDA ' + calk(n.proteinRdaG) + ' g/d' : '']);
+          n.proteinPlanningPercentRange ? calk(n.proteinPlanningPercentRange[0]) + '–' + calk(n.proteinPlanningPercentRange[1]) + ' % energii' : '']);
       }
       if (n.fatGramRange) wiersze.push(['tłuszcz', calk(n.fatGramRange[0]) + '–' + calk(n.fatGramRange[1]) + ' g/d',
         n.fatPercentRange ? calk(n.fatPercentRange[0]) + '–' + calk(n.fatPercentRange[1]) + ' % energii' : '']);
