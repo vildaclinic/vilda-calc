@@ -103,7 +103,7 @@ test('cel własny dorosłego: sekcja „Twoja droga” z liczbami generatora, dw
   expect(t).toContain('TWOJA DROGA');
   expect(t).toContain('CEL WŁASNY');
   expect(t).toContain('−' + przec(d.masa.doRedukcjiKg, 1) + ' kg');
-  expect(t).toContain('do ' + przec(d.masa.docelowaKg, 1) + ' kg | cel własny (BMI ' + przec(d.masa.docelowaBmi, 1) + ')');
+  expect(t).toContain('do ' + przec(d.masa.docelowaKg, 1) + ' kg cel własny (BMI ' + przec(d.masa.docelowaBmi, 1) + ')'); // rata O: bez kreski, opis w osobnej linii
   expect(t).toContain('Masa docelowa: ' + przec(d.masa.docelowaKg, 1) + ' kg (BMI ' + przec(d.masa.docelowaBmi, 1) + ') – cel uzgodniony z pacjentem, nie wskazanie medyczne.');
   expect(w.czas).toBeTruthy();
   expect(t).toContain('Orientacyjny czas: ' + norm(w.czas));

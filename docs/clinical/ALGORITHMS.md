@@ -5696,6 +5696,30 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Etykieta pierwszego kroku w planie PDF i jedno brzmienie zdania o korzyści (P-RAPORT rata O, SW 1.1.49, 2026-09-22)
+
+**Zgłoszenie i decyzja właściciela (2026-09-22):** pod „−5,6 kg” stało „do 89,2 kg | próg poprawy: ciśnienie,
+trójglicerydy, HDL” i linia „Reinehr 2016, doi:10.1210/jc.2016-1885”. Zalecenia to nie praca naukowa, a pacjent nie
+zna HDL ani trójglicerydów. Wybrana opcja O1; zdania w tekście ujednolicone.
+
+**Zmiana (bez wpływu klinicznego — te same progi i liczby, inne słowa).**
+- Plan PDF (`vilda_raport_plan.js`, WERSJA 7): pod masą pierwszego celu osobna, mniejsza linia: dziecko (próg
+  Reinehra) — „pierwszy krok: już ta zmiana poprawia ciśnienie i wyniki badań krwi”; dorosły — „pierwszy krok:
+  wyjście z otyłości II stopnia” (BMI 35) lub „pierwszy krok: koniec otyłości” (BMI 30); bez szczebla — opis celu
+  bez przedrostka; cel własny — „cel własny (BMI …)”. Bez kreski „|”. Bez cytowania na kartce: linia
+  „Reinehr 2016, doi:…” usunięta z planu (źródło progu −0,25 BMI-SDS zostaje w silniku `VildaBmi.drabinkaCelow`,
+  w karcie „Droga do normy BMI” dla lekarza i w tym dokumencie, wpis P-STATUS-DOROSLY / szczeble celów).
+  Na osi pod progiem Reinehra „pierwszy krok” zamiast „próg poprawy”.
+- Tekst zaleceń (`vilda_diet_recommendations.js`): trzy zdania o korzyści (dziecko z raty J, małe dziecko,
+  dorosły z raty N) w jednym brzmieniu: „już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol,
+  trójglicerydy).” Podstawa bez zmian: Reinehr 2016 (dzieci), Wing 2011 (dorośli) — obie prace opisują poprawę
+  ciśnienia, trójglicerydów i HDL; „wyniki badań krwi (cholesterol, trójglicerydy)” jest tego potocznym ujęciem.
+
+**Walidacja.** `tests/unit/rata-o-etykieta-kroku.test.mjs` (źródła), `tests/e2e/rata-o-etykieta-kroku.spec.mjs`
+(prawdziwy generator i szablon planu: dziecko, dorosły BMI 40,2 i 33,1, cel własny; oś; brak „Reinehr”/„doi:”/„|”;
+zdania tekstu). `poprawki-zalecen-rata-j`, `rata-n-prog-posredni`, `raport-rata-i` dopasowane. `npm test` zielony.
+Pełny zestaw e2e desktop: WYNIK_E2E_O.
+
 ## Próg pośredni u dorosłego w tekście zaleceń i poprawki planu PDF (P-DIETA-PROG rata N, SW 1.1.48, 2026-09-22)
 
 **Decyzje właściciela (2026-09-22):** wariant A zdania (z korzyścią zdrowotną); koło ozdobne W2 (bez koła);
@@ -5734,7 +5758,7 @@ wiersz na jasnym tle; style jawne, bo globalne `th,td` aplikacji wchodziły do h
 (prawdziwy generator i host PDF: zdania przy otyłości III i I stopnia zbudowane z `drabinkaCelow`, nadwaga bez
 zmian, `dane.masa.pierwszyCel`; host: brak koła, bmiSDS, znaki, tabela ≤ 66 % i wyśrodkowana, odstępy, zebra,
 przyrost z „+”). `przyrost-zalecen.spec` dopasowany do znaków. `npm test` zielony. Pełny zestaw e2e desktop:
-WYNIK_E2E_N.
+669 zaliczonych, 1 niestabilny (`pwa.spec` offline przy 6 równoległych procesach, zaliczony przy powtórce), 0 błędów.
 
 ## Plan PDF: nagłówki sekcji, ramka strony i zdania planu (P-RAPORT rata M, SW 1.1.47, 2026-09-22)
 
