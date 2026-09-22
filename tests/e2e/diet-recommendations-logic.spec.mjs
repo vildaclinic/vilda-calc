@@ -344,6 +344,8 @@ test('DIET-PAL-TARGET-BMI: mediana Palczewskiej liczona przez BMI jak OLAF', asy
     window.ensureDietRecommendationsElements();
     const flag = (id, on) => { const el = document.getElementById(id); if (el) el.checked = on; };
     flag('reduceToggle', true); flag('stabilizationToggle', false); flag('growthEndedFlag', false);
+    // rata J: zdanie o przeciętnej masie rówieśnika (mediana) pojawia się tylko z opcji „Masa rówieśnika”
+    flag('peerMassFlag', true);
     const out = window.generateDietRecommendations();
     const text = out && out.textOutput ? out.textOutput : '';
     const bmi50 = typeof window.getPalCentile === 'function' ? window.getPalCentile('M', 120, 50, 'BMI') : null;

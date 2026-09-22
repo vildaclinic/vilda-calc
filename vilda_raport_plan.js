@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 2;
+  var WERSJA = 3;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -335,7 +335,10 @@
     if (p && liczba(p.litry) != null) {
       kol.push('<div class="vrp-dod vrp-dod-maly"><h4>Płyny</h4>'
         + '<div class="vrp-duza">' + esc(String(p.litry).replace('.', ',')) + ' l dziennie</div>'
-        + '<p>łącznie z wodą zawartą w pożywieniu; najlepiej woda i napoje niesłodzone</p></div>');
+        /* rata J: generator oddaje też pasmo dla napojów (70–80 % normy) — kartka je cytuje, nie liczy */
+        + (liczba(p.napojeOdL) != null && liczba(p.napojeDoL) != null
+          ? '<p>licząc wodę z jedzenia; w napojach ok. ' + esc(fmt(p.napojeOdL, 1)) + '–' + esc(fmt(p.napojeDoL, 1)) + ' l, najlepiej woda i napoje niesłodzone</p></div>'
+          : '<p>łącznie z wodą zawartą w pożywieniu; najlepiej woda i napoje niesłodzone</p></div>'));
     }
     if (w && w.std) {
       kol.push('<div class="vrp-dod vrp-dod-maly"><h4>Witamina D</h4>'

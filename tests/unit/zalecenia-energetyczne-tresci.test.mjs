@@ -47,6 +47,13 @@ describe('Płyny wg norm polskich (AI, łącznie z wodą z pożywienia) i format
     expect(wl(16, 'F')).toBe(2);
     expect(wl(17, 'M')).toBe(2.5);
   });
+  it('rata J: pasmo dla napojów — format do 0,1 l (70–80 % normy: 2,35 → 1,6–1,9; 1,25 → 0,9–1,0)', () => {
+    const f1 = helper('dietFormatLitres1');
+    expect(typeof f1).toBe('function');
+    expect(f1(2.35 * 0.7)).toBe('1,6'); expect(f1(2.35 * 0.8)).toBe('1,9');
+    expect(f1(1.25 * 0.7)).toBe('0,9'); expect(f1(1.25 * 0.8)).toBe('1,0');
+    expect(f1(1.75 * 0.7)).toBe('1,2'); expect(f1(1.75 * 0.8)).toBe('1,4');
+  });
   it('format: przecinek dziesiętny, bez zbędnego zera na końcu, ale „2,0" zamiast „2"', () => {
     expect(fl(1.25)).toBe('1,25');
     expect(fl(1.6)).toBe('1,6');

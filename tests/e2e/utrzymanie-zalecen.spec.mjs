@@ -165,14 +165,17 @@ test('dziecko 5–10 lat w normie: talerz w spokojnej atmosferze, bez płatków,
   expect(zl(maly, 'ruch')).toContain('180 minut');
 });
 
-test('kontrole ujemne: nadmiar, górna norma i niedowaga bez zdań normy; alkohol tylko u dorosłego w normie', async ({ page }) => {
+test('kontrole ujemne: nadmiar, górna norma i niedowaga bez zdań normy; alkohol u dorosłego w normie i przy nadmiarze (rata J), nie przy niedowadze', async ({ page }) => {
   test.setTimeout(180_000);
   await otworz(page);
   const otyly = await policz(page, { age: 42, sex: 'M', h: 178, w: 108 });
   expect(otyly.strategia).toBe('reduction');
   expect(Object.keys(otyly.zdania).sort()).toEqual(['kontrola', 'ruch', 'talerz']);
-  expect(zl(otyly, 'talerz')).not.toMatch(ALKOHOL);
-  expect(norm(otyly.text)).not.toMatch(/ryzyko nowotworów/u);
+  // P-DIETA-POPRAWKI rata J (2026-09-22): osobne zdanie o alkoholu także przy nadmiarze — dokładnie raz,
+  // a wyliczanka talerza bez słowa „alkohol” (nie dubluje treści)
+  expect((otyly.zdania.talerz || []).map(norm).filter((z) => ALKOHOL.test(z)).length).toBe(1);
+  expect(norm(otyly.zdania.talerz[0])).not.toMatch(/alkohol/u);
+  expect(norm(otyly.text)).toMatch(/ryzyko nowotworów/u);
 
   const gornaNorma = await policz(page, { age: 35, sex: 'F', h: 164, w: 66 });
   expect(gornaNorma.strategia).toBe('utrzymanie');

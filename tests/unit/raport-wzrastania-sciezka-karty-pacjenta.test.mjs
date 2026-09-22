@@ -54,7 +54,8 @@ describe('Raport wzrastania — jedno źródło dla obu dróg', () => {
     const i = src.indexOf('async function generatePatientSelectedPdfPackage(');
     const cialo = src.slice(i, i + 1400);
     expect(cialo).toMatch(/i\.dodatkowe/);
-    expect(cialo).toMatch(/dod\.forEach\(w=>patientReportDownloadBlob\(w\.blob,w\.filename\)\)/);
+    // rata J: oba pliki idą jednym wywołaniem (na iOS z ekranu głównego — jeden arkusz udostępniania)
+    expect(cialo).toMatch(/patientReportDeliverFiles\(\[\{blob:i\.blob,filename:i\.filename\}\]\.concat\(dod\.map\(w=>\(\{blob:w\.blob,filename:w\.filename\}\)\)\)\)/);
     expect(cialo).toContain('Wygenerowano dwa pliki');
   });
 
