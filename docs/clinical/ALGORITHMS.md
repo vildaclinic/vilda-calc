@@ -5696,6 +5696,74 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## „Raport po wizycie”: nagłówek z faktów zamiast ogólników, karta energii bez noty, odstęp przed % (P-RAPORT rata R, SW 1.1.52, 2026-09-22)
+
+**Zgłoszenie i decyzje właściciela (2026-09-22).** W nagłówku raportu dziecka z otyłością pojawiło się zdanie
+„Równocześnie dodatkowej oceny wymaga jeszcze jeden parametr z podsumowania.” Przegląd wszystkich gałęzi nagłówka
+(analiza statyczna kodu + 1152 fikcyjne scenariusze na prawdziwej stronie + celowane próby; 120 różnych zestawów zdań)
+wykazał: nagłówek składał się z PREFIKSÓW linii podsumowania profesjonalnego, a każda linia bez znanej grupy
+(proporcja masy do wysokości, obwód głowy, klatki, talii, bioder) drukowała ogólnik; u pacjentki tym „parametrem” była
+„Proporcja masy do wysokości: 96. centyl” — ta sama informacja, co BMI i wskaźnik Cole’a. Inne zdania puste
+informacyjnie: ciśnienie dziecka bez kierunku i wartości (identyczne dla 130/50 i 78/40), ciśnienie dorosłego
+w doklejce bez klasy, „rozkład tkanki tłuszczowej wymaga oceny”, jedno zdanie o wzroście dla trzech sytuacji, odznaki
+„Wynik nieprawidłowy”/„Wymaga omówienia”, brak kroku masy u dziecka z niskim wzrostem, „wyjście z otyłości II stopnia”
+przy BMI ≥ 40, „0,0 kg mniej” na granicy, krok redukcji u niemowlęcia, pasmo 18–19 lat z etykietami dorosłymi
+w dziecięcym tytule, wpisane a ignorowane ciśnienie < 3 lat. Decyzje: (1) najcięższy wynik w tytule; (2) krok masy
+także u dziecka z niskim wzrostem; (3) krok masy od 2 lat, poniżej zdanie o wolniejszym przyroście; (4) nagłówek
+dorosły od 18 lat; (5) akceptacja zdań „co dalej” przy ciśnieniu i tętnie dorosłego; (6) zdanie „Ciśnienie tętnicze
+poniżej 3. roku życia wymaga oceny przez lekarza.”; (7) karta energii bez noty.
+
+**Zmiana (kliniczna: inne zdania i inny dobór tytułu w dokumencie dla pacjenta).**
+- **Nowy moduł `vilda_raport_naglowek.js`** (`window.VildaRaportNaglowek.zbuduj(fakty)`, czytelne źródło): nagłówek
+  składany z FAKTÓW, nie z tekstu linii. Fakty zbiera `patientReportZbierzFaktyNaglowka` w `vilda_patient_report.js`
+  z klasyfikatorów produkcyjnych: silnik BMI (`VildaBmi.ocen`, `kategoriaCole`, `drabinkaCelow`), `VildaMasa.kategoria`,
+  ocena BMI dorosłego (`patientReportGetAdultBmiAssessment`, progi jak Status), ciśnienie dziecka (pozycje karty
+  „Ciśnienie, tętno i oddechy” tego samego raportu: > 90. centyl „podwyższone”, ≥ 95. centyl „wysokie”, < 10. centyl
+  „niskie”; centyle z `bpModuleApi.computePediatricBp`), ciśnienie i tętno dorosłego (`adultVitalsApi.classifyBloodPressure`
+  / `classifyHeartRate`, klasy ESC/AHA), talia (`interpretWHR`: dorosły WHR > progu WHO = otyłość brzuszna; dziecko
+  centyl talii ≥ 85/≥ 95), obwód głowy i klatki (`headCircPercentile`, `chestCircPercentile`), tempo wzrastania
+  (`VildaTempoWzrastania.formatuj(advancedGrowthData.tempo)`), MPH (`hSDS − mpSDS`, tryb profesjonalny). Linia bez
+  klasyfikatora (np. proporcja masy do wysokości) nie trafia do nagłówka.
+- **Reguły:** każdy kandydat ma oś, ciężkość (1 = ostrzeżenie, 2 = alarm, 3 = ciśnienie ≥ 180/120), odznakę, tytuł, zdanie
+  główne i zdanie „Dodatkowo …”. Tytuł = najcięższy; remis: niski wzrost → masa → wysoki wzrost → ciśnienie → tętno →
+  talia → tempo → MPH → obwód głowy → klatki. Najwyżej dwa zdania „Dodatkowo …”, bez powtórki tej samej osi
+  (waga/BMI/Cole = jedna oś). Kolor = ciężkość najcięższego. Brak kandydatów → „Najważniejsze wyniki mieszczą się…”.
+- **Krok masy** z tej samej drabinki, co plan PDF i rata Q; także przy niskim wzroście („Dodatkowo masa ciała i BMI są
+  wyraźnie powyżej … Pierwszy krok …”); < 2 lat: „U małych dzieci nie stosuje się odchudzania; celem jest, aby masa
+  ciała rosła wolniej niż wzrost.”; różnica < 0,5 kg: „Masa ciała jest na granicy normy…”. Dorosły z niedowagą: „Do dolnej
+  granicy normy (BMI 18,5) brakuje ok. X kg.” **K1 u źródła:** w `vilda_bmi.js` (`drabinkaCelow`, v7) etykieta szczebla BMI 35
+  zależy od stanu wyjściowego — przy BMI ≥ 40 „wyjście z otyłości III stopnia” (dotąd zawsze „II stopnia”); zmiana
+  brzmienia, nie progów; dziedziczą ją nagłówek, karta masy, plan PDF i zdanie A generatora zaleceń.
+- **Dorosły od 18 lat** w nagłówku (jak silnik BMI); reszta raportu (karty, karta energii) bez zmian (19 lat w PDF).
+- Ciśnienie wpisane u dziecka < 3 lat: „Ciśnienie tętnicze poniżej 3. roku życia wymaga oceny przez lekarza.”
+- Dawny nagłówek (`patientReportBuildHeadline` i pomocnicze) zostaje jako zapas, gdy modułu nie ma.
+- **Karta „Zapotrzebowanie energetyczne”:** odznaka słowami („mała aktywność” zamiast „PAL 1,4”), bez noty; podstawa
+  białka w wierszu: „0,92 g/kg × 30 kg (masa referencyjna) ≈ 28 g/d”.
+- **Wskaźnik Cole’a:** „149,1 %” z twardą spacją (karta raportu i linia podsumowania, `vilda_summary_cards.js`);
+  na komputerze właściciela znak „%” nachodził na cyfrę.
+
+**Przypadki syntetyczne (wejście → wynik, prawdziwy kod).** Dziewczynka 9 l. 3 m., 52,6 kg / 146,2 cm, proporcja masy do
+wysokości 96 c → „Otyłość / Masa ciała i BMI są obecnie wyraźnie powyżej typowych wartości dla wieku. / Pierwszy krok
+to ok. 50,4 kg (koniec otyłości), czyli około 2,2 kg mniej.” — bez zdania o „jeszcze jednym parametrze”. Mężczyzna 47 l.,
+BMI 24,5, RR 165/100 → „Nadciśnienie / Ciśnienie tętnicze odpowiada nadciśnieniu: 165/100 mm Hg. / Rozpoznanie wymaga
+potwierdzenia … Dodatkowo BMI (24,5) zbliża się do górnej granicy normy.” Mężczyzna 47 l., BMI 42, RR 185/125, tętno 108,
+talia 120 → „Pilna kontrola / … bardzo wysokie: 185/125 mm Hg. / Taki wynik wymaga pilnej kontroli lekarskiej. Dodatkowo
+BMI 42,0 wskazuje na otyłość III stopnia. Pierwszy krok … (wyjście z otyłości III stopnia) … Dodatkowo obwód talii
+wskazuje na otyłość brzuszną: 120,0 cm (WHR 1,09).” Chłopiec 9 l., 123,9 cm (< 3 c), 41,5 kg → „Niski wzrost / Wzrost jest
+wyraźnie niski jak na wiek: 123,9 cm, poniżej 3. centyla. / Dodatkowo masa ciała i BMI są wyraźnie powyżej … Pierwszy krok
+to ok. 38,0 kg …”. Chłopiec 1,5 r., 13,1 kg / 82,3 cm → „U małych dzieci nie stosuje się odchudzania…”. Chłopiec 18,5 r.,
+95 kg / 175 cm → „Otyłość I stopnia / BMI wskazuje na otyłość I stopnia.” Chłopiec 2 l. 11 m. z RR 125/85 → „Ciśnienie
+tętnicze poniżej 3. roku życia wymaga oceny przez lekarza.” Chłopiec 9 l., 31 kg / 136,3 cm, RR 130/50 → „Ciśnienie wysokie /
+Ciśnienie tętnicze jest wysokie: 130/50 mm Hg. / Ciśnienie skurczowe powyżej 97. centyla …”; RR 78/40 → „Ciśnienie
+niskie …”. Chłopiec 1,5 r. z obwodem głowy 43 cm → „Obwód głowy jest mały jak na wiek: 43,0 cm, poniżej 3. centyla.”
+Testy: `tests/unit/raport-naglowek.test.mjs` (moduł na fixture faktów, strażnik: żadnego „Równocześnie” ani „jeszcze jeden
+parametr” w źródle), `tests/e2e/raport-wizyta-rata-r.spec.mjs` (prawdziwa strona). `npm test` zielony. Pełny zestaw e2e
+desktop: 687 zaliczonych, 0 niestabilnych, 1 błąd — `bmi-jedna-liczba.spec` przypinał „149,1%” bez spacji; po
+poprawce oczekiwania (twarda lub zwykła spacja) 3/3, całość zielona. Unit 3046/3046.
+
+**Akceptacja kliniczna właściciela:** decyzje 1–7 i brzmienia zdań zaakceptowane 2026-09-22 (przed kodowaniem). Status
+„zwalidowany klinicznie” nie jest nadawany przez agenta.
+
 ## „Raport po wizycie”: zapotrzebowanie energetyczne z generatora zaleceń, odniesienia masy, ton i data pomiaru (P-RAPORT rata Q, SW 1.1.51, 2026-09-22)
 
 **Audyt i decyzje właściciela (2026-09-22).** Audyt raportu dla dziecka i dorosłego (sześć fikcyjnych scenariuszy,

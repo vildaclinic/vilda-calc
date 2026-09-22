@@ -39,7 +39,7 @@ test.describe('P-SZCZEBLE — Droga do normy BMI', () => {
     expect(r.jest).toBe(true);
     expect(r.tekst, 'cel bez zmian').toContain('−43,0');
     expect(r.ile, 'dwa szczeble').toBe(2);
-    expect(r.tekst).toContain('Po drodze: −14,8 kg → BMI 35 — wyjście z otyłości II stopnia');
+    expect(r.tekst).toContain('Po drodze: −14,8 kg → BMI 35 — wyjście z otyłości III stopnia'); // rata R (K1): etykieta wg stanu wyjsciowego
     expect(r.tekst).toContain('Po drodze: −28,7 kg → BMI 30 — koniec otyłości');
     expect(r.tekst.indexOf('BMI 35'), 'bliższy szczebel pierwszy')
       .toBeLessThan(r.tekst.indexOf('BMI 30'));
