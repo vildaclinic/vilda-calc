@@ -5761,7 +5761,7 @@ pakiet z dodatkowym plikiem wzrastania idzie jednym arkuszem. Pomocnik oddaje dr
 **Walidacja.** `tests/e2e/poprawki-zalecen-rata-j.spec.mjs` (6 testów: flagi i podpowiedź dorosłego,
 alkohol, szczebel u nastolatka i dziecka z opcją rówieśnika, nawodnienie z kafelkiem raportu, zapis PDF
 z symulowanym iOS i Web Share), zaktualizowane `zdania-rol-zalecen.spec` i `zalecenia-energetyczne-tresci.spec`;
-strażnik punktów (`punkty-zalecen.spec`) zielony. `npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_J.
+strażnik punktów (`punkty-zalecen.spec`) zielony. `npm test` zielony. Pełny zestaw e2e desktop (6 workerów, po dopasowaniu asercji): 658 zielonych, 2 pominięte, 1 chwiejny (`pwa.spec` „strona główna offline” — przekroczenie 60 s przy obciążeniu, zielony przy powtórce), 0 błędów. CI GitHub na `0e19a5fc`: zielone po jednym powtórzeniu odłamka 3/3 (test tożsamości pacjenta padł na przekroczeniach czasu przy identycznym kodzie produkcyjnym jak w zielonym przebiegu poprzedniego commitu).
 
 ## Raport jednostronicowy: droga do celu własnego, oś, skala; karta zaleceń bez zwijania (P-RAPORT rata I, SW 1.1.42, 2026-09-22)
 
