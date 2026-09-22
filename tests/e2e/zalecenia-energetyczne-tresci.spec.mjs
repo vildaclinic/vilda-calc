@@ -65,7 +65,7 @@ test('3-latka z otyłością: aktywność ≥ 180 min rozłożona w ciągu dnia 
   expect(r.text).toContain('w wieku 1–3 lat 600 IU dziennie, przy otyłości dawka podwojona – 1200 IU dziennie');
   expect(r.text).toContain('Dawki powyżej 2000 IU dziennie');
   expect(r.text).not.toContain('4000 IU');
-  expect(r.text).toContain('około 1,25 l dziennie (łącznie z wodą zawartą w pożywieniu)');
+  expect(r.text).toContain('około 1,25 l dziennie, licząc też wodę z jedzenia. Około jednej piątej tej ilości dają posiłki (zupy, owoce, warzywa, nabiał), więc w napojach potrzeba ok. 0,9–1,0 l dziennie');
   expect(r.text).not.toContain('30 ml');
   expect(r.text).toContain('wymaga konsultacji dietetyka lub endokrynologa dziecięcego');
   expect(r.text).not.toContain('powinno skonsultować się');
@@ -84,7 +84,7 @@ test('14-latek z nadwagą (bez otyłości): witamina D 1000–2000 IU bez podwoj
   expect(r.text).toContain('w wieku 11–18 lat 1000–2000 IU dziennie (polskie wytyczne 2023)');
   expect(r.text).not.toContain('dawka podwojona');
   expect(r.text).toContain('Dawki powyżej 4000 IU dziennie');
-  expect(r.text).toContain('około 2,35 l dziennie (łącznie z wodą zawartą w pożywieniu)');
+  expect(r.text).toContain('około 2,35 l dziennie, licząc też wodę z jedzenia. Około jednej piątej tej ilości dają posiłki (zupy, owoce, warzywa, nabiał), więc w napojach potrzeba ok. 1,6–1,9 l dziennie');
   expect(r.text).toContain('(ok. 300 kcal każda)');
   expect(r.text).toContain('wsparcie trenera personalnego');
   expect(r.text).toContain(`BMI 27,5 kg/m², centyl ok. ${pctS} dla wieku i płci, z-score ${r.zS} – nadwaga (85.–97. centyl).`);

@@ -63,7 +63,7 @@ test('dorosly z otyloscia: trzy role cytuja zdania z tekstu', async ({ page }) =
   rolePokrywajaTekst(w);
 
   expect(norm(w.zdania.ruch[0])).toContain('150–300 minut tygodniowo');
-  expect(norm(w.zdania.ruch[0])).toContain('treningu oporowego');
+  expect(norm(w.zdania.ruch[0])).toContain('ćwiczeń wzmacniających mięśnie');
   expect(norm(w.zdania.kontrola[0])).toContain('monitorowanie masy ciała raz w tygodniu');
   expect(norm(w.zdania.talerz[0])).toContain('Jadłospis');
 

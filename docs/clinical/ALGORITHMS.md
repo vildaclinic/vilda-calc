@@ -5696,6 +5696,72 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Siedem poprawek karty „Zalecenia dietetyczne” i zapis PDF na iOS (P-DIETA-POPRAWKI rata J, SW 1.1.43, 2026-09-22)
+
+**Decyzje właściciela (2026-09-22):** punkty 1, 2, 7 techniczne; ruch wariant A; nawodnienie wariant A;
+alkohol osobno i cele pośrednie u dziecka zaakceptowane; brzmienie „do której dochodzi się stopniowo,
+etapami”; flaga „Wzrost zakończony” zostaje w opcjach dodatkowych.
+
+**1. Podpowiedź o stabilizacji u dzieci i znaczek ℹ.** Tekst w karcie „Strategia” był statyczny, a znaczek
+sterowała logika dziecka. U dorosłego oba są ukryte (`vildaDietPodpowiedzDziecka`), u dziecka jak dotąd.
+
+**2. Flagi niedostępne u dorosłego** (wit. D, płyny, wzrost zakończony, masa rówieśnika). Ukrywanie
+inline nie działało, bo styl `.diet-option-check` ma `display:grid !important`; zostawała wyszarzona,
+a po zaznaczeniu u dziecka — fioletowa flaga. Teraz atrybut `hidden` z własną regułą `!important`;
+po powrocie do dziecka flagi wracają ze swoim stanem.
+
+**3. Ruch dorosłego przy nadmiarze (klucz `d-ruch-nadmiar`), wariant A:** „Zalecana jest aktywność
+fizyczna o łącznym czasie 150–300 minut tygodniowo, rozłożona na większość dni, w tym 2–3 sesje ćwiczeń
+wzmacniających mięśnie. Pomaga też więcej zwykłego ruchu w ciągu dnia: schody zamiast windy, spacer
+zamiast krótkiej jazdy autem, przerwy od siedzenia.” Punkty raportu cytują zdanie. Liczby bez zmian
+(150–300 min, 2–3 sesje — dotychczasowe źródła zalecenia).
+
+**4. Alkohol u dorosłego.** Osobne zdanie („Alkohol jest kaloryczny, ale przede wszystkim szkodliwy…”)
+pada teraz także przy nadmiarze (rola talerz), a z wyliczanek talerza przy nadmiarze i przy utrzymaniu
+z ryzykiem talii znika słowo „alkohol”, żeby nie dublować treści. Punkty raportu odpowiednio.
+
+**5. Akapit o masie dziecka.** Zamiast od razu odległości od średniej rówieśnika akapit podaje pierwszy
+szczebel drabinki celów silnika BMI (`VildaBmi.drabinkaCelow`, szczebel Reinehr 2016: −0,25 BMI-SDS,
+doi:10.1210/jc.2016-1885 — ta sama drabinka, którą rysuje raport jednostronicowy). Zdanie o rówieśniku
+jest osobnym akapitem z nowej opcji dodatkowej „Masa rówieśnika” (`peerMassFlag`, tylko u dziecka,
+domyślnie wyłączona). Brzmienia:
+- nastolatek, redukcja: „Obecna masa ciała wynosi X kg. Pierwszy cel to ok. S kg, czyli około R kg mniej;
+  już taka zmiana poprawia ciśnienie, trójglicerydy i HDL. Górna granica normy dla wieku i wzrostu
+  odpowiada masie ok. I kg, do której dochodzi się stopniowo, etapami.”
+- młodsze dziecko, redukcja: „Waga dziecka: X kg. Pierwszy cel to ok. S kg, czyli około R kg mniej; już
+  taka zmiana poprawia ciśnienie i wyniki lipidów. Aby masa ciała znalazła się w górnej granicy normy
+  dla wieku i wzrostu, powinna wynosić ok. I kg.”
+- stabilizacja (oba pasma): dotychczasowe zdanie bez rówieśnika.
+- bez szczebla (silnik go nie daje albo wypada poza przedział [górna norma, obecna masa]): dotychczasowe
+  zdanie bez rówieśnika.
+- opcja „Masa rówieśnika”: dotychczasowe zdania o przeciętnej masie rówieśnika (nastolatek / dziecko).
+Generator odkłada `pierwszyCel {masaKg, doRedukcjiKg, klucz}` w zbiorniku; liczby wyłącznie z silnika.
+
+**6. Nawodnienie, wariant A.** Norma AI (Normy 2024) nadal łącznie z wodą z pożywienia; zdanie dodaje
+pasmo dla napojów: pożywienie dostarcza ok. 20–30 % wody (EFSA 2010, Scientific Opinion on Dietary
+Reference Values for water, doi:10.2903/j.efsa.2010.1459; według PubMed przegląd Popkin, D'Anci,
+Rosenberg 2010, Nutr Rev 68:439–458, doi:10.1111/j.1753-4887.2010.00304.x), więc napoje = 70–80 % AI,
+zaokrąglone do 0,1 l (`DIET_WODA_Z_POZYWIENIA = {od: 0,2; do: 0,3}`). Brzmienie: „…wynosi około 2,35 l
+dziennie, licząc też wodę z jedzenia. Około jednej piątej tej ilości dają posiłki (zupy, owoce, warzywa,
+nabiał), więc w napojach potrzeba ok. 1,6–1,9 l dziennie, najlepiej wody i napojów niesłodzonych.”
+`dane.plyny` niesie `napojeOdL`/`napojeDoL`; kafel płynów na kartce cytuje pasmo. Przypadki: 14 lat M →
+2,35 l → 1,6–1,9 l; 3 lata K → 1,25 l → 0,9–1,0 l; 8 lat M → 1,75 l → 1,2–1,4 l.
+
+**7. PDF na iOS z ekranu głównego (PWA).** Zapis szedł przez `<a download>`, który iOS w trybie standalone
+ignoruje — toast „wygenerowano”, pliku brak. `patientReportDownloadBlob` (raport zaleceń, pakiet
+„Raport pacjenta”, moduł obwodów) korzysta teraz z `patientReportDeliverFiles`: na iOS z ekranu głównego
+arkusz udostępniania (`navigator.share` z plikiem, jak w wydruku postępów), poza nim pobranie jak dotąd;
+pakiet z dodatkowym plikiem wzrastania idzie jednym arkuszem. Pomocnik oddaje drogę
+(`pobierz | udostepnij | anulowane | brak`), a toasty mówią, co się stało.
+
+**Wpływ kliniczny.** Zmiana brzmień zaleceń (3, 4, 5, 6) i prezentacji; nowy współczynnik tylko w punkcie 6
+(udział napojów 70–80 % AI, źródła wyżej). Wzory energii, progi BMI, drabinka celów i dawki bez zmian.
+
+**Walidacja.** `tests/e2e/poprawki-zalecen-rata-j.spec.mjs` (6 testów: flagi i podpowiedź dorosłego,
+alkohol, szczebel u nastolatka i dziecka z opcją rówieśnika, nawodnienie z kafelkiem raportu, zapis PDF
+z symulowanym iOS i Web Share), zaktualizowane `zdania-rol-zalecen.spec` i `zalecenia-energetyczne-tresci.spec`;
+strażnik punktów (`punkty-zalecen.spec`) zielony. `npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_J.
+
 ## Raport jednostronicowy: droga do celu własnego, oś, skala; karta zaleceń bez zwijania (P-RAPORT rata I, SW 1.1.42, 2026-09-22)
 
 **Zakres.** Zmiana prezentacji i naprawa UI; żaden wzór, próg, tabela, jednostka ani zaokrąglenie nie

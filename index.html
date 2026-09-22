@@ -87,7 +87,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=19" rel="stylesheet">
-<link href="style.css?v=74" rel="stylesheet">
+<link href="style.css?v=75" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 <link href="vilda_chrome.css?v=36" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=69" rel="stylesheet">
@@ -286,7 +286,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_puberty_profile.js?v=2"></script>
 <script defer src="vilda_growth_card_c.js?v=26"></script>
 <script defer src="vilda_sds_wzrostu.js?v=4"></script>
-<script defer src="vilda_bmi.js?v=6"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=5"></script>
+<script defer src="vilda_bmi.js?v=6"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=6"></script>
 <script defer src="vilda_tempo_wzrastania.js?v=1"></script>
 <script defer src="vilda_trajectory_analysis.js?v=32"></script>
 <script defer src="vilda_prediction_drift.js?v=1"></script>
@@ -1346,7 +1346,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
                   <button type="button" data-diet-strategy-choice="reduction" class="is-active">Redukcja masy</button>
                   <button type="button" data-diet-strategy-choice="stabilization">Stabilizacja masy</button>
                 </div>
-                <p class="diet-control-hint">U dzieci stabilizacja masy może być właściwa tylko w wybranych sytuacjach klinicznych.</p>
+                <p class="diet-control-hint" data-diet-strategy-child-hint>U dzieci stabilizacja masy może być właściwa tylko w wybranych sytuacjach klinicznych.</p>
                 <span id="stabilizationInfoIcon" class="info-icon diet-stabilization-info" style="display:none;cursor:pointer;">ℹ</span>
               </div>
 
@@ -1382,6 +1382,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
                 <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="vitDSuppFlag"><span id="vitDSuppLabel">Wit. D</span></label>
                 <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="hydrationFlag"><span id="hydrationLabel">Picie płynów</span></label>
                 <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="journeyFlag"><span id="journeyLabel">Czas do normy masy</span></label>
+                <!-- rata J: osobny akapit o przeciętnej masie rówieśnika, tylko u dziecka, domyślnie wyłączony -->
+                <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="peerMassFlag"><span id="peerMassLabel">Masa rówieśnika</span></label>
               </div>
             </details>
           </div>
@@ -1473,7 +1475,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=74, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=75, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->
@@ -1770,7 +1772,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script defer src="vilda_terms_gate.js?v=1"></script>
-<script src="app.js?v=226" defer></script>
+<script src="app.js?v=227" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport
@@ -1783,8 +1785,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_DIET = 'vilda_diet_recommendations.js?v=46';
-  var SRC_PR = 'vilda_patient_report.js?v=31';
+  var SRC_DIET = 'vilda_diet_recommendations.js?v=47';
+  var SRC_PR = 'vilda_patient_report.js?v=32';
   var started = false;
   function inject(src, onload) {
     var s = document.createElement('script');
