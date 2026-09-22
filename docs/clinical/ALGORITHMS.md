@@ -5696,6 +5696,36 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Opcja „Alkohol” u dorosłych i zdanie o normach bez skrótów (P-DIETA-NORMY rata K, SW 1.1.44, 2026-09-22)
+
+**Decyzje właściciela (2026-09-22):** flaga alkoholu domyślnie zaznaczona; zdanie o normach w brzmieniu wariantu
+pośredniego (poniżej); pasmo napojów z raty J zostaje; kolejność dalszych prac: #69 (PDF bez CDN), #64, #65.
+
+**1. Alkohol jako opcja.** Nowa flaga w „opcjach dodatkowych” — „Alkohol” (`alcoholFlag`), widoczna i czynna tylko
+u dorosłego (u dziecka ukryta jak wit. D po racie J), domyślnie zaznaczona. Zaznaczona → osobne zdanie „Alkohol jest
+kaloryczny, ale przede wszystkim szkodliwy dla zdrowia – zwiększa m.in. ryzyko nowotworów; nie ma bezpiecznej ilości
+spożycia.” (rola talerz) we wszystkich ścieżkach dorosłego, w których padało dotąd (norma, cel własny, nadmiar);
+odznaczona → zdania nie ma. Wyliczanki talerza pozostają bez słowa „alkohol” (rata J). Bez elementu flagi (inne
+strony) generator zachowuje się jak dotąd.
+
+**2. Zdanie o normach żywieniowych.** Dotąd: „Normy żywieniowe dla planu około 2400 kcal/d: białko do planowania
+60–120 g/d (10–20% energii); RDA 63 g/d (EAR 50 g/d); tłuszcz 80–107 g/d (30–40% energii); węglowodany 270–390 g/d
+(45–65% energii).” Teraz: „Przy planie żywieniowym zakładającym około 2400 kcal dziennie zalecane ilości składników
+to: białko 60–120 g (10–20 % energii), tłuszcze 80–107 g (30–40 % energii), węglowodany 270–390 g (45–65 % energii).”
+Przy normie bez planu: „Przy zapotrzebowaniu około N kcal dziennie zalecane ilości składników to: …”. Skróty RDA i EAR
+znikają ze zdania dla pacjenta (zostają w `dane.normy` i w dokumentach dla lekarza); bez pasma planowania białka
+zdanie podaje „białko ok. N g” (RDA). Liczby i źródło (Normy żywienia dla populacji Polski, NIZP PZH–PIB 2024) bez
+zmian. Kafel norm na kartce raportu: trzecia kolumna białka to pasmo energii zamiast „RDA N g/d”.
+
+**Wpływ kliniczny.** Brak zmian liczb, progów i źródeł; zmiana brzmienia i możliwość pominięcia zdania o alkoholu
+decyzją lekarza.
+
+**Walidacja.** `tests/e2e/rata-k-alkohol-normy.spec.mjs` (2 testy: opcja alkoholu u dorosłego z nadmiarem i w normie,
+u dziecka ukryta; zdanie o normach zbudowane z `dane.normy` dla planu i zapotrzebowania, kafel bez RDA); dopasowane
+asercje w `zalecenia-energetyczne-jezyk`, `zalecenia-energetyczne-krytyczne`, `diet-recommendations-logic`,
+`dane-zalecen-energetycznych`, `dieta-dziecko-otylosc`. Zestaw specyfikacji diety (11 plików, 66 testów) zielony.
+`npm test` zielony. Pełny zestaw e2e desktop (6 workerów, po dopasowaniu asercji): 662 zielone, 1 pominięty, 0 błędów, 0 chwiejnych. CI GitHub na `84f962f7` zielone (lint i unit, e2e 1/3–3/3, PWA, CodeQL).
+
 ## Siedem poprawek karty „Zalecenia dietetyczne” i zapis PDF na iOS (P-DIETA-POPRAWKI rata J, SW 1.1.43, 2026-09-22)
 
 **Decyzje właściciela (2026-09-22):** punkty 1, 2, 7 techniczne; ruch wariant A; nawodnienie wariant A;

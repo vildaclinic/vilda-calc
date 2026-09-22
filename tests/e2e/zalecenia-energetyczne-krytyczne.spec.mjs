@@ -69,7 +69,7 @@ test('K1: dorosła z BMI 22,8 — bez planu redukcyjnego, zapotrzebowanie i utrz
   expect(r.text).toContain('BMI wynosi 22,8 i mieści się w zakresie prawidłowym');
   expect(r.text).toContain(`wynosi ok. ${kcal} kcal/dzień; brak wskazań do deficytu energetycznego – celem jest utrzymanie masy ciała`);
   expect(r.text).not.toMatch(/deficytowi energetycznemu|tempu redukcji|Plan zakłada dietę/u);
-  expect(r.text).toContain(`Normy żywieniowe dla zapotrzebowania około ${kcal} kcal/d`);
+  expect(r.text).toContain(`Przy zapotrzebowaniu około ${kcal} kcal dziennie zalecane ilości składników to:`);
   // dorosły z otyłością bez zmian
   const ob = await generate(page, { age: 35, sex: 'M', w: 105, h: 175 });
   expect(ob.diets.length).toBe(3);
@@ -86,7 +86,7 @@ test('K2: 3-latek — flaga „Wzrost zakończony" wyłączona i ignorowana, nar
   expect(r.text).not.toMatch(/Wzrost dziecka jest już zakończony|redukcji masy ciała/u);
   expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
   expect(r.text).toContain(`tj. około ${kcal} kcal dziennie`);
-  expect(r.text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
+  expect(r.text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie zalecane ilości składników to:`);
   expect(r.plan).toContain('Stabilizacja masy ciała');
 });
 
@@ -102,7 +102,7 @@ test('K2b: dziecko z otyłością, jawna redukcja, żadna dieta nie spełnia min
   const kcal = Math.round(r.maint / 100) * 100;
   expect(r.text).toContain('Żadna dieta redukcyjna nie spełnia minimum kalorycznego dla wieku (1000 kcal/dzień), dlatego zalecana jest stabilizacja masy ciała.');
   expect(r.text).toContain(`tj. około ${kcal} kcal dziennie`);
-  expect(r.text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
+  expect(r.text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie zalecane ilości składników to:`);
   // ENERGY-REC-KROTKO2: bez nawiasu z podstawą — narracja podaje samą kaloryczność
   expect(r.text).not.toContain('z korektą na otyłość');
   expect(r.plan).toContain('Brak diety');

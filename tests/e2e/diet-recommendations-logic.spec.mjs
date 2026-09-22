@@ -266,7 +266,7 @@ test('DIET-KCAL-CONSISTENT: narracja i normy podają tę samą kaloryczność pl
   });
   const digits = (s) => Number(String(s).replace(/[^\d]/g, ''));
   const narration = text.match(/wynosi ok\. ([\d\s]+) kcal\/dzień/u);
-  const norms = text.match(/Normy żywieniowe dla planu około ([\d\s]+) kcal\/d/u);
+  const norms = text.match(/Przy planie żywieniowym zakładającym około ([\d\s\u00A0\u202F]+) kcal dziennie/u);
   expect(narration).not.toBeNull();
   expect(norms).not.toBeNull();
   const narrationKcal = digits(narration[1]);

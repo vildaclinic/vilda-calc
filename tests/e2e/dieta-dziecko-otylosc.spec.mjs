@@ -113,9 +113,9 @@ test('12–18 lat, narracja redukcyjna: kaloryczność od masy aktualnej z korek
   expect(text).not.toContain('pomniejszone o deficyt dobrany do bezpiecznego tempa');
   expect(text).not.toMatch(/kcal dziennie \(zapotrzebowanie/u);
   expect(text).toContain('wynosi około 379 kcal');
-  expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
+  expect(text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie`);
   // ENERGY-REC-KROTKO2: zdanie o normach bez nawiasu z podstawą (podstawę podaje karta planu)
-  expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d:`);
+  expect(text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie zalecane ilości składników to:`);
   expect(text).not.toContain('z korektą na otyłość');
   expect(text).not.toContain('Przeliczenie wykonano');
   // czas do granicy normy = wspólna symulacja wzrastania (jak karta planu), nie liniowe kg/tempo
@@ -152,7 +152,7 @@ test('6–11 lat przy BMI < 99c: tylko lekka −126 kcal (0,5 kg/mies.), ostrze�
   expect(text).toContain(`tj. około ${kcal} kcal dziennie.`);
   expect(text).not.toMatch(/przy PAL \d/u);
   expect(text).not.toContain('Hofsteenge');
-  expect(text).toContain(`Normy żywieniowe dla planu około ${kcal} kcal/d`);
+  expect(text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie`);
   expect(text).not.toContain('z korektą na otyłość');
   expect(text).not.toMatch(/Taki plan daje deficyt|wynosi około \d+ kcal, co przekłada/u);
   // jawna redukcja: dieta lekka −130 kcal, 0,1 kg/tydz.
@@ -185,6 +185,7 @@ test('dziecko z BMI < 85c: karta planu ukryta, brak diet, normy „dla zapotrzeb
   expect(r.planVisible).toBe(false);
   const text = await recommend(page, { strategy: null, diet: 'light' });
   expect(text).toContain('mieści się w granicach normy');
-  expect(text).toMatch(/Normy żywieniowe dla zapotrzebowania około \d+ kcal\/d/u);
-  expect(text).not.toContain('dla planu około');
+  // rata K: brzmienie bez skrótów; „zapotrzebowanie” zamiast „planu”
+  expect(text).toMatch(/Przy zapotrzebowaniu około \d+ kcal dziennie zalecane ilości składników to:/u);
+  expect(text).not.toContain('planie żywieniowym zakładającym');
 });
