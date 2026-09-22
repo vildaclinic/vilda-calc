@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.44';
+const SW_VERSION = '1.1.45';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1137,6 +1137,7 @@ const CORE_SHELL_URLS = [
   '/vilda_deps.js?v=94',
   '/vilda_deps.js?v=95',
   '/vilda_deps.js?v=96',
+  '/vilda_deps.js?v=97',
   '/vilda_update_hooks.js',
   '/vilda_update_hooks.js?v=7',
   '/vilda_centile_chart_header.js',
@@ -1507,7 +1508,9 @@ const CORE_SHELL_URLS = [
   '/vilda_pro_ui.js',
   '/vilda_pro_ui.js?v=1',
   '/vilda_pro_ui.js?v=2',
-  '/vilda_pro_ui.js?v=3'
+  '/vilda_pro_ui.js?v=3',
+  '/jspdf.umd.min.js?v=1',
+  '/html2canvas.min.js?v=1'
 ];
 
 // Dodatkowe strony i zasoby próbujemy dociągnąć w tle podczas instalacji,

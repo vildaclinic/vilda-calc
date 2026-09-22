@@ -68,6 +68,8 @@ export default defineConfig([
       'lucide.min.js',
       'pdfmake.min.js',
       'pdfmake_vfs_fonts.js',
+      'jspdf.umd.min.js',
+      'html2canvas.min.js',
       'qrcode.min.js'
     ]
   },
