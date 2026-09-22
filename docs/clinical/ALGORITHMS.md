@@ -5724,7 +5724,7 @@ decyzją lekarza.
 u dziecka ukryta; zdanie o normach zbudowane z `dane.normy` dla planu i zapotrzebowania, kafel bez RDA); dopasowane
 asercje w `zalecenia-energetyczne-jezyk`, `zalecenia-energetyczne-krytyczne`, `diet-recommendations-logic`,
 `dane-zalecen-energetycznych`, `dieta-dziecko-otylosc`. Zestaw specyfikacji diety (11 plików, 66 testów) zielony.
-`npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_K.
+`npm test` zielony. Pełny zestaw e2e desktop (6 workerów, po dopasowaniu asercji): 662 zielone, 1 pominięty, 0 błędów, 0 chwiejnych. CI GitHub na `84f962f7` zielone (lint i unit, e2e 1/3–3/3, PWA, CodeQL).
 
 ## Siedem poprawek karty „Zalecenia dietetyczne” i zapis PDF na iOS (P-DIETA-POPRAWKI rata J, SW 1.1.43, 2026-09-22)
 
