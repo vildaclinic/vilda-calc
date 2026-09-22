@@ -77,8 +77,12 @@ test('dorosly z otyloscia: kazda liczba z dane wraca w zdaniach', async ({ page 
   expect(dane.strategia).toBe('reduction');
 
   // masa: cel i roznica sa tymi samymi liczbami, ktore widzi pacjent
-  expect(text).toContain(norm('o ok. ' + przecinek(dane.masa.doRedukcjiKg, 1) + ' kg'));
-  expect(text).toContain(norm('wynosi ok. ' + przecinek(dane.masa.docelowaKg, 1) + ' kg'));
+  // rata N: przy otylosci zdanie mowi o pierwszym szczeblu drabinki (dane.masa.pierwszyCel) i o gornej granicy normy
+  expect(dane.masa.pierwszyCel).toBeTruthy();
+  expect(dane.masa.pierwszyCel.bmi).toBe(30);
+  expect(text).toContain(norm('Pierwszy cel to ok. ' + przecinek(dane.masa.pierwszyCel.masaKg, 1) + ' kg (BMI 30), czyli około ' + przecinek(dane.masa.pierwszyCel.doRedukcjiKg, 1) + ' kg mniej – koniec otyłości'));
+  expect(text).toContain(norm('odpowiada masie ok. ' + przecinek(dane.masa.docelowaKg, 1) + ' kg'));
+  expect(Math.abs(dane.masa.pierwszyCel.masaKg - (dane.masa.docelowaKg + dane.masa.doRedukcjiKg - dane.masa.pierwszyCel.doRedukcjiKg))).toBeLessThan(0.05);
 
   // energia: podaz zaokraglona do 100, deficyt, tempo
   expect(text).toContain(norm('ok. ' + dane.energia.podazZaokrKcal + ' kcal/dzień'));

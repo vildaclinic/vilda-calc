@@ -285,9 +285,9 @@ test('raport pacjenta: nagłówek „przyrost” i kafle nadwyżki; bez planu li
   expect(a.strategia).toBe('przyrost');
   expect(a.naglowek).toBe('ZAPOTRZEBOWANIE ENERGETYCZNE I PRZYROST MASY CIAŁA');
   expect(norm(a.kafle)).toContain('1 780|kcal dziennie|zapotrzebowanie energetyczne');
-  expect(norm(a.kafle)).toContain('300–500|kcal na dobę|nadwyżka energetyczna');
+  expect(norm(a.kafle)).toContain('+300–500|kcal na dobę|nadwyżka energetyczna');
   expect(norm(a.kafle)).toContain('2 100–2 300|kcal dziennie|zalecana podaż energii');
-  expect(norm(a.kafle)).toContain('0,3–0,5|kg tygodniowo|spodziewane tempo przyrostu');
+  expect(norm(a.kafle)).toContain('+0,3–0,5|kg tygodniowo|spodziewane tempo przyrostu');
   expect(a.html).not.toContain('TEMPO REDUKCJI');
   expect(a.html).not.toContain('TWOJA DROGA');
   const z6 = await raport({ age: 28, sex: 'F', h: 168, w: 44 });

@@ -5696,6 +5696,46 @@ i „maksymalne ograniczenie czasu przed ekranem", a **dodatkowo zabrania** star
 
 SW 1.1.27 → **1.1.28**; `vilda_diet_recommendations.js?v=32→33`.
 
+## Próg pośredni u dorosłego w tekście zaleceń i poprawki planu PDF (P-DIETA-PROG rata N, SW 1.1.48, 2026-09-22)
+
+**Decyzje właściciela (2026-09-22):** wariant A zdania (z korzyścią zdrowotną); koło ozdobne W2 (bez koła);
+etykieta „bmiSDS” zamiast „z-score” w bloku BMI planu (jak w karcie „Podsumowanie wyników”); tabela norm W1
+z jasnym tłem co drugiego wiersza; znaki „−”/„+” przy kaflach deficytu/nadwyżki i tempa.
+
+**1. Pierwszy cel u dorosłego z otyłością (zmiana treści, liczby bez zmian).** Dotąd tekst zaleceń u dorosłego
+z BMI 40 mówił tylko o celu końcowym („redukcja o ok. 42,6 kg; masa odpowiadająca BMI 24,9 …”), choć kafelek
+Statusu, karta „Droga do normy BMI” („Po drodze: −14,4 kg → BMI 35”) i plan PDF pokazują szczeble drabinki
+`VildaBmi.drabinkaCelow` (BMI 35 → 30 → 24,9). Teraz zdanie bierze pierwszy szczebel z tej samej drabinki:
+
+> BMI wynosi 40,2 (otyłość III stopnia). Pierwszy cel to ok. 97,6 kg (BMI 35), czyli około 14,4 kg mniej – wyjście
+> z otyłości II stopnia; już taka zmiana poprawia ciśnienie, trójglicerydy i HDL. Górna granica normy (BMI 24,9)
+> odpowiada masie ok. 69,4 kg, do której dochodzi się stopniowo, etapami.
+
+Przy otyłości I stopnia szczebel to BMI 30 („koniec otyłości”). Bez szczebla (nadwaga; cel własny) zostaje
+dotychczasowe zdanie. Populacja: dorośli ≥ 19 lat, progi `PROGI.DOROSLY` silnika BMI (WHO). Źródło zdania
+o korzyści: Wing RR i wsp., *Benefits of modest weight loss in improving cardiovascular risk factors in overweight
+and obese individuals with type 2 diabetes*, Diabetes Care 2011;34(7):1481–1486, doi:10.2337/dc10-2415, PubMed PMID 21593294 (metadane i abstrakt
+zweryfikowane w PubMed 2026-09-22; analiza obserwacyjna Look AHEAD, n = 5145) — utrata
+5–10 % masy poprawia ciśnienie, trójglicerydy i HDL; pierwszy szczebel u dorosłego z otyłością II/III stopnia
+to ok. 8–15 % masy (przy I stopnia 3–9 %; klauzula wynika z tego samego kierunku zależności „im więcej, tym lepiej”
+w tej pracy). Ograniczenie: badanie w cukrzycy typu 2; interpretacja u osób bez cukrzycy przez analogię —
+akceptacja kliniczna właściciela. Nie jest to cel leczenia ani kryterium odpowiedzi, tylko bliższy słupek.
+Syntetyczny przypadek: M, 47 lat, 112 kg, 167 cm → BMI 40,2; szczebel BMI 35 → 97,6 kg (−14,4 kg); norma 69,4 kg.
+Dane: `dane.masa.pierwszyCel = {masaKg, doRedukcjiKg, bmi, klucz, opis}` (dorosły z literału generatora,
+dziecko ze zbiornika raty J — teraz także z `bmi` i `opis`).
+
+**2. Plan PDF (bez wpływu klinicznego).** Bez turkusowego koła w prawym górnym rogu (przecinało blok BMI);
+dolne pomarańczowe zostaje. Blok BMI: „99,0. centyl · bmiSDS +2,32”. Kafle: „−253 kcal na dobę”, „−0,2 kg
+tygodniowo”; przy strategii „przyrost” „+300–500 kcal na dobę”, „+0,3–0,5 kg tygodniowo”; kaloryczność bez znaku.
+Tabela norm, gdy jest sama: 64 % szerokości, wyśrodkowana; komórki z odstępem 5×12 px (skalowanym), co drugi
+wiersz na jasnym tle; style jawne, bo globalne `th,td` aplikacji wchodziły do hosta PDF.
+
+**Walidacja.** `tests/unit/rata-n-prog-posredni.test.mjs` (źródła). `tests/e2e/rata-n-prog-posredni.spec.mjs`
+(prawdziwy generator i host PDF: zdania przy otyłości III i I stopnia zbudowane z `drabinkaCelow`, nadwaga bez
+zmian, `dane.masa.pierwszyCel`; host: brak koła, bmiSDS, znaki, tabela ≤ 66 % i wyśrodkowana, odstępy, zebra,
+przyrost z „+”). `przyrost-zalecen.spec` dopasowany do znaków. `npm test` zielony. Pełny zestaw e2e desktop:
+WYNIK_E2E_N.
+
 ## Plan PDF: nagłówki sekcji, ramka strony i zdania planu (P-RAPORT rata M, SW 1.1.47, 2026-09-22)
 
 **Zgłoszenie właściciela (2026-09-22, PDF-y z PC i Maca, oba Chrome):** w nagłówkach sekcji planu brak polskich
@@ -5732,7 +5772,8 @@ brak zdania o diecie/PAL, brzmienie zdania o ruchu). `tests/e2e/raport-plan-rata
 oknie 1728 px i przewiniętej stronie: brak gołego tekstu w kontenerach flex/grid, nagłówki w span, ramka statyczna
 bez overflow i tła, tytuł teal i nieucięty, chip ≥ 40 px od krawędzi strony; próbka kontrolna: prawdziwy `<header>`
 w tym samym miejscu wciąż dostaje sticky/overflow hidden; zdania planu). `tests/e2e/przyrost-zalecen.spec.mjs`
-dopasowany do span. `npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_M.
+dopasowany do span. `npm test` zielony. Pełny zestaw e2e desktop: 666 zaliczonych, 2 niestabilne (klirens-stage2-stage3, opis-pacjenta-sds-tempa;
+niezwiązane z PDF, zaliczone przy powtórce), 0 błędów.
 
 ## Raporty PDF bez CDN: jsPDF i html2canvas w aplikacji (P-RAPORT rata 5, SW 1.1.46, 2026-09-22)
 

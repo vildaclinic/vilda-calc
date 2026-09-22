@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 5;
+  var WERSJA = 6;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -125,7 +125,8 @@
       var c = liczba(k.klasaBmi.percentile), z = liczba(k.klasaBmi.z);
       var czesci = [];
       if (c != null) czesci.push(fmt(c, 1) + '. centyl');
-      if (z != null) czesci.push('z-score ' + (z < 0 ? '−' : '+') + fmt(Math.abs(z), 2));
+      /* rata N: etykieta jak w karcie „Podsumowanie wyników” — bmiSDS, nie z-score */
+      if (z != null) czesci.push('bmiSDS ' + (z < 0 ? '−' : '+') + fmt(Math.abs(z), 2));
       if (czesci.length) dod = '<u>' + esc(czesci.join(' · ')) + '</u>';
     }
     var opis = k.etykieta || (k.klasaBmi && k.klasaBmi.category) || '';
@@ -260,12 +261,13 @@
     var zakres = function (v) { return Array.isArray(v) && v.length === 2 && liczba(v[0]) != null && liczba(v[1]) != null ? v : null; };
     if (dane.strategia === 'przyrost') {
       var nad = zakres(e.nadwyzkaKcal), pod = zakres(e.podazZakresKcal), tem = zakres(e.tempoZakresKgTydz);
-      if (nad) kafle.push([calk(nad[0]) + '–' + calk(nad[1]), 'kcal na dobę', 'nadwyżka energetyczna']);
+      /* rata N: znak przed liczba — „+” przy nadwyzce/przyroscie, „−” przy deficycie/redukcji; kalorycznosc bez znaku */
+      if (nad) kafle.push(['+' + calk(nad[0]) + '–' + calk(nad[1]), 'kcal na dobę', 'nadwyżka energetyczna']);
       if (pod) kafle.push([calk(pod[0]) + '–' + calk(pod[1]), 'kcal dziennie', 'zalecana podaż energii']);
-      if (tem) kafle.push([fmt(tem[0], 1) + '–' + fmt(tem[1], 1), 'kg tygodniowo', 'spodziewane tempo przyrostu']);
+      if (tem) kafle.push(['+' + fmt(tem[0], 1) + '–' + fmt(tem[1], 1), 'kg tygodniowo', 'spodziewane tempo przyrostu']);
     }
-    if (liczba(e.deficytKcal) != null && e.deficytKcal > 0) kafle.push([calk(e.deficytKcal), 'kcal na dobę', 'deficyt energetyczny']);
-    if (liczba(e.tempoKgTydz) != null && e.tempoKgTydz > 0) kafle.push([fmt(e.tempoKgTydz, 1), 'kg tygodniowo', 'spodziewane tempo redukcji']);
+    if (liczba(e.deficytKcal) != null && e.deficytKcal > 0) kafle.push(['\u2212' + calk(e.deficytKcal), 'kcal na dobę', 'deficyt energetyczny']);
+    if (liczba(e.tempoKgTydz) != null && e.tempoKgTydz > 0) kafle.push(['\u2212' + fmt(e.tempoKgTydz, 1), 'kg tygodniowo', 'spodziewane tempo redukcji']);
     if (!kafle.length) return '';
 
     /* rata M (decyzja właściciela 2026-09-22): bez zdania „Wyliczone dla diety … PAL … Zmiana aktywności
@@ -537,11 +539,15 @@
       '.vrp-podkafle{margin-top:' + u(8) + ';font-size:' + u(14) + ';color:' + K.mut + ';text-align:center;}',
       '.vrp-ruchdek{margin-top:' + u(10) + ';border:1px solid ' + K.linia + ';border-radius:' + u(12) + ';background:' + K.tlo + ';padding:' + u(9) + ' ' + u(12) + ';font-size:' + u(14.5) + ';line-height:1.4;}',
       '.vrp-ruchdek b{color:' + K.teal2 + ';}',
-      '.vrp-dodatki{display:grid;gap:' + u(12) + ';}','.vrp-dod-3{grid-template-columns:1.5fr 1fr 1fr;}','.vrp-dod-2{grid-template-columns:1.5fr 1fr;}','.vrp-dod-1{grid-template-columns:1fr;}',
+      /* rata N: sama tabela norm nie rozciaga sie na cala szerokosc — 64 % strony, wysrodkowana (decyzja wlasciciela 2026-09-22) */
+      '.vrp-dodatki{display:grid;gap:' + u(12) + ';}','.vrp-dod-3{grid-template-columns:1.5fr 1fr 1fr;}','.vrp-dod-2{grid-template-columns:1.5fr 1fr;}','.vrp-dod-1{grid-template-columns:minmax(0,64%);justify-content:center;}',
       '.vrp-dod{border:1px solid ' + K.linia + ';border-radius:' + u(14) + ';padding:' + u(10) + ' ' + u(12) + ';}',
       '.vrp-dod h4{margin:0 0 ' + u(6) + ';font-size:' + u(15) + ';color:' + K.teal2 + ';}',
-      '.vrp-dod table{width:100%;border-collapse:collapse;}',
-      '.vrp-dod td{padding:' + u(2) + ' 0;font-size:' + u(14) + ';}',
+      /* rata N: komorki z odstepem od krawedzi, co drugi wiersz na jasnym tle; style jawne, bo globalne reguly th,td aplikacji (style.css) wchodza do hosta PDF */
+      '.vrp-dod table{width:100%;border-collapse:collapse;border:1px solid ' + K.linia + ';}',
+      '.vrp-dod td{padding:' + u(5) + ' ' + u(12) + ';font-size:' + u(14) + ';border:0;border-bottom:1px solid ' + K.linia + ';background:#fff;text-align:left;}',
+      '.vrp-dod tr:last-child td{border-bottom:0;}',
+      '.vrp-dod tr:nth-child(even) td{background:' + K.tlo + ';}',
       '.vrp-dod td:nth-child(3){text-align:right;color:' + K.mut + ';white-space:nowrap;}',
       '.vrp-duza{font-size:' + u(22) + ';font-weight:800;color:' + K.teal + ';}',
       '.vrp-dod p{margin:' + u(3) + ' 0 0;font-size:' + u(12.5) + ';color:' + K.mut + ';line-height:1.3;}',
