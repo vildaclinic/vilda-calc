@@ -347,7 +347,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_epicrisis_ui.js?v=23"></script>
 <script defer src="vilda_publication_creator.js?v=20"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=90" defer></script>
+<script src="vilda_update_prep.js?v=91" defer></script>
 
 <script defer src="inline_index_01.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -1770,8 +1770,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script defer src="vilda_schowek.js?v=3"></script>
 <script defer src="vilda_raport_naglowek.js?v=2"></script>
 <script defer src="vilda_summary_cards.js?v=48"></script>
-<script defer src="vilda_diet_plan_ui.js?v=23"></script>
-<script defer src="vilda_bmi_journey.js?v=16"></script>
+<script defer src="vilda_diet_plan_ui.js?v=24"></script>
+<script defer src="vilda_bmi_journey.js?v=17"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=1"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
@@ -1790,8 +1790,8 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script>
 (function () {
   'use strict';
-  var SRC_DIET = 'vilda_diet_recommendations.js?v=51';
-  var SRC_PR = 'vilda_patient_report.js?v=35';
+  var SRC_DIET = 'vilda_diet_recommendations.js?v=52';
+  var SRC_PR = 'vilda_patient_report.js?v=36';
   var started = false;
   function inject(src, onload) {
     var s = document.createElement('script');
@@ -1830,7 +1830,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
   });
 })();
 </script>
-<script src="nutrition_norms.js?v=46" defer></script>
+<script src="nutrition_norms.js?v=47" defer></script>
 <!-- PERF-P2e2 cykl 6a (2026-06-07): mikroskładniki (296 KB — największy plik
      toru) ładowane LENIWIE: idle po load LUB pierwsza interakcja. Hook
      after-update rejestruje się przez rejestr (z fallbackiem w samym module),

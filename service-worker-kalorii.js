@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.53';
+const SW_VERSION = '1.1.54';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1347,6 +1347,7 @@ const CORE_SHELL_URLS = [
   '/nutrition_norms.js?v=44',
   '/nutrition_norms.js?v=45',
   '/nutrition_norms.js?v=46',
+  '/nutrition_norms.js?v=47',
   '/nutrition_micros.js',
   '/nutrition_micros.js?v=25',
   '/nutrition_micros.js?v=26',
@@ -1909,6 +1910,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_update_prep.js?v=88',
   '/vilda_update_prep.js?v=89',
   '/vilda_update_prep.js?v=90',
+  '/vilda_update_prep.js?v=91',
   '/custom-fixes.js?v=58',
   '/custom-fixes.js?v=59',
   '/custom-fixes.js?v=60',
@@ -2298,6 +2300,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_report.js?v=33',
   '/vilda_patient_report.js?v=34',
   '/vilda_patient_report.js?v=35',
+  '/vilda_patient_report.js?v=36',
   '/vilda_raport_naglowek.js?v=1',
   '/vilda_raport_naglowek.js?v=2',
   '/vilda_vault.js?v=183',
@@ -2330,6 +2333,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=21',
   '/vilda_diet_plan_ui.js?v=22',
   '/vilda_diet_plan_ui.js?v=23',
+  '/vilda_diet_plan_ui.js?v=24',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -2355,6 +2359,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=49',
   '/vilda_diet_recommendations.js?v=50',
   '/vilda_diet_recommendations.js?v=51',
+  '/vilda_diet_recommendations.js?v=52',
   '/vilda_auth_ui.js?v=432',
   '/vilda_auth_ui.js?v=433',
   '/vilda_auth_ui.js?v=434',
@@ -2426,6 +2431,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_bmi_journey.js?v=14',
   '/vilda_bmi_journey.js?v=15',
   '/vilda_bmi_journey.js?v=16',
+  '/vilda_bmi_journey.js?v=17',
   '/vilda_diet_recommendations.js?v=23',
   '/vilda_diet_recommendations.js?v=24',
   '/vilda_diet_recommendations.js?v=25',
