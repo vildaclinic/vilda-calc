@@ -5733,7 +5733,8 @@ ryzyka kardiometabolicznego niż BMI — nie miały żadnej oceny, a Status Kart
 0,49 → zdrowy; 90/180 = 0,50 → podwyższone; 108/180 = 0,60 → wysokie; 120/170 = 0,71 przy BMI 36 → bez werdyktu;
 przy BMI 34,9 → wysokie. Test: `tests/unit/obwod-talii.test.mjs` (progi czytane z pliku danych),
 `tests/e2e/talia-whtr-status.spec.mjs` (prawdziwa Karta pacjenta: cztery pacjentki/pacjenci fikcyjni, kolory kafelków,
-brak kafelków bez talii i poniżej 19 lat). `npm test` zielony. Pełny zestaw e2e desktop: WYNIK_E2E_P.
+brak kafelków bez talii i poniżej 19 lat). `npm test` zielony. Pełny zestaw e2e desktop: 674 zaliczonych, 1 niestabilny (`pwa.spec` offline przy 6 równoległych procesach,
+zaliczony przy powtórce), 0 błędów.
 
 **Akceptacja kliniczna właściciela:** progi i źródła zaakceptowane 2026-09-22 (przed kodowaniem). Status
 „zwalidowany klinicznie” nie jest nadawany przez agenta.
