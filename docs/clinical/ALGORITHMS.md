@@ -5760,7 +5760,7 @@ obecnej masie: 1882 kcal/d”, białko z 62 kg. Nastolatka 15 l., 40 kg, 165 cm:
 dla 44,7 kg, „Cel: dolna granica normy”. Testy: `tests/unit/raport-wizyta-rata-q.test.mjs` (15 przypadków na
 eksportowanych funkcjach raportu i strażnik źródła), `tests/e2e/raport-wizyta-rata-q.spec.mjs` (6 testów na prawdziwej
 stronie: liczby porównane z generatorem, `energyBuildPlanReductionState` i `VildaBmi` policzonymi w tej samej stronie;
-data z rekordu sejfu; PDF „Raport po wizycie” nadal powstaje). `npm test` zielony. Pełny zestaw e2e desktop: w toku w chwili tego commita — wynik dopisany w kolejnym commicie tej raty.
+data z rekordu sejfu; PDF „Raport po wizycie” nadal powstaje). `npm test` zielony. Pełny zestaw e2e desktop: 680 zaliczonych, 1 niestabilny (`pwa.spec` offline przy 6 równoległych procesach, zaliczony przy powtórce), 0 błędów. Unit 3031/3031 (dwa testy `werdykt-silnik` przekroczyły limit czasu wyłącznie przy równoległym e2e; osobno 36/36).
 
 **Akceptacja kliniczna właściciela:** wariant A i decyzje 1–3 zaakceptowane 2026-09-22 (przed kodowaniem). Status
 „zwalidowany klinicznie” nie jest nadawany przez agenta.
