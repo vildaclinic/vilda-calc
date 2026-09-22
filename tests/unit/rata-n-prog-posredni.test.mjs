@@ -18,7 +18,8 @@ describe('P-DIETA-PROG rata N: próg pośredni u dorosłego i poprawki planu PDF
 
   it('generator: pierwszy szczebel drabinki u dorosłego z otyłością, źródło Wing 2011', () => {
     expect(gen).toContain('dorosly:!0})');
-    expect(gen).toContain('Pierwszy cel to ok. ${ie(szD.masaKg)} (BMI ${M(szD.bmi,0)}), czyli oko\\u0142o ${ie(szD.doRedukcjiKg)} mniej \\u2013 ${szD.opis||""}; ju\\u017C taka zmiana poprawia ci\\u015Bnienie, tr\\xF3jglicerydy i HDL.');
+    // rata O: jedno brzmienie korzyści („wyniki badań krwi (cholesterol, trójglicerydy)”)
+    expect(gen).toContain('Pierwszy cel to ok. ${ie(szD.masaKg)} (BMI ${M(szD.bmi,0)}), czyli oko\\u0142o ${ie(szD.doRedukcjiKg)} mniej \\u2013 ${szD.opis||""}; ju\\u017C taka zmiana poprawia ci\\u015Bnienie i wyniki bada\\u0144 krwi (cholesterol, tr\\xF3jglicerydy).');
     expect(gen).toContain('do kt\\xF3rej dochodzi si\\u0119 stopniowo, etapami.`:`BMI wynosi ${M(y,1)} (${j}). Do uzyskania zakresu prawid\\u0142owego BMI');
     expect(gen).toContain('doi:10.2337/dc10-2415');
     expect(gen).toMatch(/pierwszyCel:\(function\(pc\)\{pc=pc\|\|z\.pierwszyCel;/);
@@ -39,6 +40,6 @@ describe('P-DIETA-PROG rata N: próg pośredni u dorosłego i poprawki planu PDF
     expect(plan).toContain(".vrp-dod-1{grid-template-columns:minmax(0,64%);justify-content:center;}");
     expect(plan).toContain(".vrp-dod tr:nth-child(even) td{background:' + K.tlo + ';}");
     expect(plan).toMatch(/\.vrp-dod td\{padding:' \+ u\(5\) \+ ' ' \+ u\(12\) \+ ';/);
-    expect(plan).toContain('WERSJA = 6');
+    expect(plan).toMatch(/WERSJA = ([6-9]|\d{2,});/); // rata N wprowadziła 6; kolejne raty podnoszą
   });
 });

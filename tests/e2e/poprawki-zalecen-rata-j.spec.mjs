@@ -133,7 +133,7 @@ test('nastolatek z otyłością: pierwszy szczebel drabinki w akapicie o masie; 
   const sz = r.drab.szczebel;
   expect(sz && sz.masa < 88 && sz.masa > r.masa.gornaNormaKg, 'silnik nie dał szczebla między normą a obecną masą').toBe(true);
   const oczek = 'Obecna masa ciała wynosi 88,0 kg. Pierwszy cel to ok. ' + przec(sz.masa, 1) + ' kg, czyli około ' + przec(88 - sz.masa, 1)
-    + ' kg mniej; już taka zmiana poprawia ciśnienie, trójglicerydy i HDL. Górna granica normy dla wieku i wzrostu odpowiada masie ok. '
+    + ' kg mniej; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy). Górna granica normy dla wieku i wzrostu odpowiada masie ok. '
     + przec(r.masa.gornaNormaKg, 1) + ' kg, do której dochodzi się stopniowo, etapami.';
   expect(norm(r.text)).toContain(oczek);
   expect(r.text).not.toContain('Przeciętna masa');
@@ -159,7 +159,7 @@ test('młodsze dziecko: „Waga dziecka” z pierwszym celem, bez rówieśnika; 
   const sz = r.drab && r.drab.szczebel;
   if (sz && sz.masa < 45 && sz.masa > r.masa.gornaNormaKg) {
     expect(t).toContain('Waga dziecka: 45,0 kg. Pierwszy cel to ok. ' + przec(sz.masa, 1) + ' kg, czyli około ' + przec(45 - sz.masa, 1)
-      + ' kg mniej; już taka zmiana poprawia ciśnienie i wyniki lipidów. Aby masa ciała znalazła się w górnej granicy normy dla wieku i wzrostu, powinna wynosić ok. '
+      + ' kg mniej; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy). Aby masa ciała znalazła się w górnej granicy normy dla wieku i wzrostu, powinna wynosić ok. '
       + przec(r.masa.gornaNormaKg, 1) + ' kg.');
   } else {
     expect(t).toContain('Waga dziecka: 45,0 kg. Aby masa ciała znalazła się w górnej granicy normy dla wieku i wzrostu, masa ciała powinna wynosić ok. ' + przec(r.masa.gornaNormaKg, 1) + ' kg');

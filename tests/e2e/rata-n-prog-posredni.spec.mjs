@@ -46,7 +46,7 @@ test('dorosły z otyłością: zdanie o pierwszym celu z drabinki silnika; przy 
   // otyłość III stopnia → pierwszy szczebel BMI 35 (wyjście z otyłości II stopnia)
   const a = await ustaw(page, { age: 47, sex: 'M', w: 112, h: 167 });
   expect(a.szczebel && a.szczebel.bmi).toBe(35);
-  expect(a.tekst).toContain('BMI wynosi 40,2 (otyłość III stopnia). Pierwszy cel to ok. ' + kg(a.szczebel.masa) + ' (BMI 35), czyli około ' + kg(112 - a.szczebel.masa) + ' mniej – wyjście z otyłości II stopnia; już taka zmiana poprawia ciśnienie, trójglicerydy i HDL. Górna granica normy (BMI 24,9) odpowiada masie ok. ' + kg(a.docelowaKg) + ', do której dochodzi się stopniowo, etapami.');
+  expect(a.tekst).toContain('BMI wynosi 40,2 (otyłość III stopnia). Pierwszy cel to ok. ' + kg(a.szczebel.masa) + ' (BMI 35), czyli około ' + kg(112 - a.szczebel.masa) + ' mniej – wyjście z otyłości II stopnia; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy). Górna granica normy (BMI 24,9) odpowiada masie ok. ' + kg(a.docelowaKg) + ', do której dochodzi się stopniowo, etapami.');
   expect(a.tekst).not.toContain('Do uzyskania zakresu prawidłowego BMI');
   expect(a.pierwszyCel).toBeTruthy();
   expect(a.pierwszyCel.bmi).toBe(35);

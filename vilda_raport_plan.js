@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 6;
+  var WERSJA = 7;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -145,7 +145,8 @@
     var punkty = [{ masa: teraz, pod: 'dziś', typ: 'start' }];
     (drab.szczeble || []).forEach(function (s, i) {
       var m = liczba(s.masa);
-      if (m != null && m < teraz && m > cel) punkty.push({ masa: m, pod: krotko(s.opis) || s.etykieta || '', typ: i === 0 ? 'krok' : 'etap' });
+      /* rata O: pod progiem Reinehra „pierwszy krok” — pacjent nie zna „progu poprawy”; pozostałe szczeble opisem silnika */
+      if (m != null && m < teraz && m > cel) punkty.push({ masa: m, pod: s.klucz === 'reinehr' ? 'pierwszy krok' : (krotko(s.opis) || s.etykieta || ''), typ: i === 0 ? 'krok' : 'etap' });
     });
     punkty.push({ masa: cel, pod: 'norma BMI', typ: 'cel' });
     return punkty;
@@ -173,8 +174,15 @@
     var doPierwszego = teraz != null && liczba(pierwszy.masa) != null ? teraz - liczba(pierwszy.masa) : null;
     if (doPierwszego == null || !(doPierwszego > 0)) return '';
 
-    var opisCelu = pierwszy.opis || pierwszy.etykieta || '';
-    var zrodlo = pierwszy.zrodlo ? '<span class="vrp-zrodlo">' + esc(pierwszy.zrodlo) + '</span>' : '';
+    /* rata O (decyzja właściciela 2026-09-22, opcja O1): pod masą pierwszego celu osobna, mniejsza linia
+       prostym językiem — „pierwszy krok: …”; bez kreski „|” i bez cytowania pracy naukowej na kartce dla
+       pacjenta (źródło progu Reinehra zostaje w silniku, karcie lekarza i ALGORITHMS). Gdy szczebli nie ma
+       (pierwszy = cel końcowy), linia niesie opis celu bez przedrostka. */
+    var jestSzczebel = !!(drab.szczeble && drab.szczeble.length);
+    var opisSzczebla = pierwszy.klucz === 'reinehr'
+      ? 'już ta zmiana poprawia ciśnienie i wyniki badań krwi'
+      : (pierwszy.opis || pierwszy.etykieta || '');
+    var podpisKroku = jestSzczebel ? (opisSzczebla ? 'pierwszy krok: ' + opisSzczebla : '') : (pierwszy.opis || pierwszy.etykieta || '');
 
     /* Zdanie zachęty: u dziecka mówimy o wzrastaniu TYLKO wtedy, gdy generator też o nim mówi. */
     var zacheta = '';
@@ -206,10 +214,9 @@
       + '<div class="vrp-krok">'
       + '<div class="vrp-krok-lbl">PIERWSZY CEL</div>'
       + '<div class="vrp-krok-n">−' + esc(fmt(doPierwszego, 1)) + ' kg</div>'
-      + '<div class="vrp-krok-s">do ' + esc(fmt(pierwszy.masa, 1)) + ' kg'
-      + (opisCelu ? ' &nbsp;|&nbsp; ' + esc(opisCelu) : '') + '</div>'
+      + '<div class="vrp-krok-s">do ' + esc(fmt(pierwszy.masa, 1)) + ' kg</div>'
+      + (podpisKroku ? '<div class="vrp-krok-o">' + esc(podpisKroku) + '</div>' : '')
       + (zacheta ? '<div class="vrp-krok-z">' + zacheta + '</div>' : '')
-      + zrodlo
       + '</div>'
       + pasek(punktyDrabinki(dane, drab))
       + (stopka.length ? '<div class="vrp-stopa">' + stopka.join(' ') + '</div>' : '')
@@ -245,7 +252,8 @@
       + '<div class="vrp-krok">'
       + '<div class="vrp-krok-lbl">CEL WŁASNY</div>'
       + '<div class="vrp-krok-n">−' + esc(fmt(doCelu, 1)) + ' kg</div>'
-      + '<div class="vrp-krok-s">do ' + esc(fmt(cel, 1)) + ' kg &nbsp;|&nbsp; ' + esc(opisCelu) + '</div>'
+      + '<div class="vrp-krok-s">do ' + esc(fmt(cel, 1)) + ' kg</div>'
+      + '<div class="vrp-krok-o">' + esc(opisCelu) + '</div>'
       + '</div>'
       + pasek([{ masa: teraz, pod: 'dziś', typ: 'start' }, { masa: cel, pod: 'cel własny', typ: 'cel' }])
       + '<div class="vrp-stopa">' + stopka.join(' ') + '</div>'
@@ -515,8 +523,8 @@
       '.vrp-krok-lbl{font-size:' + u(12) + ';letter-spacing:.14em;font-weight:800;color:' + K.mut + ';}',
       '.vrp-krok-n{font-size:' + u(50) + ';line-height:1.05;font-weight:800;color:' + K.teal + ';}',
       '.vrp-krok-s{font-size:' + u(19) + ';font-weight:650;margin-top:' + u(2) + ';}',
+      '.vrp-krok-o{font-size:' + u(15.5) + ';color:' + K.mut + ';line-height:1.35;margin-top:' + u(3) + ';}',
       '.vrp-krok-z{font-size:' + u(15.5) + ';color:' + K.mut + ';line-height:1.35;margin-top:' + u(4) + ';}',
-      '.vrp-krok .vrp-zrodlo{text-align:center;}',
       /* oś: znacznik ma ZN px, tor TOR px; tor zaczyna się w (ZN−TOR)/2, więc przechodzi przez środki kółek */
       '.vrp-pasek{position:relative;height:' + u(80) + ';margin:' + u(18) + ' ' + u(40) + ' 0;}',
       '.vrp-tor{position:absolute;left:0;right:0;top:' + u((ZN - TOR) / 2) + ';height:' + u(TOR) + ';border-radius:999px;background:linear-gradient(90deg,' + K.bursz + ',' + K.teal + ' 60%,' + K.ziel + ');}',
