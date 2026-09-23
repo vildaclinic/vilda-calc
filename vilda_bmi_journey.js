@@ -390,7 +390,13 @@
      spodziewana masa przy samej diecie i próg (połowa spodziewanego ubytku); przy masie ≥ progu odjąć 100–200 kcal. */
   function kontrolaHtml(ctx, model) {
     if (typeof w.energyKontrolaPlanu !== 'function') return '';
-    var k = w.energyKontrolaPlanu(model.found, { weightKg: ctx.weightKg, floorKcal: lastEngineState && lastEngineState.floorKcal });
+    /* rata W: wiek, płeć, wzrost i flaga „Wzrost zakończony” — przyrost ze wzrastania i odstęp kontroli liczy silnik */
+    var geEl = d.getElementById('growthEndedFlag');
+    var k = w.energyKontrolaPlanu(model.found, {
+      weightKg: ctx.weightKg, floorKcal: lastEngineState && lastEngineState.floorKcal,
+      sex: ctx.sex, ageYears: ctx.ageYears, heightCm: ctx.heightCm,
+      growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
+    });
     if (!k) return '';
     var dzialanie = k.obnizkaMozliwa
       ? 'odejmij od planu ' + k.obnizkaKcal[0] + '\u2013' + k.obnizkaKcal[1] + '\u202Fkcal (do '
@@ -398,7 +404,7 @@
         + '\u202Fkcal), bo realne spożycie jest wyższe, niż liczymy.'
       : 'plan do omówienia na kontroli — kaloryczność jest już przy dolnej granicy.';
     return '<div class="bmi-journey-kontrola"><b class="bmi-journey-kontrolah">Kontrola za ' + k.tygodnie + ' tygodni (ok. ' + esc(k.terminTekst) + '):</b> '
-      + 'spodziewana masa <b>ok. ' + fmt(k.masaSpodziewanaKg, 1) + '\u202Fkg</b>. Jeśli będzie <b>' + fmt(k.progKg, 1) + '\u202Fkg lub więcej</b>, '
+      + 'spodziewana masa <b>ok. ' + fmt(k.masaSpodziewanaKg, 1) + '\u202Fkg</b>' + (k.wzrastanie ? ' (z uwzględnieniem wzrastania)' : '') + '. Jeśli będzie <b>' + fmt(k.progKg, 1) + '\u202Fkg lub więcej</b>, '
       + dzialanie + '</div>';
   }
 

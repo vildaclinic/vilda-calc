@@ -55,22 +55,27 @@ test.describe('P-DIETA rata V — REE Molnára, górna granica dnia, kontrola za
     await otworz(page);
     const r = await stan(page, CHLOPIEC);
     expect(r.energia).toEqual({ podaz: 2700, gorna: true, celTee: 2731, ree: 'MOLNAR_1995' });
-    expect(r.kontrola).toMatchObject({ tygodnie: 6, masaDzisKg: 102.5, masaSpodziewanaKg: 100.4, progKg: 101.5, gornaKcal: 2700, obnizkaKcal: [100, 200], obnizkaMozliwa: true, podazPoObnizceKcal: [2500, 2600] });
+    expect(r.kontrola).toMatchObject({ tygodnie: 6, masaDzisKg: 102.5, gornaKcal: 2700, obnizkaKcal: [100, 200], obnizkaMozliwa: true, podazPoObnizceKcal: [2500, 2600], wzrastanie: true, wzrostZakonczony: false });
+    // rata W: przyrost ze wzrastania (własna prognoza wzrostu × mediana BMI) w spodziewanej masie i w progu
+    const K = r.kontrola, r1 = (x) => Math.round(x * 10) / 10, f1 = (x) => x.toFixed(1).replace('.', ',');
+    expect(K.przyrostKg).toBeGreaterThan(0.1); expect(K.przyrostKg).toBeLessThan(0.5);
+    expect(K.masaSpodziewanaKg).toBe(r1(102.5 - K.ubytekDietyKg + K.przyrostKg));
+    expect(K.progKg).toBe(r1(102.5 + K.przyrostKg - K.ubytekDietyKg / 2));
     // karta drogi: hero „≤ 2700” i ramka kontroli pod nim
     expect(r.journey).toMatch(/≤ ?2 ?700 kcal\/dzień ?górna granica dnia — dieta umiarkowana \(nie cel do dobicia\)/);
-    expect(r.kontrolaBox).toMatch(new RegExp(`^Kontrola za 6 tygodni \\(ok\\. ${RE_TERMIN}\\): spodziewana masa ok\\. 100,4 kg\\. Jeśli będzie 101,5 kg lub więcej, odejmij od planu 100–200 kcal \\(do 2 ?500–2 ?600 kcal\\), bo realne spożycie jest wyższe, niż liczymy\\.$`));
+    expect(r.kontrolaBox).toMatch(new RegExp(`^Kontrola za 6 tygodni \\(ok\\. ${RE_TERMIN}\\): spodziewana masa ok\\. ${f1(K.masaSpodziewanaKg)} kg \\(z uwzględnieniem wzrastania\\)\\. Jeśli będzie ${f1(K.progKg)} kg lub więcej, odejmij od planu 100–200 kcal \\(do 2 ?500–2 ?600 kcal\\), bo realne spożycie jest wyższe, niż liczymy\\.$`));
     // zalecenia
     expect(r.tekst).toContain('Dieta umiarkowana: nie więcej niż 2700 kcal dziennie — to górna granica dnia, nie cel do dobicia.');
-    expect(r.tekst).toMatch(new RegExp(`Kontrola za 6 tygodni \\(ok\\. ${RE_TERMIN}\\): spodziewana masa ciała ok\\. 100,4 kg\\. Jeśli masa będzie wynosić 101,5 kg lub więcej, realne spożycie jest wyższe, niż liczymy — należy odjąć od planu 100–200 kcal \\(do 2500–2600 kcal dziennie\\)\\.`));
+    expect(r.tekst).toMatch(new RegExp(`Kontrola za 6 tygodni \\(ok\\. ${RE_TERMIN}\\): spodziewana masa ciała ok\\. ${f1(K.masaSpodziewanaKg)} kg \\(z uwzględnieniem wzrastania\\)\\. Jeśli masa będzie wynosić ${f1(K.progKg)} kg lub więcej, realne spożycie jest wyższe, niż liczymy — należy odjąć od planu 100–200 kcal \\(do 2500–2600 kcal dziennie\\)\\.`));
     // plan PDF: kafel „≤”, sekcja kontroli po kaloryczności, trzeci kafel wg uwagi właściciela
     expect(r.kafle[0]).toBe('≤ 2 700 | kcal dziennie | górna granica dnia, nie cel');
     const iK = r.sekcje.indexOf('KONTROLA ZA 6 TYGODNI');
     expect(iK).toBe(r.sekcje.indexOf('KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA') + 1);
     expect(r.kafle).toContain(`${r.kontrola.terminKrotki} | ${r.kontrola.terminRok} | termin kontroli (ok. 6 tygodni)`);
-    expect(r.kafle).toContain('ok. 100,4 kg | spodziewana masa | przy tej diecie (dziś 102,5 kg)');
-    expect(r.kafle).toContain('≥ 101,5 kg | odejmij od planu | 100–200 kcal');
+    expect(r.kafle).toContain(`ok. ${f1(K.masaSpodziewanaKg)} kg | spodziewana masa | z dietą i wzrastaniem (dziś 102,5 kg)`);
+    expect(r.kafle).toContain(`≥ ${f1(K.progKg)} kg | odejmij od planu | 100–200 kcal`);
     expect(r.kafle.join(' ')).not.toContain('realne spożycie');
-    expect(r.podkafle).toContain('Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci.');
+    expect(r.podkafle).toContain('Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci. Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.');
     // raport po wizycie: jedna liczba dla masy docelowej (z planu) i „≤” przy planie
     expect(r.raport.rows).toContain('Dla masy prawidłowej (82,1 kg): 2731 kcal/d');
     expect(r.raport.rows).toContain('Plan: dieta umiarkowana: ≤ 2700 kcal/d');
@@ -84,7 +89,10 @@ test.describe('P-DIETA rata V — REE Molnára, górna granica dnia, kontrola za
     expect(r.energia.ree).toBe('MOLNAR_1995');
     expect(r.energia.podaz).toBe(1750);
     expect(r.tekst).toContain('Dieta umiarkowana: nie więcej niż 1750 kcal dziennie');
-    expect(r.kontrola.progKg).toBe(69);
+    // rata W: umiarkowana (1,5 kg/mies.) — 6 tygodni, próg z przyrostem ze wzrastania
+    expect(r.kontrola.tygodnie).toBe(6);
+    expect(r.kontrola.wzrastanie).toBe(true);
+    expect(r.kontrola.progKg).toBe(Math.round((70 + r.kontrola.przyrostKg - r.kontrola.ubytekDietyKg / 2) * 10) / 10);
   });
 
   test('RV-3: nadwaga 13 l (Henry, bez korekty) — górna granica i kontrola też są; dorosły — bez zmian', async ({ page }) => {
@@ -109,7 +117,7 @@ test.describe('P-DIETA rata V — REE Molnára, górna granica dnia, kontrola za
     await otworz(page, 'docpro.html');
     const r = await stan(page, CHLOPIEC);
     expect(r.energia).toEqual({ podaz: 2700, gorna: true, celTee: 2731, ree: 'MOLNAR_1995' });
-    expect(r.kafle).toContain('≥ 101,5 kg | odejmij od planu | 100–200 kcal');
+    expect(r.kafle).toContain(`≥ ${r.kontrola.progKg.toFixed(1).replace('.', ',')} kg | odejmij od planu | 100–200 kcal`);
   });
 
   test('RV-5: widok mobilny 390 px — ramka kontroli w karcie drogi bez poziomego przewijania', async ({ page }) => {

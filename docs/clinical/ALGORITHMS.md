@@ -5778,6 +5778,67 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Kontrola planu u rosnącego dziecka: przyrost ze wzrastania w spodziewanej masie, 12 tygodni przy tempie < 1 kg/mies., zdanie o ważeniu; bez tych reguł przy „Wzrost zakończony” (P-DIETA rata W, SW 1.1.59, 2026-09-23)
+
+**Problem (analiza 2026-09-23).** Kontrola z raty V liczyła spodziewaną masę jako „dziś − ubytek z diety”, jakby dziecko nie rosło.
+Tymczasem samo wzrastanie dodaje dziecku 6–11 lat ok. 0,3–0,5 kg w 6 tygodni (mediana przyrostu masy wg siatki OLAF), a dieta
+lekka 0,5 kg/mies. odejmuje w tym czasie 0,69 kg przy progu 0,3 kg pod masą wyjściową. Dziecko w 100 % zgodne z planem stało
+na progu albo je przekraczało (symulacja na silniku: dz. 8 l., 45 kg — zapas −0,03 kg; chł. 10 l., 55 kg — −0,08 kg; dz. 11 l.,
+62 kg — −0,19 kg; chł. 13 l., 80 kg na diecie lekkiej — 0,05 kg). Dodatkowo połowa efektu diety po 6 tygodniach (0,34 kg) jest
+rzędu masy ubrania. W PubMed nie znaleziono pracy z liczbą dobowych wahań masy u dzieci — dlatego reguła opiera się na
+wzrastaniu (policzalnym) i na dłuższym odstępie, a nie na założonej wielkości szumu.
+
+**Decyzje właściciela (2026-09-23).** (1) Przyrost ze wzrastania z własnej prognozy wzrostu dziecka × mediana BMI dla wieku;
+(2) kontrola po 12 tygodniach przy tempie diety 0,5 kg/mies.; (3) zdanie o ważeniu w planie PDF; (4) przy zaznaczonym
+„Wzrost zakończony” reguły (1)–(2) nie obowiązują.
+
+**Reguła (silnik `energyKontrolaPlanu`, dane `ENERGY_KONTROLA_PLANU`).**
+- Wejście: wiersz diety, masa, podłoga, **płeć, wiek, wzrost, `growthEnded`** (flaga „Wzrost zakończony”, liczona jak w reszcie
+  aplikacji: zaznaczona i wiek ≥ 10 lat).
+- Dziecko „rośnie”, gdy: jest wiek < wieku dorosłości silnika, podano płeć i wzrost, flaga nie jest zaznaczona, a prognoza
+  `energyChildGrowthOutlook` nie jest „praktycznie zakończona” i daje > 0 cm/rok.
+- Odstęp: **12 tygodni**, gdy dziecko rośnie i tempo diety < 1 kg/mies. (`tygodnieWolne`, `tempoWolneKgMies`); inaczej 6.
+- Przyrost ze wzrastania (tylko gdy rośnie) = mediana BMI dla wieku (`energyChildMedianBmi`, ta sama siatka i populacja co
+  klasa BMI) × ((wzrost + roczne tempo × tygodnie × 7/365,25)² − wzrost²). To masa „należna” wzrastaniu przy medianie BMI,
+  bez przyrostu tkanki tłuszczowej właściwego rówieśnikom.
+- Spodziewana masa = dziś − ubytek z diety + przyrost; **próg = dziś + przyrost − ½ ubytku**; obie do 0,1 kg. Obniżka
+  100–200 kcal i podłoga jak w racie V.
+- Wynik niesie `ubytekDietyKg`, `przyrostKg`, `wzrastanie`, `wzrostZakonczony`.
+- Teksty: „(z uwzględnieniem wzrastania)” po spodziewanej masie w karcie drogi i zaleceniach; w planie PDF drugi kafel
+  „z dietą i wzrastaniem (dziś …)” albo „przy tej diecie (dziś …)”; pod kaflami zawsze „Ważenie: rano, po toalecie, w bieliźnie,
+  na tej samej wadze.”
+
+**Przypadki syntetyczne (silnik w teście jednostkowym; w aplikacji tempo wzrastania bierze się z mediany wzrostu, więc liczby
+mogą różnić się o 0,1 kg).**
+
+| pacjent (fikcyjny) | dieta, tempo | tyg. | ubytek | przyrost | spodziewana | próg | rata V |
+|---|---|---|---|---|---|---|---|
+| dz. 8 l., 130 cm, 45 kg (≥ 99. c) | lekka, 0,5 kg/mies. | 12 | 1,37 | 0,53 | 44,2 | 44,8 | 6 tyg.: 44,3 / 44,7 |
+| ta sama | umiarkowana, 1 kg/mies. | 6 | 1,38 | 0,26 | 43,9 | 44,6 | 43,6 / 44,3 |
+| chł. 11 l., 150 cm, 60 kg | lekka, 0,5 kg/mies. | 12 | 1,37 | 0,79 | 59,4 | 60,1 | 59,3 / 59,7 |
+| ten sam, „Wzrost zakończony” | lekka | 6 | 0,69 | 0 | 59,3 | 59,7 | bez zmian |
+| chł. 15;3, 186,7 cm, 102,5 kg | umiarkowana, 1,5 kg/mies. | 6 | 2,07 | 0,30 | 100,7 | 101,8 | 100,4 / 101,5 |
+| ten sam, „Wzrost zakończony” | umiarkowana | 6 | 2,07 | 0 | 100,4 | 101,5 | bez zmian |
+| dz. 17 l., 165 cm, 90 kg (wzrastanie praktycznie zakończone) | lekka | 6 | 1,38 | 0 | — | dziś − 0,69 | bez zmian |
+
+Dziecko w 100 % zgodne z planem leży ½ ubytku pod progiem (8-latka: ok. 0,7 kg po 12 tygodniach; dawna reguła: ok. 0,1 kg),
+dziecko bez deficytu — tyle samo nad progiem.
+
+**Wpływ kliniczny.** Mniej fałszywych poleceń „odejmij 100–200 kcal” u rosnących dzieci; u 6–11-latków na diecie lekkiej kontrola
+przesuwa się z 6 na 12 tygodni. Próg u rosnącego nastolatka rośnie o przyrost ze wzrastania (chłopiec z raportu: 101,5 → 101,8 kg).
+Kaloryczności diet, deficyty i tempo bez zmian.
+
+**Ograniczenia.** Przyrost jest szacunkiem populacyjnym (prognoza wzrostu: obserwowane tempo z karty, inaczej mediana dla wieku;
+mediana BMI zamiast składu ciała). Silnik nadal przelicza cały deficyt na spadek masy i w szacowanym czasie dojścia do normy
+BMI nie odejmuje przyrostu masy beztłuszczowej — osobny temat.
+
+**Walidacja.** `tests/unit/rata-w-kontrola-wzrastanie.test.mjs` (11), zaktualizowany `rata-v-ree-molnar`; e2e
+`dieta-rata-w.spec.mjs` (8-latka 12 tygodni; 11-latek z i bez „Wzrost zakończony”) i zaktualizowane specyfikacje raty U, V
+i strategii. Wyniki w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; ewentualne ujęcie przyrostu masy beztłuszczowej w tempie i czasie
+dojścia do normy; scalenie i wdrożenie.
+
 ## Dieta dziecka z otyłością: REE wg Molnára 1995 zamiast Henry’ego × 0,9 (otyłość 10–18 lat), kaloryczność jako górna granica dnia, kontrola za 6 tygodni (P-DIETA rata V, SW 1.1.58, 2026-09-23)
 
 **Zgłoszenie i decyzje właściciela (2026-09-23).** Po racie U właściciel dostarczył pełne teksty Henry 2005, Hofsteenge 2010,
