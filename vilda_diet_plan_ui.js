@@ -32,7 +32,7 @@ ve=st?"light":"moderate",
 capLbl=cwOn2?"kaloryczno\u015B\u0107 diety \u2014 cel w\u0142asny (dieta lekka)":stabMode?"energia utrzymania (stabilizacja masy cia\u0142a)":m&&m.gornaGranica?`g\u00F3rna granica dnia \u2014 dieta ${String(m.name||"").toLowerCase()} (nie cel do dobicia)`:m&&y===ve?"zalecana kaloryczno\u015B\u0107 diety":"kaloryczno\u015B\u0107 wybranej diety",
 dietAcc=y==="light"?"lekk\u0105":y==="intense"?"intensywn\u0105":"umiarkowan\u0105",
 mark2Lbl=st?"50. centyl BMI":"BMI\u202F22",
-gw=st&&simN&&simN.growthAware&&f(simN.annualGrowthCm)&&simN.annualGrowthCm>0?`<small class="plan2-note plan-growth-note">uwzgl\u0119dnia dalsze wzrastanie (ok. ${simN.annualGrowthCm.toFixed(1).replace(".",",")}\u00A0cm/rok)</small>`:"",
+gw=st&&simN&&simN.growthAware&&f(simN.annualGrowthCm)&&simN.annualGrowthCm>0?`<small class="plan2-note plan-growth-note">uwzgl\u0119dnia dalsze wzrastanie (ok. ${simN.annualGrowthCm.toFixed(1).replace(".",",")}\u00A0cm/rok)${f(simN.przyrostMasyKgMies)&&simN.przyrostMasyKgMies>=.05?` i mas\u0119 przybywaj\u0105c\u0105 z nim (ok. ${simN.przyrostMasyKgMies.toFixed(1).replace(".",",")}\u00A0kg/mies.)`:""}</small>`:"",
 hz=Ne&&simN.months>18?'<small class="plan2-note plan-horizon-note">szacunek orientacyjny \u2014 tempo warto weryfikowa\u0107 co 3\u20136 miesi\u0119cy</small>':"",
 nt=document.getElementById("dietCalorieInfo");nt&&(nt.style.display="none");
 const at=document.getElementById("dietDesc");at&&(at.style.display="none");
@@ -183,21 +183,29 @@ function energySimulateMonthsToBmiTarget(opts){
     {const T=dietBmiSilnik();if(T){try{const m=T.mediana(sx,aa*12,dietBmiZrodlo(),dietPopulacja());if(m&&isFinite(m.mediana))return m.mediana}catch(err){}}}
     return null;
   };
-  let g=0,observed=false,cap=Infinity;
-  if(grow){const ol=childGrowthOutlook({ageYears:age0,sex:sx,heightCm:h0});g=ol.annualGrowthCm;observed=ol.observedGrowth;ol.capCm!=null&&(cap=ol.capCm)}
-  const gm=g/12,mLoss=pace*(52/12),growMonthsMax=grow?Math.max(0,(k-age0)*12):0;
-  let capped=false;
+  let g=0,observed=false,cap=Infinity,ended=false;
+  if(grow){const ol=childGrowthOutlook({ageYears:age0,sex:sx,heightCm:h0});g=ol.annualGrowthCm;observed=ol.observedGrowth;ol.capCm!=null&&(cap=ol.capCm);ended=!!ol.practicallyEnded}
+  const gm=g/12,mLoss=pace*(52/12),growMonthsMax=grow?Math.max(0,(k-age0)*12):0,
+    /* P-DIETA rata X (decyzja wlasciciela 2026-09-23): przy REDUKCJI u rosnacego dziecka masa w symulacji = dzis - tempo diety x czas
+       + PRZYROST MASY ZE WZRASTANIA (ta sama regula co kontrola z raty W: mediana BMI dla wieku x przyrost wzrost^2, krok po kroku).
+       Bez tego czas do normy byl optymistyczny o ok. 30-40 % przy diecie lekkiej 6-11 lat. Nie przy stabilizacji (pace 0: masa stala
+       z definicji), nie przy „Wzrost zakonczony” (grow=false) i nie przy praktycznie zakonczonym wzrastaniu. */
+    leanOn=grow&&pace>0&&!ended&&g>0,bm0=leanOn?childMedianBmi(sx,age0):null,
+    leanMies=leanOn&&f(bm0)&&bm0>0?bm0*(Math.pow(Math.min(cap,h0+gm)/100,2)-Math.pow(h0/100,2)):0;
+  let capped=false,lean=0,hPrev=h0;
   for(let t2=0;t2<=240;t2+=0.5){
     const aa=age0+t2/12,
       hRaw=h0+gm*Math.min(t2,growMonthsMax),
-      hh=child?Math.min(cap,hRaw):h0,
-      ww=Math.max(1,w0-mLoss*t2),
+      hh=child?Math.min(cap,hRaw):h0;
+    if(leanOn&&t2>0&&hh>hPrev){const bm=childMedianBmi(sx,aa);f(bm)&&bm>0&&(lean+=bm*(Math.pow(hh/100,2)-Math.pow(hPrev/100,2)))}
+    hPrev=hh;
+    const ww=Math.max(1,w0-mLoss*t2+lean),
       bt=targetAt(ww,hh,aa);
     child&&hRaw>cap&&(capped=true);
     if(isFinite(bt)&&bt>0&&ww/Math.pow(hh/100,2)<=bt)
-      return{months:t2,growthAware:grow,annualGrowthCm:grow?g:0,observedGrowth:observed,cappedByFinalHeight:capped};
+      return{months:t2,growthAware:grow,annualGrowthCm:grow?g:0,observedGrowth:observed,cappedByFinalHeight:capped,przyrostMasyKgMies:Math.round(Math.max(0,leanMies)*100)/100,przyrostMasyKg:Math.round(lean*100)/100};
   }
-  return{months:null,growthAware:grow,annualGrowthCm:grow?g:0,observedGrowth:observed,cappedByFinalHeight:capped};
+  return{months:null,growthAware:grow,annualGrowthCm:grow?g:0,observedGrowth:observed,cappedByFinalHeight:capped,przyrostMasyKgMies:Math.round(Math.max(0,leanMies)*100)/100,przyrostMasyKg:Math.round(lean*100)/100};
 }
 function energyMonthsWordPl(m2){
   const v=Number(m2);

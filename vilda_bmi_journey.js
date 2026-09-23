@@ -86,7 +86,8 @@
           growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
         });
         if (sim && sim.months != null) {
-          return { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm };
+          /* rata X: przyrost masy ze wzrastania (kg/mies.) z tej samej symulacji — do dopisku w linijce o wzrastaniu */
+          return { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm, przyrostMasyKgMies: fin(sim.przyrostMasyKgMies) ? sim.przyrostMasyKgMies : null };
         }
       } catch (err) { /* fallback liniowy poniżej */ }
     }
@@ -222,7 +223,8 @@
       monthsCombo: comboT ? comboT.months : null,
       monthsDiet: dietT ? dietT.months : null,
       growthAware: !!(comboT && comboT.growthAware),
-      annualGrowthCm: comboT ? comboT.annualGrowthCm : null
+      annualGrowthCm: comboT ? comboT.annualGrowthCm : null,
+      przyrostMasyKgMies: comboT ? comboT.przyrostMasyKgMies : null
     };
   }
 
@@ -430,7 +432,8 @@
         : '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
           + '<div class="bmi-journey-herocap">zaznacz dietę lub ruch</div></div>';
     var growth = mc != null && model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
-      ? '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie (ok. ' + esc(fmt(model.annualGrowthCm, 1)) + ' cm/rok)</p>'
+      ? '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie (ok. ' + esc(fmt(model.annualGrowthCm, 1)) + ' cm/rok)'
+        + (fin(model.przyrostMasyKgMies) && model.przyrostMasyKgMies >= 0.05 ? ' i masę przybywającą z nim (ok. ' + esc(fmt(model.przyrostMasyKgMies, 1)) + ' kg/mies.)' : '') + '</p>'
       : '';
     var horizon = mc != null && mc > 18
       ? '<p class="bmi-journey-growth">szacunek orientacyjny — tempo warto weryfikować co 3\u20136 miesięcy</p>'
