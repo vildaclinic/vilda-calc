@@ -5778,6 +5778,106 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## „Raport po wizycie”: wysoki wzrost wobec wzrostu docelowego wg rodziców (P-RAPORT rata T, SW 1.1.55, 2026-09-23)
+
+**Zgłoszenie i analiza (2026-09-23).** W raporcie rocznego chłopca z wysokim wzrostem i wysokimi rodzicami nagłówek kończył się
+ogólnikiem „Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.”, choć
+aplikacja znała MPH i różnicę hSDS − mpSDS. Stan przed zmianą: kandydat wysokiego wzrostu (`kandydatWzrostu`, centyl > 97) nie znał
+MPH; osobna oś `mph` (|hSDS − mpSDS| ≥ 1,5 / ≥ 2,0) działała tylko w trybie profesjonalnym (zbieracz czytał leksykalny
+`professionalMode`) i bez wartości wzrostu/MPH; przy masie w tytule wzrost pojawiał się w dwóch zdaniach „Dodatkowo …” (oś mph +
+oś wzrostu). Największa luka: w trybie standardowym (siatka WHO) podtytuł uspokajał przy różnicy +3,9 SDS. Nagłówek nie ma faktu
+o PRZYSPIESZENIU wzrastania (silnik tempa flaguje tylko tempo wolne; reguła pozycyjna GROWTH-TRAJ tylko ΔhSDS ≤ −1,0) — to osobna
+rata T2. Sondy na prawdziwej stronie (dane fikcyjne) i adwersaryjna weryfikacja propozycji (trzy recenzje: kliniczna, kodowa,
+językowa) — patrz PR.
+
+**Piśmiennictwo (PubMed).** Wysoki wzrost = hSDS > +2; „wysoki względem rodziców” = hSDS − mpSDS > +2,0 (Meazza 2017,
+doi:10.1186/s13052-017-0385-5; Corredor 2019, doi:10.2174/1573396314666181105092917; Stalman 2015, doi:10.4274/jcrpe.2220:
+pasmo celu Tannera ±2,0 SD, warunkowe TH ±1,6 zbyt wąskie). Algorytm pięciu pytań (Hannema & Sävendahl 2016,
+doi:10.1159/000443685): hSDS > +2, cechy zespołu, przyspieszenie wzrastania, objawy dojrzewania, wzrost w paśmie rodziców —
+„rodzinny wysoki wzrost” to rozpoznanie z wykluczenia, którego nagłówek (znający tylko pytanie 5) nie stawia. Wartość predykcyjna
+samego „> 2” jest niska: 1,5 % patologii (przedwczesne dojrzewanie) w kohorcie 132 skierowań, wykrytej przez przyspieszenie i objawy
+dojrzewania; kryterium zmiany hSDS > 1,0 zbyt ostre po 10. r.ż. (Stalman 2015). Różnica hSDS − mpSDS jest mało wiarygodna
+poniżej 3 lat w obie strony: 2/3 niemowląt zmienia kanał do ok. 13. mies., z MPH koreluje dobrze dopiero w 2. r.ż. (Smith 1976,
+doi:10.1016/s0022-3476(76)80453-2; Tanner 1970, doi:10.1136/adc.45.244.755); wytyczna holenderska stosuje odległość od TH od
+3. r.ż. (Grote 2008, doi:10.1136/adc.2007.120188). Przedwczesne dojrzewanie: dziewczęta < 8, chłopcy < 9 lat (Latronico 2016,
+doi:10.1016/S2213-8587(15)00380-0). Regresja do średniej: oczekiwany SDS dziecka ≈ 0,75 × mpSDS, przedział ±10 cm (Luo 1998,
+doi:10.1203/00006450-199810000-00016) — dlatego zdanie mówi o zgodności z zakresem, nie „rodzice są wysocy”. Otyłość sama podnosi
+hSDS i przyspiesza wiek kostny (Meazza 2017; Albuquerque 2017, doi:10.1530/EJE-16-1054).
+
+**Decyzje właściciela (2026-09-23).** (1) Progi 1,5 / 2,0 SDS zostają (1,5 = konwencja aplikacji: oś mph, epikryza, pasmo celu
+±10 cm; 2,0 = pasmo Tannera). (2) Zdanie „w paśmie” żółte i opisowe. (3) Alarm nazywa przedwczesne dojrzewanie. (4) Alarm od
+3 lat, łagodzenie od 10 lat; wyjątek tylko hSDS ≥ +3,0 (obwód głowy nie). (5) MPH w nagłówku niezależnie od trybu, liczba SDS
+tylko w trybie profesjonalnym. (6) Dopisek o rodzicach przy ich braku. (7) Remis 2:2: alarm przed „masą proporcjonalną”, za
+otyłością/niedowagą. (8) Rata T2 (przyspieszenie ΔhSDS ≥ +1,0) zaraz po; symetria dla niskiego wzrostu osobno. Bez zdania
+„Plan ustalono na wizycie.”
+
+**Zmiana (kliniczna: inne brzmienia i tony w dokumencie dla pacjenta; progi bez zmian; nowe bramki wieku 3 i 10 lat).**
+- `vilda_raport_naglowek.js` (WERSJA 3, `?v=3`): progi i granice jako dane `WZROST_A_RODZICE = { PASMO: 1,5; ALARM: 2,0;
+  WIEK_ALARM_OD_LAT: 3; WIEK_POKWITANIA_OD_LAT: 10; HSDS_BEZ_LAGODZENIA: 3,0 }`. `kandydatWysokiegoWzrostu` (centyl > 97) z gałęziami:
+  **W0** brak MPH (nie wpisano obojga rodziców — dopisek „Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.” tylko przy
+  `rodziceBrak`; populacja DS — zdanie bez członu o rodzicach, bo mpSDS nie istnieje, P-OSTATNI-2d) albo strona ujemna (różnica
+  ≤ −1,5: zostaje przy osi mph); **W1** −1,5 < różnica < +1,5, ciężkość 1: „Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy
+  wg rodziców 192,0 cm, 98. centyl dorosłych). Najwięcej informacji daje tempo wzrastania w kolejnych pomiarach.” (z historią:
+  „porównanie z wcześniejszymi pomiarami i tempo wzrastania”; przy fakcie tempa bez tego zdania); **W1′** < 3 lat: zamiast zdania
+  o tempie „U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania
+  w kolejnych pomiarach.”; **W2** 1,5 ≤ różnica < 2,0, ciężkość 1: „Wzrost jest wyższy, niż wynika ze wzrostu rodziców (…;
+  różnica +1,62 SDS). Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.”; **W3** ≥ 2,0 w wieku 3–10 lat,
+  ciężkość 2, odznaka „Wysoki wzrost — do oceny”, tytuł „Wzrost jest wysoki jak na wiek: 129,0 cm, 98. centyl — wyraźnie wyższy,
+  niż wynika ze wzrostu rodziców.”, zdanie „Wzrost docelowy wg rodziców to 169,5 cm (8. centyl dorosłych); różnica wynosi
+  +3,57 SDS. Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania,
+  wiek kostny).” — przy nadwadze/otyłości wg BMI „…przede wszystkim wieku kostnego (nadmiar masy ciała sam przyspiesza
+  wzrastanie), a także w kierunku przedwczesnego dojrzewania.”; **W3′** < 3 lat (o ile hSDS < +3,0), ciężkość 1, odznaka „Wysoki
+  wzrost — do obserwacji”, „wyższy” bez „wyraźnie” + zastrzeżenie wieku; **W3″** od 10 lat, ciężkość 1: „…wyraźnie wyższy … W tym
+  wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.” Każda gałąź ma własne „Dodatkowo …” i
+  samowystarczalny `podtytul`. Termin „wzrost docelowy wg rodziców … centyl dorosłych” (jak karta zaawansowana), nie „prognoza”
+  (koliduje z prognozą wzrostu ostatecznego). Różnica zaokrąglana do 2 miejsc PRZED porównaniem z progiem i drukowana jak linia
+  „hSDS - mpSDS” podsumowania (`+3,57 SDS`, minus typograficzny, twarda spacja).
+- Oś `mph` (`kandydatMph`): strona dodatnia przy wzroście > 97 c przechodzi do osi wzrostu (koniec dwóch „Dodatkowo …”);
+  ta sama bramka wieku (< 3 lat: ostrzeżenie z zastrzeżeniem zamiast alarmu); nawias z wartościami; ten sam zapis 2 miejsc
+  (dotąd klasyfikacja na surowej liczbie, druk 1 miejsca).
+- Remisy: gałąź „wysoka masa przy prawidłowym BMI” (rata S, P1) wchłania kandydata wzrostu tylko o ciężkości < 2 i bierze jego
+  `podtytul`; przy W3 (2) nie wchłania, a klucz rangi `masa-proporcjonalna` stoi w `KOLEJNOSC_OSI` za `wzrost-wysoki` — W3
+  w tytule, masa jako „Dodatkowo masa ciała jest wysoka jak na wiek (…), ale proporcjonalna do wzrostu; …”. Otyłość/nadwaga/
+  niedowaga (2) nadal wygrywają tytuł; W3 w całości w „Dodatkowo”.
+- `vilda_patient_report.js` (`?v=37`, `patientReportZbierzFaktyNaglowka`): `f.mph` bez bramki trybu profesjonalnego (bramka
+  `!dorosly` zostaje), `liczbaWidoczna` = tryb profesjonalny; hSDS z tego samego wyniku, co karta wzrostu raportu
+  (`advHistoryResolveMetric("HT", …, źródło raportu)`), mpSDS z `vildaMpSdsStats(MPH, płeć, źródło raportu)` — nie z `targetStats`
+  karty zaawansowanej, które mogło być policzone na siatce sprzed przełączenia (przełącznik trybu woła `calculateGrowthAdvanced()`
+  przed `update()`, które dopiero przestawia radio źródła; sonda: +0,67 na OLAF vs +0,63 na Palczewskiej). `f.rodziceBrak`,
+  `f.ds` (`vildaPopulacjaDs()`). Reguła siatek per tryb (istniejąca): < 3 lat tryb profesjonalny → Palczewska, standardowy →
+  WHO; ten sam pacjent ma więc w obu trybach inne hSDS/centyl MPH — dlatego liczba SDS tylko w profesjonalnym, a e2e trybu
+  standardowego przypina słowa, nie liczby.
+- Strony `index`, `docpro`, `kalkulator-klirens`: `vilda_raport_naglowek.js?v=3`, `vilda_patient_report.js?v=37`;
+  `service-worker-kalorii.js` SW 1.1.54 → 1.1.55, precache append-only.
+- Znane cechy (świadome): klif urodzinowy 3 lat (W3′ → W3) i 10 lat (W3 → W3″) co do dnia (`wiekLat` ułamkowy); hairline
+  97,0/97,1 c progu „> 97” (od raty S); brak faktu o przyspieszeniu do raty T2.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne, prawdziwy kod; unit `raport-naglowek` i e2e `raport-wizyta-rata-t`):**
+- chłopiec 1 r., 11,8 kg / 83,0 cm (hSDS +2,45), rodzice 176/191 → MPH 190,0 cm (97 c), różnica +0,63 → tytuł o masie jak w racie S,
+  podtytuł „Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 190,0 cm, 97. centyl dorosłych). U dzieci poniżej
+  3 lat pozycja na siatce może się jeszcze zmieniać, …”;
+- chłopiec 6 l., 24 kg / 129,0 cm (98 c, +2,13), rodzice 158/168 → MPH 169,5 cm (8 c), różnica +3,57 → W3 czerwone, jedno zdanie,
+  różnica identyczna z linią „hSDS - mpSDS: +3,57” podsumowania; ten sam w trybie standardowym → W3 bez liczby SDS;
+- jw., rodzice 178/193 → MPH 192,0 cm (98 c), różnica +0,04 → W1 żółte „zgodny ze wzrostem rodziców”;
+- jw., rodzice 167/181 → MPH 180,5 cm, różnica 1,5–2,0 → W2 „wyższy” bez „wyraźnie”;
+- jw., bez rodziców → zdanie jak dotąd + „Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.”;
+- roczniak z różnicą +3,88 (hSDS +2,45) → W3′ żółte „do obserwacji”; z hSDS +3,05 → W3 czerwone; 2 l. 11 m. → W3′, 3 l. → W3;
+- dziewczynka 12 l., różnica +2,31 → W3″ żółte „w tym wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego”;
+- chłopiec 6 l. z nadwagą (BMI alert) i różnicą +3,57 → tytuł „Nadwaga”, jedno „Dodatkowo … — wymaga dalszej oceny, przede
+  wszystkim wieku kostnego.”; z masą 98 c przy prawidłowym BMI → W3 w tytule, masa w „Dodatkowo”;
+- różnica 1,996 → alarm, 1,994 → pogranicze „+1,99”; 1,50 → W2; 1,4949 → W1; tryb standardowy → bez „SDS”;
+- rodzice 192/208 (różnica −2,23) → oś mph „niższy … (wzrost docelowy wg rodziców 206,5 cm, powyżej 99. centyla dorosłych;
+  różnica −2,23 SDS)” + „Dodatkowo wzrost jest wysoki jak na wiek (…)”; roczniak na 85 c z różnicą +3,70 → oś mph żółta
+  z zastrzeżeniem wieku; populacja DS z wpisanymi rodzicami → W0 bez członu o rodzicach.
+
+**Walidacja.** Unit `raport-naglowek` 35 (20 dotychczasowych po aktualizacji dwóch pinezek + 15 raty T), e2e
+`raport-wizyta-rata-t` (7: index w obu trybach i docpro). Pełny `npm test` i pełny zestaw e2e desktop: wynik w PR. Zielone testy
+nie są dowodem poprawności medycznej; status „zwalidowany klinicznie” nie jest nadawany przez agenta.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna brzmień (decyzje 1–8 z 2026-09-23 przed kodowaniem); rata T2 (fakt
+o przyspieszeniu: lustrzana reguła ΔhSDS ≥ +1,0 od pierwszego pomiaru ≥ 24 mies. do 10. r.ż.); symetria dla niskiego wzrostu;
+scalenie i wdrożenie.
+
 ## „Raport po wizycie”: nagłówek bez dublowania osi wzrostu, odniesienia kart bez „0,0” (P-RAPORT rata S, SW 1.1.53, 2026-09-22)
 
 **Zgłoszenie i decyzje właściciela (2026-09-22).** W raporcie rocznego chłopca (11,8 kg na 93. centylu, 83,0 cm powyżej
