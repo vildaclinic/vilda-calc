@@ -2,7 +2,9 @@
    vilda_raport_naglowek.js — nagłówek (hero) „Raportu po wizycie” składany z FAKTÓW.
    P-RAPORT rata R (decyzje właściciela 2026-09-22); rata S (2026-09-22): bez dublowania osi
    wzrostu przy masie poza zakresem (P1/P2), jedno zdanie o nadwadze < 2 lat (P3), strażnik
-   < 0,5 kg nazywa szczebel (P4), etykieta centyla jak w kartach raportu (P8).
+   < 0,5 kg nazywa szczebel (P4), etykieta centyla jak w kartach raportu (P8); rata T (2026-09-23):
+   wysoki wzrost wobec wzrostu docelowego wg rodziców (W0–W3″, WZROST_A_RODZICE), strona dodatnia
+   osi mph przy wysokim wzroście przechodzi do osi wzrostu, remis 2:2 przed „masą proporcjonalną”.
 
    Dlaczego osobny plik: dawny nagłówek powstawał z PREFIKSÓW linii podsumowania
    profesjonalnego („Waga:”, „Obwód głowy:” …) i dla każdej linii bez znanej grupy
@@ -47,16 +49,27 @@
      talia:  { cm, centyl, whr, stan, dorosly }  stan: warn | bad
      glowa:  { cm, centyl }   klatka: { cm, centyl }
      tempo:  { cmRok, ton, norma }               ton: danger | warn
-     mph:    { roznicaSds, ton }
+     mph:    { roznicaSds, mphCm, mphCentyl, mpSds, hSds, liczbaWidoczna }
+             roznicaSds = hSDS − mpSDS (mpSDS: MPH na siatce dorosłych, to samo źródło, co hSDS);
+             liczbaWidoczna: false = tryb standardowy (bez liczby SDS w zdaniu)
+     rodziceBrak: bool (nie wpisano obojga rodziców)   ds: bool (populacja DS — mpSDS nie istnieje)
    Wyjście: { badge, tone, title, text, subtext, glowny, dodatkowe, wersja }.
    ===================================================================================== */
 (function (root) {
   'use strict';
-  var WERSJA = 2;
+  var WERSJA = 3;
   var NBSP = ' ';
   var LIMIT_DODATKOWO = 2;
   var KROK_OD_LAT = 2;
   var KORZYSC = 'już ta zmiana poprawia ciśnienie i wyniki badań krwi';
+  /* Rata T (decyzje właściciela 2026-09-23): wysoki wzrost wobec wzrostu docelowego wg rodziców (MPH).
+     Progi 1,5 / 2,0 SDS = te same, co oś mph i epikryza (1,5 — konwencja aplikacji; 2,0 — pasmo celu Tannera
+     ±2 SD, Stalman 2015, doi:10.4274/jcrpe.2220). Wiek: różnica hSDS − mpSDS jest mało wiarygodna poniżej
+     3 lat w OBIE strony (Smith 1976, doi:10.1016/s0022-3476(76)80453-2; Grote 2008, doi:10.1136/adc.2007.120188),
+     a od 10 lat skok pokwitaniowy przejściowo podnosi hSDS (Stalman 2015). Wyjątek: hSDS ≥ +3,0 nie jest
+     łagodzony poniżej 3 lat (zespoły nadmiernego wzrastania). Różnica jest zaokrąglana do 2 miejsc PRZED
+     porównaniem z progiem i drukowana tak samo, jak linia „hSDS - mpSDS” podsumowania. */
+  var WZROST_A_RODZICE = Object.freeze({ PASMO: 1.5, ALARM: 2.0, WIEK_ALARM_OD_LAT: 3, WIEK_POKWITANIA_OD_LAT: 10, HSDS_BEZ_LAGODZENIA: 3.0 });
 
   function liczba(v) { var n = Number(v); return v == null || v === '' || !isFinite(n) ? null : n; }
   function fmt(v, m) {
@@ -82,6 +95,25 @@
     if (n < 1) return 'poniżej 1. centyla';
     if (n > 99) return 'powyżej 99. centyla';
     return 'na ' + Math.round(n) + '. centylu';
+  }
+  function zaokr2(v) { var n = liczba(v); return n == null ? null : Math.round(n * 100) / 100; }
+  /* Zapis SDS jak linia „hSDS - mpSDS” podsumowania (VildaSdsWzrostu.fmtSds): 2 miejsca, znak, minus typograficzny. */
+  function sds2(v) {
+    var n = zaokr2(v);
+    if (n == null) return '—';
+    var a = Math.abs(n).toFixed(2).replace('.', ',');
+    return (n > 0 ? '+' : n < 0 ? '−' : '') + a + NBSP + 'SDS';
+  }
+  /* „wzrost docelowy wg rodziców 190,0 cm, 97. centyl dorosłych” — termin z karty zaawansowanej; centyl jawnie na
+     siatce dorosłych, żeby czytelnik nie zestawił go z centylem dziecka. */
+  function celRodzicow(m) {
+    if (!m || liczba(m.mphCm) == null) return '';
+    var c = liczba(m.mphCentyl);
+    return 'wzrost docelowy wg rodziców ' + cm(m.mphCm) + (c != null ? ', ' + centylTekst(c) + ' dorosłych' : '');
+  }
+  function nawiasRodzicow(m, r) {
+    var cz = [celRodzicow(m), m && m.liczbaWidoczna === false ? '' : 'różnica ' + sds2(r)].filter(Boolean);
+    return cz.length ? ' (' + cz.join('; ') + ')' : '';
   }
   function kolorCiezkosc(k) { return k === 'alert' ? 2 : k === 'improve' ? 1 : 0; }
   function tonCiezkosc(t) { return t === 'danger' ? 2 : t === 'warn' ? 1 : 0; }
@@ -194,6 +226,9 @@
          obok siebie (wzrost z wartością i centylem) i mówi o proporcji, nie o przyczynie; kandydat wzrostu jest
          wchłonięty, więc „Dodatkowo wzrost…” już się nie dokleja, a jego zdanie idzie do podtytułu. */
       var wz = kandydatWzrostu(f);
+      /* Rata T: kandydat wzrostu o ciężkości 2 (wyraźnie wyższy, niż wynika ze wzrostu rodziców) NIE jest wchłaniany —
+         ma własny tytuł z wartościami, a przy remisie 2:2 stoi przed „masą proporcjonalną” (klucz rangi). */
+      var wchlon = !!wz && wz.ciezkosc < 2;
       var hc = f.wzrost ? liczba(f.wzrost.centyl) : null;
       var nawiasW = hc != null && liczba(f.wzrost.cm) != null ? ' (' + cm(f.wzrost.cm) + ', ' + centylTekst(hc) + ')' : '';
       var proporcja = 'masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.';
@@ -203,10 +238,11 @@
       else if (hc != null && hc > 90) tekst = 'Wzrost jest również powyżej przeciętnej' + nawiasW + '; ' + proporcja;
       else tekst = 'Masa ciała jest proporcjonalna do wzrostu' + nawiasW + '; BMI mieści się w typowym zakresie.';
       return { os: 'masa', ciezkosc: kolorCiezkosc(m.kolor), badge: wysoka ? 'Wysoka masa ciała' : 'Niska masa ciała',
+        rangaKlucz: wz && !wchlon ? 'masa-proporcjonalna' : null,
         title: 'Masa ciała jest ' + kier + ' jak na wiek ' + nawiasM + ', ale w stosunku do wzrostu pozostaje prawidłowa.',
         text: tekst,
-        subtext: wz ? (wz.subtext || wz.text || '') : '',
-        wchlania: ['wzrost'],
+        subtext: wchlon ? (wz.podtytul || wz.subtext || wz.text || '') : '',
+        wchlania: wchlon ? ['wzrost'] : [],
         /* P2 (rata S): bez „wynika z” — proporcja i wynik BMI. */
         dodatkowo: 'Dodatkowo masa ciała jest ' + kier + ' jak na wiek ' + nawiasM + ', ale proporcjonalna do wzrostu; BMI mieści się w typowym zakresie.' };
     }
@@ -263,13 +299,90 @@
         text: '', subtext: podtytul,
         dodatkowo: 'Dodatkowo wzrost jest niski jak na wiek (' + cm(h) + ', ' + centylTekst(c) + ').' };
     }
-    if (c > 97) {
-      return { os: 'wzrost', wysoki: true, ciezkosc: 1, badge: 'Wysoki wzrost',
-        title: 'Wzrost jest wysoki jak na wiek: ' + cm(h) + ', ' + centylTekst(c) + '.',
-        text: 'Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.',
-        dodatkowo: 'Dodatkowo wzrost jest wysoki jak na wiek (' + cm(h) + ', ' + centylTekst(c) + ').' };
-    }
+    if (c > 97) return kandydatWysokiegoWzrostu(f, c, h);
     return null;
+  }
+
+  /* Rata T: wysoki wzrost (> 97 c) wobec wzrostu docelowego wg rodziców. Każda gałąź niesie samowystarczalny
+     `podtytul` (używa go gałąź „wysoka masa przy prawidłowym BMI”, która wchłania oś wzrostu) oraz własne
+     „Dodatkowo …”. Gałęzie: W0 brak MPH (albo strona ujemna — zostaje przy osi mph), W1 w paśmie (< 3 lat: W1′
+     z zastrzeżeniem wieku), W2 pogranicze, W3 alarm 3–10 lat, W3′ < 3 lat (obserwacja; nie łagodzone przy
+     hSDS ≥ +3,0), W3″ od 10 lat (ocena wobec etapu dojrzewania). */
+  function kandydatWysokiegoWzrostu(f, c, h) {
+    var P = WZROST_A_RODZICE;
+    var nawiasH = '(' + cm(h) + ', ' + centylTekst(c) + ')';
+    var k = { os: 'wzrost', wysoki: true, ciezkosc: 1, badge: 'Wysoki wzrost',
+      title: 'Wzrost jest wysoki jak na wiek: ' + cm(h) + ', ' + centylTekst(c) + '.' };
+    var m = f.mph, r = m ? zaokr2(m.roznicaSds) : null;
+    var wiek = liczba(f.wiekLat);
+    var maly = wiek != null && wiek < P.WIEK_ALARM_OD_LAT;
+    var pokwitanie = wiek != null && wiek >= P.WIEK_POKWITANIA_OD_LAT;
+    var uwagaWiek = 'U dzieci poniżej ' + P.WIEK_ALARM_OD_LAT + ' lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.';
+    if (r == null || r <= -P.PASMO) {
+      /* W0 */
+      var w0 = f.ds
+        ? 'Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania.'
+        : 'Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.';
+      if (r == null && f.rodziceBrak && !f.ds) w0 += ' Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.';
+      k.text = w0; k.podtytul = w0;
+      k.dodatkowo = 'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + '.';
+      return k;
+    }
+    var cel = celRodzicow(m);
+    var nawiasCel = cel ? ' (' + cel + ')' : '';
+    var nawiasR = nawiasRodzicow(m, r);
+    if (r < P.PASMO) {
+      /* W1 / W1′: zdanie opisowe, nie rozpoznanie („rodzinny wysoki wzrost” to rozpoznanie z wykluczenia). */
+      var t1 = 'Wzrost jest zgodny ze wzrostem rodziców' + nawiasCel + '.';
+      if (maly) t1 += ' ' + uwagaWiek;
+      else if (!f.tempo) t1 += f.historia
+        ? ' Najwięcej informacji daje porównanie z wcześniejszymi pomiarami i tempo wzrastania.'
+        : ' Najwięcej informacji daje tempo wzrastania w kolejnych pomiarach.';
+      k.text = t1; k.podtytul = t1;
+      k.dodatkowo = 'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + ', ale zgodny ze wzrostem rodziców' + nawiasCel + '.';
+      return k;
+    }
+    if (r < P.ALARM) {
+      /* W2 */
+      var t2 = 'Wzrost jest wyższy, niż wynika ze wzrostu rodziców' + nawiasR + '. Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.';
+      k.text = t2; k.podtytul = t2;
+      k.dodatkowo = 'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + ' i wyższy, niż wynika ze wzrostu rodziców' + nawiasR + '.';
+      return k;
+    }
+    var hs = liczba(m.hSds);
+    if (maly && !(hs != null && hs >= P.HSDS_BEZ_LAGODZENIA)) {
+      /* W3′ */
+      var t3m = 'Wzrost jest wyższy, niż wynika ze wzrostu rodziców' + nawiasR + '. ' + uwagaWiek;
+      k.badge = 'Wysoki wzrost — do obserwacji';
+      k.text = t3m; k.podtytul = t3m;
+      k.dodatkowo = 'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + ' i wyższy, niż wynika ze wzrostu rodziców' + nawiasR
+        + '; u dzieci poniżej ' + P.WIEK_ALARM_OD_LAT + ' lat najważniejsze jest tempo wzrastania w kolejnych pomiarach.';
+      return k;
+    }
+    if (pokwitanie) {
+      /* W3″ */
+      var t3p = 'Wzrost jest wyraźnie wyższy, niż wynika ze wzrostu rodziców' + nawiasR + '. W tym wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.';
+      k.text = t3p; k.podtytul = t3p;
+      k.dodatkowo = 'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + ' i wyraźnie wyższy, niż wynika ze wzrostu rodziców' + nawiasR
+        + '; w tym wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.';
+      return k;
+    }
+    /* W3 (decyzja właściciela 2026-09-23: nazwać przedwczesne dojrzewanie; bez „Plan ustalono na wizycie”). */
+    var nadmiar = !!(f.bmi && /nadwaga|otylosc|olbrzymia/.test(String(f.bmi.klucz || '')));
+    var ocena = nadmiar
+      ? 'Taki wynik wymaga dalszej oceny, przede wszystkim wieku kostnego (nadmiar masy ciała sam przyspiesza wzrastanie), a także w kierunku przedwczesnego dojrzewania.'
+      : 'Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania, wiek kostny).';
+    var celZd = cel ? 'Wzrost docelowy wg rodziców to ' + cm(m.mphCm) + (liczba(m.mphCentyl) != null ? ' (' + centylTekst(m.mphCentyl) + ' dorosłych)' : '') : '';
+    var rozZd = m.liczbaWidoczna === false ? '' : 'różnica wynosi ' + sds2(r);
+    var liczby = celZd ? celZd + (rozZd ? '; ' + rozZd : '') + '.' : (rozZd ? 'Różnica wynosi ' + sds2(r) + '.' : '');
+    k.ciezkosc = 2;
+    k.badge = 'Wysoki wzrost — do oceny';
+    k.title = 'Wzrost jest wysoki jak na wiek: ' + cm(h) + ', ' + centylTekst(c) + ' — wyraźnie wyższy, niż wynika ze wzrostu rodziców.';
+    k.text = zlacz(liczby, ocena);
+    k.podtytul = 'Wzrost jest wyraźnie wyższy, niż wynika ze wzrostu rodziców' + nawiasR + '. ' + ocena;
+    k.dodatkowo = 'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + ' i wyraźnie wyższy, niż wynika ze wzrostu rodziców' + nawiasR
+      + ' — wymaga dalszej oceny, ' + (nadmiar ? 'przede wszystkim wieku kostnego.' : 'm.in. w kierunku przedwczesnego dojrzewania.');
+    return k;
   }
 
   function kandydatCisnienia(f) {
@@ -383,22 +496,32 @@
 
   function kandydatMph(f) {
     var m = f.mph;
-    if (!m || liczba(m.roznicaSds) == null) return null;
-    var d = Math.abs(m.roznicaSds);
-    var ciez = d >= 2 ? 2 : d >= 1.5 ? 1 : 0;
+    var r = m ? zaokr2(m.roznicaSds) : null;
+    if (r == null) return null;
+    var P = WZROST_A_RODZICE;
+    var d = Math.abs(r);
+    var ciez = d >= P.ALARM ? 2 : d >= P.PASMO ? 1 : 0;
     if (!ciez) return null;
-    var nizszy = m.roznicaSds < 0;
-    var wart = '(różnica ' + fmt(d, 1) + NBSP + 'SDS)';
-    return { os: 'mph', ciezkosc: ciez, badge: 'Wzrost a rodzice',
-      title: 'Wzrost dziecka jest ' + (nizszy ? 'niższy' : 'wyższy') + ', niż wynika ze wzrostu rodziców ' + wart + '.',
-      text: 'Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym.',
-      dodatkowo: 'Dodatkowo wzrost dziecka jest ' + (nizszy ? 'niższy' : 'wyższy') + ', niż wynika ze wzrostu rodziców ' + wart + '.' };
+    /* Rata T: stronę dodatnią przy wysokim wzroście (> 97 c) opowiada oś wzrostu (W2/W3) — bez dwóch zdań o tym samym. */
+    if (r > 0 && f.wzrost && liczba(f.wzrost.centyl) != null && f.wzrost.centyl > 97) return null;
+    var kier = r < 0 ? 'niższy' : 'wyższy';
+    var wiek = liczba(f.wiekLat);
+    var maly = wiek != null && wiek < P.WIEK_ALARM_OD_LAT;
+    var nawias = nawiasRodzicow(m, r);
+    return { os: 'mph', ciezkosc: maly ? 1 : ciez, badge: 'Wzrost a rodzice',
+      title: 'Wzrost dziecka jest ' + kier + ', niż wynika ze wzrostu rodziców' + nawias + '.',
+      text: maly
+        ? 'U dzieci poniżej ' + P.WIEK_ALARM_OD_LAT + ' lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.'
+        : 'Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym.',
+      dodatkowo: 'Dodatkowo wzrost dziecka jest ' + kier + ', niż wynika ze wzrostu rodziców' + nawias + '.' };
   }
 
   /* Remis ciężkości: niski wzrost przed masą (jak dotąd), wysoki wzrost ZA masą (sam wysoki wzrost nie jest
-     nieprawidłowością, nadwaga jest); dalej kolejność osi. */
-  var KOLEJNOSC_OSI = ['wzrost', 'masa', 'wzrost-wysoki', 'cisnienie', 'tetno', 'talia', 'tempo', 'mph', 'glowa', 'klatka'];
-  function ranga(k) { var klucz = k.os === 'wzrost' && k.wysoki ? 'wzrost-wysoki' : k.os; return KOLEJNOSC_OSI.indexOf(klucz); }
+     nieprawidłowością, nadwaga jest); rata T: wysoki wzrost o ciężkości 2 (wyraźnie wyższy niż wynika ze wzrostu
+     rodziców) PRZED „masą proporcjonalną” (wysoka masa przy prawidłowym BMI), nadal ZA otyłością/niedowagą; dalej
+     kolejność osi. */
+  var KOLEJNOSC_OSI = ['wzrost', 'masa', 'wzrost-wysoki', 'masa-proporcjonalna', 'cisnienie', 'tetno', 'talia', 'tempo', 'mph', 'glowa', 'klatka'];
+  function ranga(k) { var klucz = k.rangaKlucz || (k.os === 'wzrost' && k.wysoki ? 'wzrost-wysoki' : k.os); return KOLEJNOSC_OSI.indexOf(klucz); }
 
   function kandydaci(f) {
     var lista = [];
@@ -459,6 +582,7 @@
     WERSJA: WERSJA,
     KROK_OD_LAT: KROK_OD_LAT,
     LIMIT_DODATKOWO: LIMIT_DODATKOWO,
+    WZROST_A_RODZICE: WZROST_A_RODZICE,
     zbuduj: zbuduj,
     kandydaci: kandydaci,
     zdanieKroku: zdanieKroku,

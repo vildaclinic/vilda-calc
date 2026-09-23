@@ -55,7 +55,8 @@ test.describe('P-RAPORT rata S — nagłówek bez dublowania, odniesienia bez �
     expect(r.hl.badge).toBe('Wysoka masa ciała'); expect(r.hl.tone).toBe('warn');
     expect(r.hl.title).toMatch(new RegExp(`^Masa ciała jest wysoka jak na wiek \\(11,8${NB}kg, 9\\d\\. centyl\\), ale w stosunku do wzrostu pozostaje prawidłowa\\.$`));
     expect(r.hl.text).toBe(`Wzrost jest również wysoki (83,0${NB}cm, powyżej 99. centyla); masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.`);
-    expect(r.hl.subtext).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.');
+    // rata T (decyzja 6): bez wpisanych rodziców zdanie jak dotąd plus dopisek o rodzicach
+    expect(r.hl.subtext).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
     expect(r.hl.dodatkowe).toEqual([]);
     for (const z of ['Dodatkowo wzrost', 'Wynika to z', '0,0 pkt', '0,0 kg', '0,0 cm']) expect(r.html, z).not.toContain(z);
     // P8: karta i nagłówek mówią to samo o wzroście

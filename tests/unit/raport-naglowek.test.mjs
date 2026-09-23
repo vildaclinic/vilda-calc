@@ -130,7 +130,7 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     expect(N.zbuduj({ ...baza, glowa: { cm: 50, centyl: 50 } }).tone).toBe('normal'); // obwód w normie nie tworzy faktu
     expect(N.zbuduj({ ...baza, tempo: { cmRok: 2, ton: 'danger', norma: '≥4 cm/rok' } })).toMatchObject({ badge: 'Wolne tempo wzrastania', tone: 'danger', title: `Tempo wzrastania jest wolne: 2,0${NB}cm/rok (norma ≥4 cm/rok).` });
     expect(N.zbuduj({ ...baza, tempo: { cmRok: 3, ton: 'warn', norma: null } }).title).toBe(`Tempo wzrastania wymaga oceny: 3,0${NB}cm/rok.`);
-    expect(N.zbuduj({ ...baza, mph: { roznicaSds: -1.8 } })).toMatchObject({ badge: 'Wzrost a rodzice', tone: 'warn', title: `Wzrost dziecka jest niższy, niż wynika ze wzrostu rodziców (różnica 1,8${NB}SDS).` });
+    expect(N.zbuduj({ ...baza, mph: { roznicaSds: -1.8 } })).toMatchObject({ badge: 'Wzrost a rodzice', tone: 'warn', title: `Wzrost dziecka jest niższy, niż wynika ze wzrostu rodziców (różnica −1,80${NB}SDS).` }); // rata T: 2 miejsca i znak jak linia podsumowania
     expect(N.zbuduj({ ...baza, mph: { roznicaSds: 2.3 } }).tone).toBe('danger');
     expect(N.zbuduj({ ...baza, mph: { roznicaSds: 1.2 } }).tone).toBe('normal');
   });
@@ -241,7 +241,152 @@ describe('Nagłówek z faktów — rata S', () => {
     expect(N.zbuduj({ ...baza, wzrost: { cm: 123.9, centyl: 2.4 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 152, centyl: 98.2 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 152,0${NB}cm, 98. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 156, centyl: 99.7 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 156,0${NB}cm, powyżej 99. centyla.`);
-    expect(N.WERSJA).toBe(2);
+    expect(N.WERSJA).toBe(3);
   });
 });
 
+
+// P-RAPORT rata T (decyzje właściciela 2026-09-23): wysoki wzrost wobec wzrostu docelowego wg rodziców (MPH).
+// Progi 1,5 / 2,0; alarm od 3 lat; łagodzenie od 10 lat; wyjątek hSDS ≥ +3,0; liczba SDS tylko w trybie
+// profesjonalnym; remis 2:2 przed „masą proporcjonalną”, za otyłością. Dane FIKCYJNE.
+describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg rodziców)', () => {
+  const NORMA = { bmi: { wartosc: 15.8, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, cole: { proc: 100, klucz: 'norma', kolor: 'ok' }, masa: { kg: 24, centyl: 60, kolor: 'ok' } };
+  const SZESC = { dorosly: false, wiekLat: 6, historia: false, ...NORMA, wzrost: { cm: 129, centyl: 98.3 } };
+  const ROCZNIAK = { dorosly: false, wiekLat: 1, historia: false, bmi: { wartosc: 17.1, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, cole: { proc: 99.7, klucz: 'norma', kolor: 'ok' }, masa: { kg: 11.8, centyl: 93, kolor: 'improve' }, wzrost: { cm: 83, centyl: 99.6 } };
+  const mph = (r, extra) => ({ roznicaSds: r, mphCm: 169.5, mphCentyl: 8, mpSds: -1.44, hSds: 2.13, liczbaWidoczna: true, ...(extra || {}) });
+  const WYSOKI = `Wzrost jest wysoki jak na wiek: 129,0${NB}cm, 98. centyl.`;
+  const CEL_NISKI = `wzrost docelowy wg rodziców 169,5${NB}cm, 8. centyl dorosłych`;
+
+  it('progi i granice wieku są danymi modułu', () => {
+    expect(N.WZROST_A_RODZICE).toEqual({ PASMO: 1.5, ALARM: 2.0, WIEK_ALARM_OD_LAT: 3, WIEK_POKWITANIA_OD_LAT: 10, HSDS_BEZ_LAGODZENIA: 3.0 });
+    expect(Object.isFrozen(N.WZROST_A_RODZICE)).toBe(true);
+  });
+
+  it('W0: brak obojga rodziców → zdanie jak dotąd + dopisek o rodzicach; populacja DS → bez członu o rodzicach i bez dopisku', () => {
+    const bez = N.zbuduj({ ...SZESC, rodziceBrak: true });
+    expect(bez).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn', title: WYSOKI });
+    expect(bez.text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
+    expect(N.zbuduj({ ...SZESC }).text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.');
+    expect(N.zbuduj({ ...SZESC, ds: true, rodziceBrak: true }).text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania.');
+  });
+
+  it('W1: w paśmie — żółte, opisowe („zgodny ze wzrostem rodziców”), bez „rodzinny”; historia i tempo zmieniają drugie zdanie', () => {
+    const h = N.zbuduj({ ...SZESC, mph: mph(0.04, { mphCm: 192, mphCentyl: 98, mpSds: 2.09 }) });
+    expect(h).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn', title: WYSOKI, dodatkowe: [] });
+    expect(h.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 192,0${NB}cm, 98. centyl dorosłych). Najwięcej informacji daje tempo wzrastania w kolejnych pomiarach.`);
+    expect(h.text).not.toMatch(/rodzinn|przemawia|SDS/);
+    expect(N.zbuduj({ ...SZESC, historia: true, mph: mph(0.04, { mphCm: 192, mphCentyl: 98 }) }).text).toMatch(/\)\. Najwięcej informacji daje porównanie z wcześniejszymi pomiarami i tempo wzrastania\.$/);
+    const zTempem = N.zbuduj({ ...SZESC, tempo: { cmRok: 3, ton: 'warn', norma: null }, mph: mph(0.04, { mphCm: 192, mphCentyl: 98 }) });
+    expect(zTempem.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 192,0${NB}cm, 98. centyl dorosłych). Dodatkowo tempo wzrastania wymaga oceny: 3,0${NB}cm/rok.`);
+    expect(N.zbuduj({ ...SZESC, cisnienie: { dziecko: true, sk: 130, roz: 50, centylSk: 99, centylRoz: 20, klasa: 'wysokie', ton: 'danger' }, mph: mph(0.04, { mphCm: 192, mphCentyl: 98 }) }).text)
+      .toMatch(/Dodatkowo wzrost jest wysoki jak na wiek \(129,0\u00A0cm, 98\. centyl\), ale zgodny ze wzrostem rodziców \(wzrost docelowy wg rodziców 192,0\u00A0cm, 98\. centyl dorosłych\)\.$/);
+  });
+
+  it('W1′: roczne dziecko z wysoką masą przy prawidłowym BMI (przypadek właściciela) — tytuł o masie, podtytuł z zastrzeżeniem wieku', () => {
+    const h = N.zbuduj({ ...ROCZNIAK, mph: { roznicaSds: 0.63, mphCm: 190, mphCentyl: 97, mpSds: 1.82, hSds: 2.45, liczbaWidoczna: true } });
+    expect(h.badge).toBe('Wysoka masa ciała'); expect(h.tone).toBe('warn');
+    expect(h.title).toBe(`Masa ciała jest wysoka jak na wiek (11,8${NB}kg, 93. centyl), ale w stosunku do wzrostu pozostaje prawidłowa.`);
+    expect(h.text).toBe(`Wzrost jest również wysoki (83,0${NB}cm, powyżej 99. centyla); masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.`);
+    expect(h.subtext).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 190,0${NB}cm, 97. centyl dorosłych). U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.`);
+    expect(h.dodatkowe).toEqual([]);
+    expect(h.subtext + h.text).not.toMatch(/Sam wysoki|SDS/);
+  });
+
+  it('W2: pogranicze 1,5–2,0 — „wyższy” bez „nieco” i bez „wyraźnie”, z wartościami i różnicą', () => {
+    const h = N.zbuduj({ ...SZESC, mph: mph(1.62, { mphCm: 182, mphCentyl: 76, mpSds: 0.51 }) });
+    expect(h).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn', title: WYSOKI });
+    expect(h.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 182,0${NB}cm, 76. centyl dorosłych; różnica +1,62${NB}SDS). Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.`);
+    expect(h.text).not.toMatch(/nieco|wyraźnie/);
+    expect(N.kandydaci({ ...SZESC, mph: mph(1.62) }).some((k) => k.os === 'mph')).toBe(false);
+  });
+
+  it('W3: ≥ 2,0 w wieku 3–10 lat — czerwony, tytuł z wartościami, przedwczesne dojrzewanie nazwane, bez „Plan ustalono”, bez drugiej osi', () => {
+    const h = N.zbuduj({ ...SZESC, mph: mph(3.57) });
+    expect(h).toMatchObject({ badge: 'Wysoki wzrost — do oceny', tone: 'danger', dodatkowe: [] });
+    expect(h.title).toBe(`Wzrost jest wysoki jak na wiek: 129,0${NB}cm, 98. centyl — wyraźnie wyższy, niż wynika ze wzrostu rodziców.`);
+    expect(h.text).toBe(`Wzrost docelowy wg rodziców to 169,5${NB}cm (8. centyl dorosłych); różnica wynosi +3,57${NB}SDS. Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania, wiek kostny).`);
+    expect(h.text).not.toMatch(/Plan ustalono|Dodatkowo wzrost/);
+    expect(N.kandydaci({ ...SZESC, mph: mph(3.57) }).map((k) => k.os)).toEqual(['wzrost']);
+  });
+
+  it('W3 przy nadwadze/otyłości: masa wygrywa tytuł (remis 2:2 za otyłością), wzrost w jednym „Dodatkowo” z wiekiem kostnym na czele', () => {
+    const h = N.zbuduj({ ...SZESC, masa: { kg: 34, centyl: 97, kolor: 'alert' }, bmi: { wartosc: 20.4, centyl: 97, klucz: 'nadwaga', etykieta: 'Nadwaga', kolor: 'alert' }, cole: { proc: 118, klucz: 'nadwaga', kolor: 'improve' }, krok: { masaKg: 32.3, roznicaKg: 1.7, opis: 'koniec nadwagi', jestSzczebel: true, korzysc: true, klucz: 'nadwaga' }, mph: mph(3.57) });
+    expect(h.badge).toBe('Nadwaga'); expect(h.tone).toBe('danger');
+    expect(h.dodatkowe).toEqual([{ os: 'wzrost', ciezkosc: 2 }]);
+    expect(h.text).toMatch(/Dodatkowo wzrost jest wysoki jak na wiek \(129,0\u00A0cm, 98\. centyl\) i wyraźnie wyższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 169,5\u00A0cm, 8\. centyl dorosłych; różnica \+3,57\u00A0SDS\) — wymaga dalszej oceny, przede wszystkim wieku kostnego\.$/);
+    expect((h.text.match(/Dodatkowo/g) || []).length).toBe(1);
+  });
+
+  it('R1: remis 2:2 z „masą proporcjonalną” (masa ≥ 97 c przy prawidłowym BMI) — W3 w tytule, masa jako „Dodatkowo”', () => {
+    const h = N.zbuduj({ ...SZESC, masa: { kg: 32, centyl: 98, kolor: 'alert' }, mph: mph(3.57) });
+    expect(h.badge).toBe('Wysoki wzrost — do oceny'); expect(h.tone).toBe('danger');
+    expect(h.title).toMatch(/^Wzrost jest wysoki jak na wiek/);
+    expect(h.dodatkowe).toEqual([{ os: 'masa', ciezkosc: 2 }]);
+    expect(h.text).toMatch(/różnica wynosi \+3,57\u00A0SDS\..*Dodatkowo masa ciała jest wysoka jak na wiek \(32,0\u00A0kg, 98\. centyl\), ale proporcjonalna do wzrostu; BMI mieści się w typowym zakresie\.$/);
+    // masa 1 vs W3 2: W3 wygrywa ciężkością, masa nie wchłania
+    const h2 = N.zbuduj({ ...SZESC, masa: { kg: 30, centyl: 93, kolor: 'improve' }, mph: mph(3.57) });
+    expect(h2.badge).toBe('Wysoki wzrost — do oceny'); expect(h2.dodatkowe).toEqual([{ os: 'masa', ciezkosc: 1 }]);
+    // masa 1 vs W2 1: jak w racie S — masa w tytule, W2 w podtytule (samowystarczalny)
+    const h3 = N.zbuduj({ ...SZESC, masa: { kg: 30, centyl: 93, kolor: 'improve' }, mph: mph(1.62, { mphCm: 182, mphCentyl: 76 }) });
+    expect(h3.badge).toBe('Wysoka masa ciała');
+    expect(h3.subtext).toMatch(/^Wzrost jest wyższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 182,0\u00A0cm, 76\. centyl dorosłych; różnica \+1,62\u00A0SDS\)\./);
+    expect(h3.dodatkowe).toEqual([]);
+  });
+
+  it('W3′: poniżej 3 lat — żółte „do obserwacji” bez „wyraźnie”; hSDS ≥ +3,0 nie jest łagodzone', () => {
+    const baza = { ...ROCZNIAK, masa: { kg: 10.5, centyl: 60, kolor: 'ok' } };
+    const h = N.zbuduj({ ...baza, mph: mph(3.88, { hSds: 2.45 }) });
+    expect(h).toMatchObject({ badge: 'Wysoki wzrost — do obserwacji', tone: 'warn', dodatkowe: [] });
+    expect(h.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (${CEL_NISKI}; różnica +3,88${NB}SDS). U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.`);
+    const h2 = N.zbuduj({ ...baza, mph: mph(3.94, { hSds: 3.05 }) });
+    expect(h2).toMatchObject({ badge: 'Wysoki wzrost — do oceny', tone: 'danger' });
+    expect(N.zbuduj({ ...baza, wiekLat: 2.9, mph: mph(3.88, { hSds: 2.45 }) }).tone).toBe('warn');
+    expect(N.zbuduj({ ...baza, wiekLat: 3, mph: mph(3.88, { hSds: 2.45 }) }).tone).toBe('danger');
+  });
+
+  it('W3″: od 10 lat — żółte, ocena wobec etapu dojrzewania i wieku kostnego', () => {
+    const h = N.zbuduj({ ...SZESC, wiekLat: 12, wzrost: { cm: 168, centyl: 98.5 }, mph: mph(2.31, { mphCm: 164.5, mphCentyl: 46, hSds: 2.2 }) });
+    expect(h).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn' });
+    expect(h.text).toBe(`Wzrost jest wyraźnie wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 164,5${NB}cm, 46. centyl dorosłych; różnica +2,31${NB}SDS). W tym wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.`);
+    expect(N.zbuduj({ ...SZESC, wiekLat: 9.9, mph: mph(2.31) }).tone).toBe('danger');
+  });
+
+  it('progi na liczbie zaokrąglonej do 2 miejsc (jak drukowana): 1,996 → alarm, 1,994 → pogranicze „+1,99”; 1,50 → W2, 1,4949 → W1', () => {
+    expect(N.zbuduj({ ...SZESC, mph: mph(1.996) }).tone).toBe('danger');
+    const p = N.zbuduj({ ...SZESC, mph: mph(1.994) });
+    expect(p.tone).toBe('warn'); expect(p.text).toMatch(/różnica \+1,99\u00A0SDS/);
+    expect(N.zbuduj({ ...SZESC, mph: mph(1.5) }).text).toMatch(/^Wzrost jest wyższy/);
+    expect(N.zbuduj({ ...SZESC, mph: mph(1.4949) }).text).toMatch(/^Wzrost jest zgodny/);
+  });
+
+  it('tryb standardowy (liczbaWidoczna: false): zdania słowami i z wzrostem docelowym, bez liczby SDS', () => {
+    const w3 = N.zbuduj({ ...SZESC, mph: mph(3.57, { liczbaWidoczna: false }) });
+    expect(w3.tone).toBe('danger');
+    expect(w3.text).toBe(`Wzrost docelowy wg rodziców to 169,5${NB}cm (8. centyl dorosłych). Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania, wiek kostny).`);
+    const w2 = N.zbuduj({ ...SZESC, mph: mph(1.62, { mphCm: 182, mphCentyl: 76, liczbaWidoczna: false }) });
+    expect(w2.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 182,0${NB}cm, 76. centyl dorosłych). Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.`);
+    expect(w3.text + w2.text).not.toMatch(/SDS/);
+  });
+
+  it('strona ujemna przy wysokim wzroście (bardzo wysocy rodzice): oś mph zostaje z wartościami, oś wzrostu mówi W0 bez dopisku', () => {
+    const h = N.zbuduj({ ...SZESC, mph: mph(-2.23, { mphCm: 206.5, mphCentyl: 99.6, mpSds: 4.36 }) });
+    expect(h).toMatchObject({ badge: 'Wzrost a rodzice', tone: 'danger' });
+    expect(h.title).toBe(`Wzrost dziecka jest niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 206,5${NB}cm, powyżej 99. centyla dorosłych; różnica −2,23${NB}SDS).`);
+    expect(h.text).toBe(`Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym. Dodatkowo wzrost jest wysoki jak na wiek (129,0${NB}cm, 98. centyl).`);
+  });
+
+  it('oś mph bez wysokiego wzrostu: ta sama bramka wieku (< 3 lat ostrzeżenie z zastrzeżeniem) i nawias z wartościami', () => {
+    const h = N.zbuduj({ ...ROCZNIAK, masa: { kg: 10, centyl: 55, kolor: 'ok' }, wzrost: { cm: 79.5, centyl: 85 }, mph: mph(3.7, { mphCm: 161.5, mphCentyl: 0.6, mpSds: -2.6, hSds: 1.1 }) });
+    expect(h).toMatchObject({ badge: 'Wzrost a rodzice', tone: 'warn' });
+    expect(h.title).toBe(`Wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 161,5${NB}cm, poniżej 1. centyla dorosłych; różnica +3,70${NB}SDS).`);
+    expect(h.text).toBe('U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.');
+    expect(N.zbuduj({ ...SZESC, wzrost: { cm: 124, centyl: 90 }, mph: mph(1.9) }).title).toBe(`Wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców (${CEL_NISKI}; różnica +1,90${NB}SDS).`);
+  });
+
+  it('strażnik: bez „Plan ustalono na wizycie” w gałęzi wysokiego wzrostu i bez „rodzinny” w źródle zdań', () => {
+    const src = fs.readFileSync(path.join(korzen, 'vilda_raport_naglowek.js'), 'utf8');
+    const blok = src.slice(src.indexOf('function kandydatWysokiegoWzrostu'), src.indexOf('function kandydatCisnienia'))
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, ''); // bez komentarzy — liczą się zdania
+    expect(blok).not.toMatch(/Plan ustalono|rodzinn|przemawia za|prognoza rodzicielska/);
+  });
+});
