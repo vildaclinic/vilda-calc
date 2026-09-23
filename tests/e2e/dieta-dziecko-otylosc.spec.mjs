@@ -67,7 +67,7 @@ function recommend(page, { strategy = null, diet = 'light', norms = true }) {
   }, { strategy, diet, norms });
 }
 
-test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktualnej z korektą (−253/−379/−506 z tempa), hero z zaokrągloną kalorycznością', async ({ page }) => {
+test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktualnej na REE Molnára (−253/−379/−506 z tempa), hero z górną granicą dnia', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 14, sex: 'M', w: 85, h: 165 });
@@ -91,10 +91,12 @@ test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktual
   expect(r.diet).toBe('moderate'); // rata U (decyzja 4): u 12–18 lat z otyłością domyślna dieta umiarkowana
   expect(r.plan).toContain('PAL 1,4 – niska aktywność');
   expect(r.plan).not.toContain('Tryb kliniczny');
-  expect(r.plan).toContain(`${Math.round((r.state.base - 379) / 100) * 100} kcal/dzień`);
-  // rata U: podstawa od masy docelowej (Mazur 2022), zapotrzebowanie aktualne z korektą −10 % REE (Hofsteenge — nazwisko zostaje w silniku)
+  // rata V pkt 1: hero karty planu to górna granica dnia — w dół do 50 kcal, ze znakiem „≤”
+  expect(r.plan).toMatch(new RegExp(`≤\\s?${Math.floor(r.state.diets[1][1] / 50) * 50}\\s?kcal/dzień\\s?górna granica dnia — dieta umiarkowana \\(nie cel do dobicia\\)`));
+  // rata U: podstawa od masy docelowej (Mazur 2022); rata V: zapotrzebowanie aktualne z REE Molnára 1995 (nazwa równania z danych)
   expect(r.plan).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok.');
-  expect(r.plan).toContain('(z korektą −10 % REE na otyłość)');
+  expect(r.plan).toContain('(REE wg Molnára 1995, zwalidowane u nastolatków z otyłością)');
+  expect(r.plan).not.toContain('korektą −10 %');
   expect(r.plan).not.toContain('Hofsteenge');
   expect(r.plan).toContain('85. centyl BMI');
   expect(r.plan).toContain('a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.');
@@ -103,15 +105,16 @@ test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktual
   expect(r.journey).toContain('−379 kcal/d');
 });
 
-test('12–18 lat, narracja redukcyjna: kaloryczność od masy aktualnej z korektą, czas z symulacji wzrastania, normy z kalorycznością planu', async ({ page }) => {
+test('12–18 lat, narracja redukcyjna: kaloryczność jako górna granica dnia (rata V), czas z symulacji wzrastania, normy z tą samą liczbą', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 14, sex: 'M', w: 85, h: 165 });
   const text = await recommend(page, { strategy: null, diet: 'moderate' });
-  const kcal = Math.round((r.state.base - 379) / 100) * 100;
+  const kcal = Math.floor(r.state.diets[1][1] / 50) * 50; // rata V pkt 1: w dół do 50 kcal
   // ENERGY-REC-KROTKO (2026-09-13, decyzja właściciela): zdanie o kaloryczności bez nawiasu
-  // z metodologią — sama liczba; podstawa i cel zostają w karcie planu.
-  expect(text).toContain(`dostarcza około ${kcal} kcal dziennie`);
+  // z metodologią — sama liczba; podstawa i cel zostają w karcie planu. Rata V: „nie więcej niż”.
+  expect(text).toContain(`Dieta umiarkowana: nie więcej niż ${kcal} kcal dziennie — to górna granica dnia, nie cel do dobicia.`);
+  expect(text).not.toContain('dostarcza około');
   expect(text).not.toContain('pomniejszone o deficyt dobrany do bezpiecznego tempa');
   expect(text).not.toMatch(/kcal dziennie \(zapotrzebowanie/u);
   expect(text).toContain('wynosi około 379 kcal');

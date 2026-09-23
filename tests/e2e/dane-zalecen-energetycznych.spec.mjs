@@ -152,8 +152,16 @@ test('nastolatka z otyloscia: masa docelowa, redukcja, witamina D, plyny i czas 
   expect(dane.masa.docelowaKg).not.toBeCloseTo(dane.klasyfikacja.klasaBmi.neededWeightKg, 1);
   expect(Math.abs(dane.pacjent.masaKg - dane.masa.docelowaKg - dane.masa.doRedukcjiKg)).toBeLessThan(0.01);
 
-  expect(text).toContain(norm('około ' + dane.energia.podazZaokrKcal + ' kcal dziennie'));
+  // P-DIETA rata V pkt 1: u dziecka z planem otyłości liczba w zdaniu to górna granica dnia („nie więcej niż”) —
+  // ta sama, którą niesie dane.energia.podazZaokrKcal (silnik: w dół do 50 kcal)
+  expect(dane.energia.gornaGranica).toBe(true);
+  expect(dane.energia.podazZaokrKcal % 50).toBe(0);
+  expect(text).toContain(norm('nie więcej niż ' + dane.energia.podazZaokrKcal + ' kcal dziennie'));
   expect(text).toContain(norm('około ' + dane.energia.deficytKcal + ' kcal'));
+  // rata V pkt 3: kontrola za 6 tygodni z liczb dane.kontrola
+  expect(dane.kontrola.tygodnie).toBe(6);
+  expect(text).toContain(norm('spodziewana masa ciała ok. ' + przecinek(dane.kontrola.masaSpodziewanaKg, 1) + ' kg'));
+  expect(text).toContain(norm('Jeśli masa będzie wynosić ' + przecinek(dane.kontrola.progKg, 1) + ' kg lub więcej'));
   expect(text).toContain(norm('ok. ' + przecinek(dane.energia.tempoKgTydz, 1) + ' kg tygodniowo'));
 
   expect(dane.witD.pasmo).toBe('11–18 lat');

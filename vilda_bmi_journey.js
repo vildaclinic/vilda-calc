@@ -381,6 +381,27 @@
     return html;
   }
 
+  /* rata V: górna granica i kontrola tylko w planie redukcji dziecka z nadwagą/otyłością (wiersze Gc silnika) */
+  function gornaGranica(found, ctx) {
+    return !!(found && found.gornaGranica && fin(found.gornaKcal) && ctx && ctx.isChild && !ctx.customGoal
+      && lastEngineState && lastEngineState.childObesityPlan);
+  }
+  /* rata V pkt 3 (decyzja właściciela 2026-09-23): kontrola za 6 tygodni — liczby z silnika (energyKontrolaPlanu):
+     spodziewana masa przy samej diecie i próg (połowa spodziewanego ubytku); przy masie ≥ progu odjąć 100–200 kcal. */
+  function kontrolaHtml(ctx, model) {
+    if (typeof w.energyKontrolaPlanu !== 'function') return '';
+    var k = w.energyKontrolaPlanu(model.found, { weightKg: ctx.weightKg, floorKcal: lastEngineState && lastEngineState.floorKcal });
+    if (!k) return '';
+    var dzialanie = k.obnizkaMozliwa
+      ? 'odejmij od planu ' + k.obnizkaKcal[0] + '\u2013' + k.obnizkaKcal[1] + '\u202Fkcal (do '
+        + (k.podazPoObnizceKcal[0] === k.podazPoObnizceKcal[1] ? fmtInt(k.podazPoObnizceKcal[1]) : fmtInt(k.podazPoObnizceKcal[0]) + '\u2013' + fmtInt(k.podazPoObnizceKcal[1]))
+        + '\u202Fkcal), bo realne spożycie jest wyższe, niż liczymy.'
+      : 'plan do omówienia na kontroli — kaloryczność jest już przy dolnej granicy.';
+    return '<div class="bmi-journey-kontrola"><b class="bmi-journey-kontrolah">Kontrola za ' + k.tygodnie + ' tygodni (ok. ' + esc(k.terminTekst) + '):</b> '
+      + 'spodziewana masa <b>ok. ' + fmt(k.masaSpodziewanaKg, 1) + '\u202Fkg</b>. Jeśli będzie <b>' + fmt(k.progKg, 1) + '\u202Fkg lub więcej</b>, '
+      + dzialanie + '</div>';
+  }
+
   function renderPanel(ctx) {
     var model = computeModel(ctx);
     var goalKg = ctx.weightKg - ctx.kgToLose;
@@ -425,6 +446,13 @@
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.maintenanceKcal / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
         + '<div class="bmi-journey-kcalcap">energia utrzymania (stabilizacja masy ciała' + (fin(model.targetWeightKg) ? ', cel: masa docelowa ok. ' + fmt(model.targetWeightKg, 1) + '\u202Fkg (85. centyl BMI)' : '') + ')</div></div>'
+      : model.found && gornaGranica(model.found, ctx)
+      /* rata V pkt 1 (decyzja właściciela 2026-09-23): u dziecka z planem otyłości liczba to górna granica dnia
+         (silnik: gornaKcal, w dół do 50 kcal), nie cel do dobicia */
+      ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">\u2264\u202F' + fmtInt(model.found.gornaKcal)
+        + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
+        + '<div class="bmi-journey-kcalcap">górna granica dnia — dieta ' + esc(String(model.found.name || '').toLowerCase()) + ' (nie cel do dobicia)</div></div>'
+        + kontrolaHtml(ctx, model)
       : model.found
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
@@ -473,6 +501,8 @@
       + '.bmi-journey-kcaln{font-size:1.9rem;font-weight:750;color:var(--bj-green);line-height:1.1}'
       + '.bmi-journey-kcalu{font-size:.82rem;color:var(--bj-muted)}'
       + '.bmi-journey-kcalcap{font-size:.72rem;color:var(--bj-green);margin-top:.05rem}'
+      + '.bmi-journey-kontrola{margin:.6rem .3rem 0;padding:.55rem .7rem;border:1px solid var(--bj-line);border-left:5px solid var(--bj-teal);border-radius:12px;background:var(--bj-chipbg);font-size:.86rem;line-height:1.4}'
+      + '.bmi-journey-kontrolah{color:var(--bj-num)}'
       + '.bmi-journey-lbl{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--bj-muted);text-align:center;margin:.7rem 0 .25rem}'
       + '.bmi-journey-pal-note{font-size:.7rem;color:var(--bj-muted);text-align:center;margin:.2rem .4rem 0;font-style:italic}'
       /* segmenty PAL/diety: komplet jawnych wartości + !important — #id wygrywa z `.liquid-ios26 button{...}!important` */

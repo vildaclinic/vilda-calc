@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 8;
+  var WERSJA = 9;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -282,7 +282,10 @@
   function sekcjaEnergia(dane, ruch) {
     var e = dane.energia || {};
     var kafle = [];
-    if (liczba(e.podazZaokrKcal) != null) kafle.push([calk(e.podazZaokrKcal), 'kcal dziennie', 'zalecana kaloryczność diety']);
+    /* rata V pkt 1 (decyzja właściciela 2026-09-23): u dziecka z planem otyłości liczba to górna granica dnia
+       (generator: gornaGranica, silnik zaokrągla w dół do 50 kcal) — „≤”, nie cel do dobicia. */
+    if (liczba(e.podazZaokrKcal) != null && e.gornaGranica === true) kafle.push(['\u2264 ' + calk(e.podazZaokrKcal), 'kcal dziennie', 'górna granica dnia, nie cel']);
+    else if (liczba(e.podazZaokrKcal) != null) kafle.push([calk(e.podazZaokrKcal), 'kcal dziennie', 'zalecana kaloryczność diety']);
     else if (liczba(e.utrzymanieKcal) != null) kafle.push([calk(e.utrzymanieKcal), 'kcal dziennie', 'zapotrzebowanie energetyczne']);
     /* P-DIETA-PRZYROST rata D: przy strategii „przyrost" kafle nadwyżki, podaży i tempa przyrostu — zakresy z generatora, nic tu nie jest liczone. */
     var zakres = function (v) { return Array.isArray(v) && v.length === 2 && liczba(v[0]) != null && liczba(v[1]) != null ? v : null; };
@@ -310,7 +313,11 @@
       /* rata M: nazwy pozycji z karty zaczynają się wielką literą („Dieta lekka”, „Spacer 30 min/d”);
          w środku zdania piszemy je małą literą. */
       var malaLitera = function (t) { return t ? t.charAt(0).toLowerCase() + t.slice(1) : t; };
-      var nazwy = ruch.rows.map(function (r) { return malaLitera(String(r[0])); });
+      /* rata V: przy górnej granicy dnia nazwa diety niesie liczbę („dieta umiarkowana (do 2 700 kcal)”) */
+      var nazwy = ruch.rows.map(function (r) {
+        var t = malaLitera(String(r[0]));
+        return e.gornaGranica === true && liczba(e.podazZaokrKcal) != null && /^dieta\b/.test(t) ? t + ' (do ' + calk(e.podazZaokrKcal) + ' kcal)' : t;
+      });
       var lista = nazwy.length > 1
         ? nazwy.slice(0, -1).join(', ') + ' i ' + nazwy[nazwy.length - 1]
         : nazwy[0];
@@ -337,6 +344,28 @@
         }).join('') + '</div>'
       + (podpis ? '<div class="vrp-podkafle">' + podpis + '</div>' : '')
       + blokRuchu
+      + '</section>';
+  }
+
+  /* rata V pkt 3 (decyzja właściciela 2026-09-23): kontrola za 6 tygodni — liczby z silnika (energyKontrolaPlanu przez
+     generator: dane.kontrola). Trzeci kafel wg uwagi właściciela: „≥ próg” / „odejmij od planu” / „100–200 kcal”. */
+  function sekcjaKontrola(dane) {
+    var k = dane.kontrola, e = dane.energia || {};
+    if (!k || e.gornaGranica !== true || liczba(k.progKg) == null || liczba(k.masaSpodziewanaKg) == null) return '';
+    var ob = Array.isArray(k.obnizkaKcal) && k.obnizkaKcal.length === 2 ? k.obnizkaKcal : null;
+    var kafle = [
+      [k.terminKrotki || '', String(k.terminRok || ''), 'termin kontroli (ok. ' + (liczba(k.tygodnie) || 6) + ' tygodni)'],
+      ['ok. ' + fmt(k.masaSpodziewanaKg, 1) + ' kg', 'spodziewana masa', 'przy tej diecie (dziś ' + fmt(k.masaDzisKg, 1) + ' kg)'],
+      k.obnizkaMozliwa && ob
+        ? ['\u2265 ' + fmt(k.progKg, 1) + ' kg', 'odejmij od planu', calk(ob[0]) + '\u2013' + calk(ob[1]) + ' kcal']
+        : ['\u2265 ' + fmt(k.progKg, 1) + ' kg', 'plan do omówienia', 'kaloryczność już przy minimum']
+    ];
+    return '<section class="vrp-blok">'
+      + '<div class="vrp-nag-blok"><span>KONTROLA ZA ' + esc(String(liczba(k.tygodnie) || 6)) + ' TYGODNI</span></div>'
+      + '<div class="vrp-kafle">' + kafle.map(function (x) {
+          return '<div class="vrp-kafel"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span><i>' + esc(x[2]) + '</i></div>';
+        }).join('') + '</div>'
+      + '<div class="vrp-podkafle">Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci.</div>'
       + '</section>';
   }
 
@@ -441,6 +470,7 @@
 
     var tresc = (sekcjaDroga(dane, drab) || sekcjaCelWlasny(dane))
       + sekcjaEnergia(dane, ruch)
+      + sekcjaKontrola(dane)
       + sekcjaDodatki(dane)
       + sekcjaCodzien(dane)
       + sekcjaFarma(kwal);

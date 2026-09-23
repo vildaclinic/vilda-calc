@@ -9,6 +9,9 @@ import { oknoZSilnikiem, wczytajDoOkna } from '../support/silnik-bmi.mjs';
 //     nie więcej niż zapotrzebowanie aktualne (skorygowane) − ten sam deficyt; tempo nie szybsze niż
 //     1/1,5/2 kg/mies. (sufit); podłoga = max(1200, REE skorygowane);
 //  4. u 12–18 lat z otyłością dieta domyślna „umiarkowana”.
+// P-DIETA rata V (2026-09-23) zastąpiła punkt 1: zamiast REE Henry'ego × 0,9 u otyłości od 10 lat liczy się
+// równanie Molnára 1995 z podziałem na płeć (doi:10.1016/s0022-3476(95)70114-1) — oczekiwania poniżej są już
+// liczbami raty V; punkty 2 i 4 raty U obowiązują bez zmian.
 // PRAWDZIWY silnik (vilda_diet_plan_ui.js + vilda_bmi.js na tablicach OLAF). Dane FIKCYJNE.
 
 const zapisane = {};
@@ -21,6 +24,8 @@ ustawGlobal('vildaAppClearHtml', (el) => { el.innerHTML = ''; });
 const win = wczytajDoOkna(oknoZSilnikiem(), 'vilda_diet_plan_ui.js');
 
 const henryBoy10_17 = (w, hM) => 15.6 * w + 266 * hM + 299;
+// wyrocznia z tabeli V Molnára 1995 (kJ/24 h → kcal), niezależna od pliku danych silnika
+const molnar = (sex, w, hCm, age) => (sex === 'F' ? 51.2 * w + 24.5 * hCm - 207.5 * age + 1629.8 : 50.9 * w + 25.3 * hCm - 50.3 * age + 26.9) / 4.184;
 const plan = (o) => win.energyBuildPlanReductionState({ ageMonthsOpt: 0, palInput: null, ...o });
 const defFor = (kg) => Math.round(kg * 7700 / 30.4375); // 1 → 253; 1,5 → 379; 2 → 506
 const r100 = (x) => Math.round(x / 100) * 100;
@@ -28,29 +33,32 @@ const r100 = (x) => Math.round(x / 100) * 100;
 describe('rata U: chłopiec 15 l 3 mies., 102,5 kg / 186,7 cm (przypadek z raportu właściciela)', () => {
   const st = plan({ sex: 'M', ageYears: 15 + 3 / 12, ageMonthsOpt: 3, weightKg: 102.5, heightCm: 186.7 });
   const ree = henryBoy10_17(102.5, 1.867);
-  it('PAL 1,4 i korekta 0,9 działają osobno: REE 2 395 → 2 155, zapotrzebowanie 3 017 kcal', () => {
+  const mol = molnar('M', 102.5, 186.7, 15 + 3 / 12);
+  it('rata V: PAL 1,4 i REE Molnára działają osobno: REE Henry 2 395 → Molnár 2 199, zapotrzebowanie 3 079 kcal', () => {
     expect(st.palUsed).toBe(1.4);
-    expect(st.reeFactor).toBe(0.9);
+    expect(st.reeRownanie.id).toBe('MOLNAR_1995');
     expect(st.reeKcal).toBeCloseTo(ree, 3);
-    expect(st.reeAdjustedKcal).toBe(Math.round(ree * 0.9));
-    expect(st.maintenanceKcal).toBe(Math.round(ree * 0.9 * 1.4));
-    expect(st.floorKcal).toBe(Math.round(ree * 0.9));
+    expect(st.reeAdjustedKcal).toBe(Math.round(mol));
+    expect(st.reeAdjustedKcal).toBe(2199); // rata U: 2 155 (Henry × 0,9)
+    expect(st.maintenanceKcal).toBe(Math.round(mol * 1.4));
+    expect(st.maintenanceKcal).toBe(3079); // rata U: 3 017
+    expect(st.floorKcal).toBe(Math.round(mol));
   });
-  it('zapotrzebowanie dla masy docelowej (82,1 kg, 85c) tym samym równaniem i PAL: 2 907 kcal', () => {
+  it('rata V: zapotrzebowanie dla masy docelowej (82,1 kg, 85c) TYM SAMYM równaniem (Molnár) i PAL: 2 731 kcal', () => {
     expect(st.targetWeightKg).toBeCloseTo(82.12, 2);
-    expect(st.targetTeeKcal).toBe(Math.round(henryBoy10_17(st.targetWeightKg, 1.867) * 1.4));
-    expect(st.targetTeeKcal).toBe(2907);
+    expect(st.targetTeeKcal).toBe(Math.round(molnar('M', st.targetWeightKg, 186.7, 15 + 3 / 12) * 1.4));
+    expect(st.targetTeeKcal).toBe(2731); // rata U: 2 907 (Henry)
   });
-  it('diety: 2907 − 200/350/500 dawałoby tempo 1,2/1,8/2,4 kg/mies. → sufit 1/1,5/2 wiąże; 2 764 / 2 638 / 2 511 → w karcie 2 800 / 2 600 / 2 500', () => {
-    const base = ree * 0.9 * 1.4;
+  it('diety: 2731 − 200/350/500 dawałoby tempo szybsze niż sufit → sufit 1/1,5/2 wiąże; 2 826 / 2 700 / 2 573 → górna granica 2 800 / 2 700 / 2 550', () => {
+    const base = mol * 1.4;
     expect(st.diets.map((d) => d.key)).toEqual(['light', 'moderate', 'intense']);
     expect(st.diets.map((d) => d.deficytCeluKcal)).toEqual([200, 350, 500]);
-    expect(st.diets.every((d) => d.bazaCeluKcal === 2907)).toBe(true);
+    expect(st.diets.every((d) => d.bazaCeluKcal === 2731)).toBe(true);
     expect(st.diets.map((d) => d.tempoSufit)).toEqual([true, true, true]);
     expect(st.diets.map((d) => d.deficit)).toEqual([1, 1.5, 2].map(defFor));
     expect(st.diets.map((d) => d.intake)).toEqual([1, 1.5, 2].map((r) => Math.round(base - defFor(r))));
-    expect(st.diets.map((d) => d.intake)).toEqual([2764, 2638, 2511]);
-    expect(st.diets.map((d) => r100(d.intake))).toEqual([2800, 2600, 2500]); // przed ratą U: 3 100 / 3 000 / 2 800
+    expect(st.diets.map((d) => d.intake)).toEqual([2826, 2700, 2573]); // rata U: 2 764 / 2 638 / 2 511
+    expect(st.diets.map((d) => d.gornaKcal)).toEqual([2800, 2700, 2550]); // rata V pkt 1: w dół do 50 kcal
     expect(st.diets.map((d) => d.monthlyLossKg)).toEqual([1, 1.5, 2]);
     expect(Math.min(...st.diets.map((d) => d.intake))).toBeGreaterThanOrEqual(st.floorKcal);
   });
@@ -93,15 +101,17 @@ describe('rata U: sama nadwaga — bez korekty, PAL 1,6; podstawa od masy docelo
   });
 });
 
-describe('rata U: bramka wieku korekty i strażnik minimalnego deficytu', () => {
-  it('otyłość 11 lat → 0,9; otyłość 9 lat → 1; nadwaga 14 lat → 1', () => {
+describe('rata U/V: bramka wieku równania i strażnik minimalnego deficytu', () => {
+  it('rata V: otyłość 11 lat → Molnár; otyłość 9 lat → Henry bez korekty; nadwaga 14 lat → Henry bez korekty', () => {
     const o11 = plan({ sex: 'M', ageYears: 11, weightKg: 65, heightCm: 150 });
-    expect(o11.bmiClass.obese).toBe(true); expect(o11.reeFactor).toBe(0.9);
+    expect(o11.bmiClass.obese).toBe(true); expect(o11.reeRownanie.id).toBe('MOLNAR_1995');
+    expect(o11.reeAdjustedKcal).toBe(Math.round(molnar('M', 65, 150, 11)));
     const o9 = plan({ sex: 'M', ageYears: 9, weightKg: 52, heightCm: 138 });
-    expect(o9.bmiClass.obese).toBe(true); expect(o9.reeFactor).toBe(1);
+    expect(o9.bmiClass.obese).toBe(true); expect(o9.reeFactor).toBe(1); expect(o9.reeRownanie.id).toBe('HENRY_2005');
     expect(o9.reeAdjustedKcal).toBe(Math.round(o9.reeKcal));
     const n14 = plan({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165 });
     expect(n14.bmiClass.overweight).toBe(true); expect(n14.bmiClass.obese).toBe(false); expect(n14.reeFactor).toBe(1);
+    expect(n14.reeRownanie.id).toBe('HENRY_2005');
   });
   it('żadna dieta nie ma deficytu mniejszego niż 200/350/500 wobec zapotrzebowania aktualnego (skorygowanego) ani szybszego niż sufit', () => {
     const przypadki = [

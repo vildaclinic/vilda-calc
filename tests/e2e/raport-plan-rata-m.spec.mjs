@@ -120,7 +120,8 @@ test('zdania planu: bez zdania o diecie/PAL, pozycje małą literą, ruch „doj
   expect(a.tekst).not.toContain('Wyliczone dla diety');
   expect(a.tekst).not.toContain('Zmiana aktywności zmienia te liczby');
   // (zdanie o ograniczonym tempie u dzieci zależy od wybranej diety — jego obecność w źródle pilnuje test jednostkowy)
-  expect(a.tekst).toMatch(/Twój zadeklarowany plan: dieta [a-ząćęłńóśźż]+ i spacer 30 min\/d — razem ok\. [\d\s\u00A0\u202F]+ kcal tygodniowo\. Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok\. −\d,\d[\s\u202F]kg tygodniowo\. Dzięki ruchowi dojdziesz do celu (o [^.]+ |nieco )wcześniej niż na samej diecie\./u);
+  // P-DIETA rata V pkt 1: u dziecka z planem otyłości nazwa diety niesie górną granicę dnia („dieta umiarkowana (do 2 000 kcal)”)
+  expect(a.tekst).toMatch(/Twój zadeklarowany plan: dieta [a-ząćęłńóśźż]+ \(do [\d\s\u00A0\u202F]+ kcal\) i spacer 30 min\/d — razem ok\. [\d\s\u00A0\u202F]+ kcal tygodniowo\. Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok\. −\d,\d[\s\u202F]kg tygodniowo\. Dzięki ruchowi dojdziesz do celu (o [^.]+ |nieco )wcześniej niż na samej diecie\./u);
   expect(a.tekst).not.toContain('szybciej niż na samej diecie');
   expect(a.tekst).not.toMatch(/ i Spacer /);
   // dorosły: pod kaflami nic (ani zdania o diecie/PAL, ani zdania o tempie u dzieci)
@@ -129,4 +130,7 @@ test('zdania planu: bez zdania o diecie/PAL, pozycje małą literą, ruch „doj
   expect(b.tekst).not.toContain('celowo ograniczone');
   expect(b.tekst).not.toContain('Wyliczone dla diety');
   expect(b.tekst).toMatch(/spodziewane tempo redukcji ?Twój zadeklarowany plan:/);
+  // dorosły: bez górnej granicy w nazwie diety i bez sekcji kontroli (rata V dotyczy tylko dziecka)
+  expect(b.tekst).toMatch(/Twój zadeklarowany plan: dieta [a-ząćęłńóśźż]+ i /u);
+  expect(b.tekst).not.toContain('KONTROLA ZA');
 });

@@ -81,7 +81,10 @@ test('8-latka (97–99c): domyślna stabilizacja — karta i Droga w trybie utrz
   expect(red.diets).toEqual([['light', red.maint - 126, 126]]);
   expect(red.text).toContain('wynosi około 126 kcal');
   expect(red.plan).toContain('−126 kcal/dzień · ok. 0,1 kg/tydz.');
-  expect(red.plan).toContain('zalecana kaloryczność diety');
+  // P-DIETA rata V pkt 1: u dziecka z planem redukcji liczba to górna granica dnia (w dół do 50 kcal), bez „zalecana”
+  expect(red.plan).toContain('górna granica dnia — dieta lekka (nie cel do dobicia)');
+  expect(red.plan).toMatch(new RegExp(`≤\\s?${Math.floor((red.maint - 126) / 50) * 50}\\s?kcal/dzień`));
+  expect(red.journey).toContain('Kontrola za 6 tygodni');
   expect(red.journey).toContain('Cel: −8,4 kg');
   expect(red.journey).toContain('−126 kcal/d');
 });

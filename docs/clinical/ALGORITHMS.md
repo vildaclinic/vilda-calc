@@ -5778,6 +5778,88 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Dieta dziecka z otyłością: REE wg Molnára 1995 zamiast Henry’ego × 0,9 (otyłość 10–18 lat), kaloryczność jako górna granica dnia, kontrola za 6 tygodni (P-DIETA rata V, SW 1.1.58, 2026-09-23)
+
+**Zgłoszenie i decyzje właściciela (2026-09-23).** Po racie U właściciel dostarczył pełne teksty Henry 2005, Hofsteenge 2010,
+Molnár 1995, Lazzer 2006 i 2014 oraz Trumbo 2002 i zapytał o „czynnik ludzki” (pacjent traktuje liczbę kcal jako cel i dokłada
+„tylko 100 kcal”). Decyzje: **V1** (równanie Molnára tylko przy otyłości 10–18 lat, przy nadwadze i poniżej 10 lat Henry bez
+korekty), **punkt 1** (liczba jako górna granica dnia, zaokrąglana w dół) i **punkt 3** (kontrola za 6 tygodni z progiem) —
+kontrola tylko w planie PDF, karcie „Droga do normy BMI” i zaleceniach; trzeci kafel kontroli: „≥ próg” / „odejmij od planu” /
+„100–200 kcal”, bez zdania o realnym spożyciu. Punkt 2 (zdanie o skutku +100 kcal) odrzucony.
+
+**Źródła.**
+- Molnár D, Jeges S, Erhardt E, Schutz Y. *Measured and predicted resting metabolic rate in obese and nonobese adolescents.*
+  J Pediatr 1995;127(4):571–7. [doi:10.1016/s0022-3476(95)70114-1](https://doi.org/10.1016/s0022-3476(95)70114-1)
+  (PMID 7562278). Tabela V: 1A chłopcy RMR [kJ/24 h] = 50,9·masa [kg] + 25,3·wzrost [cm] − 50,3·wiek [lata] + 26,9 (R² 0,884);
+  1B dziewczęta = 51,2·masa + 24,5·wzrost − 207,5·wiek + 1 629,8 (R² 0,824). Populacja: Pécs (Węgry), 371 dzieci 10–16 lat
+  (193 chłopców: 116 bez otyłości, 77 z otyłością; 178 dziewcząt: 119 i 59), kalorymetria pośrednia na czczo; walidacja w
+  niezależnej kohorcie 141 dzieci. Równania FAO/WHO i Schofielda zawyżały RMR o 7,5–18,1 %; w tabeli III u otyłych chłopców
+  ok. +12 %, u otyłych dziewcząt ok. −2 % (równanie W+H).
+- Hofsteenge GH, Chinapaw MJ, Delemarre-van de Waal HA, Weijs PJ. *Validation of predictive equations for resting energy
+  expenditure in obese adolescents.* Am J Clin Nutr 2010;91(5):1244–54. [doi:10.3945/ajcn.2009.28330](https://doi.org/10.3945/ajcn.2009.28330).
+  121 holenderskich nastolatków 12–18 lat z nadwagą/otyłością (BMI-SDS 2,93): Molnár (wspólne) 74 % trafnych (±10 %), błąd
+  −1,2 %, RMSE 174 kcal/d; **Molnár z podziałem na płeć 73 %, −1,3 %, RMSE 174 i najwęższy rozrzut między płciami i grupami
+  pochodzenia**; Henry 10–18 W+H 56 %, +2,4 %, RMSE 219; Schofield 10–18 W 50 %, +10,7 %, RMSE 276. (Sprostowanie do rozmowy:
+  74 %/−1,2 % dotyczy równania wspólnego, 73 %/−1,3 % wariantu z płcią, który wybrano.)
+- Henry CJK. *Basal metabolic rate studies in humans: measurement and development of new equations.* Public Health Nutr
+  2005;8(7A):1133–52. [doi:10.1079/phn2005801](https://doi.org/10.1079/phn2005801) — współczynniki silnika zgodne z tabelą 15.
+- „Czynnik ludzki” (PubMed): Bandini 1999 [doi:10.1002/j.1550-8528.1999.tb00431.x](https://doi.org/10.1002/j.1550-8528.1999.tb00431.x)
+  (nastolatki z otyłością raportują ok. 55 % wydatku zmierzonego DLW); Champagne 1998 [doi:10.1016/S0002-8223(98)00097-2](https://doi.org/10.1016/S0002-8223(98)00097-2);
+  Hill i Davies 2001 [doi:10.1079/bjn2000281](https://doi.org/10.1079/bjn2000281); EASO/EFAD 2022 [doi:10.1159/000527540](https://doi.org/10.1159/000527540)
+  („regularly reviewed and adjusted”). Żadna z prac nie podaje liczbowej reguły kontroli — **6 tygodni, próg „połowa spodziewanego
+  ubytku” i obniżka 100–200 kcal to decyzja właściciela**, nie wartość z publikacji.
+
+**Reguła (dane + silnik).**
+1. Równanie jako DANE: `vilda_ree_rownania_data.js` (`window.VildaReeRownania`, rejestr `MOLNAR_1995` z populacją, zakresem
+   10–18 lat, wskazaniem „otyłość”, cytowaniem i DOI; `HENRY_2005` nazwany, jego współczynniki nadal w silniku — przeniesienie
+   do danych to osobny krok bez zmiany wyników). Silnik `energyReeZRownania(id, {sex, weightKg, heightCm, ageYears})` przelicza
+   kJ → kcal (÷ 4,184), wiek dziesiętny; poza zakresem albo bez danych zwraca `null` (zostaje Henry).
+2. W `energyBuildPlanReductionState`: dziecko z otyłością (≥ 97. c) i Molnár dostępny → REE planu = Molnár(masa aktualna);
+   baza planu = TEE silnika × (Molnár / Henry) (ten sam PAL, bez dodatku na wzrastanie); **zapotrzebowanie dla masy docelowej =
+   Molnár(masa docelowa 85. c) × PAL** — jedno równanie dla REE, podłogi, zapotrzebowania aktualnego i docelowego. Wynik niesie
+   `reeRownanie` (id, nazwa, opis). `CHILD_REE_OBESITY_FACTOR` = 1 (stała zostaje jako API).
+3. Wiersze diety dziecka (`proposeChildDietsFromBase`) niosą `gornaKcal` = podaż zaokrąglona **w dół** do 50 kcal
+   (`ENERGY_GORNA_KROK_KCAL`); gdyby zejście w dół przebiło podłogę, zostaje liczba dokładna.
+4. `energyKontrolaPlanu(wiersz, {weightKg, floorKcal, dzis})`: termin = dziś + 42 dni; spodziewana masa = masa − tempo diety
+   (bez ruchu) × 6 tyg.; próg = masa − ½ spodziewanego ubytku (oba do 0,1 kg); przy masie ≥ progu odjąć od planu 100–200 kcal,
+   dolna granica zakresu nie niżej niż podłoga (w górę do 50); gdy nawet −100 kcal przebija podłogę — „plan do omówienia na kontroli”.
+5. Wyjścia: karta planu i karta drogi — „≤ N kcal/dzień, górna granica dnia — dieta … (nie cel do dobicia)” + ramka kontroli
+   (tylko karta drogi); zalecenia — „Dieta …: nie więcej niż N kcal dziennie — to górna granica dnia, nie cel do dobicia.” +
+   zdanie o kontroli (bez roli — nie trafia do kolumn planu PDF); zdanie o normach liczone od tej samej liczby; plan PDF — kafel
+   „≤ N / kcal dziennie / górna granica dnia, nie cel”, nazwa diety w zdaniu o ruchu „(do N kcal)”, sekcja „KONTROLA ZA 6 TYGODNI”;
+   „Raport po wizycie” — „Dla masy prawidłowej” z planu (`celTeeKcal`, dawniej osobne przeliczenie z × 1,01 na wzrastanie:
+   2 937 wobec 2 907 w planie) i „Plan: dieta …: ≤ N kcal/d”. Dorośli bez zmian.
+
+**Przypadki syntetyczne (wejście → wynik; testy na prawdziwych funkcjach).**
+
+| pacjent (fikcyjny) | równanie | REE | TEE aktualne | TEE dla masy docelowej | umiarkowana (górna granica) | rata U |
+|---|---|---|---|---|---|---|
+| chł. 15;3, 102,5 kg / 186,7 cm, PAL 1,4 | Molnár | 2 199 | 3 079 | 2 731 (82,1 kg) | 2 700 (≤ 2 700); lekka ≤ 2 800, intensywna ≤ 2 550 | 2 600 |
+| dz. 12, 70 kg / 150 cm, PAL 1,4 | Molnár | 1 529 (Henry 1 494) | 2 141 | 1 778 | 1 762 (≤ 1 750) | 1 500 |
+| dz. 16, 90 kg / 160 cm | Molnár | 1 634 (Henry 1 706) | 2 288 | 1 783 | 1 909 (≤ 1 900) | — |
+| chł. 13, 60 kg / 155 cm (nadwaga), PAL 1,6 | Henry | 1 647 | 2 636 | 2 480 | lekka 2 383 (≤ 2 350) | bez zmian liczby |
+| chł. 8, 45 kg / 130 cm (otyłość < 10 l.) | Henry | 1 393 | 2 228 | 1 915 | lekka 2 102 (≤ 2 100) | bez zmian liczby |
+
+Kontrola chłopca z raportu (umiarkowana, dziś 23.09.2026): 4 listopada 2026, spodziewana masa ok. 100,4 kg, próg 101,5 kg,
+po obniżce 2 500–2 600 kcal. Deficyt i tempo (379 kcal, 1,5 kg/mies.) bez zmian — sufit tempa nadal wiąże.
+
+**Wpływ kliniczny.** U chłopców 10–18 lat z otyłością kaloryczność rośnie o ok. 50–100 kcal wobec raty U (Molnár ≈ Henry × 0,9–0,93);
+u dziewcząt o 200–300 kcal (rata U zaniżała REE o 11–14 %). Przy nadwadze i poniżej 10 lat liczby silnika bez zmian; zmienia się
+tylko prezentacja (w dół do 50 kcal zamiast do najbliższej setki — różnica od −50 do +49 kcal wobec dawnej karty). „Raport po
+wizycie” pokazuje dla masy docelowej liczbę planu (bez × 1,01), u dziecka z Henrym ok. 1 % mniej niż dotąd.
+
+**Ograniczenia.** Molnár opracowany dla 10–16 lat, zwalidowany do 18 lat w populacji europejskiej; brak danych dla dzieci < 10 lat
+z otyłością. Spodziewana masa zakłada samą dietę i nie uwzględnia przyrostu masy związanego ze wzrastaniem ani wahań dobowych —
+przy tempie 0,5 kg/mies. (6–11 lat) próg leży ok. 0,35 kg pod masą wyjściową.
+
+**Walidacja.** `tests/unit/rata-v-ree-molnar.test.mjs` (dane, silnik, górna granica, kontrola, plan PDF, raport, strażnik ładowania),
+zaktualizowane `energy-dziecko-otylosc`, `rata-u-dieta-dziecka`; e2e `dieta-rata-v.spec.mjs` (index, docpro, 390 px) i
+zaktualizowane specyfikacje raty U, PAL, planu PDF, raportu Q, strategii i danych zaleceń. Wyniki w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy kontrola i próg „½ ubytku” mają obowiązywać także u dzieci
+6–11 lat z tempem 0,5 kg/mies.; czy górna granica i kontrola mają objąć dorosłych; przeniesienie współczynników Henry’ego do
+pliku danych; scalenie i wdrożenie.
+
 ## Dieta dziecka z otyłością: korekta REE × 0,9 wraca (tylko otyłość od 10 lat), podstawa od masy docelowej − 200/350/500 kcal z sufitem tempa, domyślna umiarkowana u 12–18 lat; oś planu PDF bez dwóch „pierwszych kroków” i bez nachodzących etykiet (P-DIETA rata U, SW 1.1.57, 2026-09-23)
 
 **Zgłoszenie właściciela (2026-09-23).** Raport zaleceń dietetycznych chłopca 15 l 3 mies., 102,5 kg / 186,7 cm, BMI 29,4 (98,1 c,

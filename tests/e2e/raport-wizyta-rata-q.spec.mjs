@@ -43,7 +43,11 @@ async function modelZOdniesieniem(page, s) {
     return {
       nut: { kind: k.kind, title: k.title, badge: k.badge, value: k.value, note: k.note, rows: k.rows.map((r) => `${r.label}: ${r.valueText}`) },
       dane: dane && { pal, cel, podaz: dane.energia.podazZaokrKcal, utrzymanie: dane.energia.utrzymanieKcal, tee: dane.energia.teeBazowyKcal, nadmiar: dane.klasyfikacja && dane.klasyfikacja.nadmiar, niedowaga: dane.klasyfikacja && dane.klasyfikacja.niedowaga },
-      teeCel: st ? st.teeRawKcal : null,
+      // P-DIETA rata V: przy planie otyłości/nadwagi dziecka karta bierze zapotrzebowanie dla masy docelowej z PLANU
+      // (generator: celTeeKcal = targetTeeKcal silnika) — jedna liczba z planem; poza tym dawna ścieżka (teeRaw dla masy celu)
+      teeCel: dane && dane.energia && dane.energia.celTeeKcal != null && dane.strategia !== 'cel-wlasny' ? dane.energia.celTeeKcal : st ? st.teeRawKcal : null,
+      planTeeCel: window.energyBuildPlanReductionState({ ageYears: s.age + (s.months || 0) / 12, ageMonthsOpt: s.months || 0, sex: s.sex, weightKg: s.w, heightCm: s.h, palInput: pal, history: null, intakeKcalPerDay: null, customGoalKg: null, growthEnded: false }).targetTeeKcal,
+      teeRawCel: st ? st.teeRawKcal : null,
       drab: drab && { kierunek: drab.kierunek, cel: drab.cel && drab.cel.masa, pierwszy: drab.szczeble && drab.szczeble.length ? drab.szczeble[0] : null },
       medianaBmi: med && med.mediana,
       headline: m.headline,
@@ -70,9 +74,13 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.badge).toBe(r.dane.pal === 1.4 ? 'mała aktywność' : 'umiarkowana aktywność'); // rata R
     expect(r.nut.badge).not.toBe('Normy');
     // wartość główna = zalecana kaloryczność planu; wiersz celu = funkcja produkcyjna dla masy docelowej generatora
-    expect(r.nut.value).toBe(kcal(r.dane.podaz));
+    // rata V pkt 1: kaloryczność diety dziecka to górna granica dnia — „≤” przed liczbą
+    expect(r.nut.value).toBe(`≤\u202F${kcal(r.dane.podaz)}`);
     expect(r.nut.rows[0]).toBe(`Dla masy prawidłowej (${r.dane.cel.toFixed(1).replace('.', ',')} kg): ${kcal(r.teeCel)}`);
-    expect(r.nut.rows[1]).toMatch(/^Plan: dieta \S+: /);
+    // rata V: ta sama liczba co „zapotrzebowanie dla masy docelowej” planu (bez ×1,01 na wzrastanie), nie osobne przeliczenie
+    expect(r.teeCel).toBe(r.planTeeCel);
+    expect(Math.round(r.teeRawCel)).not.toBe(r.planTeeCel);
+    expect(r.nut.rows[1]).toMatch(/^Plan: dieta \S+: ≤[\u202F ]/);
     expect(r.nut.rows[1]).toContain(kcal(r.dane.podaz));
     expect(r.nut.rows.join(' ')).not.toContain('Przy obecnej masie');
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.tee));
