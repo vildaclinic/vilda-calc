@@ -47,7 +47,10 @@ const henryBoy10_17 = (w, hM) => 15.6 * w + 266 * hM + 299;
 const henryBoy3_9 = (w, hM) => (0.0632 * w + 1.31 * hM + 1.28) * 239;
 const henryGirl3_9 = (w, hM) => 15.9 * w + 210 * hM + 349;
 const plan = (o) => win.energyBuildPlanReductionState({ ageMonthsOpt: 0, palInput: null, ...o });
-const REE_ADJ = win.CHILD_REE_OBESITY_FACTOR; // P-DIETA rata U (2026-09-23): 0,9 — tylko przy otyłości od 10 lat (poniżej 10 lat i przy nadwadze: 1)
+// P-DIETA rata V (2026-09-23): u dziecka 10–18 lat z OTYŁOŚCIĄ REE = Molnár 1995 (1A chłopcy, 1B dziewczęta; kJ/24 h),
+// doi:10.1016/s0022-3476(95)70114-1 — wyrocznia testu przepisana z tabeli V publikacji, NIE z pliku danych;
+// silnik czyta współczynniki z vilda_ree_rownania_data.js. Przy nadwadze i poniżej 10 lat zostaje Henry bez korekty.
+const molnar = (sex, w, hCm, age) => (sex === 'F' ? 51.2 * w + 24.5 * hCm - 207.5 * age + 1629.8 : 50.9 * w + 25.3 * hCm - 50.3 * age + 26.9) / 4.184;
 const defFor = (kgPerMonth) => Math.round(kgPerMonth * 7700 / 30.4375); // 0,5→126; 1→253; 1,5→379; 2→506
 
 describe('Klasa BMI i masa należna (mediana BMI × wzrost²) — z silnika, nie z atrapy', () => {
@@ -122,14 +125,17 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
     expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 40, heightCm: 165 })).toBe(1.6);
     expect(win.energyDefaultPlanPal(2, 6, { sex: 'M', weightKg: 18, heightCm: 90 })).toBe(1.4);
   });
-  it('rata U: dwa niezależne rabaty u nastolatka z otyłością — PAL 1,4 (aktywność) i REE × 0,9 (błąd równania, Hofsteenge 2010)', () => {
-    expect(win.CHILD_REE_OBESITY_FACTOR).toBe(0.9);
+  it('rata V: dwa niezależne elementy u nastolatka z otyłością — PAL 1,4 (aktywność) i REE z równania Molnára 1995 (dane), bez mnożnika 0,9', () => {
+    expect(win.CHILD_REE_OBESITY_FACTOR).toBe(1);
     expect(win.CHILD_REE_FACTOR_OD_LAT).toBe(10);
+    expect(win.CHILD_REE_OTYLOSC_ZRODLO).toBe('MOLNAR_1995');
     const st = plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null });
+    const mol = molnar('M', 85, 165, 14);
     expect(st.palUsed).toBe(1.4);
-    expect(st.reeFactor).toBe(0.9);
-    expect(st.reeAdjustedKcal).toBe(Math.round(st.reeKcal * 0.9));
-    expect(st.maintenanceKcal).toBe(Math.round(st.reeKcal * 0.9 * 1.4));
+    expect(st.reeRownanie.id).toBe('MOLNAR_1995');
+    expect(st.reeFactor).toBeCloseTo(mol / st.reeKcal, 9);
+    expect(st.reeAdjustedKcal).toBe(Math.round(mol));
+    expect(st.maintenanceKcal).toBe(Math.round(mol * 1.4));
   });
   it('ENERGY-CHILD-MID3: nastolatek z otyłością (≥ 97c) → 1,4; z samą nadwagą (85–97c) → 1,6', () => {
     // chłopiec 14 l, 165 cm: 85 kg to otyłość wg OLAF, 66 kg to nadwaga bez otyłości
@@ -170,12 +176,13 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
   });
 });
 
-describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × CHILD_REE_OBESITY_FACTOR (rata U: 0,9 przy otyłości od 10 lat) × PAL, bez ×1,01; sufit tempa 1/1,5/2 kg/mies.', () => {
+describe('Plan 12–18 lat: REE dla MASY AKTUALNEJ (rata V: Molnár 1995 przy otyłości od 10 lat; Henry zostaje jako reeKcal kontekstu) × PAL, bez ×1,01; sufit tempa 1/1,5/2 kg/mies.', () => {
   const pacjent = { sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 };
   const st = plan({ ...pacjent, palInput: 1.4 });
   const needed = zSilnika(pacjent).needed;
   const reeAct = henryBoy10_17(85, 1.65);
-  const base = reeAct * REE_ADJ * 1.4;
+  const reePlan = molnar('M', 85, 165, 14);
+  const base = reePlan * 1.4;
   it('stan: childObesityPlan, etap 12–18, kontekst na masie aktualnej z mnożnikiem 1; masa należna zostaje celem', () => {
     expect(st.childObesityPlan).toBe(true);
     expect(st.childPlanStage).toBe('age_12_18');
@@ -183,7 +190,8 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × CHILD_REE_OBES
     expect(st.context.anthropometry.weightUsedKg).toBe(85);
     expect(st.context.energy.growthMultiplier).toBe(1);
     expect(st.reeKcal).toBeCloseTo(reeAct, 3);
-    expect(st.reeAdjustedKcal).toBe(Math.round(reeAct * REE_ADJ));
+    expect(st.reeAdjustedKcal).toBe(Math.round(reePlan));
+    expect(st.reeRownanie.id).toBe('MOLNAR_1995');
     expect(st.neededWeightKg).toBeCloseTo(needed, 9);
     // ENERGY-CHILD-MID2: stan planu niesie też cel leczenia z 85. centyla BMI
     const cls = win.energyChildBmiClass(pacjent);
@@ -192,7 +200,7 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × CHILD_REE_OBES
     expect(st.maintenanceKcal).toBe(Math.round(base));
   });
   it('stabilizacja nie jest ukrytym deficytem: baza ≥ REE po korekcie i wyżej niż dawna baza od masy należnej', () => {
-    expect(st.maintenanceKcal).toBeGreaterThan(Math.round(reeAct * REE_ADJ));
+    expect(st.maintenanceKcal).toBeGreaterThan(Math.round(reePlan));
     expect(st.maintenanceKcal).toBeGreaterThan(Math.round(henryBoy10_17(needed, 1.65) * 1.4)); // dawne 2175 kcal
   });
   it('trzy diety: deficyt 253/379/506 kcal = 1 / 1,5 / 2 kg/mies., tempo zgodne z deklaracją', () => {
@@ -207,9 +215,9 @@ describe('Plan 12–18 lat: REE Henry’ego dla MASY AKTUALNEJ × CHILD_REE_OBES
     expect(st.diets.map((d) => d.zalecana)).toEqual([false, true, false]); // decyzja 4: umiarkowana domyślna u 12–18 z otyłością
   });
   it('podłoga to max(1200 kcal, REE po korekcie) — żadna dieta nie schodzi poniżej spoczynkowej przemiany materii', () => {
-    expect(st.floorKcal).toBe(Math.round(reeAct * REE_ADJ));
+    expect(st.floorKcal).toBe(Math.round(reePlan));
     expect(st.floorAbsoluteKcal ?? 1200).toBe(1200);
-    expect(st.floorReeKcal).toBe(Math.round(reeAct * REE_ADJ));
+    expect(st.floorReeKcal).toBe(Math.round(reePlan));
     expect(Math.min(...st.diets.map((d) => d.intake))).toBeGreaterThanOrEqual(st.floorKcal);
   });
   it('preset nutrition_actual (normy) zachowuje ×1,01 i masę aktualną — zmiana dotyczy tylko planu', () => {
@@ -231,7 +239,7 @@ describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mi
   it('chłopiec 10 l, 145 cm, 55 kg (otyłość, ale < 99c wg OLAF) → tylko lekka z tempem 0,5 kg/mies. (126 kcal), reszta z powodem', () => {
     const pacjent = { sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 };
     const st = plan({ ...pacjent, palInput: 1.4 });
-    const base = henryBoy10_17(55, 1.45) * REE_ADJ * 1.4;
+    const base = molnar('M', 55, 145, 10) * 1.4; // rata V: 10 lat z otyłością — Molnár
     expect(zSilnika(pacjent).r.centyl).toBeLessThan(99);
     expect(st.childPlanStage).toBe('age_6_11');
     expect(st.bmiClass.overweight).toBe(true);

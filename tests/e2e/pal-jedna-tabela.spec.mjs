@@ -64,13 +64,14 @@ test.describe('P-PAL rata 1 — jedna tabela PAL, karta norm z planu, raport z o
     expect(nd.pal).toBe('1.6'); expect(nd.silnik.palUsed).toBe(1.6); expect(nd.normy.usedPal).toBe(1.6);
   });
 
-  test('PAL-3: nastolatek z otyłością 1,4 (rata U: osobno korekta REE ×0,9 — błąd równania); wybór lekarza 1,8 przechodzi do karty norm i raportu bez noty', async ({ page }) => {
+  test('PAL-3: nastolatek z otyłością 1,4 (rata V: osobno REE z równania Molnára 1995 — błąd Henry’ego u otyłych); wybór lekarza 1,8 przechodzi do karty norm i raportu bez noty', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const r = await stan(page, { age: 14, months: 0, sex: 'M', w: 85, h: 165, reset: true });
     expect(r.pal).toBe('1.4'); expect(r.silnik.obesityPlan).toBe(true);
-    expect(r.silnik.reeAdj).toBe(Math.round(r.silnik.ree * 0.9));
-    expect(r.silnik.maint).toBe(Math.round(r.silnik.ree * 0.9 * 1.4));
+    const molnar = (50.9 * 85 + 25.3 * 165 - 50.3 * 14 + 26.9) / 4.184; // Molnár 1995, 1A (chłopcy)
+    expect(r.silnik.reeAdj).toBe(Math.round(molnar));
+    expect(r.silnik.maint).toBe(Math.round(molnar * 1.4));
     expect(r.normy.usedPal).toBe(1.4); expect(r.raport.note).toBe(NOTA);
     const w = await stan(page, { age: 14, months: 0, sex: 'M', w: 85, h: 165, pal: '1.8' });
     expect(w.touched).toBe(true); expect(w.pal).toBe('1.8');
