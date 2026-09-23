@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 // P-PAL rata 1 (decyzje właściciela 2026-09-22): JEDNA tabela domyślnego PAL wg wieku (1–3 lata 1,4; 4–9 lat 1,6;
 // 10–18 lat 1,6; dorośli 1,6), otyłość obniża o stopień tylko u 10–18 lat i dorosłych, niedowaga nigdy nie obniża,
-// karta „Normy żywieniowe” przejmuje PAL planu, u dziecka z otyłością jeden rabat (PAL 1,4, bez REE × 0,9),
+// karta „Normy żywieniowe” przejmuje PAL planu, u dziecka z otyłością PAL 1,4 (rata U przywróciła osobno korektę REE × 0,9),
 // raport nazywa poziom aktywności słowami i oznacza wartość domyślną. Prawdziwa strona, dane FIKCYJNE.
 
 async function otworz(page) {
@@ -64,13 +64,13 @@ test.describe('P-PAL rata 1 — jedna tabela PAL, karta norm z planu, raport z o
     expect(nd.pal).toBe('1.6'); expect(nd.silnik.palUsed).toBe(1.6); expect(nd.normy.usedPal).toBe(1.6);
   });
 
-  test('PAL-3: nastolatek z otyłością 1,4 i JEDEN rabat (REE bez ×0,9); wybór lekarza 1,8 przechodzi do karty norm i raportu bez noty', async ({ page }) => {
+  test('PAL-3: nastolatek z otyłością 1,4 (rata U: osobno korekta REE ×0,9 — błąd równania); wybór lekarza 1,8 przechodzi do karty norm i raportu bez noty', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const r = await stan(page, { age: 14, months: 0, sex: 'M', w: 85, h: 165, reset: true });
     expect(r.pal).toBe('1.4'); expect(r.silnik.obesityPlan).toBe(true);
-    expect(r.silnik.reeAdj).toBe(Math.round(r.silnik.ree));
-    expect(r.silnik.maint).toBe(Math.round(r.silnik.ree * 1.4));
+    expect(r.silnik.reeAdj).toBe(Math.round(r.silnik.ree * 0.9));
+    expect(r.silnik.maint).toBe(Math.round(r.silnik.ree * 0.9 * 1.4));
     expect(r.normy.usedPal).toBe(1.4); expect(r.raport.note).toBe(NOTA);
     const w = await stan(page, { age: 14, months: 0, sex: 'M', w: 85, h: 165, pal: '1.8' });
     expect(w.touched).toBe(true); expect(w.pal).toBe('1.8');

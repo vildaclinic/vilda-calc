@@ -96,7 +96,12 @@ describe('Symulacja przy tempie 0 (stabilizacja) i opisy diet wg klasy BMI', () 
     expect(win.energyDietBulletsExtra('light', adult)[0]).toContain('etap wstępny');
     const ow = win.energyBuildPlanReductionState({ ageYears: 40, ageMonthsOpt: 0, sex: 'M', weightKg: 85, heightCm: 178, palInput: 1.4 });
     expect(win.energyDietBulletsExtra('light', ow)[0]).toContain('niewielką nadwagą');
-    expect(win.energyDietBulletsExtra('moderate', severe)).toEqual(win.DIET_BULLETS.moderate.slice(2));
+    // rata U: u dziecka z planem otyłości ogon „umiarkowanej” mówi o tempie z wiersza diety (6–11 lat ≥ 99c: 1 kg/mies.), nie o procentach TEE dorosłych
+    const um = win.energyDietBulletsExtra('moderate', severe);
+    expect(um[0]).toContain('nie szybciej niż ok.\u202F1\u202Fkg/mies.');
+    expect(um[0]).not.toContain('WHO i CDC');
+    expect(um[1]).toBe(win.DIET_BULLETS.moderate[3]);
+    expect(win.energyDietBulletsExtra('moderate', adult)).toEqual(win.DIET_BULLETS.moderate.slice(2)); // dorosły bez zmian
   });
 });
 

@@ -5778,6 +5778,114 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Dieta dziecka z otyłością: korekta REE × 0,9 wraca (tylko otyłość od 10 lat), podstawa od masy docelowej − 200/350/500 kcal z sufitem tempa, domyślna umiarkowana u 12–18 lat; oś planu PDF bez dwóch „pierwszych kroków” i bez nachodzących etykiet (P-DIETA rata U, SW 1.1.57, 2026-09-23)
+
+**Zgłoszenie właściciela (2026-09-23).** Raport zaleceń dietetycznych chłopca 15 l 3 mies., 102,5 kg / 186,7 cm, BMI 29,4 (98,1 c,
+bmiSDS +2,07): dieta umiarkowana **3 000 kcal**, deficyt −379 kcal, −0,3 kg/tydz. — „za dużo”. Do tego oś „Twoja droga”: „koniec
+otyłości” (97,8 kg) przed „pierwszym krokiem” (96,4 kg), etykiety nachodzą na siebie.
+
+**Stan przed zmianą (odtworzony na prawdziwej stronie).** REE Henry’ego (masa + wzrost) dla masy aktualnej 2 395 kcal × PAL 1,4
+(`ENERGY_PAL_DOMYSLNY.otylosc.child_10_18`) = 3 352 kcal; deficyt z tempa 1,5 kg/mies. = 379 kcal → 2 973 → „3 000”. Do 22.09
+(P-PAL rata 1) ten sam chłopiec dostawał 2 600 kcal, bo REE mnożono przez 0,9. Decyzja 5 z P-PAL („jeden rabat”) potraktowała
+korektę × 0,9 jako drugi rabat za niską aktywność, a to poprawka **błędu równania**: równania Schofielda/Henry’ego na masie
+aktualnej zawyżają REE u nastolatków z otyłością (Hofsteenge 2010: Schofield-masa bias +10,7 %, RMSE 276 kcal/d; Molnár 1995:
++7,5…18,1 %; White 2019: Henry +15 %). PAL opisuje aktywność, × 0,9 opisuje błąd równania — to dwa różne składniki iloczynu.
+Druga słabość: deficyt ze stałego tempa w kg nie skaluje się z ciałem (11 % zapotrzebowania u tego chłopca, 18 % u 12-latki 70 kg).
+Oś PDF: nagłówek bierze `szczeble[0]` („pierwszy krok: koniec otyłości”), a oś (rata O) etykietowała „pierwszy krok” na stałe punkt
+Reinehra; u dziecka 1,88–2,13 SDS 97. centyl leży bliżej niż −0,25 SDS, więc kartka miała dwa różne „pierwsze kroki”; etykiety
+mają 170 px i nie było logiki odstępu (punkty 7 % osi od siebie → 45 px nakładki). Zdanie „Tempo redukcji masy ciała pokazane
+powyżej już to uwzględnia” było nieprawdziwe: kafel liczy samą dietę (379 × 7 / 7 700 = 0,34), z ruchem byłoby 0,49 kg/tydz.
+Narracja dopisywała korzyść Reinehra („już taka zmiana poprawia ciśnienie…”) pod każdym pierwszym szczeblem, także pod 97. centylem
+(−0,19 SDS, poniżej progu −0,25).
+
+**Piśmiennictwo (PubMed; przegląd w PR).**
+- Mazur A. i wsp., Nutrients 2022;14(18):3806, PMID 36145182, [doi:10.3390/nu14183806](https://doi.org/10.3390/nu14183806)
+  (pełny tekst): „The total daily energy of the diet should be calculated related to the **ideal body weight for the height** of the
+  child … may be reduced by **200–500 kcal**. However … little to no evidence … expert opinion. The reduced caloric intake should not be
+  lower than 1000 kcal/day.”; „In older children, weight loss is recommended to obtain the 85th percentile BMI. A weight loss of
+  **up to 1–2 kg/month is safe**.” Stanowisko nie wskazuje równania ani PAL.
+- Hofsteenge G.H. i wsp., Am J Clin Nutr 2010;91:1244–54, PMID 20237141, doi:10.3945/ajcn.2009.28330; Molnár D. i wsp.,
+  J Pediatr 1995;127:571–7, PMID 7562278, doi:10.1016/s0022-3476(95)70114-1; Lazzer S. i wsp., J Endocrinol Invest 2007;30:313–7,
+  PMID 17556868, doi:10.1007/BF03346298; White D.A. i wsp., Child Obes 2019;15:280–7, PMID 30888207, doi:10.1089/chi.2018.0332
+  (równania populacyjne zawyżają REE u otyłych nastolatków; najlepiej zwalidowane Molnára).
+- Łuszczki E. … Mazur A., Metabolites 2020;10:493, PMID 33271803, doi:10.3390/metabo10120493; Sci Rep 2023;13:4527, PMID 36941327,
+  doi:10.1038/s41598-023-31661-1 (błąd wzorów ±200 kcal u polskich chłopców; preferowana kalorymetria).
+- EASO/EFAD 2022, PMID 36349767, doi:10.1159/000527540 („modest to moderate energy intake deficit”; VLED ≤ 800 kcal tylko pod
+  nadzorem); Obesity Canada 2025, PMID 40228835, doi:10.1503/cmaj.241456; Endocrine Society 2017, PMID 28359099,
+  doi:10.1210/jc.2016-2573; AAP 2023, PMID 36622115, doi:10.1542/peds.2022-060640; Barlow 2007, PMID 18055651,
+  doi:10.1542/peds.2007-2329C — żadna nie podaje sztywnej liczby kcal/d.
+- Dla chłopca z raportu: REE Molnár 2 199, Lazzer 2 222–2 302, Henry 2 389; TEE ≈ 3 000–3 100 (PAL 1,4); metoda stanowiska polskiego
+  ≈ 2 000–2 900; deficyt 20–30 % ≈ 2 150–2 800 → **zakres zbieżny 2 200–2 700 kcal/d**; 3 000 kcal to dieta utrzymująca masę.
+
+**Decyzje właściciela (2026-09-23).** (1) Korekta REE × 0,9 wraca **tylko przy otyłości (≥ 97 c) od 10 lat**; przy samej
+nadwadze bez korekty. (2) Podstawa diety = zapotrzebowanie dla **masy docelowej (85. centyl BMI)** × PAL − 200/350/500 kcal, nie
+więcej niż zapotrzebowanie aktualne (skorygowane) − ten sam deficyt; sufit tempa 1/1,5/2 kg/mies. bez zmian; podłoga
+max(1 000/1 200, REE skorygowane). (3) Etapy wieku bez zmian. (4) Dieta domyślna u 12–18 lat z otyłością: **umiarkowana**.
+(5) Teksty kart, narracji i raportów opisują nową podstawę. (6) Zamiana równania (Molnár/Lazzer) — osobna rata po zdobyciu
+współczynników dla obu płci z tekstu źródłowego. Makieta osi zaakceptowana z poprawką (drugi rząd niżej).
+
+**Uczciwa korekta wobec propozycji.** Tabela w propozycji sugerowała, że podstawa od masy docelowej da dietę łagodniejszą przy
+samej nadwadze (0,4–1,5 kg/mies.). Liczby z prawdziwego silnika pokazują, że sufit tempa 1/1,5/2 kg/mies. wiąże niemal zawsze
+(różnica TEE między masą aktualną a docelową to ok. 25 kcal na kg nadmiaru, więc już 2–3 kg nad celem deficyt „docelowy” przekracza
+sufit). Podstawa od masy docelowej różni się liczbowo od samego tempa tylko u dziecka tuż nad 85. centylem (np. chłopiec 13 l,
+155 cm, 55 kg: lekka 2 280 = 2 480 − 200, tempo 0,9 kg/mies.). Poza tym wynik = wariant V1 (korekta × 0,9 + tempo). Reguła jest
+więc „mniej agresywna z dwóch metod Mazura” i jest tak opisana w kartach.
+
+**Zmiana (kliniczna: inne kaloryczności diet u dzieci z otyłością od 10 lat; inna dieta domyślna; inne brzmienia).**
+- `vilda_diet_plan_ui.js` (`?v=25`): `CHILD_REE_OBESITY_FACTOR` 1 → **0,9**, nowa stała `CHILD_REE_FACTOR_OD_LAT = 10`; mnożnik
+  `reeFactor` = 0,9 tylko dla `cls.obese` i wieku ≥ 10 (stan planu niesie `reeFactor`); `targetTeeKcal` = REE Henry’ego dla
+  `targetWeightKg` (ten sam etap, płeć, wzrost) × ten sam PAL, bez korekty i bez dodatku na wzrastanie; `Gc(baza, wiek, klasa, etap,
+  podłoga, teeTarget)`: podaż = min(teeTarget, baza) − `DIET_CHILD.deficitKcal` (200/350/500 — dotąd martwe), deficyt rzeczywisty =
+  baza − podaż, przy przekroczeniu sufitu z `CHILD_RATE_KG_MONTH` podaż = baza − sufit (`tempoSufit`, `rateBased`); `monthlyLossKg`
+  liczone z deficytu rzeczywistego (2 miejsca); wiersz diety niesie `bazaCeluKcal`, `deficytCeluKcal`, `sufitTempaKgMies`,
+  `zalecana` (umiarkowana przy `age_12_18` i otyłości, inaczej lekka); selekt `#dietLevel` i karta „Droga do normy” biorą
+  domyślną z flagi `zalecana`; nota karty planu i punkt opisu diety mówią o podstawie od masy docelowej, deficycie Mazura,
+  suficie tempa i zapotrzebowaniu aktualnym (z dopiskiem o korekcie, gdy działa).
+  `energyDietBulletsExtra`: u dziecka z planem otyłości ogony opisów diet mówią o tempie z wiersza diety („nie szybciej niż
+  ok. X kg/mies.”, umiarkowana jako domyślna u nastolatka, intensywna jako górna granica tempa), zamiast zdań dla dorosłych
+  o procentach TEE i „konsensusie WHO i CDC”; dorośli bez zmian.
+- `vilda_diet_recommendations.js` (`?v=53`): dieta domyślna z flagi `zalecana`; `dane.energia` dostaje `tempoSufit`,
+  `bazaCeluKcal`, `deficytCeluKcal` (dziecko i dorosły); zdanie „Pierwszy cel to ok. X kg, czyli około Y kg mniej” dopisuje
+  korzyść Reinehra tylko dla klucza `reinehr`, inaczej opis szczebla w nawiasie („(koniec otyłości)”).
+- `vilda_bmi_journey.js` (`?v=18`): `zalecanaDieta(diets, ctx)`; zdanie o deficycie jak w karcie planu; `getPdfModel()` oddaje
+  `tempoZRuchemKgTydz` (suma tygodniowa / kcal na kg) dla planu PDF.
+- `vilda_raport_plan.js` (WERSJA 8, `?v=11`): etykieta „pierwszy krok” tylko gdy próg Reinehra jest pierwszym szczeblem, dalej
+  „lepsze wyniki badań”; `rzedyPunktow` — punkt bliżej niż `OS_MIN_ODSTEP_PROC` (18 % osi) od ostatniego punktu górnego rzędu
+  dostaje klasę `vrp-zn-dol` (kg + podpis o `OS_DRUGI_RZAD` = 46 px × skala niżej), pasek `vrp-pasek-2r` wyższy tylko wtedy;
+  zdanie o ruchu: „Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok. −X kg tygodniowo.” (liczba z karty, moduł nadal
+  niczego nie liczy); eksport `rzedyPunktow`, `punktyDrabinki`, `OS_MIN_ODSTEP_PROC` dla testów.
+- Strony `index`, `docpro`, `kalkulator-klirens`; `service-worker-kalorii.js` SW 1.1.56 → 1.1.57, precache append-only.
+
+**Wyniki (prawdziwy silnik, dane fikcyjne, PAL domyślny, zaokrąglenie do 100; * = sufit tempa).**
+
+| przypadek | BMI (c) | PAL / korekta | REE → zapotrzebowanie | cel 85 c / TEE celu | lekka / umiarkowana / intensywna | tempo kg/mies. | domyślna |
+|---|---|---|---|---|---|---|---|
+| chł. 15;3, 102,5/186,7 (raport) | 29,4 (98,1) | 1,4 / 0,9 | 2 395 → 3 017 | 82,1 / 2 907 | 2 800* / **2 600*** / 2 500* (dotąd 3 100 / 3 000 / 2 800) | 1 / 1,5 / 2 | umiarkowana |
+| chł. 15, 95/175 | 31,0 (98,9) | 1,4 / 0,9 | 2 247 → 2 831 | 71,5 / 2 633 | 2 600* / 2 500* / 2 300* | 1 / 1,5 / 2 | umiarkowana |
+| dz. 12, 70/150 | 31,1 (99,3) | 1,4 / 0,9 | 1 494 → 1 882 | 48,8 / 1 812 | 1 600* / 1 500* / 1 400* | 1 / 1,5 / 2 | umiarkowana |
+| chł. 14, 85/165 | 31,2 (98,8) | 1,4 / 0,9 | 2 064 → 2 601 | 62,3 / 2 393 | 2 300* / 2 200* / 2 100* | 1 / 1,5 / 2 | umiarkowana |
+| dz. 16, 90/160 | 35,2 (99,7) | 1,4 / 0,9 | 1 706 → 2 150 | 60,5 / 2 001 | 1 900* / 1 800* / 1 600* | 1 / 1,5 / 2 | umiarkowana |
+| chł. 13, 60/155 (nadwaga) | 25,0 (93,4) | 1,6 / 1 | 1 647 → 2 636 | 53,8 / 2 480 | 2 400* / 2 300* / 2 100* | 1 / 1,5 / 2 | lekka |
+| chł. 13, 55/155 (tuż nad 85 c) | 22,9 (87,3) | 1,6 / 1 | 1 569 → 2 511 | 53,8 / 2 480 | 2 300 / 2 100* / 2 000* | 0,91 / 1,5 / 2 | lekka |
+| dz. 17, 75/165 (nadwaga) | 27,5 (96,8) | 1,6 / 1 | 1 578 → 2 525 | 64,7 / 2 369 | 2 300* / 2 100* / 2 000* | 1 / 1,5 / 2 | lekka |
+| chł. 8, 45/130 (6–11 ≥ 99 c) | 26,6 (99,1) | 1,6 / 1 | 1 393 → 2 228 | 32,1 / 1 915 | 2 100* / 2 000* / 1 800* | 0,5 / 1 / 1,5 | lekka |
+| chł. 10, 55/145 (6–11 < 99 c) | 26,2 (97,3) | 1,4 / 0,9 | 1 543 → 1 944 | 43,2 / 1 902 | 1 800* | 0,5 | lekka |
+
+Oś planu chłopca z raportu: 102,5 „dziś” → 97,8 „koniec otyłości” → 96,4 „lepsze wyniki badań” (drugi rząd) → 82,1 „norma BMI”;
+nagłówek „pierwszy krok: koniec otyłości”; narracja „Pierwszy cel to ok. 97,8 kg, czyli około 4,7 kg mniej (koniec otyłości).”;
+zdanie o ruchu „…razem ok. 3 783 kcal tygodniowo. Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok. −0,5 kg tygodniowo.”
+Dziewczynka 16;4, 94,8/175,5 (próg Reinehra pierwszy): oś „pierwszy krok”, korzyść w narracji bez zmian.
+
+**Strażnicy.** `tests/unit/rata-u-dieta-dziecka.test.mjs` (przypadek z raportu co do kcal, nadwaga 60 i 55 kg, bramka wieku,
+niezmienniki deficytu i sufitu, etap 6–11), `tests/unit/rata-u-os-planu.test.mjs` (rzędy etykiet, podpisy, strażnicy tekstów),
+zaktualizowane `energy-dziecko-otylosc` (0,9 tylko ≥ 10 lat), `rata-o-etykieta-kroku`; e2e `tests/e2e/dieta-rata-u.spec.mjs`
+(RU-1…RU-7 na index i docpro), zaktualizowane pinezki `dieta-dziecko-otylosc`, `pal-jedna-tabela`, `raport-plan-rata-m`.
+
+**Walidacja.** Wynik `npm test` i e2e w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna decyzji 1–6 (2026-09-23, przed kodowaniem); rata równania Molnára/Lazzera
+(po zdobyciu pełnych tekstów); ewentualna zmiana sufitu tempa przy samej nadwadze (dziś sufit wiąże także tam); scalenie i wdrożenie.
+
 ## „Raport po wizycie”: przesunięcie pozycji wzrostu w górę siatki i niski wzrost wobec rodziców (P-RAPORT rata T2, SW 1.1.56, 2026-09-23)
 
 **Zgłoszenie i analiza (2026-09-23).** Rata T dała nagłówkowi pozycję wysokiego wzrostu wobec MPH, ale bez faktu o PRZYSPIESZENIU

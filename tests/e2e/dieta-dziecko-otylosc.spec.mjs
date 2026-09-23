@@ -88,17 +88,18 @@ test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktual
   expect(r.state.target).toBeLessThan(85);
   expect(r.state.diets.map((d) => d[2])).toEqual([253, 379, 506]); // 1 / 1,5 / 2 kg/mies.
   expect(r.state.diets[0][1]).toBe(r.state.base - 253);
-  expect(r.diet).toBe('light');
+  expect(r.diet).toBe('moderate'); // rata U (decyzja 4): u 12–18 lat z otyłością domyślna dieta umiarkowana
   expect(r.plan).toContain('PAL 1,4 – niska aktywność');
   expect(r.plan).not.toContain('Tryb kliniczny');
-  expect(r.plan).toContain(`${Math.round((r.state.base - 253) / 100) * 100} kcal/dzień`);
-  expect(r.plan).toContain('baza planu liczona dla obecnej masy ciała (REE Henry’ego × PAL, bez dodatku na wzrastanie)'); // P-PAL rata 1: bez korekty −10 % REE
+  expect(r.plan).toContain(`${Math.round((r.state.base - 379) / 100) * 100} kcal/dzień`);
+  // rata U: podstawa od masy docelowej (Mazur 2022), zapotrzebowanie aktualne z korektą −10 % REE (Hofsteenge — nazwisko zostaje w silniku)
+  expect(r.plan).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok.');
+  expect(r.plan).toContain('(z korektą −10 % REE na otyłość)');
   expect(r.plan).not.toContain('Hofsteenge');
-  expect(r.plan).toContain('cel: masa docelowa ok.');
   expect(r.plan).toContain('85. centyl BMI');
-  expect(r.plan).toContain('deficyt ok. 253 kcal dziennie względem zapotrzebowania przy obecnej masie ciała, dobrany do tempa ok. 1,0 kg/mies.');
+  expect(r.plan).toContain('a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.');
   expect(r.plan).not.toMatch(/deficyt ok\. \d+ % całkowitego wydatku/u);
-  expect(r.journey).toContain('deficyt ok. 253 kcal/dzień względem zapotrzebowania przy obecnej masie ciała, dobrany do tempa ok. 1,0 kg/mies.');
+  expect(r.journey).toContain('deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
   expect(r.journey).toContain('−379 kcal/d');
 });
 

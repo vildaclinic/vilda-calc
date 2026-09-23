@@ -20,7 +20,8 @@ describe('P-RAPORT rata O: etykieta pierwszego kroku i zdanie o korzyści', () =
     expect(plan).toContain('<div class="vrp-krok-o">');
     expect(plan).not.toContain('&nbsp;|&nbsp;');
     expect(plan).not.toContain("pierwszy.zrodlo");
-    expect(plan).toContain("s.klucz === 'reinehr' ? 'pierwszy krok'");
+    // rata U: „pierwszy krok” tylko gdy próg Reinehra jest pierwszym szczeblem; dalej „lepsze wyniki badań”
+    expect(plan).toContain("s.klucz === 'reinehr' ? (i === 0 ? 'pierwszy krok' : 'lepsze wyniki badań')");
     expect(plan).toMatch(/WERSJA = ([7-9]|\d{2,});/);
   });
 

@@ -159,6 +159,12 @@
     return '<div class="bmi-journey-badge">🏅 Rok spacerów 30 min dziennie to ok. ' + fmtInt(km) + ' km' + routeTxt + '.</div>';
   }
 
+  /* rata U: dietę domyślną wskazuje silnik (flaga `zalecana` w wierszu diety: umiarkowana u nastolatka
+     12–18 lat z otyłością, lekka u pozostałych dzieci); bez flagi — dawna reguła. */
+  function zalecanaDieta(diets, ctx) {
+    for (var i = 0; i < (diets || []).length; i += 1) if (diets[i] && diets[i].zalecana) return diets[i].key;
+    return ctx && ctx.isChild ? 'light' : 'moderate';
+  }
   function computeModel(ctx) {
     var diets = resolveDiets(ctx);
     var dietAvailable = diets.length > 0;
@@ -170,7 +176,7 @@
     var found = null;
     for (var i = 0; i < diets.length; i += 1) if (diets[i].key === dietKey) found = diets[i];
     if (!found) {
-      var preferred = ctx.isChild ? 'light' : 'moderate';
+      var preferred = zalecanaDieta(diets, ctx);
       for (var j = 0; j < diets.length; j += 1) if (diets[j].key === preferred) found = diets[j];
       if (!found && diets.length) found = diets[0];
       dietKey = found ? found.key : null;
@@ -306,8 +312,13 @@
     if (model.found && w.DIET_BULLETS && w.DIET_BULLETS[model.dietKey] && w.DIET_LEVELS && w.DIET_LEVELS[model.dietKey]) {
       var extra = typeof w.energyDietBulletsExtra === 'function' ? w.energyDietBulletsExtra(model.dietKey, lastEngineState) : w.DIET_BULLETS[model.dietKey].slice(2);
       var items = [((lastEngineState && lastEngineState.childObesityPlan) || (model.found && model.found.fixedDeficit)
-        ? 'deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania przy obecnej masie ciała'
-          + (fin(model.found.monthlyLossKg) ? ', dobrany do tempa ok.\u202F' + fmt(model.found.monthlyLossKg, 1) + '\u202Fkg/mies.' : '')
+        /* rata U: to samo zdanie, co w karcie planu — podstawa od masy docelowej (Mazur 2022), sufit tempa, deficyt wobec masy aktualnej */
+        ? (fin(model.found.bazaCeluKcal)
+            ? 'od zapotrzebowania dla masy docelowej ok.\u202F' + fmtInt(model.found.bazaCeluKcal) + '\u202Fkcal odjęto ' + fmtInt(model.found.deficytCeluKcal) + '\u202Fkcal (Mazur 2022)'
+              + (model.found.tempoSufit && fin(model.found.sufitTempaKgMies) ? ', a tempo ograniczono do ok.\u202F' + fmt(model.found.sufitTempaKgMies, 1) + '\u202Fkg/mies.' : '') + '; '
+            : '')
+          + 'deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania przy obecnej masie ciała'
+          + (fin(model.found.monthlyLossKg) ? ' (tempo ok.\u202F' + fmt(model.found.monthlyLossKg, 1) + '\u202Fkg/mies.)' : '')
         : 'deficyt ok.\u202F' + Math.round(w.DIET_LEVELS[model.dietKey].deficitPct * 100)
         + '\u202F% całkowitego wydatku energetycznego')].concat(extra);
       html += '<ul class="bmi-journey-bullets">' + items.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
@@ -417,7 +428,7 @@
       : model.found
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
-        + '<div class="bmi-journey-kcalcap">' + (ctx.customGoal ? 'kaloryczność diety — cel własny (dieta lekka)' : (ctx.isChild ? 'light' : 'moderate') === model.dietKey ? 'zalecana kaloryczność diety' : 'kaloryczność wybranej diety') + '</div></div>'
+        + '<div class="bmi-journey-kcalcap">' + (ctx.customGoal ? 'kaloryczność diety — cel własny (dieta lekka)' : zalecanaDieta(model.diets || [], ctx) === model.dietKey ? 'zalecana kaloryczność diety' : 'kaloryczność wybranej diety') + '</div></div>'
       : '';
     var moveChips = '<span class="bmi-journey-lbl">Ruch — przyspiesz osiągnięcie celu</span><div class="bmi-journey-chips">';
     for (var m = 0; m < MOVES.length; m += 1) {
@@ -615,7 +626,9 @@
           ? '; uwzględnia dalsze wzrastanie ok. ' + fmt(model.annualGrowthCm, 1) + ' cm/rok'
           : '')
         + ').',
-      gainText: gainText
+      gainText: gainText,
+      /* rata U: tempo z ruchem (suma tygodniowa / kcal na kg) — dla zdania w planie PDF; kafel tempa w planie liczy samą dietę */
+      tempoZRuchemKgTydz: model.totalWeek > 0 && model.rows.length > 1 ? fmt(model.totalWeek / kk, 1) : null
     };
   }
 
