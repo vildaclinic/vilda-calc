@@ -28,7 +28,7 @@ async function stan(page, c) {
     const br = window.buildDietEnergyRecommendationResult();
     const d = br.dane || {};
     const html = window.VildaRaportPlan.html({ patient: { name: 'Testowa Fikcyjna', ageLabel: `${c.y} lat`, sexLabel: 'x', weightLabel: `${c.w} kg`, heightLabel: `${c.h} cm` }, baseResult: br });
-    const norm = (s) => String(s || '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
+    const norm = (s) => String(s || '').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim();
     return {
       strategia: d.strategia, dieta: d.energia && d.energia.dietaKlucz, kontrola: d.kontrola,
       kafle: Array.from(html.matchAll(/vrp-kafel"><b>([^<]*)<\/b><span>([^<]*)<\/span><i>([^<]*)<\/i>/g)).map((x) => norm(x[1] + ' | ' + x[2] + ' | ' + x[3])),
