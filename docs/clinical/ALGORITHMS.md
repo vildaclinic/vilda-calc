@@ -5778,6 +5778,49 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Czas dojścia do normy BMI u rosnącego dziecka: masa przybywająca ze wzrastaniem w symulacji (P-DIETA rata X, SW 1.1.60, 2026-09-23)
+
+**Problem (analiza 2026-09-23).** Jedna symulacja silnika (`energySimulateMonthsToBmiTarget`) liczy czas dojścia do normy BMI dla karty
+planu, karty „Droga do normy BMI” (także „Dzięki ruchowi o … szybciej”), zaleceń i planu PDF. Masę liczyła jako „dziś − tempo diety ×
+czas”, podczas gdy wzrost dziecka rósł — bez masy, która przybywa razem ze wzrostem. Ta sama rozbieżność, którą rata W usunęła
+z kontroli. Skutek: czas do normy optymistyczny o ok. 30–40 % przy diecie lekkiej 6–11 lat i o ok. 20 % u szybko rosnącego nastolatka.
+
+**Decyzje właściciela (2026-09-23).** (1) Symulacja dolicza przyrost masy ze wzrastania tą samą regułą co rata W; (2) nie przy
+„Wzrost zakończony”, praktycznie zakończonym wzrastaniu i u dorosłych; (3) stabilizacja bez zmian; (4) kafle i zdania o tempie
+zostają „z samej diety”; (5) dopisek w linijce o wzrastaniu w karcie drogi i karcie planu.
+
+**Reguła.** Przy redukcji (tempo > 0) u rosnącego dziecka w każdym kroku 0,5 mies.: przyrost += mediana BMI dla wieku w danym kroku
+(`energyChildMedianBmi`) × (wzrost² nowy − wzrost² poprzedni); masa = dziś − tempo × czas + przyrost. Wzrost i jego sufit jak dotąd
+(`energyChildGrowthOutlook`: tempo obserwowane z karty albo z mediany wzrostu, sufit z prognozy wzrostu końcowego). Cel (85. centyl,
+mediana albo cel własny) bez zmian. Wynik niesie `przyrostMasyKgMies` (pierwszy miesiąc, do dopisku) i `przyrostMasyKg` (do chwili
+osiągnięcia celu). Dopisek: „uwzględnia dalsze wzrastanie (ok. X cm/rok) i masę przybywającą z nim (ok. Y kg/mies.)” — od 0,05 kg/mies.
+
+**Przypadki syntetyczne (prawdziwa strona, sama dieta, PAL domyślny; dane fikcyjne).**
+
+| pacjent | dieta | tempo z diety | przyrost ze wzrastania | czas przed | czas po |
+|---|---|---|---|---|---|
+| dz. 8 l., 130 cm, 45 kg | lekka (domyślna) | 0,5 kg/mies. | +0,20 kg/mies. | 16 mies. | 21 mies. |
+| ta sama | umiarkowana | 1 | +0,20 | 10,5 | 12 |
+| chł. 7 l., 128 cm, 38 kg | lekka (domyślna) | 0,5 | +0,20 | 10 | 13 |
+| chł. 10 l., 145 cm, 55 kg | lekka (domyślna) | 0,5 | +0,22 | 13,5 | 18 |
+| dz. 11 l., 150 cm, 62 kg | lekka (domyślna) | 0,5 | +0,29 | 15 | 21,5 |
+| chł. 13 l., 160 cm, 80 kg | umiarkowana (domyślna) | 1,5 | +0,35 | 11,5 | 14 |
+| dz. 14 l., 160 cm, 85 kg | umiarkowana (domyślna) | 1,5 | +0,08 | 16 | 17 |
+| chł. 15;3, 186,7 cm, 102,5 kg | umiarkowana (domyślna) | 1,5 | +0,18 | 11 | 12,5 |
+
+Z ruchem (karta drogi, dz. 8 l., dieta lekka + spacer 30 min/d): 12 → 15 mies. Stabilizacja, „Wzrost zakończony” i dorośli — bez zmian.
+
+**Wpływ kliniczny.** Dłuższe (realistyczne) szacunki czasu dojścia do normy u rosnących dzieci; kaloryczności, deficyty, tempo w kaflach,
+kontrola i strategia bez zmian. Dłuższy czas może częściej uruchamiać istniejącą notę „szacunek orientacyjny” (> 18 mies.).
+
+**Ograniczenia.** Przyrost to szacunek populacyjny (tempo wzrastania × mediana BMI), bez składu ciała; przelicznik 7700 kcal/kg jak
+u dorosłych (brak źródła specyficznego dla dzieci — nie zmieniany).
+
+**Walidacja.** `tests/unit/rata-x-czas-do-normy-wzrastanie.test.mjs` (7, z produkcyjnym `toNormalBMITarget` z app.js), e2e
+`dieta-rata-x.spec.mjs` (2) i pełny zestaw e2e. Wyniki w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
+
 ## Kontrola planu u rosnącego dziecka: przyrost ze wzrastania w spodziewanej masie, 12 tygodni przy tempie < 1 kg/mies., zdanie o ważeniu; bez tych reguł przy „Wzrost zakończony” (P-DIETA rata W, SW 1.1.59, 2026-09-23)
 
 **Problem (analiza 2026-09-23).** Kontrola z raty V liczyła spodziewaną masę jako „dziś − ubytek z diety”, jakby dziecko nie rosło.
