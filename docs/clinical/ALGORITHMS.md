@@ -5841,6 +5841,9 @@ więc „mniej agresywna z dwóch metod Mazura” i jest tak opisana w kartach.
   `zalecana` (umiarkowana przy `age_12_18` i otyłości, inaczej lekka); selekt `#dietLevel` i karta „Droga do normy” biorą
   domyślną z flagi `zalecana`; nota karty planu i punkt opisu diety mówią o podstawie od masy docelowej, deficycie Mazura,
   suficie tempa i zapotrzebowaniu aktualnym (z dopiskiem o korekcie, gdy działa).
+  `energyDietBulletsExtra`: u dziecka z planem otyłości ogony opisów diet mówią o tempie z wiersza diety („nie szybciej niż
+  ok. X kg/mies.”, umiarkowana jako domyślna u nastolatka, intensywna jako górna granica tempa), zamiast zdań dla dorosłych
+  o procentach TEE i „konsensusie WHO i CDC”; dorośli bez zmian.
 - `vilda_diet_recommendations.js` (`?v=53`): dieta domyślna z flagi `zalecana`; `dane.energia` dostaje `tempoSufit`,
   `bazaCeluKcal`, `deficytCeluKcal` (dziecko i dorosły); zdanie „Pierwszy cel to ok. X kg, czyli około Y kg mniej” dopisuje
   korzyść Reinehra tylko dla klucza `reinehr`, inaczej opis szczebla w nawiasie („(koniec otyłości)”).

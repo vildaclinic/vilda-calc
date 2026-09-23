@@ -152,12 +152,20 @@ function energyResolveStrategyFromDom(st,{ageYears:e,sex:l,heightCm:n}={}){
 /* Punkty opisu diety zalezne od klasy BMI (>=99c u dzieci / BMI >=30 u doroslych): „lekka" to etap wstepny, nie „niewielka nadwaga". */
 function energyDietBulletsExtra(key,st){
   const base=Q[key]?Q[key].slice(2):[];
+  /* rata U: u dziecka z planem otyłości ogony opisów mówią o tempie w kg/mies. z wiersza diety (sufit z CHILD_RATE_KG_MONTH),
+     nie o procentach TEE i „konsensusie WHO i CDC" pisanych dla dorosłych. */
+  const dzieckoPlan=!!(st&&st.isChild&&st.childObesityPlan),
+    wiersz=dzieckoPlan&&Array.isArray(st.diets)?st.diets.find(d0=>d0&&d0.key===key):null,
+    tempo=wiersz&&f(Number(wiersz.sufitTempaKgMies))?String(wiersz.sufitTempaKgMies).replace(".",","):null;
+  if(dzieckoPlan&&key==="moderate")return[`dieta domyślna u nastolatka 12–18 lat z otyłością${tempo?` — nie szybciej niż ok.\u202F${tempo}\u202Fkg/mies.`:""} (Mazur 2022: bezpiecznie do 1–2\u202Fkg/mies.)`,"pomaga redukować tkankę tłuszczową przy minimalnej utracie mięśni"];
+  if(dzieckoPlan&&key==="intense")return[`górna granica bezpiecznego tempa u dziecka${tempo?` (ok.\u202F${tempo}\u202Fkg/mies.)`:""} — do rozważenia przy otyłości ≥ 99. centyla, z oceną tempa po 4–6 tygodniach`,"może wiązać się z większym ryzykiem niedoborów i efektu jojo"];
   if(key!=="light"||!st)return base;
   const cls=st.bmiClass,ctx=st.context&&st.context.anthropometry?st.context.anthropometry:null,
     wIn=ctx?Number(ctx.weightInputKg):NaN,hIn=ctx?Number(ctx.heightInputCm):NaN,
     adultObese=!st.isChild&&f(wIn)&&f(hIn)&&hIn>0&&wIn/Math.pow(hIn/100,2)>=30,
     severe=!!(cls&&cls.severe)||adultObese;
-  return severe?["przy otyłości: łagodny etap wstępny — po 4–6 tygodniach warto ocenić tempo i w razie potrzeby przejść na dietę umiarkowaną pod nadzorem",...base.slice(1)]:base;
+  if(severe)return["przy otyłości: łagodny etap wstępny — po 4–6 tygodniach warto ocenić tempo i w razie potrzeby przejść na dietę umiarkowaną pod nadzorem",...base.slice(1)];
+  return dzieckoPlan?[`łagodny start${tempo?`: nie szybciej niż ok.\u202F${tempo}\u202Fkg/mies.`:""} — odpowiednia przy nadwadze i na początku leczenia`,...base.slice(1)]:base;
 }
 function energySimulateMonthsToBmiTarget(opts){
   const o=opts||{},age0=(Number(o.ageYears)||0)+(Number(o.ageMonthsOpt)||0)/12,

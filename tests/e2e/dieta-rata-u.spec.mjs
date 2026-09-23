@@ -67,7 +67,7 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     expect(r.kafle.slice(0, 3)).toEqual(['2 600 kcal dziennie', '−379 kcal na dobę', '−0,3 kg tygodniowo']);
     expect(r.nota).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok. 82,1 kg (85. centyl BMI): ok. 2907 kcal/dzień przy PAL 1,4, pomniejszonego o 200–500 kcal (Mazur 2022), nie szybciej niż 1–2 kg/mies.; zapotrzebowanie przy obecnej masie ciała ok. 3017 kcal/dzień (z korektą −10 % REE na otyłość); minimum 2155 kcal/dzień (spoczynkowa przemiana materii)');
     expect(r.plan).toContain('od zapotrzebowania dla masy docelowej ok. 2907 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.; Mazur 2022: bezpiecznie do 1–2 kg/mies.)');
-    expect(r.journey).toContain('od zapotrzebowania dla masy docelowej ok. 2907 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
+    expect(r.journey).toContain('od zapotrzebowania dla masy docelowej ok. 2 907 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
     expect(r.tekst).toContain('dostarcza około 2600 kcal dziennie');
   });
 

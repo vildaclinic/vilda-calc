@@ -48,8 +48,11 @@ function generate(page, { age, sex, w, h, growthEnded = false, strategy = null, 
     const text = norm(res.innerHTML.replace(/<\/(li|p|div|h3)>/g, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' '));
     const ge = document.getElementById('growthEndedFlag');
     const st = window.energyBuildPlanReductionState({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, palInput: parseFloat(document.getElementById('palFactor').value) });
-    const simEnded = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: 253 * 7 / 7700, target: 'norm', growthEnded: true });
-    const simGrow = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: 253 * 7 / 7700, target: 'norm' });
+    // rata U: narracja liczy czas dla diety wybranej w #dietLevel (u 12–18 lat z otyłością domyślnie umiarkowana, 379 kcal) — bierzemy deficyt z tego samego wyniku
+    const dz = ((window.buildDietEnergyRecommendationResult() || {}).dane || {}).energia || {};
+    const tydz = (Number(dz.deficytKcal) > 0 ? Number(dz.deficytKcal) : 253) * 7 / 7700;
+    const simEnded = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: tydz, target: 'norm', growthEnded: true });
+    const simGrow = window.energySimulateMonthsToBmiTarget({ ageYears: age, ageMonthsOpt: 0, sex, weightKg: w, heightCm: h, weeklyLossKg: tydz, target: 'norm' });
     return {
       text,
       geChecked: ge.checked, geDisabled: ge.disabled,
