@@ -56,8 +56,10 @@
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
   function weeksToMonthsHalf(weeks) { return Math.round((weeks * 12 / 52) * 2) / 2; }
-  // Etap 3: dzieci dostają czas z wspólnej symulacji wzrastania (silnik energii);
-  // dorośli — dotychczasowa matematyka liniowa (symulacja dałaby ten sam wynik).
+  // Etap 3: dzieci dostają czas z wspólnej symulacji wzrastania (silnik energii).
+  // P-PAL rata 1 (2026-09-22): dorośli TEŻ z tej samej symulacji — dawna matematyka liniowa
+  // zaokrąglała do najbliższego pół miesiąca (6,07 → 6), a plan stawia krok 0,5 mies. w górę
+  // (6,07 → 6,5); przy PAL 1,4 wyniki zbiegały się przypadkiem, przy 1,6 rozjechały.
   // ENERGY-REC-2: stabilizacja u dziecka — czas z tej samej symulacji przy tempie 0 (sam wzrost).
   function timeToNormStab(ctx) {
     if (!ctx.isChild || typeof w.energySimulateMonthsToBmiTarget !== 'function') return null;
@@ -74,7 +76,7 @@
   }
   function timeToNorm(ctx, weeklyLossKg) {
     if (!(weeklyLossKg > 0) || !(ctx.kgToLose > 0)) return null;
-    if (ctx.isChild && typeof w.energySimulateMonthsToBmiTarget === 'function') {
+    if (typeof w.energySimulateMonthsToBmiTarget === 'function') {
       try {
         var geEl = d.getElementById('growthEndedFlag');
         var sim = w.energySimulateMonthsToBmiTarget({

@@ -57,7 +57,7 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     for (const z of ['Równocześnie', 'jeszcze jeden parametr', 'inne parametry', 'Wymaga omówienia', 'Wynik nieprawidłowy']) expect(r.html, z).not.toContain(z);
     expect(r.cole).toBe(`149,1${NB}%`);
     expect(r.lines.find((l) => l.startsWith('Wskaźnik Cole'))).toBe(`Wskaźnik Cole’a: 149,1${NB}%`);
-    expect(r.nut.badge).toBe('mała aktywność'); expect(r.nut.note).toBe('');
+    expect(r.nut.badge).toBe('umiarkowana aktywność'); expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku, dopóki lekarz go nie zmieni.'); // P-PAL rata 1: 4–9 lat → 1,6; PAL nietknięty → oznaczony jako domyślny
     expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/× 30 kg \(masa referencyjna\) ≈/);
     expect(r.html).not.toMatch(/PAL 1,4|Henry/);
   });

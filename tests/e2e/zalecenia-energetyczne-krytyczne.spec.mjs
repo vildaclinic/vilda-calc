@@ -25,8 +25,8 @@ async function openAll(page) {
   await page.waitForFunction(() => typeof window.patientReportFormatIssueList === 'function');
 }
 
-function generate(page, { age, sex, w, h, growthEnded = false, strategy = null }) {
-  return page.evaluate(async ({ age, sex, w, h, growthEnded, strategy }) => {
+function generate(page, { age, sex, w, h, growthEnded = false, strategy = null, pal = null }) {
+  return page.evaluate(async ({ age, sex, w, h, growthEnded, strategy, pal }) => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
     const tgl = document.getElementById('resultsModeToggle');
     if (tgl && !tgl.checked) { tgl.checked = true; tgl.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -39,6 +39,8 @@ function generate(page, { age, sex, w, h, growthEnded = false, strategy = null }
     flag('growthEndedFlag', growthEnded); flag('nutritionNormsFlag', true); flag('journeyFlag', true);
     flag('vitDSuppFlag', false); flag('hydrationFlag', false);
     window.update();
+    // P-PAL rata 1: jawny wybór PAL przez lekarza (jak zmiana w UI: wartość + zdarzenie change → __vildaPlanPalTouched)
+    if (pal != null) { const sel = document.getElementById('palFactor'); sel.value = String(pal); sel.dispatchEvent(new Event('change', { bubbles: true })); window.update(); }
     document.getElementById('generateEnergyDietBtn').click();
     await new Promise((res) => { setTimeout(res, 150); });
     const norm = (s) => (s || '').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -56,7 +58,7 @@ function generate(page, { age, sex, w, h, growthEnded = false, strategy = null }
       plan: norm(document.getElementById('planResults')?.textContent),
       journey: norm(document.getElementById('bmiJourneyMount')?.textContent),
     };
-  }, { age, sex, w, h, growthEnded, strategy });
+  }, { age, sex, w, h, growthEnded, strategy, pal });
 }
 
 test('K1: dorosła z BMI 22,8 — bez planu redukcyjnego, zapotrzebowanie i utrzymanie masy, normy „dla zapotrzebowania"', async ({ page }) => {
@@ -93,10 +95,11 @@ test('K2: 3-latek — flaga „Wzrost zakończony" wyłączona i ignorowana, nar
 test('K2b: dziecko z otyłością, jawna redukcja, żadna dieta nie spełnia minimum → zdanie z powodem i energią utrzymania', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
-  // ENERGY-CHILD-MID1: skrajny przypadek pilnujący twardego minimum wieku — dziewczynka 6 l, 95 cm, 21 kg
-  // (z ≈ 2,5, ≥ 99c, więc redukcja zostaje wybrana): REE ≈ 882, po korekcie ≈ 794, baza ≈ 1112 kcal;
-  // nawet najlżejsza dieta (−126 kcal, 0,5 kg/mies.) daje < 1000 kcal → brak diet, zostaje stabilizacja.
-  const r = await generate(page, { age: 6, sex: 'F', w: 21, h: 95, strategy: 'reduction' });
+  // ENERGY-CHILD-MID1: skrajny przypadek pilnujący twardego minimum wieku. P-PAL rata 1: bez korekty REE × 0,9
+  // i z domyślnym PAL 1,6 żadna realna antropometria 6–9 lat nie schodzi poniżej minimum — gałąź zostaje osiągalna
+  // przy jawnym wyborze PAL 1,4 przez lekarza: dziewczynka 6 l, 85 cm, 17 kg (z ≈ 2,5, ≥ 99c): REE ≈ 798,
+  // baza ≈ 1117 kcal; najlżejsza dieta (−126 kcal) daje < 1000 kcal → brak diet, zostaje stabilizacja.
+  const r = await generate(page, { age: 6, sex: 'F', w: 17, h: 85, strategy: 'reduction', pal: 1.4 });
   expect(r.diets).toEqual([]);
   expect(r.floor).toBe(1000);
   const kcal = Math.round(r.maint / 100) * 100;

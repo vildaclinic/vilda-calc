@@ -186,7 +186,7 @@ test('TONORM-J-ADULT-PANEL: panel dieta+ruch dla dorosłego — cel, diety z sil
   expect(out.text).toMatch(/(w|we) \S+ \d{4} · (dieta \+ ruch|sama dieta)/u);
   expect(out.text).toContain('Cel: −16,1 kg');
   expect(out.text).toContain('Start: 95,0 kg → Cel: 78,9 kg');
-  expect(out.text).toMatch(/2\s?100 kcal\/dzień/u);
+  expect(out.text).toMatch(/2\s?400 kcal\/dzień/u); // P-PAL rata 1: dorosły bez otyłości (BMI 29,98) → PAL 1,6, dieta umiarkowana −672 kcal
   // Deficyty diet liczone produkcyjnym silnikiem Planu odchudzania (segment diety).
   expect(out.text).toContain('lekka');
   expect(out.text).toContain('umiarkowana');

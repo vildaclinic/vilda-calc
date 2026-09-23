@@ -123,9 +123,10 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   expect(pro.strategia).toBe('przyrost');
   const t = norm(pro.text);
   expect(t).toContain('BMI wynosi 17,7 (niedowaga)');
-  expect(t).toContain('Dla przyrostu masy ciała proponowana jest nadwyżka 300–500 kcal dziennie, czyli podaż ok. 2100–2300 kcal dziennie; odpowiada to tempu ok. 0,3–0,5 kg tygodniowo, a dojście do dolnej granicy normy można orientacyjnie szacować na ok. 5–8 tygodni; z badań naukowych wynika, że w praktyce przyrost bywa wolniejszy niż z tego rachunku, dlatego o postępie decyduje kontrola masy ciała.');
-  expect(t).toContain('wynosi ok. 1800 kcal/dzień');
-  expect(t).toContain('Przy planie żywieniowym zakładającym około 2200 kcal dziennie');
+  expect(t).toContain('Dla przyrostu masy ciała proponowana jest nadwyżka 300–500 kcal dziennie, czyli podaż ok. 2300–2500 kcal dziennie; odpowiada to tempu ok. 0,3–0,5 kg tygodniowo, a dojście do dolnej granicy normy można orientacyjnie szacować na ok. 5–8 tygodni; z badań naukowych wynika, że w praktyce przyrost bywa wolniejszy niż z tego rachunku, dlatego o postępie decyduje kontrola masy ciała.');
+  // P-PAL rata 1: dorosła z niedowagą dostaje PAL 1,6 (niedowaga nie obniża PAL): TEE 2034 zamiast 1780
+  expect(t).toContain('wynosi ok. 2000 kcal/dzień');
+  expect(t).toContain('Przy planie żywieniowym zakładającym około 2400 kcal dziennie');
   expect(Object.keys(pro.zdania).sort()).toEqual(['kontrola', 'ruch', 'talerz']);
   expect(pro.zdania.talerz.length).toBe(2);
   expect(norm(pro.zdania.talerz[0])).toMatch(/^Warto zadbać o 4–5 regularnych/);
@@ -137,7 +138,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   // dane strukturalne = to, co poszło do zdań
   expect(pro.energia.utrzymanieKcal).toBe(pro.gp.teeKcal);
   expect(pro.energia.nadwyzkaKcal).toEqual([300, 500]);
-  expect(pro.energia.podazZakresKcal).toEqual([2100, 2300]);
+  expect(pro.energia.podazZakresKcal).toEqual([2300, 2500]); // P-PAL rata 1: PAL 1,6
   expect(pro.energia.tempoZakresKgTydz[0]).toBeCloseTo(300 * 7 / 7700, 6);
   expect(pro.energia.tempoZakresKgTydz[1]).toBeCloseTo(500 * 7 / 7700, 6);
   expect(pro.energia.deficytKcal).toBe(0); expect(pro.energia.tempoKgTydz).toBe(0); expect(pro.energia.podazZaokrKcal).toBeNull();
@@ -154,7 +155,7 @@ test('generator dorosły: Z1–Z6, strategia „przyrost”, role, dane struktur
   expect(z6.strategia).toBe('przyrost');
   expect(norm(z6.text)).toContain('Przy BMI poniżej 17,5 lub cechach ryzyka zaburzeń odżywiania nie ustala się planu liczbowego; wskazana ocena kliniczna, w tym ryzyka zespołu ponownego odżywienia, i prowadzenie żywienia pod nadzorem lekarza i dietetyka klinicznego.');
   expect(norm(z6.text)).not.toContain('nadwyżka');
-  expect(norm(z6.text)).toContain('Przy zapotrzebowaniu około 1700 kcal dziennie');
+  expect(norm(z6.text)).toContain('Przy zapotrzebowaniu około 1900 kcal dziennie'); // P-PAL rata 1: PAL 1,6 (REE 1209 × 1,6 = 1934)
   expect(z6.energia.nadwyzkaKcal).toBeNull(); expect(z6.energia.podazZakresKcal).toBeNull(); expect(z6.czas).toBeNull();
   expect(z6.energia.utrzymanieKcal).toBe(Math.round(z6.teeRaw));
   expect(z6.zdania.talerz.length).toBe(2); expect(z6.zdania.ruch.length).toBe(1); expect(z6.zdania.kontrola.length).toBe(2);
@@ -284,9 +285,9 @@ test('raport pacjenta: nagłówek „przyrost” i kafle nadwyżki; bez planu li
   const a = await raport({ age: 28, sex: 'F', h: 168, w: 50 });
   expect(a.strategia).toBe('przyrost');
   expect(a.naglowek).toBe('ZAPOTRZEBOWANIE ENERGETYCZNE I PRZYROST MASY CIAŁA');
-  expect(norm(a.kafle)).toContain('1 780|kcal dziennie|zapotrzebowanie energetyczne');
+  expect(norm(a.kafle)).toContain('2 034|kcal dziennie|zapotrzebowanie energetyczne'); // P-PAL rata 1: PAL 1,6
   expect(norm(a.kafle)).toContain('+300–500|kcal na dobę|nadwyżka energetyczna');
-  expect(norm(a.kafle)).toContain('2 100–2 300|kcal dziennie|zalecana podaż energii');
+  expect(norm(a.kafle)).toContain('2 300–2 500|kcal dziennie|zalecana podaż energii');
   expect(norm(a.kafle)).toContain('+0,3–0,5|kg tygodniowo|spodziewane tempo przyrostu');
   expect(a.html).not.toContain('TEMPO REDUKCJI');
   expect(a.html).not.toContain('TWOJA DROGA');
