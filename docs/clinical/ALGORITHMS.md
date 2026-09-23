@@ -5778,6 +5778,101 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## „Raport po wizycie”: przesunięcie pozycji wzrostu w górę siatki i niski wzrost wobec rodziców (P-RAPORT rata T2, SW 1.1.56, 2026-09-23)
+
+**Zgłoszenie i analiza (2026-09-23).** Rata T dała nagłówkowi pozycję wysokiego wzrostu wobec MPH, ale bez faktu o PRZYSPIESZENIU
+(algorytm Hannemy, pytanie 3). Silnik trajektorii miał flagę pozycyjną tylko w dół (ΔhSDS ≤ −1,0, PR #64), słownik werdyktów zna
+akcelerację tylko per odcinek i tylko przy końcu > 97 c, a zbieracz nagłówka nie czytał modelu trajektorii. Osobny raport
+właściciela (chłopiec 6 l. z niskim wzrostem) pokazał dublowanie przy niskim wzroście: oś „Wzrost a rodzice” jako drugie
+„Dodatkowo …” i podtytuł „…w odniesieniu do wzrostu rodziców” obok zdania o rodzicach. Propozycję zweryfikowano adwersaryjnie
+(recenzja kliniczna, kodowa, językowa): prosta lustrzana reguła (baza 24 mies., bez niedawności) flagowałaby głównie
+konstytucjonalne przyspieszenie wzrastania sprzed 4. r.ż. i szew siatek w 36. mies.; flaga w dół bez kontekstu (GH, kanał
+rodzicielski, Tanner IV–V) nie nadaje się do dokumentu dla rodzica — odłożona.
+
+**Piśmiennictwo (PubMed).** Hannema & Sävendahl 2016, doi:10.1159/000443685 (pytanie 3: przyspieszenie wzrastania); Stalman 2015,
+doi:10.4274/jcrpe.2220 (dodatnia zmiana hSDS jako element diagnostyki, oba przypadki patologii z NIEDAWNYM przyspieszeniem,
+kryterium „zmiana hSDS > 1,0 w nieokreślonym czasie” zbyt ostre po 10. r.ż.); Kaplowitz 2016, doi:10.1542/peds.2015-3732
+(szybkie wzrastanie towarzyszące postępowi cech płciowych jako wskaźnik prawdziwego przedwczesnego dojrzewania); Papadimitriou
+2010, doi:10.1210/jc.2010-0895; 2011, doi:10.1159/000330005; 2022, doi:10.1016/j.tem.2022.02.004 (konstytucjonalne
+przyspieszenie wzrastania: szczyt centyla w 2.–4. r.ż., potem normalizacja; wzorzec typowy dla idiopatycznego przedwczesnego
+dojrzewania u dziewcząt); Grote 2008, doi:10.1136/adc.2007.120188 (kryterium odległości od celu > 2 SD przy hSDS < −2 w wieku
+3–10 lat; poniżej 3 lat czułość znacznie niższa); Smith 1976, doi:10.1016/s0022-3476(76)80453-2.
+
+**Decyzje właściciela (2026-09-23).** (1) Baza flagi w górę ≥ 36 mies. + warunek niedawności (ostatni odcinek ≥ 6 mies. z ΔSDS
+≥ +0,5). (2) Wysoki wzrost w paśmie rodziców + przesunięcie → alarm. (3) Przesunięcie bez wysokiego wzrostu → nowa oś w nagłówku
+(ostrzeżenie, odznaka „Przesunięcie w górę siatki”). (4) Gałąź nadmiaru masy (wiek kostny na czele) we wszystkich zdaniach.
+(5) Od 10 lat ciężkość 1 z odniesieniem do etapu dojrzewania, bez klauzuli Tannera. (6) Przedwczesne dojrzewanie nazwane
+(jak W3). (7) Flaga w dół w nagłówku, linia panelu/epikryzy z etykietą słownika i wyrównanie bazy flagi w dół — odłożone.
+Dodatkowo symetria N0–N3 dla niskiego wzrostu (brzmienia zaakceptowane 2026-09-23).
+
+**Zmiana (kliniczna: nowy fakt i nowe zdania w dokumencie dla pacjenta; próg +1,0 = lustro flagi w dół; baza 36 mies., niedawność
+i bramki wieku 3/10 lat nowe).**
+- `vilda_trajectory_analysis.js` (VERSION 25, `?v=33`): parametry jako dane `UPFLAG_DSDS = 1,0`, `UPFLAG_BASE_MIN_M = 36`,
+  `UPFLAG_RECENT_MIN_M = 6`, `UPFLAG_RECENT_DSDS = 0,5`; `metrics[height].upFlag = { dSds, baseAgeMonths, baseC, lastAgeMonths, lastC,
+  ostatniOdcinekDSds, ostatniOdcinekOdMies, siatka }` — baza = pierwszy punkt ≥ 36 mies., koniec = ostatni punkt serii, ta sama
+  siatka (`statFor` niesie teraz `siatka` z `advHistoryResolveMetric`), niedawność = ostatni punkt wobec najbliższego wcześniejszego
+  punktu odległego o ≥ 6 mies.; zaokrąglenie do 2 miejsc jak flaga w dół. `redFlag` dostaje te same pola `baseC`, `lastAgeMonths`,
+  `lastC` (bez zmiany progu ani banerów). `heightRedFlagOf`/`heightUpFlagOf` w eksporcie. Flaga w górę NIE tworzy banera karty,
+  werdyktu ani linii panelu — asymetria wobec flagi w dół świadoma (słownik werdyktów w paśmie środkowym nazywa +0,5…+1,3 z końcem
+  ≤ 97 c „stabilnym torem”; osobna rata).
+- `vilda_patient_report.js` (`?v=38`, `patientReportZbierzFaktyNaglowka`): fakt `f.pozycja = { dSds, odWiekuMies, zCentyla,
+  naCentyl, liczbaWidoczna }` liczony W CHWILI BUDOWY RAPORTU przez `VildaTrajectoryAnalysis.analyze()` na punktach karty
+  (`advGrowthCollectAllPointsForReport()`, z `ageYears`) i źródle raportu — nie z modelu karty (mógł być policzony na siatce sprzed
+  przełączenia); tylko gdy ostatni punkt serii wzrostu to pomiar dzisiejszy (`lastAgeMonths` = wiek dziś w miesiącach); liczba SDS
+  tylko w trybie profesjonalnym.
+- `vilda_raport_naglowek.js` (WERSJA 4, `?v=4`): `POZYCJA_WZROSTU = { DSDS: 1,0 }`; fakt od `WIEK_ALARM_OD_LAT` (3 lata); zdanie
+  „od pomiaru z wieku 3 lat 2 mies. pozycja wzrostu na siatce podniosła się z 50. na 98. centyl (o +2,13 SDS)” (wiek bazy w
+  dopełniaczu, centyle jak ADV-REPORT-5, SDS jak linia podsumowania, bez liczby w trybie standardowym). Gałęzie: **A1** W1 +
+  przesunięcie → ciężkość 2, odznaka „Wysoki wzrost — do oceny”, tytuł „Wzrost jest wysoki jak na wiek: 129,0 cm, 98. centyl — od
+  pomiaru z wieku 3 lat 2 mies. przesunął się w górę siatki.”, zdanie „Wzrost jest zgodny ze wzrostem rodziców (…), ale od pomiaru
+  … (o +2,13 SDS). Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy
+  dojrzewania, wiek kostny).”; **A2** W2 + przesunięcie → jak A1 („wyższy, niż wynika…, a od pomiaru…”), W3/W3″ + przesunięcie →
+  zdanie doklejone; **A3** W0 + przesunięcie → jak A1 bez zdania o rodzicach; **A4** bez wysokiego wzrostu (≤ 97 c) → własna oś
+  `pozycja`, ciężkość 1, odznaka „Przesunięcie w górę siatki”, tytuł = zdanie faktu, „Taki wynik ocenia się razem z objawami
+  dojrzewania i wiekiem kostnym.”; przy nadwadze/otyłości (BMI lub Cole) wszędzie „przede wszystkim wieku kostnego (nadmiar masy
+  ciała sam przyspiesza wzrastanie)”; od 10 lat ciężkość 1 i „W tym wieku przesunięcie w górę siatki ocenia się w odniesieniu do
+  etapu dojrzewania i wieku kostnego.”; poniżej 3 lat bez faktu. Oś wysokiego wzrostu wchłania oś `pozycja` (jedno zdanie
+  o wzroście); `pozycja` w `KOLEJNOSC_OSI` za `tempo`, przed `mph`.
+- Niski wzrost (N0–N3, `kandydatNiskiegoWzrostu`): **N0** brak MPH — podtytuł jak dotąd (przy DS bez członu o rodzicach; dopisek
+  „Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.” przy `rodziceBrak`) albo strona dodatnia (zostaje przy osi mph);
+  **N1** |różnica| < 1,5 — „Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 165,0 cm, 5. centyl dorosłych).”
+  + zdanie o tempie (historia: „porównanie z wcześniejszymi pomiarami”); **N2** −2,0 < różnica ≤ −1,5 — „Wzrost jest niższy, niż
+  wynika ze wzrostu rodziców (…; różnica −1,69 SDS). Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym.”; **N3**
+  ≤ −2,0 — ciężkość 2 także przy 3–10 c: „Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców (…). Taki wynik wymaga
+  dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.”; poniżej 3 lat N2/N3 bez alarmu z porównania,
+  z zastrzeżeniem wieku. Przy N1–N3 podtytuł pusty (tempo i rodzice są już w zdaniu), oś `mph` (strona ujemna przy ≤ 10 c)
+  wchłonięta; ton tytułu (≤ 3 c czerwony, 3–10 c żółty) bez zmian.
+- Strony `index`, `docpro`, `kalkulator-klirens` i pozostałe ładujące trajektorię: `vilda_trajectory_analysis.js?v=33`,
+  `vilda_patient_report.js?v=38`, `vilda_raport_naglowek.js?v=4`; `service-worker-kalorii.js` SW 1.1.55 → 1.1.56, precache
+  append-only.
+- Znane cechy (świadome): flaga w dół nadal z bazą 24 mies. i bez warunku siatki (odziedziczone, osobna decyzja); brak linii
+  o przesunięciu w górę w panelu trajektorii i epikryzie (asymetria słownika, osobna rata); klif 97,0/97,1 c między A4
+  (ostrzeżenie) a A1/A3 (alarm).
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne, prawdziwy kod; unit `trajectory-analysis` i `raport-naglowek`, e2e
+`raport-wizyta-rata-t2`):**
+- silnik: 24 mies. 0,0 → 38 mies. 0,0 → 74 mies. +2,13: baza 38 mies., `upFlag.dSds` +2,13, `ostatniOdcinekDSds` +2,13;
+  24 → 42 mies. +1,2 → 96 mies. +1,2 (konstytucjonalne przyspieszenie): brak flagi; 36 → 48 mies. +1,3 → 96 mies. +1,3 (dawne):
+  brak; 36 → 84 mies. +0,4 → 96 mies. +1,1 (niedawne): flaga; baza i koniec na różnych siatkach: brak; +0,99: brak, +1,00: flaga;
+- chłopiec 6 l. 2 m., 130,0 cm (98 c, hSDS +2,12), rodzice 178/193 (MPH 192,0 cm, 98 c), historia 3 l. 2 m. 98,8 cm (50 c) →
+  A1 czerwone „…zgodny ze wzrostem rodziców (…), ale od pomiaru z wieku 3 lat 2 mies. pozycja wzrostu na siatce podniosła się
+  z 50. na 98. centyl (o +2,11 SDS). Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (…)”;
+  ta sama historia na 95. c → W1; bez historii → W1; historia 2 l. 50 c + 3 l. 6 m. 97 c (szczyt przed 3,5 r.ż.) → W1;
+- dziewczynka 7 l. na 90. c, historia 3 l. 6 m. na 50. c, bez rodziców → A4 żółte „Przesunięcie w górę siatki / Od pomiaru
+  z wieku 3 lat 6 mies. pozycja wzrostu na siatce podniosła się z 50. na 90. centyl (o +1,2x SDS).”;
+- chłopiec 6 l. 2 m., 109,3 cm (2 c), 16,2 kg, rodzice 163/177 (MPH 176,5 cm), historia 4 l. 5 m. 97 cm → tytuł „Niski wzrost”
+  bez zmian; zdanie „Wzrost jest niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 176,5 cm, N. centyl
+  dorosłych; różnica −1,xx SDS). Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym. Dodatkowo masa ciała
+  w stosunku do wzrostu jest za mała (wskaźnik Cole’a 87 %, norma 90–110 %).”; podtytuł pusty; różnica identyczna z linią
+  „hSDS - mpSDS” podsumowania; tryb standardowy → bez liczby SDS; docpro tą samą ścieżką.
+
+**Walidacja.** Unit `trajectory-analysis` 62 (56 + 6), `raport-naglowek` 43 (35 + 8), e2e `raport-wizyta-rata-t2` (7: index w obu
+trybach i docpro). Pełny `npm test` i pełny zestaw e2e desktop: wynik w PR. Zielone testy nie są dowodem poprawności medycznej.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna brzmień (decyzje 1–7 i N0–N3 z 2026-09-23 przed kodowaniem); rata
+z flagą w dół w nagłówku (bramki: GH, normalizacja do kanału rodzicielskiego, Tanner IV–V, koniec > 90 c); linia panelu/epikryzy
+o przesunięciu w górę z etykietą słownika; wyrównanie bazy flagi w dół do 36 mies.; scalenie i wdrożenie.
+
 ## „Raport po wizycie”: wysoki wzrost wobec wzrostu docelowego wg rodziców (P-RAPORT rata T, SW 1.1.55, 2026-09-23)
 
 **Zgłoszenie i analiza (2026-09-23).** W raporcie rocznego chłopca z wysokim wzrostem i wysokimi rodzicami nagłówek kończył się

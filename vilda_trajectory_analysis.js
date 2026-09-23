@@ -15,6 +15,8 @@
  *    więc słownik i progi ΔSDS nie mogą się już rozjechać między tymi dwoma powierzchniami;
  *  - opis strefy/kanału: identyczny z interpCh panelu (kanały 3/10/25/50/75/90/97);
  *  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 od pierwszego pomiaru z wieku ≥24 mies. (PR #64);
+ *  - flaga pozycyjna wzrostu W GÓRĘ (P-RAPORT rata T2): ΔhSDS ≥ +1,0 od pierwszego pomiaru z wieku ≥36 mies.,
+ *    z warunkiem niedawności (ostatni odcinek ≥ 6 mies. ma ΔSDS ≥ +0,5) i tej samej siatki; bez banera;
  *  - tempo wzrastania: od SW 1.0.944 liczy je WYŁĄCZNIE vilda_tempo_wzrastania.js
  *    (window.VildaTempoWzrastania, P-TEMPO) — dobór pary, wzór, drabinka wiekowa i hierarchia
  *    okołopokwitaniowa (Tanner → wiek kostny → reguła generyczna) są tam, ten plik tylko woła.
@@ -24,13 +26,24 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '24';
+  var VERSION = '25';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
     SEGMENT_MIN_GAP_M: 3,
     REDFLAG_DSDS: -1.0,
     REDFLAG_BASE_MIN_M: 24,
+    // P-RAPORT rata T2 (decyzje właściciela 2026-09-23): flaga pozycyjna wzrostu W GÓRĘ. Lustro progu
+    // (+1,0), ale z bazą od 36 mies. (szczyt centyla konstytucjonalnego przyspieszenia wzrastania
+    // przypada na 2.–4. r.ż. — Papadimitriou 2010, doi:10.1210/jc.2010-0895 — a w 36. mies. zmienia się
+    // siatka: Palczewska→OLAF, WHO 2006→WHO 2007) i warunkiem NIEDAWNOŚCI: ostatni odcinek ≥ 6 mies.
+    // ma ΔSDS ≥ +0,5 (ten sam próg, co słownik werdyktów; Stalman 2015, doi:10.4274/jcrpe.2220:
+    // „niedawne przyspieszenie"). Baza i koniec muszą leżeć na tej samej siatce. Flaga jest liczbą
+    // opisową dla nagłówka raportu; nie tworzy banera ani werdyktu (asymetria wobec REDFLAG świadoma).
+    UPFLAG_DSDS: 1.0,
+    UPFLAG_BASE_MIN_M: 36,
+    UPFLAG_RECENT_MIN_M: 6,
+    UPFLAG_RECENT_DSDS: 0.5,
     // P-SLOWA (punkt 4 audytu) nazwał dwie różne wielkości chodzące pod jednym słowem
     // „istotny"; P-WERDYKT rata 1 przeniósł je razem z regułą werdyktu do vilda_werdykt.js
     // (VildaWerdykt.PROGI.ISTOTNA_DECELERACJA_DSDS = −1,0 dla wzrostu i
@@ -140,20 +153,23 @@
       if (v == null || v <= 0) return null;
       var g = sexMK(sex);
       var src = source != null && String(source).trim() !== '' ? String(source).toUpperCase() : null;
-      var st = null;
+      var st = null, siatka = null;
       if (typeof w.advHistoryResolveMetric === 'function') {
         var r = w.advHistoryResolveMetric(param, v, g, ageYears, src || 'OLAF');
-        if (r && r.result && typeof r.result.percentile === 'number' && isFinite(r.result.percentile)) st = r.result;
+        if (r && r.result && typeof r.result.percentile === 'number' && isFinite(r.result.percentile)) {
+          st = r.result;
+          siatka = r.source != null && String(r.source).trim() !== '' ? String(r.source).toUpperCase() : null;
+        }
       }
       if (!st && src === 'PALCZEWSKA' && typeof w.calcPercentileStatsPal === 'function') {
         var q = w.calcPercentileStatsPal(v, g, ageYears, param);
-        if (q && typeof q.percentile === 'number' && isFinite(q.percentile)) st = q;
+        if (q && typeof q.percentile === 'number' && isFinite(q.percentile)) { st = q; siatka = 'PALCZEWSKA'; }
       }
       if (!st) return null;
       var sd = (typeof st.sd === 'number' && isFinite(st.sd)) ? st.sd
         : (typeof w.normInv === 'function' ? w.normInv(st.percentile / 100) : null);
       if (typeof sd !== 'number' || !isFinite(sd)) return null;
-      return { percentile: st.percentile, sd: sd };
+      return { percentile: st.percentile, sd: sd, siatka: siatka };
     } catch (e) {
       return null;
     }
@@ -474,7 +490,7 @@
       if (v == null) return;
       var st = statFor(met.param, v, sex, p.ageYears, source);
       if (!st) return;
-      series.push({ ageMonths: p.ageMonths, ageYears: p.ageYears, value: v, c: st.percentile, sd: st.sd, isCurrent: p.isCurrent });
+      series.push({ ageMonths: p.ageMonths, ageYears: p.ageYears, value: v, c: st.percentile, sd: st.sd, siatka: st.siatka || null, isCurrent: p.isCurrent });
     });
     if (series.length < 2) return null;
 
@@ -536,7 +552,29 @@
       }
       if (base && last.ageMonths > base.ageMonths) {
         var dh = Math.round(100 * (last.sd - base.sd)) / 100;
-        if (dh <= P.REDFLAG_DSDS) redFlag = { dSds: dh, baseAgeMonths: base.ageMonths };
+        if (dh <= P.REDFLAG_DSDS) redFlag = { dSds: dh, baseAgeMonths: base.ageMonths, baseC: base.c, lastAgeMonths: last.ageMonths, lastC: last.c };
+      }
+    }
+
+    // P-RAPORT rata T2: flaga pozycyjna wzrostu W GÓRĘ (parametry i uzasadnienie przy UPFLAG_* w P).
+    var upFlag = null;
+    if (met.key === 'height') {
+      var ub = null;
+      for (var u = 0; u < series.length; u++) {
+        if (series[u].ageMonths >= P.UPFLAG_BASE_MIN_M) { ub = series[u]; break; }
+      }
+      if (ub && last.ageMonths > ub.ageMonths && (ub.siatka == null || last.siatka == null || ub.siatka === last.siatka)) {
+        var du = Math.round(100 * (last.sd - ub.sd)) / 100;
+        // niedawność: ostatni punkt wobec najbliższego wcześniejszego punktu odległego o ≥ 6 mies.
+        var prev = null;
+        for (var q9 = series.length - 2; q9 >= 0; q9--) {
+          if (last.ageMonths - series[q9].ageMonths >= P.UPFLAG_RECENT_MIN_M) { prev = series[q9]; break; }
+        }
+        var dRecent = prev ? Math.round(100 * (last.sd - prev.sd)) / 100 : null;
+        if (du >= P.UPFLAG_DSDS && dRecent != null && dRecent >= P.UPFLAG_RECENT_DSDS) {
+          upFlag = { dSds: du, baseAgeMonths: ub.ageMonths, baseC: ub.c, lastAgeMonths: last.ageMonths, lastC: last.c,
+            ostatniOdcinekDSds: dRecent, ostatniOdcinekOdMies: prev.ageMonths, siatka: last.siatka || null };
+        }
       }
     }
 
@@ -559,7 +597,7 @@
     return {
       metric: met.key, title: met.title, unit: met.unit, dec: met.dec,
       series: series, segments: segments,
-      first: first, last: last, total: total, worst: worst, redFlag: redFlag,
+      first: first, last: last, total: total, worst: worst, redFlag: redFlag, upFlag: upFlag,
       treatment: treatment,
       tone: toneCent(met.key, last.c)
     };
@@ -685,6 +723,14 @@
     if (!model || !model.metrics) return null;
     for (var i = 0; i < model.metrics.length; i++) {
       if (model.metrics[i].metric === 'height') return model.metrics[i].redFlag || null;
+    }
+    return null;
+  }
+
+  function heightUpFlagOf(model) {
+    if (!model || !model.metrics) return null;
+    for (var i = 0; i < model.metrics.length; i++) {
+      if (model.metrics[i].metric === 'height') return model.metrics[i].upFlag || null;
     }
     return null;
   }
@@ -1434,6 +1480,8 @@
     // pierwszej zmianie progu.
     velocityAssessment: velocityAssessment,
     analyze: analyze,
+    heightRedFlagOf: heightRedFlagOf,
+    heightUpFlagOf: heightUpFlagOf,
     buildHtml: buildHtml,
     buildCardAlertsHtml: buildCardAlertsHtml,
     analyzeAndRenderHtml: analyzeAndRenderHtml,

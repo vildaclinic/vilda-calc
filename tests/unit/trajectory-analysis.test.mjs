@@ -1313,3 +1313,85 @@ describe('start z niedoboru masy/BMI: etykietę różnicuje centyl końcowy (dec
     expect(vta.verdictForPair('weight', -1.5, -1.7, 7, 5)).toEqual({ t: 'warn', l: 'pogłębianie niedoboru masy ciała' });
   });
 });
+
+// P-RAPORT rata T2 (decyzje właściciela 2026-09-23): flaga pozycyjna wzrostu W GÓRĘ — próg +1,0, baza od
+// 36 mies., niedawność (ostatni odcinek ≥ 6 mies. z ΔSDS ≥ +0,5), ta sama siatka; liczba opisowa bez banera.
+describe('flaga pozycyjna wzrostu w górę (rata T2)', () => {
+  function makeGlobalWithStats(table, sourceOf) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    const browserGlobal = {
+      bmiSource: 'OLAF',
+      advHistoryResolveMetric(param, value, sex, ageYears, source) {
+        const m = Math.round(ageYears * 12);
+        const key = `${param}|${m}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        const sd = table[key];
+        return { result: { percentile: centileFromSds(sd), sd }, source: sourceOf ? sourceOf(m) : source, reason: '' };
+      }
+    };
+    return loadModule(browserGlobal).VildaTrajectoryAnalysis;
+  }
+  const wzrost = (vta, input) => vta.analyze(input).metrics.find((m) => m.metric === 'height');
+
+  it('parametry są danymi silnika', () => {
+    const vta = makeGlobalWithStats({});
+    expect(vta.PARAMS.UPFLAG_DSDS).toBe(1.0);
+    expect(vta.PARAMS.UPFLAG_BASE_MIN_M).toBe(36);
+    expect(vta.PARAMS.UPFLAG_RECENT_MIN_M).toBe(6);
+    expect(vta.PARAMS.UPFLAG_RECENT_DSDS).toBe(0.5);
+  });
+
+  it('baza = pierwszy pomiar ≥ 36 mies.; flaga niesie centyle i wiek końca; flaga w dół dostaje te same pola', () => {
+    const vta = makeGlobalWithStats({ 'HT|24': 0.0, 'HT|38': 0.0, 'HT|74': 2.13 });
+    const h = wzrost(vta, { measurements: [{ ageMonths: 24, height: 87 }, { ageMonths: 38, height: 97 }], currentAgeMonths: 74, currentHeight: 129, sex: 'M', source: 'OLAF' });
+    expect(h.upFlag).toMatchObject({ dSds: 2.13, baseAgeMonths: 38, lastAgeMonths: 74, ostatniOdcinekDSds: 2.13, ostatniOdcinekOdMies: 38, siatka: 'OLAF' });
+    expect(Math.round(h.upFlag.baseC)).toBe(50); expect(Math.round(h.upFlag.lastC)).toBe(98);
+    expect(h.redFlag).toBeNull();
+    const d = wzrost(vta, { measurements: [{ ageMonths: 38, height: 97 }], currentAgeMonths: 74, currentHeight: 129, sex: 'M' });
+    expect(d.upFlag.dSds).toBe(2.13);
+    const dol = makeGlobalWithStats({ 'HT|30': 1.3, 'HT|72': 0.1 });
+    const r = wzrost(dol, { measurements: [{ ageMonths: 30, height: 93 }], currentAgeMonths: 72, currentHeight: 113, sex: 'M' });
+    expect(r.redFlag).toMatchObject({ dSds: -1.2, baseAgeMonths: 30, lastAgeMonths: 72 });
+    expect(typeof r.redFlag.baseC).toBe('number'); expect(typeof r.redFlag.lastC).toBe('number');
+    expect(vta.heightUpFlagOf(vta.analyze({ measurements: [{ ageMonths: 38, height: 97 }], currentAgeMonths: 74, currentHeight: 129, sex: 'M' })).dSds).toBe(2.13);
+  });
+
+  it('bez flagi, gdy przesunięcie zaszło przed 36. mies. (konstytucjonalne przyspieszenie) albo nie jest niedawne', () => {
+    // CAG: 24 mies. 0,0 → 42 mies. +1,2 → 96 mies. +1,2: baza 42 mies. (≥ 36), Δ od bazy 0,0
+    const cag = makeGlobalWithStats({ 'HT|24': 0.0, 'HT|42': 1.2, 'HT|96': 1.2 });
+    expect(wzrost(cag, { measurements: [{ ageMonths: 24, height: 87 }, { ageMonths: 42, height: 102 }], currentAgeMonths: 96, currentHeight: 133, sex: 'M' }).upFlag).toBeNull();
+    // przesunięcie dawno temu: 36 mies. 0,0 → 48 mies. +1,3 → 96 mies. +1,3 (ostatni odcinek 48 mies. z Δ 0,0)
+    const stare = makeGlobalWithStats({ 'HT|36': 0.0, 'HT|48': 1.3, 'HT|96': 1.3 });
+    expect(wzrost(stare, { measurements: [{ ageMonths: 36, height: 96 }, { ageMonths: 48, height: 106 }], currentAgeMonths: 96, currentHeight: 133, sex: 'M' }).upFlag).toBeNull();
+    // niedawne: 36 mies. 0,0 → 84 mies. +0,4 → 96 mies. +1,1 (ostatni odcinek 12 mies. z Δ +0,7)
+    const swieze = makeGlobalWithStats({ 'HT|36': 0.0, 'HT|84': 0.4, 'HT|96': 1.1 });
+    const f = wzrost(swieze, { measurements: [{ ageMonths: 36, height: 96 }, { ageMonths: 84, height: 122 }], currentAgeMonths: 96, currentHeight: 133, sex: 'M' }).upFlag;
+    expect(f).toMatchObject({ dSds: 1.1, baseAgeMonths: 36, ostatniOdcinekDSds: 0.7, ostatniOdcinekOdMies: 84 });
+    // odcinek krótszy niż 6 mies. nie jest „ostatnim odcinkiem": 36 → 90 (+1,0) → 93 (+1,1): niedawność liczona od 36
+    const krotki = makeGlobalWithStats({ 'HT|36': 0.0, 'HT|90': 1.0, 'HT|93': 1.1 });
+    expect(wzrost(krotki, { measurements: [{ ageMonths: 36, height: 96 }, { ageMonths: 90, height: 130 }], currentAgeMonths: 93, currentHeight: 131, sex: 'M' }).upFlag).toMatchObject({ ostatniOdcinekOdMies: 36 });
+    // próg: +0,99 nie, +1,00 tak
+    expect(wzrost(makeGlobalWithStats({ 'HT|36': 0.0, 'HT|72': 0.99 }), { measurements: [{ ageMonths: 36, height: 96 }], currentAgeMonths: 72, currentHeight: 120, sex: 'M' }).upFlag).toBeNull();
+    expect(wzrost(makeGlobalWithStats({ 'HT|36': 0.0, 'HT|72': 1.0 }), { measurements: [{ ageMonths: 36, height: 96 }], currentAgeMonths: 72, currentHeight: 120, sex: 'M' }).upFlag).not.toBeNull();
+  });
+
+  it('baza i koniec na różnych siatkach → bez flagi (szew siatek nie tworzy przesunięcia)', () => {
+    const vta = makeGlobalWithStats({ 'HT|36': 0.0, 'HT|72': 1.3 }, (m) => (m < 40 ? 'PALCZEWSKA' : 'OLAF'));
+    expect(wzrost(vta, { measurements: [{ ageMonths: 36, height: 96 }], currentAgeMonths: 72, currentHeight: 122, sex: 'M', source: 'OLAF' }).upFlag).toBeNull();
+    const ok = makeGlobalWithStats({ 'HT|36': 0.0, 'HT|72': 1.3 }, () => 'OLAF');
+    expect(wzrost(ok, { measurements: [{ ageMonths: 36, height: 96 }], currentAgeMonths: 72, currentHeight: 122, sex: 'M', source: 'OLAF' }).upFlag).not.toBeNull();
+  });
+
+  it('strażnik: flaga w górę nie tworzy banera karty ani werdyktu', () => {
+    const vta = makeGlobalWithStats({ 'HT|38': 0.0, 'HT|74': 2.13 });
+    const model = vta.analyze({ measurements: [{ ageMonths: 38, height: 97 }], currentAgeMonths: 74, currentHeight: 129, sex: 'M' });
+    expect(vta.heightUpFlagOf(model)).not.toBeNull();
+    expect(vta.buildCardAlertsHtml(model)).toBe('');
+  });
+});
