@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 7;
+  var WERSJA = 8;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -145,8 +145,11 @@
     var punkty = [{ masa: teraz, pod: 'dziś', typ: 'start' }];
     (drab.szczeble || []).forEach(function (s, i) {
       var m = liczba(s.masa);
-      /* rata O: pod progiem Reinehra „pierwszy krok” — pacjent nie zna „progu poprawy”; pozostałe szczeble opisem silnika */
-      if (m != null && m < teraz && m > cel) punkty.push({ masa: m, pod: s.klucz === 'reinehr' ? 'pierwszy krok' : (krotko(s.opis) || s.etykieta || ''), typ: i === 0 ? 'krok' : 'etap' });
+      /* rata O: pod progiem Reinehra „pierwszy krok” — pacjent nie zna „progu poprawy”; pozostałe szczeble opisem silnika.
+         rata U: „pierwszy krok” tylko wtedy, gdy próg Reinehra JEST pierwszym szczeblem (jak w nagłówku sekcji);
+         gdy pierwszy jest 97. centyl (dziecko 1,88–2,13 SDS), próg Reinehra dalej na osi dostaje podpis
+         „lepsze wyniki badań” — koniec dwóch różnych „pierwszych kroków” na jednej kartce. */
+      if (m != null && m < teraz && m > cel) punkty.push({ masa: m, pod: s.klucz === 'reinehr' ? (i === 0 ? 'pierwszy krok' : 'lepsze wyniki badań') : (krotko(s.opis) || s.etykieta || ''), typ: i === 0 ? 'krok' : 'etap' });
     });
     punkty.push({ masa: cel, pod: 'norma BMI', typ: 'cel' });
     return punkty;
@@ -155,13 +158,29 @@
   /* P-RAPORT rata I: oś drogi rysowana z listy punktów, żeby ta sama oś służyła drabince
      i celowi własnemu. Wszystkie znaczniki mają jeden rozmiar, a tor biegnie przez ich środki
      (pozycja toru liczona z rozmiaru znacznika w CSS, nie „na oko"). */
-  function pasek(punkty) {
-    if (!punkty || punkty.length < 2) return '';
+  /* rata U: etykieta ma szerokość 170 px, więc dwa punkty bliżej niż OS_MIN_ODSTEP_PROC osi nachodziły na
+     siebie (97,8 i 96,4 kg u dziecka tuż nad 97. centylem: 7 % osi). Punkt bliższy niż próg od ostatniego
+     punktu w górnym rzędzie schodzi z opisem (kg + podpis) do drugiego rzędu; oś jest wyższa tylko wtedy,
+     gdy drugi rząd jest użyty. Reguła geometryczna, wspólna dla dziecka, dorosłego i celu własnego. */
+  var OS_MIN_ODSTEP_PROC = 18;
+  function rzedyPunktow(punkty) {
+    if (!punkty || punkty.length < 2) return [];
     var max = punkty[0].masa, min = punkty[punkty.length - 1].masa;
     var rozpietosc = max - min || 1;
-    return '<div class="vrp-pasek"><div class="vrp-tor"></div>' + punkty.map(function (p) {
+    var ostatniGora = -Infinity;
+    return punkty.map(function (p) {
       var lewo = ((max - p.masa) / rozpietosc) * 100;
-      return '<div class="vrp-zn vrp-t-' + p.typ + '" style="left:' + lewo.toFixed(2) + '%">'
+      var rzad = lewo - ostatniGora >= OS_MIN_ODSTEP_PROC ? 0 : 1;
+      if (rzad === 0) ostatniGora = lewo;
+      return { lewo: lewo, rzad: rzad };
+    });
+  }
+  function pasek(punkty) {
+    if (!punkty || punkty.length < 2) return '';
+    var rzedy = rzedyPunktow(punkty);
+    var dwaRzedy = rzedy.some(function (r) { return r.rzad === 1; });
+    return '<div class="vrp-pasek' + (dwaRzedy ? ' vrp-pasek-2r' : '') + '"><div class="vrp-tor"></div>' + punkty.map(function (p, i) {
+      return '<div class="vrp-zn vrp-t-' + p.typ + (rzedy[i].rzad === 1 ? ' vrp-zn-dol' : '') + '" style="left:' + rzedy[i].lewo.toFixed(2) + '%">'
         + '<div class="vrp-kr"></div><div class="vrp-kg">' + esc(fmt(p.masa, 1)) + '<small> kg</small></div>'
         + '<div class="vrp-pd">' + esc(p.pod) + '</div></div>';
     }).join('') + '</div>';
@@ -299,7 +318,9 @@
       blokRuchu = '<div class="vrp-ruchdek">'
         + '<b>Twój zadeklarowany plan:</b> ' + esc(lista)
         + (suma ? ' \u2014 razem ' + esc(suma) + ' kcal tygodniowo' : '') + '. '
-        + 'Tempo redukcji masy ciała pokazane powyżej już to uwzględnia.'
+        /* rata U: kafel tempa liczy SAMĄ dietę (generator: deficyt × 7 / 7700); dawne „już to uwzględnia” było
+           nieprawdziwe. Liczba z ruchem pochodzi z karty „Droga do normy BMI” (getPdfModel), nie stąd. */
+        + (ruch.tempoZRuchemKgTydz ? 'Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok. \u2212' + esc(ruch.tempoZRuchemKgTydz) + '\u202Fkg tygodniowo.' : '')
         + (ruch.gainText ? ' ' + esc(ruch.gainText) : '')
         + '</div>';
     }
@@ -500,6 +521,7 @@
     var u = function (n) { return 'calc(' + n + 'px * var(--s))'; };
     var ug = function (n) { return 'calc(' + n + 'px * var(--sg))'; }; /* nagłówek: skala ograniczona */
     var ZN = 18, TOR = 5;
+    var OS_DRUGI_RZAD = 46; /* rata U: przesunięcie drugiego rzędu etykiet osi (px przy skali 1) */
     return [
       '.vrp{--s:1;--sg:1;--luz:0px;display:flex;flex-direction:column;gap:calc(' + u(14) + ' + var(--luz));color:' + K.ciemny + ';}',
       '.vrp *{box-sizing:border-box;}',
@@ -535,6 +557,9 @@
       '.vrp-kg{font-size:' + u(17) + ';font-weight:800;white-space:nowrap;}',
       '.vrp-kg small{font-size:' + u(12.5) + ';font-weight:650;color:' + K.mut + ';}',
       '.vrp-pd{font-size:' + u(12.5) + ';color:' + K.mut + ';line-height:1.25;}',
+      /* rata U: drugi rząd etykiet — o pełną wysokość rzędu górnego (kg + podpis) niżej; oś wyższa tylko z drugim rzędem */
+      '.vrp-zn-dol .vrp-kg,.vrp-zn-dol .vrp-pd{position:relative;top:' + u(OS_DRUGI_RZAD) + ';}',
+      '.vrp-pasek-2r{height:' + u(80 + OS_DRUGI_RZAD) + ';}',
       '.vrp-stopa{margin-top:' + u(8) + ';font-size:' + u(15) + ';color:' + K.ciemny + ';text-align:center;}',
       '.vrp-kafle{display:grid;grid-template-columns:repeat(3,1fr);gap:' + u(12) + ';}',
       /* P-DIETA-PRZYROST rata D: cztery kafle (zapotrzebowanie, nadwyżka, podaż, tempo) w jednym rzędzie. */
@@ -585,7 +610,11 @@
     SKALA_MAX_GORA: SKALA_MAX_GORA,
     html: html,
     css: css,
-    dopasuj: dopasuj
+    dopasuj: dopasuj,
+    /* rata U: reguły osi „Twoja droga” dostępne dla testów jednostkowych (bez renderu) */
+    OS_MIN_ODSTEP_PROC: OS_MIN_ODSTEP_PROC,
+    rzedyPunktow: rzedyPunktow,
+    punktyDrabinki: punktyDrabinki
   });
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null,
    typeof document !== 'undefined' ? document : null);

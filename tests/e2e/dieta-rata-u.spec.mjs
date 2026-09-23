@@ -1,0 +1,143 @@
+import { expect, test } from '@playwright/test';
+
+// P-DIETA rata U (decyzje właściciela 2026-09-23): u dziecka z otyłością od 10 lat korekta REE × 0,9 (błąd równania)
+// osobno od PAL 1,4; podstawa diety = zapotrzebowanie dla masy docelowej (85c) − 200/350/500 kcal (Mazur 2022),
+// nie szybciej niż 1/1,5/2 kg/mies.; u 12–18 lat z otyłością domyślna dieta umiarkowana; oś planu PDF: „pierwszy krok”
+// tylko na pierwszym szczeblu, bliskie etykiety w drugim rzędzie; zdanie o ruchu prawdziwe; korzyść Reinehra tylko pod
+// progiem Reinehra. PRAWDZIWA strona (index i docpro), dane FIKCYJNE.
+
+async function otworz(page, strona) {
+  await page.goto(`/${strona || 'index.html'}`, { waitUntil: 'load' });
+  await page.waitForFunction(() => typeof window.update === 'function' && typeof window.buildDietEnergyRecommendationResult === 'function'
+    && !!window.VildaRaportPlan && window.VildaRaportPlan.version >= 8 && !!window.VildaBmi);
+}
+
+async function stan(page, c) {
+  return page.evaluate(async (c) => {
+    document.documentElement.classList.remove('vilda-auth-locked');
+    const set = (id, v) => { const el = document.getElementById(id); if (!el) return; el.value = v == null ? '' : String(v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+    window.professionalMode = true; window.intakeHistory = null; window.lastLoadedData = null; window.hasUserModifiedAfterLoad = false;
+    window.__vildaPlanPalTouched = false; window.__vildaPlanPalDefault = null;
+    set('name', 'Testowy Fikcyjny'); set('sex', c.sex); set('age', c.y); set('ageMonths', c.m || 0); set('weight', c.w); set('height', c.h);
+    if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
+    const jf = document.getElementById('journeyFlag'); if (jf && !jf.checked) { jf.checked = true; jf.dispatchEvent(new Event('change', { bubbles: true })); }
+    window.update();
+    await new Promise((r) => { setTimeout(r, 700); });
+    if (c.dieta) { const sel = document.getElementById('dietLevel'); if (sel) { sel.value = c.dieta; } if (sel) { sel.dispatchEvent(new Event('change', { bubbles: true })); } if (typeof window.updatePlanFromDiet === 'function') window.updatePlanFromDiet(); window.update(); await new Promise((r) => { setTimeout(r, 700); }); }
+    const br = window.buildDietEnergyRecommendationResult();
+    const d = br.dane || {};
+    const st = window.energyBuildPlanReductionState({ ageYears: c.y + (c.m || 0) / 12, ageMonthsOpt: c.m || 0, sex: c.sex, weightKg: c.w, heightCm: c.h, palInput: null, history: null, intakeKcalPerDay: null, mountId: 'anorexiaTmpMount' });
+    const html = window.VildaRaportPlan.html({ patient: { name: 'Testowy Fikcyjny', ageLabel: `${c.y} lat`, sexLabel: 'x', weightLabel: `${c.w} kg`, heightLabel: `${c.h} cm` }, baseResult: br });
+    const norm = (s) => String(s || '').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim();
+    return {
+      dietLevel: (document.getElementById('dietLevel') || {}).value || null, // docpro nie ma karty planu — selektu może nie być
+      silnik: { pal: st.palUsed, fac: st.reeFactor, ree: st.reeKcal, reeAdj: st.reeAdjustedKcal, maint: st.maintenanceKcal, teeT: st.targetTeeKcal, cel: st.targetWeightKg,
+        diety: st.diets.map((x) => ({ k: x.key, kcal: x.intake, def: x.deficit, mies: x.monthlyLossKg, sufit: x.tempoSufit, zal: x.zalecana, baza: x.bazaCeluKcal, defCelu: x.deficytCeluKcal })) },
+      energia: { podaz: d.energia.podazZaokrKcal, def: d.energia.deficytKcal, dieta: d.energia.dietaKlucz, baza: d.energia.bazaCeluKcal, defCelu: d.energia.deficytCeluKcal, sufit: d.energia.tempoSufit },
+      naglowek: (html.match(/vrp-krok-n">([^<]*)<\/div><div class="vrp-krok-s">([^<]*)<\/div>(?:<div class="vrp-krok-o">([^<]*)<\/div>)?/) || []).slice(1).map(norm),
+      os: Array.from(html.matchAll(/vrp-zn vrp-t-(\w+)( vrp-zn-dol)?" style="left:([\d.]+)%">.*?vrp-kg">([^<]*)<small>.*?vrp-pd">([^<]*)</g)).map((x) => ({ typ: x[1], dol: !!x[2], kg: norm(x[4]), pod: x[5] })),
+      dwaRzedy: /vrp-pasek vrp-pasek-2r/.test(html),
+      kafle: Array.from(html.matchAll(/vrp-kafel"><b>([^<]*)<\/b><span>([^<]*)<\/span>/g)).map((x) => norm(x[1] + ' ' + x[2])),
+      ruch: norm((html.match(/vrp-ruchdek">(.*?)<\/div>/) || [])[1]).replace(/<[^>]+>/g, ''),
+      nota: norm((document.querySelector('.plan-needed-note') || {}).textContent),
+      plan: norm(document.getElementById('planResults')?.textContent),
+      journey: norm(document.getElementById('bmiJourneyMount')?.textContent),
+      tekst: norm(br.textOutput),
+    };
+  }, c);
+}
+
+const CHLOPIEC = { sex: 'M', y: 15, m: 3, w: 102.5, h: 186.7 };
+
+test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej, korekta REE, oś planu PDF', () => {
+  test('RU-1: chłopiec 15;3, 102,5 kg / 186,7 cm — domyślnie umiarkowana 2 600 kcal (dotąd 3 000), −379 kcal, korekta 0,9 osobno od PAL 1,4, nota i punkt planu z podstawą od masy docelowej', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, CHLOPIEC);
+    expect(r.dietLevel).toBe('moderate');
+    expect(r.silnik.pal).toBe(1.4); expect(r.silnik.fac).toBe(0.9);
+    expect(r.silnik.reeAdj).toBe(Math.round(r.silnik.ree * 0.9));
+    expect(r.silnik.maint).toBe(Math.round(r.silnik.ree * 0.9 * 1.4));
+    expect(r.silnik.teeT).toBe(2907); expect(r.silnik.cel).toBeCloseTo(82.1, 1);
+    expect(r.silnik.diety.map((x) => x.kcal)).toEqual([2764, 2638, 2511]);
+    expect(r.silnik.diety.map((x) => x.def)).toEqual([253, 379, 506]);
+    expect(r.silnik.diety.map((x) => x.sufit)).toEqual([true, true, true]);
+    expect(r.silnik.diety.map((x) => x.zal)).toEqual([false, true, false]);
+    expect(r.energia).toEqual({ podaz: 2600, def: 379, dieta: 'moderate', baza: 2907, defCelu: 350, sufit: true });
+    expect(r.kafle.slice(0, 3)).toEqual(['2 600 kcal dziennie', '−379 kcal na dobę', '−0,3 kg tygodniowo']);
+    expect(r.nota).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok. 82,1 kg (85. centyl BMI): ok. 2907 kcal/dzień przy PAL 1,4, pomniejszonego o 200–500 kcal (Mazur 2022), nie szybciej niż 1–2 kg/mies.; zapotrzebowanie przy obecnej masie ciała ok. 3017 kcal/dzień (z korektą −10 % REE na otyłość); minimum 2155 kcal/dzień (spoczynkowa przemiana materii)');
+    expect(r.plan).toContain('od zapotrzebowania dla masy docelowej ok. 2907 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.; Mazur 2022: bezpiecznie do 1–2 kg/mies.)');
+    expect(r.journey).toContain('od zapotrzebowania dla masy docelowej ok. 2907 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
+    expect(r.tekst).toContain('dostarcza około 2600 kcal dziennie');
+  });
+
+  test('RU-2: ten sam chłopiec — oś planu PDF: „koniec otyłości” przed „lepsze wyniki badań” (drugi rząd), nagłówek „pierwszy krok: koniec otyłości”, zdanie o ruchu prawdziwe, narracja bez korzyści Reinehra pod 97. centylem', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, CHLOPIEC);
+    expect(r.naglowek).toEqual(['−4,7 kg', 'do 97,8 kg', 'pierwszy krok: koniec otyłości']);
+    expect(r.os.map((p) => [p.kg, p.pod, p.dol])).toEqual([['102,5', 'dziś', false], ['97,8', 'koniec otyłości', false], ['96,4', 'lepsze wyniki badań', true], ['82,1', 'norma BMI', false]]);
+    expect(r.dwaRzedy).toBe(true);
+    expect(r.os.filter((p) => p.pod === 'pierwszy krok')).toEqual([]);
+    expect(r.ruch).toMatch(/^Twój zadeklarowany plan: dieta umiarkowana i spacer 30 min\/d — razem ok\. 3 783 kcal tygodniowo\. Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok\. −0,5 kg tygodniowo\. Dzięki ruchowi dojdziesz do celu o /);
+    expect(r.ruch).not.toContain('już to uwzględnia');
+    expect(r.tekst).toContain('Pierwszy cel to ok. 97,8 kg, czyli około 4,7 kg mniej (koniec otyłości). Górna granica normy');
+    expect(r.tekst).not.toContain('już taka zmiana poprawia');
+  });
+
+  test('RU-3: lekka i intensywna z selektu — 2 800 / 2 500 kcal, deficyt 253 / 506', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const l = await stan(page, { ...CHLOPIEC, dieta: 'light' });
+    expect(l.energia.podaz).toBe(2800); expect(l.energia.def).toBe(253); expect(l.kafle[0]).toBe('2 800 kcal dziennie');
+    const i = await stan(page, { ...CHLOPIEC, dieta: 'intense' });
+    expect(i.energia.podaz).toBe(2500); expect(i.energia.def).toBe(506);
+  });
+
+  test('RU-4: chłopiec 13 l, 155 cm, 55 kg (nadwaga tuż nad celem) — bez korekty, PAL 1,6, lekka domyślna z podstawy masy docelowej (bez sufitu), tempo < 1 kg/mies.', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, { sex: 'M', y: 13, m: 0, w: 55, h: 155 });
+    expect(r.dietLevel).toBe('light');
+    expect(r.silnik.fac).toBe(1); expect(r.silnik.pal).toBe(1.6);
+    expect(r.silnik.reeAdj).toBe(Math.round(r.silnik.ree));
+    const lekka = r.silnik.diety[0];
+    expect(lekka.sufit).toBe(false); expect(lekka.zal).toBe(true);
+    expect(lekka.kcal).toBe(r.silnik.teeT - 200);
+    expect(lekka.mies).toBeLessThan(1);
+    expect(r.energia.sufit).toBe(false); expect(r.energia.defCelu).toBe(200);
+    expect(r.plan).toContain(`od zapotrzebowania dla masy docelowej ok. ${r.silnik.teeT} kcal odjęto 200 kcal (Mazur 2022); deficyt ok. ${lekka.def} kcal dziennie`);
+    expect(r.plan).not.toContain('tempo ograniczono');
+  });
+
+  test('RU-5: bramka wieku korekty — 8 lat z otyłością bez korekty (1), 11 lat z otyłością 0,9', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const m8 = await stan(page, { sex: 'M', y: 8, m: 0, w: 45, h: 130 });
+    expect(m8.silnik.fac).toBe(1); expect(m8.silnik.reeAdj).toBe(Math.round(m8.silnik.ree)); expect(m8.dietLevel).toBe('light');
+    expect(m8.nota).toContain('dieta liczona od zapotrzebowania dla masy docelowej');
+    expect(m8.nota).not.toContain('korektą');
+    const m11 = await stan(page, { sex: 'M', y: 11, m: 0, w: 65, h: 150 });
+    expect(m11.silnik.fac).toBe(0.9); expect(m11.silnik.reeAdj).toBe(Math.round(m11.silnik.ree * 0.9));
+  });
+
+  test('RU-6: dziewczynka 16;4, 94,8 kg / 175,5 cm (próg Reinehra pierwszy) — „pierwszy krok” na osi i korzyść w narracji bez zmian', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, { sex: 'F', y: 16, m: 4, w: 94.8, h: 175.5 });
+    expect(r.naglowek[2]).toBe('pierwszy krok: już ta zmiana poprawia ciśnienie i wyniki badań krwi');
+    expect(r.os.map((p) => p.pod)).toContain('pierwszy krok');
+    expect(r.os.map((p) => p.pod)).not.toContain('lepsze wyniki badań');
+    expect(r.tekst).toContain('kg mniej; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).');
+  });
+
+  test('RU-7: docpro.html — ta sama ścieżka (2 600 kcal, umiarkowana, oś z drugim rzędem)', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page, 'docpro.html');
+    const r = await stan(page, CHLOPIEC);
+    expect(r.energia.dieta).toBe('moderate');
+    expect(r.energia.podaz).toBe(2600);
+    expect(r.os.map((p) => p.pod)).toEqual(['dziś', 'koniec otyłości', 'lepsze wyniki badań', 'norma BMI']);
+    expect(r.dwaRzedy).toBe(true);
+  });
+});
