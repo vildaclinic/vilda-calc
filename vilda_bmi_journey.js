@@ -383,10 +383,11 @@
     return html;
   }
 
-  /* rata V: górna granica i kontrola tylko w planie redukcji dziecka z nadwagą/otyłością (wiersze Gc silnika) */
+  /* rata V: górna granica i kontrola w planie redukcji dziecka z nadwagą/otyłością (wiersze Gc silnika);
+     P-DIETA rata Z (decyzja właściciela 2026-09-23): także u dorosłego, łącznie z celem własnym (wiersze G i Gcw) */
   function gornaGranica(found, ctx) {
-    return !!(found && found.gornaGranica && fin(found.gornaKcal) && ctx && ctx.isChild && !ctx.customGoal
-      && lastEngineState && lastEngineState.childObesityPlan);
+    if (!(found && found.gornaGranica && fin(found.gornaKcal) && ctx)) return false;
+    return ctx.isChild ? !ctx.customGoal && !!(lastEngineState && lastEngineState.childObesityPlan) : true;
   }
   /* rata V pkt 3 (decyzja właściciela 2026-09-23): kontrola za 6 tygodni — liczby z silnika (energyKontrolaPlanu):
      spodziewana masa przy samej diecie i próg (połowa spodziewanego ubytku); przy masie ≥ progu odjąć 100–200 kcal. */

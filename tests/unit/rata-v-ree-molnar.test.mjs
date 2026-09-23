@@ -121,11 +121,17 @@ describe('rata V pkt 1: górna granica dnia w dół do 50 kcal', () => {
     expect(win.energyGornaGranicaKcal(2205, 2203)).toBe(2205);
     expect(win.energyGornaGranicaKcal(2249, 2200)).toBe(2200);
   });
-  it('tylko wiersze planu dziecka (Gc) niosą górną granicę; dorosły bez zmian', () => {
+  // P-DIETA rata Z (decyzja właściciela 2026-09-23): górna granica dnia także u dorosłego (wiersze G) — pełne przypadki w rata-z-dorosly-gorna-kontrola
+  it('wiersze planu dziecka (Gc) i dorosłego (G) niosą górną granicę: w dół do 50 kcal, nie poniżej podłogi', () => {
     expect(plan(CHLOPIEC).diets.every((d) => d.gornaGranica === true && Number.isFinite(d.gornaKcal))).toBe(true);
     const dor = plan({ sex: 'M', ageYears: 40, weightKg: 95, heightCm: 178 });
     expect(dor.diets.length).toBeGreaterThan(0);
-    expect(dor.diets.some((d) => d.gornaGranica)).toBe(false);
+    for (const d of dor.diets) {
+      expect(d.gornaGranica).toBe(true);
+      expect(d.gornaKcal).toBe(Math.floor(d.intake / 50) * 50);
+      expect(d.gornaKcal).toBeGreaterThanOrEqual(d.floorKcal);
+      expect(d.floorKcal).toBe(1600);
+    }
   });
 });
 
