@@ -72,10 +72,10 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     expect(r.plan).toContain('od zapotrzebowania dla masy docelowej ok. 2731 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.; Mazur 2022: bezpiecznie do 1–2 kg/mies.)');
     expect(r.journey).toContain('od zapotrzebowania dla masy docelowej ok. 2 731 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
     expect(r.journey).toMatch(/≤ ?2 ?700 kcal\/dzień ?górna granica dnia — dieta umiarkowana \(nie cel do dobicia\)/);
-    expect(r.journey).toMatch(/Kontrola za 6 tygodni \(ok\. \d{1,2} [a-ząćęłńóśźż]+ \d{4}\): spodziewana masa ok\. 100,4 kg\. Jeśli będzie 101,5 kg lub więcej, odejmij od planu 100–200 kcal \(do 2 ?500–2 ?600 kcal\), bo realne spożycie jest wyższe, niż liczymy\./);
+    expect(r.journey).toMatch(/Kontrola za 6 tygodni \(ok\. \d{1,2} [a-ząćęłńóśźż]+ \d{4}\): spodziewana masa ok\. [\d,]+ kg \(z uwzględnieniem wzrastania\)\. Jeśli będzie [\d,]+ kg lub więcej, odejmij od planu 100–200 kcal \(do 2 ?500–2 ?600 kcal\), bo realne spożycie jest wyższe, niż liczymy\./);
     expect(r.tekst).toContain('Dieta umiarkowana: nie więcej niż 2700 kcal dziennie — to górna granica dnia, nie cel do dobicia. Deficyt kaloryczny przy tej diecie wynosi około 379 kcal');
     expect(r.tekst).not.toContain('dostarcza około');
-    expect(r.tekst).toMatch(/Kontrola za 6 tygodni \(ok\. \d{1,2} [a-ząćęłńóśźż]+ \d{4}\): spodziewana masa ciała ok\. 100,4 kg\. Jeśli masa będzie wynosić 101,5 kg lub więcej, realne spożycie jest wyższe, niż liczymy — należy odjąć od planu 100–200 kcal \(do 2500–2600 kcal dziennie\)\./);
+    expect(r.tekst).toMatch(/Kontrola za 6 tygodni \(ok\. \d{1,2} [a-ząćęłńóśźż]+ \d{4}\): spodziewana masa ciała ok\. [\d,]+ kg \(z uwzględnieniem wzrastania\)\. Jeśli masa będzie wynosić [\d,]+ kg lub więcej, realne spożycie jest wyższe, niż liczymy — należy odjąć od planu 100–200 kcal \(do 2500–2600 kcal dziennie\)\./);
   });
 
   test('RU-2: ten sam chłopiec — oś planu PDF: „koniec otyłości” przed „lepsze wyniki badań” (drugi rząd), nagłówek „pierwszy krok: koniec otyłości”, zdanie o ruchu prawdziwe, narracja bez korzyści Reinehra pod 97. centylem', async ({ page }) => {

@@ -138,7 +138,10 @@ describe('rata V pkt 3: kontrola za 6 tygodni', () => {
       masaDzisKg: 102.5, masaSpodziewanaKg: 100.4, progKg: 101.5, gornaKcal: 2700,
       obnizkaKcal: [100, 200], obnizkaMozliwa: true, podazPoObnizceKcal: [2500, 2600], dietaKlucz: 'moderate',
     });
-    expect(win.ENERGY_KONTROLA_PLANU).toEqual({ tygodnie: 6, progCzescUbytku: 0.5, obnizkaKcal: [100, 200] });
+    // rata W: bez wieku, płci i wzrostu (tu nie podane) reguła raty V bez zmian; nowe pola odstępu dla wolnego tempa
+    expect(win.ENERGY_KONTROLA_PLANU).toEqual({ tygodnie: 6, tygodnieWolne: 12, tempoWolneKgMies: 1, progCzescUbytku: 0.5, obnizkaKcal: [100, 200] });
+    expect(k.przyrostKg).toBe(0);
+    expect(k.wzrastanie).toBe(false);
   });
   it('próg = połowa spodziewanego ubytku; spodziewana masa z samej diety (weeklyLoss wiersza)', () => {
     const wiersz = { key: 'light', intake: 1888, gornaKcal: 1850, weeklyLoss: 253 * 7 / 7700 };

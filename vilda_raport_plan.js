@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 9;
+  var WERSJA = 10;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -355,7 +355,8 @@
     var ob = Array.isArray(k.obnizkaKcal) && k.obnizkaKcal.length === 2 ? k.obnizkaKcal : null;
     var kafle = [
       [k.terminKrotki || '', String(k.terminRok || ''), 'termin kontroli (ok. ' + (liczba(k.tygodnie) || 6) + ' tygodni)'],
-      ['ok. ' + fmt(k.masaSpodziewanaKg, 1) + ' kg', 'spodziewana masa', 'przy tej diecie (dziś ' + fmt(k.masaDzisKg, 1) + ' kg)'],
+      /* rata W: u rosnącego dziecka spodziewana masa zawiera przyrost ze wzrastania */
+      ['ok. ' + fmt(k.masaSpodziewanaKg, 1) + ' kg', 'spodziewana masa', (k.wzrastanie === true ? 'z dietą i wzrastaniem' : 'przy tej diecie') + ' (dziś ' + fmt(k.masaDzisKg, 1) + ' kg)'],
       k.obnizkaMozliwa && ob
         ? ['\u2265 ' + fmt(k.progKg, 1) + ' kg', 'odejmij od planu', calk(ob[0]) + '\u2013' + calk(ob[1]) + ' kcal']
         : ['\u2265 ' + fmt(k.progKg, 1) + ' kg', 'plan do omówienia', 'kaloryczność już przy minimum']
@@ -365,7 +366,7 @@
       + '<div class="vrp-kafle">' + kafle.map(function (x) {
           return '<div class="vrp-kafel"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span><i>' + esc(x[2]) + '</i></div>';
         }).join('') + '</div>'
-      + '<div class="vrp-podkafle">Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci.</div>'
+      + '<div class="vrp-podkafle">Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci. Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.</div>'
       + '</section>';
   }
 

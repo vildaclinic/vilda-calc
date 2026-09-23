@@ -84,7 +84,9 @@ test('8-latka (97–99c): domyślna stabilizacja — karta i Droga w trybie utrz
   // P-DIETA rata V pkt 1: u dziecka z planem redukcji liczba to górna granica dnia (w dół do 50 kcal), bez „zalecana”
   expect(red.plan).toContain('górna granica dnia — dieta lekka (nie cel do dobicia)');
   expect(red.plan).toMatch(new RegExp(`≤\\s?${Math.floor((red.maint - 126) / 50) * 50}\\s?kcal/dzień`));
-  expect(red.journey).toContain('Kontrola za 6 tygodni');
+  // rata W: dieta lekka 0,5 kg/mies. u rosnącego dziecka — kontrola po 12 tygodniach, spodziewana masa z przyrostem ze wzrastania
+  expect(red.journey).toContain('Kontrola za 12 tygodni');
+  expect(red.journey).toContain('(z uwzględnieniem wzrastania)');
   expect(red.journey).toContain('Cel: −8,4 kg');
   expect(red.journey).toContain('−126 kcal/d');
 });
