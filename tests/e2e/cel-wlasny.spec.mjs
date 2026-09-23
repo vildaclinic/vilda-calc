@@ -165,7 +165,8 @@ test('generator: zdania celu własnego, liczby z silnika, talerz stanu bez zmian
     expect(t).toMatch(/nie jest to wskazanie medyczne, lecz cel uzgodniony z pacjentem/u);
     // Z2: energia — 15 %, maks. 500, podaż i tempo z silnika
     expect(t).toMatch(/15%/u); expect(t).toContain('500 kcal');
-    expect(t).toContain(`ok. ${w.energia.podazZaokrKcal} kcal`);
+    // P-DIETA rata Z: cel własny dorosłego — podaż jako górna granica dnia
+    expect(t).toContain(`podaż nie więcej niż ${w.energia.podazZaokrKcal} kcal dziennie (górna granica dnia, nie cel do dobicia)`);
     expect(t).toContain(`${w.energia.tempoKgTydz.toFixed(1).replace('.', ',')} kg`);
     expect(t).not.toMatch(/brak wskazań do deficytu|nie ma wskazań do deficytu/u);
     // Z4: czas z tych samych liczb
@@ -198,7 +199,7 @@ test('Droga do normy i karta „Cel”: jedno źródło wartości, panel do celu
   expect(z.wrap).toBe(true); expect(z.hint).toMatch(/^Cel własny: 62,0 kg \(BMI 23,1\)/u);
   expect(z.journey).not.toBeNull();
   expect(z.journey).toContain('Cel własny: −4,0 kg'); expect(z.journey).toContain('do celu własnego (BMI 23,1)');
-  expect(z.journey).toContain('Start: 66,0 kg → Cel: 62,0 kg'); expect(z.journey).toContain('cel własny (dieta lekka)');
+  expect(z.journey).toContain('Start: 66,0 kg → Cel: 62,0 kg'); expect(z.journey).toContain('górna granica dnia — cel własny, dieta lekka (nie cel do dobicia)'); // P-DIETA rata Z
   expect(z.journey).toContain('nie jest wskazaniem medycznym');
   expect(z.journey).not.toMatch(/granicy normy BMI/u);
   expect(z.dietLevel).toEqual(['light']); expect(z.planWidoczny).toBe(false);

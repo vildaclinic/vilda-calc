@@ -461,7 +461,7 @@
          (silnik: gornaKcal, w dół do 50 kcal), nie cel do dobicia */
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">\u2264\u202F' + fmtInt(model.found.gornaKcal)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
-        + '<div class="bmi-journey-kcalcap">górna granica dnia — dieta ' + esc(String(model.found.name || '').toLowerCase()) + ' (nie cel do dobicia)</div></div>'
+        + '<div class="bmi-journey-kcalcap">górna granica dnia — ' + (ctx.customGoal ? 'cel własny, ' : '') + 'dieta ' + esc(String(model.found.name || '').toLowerCase()) + ' (nie cel do dobicia)</div></div>'
         + kontrolaHtml(ctx, model)
       : model.found
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.found.intake / 100) * 100)

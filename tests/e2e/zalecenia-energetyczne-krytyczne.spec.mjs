@@ -78,7 +78,8 @@ test('K1: dorosła z BMI 22,8 — bez planu redukcyjnego, zapotrzebowanie i utrz
   // dorosły z otyłością bez zmian
   const ob = await generate(page, { age: 35, sex: 'M', w: 105, h: 175 });
   expect(ob.diets.length).toBe(3);
-  expect(ob.text).toMatch(/Plan zakłada dietę .* deficytowi energetycznemu/u);
+  // P-DIETA rata Z: dorosły z otyłością — kaloryczność jako górna granica dnia, potem deficyt i tempo
+  expect(ob.text).toMatch(/Plan zakłada dietę .* Dieta [a-ząćęłńóśźż]+: nie więcej niż [\d\s\u00A0\u202F]+ kcal dziennie — to górna granica dnia, nie cel do dobicia\. Deficyt energetyczny przy tej diecie wynosi ok\. \d+ kcal\/dobę, co odpowiada tempu redukcji/u);
 });
 
 test('K2: 3-latek — flaga „Wzrost zakończony" wyłączona i ignorowana, narracja stabilizacji z kalorycznością', async ({ page }) => {

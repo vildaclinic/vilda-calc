@@ -265,13 +265,14 @@ test('DIET-KCAL-CONSISTENT: narracja i normy podają tę samą kaloryczność pl
     return result && result.textOutput ? result.textOutput : '';
   });
   const digits = (s) => Number(String(s).replace(/[^\d]/g, ''));
-  const narration = text.match(/wynosi ok\. ([\d\s]+) kcal\/dzień/u);
+  // P-DIETA rata Z: u dorosłego kaloryczność jako górna granica dnia („nie więcej niż N kcal dziennie”, w dół do 50)
+  const narration = text.match(/nie więcej niż ([\d\s\u00A0\u202F]+) kcal dziennie — to górna granica dnia/u);
   const norms = text.match(/Przy planie żywieniowym zakładającym około ([\d\s\u00A0\u202F]+) kcal dziennie/u);
   expect(narration).not.toBeNull();
   expect(norms).not.toBeNull();
   const narrationKcal = digits(narration[1]);
   const normsKcal = digits(norms[1]);
-  expect(narrationKcal % 100).toBe(0);
+  expect(narrationKcal % 50).toBe(0);
   expect(normsKcal).toBe(narrationKcal);
   // Etap 5: etykieta aktywności pochodzi ze wspólnego słownika karty planu
   // i jest cytowana jawnie („na poziomie „X” (PAL y)”; ENERGY-REC-4: polski cudzysłów zamykający):
