@@ -86,7 +86,8 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     expect(r.os.map((p) => [p.kg, p.pod, p.dol])).toEqual([['102,5', 'dziś', false], ['97,8', 'koniec otyłości', false], ['96,4', 'lepsze wyniki badań', true], ['82,1', 'norma BMI', false]]);
     expect(r.dwaRzedy).toBe(true);
     expect(r.os.filter((p) => p.pod === 'pierwszy krok')).toEqual([]);
-    expect(r.ruch).toMatch(/^Twój zadeklarowany plan: dieta umiarkowana \(do 2 700 kcal\) i spacer 30 min\/d — razem ok\. 3 783 kcal tygodniowo\. Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok\. −0,5 kg tygodniowo\. Dzięki ruchowi dojdziesz do celu o /);
+    // P-RAPORT rata Y: suma tygodniowa nazwana jako deficyt i zaokrąglona do 50 (3 783 → 3 800), kaloryczność „dziennie”
+    expect(r.ruch).toMatch(/^Twój zadeklarowany plan: dieta umiarkowana \(do 2 700 kcal dziennie\) i spacer 30 min\/d — razem to ok\. 3 800 kcal tygodniowo mniej, niż organizm zużywa\. Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok\. −0,5 kg tygodniowo\. Dzięki ruchowi dojdziesz do celu o /);
     expect(r.ruch).not.toContain('już to uwzględnia');
     expect(r.tekst).toContain('Pierwszy cel to ok. 97,8 kg, czyli około 4,7 kg mniej (koniec otyłości). Górna granica normy');
     expect(r.tekst).not.toContain('już taka zmiana poprawia');
