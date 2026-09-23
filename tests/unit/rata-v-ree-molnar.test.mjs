@@ -177,15 +177,15 @@ describe('rata V: plan PDF — kafel „≤”, sekcja KONTROLA ZA 6 TYGODNI, tr
   const html = (d) => okP.VildaRaportPlan.html({ patient: { name: 'Testowy Fikcyjny' }, baseResult: { dane: d } });
   it('kafel kaloryczności: „≤ 2 700” / „górna granica dnia, nie cel”', () => {
     const h = html(dane());
-    expect(h).toMatch(/<b>≤ 2[\u00A0\u202F ]700<\/b><span>kcal dziennie<\/span><i>górna granica dnia, nie cel<\/i>/);
+    expect(h).toMatch(/<b>≤\u00A02[\u00A0\u202F]700<\/b><span>kcal dziennie<\/span><i>górna granica dnia, nie cel<\/i>/);
     expect(h).not.toContain('zalecana kaloryczność diety');
   });
   it('sekcja kontroli: termin, spodziewana masa, trzeci kafel „≥ 101,5 kg / odejmij od planu / 100–200 kcal” bez zdania o realnym spożyciu', () => {
     const h = html(dane());
     expect(h).toContain('<span>KONTROLA ZA 6 TYGODNI</span>');
-    expect(h).toContain('<b>4 XI</b><span>2026</span><i>termin kontroli (ok. 6 tygodni)</i>');
-    expect(h).toContain('<b>ok. 100,4 kg</b><span>spodziewana masa</span><i>przy tej diecie (dziś 102,5 kg)</i>');
-    expect(h).toContain('<b>≥ 101,5 kg</b><span>odejmij od planu</span><i>100–200 kcal</i>');
+    expect(h).toContain('<b>4\u00A0XI</b><span>2026</span><i>termin kontroli (ok. 6 tygodni)</i>');
+    expect(h).toContain('<b>ok.\u00A0100,4\u00A0kg</b><span>spodziewana masa</span><i>przy tej diecie (dziś 102,5 kg)</i>');
+    expect(h).toContain('<b>≥\u00A0101,5\u00A0kg</b><span>odejmij od planu</span><i>100–200 kcal</i>');
     expect(h).not.toContain('realne spożycie');
     expect(h).toContain('Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci.');
     expect(h.indexOf('KONTROLA ZA 6 TYGODNI')).toBeGreaterThan(h.indexOf('KALORYCZNOŚĆ DIETY'));

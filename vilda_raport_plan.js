@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 10;
+  var WERSJA = 11;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -51,6 +51,8 @@
     return x == null ? '' : x.toFixed(n == null ? 1 : n).replace('.', ',');
   }
   /* Spacja wąska nierozdzielająca między tysiącami — tak jak w kaflach aplikacji. */
+  /* rata Y: twarde spacje w liczbach z jednostką — „ok. 100,7 kg” nie łamie się i nie rozjeżdża na kartce */
+  function twarde(t) { return String(t == null ? '' : t).replace(/ /g, '\u00A0'); }
   function calk(v) {
     var x = liczba(v);
     if (x == null) return '';
@@ -181,7 +183,7 @@
     var dwaRzedy = rzedy.some(function (r) { return r.rzad === 1; });
     return '<div class="vrp-pasek' + (dwaRzedy ? ' vrp-pasek-2r' : '') + '"><div class="vrp-tor"></div>' + punkty.map(function (p, i) {
       return '<div class="vrp-zn vrp-t-' + p.typ + (rzedy[i].rzad === 1 ? ' vrp-zn-dol' : '') + '" style="left:' + rzedy[i].lewo.toFixed(2) + '%">'
-        + '<div class="vrp-kr"></div><div class="vrp-kg">' + esc(fmt(p.masa, 1)) + '<small> kg</small></div>'
+        + '<div class="vrp-kr"></div>' + (rzedy[i].rzad === 1 ? '<div class="vrp-lacz"></div>' : '') + '<div class="vrp-kg">' + esc(fmt(p.masa, 1)) + '<small> kg</small></div>'
         + '<div class="vrp-pd">' + esc(p.pod) + '</div></div>';
     }).join('') + '</div>';
   }
@@ -313,18 +315,22 @@
       /* rata M: nazwy pozycji z karty zaczynają się wielką literą („Dieta lekka”, „Spacer 30 min/d”);
          w środku zdania piszemy je małą literą. */
       var malaLitera = function (t) { return t ? t.charAt(0).toLowerCase() + t.slice(1) : t; };
-      /* rata V: przy górnej granicy dnia nazwa diety niesie liczbę („dieta umiarkowana (do 2 700 kcal)”) */
+      /* rata V: przy górnej granicy dnia nazwa diety niesie liczbę; rata Y: z jednostką dnia („(do 2 700 kcal dziennie)”) */
       var nazwy = ruch.rows.map(function (r) {
         var t = malaLitera(String(r[0]));
-        return e.gornaGranica === true && liczba(e.podazZaokrKcal) != null && /^dieta\b/.test(t) ? t + ' (do ' + calk(e.podazZaokrKcal) + ' kcal)' : t;
+        return e.gornaGranica === true && liczba(e.podazZaokrKcal) != null && /^dieta\b/.test(t) ? t + ' (do ' + calk(e.podazZaokrKcal) + '\u00A0kcal dziennie)' : t;
       });
       var lista = nazwy.length > 1
         ? nazwy.slice(0, -1).join(', ') + ' i ' + nazwy[nazwy.length - 1]
         : nazwy[0];
-      var suma = ruch.totalRow ? String(ruch.totalRow[1]) : '';
+      /* rata Y (decyzja właściciela 2026-09-23): suma tygodniowa z karty to DEFICYT (dieta + ruch), nie spożycie —
+         nazwana wprost i zaokrąglona do 50 kcal; przy samej diecie pominięta (powtarzałaby kafel deficytu × 7). */
+      var sumaKcal = liczba(ruch.totalWeekKcal);
+      var samaDieta = nazwy.length === 1 && /^dieta\b/.test(nazwy[0]);
+      var suma = !samaDieta && sumaKcal != null && sumaKcal > 0 ? calk(Math.round(sumaKcal / 50) * 50) : '';
       blokRuchu = '<div class="vrp-ruchdek">'
         + '<b>Twój zadeklarowany plan:</b> ' + esc(lista)
-        + (suma ? ' \u2014 razem ' + esc(suma) + ' kcal tygodniowo' : '') + '. '
+        + (suma ? ' \u2014 razem to ok. ' + esc(suma) + '\u00A0kcal tygodniowo mniej, niż organizm zużywa' : '') + '. '
         /* rata U: kafel tempa liczy SAMĄ dietę (generator: deficyt × 7 / 7700); dawne „już to uwzględnia” było
            nieprawdziwe. Liczba z ruchem pochodzi z karty „Droga do normy BMI” (getPdfModel), nie stąd. */
         + (ruch.tempoZRuchemKgTydz ? 'Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok. \u2212' + esc(ruch.tempoZRuchemKgTydz) + '\u202Fkg tygodniowo.' : '')
@@ -340,7 +346,7 @@
     return '<section class="vrp-blok">'
       + '<div class="vrp-nag-blok"><span>' + esc(naglowek) + '</span></div>'
       + '<div class="vrp-kafle' + (kafle.length === 4 ? ' vrp-kafle-4' : '') + '">' + kafle.map(function (k) {
-          return '<div class="vrp-kafel"><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span><i>' + esc(k[2]) + '</i></div>';
+          return '<div class="vrp-kafel"><b>' + esc(twarde(k[0])) + '</b><span>' + esc(k[1]) + '</span><i>' + esc(k[2]) + '</i></div>';
         }).join('') + '</div>'
       + (podpis ? '<div class="vrp-podkafle">' + podpis + '</div>' : '')
       + blokRuchu
@@ -364,7 +370,7 @@
     return '<section class="vrp-blok">'
       + '<div class="vrp-nag-blok"><span>KONTROLA ZA ' + esc(String(liczba(k.tygodnie) || 6)) + ' TYGODNI</span></div>'
       + '<div class="vrp-kafle">' + kafle.map(function (x) {
-          return '<div class="vrp-kafel"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span><i>' + esc(x[2]) + '</i></div>';
+          return '<div class="vrp-kafel"><b>' + esc(twarde(x[0])) + '</b><span>' + esc(x[1]) + '</span><i>' + esc(x[2]) + '</i></div>';
         }).join('') + '</div>'
       + '<div class="vrp-podkafle">Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci. Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.</div>'
       + '</section>';
@@ -547,12 +553,13 @@
   function css() {
     var K = {
       teal: '#00838d', teal2: '#00636b', ciemny: '#12262b', mut: '#5f7276',
-      linia: '#d8e7e8', tlo: '#f6fafa', ziel: '#1e6f43', bursz: '#b5731a'
+      linia: '#d8e7e8', tlo: '#f6fafa', ziel: '#1e6f43', bursz: '#b5731a', lacznik: '#9db9bb'
     };
     var u = function (n) { return 'calc(' + n + 'px * var(--s))'; };
     var ug = function (n) { return 'calc(' + n + 'px * var(--sg))'; }; /* nagłówek: skala ograniczona */
     var ZN = 18, TOR = 5;
     var OS_DRUGI_RZAD = 46; /* rata U: przesunięcie drugiego rzędu etykiet osi (px przy skali 1) */
+    var LACZ = 1.5; /* rata Y: grubość łącznika etykiety drugiego rzędu (px przy skali 1) */
     return [
       '.vrp{--s:1;--sg:1;--luz:0px;display:flex;flex-direction:column;gap:calc(' + u(14) + ' + var(--luz));color:' + K.ciemny + ';}',
       '.vrp *{box-sizing:border-box;}',
@@ -581,7 +588,7 @@
       /* oś: znacznik ma ZN px, tor TOR px; tor zaczyna się w (ZN−TOR)/2, więc przechodzi przez środki kółek */
       '.vrp-pasek{position:relative;height:' + u(80) + ';margin:' + u(18) + ' ' + u(40) + ' 0;}',
       '.vrp-tor{position:absolute;left:0;right:0;top:' + u((ZN - TOR) / 2) + ';height:' + u(TOR) + ';border-radius:999px;background:linear-gradient(90deg,' + K.bursz + ',' + K.teal + ' 60%,' + K.ziel + ');}',
-      '.vrp-zn{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:' + u(170) + ';}',
+      '.vrp-zn{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:' + u(170) + ';z-index:1;}',
       '.vrp-kr{width:' + u(ZN) + ';height:' + u(ZN) + ';border-radius:999px;background:#fff;border:' + u(4) + ' solid ' + K.teal + ';margin:0 auto ' + u(6) + ';box-shadow:0 0 0 ' + u(3) + ' #fff;}',
       '.vrp-t-start .vrp-kr{border-color:' + K.bursz + ';background:' + K.bursz + ';}',
       '.vrp-t-cel .vrp-kr{border-color:' + K.ziel + ';background:' + K.ziel + ';}',
@@ -591,13 +598,21 @@
       /* rata U: drugi rząd etykiet — o pełną wysokość rzędu górnego (kg + podpis) niżej; oś wyższa tylko z drugim rzędem */
       '.vrp-zn-dol .vrp-kg,.vrp-zn-dol .vrp-pd{position:relative;top:' + u(OS_DRUGI_RZAD) + ';}',
       '.vrp-pasek-2r{height:' + u(80 + OS_DRUGI_RZAD) + ';}',
+      /* rata Y (decyzja właściciela 2026-09-23): etykieta drugiego rzędu połączona ze swoim kółkiem ciągłą linią —
+         od dołu kółka do góry opisu (ZN + 6 + OS_DRUGI_RZAD). Punkt drugiego rzędu leży pod górnym rzędem (z-index),
+         a opisy górnego rzędu mają białą podkładkę na szerokość tekstu, więc linia bliskiego punktu nie przekreśla liter. */
+      '.vrp-zn-dol{z-index:0;}',
+      '.vrp-lacz{position:absolute;left:calc(50% - ' + u(LACZ / 2) + ');top:' + u(ZN + 2) + ';width:' + u(LACZ) + ';height:' + u(OS_DRUGI_RZAD + 2) + ';border-radius:1px;background:' + K.lacznik + ';}',
+      '.vrp-pasek-2r .vrp-zn:not(.vrp-zn-dol) .vrp-kg,.vrp-pasek-2r .vrp-zn:not(.vrp-zn-dol) .vrp-pd{width:fit-content;margin-left:auto;margin-right:auto;padding:0 ' + u(4) + ';background:#fff;}',
       '.vrp-stopa{margin-top:' + u(8) + ';font-size:' + u(15) + ';color:' + K.ciemny + ';text-align:center;}',
       '.vrp-kafle{display:grid;grid-template-columns:repeat(3,1fr);gap:' + u(12) + ';}',
       /* P-DIETA-PRZYROST rata D: cztery kafle (zapotrzebowanie, nadwyżka, podaż, tempo) w jednym rzędzie. */
       '.vrp-kafle-4{grid-template-columns:repeat(4,1fr);gap:' + u(10) + ';}',
       '.vrp-kafle-4 .vrp-kafel b{font-size:' + u(27) + ';}',
       '.vrp-kafel{border:1px solid ' + K.linia + ';border-radius:' + u(14) + ';padding:' + u(10) + ' ' + u(12) + ';background:' + K.tlo + ';text-align:center;}',
-      '.vrp-kafel b{display:block;font-size:' + u(34) + ';line-height:1.05;font-weight:800;color:' + K.teal2 + ';}',
+      /* rata Y: niezerowy odstęp liter przełącza html2canvas na rysowanie znak po znaku w miejscach z układu strony —
+         w PDF z Safari słowa rysowane w całości zjadały spacje („ok.100,7kg”); nagłówki z letter-spacing były poprawne. */
+      '.vrp-kafel b{display:block;font-size:' + u(34) + ';line-height:1.05;font-weight:800;letter-spacing:.01em;color:' + K.teal2 + ';}',
       '.vrp-kafel span{display:block;font-size:' + u(15) + ';font-weight:700;}',
       '.vrp-kafel i{display:block;font-style:normal;font-size:' + u(13) + ';color:' + K.mut + ';}',
       '.vrp-podkafle{margin-top:' + u(8) + ';font-size:' + u(14) + ';color:' + K.mut + ';text-align:center;}',
@@ -645,7 +660,10 @@
     /* rata U: reguły osi „Twoja droga” dostępne dla testów jednostkowych (bez renderu) */
     OS_MIN_ODSTEP_PROC: OS_MIN_ODSTEP_PROC,
     rzedyPunktow: rzedyPunktow,
-    punktyDrabinki: punktyDrabinki
+    punktyDrabinki: punktyDrabinki,
+    /* rata Y: oś i sekcja energii dla testów jednostkowych */
+    pasek: pasek,
+    sekcjaEnergia: sekcjaEnergia
   });
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null,
    typeof document !== 'undefined' ? document : null);

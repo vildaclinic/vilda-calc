@@ -112,7 +112,8 @@ test('plan PDF: bez koła, bmiSDS, znaki przy kaflach, tabela norm wąska z zebr
   expect(a.kafle.find((k) => k.includes('deficyt energetyczny'))).toMatch(/^−\d+ kcal na dobę/);
   expect(a.kafle.find((k) => k.includes('tempo redukcji'))).toMatch(/^−\d,\d kg tygodniowo/);
   // P-DIETA rata V pkt 1: u dziecka z planem otyłości kaloryczność to górna granica dnia — „≤”, bez znaku +/−
-  expect(a.kafle.find((k) => k.includes('górna granica dnia'))).toMatch(/^≤ \d/);
+  // P-RAPORT rata Y: w kaflach twarda spacja („≤\u00A02\u202F050”), żeby html2canvas jej nie zjadał
+  expect(a.kafle.find((k) => k.includes('górna granica dnia'))).toMatch(/^≤\u00A0\d/);
   expect(a.kafle.some((k) => k.includes('zalecana kaloryczność'))).toBe(false);
   expect(a.normy).toBeTruthy();
   expect(a.normy.kolumny).toContain('vrp-dod-1');

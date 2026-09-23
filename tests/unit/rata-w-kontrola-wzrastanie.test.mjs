@@ -124,9 +124,9 @@ describe('rata W: plan PDF — etykieta spodziewanej masy, nagłówek 12 tygodni
   it('rosnące dziecko: „KONTROLA ZA 12 TYGODNI”, „z dietą i wzrastaniem (dziś 45,0 kg)”, zdanie o ważeniu', () => {
     const h = html(kontr());
     expect(h).toContain('<span>KONTROLA ZA 12 TYGODNI</span>');
-    expect(h).toContain('<b>16 XII</b><span>2026</span><i>termin kontroli (ok. 12 tygodni)</i>');
-    expect(h).toContain('<b>ok. 44,2 kg</b><span>spodziewana masa</span><i>z dietą i wzrastaniem (dziś 45,0 kg)</i>');
-    expect(h).toContain('<b>≥ 44,8 kg</b><span>odejmij od planu</span><i>100–200 kcal</i>');
+    expect(h).toContain('<b>16\u00A0XII</b><span>2026</span><i>termin kontroli (ok. 12 tygodni)</i>');
+    expect(h).toContain('<b>ok.\u00A044,2\u00A0kg</b><span>spodziewana masa</span><i>z dietą i wzrastaniem (dziś 45,0 kg)</i>');
+    expect(h).toContain('<b>≥\u00A044,8\u00A0kg</b><span>odejmij od planu</span><i>100–200 kcal</i>');
     expect(h).toContain('Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.');
   });
   it('wzrastanie zakończone: „przy tej diecie”, zdanie o ważeniu zostaje', () => {

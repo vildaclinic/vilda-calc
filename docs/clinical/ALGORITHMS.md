@@ -5778,6 +5778,46 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Plan PDF: zdanie „Twój zadeklarowany plan” bez mylącej sumy, łącznik etykiety drugiego rzędu osi, spacje w kaflach (P-RAPORT rata Y, SW 1.1.61, 2026-09-23)
+
+**Zgłoszenie i decyzje właściciela (2026-09-23).** W planie PDF chłopca 15;3 lat (102,5 kg / 186,7 cm) stało
+„Twój zadeklarowany plan: dieta umiarkowana (do 2 700 kcal) — razem ok. 2 653 kcal tygodniowo.” Liczba 2 653 to
+tygodniowy **deficyt** (379 kcal/d × 7) z wiersza „Razem” karty „Droga do normy BMI”, ale w zdaniu zabrakło nagłówka
+kolumny — obok „2 700 kcal” (spożycie dziennie) czytała się jak tygodniowe spożycie. Etykieta „96,4 kg / lepsze
+wyniki badań” w drugim rzędzie osi (rata U) nie miała połączenia ze swoim kółkiem. W PDF z urządzenia właściciela
+kafle kontroli miały zjedzone spacje („ok.100,7kg”, „≥ 101,7kg”). Decyzje: brzmienie jak na makiecie, linia ciągła,
+spacje w kaflach w tej samej racie.
+
+**Zmiana (bez wpływu klinicznego — te same liczby silnika, inne słowa i rysunek).**
+- Zdanie (`vilda_raport_plan.js`, WERSJA 11): kaloryczność z jednostką dnia — „dieta umiarkowana (do 2 700 kcal
+  dziennie)”. Sama dieta: bez sumy tygodniowej (powtarzałaby kafel deficytu × 7). Dieta z ruchem albo sam ruch:
+  „— razem to ok. 3 800 kcal tygodniowo mniej, niż organizm zużywa.” — suma z karty drogi zaokrąglona do 50 kcal
+  (3 783 → 3 800). Liczba przychodzi polem `totalWeekKcal` z `VildaBmiJourney.getPdfModel()`
+  (`vilda_bmi_journey.js`), nie z tekstu wiersza; bez niej zdanie pomija sumę. Zdania o tempie z ruchem i o
+  szybszym dojściu do celu bez zmian. Karta „Droga do normy BMI” (tabela dla lekarza) bez zmian.
+- Oś „Twoja droga”: punkt drugiego rzędu dostaje ciągłą, jasną linię 1,5 px (`#9db9bb`) od dołu kółka
+  (ZN 18 + 2 px) do góry opisu (18 + 6 + 46 px), w skali `--s`. Punkty drugiego rzędu leżą pod górnym rzędem
+  (`z-index`), a opisy górnego rzędu — tylko na osi z drugim rzędem — mają białą podkładkę na szerokość tekstu,
+  więc linia bardzo bliskiego punktu nie przekreśla liter. Reguła rzędów (18 % osi, rata U) bez zmian.
+- Kafle (energia, przyrost, kontrola): wartość z twardymi spacjami (` `; separator tysięcy nadal ` `)
+  i `letter-spacing: .01em`. html2canvas 1.4.1 przy niezerowym odstępie liter rysuje znak po znaku w miejscach
+  z układu strony (tak jak nagłówki sekcji, które w PDF właściciela były poprawne); przy zerowym rysuje całe słowa
+  czcionką płótna, co w Safari zjadało spacje. W Chromium spacje były poprawne przed i po zmianie; potwierdzenie
+  w Safari/iOS — przy najbliższym PDF z urządzenia właściciela.
+
+Syntetyczne przypadki (fikcyjne): chł. 15;3, 102,5 kg / 186,7 cm, dieta umiarkowana → „Twój zadeklarowany plan:
+dieta umiarkowana (do 2 700 kcal dziennie).”; z „spacer 30 min/d” → „… i spacer 30 min/d — razem to ok. 3 800 kcal
+tygodniowo mniej, niż organizm zużywa. Tempo pokazane powyżej dotyczy samej diety; z ruchem to ok. −0,5 kg
+tygodniowo. …”; oś 102,5 → 97,8 → 96,4 (drugi rząd, z łącznikiem) → 82,1 kg; kafle „≤ 2 700”, „−379”, „−0,3”,
+„ok. 100,7 kg”, „≥ 101,7 kg” z twardymi spacjami.
+
+**Walidacja.** `tests/unit/rata-y-plan-zdanie-os.test.mjs` (prawdziwy moduł planu: zdanie przy samej diecie,
+diecie z ruchem, samym ruchu i bez liczby z karty; łącznik tylko przy punkcie drugiego rzędu; CSS łącznika,
+warstw i podkładki; kafle bez zwykłej spacji, `letter-spacing`). `tests/e2e/raport-plan-rata-y.spec.mjs`
+(prawdziwa strona: zdanie z kartą drogi bez i ze spacerem; geometria łącznika w przeglądarce — w osi kółka,
+od jego dołu do góry opisu; podkładki; kafle w jednej linii). `dieta-rata-u` i `raport-plan-rata-m` —
+oczekiwane brzmienie zdania zaktualizowane.
+
 ## Czas dojścia do normy BMI u rosnącego dziecka: masa przybywająca ze wzrastaniem w symulacji (P-DIETA rata X, SW 1.1.60, 2026-09-23)
 
 **Problem (analiza 2026-09-23).** Jedna symulacja silnika (`energySimulateMonthsToBmiTarget`) liczy czas dojścia do normy BMI dla karty

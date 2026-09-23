@@ -659,6 +659,8 @@
       startCel: 'Start: ' + fmt(lastCtx.weightKg, 1) + ' kg · Cel: ' + fmt(lastCtx.weightKg - lastCtx.kgToLose, 1) + ' kg',
       rows: rows,
       totalRow: ['Razem', 'ok. ' + fmtInt(model.totalWeek), '-' + fmt(model.totalWeek * 52 / 12 / kk, 2)],
+      /* rata Y: tygodniowy deficyt (dieta + ruch) jako liczba — plan PDF nazywa go i zaokrągla, zamiast parsować tekst */
+      totalWeekKcal: model.totalWeek,
       whenText: 'Przy tym planie osiągniesz ' + (lastCtx.customGoal ? 'cel własny ' : 'normę BMI ') + dateAfterMonths(mc)
         + ' (za ok. ' + monthsWord(mc)
         + (model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
