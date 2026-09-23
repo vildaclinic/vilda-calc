@@ -111,7 +111,9 @@ test('plan PDF: bez koła, bmiSDS, znaki przy kaflach, tabela norm wąska z zebr
   expect(a.bmiTekst).not.toContain('z-score');
   expect(a.kafle.find((k) => k.includes('deficyt energetyczny'))).toMatch(/^−\d+ kcal na dobę/);
   expect(a.kafle.find((k) => k.includes('tempo redukcji'))).toMatch(/^−\d,\d kg tygodniowo/);
-  expect(a.kafle.find((k) => k.includes('zalecana kaloryczność'))).toMatch(/^\d/);
+  // P-DIETA rata V pkt 1: u dziecka z planem otyłości kaloryczność to górna granica dnia — „≤”, bez znaku +/−
+  expect(a.kafle.find((k) => k.includes('górna granica dnia'))).toMatch(/^≤ \d/);
+  expect(a.kafle.some((k) => k.includes('zalecana kaloryczność'))).toBe(false);
   expect(a.normy).toBeTruthy();
   expect(a.normy.kolumny).toContain('vrp-dod-1');
   expect(a.normy.udzial).toBeGreaterThan(0.55);
