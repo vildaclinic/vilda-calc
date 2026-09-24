@@ -278,14 +278,15 @@ describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mi
   });
   it('dieta poniżej REE jest niedostępna z nazwanym powodem; poniżej minimum wieku — z powodem o minimum', () => {
     // wprost na silniku doboru diet: baza 1600 kcal, REE po korekcie 1400 → intensywna (−506) odpada przez REE
-    const przezRee = win.proposeChildDietsFromBase(1700, 14, { severe: true }, 'age_12_18', 1400);
+    // ≥ 99c to także otyłość (obese) — od raty N2 sama nadwaga 12–18 lat ma inny sufit tempa
+    const przezRee = win.proposeChildDietsFromBase(1700, 14, { severe: true, obese: true }, 'age_12_18', 1400);
     expect(przezRee.floorKcal).toBe(1400);
     expect(przezRee.floorReeKcal).toBe(1400);
     expect(przezRee.diets.map((d) => d.key)).toEqual(['light']);
     expect(przezRee.unavailable.moderate).toContain('spoczynkowej przemiany materii');
     expect(przezRee.unavailable.intense).toContain('spoczynkowej przemiany materii');
     // bez REE (np. brak wzrostu) zostaje samo minimum wieku
-    const przezMinimum = win.proposeChildDietsFromBase(1500, 14, { severe: true }, 'age_12_18', null);
+    const przezMinimum = win.proposeChildDietsFromBase(1500, 14, { severe: true, obese: true }, 'age_12_18', null);
     expect(przezMinimum.floorKcal).toBe(1200);
     expect(przezMinimum.unavailable.moderate).toContain('minimum 1200 kcal');
   });

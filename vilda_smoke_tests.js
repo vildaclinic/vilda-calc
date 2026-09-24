@@ -114,7 +114,7 @@
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=2',
     'vilda_ree_rownania_data.js?v=2',
-    'vilda_diet_plan_ui.js?v=30',
+    'vilda_diet_plan_ui.js?v=31',
     'vilda_bmi_journey.js?v=23',
     'vilda_estimated_intake_ui.js?v=1',
     'vilda_estimated_intake_runtime.js?v=1',
@@ -122,7 +122,7 @@
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=227',
     'vilda_smoke_tests.js?v=77',
-    'vilda_diet_recommendations.js?v=57',
+    'vilda_diet_recommendations.js?v=58',
     'nutrition_norms.js?v=47',
     'nutrition_micros.js?v=28'
   ]);

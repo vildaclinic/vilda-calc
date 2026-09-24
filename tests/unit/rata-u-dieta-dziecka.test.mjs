@@ -67,8 +67,10 @@ describe('rata U: chłopiec 15 l 3 mies., 102,5 kg / 186,7 cm (przypadek z rapor
   });
 });
 
-describe('rata U: sama nadwaga — bez korekty, PAL 1,6; podstawa od masy docelowej wiąże tylko tuż nad celem', () => {
-  it('chłopiec 13 l, 155 cm, 60 kg (BMI 25,0, nadwaga): reeFactor 1, PAL 1,6; 6 kg nad celem → sufit tempa nadal wiąże', () => {
+// P-DIETA rata N2 (decyzja właściciela 2026-09-24): przy samej nadwadze 12–18 lat sufit tempa 0,5 / 1 / 1,5 kg/mies.
+// (dawniej 1 / 1,5 / 2 jak przy otyłości) — sufit wiąże od pierwszego kilograma nad celem.
+describe('rata U + N2: sama nadwaga — bez korekty, PAL 1,6; sufit tempa 0,5 / 1 / 1,5 kg/mies.', () => {
+  it('chłopiec 13 l, 155 cm, 60 kg (BMI 25,0, nadwaga): reeFactor 1, PAL 1,6; 6 kg nad celem → sufit tempa 0,5 / 1 / 1,5 wiąże', () => {
     const st = plan({ sex: 'M', ageYears: 13, weightKg: 60, heightCm: 155 });
     const tee = henryBoy10_17(60, 1.55) * 1.6;
     expect(st.bmiClass.overweight).toBe(true);
@@ -78,13 +80,16 @@ describe('rata U: sama nadwaga — bez korekty, PAL 1,6; podstawa od masy docelo
     expect(st.maintenanceKcal).toBe(Math.round(tee));
     const teeT = henryBoy10_17(st.targetWeightKg, 1.55) * 1.6;
     expect(st.targetTeeKcal).toBe(Math.round(teeT));
-    // 2 480 − 200 = 2 280 to deficyt 356 kcal (1,4 kg/mies.) > sufit 253 → dieta z sufitu: 2 383 / 2 257 / 2 130
+    // rata N2: dieta z sufitu 0,5 / 1 / 1,5 kg/mies.: 2 510 / 2 383 / 2 257 (dawniej 2 383 / 2 257 / 2 130)
     expect(tee - teeT).toBeGreaterThan(defFor(1) - 200);
     expect(st.diets.map((d) => d.tempoSufit)).toEqual([true, true, true]);
-    expect(st.diets.map((d) => d.intake)).toEqual([1, 1.5, 2].map((r) => Math.round(tee - defFor(r))));
+    expect(st.diets.map((d) => d.tempoNadwagi)).toEqual([true, true, true]);
+    expect(st.diets.map((d) => d.sufitTempaKgMies)).toEqual([0.5, 1, 1.5]);
+    expect(st.diets.map((d) => d.intake)).toEqual([0.5, 1, 1.5].map((r) => Math.round(tee - defFor(r))));
+    expect(st.diets.map((d) => d.intake)).toEqual([2510, 2383, 2257]);
     expect(st.diets.map((d) => d.zalecana)).toEqual([true, false, false]); // lekka domyślna poza otyłością 12–18
   });
-  it('chłopiec 13 l, 155 cm, 55 kg (ok. 1 kg nad celem 85c): lekka z podstawy masy docelowej − 200 (deficyt < sufitu), tempo < 1 kg/mies.', () => {
+  it('chłopiec 13 l, 155 cm, 55 kg (ok. 1 kg nad celem 85c): rata N2 — sufit 0,5 kg/mies. jest niższy niż deficyt Mazura (200), więc wiąże', () => {
     const st = plan({ sex: 'M', ageYears: 13, weightKg: 55, heightCm: 155 });
     expect(st.childObesityPlan).toBe(true);
     expect(st.bmiClass.obese).toBe(false);
@@ -92,11 +97,12 @@ describe('rata U: sama nadwaga — bez korekty, PAL 1,6; podstawa od masy docelo
     const teeT = henryBoy10_17(st.targetWeightKg, 1.55) * 1.6;
     expect(55 - st.targetWeightKg).toBeLessThan(2.2);
     const lekka = st.diets[0];
-    expect(lekka.tempoSufit).toBe(false);
-    expect(lekka.intake).toBe(Math.round(teeT - 200));
+    // podstawa od masy docelowej dałaby teeT − 200, ale deficyt przekroczyłby sufit 0,5 kg/mies. (126 kcal)
+    expect(tee - (teeT - 200)).toBeGreaterThan(defFor(0.5));
+    expect(lekka.tempoSufit).toBe(true);
+    expect(lekka.intake).toBe(Math.round(tee - defFor(0.5)));
     expect(lekka.deficit).toBe(Math.round(tee - lekka.intake));
-    expect(lekka.deficit).toBeLessThan(defFor(1));
-    expect(lekka.monthlyLossKg).toBeLessThan(1);
+    expect(lekka.monthlyLossKg).toBe(0.5);
     expect(lekka.monthlyLossKg).toBe(Math.round(lekka.deficit * 30.4375 / 7700 * 100) / 100);
   });
 });
@@ -125,7 +131,9 @@ describe('rata U/V: bramka wieku równania i strażnik minimalnego deficytu', ()
       const st = plan(p);
       expect(st.diets.length).toBe(3);
       for (const d of st.diets) {
-        expect(d.deficit).toBeGreaterThanOrEqual(d.deficytCeluKcal - 1);
+        // rata N2: przy samej nadwadze sufit 0,5 / 1 / 1,5 kg/mies. bywa niższy niż deficyt Mazura — wtedy wiąże sufit
+        if (d.tempoNadwagi && d.tempoSufit) expect(d.deficit).toBe(defFor(d.sufitTempaKgMies));
+        else expect(d.deficit).toBeGreaterThanOrEqual(d.deficytCeluKcal - 1);
         expect(d.deficit).toBeLessThanOrEqual(defFor(d.sufitTempaKgMies));
         expect(d.intake).toBeGreaterThanOrEqual(st.floorKcal);
         expect(Math.abs(d.intake + d.deficit - st.maintenanceKcal)).toBeLessThanOrEqual(1);

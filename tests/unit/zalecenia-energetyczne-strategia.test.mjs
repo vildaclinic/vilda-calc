@@ -56,7 +56,7 @@ describe('Prognoza wzrastania (fallback tabelaryczny wg płci i wieku)', () => {
 });
 
 describe('Resolver strategii — kolejność reguł', () => {
-  const st = (stage, severe = false) => ({ childObesityPlan: true, childPlanStage: stage, bmiClass: { severe } });
+  const st = (stage, severe = false, obese = severe) => ({ childObesityPlan: true, childPlanStage: stage, bmiClass: { severe, obese } });
   it('dorosły / wzrost zakończony → redukcja niezależnie od wyboru', () => {
     expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 25, stabChecked: true })).toBe('reduction');
     expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14, growthEnded: true, stabChecked: true })).toBe('reduction');
@@ -66,11 +66,17 @@ describe('Resolver strategii — kolejność reguł', () => {
     expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14, stabChecked: true })).toBe('stabilization');
     expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14, stabChecked: true, stabDisabled: true })).toBe('reduction');
   });
-  it('domyślnie: 2–5 stabilizacja (nawet przy blokadzie), 6–11 < 99c stabilizacja, ≥ 99c i 12–18 redukcja, praktycznie zakończone wzrastanie → redukcja', () => {
+  // P-DIETA rata N2 (2026-09-24): 12–18 lat — sama nadwaga domyślnie stabilizacja, otyłość redukcja
+  it('domyślnie: 2–5 stabilizacja (nawet przy blokadzie), 6–11 < 99c stabilizacja, ≥ 99c redukcja; 12–18: nadwaga stabilizacja, otyłość redukcja; praktycznie zakończone wzrastanie → redukcja', () => {
     expect(win.energyResolveStrategy({ state: st('age_2_5'), ageYears: 4, stabDisabled: true })).toBe('stabilization');
     expect(win.energyResolveStrategy({ state: st('age_6_11'), ageYears: 8 })).toBe('stabilization');
     expect(win.energyResolveStrategy({ state: st('age_6_11', true), ageYears: 8 })).toBe('reduction');
-    expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14 })).toBe('reduction');
+    expect(win.energyResolveStrategy({ state: st('age_12_18', false, true), ageYears: 14 })).toBe('reduction');
+    expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14 })).toBe('stabilization');
+    expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14, growthEnded: true })).toBe('reduction');
+    expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 16, outlook: { practicallyEnded: true } })).toBe('reduction');
+    expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14, stabDisabled: true })).toBe('reduction');
+    expect(win.energyResolveStrategy({ state: st('age_12_18'), ageYears: 14, reduceChecked: true })).toBe('reduction');
     expect(win.energyResolveStrategy({ state: st('age_6_11'), ageYears: 8, outlook: { practicallyEnded: true } })).toBe('reduction');
     expect(win.energyResolveStrategy({ state: st('age_6_11'), ageYears: 8, stabDisabled: true })).toBe('reduction');
     expect(win.energyResolveStrategy({ state: { childObesityPlan: false }, ageYears: 8 })).toBe('reduction');
