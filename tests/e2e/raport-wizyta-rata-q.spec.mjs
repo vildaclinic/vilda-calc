@@ -41,7 +41,7 @@ async function modelZOdniesieniem(page, s) {
     const html = window.patientReportBuildHtml(m);
     const k = m.nutritionCard;
     return {
-      nut: { kind: k.kind, title: k.title, badge: k.badge, value: k.value, note: k.note, rows: k.rows.map((r) => `${r.label}: ${r.valueText}`) },
+      nut: { kind: k.kind, title: k.title, badge: k.badge, value: k.value, note: k.note, rows: k.rows.map((r) => `${r.label}: ${r.valueText}`), bialkoDetail: (k.rows.find((r) => r.label === 'Białko') || {}).detail || null },
       dane: dane && { pal, cel, podaz: dane.energia.podazZaokrKcal, utrzymanie: dane.energia.utrzymanieKcal, tee: dane.energia.teeBazowyKcal, nadmiar: dane.klasyfikacja && dane.klasyfikacja.nadmiar, niedowaga: dane.klasyfikacja && dane.klasyfikacja.niedowaga },
       // P-DIETA rata V: przy planie otyłości/nadwagi dziecka karta bierze zapotrzebowanie dla masy docelowej z PLANU
       // (generator: celTeeKcal = targetTeeKcal silnika) — jedna liczba z planem; poza tym dawna ścieżka (teeRaw dla masy celu)
@@ -85,7 +85,9 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.rows.join(' ')).not.toContain('Przy obecnej masie');
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.tee));
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.utrzymanie));
-    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/^Białko: \d,\d\d g\/kg × \d+ kg \(masa referencyjna\) ≈ \d+ g\/d$/);
+    // P-NORMY rata B1: „ok. X g/d”, podstawa (g/kg i masa należna do wzrostu) w podpisie pod etykietą
+    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/^Białko: ok\.\u00A0\d+\u00A0g\/d$/);
+    expect(r.nut.bialkoDetail).toMatch(/^\d,\d\d\u00A0g na kg należnej masy ciała \(\d+,\d\u00A0kg\)$/);
     expect(r.nut.rows.find((x) => x.startsWith('Węglowodany'))).toBe('Węglowodany: 45–65\u00A0% energii');
     expect(r.nut.rows.find((x) => x.startsWith('Tłuszcze'))).toBe('Tłuszcze: 30–40\u00A0% energii');
     // stara karta: 2412 kcal (masa aktualna × PAL 1,6) — nie ma prawa się pojawić
@@ -93,6 +95,8 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.html).not.toContain('Normy żywieniowe');
     // masa: odniesienie do wzrostu = mediana BMI × wzrost²
     const masaWzrost = r.medianaBmi * (s.h / 100) ** 2;
+    // P-NORMY rata B1: białko liczone od tej samej masy należnej do wzrostu, co karta masy
+    expect(r.nut.bialkoDetail).toContain(`(${masaWzrost.toFixed(1).replace('.', ',')}\u00A0kg)`);
     const wt = r.cards.find((c) => c.key === 'WT');
     expect(wt.ref.label).toBe('Przeciętna masa dla tego wzrostu i wieku');
     expect(wt.ref.medianText).toBe(`${masaWzrost.toFixed(1).replace('.', ',')} kg`);
@@ -175,7 +179,9 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.rows[0]).toBe(`Przy obecnej masie: ${kcal(r.dane.utrzymanie)}`);
     expect(r.nut.value).toBe(kcal(r.dane.utrzymanie));
     expect(r.nut.rows.join(' ')).not.toMatch(/Dla masy|Plan/);
-    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/× 62 kg \(obecna masa\)/);
+    // P-NORMY rata B1: dorosły — masa należna przy BMI 22 (22 × 1,69² = 62,8 kg), jak w karcie „Normy żywieniowe”; w dokumencie bez słów „BMI 22” (rata Q)
+    expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toBe('Białko: ok.\u00A052\u00A0g/d');
+    expect(r.nut.bialkoDetail).toBe('0,83\u00A0g na kg należnej masy ciała (62,8\u00A0kg)');
     expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku, dopóki lekarz go nie zmieni.'); // P-PAL rata 1
     expect(r.cards.find((c) => c.key === 'HT').ref.diffText).toBe('Obecna masa mieści się w tym zakresie.');
     expect(r.cards.find((c) => c.key === 'BMI').ref.diffText).toBe('BMI mieści się w tym zakresie.');

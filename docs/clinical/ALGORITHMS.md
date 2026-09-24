@@ -5778,6 +5778,54 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Norma białka od masy należnej i wiersz „Białko” w „Raporcie po wizycie” (P-NORMY rata B1, SW 1.1.70, 2026-09-24)
+
+**Zgłoszenie.**
+1. Otwarta decyzja z raty Q: czy RDA białka dorosłych ma wynosić 0,83 g/kg (silnik) czy 0,9 g/kg.
+2. Właściciel (2026-09-24, na podstawie prawdziwego raportu, którego nie dołączono do repozytorium): wiersz „Białko” w
+   karcie „Zapotrzebowanie energetyczne” miał postać wzoru „0,92 g/kg × 27 kg (masa referencyjna) ≈ 24 g/d”, łamaną w
+   wąskiej kolumnie na cztery linie.
+
+**Źródło.** Normy żywienia dla populacji Polski (red. Rychlik, Stoś, Woźniak, Mojska; NIZP PZH–PIB 2024,
+ISBN 978-83-65870-78-0), rozdział „Białka”, s. 63–69, tabele 8–11:
+- normy „wyrażone w gramach na kilogram należnej masy ciała na dobę”;
+- dorośli (19–29, 30–59, 60–74, ≥ 75 lat): EAR 0,66, RDA 0,83 g/kg (Rand 2003; stanowisko WHO/FAO/UNU i EFSA, także
+  dla osób starszych); w g/d od masy przy BMI 22 dla wzrostu;
+- dzieci 1–18 lat: metoda czynnikowa, g/d od masy referencyjnej dla wieku (mediana WHO 1–3 lat, OLA/OLAF 3–18 lat).
+Wartość 0,9 g/kg nie występuje w Normach 2024. Tabela dzieci w aplikacji (`energyGetReferenceEntry`: EAR, RDA, masa,
+wzrost) zgodna z tabelami 8–9 we wszystkich 36 wierszach (sprawdzone 2026-09-24).
+
+**Decyzje właściciela (2026-09-24, po makiecie).**
+1. RDA dorosłych zostaje 0,83 g/kg (bez zmiany).
+2. Norma w g/d od masy należnej: dziecko 1–18 lat — mediana BMI dla wieku i płci × wzrost² (ta sama liczba, co
+   „przeciętna masa dla tego wzrostu” na karcie masy raportu; `energyChildMedianBmi`); dorosły — masa przy BMI 22 (bez
+   zmiany w karcie norm). Bez wzrostu albo mediany u dziecka: masa typowa dla wieku z tabel Norm (jak dotąd).
+3. Raport i karta „Normy żywieniowe” liczą białko z tego samego modelu (`nutritionNormsBuildCardModel().protein.main`) —
+   jedna liczba. Wiersz raportu: wartość „ok. X g/d”, pod etykietą podpis „0,92 g na kg należnej masy ciała (24,1 kg)”;
+   u dorosłego to samo brzmienie (bez słów „BMI 22” w dokumencie dla pacjenta — decyzja z raty Q).
+
+**Zmiana (kliniczna, niewielka).**
+- `nutrition_norms.js` (1.3.0, `?v=48`): `pnDziecko()` — masa należna do wzrostu dla dziecka 1–18 lat; `protein.basisKind`
+  (`nalezna` / `bmi22` / `typowa` / `obecna`). Zmienia się norma białka w g/d w karcie „Normy żywieniowe” i w
+  generatorze zaleceń (odsetek energii z białka), bo oba czytają `protein.main`.
+- `vilda_patient_report.js` (`?v=42`): zbieracz bierze `protein.main` (dotąd: masa referencyjna dla wieku u dziecka, a u
+  dorosłego z nadwagą masa przy BMI 24,9, u dorosłego w normie masa aktualna — trzy różne podstawy); wiersz przez
+  `patientReportBialkoWiersz`; renderer tabeli obsługuje podpis wiersza (`detail`, klasa `patient-report-bmr-row-detail`).
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne, prawdziwa strona; e2e `raport-bialko-rata-b1`):
+
+| pacjent | dotąd (raport) | po zmianie (raport = karta norm) |
+|---|---|---|
+| dz. 8 l. 5 mies., 122 cm, 25,8 kg | 0,92 × 27 kg (masa referencyjna) ≈ 24 g/d | ok. 22 g/d; 0,92 g na kg należnej masy ciała (24,1 kg) |
+| chł. 15 l. 3 mies., 186,7 cm, 102,5 kg | 0,88 × 59 kg ≈ 52 g/d | ok. 61 g/d (masa należna 69,7 kg) |
+| kobieta 45 l., 165 cm, 70 kg | 0,83 × 68 kg (masa prawidłowa) ≈ 56 g/d | ok. 50 g/d (59,9 kg; karta norm dotąd też 50) |
+
+**Walidacja.** Unit `raport-wizyta-rata-q` (wiersz bez wzoru, podpis); e2e `raport-bialko-rata-b1` (3 testy: dziecko
+niskie, nastolatek z otyłością, dorosła — raport = karta norm, brak „×”, „≈”, „masa referencyjna”, „BMI 22”),
+`nutrition-norms-logic` NORM-PROT-U1-CHILD-OBESE (masa należna u niskiego chłopca 9 lat), `raport-wizyta-rata-q/r`.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Domyślny PAL u dziecka 4–9 lat z otyłością zostaje 1,6 — uzasadnienie (P-PAL rata 2, SW 1.1.69, 2026-09-24)
 
 **Zgłoszenie (odłożona decyzja z P-PAL rata 1).** Po racie 1 baza planu dziecka 4–9 lat z otyłością wzrosła o ok. 27 %:

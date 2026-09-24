@@ -123,7 +123,7 @@
     'app.js?v=227',
     'vilda_smoke_tests.js?v=77',
     'vilda_diet_recommendations.js?v=58',
-    'nutrition_norms.js?v=47',
+    'nutrition_norms.js?v=48',
     'nutrition_micros.js?v=28'
   ]);
   const MANIFEST = Object.freeze([

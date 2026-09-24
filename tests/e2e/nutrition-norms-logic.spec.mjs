@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test';
 
 // Testy regresyjne zmiany U1 w karcie „Normy żywieniowe" (nutrition_norms.js):
 // nagłówkowa norma białka w g/d liczona jest od masy należnej przy BMI 22
-// (dorośli) lub masy typowej dla wieku i płci (dzieci 1–18) — zgodnie z
+// (dorośli) lub — od P-NORMY rata B1 (2026-09-24) — masy należnej do wzrostu
+// (mediana BMI dla wieku i płci × wzrost², dzieci 1–18) — zgodnie z
 // definicją EAR/RDA w Normach żywienia dla populacji Polski (NIZP PZH–PIB,
 // 2024). Masa aktualna pozostaje w linii porównania. Testy wołają PRAWDZIWĄ
 // funkcję produkcyjną window.nutritionNormsBuildCardModel oraz produkcyjny
@@ -12,9 +13,9 @@ import { expect, test } from '@playwright/test';
 //  NORM-PROT-U1-ADULT-OBESE: kobieta 40 lat, 110 kg, 165 cm → RDA g/d od masy
 //    należnej 22×1,65² = 59,9 kg → 49,7 g/d (nie 91,3 g/d od masy aktualnej);
 //    porównanie „masa aktualna" widoczne.
-//  NORM-PROT-U1-CHILD-OBESE: chłopiec 9 lat, 55 kg, 135 cm → RDA od masy
-//    typowej dla wieku (tabela referencyjna), porównanie z masą aktualną
-//    widoczne.
+//  NORM-PROT-U1-CHILD-OBESE: chłopiec 9 lat, 55 kg, 128 cm (niski) → RDA od masy
+//    należnej do wzrostu (mediana BMI × 1,28²; rata B1), porównanie z masą
+//    aktualną widoczne.
 //  NORM-PROT-U1-NEAR-EQUAL: mężczyzna 19 lat, 70 kg, 178 cm → masa aktualna
 //    ≈ należna (69,7 kg), porównanie ukryte (różnica < 1 g).
 //  NORM-PROT-U1-NO-WEIGHT: dorosły bez masy, ze wzrostem → norma białka
@@ -70,20 +71,25 @@ test('NORM-PROT-U1-ADULT-OBESE: RDA od masy należnej BMI 22, masa aktualna w po
   expect(m.energy.basisWeightKg).toBe(110);
 });
 
-test('NORM-PROT-U1-CHILD-OBESE: dziecko — RDA od masy typowej dla wieku, porównanie widoczne', async ({ page }) => {
+test('NORM-PROT-U1-CHILD-OBESE: dziecko — RDA od masy należnej do wzrostu (rata B1), porównanie widoczne', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   const m = await buildModel(
     page,
-    { ageYears: 9, ageMonthsOpt: null, sex: 'M', weightKg: 55, heightCm: 135 },
+    { ageYears: 9, ageMonthsOpt: null, sex: 'M', weightKg: 55, heightCm: 128 },
     { palSelector: '1.6', bodyMode: 'actual' },
   );
   const refKg = m.protein.targets.referenceWeightKg;
   expect(refKg).toBeGreaterThan(20);
   expect(refKg).toBeLessThan(45);
-  expect(m.protein.basisLabel).toContain('wartości typowe dla wieku 9 lat');
-  expect(m.protein.main.basisWeightKg).toBeCloseTo(refKg, 3);
-  expect(m.protein.main.rdaGDay).toBeCloseTo(refKg * m.protein.targets.rda_g_per_kg, 1);
+  // rata B1: masa należna = mediana BMI dla wieku i płci × wzrost² (ta sama funkcja, co plan diety)
+  const med = await page.evaluate(() => window.energyChildMedianBmi('M', 9, null));
+  const nalezna = med * 1.28 ** 2;
+  expect(m.protein.basisLabel).toBe('masa należna do wzrostu');
+  expect(m.protein.basisKind).toBe('nalezna');
+  expect(m.protein.main.basisWeightKg).toBeCloseTo(nalezna, 3);
+  expect(Math.abs(m.protein.main.basisWeightKg - refKg)).toBeGreaterThan(2); // niski chłopiec: nie masa typowa dla wieku (30,8 kg)
+  expect(m.protein.main.rdaGDay).toBeCloseTo(nalezna * m.protein.targets.rda_g_per_kg, 1);
   expect(m.protein.comparisonLabel).toBe('masa aktualna');
   expect(m.protein.comparisonValue).toBeCloseTo(55 * m.protein.targets.rda_g_per_kg, 1);
   expect(m.protein.showComparison).toBe(true);
