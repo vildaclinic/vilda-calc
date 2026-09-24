@@ -31,7 +31,7 @@ async function otworz(page) {
 }
 
 test.describe('P-SZCZEBLE — Droga do normy BMI', () => {
-  test('SZCZEBLE-1: dorosły z otyłością III stopnia dostaje BMI 35 przed BMI 30', async ({ page }) => {
+  test('SZCZEBLE-1: dorosły z otyłością III stopnia — dwa najbliższe szczeble: −5 % masy, potem BMI 35 (rata Z2)', async ({ page }) => {
     test.setTimeout(90_000);
     await otworz(page);
     const r = await policz(page, { age: 47, sex: 'M', weight: 112.4, height: 167 });
@@ -40,9 +40,11 @@ test.describe('P-SZCZEBLE — Droga do normy BMI', () => {
     expect(r.tekst, 'cel bez zmian').toContain('−43,0');
     expect(r.ile, 'dwa szczeble').toBe(2);
     expect(r.tekst).toContain('Po drodze: −14,8 kg → BMI 35 — wyjście z otyłości III stopnia'); // rata R (K1): etykieta wg stanu wyjsciowego
-    expect(r.tekst).toContain('Po drodze: −28,7 kg → BMI 30 — koniec otyłości');
-    expect(r.tekst.indexOf('BMI 35'), 'bliższy szczebel pierwszy')
-      .toBeLessThan(r.tekst.indexOf('BMI 30'));
+    // P-DIETA rata Z2: najbliżej −5 % masy (Wing 2011); karta pokazuje dwa najbliższe szczeble (SZCZEBLE_MAX), więc BMI 30 odpada
+    expect(r.tekst).toContain('Po drodze: −5,6 kg → −5 % masy — próg poprawy: ciśnienie, trójglicerydy, HDL (Wing 2011)');
+    expect(r.tekst).not.toContain('→ BMI 30');
+    expect(r.tekst.indexOf('−5 % masy'), 'bliższy szczebel pierwszy')
+      .toBeLessThan(r.tekst.indexOf('BMI 35'));
   });
 
   test('SZCZEBLE-2: dziecko z otyłością dostaje próg Reinehra ze źródłem', async ({ page }) => {

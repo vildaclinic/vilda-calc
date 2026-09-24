@@ -46,14 +46,16 @@ test('etykieta pierwszego kroku: dziecko, dorosły, cel własny — prostym jęz
 
   const a = await plan(page, { age: 47, sex: 'M', w: 112, h: 167 });
   expect(a.masa).toMatch(/^do \d+,\d kg$/);
-  // rata R (K1): przy BMI ≥ 40 szczebel BMI 35 to wyjscie z otylosci III stopnia
-  expect(a.podpis).toBe('pierwszy krok: wyjście z otyłości III stopnia');
+  // P-DIETA rata Z2: pierwszym krokiem −5 % masy (jak próg Reinehra); BMI 35 dalej na osi jako „wyjście z otyłości III stopnia” (rata R, K1)
+  expect(a.podpis).toBe('pierwszy krok: już ta zmiana poprawia ciśnienie i wyniki badań krwi');
+  expect(a.os).toContain('pierwszy krok');
   expect(a.os).toContain('wyjście z otyłości III stopnia');
-  expect(a.tekst).toContain('wyjście z otyłości III stopnia; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).');
+  expect(a.tekst).toContain('(5 % masy ciała), czyli około 5,6 kg mniej; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).');
   expect(a.tekst).not.toContain('HDL');
 
-  const b = await plan(page, { age: 40, sex: 'F', w: 90, h: 165 });
+  const b = await plan(page, { age: 62, sex: 'F', w: 78, h: 158 }); // rata Z2: BMI 31,2 — pierwszy BMI 30, −5 % dalej
   expect(b.podpis).toBe('pierwszy krok: koniec otyłości');
+  expect(b.os).toContain('lepsze wyniki badań');
 
   const c = await plan(page, { age: 34, sex: 'F', w: 68, h: 169, cel: 63 });
   expect(c.masa).toBe('do 63,0 kg');

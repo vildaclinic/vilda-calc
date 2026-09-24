@@ -34,7 +34,7 @@ function ustaw(page, s) {
     const res = window.VildaDietRecommendations.buildEnergyRecommendationResult();
     const tekst = String(res.textOutput || '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ');
     const drab = window.VildaBmi.drabinkaCelow({ wzrostCm: s.h, masaKg: s.w, plec: s.sex, wiekMies: s.age * 12, zrodlo: window.bmiSource, dorosly: s.age >= 19 });
-    return { tekst, pierwszyCel: res.dane && res.dane.masa ? res.dane.masa.pierwszyCel : undefined, szczebel: drab && drab.szczeble && drab.szczeble[0] ? { masa: drab.szczeble[0].masa, bmi: drab.szczeble[0].bmi, opis: drab.szczeble[0].opis } : null, docelowaKg: res.dane && res.dane.masa ? res.dane.masa.docelowaKg : null };
+    return { tekst, pierwszyCel: res.dane && res.dane.masa ? res.dane.masa.pierwszyCel : undefined, szczebel: drab && drab.szczeble && drab.szczeble[0] ? { masa: drab.szczeble[0].masa, bmi: drab.szczeble[0].bmi, opis: drab.szczeble[0].opis, klucz: drab.szczeble[0].klucz } : null, klucze: drab && drab.szczeble ? drab.szczeble.map((q) => q.klucz) : [], docelowaKg: res.dane && res.dane.masa ? res.dane.masa.docelowaKg : null };
   }, s);
 }
 
@@ -43,25 +43,35 @@ const kg = (v) => v.toFixed(1).replace('.', ',') + ' kg';
 test('dorosły z otyłością: zdanie o pierwszym celu z drabinki silnika; przy nadwadze bez zmian', async ({ page }) => {
   test.setTimeout(150_000);
   await otworz(page);
-  // otyłość III stopnia → pierwszy szczebel BMI 35 (rata R, K1: „wyjście z otyłości III stopnia”)
+  // P-DIETA rata Z2 (2026-09-24): otyłość III stopnia → pierwszy szczebel −5 % masy (Wing 2011), dalej BMI 35
+  // („wyjście z otyłości III stopnia”, rata R K1) i BMI 30
   const a = await ustaw(page, { age: 47, sex: 'M', w: 112, h: 167 });
-  expect(a.szczebel && a.szczebel.bmi).toBe(35);
-  expect(a.tekst).toContain('BMI wynosi 40,2 (otyłość III stopnia). Pierwszy cel to ok. ' + kg(a.szczebel.masa) + ' (BMI 35), czyli około ' + kg(112 - a.szczebel.masa) + ' mniej – wyjście z otyłości III stopnia; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy). Górna granica normy (BMI 24,9) odpowiada masie ok. ' + kg(a.docelowaKg) + ', do której dochodzi się stopniowo, etapami.');
+  expect(a.szczebel && a.szczebel.klucz).toBe('wing');
+  expect(a.klucze).toEqual(['wing', 'otylosc-2', 'otylosc-1']);
+  expect(a.tekst).toContain('BMI wynosi 40,2 (otyłość III stopnia). Pierwszy cel to ok. ' + kg(a.szczebel.masa) + ' (5 % masy ciała), czyli około ' + kg(112 - a.szczebel.masa) + ' mniej; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy). Górna granica normy (BMI 24,9) odpowiada masie ok. ' + kg(a.docelowaKg) + ', do której dochodzi się stopniowo, etapami.');
   expect(a.tekst).not.toContain('Do uzyskania zakresu prawidłowego BMI');
   expect(a.pierwszyCel).toBeTruthy();
-  expect(a.pierwszyCel.bmi).toBe(35);
+  expect(a.pierwszyCel.klucz).toBe('wing');
   expect(Math.abs(a.pierwszyCel.masaKg - a.szczebel.masa)).toBeLessThan(0.01);
   expect(Math.abs(a.pierwszyCel.doRedukcjiKg - (112 - a.szczebel.masa))).toBeLessThan(0.01);
-  expect(a.pierwszyCel.opis).toBe('wyjście z otyłości III stopnia');
-  // otyłość I stopnia → pierwszy szczebel BMI 30 (koniec otyłości)
+  expect(a.pierwszyCel.opis).toBe('próg poprawy: ciśnienie, trójglicerydy, HDL');
+  // otyłość I stopnia (BMI 33,1) → także −5 % przed BMI 30
   const b = await ustaw(page, { age: 40, sex: 'F', w: 90, h: 165 });
-  expect(b.szczebel && b.szczebel.bmi).toBe(30);
-  expect(b.tekst).toContain('BMI wynosi 33,1 (otyłość I stopnia). Pierwszy cel to ok. ' + kg(b.szczebel.masa) + ' (BMI 30), czyli około ' + kg(90 - b.szczebel.masa) + ' mniej – koniec otyłości; już taka zmiana');
-  expect(b.pierwszyCel && b.pierwszyCel.bmi).toBe(30);
-  // nadwaga → brak szczebla, dotychczasowe zdanie
-  const c = await ustaw(page, { age: 40, sex: 'F', w: 74, h: 165 });
+  expect(b.klucze).toEqual(['wing', 'otylosc-1']);
+  expect(b.tekst).toContain('BMI wynosi 33,1 (otyłość I stopnia). Pierwszy cel to ok. ' + kg(b.szczebel.masa) + ' (5 % masy ciała), czyli około ' + kg(90 - b.szczebel.masa) + ' mniej; już taka zmiana');
+  expect(b.pierwszyCel && b.pierwszyCel.klucz).toBe('wing');
+  // tuż nad BMI 30 (BMI 31,2) → pierwszy BMI 30, −5 % wskazane osobno
+  const b2 = await ustaw(page, { age: 62, sex: 'F', w: 78, h: 158 });
+  expect(b2.klucze).toEqual(['otylosc-1', 'wing']);
+  expect(b2.tekst).toContain('Pierwszy cel to ok. ' + kg(b2.szczebel.masa) + ' (BMI 30), czyli około ' + kg(78 - b2.szczebel.masa) + ' mniej – koniec otyłości; już ok. 5 % masy (ok. 74,1 kg) poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).');
+  // nadwaga BMI 27,2 → −5 % jedynym krokiem
+  const c0 = await ustaw(page, { age: 40, sex: 'F', w: 74, h: 165 });
+  expect(c0.klucze).toEqual(['wing']);
+  expect(c0.tekst).toContain('BMI wynosi 27,2 (nadwaga). Pierwszy cel to ok. ' + kg(74 * 0.95) + ' (5 % masy ciała)');
+  // nadwaga BMI 25,5 → −5 % za celem: brak szczebla, dotychczasowe zdanie
+  const c = await ustaw(page, { age: 40, sex: 'F', w: 69.4, h: 165 });
   expect(c.szczebel).toBeNull();
-  expect(c.tekst).toContain('BMI wynosi 27,2 (nadwaga). Do uzyskania zakresu prawidłowego BMI dla dorosłych potrzebna byłaby redukcja masy ciała o ok.');
+  expect(c.tekst).toContain('BMI wynosi 25,5 (nadwaga). Do uzyskania zakresu prawidłowego BMI dla dorosłych potrzebna byłaby redukcja masy ciała o ok.');
   expect(c.tekst).not.toContain('Pierwszy cel');
   expect(c.pierwszyCel).toBeNull();
   // dziecko (rata J): pierwszyCel w danych też z opisem szczebla

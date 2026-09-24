@@ -528,6 +528,12 @@
    * dla nich źródła.
    */
   var SZCZEBEL_SDS_REINEHR = 0.25;
+  /* P-DIETA rata Z2 (decyzja właściciela 2026-09-24): próg poprawy u DOROSŁEGO — ubytek 5 % DZISIEJSZEJ masy
+     (masa z wizyty, na którą powstaje plan). Wing RR i wsp., Diabetes Care 2011;34(7):1481–1486,
+     doi:10.2337/dc10-2415 (Look AHEAD): już 5 % poprawia ciśnienie, trójglicerydy i HDL; cel początkowy 5–10 %
+     w wytycznych AHA/ACC/TOS 2013 (doi:10.1161/01.cir.0000437739.71477.ee). Ten sam próg 5 % jest pierwszym
+     szczeblem „Postępów dorosłego” (tam od masy wyjściowej leczenia). Odpowiednik progu Reinehra u dziecka. */
+  var SZCZEBEL_PROC_MASY_DOROSLY = 5;
   /* Powyżej tego SDS z-score przestaje wiernie oddawać BMI — liczba wprost z Freedmana:
      „BMIz i centyle mogą się istotnie różnić od obserwowanych dla BMI powyżej 97. centyla
      (z = 1,88)". Konsument, który dostanie tę flagę, ma się opierać na kilogramach
@@ -570,6 +576,12 @@
       dodaj('otylosc-2', P.OTYLOSC_2, 'BMI ' + P.OTYLOSC_2,
         x >= P.OTYLOSC_3 ? 'wyjście z otyłości III stopnia' : 'wyjście z otyłości II stopnia');
       dodaj('otylosc-1', P.OTYLOSC_1, 'BMI ' + P.OTYLOSC_1, 'koniec otyłości');
+      /* rata Z2: szczebel „−5 % masy” — przez filtr niżej wchodzi tylko, gdy leży między dzisiejszą masą a celem
+         (przy nadwadze z BMI poniżej ok. 26,2 cel BMI 24,9 jest bliżej i szczebla nie ma) */
+      dodaj('wing', x * (1 - SZCZEBEL_PROC_MASY_DOROSLY / 100),
+        '\u2212' + SZCZEBEL_PROC_MASY_DOROSLY + '\u00A0% masy',
+        'próg poprawy: ciśnienie, trójglicerydy, HDL',
+        { procentMasy: SZCZEBEL_PROC_MASY_DOROSLY, zrodlo: 'Wing 2011, doi:10.2337/dc10-2415' });
     } else {
       var D = PROGI.DZIECKO;
       var r = policz({ bmi: x, plec: o.plec, wiekMies: wiek, zrodlo: o.zrodlo, siatka: o.siatka, populacja: pop });

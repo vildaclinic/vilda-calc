@@ -79,8 +79,10 @@ test('dorosly z otyloscia: kazda liczba z dane wraca w zdaniach', async ({ page 
   // masa: cel i roznica sa tymi samymi liczbami, ktore widzi pacjent
   // rata N: przy otylosci zdanie mowi o pierwszym szczeblu drabinki (dane.masa.pierwszyCel) i o gornej granicy normy
   expect(dane.masa.pierwszyCel).toBeTruthy();
-  expect(dane.masa.pierwszyCel.bmi).toBe(30);
-  expect(text).toContain(norm('Pierwszy cel to ok. ' + przecinek(dane.masa.pierwszyCel.masaKg, 1) + ' kg (BMI 30), czyli około ' + przecinek(dane.masa.pierwszyCel.doRedukcjiKg, 1) + ' kg mniej – koniec otyłości'));
+  // P-DIETA rata Z2: przy BMI 34,1 pierwszym szczeblem jest −5 % masy (Wing 2011), BMI 30 dalej
+  expect(dane.masa.pierwszyCel.klucz).toBe('wing');
+  expect(dane.masa.pierwszyCel.masaKg).toBeCloseTo(108 * 0.95, 6);
+  expect(text).toContain(norm('Pierwszy cel to ok. ' + przecinek(dane.masa.pierwszyCel.masaKg, 1) + ' kg (5 % masy ciała), czyli około ' + przecinek(dane.masa.pierwszyCel.doRedukcjiKg, 1) + ' kg mniej; już taka zmiana poprawia ciśnienie'));
   expect(text).toContain(norm('odpowiada masie ok. ' + przecinek(dane.masa.docelowaKg, 1) + ' kg'));
   expect(Math.abs(dane.masa.pierwszyCel.masaKg - (dane.masa.docelowaKg + dane.masa.doRedukcjiKg - dane.masa.pierwszyCel.doRedukcjiKg))).toBeLessThan(0.05);
 

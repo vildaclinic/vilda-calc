@@ -5778,6 +5778,53 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Próg −5 % masy („lepsze wyniki badań”) w drabince celów dorosłego (P-DIETA rata Z2, SW 1.1.64, 2026-09-24)
+
+**Decyzje właściciela (2026-09-24, po makiecie).** Dorosły dostaje odpowiednik progu Reinehra dziecka: szczebel −5 %
+DZISIEJSZEJ masy (masa z wizyty, na którą powstaje plan); także przy nadwadze, jeśli leży przed celem; brzmienie zdań
+jak na makiecie.
+
+**Stan przed zmianą.** Drabinka dorosłego (`VildaBmi.drabinkaCelow`) miała tylko progi klas WHO (BMI 35, BMI 30).
+Dorosły z nadwagą nie miał kroku pośredniego; korzyść zdrowotna (Wing 2011) była przypisana pierwszemu progowi BMI,
+także gdy był to mniej niż 5 % masy (K 62 l., 78 kg: BMI 30 = 4 %).
+
+**Zmiana (wynik kliniczny: inny pierwszy cel u części dorosłych i dodatkowy punkt na drodze).**
+- Silnik BMI (`vilda_bmi.js`): stała `SZCZEBEL_PROC_MASY_DOROSLY = 5` i szczebel `wing` = masa × 0,95 z etykietą
+  „−5 % masy”, opisem „próg poprawy: ciśnienie, trójglicerydy, HDL”, `procentMasy` i źródłem. Ten sam filtr co
+  pozostałe szczeble: tylko między dzisiejszą masą a celem BMI 24,9 (przy BMI poniżej ok. 26,2 cel jest bliżej —
+  szczebla nie ma). Kafel Statusu (próg BMI 30) bez zmian.
+- Plan PDF (`vilda_raport_plan.js`, WERSJA 12): `progPoprawy(s)` = próg Reinehra albo −5 % — na osi „pierwszy krok”
+  (pierwszy) albo „lepsze wyniki badań” (dalej), nagłówek „pierwszy krok: już ta zmiana poprawia ciśnienie i wyniki
+  badań krwi”. Bliskie punkty schodzą do drugiego rzędu z łącznikiem (rata Y).
+- Zalecenia dorosłego (`vilda_diet_recommendations.js`): pierwszy −5 %: „Pierwszy cel to ok. 106,4 kg (5 % masy
+  ciała), czyli około 5,6 kg mniej; już taka zmiana poprawia ciśnienie i wyniki badań krwi (cholesterol,
+  trójglicerydy).”; pierwszy próg BMI, −5 % dalej: „… (BMI 30), czyli około 3,1 kg mniej – koniec otyłości; już ok.
+  5 % masy (ok. 74,1 kg) poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).”
+- „Raport po wizycie” (`vilda_patient_report.js`, `vilda_raport_naglowek.js`): −5 % to ten sam próg poprawy
+  (pierwszy krok z korzyścią); gdy pierwszy jest próg BMI, zdanie nagłówka i pole „Pierwszy krok” na karcie masy
+  mówią „już ok. 5 % masy (ok. X kg) poprawia ciśnienie i wyniki badań krwi”.
+- Karta „Droga do normy BMI”: „Po drodze: −5,6 kg → −5 % masy — próg poprawy: … (Wing 2011)” z tej samej drabinki.
+
+**Źródła (według PubMed).** Wing RR i wsp., *Benefits of modest weight loss in improving cardiovascular risk factors
+in overweight and obese individuals with type 2 diabetes*, Diabetes Care 2011;34(7):1481–1486, doi:10.2337/dc10-2415,
+PMID 21593294 (Look AHEAD, n = 5 145) — już 5 % masy poprawia ciśnienie, trójglicerydy i HDL; Jensen MD i wsp.,
+wytyczne AHA/ACC/TOS 2013, doi:10.1161/01.cir.0000437739.71477.ee — cel początkowy 5–10 %. Ograniczenie: badanie
+w cukrzycy typu 2; u osób bez cukrzycy przez analogię (jak w racie N) — akceptacja kliniczna właściciela. „Postępy
+dorosłego” liczą próg 5 % od masy wyjściowej leczenia — plan liczy go od dzisiejszej masy (osobny cel: krok planu).
+
+Syntetyczne przypadki `wejście → oczekiwany wynik` (fikcyjne):
+- M 47 l., 112 kg / 167 cm (BMI 40,2): szczeble 106,4 (−5 %) → 97,6 (BMI 35) → 83,7 (BMI 30) kg; pierwszy cel −5,6 kg
+  (dawniej −14,4 kg do BMI 35).
+- K 62 l., 78 kg / 158 cm (BMI 31,2): 74,9 (BMI 30) → 74,1 (−5 %) kg; pierwszy cel bez zmian, korzyść przy 74,1 kg.
+- K 45 l., 80 kg / 165 cm (BMI 29,4): pierwszy cel 76,0 kg (−4,0 kg), dawniej brak kroku pośredniego.
+- K 40 l., 65,3 kg / 160 cm (BMI 25,5): brak szczebla (−5 % = 62,0 kg za celem 63,7 kg).
+- Dziecko: bez zmian (próg Reinehra).
+
+**Walidacja.** `tests/unit/rata-z2-prog-5-procent.test.mjs` (prawdziwy silnik BMI, oś planu, nagłówek raportu,
+strażnicy). `tests/e2e/dieta-rata-z2.spec.mjs` (index i docpro: zdania, oś, karta drogi, nagłówek raportu, nadwaga).
+Przepisane: unit `szczeble-celow` (dorosły: `wing` w drabince, nadwaga BMI 26,6 → sam `wing`, BMI 25,5 → brak),
+`rata-n-prog-posredni`, `rata-o-etykieta-kroku`.
+
 ## Górna granica dnia i kontrola planu za 6 tygodni u dorosłego (P-DIETA rata Z, SW 1.1.62, 2026-09-23)
 
 **Decyzje właściciela (2026-09-23, po makiecie).** Reguły raty V (dziecko z planem otyłości) obejmują dorosłego
