@@ -475,6 +475,21 @@ describe('epikryza etap 2 — zasilenie danymi analizy trajektorii', () => {
     expect(t).toContain('W porównaniu z pomiarem wykonanym w wieku 4 lat pozycja centylowa wzrostu obniżyła się istotnie (ΔhSDS = −1,20).');
   });
 
+  it('rata T4: kontekst flagi (fraza z modułu trajektorii) dopisany w tym samym zdaniu; bez frazy — jak dotąd', () => {
+    const traj = JSON.parse(JSON.stringify(trajDecel));
+    traj.height.redFlag.fraza = 'w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I)';
+    const t = gen({ sex: 'M', ageYears: 12, ageMonths: 0, height: 141, trajectory: traj }, {});
+    expect(t).toContain('W porównaniu z pomiarem wykonanym w wieku 4 lat pozycja centylowa wzrostu obniżyła się istotnie (ΔhSDS = −1,20) w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I).');
+    traj.height.redFlag.fraza = null;
+    expect(gen({ sex: 'M', ageYears: 12, ageMonths: 0, height: 141, trajectory: traj }, {}))
+      .toContain('obniżyła się istotnie (ΔhSDS = −1,20).');
+  });
+
+  it('rata T4: kolektor epikryzy przekazuje frazę kontekstu z modelu trajektorii (źródło vilda_epicrisis_ui.js)', () => {
+    const src = fs.readFileSync(path.join(repositoryRoot, 'vilda_epicrisis_ui.js'), 'utf8');
+    expect(src).toContain('fraza:mm9.redFlag.kontekst&&mm9.redFlag.kontekst.fraza||null');
+  });
+
   it('najgorszy odcinek pokrywający cały okres obserwacji nie jest powtarzany', () => {
     const traj = JSON.parse(JSON.stringify(trajDecel));
     traj.height.worst = { fromAgeM: 48, toAgeM: 84, dSds: -1.2, label: 'istotna deceleracja wzrastania', tone: 'bad' };

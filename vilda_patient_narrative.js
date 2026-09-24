@@ -444,12 +444,16 @@
     var m = metryka(model, 'height');
     if (!m || !m.first || !m.last) return null;
     if (m.redFlag) {
+      // P-TRAJ rata T4: kontekst flagi (wariant, ton, fraza) liczy vilda_trajectory_analysis.js — tu tylko czytamy.
+      var kf = m.redFlag.kontekst || null;
+      var zolta = !!(kf && kf.ton === 'warn');
       return {
         id: 'przebieg',
-        tone: 'bad',
+        tone: zolta ? 'warn' : 'bad',
         text: kropka('Od pomiaru w wieku ' + wiekDop(m.redFlag.baseAgeMonths)
-          + ' pozycja centylowa wzrostu obniżyła się o ' + fmtSdsAbs(m.redFlag.dSds)
-          + ' SD, co wskazuje na decelerację tempa wzrastania')
+          + ' pozycja centylowa wzrostu obniżyła się o ' + fmtSdsAbs(m.redFlag.dSds) + ' SD'
+          + (kf && kf.fraza ? ' ' + kf.fraza : '')
+          + (zolta ? '' : ', co wskazuje na decelerację tempa wzrastania'))
       };
     }
     if (!m.total) return null;
