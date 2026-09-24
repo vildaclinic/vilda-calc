@@ -5778,6 +5778,113 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Tempo wzrastania w planie diety dziecka z nadmiarem masy: pomiar wzrostu na kontroli, tempo poniżej normy → domyślnie stabilizacja, stabilizacja w planie PDF jako utrzymanie masy (P-DIETA rata G1, SW 1.1.73, 2026-09-24)
+
+**Zgłoszenie (odłożona decyzja z raty T4).** Plan diety dziecka z nadwagą lub otyłością nie korzystał ze zmierzonego tempa
+wzrastania, choć karta wzrostu je liczy i przy tempie poniżej normy pokazuje czerwony baner. Skutki:
+- dziewczynka 13 l., Tanner I, 2 cm/rok (baner tempa czerwony) dostawała domyślnie redukcję i zdanie „Wzrastanie nadal trwa,
+  a każdy dodatkowy centymetr wzrostu dodatkowo obniża BMI …”;
+- przy tempie < 1 cm/rok przed skokiem pokwitaniowym prognoza uznawała wzrastanie za „praktycznie zakończone”, co wymuszało
+  redukcję;
+- kontrola planu mówiła o ważeniu, ale nie o pomiarze wzrostu;
+- plan PDF i Karta pacjenta pokazywały stabilizację dziecka jak redukcję (kafle „≤ … kcal”, deficytu i tempa, nagłówek
+  „KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI”), choć zalecenia mówiły „nie planuje się dodatkowego deficytu”.
+
+**Źródła (według PubMed).**
+- Dietz, Hartung 1985, Am J Dis Child 139:705–7, PMID 4014094,
+  [doi:10.1001/archpedi.1985.02140090067031](https://doi.org/10.1001/archpedi.1985.02140090067031) (streszczenie):
+  19 dzieci przed pokwitaniem z otyłością na łagodnej diecie (średnio 9,7 mies.) — Z-score tempa wzrastania spadł z
+  +2,32 do +0,62, spadek korelował ze zmianą masy; autorzy zalecają „careful monitoring”.
+- Epstein i wsp. 1990, Am J Dis Child 144:1360–4, PMID 2244623,
+  [doi:10.1001/archpedi.1990.02150360086029](https://doi.org/10.1001/archpedi.1990.02150360086029): obserwacja 5-letnia
+  dzieci 6–12 lat leczonych behawioralnie — zmiana masy nie korelowała ze wzrastaniem skorygowanym o wzrost rodziców;
+  dzieci z otyłością na starcie wyższe (74. c), po 5 latach nadal powyżej normy (65. c).
+- Epstein i wsp. 1993, [doi:10.1001/archpedi.1993.02160340062015](https://doi.org/10.1001/archpedi.1993.02160340062015)
+  oraz Epstein i wsp. 1990, JAMA 264:2519–23, PMID 2232019 (obserwacja 10-letnia): wzrost dziecka po 10 latach zależał
+  od wzrostu rodzica tej samej płci, bez różnic między grupami leczenia.
+- Valoski, Epstein 1990, Int J Obes 14:667–77, PMID 2228401 (bez DOI w PubMed): przez 6 miesięcy programu dzieci z
+  otyłością rosły prawidłowo (+4,3 cm), bez zmiany centyla wzrostu.
+- Mazur i wsp. 2022, Nutrients 14:3806, PMID 36145182, [doi:10.3390/nu14183806](https://doi.org/10.3390/nu14183806):
+  przy otyłości endokrynnej typowe są niski wzrost, zmniejszone tempo wzrastania i opóźniony wiek kostny; szybka redukcja
+  niezalecana ze względu na wzrastanie; stanowisko nie podaje stałego odstępu pomiaru wzrostu w trakcie diety.
+- Styne i wsp. 2017, J Clin Endocrinol Metab, PMID 28359099,
+  [doi:10.1210/jc.2016-2573](https://doi.org/10.1210/jc.2016-2573) (tylko streszczenie): przyczynom endokrynnym otyłości
+  zwykle towarzyszy spowolnione wzrastanie.
+- **Nie potwierdzono:** konkretnego odstępu pomiaru wzrostu w trakcie diety w wytycznych. Zdanie „tempo wzrastania ocenia
+  się w odstępie co najmniej 6 miesięcy” opisuje regułę modelu tempa aplikacji (para pomiarów ≥ 6 mies.), a nie zalecenie
+  z wytycznych.
+
+Wniosek: prawidłowo prowadzona dieta nie hamuje wzrastania. Spowolnienie przy nadmiarze masy jest sygnałem do oceny
+przyczyny, a nie powodem do dalszego ograniczania kalorii.
+
+**Decyzje właściciela (2026-09-24, po makiecie; „zgadzam się z rekomendacjami, koduj”).** Dotyczy dziecka < 18 lat z nadwagą
+lub otyłością, bez zaznaczonego „Wzrost zakończony”.
+
+| reguła | warunek | skutek |
+|---|---|---|
+| A | tempo w normie albo nieznane, wzrastanie nie jest praktycznie zakończone | przy redukcji z kontrolą: dopisek w zdaniu kontroli „Na kontroli mierzony jest także wzrost dziecka — prawidłowo prowadzona dieta nie spowalnia wzrastania.” i linia pod kaflami kontroli w planie PDF; bez kontroli (stabilizacja): osobne zdanie roli „kontrola” „Na wizytach kontrolnych mierzony jest także wzrost dziecka: prawidłowo prowadzona dieta nie spowalnia wzrastania, a tempo wzrastania ocenia się w odstępie co najmniej 6 miesięcy.” |
+| B1 | tempo poniżej normy (`tempo.alarm`, poziom „danger” modelu tempa: < 10 lat albo Tanner I od 10 lat) | domyślna strategia: stabilizacja (redukcja nadal do wyboru ręcznie); zdanie zastępuje „Wzrastanie nadal trwa” / „Dziecko wciąż rośnie”; czerwona ramka nad kaflami energii w planie PDF; wzrastanie nie jest „praktycznie zakończone” |
+| B2 | tempo „do oceny” (poziom „warn”) | zdanie po zdaniu o wzrastaniu i bursztynowa ramka w planie PDF; plan i strategia bez zmian; zdanie A pominięte (B2 je obejmuje) |
+| F0 | strategia dziecka = stabilizacja | plan PDF: nagłówek „ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)”, jeden kafel „zapotrzebowanie energetyczne”, bez kafli deficytu i tempa; Karta pacjenta: „Plan: utrzymanie masy ciała: … kcal/d” |
+
+Zdania B1 i B2 (liczby z modelu tempa; norma z etykiety normy modelu):
+- B1 przy stabilizacji: „Tempo wzrastania jest poniżej normy dla wieku: 2,0 cm/rok (norma ≥4 cm/rok). Spowolnienie
+  wzrastania przy nadmiarze masy ciała wymaga oceny lekarskiej, m.in. w kierunku przyczyn hormonalnych, zanim zostanie
+  wprowadzona dieta z ograniczeniem kalorii.”
+- B1 przy ręcznie wybranej redukcji: „… w kierunku przyczyn hormonalnych; w czasie diety z ograniczeniem kalorii wzrost
+  dziecka powinien być mierzony na każdej wizycie.”
+- B2: „Tempo wzrastania wymaga oceny: 3,0 cm/rok (norma ≥4 cm/rok). Na wizytach kontrolnych mierzony jest wzrost dziecka;
+  jeśli spowolnienie się utrzyma, wskazana jest ocena lekarska jego przyczyny.”
+
+„Twoja droga” w planie PDF przy stabilizacji (nadal „pierwszy cel −X kg”) i tytuł planu — osobna rata.
+
+**Zmiana (kliniczna: domyślna strategia przy tempie poniżej normy; treść zaleceń, planu PDF i Karty pacjenta).**
+- `vilda_diet_plan_ui.js` (`?v=33`):
+  - `energyChildGrowthOutlook` czyta `advancedGrowthData.tempo` (ten sam obiekt co baner tempa karty) i zwraca `tempoAlarm`,
+    `tempoDoOceny`, `tempoCmRok`, `tempoNormaCmRok`; `practicallyEnded` jest fałszywe przy alarmie tempa;
+  - `energyResolveStrategy`: po regułach ręcznego wyboru, „Wzrost zakończony” i etapu 2–5 lat, a przed „praktycznie
+    zakończone” — `tempoAlarm` bez blokady stabilizacji → stabilizacja.
+- `vilda_diet_recommendations.js` (`?v=59`):
+  - `vildaZdanieTempaWzrastania()` (zdania B1/B2), zdanie A w kontroli albo osobno (rola `kontrola`, punkty
+    `dz-kontrola-wzrost`);
+  - przy B1 zdanie o wzrastaniu zastąpione, PDF-owa zachęta „Wzrastanie wciąż trwa” wyłączona;
+  - dane (`vildaDaneZalecen`): nowe `tempoWzrastania = { ocena: 'ponizej' | 'do-oceny', cmRok, normaCmRok, zdanie }`,
+    `kontrola.pomiarWzrostu`, `dziecko.utrzymanieZaokrKcal`; `strategia` dziecka z nadmiarem = `stabilization`, gdy plan
+    liczy utrzymanie; `energia` przy stabilizacji dziecka: podaż = zapotrzebowanie (zaokrąglone do 100 kcal jak w
+    zdaniu), bez górnej granicy, deficytu, tempa i nazwy diety.
+- `vilda_raport_plan.js` (`?v=16`, WERSJA 13): F0 w sekcji energii, `ramkaTempa()` (klasy `vrp-tempo-alarm` /
+  `vrp-tempo-ocena`), linia A pod kaflami kontroli.
+- `vilda_patient_report.js` (`?v=43`): etykieta wiersza planu „utrzymanie masy ciała” przy stabilizacji dziecka.
+- Model tempa, progi norm tempa i baner karty wzrostu — bez zmian.
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne; prawdziwa strona, wiersz historii 12 mies. wcześniej; „przed” zmierzone
+na tej samej stronie z bazy `audyt` 999e8e8c):
+
+| przypadek | tempo | przed | po |
+|---|---|---|---|
+| chł. 10 l., 52 kg / 145 cm (nadwaga), 139 → 145 cm | 6 cm/rok, norma | stabilizacja w zaleceniach (2 400 kcal), ale plan PDF: nagłówek redukcji, „≤ 2 250 kcal”, „−126 kcal”, „−0,1 kg tygodniowo”; Karta: „Plan: dieta lekka: ≤ 2250 kcal/d” | stabilizacja; zdanie A (kontrola); PDF: UTRZYMANIE, kafel „2 400 kcal · zapotrzebowanie energetyczne”; Karta: „Plan: utrzymanie masy ciała: 2400 kcal/d” |
+| ten sam, 142 → 145 cm | 3 cm/rok, do oceny | stabilizacja bez zdania o tempie (PDF jak wyżej) | zdanie B2, bursztynowa ramka; strategia bez zmian, PDF jako utrzymanie (F0) |
+| dz. 13 l., 75 kg / 155 cm (otyłość), Tanner I, 153 → 155 cm | 2 cm/rok, alarm | redukcja ≤ 1 800 kcal, „Wzrastanie nadal trwa” | stabilizacja 2 200 kcal, zdanie B1, czerwona ramka, bez „Wzrastanie nadal trwa” |
+| ta sama, redukcja wybrana ręcznie | alarm | redukcja | redukcja ≤ 1 800 kcal, zdanie B1 w wariancie redukcji, bez dopisku A w kontroli |
+| ta sama, 154,5 → 155 cm | 0,5 cm/rok, alarm | wzrastanie „praktycznie zakończone” → redukcja | stabilizacja, zdanie B1 |
+| dz. 13 l., 75 kg / 155 cm, 148 → 155 cm | 7 cm/rok | redukcja ≤ 1 800 kcal | bez zmiany planu; dopisek A w zdaniu kontroli; linia A w planie PDF |
+| chł. 8 l., 45 kg / 123 cm (≥ 99. c), 119 → 123 cm | 4 cm/rok (norma ≥ 5), alarm | redukcja lekka ≤ 2 050 kcal, kontrola za 12 tygodni | stabilizacja 2 200 kcal, zdanie B1 z normą ≥ 5 cm/rok |
+| dz. 13 l., 75 kg / 155 cm, bez historii | nieznane | redukcja ≤ 1 800 kcal | bez zmiany planu, dopisek A w kontroli |
+| docpro, dz. 13 l., Tanner I, 2 cm/rok | alarm | redukcja ≤ 1 800 kcal | stabilizacja 2 200 kcal, zdanie B1 (docpro nie ma przełączników strategii) |
+
+**Ograniczenia.**
+- Blokada stabilizacji z prognozy wzrostu (app.js: dziecko „nie zdąży wyrosnąć”) wygrywa z B1 — wtedy zostaje redukcja
+  ze zdaniem B1 w wariancie redukcji.
+- Karta planu odświeża strategię przy `update()`; ocena tempa pochodzi z karty zaawansowanej (`advancedGrowthData`).
+- Norma w zdaniu pochodzi z etykiety normy modelu tempa; przy jej braku zdanie podaje samo tempo.
+
+**Walidacja.** Unit `dieta-tempo-wzrastania-rata-g1` (14: pola prognozy, kolejność reguł resolvera, pełny plan na
+prawdziwym silniku, plan PDF F0/B1/B2/A), zaktualizowany `raport-wizyta-rata-q` (stabilizacja dziecka jako utrzymanie,
+nowy test etykiet planu); e2e `dieta-tempo-rata-g1` (7: index i docpro, prawdziwe wiersze historii). Wyniki w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna (udzielona 2026-09-24 przed kodowaniem); „Twoja droga” przy
+stabilizacji — osobna rata; scalenie i wdrożenie.
+
 ## Baner lekarza przy obniżeniu pozycji wzrostu: wiek dojrzewania i kierunek celu rodziców (P-TRAJ rata T4, SW 1.1.72, 2026-09-24)
 
 **Zgłoszenie.** Odłożona decyzja z raty T3: flaga w dół (ΔhSDS ≤ −1,0 od pierwszego pomiaru ≥ 36 mies. na tej samej
@@ -5850,7 +5957,7 @@ nagłówkiem), `epicrisis` (fraza w zdaniu, kolektor), `pacjent-opis-silnik` (zd
 `baner-spadku-rata-t4` (6 testów, index i docpro, prawdziwe wiersze historii).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; linia panelu/epikryzy dla flagi w górę; kontrola tempa
-wzrastania w czasie diety redukcyjnej.
+wzrastania w czasie diety redukcyjnej (*podjęta: P-DIETA rata G1, SW 1.1.73*).
 
 ## „Raport po wizycie”: wzrost rodziców w nagłówku najwyżej raz (P-RAPORT rata R2, SW 1.1.71, 2026-09-24)
 

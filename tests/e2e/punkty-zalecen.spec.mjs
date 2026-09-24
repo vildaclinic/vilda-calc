@@ -150,7 +150,13 @@ test('rola bez rozpisania pokazuje cale zdanie, a nie jego kawalek', async ({ pa
   expect(niedowaga.punkty.kontrola.length).toBe(3);
 
   const dziecko = await policz(page, { age: 3, sex: 'F', w: 22, h: 100 });
-  expect(dziecko.punkty.kontrola).toEqual(dziecko.zdania.kontrola);
+  // P-DIETA rata G1 (A, decyzja właściciela 2026-09-24): kontrola rosnącego dziecka z nadmiarem masy zaczyna się zdaniem
+  // o pomiarze wzrostu (ma rozpisanie na dwa punkty); zdanie o konsultacji nie ma rozpisania → jest punktem w całości
+  expect(dziecko.zdania.kontrola.length).toBe(2);
+  expect(norm(dziecko.zdania.kontrola[0])).toContain('Na wizytach kontrolnych mierzony jest także wzrost dziecka');
+  expect(dziecko.punkty.kontrola.slice(0, 2).map(norm)).toEqual(['wzrost dziecka mierzony na wizytach kontrolnych', 'tempo wzrastania oceniane w odstępie co najmniej 6 miesięcy']);
+  expect(dziecko.punkty.kontrola[2]).toBe(dziecko.zdania.kontrola[1]);
+  expect(dziecko.punkty.kontrola.length).toBe(3);
 
   // a rola z rozpisaniem ma punkty KROTSZE od zdania — inaczej rozpisanie niczego nie daje
   dziecko.punkty.ruch.forEach((p) => {

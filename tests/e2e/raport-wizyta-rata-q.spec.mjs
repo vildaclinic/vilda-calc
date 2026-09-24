@@ -42,7 +42,7 @@ async function modelZOdniesieniem(page, s) {
     const k = m.nutritionCard;
     return {
       nut: { kind: k.kind, title: k.title, badge: k.badge, value: k.value, note: k.note, rows: k.rows.map((r) => `${r.label}: ${r.valueText}`), bialkoDetail: (k.rows.find((r) => r.label === 'Białko') || {}).detail || null },
-      dane: dane && { pal, cel, podaz: dane.energia.podazZaokrKcal, utrzymanie: dane.energia.utrzymanieKcal, tee: dane.energia.teeBazowyKcal, nadmiar: dane.klasyfikacja && dane.klasyfikacja.nadmiar, niedowaga: dane.klasyfikacja && dane.klasyfikacja.niedowaga },
+      dane: dane && { pal, cel, strategia: dane.strategia, podaz: dane.energia.podazZaokrKcal, utrzymanie: dane.energia.utrzymanieKcal, tee: dane.energia.teeBazowyKcal, nadmiar: dane.klasyfikacja && dane.klasyfikacja.nadmiar, niedowaga: dane.klasyfikacja && dane.klasyfikacja.niedowaga },
       // P-DIETA rata V: przy planie otyłości/nadwagi dziecka karta bierze zapotrzebowanie dla masy docelowej z PLANU
       // (generator: celTeeKcal = targetTeeKcal silnika) — jedna liczba z planem; poza tym dawna ścieżka (teeRaw dla masy celu)
       teeCel: dane && dane.energia && dane.energia.celTeeKcal != null && dane.strategia !== 'cel-wlasny' ? dane.energia.celTeeKcal : st ? st.teeRawKcal : null,
@@ -73,15 +73,18 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.title).toBe('Zapotrzebowanie energetyczne');
     expect(r.nut.badge).toBe(r.dane.pal === 1.4 ? 'mała aktywność' : 'umiarkowana aktywność'); // rata R
     expect(r.nut.badge).not.toBe('Normy');
-    // wartość główna = zalecana kaloryczność planu; wiersz celu = funkcja produkcyjna dla masy docelowej generatora
-    // rata V pkt 1: kaloryczność diety dziecka to górna granica dnia — „≤” przed liczbą
-    expect(r.nut.value).toBe(`≤\u202F${kcal(r.dane.podaz)}`);
+    // wartość główna = liczba planu z generatora; wiersz celu = funkcja produkcyjna dla masy docelowej generatora
+    // P-DIETA rata G1 (F0, decyzja właściciela 2026-09-24): 9-latka z otyłością ma domyślnie stabilizację, a stabilizacja
+    // dziecka to utrzymanie masy — zapotrzebowanie przy obecnej masie (jak zdanie „W strategii stabilizacji …”), bez „≤”
+    // i nazwy diety. Dotąd karta pokazywała tu „≤” diety lekkiej, choć zalecenia mówiły „bez dodatkowego deficytu”.
+    // „≤” przy redukcji dziecka (rata V pkt 1) pilnują: e2e dieta-tempo-rata-g1 (G1-4) i unit raport-wizyta-rata-q.
+    expect(r.dane.strategia).toBe('stabilization');
+    expect(r.nut.value).toBe(kcal(r.dane.podaz));
     expect(r.nut.rows[0]).toBe(`Dla masy prawidłowej (${r.dane.cel.toFixed(1).replace('.', ',')} kg): ${kcal(r.teeCel)}`);
     // rata V: ta sama liczba co „zapotrzebowanie dla masy docelowej” planu (bez ×1,01 na wzrastanie), nie osobne przeliczenie
     expect(r.teeCel).toBe(r.planTeeCel);
     expect(Math.round(r.teeRawCel)).not.toBe(r.planTeeCel);
-    expect(r.nut.rows[1]).toMatch(/^Plan: dieta \S+: ≤[\u202F ]/);
-    expect(r.nut.rows[1]).toContain(kcal(r.dane.podaz));
+    expect(r.nut.rows[1]).toBe(`Plan: utrzymanie masy ciała: ${kcal(r.dane.podaz)}`);
     expect(r.nut.rows.join(' ')).not.toContain('Przy obecnej masie');
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.tee));
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.utrzymanie));

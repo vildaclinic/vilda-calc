@@ -456,12 +456,12 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 32,
-  "sha256": "b93e55efd66b8ede7b7bdee9e9925b16f17cf8c3983da3638634c137c6c118de"
+  "v": 33,
+  "sha256": "0fdc3708cbfac044c2cfcba06911834ab8c59d3e2f3ccd27d5d629c0501f7474"
  },
  "vilda_diet_recommendations.js": {
-  "v": 58,
-  "sha256": "80f8a5d77ef04674836c5c6d5d653b3f8cc743772b680fa00d0ff28adb488c6c"
+  "v": 59,
+  "sha256": "069a33477a794f1005f166c35b84202507cd716a6f9264553fb1a5cc193d74fb"
  },
  "vilda_dob_age.js": {
   "v": 7,
@@ -616,8 +616,8 @@
   "sha256": "f82ae91c53ceefc4394342a9ea3d4254454620b6330e112ed8e048a0333d09c5"
  },
  "vilda_patient_report.js": {
-  "v": 42,
-  "sha256": "c21338630c8b20c5f0161d60a22cc26aa7e4160a8d563bcf60b2b079a960dc4a"
+  "v": 43,
+  "sha256": "90025871b9e5552c7a9eaca082055a9f976bf490189fef28b312430d1930bb93"
  },
  "vilda_patient_summary_copy.js": {
   "v": 13,
@@ -692,8 +692,8 @@
   "sha256": "f61018b1714d98767a6d82b37f86270b5576176dc39bee502c5d120cc0ab6d6b"
  },
  "vilda_raport_plan.js": {
-  "v": 15,
-  "sha256": "0ba5fd44c09db855079947afe50c32cfbaf9d2d6dd3e9884cba711682830c104"
+  "v": 16,
+  "sha256": "f8add5f9774a0fd26091c9c518e77d08554a9907b6b1bac7a9ba1e7a4d67729f"
  },
  "vilda_realtime.js": {
   "v": 7,
