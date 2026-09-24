@@ -22,10 +22,13 @@ function okno() {
 }
 const w = okno();
 
+// P-DIETA rata G1 (F0, decyzja właściciela 2026-09-24): przy stabilizacji generator oddaje utrzymanie masy (zapotrzebowanie
+// zaokrąglone do 100 kcal, bez wiersza diety i deficytu) — dawny kształt „stabilizacja + dieta lekka ≤ …” był rozbieżny ze
+// zdaniem „W strategii stabilizacji nie planuje się dodatkowego deficytu”. Kształt „reduction + dieta lekka” niżej.
 const DANE_DZIECKO_OTYLOSC = {
   wersja: 1, dorosly: false, strategia: 'stabilization',
   klasyfikacja: { nadmiar: true, nadwaga: true, otylosc: true, niedowaga: false },
-  energia: { reeKcal: 1492.36, teeBazowyKcal: 2089.304, palUzyty: 1.4, podazKcal: 1754, podazZaokrKcal: 1800, deficytKcal: 126, dietaKlucz: 'light', dietaNazwa: 'lekka', utrzymanieKcal: 1880, nadwyzkaKcal: null, podazZakresKcal: null },
+  energia: { reeKcal: 1492.36, teeBazowyKcal: 2089.304, palUzyty: 1.4, podazKcal: 1880, podazZaokrKcal: 1900, gornaGranica: false, deficytKcal: null, dietaKlucz: null, dietaNazwa: null, utrzymanieKcal: 1880, nadwyzkaKcal: null, podazZakresKcal: null },
   masa: { docelowaKg: 41.755, doRedukcjiKg: 10.84, gornaNormaKg: 41.755, dolnaNormaKg: null, pierwszyCel: null },
 };
 const DANE_DOROSLY_NORMA = {
@@ -52,11 +55,11 @@ describe('Karta „Zapotrzebowanie energetyczne” (wariant A)', () => {
     expect(k.title).toBe('Zapotrzebowanie energetyczne');
     expect(k.badge).toBe('mała aktywność'); // rata R: odznaka slowami, bez PAL
     expect(k.badge).not.toBe('Normy');
-    expect(k.value).toBe('1800 kcal/d');
+    expect(k.value).toBe('1900 kcal/d');
     const wiersze = k.rows.map((r) => `${r.label}: ${r.valueText}`);
     expect(wiersze).toEqual([
       'Dla masy prawidłowej (41,8 kg): 1866 kcal/d',
-      'Plan: dieta lekka: 1800 kcal/d',
+      'Plan: utrzymanie masy ciała: 1900 kcal/d',
       'Białko: ok.\u00A027\u00A0g/d',
       'Węglowodany: 45–65 % energii',
       'Tłuszcze: 30–40 % energii',
@@ -68,6 +71,18 @@ describe('Karta „Zapotrzebowanie energetyczne” (wariant A)', () => {
     expect(k.note).toBe(''); // rata R (decyzja 7): bez noty o wzorze i PAL
     // liczby z masy aktualnej (2412 kcal starej karty) nie mają prawa się pojawić
     expect(JSON.stringify(k)).not.toMatch(/2412|2089/);
+  });
+
+  it('rata G1: redukcja dziecka — „Plan: dieta lekka: ≤ …” (górna granica), stabilizacja — „Plan: utrzymanie masy ciała”', () => {
+    const red = { ...DANE_DZIECKO_OTYLOSC, strategia: 'reduction',
+      energia: { ...DANE_DZIECKO_OTYLOSC.energia, podazKcal: 1754, podazZaokrKcal: 1750, gornaGranica: true, deficytKcal: 126, dietaKlucz: 'light', dietaNazwa: 'lekka' } };
+    const kr = w.patientReportBuildEnergyCardFromData(red, { celEnergiaKcal: 1866.2, celMasaKg: 41.755 });
+    expect(kr.rows.map((r) => `${r.label}: ${r.valueText}`)).toContain('Plan: dieta lekka: \u2264\u202F1750 kcal/d');
+    const ks = w.patientReportBuildEnergyCardFromData(DANE_DZIECKO_OTYLOSC, {});
+    expect(ks.rows.map((r) => `${r.label}: ${r.valueText}`)).toEqual(['Plan: utrzymanie masy ciała: 1900 kcal/d']);
+    // dorosły z tą samą strategią nie istnieje w generatorze — etykieta tylko dla dziecka
+    const dor = w.patientReportBuildEnergyCardFromData({ ...DANE_DZIECKO_OTYLOSC, dorosly: true }, {});
+    expect(dor.rows.map((r) => r.label)).toEqual(['Plan: zalecana kaloryczność']);
   });
 
   it('BMI w normie: wiersz „przy obecnej masie” = utrzymanie z generatora; bez celu i bez planu', () => {

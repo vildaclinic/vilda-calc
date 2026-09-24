@@ -132,7 +132,17 @@ function childGrowthOutlook({ageYears:e,sex:l,heightCm:n}={}){
   if(agd&&agd.finalHeightPrediction&&typeof agd.finalHeightPrediction.cm=="number"&&isFinite(agd.finalHeightPrediction.cm)&&agd.finalHeightPrediction.cm>0)finalCm=agd.finalHeightPrediction.cm;
   else if(agd&&typeof agd.targetHeight=="number"&&isFinite(agd.targetHeight)&&agd.targetHeight>0)finalCm=agd.targetHeight;
   const remaining=finalCm!=null&&f(h0)&&h0>0?finalCm-h0:null,capCm=finalCm!=null&&f(h0)&&finalCm>h0?finalCm:null;
-  return{annualGrowthCm:g,observedGrowth:observed,source,finalHeightCm:finalCm,remainingCm:remaining,capCm,practicallyEnded:age0<k&&(g<1||(remaining!=null&&remaining<=3))};
+  /* P-DIETA rata G1 (decyzja wlasciciela 2026-09-24): ocena zmierzonego tempa z tego samego modelu karty, co czerwony baner
+     tempa (advancedGrowthData.tempo z VildaTempoWzrastania / trajektorii): alarm = ponizej normy dla wieku (poziom „danger”:
+     < 10 lat albo Tanner I od 10 lat), do oceny = „warn”. Przy alarmie wzrastanie NIE jest „praktycznie zakonczone” — dziecko
+     przed skokiem pokwitaniowym z tempem < 1 cm/rok ma zahamowane, a nie zakonczone wzrastanie (Mazur 2022, doi:10.3390/nu14183806:
+     przy otylosci endokrynnej niski wzrost i zmniejszone tempo wzrastania). */
+  const tp=agd&&agd.tempo&&typeof agd.tempo.cmPerYear=="number"&&isFinite(agd.tempo.cmPerYear)?agd.tempo:null,
+    tpAlarm=!!(tp&&tp.alarm===!0),tpWarn=!!(tp&&!tpAlarm&&tp.severity==="warn"),
+    tpNm=tp&&typeof tp.normLabel=="string"?tp.normLabel.match(/\u2265\s*(\d+(?:[.,]\d+)?)\s*cm\/rok/):null,
+    tpNorma=tpNm?Number(tpNm[1].replace(",",".")):(tp&&tp.threshold&&f(Number(tp.threshold.threshold))?Number(tp.threshold.threshold):null);
+  return{annualGrowthCm:g,observedGrowth:observed,source,finalHeightCm:finalCm,remainingCm:remaining,capCm,practicallyEnded:age0<k&&!tpAlarm&&(g<1||(remaining!=null&&remaining<=3)),
+    tempoAlarm:tpAlarm,tempoDoOceny:tpWarn,tempoCmRok:tp?tp.cmPerYear:null,tempoNormaCmRok:tpNorma};
 }
 function energyResolveStrategy({state:st,ageYears:e,growthEnded:ge=!1,stabDisabled:sd=!1,reduceChecked:rc=!1,stabChecked:sc=!1,outlook:ol=null}={}){
   const age=Number(e)||0;
@@ -141,6 +151,10 @@ function energyResolveStrategy({state:st,ageYears:e,growthEnded:ge=!1,stabDisabl
   if(sc&&!sd)return"stabilization";
   if(!st||!st.childObesityPlan)return"reduction";
   if(st.childPlanStage==="age_2_5")return"stabilization";
+  /* P-DIETA rata G1: tempo wzrastania ponizej normy — domyslnie bez deficytu (stabilizacja) do czasu oceny lekarskiej przyczyny;
+     reczny wybor redukcji (rc) i blokada stabilizacji przez prognoze wzrostu (sd, app.js) wygrywaja, zeby przelaczniki,
+     karta planu i generator mowily to samo. */
+  if(ol&&ol.tempoAlarm&&!sd)return"stabilization";
   if(ol&&ol.practicallyEnded)return"reduction";
   if(sd)return"reduction";
   if(st.childPlanStage==="age_6_11"&&!(st.bmiClass&&st.bmiClass.severe))return"stabilization";

@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 12;
+  var WERSJA = 13;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -285,13 +285,24 @@
       + '</section>';
   }
 
+  /* P-DIETA rata G1 (decyzja właściciela 2026-09-24): zmierzone tempo wzrastania dziecka z nadmiarem masy — zdanie z generatora
+     (dane.tempoWzrastania), czerwona ramka przy tempie poniżej normy, bursztynowa przy „do oceny”. Nic tu nie jest liczone. */
+  function ramkaTempa(dane) {
+    var t = dane.tempoWzrastania;
+    if (dane.dorosly || !t || !t.zdanie || (t.ocena !== 'ponizej' && t.ocena !== 'do-oceny')) return '';
+    return '<div class="vrp-tempo vrp-tempo-' + (t.ocena === 'ponizej' ? 'alarm' : 'ocena') + '">' + esc(t.zdanie) + '</div>';
+  }
+
   function sekcjaEnergia(dane, ruch) {
     var e = dane.energia || {};
     var kafle = [];
     /* rata V pkt 1 (decyzja właściciela 2026-09-23): u dziecka z planem otyłości liczba to górna granica dnia
        (generator: gornaGranica, silnik zaokrągla w dół do 50 kcal) — „≤”, nie cel do dobicia. */
+    /* P-DIETA rata G1 (F0, decyzja właściciela 2026-09-24): stabilizacja dziecka = utrzymanie masy — jedna liczba (zapotrzebowanie
+       z generatora, jak w zdaniu „W strategii stabilizacji …”), bez kafli deficytu i tempa redukcji. */
+    var stabilizacja = dane.strategia === 'stabilization';
     if (liczba(e.podazZaokrKcal) != null && e.gornaGranica === true) kafle.push(['\u2264 ' + calk(e.podazZaokrKcal), 'kcal dziennie', 'górna granica dnia, nie cel']);
-    else if (liczba(e.podazZaokrKcal) != null) kafle.push([calk(e.podazZaokrKcal), 'kcal dziennie', 'zalecana kaloryczność diety']);
+    else if (liczba(e.podazZaokrKcal) != null) kafle.push([calk(e.podazZaokrKcal), 'kcal dziennie', stabilizacja ? 'zapotrzebowanie energetyczne' : 'zalecana kaloryczność diety']);
     else if (liczba(e.utrzymanieKcal) != null) kafle.push([calk(e.utrzymanieKcal), 'kcal dziennie', 'zapotrzebowanie energetyczne']);
     /* P-DIETA-PRZYROST rata D: przy strategii „przyrost" kafle nadwyżki, podaży i tempa przyrostu — zakresy z generatora, nic tu nie jest liczone. */
     var zakres = function (v) { return Array.isArray(v) && v.length === 2 && liczba(v[0]) != null && liczba(v[1]) != null ? v : null; };
@@ -302,8 +313,8 @@
       if (pod) kafle.push([calk(pod[0]) + '–' + calk(pod[1]), 'kcal dziennie', 'zalecana podaż energii']);
       if (tem) kafle.push(['+' + fmt(tem[0], 1) + '–' + fmt(tem[1], 1), 'kg tygodniowo', 'spodziewane tempo przyrostu']);
     }
-    if (liczba(e.deficytKcal) != null && e.deficytKcal > 0) kafle.push(['\u2212' + calk(e.deficytKcal), 'kcal na dobę', 'deficyt energetyczny']);
-    if (liczba(e.tempoKgTydz) != null && e.tempoKgTydz > 0) kafle.push(['\u2212' + fmt(e.tempoKgTydz, 1), 'kg tygodniowo', 'spodziewane tempo redukcji']);
+    if (!stabilizacja && liczba(e.deficytKcal) != null && e.deficytKcal > 0) kafle.push(['\u2212' + calk(e.deficytKcal), 'kcal na dobę', 'deficyt energetyczny']);
+    if (!stabilizacja && liczba(e.tempoKgTydz) != null && e.tempoKgTydz > 0) kafle.push(['\u2212' + fmt(e.tempoKgTydz, 1), 'kg tygodniowo', 'spodziewane tempo redukcji']);
     if (!kafle.length) return '';
 
     /* rata M (decyzja właściciela 2026-09-22): bez zdania „Wyliczone dla diety … PAL … Zmiana aktywności
@@ -343,12 +354,13 @@
     }
 
     // P-DIETA-CEL-WLASNY rata C: nagłówek sekcji wg strategii generatora — bez „redukcji” przy utrzymaniu.
-    var naglowek = dane.strategia === 'utrzymanie' ? 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)'
+    var naglowek = dane.strategia === 'utrzymanie' || stabilizacja ? 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)'
       : dane.strategia === 'przyrost' ? 'ZAPOTRZEBOWANIE ENERGETYCZNE I PRZYROST MASY CIAŁA'
       : dane.strategia === 'cel-wlasny' ? 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI DO CELU WŁASNEGO'
       : 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
     return '<section class="vrp-blok">'
       + '<div class="vrp-nag-blok"><span>' + esc(naglowek) + '</span></div>'
+      + ramkaTempa(dane)
       + '<div class="vrp-kafle' + (kafle.length === 4 ? ' vrp-kafle-4' : '') + '">' + kafle.map(function (k) {
           return '<div class="vrp-kafel"><b>' + esc(twarde(k[0])) + '</b><span>' + esc(k[1]) + '</span><i>' + esc(k[2]) + '</i></div>';
         }).join('') + '</div>'
@@ -377,6 +389,8 @@
           return '<div class="vrp-kafel"><b>' + esc(twarde(x[0])) + '</b><span>' + esc(x[1]) + '</span><i>' + esc(x[2]) + '</i></div>';
         }).join('') + '</div>'
       + '<div class="vrp-podkafle">Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci. Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.</div>'
+      /* P-DIETA rata G1 (A): u rosnącego dziecka na kontroli mierzony jest też wzrost (flaga z generatora) */
+      + (!dane.dorosly && k.pomiarWzrostu === true ? '<div class="vrp-podkafle vrp-podkafle-wzrost">Na kontroli mierzymy też wzrost dziecka — dobrze prowadzona dieta nie spowalnia wzrastania.</div>' : '')
       + '</section>';
   }
 
@@ -557,7 +571,7 @@
   function css() {
     var K = {
       teal: '#00838d', teal2: '#00636b', ciemny: '#12262b', mut: '#5f7276',
-      linia: '#d8e7e8', tlo: '#f6fafa', ziel: '#1e6f43', bursz: '#b5731a', lacznik: '#9db9bb'
+      linia: '#d8e7e8', tlo: '#f6fafa', ziel: '#1e6f43', bursz: '#b5731a', lacznik: '#9db9bb', czerw: '#c62828'
     };
     var u = function (n) { return 'calc(' + n + 'px * var(--s))'; };
     var ug = function (n) { return 'calc(' + n + 'px * var(--sg))'; }; /* nagłówek: skala ograniczona */
@@ -620,6 +634,9 @@
       '.vrp-kafel span{display:block;font-size:' + u(15) + ';font-weight:700;}',
       '.vrp-kafel i{display:block;font-style:normal;font-size:' + u(13) + ';color:' + K.mut + ';}',
       '.vrp-podkafle{margin-top:' + u(8) + ';font-size:' + u(14) + ';color:' + K.mut + ';text-align:center;}',
+      /* rata G1: ramka tempa wzrastania — czerwona (poniżej normy) / bursztynowa (do oceny) */
+      '.vrp-tempo{margin:0 0 ' + u(10) + ';padding:' + u(8) + ' ' + u(12) + ';border-left:' + u(5) + ' solid ' + K.czerw + ';border-radius:' + u(8) + ';background:#fdecea;font-size:' + u(14.5) + ';line-height:1.4;color:' + K.ciemny + ';}',
+      '.vrp-tempo-ocena{border-left-color:' + K.bursz + ';background:#fdf3e6;}',
       '.vrp-ruchdek{margin-top:' + u(10) + ';border:1px solid ' + K.linia + ';border-radius:' + u(12) + ';background:' + K.tlo + ';padding:' + u(9) + ' ' + u(12) + ';font-size:' + u(14.5) + ';line-height:1.4;}',
       '.vrp-ruchdek b{color:' + K.teal2 + ';}',
       /* rata N: sama tabela norm nie rozciaga sie na cala szerokosc — 64 % strony, wysrodkowana (decyzja wlasciciela 2026-09-22) */
