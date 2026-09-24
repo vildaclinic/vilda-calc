@@ -105,6 +105,23 @@ Zmiana synchronizacji wymaga sprawdzenia co najmniej:
 
 Wersjonowane adresy zasobów są elementem migracji cache. Przy zmianie zasobu trzeba sprawdzić jego `?v=`, `SW_VERSION`, wszystkie odwołania w precache oraz zachowanie aktualizacji istniejącej instalacji. Usunięcie historycznego adresu może zepsuć aktualizację użytkownikowi, który przechodzi ze starszej wersji.
 
+**Strategia cache (P-SW rata 1, decyzja właściciela 2026-09-24).**
+
+| Żądanie | Strategia |
+|---|---|
+| Dokument HTML | z pamięci + odświeżenie w tle |
+| Zasób bez `?v=` | z pamięci + odświeżenie w tle |
+| Zasób z `?v=` (powłoka i runtime) | **niezmienny**: z pamięci bez odświeżania; przy braku — raz z sieci |
+
+Hosting (GitHub Pages) ignoruje `?v=` i oddaje bieżący plik. Dawniej odświeżenie w tle zapisywało więc pod starym kluczem treść nowego wydania, a strona ze starego HTML-a ładowała mieszankę wersji modułów. Przykład z raty H1: nowy silnik diety bez nowego pliku danych, co dawało REE `null` i fałszywy komunikat kliniczny. Teraz stary HTML dostaje stare, spójne klucze, a nowy HTML — nowe. **Każda zmiana treści pliku wymaga podbicia `?v=`**; pilnuje tego `tests/unit/wersje-zasobow.test.mjs` (stan: `tests/fixtures/wersje-zasobow.json`, odświeżanie: `node tests/scripts/wersje-zasobow.mjs --zapisz`).
+
+Czego to nie zamyka:
+- klienci z SW ≤ 1.1.65 zachowują stare zachowanie aż do aktywacji nowego SW;
+- instalacja pobiera historyczne adresy z bieżącą treścią serwera;
+- chybienie na starym kluczu pobiera bieżący plik.
+
+Pełne domknięcie wymagałoby plików z hashem w nazwie albo katalogów per wydanie, co jest osobną decyzją o modelu wdrożenia. Dlatego silnik diety trzyma `henryPrzejsciowo()` co najmniej 3 miesiące po wydaniu SW 1.1.66.
+
 ## Testy i CI
 
 `package.json` nie jest częścią runtime aplikacji. Definiuje narzędzia jakości:

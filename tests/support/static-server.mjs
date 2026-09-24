@@ -24,8 +24,16 @@ const contentTypes = new Map([
 
 const serviceWorkerPath = path.join(root, 'service-worker-kalorii.js');
 
-function createE2eServiceWorker(source) {
-  return source
+// P-SW rata 1: e2e strategii cache potrzebuje zasobu, którego treść zmienia się przy każdym pobraniu
+// z serwera („licznik N” per pełny adres), oraz wersji SW podanej w adresie (przejście N → N+1).
+// `/__test-zmienny.js` jest w ścieżkach powłoki testowego SW, `/__test-zmienny-runtime.js` — nie.
+const licznikiZmiennych = new Map();
+
+function createE2eServiceWorker(source, wersja) {
+  const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
+    ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)
+    : source;
+  return zWersja
     .replace(
       /const CORE_SHELL_URLS = \[[\s\S]*?\n\];/,
       "const CORE_SHELL_URLS = [ROOT_DOCUMENT, '/manifest.json', '/style.css'];"
@@ -36,7 +44,7 @@ function createE2eServiceWorker(source) {
     )
     .replace(
       /const OPTIONAL_ASSETS = \[[\s\S]*?\n\];/,
-      'const OPTIONAL_ASSETS = [];'
+      "const OPTIONAL_ASSETS = ['/__test-zmienny.js?v=0'];"
     );
 }
 
@@ -50,7 +58,22 @@ function resolveRequestPath(requestUrl) {
 }
 
 const server = http.createServer((request, response) => {
-  const pathname = decodeURIComponent(new URL(request.url || '/', `http://${host}`).pathname);
+  const requestUrl = new URL(request.url || '/', `http://${host}`);
+  const pathname = decodeURIComponent(requestUrl.pathname);
+  if (pathname === '/__test-zmienny.js' || pathname === '/__test-zmienny-runtime.js') {
+    const klucz = `${pathname}${requestUrl.search}`;
+    const n = (licznikiZmiennych.get(klucz) || 0) + 1;
+    licznikiZmiennych.set(klucz, n);
+    response.writeHead(200, { 'Cache-Control': 'no-cache', 'Content-Type': 'text/javascript; charset=utf-8' });
+    response.end(`// licznik ${n}\n`);
+    return;
+  }
+  if (pathname === '/__test-licznik') {
+    const klucz = requestUrl.searchParams.get('u') || '';
+    response.writeHead(200, { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ n: licznikiZmiennych.get(klucz) || 0 }));
+    return;
+  }
   if (pathname === '/__test-service-worker-kalorii.js') {
     fs.readFile(serviceWorkerPath, 'utf8', (readError, source) => {
       if (readError) {
@@ -64,7 +87,7 @@ const server = http.createServer((request, response) => {
         'Content-Type': 'text/javascript; charset=utf-8',
         'Service-Worker-Allowed': '/'
       });
-      response.end(createE2eServiceWorker(source));
+      response.end(createE2eServiceWorker(source, requestUrl.searchParams.get('wersja')));
     });
     return;
   }
