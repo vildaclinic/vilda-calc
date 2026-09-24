@@ -5778,6 +5778,55 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Domyślny PAL u dziecka 4–9 lat z otyłością zostaje 1,6 — uzasadnienie (P-PAL rata 2, SW 1.1.69, 2026-09-24)
+
+**Zgłoszenie (odłożona decyzja z P-PAL rata 1).** Po racie 1 baza planu dziecka 4–9 lat z otyłością wzrosła o ok. 27 %:
+dawniej PAL 1,4 i REE × 0,9, od raty 1 PAL 1,6 i REE Henry’ego bez korekty (1,6 / (1,4 × 0,9) ≈ 1,27). Pytanie: czy przy
+otyłości w tym wieku obniżać domyślny PAL do 1,4, jak u nastolatków 10–18 lat i dorosłych.
+
+**Piśmiennictwo (PubMed).**
+- Kim 2022, Clin Exp Pediatr, PMID 36265521, [doi:10.3345/cep.2022.00472](https://doi.org/10.3345/cep.2022.00472) (pełny
+  tekst): przegląd 63 badań z podwójnie znakowaną wodą (4283 dzieci 1–18 lat, w tym 413 z nadwagą lub otyłością). PAL i
+  energia aktywności nie różnią się między dziećmi z otyłością i z masą prawidłową; z krzywych pracy PAL ok. 1,55 vs 1,59 w
+  wieku 6 lat i 1,63 vs 1,62 w wieku 9 lat. Całkowity wydatek (kcal) wyższy przy otyłości.
+- Davidsson 2016, Int J Environ Res Public Health, PMID 27754397,
+  [doi:10.3390/ijerph13101007](https://doi.org/10.3390/ijerph13101007) (pełny tekst): 35 dzieci 7–9 lat z otyłością, PAL
+  liczony tak jak w aplikacji — TEE z DLW / REE ze wzoru (Schofield): chłopcy 1,61 ± 0,17, dziewczęta 1,51; TEE 2395 i
+  1978 kcal/d.
+- Treuth 1998, PMID 9622341, [doi:10.1038/sj.ijo.0800605](https://doi.org/10.1038/sj.ijo.0800605) (abstrakt): dziewczęta
+  7–10 lat z nadwagą — wydatek wyższy, różnica znika po uwzględnieniu beztłuszczowej masy ciała; PAL bez różnicy.
+- Chima 2020, PMID 32073189, [doi:10.1111/jhn.12735](https://doi.org/10.1111/jhn.12735) (abstrakt): u dzieci 3–10 lat z
+  nadwagą/otyłością równanie Schofielda średnio +1,1 %, ale mało precyzyjne indywidualnie; błędu Henry’ego dla 4–9 lat nie
+  potwierdzono.
+- Mazur 2022, [doi:10.3390/nu14183806](https://doi.org/10.3390/nu14183806) (pełny tekst): u młodszych dzieci z otyłością
+  celem jest stabilizacja masy; energię diety liczy się względem masy należnej do wzrostu z deficytem 200–500 kcal, nie
+  poniżej 1000 kcal/d. Brak obniżenia PAL z powodu otyłości.
+
+**Sonda (prawdziwy silnik, dane fikcyjne; PAL 1,6 → gdyby 1,4).**
+
+| dziecko | PAL 1,6 (bez zmian) | PAL 1,4 (odrzucone) |
+|---|---|---|
+| dz. 4 l., 104 cm, 21 kg (97 c) | utrzymanie 1442 kcal | 1262 kcal |
+| dz. 7 l., 124 cm, 34 kg (98 c) | stabilizacja 1840; dieta lekka ≤ 1700 kcal | 1610; ≤ 1450 kcal |
+| dz. 8 l., 130 cm, 45 kg (> 99 c) | lekka / umiarkowana / intensywna ≤ 2000 / 1850 / 1750 kcal | ≤ 1700 / 1600 / 1450 kcal |
+| chł. 9 l., 136 cm, 48 kg (98 c) | stabilizacja 2331 kcal (zmierzone u Davidssona: 2395) | 2039 kcal |
+
+**Decyzja właściciela (2026-09-24): PAL 1,6 zostaje.** Uzasadnienie:
+1. Zmierzony PAL dzieci 4–9 lat z otyłością (1,5–1,6, także wobec REE ze wzoru) odpowiada wartości 1,6; 1,4 byłoby
+   poniżej pomiarów (−12,5 % energii).
+2. Stabilizacja masy = jedzenie na poziomie wydatku przy masie aktualnej; do tego służy TEE z PAL 1,6.
+3. Deficyt redukcji jest jawny w diecie (masa docelowa, deficyt Mazura, sufit tempa 0,5 kg/mies. u 6–11 lat), a nie ukryty
+   w PAL — jedna obniżka, widoczna dla lekarza.
+4. PAL 1,4 („mała aktywność”) zostaje do wyboru lekarza dla dziecka rzeczywiście mało aktywnego.
+
+**Zmiana.** Brak zmiany wyników. `vilda_diet_plan_ui.js` (`?v=32`): tylko komentarz przy `ENERGY_PAL_DOMYSLNY` — dawne
+uzasadnienie powoływało się na badanie chłopców 9–12 lat z nadwagą (Park 2017), teraz Kim 2022 i Davidsson 2016 oraz ta
+decyzja. Testy przypinające zachowanie już istnieją: `tests/unit/energy-dziecko-otylosc.test.mjs` (tabela jako dane, bez
+wiersza `otylosc.child_4_9`) i e2e `pal-jedna-tabela` PAL-4 (8-latek z otyłością zostaje przy 1,6 w planie, karcie norm i
+raporcie).
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Obniżenie pozycji wzrostu na siatce: baza flagi od 36 mies. i fakt w „Raporcie po wizycie” (P-RAPORT rata T3, SW 1.1.68, 2026-09-24)
 
 **Zgłoszenie (odłożone z raty T2).** Flaga pozycyjna wzrostu w dół (GROWTH-TRAJ, PR #64: ΔhSDS ≤ −1,0 od pierwszego pomiaru
