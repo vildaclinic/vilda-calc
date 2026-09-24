@@ -2,8 +2,8 @@
    P-DIETA rata V (decyzja właściciela 2026-09-23): u dziecka 10–18 lat z OTYŁOŚCIĄ (BMI ≥ 97. centyla)
    REE liczy się równaniem Molnára 1995 z podziałem na płeć (1A chłopcy, 1B dziewczęta) zamiast
    Henry'ego/Oxford × 0,9. Przy nadwadze i poniżej 10 lat zostaje Henry 2005 bez korekty.
-   P-DIETA rata H1 (2026-09-24): współczynniki Henry'ego 2005 też są tutaj (HENRY_2005.wspolczynnikiWgEtapu);
-   silnik (energyHenryREEkcal) nie ma już własnej kopii — bez tego pliku nie liczy REE wcale.
+   P-DIETA rata H1 (2026-09-24): współczynniki Henry'ego 2005 też są tutaj (HENRY_2005.wspolczynnikiWgEtapu) i silnik
+   (energyHenryREEkcal) liczy z nich; jego kopia przejściowa działa tylko wtedy, gdy tego pliku (albo tej tabeli) brak.
    Reguła „normy zawsze jako dane” (docs/ARCHITECTURE.md, „Kierunek: wielopopulacyjność”): współczynniki,
    populacja, zakres wieku, wskazanie i cytowanie mieszkają tutaj; silnik (vilda_diet_plan_ui.js,
    energyReeZRownania) jest bezpaństwowy, przyjmuje identyfikator źródła i oddaje jego nazwę w wyniku.
@@ -49,15 +49,17 @@
       jednostka: 'kcal/24 h',
       zmienne: { masa: 'kg', wzrost: 'm' },
       wskazanie: 'domyslne',
-      weryfikacja: 'Normy żywienia dla populacji Polski (NIZP PZH–PIB, 2024), rozdział „Energia”, tabele 1–2 (kolumny kcal i MJ), oraz Henry 2005, tabela 15 — zgodne (ENERGY-PLAN etap 1, 2026-08-13; rata V, 2026-09-23).',
-      ograniczenia: 'Równania masa + wzrost w postaci kcal/24 h (wzrost w metrach). Chłopcy 3–10 lat liczeni z postaci MJ/24 h × 239 (przypis Norm 2024: wzór kcal dla tej grupy jest w normach błędny). Chłopcy 10–18 lat: wzrost × 266 jak u Henry’ego 2005 i w kolumnie MJ norm — NIE 226 z kolumny kcal Norm 2024 (literówka). Równanie 60–70 lat stosowane też powyżej 70 lat, jak w normach (jedna strefa „≥ 60”). Poniżej 1. roku życia silnik nie używa Henry’ego.',
+      weryfikacja: 'P-DIETA rata H1 (2026-09-24): 14/14 wierszy zgodnych z Henry 2005, tab. 15 („Oxford prediction equations for BMR using height and weight”, s. 1146) — dwa niezależne odczyty (tekst i obraz strony). Normy żywienia dla populacji Polski (NIZP PZH–PIB, 2024), rozdział „Energia”, tab. 1–2: 12/14 wierszy równych kolumnie kcal, dwa celowe wyjątki opisane w polu ograniczenia.',
+      ograniczenia: 'Henry podaje równania BMR (podstawowa przemiana materii); aplikacja używa ich jako REE. Równania z masą i wzrostem, w kcal/24 h (wzrost w metrach). Chłopcy 3–10 lat: liczymy z postaci MJ/24 h × 239, bo kolumna kcal tab. 15 Henry’ego (a za nią Norm 2024) ma 74,2·H, co jest niespójne z postacią MJ (1,31 MJ/m ≈ 313 kcal/m) i ze średnimi z tab. 16–17; Normy 2024 opisują to w przypisie. Chłopcy 10–18 lat: wzrost × 266, jak w kolumnie kcal Henry’ego 2005 (kolumna MJ × 239 ≈ 265) — NIE 226 z kolumny kcal Norm 2024 (najprawdopodobniej literówka). Od 60 lat: jedno równanie masa + wzrost dla całej grupy (Henry tab. 15 „60 +”, Normy tab. 2 „≥ 60”); podział 60–70 / 70+ istnieje u Henry’ego tylko dla równań z samą masą (tab. 14) i nie jest używany. Granice przedziałów silnik przyjmuje jako [od, do): 18 lat liczy równaniem 18–30. Równanie 0–3 lata stosowane od 1. roku życia; niemowlęta bez Henry’ego. Uwaga w polu populacja o dzieciach z otyłością to wniosek z Hofsteenge 2010 i Molnára 1995, nie cytat z Henry’ego.',
       /* Liniowe równanie z wiekiem (energyReeZRownania) nie dotyczy Henry’ego — jego współczynniki są po etapie wieku niżej. */
       wspolczynniki: null,
       /* P-DIETA rata H1 (polecenie właściciela 2026-09-24): współczynniki przeniesione BEZ ZMIANY z silnika
          (energyHenryREEkcal w vilda_diet_plan_ui.js). Klucz = etap z energyResolveEquationStage; silnik liczy
          (masaKg × masa + wzrostM × wzrost_m + stala) × mnoznikKcal (mnożnik tylko tam, gdzie jest).
-         Dwa wiersze wyglądają na „do poprawy”, a NIE są (docs/clinical/ALGORITHMS.md, ENERGY-PLAN etap 1):
-         child_3_9 M liczony z MJ × 239 (błędny wzór kcal w Normach 2024), child_10_17 M wzrostM 266, nie 226. */
+         Dwa wiersze wyglądają na „do poprawy”, a NIE są (docs/clinical/ALGORITHMS.md, ENERGY-PLAN etap 1 i rata H1):
+         child_3_9 M liczony z MJ × 239 (kolumna kcal u Henry’ego i w Normach 2024 ma błędne 74,2·H),
+         child_10_17 M wzrostM 266 jak u Henry’ego, nie 226 z Norm 2024. Silnik ma do czasu zmiany strategii service workera
+         zapieczętowaną kopię przejściową tej tabeli (henryPrzejsciowo), używaną tylko, gdy rejestru brak — test pilnuje równości. */
       wspolczynnikiWgEtapu: {
         child_1_2: {
           przedzialLat: '0–3',

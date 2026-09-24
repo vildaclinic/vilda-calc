@@ -13,8 +13,8 @@ export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 export const zrodlo = (f) => fs.readFileSync(path.join(korzen, f), 'utf8');
 export const appSrc = zrodlo('app.js');
 
-// P-DIETA rata V i H1: równania REE (Molnár 1995, Henry 2005) jako dane — strony ładują je przed
-// vilda_diet_plan_ui.js, więc okno testów też; bez nich silnik diety nie liczy REE wcale.
+// P-DIETA rata V: równania REE (Molnár 1995) jako dane — strony ładują je przed vilda_diet_plan_ui.js,
+// więc okno testów też; bez nich silnik diety cicho wróciłby do Henry'ego u nastolatka z otyłością.
 const PLIKI_SILNIKA = ['vilda_growth_reference_data.js', 'centile_data.js', 'vilda_centile_interpolation.js', 'ds_lms.js', 'vilda_bmi.js', 'vilda_ree_rownania_data.js'];
 
 /** Wycina zbalansowany blok { … } zaczynający się od pierwszego „{" za pozycją `od`. */
