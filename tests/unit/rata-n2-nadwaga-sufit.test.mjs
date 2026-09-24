@@ -80,10 +80,10 @@ describe('rata N2: sufit tempa przy samej nadwadze 12–18 lat', () => {
     const umiark = win.energyDietBulletsExtra('moderate', st).join(' ');
     const intens = win.energyDietBulletsExtra('intense', st).join(' ');
     expect(umiark).toContain('przy nadwadze');
-    expect(umiark).toMatch(/1 kg\/mies\./);
+    expect(umiark).toMatch(/1\u202Fkg\/mies\./);
     expect(umiark).not.toContain('z otyłością');
     expect(intens).toContain('górna granica tempa przy nadwadze');
-    expect(intens).toMatch(/1,5 kg\/mies\./);
+    expect(intens).toMatch(/1,5\u202Fkg\/mies\./);
     const ob = win.energyBuildPlanReductionState({ sex: 'M', ageYears: 15, ageMonthsOpt: 0, heightCm: 175, weightKg: 95, palInput: null });
     expect(win.energyDietBulletsExtra('moderate', ob).join(' ')).toContain('dieta domyślna u nastolatka 12–18 lat z otyłością');
   });

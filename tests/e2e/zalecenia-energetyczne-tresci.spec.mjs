@@ -76,7 +76,8 @@ test('3-latka z otyłością: aktywność ≥ 180 min rozłożona w ciągu dnia 
 test('14-latek z nadwagą (bez otyłości): witamina D 1000–2000 IU bez podwojenia, UL 4000, płyny 2,35 l, kcal sesji netto 300, trener od 12 lat, BMI z centylem 1 miejsce po przecinku', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
-  const r = await run(page, { age: 14, sex: 'M', w: 75, h: 165 });
+  // rata N2: sama nadwaga 12–18 lat ma domyślnie stabilizację — treści planu redukcji sprawdzamy przy wybranej redukcji
+  const r = await run(page, { age: 14, sex: 'M', w: 75, h: 165, click: 'reduction' });
   expect(r.cls.overweight).toBe(true);
   expect(r.cls.obese).toBe(false);
   expect(r.pct).toBeGreaterThan(95);

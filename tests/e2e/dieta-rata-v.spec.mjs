@@ -22,6 +22,8 @@ async function stan(page, c) {
     set('name', 'Testowy Fikcyjny'); set('sex', c.sex); set('age', c.y); set('ageMonths', c.m || 0); set('weight', c.w); set('height', c.h); set('customGoalKg', '');
     if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
     const jf = document.getElementById('journeyFlag'); if (jf && !jf.checked) { jf.checked = true; jf.dispatchEvent(new Event('change', { bubbles: true })); }
+    // P-DIETA rata N2: sama nadwaga 12–18 lat ma domyślnie stabilizację — test diety redukcyjnej wybiera redukcję jawnie
+    if (c.redukcja) { window.__vildaDietStrategyTouched = true; const rt = document.getElementById('reduceToggle'); if (rt) rt.checked = true; const sb = document.getElementById('stabilizationToggle'); if (sb) sb.checked = false; }
     window.update();
     await new Promise((r) => { setTimeout(r, 700); });
     const br = window.buildDietEnergyRecommendationResult();
@@ -98,7 +100,8 @@ test.describe('P-DIETA rata V — REE Molnára, górna granica dnia, kontrola za
   test('RV-3: nadwaga 13 l (Henry, bez korekty) — górna granica i kontrola też są; dorosły — od raty Z także', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
-    const n = await stan(page, { sex: 'M', y: 13, m: 0, w: 60, h: 155 });
+    // rata N2: nadwaga 12–18 lat — domyślnie stabilizacja; górną granicę i kontrolę sprawdzamy na wybranej redukcji
+    const n = await stan(page, { sex: 'M', y: 13, m: 0, w: 60, h: 155, redukcja: true });
     expect(n.energia.ree).toBe('HENRY_2005');
     expect(n.energia.gorna).toBe(true);
     expect(n.energia.podaz % 50).toBe(0);
