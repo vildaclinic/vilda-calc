@@ -5850,8 +5850,9 @@ zawiera żadnego współczynnika ani metadanych Henry’ego; wersje `?v=` plikó
 „bez pliku danych” (dawniej: zostaje Henry; teraz: ani Molnár, ani Henry). Pomocnik `loadBrowserScript` dokłada plik danych
 jako twardą zależność `vilda_diet_plan_ui.js`.
 
-**Wpływ kliniczny: brak** (refaktoryzacja z dowodem bit w bit). Decyzja właściciela na przyszłość: przy wyborze populacji
-odniesienia kolejne zestawy równań REE dochodzą jako nowe wpisy rejestru, a silnik przyjmuje `zrodlo`.
+**Wpływ kliniczny: brak** (refaktoryzacja z dowodem bit w bit). Zgodnie z kierunkiem z `docs/ARCHITECTURE.md` kolejne
+zestawy równań REE (np. dla innej populacji odniesienia) mogą dojść jako nowe wpisy rejestru; silnik przyjmuje już `zrodlo`.
+Wybór źródła w interfejsie to osobna decyzja właściciela.
 
 ## Próg −5 % masy („lepsze wyniki badań”) w drabince celów dorosłego (P-DIETA rata Z2, SW 1.1.64, 2026-09-24)
 
