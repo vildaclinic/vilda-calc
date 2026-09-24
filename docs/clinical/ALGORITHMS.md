@@ -5778,6 +5778,81 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Współczynniki Henry’ego 2005 jako dane, bez zmiany wyników (P-DIETA rata H1, SW 1.1.65, 2026-09-24)
+
+**Polecenie właściciela (2026-09-24).** Przenieść współczynniki równań Henry’ego z silnika do pliku danych — domknięcie
+reguły „normy zawsze jako dane” (`docs/ARCHITECTURE.md`, „Kierunek: wielopopulacyjność”) po racie V, która przeniosła tam
+tylko Molnára. **Refaktoryzacja: żaden wynik, próg, zaokrąglenie ani tekst się nie zmienia.**
+
+**Stan przed zmianą.** `energyHenryREEkcal` (`me` w `vilda_diet_plan_ui.js`) miał 14 równań wpisanych w `switch` po etapie
+wieku. Rejestr `VildaReeRownania.zrodla.HENRY_2005` miał tylko nazwę, cytowanie i DOI (`wspolczynniki: null`), a
+`energyBuildPlanReductionState` miał zapasową kopię tych metadanych na wypadek braku pliku danych.
+
+**Zmiana.**
+- `vilda_ree_rownania_data.js` (wersja 1.1.0): `HENRY_2005.wspolczynnikiWgEtapu` — klucz to etap z
+  `energyResolveEquationStage` (`child_1_2`, `child_3_9`, `child_10_17`, `child_18`, `adult_19_29`, `adult_30_59`,
+  `adult_60_plus`), w każdym `M` i `F` z polami `masaKg`, `wzrostM` (wzrost w metrach), `stala`. Wiersz chłopców 3–10 lat
+  ma `jednostka: 'MJ/24 h'` i `mnoznikKcal: 239`. Doszły pola `jednostka: 'kcal/24 h'`, `zmienne`, `weryfikacja`,
+  `ograniczenia`. Cały rejestr (także Molnár) jest zamrożony w głąb. `wspolczynniki` Henry’ego zostaje `null`, więc
+  `energyReeZRownania('HENRY_2005', …)` nadal zwraca `null`, jak dotąd.
+- Silnik: `me({stage, sex, weightKg, heightCm, zrodlo})` czyta wiersz z rejestru (źródło argumentem, domyślnie `HENRY_2005`)
+  i liczy **w tej samej kolejności działań** co dotąd: `(masaKg·masa + wzrostM·wzrost_m) + stala`, a przy `mnoznikKcal`
+  całość × mnożnik. Płeć jak dotąd: wszystko poza „M” liczy się jak kobieta. Bez pliku danych, bez etapu w danych albo przy
+  złej masie/wzroście → `null`; silnik nie ma już żadnej kopii liczb ani metadanych Henry’ego (`reeRownanie` bez danych = `null`).
+
+**Tabela (kcal/24 h; masa w kg, wzrost w m).**
+
+| Etap silnika | Przedział Henry’ego | Mężczyźni / chłopcy | Kobiety / dziewczęta |
+|---|---|---|---|
+| `child_1_2` | 0–3 | 28,2·W + 859·H − 371 | 30,4·W + 703·H − 287 |
+| `child_3_9` | 3–10 | (0,0632·W + 1,31·H + 1,28) MJ × 239 | 15,9·W + 210·H + 349 |
+| `child_10_17` | 10–18 | 15,6·W + 266·H + 299 | 9,4·W + 249·H + 462 |
+| `child_18`, `adult_19_29` | 18–30 | 14,4·W + 313·H + 113 | 10,4·W + 615·H − 282 |
+| `adult_30_59` | 30–60 | 11,4·W + 541·H − 137 | 8,18·W + 502·H − 11,6 |
+| `adult_60_plus` | ≥ 60 | 11,4·W + 541·H − 256 | 8,52·W + 421·H + 10,7 |
+
+**Źródło i wersja.** Henry CJK. *Basal metabolic rate studies in humans: measurement and development of new equations.*
+Public Health Nutr 2005;8(7A):1133–52. [doi:10.1079/phn2005801](https://doi.org/10.1079/phn2005801) (PMID 16277825;
+dane bibliograficzne z PubMed). Liczby przeniesiono bez zmiany; ich zgodność z Normami żywienia 2024 (NIZP PZH–PIB,
+rozdział „Energia”, tabele 1–2, kolumny kcal i MJ) i z tabelą 15 Henry’ego sprawdzono wcześniej (ENERGY-PLAN etap 1,
+2026-08-13; rata V, 2026-09-23). W tej racie nie weryfikowano ich ponownie ze źródłem. Dwa wiersze celowo odbiegają od kolumny
+kcal norm i **nie wolno ich „poprawiać”**: chłopcy 3–10 lat liczeni z postaci MJ × 239 (przypis norm o błędnym wzorze kcal),
+chłopcy 10–18 lat ze współczynnikiem wzrostu 266 (Henry 2005 i kolumna MJ norm), a nie 226 (literówka w kolumnie kcal norm).
+Opisy obu wyjątków są też w polach `ograniczenia` i w komentarzu pliku danych.
+
+**Populacja i ograniczenia.** Bez zmian względem dotychczasowego stanu: baza Oxford, w której praktycznie nie ma dzieci z
+otyłością; u dzieci 10–18 lat z otyłością REE liczy Molnár 1995 (rata V). Równanie 60–70 lat obejmuje też osoby > 70 lat.
+Niemowlęta (< 1 roku) — bez Henry’ego (Butte / brak liczb).
+
+**Dowód „bez zmiany wyników”.** Stary silnik (origin/audyt `ebc63bb9`) i nowy (dane) porównane bit w bit (`Object.is`) na
+18 889 240 wejściach. Siatka: 7 etapów × 2 płcie × masa 0,5–300 kg co 0,1 × wzrost 30–230 cm co 0,5; do tego 2 mln losowych
+wartości z pełną precyzją i wejścia brzegowe (0, ujemne, NaN, ±∞, napisy, `null`, nieznane etapy, w tym `__proto__` i
+`constructor`, płeć spoza M/F). Porównano też 12 192 wywołania `BMR()` i `energyBuildContext()` (cały obiekt) dla wieku
+0–95 lat. **Różnic: 0.** Wywołanie bez argumentu rzuca `TypeError` w obu wersjach.
+
+**Zmiana zachowania tylko bez pliku danych.** Dotąd silnik bez `vilda_ree_rownania_data.js` liczył Henry’ego z własnej kopii.
+Teraz zwraca `null` (brak REE i planu), zamiast wymyślać równanie. Wszystkie trzy strony z silnikiem diety (`index.html`,
+`docpro.html`, `kalkulator-klirens.html`) ładują plik danych przed silnikiem, a service worker ma go w precache — pilnują
+tego strażnicy raty V i H1. Wersje obu plików podniesiono razem (dane `?v=2`, silnik `?v=30`), więc nowy silnik nigdy nie
+dostanie z pamięci podręcznej starego pliku danych.
+
+Syntetyczne przypadki `wejście → oczekiwany wynik` (fikcyjne, wartości silnika sprzed zmiany, test sprawdza `toBe`):
+- chłopiec, etap `child_3_9`, 24,6 kg / 124,8 cm → 1 068,2344 kcal (`BMR` → 1 068);
+- kobieta, `adult_19_29`, 64,4 kg / 168,2 cm → 1 422,19 kcal (`BMR`, 25 lat → 1 422);
+- kobieta, `adult_30_59`, 88,7 kg / 171,3 cm → 1 573,8920000000003 kcal (to samo w `energyBuildContext().energy.reeKcal`);
+- mężczyzna, `adult_60_plus`, 79,1 kg / 162,6 cm → 1 525,406 kcal;
+- komplet 14 wierszy (7 etapów × 2 płcie) w `tests/unit/rata-h1-henry-dane.test.mjs`.
+
+**Walidacja.** `tests/unit/rata-h1-henry-dane.test.mjs`: rejestr i pełna tabela, złote wartości na prawdziwym
+`energyHenryREEkcal`, `BMR` i `energyBuildContext`, wejścia brzegowe, pokrycie etapów dla wieku 1–100 lat, bezpaństwowość
+(źródło argumentem, liczby tylko z rejestru), brak danych → `null`, zamrożenie. Strażnik: kod silnika bez komentarzy nie
+zawiera żadnego współczynnika ani metadanych Henry’ego; wersje `?v=` plików na stronach są w precache. Przepisany test raty V
+„bez pliku danych” (dawniej: zostaje Henry; teraz: ani Molnár, ani Henry). Pomocnik `loadBrowserScript` dokłada plik danych
+jako twardą zależność `vilda_diet_plan_ui.js`.
+
+**Wpływ kliniczny: brak** (refaktoryzacja z dowodem bit w bit). Decyzja właściciela na przyszłość: przy wyborze populacji
+odniesienia kolejne zestawy równań REE dochodzą jako nowe wpisy rejestru, a silnik przyjmuje `zrodlo`.
+
 ## Próg −5 % masy („lepsze wyniki badań”) w drabince celów dorosłego (P-DIETA rata Z2, SW 1.1.64, 2026-09-24)
 
 **Decyzje właściciela (2026-09-24, po makiecie).** Dorosły dostaje odpowiednik progu Reinehra dziecka: szczebel −5 %

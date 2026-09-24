@@ -102,13 +102,17 @@ describe('rata V: silnik planu na Molnárze tylko przy otyłości 10–18 lat', 
     expect(o8.reeRownanie.id).toBe('HENRY_2005');
     expect(o8.reeFactor).toBe(1);
   });
-  it('bez pliku danych silnik nie wymyśla równania: zostaje Henry (strony ładują dane — strażnik niżej)', () => {
+  // P-DIETA rata H1: Henry też jest w pliku danych — bez danych nie ma ANI Molnára, ANI Henry'ego
+  // (wcześniej zostawał Henry z kopii w silniku). Okno ładujemy bez pomocnika, bo ten dokłada dane.
+  it('bez pliku danych silnik nie wymyśla równania: ani Molnár, ani Henry (strony ładują dane — strażnik niżej)', () => {
     const goly = oknoZSilnikiem();
     delete goly.VildaReeRownania;
-    wczytajDoOkna(goly, 'vilda_diet_plan_ui.js');
+    new Function('window', 'globalThis', czytaj('vilda_diet_plan_ui.js'))(goly, goly);
     const st = goly.energyBuildPlanReductionState({ ...CHLOPIEC, palInput: null });
-    expect(st.reeRownanie.id).toBe('HENRY_2005');
-    expect(st.reeAdjustedKcal).toBe(Math.round(st.reeKcal));
+    expect(goly.VildaReeRownania).toBeUndefined();
+    expect(st.reeRownanie ?? null).toBeNull();
+    expect(st.reeKcal ?? null).toBeNull();
+    expect(st.reeAdjustedKcal ?? null).toBeNull();
   });
 });
 

@@ -28,6 +28,9 @@ const ZALEZNOSCI = {
   // Modul wydruku sklada dokument z tego, co narysowal widok; bez widoku oddaje pusty napis,
   // czyli znowu cicha zmiane wyniku zamiast glosnej awarii.
   'vilda_postepy_doroslego_wydruk.js': ['vilda_postepy_doroslego_ui.js'],
+  // P-DIETA rata H1: wspolczynniki Henry'ego 2005 (i Molnara 1995) sa danymi — bez pliku danych silnik
+  // diety nie liczy REE wcale (null), czyli znowu cicha zmiana wyniku zamiast glosnej awarii.
+  'vilda_diet_plan_ui.js': ['vilda_ree_rownania_data.js'],
 };
 
 // Zaleznosci sa PRZECHODNIE i wykonywane RAZ na dane okno.

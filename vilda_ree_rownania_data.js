@@ -2,6 +2,8 @@
    P-DIETA rata V (decyzja właściciela 2026-09-23): u dziecka 10–18 lat z OTYŁOŚCIĄ (BMI ≥ 97. centyla)
    REE liczy się równaniem Molnára 1995 z podziałem na płeć (1A chłopcy, 1B dziewczęta) zamiast
    Henry'ego/Oxford × 0,9. Przy nadwadze i poniżej 10 lat zostaje Henry 2005 bez korekty.
+   P-DIETA rata H1 (2026-09-24): współczynniki Henry'ego 2005 też są tutaj (HENRY_2005.wspolczynnikiWgEtapu);
+   silnik (energyHenryREEkcal) nie ma już własnej kopii — bez tego pliku nie liczy REE wcale.
    Reguła „normy zawsze jako dane” (docs/ARCHITECTURE.md, „Kierunek: wielopopulacyjność”): współczynniki,
    populacja, zakres wieku, wskazanie i cytowanie mieszkają tutaj; silnik (vilda_diet_plan_ui.js,
    energyReeZRownania) jest bezpaństwowy, przyjmuje identyfikator źródła i oddaje jego nazwę w wyniku.
@@ -44,14 +46,68 @@
       kraj: 'baza Oxford (wiele krajów)',
       populacja: 'równania masa + wzrost dla przedziałów wieku; w bazie praktycznie brak dzieci z otyłością',
       metoda: 'kalorymetria (baza Oxford); regresja',
-      jednostka: 'MJ/24 h',
+      jednostka: 'kcal/24 h',
+      zmienne: { masa: 'kg', wzrost: 'm' },
       wskazanie: 'domyslne',
-      ograniczenia: 'Współczynniki są dziś w silniku (energyHenryREEkcal w vilda_diet_plan_ui.js); przeniesienie ich do tego pliku to osobny krok bez zmiany wyników.',
-      wspolczynniki: null
+      weryfikacja: 'Normy żywienia dla populacji Polski (NIZP PZH–PIB, 2024), rozdział „Energia”, tabele 1–2 (kolumny kcal i MJ), oraz Henry 2005, tabela 15 — zgodne (ENERGY-PLAN etap 1, 2026-08-13; rata V, 2026-09-23).',
+      ograniczenia: 'Równania masa + wzrost w postaci kcal/24 h (wzrost w metrach). Chłopcy 3–10 lat liczeni z postaci MJ/24 h × 239 (przypis Norm 2024: wzór kcal dla tej grupy jest w normach błędny). Chłopcy 10–18 lat: wzrost × 266 jak u Henry’ego 2005 i w kolumnie MJ norm — NIE 226 z kolumny kcal Norm 2024 (literówka). Równanie 60–70 lat stosowane też powyżej 70 lat, jak w normach (jedna strefa „≥ 60”). Poniżej 1. roku życia silnik nie używa Henry’ego.',
+      /* Liniowe równanie z wiekiem (energyReeZRownania) nie dotyczy Henry’ego — jego współczynniki są po etapie wieku niżej. */
+      wspolczynniki: null,
+      /* P-DIETA rata H1 (polecenie właściciela 2026-09-24): współczynniki przeniesione BEZ ZMIANY z silnika
+         (energyHenryREEkcal w vilda_diet_plan_ui.js). Klucz = etap z energyResolveEquationStage; silnik liczy
+         (masaKg × masa + wzrostM × wzrost_m + stala) × mnoznikKcal (mnożnik tylko tam, gdzie jest).
+         Dwa wiersze wyglądają na „do poprawy”, a NIE są (docs/clinical/ALGORITHMS.md, ENERGY-PLAN etap 1):
+         child_3_9 M liczony z MJ × 239 (błędny wzór kcal w Normach 2024), child_10_17 M wzrostM 266, nie 226. */
+      wspolczynnikiWgEtapu: {
+        child_1_2: {
+          przedzialLat: '0–3',
+          M: { masaKg: 28.2, wzrostM: 859, stala: -371 },
+          F: { masaKg: 30.4, wzrostM: 703, stala: -287 }
+        },
+        child_3_9: {
+          przedzialLat: '3–10',
+          M: { masaKg: 0.0632, wzrostM: 1.31, stala: 1.28, jednostka: 'MJ/24 h', mnoznikKcal: 239 },
+          F: { masaKg: 15.9, wzrostM: 210, stala: 349 }
+        },
+        child_10_17: {
+          przedzialLat: '10–18',
+          M: { masaKg: 15.6, wzrostM: 266, stala: 299 },
+          F: { masaKg: 9.4, wzrostM: 249, stala: 462 }
+        },
+        child_18: {
+          przedzialLat: '18–30',
+          M: { masaKg: 14.4, wzrostM: 313, stala: 113 },
+          F: { masaKg: 10.4, wzrostM: 615, stala: -282 }
+        },
+        adult_19_29: {
+          przedzialLat: '18–30',
+          M: { masaKg: 14.4, wzrostM: 313, stala: 113 },
+          F: { masaKg: 10.4, wzrostM: 615, stala: -282 }
+        },
+        adult_30_59: {
+          przedzialLat: '30–60',
+          M: { masaKg: 11.4, wzrostM: 541, stala: -137 },
+          F: { masaKg: 8.18, wzrostM: 502, stala: -11.6 }
+        },
+        adult_60_plus: {
+          przedzialLat: '≥ 60',
+          M: { masaKg: 11.4, wzrostM: 541, stala: -256 },
+          F: { masaKg: 8.52, wzrostM: 421, stala: 10.7 }
+        }
+      }
     }
   };
+  /* Dane tylko do odczytu: nikt w trakcie sesji nie przestawi współczynnika. */
+  function zamroz(o) {
+    if (o && typeof o === 'object' && !Object.isFrozen(o)) {
+      Object.keys(o).forEach(function (k) { zamroz(o[k]); });
+      Object.freeze(o);
+    }
+    return o;
+  }
+  zamroz(ZRODLA);
   w.VildaReeRownania = Object.freeze({
-    wersja: '1.0.0',
+    wersja: '1.1.0',
     kjNaKcal: 4.184,
     zrodla: ZRODLA,
     lista: function () { return Object.keys(ZRODLA); }
