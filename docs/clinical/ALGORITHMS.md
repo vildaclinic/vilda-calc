@@ -160,7 +160,7 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
   - statystyka punktu (centyl/SDS): wspólna ścieżka `advHistoryResolveMetric` z fallbackiem tabel Palczewskiej (jak „Podsumowanie wyników" i panel porównania A→B, v386);
   - werdykt pary punktów: progi ΔSDS identyczne z `verdictCh` panelu porównania (v388); etykiety w rejestrze lekarskim (słownik zaakceptowany przez właściciela 2026-08-08: m.in. „istotna deceleracja wzrastania", „progresja otyłości", „wyrównywanie niedoboru wzrostu (catch-up)", „dalsza akceleracja wzrastania") — wspólne dla panelu porównania, alarmów kart i modułu; parytet pilnuje test `tests/unit/trajectory-analysis.test.mjs` uruchamiający realny `verdictCh` z `vilda_auth_ui.js` na siatce ~1000 przypadków;
   - opis kanału/strefy: identyczny z `interpCh` panelu (granice 3/10/25/50/75/90/97);
-  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64); **od P-RAPORT rata T3 (SW 1.1.68): baza ≥ 36 mies. na tej samej siatce, co ostatni pomiar**;
+  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64); **od P-RAPORT rata T3 (SW 1.1.68): baza ≥ 36 mies. na tej samej siatce, co ostatni pomiar**; **od P-TRAJ rata T4 (SW 1.1.72): ton i treść banera wg kontekstu (`redFlag.kontekst`: P2/R/P1/P0/D) — wpis raty T4**;
   - tempo wzrastania <10 lat: produkcyjne `pickPrevForLastYear`/`pickPrevFallback`/`velocityCmPerYear`/`getVelocityThreshold` (okno 12±3 mies., fallback 6–8 mies., progi wg wieku metrykalnego, poziom alarmowy).
 
 #### Ocena tempa wzrastania >10 lat — hierarchia okołopokwitaniowa (akceptacja kliniczna właściciela 2026-08-08)
@@ -5777,6 +5777,80 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
+
+## Baner lekarza przy obniżeniu pozycji wzrostu: wiek dojrzewania i kierunek celu rodziców (P-TRAJ rata T4, SW 1.1.72, 2026-09-24)
+
+**Zgłoszenie.** Odłożona decyzja z raty T3: flaga w dół (ΔhSDS ≤ −1,0 od pierwszego pomiaru ≥ 36 mies. na tej samej
+siatce) dawała lekarzowi zawsze ten sam czerwony baner „… obraz deceleracji wzrastania, wskazana konsultacja
+endokrynologiczna, umów wizytę” (karta wzrostu index/docpro; panel trajektorii; Karta pacjenta: „wskazana ocena
+endokrynologiczna”), także u dziecka bez cech dojrzewania w wieku pokwitania i przy spadku ku wzrostowi docelowemu wg
+rodziców. Silnik znał stadium Tannera i mpSDS, ale treść ich nie używała. Wiek bazy był w mianowniku („z wieku 3 lata”).
+
+**Źródła (według PubMed).**
+- Grote i wsp. 2008, BMC Pediatr 8:21, [doi:10.1186/1471-2431-8-21](https://doi.org/10.1186/1471-2431-8-21), pełny
+  tekst, tabela 1 (Dutch Consensus Guideline): reguły 6–7 — odchylenie wzrostu (ΔHSDS < −0,25/rok albo < −1) w wieku
+  pokwitania (chłopcy 10–13,4, dziewczęta 9–12,3 lat) tylko przy cechach dojrzewania; „When a child does not show any
+  pubertal signs at this age referral is not necessary”. Poza tym oknem reguła bez wyjątków.
+- Grote i wsp. 2007, Arch Dis Child 93:212–7, [doi:10.1136/adc.2007.120188](https://doi.org/10.1136/adc.2007.120188):
+  odległość od wzrostu docelowego najważniejszym kryterium; odchylenie („height deflection”) ma niewielki udział.
+- Wright, Cheetham 1999, Arch Dis Child 81:257–60, [doi:10.1136/adc.81.3.257](https://doi.org/10.1136/adc.81.3.257):
+  90 % dzieci w ±1,5 SDS od mpSDS.
+- Tanner, Davies 1985, J Pediatr 107:317–29, [doi:10.1016/s0022-3476(85)80501-1](https://doi.org/10.1016/s0022-3476(85)80501-1):
+  osobne centyle dla dojrzewających wcześnie, przeciętnie i późno — pozycja na siatce przekrojowej zależy od tempa
+  dojrzewania (tło wariantu P3, którego właściciel nie przyjął).
+- Nie znaleziono pracy uznającej spadek ku celowi rodziców po 3. r.ż. za fizjologiczny; wariant R to analogia do D0
+  nagłówka raportu (rata T3) i dlatego flaga zostaje (zmienia się ton), a nie znika.
+
+**Decyzje właściciela (2026-09-24, po makiecie; „zgadzam się z rekomendacjami, pomiń P3”).** Wariant liczy silnik
+(`redFlag.kontekst = { wariant, ton, tanner, fraza, roznicaBaza, roznicaDzis }`), kolejność sprawdzania:
+
+| wariant | warunek | ton | treść banera karty |
+|---|---|---|---|
+| P2 | wiek ≥ 120 mies., Tanner II–III (aktualny) | czerwony | „… mimo cech dojrzewania (Tanner III), gdy oczekiwany jest skok pokwitaniowy — obraz deceleracji wzrastania, wskazana konsultacja endokrynologiczna, umów wizytę” |
+| R | hSDS bazy − mpSDS ≥ +1,0 i hSDS dziś − mpSDS > −1,0 | żółty | „… w kierunku wzrostu docelowego wg rodziców (hSDS − mpSDS: z +1,89 na +0,58) — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach.” |
+| P1 | 120 mies. ≤ wiek ≤ 156 (dz.) / 168 (chł.) mies., Tanner I | żółty | „… w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I) — obraz częsty przy późniejszym skoku pokwitaniowym (m.in. konstytucjonalne opóźnienie wzrastania i dojrzewania); wskazana kontrola tempa wzrastania i ocena wieku kostnego.” |
+| P0 | to samo okno, brak aktualnego stadium Tannera | żółty | „… w wieku okołopokwitaniowym — ocena zależy od etapu dojrzewania: bez cech dojrzewania (Tanner I) obraz częsty przy późniejszym skoku pokwitaniowym, przy cechach dojrzewania wskazana konsultacja endokrynologiczna. Uzupełnij stadium Tannera.” |
+| D | pozostałe (3–10 lat, Tanner IV–V, Tanner I powyżej okna = opóźnione dojrzewanie) | czerwony | bez zmian |
+
+- Okno: od 10 lat dla obu płci (jak nagłówek raportu, decyzja z raty T3) do progu opóźnionego dojrzewania już
+  używanego przez silnik (`DELAYED_PUB_F_M` 156, `DELAYED_PUB_M_M` 168; Palmert i Dunkel 2012).
+- Progi R równe `SPADEK_WZROSTU.KU_CELOWI_*` nagłówka raportu (test pilnuje równości).
+- Tanner nieaktualny (> 12 mies., `TANNER_FRESH_M`) traktowany jak brak.
+- P3 (Tanner IV–V → żółty) — nieprzyjęty.
+- Baner tempa (np. < 4 cm/rok przy Tannerze I od 10 lat) pozostaje osobnym czerwonym alarmem — bez zmian.
+- Wiek bazy w dopełniaczu („względem pomiaru z wieku 3 lat”) — poprawka językowa.
+
+**Zmiana (kliniczna: ton i zalecenie banera; próg flagi i baza bez zmian).**
+- `vilda_trajectory_analysis.js` (VERSION 27, `?v=35`): `redFlagKontekst()`, parametry `REDFLAG_POKW_OD_M`,
+  `REDFLAG_KU_CELOWI_BAZA`, `REDFLAG_KU_CELOWI_DZIS`; `redFlagBannerHtml()` (karta), `redFlagKrotko()` (panel, Karta
+  pacjenta: klasa `vta-warn` / `vtap-flag vw` dla żółtych); `fmtAgeGen()`.
+- `vilda_epicrisis_ui.js` (`?v=24`), `vilda_epicrisis.js` (`?v=24`): zdanie flagi dostaje frazę kontekstu („… (ΔhSDS =
+  −1,04) w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I).”).
+- `vilda_patient_narrative.js` (`?v=16`): zdanie „przebieg” — ton `warn` i fraza dla R/P1/P0, bez „co wskazuje na
+  decelerację”; P2 z frazą i deceleracją.
+- Kopie awaryjne w `growth-basic-module.js` / `vilda_advanced_growth.js` (tylko bez modułu trajektorii) — bez zmian.
+- Nagłówek „Raportu po wizycie” — bez zmian (D0/D3 z raty T3).
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne; prawdziwy silnik, sonda na stronie):
+
+| przypadek | przed | po |
+|---|---|---|
+| chł. 12 l., Tanner I, 3 l. 50 c → 15 c | czerwony, konsultacja | P1 żółty (+ czerwony baner tempa przy 2,5 cm/rok) |
+| j.w., bez Tannera | czerwony | P0 żółty |
+| j.w., Tanner III | czerwony | P2 czerwony z „mimo cech dojrzewania” |
+| j.w., Tanner V | czerwony | D bez zmian (P3 pominięte) |
+| chł. 8 l., 3 l. 97 c → 72 c, cel rodziców 50 c | czerwony | R żółty |
+| chł. 8 l., 3 l. 75 c → 10 c, cel rodziców 75 c | czerwony | D czerwony |
+| dz. 8 l., 4 l. 50 c → 12 c | czerwony | D bez zmian („z wieku 4 lat”) |
+| chł. 15 l., Tanner I | czerwony | D bez zmian (opóźnione dojrzewanie) |
+
+**Walidacja.** Unit `trajectory-analysis` (blok T4: warianty, kolejność P2 > R, granice okna 119/120/168/169 i
+156/157 mies., progi R włącznie/wyłącznie, Tanner nieaktualny, treść banera, panelu i Karty, równość progów z
+nagłówkiem), `epicrisis` (fraza w zdaniu, kolektor), `pacjent-opis-silnik` (zdanie „przebieg”); e2e
+`baner-spadku-rata-t4` (6 testów, index i docpro, prawdziwe wiersze historii).
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; linia panelu/epikryzy dla flagi w górę; kontrola tempa
+wzrastania w czasie diety redukcyjnej.
 
 ## „Raport po wizycie”: wzrost rodziców w nagłówku najwyżej raz (P-RAPORT rata R2, SW 1.1.71, 2026-09-24)
 

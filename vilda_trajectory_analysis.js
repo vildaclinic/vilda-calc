@@ -17,6 +17,8 @@
  *  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 od pierwszego pomiaru z wieku ≥ 36 mies. na tej samej siatce (PR #64; baza 24 → 36 mies. i warunek siatki od raty T3);
  *  - flaga pozycyjna wzrostu W GÓRĘ (P-RAPORT rata T2): ΔhSDS ≥ +1,0 od pierwszego pomiaru z wieku ≥36 mies.,
  *    z warunkiem niedawności (ostatni odcinek ≥ 6 mies. ma ΔSDS ≥ +0,5) i tej samej siatki; bez banera;
+ *  - kontekst flagi w dół (P-TRAJ rata T4): wariant P2/R/P1/P0/D z wieku, stadium Tannera i mpSDS
+ *    (redFlag.kontekst) — JEDNO źródło tonu i treści banera karty, panelu, Karty pacjenta, epikryzy i narracji;
  *  - tempo wzrastania: od SW 1.0.944 liczy je WYŁĄCZNIE vilda_tempo_wzrastania.js
  *    (window.VildaTempoWzrastania, P-TEMPO) — dobór pary, wzór, drabinka wiekowa i hierarchia
  *    okołopokwitaniowa (Tanner → wiek kostny → reguła generyczna) są tam, ten plik tylko woła.
@@ -26,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '26';
+  var VERSION = '27';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -63,7 +65,15 @@
     // Opóźnione dojrzewanie (Palmert & Dunkel, N Engl J Med 2012;366:443-53, PMID 22296078,
     // doi:10.1056/NEJMcp1109290): brak cech pokwitania u dziewcząt >13 lat / chłopców >14 lat.
     DELAYED_PUB_F_M: 156,
-    DELAYED_PUB_M_M: 168
+    DELAYED_PUB_M_M: 168,
+    // P-TRAJ rata T4 (decyzje właściciela 2026-09-24): kontekst flagi w dół. Okno okołopokwitaniowe od 10 lat
+    // (obie płcie, jak nagłówek raportu z raty T3) do progu opóźnionego dojrzewania (DELAYED_PUB_*_M).
+    // Konsensus holenderski (Grote 2008, doi:10.1186/1471-2431-8-21, reguły 6–7): w wieku pokwitania spadek
+    // ΔHSDS < −1 liczy się tylko przy cechach dojrzewania. Spadek ku celowi rodziców: te same progi, co D0
+    // nagłówka raportu (vilda_raport_naglowek.js SPADEK_WZROSTU.KU_CELOWI_*), pilnuje ich test.
+    REDFLAG_POKW_OD_M: 120,
+    REDFLAG_KU_CELOWI_BAZA: 1.0,
+    REDFLAG_KU_CELOWI_DZIS: -1.0
   };
 
   var METRICS = [
@@ -125,6 +135,15 @@
     var yd = y % 10, ys100 = y % 100;
     var ys = y ? y + (y === 1 ? ' rok'
       : (yd >= 2 && yd <= 4 && !(ys100 >= 12 && ys100 <= 14) ? ' lata' : ' lat')) : '';
+    var rs = r ? r + ' mies.' : '';
+    return ys && rs ? ys + ' ' + rs : (ys || rs || '0 mies.');
+  }
+
+  // Wiek w dopełniaczu („względem pomiaru z wieku 3 lat", nie „3 lata") — rata T4.
+  function fmtAgeGen(mo) {
+    mo = Math.round(mo);
+    var y = Math.floor(mo / 12), r = mo % 12;
+    var ys = y ? y + (y === 1 ? ' roku' : ' lat') : '';
     var rs = r ? r + ' mies.' : '';
     return ys && rs ? ys + ' ' + rs : (ys || rs || '0 mies.');
   }
@@ -487,6 +506,36 @@
 
   // ── Analiza jednej metryki ──
 
+  // P-TRAJ rata T4: kontekst flagi w dół → { wariant, ton, tanner, fraza, roznicaBaza, roznicaDzis }.
+  // Kolejność: P2 (Tanner II–III od 10 lat: czerwony — spadek mimo cech dojrzewania) → R (ku celowi rodziców:
+  // baza ≥ +1,0 SDS nad mpSDS i dziś > −1,0 od mpSDS: żółty) → P1 (okno okołopokwitaniowe, Tanner I: żółty) →
+  // P0 (okno, brak aktualnego Tannera: żółty) → D (pozostałe: czerwony, treść jak dotąd). Tanner IV–V nie ma
+  // własnego wariantu (decyzja właściciela: P3 pominięte) — daje R albo D.
+  var TANNER_RZYM = ['I', 'II', 'III', 'IV', 'V'];
+  function redFlagKontekst(rf, sex, ctx) {
+    var ts = ctx && ctx.tannerStage != null ? ctx.tannerStage : null;
+    var wiek = rf.lastAgeMonths;
+    var okno = wiek >= P.REDFLAG_POKW_OD_M && wiek <= (sex === 'M' ? P.DELAYED_PUB_M_M : P.DELAYED_PUB_F_M);
+    var mp = ctx && typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds) ? ctx.mpSds : null;
+    var rb = mp != null ? Math.round(100 * (rf.baseSd - mp)) / 100 : null;
+    var rd = mp != null ? Math.round(100 * (rf.lastSd - mp)) / 100 : null;
+    var k = { wariant: 'D', ton: 'danger', tanner: ts, roznicaBaza: rb, roznicaDzis: rd, fraza: '' };
+    if (wiek >= P.REDFLAG_POKW_OD_M && (ts === 2 || ts === 3)) {
+      k.wariant = 'P2';
+      k.fraza = 'mimo cech dojrzewania (Tanner ' + TANNER_RZYM[ts - 1] + ')';
+    } else if (rb != null && rb >= P.REDFLAG_KU_CELOWI_BAZA && rd > P.REDFLAG_KU_CELOWI_DZIS) {
+      k.wariant = 'R'; k.ton = 'warn';
+      k.fraza = 'w kierunku wzrostu docelowego wg rodziców (hSDS − mpSDS: z ' + fmtP(rb) + ' na ' + fmtP(rd) + ')';
+    } else if (okno && ts === 1) {
+      k.wariant = 'P1'; k.ton = 'warn';
+      k.fraza = 'w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I)';
+    } else if (okno && ts == null) {
+      k.wariant = 'P0'; k.ton = 'warn';
+      k.fraza = 'w wieku okołopokwitaniowym, bez ocenionego stadium dojrzewania';
+    }
+    return k;
+  }
+
   function analyzeMetric(met, pts, sex, source, ctx) {
     var series = [];
     pts.forEach(function (p) {
@@ -560,6 +609,7 @@
         var dh = Math.round(100 * (last.sd - base.sd)) / 100;
         if (dh <= P.REDFLAG_DSDS) redFlag = { dSds: dh, baseAgeMonths: base.ageMonths, baseC: base.c, baseSd: base.sd,
           lastAgeMonths: last.ageMonths, lastC: last.c, lastSd: last.sd, siatka: last.siatka || null };
+        if (redFlag) redFlag.kontekst = redFlagKontekst(redFlag, sex, ctx);
       }
     }
 
@@ -742,15 +792,50 @@
     return null;
   }
 
+  // P-TRAJ rata T4: treść flagi w dół wg wariantu kontekstu (redFlag.kontekst). D i P2 — czerwone, z konsultacją
+  // endokrynologiczną; R, P1, P0 — żółte, bez skierowania (baner tempa pozostaje niezależnym alarmem).
+  var ZOLTY = '#b26a00';
+  function rfKontekst(rf) { return rf && rf.kontekst ? rf.kontekst : { wariant: 'D', ton: 'danger', fraza: '' }; }
+  function rfZmiana(rf, etyk) {
+    return '(' + etyk + esc(fmtP(rf.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeGen(rf.baseAgeMonths)) + ')';
+  }
+  function redFlagBannerHtml(rf) {
+    var k = rfKontekst(rf);
+    var zm = rfZmiana(rf, 'zmiana hSDS: ');
+    if (k.wariant === 'D' || k.wariant === 'P2') {
+      return '<p style="color: var(--danger); font-weight:600;">Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu '
+        + zm + (k.wariant === 'P2' ? ' ' + esc(k.fraza) + ', gdy oczekiwany jest skok pokwitaniowy' : '')
+        + ' — obraz deceleracji wzrastania' + CARD_ALERT_LINK + '</p>';
+    }
+    var t;
+    if (k.wariant === 'R') {
+      t = ' ' + esc(k.fraza) + ' — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach.';
+    } else if (k.wariant === 'P1') {
+      t = ' ' + esc(k.fraza) + ' — obraz częsty przy późniejszym skoku pokwitaniowym (m.in. konstytucjonalne opóźnienie wzrastania i dojrzewania); wskazana kontrola tempa wzrastania i ocena wieku kostnego.';
+    } else {
+      t = ' w wieku okołopokwitaniowym — ocena zależy od etapu dojrzewania: bez cech dojrzewania (Tanner I) obraz częsty przy późniejszym skoku pokwitaniowym, przy cechach dojrzewania wskazana konsultacja endokrynologiczna. Uzupełnij stadium Tannera.';
+    }
+    return '<p style="color: ' + ZOLTY + '; font-weight:600;">Obniżenie pozycji centylowej wzrostu ' + zm + t + '</p>';
+  }
+  // Krótka forma (panel trajektorii, Karta pacjenta): { ton, tekst } bez znaku ⚠.
+  function redFlagKrotko(rf) {
+    var k = rfKontekst(rf);
+    var zm = rfZmiana(rf, 'ΔhSDS ');
+    if (k.wariant === 'D' || k.wariant === 'P2') {
+      return { ton: 'danger', tekst: 'Istotne obniżenie pozycji centylowej wzrostu ' + zm + (k.fraza ? ' ' + esc(k.fraza) : '') + ' — obraz deceleracji wzrastania' };
+    }
+    var zal = k.wariant === 'R' ? 'kontrola tempa wzrastania'
+      : k.wariant === 'P1' ? 'obraz częsty przy późniejszym skoku pokwitaniowym; kontrola tempa wzrastania, wiek kostny'
+        : 'uzupełnij stadium Tannera; przy cechach dojrzewania wskazana ocena endokrynologiczna';
+    var fr = k.wariant === 'P0' ? 'w wieku okołopokwitaniowym' : esc(k.fraza);
+    return { ton: 'warn', tekst: 'Obniżenie pozycji centylowej wzrostu ' + zm + ' ' + fr + ' — ' + zal };
+  }
+
   function buildCardAlertsHtml(model) {
     if (!model) return '';
     var out = '';
     var rf = heightRedFlagOf(model);
-    if (rf) {
-      out += '<p style="color: var(--danger); font-weight:600;">Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu (zmiana hSDS: '
-        + esc(fmtP(rf.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(rf.baseAgeMonths))
-        + ') — obraz deceleracji wzrastania' + CARD_ALERT_LINK + '</p>';
-    }
+    if (rf) out += redFlagBannerHtml(rf);
     // Czerwony baner tempa tylko dla poziomu alarmowego (danger); poziom „czujność" (warn,
     // reguły okołopokwitaniowe) pokazują chipy bloku trajektorii i panelu — bez banera.
     if (model.velocity && model.velocity.alarm) {
@@ -770,9 +855,8 @@
       + ' · SDS ' + esc(fmtP(m.first.sd) + ' → ' + fmtP(m.last.sd))
       + ' — ' + vSpan(m.total) + '</p>';
     if (m.redFlag) {
-      line += '<p class="vta-red">⚠ Istotne obniżenie pozycji centylowej wzrostu '
-        + '(ΔhSDS ' + esc(fmtP(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
-        + ') — obraz deceleracji wzrastania</p>';
+      var kr = redFlagKrotko(m.redFlag);
+      line += '<p class="' + (kr.ton === 'warn' ? 'vta-warn' : 'vta-red') + '">⚠ ' + kr.tekst + '</p>';
     }
     if (m.worst && m.worst.verdict && (m.worst.verdict.t === 'bad' || m.worst.verdict.t === 'warn') && m.segments.length > 1) {
       line += '<p>↳ najpoważniejszy odcinek: ' + esc(fmtAgeM(m.worst.a.ageMonths)) + ' → ' + esc(fmtAgeM(m.worst.b.ageMonths))
@@ -1176,6 +1260,7 @@
     '.vtap .vtap-mchip{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #d9e8e8;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#39555b;white-space:nowrap}',
     '.vtap .vtap-mchip .k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7d979b}',
     '.vtap .vtap-flag{padding:9px 14px;background:#fdecea;border-bottom:1px solid #f6d4d0;font-size:12px;font-weight:700;color:#b71c1c;line-height:1.45}',
+    '.vtap .vtap-flag.vw{background:#fdf1e5;border-bottom-color:#f6dfc6;color:#c75d00}',
     '.vtap .vtap-row{padding:9px 14px;border-top:1px solid #eef4f4}',
     '.vtap .vtap-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px 14px 4px}',
     '.vtap .vtap-card{border:1px solid #e3ecec;border-left:4px solid #b9c8ca;border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;min-width:0}',
@@ -1375,9 +1460,9 @@
     html += metaStripHtml(model);
     hideRedFlag || model.metrics.forEach(function (m) {
       if (m.redFlag) {
-        html += '<div class="vtap-flag">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS '
-          + esc(fmtP(m.redFlag.dSds)) + ' względem pomiaru z wieku ' + esc(fmtAgeM(m.redFlag.baseAgeMonths))
-          + ') — obraz deceleracji wzrastania, wskazana ocena endokrynologiczna</div>';
+        var kp = redFlagKrotko(m.redFlag);
+        html += '<div class="vtap-flag' + (kp.ton === 'warn' ? ' vw' : '') + '">⚠ ' + kp.tekst
+          + (kp.ton === 'warn' ? '' : ', wskazana ocena endokrynologiczna') + '</div>';
       }
     });
     html += '<div class="vtap-cards">';
@@ -1488,6 +1573,8 @@
     velocityAssessment: velocityAssessment,
     analyze: analyze,
     heightRedFlagOf: heightRedFlagOf,
+    redFlagBannerHtml: redFlagBannerHtml,
+    redFlagKrotko: redFlagKrotko,
     heightUpFlagOf: heightUpFlagOf,
     buildHtml: buildHtml,
     buildCardAlertsHtml: buildCardAlertsHtml,

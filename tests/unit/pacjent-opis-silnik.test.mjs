@@ -112,6 +112,17 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
       .toBe('Od pomiaru w wieku 4 lat pozycja centylowa wzrostu obniżyła się o 1,4 SD, co wskazuje na decelerację tempa wzrastania.');
   });
 
+  it('rata T4: kontekst flagi — żółta wersja bez „deceleracji” (Tanner I w oknie), czerwona z frazą (Tanner III)', () => {
+    const tabela = { 'HT|36': 0.0, 'HT|100': -0.4, 'HT|132': -0.9, 'HT|144': -1.04 };
+    const wejscie = (ctx) => ({ measurements: [{ ageMonths: 36, height: 96 }, { ageMonths: 100, height: 128 }, { ageMonths: 132, height: 138.5 }],
+      currentAgeMonths: 144, currentHeight: 141, sex: 'M', source: 'OLAF', context: ctx });
+    const g = srodowisko(tabela);
+    const p1 = opis(g, wejscie({ tannerStage: 1 })).wynik.sentences.filter((s) => s.id === 'przebieg')[0];
+    expect(p1).toMatchObject({ tone: 'warn', text: 'Od pomiaru w wieku 3 lat pozycja centylowa wzrostu obniżyła się o 1,0 SD w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I).' });
+    expect(zdanie(opis(g, wejscie({ tannerStage: 3 })).wynik, 'przebieg'))
+      .toBe('Od pomiaru w wieku 3 lat pozycja centylowa wzrostu obniżyła się o 1,0 SD mimo cech dojrzewania (Tanner III), co wskazuje na decelerację tempa wzrastania.');
+  });
+
   it('werdykt odcinka otwiera zdanie w bierniku, tak jak pisze endokrynolog', () => {
     // Brzmienie właściciela (2026-09-07): „Istotną decelerację wzrastania zaobserwowano
     // pomiędzy 5 a 6 rokiem życia" — etykieta karty jest w mianowniku, zdanie wymaga

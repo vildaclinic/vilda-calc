@@ -1423,3 +1423,129 @@ describe('flaga pozycyjna wzrostu w górę (rata T2)', () => {
     expect(vta.buildCardAlertsHtml(model)).toBe('');
   });
 });
+
+// P-TRAJ rata T4 (decyzje właściciela 2026-09-24): kontekst flagi w dół — wariant P2/R/P1/P0/D liczony
+// w silniku (redFlag.kontekst), jedna treść dla banera karty, panelu i Karty pacjenta. P3 (Tanner IV–V) pominięte.
+// Dane FIKCYJNE, statystyki stubowane deterministycznie; wywołujemy produkcyjny analyze()/renderery.
+describe('kontekst flagi w dół (rata T4)', () => {
+  function vtaZ(table) {
+    const centileFromSds = (sds) => {
+      const sign = sds >= 0 ? 1 : -1;
+      const x = Math.abs(sds) / Math.SQRT2;
+      const t = 1 / (1 + 0.3275911 * x);
+      const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.min(99.9, Math.max(0.1, 100 * 0.5 * (1 + sign * y)));
+    };
+    return loadModule({
+      bmiSource: 'OLAF',
+      advHistoryResolveMetric(param, value, sex, ageYears) {
+        const key = `${param}|${Math.round(ageYears * 12)}`;
+        if (!(key in table)) return { result: null, source: null, reason: '' };
+        return { result: { percentile: centileFromSds(table[key]), sd: table[key] }, source: 'OLAF', reason: '' };
+      }
+    }).VildaTrajectoryAnalysis;
+  }
+  // chłopiec: 3 l. na 50 c → teraz −1,04 SDS (wiek końcowy `m`)
+  const kowd = (m, context, sex = 'M') => {
+    const vta = vtaZ({ 'HT|36': 0.0, 'HT|100': -0.4, [`HT|${m - 12}`]: -0.9, [`HT|${m}`]: -1.04 });
+    // tempo 2,5 cm/rok w ostatnim roku — przy Tannerze I od 10 lat to alarm tempa (osobny baner)
+    const model = vta.analyze({ measurements: [{ ageMonths: 36, height: 96 }, { ageMonths: 100, height: 128 }, { ageMonths: m - 12, height: 138.5 }],
+      currentAgeMonths: m, currentHeight: 141, sex, context });
+    return { vta, model, rf: vta.heightRedFlagOf(model) };
+  };
+  const tekst = (html) => html.replace(/<[^>]+>/g, '');
+
+  it('parametry są danymi silnika; progi „ku celowi rodziców” równe D0 nagłówka raportu', () => {
+    const vta = vtaZ({});
+    expect(vta.PARAMS).toMatchObject({ REDFLAG_POKW_OD_M: 120, REDFLAG_KU_CELOWI_BAZA: 1.0, REDFLAG_KU_CELOWI_DZIS: -1.0, DELAYED_PUB_F_M: 156, DELAYED_PUB_M_M: 168 });
+    const N = loadBrowserScript('vilda_raport_naglowek.js', {}).VildaRaportNaglowek;
+    expect(vta.PARAMS.REDFLAG_KU_CELOWI_BAZA).toBe(N.SPADEK_WZROSTU.KU_CELOWI_BAZA);
+    expect(vta.PARAMS.REDFLAG_KU_CELOWI_DZIS).toBe(N.SPADEK_WZROSTU.KU_CELOWI_DZIS);
+  });
+
+  it('P1: 12 l., Tanner I — żółty baner bez skierowania; baner tempa zostaje niezależnym alarmem', () => {
+    const { vta, model, rf } = kowd(144, { tannerStage: 1 });
+    expect(rf.kontekst).toMatchObject({ wariant: 'P1', ton: 'warn', tanner: 1, fraza: 'w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I)' });
+    const html = vta.buildCardAlertsHtml(model);
+    expect(html).toContain('color: #b26a00');
+    expect(tekst(html)).toContain('Obniżenie pozycji centylowej wzrostu (zmiana hSDS: −1,04 względem pomiaru z wieku 3 lat) w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I) — obraz częsty przy późniejszym skoku pokwitaniowym (m.in. konstytucjonalne opóźnienie wzrastania i dojrzewania); wskazana kontrola tempa wzrastania i ocena wieku kostnego.');
+    expect(tekst(vta.redFlagBannerHtml(rf))).not.toMatch(/endokrynolog|umów wizytę|deceleracji/);
+    // tempo 2,5 cm/rok przy Tannerze I od 10 lat — czerwony baner tempa bez zmian (niezależny alarm)
+    expect(html).toContain('Tempo wzrastania poniżej normy dla wieku');
+  });
+
+  it('P0: okno okołopokwitaniowe bez Tannera (także nieaktualny zapis) — żółty z prośbą o stadium', () => {
+    for (const ctx of [null, { tannerStage: 1, tannerAtAgeMonths: 120 }]) {
+      const { vta, rf } = kowd(144, ctx);
+      expect(rf.kontekst).toMatchObject({ wariant: 'P0', ton: 'warn', tanner: null });
+      expect(tekst(vta.redFlagBannerHtml(rf))).toBe('Obniżenie pozycji centylowej wzrostu (zmiana hSDS: −1,04 względem pomiaru z wieku 3 lat) w wieku okołopokwitaniowym — ocena zależy od etapu dojrzewania: bez cech dojrzewania (Tanner I) obraz częsty przy późniejszym skoku pokwitaniowym, przy cechach dojrzewania wskazana konsultacja endokrynologiczna. Uzupełnij stadium Tannera.');
+    }
+  });
+
+  it('P2: od 10 lat, Tanner II–III — czerwony, z odniesieniem do dojrzewania i konsultacją', () => {
+    const { vta, rf } = kowd(144, { tannerStage: 3 });
+    expect(rf.kontekst).toMatchObject({ wariant: 'P2', ton: 'danger', fraza: 'mimo cech dojrzewania (Tanner III)' });
+    expect(tekst(vta.redFlagBannerHtml(rf))).toBe('Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu (zmiana hSDS: −1,04 względem pomiaru z wieku 3 lat) mimo cech dojrzewania (Tanner III), gdy oczekiwany jest skok pokwitaniowy — obraz deceleracji wzrastania, wskazana konsultacja endokrynologiczna, umów wizytę');
+    expect(kowd(144, { tannerStage: 2 }).rf.kontekst.wariant).toBe('P2');
+    // P2 wyprzedza R (spadek w pokwitaniu mimo celu rodziców)
+    expect(kowd(144, { tannerStage: 3, mpSds: -1.5 }).rf.kontekst.wariant).toBe('P2');
+  });
+
+  it('P3 pominięte: Tanner IV–V daje D (czerwony, treść jak dotąd)', () => {
+    const { vta, rf } = kowd(144, { tannerStage: 5 });
+    expect(rf.kontekst).toMatchObject({ wariant: 'D', ton: 'danger', fraza: '' });
+    expect(tekst(vta.redFlagBannerHtml(rf))).toBe('Z analizy siatki centylowej wynika istotne obniżenie pozycji centylowej wzrostu (zmiana hSDS: −1,04 względem pomiaru z wieku 3 lat) — obraz deceleracji wzrastania, wskazana konsultacja endokrynologiczna, umów wizytę');
+  });
+
+  it('granice okna: od 120 mies.; do 168 mies. u chłopców i 156 mies. u dziewcząt (próg opóźnionego dojrzewania)', () => {
+    expect(kowd(119, { tannerStage: 1 }).rf.kontekst.wariant).toBe('D');
+    expect(kowd(120 + 1, { tannerStage: 1 }).rf.kontekst.wariant).toBe('P1');
+    expect(kowd(168, { tannerStage: 1 }).rf.kontekst.wariant).toBe('P1');
+    expect(kowd(169, { tannerStage: 1 }).rf.kontekst.wariant).toBe('D'); // Tanner I > 14 l. — opóźnione dojrzewanie
+    expect(kowd(156, { tannerStage: 1 }, 'F').rf.kontekst.wariant).toBe('P1');
+    expect(kowd(157, { tannerStage: 1 }, 'F').rf.kontekst.wariant).toBe('D');
+    expect(kowd(169, null).rf.kontekst.wariant).toBe('D');
+    expect(kowd(119, { tannerStage: 3 }).rf.kontekst.wariant).toBe('D'); // P2 dopiero od 10 lat
+  });
+
+  it('R: ku celowi rodziców — baza ≥ +1,0 nad mpSDS i dziś > −1,0; progi włącznie/wyłącznie', () => {
+    const r = (baza, dzis, mp) => {
+      const vta = vtaZ({ 'HT|36': baza, 'HT|96': dzis });
+      const model = vta.analyze({ measurements: [{ ageMonths: 36, height: 100 }], currentAgeMonths: 96, currentHeight: 128, sex: 'M', context: { mpSds: mp } });
+      return { vta, rf: vta.heightRedFlagOf(model) };
+    };
+    const { vta, rf } = r(1.89, 0.58, 0);
+    expect(rf.kontekst).toMatchObject({ wariant: 'R', ton: 'warn', roznicaBaza: 1.89, roznicaDzis: 0.58 });
+    expect(tekst(vta.redFlagBannerHtml(rf))).toBe('Obniżenie pozycji centylowej wzrostu (zmiana hSDS: −1,31 względem pomiaru z wieku 3 lat) w kierunku wzrostu docelowego wg rodziców (hSDS − mpSDS: z +1,89 na +0,58) — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach.');
+    expect(r(1.0, -0.5, 0).rf.kontekst.wariant).toBe('R');   // baza dokładnie +1,0
+    expect(r(0.99, -0.5, 0).rf.kontekst.wariant).toBe('D');
+    expect(r(1.0, -0.99, 0.0).rf.kontekst.wariant).toBe('R');
+    expect(r(0.5, -1.5, -0.5).rf.kontekst.wariant).toBe('D'); // dziś dokładnie −1,0 od celu — już nie R
+    expect(r(0.67, -1.27, 0.67).rf.kontekst.wariant).toBe('D'); // spadek poniżej celu rodziców
+  });
+
+  it('bez kontekstu (3–10 l.) — D bez zmian, wiek w dopełniaczu („z wieku 3 lat”, „1 roku 6 mies.” nie występuje dla bazy < 36)', () => {
+    const vta = vtaZ({ 'HT|42': 0.3, 'HT|96': -1.0 });
+    const model = vta.analyze({ measurements: [{ ageMonths: 42, height: 100 }], currentAgeMonths: 96, currentHeight: 124, sex: 'F' });
+    const rf = vta.heightRedFlagOf(model);
+    expect(rf.kontekst.wariant).toBe('D');
+    expect(tekst(vta.buildCardAlertsHtml(model))).toContain('względem pomiaru z wieku 3 lat 6 mies.)');
+    expect(tekst(vta.buildCardAlertsHtml(model))).not.toContain('3 lata');
+  });
+
+  it('panel trajektorii i Karta pacjenta: ton i treść z tego samego wariantu', () => {
+    const p1 = kowd(144, { tannerStage: 1 });
+    const panel = p1.vta.buildHtml(p1.model);
+    expect(panel).toContain('<p class="vta-warn">⚠ Obniżenie pozycji centylowej wzrostu (ΔhSDS −1,04 względem pomiaru z wieku 3 lat) w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I) — obraz częsty przy późniejszym skoku pokwitaniowym; kontrola tempa wzrastania, wiek kostny</p>');
+    const karta = p1.vta.buildPatientHtml(p1.model);
+    expect(karta).toContain('<div class="vtap-flag vw">⚠ Obniżenie pozycji centylowej wzrostu (ΔhSDS −1,04 względem pomiaru z wieku 3 lat) w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I)');
+    expect(karta).not.toContain('ocena endokrynologiczna');
+    const p0 = kowd(144, null);
+    expect(p0.vta.buildPatientHtml(p0.model)).toContain('w wieku okołopokwitaniowym — uzupełnij stadium Tannera; przy cechach dojrzewania wskazana ocena endokrynologiczna</div>');
+    const d = kowd(144, { tannerStage: 5 });
+    expect(d.vta.buildHtml(d.model)).toContain('<p class="vta-red">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS −1,04 względem pomiaru z wieku 3 lat) — obraz deceleracji wzrastania</p>');
+    expect(d.vta.buildPatientHtml(d.model)).toContain('<div class="vtap-flag">⚠ Istotne obniżenie pozycji centylowej wzrostu (ΔhSDS −1,04 względem pomiaru z wieku 3 lat) — obraz deceleracji wzrastania, wskazana ocena endokrynologiczna</div>');
+    const p2 = kowd(144, { tannerStage: 2 });
+    expect(p2.vta.buildPatientHtml(p2.model)).toContain('mimo cech dojrzewania (Tanner II) — obraz deceleracji wzrastania, wskazana ocena endokrynologiczna</div>');
+  });
+});
