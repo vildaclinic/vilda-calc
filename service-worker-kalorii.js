@@ -3,7 +3,8 @@
  *
  * Priorytety tej wersji:
  * 1) aplikacja ma otwierać się natychmiast z cache,
- * 2) aktualizacja ma odświeżać zasoby w tle,
+ * 2) aktualizacja ma odświeżać w tle dokumenty HTML i zasoby bez ?v=; zasoby z ?v= są niezmienne
+ *    (P-SW rata 1 — patrz isImmutableVersionedRequest),
  * 3) nowy SW nadal czeka w stanie "waiting" aż użytkownik kliknie „Przeładuj”,
  * 4) unikamy oddawania nawigacji odpowiedzi oznaczonych jako redirected,
  *    co ogranicza ryzyko błędu WebKit/Chrome:
@@ -18,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.65';
+const SW_VERSION = '1.1.66';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -76,7 +77,12 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   pwaManifestMaskableIconCached: true,
   pwaManifestFaviconCacheCovered: true,
   pwaManifestBrowserIconCacheCovered: true,
-  semanticsChanged: false
+  semanticsChanged: false,
+  // P-SW rata 1 (decyzja właściciela 2026-09-24): klucze z ?v= są NIEZMIENNE — trafienie w cache
+  // (shell albo runtime) oddaje zapisaną treść BEZ odświeżania w tle. Dokumenty HTML i klucze bez ?v=
+  // zostają przy cache-first + odświeżanie w tle.
+  versionedAssets: 'cache-first-immutable-no-background-refresh',
+  immutableVersionedKeysApplied: true
 });
 
 // Minimalny shell wymagany do natychmiastowego startu aplikacji z cache.
@@ -2648,6 +2654,24 @@ function getShellCacheKeyFromStaticUrl(input) {
   return url.search ? `${pathname}${url.search}` : pathname;
 }
 
+// P-SW rata 1 (decyzja właściciela 2026-09-24): wpis z parametrem ?v= jest NIEZMIENNY.
+// Hosting (GitHub Pages) ignoruje ?v= i zawsze oddaje bieżący plik, więc odświeżenie w tle zapisywało
+// pod STARYM kluczem treść NOWEGO wydania. Strona ze starego HTML-a ładowała wtedy mieszankę wersji
+// modułów (P-DIETA rata H1: nowy silnik diety bez nowego pliku danych → REE null i fałszywy komunikat
+// kliniczny). Teraz stary HTML dostaje stare, spójne klucze, a nowy HTML (odświeżany w tle jak dotąd)
+// odwołuje się do nowych kluczy, które przy pierwszym użyciu przychodzą z sieci. Koszt: poprawka wgrana
+// pod tym samym ?v= nie dotrze do klienta — każda zmiana treści pliku wymaga podbicia ?v= (strażnik:
+// tests/unit/wersje-zasobow.test.mjs). Dokumenty HTML i adresy bez ?v= odświeżają się jak dotąd.
+function isImmutableVersionedRequest(request) {
+  if (isNavigationRequest(request)) return false;
+  if (!isSameOrigin(request)) return false;
+
+  const url = toURL(request);
+  if (!url || !url.searchParams.has('v')) return false;
+
+  return !DOCUMENT_PATHS.has(normalizeNavigationPath(unscopePathname(url.pathname)));
+}
+
 function getShellCacheKeyFromRequest(request) {
   if (!isSameOrigin(request)) return null;
 
@@ -3070,6 +3094,11 @@ self.addEventListener('fetch', (event) => {
           (await readFromShellCache(request)) ||
           (await readFromRuntimeCache(request));
 
+        // P-SW rata 1: wersjonowany zasób z cache jest niezmienny — bez odświeżania w tle.
+        if (cachedResponse && isImmutableVersionedRequest(request)) {
+          return cachedResponse;
+        }
+
         const networkResponsePromise = updateShellFromNetwork(request);
         event.waitUntil(networkResponsePromise.catch(() => undefined));
 
@@ -3090,6 +3119,12 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cachedResponse = await readFromRuntimeCache(request);
+
+      // P-SW rata 1: to samo w runtime cache (TTL i limit wpisów działają jak dotąd).
+      if (cachedResponse && isImmutableVersionedRequest(request)) {
+        return cachedResponse;
+      }
+
       const networkResponsePromise = updateRuntimeFromNetwork(request);
 
       event.waitUntil(networkResponsePromise.catch(() => undefined));

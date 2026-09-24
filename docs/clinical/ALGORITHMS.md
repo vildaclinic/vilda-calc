@@ -5813,7 +5813,10 @@ cytowanie, DOI, kraj, populację, metodę, `jednostka: 'MJ/24 h'`, wskazanie i u
   Bez kopii REE wychodziło wtedy `null`, a karta planu pokazywała **fałszywy komunikat kliniczny** („zapotrzebowanie zbyt
   niskie”, „zalecana stabilizacja masy ciała”). Z kopią wynik jest bit w bit taki jak dawniej. Test pilnuje, że kopia jest
   równa danym co do bitu i że silnik woła ją w jednym miejscu. **Warunek usunięcia kopii:** klucze z `?v=` w service workerze
-  przestają się odświeżać w tle, a potem mija jeden cykl wydania (decyzja właściciela). **Do tego czasu tabela może tylko
+  przestają się odświeżać w tle, a potem mija jeden cykl wydania (decyzja właściciela). *Aktualizacja (P-SW rata 1, SW 1.1.66,
+  2026-09-24):* klucze z `?v=` są już niezmienne, ale klient z SW ≤ 1.1.65, który nie otworzy aplikacji w okresie przejściowym,
+  pozostaje narażony. Decyzja właściciela: kopię trzymamy **co najmniej 3 miesiące po wydaniu SW 1.1.66** (`docs/ARCHITECTURE.md`,
+  „PWA i cache”). **Do tego czasu tabela może tylko
   dodawać pola i etapy.** Zmiana nazwy pola, klucza etapu albo jednostki trafiłaby w oknie starego SW na silnik, który znajdzie
   tabelę, ale nie swoje pola, i zwróci `null`. Zapasowe metadane Henry’ego w `energyBuildPlanReductionState` zostają bez zmian
   z tego samego powodu.
