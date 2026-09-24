@@ -102,7 +102,9 @@ test('J3: stabilizacja 8-latki — cel raz, „bez dodatkowego deficytu", bez �
 test('J4: czas dojścia — 14-latek ≤ 52 tyg. „około N tygodni (ok. X miesiąca)", 3-latka > roku tylko miesiące, dorosły z cudzysłowem polskim', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
-  const r14 = await run(page, { age: 14, sex: 'M', w: 75, h: 165 });
+  // rata N2: 14-latek z samą nadwagą ma domyślnie stabilizację i wolniejszy sufit tempa (0,5 kg/mies.) — format „≤ 52 tygodnie”
+  // sprawdzamy na 14-latku z otyłością (redukcja domyślna, tempo 1,5 kg/mies.)
+  const r14 = await run(page, { age: 14, sex: 'M', w: 82, h: 165 });
   expect(r14.text).toMatch(/można szacować na około \d+ tygodni \(ok\. \d+(,\d)? miesi(ąca|ęcy)\)\. Regularna aktywność/u);
   expect(r14.text).not.toContain('mies.)');
   const r3 = await run(page, { age: 3, sex: 'F', w: 22, h: 100 });

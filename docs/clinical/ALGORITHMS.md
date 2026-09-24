@@ -5778,6 +5778,83 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Sama nadwaga u nastolatka 12–18 lat: domyślnie stabilizacja masy, redukcja z sufitem 0,5 / 1 / 1,5 kg/mies. (P-DIETA rata N2, SW 1.1.67, 2026-09-24)
+
+**Zgłoszenie (odłożona decyzja z raty U).** Przy samej nadwadze (85.–97. centyl) plan nastolatka 12–18 lat działał jak przy
+otyłości. Domyślna była redukcja, a sufit tempa wynosił 1 / 1,5 / 2 kg/mies. Sufit wiązał niemal zawsze: już 2–3 kg nad celem
+deficyt liczony od masy docelowej go przekraczał. Dziecko 1,2 kg nad 85. centylem dostawało więc dietę intensywną 2 kg/mies. i
+dochodziło do celu w niecały miesiąc. U dzieci 6–11 lat było łagodniej: domyślnie stabilizacja, redukcja do 0,5 kg/mies.
+
+**Piśmiennictwo (PubMed).** Mazur A. i wsp., stanowisko PTP/PTOD/PTEiDD/KLRwP/PTBO, Nutrients 2022;14(18):3806, PMID 36145182,
+[doi:10.3390/nu14183806](https://doi.org/10.3390/nu14183806) (pełny tekst, rozdz. 4.1): „Maintenance of a stable weight for
+more than 1 year might be an appropriate goal for those children with overweight and mild obesity, because BMI will decrease as
+children gain height. In older children, weight loss is recommended to obtain the 85th percentile BMI. A weight loss of up to
+1–2 kg/month is safe.” Wynika z tego, że 1–2 kg/mies. to granica bezpieczeństwa leczenia otyłości, a przy nadwadze celem
+pierwszego wyboru jest utrzymanie masy.
+
+Barlow 2007 ([doi:10.1542/peds.2007-2329C](https://doi.org/10.1542/peds.2007-2329C)) przy 85.–94. centylu zaleca
+najpewniej utrzymanie masy albo stopniowy ubytek; tego brzmienia nie potwierdzono w pełnym tekście. Liczby 0,5 / 1 / 1,5 kg/mies. to
+decyzja właściciela; to te same progi, które aplikacja stosuje u dzieci 6–11 lat z ≥ 99. centylem.
+
+**Decyzje właściciela (2026-09-24, po makiecie).**
+1. U nastolatka 12–18 lat z samą nadwagą domyślna strategia to stabilizacja masy, póki rośnie. Redukcja zostaje domyślna, gdy:
+   - zaznaczono „Wzrost zakończony”;
+   - wzrastanie jest praktycznie zakończone;
+   - aplikacja wie, że dziecko nie zdąży wyrosnąć z nadwagi (zablokowany przełącznik stabilizacji).
+2. Redukcja do wyboru z sufitem 0,5 / 1 / 1,5 kg/mies. Sufit obowiązuje także po zakończeniu wzrastania. Dieta domyślna: lekka.
+3. Otyłość (≥ 97. centyl), także łagodna, bez zmian: 1 / 1,5 / 2 kg/mies., domyślna umiarkowana. Etap 6–11 lat bez zmian.
+
+**Zmiana (kliniczna: inny domyślny plan i niższe tempo przy nadwadze 12–18 lat).**
+- `vilda_diet_plan_ui.js` (`?v=31`):
+  - `CHILD_RATE_KG_MONTH.age_12_18_nadwaga = {light: 0,5, moderate: 1, intense: 1,5}`;
+  - `Gc` wybiera ten wiersz przy etapie 12–18 i braku otyłości, a wiersz diety niesie `tempoNadwagi`;
+  - `energyResolveStrategy` zwraca stabilizację dla etapu 12–18 bez otyłości, po regułach „wzrost zakończony”, „praktycznie
+    zakończone” i „nie zdąży wyrosnąć”;
+  - nowe teksty: punkt opisu diety „przy nadwadze ubytek stopniowy: do 0,5–1,5 kg/mies.”, nota karty „nie szybciej niż
+    0,5–1,5 kg/mies. (nadwaga)”, ostrzeżenie karty planu przy redukcji „Nadwaga u nastolatka 12–18 lat: zalecane utrzymanie
+    masy ciała … albo ubytek stopniowy — do 0,5–1,5 kg/mies.”;
+  - opisy diety umiarkowanej i intensywnej mówią „przy nadwadze”, a nie „dieta domyślna u nastolatka z otyłością”.
+- `vilda_diet_recommendations.js` (`?v=58`), przy redukcji: „Przy nadwadze u nastolatka ubytek masy powinien być stopniowy —
+  tempo ograniczono do ok. X kg/mies. (deficyt ok. Y kcal/dzień). U rosnącego nastolatka często wystarcza utrzymanie masy ciała,
+  bo BMI obniża się przy dalszym wzrastaniu.”
+- Stabilizacja przy nadwadze 12–18 lat korzysta z istniejącej ścieżki raty B: energia utrzymania, karta „Droga do normy”
+  z czasem dojścia przy stałej masie i zdania stabilizacji w zaleceniach. Nowych ekranów nie ma.
+- SW 1.1.67; `?v=` na `index.html`, `docpro.html` i `kalkulator-klirens.html`; precache tylko dopisany;
+  `tests/fixtures/wersje-zasobow.json` odświeżony.
+
+**Uwaga o deficycie Mazura.** Sufit 0,5 kg/mies. to ok. 126 kcal/d, mniej niż minimalny deficyt Mazura 200 kcal. Przy
+nadwadze wiąże więc zawsze sufit. Strażnik raty U („deficyt ≥ 200/350/500”) obowiązuje dalej przy otyłości, a przy
+`tempoNadwagi` sprawdza deficyt równy sufitowi.
+
+Syntetyczne przypadki `wejście → oczekiwany wynik` (fikcyjne, PAL domyślny 1,6; górna granica dnia lekka / umiarkowana /
+intensywna, kcal; tempo 0,5 / 1 / 1,5 kg/mies.; dawniej 1 / 1,5 / 2):
+
+| przypadek | centyl / nadmiar | po zmianie | dotąd | strategia domyślna |
+|---|---|---|---|---|
+| chł. 13 l., 155 cm, 55 kg | 87,3 c / 1,2 kg | 2 350 / 2 250 / 2 100 | 2 250 / 2 100 / 2 000 | stabilizacja (dotąd redukcja) |
+| chł. 13 l., 155 cm, 60 kg | 93,4 c / 6,2 kg | 2 500 / 2 350 / 2 250 | 2 350 / 2 250 / 2 100 | stabilizacja, 2 600 kcal utrzymania |
+| dz. 12 l., 152 cm, 52 kg | 88,8 c / 1,9 kg | 2 000 / 1 850 / 1 700 | 1 850 / 1 700 / 1 600 | stabilizacja |
+| dz. 15 l., 162 cm, 66 kg | 92,6 c / 4,8 kg | 2 250 / 2 100 / 1 950 | 2 100 / 1 950 / 1 850 | stabilizacja |
+| chł. 17 l., 178 cm, 80 kg | 88,1 c / 1,9 kg | 3 100 / 2 950 / 2 850 | 2 950 / 2 850 / 2 700 | stabilizacja; redukcja po „Wzrost zakończony” |
+| chł. 15;3, 186,7 cm, 102,5 kg (otyłość) | 98,1 c | bez zmian (tempo 1 / 1,5 / 2, domyślna umiarkowana) | — | redukcja |
+| chł. 10 l., 145 cm, 50 kg (6–11 lat) | 94,8 c | bez zmian (lekka 0,5 kg/mies.) | — | stabilizacja |
+
+Na prawdziwej stronie (chłopiec 13 l., 60 kg; przyrost wzrostu z prognozy ok. 7 cm/rok):
+- stabilizacja: norma BMI po ok. 12 mies.;
+- redukcja lekka: ok. 6 mies. (dotąd 4,5), kontrola po 12 tygodniach (reguła raty W dla tempa < 1 kg/mies.).
+
+**Walidacja.**
+- `tests/unit/rata-n2-nadwaga-sufit.test.mjs`: prawdziwy silnik — stałe, przypadki z tabeli, otyłość i 6–11 lat bez zmian,
+  strategia domyślna z wyjątkami, opisy diet.
+- Przepisane oczekiwania:
+  - `rata-u-dieta-dziecka` (nadwaga 60 i 55 kg, strażnik deficytu);
+  - `zalecenia-energetyczne-strategia` (resolver 12–18: nadwaga → stabilizacja, otyłość → redukcja);
+  - `energy-dziecko-otylosc` (wywołanie `proposeChildDietsFromBase` z klasą ≥ 99 c dostaje `obese: true`, bo ≥ 99 c to
+    otyłość).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna (udzielona 2026-09-24 przed kodowaniem), scalenie i wdrożenie.
+Ewentualnie pełny tekst Barlow 2007 do potwierdzenia brzmienia dla 85.–94. centyla.
+
 ## Współczynniki Henry’ego 2005 jako dane, bez zmiany wyników (P-DIETA rata H1, SW 1.1.65, 2026-09-24)
 
 **Polecenie właściciela (2026-09-24).** Przenieść współczynniki równań Henry’ego z silnika do pliku danych. To kontynuacja

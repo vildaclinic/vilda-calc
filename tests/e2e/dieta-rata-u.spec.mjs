@@ -23,6 +23,8 @@ async function stan(page, c) {
     set('name', 'Testowy Fikcyjny'); set('sex', c.sex); set('age', c.y); set('ageMonths', c.m || 0); set('weight', c.w); set('height', c.h);
     if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
     const jf = document.getElementById('journeyFlag'); if (jf && !jf.checked) { jf.checked = true; jf.dispatchEvent(new Event('change', { bubbles: true })); }
+    // P-DIETA rata N2: sama nadwaga 12–18 lat ma domyślnie stabilizację — test diety redukcyjnej wybiera redukcję jawnie
+    if (c.redukcja) { window.__vildaDietStrategyTouched = true; const rt = document.getElementById('reduceToggle'); if (rt) rt.checked = true; const sb = document.getElementById('stabilizationToggle'); if (sb) sb.checked = false; }
     window.update();
     await new Promise((r) => { setTimeout(r, 700); });
     if (c.dieta) { const sel = document.getElementById('dietLevel'); if (sel) { sel.value = c.dieta; } if (sel) { sel.dispatchEvent(new Event('change', { bubbles: true })); } if (typeof window.updatePlanFromDiet === 'function') window.updatePlanFromDiet(); window.update(); await new Promise((r) => { setTimeout(r, 700); }); }
@@ -102,20 +104,27 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     expect(i.energia.podaz).toBe(2550); expect(i.energia.def).toBe(506); expect(i.kafle[0]).toBe('≤ 2 550 kcal dziennie');
   });
 
-  test('RU-4: chłopiec 13 l, 155 cm, 55 kg (nadwaga tuż nad celem) — bez korekty, PAL 1,6, lekka domyślna z podstawy masy docelowej (bez sufitu), tempo < 1 kg/mies.', async ({ page }) => {
+  // P-DIETA rata N2 (2026-09-24): przy samej nadwadze 12–18 lat domyślnie stabilizacja, a redukcja ma sufit 0,5 / 1 / 1,5 kg/mies.
+  // — sufit 0,5 kg/mies. (126 kcal) jest niższy niż deficyt Mazura 200 kcal, więc wiąże także tuż nad celem.
+  test('RU-4: chłopiec 13 l, 155 cm, 55 kg (nadwaga tuż nad celem) — bez korekty, PAL 1,6; domyślnie stabilizacja; redukcja lekka z sufitem 0,5 kg/mies. (rata N2)', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
-    const r = await stan(page, { sex: 'M', y: 13, m: 0, w: 55, h: 155 });
+    const s = await stan(page, { sex: 'M', y: 13, m: 0, w: 55, h: 155 });
+    expect(s.journey).toContain('utrzymanie masy');
+    const r = await stan(page, { sex: 'M', y: 13, m: 0, w: 55, h: 155, redukcja: true });
     expect(r.dietLevel).toBe('light');
     expect(r.silnik.fac).toBe(1); expect(r.silnik.pal).toBe(1.6);
     expect(r.silnik.reeAdj).toBe(Math.round(r.silnik.ree));
     const lekka = r.silnik.diety[0];
-    expect(lekka.sufit).toBe(false); expect(lekka.zal).toBe(true);
-    expect(lekka.kcal).toBe(r.silnik.teeT - 200);
-    expect(lekka.mies).toBeLessThan(1);
-    expect(r.energia.sufit).toBe(false); expect(r.energia.defCelu).toBe(200);
-    expect(r.plan).toContain(`od zapotrzebowania dla masy docelowej ok. ${r.silnik.teeT} kcal odjęto 200 kcal (Mazur 2022); deficyt ok. ${lekka.def} kcal dziennie`);
-    expect(r.plan).not.toContain('tempo ograniczono');
+    expect(lekka.sufit).toBe(true); expect(lekka.zal).toBe(true);
+    expect(lekka.def).toBe(126);
+    expect(lekka.kcal).toBe(r.silnik.maint - 126);
+    expect(lekka.mies).toBe(0.5);
+    expect(r.energia.sufit).toBe(true); expect(r.energia.defCelu).toBe(200);
+    expect(r.plan).toContain(`od zapotrzebowania dla masy docelowej ok. ${r.silnik.teeT} kcal odjęto 200 kcal (Mazur 2022), a tempo ograniczono do ok. 0,5 kg/mies.`);
+    expect(r.plan).toContain('przy nadwadze ubytek stopniowy: do 0,5–1,5 kg/mies.');
+    expect(r.plan).toContain('Nadwaga u nastolatka 12–18 lat: zalecane utrzymanie masy ciała');
+    expect(r.tekst).toContain('Przy nadwadze u nastolatka ubytek masy powinien być stopniowy — tempo ograniczono do ok. 0,5 kg/mies.');
   });
 
   test('RU-5: bramka wieku równania — 8 lat z otyłością Henry bez korekty (1), 11 lat z otyłością Molnár (rata V)', async ({ page }) => {

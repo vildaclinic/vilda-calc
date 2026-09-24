@@ -104,7 +104,8 @@ test('niedowaga bez cech ryzyka: ruch dla przyjemności bez wyczerpujących tren
   expect(zl(m3, 'ruch')).toContain('180 minut');
   // kontrola pozytywna: nadmiar u 12‑latka nadal dostaje 60 minut ruchu
   const o12 = await policz(page, { age: 12, sex: 'M', h: 150, centyl: 95 });
-  expect(o12.strategia).toBe('reduction');
+  // P-DIETA rata N2: sama nadwaga u 12-latka — domyślnie stabilizacja masy; ruch 60 minut bez zmian
+  expect(o12.strategia).toBe('stabilization');
   expect(zl(o12, 'ruch')).toContain('co najmniej 60 minut');
 });
 

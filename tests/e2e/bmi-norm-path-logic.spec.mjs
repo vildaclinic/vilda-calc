@@ -13,8 +13,8 @@ import { expect, test } from '@playwright/test';
 // Testy uruchamiają PRAWDZIWĄ ścieżkę produkcyjną window.update() na
 // index.html i czytają wyrenderowaną kartę (AGENTS.md §3.5). Dane FIKCYJNE.
 
-async function renderToNorm(page, { age, months, sex, weight, height }) {
-  return page.evaluate(({ age, months, sex, weight, height }) => {
+async function renderToNorm(page, { age, months, sex, weight, height, redukcja = false }) {
+  return page.evaluate(({ age, months, sex, weight, height, redukcja }) => {
     const set = (id, v) => {
       const el = document.getElementById(id);
       if (el) el.value = String(v);
@@ -24,6 +24,9 @@ async function renderToNorm(page, { age, months, sex, weight, height }) {
     set('sex', sex);
     set('weight', weight);
     set('height', height);
+    // P-DIETA rata N2: sama nadwaga 12–18 lat ma domyślnie stabilizację — redukcję wybieramy jawnie
+    window.__vildaDietStrategyTouched = !!redukcja;
+    if (redukcja) { const rt = document.getElementById('reduceToggle'); if (rt) rt.checked = true; const sb = document.getElementById('stabilizationToggle'); if (sb) sb.checked = false; }
     window.update();
     const card = document.getElementById('toNormCard');
     const info = document.getElementById('toNormInfo');
@@ -31,7 +34,7 @@ async function renderToNorm(page, { age, months, sex, weight, height }) {
       visible: !!card && card.style.display !== 'none',
       text: info ? info.textContent.replace(/\s+/g, ' ').trim() : '',
     };
-  }, { age, months, sex, weight, height });
+  }, { age, months, sex, weight, height, redukcja });
 }
 
 async function openIndex(page) {
@@ -91,7 +94,10 @@ test('TONORM-S1-TODDLER-2-5-HIGH: 3 lata, BMI > 85c → „nadwyżka" i spowolni
 test('TONORM-S1-OLDER-JOURNEY: 13 lat i dorosły — panel „Droga do normy 2.0" zamiast recepty', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
-  const teen = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
+  // rata N2: 13-latek z samą nadwagą — domyślnie utrzymanie masy; panel redukcji po jawnym wyborze
+  const teenStab = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
+  expect(teenStab.text).toContain('Cel: utrzymanie masy');
+  const teen = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158, redukcja: true });
   expect(teen.visible).toBe(true);
   expect(teen.text).toContain('Cel: −');
   expect(teen.text).toContain('85. centyl dla wieku');
@@ -224,7 +230,7 @@ test('TONORM-J-INTERACTIONS: chipy budują tabelę, toggle wyłącza dietę, wyb
 test('TONORM-J-CHILD: 13-latek — cel 85. centyla, domyślna dieta lekka, minima dziecięce', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
-  const out = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158 });
+  const out = await renderToNorm(page, { age: 13, months: 0, sex: 'M', weight: 58, height: 158, redukcja: true });
   expect(out.text).toContain('85. centyl dla wieku');
   expect(out.text).toContain('Dieta lekka');
   expect(out.text).toMatch(/\d+(,5)? mies\./);
