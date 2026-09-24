@@ -237,14 +237,15 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
     expect(h.total).toEqual({ t: 'bad', l: 'istotna deceleracja wzrastania' });
   });
 
-  it('czerwona flaga pozycyjna: baza = pierwszy pomiar ≥24 mies. (reguła PR #64)', () => {
+  it('czerwona flaga pozycyjna: baza = pierwszy pomiar ≥ 36 mies. (reguła PR #64; od raty T3 36, nie 24)', () => {
     const vta = makeGlobalWithStats({
-      'HT|6': 1.9, 'HT|30': 1.3, 'HT|72': 0.1
+      'HT|6': 1.9, 'HT|30': 1.3, 'HT|40': 1.3, 'HT|72': 0.1
     });
     const model = vta.analyze({
       measurements: [
         { ageMonths: 6, height: 70 },
-        { ageMonths: 30, height: 93 }
+        { ageMonths: 30, height: 93 },
+        { ageMonths: 40, height: 100 }
       ],
       currentAgeMonths: 72,
       currentHeight: 113,
@@ -252,8 +253,21 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
     });
     const h = model.metrics.find((m) => m.metric === 'height');
     expect(h.redFlag).not.toBeNull();
-    expect(h.redFlag.baseAgeMonths).toBe(30);
+    expect(h.redFlag.baseAgeMonths).toBe(40);
     expect(h.redFlag.dSds).toBe(-1.2);
+    expect(h.redFlag).toMatchObject({ baseSd: 1.3, lastSd: 0.1, lastAgeMonths: 72 });
+  });
+
+  it('rata T3: pomiar z 24–35 mies. nie jest bazą flagi w dół (catch-down 2.–3. r.ż., szew siatek)', () => {
+    // dawniej (baza ≥ 24 mies.): 30 mies. +1,3 → 72 mies. +0,1 = −1,2 → flaga; teraz bazą byłby dopiero pomiar ≥ 36 mies.
+    const vta = makeGlobalWithStats({ 'HT|6': 1.9, 'HT|30': 1.3, 'HT|72': 0.1 });
+    const h = vta.analyze({
+      measurements: [{ ageMonths: 6, height: 70 }, { ageMonths: 30, height: 93 }],
+      currentAgeMonths: 72, currentHeight: 113, sex: 'M'
+    }).metrics.find((m) => m.metric === 'height');
+    expect(vta.PARAMS.REDFLAG_BASE_MIN_M).toBe(36);
+    expect(vta.PARAMS.REDFLAG_DSDS).toBe(-1.0);
+    expect(h.redFlag).toBeNull();
   });
 
   it('bez czerwonej flagi, gdy spadek zaszedł wyłącznie przed 24. mies. (catch-down niemowlęcy)', () => {
@@ -1355,9 +1369,9 @@ describe('flaga pozycyjna wzrostu w górę (rata T2)', () => {
     expect(h.redFlag).toBeNull();
     const d = wzrost(vta, { measurements: [{ ageMonths: 38, height: 97 }], currentAgeMonths: 74, currentHeight: 129, sex: 'M' });
     expect(d.upFlag.dSds).toBe(2.13);
-    const dol = makeGlobalWithStats({ 'HT|30': 1.3, 'HT|72': 0.1 });
-    const r = wzrost(dol, { measurements: [{ ageMonths: 30, height: 93 }], currentAgeMonths: 72, currentHeight: 113, sex: 'M' });
-    expect(r.redFlag).toMatchObject({ dSds: -1.2, baseAgeMonths: 30, lastAgeMonths: 72 });
+    const dol = makeGlobalWithStats({ 'HT|38': 1.3, 'HT|72': 0.1 });
+    const r = wzrost(dol, { measurements: [{ ageMonths: 38, height: 97 }], currentAgeMonths: 72, currentHeight: 113, sex: 'M' });
+    expect(r.redFlag).toMatchObject({ dSds: -1.2, baseAgeMonths: 38, lastAgeMonths: 72 });
     expect(typeof r.redFlag.baseC).toBe('number'); expect(typeof r.redFlag.lastC).toBe('number');
     expect(vta.heightUpFlagOf(vta.analyze({ measurements: [{ ageMonths: 38, height: 97 }], currentAgeMonths: 74, currentHeight: 129, sex: 'M' })).dSds).toBe(2.13);
   });
@@ -1386,6 +1400,20 @@ describe('flaga pozycyjna wzrostu w górę (rata T2)', () => {
     expect(wzrost(vta, { measurements: [{ ageMonths: 36, height: 96 }], currentAgeMonths: 72, currentHeight: 122, sex: 'M', source: 'OLAF' }).upFlag).toBeNull();
     const ok = makeGlobalWithStats({ 'HT|36': 0.0, 'HT|72': 1.3 }, () => 'OLAF');
     expect(wzrost(ok, { measurements: [{ ageMonths: 36, height: 96 }], currentAgeMonths: 72, currentHeight: 122, sex: 'M', source: 'OLAF' }).upFlag).not.toBeNull();
+  });
+
+  it('rata T3: flaga w dół — baza na innej siatce niż ostatni pomiar jest pomijana (szew siatek)', () => {
+    // 36 mies. na Palczewskiej (szew), 48 mies. i 96 mies. na OLAF: bazą jest 48 mies., nie 36
+    const vta = makeGlobalWithStats({ 'HT|36': 1.5, 'HT|48': 1.0, 'HT|96': 0.1 }, (m) => (m < 40 ? 'PALCZEWSKA' : 'OLAF'));
+    const h = wzrost(vta, { measurements: [{ ageMonths: 36, height: 97 }, { ageMonths: 48, height: 106 }], currentAgeMonths: 96, currentHeight: 126, sex: 'M', source: 'OLAF' });
+    expect(h.redFlag).toBeNull(); // 48 → 96: −0,9 (bez szwu); z bazą 36 byłoby −1,4
+    const ta = makeGlobalWithStats({ 'HT|36': 1.5, 'HT|48': 1.0, 'HT|96': -0.1 }, (m) => (m < 40 ? 'PALCZEWSKA' : 'OLAF'));
+    expect(wzrost(ta, { measurements: [{ ageMonths: 36, height: 97 }, { ageMonths: 48, height: 106 }], currentAgeMonths: 96, currentHeight: 124, sex: 'M', source: 'OLAF' }).redFlag)
+      .toMatchObject({ dSds: -1.1, baseAgeMonths: 48, siatka: 'OLAF' });
+    // ta sama siatka od 36 mies. → baza 36
+    const jedna = makeGlobalWithStats({ 'HT|36': 1.5, 'HT|48': 1.0, 'HT|96': 0.1 }, () => 'OLAF');
+    expect(wzrost(jedna, { measurements: [{ ageMonths: 36, height: 97 }, { ageMonths: 48, height: 106 }], currentAgeMonths: 96, currentHeight: 126, sex: 'M', source: 'OLAF' }).redFlag)
+      .toMatchObject({ dSds: -1.4, baseAgeMonths: 36 });
   });
 
   it('strażnik: flaga w górę nie tworzy banera karty ani werdyktu', () => {
