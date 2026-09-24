@@ -42,10 +42,10 @@ const DANE_PRZYROST = {
 };
 
 describe('Karta „Zapotrzebowanie energetyczne” (wariant A)', () => {
-  it('otyłość: bez wiersza „przy obecnej masie”; masa prawidłowa, plan, białko g/kg × masa ref., makro w procentach; bez odznaki „Normy”', () => {
+  it('otyłość: bez wiersza „przy obecnej masie”; masa prawidłowa, plan, białko „ok. X g/d” z masy należnej (rata B1), makro w procentach; bez odznaki „Normy”', () => {
     const k = w.patientReportBuildEnergyCardFromData(DANE_DZIECKO_OTYLOSC, {
       celEnergiaKcal: 1866.2, celMasaKg: 41.755, celWlasny: false,
-      bialko: { rdaGKg: 0.92, masaRefKg: 30, podstawa: 'masa referencyjna dla wieku wg Norm 2024', podstawaKrotka: 'masa referencyjna' },
+      bialko: { rdaGKg: 0.92, masaKg: 29.46, gDzien: 27.103, rodzaj: 'nalezna' },
       weglProc: [45, 65], tluszczProc: [30, 40],
     });
     expect(k.kind).toBe('energy-demand');
@@ -57,11 +57,13 @@ describe('Karta „Zapotrzebowanie energetyczne” (wariant A)', () => {
     expect(wiersze).toEqual([
       'Dla masy prawidłowej (41,8 kg): 1866 kcal/d',
       'Plan: dieta lekka: 1800 kcal/d',
-      'Białko: 0,92 g/kg × 30 kg (masa referencyjna) ≈ 28 g/d',
+      'Białko: ok.\u00A027\u00A0g/d',
       'Węglowodany: 45–65 % energii',
       'Tłuszcze: 30–40 % energii',
     ]);
     expect(wiersze.join(' ')).not.toContain('Przy obecnej masie');
+    expect(k.rows.find((r) => r.label === 'Białko').detail).toBe('0,92\u00A0g na kg należnej masy ciała (29,5\u00A0kg)');
+    expect(JSON.stringify(k.rows)).not.toMatch(/×|≈|masa referencyjna/);
     expect(k.rows.find((r) => r.label.startsWith('Plan')).highlighted).toBe(true);
     expect(k.note).toBe(''); // rata R (decyzja 7): bez noty o wzorze i PAL
     // liczby z masy aktualnej (2412 kcal starej karty) nie mają prawa się pojawić
@@ -69,10 +71,12 @@ describe('Karta „Zapotrzebowanie energetyczne” (wariant A)', () => {
   });
 
   it('BMI w normie: wiersz „przy obecnej masie” = utrzymanie z generatora; bez celu i bez planu', () => {
-    const k = w.patientReportBuildEnergyCardFromData(DANE_DOROSLY_NORMA, { bialko: { rdaGKg: 0.83, masaRefKg: 62, podstawa: 'obecna masa', podstawaKrotka: 'obecna masa' }, weglProc: [45, 65], tluszczProc: [30, 40] });
+    const k = w.patientReportBuildEnergyCardFromData(DANE_DOROSLY_NORMA, { bialko: { rdaGKg: 0.83, masaKg: 59.9, gDzien: 49.717, rodzaj: 'bmi22' }, weglProc: [45, 65], tluszczProc: [30, 40] });
     expect(k.value).toBe('1882 kcal/d');
     expect(k.rows.map((r) => r.label)).toEqual(['Przy obecnej masie', 'Białko', 'Węglowodany', 'Tłuszcze']);
-    expect(k.rows[1].valueText).toBe('0,83 g/kg × 62 kg (obecna masa) ≈ 51 g/d');
+    // rata B1: wartość bez wzoru, podstawa w podpisie pod etykietą
+    expect(k.rows[1].valueText).toBe('ok.\u00A050\u00A0g/d');
+    expect(k.rows[1].detail).toBe('0,83\u00A0g na kg należnej masy ciała (59,9\u00A0kg)');
   });
 
   it('strategia przyrost: plan jako zakres kcal, wartość główna = plan', () => {

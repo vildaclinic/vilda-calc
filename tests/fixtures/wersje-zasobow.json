@@ -292,8 +292,8 @@
   "sha256": "83d2e2f592be8e799c6e2db502b4a7d55c533fa5d2cfc523c52eed98dc15d280"
  },
  "nutrition_norms.js": {
-  "v": 47,
-  "sha256": "b15f8b627a86301f515144f48e51fbda27268f118efefb1830dfa3a8c4b38b8d"
+  "v": 48,
+  "sha256": "9eab5b0c617aeb9709d6934907620b133de6846295120931140508a3a4aabf67"
  },
  "obesity_response_criteria.js": {
   "v": 4,
@@ -616,8 +616,8 @@
   "sha256": "f82ae91c53ceefc4394342a9ea3d4254454620b6330e112ed8e048a0333d09c5"
  },
  "vilda_patient_report.js": {
-  "v": 41,
-  "sha256": "a754b5286509945f7ca01331558f025f02480cbda36042a1c75f936dfb987e4a"
+  "v": 42,
+  "sha256": "c21338630c8b20c5f0161d60a22cc26aa7e4160a8d563bcf60b2b079a960dc4a"
  },
  "vilda_patient_summary_copy.js": {
   "v": 13,

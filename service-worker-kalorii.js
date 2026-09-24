@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.69';
+const SW_VERSION = '1.1.70';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1357,6 +1357,7 @@ const CORE_SHELL_URLS = [
   '/nutrition_norms.js?v=45',
   '/nutrition_norms.js?v=46',
   '/nutrition_norms.js?v=47',
+  '/nutrition_norms.js?v=48',
   '/nutrition_micros.js',
   '/nutrition_micros.js?v=25',
   '/nutrition_micros.js?v=26',
@@ -2322,6 +2323,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_report.js?v=39',
   '/vilda_patient_report.js?v=40',
   '/vilda_patient_report.js?v=41',
+  '/vilda_patient_report.js?v=42',
   '/vilda_raport_naglowek.js?v=1',
   '/vilda_raport_naglowek.js?v=2',
   '/vilda_raport_naglowek.js?v=3',
