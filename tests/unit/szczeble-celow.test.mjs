@@ -43,28 +43,45 @@ function karta() {
 }
 
 describe('P-SZCZEBLE — dorosły', () => {
-  it('przy otyłości III stopnia daje dwa szczeble, najbliżej BMI 35', () => {
+  // P-DIETA rata Z2 (decyzja właściciela 2026-09-24): u dorosłego także szczebel „−5 % masy” (klucz `wing`,
+  // Wing 2011, doi:10.2337/dc10-2415) — dzisiejsza masa × 0,95, gdy leży między dzisiejszą masą a celem.
+  it('przy otyłości III stopnia: najbliżej −5 % masy, potem BMI 35 i BMI 30', () => {
     const d = B.drabinkaCelow({ wzrostCm: 167, masaKg: 112.4, wiekMies: 564, plec: 'M' });
-    expect(klucze(d)).toEqual(['otylosc-2', 'otylosc-1']);
-    expect(d.najblizszy.klucz).toBe('otylosc-2');
-    expect(d.najblizszy.bmi, 'próg z silnika, nie z widoku').toBe(P.OTYLOSC_2);
-    expect(d.najblizszy.masa).toBeCloseTo(masaPrzy(P.OTYLOSC_2, 167), 9);
+    expect(klucze(d)).toEqual(['wing', 'otylosc-2', 'otylosc-1']);
+    expect(d.najblizszy.klucz).toBe('wing');
+    expect(d.najblizszy.masa).toBeCloseTo(112.4 * 0.95, 9);
+    expect(d.najblizszy.procentMasy).toBe(5);
+    expect(d.najblizszy.zrodlo).toContain('10.2337/dc10-2415');
     expect(Math.abs(d.najblizszy.roznica), 'szczebel jest BLIŻEJ niż cel')
       .toBeLessThan(Math.abs(d.cel.roznica));
+    const b35 = poKluczu(d, 'otylosc-2');
+    expect(b35.bmi, 'próg z silnika, nie z widoku').toBe(P.OTYLOSC_2);
+    expect(b35.masa).toBeCloseTo(masaPrzy(P.OTYLOSC_2, 167), 9);
     expect(poKluczu(d, 'otylosc-1').bmi).toBe(P.OTYLOSC_1);
   });
 
-  it('przy otyłości I stopnia zostaje sam BMI 30', () => {
+  it('przy otyłości I stopnia (BMI 33,2): −5 % masy przed BMI 30', () => {
     const d = B.drabinkaCelow({ wzrostCm: 186, masaKg: 115, wiekMies: 528, plec: 'M' });
-    expect(klucze(d)).toEqual(['otylosc-1']);
+    expect(klucze(d)).toEqual(['wing', 'otylosc-1']);
   });
 
-  it('przy nadwadze nie ma żadnego szczebla', () => {
+  it('tuż nad BMI 30 (K 78 kg / 158 cm, BMI 31,2): BMI 30 bliżej, −5 % masy dalej', () => {
+    const d = B.drabinkaCelow({ wzrostCm: 158, masaKg: 78, wiekMies: 744, plec: 'F' });
+    expect(klucze(d)).toEqual(['otylosc-1', 'wing']);
+    expect(poKluczu(d, 'wing').masa).toBeCloseTo(74.1, 9);
+  });
+
+  it('przy nadwadze nigdy „do BMI 30”; −5 % masy tylko, gdy leży przed celem', () => {
     // Inaczej pacjent z BMI 26 czytałby „do BMI 30", czyli w stronę, z której wyszedł.
     const d = B.drabinkaCelow({ wzrostCm: 160, masaKg: 68, wiekMies: 480, plec: 'F' });
     expect(d.kierunek).toBe('redukcja');
-    expect(d.szczeble).toEqual([]);
-    expect(d.najblizszy).toBeNull();
+    expect(klucze(d)).toEqual(['wing']);
+    expect(d.najblizszy.masa).toBeCloseTo(64.6, 9);
+    // BMI 25,5: −5 % masy (62,0 kg) wypada za celem BMI 24,9 (63,7 kg) — szczebla nie ma
+    const e = B.drabinkaCelow({ wzrostCm: 160, masaKg: 65.3, wiekMies: 480, plec: 'F' });
+    expect(e.kierunek).toBe('redukcja');
+    expect(e.szczeble).toEqual([]);
+    expect(e.najblizszy).toBeNull();
   });
 
   it('w normie nie ma ani celu, ani szczebli — jest zakres', () => {
@@ -154,7 +171,7 @@ describe('P-SZCZEBLE — jedno źródło obliczeń', () => {
     const d = B.drabinkaCelow({ wzrostCm: 167, masaKg: 112.4, wiekMies: 564, plec: 'M' });
     expect(cel.posredni.masa).toBeCloseTo(poKluczu(d, 'otylosc-1').masa, 9);
     expect(cel.cel.masa).toBeCloseTo(d.cel.masa, 9);
-    expect(cel.najblizszy.klucz, 'Status dostaje też pełną drabinkę').toBe('otylosc-2');
+    expect(cel.najblizszy.klucz, 'Status dostaje też pełną drabinkę (rata Z2: najbliżej −5 % masy)').toBe('wing');
   });
 });
 
@@ -200,7 +217,7 @@ describe('P-SZCZEBLE — karta „Droga do normy BMI"', () => {
   });
 
   it('bez szczebli nie zostawia pustego wiersza', () => {
-    const html = K.szczebleHtml({ weightKg: 68, heightCm: 160, ageYears: 40, sex: 'F', isChild: false },
+    const html = K.szczebleHtml({ weightKg: 65.3, heightCm: 160, ageYears: 40, sex: 'F', isChild: false }, // rata Z2: BMI 25,5 — −5 % za celem
       { stabMode: false });
     expect(html).toBe('');
   });

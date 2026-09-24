@@ -19,7 +19,9 @@ describe('P-DIETA-PROG rata N: próg pośredni u dorosłego i poprawki planu PDF
   it('generator: pierwszy szczebel drabinki u dorosłego z otyłością, źródło Wing 2011', () => {
     expect(gen).toContain('dorosly:!0})');
     // rata O: jedno brzmienie korzyści („wyniki badań krwi (cholesterol, trójglicerydy)”)
-    expect(gen).toContain('Pierwszy cel to ok. ${ie(szD.masaKg)} (BMI ${M(szD.bmi,0)}), czyli oko\\u0142o ${ie(szD.doRedukcjiKg)} mniej \\u2013 ${szD.opis||""}; ju\\u017C taka zmiana poprawia ci\\u015Bnienie i wyniki bada\\u0144 krwi (cholesterol, tr\\xF3jglicerydy).');
+    // P-DIETA rata Z2: pierwszy cel −5 % masy albo próg BMI z osobnym wskazaniem progu −5 % (korzyść przy −5 %)
+    expect(gen).toContain('Pierwszy cel to ok. ${ie(szD.masaKg)} (5 % masy cia\\u0142a), czyli oko\\u0142o ${ie(szD.doRedukcjiKg)} mniej; ju\\u017C taka zmiana poprawia ci\\u015Bnienie i wyniki bada\\u0144 krwi (cholesterol, tr\\xF3jglicerydy).');
+    expect(gen).toContain('Pierwszy cel to ok. ${ie(szD.masaKg)} (BMI ${M(szD.bmi,0)}), czyli oko\\u0142o ${ie(szD.doRedukcjiKg)} mniej \\u2013 ${szD.opis||""}; `+(szD.wingKg!=null?`ju\\u017C ok. 5 % masy (ok. ${ie(szD.wingKg)}) poprawia ci\\u015Bnienie i wyniki bada\\u0144 krwi (cholesterol, tr\\xF3jglicerydy).`:`ju\\u017C taka zmiana poprawia ci\\u015Bnienie i wyniki bada\\u0144 krwi (cholesterol, tr\\xF3jglicerydy).`)');
     expect(gen).toContain('do kt\\xF3rej dochodzi si\\u0119 stopniowo, etapami.`:`BMI wynosi ${M(y,1)} (${j}). Do uzyskania zakresu prawid\\u0142owego BMI');
     expect(gen).toContain('doi:10.2337/dc10-2415');
     expect(gen).toMatch(/pierwszyCel:\(function\(pc\)\{pc=pc\|\|z\.pierwszyCel;/);

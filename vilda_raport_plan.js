@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 11;
+  var WERSJA = 12;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -136,6 +136,10 @@
       + (opis ? '<i>' + esc(opis) + '</i>' : '') + dod + '</div>';
   }
 
+  /* P-DIETA rata Z2: „próg poprawy” wyników badań — próg Reinehra u dziecka (−0,25 BMI-SDS) albo −5 % masy
+     u dorosłego (Wing 2011); obu dotyczy ten sam podpis na osi i to samo zdanie pod pierwszym celem. */
+  function progPoprawy(s) { return !!s && (s.klucz === 'reinehr' || s.klucz === 'wing'); }
+
   /* Pasek drogi: start (dziś) → szczeble pośrednie → cel. Pozycja liniowo po masie ciała. */
   /* Punkty osi z drabinki celów (redukcja do normy): dziś → szczeble → norma BMI. */
   function punktyDrabinki(dane, drab) {
@@ -151,7 +155,7 @@
          rata U: „pierwszy krok” tylko wtedy, gdy próg Reinehra JEST pierwszym szczeblem (jak w nagłówku sekcji);
          gdy pierwszy jest 97. centyl (dziecko 1,88–2,13 SDS), próg Reinehra dalej na osi dostaje podpis
          „lepsze wyniki badań” — koniec dwóch różnych „pierwszych kroków” na jednej kartce. */
-      if (m != null && m < teraz && m > cel) punkty.push({ masa: m, pod: s.klucz === 'reinehr' ? (i === 0 ? 'pierwszy krok' : 'lepsze wyniki badań') : (krotko(s.opis) || s.etykieta || ''), typ: i === 0 ? 'krok' : 'etap' });
+      if (m != null && m < teraz && m > cel) punkty.push({ masa: m, pod: progPoprawy(s) ? (i === 0 ? 'pierwszy krok' : 'lepsze wyniki badań') : (krotko(s.opis) || s.etykieta || ''), typ: i === 0 ? 'krok' : 'etap' });
     });
     punkty.push({ masa: cel, pod: 'norma BMI', typ: 'cel' });
     return punkty;
@@ -200,7 +204,7 @@
        pacjenta (źródło progu Reinehra zostaje w silniku, karcie lekarza i ALGORITHMS). Gdy szczebli nie ma
        (pierwszy = cel końcowy), linia niesie opis celu bez przedrostka. */
     var jestSzczebel = !!(drab.szczeble && drab.szczeble.length);
-    var opisSzczebla = pierwszy.klucz === 'reinehr'
+    var opisSzczebla = progPoprawy(pierwszy)
       ? 'już ta zmiana poprawia ciśnienie i wyniki badań krwi'
       : (pierwszy.opis || pierwszy.etykieta || '');
     var podpisKroku = jestSzczebel ? (opisSzczebla ? 'pierwszy krok: ' + opisSzczebla : '') : (pierwszy.opis || pierwszy.etykieta || '');

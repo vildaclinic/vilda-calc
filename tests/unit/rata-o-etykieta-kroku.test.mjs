@@ -21,14 +21,17 @@ describe('P-RAPORT rata O: etykieta pierwszego kroku i zdanie o korzyści', () =
     expect(plan).not.toContain('&nbsp;|&nbsp;');
     expect(plan).not.toContain("pierwszy.zrodlo");
     // rata U: „pierwszy krok” tylko gdy próg Reinehra jest pierwszym szczeblem; dalej „lepsze wyniki badań”
-    expect(plan).toContain("s.klucz === 'reinehr' ? (i === 0 ? 'pierwszy krok' : 'lepsze wyniki badań')");
+    // rata Z2: ten sam podpis dla progu −5 % masy u dorosłego (progPoprawy: reinehr albo wing)
+    expect(plan).toContain("progPoprawy(s) ? (i === 0 ? 'pierwszy krok' : 'lepsze wyniki badań')");
+    expect(plan).toContain("function progPoprawy(s) { return !!s && (s.klucz === 'reinehr' || s.klucz === 'wing'); }");
     expect(plan).toMatch(/WERSJA = ([7-9]|\d{2,});/);
   });
 
-  it('generator: jedno brzmienie korzyści w trzech zdaniach, bez „trójglicerydy i HDL” i „wyniki lipidów”', () => {
+  // rata Z2: dorosły ma trzy warianty zdania o pierwszym celu (−5 % pierwsze / próg BMI + wskazanie −5 % / zapas) — razem 5 wystąpień
+  it('generator: jedno brzmienie korzyści w pięciu zdaniach, bez „trójglicerydy i HDL” i „wyniki lipidów”', () => {
     const fraza = 'poprawia ci\\u015Bnienie i wyniki bada\\u0144 krwi (cholesterol, tr\\xF3jglicerydy).';
     const frazaUtf = 'poprawia ciśnienie i wyniki badań krwi (cholesterol, trójglicerydy).';
-    expect((gen.match(new RegExp(fraza.replace(/[\\().]/g, '\\$&'), 'g')) || []).length + (gen.split(frazaUtf).length - 1)).toBe(3);
+    expect((gen.match(new RegExp(fraza.replace(/[\\().]/g, '\\$&'), 'g')) || []).length + (gen.split(frazaUtf).length - 1)).toBe(5);
     expect(gen).not.toContain('tr\\xF3jglicerydy i HDL');
     expect(gen).not.toContain('trójglicerydy i HDL');
     expect(gen).not.toContain('wyniki lipidów');

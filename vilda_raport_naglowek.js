@@ -185,6 +185,11 @@
     if (k.roznicaKg < 0.5) return zdanieGranicy(f, k, opis);
     var nawias = opis ? ' (' + opis + ')' : '';
     var korpus = kg(k.masaKg) + nawias + ', czyli około ' + kg(k.roznicaKg) + ' mniej';
+    /* P-DIETA rata Z2 (decyzja właściciela 2026-09-24): u dorosłego, gdy pierwszy jest próg BMI, a próg −5 % masy
+       (Wing 2011) wypada dalej, korzyść przypisana progowi −5 % (zbieracz podaje k.wingKg) */
+    if (k.jestSzczebel && liczba(k.wingKg) != null) {
+      return 'Pierwszy krok to ok. ' + korpus + '; już ok. 5' + NBSP + '% masy (ok. ' + kg(k.wingKg) + ') poprawia ciśnienie i wyniki badań krwi.';
+    }
     if (k.jestSzczebel) return 'Pierwszy krok to ok. ' + korpus + (k.korzysc ? '; ' + KORZYSC + '.' : '.');
     return 'Cel to ok. ' + korpus + '.';
   }
