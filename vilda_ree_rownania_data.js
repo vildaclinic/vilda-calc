@@ -49,8 +49,8 @@
       jednostka: 'kcal/24 h',
       zmienne: { masa: 'kg', wzrost: 'm' },
       wskazanie: 'domyslne',
-      weryfikacja: 'P-DIETA rata H1 (2026-09-24): 14/14 wierszy zgodnych z Henry 2005, tab. 15 („Oxford prediction equations for BMR using height and weight”, s. 1146) — dwa niezależne odczyty (tekst i obraz strony). Normy żywienia dla populacji Polski (NIZP PZH–PIB, 2024), rozdział „Energia”, tab. 1–2: 12/14 wierszy równych kolumnie kcal, dwa celowe wyjątki opisane w polu ograniczenia.',
-      ograniczenia: 'Henry podaje równania BMR (podstawowa przemiana materii); aplikacja używa ich jako REE. Równania z masą i wzrostem, w kcal/24 h (wzrost w metrach). Chłopcy 3–10 lat: liczymy z postaci MJ/24 h × 239, bo kolumna kcal tab. 15 Henry’ego (a za nią Norm 2024) ma 74,2·H, co jest niespójne z postacią MJ (1,31 MJ/m ≈ 313 kcal/m) i ze średnimi z tab. 16–17; Normy 2024 opisują to w przypisie. Chłopcy 10–18 lat: wzrost × 266, jak w kolumnie kcal Henry’ego 2005 (kolumna MJ × 239 ≈ 265) — NIE 226 z kolumny kcal Norm 2024 (najprawdopodobniej literówka). Od 60 lat: jedno równanie masa + wzrost dla całej grupy (Henry tab. 15 „60 +”, Normy tab. 2 „≥ 60”); podział 60–70 / 70+ istnieje u Henry’ego tylko dla równań z samą masą (tab. 14) i nie jest używany. Granice przedziałów silnik przyjmuje jako [od, do): 18 lat liczy równaniem 18–30. Równanie 0–3 lata stosowane od 1. roku życia; niemowlęta bez Henry’ego. Uwaga w polu populacja o dzieciach z otyłością to wniosek z Hofsteenge 2010 i Molnára 1995, nie cytat z Henry’ego.',
+      weryfikacja: 'P-DIETA rata H1 (2026-09-24): wszystkie 14 wierszy danych (12 równań Henry’ego; równanie 18–30 dla dwóch etapów) zgodne z Henry 2005, tab. 15 („Oxford prediction equations for BMR using height and weight”, s. 1146) — wiersz chłopców 3–10 lat z kolumną MJ, pozostałe z kolumną kcal; dwa niezależne odczyty (tekst i obraz strony). Normy żywienia dla populacji Polski (red. Rychlik, Stoś, Woźniak, Mojska; NIZP PZH–PIB 2024, ISBN 978-83-65870-78-0), rozdział „Energia”, tab. 1–2, s. 31: 12/14 wierszy równych kolumnie kcal, dwa celowe wyjątki opisane w polu ograniczenia; mnożnik 239 wg przypisu do tab. 1 (1 MJ = 239 kcal).',
+      ograniczenia: 'Henry podaje równania BMR (podstawowa przemiana materii); aplikacja używa ich jako REE. Równania z masą i wzrostem, w kcal/24 h (wzrost w metrach). Chłopcy 3–10 lat: liczymy z postaci MJ/24 h × 239, bo kolumna kcal tab. 15 Henry’ego (a za nią Norm 2024) ma 74,2·H, co jest niespójne z postacią MJ (1,31 MJ/m ≈ 313 kcal/m) i ze średnimi z tab. 16–17; Normy 2024 opisują to w przypisie. Chłopcy 10–18 lat: wzrost × 266, jak w kolumnie kcal Henry’ego 2005 (kolumna MJ × 239 ≈ 265) — NIE 226 z kolumny kcal Norm 2024 (najprawdopodobniej literówka). Od 60 lat: jedno równanie masa + wzrost dla całej grupy (Henry tab. 15 „60 +”, Normy tab. 2 „≥ 60”); podział 60–70 / 70+ istnieje u Henry’ego tylko dla równań z samą masą (tab. 14) i nie jest używany. Granice przedziałów silnik przyjmuje jako [od, do): 18 lat liczy równaniem 18–30. Równanie 0–3 lata stosowane od 1. roku życia; niemowlęta bez Henry’ego. Uwaga w polu populacja o dzieciach z otyłością nie pochodzi od Henry’ego: publikacja nie opisuje udziału dzieci z otyłością, a średnie BMI z tab. 16 (10–18 lat: M 17,7, K 18,8) wskazują na przewagę normowagi; Hofsteenge 2010 i Molnár 1995 pokazują mniejszą trafność równań na masie aktualnej u nastolatków z otyłością.',
       /* Liniowe równanie z wiekiem (energyReeZRownania) nie dotyczy Henry’ego — jego współczynniki są po etapie wieku niżej. */
       wspolczynniki: null,
       /* P-DIETA rata H1 (polecenie właściciela 2026-09-24): współczynniki przeniesione BEZ ZMIANY z silnika
@@ -58,8 +58,11 @@
          (masaKg × masa + wzrostM × wzrost_m + stala) × mnoznikKcal (mnożnik tylko tam, gdzie jest).
          Dwa wiersze wyglądają na „do poprawy”, a NIE są (docs/clinical/ALGORITHMS.md, ENERGY-PLAN etap 1 i rata H1):
          child_3_9 M liczony z MJ × 239 (kolumna kcal u Henry’ego i w Normach 2024 ma błędne 74,2·H),
-         child_10_17 M wzrostM 266 jak u Henry’ego, nie 226 z Norm 2024. Silnik ma do czasu zmiany strategii service workera
-         zapieczętowaną kopię przejściową tej tabeli (henryPrzejsciowo), używaną tylko, gdy rejestru brak — test pilnuje równości. */
+         child_10_17 M wzrostM 266 jak u Henry’ego, nie 226 z Norm 2024. Pole jednostka wiersza jest opisowe — o przeliczeniu
+         decyduje wyłącznie mnoznikKcal. Silnik ma do czasu zmiany strategii service workera zapieczętowaną kopię przejściową
+         tej tabeli (henryPrzejsciowo), używaną tylko, gdy rejestr jej nie ma (brak pliku albo plik 1.0.0) — test pilnuje
+         równości. Dopóki ta kopia istnieje, zmiana tabeli może tylko DODAWAĆ pola i etapy: zmiana nazwy pola, klucza etapu
+         albo jednostki trafiłaby w oknie starego SW na silnik, który znajdzie tabelę, ale nie swoje pola, i zwróci null. */
       wspolczynnikiWgEtapu: {
         child_1_2: {
           przedzialLat: '0–3',
@@ -92,7 +95,7 @@
           F: { masaKg: 8.18, wzrostM: 502, stala: -11.6 }
         },
         adult_60_plus: {
-          przedzialLat: '≥ 60',
+          przedzialLat: '60 +',
           M: { masaKg: 11.4, wzrostM: 541, stala: -256 },
           F: { masaKg: 8.52, wzrostM: 421, stala: 10.7 }
         }

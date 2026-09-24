@@ -72,9 +72,14 @@ describe('rata H1: współczynniki Henry 2005 jako dane', () => {
     expect(wiersz('child_18')).toEqual(['18–30', { masaKg: 14.4, wzrostM: 313, stala: 113 }, { masaKg: 10.4, wzrostM: 615, stala: -282 }]);
     expect(wiersz('adult_19_29')).toEqual(wiersz('child_18'));
     expect(wiersz('adult_30_59')).toEqual(['30–60', { masaKg: 11.4, wzrostM: 541, stala: -137 }, { masaKg: 8.18, wzrostM: 502, stala: -11.6 }]);
-    expect(wiersz('adult_60_plus')).toEqual(['≥ 60', { masaKg: 11.4, wzrostM: 541, stala: -256 }, { masaKg: 8.52, wzrostM: 421, stala: 10.7 }]);
+    expect(wiersz('adult_60_plus')).toEqual(['60 +', { masaKg: 11.4, wzrostM: 541, stala: -256 }, { masaKg: 8.52, wzrostM: 421, stala: 10.7 }]);
     const zMnoznikiem = ETAPY.flatMap((e) => ['M', 'F'].filter((p) => 'mnoznikKcal' in w[e][p]).map((p) => `${e} ${p}`));
     expect(zMnoznikiem).toEqual(['child_3_9 M']);
+    // jednostka wiersza jest opisowa, przelicza wyłącznie mnoznikKcal — wiersz spoza kcal bez mnożnika dałby „kcal” rzędu 4
+    for (const e of ETAPY) for (const p of ['M', 'F']) {
+      const k = w[e][p];
+      if (k.jednostka && !/^kcal/.test(k.jednostka)) expect(Number.isFinite(k.mnoznikKcal), `${e} ${p}`).toBe(true);
+    }
     // dwa wiersze, które wyglądają na „do poprawy”, mają opisany powód w danych
     expect(H.ograniczenia).toMatch(/74,2/);
     expect(H.ograniczenia).toMatch(/266/);
@@ -95,7 +100,7 @@ describe('rata H1: współczynniki Henry 2005 jako dane', () => {
     expect(win.energyBuildContext({ ageYears: 40, ageMonthsOpt: 0, sex: 'F', weightKg: 88.7, heightCm: 171.3, pal: 1.6 }).energy.reeKcal).toBe(1573.8920000000003);
   });
 
-  it('bez pliku danych i ze starym plikiem 1.0.0 (stary service worker) — te same liczby i ten sam podpis co z danymi', () => {
+  it('bez pliku danych i z rejestrem w kształcie 1.0.0 (bez tabeli; stary service worker) — te same liczby i ten sam podpis co z danymi', () => {
     for (const dane of ['brak', '1.0.0']) {
       const okno = silnikBez(dane);
       const zle = ZLOTE.filter(([stage, sex, weightKg, heightCm, kcal]) => !Object.is(okno.energyHenryREEkcal({ stage, sex, weightKg, heightCm }), kcal));
@@ -186,6 +191,11 @@ describe('rata H1: strażnik — jedna tabela danych, jedna zapieczętowana kopi
   it('liczby Henry’ego są w silniku tylko w henryPrzejsciowo(), wołanej w jednym miejscu', () => {
     expect(kod.split('henryPrzejsciowo').length - 1, 'definicja + jedno wywołanie').toBe(2);
     const bezKopii = kod.replace(funkcjaZ(kod, 'henryPrzejsciowo'), '');
+    // literały niezależnie od kolejności czynników (a*masa, masa*a, 239*(…)); 1.31 i 9.4 pominięte — silnik używa ich gdzie indziej
+    const LITERALY = ['28.2', '859', '371', '30.4', '703', '287', '.0632', '1.28', '239', '15.9', '210', '349', '15.6', '266', '299', '249', '462',
+      '14.4', '313', '113', '10.4', '615', '282', '11.4', '541', '137', '8.18', '502', '11.6', '256', '8.52', '421', '10.7'];
+    const poza = LITERALY.filter((l) => new RegExp(`(?<![0-9.])${l.replace('.', '\\.')}(?![0-9])`).test(bezKopii));
+    expect(poza, 'literały Henry’ego poza kopią przejściową').toEqual([]);
     for (const o of ['masaKg:28.2', 'wzrostM:859', 'masaKg:30.4', 'wzrostM:703', 'masaKg:.0632', 'mnoznikKcal:239', 'wzrostM:266', 'wzrostM:615', 'stala:-11.6', 'stala:10.7']) {
       expect(kod.split(o).length - 1, `${o} w kopii`).toBe(o === 'wzrostM:615' ? 2 : 1);
       expect(bezKopii, `${o} poza kopią`).not.toContain(o);

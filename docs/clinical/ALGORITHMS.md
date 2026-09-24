@@ -5786,14 +5786,16 @@ Molnára. **Refaktoryzacja: żaden wynik, próg, zaokrąglenie ani tekst się ni
 aktualizacji starego service workera (dowody niżej).
 
 **Stan przed zmianą.** `energyHenryREEkcal` (`me` w `vilda_diet_plan_ui.js`) miał 14 równań wpisanych w `switch` po etapie
-wieku. Rejestr `VildaReeRownania.zrodla.HENRY_2005` (wersja 1.0.0) miał id, nazwę, opis, cytowanie, DOI, kraj, populację,
-metodę, `jednostka: 'MJ/24 h'`, wskazanie i uwagę, że współczynniki są w silniku (`wspolczynniki: null`).
+wieku. Rejestr `VildaReeRownania.zrodla.HENRY_2005` (wersja 1.0.0) miał id, nazwę, krótki opis i wzór (`krotko`, `wzor`),
+cytowanie, DOI, kraj, populację, metodę, `jednostka: 'MJ/24 h'`, wskazanie i uwagę, że współczynniki są w silniku
+(`wspolczynniki: null`).
 
 **Zmiana.**
 - `vilda_ree_rownania_data.js` (wersja 1.1.0): nowe pole `HENRY_2005.wspolczynnikiWgEtapu`. Klucz to etap z
   `energyResolveEquationStage`: `child_1_2`, `child_3_9`, `child_10_17`, `child_18`, `adult_19_29`, `adult_30_59`,
   `adult_60_plus`. Każdy etap ma `M` i `F` z polami `masaKg`, `wzrostM` (wzrost w metrach) i `stala`. Wiersz chłopców 3–10
-  lat ma `jednostka: 'MJ/24 h'` i `mnoznikKcal: 239`. Pole `jednostka` źródła zmieniło się z `'MJ/24 h'` na `'kcal/24 h'`,
+  lat ma `jednostka: 'MJ/24 h'` i `mnoznikKcal: 239` (1 MJ = 239 kcal wg przypisu do tab. 1 Norm 2024; pole `jednostka`
+  wiersza jest opisowe, przelicza wyłącznie `mnoznikKcal`). Pole `jednostka` źródła zmieniło się z `'MJ/24 h'` na `'kcal/24 h'`,
   bo tak zapisane są współczynniki. Pole `ograniczenia` jest przepisane, doszły `zmienne` i `weryfikacja`. Cały rejestr, także
   Molnár, jest zamrożony w głąb. Pola, które trafiają do wyniku (`id`, `nazwa`, `krotko`, `wzor`, `doi`, `populacja`), się nie
   zmieniły. `wspolczynniki` Henry’ego zostaje `null`, więc `energyReeZRownania('HENRY_2005', …)` nadal zwraca `null`.
@@ -5811,8 +5813,15 @@ metodę, `jednostka: 'MJ/24 h'`, wskazanie i uwagę, że współczynniki są w s
   Bez kopii REE wychodziło wtedy `null`, a karta planu pokazywała **fałszywy komunikat kliniczny** („zapotrzebowanie zbyt
   niskie”, „zalecana stabilizacja masy ciała”). Z kopią wynik jest bit w bit taki jak dawniej. Test pilnuje, że kopia jest
   równa danym co do bitu i że silnik woła ją w jednym miejscu. **Warunek usunięcia kopii:** klucze z `?v=` w service workerze
-  przestają się odświeżać w tle, a potem mija jeden cykl wydania (decyzja właściciela). Zapasowe metadane Henry’ego w
-  `energyBuildPlanReductionState` zostają bez zmian z tego samego powodu.
+  przestają się odświeżać w tle, a potem mija jeden cykl wydania (decyzja właściciela). **Do tego czasu tabela może tylko
+  dodawać pola i etapy.** Zmiana nazwy pola, klucza etapu albo jednostki trafiłaby w oknie starego SW na silnik, który znajdzie
+  tabelę, ale nie swoje pola, i zwróci `null`. Zapasowe metadane Henry’ego w `energyBuildPlanReductionState` zostają bez zmian
+  z tego samego powodu.
+- **Poza zakresem H1 (skutek raty V, nie tej zmiany).** Nie ma kopii przejściowej Molnára. W oknie starego SW na stronie bez
+  pliku danych, czyli ze starym HTML-em sprzed raty V, dziecko 10–18 lat z otyłością dostaje Henry’ego bez korekty (× 1)
+  zamiast Molnára. Przykład: chłopiec 17,9 l., 105,6 kg / 176 cm, dieta umiarkowana 3 001 zamiast 2 617 kcal. Nie ma przy
+  tym `null` ani fałszywego komunikatu, a podpis wyniku (`HENRY_2005`) zgadza się z tym, co policzono. Stary silnik liczy tu
+  bit w bit tak samo. Ma to znaczenie tylko wtedy, gdy produkcja jest sprzed raty V (decyzja właściciela).
 
 **Tabela (kcal/24 h; masa W w kg, wzrost H w m).**
 
@@ -5823,17 +5832,18 @@ metodę, `jednostka: 'MJ/24 h'`, wskazanie i uwagę, że współczynniki są w s
 | `child_10_17` | 10–18 | 15,6·W + 266·H + 299 | 9,4·W + 249·H + 462 |
 | `child_18`, `adult_19_29` | 18–30 | 14,4·W + 313·H + 113 | 10,4·W + 615·H − 282 |
 | `adult_30_59` | 30–60 | 11,4·W + 541·H − 137 | 8,18·W + 502·H − 11,6 |
-| `adult_60_plus` | 60 + | 11,4·W + 541·H − 256 | 8,52·W + 421·H + 10,7 |
+| `adult_60_plus` | 60 + (Normy: „≥ 60”) | 11,4·W + 541·H − 256 | 8,52·W + 421·H + 10,7 |
 
 **Źródło i wersja.** Henry CJK. *Basal metabolic rate studies in humans: measurement and development of new equations.*
 Public Health Nutr 2005;8(7A):1133–52. [doi:10.1079/phn2005801](https://doi.org/10.1079/phn2005801), PMID 16277825
 (dane bibliograficzne z PubMed, NLM).
 
-W tej racie 14 wierszy sprawdzono jeszcze raz z pełnym tekstem od właściciela. Tabela 15, „Oxford prediction equations for BMR
-using height and weight”, s. 1146, czytana dwa razy niezależnie: z tekstu i z obrazu strony. Wynik: **14/14 zgodnych**.
-Wiersz chłopców 3–10 lat zgadza się z postacią MJ. Z Normami żywienia 2024 (NIZP PZH–PIB, rozdział „Energia”, tab. 1–2):
-12/14 wierszy równych kolumnie kcal, dwa celowe wyjątki. Oba są opisane w polu `ograniczenia` i **nie wolno ich
-„poprawiać”**:
+W tej racie 14 wierszy danych sprawdzono jeszcze raz z pełnym tekstem od właściciela. To 12 równań Henry’ego, bo równanie
+18–30 obsługuje dwa etapy. Tabela 15, „Oxford prediction equations for BMR using height and weight”, s. 1146, czytana dwa razy
+niezależnie: z tekstu i z obrazu strony. Wynik: **wszystkie 14 zgodnych**. Wiersz chłopców 3–10 lat zgadza się z kolumną MJ,
+pozostałe z kolumną kcal. Z Normami żywienia dla populacji Polski (red. Rychlik, Stoś, Woźniak, Mojska; NIZP PZH–PIB 2024,
+ISBN 978-83-65870-78-0; rozdział „Energia”, tab. 1–2, s. 31): 12/14 wierszy równych kolumnie kcal, dwa celowe wyjątki. Oba
+są opisane w polu `ograniczenia` i **nie wolno ich „poprawiać”**:
 - **Chłopcy 3–10 lat.** Kolumna kcal ma 74,2·H już u Henry’ego (tab. 15), a za nim w Normach 2024. Jest to niespójne z
   postacią MJ (1,31 MJ/m ≈ 313 kcal/m) i ze średnimi z tab. 16–17: w punkcie średnich postać MJ daje 4,165 MJ wobec 4,168 MJ
   w tab. 17, kolumna kcal dałaby −28 %. Normy 2024 opisują ten błąd w przypisie. Liczymy z postaci MJ × 239.
@@ -5847,15 +5857,20 @@ nie używa. Liczby się nie zmieniają.
 
 **Populacja i ograniczenia.** Bez zmian względem dotychczasowego stanu:
 - Henry podaje równania **BMR**; aplikacja używa ich jako REE.
-- Baza Oxford to 10 552 wartości BMR. U dzieci 10–18 lat z otyłością REE liczy Molnár 1995 (rata V). Uwaga w polu
-  `populacja` o dzieciach z otyłością to wniosek z Hofsteenge 2010 i Molnára 1995, nie cytat z Henry’ego.
+- Baza Oxford to 10 552 wartości BMR. U dzieci 10–18 lat z otyłością REE liczy Molnár 1995 (rata V).
+- Uwaga w polu `populacja` o dzieciach z otyłością nie pochodzi od Henry’ego, który nie opisuje ich udziału. Średnie BMI z
+  tab. 16 (10–18 lat: M 17,7, K 18,8) wskazują na przewagę normowagi. Hofsteenge 2010 i Molnár 1995 pokazują mniejszą
+  trafność równań na masie aktualnej u nastolatków z otyłością. Pola nie zmieniono, bo trafia do danych wyniku.
 - Granice przedziałów silnik przyjmuje jako [od, do): 18 lat liczy równaniem 18–30, 60 lat równaniem „60 +”.
 - Równanie 0–3 lata działa od 1. roku życia. Niemowlęta nie są liczone Henrym (Butte albo brak liczb).
 - Argument `zrodlo` działa w `energyHenryREEkcal`. Podpis wyniku w planie (`reeRownanie`) i `formulaId` (`henry_<etap>`) nadal
   zakładają Henry’ego. Zanim użytkownik dostanie wybór populacji, źródło trzeba przeciągnąć do wyniku (osobna decyzja).
 
-**Dowód „bez zmiany wyników”.** Stary silnik (origin/audyt `ebc63bb9`) porównano z nowym bit w bit (`Object.is`) w trzech
-sytuacjach: z danymi 1.1.0, bez pliku danych i z danymi 1.0.0.
+**Dowód „bez zmiany wyników”.** Stary silnik (origin/audyt `ebc63bb9`) porównano z nowym w trzech sytuacjach: z danymi
+1.1.0, bez pliku danych i z prawdziwym plikiem danych 1.0.0. `energyHenryREEkcal` i `BMR` porównano bit w bit (`Object.is`),
+a obiekty kontekstu i stanu planu przez serializację JSON. Równoważność dotyczy wywołań bez argumentu `zrodlo`, czyli
+wszystkich obecnych. Z `zrodlo` innym niż `HENRY_2005` funkcja zwraca `null`, a dawniej argument był ignorowany; to zamierzone
+rozszerzenie API.
 - `energyHenryREEkcal`: po 18 889 240 wejść na sytuację. Siatka to 7 etapów × 2 płcie × masa 0,5–300 kg co 0,1 × wzrost
   30–230 cm co 0,5. Doszło 2 mln losowych wartości z pełną precyzją i wejścia brzegowe: 0, liczby ujemne, NaN, ±∞, napisy,
   `null`, nieznane etapy, w tym `__proto__` i `constructor`, oraz płeć spoza M/F.
@@ -5863,8 +5878,15 @@ sytuacjach: z danymi 1.1.0, bez pliku danych i z danymi 1.0.0.
 - Pełny stan `energyBuildPlanReductionState()` i `energyBuildContext()` na prawdziwym silniku BMI: 630 fikcyjnych pacjentów
   (2–85 lat, BMI od niedowagi do otyłości, PAL domyślny, 1,4 i 1,6), 3 780 porównań.
 
-**Różnic: 0.** Wywołanie bez argumentu rzuca `TypeError` w obu wersjach. Niezależny recenzent dołożył wejścia z `valueOf`,
-liczby subnormalne i napisy z przecinkiem: też 0 różnic.
+**Różnic: 0.** Wywołanie bez argumentu rzuca `TypeError` w obu wersjach. Druga runda niezależnej weryfikacji (wersja z kopią
+przejściową) sprawdziła dodatkowo:
+- wejścia z `valueOf`, liczby subnormalne, napisy z przecinkiem i etapy niebędące napisami (98 292 porównania na sytuację);
+- 266 pacjentów w pełnym JSON-ie z kodowaniem −0, NaN i ±∞;
+- stary silnik z NOWYM plikiem danych (zamrożenie niczego mu nie psuje).
+
+Wszędzie 0 różnic. Czułość metody potwierdzają mutanty: kopia zwracająca `null` daje 264/266 różnic, a jedna zmieniona liczba
+w kopii 15/266. Skrypty dowodu są poza repo. Złote wartości da się odtworzyć i sprawdzić poleceniem
+`node tests/scripts/henry-2005-zlote.mjs`, które liczy je starym silnikiem z `git show ebc63bb9:vilda_diet_plan_ui.js`.
 
 Syntetyczne przypadki `wejście → oczekiwany wynik` (fikcyjne, wartości silnika sprzed zmiany, test sprawdza `Object.is`):
 - chłopiec, `child_3_9`, 24,6 kg / 124,8 cm → 1 068,2344 kcal (`BMR` → 1 068);
@@ -5875,16 +5897,18 @@ Syntetyczne przypadki `wejście → oczekiwany wynik` (fikcyjne, wartości silni
 
 **Walidacja.** `tests/unit/rata-h1-henry-dane.test.mjs` sprawdza:
 - rejestr i pełną tabelę;
-- 612 złotych wartości na prawdziwym `energyHenryREEkcal` z danymi, bez danych i z danymi 1.0.0 (ten sam podpis
-  `reeRownanie`);
+- 612 złotych wartości na prawdziwym `energyHenryREEkcal` z danymi, bez danych i z rejestrem w kształcie 1.0.0 (bez tabeli;
+  ten sam podpis `reeRownanie`). Prawdziwy plik 1.0.0 sprawdzono w dowodzie poza repo;
 - równość kopii przejściowej i danych;
 - wejścia brzegowe, niezależność od `Object.prototype` i pokrycie etapów dla wieku 1–100 lat;
+- regułę, że wiersz spoza kcal musi mieć `mnoznikKcal`;
 - bezpaństwowość: źródło argumentem, liczby z rejestru;
 - zamrożenie rejestru.
 
 Strażnik sprawdza, że:
 - w silniku nie ma dawnych wzorów;
-- liczby Henry’ego występują tylko w `henryPrzejsciowo()`, wołanej w jednym miejscu;
+- literały Henry’ego (poza 1,31 i 9,4, używanymi w silniku gdzie indziej) występują tylko w `henryPrzejsciowo()`, niezależnie
+  od kolejności czynników, a funkcja jest wołana w jednym miejscu;
 - tagi danych i silnika na 3 stronach mają `defer`, nie mają `async`, dane stoją przed silnikiem, a wersje są w precache.
 
 Zestaw smoke e2e (`EXPECTED_BROWSER_SCRIPTS`) sprawdza też tag danych na `index.html`. Test raty V („bez pliku danych zostaje
