@@ -99,11 +99,11 @@ test.describe('P-RAPORT rata T — wysoki wzrost a wzrost docelowy wg rodziców'
     expect(r.hl.text).not.toMatch(/wyraźnie|nieco|Dodatkowo wzrost/);
   });
 
-  test('RT-6: bez wzrostu rodziców — zdanie jak dotąd plus dopisek o rodzicach', async ({ page }) => {
+  test('RT-6: bez wzrostu rodziców — zdanie o tempie plus dopisek o rodzicach (rata R2: rodzice raz)', async ({ page }) => {
     await otworz(page);
     const r = await model(page, { ...SZESCIOLATEK });
     expect(r.hl.badge).toBe('Wysoki wzrost');
-    expect(r.hl.text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
+    expect(r.hl.text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
   });
 
   test('RT-7: docpro.html — ta sama ścieżka (W3 u 6-latka z rodzicami 158/168)', async ({ page }) => {

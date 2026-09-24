@@ -62,7 +62,7 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     expect(h.badge).toBe('Niski wzrost');
     expect(h.title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`); // P8 (rata S): etykieta jak w kartach
     expect(h.text).toBe(`Dodatkowo masa ciała i BMI są wyraźnie powyżej typowych wartości dla wieku (41,5${NB}kg, BMI 27,0). Pierwszy krok to ok. 38,0${NB}kg, czyli około 3,5${NB}kg mniej; już ta zmiana poprawia ciśnienie i wyniki badań krwi.`);
-    expect(h.subtext).toBe('Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania. Wynik warto interpretować także w odniesieniu do wzrostu rodziców i całego obrazu klinicznego.');
+    expect(h.subtext).toBe('Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania. Wynik warto interpretować także w odniesieniu do wzrostu rodziców.'); // rata R2: bez „całego obrazu klinicznego”
   });
 
   it('decyzja 3: poniżej 2 lat bez kroku redukcji — zdanie o wolniejszym przyroście; granica < 0,5 kg', () => {
@@ -241,7 +241,7 @@ describe('Nagłówek z faktów — rata S', () => {
     expect(N.zbuduj({ ...baza, wzrost: { cm: 123.9, centyl: 2.4 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 152, centyl: 98.2 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 152,0${NB}cm, 98. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 156, centyl: 99.7 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 156,0${NB}cm, powyżej 99. centyla.`);
-    expect(N.WERSJA).toBe(5);
+    expect(N.WERSJA).toBe(6);
   });
 });
 
@@ -262,10 +262,10 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
     expect(Object.isFrozen(N.WZROST_A_RODZICE)).toBe(true);
   });
 
-  it('W0: brak obojga rodziców → zdanie jak dotąd + dopisek o rodzicach; populacja DS → bez członu o rodzicach i bez dopisku', () => {
+  it('W0: brak obojga rodziców → bez członu „i wzrostem rodziców”, tylko dopisek o brakującym wzroście (rata R2); populacja DS → bez członu o rodzicach i bez dopisku', () => {
     const bez = N.zbuduj({ ...SZESC, rodziceBrak: true });
     expect(bez).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn', title: WYSOKI });
-    expect(bez.text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
+    expect(bez.text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
     expect(N.zbuduj({ ...SZESC }).text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.');
     expect(N.zbuduj({ ...SZESC, ds: true, rodziceBrak: true }).text).toBe('Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania.');
   });
@@ -459,11 +459,11 @@ describe('Nagłówek z faktów — rata T2 (przesunięcie w górę siatki, niski
     expect(ekstrem.title).toMatch(/z poniżej 1\. centyla na powyżej 99\. centyla/);
   });
 
-  it('N0: niski wzrost bez MPH — podtytuł jak dotąd (+ dopisek o rodzicach); DS bez członu o rodzicach', () => {
+  it('N0: niski wzrost bez MPH — podtytuł: tempo + dopisek o brakującym wzroście rodziców (rata R2); DS bez członu o rodzicach', () => {
     const baza = { dorosly: false, wiekLat: 6.17, historia: true, ...NORMA, wzrost: { cm: 109.3, centyl: 2 } };
     const h = N.zbuduj({ ...baza, rodziceBrak: true });
     expect(h).toMatchObject({ badge: 'Niski wzrost', tone: 'danger', text: '' });
-    expect(h.subtext).toBe('Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania. Wynik warto interpretować także w odniesieniu do wzrostu rodziców i całego obrazu klinicznego. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
+    expect(h.subtext).toBe('Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.');
     expect(N.zbuduj({ ...baza, ds: true, rodziceBrak: true }).subtext).toBe('Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania. Wynik warto interpretować w odniesieniu do całego obrazu klinicznego.');
     expect(N.zbuduj({ ...baza, historia: false }).subtext).toMatch(/^Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach\. Wynik warto/);
   });
@@ -509,10 +509,10 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
   const D8 = { dorosly: false, wiekLat: 8, historia: true, ...NORMA, wzrost: { cm: 122.7, centyl: 12 }, spadek: SP };
   const TYT = `Od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50. na 12. centyl (o −1,17${NB}SDS).`;
 
-  it('progi są danymi modułu; WERSJA 5', () => {
+  it('progi są danymi modułu; WERSJA 6', () => {
     expect(N.SPADEK_WZROSTU).toEqual({ DSDS: -1.0, ODSTEP_MIES: 12, KU_CELOWI_BAZA: 1.0, KU_CELOWI_DZIS: -1.0 });
     expect(Object.isFrozen(N.SPADEK_WZROSTU)).toBe(true);
-    expect(N.WERSJA).toBe(5);
+    expect(N.WERSJA).toBe(6);
   });
 
   it('D1: domyślnie żółte „Obniżenie pozycji na siatce”; tryb standardowy bez liczby SDS', () => {
@@ -619,5 +619,62 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
   it('strażnik: zdania spadku nie nazywają rozpoznania ani „konsultacji endokrynologicznej”', () => {
     const zr = ZRODLO.slice(ZRODLO.indexOf('function kandydatSpadku'), ZRODLO.indexOf('function kandydatCisnienia'));
     expect(zr).not.toMatch(/endokrynolog|niedoczynno|niedobór hormonu wzrostu|Turner/i);
+  });
+});
+
+// P-RAPORT rata R2 (decyzja właściciela 2026-09-24): o rodzicach najwyżej JEDNO zdanie w nagłówku,
+// bez ogólnika „całego obrazu klinicznego” (poza populacją DS). Dane FIKCYJNE.
+describe('Nagłówek z faktów — rata R2 (rodzice raz)', () => {
+  const NORMA = { masa: { kg: 20, centyl: 20, kolor: 'ok' }, bmi: { wartosc: 13.7, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, cole: { proc: 95, klucz: 'norma', kolor: 'ok' } };
+  const NISKI = { dorosly: false, wiekLat: 7.5, historia: false, ...NORMA, wzrost: { cm: 121, centyl: 3 } };
+  const WYSOKI = { dorosly: false, wiekLat: 6, historia: false, ...NORMA, masa: { kg: 24, centyl: 60, kolor: 'ok' }, wzrost: { cm: 129, centyl: 98.3 } };
+  const MPH_NISKI = { roznicaSds: 1.8, mphCm: 152, mphCentyl: 0.2, mpSds: -3.7, hSds: -1.9, liczbaWidoczna: true };
+  const MPH_WYSOKI = { roznicaSds: -1.8, mphCm: 170, mphCentyl: 40, mpSds: 0.3, hSds: 2.1, liczbaWidoczna: true };
+  const BRAK = 'Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.';
+  // zdania nagłówka (tytuł, treść, podtytuł); podział tylko przed wielką literą — „3. centyl” nie tnie zdania
+  const zdania = (h) => [h.title, h.text, h.subtext].filter(Boolean).join(' ').split(/(?<=\.)\s+(?=[A-ZĄĆĘŁŃÓŚŹŻ])/);
+  const oRodzicach = (h) => zdania(h).filter((z) => /rodzic/.test(z));
+
+  it('N0 bez wzrostu rodziców (przypadek z raportu): tempo + jedno zdanie o brakującym wzroście rodziców', () => {
+    const h = N.zbuduj({ ...NISKI, rodziceBrak: true });
+    expect(h).toMatchObject({ badge: 'Niski wzrost', tone: 'danger', title: `Wzrost jest wyraźnie niski jak na wiek: 121,0${NB}cm, 3. centyl.`, text: '' });
+    expect(h.subtext).toBe(`Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach. ${BRAK}`);
+    expect(oRodzicach(h)).toEqual([BRAK]);
+    expect(N.zbuduj({ ...NISKI, historia: true, rodziceBrak: true }).subtext)
+      .toBe(`Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania. ${BRAK}`);
+  });
+
+  it('N0 z MPH (wyższy niż cel rodziców): o rodzicach mówi tylko oś mph z liczbami, podtytuł bez rodziców', () => {
+    const h = N.zbuduj({ ...NISKI, mph: MPH_NISKI });
+    expect(h.subtext).toBe('Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach.');
+    expect(h.dodatkowe).toEqual([{ os: 'mph', ciezkosc: 1 }]);
+    expect(oRodzicach(h)).toHaveLength(1);
+    expect(oRodzicach(h)[0]).toMatch(/^Dodatkowo wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 152,0\u00A0cm/);
+  });
+
+  it('W0 bez wzrostu rodziców: bez członu „i wzrostem rodziców”, tylko zdanie o brakującym wzroście; z MPH — tylko oś mph', () => {
+    const bez = N.zbuduj({ ...WYSOKI, rodziceBrak: true });
+    expect(bez.text).toBe(`Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania. ${BRAK}`);
+    expect(oRodzicach(bez)).toEqual([BRAK]);
+    const zMph = N.zbuduj({ ...WYSOKI, mph: MPH_WYSOKI });
+    expect(zMph.text).toMatch(/^Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania\. Dodatkowo wzrost dziecka jest niższy, niż wynika ze wzrostu rodziców/);
+    expect(oRodzicach(zMph)).toHaveLength(1);
+  });
+
+  it('bez faktu o rodzicach (ani MPH, ani braku) — jedno zdanie ogólne; DS — bez rodziców, z odniesieniem do obrazu klinicznego', () => {
+    expect(oRodzicach(N.zbuduj({ ...NISKI }))).toEqual(['Wynik warto interpretować także w odniesieniu do wzrostu rodziców.']);
+    expect(oRodzicach(N.zbuduj({ ...WYSOKI }))).toEqual(['Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.']);
+    const ds = N.zbuduj({ ...NISKI, ds: true, rodziceBrak: true });
+    expect(ds.subtext).toBe('Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach. Wynik warto interpretować w odniesieniu do całego obrazu klinicznego.');
+    expect(oRodzicach(ds)).toEqual([]);
+    expect(oRodzicach(N.zbuduj({ ...WYSOKI, ds: true, rodziceBrak: true }))).toEqual([]);
+  });
+
+  it('strażnik: „całego obrazu klinicznego” tylko w gałęzi DS', () => {
+    // w literałach tekstowych modułu (komentarze pomijamy) — tylko zdanie gałęzi DS
+    expect(ZRODLO.match(/'[^'\n]*całego obrazu klinicznego[^'\n]*'/g)).toEqual(["' Wynik warto interpretować w odniesieniu do całego obrazu klinicznego.'"]);
+    for (const f of [{ ...NISKI, rodziceBrak: true }, { ...NISKI }, { ...NISKI, historia: true }, { ...NISKI, mph: MPH_NISKI }]) {
+      expect(N.zbuduj(f).subtext).not.toContain('całego obrazu klinicznego');
+    }
   });
 });
