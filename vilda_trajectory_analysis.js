@@ -14,7 +14,7 @@
  *    (window.VildaWerdykt) — ten sam kod, który woła panel porównania w vilda_auth_ui.js,
  *    więc słownik i progi ΔSDS nie mogą się już rozjechać między tymi dwoma powierzchniami;
  *  - opis strefy/kanału: identyczny z interpCh panelu (kanały 3/10/25/50/75/90/97);
- *  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 od pierwszego pomiaru z wieku ≥24 mies. (PR #64);
+ *  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 od pierwszego pomiaru z wieku ≥ 36 mies. na tej samej siatce (PR #64; baza 24 → 36 mies. i warunek siatki od raty T3);
  *  - flaga pozycyjna wzrostu W GÓRĘ (P-RAPORT rata T2): ΔhSDS ≥ +1,0 od pierwszego pomiaru z wieku ≥36 mies.,
  *    z warunkiem niedawności (ostatni odcinek ≥ 6 mies. ma ΔSDS ≥ +0,5) i tej samej siatki; bez banera;
  *  - tempo wzrastania: od SW 1.0.944 liczy je WYŁĄCZNIE vilda_tempo_wzrastania.js
@@ -26,13 +26,17 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '25';
+  var VERSION = '26';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
     SEGMENT_MIN_GAP_M: 3,
     REDFLAG_DSDS: -1.0,
-    REDFLAG_BASE_MIN_M: 24,
+    // P-RAPORT rata T3 (decyzja właściciela 2026-09-24): baza flagi w dół od 36 mies. (dotąd 24) i ta sama siatka
+    // bazy i końca, jak we fladze w górę. Przesuwanie się po centylach w 2.–3. r.ż. jest częste i fizjologiczne
+    // (Mei 2004, doi:10.1542/peds.113.6.e617), reguła „ΔHSDS < −1" od 0–3 lat skierowałaby 34 % zdrowych dzieci
+    // (Grote 2007, doi:10.1186/1471-2458-7-77), a szew siatek w 36. mies. sam przesuwa hSDS o 0,15–0,7 SDS.
+    REDFLAG_BASE_MIN_M: 36,
     // P-RAPORT rata T2 (decyzje właściciela 2026-09-23): flaga pozycyjna wzrostu W GÓRĘ. Lustro progu
     // (+1,0), ale z bazą od 36 mies. (szczyt centyla konstytucjonalnego przyspieszenia wzrastania
     // przypada na 2.–4. r.ż. — Papadimitriou 2010, doi:10.1210/jc.2010-0895 — a w 36. mies. zmienia się
@@ -543,16 +547,19 @@
         (sev[s.verdict.t] === sev[worst.verdict.t] && Math.abs(s.dSds) > Math.abs(worst.dSds))) worst = s;
     });
 
-    // czerwona flaga pozycyjna wzrostu — reguła PR #64 (ΔhSDS ≤ −1 od pierwszego pomiaru ≥24 mies.)
+    // czerwona flaga pozycyjna wzrostu — reguła PR #64 (ΔhSDS ≤ −1); od raty T3 baza = pierwszy pomiar ≥ 36 mies.
+    // na TEJ SAMEJ siatce co ostatni pomiar (punkty na innej siatce są pomijane jako baza).
     var redFlag = null;
     if (met.key === 'height') {
       var base = null;
       for (var j = 0; j < series.length; j++) {
-        if (series[j].ageMonths >= P.REDFLAG_BASE_MIN_M) { base = series[j]; break; }
+        if (series[j].ageMonths >= P.REDFLAG_BASE_MIN_M
+          && (series[j].siatka == null || last.siatka == null || series[j].siatka === last.siatka)) { base = series[j]; break; }
       }
       if (base && last.ageMonths > base.ageMonths) {
         var dh = Math.round(100 * (last.sd - base.sd)) / 100;
-        if (dh <= P.REDFLAG_DSDS) redFlag = { dSds: dh, baseAgeMonths: base.ageMonths, baseC: base.c, lastAgeMonths: last.ageMonths, lastC: last.c };
+        if (dh <= P.REDFLAG_DSDS) redFlag = { dSds: dh, baseAgeMonths: base.ageMonths, baseC: base.c, baseSd: base.sd,
+          lastAgeMonths: last.ageMonths, lastC: last.c, lastSd: last.sd, siatka: last.siatka || null };
       }
     }
 

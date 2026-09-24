@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.67';
+const SW_VERSION = '1.1.68';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2254,6 +2254,7 @@ const OPTIONAL_ASSETS = [
   '/growth-basic-module.js?v=15',
   '/growth-basic-module.js?v=16',
   '/growth-basic-module.js?v=17',
+  '/growth-basic-module.js?v=18',
   '/vilda_summary_cards.js?v=33',
   '/vilda_summary_cards.js?v=34',
   '/vilda_summary_cards.js?v=35',
@@ -2320,11 +2321,13 @@ const OPTIONAL_ASSETS = [
   '/vilda_patient_report.js?v=38',
   '/vilda_patient_report.js?v=39',
   '/vilda_patient_report.js?v=40',
+  '/vilda_patient_report.js?v=41',
   '/vilda_raport_naglowek.js?v=1',
   '/vilda_raport_naglowek.js?v=2',
   '/vilda_raport_naglowek.js?v=3',
   '/vilda_raport_naglowek.js?v=4',
   '/vilda_raport_naglowek.js?v=5',
+  '/vilda_raport_naglowek.js?v=6',
   '/vilda_vault.js?v=183',
   '/vilda_vault.js?v=184',
   '/vilda_vault.js?v=185',
@@ -2341,6 +2344,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_trajectory_analysis.js?v=31',
   '/vilda_trajectory_analysis.js?v=32',
   '/vilda_trajectory_analysis.js?v=33',
+  '/vilda_trajectory_analysis.js?v=34',
   '/gh_therapy_monitor.js?v=40',
   '/gh_therapy_monitor.js?v=41',
   '/gh_therapy_monitor.js?v=42',
@@ -2455,6 +2459,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=66',
   '/vilda_advanced_growth.js?v=67',
   '/vilda_advanced_growth.js?v=68',
+  '/vilda_advanced_growth.js?v=69',
   '/inline_index_02.js?v=11',
   '/inline_index_02.js?v=12',
   '/inline_index_02.js?v=13',

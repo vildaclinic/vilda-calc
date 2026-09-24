@@ -241,7 +241,7 @@ describe('Nagłówek z faktów — rata S', () => {
     expect(N.zbuduj({ ...baza, wzrost: { cm: 123.9, centyl: 2.4 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 152, centyl: 98.2 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 152,0${NB}cm, 98. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 156, centyl: 99.7 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 156,0${NB}cm, powyżej 99. centyla.`);
-    expect(N.WERSJA).toBe(4);
+    expect(N.WERSJA).toBe(5);
   });
 });
 
@@ -498,5 +498,126 @@ describe('Nagłówek z faktów — rata T2 (przesunięcie w górę siatki, niski
     // „Dodatkowo” przy tytule innej osi
     const d = N.zbuduj({ ...baza, cisnienie: { dziecko: true, sk: 130, roz: 50, centylSk: 99, centylRoz: 20, klasa: 'wysokie', ton: 'danger' }, mph: { roznicaSds: -1.69, mphCm: 176.5, mphCentyl: 37, liczbaWidoczna: true } });
     expect(d.text).toMatch(/Dodatkowo wzrost jest niski jak na wiek \(111,0\u00A0cm, 6\. centyl\) i niższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 176,5\u00A0cm, 37\. centyl dorosłych; różnica −1,69\u00A0SDS\)\./);
+  });
+});
+
+// P-RAPORT rata T3 (decyzje właściciela 2026-09-24): obniżenie pozycji wzrostu na siatce (flaga w dół silnika trajektorii
+// w dokumencie dla rodzica). Fakty w kształcie zbieracza (f.spadek); dane FIKCYJNE.
+describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce)', () => {
+  const NORMA = { masa: { kg: 24, centyl: 40, kolor: 'ok' }, bmi: { wartosc: 15.9, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' } };
+  const SP = { dSds: -1.17, odWiekuMies: 48, naWiekMies: 96, zCentyla: 50, naCentyl: 12, hSdsBazy: 0, hSdsDzis: -1.17, liczbaWidoczna: true };
+  const D8 = { dorosly: false, wiekLat: 8, historia: true, ...NORMA, wzrost: { cm: 122.7, centyl: 12 }, spadek: SP };
+  const TYT = `Od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50. na 12. centyl (o −1,17${NB}SDS).`;
+
+  it('progi są danymi modułu; WERSJA 5', () => {
+    expect(N.SPADEK_WZROSTU).toEqual({ DSDS: -1.0, ODSTEP_MIES: 12, KU_CELOWI_BAZA: 1.0, KU_CELOWI_DZIS: -1.0 });
+    expect(Object.isFrozen(N.SPADEK_WZROSTU)).toBe(true);
+    expect(N.WERSJA).toBe(5);
+  });
+
+  it('D1: domyślnie żółte „Obniżenie pozycji na siatce”; tryb standardowy bez liczby SDS', () => {
+    const h = N.zbuduj(D8);
+    expect(h).toMatchObject({ badge: 'Obniżenie pozycji na siatce', tone: 'warn', title: TYT,
+      text: 'Taki wynik ocenia się razem z tempem wzrastania, masą ciała i wiekiem kostnym.' });
+    expect(h.glowny).toEqual({ os: 'spadek', ciezkosc: 1 });
+    const std = N.zbuduj({ ...D8, spadek: { ...SP, liczbaWidoczna: false } });
+    expect(std.title).toBe('Od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50. na 12. centyl.');
+    expect(std.title).not.toMatch(/SDS/);
+    // wiek bazy w dopełniaczu z miesiącami
+    expect(N.zbuduj({ ...D8, spadek: { ...SP, odWiekuMies: 38 } }).title).toMatch(/^Od pomiaru z wieku 3 lat 2 mies\. pozycja/);
+  });
+
+  it('bramki faktu: próg −1,00, wiek ≥ 3 lat, odstęp ≥ 12 mies., dorosły bez faktu', () => {
+    expect(N.zbuduj({ ...D8, spadek: { ...SP, dSds: -0.99 } }).glowny).toBeNull();
+    expect(N.zbuduj({ ...D8, spadek: { ...SP, dSds: -1.0 } }).glowny).toEqual({ os: 'spadek', ciezkosc: 1 });
+    expect(N.zbuduj({ ...D8, wiekLat: 2.9 }).glowny).toBeNull();
+    expect(N.zbuduj({ ...D8, spadek: { ...SP, odWiekuMies: 85 } }).glowny).toBeNull(); // 11 mies.
+    expect(N.zbuduj({ ...D8, spadek: { ...SP, odWiekuMies: 84 } }).glowny).toEqual({ os: 'spadek', ciezkosc: 1 }); // 12 mies.
+    expect(N.kandydaci({ ...D8, dorosly: true }).some((k) => k.os === 'spadek')).toBe(false);
+  });
+
+  it('D0: zbliżanie się do wzrostu docelowego wg rodziców (start ≥ +1,0 nad celem, dziś > −1,0) — bez faktu', () => {
+    const mph = { roznicaSds: 0.58, mphCm: 176, mphCentyl: 50, mpSds: 0, hSds: 0.58, liczbaWidoczna: true };
+    const f = { ...D8, wzrost: { cm: 133.7, centyl: 72 }, spadek: { ...SP, dSds: -1.31, zCentyla: 97, naCentyl: 72, hSdsBazy: 1.89, hSdsDzis: 0.58 }, mph };
+    expect(N.kandydaci(f).some((k) => k.os === 'spadek')).toBe(false);
+    expect(N.zbuduj(f).tone).toBe('normal');
+    // start tylko +0,99 nad celem → fakt zostaje
+    expect(N.kandydaci({ ...f, spadek: { ...f.spadek, hSdsBazy: 0.99 } }).some((k) => k.os === 'spadek')).toBe(true);
+    // dziś −1,00 pod celem (przestrzelony cel) → fakt zostaje
+    expect(N.kandydaci({ ...f, spadek: { ...f.spadek, hSdsBazy: 1.5, hSdsDzis: -1.0 } }).some((k) => k.os === 'spadek')).toBe(true);
+  });
+
+  it('D1+: nadmiar masy — ciężkość 2; przy otyłości tytuł zostaje przy masie, spadek w „Dodatkowo” z przyczynami hormonalnymi', () => {
+    const otyl = { ...D8, bmi: { wartosc: 22, klucz: 'otylosc', etykieta: 'Otyłość', kolor: 'alert' }, masa: { kg: 33, centyl: 98, kolor: 'alert' } };
+    const h = N.zbuduj(otyl);
+    expect(h.badge).toBe('Otyłość');
+    expect(h.dodatkowe).toEqual([{ os: 'spadek', ciezkosc: 2 }]);
+    expect(h.text).toContain(`Dodatkowo od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50. na 12. centyl (o −1,17${NB}SDS) — przy nadmiarze masy ciała wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych.`);
+    // sama nadwaga wg Cole’a (BMI w normie): tytuł = spadek, zdanie o przyczynach hormonalnych
+    const cole = N.zbuduj({ ...D8, cole: { proc: 115, klucz: 'nadwaga', kolor: 'improve' } });
+    expect(cole).toMatchObject({ badge: 'Obniżenie pozycji na siatce — do oceny', tone: 'danger', title: TYT });
+    expect(cole.text).toMatch(/^Obniżanie się pozycji wzrostu przy nadmiarze masy ciała wymaga dalszej oceny, m\.in\. w kierunku przyczyn hormonalnych: tempa wzrastania i wieku kostnego\./);
+  });
+
+  it('D1−: niedobór masy — ciężkość 2, zdanie o żywieniu; masa jako „Dodatkowo”', () => {
+    const h = N.zbuduj({ ...D8, bmi: { wartosc: 13, klucz: 'niedowaga', etykieta: 'Niedowaga', kolor: 'improve' }, masa: { kg: 18, centyl: 5, kolor: 'improve' } });
+    expect(h).toMatchObject({ badge: 'Obniżenie pozycji na siatce — do oceny', tone: 'danger', title: TYT });
+    expect(h.text).toMatch(/^Obniżanie się pozycji wzrostu przy niedoborze masy ciała wymaga dalszej oceny: tempa wzrastania, sposobu żywienia i przyczyn niedoboru masy\. Dodatkowo /);
+    expect(h.dodatkowe[0].os).toBe('masa');
+  });
+
+  it('D1r: niżej niż cel rodziców (≤ −1,5) — ciężkość 2, rodzice w zdaniu, oś mph wchłonięta', () => {
+    const mph = { roznicaSds: -2.77, mphCm: 176.5, mphCentyl: 97, mpSds: 1.6, hSds: -1.17, liczbaWidoczna: true };
+    const f = { ...D8, wiekLat: 7, spadek: { ...SP, zCentyla: 60, naCentyl: 20, dSds: -1.1 }, wzrost: { cm: 118.7, centyl: 20 }, mph };
+    const h = N.zbuduj(f);
+    expect(h).toMatchObject({ badge: 'Obniżenie pozycji na siatce — do oceny', tone: 'danger' });
+    expect(h.title).toBe(`Od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 60. na 20. centyl (o −1,10${NB}SDS).`);
+    expect(h.text).toBe(`Wzrost jest też niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 176,5${NB}cm, 97. centyl dorosłych; różnica −2,77${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania i wieku kostnego.`);
+    expect((h.text.match(/niż wynika ze wzrostu rodziców/g) || []).length).toBe(1);
+    expect(h.dodatkowe.some((d) => d.os === 'mph')).toBe(false);
+    // −1,49 → bez D1r (oś mph pojedynczo nie powstaje), spadek żółty
+    expect(N.zbuduj({ ...f, mph: { ...mph, roznicaSds: -1.49 } }).glowny).toEqual({ os: 'spadek', ciezkosc: 1 });
+    // bez wzrostu rodziców (także populacja DS, gdzie mpSDS nie istnieje): D1
+    expect(N.zbuduj({ ...f, mph: undefined }).glowny).toEqual({ os: 'spadek', ciezkosc: 1 });
+  });
+
+  it('D2: niski wzrost — oś wzrostu wchłania spadek, jedno zdanie, ciężkość 2 i „Niski wzrost — do oceny”', () => {
+    const mph = { roznicaSds: -2.65, mphCm: 182.5, mphCentyl: 73, mpSds: 0.6, hSds: -2.05, liczbaWidoczna: true };
+    const f = { ...D8, wzrost: { cm: 119.2, centyl: 2 }, spadek: { ...SP, dSds: -1.38, odWiekuMies: 36, zCentyla: 25, naCentyl: 2 }, mph };
+    const h = N.zbuduj(f);
+    expect(h).toMatchObject({ badge: 'Niski wzrost — do oceny', tone: 'danger', title: `Wzrost jest wyraźnie niski jak na wiek: 119,2${NB}cm, 2. centyl.` });
+    expect(h.text).toBe(`Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 182,5${NB}cm, 73. centyl dorosłych; różnica −2,65${NB}SDS), a od pomiaru z wieku 3 lat pozycja wzrostu na siatce obniżyła się z 25. na 2. centyl (o −1,38${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.`);
+    expect(N.kandydaci(f).some((k) => k.os === 'spadek')).toBe(false);
+    // N1 (w paśmie rodziców) 3–10 c: z żółtego robi się czerwone
+    const n1 = N.zbuduj({ ...D8, wzrost: { cm: 119.2, centyl: 8 }, spadek: { ...SP, naCentyl: 8 }, mph: { roznicaSds: -0.8, mphCm: 165, mphCentyl: 20, mpSds: -0.6, hSds: -1.4, liczbaWidoczna: true } });
+    expect(n1).toMatchObject({ badge: 'Niski wzrost — do oceny', tone: 'danger' });
+    expect(n1.text).toMatch(/^Wzrost jest zgodny ze wzrostem rodziców \(wzrost docelowy wg rodziców 165,0\u00A0cm, 20\. centyl dorosłych\), ale od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50\. na 8\. centyl/);
+    // N0 bez rodziców: dopisek o rodzicach zostaje
+    const n0 = N.zbuduj({ ...D8, wzrost: { cm: 119.2, centyl: 8 }, spadek: { ...SP, naCentyl: 8 }, rodziceBrak: true });
+    expect(n0.text).toMatch(/^Od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50\. na 8\. centyl .*Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu\. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców\.$/);
+    expect(n0.subtext).toBe('');
+    // zdanie „Dodatkowo …” osi wzrostu (gdy tytuł niesie inna oś)
+    const d = N.kandydaci({ ...D8, wzrost: { cm: 119.2, centyl: 8 }, spadek: { ...SP, naCentyl: 8 } }).find((k) => k.os === 'wzrost');
+    expect(d.dodatkowo).toBe(`Dodatkowo wzrost jest niski jak na wiek (119,2${NB}cm, 8. centyl), a od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50. na 8. centyl (o −1,17${NB}SDS) — wymaga dalszej oceny.`);
+  });
+
+  it('D3: od 10 lat — żółte, odniesienie do etapu dojrzewania (także przy nadmiarze masy i przy niskim wzroście)', () => {
+    const f = { ...D8, wiekLat: 13, wzrost: { cm: 151.7, centyl: 15 }, spadek: { ...SP, odWiekuMies: 36, naWiekMies: 156, zCentyla: 50, naCentyl: 15, dSds: -1.04 } };
+    const h = N.zbuduj(f);
+    expect(h).toMatchObject({ badge: 'Obniżenie pozycji na siatce', tone: 'warn',
+      text: 'W tym wieku pozycja na siatce zależy od tego, kiedy zaczyna się i kończy dojrzewanie, dlatego wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.' });
+    expect(N.zbuduj({ ...f, cole: { proc: 125, klucz: 'otylosc', kolor: 'alert' } }).dodatkowe).toEqual([{ os: 'spadek', ciezkosc: 1 }]);
+    const niski = N.zbuduj({ ...f, wzrost: { cm: 140, centyl: 8 }, spadek: { ...f.spadek, naCentyl: 8 } });
+    expect(niski).toMatchObject({ badge: 'Niski wzrost', tone: 'warn' });
+    expect(niski.text).toMatch(/obniżyła się z 50\. na 8\. centyl .*\. W tym wieku pozycja na siatce zależy od tego, kiedy zaczyna się i kończy dojrzewanie/);
+    // tempo wzrastania (ta sama ciężkość) wyprzedza spadek; spadek jako „Dodatkowo” z odniesieniem do dojrzewania
+    const t = N.zbuduj({ ...f, tempo: { cmRok: 3.9, ton: 'warn', norma: '≥4 cm/rok' } });
+    expect(t.glowny.os).toBe('tempo');
+    expect(t.text).toContain('; w tym wieku ocenia się to w odniesieniu do etapu dojrzewania i wieku kostnego.');
+  });
+
+  it('strażnik: zdania spadku nie nazywają rozpoznania ani „konsultacji endokrynologicznej”', () => {
+    const zr = ZRODLO.slice(ZRODLO.indexOf('function kandydatSpadku'), ZRODLO.indexOf('function kandydatCisnienia'));
+    expect(zr).not.toMatch(/endokrynolog|niedoczynno|niedobór hormonu wzrostu|Turner/i);
   });
 });

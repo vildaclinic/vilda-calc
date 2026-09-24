@@ -160,7 +160,7 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
   - statystyka punktu (centyl/SDS): wspólna ścieżka `advHistoryResolveMetric` z fallbackiem tabel Palczewskiej (jak „Podsumowanie wyników" i panel porównania A→B, v386);
   - werdykt pary punktów: progi ΔSDS identyczne z `verdictCh` panelu porównania (v388); etykiety w rejestrze lekarskim (słownik zaakceptowany przez właściciela 2026-08-08: m.in. „istotna deceleracja wzrastania", „progresja otyłości", „wyrównywanie niedoboru wzrostu (catch-up)", „dalsza akceleracja wzrastania") — wspólne dla panelu porównania, alarmów kart i modułu; parytet pilnuje test `tests/unit/trajectory-analysis.test.mjs` uruchamiający realny `verdictCh` z `vilda_auth_ui.js` na siatce ~1000 przypadków;
   - opis kanału/strefy: identyczny z `interpCh` panelu (granice 3/10/25/50/75/90/97);
-  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64);
+  - czerwona flaga pozycyjna wzrostu: ΔhSDS ≤ −1,0 względem pierwszego pomiaru z wieku ≥24 mies. (reguła alarmu kart z PR #64); **od P-RAPORT rata T3 (SW 1.1.68): baza ≥ 36 mies. na tej samej siatce, co ostatni pomiar**;
   - tempo wzrastania <10 lat: produkcyjne `pickPrevForLastYear`/`pickPrevFallback`/`velocityCmPerYear`/`getVelocityThreshold` (okno 12±3 mies., fallback 6–8 mies., progi wg wieku metrykalnego, poziom alarmowy).
 
 #### Ocena tempa wzrastania >10 lat — hierarchia okołopokwitaniowa (akceptacja kliniczna właściciela 2026-08-08)
@@ -209,7 +209,7 @@ Przypadki syntetyczne: TRAJ-VELO-T1 (12 lat, 3,0 cm/rok, Tanner I → alarm); TR
 | Przypadek | Wejście | Oczekiwany wynik |
 | --- | --- | --- |
 | TRAJ-SEG | wzrost hSDS 0,4→0,3→−0,9→−1,0 (48→60→72→84 mies.) | najpoważniejszy odcinek 60→72 mies. (ΔSDS −1,2, „istotna deceleracja wzrastania"); całość „istotna deceleracja wzrastania" |
-| TRAJ-REDFLAG | hSDS 1,9 (6 m.) → 1,3 (30 m.) → 0,1 (72 m.) | czerwona flaga od bazy 30 mies. (ΔhSDS −1,2); punkt niemowlęcy pominięty jako baza |
+| TRAJ-REDFLAG | hSDS 1,9 (6 m.) → 1,3 (30 m.) → 0,1 (72 m.) | czerwona flaga od bazy 30 mies. (ΔhSDS −1,2); punkt niemowlęcy pominięty jako baza. **Od raty T3 (baza ≥ 36 mies.): bez flagi; z pomiarem 40 mies. (+1,3) flaga od bazy 40 mies. (−1,2)** |
 | TRAJ-CATCHDOWN | hSDS 1,9 (6 m.) → 0,2 (40 m.) → 0,1 (72 m.) | brak czerwonej flagi (spadek przed 24. mies.) |
 | TRAJ-OBESE | pacjent 12,1→12,5 r.ż., waga/BMI >97c → >97c | „progresja nadmiaru masy (>97. centyla)" / „progresja otyłości" (słownik lekarski) |
 | TRAJ-VELO | 120→124 cm w 12 mies. w wieku 8 lat | 4,0 cm/rok — poniżej normy ≥5 cm/rok (próg 5–10 lat) |
@@ -5777,6 +5777,101 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
+
+## Obniżenie pozycji wzrostu na siatce: baza flagi od 36 mies. i fakt w „Raporcie po wizycie” (P-RAPORT rata T3, SW 1.1.68, 2026-09-24)
+
+**Zgłoszenie (odłożone z raty T2).** Flaga pozycyjna wzrostu w dół (GROWTH-TRAJ, PR #64: ΔhSDS ≤ −1,0 od pierwszego pomiaru
+≥ 24 mies.) nie miała limitu czasu ani warunku tej samej siatki. Zasilała czerwony baner kart („wskazana konsultacja
+endokrynologiczna”), panel trajektorii, epikryzę i Kartę pacjenta, ale nie trafiała do dokumentu dla rodzica. Sonda na
+prawdziwym silniku (dane fikcyjne) pokazała, że flaga zapala się także w przebiegach fizjologicznych:
+- chłopiec 13–14 lat z późnym dojrzewaniem (50 → 15 c, 40 → 10 c; ΔhSDS −1,04);
+- dziewczynka wcześnie dojrzewająca po zakończeniu wzrastania (90 → 60 c; −1,02);
+- dziecko wysokie wracające do wzrostu rodziców (97 → 72 c; −1,31);
+- powrót na niższy kanał po 2. r.ż. z bazą w 24 mies. (90 → 55 c; −1,14).
+Łapie też patologie: niedoczynność tarczycy (50 → 12 c; −1,17), GHD (25 → 2 c; −1,38), zespół Turnera (30 → 3 c; −1,36).
+Szew siatek w 36. mies. (OLAF: Palczewska → OLAF) sam przesuwa hSDS dziecka idącego równo po centylu WHO o −0,15…−0,45 SDS
+(chłopiec 97 c: +1,96 → +1,51), a u dziewczynki na 3. centylu o +0,72 SDS.
+
+**Piśmiennictwo (PubMed).**
+- Grote FK i wsp., BMC Public Health 2007;7:77, PMID 17493282, [doi:10.1186/1471-2458-7-77](https://doi.org/10.1186/1471-2458-7-77)
+  (pełny tekst, losowa próba 392 dzieci): reguła „ΔHSDS < −1 w nieokreślonym czasie” skierowałaby 34,2 % dzieci 0–3 lat,
+  6,4 % w wieku 3–10 lat i 15,4 % w wieku 10–18 lat; wersja „odchylenie od celu rodziców” też za czuła.
+- Grote FK i wsp., BMC Pediatr 2008;8:21, PMID 18477383, [doi:10.1186/1471-2431-8-21](https://doi.org/10.1186/1471-2431-8-21)
+  (pełny tekst): holenderski konsensus liczy odchylenie tylko przy odstępie > 1 roku, a w oknie pokwitaniowym (chłopcy
+  10–13,4, dziewczęta 9–12,3 lat) tylko przy objawach dojrzewania.
+- Grote FK i wsp., Arch Dis Child 2008;93:212–7, PMID 17908714, [doi:10.1136/adc.2007.120188](https://doi.org/10.1136/adc.2007.120188)
+  (abstrakt): najlepsze reguły 3–10 lat łączą niski wzrost z odległością od celu rodziców; odchylenie ma udział niewielki.
+  Dokładnej reguły odchylenia tej pracy nie potwierdzono.
+- Stalman SE i wsp., Horm Res Paediatr 2015, PMID 26448202, [doi:10.1159/000440652](https://doi.org/10.1159/000440652)
+  (abstrakt): „niedawne odchylenie” podnosi czułość reguł holenderskich do 87 %, ale swoistość spada do 87 % — ważny objaw
+  nabytych zaburzeń, za mało swoisty do przesiewu.
+- Mei Z i wsp., Pediatrics 2004;113:e617, PMID 15173545, [doi:10.1542/peds.113.6.e617](https://doi.org/10.1542/peds.113.6.e617);
+  Smith DW i wsp., J Pediatr 1976;89:225–30, [doi:10.1016/s0022-3476(76)80453-2](https://doi.org/10.1016/s0022-3476(76)80453-2):
+  przekraczanie centyli w pierwszych latach życia jest częste i fizjologiczne.
+- Haymond M i wsp., Acta Paediatr 2013, PMID 23586744, [doi:10.1111/apa.12266](https://doi.org/10.1111/apa.12266) (pełny tekst):
+  spowolnienie wzrastania u dziecka dobrze odżywionego lub z otyłością sugeruje GHD, niedoczynność tarczycy albo nadmiar
+  glikokortykosteroidów; przy niedoborze masy — chorobę przewlekłą. Saari A i wsp., JCEM 2021, PMID 33245341,
+  [doi:10.1210/clinem/dgaa869](https://doi.org/10.1210/clinem/dgaa869): w nabytej niedoczynności tarczycy BMI SDS wyższe.
+- Tanner JM i wsp., Arch Dis Child 1970;45:755–62, [doi:10.1136/adc.45.244.755](https://doi.org/10.1136/adc.45.244.755):
+  wzrost dziecka ocenia się wobec wzrostu rodziców.
+
+**Decyzje właściciela (2026-09-24, po makiecie).**
+1. Flaga lekarza: baza = pierwszy pomiar ≥ 36 mies. (dotąd 24) na tej samej siatce, co ostatni pomiar. Próg −1,0 i treść
+   banerów bez zmian. Kopie awaryjne w `growth-basic-module.js` i `vilda_advanced_growth.js` (działają tylko bez modułu
+   trajektorii) też od 36 mies.
+2. Fakt w nagłówku raportu: dziecko ≥ 3 lat, ostatni punkt = dzisiejszy pomiar, odstęp baza → dziś ≥ 12 mies.
+3. D0: bez faktu, gdy dziecko startowało ≥ 1,0 SDS nad wzrostem docelowym wg rodziców i dziś jest nie niżej niż 1,0 SDS pod nim.
+4. Domyślnie ciężkość 1 (żółte); ciężkość 2 tylko razem z nadmiarem masy (D1+), niedoborem masy (D1−), wzrostem niższym niż
+   cel rodziców o ≥ 1,5 SDS (D1r) albo niskim wzrostem ≤ 10 c (D2).
+5. Od 10 lat (obie płcie, spójnie z ratą T i T2) ciężkość 1 i odniesienie do etapu dojrzewania (D3).
+6. Przy nadmiarze masy zdanie nazywa kierunek „m.in. w kierunku przyczyn hormonalnych”.
+
+**Zmiana (kliniczna).**
+- `vilda_trajectory_analysis.js` (VERSION 26): `REDFLAG_BASE_MIN_M` 24 → 36; baza tylko z tej samej siatki; `redFlag` dostaje
+  `baseSd`, `lastSd`, `siatka`.
+- `vilda_patient_report.js`: zbieracz faktów oddaje `f.spadek` z `heightRedFlagOf` tego samego modelu, co fakt `f.pozycja`
+  (punkty karty z `ageYears`, źródło raportu), tylko gdy ostatni punkt flagi to dzisiejszy pomiar.
+- `vilda_raport_naglowek.js` (WERSJA 5): progi jako dane `SPADEK_WZROSTU = { DSDS −1,0, ODSTEP_MIES 12, KU_CELOWI_BAZA 1,0,
+  KU_CELOWI_DZIS −1,0 }`; oś `spadek` (kolejność za `tempo`); przy niskim wzroście fakt opowiada oś wzrostu (N0–N3 + zdanie
+  o obniżeniu). Liczba SDS tylko w trybie profesjonalnym.
+
+Brzmienia (zdanie faktu: „od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50. na 12. centyl (o −1,17 SDS)”):
+
+| gałąź | kiedy | ciężkość / odznaka | zdanie oceny |
+|---|---|---|---|
+| D1 | 3–10 lat, > 10 c | 1, „Obniżenie pozycji na siatce” | „Taki wynik ocenia się razem z tempem wzrastania, masą ciała i wiekiem kostnym.” |
+| D1+ | nadwaga/otyłość wg BMI albo Cole’a | 2, „… — do oceny” | „Obniżanie się pozycji wzrostu przy nadmiarze masy ciała wymaga dalszej oceny, m.in. w kierunku przyczyn hormonalnych: tempa wzrastania i wieku kostnego.” |
+| D1− | niedowaga wg BMI albo Cole’a | 2, „… — do oceny” | „Obniżanie się pozycji wzrostu przy niedoborze masy ciała wymaga dalszej oceny: tempa wzrastania, sposobu żywienia i przyczyn niedoboru masy.” |
+| D1r | hSDS − mpSDS ≤ −1,5 (nie DS) | 2, „… — do oceny”, oś mph wchłonięta | „Wzrost jest też niższy, niż wynika ze wzrostu rodziców (…). Taki wynik wymaga dalszej oceny: tempa wzrastania i wieku kostnego.” |
+| D2 | wzrost ≤ 10 c, 3–10 lat | 2, „Niski wzrost — do oceny” | zdanie N0–N3 + „…, a od pomiaru …” + „Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.” |
+| D3 | od 10 lat | 1 (przy niskim wzroście ciężkość gałęzi N) | „W tym wieku pozycja na siatce zależy od tego, kiedy zaczyna się i kończy dojrzewanie, dlatego wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.” |
+| D0 | powrót do celu rodziców | — | bez faktu |
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne, prawdziwa strona; e2e `raport-wizyta-rata-t3`).**
+
+| przypadek | wynik |
+|---|---|
+| dz. 8 l., 4 l. 50 c → 6 l. 42 c → dziś 12 c, BMI prawidłowe | D1: „Obniżenie pozycji na siatce”, żółte, tytuł ze zdaniem faktu (tryb standardowy bez „SDS”); flaga lekarza od 48 mies. |
+| ta sama, masa 31 kg (nadwaga) | ciężkość 2, zdanie o przyczynach hormonalnych |
+| chł. 8 l., 3 l. 25 c → dziś 2 c, rodzice 170/182 | D2: „Niski wzrost — do oceny”, jedno zdanie o wzroście (N3 + obniżenie z 25. na 2. centyl) |
+| chł. 8 l., 3 l. 97 c → 5 l. 90 c → dziś 72 c, rodzice 163/176 | D0: flaga lekarza jest (baza 36 mies.), w nagłówku bez faktu |
+| dz. 5 l., 2 l. 90 c → 2,5 l. 80 c → 3 l. 70 c → dziś 55 c | brak flagi (baza 36 mies.: −0,39); dotąd flaga −1,14 od 24 mies. |
+| chł. 13 l., 3 l. 50 c → dziś 15 c | D3: żółte, odniesienie do etapu dojrzewania |
+
+Testy jednostkowe: `trajectory-analysis` (baza 36 mies., pomiar z 24–35 mies. pominięty, baza z innej siatki pominięta, pola
+`baseSd`/`lastSd`/`siatka`), `raport-naglowek` (D0–D3, progi −0,99/−1,00, 11/12 mies., < 3 lata, tryb standardowy, DS,
+wchłanianie osi mph i `spadek`, strażnik braku słów „endokrynolog” w zdaniach dla rodzica).
+
+**Znane ograniczenia (świadome).**
+- Flaga lekarza nadal bez bramek D0 i D3 (baner „wskazana konsultacja endokrynologiczna” w wieku dojrzewania i przy powrocie
+  do celu rodziców) — osobna decyzja.
+- Spadek, który w całości zaszedł między 24. a 36. mies., nie daje flagi.
+- Siatka WHO ma jedną etykietę (`WHO`) dla WHO 2006 i WHO 2007, więc warunek tej samej siatki nie wykrywa tego szwu.
+- Granica 10 lat dla obu płci (konsensus holenderski: dziewczęta od 9 lat) — decyzja właściciela dla spójności z ratą T/T2.
+- Dieta redukcyjna może obniżać tempo wzrastania (Dietz WH, Hartung R, Am J Dis Child 1985, PMID 4014094,
+  [doi:10.1001/archpedi.1985.02140090067031](https://doi.org/10.1001/archpedi.1985.02140090067031)); nagłówek tego nie rozróżnia.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna udzielona przed kodowaniem (2026-09-24); scalenie i wdrożenie.
 
 ## Sama nadwaga u nastolatka 12–18 lat: domyślnie stabilizacja masy, redukcja z sufitem 0,5 / 1 / 1,5 kg/mies. (P-DIETA rata N2, SW 1.1.67, 2026-09-24)
 

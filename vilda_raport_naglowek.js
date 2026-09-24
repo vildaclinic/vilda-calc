@@ -6,7 +6,8 @@
    wysoki wzrost wobec wzrostu docelowego wg rodziców (W0–W3″, WZROST_A_RODZICE), strona dodatnia
    osi mph przy wysokim wzroście przechodzi do osi wzrostu, remis 2:2 przed „masą proporcjonalną”;
    rata T2 (2026-09-23): fakt o przesunięciu pozycji wzrostu w górę siatki (A1–A4, POZYCJA_WZROSTU)
-   i symetria dla niskiego wzrostu (N0–N3: MPH w zdaniu, oś mph wchłonięta, podtytuł bez powtórki).
+   i symetria dla niskiego wzrostu (N0–N3: MPH w zdaniu, oś mph wchłonięta, podtytuł bez powtórki);
+   rata T3 (2026-09-24): fakt o obniżeniu pozycji wzrostu na siatce (D0–D3, SPADEK_WZROSTU).
 
    Dlaczego osobny plik: dawny nagłówek powstawał z PREFIKSÓW linii podsumowania
    profesjonalnego („Waga:”, „Obwód głowy:” …) i dla każdej linii bez znanej grupy
@@ -58,11 +59,14 @@
      pozycja: { dSds, odWiekuMies, zCentyla, naCentyl, liczbaWidoczna }
              flaga w górę z VildaTrajectoryAnalysis (ΔhSDS od pierwszego pomiaru ≥ 36 mies., niedawna,
              ostatni punkt = pomiar dzisiejszy); nagłówek używa jej od 3 lat
+     spadek:  { dSds, odWiekuMies, naWiekMies, zCentyla, naCentyl, hSdsBazy, hSdsDzis, liczbaWidoczna }
+             flaga w dół z VildaTrajectoryAnalysis (ΔhSDS ≤ −1,0 od pierwszego pomiaru ≥ 36 mies. na tej samej siatce,
+             ostatni punkt = pomiar dzisiejszy); nagłówek używa jej od 3 lat, przy odstępie ≥ 12 mies.
    Wyjście: { badge, tone, title, text, subtext, glowny, dodatkowe, wersja }.
    ===================================================================================== */
 (function (root) {
   'use strict';
-  var WERSJA = 4;
+  var WERSJA = 5;
   var NBSP = ' ';
   var LIMIT_DODATKOWO = 2;
   var KROK_OD_LAT = 2;
@@ -80,6 +84,16 @@
      używa faktu od WZROST_A_RODZICE.WIEK_ALARM_OD_LAT (3 lata), a od WIEK_POKWITANIA_OD_LAT (10 lat) z ciężkością 1
      i odniesieniem do etapu dojrzewania (Stalman 2015, doi:10.4274/jcrpe.2220; Hannema 2016, doi:10.1159/000443685). */
   var POZYCJA_WZROSTU = Object.freeze({ DSDS: 1.0 });
+  /* Rata T3 (decyzje właściciela 2026-09-24): obniżenie pozycji wzrostu na siatce w dokumencie dla rodzica.
+     DSDS = próg flagi silnika (−1,0). ODSTEP_MIES = 12: holenderski konsensus liczy odchylenie tylko przy odstępie
+     > 1 roku (Grote 2008, doi:10.1186/1471-2431-8-21). KU_CELOWI_*: dziecko, które startowało ≥ 1,0 SDS nad wzrostem
+     docelowym wg rodziców i dziś jest nie niżej niż 1,0 SDS pod nim, zbliża się do celu rodziców (Tanner 1970,
+     doi:10.1136/adc.45.244.755) — bez faktu w nagłówku (D0). Sam spadek jest mało swoisty (reguła „ΔHSDS < −1” skierowałaby
+     6,4 % zdrowych dzieci 3–10 lat, Grote 2007, doi:10.1186/1471-2458-7-77), dlatego domyślnie ciężkość 1; ciężkość 2
+     tylko razem z niskim wzrostem, odległością od celu rodziców (Grote 2008, doi:10.1136/adc.2007.120188) albo masą
+     ciała poza normą (Haymond 2013, doi:10.1111/apa.12266). Od WIEK_POKWITANIA_OD_LAT (10 lat) ciężkość 1 i odniesienie
+     do etapu dojrzewania (konsensus holenderski pomija odchylenie bez objawów dojrzewania). */
+  var SPADEK_WZROSTU = Object.freeze({ DSDS: -1.0, ODSTEP_MIES: 12, KU_CELOWI_BAZA: 1.0, KU_CELOWI_DZIS: -1.0 });
 
   function liczba(v) { var n = Number(v); return v == null || v === '' || !isFinite(n) ? null : n; }
   function fmt(v, m) {
@@ -152,6 +166,33 @@
     var cz = poz.zCentyla != null && poz.naCentyl != null ? ' z ' + centylOd(poz.zCentyla) + ' na ' + centylDo(poz.naCentyl) : '';
     return 'od pomiaru z wieku ' + wiekDop(poz.odWiekuMies) + ' pozycja wzrostu na siatce podniosła się' + cz
       + (poz.liczbaWidoczna ? ' (o ' + sds2(poz.dSds) + ')' : '');
+  }
+  /* Rata T3: fakt o obniżeniu pozycji — od 3 lat, odstęp ≥ 12 mies., bez D0 (zbliżanie się do celu rodziców). */
+  function spadekFakt(f) {
+    var p = f.spadek;
+    if (!p || f.dorosly) return null;
+    var d = zaokr2(p.dSds);
+    if (d == null || d > SPADEK_WZROSTU.DSDS) return null;
+    var wiek = liczba(f.wiekLat);
+    if (wiek == null || wiek < WZROST_A_RODZICE.WIEK_ALARM_OD_LAT) return null;
+    var od = liczba(p.odWiekuMies), na = liczba(p.naWiekMies);
+    if (od == null || na == null || na - od < SPADEK_WZROSTU.ODSTEP_MIES) return null;
+    var m = f.mph, mp = m ? liczba(m.mpSds) : null, hb = liczba(p.hSdsBazy), hd = liczba(p.hSdsDzis);
+    if (mp != null && hb != null && hd != null
+      && zaokr2(hb - mp) >= SPADEK_WZROSTU.KU_CELOWI_BAZA && zaokr2(hd - mp) > SPADEK_WZROSTU.KU_CELOWI_DZIS) return null;
+    return { dSds: d, odWiekuMies: od, zCentyla: liczba(p.zCentyla), naCentyl: liczba(p.naCentyl), liczbaWidoczna: p.liczbaWidoczna !== false,
+      pokwitanie: wiek >= WZROST_A_RODZICE.WIEK_POKWITANIA_OD_LAT };
+  }
+  /* „od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50. na 12. centyl (o −1,17 SDS)” */
+  function zdanieSpadku(sp) {
+    var cz = sp.zCentyla != null && sp.naCentyl != null ? ' z ' + centylOd(sp.zCentyla) + ' na ' + centylDo(sp.naCentyl) : '';
+    return 'od pomiaru z wieku ' + wiekDop(sp.odWiekuMies) + ' pozycja wzrostu na siatce obniżyła się' + cz
+      + (sp.liczbaWidoczna ? ' (o ' + sds2(sp.dSds) + ')' : '');
+  }
+  var ZD_SPADEK_POKWITANIE = 'W tym wieku pozycja na siatce zależy od tego, kiedy zaczyna się i kończy dojrzewanie, dlatego wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.';
+  var ZD_SPADEK_POKWITANIE_DOD = '; w tym wieku ocenia się to w odniesieniu do etapu dojrzewania i wieku kostnego.';
+  function niedoborMasy(f) {
+    return !!((f.bmi && f.bmi.klucz === 'niedowaga') || (f.cole && f.cole.klucz === 'niedowaga'));
   }
   function nadmiarMasy(f) {
     var b = f.bmi && /nadwaga|otylosc|olbrzymia/.test(String(f.bmi.klucz || ''));
@@ -360,8 +401,25 @@
     var tempoZd = f.historia
       ? 'Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania.'
       : 'Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach.';
+    /* Rata T3 (D2): obniżenie pozycji na siatce przy niskim wzroście — jedno zdanie o wzroście (oś `spadek` wchłonięta);
+       przed wiekiem dojrzewania ciężkość 2 i „do oceny”, od 10 lat ciężkość gałęzi N bez zmian i odniesienie do dojrzewania. */
+    var sp = spadekFakt(f);
+    var zdSp = sp ? zdanieSpadku(sp) : '';
+    function zSpadkiem(pierwsze, dodPocz, dopisek) {
+      var przed = !sp.pokwitanie;
+      var t = zlacz(pierwsze, przed ? 'Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.' : ZD_SPADEK_POKWITANIE, dopisek || '');
+      k.text = t; k.podtytul = t; k.subtext = '';
+      if (przed) { k.ciezkosc = 2; k.badge = 'Niski wzrost — do oceny'; }
+      k.dodatkowo = dodPocz + (przed ? ' — wymaga dalszej oceny.' : ZD_SPADEK_POKWITANIE_DOD);
+      k.wchlania = ['spadek'];
+      return k;
+    }
     if (r == null || r >= P.PASMO) {
       /* N0 */
+      if (sp) {
+        return zSpadkiem(duze(zdSp) + '.', 'Dodatkowo wzrost jest ' + jak + ' jak na wiek ' + nawiasH + ', a ' + zdSp,
+          r == null && f.rodziceBrak && !f.ds ? 'Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.' : '');
+      }
       var pod = tempoZd + (f.ds
         ? ' Wynik warto interpretować w odniesieniu do całego obrazu klinicznego.'
         : ' Wynik warto interpretować także w odniesieniu do wzrostu rodziców i całego obrazu klinicznego.');
@@ -374,6 +432,10 @@
     var nawiasR = nawiasRodzicow(m, r);
     if (r > -P.PASMO) {
       /* N1 */
+      if (sp) {
+        return zSpadkiem('Wzrost jest zgodny ze wzrostem rodziców' + nawiasCel + ', ale ' + zdSp + '.',
+          'Dodatkowo wzrost jest ' + jak + ' jak na wiek ' + nawiasH + ', zgodny ze wzrostem rodziców' + nawiasCel + ', ale ' + zdSp);
+      }
       var t1 = 'Wzrost jest zgodny ze wzrostem rodziców' + nawiasCel + '. ' + (maly ? uwagaWieku() : tempoZd);
       k.text = t1; k.podtytul = t1;
       k.dodatkowo = 'Dodatkowo wzrost jest ' + jak + ' jak na wiek ' + nawiasH + ', ale zgodny ze wzrostem rodziców' + nawiasCel + '.';
@@ -381,6 +443,10 @@
     }
     if (r > -P.ALARM || maly) {
       /* N2 (oraz N3 poniżej 3 lat — bez alarmu z porównania, z zastrzeżeniem wieku) */
+      if (sp) {
+        return zSpadkiem('Wzrost jest niższy, niż wynika ze wzrostu rodziców' + nawiasR + ', a ' + zdSp + '.',
+          'Dodatkowo wzrost jest ' + jak + ' jak na wiek ' + nawiasH + ' i niższy, niż wynika ze wzrostu rodziców' + nawiasR + ', a ' + zdSp);
+      }
       var t2 = 'Wzrost jest niższy, niż wynika ze wzrostu rodziców' + nawiasR + '. '
         + (maly ? uwagaWieku() : 'Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym.');
       k.text = t2; k.podtytul = t2;
@@ -389,6 +455,10 @@
     }
     /* N3 */
     k.ciezkosc = 2;
+    if (sp) {
+      return zSpadkiem('Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców' + nawiasR + ', a ' + zdSp + '.',
+        'Dodatkowo wzrost jest ' + jak + ' jak na wiek ' + nawiasH + ' i wyraźnie niższy, niż wynika ze wzrostu rodziców' + nawiasR + ', a ' + zdSp);
+    }
     var t3 = 'Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców' + nawiasR + '. Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.';
     k.text = t3; k.podtytul = t3;
     k.dodatkowo = 'Dodatkowo wzrost jest ' + jak + ' jak na wiek ' + nawiasH + ' i wyraźnie niższy, niż wynika ze wzrostu rodziców' + nawiasR + ' — wymaga dalszej oceny.';
@@ -529,6 +599,35 @@
       dodatkowo: 'Dodatkowo ' + zd + '.' };
   }
 
+  /* Rata T3 (D1, D1+, D1−, D1r, D3): obniżenie pozycji na siatce bez niskiego wzrostu (> 10 c) — własna oś `spadek`.
+     Odznaka nazywa wynik (pozycję). Przy niskim wzroście fakt opowiada oś wzrostu (D2). */
+  function kandydatSpadku(f) {
+    var sp = spadekFakt(f);
+    if (!sp) return null;
+    if (f.wzrost && liczba(f.wzrost.centyl) != null && f.wzrost.centyl <= 10) return null;
+    var zd = zdanieSpadku(sp);
+    var pokw = sp.pokwitanie;
+    var nadmiar = nadmiarMasy(f), niedob = niedoborMasy(f);
+    var m = f.mph, r = m ? zaokr2(m.roznicaSds) : null;
+    var pozaCelem = !pokw && !f.ds && r != null && r <= -WZROST_A_RODZICE.PASMO;
+    var ciez = pokw ? 1 : (nadmiar || niedob || pozaCelem) ? 2 : 1;
+    var nawR = pozaCelem ? nawiasRodzicow(m, r) : '';
+    var ocena = pokw ? ZD_SPADEK_POKWITANIE
+      : nadmiar ? 'Obniżanie się pozycji wzrostu przy nadmiarze masy ciała wymaga dalszej oceny, m.in. w kierunku przyczyn hormonalnych: tempa wzrastania i wieku kostnego.'
+        : niedob ? 'Obniżanie się pozycji wzrostu przy niedoborze masy ciała wymaga dalszej oceny: tempa wzrastania, sposobu żywienia i przyczyn niedoboru masy.'
+          : pozaCelem ? 'Taki wynik wymaga dalszej oceny: tempa wzrastania i wieku kostnego.'
+            : 'Taki wynik ocenia się razem z tempem wzrastania, masą ciała i wiekiem kostnym.';
+    var kon = pokw ? ZD_SPADEK_POKWITANIE_DOD
+      : nadmiar ? ' — przy nadmiarze masy ciała wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych.'
+        : niedob ? ' — przy niedoborze masy ciała wymaga to dalszej oceny.'
+          : pozaCelem ? ' — wymaga dalszej oceny.' : '.';
+    return { os: 'spadek', ciezkosc: ciez, badge: ciez >= 2 ? 'Obniżenie pozycji na siatce — do oceny' : 'Obniżenie pozycji na siatce',
+      title: duze(zd) + '.',
+      text: zlacz(pozaCelem ? 'Wzrost jest też niższy, niż wynika ze wzrostu rodziców' + nawR : '', ocena),
+      dodatkowo: 'Dodatkowo ' + zd + (pozaCelem ? ', a wzrost jest niższy, niż wynika ze wzrostu rodziców' + nawR : '') + kon,
+      wchlania: pozaCelem ? ['mph'] : [] };
+  }
+
   function kandydatCisnienia(f) {
     var p = f.cisnienie;
     if (!p || liczba(p.sk) == null || liczba(p.roz) == null) return null;
@@ -666,7 +765,7 @@
      nieprawidłowością, nadwaga jest); rata T: wysoki wzrost o ciężkości 2 (wyraźnie wyższy niż wynika ze wzrostu
      rodziców) PRZED „masą proporcjonalną” (wysoka masa przy prawidłowym BMI), nadal ZA otyłością/niedowagą; dalej
      kolejność osi. */
-  var KOLEJNOSC_OSI = ['wzrost', 'masa', 'wzrost-wysoki', 'masa-proporcjonalna', 'cisnienie', 'tetno', 'talia', 'tempo', 'pozycja', 'mph', 'glowa', 'klatka'];
+  var KOLEJNOSC_OSI = ['wzrost', 'masa', 'wzrost-wysoki', 'masa-proporcjonalna', 'cisnienie', 'tetno', 'talia', 'tempo', 'spadek', 'pozycja', 'mph', 'glowa', 'klatka'];
   function ranga(k) { var klucz = k.rangaKlucz || (k.os === 'wzrost' && k.wysoki ? 'wzrost-wysoki' : k.os); return KOLEJNOSC_OSI.indexOf(klucz); }
 
   function kandydaci(f) {
@@ -679,6 +778,7 @@
     dod(kandydatTalii(f));
     dod(kandydatTempa(f));
     dod(kandydatPozycji(f));
+    dod(kandydatSpadku(f));
     dod(kandydatMph(f));
     dod(kandydatObwodu('glowa', 'obwód głowy', f.glowa));
     dod(kandydatObwodu('klatka', 'obwód klatki piersiowej', f.klatka));
@@ -731,6 +831,7 @@
     LIMIT_DODATKOWO: LIMIT_DODATKOWO,
     WZROST_A_RODZICE: WZROST_A_RODZICE,
     POZYCJA_WZROSTU: POZYCJA_WZROSTU,
+    SPADEK_WZROSTU: SPADEK_WZROSTU,
     zbuduj: zbuduj,
     kandydaci: kandydaci,
     zdanieKroku: zdanieKroku,
