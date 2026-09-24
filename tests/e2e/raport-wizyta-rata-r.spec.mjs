@@ -72,14 +72,17 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     expect(r.h.text).toBe('Rozpoznanie wymaga potwierdzenia w powtarzanych pomiarach; dalsze postępowanie ustalono na wizycie. Dodatkowo BMI (24,5) zbliża się do górnej granicy normy.');
   });
 
-  test('RR-3: dorosły BMI 42, RR 185/125, tętno 108, talia 120 — pilna kontrola, krok „wyjście z otyłości III stopnia”, dwa „Dodatkowo”', async ({ page }) => {
+  test('RR-3: dorosły BMI 42, RR 185/125, tętno 108, talia 120 — pilna kontrola, krok −5 % masy (rata Z2), dwa „Dodatkowo”', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const r = await model(page, { age: 47, sex: 'M', w: 121.4, h: 170, extra: { adultBpSystolic: 185, adultBpDiastolic: 125, adultHeartRate: 108, waistCm: 120, hipCm: 110 } });
     expect(r.h.badge).toBe('Pilna kontrola');
     expect(r.h.title).toBe(`Ciśnienie tętnicze jest bardzo wysokie: 185/125${NB}mm${NB}Hg.`);
     expect(r.h.text).toContain('Taki wynik wymaga pilnej kontroli lekarskiej.');
-    expect(r.h.text).toContain(`Pierwszy krok to ok. ${f1(r.pierwszy)}${NB}kg (wyjście z otyłości III stopnia)`);
+    // P-DIETA rata Z2: przy BMI 42 pierwszym krokiem jest −5 % masy (Wing 2011) — z korzyścią, bez nawiasu progu BMI
+    expect(r.h.text).toContain(`Pierwszy krok to ok. ${f1(r.pierwszy)}${NB}kg, czyli około `);
+    expect(r.pierwszy).toBeCloseTo(121.4 * 0.95, 6);
+    expect(r.h.text).toContain('mniej; już ta zmiana poprawia ciśnienie i wyniki badań krwi.');
     expect(r.h.text).toContain('Dodatkowo obwód talii wskazuje na otyłość brzuszną: 120,0');
     expect(r.h.text).not.toContain('otyłości II stopnia');
     expect(r.h.dodatkowe.map((d) => d.os)).toEqual(['masa', 'talia']);
