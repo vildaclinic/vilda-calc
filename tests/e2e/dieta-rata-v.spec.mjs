@@ -95,7 +95,7 @@ test.describe('P-DIETA rata V — REE Molnára, górna granica dnia, kontrola za
     expect(r.kontrola.progKg).toBe(Math.round((70 + r.kontrola.przyrostKg - r.kontrola.ubytekDietyKg / 2) * 10) / 10);
   });
 
-  test('RV-3: nadwaga 13 l (Henry, bez korekty) — górna granica i kontrola też są; dorosły — bez zmian', async ({ page }) => {
+  test('RV-3: nadwaga 13 l (Henry, bez korekty) — górna granica i kontrola też są; dorosły — od raty Z także', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const n = await stan(page, { sex: 'M', y: 13, m: 0, w: 60, h: 155 });
@@ -105,11 +105,14 @@ test.describe('P-DIETA rata V — REE Molnára, górna granica dnia, kontrola za
     expect(n.tekst).toContain('Dieta lekka: nie więcej niż');
     expect(n.kontrola).not.toBeNull();
     const d = await stan(page, { sex: 'M', y: 40, m: 0, w: 95, h: 178 });
-    expect(d.energia.gorna).toBe(false);
-    expect(d.kontrola).toBeNull();
-    expect(d.sekcje).not.toContain('KONTROLA ZA 6 TYGODNI');
-    expect(d.tekst).not.toContain('nie więcej niż');
-    expect(d.journey).not.toContain('Kontrola za 6 tygodni');
+    // P-DIETA rata Z (decyzja właściciela 2026-09-23): dorosły ma górną granicę dnia i kontrolę za 6 tygodni (bez wzrastania)
+    expect(d.energia.gorna).toBe(true);
+    expect(d.energia.podaz % 50).toBe(0);
+    expect(d.kontrola).not.toBeNull();
+    expect(d.kontrola.wzrastanie).toBe(false);
+    expect(d.sekcje).toContain('KONTROLA ZA 6 TYGODNI');
+    expect(d.tekst).toMatch(/Dieta [a-ząćęłńóśźż]+: nie więcej niż \d+ kcal dziennie — to górna granica dnia/u);
+    expect(d.journey).toContain('Kontrola za 6 tygodni');
   });
 
   test('RV-4: docpro.html — ta sama ścieżka i te same liczby', async ({ page }) => {

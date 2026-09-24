@@ -131,7 +131,8 @@ test('zdania planu: bez zdania o diecie/PAL, pozycje małą literą, ruch „doj
   expect(b.tekst).not.toContain('celowo ograniczone');
   expect(b.tekst).not.toContain('Wyliczone dla diety');
   expect(b.tekst).toMatch(/spodziewane tempo redukcji ?Twój zadeklarowany plan:/);
-  // dorosły: bez górnej granicy w nazwie diety i bez sekcji kontroli (rata V dotyczy tylko dziecka)
-  expect(b.tekst).toMatch(/Twój zadeklarowany plan: dieta [a-ząćęłńóśźż]+ i /u);
-  expect(b.tekst).not.toContain('KONTROLA ZA');
+  // P-DIETA rata Z (decyzja właściciela 2026-09-23): u dorosłego nazwa diety też niesie górną granicę dnia,
+  // a plan ma sekcję kontroli (dawniej: rata V tylko u dziecka)
+  expect(b.tekst).toMatch(/Twój zadeklarowany plan: dieta [a-ząćęłńóśźż]+ \(do [\d\s\u00A0\u202F]+ kcal dziennie\) i /u);
+  expect(b.tekst).toContain('KONTROLA ZA 6 TYGODNI');
 });

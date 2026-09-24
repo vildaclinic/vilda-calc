@@ -85,10 +85,12 @@ test('dorosly z otyloscia: kazda liczba z dane wraca w zdaniach', async ({ page 
   expect(Math.abs(dane.masa.pierwszyCel.masaKg - (dane.masa.docelowaKg + dane.masa.doRedukcjiKg - dane.masa.pierwszyCel.doRedukcjiKg))).toBeLessThan(0.05);
 
   // energia: podaz zaokraglona do 100, deficyt, tempo
-  expect(text).toContain(norm('ok. ' + dane.energia.podazZaokrKcal + ' kcal/dzień'));
+  // P-DIETA rata Z: u dorosłego liczba diety to górna granica dnia (w dół do 50 kcal)
+  expect(text).toContain(norm('nie więcej niż ' + dane.energia.podazZaokrKcal + ' kcal dziennie'));
+  expect(dane.energia.gornaGranica).toBe(true);
   expect(text).toContain(norm('ok. ' + dane.energia.deficytKcal + ' kcal/dobę'));
   expect(text).toContain(norm('ok. ' + przecinek(dane.energia.tempoKgTydz, 1) + ' kg/tydzień'));
-  expect(dane.energia.podazZaokrKcal).toBe(Math.round(dane.energia.podazKcal / 100) * 100);
+  expect(dane.energia.podazZaokrKcal).toBe(Math.floor(dane.energia.podazKcal / 50) * 50);
   expect(dane.energia.palUzyty).toBeGreaterThan(0);
 
   // normy zywieniowe: zakres bialka do planowania

@@ -143,7 +143,7 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     // energia: cel = masa przy BMI 24,9 (generator), funkcja produkcyjna
     expect(r.dane.cel).toBeCloseTo(gora, 1);
     expect(r.nut.rows[0]).toBe(`Dla masy prawidłowej (${f1(r.dane.cel)} kg): ${kcal(r.teeCel)}`);
-    expect(r.nut.value).toBe(kcal(r.dane.podaz));
+    expect(r.nut.value).toBe('\u2264\u202F' + kcal(r.dane.podaz)); // P-DIETA rata Z: u dorosłego górna granica dnia
     expect(r.html).not.toContain('3269');
   });
 

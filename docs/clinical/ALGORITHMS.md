@@ -5778,6 +5778,70 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Górna granica dnia i kontrola planu za 6 tygodni u dorosłego (P-DIETA rata Z, SW 1.1.62, 2026-09-23)
+
+**Decyzje właściciela (2026-09-23, po makiecie).** Reguły raty V (dziecko z planem otyłości) obejmują dorosłego
+w redukcji (dieta lekka, umiarkowana, intensywna) i przy celu własnym (BMI 23–25, dieta lekka); parametry kontroli
+takie jak u dzieci; kontrola w planie PDF, karcie „Droga do normy BMI” i zaleceniach (nie w karcie planu i nie
+w „Raporcie po wizycie”). Próg −5 % masy („lepsze wyniki badań”) — osobna rata.
+
+**Stan przed zmianą.** Kaloryczność dorosłego była podawana jako „zalecana kaloryczność diety” i zaokrąglana do
+pełnej setki, także w górę (K 62 l., 78 kg / 158 cm: silnik 1 464 kcal → „1 500”); plan nie miał kontroli.
+
+**Zmiana (wynik kliniczny: inna prezentacja liczby i nowa reguła kontroli; deficyt i tempo bez zmian).**
+- Silnik (`vilda_diet_plan_ui.js`): wiersze diety dorosłego (`G`) i celu własnego dorosłego (`Gcw`) niosą
+  `gornaKcal = energyGornaGranicaKcal(podaż, podłoga)` — w dół do 50 kcal, nigdy poniżej podłogi (K 1 200, M 1 600;
+  diety poniżej podłogi i tak są wycinane) — oraz `gornaGranica: true` i `floorKcal`. `energyKontrolaPlanu` bierze
+  podłogę z wiersza, gdy nie dostanie jej w opcjach. U dorosłego nie ma wzrastania, a tempo diety zawsze wynosi
+  ≥ 1 kg/mies., więc kontrola zawsze po 6 tygodniach: spodziewana masa = dziś − 6 × tygodniowy ubytek z samej diety,
+  próg = dziś − ½ tego ubytku, przy masie ≥ progu odjąć 100–200 kcal nie poniżej podłogi (inaczej „plan do omówienia
+  na kontroli”).
+- Zalecenia dorosłego (`vilda_diet_recommendations.js`, gałąź `yi`): „Plan zakłada dietę … oraz deklarowaną
+  aktywność … . Dieta umiarkowana: nie więcej niż N kcal dziennie — to górna granica dnia, nie cel do dobicia.
+  Deficyt energetyczny przy tej diecie wynosi ok. … kcal/dobę, co odpowiada tempu redukcji ok. … kg/tydzień.”;
+  cel własny: „podaż nie więcej niż N kcal dziennie (górna granica dnia, nie cel do dobicia)”; po nich zdanie
+  o kontroli jak u dziecka (bez dopisku o wzrastaniu). `dane.energia.gornaGranica` i `podazZaokrKcal = gornaKcal`;
+  `dane.kontrola` nie jest już zerowana u dorosłego. Normy składników liczą się od tej samej liczby (jak u dziecka).
+- Karta „Droga do normy BMI” (`vilda_bmi_journey.js`): „≤ N kcal/dzień, górna granica dnia — dieta …” (przy celu
+  własnym „— cel własny, dieta lekka”) i ramka kontroli; dziecko bez zmian (tylko plan otyłości, bez celu własnego).
+- Karta planu, plan PDF (kafel „≤ N / górna granica dnia, nie cel”, sekcja „KONTROLA ZA 6 TYGODNI” z kaflem
+  „przy tej diecie (dziś X kg)”) i „Raport po wizycie” („Plan: dieta …: ≤ N kcal/d”) przejmują flagę bez własnej
+  logiki.
+
+**Źródła (według PubMed).** Lichtman SW i wsp., NEJM 1992;327:1893–8, doi:10.1056/NEJM199212313272701 — dorośli
+z otyłością zaniżali spożycie średnio o 47 % i zawyżali aktywność o 51 % przy prawidłowym wydatku energetycznym
+(uzasadnienie „górnej granicy dnia” i sprawdzianu wagą). Unick JL i wsp., Obesity 2015;23:1353–6,
+doi:10.1002/oby.21112 — ubytek masy w 1.–2. miesiącu (Look AHEAD, n = 2 290) przewidywał wynik po 4 i 8 latach
+(okno kontroli). Jensen MD i wsp., wytyczne AHA/ACC/TOS 2013, Circulation 2014;129(25 Suppl 2):S102–38,
+doi:10.1161/01.cir.0000437739.71477.ee — deficyt 500–750 kcal/d, orientacyjnie 1 200–1 500 kcal (kobiety)
+i 1 500–1 800 kcal (mężczyźni). Zheng Y i wsp., Obesity 2015;23:256–65, doi:10.1002/oby.20946 — regularne ważenie
+się wiązało się z większym ubytkiem masy bez niekorzystnych skutków psychologicznych. Hall KD i wsp., Lancet
+2011;378:826–37, doi:10.1016/S0140-6736(11)60812-X — dynamika masy przy deficycie (próg ½ ubytku z przelicznika
+7 700 kcal/kg jest u dorosłego łagodny). Żadna praca nie podaje parametrów kontroli (6 tygodni, ½ ubytku,
+100–200 kcal) — to decyzja właściciela, jak u dzieci.
+
+**Populacja i ograniczenia.** Dorośli ≥ 18 lat w redukcji (BMI ≥ 25) i z celem własnym (BMI 23–25). Nie dotyczy
+utrzymania, niedowagi (plan przyrostu) ani dziecka/nastolatka (reguły raty V–X). Spodziewana masa liczy samą dietę,
+bez ruchu.
+
+Syntetyczne przypadki `wejście → oczekiwany wynik` (fikcyjne, PAL domyślny 1,4, dieta umiarkowana):
+- K 62 l., 78 kg / 158 cm (BMI 31,2): podaż 1 464 → **≤ 1 450** (dawniej 1 500); lekka ≤ 1 550, intensywna ≤ 1 300;
+  kontrola: ok. 75,7 kg, próg 76,9 kg, po obniżce 1 250–1 350 kcal.
+- M 47 l., 112 kg / 167 cm (BMI 40,2): 2 231 → ≤ 2 200 (bez zmiany liczby); ok. 108,6 kg, próg 110,3 kg,
+  po obniżce 2 000–2 100 kcal.
+- K 40 l., 95 kg / 165 cm: 1 740 → ≤ 1 700; ok. 92,3 kg, próg 93,7 kg.
+- M 30 l., 150 kg / 180 cm: 2 816 → ≤ 2 800; ok. 145,9 kg, próg 148,0 kg.
+- K 40 l., 66 kg / 165 cm, cel własny 62 kg: dieta lekka ≤ (podaż w dół do 50), kontrola 6 tygodni; ta sama osoba
+  bez celu własnego — utrzymanie, bez granicy i bez kontroli.
+Skutek: liczba taka sama albo niższa o 50–99 kcal — tylko tam, gdzie dawne zaokrąglenie szło w górę.
+
+**Walidacja.** `tests/unit/rata-z-dorosly-gorna-kontrola.test.mjs` (prawdziwy silnik: wiersze G i Gcw, podłoga,
+kontrola z podłogą z wiersza, dziecko bez zmian, strażnicy generatora i karty drogi). `tests/e2e/dieta-rata-z.spec.mjs`
+(index i docpro: zdania, `dane`, plan PDF, karta drogi, karta planu, raport po wizycie; cel własny; 390 px).
+Przepisane oczekiwania dorosłego (nowe brzmienie, „≤”, kontrola): unit `rata-v-ree-molnar`; e2e
+`dane-zalecen-energetycznych`, `cel-wlasny`, `diet-recommendations-logic`, `dieta-rata-v`, `raport-wizyta-rata-q`,
+`raport-plan-rata-m`, `zalecenia-energetyczne-krytyczne`.
+
 ## Plan PDF: zdanie „Twój zadeklarowany plan” bez mylącej sumy, łącznik etykiety drugiego rzędu osi, spacje w kaflach (P-RAPORT rata Y, SW 1.1.61, 2026-09-23)
 
 **Zgłoszenie i decyzje właściciela (2026-09-23).** W planie PDF chłopca 15;3 lat (102,5 kg / 186,7 cm) stało
