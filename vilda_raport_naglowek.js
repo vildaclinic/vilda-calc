@@ -7,7 +7,8 @@
    osi mph przy wysokim wzroście przechodzi do osi wzrostu, remis 2:2 przed „masą proporcjonalną”;
    rata T2 (2026-09-23): fakt o przesunięciu pozycji wzrostu w górę siatki (A1–A4, POZYCJA_WZROSTU)
    i symetria dla niskiego wzrostu (N0–N3: MPH w zdaniu, oś mph wchłonięta, podtytuł bez powtórki);
-   rata T3 (2026-09-24): fakt o obniżeniu pozycji wzrostu na siatce (D0–D3, SPADEK_WZROSTU).
+   rata T3 (2026-09-24): fakt o obniżeniu pozycji wzrostu na siatce (D0–D3, SPADEK_WZROSTU);
+   rata R2 (2026-09-24): wzrost rodziców w nagłówku najwyżej raz (N0/W0), bez ogólnika „całego obrazu klinicznego”.
 
    Dlaczego osobny plik: dawny nagłówek powstawał z PREFIKSÓW linii podsumowania
    profesjonalnego („Waga:”, „Obwód głowy:” …) i dla każdej linii bez znanej grupy
@@ -66,7 +67,7 @@
    ===================================================================================== */
 (function (root) {
   'use strict';
-  var WERSJA = 5;
+  var WERSJA = 6;
   var NBSP = ' ';
   var LIMIT_DODATKOWO = 2;
   var KROK_OD_LAT = 2;
@@ -189,6 +190,7 @@
     return 'od pomiaru z wieku ' + wiekDop(sp.odWiekuMies) + ' pozycja wzrostu na siatce obniżyła się' + cz
       + (sp.liczbaWidoczna ? ' (o ' + sds2(sp.dSds) + ')' : '');
   }
+  var ZD_RODZICE_BRAK = 'Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.';
   var ZD_SPADEK_POKWITANIE = 'W tym wieku pozycja na siatce zależy od tego, kiedy zaczyna się i kończy dojrzewanie, dlatego wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.';
   var ZD_SPADEK_POKWITANIE_DOD = '; w tym wieku ocenia się to w odniesieniu do etapu dojrzewania i wieku kostnego.';
   function niedoborMasy(f) {
@@ -418,12 +420,15 @@
       /* N0 */
       if (sp) {
         return zSpadkiem(duze(zdSp) + '.', 'Dodatkowo wzrost jest ' + jak + ' jak na wiek ' + nawiasH + ', a ' + zdSp,
-          r == null && f.rodziceBrak && !f.ds ? 'Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.' : '');
+          r == null && f.rodziceBrak && !f.ds ? ZD_RODZICE_BRAK : '');
       }
-      var pod = tempoZd + (f.ds
-        ? ' Wynik warto interpretować w odniesieniu do całego obrazu klinicznego.'
-        : ' Wynik warto interpretować także w odniesieniu do wzrostu rodziców i całego obrazu klinicznego.');
-      if (r == null && f.rodziceBrak && !f.ds) pod += ' Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.';
+      /* Rata R2 (decyzja właściciela 2026-09-24): o rodzicach JEDNO zdanie, najbardziej konkretne — brak danych →
+         „potrzebny jest wzrost obojga rodziców”; różnica znana (r ≥ PASMO) → mówi o niej oś mph z liczbami; bez ogólnika
+         „całego obrazu klinicznego” (Z1), poza populacją DS, gdzie to jedyne odniesienie. */
+      var pod = tempoZd + (f.ds ? ' Wynik warto interpretować w odniesieniu do całego obrazu klinicznego.'
+        : f.rodziceBrak ? ' ' + ZD_RODZICE_BRAK
+          : r != null ? ''
+            : ' Wynik warto interpretować także w odniesieniu do wzrostu rodziców.');
       k.subtext = pod; k.podtytul = pod;
       return k;
     }
@@ -509,10 +514,11 @@
           'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + ', a ' + pozZd + pozKonc);
       }
       /* W0 */
-      var w0 = f.ds
-        ? 'Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania.'
-        : 'Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania i wzrostem rodziców.';
-      if (r == null && f.rodziceBrak && !f.ds) w0 += ' Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.';
+      /* Rata R2: rodzice raz — brak danych → tylko zdanie o brakującym wzroście rodziców; różnica znana (r ≤ −PASMO) →
+         opowiada ją oś mph z liczbami. */
+      var w0 = 'Sam wysoki wzrost nie jest nieprawidłowością; ocenia się go razem z tempem wzrastania'
+        + (f.ds || f.rodziceBrak || r != null ? '.' : ' i wzrostem rodziców.')
+        + (f.rodziceBrak && !f.ds ? ' ' + ZD_RODZICE_BRAK : '');
       k.text = w0; k.podtytul = w0;
       k.dodatkowo = 'Dodatkowo wzrost jest wysoki jak na wiek ' + nawiasH + '.';
       return k;

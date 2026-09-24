@@ -5778,6 +5778,46 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## „Raport po wizycie”: wzrost rodziców w nagłówku najwyżej raz (P-RAPORT rata R2, SW 1.1.71, 2026-09-24)
+
+**Zgłoszenie.** Właściciel (2026-09-24, na podstawie prawdziwego raportu, którego nie dołączono do repozytorium):
+nagłówek dziecka z niskim wzrostem bez wzrostu rodziców brzmiał „Wzrost jest wyraźnie niski jak na wiek: 121,0 cm,
+3. centyl. Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach. Wynik warto interpretować także w
+odniesieniu do wzrostu rodziców i całego obrazu klinicznego. Do pełniejszej oceny potrzebny jest wzrost obojga
+rodziców.” — dwa zdania o rodzicach pod rząd i ogólnik „całego obrazu klinicznego”. To samo przy wysokim wzroście
+(W0): „… razem z tempem wzrastania i wzrostem rodziców. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.”
+
+**Reguła (decyzja właściciela 2026-09-24, „pasuje, koduj”).** O rodzicach w nagłówku najwyżej jedno zdanie, to
+najbardziej konkretne:
+- brak wzrostu rodziców (`f.rodziceBrak`) → tylko „Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.”;
+- różnica od celu rodziców znana i poza pasmem (oś `mph`, |hSDS − mpSDS| ≥ 1,5) → mówi o niej tylko oś mph (z liczbami,
+  w tytule albo „Dodatkowo …”); podtytuł N0 i zdanie W0 bez członu o rodzicach;
+- brak obu faktów → jedno zdanie ogólne jak dotąd („… także w odniesieniu do wzrostu rodziców.” / „… i wzrostem
+  rodziców.”), bez „całego obrazu klinicznego”;
+- populacja z zespołem Downa (`f.ds`) — bez zmian: bez rodziców, z odniesieniem do całego obrazu klinicznego (siatki DS
+  nie mają celu rodziców).
+Gałęzie N1–N3, W1–W3″ (MPH w zdaniu osi wzrostu) i zdanie spadku N0 z raty T3 — bez zmian.
+
+**Zmiana (tekst nagłówka dla rodzica; bez zmiany progów, osi, ciężkości i kolorów).**
+`vilda_raport_naglowek.js` (WERSJA 6, `?v=7`): stała `ZD_RODZICE_BRAK`, podtytuł N0 i zdanie W0 wg reguły wyżej.
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne; unit `raport-naglowek`, blok „rata R2”):
+
+| przypadek | dotąd | po zmianie |
+|---|---|---|
+| dz. 7,5 l., 121,0 cm (3 c), bez rodziców | tempo + „… wzrostu rodziców i całego obrazu klinicznego.” + „Do pełniejszej oceny …” | tempo + „Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.” |
+| j.w., cel rodziców 152 cm (różnica +1,80 SDS) | tempo + „… wzrostu rodziców i całego obrazu klinicznego.” + „Dodatkowo … wyższy, niż wynika ze wzrostu rodziców …” | tempo + „Dodatkowo …” (rodzice raz) |
+| j.w., bez faktu o rodzicach | „… wzrostu rodziców i całego obrazu klinicznego.” | „… także w odniesieniu do wzrostu rodziców.” |
+| chł. 6 l., 129 cm (98 c), bez rodziców | „… i wzrostem rodziców. Do pełniejszej oceny …” | „… razem z tempem wzrastania. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców.” |
+| j.w., cel rodziców 170 cm (−1,80 SDS) | „… i wzrostem rodziców. Dodatkowo … niższy, niż wynika ze wzrostu rodziców …” | „… razem z tempem wzrastania. Dodatkowo …” |
+| DS, niski wzrost, bez rodziców | „… w odniesieniu do całego obrazu klinicznego.” | bez zmian |
+
+**Walidacja.** Unit `raport-naglowek` (blok R2: liczba zdań o rodzicach ≤ 1 w N0/W0 z MPH, bez MPH i bez danych; DS;
+strażnik literału „całego obrazu klinicznego” tylko w gałęzi DS; pinezki N0/W0 i `WERSJA` 6); e2e
+`raport-wizyta-rata-s` (P1) i `raport-wizyta-rata-t` (W0 bez rodziców) na prawdziwej stronie.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Norma białka od masy należnej i wiersz „Białko” w „Raporcie po wizycie” (P-NORMY rata B1, SW 1.1.70, 2026-09-24)
 
 **Zgłoszenie.**
