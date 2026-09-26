@@ -244,7 +244,7 @@ describe('Nagłówek z faktów — rata S', () => {
     expect(N.zbuduj({ ...baza, wzrost: { cm: 123.9, centyl: 2.4 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 152, centyl: 98.2 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 152,0${NB}cm, 98. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 156, centyl: 99.7 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 156,0${NB}cm, powyżej 99. centyla.`);
-    expect(N.WERSJA).toBe(7); // rata G1a
+    expect(N.WERSJA).toBe(8); // rata G2
   });
 });
 
@@ -515,7 +515,7 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
   it('progi są danymi modułu; WERSJA 6', () => {
     expect(N.SPADEK_WZROSTU).toEqual({ DSDS: -1.0, ODSTEP_MIES: 12, KU_CELOWI_BAZA: 1.0, KU_CELOWI_DZIS: -1.0 });
     expect(Object.isFrozen(N.SPADEK_WZROSTU)).toBe(true);
-    expect(N.WERSJA).toBe(7); // rata G1a
+    expect(N.WERSJA).toBe(8); // rata G2
   });
 
   it('D1: domyślnie żółte „Obniżenie pozycji na siatce”; tryb standardowy bez liczby SDS', () => {

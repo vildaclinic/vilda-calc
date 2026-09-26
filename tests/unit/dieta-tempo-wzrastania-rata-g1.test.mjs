@@ -104,7 +104,7 @@ describe('rata G1: plan PDF — stabilizacja jako utrzymanie masy, ramka tempa, 
   const naglowki = (h) => Array.from(h.matchAll(/vrp-nag-blok"><span>([^<]*)</g)).map((x) => x[1]);
   const ZD_PONIZEJ = 'Tempo wzrastania jest poniżej normy dla wieku: 2,0\u00A0cm/rok (norma ≥4\u00A0cm/rok). Spowolnienie wzrastania przy nadmiarze masy ciała wymaga oceny lekarskiej, m.in. w kierunku przyczyn hormonalnych, zanim zostanie wprowadzona dieta z ograniczeniem kalorii.';
 
-  it('wersja modułu 14 (rata G1a)', () => { expect(okP.VildaRaportPlan.version).toBe(14); });
+  it('wersja modułu 15 (rata G2)', () => { expect(okP.VildaRaportPlan.version).toBe(15); });
 
   it('F0: strategia „stabilization” → nagłówek utrzymania, jeden kafel „zapotrzebowanie energetyczne”, bez deficytu i tempa', () => {
     const h = html(dane({ strategia: 'stabilization', energia: { podazKcal: 2198, podazZaokrKcal: 2200, gornaGranica: false, deficytKcal: null, tempoKgTydz: null, utrzymanieKcal: 2198 } }));
