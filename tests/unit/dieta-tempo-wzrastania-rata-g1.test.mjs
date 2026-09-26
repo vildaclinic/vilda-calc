@@ -104,7 +104,7 @@ describe('rata G1: plan PDF — stabilizacja jako utrzymanie masy, ramka tempa, 
   const naglowki = (h) => Array.from(h.matchAll(/vrp-nag-blok"><span>([^<]*)</g)).map((x) => x[1]);
   const ZD_PONIZEJ = 'Tempo wzrastania jest poniżej normy dla wieku: 2,0\u00A0cm/rok (norma ≥4\u00A0cm/rok). Spowolnienie wzrastania przy nadmiarze masy ciała wymaga oceny lekarskiej, m.in. w kierunku przyczyn hormonalnych, zanim zostanie wprowadzona dieta z ograniczeniem kalorii.';
 
-  it('wersja modułu 13', () => { expect(okP.VildaRaportPlan.version).toBe(13); });
+  it('wersja modułu 14 (rata G1a)', () => { expect(okP.VildaRaportPlan.version).toBe(14); });
 
   it('F0: strategia „stabilization” → nagłówek utrzymania, jeden kafel „zapotrzebowanie energetyczne”, bez deficytu i tempa', () => {
     const h = html(dane({ strategia: 'stabilization', energia: { podazKcal: 2198, podazZaokrKcal: 2200, gornaGranica: false, deficytKcal: null, tempoKgTydz: null, utrzymanieKcal: 2198 } }));
@@ -138,9 +138,14 @@ describe('rata G1: plan PDF — stabilizacja jako utrzymanie masy, ramka tempa, 
 
   it('A: sekcja kontroli — zdanie o pomiarze wzrostu tylko przy fladze pomiarWzrostu (osobny element, zdanie o ważeniu bez zmian)', () => {
     const k = { tygodnie: 6, terminTekst: '5 listopada 2026', terminKrotki: '5 XI', terminRok: 2026, masaDzisKg: 75, masaSpodziewanaKg: 73.4, progKg: 74.4, gornaKcal: 1800, obnizkaKcal: [100, 200], obnizkaMozliwa: true, podazPoObnizceKcal: [1600, 1700], przyrostKg: 0.3, wzrastanie: true };
-    const z = html(dane({ kontrola: { ...k, pomiarWzrostu: true } }));
-    expect(z).toContain('Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.</div><div class="vrp-podkafle vrp-podkafle-wzrost">Na kontroli mierzymy też wzrost dziecka — dobrze prowadzona dieta nie spowalnia wzrastania.</div>');
+    // rata G1a: zdanie z generatora (to samo co w zaleceniach), moduł PDF niczego nie pisze od siebie; bez zdania — bez linii
+    const ZD = 'Na kontroli mierzony jest także wzrost dziecka — prawidłowo prowadzona dieta nie spowalnia wzrastania.';
+    const z = html(dane({ kontrola: { ...k, pomiarWzrostu: true, zdanieWzrostu: ZD } }));
+    expect(z).toContain(`Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.</div><div class="vrp-podkafle vrp-podkafle-wzrost">${ZD}</div>`);
+    expect(z).not.toContain('mierzymy');
+    expect(html(dane({ kontrola: { ...k, pomiarWzrostu: true } }))).not.toContain('<div class="vrp-podkafle vrp-podkafle-wzrost');
+    expect(html(dane({ kontrola: { ...k, pomiarWzrostu: true, zdanieWzrostu: '<b>x</b>' } }))).toContain('&lt;b&gt;x&lt;/b&gt;');
     expect(html(dane({ kontrola: k }))).not.toContain('<div class="vrp-podkafle vrp-podkafle-wzrost');
-    expect(html(dane({ dorosly: true, kontrola: { ...k, pomiarWzrostu: true } }))).not.toContain('<div class="vrp-podkafle vrp-podkafle-wzrost');
+    expect(html(dane({ dorosly: true, kontrola: { ...k, pomiarWzrostu: true, zdanieWzrostu: ZD } }))).not.toContain('<div class="vrp-podkafle vrp-podkafle-wzrost');
   });
 });

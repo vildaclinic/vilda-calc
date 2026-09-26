@@ -128,7 +128,10 @@ describe('Nagłówek z faktów — zasady Z1–Z7', () => {
     expect(N.zbuduj({ ...baza, klatka: { cm: 70, centyl: 99 } }).title).toBe(`Obwód klatki piersiowej jest duży jak na wiek: 70,0${NB}cm, 99. centyl.`);
     expect(N.zbuduj({ ...baza, klatka: { cm: 72, centyl: 99.4 } }).title).toBe(`Obwód klatki piersiowej jest duży jak na wiek: 72,0${NB}cm, powyżej 99. centyla.`);
     expect(N.zbuduj({ ...baza, glowa: { cm: 50, centyl: 50 } }).tone).toBe('normal'); // obwód w normie nie tworzy faktu
-    expect(N.zbuduj({ ...baza, tempo: { cmRok: 2, ton: 'danger', norma: '≥4 cm/rok' } })).toMatchObject({ badge: 'Wolne tempo wzrastania', tone: 'danger', title: `Tempo wzrastania jest wolne: 2,0${NB}cm/rok (norma ≥4 cm/rok).` });
+    // P-DIETA rata G1a: etykieta alarmu jak w zaleceniach („poniżej normy”), w nawiasie sama liczba normy
+    expect(N.zbuduj({ ...baza, tempo: { cmRok: 2, ton: 'danger', norma: '≥4 cm/rok' } })).toMatchObject({ badge: 'Tempo wzrastania poniżej normy', tone: 'danger', title: `Tempo wzrastania jest poniżej normy: 2,0${NB}cm/rok (norma ≥${NB}4${NB}cm/rok).` });
+    expect(N.zbuduj({ ...baza, tempo: { cmRok: 2, ton: 'danger', norma: '≥4 cm/rok przed skokiem (Tanner I)' } }).title).toBe(`Tempo wzrastania jest poniżej normy: 2,0${NB}cm/rok (norma ≥${NB}4${NB}cm/rok).`);
+    expect(N.zbuduj({ ...baza, tempo: { cmRok: 3, ton: 'warn', norma: '≥4 cm/rok (okres okołopokwitaniowy — możliwy późny skok)' } }).title).toBe(`Tempo wzrastania wymaga oceny: 3,0${NB}cm/rok (norma ≥${NB}4${NB}cm/rok).`);
     expect(N.zbuduj({ ...baza, tempo: { cmRok: 3, ton: 'warn', norma: null } }).title).toBe(`Tempo wzrastania wymaga oceny: 3,0${NB}cm/rok.`);
     expect(N.zbuduj({ ...baza, mph: { roznicaSds: -1.8 } })).toMatchObject({ badge: 'Wzrost a rodzice', tone: 'warn', title: `Wzrost dziecka jest niższy, niż wynika ze wzrostu rodziców (różnica −1,80${NB}SDS).` }); // rata T: 2 miejsca i znak jak linia podsumowania
     expect(N.zbuduj({ ...baza, mph: { roznicaSds: 2.3 } }).tone).toBe('danger');
@@ -241,7 +244,7 @@ describe('Nagłówek z faktów — rata S', () => {
     expect(N.zbuduj({ ...baza, wzrost: { cm: 123.9, centyl: 2.4 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 152, centyl: 98.2 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 152,0${NB}cm, 98. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 156, centyl: 99.7 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 156,0${NB}cm, powyżej 99. centyla.`);
-    expect(N.WERSJA).toBe(6);
+    expect(N.WERSJA).toBe(7); // rata G1a
   });
 });
 
@@ -512,7 +515,7 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
   it('progi są danymi modułu; WERSJA 6', () => {
     expect(N.SPADEK_WZROSTU).toEqual({ DSDS: -1.0, ODSTEP_MIES: 12, KU_CELOWI_BAZA: 1.0, KU_CELOWI_DZIS: -1.0 });
     expect(Object.isFrozen(N.SPADEK_WZROSTU)).toBe(true);
-    expect(N.WERSJA).toBe(6);
+    expect(N.WERSJA).toBe(7); // rata G1a
   });
 
   it('D1: domyślnie żółte „Obniżenie pozycji na siatce”; tryb standardowy bez liczby SDS', () => {

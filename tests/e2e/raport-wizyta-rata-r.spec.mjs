@@ -57,7 +57,7 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     for (const z of ['Równocześnie', 'jeszcze jeden parametr', 'inne parametry', 'Wymaga omówienia', 'Wynik nieprawidłowy']) expect(r.html, z).not.toContain(z);
     expect(r.cole).toBe(`149,1${NB}%`);
     expect(r.lines.find((l) => l.startsWith('Wskaźnik Cole'))).toBe(`Wskaźnik Cole’a: 149,1${NB}%`);
-    expect(r.nut.badge).toBe('umiarkowana aktywność'); expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku, dopóki lekarz go nie zmieni.'); // P-PAL rata 1: 4–9 lat → 1,6; PAL nietknięty → oznaczony jako domyślny
+    expect(r.nut.badge).toBe('umiarkowana aktywność'); expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku.'); // P-PAL rata 1: 4–9 lat → 1,6; PAL nietknięty → oznaczony jako domyślny
     expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/^Białko: ok\.\u00A0\d+\u00A0g\/d$/); // P-NORMY rata B1
     expect(r.html).not.toMatch(/PAL 1,4|Henry/);
   });
@@ -72,7 +72,7 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     expect(r.h.text).toBe('Rozpoznanie wymaga potwierdzenia w powtarzanych pomiarach; dalsze postępowanie ustalono na wizycie. Dodatkowo BMI (24,5) zbliża się do górnej granicy normy.');
   });
 
-  test('RR-3: dorosły BMI 42, RR 185/125, tętno 108, talia 120 — pilna kontrola, krok −5 % masy (rata Z2), dwa „Dodatkowo”', async ({ page }) => {
+  test('RR-3: dorosły BMI 42, RR 185/125, tętno 108, talia 120 — pilna kontrola, krok −5 % masy (rata Z2), „Dodatkowo” i „Ponadto” (rata G1a)', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const r = await model(page, { age: 47, sex: 'M', w: 121.4, h: 170, extra: { adultBpSystolic: 185, adultBpDiastolic: 125, adultHeartRate: 108, waistCm: 120, hipCm: 110 } });
@@ -83,7 +83,10 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     expect(r.h.text).toContain(`Pierwszy krok to ok. ${f1(r.pierwszy)}${NB}kg, czyli około `);
     expect(r.pierwszy).toBeCloseTo(121.4 * 0.95, 6);
     expect(r.h.text).toContain('mniej; już ta zmiana poprawia ciśnienie i wyniki badań krwi.');
-    expect(r.h.text).toContain('Dodatkowo obwód talii wskazuje na otyłość brzuszną: 120,0');
+    // P-DIETA rata G1a: drugie zdanie dodatkowe zaczyna się od „Ponadto” — „Dodatkowo” pada w nagłówku raz
+    expect(r.h.text).toContain('Dodatkowo BMI 42,0 wskazuje na otyłość III stopnia.');
+    expect(r.h.text).toContain('Ponadto obwód talii wskazuje na otyłość brzuszną: 120,0');
+    expect((r.h.text.match(/Dodatkowo /g) || []).length).toBe(1);
     expect(r.h.text).not.toContain('otyłości II stopnia');
     expect(r.h.dodatkowe.map((d) => d.os)).toEqual(['masa', 'talia']);
   });

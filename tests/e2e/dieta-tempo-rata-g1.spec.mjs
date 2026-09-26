@@ -4,16 +4,19 @@ import { expect, test } from '@playwright/test';
 // A — zdanie o pomiarze wzrostu na kontroli; B1 — tempo poniżej normy (alarm modelu tempa) → domyślnie stabilizacja,
 // zdanie zamiast „wzrastanie trwa”, czerwona ramka w planie PDF; B2 — tempo „do oceny” → zdanie i żółta ramka, plan bez zmian;
 // F0 — stabilizacja dziecka w planie PDF i Karcie pacjenta jako utrzymanie masy (bez deficytu).
+// P-DIETA rata G1a (decyzje właściciela 2026-09-26): te same zdania w jednym rejestrze bezosobowym, bez odsyłania do lekarza
+// („wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych”), wariant B1 wg strategii efektywnej i powodu stabilizacji,
+// karta planu i „Droga do normy” przy B1, nagłówek raportu bez „Dodatkowo … Dodatkowo”, nota PAL bez „dopóki lekarz…”.
 // PRAWDZIWA strona (index i docpro), wiersze historii dodawane przyciskiem karty zaawansowanej. Dane FIKCYJNE.
 
 async function otworz(page, strona) {
   await page.goto(`/${strona || 'index.html'}`, { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.update === 'function' && typeof window.buildDietEnergyRecommendationResult === 'function'
-    && !!window.VildaRaportPlan && window.VildaRaportPlan.version >= 13 && typeof window.energyChildGrowthOutlook === 'function'
+    && !!window.VildaRaportPlan && window.VildaRaportPlan.version >= 14 && typeof window.energyChildGrowthOutlook === 'function'
     && typeof window.patientReportBuildModel === 'function');
 }
 
-// s: { sex, age, w, h, tanner, historia: [{ age, h, w }], redukcja }
+// s: { sex, age, w, h, tanner, historia: [{ age, h, w }], redukcja, pal }
 async function stan(page, s) {
   return page.evaluate(async (s) => {
     document.documentElement.classList.remove('vilda-auth-locked');
@@ -25,6 +28,7 @@ async function stan(page, s) {
     document.querySelectorAll('#advMeasurements .measure-row .remove-measure').forEach((b) => b.click());
     set('name', 'Testowy Fikcyjny'); set('sex', s.sex); set('age', s.age); set('ageMonths', 0); set('weight', s.w); set('height', s.h); set('customGoalKg', '');
     set('tannerStage', s.tanner == null ? '' : s.tanner);
+    const jf = document.getElementById('journeyFlag'); if (jf && !jf.checked) { jf.checked = true; jf.dispatchEvent(new Event('change', { bubbles: true })); }
     for (const r of s.historia || []) {
       const btn = document.getElementById('advAddMeasurementBtn'); if (btn) btn.click();
       const rows = document.querySelectorAll('#advMeasurements .measure-row');
@@ -36,6 +40,7 @@ async function stan(page, s) {
     window.update();
     await new Promise((r) => { setTimeout(r, 700); });
     if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
+    if (s.pal) set('palFactor', s.pal);
     if (s.redukcja) {
       window.__vildaDietStrategyTouched = true;
       const rt = document.getElementById('reduceToggle'), sb = document.getElementById('stabilizationToggle');
@@ -72,17 +77,22 @@ async function stan(page, s) {
         pomiarWzrostu: norm((html.match(/<div class="vrp-podkafle vrp-podkafle-wzrost">([^<]*)<\/div>/) || [])[1]),
         zacheta: /Wzrastanie wciąż trwa/.test(html),
       },
-      karta: k ? { value: norm(k.value), rows: k.rows.map((r) => norm(`${r.label}: ${r.valueText}`)) } : null,
+      karta: k ? { value: norm(k.value), rows: k.rows.map((r) => norm(`${r.label}: ${r.valueText}`)), nota: norm(k.note) } : null,
+      naglowek: norm(m && m.headline && m.headline.text),
+      kartaPlanu: norm((document.getElementById('planResults') || {}).textContent),
+      droga: norm((document.getElementById('bmiJourneyMount') || {}).textContent),
     };
   }, s);
 }
 
-const ZD_ALARM_STAB = 'Tempo wzrastania jest poniżej normy dla wieku: 2,0 cm/rok (norma ≥4 cm/rok). Spowolnienie wzrastania przy nadmiarze masy ciała wymaga oceny lekarskiej, m.in. w kierunku przyczyn hormonalnych, zanim zostanie wprowadzona dieta z ograniczeniem kalorii.';
-const ZD_ALARM_RED = 'Tempo wzrastania jest poniżej normy dla wieku: 2,0 cm/rok (norma ≥4 cm/rok). Spowolnienie wzrastania przy nadmiarze masy ciała wymaga oceny lekarskiej, m.in. w kierunku przyczyn hormonalnych; w czasie diety z ograniczeniem kalorii wzrost dziecka powinien być mierzony na każdej wizycie.';
-const ZD_DO_OCENY = 'Tempo wzrastania wymaga oceny: 3,0 cm/rok (norma ≥4 cm/rok). Na wizytach kontrolnych mierzony jest wzrost dziecka; jeśli spowolnienie się utrzyma, wskazana jest ocena lekarska jego przyczyny.';
-const ZD_A_OSOBNE = 'Na wizytach kontrolnych mierzony jest także wzrost dziecka: prawidłowo prowadzona dieta nie spowalnia wzrastania, a tempo wzrastania ocenia się w odstępie co najmniej 6 miesięcy.';
-const ZD_A_KONTROLA = 'Na kontroli mierzony jest także wzrost dziecka — prawidłowo prowadzona dieta nie spowalnia wzrastania.';
-const PDF_A = 'Na kontroli mierzymy też wzrost dziecka — dobrze prowadzona dieta nie spowalnia wzrastania.';
+// rata G1a: brzmienia w głosie lekarza (bez „oceny lekarskiej”), nastolatek (od 11 lat) bez słowa „dziecka”
+const OCENA = 'Przy nadmiarze masy ciała wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych';
+const ZD_ALARM_STAB = `Tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma ≥ 4 cm/rok). ${OCENA}, dlatego plan ma charakter stabilizacji masy ciała. Wzrost jest mierzony na każdej wizycie kontrolnej.`;
+const ZD_ALARM_RED = `Tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma ≥ 4 cm/rok). ${OCENA}. W czasie diety redukcyjnej wzrost jest mierzony na każdej wizycie kontrolnej.`;
+const ZD_DO_OCENY = 'Tempo wzrastania wymaga oceny: 3,0 cm/rok (norma ≥ 4 cm/rok). W tym wieku zależy ono od etapu dojrzewania, dlatego wzrost dziecka jest mierzony na kolejnych wizytach kontrolnych. Jeśli tempo pozostanie poniżej 4 cm/rok, wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych.';
+const ZD_A_OSOBNE = 'Na każdej wizycie kontrolnej mierzone są masa ciała i wzrost dziecka; tempo wzrastania ocenia się na podstawie pomiarów wykonanych w odstępie co najmniej 6 miesięcy.';
+const ZD_A_KONTROLA = 'Na kontroli mierzony jest także wzrost — prawidłowo prowadzona dieta nie spowalnia wzrastania.';
+const PDF_A = ZD_A_KONTROLA; // rata G1a: plan PDF cytuje zdanie generatora (bez „mierzymy”/„dobrze”)
 const NAG_UTRZ = 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)';
 const NAG_RED = 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
 
@@ -102,7 +112,9 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.tempoWzrastania).toBeNull();
     expect(r.tekst).toContain(ZD_A_OSOBNE);
     expect(r.tekst).toContain('Dziecko wciąż rośnie');
-    expect(r.punktyKontrola.slice(0, 2)).toEqual(['wzrost dziecka mierzony na wizytach kontrolnych', 'tempo wzrastania oceniane w odstępie co najmniej 6 miesięcy']);
+    expect(r.punktyKontrola.slice(0, 2)).toEqual(['masa ciała i wzrost dziecka mierzone na każdej wizycie kontrolnej', 'tempo wzrastania oceniane na podstawie pomiarów w odstępie co najmniej 6\u00A0miesięcy']);
+    expect(r.kartaPlanu).toContain('szacunek orientacyjny — wzrost warto mierzyć co 3–6 miesięcy');
+    expect(r.karta.nota).toBe('Poziom aktywności przyjęto domyślnie dla wieku.');
     expect(r.pdf.sekcje).toContain(NAG_UTRZ);
     expect(r.pdf.sekcje).not.toContain(NAG_RED);
     expect(r.pdf.kafle).toEqual(['2 400 | kcal dziennie | zapotrzebowanie energetyczne']);
@@ -175,7 +187,7 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.outlook).toMatchObject({ alarm: true, pe: false });
     expect(r.strategia).toBe('stabilization');
     expect(r.tempoWzrastania).toMatchObject({ ocena: 'ponizej', cmRok: 0.5 });
-    expect(r.tekst).toContain('Tempo wzrastania jest poniżej normy dla wieku: 0,5 cm/rok (norma ≥4 cm/rok).');
+    expect(r.tekst).toContain(`Tempo wzrastania jest poniżej normy: 0,5 cm/rok (norma ≥ 4 cm/rok). ${OCENA}, dlatego plan ma charakter stabilizacji masy ciała.`);
     expect(r.pdf.ramka[0]).toBe('vrp-tempo-alarm');
   });
 
@@ -188,7 +200,7 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.kontrola).toEqual({ tygodnie: 6, pomiarWzrostu: true });
     expect(r.tempoWzrastania).toBeNull();
     expect(r.tekst).toContain('Wzrastanie nadal trwa');
-    expect(r.tekst).toMatch(/Kontrola za 6 tygodni \(ok\. [^)]+\): .*\(do 1600–1700 kcal dziennie\)\. Na kontroli mierzony jest także wzrost dziecka — prawidłowo prowadzona dieta nie spowalnia wzrastania\./);
+    expect(r.tekst).toMatch(/Kontrola za 6 tygodni \(ok\. [^)]+\): .*\(do 1600–1700 kcal dziennie\)\. Na kontroli mierzony jest także wzrost — prawidłowo prowadzona dieta nie spowalnia wzrastania\./);
     expect(r.tekst).not.toContain(ZD_A_OSOBNE);
     expect(r.pdf.pomiarWzrostu).toBe(PDF_A);
     expect(r.pdf.ramka).toEqual([]);
@@ -205,5 +217,83 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.tekst).toContain(ZD_ALARM_STAB);
     expect(r.pdf.sekcje).toContain(NAG_UTRZ);
     expect(r.pdf.ramka).toEqual(['vrp-tempo-alarm', ZD_ALARM_STAB]);
+  });
+});
+
+test.describe('P-DIETA rata G1a — zdania w głosie lekarza, wariant wg strategii efektywnej, karty planu i drogi', () => {
+  test('G1a-1: dziewczynka 13 l., Tanner I, 2 cm/rok — karta planu i „Droga do normy” bez „praktycznie zakończonego wzrastania”, nagłówek raportu', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, M3);
+    expect(r.strategia).toBe('stabilization');
+    expect(r.tekst).toContain(ZD_ALARM_STAB);
+    expect(r.tekst).toContain('Zalecane jest utrzymanie obecnej masy ciała podczas dalszego wzrastania, aby BMI mogło stopniowo się obniżać.');
+    expect(r.tekst).not.toMatch(/lekarsk|ograniczeniem kalorii/);
+    expect(r.kartaPlanu).toContain('Przy obecnym tempie wzrastania samo utrzymanie masy ciała nie doprowadzi do normy BMI; kolejny etap planu zależy od wyniku dalszej oceny.');
+    expect(r.kartaPlanu).toContain('strategia domyślna przy tempie wzrastania poniżej normy');
+    expect(r.kartaPlanu).not.toMatch(/praktycznie zakończonym|rozważ strategię redukcji|BMI obniża się wraz ze wzrostem|Barlow 2007/);
+    expect(r.droga).toContain('przy obecnym tempie wzrastania samo utrzymanie masy nie doprowadzi do normy BMI');
+    expect(r.droga).toContain('Kolejny etap planu zależy od wyniku dalszej oceny.');
+    expect(r.droga).not.toMatch(/praktycznie zakończonym|BMI obniży się dzięki dalszemu wzrastaniu/);
+    expect(r.naglowek).toContain('Dodatkowo tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma ≥ 4 cm/rok).');
+    expect(r.karta.nota).toBe('Poziom aktywności przyjęto domyślnie dla wieku.');
+  });
+
+  test('G1a-2: chłopiec 4 l. — alarm tempa: zdanie bez zapowiedzi diety i bez „dlatego”; bez alarmu: zachęta „Wzrastanie wciąż trwa” w planie PDF', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const a = await stan(page, { sex: 'M', age: 4, w: 24, h: 100, historia: [{ age: 3, h: 97, w: 21 }] });
+    expect(a.tempo).toEqual({ cm: 3, alarm: true, sev: 'danger' });
+    const ZD = `Tempo wzrastania jest poniżej normy: 3,0 cm/rok (norma ≥ 6 cm/rok). ${OCENA}. Wzrost dziecka jest mierzony na każdej wizycie kontrolnej.`;
+    expect(a.tempoWzrastania).toMatchObject({ ocena: 'ponizej', zdanie: ZD });
+    expect(a.tekst).toContain(ZD);
+    expect(a.pdf.ramka).toEqual(['vrp-tempo-alarm', ZD]);
+    expect(a.pdf.zacheta).toBe(false);
+    expect(a.naglowek).not.toMatch(/Dodatkowo[^.]*\.[^]*Dodatkowo/);
+    // ten sam chłopiec, tempo w normie (7 cm/rok ≥ 6) — zachęta w PDF jest; sprawdzenie „bez zachęty” przy alarmie nie jest więc puste
+    const b = await stan(page, { sex: 'M', age: 4, w: 24, h: 104, historia: [{ age: 3, h: 97, w: 21 }] });
+    expect(b.tempoWzrastania).toBeNull();
+    expect(b.pdf.zacheta).toBe(true);
+  });
+
+  test('G1a-3: dziewczynka 9 l., otyłość < 99. c. — stabilizacja z powodu wieku: zdanie bez „dlatego plan…”, karta planu z powodem wieku', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, { sex: 'F', age: 9, w: 38, h: 130, historia: [{ age: 8, h: 127, w: 35 }] });
+    expect(r.tempo).toEqual({ cm: 3, alarm: true, sev: 'danger' });
+    expect(r.strategia).toBe('stabilization');
+    expect(r.tekst).toContain(`Tempo wzrastania jest poniżej normy: 3,0 cm/rok (norma ≥ 5 cm/rok). ${OCENA}. Wzrost dziecka jest mierzony na każdej wizycie kontrolnej.`);
+    expect(r.tekst).not.toContain('dlatego plan ma charakter stabilizacji');
+    expect(r.kartaPlanu).toContain('strategia domyślna dla wieku 2–5 lat oraz 6–11 lat przy BMI poniżej 99. centyla (Barlow 2007)');
+  });
+
+  test('G1a-4: dziewczynka 6 l., redukcja wybrana ręcznie, żadna dieta nie spełnia minimum — stabilizacja i zdanie w wariancie stabilizacji', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, { sex: 'F', age: 6, w: 17, h: 85, pal: '1.4', redukcja: true, historia: [{ age: 5, h: 82, w: 16 }] });
+    expect(r.tempo).toMatchObject({ alarm: true });
+    expect(r.strategia).toBe('stabilization');
+    expect(r.tekst).toContain('Żadna dieta redukcyjna nie spełnia minimum kalorycznego');
+    expect(r.tempoWzrastania.zdanie).toBe(`Tempo wzrastania jest poniżej normy: 3,0 cm/rok (norma ≥ 5 cm/rok). ${OCENA}. Wzrost dziecka jest mierzony na każdej wizycie kontrolnej.`);
+    expect(r.tekst).not.toContain('W czasie diety redukcyjnej wzrost');
+  });
+
+  test('G1a-5: chłopiec 12 l., otyłość, 0,8 cm/rok bez Tannera („do oceny”) — samo B2, bez „Wzrost prawie się zakończył”', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, { sex: 'M', age: 12, w: 70, h: 152, historia: [{ age: 11, h: 151.2, w: 67 }] });
+    expect(r.tempo).toMatchObject({ alarm: false, sev: 'warn' });
+    expect(r.tekst).toContain('Tempo wzrastania wymaga oceny: 0,8 cm/rok (norma ≥ 4 cm/rok). W tym wieku zależy ono od etapu dojrzewania, dlatego wzrost jest mierzony na kolejnych wizytach kontrolnych.');
+    expect(r.tekst).not.toMatch(/Wzrost prawie się zakończył|Wzrastanie nadal trwa/);
+  });
+
+  test('G1a-6: chłopiec 13 l., sama nadwaga, Tanner I, 2 cm/rok, redukcja ręczna — bez zapewnienia z raty N2, że BMI obniży się przy wzrastaniu', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await stan(page, { sex: 'M', age: 13, w: 58, h: 155, tanner: 1, redukcja: true, historia: [{ age: 12, h: 153, w: 55 }] });
+    expect(r.strategia).toBe('reduction');
+    expect(r.tekst).toContain(`Tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma ≥ 4 cm/rok). ${OCENA}. W czasie diety redukcyjnej wzrost jest mierzony na każdej wizycie kontrolnej.`);
+    expect(r.tekst).toContain('Przy nadwadze u nastolatka ubytek masy powinien być stopniowy');
+    expect(r.tekst).not.toContain('U rosnącego nastolatka często wystarcza utrzymanie masy ciała');
   });
 });

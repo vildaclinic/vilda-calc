@@ -29,7 +29,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 13;
+  var WERSJA = 14;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -389,8 +389,8 @@
           return '<div class="vrp-kafel"><b>' + esc(twarde(x[0])) + '</b><span>' + esc(x[1]) + '</span><i>' + esc(x[2]) + '</i></div>';
         }).join('') + '</div>'
       + '<div class="vrp-podkafle">Liczba kcal to górna granica dnia, nie cel do dobicia. Sprawdzianem jest waga na kontroli, nie liczenie kalorii w pamięci. Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.</div>'
-      /* P-DIETA rata G1 (A): u rosnącego dziecka na kontroli mierzony jest też wzrost (flaga z generatora) */
-      + (!dane.dorosly && k.pomiarWzrostu === true ? '<div class="vrp-podkafle vrp-podkafle-wzrost">Na kontroli mierzymy też wzrost dziecka — dobrze prowadzona dieta nie spowalnia wzrastania.</div>' : '')
+      /* P-DIETA rata G1 (A), G1a: zdanie o pomiarze wzrostu z generatora (to samo brzmienie co w zaleceniach, bezosobowo) */
+      + (!dane.dorosly && k.pomiarWzrostu === true && k.zdanieWzrostu ? '<div class="vrp-podkafle vrp-podkafle-wzrost">' + esc(k.zdanieWzrostu) + '</div>' : '')
       + '</section>';
   }
 
