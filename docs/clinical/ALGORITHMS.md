@@ -5843,7 +5843,9 @@ obecnym wzroście: … kg”.
   (`raport-rata-i`) przypadek dziecka z nadwagą 14 l./72 kg (stabilizacja, bez osi) zastąpiono otyłością 14 l./80 kg (redukcja).
   Zdanie szczebla < 0,5 kg dla redukcji zostaje pokryte testem jednostkowym `raport-naglowek`.
 
-**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+**Akceptacja właściciela (2026-09-26, po scaleniu #438).** Właściciel zaakceptował zakres, w tym dzieci z otyłością poniżej
+10 lat w stabilizacji z powodu wieku (także 2-latka): w raporcie „Na tym etapie celem jest utrzymanie obecnej masy ciała
+(ok. X kg).” zamiast „Pierwszy krok …”. Poniżej 2 lat zostaje zdanie o małych dzieciach.
 
 ## Zdania o tempie wzrastania w głosie lekarza i spójne z sąsiednimi zdaniami (P-DIETA rata G1a, SW 1.1.74, 2026-09-26)
 
