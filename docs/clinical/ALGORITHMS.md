@@ -5838,6 +5838,10 @@ obecnym wzroście: … kg”.
 - Unit `raport-plan-stabilizacja-rata-g2` (10): prawdziwe `VildaRaportPlan`, `VildaRaportNaglowek` i funkcje raportu pacjenta.
 - E2E `raport-plan-stabilizacja-rata-g2` (3): tytuł i kartka z prawdziwego `dietRecommendationsCollectPdfPages`, nagłówek
   i karta masy z `patientReportBuildModel`.
+- Świadomie zmieniona umowa w starszych e2e: 9-latka i 9-latek z otyłością oraz 2-latek z otyłością są w stabilizacji (wiek),
+  więc zamiast „Pierwszy krok …” mają zdanie utrzymania (`raport-wizyta-rata-q` RQ-1, `-r` RR-1/RR-4, `-s` RS-4). W teście osi
+  (`raport-rata-i`) przypadek dziecka z nadwagą 14 l./72 kg (stabilizacja, bez osi) zastąpiono otyłością 14 l./80 kg (redukcja).
+  Zdanie szczebla < 0,5 kg dla redukcji zostaje pokryte testem jednostkowym `raport-naglowek`.
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 

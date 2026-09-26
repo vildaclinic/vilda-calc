@@ -104,12 +104,13 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(wt.ref.label).toBe('Przeciętna masa dla tego wzrostu i wieku');
     expect(wt.ref.medianText).toBe(`${masaWzrost.toFixed(1).replace('.', ',')} kg`);
     expect(wt.ref.diffText).toBe(`To o ${(s.w - masaWzrost).toFixed(1).replace('.', ',')} kg powyżej tej wartości.`);
-    // pierwszy krok = pierwszy szczebel drabinki (ten sam, co plan PDF)
+    // drabinka nadal wskazuje kierunek redukcji, ale 9-latka dostaje w generatorze stabilizację (wiek) —
+    // P-DIETA rata G2 (decyzja właściciela 2026-09-26): zamiast „pierwszego kroku” cel na ten etap = utrzymanie obecnej masy
     expect(r.drab.kierunek).toBe('redukcja');
-    const pk = r.drab.pierwszy;
-    expect(wt.ref2.label).toBe('Pierwszy krok');
-    expect(wt.ref2.medianText).toBe(`do ${pk.masa.toFixed(1).replace('.', ',')} kg`);
-    expect(r.headline.text).toContain(`Pierwszy krok to ok. ${pk.masa.toFixed(1).replace('.', ',')}\u00A0kg`);
+    expect(wt.ref2.label).toBe('Cel na ten etap');
+    expect(wt.ref2.medianText).toBe(`utrzymanie masy ok. ${s.w.toFixed(1).replace('.', ',')} kg`);
+    expect(r.headline.text).toContain(`Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. ${s.w.toFixed(1).replace('.', ',')}\u00A0kg).`);
+    expect(r.headline.text).not.toContain('Pierwszy krok');
     expect(r.headline.text).not.toContain('obserwowanie trendu');
     expect(r.html).not.toMatch(/Reinehr|doi:/);
     // data pomiaru: bez rekordu sejfu — dzień raportu, jeden czip
