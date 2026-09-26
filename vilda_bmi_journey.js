@@ -212,7 +212,9 @@
         rows: [], moveWeek: 0, totalWeek: 0,
         monthsCombo: stabT ? stabT.months : null, monthsDiet: null,
         growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null,
-        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, targetWeightKg: lastEngineState.targetWeightKg
+        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, targetWeightKg: lastEngineState.targetWeightKg,
+        // P-DIETA rata G1a: stabilizacja przy tempie wzrastania poniżej normy (alarm modelu tempa)
+        tempoAlarm: (function () { try { var o = typeof w.energyChildGrowthOutlook === 'function' ? w.energyChildGrowthOutlook({ ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm }) : null; return !!(o && o.tempoAlarm); } catch (e) { return false; } })()
       };
     }
     return {
@@ -429,7 +431,7 @@
         + (model.stabMode ? 'utrzymanie masy + wzrastanie' : model.moveWeek > 0 ? 'dieta + ruch' : 'sama dieta') + '</div></div>'
       : model.stabMode
         ? '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
-          + '<div class="bmi-journey-herocap">przy praktycznie zakończonym wzrastaniu samo utrzymanie masy nie doprowadzi do normy BMI</div></div>'
+          + '<div class="bmi-journey-herocap">' + (model.tempoAlarm ? 'przy obecnym tempie wzrastania' : 'przy praktycznie zakończonym wzrastaniu') + ' samo utrzymanie masy nie doprowadzi do normy BMI</div></div>'
         : '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
           + '<div class="bmi-journey-herocap">zaznacz dietę lub ruch</div></div>';
     var growth = mc != null && model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
@@ -437,12 +439,14 @@
         + (fin(model.przyrostMasyKgMies) && model.przyrostMasyKgMies >= 0.05 ? ' i masę przybywającą z nim (ok. ' + esc(fmt(model.przyrostMasyKgMies, 1)) + ' kg/mies.)' : '') + '</p>'
       : '';
     var horizon = mc != null && mc > 18
-      ? '<p class="bmi-journey-growth">szacunek orientacyjny — tempo warto weryfikować co 3\u20136 miesięcy</p>'
+      ? '<p class="bmi-journey-growth">szacunek orientacyjny — wzrost warto mierzyć co 3\u20136 miesięcy</p>'
       : '';
     var goalbox = model.stabMode
       ? '<div class="bmi-journey-goalbox">'
         + '<div class="bmi-journey-g1">Cel: <b>utrzymanie masy ok. ' + fmt(ctx.weightKg, 1) + '\u202Fkg</b></div>'
-        + '<div class="bmi-journey-g2">BMI obniży się dzięki dalszemu wzrastaniu — ' + targetLabel + '</div>'
+        + (model.tempoAlarm && mc == null
+          ? '<div class="bmi-journey-g2">Kolejny etap planu zależy od wyniku dalszej oceny.</div>'
+          : '<div class="bmi-journey-g2">BMI obniży się dzięki dalszemu wzrastaniu — ' + targetLabel + '</div>')
         + '<div class="bmi-journey-g3">Górna granica normy przy obecnym wzroście: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
         + szczebleHtml(ctx, model)
         + '</div>'

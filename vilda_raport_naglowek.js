@@ -67,7 +67,7 @@
    ===================================================================================== */
 (function (root) {
   'use strict';
-  var WERSJA = 6;
+  var WERSJA = 7;
   var NBSP = ' ';
   var LIMIT_DODATKOWO = 2;
   var KROK_OD_LAT = 2;
@@ -735,12 +735,14 @@
   function kandydatTempa(f) {
     var t = f.tempo;
     if (!t || liczba(t.cmRok) == null || (t.ton !== 'danger' && t.ton !== 'warn')) return null;
-    var wart = fmt(t.cmRok, 1) + NBSP + 'cm/rok' + (t.norma ? ' (norma ' + t.norma + ')' : '');
+    /* P-DIETA rata G1a: w nawiasie sama liczba normy (bez opisu etykiety — dawniej nawias w nawiasie), etykieta alarmu jak w zaleceniach: „poniżej normy” */
+    var nm = typeof t.norma === 'string' ? t.norma.match(/\u2265\s*(\d+(?:[.,]\d+)?)\s*cm\/rok/) : null;
+    var wart = fmt(t.cmRok, 1) + NBSP + 'cm/rok' + (nm ? ' (norma \u2265' + NBSP + nm[1].replace('.', ',') + NBSP + 'cm/rok)' : t.norma ? ' (norma ' + t.norma + ')' : '');
     var wolne = t.ton === 'danger';
-    return { os: 'tempo', ciezkosc: wolne ? 2 : 1, badge: wolne ? 'Wolne tempo wzrastania' : 'Tempo wzrastania do oceny',
-      title: (wolne ? 'Tempo wzrastania jest wolne: ' : 'Tempo wzrastania wymaga oceny: ') + wart + '.',
+    return { os: 'tempo', ciezkosc: wolne ? 2 : 1, badge: wolne ? 'Tempo wzrastania poniżej normy' : 'Tempo wzrastania do oceny',
+      title: (wolne ? 'Tempo wzrastania jest poniżej normy: ' : 'Tempo wzrastania wymaga oceny: ') + wart + '.',
       text: 'Najwięcej informacji daje porównanie kilku kolejnych pomiarów w czasie.',
-      dodatkowo: (wolne ? 'Dodatkowo tempo wzrastania jest wolne: ' : 'Dodatkowo tempo wzrastania wymaga oceny: ') + wart + '.' };
+      dodatkowo: (wolne ? 'Dodatkowo tempo wzrastania jest poniżej normy: ' : 'Dodatkowo tempo wzrastania wymaga oceny: ') + wart + '.' };
   }
 
   function kandydatMph(f) {
@@ -818,7 +820,13 @@
       pomin[lista[i].os] = true;
       (lista[i].wchlania || []).forEach(function (o) { pomin[o] = true; });
     }
-    var text = zlacz.apply(null, [glowny.text].concat(dodatkowe.map(function (d) { return d.dodatkowo; })).concat(uwagi));
+    /* P-DIETA rata G1a: drugie zdanie dodatkowe zaczyna się od „Ponadto” — bez „Dodatkowo … Dodatkowo” */
+    var juzDodatkowo = /(^|[.;] )Dodatkowo /.test(glowny.text || '');
+    var text = zlacz.apply(null, [glowny.text].concat(dodatkowe.map(function (d) {
+      var z = d.dodatkowo;
+      if (/^Dodatkowo /.test(z)) { if (juzDodatkowo) z = 'Ponadto ' + z.slice(10); juzDodatkowo = true; }
+      return z;
+    })).concat(uwagi));
     return {
       badge: glowny.badge,
       tone: ciezkoscTon(lista[0].ciezkosc),

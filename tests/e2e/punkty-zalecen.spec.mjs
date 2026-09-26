@@ -153,8 +153,9 @@ test('rola bez rozpisania pokazuje cale zdanie, a nie jego kawalek', async ({ pa
   // P-DIETA rata G1 (A, decyzja właściciela 2026-09-24): kontrola rosnącego dziecka z nadmiarem masy zaczyna się zdaniem
   // o pomiarze wzrostu (ma rozpisanie na dwa punkty); zdanie o konsultacji nie ma rozpisania → jest punktem w całości
   expect(dziecko.zdania.kontrola.length).toBe(2);
-  expect(norm(dziecko.zdania.kontrola[0])).toContain('Na wizytach kontrolnych mierzony jest także wzrost dziecka');
-  expect(dziecko.punkty.kontrola.slice(0, 2).map(norm)).toEqual(['wzrost dziecka mierzony na wizytach kontrolnych', 'tempo wzrastania oceniane w odstępie co najmniej 6 miesięcy']);
+  // P-DIETA rata G1a (decyzja właściciela 2026-09-26): przy stabilizacji masa i wzrost razem, bez zdania o diecie
+  expect(norm(dziecko.zdania.kontrola[0])).toContain('Na każdej wizycie kontrolnej mierzone są masa ciała i wzrost dziecka');
+  expect(dziecko.punkty.kontrola.slice(0, 2).map(norm)).toEqual(['masa ciała i wzrost dziecka mierzone na każdej wizycie kontrolnej', 'tempo wzrastania oceniane na podstawie pomiarów w odstępie co najmniej 6 miesięcy']);
   expect(dziecko.punkty.kontrola[2]).toBe(dziecko.zdania.kontrola[1]);
   expect(dziecko.punkty.kontrola.length).toBe(3);
 

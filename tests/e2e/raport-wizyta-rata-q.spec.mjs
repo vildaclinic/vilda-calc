@@ -185,7 +185,7 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     // P-NORMY rata B1: dorosły — masa należna przy BMI 22 (22 × 1,69² = 62,8 kg), jak w karcie „Normy żywieniowe”; w dokumencie bez słów „BMI 22” (rata Q)
     expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toBe('Białko: ok.\u00A052\u00A0g/d');
     expect(r.nut.bialkoDetail).toBe('0,83\u00A0g na kg należnej masy ciała (62,8\u00A0kg)');
-    expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku, dopóki lekarz go nie zmieni.'); // P-PAL rata 1
+    expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku.'); // P-PAL rata 1
     expect(r.cards.find((c) => c.key === 'HT').ref.diffText).toBe('Obecna masa mieści się w tym zakresie.');
     expect(r.cards.find((c) => c.key === 'BMI').ref.diffText).toBe('BMI mieści się w tym zakresie.');
   });

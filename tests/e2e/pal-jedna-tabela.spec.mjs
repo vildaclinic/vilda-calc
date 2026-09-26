@@ -38,7 +38,8 @@ async function stan(page, s) {
   }, s);
 }
 
-const NOTA = 'Poziom aktywności przyjęto domyślnie dla wieku, dopóki lekarz go nie zmieni.';
+// P-DIETA rata G1a (decyzja właściciela 2026-09-26): bez „dopóki lekarz go nie zmieni” — dokument wydaje lekarz
+const NOTA = 'Poziom aktywności przyjęto domyślnie dla wieku.';
 
 test.describe('P-PAL rata 1 — jedna tabela PAL, karta norm z planu, raport z oznaczeniem wartości domyślnej', () => {
   test('PAL-1: dziecko 7 lat bez nadmiaru → 1,6 w planie, w karcie norm („Jak w planie”) i w raporcie z notą o wartości domyślnej', async ({ page }) => {

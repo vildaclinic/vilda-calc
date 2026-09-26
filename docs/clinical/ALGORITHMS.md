@@ -5778,6 +5778,111 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Zdania o tempie wzrastania w głosie lekarza i spójne z sąsiednimi zdaniami (P-DIETA rata G1a, SW 1.1.74, 2026-09-26)
+
+**Zgłoszenie (właściciel, 2026-09-24).** Plan, zalecenia i raport wydaje lekarz, więc tekst nie może odsyłać „do lekarza”.
+Scalone zdania raty G1 robiły to wprost:
+- B1: „…wymaga oceny lekarskiej, m.in. w kierunku przyczyn hormonalnych, zanim zostanie wprowadzona dieta z ograniczeniem kalorii”;
+- B2: „…wskazana jest ocena lekarska jego przyczyny”.
+
+Właściciel poprosił też o sprawdzenie spójności tych zdań z sąsiednimi. Przegląd objął 12 fikcyjnych przypadków na prawdziwej
+stronie i pięć miejsc: zalecenia, plan PDF, kartę planu, „Drogę do normy BMI” i „Raport po wizycie”. Znalazł:
+- B1 u dziecka 2–5 lat zapowiadał dietę, choć tuż obok stało „W wieku 2–4 lat nie stosuje się diety redukcyjnej”;
+- przy braku diety spełniającej minimum ramka tempa miała wariant redukcji, a plan był już stabilizacją;
+- karta planu i „Droga do normy” pisały przy B1 „przy praktycznie zakończonym wzrastaniu… rozważ strategię redukcji”;
+- „Droga do normy” łączyła „nie doprowadzi do normy BMI” z „BMI obniży się dzięki dalszemu wzrastaniu”;
+- nowy termin „dieta z ograniczeniem kalorii” obok utrwalonych „dieta redukcyjna” i „deficyt”;
+- to samo zdanie A w dwóch brzmieniach: „mierzymy / dobrze” w PDF i „mierzony jest / prawidłowo” w zaleceniach;
+- „co 3–6 miesięcy” obok „co najmniej 6 miesięcy”;
+- w nagłówku raportu nawias w nawiasie („(norma ≥4 cm/rok przed skokiem (Tanner I))”), „tempo … jest wolne” zamiast
+  „poniżej normy” oraz dwa zdania z rzędu zaczynające się od „Dodatkowo”;
+- w każdym raporcie nota „…dopóki lekarz go nie zmieni”.
+
+**Zasada (decyzja właściciela 2026-09-26, po makiecie: „zgadzam się z rekomendacjami”).**
+- Jeden rejestr bezosobowy, zgodnie z decyzją z raty G (2026-09-21). Lekarz nie występuje w tekście, ani jako „my”,
+  ani jako osoba trzecia.
+- Potrzeba diagnostyki to fakt kliniczny podany zwrotem już zatwierdzonym w nagłówku raportu (rata T3): „Przy nadmiarze masy
+  ciała wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych”.
+- Terminologia: „dieta redukcyjna”; „poniżej normy” bez „dla wieku”, bo przy Tannerze I norma zależy od etapu dojrzewania;
+  twarda spacja w „≥ 4 cm/rok”.
+- Od 11 lat wariant nastolatka bez słowa „dziecka”, jak w pozostałych zdaniach tej grupy wieku.
+
+**Brzmienia** (`{cm}`, `{n}` — liczby z modelu tempa):
+
+| zdanie | kiedy | brzmienie |
+|---|---|---|
+| B1 „tempo” | to tempo zmieniło domyślną strategię na stabilizację | „Tempo wzrastania jest poniżej normy: {cm} cm/rok (norma ≥ {n} cm/rok). Przy nadmiarze masy ciała wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych, dlatego plan ma charakter stabilizacji masy ciała. Wzrost dziecka jest mierzony na każdej wizycie kontrolnej.” |
+| B1 „stabilizacja” | stabilizacja z innego powodu: 2–5 lat, 6–11 lat < 99. c., sama nadwaga, brak diety spełniającej minimum | jak wyżej, bez „, dlatego plan ma charakter stabilizacji masy ciała” |
+| B1 „redukcja” | redukcja jest strategią efektywną | „…hormonalnych. W czasie diety redukcyjnej wzrost dziecka jest mierzony na każdej wizycie kontrolnej.” |
+| B2 | tempo „do oceny” (poziom `warn`) | „Tempo wzrastania wymaga oceny: {cm} cm/rok (norma ≥ {n} cm/rok). W tym wieku zależy ono od etapu dojrzewania, dlatego wzrost dziecka jest mierzony na kolejnych wizytach kontrolnych. Jeśli tempo pozostanie poniżej {n} cm/rok, wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych.” (bez normy: „Jeśli takie tempo się utrzyma, …”) |
+| A w kontroli i w PDF | redukcja z kontrolą | „Na kontroli mierzony jest także wzrost dziecka — prawidłowo prowadzona dieta nie spowalnia wzrastania.” Plan PDF cytuje to zdanie z danych (`kontrola.zdanieWzrostu`) i sam go nie pisze. |
+| A osobno | stabilizacja (rola „kontrola”) | „Na każdej wizycie kontrolnej mierzone są masa ciała i wzrost dziecka; tempo wzrastania ocenia się na podstawie pomiarów wykonanych w odstępie co najmniej 6 miesięcy.” Punkty: „masa ciała i wzrost dziecka mierzone na każdej wizycie kontrolnej”, „tempo wzrastania oceniane na podstawie pomiarów w odstępie co najmniej 6 miesięcy”. Wariant nastolatka ma klucz `dz-kontrola-wzrost-nast`. |
+
+W zdaniu A przy stabilizacji nie ma już zdania o diecie, bo przy stabilizacji nie ma diety redukcyjnej.
+
+**Reguły wyboru i sąsiednie zdania.**
+- Wariant B1 zależy od strategii **efektywnej**: redukcja bez diety spełniającej minimum to stabilizacja.
+- Wariant „tempo” wymaga, by `energyStabilizacjaZPowoduTempa` (nowa funkcja silnika planu, wspólna dla generatora i karty
+  planu) potwierdziła trzy warunki:
+  - strategia nominalna to stabilizacja;
+  - to nie etap 2–5 lat;
+  - bez alarmu i bez ręcznego wyboru domyślna strategia byłaby redukcją.
+
+  Stan „bez alarmu” liczy nowe pole prognozy `practicallyEndedBezAlarmu`.
+- B2 przy „prawie zakończonym” wzrastaniu: zdanie „Wzrost prawie się zakończył…” znika i zostaje samo B2. Strategia się nie
+  zmienia.
+- Nastolatek na redukcji przy samej nadwadze: przy alarmie tempa znika zapewnienie z raty N2 „U rosnącego nastolatka często
+  wystarcza utrzymanie masy ciała, bo BMI obniża się przy dalszym wzrastaniu”.
+- Nastolatek przy stabilizacji: „…– dzięki temu BMI będzie stopniowo się obniżać” zmienia się w „…, aby BMI mogło stopniowo
+  się obniżać”, jak w wariancie dziecięcym.
+- Karta planu przy stabilizacji i alarmie:
+  - gdy norma BMI jest nieosiągalna: „Przy obecnym tempie wzrastania samo utrzymanie masy ciała nie doprowadzi do normy BMI;
+    kolejny etap planu zależy od wyniku dalszej oceny.”;
+  - punkt celu: „celem jest utrzymanie obecnej masy ciała”;
+  - powód strategii (tylko gdy to tempo zmieniło strategię): „strategia domyślna przy tempie wzrastania poniżej normy”.
+- „Droga do normy”: `model.tempoAlarm`; podpis „przy obecnym tempie wzrastania samo utrzymanie masy nie doprowadzi do normy
+  BMI”; przy nieosiągalnej normie linia celu „Kolejny etap planu zależy od wyniku dalszej oceny.”
+- Obie karty: „szacunek orientacyjny — wzrost warto mierzyć co 3–6 miesięcy”.
+- Nagłówek „Raportu po wizycie” (`VildaRaportNaglowek` WERSJA 7):
+  - odznaka „Tempo wzrastania poniżej normy”;
+  - tytuł i zdanie dodatkowe z „jest poniżej normy”;
+  - w nawiasie sama liczba normy;
+  - drugie „Dodatkowo” w nagłówku zmienia się na „Ponadto”.
+- Nota PAL w karcie energii raportu: „Poziom aktywności przyjęto domyślnie dla wieku.”
+
+**Przyjęte bez zmiany kodu.** U nastolatka **bez** nadmiaru masy z alarmem tempa (np. 16 lat, Tanner I, 0,5 cm/rok) podpowiedź
+„celu własnego” brzmi „Cel własny u nastolatka jest dostępny po potwierdzeniu zakończonego wzrastania – …” zamiast „Według
+prognozy wzrastanie jest praktycznie zakończone…”. To skutek raty G1: przy alarmie wzrastanie nie jest „praktycznie
+zakończone”. Nowe brzmienie jest trafniejsze, bo to raczej opóźnione dojrzewanie.
+
+**Klasyfikacja.** Zmiana kliniczna treści i interpretacji. Zmienia się brzmienie zaleceń, planu PDF, kart i raportu oraz wybór
+wariantu zdania. Liczby, progi, strategie domyślne i model tempa się nie zmieniają.
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne, prawdziwa strona):
+- dz. 13 l., otyłość, Tanner I, 2 cm/rok → B1 „tempo” (wariant nastolatka), karta planu i „Droga do normy” bez
+  „praktycznie zakończonym”, nagłówek „tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma ≥ 4 cm/rok)”;
+- chł. 8 l., ≥ 99. c., 4 cm/rok → B1 „tempo”, powód strategii „przy tempie wzrastania poniżej normy”;
+- dz. 9 l., otyłość < 99. c., 3 cm/rok → B1 „stabilizacja”, powód strategii „dla wieku… (Barlow 2007)”;
+- chł. 4 l., 3 cm/rok (norma ≥ 6) → B1 „stabilizacja”, bez zapowiedzi diety; w PDF bez zachęty „Wzrastanie wciąż trwa”
+  (przy 7 cm/rok zachęta jest);
+- dz. 6 l., 17 kg / 85 cm, PAL 1,4, redukcja ręczna, brak diety → stabilizacja i B1 „stabilizacja”;
+- chł. 12 l., otyłość, 0,8 cm/rok bez Tannera („do oceny”) → samo B2, bez „Wzrost prawie się zakończył”;
+- chł. 13 l., nadwaga, Tanner I, 2 cm/rok, redukcja ręczna → B1 „redukcja”, bez zapewnienia z raty N2.
+
+**Walidacja.**
+- Unit `dieta-tempo-rata-g1a` (11): prawdziwe `vildaZdanieTempaWzrastania` (eksport `window` dodany do testu),
+  `energyStabilizacjaZPowoduTempa`, `energyChildGrowthOutlook`, `VildaRaportNaglowek`; strażnicy źródła.
+- Zaktualizowane: `dieta-tempo-wzrastania-rata-g1` (WERSJA 14 planu PDF, zdanie A z danych, escapowanie), `raport-naglowek`
+  (etykieta i nawias tempa, WERSJA 7).
+- E2E: `dieta-tempo-rata-g1` (7 przepisanych i 6 nowych, G1a-1…6); nota PAL w `raport-wizyta-rata-q`, `raport-wizyta-rata-r`
+  i `pal-jedna-tabela`.
+
+**Poza tą ratą (do osobnej decyzji).**
+- Tytuł planu PDF i „PIERWSZY CEL −X kg” przy stabilizacji — następna rata.
+- Pozostałe zdania z „lekarzem” w innych gałęziach — rata „głos lekarza”: „ustala lekarz prowadzący”, „nadzór dietetyka lub
+  lekarza” u 5–9 lat, „O włączeniu leczenia farmakologicznego decyduje lekarz”.
+- Wyświetlanie tempa tuż pod progiem (3,97 → „4,0 cm/rok (norma ≥ 4)”) — reguła zaokrąglania w modelu tempa.
+
 ## Tempo wzrastania w planie diety dziecka z nadmiarem masy: pomiar wzrostu na kontroli, tempo poniżej normy → domyślnie stabilizacja, stabilizacja w planie PDF jako utrzymanie masy (P-DIETA rata G1, SW 1.1.73, 2026-09-24)
 
 **Zgłoszenie (odłożona decyzja z raty T4).** Plan diety dziecka z nadwagą lub otyłością nie korzystał ze zmierzonego tempa
@@ -5884,6 +5989,8 @@ nowy test etykiet planu); e2e `dieta-tempo-rata-g1` (7: index i docpro, prawdziw
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (udzielona 2026-09-24 przed kodowaniem); „Twoja droga” przy
 stabilizacji — osobna rata; scalenie i wdrożenie.
+
+*Aktualizacja (P-DIETA rata G1a, SW 1.1.74):* brzmienia B1, B2 i A zmienione — w głosie lekarza, bez „oceny lekarskiej”; wariant B1 wg strategii efektywnej. Zob. wpis raty G1a.
 
 ## Baner lekarza przy obniżeniu pozycji wzrostu: wiek dojrzewania i kierunek celu rodziców (P-TRAJ rata T4, SW 1.1.72, 2026-09-24)
 
