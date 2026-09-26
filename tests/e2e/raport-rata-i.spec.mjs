@@ -157,7 +157,7 @@ test('oś drogi: znaczniki jednej wielkości, tor przechodzi przez ich środki i
   await otworz(page);
   for (const s of [
     { age: 47, sex: 'M', w: 112, h: 167 },               // drabinka: 4 punkty
-    { age: 14, months: 3, sex: 'M', w: 72, h: 165 },     // drabinka dziecka: 3 punkty
+    { age: 14, months: 3, sex: 'M', w: 80, h: 165 },     // drabinka dziecka (otyłość, redukcja): 3 punkty; nadwaga 72 kg to od raty G2 stabilizacja bez osi
     { age: 34, sex: 'F', w: 68, h: 169, cel: 63 }        // cel własny: 2 punkty
   ]) {
     const w = await zbuduj(page, s);

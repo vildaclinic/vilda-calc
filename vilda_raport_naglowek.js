@@ -41,6 +41,7 @@
      cole:   { proc, klucz, kolor }              klucz: niedowaga | norma | nadwaga | otylosc
      wzrost: { cm, centyl }
      krok:   { masaKg, roznicaKg, opis, jestSzczebel, korzysc, klucz }  (redukcja)
+             albo { utrzymanie: true, masaKg } przy stabilizacji dziecka (P-DIETA rata G2)
      celPrzyrost: { masaKg, roznicaKg }                                 (niedowaga)
      granice: { dolKg, goraKg }                  dorosły: BMI 18,5 i 24,9 dla wzrostu
      cisnienie: { dziecko, sk, roz, centylSk, centylRoz, klasa, ton }
@@ -67,7 +68,7 @@
    ===================================================================================== */
 (function (root) {
   'use strict';
-  var WERSJA = 7;
+  var WERSJA = 8;
   var NBSP = ' ';
   var LIMIT_DODATKOWO = 2;
   var KROK_OD_LAT = 2;
@@ -218,10 +219,13 @@
   /* ---------- zdanie kroku masy (ta sama reguła, co plan PDF i rata Q) ---------- */
   function zdanieKroku(f) {
     var k = f.krok;
-    if (!k || liczba(k.masaKg) == null || liczba(k.roznicaKg) == null) return '';
+    if (!k || liczba(k.masaKg) == null || (!k.utrzymanie && liczba(k.roznicaKg) == null)) return '';
     if (f.wiekLat != null && !f.dorosly && f.wiekLat < KROK_OD_LAT) {
       return 'U małych dzieci nie stosuje się odchudzania; celem jest, aby masa ciała rosła wolniej niż wzrost.';
     }
+    /* P-DIETA rata G2 (decyzja właściciela 2026-09-26): przy stabilizacji dziecka (strategia z generatora zaleceń) celem na ten
+       etap jest utrzymanie masy — bez „pierwszego kroku” w kilogramach w dół. */
+    if (k.utrzymanie) return 'Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. ' + kg(k.masaKg) + ').';
     var opis = k.opis || '';
     /* K1: szczebel BMI 35 u pacjenta z BMI ≥ 40 to wyjście z otyłości III, nie II stopnia. */
     if (f.bmi && f.bmi.klucz === 'obesity-3' && k.klucz === 'otylosc-2') opis = 'wyjście z otyłości III stopnia';

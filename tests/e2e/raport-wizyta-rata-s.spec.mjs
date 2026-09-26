@@ -91,10 +91,12 @@ test.describe('P-RAPORT rata S — nagłówek bez dublowania, odniesienia bez �
     // 80 cm u 2-latka to wzrost < 1 c (tytuł), otyłość w „Dodatkowo”; szczebel −0,25 BMI-SDS ma tu < 0,5 kg
     const o = await model(page, { age: 2, months: 0, sex: 'M', w: 16.3, h: 80 });
     expect(o.hl.badge).toBe('Niski wzrost'); expect(o.BMI.badge).toBe('Otyłość');
-    expect(o.hl.text).toMatch(new RegExp(`Dodatkowo masa ciała i BMI są wyraźnie powyżej typowych wartości dla wieku \\(16,3${NB}kg, BMI 25,5\\)\\. Pierwszy krok to ok\\. 1\\d,\\d${NB}kg, czyli mniej niż 0,5${NB}kg; celem jest, aby masa ciała przestała rosnąć szybciej niż wzrost\\.$`));
+    // P-DIETA rata G2 (decyzja właściciela 2026-09-26): 2-latek jest w stabilizacji — zamiast szczebla < 0,5 kg cel na ten etap
+    // to utrzymanie obecnej masy (zdanie szczebla < 0,5 kg zostaje dla redukcji; test jednostkowy raport-naglowek)
+    expect(o.hl.text).toBe(`Dodatkowo masa ciała i BMI są wyraźnie powyżej typowych wartości dla wieku (16,3${NB}kg, BMI 25,5). Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 16,3${NB}kg).`);
     const k = await model(page, { age: 2, months: 0, sex: 'M', w: 12.2, h: 80 });
     expect(k.BMI.badge).toBe('Otyłość');
-    expect(k.hl.text).toMatch(new RegExp(`(Do końca otyłości brakuje mniej niż 0,5${NB}kg|Pierwszy krok to ok\\. 1\\d,\\d${NB}kg, czyli mniej niż 0,5${NB}kg); celem jest, aby masa ciała przestała rosnąć szybciej niż wzrost\\.$`));
+    expect(k.hl.text).toMatch(new RegExp(`Na tym etapie celem jest utrzymanie obecnej masy ciała \\(ok\\. 12,2${NB}kg\\)\\.$`));
     for (const r of [o, k]) { expect(r.hl.text).not.toContain('granicy normy'); expect(r.hl.text).not.toContain('poprawia ciśnienie'); }
   });
 

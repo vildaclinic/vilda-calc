@@ -53,7 +53,8 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     expect(r.lines.some((l) => /^Proporcja masy do wysokości/.test(l))).toBe(true); // linia istnieje, ale nie wchodzi do nagłówka
     expect(r.h.badge).toBe('Otyłość'); expect(r.h.tone).toBe('danger');
     expect(r.h.title).toBe('Masa ciała i BMI są obecnie wyraźnie powyżej typowych wartości dla wieku.');
-    expect(r.h.text).toBe(`Pierwszy krok to ok. ${f1(r.pierwszy)}${NB}kg (koniec otyłości), czyli około ${f1(52.6 - r.pierwszy)}${NB}kg mniej.`);
+    // P-DIETA rata G2 (decyzja właściciela 2026-09-26): 9-latka jest w stabilizacji (wiek) — cel na ten etap to utrzymanie masy
+    expect(r.h.text).toBe(`Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 52,6${NB}kg).`);
     for (const z of ['Równocześnie', 'jeszcze jeden parametr', 'inne parametry', 'Wymaga omówienia', 'Wynik nieprawidłowy']) expect(r.html, z).not.toContain(z);
     expect(r.cole).toBe(`149,1${NB}%`);
     expect(r.lines.find((l) => l.startsWith('Wskaźnik Cole'))).toBe(`Wskaźnik Cole’a: 149,1${NB}%`);
@@ -98,7 +99,7 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     expect(r.h.badge).toBe('Niski wzrost');
     expect(r.h.title).toMatch(new RegExp(`^Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, (poniżej 1\\. centyla|[12]\\. centyl)\\.$`)); // P8 (rata S): etykieta jak w kartach
     expect(r.h.text).toContain('Dodatkowo masa ciała i BMI są wyraźnie powyżej typowych wartości dla wieku');
-    expect(r.h.text).toContain(`Pierwszy krok to ok. ${f1(r.pierwszy)}${NB}kg`);
+    expect(r.h.text).toContain(`Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 41,5${NB}kg).`); // rata G2: stabilizacja (wiek)
     expect(r.h.subtext).toContain('tempa wzrastania');
   });
 

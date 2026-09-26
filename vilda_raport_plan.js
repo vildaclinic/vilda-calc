@@ -15,7 +15,8 @@
  * rozłożone w ciągu dnia, starsze dzieci 60 minut, dorośli 150–300 minut tygodniowo).
  *
  * Decyzje właściciela wbudowane w ten widok:
- *  • tytuł „Twój plan redukcji masy ciała";
+ *  • tytuł „Twój plan redukcji masy ciała" (od P-DIETA rata G2: przy stabilizacji dziecka „Twój plan utrzymania masy ciała",
+ *    a „Twoja droga" pokazuje cel na ten etap — utrzymanie masy — bez osi w kilogramach i bez pierwszego kroku);
  *  • bez zdania o przeciętnej masie rówieśnika (działa demotywująco);
  *  • bez zwrotów „skonsultuj się z lekarzem" — raport generuje lekarz podczas wizyty;
  *  • kolumna „Kontrola" wyłącznie ze zdań silnika (decyzja 2026-09-20: „zostaw jak jest");
@@ -29,7 +30,7 @@
   'use strict';
   if (!root) return;
 
-  var WERSJA = 14;
+  var WERSJA = 15;
   var SKALA_MIN = 0.74;      // poniżej tego tekst przestaje być czytelny w druku
   var SKALA_MAX = 1.4;       // P-RAPORT rata I: powiększenie pisma przy krótkiej treści
   var SKALA_MAX_GORA = 1.1;  // nagłówek z chipami rośnie najwyżej tyle, żeby chipy się nie zawijały
@@ -192,7 +193,40 @@
     }).join('') + '</div>';
   }
 
+  /* P-DIETA rata G2 (decyzja właściciela 2026-09-26): stabilizacja dziecka = utrzymanie masy. Cel na ten etap to obecna masa;
+     bez osi w kilogramach i bez „pierwszego kroku” (sugerowały chudnięcie). Zachęta o wzrastaniu tylko wtedy, gdy generator ją podaje
+     (przy tempie wzrastania poniżej normy jej nie ma). Stopka tym samym brzmieniem co karta „Droga do normy BMI”. Nic tu nie jest liczone. */
+  function sekcjaUtrzymanieDziecka(dane) {
+    var teraz = liczba((dane.pacjent || {}).masaKg);
+    if (teraz == null) return '';
+    var zacheta = '';
+    if (dane.wzrastanie && dane.wzrastanie.tempoCmRokLabel) {
+      zacheta = 'Wzrastanie wciąż trwa (ok. ' + esc(dane.wzrastanie.tempoCmRokLabel)
+        + ' cm/rok) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała.';
+    }
+    var stopka = [];
+    var m = dane.masa || {};
+    if (liczba(m.docelowaKg) != null) stopka.push('Górna granica normy BMI przy obecnym wzroście: <b>' + esc(fmt(m.docelowaKg, 1)) + ' kg</b> (85. centyl).');
+    var cz = dane.czasDoNormy;
+    var F = root.VildaDietRecommendations;
+    if (cz && F && typeof F.formatujCzasDojscia === 'function') {
+      var fraza = bezpiecznie(function () { return F.formatujCzasDojscia(cz.tygodnie, cz.miesiaceLabel); }, '');
+      if (fraza) stopka.push('Dojście do normy BMI przy stałej masie ciała: <b>' + esc(fraza) + '</b>.');
+    }
+    return '<section class="vrp-blok vrp-droga vrp-droga-utrzymanie">'
+      + '<div class="vrp-nag-blok"><span>TWOJA DROGA</span></div>'
+      + '<div class="vrp-krok">'
+      + '<div class="vrp-krok-lbl">CEL NA TEN ETAP</div>'
+      + '<div class="vrp-krok-n">' + esc(fmt(teraz, 1)) + ' kg</div>'
+      + '<div class="vrp-krok-s">utrzymanie obecnej masy ciała</div>'
+      + (zacheta ? '<div class="vrp-krok-z">' + zacheta + '</div>' : '')
+      + '</div>'
+      + (stopka.length ? '<div class="vrp-stopa">' + stopka.join(' ') + '</div>' : '')
+      + '</section>';
+  }
+
   function sekcjaDroga(dane, drab) {
+    if (dane && dane.strategia === 'stabilization' && !dane.dorosly) return sekcjaUtrzymanieDziecka(dane);
     if (!drab || drab.kierunek !== 'redukcja' || !drab.cel) return '';
     var teraz = liczba((dane.pacjent || {}).masaKg);
     var pierwszy = (drab.szczeble && drab.szczeble.length) ? drab.szczeble[0] : drab.cel;

@@ -5778,6 +5778,73 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Plan PDF i „Raport po wizycie” przy stabilizacji dziecka: plan utrzymania masy, bez „pierwszego kroku” w dół (P-DIETA rata G2, SW 1.1.75, 2026-09-26)
+
+**Zgłoszenie (odłożone z raty G1; polecenie właściciela 2026-09-26).** Przy każdej stabilizacji dziecka dokumenty dla pacjenta
+mówiły o redukcji. Dotyczyło to 7 z 7 sprawdzonych przypadków: B1, stabilizacji z powodu wieku, nadwagi 12–18 lat i braku diety
+spełniającej minimum.
+- Tytuł planu PDF „Twój plan redukcji masy ciała”. Warunkiem była sama masa docelowa w danych.
+- „Twoja droga”: „PIERWSZY CEL −5,3 kg / do 69,7 kg / pierwszy krok: już ta zmiana poprawia ciśnienie…”, oś w kilogramach
+  „dziś → pierwszy krok → koniec otyłości → norma BMI” i „Cel końcowy: 53,8 kg”.
+- Pod tym stała sekcja „ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)” (rata G1, F0), a przy B1 czerwona ramka „plan ma
+  charakter stabilizacji”.
+- „Raport po wizycie”: „Pierwszy krok to ok. 69,7 kg, czyli około 5,3 kg mniej…”, w karcie masy „Pierwszy krok: do 69,7 kg”.
+
+Karta „Droga do normy BMI” przy stabilizacji już dotąd pokazywała „Cel: utrzymanie masy ok. … kg” i „Górna granica normy przy
+obecnym wzroście: … kg”.
+
+**Decyzje właściciela (2026-09-26, po makiecie: „zgadzam się z rekomendacjami”).** Dotyczą tylko dziecka ze strategią
+`stabilization` z generatora zaleceń. Redukcja, dorośli, cel własny, utrzymanie i przyrost są bez zmian.
+1. Tytuł planu PDF: **„Twój plan utrzymania masy ciała”**. To zmiana decyzji z 2026-09-20 (tytuł „Twój plan redukcji masy
+   ciała”) tylko dla stabilizacji dziecka.
+2. „Twoja droga”:
+   - etykieta „CEL NA TEN ETAP”, liczba = obecna masa, podpis „utrzymanie obecnej masy ciała”;
+   - zachęta „Wzrastanie wciąż trwa (ok. X cm/rok) i każdy centymetr sam obniża BMI…” tylko wtedy, gdy generator ją podaje
+     (przy tempie wzrastania poniżej normy jej nie ma);
+   - **bez osi w kilogramach**;
+   - stopka tym samym brzmieniem co karta „Droga do normy”: „Górna granica normy BMI przy obecnym wzroście: X kg (85. centyl).
+     Dojście do normy BMI przy stałej masie ciała: około … .”
+3. **Bez „pierwszego kroku” (próg Reinehra) przy stabilizacji** w PDF i raporcie. Próg zostaje w karcie „Droga do normy” jako
+   „Po drodze”.
+4. „Raport po wizycie”:
+   - nagłówek „Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. X kg).”; kolejne zdania bez zmian, np. „Najważniejsze
+     jest, aby w kolejnych pomiarach masa ciała rosła wolniej niż wzrost.”;
+   - karta masy: „Cel na ten etap: utrzymanie masy ok. X kg”.
+   - U dziecka poniżej `KROK_OD_LAT` (2 lat) zostaje dotychczasowe zdanie o małych dzieciach.
+
+**Zmiana (treść dokumentów dla pacjenta; liczby, strategie i progi bez zmian).**
+- `vilda_diet_recommendations.js` (`?v=61`): tytuł kontekstu PDF wg strategii.
+- `vilda_raport_plan.js` (`?v=18`, WERSJA 15): `sekcjaUtrzymanieDziecka()`; nadal niczego nie liczy, wszystkie liczby pochodzą
+  z `dane`.
+- `vilda_raport_naglowek.js` (`?v=9`, WERSJA 8): fakt `krok = { utrzymanie: true, masaKg }` daje zdanie utrzymania.
+- `vilda_patient_report.js` (`?v=45`):
+  - `patientReportStabilizacjaDziecka()` czyta strategię z generatora zaleceń;
+  - `patientReportKrokLubUtrzymanie()` obsługuje zbieracz faktów i starszą ścieżkę nagłówka;
+  - `patientReportKrokReference()` daje kartę masy.
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne, prawdziwa strona):
+- dz. 13 l., 75 kg / 155 cm (otyłość), Tanner I, 2 cm/rok (stabilizacja B1):
+  - tytuł „Twój plan utrzymania masy ciała”;
+  - „Twoja droga”: „CEL NA TEN ETAP | 75,0 kg | utrzymanie obecnej masy ciała | Górna granica normy BMI przy obecnym wzroście:
+    53,8 kg (85. centyl).”, bez osi;
+  - raport „Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 75,0 kg).”, karta „Cel na ten etap: utrzymanie masy
+    ok. 75,0 kg”.
+- chł. 10 l., 52 kg / 145 cm (nadwaga), 6 cm/rok: jak wyżej z zachętą o wzrastaniu i „Dojście do normy BMI przy stałej masie
+  ciała: około 20 miesięcy.”
+- dz. 13 l., 75 kg / 155 cm, 7 cm/rok (redukcja) i dorosły 100 kg / 175 cm: bez zmian („Twój plan redukcji masy ciała”,
+  „PIERWSZY CEL −5,3 kg”, oś, „Pierwszy krok to ok. 69,7 kg…”).
+
+**Walidacja.**
+- Unit `raport-plan-stabilizacja-rata-g2` (10): prawdziwe `VildaRaportPlan`, `VildaRaportNaglowek` i funkcje raportu pacjenta.
+- E2E `raport-plan-stabilizacja-rata-g2` (3): tytuł i kartka z prawdziwego `dietRecommendationsCollectPdfPages`, nagłówek
+  i karta masy z `patientReportBuildModel`.
+- Świadomie zmieniona umowa w starszych e2e: 9-latka i 9-latek z otyłością oraz 2-latek z otyłością są w stabilizacji (wiek),
+  więc zamiast „Pierwszy krok …” mają zdanie utrzymania (`raport-wizyta-rata-q` RQ-1, `-r` RR-1/RR-4, `-s` RS-4). W teście osi
+  (`raport-rata-i`) przypadek dziecka z nadwagą 14 l./72 kg (stabilizacja, bez osi) zastąpiono otyłością 14 l./80 kg (redukcja).
+  Zdanie szczebla < 0,5 kg dla redukcji zostaje pokryte testem jednostkowym `raport-naglowek`.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Zdania o tempie wzrastania w głosie lekarza i spójne z sąsiednimi zdaniami (P-DIETA rata G1a, SW 1.1.74, 2026-09-26)
 
 **Zgłoszenie (właściciel, 2026-09-24).** Plan, zalecenia i raport wydaje lekarz, więc tekst nie może odsyłać „do lekarza”.
