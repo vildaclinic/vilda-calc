@@ -5778,6 +5778,69 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Tempo wzrastania poniżej normy wygrywa z blokadą stabilizacji z prognozy wzrostu końcowego (P-DIETA rata G3, SW 1.1.76, 2026-09-27)
+
+**Zgłoszenie (ograniczenie zapisane w racie G1).** Blokada stabilizacji w `app.js` („nie zdąży wyrosnąć”) wygrywała z zasadą
+B1. Blokada bierze prognozę wzrostu końcowego (albo wzrost docelowy wg rodziców) i sprawdza, czy obecna masa mieści się w normie
+BMI przy tym wzroście w wieku 18 lat. Jeśli się nie mieści, wyłącza przełącznik „Stabilizacja masy” i wymusza redukcję.
+Sonda na prawdziwej stronie (dane fikcyjne):
+- dz. 13 l., 75 kg / 155 cm, Tanner I, 153 → 155 cm w rok (2,0 cm/rok, norma ≥ 4, alarm):
+  - bez wzrostu rodziców: stabilizacja 2 200 kcal;
+  - po wpisaniu rodziców 160/172 cm (prognoza 156,5 cm): redukcja ≤ 1 800 kcal, „Pierwszy krok −5,3 kg”, tytuł „plan redukcji”;
+- ta sama pacjentka w docpro (bez przełączników strategii, więc bez blokady): stabilizacja 2 200 kcal — dwa różne plany.
+
+Prognoza wzrostu końcowego zakłada prawidłowe wzrastanie; przy tempie poniżej normy jest niepewna. Spowolnione wzrastanie obniża
+prognozę, niska prognoza włącza blokadę, a blokada narzuca deficyt u dziecka, które słabo rośnie. Rata G1 stosuje już tę zasadę
+do wniosku „wzrastanie praktycznie zakończone” (alarm go znosi).
+
+**Źródło.** Styne i wsp. 2017, J Clin Endocrinol Metab 102:709–757, PMID 28359099,
+[doi:10.1210/jc.2016-2573](https://doi.org/10.1210/jc.2016-2573) (według PubMed; tylko streszczenie): endokrynne przyczyny
+otyłości są rzadkie i zwykle towarzyszy im osłabione wzrastanie. Pozostałe źródła jak w racie G1.
+
+**Decyzje właściciela (2026-09-27, po makiecie: „zgadzam się z rekomendacjami”).**
+1. Przy alarmie tempa (B1) domyślna jest stabilizacja także wtedy, gdy prognoza mówi „nie zdąży wyrosnąć”. Przełącznik
+   stabilizacji zostaje aktywny.
+2. Ręczny wybór redukcji nadal wygrywa (zdanie B1 w wariancie redukcji, rata G1a).
+3. Dymek ℹ przy przełącznikach (tylko dla lekarza): „Tempo wzrastania poniżej normy (X cm/rok; norma ≥ Y cm/rok): domyślnie
+   stabilizacja masy ciała. Prognoza wzrostu końcowego wskazywałaby redukcję, ale przy takim tempie wzrastania jest niepewna.
+   Redukcję można wybrać ręcznie.”
+4. Tempo „do oceny” (B2) i tempo w normie — bez zmian: blokada działa jak dotąd.
+5. Dymek blokady bez nazwy serwisu: „Według prognozy wzrostu końcowego pacjent nie zdąży wyrosnąć z otyłości — strategia:
+   redukcja masy ciała.” (dawniej „Według algorytmów systemu wagaiwzrost.pl ta osoba już nie zdąży…”).
+
+**Zmiana (kliniczna: domyślna strategia przy alarmie tempa i dostępnej prognozie; liczby kcal liczone jak dotąd).**
+- `app.js` (`?v=228`), blok przełącznika strategii:
+  - przy alarmie tempa (`advancedGrowthData.tempo.alarm`, ten sam model co baner tempa i zdanie B1) blokada nie wyłącza
+    przełącznika i pokazuje dymek alarmu;
+  - `window.vildaStabilizacjaZablokowanaPrognoza()` — czy prognoza wyłączyłaby stabilizację, gdyby nie alarm (działa też na
+    docpro, bez DOM przełączników);
+  - `window.vildaTekstAlarmuTempaStabilizacji()` — tekst dymka z liczbami tempa i normy.
+- `vilda_diet_plan_ui.js` (`?v=35`):
+  - `energyResolveStrategy`: alarm tempa → stabilizacja także przy `stabDisabled` (ręczna redukcja i „Wzrost zakończony” wyżej);
+  - `energyStabilizacjaZPowoduTempa`: kontrfakt „bez alarmu” uwzględnia blokadę z prognozy — powód „strategia domyślna przy
+    tempie wzrastania poniżej normy” w karcie planu i wariant zdania B1 „tempo” w dokumentach.
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne, prawdziwa strona):
+- dz. 13 l., 75 kg / 155 cm, Tanner I, 2,0 cm/rok, rodzice 160/172 cm → stabilizacja 2 200 kcal, przełącznik aktywny i zaznaczony,
+  dymek alarmu, zdanie „…dlatego plan ma charakter stabilizacji masy ciała. Wzrost jest mierzony na każdej wizycie kontrolnej.”,
+  w karcie planu „strategia domyślna przy tempie wzrastania poniżej normy”; w docpro to samo;
+- ta sama, redukcja wybrana ręcznie → redukcja ≤ 1 800 kcal, zdanie B1 „W czasie diety redukcyjnej…”;
+- dz. 13 l., 75 kg / 155 cm, 7,0 cm/rok, rodzice 160/172 → bez zmian: redukcja ≤ 1 800 kcal, przełącznik wyłączony, dymek blokady;
+- chł. 14 l., 90 kg / 160 cm, Tanner II, 3,0 cm/rok („do oceny”), rodzice 158/170 → bez zmian: redukcja, zdanie B2.
+
+**Populacja i ograniczenia.** Dzieci z nadwagą lub otyłością i alarmem modelu tempa (poniżej normy dla wieku: < 10 lat albo
+Tanner I od 10 lat), u których znany jest wzrost docelowy albo prognoza wzrostu końcowego. Dorośli, „Wzrost zakończony” i dzieci
+2–5 lat bez zmian. Blokada przy tempie w normie zostaje — decyzja o ewentualnej zmianie jej progu to osobny temat.
+
+**Walidacja.**
+- Unit `dieta-tempo-blokada-rata-g3` (6): prawdziwe `energyResolveStrategy`, `energyStabilizacjaZPowoduTempa` i obiekty tempa
+  z `vilda_tempo_wzrastania.js`.
+- E2E `dieta-tempo-blokada-rata-g3` (4): index (przełączniki, dymki, strategia, kcal, zdanie B1, powód w karcie planu), ręczna
+  redukcja, przypadki bez zmian, docpro.
+- Świadomie zmieniona umowa: `dieta-tempo-wzrastania-rata-g1` — alarm + `stabDisabled` daje teraz stabilizację (dawniej redukcję).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna (udzielona 2026-09-27 przed kodowaniem); scalenie i wdrożenie.
+
 ## Plan PDF i „Raport po wizycie” przy stabilizacji dziecka: plan utrzymania masy, bez „pierwszego kroku” w dół (P-DIETA rata G2, SW 1.1.75, 2026-09-26)
 
 **Zgłoszenie (odłożone z raty G1; polecenie właściciela 2026-09-26).** Przy każdej stabilizacji dziecka dokumenty dla pacjenta
@@ -6049,6 +6112,7 @@ na tej samej stronie z bazy `audyt` 999e8e8c):
 **Ograniczenia.**
 - Blokada stabilizacji z prognozy wzrostu (app.js: dziecko „nie zdąży wyrosnąć”) wygrywa z B1 — wtedy zostaje redukcja
   ze zdaniem B1 w wariancie redukcji.
+  *Zmienione: P-DIETA rata G3, SW 1.1.76 — alarm tempa wygrywa z blokadą; zob. wpis raty G3.*
 - Karta planu odświeża strategię przy `update()`; ocena tempa pochodzi z karty zaawansowanej (`advancedGrowthData`).
 - Norma w zdaniu pochodzi z etykiety normy modelu tempa; przy jej braku zdanie podaje samo tempo.
 

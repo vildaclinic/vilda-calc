@@ -73,9 +73,10 @@ describe('rata G1: energyResolveStrategy — reguła B1 i jej miejsce w kolejno�
     expect(win.energyResolveStrategy({ state: st('age_6_11', true), ageYears: 8 })).toBe('reduction');
     expect(win.energyResolveStrategy({ state: st('age_6_11', true), ageYears: 8, outlook: alarm })).toBe('stabilization');
   });
-  it('wygrywa: ręczna redukcja, blokada stabilizacji (app.js), „Wzrost zakończony”, dorosły', () => {
+  it('wygrywa: ręczna redukcja, „Wzrost zakończony”, dorosły; blokada z prognozy już nie (rata G3)', () => {
     expect(win.energyResolveStrategy({ state: st('age_12_18', false, true), ageYears: 13, outlook: alarm, reduceChecked: true })).toBe('reduction');
-    expect(win.energyResolveStrategy({ state: st('age_12_18', false, true), ageYears: 13, outlook: alarm, stabDisabled: true })).toBe('reduction');
+    // P-DIETA rata G3 (decyzja właściciela 2026-09-27): alarm tempa wygrywa z blokadą stabilizacji z prognozy (dawniej 'reduction')
+    expect(win.energyResolveStrategy({ state: st('age_12_18', false, true), ageYears: 13, outlook: alarm, stabDisabled: true })).toBe('stabilization');
     expect(win.energyResolveStrategy({ state: st('age_12_18', false, true), ageYears: 13, outlook: alarm, growthEnded: true })).toBe('reduction');
     expect(win.energyResolveStrategy({ state: st('age_12_18', false, true), ageYears: 25, outlook: alarm })).toBe('reduction');
   });
