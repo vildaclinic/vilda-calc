@@ -26,6 +26,16 @@
  * Rata 5 (decyzja właściciela 2026-09-27) dokłada dwie gałęzie POZIOMU przy nadwadze: BMI
  * stabilne w paśmie 85.–97. centyla przestaje brzmieć „stabilny tor BMI", a stabilny tor
  * masy-do-wieku przy BMI ≥85c (albo Cole ≥110 %) przestaje brzmieć uspokajająco.
+ * Rata 6 (audyt 2 werdyktów, decyzja właściciela 2026-09-27) zmienia gałęzie LECZENIA: odpowiedź
+ * na GH i na leczenie redukcyjne jest liczona na 12 miesięcy (ΔSDS × 12 / długość okna), a nie
+ * z surowej ΔSDS pary punktów — dotąd +0,30 w 36 mies. brzmiało „dobra odpowiedź na GH", a +0,29
+ * w 6 mies. „umiarkowana". Dochodzą: etykieta „brak istotnej odpowiedzi na leczenie" (redukcja
+ * między −0,25 a +0,2 SDS/rok — dotąd taki pacjent spadał do werdyktu populacyjnego i słowo
+ * „leczenie" znikało), „za wcześnie na ocenę odpowiedzi na GH" (okno < 6 mies. w kursie),
+ * „szybka zmiana w krótkim oknie — do weryfikacji pomiaru" (wzrost, |ΔSDS| ≥ 0,5 w < 6 mies.)
+ * oraz dopisek „nadal poniżej 3. centyla" przy GH (nakładka pozycyjna dotąd milkła przy GH).
+ * Wołający, który nie poda długości okna, dostaje dokładnie dotychczasowe zachowanie — tego
+ * pilnuje odcisk siatki (tests/unit/werdykt-silnik.test.mjs).
  *
  * WARSTWY. Werdykt powstaje w trzech krokach i to jest cała architektura tego modułu:
  *   1. para()                  — werdykt bazowy z samych liczb: ΔSDS + pozycja centylowa.
@@ -52,7 +62,7 @@
 
   if (!root) return;
 
-  var WERSJA = '5';
+  var WERSJA = '6';
 
   // Progi nazwane. Reszta liczb w gałęziach jest celowo zostawiona dokładnie tam, gdzie była
   // przed przeniesieniem — rata 1 ma być czytelna jako przeniesienie, a nie jako przepisanie.
@@ -83,11 +93,87 @@
     PRZYSPIESZENIE_BMI_DSDS: 0.3,
     // Krótki odcinek to szum pomiarowy, nie przyspieszenie. Ta sama liczba i ten sam powód,
     // co SEGMENT_MIN_GAP_M w vilda_trajectory_analysis.js — pilnuje tego test między plikami.
-    PREDKOSC_MIN_ODSTEP_M: 3
+    PREDKOSC_MIN_ODSTEP_M: 3,
+    // ── P-WERDYKT rata 6 (audyt 2, decyzja właściciela 2026-09-27): odpowiedź na leczenie NA ROK ──
+    // Ocena odpowiedzi na GH wymaga okna ≥ 6 mies. w kursie (jak dotąd próg nakładania), a przy
+    // oknie 6–11 mies. jest oznaczona „wstępnie". Progi na 12 mies. to dotychczasowe liczby
+    // aplikacji (PR #63/v388: ≥ +0,3 dobra, < +0,1 słaba) — teraz odniesione do roku, a nie do
+    // dowolnie długiego okna. Definicja słabej odpowiedzi w 1. roku (ΔhSDS < 0,3) za konsensusem
+    // Bang 2012 (doi:10.1111/j.1365-2265.2012.04420.x). Osobny, niższy próg dla kolejnych lat
+    // kursu pozostaje decyzją właściciela — dziś te same liczby na każdy rok kursu.
+    GH_OKNO_MIN_M: 6,
+    GH_WSTEPNIE_DO_M: 12,
+    GH_DOBRA_DSDS_ROK: 0.3,
+    GH_SLABA_DSDS_ROK: 0.1,
+    // Redukcja: ocena od 3 mies. leczenia (okno 12 tyg. z ChPL — obesity_response_criteria.js),
+    // „wstępnie" poniżej 6 mies. Odpowiedź = ΔBMI-SDS ≤ −0,25 na rok (Reinehr 2016, doi:10.1210/
+    // jc.2016-1885: od 0,25 BMI-SDS poprawa ciśnienia i lipidów; dotąd −0,2 bez czasu), przyrost
+    // ≥ +0,2/rok (jak dotąd), między nimi nowa etykieta „brak istotnej odpowiedzi na leczenie".
+    // Próg „bardzo szybkiej" redukcji (−1,5) był już liczony na rok w panelu porównania.
+    RD_OKNO_MIN_M: 3,
+    RD_WSTEPNIE_DO_M: 6,
+    RD_ODPOWIEDZ_DSDS_ROK: -0.25,
+    RD_PRZYROST_DSDS_ROK: 0.2,
+    RD_SZYBKA_DSDS_ROK: -1.5,
+    // Krótkie okno wzrostu: |ΔhSDS| ≥ 0,5 (próg „deceleracji") w oknie < 6 mies. to najczęściej
+    // błąd pomiaru, nie zdarzenie kliniczne — werdykt kieruje do weryfikacji, nie do rozpoznania.
+    KROTKIE_OKNO_M: 6,
+    KROTKIE_OKNO_DSDS: 0.5
   });
 
   function dSds(sa0, sb0) {
     return Math.round(100 * (sb0 - sa0)) / 100;
+  }
+
+  // ── Pomocnicze raty 6 ──────────────────────────────────────────────────────────────
+  // ΔSDS przeliczona na 12 miesięcy. Okno w miesiącach; bez poprawnego okna zwraca samą ΔSDS.
+  function naRok(d, oknoM) {
+    if (typeof oknoM !== 'number' || !isFinite(oknoM) || oknoM <= 0) return d;
+    return Math.round(100 * d * 12 / oknoM) / 100;
+  }
+  // Dopisek do etykiety po „ — " (albo po przecinku, gdy ogon już jest). Słowniki opisu i epikryzy
+  // odmieniają GŁOWĘ etykiety (część przed „ — "), ogon wraca na koniec zdania bez odmiany —
+  // dlatego dopiski idą wyłącznie tędy, a nie do środka etykiety.
+  function zOgonem(v, ogon) {
+    if (!v || !ogon) return v;
+    var l = String(v.l || '');
+    var out = { t: v.t };
+    out.l = l.indexOf(' \u2014 ') >= 0 ? l + ', ' + ogon : l + ' \u2014 ' + ogon;
+    return out;
+  }
+  function oknoMies(oknoM) { return Math.round(oknoM) + ' mies.'; }
+  // Odpowiedź na GH na 12 mies. (okno ≥ GH_OKNO_MIN_M — pilnuje wołający przez `gm`).
+  function odpowiedzGH(d, oknoM) {
+    var dr = naRok(d, oknoM);
+    var v = dr >= PROGI.GH_DOBRA_DSDS_ROK ? { t: 'good', l: 'dobra odpowiedź na GH' }
+      : dr < PROGI.GH_SLABA_DSDS_ROK ? { t: 'warn', l: 'słaba odpowiedź na GH — do oceny' }
+        : { t: 'stable', l: 'odpowiedź umiarkowana (GH)' };
+    return oknoM < PROGI.GH_WSTEPNIE_DO_M ? zOgonem(v, 'wstępnie (' + oknoMies(oknoM) + ')') : v;
+  }
+  // Odpowiedź na leczenie redukcyjne. `v1` = werdykt bazowy (ton przyrostu). Okno krótsze niż rok
+  // jest przeliczane na 12 mies. (kryteria ChPL i Reinehra są roczne); okno ≥ 12 mies. ocenia
+  // ZMIANĘ SKUMULOWANĄ od początku okna — odpowiedź osiągnięta i utrzymana przez 3 lata (−0,6) nie
+  // może brzmieć „brak odpowiedzi" tylko dlatego, że średnio to −0,2 na rok. Tempo „bardzo szybkie"
+  // jest zawsze na rok, bo to alarm o szybkości, nie o wielkości.
+  function odpowiedzRedukcji(d, oknoM, v1) {
+    var dr = naRok(d, oknoM);
+    var ds = oknoM < 12 ? dr : d;
+    var v;
+    if (dr <= PROGI.RD_SZYBKA_DSDS_ROK) v = { t: 'warn', l: 'redukcja bardzo szybka — do kontroli' };
+    else if (ds <= PROGI.RD_ODPOWIEDZ_DSDS_ROK) v = { t: 'good', l: 'redukcja w trakcie leczenia' };
+    else if (ds >= PROGI.RD_PRZYROST_DSDS_ROK) v = { t: v1 && v1.t === 'bad' ? 'bad' : 'warn', l: 'przyrost masy mimo leczenia redukcyjnego' };
+    else v = zOgonem({ t: 'warn', l: 'brak istotnej odpowiedzi na leczenie' }, 'po ' + oknoMies(oknoM));
+    return oknoM < PROGI.RD_WSTEPNIE_DO_M ? zOgonem(v, 'wstępnie (' + oknoMies(oknoM) + ')') : v;
+  }
+  // Okno w kursie GH za krótkie na ocenę odpowiedzi (< GH_OKNO_MIN_M).
+  function zaWczesnieGH(oknoM) {
+    return zOgonem({ t: 'stable', l: 'za wcześnie na ocenę odpowiedzi na GH' }, oknoMies(oknoM));
+  }
+  // Krótkie okno wzrostu z dużą zmianą — do weryfikacji pomiaru, przed każdą inną regułą.
+  function krotkieOkno(met, sa0, sb0, oknoM) {
+    if (met !== 'height' || typeof oknoM !== 'number' || !isFinite(oknoM) || oknoM >= PROGI.KROTKIE_OKNO_M) return null;
+    if (Math.abs(dSds(sa0, sb0)) < PROGI.KROTKIE_OKNO_DSDS) return null;
+    return { t: 'warn', l: 'szybka zmiana w krótkim oknie — do weryfikacji pomiaru' };
   }
 
   // ── Poziom miary przy stabilnym torze (P-WERDYKT rata 2) ─────────────────────────────
@@ -176,12 +262,18 @@
   // gm: miesiące terapii GH nakładające się z odcinkiem (ocena odpowiedzi od gm≥6);
   // mp: SDS kanału rodzicielskiego (MPH); rd: zamierzona redukcja aktywna w odcinku
   // (panel wymaga nakładania ≥3 mies.; nigdy przy niedoborze ca<10).
-  function zKontekstem(met, sa0, sb0, ca, cb, gm, mp, rd) {
+  // Rata 6: dziewiąty argument `oknoM` (długość okna A→B w miesiącach) włącza liczenie odpowiedzi
+  // na leczenie NA ROK. Bez niego gałęzie GH i redukcji zachowują się dokładnie jak dotąd.
+  function zKontekstem(met, sa0, sb0, ca, cb, gm, mp, rd, oknoM) {
     var v1 = para(met, sa0, sb0, ca, cb);
     if (!v1) return null;
     var d = dSds(sa0, sb0);
+    var naRokOn = typeof oknoM === 'number' && isFinite(oknoM) && oknoM > 0;
     if (met === 'height') {
-      if (gm >= 6) return d >= 0.3 ? { t: 'good', l: 'dobra odpowiedź na GH' } : d < 0.1 ? { t: 'warn', l: 'słaba odpowiedź na GH — do oceny' } : { t: 'stable', l: 'odpowiedź umiarkowana (GH)' };
+      if (gm >= 6) {
+        if (naRokOn) return odpowiedzGH(d, oknoM);
+        return d >= 0.3 ? { t: 'good', l: 'dobra odpowiedź na GH' } : d < 0.1 ? { t: 'warn', l: 'słaba odpowiedź na GH — do oceny' } : { t: 'stable', l: 'odpowiedź umiarkowana (GH)' };
+      }
       if (typeof mp === 'number' && isFinite(mp)) {
         var e0 = Math.round(100 * (sa0 - mp)) / 100;
         if (e0 <= -1.5) return d >= 0.2 ? { t: 'good', l: 'nadrabia względem kanału rodzicielskiego' } : d <= -0.5 ? { t: 'bad', l: 'oddala się od kanału rodzicielskiego' } : d <= -0.2 ? { t: 'warn', l: 'oddala się od kanału rodzicielskiego' } : { t: 'stable', l: 'stabilnie (poniżej kanału rodzicielskiego)' };
@@ -195,6 +287,7 @@
       return v1;
     }
     if (rd && ca >= 10) {
+      if (naRokOn) return odpowiedzRedukcji(d, oknoM, v1);
       if (d <= -1.5) return { t: 'warn', l: 'redukcja bardzo szybka — do kontroli' };
       if (d <= -0.2) return { t: 'good', l: 'redukcja w trakcie leczenia' };
       if (d >= 0.2) return { t: v1.t === 'bad' ? 'bad' : 'warn', l: 'przyrost masy mimo leczenia redukcyjnego' };
@@ -296,9 +389,13 @@
   // „Stabilny" tor nie jest uspokajający, gdy pozycja tego nie uzasadnia: <3c zawsze (niedobór
   // wzrostu z definicji, poza normą populacyjną 3–97c), 3–10c tylko przy torze poniżej kanału
   // rodzicielskiego (≥1,5 SDS pod MPH). Pasmo 3–10c samo w sobie to DOLNE PASMO NORMY, nie brak
-  // normy (decyzja właściciela 2026-08-14). Nie stosuje się przy aktywnej ocenie odpowiedzi na GH.
+  // normy (decyzja właściciela 2026-08-14). Przy aktywnej ocenie odpowiedzi na GH nakładka nie
+  // zmienia werdyktu, ale od raty 6 dopisuje „nadal poniżej 3. centyla" — dotąd milkła zupełnie
+  // i „odpowiedź umiarkowana (GH)" na 1. centylu brzmiała jak dziecko w normie.
   function nakladkaPozycjaWzrostu(v, cb, mp, sa0, ghOn) {
-    if (!v || v.t !== 'stable' || ghOn) return v;
+    if (!v) return v;
+    if (ghOn) return typeof cb === 'number' && cb < 3 ? zOgonem(v, 'nadal poniżej 3. centyla') : v;
+    if (v.t !== 'stable') return v;
     if (cb < 3) return { t: 'warn', l: 'tor stabilny, ale poniżej 3. centyla — niedobór wzrostu' };
     if (cb < 10 && typeof mp === 'number' && isFinite(mp) && Math.round(100 * (sa0 - mp)) / 100 <= -1.5)
       return { t: 'warn', l: 'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego — do obserwacji' };
@@ -316,6 +413,11 @@
     poziomNadwagiPrzyStabilnejMasie: poziomNadwagiPrzyStabilnejMasie,
     nakladkaMasaBmi: nakladkaMasaBmi,
     nakladkaPredkosciBmi: nakladkaPredkosciBmi,
-    nakladkaPozycjaWzrostu: nakladkaPozycjaWzrostu
+    nakladkaPozycjaWzrostu: nakladkaPozycjaWzrostu,
+    // Rata 6
+    naRok: naRok,
+    zOgonem: zOgonem,
+    krotkieOkno: krotkieOkno,
+    zaWczesnieGH: zaWczesnieGH
   });
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null);

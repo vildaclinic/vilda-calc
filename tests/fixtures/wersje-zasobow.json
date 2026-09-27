@@ -364,8 +364,8 @@
   "sha256": "7b316629332c6d99f9676fe0b0f779507d3eaab326ac671361cd68f4646f4fa9"
  },
  "vilda_advanced_growth.js": {
-  "v": 69,
-  "sha256": "0cc39249e98f1fd7f82d97674cb6c16af6c990a4d112817cb018b39832aa093c"
+  "v": 70,
+  "sha256": "e791cadaa71d51a249255b6dc3a3ade89848da664056c848fedfa5831172e9c2"
  },
  "vilda_anorexia_risk.js": {
   "v": 4,
@@ -384,8 +384,8 @@
   "sha256": "d32d7d80e78cdea8a5f263ae5be8a862e2c664bed51cdde1e3772e48892768c2"
  },
  "vilda_auth_ui.js": {
-  "v": 461,
-  "sha256": "4bdfc8ac357b7d4ab4e4dc9ac3e7ad3e773837598ffb174543c58a977319c024"
+  "v": 462,
+  "sha256": "7b1868bcd563d897ce4f9c13609790e7cd8692a11b285c0d558510953e0b466d"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -608,8 +608,8 @@
   "sha256": "70e9784e63bd9c4ec6c83f3fcd8497b3fc927919981ed47d435d1570403705e6"
  },
  "vilda_patient_narrative.js": {
-  "v": 17,
-  "sha256": "628d4a9c543f71527a16fafc037bd3c5801b4ee2e67fd3eca2eef677bb2067d5"
+  "v": 18,
+  "sha256": "8ca773cbda2c8097361f8f5698e777b101a6fa2961171814594a1aa1233a3a78"
  },
  "vilda_patient_narrative_ui.js": {
   "v": 9,
@@ -780,8 +780,8 @@
   "sha256": "872eda8f28b9c101af73ddecb52ad605d15678a0d1e168745be89ef558fb470e"
  },
  "vilda_trajectory_analysis.js": {
-  "v": 36,
-  "sha256": "89b2c691ea68dccf32f86d456b2a9f9530162d7493c4761bcb92e07ed13eec20"
+  "v": 37,
+  "sha256": "9cd09d59c73b81850c02703716b90c7fc96d0d4b8a15a522e2cc5a720331efb3"
  },
  "vilda_tw2_prediction.js": {
   "v": 4,
@@ -808,8 +808,8 @@
   "sha256": "f403dd0204b0e121b9505dd2f622c2e2dc97b01c18dc66afef3a1c1f709e3af1"
  },
  "vilda_werdykt.js": {
-  "v": 5,
-  "sha256": "413ff47247e2aef01f450ebda72e63d083b3c29ccac08822c773e1c20bdfd2cb"
+  "v": 6,
+  "sha256": "75f6ce1d9a15ac401c7af26b3769e1271858705b8bd8957a1e12c97d82b6eff7"
  },
  "vilda_zrodla_pacjenta.js": {
   "v": 1,

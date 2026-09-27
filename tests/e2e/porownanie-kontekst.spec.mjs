@@ -89,7 +89,8 @@ test('terapia GH z rekordu: po 7 mies. werdykt wzrostu to odpowiedź na GH (jak 
   await expect.poll(() => page.evaluate(() => Array.isArray(window.ghTherapyPoints) ? window.ghTherapyPoints.length : -1)).toBe(1);
   await wpisz(page, DZIECKO_2);
   const wzrost = page.locator('#prevSummaryCard tr[data-klucz="wzrost"]');
-  await expect(wzrost.locator('.pt-zmiana .pt-pill')).toHaveText('słaba odpowiedź na GH — do oceny', { timeout: 10000 });
+  // P-WERDYKT rata 6: okno 7 mies. w kursie GH — odpowiedź na rok, oznaczona „wstępnie" poniżej 12 mies.
+  await expect(wzrost.locator('.pt-zmiana .pt-pill')).toHaveText('słaba odpowiedź na GH — do oceny, wstępnie (7 mies.)', { timeout: 10000 });
   await expect(page.locator('#porownanieKontekst')).toBeVisible();
   await expect(page.locator('#porownanieKontekst')).toHaveText('kontekst: GH 7 mies. w odcinku');
   // parytet: ten sam werdykt daje jedna ścieżka silnika z kontekstem zbudowanym z tych samych globali
@@ -102,7 +103,7 @@ test('terapia GH z rekordu: po 7 mies. werdykt wzrostu to odpowiedź na GH (jak 
   });
   expect(oczek.ctx.gh).toEqual({ a: 98, b: null });
   expect(oczek.v.ghOn).toBe(true);
-  expect(oczek.v.v.l).toBe('słaba odpowiedź na GH — do oceny');
+  expect(oczek.v.v.l).toBe('słaba odpowiedź na GH — do oceny, wstępnie (7 mies.)');
   // bez terapii ta sama para była „stabilnym torem" — kontekst zmienia brzmienie, nie liczby
   const bezCtx = await page.evaluate(() => {
     const J = window.VildaTrajectoryAnalysis, prev = window.prevMeasurementInfo, teraz = window.getAgeDecimal() * 12;

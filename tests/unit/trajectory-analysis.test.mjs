@@ -568,8 +568,11 @@ describe('czułość dolnego pasma pod nakładką MPH i nakładka pozycyjna wzro
     expect(vta.heightPositionOverlayVerdict(ST, 8, -1.2, -1.5, false)).toEqual(ST);
     // 3–10c bez danych MPH — bez alarmu (decyzja właściciela).
     expect(vta.heightPositionOverlayVerdict(ST, 4, null, -1.6, false)).toEqual(ST);
-    // Aktywna ocena GH — nakładka się wycofuje.
-    expect(vta.heightPositionOverlayVerdict(ST, 2.5, -0.1, -2.1, true)).toEqual(ST);
+    // Aktywna ocena GH — nakładka nie zmienia werdyktu, ale od P-WERDYKT raty 6 dopisuje pozycję < 3c
+    // (dotąd milkła: „odpowiedź umiarkowana (GH)" na 1. centylu brzmiała jak dziecko w normie).
+    expect(vta.heightPositionOverlayVerdict(ST, 2.5, -0.1, -2.1, true))
+      .toEqual({ t: 'stable', l: 'stabilny tor wzrastania — nadal poniżej 3. centyla' });
+    expect(vta.heightPositionOverlayVerdict(ST, 4, -0.1, -1.6, true)).toEqual(ST);
     // Werdykty inne niż stabilne — nietknięte.
     const W = { t: 'warn', l: 'deceleracja toru wzrastania' };
     expect(vta.heightPositionOverlayVerdict(W, 2.5, -0.1, -2.1, false)).toEqual(W);
@@ -1289,10 +1292,14 @@ describe('chip odpowiedzi na leczenie (para od startu zamierzonej redukcji)', ()
       context: { red: { a: 192, b: null, label: 'Wegovy' } }
     });
     const wt = m.metrics.find((x) => x.metric === 'weight');
-    expect(wt.total.l).toBe('przyrost masy mimo leczenia redukcyjnego');
+    // P-WERDYKT rata 6 (audyt 2, A4): 4 mies. leczenia w 52-miesięcznym oknie nie czynią z całości oceny
+    // leczenia — całość dostaje werdykt populacyjny z dopiskiem (dotąd „przyrost masy mimo leczenia").
+    expect(wt.total.l).toBe('stabilny tor masy ciała — w tym 4 mies. leczenia redukcyjnego');
     expect(wt.treatment).not.toBeNull();
     expect(wt.treatment.dSds).toBeCloseTo(-0.3, 5);
-    expect(wt.treatment.verdict.l).toBe('redukcja w trakcie leczenia');
+    expect(wt.treatment.aktywne).toBe(true);
+    // −0,3 w 4 mies. = −0,9/rok: odpowiedź, oznaczona „wstępnie" poniżej 6 mies. kursu.
+    expect(wt.treatment.verdict.l).toBe('redukcja w trakcie leczenia — wstępnie (4 mies.)');
     const html = vta.buildPatientHtml(m);
     expect(html).toContain('redukcja w trakcie leczenia');
     expect(html).toContain('okres leczenia (od 16 lat)');

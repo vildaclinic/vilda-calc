@@ -184,8 +184,12 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
     if(!sa||!sb){tr+='<tr><td>'+(m.title||"")+'</td><td colspan="6" class="l">— brak pomiaru w tym punkcie</td></tr>';
       cards+='<div class="vilda-cmp-kpi"><div class="nm">'+(m.title||"")+'</div><div class="ftv">— brak pomiaru w tym punkcie</div></div>';return}
     var dv=sb.val-sa.val,dyr=dt/12,ca=sa.c,cb=sb.c,ip=ca!=null&&cb!=null?interpCh(ca,cb,sa.sd,sb.sd):["flat","",""];
-    var v=verdictCh2(m.metric,sa.sd,sb.sd,ca,cb,ghM,cx?cx.mpSds:null,rdOn);
-    "height"===m.metric&&(v=verdictHtPos(v,cb,cx?cx.mpSds:null,sa.sd,ghM>=6));
+    // P-WERDYKT rata 6 (audyt 2): werdykt pary liczy JEDNA sciezka modulu trajektorii (kursy leczenia, okno
+    // na rok, krotkie okno, dopiski). Bez modulu — dotychczasowa delegacja do silnika (zapas na stronach bez niego).
+    var _TJ=i.VildaTrajectoryAnalysis,_pr=null;
+    if(_TJ&&typeof _TJ.pairVerdictInContext=="function"){try{_pr=_TJ.pairVerdictInContext(m.metric,{sd:sa.sd,c:ca,ageMonths:agA},{sd:sb.sd,c:cb,ageMonths:agB},cx)}catch(_pe){_pr=null}}
+    var v=_pr?_pr.v:verdictCh2(m.metric,sa.sd,sb.sd,ca,cb,ghM,cx?cx.mpSds:null,rdOn);
+    !_pr&&"height"===m.metric&&(v=verdictHtPos(v,cb,cx?cx.mpSds:null,sa.sd,ghM>=6));
     // P-WERDYKT rata 4: przyspieszenie BMI w pasmie typowym. Odstep `dt` jest w miesiacach
     // (ageOf zwraca miesiace) — nakladka sama pilnuje progu krotkiego odcinka.
     "bmi"===m.metric&&(v=verdictBmiSpd(v,Math.round(100*(sb.sd-sa.sd))/100,dt));
@@ -199,7 +203,8 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
     if("weight"===m.metric&&v&&("stable"===v.t||"good"===v.t)){var _bit=null;items.forEach(function(x){x.sc&&"bmi"===x.sc.metric&&(_bit=x)});
       var _b1=_bit?statAt(_bit,a):null,_b2=_bit?statAt(_bit,b):null;
       if(_b1&&_b2&&typeof _b1.sd=="number"&&typeof _b2.sd=="number"){
-        var _vb=verdictCh2("bmi",_b1.sd,_b2.sd,_b1.c,_b2.c,ghM,cx?cx.mpSds:null,rdOn);
+        var _vbr=null;if(_TJ&&typeof _TJ.pairVerdictInContext=="function"){try{_vbr=_TJ.pairVerdictInContext("bmi",{sd:_b1.sd,c:_b1.c,ageMonths:agA},{sd:_b2.sd,c:_b2.c,ageMonths:agB},cx)}catch(_pe2){_vbr=null}}
+        var _vb=_vbr?_vbr.v:verdictCh2("bmi",_b1.sd,_b2.sd,_b1.c,_b2.c,ghM,cx?cx.mpSds:null,rdOn);
         // Poziom BMI punktu B — wsad hamulca catch-upu. Wskaznik Cole'a liczy WYLACZNIE
         // silnik BMI (P-BMI); tu podajemy mu tylko wartosc, wiek, plec i zrodlo, tak samo
         // jak robi to statAt wyzej. Brak silnika = milczy samo ramie Cole'a.

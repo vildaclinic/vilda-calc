@@ -94,7 +94,8 @@ describe('pairVerdictInContext — jedna ścieżka werdyktu pary', () => {
 
   it('bez kontekstu = verdictForPair + nakładka pozycyjna (jak odcinki trajektorii)', () => {
     const r = J.pairVerdictInContext('height', A, B, null);
-    expect(r).toEqual({ v: J.heightPositionOverlayVerdict(J.verdictForPair('height', A.sd, B.sd, A.c, B.c), B.c, null, A.sd, false), ghOn: false, rdOn: false, ghM: 0, mphOn: false });
+    // P-WERDYKT rata 6: wynik niesie też kurs / okno mieszane / krótkie okno (tu: nic z tego).
+    expect(r).toEqual({ v: J.heightPositionOverlayVerdict(J.verdictForPair('height', A.sd, B.sd, A.c, B.c), B.c, null, A.sd, false), ghOn: false, rdOn: false, ghM: 0, mphOn: false, kurs: null, mieszane: false, dopisek: '', krotkie: false });
     expect(r.v.l).toBe('stabilny tor wzrastania');
     expect(J.pairVerdictInContext('height', A, B, { mpSds: null, gh: null, red: null })).toEqual(r);
   });
@@ -104,8 +105,9 @@ describe('pairVerdictInContext — jedna ścieżka werdyktu pary', () => {
     expect(r.ghM).toBe(7);
     expect(r.ghOn).toBe(true);
     expect(r.mphOn).toBe(false);
-    expect(r.v).toEqual(J.verdictForPairCtx('height', A.sd, B.sd, A.c, B.c, 7, null, false));
-    expect(r.v.l).toBe('słaba odpowiedź na GH — do oceny');
+    // P-WERDYKT rata 6: odpowiedź na GH liczona na rok z długością okna (7 mies. → „wstępnie").
+    expect(r.v).toEqual(J.verdictForPairCtx('height', A.sd, B.sd, A.c, B.c, 7, null, false, 7));
+    expect(r.v.l).toBe('słaba odpowiedź na GH — do oceny, wstępnie (7 mies.)');
   });
 
   it('GH zakończone przed odcinkiem: nakładanie 0 → werdykt populacyjny', () => {
@@ -129,8 +131,13 @@ describe('pairVerdictInContext — jedna ścieżka werdyktu pary', () => {
     expect(w.v).toEqual({ t: 'good', l: 'redukcja w trakcie leczenia' });
     const h = J.pairVerdictInContext('height', { sd: 0.1, c: 54, ageMonths: 144 }, { sd: 0.1, c: 54, ageMonths: 150 }, ctx);
     expect(h.rdOn).toBe(false);
+    // P-WERDYKT rata 6: pomiar miesiąc przed startem kursu jest pomiarem startowym (tolerancja 6 mies.), okno 3 mies.
+    // w kursie dostaje ocenę wstępną; okno 2 mies. jest poniżej progu odcinka i redukcji.
     const krotko = J.pairVerdictInContext('weight', { sd: 2.1, c: 98, ageMonths: 143 }, { sd: 1.7, c: 95, ageMonths: 146 }, ctx);
-    expect(krotko.rdOn).toBe(false);
+    expect(krotko.rdOn).toBe(true);
+    expect(krotko.v.l).toBe('redukcja bardzo szybka — do kontroli, wstępnie (3 mies.)');
+    const zaKrotko = J.pairVerdictInContext('weight', { sd: 2.1, c: 98, ageMonths: 143 }, { sd: 1.9, c: 95, ageMonths: 145 }, ctx);
+    expect(zaKrotko.rdOn).toBe(false);
   });
 
   it('analyze() liczy odcinki tą samą funkcją (regresja: wynik z kontekstem bez zmian)', () => {
@@ -176,7 +183,7 @@ describe('karta porównania z poprzednim pomiarem: werdykty w kontekście', () =
     const m = win.VildaSummaryCards.__porownanieZPoprzednim(PREV, CUR, { plec: 'M', zrodlo: 'OLAF', dorosly: false, ctx });
     const w = m.wiersze.find((x) => x.klucz === 'wzrost');
     expect(w.werdykt).toEqual(J.pairVerdictInContext('height', { sd: -0.99, c: 16, ageMonths: 98 }, { sd: -1.0, c: 16, ageMonths: 105 }, ctx).v);
-    expect(w.werdykt.l).toBe('słaba odpowiedź na GH — do oceny');
+    expect(w.werdykt.l).toBe('słaba odpowiedź na GH — do oceny, wstępnie (7 mies.)');
     expect(w.ton).toBe('improve');
     expect(m.kontekst).toEqual({ gh: true, ghM: 7, mph: false, red: false, redLabel: null });
   });

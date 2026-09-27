@@ -19,6 +19,16 @@
  *    z warunkiem niedawności (ostatni odcinek ≥ 6 mies. ma ΔSDS ≥ +0,5) i tej samej siatki; bez banera;
  *  - kontekst flagi w dół (P-TRAJ rata T4): wariant P2/R/P1/P0/D z wieku, stadium Tannera i mpSDS
  *    (redFlag.kontekst) — JEDNO źródło tonu i treści banera karty, panelu, Karty pacjenta, epikryzy i narracji;
+ *    od raty 6 werdyktów także wariant G (aktywny kurs GH, od jego startu wzrost nadrabia ≥ +0,2 SDS);
+ *  - KURSY leczenia (P-WERDYKT rata 6, audyt 2, decyzja właściciela 2026-09-27): kontekst niesie listę kursów
+ *    GH i leczenia otyłości (przerwa ≥ KURS_PRZERWA_MIN_M między „end" a kolejnym punktem = osobny kurs; dotąd
+ *    jeden przedział od pierwszego „start" do ostatniego „end", z przerwą liczoną jako leczenie). Werdykt
+ *    odpowiedzi na leczenie dostaje WYŁĄCZNIE okno leżące w jednym kursie (start ≥ początek − KURS_START_TOL_M,
+ *    koniec ≤ koniec kursu, pokrycie ≥ KURS_POKRYCIE_MIN okna); okno mieszane dostaje werdykt populacyjny
+ *    z dopiskiem „w tym N mies. na GH / leczenia". Dotąd 6 mies. nakładania w 36-miesięcznym oknie wystarczało,
+ *    by całość brzmiała „dobra odpowiedź na GH". Chip leczenia biegnie od pomiaru na starcie do OSTATNIEGO
+ *    POMIARU W KURSIE (nie do ostatniego pomiaru w ogóle); po zakończeniu kursu zostaje linią, a nagłówek wraca
+ *    do fazy/całości. Faza nie przechodzi przez granicę kursu. Chip masy przechodzi przez nakładkę masa↔BMI;
  *  - tempo wzrastania: od SW 1.0.944 liczy je WYŁĄCZNIE vilda_tempo_wzrastania.js
  *    (window.VildaTempoWzrastania, P-TEMPO) — dobór pary, wzór, drabinka wiekowa i hierarchia
  *    okołopokwitaniowa (Tanner → wiek kostny → reguła generyczna) są tam, ten plik tylko woła.
@@ -28,7 +38,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '28';
+  var VERSION = '29';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -41,6 +51,18 @@
     // przejmuje nagłówka. 6 mies. = to samo okno, co niedawność flagi w górę (UPFLAG_RECENT_MIN_M) i ocena tempa.
     FAZA_PLASKI_DSDS: 0.1,
     FAZA_MIN_M: 6,
+    // P-WERDYKT rata 6 (audyt 2): kursy leczenia. Pomiar na starcie kursu = ostatni pomiar nie starszy niż
+    // KURS_START_TOL_M przed startem (inaczej pierwszy pomiar do KURS_START_TOL_M po starcie); starszy pomiar
+    // niósłby miesiące bez leczenia do werdyktu odpowiedzi. Okno „w kursie" musi być pokryte leczeniem
+    // co najmniej w połowie (KURS_POKRYCIE_MIN) — odcinek start−5 → start+1 mies. nie jest oceną leczenia.
+    // Przerwa krótsza niż KURS_PRZERWA_MIN_M między „end" a kolejnym punktem to ten sam kurs (zmiana dawki,
+    // wpis porządkowy), dłuższa — osobny kurs (ta sama liczba, co próg nakładania redukcji ≥ 3 mies.).
+    KURS_START_TOL_M: 6,
+    KURS_POKRYCIE_MIN: 0.5,
+    KURS_PRZERWA_MIN_M: 3,
+    // Flaga w dół z wariantem G: od startu aktywnego kursu GH wzrost nadrobił ≥ +0,2 SDS (próg „ruchu"
+    // słownika werdyktów) — spadek jest sprzed leczenia i baner nie ma brzmieć jak nierozpoznany niedobór.
+    REDFLAG_GH_NADRABIA_DSDS: 0.2,
     REDFLAG_DSDS: -1.0,
     // P-RAPORT rata T3 (decyzja właściciela 2026-09-24): baza flagi w dół od 36 mies. (dotąd 24) i ta sama siatka
     // bazy i końca, jak we fladze w górę. Przesuwanie się po centylach w 2.–3. r.ż. jest częste i fizjologiczne
@@ -227,9 +249,9 @@
   // gm: miesiące terapii GH w odcinku (ocena odpowiedzi od gm>=6); mp: SDS kanału rodzicielskiego
   // (MPH); rd: zamierzona redukcja aktywna w odcinku (panel: nakładanie >=3 mies.; nigdy przy
   // niedoborze ca<10).
-  function verdictForPairCtx(met, sa0, sb0, ca, cb, gm, mp, rd) {
+  function verdictForPairCtx(met, sa0, sb0, ca, cb, gm, mp, rd, oknoM) {
     var S = silnikWerdyktu();
-    return S ? S.zKontekstem(met, sa0, sb0, ca, cb, gm, mp, rd) : null;
+    return S ? S.zKontekstem(met, sa0, sb0, ca, cb, gm, mp, rd, oknoM) : null;
   }
 
   function weightBmiOverlayVerdict(v, dW, vB, dB, poziomBmi) {
@@ -267,8 +289,8 @@
 
   // Zastosowanie nakładki do gotowych metryk: odcinki wagi parowane z odcinkami BMI po wieku
   // granic; po zmianach przeliczany jest najpoważniejszy odcinek wagi (ta sama reguła co
-  // w analyzeMetric). Werdykty chipu leczenia (redukcja) pozostają nietknięte — ścieżka rd
-  // nie zwraca „stabilnych" werdyktów przy ΔSDS ≥ 0,2, więc warunek nakładki ich nie obejmuje.
+  // w analyzeMetric). Od raty 6 werdyktów także okno chipu leczenia masy przechodzi przez nakładkę
+  // (audyt 2, A7: chip masy brzmiał „stabilnie" przy BMI 95c, bo omijał regułę poziomu z raty 5).
   function applyWeightBmiConsistency(metrics, sex, source, ctx) {
     var wt = null, bm = null;
     metrics.forEach(function (m) {
@@ -316,6 +338,7 @@
       okno.verdict = weightBmiOverlayVerdict(okno.verdict, okno.dSds, vB, dB2, poziomBmiPunktu(bb, sex, source));
     }
     if (wt.faza && !wt.faza.zaKrotka) { nalozNaOkno(wt.faza); nalozNaOkno(wt.faza.wczesniej); }
+    if (wt.treatment) nalozNaOkno(wt.treatment);
     if (changed) {
       var sev = { bad: 2, warn: 1 }, worst = null;
       wt.segments.forEach(function (s) {
@@ -340,6 +363,8 @@
     var mp = typeof raw.mpSds === 'number' && isFinite(raw.mpSds) ? raw.mpSds : null;
     var gh = raw.gh && raw.gh.a != null && isFinite(raw.gh.a) ? { a: raw.gh.a, b: raw.gh.b != null && isFinite(raw.gh.b) ? raw.gh.b : null } : null;
     var red = raw.red && raw.red.a != null && isFinite(raw.red.a) ? { a: raw.red.a, b: raw.red.b != null && isFinite(raw.red.b) ? raw.red.b : null, label: raw.red.label || null } : null;
+    // Rata 6: lista kursów; bez niej pojedynczy przedział jest jednym kursem (stare wywołania i testy).
+    var ghKursy = kursyZListy(raw.ghKursy, gh), redKursy = kursyZListy(raw.redKursy, red);
     var ts = num(raw.tannerStage);
     ts = ts != null && ts >= 1 && ts <= 5 ? Math.round(ts) : null;
     var tsAt = num(raw.tannerAtAgeMonths);
@@ -348,7 +373,60 @@
       ba = { baMonths: num(raw.boneAge.baMonths), atAgeMonths: num(raw.boneAge.atAgeMonths) };
     }
     if (mp == null && !gh && !red && ts == null && !ba) return null;
-    return { mpSds: mp, gh: gh, red: red, tannerStage: ts, tannerAtAgeMonths: tsAt, tannerStale: false, boneAge: ba };
+    return { mpSds: mp, gh: gh, red: red, ghKursy: ghKursy, redKursy: redKursy, tannerStage: ts, tannerAtAgeMonths: tsAt, tannerStale: false, boneAge: ba };
+  }
+  function kursyZListy(lista, pojedynczy) {
+    var out = [];
+    if (Array.isArray(lista)) {
+      lista.forEach(function (k) {
+        if (!k || k.a == null || !isFinite(k.a)) return;
+        out.push({ a: k.a, b: k.b != null && isFinite(k.b) ? k.b : null, label: k.label || null });
+      });
+    }
+    if (!out.length && pojedynczy) out.push({ a: pojedynczy.a, b: pojedynczy.b, label: pojedynczy.label || null });
+    out.sort(function (x, y) { return x.a - y.a; });
+    return out;
+  }
+  // Kursy z kontekstu ('gh' | 'red'); zapas dla kontekstu spoza normalizeContext (sam przedział).
+  function kursyZ(cx, key) {
+    if (!cx) return [];
+    var lista = cx[key + 'Kursy'];
+    if (Array.isArray(lista) && lista.length) return lista;
+    var jeden = cx[key];
+    return jeden && jeden.a != null && isFinite(jeden.a) ? [jeden] : [];
+  }
+  function overlapKursy(kursy, a0, b0) {
+    var s = 0;
+    for (var i = 0; i < kursy.length; i++) s += overlapM(kursy[i], a0, b0);
+    return s;
+  }
+  // Kurs, w którym okno [a0,b0] leży W CAŁOŚCI (parametry KURS_* w P). null = okno poza kursem albo mieszane.
+  function kursOkna(kursy, a0, b0) {
+    if (!(b0 > a0)) return null;
+    for (var i = 0; i < kursy.length; i++) {
+      var k = kursy[i];
+      if (a0 < k.a - P.KURS_START_TOL_M) continue;
+      if (k.b != null && b0 > k.b) continue;
+      if (overlapM(k, a0, b0) < P.KURS_POKRYCIE_MIN * (b0 - a0)) continue;
+      return k;
+    }
+    return null;
+  }
+  // Pomiar na starcie kursu i ostatni pomiar w kursie (reguła KURS_START_TOL_M). null, gdy brak pomiaru startowego.
+  function oknoKursu(kurs, series) {
+    if (!kurs || !series || !series.length) return null;
+    var tb = null, te = null, i;
+    for (i = 0; i < series.length; i++) {
+      if (series[i].ageMonths >= kurs.a - P.KURS_START_TOL_M && series[i].ageMonths <= kurs.a) tb = series[i];
+    }
+    if (!tb) for (i = 0; i < series.length; i++) {
+      if (series[i].ageMonths > kurs.a && series[i].ageMonths <= kurs.a + P.KURS_START_TOL_M) { tb = series[i]; break; }
+    }
+    if (!tb) return null;
+    if (kurs.b == null) te = series[series.length - 1];
+    else for (i = 0; i < series.length; i++) { if (series[i].ageMonths <= kurs.b) te = series[i]; }
+    if (!te || te === tb || te.ageMonths <= tb.ageMonths) return null;
+    return { a: tb, b: te, aktywne: kurs.b == null };
   }
 
   // ── Kontekst kliniczny — JEDEN budowniczy dla wszystkich kart (P-OSTATNI-2b, 2026-09-17) ──
@@ -368,19 +446,36 @@
       return p && (p.type === 'start' || p.type === 'continue' || p.type === 'end');
     });
   }
-  function therapyInterval(points) {
+  // Rata 6: KURSY leczenia z punktów monitora. Punkty posortowane po wieku; kurs otwiera pierwszy punkt
+  // (albo punkt po zamkniętym kursie z przerwą ≥ KURS_PRZERWA_MIN_M), zamyka punkt „end". Punkt po „end"
+  // z krótszą przerwą wraca do tego samego kursu. Etykieta kursu = preparat z jego ostatniego punktu.
+  function therapyIntervals(points) {
     try {
-      var pts = therapyPointsOf(points);
-      if (!pts.length) return null;
-      var ages = pts.map(therapyAgeM).filter(function (a) { return a > 0; });
-      if (!ages.length) return null;
-      var st = null, en = null;
+      var pts = therapyPointsOf(points).filter(function (p) { return therapyAgeM(p) > 0; })
+        .sort(function (x, y) { return therapyAgeM(x) - therapyAgeM(y); });
+      var out = [], cur = null;
       for (var i = 0; i < pts.length; i++) {
-        if (pts[i].type === 'start' && !st) st = pts[i];
-        if (pts[i].type === 'end') en = pts[i];
+        var p = pts[i], age = therapyAgeM(p);
+        if (cur && cur.b != null) {
+          if (age - cur.b >= P.KURS_PRZERWA_MIN_M) cur = null;
+          else cur.b = null;
+        }
+        if (!cur) { cur = { a: age, b: null, label: null }; out.push(cur); }
+        if (p.type === 'end') cur.b = age;
+        var d = drugShortName(p.drug);
+        if (d) cur.label = d;
       }
-      return { a: st ? therapyAgeM(st) : Math.min.apply(null, ages), b: en ? therapyAgeM(en) : null, active: !en };
-    } catch (e) { return null; }
+      out.forEach(function (k) { k.active = k.b == null; });
+      return out;
+    } catch (e) { return []; }
+  }
+  // Przedział-koperta (pierwszy start → ostatni koniec) — zachowany dla starszych konsumentów (pasek
+  // kontekstu panelu porównania); werdykty liczą na kursach.
+  function therapyInterval(points) {
+    var k = therapyIntervals(points);
+    if (!k.length) return null;
+    var last = k[k.length - 1];
+    return { a: k[0].a, b: last.b, active: last.b == null };
   }
   function drugShortName(drug) {
     var a = String(drug == null ? '' : drug).trim();
@@ -433,10 +528,17 @@
   function buildClinicalContext(input) {
     var inp = input && typeof input === 'object' ? input : {};
     var out = { mpSds: null, mph: null, mphC: null, gh: null, red: null };
-    var gh = therapyInterval(inp.ghTherapyPoints);
-    if (gh) out.gh = { a: gh.a, b: gh.b };
-    var rd = therapyInterval(inp.obesityTherapyPoints);
-    if (rd) out.red = { a: rd.a, b: rd.b, label: reductionLabel(inp.obesityTherapyPoints) };
+    var ghK = therapyIntervals(inp.ghTherapyPoints);
+    if (ghK.length) {
+      out.gh = { a: ghK[0].a, b: ghK[ghK.length - 1].b };
+      out.ghKursy = ghK.map(function (k) { return { a: k.a, b: k.b, label: null }; });
+    }
+    var rdK = therapyIntervals(inp.obesityTherapyPoints);
+    if (rdK.length) {
+      var lbl = reductionLabel(inp.obesityTherapyPoints);
+      out.red = { a: rdK[0].a, b: rdK[rdK.length - 1].b, label: lbl };
+      out.redKursy = rdK.map(function (k) { return { a: k.a, b: k.b, label: k.label || lbl }; });
+    }
     var mp = num(inp.mpSds);
     if (mp != null) out.mpSds = mp;
     else {
@@ -457,19 +559,45 @@
   // porownania z poprzednim pomiarem. a/b: {sd, c, ageMonths}. GH liczone tylko dla wzrostu (odpowiedz
   // na terapie przy >=6 mies. nakladania w odcinku), redukcja tylko dla wagi/BMI (nakladanie >=3 mies.),
   // nakladka pozycyjna wzrostu poza GH. Zwraca {v, ghOn, rdOn, ghM, mphOn}.
+  // Rata 6: (1) krótkie okno wzrostu z dużą zmianą → „do weryfikacji pomiaru" przed każdą regułą;
+  // (2) odpowiedź na leczenie tylko dla okna W JEDNYM KURSIE (kursOkna), liczona na rok (oknoM do silnika);
+  // (3) okno w kursie GH krótsze niż GH_OKNO_MIN_M → „za wcześnie na ocenę"; (4) okno mieszane → werdykt
+  // populacyjny/MPH z dopiskiem „w tym N mies. na GH / leczenia". Zwraca też `kurs` (do granic faz).
   function pairVerdictInContext(met, a, b, ctx) {
     var cx = ctx && typeof ctx === 'object' ? ctx : null;
+    var S = silnikWerdyktu();
+    var oknoM = b.ageMonths - a.ageMonths;
+    var kr = S && typeof S.krotkieOkno === 'function' ? S.krotkieOkno(met, a.sd, b.sd, oknoM) : null;
+    if (kr) return { v: kr, ghOn: false, rdOn: false, ghM: 0, mphOn: false, kurs: null, mieszane: false, dopisek: '', krotkie: true };
     if (!cx) {
       var v0 = verdictForPair(met, a.sd, b.sd, a.c, b.c);
       if (met === 'height') v0 = heightPositionOverlayVerdict(v0, b.c, null, a.sd, false);
-      return { v: v0, ghOn: false, rdOn: false, ghM: 0, mphOn: false };
+      return { v: v0, ghOn: false, rdOn: false, ghM: 0, mphOn: false, kurs: null, mieszane: false, dopisek: '', krotkie: false };
     }
-    var ghM = met === 'height' ? overlapM(cx.gh, a.ageMonths, b.ageMonths) : 0;
-    var rdOn = met !== 'height' && overlapM(cx.red, a.ageMonths, b.ageMonths) >= 3;
     var mp = typeof cx.mpSds === 'number' && isFinite(cx.mpSds) ? cx.mpSds : null;
-    var v = verdictForPairCtx(met, a.sd, b.sd, a.c, b.c, ghM, mp, rdOn);
-    if (met === 'height') v = heightPositionOverlayVerdict(v, b.c, mp, a.sd, ghM >= 6);
-    return { v: v, ghOn: ghM >= 6, rdOn: rdOn && a.c >= 10, ghM: ghM, mphOn: met === 'height' && ghM < 6 && mp != null };
+    var kursyGH = met === 'height' ? kursyZ(cx, 'gh') : [];
+    var kursyRd = met !== 'height' ? kursyZ(cx, 'red') : [];
+    var kG = kursOkna(kursyGH, a.ageMonths, b.ageMonths);
+    var kR = kursOkna(kursyRd, a.ageMonths, b.ageMonths);
+    var ghMix = !kG ? overlapKursy(kursyGH, a.ageMonths, b.ageMonths) : 0;
+    var rdMix = !kR ? overlapKursy(kursyRd, a.ageMonths, b.ageMonths) : 0;
+    var PR = S ? S.PROGI : null;
+    var ghMinM = PR && PR.GH_OKNO_MIN_M != null ? PR.GH_OKNO_MIN_M : 6;
+    var rdMinM = PR && PR.RD_OKNO_MIN_M != null ? PR.RD_OKNO_MIN_M : 3;
+    var ghOn = !!kG && oknoM >= ghMinM;
+    var rdOn = !!kR && oknoM >= rdMinM;
+    var v;
+    if (kG && !ghOn && S && typeof S.zaWczesnieGH === 'function') v = S.zaWczesnieGH(oknoM);
+    else v = verdictForPairCtx(met, a.sd, b.sd, a.c, b.c, ghOn ? oknoM : 0, mp, rdOn, oknoM);
+    if (met === 'height') v = heightPositionOverlayVerdict(v, b.c, mp, a.sd, !!kG);
+    // Dopisek okna mieszanego wraca też w `dopisek` — nakładki (masa↔BMI, prędkość BMI) budują nowy obiekt werdyktu
+    // i zgubiłyby go; analyze() dopisuje go ponownie na końcu (dopiszMieszane).
+    var dopisek = '';
+    if (ghMix > 0) dopisek = 'w tym ' + Math.round(ghMix) + ' mies. na GH';
+    if (rdMix > 0) dopisek = (dopisek ? dopisek + ', ' : '') + 'w tym ' + Math.round(rdMix) + ' mies. leczenia redukcyjnego';
+    if (v && dopisek && S && typeof S.zOgonem === 'function') v = S.zOgonem(v, dopisek);
+    return { v: v, ghOn: ghOn, rdOn: rdOn && a.c >= 10, ghM: kG ? oknoM : ghMix, mphOn: met === 'height' && !kG && mp != null,
+      kurs: kG || kR || null, mieszane: !!dopisek, dopisek: dopisek, krotkie: false };
   }
 
   // Opis strefy dla pary — transkrypcja interpCh panelu (zwraca sam tekst strefy).
@@ -545,7 +673,11 @@
     var rb = mp != null ? Math.round(100 * (rf.baseSd - mp)) / 100 : null;
     var rd = mp != null ? Math.round(100 * (rf.lastSd - mp)) / 100 : null;
     var k = { wariant: 'D', ton: 'danger', tanner: ts, roznicaBaza: rb, roznicaDzis: rd, fraza: '' };
-    if (wiek >= P.REDFLAG_POKW_OD_M && (ts === 2 || ts === 3)) {
+    if (rf.ghNadrabia) {
+      // Rata 6 werdyktów: spadek jest sprzed aktywnego kursu GH, od jego startu wzrost nadrabia.
+      k.wariant = 'G'; k.ton = 'warn';
+      k.fraza = 'sprzed leczenia GH — od jego startu w wieku ' + fmtAgeGen(rf.ghNadrabia.odMies) + ' wzrost nadrabia (ΔhSDS ' + fmtP(rf.ghNadrabia.dSds) + ')';
+    } else if (wiek >= P.REDFLAG_POKW_OD_M && (ts === 2 || ts === 3)) {
       k.wariant = 'P2';
       k.fraza = 'mimo cech dojrzewania (Tanner ' + TANNER_RZYM[ts - 1] + ')';
     } else if (rb != null && rb >= P.REDFLAG_KU_CELOWI_BAZA && rd > P.REDFLAG_KU_CELOWI_DZIS) {
@@ -572,6 +704,8 @@
     while (i - 1 >= 0) {
       var sg = segments[i - 1], c = cls(sg.dSds);
       var zgodny = lastC === 0 ? c === 0 : (c === lastC || (c === 0 && sg.gapM < P.FAZA_MIN_M));
+      // Rata 6: faza nie przechodzi przez granicę kursu leczenia (odcinek w kursie vs poza/inny kurs).
+      if (zgodny && (sg.kurs || null) !== (segments[i].kurs || null)) zgodny = false;
       if (!zgodny) break;
       i -= 1;
     }
@@ -586,9 +720,24 @@
     var pw = wg >= P.SEGMENT_MIN_GAP_M ? pairVerdict(first, a) : null;
     return {
       zaKrotka: false, pokaz: false, a: a, b: b, gapM: gapM, dSds: dSds,
-      verdict: pv ? pv.v : null, ghOn: pv ? pv.ghOn : false, rdOn: pv ? pv.rdOn : false,
-      wczesniej: { a: first, b: a, gapM: wg, dSds: Math.round(100 * (a.sd - first.sd)) / 100, verdict: pw ? pw.v : null }
+      verdict: pv ? pv.v : null, ghOn: pv ? pv.ghOn : false, rdOn: pv ? pv.rdOn : false, dopisek: pv ? pv.dopisek || '' : '',
+      wczesniej: { a: first, b: a, gapM: wg, dSds: Math.round(100 * (a.sd - first.sd)) / 100, verdict: pw ? pw.v : null, dopisek: pw ? pw.dopisek || '' : '' }
     };
+  }
+
+  // Rata 6: nakładki budują nowy obiekt werdyktu i gubią dopisek okna mieszanego — tu wraca na koniec etykiety.
+  function dopiszMieszane(m) {
+    var S = silnikWerdyktu();
+    if (!S || typeof S.zOgonem !== 'function') return;
+    function dopisz(holder, dop) {
+      if (!holder || !holder.verdict || !dop) return;
+      var l = String(holder.verdict.l || '');
+      if (l.slice(-dop.length) === dop) return;
+      holder.verdict = S.zOgonem(holder.verdict, dop);
+    }
+    m.segments.forEach(function (sg) { dopisz(sg, sg.dopisek); });
+    if (m.total && m.totalDopisek) { var t = { verdict: m.total }; dopisz(t, m.totalDopisek); m.total = t.verdict; }
+    if (m.faza && !m.faza.zaKrotka) { dopisz(m.faza, m.faza.dopisek); dopisz(m.faza.wczesniej, m.faza.wczesniej && m.faza.wczesniej.dopisek); }
   }
 
   // Czy faza mówi coś innego niż reszta obserwacji. Podział „od 10 lat: stabilny tor / wcześniej: stabilny tor"
@@ -602,9 +751,13 @@
   }
 
   // Werdykt nagłówka wiersza: chip leczenia > ostatnia faza (≥ FAZA_MIN_M, z werdyktem, informatywna) > całość.
+  // Chip leczenia przejmuje nagłówek tylko przy AKTYWNYM kursie (rata 6: zakończony kurs zostaje linią).
+  function chipNaglowka(m) {
+    return !!(m && m.treatment && m.treatment.verdict && m.treatment.aktywne);
+  }
   function naglowekMetryki(m) {
     if (!m) return null;
-    if (m.treatment && m.treatment.verdict) return m.treatment.verdict;
+    if (chipNaglowka(m)) return m.treatment.verdict;
     if (m.faza && !m.faza.zaKrotka && m.faza.pokaz && m.faza.verdict) return m.faza.verdict;
     return m.total;
   }
@@ -625,7 +778,7 @@
     function pairVerdict(a0, b0) {
       // P-OSTATNI-2b: ta sama funkcja, ktorej uzywa karta porownania z poprzednim pomiarem.
       var r = pairVerdictInContext(met.key, a0, b0, ctx);
-      return { v: r.v, ghOn: r.ghOn, rdOn: r.rdOn };
+      return { v: r.v, ghOn: r.ghOn, rdOn: r.rdOn, kurs: r.kurs || null, mieszane: !!r.mieszane, dopisek: r.dopisek || '' };
     }
 
     var segments = [];
@@ -641,13 +794,17 @@
         zone: zoneForPair(a.c, b.c, a.sd, b.sd),
         verdict: pv ? pv.v : null,
         ghOn: pv ? pv.ghOn : false,
-        rdOn: pv ? pv.rdOn : false
+        rdOn: pv ? pv.rdOn : false,
+        kurs: pv ? pv.kurs : null,
+        mieszane: pv ? pv.mieszane : false,
+        dopisek: pv ? pv.dopisek : ''
       });
     }
 
     var first = series[0], last = series[series.length - 1];
     var totalPv = (last.ageMonths - first.ageMonths) >= P.SEGMENT_MIN_GAP_M ? pairVerdict(first, last) : null;
     var total = totalPv ? totalPv.v : null;
+    var totalDopisek = totalPv ? totalPv.dopisek : '';
 
     // P-WERDYKT rata 4: przyspieszenie BMI w paśmie typowym. Tylko dla BMI — dla masy-do-wieku
     // ten sam dryf w górę może znaczyć po prostu, że dziecko rośnie. Nakładka odzywa się
@@ -689,7 +846,16 @@
         var dh = Math.round(100 * (last.sd - base.sd)) / 100;
         if (dh <= P.REDFLAG_DSDS) redFlag = { dSds: dh, baseAgeMonths: base.ageMonths, baseC: base.c, baseSd: base.sd,
           lastAgeMonths: last.ageMonths, lastC: last.c, lastSd: last.sd, siatka: last.siatka || null };
-        if (redFlag) redFlag.kontekst = redFlagKontekst(redFlag, sex, ctx);
+        if (redFlag) {
+          // Rata 6: aktywny kurs GH, od którego startu wzrost nadrabia — wariant G kontekstu flagi.
+          var kGH = kursyZ(ctx, 'gh'); var kA = kGH.length ? kGH[kGH.length - 1] : null;
+          var oG = kA && kA.b == null ? oknoKursu(kA, series) : null;
+          if (oG && oG.b === last && oG.a.ageMonths > base.ageMonths) {
+            var dG = Math.round(100 * (last.sd - oG.a.sd)) / 100;
+            if (dG >= P.REDFLAG_GH_NADRABIA_DSDS) redFlag.ghNadrabia = { odMies: oG.a.ageMonths, dSds: dG };
+          }
+          redFlag.kontekst = redFlagKontekst(redFlag, sex, ctx);
+        }
       }
     }
 
@@ -718,23 +884,25 @@
     // Chip odpowiedzi na leczenie (decyzja właściciela 2026-08-09): dla masy/BMI przy aktywnej
     // zamierzonej redukcji werdykt wiersza liczony od pomiaru na starcie leczenia do ostatniego
     // (te same progi rd co panel porównania); całość okresu pozostaje w total.
+    // Rata 6 (audyt 2, A3/A6): okno chipu = OSTATNI KURS, od pomiaru na starcie (KURS_START_TOL_M) do ostatniego
+    // pomiaru W KURSIE; po zakończeniu kursu chip zostaje linią (aktywne=false) i nie przejmuje nagłówka.
     var treatment = null;
-    if (met.key !== 'height' && ctx && ctx.red && ctx.red.a != null) {
-      var tb = null;
-      for (var t9 = 0; t9 < series.length; t9++) { if (series[t9].ageMonths <= ctx.red.a) tb = series[t9]; }
-      if (!tb) tb = series[0];
-      if (tb !== last && (last.ageMonths - tb.ageMonths) >= P.SEGMENT_MIN_GAP_M
-        && overlapM(ctx.red, tb.ageMonths, last.ageMonths) >= 3) {
-        var tp = pairVerdict(tb, last);
+    if (met.key !== 'height' && ctx) {
+      var kR = kursyZ(ctx, 'red'); var kOst = kR.length ? kR[kR.length - 1] : null;
+      var ok = kOst ? oknoKursu(kOst, series) : null;
+      if (ok && (ok.b.ageMonths - ok.a.ageMonths) >= P.SEGMENT_MIN_GAP_M) {
+        var tp = pairVerdict(ok.a, ok.b);
         if (tp && tp.v && tp.rdOn) {
-          treatment = { a: tb, b: last, dSds: Math.round(100 * (last.sd - tb.sd)) / 100, verdict: tp.v };
+          treatment = { a: ok.a, b: ok.b, dSds: Math.round(100 * (ok.b.sd - ok.a.sd)) / 100, verdict: tp.v,
+            aktywne: ok.aktywne, kursOd: kOst.a, kursDo: kOst.b, label: kOst.label || (ctx.red && ctx.red.label) || null, kursow: kR.length };
+          if (met.key === 'bmi') treatment.verdict = bmiSpeedOverlayVerdict(treatment.verdict, treatment.dSds, ok.b.ageMonths - ok.a.ageMonths);
         }
       }
     }
     return {
       metric: met.key, title: met.title, unit: met.unit, dec: met.dec,
       series: series, segments: segments,
-      first: first, last: last, total: total, worst: worst, redFlag: redFlag, upFlag: upFlag,
+      first: first, last: last, total: total, totalDopisek: totalDopisek, worst: worst, redFlag: redFlag, upFlag: upFlag,
       faza: faza,
       treatment: treatment,
       tone: toneCent(met.key, last.c)
@@ -799,6 +967,8 @@
     });
     if (!metrics.length) return null;
     applyWeightBmiConsistency(metrics, sex, source, ctx);
+    // P-WERDYKT rata 6: dopisek okna mieszanego („w tym N mies. na GH / leczenia") po wszystkich nakładkach.
+    metrics.forEach(dopiszMieszane);
     // P-WERDYKT rata 5: nagłówek wiersza (chip leczenia > ostatnia faza > całość) — jedno pole dla wszystkich konsumentów.
     metrics.forEach(function (m) { ustalPokazFazy(m); m.naglowek = naglowekMetryki(m); });
     var lastAgeM = pts[pts.length - 1].ageMonths;
@@ -891,7 +1061,9 @@
         + ' — obraz deceleracji wzrastania' + CARD_ALERT_LINK + '</p>';
     }
     var t;
-    if (k.wariant === 'R') {
+    if (k.wariant === 'G') {
+      t = ' ' + esc(k.fraza) + ' — ocena odpowiedzi na leczenie w wierszu wzrostu; wskazana kontrola tempa wzrastania w kolejnych pomiarach.';
+    } else if (k.wariant === 'R') {
       t = ' ' + esc(k.fraza) + ' — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach.';
     } else if (k.wariant === 'P1') {
       t = ' ' + esc(k.fraza) + ' — obraz częsty przy późniejszym skoku pokwitaniowym (m.in. konstytucjonalne opóźnienie wzrastania i dojrzewania); wskazana kontrola tempa wzrastania i ocena wieku kostnego.';
@@ -908,6 +1080,7 @@
       return { ton: 'danger', tekst: 'Istotne obniżenie pozycji centylowej wzrostu ' + zm + (k.fraza ? ' ' + esc(k.fraza) : '') + ' — obraz deceleracji wzrastania' };
     }
     var zal = k.wariant === 'R' ? 'kontrola tempa wzrastania'
+      : k.wariant === 'G' ? 'ocena odpowiedzi na leczenie w wierszu wzrostu'
       : k.wariant === 'P1' ? 'obraz częsty przy późniejszym skoku pokwitaniowym; kontrola tempa wzrastania, wiek kostny'
         : 'uzupełnij stadium Tannera; przy cechach dojrzewania wskazana ocena endokrynologiczna';
     var fr = k.wariant === 'P0' ? 'w wieku okołopokwitaniowym' : esc(k.fraza);
@@ -934,18 +1107,18 @@
   // etykieta werdyktu zostaje czysta (słowniki opisu i epikryzy odmieniają etykiety, nie zdania).
   function fazaPrefiks(m) {
     var f = m && m.faza;
-    if (!f || f.zaKrotka || !f.pokaz || !f.verdict || (m.treatment && m.treatment.verdict)) return '';
+    if (!f || f.zaKrotka || !f.pokaz || !f.verdict || chipNaglowka(m)) return '';
     return 'od ' + fmtAgeM(f.a.ageMonths) + ' (' + f.gapM + ' mies.): ';
   }
   function fazaSufiks(m) {
     var f = m && m.faza;
-    if (!f || f.zaKrotka || !f.pokaz || !f.verdict || (m.treatment && m.treatment.verdict)) return '';
+    if (!f || f.zaKrotka || !f.pokaz || !f.verdict || chipNaglowka(m)) return '';
     return ' (ΔSDS ' + fmtP(f.dSds) + ')';
   }
   // Linia „wcześniej” (faza nie obejmuje całości) albo „ostatnie N mies.” (faza za krótka na ocenę). Tekst bez HTML.
   function fazaLiniaTekst(m) {
     var f = m && m.faza;
-    if (!f || !f.pokaz || (m.treatment && m.treatment.verdict)) return null;
+    if (!f || !f.pokaz || chipNaglowka(m)) return null;
     if (f.zaKrotka) {
       return { ton: null, tekst: '↳ ostatnie ' + f.gapM + ' mies. (od ' + fmtAgeM(f.a.ageMonths) + '): ΔSDS ' + fmtP(f.dSds) + ' — za krótko na ocenę fazy' };
     }
@@ -955,6 +1128,15 @@
       + ' (' + fmtC(w.a.c) + 'c → ' + fmtC(w.b.c) + 'c, ΔSDS ' + fmtP(w.dSds) + ')' };
   }
 
+  // Linia chipu leczenia (tekst bez HTML): aktywny kurs „(od X)", zakończony „(X → Y, zakończone)".
+  function chipLiniaTekst(m) {
+    var t = m && m.treatment;
+    if (!t || !t.verdict) return '';
+    var okres = t.aktywne
+      ? '(od ' + fmtAgeM(t.a.ageMonths) + ')'
+      : '(' + fmtAgeM(t.a.ageMonths) + ' → ' + fmtAgeM(t.b.ageMonths) + ', zakończone)';
+    return '↳ okres leczenia ' + okres + ': ΔSDS ' + fmtP(t.dSds) + ' — ' + t.verdict.l;
+  }
   function metricSummaryHtml(m) {
     var v0 = naglowekMetryki(m);
     var line = '<p><span class="vta-lbl">' + esc(m.title) + ':</span> '
@@ -965,6 +1147,7 @@
       + ' — ' + esc(fazaPrefiks(m)) + vSpan(v0) + esc(fazaSufiks(m)) + '</p>';
     var fl = fazaLiniaTekst(m);
     if (fl) line += '<p class="vta-faza">' + esc(fl.tekst) + '</p>';
+    if (m.treatment && !chipNaglowka(m)) line += '<p class="vta-faza">' + esc(chipLiniaTekst(m)) + '</p>';
     if (m.redFlag) {
       var kr = redFlagKrotko(m.redFlag);
       line += '<p class="' + (kr.ton === 'warn' ? 'vta-warn' : 'vta-red') + '">⚠ ' + kr.tekst + '</p>';
@@ -1513,10 +1696,7 @@
     if (v) html += '<div class="vdt ' + tCls + '">' + esc(fazaPrefiks(m) + v.l + fazaSufiks(m)) + '</div>';
     var fl = fazaLiniaTekst(m);
     if (fl) html += '<div class="vtap-seg' + (fl.ton === 'bad' ? ' vt-b' : fl.ton === 'warn' ? ' vt-w' : '') + '">' + esc(fl.tekst) + '</div>';
-    if (m.treatment) {
-      html += '<div class="vtap-seg">↳ okres leczenia (od ' + esc(fmtAgeM(m.treatment.a.ageMonths)) + '): ΔSDS '
-        + esc(fmtP(m.treatment.dSds)) + ' — ' + esc(m.treatment.verdict.l) + '</div>';
-    }
+    if (m.treatment) html += '<div class="vtap-seg">' + esc(chipLiniaTekst(m)) + '</div>';
     if (m.worst && m.worst.verdict && (m.worst.verdict.t === 'bad' || m.worst.verdict.t === 'warn') && m.segments.length > 1) {
       html += '<div class="vtap-seg">↳ najpoważniejszy odcinek: ' + esc(fmtAgeM(m.worst.a.ageMonths)) + ' → '
         + esc(fmtAgeM(m.worst.b.ageMonths)) + ' (ΔSDS ' + esc(fmtP(m.worst.dSds)) + ') — ' + esc(m.worst.verdict.l) + '</div>';
@@ -1663,6 +1843,12 @@
     // P-WERDYKT rata 5: nagłówek wiersza i wykrywanie ostatniej fazy (do testów na funkcji produkcyjnej)
     naglowekMetryki: naglowekMetryki,
     fazaOstatnia: fazaOstatnia,
+    // P-WERDYKT rata 6: kursy leczenia i okno chipu (do testów na funkcji produkcyjnej)
+    therapyIntervals: therapyIntervals,
+    kursOkna: kursOkna,
+    oknoKursu: oknoKursu,
+    chipNaglowka: chipNaglowka,
+    chipLiniaTekst: chipLiniaTekst,
     version: VERSION,
     PARAMS: P,
     statFor: statFor,
