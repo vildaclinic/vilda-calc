@@ -5778,6 +5778,64 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Mini-podsumowanie na pasku powłoki znika od razu po „Wyczyść wszystkie pola” (P-MINI-WYCZYSC, SW 1.1.80, 2026-09-27)
+
+**Zgłoszenie właściciela (2026-09-27).** W powłoce `app.html` na szerokim ekranie PC pasek ozdobny po prawej
+stronie pokazuje mini-podsumowanie (wiek, masa z centylem, wzrost z centylem, BMI z centylem, powierzchnia
+ciała). Po kliknięciu „Wyczyść wszystkie pola” podsumowanie znikało z opóźnieniem odbieranym jako ok. 2 s.
+
+**Pomiar przed poprawką.** Playwright, `app.html`, 1440 px, bramka PRO podmieniona: podsumowanie chowa się
+**3203 ms** po kliknięciu. To dokładnie timer 3200 ms lustra formularza (`custom-fixes.js`, moduł
+`vilda-form-mirror`), które po „Wyczyść” rozsyła `change` po wszystkich polach — podsumowanie znikało więc
+cudzym sygnałem, nie własnym odświeżeniem.
+
+**Przyczyna (audyt).** Mini-podsumowanie (`custom-fixes.js`, `custom-fixes:mini-summary`) odświeża się
+z `input`/`change` pól: w powłoce nasłuch w fazie przechwytywania na dokumencie ramki Start, na samodzielnym
+`index.html` wprost na polach. `clearAllData` w `vilda_data_import_export.js` kasuje pola programowo
+(`el.value=""`), co żadnego zdarzenia nie wywołuje — i dlatego ma osobny krok `Xt()`: w następnym ticku
+rozsyła `input` + `change` po `age`, `ageMonths`, `height`, `weight`, `sex` i polach modułów parametrów
+życiowych. Ten krok oraz drugi odroczony krok — `resetGrowthHistoryModulesAfterClear`, który po wykasowaniu
+tabel historii miał zdjąć flagi `__vildaSuspendAdvIntakeSync`, `__vildaSuspendGrowthHistoryCrossSync`,
+`__vildaSuspendIntakeUserReset` i dopiąć parowanie zaawansowane↔spożycie — wołały **`scheduleTimeout`**,
+identyfikator, którego nie ma w żadnym pliku repozytorium (pozostałość po wydzieleniu modułu; historia sprzed
+płytkiego klonu). W trybie ścisłym to `ReferenceError`; otaczający `try/catch` łapał go i przekazywał
+wyłącznie do `vildaLogSwallowedCatch`, a ESLint ma `no-undef` wyłączone dla zastanego kodu — błąd nie
+pokazywał się nigdzie.
+
+**Skutki poza podsumowaniem (ten sam błąd).** Po każdym „Wyczyść wszystkie pola” trzy flagi zawieszenia
+zostawały ustawione aż do przeładowania strony albo odtworzenia stanu (`vilda_persist_runtime.js` zdejmuje
+dwie z nich po restore). W tym czasie moduł podstawowego wzrastania nie synchronizował historii
+z zaawansowanym (`growth-basic-module.js` sprawdza `__vildaSuspendGrowthHistoryCrossSync`), parowanie
+wierszy zaawansowanych ze spożyciem było wyłączone (`app.js`, `vilda_advanced_growth.js`), a reset spożycia
+przy zmianie danych użytkownika — pomijany (`shouldSuspendIntakeUserReset`). Konsumenci używający wzorca
+„zapamiętaj–ustaw–przywróć” przywracali wartość `true`, więc nic tego nie odkręcało.
+
+**Poprawka.** Oba wywołania `scheduleTimeout(` → `setTimeout(` (tak jak cztery pozostałe odroczenia w tym
+pliku), z komentarzem `P-MINI-WYCZYSC` przy `Xt()`. Bez zmiany kolejności kroków, treści zdarzeń ani wartości
+pól. Nic w wynikach, jednostkach, progach, zapisie i synchronizacji rekordów się nie zmienia — to
+przywrócenie zaprojektowanego zachowania. Pomiar po poprawce: podsumowanie znika **8 ms** po kliknięciu.
+
+**Co się zmienia dla lekarza.** Po „Wyczyść wszystkie pola” podsumowanie na pasku oraz karty i moduły
+słuchające `input`/`change` odświeżają się natychmiast; synchronizacja historii wzrastania i spożycia działa
+po wyczyszczeniu bez przeładowania strony. Zdarzenia syntetyczne nie oznaczają formularza jako
+„niezapisany”: wskaźnik stanu zapisu ignoruje zdarzenia z `isTrusted === false`, a strażnik niezapisanych
+zmian czyta jego stan.
+
+**Strażnicy.** `tests/unit/czyszczenie-pol-odswiezenie.test.mjs` — prawdziwy `vilda_data_import_export.js`
+na atrapie okna, prawdziwe `clearAllData`: po ticku każde z pięciu pól ma `input` i `change`, trzy flagi
+zawieszenia są `false`; **kontrola negatywna** przywraca `scheduleTimeout` w treści modułu i pokazuje
+zgłoszony przebieg (pola puste, zero zdarzeń, flaga wisi); strażnik źródła: brak `scheduleTimeout(`
+w module, nasłuchy `input`/`change` mini-podsumowania w `custom-fixes.js`.
+`tests/e2e/mini-podsumowanie-wyczysc.spec.mjs` — powłoka `app.html` na 1440 px, fikcyjne konto sejfu,
+bramka PRO podmieniona: podsumowanie z danymi ze zgłoszenia (16 lat 4 mies., 62 kg, 142 cm → BMI 30,7,
+1,56 m²), klik prawdziwego `#clearAllDataBtn`, znika w budżecie 1000 ms (na kodzie sprzed poprawki ten test
+czerwieni się: `Received: "block"`), pasek wraca do stanu bez treści, brak `pageerror`.
+
+SW 1.1.79 → **1.1.80**; `vilda_data_import_export.js?v=81→82`.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie. Zmiana nie jest kliniczna (żaden wzór, próg
+ani dane); rejestr uzupełniono, bo ten sam błąd po cichu wyłączał synchronizację historii po czyszczeniu.
+
 ## Karta „Porównanie z poprzednim pomiarem”: ruch w krótkim oknie, pasmo wysokie masy od 85c, leczenie w krótkim oknie (P-WERDYKT rata 7, SW 1.1.79, 2026-09-27)
 
 **Zgłoszenie właściciela (2026-09-27, zrzut karty; liczby bez danych osobowych).** Chłopiec 16 lat 3 mies., odstęp
