@@ -444,8 +444,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_data_import_export.js": {
-  "v": 81,
-  "sha256": "aec50adc7f1307503f5aa65572bf5fc8cfb91038fbbef867bdd83a582c3fa0a9"
+  "v": 82,
+  "sha256": "3d90f0849eb830545c0855dac2cbd719805600d7fe866fc47804f6e78b3024fe"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
