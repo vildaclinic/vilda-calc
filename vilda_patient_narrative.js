@@ -239,7 +239,10 @@
     'redukcja bardzo szybka': 'redukcję bardzo szybką',
     'redukcja w trakcie leczenia': 'redukcję w trakcie leczenia',
     // P-WERDYKT rata 6: krótkie okno wzrostu z dużą zmianą (ogon „do weryfikacji pomiaru" wraca na koniec).
-    'szybka zmiana w krótkim oknie': 'szybką zmianę w krótkim oknie'
+    'szybka zmiana w krótkim oknie': 'szybką zmianę w krótkim oknie',
+    // P-WERDYKT rata 7: ruch masy w krótkim oknie (ogon z liczbami i poziomem wraca na koniec).
+    'redukcja masy ciała w krótkim oknie': 'redukcję masy ciała w krótkim oknie',
+    'utrata masy w krótkim oknie': 'utratę masy w krótkim oknie'
   };
 
   // Etykiety, ktore sa juz zdaniem albo okolicznikiem, nie rzeczownikiem — nie wchodza
@@ -343,7 +346,9 @@
     'przyrost masy szybszy niż wzrastanie',
     'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl)',
     // P-WERDYKT rata 6: redukcja między −0,25 a +0,2 SDS/rok w kursie leczenia (ogon „po N mies." wraca na koniec).
-    'brak istotnej odpowiedzi na leczenie'
+    'brak istotnej odpowiedzi na leczenie',
+    // P-WERDYKT rata 7: ruch BMI/masy w krótkim oknie (rzeczowniki męskie nieosobowe).
+    'spadek BMI w krótkim oknie', 'wzrost BMI w krótkim oknie', 'przyrost masy w krótkim oknie'
   ];
 
   function rozbijEtykiete(label) {

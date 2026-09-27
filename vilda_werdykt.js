@@ -36,6 +36,13 @@
  * oraz dopisek „nadal poniżej 3. centyla" przy GH (nakładka pozycyjna dotąd milkła przy GH).
  * Wołający, który nie poda długości okna, dostaje dokładnie dotychczasowe zachowanie — tego
  * pilnuje odcisk siatki (tests/unit/werdykt-silnik.test.mjs).
+ * Rata 7 (karta „Porównanie z poprzednim pomiarem", decyzja właściciela 2026-09-27) dokłada: pasmo
+ * wysokie MASY od 85. centyla (dotąd 90; start z 82c przy BMI 99c wpadał do środka siatki, gdzie
+ * mówi tylko |ΔSDS| ≥ 0,5), ruch masy/BMI w KRÓTKIM OKNIE (< 6 mies.) liczony po tempie rocznym
+ * (ruchKrotkieOkno: |ΔSDS × 12/okno| ≥ 0,5 — dotąd −0,19 w miesiąc brzmiało „stabilny tor"),
+ * z kierunkiem PRZED poziomem („spadek BMI w krótkim oknie — …, nadal otyłość (>97c)") i liczbami
+ * w ogonie, oraz strażnik tempa redukcji (strazTempaRedukcji) przeniesiony z panelu Karty pacjenta
+ * do silnika, żeby karta, panel i trajektoria mówiły jednym głosem.
  *
  * WARSTWY. Werdykt powstaje w trzech krokach i to jest cała architektura tego modułu:
  *   1. para()                  — werdykt bazowy z samych liczb: ΔSDS + pozycja centylowa.
@@ -62,7 +69,7 @@
 
   if (!root) return;
 
-  var WERSJA = '6';
+  var WERSJA = '7';
 
   // Progi nazwane. Reszta liczb w gałęziach jest celowo zostawiona dokładnie tam, gdzie była
   // przed przeniesieniem — rata 1 ma być czytelna jako przeniesienie, a nie jako przepisanie.
@@ -118,7 +125,22 @@
     // Krótkie okno wzrostu: |ΔhSDS| ≥ 0,5 (próg „deceleracji") w oknie < 6 mies. to najczęściej
     // błąd pomiaru, nie zdarzenie kliniczne — werdykt kieruje do weryfikacji, nie do rozpoznania.
     KROTKIE_OKNO_M: 6,
-    KROTKIE_OKNO_DSDS: 0.5
+    KROTKIE_OKNO_DSDS: 0.5,
+    // ── P-WERDYKT rata 7 (decyzja właściciela 2026-09-27) ──
+    // Pasmo wysokie masy-do-wieku od 85c (dotąd 90c w literale para()). 85 = próg nadwagi BMI
+    // (VildaBmi.PROGI.DZIECKO.NADWAGA) — ten sam, którym silnik od raty 5 nazywa poziom masy.
+    MASA_PASMO_WYSOKIE_C: 85,
+    // Ruch masy/BMI w krótkim oknie (< KROTKIE_OKNO_M): tempo roczne |ΔSDS × 12/okno| ≥ 0,5 —
+    // ten sam próg, co ISTOTNE_PRZESUNIECIE_DSDS, tylko odniesiony do roku.
+    RUCH_KROTKI_DSDS_ROK: 0.5,
+    // …i zarazem |ΔSDS| ≥ 0,1 (próg płaskości fazy z raty 5): −0,05 SDS w miesiąc to szum wagi, nie ruch.
+    RUCH_KROTKI_MIN_DSDS: 0.1,
+    // Strażnik tempa redukcji — liczby z panelu Karty pacjenta (PR #63/v388): ≤ −1,5 SDS/rok albo
+    // ubytek > 1 kg/mies. u dziecka < 12 lat / > ~3,9 kg/mies. (≈ 0,9 kg/tydz.) od 12 lat; odstęp ≥ 2 mies.
+    TEMPO_RD_KG_MIES_MLODSI: 1,
+    TEMPO_RD_KG_MIES_STARSI: 3.9,
+    TEMPO_RD_WIEK_GRANICA_M: 144,
+    TEMPO_RD_MIN_ODSTEP_M: 2
   });
 
   function dSds(sa0, sb0) {
@@ -169,6 +191,67 @@
   function zaWczesnieGH(oknoM) {
     return zOgonem({ t: 'stable', l: 'za wcześnie na ocenę odpowiedzi na GH' }, oknoMies(oknoM));
   }
+  // ── Rata 7: ruch masy/BMI w krótkim oknie i strażnik tempa ─────────────────────────
+  function fmtL(x, miejsca) {
+    if (typeof x !== 'number' || !isFinite(x)) return '';
+    var r = Math.abs(x).toFixed(miejsca).replace('.', ',');
+    return (x > 0 ? '+' : x < 0 ? '\u2212' : '\u00B1') + r;
+  }
+  function oknoTekst(oknoM) {
+    if (typeof oknoM !== 'number' || !isFinite(oknoM)) return '';
+    return oknoM < 1 ? 'w niecały mies.' : 'w ' + Math.round(oknoM) + ' mies.';
+  }
+  // Ogon z liczbami: masa „−2,0 kg (−3,1 %) w 1 mies.", BMI „−1,0 (−3,2 %) w 1 mies."; bez wartości — ΔSDS.
+  function ogonLiczb(met, d, oknoM, ekstra) {
+    var e = ekstra && typeof ekstra === 'object' ? ekstra : {};
+    var maDv = typeof e.dVal === 'number' && isFinite(e.dVal), maPct = typeof e.pct === 'number' && isFinite(e.pct);
+    if (maDv) return fmtL(e.dVal, 1) + (met === 'weight' ? ' kg' : '') + (maPct ? ' (' + fmtL(e.pct, 1) + ' %)' : '') + ' ' + oknoTekst(oknoM);
+    return 'ΔSDS ' + fmtL(d, 2) + ' ' + oknoTekst(oknoM);
+  }
+  function poziomPoRuchu(met, cb) {
+    if (typeof cb !== 'number' || !isFinite(cb)) return '';
+    if (met === 'bmi') return cb >= PROGI.BMI_OTYLOSC_C ? 'nadal otyłość (>97c)' : cb >= PROGI.BMI_NADWAGA_C ? 'nadal nadwaga (85.–97. centyl)' : '';
+    return cb >= PROGI.MASA_WYSOKA_C ? 'masa nadal >97c' : '';
+  }
+  // Ruch masy/BMI w oknie krótszym niż KROTKIE_OKNO_M, po tempie rocznym. Spadek z pasma nadmiaru (ca ≥ 85)
+  // to dobra wiadomość z nazwanym poziomem; spadek spoza nadmiaru — do oceny; przyrost liczy się tylko, gdy
+  // kończy w nadmiarze (cb ≥ 85). null = reguła milczy, wołający idzie dalej dotychczasową ścieżką.
+  // ekstra: { dVal, pct } (zmiana wartości i procent) — do ogona; bez nich ogon niesie ΔSDS.
+  function ruchKrotkieOkno(met, sa0, sb0, ca, cb, oknoM, ekstra) {
+    if (met === 'height' || typeof oknoM !== 'number' || !isFinite(oknoM) || oknoM >= PROGI.KROTKIE_OKNO_M) return null;
+    if (typeof sa0 !== 'number' || typeof sb0 !== 'number' || !isFinite(sa0) || !isFinite(sb0) || ca == null || cb == null) return null;
+    var d = dSds(sa0, sb0), dr = naRok(d, oknoM);
+    if (Math.abs(d) < PROGI.RUCH_KROTKI_MIN_DSDS || Math.abs(dr) < PROGI.RUCH_KROTKI_DSDS_ROK) return null;
+    var B = met === 'bmi', v, ogon = ogonLiczb(met, d, oknoM, ekstra), poz;
+    if (d < 0) {
+      if (ca >= PROGI.BMI_NADWAGA_C) {
+        v = zOgonem({ t: 'good', l: B ? 'spadek BMI w krótkim oknie' : 'redukcja masy ciała w krótkim oknie' }, ogon);
+        poz = poziomPoRuchu(met, cb);
+        return poz ? zOgonem(v, poz) : v;
+      }
+      return zOgonem(zOgonem({ t: 'warn', l: B ? 'spadek BMI w krótkim oknie' : 'utrata masy w krótkim oknie' }, ogon), 'do oceny');
+    }
+    if (cb < PROGI.BMI_NADWAGA_C) return null;
+    v = zOgonem({ t: 'warn', l: B ? 'wzrost BMI w krótkim oknie' : 'przyrost masy w krótkim oknie' }, ogon);
+    poz = poziomPoRuchu(met, cb);
+    return poz ? zOgonem(v, poz) : v;
+  }
+  // Strażnik tempa redukcji (nie osłabia werdyktu „bad"): spadek ≥ 0,2 SDS przy starcie ≥ 10c i odstępie
+  // ≥ 2 mies., gdy tempo ≤ −1,5 SDS/rok albo (masa) ubytek w kg/mies. ponad próg wieku. ekstra: { dVal, wiekMies }.
+  function strazTempaRedukcji(met, sa0, sb0, ca, oknoM, ekstra) {
+    if (met === 'height' || typeof oknoM !== 'number' || !isFinite(oknoM) || oknoM < PROGI.TEMPO_RD_MIN_ODSTEP_M) return null;
+    if (typeof sa0 !== 'number' || typeof sb0 !== 'number' || !isFinite(sa0) || !isFinite(sb0) || ca == null || ca < 10) return null;
+    var d = dSds(sa0, sb0);
+    if (d > -0.2) return null;
+    var szybko = naRok(d, oknoM) <= PROGI.RD_SZYBKA_DSDS_ROK;
+    var e = ekstra && typeof ekstra === 'object' ? ekstra : {};
+    if (!szybko && met === 'weight' && typeof e.dVal === 'number' && isFinite(e.dVal) && typeof e.wiekMies === 'number' && isFinite(e.wiekMies)) {
+      var kgM = e.dVal / oknoM;
+      szybko = e.wiekMies < PROGI.TEMPO_RD_WIEK_GRANICA_M ? kgM <= -PROGI.TEMPO_RD_KG_MIES_MLODSI : kgM <= -PROGI.TEMPO_RD_KG_MIES_STARSI;
+    }
+    return szybko ? { t: 'warn', l: 'redukcja bardzo szybka — do kontroli' } : null;
+  }
+
   // Krótkie okno wzrostu z dużą zmianą — do weryfikacji pomiaru, przed każdą inną regułą.
   function krotkieOkno(met, sa0, sb0, oknoM) {
     if (met !== 'height' || typeof oknoM !== 'number' || !isFinite(oknoM) || oknoM >= PROGI.KROTKIE_OKNO_M) return null;
@@ -225,7 +308,8 @@
   // met: 'height' | 'weight' | 'bmi'; sa0/sb0: SDS punktu A/B; ca/cb: centyl punktu A/B.
   function para(met, sa0, sb0, ca, cb) {
     if (typeof sa0 !== 'number' || typeof sb0 !== 'number' || !isFinite(sa0) || !isFinite(sb0) || ca == null || cb == null) return null;
-    var d = dSds(sa0, sb0), W = met === 'height', B = met === 'bmi', low = ca < 10, high = W ? ca > 90 : ca >= (B ? 85 : 90);
+    // Rata 7: pasmo wysokie masy od MASA_PASMO_WYSOKIE_C (85), jak BMI; wzrost bez zmian (> 90c).
+    var d = dSds(sa0, sb0), W = met === 'height', B = met === 'bmi', low = ca < 10, high = W ? ca > 90 : ca >= (B ? 85 : PROGI.MASA_PASMO_WYSOKIE_C);
     var ST = W ? 'stabilny tor wzrastania' : B ? 'stabilny tor BMI' : 'stabilny tor masy ciała';
     var ND = W ? 'pogłębianie niedoboru wzrostu' : 'pogłębianie niedoboru masy ciała';
     if (low) {
@@ -342,6 +426,15 @@
   }
 
   function nakladkaMasaBmi(v, dW, vB, dB, poziomBmi) {
+    // Rata 7: „utrata masy w krótkim oknie — do oceny" (masa-do-wieku spoza pasma nadmiaru) przy BMI, które
+    // w tym samym oknie spada z nadmiaru („spadek BMI w krótkim oknie", good), to redukcja nadmiaru — BMI
+    // rozstrzyga o nadmiarze, nie centyl masy (ten sam argument, co w poziomMasyBmi).
+    if (v && vB && vB.t === 'good' && String(v.l || '').indexOf('utrata masy w krótkim oknie') === 0
+      && String(vB.l || '').indexOf('spadek BMI w krótkim oknie') === 0) {
+      var l7 = String(v.l).replace('utrata masy w krótkim oknie', 'redukcja masy ciała w krótkim oknie').replace(/, do oceny(?=,|$)/, '');
+      var o7 = { t: 'good' }; o7.l = l7;
+      return o7;
+    }
     if (!v) return v;
     if (dW >= 0.2) {
       // Catch-up (`good`) ocenia hamulec poziomu; „stabilny" tor — reguła ruchu poniżej.
@@ -418,6 +511,9 @@
     naRok: naRok,
     zOgonem: zOgonem,
     krotkieOkno: krotkieOkno,
-    zaWczesnieGH: zaWczesnieGH
+    zaWczesnieGH: zaWczesnieGH,
+    // Rata 7
+    ruchKrotkieOkno: ruchKrotkieOkno,
+    strazTempaRedukcji: strazTempaRedukcji
   });
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null);

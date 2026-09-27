@@ -96,8 +96,9 @@ describe('pairVerdictInContext — jedna ścieżka werdyktu pary', () => {
     const r = J.pairVerdictInContext('height', A, B, null);
     // P-WERDYKT rata 6: wynik niesie też kurs / okno mieszane / krótkie okno (tu: nic z tego).
     expect(r).toEqual({ v: J.heightPositionOverlayVerdict(J.verdictForPair('height', A.sd, B.sd, A.c, B.c), B.c, null, A.sd, false), ghOn: false, rdOn: false, ghM: 0, mphOn: false, kurs: null, mieszane: false, dopisek: '', krotkie: false });
+    // z pustym kontekstem: te same pola plus opis kursu (P-WERDYKT rata 7)
     expect(r.v.l).toBe('stabilny tor wzrastania');
-    expect(J.pairVerdictInContext('height', A, B, { mpSds: null, gh: null, red: null })).toEqual(r);
+    expect(J.pairVerdictInContext('height', A, B, { mpSds: null, gh: null, red: null })).toEqual(Object.assign({}, r, { wKursieGh: false, wKursieRd: false, kursM: 0, kursLabel: null }));
   });
 
   it('GH ≥ 6 mies. w odcinku: werdykt odpowiedzi na GH i flaga ghOn; ΔhSDS −0,01 → „słaba odpowiedź"', () => {
@@ -173,7 +174,7 @@ describe('karta porównania z poprzednim pomiarem: werdykty w kontekście', () =
     const win = okno();
     const m = win.VildaSummaryCards.__porownanieZPoprzednim(PREV, CUR, { plec: 'M', zrodlo: 'OLAF', dorosly: false });
     expect(m.wiersze.find((w) => w.klucz === 'wzrost').werdykt.l).toBe('stabilny tor wzrastania');
-    expect(m.kontekst).toEqual({ gh: false, ghM: 0, mph: false, red: false, redLabel: null });
+    expect(m.kontekst).toEqual({ gh: false, ghM: 0, mph: false, red: false, redLabel: null, redM: 0 });
   });
 
   it('z terapią GH: ten sam werdykt, co odcinek trajektorii i Karta pacjenta; kontekst mówi „GH 7 mies."', () => {
@@ -185,7 +186,7 @@ describe('karta porównania z poprzednim pomiarem: werdykty w kontekście', () =
     expect(w.werdykt).toEqual(J.pairVerdictInContext('height', { sd: -0.99, c: 16, ageMonths: 98 }, { sd: -1.0, c: 16, ageMonths: 105 }, ctx).v);
     expect(w.werdykt.l).toBe('słaba odpowiedź na GH — do oceny, wstępnie (7 mies.)');
     expect(w.ton).toBe('improve');
-    expect(m.kontekst).toEqual({ gh: true, ghM: 7, mph: false, red: false, redLabel: null });
+    expect(m.kontekst).toEqual({ gh: true, ghM: 7, mph: false, red: false, redLabel: null, redM: 0 });
   });
 
   it('z kanałem rodzicielskim: „w kanale rodzicielskim" i flaga mph', () => {
