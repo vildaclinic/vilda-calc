@@ -28,11 +28,19 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '27';
+  var VERSION = '28';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
     SEGMENT_MIN_GAP_M: 3,
+    // P-WERDYKT rata 5 (decyzja właściciela 2026-09-27): OSTATNIA FAZA jako nagłówek werdyktu. Werdykt z okna
+    // „pierwszy → ostatni pomiar” opisuje przy długiej obserwacji historię, nie stan (pacjent: 32 mies., spadek do
+    // 14 lat 3 mies., potem tor stabilny — nagłówek nadal „pogłębianie niedoboru”). Odcinek o |ΔSDS| < FAZA_PLASKI_DSDS
+    // jest płaski; faza = maksymalny sufiks odcinków zgodnych z ostatnim (ten sam znak; płaski odcinek KRÓTSZY niż
+    // FAZA_MIN_M dołącza jako szum krótkiego odstępu, dłuższy to własne plateau). Faza krótsza niż FAZA_MIN_M nie
+    // przejmuje nagłówka. 6 mies. = to samo okno, co niedawność flagi w górę (UPFLAG_RECENT_MIN_M) i ocena tempa.
+    FAZA_PLASKI_DSDS: 0.1,
+    FAZA_MIN_M: 6,
     REDFLAG_DSDS: -1.0,
     // P-RAPORT rata T3 (decyzja właściciela 2026-09-24): baza flagi w dół od 36 mies. (dotąd 24) i ta sama siatka
     // bazy i końca, jak we fladze w górę. Przesuwanie się po centylach w 2.–3. r.ż. jest częste i fizjologiczne
@@ -261,7 +269,7 @@
   // granic; po zmianach przeliczany jest najpoważniejszy odcinek wagi (ta sama reguła co
   // w analyzeMetric). Werdykty chipu leczenia (redukcja) pozostają nietknięte — ścieżka rd
   // nie zwraca „stabilnych" werdyktów przy ΔSDS ≥ 0,2, więc warunek nakładki ich nie obejmuje.
-  function applyWeightBmiConsistency(metrics, sex, source) {
+  function applyWeightBmiConsistency(metrics, sex, source, ctx) {
     var wt = null, bm = null;
     metrics.forEach(function (m) {
       if (m.metric === 'weight') wt = m;
@@ -291,6 +299,23 @@
       wt.total = weightBmiOverlayVerdict(wt.total, dW, bm.total, dB,
         poziomBmiPunktu(bm.last, sex, source));
     }
+    // P-WERDYKT rata 5: ta sama nakładka dla okien fazy masy (faza i „wcześniej”) — werdykt BMI liczony dla
+    // tego samego okna tą samą ścieżką (kontekst + nakładka prędkości), bez zgadywania, gdy BMI nie ma punktu.
+    function bmiPunkt(ageM) {
+      for (var k = 0; k < bm.series.length; k++) if (bm.series[k].ageMonths === ageM) return bm.series[k];
+      return null;
+    }
+    function nalozNaOkno(okno) {
+      if (!okno || !okno.verdict) return;
+      var ba = bmiPunkt(okno.a.ageMonths), bb = bmiPunkt(okno.b.ageMonths);
+      if (!ba || !bb) return;
+      var r = pairVerdictInContext('bmi', ba, bb, ctx);
+      var dB2 = Math.round(100 * (bb.sd - ba.sd)) / 100;
+      var vB = r && r.v ? bmiSpeedOverlayVerdict(r.v, dB2, bb.ageMonths - ba.ageMonths) : null;
+      if (!vB) return;
+      okno.verdict = weightBmiOverlayVerdict(okno.verdict, okno.dSds, vB, dB2, poziomBmiPunktu(bb, sex, source));
+    }
+    if (wt.faza && !wt.faza.zaKrotka) { nalozNaOkno(wt.faza); nalozNaOkno(wt.faza.wczesniej); }
     if (changed) {
       var sev = { bad: 2, warn: 1 }, worst = null;
       wt.segments.forEach(function (s) {
@@ -536,6 +561,54 @@
     return k;
   }
 
+  // ── Ostatnia faza (P-WERDYKT rata 5) ──
+  // Zwraca null, gdy faza obejmuje całą obserwację (nagłówek = całość, jak dotąd). Przy fazie krótszej niż
+  // FAZA_MIN_M zwraca { zaKrotka: true } bez werdyktu — renderer dopisuje same liczby. `wczesniej` to okno
+  // pierwszy pomiar → początek fazy, liczone tym samym werdyktem pary (kontekst GH/MPH/redukcja jak dla całości).
+  function fazaOstatnia(series, segments, pairVerdict) {
+    if (!segments || segments.length < 2) return null;
+    var cls = function (d) { return Math.abs(d) < P.FAZA_PLASKI_DSDS ? 0 : (d > 0 ? 1 : -1); };
+    var lastC = cls(segments[segments.length - 1].dSds), i = segments.length - 1;
+    while (i - 1 >= 0) {
+      var sg = segments[i - 1], c = cls(sg.dSds);
+      var zgodny = lastC === 0 ? c === 0 : (c === lastC || (c === 0 && sg.gapM < P.FAZA_MIN_M));
+      if (!zgodny) break;
+      i -= 1;
+    }
+    if (i === 0) return null;
+    var a = segments[i].a, b = series[series.length - 1], first = series[0];
+    var gapM = b.ageMonths - a.ageMonths;
+    var dSds = Math.round(100 * (b.sd - a.sd)) / 100;
+    // Faza za krótka: sama linia z liczbami, i tylko gdy ostatni ruch nie jest szumem (|ΔSDS| ≥ próg płaskości).
+    if (gapM < P.FAZA_MIN_M) return { zaKrotka: true, pokaz: Math.abs(dSds) >= P.FAZA_PLASKI_DSDS, a: a, b: b, gapM: gapM, dSds: dSds, verdict: null, wczesniej: null };
+    var pv = pairVerdict(a, b);
+    var wg = a.ageMonths - first.ageMonths;
+    var pw = wg >= P.SEGMENT_MIN_GAP_M ? pairVerdict(first, a) : null;
+    return {
+      zaKrotka: false, pokaz: false, a: a, b: b, gapM: gapM, dSds: dSds,
+      verdict: pv ? pv.v : null, ghOn: pv ? pv.ghOn : false, rdOn: pv ? pv.rdOn : false,
+      wczesniej: { a: first, b: a, gapM: wg, dSds: Math.round(100 * (a.sd - first.sd)) / 100, verdict: pw ? pw.v : null }
+    };
+  }
+
+  // Czy faza mówi coś innego niż reszta obserwacji. Podział „od 10 lat: stabilny tor / wcześniej: stabilny tor"
+  // niczego nie wnosi — wtedy nagłówek zostaje całością bez prefiksu. Liczone PO nakładkach (masa↔BMI), w analyze().
+  function ustalPokazFazy(m) {
+    var f = m && m.faza;
+    if (!f || f.zaKrotka) return;
+    if (!f.verdict) { f.pokaz = false; return; }
+    var w = f.wczesniej && f.wczesniej.verdict ? f.wczesniej.verdict : null;
+    f.pokaz = w ? w.l !== f.verdict.l : !!(m.total && m.total.l !== f.verdict.l);
+  }
+
+  // Werdykt nagłówka wiersza: chip leczenia > ostatnia faza (≥ FAZA_MIN_M, z werdyktem, informatywna) > całość.
+  function naglowekMetryki(m) {
+    if (!m) return null;
+    if (m.treatment && m.treatment.verdict) return m.treatment.verdict;
+    if (m.faza && !m.faza.zaKrotka && m.faza.pokaz && m.faza.verdict) return m.faza.verdict;
+    return m.total;
+  }
+
   function analyzeMetric(met, pts, sex, source, ctx) {
     var series = [];
     pts.forEach(function (p) {
@@ -585,6 +658,13 @@
       });
       total = bmiSpeedOverlayVerdict(total,
         Math.round(100 * (last.sd - first.sd)) / 100, last.ageMonths - first.ageMonths);
+    }
+
+    // P-WERDYKT rata 5: ostatnia faza i okno „wcześniej” (parametry i uzasadnienie przy FAZA_* w P).
+    var faza = fazaOstatnia(series, segments, pairVerdict);
+    if (faza && met.key === 'bmi') {
+      if (faza.verdict) faza.verdict = bmiSpeedOverlayVerdict(faza.verdict, faza.dSds, faza.gapM);
+      if (faza.wczesniej && faza.wczesniej.verdict) faza.wczesniej.verdict = bmiSpeedOverlayVerdict(faza.wczesniej.verdict, faza.wczesniej.dSds, faza.wczesniej.gapM);
     }
 
     // najpoważniejszy odcinek: bad > warn, potem największe |ΔSDS|
@@ -655,6 +735,7 @@
       metric: met.key, title: met.title, unit: met.unit, dec: met.dec,
       series: series, segments: segments,
       first: first, last: last, total: total, worst: worst, redFlag: redFlag, upFlag: upFlag,
+      faza: faza,
       treatment: treatment,
       tone: toneCent(met.key, last.c)
     };
@@ -717,7 +798,9 @@
       if (m) metrics.push(m);
     });
     if (!metrics.length) return null;
-    applyWeightBmiConsistency(metrics, sex, source);
+    applyWeightBmiConsistency(metrics, sex, source, ctx);
+    // P-WERDYKT rata 5: nagłówek wiersza (chip leczenia > ostatnia faza > całość) — jedno pole dla wszystkich konsumentów.
+    metrics.forEach(function (m) { ustalPokazFazy(m); m.naglowek = naglowekMetryki(m); });
     var lastAgeM = pts[pts.length - 1].ageMonths;
     // Opóźnione dojrzewanie (Palmert & Dunkel 2012): Tanner I u dziewcząt >13 lat / chłopców >14 lat.
     var delayedPuberty = !!(ctx && ctx.tannerStage === 1
@@ -847,13 +930,41 @@
     return out;
   }
 
+  // P-WERDYKT rata 5: nagłówek z ostatniej fazy — prefiks „od <wiek> (N mies.)” i ΔSDS fazy składa renderer,
+  // etykieta werdyktu zostaje czysta (słowniki opisu i epikryzy odmieniają etykiety, nie zdania).
+  function fazaPrefiks(m) {
+    var f = m && m.faza;
+    if (!f || f.zaKrotka || !f.pokaz || !f.verdict || (m.treatment && m.treatment.verdict)) return '';
+    return 'od ' + fmtAgeM(f.a.ageMonths) + ' (' + f.gapM + ' mies.): ';
+  }
+  function fazaSufiks(m) {
+    var f = m && m.faza;
+    if (!f || f.zaKrotka || !f.pokaz || !f.verdict || (m.treatment && m.treatment.verdict)) return '';
+    return ' (ΔSDS ' + fmtP(f.dSds) + ')';
+  }
+  // Linia „wcześniej” (faza nie obejmuje całości) albo „ostatnie N mies.” (faza za krótka na ocenę). Tekst bez HTML.
+  function fazaLiniaTekst(m) {
+    var f = m && m.faza;
+    if (!f || !f.pokaz || (m.treatment && m.treatment.verdict)) return null;
+    if (f.zaKrotka) {
+      return { ton: null, tekst: '↳ ostatnie ' + f.gapM + ' mies. (od ' + fmtAgeM(f.a.ageMonths) + '): ΔSDS ' + fmtP(f.dSds) + ' — za krótko na ocenę fazy' };
+    }
+    var w = f.wczesniej;
+    if (!f.verdict || !w || !w.verdict) return null;
+    return { ton: w.verdict.t, tekst: '↳ wcześniej ' + fmtAgeM(w.a.ageMonths) + ' → ' + fmtAgeM(w.b.ageMonths) + ': ' + w.verdict.l
+      + ' (' + fmtC(w.a.c) + 'c → ' + fmtC(w.b.c) + 'c, ΔSDS ' + fmtP(w.dSds) + ')' };
+  }
+
   function metricSummaryHtml(m) {
+    var v0 = naglowekMetryki(m);
     var line = '<p><span class="vta-lbl">' + esc(m.title) + ':</span> '
       + esc(fmt(m.first.value, m.dec) + (m.unit ? ' ' + m.unit : '') + ' → ' + fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
       + ' · ' + esc(fmtC(m.first.c) + 'c → ' + fmtC(m.last.c) + 'c')
       + ' (' + esc(zoneForPair(m.first.c, m.last.c, m.first.sd, m.last.sd)) + ')'
       + ' · SDS ' + esc(fmtP(m.first.sd) + ' → ' + fmtP(m.last.sd))
-      + ' — ' + vSpan(m.total) + '</p>';
+      + ' — ' + esc(fazaPrefiks(m)) + vSpan(v0) + esc(fazaSufiks(m)) + '</p>';
+    var fl = fazaLiniaTekst(m);
+    if (fl) line += '<p class="vta-faza">' + esc(fl.tekst) + '</p>';
     if (m.redFlag) {
       var kr = redFlagKrotko(m.redFlag);
       line += '<p class="' + (kr.ton === 'warn' ? 'vta-warn' : 'vta-red') + '">⚠ ' + kr.tekst + '</p>';
@@ -1380,7 +1491,7 @@
   var VERDICT_TONE = { bad: 'danger', warn: 'warn', good: 'good', stable: 'normal' };
 
   function rowTone(m) {
-    var v = m.treatment ? m.treatment.verdict : m.total;
+    var v = naglowekMetryki(m);
     return (v && VERDICT_TONE[v.t]) || m.tone;
   }
 
@@ -1390,7 +1501,7 @@
   // Karta statusu parametru (makieta B): pasek koloru werdyktu, przejście centylowe z ΔSDS
   // jako liczba wiodąca, werdykt jako zdanie pod kreską (nie chip).
   function patientMetricCardHtml(m) {
-    var v = m.treatment ? m.treatment.verdict : m.total;
+    var v = naglowekMetryki(m);
     var tCls = TEXT_CLS[v && v.t] || 'vt-s';
     var html = '<div class="vtap-card ' + (STRIPE_CLS[v && v.t] || 'cs') + '">'
       + '<div class="top"><span class="nm">' + esc(m.title) + '</span>'
@@ -1399,7 +1510,9 @@
       + '<span class="d ' + tCls + '">ΔSDS ' + esc(fmtP(m.last.sd - m.first.sd)) + '</span></div>'
       + '<div class="sub">' + esc(fmt(m.first.value, m.dec)) + ' → ' + esc(fmt(m.last.value, m.dec) + (m.unit ? ' ' + m.unit : ''))
       + ' · SDS ' + esc(fmtP(m.first.sd) + ' → ' + fmtP(m.last.sd)) + '</div>';
-    if (v) html += '<div class="vdt ' + tCls + '">' + esc(v.l) + '</div>';
+    if (v) html += '<div class="vdt ' + tCls + '">' + esc(fazaPrefiks(m) + v.l + fazaSufiks(m)) + '</div>';
+    var fl = fazaLiniaTekst(m);
+    if (fl) html += '<div class="vtap-seg' + (fl.ton === 'bad' ? ' vt-b' : fl.ton === 'warn' ? ' vt-w' : '') + '">' + esc(fl.tekst) + '</div>';
     if (m.treatment) {
       html += '<div class="vtap-seg">↳ okres leczenia (od ' + esc(fmtAgeM(m.treatment.a.ageMonths)) + '): ΔSDS '
         + esc(fmtP(m.treatment.dSds)) + ' — ' + esc(m.treatment.verdict.l) + '</div>';
@@ -1547,6 +1660,9 @@
   }
 
   w.VildaTrajectoryAnalysis = {
+    // P-WERDYKT rata 5: nagłówek wiersza i wykrywanie ostatniej fazy (do testów na funkcji produkcyjnej)
+    naglowekMetryki: naglowekMetryki,
+    fazaOstatnia: fazaOstatnia,
     version: VERSION,
     PARAMS: P,
     statFor: statFor,
