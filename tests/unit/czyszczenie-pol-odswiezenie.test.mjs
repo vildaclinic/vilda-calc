@@ -11,19 +11,31 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // PRZYCZYNA. `clearAllData` w vilda_data_import_export.js kasuje pola programowo (`el.value=""`),
 // więc nasłuchy `input`/`change` — w tym mini-podsumowanie z custom-fixes.js — same nic nie widzą.
 // Moduł ma na to osobny krok: w następnym ticku rozsyła `input` i `change` po polach wieku, masy,
-// wzrostu i płci. Ten krok, jak i drugi odroczony (zdjęcie flag zawieszenia synchronizacji
-// historii wzrastania i spożycia po wyczyszczeniu), wołał `scheduleTimeout` — identyfikator,
-// którego NIE MA nigdzie w repozytorium. ReferenceError łapał otaczający try/catch i szedł tylko do
-// vildaLogSwallowedCatch, więc nikt go nie widział (ESLint ma `no-undef` wyłączone dla zastanego
-// kodu). Podsumowanie znikało dopiero po 3200 ms — z timera lustra formularza, które po kliknięciu
-// „Wyczyść" wysyła `change` po wszystkich polach; zmierzone Playwrightem przed poprawką: 3203 ms.
+// wzrostu i płci. Ten krok wołał `scheduleTimeout` — identyfikator, którego NIE MA nigdzie
+// w repozytorium. ReferenceError łapał otaczający try/catch i szedł tylko do vildaLogSwallowedCatch,
+// więc nikt go nie widział (ESLint ma `no-undef` wyłączone dla zastanego kodu). Podsumowanie znikało
+// dopiero po 3200 ms — z timera lustra formularza, które po kliknięciu „Wyczyść" wysyła `change`
+// po wszystkich polach; zmierzone Playwrightem przed poprawką: 3203 ms.
+//
+// DRUGIE, NIENAPRAWIONE ODROCZENIE. Ten sam nieistniejący `scheduleTimeout` woła w tym pliku także
+// krok po wykasowaniu tabel historii, który miał zdjąć flagi zawieszenia synchronizacji
+// (__vildaSuspendAdvIntakeSync, __vildaSuspendGrowthHistoryCrossSync, __vildaSuspendIntakeUserReset)
+// i dopiąć parowanie zaawansowane↔spożycie. Włączenie go zmienia przebieg „Wyczyść" → „Wczytaj tego
+// pacjenta" → „Odtwórz zapis": parowanie dokleja z tabeli spożycia wiersz-bliźniak punktu terapii GH,
+// a import punktów uznaje go za wiersz ręczny i punktu nie oznacza (e2e gh-punkty-po-wczytaniu
+// i gh-punkt-a-reczny-wiersz czerwienią się). To zmiana funkcjonalna poza zgłoszeniem, więc zostaje
+// jako dług do decyzji właściciela — patrz docs/clinical/ALGORITHMS.md, P-MINI-WYCZYSC. Trzeci blok
+// testów pilnuje, żeby ten stan był zapisany, a nie zapomniany.
 //
 // Test uruchamia PRAWDZIWY moduł na atrapie okna i woła prawdziwe `clearAllData`. Kontrola
-// negatywna przywraca `scheduleTimeout` w treści modułu i pokazuje, że wtedy zdarzenia nie lecą.
+// negatywna przywraca `scheduleTimeout` w kroku zdarzeń i pokazuje, że wtedy zdarzenia nie lecą.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const czytaj = (plik) => readFileSync(path.join(korzen, plik), 'utf8');
 const POLA_Z_ODSWIEZENIEM = ['age', 'ageMonths', 'height', 'weight', 'sex'];
+const XT_NAPRAWIONE = 'function Xt(){try{setTimeout(';
+const XT_ZEPSUTE = 'function Xt(){try{scheduleTimeout(';
+const QE_DLUG = 'try{scheduleTimeout(()=>{try{r.__vildaSuspendAdvIntakeSync=!1';
 
 function makeStorage() {
   const m = Object.create(null);
@@ -83,7 +95,7 @@ const wypelnij = (pola) => {
 const tick = () => new Promise((r) => { setTimeout(r, 0); });
 
 describe('P-MINI-WYCZYSC — „Wyczyść wszystkie pola" odświeża nasłuchy pól w następnym ticku', () => {
-  it('po clearAllData każde pole antropometryczne dostaje input i change; flagi zawieszenia schodzą', async () => {
+  it('po clearAllData każde pole antropometryczne dostaje input i change', async () => {
     const { win, pola } = atrapaOkna();
     loadBrowserScript('vilda_data_import_export.js', win);
     const api = win.VildaDataImportExport;
@@ -93,24 +105,20 @@ describe('P-MINI-WYCZYSC — „Wyczyść wszystkie pola" odświeża nasłuchy p
     expect(api.clearAllData({})).toBe(true);
     expect(pola.weight.value, 'kasowanie pól jest synchroniczne').toBe('');
     expect(pola.height.value).toBe('');
-    expect(win.__vildaSuspendAdvIntakeSync, 'na czas kasowania historii synchronizacja jest zawieszona').toBe(true);
-    expect(win.__vildaSuspendGrowthHistoryCrossSync).toBe(true);
+    for (const id of POLA_Z_ODSWIEZENIEM) {
+      expect(pola[id].zdarzenia, `${id}: zdarzenia idą dopiero w następnym ticku`).toEqual([]);
+    }
 
     await tick(); await tick();
     for (const id of POLA_Z_ODSWIEZENIEM) {
       expect(pola[id].zdarzenia, `${id}: input po wyczyszczeniu`).toContain('input');
       expect(pola[id].zdarzenia, `${id}: change po wyczyszczeniu`).toContain('change');
     }
-    expect(win.__vildaSuspendAdvIntakeSync, 'flaga zdjęta zaraz po wyczyszczeniu, nie dopiero po przeładowaniu').toBe(false);
-    expect(win.__vildaSuspendGrowthHistoryCrossSync).toBe(false);
-    expect(win.__vildaSuspendIntakeUserReset).toBe(false);
   });
 
-  it('kontrola negatywna: z przywróconym `scheduleTimeout` zdarzenia nie lecą, a flagi wiszą', async () => {
-    const src = czytaj('vilda_data_import_export.js')
-      .replace('function Xt(){try{setTimeout(', 'function Xt(){try{scheduleTimeout(')
-      .replace('debouncedIntakeCalc");try{setTimeout(', 'debouncedIntakeCalc");try{scheduleTimeout(');
-    expect(src.match(/scheduleTimeout\(/g), 'kontrola negatywna musi odtworzyć oba wywołania').toHaveLength(2);
+  it('kontrola negatywna: z przywróconym `scheduleTimeout` w kroku zdarzeń nic nie leci', async () => {
+    const src = czytaj('vilda_data_import_export.js').replace(XT_NAPRAWIONE, XT_ZEPSUTE);
+    expect(src, 'kontrola negatywna musi odtworzyć zepsute wywołanie').toContain(XT_ZEPSUTE);
     const { win, pola } = atrapaOkna();
     new Function('window', 'globalThis', src)(win, win);
     wypelnij(pola);
@@ -119,18 +127,38 @@ describe('P-MINI-WYCZYSC — „Wyczyść wszystkie pola" odświeża nasłuchy p
     await tick(); await tick();
     expect(pola.weight.zdarzenia, 'to jest zgłoszony przebieg: pola puste, nasłuchy nic nie wiedzą').toEqual([]);
     expect(pola.weight.value).toBe('');
-    expect(win.__vildaSuspendAdvIntakeSync, 'flaga zostawała ustawiona do przeładowania').toBe(true);
+  });
+});
+
+describe('P-MINI-WYCZYSC — dług zapisany, nie naprawiony w tej racie: flagi zawieszenia po wyczyszczeniu', () => {
+  it('drugie odroczenie nadal woła nieistniejące scheduleTimeout — i tylko ono', () => {
+    const src = czytaj('vilda_data_import_export.js');
+    // Kontrola negatywna dla rejestru: gdy ktoś to naprawi, ten test ma zmusić do zdjęcia wpisu
+    // „co zostaje otwarte" z ALGORITHMS i do przejrzenia e2e gh-punkty-po-wczytaniu oraz
+    // gh-punkt-a-reczny-wiersz, a nie zgnić jako nieprawdziwy komentarz.
+    expect(src.match(/scheduleTimeout\(/g), 'jedno pozostałe wywołanie').toHaveLength(1);
+    expect(src).toContain(QE_DLUG);
+    expect(src).toContain('P-MINI-WYCZYSC: to drugie odroczenie');
+  });
+
+  it('po clearAllData flagi zawieszenia zostają ustawione (dzisiejsze zachowanie, na którym stoją e2e punktów GH)', async () => {
+    const { win, pola } = atrapaOkna();
+    loadBrowserScript('vilda_data_import_export.js', win);
+    wypelnij(pola);
+    expect(win.VildaDataImportExport.clearAllData({})).toBe(true);
+    await tick(); await tick();
+    expect(win.__vildaSuspendAdvIntakeSync, 'flaga wisi do przeładowania albo odtworzenia stanu').toBe(true);
+    expect(win.__vildaSuspendGrowthHistoryCrossSync).toBe(true);
+    expect(win.__vildaSuspendIntakeUserReset).toBe(true);
   });
 });
 
 describe('P-MINI-WYCZYSC — treść, którą ten test chroni', () => {
-  const importExport = czytaj('vilda_data_import_export.js');
-
-  it('moduł nie woła nieistniejącego scheduleTimeout; oba odroczenia idą przez setTimeout', () => {
-    expect(importExport).not.toMatch(/scheduleTimeout\(/);
-    expect(importExport).toContain('function Xt(){try{setTimeout(');
-    expect(importExport).toContain('debouncedIntakeCalc");try{setTimeout(()=>{try{r.__vildaSuspendAdvIntakeSync=!1');
-    expect(importExport).toContain('P-MINI-WYCZYSC');
+  it('krok zdarzeń idzie przez setTimeout i niesie komentarz z przyczyną', () => {
+    const importExport = czytaj('vilda_data_import_export.js');
+    expect(importExport).toContain(XT_NAPRAWIONE);
+    expect(importExport).not.toContain(XT_ZEPSUTE);
+    expect(importExport).toContain('P-MINI-WYCZYSC (zgloszenie wlasciciela 2026-09-27)');
   });
 
   it('mini-podsumowanie (custom-fixes.js) odświeża się z input/change — to te zdarzenia niesie poprawka', () => {
