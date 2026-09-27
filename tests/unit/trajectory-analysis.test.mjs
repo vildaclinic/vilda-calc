@@ -406,9 +406,11 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
       currentWeight: 44,
       sex: 'K'
     });
+    // Reguła RUCHU milczy (BMI maleje). P-WERDYKT rata 5: BMI ostatniego punktu 1,2 SDS (≈88c) → gałąź POZIOMU
+    // nazywa pasmo nadwagi zamiast „stabilnego toru masy ciała" (dawniej: { stable, 'stabilny tor masy ciała' }).
     expect(mDown.metrics.find((m) => m.metric === 'weight').total)
-      .toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
-    // waga +0,1 SDS (poniżej progu nakładki) mimo BMI warn → bez nakładki
+      .toEqual({ t: 'warn', l: 'tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)' });
+    // waga +0,1 SDS (poniżej progu nakładki) mimo BMI warn → bez nakładki RUCHU (poziom BMI 1,6 SDS ≈ 95c → poziom)
     const vtaFlat = makeGlobalWithStats({
       'HT|130': -1.6, 'HT|138': -1.7,
       'WT|130': 0.3, 'WT|138': 0.4,
@@ -422,6 +424,18 @@ describe('silnik analizy trajektorii (statystyki stubowane deterministycznie)', 
       sex: 'K'
     });
     expect(mFlat.metrics.find((m) => m.metric === 'weight').total)
+      .toEqual({ t: 'warn', l: 'tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)' });
+    // kontrola: ten sam płaski tor masy przy BMI w środku siatki zostaje „stabilny"
+    const vtaMid = makeGlobalWithStats({
+      'HT|130': -1.6, 'HT|138': -1.7,
+      'WT|130': 0.3, 'WT|138': 0.4,
+      'BMI|130': 0.2, 'BMI|138': 0.3
+    });
+    const mMid = vtaMid.analyze({
+      measurements: [{ ageMonths: 130, height: 135, weight: 39.5 }],
+      currentAgeMonths: 138, currentHeight: 139, currentWeight: 44, sex: 'K'
+    });
+    expect(mMid.metrics.find((m) => m.metric === 'weight').total)
       .toEqual({ t: 'stable', l: 'stabilny tor masy ciała' });
   });
 
@@ -1241,7 +1255,9 @@ describe('BMI >97. centyla nigdy „stabilny tor BMI” (decyzja właściciela 2
     // rata 2 domknęła tę asymetrię, więc waga też nazywa teraz poziom.
     expect(vta.verdictForPair('weight', 2.3, 2.4, 98.9, 99.2))
       .toEqual({ t: 'warn', l: 'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)' });
-    expect(vta.verdictForPair('bmi', 1.2, 1.3, 88, 90)).toEqual({ t: 'stable', l: 'stabilny tor BMI' });
+    // P-WERDYKT rata 5: BMI stabilne w paśmie 85.–97. centyla nazywa pasmo (dawniej „stabilny tor BMI").
+    expect(vta.verdictForPair('bmi', 1.2, 1.3, 88, 90)).toEqual({ t: 'warn', l: 'tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl)' });
+    expect(vta.verdictForPair('bmi', 0.2, 0.3, 58, 62)).toEqual({ t: 'stable', l: 'stabilny tor BMI' });
     const real = extractRealVerdictCh();
     for (const [sa, sb, ca, cb] of [[2.3, 2.4, 98.9, 99.2], [2.4, 2.4, 99.2, 99.2], [2.4, 2.3, 99.2, 98.9]]) {
       expect(vta.verdictForPair('bmi', sa, sb, ca, cb)).toEqual(real('bmi', sa, sb, ca, cb));

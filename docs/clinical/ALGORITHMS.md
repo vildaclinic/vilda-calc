@@ -5778,6 +5778,93 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Werdykt trajektorii: ostatnia faza jako nagłówek, poziom nadwagi przy stabilnym torze (P-WERDYKT rata 5, SW 1.1.77, 2026-09-27)
+
+**Zgłoszenie właściciela (2026-09-27, z raportu wzrastania; liczby bez danych osobowych).** Chłopiec 12,3 → 15,0 r.ż.,
+6 pomiarów, MPH SDS −0,34:
+- wzrost 10c → 2c (ΔhSDS −0,83): odcinki −0,36, −0,25, −0,30 do 14 lat 3 mies., potem −0,03 i +0,11; tempo 7,5 cm/rok
+  w normie. Nagłówek „pogłębianie niedoboru wzrostu” opisywał pierwsze 23 miesiące, a nie stan.
+- masa 51c → 50c „stabilny tor masy ciała” obok BMI 88c — brzmiało uspokajająco.
+- BMI 81c → 88c „BMI rośnie szybciej niż wzrastanie”, choć od 14 lat 3 mies. płasko na 88c.
+Pytania ogólne: co ma mówić nagłówek przy długiej obserwacji (spadek dawno temu, od 2 lat stabilnie) i przy odrabianiu
+(masa: utrata, potem nadrabianie).
+
+**Przyczyna.** Nagłówek wiersza w „Analizie trajektorii” (Karta pacjenta → Siatki centylowe; karta Zaawansowane obliczenia
+wzrostowe; opis pacjenta; epikryza) był werdyktem jednego okna „pierwszy → ostatni pomiar”. Kierunek ostatnich pomiarów
+widać było tylko w rozwijanej tabeli odcinków. Dodatkowo rata 2 nazwała przy stabilnym torze tylko masę ≥97c oraz BMI ≥97c
+i <5c — pasmo nadwagi 85.–97. centyla zostawało „stabilnym torem BMI”, a masa-do-wieku milczała o BMI.
+
+**Decyzje właściciela (2026-09-27, po makiecie: „zgadzam się z rekomendacjami”).**
+1. Nagłówek z ostatniej fazy, linia „wcześniej”.
+2. Próg płaskości 0,10 SDS; minimalna faza 6 mies. (to samo okno, co niedawność flagi w górę i ocena tempa).
+3. Masa „stabilna” przy BMI ≥85c (albo Cole ≥110 %): ostrzeżenie.
+4. BMI stabilne w 85.–97. centylu: ostrzeżenie „w paśmie nadwagi”.
+5. „Najpoważniejszy odcinek” zostaje.
+
+**Reguła ostatniej fazy (`vilda_trajectory_analysis.js` v28, `fazaOstatnia`).**
+- Klasa odcinka: |ΔSDS| < `FAZA_PLASKI_DSDS` (0,10) → płaski; inaczej znak.
+- Faza = maksymalny sufiks odcinków zgodnych z ostatnim: przy ostatnim ze znakiem dołączają odcinki tego samego znaku oraz
+  płaskie krótsze niż `FAZA_MIN_M` (6 mies.; szum krótkiego odstępu) — płaski odcinek ≥ 6 mies. to własne plateau i kończy
+  fazę; przy ostatnim płaskim dołączają tylko płaskie.
+- Faza obejmująca całość → nagłówek jak dotąd. Faza krótsza niż 6 mies. nie przejmuje nagłówka — sama linia
+  „↳ ostatnie N mies. (od …): ΔSDS … — za krótko na ocenę fazy”, i tylko gdy |ΔSDS| ≥ 0,10.
+- Werdykt fazy i okna „wcześniej” (pierwszy pomiar → początek fazy) liczy TEN SAM werdykt pary co całość: kontekst
+  GH/MPH/redukcja, nakładka pozycyjna wzrostu, nakładka prędkości BMI, nakładka masa↔BMI (okno BMI o tych samych wiekach).
+- Faza jest **informatywna** (`faza.pokaz`) tylko wtedy, gdy jej werdykt różni się etykietą od werdyktu „wcześniej”
+  (a bez werdyktu „wcześniej” — od całości). Podział „od 10 lat: stabilny tor / wcześniej: stabilny tor” niczego nie wnosi
+  i nie jest pokazywany.
+- Nagłówek wiersza (`m.naglowek`, `naglowekMetryki`): chip leczenia (redukcja) > informatywna faza > całość. `m.total`
+  zostaje w modelu bez zmian (historia nie znika). Renderery: „od <wiek> (N mies.): <werdykt> (ΔSDS ±x)”, linia
+  „↳ wcześniej <od> → <do>: <werdykt> (<ca>c → <cb>c, ΔSDS …)”; ton paska karty i sparkline’a z nagłówka.
+- Bez zmian: flagi w dół/w górę (baner), „najpoważniejszy odcinek”, chip leczenia, tabela odcinków, tempo.
+
+**Gałęzie poziomu nadwagi (`vilda_werdykt.js` WERSJA 5).**
+- `para()` dla BMI, gdy tor jest stabilny i centyl końcowy ∈ [85, 97): `warn` „tor stabilny, ale BMI w paśmie nadwagi
+  (85.–97. centyl)”. Zmierzone na siatce z rat 2/4 (SDS −4…+4 co 0,05, ΔSDS −1…+1 co 0,01): 864 z 5 499 „stabilnych”
+  komórek BMI (340 płaskich, 371 rosnących pod progiem 0,30, 153 malejących).
+- `nakladkaPredkosciBmi` traktuje tę etykietę jak „stabilny”: RUCH (ΔbmiSDS ≥ +0,30 w ≥ 3 mies.) ma pierwszeństwo przed
+  POZIOMEM — „tor stabilny” przy +0,30 byłby nieprawdą.
+- `nakladkaMasaBmi`, nowa gałąź `poziomNadwagiPrzyStabilnejMasie`: stabilny tor masy-do-wieku (niezależnie od ruchu masy)
+  przy BMI ≥97c → „tor masy ciała stabilny, ale BMI w paśmie otyłości (≥97c)”; ≥85c → „… w paśmie nadwagi (≥85c)”;
+  Cole ≥110 % → „… wskaźnik Cole’a sięga 110%”. Reguła ruchu i hamulec catch-upu mają pierwszeństwo. Bez danych o poziomie
+  milczy (jak hamulec). Progi = `VildaBmi.PROGI` (85, 97, 110) — nie nowe. Działa też w panelu „Porównanie z poprzednim
+  pomiarem” (delegacja `verdictWtBmi` podaje `poziomBmi` od raty 3).
+- Odcisk siatki: nowy `ODCISK_RATA_5`; po odwzorowaniu jednej nowej etykiety na „stabilny tor BMI” wychodzi dokładnie
+  odcisk raty 2, a po odwzorowaniu etykiet rat 2 i 5 — odcisk raty 1 (rata 5 ruszyła wyłącznie „stabilne” komórki).
+
+**Konsumenci.** Opis pacjenta (`vilda_patient_narrative.js`): zdanie „przebieg” i „masa” opisują ostatnią fazę, a wcześniejszy
+okres dostaje zdanie „Wcześniej, w wieku od … do …, wzrost/BMI … (ΔSDS …); <werdykt w czasie przeszłym>”; słownik `ZDANIOWE`
+ma cztery nowe etykiety. Epikryza (`vilda_epicrisis_ui.js` → `vilda_epicrisis.js`): „Analiza toru wzrastania w wieku
+<faza> wykazała …. Wcześniej, w wieku <okno>, obserwowano … (ΔSDS = …).”; bez fazy — jak dotąd.
+
+**Przypadki `wejście → oczekiwany wynik`** (fikcyjne; unit ze stubem statystyk, e2e na prawdziwej stronie):
+- kształt z raportu (dz. 12,3 → 15 l., MPH −0,3; SDS wzrostu −1,3 → −2,2 do 14 lat 3 mies., potem −0,03 i +0,11): nagłówek
+  „od 14 lat 3 mies. (9 mies.): tor stabilny, ale poniżej 3. centyla — niedobór wzrostu (ΔSDS +0,08)”, ton warn (nie bad);
+  „↳ wcześniej 12 lat 4 mies. → 14 lat 3 mies.: pogłębianie niedoboru wzrostu (10c → 1c, ΔSDS −0,90)”; `total` bez zmian;
+- BMI 81c → 88c, potem płasko 9 mies.: nagłówek „tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl) (ΔSDS +0,02)”,
+  wcześniej „BMI rośnie szybciej niż wzrastanie” (+0,30 — ruch przed poziomem); masa 51c → 50c: „tor masy ciała stabilny, ale
+  BMI w paśmie nadwagi (≥85c)”;
+- 75c → 25c w 3 lata, od 2 lat stabilnie: „od 10 lat (24 mies.): stabilny tor wzrastania (ΔSDS +0,01)”, wcześniej „istotna
+  deceleracja wzrastania (75c → 25c, ΔSDS −1,34)”, baner flagi w dół zostaje (−1,33);
+- masa 50c → 8c w rok, potem do 40c w rok: całość „stabilny tor” (!), nagłówek „wyrównanie niedoboru masy ciała”; przy BMI
+  87c hamulec „wyrównanie niedoboru masy, ale BMI jest już w paśmie nadwagi (≥85c)”;
+- 3 lata płasko, ostatnie 8 mies. −0,55: faza od 9 lat „deceleracja toru wzrastania”, wcześniej „stabilny tor”;
+- jednostajny spadek, faza < 6 mies., faza nieinformatywna, chip leczenia — bez prefiksu i linii;
+- e2e (prawdziwa strona): dz. 13,3 → 16 l. z catch-upem od 15 lat 3 mies. („nadrabia względem kanału rodzicielskiego (ΔSDS
+  +0,70)”, pasek good), odcinek masy +0,42 przy BMI ≥85c jako ostrzeżenie poziomu; chł. 8 → 11 l. jednostajny spadek (bez
+  fazy, flaga); chł. 7 → 12 l. z BMI „stabilnym” w całości, a „istotne przesunięcie w górę” od 9 lat.
+
+**Ograniczenia (świadome).** Progi werdyktu pary bez zmian: w środku siatki spadek wzrostu −0,45 w 8 mies. nadal jest
+„stabilnym torem” (próg −0,5 z PR #63) — osobne pytanie o progi. „Najpoważniejszy odcinek” może powtarzać treść linii
+„wcześniej”; właściciel zdecydował, że zostaje.
+
+**Walidacja.** Unit `werdykt-faza-rata-5` (18: faza, pokaz, za krótka, plateau, chip leczenia, masa↔BMI na oknach, renderery,
+opis pacjenta, epikryza), `werdykt-silnik` (odcisk raty 5 + dowody odwzorowania, gałęzie poziomu z progami domkniętymi),
+`trajectory-analysis` (zmieniona umowa: masa „stabilna” przy BMI ≥85c i BMI 88c → ostrzeżenia poziomu). E2E
+`werdykt-faza-rata-5` (3) na prawdziwej stronie.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna (udzielona 2026-09-27 przed kodowaniem); scalenie i wdrożenie.
+
 ## Tempo wzrastania poniżej normy wygrywa z blokadą stabilizacji z prognozy wzrostu końcowego (P-DIETA rata G3, SW 1.1.76, 2026-09-27)
 
 **Zgłoszenie (ograniczenie zapisane w racie G1).** Blokada stabilizacji w `app.js` („nie zdąży wyrosnąć”) wygrywała z zasadą

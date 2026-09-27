@@ -299,6 +299,23 @@
     'BMI rośnie szybciej niż wzrastanie': {
       teraz: 'BMI rośnie szybciej niż wzrastanie',
       wtedy: 'BMI rosło szybciej niż wzrastanie'
+    },
+    // Poziom nadwagi przy stabilnym torze (P-WERDYKT rata 5): STAN, jak nakladki poziomu z raty 2.
+    'tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl)': {
+      teraz: 'tor jest stabilny, ale BMI utrzymuje się w paśmie nadwagi (85.–97. centyl)',
+      wtedy: 'tor był stabilny, ale BMI utrzymywało się w paśmie nadwagi (85.–97. centyl)'
+    },
+    'tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)': {
+      teraz: 'tor masy ciała jest stabilny, ale BMI jest w paśmie nadwagi (≥85c)',
+      wtedy: 'tor masy ciała był stabilny, ale BMI było w paśmie nadwagi (≥85c)'
+    },
+    'tor masy ciała stabilny, ale BMI w paśmie otyłości (≥97c)': {
+      teraz: 'tor masy ciała jest stabilny, ale BMI jest w paśmie otyłości (≥97c)',
+      wtedy: 'tor masy ciała był stabilny, ale BMI było w paśmie otyłości (≥97c)'
+    },
+    'tor masy ciała stabilny, ale wskaźnik Cole\'a sięga 110%': {
+      teraz: 'tor masy ciała jest stabilny, ale wskaźnik Cole\'a sięga 110%',
+      wtedy: 'tor masy ciała był stabilny, ale wskaźnik Cole\'a sięgał 110%'
     }
   };
 
@@ -458,19 +475,39 @@
     }
     if (!m.total) return null;
     var o = osoba(model.sex);
-    var kA = kanal(m.first.c), kB = kanal(m.last.c);
-    var dSds = m.last.sd != null && m.first.sd != null ? m.last.sd - m.first.sd : null;
+    // P-WERDYKT rata 5: nagłówek z ostatniej fazy (m.faza / m.naglowek liczy karta) — zdanie opisuje
+    // ostatnią fazę, a wcześniejszy okres dostaje własne zdanie w czasie przeszłym.
+    var f = fazaNaglowka(m);
+    var od = f ? f.a : m.first, doP = m.last;
+    var v = f ? f.verdict : m.total;
+    var kA = kanal(od.c), kB = kanal(doP.c);
+    var dSds = doP.sd != null && od.sd != null ? doP.sd - od.sd : null;
     var ruch = kA && kB && kA !== kB
       ? ' przesunął się z kanału ' + kA + ' do kanału ' + kB
       : (kB ? ' mieści się w kanale ' + kB : ' utrzymuje pozycję centylową');
+    var txt = 'Z analizy siatki centylowej wynika, że wzrost ' + o.kogo + ' '
+      + zakresWieku(od.ageMonths, doP.ageMonths) + ruch
+      + (dSds != null ? ' (ΔhSDS ' + fmtSds(dSds) + ')' : '')
+      + konkluzja(v.l, 'teraz');
+    var w = f && f.wczesniej && f.wczesniej.verdict ? f.wczesniej : null;
+    if (w) {
+      var kW = kanal(w.a.c), kW2 = kanal(w.b.c);
+      var ruchW = kW && kW2 && kW !== kW2 ? ' przesunął się z kanału ' + kW + ' do kanału ' + kW2 : (kW2 ? ' pozostawał w kanale ' + kW2 : ' utrzymywał pozycję centylową');
+      txt = kropka(txt) + ' Wcześniej, ' + zakresWieku(w.a.ageMonths, w.b.ageMonths) + ', wzrost' + ruchW
+        + ' (ΔhSDS ' + fmtSds(w.dSds) + ')' + konkluzja(w.verdict.l, 'wtedy');
+    }
     return {
       id: 'przebieg',
-      tone: m.total.t === 'bad' ? 'bad' : (m.total.t === 'warn' ? 'warn' : 'plain'),
-      text: kropka('Z analizy siatki centylowej wynika, że wzrost ' + o.kogo + ' '
-        + zakresWieku(m.first.ageMonths, m.last.ageMonths) + ruch
-        + (dSds != null ? ' (ΔhSDS ' + fmtSds(dSds) + ')' : '')
-        + konkluzja(m.total.l, 'teraz'))
+      tone: v.t === 'bad' ? 'bad' : (v.t === 'warn' ? 'warn' : 'plain'),
+      text: kropka(txt)
     };
+  }
+
+  // Ostatnia faza, gdy ma przejąć nagłówek (jak naglowekMetryki w karcie): bez chipu leczenia, ≥ FAZA_MIN_M, z werdyktem.
+  function fazaNaglowka(m) {
+    if (!m || !m.faza || m.faza.zaKrotka || !m.faza.pokaz || !m.faza.verdict) return null;
+    if (m.treatment && m.treatment.verdict) return null;
+    return m.faza;
   }
 
   // 3. Najglebszy odcinek — tylko gdy jest co porownywac i werdykt jest ostrzegawczy.
@@ -563,18 +600,33 @@
   function zdanieMasa(model) {
     var m = metryka(model, 'bmi');
     if (!m || !m.total || !m.first || !m.last) return null;
-    if (m.total.t !== 'bad' && m.total.t !== 'warn') return null;
-    var dSds = m.last.sd != null && m.first.sd != null ? m.last.sd - m.first.sd : null;
-    var kA = kanal(m.first.c), kB = kanal(m.last.c);
+    // P-WERDYKT rata 5: ostatnia faza BMI (jak dla wzrostu); zdanie tylko przy ostrzeżeniu w nagłówku
+    // ALBO we wcześniejszym okresie (żeby historia przyrostu nie znikała z opisu).
+    var f = fazaNaglowka(m);
+    var v = f ? f.verdict : m.total;
+    var w = f && f.wczesniej && f.wczesniej.verdict ? f.wczesniej : null;
+    var ostrz = function (x) { return x && (x.t === 'bad' || x.t === 'warn'); };
+    if (!ostrz(v) && !(w && ostrz(w.verdict))) return null;
+    var od = f ? f.a : m.first;
+    var dSds = m.last.sd != null && od.sd != null ? m.last.sd - od.sd : null;
+    var kA = kanal(od.c), kB = kanal(m.last.c);
     var ruch = kA && kB && kA !== kB
       ? ' przesunęło się z kanału ' + kA + ' do kanału ' + kB
       : (kB ? ' utrzymuje się w kanale ' + kB : ' zmieniło pozycję centylową');
+    var txt = 'Od pomiaru w wieku ' + wiekDop(od.ageMonths) + ' BMI' + ruch
+      + (dSds != null ? ' (ΔbmiSDS ' + fmtSds(dSds) + ')' : '')
+      + konkluzja(v.l, 'teraz');
+    if (w) {
+      var kW = kanal(w.a.c), kW2 = kanal(w.b.c);
+      var ruchW = kW && kW2 && kW !== kW2 ? ' przesunęło się z kanału ' + kW + ' do kanału ' + kW2 : (kW2 ? ' pozostawało w kanale ' + kW2 : ' utrzymywało pozycję centylową');
+      txt = kropka(txt) + ' Wcześniej, ' + zakresWieku(w.a.ageMonths, w.b.ageMonths) + ', BMI' + ruchW
+        + ' (ΔbmiSDS ' + fmtSds(w.dSds) + ')' + konkluzja(w.verdict.l, 'wtedy');
+    }
+    var ton = ostrz(v) ? v.t : w.verdict.t;
     return {
       id: 'masa',
-      tone: m.total.t === 'bad' ? 'bad' : 'warn',
-      text: kropka('Od pomiaru w wieku ' + wiekDop(m.first.ageMonths) + ' BMI' + ruch
-        + (dSds != null ? ' (ΔbmiSDS ' + fmtSds(dSds) + ')' : '')
-        + konkluzja(m.total.l, 'teraz'))
+      tone: ton === 'bad' ? 'bad' : 'warn',
+      text: kropka(txt)
     };
   }
 

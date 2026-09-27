@@ -137,7 +137,11 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
   // przesunięcie dowolnej nierówności o jeden krok zmienia odcisk.
   const ODCISK_RATA_1 = 'a9a60858e6926c878cf06b8869a0df725be82a592581320f52fdf71e16d7a93d';
   const ODCISK_RATA_2 = '62fa83552244e0565ce60b42beabbf9b033d794131553abcbe6e71eee2f8e15d';
+  // P-WERDYKT rata 5: gałąź poziomu „BMI w paśmie nadwagi (85.–97. centyl)" przy stabilnym torze BMI.
+  // Nakładka masa↔BMI dostaje w siatce werdykty bez `poziomBmi`, więc jej nowa gałąź poziomu odcisku nie rusza.
+  const ODCISK_RATA_5 = '82277490be7d68db80f1fd4fae397dd46391e52feb30334299ad8747c02fb883';
   const PRZYPADKOW = 6280776;
+  // Trzy przemiatania po 6,3 mln przypadków w jednym pliku: pod pełnym obciążeniem suite domyślne 10 s bywa za mało.
 
   // Trzy etykiety, które wprowadziła rata 2 — i nic poza nimi.
   const ETYKIETY_POZIOMU = [
@@ -145,6 +149,8 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
     'tor stabilny, masa ciała poniżej 3. centyla',
     'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)',
   ];
+  // Jedna etykieta, którą wprowadziła rata 5 w para() — i nic poza nią.
+  const ETYKIETY_RATA_5 = ['tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl)'];
   const ST = {
     height: 'stabilny tor wzrastania',
     weight: 'stabilny tor masy ciała',
@@ -154,15 +160,30 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
   it(`odcisk bieżącego silnika jest zamrożony (${PRZYPADKOW} przypadków)`, () => {
     const wynik = odciskSiatki(silnik());
     expect(wynik.przypadkow, 'rozmiar siatki').toBe(PRZYPADKOW);
-    expect(wynik.odcisk).toBe(ODCISK_RATA_2);
-  });
+    expect(wynik.odcisk).toBe(ODCISK_RATA_5);
+  }, 30_000);
+
+  it('rata 5 odezwała się WYŁĄCZNIE tam, gdzie silnik dotąd milczał (odcisk raty 2 po odwzorowaniu)', () => {
+    const W = silnik();
+    const cofnij = (met, v) => (v && ETYKIETY_RATA_5.indexOf(v.l) >= 0 ? { t: 'stable', l: ST[met] } : v);
+    const jakPrzed = {
+      para: (m, a, b, c, d) => cofnij(m, W.para(m, a, b, c, d)),
+      zKontekstem: (m, a, b, c, d, g, p, r) => cofnij(m, W.zKontekstem(m, a, b, c, d, g, p, r)),
+      nakladkaMasaBmi: W.nakladkaMasaBmi,
+      nakladkaPozycjaWzrostu: W.nakladkaPozycjaWzrostu,
+    };
+    const wynik = odciskSiatki(jakPrzed);
+    expect(wynik.przypadkow).toBe(PRZYPADKOW);
+    expect(wynik.odcisk, 'rata 5 ruszyła coś poza werdyktami „stabilny"').toBe(ODCISK_RATA_2);
+  }, 30_000);
 
   it('rata 2 odezwała się WYŁĄCZNIE tam, gdzie silnik dotąd milczał — dowód, nie deklaracja', () => {
     // Zamieniamy każdą etykietę poziomu z powrotem na „stabilny tor" tej miary. Jeżeli rata 2
     // niczego poza stabilnymi werdyktami nie ruszyła, po takim odwzorowaniu MUSI wyjść
     // dokładnie odcisk raty 1 — bez sięgania po nieistniejący już stary kod.
+    // (Rata 5 dołożyła jedną etykietę poziomu — odwzorowana tak samo.)
     const W = silnik();
-    const cofnij = (met, v) => (v && ETYKIETY_POZIOMU.indexOf(v.l) >= 0 ? { t: 'stable', l: ST[met] } : v);
+    const cofnij = (met, v) => (v && (ETYKIETY_POZIOMU.indexOf(v.l) >= 0 || ETYKIETY_RATA_5.indexOf(v.l) >= 0) ? { t: 'stable', l: ST[met] } : v);
     const jakPrzed = {
       para: (m, a, b, c, d) => cofnij(m, W.para(m, a, b, c, d)),
       zKontekstem: (m, a, b, c, d, g, p, r) => cofnij(m, W.zKontekstem(m, a, b, c, d, g, p, r)),
@@ -172,7 +193,7 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
     const wynik = odciskSiatki(jakPrzed);
     expect(wynik.przypadkow).toBe(PRZYPADKOW);
     expect(wynik.odcisk, 'rata 2 ruszyła coś poza werdyktami „stabilny"').toBe(ODCISK_RATA_1);
-  });
+  }, 30_000);
 });
 
 describe('P-WERDYKT rata 2 — „stabilny tor" przestaje milczeć o poziomie', () => {
@@ -324,7 +345,10 @@ describe('P-WERDYKT rata 3 — hamulec catch-upu masy', () => {
     const stabilna = { t: 'stable', l: 'stabilny tor masy ciała' };
     expect(W.nakladkaMasaBmi(stabilna, 0.3, { t: 'warn', l: 'x' }, 0.3, { centyl: 92, cole: 130 }))
       .toEqual({ t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' });
+    // Poniżej progu ruchu BMI reguła ruchu milczy; od raty 5 mówi za to gałąź POZIOMU (BMI 92c).
     expect(W.nakladkaMasaBmi(stabilna, 0.3, { t: 'warn', l: 'x' }, 0.1, { centyl: 92, cole: 130 }))
+      .toEqual({ t: 'warn', l: 'tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)' });
+    expect(W.nakladkaMasaBmi(stabilna, 0.3, { t: 'warn', l: 'x' }, 0.1, { centyl: 60, cole: 100 }))
       .toBe(stabilna);
   });
 
@@ -425,5 +449,55 @@ describe('P-WERDYKT rata 4 — przyspieszenie BMI w paśmie typowym', () => {
     // Nakładki prędkości nie stosuje się do masy; gdyby ktoś ją tam wpiął, ten test nie
     // zaświeci się sam — pilnuje tego asercja o konsumentach wyżej.
     expect(TRAJ).not.toContain("met.key === 'weight'ovl");
+  });
+});
+
+describe('P-WERDYKT rata 5 — poziom nadwagi przy stabilnym torze (decyzja właściciela 2026-09-27)', () => {
+  // Zgłoszenie z raportu wzrastania: masa 51c → 50c „stabilny tor masy ciała" obok BMI 88c brzmiało
+  // uspokajająco, a BMI stabilne w paśmie 85.–97. centyla nazywało się „stabilny tor BMI".
+
+  it('BMI stabilne w paśmie 85.–97. centyla ostrzega i nazywa pasmo; progi domknięte od właściwej strony', () => {
+    const W = silnik();
+    const L = 'tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl)';
+    expect(W.para('bmi', 1.2, 1.3, 88, 90)).toEqual({ t: 'warn', l: L });
+    expect(W.para('bmi', 1.05, 1.04, 85.3, 85)).toEqual({ t: 'warn', l: L });          // 85 włącznie
+    expect(W.para('bmi', 1.0, 1.0, 84.1, 84.9)).toEqual({ t: 'stable', l: 'stabilny tor BMI' }); // poniżej 85
+    expect(W.para('bmi', 1.85, 1.86, 96.8, 96.9)).toEqual({ t: 'warn', l: L });        // tuż pod 97
+    expect(W.para('bmi', 1.9, 1.92, 97.1, 97.3).l).toBe('utrzymująca się otyłość (>97c)'); // ≥97 jak dotąd
+    // start ze środka siatki, mały ruch, koniec w paśmie nadwagi — też nazywa pasmo
+    expect(W.para('bmi', 1.0, 1.1, 84.1, 86.4)).toEqual({ t: 'warn', l: L });
+    // ten sam ruch w środku siatki — bez zmian
+    expect(W.para('bmi', 0.0, 0.1, 50, 54)).toEqual({ t: 'stable', l: 'stabilny tor BMI' });
+  });
+
+  it('stabilny tor masy przy BMI ≥85c / ≥97c / Cole ≥110 % ostrzega niezależnie od ruchu masy', () => {
+    const W = silnik();
+    const st = { t: 'stable', l: 'stabilny tor masy ciała' };
+    expect(W.nakladkaMasaBmi(st, -0.03, { t: 'warn', l: 'x' }, 0.31, { centyl: 88.2, cole: 121 }))
+      .toEqual({ t: 'warn', l: 'tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)' });
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0, { centyl: 97 }))
+      .toEqual({ t: 'warn', l: 'tor masy ciała stabilny, ale BMI w paśmie otyłości (≥97c)' });
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0, { centyl: 85 }).l).toBe('tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)');
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0, { centyl: 84.9 })).toBe(st);
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0, { centyl: 80, cole: 110 }))
+      .toEqual({ t: 'warn', l: 'tor masy ciała stabilny, ale wskaźnik Cole\'a sięga 110%' });
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0, { centyl: 80, cole: 109.9 })).toBe(st);
+    // bez danych o poziomie — milczy (przemiatanie siatki, brak silnika BMI)
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0)).toBe(st);
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0, {})).toBe(st);
+    // gdy trafiają oba — mówi BMI
+    expect(W.nakladkaMasaBmi(st, 0.0, null, 0, { centyl: 90, cole: 130 }).l).toMatch(/BMI w paśmie nadwagi/);
+  });
+
+  it('reguła ruchu ma pierwszeństwo przed poziomem; catch-up i werdykty warn/bad bez zmian', () => {
+    const W = silnik();
+    const st = { t: 'stable', l: 'stabilny tor masy ciała' };
+    expect(W.nakladkaMasaBmi(st, 0.3, { t: 'warn', l: 'x' }, 0.3, { centyl: 90 }).l)
+      .toBe('przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI');
+    const good = { t: 'good', l: 'wyrównanie niedoboru masy ciała' };
+    expect(W.nakladkaMasaBmi(good, 0.6, null, 0, { centyl: 60 })).toBe(good);
+    expect(W.nakladkaMasaBmi(good, 0.6, null, 0, { centyl: 90 }).l).toMatch(/^wyrównanie niedoboru masy, ale BMI/);
+    const warn = { t: 'warn', l: 'x' };
+    expect(W.nakladkaMasaBmi(warn, 0.0, null, 0, { centyl: 99 })).toBe(warn);
   });
 });

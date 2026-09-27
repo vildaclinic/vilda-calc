@@ -23,6 +23,9 @@
  * z powrotem na „stabilny tor" — pilnuje tego tests/unit/werdykt-silnik.test.mjs.
  * Kolejne zmiany merytoryczne (gate catch-upu, prędkość BMI wobec tempa wzrastania) są
  * osobnymi ratami i wymagają akceptacji klinicznej właściciela.
+ * Rata 5 (decyzja właściciela 2026-09-27) dokłada dwie gałęzie POZIOMU przy nadwadze: BMI
+ * stabilne w paśmie 85.–97. centyla przestaje brzmieć „stabilny tor BMI", a stabilny tor
+ * masy-do-wieku przy BMI ≥85c (albo Cole ≥110 %) przestaje brzmieć uspokajająco.
  *
  * WARSTWY. Werdykt powstaje w trzech krokach i to jest cała architektura tego modułu:
  *   1. para()                  — werdykt bazowy z samych liczb: ΔSDS + pozycja centylowa.
@@ -49,7 +52,7 @@
 
   if (!root) return;
 
-  var WERSJA = '4';
+  var WERSJA = '5';
 
   // Progi nazwane. Reszta liczb w gałęziach jest celowo zostawiona dokładnie tam, gdzie była
   // przed przeniesieniem — rata 1 ma być czytelna jako przeniesienie, a nie jako przepisanie.
@@ -109,6 +112,11 @@
       // Górny koniec BMI ma własną, mocniejszą etykietę w gałęzi wysokich centyli
       // („utrzymująca się otyłość (>97c)") — rata 2 jej nie dubluje i nie zmienia.
       if (cb < PROGI.BMI_NIEDOWAGA_C) return { t: 'warn', l: 'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)' };
+      // P-WERDYKT rata 5 (decyzja właściciela 2026-09-27): rata 2 nazwała przy stabilnym torze
+      // tylko ≥97c i <5c; pasmo nadwagi 85.–97. centyla zostawało „stabilnym torem BMI", czyli
+      // brzmiało jak środek siatki. Zmierzone na siatce z rat 2/4: 864 z 5 499 „stabilnych"
+      // komórek BMI kończy w tym paśmie. Próg 85 = VildaBmi.PROGI.DZIECKO.NADWAGA (nie nowy).
+      if (cb >= PROGI.BMI_NADWAGA_C && cb < PROGI.BMI_OTYLOSC_C) return { t: 'warn', l: 'tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl)' };
       return null;
     }
     if (cb >= PROGI.MASA_WYSOKA_C) return { t: 'warn', l: 'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)' };
@@ -225,15 +233,36 @@
     return null;
   }
 
+  // Poziom BMI przy STABILNYM torze masy-do-wieku (P-WERDYKT rata 5, decyzja właściciela
+  // 2026-09-27). Rata 2 ostrzegała o masie tylko ≥97c, bo „wiersz BMI rozstrzyga". Ale
+  // „stabilny tor masy ciała" obok BMI 88c brzmiał uspokajająco (zgłoszenie właściciela
+  // z raportu wzrastania). To próg POZIOMU, nie ruchu — te same liczby, co hamulec
+  // catch-upu (BMI ≥85c, Cole ≥110 %), i ta sama zasada: BMI mówi pierwsze, Cole drugi.
+  function poziomNadwagiPrzyStabilnejMasie(poziomBmi) {
+    var p = poziomBmi || {};
+    var c = typeof p.centyl === 'number' && isFinite(p.centyl) ? p.centyl : null;
+    var cole = typeof p.cole === 'number' && isFinite(p.cole) ? p.cole : null;
+    if (c != null && c >= PROGI.BMI_OTYLOSC_C) return { t: 'warn', l: 'tor masy ciała stabilny, ale BMI w paśmie otyłości (≥97c)' };
+    if (c != null && c >= PROGI.BMI_NADWAGA_C) return { t: 'warn', l: 'tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)' };
+    if (cole != null && cole >= PROGI.COLE_NADWAGA_PCT) return { t: 'warn', l: 'tor masy ciała stabilny, ale wskaźnik Cole\'a sięga 110%' };
+    return null;
+  }
+
   function nakladkaMasaBmi(v, dW, vB, dB, poziomBmi) {
-    if (!v || !(dW >= 0.2)) return v;
-    // Catch-up (`good`) ocenia hamulec poziomu; „stabilny" tor — reguła ruchu poniżej.
-    // Rozdział jest celowy: etykieta reguły ruchu mówi „nadmiar ujawnia się w BMI",
-    // a to byłaby nieprawda przy catch-upie, który dojechał dopiero do środka siatki.
-    if (v.t === 'good') return hamulecCatchUp(poziomBmi) || v;
-    if (v.t !== 'stable') return v;
-    if (!vB || (vB.t !== 'warn' && vB.t !== 'bad') || !(dB >= 0.2)) return v;
-    return { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
+    if (!v) return v;
+    if (dW >= 0.2) {
+      // Catch-up (`good`) ocenia hamulec poziomu; „stabilny" tor — reguła ruchu poniżej.
+      // Rozdział jest celowy: etykieta reguły ruchu mówi „nadmiar ujawnia się w BMI",
+      // a to byłaby nieprawda przy catch-upie, który dojechał dopiero do środka siatki.
+      if (v.t === 'good') return hamulecCatchUp(poziomBmi) || v;
+      if (v.t === 'stable' && vB && (vB.t === 'warn' || vB.t === 'bad') && dB >= 0.2) {
+        return { t: 'warn', l: 'przyrost masy szybszy niż wzrastanie — nadmiar ujawnia się w BMI' };
+      }
+    }
+    // Rata 5: poziom BMI przy stabilnym torze masy — niezależnie od ruchu masy. Bez danych
+    // o poziomie (przemiatanie siatki, brak silnika BMI) reguła milczy, jak hamulec.
+    if (v.t === 'stable') return poziomNadwagiPrzyStabilnejMasie(poziomBmi) || v;
+    return v;
   }
 
   // ── 3c. Nakładka przyspieszenia BMI ──────────────────────────────────────────────────
@@ -251,8 +280,12 @@
   // Nakładka odzywa się WYŁĄCZNIE tam, gdzie silnik dotąd milczał (`stable`) — nigdy nie
   // nadpisuje mocniejszego werdyktu. Stosuje się ją tylko do BMI; dla masy-do-wieku ten sam
   // dryf znaczy co innego (dziecko może po prostu rosnąć).
+  // Rata 5: gałąź poziomu „BMI w paśmie nadwagi (85.–97. centyl)" powstaje w para() tam, gdzie dotąd był
+  // „stabilny tor BMI" — czyli dokładnie tam, gdzie ta nakładka ma prawo mówić. RUCH ma pierwszeństwo przed
+  // POZIOMEM (jak w nakładce masa↔BMI): przy ΔbmiSDS ≥ +0,30 etykieta „tor stabilny" byłaby nieprawdą.
+  var ETYKIETA_POZIOMU_NADWAGI_BMI = 'tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl)';
   function nakladkaPredkosciBmi(v, d, gapM) {
-    if (!v || v.t !== 'stable') return v;
+    if (!v || (v.t !== 'stable' && v.l !== ETYKIETA_POZIOMU_NADWAGI_BMI)) return v;
     if (typeof d !== 'number' || !isFinite(d) || !(d >= PROGI.PRZYSPIESZENIE_BMI_DSDS)) return v;
     if (typeof gapM !== 'number' || !isFinite(gapM) || !(gapM >= PROGI.PREDKOSC_MIN_ODSTEP_M)) return v;
     return { t: 'warn', l: 'BMI rośnie szybciej niż wzrastanie — do obserwacji' };
@@ -280,6 +313,7 @@
     para: para,
     zKontekstem: zKontekstem,
     hamulecCatchUp: hamulecCatchUp,
+    poziomNadwagiPrzyStabilnejMasie: poziomNadwagiPrzyStabilnejMasie,
     nakladkaMasaBmi: nakladkaMasaBmi,
     nakladkaPredkosciBmi: nakladkaPredkosciBmi,
     nakladkaPozycjaWzrostu: nakladkaPozycjaWzrostu
