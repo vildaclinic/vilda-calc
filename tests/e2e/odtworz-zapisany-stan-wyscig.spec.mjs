@@ -125,3 +125,49 @@ test('kolejne wczytanie pacjenta znów proponuje wybór — zapamiętany wybór 
   await expect(page.locator('#restoreStateBtn')).toBeHidden();
   expect(await page.evaluate(() => window.sessionStorage.getItem('vildaLoadChoiceV1'))).toBe('new');
 });
+
+// Ścieżka F5 (pytanie właściciela 2026-09-27): po „Odtwórz zapis” odświeżenie strony odtwarza sesję przez
+// applyLoadedData({ isSessionRestore: true }) — ten sam mostek punktów GH startuje od nowa, a start persistence
+// decyduje o przycisku wg zapamiętanego wyboru. Sprawdzamy dwa F5 pod rząd: przycisk nie wraca, wybór „restore”
+// zostaje w sesji, modal nie pyta ponownie, punkt terapii jest w historii. Powolnego importu nie da się tu
+// wymusić z zewnątrz (moduł analizy wzrastania jest zamrożony, a przy odtwarzaniu sesji mostek idzie przez
+// zależności app.js, nie przez window) — ten wyścig pokrywa test jednostkowy na prawdziwym module
+// (tests/unit/odtworz-po-wyborze.test.mjs); tu liczy się prawdziwa ścieżka F5 na prawdziwej stronie.
+test('F5 po „Odtwórz zapis” u pacjenta z punktami GH: przycisk nie wraca — także po drugim F5', async ({ page }) => {
+  test.setTimeout(150_000);
+  await otworz(page);
+  await policzPacjentke(page);
+  await page.locator('#saveDataBtnSidebar').click();
+  const pid = await idZapisanegoPacjenta(page);
+  await page.evaluate(() => window.clearAllData());
+  await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), pid);
+  await expect(page.locator('.vhv-tile')).toBeVisible();
+  await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+  await expect(page.locator('#vildaLoadChoiceModal')).toBeVisible();
+  await page.locator('#vildaLcmRestore').click();
+  await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+  await expect(page.locator('#height')).toHaveValue('148.5');
+  await expect(page.locator('#restoreStateBtn')).toBeHidden();
+
+  // Sesję główną zapisuje pagehide przy F5; zapis jest wstrzymany przez 2,5 s po „Wyczyść wszystkie pola”
+  // (okno blokady persistence). Człowiek nie zdąży w tym oknie wczytać, odtworzyć i odświeżyć — test musiałby.
+  await expect.poll(() => page.evaluate(() => window.VildaPersistence.isClearInProgress()), { message: 'okno blokady zapisu po czyszczeniu zamknięte' }).toBe(false);
+
+  const poF5 = async (ktore) => {
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
+    await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+    await expect(page.locator('#height'), `${ktore}: sesja odtworzona`).toHaveValue('148.5', { timeout: 15_000 });
+    // kaskady po starcie (mostek punktów GH, odtworzenie historii) kończą się asynchronicznie
+    await page.waitForTimeout(2500);
+    await expect(page.locator('#restoreStateBtn'), `${ktore}: po odtworzeniu nie ma czego odtwarzać`).toBeHidden();
+    expect(await page.evaluate(() => document.getElementById('restoreStateBtn').style.display), `${ktore}: styl inline przycisku`).toBe('none');
+    expect(await page.evaluate(() => window.sessionStorage.getItem('vildaLoadChoiceV1')), `${ktore}: wybór zostaje w sesji`).toBe('restore');
+    expect(await page.evaluate(() => Boolean(document.getElementById('vildaLoadChoiceModal'))), `${ktore}: F5 nie pyta ponownie`).toBe(false);
+    // punkt terapii jest w historii i tempo liczy się z niego (11 mies.), jak przed F5
+    await expect.poll(() => page.evaluate(() => Array.from(document.querySelectorAll('#advMeasurements .measure-row')).map((r) => r.querySelector('.adv-height')?.value)), { message: `${ktore}: punkt terapii w historii`, timeout: 15_000 }).toEqual(['123.9', '139.9']);
+    await expect.poll(() => page.evaluate(() => Number(window.advancedGrowthData && window.advancedGrowthData.growthVelocityGapM)), { message: `${ktore}: tempo z ostatnich 11 mies.` }).toBe(11);
+  };
+  await poF5('pierwsze F5');
+  await poF5('drugie F5');
+});
