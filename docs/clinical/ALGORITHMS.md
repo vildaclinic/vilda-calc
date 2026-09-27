@@ -5778,7 +5778,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Mini-podsumowanie na pasku powłoki znika od razu po „Wyczyść wszystkie pola” (P-MINI-WYCZYSC, SW 1.1.80, 2026-09-27)
+## Mini-podsumowanie na pasku powłoki znika od razu po „Wyczyść wszystkie pola” (P-MINI-WYCZYSC, SW 1.1.81, 2026-09-27)
 
 **Zgłoszenie właściciela (2026-09-27).** W powłoce `app.html` na szerokim ekranie PC pasek ozdobny po prawej
 stronie pokazuje mini-podsumowanie (wiek, masa z centylem, wzrost z centylem, BMI z centylem, powierzchnia
@@ -5840,7 +5840,7 @@ bramka PRO podmieniona: podsumowanie z danymi ze zgłoszenia (16 lat 4 mies., 62
 1,56 m²), klik prawdziwego `#clearAllDataBtn`, znika w budżecie 1000 ms (na kodzie sprzed poprawki ten test
 czerwieni się: `Received: "block"`), pasek wraca do stanu bez treści, brak `pageerror`.
 
-SW 1.1.79 → **1.1.80**; `vilda_data_import_export.js?v=81→82`.
+SW 1.1.80 → **1.1.81**; `vilda_data_import_export.js?v=82→83`. (Pierwsza wersja raty podbijała do `?v=82` / SW 1.1.80; równolegle #444 wydał ten sam moduł pod tymi samymi numerami, więc po scaleniu z `audyt` rata podbija o jeszcze jeden — ten sam klucz cache nie może nieść dwóch treści.)
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; rozstrzygnięcie (a)/(b) dla drugiego odroczenia.
 Zmiana kodu w tej racie nie jest kliniczna (żaden wzór, próg ani dane).
