@@ -237,7 +237,9 @@
     'progresja nadwagi (BMI w paśmie 85.–97. centyla)': 'progresję nadwagi (BMI w paśmie 85.–97. centyla)',
     'utrzymująca się otyłość (>97c)': 'utrzymującą się otyłość (>97c)',
     'redukcja bardzo szybka': 'redukcję bardzo szybką',
-    'redukcja w trakcie leczenia': 'redukcję w trakcie leczenia'
+    'redukcja w trakcie leczenia': 'redukcję w trakcie leczenia',
+    // P-WERDYKT rata 6: krótkie okno wzrostu z dużą zmianą (ogon „do weryfikacji pomiaru" wraca na koniec).
+    'szybka zmiana w krótkim oknie': 'szybką zmianę w krótkim oknie'
   };
 
   // Etykiety, ktore sa juz zdaniem albo okolicznikiem, nie rzeczownikiem — nie wchodza
@@ -316,6 +318,11 @@
     'tor masy ciała stabilny, ale wskaźnik Cole\'a sięga 110%': {
       teraz: 'tor masy ciała jest stabilny, ale wskaźnik Cole\'a sięga 110%',
       wtedy: 'tor masy ciała był stabilny, ale wskaźnik Cole\'a sięgał 110%'
+    },
+    // P-WERDYKT rata 6: okno w kursie GH krótsze niż 6 mies. (ogon z długością okna wraca na koniec).
+    'za wcześnie na ocenę odpowiedzi na GH': {
+      teraz: 'na ocenę odpowiedzi na GH jest jeszcze za wcześnie',
+      wtedy: 'na ocenę odpowiedzi na GH było jeszcze za wcześnie'
     }
   };
 
@@ -334,7 +341,9 @@
     'obniżenie masy ciała poniżej 3. centyla', 'istotne przesunięcie centylowe w górę',
     'istotne przesunięcie centylowe w dół', 'przyrost masy mimo leczenia redukcyjnego',
     'przyrost masy szybszy niż wzrastanie',
-    'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl)'
+    'obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl)',
+    // P-WERDYKT rata 6: redukcja między −0,25 a +0,2 SDS/rok w kursie leczenia (ogon „po N mies." wraca na koniec).
+    'brak istotnej odpowiedzi na leczenie'
   ];
 
   function rozbijEtykiete(label) {
@@ -506,7 +515,8 @@
   // Ostatnia faza, gdy ma przejąć nagłówek (jak naglowekMetryki w karcie): bez chipu leczenia, ≥ FAZA_MIN_M, z werdyktem.
   function fazaNaglowka(m) {
     if (!m || !m.faza || m.faza.zaKrotka || !m.faza.pokaz || !m.faza.verdict) return null;
-    if (m.treatment && m.treatment.verdict) return null;
+    // P-WERDYKT rata 6: chip leczenia przejmuje nagłówek tylko przy aktywnym kursie (jak chipNaglowka w karcie).
+    if (m.treatment && m.treatment.verdict && m.treatment.aktywne) return null;
     return m.faza;
   }
 

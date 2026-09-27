@@ -38,6 +38,10 @@ describe('silnik werdyktu — kształt modułu', () => {
       MASA_WYSOKA_C: 97, MASA_NISKA_C: 3, BMI_OTYLOSC_C: 97, BMI_NIEDOWAGA_C: 5,
       BMI_NADWAGA_C: 85, COLE_NADWAGA_PCT: 110,
       PRZYSPIESZENIE_BMI_DSDS: 0.3, PREDKOSC_MIN_ODSTEP_M: 3,
+      // P-WERDYKT rata 6 (audyt 2): odpowiedź na leczenie liczona na rok, krótkie okno wzrostu.
+      GH_OKNO_MIN_M: 6, GH_WSTEPNIE_DO_M: 12, GH_DOBRA_DSDS_ROK: 0.3, GH_SLABA_DSDS_ROK: 0.1,
+      RD_OKNO_MIN_M: 3, RD_WSTEPNIE_DO_M: 6, RD_ODPOWIEDZ_DSDS_ROK: -0.25, RD_PRZYROST_DSDS_ROK: 0.2, RD_SZYBKA_DSDS_ROK: -1.5,
+      KROTKIE_OKNO_M: 6, KROTKIE_OKNO_DSDS: 0.5,
     });
   });
 
@@ -140,6 +144,12 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
   // P-WERDYKT rata 5: gałąź poziomu „BMI w paśmie nadwagi (85.–97. centyl)" przy stabilnym torze BMI.
   // Nakładka masa↔BMI dostaje w siatce werdykty bez `poziomBmi`, więc jej nowa gałąź poziomu odcisku nie rusza.
   const ODCISK_RATA_5 = '82277490be7d68db80f1fd4fae397dd46391e52feb30334299ad8747c02fb883';
+  // P-WERDYKT rata 6 (audyt 2): w siatce zKontekstem jest wołane BEZ długości okna, więc gałęzie leczenia liczone
+  // na rok odcisku nie ruszają; jedyna zmiana w siatce to dopisek nakładki pozycyjnej „nadal poniżej 3. centyla"
+  // przy GH i centylu < 3 (dotąd nakładka przy GH milczała). Odwzorowanie: obcięcie tego dopisku.
+  const ODCISK_RATA_6 = 'f4464df1198b87c266fe0ee2f5922d3b00186bed44d57356b159d13d65a16847';
+  const DOPISEK_RATA_6 = /(,| —) nadal poniżej 3\. centyla$/;
+  const bezDopisku6 = (v) => (v && typeof v.l === 'string' && DOPISEK_RATA_6.test(v.l) ? { t: v.t, l: v.l.replace(DOPISEK_RATA_6, '') } : v);
   const PRZYPADKOW = 6280776;
   // Trzy przemiatania po 6,3 mln przypadków w jednym pliku: pod pełnym obciążeniem suite domyślne 10 s bywa za mało.
 
@@ -160,7 +170,20 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
   it(`odcisk bieżącego silnika jest zamrożony (${PRZYPADKOW} przypadków)`, () => {
     const wynik = odciskSiatki(silnik());
     expect(wynik.przypadkow, 'rozmiar siatki').toBe(PRZYPADKOW);
-    expect(wynik.odcisk).toBe(ODCISK_RATA_5);
+    expect(wynik.odcisk).toBe(ODCISK_RATA_6);
+  }, 30_000);
+
+  it('rata 6 zmieniła w siatce WYŁĄCZNIE dopisek nakładki pozycyjnej przy GH (odcisk raty 5 po odwzorowaniu)', () => {
+    const W = silnik();
+    const jakPrzed = {
+      para: W.para,
+      zKontekstem: W.zKontekstem,
+      nakladkaMasaBmi: W.nakladkaMasaBmi,
+      nakladkaPozycjaWzrostu: (v, cb, mp, sa, gh) => bezDopisku6(W.nakladkaPozycjaWzrostu(v, cb, mp, sa, gh)),
+    };
+    const wynik = odciskSiatki(jakPrzed);
+    expect(wynik.przypadkow).toBe(PRZYPADKOW);
+    expect(wynik.odcisk, 'rata 6 ruszyła coś poza dopiskiem przy GH').toBe(ODCISK_RATA_5);
   }, 30_000);
 
   it('rata 5 odezwała się WYŁĄCZNIE tam, gdzie silnik dotąd milczał (odcisk raty 2 po odwzorowaniu)', () => {
@@ -170,7 +193,7 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
       para: (m, a, b, c, d) => cofnij(m, W.para(m, a, b, c, d)),
       zKontekstem: (m, a, b, c, d, g, p, r) => cofnij(m, W.zKontekstem(m, a, b, c, d, g, p, r)),
       nakladkaMasaBmi: W.nakladkaMasaBmi,
-      nakladkaPozycjaWzrostu: W.nakladkaPozycjaWzrostu,
+      nakladkaPozycjaWzrostu: (v, cb, mp, sa, gh) => bezDopisku6(W.nakladkaPozycjaWzrostu(v, cb, mp, sa, gh)),
     };
     const wynik = odciskSiatki(jakPrzed);
     expect(wynik.przypadkow).toBe(PRZYPADKOW);
@@ -188,7 +211,7 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
       para: (m, a, b, c, d) => cofnij(m, W.para(m, a, b, c, d)),
       zKontekstem: (m, a, b, c, d, g, p, r) => cofnij(m, W.zKontekstem(m, a, b, c, d, g, p, r)),
       nakladkaMasaBmi: W.nakladkaMasaBmi,
-      nakladkaPozycjaWzrostu: W.nakladkaPozycjaWzrostu,
+      nakladkaPozycjaWzrostu: (v, cb, mp, sa, gh) => bezDopisku6(W.nakladkaPozycjaWzrostu(v, cb, mp, sa, gh)),
     };
     const wynik = odciskSiatki(jakPrzed);
     expect(wynik.przypadkow).toBe(PRZYPADKOW);

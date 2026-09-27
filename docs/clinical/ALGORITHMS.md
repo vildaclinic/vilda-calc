@@ -5778,6 +5778,83 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Werdykty trajektorii przy leczeniu GH i otyłości: kursy, okna na rok, chip w kursie (P-WERDYKT rata 6, SW 1.1.78, 2026-09-27)
+
+**Zgłoszenie właściciela (2026-09-27).** Audyt funkcji „wydającej werdykty” w analizie siatki centylowej ze szczególnym
+uwzględnieniem pacjentów leczonych z powodu otyłości i hormonem wzrostu; werdykt nie może opierać się na punkcie pierwszym
+i ostatnim. Audyt (dowody na prawdziwym silniku, dane fikcyjne) wykazał 11 usterek; decyzja: „zgadzam się z rekomendacjami,
+koduj” (wszystkie R1–R9 w jednej racie).
+
+**Co było źle (skrót ustaleń A1–A11).**
+- A1/A5/A7: progi odpowiedzi na GH (≥ +0,3 dobra, < +0,1 słaba) i na redukcję (≤ −0,2 odpowiedź, ≥ +0,2 przyrost) były
+  liczone na surowej ΔSDS pary punktów bez czasu: +0,29 w 6 mies. „umiarkowana”, +0,30 w 36 mies. „dobra”; −0,2 BMI-SDS
+  w 3 mies. „redukcja w trakcie leczenia”; brak ruchu przez 12 mies. leczenia spadał do werdyktu populacyjnego bez słowa
+  o leczeniu.
+- A2/A4: gałąź GH włączała się przy ≥ 6 mies. nakładania z dowolnie długim oknem (6 z 36 mies. → całość „dobra odpowiedź
+  na GH”), gałąź redukcji przy ≥ 3 mies. (24-miesięczny przyrost sprzed leczenia → „przyrost masy mimo leczenia”).
+- A3: chip „okres leczenia” biegł od startu do OSTATNIEGO pomiaru, także po zakończeniu leczenia, i nadpisywał fazę
+  (skuteczna redukcja 96–108 mies. + regain po odstawieniu = „przyrost masy mimo leczenia redukcyjnego”).
+- A6: wiele kursów zlewało się w jeden przedział od pierwszego „start” do ostatniego „end” (przerwa liczona jako leczenie).
+- A7: chip masy omijał nakładkę poziomu z raty 5 („stabilny tor masy ciała” przy BMI 95c na leczeniu).
+- A8: −0,5 hSDS w 3 mies. i w 60 mies. dostawały tę samą „decelerację”.
+- A9: nakładka pozycyjna milkła przy GH („odpowiedź umiarkowana (GH)” na 1. centylu).
+- A10: flaga w dół nie znała GH (spadek sprzed leczenia, na GH nadrabianie — baner jak przy nierozpoznanym niedoborze).
+
+**Reguły od tej raty (vilda_werdykt.js v6, vilda_trajectory_analysis.js v29).**
+1. *Kursy leczenia* (`therapyIntervals`): punkty monitora posortowane po wieku; kurs otwiera pierwszy punkt, zamyka „end”;
+   punkt po „end” z przerwą < 3 mies. wraca do kursu, ≥ 3 mies. otwiera nowy. Kontekst niesie `ghKursy` / `redKursy`
+   (etykieta kursu = preparat z jego ostatniego punktu) obok dotychczasowej koperty `gh` / `red`.
+2. *Okno w kursie* (`kursOkna`): start okna ≥ początek kursu − 6 mies., koniec ≤ koniec kursu (gdy zakończony), pokrycie
+   leczeniem ≥ 50 % okna. Tylko takie okno dostaje werdykt odpowiedzi na leczenie. Okno mieszane dostaje werdykt
+   populacyjny/MPH z dopiskiem „— w tym N mies. na GH” / „— w tym N mies. leczenia redukcyjnego” (dopisek jest
+   ogonem etykiety; słowniki opisu i epikryzy odmieniają głowę, ogon wraca na koniec zdania).
+3. *Odpowiedź na GH na rok*: okno w kursie < 6 mies. → „za wcześnie na ocenę odpowiedzi na GH — N mies.”; ≥ 6 mies. →
+   ΔhSDS × 12 / okno z progami ≥ +0,3 dobra, < +0,1 słaba (dotychczasowe liczby aplikacji, PR #63/v388; słaba
+   odpowiedź w 1. roku < 0,3 wg konsensusu Bang 2012, doi:10.1111/j.1365-2265.2012.04420.x); okno 6–11 mies. z dopiskiem
+   „wstępnie (N mies.)”. Ten sam próg obowiązuje w każdym roku kursu — osobny, niższy próg dla kolejnych lat pozostaje
+   decyzją właściciela.
+4. *Odpowiedź na redukcję*: ocena od 3 mies. w kursie (okno 12 tyg. ChPL, jak `obesity_response_criteria.js`); okno
+   < 12 mies. przeliczane na rok, okno ≥ 12 mies. oceniane po ZMIANIE SKUMULOWANEJ (odpowiedź osiągnięta i utrzymana
+   przez 3 lata, −0,6, nie może brzmieć „brak odpowiedzi”). Progi: ≤ −0,25 BMI-SDS „redukcja w trakcie leczenia”
+   (Reinehr 2016, doi:10.1210/jc.2016-1885 — od 0,25 BMI-SDS poprawa ciśnienia i lipidów; dotąd −0,2), ≥ +0,2 „przyrost
+   masy mimo leczenia redukcyjnego” (jak dotąd), między nimi NOWA etykieta „brak istotnej odpowiedzi na leczenie — po
+   N mies.” (ton warn); „redukcja bardzo szybka — do kontroli” przy ≤ −1,5 SDS/rok (zawsze na rok); okno < 6 mies.
+   z dopiskiem „wstępnie”.
+5. *Chip leczenia* = OSTATNI kurs, od pomiaru na starcie (ostatni pomiar nie starszy niż 6 mies. przed startem, inaczej
+   pierwszy do 6 mies. po starcie; bez takiego pomiaru chipu nie ma) do ostatniego pomiaru W KURSIE. Aktywny kurs: chip
+   jest nagłówkiem wiersza (jak dotąd). Zakończony kurs: linia „↳ okres leczenia (X → Y, zakończone): ΔSDS … — …”,
+   nagłówek wraca do fazy/całości (karta, podsumowanie, opis pacjenta, epikryza). Chip masy przechodzi przez nakładkę
+   masa↔BMI, chip BMI przez nakładkę prędkości.
+6. *Faza* (rata 5) nie przechodzi przez granicę kursu: odcinek w kursie i odcinek poza nim (albo w innym kursie) nie
+   sklejają się w jedną fazę, nawet przy tym samym kierunku.
+7. *Krótkie okno wzrostu*: |ΔhSDS| ≥ 0,5 w oknie < 6 mies. → „szybka zmiana w krótkim oknie — do weryfikacji pomiaru”
+   (warn) przed każdą inną regułą; tylko wzrost (redukcja masy jest oceniana już od 12 tyg.).
+8. *Pozycja przy GH*: nakładka pozycyjna nie zmienia werdyktu odpowiedzi na GH, ale przy centylu < 3 dopisuje
+   „nadal poniżej 3. centyla”.
+9. *Flaga w dół, wariant G*: aktywny (ostatni) kurs GH z pomiarem na starcie i ΔhSDS od startu ≥ +0,2 → wariant `G`,
+   ton warn, fraza „sprzed leczenia GH — od jego startu w wieku … wzrost nadrabia (ΔhSDS +…)”, zalecenie „ocena
+   odpowiedzi na leczenie w wierszu wzrostu”. Ma pierwszeństwo przed P2/R/P1/P0.
+10. Panel „Porównanie z poprzednim pomiarem” (Karta pacjenta) liczy werdykt pary tą samą funkcją
+    `pairVerdictInContext` (kursy, okno na rok, krótkie okno, dopiski); bez modułu trajektorii wraca do dotychczasowej
+    delegacji do silnika.
+
+**Bez zmiany.** Progi populacyjne i MPH, nakładki poziomu (raty 2–5), progi 0,3/0,1 GH i +0,2 przyrostu, warunek
+„redukcja tylko przy centylu startowym ≥ 10”, flaga w dół ΔhSDS ≤ −1 od bazy ≥ 36 mies. Wołanie `zKontekstem` bez długości
+okna zachowuje się jak dotąd — odcisk siatki 6 280 776 przypadków zmienia się WYŁĄCZNIE o dopisek nakładki pozycyjnej przy
+GH (`ODCISK_RATA_6`, dowód odwzorowaniem na odcisk raty 5).
+
+**Wpływ kliniczny.** Zmieniają się werdykty u pacjentów z punktami monitora GH lub leczenia otyłości: (a) okna leżące
+w kursie dostają ocenę na rok (+0,30 w 36 mies. przestaje być „dobrą odpowiedzią”, −0,2 w 3 mies. jest odpowiedzią
+wstępną), (b) okna mieszane tracą etykietę leczenia na rzecz werdyktu populacyjnego z dopiskiem, (c) po zakończeniu
+kursu chip przestaje być nagłówkiem, (d) brak ruchu na leczeniu dostaje ostrzeżenie „brak istotnej odpowiedzi”, (e) próg
+odpowiedzi redukcyjnej −0,2 → −0,25. U pacjentów bez punktów terapii zmienia się tylko: krótkie okno wzrostu
+(|Δ| ≥ 0,5 w < 6 mies. → weryfikacja pomiaru zamiast deceleracji). Przypadki regresyjne: `tests/unit/werdykt-kursy-rata-6.test.mjs`
+(D1–D15 z raportu audytu na prawdziwych `zKontekstem`, `therapyIntervals`, `kursOkna`, `analyze`, renderery, opis).
+
+**Decyzje właściciela do potwierdzenia.** Niższy próg odpowiedzi na GH dla kolejnych lat kursu (dziś ten sam co w 1. roku);
+brzmienie „brak istotnej odpowiedzi na leczenie — po N mies.”; próg −0,25 zamiast −0,2; czy dopisek „w tym N mies.” ma
+być także w epikryzie (dziś idzie jako ogon etykiety, więc tak).
+
 ## Werdykt trajektorii: ostatnia faza jako nagłówek, poziom nadwagi przy stabilnym torze (P-WERDYKT rata 5, SW 1.1.77, 2026-09-27)
 
 **Zgłoszenie właściciela (2026-09-27, z raportu wzrastania; liczby bez danych osobowych).** Chłopiec 12,3 → 15,0 r.ż.,
