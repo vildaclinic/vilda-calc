@@ -187,7 +187,7 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
     // P-WERDYKT rata 6 (audyt 2): werdykt pary liczy JEDNA sciezka modulu trajektorii (kursy leczenia, okno
     // na rok, krotkie okno, dopiski). Bez modulu — dotychczasowa delegacja do silnika (zapas na stronach bez niego).
     var _TJ=i.VildaTrajectoryAnalysis,_pr=null;
-    if(_TJ&&typeof _TJ.pairVerdictInContext=="function"){try{_pr=_TJ.pairVerdictInContext(m.metric,{sd:sa.sd,c:ca,ageMonths:agA},{sd:sb.sd,c:cb,ageMonths:agB},cx)}catch(_pe){_pr=null}}
+    if(_TJ&&typeof _TJ.pairVerdictInContext=="function"){try{_pr=_TJ.pairVerdictInContext(m.metric,{sd:sa.sd,c:ca,ageMonths:agA,value:sa.val},{sd:sb.sd,c:cb,ageMonths:agB,value:sb.val},cx)}catch(_pe){_pr=null}}
     var v=_pr?_pr.v:verdictCh2(m.metric,sa.sd,sb.sd,ca,cb,ghM,cx?cx.mpSds:null,rdOn);
     !_pr&&"height"===m.metric&&(v=verdictHtPos(v,cb,cx?cx.mpSds:null,sa.sd,ghM>=6));
     // P-WERDYKT rata 4: przyspieszenie BMI w pasmie typowym. Odstep `dt` jest w miesiacach
@@ -213,6 +213,8 @@ function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(
           var _cr=i.VildaBmi.cole({bmi:_b2.val,plec:_bit.sc.sex,wiekMies:agB,zrodlo:i.bmiSource});
           if(_cr&&typeof _cr.cole=="number"&&isFinite(_cr.cole))_pb.cole=_cr.cole}}catch(_ce){}
         v=verdictWtBmi(v,Math.round(100*(sb.sd-sa.sd))/100,_vb,Math.round(100*(_b2.sd-_b1.sd))/100,_pb)}}
+    // P-WERDYKT rata 7: dopisek okna (leczenie w kursie, okno mieszane) przezywa nakladki, ktore buduja nowy obiekt.
+    if(_pr&&_pr.dopisek&&v&&String(v.l||"").indexOf(_pr.dopisek)<0&&i.VildaWerdykt&&typeof i.VildaWerdykt.zOgonem=="function")v=i.VildaWerdykt.zOgonem(v,_pr.dopisek);
     var vW=function(h){return v?'<span class="vilda-v-'+v.t+'">'+h+"</span>":h};
     var _vv2=velMo?(dt>0?dv/dt:0):(dyr>0?dv/dyr:0),_tk=false,_Tq=i.VildaTempoWzrastania;
     // P-TEMPO etap 4: tempo wzrostu miedzy dwoma pomiarami liczy odcinek() silnika; odstep < 6 mies. jest oznaczony (bez werdyktu).

@@ -5778,6 +5778,68 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Karta „Porównanie z poprzednim pomiarem”: ruch w krótkim oknie, pasmo wysokie masy od 85c, leczenie w krótkim oknie (P-WERDYKT rata 7, SW 1.1.79, 2026-09-27)
+
+**Zgłoszenie właściciela (2026-09-27, zrzut karty; liczby bez danych osobowych).** Chłopiec 16 lat 3 mies., odstęp
+1 mies.: masa 64 → 62 kg (82c → 77c, ΔwSDS −0,19) „stabilny tor masy ciała”; BMI 31,7 → 30,7 (>99c → 99c,
+ΔbmiSDS −0,13) „utrzymująca się otyłość (>97c)”; Cole −4,9 pkt proc. bez słowa. Pytanie: czemu karta nic nie mówi,
+że dziecko chudnie, i czy w ogóle wie o leczeniu otyłości / GH.
+
+**Przyczyny (audyt).** (1) Pasmo wysokie masy zaczynało się od 90c; start z 82c trafiał do środka siatki, gdzie
+mówi tylko |ΔSDS| ≥ 0,5. (2) BMI w paśmie wysokim wymaga ≤ −0,2 SDS do „redukcji BMI”; −0,13 spadało do reguły
+poziomu, która zjada kierunek. (3) Poza kursem leczenia progi nie znały czasu (−0,19 w 1 mies. = −2,3 SDS/rok).
+(4) Karta pokazywała Δ kg bez procentu i tempa. (5) Karta zna leczenie (globalne listy punktów monitorów →
+`buildClinicalContext`), ale przy oknie w kursie krótszym niż 3 mies. gałąź redukcji jest wyłączona i nic o leczeniu
+nie mówiła; monitory wypełniają listy 350–400 ms po wczytaniu pacjenta i nie ogłaszały zmian, więc karta
+przeliczała kontekst dopiero przy nowym pomiarze.
+
+**Decyzja właściciela (2026-09-27): „zgadzam się, koduj ratę 7” (P1–P8).**
+
+**Reguły (vilda_werdykt.js v7, vilda_trajectory_analysis.js v30, vilda_summary_cards.js).**
+1. *Pasmo wysokie masy-do-wieku od 85c* (`PROGI.MASA_PASMO_WYSOKIE_C`; dotąd 90c w literale) — ten sam próg, którym
+   silnik od raty 5 nazywa nadmiar (próg nadwagi BMI). Start z 85–89c dostaje reguły pasma wysokiego (redukcja /
+   przyrost od 0,2 SDS) zamiast progu 0,5 środka siatki. Jedyna zmiana w siatce odcisku (`ODCISK_RATA_7`; dowód:
+   ten sam kod z progiem cofniętym do 90 daje `ODCISK_RATA_6`).
+2. *Ruch masy/BMI w krótkim oknie* (`ruchKrotkieOkno`, okno < 6 mies.): warunek podwójny — tempo |ΔSDS × 12/okno|
+   ≥ 0,5 SDS/rok (`RUCH_KROTKI_DSDS_ROK`, ten sam próg co „istotne przesunięcie”, odniesiony do roku) **i**
+   |ΔSDS| ≥ 0,1 (`RUCH_KROTKI_MIN_DSDS`, próg płaskości fazy z raty 5; −0,05 SDS w miesiąc to szum wagi).
+   Spadek z pasma nadmiaru (ca ≥ 85): „redukcja masy ciała w krótkim oknie” / „spadek BMI w krótkim oknie” (good)
+   z ogonem liczb („−2,0 kg (−3,1 %) w 1 mies.”, BMI „−1,0 (−3,1 %) w 1 mies.”; bez wartości — ΔSDS) i poziomem
+   końcowym („nadal otyłość (>97c)”, „nadal nadwaga (85.–97. centyl)”, masa „masa nadal >97c”). Spadek spoza
+   nadmiaru: „utrata masy w krótkim oknie … do oceny” (warn). Przyrost tylko, gdy kończy w nadmiarze (cb ≥ 85):
+   „przyrost masy w krótkim oknie” / „wzrost BMI w krótkim oknie” (warn). Reguła nie osłabia werdyktu „bad” i nie
+   działa w oknie, które liczy gałąź leczenia (≥ 3 mies. w kursie). Tylko masa i BMI (wzrost ma własną regułę
+   z raty 6).
+3. *Kierunek przed poziomem w nakładce masa↔BMI*: „utrata masy w krótkim oknie — do oceny” (masa spoza pasma
+   nadmiaru) przy BMI, które w tym samym oknie spada z nadmiaru, staje się „redukcja masy ciała w krótkim oknie”
+   (good) — o nadmiarze rozstrzyga BMI, jak w gałęzi poziomu z raty 2.
+4. *Strażnik tempa redukcji w silniku* (`strazTempaRedukcji`, dotąd tylko w panelu Karty pacjenta): spadek ≥ 0,2 SDS
+   przy starcie ≥ 10c i odstępie ≥ 2 mies., gdy tempo ≤ −1,5 SDS/rok albo (masa) ubytek > 1 kg/mies. u < 12 lat /
+   > 3,9 kg/mies. od 12 lat → „redukcja bardzo szybka — do kontroli” (nie osłabia „bad”, nie dubluje etykiety
+   gałęzi leczenia). Wspólna ścieżka `pairVerdictInContext` dostaje wartości (Δ kg, %, wiek) od karty, panelu
+   i trajektorii.
+5. *Karta pokazuje procent i tempo* obok Δ: masa „−3,1 %, −2,00 kg/mies.”, BMI „−3,1 %”.
+6. *Okno w kursie leczenia otyłości krótsze niż próg oceny (3 mies.)*: werdykt (także krótkiego okna) z dopiskiem
+   „w trakcie leczenia (N mies., ocena od 3 mies.)”; chip kontekstu „leczenie otyłości (lek) — N mies. w odcinku”
+   świeci także wtedy (dotąd tylko od 3 mies.). GH analogicznie przez „za wcześnie na ocenę odpowiedzi na GH”.
+7. *Sygnał zmiany punktów*: monitory GH i otyłości ogłaszają `vilda:therapy-points-changed` po zapisie, edycji
+   i wczytaniu z rekordu; karta porównania przelicza się po nim (dotąd dopiero przy nowym pomiarze).
+8. Panel Karty pacjenta: dopisek okna przeżywa nakładki (jak w trajektorii od raty 6).
+
+**Bez zmiany.** Progi GH, redukcji na rok (rata 6), populacyjne progi 0,2/0,5 dla okien ≥ 6 mies., nakładki poziomu
+(raty 2–5), wzrost.
+
+**Wpływ kliniczny.** Zmiana kliniczna dla masy i BMI: (a) start masy z 85–89c dostaje reguły pasma wysokiego;
+(b) okna < 6 mies. dostają werdykt z tempa (przypadek właściciela: masa „redukcja masy ciała w krótkim oknie —
+−2,0 kg (−3,1 %) w 1 mies.”, BMI „spadek BMI w krótkim oknie — −1,0 (−3,1 %) w 1 mies., nadal otyłość (>97c)”);
+(c) strażnik tempa działa też w trajektorii i karcie porównania, nie tylko w panelu; (d) leczenie w kursie < 3 mies.
+przestaje być niewidoczne. Przypadki regresyjne: `tests/unit/werdykt-krotkie-okno-rata-7.test.mjs` (silnik, ścieżka
+pary, model karty, opis), `tests/e2e/porownanie-rata-7.spec.mjs` (prawdziwa strona, liczby z przypadku).
+
+**Decyzje właściciela do potwierdzenia.** Progi 0,5 SDS/rok i 0,1 SDS dla ruchu w krótkim oknie; brzmienie etykiet
+(„redukcja masy ciała w krótkim oknie”, „utrata masy w krótkim oknie — do oceny”, „w trakcie leczenia (N mies.,
+ocena od 3 mies.)”); przyrost w krótkim oknie liczony tylko przy końcu w nadmiarze.
+
 ## Werdykty trajektorii przy leczeniu GH i otyłości: kursy, okna na rok, chip w kursie (P-WERDYKT rata 6, SW 1.1.78, 2026-09-27)
 
 **Zgłoszenie właściciela (2026-09-27).** Audyt funkcji „wydającej werdykty” w analizie siatki centylowej ze szczególnym

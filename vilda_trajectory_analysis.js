@@ -38,7 +38,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '29';
+  var VERSION = '30';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -572,6 +572,11 @@
     if (!cx) {
       var v0 = verdictForPair(met, a.sd, b.sd, a.c, b.c);
       if (met === 'height') v0 = heightPositionOverlayVerdict(v0, b.c, null, a.sd, false);
+      if (met !== 'height' && S) {
+        var ek0 = ekstraZ(a, b, oknoM);
+        if ((!v0 || v0.t !== 'bad') && typeof S.ruchKrotkieOkno === 'function') { var rk0 = S.ruchKrotkieOkno(met, a.sd, b.sd, a.c, b.c, oknoM, ek0); if (rk0) v0 = rk0; }
+        if (v0 && v0.t !== 'bad' && typeof S.strazTempaRedukcji === 'function') { var st0 = S.strazTempaRedukcji(met, a.sd, b.sd, a.c, oknoM, ek0); if (st0) v0 = st0; }
+      }
       return { v: v0, ghOn: false, rdOn: false, ghM: 0, mphOn: false, kurs: null, mieszane: false, dopisek: '', krotkie: false };
     }
     var mp = typeof cx.mpSds === 'number' && isFinite(cx.mpSds) ? cx.mpSds : null;
@@ -590,14 +595,35 @@
     if (kG && !ghOn && S && typeof S.zaWczesnieGH === 'function') v = S.zaWczesnieGH(oknoM);
     else v = verdictForPairCtx(met, a.sd, b.sd, a.c, b.c, ghOn ? oknoM : 0, mp, rdOn, oknoM);
     if (met === 'height') v = heightPositionOverlayVerdict(v, b.c, mp, a.sd, !!kG);
+    // P-WERDYKT rata 7: masa/BMI — ruch w krótkim oknie po tempie (gdy nie liczy go gałąź leczenia) i strażnik
+    // tempa redukcji; oba w silniku, tu tylko wsad z wartości (Δ kg / %, wiek) — patrz ekstraZ().
+    if (met !== 'height' && S) {
+      var ek = ekstraZ(a, b, oknoM);
+      // Ruch w krótkim oknie nie osłabia werdyktu „bad" (np. „progresja otyłości"); strażnik nie dubluje etykiety
+      // „redukcja bardzo szybka", którą gałąź leczenia już nadała (z dopiskiem „wstępnie").
+      if (!rdOn && (!v || v.t !== 'bad') && typeof S.ruchKrotkieOkno === 'function') { var rk = S.ruchKrotkieOkno(met, a.sd, b.sd, a.c, b.c, oknoM, ek); if (rk) v = rk; }
+      if (v && v.t !== 'bad' && String(v.l || '').indexOf('redukcja bardzo szybka') !== 0 && typeof S.strazTempaRedukcji === 'function') { var st = S.strazTempaRedukcji(met, a.sd, b.sd, a.c, oknoM, ek); if (st) v = st; }
+    }
     // Dopisek okna mieszanego wraca też w `dopisek` — nakładki (masa↔BMI, prędkość BMI) budują nowy obiekt werdyktu
     // i zgubiłyby go; analyze() dopisuje go ponownie na końcu (dopiszMieszane).
     var dopisek = '';
     if (ghMix > 0) dopisek = 'w tym ' + Math.round(ghMix) + ' mies. na GH';
     if (rdMix > 0) dopisek = (dopisek ? dopisek + ', ' : '') + 'w tym ' + Math.round(rdMix) + ' mies. leczenia redukcyjnego';
+    // Rata 7 (P6): okno w kursie leczenia otyłości krótsze niż próg oceny nie milczy o leczeniu.
+    var kursM = kG ? overlapM(kG, a.ageMonths, b.ageMonths) : kR ? overlapM(kR, a.ageMonths, b.ageMonths) : 0;
+    if (kR && !rdOn) dopisek = (dopisek ? dopisek + ', ' : '') + 'w trakcie leczenia (' + Math.round(kursM) + ' mies., ocena od ' + rdMinM + ' mies.)';
     if (v && dopisek && S && typeof S.zOgonem === 'function') v = S.zOgonem(v, dopisek);
     return { v: v, ghOn: ghOn, rdOn: rdOn && a.c >= 10, ghM: kG ? oknoM : ghMix, mphOn: met === 'height' && !kG && mp != null,
-      kurs: kG || kR || null, mieszane: !!dopisek, dopisek: dopisek, krotkie: false };
+      kurs: kG || kR || null, mieszane: !!(ghMix > 0 || rdMix > 0), dopisek: dopisek, krotkie: false,
+      wKursieGh: !!kG, wKursieRd: !!kR, kursM: kursM, kursLabel: kR ? kR.label || null : null };
+  }
+
+  // Rata 7: wsad liczbowy dla reguł krótkiego okna i strażnika tempa — Δ wartości, procent od punktu A, wiek B.
+  function ekstraZ(a, b, oknoM) {
+    var va = typeof a.value === 'number' && isFinite(a.value) ? a.value : null;
+    var vb = typeof b.value === 'number' && isFinite(b.value) ? b.value : null;
+    var dVal = va != null && vb != null ? Math.round(10 * (vb - va)) / 10 : null;
+    return { dVal: dVal, pct: dVal != null && va > 0 ? Math.round(10 * (vb - va) / va * 100) / 10 : null, wiekMies: b.ageMonths, oknoM: oknoM };
   }
 
   // Opis strefy dla pary — transkrypcja interpCh panelu (zwraca sam tekst strefy).

@@ -18,6 +18,16 @@ const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 //  2. że przeniesienie nie ruszyło ani jednego werdyktu — odciskiem pełnej siatki wejść.
 
 const silnik = () => loadBrowserScript('vilda_werdykt.js', {}).VildaWerdykt;
+// P-WERDYKT rata 7 przesunęła pasmo wysokie masy z 90c na 85c (PROGI.MASA_PASMO_WYSOKIE_C). Dowody odwzorowania
+// starszych rat liczone są na TYM SAMYM źródle z progiem cofniętym do 90 — jedyna różnica między silnikiem
+// a tym wariantem to ta liczba, więc odcisk wariantu MUSI równać się odciskowi raty 6.
+const silnikPasmo90 = () => {
+  const zr = zrodlo('vilda_werdykt.js');
+  expect(zr).toContain('MASA_PASMO_WYSOKIE_C: 85,');
+  const g = {};
+  new Function('window', 'globalThis', zr.replace('MASA_PASMO_WYSOKIE_C: 85,', 'MASA_PASMO_WYSOKIE_C: 90,'))(g, g);
+  return g.VildaWerdykt;
+};
 
 const WERD = zrodlo('vilda_werdykt.js');
 const TRAJ = zrodlo('vilda_trajectory_analysis.js');
@@ -42,6 +52,9 @@ describe('silnik werdyktu — kształt modułu', () => {
       GH_OKNO_MIN_M: 6, GH_WSTEPNIE_DO_M: 12, GH_DOBRA_DSDS_ROK: 0.3, GH_SLABA_DSDS_ROK: 0.1,
       RD_OKNO_MIN_M: 3, RD_WSTEPNIE_DO_M: 6, RD_ODPOWIEDZ_DSDS_ROK: -0.25, RD_PRZYROST_DSDS_ROK: 0.2, RD_SZYBKA_DSDS_ROK: -1.5,
       KROTKIE_OKNO_M: 6, KROTKIE_OKNO_DSDS: 0.5,
+      // P-WERDYKT rata 7: pasmo wysokie masy od 85c, ruch w krótkim oknie po tempie, strażnik tempa redukcji.
+      MASA_PASMO_WYSOKIE_C: 85, RUCH_KROTKI_DSDS_ROK: 0.5, RUCH_KROTKI_MIN_DSDS: 0.1,
+      TEMPO_RD_KG_MIES_MLODSI: 1, TEMPO_RD_KG_MIES_STARSI: 3.9, TEMPO_RD_WIEK_GRANICA_M: 144, TEMPO_RD_MIN_ODSTEP_M: 2,
     });
   });
 
@@ -148,6 +161,10 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
   // na rok odcisku nie ruszają; jedyna zmiana w siatce to dopisek nakładki pozycyjnej „nadal poniżej 3. centyla"
   // przy GH i centylu < 3 (dotąd nakładka przy GH milczała). Odwzorowanie: obcięcie tego dopisku.
   const ODCISK_RATA_6 = 'f4464df1198b87c266fe0ee2f5922d3b00186bed44d57356b159d13d65a16847';
+  // P-WERDYKT rata 7 (decyzja właściciela 2026-09-27): pasmo wysokie masy-do-wieku od 85c (dotąd 90c) — start
+  // z 85–89c dostaje reguły pasma wysokiego (redukcja/przyrost od 0,2 SDS) zamiast środka siatki (tylko 0,5).
+  // Reguły krótkiego okna i strażnik tempa NIE są w siatce (osobne funkcje z długością okna).
+  const ODCISK_RATA_7 = '6fa8b66fd576e84be71063219814a4a78f05761df8a51fcd4986f4377e76dd3a';
   const DOPISEK_RATA_6 = /(,| —) nadal poniżej 3\. centyla$/;
   const bezDopisku6 = (v) => (v && typeof v.l === 'string' && DOPISEK_RATA_6.test(v.l) ? { t: v.t, l: v.l.replace(DOPISEK_RATA_6, '') } : v);
   const PRZYPADKOW = 6280776;
@@ -170,11 +187,17 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
   it(`odcisk bieżącego silnika jest zamrożony (${PRZYPADKOW} przypadków)`, () => {
     const wynik = odciskSiatki(silnik());
     expect(wynik.przypadkow, 'rozmiar siatki').toBe(PRZYPADKOW);
-    expect(wynik.odcisk).toBe(ODCISK_RATA_6);
+    expect(wynik.odcisk).toBe(ODCISK_RATA_7);
+  }, 30_000);
+
+  it('rata 7 zmieniła w siatce WYŁĄCZNIE pasmo wysokie masy (próg cofnięty do 90c daje odcisk raty 6)', () => {
+    const wynik = odciskSiatki(silnikPasmo90());
+    expect(wynik.przypadkow).toBe(PRZYPADKOW);
+    expect(wynik.odcisk, 'rata 7 ruszyła coś poza progiem pasma wysokiego masy').toBe(ODCISK_RATA_6);
   }, 30_000);
 
   it('rata 6 zmieniła w siatce WYŁĄCZNIE dopisek nakładki pozycyjnej przy GH (odcisk raty 5 po odwzorowaniu)', () => {
-    const W = silnik();
+    const W = silnikPasmo90();
     const jakPrzed = {
       para: W.para,
       zKontekstem: W.zKontekstem,
@@ -187,7 +210,7 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
   }, 30_000);
 
   it('rata 5 odezwała się WYŁĄCZNIE tam, gdzie silnik dotąd milczał (odcisk raty 2 po odwzorowaniu)', () => {
-    const W = silnik();
+    const W = silnikPasmo90();
     const cofnij = (met, v) => (v && ETYKIETY_RATA_5.indexOf(v.l) >= 0 ? { t: 'stable', l: ST[met] } : v);
     const jakPrzed = {
       para: (m, a, b, c, d) => cofnij(m, W.para(m, a, b, c, d)),
@@ -205,7 +228,7 @@ describe('odcisk siatki — co która rata zmieniła i czego nie tknęła', () =
     // niczego poza stabilnymi werdyktami nie ruszyła, po takim odwzorowaniu MUSI wyjść
     // dokładnie odcisk raty 1 — bez sięgania po nieistniejący już stary kod.
     // (Rata 5 dołożyła jedną etykietę poziomu — odwzorowana tak samo.)
-    const W = silnik();
+    const W = silnikPasmo90();
     const cofnij = (met, v) => (v && (ETYKIETY_POZIOMU.indexOf(v.l) >= 0 || ETYKIETY_RATA_5.indexOf(v.l) >= 0) ? { t: 'stable', l: ST[met] } : v);
     const jakPrzed = {
       para: (m, a, b, c, d) => cofnij(m, W.para(m, a, b, c, d)),
