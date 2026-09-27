@@ -144,7 +144,7 @@ function childGrowthOutlook({ageYears:e,sex:l,heightCm:n}={}){
   return{annualGrowthCm:g,observedGrowth:observed,source,finalHeightCm:finalCm,remainingCm:remaining,capCm,practicallyEnded:age0<k&&!tpAlarm&&(g<1||(remaining!=null&&remaining<=3)),/* rata G1a: stan bez alarmu tempa — do ustalenia, czy to tempo zmienilo domyslna strategie */practicallyEndedBezAlarmu:age0<k&&(g<1||(remaining!=null&&remaining<=3)),
     tempoAlarm:tpAlarm,tempoDoOceny:tpWarn,tempoCmRok:tp?tp.cmPerYear:null,tempoNormaCmRok:tpNorma};
 }
-/* P-DIETA rata G1a: czy to tempo wzrastania ponizej normy zmienilo domyslna strategie na stabilizacje (bez alarmu i bez recznego wyboru domyslna bylaby redukcja). Wspolny dla generatora zalecen (wariant zdania B1) i karty planu (powod strategii). */function energyStabilizacjaZPowoduTempa({state:st,ageYears:e,growthEnded:ge=!1,stabDisabled:sd=!1,outlook:ol=null}={}){if(!st||!st.childObesityPlan||st.childPlanStage==="age_2_5"||!ol||ol.tempoAlarm!==!0)return!1;return energyResolveStrategy({state:st,ageYears:e,growthEnded:ge,stabDisabled:sd,outlook:Object.assign({},ol,{tempoAlarm:!1,practicallyEnded:!!ol.practicallyEndedBezAlarmu})})==="reduction"}
+/* P-DIETA rata G1a: czy to tempo wzrastania ponizej normy zmienilo domyslna strategie na stabilizacje (bez alarmu i bez recznego wyboru domyslna bylaby redukcja). Wspolny dla generatora zalecen (wariant zdania B1) i karty planu (powod strategii). */function energyStabilizacjaZPowoduTempa({state:st,ageYears:e,growthEnded:ge=!1,stabDisabled:sd=!1,outlook:ol=null}={}){if(!st||!st.childObesityPlan||st.childPlanStage==="age_2_5"||!ol||ol.tempoAlarm!==!0)return!1;/* rata G3: kontrfakt „bez alarmu” uwzglednia blokade z prognozy (app.js), ktora przy alarmie nie wylacza juz przelacznika */const sdBez=sd||(typeof window<"u"&&typeof window.vildaStabilizacjaZablokowanaPrognoza=="function"&&(()=>{try{return window.vildaStabilizacjaZablokowanaPrognoza()===!0}catch(_e){return!1}})());return energyResolveStrategy({state:st,ageYears:e,growthEnded:ge,stabDisabled:sdBez,outlook:Object.assign({},ol,{tempoAlarm:!1,practicallyEnded:!!ol.practicallyEndedBezAlarmu})})==="reduction"}
 function energyResolveStrategy({state:st,ageYears:e,growthEnded:ge=!1,stabDisabled:sd=!1,reduceChecked:rc=!1,stabChecked:sc=!1,outlook:ol=null}={}){
   const age=Number(e)||0;
   if(age>=k||ge)return"reduction";
@@ -152,10 +152,11 @@ function energyResolveStrategy({state:st,ageYears:e,growthEnded:ge=!1,stabDisabl
   if(sc&&!sd)return"stabilization";
   if(!st||!st.childObesityPlan)return"reduction";
   if(st.childPlanStage==="age_2_5")return"stabilization";
-  /* P-DIETA rata G1: tempo wzrastania ponizej normy — domyslnie bez deficytu (stabilizacja) do czasu oceny lekarskiej przyczyny;
-     reczny wybor redukcji (rc) i blokada stabilizacji przez prognoze wzrostu (sd, app.js) wygrywaja, zeby przelaczniki,
-     karta planu i generator mowily to samo. */
-  if(ol&&ol.tempoAlarm&&!sd)return"stabilization";
+  /* P-DIETA rata G1: tempo wzrastania ponizej normy — domyslnie bez deficytu (stabilizacja) do czasu dalszej oceny przyczyny;
+     reczny wybor redukcji (rc) wygrywa. P-DIETA rata G3 (decyzja wlasciciela 2026-09-27): alarm tempa wygrywa takze z blokada
+     stabilizacji z prognozy wzrostu koncowego (sd, app.js) — prognoza zaklada prawidlowe wzrastanie, wiec przy alarmie jest
+     niepewna; app.js przy alarmie nie wylacza przelacznika, a index i docpro licza to samo. */
+  if(ol&&ol.tempoAlarm)return"stabilization";
   if(ol&&ol.practicallyEnded)return"reduction";
   if(sd)return"reduction";
   if(st.childPlanStage==="age_6_11"&&!(st.bmiClass&&st.bmiClass.severe))return"stabilization";
