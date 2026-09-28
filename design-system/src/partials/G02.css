@@ -697,14 +697,10 @@ select.vilda-auth-input{
 #stabilizationGroup .toggle-label{
   margin-bottom:0;
   margin-right:0}
-#dietRecommendationsContent .switch-diet input:checked+.slider{
-  background:#90f!important}
 #dietRecommendationsContent .switch-diet .slider{
   background:var(--diet-ui-switch-bg)!important}
 #dietRecommendationsContent .switch-diet .slider:before{
   background:var(--diet-ui-switch-thumb)!important}
-#dietRecommendationsContent .switch-diet input:checked+.slider{
-  background:var(--diet-ui-active-bg)!important}
 #dietRecommendationsContent .switch-diet input:checked+.slider:before{
   background:var(--diet-ui-switch-thumb)!important}
 

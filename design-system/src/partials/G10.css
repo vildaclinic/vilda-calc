@@ -6,13 +6,10 @@
 
 /* ===== ChromeStrip — bazowy header (style.css 25-29, 3124-3127) ===== */
 header{
-  background:var(--primary);
-  color:#fff;
   text-align:center;
-  padding:1rem}
+  padding:var(--space-1);
+}
 header{
-  background:#fff;
-  color:var(--text);
   border-bottom:var(--border-hairline) solid var(--line);
 }
 

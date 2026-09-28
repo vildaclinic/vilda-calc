@@ -152,8 +152,6 @@
   padding:.66rem .78rem;
   border:var(--border-emphasis) solid #000;
   border-radius:var(--radius-8);
-  background:#fff;
-  color:#000;
   font-size:1.02rem;
   font-weight:500;
   line-height:1.42;
@@ -177,12 +175,6 @@
   max-width:calc(100vw - 20px);
   font-size:.98rem}
 }
-/* style.css 7267-7270 */
-body .nutrition-micros-tooltip{
-  background:#fff!important;
-  color:#000!important;
-  border-color:#000!important}
-
 /* ===== ChromeTooltip — vilda_chrome.css 964-1020 (.vilda-tip; .has-vilda-chrome .menu-tooltip) ===== */
 .vilda-tip{
   position:fixed;
@@ -260,13 +252,10 @@ body .nutrition-micros-tooltip{
   font-size:1.75rem;
   font-weight:600}
 .result-card{
-  background:var(--card-bg);
-  border:2px solid var(--brand);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow-s);
-  padding:1.25rem 1.5rem;
+  padding:var(--space-1-25) var(--space-1-5);
   position:relative;
-  overflow:hidden}
+  overflow:hidden;
+}
 /* Pulse — style.css 672-710 */
 .result-card.--pulse:after{
   content:"";

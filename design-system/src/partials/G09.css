@@ -94,12 +94,7 @@ body.thy-modal-open{
 button,input[type=button],input[type=submit]{
   cursor:pointer;
   font:inherit;
-  border:none;
-  border-radius:var(--radius);
-  padding:var(--space-0-55) var(--space-1-1);
-  background:var(--primary);
-  color:#fff;
-  transition:background .2s ease,box-shadow .2s ease;
+  padding:var(--space-0-55) var(--space-1-1)
 }
 button:hover,input[type=button]:hover,input[type=submit]:hover{
   background:var(--secondary);
@@ -113,8 +108,6 @@ button,input[type=button],input[type=submit]{
   margin-top:var(--space-0-5);
 }
 }
-button,input[type=submit]{
-  transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
 button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
   transform:translateY(-1px) scale(1.02);
   box-shadow:var(--shadow-l)}

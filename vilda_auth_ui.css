@@ -1130,42 +1130,20 @@ select.vilda-auth-input {
 }
 
 .vilda-patient-hero-edit-pill {
-  background: #fff!important;
-  color: var(--primary)!important;
-  border: var(--border-hairline) solid #bcdfe2!important;
   width: auto!important;
   min-width: 0!important;
-  padding: var(--space-8px) var(--space-14px)!important;
-  font-size: 15px!important;
   font-weight: 500!important;
-  border-radius: var(--radius-10)!important;
   flex: 0 0 auto!important;
   white-space: nowrap
-}
-
-.vilda-patient-hero-edit-pill:hover {
-  background: #e1f5ee!important;
-  border-color: var(--primary)!important
 }
 
 .vilda-patient-hero-new-measure-pill {
-  background: #fff!important;
-  color: var(--primary)!important;
-  border: var(--border-hairline) solid #bcdfe2!important;
   width: auto!important;
   min-width: 0!important;
-  padding: var(--space-8px) var(--space-14px)!important;
-  font-size: 15px!important;
   font-weight: 500!important;
-  border-radius: var(--radius-10)!important;
   flex: 0 0 auto!important;
   cursor: pointer;
   white-space: nowrap
-}
-
-.vilda-patient-hero-new-measure-pill:hover {
-  background: #e1f5ee!important;
-  border-color: var(--primary)!important
 }
 
 .vilda-patient-hero-info {
@@ -1254,11 +1232,6 @@ select.vilda-auth-input {
   justify-content: center;
   gap: var(--space-6px);
   padding: 9px var(--space-8px);
-  background: transparent!important;
-  border: 0!important;
-  box-shadow: none!important;
-  border-radius: var(--radius-9);
-  color: #3a4a52;
   font-size: 16px;
   font-weight: 500;
   white-space: nowrap;
@@ -1273,16 +1246,6 @@ select.vilda-auth-input {
 
 .vilda-patient-tab-ico {
   flex: 0 0 auto
-}
-
-.vilda-patient-tab:hover:not(.vilda-patient-tab--active) {
-  background: #eef5f6!important;
-  color: var(--primary)
-}
-
-.vilda-patient-tab--active {
-  background: var(--primary)!important;
-  color: #fff!important
 }
 
 .liquid-ios26 .vilda-patient-hero-edit-pill {
@@ -1544,12 +1507,6 @@ select.vilda-auth-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #8a9aa1;
   cursor: pointer
 }
 
@@ -1561,10 +1518,6 @@ select.vilda-auth-input {
   background: currentColor;
   border-radius: 1px;
   box-shadow: 0 -5px 0 currentColor,0 5px 0 currentColor
-}
-
-.vilda-auth-sort-btn--open {
-  color: var(--primary)
 }
 
 .vilda-auth-sort-dropdown {
@@ -1584,23 +1537,10 @@ select.vilda-auth-input {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: 100%;
-  padding: var(--space-12px) var(--space-16px);
-  background: none;
-  border: none;
-  border-bottom: var(--border-hairline) solid #f0f4f5;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
   transition: background .1s
-}
-
-.vilda-auth-sort-option:last-child {
-  border-bottom: none
-}
-
-.vilda-auth-sort-option:hover {
-  background: #f5fafb
 }
 
 .vilda-auth-sort-option-label {
