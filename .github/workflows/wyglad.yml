@@ -8,9 +8,14 @@ name: Wygląd
 #
 # Wzorce zrzutów (tests/visual/wzorce) powstają WYŁĄCZNIE tu, na ubuntu-latest: czcionki
 # i wygładzanie różnią się między systemami, więc wzorzec z Maca nie zgodzi się z Linuksem.
-# Odświeżenie po ZAMIERZONEJ zmianie wyglądu: Actions → „Wygląd" → „Run workflow" na gałęzi PR-a
-# z zaznaczonym „aktualizuj_wzorce". Job wypycha nowe wzorce na tę gałąź jednym commitem;
-# różnice obrazów ogląda się potem w PR-ze. Wzorce są też zachowywane jako artefakt.
+# Dwie drogi odświeżenia po ZAMIERZONEJ zmianie wyglądu:
+#   1. Actions → „Wygląd" → „Run workflow" na gałęzi PR-a z zaznaczonym „aktualizuj_wzorce"
+#      (przycisk jest dostępny, gdy ten plik jest już na gałęzi domyślnej);
+#   2. usunięcie katalogu tests/visual/wzorce w PR-ze — job widzi brak wzorców i tworzy je od nowa.
+# W obu wypadkach job wypycha wzorce na gałąź jednym commitem (i zachowuje jako artefakt), a że
+# commit z GITHUB_TOKEN sam nie uruchamia workflow'ów, dodatkowo uruchamia „Kontrola jakości"
+# i „Wygląd" dla nowego commita przez workflow_dispatch (jedyny wyjątek od tej reguły GitHuba).
+# Różnice obrazów ogląda się potem w PR-ze.
 
 on:
   pull_request:
@@ -65,14 +70,17 @@ jobs:
     name: Zrzuty wyglądu
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # zapis do gałęzi tylko w trybie aktualizacji wzorców; przy PR-ze z forka token i tak jest tylko do odczytu
+    # zapis do gałęzi i uruchomienie kontroli tylko przy odświeżaniu wzorców; przy PR-ze z forka
+    # token i tak jest tylko do odczytu
     permissions:
       contents: write
-    env:
-      AKTUALIZUJ: ${{ github.event_name == 'workflow_dispatch' && inputs.aktualizuj_wzorce == true }}
+      actions: write
     steps:
       - name: Pobierz repozytorium
         uses: actions/checkout@v4
+        with:
+          # czubek gałęzi (nie commit scalenia z bazą): tylko na niego da się wypchnąć wzorce
+          ref: ${{ github.head_ref || github.ref_name }}
       - name: Skonfiguruj Node.js
         uses: actions/setup-node@v4
         with:
@@ -82,14 +90,36 @@ jobs:
         run: npm ci
       - name: Zainstaluj Chromium
         run: npx playwright install --with-deps chromium
+      - name: Ustal tryb (porównanie albo odświeżenie wzorców)
+        id: tryb
+        env:
+          Z_DISPATCH: ${{ github.event_name == 'workflow_dispatch' && inputs.aktualizuj_wzorce == true }}
+        run: |
+          if [ "$Z_DISPATCH" = "true" ]; then
+            echo "aktualizuj=true" >> "$GITHUB_OUTPUT"; echo "powod=Run workflow z opcją aktualizuj_wzorce"
+          elif [ ! -d tests/visual/wzorce ]; then
+            echo "aktualizuj=true" >> "$GITHUB_OUTPUT"; echo "powod=brak katalogu tests/visual/wzorce"
+          else
+            echo "aktualizuj=false" >> "$GITHUB_OUTPUT"; echo "powod=porównanie z wzorcami"
+          fi
       - name: Porównaj strony z wzorcami
-        if: env.AKTUALIZUJ != 'true'
+        if: steps.tryb.outputs.aktualizuj != 'true'
         run: npm run test:visual
-      - name: Odśwież wzorce
-        if: env.AKTUALIZUJ == 'true'
+      - name: Utwórz wzorce od nowa
+        if: steps.tryb.outputs.aktualizuj == 'true'
         run: npm run test:visual -- --update-snapshots
-      - name: Wypchnij wzorce na gałąź
-        if: env.AKTUALIZUJ == 'true'
+      - name: Zachowaj wzorce jako artefakt
+        if: steps.tryb.outputs.aktualizuj == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wzorce-zrzutow-wygladu
+          path: tests/visual/wzorce/
+          retention-days: 14
+      - name: Wypchnij wzorce na gałąź i uruchom kontrole dla nowego commita
+        if: steps.tryb.outputs.aktualizuj == 'true' && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GALAZ: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -99,14 +129,10 @@ jobs:
             exit 0
           fi
           git commit -m "Wzorce zrzutów wyglądu odświeżone w CI (ubuntu-latest, Chromium Playwrighta)"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-      - name: Zachowaj wzorce jako artefakt
-        if: env.AKTUALIZUJ == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: wzorce-zrzutow-wygladu
-          path: tests/visual/wzorce/
-          retention-days: 14
+          git push origin "HEAD:${GALAZ}"
+          # commit z GITHUB_TOKEN nie uruchamia workflow'ów; workflow_dispatch jest wyjątkiem
+          gh workflow run ci.yml --ref "$GALAZ"
+          gh workflow run wyglad.yml --ref "$GALAZ" || echo 'Wygląd nie jest jeszcze na gałęzi domyślnej: porównanie pójdzie przy następnym pushu'
       - name: Zachowaj różnice po niepowodzeniu
         if: failure()
         uses: actions/upload-artifact@v4
