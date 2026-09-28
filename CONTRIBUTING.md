@@ -78,6 +78,12 @@ Po zmianie zasobu ładowanego przez stronę:
 
 Jeżeli dostępny jest czytelny plik źródłowy i generowany artefakt, zmieniaj źródło i odtwórz artefakt kontrolowanym procesem. Nie poprawiaj tylko zminifikowanej kopii.
 
+### Arkusze CSS (P-STYLE rata 1, decyzja właściciela 2026-09-28)
+
+Arkusze w korzeniu repozytorium są **sformatowane** i tak mają zostać: nie commituj postaci zminifikowanej. `npm run css:formatuj` formatuje arkusze, które wyglądają na zminifikowane (czytelne zostawia), zmieniając wyłącznie białe znaki poza łańcuchami i komentarzami; `npm run css:cssom -- --baza origin/audyt` dowodzi w Chromium, że lista reguł nie zmieniła się względem bazy. Strażnik `tests/unit/css-sformatowany.test.mjs` odrzuca linie dłuższe niż 1000 znaków. Test jednostkowy, który cytuje regułę CSS, czyta arkusz przez `zwartyCss()` z `tests/support/css-zwarty.mjs`, a nie dosłownie — cytat nie zależy wtedy od układu białych znaków.
+
+Po zamierzonej zmianie wyglądu uruchom `npm run test:visual` (siatka zrzutów: `tests/visual`, osiem stron, desktop i telefon, cztery tryby z sekcji „Wygląd aplikacji”). Wzorce zrzutów powstają **wyłącznie w CI**: Actions → „Wygląd” → „Run workflow” na gałęzi PR-a z zaznaczonym „aktualizuj_wzorce” — job wypycha nowe wzorce na gałąź, a różnice obrazów ogląda się w PR-ze. Lokalny przebieg na macOS nie zgodzi się z wzorcem z Linuksa (inne czcionki i wygładzanie), więc służy tylko do sprawdzenia, że strony się renderują.
+
 ## Testy
 
 Minimalny zestaw przed PR:

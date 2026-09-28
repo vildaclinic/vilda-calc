@@ -1,0 +1,116 @@
+name: Wygląd
+
+# P-STYLE rata 1 (decyzja właściciela 2026-09-28): siatka zrzutów stron w czterech trybach wyglądu
+# (tests/visual) i kontrola dryfu stylów względem design systemu (design-system --strict).
+# Idzie tylko dla zmian, które mogą zmienić wygląd (filtr ścieżek niżej), żeby nie hałasować
+# przy zmianach klinicznych. Skutek uboczny: zmiana renderowania z pliku spoza filtra wyjdzie
+# dopiero przy najbliższym PR-ze ze stylami — wtedy odświeża się wzorce jak niżej.
+#
+# Wzorce zrzutów (tests/visual/wzorce) powstają WYŁĄCZNIE tu, na ubuntu-latest: czcionki
+# i wygładzanie różnią się między systemami, więc wzorzec z Maca nie zgodzi się z Linuksem.
+# Odświeżenie po ZAMIERZONEJ zmianie wyglądu: Actions → „Wygląd" → „Run workflow" na gałęzi PR-a
+# z zaznaczonym „aktualizuj_wzorce". Job wypycha nowe wzorce na tę gałąź jednym commitem;
+# różnice obrazów ogląda się potem w PR-ze. Wzorce są też zachowywane jako artefakt.
+
+on:
+  pull_request:
+    branches: [audyt]
+    paths:
+      - '*.css'
+      - '*.html'
+      - 'ios26-ui.js'
+      - 'custom-fixes.js'
+      - 'vilda_shell.js'
+      - 'vilda_chrome.js'
+      - 'vilda_auth_ui.js'
+      - 'design-system/**'
+      - 'tests/visual/**'
+      - 'tests/support/**'
+      - 'playwright.config.mjs'
+      - 'playwright.visual.config.mjs'
+      - '.github/workflows/wyglad.yml'
+  workflow_dispatch:
+    inputs:
+      aktualizuj_wzorce:
+        description: 'Odśwież wzorce zrzutów w CI i wypchnij je na tę gałąź'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vilda-calc-wyglad-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  design-system:
+    name: Dryf stylów względem design systemu
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+      - name: Skonfiguruj Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Zainstaluj zależności
+        run: npm ci
+      - name: Odbuduj design system i sprawdź dryf
+        run: npm run design-system -- --strict
+
+  zrzuty:
+    name: Zrzuty wyglądu
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # zapis do gałęzi tylko w trybie aktualizacji wzorców; przy PR-ze z forka token i tak jest tylko do odczytu
+    permissions:
+      contents: write
+    env:
+      AKTUALIZUJ: ${{ github.event_name == 'workflow_dispatch' && inputs.aktualizuj_wzorce == true }}
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+      - name: Skonfiguruj Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Zainstaluj zależności
+        run: npm ci
+      - name: Zainstaluj Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Porównaj strony z wzorcami
+        if: env.AKTUALIZUJ != 'true'
+        run: npm run test:visual
+      - name: Odśwież wzorce
+        if: env.AKTUALIZUJ == 'true'
+        run: npm run test:visual -- --update-snapshots
+      - name: Wypchnij wzorce na gałąź
+        if: env.AKTUALIZUJ == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A tests/visual/wzorce
+          if git diff --cached --quiet; then
+            echo "wzorce bez zmian"
+            exit 0
+          fi
+          git commit -m "Wzorce zrzutów wyglądu odświeżone w CI (ubuntu-latest, Chromium Playwrighta)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Zachowaj wzorce jako artefakt
+        if: env.AKTUALIZUJ == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wzorce-zrzutow-wygladu
+          path: tests/visual/wzorce/
+          retention-days: 14
+      - name: Zachowaj różnice po niepowodzeniu
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zrzuty-wygladu-roznice
+          path: test-results-wyglad/
+          retention-days: 14

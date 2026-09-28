@@ -67,3 +67,7 @@ makieta_klirens_*.html
 
 # Wynik producenta design systemu (generowany: npm run design-system)
 design-system/out/
+
+# Siatka zrzutów wyglądu (npm run test:visual): wyniki i raport; wzorce w tests/visual/wzorce SĄ w repozytorium
+test-results-wyglad/
+playwright-report-wyglad/
