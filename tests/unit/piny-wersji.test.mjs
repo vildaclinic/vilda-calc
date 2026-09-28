@@ -119,8 +119,8 @@ describe('Listy, które muszą mówić to samo', () => {
 // nie jest pobierany z góry — offline ratuje go dopiero cache czasu działania, czyli po
 // pierwszej wizycie ONLINE. To nie jest awaria, ale jest luka, więc pilnujemy, żeby nie rosła.
 describe('Zasoby poza wstępnym pobraniem service workera', () => {
+  // P-SLOWA-MPH rata 3 (2026-09-28): lab_clinical_panels.js wrócił do precache (wpis ?v=143), lista skurczyła się o jeden.
   const ZNANE = [
-    'lab_clinical_panels.js',
     'lab_pin_result.js',
     'ustawienia.css',
     'vilda_data_safety_explainer.js',
