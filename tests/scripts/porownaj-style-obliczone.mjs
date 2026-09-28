@@ -144,7 +144,9 @@ async function zbierz(page) {
         if (/^(SCRIPT|STYLE|LINK|META|TEMPLATE|NOSCRIPT)$/.test(el.tagName)) continue;
         const cs = getComputedStyle(el);
         const r = el.getBoundingClientRect();
-        const klucz = `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.classList.length ? `.${[...el.classList].join('.')}` : ''}`;
+        // klasa docka na body zmienia się z opóźnieniem (pokazanie docka po bezczynności) — nie jest częścią klucza
+        const klasy = [...el.classList].filter((k) => k !== 'has-mobile-bottom-dock-visible');
+        const klucz = `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${klasy.length ? `.${klasy.join('.')}` : ''}`;
         const style = wlasnocsiMap(cs, wlasnosci);
         const przed = getComputedStyle(el, '::before');
         const po = getComputedStyle(el, '::after');
