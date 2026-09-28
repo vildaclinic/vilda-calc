@@ -364,8 +364,8 @@
   "sha256": "7b316629332c6d99f9676fe0b0f779507d3eaab326ac671361cd68f4646f4fa9"
  },
  "vilda_advanced_growth.js": {
-  "v": 70,
-  "sha256": "e791cadaa71d51a249255b6dc3a3ade89848da664056c848fedfa5831172e9c2"
+  "v": 71,
+  "sha256": "6b6f5ec4cb332d25bf4e7af508f4bc8af59ba2a0cc319789d6e8d786e8106110"
  },
  "vilda_anorexia_risk.js": {
   "v": 4,
@@ -444,8 +444,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_data_import_export.js": {
-  "v": 84,
-  "sha256": "3742eb83cdefaea355095b0f97e37c4e9d35987db6267e12d41831db15f472f5"
+  "v": 85,
+  "sha256": "ccca1ea46c58316679a23417d832b906b2654306ad1ed1847c2473a9dfd12d77"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -628,8 +628,8 @@
   "sha256": "95161ccfe4b79076f38686d4a95cd72bc1ec7fbcdb50813cb64e74b530b6af6a"
  },
  "vilda_persist_runtime.js": {
-  "v": 16,
-  "sha256": "133f72f183466d18dedc8176d38e47b96d51157c44eadace0dd7cc11eeca8568"
+  "v": 17,
+  "sha256": "1626722e242777b49c74722420918c1899f763aa62c58a74d25e1baec3500cfe"
  },
  "vilda_persistence_adapter.js": {
   "v": 26,
