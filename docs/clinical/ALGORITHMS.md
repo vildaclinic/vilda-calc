@@ -5813,6 +5813,67 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Wiersze punktów terapii GH przeżywają przebudowę tabeli zaawansowanej (P-GH-TOZSAMOSC rata 1, SW 1.1.83, 2026-09-28)
+
+**Skąd.** Rozstrzygnięcie długu z P-MINI-WYCZYSC („drugie odroczenie”): właściciel wybrał **opcję (a) w dwóch
+ratach** (2026-09-28). Przed kodowaniem zbadano dwa przebiegi bez czyszczenia formularza, hakami na DOM
+(`setAttribute`/`removeAttribute` dla `data-gh-sync`, `appendChild`/czyszczenie kontenera, flagi zawieszenia),
+tym samym przypadkiem co `gh-punkty-po-wczytaniu`: dziewczynka 14 lat / 148,5 cm, wiersz ręczny 11 lat / 123,9 cm,
+punkt terapii GH 13 lat 1 mies. / 139,9 cm.
+
+**Wynik 1 — nowa karta przeglądarki (pusty `sessionStorage`, sejf odblokowany hasłem).** Flagi
+`__vildaSuspendAdvIntakeSync`, `__vildaSuspendGrowthHistoryCrossSync`, `__vildaSuspendIntakeUserReset` są
+ustawione **od startu strony**, zanim ktokolwiek kliknie „Wyczyść”. Ścieżka „Wczytaj tego pacjenta → Odtwórz
+zapis” daje `139,9` ze znacznikiem, tak jak po czyszczeniu. Stan „flagi wiszą” nie jest więc skutkiem
+czyszczenia, lecz de facto normalnym stanem aplikacji po starcie: parowanie zaawansowane↔spożycie jest
+w praktyce prawie zawsze zawieszone.
+
+**Wynik 2 — F5 z pacjentem w formularzu: znacznik punktu GH ginie bez żadnego czyszczenia.** Odtworzenie
+wspólnego stanu (`vilda_persist_runtime`) biegnie po F5 w dwóch przebiegach. Pierwszy: `rehydrateAdvancedRowsUIFromState`
+odbudowuje wiersze ręczne (`ht()` odsiewa wiersze `ghSync` ze zrzutu wierszy), a odroczony import punktów terapii
+dokłada `139,9` **ze znacznikiem** — poprawnie. Drugi: `rehydrateAdvancedFromState` czyści kontener i buduje wiersze
+wyłącznie z modelu `advancedGrowthData.measurements`, z którego `be()` **celowo odsiewa** wiersze `ghSync` (źródłem
+prawdy punktów jest monitor terapii). Wynik importu przepada. Następnie parowanie (`vildaEnsureAdvancedIntakePairing`
+z odroczenia po imporcie, flagi zdjęte) dokłada wiersz zaawansowany do liczby wierszy spożycia i wypełnia go
+z tabeli spożycia (`backfillAdvRowFromIntake`): bliźniak 13 lat 1 mies. / 139,9 cm **bez** `data-gh-sync`.
+Import (`ghReczny`) uznaje go za wiersz ręczny w tym samym wieku i wzroście (±0,11) i punktu nie oznacza. Skutek
+dla lekarza: po zwykłym F5 punkt terapii wygląda jak pomiar ręczny, a `collectUserData` nie odsiewa go przy
+kolejnym zapisie. Błąd produkcyjny, niezależny od flag i od P-MINI-WYCZYSC; żaden test go nie pokrywał (test F5
+z #447 sprawdza przycisk i znaczniki dopiero po „Odtwórz zapis” z karty).
+
+**Reguła (rata 1).** Przebudowa tabeli zaawansowanej z modelu **nigdy nie kasuje wierszy punktów terapii**. W obu
+funkcjach przebudowujących (`rehydrateAdvancedFromState`, `rehydrateAdvancedRowsUIFromState`) wiersze z `data-gh-sync`
+lub `data-gh-id` są odłączane przed czyszczeniem kontenera (`Bgh0`) i doklejane po zbudowaniu wierszy ręcznych
+(`Bgh1`), w obu gałęziach (pusty model i wiersze). Import punktów pozostaje jedynym miejscem, które wiersze GH
+dodaje i usuwa (rozpoznaje je po `data-gh-id`). Po poprawce po F5 tabela ma `123,9` (ręczny) i `139,9*` (punkt,
+`gh-e2e-…`), bez bliźniaka; parowanie nie ma czego doklejać, bo liczby wierszy się zgadzają.
+
+**Co się nie zmienia.** Żaden wzór, próg ani dane. `be()` i `ht()` nadal odsiewają wiersze GH z modelu i ze zrzutu
+(to jest zamierzone). Import punktów i jego deduplikacja (`gh-punkt-a-reczny-wiersz`: identyczny wiersz ręczny
+zostaje ręczny) bez zmian. Flagi zawieszenia po czyszczeniu — bez zmian w tej racie (martwe odroczenie
+w `resetGrowthHistoryModulesAfterClear` zostaje do raty 2).
+
+**Rata 2 (do zrobienia, ta sama decyzja właściciela).** Zdjęcie flag zawieszenia po „Wyczyść wszystkie pola”
+(przywrócenie odroczenia w `resetGrowthHistoryModulesAfterClear`) wymaga, by bliźniak nie mógł powstać także na
+ścieżce „Wyczyść → Wczytaj → Odtwórz zapis”, gdzie kontener jest czyszczony celowo i nie ma czego zachować:
+sparowany wiersz spożycia ma nieść tożsamość punktu (`data-gh-id`), zrzut `intakeRowsUI` ma ją zapisywać,
+a `backfillAdvRowFromIntake` przenosić znacznik na wiersz zaawansowany, żeby import rozpoznał go po `data-gh-id`.
+Wtedy blok „dług zapisany” w `tests/unit/czyszczenie-pol-odswiezenie.test.mjs` zmienia się na test naprawy.
+
+**Strażnicy.** `tests/unit/gh-wiersze-przezywaja-przebudowe.test.mjs` — prawdziwy `vilda_data_import_export.js`
+na atrapie DOM (kontener, wiersze z atrybutami i polami `.adv-*`): obie funkcje przebudowujące zachowują wiersz GH
+przy modelu z wierszami i przy pustym modelu; **kontrola negatywna** wyłącza doklejanie w treści modułu i pokazuje
+zgłoszony przebieg (punkt znika z tabeli); strażnik źródła pilnuje odłączenia i doklejenia w obu gałęziach obu
+funkcji. `tests/e2e/gh-znacznik-po-f5.spec.mjs` — prawdziwa strona: pacjentka jak wyżej, F5, po odtworzeniu
+dokładnie jeden wiersz `139,9` **ze** znacznikiem i `data-gh-id`, wiersz ręczny zostaje ręczny, odstęp tempa
+11 mies.; na module sprzed poprawki test czerwieni się (`gh: false`). Zestawy `gh-punkty-po-wczytaniu`,
+`gh-punkt-a-reczny-wiersz`, `odtworz-zapisany-stan-wyscig` — zielone.
+
+SW 1.1.82 → **1.1.83**; `vilda_data_import_export.js?v=83→84`.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie raty 1; rata 2 wg opisu wyżej. Zmiana nie jest
+kliniczna (żaden wzór, próg ani dane), ale zmienia to, co lekarz widzi w historii wzrastania po F5.
+
 ## Mini-podsumowanie na pasku powłoki znika od razu po „Wyczyść wszystkie pola” (P-MINI-WYCZYSC, SW 1.1.82, 2026-09-27)
 
 **Zgłoszenie właściciela (2026-09-27).** W powłoce `app.html` na szerokim ekranie PC pasek ozdobny po prawej
@@ -5862,7 +5923,9 @@ właściciela: (a) czy flagi po czyszczeniu mają schodzić (wtedy import punkt�
 parowaniem albo parowanie nie może dokładać wierszy z tabeli spożycia dla punktów terapii), czy (b) obecne
 zachowanie jest pożądane i martwe odroczenie należy usunąć. Uwaga: ta sama para „bliźniak z parowania →
 deduplikacja importu” może zachodzić bez czyszczenia, po zwykłym przeładowaniu strony (flagi wtedy nie są
-ustawione) — nie zbadano tego w tej racie.
+ustawione) — nie zbadano tego w tej racie. **Rozstrzygnięcie (2026-09-28):** właściciel wybrał opcję (a)
+w dwóch ratach; badanie i rata 1 — wpis „P-GH-TOZSAMOSC rata 1” wyżej (po F5 znacznik ginie z innego powodu:
+przebudowa tabeli z modelu; w nowej karcie flagi są ustawione od startu).
 
 **Strażnicy.** `tests/unit/czyszczenie-pol-odswiezenie.test.mjs` — prawdziwy `vilda_data_import_export.js`
 na atrapie okna, prawdziwe `clearAllData`: po ticku każde z pięciu pól ma `input` i `change`; **kontrola
