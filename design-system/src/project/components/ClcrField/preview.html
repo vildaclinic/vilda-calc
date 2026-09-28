@@ -1,0 +1,91 @@
+<!-- @dsCard group="Moduł Klirens" height=610 -->
+<!doctype html><html lang="pl" data-clcr-workflow-ui="1"><head><meta charset="utf-8"><title>ClcrField</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;align-items:start}
+</style></head><body class="liquid-ios26">
+<div class="pv">
+  <label class="clcr-field" data-clcr-field-id="weight" data-clcr-status="required">
+    <span class="clcr-field__heading">
+      <span class="clcr-field__name" id="clcr-label-weight">Masa ciała (kg)</span>
+      <span class="clcr-field__status clcr-field__status--required">* Wymagane</span>
+      <button type="button" class="clcr-info-button" aria-label="Informacja: Masa ciała (kg)" aria-expanded="false" aria-controls="clcr-help-weight">i</button>
+    </span>
+    <input id="weight" type="number" min="2" max="300" value="41.5" aria-labelledby="clcr-label-weight" aria-required="true">
+    <span class="clcr-field__help" id="clcr-help-weight" data-clcr-help-source="field" hidden>Podaj aktualną masę ciała w kilogramach. Nie zastępuj jej masą należną bez wskazania wzoru.</span>
+    <div class="validation-message clcr-field__validation"></div>
+  </label>
+  <label class="clcr-field" data-clcr-field-id="height" data-clcr-status="required">
+    <span class="clcr-field__heading">
+      <span class="clcr-field__name" id="clcr-label-height">Wzrost (cm)</span>
+      <span class="clcr-field__status clcr-field__status--required">* Wymagane</span>
+      <button type="button" class="clcr-info-button" aria-label="Informacja: Wzrost (cm)" aria-expanded="false" aria-controls="clcr-help-height">i</button>
+    </span>
+    <input id="height" type="number" min="30" max="250" value="-5" class="error" aria-labelledby="clcr-label-height" aria-required="true">
+    <span class="clcr-field__help" id="clcr-help-height" data-clcr-help-source="field" hidden>Podaj aktualny wzrost w centymetrach; jest używany m.in. w BSA i wzorach pediatrycznych.</span>
+    <div class="validation-message clcr-field__validation">Wartość nie może być ujemna</div>
+  </label>
+  <div class="clcr-field-pair" data-clcr-value-field="Scr" data-clcr-unit-field="ScrUnit">
+    <label class="clcr-field clcr-field--value" data-clcr-field-id="Scr" data-clcr-unit-pair="ScrUnit" data-clcr-status="required">
+      <span class="clcr-field__heading">
+        <span class="clcr-field__name" id="clcr-label-Scr">Kreatynina w surowicy</span>
+        <span class="clcr-field__status clcr-field__status--required">* Wymagane</span>
+        <button type="button" class="clcr-info-button" aria-label="Informacja: Kreatynina w surowicy" aria-expanded="false" aria-controls="clcr-help-Scr">i</button>
+      </span>
+      <input id="Scr" type="number" step="0.01" value="0.62" aria-labelledby="clcr-label-Scr" aria-required="true">
+      <span class="clcr-field__help" id="clcr-help-Scr" data-clcr-help-source="field" hidden>Podaj kreatyninę w surowicy i wybierz jednostkę dokładnie zgodną z wynikiem laboratoryjnym.</span>
+      <div class="validation-message clcr-field__validation"></div>
+    </label>
+    <label class="clcr-field clcr-field--unit" data-clcr-field-id="ScrUnit" data-clcr-status="required">
+      <span class="clcr-field__heading">
+        <span class="clcr-field__name" id="clcr-label-ScrUnit">Jednostka kreatyniny w surowicy</span>
+        <span class="clcr-field__status clcr-field__status--required">* Wymagane</span>
+        <button type="button" class="clcr-info-button" aria-label="Informacja: Jednostka kreatyniny w surowicy" aria-expanded="false" aria-controls="clcr-help-ScrUnit">i</button>
+      </span>
+      <select id="ScrUnit" aria-labelledby="clcr-label-ScrUnit">
+        <option value="mg/dl" selected>mg/dl</option>
+        <option value="umol">µmol/L</option>
+      </select>
+      <span class="clcr-field__help" id="clcr-help-ScrUnit" data-clcr-help-source="field" hidden>Wybierz jednostkę kreatyniny w surowicy zgodną z dokumentem źródłowym.</span>
+    </label>
+  </div>
+  <label class="clcr-field clcr-field--choice" data-clcr-field-id="suspectedAKI" data-clcr-status="optional">
+    <span class="clcr-field__heading">
+      <span class="clcr-field__name" id="clcr-label-suspectedAKI">Podejrzenie ostrego uszkodzenia nerek (AKI)</span>
+      <span class="clcr-field__status clcr-field__status--optional">Opcjonalne</span>
+      <button type="button" class="clcr-info-button" aria-label="Informacja: Podejrzenie ostrego uszkodzenia nerek (AKI)" aria-expanded="false" aria-controls="clcr-help-suspectedAKI">i</button>
+    </span>
+    <input type="checkbox" id="suspectedAKI" class="white-checkbox" aria-labelledby="clcr-label-suspectedAKI">
+    <span class="clcr-field__help" id="clcr-help-suspectedAKI" data-clcr-help-source="field" hidden>Zaznacz, jeżeli istnieje podejrzenie ostrego uszkodzenia nerek. Wtedy estymacje stanu stacjonarnego mogą być niewiarygodne.</span>
+  </label>
+  <label class="clcr-field clcr-field--choice" data-clcr-field-id="ktvTreatmentsDelivered" data-clcr-status="required">
+    <span class="clcr-field__heading">
+      <span class="clcr-field__name" id="clcr-label-ktvTreatmentsDelivered">Cały schemat realizowano regularnie</span>
+      <span class="clcr-field__status clcr-field__status--required">Wymagane potwierdzenie</span>
+      <button type="button" class="clcr-info-button" aria-label="Informacja: Cały schemat realizowano regularnie" aria-expanded="false" aria-controls="clcr-help-ktvTreatmentsDelivered">i</button>
+    </span>
+    <input type="checkbox" id="ktvTreatmentsDelivered" class="clcr-canonical-checkbox" aria-hidden="true" tabindex="-1" checked>
+    <select class="clcr-protocol-answer" id="ui_ktvTreatmentsDelivered_answer" aria-label="Cały schemat realizowano regularnie: wybierz odpowiedź" aria-required="true">
+      <option value="">— wybierz —</option>
+      <option value="yes" selected>Tak — potwierdzam</option>
+      <option value="no">Nie</option>
+      <option value="unknown">Nie wiem</option>
+    </select>
+    <span class="clcr-field__help" id="clcr-help-ktvTreatmentsDelivered" data-clcr-help-source="field" hidden>Ocena progowa pojedynczej sesji wymaga potwierdzenia, że cały oceniany schemat realizowano regularnie bez skracania zabiegów.</span>
+  </label>
+  <details class="clcr-context-details" open>
+    <summary class="clcr-context-details__summary">Opcjonalny kontekst kliniczny</summary>
+    <div class="clcr-context-details__body">
+      <label class="clcr-field" data-clcr-field-id="ageMonths" data-clcr-status="optional">
+        <span class="clcr-field__heading">
+          <span class="clcr-field__name" id="clcr-label-ageMonths">Miesiące</span>
+          <span class="clcr-field__status clcr-field__status--optional">Opcjonalne</span>
+          <button type="button" class="clcr-info-button" aria-label="Informacja: Miesiące" aria-expanded="false" aria-controls="clcr-help-ageMonths">i</button>
+        </span>
+        <input id="ageMonths" type="number" min="0" max="11" placeholder="0–11" aria-labelledby="clcr-label-ageMonths">
+        <span class="clcr-field__help" id="clcr-help-ageMonths" data-clcr-help-source="field" hidden>Podaj pełne miesiące od ostatnich urodzin (0–11). Wartość 0 jest prawidłowa.</span>
+        <div class="validation-message clcr-field__validation"></div>
+      </label>
+    </div>
+  </details>
+</div>
+</body></html>

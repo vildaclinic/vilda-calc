@@ -1,0 +1,17 @@
+<!-- @dsCard group="Chrome" height=160 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>MobileTopNav</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:14px}
+.ground{background:var(--chrome-glass-bg);border:1px solid var(--chrome-glass-border);border-radius:8px;padding:10px 12px}
+.bar-wrap{max-width:420px}
+/* próbki legacy poza <header>: tylko układ (szerokość/odstępy nav) */
+.row .main-nav{max-width:none;width:auto;margin:0;padding:0}
+.row .main-nav ul{margin:0}
+</style></head><body class="liquid-ios26 has-vilda-chrome">
+<div class="row">
+  <span class="ground"><button type="button" class="chrome-mobile-menu-btn" aria-label="Otwórz menu" data-vilda-chrome-menu-btn><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button></span>
+  <nav class="main-nav" aria-label="Menu (legacy)"><ul><li class="menu-toggle"><input type="checkbox" class="nav-toggle" id="navToggleA"><label for="navToggleA" aria-label="Menu"><span class="bar"></span><span class="bar"></span><span class="bar"></span></label></li></ul></nav>
+  <nav class="main-nav" aria-label="Menu (legacy, otwarte)"><ul><li class="menu-toggle"><input type="checkbox" class="nav-toggle" id="navToggleB" checked><label for="navToggleB" aria-label="Zamknij menu"><span class="bar"></span><span class="bar"></span><span class="bar"></span></label></li></ul></nav>
+</div>
+<div class="bar-wrap"><div class="chrome-mobile-brand-bar" aria-hidden="true">wagaiwzrost.pl</div></div>
+</body></html>

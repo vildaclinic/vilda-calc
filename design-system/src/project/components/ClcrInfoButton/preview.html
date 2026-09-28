@@ -1,0 +1,37 @@
+<!-- @dsCard group="Moduł Klirens" height=250 -->
+<!doctype html><html lang="pl" data-clcr-workflow-ui="1"><head><meta charset="utf-8"><title>ClcrInfoButton</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+/* dymek jest w źródle position:fixed (współrzędne z JS) — w podglądzie tylko pozycja w przepływie */
+html[data-clcr-workflow-ui="1"] .pv .clcr-field__help{position:relative !important}
+</style></head><body class="liquid-ios26">
+<div class="pv">
+  <label class="clcr-field" data-clcr-field-id="weight">
+    <span class="clcr-field__heading">
+      <span class="clcr-field__name" id="clcr-label-weight">Masa ciała (kg)</span>
+      <span class="clcr-field__status clcr-field__status--required">* Wymagane</span>
+      <button type="button" class="clcr-info-button" aria-label="Informacja: Masa ciała (kg)" aria-expanded="false" aria-controls="clcr-help-weight">i</button>
+    </span>
+    <input id="weight" type="number" min="2" max="300" value="41.5" aria-labelledby="clcr-label-weight">
+    <span class="clcr-field__help" id="clcr-help-weight" data-clcr-help-source="field" hidden>Podaj aktualną masę ciała w kilogramach. Nie zastępuj jej masą należną bez wskazania wzoru.</span>
+  </label>
+  <label class="clcr-field clcr-field--value" data-clcr-field-id="Scr">
+    <span class="clcr-field__heading">
+      <span class="clcr-field__name" id="clcr-label-Scr">Kreatynina w surowicy</span>
+      <span class="clcr-field__status clcr-field__status--required">* Wymagane</span>
+      <button type="button" class="clcr-info-button" aria-label="Informacja: Kreatynina w surowicy" aria-expanded="true" aria-controls="clcr-help-Scr">i</button>
+    </span>
+    <input id="Scr" type="number" step="0.01" value="0.62" aria-labelledby="clcr-label-Scr">
+    <span class="clcr-field__help" id="clcr-help-Scr" data-clcr-help-source="field">Podaj kreatyninę w surowicy i wybierz jednostkę dokładnie zgodną z wynikiem laboratoryjnym.</span>
+  </label>
+  <label class="clcr-field" data-clcr-field-id="height">
+    <span class="clcr-field__heading">
+      <span class="clcr-field__name" id="clcr-label-height">Wzrost (cm)</span>
+      <span class="clcr-field__status clcr-field__status--required">* Wymagane</span>
+      <button type="button" class="clcr-info-button" aria-label="Informacja: Wzrost (cm)" aria-expanded="true" aria-controls="clcr-help-height">i</button>
+    </span>
+    <input id="height" type="number" min="30" max="250" value="148" aria-labelledby="clcr-label-height">
+    <span class="clcr-field__help clcr-field__help--above" id="clcr-help-height" data-clcr-help-source="field">Podaj aktualny wzrost w centymetrach; jest używany m.in. w BSA i wzorach pediatrycznych.</span>
+  </label>
+</div>
+</body></html>

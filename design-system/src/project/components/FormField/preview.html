@@ -1,0 +1,45 @@
+<!-- @dsCard group="Pola formularza" height=280 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>FormField</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.pv-col{flex:1 1 260px;max-width:300px;min-width:0}
+.pv-col>label:first-child,.pv-col>.vild-age-row:first-child{margin-top:0}
+</style></head><body class="liquid-ios26">
+<div class="pv-row">
+  <div class="pv-col">
+    <label>Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+      <input type="text" id="lastName" autocomplete="off" value="Testowa"></label>
+    <label>Płeć:
+      <select id="sex">
+        <option value="M">Mężczyzna</option>
+        <option value="F" selected>Kobieta</option>
+      </select></label>
+    <label>Obwód talii (cm):
+      <input type="number" id="waist" step="0.1" autofocus></label>
+  </div>
+  <div class="pv-col">
+    <div class="vild-age-row">
+      <label class="vild-age-years">Wiek (lata):
+        <input type="number" id="age" class="vild-age-auto" min="0" max="130" value="8" readonly required></label>
+      <label>Wiek (miesiące):
+        <input type="number" id="ageMonths" class="vild-age-auto" min="0" max="11" step="1" value="4" readonly></label>
+    </div>
+    <div class="vild-dob-note">Wiek liczony z daty urodzenia na dzień wizyty: 8 lat 4 mies.</div>
+    <div class="vild-weeks-row">
+      <label for="ageWeeks">Wiek (ukończone tygodnie):
+        <input type="number" id="ageWeeks" min="0" max="13" step="1" inputmode="numeric" value="9">
+      </label>
+      <div class="vild-dob-error" role="alert">Data urodzenia nie może być z przyszłości.</div>
+    </div>
+  </div>
+  <div class="pv-col">
+    <label>Imię <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+      <input type="text" id="name" value="Zosia" disabled></label>
+    <label>Wzrost (cm):
+      <input type="number" id="height" class="vild-range-invalid" step="0.1" value="240"></label>
+    <label>Dawka (mg/kg):
+      <input type="number" id="abxDoseInput" class="dose-out-of-range" step="0.1" value="120"></label>
+    <div class="muted">Wartość poza zakresem dawkowania.</div>
+  </div>
+</div>
+</body></html>

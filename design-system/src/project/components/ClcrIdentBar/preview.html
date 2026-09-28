@@ -1,0 +1,41 @@
+<!-- @dsCard group="Moduł Klirens" height=260 -->
+<!doctype html><html lang="pl" data-clcr-workflow-ui="1"><head><meta charset="utf-8"><title>ClcrIdentBar</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{display:flex;flex-direction:column;gap:8px}
+</style></head><body class="liquid-ios26">
+<div class="pv">
+  <div class="patient-card clcr-ident-collapsed">
+    <div id="clcrIdentityBar" class="clcr-ident-bar">
+      <div class="clcr-ident-id">
+        <span class="clcr-ident-avatar">JT</span>
+        <span class="clcr-ident-who">
+          <span class="clcr-ident-name">Jan Testowy</span>
+          <span class="clcr-ident-sub">12 lat 3 mies. · mężczyzna</span>
+        </span>
+      </div>
+      <div class="clcr-ident-badges">
+        <span class="clcr-ident-badge">12 lat 3 mies.</span>
+        <span class="clcr-ident-badge">148 cm</span>
+        <span class="clcr-ident-badge clcr-ident-badge--mass">Masa 41,5 kg · dziś</span>
+      </div>
+      <button type="button" class="clcr-ident-toggle" data-ident-act="toggle">Dane pacjenta ▾</button>
+    </div>
+    <fieldset id="patientSet"><legend>Dane pacjenta</legend></fieldset>
+  </div>
+  <div class="patient-card">
+    <div class="clcr-ident-bar">
+      <div class="clcr-ident-id">
+        <span class="clcr-ident-avatar">AP</span>
+        <span class="clcr-ident-who">
+          <span class="clcr-ident-name">Anna Próbna</span>
+          <span class="clcr-ident-sub">8 mies. · kobieta</span>
+        </span>
+      </div>
+      <button type="button" class="clcr-ident-toggle" data-ident-act="toggle">Zwiń ▲</button>
+    </div>
+    <span class="clcr-weight-note fresh">nowy pomiar: dziś 28.09.2026</span>
+    <span class="clcr-weight-note">ostatni pomiar: 14.03.2026 — nadpisz, jeśli pacjent był ważony dziś.</span>
+    <span class="clcr-weight-note">podaj masę zmierzoną na tej wizycie.</span>
+  </div>
+</div>
+</body></html>

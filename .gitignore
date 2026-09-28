@@ -64,3 +64,6 @@ Desktop.ini
 
 # Makiety odbioru faz (dostarczane przez chat, nie do repo)
 makieta_klirens_*.html
+
+# Wynik producenta design systemu (generowany: npm run design-system)
+design-system/out/

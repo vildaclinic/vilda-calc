@@ -1,0 +1,614 @@
+/* G10 Chrome — źródło: vilda_chrome.css (nagłówek 43-72, pasek 73-81, przycisk menu i pasek marki 82-119, 456-484; marka 120-146; chipy 147-281, 404-455, 485-522; focus 960-963; view-transition 1293-1296; nadpisanie szkła .chip-action 1253-1263), vilda_save_status_indicator.css (cały plik 1-55), ios26-v2.css (.liquid-ios26 header 51-73), style.css (bazowy header 25-29 i 3124-3127; wysoki kontrast 5157-5162 z listą selektorów przyciętą do header; legacy .main-nav 3161-3184, 3914-3934, 4015-4021, 4881-4935), sidebar.css (header .main-nav 10-11). Kolejność: baza → .liquid-ios26 → wysoki kontrast. Brak reguł ciemnego tła dla tej grupy. Zmienna --chrome-active-bg nie jest tokenem (zawiera var()), więc zostaje zadeklarowana lokalnie. */
+
+/* ===== Zmienna lokalna, nieeksportowana do tokens.css (vilda_chrome.css :root 9) ===== */
+:root{
+  --chrome-active-bg: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6))}
+
+/* ===== ChromeStrip — bazowy header (style.css 25-29, 3124-3127) ===== */
+header{
+  background:var(--primary);
+  color:#fff;
+  text-align:center;
+  padding:1rem}
+header{
+  background:#fff;
+  color:var(--text);
+  border-bottom:1px solid #d0dede}
+
+/* ===== ChromeStrip — nagłówek z chrome (vilda_chrome.css 43-72) ===== */
+.has-sidebar header>.container{
+  display:none!important}
+.has-sidebar header>.main-nav{
+  display:none!important}
+.has-sidebar header{
+  min-height:var(--chrome-strip-height);
+  box-sizing:border-box;
+  flex-shrink:0}
+@media(max-width:991px){
+  .has-sidebar header{
+  min-height:calc(var(--chrome-strip-height) + 25px)}
+}
+.has-vilda-chrome header{
+  position:relative;
+  z-index:50;
+  padding:0;
+  background:var(--chrome-glass-bg);
+  backdrop-filter:saturate(160%) blur(14px);
+  -webkit-backdrop-filter:saturate(160%) blur(14px);
+  border-bottom:1px solid var(--chrome-glass-border);
+  box-shadow:0 1px #fff9 inset,0 6px 18px #0046500f}
+@media(min-width:992px){
+  .has-vilda-chrome header{
+  position:sticky;
+  top:0}
+}
+.has-vilda-chrome header>[data-vilda-chrome-wrap]{
+  width:100%}
+
+/* ===== ChromeStrip — pasek (vilda_chrome.css 73-81) ===== */
+.chrome-strip{
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+  height:var(--chrome-strip-height);
+  padding:0 1rem;
+  max-width:1500px;
+  margin:0 auto;
+  box-sizing:border-box}
+
+/* ===== MobileTopNav — przycisk menu i ikony zastępcze (vilda_chrome.css 82-119) ===== */
+.chrome-mobile-menu-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:40px!important;
+  height:40px!important;
+  min-height:40px!important;
+  max-height:40px!important;
+  flex:0 0 auto;
+  align-self:center!important;
+  border-radius:12px!important;
+  border:1px solid var(--chrome-glass-border)!important;
+  background:#fff9!important;
+  color:var(--primary, #00838d)!important;
+  cursor:pointer;
+  padding:0!important;
+  margin:0!important;
+  line-height:1!important;
+  box-sizing:border-box!important;
+  transition:background .15s ease,transform .1s ease}
+.chrome-mobile-menu-btn:hover{
+  background:#ffffffe6!important}
+.chrome-mobile-menu-btn:active{
+  transform:scale(.96)}
+.chrome-mobile-menu-btn svg{
+  width:22px;
+  height:22px;
+  display:block}
+.chrome-icon-fallback{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.4rem;
+  line-height:1;
+  font-weight:400;
+  color:currentColor}
+.chrome-icon-fallback--small{
+  font-size:.95rem}
+
+/* ===== ChromeStrip — marka i wiersz chipów (vilda_chrome.css 120-153) ===== */
+.chrome-brand{
+  display:inline-flex;
+  align-items:center;
+  gap:.6rem;
+  text-decoration:none;
+  color:var(--text, #333);
+  flex:0 0 auto}
+.chrome-brand-logo{
+  width:38px;
+  height:38px;
+  object-fit:cover;
+  border-radius:10px;
+  flex:0 0 auto}
+.chrome-brand-text{
+  display:inline-flex;
+  flex-direction:column;
+  line-height:1.1}
+.chrome-brand-name{
+  font-weight:700;
+  font-size:1.05rem;
+  color:var(--primary, #00838d);
+  letter-spacing:-.01em}
+.chrome-brand-tagline{
+  font-size:.72rem;
+  color:var(--chrome-label-color);
+  letter-spacing:.04em;
+  text-transform:uppercase}
+.chrome-chips{
+  margin-left:auto;
+  display:inline-flex;
+  align-items:center;
+  gap:.55rem;
+  flex:0 1 auto;
+  min-width:0}
+
+/* ===== PatientChip / UserChip — szkielet chipa (vilda_chrome.css 154-203) ===== */
+.chrome-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.25rem .4rem;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  border-radius:var(--chrome-radius-pill);
+  transition:background .15s ease;
+  max-width:240px;
+  min-width:0}
+.chrome-chip:hover{
+  background:#ffffff8c}
+.chip-icon,.chip-avatar{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  height:28px;
+  flex:0 0 auto;
+  border-radius:50%;
+  background:linear-gradient(135deg,#e2f1f2,#cfe9ec);
+  color:var(--primary, #00838d);
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.02em}
+.chip-icon svg,.chip-avatar svg{
+  width:16px;
+  height:16px}
+.chip-content{
+  display:inline-flex;
+  flex-direction:column;
+  line-height:1.1;
+  min-width:0;
+  flex:1 1 auto}
+.chip-label{
+  font-size:.66rem;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--chrome-label-color);
+  font-weight:600}
+.chip-value{
+  font-size:.86rem;
+  font-weight:600;
+  color:var(--text, #333);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:180px}
+
+/* ===== PatientChip — stany pacjenta i tinty zapisu (vilda_chrome.css 204-281) ===== */
+.chrome-patient-chip.is-empty{
+  background:#fff;
+  border:1px solid #cfe4e4;
+  border-radius:9px}
+.chrome-patient-chip.is-empty .chip-icon{
+  background:#e8eded;
+  color:#9eb8bb}
+.chrome-patient-chip.is-empty .chip-value{
+  color:#9eb8bb;
+  font-weight:500}
+.chrome-patient-chip.has-patient{
+  background:#e6f4f5;
+  border:1px solid #9fd4d8;
+  border-radius:9px}
+.chrome-patient-chip.has-patient .chip-icon{
+  background:#00838d;
+  color:#fff}
+.chrome-patient-chip.has-patient .chip-label{
+  color:#00838d}
+.chrome-patient-chip.has-patient .chip-value{
+  color:#0c3a3e}
+@media(min-width:601px){
+  .chrome-patient-chip.vilda-save-state--saved{
+  background:#e8f6ee!important;
+  border-color:#b6e2c8!important}
+.chrome-patient-chip.vilda-save-state--saved .chip-label,.chrome-patient-chip.vilda-save-state--saved .chrome-chip-card{
+  color:#15803d!important}
+.chrome-patient-chip.vilda-save-state--saved .chip-value{
+  color:#14532d!important}
+.chrome-patient-chip.vilda-save-state--dirty{
+  background:#fdf1dd!important;
+  border-color:#f2cf95!important}
+.chrome-patient-chip.vilda-save-state--dirty .chip-label,.chrome-patient-chip.vilda-save-state--dirty .chrome-chip-card{
+  color:#b45309!important}
+.chrome-patient-chip.vilda-save-state--dirty .chip-value{
+  color:#7c3a06!important}
+.chrome-patient-chip.vilda-save-state--saving{
+  background:#e6edfc!important;
+  border-color:#b8ccf5!important}
+.chrome-patient-chip.vilda-save-state--saving .chip-label,.chrome-patient-chip.vilda-save-state--saving .chrome-chip-card{
+  color:#1d4ed8!important}
+.chrome-patient-chip.vilda-save-state--saving .chip-value{
+  color:#1e3a8a!important}
+.chrome-patient-chip.vilda-save-state--error{
+  background:#fdeaea!important;
+  border-color:#f4bcbc!important}
+.chrome-patient-chip.vilda-save-state--error .chip-label,.chrome-patient-chip.vilda-save-state--error .chrome-chip-card{
+  color:#b91c1c!important}
+.chrome-patient-chip.vilda-save-state--error .chip-value{
+  color:#7f1d1d!important}
+.chrome-patient-chip.vilda-save-state--new_patient{
+  background:#f1e9fd!important;
+  border-color:#d6bef5!important}
+.chrome-patient-chip.vilda-save-state--new_patient .chip-label,.chrome-patient-chip.vilda-save-state--new_patient .chrome-chip-card{
+  color:#6d28d9!important}
+.chrome-patient-chip.vilda-save-state--new_patient .chip-value{
+  color:#4c1d95!important}
+}
+.chrome-patient-chip{
+  cursor:pointer}
+.chrome-chip-card{
+  display:inline-flex;
+  align-items:center;
+  color:#00838d;
+  margin-left:1px;
+  flex-shrink:0;
+  line-height:1}
+.chrome-chip-card svg{
+  width:17px;
+  height:17px}
+.chrome-patient-chip.is-empty .chrome-chip-card{
+  display:none}
+.chrome-patient-chip:focus-visible{
+  outline:2px solid var(--primary, #00838d);
+  outline-offset:2px}
+@media(max-width:600px){
+  .chrome-chip-card{
+  display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .chrome-chip-card{
+  transition:none}
+}
+
+/* ===== UserChip — stany konta i przycisk akcji (vilda_chrome.css 407-455) ===== */
+.chrome-user-chip.is-loading .chip-avatar{
+  color:#9eb8bb}
+.chrome-user-chip.is-guest .chip-avatar{
+  background:#f3eaea;
+  color:#b35c5c}
+.chrome-user-chip.is-logged-in .chip-avatar{
+  background:var(--chrome-active-bg, #00838d);
+  color:#fff}
+.chrome-user-chip.is-logged-in{
+  background:#fff;
+  border:1px solid #cfe4e4;
+  border-radius:9px}
+.chrome-user-chip.is-logged-in .chip-value{
+  color:#0c3a3e}
+.chrome-user-chip.is-logged-in .chip-action{
+  color:#5f8f91}
+.chrome-user-chip.is-logged-in .chip-avatar,.chrome-user-chip.is-logged-in .chip-value{
+  cursor:pointer}
+.chrome-user-chip.is-logged-in .chip-value:hover{
+  text-decoration:underline;
+  text-underline-offset:2px}
+.chrome-user-chip.is-logged-in .chip-value:focus-visible{
+  outline:2px solid var(--primary, #00838d);
+  outline-offset:2px;
+  border-radius:3px}
+.chip-action{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:transparent;
+  border:0;
+  color:var(--chrome-label-color);
+  cursor:pointer;
+  padding:0;
+  margin-left:.15rem;
+  flex:0 0 auto;
+  transition:background .15s ease,color .15s ease}
+.chip-action:hover{
+  background:#c628281f;
+  color:var(--danger, #c62828)}
+.chrome-user-chip.is-guest .chip-action:hover{
+  background:#00838d1f;
+  color:var(--primary, #00838d)}
+.chip-action svg{
+  width:14px;
+  height:14px}
+
+/* ===== Responsywność paska, przycisku menu, paska marki i chipów (vilda_chrome.css 456-522) ===== */
+@media(min-width:992px){
+  .chrome-mobile-menu-btn{
+  display:none!important}
+}
+@media(max-width:991px){
+  .chrome-strip{
+  padding:0 .75rem;
+  gap:.55rem}
+.chrome-brand{
+  display:none!important}
+}
+.chrome-mobile-brand-bar{
+  display:none}
+@media(max-width:991px){
+  .chrome-mobile-brand-bar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:25px;
+  box-sizing:border-box;
+  padding:0;
+  font-size:.8rem;
+  font-weight:600;
+  letter-spacing:.04em;
+  color:var(--primary, #00838d);
+  background:#00838d0d;
+  border-top:.5px solid rgba(0,131,141,.14);
+  line-height:1}
+}
+@media(max-width:600px){
+  .chrome-strip{
+  gap:.4rem}
+.chrome-chip{
+  padding:.3rem .45rem .3rem .35rem}
+.chrome-chip .chip-content,.chrome-chip .chip-action{
+  display:none}
+.chrome-patient-chip,.chrome-user-chip{
+  padding:.3rem}
+.chip-icon,.chip-avatar{
+  width:32px;
+  height:32px}
+}
+@media(max-width:600px){
+  .chrome-patient-chip.has-patient,.chrome-patient-chip.is-empty,.chrome-user-chip.is-logged-in{
+  height:34px;
+  padding:0;
+  border:none;
+  background:transparent;
+  box-sizing:border-box}
+.chrome-patient-chip.has-patient .chip-icon,.chrome-patient-chip.is-empty .chip-icon,.chrome-user-chip.is-logged-in .chip-avatar{
+  width:34px;
+  height:34px;
+  border-radius:8px}
+.chrome-patient-chip.is-empty .chip-icon{
+  background:#fff;
+  border:1px solid #cfe4e4;
+  color:#9eb8bb}
+.chrome-user-chip.is-logged-in .chip-avatar{
+  background:var(--chrome-active-bg, #00838d)}
+}
+.has-vilda-chrome .vilda-auth-logout{
+  display:none!important}
+
+/* ===== Fokus i przejście widoku (vilda_chrome.css 960-963, 1293-1296) ===== */
+.has-vilda-chrome a:focus-visible,.has-vilda-chrome button:focus-visible{
+  outline:2px solid var(--primary, #00838d);
+  outline-offset:2px;
+  border-radius:8px}
+@media(min-width:992px){
+  .has-sidebar header{
+  view-transition-name:vilda-header}
+}
+
+/* ===== SaveStatusIndicator — warstwa stanu zapisu na ikonie chipa (vilda_save_status_indicator.css 1-55) ===== */
+.chrome-chip.chrome-patient-chip .chip-icon,.chrome-patient-chip .chip-icon{
+  transition:none!important}
+.chrome-patient-chip.vilda-save-state--hidden .chip-icon{
+  background:#e8eded!important;
+  color:#9eb8bb!important}
+.chrome-patient-chip.vilda-save-state--saved .chip-icon{
+  background:linear-gradient(135deg,#15803d,#22c55e)!important;
+  color:#fff!important}
+.chrome-patient-chip.vilda-save-state--dirty .chip-icon{
+  background:linear-gradient(135deg,#b45309,#f59e0b)!important;
+  color:#fff!important;
+  animation:vilda-save-status-dirty-pulse 2.4s ease-in-out infinite}
+@keyframes vilda-save-status-dirty-pulse{
+  0%,to{
+  box-shadow:0 0 #f59e0b00}
+50%{
+  box-shadow:0 0 0 4px #f59e0b38}
+}
+.chrome-patient-chip.vilda-save-state--saving .chip-icon{
+  background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;
+  color:#fff!important}
+.chrome-patient-chip.vilda-save-state--saving .chip-icon>*{
+  animation:vilda-save-status-spin .9s linear infinite;
+  transform-origin:50% 50%}
+@keyframes vilda-save-status-spin{
+  to{
+  transform:rotate(360deg)}
+}
+.chrome-patient-chip.vilda-save-state--error .chip-icon{
+  background:linear-gradient(135deg,#b91c1c,#ef4444)!important;
+  color:#fff!important;
+  animation:vilda-save-status-error-pulse 1.8s ease-in-out infinite}
+@keyframes vilda-save-status-error-pulse{
+  0%,to{
+  box-shadow:0 0 #ef444400}
+50%{
+  box-shadow:0 0 0 5px #ef444452}
+}
+.chrome-patient-chip.vilda-save-state--new_patient .chip-icon{
+  background:linear-gradient(135deg,#6d28d9,#a855f7)!important;
+  color:#fff!important;
+  animation:vilda-save-status-new-pulse 2.4s ease-in-out infinite}
+@keyframes vilda-save-status-new-pulse{
+  0%,to{
+  box-shadow:0 0 #a855f700}
+50%{
+  box-shadow:0 0 0 5px #a855f747}
+}
+@media(prefers-reduced-motion:reduce){
+  .chrome-patient-chip.vilda-save-state--dirty .chip-icon,.chrome-patient-chip.vilda-save-state--error .chip-icon,.chrome-patient-chip.vilda-save-state--new_patient .chip-icon{
+  animation:none}
+.chrome-patient-chip.vilda-save-state--saving .chip-icon>*{
+  animation-duration:3s}
+}
+
+/* ===== MobileTopNav — legacy hamburger .main-nav (style.css 3161-3184, 3914-3934, 4015-4021, 4881-4935; sidebar.css 10-11). Żadna strona nie niesie już tego znacznika; JS ios26-ui.js tylko go wykrywa. ===== */
+.main-nav ul{
+  list-style:none;
+  padding-left:0;
+  margin:.5rem 0 0;
+  display:flex;
+  gap:1rem;
+  align-items:center}
+.main-nav a{
+  color:var(--primary);
+  font-weight:600;
+  text-decoration:none}
+.main-nav a:hover{
+  text-decoration:underline}
+.main-nav{
+  max-width:960px;
+  margin-left:auto;
+  margin-right:auto;
+  padding-left:1.5rem;
+  padding-right:1rem;
+  width:100%;
+  background:inherit;
+  position:relative}
+.main-nav ul li a{
+  font-size:1rem;
+  display:flex;
+  align-items:end;
+  height:32px}
+.main-nav .menu-toggle{
+  list-style:none}
+.main-nav .menu-toggle label{
+  background:none;
+  border:none;
+  padding:.4rem;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:4px;
+  width:32px;
+  height:32px}
+.main-nav .menu-toggle .bar{
+  display:block;
+  width:24px;
+  height:2px;
+  background:var(--primary);
+  border-radius:1px;
+  transition:transform .3s ease,opacity .3s ease}
+.nav-toggle{
+  position:absolute;
+  opacity:0;
+  pointer-events:none}
+.nav-toggle:checked+label .bar:nth-child(1){
+  transform:translateY(6px) rotate(45deg)}
+.nav-toggle:checked+label .bar:nth-child(2){
+  opacity:1;
+  transform:none}
+.nav-toggle:checked+label .bar:nth-child(3){
+  transform:translateY(-6px) rotate(-45deg)}
+.main-nav{
+  box-sizing:border-box}
+@media(max-width:600px){
+  .main-nav{
+  --mobile-top-nav-font-size: .72rem;
+  --mobile-top-nav-gap: .22rem;
+  --mobile-top-nav-side-padding: .48rem;
+  --mobile-top-nav-hamburger-size: 2.06rem;
+  padding-left:var(--mobile-top-nav-side-padding);
+  padding-right:var(--mobile-top-nav-side-padding);
+  overflow:visible}
+.main-nav>ul{
+  width:100%;
+  display:grid;
+  grid-template-columns:var(--mobile-top-nav-hamburger-size) repeat(5,minmax(0,1fr));
+  gap:var(--mobile-top-nav-gap);
+  align-items:center}
+.main-nav>ul>li{
+  min-width:0}
+.main-nav>ul>li.menu-toggle{
+  width:var(--mobile-top-nav-hamburger-size)}
+.main-nav .menu-toggle label{
+  width:var(--mobile-top-nav-hamburger-size);
+  height:var(--mobile-top-nav-hamburger-size);
+  padding:.28rem;
+  margin:0 auto}
+.main-nav>ul>li>a{
+  width:100%;
+  min-width:0;
+  justify-content:center;
+  align-items:center;
+  height:auto;
+  min-height:2rem;
+  font-size:var(--mobile-top-nav-font-size, .72rem);
+  line-height:1.06;
+  letter-spacing:-.012em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis}
+}
+@media(max-width:420px){
+  .main-nav{
+  --mobile-top-nav-gap: .18rem;
+  --mobile-top-nav-side-padding: .4rem;
+  --mobile-top-nav-hamburger-size: 1.98rem}
+}
+@media(max-width:360px){
+  .main-nav{
+  --mobile-top-nav-gap: .14rem;
+  --mobile-top-nav-side-padding: .34rem;
+  --mobile-top-nav-hamburger-size: 1.92rem}
+}
+@media(min-width:992px){
+  header .main-nav{
+  display:none}
+}
+
+/* ===== Nadpisania Liquid Glass — header (ios26-v2.css 51-73) ===== */
+.liquid-ios26 header{
+  background:var(--lg-surface-light)!important;
+  color:#111!important;
+  border-bottom:1px solid var(--lg-border);
+  backdrop-filter:blur(18px) saturate(120%);
+  -webkit-backdrop-filter:blur(18px) saturate(120%);
+  border-radius:0 0 var(--lg-radius) var(--lg-radius);
+  overflow:hidden;
+  box-shadow:var(--lg-shadow);
+  position:sticky!important;
+  top:0!important;
+  z-index:200}
+.liquid-ios26 header,.liquid-ios26 header._glass{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  background:linear-gradient(180deg,#ffffffe6,#fffc)!important}
+@media(max-width:991px){
+  .liquid-ios26 header{
+  position:relative!important;
+  top:auto!important}
+}
+.liquid-ios26 header img{
+  box-shadow:0 2px 12px #0000001f}
+
+/* ===== Nadpisania Liquid Glass — przycisk akcji chipa konta (vilda_chrome.css 1253-1263) ===== */
+.liquid-ios26 .chrome-user-chip .chip-action{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  border-radius:50%!important;
+  color:#5f8f91!important}
+.liquid-ios26 .chrome-user-chip .chip-action:hover{
+  background:#c628281f!important;
+  color:#c62828!important}
+
+/* ===== Wysoki kontrast — header (style.css 5157-5162; lista selektorów przycięta do header i header._glass) ===== */
+body.high-contrast-level-1.liquid-ios26 header,body.high-contrast-level-2.liquid-ios26 header,body.high-contrast-level-3.liquid-ios26 header,body.high-contrast-level-1.liquid-ios26 header._glass,body.high-contrast-level-2.liquid-ios26 header._glass,body.high-contrast-level-3.liquid-ios26 header._glass{
+  background:var(--hc-surface)!important;
+  border:var(--hc-card-border-width) solid var(--hc-border)!important;
+  box-shadow:var(--hc-shadow)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important}

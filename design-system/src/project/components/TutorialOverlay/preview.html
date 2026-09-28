@@ -1,0 +1,21 @@
+<!-- @dsCard group="Nakładki" height=340 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>TutorialOverlay</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.ds-stage{position:relative;height:300px;max-width:928px}
+/* w aplikacji nakładka, blokada, ramka i dymek są position:fixed względem okna — w podglądzie są pozycjonowane względem sceny */
+.ds-stage .tutorial-overlay{position:absolute!important}
+.ds-stage .tutorial-blocker,.ds-stage .tutorial-highlight-frame,.ds-stage .tutorial-bubble{position:absolute!important}
+</style></head><body class="liquid-ios26">
+<div class="ds-stage">
+  <div class="tutorial-overlay" style="display:block">
+    <div class="tutorial-blocker" style="inset:0"></div>
+    <div class="tutorial-highlight-frame" style="display:block;top:40px;left:400px;width:420px;height:96px"></div>
+    <div class="tutorial-bubble" role="dialog" aria-labelledby="tutorialTitle">
+      <strong id="tutorialTitle">Pierwsze kroki</strong>
+      <p>Uzupełnij formularz i sprawdź wyniki pod nim. Wpisz wzrost, wagę i wiek, aby dodać pierwszy pomiar.</p>
+      <button type="button" class="tutorial-next">Dalej</button>
+      <button type="button" class="tutorial-skip">Pomiń</button>
+    </div>
+  </div>
+</div>
+</body></html>

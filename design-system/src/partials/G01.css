@@ -1,0 +1,940 @@
+/* G01 Akcje — źródło: style.css (Button, ProButton), index.html (inline <style>, .vild-tanner-toggle), ios26-v2.css (nadpisania .liquid-ios26 przycisków), vilda_chrome.css (ChromeActionButton), vilda_auth_ui.css + ustawienia.css 400-401 (AuthButton). Reguły skopiowane dosłownie z czytelnych kopii; kolejność: baza → .liquid-ios26 → wysoki kontrast. Brak reguł ciemnego tła dla tej grupy. */
+
+/* ---- Button — baza (style.css 100-119, 569-591, 633-635, 659-663, 809-816, 864-867, 2283-2289, 2865-2871, 3881-3892, 3221-3225, 3898-3913, 7420-7465) ---- */
+button.icon{
+  background:none;
+  border:none;
+  font-size:1.35rem;
+  cursor:pointer;
+  color:var(--danger);
+  font-weight:900;
+  line-height:1}
+button.icon:hover{
+  opacity:.8}
+button.add-row{
+  background:var(--secondary);
+  color:#fff;
+  border:none;
+  padding:.45rem .9rem;
+  border-radius:4px;
+  cursor:pointer;
+  margin-top:.7rem}
+button.add-row:hover{
+  background:var(--primary)}
+button,input[type=button],input[type=submit]{
+  cursor:pointer;
+  font:inherit;
+  border:none;
+  border-radius:var(--radius);
+  padding:.55rem 1.1rem;
+  background:var(--primary);
+  color:#fff;
+  transition:background .2s ease,box-shadow .2s ease}
+button:hover,input[type=button]:hover,input[type=submit]:hover{
+  background:var(--secondary);
+  box-shadow:var(--shadow)}
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed}
+button.icon{
+  background:transparent;
+  color:var(--danger);
+  font-size:1.25rem;
+  padding:.25rem .5rem;
+  line-height:1}
+button.icon:hover{
+  background:#c628281a}
+@media(max-width:600px){
+button,input[type=button],input[type=submit]{
+  width:100%;
+  margin-top:.5rem}
+}
+button,input[type=submit]{
+  transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
+button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
+  transform:translateY(-1px) scale(1.02);
+  box-shadow:var(--shadow-l)}
+#toggleAdvancedGrowth,#generateCentileChart,#generateCentileChartBasic,#toggleIntakeCard,#toggleFoodCard,#toggleNutritionMicrosCard,#toggleNutritionNormsCard,#toggleDownSyndrome,#generateDsCentileChart,#toggleCircSection{
+  width:100%;
+  padding:.55rem 1.1rem!important;
+  border-radius:var(--radius)!important;
+  background:var(--primary)!important;
+  color:#fff!important;
+  font-weight:600!important;
+  margin:.5rem 0!important}
+#toggleAdvancedGrowth:hover,#generateCentileChart:hover,#generateCentileChartBasic:hover,#toggleIntakeCard:hover,#toggleFoodCard:hover,#toggleNutritionMicrosCard:hover,#toggleNutritionNormsCard:hover,#toggleDownSyndrome:hover,#generateDsCentileChart:hover,#toggleCircSection:hover{
+  background:var(--secondary)!important;
+  transform:translateY(-1px) scale(1.02);
+  box-shadow:var(--shadow-l)}
+.primary-btn{
+  background:var(--primary);
+  color:#fff;
+  border:0;
+  padding:.6rem 1rem;
+  border-radius:var(--radius);
+  cursor:pointer}
+.secondary-btn{
+  background:transparent;
+  color:var(--primary);
+  border:none;
+  cursor:pointer;
+  padding:.3rem .6rem;
+  border-radius:var(--radius)}
+#modulesWrapper .module-btn-wrapper{
+  display:flex;
+  justify-content:center;
+  margin:1rem 0;
+  width:100%;
+  flex:0 0 100%;
+  max-width:100%}
+@media(min-width:700px){
+  #modulesWrapper .module-btn-wrapper{
+  flex:0 0 calc(50% - .5rem);
+  max-width:calc(50% - .5rem)}
+}
+#modulesWrapper #toggleThyroidCancerKids{
+  width:100%;
+  max-width:520px}
+#modulesWrapper #toggleThyroidCancerKids.active-toggle{
+  border:1px solid var(--brand-light)}
+#modulesWrapper #toggleThyroidCancerKids{
+  width:100%!important;
+  max-width:520px!important}
+.module-btn{
+  width:100%;
+  max-width:520px;
+  border:none;
+  border-radius:var(--radius);
+  padding:.6rem 1rem;
+  font-size:1rem;
+  font-family:inherit;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  transition:background .2s ease,box-shadow .2s ease}
+.module-btn:hover{
+  box-shadow:0 4px 8px #00000026}
+.vild-rem-dlg-acts{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  padding:10px 16px 14px;
+  border-top:1px solid #eef2f3}
+
+.vild-rem-dlg-acts button{
+  font:inherit;
+  font-size:.82rem!important;
+  font-weight:600!important;
+  border:1px solid #d7e9ec!important;
+  background:#fff!important;
+  color:#0f2b33!important;
+  border-radius:9px!important;
+  padding:8px 11px!important;
+  display:inline-flex!important;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+  cursor:pointer;
+  box-shadow:none!important;
+  min-height:0!important;
+  height:auto!important;
+  width:auto!important;
+  min-width:0!important;
+  margin:0!important}
+
+.vild-rem-dlg-acts button:hover{
+  background:#f5fafb!important}
+
+.vild-rem-dlg-acts button.vild-rem-dlg-pri{
+  background:#00838d!important;
+  border-color:#00838d!important;
+  color:#fff!important}
+
+.vild-rem-dlg-acts button.vild-rem-dlg-pri:hover{
+  background:#006f78!important}
+
+.vild-rem-dlg-acts button.vild-rem-dlg-destr{
+  color:#c2271d!important;
+  border-color:#f3c9c5!important}
+
+.vild-rem-dlg-acts button.vild-rem-dlg-ghost{
+  border-color:transparent!important;
+  color:#5b6672!important}
+
+/* ---- Button — .vild-tanner-toggle (index.html inline <style> = src/html-styles/index.css 305-342; ten sam blok w docpro.html) ---- */
+  .vild-tanner-toggle,
+  .liquid-ios26 .vild-tanner-toggle{
+  display:block!important;
+  width:fit-content!important;
+  margin:0.7rem auto 0!important;
+  padding:8px 12px!important;
+  font-size:.82rem!important;
+  font-weight:600!important;
+  background:transparent!important;
+  border:1px solid #cfe0e3!important;
+  border-radius:9px!important;
+  color:#5a7274!important;
+  cursor:pointer!important;
+  font-family:inherit!important;
+  line-height:1.2!important;
+  height:auto!important;
+  min-height:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  text-align:center!important;
+  }
+  .vild-tanner-toggle:hover,
+  .liquid-ios26 .vild-tanner-toggle:hover{
+  border-color:#00838d!important;
+  color:#00838d!important;
+  background:transparent!important;
+  }
+
+/* ---- ProButton — baza + nadpisania .liquid-ios26 w kolejności źródła (style.css 1053-1066, 1150-1160, 1702-1722, 1767-1786, 1791-1795, 1799-1831, 1836-1863, 1866-1869, 1872-1899, 1996-2004, 3226-3227, 4825-4826) ---- */
+.circ-result-action .circ-action-btn .pro-superscript{
+  display:inline;
+  vertical-align:super}
+.circ-result-action .circ-action-btn.is-pro-locked,.circ-result-action .circ-action-btn.is-pro-locked:disabled,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked:disabled{
+  background:#f3f3f3!important;
+  color:#000!important;
+  border:3px solid #cccccc!important;
+  box-shadow:none!important;
+  transform:none!important;
+  opacity:1!important;
+  cursor:not-allowed!important;
+  pointer-events:none!important}
+.circ-result-action .circ-action-btn.is-pro-locked .pro-superscript,.circ-result-action .circ-action-btn.is-pro-locked:disabled .pro-superscript,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked .pro-superscript,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked:disabled .pro-superscript{
+  color:#90f!important}
+.circ-pro-pill{
+  display:inline-block;
+  margin-left:.18rem;
+  padding:.02rem .35rem;
+  border-radius:999px;
+  background:#6a1b9a;
+  color:#fff;
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  vertical-align:baseline}
+.pro-link{
+  color:#90f;
+  font-weight:600;
+  text-decoration:none}
+.pro-link:hover,.pro-link:focus{
+  color:#b34af7;
+  text-decoration:underline}
+.pro-summary-label{
+  display:none;
+  position:absolute;
+  border-radius:4px;
+  background-color:#90f;
+  color:#fff;
+  font-size:.8rem;
+  padding:.5rem}
+.pro-summary-card,.liquid-ios26 .pro-summary-card{
+  border:3px solid #9900ff!important}
+#dietRecommendationsBtn{
+  border:3px solid #9900ff}
+.liquid-ios26 #dietRecommendationsBtn{
+  border:3px solid #9900ff!important}
+#generateDietBtn,#dietRecommendationsPdfBtn{
+  border:3px solid #9900ff}
+#dietRecommendationsContent #generateDietBtn,#dietRecommendationsPdfBtn.diet-report-pdf-btn{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:.55rem 0 0!important;
+  padding:.55rem 1rem!important;
+  border-radius:var(--radius)!important;
+  font-size:.95rem!important;
+  font-weight:600!important;
+  cursor:pointer;
+  text-align:center}
+#dietRecommendationsPdfBtn.diet-report-pdf-btn{
+  background:#fff;
+  color:#000}
+.liquid-ios26 #generateDietBtn,.liquid-ios26 #dietRecommendationsPdfBtn{
+  border:3px solid #9900ff!important;
+  font-weight:600!important}
+.pro-summary-card .pro-summary-label{
+  display:block;
+  top:.5rem;
+  right:.5rem;
+  transform:none}
+#toggleAdvancedGrowth.advanced-growth-btn{
+  background:#fff;
+  color:#000;
+  border:3px solid #9900ff;
+  border-radius:var(--radius);
+  padding:.6rem 1.2rem;
+  font-size:1rem;
+  font-weight:600;
+  cursor:pointer;
+  display:block;
+  margin:0 auto;
+  width:100%;
+  text-align:center}
+.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn{
+  background:#fff!important;
+  color:#000!important;
+  border:3px solid #9900ff!important;
+  border-radius:var(--radius)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  box-shadow:none!important}
+.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled,.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled{
+  background:#f3f3f3!important;
+  color:#000!important;
+  border:3px solid #cccccc!important;
+  cursor:not-allowed;
+  pointer-events:none}
+#toggleAdvancedGrowth .adv-pro-tag,.pro-superscript{
+  color:#90f;
+  font-size:.55em;
+  font-weight:700;
+  vertical-align:super;
+  margin-left:.1rem}
+#toggleAdvancedGrowth.advanced-growth-btn:disabled .pro-superscript{
+  color:#90f}
+.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled .pro-superscript{
+  color:#90f!important}
+.pro-button:disabled{
+  background:#f3f3f3;
+  color:#000;
+  border:3px solid #cccccc;
+  cursor:not-allowed;
+  pointer-events:none;
+  opacity:1}
+.liquid-ios26 .pro-button:disabled{
+  background:#f3f3f3!important;
+  color:#000!important;
+  border:3px solid #cccccc!important;
+  cursor:not-allowed!important;
+  pointer-events:none!important;
+  opacity:1!important}
+.pro-button:disabled .pro-superscript{
+  color:#90f}
+.liquid-ios26 .pro-button:disabled .pro-superscript{
+  color:#90f!important}
+#toggleAdvancedGrowth.advanced-growth-btn:disabled,#toggleAdvancedGrowth.advanced-growth-btn.disabled{
+  background:#f3f3f3!important;
+  color:#000!important;
+  border:3px solid #cccccc!important;
+  cursor:not-allowed;
+  pointer-events:none}
+#nutritionNormsSection,#nutritionMicrosSection,#foodSection,#circSection,#downSyndromeSection,#intakeSection,#growthCalculationsSection,#advancedGrowthSection{
+  margin-top:0!important}
+#toggleNutritionNormsCard,#toggleNutritionMicrosCard,#toggleFoodCard,#toggleCircSection,#toggleDownSyndrome,#toggleIntakeCard,#toggleGrowthCalculations.advanced-growth-btn,#toggleAdvancedGrowth.advanced-growth-btn{
+  margin:0 auto!important}
+#toggleGrowthCalculations.advanced-growth-btn{
+  background:#fff;
+  color:#000;
+  border:3px solid var(--primary);
+  border-radius:var(--radius);
+  padding:.6rem 1.2rem;
+  font-size:1rem;
+  font-weight:600;
+  cursor:pointer;
+  display:block;
+  margin:0 auto;
+  width:100%;
+  text-align:center}
+.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn{
+  background:#fff!important;
+  color:#000!important;
+  border:3px solid var(--primary)!important;
+  border-radius:var(--radius)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  box-shadow:none!important}
+#toggleGrowthCalculations.advanced-growth-btn:disabled,#toggleGrowthCalculations.advanced-growth-btn.disabled,.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn:disabled,.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn.disabled{
+  background:#f3f3f3!important;
+  color:#000!important;
+  border:3px solid #cccccc!important;
+  cursor:not-allowed;
+  pointer-events:none;
+  opacity:1}
+#resultsModeToggleContainer .pro-label{
+  color:#90f;
+  position:relative}
+#resultsModeToggleContainer .pro-label .pro-tag{
+  color:#90f;
+  font-size:.55em;
+  font-weight:700;
+  vertical-align:super;
+  margin-left:.1rem}
+#thyroidCancerKidsCard .thy-jump-cancer-preop{
+  border:3px solid #9900ff!important}
+/* style.css 4825-4826 — reguła leży w źródle wewnątrz większego bloku @media(max-width:699px) (od linii 4820); obudowa odtworzona, deklaracja bez zmian */
+@media(max-width:699px){
+#toggleCircSection,#toggleNutritionNormsCard,#toggleNutritionMicrosCard,#toggleFoodCard,#toggleDownSyndrome,#toggleIntakeCard,#toggleGrowthCalculations.advanced-growth-btn,#toggleAdvancedGrowth.advanced-growth-btn{
+  margin:0!important}
+}
+
+/* ---- ChromeActionButton — baza (vilda_chrome.css 1026-1192, 499-503) ---- */
+.chrome-sync-btn{
+  display:none;
+  align-items:center;
+  justify-content:center;
+  width:30px;
+  height:30px;
+  padding:0;
+  border:1px solid #cfe4e4;
+  border-radius:8px;
+  background:#fff;
+  color:#4d8285;
+  cursor:pointer;
+  flex-shrink:0;
+  box-sizing:border-box;
+  transition:color .15s ease,background .15s ease,border-color .15s ease;
+  text-decoration:none}
+.chrome-sync-btn.is-enabled{
+  display:inline-flex}
+.chrome-sync-btn:hover{
+  background:#f2f9f9;
+  border-color:#9fd4d8;
+  color:var(--primary, #00838d)}
+.chrome-sync-btn[data-sync-state=syncing]{
+  color:var(--primary, #00838d)}
+.chrome-sync-btn[data-sync-state=syncing] svg{
+  animation:vildaSyncPulse 1.1s ease-in-out infinite}
+.chrome-sync-btn[data-sync-state=ok]{
+  color:#16a34a}
+.chrome-sync-btn[data-sync-state=error]{
+  color:#dc2626}
+.chrome-sync-btn[data-sync-state=stale]{
+  color:#b45400}
+@keyframes vildaSyncPulse{
+  0%,to{
+  opacity:1;
+  transform:scale(1)}
+50%{
+  opacity:.4;
+  transform:scale(.88)}
+}
+.chrome-sync-btn[data-cloud-only=true]{
+  display:inline-flex;
+  border-radius:8px;
+  border-color:transparent;
+  background:var(--primary, #00838d);
+  color:#fff}
+.chrome-sync-btn[data-cloud-only=true]:hover{
+  background:#006c75;
+  color:#fff}
+.chrome-sync-btn[data-cloud-only=true][data-sync-state=syncing]{
+  background:var(--primary, #00838d);
+  color:#fff}
+.chrome-sync-btn[data-cloud-only=true][data-sync-state=syncing] svg{
+  animation:vildaSyncPulse 1.1s ease-in-out infinite}
+.chrome-sync-btn[data-cloud-only=true][data-sync-state=ok]{
+  background:#16a34a;
+  color:#fff}
+.chrome-sync-btn[data-cloud-only=true][data-sync-state=error]{
+  background:#dc2626;
+  color:#fff}
+.chrome-reminders-btn{
+  position:relative;
+  display:inline-block;
+  width:30px;
+  height:30px;
+  padding:0;
+  margin:0;
+  border:1px solid #cfe4e4;
+  border-radius:8px;
+  background:#fff;
+  color:#4d8285;
+  cursor:pointer;
+  flex-shrink:0;
+  box-sizing:border-box;
+  transition:color .15s ease,background .15s ease,border-color .15s ease,transform .1s ease;
+  font-family:inherit}
+.chrome-reminders-inner{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%}
+.chrome-reminders-btn[hidden]{
+  display:none}
+.chrome-reminders-btn:hover{
+  background:#f2f9f9;
+  border-color:#9fd4d8;
+  color:var(--primary, #00838d)}
+.chrome-reminders-btn:active{
+  transform:scale(.95)}
+.chrome-reminders-btn:focus-visible{
+  outline:2px solid var(--primary, #00838d);
+  outline-offset:2px}
+.chrome-reminders-badge{
+  position:absolute;
+  top:-4px;
+  right:-4px;
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:.62rem;
+  font-weight:700;
+  line-height:1;
+  color:#fff;
+  background:#6b7280;
+  border-radius:999px;
+  border:1.5px solid #fff;
+  box-shadow:0 1px 3px #00283026;
+  letter-spacing:-.02em;
+  pointer-events:none}
+.chrome-reminders-btn[data-state=overdue]{
+  color:#dc2626}
+.chrome-reminders-btn[data-state=overdue] .chrome-reminders-badge{
+  background:#dc2626}
+.chrome-reminders-btn[data-state=today]{
+  color:var(--primary, #00838d)}
+.chrome-reminders-btn[data-state=today] .chrome-reminders-badge{
+  background:#d97706}
+.chrome-reminders-btn:not([hidden]):not([data-state=empty]) .chrome-reminders-badge{
+  animation:vildaRemindersPulse .6s ease-out 3}
+@keyframes vildaRemindersPulse{
+  0%,to{
+  transform:scale(1)}
+50%{
+  transform:scale(1.18)}
+}
+@media(prefers-reduced-motion:reduce){
+  .chrome-reminders-btn .chrome-reminders-badge{
+  animation:none}
+}
+.chrome-sync-btn[data-cloud-only=true][data-offline=true]{
+  background:#b45309;
+  color:#fff;
+  box-shadow:0 0 0 2px #b4530940}
+.chrome-sync-btn[data-cloud-only=true][data-offline=true]:hover{
+  background:#8a3d05}
+.chrome-pro-badge{
+  display:none;
+  align-items:center;
+  justify-content:center;
+  height:30px;
+  padding:0 10px;
+  border-radius:8px;
+  font-size:10.5px;
+  font-weight:700;
+  letter-spacing:.05em;
+  text-decoration:none;
+  cursor:pointer;
+  flex-shrink:0;
+  white-space:nowrap;
+  box-sizing:border-box;
+  transition:opacity .15s ease,transform .15s ease;
+  border:1px solid transparent}
+.chrome-pro-badge:hover{
+  opacity:.8;
+  transform:scale(.96)}
+.chrome-pro-badge[data-pro-state=active]{
+  background:#ece8fb;
+  color:#6d4bd8;
+  border-color:transparent}
+.chrome-pro-badge[data-pro-state=upgrade]{
+  background:#e0f2f3;
+  color:#00838d;
+  border-color:transparent}
+@media(max-width:600px){
+  .chrome-pro-badge{
+  height:34px!important}
+.chrome-sync-btn,.chrome-sync-btn[data-cloud-only=true],.chrome-reminders-btn{
+  width:34px!important;
+  height:34px!important}
+}
+
+/* ---- AuthButton — baza (vilda_auth_ui.css 188-256, 266-276, 295-339, 454-461, 709-735, 1208+1226-1233, 1234-1251, 1341-1383, 1647-1650) ---- */
+.vilda-auth-buttons{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-top:4px}
+.vilda-auth-actions{
+  display:flex;
+  gap:12px;
+  margin-top:8px}
+.vilda-auth-actions .vilda-auth-btn{
+  flex:1}
+.vilda-auth-actions-end{
+  justify-content:flex-end}
+.vilda-auth-actions-end .vilda-auth-btn{
+  flex:0 0 auto;
+  min-width:140px}
+.vilda-auth-actions-center{
+  justify-content:center}
+.vilda-auth-actions-center .vilda-auth-btn{
+  flex:0 0 auto;
+  min-width:200px}
+.vilda-auth-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:14px 22px;
+  border-radius:12px;
+  border:1.5px solid transparent;
+  font-size:15px;
+  font-weight:500;
+  font-family:inherit;
+  cursor:pointer;
+  transition:background-color .15s ease,border-color .15s ease,transform .05s ease,box-shadow .15s ease;
+  text-decoration:none}
+.vilda-auth-btn:active{
+  transform:translateY(1px)}
+.vilda-auth-btn:focus-visible{
+  outline:3px solid rgba(0,131,141,.3);
+  outline-offset:2px}
+.vilda-auth-btn-small{
+  padding:10px 16px;
+  font-size:13px;
+  border-radius:10px}
+.vilda-auth-btn-primary{
+  background:#00838d;
+  color:#fff;
+  border-color:#00838d;
+  box-shadow:0 6px 18px #00838d38}
+.vilda-auth-btn-primary:hover{
+  background:#006d75;
+  border-color:#006d75;
+  box-shadow:0 8px 22px #00838d4d}
+.vilda-auth-btn-ghost{
+  background:#fff;
+  color:#08202c;
+  border-color:#d6dde0}
+.vilda-auth-btn-ghost:hover{
+  background:#f5fafb;
+  border-color:#00838d;
+  color:#00838d}
+.vilda-auth-btn-danger{
+  background:#b00020;
+  color:#fff;
+  border-color:#b00020;
+  box-shadow:0 6px 18px #b0002038}
+.vilda-auth-btn-danger:hover{
+  background:#8e0019;
+  border-color:#8e0019;
+  box-shadow:0 8px 22px #b000204d}
+.vilda-auth-root .vilda-patient-delete-btn{
+  flex:0 0 auto;
+  background:#fff!important;
+  color:#b00020!important;
+  border:1.5px solid #f0c4cf!important;
+  box-shadow:none!important}
+.vilda-auth-root .vilda-patient-delete-btn:hover{
+  background:#fff5f6!important;
+  border-color:#b00020!important;
+  color:#8e0019!important;
+  box-shadow:none!important}
+.vilda-auth-logout{
+  position:fixed!important;
+  inset:14px 14px auto auto!important;
+  z-index:99990!important;
+  display:none;
+  align-items:center;
+  gap:8px;
+  width:auto!important;
+  max-width:max-content!important;
+  margin:0!important;
+  background:#fff!important;
+  border:1.5px solid #d6dde0!important;
+  border-radius:24px!important;
+  padding:8px 16px!important;
+  font-size:13px!important;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important;
+  font-weight:500!important;
+  color:#08202c!important;
+  cursor:pointer;
+  box-shadow:0 4px 14px #003c501a;
+  transition:all .15s ease}
+.vilda-auth-logout:hover{
+  border-color:#00838d;
+  color:#00838d;
+  box-shadow:0 6px 18px #00838d2e}
+.vilda-auth-logout:focus-visible{
+  outline:3px solid rgba(0,131,141,.3);
+  outline-offset:2px}
+.vilda-auth-logout-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+  font-size:14px;
+  line-height:1}
+@media(max-width:520px){
+  .vilda-auth-logout{
+  top:8px!important;
+  right:8px!important;
+  padding:6px 12px!important;
+  font-size:12px!important;
+  width:auto!important;
+  max-width:max-content!important}
+}
+.vilda-auth-btn-subtle{
+  background:transparent;
+  border-color:transparent;
+  color:#6a8089}
+.vilda-auth-btn-subtle:hover{
+  background:#f5fafb;
+  border-color:transparent;
+  color:#00838d}
+.vilda-copy-summary-row{
+  display:flex;
+  justify-content:center;
+  margin:24px 0 0}
+.vilda-auth-btn.vilda-copy-summary-btn{
+  width:auto!important;
+  padding:10px 20px!important;
+  border:1.5px solid #c4b5fd!important;
+  color:#5b21b6!important;
+  background:#ede9fe!important;
+  box-shadow:0 3px 10px #7c3aed33!important;
+  font-weight:650}
+.vilda-auth-btn.vilda-copy-summary-btn:hover{
+  background:#e3ddfc!important}
+.vilda-auth-btn.vilda-copy-summary-btn:active{
+  background:#d6ccfa!important}
+@media(max-width:720px),(pointer:coarse)and (max-width:1366px){
+  .vilda-auth-btn.vilda-copy-summary-btn{
+  border-color:#ddd6fe!important;
+  color:#6d28d9!important;
+  background:#f5f3ff!important;
+  box-shadow:none!important}
+.vilda-auth-btn.vilda-copy-summary-btn:hover{
+  background:#ede9fe!important}
+.vilda-auth-btn.vilda-copy-summary-btn:active{
+  background:#e5defd!important}
+}
+@media(max-width:520px){
+.vilda-auth-actions{
+  flex-direction:column-reverse}
+.vilda-auth-actions-end .vilda-auth-btn{
+  width:100%}
+.vilda-auth-root .vilda-patient-delete-btn{
+  width:100%!important;
+  flex:1 1 auto}
+}
+.vilda-auth-btn-biometric{
+  background:linear-gradient(135deg,#00838d,#00b0a6);
+  color:#fff;
+  border:none;
+  font-weight:600;
+  letter-spacing:.01em}
+.vilda-auth-btn-biometric:hover{
+  background:linear-gradient(135deg,#006d77,#009a91);
+  transform:translateY(-1px);
+  box-shadow:0 4px 14px #00838d47}
+.vilda-auth-btn-biometric:active{
+  transform:translateY(0);
+  box-shadow:none}
+.vilda-auth-btn-biometric:focus-visible{
+  outline:2px solid #00838d;
+  outline-offset:3px}
+.vilda-auth-biometric-section,.vilda-auth-biometric-section .vilda-auth-actions{
+  margin-bottom:0}
+.vilda-auth-root button{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  width:auto!important;
+  margin-top:0!important}
+.vilda-auth-root .vilda-auth-btn-primary{
+  background:#00838d!important;
+  color:#fff!important;
+  border:1.5px solid #00838d!important;
+  box-shadow:0 6px 18px #00838d38!important}
+.vilda-auth-root .vilda-auth-btn-primary:hover{
+  background:#006d75!important;
+  border-color:#006d75!important;
+  box-shadow:0 8px 22px #00838d4d!important}
+.vilda-auth-root .vilda-auth-btn-ghost{
+  background:#fff!important;
+  color:#08202c!important;
+  border:1.5px solid #d6dde0!important;
+  box-shadow:none!important}
+.vilda-auth-root .vilda-auth-btn-ghost:hover{
+  background:#f5fafb!important;
+  border-color:#00838d!important;
+  color:#00838d!important;
+  box-shadow:none!important}
+.vilda-auth-root .vilda-auth-btn-subtle{
+  background:transparent!important;
+  border-color:transparent!important;
+  color:#6a8089!important;
+  box-shadow:none!important}
+.vilda-auth-root .vilda-auth-btn-subtle:hover{
+  background:#00838d0f!important;
+  border-color:transparent!important;
+  color:#00838d!important;
+  box-shadow:none!important}
+.vilda-auth-root .vilda-auth-btn-danger{
+  background:#b00020!important;
+  color:#fff!important;
+  border:1.5px solid #b00020!important;
+  box-shadow:0 6px 18px #b0002038!important}
+.vilda-auth-root .vilda-auth-btn-danger:hover{
+  background:#8e0019!important;
+  border-color:#8e0019!important;
+  box-shadow:0 8px 22px #b000204d!important}
+.vilda-auth-btn-danger{
+  color:#9f1239!important;
+  border-color:#f0c2cd!important;
+  background:#fff!important}
+
+/* ---- AuthButton — .settings-backup-btn (ustawienia.css 400-401; przyciski kopii zapasowej na ustawienia.html) ---- */
+.settings-backup-btn{
+  min-width:175px}
+
+/* ---- Nadpisania .liquid-ios26 — Button (ios26-v2.css 85-117, 122-130, 199-200) ---- */
+.liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
+  background:#fff3!important;
+  border:1px solid var(--lg-border)!important;
+  color:#111!important;
+  border-radius:14px!important;
+  backdrop-filter:blur(10px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
+  box-shadow:0 4px 12px #0000001a!important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+.liquid-ios26 .btn-accent{
+  background:color-mix(in srgb,var(--lg-accent) 40%,transparent)!important;
+  color:#fff!important}
+.liquid-ios26 button._pressed{
+  transform:scale(.96);
+  box-shadow:0 2px 8px #0000001f!important}
+.liquid-ios26 #toggleIgfTests,.liquid-ios26 #toggleSnp,.liquid-ios26 #toggleTurner,.liquid-ios26 #togglePws,.liquid-ios26 #toggleSga,.liquid-ios26 #toggleIgf1,.liquid-ios26 #toggleAbxTherapy,.liquid-ios26 #toggleFluTherapy,.liquid-ios26 #toggleObesityTherapy,.liquid-ios26 #toggleHypertensionTherapy,.liquid-ios26 #toggleThyroidCancerKids,.liquid-ios26 #toggleGhMonitor{
+  background:#fff3!important;
+  border:1px solid var(--lg-border)!important;
+  color:#111!important;
+  justify-content:center}
+.liquid-ios26 #toggleGhMonitor.active-toggle,.liquid-ios26 .active-toggle,.liquid-ios26 #toggleIgfTests.active-toggle,.liquid-ios26 #toggleSnp.active-toggle,.liquid-ios26 #toggleTurner.active-toggle,.liquid-ios26 #togglePws.active-toggle,.liquid-ios26 #toggleSga.active-toggle,.liquid-ios26 #toggleIgf1.active-toggle{
+  border-color:var(--brand-light)!important}
+.liquid-ios26 #abxBrandToggle,.liquid-ios26 #abxCopyRec,.liquid-ios26 .abx-brand-option{
+  background:#fff3!important;
+  border:1px solid var(--lg-border)!important;
+  color:#111!important;
+  border-radius:14px!important;
+  backdrop-filter:blur(10px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
+  box-shadow:0 4px 12px #0000001a!important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+.liquid-ios26 #abxBrandToggle.active-toggle,.liquid-ios26 #abxCopyRec.active-toggle,.liquid-ios26 .abx-brand-option.active-toggle,.liquid-ios26 #toggleAbxTherapy.active-toggle,.liquid-ios26 #toggleFluTherapy.active-toggle,.liquid-ios26 #toggleObesityTherapy.active-toggle,.liquid-ios26 #toggleHypertensionTherapy.active-toggle,.liquid-ios26 #toggleThyroidCancerKids.active-toggle{
+  border-color:var(--brand-light)!important}
+.liquid-ios26 .btn-icon{
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem}
+.liquid-ios26 .btn-icon svg{
+  width:20px;
+  height:20px;
+  stroke:currentColor;
+  stroke-width:1.75}
+.liquid-ios26 button.icon{
+  color:var(--danger)!important}
+
+/* ---- Nadpisania .liquid-ios26 — ProButton (ios26-v2.css 118-119) ---- */
+.liquid-ios26 #thyroidCancerKidsCard .thy-jump-cancer-preop{
+  border:3px solid #9900ff!important}
+
+/* ---- Nadpisania .liquid-ios26 — ChromeActionButton (vilda_chrome.css 1193-1252, 1264-1271) ---- */
+.liquid-ios26 .chrome-reminders-btn{
+  background:#fff!important;
+  border:1px solid #cfe4e4!important;
+  border-radius:8px!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  color:#4d8285!important}
+.liquid-ios26 .chrome-reminders-btn:hover{
+  background:#f2f9f9!important;
+  border-color:#9fd4d8!important;
+  color:#00838d!important}
+.liquid-ios26 .chrome-reminders-btn[data-state=overdue]{
+  color:#dc2626!important}
+.liquid-ios26 .chrome-reminders-btn[data-state=today]{
+  color:#00838d!important}
+.chrome-reminders-btn[data-state=loading],.liquid-ios26 .chrome-reminders-btn[data-state=loading]{
+  color:#9aa8aa!important}
+.chrome-reminders-btn[data-state=loading] .chrome-reminders-badge,.liquid-ios26 .chrome-reminders-btn[data-state=loading] .chrome-reminders-badge{
+  display:inline-flex!important;
+  width:14px;
+  min-width:14px;
+  height:14px;
+  padding:0;
+  top:-3px;
+  right:-3px;
+  background:transparent!important;
+  border:2px solid rgba(0,131,141,.25);
+  border-top-color:var(--primary, #00838d);
+  color:transparent!important;
+  box-shadow:none!important;
+  animation:chrome-rem-spin .7s linear infinite}
+@keyframes chrome-rem-spin{
+  to{
+  transform:rotate(360deg)}
+}
+.chrome-reminders-btn[data-state=empty],.liquid-ios26 .chrome-reminders-btn[data-state=empty]{
+  color:#b3c2c4!important;
+  opacity:.72}
+.liquid-ios26 .chrome-sync-btn{
+  background:#fff!important;
+  border:1px solid #cfe4e4!important;
+  border-radius:8px!important;
+  box-shadow:none!important;
+  color:#4d8285!important}
+.liquid-ios26 .chrome-sync-btn:hover{
+  background:#f2f9f9!important;
+  border-color:#9fd4d8!important;
+  color:var(--primary, #00838d)!important}
+.liquid-ios26 .chrome-sync-btn[data-cloud-only=true]{
+  background:var(--primary, #00838d)!important;
+  border-color:transparent!important;
+  border-radius:8px!important;
+  color:#fff!important}
+.liquid-ios26 .chrome-sync-btn[data-cloud-only=true][data-offline=true]{
+  background:#b45309!important}
+.liquid-ios26 .chrome-sync-btn[data-sync-state=ok]{
+  color:#16a34a!important}
+.liquid-ios26 .chrome-sync-btn[data-sync-state=error]{
+  color:#dc2626!important}
+.liquid-ios26 .chrome-pro-badge[data-pro-state=active]{
+  background:#ece8fb!important;
+  color:#6d4bd8!important;
+  border-color:transparent!important}
+.liquid-ios26 .chrome-pro-badge[data-pro-state=upgrade]{
+  background:#e0f2f3!important;
+  color:#00838d!important;
+  border-color:transparent!important}
+
+/* ---- Wysoki kontrast — Button (style.css 5167-5179; 5196-5198 z listą selektorów przyciętą do button/a) ---- */
+body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-1.liquid-ios26 #toggleGhTests,body.high-contrast-level-2.liquid-ios26 #toggleGhTests,body.high-contrast-level-3.liquid-ios26 #toggleGhTests,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests,body.high-contrast-level-1.liquid-ios26 #toggleActhTests,body.high-contrast-level-2.liquid-ios26 #toggleActhTests,body.high-contrast-level-3.liquid-ios26 #toggleActhTests,body.high-contrast-level-1.liquid-ios26 .version-option,body.high-contrast-level-2.liquid-ios26 .version-option,body.high-contrast-level-3.liquid-ios26 .version-option{
+  background:var(--hc-module-btn-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
+  box-shadow:var(--hc-module-btn-shadow)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-1.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-1.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-1.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-2.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-3.liquid-ios26 .version-option:not(.disabled):hover{
+  background:var(--hc-module-btn-hover-bg)!important}
+body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-1.liquid-ios26 .version-option.selected,body.high-contrast-level-2.liquid-ios26 .version-option.selected,body.high-contrast-level-3.liquid-ios26 .version-option.selected{
+  background:var(--hc-module-btn-active-bg)!important;
+  border-color:var(--hc-module-btn-active-border)!important;
+  box-shadow:0 0 0 1px #00838d1f,var(--hc-module-btn-active-shadow)!important}
+body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+  outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
+  outline-offset:2px!important}
+
+/* ---- Wysoki kontrast — AuthButton (vilda_auth_ui.css 1452-1458, 1468-1471; listy selektorów przycięte do przycisków tej rodziny) ---- */
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-1 .vilda-patient-delete-btn,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-patient-delete-btn,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-patient-delete-btn{
+  background:var(--hc-surface)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important;
+  box-shadow:var(--hc-shadow)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost{
+  border:var(--hc-card-border-width) solid var(--hc-border)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost{
+  color:var(--hc-text)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-subtle,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-subtle,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-subtle{
+  color:var(--hc-muted)!important}

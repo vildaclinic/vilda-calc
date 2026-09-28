@@ -1,0 +1,61 @@
+<!-- @dsCard group="Ustawienia" height=670 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>BackupCard</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */body{margin:0;padding:16px;background:var(--bg)}.row{display:flex;gap:16px;align-items:flex-start;max-width:928px}.row>.settings-backup-card{flex:1 1 540px;min-width:0}.row>.settings-danger-card{flex:0 1 340px;min-width:0}</style></head><body class="liquid-ios26 page-settings">
+<div class="row">
+  <div class="settings-control-card settings-backup-card settings-control-card--wide" id="backupFolderCard">
+    <div class="settings-backup-section">
+      <div class="settings-control-header">
+        <h3 class="settings-control-title">Folder kopii zapasowych</h3>
+        <span class="settings-tag" id="backupFolderTag">brak</span>
+      </div>
+      <p class="settings-control-desc" id="backupFolderDesc">Aktualnie pliki kopii trafiają do domyślnego folderu Pobrane.</p>
+      <div class="settings-card-toggle-row settings-backup-btn-row">
+        <button type="button" id="backupChooseFolderBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn">Wybierz folder kopii</button>
+        <button type="button" id="backupClearFolderBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn">Wyłącz auto-folder</button>
+      </div>
+      <p class="settings-inline-note settings-backup-note" id="backupHelp">Funkcja działa w Chrome i Edge na komputerze. W Safari oraz na telefonie pliki zawsze trafiają do folderu Pobrane.</p>
+    </div>
+    <div class="settings-backup-sep" role="separator"></div>
+    <div class="settings-backup-section" id="autoVaultBackupCard">
+      <div class="settings-control-header">
+        <h3 class="settings-control-title">Automatyczny backup konta po zapisie pacjenta</h3>
+        <span class="settings-tag" id="autoBackupTag">Backup</span>
+      </div>
+      <p class="settings-control-desc">Po każdym zapisie pacjenta aplikacja w tle aktualizuje plik <code>wagaiwzrost_konto_<i>imię</i>.wiw</code> w wybranym folderze kopii (lub w Pobranych).</p>
+      <div class="settings-backup-controls-row">
+        <label class="settings-backup-checkbox-label">
+          <input type="checkbox" id="autoBackupEnabledToggle" class="settings-backup-checkbox" checked>
+          <span>Włączony</span>
+        </label>
+        <label class="settings-backup-interval-label">
+          <span>Minimalny odstęp:</span>
+          <select id="autoBackupIntervalSelect" class="vilda-auth-input settings-backup-select">
+            <option value="1">1 min</option>
+            <option value="3">3 min</option>
+            <option value="5" selected>5 min</option>
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="60">60 min</option>
+          </select>
+        </label>
+        <button type="button" id="autoBackupRunNowBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-run-btn">Wykonaj teraz</button>
+      </div>
+      <p class="settings-inline-note settings-backup-note" id="autoBackupStatus">Status: ładowanie…</p>
+      <p class="settings-inline-note settings-backup-note settings-note-warn" id="syncStaleWarning" role="status">⚠ To urządzenie nie synchronizowało się od 14 dni. Znaczniki usunięć żyją 30 dni, więc starsze usunięcia mogły już wygasnąć — sprawdź, czy w kalendarzu i na listach nie wróciły wpisy skasowane na innym urządzeniu.</p>
+    </div>
+  </div>
+
+  <div class="settings-control-card settings-danger-card" id="removeUserCard">
+    <div class="settings-control-header">
+      <h3 class="settings-control-title">Usuń to konto z urządzenia</h3>
+      <span class="settings-tag settings-tag--danger">Nieodwracalne</span>
+    </div>
+    <p class="settings-control-desc">Wszystkie dane pacjentów tego konta zostaną nieodwracalnie usunięte z tej przeglądarki. Pliki kopii w OneDrive / na dysku pozostają nietknięte. Operacji NIE można cofnąć.</p>
+    <input type="password" id="removeUserPwInput" class="vilda-auth-input settings-danger-input" placeholder="Wpisz hasło, aby potwierdzić">
+    <div class="settings-card-toggle-row">
+      <button type="button" id="removeUserBtn" class="vilda-auth-btn vilda-auth-btn-small settings-danger-btn">Usuń to konto</button>
+    </div>
+    <p class="settings-inline-note settings-danger-status" id="removeUserStatus">&nbsp;</p>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,491 @@
+/* G08 Komunikaty — źródło: src/css/style.css (Toast 7495-7540; Tooltip 4053-4135, 6222-6260, 7267-7280; Pulse 525-537, 665-710, 731-761, 895-921, 936-985, 1004-1021, 1227-1236, 4741-4742, 4848-4865, 5420-5446), src/css/vilda_chrome.css (ChromeTooltip 964-1020). Bez reguł wstrzykiwanych z JS (vilda_dymek.js i vilda_chrome.js tylko tworzą elementy). */
+
+/* ===== Toast (.vilda-dymek) — style.css 7495-7540 ===== */
+.vilda-dymek{
+  position:fixed;
+  left:50%;
+  bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px);
+  transform:translateX(-50%);
+  z-index:2147483000;
+  box-sizing:border-box;
+  max-width:min(88vw,520px);
+  padding:.65rem 1.25rem;
+  border-radius:10px;
+  font-size:.98rem;
+  line-height:1.35;
+  text-align:center;
+  box-shadow:0 10px 24px rgba(0,0,0,.18);
+  pointer-events:none;
+  transition:bottom .22s ease}
+.vilda-dymek--ok{
+  background:#00838d;
+  color:#fff}
+.vilda-dymek--info{
+  background:#0f2b33;
+  color:#fff}
+.vilda-dymek--blad{
+  background:#fff;
+  color:#2f3137;
+  border:1px solid rgba(211,47,47,.28);
+  border-left:4px solid #d32f2f;
+  border-radius:14px;
+  text-align:left;
+  font:500 14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  padding:12px 14px;
+  pointer-events:auto}
+.vilda-dymek--prawo{
+  left:auto;
+  right:16px;
+  transform:none;
+  max-width:min(420px,calc(100vw - 32px))}
+.vilda-dol-kotwica{
+  bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px)!important;
+  transition:bottom .22s ease}
+
+/* ===== Tooltip — style.css 4053-4135 (.menu-tooltip, .vild-range-*) ===== */
+.menu-tooltip{
+  position:absolute;
+  top:0;
+  left:0;
+  z-index:10020;
+  opacity:0;
+  transition:opacity .2s ease,transform .2s ease;
+  transform:translateY(2px);
+  background:#fff;
+  color:var(--primary);
+  border:2px solid var(--primary);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:.55rem .75rem;
+  font-size:1.5rem;
+  line-height:1.2;
+  font-weight:600;
+  max-width:min(360px,calc(100vw - 24px));
+  pointer-events:none;
+  white-space:normal}
+.menu-tooltip.copy-tooltip{
+  font-size:.95rem;
+  padding:.45rem .65rem;
+  line-height:1.25;
+  max-width:min(320px,calc(100vw - 24px))}
+.vild-range-host{
+  position:relative}
+.vild-range-tip{
+  position:absolute!important;
+  left:12px;
+  bottom:calc(100% + 9px);
+  z-index:10020;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  max-width:min(300px,calc(100vw - 28px));
+  background:#fffffff5!important;
+  color:var(--primary)!important;
+  border:1.5px solid rgba(0,131,141,.2)!important;
+  border-radius:10px!important;
+  box-shadow:0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc!important;
+  -webkit-backdrop-filter:blur(14px) saturate(1.6);
+  backdrop-filter:blur(14px) saturate(1.6);
+  font-size:.83rem!important;
+  font-weight:500!important;
+  line-height:1.3;
+  padding:.55rem .85rem!important;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(4px);
+  transition:opacity .18s ease,transform .18s ease}
+.vild-range-tip.is-on{
+  opacity:1;
+  transform:translateY(0)}
+.vild-range-tip__ic{
+  flex:0 0 auto;
+  width:15px;
+  height:15px;
+  display:inline-flex;
+  color:var(--primary)}
+.vild-range-tip__ic svg{
+  width:15px;
+  height:15px;
+  display:block}
+.vild-range-tip__txt{
+  display:block}
+.vild-range-tip:after{
+  content:"";
+  position:absolute;
+  left:20px;
+  top:100%;
+  width:12px;
+  height:12px;
+  margin-top:-7px;
+  transform:rotate(45deg);
+  background:#fffffff5;
+  border-right:1.5px solid rgba(0,131,141,.2);
+  border-bottom:1.5px solid rgba(0,131,141,.2);
+  -webkit-backdrop-filter:blur(14px) saturate(1.6);
+  backdrop-filter:blur(14px) saturate(1.6)}
+.vild-range-invalid{
+  border-color:var(--primary)!important;
+  box-shadow:0 0 0 3px #00838d24!important}
+
+/* ===== Tooltip — style.css 6222-6260 (.nutrition-micros-abbr = kotwica, .nutrition-micros-tooltip) ===== */
+.nutrition-micros-abbr{
+  text-decoration:underline dotted;
+  text-underline-offset:.14em;
+  cursor:help}
+.nutrition-micros-abbr:focus-visible{
+  outline:2px solid #111;
+  outline-offset:2px;
+  border-radius:3px}
+.nutrition-micros-tooltip{
+  position:fixed;
+  z-index:2147483000;
+  max-width:min(360px,calc(100vw - 16px));
+  padding:.66rem .78rem;
+  border:2px solid #000;
+  border-radius:8px;
+  background:#fff;
+  color:#000;
+  font-size:1.02rem;
+  font-weight:500;
+  line-height:1.42;
+  text-align:left;
+  box-shadow:0 8px 20px #0000002e;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(1px);
+  transition:opacity 35ms linear,transform 35ms linear}
+.nutrition-micros-tooltip.is-visible{
+  opacity:1;
+  transform:translateY(0)}
+.nutrition-micros-tooltip.is-measuring{
+  opacity:0;
+  transform:none}
+.nutrition-micros-tooltip[hidden]{
+  display:none}
+@media(max-width:420px){
+  .nutrition-micros-tooltip{
+  max-width:calc(100vw - 20px);
+  font-size:.98rem}
+}
+/* style.css 7267-7270 */
+body .nutrition-micros-tooltip{
+  background:#fff!important;
+  color:#000!important;
+  border-color:#000!important}
+
+/* ===== ChromeTooltip — vilda_chrome.css 964-1020 (.vilda-tip; .has-vilda-chrome .menu-tooltip) ===== */
+.vilda-tip{
+  position:fixed;
+  z-index:99999;
+  max-width:min(280px,calc(100vw - 24px));
+  padding:.6rem 1rem;
+  border-radius:10px;
+  font-family:inherit;
+  font-size:.83rem;
+  font-weight:500;
+  line-height:1.5;
+  color:var(--primary, #00838d);
+  background:#fffffff5;
+  border:1.5px solid rgba(0,131,141,.2);
+  box-shadow:0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc;
+  backdrop-filter:blur(14px) saturate(1.6);
+  -webkit-backdrop-filter:blur(14px) saturate(1.6);
+  pointer-events:none;
+  white-space:normal;
+  opacity:0;
+  transform:translate(6px);
+  transition:opacity .18s ease,transform .18s ease}
+.vilda-tip.vilda-tip--in{
+  opacity:1;
+  transform:translate(0)}
+.vilda-tip:before{
+  content:"";
+  position:absolute;
+  left:-7px;
+  top:50%;
+  transform:translateY(-50%);
+  border-width:6px 7px 6px 0;
+  border-style:solid;
+  border-color:transparent rgba(0,131,141,.2) transparent transparent}
+.vilda-tip:after{
+  content:"";
+  position:absolute;
+  left:-5px;
+  top:50%;
+  transform:translateY(-50%);
+  border-width:5px 6px 5px 0;
+  border-style:solid;
+  border-color:transparent rgba(255,255,255,.96) transparent transparent}
+.has-vilda-chrome .menu-tooltip{
+  background:#fffffff5!important;
+  color:var(--primary, #00838d)!important;
+  border:1.5px solid rgba(0,131,141,.2)!important;
+  border-radius:10px!important;
+  box-shadow:0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc!important;
+  backdrop-filter:blur(14px) saturate(1.6)!important;
+  -webkit-backdrop-filter:blur(14px) saturate(1.6)!important;
+  font-size:.83rem!important;
+  font-weight:500!important;
+  padding:.6rem 1rem!important;
+  transform:translate(6px)!important;
+  transition:opacity .18s ease,transform .18s ease!important}
+.has-vilda-chrome .menu-tooltip[style*="opacity: 1"],.has-vilda-chrome .menu-tooltip[style*="opacity:1"]{
+  transform:translate(0)!important}
+
+/* ===== Pulse — style.css 525-537, 665-671 (gospodarze pulsu: .result-box, .result-card) ===== */
+.result-box{
+  border:2px solid var(--brand);
+  border-radius:var(--radius);
+  padding:1rem;
+  margin:12px 0;
+  font-size:1.75rem;
+  background:var(--card-bg);
+  text-align:center;
+  box-shadow:var(--shadow-s)}
+.result-val{
+  color:var(--primary);
+  font-size:1.75rem;
+  font-weight:600}
+.result-card{
+  background:var(--card-bg);
+  border:2px solid var(--brand);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-s);
+  padding:1.25rem 1.5rem;
+  position:relative;
+  overflow:hidden}
+/* Pulse — style.css 672-710 */
+.result-card.--pulse:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:var(--brand-light);
+  opacity:0;
+  z-index:-1;
+  animation:pulseBG 1s ease-out forwards}
+@keyframes pulseBG{
+  0%{
+  opacity:.15}
+to{
+  opacity:0}
+}
+@keyframes fadeSlideUp{
+  0%{
+  opacity:0;
+  transform:translateY(12px)}
+to{
+  opacity:1;
+  transform:translateY(0)}
+}
+.animate-in{
+  animation:fadeSlideUp .45s cubic-bezier(.4,0,.2,1)}
+/* style.css 731-761 (token --pulse-ring: 12px daje tokens.css) */
+@keyframes pulseRed{
+  0%{
+  box-shadow:0 0 #c628284d}
+70%{
+  box-shadow:0 0 0 var(--pulse-ring) #c628281a}
+to{
+  box-shadow:0 0 #c6282800}
+}
+@keyframes pulseOrange{
+  0%{
+  box-shadow:0 0 #c75d0047}
+70%{
+  box-shadow:0 0 0 var(--pulse-ring) #c75d001a}
+to{
+  box-shadow:0 0 #c75d0000}
+}
+.pulse-danger-infinite{
+  animation:pulseRed 1.25s ease-in-out infinite;
+  will-change:box-shadow}
+.pulse-warning-infinite{
+  animation:pulseOrange 1.25s ease-in-out infinite;
+  will-change:box-shadow}
+.pulse-danger-2s{
+  animation:pulseRed 2s ease-in-out 1;
+  will-change:box-shadow}
+.pulse-warning-2s{
+  animation:pulseOrange 2s ease-in-out 1;
+  will-change:box-shadow}
+@media(prefers-reduced-motion:reduce){
+  .pulse-danger-infinite,.pulse-warning-infinite,.pulse-danger-2s,.pulse-warning-2s{
+  animation:none!important}
+}
+/* style.css 895-921 (#intakeResults) */
+#intakeResults{
+  position:relative}
+#intakeResults.bmi-warning{
+  border-color:#c75d00!important}
+#intakeResults.bmi-danger{
+  border-color:var(--danger)!important}
+#intakeResults.pulse-warning-infinite:after,#intakeResults.pulse-warning-2s:after,#intakeResults.pulse-danger-infinite:after,#intakeResults.pulse-danger-2s:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none}
+#intakeResults.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite}
+#intakeResults.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1}
+#intakeResults.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite}
+#intakeResults.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1}
+@media(prefers-reduced-motion:reduce){
+  #intakeResults.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite!important}
+#intakeResults.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1!important}
+#intakeResults.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite!important}
+#intakeResults.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1!important}
+}
+/* style.css 936-955, 1227-1236 (#coleInfo) */
+#coleInfo{
+  position:relative}
+#coleInfo.bmi-warning{
+  border-color:#c75d00!important}
+#coleInfo.bmi-danger{
+  border-color:var(--danger)!important}
+#coleInfo.pulse-warning-infinite:after,#coleInfo.pulse-warning-2s:after,#coleInfo.pulse-danger-infinite:after,#coleInfo.pulse-danger-2s:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none}
+#coleInfo.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite}
+#coleInfo.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1}
+#coleInfo.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite}
+#coleInfo.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1}
+@media(prefers-reduced-motion:reduce){
+  #coleInfo.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite!important}
+#coleInfo.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1!important}
+#coleInfo.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite!important}
+#coleInfo.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1!important}
+}
+/* style.css 956-985 (#bpResult) */
+#bpResult{
+  position:relative}
+#bpResult.rr-warning{
+  border-color:#c75d00!important}
+#bpResult.rr-danger{
+  border-color:var(--danger)!important}
+#bpResult.pulse-warning-infinite:after,#bpResult.pulse-warning-2s:after,#bpResult.pulse-danger-infinite:after,#bpResult.pulse-danger-2s:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none}
+#bpResult.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite}
+#bpResult.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1}
+#bpResult.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite}
+#bpResult.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1}
+@media(prefers-reduced-motion:reduce){
+  #bpResult.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite!important}
+#bpResult.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1!important}
+#bpResult.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite!important}
+#bpResult.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1!important}
+}
+/* style.css 1004-1021 (#circHeadResult, #circChestResult) */
+#circHeadResult.rr-warning,#circChestResult.rr-warning{
+  border-color:#c75d00!important}
+#circHeadResult.rr-danger,#circChestResult.rr-danger{
+  border-color:var(--danger)!important}
+#circHeadResult.pulse-warning-infinite:after,#circHeadResult.pulse-warning-2s:after,#circHeadResult.pulse-danger-infinite:after,#circHeadResult.pulse-danger-2s:after,#circChestResult.pulse-warning-infinite:after,#circChestResult.pulse-warning-2s:after,#circChestResult.pulse-danger-infinite:after,#circChestResult.pulse-danger-2s:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none}
+#circHeadResult.pulse-warning-infinite:after,#circChestResult.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite}
+#circHeadResult.pulse-warning-2s:after,#circChestResult.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1}
+#circHeadResult.pulse-danger-infinite:after,#circChestResult.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite}
+#circHeadResult.pulse-danger-2s:after,#circChestResult.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1}
+/* style.css 4741-4742 (stan ładowania) */
+body.js-loading .main-content{
+  visibility:hidden}
+/* style.css 4848-4865 (.pro-overlay — nakładka pulsu) */
+.pro-overlay:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none}
+.pro-overlay.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite}
+.pro-overlay.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1}
+.pro-overlay.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite}
+.pro-overlay.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1}
+@media(prefers-reduced-motion:reduce){
+  .pro-overlay.pulse-warning-infinite:after,.pro-overlay.pulse-warning-2s:after,.pro-overlay.pulse-danger-infinite:after,.pro-overlay.pulse-danger-2s:after{
+  animation:none!important}
+}
+/* style.css 5420-5446 (#adultVitalsResult) */
+.adult-vitals-result-box.adult-vitals-warning{
+  border-color:#c75d00!important}
+.adult-vitals-result-box.adult-vitals-danger{
+  border-color:var(--danger)!important}
+#adultVitalsResult.pulse-warning-infinite:after,#adultVitalsResult.pulse-warning-2s:after,#adultVitalsResult.pulse-danger-infinite:after,#adultVitalsResult.pulse-danger-2s:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none}
+#adultVitalsResult.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite}
+#adultVitalsResult.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1}
+#adultVitalsResult.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite}
+#adultVitalsResult.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1}
+@media(prefers-reduced-motion:reduce){
+  #adultVitalsResult.pulse-warning-infinite:after{
+  animation:pulseOrange 1.25s ease-in-out infinite!important}
+#adultVitalsResult.pulse-warning-2s:after{
+  animation:pulseOrange 2s ease-in-out 1!important}
+#adultVitalsResult.pulse-danger-infinite:after{
+  animation:pulseRed 1.25s ease-in-out infinite!important}
+#adultVitalsResult.pulse-danger-2s:after{
+  animation:pulseRed 2s ease-in-out 1!important}
+}
+
+/* ===== Liquid Glass — style.css 7271-7274 ===== */
+body.liquid-ios26 .nutrition-micros-tooltip{
+  background:color-mix(in srgb,var(--lg-surface-light) 95%,rgba(255,255,255,.96))!important;
+  color:#10282d!important;
+  border-color:var(--lg-border)!important}
+
+/* ===== Wysoki kontrast — style.css 7275-7278 ===== */
+body.high-contrast-level-1.liquid-ios26 .nutrition-micros-tooltip,body.high-contrast-level-2.liquid-ios26 .nutrition-micros-tooltip,body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip{
+  background:var(--hc-result-bg)!important;
+  color:var(--hc-text)!important;
+  border-color:var(--hc-input-border)!important}
+
+/* Ciemne tło: źródło nie ma osobnych reguł dark-bg dla tej grupy. */

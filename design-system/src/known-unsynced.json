@@ -1,0 +1,27 @@
+{
+  "_opis": "Własności --nazwa ze źródeł, które świadomie nie są tokenami (opisane w README systemu w sekcji „Nie zsynchronizowane”). Producent nie zgłasza ich jako nowych.",
+  "names": [
+    "anim-fast",
+    "chrome-active-bg",
+    "clcr-arrow-x",
+    "mobile-dock-anchor-bottom",
+    "mobile-dock-effective-height",
+    "mobile-dock-pinned-scroll-top-bottom",
+    "mobile-dock-pinned-visible-lift",
+    "mobile-dock-measured-height",
+    "mobile-top-nav-font-size",
+    "thy-modal-top",
+    "vilda-safe-top",
+    "vilda-dol-wolny",
+    "vilda-shell-dock-h",
+    "vilda-dock-occ",
+    "nutrition-practice-sheet-vh",
+    "whr-info-font-size",
+    "whr-info-font-style",
+    "whr-info-font-weight",
+    "whr-interpret-font-size",
+    "whr-interpret-font-style",
+    "whr-suggest-font-size",
+    "whr-suggest-font-style"
+  ]
+}

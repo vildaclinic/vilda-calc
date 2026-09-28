@@ -1,0 +1,1040 @@
+/* G06 Etykiety — źródło: style.css (Chip: 773-782, 789-806, 1150-1160, 2290-2295, 2531-2540, 2676-2701, 2771-2790, 2794/2809-2810, 2967-2999, 3064-3109, 3115-3121, 4170-4176, 5471-5489, 5584/5593-5594, 6094-6110, 6596-6612, 6925-6936, skórki 7065-7071, 7076-7078, 7191-7192, 7210-7211; wysoki kontrast 5258-5264, 5276-5278, 5279-5283, 5289-5299, 5321-5327, 5355-5358), edu-video-ui.css (EduKicker/EduChip/MetaPill: 43-69, 82-99, 333-335, 552-565), o-aplikacji.css (MarketingBadge: 74-79, 101-121, 132-141, 152-156, 170-172, 209-220, 824-851, 862-868, 956-970, 996-1000, 1024/1059-1064; StepBadge: 543-593), kontakt.css (MarketingBadge: 403-433, 445-460, 472-476, 1052-1068, 1303/1325-1328; StepBadge: 934-1007), instrukcja.css (MarketingBadge: 183-195, 532-558, 574-597; StepBadge: 452-463), subskrypcja.css (MarketingBadge: 50-66, 81-84, 182-197), przelicznik-jednostek.css (StepBadge: 854-931, 1859-1878, wysoki kontrast 4547-4555, 4625-4628), cukrzyca.css (StepBadge: 267-300, 315-330, 6061-6073, skórki 6431-6454, 6485-6504, 6620-6636, 6818-6824), sidebar.css (MiniSummaryChip: 388-481). Reguły skopiowane dosłownie z czytelnych kopii; kolejność: baza → .liquid-ios26 → wysoki kontrast. Ciemne tło nie ma reguł dla tej grupy (tylko tokeny --edu-*-shadow / --diab-* w tokens.css). Uwaga: blok .ms-chip leży w sidebar.css wewnątrz @media(min-width:992px) (linie 3-487); tutaj bez tego opakowania, żeby karta 960 px renderowała chip jak w pasku bocznym. */
+
+/* ===================== Chip — baza (style.css) ===================== */
+/* .porownanie-chipy, .porownanie-chip (2676-2701) */
+.porownanie-chipy{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem;
+  margin:.55rem 0 .15rem}
+.porownanie-chip{
+  display:inline-flex;
+  align-items:center;
+  font-size:.8rem;
+  font-weight:600;
+  padding:.15rem .6rem;
+  border-radius:999px;
+  background:#e6f4f5;
+  color:#0a6b73;
+  border:1px solid #cfe2e5;
+  white-space:nowrap}
+.porownanie-chip--szara{
+  background:transparent;
+  color:#6b7a7a;
+  border-color:#e3ecee}
+.porownanie-chip--kontekst{
+  background:#eef3ff;
+  color:#2f4b8a;
+  border-color:#d5def5}
+.porownanie-chip[hidden]{
+  display:none}
+/* .pt-pill (2771-2790) */
+.pt-pill{
+  display:inline-block;
+  margin-top:.25rem;
+  font-size:.74rem;
+  font-weight:600;
+  padding:.12rem .5rem;
+  border-radius:999px;
+  line-height:1.3;
+  background:#eef2f3;
+  color:#4b5b5b}
+.pt-pill.status-ok{
+  background:#e7f5ec;
+  color:#1f8a4c}
+.pt-pill.status-improve{
+  background:#fff1e3;
+  color:#c75d00}
+.pt-pill.status-alert{
+  background:#fdecec;
+  color:#c62828}
+@media(max-width:559px){
+.pt-pill{
+  font-size:.7rem}
+}
+/* .energy-mode-badge (789-806) */
+.energy-mode-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:.28rem .62rem;
+  border-radius:999px;
+  font-size:.82rem;
+  font-weight:700;
+  line-height:1;
+  border:1px solid rgba(191,87,0,.28);
+  background:#ff914d1f;
+  color:#9c4300}
+.energy-mode-badge--clinical{
+  border-color:#bf570052;
+  background:#ff914d24;
+  color:#9c4300}
+/* .energy-mode-badge-row (773-782) — kontener wiersza odznak trybu */
+.energy-mode-badge-row{
+  display:flex;
+  align-items:center;
+  gap:.45rem;
+  flex-wrap:wrap}
+.energy-mode-badge-row--inline{
+  margin-top:.45rem}
+.energy-mode-badge-row--results{
+  margin:0 0 .55rem;
+  justify-content:flex-start}
+/* .whr-badge (2531-2540), #intakeCard .badge (2290-2295) */
+.whr-badge{
+  display:inline-block;
+  padding:.35rem .55rem;
+  border:1px solid #d0dede;
+  background:#fff;
+  border-radius:6px;
+  font-size:1rem}
+.whr-badge small{
+  opacity:.85;
+  margin-left:.25rem}
+#intakeCard .badge{
+  display:inline-block;
+  padding:.35rem .6rem;
+  border:1px solid #d0dede;
+  background:#fff;
+  border-radius:6px}
+/* .adv-growth-reliability-badge (2967-2999) */
+.adv-growth-reliability-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:8.75rem;
+  padding:.38rem .78rem;
+  border-radius:999px;
+  border:1px solid rgba(0,131,141,.18);
+  font-size:.92rem;
+  font-weight:700;
+  line-height:1.2;
+  background:#eef7f7;
+  color:#0a5157}
+.adv-growth-reliability-badge.is-high{
+  background:#00838d1f;
+  border-color:#00838d42;
+  color:#0a5157}
+.adv-growth-reliability-badge.is-moderate{
+  background:#00838d14;
+  border-color:#00838d33;
+  color:#0a5157}
+.adv-growth-reliability-badge.is-lowered{
+  background:#c75d001f;
+  border-color:#c75d003d;
+  color:#8a4b00}
+.adv-growth-reliability-badge.is-low{
+  background:#c628281a;
+  border-color:#c628283d;
+  color:var(--danger)}
+.adv-growth-reliability-badge.is-indicative{
+  background:#5a6f701a;
+  border-color:#5a6f7033;
+  color:#445758}
+/* .adv-growth-profile-badge, .adv-growth-model-chip (3064-3109) */
+.adv-growth-profile-badge,.adv-growth-model-chip{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:8.75rem;
+  padding:.38rem .78rem;
+  border-radius:999px;
+  border:1px solid rgba(0,131,141,.18);
+  font-size:.92rem;
+  font-weight:700;
+  line-height:1.2}
+.adv-growth-profile-badge.is-standard{
+  background:#eef7f7;
+  color:#0a5157}
+.adv-growth-profile-badge.is-possible{
+  background:#00838d1a;
+  border-color:#00838d38;
+  color:#0a5157}
+.adv-growth-profile-badge.is-probable{
+  background:#6f2dbd1a;
+  border-color:#6f2dbd38;
+  color:#6f2dbd}
+.adv-growth-profile-badge.is-out-of-scope{
+  background:#c628281a;
+  border-color:#c628283d;
+  color:var(--danger)}
+.adv-growth-model-chip.is-preferred{
+  background:#00838d1f;
+  border-color:#00838d42;
+  color:#0a5157}
+.adv-growth-model-chip.is-specialist{
+  background:#6f2dbd1a;
+  border-color:#6f2dbd38;
+  color:#6f2dbd}
+.adv-growth-model-chip.is-comparison{
+  background:#eef7f7;
+  color:#0a5157}
+.adv-growth-model-chip.is-warning{
+  background:#c75d001f;
+  border-color:#c75d003d;
+  color:#8a4b00}
+.adv-growth-model-chip.is-unavailable{
+  background:#5a6f701a;
+  border-color:#5a6f7033;
+  color:#445758}
+@media(max-width:700px){
+.adv-growth-reliability-badge,.adv-growth-profile-badge,.adv-growth-model-chip{
+  width:100%;
+  min-width:0}
+}
+/* .vild-rem-chip (4170-4176) */
+.vild-rem-chip{
+  font-size:.72rem;
+  font-weight:800;
+  color:#fff;
+  background:var(--primary);
+  border-radius:999px;
+  padding:2px 9px}
+/* .adult-vitals-summary-badge (5471-5489, 5593-5594) */
+.adult-vitals-summary-badge{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:30px;
+  padding:.35rem .7rem;
+  border-radius:999px;
+  background:#00838d1f;
+  color:var(--primary);
+  font-size:.78rem;
+  font-weight:800;
+  text-align:center}
+.adult-vitals-summary-badge.tone-warn{
+  background:#c75d001f;
+  color:#a94f00}
+.adult-vitals-summary-badge.tone-danger{
+  background:#c628281f;
+  color:var(--danger)}
+@media(max-width:700px){
+.adult-vitals-summary-badge{
+  align-self:flex-start}
+}
+/* .nutrition-micros-badge (6094-6110) */
+.nutrition-micros-badge{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:2.9rem;
+  padding:.18rem .55rem;
+  border-radius:999px;
+  background:#0b72851a;
+  color:#0b7285;
+  font-size:.76rem;
+  font-weight:700;
+  line-height:1.2}
+/* .diet-personalized-badge (6596-6612), .diet-recommended-badge (6925-6936) */
+.diet-personalized-badge{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:.28rem .5rem;
+  border:1px solid #d6c3ea;
+  border-radius:999px;
+  color:#5b3a78;
+  background:#fff;
+  font-size:.75rem;
+  font-weight:700;
+  white-space:nowrap}
+.diet-personalized-badge--active{
+  border-color:#90f;
+  color:#5a008f;
+  background:#9900ff14}
+.diet-recommended-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-bottom:.45rem;
+  padding:.22rem .48rem;
+  border-radius:999px;
+  background:#90f;
+  color:#fff;
+  font-size:.74rem;
+  font-weight:800;
+  letter-spacing:.02em}
+/* .circ-pro-pill (1150-1160) */
+.circ-pro-pill{
+  display:inline-block;
+  margin-left:.18rem;
+  padding:.02rem .35rem;
+  border-radius:999px;
+  background:#6a1b9a;
+  color:#fff;
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  vertical-align:baseline}
+/* skórki modułów diety i mikroskładników (7065-7078, 7191-7192, 7210-7211) — wymagają kontenera #dietRecommendationsContent / .nutrition-micros-card */
+#dietRecommendationsContent .diet-personalized-badge{
+  background:var(--diet-ui-button-bg)!important;
+  color:var(--diet-ui-muted-strong)!important;
+  border-color:var(--diet-ui-border)!important}
+#dietRecommendationsContent .diet-mode-tab.is-active,#dietRecommendationsContent .diet-segmented-control button.is-active,#dietRecommendationsContent .diet-option-check:has(input:checked),#dietRecommendationsContent .diet-survey-chip:has(input:checked),#dietRecommendationsContent .diet-pdf-variant-card--recommended,#dietRecommendationsContent .diet-personalized-badge--active{
+  background:color-mix(in srgb,var(--diet-ui-surface) 80%,var(--diet-ui-accent) 20%)!important;
+  border-color:var(--diet-ui-active-border)!important}
+#dietRecommendationsContent .diet-recommended-badge,#dietRecommendationsContent .diet-smart-goal-number{
+  background:var(--diet-ui-active-bg)!important;
+  color:var(--diet-ui-active-text)!important}
+.nutrition-norms-card .nutrition-norms-value,.nutrition-micros-card .nutrition-micros-value,.nutrition-micros-card .nutrition-micros-badge,.nutrition-micros-card .nutrition-micros-vitd-dose strong{
+  color:var(--nutrition-ui-accent-text)!important}
+.nutrition-micros-card .nutrition-micros-badge{
+  background:var(--nutrition-ui-chip-bg)!important}
+
+/* ===================== EduKicker, EduChip, MetaPill — baza (edu-video-ui.css 43-69, 82-99) ===================== */
+.edu-kicker,.edu-card-badge,.edu-chip,.edu-meta-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  border-radius:999px;
+  white-space:nowrap}
+.edu-kicker{
+  align-self:flex-start;
+  padding:.48rem .82rem;
+  background:#ffffffe6;
+  border:1px solid var(--edu-border-strong);
+  color:#0f4b48;
+  font-weight:800;
+  font-size:.92rem;
+  box-shadow:0 8px 24px #0f2d2a0d}
+.edu-kicker-icon,.edu-chip-icon,.edu-inline-icon,.edu-meta-icon{
+  width:1rem;
+  height:1rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  line-height:0}
+.edu-kicker-icon svg,.edu-chip-icon svg,.edu-inline-icon svg,.edu-meta-icon svg{
+  width:100%;
+  height:100%;
+  display:block}
+.edu-chip-row,.edu-meta-row,.resource-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.65rem}
+.edu-chip-row{
+  margin-top:1rem}
+.edu-chip,.edu-meta-pill{
+  padding:.46rem .8rem;
+  background:#ffffffe0;
+  border:1px solid rgba(22,76,71,.1);
+  color:#0f4b48;
+  font-weight:700;
+  box-shadow:0 8px 24px #0f2d2a0a}
+.edu-chip{
+  font-size:.92rem}
+.edu-meta-pill{
+  font-size:.88rem}
+/* wersja stokenizowana body.edu-page (552-565) */
+body.edu-page .edu-kicker{
+  background:var(--edu-kicker-bg);
+  border:var(--edu-control-border-width) solid var(--edu-border-strong);
+  color:var(--edu-kicker-text);
+  box-shadow:var(--edu-kicker-shadow);
+  backdrop-filter:var(--edu-control-backdrop);
+  -webkit-backdrop-filter:var(--edu-control-backdrop)}
+body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
+  background:var(--edu-chip-bg);
+  border:var(--edu-control-border-width) solid var(--edu-border);
+  color:var(--edu-chip-text);
+  box-shadow:var(--edu-chip-shadow);
+  backdrop-filter:var(--edu-control-backdrop);
+  -webkit-backdrop-filter:var(--edu-control-backdrop)}
+
+/* ===================== MarketingBadge — baza (o-aplikacji.css) ===================== */
+.about-page .about-badges,
+.about-page .about-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+.about-page .about-badge,
+.about-page .about-quick-links a,
+.about-page .about-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(0, 168, 181, 0.16);
+  color: #0f4b48;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.about-page .about-badge .sidebar-icon,
+.about-page .about-chip .sidebar-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex-shrink: 0;
+}
+.about-page .sidebar-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.about-page .about-hero .about-badges {
+  justify-content: center;
+}
+.about-page .inline-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 168, 181, 0.12);
+  border: 1px solid rgba(0, 168, 181, 0.22);
+  color: #0a6261;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.about-page .disclaimer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.75rem;
+}
+.about-page .disclaimer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  background: rgba(180, 83, 9, 0.07);
+  border: 1px solid rgba(180, 83, 9, 0.18);
+  border-radius: 100px;
+  padding: 0.28rem 0.8rem 0.28rem 0.6rem;
+  font-size: 0.79rem;
+  font-weight: 500;
+  color: #92400e;
+  line-height: 1.4;
+}
+.about-page .disclaimer-chip .sidebar-icon {
+  color: #c2410c;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.about-page .pro-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  background: linear-gradient(135deg, #0284c7, #0891b2);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.22rem 0.65rem;
+  border-radius: 100px;
+  vertical-align: middle;
+  margin-left: 0.35rem;
+}
+.about-page .about-badge:hover,
+.about-page .about-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 45, 42, 0.08);
+}
+@media (max-width: 640px) {
+  .about-page .about-badge,
+  .about-page .about-quick-links a,
+  .about-page .about-chip {
+    width: 100%;
+    justify-content: center;
+  }
+}
+/* MarketingBadge — kontakt.css */
+.contact-page .contact-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: center;
+}
+.contact-page .contact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.52rem 0.82rem;
+  border-radius: 999px;
+  background: var(--contact-badge-bg);
+  border: 1px solid var(--contact-badge-border);
+  color: var(--contact-text-action);
+  font-weight: 700;
+  box-shadow: var(--contact-card-shadow);
+  backdrop-filter: var(--contact-control-backdrop);
+  -webkit-backdrop-filter: var(--contact-control-backdrop);
+}
+.contact-page .contact-badge .sidebar-icon,
+.contact-page .contact-section-heading .sidebar-icon,
+.contact-page .contact-topic-card h4 .sidebar-icon,
+.contact-page .contact-action .sidebar-icon,
+.contact-page .contact-method-head .sidebar-icon,
+.contact-page .contact-link-card .sidebar-icon,
+.contact-page .contact-kicker .sidebar-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 0;
+}
+.contact-page .sidebar-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.contact-page .contact-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  background: var(--contact-pill-bg);
+  border: 1px solid var(--contact-pill-border);
+  color: var(--contact-pill-text);
+  font-weight: 800;
+  font-size: 0.88rem;
+  margin: 0 0 0.9rem;
+  box-shadow: var(--contact-card-shadow);
+  backdrop-filter: var(--contact-control-backdrop);
+  -webkit-backdrop-filter: var(--contact-control-backdrop);
+}
+@media (max-width: 640px) {
+  .contact-page .contact-badge {
+    width: 100%;
+    justify-content: center;
+  }
+}
+/* MarketingBadge — instrukcja.css */
+.guide-tile-count{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:.28rem .65rem;
+  border-radius:999px;
+  border:1px solid rgba(0,131,141,0.15);
+  background:#fff;
+  color:var(--primary);
+  font-size:.82rem;
+  font-weight:800;
+  white-space:nowrap;
+  min-height:2rem;
+}
+.guide-module-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.45rem;
+  margin:0 0 .7rem;
+}
+.guide-module-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:1.7rem;
+  padding:.22rem .62rem;
+  border-radius:999px;
+  font-size:.76rem;
+  font-weight:800;
+  line-height:1.2;
+  letter-spacing:.01em;
+  border:1px solid rgba(0,131,141,0.14);
+  background:#ffffff;
+  color:#31585b;
+}
+.guide-module-badge-user{
+  border-color:rgba(0,131,141,0.18);
+  background:rgba(0,176,166,0.08);
+  color:#0b6b72;
+}
+.guide-module-badge-doctor{
+  border-color:rgba(153,0,255,0.18);
+  background:rgba(153,0,255,0.08);
+  color:#7b2cbf;
+}
+.guide-module-badge-shared{
+  border-color:rgba(0,131,141,0.14);
+  background:rgba(0,131,141,0.06);
+  color:#31585b;
+}
+/* MarketingBadge — subskrypcja.css */
+.sub-hero__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--pro-light);
+  color: var(--pro-dark);
+  border: 1px solid var(--pro-border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.28rem 0.9rem;
+  margin-bottom: 1.1rem;
+  text-transform: uppercase;
+}
+.sub-hero__pill::before {
+  content: "★";
+  font-size: 0.7rem;
+}
+.sub-plan__badge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, var(--pro-dark), var(--pro-color));
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.9rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(153, 0, 255, 0.35);
+}
+
+/* ===================== StepBadge — baza ===================== */
+/* o-aplikacji.css 543-593 */
+.about-page .flow-steps {
+  counter-reset: aboutStep;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+.about-page .flow-steps li {
+  counter-increment: aboutStep;
+  position: relative;
+  padding: 1rem 1rem 1rem 3.25rem;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(22, 76, 71, 0.1);
+}
+.about-page .flow-steps li::before {
+  content: counter(aboutStep);
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0891b2, #14b8a6);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+}
+/* kontakt.css 934-1007 */
+.contact-page .contact-steps {
+  counter-reset: contactStep;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+.contact-page .contact-steps li {
+  counter-increment: contactStep;
+  position: relative;
+  padding: 1rem 1rem 1rem 3.15rem;
+  border-radius: 20px;
+  background: var(--contact-surface-elevated);
+  border: 1px solid var(--contact-border);
+  color: var(--contact-text-muted);
+  line-height: 1.62;
+  box-shadow: var(--contact-card-shadow);
+  backdrop-filter: var(--contact-control-backdrop);
+  -webkit-backdrop-filter: var(--contact-control-backdrop);
+}
+.contact-page .contact-steps li::before {
+  content: counter(contactStep);
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--contact-step-badge-bg);
+  color: var(--contact-step-badge-text);
+  font-weight: 800;
+  box-shadow: var(--contact-step-badge-shadow);
+}
+/* przelicznik-jednostek.css 854-931, 1859-1878 */
+.lab-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 0.5px solid rgba(0,131,141,0.10);
+  animation: lab-step-slidein 0.3s ease-out;
+}
+.lab-step:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.lab-step.is-hidden {
+  display: none;
+}
+.lab-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  background: rgba(0,131,141,0.08);
+  color: #7a8587;
+}
+.lab-step-num.is-done {
+  background: #1D9E75;
+  color: #fff;
+}
+.lab-step-num.is-active {
+  background: #00838d;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(0,131,141,0.15);
+  animation: lab-step-glow 2s ease-in-out infinite;
+}
+.lab-step-body {
+  flex: 1;
+  min-width: 0;
+}
+.lab-step-label {
+  font-size: 0.72rem;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+@keyframes lab-step-slidein {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes lab-step-glow    {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+/* cukrzyca.css 267-300, 315-330, 6061-6073 */
+.diab-day-step {
+  border-radius: var(--radius);
+  padding: 0.75rem 0.85rem;
+  background: rgba(255,255,255,0.82);
+  border: 1px solid #d7e5e5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+}
+.diab-day-step__num {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  background: rgba(0,131,141,0.12);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-top: 0.05rem;
+}
+.diab-day-step strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 1.05rem;
+}
+.diab-day-step p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: #4f6060;
+}
+.diab-module-card__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.32rem 0.68rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0,131,141,0.16);
+  background: rgba(0,131,141,0.10);
+  color: var(--primary);
+  font-size: 0.79rem;
+  font-weight: 800;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+/* skórka body.page-cukrzyca (6431-6454, 6620-6636, 6818-6824) */
+body.page-cukrzyca .diab-day-step,
+body.page-cukrzyca .diab-case,
+body.page-cukrzyca .diab-note,
+body.page-cukrzyca .diab-metric,
+body.page-cukrzyca .diab-solution__summary > div,
+body.page-cukrzyca .diab-solution__source-item,
+body.page-cukrzyca .diab-solution__today-item,
+body.page-cukrzyca .diab-solution__balance-box,
+body.page-cukrzyca .diab-mini-formula,
+body.page-cukrzyca .diab-macro-row,
+body.page-cukrzyca .diab-macro-empty,
+body.page-cukrzyca .diab-macro-state--soft,
+body.page-cukrzyca .diab-calc-empty,
+body.page-cukrzyca .diab-calc-table-wrap,
+body.page-cukrzyca .diab-launchpad__path,
+body.page-cukrzyca .diab-path-item,
+body.page-cukrzyca .diab-dose-source,
+body.page-cukrzyca .diab-reward-badge {
+  background: var(--diab-surface-1) !important;
+  border-color: var(--diab-border-1) !important;
+  box-shadow: var(--diab-shadow-1) !important;
+  color: var(--diab-text-1) !important;
+}
+body.page-cukrzyca .diab-day-step__num,
+body.page-cukrzyca .diab-badge,
+body.page-cukrzyca .diab-launchpad__eyebrow,
+body.page-cukrzyca .diab-topic-chip,
+body.page-cukrzyca .diab-path-item__num,
+body.page-cukrzyca .diab-module-card__icon,
+body.page-cukrzyca .diab-module-card__step,
+body.page-cukrzyca .diab-macro-row__index,
+body.page-cukrzyca .diab-macro-chip,
+body.page-cukrzyca .diab-calc-day-badge,
+body.page-cukrzyca .diab-calc-balance-chip--stable,
+body.page-cukrzyca .diab-dose-source,
+body.page-cukrzyca .diab-accordion-icon {
+  background: var(--diab-surface-accent) !important;
+  border-color: var(--diab-border-2) !important;
+  color: var(--primary) !important;
+}
+body.page-cukrzyca .diab-day-step p,
+body.page-cukrzyca .diab-video-cta__note,
+body.page-cukrzyca .diab-note-box p:last-child,
+body.page-cukrzyca .diab-calc-empty,
+body.page-cukrzyca .diab-macro-empty {
+  color: var(--diab-text-2) !important;
+}
+/* instrukcja.css 452-463 */
+.guide-accordion-index{
+  width:2rem;
+  height:2rem;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,131,141,0.1);
+  color:var(--primary);
+  font-size:.82rem;
+  font-weight:800;
+}
+
+/* ===================== MiniSummaryChip — baza (sidebar.css 388-481, w źródle wewnątrz @media(min-width:992px)) ===================== */
+.ms-chips{
+  display:flex;
+  flex-direction:column;
+  gap:.3rem}
+.ms-chip{
+  display:flex;
+  align-items:center;
+  gap:.4rem;
+  padding:.35rem .5rem;
+  border-radius:10px;
+  border:1px solid #d0dede;
+  background:#ffffff8c;
+  min-height:36px;
+  box-sizing:border-box}
+.ms-chip--normal{
+  border-color:#00838d47;
+  background:#00838d0f}
+.ms-chip--borderline{
+  border-color:#c75d0047;
+  background:#c75d000f}
+.ms-chip--alert{
+  border-color:#c628284d;
+  background:#c628280f}
+.ms-chip--neutral{
+  border-color:#d0dede;
+  background:#ffffff8c}
+.ms-chip-icon{
+  flex:0 0 auto;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:#00838d1f;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:.65rem;
+  font-weight:700;
+  color:#00535a}
+.ms-chip--borderline .ms-chip-icon{
+  background:#c75d001f;
+  color:#7a3800}
+.ms-chip--alert .ms-chip-icon{
+  background:#c6282824;
+  color:#7a1a1a}
+.ms-chip--neutral .ms-chip-icon{
+  background:#5a72741a;
+  color:#5a7274}
+.ms-chip-main{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  line-height:1.15}
+.ms-chip-label{
+  font-size:.64rem;
+  color:#5a7274;
+  font-weight:500;
+  text-transform:uppercase;
+  letter-spacing:.04em}
+.ms-chip-value{
+  font-size:.84rem;
+  font-weight:700;
+  color:#1a3536;
+  line-height:1.2}
+.ms-chip--normal .ms-chip-label,.ms-chip--normal .ms-chip-value{
+  color:#00535a}
+.ms-chip--borderline .ms-chip-label,.ms-chip--borderline .ms-chip-value{
+  color:#7a3800}
+.ms-chip--alert .ms-chip-label,.ms-chip--alert .ms-chip-value{
+  color:#7a1a1a}
+.ms-chip--neutral .ms-chip-label{
+  color:#5a7274}
+.ms-chip--neutral .ms-chip-value{
+  color:#1a3536}
+.ms-chip-badge{
+  flex:0 0 auto;
+  font-size:.64rem;
+  font-weight:700;
+  padding:.12rem .38rem;
+  border-radius:999px;
+  background:#00838d24;
+  color:#00535a;
+  white-space:nowrap;
+  align-self:center}
+.ms-chip--borderline .ms-chip-badge{
+  background:#c75d0024;
+  color:#7a3800}
+.ms-chip--alert .ms-chip-badge{
+  background:#c6282824;
+  color:#7a1a1a}
+.ms-chip--neutral .ms-chip-badge{
+  background:#5a72741a;
+  color:#5a7274}
+
+/* ===================== Nadpisania .liquid-ios26 ===================== */
+/* edu-video-ui.css 333-335 */
+.liquid-ios26 .edu-kicker,.liquid-ios26 .edu-chip,.liquid-ios26 .edu-meta-pill,.liquid-ios26 .chapter-list a,.liquid-ios26 .resource-button{
+  backdrop-filter:blur(10px) saturate(120%);
+  -webkit-backdrop-filter:blur(10px) saturate(120%)}
+/* cukrzyca.css 6485-6504 */
+body.page-cukrzyca.liquid-ios26 .diab-day-step,
+body.page-cukrzyca.liquid-ios26 .diab-case,
+body.page-cukrzyca.liquid-ios26 .diab-note,
+body.page-cukrzyca.liquid-ios26 .diab-metric,
+body.page-cukrzyca.liquid-ios26 .diab-solution__summary > div,
+body.page-cukrzyca.liquid-ios26 .diab-solution__source-item,
+body.page-cukrzyca.liquid-ios26 .diab-solution__today-item,
+body.page-cukrzyca.liquid-ios26 .diab-solution__balance-box,
+body.page-cukrzyca.liquid-ios26 .diab-mini-formula,
+body.page-cukrzyca.liquid-ios26 .diab-macro-row,
+body.page-cukrzyca.liquid-ios26 .diab-calc-table-wrap,
+body.page-cukrzyca.liquid-ios26 .diab-launchpad__hero,
+body.page-cukrzyca.liquid-ios26 .diab-launchpad__path,
+body.page-cukrzyca.liquid-ios26 .diab-path-item,
+body.page-cukrzyca.liquid-ios26 .diab-video-modal__dialog,
+body.page-cukrzyca.liquid-ios26 .diab-film-frame {
+  -webkit-backdrop-filter: var(--diab-card-filter) !important;
+  backdrop-filter: var(--diab-card-filter) !important;
+}
+
+/* ===================== Wysoki kontrast ===================== */
+/* style.css 5258-5264 — liczniki i odznaki instrukcji */
+body.high-contrast-level-1.liquid-ios26 .guide-inline-count,body.high-contrast-level-2.liquid-ios26 .guide-inline-count,body.high-contrast-level-3.liquid-ios26 .guide-inline-count,body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+  background:var(--hc-button-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 4px 12px #0000000f!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+/* style.css 5276-5278 */
+body.high-contrast-level-1.liquid-ios26 .guide-lead,body.high-contrast-level-2.liquid-ios26 .guide-lead,body.high-contrast-level-3.liquid-ios26 .guide-lead,body.high-contrast-level-1.liquid-ios26 .guide-tile-copy,body.high-contrast-level-2.liquid-ios26 .guide-tile-copy,body.high-contrast-level-3.liquid-ios26 .guide-tile-copy,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+  color:var(--hc-muted)!important;
+  opacity:1!important}
+/* style.css 5279-5283 — indeks akordeonu instrukcji */
+body.high-contrast-level-1.liquid-ios26 .guide-tile-icon,body.high-contrast-level-2.liquid-ios26 .guide-tile-icon,body.high-contrast-level-3.liquid-ios26 .guide-tile-icon,body.high-contrast-level-1.liquid-ios26 .guide-accordion-index,body.high-contrast-level-2.liquid-ios26 .guide-accordion-index,body.high-contrast-level-3.liquid-ios26 .guide-accordion-index{
+  background:#ffffffdb!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 4px 12px #0000000f!important}
+/* style.css 5284-5285 */
+body.high-contrast-level-1.liquid-ios26 .guide-tile-footer,body.high-contrast-level-2.liquid-ios26 .guide-tile-footer,body.high-contrast-level-3.liquid-ios26 .guide-tile-footer,body.high-contrast-level-1.liquid-ios26 .guide-inline-count,body.high-contrast-level-2.liquid-ios26 .guide-inline-count,body.high-contrast-level-3.liquid-ios26 .guide-inline-count,body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count{
+  color:var(--hc-text)!important}
+/* style.css 5289-5299 */
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-user{
+  background:#00b0a61f!important;
+  border-color:#00838d38!important;
+  color:#0b5e65!important}
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-doctor{
+  background:#9900ff1a!important;
+  border-color:#7b2cbf38!important;
+  color:#5f3388!important}
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-shared{
+  background:#00838d14!important;
+  border-color:#07363e2e!important}
+/* style.css 5321-5327 — odznaki „O aplikacji” */
+body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,body.about-page.high-contrast-level-1.liquid-ios26 .about-chip,body.about-page.high-contrast-level-2.liquid-ios26 .about-chip,body.about-page.high-contrast-level-3.liquid-ios26 .about-chip,body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,body.about-page.high-contrast-level-3.liquid-ios26 .inline-label{
+  background:var(--hc-button-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 6px 18px #0000000f!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+/* style.css 5355-5358 — krążek kroku „O aplikacji” */
+body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li:before,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li:before,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li:before{
+  background:linear-gradient(135deg,#00838de6,#14b8a6e0)!important;
+  color:#fff!important;
+  box-shadow:0 10px 20px #00838d2e!important}
+/* przelicznik-jednostek.css 4547-4555, 4625-4628 */
+body.liquid-ios26.high-contrast-level-1 .lab-step-label,
+body.liquid-ios26.high-contrast-level-2 .lab-step-label,
+body.liquid-ios26.high-contrast-level-3 .lab-step-label,
+body.liquid-ios26.high-contrast-level-1 .lab-result-title,
+body.liquid-ios26.high-contrast-level-2 .lab-result-title,
+body.liquid-ios26.high-contrast-level-3 .lab-result-title {
+  color: var(--hc-muted) !important;
+}
+body.liquid-ios26.high-contrast-level-2 .lab-step-num,
+body.liquid-ios26.high-contrast-level-3 .lab-step-num {
+  border: var(--hc-card-border-width) solid var(--hc-border);
+}

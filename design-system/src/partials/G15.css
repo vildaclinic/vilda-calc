@@ -1,0 +1,1111 @@
+/* G15 Marketing — źródło: o-aplikacji.html <style> (src/html-styles/o-aplikacji.css 10–74, 75–101, 103–168, 170–198, 209–298, 543–608, 678–781, 987–1077), kontakt.html <style> (src/html-styles/kontakt.css 347–356, 371–536, 537–655, 727–841, 1165–1231, 1291–1334; bloki body.contact-page.dark-bg-level-N / glass-level-N / high-contrast-level-N zawierają wyłącznie tokeny --contact-* i pochodzą z tokens.css), subskrypcja.html <style> (src/html-styles/subskrypcja.css 37–119, 121–595, 1532–1541; :root --pro-* z tokens.css), instrukcja.html <style> (src/html-styles/instrukcja.css 13–45, 47–83, 85–253, 532–602, 622–626), style.css 569–583, 631–635, 659–663 (globalne reguły button, które w aplikacji obejmują .guide-tile i .sub-plan__cta), ios26-v2.css 85–98 (globalne szkło przycisków — w aplikacji nadpisuje .guide-tile; subskrypcja.html nie ma klasy liquid-ios26), style.css 5235–5262 (wysoki kontrast instrukcji) i 5300–5360 (wysoki kontrast o-aplikacji; selektory body.about-page.high-contrast-level-N.liquid-ios26 dosłownie, listy selektorów przycięte do tej grupy). Podgląd stron „O aplikacji” wymaga body.about-page, strony kontaktowej — przodka .contact-page. */
+
+/* ——— 0. Globalne reguły przycisku (style.css 569–583, 631–635, 659–663) — w aplikacji obejmują <button class="guide-tile"> i <button class="sub-plan__cta"> ——— */
+button,input[type=button],input[type=submit]{
+  cursor:pointer;
+  font:inherit;
+  border:none;
+  border-radius:var(--radius);
+  padding:.55rem 1.1rem;
+  background:var(--primary);
+  color:#fff;
+  transition:background .2s ease,box-shadow .2s ease}
+button:hover,input[type=button]:hover,input[type=submit]:hover{
+  background:var(--secondary);
+  box-shadow:var(--shadow)}
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed}
+@media(max-width:600px){
+button,input[type=button],input[type=submit]{
+  width:100%;
+  margin-top:.5rem}
+}
+button,input[type=submit]{
+  transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
+button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
+  transform:translateY(-1px) scale(1.02);
+  box-shadow:var(--shadow-l)}
+
+/* ——— 1. MarketingHero — „O aplikacji” (o-aplikacji.css 10–74, 75–84, 103–168, 170–198, 209–298, 987–989) ——— */
+    .about-page .about-panel,
+    .about-page .about-card,
+    .about-page .about-hero {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      border-radius: 24px;
+      box-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+    }
+    .about-page .about-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding: 1.6rem;
+      margin-bottom: 1.2rem;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .about-page .about-hero-main {
+      width: 100%;
+      max-width: 78ch;
+      margin: 0 auto;
+    }
+    .about-page .about-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(0, 168, 181, 0.14), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(4, 120, 87, 0.09), transparent 32%);
+      z-index: -1;
+    }
+    .about-page .about-badges,
+    .about-page .about-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+    .about-page .about-badge,
+    .about-page .about-quick-links a,
+    .about-page .about-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(0, 168, 181, 0.16);
+      color: #0f4b48;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .about-page .about-badge .sidebar-icon,
+    .about-page .about-chip .sidebar-icon {
+      width: 1rem;
+      height: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      flex-shrink: 0;
+    }
+    .about-page .sidebar-icon svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .about-page .about-shell .sidebar-icon {
+      line-height: 0;
+    }
+    .about-page .about-hero .about-badges {
+      justify-content: center;
+    }
+    .about-page .about-hero h2 {
+      font-size: clamp(1.75rem, 3.5vw, 2.55rem);
+      line-height: 1.1;
+      margin: 0.75rem auto 0.9rem;
+      max-width: 26ch;
+      text-align: center;
+      text-wrap: balance;
+      color: #0f3533;
+    }
+    .about-page .about-hero p,
+    .about-page .about-card p,
+    .about-page .about-panel p,
+    .about-page .about-panel li,
+    .about-page .about-card li {
+      color: #284847;
+      line-height: 1.72;
+    }
+    .about-page .inline-label {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.14rem 0.45rem;
+      border-radius: 999px;
+      background: rgba(0, 168, 181, 0.12);
+      border: 1px solid rgba(0, 168, 181, 0.22);
+      color: #0a6261;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .about-page .hero-copy {
+      width: 100%;
+      max-width: 68ch;
+      box-sizing: border-box;
+      margin: 0 auto 1rem;
+      text-align: justify;
+      text-justify: inter-word;
+    }
+    .about-page .hero-copy p {
+      margin: 0;
+    }
+    .about-page .hero-copy p + p {
+      margin-top: 1rem;
+    }
+    .about-page .hero-copy .hero-lead {
+      font-size: 1.07rem;
+    }
+    .about-page .hero-note {
+      margin-top: 1rem;
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: rgba(8, 145, 178, 0.09);
+      border: 1px solid rgba(8, 145, 178, 0.18);
+      width: 100%;
+      box-sizing: border-box;
+      text-align: justify;
+      text-justify: inter-word;
+    }
+    .about-page .hero-note strong {
+      color: #0f4b48;
+    }
+    .about-page .about-hero strong {
+      color: #0f3533;
+    }
+
+/* ——— 1b. MarketingHero — strona kontaktowa (kontakt.css 347–356, 371–536) ——— */
+    .contact-page .contact-hero,
+    .contact-page .contact-panel,
+    .contact-page .contact-card,
+    .contact-page .contact-profile-card {
+      background: var(--contact-surface);
+      border: 1px solid var(--contact-border);
+      border-radius: 24px;
+      box-shadow: var(--contact-shadow);
+      backdrop-filter: var(--contact-surface-backdrop);
+      -webkit-backdrop-filter: var(--contact-surface-backdrop);
+    }
+    .contact-page .contact-hero {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      padding: 1.6rem;
+      margin-bottom: 1.1rem;
+    }
+    .contact-page .contact-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, var(--contact-hero-highlight-1), transparent 34%),
+        radial-gradient(circle at bottom left, var(--contact-hero-highlight-2), transparent 30%);
+      z-index: -1;
+    }
+    .contact-page .contact-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      justify-content: center;
+    }
+    .contact-page .contact-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.52rem 0.82rem;
+      border-radius: 999px;
+      background: var(--contact-badge-bg);
+      border: 1px solid var(--contact-badge-border);
+      color: var(--contact-text-action);
+      font-weight: 700;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+    }
+    .contact-page .contact-badge .sidebar-icon,
+    .contact-page .contact-section-heading .sidebar-icon,
+    .contact-page .contact-topic-card h4 .sidebar-icon,
+    .contact-page .contact-action .sidebar-icon,
+    .contact-page .contact-method-head .sidebar-icon,
+    .contact-page .contact-link-card .sidebar-icon,
+    .contact-page .contact-kicker .sidebar-icon {
+      width: 1rem;
+      height: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      align-self: center;
+      line-height: 0;
+    }
+    .contact-page .sidebar-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .contact-page .contact-hero-main {
+      max-width: 76ch;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .contact-page .contact-hero h2 {
+      font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+      line-height: 1.08;
+      margin: 0.95rem auto 0.9rem;
+      max-width: 18ch;
+      text-align: center;
+      text-wrap: balance;
+      color: var(--contact-text-strong);
+    }
+    .contact-page .hero-lead,
+    .contact-page .contact-panel p,
+    .contact-page .contact-panel li,
+    .contact-page .contact-card p,
+    .contact-page .contact-profile-card p {
+      color: var(--contact-text-muted);
+      line-height: 1.72;
+    }
+    .contact-page .hero-lead {
+      margin: 0 auto;
+      max-width: 64ch;
+      font-size: 1.05rem;
+    }
+    .contact-page .contact-hero strong,
+    .contact-page .contact-panel strong,
+    .contact-page .contact-card strong,
+    .contact-page .contact-profile-card strong {
+      color: var(--contact-text-strong);
+    }
+
+/* ——— 1c. MarketingHero — subskrypcja (subskrypcja.css 37–119) ——— */
+    .sub-hero {
+      text-align: center;
+      padding: 1.5rem 1rem 2.5rem;
+      max-width: 660px;
+      margin: 0 auto 2.5rem;
+    }
+    .sub-hero__pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--pro-light);
+      color: var(--pro-dark);
+      border: 1px solid var(--pro-border);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 0.28rem 0.9rem;
+      margin-bottom: 1.1rem;
+      text-transform: uppercase;
+    }
+    .sub-hero__pill::before {
+      content: "★";
+      font-size: 0.7rem;
+    }
+    .sub-hero h1 {
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      font-weight: 700;
+      color: #1a2e30;
+      margin: 0 0 0.75rem;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .sub-hero p {
+      font-size: 1.05rem;
+      color: #5a7274;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+/* ——— 1d. MarketingHero — instrukcja (instrukcja.css 13–45) ——— */
+  .guide-hero{
+    background:linear-gradient(135deg, rgba(0,131,141,0.12), rgba(0,176,166,0.05));
+    border:1px solid rgba(0,131,141,0.16);
+    border-radius:18px;
+    padding:1.1rem 1.2rem;
+    box-shadow:var(--shadow);
+  }
+  .guide-title{
+    margin:0;
+    font-size:clamp(1.35rem,2.2vw,1.85rem);
+    color:#163638;
+  }
+  .guide-lead{
+    margin:.45rem 0 0;
+    color:#537072;
+    line-height:1.55;
+  }
+
+/* ——— 2. FeatureCard — kafelek instrukcji (instrukcja.css 47–83, 85–253, 532–602) ——— */
+  .guide-tile-grid{
+    display:grid;
+    gap:1rem;
+    grid-template-columns:1fr;
+    align-items:stretch;
+  }
+  @media (min-width:700px){
+    .guide-tile-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width:1180px){
+    .guide-tile-grid{
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+    .guide-tile-grid > :last-child:nth-child(3n + 1){
+      grid-column:2;
+    }
+  }
+  .guide-tile{
+    width:100%;
+    min-height:176px;
+    margin:0;
+    appearance:none;
+    -webkit-appearance:none;
+    color:inherit;
+    border:1px solid rgba(0,131,141,0.16);
+    border-radius:18px;
+    padding:1.1rem;
+    background:linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
+    box-shadow:0 12px 30px rgba(0,0,0,0.06);
+    display:grid;
+    gap:.75rem;
+    text-align:left;
+    cursor:pointer;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+  }
+  .guide-tile:hover{
+    transform:translateY(-2px);
+    box-shadow:0 18px 42px rgba(0,0,0,0.09);
+    border-color:rgba(0,131,141,0.24);
+  }
+  .guide-tile:focus-visible{
+    outline:3px solid rgba(0,176,166,0.34);
+    outline-offset:3px;
+  }
+  .guide-tile.is-active{
+    border-color:rgba(0,131,141,0.34);
+    background:linear-gradient(180deg, #ffffff 0%, rgba(0,176,166,0.08) 100%);
+    box-shadow:0 18px 42px rgba(0,0,0,0.09);
+  }
+  .guide-tile-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-start;
+    gap:.75rem;
+  }
+  .guide-tile-icon{
+    width:46px;
+    height:46px;
+    border-radius:14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,131,141,0.1);
+    color:var(--primary);
+    flex:0 0 auto;
+  }
+  .guide-tile-count{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.28rem .65rem;
+    border-radius:999px;
+    border:1px solid rgba(0,131,141,0.15);
+    background:#fff;
+    color:var(--primary);
+    font-size:.82rem;
+    font-weight:800;
+    white-space:nowrap;
+    min-height:2rem;
+  }
+  .guide-tile-title{
+    margin:0;
+    color:#163638;
+    font-size:1.12rem;
+    font-weight:800;
+  }
+  .guide-tile-copy{
+    margin:0;
+    color:#557174;
+    line-height:1.5;
+    font-size:.94rem;
+  }
+  .guide-tile-footer{
+    margin-top:auto;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:.75rem;
+    color:var(--primary);
+    font-size:.9rem;
+    font-weight:800;
+  }
+  .guide-module-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.45rem;
+    margin:0 0 .7rem;
+  }
+  .guide-module-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:1.7rem;
+    padding:.22rem .62rem;
+    border-radius:999px;
+    font-size:.76rem;
+    font-weight:800;
+    line-height:1.2;
+    letter-spacing:.01em;
+    border:1px solid rgba(0,131,141,0.14);
+    background:#ffffff;
+    color:#31585b;
+  }
+  .guide-module-badge-user{
+    border-color:rgba(0,131,141,0.18);
+    background:rgba(0,176,166,0.08);
+    color:#0b6b72;
+  }
+  .guide-module-badge-doctor{
+    border-color:rgba(153,0,255,0.18);
+    background:rgba(153,0,255,0.08);
+    color:#7b2cbf;
+  }
+  .guide-module-badge-shared{
+    border-color:rgba(0,131,141,0.14);
+    background:rgba(0,131,141,0.06);
+    color:#31585b;
+  }
+
+/* ——— 2b. FeatureCard — kroki i karty-odnośniki „O aplikacji” (o-aplikacji.css 543–608, 678–750) ——— */
+    .about-page .flow-steps {
+      counter-reset: aboutStep;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.9rem;
+    }
+    .about-page .flow-steps li {
+      counter-increment: aboutStep;
+      position: relative;
+      padding: 1rem 1rem 1rem 3.25rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+    }
+    .about-page .flow-steps li::before {
+      content: counter(aboutStep);
+      position: absolute;
+      left: 1rem;
+      top: 1rem;
+      width: 1.6rem;
+      height: 1.6rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0891b2, #14b8a6);
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+    }
+    .about-page .about-link-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.8rem;
+      margin-top: 0.9rem;
+    }
+    .about-page .about-link-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.95rem 1rem;
+      border-radius: 18px;
+      border: 1px solid rgba(0, 168, 181, 0.16);
+      background: rgba(255,255,255,0.9);
+      text-decoration: none;
+      color: #0f4b48;
+      font-weight: 700;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .about-page .about-link-card .sidebar-icon {
+      width: 1rem;
+      height: 1rem;
+      color: #0891b2;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+    }
+    .about-page .about-link-card span:nth-child(2) {
+      display: block;
+      align-self: center;
+      line-height: 1.25;
+    }
+
+/* ——— 3. QuickLink — pigułki „O aplikacji” (o-aplikacji.css 86–101, 752–781, 990–996) ——— */
+    .about-page .about-quick-links {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      width: 100%;
+      margin: 1rem 0 0;
+    }
+    .about-page .about-quick-links a {
+      justify-content: center;
+      text-align: center;
+      min-height: 3rem;
+      width: 100%;
+    }
+    .about-page .about-quick-links a.warning-link {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,248,240,0.96));
+      border-color: rgba(180, 83, 9, 0.16);
+      color: #8a3d0a;
+    }
+    .about-page .about-quick-links a.warning-link:hover {
+      box-shadow: 0 12px 24px rgba(138, 61, 10, 0.12);
+    }
+    .about-page .about-link-card:hover,
+    .about-page .about-quick-links a:hover,
+    .about-page .about-badge:hover,
+    .about-page .about-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(15, 45, 42, 0.08);
+    }
+
+/* ——— 3b. QuickLink — akcje, metody i karty-odnośniki strony kontaktowej (kontakt.css 537–655, 727–841, 1165–1225) ——— */
+    .contact-page .contact-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.15rem;
+    }
+    .contact-page .contact-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      min-height: 3.2rem;
+      padding: 0.82rem 1.15rem;
+      border-radius: 18px;
+      border: 1px solid var(--contact-border-strong);
+      background: var(--contact-surface-elevated);
+      color: var(--contact-text-action);
+      text-decoration: none;
+      font-weight: 800;
+      text-align: center;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .contact-page .contact-action.primary {
+      background: var(--contact-primary-bg);
+      color: var(--contact-primary-text);
+      border-color: var(--contact-primary-border);
+      box-shadow: var(--contact-primary-shadow);
+    }
+    .contact-page .contact-action:not(.primary):hover,
+    .contact-page .contact-action:not(.primary):focus-visible,
+    .contact-page .contact-link-card:hover,
+    .contact-page .contact-link-card:focus-visible,
+    .contact-page .contact-method:hover,
+    .contact-page .contact-method:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: var(--contact-hover-shadow);
+      background: var(--contact-surface-soft);
+      border-color: var(--contact-border-strong);
+      outline: none;
+    }
+    .contact-page .contact-action.primary:hover,
+    .contact-page .contact-action.primary:focus-visible {
+      transform: translateY(-1px);
+      background: var(--contact-primary-bg);
+      box-shadow: var(--contact-primary-hover-shadow);
+      border-color: var(--contact-primary-border);
+      outline: none;
+    }
+    .contact-page .contact-action:focus-visible,
+    .contact-page .contact-link-card:focus-visible,
+    .contact-page .contact-method:focus-visible {
+      box-shadow: var(--contact-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
+    }
+    .contact-page .contact-action.primary:focus-visible {
+      box-shadow: var(--contact-primary-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
+    }
+    .contact-page .contact-methods {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin-top: 0.35rem;
+    }
+    .contact-page .contact-method {
+      display: block;
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      text-decoration: none;
+      color: var(--contact-text);
+      min-height: 100%;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .contact-page .contact-method-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 800;
+      color: var(--contact-text-action);
+      margin-bottom: 0.5rem;
+    }
+    .contact-page .contact-method-head .sidebar-icon {
+      width: 1.05rem;
+      height: 1.05rem;
+      color: var(--contact-icon);
+    }
+    .contact-page .contact-method-label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--contact-text-subtle);
+      margin-bottom: 0.25rem;
+    }
+    .contact-page .contact-method-value {
+      display: block;
+      font-size: 1rem;
+      line-height: 1.45;
+      font-weight: 700;
+      color: var(--contact-text);
+      overflow-wrap: anywhere;
+    }
+    .contact-page .contact-method-note {
+      display: block;
+      margin-top: 0.5rem;
+      color: var(--contact-text-soft);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .contact-page .contact-link-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .contact-page .contact-link-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.95rem 1rem;
+      border-radius: 18px;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border-strong);
+      text-decoration: none;
+      color: var(--contact-text-action);
+      font-weight: 800;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .contact-page .contact-link-card .sidebar-icon:first-child {
+      color: var(--contact-icon);
+    }
+    .contact-page .contact-link-card span:nth-child(2) {
+      line-height: 1.25;
+    }
+
+/* ——— 4. PlanCard (subskrypcja.css 121–595) ——— */
+    .sub-plans {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+      align-items: start;
+    }
+    @media (max-width: 640px) {
+      .sub-plans {
+   grid-template-columns: 1fr;
+   }
+    }
+    .sub-plan {
+      background: #fff;
+      border: 1.5px solid #d0dede;
+      border-radius: 16px;
+      padding: 1.75rem 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      position: relative;
+    }
+    .sub-plan--pro {
+      border-color: var(--pro-color);
+      border-width: 2px;
+      box-shadow: var(--pro-glow);
+      background: linear-gradient(180deg, #fffaff 0%, #ffffff 60%);
+    }
+    .sub-plan__badge {
+      position: absolute;
+      top: -13px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, var(--pro-dark), var(--pro-color));
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.22rem 0.9rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(153, 0, 255, 0.35);
+    }
+    .sub-plan__header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .sub-plan__name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1a2e30;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .sub-plan__name-pro {
+   color: var(--pro-color);
+   }
+    .sub-plan__price {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1a2e30;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .sub-plan__price span {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #5a7274;
+      letter-spacing: 0;
+    }
+    .sub-plan__price-trial {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--pro-dark);
+      margin: 0;
+      line-height: 1.3;
+    }
+    .sub-plan__price-note {
+      font-size: 0.82rem;
+      color: #5a7274;
+      line-height: 1.4;
+    }
+    .sub-plan__sep {
+      height: 1px;
+      background: #e8eded;
+      margin: 0;
+      border: none;
+    }
+    .sub-plan--pro .sub-plan__sep {
+      background: rgba(153, 0, 255, 0.12);
+    }
+    .sub-plan__features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      flex: 1;
+    }
+    .sub-plan__features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: #2e4a4c;
+      line-height: 1.4;
+    }
+    .sub-plan__check {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.05rem;
+    }
+    .sub-plan__check--teal {
+      background: #e0f5f5;
+      color: var(--primary);
+    }
+    .sub-plan__check--pro {
+      background: var(--pro-light);
+      color: var(--pro-color);
+    }
+    .sub-plan__cta {
+      display: block;
+      width: 100%;
+      padding: 0.78rem 1rem;
+      border-radius: 10px;
+      font-size: 0.97rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      border: none;
+      text-decoration: none;
+    }
+    .sub-plan__cta--secondary {
+      background: #f0f5f5;
+      color: var(--primary);
+      border: 1.5px solid #d0dede;
+    }
+    .sub-plan__cta--secondary:hover {
+      background: #e0eded;
+    }
+    .sub-plan__cta--pro {
+      background: linear-gradient(135deg, var(--pro-dark), var(--pro-color));
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(153, 0, 255, 0.30);
+    }
+    .sub-plan__cta--pro:hover:not(:disabled) {
+      background: linear-gradient(135deg, #6600bb, var(--pro-dark));
+      transform: translateY(-1px);
+    }
+    .sub-plan__cta--pro:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    .sub-plan__cta--pro:disabled {
+      opacity: 0.65;
+      cursor: default;
+      transform: none;
+    }
+    .sub-plan__cta--active {
+      background: #e8faf0 !important;
+      color: #00693e !important;
+      border: 1.5px solid #a3e6c3 !important;
+      box-shadow: none !important;
+      cursor: default;
+    }
+    .sub-trial-status {
+      font-size: 0.84rem;
+      text-align: center;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      line-height: 1.4;
+      display: none;
+    }
+    .sub-trial-status:not(:empty) {
+   display: block;
+   }
+    .sub-trial-status--success {
+      background: #e8faf0;
+      color: #00693e;
+      border: 1px solid #a3e6c3;
+    }
+    .sub-trial-status--warn {
+      background: #fff8e6;
+      color: #7a4f00;
+      border: 1px solid #ffd466;
+    }
+    .sub-trial-status--info {
+      background: #e8f0fe;
+      color: #1a3a8f;
+      border: 1px solid #93b4f7;
+    }
+    .sub-trial-status--error {
+      background: #fde8e8;
+      color: #9e1b1b;
+      border: 1px solid #f5a5a5;
+    }
+    .sub-login-note {
+      font-size: 0.8rem;
+      color: #7a9999;
+      text-align: center;
+      line-height: 1.45;
+    }
+    .sub-login-note a {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .sub-login-note a:hover {
+   text-decoration: underline;
+   }
+
+/* ——— 5. Responsywność (o-aplikacji.css 1006–1077 przycięte do grupy; kontakt.css 1291–1334 przycięte; instrukcja.css 622–626; subskrypcja.css 1532–1541) ——— */
+    @media (max-width: 780px) {
+      .about-page .about-quick-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 640px) {
+      .about-page .about-hero,
+      .about-page .about-card,
+      .about-page .about-panel {
+        padding: 1.1rem;
+        border-radius: 20px;
+      }
+      .about-page .about-badge,
+      .about-page .about-quick-links a,
+      .about-page .about-chip {
+        width: 100%;
+        justify-content: center;
+      }
+      .about-page .about-quick-links {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 780px) {
+      .contact-page .contact-methods,
+      .contact-page .contact-side-stack {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 640px) {
+      .contact-page .contact-hero,
+      .contact-page .contact-panel,
+      .contact-page .contact-card,
+      .contact-page .contact-profile-card {
+        padding: 1.1rem;
+        border-radius: 20px;
+      }
+      .contact-page .contact-action,
+      .contact-page .contact-badge {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  @media (max-width:640px){
+    .guide-hero{
+      padding:1rem;
+    }
+  }
+    @media (max-width: 480px) {
+      .sub-hero {
+   padding: 1rem 0.5rem 1.75rem;
+   }
+      .sub-plan  {
+   padding: 1.5rem 1.1rem 1.25rem;
+   }
+    }
+
+/* ——— 6. Liquid Glass — ios26-v2.css 85–98: globalna reguła przycisków, która w aplikacji (instrukcja.html ma body.liquid-ios26) nadpisuje tło, obrys, kolor, promień i cień .guide-tile; subskrypcja.html nie ma klasy liquid-ios26, więc .sub-plan__cta jej nie podlega ——— */
+.liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
+  background:#fff3!important;
+  border:1px solid var(--lg-border)!important;
+  color:#111!important;
+  border-radius:14px!important;
+  backdrop-filter:blur(10px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
+  box-shadow:0 4px 12px #0000001a!important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+.liquid-ios26 button._pressed{
+  transform:scale(.96);
+  box-shadow:0 2px 8px #0000001f!important}
+
+/* ——— 7. Wysoki kontrast — instrukcja (style.css 5235–5262, listy selektorów przycięte do tej grupy) ——— */
+body.high-contrast-level-1.liquid-ios26 .guide-hero,body.high-contrast-level-2.liquid-ios26 .guide-hero,body.high-contrast-level-3.liquid-ios26 .guide-hero{
+  background:var(--hc-surface)!important;
+  border:var(--hc-card-border-width) solid var(--hc-border)!important;
+  box-shadow:var(--hc-shadow)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important}
+body.high-contrast-level-1.liquid-ios26 .guide-tile,body.high-contrast-level-2.liquid-ios26 .guide-tile,body.high-contrast-level-3.liquid-ios26 .guide-tile{
+  background:var(--hc-module-btn-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
+  box-shadow:var(--hc-module-btn-shadow)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.high-contrast-level-1.liquid-ios26 .guide-tile:hover,body.high-contrast-level-2.liquid-ios26 .guide-tile:hover,body.high-contrast-level-3.liquid-ios26 .guide-tile:hover{
+  background:var(--hc-module-btn-hover-bg)!important;
+  border-color:var(--hc-module-btn-border)!important}
+body.high-contrast-level-1.liquid-ios26 .guide-tile.is-active,body.high-contrast-level-2.liquid-ios26 .guide-tile.is-active,body.high-contrast-level-3.liquid-ios26 .guide-tile.is-active{
+  background:var(--hc-module-btn-active-bg)!important;
+  border-color:var(--hc-module-btn-active-border)!important;
+  box-shadow:0 0 0 1px #00838d1a,var(--hc-module-btn-active-shadow)!important}
+body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+  background:var(--hc-button-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 4px 12px #0000000f!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.high-contrast-level-1.liquid-ios26 .guide-title,body.high-contrast-level-2.liquid-ios26 .guide-title,body.high-contrast-level-3.liquid-ios26 .guide-title,body.high-contrast-level-1.liquid-ios26 .guide-tile-title,body.high-contrast-level-2.liquid-ios26 .guide-tile-title,body.high-contrast-level-3.liquid-ios26 .guide-tile-title{
+  color:var(--hc-text)!important}
+body.high-contrast-level-1.liquid-ios26 .guide-lead,body.high-contrast-level-2.liquid-ios26 .guide-lead,body.high-contrast-level-3.liquid-ios26 .guide-lead,body.high-contrast-level-1.liquid-ios26 .guide-tile-copy,body.high-contrast-level-2.liquid-ios26 .guide-tile-copy,body.high-contrast-level-3.liquid-ios26 .guide-tile-copy,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+  color:var(--hc-muted)!important;
+  opacity:1!important}
+body.high-contrast-level-1.liquid-ios26 .guide-tile-icon,body.high-contrast-level-2.liquid-ios26 .guide-tile-icon,body.high-contrast-level-3.liquid-ios26 .guide-tile-icon{
+  background:#ffffffdb!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 4px 12px #0000000f!important}
+body.high-contrast-level-1.liquid-ios26 .guide-tile-footer,body.high-contrast-level-2.liquid-ios26 .guide-tile-footer,body.high-contrast-level-3.liquid-ios26 .guide-tile-footer,body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count{
+  color:var(--hc-text)!important}
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-user{
+  background:#00b0a61f!important;
+  border-color:#00838d38!important;
+  color:#0b5e65!important}
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-doctor{
+  background:#9900ff1a!important;
+  border-color:#7b2cbf38!important;
+  color:#5f3388!important}
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-shared{
+  background:#00838d14!important;
+  border-color:#07363e2e!important}
+
+/* ——— 8. Wysoki kontrast — „O aplikacji” (style.css 5300–5360; selektory dosłownie, listy przycięte do tej grupy) ——— */
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero,body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li{
+  background:var(--hc-surface)!important;
+  border:var(--hc-card-border-width) solid var(--hc-border)!important;
+  box-shadow:var(--hc-shadow)!important;
+  color:var(--hc-text)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,body.about-page.high-contrast-level-2.liquid-ios26 .hero-note,body.about-page.high-contrast-level-3.liquid-ios26 .hero-note{
+  background:var(--hc-result-bg)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 8px 22px #00000014!important;
+  color:var(--hc-text)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a{
+  background:var(--hc-module-btn-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
+  box-shadow:var(--hc-module-btn-shadow)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,body.about-page.high-contrast-level-3.liquid-ios26 .inline-label{
+  background:var(--hc-button-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 6px 18px #0000000f!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card:hover,body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a:hover,body.about-page.high-contrast-level-1.liquid-ios26 .about-badge:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge:hover{
+  background:var(--hc-module-btn-hover-bg)!important;
+  border-color:var(--hc-module-btn-border)!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a.warning-link,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a.warning-link,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a.warning-link{
+  background:linear-gradient(180deg,#fffcf8fc,#fff6eef7)!important;
+  border-color:#b4530942!important;
+  color:#7c360a!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a.warning-link:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a.warning-link:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a.warning-link:hover{
+  background:linear-gradient(180deg,#fffefb,#fff9f2fa)!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero:before,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero:before,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero:before{
+  background:radial-gradient(circle at top right,rgba(0,131,141,.08),transparent 36%),radial-gradient(circle at bottom left,rgba(0,131,141,.05),transparent 34%)!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero h2,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero h2,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero h2,body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,body.about-page.high-contrast-level-3.liquid-ios26 .inline-label,body.about-page.high-contrast-level-1.liquid-ios26 .hero-note strong,body.about-page.high-contrast-level-2.liquid-ios26 .hero-note strong,body.about-page.high-contrast-level-3.liquid-ios26 .hero-note strong,body.about-page.high-contrast-level-1.liquid-ios26 .about-hero strong,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero strong,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero strong{
+  color:var(--hc-text)!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero p,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero p,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero p,body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,body.about-page.high-contrast-level-2.liquid-ios26 .hero-note,body.about-page.high-contrast-level-3.liquid-ios26 .hero-note{
+  color:var(--hc-text)!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card .sidebar-icon,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card .sidebar-icon,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card .sidebar-icon,body.about-page.high-contrast-level-1.liquid-ios26 .about-badge .sidebar-icon,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge .sidebar-icon,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge .sidebar-icon{
+  color:#0b6a71!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li:before,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li:before,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li:before{
+  background:linear-gradient(135deg,#00838de6,#14b8a6e0)!important;
+  color:#fff!important;
+  box-shadow:0 10px 20px #00838d2e!important}
+
+/* ——— 9. Ciemne tło — źródło nie ma reguł dla tej grupy; kontakt.css remapuje tylko tokeny --contact-* (tokens.css) ——— */

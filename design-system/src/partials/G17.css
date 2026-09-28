@@ -1,0 +1,413 @@
+/* G17 Konto i stopka — źródło: vilda_auth_ui.css (1-102, 277-294, 377-383, 398-453, 578-590, 629-633, 1208-1226, 1252-1263, 1341-1345, 1384-1394, 1434-1442, 1452-1458, 1468-1471, 1580-1606), style.css (146-246). Znacznik AuthCard buduje vilda_auth_ui.js; reguły wstrzykiwane z JS (arkusz „vilda-patients2-css”: .vilda-auth-root:has(.vilda-patients2){overflow:hidden!important} oraz .vilda-auth-overlay/.vilda-auth-card/.vilda-auth-title pod tym samym przodkiem lub .vilda-patients2) dotyczą wyłącznie widoku pacjentów i zostały pominięte. */
+
+/* ===================== AuthCard — reguły bazowe (vilda_auth_ui.css) ===================== */
+.vilda-auth-root{
+  position:fixed;
+  inset:0;
+  z-index:999999;
+  display:none;
+  background:#fff;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:none;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  color:#08202c;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale}
+.vilda-auth-root[data-busy="1"] .vilda-auth-card{
+  pointer-events:none;
+  opacity:.6}
+.vilda-auth-overlay{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  min-height:100vh;
+  padding:56px 24px 48px;
+  box-sizing:border-box;
+  background:radial-gradient(circle at top right,rgba(0,131,141,.05),transparent 70%),radial-gradient(circle at bottom left,rgba(0,131,141,.04),transparent 60%),#fff}
+.vilda-auth-card{
+  width:100%;
+  max-width:540px;
+  background:transparent;
+  box-shadow:none;
+  padding:0;
+  display:flex;
+  flex-direction:column}
+@media(min-width:760px){
+  .vilda-auth-card:has(.vilda-auth-patient-card){
+  max-width:675px}
+}
+@media(min-width:1200px){
+  .vilda-auth-card:has(.vilda-auth-patient-card){
+  max-width:880px}
+}
+.vilda-auth-brand{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  margin-bottom:32px}
+.vilda-auth-logo{
+  max-width:180px;
+  width:100%;
+  height:auto;
+  border-radius:14px;
+  margin-bottom:14px;
+  display:block}
+.vilda-auth-brand-name{
+  font-size:22px;
+  font-weight:600;
+  color:#00838d;
+  letter-spacing:-.01em;
+  margin:0}
+.vilda-auth-brand-tag{
+  font-size:11px;
+  color:#6a8089;
+  margin:4px 0 0;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  font-weight:500}
+.vilda-auth-screen{
+  display:flex;
+  flex-direction:column;
+  gap:18px}
+.vilda-auth-step{
+  text-align:center;
+  font-size:11px;
+  letter-spacing:.18em;
+  color:#00838d;
+  text-transform:uppercase;
+  font-weight:600;
+  margin-bottom:-8px}
+.vilda-auth-title{
+  margin:0;
+  font-size:28px;
+  font-weight:600;
+  color:#08202c;
+  letter-spacing:-.015em;
+  line-height:1.2;
+  text-align:center}
+.vilda-auth-subtitle{
+  margin:0 auto;
+  max-width:480px;
+  font-size:15px;
+  line-height:1.55;
+  color:#4a6168;
+  text-align:center}
+.vilda-auth-info{
+  margin:12px 0 0;
+  padding:18px 22px;
+  background:#f5fafb;
+  border:1px solid #e0eef0;
+  border-radius:14px;
+  font-size:13px;
+  line-height:1.6;
+  color:#3b5560}
+/* odnośniki pod formularzem (277-294) */
+.vilda-auth-link{
+  color:#00838d;
+  font-size:14px;
+  text-decoration:none;
+  font-weight:500;
+  cursor:pointer}
+.vilda-auth-link:hover{
+  text-decoration:underline}
+.vilda-auth-link-muted{
+  color:#6a8089;
+  font-size:13px;
+  font-weight:400}
+.vilda-auth-link-muted:hover{
+  color:#b00020}
+.vilda-auth-links{
+  display:flex;
+  justify-content:center;
+  margin-top:8px}
+/* lista kont (377-451) */
+.vilda-auth-user-card[hidden],.vilda-auth-search-empty[hidden]{
+  display:none!important}
+.vilda-auth-user-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:4px}
+.vilda-auth-user-card{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  width:100%;
+  padding:14px 16px;
+  background:#fff;
+  border:1.5px solid #e0eef0;
+  border-radius:14px;
+  font-family:inherit;
+  cursor:pointer;
+  text-align:left;
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .05s ease}
+.vilda-auth-user-card:hover{
+  border-color:#00838d;
+  background:#f5fafb;
+  box-shadow:0 4px 14px #00838d1f}
+.vilda-auth-user-card:active{
+  transform:translateY(1px)}
+.vilda-auth-user-card:focus-visible{
+  outline:3px solid rgba(0,131,141,.3);
+  outline-offset:2px}
+.vilda-auth-user-avatar{
+  flex:0 0 44px;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#00838d,#00a4b1);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  font-weight:600;
+  text-transform:uppercase}
+.vilda-auth-user-info{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0}
+.vilda-auth-user-name{
+  font-size:15px;
+  font-weight:600;
+  color:#08202c;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap}
+.vilda-auth-user-meta{
+  font-size:12px;
+  color:#6a8089}
+.vilda-auth-user-arrow{
+  color:#6a8089;
+  font-size:22px;
+  font-weight:300;
+  line-height:1}
+/* klucz odzyskiwania (578-590) */
+.vilda-auth-recovery-key{
+  font-family:SF Mono,Menlo,Consolas,Liberation Mono,monospace;
+  background:#f5fafb;
+  border:2px dashed #b0d4d8;
+  border-radius:14px;
+  padding:22px;
+  text-align:center;
+  font-size:19px;
+  letter-spacing:.1em;
+  color:#00838d;
+  font-weight:600;
+  user-select:all;
+  word-break:break-all}
+/* notatka poboczna w bloku .vilda-auth-info (629-633) */
+.vilda-auth-side-note{
+  font-size:12.5px;
+  line-height:1.5;
+  color:#6a8089;
+  margin:0}
+/* separator „lub” (1252-1263) */
+.vilda-auth-divider{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:14px 0 10px;
+  color:#9aafb5;
+  font-size:.82rem}
+.vilda-auth-divider:before,.vilda-auth-divider:after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:#00838d26}
+/* przyciski w drzewie konta — neutralizacja globalnych stylów przycisków (1341-1345) */
+.vilda-auth-root button{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  width:auto!important;
+  margin-top:0!important}
+/* nadpisanie kart kont w obrębie korzenia — bije globalne style przycisków i szkło (1384-1394) */
+.vilda-auth-root .vilda-auth-user-card{
+  background:#fff!important;
+  border:1.5px solid #e0eef0!important;
+  color:#08202c!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  box-shadow:none!important}
+.vilda-auth-root .vilda-auth-user-card:hover{
+  border-color:#00838d!important;
+  background:#f5fafb!important;
+  box-shadow:0 4px 14px #00838d1f!important}
+/* odznaka passkey (1434-1442) */
+.vilda-auth-user-passkey-badge{
+  display:inline-flex;
+  align-items:center;
+  margin-top:2px;
+  font-size:.78rem;
+  font-weight:500;
+  color:#00838d;
+  line-height:1.3;
+  letter-spacing:.01em}
+/* responsywność ≤520px (1208-1226; pominięto reguły .vilda-auth-actions i .vilda-patient-delete-btn spoza komponentu) */
+@media(max-width:520px){
+  .vilda-auth-overlay{
+  padding:32px 18px 28px}
+.vilda-auth-logo{
+  max-width:140px}
+.vilda-auth-brand-name{
+  font-size:19px}
+.vilda-auth-brand-tag{
+  font-size:10px;
+  letter-spacing:.16em}
+.vilda-auth-title{
+  font-size:22px}
+.vilda-auth-subtitle{
+  font-size:14px}
+.vilda-auth-recovery-key{
+  font-size:15px;
+  padding:18px;
+  letter-spacing:.06em}
+}
+/* safe-area, dok mobilny i wariant osadzony .vilda-embedded (1580-1606) */
+.vilda-auth-root{
+  padding-top:env(safe-area-inset-top,0px);
+  padding-left:env(safe-area-inset-left,0px);
+  padding-right:env(safe-area-inset-right,0px)}
+.vilda-auth-overlay{
+  padding-bottom:calc(48px + max(var(--vilda-shell-dock-h, 0px),var(--mobile-dock-visible-lift, 0px)))}
+@media(max-width:520px){
+  .vilda-auth-overlay{
+  padding-bottom:calc(28px + max(var(--vilda-shell-dock-h, 0px),var(--mobile-dock-visible-lift, 0px)))}
+}
+@media(pointer:coarse)and (max-width:1366px){
+  .vilda-auth-overlay{
+  padding-bottom:calc(28px + max(var(--vilda-shell-dock-h, 0px),var(--mobile-dock-visible-lift, 0px),env(safe-area-inset-bottom,0px) + 96px))}
+}
+.vilda-embedded .vilda-auth-brand{
+  display:none}
+.vilda-embedded .vilda-auth-root{
+  padding-top:0}
+.vilda-embedded .vilda-auth-overlay{
+  padding-top:14px}
+@media(pointer:coarse)and (max-width:1366px){
+  .vilda-embedded .vilda-auth-root{
+  bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
+.vilda-embedded .vilda-auth-overlay{
+  padding-bottom:24px;
+  min-height:100%}
+}
+
+/* ===================== AuthCard — wysoki kontrast (vilda_auth_ui.css 1452-1458, 1468-1471; selektory dosłownie „body.liquid-ios26.high-contrast-level-N”; listy selektorów zawierają też klasy .vilda-auth-sheet, .vilda-patient-* spoza komponentu — skopiowane w całości) ===================== */
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-root,body.liquid-ios26.high-contrast-level-1 .vilda-auth-overlay,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-dropdown,body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-key,body.liquid-ios26.high-contrast-level-1 .vilda-auth-meter,body.liquid-ios26.high-contrast-level-1 .vilda-auth-checkbox-row,body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-1 .vilda-patient-card-header,body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-wrap,body.liquid-ios26.high-contrast-level-1 .vilda-patient-sparkline-wrap,body.liquid-ios26.high-contrast-level-1 .vilda-patient-empty-msg,body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat,body.liquid-ios26.high-contrast-level-1 .vilda-patient-tabs,body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-edit-pill,body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-new-measure-pill,body.liquid-ios26.high-contrast-level-1 .vilda-patient-delete-btn,body.liquid-ios26.high-contrast-level-2 .vilda-auth-root,body.liquid-ios26.high-contrast-level-2 .vilda-auth-overlay,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-dropdown,body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-key,body.liquid-ios26.high-contrast-level-2 .vilda-auth-meter,body.liquid-ios26.high-contrast-level-2 .vilda-auth-checkbox-row,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-patient-card-header,body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-wrap,body.liquid-ios26.high-contrast-level-2 .vilda-patient-sparkline-wrap,body.liquid-ios26.high-contrast-level-2 .vilda-patient-empty-msg,body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat,body.liquid-ios26.high-contrast-level-2 .vilda-patient-tabs,body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-edit-pill,body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-new-measure-pill,body.liquid-ios26.high-contrast-level-2 .vilda-patient-delete-btn,body.liquid-ios26.high-contrast-level-3 .vilda-auth-root,body.liquid-ios26.high-contrast-level-3 .vilda-auth-overlay,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-dropdown,body.liquid-ios26.high-contrast-level-3 .vilda-auth-info,body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-key,body.liquid-ios26.high-contrast-level-3 .vilda-auth-meter,body.liquid-ios26.high-contrast-level-3 .vilda-auth-checkbox-row,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-patient-card-header,body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-wrap,body.liquid-ios26.high-contrast-level-3 .vilda-patient-sparkline-wrap,body.liquid-ios26.high-contrast-level-3 .vilda-patient-empty-msg,body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat,body.liquid-ios26.high-contrast-level-3 .vilda-patient-tabs,body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-edit-pill,body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-new-measure-pill,body.liquid-ios26.high-contrast-level-3 .vilda-patient-delete-btn{
+  background:var(--hc-surface)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important;
+  box-shadow:var(--hc-shadow)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-key,body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-1 .vilda-patient-card-header,body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-wrap,body.liquid-ios26.high-contrast-level-1 .vilda-patient-sparkline-wrap,body.liquid-ios26.high-contrast-level-1 .vilda-patient-empty-msg,body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat,body.liquid-ios26.high-contrast-level-1 .vilda-patient-tabs,body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-edit-pill,body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-new-measure-pill,body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-key,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-patient-card-header,body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-wrap,body.liquid-ios26.high-contrast-level-2 .vilda-patient-sparkline-wrap,body.liquid-ios26.high-contrast-level-2 .vilda-patient-empty-msg,body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat,body.liquid-ios26.high-contrast-level-2 .vilda-patient-tabs,body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-edit-pill,body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-new-measure-pill,body.liquid-ios26.high-contrast-level-3 .vilda-auth-info,body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-key,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-patient-card-header,body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-wrap,body.liquid-ios26.high-contrast-level-3 .vilda-patient-sparkline-wrap,body.liquid-ios26.high-contrast-level-3 .vilda-patient-empty-msg,body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat,body.liquid-ios26.high-contrast-level-3 .vilda-patient-tabs,body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-edit-pill,body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-new-measure-pill{
+  border:var(--hc-card-border-width) solid var(--hc-border)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-title,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet-title,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet-body,body.liquid-ios26.high-contrast-level-1 .vilda-auth-root,body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-name,body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card-name,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-option-label,body.liquid-ios26.high-contrast-level-1 .vilda-logout-overlay,body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-name,body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat-label,body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat-value,body.liquid-ios26.high-contrast-level-1 .vilda-patient-tab,body.liquid-ios26.high-contrast-level-2 .vilda-auth-title,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet-title,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet-body,body.liquid-ios26.high-contrast-level-2 .vilda-auth-root,body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-name,body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card-name,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-option-label,body.liquid-ios26.high-contrast-level-2 .vilda-logout-overlay,body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-name,body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat-label,body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat-value,body.liquid-ios26.high-contrast-level-2 .vilda-patient-tab,body.liquid-ios26.high-contrast-level-3 .vilda-auth-title,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet-title,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet-body,body.liquid-ios26.high-contrast-level-3 .vilda-auth-root,body.liquid-ios26.high-contrast-level-3 .vilda-auth-info,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-card,body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-name,body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card-name,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-option-label,body.liquid-ios26.high-contrast-level-3 .vilda-logout-overlay,body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-name,body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat-label,body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat-value,body.liquid-ios26.high-contrast-level-3 .vilda-patient-tab{
+  color:var(--hc-text)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-brand-tag,body.liquid-ios26.high-contrast-level-1 .vilda-auth-divider,body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card-filename,body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card-meta,body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-toolbar,body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-toolbar-actions,body.liquid-ios26.high-contrast-level-1 .vilda-auth-link-muted,body.liquid-ios26.high-contrast-level-1 .vilda-auth-meter-label,body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-counter,body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-1 .vilda-auth-side-note,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-btn,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-option-sub,body.liquid-ios26.high-contrast-level-1 .vilda-auth-subtitle,body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-arrow,body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-meta,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-subtle,body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-disclaimer,body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-legend,body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-meta,body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-meta--small,body.liquid-ios26.high-contrast-level-1 .vilda-patient-section-h,body.liquid-ios26.high-contrast-level-1 .vilda-patient-sparkline-label,body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat-sub,body.liquid-ios26.high-contrast-level-2 .vilda-auth-brand-tag,body.liquid-ios26.high-contrast-level-2 .vilda-auth-divider,body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card-filename,body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card-meta,body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-toolbar,body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-toolbar-actions,body.liquid-ios26.high-contrast-level-2 .vilda-auth-link-muted,body.liquid-ios26.high-contrast-level-2 .vilda-auth-meter-label,body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-counter,body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-2 .vilda-auth-side-note,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-btn,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-option-sub,body.liquid-ios26.high-contrast-level-2 .vilda-auth-subtitle,body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-arrow,body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-meta,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-subtle,body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-disclaimer,body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-legend,body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-meta,body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-meta--small,body.liquid-ios26.high-contrast-level-2 .vilda-patient-section-h,body.liquid-ios26.high-contrast-level-2 .vilda-patient-sparkline-label,body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat-sub,body.liquid-ios26.high-contrast-level-3 .vilda-auth-brand-tag,body.liquid-ios26.high-contrast-level-3 .vilda-auth-divider,body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card-filename,body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card-meta,body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-toolbar,body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-toolbar-actions,body.liquid-ios26.high-contrast-level-3 .vilda-auth-link-muted,body.liquid-ios26.high-contrast-level-3 .vilda-auth-meter-label,body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-counter,body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-3 .vilda-auth-side-note,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-btn,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-option-sub,body.liquid-ios26.high-contrast-level-3 .vilda-auth-subtitle,body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-arrow,body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-meta,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-subtle,body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-disclaimer,body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-legend,body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-meta,body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-meta--small,body.liquid-ios26.high-contrast-level-3 .vilda-patient-section-h,body.liquid-ios26.high-contrast-level-3 .vilda-patient-sparkline-label,body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat-sub{
+  color:var(--hc-muted)!important}
+
+/* ===================== SiteFooter — reguły bazowe (style.css 146-246) ===================== */
+.site-footer{
+  background:#f4f8f8;
+  border-top:1px solid #d0e8e8;
+  position:relative;
+  color:#4a7a7a}
+.site-footer__inner{
+  max-width:960px;
+  margin:0 auto;
+  padding:1.5rem 1rem 1.1rem;
+  display:grid;
+  grid-template-columns:1.5fr 1fr 1fr 1fr;
+  gap:1.5rem;
+  box-sizing:border-box}
+.site-footer__brand-link{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  text-decoration:none;
+  margin-bottom:.45rem}
+.site-footer__brand-icon{
+  width:22px;
+  height:22px;
+  border-radius:6px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0}
+.site-footer__brand-icon img{
+  width:22px;
+  height:22px;
+  display:block}
+.site-footer__brand-name{
+  font-size:.8rem;
+  font-weight:600;
+  color:#005a62;
+  letter-spacing:.01em}
+.site-footer__brand-meta{
+  font-size:.72rem;
+  color:#7a9999;
+  line-height:1.55}
+.site-footer__col-title{
+  font-size:.65rem;
+  font-weight:600;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#6fa8a8;
+  margin-bottom:.5rem}
+.site-footer__col-title--hidden{
+  visibility:hidden}
+.site-footer__link{
+  display:block;
+  font-size:.78rem;
+  color:#4a7a7a;
+  text-decoration:none;
+  padding:.18rem 0;
+  transition:color .15s}
+.site-footer__link:hover{
+  color:#00838d}
+.site-footer__disclaimer-wrap{
+  background:#00838d0e;
+  border-top:.5px solid rgba(0,131,141,.14);
+  border-bottom:.5px solid rgba(0,131,141,.14)}
+.site-footer__disclaimer{
+  max-width:960px;
+  margin:0 auto;
+  padding:.6rem 1rem;
+  font-size:.73rem;
+  color:#3a6d6d;
+  line-height:1.55;
+  box-sizing:border-box}
+.site-footer__disclaimer:before{
+  content:"\2695\a0"}
+.site-footer__bottom{
+  max-width:960px;
+  margin:0 auto;
+  padding:.6rem 1rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:.72rem;
+  color:#a0b8b8;
+  box-sizing:border-box}
+.site-footer__vildaclinic{
+  color:#7ababd;
+  text-decoration:none;
+  font-weight:500}
+.site-footer__vildaclinic:hover{
+  color:#00838d}
+@media(max-width:700px){
+  .site-footer__inner{
+  grid-template-columns:1fr 1fr 1fr;
+  gap:1rem .75rem}
+.site-footer__brand{
+  grid-column:1 / -1}
+.site-footer__bottom{
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:.1rem .5rem;
+  padding:.35rem 1rem}
+}
