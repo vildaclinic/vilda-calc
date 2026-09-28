@@ -1,0 +1,15 @@
+<!-- @dsCard group="Komunikaty" height=272 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Toast</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.ds-stack{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:720px;margin:0 auto}
+.ds-stack .vilda-dymek--prawo{align-self:flex-end}
+/* dymek jest w aplikacji position:fixed nad dockiem — w podglądzie tylko przepływ dokumentu */
+body .vilda-dymek{position:static!important;transform:none!important}
+</style></head><body class="liquid-ios26">
+<div class="ds-stack">
+  <div class="vilda-dymek vilda-dymek--ok" role="status" aria-live="polite">Dane zostały skopiowane do schowka.</div>
+  <div class="vilda-dymek vilda-dymek--info" role="status" aria-live="polite">Brak historycznych punktów pomiarowych do raportu.</div>
+  <div class="vilda-dymek vilda-dymek--blad" role="status" aria-live="polite">Nie udało się uruchomić generatora PDF. Sprawdź połączenie z internetem i spróbuj ponownie.</div>
+  <div class="vilda-dymek vilda-dymek--blad vilda-dymek--prawo" role="status" aria-live="polite">Nie udało się skopiować danych.</div>
+</div>
+</body></html>

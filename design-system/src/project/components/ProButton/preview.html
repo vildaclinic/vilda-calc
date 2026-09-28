@@ -1,0 +1,23 @@
+<!-- @dsCard group="Akcje" height=180 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>ProButton</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-width:928px;align-items:start}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:20px;margin-top:20px}
+</style></head><body class="liquid-ios26">
+<div class="grid">
+  <button type="button" id="toggleAdvancedGrowth" class="advanced-growth-btn pro-button">
+    <span>Zaawansowane obliczenia wzrostowe</span><sup class="pro-superscript">PRO</sup>
+  </button>
+  <button type="button" class="advanced-growth-btn pro-button" disabled>
+    <span>Rekomendacje żywieniowe</span><sup class="pro-superscript">PRO</sup>
+  </button>
+  <button type="button" id="toggleGrowthCalculations" class="advanced-growth-btn growth-calculations-btn">
+    <span>Obliczenia wzrostowe</span>
+  </button>
+</div>
+<div class="row">
+  <div id="resultsModeToggleContainer"><span class="label-right pro-label">Wyniki profesjonalne<sup class="pro-tag">PRO</sup></span></div>
+  <span>Obwód głowy<span class="circ-pro-pill">PRO</span></span>
+  <a href="docpro.html" class="pro-link">DocPro</a>
+</div>
+</body></html>

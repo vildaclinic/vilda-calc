@@ -1,0 +1,64 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Vilda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--bg); color:var(--text-strong); font-family:var(--font-sans); overflow:hidden; display:block; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  /* kompozycja: pudełko 480 px szerokości po prawej stronie układu 960, z dala od nazwy */
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .brand  { fill:var(--primary); }
+  .accent { fill:var(--secondary); }
+  .ink    { fill:var(--text-strong); }
+  .tint   { fill:var(--card); stroke:var(--line); stroke-width:var(--border-hairline); }
+  .signal { fill:var(--notice-orange); }
+  .slab   { rx:var(--lg-radius); }
+  .blk    { rx:var(--chrome-radius-card); }
+  .tile   { rx:var(--radius); }
+  .badge  { rx:var(--radius-4); }
+  .curve  { fill:none; stroke:var(--bg); stroke-width:var(--summary-border-thickness); stroke-linecap:round; }
+  .curve-teal { fill:none; stroke:var(--secondary); stroke-width:var(--border-emphasis); stroke-linecap:round; }
+  /* nazwa i jedno zdanie, na gruncie, przypięte do dolnego lewego rogu */
+  .words { position:absolute; left:var(--space-24px); bottom:var(--space-24px); max-width:440px; }
+  .name { margin:0; font-size:120px; line-height:.9; font-weight:700; letter-spacing:-.015em; color:var(--text-strong); }
+  .tag { margin:var(--space-12px) 0 0 var(--space-4px); font-size:14px; line-height:20px; color:var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="480 0 480 288" width="480" height="288">
+<!--
+  bloki        primary 168×264 (slab, wychodzi górą; lg-radius 18) · secondary 120×144 (chrome-radius-card 14) · text-strong 120×56 (radius 12) · card 144×192 z obrysem line (radius 12, wychodzi prawą krawędzią) · notice-orange 48×24 (radius-4; sygnał, więc mały) — ok. 33 % z 960×288
+  układ        jeden wysoki slab z satelitami: dna na jednej linii 240 px (10 × space-24px), rynny 16 px (space-16px), sygnał nad kartą
+  wzór         łuki: znak Vildy to krzywe wzrastania na siatce centylowej, więc trzy ćwierćkoła wycięte z gruntu w slabie (promienie 72/120/168 = 3/5/7 × space-24px) i trzy cienkie łuki secondary na karcie (48/96/144 = 2/4/6 × space-24px) — sześć łuków, nie siatka
+  skale        boki i promienie łuków w wielokrotnościach space-24px; rynny space-16px; narożniki lg-radius, chrome-radius-card, radius, radius-4; grubości: summary-border-thickness (3px) w slabie, border-emphasis (2px) na karcie, border-hairline (1px) obrys karty
+-->
+<rect class="brand slab"  x="520" y="-24" width="168" height="264"/>
+<rect class="ink blk"     x="704" y="24"  width="120" height="56"/>
+<rect class="accent blk"  x="704" y="96"  width="120" height="144"/>
+<rect class="signal badge" x="840" y="8"  width="48"  height="24"/>
+<rect class="tint tile"   x="840" y="48"  width="144" height="192"/>
+<!-- łuki wzrastania w slabie: środek w dolnym lewym rogu (520,240), ćwierćkoła w górę-prawo -->
+<path class="curve" d="M 592 240 A 72 72 0 0 0 520 168"/>
+<path class="curve" d="M 640 240 A 120 120 0 0 0 520 120"/>
+<path class="curve" d="M 688 240 A 168 168 0 0 0 520 72"/>
+<!-- cienkie łuki na karcie: środek (840,240) -->
+<path class="curve-teal" d="M 888 240 A 48 48 0 0 0 840 192"/>
+<path class="curve-teal" d="M 936 240 A 96 96 0 0 0 840 144"/>
+<path class="curve-teal" d="M 984 240 A 144 144 0 0 0 840 96"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Vilda</h1>
+<p class="tag">Narzędzie edukacyjne Vilda Clinic dla rodzin i lekarzy.</p>
+</div>
+</div>
+</body>
+</html>

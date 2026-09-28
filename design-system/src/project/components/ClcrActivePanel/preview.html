@@ -1,0 +1,33 @@
+<!-- @dsCard group="Powierzchnie" height=615 -->
+<!doctype html><html lang="pl" data-clcr-workflow-ui="1"><head><meta charset="utf-8"><title>ClcrActivePanel</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start;max-width:928px}
+.pv .clcr-workflow{margin:0}
+.pv .clcr-stack{display:grid;gap:12px;margin-top:12px}
+</style></head><body class="liquid-ios26">
+<div class="pv">
+  <section class="clcr-workflow">
+    <span class="clcr-workflow__eyebrow">Klirens kreatyniny</span>
+    <h1 class="clcr-workflow__title">Kalkulator eGFR</h1>
+    <p class="clcr-workflow__lead">Wybierz formułę, uzupełnij dane i odczytaj wynik.</p>
+    <div class="clcr-active-panel">
+      <span class="clcr-active-panel__eyebrow">Aktywne obliczenie</span>
+      <h2 class="clcr-active-panel__title">CKiD U25 eGFRcr (2021)</h2>
+      <p class="clcr-active-panel__note">Współczesny wzór pediatryczny opracowany głównie w łagodnej i umiarkowanej CKD. Przy wysokim/prawidłowym GFR może zaniżać wynik; u osób w wieku 18–25 lat zawsze porównaj także z 2021 CKD‑EPI.</p>
+    </div>
+    <div class="clcr-stack">
+      <div class="clcr-active-panel">
+        <span class="clcr-active-panel__eyebrow">Tryb zgodności</span>
+        <h2 class="clcr-active-panel__title">Najpierw wybierz formułę</h2>
+      </div>
+      <div class="clcr-readiness clcr-readiness--incomplete"><p>Brakuje danych: wzrost, kreatynina.</p></div>
+      <div class="clcr-readiness clcr-readiness--ready"><p>Wszystkie wymagane dane są uzupełnione.</p></div>
+    </div>
+  </section>
+  <div class="clcr-result-rail">
+    <div class="clcr-rail-head"><span class="clcr-rail-kick">Wynik gotowy</span><div class="clcr-rail-formula">CKiD U25 eGFRcr (2021)</div><div class="clcr-rnum">92<small>mL/min/1,73 m²</small></div></div>
+    <button type="button" class="clcr-fullreport-button">Zobacz pełny opis wyniku ↓</button>
+    <span class="clcr-step-kicker">Wynik i raport</span>
+  </div>
+</div>
+</body></html>

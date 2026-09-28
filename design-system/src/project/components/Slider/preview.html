@@ -1,0 +1,46 @@
+<!-- @dsCard group="Pola formularza" height=370 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Slider</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv-row{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap}
+.pv-row+.pv-row{margin-top:8px}
+.pv-col{flex:1 1 380px;min-width:0}
+.pv-col--tip{flex:0 1 300px}
+.pv-col--tip .pv-cap{margin-bottom:60px}
+.pv-cap{margin:0 0 4px;font-size:.8rem;color:#666}
+</style></head><body class="liquid-ios26">
+<div id="antibioticTherapyCard">
+<div class="pv-row">
+  <div class="pv-col">
+    <p class="pv-cap">Suwak dawki z podziałką i etykietą wartości</p>
+    <label style="display:block; margin-top:.4rem; text-align:center;">
+      Dawka (<span id="abxDoseDisplay">mg/kg/dobę</span>)
+      <div class="dose-slider-container">
+        <div id="sliderTicks" class="slider-ticks"><div class="slider-tick-label" style="left:0%;transform:translateX(0)">20</div><div class="slider-tick-label" style="left:100%;transform:translateX(-100%)">50</div></div>
+        <input type="range" id="abxDoseSlider" style="width:100%;" min="20" max="50" step="5" value="30" aria-label="Dawka (mg/kg/dobę)">
+        <span id="sliderValueLabel" class="slider-value-label" style="left:33.333%">30 mg/kg/dobę</span>
+      </div>
+    </label>
+  </div>
+  <div class="pv-col">
+    <p class="pv-cap">Stała dawka — suwak wyłączony, etykieta wielowierszowa</p>
+    <label style="display:block; margin-top:.4rem; text-align:center;">
+      Dawka (<span>mg/kg/dobę</span>)
+      <div class="dose-slider-container dose-slider-container--multiline">
+        <div class="slider-ticks"></div>
+        <input type="range" style="width:100%;" min="50" max="50" value="50" disabled aria-label="Dawka (mg/kg/dobę)">
+        <span class="slider-value-label slider-value-label--multiline">W tym wskazaniu rekomendowana jest stała dawka 50 mg/kg/dobę wybranego leku</span>
+      </div>
+    </label>
+  </div>
+</div>
+</div>
+<div class="pv-row">
+  <div class="pv-col pv-col--tip">
+    <p class="pv-cap">Podpowiedź zakresu pola (.vild-range-tip)</p>
+    <label class="vild-range-host">Waga (kg)
+      <input type="number" id="weight" class="vild-range-invalid" value="600" aria-invalid="true">
+      <div class="vild-range-tip is-on" role="alert"><span class="vild-range-tip__ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1.15" fill="currentColor"/></svg></span><span class="vild-range-tip__txt">Waga poza zakresem (1–500 kg)</span></div>
+    </label>
+  </div>
+</div>
+</body></html>

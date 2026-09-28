@@ -1,0 +1,931 @@
+/* G07 Komunikaty — źródło: style.css (Notice, Banner, CookieBanner, wysoki kontrast Callout 5265-5271 i 5307-5313), ios26-v2.css (nadpisania szkła przycisków), index.html <style> #2 (index.css — .vilda-pro-gate-banner), ios26-ui.js (style wstrzykiwany #sw-update-banner + style.cssText), vilda_obesity_banner.css, vilda_auth_ui.css, o-aplikacji.css, kontakt.css, instrukcja.css, kalkulator-klirens.css, cukrzyca.css, ustawienia.css + ustawienia.html <style>, notatki.css, terminarz.css, subskrypcja.css */
+
+/* ==========================================================================
+   Zależność: globalne reguły przycisków (style.css 569-590, 630-636, 659-664; ios26-v2.css 85-93).
+   Przyciski banerów (#updateBanner button, .cookie-buttons button, #sw-update-banner .btn,
+   .notes-pii__close, .notes-alert__close, .vilda-pro-gate-banner__btn) dziedziczą z nich
+   wygląd; na szkle (.liquid-ios26) rządzi reguła z !important. Duplikat grupy Przyciski.
+   ========================================================================== */
+button,input[type=button],input[type=submit]{
+  cursor:pointer;
+  font:inherit;
+  border:none;
+  border-radius:var(--radius);
+  padding:.55rem 1.1rem;
+  background:var(--primary);
+  color:#fff;
+  transition:background .2s ease,box-shadow .2s ease}
+button:hover,input[type=button]:hover,input[type=submit]:hover{
+  background:var(--secondary);
+  box-shadow:var(--shadow)}
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed}
+@media(max-width:600px){
+button,input[type=button],input[type=submit]{
+  width:100%;
+  margin-top:.5rem}
+}
+:root{
+  --anim-fast:.15s ease}
+button,input[type=submit]{
+  transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
+button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
+  transform:translateY(-1px) scale(1.02);
+  box-shadow:var(--shadow-l)}
+.liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
+  background:#fff3!important;
+  border:1px solid var(--lg-border)!important;
+  color:#111!important;
+  border-radius:14px!important;
+  backdrop-filter:blur(10px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
+  box-shadow:0 4px 12px #0000001a!important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+.liquid-ios26 button._pressed{
+  transform:scale(.96);
+  box-shadow:0 2px 8px #0000001f!important}
+
+/* ==========================================================================
+   Notice — style.css
+   ========================================================================== */
+.wfl-reminder{
+  font-size:1.3rem;
+  color:#c75d00;
+  font-weight:600;
+  line-height:1.4;
+  margin-top:.5rem}
+.diet-info-note{
+  color:var(--primary);
+  background:var(--card);
+  padding:.5rem .8rem;
+  border-left:4px solid var(--secondary);
+  border-radius:4px;
+  font-size:.9rem;
+  text-align:left;
+  margin-bottom:.6rem}
+#intakeResults .intake-alert{
+  margin-top:.5rem;
+  font-size:1.2rem;
+  font-weight:600}
+#intakeResults .intake-alert.warn{
+  color:#c75d00}
+#intakeResults .intake-alert.danger{
+  color:var(--danger)}
+#intakeResults .intake-reasons{
+  margin:.25rem 0 .4rem 1.2rem;
+  padding:0}
+#intakeResults .intake-reasons li{
+  margin:.1rem 0}
+.diet-warning{
+  color:var(--danger);
+  font-size:1.5rem;
+  font-weight:600;
+  margin-top:.4rem;
+  line-height:1.2}
+.centile-warning{
+  color:var(--danger);
+  font-weight:600;
+  margin-top:.4rem;
+  line-height:1.3}
+.centile-warning a{
+  color:inherit;
+  text-decoration:underline;
+  font-weight:inherit}
+.centile-monitor-warning{
+  color:var(--notice-orange);
+  font-weight:600;
+  margin-top:.4rem;
+  line-height:1.3}
+.centile-monitor-warning a{
+  color:inherit;
+  text-decoration:underline;
+  font-weight:inherit}
+#errorBox{
+  color:var(--primary);
+  font-weight:600;
+  font-size:1.4rem;
+  text-align:center;
+  margin:1rem 0;
+  display:none}
+#compareInstruction{
+  color:var(--primary);
+  font-weight:600;
+  font-size:1.2rem;
+  text-align:center;
+  margin-top:.5rem}
+#compareInstruction a{
+  color:var(--primary);
+  text-decoration:underline;
+  font-size:1rem}
+#infoMessages{
+  margin-top:0}
+.info-card #errorBox{
+  margin-top:0;
+  margin-bottom:.5rem}
+.info-card #compareInstruction{
+  margin-top:0}
+.diet-info-note{
+  color:#000;
+  background:none;
+  border:none;
+  border-left:none;
+  border-radius:0;
+  font-size:1rem;
+  text-align:left;
+  display:block;
+  box-sizing:border-box;
+  margin-right:0;
+  margin-inline-end:0;
+  padding:.5rem .8rem;
+  margin-bottom:.6rem}
+.professional-message{
+  text-align:center;
+  font-size:.98rem;
+  line-height:1;
+  margin-top:.5rem;
+  font-family:Inter,sans-serif;
+  font-weight:600;
+  color:#ce0000}
+.plan-warning-card{
+  border:2px solid var(--danger);
+  background:#ffeaea;
+  border-radius:var(--radius);
+  color:var(--danger);
+  padding:.75rem 1rem;
+  margin-bottom:1rem;
+  font-size:.95rem}
+.gh-test-warning{
+  color:var(--danger);
+  font-size:1.25rem;
+  font-weight:600;
+  display:block;
+  margin-top:1rem;
+  line-height:1.3}
+.plan-warning-card{
+  text-align:center;
+  font-weight:600}
+#whrSuggest{
+  color:#c75d00}
+#whrSuggest.plan-warning-card{
+  border-color:var(--notice-orange);
+  background:#fff!important;
+  color:var(--notice-orange);
+  text-align:center;
+  font-weight:600}
+#whrSuggest.plan-warning-card strong{
+  color:inherit}
+.plan-warning-card.notice-orange{
+  border-color:#c75d00;
+  background:#fff!important;
+  color:#c75d00;
+  text-align:center;
+  font-weight:600}
+/* lokalne zmienne (nie są tokenami) — style.css 2577-2578 */
+:root{
+  --whr-suggest-font-size: 1.5rem;
+  --whr-suggest-font-style: "Inter", sans-serif}
+#whrSuggest{
+  font-size:var(--whr-suggest-font-size);
+  font-style:var(--whr-suggest-font-style)}
+.adv-growth-profile-title,.adv-growth-profile-copy,.adv-growth-profile-warning{
+  margin:0}
+.adv-growth-profile-warning{
+  padding:.85rem .95rem;
+  border-radius:14px;
+  border:1px solid rgba(199,93,0,.22);
+  background:linear-gradient(180deg,#fff9f0fa,#fff5e6fa);
+  color:#6d4a11}
+@media(max-width:700px){
+  #infoMessages{
+  margin-bottom:1rem}
+}
+/* Notice — szkło */
+.liquid-ios26 .diet-info-note{
+  color:#000!important;
+  background:none!important;
+  border:none!important;
+  border-left:none!important;
+  border-radius:0!important;
+  font-size:1rem!important;
+  text-align:left!important;
+  display:block!important;
+  box-sizing:border-box!important;
+  margin-right:0!important;
+  margin-inline-end:0!important}
+/* Notice — wysoki kontrast (style.css 5163; lista selektorów przycięta do .info-card) */
+body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.liquid-ios26 .info-card,body.high-contrast-level-3.liquid-ios26 .info-card{
+  background:var(--hc-result-bg)!important;
+  color:var(--hc-text)!important;
+  box-shadow:0 6px 18px #00000017!important}
+
+/* ==========================================================================
+   Callout — o-aplikacji.css, kontakt.css, instrukcja.css, kalkulator-klirens.css,
+   cukrzyca.css, ustawienia.css, ustawienia.html <style>, notatki.css (= terminarz.css), subskrypcja.css
+   ========================================================================== */
+.about-page .hero-note {
+  margin-top: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: 20px;
+  background: rgba(8, 145, 178, 0.09);
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  width: 100%;
+  box-sizing: border-box;
+  text-align: justify;
+  text-justify: inter-word;
+}
+.about-page .hero-note strong {
+  color: #0f4b48;
+}
+.about-page .about-callout {
+  margin-top: 1rem;
+  padding: 1rem 1.05rem;
+  border-left: 4px solid #0891b2;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.8);
+}
+.contact-page .contact-callout {
+  margin-top: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: 20px;
+  background: var(--contact-callout-bg);
+  border: 1px solid var(--contact-callout-border);
+  color: var(--contact-callout-text);
+  box-shadow: var(--contact-card-shadow);
+  backdrop-filter: var(--contact-control-backdrop);
+  -webkit-backdrop-filter: var(--contact-control-backdrop);
+}
+.guide-placeholder{
+  margin:0;
+  padding:.9rem 1rem;
+  border-radius:12px;
+  border:1px dashed rgba(0,131,141,0.24);
+  background:rgba(0,131,141,0.05);
+  color:#5a7375;
+  line-height:1.55;
+}
+.guide-module-copy{
+  margin:0;
+  padding:.95rem 1rem;
+  border-radius:12px;
+  border:1px solid rgba(0,131,141,0.14);
+  background:linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
+  color:#456467;
+  line-height:1.62;
+}
+.helper-box {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: #555;
+  background: #eef4f4;
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius);
+  padding: 0.6rem;
+}
+.diab-note-box {
+  border: 1px solid #d7e5e5;
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  background: rgba(255,255,255,0.65);
+}
+.diab-note-box--accent {
+  border-color: rgba(0,131,141,0.24);
+  background: rgba(0,131,141,0.07);
+}
+.diab-note-box--warn {
+  border-color: rgba(178,107,0,0.22);
+  background: rgba(255,248,239,0.92);
+}
+.diab-note-box--danger {
+  border-color: rgba(198,40,40,0.22);
+  background: rgba(255,244,244,0.95);
+}
+.diab-note-box--soft {
+  border-color: rgba(0,131,141,0.14);
+  background: rgba(248,252,252,0.98);
+}
+.diab-note-box h3 {
+  margin-top: 0;
+}
+.settings-note-warn{
+  margin-top:.55rem;
+  padding:.6rem .75rem;
+  border:1px solid #b4540033;
+  border-radius:12px;
+  background:#b454000f;
+  color:#6e4600;
+  font-weight:600}
+.pro-sync-note {
+   display: none;
+   }
+html.vilda-pro-active .pro-sync-note {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-top: .85rem;
+  padding: .65rem .85rem;
+  background: #f0f7ff;
+  border: 1px solid rgba(0,100,220,.15);
+  border-radius: .6rem;
+  font-size: .82rem;
+  color: var(--text-2, #555);
+  line-height: 1.4;
+}
+.pro-sync-note__icon {
+   font-size: 1rem;
+   flex-shrink: 0;
+   }
+.pro-sync-note a {
+   color: #0064dc;
+   text-decoration: underline;
+   }
+.pro-sync-note a:hover {
+   color: #0050b0;
+   }
+.notes-pii {
+  display: flex;
+   align-items: flex-start;
+   gap: .7rem;
+  padding: .8rem 1rem;
+   margin-bottom: 1rem;
+  background: #f0f7ff;
+   border: 1px solid rgba(0,100,220,.16);
+   border-radius: 12px;
+  font-size: .85rem;
+   color: var(--text-2, #44535c);
+   line-height: 1.45;
+}
+.notes-pii__icon {
+   font-size: 1.05rem;
+   flex-shrink: 0;
+   }
+.notes-pii__body {
+   flex: 1 1 auto;
+   min-width: 0;
+   }
+.notes-pii__close {
+  flex-shrink: 0;
+   border: 0;
+   background: transparent;
+   cursor: pointer;
+  color: #5a7274;
+   font-size: 1.1rem;
+   line-height: 1;
+   padding: .1rem .35rem;
+}
+.notes-pii__close:hover {
+   color: #0f2b33;
+   }
+.notes-alert {
+  display: none;
+   align-items: flex-start;
+   gap: .7rem;
+  padding: .8rem 1rem;
+   margin-bottom: 1rem;
+  background: #fff5f5;
+   border: 1px solid rgba(192,57,90,.24);
+   border-radius: 12px;
+  font-size: .85rem;
+   color: #8a2338;
+   line-height: 1.45;
+}
+.notes-alert__icon {
+   font-size: 1.05rem;
+   flex-shrink: 0;
+   }
+.notes-alert__body {
+   flex: 1 1 auto;
+   min-width: 0;
+   }
+.notes-alert__close {
+  flex-shrink: 0;
+   border: 0;
+   background: transparent;
+   cursor: pointer;
+  color: #8a2338;
+   font-size: 1.1rem;
+   line-height: 1;
+   padding: .1rem .35rem;
+}
+.notes-alert__close:hover {
+   color: #5e1626;
+   }
+@media (max-width: 600px) {
+  .notes-pii__close {
+    width: auto !important;
+    margin-top: 0 !important;
+  }
+  .notes-pii {
+   align-items: flex-start;
+   }
+  .notes-pii__body {
+   flex: 1 1 auto;
+   min-width: 0;
+   }
+}
+.sub-preview__free-notice {
+  margin-top: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  background: #f5f9f9;
+  border: 1px dashed #c0d0d0;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #8aadad;
+  text-align: center;
+}
+/* Callout — drabinka strony cukrzyca.html (listy selektorów przycięte do .diab-note-box*; body ma klasę page-cukrzyca) */
+body.page-cukrzyca .diab-note-box {
+  background: var(--diab-surface-1) !important;
+  border-color: var(--diab-border-1) !important;
+  box-shadow: var(--diab-shadow-1) !important;
+  color: var(--diab-text-1) !important;
+}
+body.page-cukrzyca.liquid-ios26 .diab-note-box {
+  -webkit-backdrop-filter: var(--diab-card-filter) !important;
+  backdrop-filter: var(--diab-card-filter) !important;
+}
+body.page-cukrzyca .diab-note-box--accent {
+  background: var(--diab-surface-accent) !important;
+  border-color: var(--diab-border-2) !important;
+  color: var(--diab-text-3) !important;
+}
+body.page-cukrzyca .diab-note-box--warn {
+  background: var(--diab-surface-warn) !important;
+  border-color: rgba(178,107,0,0.22) !important;
+  color: #8b5300 !important;
+}
+body.page-cukrzyca .diab-note-box--danger {
+  background: var(--diab-surface-danger) !important;
+  border-color: rgba(198,40,40,0.20) !important;
+  color: var(--danger) !important;
+}
+body.page-cukrzyca .diab-note-box p:last-child {
+  color: var(--diab-text-2) !important;
+}
+/* Callout — wysoki kontrast (style.css 5265-5271: lista selektorów przycięta do .guide-module-copy/.guide-placeholder; style.css 5307-5313: lista przycięta do .hero-note/.about-callout; reguła działa tylko, gdy <body> ma klasę about-page, jak w o-aplikacji.html) */
+body.high-contrast-level-1.liquid-ios26 .guide-module-copy,body.high-contrast-level-2.liquid-ios26 .guide-module-copy,body.high-contrast-level-3.liquid-ios26 .guide-module-copy,body.high-contrast-level-1.liquid-ios26 .guide-placeholder,body.high-contrast-level-2.liquid-ios26 .guide-placeholder,body.high-contrast-level-3.liquid-ios26 .guide-placeholder{
+  background:var(--hc-result-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 6px 18px #00000014!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,body.about-page.high-contrast-level-2.liquid-ios26 .hero-note,body.about-page.high-contrast-level-3.liquid-ios26 .hero-note,body.about-page.high-contrast-level-1.liquid-ios26 .about-callout,body.about-page.high-contrast-level-2.liquid-ios26 .about-callout,body.about-page.high-contrast-level-3.liquid-ios26 .about-callout{
+  background:var(--hc-result-bg)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  box-shadow:0 8px 22px #00000014!important;
+  color:var(--hc-text)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+
+/* ==========================================================================
+   AuthBanner — vilda_auth_ui.css
+   ========================================================================== */
+.vilda-auth-info{
+  margin:12px 0 0;
+  padding:18px 22px;
+  background:#f5fafb;
+  border:1px solid #e0eef0;
+  border-radius:14px;
+  font-size:13px;
+  line-height:1.6;
+  color:#3b5560}
+.vilda-auth-banner{
+  padding:14px 18px;
+  background:#fff8e1;
+  color:#6b4900;
+  border-radius:12px;
+  border:1px solid #f0d590;
+  font-size:14px;
+  line-height:1.45;
+  text-align:center}
+.vilda-auth-warning-banner{
+  margin:12px 0 0;
+  padding:14px 18px;
+  background:#fffbea;
+  color:#5a3e00;
+  border-radius:12px;
+  border:1px solid #f0d060;
+  font-size:13px;
+  line-height:1.55;
+  text-align:left}
+.vilda-auth-warning-banner:before{
+  content:"\26a0  "}
+.vilda-auth-error{
+  background:#fef2f3;
+  color:#b00020;
+  padding:12px 16px;
+  border-radius:10px;
+  font-size:13.5px;
+  line-height:1.45;
+  border:1px solid #f3cfd2}
+.vilda-auth-error:empty{
+  display:none}
+.vilda-auth-search-empty{
+  padding:28px 16px;
+  text-align:center;
+  color:#6c8084;
+  font-size:14px;
+  font-style:italic}
+.vilda-auth-search-empty[hidden]{
+  display:none!important}
+.vilda-auth-error-stable[data-empty="1"]{
+  visibility:hidden;
+  height:0;
+  padding:0;
+  margin:0;
+  border:0;
+  overflow:hidden}
+.vilda-auth-side-note{
+  font-size:12.5px;
+  line-height:1.5;
+  color:#6a8089;
+  margin:0}
+.vilda-auth-password-warning{
+  background:#fff7ed;
+  border:1px solid #fbd5a8;
+  color:#7c3f04;
+  padding:12px 14px;
+  border-radius:12px;
+  font-size:.86rem;
+  line-height:1.5;
+  margin:0 0 18px}
+.vilda-patient-age-note{
+  font-size:.78rem;
+  line-height:1.45;
+  color:#5a7274;
+  background:#f3f8f9;
+  border-left:3px solid #cfe3e5;
+  border-radius:0 8px 8px 0;
+  padding:7px 10px;
+  margin:0 0 10px}
+.vilda-note-wskazana{
+  outline:2px solid #00838d;
+  outline-offset:2px;
+  box-shadow:0 0 0 6px rgba(0,131,141,.12)}
+/* AuthBanner — wysoki kontrast (vilda_auth_ui.css 1452-1471; listy selektorów przycięte do .vilda-auth-info / .vilda-auth-search-empty / .vilda-auth-side-note) */
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,body.liquid-ios26.high-contrast-level-3 .vilda-auth-info{
+  background:var(--hc-surface)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important;
+  box-shadow:var(--hc-shadow)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,body.liquid-ios26.high-contrast-level-3 .vilda-auth-info{
+  border:var(--hc-card-border-width) solid var(--hc-border)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,body.liquid-ios26.high-contrast-level-3 .vilda-auth-info{
+  color:var(--hc-text)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-1 .vilda-auth-side-note,body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-2 .vilda-auth-side-note,body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-3 .vilda-auth-side-note{
+  color:var(--hc-muted)!important}
+
+/* ==========================================================================
+   Banner — style.css (#updateBanner, #sw-update-banner .btn), index.html <style> #2 (.vilda-pro-gate-banner),
+   ios26-ui.js (Pn(): <style id="ww-sw-update-banner-styles">; zn(): i.style.cssText)
+   ========================================================================== */
+#sw-update-banner .btn{
+  padding:.5rem .9rem;
+  border:0;
+  border-radius:.5rem;
+  background:var(--secondary, #06b6d4);
+  color:#fff;
+  cursor:pointer;
+  font-size:.95rem}
+#sw-update-banner .btn:nth-child(2){
+  background:#e5e7eb;
+  color:#111827}
+#updateBanner{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:10000;
+  display:none;
+  background:var(--primary);
+  color:#fff;
+  text-align:center;
+  padding:calc(env(safe-area-inset-top,0px) + .5rem) 1rem .5rem;
+  padding-top:calc(constant(safe-area-inset-top) + .5rem);
+  box-shadow:0 2px 6px #0003}
+#updateBanner button{
+  margin-left:1rem;
+  background:var(--secondary);
+  color:#fff;
+  border:none;
+  padding:.35rem .8rem;
+  border-radius:6px;
+  font-size:.95rem;
+  cursor:pointer}
+#updateBanner button:disabled{
+  opacity:.75;
+  cursor:not-allowed}
+#updateBanner .dismiss{
+  background:transparent;
+  border:1px solid rgba(255,255,255,.85)}
+/* #sw-update-banner — deklaracje, które ios26-ui.js ustawia w i.style.cssText (w aplikacji są stylem inline) */
+#sw-update-banner{
+      position:fixed;
+      top:calc(env(safe-area-inset-top, 0px) + 0.75rem);
+      left:50%;
+      transform:translateX(-50%);
+      width:min(540px, calc(100% - 1.5rem));
+      z-index:2147483000;
+      padding:12px 14px;
+      border-radius:.75rem;
+      box-shadow:0 10px 30px rgba(0,0,0,.15);
+      background:#fff;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      font-size:1rem;
+}
+/* #sw-update-banner — <style id="ww-sw-update-banner-styles"> wstrzykiwany przez ios26-ui.js */
+      @keyframes wwHelpPulsePurple {
+        0% {
+          box-shadow: 0 0 0 0 rgba(153, 0, 255, 0.26);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(153, 0, 255, 0.08);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(153, 0, 255, 0);
+        }
+      }
+      #sw-update-banner {
+        box-sizing: border-box;
+        flex-wrap: wrap;
+        row-gap: .65rem;
+      }
+      #sw-update-banner .ww-sw-update-banner__ico {
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #E0EBFF;
+        color: #073F94;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #sw-update-banner .ww-sw-update-banner__message {
+        flex: 1 1 14rem;
+        min-width: 0;
+        line-height: 1.35;
+      }
+      #sw-update-banner .ww-sw-update-banner__title { display: block; font-size: 14px; color: #0f2b33; }
+      #sw-update-banner .ww-sw-update-banner__sub { display: block; font-size: 12.5px; color: #5b6672; margin-top: 1px; }
+      #sw-update-banner .ww-sw-update-banner__notes { margin-top: 6px; font-size: 12.5px; color: #5b6672; }
+      #sw-update-banner .ww-sw-update-banner__notes > summary { cursor: pointer; color: #00838d; font-weight: 600; list-style: none; }
+      #sw-update-banner .ww-sw-update-banner__notes > summary::-webkit-details-marker { display: none; }
+      #sw-update-banner .ww-sw-update-banner__notes ul { margin: 5px 0 0; padding-left: 1.1rem; }
+      #sw-update-banner .ww-sw-update-banner__notes li { margin: 2px 0; }
+      #sw-update-banner .ww-sw-update-banner__actions {
+        display: flex;
+        gap: .5rem;
+        flex: 0 0 auto;
+        align-items: center;
+      }
+      #sw-update-banner #sw-refresh {
+        position: relative;
+        isolation: isolate;
+        overflow: visible;
+      }
+      #sw-update-banner #sw-refresh::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 1.5px solid rgba(153, 0, 255, 0.72);
+        box-shadow: 0 0 0 0 rgba(153, 0, 255, 0);
+        pointer-events: none;
+      }
+      #sw-update-banner #sw-refresh.ww-sw-refresh--pulse::after {
+        animation: wwHelpPulsePurple 1.333333s ease-in-out infinite;
+      }
+      @media (max-width: 560px) {
+        #sw-update-banner {
+          align-items: stretch;
+        }
+        #sw-update-banner .ww-sw-update-banner__actions {
+          width: 100%;
+        }
+        #sw-update-banner .ww-sw-update-banner__actions .btn {
+          flex: 1 1 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #sw-update-banner #sw-refresh.ww-sw-refresh--pulse::after {
+          animation: none;
+        }
+      }
+/* .vilda-pro-gate-banner — index.html <style> #2 (reguły #resultsModeToggleContainer pominięte: element spoza komponentu) */
+.vilda-pro-gate-banner {
+   display: none;
+   }
+html.vilda-pro-inactive.vilda-logged-in .vilda-pro-gate-banner--upgrade {
+   display: flex;
+   }
+html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
+   display: flex;
+   }
+.vilda-pro-gate-banner {
+  width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem .55rem;
+  font-size: .82rem;
+  border-radius: 10px;
+  padding: .4rem .55rem .4rem .8rem;
+  line-height: 1.3;
+}
+.vilda-pro-gate-banner__text {
+  flex: 1 1 150px;
+}
+.vilda-pro-gate-banner__btn {
+  border: none !important;
+  border-radius: 999px !important;
+  padding: .24rem .75rem !important;
+  background: transparent;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  transition: background .15s;
+}
+@media (max-width: 540px) {
+  .vilda-pro-gate-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: .55rem .8rem;
+    gap: .5rem;
+  }
+  .vilda-pro-gate-banner__text {
+    flex: none;
+    width: 100%;
+    text-align: center;
+  }
+  .vilda-pro-gate-banner__btn {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+.vilda-pro-gate-banner--upgrade {
+  background: #f5eeff;
+  border: 1px solid rgba(153,0,255,.28);
+  color: #5c008a;
+}
+.vilda-pro-gate-banner--upgrade .vilda-pro-gate-banner__btn {
+  background: #9900ff !important;
+  color: #fff !important;
+}
+.vilda-pro-gate-banner--upgrade .vilda-pro-gate-banner__btn:hover {
+   background: #7a00cc !important;
+   }
+.vilda-pro-gate-banner--login {
+  background: #e5f9fb;
+  border: 1px solid rgba(0,131,141,.28);
+  color: #005a61;
+}
+.vilda-pro-gate-banner--login .vilda-pro-gate-banner__btn {
+  background: #00838d !important;
+  color: #fff !important;
+}
+.vilda-pro-gate-banner--login .vilda-pro-gate-banner__btn:hover {
+   background: #006b73 !important;
+   }
+
+/* ==========================================================================
+   ObesityBanner — vilda_obesity_banner.css (cały plik)
+   ========================================================================== */
+.vilda-obesity-banner{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:.75rem;
+  padding:8px 12px 8px 10px;
+  background:#fff;
+  border-radius:var(--chrome-radius-card, 14px);
+  border:1px solid rgba(0,131,141,.18);
+  box-shadow:0 2px 8px #00515814;
+  font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  font-size:12.5px;
+  line-height:1.4;
+  color:#1f2937}
+.vilda-obesity-banner__icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:30px;
+  height:30px;
+  flex:0 0 auto;
+  border-radius:50%;
+  background:linear-gradient(135deg,#b45309,#f59e0b);
+  color:#fff}
+.vilda-obesity-banner__icon svg{
+  width:16px;
+  height:16px}
+.vilda-obesity-banner__content{
+  flex:1 1 auto;
+  min-width:0}
+.vilda-obesity-banner__title{
+  font-weight:600;
+  color:#1f2937}
+.vilda-obesity-banner__sub{
+  font-size:11.5px;
+  color:#6b7280;
+  margin-top:1px}
+.vilda-obesity-banner__btn{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:6px 12px;
+  background:linear-gradient(135deg,var(--primary, #00838d),var(--secondary, #00b0a6));
+  color:#fff!important;
+  text-decoration:none!important;
+  border-radius:999px;
+  font-weight:500;
+  font-size:12px;
+  white-space:nowrap;
+  flex:0 0 auto;
+  transition:transform .1s ease,box-shadow .15s ease;
+  box-shadow:0 1px 3px #00838d2e}
+.vilda-obesity-banner__btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 2px 6px #00838d40}
+.vilda-obesity-banner__btn:active{
+  transform:translateY(0)}
+@media(max-width:599px){
+  .vilda-obesity-banner{
+  flex-wrap:wrap;
+  align-items:flex-start;
+  padding:8px 10px}
+.vilda-obesity-banner__content{
+  flex:1 1 0;
+  min-width:0}
+.vilda-obesity-banner__btn{
+  flex:1 0 100%;
+  width:100%;
+  justify-content:center;
+  margin-top:8px}
+}
+@media(prefers-color-scheme:dark){
+  .vilda-obesity-banner{
+  background:#fff;
+  border-color:#00838d40;
+  color:#1f2937;
+  box-shadow:0 2px 8px #00000059}
+.vilda-obesity-banner__title{
+  color:#1f2937}
+.vilda-obesity-banner__sub{
+  color:#6b7280}
+}
+@media(prefers-reduced-motion:reduce){
+  .vilda-obesity-banner__btn{
+  transition:none}
+.vilda-obesity-banner__btn:hover{
+  transform:none}
+}
+
+/* ==========================================================================
+   CookieBanner (#consent-banner, znacznik z vilda_chrome.js) — style.css 3130-3160, vilda_auth_ui.css 1621
+   ========================================================================== */
+.cookie-banner{
+  position:fixed;
+  bottom:0;
+  left:0;
+  width:100%;
+  background-color:#fff;
+  box-shadow:0 -2px 8px #0000001a;
+  padding:1rem;
+  font-size:.9rem;
+  z-index:10000;
+  display:none}
+.cookie-banner ul{
+  margin:0 0 1rem;
+  padding-left:1.2rem;
+  list-style-type:disc}
+.cookie-buttons{
+  display:flex;
+  gap:1rem;
+  justify-content:flex-start}
+.cookie-buttons button{
+  border:none;
+  padding:.5rem 1rem;
+  border-radius:4px;
+  cursor:pointer;
+  font-size:.9rem}
+#consent-accept{
+  background-color:#007c8d;
+  color:#fff}
+#consent-decline{
+  background-color:#e0e0e0;
+  color:#333}
+/* vilda_auth_ui.css 1621 (lista selektorów przycięta do banera) */
+.vilda-embedded body.vilda-auth-embedded-open .cookie-banner,.vilda-embedded body.vilda-auth-embedded-open #cookieBanner{
+  display:none!important}

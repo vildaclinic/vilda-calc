@@ -1,0 +1,37 @@
+<!-- @dsCard group="Akcje" height=380 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Button</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px}
+.col{display:flex;flex-direction:column;gap:0;max-width:420px}
+#modulesWrapper{display:flex;flex-wrap:wrap;gap:1rem;max-width:720px;margin:0 0 4px}
+</style></head><body class="liquid-ios26">
+<div class="row">
+  <button type="button">Generuj siatkę centylową</button>
+  <button type="button" class="primary-btn">Wygeneruj raport PDF dla pacjenta</button>
+  <button type="button" class="secondary-btn">Anuluj</button>
+  <button type="button" disabled>Zapisz dane</button>
+  <button type="button" class="add-row" id="intakeAddRow">+ dodaj wiersz</button>
+  <button type="button" class="icon" aria-label="Usuń wiersz">×</button>
+</div>
+<div class="col">
+  <button type="button" id="toggleIntakeCard" class="primary-btn">Szacowane spożycie energii</button>
+</div>
+<div id="modulesWrapper">
+  <div id="abxButtonWrapper" class="module-btn-wrapper">
+    <button type="button" id="toggleAbxTherapy" class="module-btn">Antybiotykoterapia</button>
+  </div>
+  <div id="fluButtonWrapper" class="module-btn-wrapper">
+    <button type="button" id="toggleFluTherapy" class="module-btn active-toggle" aria-expanded="true">Leczenie grypy</button>
+  </div>
+</div>
+<div class="row">
+  <div class="col">
+    <button type="button" id="tannerToggleBtn" class="vild-tanner-toggle">+ Dane pokwitaniowe</button>
+  </div>
+  <div class="vild-rem-dlg-acts">
+    <button type="button" class="vild-rem-dlg-pri">Zapisz</button>
+    <button type="button" class="vild-rem-dlg-destr">Usuń</button>
+    <button type="button" class="vild-rem-dlg-ghost">Anuluj</button>
+  </div>
+</div>
+</body></html>

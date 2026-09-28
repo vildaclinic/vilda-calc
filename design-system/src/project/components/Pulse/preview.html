@@ -1,0 +1,17 @@
+<!-- @dsCard group="Komunikaty" height=256 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Pulse</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px 24px;background:var(--bg)}
+.ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;max-width:860px}
+.ds-grid .result-card{margin:12px 0}
+</style></head><body class="liquid-ios26">
+<div class="ds-grid">
+  <div id="bpResult" class="result-box rr-danger pulse-danger-infinite"><div class="result-val">142/94 mmHg</div></div>
+  <div id="coleInfo" class="result-box bmi-warning pulse-warning-infinite">BMI 24,8 — nadwaga</div>
+  <div class="result-box pulse-danger-2s animate-in" data-replay="pulse-danger-2s animate-in"><div class="result-val">116 cm</div></div>
+  <section class="result-card --pulse" data-replay="--pulse"><strong>Podsumowanie wyników</strong><br>116 cm, &lt;1 centyla (Z-score = −2,48)</section>
+</div>
+<script>
+/* Jednorazowe animacje (2 s, .--pulse, .animate-in) odtwarzają się w podglądzie co 4 s przez zdjęcie i ponowne nadanie klasy. */
+setInterval(function(){document.querySelectorAll('[data-replay]').forEach(function(el){var c=el.getAttribute('data-replay').split(' ');c.forEach(function(k){el.classList.remove(k)});void el.offsetWidth;c.forEach(function(k){el.classList.add(k)})})},4000);
+</script>
+</body></html>

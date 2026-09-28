@@ -1,0 +1,54 @@
+<!-- @dsCard group="Moduł Klirens" height=420 -->
+<!doctype html><html lang="pl" data-clcr-workflow-ui="1"><head><meta charset="utf-8"><title>ClcrFormulaChoice</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{position:relative;display:flex;flex-direction:column;gap:16px}
+</style></head><body class="liquid-ios26">
+<div class="pv">
+  <div class="clcr-modules">
+    <section class="clcr-module-section" data-level="basic">
+      <h3 class="clcr-module-section__title">Obliczenia podstawowe</h3>
+      <div class="clcr-module-grid">
+        <article class="clcr-module-card is-active" data-module-id="child-egfr">
+          <h4 class="clcr-module-card__title">eGFR u dziecka i młodej osoby</h4>
+          <p class="clcr-module-card__description">Współczesny wzór kreatyninowy CKiD U25.</p>
+          <div class="clcr-module-card__variants">
+            <button type="button" class="clcr-formula-choice" data-formula-id="ckid_u25" aria-pressed="true">Wybierz</button>
+          </div>
+        </article>
+        <article class="clcr-module-card" data-module-id="cockcroft-gault">
+          <h4 class="clcr-module-card__title">Cockcroft–Gault</h4>
+          <p class="clcr-module-card__description">Nieindeksowany eCrCl z rzeczywistą masą ciała.</p>
+          <div class="clcr-module-card__variants">
+            <button type="button" class="clcr-formula-choice" data-formula-id="cg" aria-pressed="false">Wybierz</button>
+          </div>
+        </article>
+        <article class="clcr-module-card" data-module-id="pediatric-extended">
+          <h4 class="clcr-module-card__title">Dziecko i noworodek — wzory dodatkowe</h4>
+          <p class="clcr-module-card__description">Bedside Schwartz 2009 oraz ścieżka noworodka donoszonego.</p>
+          <div class="clcr-module-card__variants">
+            <select class="clcr-module-variant-select" aria-label="Wariant: Dziecko i noworodek — wzory dodatkowe">
+              <option value="" selected>Wybierz wariant (2)</option>
+              <option value="sch_idms">eGFR — dzieci (kreatynina)</option>
+              <option value="neonatal_egfr">eGFR — noworodek donoszony (kreatynina)</option>
+            </select>
+            <button type="button" class="clcr-formula-choice" disabled>Otwórz obliczenie</button>
+          </div>
+        </article>
+        <article class="clcr-module-card" data-module-id="adult-egfr">
+          <h4 class="clcr-module-card__title">eGFR u dorosłych</h4>
+          <p class="clcr-module-card__description">Oszacowanie filtracji na podstawie kreatyniny.</p>
+          <div class="clcr-module-card__variants">
+            <button type="button" class="clcr-formula-choice" data-formula-id="egfr" aria-pressed="false">Wybierz</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+  <div id="versionContainer" class="version-container">
+    <div class="version-option selected">Klirens kreatyniny — dorośli (ml/min)</div>
+    <div class="version-option">Klirens kreatyniny — dorośli (1,73 m²)</div>
+    <div class="version-option disabled">eGFR — noworodek donoszony (kreatynina)</div>
+  </div>
+  <div id="formulaPicker" class="clcr-canonical-picker"></div>
+</div>
+</body></html>

@@ -1,0 +1,29 @@
+<!-- @dsCard group="Powierzchnie" height=470 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>SourcePanel</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{max-width:720px}
+.pv #sourceFieldset{margin-top:0}
+</style></head><body class="liquid-ios26">
+<div class="pv">
+<fieldset id="sourceFieldset">
+  <legend>Źródła i zastrzeżenia</legend>
+  <div class="source-panel source-panel--warning">
+    <div class="source-panel__heading"><span class="source-panel__icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span><strong>Ograniczenia</strong></div>
+    <p>Siatki centylowe OLAF obejmują dzieci w wieku 3–18 lat.</p>
+    <ul><li>Poniżej 3. roku życia stosowane są normy WHO.</li><li>Wynik nie zastępuje oceny lekarskiej.</li></ul>
+  </div>
+  <div class="source-panel source-panel--pro">
+    <div class="source-panel__heading"><span class="source-panel__icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span><strong>Tryb profesjonalny</strong></div>
+    <p>Wartości Z-score dostępne po zalogowaniu.</p>
+  </div>
+  <div class="source-toggle-wrap"><button type="button" id="toggleSources" aria-expanded="true" aria-controls="sourceList">Ukryj źródła</button></div>
+  <ol id="sourceList">
+    <li>Kułaga Z. i wsp., OLAF 2010. <a href="#">Siatki centylowe dla dzieci i młodzieży w Polsce</a>.</li>
+    <li>WHO Child Growth Standards, 2006.</li>
+  </ol>
+</fieldset>
+</div>
+<script>
+(function(){var b=document.getElementById('toggleSources'),l=document.getElementById('sourceList');if(!b||!l)return;b.addEventListener('click',function(){var h=l.hasAttribute('hidden');if(h){l.removeAttribute('hidden');}else{l.setAttribute('hidden','');}b.textContent=h?'Ukryj źródła':'Pokaż źródła';b.setAttribute('aria-expanded',h?'true':'false');});})();
+</script>
+</body></html>

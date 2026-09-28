@@ -1,0 +1,78 @@
+<!-- @dsCard group="Moduły treści" height=520 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>ReminderCard</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px}
+</style></head><body class="liquid-ios26">
+<div class="row">
+  <div class="vild-rem-inline">
+    <div class="vild-rem-card">
+      <div class="vild-rem-head"><span class="vild-rem-bell"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 5 1.5 7 1.5 7H4.5S6 13 6 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><h2 class="vild-rem-ttl">Przypomnienia</h2><span class="vild-rem-chip">4</span></div>
+      <div class="vild-rem-body">
+        <div class="vild-rem-sec vild-rem-sec-over">
+          <div class="vild-rem-sec-head"><span>Zaległe</span><span>1</span></div>
+          <div class="vild-rem-row" role="button" tabindex="0" aria-label="Szczegóły: Anna Testowa">
+            <div class="vild-rem-av" style="background:linear-gradient(135deg,#32ADE6,#32ADE6cc)">A</div>
+            <div class="vild-rem-meta"><div class="vild-rem-nm">Anna Testowa</div><div class="vild-rem-cat" style="color:#0E6E99"><span class="vild-rem-dot" style="background:#32ADE6"></span>Kontrola — Kontrola wzrostu</div></div>
+            <div class="vild-rem-when w-over">3 dni temu</div>
+            <button type="button" class="vild-rem-more" aria-label="Szczegóły i akcje" title="Szczegóły i akcje"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+          </div>
+        </div>
+        <div class="vild-rem-sec vild-rem-sec-today">
+          <div class="vild-rem-sec-head"><span>Dziś</span><span>2</span></div>
+          <div class="vild-rem-row" role="button" tabindex="0" aria-label="Szczegóły: Jan Testowy">
+            <div class="vild-rem-av" style="background:linear-gradient(135deg,#34C759,#34C759cc)">J</div>
+            <div class="vild-rem-meta"><div class="vild-rem-nm">Jan Testowy</div><div class="vild-rem-cat" style="color:#1F7A3D"><span class="vild-rem-dot" style="background:#34C759"></span>Leczenie — Kontrola TSH za 6 mies.</div></div>
+            <div class="vild-rem-when w-today">10:30</div>
+            <button type="button" class="vild-rem-more" aria-label="Szczegóły i akcje" title="Szczegóły i akcje"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+          </div>
+          <div class="vild-rem-row" role="button" tabindex="0" aria-label="Szczegóły: Dyżur">
+            <div class="vild-rem-av" style="background:linear-gradient(135deg,#FF3B30,#FF3B30cc)">D</div>
+            <div class="vild-rem-meta"><div class="vild-rem-nm">Dyżur</div><div class="vild-rem-cat" style="color:#C2271D"><span class="vild-rem-dot" style="background:#FF3B30"></span>Dyżur · SOR</div></div>
+            <div class="vild-rem-when w-today">dziś</div>
+            <button type="button" class="vild-rem-more" aria-label="Szczegóły i akcje" title="Szczegóły i akcje"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+          </div>
+        </div>
+        <div class="vild-rem-sec vild-rem-sec-pend">
+          <div class="vild-rem-sec-head"><span>Oczekujące wyniki</span><span>1</span></div>
+          <div class="vild-rem-cat-head" data-vild-cat="badanie" aria-expanded="true" style="color:#4341B5;background:#EDEDFB;"><span class="vild-rem-caret">▾</span><span class="vild-rem-cat-nm">Badanie</span><span class="vild-rem-cat-n">1</span></div>
+          <div class="vild-rem-cat-rows" data-vild-cat="badanie">
+            <div class="vild-rem-row" role="button" tabindex="0" aria-label="Szczegóły: Maria Testowa">
+              <div class="vild-rem-av" style="background:linear-gradient(135deg,#5856D6,#5856D6cc)">M</div>
+              <div class="vild-rem-meta"><div class="vild-rem-nm">Maria Testowa</div><div class="vild-rem-cat" style="color:#4341B5"><span class="vild-rem-dot" style="background:#5856D6"></span>Badanie — IGF-1</div></div>
+              <div class="vild-rem-when w-pend">co 7 dni</div>
+              <button type="button" class="vild-rem-more" aria-label="Szczegóły i akcje" title="Szczegóły i akcje"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="vild-rem-foot"><button type="button" class="vild-rem-all">Pokaż wszystkie (4) →</button></div>
+    </div>
+  </div>
+
+  <div class="col">
+  <div class="vild-rem-inline">
+    <div class="vild-rem-card">
+      <div class="vild-rem-head"><span class="vild-rem-bell"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 5 1.5 7 1.5 7H4.5S6 13 6 8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><h2 class="vild-rem-ttl">Przypomnienia</h2></div>
+      <div class="vild-rem-empty"><div class="vild-rem-empty-ic">✓</div><div class="vild-rem-empty-t">Brak przypomnień na dziś</div><div class="vild-rem-empty-s">Nic nie wymaga teraz Twojej uwagi.</div></div>
+    </div>
+  </div>
+
+  <div class="vild-rem-dlg" role="dialog" aria-modal="true" aria-label="Szczegóły przypomnienia">
+    <div class="vild-rem-dlg-head"><span class="vild-rem-dlg-cat" style="color:#0E6E99;background:#E7F6FD;">Kontrola</span><button type="button" class="vild-rem-dlg-x" aria-label="Zamknij">×</button></div>
+    <div class="vild-rem-dlg-body">
+      <p class="vild-rem-dlg-nm">Anna Testowa</p>
+      <p class="vild-rem-dlg-ttl">Kontrola wzrostu</p>
+      <p class="vild-rem-dlg-txt">Pomiar wzrostu i masy ciała, ocena tempa wzrastania na siatce centylowej.</p>
+    </div>
+    <div class="vild-rem-dlg-acts">
+      <button type="button" class="vild-rem-dlg-pri">👤 Otwórz kartę pacjenta</button>
+      <button type="button">✓ Zrobione</button>
+      <button type="button">📅 Przełóż…</button>
+      <button type="button" class="vild-rem-dlg-destr">✕ Nie zgłosił się</button>
+      <button type="button" class="vild-rem-dlg-ghost">Zamknij</button>
+    </div>
+  </div>
+  </div>
+</div>
+</body></html>

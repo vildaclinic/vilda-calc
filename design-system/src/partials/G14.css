@@ -1,0 +1,660 @@
+/* G14 Moduł Klirens — źródło: clcr_ui_workflow.css (blok „Faza 5” 2756–2897 bez zakresu; reguły html[data-clcr-workflow-ui="1"] 340–463, 465–648, 729–740, 1019–1430, 1718–1770, 3035–3051; @media 1897–1901, 1935–2160, 2227–2246, 2249–2256), kalkulator-klirens.html <style> (843–877, 1148–1195, 1763–1777), ios26-v2.css 85–98 i 187–190 (globalne szkło przycisków i pól, które w aplikacji nadpisuje przyciski modułu), style.css 5167–5183 (wysoki kontrast .version-option, lista selektorów przycięta do tego komponentu), 5185–5198 (wysoki kontrast pól i focus-visible). Podgląd wymaga <html data-clcr-workflow-ui="1"> jak strona kalkulator-klirens.html. */
+
+/* ——— 1. ClcrIdentBar — reguły bazowe (clcr_ui_workflow.css „Faza 5”, bez zakresu atrybutu) ——— */
+.clcr-ident-bar {
+  display: flex;
+   align-items: center;
+   gap: 12px;
+   flex-wrap: wrap;
+  padding: 12px 14px;
+   margin: 0 0 12px;
+  background: #fff;
+   border: 1px solid #e3ecec;
+   border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(18, 72, 77, 0.05);
+}
+.clcr-ident-bar[hidden] {
+   display: none;
+   }
+.clcr-ident-id {
+   display: inline-flex;
+   align-items: center;
+   gap: 11px;
+   min-width: 0;
+   }
+.clcr-ident-avatar {
+  width: 40px;
+   height: 40px;
+   border-radius: 50%;
+   flex: none;
+  background: #00838d;
+   color: #fff;
+   font-weight: 800;
+   font-size: 14px;
+  display: flex;
+   align-items: center;
+   justify-content: center;
+   letter-spacing: 0.02em;
+}
+.clcr-ident-who {
+   display: flex;
+   flex-direction: column;
+   min-width: 0;
+   }
+.clcr-ident-name {
+   font-weight: 800;
+   font-size: 16px;
+   line-height: 1.15;
+   color: #15363a;
+   }
+.clcr-ident-sub {
+   color: #557074;
+   font-size: 12.5px;
+   font-weight: 600;
+   }
+.clcr-ident-badges {
+   display: inline-flex;
+   gap: 6px;
+   flex-wrap: wrap;
+   }
+.clcr-ident-badge {
+  background: #f4fafa;
+   border: 1px solid #e3ecec;
+   border-radius: 999px;
+  padding: 3px 10px;
+   font-size: 12.5px;
+   font-weight: 700;
+   color: #006b73;
+  font-variant-numeric: tabular-nums;
+}
+.clcr-ident-badge--mass {
+   background: #fff8e7;
+   border-color: #ead6a8;
+   color: #8a5400;
+   }
+.clcr-ident-toggle {
+  margin-left: auto;
+   border: 1px solid #d0dede;
+   background: #fff;
+   color: #006b73;
+  border-radius: 999px;
+   padding: 6px 13px;
+   font: inherit;
+   font-size: 13px;
+   font-weight: 750;
+  cursor: pointer;
+   min-height: 36px;
+}
+.clcr-ident-toggle:hover {
+   background: #f4fafa;
+   }
+.patient-card.clcr-ident-collapsed > #patientSet {
+   display: none !important;
+   }
+.clcr-weight-note {
+  display: block;
+   margin-top: 4px;
+   font-size: 12px;
+   font-weight: 650;
+   color: #8a5400;
+}
+.clcr-weight-note.fresh {
+   color: #147a64;
+   }
+.clcr-weight-note[hidden] {
+   display: none;
+   }
+
+/* ——— 2. ClcrFormulaChoice — legacy .version-option w trybie workflow, sekcje i karty modułów, przycisk wyboru, select wariantu, ukryty picker kanoniczny (clcr_ui_workflow.css) ——— */
+html[data-clcr-workflow-ui="1"] #versionContainer.version-container {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+html[data-clcr-workflow-ui="1"] .version-option {
+  display: grid !important;
+  min-height: 52px;
+  padding: 0.7rem 0.8rem;
+  place-items: center;
+  color: var(--clcr-primary-dark);
+  text-align: center;
+  background: var(--clcr-surface-soft);
+  border: 1px solid var(--clcr-border);
+  border-radius: 13px;
+  box-shadow: none;
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+html[data-clcr-workflow-ui="1"] .version-option:hover {
+  border-color: rgba(0, 131, 141, 0.55);
+  transform: translateY(-1px);
+}
+html[data-clcr-workflow-ui="1"] .version-option.selected {
+  color: #fff;
+  background: var(--clcr-primary);
+  border-color: var(--clcr-primary);
+  box-shadow: 0 8px 18px rgba(0, 131, 141, 0.2);
+}
+html[data-clcr-workflow-ui="1"] .version-option:focus-visible {
+  outline: 3px solid rgba(0, 131, 141, 0.24);
+  outline-offset: 2px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-modules {
+  margin-top: 1.1rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-section + .clcr-module-section {
+  margin-top: 1.3rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--clcr-border-soft);
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-section__title {
+  margin: 0 0 0.65rem;
+  color: var(--clcr-muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-card {
+  display: flex;
+  min-width: 0;
+  padding: 0.9rem;
+  flex-direction: column;
+  background: var(--clcr-surface);
+  border: 1px solid var(--clcr-border-soft);
+  border-radius: 15px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-card.is-active {
+  background: linear-gradient(145deg, rgba(0, 169, 159, 0.08), #fff 62%);
+  border-color: rgba(0, 131, 141, 0.55);
+  box-shadow: inset 3px 0 0 var(--clcr-primary);
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-card__title {
+  margin: 0;
+  color: var(--clcr-text);
+  font-size: 1rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-card__description {
+  margin: 0.32rem 0 0.75rem;
+  color: var(--clcr-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-card__variants {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: auto;
+}
+html[data-clcr-workflow-ui="1"] .clcr-formula-choice {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.55rem 0.7rem;
+  color: var(--clcr-primary-dark);
+  text-align: left;
+  background: var(--clcr-surface-soft);
+  border: 1px solid var(--clcr-border);
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+html[data-clcr-workflow-ui="1"] .clcr-formula-choice:hover,
+html[data-clcr-workflow-ui="1"] .clcr-formula-choice[aria-pressed="true"] {
+  color: #fff;
+  background: var(--clcr-primary);
+  border-color: var(--clcr-primary);
+}
+html[data-clcr-workflow-ui="1"] .clcr-formula-choice:disabled {
+  color: #819395;
+  background: #edf2f2;
+  border-color: var(--clcr-border-soft);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+html[data-clcr-workflow-ui="1"] .clcr-module-variant-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.5rem 0.6rem;
+  color: var(--clcr-text);
+  background: #fff;
+  border: 1px solid var(--clcr-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.78rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-canonical-picker {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 2px !important;
+  height: 2px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0;
+}
+
+/* ——— 3. ClcrField — karta pola, para wartość+jednostka, nagłówek, status, ClcrInfoButton, kontrolki, pole wyboru, ukryty checkbox kanoniczny, dymek pomocy, walidacja, szczegóły kontekstu, stan błędu (clcr_ui_workflow.css) ——— */
+html[data-clcr-workflow-ui="1"] .clcr-field {
+  position: relative;
+  display: grid !important;
+  min-width: 0;
+  min-height: 112px;
+  margin: 0 !important;
+  padding: 0.75rem;
+  align-content: start;
+  gap: 0.5rem;
+  color: var(--clcr-text);
+  background: var(--clcr-surface-soft);
+  border: 1px solid var(--clcr-border-soft);
+  border-radius: 13px;
+  font-size: 0.85rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field-pair {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1.55fr) minmax(180px, 0.75fr);
+  gap: 0.75rem;
+  min-width: 0;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field-pair[hidden] {
+  display: none !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field-pair > .clcr-field {
+  height: 100%;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field[hidden],
+html[data-clcr-workflow-ui="1"] [hidden] {
+  display: none !important;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 26px;
+  align-items: start;
+  gap: 0.4rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__name {
+  min-width: 0;
+  color: var(--clcr-text);
+  font-size: 0.84rem;
+  font-weight: 730;
+  line-height: 1.35;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__status {
+  display: inline-flex;
+  max-width: 150px;
+  min-height: 22px;
+  padding: 0.18rem 0.4rem;
+  align-items: center;
+  color: var(--clcr-muted);
+  background: #e9f0f0;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 760;
+  line-height: 1.15;
+  text-align: center;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__status--required {
+  color: var(--clcr-error);
+  background: #ffe8ea;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__status--interpretation {
+  color: var(--clcr-warning);
+  background: #fff0c9;
+}
+html[data-clcr-workflow-ui="1"] .clcr-info-button {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -0.45rem -0.42rem -0.25rem 0;
+  padding: 0;
+  place-items: center;
+  color: var(--clcr-primary-dark);
+  background: #fff;
+  border: 1px solid var(--clcr-border);
+  border-radius: 50%;
+  box-shadow: none;
+  font-family: Georgia, serif;
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+html[data-clcr-workflow-ui="1"] .clcr-info-button:hover,
+html[data-clcr-workflow-ui="1"] .clcr-info-button:focus-visible,
+html[data-clcr-workflow-ui="1"] .clcr-info-button[aria-expanded="true"] {
+  color: #fff;
+  background: var(--clcr-primary);
+  border-color: var(--clcr-primary);
+}
+html[data-clcr-workflow-ui="1"] .clcr-info-button:focus-visible {
+  outline: 3px solid rgba(0, 131, 141, 0.22);
+  outline-offset: 2px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field > input:not([type="checkbox"]),
+html[data-clcr-workflow-ui="1"] .clcr-field > select,
+html[data-clcr-workflow-ui="1"] .clcr-field > textarea,
+html[data-clcr-workflow-ui="1"] .clcr-protocol-answer {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  margin: 0;
+  padding: 0.62rem 0.7rem;
+  color: var(--clcr-text);
+  background: #fff;
+  border: 1px solid #bfcfcf;
+  border-radius: 10px;
+  font: inherit;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field > input:focus,
+html[data-clcr-workflow-ui="1"] .clcr-field > select:focus,
+html[data-clcr-workflow-ui="1"] .clcr-field > textarea:focus {
+  border-color: var(--clcr-primary);
+  outline: 3px solid rgba(0, 131, 141, 0.16);
+}
+html[data-clcr-workflow-ui="1"] .clcr-field--choice {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-clcr-workflow-ui="1"] .clcr-field--choice:not(:has(.clcr-protocol-answer)) {
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+}
+html[data-clcr-workflow-ui="1"]
+  .clcr-field--choice:not(:has(.clcr-protocol-answer))
+  > .clcr-field__heading {
+  grid-column: 2;
+  grid-row: 1;
+}
+html[data-clcr-workflow-ui="1"]
+  .clcr-field--choice:not(:has(.clcr-protocol-answer))
+  > input[type="checkbox"] {
+  grid-column: 1;
+  grid-row: 1;
+  width: 22px;
+  height: 22px;
+  margin: 0.15rem 0 0;
+}
+html[data-clcr-workflow-ui="1"] .clcr-canonical-checkbox {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: 0 !important;
+  clip-path: inset(50%);
+  opacity: 0;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__help {
+  --clcr-arrow-x: calc(100% - 26px);
+  position: fixed;
+  z-index: 1300;
+  pointer-events: none;
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--clcr-text);
+  background: #fff;
+  border: 1px solid var(--clcr-border);
+  border-top: 3px solid var(--clcr-primary);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(13, 60, 65, 0.24);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__help::before {
+  position: absolute;
+  top: -7px;
+  left: var(--clcr-arrow-x);
+  width: 10px;
+  height: 10px;
+  background: var(--clcr-primary);
+  content: "";
+  transform: rotate(45deg);
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__help--above {
+  border-top: 1px solid var(--clcr-border);
+  border-bottom: 3px solid var(--clcr-primary);
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__help--above::before {
+  top: auto;
+  bottom: -7px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__validation {
+  grid-column: 1 / -1;
+  min-height: 0;
+  margin: 0;
+  color: var(--clcr-error);
+  font-size: 0.74rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__validation:empty {
+  display: none;
+}
+html[data-clcr-workflow-ui="1"] .clcr-context-details {
+  grid-column: 1 / -1;
+  width: 100%;
+  overflow: hidden;
+  background: #f8fbfb;
+  border: 1px solid var(--clcr-border);
+  border-radius: 12px;
+}
+html[data-clcr-workflow-ui="1"] .clcr-context-details__summary {
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
+  color: var(--clcr-primary-dark);
+  font-size: 0.84rem;
+  font-weight: 760;
+  line-height: 1.35;
+  cursor: pointer;
+}
+html[data-clcr-workflow-ui="1"] .clcr-context-details__body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0 0.65rem 0.65rem;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field:has(> .error) {
+  background: var(--clcr-error-bg);
+  border-color: #e4aeb3;
+}
+
+/* Układ B (U2), clcr_ui_workflow.css 3035–3051: pole w #patientSet bez minimalnej wysokości; etykieta statusu pola jest w aplikacji UKRYTA (wymagalność niesie panel „Wymagane dane”), nagłówek ma wtedy dwie kolumny. */
+html[data-clcr-workflow-ui="1"] #clcrForm #patientSet .clcr-field {
+  min-height: 0;
+}
+html[data-clcr-workflow-ui="1"] .clcr-field__status {
+   display: none !important;
+   }
+html[data-clcr-workflow-ui="1"] .clcr-field__heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* ——— 4. Reguły strony kalkulator-klirens.html (<style> inline, ładowany po clcr_ui_workflow.css): legacy .formula-picker / .version-option oraz komunikat walidacji i klasa .error pola ——— */
+.formula-picker {
+  border: 1px solid #d0dede;
+  background: var(--card);
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin: 0.25rem 0 1rem;
+}
+.formula-picker label {
+  font-weight: 600;
+}
+#formulaPicker {
+  margin-top: 0.35rem;
+}
+.formula-note {
+  font-size: 0.9rem;
+  color: #555;
+  margin-top: 0.5rem;
+}
+.version-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.version-option {
+  border: 1px solid #d0dede;
+  background: var(--card);
+  padding: 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  font-weight: 600;
+  text-align: center;
+}
+.version-option.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,131,141,0.25);
+}
+.version-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+  .validation-message {
+    color: var(--danger);
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+  .error {
+    border-color: var(--danger) !important;
+  }
+
+/* ——— 5. Zapytania @media komponentów grupy (clcr_ui_workflow.css; z bloku max-width: 760px skopiowano tylko reguły tej grupy, ze wspólnej listy selektorów 1987–1992 zostawiono .clcr-module-grid i .clcr-context-details__body) ——— */
+@media (min-width: 920px) {
+  html[data-clcr-workflow-ui="1"] .clcr-module-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  html[data-clcr-workflow-ui="1"] #versionContainer.version-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  html[data-clcr-workflow-ui="1"] .version-option {
+    min-height: 50px;
+    padding: 0.55rem 0.45rem;
+    font-size: 0.8rem;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-module-grid,
+  html[data-clcr-workflow-ui="1"] .clcr-context-details__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-module-card {
+    padding: 0.78rem;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-module-card__variants {
+    gap: 0.3rem;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-formula-choice {
+    min-height: 46px;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-field {
+    min-height: 0;
+    padding: 0.7rem;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-field-pair {
+    grid-template-columns: minmax(0, 1fr) minmax(96px, 0.62fr);
+    gap: 0.55rem;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-field__heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-field__status {
+    grid-column: 1;
+    grid-row: 2;
+    width: max-content;
+    max-width: min(170px, 100%);
+  }
+  html[data-clcr-workflow-ui="1"] .clcr-info-button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+@media (max-width: 340px) {
+  html[data-clcr-workflow-ui="1"] .version-option {
+    font-size: 0.74rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-clcr-workflow-ui="1"] *,
+  html[data-clcr-workflow-ui="1"] *::before,
+  html[data-clcr-workflow-ui="1"] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ——— 6. Nadpisania Liquid Glass (ios26-v2.css 85–98, 187–190): globalna reguła .liquid-ios26 button z !important wygrywa w aplikacji z tłem, obrysem, kolorem i promieniem .clcr-formula-choice, .clcr-info-button, .clcr-ident-toggle i legacy .version-option; reguła pól (bez !important) przegrywa specyficznością z regułami .clcr-field > input ——— */
+.liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
+  background:#fff3!important;
+  border:1px solid var(--lg-border)!important;
+  color:#111!important;
+  border-radius:14px!important;
+  backdrop-filter:blur(10px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
+  box-shadow:0 4px 12px #0000001a!important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+.liquid-ios26 button._pressed{
+  transform:scale(.96);
+  box-shadow:0 2px 8px #0000001f!important}
+.liquid-ios26 input[type=text],.liquid-ios26 input[type=number],.liquid-ios26 select{
+  background:#ffffffd9;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:12px}
+
+/* ——— 7. Wysoki kontrast (style.css 5167–5183: selektory #modulesWrapper .module-btn / #toggle* pominięte, zostawiono .version-option; 5185–5198 pola, placeholder, focus-visible — dosłownie) ——— */
+body.high-contrast-level-1.liquid-ios26 .version-option,body.high-contrast-level-2.liquid-ios26 .version-option,body.high-contrast-level-3.liquid-ios26 .version-option{
+  background:var(--hc-module-btn-bg)!important;
+  color:var(--hc-text)!important;
+  border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
+  box-shadow:var(--hc-module-btn-shadow)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important}
+body.high-contrast-level-1.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-2.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-3.liquid-ios26 .version-option:not(.disabled):hover{
+  background:var(--hc-module-btn-hover-bg)!important}
+body.high-contrast-level-1.liquid-ios26 .version-option.selected,body.high-contrast-level-2.liquid-ios26 .version-option.selected,body.high-contrast-level-3.liquid-ios26 .version-option.selected{
+  background:var(--hc-module-btn-active-bg)!important;
+  border-color:var(--hc-module-btn-active-border)!important;
+  box-shadow:0 0 0 1px #00838d1f,var(--hc-module-btn-active-shadow)!important}
+body.high-contrast-level-1.liquid-ios26 .version-option.disabled,body.high-contrast-level-2.liquid-ios26 .version-option.disabled,body.high-contrast-level-3.liquid-ios26 .version-option.disabled{
+  background:#ffffffc7!important;
+  border-color:var(--hc-module-btn-border)!important;
+  color:var(--hc-muted)!important;
+  opacity:.72!important}
+body.high-contrast-level-1.liquid-ios26 input[type=text],body.high-contrast-level-2.liquid-ios26 input[type=text],body.high-contrast-level-3.liquid-ios26 input[type=text],body.high-contrast-level-1.liquid-ios26 input[type=number],body.high-contrast-level-2.liquid-ios26 input[type=number],body.high-contrast-level-3.liquid-ios26 input[type=number],body.high-contrast-level-1.liquid-ios26 select,body.high-contrast-level-2.liquid-ios26 select,body.high-contrast-level-3.liquid-ios26 select,body.high-contrast-level-1.liquid-ios26 textarea,body.high-contrast-level-2.liquid-ios26 textarea,body.high-contrast-level-3.liquid-ios26 textarea{
+  background:var(--hc-input-bg)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  color:var(--hc-text)!important;
+  box-shadow:0 1px #ffffffb8,0 4px 12px #0000000d!important}
+body.high-contrast-level-1.liquid-ios26 input::placeholder,body.high-contrast-level-2.liquid-ios26 input::placeholder,body.high-contrast-level-3.liquid-ios26 input::placeholder,body.high-contrast-level-1.liquid-ios26 textarea::placeholder,body.high-contrast-level-2.liquid-ios26 textarea::placeholder,body.high-contrast-level-3.liquid-ios26 textarea::placeholder{
+  color:var(--hc-muted)!important;
+  opacity:1!important}
+body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-level-2.liquid-ios26 input:focus-visible,body.high-contrast-level-3.liquid-ios26 input:focus-visible,body.high-contrast-level-1.liquid-ios26 select:focus-visible,body.high-contrast-level-2.liquid-ios26 select:focus-visible,body.high-contrast-level-3.liquid-ios26 select:focus-visible,body.high-contrast-level-1.liquid-ios26 textarea:focus-visible,body.high-contrast-level-2.liquid-ios26 textarea:focus-visible,body.high-contrast-level-3.liquid-ios26 textarea:focus-visible,body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 summary:focus-visible,body.high-contrast-level-2.liquid-ios26 summary:focus-visible,body.high-contrast-level-3.liquid-ios26 summary:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+  outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
+  outline-offset:2px!important}
+
+/* ——— 8. Ciemne tło: źródło nie ma reguł dark-bg-level-N dla selektorów tej grupy (zmienia się tylko --bg z tokens.css) ——— */

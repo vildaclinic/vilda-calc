@@ -1,0 +1,30 @@
+<!-- @dsCard group="Komunikaty" height=292 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Tooltip</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.ds-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:28px}
+.ds-col{display:flex;flex-direction:column;gap:12px}
+.ds-range{margin-top:56px}
+.ds-range .vild-range-host{display:inline-block;min-width:340px;font-size:.95rem;color:var(--text)}
+.ds-range input{width:120px;padding:.5rem .6rem;border:1px solid #ccc;border-radius:var(--radius);font:inherit;margin-left:.4rem}
+.ds-micros{font-size:.95rem;color:var(--text)}
+/* dymki są w aplikacji absolute/fixed przy kotwicy — w podglądzie tylko przepływ dokumentu */
+body .menu-tooltip{position:relative!important}
+body .nutrition-micros-tooltip{position:relative!important;margin-top:10px}
+</style></head><body class="liquid-ios26">
+<div class="ds-row">
+  <div class="ds-col">
+    <div class="menu-tooltip" style="opacity:1" role="tooltip">Strona główna</div>
+    <div class="menu-tooltip copy-tooltip" style="opacity:1" role="status" aria-live="polite">Skopiowano zalecenia do schowka.</div>
+  </div>
+  <div class="ds-range">
+    <label class="vild-range-host">Masa ciała (kg):
+      <input type="number" id="weight" class="vild-range-invalid" value="640" aria-invalid="true">
+      <span class="vild-range-tip is-on" role="tooltip"><span class="vild-range-tip__ic"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.4" r="1.15" fill="currentColor"/></svg></span><span class="vild-range-tip__txt">Waga poza zakresem (1–500 kg)</span></span>
+    </label>
+  </div>
+  <div class="ds-micros">
+    Witamina D — <span class="nutrition-micros-abbr" tabindex="0" aria-describedby="nutritionMicrosTooltip">RDA</span> 15 µg/d
+    <div class="nutrition-micros-tooltip is-visible" id="nutritionMicrosTooltip" role="tooltip">RDA — Recommended Dietary Allowance; zalecane spożycie dzienne</div>
+  </div>
+</div>
+</body></html>

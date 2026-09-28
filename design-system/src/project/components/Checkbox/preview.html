@@ -1,0 +1,32 @@
+<!-- @dsCard group="Pola formularza" height=180 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Checkbox</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.pv-col{flex:1 1 200px;max-width:300px;min-width:0}
+.pv-col>.doctor-wrapper{margin-top:0}
+</style></head><body class="liquid-ios26">
+<div class="pv-row">
+  <div class="pv-col">
+    <div class="doctor-wrapper">
+      <label class="doctor-label" for="isDoctor">Jestem lekarzem</label>
+      <span class="doctor-subtitle">Zaznacz, aby odblokować moduł profesjonalny</span>
+      <input type="checkbox" id="isDoctor" class="doctor-checkbox">
+    </div>
+  </div>
+  <div class="pv-col">
+    <div class="doctor-wrapper compact">
+      <label class="doctor-label" for="isDoctorCompact">Jestem lekarzem</label>
+      <span class="doctor-subtitle">Zaznacz, aby odblokować moduł profesjonalny</span>
+      <input type="checkbox" id="isDoctorCompact" class="doctor-checkbox" checked>
+    </div>
+  </div>
+  <div class="pv-col">
+    <div class="diet-survey-grid">
+      <label class="diet-survey-chip"><input type="checkbox" name="habit" value="slodycze" checked><span>Słodycze codziennie</span></label>
+      <label class="diet-survey-chip"><input type="checkbox" name="habit" value="napoje"><span>Słodzone napoje</span></label>
+      <label class="diet-survey-chip"><input type="checkbox" name="habit" value="sniadanie"><span>Pomija śniadanie</span></label>
+      <label class="diet-survey-chip"><input type="checkbox" name="habit" value="ekran" checked><span>Jedzenie przed ekranem</span></label>
+    </div>
+  </div>
+</div>
+</body></html>

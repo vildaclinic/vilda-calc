@@ -1,0 +1,58 @@
+<!-- @dsCard group="Moduły treści" height=440 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>NoteItem</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+</style></head><body class="liquid-ios26">
+<div class="notes-shell">
+  <div class="notes-toolbar">
+    <div class="notes-search"><span class="notes-search__icon">🔍</span><input type="search" placeholder="Szukaj w notatkach…" aria-label="Szukaj w notatkach"></div>
+    <div class="notes-filters" id="notesFilters">
+      <button type="button" class="notes-filter is-active" data-cat="all">Wszystkie</button>
+      <button type="button" class="notes-filter" data-cat="badanie">Opisy badań</button>
+      <button type="button" class="notes-filter" data-cat="zalecenia">Zalecenia</button>
+      <button type="button" class="notes-filter" data-cat="wywiad">Wywiad</button>
+      <button type="button" class="notes-filter" data-cat="wlasne">Własne</button>
+    </div>
+  </div>
+  <div class="notes-grid">
+    <div class="note-card is-pinned">
+      <div class="note-card__top">
+        <span class="note-cat note-cat--badanie">Badanie</span>
+        <button type="button" class="note-pin is-on" title="Odepnij" aria-label="Odepnij notatkę"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg></button>
+      </div>
+      <p class="note-card__title">Opis USG tarczycy</p>
+      <p class="note-card__body">Tarczyca położona typowo, o prawidłowej echogeniczności. Płat prawy … × … × … mm, płat lewy … × … × … mm. Bez zmian ogniskowych.</p>
+      <div class="note-card__actions">
+        <button type="button" class="note-act note-act--copy"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Kopiuj</button>
+        <button type="button" class="note-act"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg> Edytuj</button>
+        <button type="button" class="note-act note-act--danger" title="Usuń" aria-label="Usuń"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+    </div>
+    <div class="note-card">
+      <div class="note-card__top">
+        <span class="note-cat note-cat--zalecenia">Zalecenia</span>
+        <button type="button" class="note-pin" title="Przypnij" aria-label="Przypnij notatkę"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg></button>
+      </div>
+      <p class="note-card__title">Zalecenia w zapaleniu tarczycy</p>
+      <p class="note-card__body">Kontrola TSH, fT4 za 6–8 tygodni. W razie objawów niedoczynności — wcześniejsza wizyta. Dieta bez ograniczeń.</p>
+      <div class="note-card__actions">
+        <button type="button" class="note-act note-act--copy is-done"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Skopiowano</button>
+        <button type="button" class="note-act"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg> Edytuj</button>
+        <button type="button" class="note-act note-act--danger" title="Usuń" aria-label="Usuń"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+    </div>
+    <div class="note-card">
+      <div class="note-card__top">
+        <span class="note-cat note-cat--wywiad">Wywiad</span>
+        <button type="button" class="note-pin" title="Przypnij" aria-label="Przypnij notatkę"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg></button>
+      </div>
+      <p class="note-card__title">Wywiad — niski wzrost</p>
+      <p class="note-card__body">Wzrost rodziców, tempo wzrastania w ostatnim roku, choroby przewlekłe, leki, dojrzewanie rodzeństwa, masa urodzeniowa i długość ciała.</p>
+      <div class="note-card__actions">
+        <button type="button" class="note-act note-act--copy"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Kopiuj</button>
+        <button type="button" class="note-act"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg> Edytuj</button>
+        <button type="button" class="note-act note-act--danger" title="Usuń" aria-label="Usuń"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

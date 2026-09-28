@@ -1,0 +1,43 @@
+<!-- @dsCard group="Nawigacja" height=310 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>MiniSummary</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:flex;align-items:flex-start;gap:24px}
+.col{flex:0 0 auto;width:var(--chrome-sidebar-width)}
+.col--decor,.col--legacy{width:230px}
+/* tylko pozycja: pasek boczny i kolumna dekoracyjna są sticky, blok legacy sticky top:0 */
+body.has-vilda-chrome .col aside.sidebar,body.has-vilda-chrome .col .decor-sidebar{position:static!important;top:auto!important}
+body.has-vilda-chrome .col .mini-summary{position:static!important}
+</style></head><body class="liquid-ios26 has-vilda-chrome">
+<div class="row">
+<div class="col"><aside class="sidebar sidebar-v2" data-vilda-chrome-mounted="1" data-vilda-chrome-sidebar><div class="sidebar-inner"><div class="sidebar-extras" data-vilda-chrome-extras>
+<div id="miniSummary" class="mini-summary" style="display:block"><div id="miniSummaryContent">
+<div class="ms-patient-chip"><div class="ms-avatar-wiek">Wiek</div><span class="ms-patient-age">8 lat i 3 miesiące</span></div>
+<div class="ms-chips">
+<div class="ms-chip ms-chip--normal"><div class="ms-chip-icon">W</div><div class="ms-chip-main"><span class="ms-chip-label">Waga</span><span class="ms-chip-value">27,5&thinsp;kg</span></div><div class="ms-chip-badge">55 centyl</div></div>
+<div class="ms-chip ms-chip--borderline"><div class="ms-chip-icon">H</div><div class="ms-chip-main"><span class="ms-chip-label">Wzrost</span><span class="ms-chip-value">121,0&thinsp;cm</span></div><div class="ms-chip-badge">3 centyl</div></div>
+<div class="ms-chip ms-chip--alert"><div class="ms-chip-icon">B</div><div class="ms-chip-main"><span class="ms-chip-label">BMI</span><span class="ms-chip-value">18,8</span></div><div class="ms-chip-badge">&gt;97 centyla</div></div>
+<div class="ms-chip ms-chip--neutral"><div class="ms-chip-icon">S</div><div class="ms-chip-main"><span class="ms-chip-label">Pow. ciała</span><span class="ms-chip-value">0,96&thinsp;m²</span></div></div>
+</div></div></div>
+</div></div></aside></div>
+<div class="col col--decor"><aside class="decor-sidebar decor-sidebar--has-content" id="vildaShellDecor" style="display:block">
+<div id="miniSummaryDecor" class="mini-summary" style="display:block"><div id="miniSummaryDecorContent">
+<div class="ms-patient-chip"><div class="ms-avatar-wiek">Wiek</div><span class="ms-patient-age">8 lat i 3 miesiące</span></div>
+<div class="ms-chips">
+<div class="ms-chip ms-chip--normal"><div class="ms-chip-icon">W</div><div class="ms-chip-main"><span class="ms-chip-label">Waga</span><span class="ms-chip-value">27,5&thinsp;kg</span></div><div class="ms-chip-badge">55 centyl</div></div>
+<div class="ms-chip ms-chip--borderline"><div class="ms-chip-icon">H</div><div class="ms-chip-main"><span class="ms-chip-label">Wzrost</span><span class="ms-chip-value">121,0&thinsp;cm</span></div><div class="ms-chip-badge">3 centyl</div></div>
+<div class="ms-chip ms-chip--alert"><div class="ms-chip-icon">B</div><div class="ms-chip-main"><span class="ms-chip-label">BMI</span><span class="ms-chip-value">18,8</span></div><div class="ms-chip-badge">&gt;97 centyla</div></div>
+
+</div></div></div>
+</aside></div>
+<div class="col col--legacy">
+<div id="miniSummaryLegacy" class="mini-summary" style="display:block"><div id="miniSummaryLegacyContent">
+<div class="ms-patient-chip"><div class="ms-avatar-wiek">Wiek</div><span class="ms-patient-age">8 lat i 3 miesiące</span></div>
+<div class="ms-chips">
+<div class="ms-chip ms-chip--normal"><div class="ms-chip-icon">W</div><div class="ms-chip-main"><span class="ms-chip-label">Waga</span><span class="ms-chip-value">27,5&thinsp;kg</span></div><div class="ms-chip-badge">55 centyl</div></div>
+<div class="ms-chip ms-chip--borderline"><div class="ms-chip-icon">H</div><div class="ms-chip-main"><span class="ms-chip-label">Wzrost</span><span class="ms-chip-value">121,0&thinsp;cm</span></div><div class="ms-chip-badge">3 centyl</div></div>
+
+
+</div></div></div>
+</div>
+</div>
+</body></html>

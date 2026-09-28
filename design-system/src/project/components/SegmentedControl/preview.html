@@ -1,0 +1,85 @@
+<!-- @dsCard group="Pola formularza" height=270 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>SegmentedControl</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.pv-row+.pv-row{margin-top:20px}
+.pv-col{flex:1 1 260px;min-width:0}
+.pv-col--narrow{flex:0 1 300px}
+.pv-cap{margin:0 0 6px;font-size:.8rem;color:#666}
+</style></head><body class="liquid-ios26">
+<div class="pv-row">
+  <div class="pv-col">
+    <p class="pv-cap">Źródło danych — pigułki radiowe, opcja PRO fioletowa</p>
+    <div id="dataToggleContainer" class="data-source-toggle">
+      <label>
+        <input type="radio" name="dataSource" id="sourcePalczewska" value="PALCZEWSKA">
+        <span>Palczewska<sup class="pro-superscript">PRO</sup></span>
+      </label>
+      <label>
+        <input type="radio" name="dataSource" id="sourceOlaf" value="OLAF" checked>
+        <span>OLAF</span>
+      </label>
+      <label>
+        <input type="radio" name="dataSource" id="sourceWho" value="WHO">
+        <span>WHO</span>
+      </label>
+    </div>
+  </div>
+  <div class="pv-col">
+    <p class="pv-cap">Opcja wyłączona (input:disabled)</p>
+    <div class="data-source-toggle">
+      <label>
+        <input type="radio" name="dataSourceLocked" value="PALCZEWSKA" disabled>
+        <span>Palczewska<sup class="pro-superscript">PRO</sup></span>
+      </label>
+      <label>
+        <input type="radio" name="dataSourceLocked" value="OLAF">
+        <span>OLAF</span>
+      </label>
+      <label>
+        <input type="radio" name="dataSourceLocked" value="WHO" checked>
+        <span>WHO</span>
+      </label>
+    </div>
+  </div>
+</div>
+<div class="pv-row">
+  <div class="pv-col pv-col--narrow">
+    <p class="pv-cap">Regularnie uprawia sport</p>
+    <div class="adult-vitals-radio-group" role="radiogroup" aria-label="Regularnie uprawia sport">
+      <label class="adult-vitals-radio-option">
+        <input type="radio" name="adultHrAthleteGroup" id="adultHrAthleteNo" value="0">
+        <span>Nie</span>
+      </label>
+      <label class="adult-vitals-radio-option">
+        <input type="radio" name="adultHrAthleteGroup" id="adultHrAthlete" value="1" checked>
+        <span>Tak</span>
+      </label>
+    </div>
+  </div>
+  <div class="pv-col pv-col--narrow">
+    <p class="pv-cap">Masa do obliczeń — wariant norm żywieniowych</p>
+    <div class="nutrition-norms-card">
+      <div class="adult-vitals-radio-group nutrition-norms-radio-group" role="radiogroup" aria-label="Masa do obliczeń w normach żywieniowych">
+        <label class="adult-vitals-radio-option">
+          <input type="radio" name="nutritionNormsBodyMode" value="actual" checked>
+          <span>Aktualna</span>
+        </label>
+        <label class="adult-vitals-radio-option">
+          <input type="radio" name="nutritionNormsBodyMode" value="reference">
+          <span>Referencyjna</span>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="pv-col">
+    <p class="pv-cap">Strategia (.diet-segmented-control w #dietRecommendationsContent)</p>
+    <div id="dietRecommendationsContent">
+      <div class="diet-segmented-control" data-diet-strategy-proxy>
+        <button type="button" data-diet-strategy-choice="reduction" class="is-active">Redukcja masy</button>
+        <button type="button" data-diet-strategy-choice="stabilization">Stabilizacja masy</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,7 @@
+{
+  "_opis": "Wartości tokenów, które w źródle nie są własnością --nazwa, tylko zwykłą deklaracją w regule motywu. Producent bierze wartość podanej właściwości z reguły o dokładnie tym selektorze.",
+  "bg": {
+    "dark-bg-1": { "selector": "body.dark-bg-level-1", "property": "background-color" },
+    "dark-bg-2": { "selector": "body.dark-bg-level-2", "property": "background-color" }
+  }
+}
