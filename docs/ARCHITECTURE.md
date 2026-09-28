@@ -131,8 +131,11 @@ Pełne domknięcie wymagałoby plików z hashem w nazwie albo katalogów per wyd
 - Vitest dla wybranych czystych modeli;
 - historyczne zestawy regresji PRO;
 - Playwright dla stron, układu mobilnego i PWA/offline.
+- siatkę zrzutów wyglądu (Playwright, `tests/visual`, `npm run test:visual`) i kontrolę dryfu stylów względem design systemu (`npm run design-system -- --strict`).
 
 Workflow `.github/workflows/ci.yml` uruchamia się dla PR-ów do `audyt` i commitów na `audyt`. Nie należy zmieniać nazw istniejących jobów bez sprawdzenia ochrony gałęzi.
+
+Workflow `.github/workflows/wyglad.yml` („Wygląd”, P-STYLE rata 1, decyzja właściciela 2026-09-28) uruchamia się tylko dla PR-ów zmieniających pliki, które mogą zmienić wygląd (arkusze, strony, skrypty powłoki i wyglądu, `design-system/`, testy wizualne). Ma dwa joby: dryf stylów względem `design-system/src` (`--strict`) i porównanie ośmiu stron w dwóch szerokościach i czterech trybach wyglądu z wzorcami PNG w `tests/visual/wzorce`. Wzorce powstają wyłącznie na `ubuntu-latest`: ręczne uruchomienie z opcją „aktualizuj_wzorce” albo usunięcie katalogu wzorców w PR-ze odświeża je i wypycha na gałąź jednym commitem, po czym job sam uruchamia „Kontrola jakości” i „Wygląd” dla tego commita (commit z `GITHUB_TOKEN` nie uruchamia workflow'ów, `workflow_dispatch` jest wyjątkiem). Skutek uboczny filtra ścieżek: zmiana renderowania z pliku spoza filtra (np. `app.js`) wychodzi dopiero przy najbliższym PR-ze ze stylami — wtedy odświeża się wzorce tak samo. Arkusze CSS są od tej raty sformatowane (`npm run css:formatuj`, dowód równoważności `npm run css:cssom`), a strażnik `tests/unit/css-sformatowany.test.mjs` nie dopuszcza powrotu postaci zminifikowanej.
 
 ### Równoległość zestawu przeglądarkowego (decyzja właściciela 2026-09-11)
 

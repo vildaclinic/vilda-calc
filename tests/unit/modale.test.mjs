@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { zwartyCss } from '../support/css-zwarty.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { korzen, zrodlo } from '../support/silnik-bmi.mjs';
@@ -17,7 +18,8 @@ import { korzen, zrodlo } from '../support/silnik-bmi.mjs';
 // kończą się dokładnie na krawędzi docka, więc warunek ich nie łapie. Ten plik pilnuje obu końców.
 
 const shellJs = zrodlo('vilda_shell.js');
-const shellCss = zrodlo('vilda_shell.css');
+// arkusz jest sformatowany (P-STYLE rata 1); wzorzec niżej jest w postaci zwartej
+const shellCss = zwartyCss(zrodlo('vilda_shell.css'));
 
 describe('P-MODALE: powłoka chowa dock, gdy modal z iframe\'a sięga pod dock', () => {
   it('vilda_shell.js obserwuje aktywny panel (childList + subtree + class/style/hidden) i przełącza vilda-pane-modal-open', () => {

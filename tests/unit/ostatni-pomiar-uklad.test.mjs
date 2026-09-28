@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { zwartyCss } from '../support/css-zwarty.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { oknoZSilnikiem, wczytajDoOkna, zrodlo } from '../support/silnik-bmi.mjs';
@@ -156,7 +157,8 @@ describe('strażnik: jedna karta na całą szerokość, koniec podziału Left/Ri
   });
 
   it('style.css: karta rozpięta na obie kolumny siatki formularza, nagłówek tabeli bez globalnego tła', () => {
-    const c = html('style.css');
+    // arkusz jest sformatowany (P-STYLE rata 1); cytaty niżej są w postaci zwartej
+    const c = zwartyCss(html('style.css'));
     expect(c).toContain('#calcForm>#prevSummaryWrap{grid-column:1 / -1');
     expect(c).toContain('#calcForm>#userSection{grid-column:1;grid-row:1}');
     expect(c).toContain('#calcForm>#doctorSection{grid-column:2;grid-row:1}');

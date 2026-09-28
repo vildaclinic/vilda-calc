@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { zwartyCss } from '../support/css-zwarty.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
@@ -131,15 +132,16 @@ describe('P-DYMKI — strażnik: jeden dół dla wszystkich dymków', () => {
   });
 
   it('CSS: .vilda-dymek i kotwice bogatszych elementów liczą bottom z --vilda-dol-wolny', () => {
-    const css = zrodlo('style.css');
+    // arkusz jest sformatowany (P-STYLE rata 1); wzorce niżej są w postaci zwartej
+    const css = zwartyCss(zrodlo('style.css'));
     expect(css).toMatch(/\.vilda-dymek\{[^}]*bottom:calc\(var\(--vilda-dol-wolny,env\(safe-area-inset-bottom,0px\)\) \+ 16px\)/);
     expect(css).toMatch(/\.vilda-dol-kotwica\{bottom:calc\(var\(--vilda-dol-wolny,env\(safe-area-inset-bottom,0px\)\) \+ 16px\)!important/);
     // te, które zachowują własny wygląd, ale muszą stać nad dockiem
     expect(zrodlo('vilda_deps.js')).toContain('#vilda-dependency-notice-container{position:fixed;z-index:2147483647;right:16px;bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px)');
     expect(zrodlo('vilda_growth_prediction_validation.js')).toContain('.vgpv-toast{position:fixed;left:50%;bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px)');
     expect(zrodlo('vilda_terminarz.js')).toContain('.tz-undo-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px)');
-    expect(zrodlo('vilda_auth_ui.css')).toContain('.vilda-copy-summary-toast{position:fixed;left:50%;bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px)');
-    expect(zrodlo('vilda_auth_ui.css'), 'stara, jednorazowa formuła z --vilda-dock-occ zniknęła').not.toContain('--vilda-dock-occ, calc(env(safe-area-inset-bottom, 0px) + max(');
+    expect(zwartyCss(zrodlo('vilda_auth_ui.css'))).toContain('.vilda-copy-summary-toast{position:fixed;left:50%;bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px)');
+    expect(zwartyCss(zrodlo('vilda_auth_ui.css')), 'stara, jednorazowa formuła z --vilda-dock-occ zniknęła').not.toContain('--vilda-dock-occ, calc(env(safe-area-inset-bottom, 0px) + max(');
     expect(zrodlo('vilda_chrome.js')).toContain('d.className="vilda-dol-kotwica"');
   });
 
