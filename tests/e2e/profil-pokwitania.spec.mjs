@@ -68,10 +68,10 @@ test('dziewczynka 7 l 6 mies., Tanner II od 7,0, BA 9,5 z BA 7,5 rok wcześniej:
   expect(r.fhp.methods.find((m) => m.key === 'rwt').gateNote).toContain('Zachmann 1978');
   expect(r.lms).toMatchObject({ M: expect.any(Number), S: expect.any(Number) });
   expect(r.fhp.targetAssessment).toMatchObject({ tier: expect.stringMatching(/^(w-zakresie-celu|ponizej-celu|niskoroslosc-dorosla)$/), diffCm: expect.any(Number), adultSds: expect.any(Number) });
-  expect(r.cardText).toContain('Konsensus wobec celu rodzicielskiego:');
+  expect(r.cardText).toContain('Konsensus wobec potencjału genetycznego wzrostu:');
   expect(r.cardText).toContain('Reguły konsensusu w profilu przedwczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978); Bayley–Pinneau z tablicy „przeciętnej" zamiast „przyspieszonej"');
   expect(r.cardText).toContain('tablica przyspieszona dałaby');
-  expect(r.cardText).toContain('Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej celu (Kauli 1997)');
+  expect(r.cardText).toContain('Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej potencjału genetycznego (Kauli 1997)');
   expect(r.cardText).not.toContain('w przygotowaniu');
   // GROWTH-PRED-PUB3: wiersze informacyjne — SDS wzrostu dla wieku kostnego z tych samych norm co centyle
   expect(typeof r.hBa).toBe('number');
@@ -115,8 +115,8 @@ test('ta sama dziewczynka w trakcie GnRHa od 7,2 l: tempo nieoceniane, nota Laza
   expect(b.cardText).toContain('Reguły konsensusu w profilu wczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978; w profilu wczesnym jak w przedwczesnym — decyzja właściciela)');
   expect(b.cardText).toContain('Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm');
   expect(b.cardText).not.toContain('Lazar 2001'); // GROWTH-PRED-PUB4: nota o Tanner 3 tylko przy stadium ≥ 3 (tu bez etapu)
-  expect(b.cardText).toContain('Po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026)');
-  expect(b.cardText).toContain('Konsensus wobec celu rodzicielskiego:');
+  expect(b.cardText).toContain('Po GnRHa wzrost ostateczny chłopców był bliski potencjału genetycznego (Cho 2026)');
+  expect(b.cardText).toContain('Konsensus wobec potencjału genetycznego wzrostu:');
   expect(b.fhp.infoRows.map((x) => x.key)).toEqual(['hba']); // chłopiec: bez Wu 2023
 });
 
@@ -128,7 +128,7 @@ test('bez danych pokwitaniowych profil standardowy: etykieta z modelu wiarygodno
   expect(r.cardText).toContain('Profil predykcyjny: Profil standardowy');
   expect(r.cardText).toContain('Profil pokwitaniowy: standardowy. Brakuje: brak danych pokwitaniowych (etap Tannera, wiek startu, objętość jąder)');
   expect(r.cardText).not.toContain('Reguły konsensusu w profilu');
-  expect(r.cardText).not.toContain('Konsensus wobec celu rodzicielskiego');
+  expect(r.cardText).not.toContain('Konsensus wobec potencjału genetycznego wzrostu');
   expect(r.fhp.pubertyRulesActive).toBe(false);
   expect(r.fhp.targetAssessment).toBeNull();
   expect(r.bp).toMatchObject({ override: false, groupKey: 'accelerated' });

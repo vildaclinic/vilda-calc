@@ -365,7 +365,7 @@
  },
  "vilda_advanced_growth.js": {
   "v": 71,
-  "sha256": "3bc85225036953e79a356c9213a351b45c999c6f496a9f351dcc5bb01696b7f8"
+  "sha256": "564dc0686cbb989a1227449b3d9073e6c302941724bf82de4a96e97376590f92"
  },
  "vilda_anorexia_risk.js": {
   "v": 4,
@@ -536,12 +536,12 @@
   "sha256": "19c714270a6ad18cc40d247879471f4fe2973e920ae9aeca26a3b5c22d90e465"
  },
  "vilda_growth_card_c.js": {
-  "v": 26,
-  "sha256": "46ea31fbc2124636af91f3a2986e2e235d338c59ac5695f491f11d912d575de8"
+  "v": 27,
+  "sha256": "4fa5815e6128b0435deba3e96b5e895c7ff5d9630996193d9e7e963b22c91ef4"
  },
  "vilda_growth_method_ledger.js": {
-  "v": 1,
-  "sha256": "a431f3c16e835a54ef4d44cef7219c85bf8616e7ed187654b8e123044dd6eedb"
+  "v": 2,
+  "sha256": "e6934adae00ded8660e66c918c306d9b483d217d3520a7c449f1114fe8d5d2ec"
  },
  "vilda_growth_prediction_lines.js": {
   "v": 1,
@@ -552,8 +552,8 @@
   "sha256": "9c2334fdbd65bdc29bb3f138a1e3c35388b3b1385188f218259a30fbb3a5c8f4"
  },
  "vilda_growth_prediction_validation_model.js": {
-  "v": 2,
-  "sha256": "857dc96dff22d0565d4535ae2e4f1edb1e8af85ae5aed26c32dbfa2c954c3ad4"
+  "v": 3,
+  "sha256": "f43f3f49fb7c0153c4ebf5448e635eb27109047226eaeec53e50c70728e61376"
  },
  "vilda_growth_reference_data.js": {
   "v": 1,

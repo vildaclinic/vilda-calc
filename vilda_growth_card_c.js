@@ -164,7 +164,7 @@
     }
     if (sk === 'F' && hBa !== null && hCa !== null && mph !== null && mph > 0) {
       push('wu2023', 'Wu 2023 (CPP, dziewczęta)', WU2023.hSds * hCa + WU2023.hSdsBa * hBa + WU2023.th * mph + WU2023.konst,
-        'równanie 1,896·hSDS ' + fmtSds(hCa) + ' + 2,299·hSDS dla wieku kostnego ' + fmtSds(hBa) + ' + 0,408·cel ' + fmt1(mph) + ' + 100,17; model z dziewcząt z idiopatycznym CPP leczonych GnRHa, populacja chińska (RMSE 2,2 cm u autorów) — orientacyjny',
+        'równanie 1,896·hSDS ' + fmtSds(hCa) + ' + 2,299·hSDS dla wieku kostnego ' + fmtSds(hBa) + ' + 0,408·MPH ' + fmt1(mph) + ' + 100,17; model z dziewcząt z idiopatycznym CPP leczonych GnRHa, populacja chińska (RMSE 2,2 cm u autorów) — orientacyjny',
         { heightSds: hCa, heightSdsForBoneAge: hBa, targetCm: mph });
     }
     return rows;
@@ -204,7 +204,8 @@
     var z = prim.zLms(x, [L === null ? 1 : L, M, S]);
     return typeof z === 'number' && isFinite(z) ? z : null;
   }
-  // Konsensus wobec celu rodzicielskiego: różnica w cm i w SD celu, SDS wobec norm dorosłych, próg.
+  // Konsensus wobec potencjału genetycznego wzrostu (MPH): różnica w cm i w SD potencjału, SDS wobec norm dorosłych,
+  // próg. Słowo „potencjał genetyczny”, nie „cel” (decyzja właściciela 2026-09-28) — klucze `tier` bez zmian.
   function targetAssessmentFor(weightedCm, mphCm, adultLms) {
     var w = num(weightedCm), m = num(mphCm);
     if (w === null) return null;
@@ -214,7 +215,7 @@
     if (adultSds !== null && adultSds < ADULT_SHORT_SDS) tier = 'niskoroslosc-dorosla';
     else if (diff !== null && diff <= -TARGET_BELOW_CM) tier = 'ponizej-celu';
     else if (diff === null && adultSds === null) return null;
-    var labels = { 'niskoroslosc-dorosla': 'niskorosłość dorosła', 'ponizej-celu': 'poniżej celu', 'w-zakresie-celu': 'w zakresie celu', 'w-normie-doroslych': 'w normie dorosłych' };
+    var labels = { 'niskoroslosc-dorosla': 'niskorosłość dorosła', 'ponizej-celu': 'poniżej potencjału genetycznego', 'w-zakresie-celu': 'w zakresie potencjału genetycznego', 'w-normie-doroslych': 'w normie dorosłych' };
     return { diffCm: diff, targetSd: diff !== null ? diff / MPH_SIGMA_CM : null, adultSds: adultSds, tier: tier, tierLabel: labels[tier] };
   }
 
@@ -858,13 +859,13 @@
     var wcm = model.weighted || {};
     if (wcm.withMph) s += '; MPH jako kotwica ' + (wcm.mphWeightFactor === 1 ? 'z pełną wagą' + (model.postmenarcheal ? '' : ' (×0,25 dopiero po menarche)') : 'z wagą ×' + esc(fmt1(wcm.mphWeightFactor)) + (wcm.mphWeightFactor < 1 && !model.postmenarcheal ? ' (niskorosłość, Blum 2022)' : '')) + '.';
     else s += '; MPH poza konsensusem (' + (model.mph ? 'kotwica wchodzi dopiero przy dwóch metodach' : 'brak wzrostu rodziców') + ').';
-    if (r.tempo === 'wolne') s += ' Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm, a wzrost ostateczny nieleczonych zwykle mieści się w zakresie celu (Jang 2023; Palmert 1999; Léger 2000).';
-    else if (r.tempo === 'szybkie') s += ' Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej celu (Kauli 1997), a prognozy z wieku kostnego zawyżają (Kauli 1997; Lazar 2001).';
-    else if (r.tempo === 'nieznane') s += ' Tempo nieznane — bez wieku kostnego z dwóch wizyt nie da się odróżnić przebiegu wolnego (wzrost ostateczny ≈ cel) od szybkiego (5–8 cm poniżej celu).';
+    if (r.tempo === 'wolne') s += ' Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm, a wzrost ostateczny nieleczonych zwykle mieści się w zakresie potencjału genetycznego (Jang 2023; Palmert 1999; Léger 2000).';
+    else if (r.tempo === 'szybkie') s += ' Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej potencjału genetycznego (Kauli 1997), a prognozy z wieku kostnego zawyżają (Kauli 1997; Lazar 2001).';
+    else if (r.tempo === 'nieznane') s += ' Tempo nieznane — bez wieku kostnego z dwóch wizyt nie da się odróżnić przebiegu wolnego (wzrost ostateczny ≈ potencjał genetyczny) od szybkiego (5–8 cm poniżej potencjału genetycznego).';
     if (model.sexKey === 'M') {
       var stad = model.pubertyProfile && model.pubertyProfile.wskazniki ? num(model.pubertyProfile.wskazniki.tannerStadium) : null;
       if (stad !== null && stad >= 3) s += ' U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001).';
-      s += ' Po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026).';
+      s += ' Po GnRHa wzrost ostateczny chłopców był bliski potencjału genetycznego (Cho 2026).';
     }
     if (r.gnrhaWTrakcie) s += ' W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie — nasady zamykają się wcześniej, niż wynika z wieku kostnego (Lazar 2007).';
     return s + '</p>';
@@ -883,14 +884,14 @@
     var parts = [];
     if (t.diffCm !== null) {
       var sign = t.diffCm < -0.05 ? '−' : (t.diffCm > 0.05 ? '+' : '');
-      parts.push('<b>' + sign + esc(fmt1(Math.abs(t.diffCm))) + ' cm</b> (' + sign + esc(fmt1(Math.abs(t.targetSd))) + ' SD celu; cel ±10 cm)');
+      parts.push('<b>' + sign + esc(fmt1(Math.abs(t.diffCm))) + ' cm</b> (' + sign + esc(fmt1(Math.abs(t.targetSd))) + ' SD potencjału genetycznego; pasmo ±10 cm)');
     }
     if (t.adultSds !== null) {
       var sg = t.adultSds < -0.005 ? '−' : (t.adultSds > 0.005 ? '+' : '');
       parts.push('wobec norm dorosłych ' + sg + esc(fmt1(Math.abs(t.adultSds))) + ' SDS');
     }
     var lbl = t.diffCm === null ? 'Prognoza wobec norm dorosłych (bez wzrostu rodziców): '
-      : (model.consensus && model.consensus.count >= 2 ? 'Konsensus wobec celu rodzicielskiego: ' : 'Prognoza wobec celu rodzicielskiego: ');
+      : (model.consensus && model.consensus.count >= 2 ? 'Konsensus wobec potencjału genetycznego wzrostu: ' : 'Prognoza wobec potencjału genetycznego wzrostu: ');
     return '<div class="vgcc-target">' + lbl + parts.join('; ') + ' — <b>' + esc(t.tierLabel) + '</b></div>';
   }
 
@@ -984,7 +985,7 @@
       else if (cm[1] === '>') c = '; <span class="vgcc-mph-cent">&gt;' + esc(cm[2]) + '. centyla</span>';
       else c = '; <span class="vgcc-mph-cent">' + esc(cm[2]) + '. centyl</span>';
     }
-    return '<div class="vgcc-mph">🎯 Cel rodzicielski (MPH): <b>' + esc(fmt1(model.mph.cm)) + ' cm</b>' + c + '</div>';
+    return '<div class="vgcc-mph">🎯 Potencjał genetyczny wzrostu (MPH): <b>' + esc(fmt1(model.mph.cm)) + ' cm</b>' + c + '</div>';
   }
 
   function statsHtml(model) {
@@ -999,13 +1000,13 @@
     var anchor = num(wc.mphAnchorCm), mph = model.mph ? num(model.mph.cm) : null;
     var s = ' MPH w konsensusie jako ';
     if (anchor !== null && mph !== null && Math.abs(anchor - mph) >= 0.05) {
-      s += 'cel warunkowy ' + esc(fmt1(anchor)) + ' cm (regresja do średniej 0,78, Luo 1998; udział ';
+      s += 'potencjał warunkowy ' + esc(fmt1(anchor)) + ' cm (regresja do średniej 0,78, Luo 1998; udział ';
     } else {
       s += 'kotwica (udział ';
     }
     s += esc(String(Math.round((wc.mphShare || 0) * 100))) + '%';
     if (model.postmenarcheal) s += '; waga ×0,25 po menarche, bo przy ok. 95 % wzrostu dorosłego poprawka na rodziców traci sens, Tanner 1983';
-    if (wc.mphWeightFactor !== undefined && wc.mphWeightFactor < (model.postmenarcheal ? MPH_POSTMENARCHE_WEIGHT : 1)) s += '; waga ×0,5 w niskorosłości, bo dzieci ISS kończą poniżej celu, Blum 2022';
+    if (wc.mphWeightFactor !== undefined && wc.mphWeightFactor < (model.postmenarcheal ? MPH_POSTMENARCHE_WEIGHT : 1)) s += '; waga ×0,5 w niskorosłości, bo dzieci ISS kończą poniżej potencjału genetycznego, Blum 2022';
     return s + ').';
   }
   function tw2Paragraph(model) {

@@ -65,7 +65,7 @@ describe('GROWTH-PRED-BIAS — reguły korekt (biasFor)', () => {
 
 describe('GROWTH-PRED-BIAS — chłopiec KOWD (Δ −30, hSDS −2,1)', () => {
   const C = loadCard();
-  it('BP 176,0 → 174,0 (σ×1,2), RWT 172,0 → 170,7, Reinehr ±6,4; MPH jako cel warunkowy z wagą ×0,5', () => {
+  it('BP 176,0 → 174,0 (σ×1,2), RWT 172,0 → 170,7, Reinehr ±6,4; MPH jako potencjał warunkowy z wagą ×0,5', () => {
     const r = C.computeFinalHeightPrediction(KOWD);
     const bp = r.methods.find((m) => m.key === 'bp');
     const rwt = r.methods.find((m) => m.key === 'rwt');
@@ -102,10 +102,10 @@ describe('GROWTH-PRED-BIAS — chłopiec KOWD (Δ −30, hSDS −2,1)', () => {
     expect(rows).toContain('Reinehr/CDGP</span><span><span class="vgcc-val">173,0 cm</span>');
     expect(rows.slice(rows.indexOf('Reinehr/CDGP'))).not.toContain('do konsensusu wchodzi');
     // Wartość konsensusu NIE zmienia się przez tę zmianę — liczy się nadal ze skorygowanych.
-    expect(html).toContain('Cel rodzicielski (MPH): <b>181,0 cm</b>'); // kafel bez zmian
+    expect(html).toContain('Potencjał genetyczny wzrostu (MPH): <b>181,0 cm</b>'); // kafel bez zmian
     const det = html.slice(html.indexOf('vgcc-det'));
     expect(det).toContain('Korekta błędu systematycznego:</span> RWT 172,0 → 170,7 cm (−1,3 cm): RWT w niskorosłości (hSDS ≤ −2) zawyża (Blum 2022); Bayley–Pinneau 176,0 → 174,0 cm (−2,0 cm, σ ×1,2): Bayley–Pinneau przy opóźnieniu kostnym ≥ 2 lata zawyża u chłopców (Reinehr 2019; Brämswig 1990).');
-    expect(det).toContain('MPH w konsensusie jako cel warunkowy 180,6 cm (regresja do średniej 0,78, Luo 1998; udział ');
+    expect(det).toContain('MPH w konsensusie jako potencjał warunkowy 180,6 cm (regresja do średniej 0,78, Luo 1998; udział ');
     expect(det).toContain('waga ×0,5 w niskorosłości');
     // Karta mówi wprost, którą wersję liczby pokazuje i co jeszcze na nią działa.
     expect(det).toContain('Skąd te liczby:');

@@ -82,7 +82,7 @@ describe('Karta i API', () => {
     expect(html.indexOf('is-info')).toBeGreaterThan(html.indexOf('TW Mark II'));
     const t = text(html);
     expect(t).toContain('Wiersze informacyjne (poza konsensusem, bez wagi): Wzrost dla wieku kostnego 152,8 cm: SDS wzrostu dla wieku kostnego −2,00 przeniesiony na normy dorosłych (18 l)');
-    expect(t).toContain('Wu 2023 (CPP, dziewczęta) 163,2 cm: równanie 1,896·hSDS −0,50 + 2,299·hSDS dla wieku kostnego −2,00 + 0,408·cel 168,0 + 100,17');
+    expect(t).toContain('Wu 2023 (CPP, dziewczęta) 163,2 cm: równanie 1,896·hSDS −0,50 + 2,299·hSDS dla wieku kostnego −2,00 + 0,408·MPH 168,0 + 100,17');
     expect(t).toContain('Konsensus: 2 metody i MPH, ważony wiarygodnością 161,2 cm; widełki metod 158,0–160,0 cm');
     const stdHtml = C.render(BAZA);
     expect(stdHtml).not.toContain('vgcc-tag'); // „poza konsensusem" w tekście może paść z bramki KR — tag i akapit są tylko dla wierszy informacyjnych

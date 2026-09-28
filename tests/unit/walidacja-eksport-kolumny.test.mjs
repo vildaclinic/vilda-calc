@@ -116,7 +116,7 @@ describe('Eksport zbiorczy — kolumny korekty aplikacji', () => {
   it('lista metod w eksporcie idzie z modelu — Blum/ISS też trafia do pliku', () => {
     const metody = Array.from(new Set(rows.map((r) => r[kol('metoda')])));
     expect(metody).toContain('Blum/ISS');
-    expect(metody).toContain('MPH (cel)');
+    expect(metody).toContain('MPH (potencjał genetyczny)');
     expect(metody.length).toBeGreaterThanOrEqual(model.methods.length);
   });
 

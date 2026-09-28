@@ -132,7 +132,7 @@ test('ADV-REPORT-4: podsumowanie podaje wiek kostny i pasmo celu rodzicielskiego
   expect(out.summary).toContain('Wiek kostny: 8 lat');
   expect(out.summary).toContain('opóźniony o 24 mies.');
   // pasmo celu rodzicielskiego zamiast samej liczby MPH
-  expect(out.summary).toContain('pasmo celu');
+  expect(out.summary).toMatch(/pasmo \d+,\d–\d+,\d[\s\u00A0]cm/);
 });
 
 

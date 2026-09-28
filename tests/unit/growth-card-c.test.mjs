@@ -62,7 +62,7 @@ describe('Wariant B — render (clean, HTML)', () => {
     expect(html).toContain('≈ 178 cm');
     expect(html).toContain('177,8 cm'); // RWT wartość
     expect(html).toContain('±4,6');     // przedział przy metodzie
-    expect(html).toContain('Cel rodzicielski (MPH)');
+    expect(html).toContain('Potencjał genetyczny wzrostu (MPH)');
     expect(html).toContain('178,5 cm');
     expect(html).toContain('Tempo wzrastania');
     expect(html).toContain('5,1');
@@ -98,7 +98,7 @@ describe('Wariant B — render (clean, HTML)', () => {
     // etykieta poprawiona: nie twierdzi już fałszywie, że RWT/Reinehr wymagają wieku kostnego
     expect(html).toContain('Część metod (np. Bayley–Pinneau) wymaga wieku kostnego');
     expect(html).not.toContain('RWT i Reinehr wymagają');
-    expect(html).toContain('Cel rodzicielski (MPH)');
+    expect(html).toContain('Potencjał genetyczny wzrostu (MPH)');
     // brak wierszy metod BP/RWT/Reinehr
     expect(html).not.toContain('<span class="vgcc-nm">Bayley');
     expect(html).not.toContain('<span class="vgcc-nm">Reinehr');
@@ -113,7 +113,7 @@ describe('Wariant B — render (clean, HTML)', () => {
 
   it('brak MPH i brak tempa → sekcje znikają', () => {
     const html = C.render(baseInput({ mphCm: null, growthVelocityCmPerYear: null }));
-    expect(html).not.toContain('Cel rodzicielski (MPH)');
+    expect(html).not.toContain('Potencjał genetyczny wzrostu (MPH)');
     expect(html).not.toContain('Tempo wzrastania');
   });
 

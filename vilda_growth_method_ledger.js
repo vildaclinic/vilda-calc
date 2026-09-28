@@ -90,9 +90,9 @@
       klucz: 'mph',
       nazwa: 'MPH — kotwica konsensusu',
       zrodlo: 'Luo ZC i wsp., Pediatr Res 1998; Cole TJ 2000; Tanner 1983',
-      wzor: 'Średnia wzrostu rodziców ± 6,5 cm. <b>Cel genetyczny, nie prognoza</b> — nie jest metodą i nie startuje w rankingu „najbliżej FH".',
+      wzor: 'Średnia wzrostu rodziców ± 6,5 cm. <b>Potencjał genetyczny, nie prognoza</b> — nie jest metodą i nie startuje w rankingu „najbliżej FH".',
       silnik: '—',
-      karta: 'Do konsensusu wchodzi <b>cel warunkowy</b>, nie samo MPH: mediana wzrostu dorosłych + 0,78 × (MPH − mediana), czyli z regresją do średniej. Waga <b>×0,5</b> przy hSDS ≤ −2 (dzieci z ISS kończą ok. 0,6 SDS poniżej celu) i <b>×0,25</b> po menarche (przy 95 % wzrostu dorosłego dodawanie za wysokich rodziców „nie ma sensu" — Tanner 1983, s. 775). Udział nigdy nie przekracza około jednej trzeciej konsensusu.'
+      karta: 'Do konsensusu wchodzi <b>potencjał warunkowy</b>, nie samo MPH: mediana wzrostu dorosłych + 0,78 × (MPH − mediana), czyli z regresją do średniej. Waga <b>×0,5</b> przy hSDS ≤ −2 (dzieci z ISS kończą ok. 0,6 SDS poniżej potencjału genetycznego) i <b>×0,25</b> po menarche (przy 95 % wzrostu dorosłego dodawanie za wysokich rodziców „nie ma sensu" — Tanner 1983, s. 775). Udział nigdy nie przekracza około jednej trzeciej konsensusu.'
     }
   ];
 
