@@ -40,7 +40,8 @@ export function assembleTypes(componentsDir) {
 
 /** Kompiluje tokens.json do CSS tak, jak robi to strona (do lokalnych renderów). */
 export function compileTokensCss(t) {
-  const esc = (n) => n.replace(/\./g, '\\.');
+  // nazwa tokenu w selektorze/właściwości CSS: znaki spoza gramatyki nazw wypadają, backslash i kropka są escapowane (w tej kolejności)
+  const esc = (n) => String(n).replace(/[^A-Za-z0-9_.\\-]/g, '').replace(/\\/g, '\\\\').replace(/\./g, '\\.');
   const themes = (t.color && t.color.themes) || [{ id: 'light' }];
   const first = themes[0].id;
   const cssVal = (v) => { const m = /^\{([A-Za-z0-9_.-]+)\}$/.exec(v); return m ? `var(--${esc(m[1])})` : v; };

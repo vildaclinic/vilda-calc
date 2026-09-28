@@ -202,15 +202,12 @@ export function extractHtmlStyles(html) {
   return findStyleBlocks(html);
 }
 
+const JS_ESCAPES = { n: '\n', t: '\t', r: '\r', '"': '"', "'": "'", '\\': '\\', '/': '/', '`': '`' };
+
+/** Odkodowuje sekwencje ucieczki literału JS w jednym przebiegu (każdy backslash rozpatrzony raz). */
 function unescapeJsString(css) {
-  if (!/\\n|\\"|\\'|\\\\/.test(css)) return css;
-  return css
-    .replace(/\\n/g, '\n')
-    .replace(/\\t/g, '\t')
-    .replace(/\\"/g, '"')
-    .replace(/\\'/g, "'")
-    .replace(/\\\\/g, '\\')
-    .replace(/\\\//g, '/');
+  if (!css.includes('\\')) return css;
+  return css.replace(/\\(.)/gs, (m, c) => (Object.hasOwn(JS_ESCAPES, c) ? JS_ESCAPES[c] : m));
 }
 
 /**
