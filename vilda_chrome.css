@@ -1423,10 +1423,6 @@ body.chrome-drawer-open {
   width: 30px;
   height: 30px;
   padding: 0;
-  border: var(--border-hairline) solid #cfe4e4;
-  border-radius: var(--radius-8);
-  background: #fff;
-  color: #4d8285;
   cursor: pointer;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -1438,26 +1434,12 @@ body.chrome-drawer-open {
   display: inline-flex
 }
 
-.chrome-sync-btn:hover {
-  background: #f2f9f9;
-  border-color: #9fd4d8;
-  color: var(--primary, #00838d)
-}
-
 .chrome-sync-btn[data-sync-state=syncing] {
   color: var(--primary, #00838d)
 }
 
 .chrome-sync-btn[data-sync-state=syncing] svg {
   animation: vildaSyncPulse 1.1s ease-in-out infinite
-}
-
-.chrome-sync-btn[data-sync-state=ok] {
-  color: #16a34a
-}
-
-.chrome-sync-btn[data-sync-state=error] {
-  color: #dc2626
 }
 
 .chrome-sync-btn[data-sync-state=stale] {
@@ -1477,11 +1459,7 @@ body.chrome-drawer-open {
 }
 
 .chrome-sync-btn[data-cloud-only=true] {
-  display: inline-flex;
-  border-radius: var(--radius-8);
-  border-color: transparent;
-  background: var(--primary, #00838d);
-  color: #fff
+  display: inline-flex
 }
 
 .chrome-sync-btn[data-cloud-only=true]:hover {
@@ -1515,10 +1493,6 @@ body.chrome-drawer-open {
   height: 30px;
   padding: 0;
   margin: 0;
-  border: var(--border-hairline) solid #cfe4e4;
-  border-radius: var(--radius-8);
-  background: #fff;
-  color: #4d8285;
   cursor: pointer;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -1536,12 +1510,6 @@ body.chrome-drawer-open {
 
 .chrome-reminders-btn[hidden] {
   display: none
-}
-
-.chrome-reminders-btn:hover {
-  background: #f2f9f9;
-  border-color: #9fd4d8;
-  color: var(--primary, #00838d)
 }
 
 .chrome-reminders-btn:active {
@@ -1575,16 +1543,8 @@ body.chrome-drawer-open {
   pointer-events: none
 }
 
-.chrome-reminders-btn[data-state=overdue] {
-  color: #dc2626
-}
-
 .chrome-reminders-btn[data-state=overdue] .chrome-reminders-badge {
   background: #dc2626
-}
-
-.chrome-reminders-btn[data-state=today] {
-  color: var(--primary, #00838d)
 }
 
 .chrome-reminders-btn[data-state=today] .chrome-reminders-badge {
@@ -1612,7 +1572,6 @@ body.chrome-drawer-open {
 }
 
 .chrome-sync-btn[data-cloud-only=true][data-offline=true] {
-  background: var(--warning);
   color: #fff;
   box-shadow: 0 0 0 2px #b4530940
 }
@@ -1643,18 +1602,6 @@ body.chrome-drawer-open {
 .chrome-pro-badge:hover {
   opacity: var(--opacity-muted);
   transform: scale(.96)
-}
-
-.chrome-pro-badge[data-pro-state=active] {
-  background: #ece8fb;
-  color: #6d4bd8;
-  border-color: transparent
-}
-
-.chrome-pro-badge[data-pro-state=upgrade] {
-  background: #e0f2f3;
-  color: var(--primary);
-  border-color: transparent
 }
 
 .liquid-ios26 .chrome-reminders-btn {

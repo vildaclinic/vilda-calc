@@ -5829,7 +5829,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Dziecko z otyłością: PAL 1,4 także w wieku 4–9 lat, sufit tempa 1 / 1,5 / 2 kg/mies. przy ≥ 99. centylu w wieku 6–11 lat, redukcja domyślna przy otyłości 6–11 lat, stabilizacja jako górna granica z kontrolą po 12 tygodniach (P-DIETA-STAB rata 1, SW 1.1.93, 2026-09-28)
+## Dziecko z otyłością: PAL 1,4 także w wieku 4–9 lat, sufit tempa 1 / 1,5 / 2 kg/mies. przy ≥ 99. centylu w wieku 6–11 lat, redukcja domyślna przy otyłości 6–11 lat, stabilizacja jako górna granica z kontrolą po 12 tygodniach (P-DIETA-STAB rata 1, SW 1.1.95, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28, endokrynolog dziecięcy).** Chłopiec 7 l. 3 mies., 44 kg, 131 cm, BMI 25,6
 (99,2. centyl OLAF, bmiSDS +2,42), strategia „stabilizacja” wybrana ręcznie: zalecenia podawały „podaż energii dziecka odpowiada
@@ -5907,7 +5907,7 @@ CDC 2000 ok. 133 % 95. centyla (AAP 2023: otyłość ciężka klasy 2; obliczeni
   próg „> X kg” (przy redukcji bez zmian: „≥”).
 - `vilda_bmi_journey.js` (`?v=25`): „Droga do normy” w trybie stabilizacji — „≤ X kcal/dzień, górna granica dnia —
   stabilizacja masy ciała, nie cel do dobicia”.
-- Strony (`index.html`, `docpro.html`, `kalkulator-klirens.html`, lista smoke) i precache SW (append-only), SW 1.1.92 → 1.1.93,
+- Strony (`index.html`, `docpro.html`, `kalkulator-klirens.html`, lista smoke) i precache SW (append-only), SW 1.1.94 → 1.1.95 (1.1.93 i 1.1.94 zajęły równolegle P-STYLE rata 4a i P-VAR-TOAST),
   fixture wersji odświeżony.
 
 **Przypadki `wejście → oczekiwany wynik` (fikcyjne; prawdziwy silnik; `tests/unit/p-dieta-stab-rata1.test.mjs`).**
@@ -5944,6 +5944,38 @@ kontroli planu PDF). Zaktualizowane oczekiwania (skutki decyzji 1–4, bez zmnie
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna po przeglądzie PR; ewentualny margines tolerancji progu kontroli
 stabilizacji; czy dziecko 6–11 lat z otyłością i niskim wzrostem (bez alarmu tempa) ma dostawać domyślnie redukcję; wybór siatki
 odniesienia dla kategorii otyłości; scalenie i wdrożenie.
+
+## Toast „Zalecenia zostały uaktualnione” modułu VAR tylko przy widocznej karcie (P-VAR-TOAST, SW 1.1.94, 2026-09-28)
+
+**Zgłoszenie właściciela (2026-09-28).** Na `docpro.html`, także przy pustym formularzu, kliknięcie „Wyczyść
+wszystkie pola” wywoływało przy lewej krawędzi ekranu fragment dymka: biała etykieta na turkusowym tle, kończąca
+się słowem „uaktualnione”.
+
+**Przyczyna.** To toast „Zalecenia zostały uaktualnione” modułu leczenia ospy wietrznej (VAR) w `flu_therapy.js`
+(`scheduleUpdateTooltip`, dodane naprawą z 2026-08-20). `recalculateVar()` słucha `input` na polach `age`,
+`ageMonths` i `weight` niezależnie od tego, czy karta leczenia przeciwwirusowego (`#fluCard`) jest otwarta. Od
+P-MINI-WYCZYSC (2026-09-27) „Wyczyść wszystkie pola” rozsyła po tych polach `input`/`change` — przeliczenie VAR
+rusza więc przy każdym czyszczeniu, a po 800 ms toast centruje się na prostokącie ukrytej karty. Ukryta karta ma
+prostokąt 0×0, więc toast dostawał `left: 0` z `translateX(-50%)`: połowa poza ekranem, widoczne tylko
+„…ły uaktualnione”. Ten sam przebieg zachodził przy zwykłym wpisywaniu wieku lub masy przy zamkniętej karcie.
+Bliźniaczy toast grypy (`initFluTherapyModule`) od zawsze sprawdza widoczność `#fluCard` — toast VAR tego nie robił.
+Pomiar przed poprawką (Playwright, 1440 px i 390 px): toast `display: block`, `opacity: 1`, x = −156 px.
+
+**Poprawka.** W `scheduleUpdateTooltip`, po debounce, toast pokazuje się tylko wtedy, gdy `#varResult` jest
+wyrenderowany (`getClientRects().length > 0`) — czyli karta jest otwarta i wybrana ospa wietrzna. Przy otwartej
+karcie z wybraną grypą toast VAR też milknie (sekcja VAR jest ukryta). Położenie i wygląd toastu przy widocznej
+karcie bez zmian. **Bez zmiany wyników:** przeliczenie zaleceń VAR, automatyczny dobór preparatu, treść zaleceń,
+zapis i synchronizacja działają jak dotąd — zmienia się wyłącznie to, czy pokazuje się komunikat.
+
+**Strażnicy.** `tests/unit/flu-var-tooltip.test.mjs` — prawdziwy `flu_therapy.js` w kontekście `vm` na atrapie
+DOM, prawdziwe `recalculateVar()`: zamknięta karta → zalecenia przeliczone, toastu brak; otwarta karta z grypą →
+toastu brak; widoczna sekcja VAR → toast wyśrodkowany nad kartą; **kontrola negatywna** (kod sprzed poprawki) →
+toast w `left: 0`. `tests/e2e/docpro-toast-var.spec.mjs` — docpro z fikcyjnym kontem sejfu: po „Wyczyść wszystkie
+pola” na pustym formularzu `#varResult` się przelicza, a toast nie pojawia się przez 1,8 s; przy widocznej sekcji
+VAR toast pojawia się w granicach ekranu, nad środkiem karty. Kontrola negatywna e2e na kodzie sprzed poprawki:
+pierwszy test czerwony z x = −156 px. Oba testy e2e przechodzą także na 390 px.
+
+SW 1.1.93 → **1.1.94** (1.1.93 zajęło równolegle P-STYLE rata 4a); `flu_therapy.js?v=7→8` (precache append-only), fixture wersji odświeżony.
 
 ## Przełączanie paneli powłoki (Start → DocPro) po wczytaniu pacjenta: pusty albo częściowy formularz i karta porównania (P-POWLOKA-PANELE, SW 1.1.88, 2026-09-28)
 
