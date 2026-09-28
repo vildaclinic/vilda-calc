@@ -244,21 +244,21 @@ describe('Nagłówek z faktów — rata S', () => {
     expect(N.zbuduj({ ...baza, wzrost: { cm: 123.9, centyl: 2.4 } }).title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, 2. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 152, centyl: 98.2 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 152,0${NB}cm, 98. centyl.`);
     expect(N.zbuduj({ ...baza, wzrost: { cm: 156, centyl: 99.7 } }).title).toBe(`Wzrost jest wysoki jak na wiek: 156,0${NB}cm, powyżej 99. centyla.`);
-    expect(N.WERSJA).toBe(8); // rata G2
+    expect(N.WERSJA).toBe(9); // P-SLOWA-MPH (rata G2: 8)
   });
 });
 
 
-// P-RAPORT rata T (decyzje właściciela 2026-09-23): wysoki wzrost wobec wzrostu docelowego wg rodziców (MPH).
+// P-RAPORT rata T (decyzje właściciela 2026-09-23): wysoki wzrost wobec potencjału genetycznego wzrostu (MPH).
 // Progi 1,5 / 2,0; alarm od 3 lat; łagodzenie od 10 lat; wyjątek hSDS ≥ +3,0; liczba SDS tylko w trybie
 // profesjonalnym; remis 2:2 przed „masą proporcjonalną”, za otyłością. Dane FIKCYJNE.
-describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg rodziców)', () => {
+describe('Nagłówek z faktów — rata T (wysoki wzrost a potencjał genetyczny wzrostu)', () => {
   const NORMA = { bmi: { wartosc: 15.8, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, cole: { proc: 100, klucz: 'norma', kolor: 'ok' }, masa: { kg: 24, centyl: 60, kolor: 'ok' } };
   const SZESC = { dorosly: false, wiekLat: 6, historia: false, ...NORMA, wzrost: { cm: 129, centyl: 98.3 } };
   const ROCZNIAK = { dorosly: false, wiekLat: 1, historia: false, bmi: { wartosc: 17.1, klucz: 'prawidlowe', etykieta: 'Prawidłowe', kolor: 'ok' }, cole: { proc: 99.7, klucz: 'norma', kolor: 'ok' }, masa: { kg: 11.8, centyl: 93, kolor: 'improve' }, wzrost: { cm: 83, centyl: 99.6 } };
   const mph = (r, extra) => ({ roznicaSds: r, mphCm: 169.5, mphCentyl: 8, mpSds: -1.44, hSds: 2.13, liczbaWidoczna: true, ...(extra || {}) });
   const WYSOKI = `Wzrost jest wysoki jak na wiek: 129,0${NB}cm, 98. centyl.`;
-  const CEL_NISKI = `wzrost docelowy wg rodziców 169,5${NB}cm, 8. centyl dorosłych`;
+  const CEL_NISKI = `potencjał genetyczny wzrostu 169,5${NB}cm, 8. centyl dorosłych`;
 
   it('progi i granice wieku są danymi modułu', () => {
     expect(N.WZROST_A_RODZICE).toEqual({ PASMO: 1.5, ALARM: 2.0, WIEK_ALARM_OD_LAT: 3, WIEK_POKWITANIA_OD_LAT: 10, HSDS_BEZ_LAGODZENIA: 3.0 });
@@ -276,13 +276,13 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
   it('W1: w paśmie — żółte, opisowe („zgodny ze wzrostem rodziców”), bez „rodzinny”; historia i tempo zmieniają drugie zdanie', () => {
     const h = N.zbuduj({ ...SZESC, mph: mph(0.04, { mphCm: 192, mphCentyl: 98, mpSds: 2.09 }) });
     expect(h).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn', title: WYSOKI, dodatkowe: [] });
-    expect(h.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 192,0${NB}cm, 98. centyl dorosłych). Najwięcej informacji daje tempo wzrastania w kolejnych pomiarach.`);
+    expect(h.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (potencjał genetyczny wzrostu 192,0${NB}cm, 98. centyl dorosłych). Najwięcej informacji daje tempo wzrastania w kolejnych pomiarach.`);
     expect(h.text).not.toMatch(/rodzinn|przemawia|SDS/);
     expect(N.zbuduj({ ...SZESC, historia: true, mph: mph(0.04, { mphCm: 192, mphCentyl: 98 }) }).text).toMatch(/\)\. Najwięcej informacji daje porównanie z wcześniejszymi pomiarami i tempo wzrastania\.$/);
     const zTempem = N.zbuduj({ ...SZESC, tempo: { cmRok: 3, ton: 'warn', norma: null }, mph: mph(0.04, { mphCm: 192, mphCentyl: 98 }) });
-    expect(zTempem.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 192,0${NB}cm, 98. centyl dorosłych). Dodatkowo tempo wzrastania wymaga oceny: 3,0${NB}cm/rok.`);
+    expect(zTempem.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (potencjał genetyczny wzrostu 192,0${NB}cm, 98. centyl dorosłych). Dodatkowo tempo wzrastania wymaga oceny: 3,0${NB}cm/rok.`);
     expect(N.zbuduj({ ...SZESC, cisnienie: { dziecko: true, sk: 130, roz: 50, centylSk: 99, centylRoz: 20, klasa: 'wysokie', ton: 'danger' }, mph: mph(0.04, { mphCm: 192, mphCentyl: 98 }) }).text)
-      .toMatch(/Dodatkowo wzrost jest wysoki jak na wiek \(129,0\u00A0cm, 98\. centyl\), ale zgodny ze wzrostem rodziców \(wzrost docelowy wg rodziców 192,0\u00A0cm, 98\. centyl dorosłych\)\.$/);
+      .toMatch(/Dodatkowo wzrost jest wysoki jak na wiek \(129,0\u00A0cm, 98\. centyl\), ale zgodny ze wzrostem rodziców \(potencjał genetyczny wzrostu 192,0\u00A0cm, 98\. centyl dorosłych\)\.$/);
   });
 
   it('W1′: roczne dziecko z wysoką masą przy prawidłowym BMI (przypadek właściciela) — tytuł o masie, podtytuł z zastrzeżeniem wieku', () => {
@@ -290,7 +290,7 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
     expect(h.badge).toBe('Wysoka masa ciała'); expect(h.tone).toBe('warn');
     expect(h.title).toBe(`Masa ciała jest wysoka jak na wiek (11,8${NB}kg, 93. centyl), ale w stosunku do wzrostu pozostaje prawidłowa.`);
     expect(h.text).toBe(`Wzrost jest również wysoki (83,0${NB}cm, powyżej 99. centyla); masa ciała jest proporcjonalna do wzrostu, a BMI mieści się w typowym zakresie.`);
-    expect(h.subtext).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 190,0${NB}cm, 97. centyl dorosłych). U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.`);
+    expect(h.subtext).toBe(`Wzrost jest zgodny ze wzrostem rodziców (potencjał genetyczny wzrostu 190,0${NB}cm, 97. centyl dorosłych). U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.`);
     expect(h.dodatkowe).toEqual([]);
     expect(h.subtext + h.text).not.toMatch(/Sam wysoki|SDS/);
   });
@@ -298,7 +298,7 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
   it('W2: pogranicze 1,5–2,0 — „wyższy” bez „nieco” i bez „wyraźnie”, z wartościami i różnicą', () => {
     const h = N.zbuduj({ ...SZESC, mph: mph(1.62, { mphCm: 182, mphCentyl: 76, mpSds: 0.51 }) });
     expect(h).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn', title: WYSOKI });
-    expect(h.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 182,0${NB}cm, 76. centyl dorosłych; różnica +1,62${NB}SDS). Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.`);
+    expect(h.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 182,0${NB}cm, 76. centyl dorosłych; różnica +1,62${NB}SDS). Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.`);
     expect(h.text).not.toMatch(/nieco|wyraźnie/);
     expect(N.kandydaci({ ...SZESC, mph: mph(1.62) }).some((k) => k.os === 'mph')).toBe(false);
   });
@@ -307,7 +307,7 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
     const h = N.zbuduj({ ...SZESC, mph: mph(3.57) });
     expect(h).toMatchObject({ badge: 'Wysoki wzrost — do oceny', tone: 'danger', dodatkowe: [] });
     expect(h.title).toBe(`Wzrost jest wysoki jak na wiek: 129,0${NB}cm, 98. centyl — wyraźnie wyższy, niż wynika ze wzrostu rodziców.`);
-    expect(h.text).toBe(`Wzrost docelowy wg rodziców to 169,5${NB}cm (8. centyl dorosłych); różnica wynosi +3,57${NB}SDS. Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania, wiek kostny).`);
+    expect(h.text).toBe(`Potencjał genetyczny wzrostu (MPH) to 169,5${NB}cm (8. centyl dorosłych); różnica wynosi +3,57${NB}SDS. Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania, wiek kostny).`);
     expect(h.text).not.toMatch(/Plan ustalono|Dodatkowo wzrost/);
     expect(N.kandydaci({ ...SZESC, mph: mph(3.57) }).map((k) => k.os)).toEqual(['wzrost']);
   });
@@ -316,7 +316,7 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
     const h = N.zbuduj({ ...SZESC, masa: { kg: 34, centyl: 97, kolor: 'alert' }, bmi: { wartosc: 20.4, centyl: 97, klucz: 'nadwaga', etykieta: 'Nadwaga', kolor: 'alert' }, cole: { proc: 118, klucz: 'nadwaga', kolor: 'improve' }, krok: { masaKg: 32.3, roznicaKg: 1.7, opis: 'koniec nadwagi', jestSzczebel: true, korzysc: true, klucz: 'nadwaga' }, mph: mph(3.57) });
     expect(h.badge).toBe('Nadwaga'); expect(h.tone).toBe('danger');
     expect(h.dodatkowe).toEqual([{ os: 'wzrost', ciezkosc: 2 }]);
-    expect(h.text).toMatch(/Dodatkowo wzrost jest wysoki jak na wiek \(129,0\u00A0cm, 98\. centyl\) i wyraźnie wyższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 169,5\u00A0cm, 8\. centyl dorosłych; różnica \+3,57\u00A0SDS\) — wymaga dalszej oceny, przede wszystkim wieku kostnego\.$/);
+    expect(h.text).toMatch(/Dodatkowo wzrost jest wysoki jak na wiek \(129,0\u00A0cm, 98\. centyl\) i wyraźnie wyższy, niż wynika ze wzrostu rodziców \(potencjał genetyczny wzrostu 169,5\u00A0cm, 8\. centyl dorosłych; różnica \+3,57\u00A0SDS\) — wymaga dalszej oceny, przede wszystkim wieku kostnego\.$/);
     expect((h.text.match(/Dodatkowo/g) || []).length).toBe(1);
   });
 
@@ -332,7 +332,7 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
     // masa 1 vs W2 1: jak w racie S — masa w tytule, W2 w podtytule (samowystarczalny)
     const h3 = N.zbuduj({ ...SZESC, masa: { kg: 30, centyl: 93, kolor: 'improve' }, mph: mph(1.62, { mphCm: 182, mphCentyl: 76 }) });
     expect(h3.badge).toBe('Wysoka masa ciała');
-    expect(h3.subtext).toMatch(/^Wzrost jest wyższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 182,0\u00A0cm, 76\. centyl dorosłych; różnica \+1,62\u00A0SDS\)\./);
+    expect(h3.subtext).toMatch(/^Wzrost jest wyższy, niż wynika ze wzrostu rodziców \(potencjał genetyczny wzrostu 182,0\u00A0cm, 76\. centyl dorosłych; różnica \+1,62\u00A0SDS\)\./);
     expect(h3.dodatkowe).toEqual([]);
   });
 
@@ -350,7 +350,7 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
   it('W3″: od 10 lat — żółte, ocena wobec etapu dojrzewania i wieku kostnego', () => {
     const h = N.zbuduj({ ...SZESC, wiekLat: 12, wzrost: { cm: 168, centyl: 98.5 }, mph: mph(2.31, { mphCm: 164.5, mphCentyl: 46, hSds: 2.2 }) });
     expect(h).toMatchObject({ badge: 'Wysoki wzrost', tone: 'warn' });
-    expect(h.text).toBe(`Wzrost jest wyraźnie wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 164,5${NB}cm, 46. centyl dorosłych; różnica +2,31${NB}SDS). W tym wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.`);
+    expect(h.text).toBe(`Wzrost jest wyraźnie wyższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 164,5${NB}cm, 46. centyl dorosłych; różnica +2,31${NB}SDS). W tym wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego.`);
     expect(N.zbuduj({ ...SZESC, wiekLat: 9.9, mph: mph(2.31) }).tone).toBe('danger');
   });
 
@@ -362,26 +362,26 @@ describe('Nagłówek z faktów — rata T (wysoki wzrost a wzrost docelowy wg ro
     expect(N.zbuduj({ ...SZESC, mph: mph(1.4949) }).text).toMatch(/^Wzrost jest zgodny/);
   });
 
-  it('tryb standardowy (liczbaWidoczna: false): zdania słowami i z wzrostem docelowym, bez liczby SDS', () => {
+  it('tryb standardowy (liczbaWidoczna: false): zdania słowami i z potencjałem genetycznym, bez liczby SDS', () => {
     const w3 = N.zbuduj({ ...SZESC, mph: mph(3.57, { liczbaWidoczna: false }) });
     expect(w3.tone).toBe('danger');
-    expect(w3.text).toBe(`Wzrost docelowy wg rodziców to 169,5${NB}cm (8. centyl dorosłych). Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania, wiek kostny).`);
+    expect(w3.text).toBe(`Potencjał genetyczny wzrostu (MPH) to 169,5${NB}cm (8. centyl dorosłych). Taki wynik wymaga dalszej oceny, m.in. w kierunku przedwczesnego dojrzewania (tempo wzrastania, objawy dojrzewania, wiek kostny).`);
     const w2 = N.zbuduj({ ...SZESC, mph: mph(1.62, { mphCm: 182, mphCentyl: 76, liczbaWidoczna: false }) });
-    expect(w2.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 182,0${NB}cm, 76. centyl dorosłych). Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.`);
+    expect(w2.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 182,0${NB}cm, 76. centyl dorosłych). Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach.`);
     expect(w3.text + w2.text).not.toMatch(/SDS/);
   });
 
   it('strona ujemna przy wysokim wzroście (bardzo wysocy rodzice): oś mph zostaje z wartościami, oś wzrostu mówi W0 bez dopisku', () => {
     const h = N.zbuduj({ ...SZESC, mph: mph(-2.23, { mphCm: 206.5, mphCentyl: 99.6, mpSds: 4.36 }) });
     expect(h).toMatchObject({ badge: 'Wzrost a rodzice', tone: 'danger' });
-    expect(h.title).toBe(`Wzrost dziecka jest niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 206,5${NB}cm, powyżej 99. centyla dorosłych; różnica −2,23${NB}SDS).`);
+    expect(h.title).toBe(`Wzrost dziecka jest niższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 206,5${NB}cm, powyżej 99. centyla dorosłych; różnica −2,23${NB}SDS).`);
     expect(h.text).toBe(`Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym. Dodatkowo wzrost jest wysoki jak na wiek (129,0${NB}cm, 98. centyl).`);
   });
 
   it('oś mph bez wysokiego wzrostu: ta sama bramka wieku (< 3 lat ostrzeżenie z zastrzeżeniem) i nawias z wartościami', () => {
     const h = N.zbuduj({ ...ROCZNIAK, masa: { kg: 10, centyl: 55, kolor: 'ok' }, wzrost: { cm: 79.5, centyl: 85 }, mph: mph(3.7, { mphCm: 161.5, mphCentyl: 0.6, mpSds: -2.6, hSds: 1.1 }) });
     expect(h).toMatchObject({ badge: 'Wzrost a rodzice', tone: 'warn' });
-    expect(h.title).toBe(`Wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 161,5${NB}cm, poniżej 1. centyla dorosłych; różnica +3,70${NB}SDS).`);
+    expect(h.title).toBe(`Wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 161,5${NB}cm, poniżej 1. centyla dorosłych; różnica +3,70${NB}SDS).`);
     expect(h.text).toBe('U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.');
     expect(N.zbuduj({ ...SZESC, wzrost: { cm: 124, centyl: 90 }, mph: mph(1.9) }).title).toBe(`Wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców (${CEL_NISKI}; różnica +1,90${NB}SDS).`);
   });
@@ -415,7 +415,7 @@ describe('Nagłówek z faktów — rata T2 (przesunięcie w górę siatki, niski
     const h = N.zbuduj({ ...SZESC, mph: mph(0.04), pozycja: POZ });
     expect(h).toMatchObject({ badge: 'Wysoki wzrost — do oceny', tone: 'danger', dodatkowe: [] });
     expect(h.title).toBe(`Wzrost jest wysoki jak na wiek: 129,0${NB}cm, 98. centyl — od pomiaru z wieku 3 lat 2 mies. przesunął się w górę siatki.`);
-    expect(h.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 192,0${NB}cm, 98. centyl dorosłych), ale ${ZD}. ${OCENA}`);
+    expect(h.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (potencjał genetyczny wzrostu 192,0${NB}cm, 98. centyl dorosłych), ale ${ZD}. ${OCENA}`);
     expect(N.kandydaci({ ...SZESC, mph: mph(0.04), pozycja: POZ }).map((k) => k.os)).toEqual(['wzrost']);
     // nadmiar masy: wiek kostny na czele
     const n = N.zbuduj({ ...SZESC, bmi: { wartosc: 19, klucz: 'nadwaga', etykieta: 'Nadwaga', kolor: 'improve' }, masa: { kg: 30, centyl: 92, kolor: 'improve' }, krok: { masaKg: 29, roznicaKg: 1, opis: 'koniec nadwagi', jestSzczebel: true, korzysc: true, klucz: 'nadwaga' }, mph: mph(0.04), pozycja: POZ });
@@ -426,10 +426,10 @@ describe('Nagłówek z faktów — rata T2 (przesunięcie w górę siatki, niski
   it('A2: W2 + przesunięcie → alarm; W3 + przesunięcie → zdanie doklejone; W3″ (≥ 10 lat) zostaje żółte', () => {
     const w2 = N.zbuduj({ ...SZESC, mph: mph(1.62, { mphCm: 182, mphCentyl: 76 }), pozycja: POZ });
     expect(w2).toMatchObject({ badge: 'Wysoki wzrost — do oceny', tone: 'danger' });
-    expect(w2.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 182,0${NB}cm, 76. centyl dorosłych; różnica +1,62${NB}SDS), a ${ZD}. ${OCENA}`);
+    expect(w2.text).toBe(`Wzrost jest wyższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 182,0${NB}cm, 76. centyl dorosłych; różnica +1,62${NB}SDS), a ${ZD}. ${OCENA}`);
     const w3 = N.zbuduj({ ...SZESC, mph: mph(3.57, { mphCm: 169.5, mphCentyl: 8 }), pozycja: POZ });
     expect(w3.title).toMatch(/— wyraźnie wyższy, niż wynika ze wzrostu rodziców\.$/);
-    expect(w3.text).toBe(`Wzrost docelowy wg rodziców to 169,5${NB}cm (8. centyl dorosłych); różnica wynosi +3,57${NB}SDS. Od pomiaru z wieku 3 lat 2 mies. pozycja wzrostu na siatce podniosła się z 50. na 98. centyl (o +2,13${NB}SDS). ${OCENA}`);
+    expect(w3.text).toBe(`Potencjał genetyczny wzrostu (MPH) to 169,5${NB}cm (8. centyl dorosłych); różnica wynosi +3,57${NB}SDS. Od pomiaru z wieku 3 lat 2 mies. pozycja wzrostu na siatce podniosła się z 50. na 98. centyl (o +2,13${NB}SDS). ${OCENA}`);
     const w3p = N.zbuduj({ ...SZESC, wiekLat: 12, mph: mph(2.31, { mphCm: 164.5, mphCentyl: 46 }), pozycja: { ...POZ, dSds: 1.4, odWiekuMies: 48 } });
     expect(w3p.tone).toBe('warn');
     expect(w3p.text).toMatch(/, a od pomiaru z wieku 4 lat pozycja wzrostu na siatce podniosła się .*\. W tym wieku wynik ocenia się w odniesieniu do etapu dojrzewania i wieku kostnego\.$/);
@@ -476,7 +476,7 @@ describe('Nagłówek z faktów — rata T2 (przesunięcie w górę siatki, niski
     const h = N.zbuduj(f);
     expect(h.badge).toBe('Niski wzrost'); expect(h.tone).toBe('danger');
     expect(h.title).toBe(`Wzrost jest wyraźnie niski jak na wiek: 109,3${NB}cm, 2. centyl.`);
-    expect(h.text).toBe(`Wzrost jest niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 176,5${NB}cm, 37. centyl dorosłych; różnica −1,69${NB}SDS). Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym. Dodatkowo masa ciała w stosunku do wzrostu jest za mała (wskaźnik Cole’a 87${NB}%, norma 90–110${NB}%).`);
+    expect(h.text).toBe(`Wzrost jest niższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 176,5${NB}cm, 37. centyl dorosłych; różnica −1,69${NB}SDS). Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym. Dodatkowo masa ciała w stosunku do wzrostu jest za mała (wskaźnik Cole’a 87${NB}%, norma 90–110${NB}%).`);
     expect(h.subtext).toBe('');
     expect(h.dodatkowe).toEqual([{ os: 'masa', ciezkosc: 2 }]);
     expect((h.text.match(/niż wynika ze wzrostu rodziców/g) || []).length).toBe(1);
@@ -488,10 +488,10 @@ describe('Nagłówek z faktów — rata T2 (przesunięcie w górę siatki, niski
     const baza = { dorosly: false, wiekLat: 6, historia: false, ...NORMA, wzrost: { cm: 111, centyl: 6 } };
     const n1 = N.zbuduj({ ...baza, mph: { roznicaSds: -0.4, mphCm: 165, mphCentyl: 5, liczbaWidoczna: true } });
     expect(n1).toMatchObject({ badge: 'Niski wzrost', tone: 'warn' });
-    expect(n1.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (wzrost docelowy wg rodziców 165,0${NB}cm, 5. centyl dorosłych). Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach.`);
+    expect(n1.text).toBe(`Wzrost jest zgodny ze wzrostem rodziców (potencjał genetyczny wzrostu 165,0${NB}cm, 5. centyl dorosłych). Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach.`);
     const n3 = N.zbuduj({ ...baza, mph: { roznicaSds: -2.3, mphCm: 180, mphCentyl: 60, liczbaWidoczna: true } });
     expect(n3.tone).toBe('danger');
-    expect(n3.text).toBe(`Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 180,0${NB}cm, 60. centyl dorosłych; różnica −2,30${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.`);
+    expect(n3.text).toBe(`Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 180,0${NB}cm, 60. centyl dorosłych; różnica −2,30${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.`);
     const maly = N.zbuduj({ ...baza, wiekLat: 2, wzrost: { cm: 80, centyl: 6 }, mph: { roznicaSds: -2.3, mphCm: 180, mphCentyl: 60, liczbaWidoczna: true } });
     expect(maly.tone).toBe('warn');
     expect(maly.text).toMatch(/^Wzrost jest niższy, niż wynika ze wzrostu rodziców \(.*\)\. U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać/);
@@ -500,7 +500,7 @@ describe('Nagłówek z faktów — rata T2 (przesunięcie w górę siatki, niski
     expect(plus.text).toMatch(/Dodatkowo wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców/);
     // „Dodatkowo” przy tytule innej osi
     const d = N.zbuduj({ ...baza, cisnienie: { dziecko: true, sk: 130, roz: 50, centylSk: 99, centylRoz: 20, klasa: 'wysokie', ton: 'danger' }, mph: { roznicaSds: -1.69, mphCm: 176.5, mphCentyl: 37, liczbaWidoczna: true } });
-    expect(d.text).toMatch(/Dodatkowo wzrost jest niski jak na wiek \(111,0\u00A0cm, 6\. centyl\) i niższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 176,5\u00A0cm, 37\. centyl dorosłych; różnica −1,69\u00A0SDS\)\./);
+    expect(d.text).toMatch(/Dodatkowo wzrost jest niski jak na wiek \(111,0\u00A0cm, 6\. centyl\) i niższy, niż wynika ze wzrostu rodziców \(potencjał genetyczny wzrostu 176,5\u00A0cm, 37\. centyl dorosłych; różnica −1,69\u00A0SDS\)\./);
   });
 });
 
@@ -515,7 +515,7 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
   it('progi są danymi modułu; WERSJA 6', () => {
     expect(N.SPADEK_WZROSTU).toEqual({ DSDS: -1.0, ODSTEP_MIES: 12, KU_CELOWI_BAZA: 1.0, KU_CELOWI_DZIS: -1.0 });
     expect(Object.isFrozen(N.SPADEK_WZROSTU)).toBe(true);
-    expect(N.WERSJA).toBe(8); // rata G2
+    expect(N.WERSJA).toBe(9); // P-SLOWA-MPH (rata G2: 8)
   });
 
   it('D1: domyślnie żółte „Obniżenie pozycji na siatce”; tryb standardowy bez liczby SDS', () => {
@@ -539,7 +539,7 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
     expect(N.kandydaci({ ...D8, dorosly: true }).some((k) => k.os === 'spadek')).toBe(false);
   });
 
-  it('D0: zbliżanie się do wzrostu docelowego wg rodziców (start ≥ +1,0 nad celem, dziś > −1,0) — bez faktu', () => {
+  it('D0: zbliżanie się do potencjału genetycznego wzrostu (start ≥ +1,0 nad celem, dziś > −1,0) — bez faktu', () => {
     const mph = { roznicaSds: 0.58, mphCm: 176, mphCentyl: 50, mpSds: 0, hSds: 0.58, liczbaWidoczna: true };
     const f = { ...D8, wzrost: { cm: 133.7, centyl: 72 }, spadek: { ...SP, dSds: -1.31, zCentyla: 97, naCentyl: 72, hSdsBazy: 1.89, hSdsDzis: 0.58 }, mph };
     expect(N.kandydaci(f).some((k) => k.os === 'spadek')).toBe(false);
@@ -575,7 +575,7 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
     const h = N.zbuduj(f);
     expect(h).toMatchObject({ badge: 'Obniżenie pozycji na siatce — do oceny', tone: 'danger' });
     expect(h.title).toBe(`Od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 60. na 20. centyl (o −1,10${NB}SDS).`);
-    expect(h.text).toBe(`Wzrost jest też niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 176,5${NB}cm, 97. centyl dorosłych; różnica −2,77${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania i wieku kostnego.`);
+    expect(h.text).toBe(`Wzrost jest też niższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 176,5${NB}cm, 97. centyl dorosłych; różnica −2,77${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania i wieku kostnego.`);
     expect((h.text.match(/niż wynika ze wzrostu rodziców/g) || []).length).toBe(1);
     expect(h.dodatkowe.some((d) => d.os === 'mph')).toBe(false);
     // −1,49 → bez D1r (oś mph pojedynczo nie powstaje), spadek żółty
@@ -589,12 +589,12 @@ describe('Nagłówek z faktów — rata T3 (obniżenie pozycji wzrostu na siatce
     const f = { ...D8, wzrost: { cm: 119.2, centyl: 2 }, spadek: { ...SP, dSds: -1.38, odWiekuMies: 36, zCentyla: 25, naCentyl: 2 }, mph };
     const h = N.zbuduj(f);
     expect(h).toMatchObject({ badge: 'Niski wzrost — do oceny', tone: 'danger', title: `Wzrost jest wyraźnie niski jak na wiek: 119,2${NB}cm, 2. centyl.` });
-    expect(h.text).toBe(`Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców (wzrost docelowy wg rodziców 182,5${NB}cm, 73. centyl dorosłych; różnica −2,65${NB}SDS), a od pomiaru z wieku 3 lat pozycja wzrostu na siatce obniżyła się z 25. na 2. centyl (o −1,38${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.`);
+    expect(h.text).toBe(`Wzrost jest wyraźnie niższy, niż wynika ze wzrostu rodziców (potencjał genetyczny wzrostu 182,5${NB}cm, 73. centyl dorosłych; różnica −2,65${NB}SDS), a od pomiaru z wieku 3 lat pozycja wzrostu na siatce obniżyła się z 25. na 2. centyl (o −1,38${NB}SDS). Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu.`);
     expect(N.kandydaci(f).some((k) => k.os === 'spadek')).toBe(false);
     // N1 (w paśmie rodziców) 3–10 c: z żółtego robi się czerwone
     const n1 = N.zbuduj({ ...D8, wzrost: { cm: 119.2, centyl: 8 }, spadek: { ...SP, naCentyl: 8 }, mph: { roznicaSds: -0.8, mphCm: 165, mphCentyl: 20, mpSds: -0.6, hSds: -1.4, liczbaWidoczna: true } });
     expect(n1).toMatchObject({ badge: 'Niski wzrost — do oceny', tone: 'danger' });
-    expect(n1.text).toMatch(/^Wzrost jest zgodny ze wzrostem rodziców \(wzrost docelowy wg rodziców 165,0\u00A0cm, 20\. centyl dorosłych\), ale od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50\. na 8\. centyl/);
+    expect(n1.text).toMatch(/^Wzrost jest zgodny ze wzrostem rodziców \(potencjał genetyczny wzrostu 165,0\u00A0cm, 20\. centyl dorosłych\), ale od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50\. na 8\. centyl/);
     // N0 bez rodziców: dopisek o rodzicach zostaje
     const n0 = N.zbuduj({ ...D8, wzrost: { cm: 119.2, centyl: 8 }, spadek: { ...SP, naCentyl: 8 }, rodziceBrak: true });
     expect(n0.text).toMatch(/^Od pomiaru z wieku 4 lat pozycja wzrostu na siatce obniżyła się z 50\. na 8\. centyl .*Taki wynik wymaga dalszej oceny: tempa wzrastania, wieku kostnego i przyczyn niskiego wzrostu\. Do pełniejszej oceny potrzebny jest wzrost obojga rodziców\.$/);
@@ -652,7 +652,7 @@ describe('Nagłówek z faktów — rata R2 (rodzice raz)', () => {
     expect(h.subtext).toBe('Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach.');
     expect(h.dodatkowe).toEqual([{ os: 'mph', ciezkosc: 1 }]);
     expect(oRodzicach(h)).toHaveLength(1);
-    expect(oRodzicach(h)[0]).toMatch(/^Dodatkowo wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 152,0\u00A0cm/);
+    expect(oRodzicach(h)[0]).toMatch(/^Dodatkowo wzrost dziecka jest wyższy, niż wynika ze wzrostu rodziców \(potencjał genetyczny wzrostu 152,0\u00A0cm/);
   });
 
   it('W0 bez wzrostu rodziców: bez członu „i wzrostem rodziców”, tylko zdanie o brakującym wzroście; z MPH — tylko oś mph', () => {

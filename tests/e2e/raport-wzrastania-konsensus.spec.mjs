@@ -83,7 +83,7 @@ test('ADV-REPORT-9: podsumowanie niesie tylko linie, które lekarz czyta', async
   expect(tresc).toContain('Wzrost Taty:');
   expect(tresc).toContain('MPH (mid-parental height):');
   expect(tresc).toContain('Wiek kostny:');
-  expect(tresc).toContain('Wzrost docelowy (potencjał rodzicielski):');
+  expect(tresc).toContain('Potencjał genetyczny wzrostu (MPH):');
   expect(tresc).toContain('Prognoza wzrostu ostatecznego (');
   expect(tresc).toContain('Obliczenia wykonano na podstawie danych:');
   expect(tresc).toContain('Wygenerowano:');
@@ -132,7 +132,7 @@ test('ADV-REPORT-4: podsumowanie podaje wiek kostny i pasmo celu rodzicielskiego
   expect(out.summary).toContain('Wiek kostny: 8 lat');
   expect(out.summary).toContain('opóźniony o 24 mies.');
   // pasmo celu rodzicielskiego zamiast samej liczby MPH
-  expect(out.summary).toContain('pasmo celu');
+  expect(out.summary).toMatch(/pasmo \d+,\d–\d+,\d[\s\u00A0]cm/);
 });
 
 

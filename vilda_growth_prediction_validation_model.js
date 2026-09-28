@@ -511,7 +511,7 @@
     });
 
     var metody = kolejnosc.map(function (k) { return { key: k, label: etykiety[k], pred: true }; });
-    if (ctx.mph !== null) metody.push({ key: 'mph', label: 'MPH (cel)', pred: false, cel: true });
+    if (ctx.mph !== null) metody.push({ key: 'mph', label: 'MPH (potencjał genetyczny)', pred: false, cel: true });
 
     var summary = Object.create(null);
     metody.forEach(function (m) { if (m.pred) summary[m.key] = metrykiMetody(punkty, m.key); });

@@ -38,7 +38,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '30';
+  var VERSION = '31';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -708,7 +708,9 @@
       k.fraza = 'mimo cech dojrzewania (Tanner ' + TANNER_RZYM[ts - 1] + ')';
     } else if (rb != null && rb >= P.REDFLAG_KU_CELOWI_BAZA && rd > P.REDFLAG_KU_CELOWI_DZIS) {
       k.wariant = 'R'; k.ton = 'warn';
-      k.fraza = 'w kierunku wzrostu docelowego wg rodziców (hSDS − mpSDS: z ' + fmtP(rb) + ' na ' + fmtP(rd) + ')';
+      // MPH to „potencjał genetyczny wzrostu", nie „wzrost docelowy" (decyzja właściciela 2026-09-28: jedno słowo
+      // w karcie, raporcie, epikryzie i opisie pacjenta).
+      k.fraza = 'w kierunku potencjału genetycznego wzrostu (hSDS − mpSDS: z ' + fmtP(rb) + ' na ' + fmtP(rd) + ')';
     } else if (okno && ts === 1) {
       k.wariant = 'P1'; k.ton = 'warn';
       k.fraza = 'w wieku okołopokwitaniowym, bez cech dojrzewania (Tanner I)';

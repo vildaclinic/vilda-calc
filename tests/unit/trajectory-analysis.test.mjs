@@ -1539,7 +1539,7 @@ describe('kontekst flagi w dół (rata T4)', () => {
     };
     const { vta, rf } = r(1.89, 0.58, 0);
     expect(rf.kontekst).toMatchObject({ wariant: 'R', ton: 'warn', roznicaBaza: 1.89, roznicaDzis: 0.58 });
-    expect(tekst(vta.redFlagBannerHtml(rf))).toBe('Obniżenie pozycji centylowej wzrostu (zmiana hSDS: −1,31 względem pomiaru z wieku 3 lat) w kierunku wzrostu docelowego wg rodziców (hSDS − mpSDS: z +1,89 na +0,58) — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach.');
+    expect(tekst(vta.redFlagBannerHtml(rf))).toBe('Obniżenie pozycji centylowej wzrostu (zmiana hSDS: −1,31 względem pomiaru z wieku 3 lat) w kierunku potencjału genetycznego wzrostu (hSDS − mpSDS: z +1,89 na +0,58) — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach.');
     expect(r(1.0, -0.5, 0).rf.kontekst.wariant).toBe('R');   // baza dokładnie +1,0
     expect(r(0.99, -0.5, 0).rf.kontekst.wariant).toBe('D');
     expect(r(1.0, -0.99, 0.0).rf.kontekst.wariant).toBe('R');

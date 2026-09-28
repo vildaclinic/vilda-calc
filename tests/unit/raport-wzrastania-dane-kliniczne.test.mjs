@@ -30,16 +30,16 @@ describe('Raport wzrastania — wiek kostny, pasmo celu i pokwitanie w podsumowa
   });
 
   it('podaje pasmo celu rodzicielskiego i zestawia z nim prognozę', () => {
-    const out = lines({}, { targetAssessment: { diffCm: -2.4, tierLabel: 'w zakresie celu' } }, 176.5);
+    const out = lines({}, { targetAssessment: { diffCm: -2.4, tierLabel: 'w zakresie potencjału genetycznego' } }, 176.5);
     // model niesie spacje nierozdzielające między liczbą a jednostką
-    expect(out[0]).toContain('pasmo celu 166,5–186,5\u00A0cm');
-    expect(out[0]).toContain('prognoza 2,4\u00A0cm poniżej celu');
-    expect(out[0]).toContain('w zakresie celu');
+    expect(out[0]).toContain('pasmo 166,5–186,5\u00A0cm');
+    expect(out[0]).toContain('prognoza 2,4\u00A0cm poniżej potencjału');
+    expect(out[0]).toContain('w zakresie potencjału genetycznego');
   });
 
   it('prognoza powyżej celu jest nazwana powyżej, nie ujemną liczbą', () => {
-    const out = lines({}, { targetAssessment: { diffCm: 6.1, tierLabel: 'w zakresie celu' } }, 170);
-    expect(out[0]).toContain('prognoza 6,1\u00A0cm powyżej celu');
+    const out = lines({}, { targetAssessment: { diffCm: 6.1, tierLabel: 'w zakresie potencjału genetycznego' } }, 170);
+    expect(out[0]).toContain('prognoza 6,1\u00A0cm powyżej potencjału');
     expect(out[0]).not.toContain('-6,1');
   });
 
