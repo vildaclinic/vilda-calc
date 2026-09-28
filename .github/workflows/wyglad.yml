@@ -132,6 +132,7 @@ jobs:
           git push origin "HEAD:${GALAZ}"
           # commit z GITHUB_TOKEN nie uruchamia workflow'ów; workflow_dispatch jest wyjątkiem
           gh workflow run ci.yml --ref "$GALAZ"
+          gh workflow run codeql.yml --ref "$GALAZ"
           gh workflow run wyglad.yml --ref "$GALAZ" || echo 'Wygląd nie jest jeszcze na gałęzi domyślnej: porównanie pójdzie przy następnym pushu'
       - name: Zachowaj różnice po niepowodzeniu
         if: failure()

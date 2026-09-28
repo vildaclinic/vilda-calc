@@ -25,6 +25,8 @@ export default defineConfig({
   // jedyną platformą wzorców jest ubuntu-latest z CI.
   snapshotPathTemplate: '{testDir}/wzorce/{projectName}/{arg}{ext}',
   expect: {
+    // toHaveScreenshot czeka na dwa kolejne identyczne zrzuty; strona po 3000 px potrzebuje na to więcej niż domyślne 5 s
+    timeout: 20_000,
     toHaveScreenshot: {
       animations: 'disabled',
       caret: 'hide',
