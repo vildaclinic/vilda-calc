@@ -95,7 +95,7 @@ describe('Klasa BMI i masa należna (mediana BMI × wzrost²) — z silnika, nie
   });
 });
 
-describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 1,6 / 1,6; otyłość −1 stopień tylko 10–18 lat i dorośli', () => {
+describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 1,6 / 1,6; otyłość −1 stopień od 4 lat (P-DIETA-STAB) i u dorosłych', () => {
   it('energyDefaultPlanPal bez antropometrii: 14 l → 1,6; 10 l → 1,6; 8 l → 1,6; 2 l → 1,4; 30 l → 1,6', () => {
     expect(win.energyDefaultPlanPal(14, 0)).toBe(1.6);
     expect(win.energyDefaultPlanPal(10, 0)).toBe(1.6);
@@ -104,7 +104,7 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
     expect(win.energyDefaultPlanPal(30, 0)).toBe(1.6);
   });
   it('tabela jako dane (ENERGY_PAL_DOMYSLNY) — normy nie są założeniem wbudowanym w silnik', () => {
-    expect(win.ENERGY_PAL_DOMYSLNY).toEqual({ child_1_3: 1.4, child_4_9: 1.6, child_10_18: 1.6, adult: 1.6, otylosc: { child_10_18: 1.4, adult: 1.4 } });
+    expect(win.ENERGY_PAL_DOMYSLNY).toEqual({ child_1_3: 1.4, child_4_9: 1.6, child_10_18: 1.6, adult: 1.6, otylosc: { child_4_9: 1.4, child_10_18: 1.4, adult: 1.4 } });
     expect(Object.isFrozen(win.ENERGY_PAL_DOMYSLNY)).toBe(true);
   });
   it('dorosły: otyłość (BMI ≥ 30) → 1,4; nadwaga, norma i NIEDOWAGA → 1,6 (niedowaga nigdy nie obniża PAL)', () => {
@@ -119,8 +119,9 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
     expect(plan({ sex: 'M', ageYears: 30, weightKg: 70, heightCm: 170, palInput: null }).palUsed).toBe(1.6);
     expect(plan({ sex: 'F', ageYears: 30, weightKg: 50, heightCm: 170, palInput: null }).palUsed).toBe(1.6);
   });
-  it('dziecko 4–9 lat z otyłością zostaje przy 1,6; nastolatek z niedowagą 1,6; 2-latek 1,4', () => {
-    expect(plan({ sex: 'M', ageYears: 8, weightKg: 45, heightCm: 130, palInput: null }).palUsed).toBe(1.6);
+  // P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): otyłość 4–9 lat → 1,4 (dotąd 1,6); masa prawidłowa 4–9 lat zostaje 1,6.
+  it('dziecko 4–9 lat z otyłością → 1,4 (P-DIETA-STAB), z masą prawidłową 1,6; nastolatek z niedowagą 1,6; 2-latek 1,4', () => {
+    expect(plan({ sex: 'M', ageYears: 8, weightKg: 45, heightCm: 130, palInput: null }).palUsed).toBe(1.4);
     expect(plan({ sex: 'M', ageYears: 7, weightKg: 24, heightCm: 122, palInput: null }).palUsed).toBe(1.6);
     expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 40, heightCm: 165 })).toBe(1.6);
     expect(win.energyDefaultPlanPal(2, 6, { sex: 'M', weightKg: 18, heightCm: 90 })).toBe(1.4);
@@ -150,8 +151,8 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
     // albo sama antropometria — moduł liczy klasę sam (ścieżka formularza)
     expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 85, heightCm: 165 })).toBe(1.4);
     expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 66, heightCm: 165 })).toBe(1.6);
-    // poniżej 10 lat otyłość niczego nie zmienia — pomiary DLW nie pokazują niższego PAL (P-PAL rata 1: 1,6)
-    expect(win.energyDefaultPlanPal(8, 0, { sex: 'M', weightKg: 45, heightCm: 130 })).toBe(1.6);
+    // P-DIETA-STAB rata 1: poniżej 10 lat otyłość także obniża do 1,4 (dotąd 1,6 z P-PAL rata 2)
+    expect(win.energyDefaultPlanPal(8, 0, { sex: 'M', weightKg: 45, heightCm: 130 })).toBe(1.4);
   });
   it('ENERGY-CHILD-MID3: silnik bez jawnego PAL bierze wartość zależną od klasy BMI', () => {
     expect(plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null }).palUsed).toBe(1.4);
@@ -235,7 +236,8 @@ describe('Plan 12–18 lat: REE dla MASY AKTUALNEJ (rata V: Molnár 1995 przy ot
   });
 });
 
-describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mies.', () => {
+// P-DIETA-STAB rata 1 (2026-09-28): ≥ 99c w wieku 6–11 lat sufit 1 / 1,5 / 2 kg/mies. (dotąd 0,5 / 1 / 1,5).
+describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 1 / 1,5 / 2 kg/mies.', () => {
   it('chłopiec 10 l, 145 cm, 55 kg (otyłość, ale < 99c wg OLAF) → tylko lekka z tempem 0,5 kg/mies. (126 kcal), reszta z powodem', () => {
     const pacjent = { sex: 'M', ageYears: 10, weightKg: 55, heightCm: 145 };
     const st = plan({ ...pacjent, palInput: 1.4 });
@@ -252,27 +254,29 @@ describe('Etap 6–11 lat: < 99c tylko 0,5 kg/mies.; ≥ 99c 0,5 / 1 / 1,5 kg/mi
     expect(st.dietUnavailable.moderate).toContain('0,5 kg/mies.');
     expect(st.dietUnavailable.intense).toContain('6–11 lat');
   });
-  it('chłopiec 8 l, 130 cm, 45 kg (≥ 99c wg OLAF) → trzy diety 0,5 / 1 / 1,5 kg/mies., podłoga z REE (> 1000 kcal)', () => {
+  it('chłopiec 8 l, 130 cm, 45 kg (≥ 99c wg OLAF) → trzy diety 1 / 1,5 / 2 kg/mies., podłoga z REE (> 1000 kcal)', () => {
     const pacjent = { sex: 'M', ageYears: 8, weightKg: 45, heightCm: 130 };
     const st = plan({ ...pacjent, palInput: 1.4 });
     const ree = henryBoy3_9(45, 1.3);
     const base = ree * 1.4; // rata U: poniżej 10 lat bez korekty REE
     expect(zSilnika(pacjent).r.centyl).toBeGreaterThanOrEqual(99);
     expect(st.bmiClass.severe).toBe(true);
-    expect(st.diets.map((d) => d.monthlyLossKg)).toEqual([0.5, 1, 1.5]);
-    expect(st.diets.map((d) => d.deficit)).toEqual([0.5, 1, 1.5].map(defFor));
-    expect(st.diets.map((d) => d.intake)).toEqual([0.5, 1, 1.5].map((r) => Math.round(base - defFor(r))));
+    expect(st.diets.map((d) => d.monthlyLossKg)).toEqual([1, 1.5, 2]);
+    expect(st.diets.map((d) => d.deficit)).toEqual([1, 1.5, 2].map(defFor));
+    expect(st.diets.map((d) => d.intake)).toEqual([1, 1.5, 2].map((r) => Math.round(base - defFor(r))));
     expect(st.floorKcal).toBe(Math.round(ree));
     expect(st.floorKcal).toBeGreaterThan(1000);
     expect(st.diets.every((d) => d.rateCapped === false)).toBe(true);
   });
-  it('dziewczynka 7 l, 118 cm, 35 kg (≥ 99c): trzy diety, każda powyżej REE po korekcie', () => {
+  // P-DIETA-STAB rata 1: przy suficie 2 kg/mies. intensywna schodzi poniżej REE — niedostępna z nazwanym powodem
+  it('dziewczynka 7 l, 118 cm, 35 kg (≥ 99c): lekka i umiarkowana powyżej REE, intensywna niedostępna (poniżej REE)', () => {
     const pacjent = { sex: 'F', ageYears: 7, weightKg: 35, heightCm: 118 };
     const st = plan({ ...pacjent, palInput: 1.4 });
     const ree = henryGirl3_9(35, 1.18);
     expect(zSilnika(pacjent).r.centyl).toBeGreaterThanOrEqual(99);
     expect(st.bmiClass.severe).toBe(true);
-    expect(st.diets.map((d) => d.key)).toEqual(['light', 'moderate', 'intense']);
+    expect(st.diets.map((d) => d.key)).toEqual(['light', 'moderate']);
+    expect(st.dietUnavailable.intense).toContain('spoczynkowej przemiany materii');
     expect(st.floorKcal).toBe(Math.max(1000, Math.round(ree))); // rata U: 7 lat — bez korekty
     expect(Math.min(...st.diets.map((d) => d.intake))).toBeGreaterThanOrEqual(st.floorKcal);
   });
