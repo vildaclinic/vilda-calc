@@ -3,7 +3,7 @@
    P-RAPORT rata R (decyzje właściciela 2026-09-22); rata S (2026-09-22): bez dublowania osi
    wzrostu przy masie poza zakresem (P1/P2), jedno zdanie o nadwadze < 2 lat (P3), strażnik
    < 0,5 kg nazywa szczebel (P4), etykieta centyla jak w kartach raportu (P8); rata T (2026-09-23):
-   wysoki wzrost wobec wzrostu docelowego wg rodziców (W0–W3″, WZROST_A_RODZICE), strona dodatnia
+   wysoki wzrost wobec potencjału genetycznego wzrostu (W0–W3″, WZROST_A_RODZICE), strona dodatnia
    osi mph przy wysokim wzroście przechodzi do osi wzrostu, remis 2:2 przed „masą proporcjonalną”;
    rata T2 (2026-09-23): fakt o przesunięciu pozycji wzrostu w górę siatki (A1–A4, POZYCJA_WZROSTU)
    i symetria dla niskiego wzrostu (N0–N3: MPH w zdaniu, oś mph wchłonięta, podtytuł bez powtórki);
@@ -68,12 +68,12 @@
    ===================================================================================== */
 (function (root) {
   'use strict';
-  var WERSJA = 8;
+  var WERSJA = 9;
   var NBSP = ' ';
   var LIMIT_DODATKOWO = 2;
   var KROK_OD_LAT = 2;
   var KORZYSC = 'już ta zmiana poprawia ciśnienie i wyniki badań krwi';
-  /* Rata T (decyzje właściciela 2026-09-23): wysoki wzrost wobec wzrostu docelowego wg rodziców (MPH).
+  /* Rata T (decyzje właściciela 2026-09-23): wysoki wzrost wobec potencjału genetycznego wzrostu (MPH).
      Progi 1,5 / 2,0 SDS = te same, co oś mph i epikryza (1,5 — konwencja aplikacji; 2,0 — pasmo celu Tannera
      ±2 SD, Stalman 2015, doi:10.4274/jcrpe.2220). Wiek: różnica hSDS − mpSDS jest mało wiarygodna poniżej
      3 lat w OBIE strony (Smith 1976, doi:10.1016/s0022-3476(76)80453-2; Grote 2008, doi:10.1136/adc.2007.120188),
@@ -130,12 +130,14 @@
     var a = Math.abs(n).toFixed(2).replace('.', ',');
     return (n > 0 ? '+' : n < 0 ? '−' : '') + a + NBSP + 'SDS';
   }
-  /* „wzrost docelowy wg rodziców 190,0 cm, 97. centyl dorosłych” — termin z karty zaawansowanej; centyl jawnie na
-     siatce dorosłych, żeby czytelnik nie zestawił go z centylem dziecka. */
+  /* „potencjał genetyczny wzrostu 190,0 cm, 97. centyl dorosłych” — MPH jest nazywany potencjałem genetycznym, nie
+     „wzrostem docelowym” (decyzja właściciela 2026-09-28: jedno słowo w karcie, raporcie, epikryzie i opisie
+     pacjenta); w nawiasie osi bez „(MPH)”, żeby nie zagnieżdżać nawiasów. Centyl jawnie na siatce dorosłych,
+     żeby czytelnik nie zestawił go z centylem dziecka. */
   function celRodzicow(m) {
     if (!m || liczba(m.mphCm) == null) return '';
     var c = liczba(m.mphCentyl);
-    return 'wzrost docelowy wg rodziców ' + cm(m.mphCm) + (c != null ? ', ' + centylTekst(c) + ' dorosłych' : '');
+    return 'potencjał genetyczny wzrostu ' + cm(m.mphCm) + (c != null ? ', ' + centylTekst(c) + ' dorosłych' : '');
   }
   function nawiasRodzicow(m, r) {
     var cz = [celRodzicow(m), m && m.liczbaWidoczna === false ? '' : 'różnica ' + sds2(r)].filter(Boolean);
@@ -387,7 +389,7 @@
     return 'U dzieci poniżej ' + WZROST_A_RODZICE.WIEK_ALARM_OD_LAT + ' lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach.';
   }
 
-  /* Rata T2 (symetria N0–N3): niski wzrost (≤ 10 c) wobec wzrostu docelowego wg rodziców. N0 brak MPH (podtytuł jak
+  /* Rata T2 (symetria N0–N3): niski wzrost (≤ 10 c) wobec potencjału genetycznego wzrostu. N0 brak MPH (podtytuł jak
      dotąd; DS bez członu o rodzicach; dopisek przy braku rodziców) albo strona dodatnia (zostaje przy osi mph);
      N1 w paśmie („zgodny ze wzrostem rodziców”); N2 pogranicze −1,5…−2,0; N3 ≤ −2,0 — ciężkość 2 (kryterium
      odległości od celu > 2 SD przy niskim wzroście, Grote 2008, doi:10.1136/adc.2007.120188); poniżej 3 lat zamiast
@@ -474,7 +476,7 @@
     return k;
   }
 
-  /* Rata T: wysoki wzrost (> 97 c) wobec wzrostu docelowego wg rodziców. Każda gałąź niesie samowystarczalny
+  /* Rata T: wysoki wzrost (> 97 c) wobec potencjału genetycznego wzrostu. Każda gałąź niesie samowystarczalny
      `podtytul` (używa go gałąź „wysoka masa przy prawidłowym BMI”, która wchłania oś wzrostu) oraz własne
      „Dodatkowo …”. Gałęzie: W0 brak MPH (albo strona ujemna — zostaje przy osi mph), W1 w paśmie (< 3 lat: W1′
      z zastrzeżeniem wieku), W2 pogranicze, W3 alarm 3–10 lat, W3′ < 3 lat (obserwacja; nie łagodzone przy
@@ -579,7 +581,7 @@
       return k;
     }
     /* W3 (+ A2) (decyzja właściciela 2026-09-23: nazwać przedwczesne dojrzewanie; bez „Plan ustalono na wizycie”). */
-    var celZd = cel ? 'Wzrost docelowy wg rodziców to ' + cm(m.mphCm) + (liczba(m.mphCentyl) != null ? ' (' + centylTekst(m.mphCentyl) + ' dorosłych)' : '') : '';
+    var celZd = cel ? 'Potencjał genetyczny wzrostu (MPH) to ' + cm(m.mphCm) + (liczba(m.mphCentyl) != null ? ' (' + centylTekst(m.mphCentyl) + ' dorosłych)' : '') : '';
     var rozZd = m.liczbaWidoczna === false ? '' : 'różnica wynosi ' + sds2(r);
     var liczby = celZd ? celZd + (rozZd ? '; ' + rozZd : '') + '.' : (rozZd ? 'Różnica wynosi ' + sds2(r) + '.' : '');
     k.ciezkosc = 2;

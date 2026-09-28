@@ -67,7 +67,7 @@ describe('rata G2: nagłówek „Raportu po wizycie” — utrzymanie zamiast pi
     const h = N.zbuduj({ ...BAZA, krok: { utrzymanie: true, masaKg: 75 } });
     expect(h.text).toBe(`Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 75,0${NB}kg).`);
     expect(h.text).not.toContain('Pierwszy krok');
-    expect(N.WERSJA).toBe(8);
+    expect(N.WERSJA).toBe(9); // P-SLOWA-MPH (rata G2: 8)
   });
   it('redukcja bez zmian', () => {
     const h = N.zbuduj({ ...BAZA, krok: { masaKg: 69.7, roznicaKg: 5.3, opis: '', jestSzczebel: true, korzysc: true, klucz: 'reinehr' } });

@@ -100,7 +100,7 @@ test.describe('P-TRAJ rata T4 — baner lekarza przy obniżeniu pozycji wzrostu'
     const r = await model(page, { age: 8, months: 0, sex: 'M', w: 26, hc: 72, mo: 163, fa: 176, historia: [{ age: 3, months: 0, hc: 97, w: 16 }, { age: 5, months: 0, hc: 90, w: 20 }] });
     expect(r.rf.kontekst.wariant).toBe('R');
     const b = jeden(r);
-    expect(b.tekst).toMatch(/w kierunku wzrostu docelowego wg rodziców \(hSDS − mpSDS: z \+\d,\d\d na [+−]?\d,\d\d\) — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach\.$/);
+    expect(b.tekst).toMatch(/w kierunku potencjału genetycznego wzrostu \(hSDS − mpSDS: z \+\d,\d\d na [+−]?\d,\d\d\) — wzrost pozostaje w kanale rodzinnym; wskazana kontrola tempa wzrastania w kolejnych pomiarach\.$/);
     expect(b.kolor).toBe(ZOLTY);
   });
 

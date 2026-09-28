@@ -364,8 +364,8 @@
   "sha256": "7b316629332c6d99f9676fe0b0f779507d3eaab326ac671361cd68f4646f4fa9"
  },
  "vilda_advanced_growth.js": {
-  "v": 70,
-  "sha256": "e791cadaa71d51a249255b6dc3a3ade89848da664056c848fedfa5831172e9c2"
+  "v": 71,
+  "sha256": "3bc85225036953e79a356c9213a351b45c999c6f496a9f351dcc5bb01696b7f8"
  },
  "vilda_anorexia_risk.js": {
   "v": 4,
@@ -384,8 +384,8 @@
   "sha256": "d32d7d80e78cdea8a5f263ae5be8a862e2c664bed51cdde1e3772e48892768c2"
  },
  "vilda_auth_ui.js": {
-  "v": 463,
-  "sha256": "29f585041791ca74f1a9c4996e85f53ffea3eb4a7a8ad92055baf329fac5f17f"
+  "v": 464,
+  "sha256": "0a438901acc51ac063e87f69bc1c04faddab0cd330d63920bbd3c90ed0741eb1"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -460,8 +460,8 @@
   "sha256": "8ac757ad4edbe7f0c55a084057761b970be43ae74250212b62a90fe72cde1172"
  },
  "vilda_diet_recommendations.js": {
-  "v": 61,
-  "sha256": "a35716bd61d4c4887e9e6acab1614ad9e8245729b9569b803617ada4ec7690e0"
+  "v": 62,
+  "sha256": "d9e49132e0dce5da91471985a4e01fcd095c335c901fc2132d0c29854fd2c03c"
  },
  "vilda_dob_age.js": {
   "v": 7,
@@ -480,8 +480,8 @@
   "sha256": "b407f09433a95539a43bd419b4fa807a467d4202b58d610ebda8febf5da85595"
  },
  "vilda_epicrisis.js": {
-  "v": 25,
-  "sha256": "437c5dd965a05111ce43f4697b82cd27d345e3c47c7ba68f8355976bae8ca5cf"
+  "v": 26,
+  "sha256": "1393522e4d6d2905a38e73b1fa88983908f1c15b8fc44dba796672f524473ba7"
  },
  "vilda_epicrisis_ui.js": {
   "v": 25,
@@ -548,8 +548,8 @@
   "sha256": "c79684e9db3381331025474562ac8de5ebd1b14d4deb54f0b7cd67a3324820bc"
  },
  "vilda_growth_prediction_validation.js": {
-  "v": 13,
-  "sha256": "93545e573193f10333ca0e8ea71705ac71f9bf4018e41e6bedb09fd6c959b9c3"
+  "v": 14,
+  "sha256": "9c2334fdbd65bdc29bb3f138a1e3c35388b3b1385188f218259a30fbb3a5c8f4"
  },
  "vilda_growth_prediction_validation_model.js": {
   "v": 2,
@@ -688,8 +688,8 @@
   "sha256": "636b1b7845a477931830b0a72cd3d7a14e7a41e6847623facbadf8431c1e615f"
  },
  "vilda_raport_naglowek.js": {
-  "v": 9,
-  "sha256": "a22addc4bf41ca5ead574f238c2ad0e46c457cdc7022ad5e159b0b4f1318844f"
+  "v": 10,
+  "sha256": "4faaefb451e372c17eb1127ba54464187a235107d3fca7e679f33f893d4908d2"
  },
  "vilda_raport_plan.js": {
   "v": 18,
@@ -780,8 +780,8 @@
   "sha256": "872eda8f28b9c101af73ddecb52ad605d15678a0d1e168745be89ef558fb470e"
  },
  "vilda_trajectory_analysis.js": {
-  "v": 38,
-  "sha256": "e40e3668dbf5b792f37e899af617c509b032950acda6047d3b6678c87875f777"
+  "v": 39,
+  "sha256": "8dfaa3f234fed82e59bf728e15dbfc270baf159b558307410e83c869e3335bfe"
  },
  "vilda_tw2_prediction.js": {
   "v": 4,

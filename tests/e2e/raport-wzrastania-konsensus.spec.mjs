@@ -83,7 +83,7 @@ test('ADV-REPORT-9: podsumowanie niesie tylko linie, które lekarz czyta', async
   expect(tresc).toContain('Wzrost Taty:');
   expect(tresc).toContain('MPH (mid-parental height):');
   expect(tresc).toContain('Wiek kostny:');
-  expect(tresc).toContain('Wzrost docelowy (potencjał rodzicielski):');
+  expect(tresc).toContain('Potencjał genetyczny wzrostu (MPH):');
   expect(tresc).toContain('Prognoza wzrostu ostatecznego (');
   expect(tresc).toContain('Obliczenia wykonano na podstawie danych:');
   expect(tresc).toContain('Wygenerowano:');
