@@ -302,6 +302,36 @@ Moduł `vilda_patient_narrative.js` (`window.VildaPatientNarrative`) składa kil
   - *Wiek kostny sprzed lat.* Zdanie „Wiek kostny oceniono na X przy wieku metrykalnym Y; jest on opóźniony o Z" porównywało wiek kostny z DZISIEJSZYM wiekiem także wtedy, gdy `boneAgeMonthsAgo` mówiło, że oznaczono go 20 mies. temu — opóźnienie rosło z każdym miesiącem od badania. Teraz wiek metrykalny z chwili oznaczenia i czas przeszły („był on zgodny z wiekiem metrykalnym"); zastrzeżenie o starym oznaczeniu jak dotąd. UI: gdy pole `advBoneAge` jest puste, opis bierze wiek kostny z tego samego kontekstu karty (`model.context.boneAge` — ostatni wiersz historii z wiekiem kostnym, datowany wiekiem tamtej wizyty), z którego karta dobiera normę tempa; dotąd zdanie o tempie cytowało wiek kostny, o którym opis nie mówił.
   - *Odnotowane, bez zmiany (do decyzji właściciela):* (1) stadium Tannera bywa nazwane trzy razy — w frazie flagi („bez cech dojrzewania (Tanner I)"), w normie tempa („≥4 cm/rok przed skokiem, Tanner I") i w zdaniu „Dojrzewanie płciowe oceniono na stadium Tanner I"; dwa pierwsze to cytaty karty, trzecie to jedyne jawne stwierdzenie stadium. (2) Flaga mówi „obniżyła się o 1,4 SD" (1 miejsce, brzmienie właściciela z 2026-09-07), a baner karty i ΔhSDS w opisie mają 2 miejsca („−1,40"). (3) Fraza flagi w wariancie R (tekst karty) mówi „w kierunku wzrostu docelowego wg rodziców", a opis o tej samej wielkości „potencjał genetyczny wzrostu (MPH)" — słowo do ujednolicenia po stronie karty. (4) Dobre werdykty BMI poza kursem leczenia (np. „redukcja nadmiaru masy ciała" u dziecka z BMI >97c) nadal nie dostają zdania — poziom niesie zdanie o stanie bieżącym; zmiana bramki tonu to decyzja właściciela. (5) Norma tempa niemowlęcia z karty daje „norma ≥9 cm/rok, norma 10 cm/rok z tolerancją 1 cm" (dwa razy „norma") — tekst karty.
 
+### P-SLOWA-MPH — „potencjał genetyczny wzrostu (MPH)” zamiast „wzrostu docelowego” (SW 1.1.85, 2026-09-28, decyzja właściciela)
+
+Decyzja właściciela 2026-09-28 (po audycie składu opisu pacjenta, punkt „odnotowane bez zmiany (3)”): poprawnym stwierdzeniem jest **„potencjał genetyczny”** — MPH to środek rozkładu wzrostu dorosłych dzieci wokół średniej rodzicielskiej, nie cel ani prognoza (ta sama uwaga z 2026-09-07 dotyczyła dotąd tylko opisu pacjenta). Jedno słowo we wszystkich tekstach dla lekarza; **żaden próg, wzór ani werdykt się nie zmienia** — zmieniają się wyłącznie brzmienia:
+
+| Miejsce | Było | Jest |
+| --- | --- | --- |
+| Karta trajektorii, fraza flagi w dół, wariant R (`vilda_trajectory_analysis.js` v31; baner karty, panel, Karta pacjenta, epikryza, opis pacjenta) | „w kierunku wzrostu docelowego wg rodziców (hSDS − mpSDS: …)” | „w kierunku potencjału genetycznego wzrostu (hSDS − mpSDS: …)” |
+| Nagłówek „Raportu po wizycie”, oś mph / rata T / T2 (`vilda_raport_naglowek.js` WERSJA 9) | „(wzrost docelowy wg rodziców 190,0 cm, 97. centyl dorosłych; różnica …)”, „Wzrost docelowy wg rodziców to 169,5 cm (…)” | „(potencjał genetyczny wzrostu 190,0 cm, 97. centyl dorosłych; różnica …)”, „Potencjał genetyczny wzrostu (MPH) to 169,5 cm (…)” — w nawiasie osi bez „(MPH)”, żeby nie zagnieżdżać nawiasów |
+| Podsumowanie karty zaawansowanej / raport wzrastania (`vilda_advanced_growth.js` ?v=71) | „Wzrost docelowy (potencjał rodzicielski): X cm, pasmo celu …” | „Potencjał genetyczny wzrostu (MPH): X cm, pasmo celu …” |
+| Karta pacjenta, podpowiedź przy wzroście rodziców (`vilda_auth_ui.js` ?v=464) | „Stałe wartości dorosłych — do wzrostu docelowego (MPH).” | „… do potencjału genetycznego wzrostu (MPH).” |
+| Epikryza (`vilda_epicrisis.js` ?v=26) | „Wzrost docelowy (mid-parental height, MPH) wynosi X cm”; „przewyższa wzrost docelowy” | „Potencjał genetyczny wzrostu (mid-parental height, MPH) wynosi X cm”; „przewyższa potencjał genetyczny” (pozostałe gałęzie mówiły już „w granicach / na dolnej granicy / poniżej potencjału genetycznego”) |
+| Zalecenia dietetyczne, nawias o wzroście rodziców (`vilda_diet_recommendations.js` ?v=62) | „(docelowy wzrost na podstawie wzrostu rodziców to ok. X cm ±8,5 cm)” | „(potencjał genetyczny wzrostu na podstawie wzrostu rodziców to ok. X cm ±8,5 cm)” |
+| Walidacja prognoz, nota metod (`vilda_growth_prediction_validation.js` ?v=14) | „MPH (wzrost docelowy) pokazujemy dla porównania” | „MPH (potencjał genetyczny wzrostu) pokazujemy dla porównania” |
+
+**Druga rata (decyzja właściciela 2026-09-28, po pierwszym PR): także rodzina „cel rodzicielski / pasmo celu / poniżej celu” przechodzi na potencjał genetyczny.** Klucze `targetAssessment.tier` (`ponizej-celu`, `w-zakresie-celu`) i progi (5 cm, −2 SDS, σ 5,1 cm, pasmo ±10 cm) bez zmian — same etykiety:
+
+| Miejsce | Było | Jest |
+| --- | --- | --- |
+| Karta konsensusu prognozy (`vilda_growth_card_c.js` ?v=27), kafel MPH | „🎯 Cel rodzicielski (MPH): 178,5 cm” | „🎯 Potencjał genetyczny wzrostu (MPH): 178,5 cm” |
+| Karta konsensusu, zdanie w profilach pokwitaniowych | „Konsensus wobec celu rodzicielskiego: −6,8 cm (−1,3 SD celu; cel ±10 cm); wobec norm dorosłych −0,6 SDS — poniżej celu” | „Konsensus wobec potencjału genetycznego wzrostu: −6,8 cm (−1,3 SD potencjału genetycznego; pasmo ±10 cm); wobec norm dorosłych −0,6 SDS — poniżej potencjału genetycznego”; przy jednej metodzie „Prognoza wobec potencjału genetycznego wzrostu:” |
+| `targetAssessment.tierLabel` (karta C, podsumowanie raportu wzrastania) | „poniżej celu”, „w zakresie celu” | „poniżej potencjału genetycznego”, „w zakresie potencjału genetycznego” |
+| Noty reguł profilu (Jang 2023, Kauli 1997, Cho 2026) i kotwica MPH | „w zakresie celu”, „5–8 cm poniżej celu”, „wzrost ostateczny ≈ cel”, „bliski celu”, „MPH w konsensusie jako cel warunkowy …”, „kończą poniżej celu, Blum 2022”; równanie Wu 2023 „0,408·cel” | „w zakresie potencjału genetycznego”, „5–8 cm poniżej potencjału genetycznego”, „≈ potencjał genetyczny”, „bliski potencjału genetycznego”, „jako potencjał warunkowy …”, „poniżej potencjału genetycznego, Blum 2022”; „0,408·MPH” |
+| Metryczka metod (`vilda_growth_method_ledger.js` ?v=2) | „Cel genetyczny, nie prognoza”, „wchodzi cel warunkowy”, „poniżej celu” | „Potencjał genetyczny, nie prognoza”, „wchodzi potencjał warunkowy”, „poniżej potencjału genetycznego” |
+| Model walidacji prognoz (`vilda_growth_prediction_validation_model.js` ?v=3), etykieta wiersza | „MPH (cel)” | „MPH (potencjał genetyczny)” |
+| Podsumowanie raportu wzrastania (`vilda_advanced_growth.js`) | „…(MPH): 176,5 cm, pasmo celu 166,5–186,5 cm; prognoza 2,4 cm poniżej celu — w zakresie celu” | „…(MPH): 176,5 cm, pasmo 166,5–186,5 cm; prognoza 2,4 cm poniżej potencjału — w zakresie potencjału genetycznego” (podmiot zdania nazwany raz, na początku) |
+
+**Świadomie bez zmiany (do osobnej decyzji):** (1) panele kliniczne (`lab_clinical_panels.js`) cytujące kryteria wytycznych z terminem literatury „target height” („różnica > 1,5 SD od wzrostu docelowego (target height) rodziców”); (2) profil KOWD (`advanced_growth_kowd.js`): „Różnica target height SDS – height SDS”; (3) komentarze w kodzie i metadane (`app.js`, `vilda_update_prep.js`); (4) klucze `tier` i identyfikatory w kodzie. Testy: aktualizacja brzmień w `trajectory-analysis`, `raport-naglowek` (jednostkowe) oraz e2e `raport-wizyta-rata-t`, `raport-wizyta-rata-t2`, `baner-spadku-rata-t4`, `raport-wzrastania-konsensus`, `raport-wzrastania-swiezosc`; liczby i progi w testach bez zmian.
+
+SW 1.1.83 → **1.1.85** (pierwsza wersja PR podbijała do SW 1.1.83; równolegle #450 wydał ten sam numer na `audyt`, a otwarty #452 niesie 1.1.84 — ten sam klucz cache nie może nieść dwóch treści, więc po scaleniu z `audyt` rata podbija ponad oba numery). Piny `?v=` skryptów bez zmian: #449/#450 nie ruszały żadnego z podbitych tu plików.
+
 ### GROWTH-PRED-ODLOZONE — dwie decyzje odłożone po przeglądzie PUB1–PUB4 (2026-09-12, do rozstrzygnięcia przez właściciela)
 
 Zapis na przyszłość: obie sprawy wyszły z przeglądu („double check") funkcji prognozy u dzieci wcześnie / przedwcześnie dojrzewających i leczonych GnRHa. Właściciel zdecydował wdrożyć najpierw poprawki bezsporne (GROWTH-PRED-PUB4, bez zmiany wag); poniższe **czekają na decyzję** i nie są zaimplementowane.
@@ -5785,7 +5815,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.84, 2026-09-28)
+## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
 **Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe
 odroczenie w `resetGrowthHistoryModulesAfterClear` (`vilda_data_import_export.js`), które po „Wyczyść wszystkie pola”
@@ -5869,8 +5899,8 @@ parowania przed importem). `tests/e2e/gh-tozsamosc-spozycie.spec.mjs` — prawdz
 i F5 wraca ze znacznikiem bez dubli, po usunięciu punktu znika bez wiersza-ducha. Zestawy `gh-punkty-po-wczytaniu`,
 `gh-punkt-a-reczny-wiersz`, `gh-znacznik-po-f5`, `odtworz-zapisany-stan-wyscig`, `wczytany-pacjent-odswiezenie` — zielone.
 
-SW 1.1.83 → **1.1.84**; `vilda_advanced_growth.js?v=70→71`, `vilda_data_import_export.js?v=84→85`,
-`vilda_persist_runtime.js?v=16→17`.
+SW 1.1.85 → **1.1.86** (równolegle scalony #451 wydał SW 1.1.85 i `vilda_advanced_growth.js?v=71`, więc rata podbija o jeszcze jeden);
+`vilda_advanced_growth.js?v=71→72`, `vilda_data_import_export.js?v=84→85`, `vilda_persist_runtime.js?v=16→17`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania (a)–(d) wyżej i scalenie; ewentualne `ghId` w rekordzie
 pacjenta (domknięcie ryzyka resztkowego). Zmiana nie jest kliniczna (żaden wzór, próg ani dane), ale zmienia skład historii
@@ -5916,7 +5946,7 @@ dodaje i usuwa (rozpoznaje je po `data-gh-id`). Po poprawce po F5 tabela ma `123
 zostaje ręczny) bez zmian. Flagi zawieszenia po czyszczeniu — bez zmian w tej racie (martwe odroczenie
 w `resetGrowthHistoryModulesAfterClear` zostaje do raty 2).
 
-**Rata 2 (plan z raty 1; zrealizowana jako P-GH-TOZSAMOSC rata 2, SW 1.1.84 — wpis wyżej; w realizacji zamiast przenoszenia znacznika przez `backfillAdvRowFromIntake` przyjęto parowanie po tożsamości i zakaz dorabiania wiersza z lustra).** Zdjęcie flag zawieszenia po „Wyczyść wszystkie pola”
+**Rata 2 (plan z raty 1; zrealizowana jako P-GH-TOZSAMOSC rata 2, SW 1.1.86 — wpis wyżej; w realizacji zamiast przenoszenia znacznika przez `backfillAdvRowFromIntake` przyjęto parowanie po tożsamości i zakaz dorabiania wiersza z lustra).** Zdjęcie flag zawieszenia po „Wyczyść wszystkie pola”
 (przywrócenie odroczenia w `resetGrowthHistoryModulesAfterClear`) wymaga, by bliźniak nie mógł powstać także na
 ścieżce „Wyczyść → Wczytaj → Odtwórz zapis”, gdzie kontener jest czyszczony celowo i nie ma czego zachować:
 sparowany wiersz spożycia ma nieść tożsamość punktu (`data-gh-id`), zrzut `intakeRowsUI` ma ją zapisywać,

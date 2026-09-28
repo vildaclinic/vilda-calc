@@ -66,8 +66,8 @@ test('cel warunkowy MPH i korekta BP −2,0 przy opóźnieniu kostnym idą przez
   expect(fhp.mphAnchorCm).toBeGreaterThan(171.5);
   expect(fhp.mphAnchorCm).toBeLessThan(180);
   expect(fhp.mphWeightFactor, 'hSDS ≤ −2 → waga kotwicy ×0,5').toBe(0.5);
-  expect(r.cardText).toContain('Cel rodzicielski (MPH): 171,5 cm'); // kafel bez zmian
-  expect(r.detailsHtml).toContain('MPH w konsensusie jako cel warunkowy');
+  expect(r.cardText).toContain('Potencjał genetyczny wzrostu (MPH): 171,5 cm'); // kafel bez zmian
+  expect(r.detailsHtml).toContain('MPH w konsensusie jako potencjał warunkowy');
   // Δ = 8·12 − 120 = −24 → BP −2,0 cm u chłopca; RWT −1,3 (hSDS ≤ −2).
   expect(fhp.deltaMonths).toBe(-24);
   const bp = fhp.methods.find((m) => m.key === 'bp');

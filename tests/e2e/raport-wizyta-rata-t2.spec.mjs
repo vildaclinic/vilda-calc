@@ -61,7 +61,7 @@ test.describe('P-RAPORT rata T2 — przesunięcie w górę siatki i niski wzrost
     expect(r.proLeksykalny).toBe(true);
     expect(r.hl.badge).toBe('Wysoki wzrost — do oceny'); expect(r.hl.tone).toBe('danger');
     expect(r.hl.title).toMatch(new RegExp(`^Wzrost jest wysoki jak na wiek: ${r.h.toFixed(1).replace('.', ',')}${NB}cm, 9[89]\\. centyl — od pomiaru z wieku 3 lat 2 mies\\. przesunął się w górę siatki\\.$`));
-    expect(r.hl.text).toMatch(new RegExp(`^Wzrost jest zgodny ze wzrostem rodziców \\(wzrost docelowy wg rodziców 192,0${NB}cm, 9\\d\\. centyl dorosłych\\), ale od pomiaru z wieku 3 lat 2 mies\\. pozycja wzrostu na siatce podniosła się z 50\\. na 9[89]\\. centyl \\(o \\+(\\d,\\d\\d)${NB}SDS\\)\\. Taki wynik wymaga dalszej oceny, m\\.in\\. w kierunku przedwczesnego dojrzewania`));
+    expect(r.hl.text).toMatch(new RegExp(`^Wzrost jest zgodny ze wzrostem rodziców \\(potencjał genetyczny wzrostu 192,0${NB}cm, 9\\d\\. centyl dorosłych\\), ale od pomiaru z wieku 3 lat 2 mies\\. pozycja wzrostu na siatce podniosła się z 50\\. na 9[89]\\. centyl \\(o \\+(\\d,\\d\\d)${NB}SDS\\)\\. Taki wynik wymaga dalszej oceny, m\\.in\\. w kierunku przedwczesnego dojrzewania`));
     const d = Number(r.hl.text.match(/o \+(\d,\d\d)/)[1].replace(',', '.'));
     expect(d).toBeGreaterThanOrEqual(1.5);
     expect(r.hl.dodatkowe).toEqual([]);
@@ -100,7 +100,7 @@ test.describe('P-RAPORT rata T2 — przesunięcie w górę siatki i niski wzrost
     const r = await model(page, { age: 6, months: 2, sex: 'M', w: 16.2, h: 109.3, mo: 163, fa: 177, historia: [{ age: 4, months: 5, h: 97, w: 11.8 }] });
     expect(r.hl.badge).toBe('Niski wzrost'); expect(r.hl.tone).toBe('danger');
     expect(r.hl.title).toMatch(new RegExp(`^Wzrost jest wyraźnie niski jak na wiek: 109,3${NB}cm, [1-3]\\. centyl\\.$`));
-    expect(r.hl.text).toMatch(new RegExp(`^Wzrost jest niższy, niż wynika ze wzrostu rodziców \\(wzrost docelowy wg rodziców 176,5${NB}cm, \\d+\\. centyl dorosłych; różnica −1,\\d\\d${NB}SDS\\)\\. Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym\\. Dodatkowo masa ciała w stosunku do wzrostu jest za mała \\(wskaźnik Cole’a \\d+${NB}%, norma 90–110${NB}%\\)\\.$`));
+    expect(r.hl.text).toMatch(new RegExp(`^Wzrost jest niższy, niż wynika ze wzrostu rodziców \\(potencjał genetyczny wzrostu 176,5${NB}cm, \\d+\\. centyl dorosłych; różnica −1,\\d\\d${NB}SDS\\)\\. Taki wynik ocenia się razem z tempem wzrastania i wiekiem kostnym\\. Dodatkowo masa ciała w stosunku do wzrostu jest za mała \\(wskaźnik Cole’a \\d+${NB}%, norma 90–110${NB}%\\)\\.$`));
     expect(r.hl.subtext).toBe('');
     expect((r.hl.text.match(/Dodatkowo/g) || []).length).toBe(1);
     expect(r.hl.text).not.toMatch(/Wzrost dziecka jest niższy|w odniesieniu do wzrostu rodziców/);
@@ -121,7 +121,7 @@ test.describe('P-RAPORT rata T2 — przesunięcie w górę siatki i niski wzrost
     await otworz(page, 'docpro.html');
     const r = await model(page, { age: 6, months: 2, sex: 'M', w: 16.2, h: 109.3, mo: 163, fa: 177, historia: [{ age: 4, months: 5, h: 97, w: 11.8 }] });
     expect(r.hl.badge).toBe('Niski wzrost');
-    expect(r.hl.text).toMatch(/^Wzrost jest niższy, niż wynika ze wzrostu rodziców \(wzrost docelowy wg rodziców 176,5/);
+    expect(r.hl.text).toMatch(/^Wzrost jest niższy, niż wynika ze wzrostu rodziców \(potencjał genetyczny wzrostu 176,5/);
     expect(r.hl.subtext).toBe('');
   });
 });

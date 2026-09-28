@@ -84,7 +84,7 @@ describe('Konsensus w profilu przedwczesnym — dziewczynka 7 l 6 mies., BA 9,5,
   });
   it('zdanie „konsensus wobec celu": −6,8 cm (−1,3 SD celu), −0,6 SDS norm dorosłych → poniżej celu; profil wczesny i GnRHa w trakcie liczą tak samo', () => {
     const r = C.computeFinalHeightPrediction({ ...BAZA, pubertyProfile: PROFIL });
-    expect(r.targetAssessment).toMatchObject({ tier: 'ponizej-celu', tierLabel: 'poniżej celu' });
+    expect(r.targetAssessment).toMatchObject({ tier: 'ponizej-celu', tierLabel: 'poniżej potencjału genetycznego' });
     expect(r.targetAssessment.diffCm).toBeCloseTo(-6.8, 1);
     expect(r.targetAssessment.targetSd).toBeCloseTo(-1.33, 1);
     expect(r.targetAssessment.adultSds).toBeCloseTo(-0.62, 1);
@@ -124,9 +124,9 @@ describe('Konsensus w profilu przedwczesnym — dziewczynka 7 l 6 mies., BA 9,5,
 describe('Karta', () => {
   it('z profilem: akapit reguł, nota o tablicy przeciętnej z wartością tablicy przyspieszonej, tempo szybkie, zdanie wobec celu; bez zdania „w przygotowaniu"', () => {
     const t = text(C.render({ ...BAZA, pubertyProfile: PROFIL }));
-    expect(t).toContain('Konsensus wobec celu rodzicielskiego: −6,8 cm (−1,3 SD celu; cel ±10 cm); wobec norm dorosłych −0,6 SDS — poniżej celu');
+    expect(t).toContain('Konsensus wobec potencjału genetycznego wzrostu: −6,8 cm (−1,3 SD potencjału genetycznego; pasmo ±10 cm); wobec norm dorosłych −0,6 SDS — poniżej potencjału genetycznego');
     expect(t).toContain('Reguły konsensusu w profilu przedwczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978); Bayley–Pinneau z tablicy „przeciętnej" zamiast „przyspieszonej" (Kauli 1997; Tanaka 2005; Brito 2008; Mul 2005) — tablica przyspieszona dałaby 162,4 cm, przedział ×1,3 w profilu przedwczesnego pokwitania (Erkko 2025: SD 6,6 cm u 6–8-latek); TW Mark II orientacyjna (tablice z dzieci o prawidłowym czasie dojrzewania); MPH jako kotwica z pełną wagą (×0,25 dopiero po menarche).');
-    expect(t).toContain('Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej celu (Kauli 1997)');
+    expect(t).toContain('Tempo szybkie: bez leczenia wzrost ostateczny bywa 5–8 cm poniżej potencjału genetycznego (Kauli 1997)');
     expect(t).toContain('Bayley–Pinneau 158,0 cm ±7,4');
     expect(t).toContain('RWT: poza konsensusem w profilu przedwczesnego pokwitania');
     expect(t).toContain('W profilu przedwczesnego / wczesnego pokwitania użyto tablicy dla dzieci „przeciętnych"');
@@ -137,13 +137,13 @@ describe('Karta', () => {
   it('tempo wolne i chłopiec: noty Jang 2023 i Lazar 2001 / Cho 2026; GnRHa w trakcie: ostrożność (Lazar 2007); bez profilu — bez akapitu i bez zdania wobec celu', () => {
     const boy = text(C.render({ ...BAZA, sex: 'M', tw2: null, adultHeightLMS: { L: 1, M: 178, S: 0.038 }, mphCm: 176, pubertyProfile: { ...PROFIL, profil: 'wczesne', tempo: 'wolne', etykieta: 'wczesne pokwitanie (tempo wolne)', wskazniki: { tannerStadium: 3 } } }));
     expect(boy).toContain('Reguły konsensusu w profilu wczesnego pokwitania: RWT i Khamis–Roche poza konsensusem (Zachmann 1978; w profilu wczesnym jak w przedwczesnym — decyzja właściciela)');
-    expect(boy).toContain('Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm, a wzrost ostateczny nieleczonych zwykle mieści się w zakresie celu (Jang 2023; Palmert 1999; Léger 2000).');
+    expect(boy).toContain('Tempo wolne: metody z wieku kostnego zaniżają o ok. 3–4 cm, a wzrost ostateczny nieleczonych zwykle mieści się w zakresie potencjału genetycznego (Jang 2023; Palmert 1999; Léger 2000).');
     expect(boy).toContain('U chłopców Bayley–Pinneau w stadium Tanner 3 zawyża (Lazar 2001)');
-    expect(boy).toContain('Prognoza wobec celu rodzicielskiego:'); // jedna metoda aktywna (BP) — zdanie zostaje, podpis bez słowa „konsensus"
+    expect(boy).toContain('Prognoza wobec potencjału genetycznego wzrostu:'); // jedna metoda aktywna (BP) — zdanie zostaje, podpis bez słowa „konsensus"
     expect(boy).toContain('MPH poza konsensusem (kotwica wchodzi dopiero przy dwóch metodach)'); // GROWTH-PRED-PUB4: tekst mówi, co policzono
     const boy2 = text(C.render({ ...BAZA, sex: 'M', tw2: null, adultHeightLMS: { L: 1, M: 178, S: 0.038 }, mphCm: 176, pubertyProfile: { ...PROFIL, profil: 'wczesne', tempo: 'wolne', etykieta: 'x', wskazniki: { tannerStadium: 2 } } }));
     expect(boy2).not.toContain('Lazar 2001'); // nota o Tanner 3 tylko w stadium ≥ 3
-    expect(boy2).toContain('Po GnRHa wzrost ostateczny chłopców był bliski celu (Cho 2026)');
+    expect(boy2).toContain('Po GnRHa wzrost ostateczny chłopców był bliski potencjału genetycznego (Cho 2026)');
     const gn = text(C.render({ ...BAZA, pubertyProfile: { ...PROFIL, tempo: 'nieoceniane', gnrha: { status: 'w-trakcie', wTrakcie: true, poLeczeniu: false } } }));
     expect(gn).toContain('W trakcie GnRHa liczby Bayley–Pinneau i TW Mark II traktuj ostrożnie');
     const std = text(C.render(STANDARD));
@@ -164,7 +164,7 @@ describe('Karta', () => {
     expect(stdSummary).toContain('Profil predykcyjny: Profil standardowy. Dla tego profilu pokazano standardowe modele');
     const niski = text(C.render({ ...BAZA, heightSds: -2.5, pubertyProfile: PROFIL }));
     expect(niski).toContain('MPH jako kotwica z wagą ×0,5 (niskorosłość, Blum 2022)');
-    expect(std).not.toContain('Konsensus wobec celu rodzicielskiego');
+    expect(std).not.toContain('Konsensus wobec potencjału genetycznego wzrostu');
     expect(std).toContain('dzieci przyspieszone o ponad 2 lata osiągają zwykle wzrost wyższy');
   });
 });

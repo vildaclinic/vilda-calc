@@ -66,7 +66,7 @@ test('ADV-REPORT-1: zmiana danych bez „Oblicz" unieważnia prognozy, a raport 
   // ADV-REPORT-9: linia wiarygodności zniknęła z wydruku, więc bramy pilnują dziś linie
   // kontekstu klinicznego — one też powstają wyłącznie przy aktualnych prognozach.
   expect(out.staleSummary).not.toContain('Wiek kostny:');
-  expect(out.staleSummary).not.toContain('Wzrost docelowy');
+  expect(out.staleSummary).not.toContain('Potencjał genetyczny wzrostu');
   expect(out.staleNotes).toContain('Prognoz wzrostu ostatecznego nie wydrukowano');
   // kontrola pozytywna: bez tej flagi blok prognoz nadal powstaje
   expect(out.freshSummary).toContain('Prognoza wzrostu ostatecznego');

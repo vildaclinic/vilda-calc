@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 // P-RAPORT rata T (decyzje właściciela 2026-09-23): zdanie o wysokim wzroście w nagłówku „Raportu po wizycie”
-// zależy od wzrostu docelowego wg rodziców (MPH): W1 w paśmie (żółte, opisowe), W2 pogranicze, W3 alarm 3–10 lat
+// zależy od potencjału genetycznego wzrostu (MPH): W1 w paśmie (żółte, opisowe), W2 pogranicze, W3 alarm 3–10 lat
 // (przedwczesne dojrzewanie nazwane), W3′ < 3 lat (obserwacja), MPH niezależnie od trybu, liczba SDS tylko w trybie
 // profesjonalnym, brak dwóch „Dodatkowo …” o tej samej osi. PRAWDZIWA strona (index i docpro); dane FIKCYJNE.
 // Tryb przełączany przez #resultsModeToggle (zbieracz czyta leksykalny `professionalMode` z app.js, nie window.*).
@@ -41,14 +41,14 @@ async function model(page, s) {
 
 const SZESCIOLATEK = { age: 6, months: 0, sex: 'M', w: 24, h: 129 };
 
-test.describe('P-RAPORT rata T — wysoki wzrost a wzrost docelowy wg rodziców', () => {
+test.describe('P-RAPORT rata T — wysoki wzrost a potencjał genetyczny wzrostu', () => {
   test('RT-1: chłopiec 1 rok, 11,8 kg / 83,0 cm, rodzice 176/191 — tytuł o masie, podtytuł „zgodny ze wzrostem rodziców” z zastrzeżeniem < 3 lat, bez liczby SDS', async ({ page }) => {
     await otworz(page);
     const r = await model(page, { age: 1, months: 0, sex: 'M', w: 11.8, h: 83, mo: 176, fa: 191 });
     expect(r.proLeksykalny).toBe(true);
     expect(r.hl.badge).toBe('Wysoka masa ciała');
     expect(r.hl.title).toMatch(new RegExp(`^Masa ciała jest wysoka jak na wiek \\(11,8${NB}kg, 9\\d\\. centyl\\), ale w stosunku do wzrostu pozostaje prawidłowa\\.$`));
-    expect(r.hl.subtext).toMatch(new RegExp(`^Wzrost jest zgodny ze wzrostem rodziców \\(wzrost docelowy wg rodziców 190,0${NB}cm, 9\\d\\. centyl dorosłych\\)\\. U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach\\.$`));
+    expect(r.hl.subtext).toMatch(new RegExp(`^Wzrost jest zgodny ze wzrostem rodziców \\(potencjał genetyczny wzrostu 190,0${NB}cm, 9\\d\\. centyl dorosłych\\)\\. U dzieci poniżej 3 lat pozycja na siatce może się jeszcze zmieniać, dlatego najważniejsze jest tempo wzrastania w kolejnych pomiarach\\.$`));
     expect(r.hl.subtext + r.hl.text).not.toMatch(/Sam wysoki|SDS|rodzinn/);
     expect(r.hl.dodatkowe).toEqual([]);
     expect(r.podsumowanieMph.join(' ')).toMatch(/MPH: 190,0 cm/);
@@ -59,7 +59,7 @@ test.describe('P-RAPORT rata T — wysoki wzrost a wzrost docelowy wg rodziców'
     const r = await model(page, { ...SZESCIOLATEK, mo: 158, fa: 168 });
     expect(r.hl.badge).toBe('Wysoki wzrost — do oceny'); expect(r.hl.tone).toBe('danger');
     expect(r.hl.title).toMatch(new RegExp(`^Wzrost jest wysoki jak na wiek: 129,0${NB}cm, 9[89]\\. centyl — wyraźnie wyższy, niż wynika ze wzrostu rodziców\\.$`));
-    const m = r.hl.text.match(new RegExp(`^Wzrost docelowy wg rodziców to 169,5${NB}cm \\((\\d+)\\. centyl dorosłych\\); różnica wynosi (\\+\\d,\\d\\d)${NB}SDS\\. Taki wynik wymaga dalszej oceny, m\\.in\\. w kierunku przedwczesnego dojrzewania \\(tempo wzrastania, objawy dojrzewania, wiek kostny\\)\\.$`));
+    const m = r.hl.text.match(new RegExp(`^Potencjał genetyczny wzrostu \\(MPH\\) to 169,5${NB}cm \\((\\d+)\\. centyl dorosłych\\); różnica wynosi (\\+\\d,\\d\\d)${NB}SDS\\. Taki wynik wymaga dalszej oceny, m\\.in\\. w kierunku przedwczesnego dojrzewania \\(tempo wzrastania, objawy dojrzewania, wiek kostny\\)\\.$`));
     expect(m, r.hl.text).not.toBeNull();
     expect(Number(m[2].replace(',', '.'))).toBeGreaterThanOrEqual(2);
     const linia = r.podsumowanieMph.find((l) => /hSDS - mpSDS/.test(l));
@@ -74,7 +74,7 @@ test.describe('P-RAPORT rata T — wysoki wzrost a wzrost docelowy wg rodziców'
     const r = await model(page, { ...SZESCIOLATEK, mo: 158, fa: 168, pro: false });
     expect(r.proLeksykalny).toBe(false);
     expect(r.hl.badge).toBe('Wysoki wzrost — do oceny'); expect(r.hl.tone).toBe('danger');
-    expect(r.hl.text).toMatch(new RegExp(`^Wzrost docelowy wg rodziców to 169,5${NB}cm \\(\\d+\\. centyl dorosłych\\)\\. Taki wynik wymaga dalszej oceny, m\\.in\\. w kierunku przedwczesnego dojrzewania`));
+    expect(r.hl.text).toMatch(new RegExp(`^Potencjał genetyczny wzrostu \\(MPH\\) to 169,5${NB}cm \\(\\d+\\. centyl dorosłych\\)\\. Taki wynik wymaga dalszej oceny, m\\.in\\. w kierunku przedwczesnego dojrzewania`));
     expect(r.hl.title + r.hl.text + r.hl.subtext).not.toMatch(/SDS/);
     expect(r.podsumowanieMph.join(' ')).not.toMatch(/hSDS - mpSDS/); // podsumowanie standardowe też bez liczby
   });
@@ -84,7 +84,7 @@ test.describe('P-RAPORT rata T — wysoki wzrost a wzrost docelowy wg rodziców'
     const r = await model(page, { ...SZESCIOLATEK, mo: 178, fa: 193 });
     expect(r.hl.badge).toBe('Wysoki wzrost'); expect(r.hl.tone).toBe('warn');
     expect(r.hl.title).toMatch(new RegExp(`^Wzrost jest wysoki jak na wiek: 129,0${NB}cm, 9[89]\\. centyl\\.$`));
-    expect(r.hl.text).toMatch(new RegExp(`^Wzrost jest zgodny ze wzrostem rodziców \\(wzrost docelowy wg rodziców 192,0${NB}cm, 9\\d\\. centyl dorosłych\\)\\. Najwięcej informacji daje tempo wzrastania w kolejnych pomiarach\\.$`));
+    expect(r.hl.text).toMatch(new RegExp(`^Wzrost jest zgodny ze wzrostem rodziców \\(potencjał genetyczny wzrostu 192,0${NB}cm, 9\\d\\. centyl dorosłych\\)\\. Najwięcej informacji daje tempo wzrastania w kolejnych pomiarach\\.$`));
     expect(r.hl.text).not.toMatch(/Sam wysoki|rodzinn|SDS/);
   });
 
@@ -92,7 +92,7 @@ test.describe('P-RAPORT rata T — wysoki wzrost a wzrost docelowy wg rodziców'
     await otworz(page);
     const r = await model(page, { ...SZESCIOLATEK, mo: 167, fa: 181 });
     expect(r.hl.badge).toBe('Wysoki wzrost'); expect(r.hl.tone).toBe('warn');
-    const m = r.hl.text.match(new RegExp(`^Wzrost jest wyższy, niż wynika ze wzrostu rodziców \\(wzrost docelowy wg rodziców 180,5${NB}cm, \\d+\\. centyl dorosłych; różnica \\+(\\d,\\d\\d)${NB}SDS\\)\\. Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach\\.$`));
+    const m = r.hl.text.match(new RegExp(`^Wzrost jest wyższy, niż wynika ze wzrostu rodziców \\(potencjał genetyczny wzrostu 180,5${NB}cm, \\d+\\. centyl dorosłych; różnica \\+(\\d,\\d\\d)${NB}SDS\\)\\. Taki wynik ocenia się razem z tempem wzrastania w kolejnych pomiarach\\.$`));
     expect(m, r.hl.text).not.toBeNull();
     const d = Number(m[1].replace(',', '.'));
     expect(d).toBeGreaterThanOrEqual(1.5); expect(d).toBeLessThan(2);
