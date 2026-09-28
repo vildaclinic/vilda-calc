@@ -6,7 +6,7 @@
   left:50%;
   bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px);
   transform:translateX(-50%);
-  z-index:2147483000;
+  z-index:var(--z-toast);
   box-sizing:border-box;
   max-width:min(88vw,520px);
   padding:.65rem 1.25rem;
@@ -16,13 +16,16 @@
   text-align:center;
   box-shadow:0 10px 24px rgba(0,0,0,.18);
   pointer-events:none;
-  transition:bottom .22s ease}
+  transition:bottom .22s ease;
+}
 .vilda-dymek--ok{
-  background:#00838d;
-  color:#fff}
+  background:var(--primary);
+  color:#fff;
+}
 .vilda-dymek--info{
-  background:#0f2b33;
-  color:#fff}
+  background:var(--text-strong);
+  color:#fff;
+}
 .vilda-dymek--blad{
   background:#fff;
   color:#2f3137;
@@ -47,7 +50,7 @@
   position:absolute;
   top:0;
   left:0;
-  z-index:10020;
+  z-index:var(--z-tutorial-overlay);
   opacity:0;
   transition:opacity .2s ease,transform .2s ease;
   transform:translateY(2px);
@@ -62,7 +65,8 @@
   font-weight:600;
   max-width:min(360px,calc(100vw - 24px));
   pointer-events:none;
-  white-space:normal}
+  white-space:normal;
+}
 .menu-tooltip.copy-tooltip{
   font-size:.95rem;
   padding:.45rem .65rem;
@@ -71,29 +75,30 @@
 .vild-range-host{
   position:relative}
 .vild-range-tip{
-  position:absolute!important;
+  position:absolute !important;
   left:12px;
   bottom:calc(100% + 9px);
-  z-index:10020;
+  z-index:var(--z-tutorial-overlay);
   display:flex;
   align-items:center;
   gap:7px;
   max-width:min(300px,calc(100vw - 28px));
-  background:#fffffff5!important;
-  color:var(--primary)!important;
-  border:1.5px solid rgba(0,131,141,.2)!important;
-  border-radius:10px!important;
-  box-shadow:0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc!important;
+  background:#fffffff5 !important;
+  color:var(--primary) !important;
+  border:1.5px solid rgba(0,131,141,.2) !important;
+  border-radius:10px !important;
+  box-shadow:0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc !important;
   -webkit-backdrop-filter:blur(14px) saturate(1.6);
   backdrop-filter:blur(14px) saturate(1.6);
-  font-size:.83rem!important;
-  font-weight:500!important;
+  font-size:.83rem !important;
+  font-weight:500 !important;
   line-height:1.3;
-  padding:.55rem .85rem!important;
+  padding:.55rem .85rem !important;
   pointer-events:none;
   opacity:0;
   transform:translateY(4px);
-  transition:opacity .18s ease,transform .18s ease}
+  transition:opacity .18s ease,transform .18s ease;
+}
 .vild-range-tip.is-on{
   opacity:1;
   transform:translateY(0)}
@@ -133,12 +138,13 @@
   text-underline-offset:.14em;
   cursor:help}
 .nutrition-micros-abbr:focus-visible{
-  outline:2px solid #111;
+  outline:2px solid var(--text-ink);
   outline-offset:2px;
-  border-radius:3px}
+  border-radius:3px;
+}
 .nutrition-micros-tooltip{
   position:fixed;
-  z-index:2147483000;
+  z-index:var(--z-toast);
   max-width:min(360px,calc(100vw - 16px));
   padding:.66rem .78rem;
   border:2px solid #000;
@@ -153,7 +159,8 @@
   pointer-events:none;
   opacity:0;
   transform:translateY(1px);
-  transition:opacity 35ms linear,transform 35ms linear}
+  transition:opacity 35ms linear,transform 35ms linear;
+}
 .nutrition-micros-tooltip.is-visible{
   opacity:1;
   transform:translateY(0)}
@@ -176,7 +183,7 @@ body .nutrition-micros-tooltip{
 /* ===== ChromeTooltip — vilda_chrome.css 964-1020 (.vilda-tip; .has-vilda-chrome .menu-tooltip) ===== */
 .vilda-tip{
   position:fixed;
-  z-index:99999;
+  z-index:var(--z-drawer);
   max-width:min(280px,calc(100vw - 24px));
   padding:.6rem 1rem;
   border-radius:10px;
@@ -194,7 +201,8 @@ body .nutrition-micros-tooltip{
   white-space:normal;
   opacity:0;
   transform:translate(6px);
-  transition:opacity .18s ease,transform .18s ease}
+  transition:opacity .18s ease,transform .18s ease;
+}
 .vilda-tip.vilda-tip--in{
   opacity:1;
   transform:translate(0)}
@@ -261,13 +269,12 @@ body .nutrition-micros-tooltip{
   inset:0;
   background:var(--brand-light);
   opacity:0;
-  z-index:-1;
-  animation:pulseBG 1s ease-out forwards}
+  z-index:var(--z-behind);
+  animation:pulseBG 1s ease-out forwards;
+}
 @keyframes pulseBG{
-  0%{
-  opacity:.15}
-to{
-  opacity:0}
+  0% { opacity: 0.15; }
+  100% { opacity: 0; }
 }
 @keyframes fadeSlideUp{
   0%{
@@ -281,12 +288,15 @@ to{
   animation:fadeSlideUp .45s cubic-bezier(.4,0,.2,1)}
 /* style.css 731-761 (token --pulse-ring: 12px daje tokens.css) */
 @keyframes pulseRed{
-  0%{
-  box-shadow:0 0 #c628284d}
-70%{
-  box-shadow:0 0 0 var(--pulse-ring) #c628281a}
-to{
-  box-shadow:0 0 #c6282800}
+  0% {
+    box-shadow: 0 0 #c628284d
+  }
+  70% {
+    box-shadow: 0 0 0 var(--pulse-ring) var(--danger-tint)
+  }
+  to {
+    box-shadow: 0 0 #c6282800
+  }
 }
 @keyframes pulseOrange{
   0%{
@@ -316,7 +326,8 @@ to{
 #intakeResults{
   position:relative}
 #intakeResults.bmi-warning{
-  border-color:#c75d00!important}
+  border-color:var(--notice-orange) !important;
+}
 #intakeResults.bmi-danger{
   border-color:var(--danger)!important}
 #intakeResults.pulse-warning-infinite:after,#intakeResults.pulse-warning-2s:after,#intakeResults.pulse-danger-infinite:after,#intakeResults.pulse-danger-2s:after{
@@ -347,7 +358,8 @@ to{
 #coleInfo{
   position:relative}
 #coleInfo.bmi-warning{
-  border-color:#c75d00!important}
+  border-color:var(--notice-orange) !important;
+}
 #coleInfo.bmi-danger{
   border-color:var(--danger)!important}
 #coleInfo.pulse-warning-infinite:after,#coleInfo.pulse-warning-2s:after,#coleInfo.pulse-danger-infinite:after,#coleInfo.pulse-danger-2s:after{
@@ -378,7 +390,8 @@ to{
 #bpResult{
   position:relative}
 #bpResult.rr-warning{
-  border-color:#c75d00!important}
+  border-color:var(--notice-orange) !important;
+}
 #bpResult.rr-danger{
   border-color:var(--danger)!important}
 #bpResult.pulse-warning-infinite:after,#bpResult.pulse-warning-2s:after,#bpResult.pulse-danger-infinite:after,#bpResult.pulse-danger-2s:after{
@@ -407,7 +420,8 @@ to{
 }
 /* style.css 1004-1021 (#circHeadResult, #circChestResult) */
 #circHeadResult.rr-warning,#circChestResult.rr-warning{
-  border-color:#c75d00!important}
+  border-color:var(--notice-orange) !important;
+}
 #circHeadResult.rr-danger,#circChestResult.rr-danger{
   border-color:var(--danger)!important}
 #circHeadResult.pulse-warning-infinite:after,#circHeadResult.pulse-warning-2s:after,#circHeadResult.pulse-danger-infinite:after,#circHeadResult.pulse-danger-2s:after,#circChestResult.pulse-warning-infinite:after,#circChestResult.pulse-warning-2s:after,#circChestResult.pulse-danger-infinite:after,#circChestResult.pulse-danger-2s:after{
@@ -448,7 +462,8 @@ body.js-loading .main-content{
 }
 /* style.css 5420-5446 (#adultVitalsResult) */
 .adult-vitals-result-box.adult-vitals-warning{
-  border-color:#c75d00!important}
+  border-color:var(--notice-orange) !important;
+}
 .adult-vitals-result-box.adult-vitals-danger{
   border-color:var(--danger)!important}
 #adultVitalsResult.pulse-warning-infinite:after,#adultVitalsResult.pulse-warning-2s:after,#adultVitalsResult.pulse-danger-infinite:after,#adultVitalsResult.pulse-danger-2s:after{

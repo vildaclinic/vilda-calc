@@ -144,8 +144,9 @@ export function splitTopLevel(text, separator) {
 
 export function parseDeclarations(body) {
   const out = [];
-  for (const raw of splitTopLevel(body, ';')) {
-    const decl = raw.replace(/\/\*[\s\S]*?\*\//g, '').trim();
+  // komentarze wypadają PRZED podziałem na deklaracje: średnik albo dwukropek w komentarzu nie jest separatorem
+  for (const raw of splitTopLevel(body.replace(/\/\*[\s\S]*?\*\//g, ''), ';')) {
+    const decl = raw.trim();
     if (!decl) continue;
     const colon = decl.indexOf(':');
     if (colon < 0) continue;

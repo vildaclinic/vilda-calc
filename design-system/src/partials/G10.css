@@ -13,7 +13,8 @@ header{
 header{
   background:#fff;
   color:var(--text);
-  border-bottom:1px solid #d0dede}
+  border-bottom:1px solid var(--line);
+}
 
 /* ===== ChromeStrip — nagłówek z chrome (vilda_chrome.css 43-72) ===== */
 .has-sidebar header>.container{
@@ -30,13 +31,14 @@ header{
 }
 .has-vilda-chrome header{
   position:relative;
-  z-index:50;
+  z-index:var(--z-header-chrome);
   padding:0;
   background:var(--chrome-glass-bg);
   backdrop-filter:saturate(160%) blur(14px);
   -webkit-backdrop-filter:saturate(160%) blur(14px);
   border-bottom:1px solid var(--chrome-glass-border);
-  box-shadow:0 1px #fff9 inset,0 6px 18px #0046500f}
+  box-shadow:0 1px #fff9 inset,0 6px 18px #0046500f;
+}
 @media(min-width:992px){
   .has-vilda-chrome header{
   position:sticky;
@@ -191,19 +193,23 @@ header{
   border-radius:9px}
 .chrome-patient-chip.is-empty .chip-icon{
   background:#e8eded;
-  color:#9eb8bb}
+  color:var(--text-disabled);
+}
 .chrome-patient-chip.is-empty .chip-value{
-  color:#9eb8bb;
-  font-weight:500}
+  color:var(--text-disabled);
+  font-weight:500;
+}
 .chrome-patient-chip.has-patient{
   background:#e6f4f5;
   border:1px solid #9fd4d8;
   border-radius:9px}
 .chrome-patient-chip.has-patient .chip-icon{
-  background:#00838d;
-  color:#fff}
+  background:var(--primary);
+  color:#fff;
+}
 .chrome-patient-chip.has-patient .chip-label{
-  color:#00838d}
+  color:var(--primary);
+}
 .chrome-patient-chip.has-patient .chip-value{
   color:#0c3a3e}
 @media(min-width:601px){
@@ -218,7 +224,8 @@ header{
   background:#fdf1dd!important;
   border-color:#f2cf95!important}
 .chrome-patient-chip.vilda-save-state--dirty .chip-label,.chrome-patient-chip.vilda-save-state--dirty .chrome-chip-card{
-  color:#b45309!important}
+  color:var(--warning) !important;
+}
 .chrome-patient-chip.vilda-save-state--dirty .chip-value{
   color:#7c3a06!important}
 .chrome-patient-chip.vilda-save-state--saving{
@@ -232,7 +239,8 @@ header{
   background:#fdeaea!important;
   border-color:#f4bcbc!important}
 .chrome-patient-chip.vilda-save-state--error .chip-label,.chrome-patient-chip.vilda-save-state--error .chrome-chip-card{
-  color:#b91c1c!important}
+  color:var(--error) !important;
+}
 .chrome-patient-chip.vilda-save-state--error .chip-value{
   color:#7f1d1d!important}
 .chrome-patient-chip.vilda-save-state--new_patient{
@@ -248,10 +256,11 @@ header{
 .chrome-chip-card{
   display:inline-flex;
   align-items:center;
-  color:#00838d;
+  color:var(--primary);
   margin-left:1px;
   flex-shrink:0;
-  line-height:1}
+  line-height:1;
+}
 .chrome-chip-card svg{
   width:17px;
   height:17px}
@@ -271,7 +280,8 @@ header{
 
 /* ===== UserChip — stany konta i przycisk akcji (vilda_chrome.css 407-455) ===== */
 .chrome-user-chip.is-loading .chip-avatar{
-  color:#9eb8bb}
+  color:var(--text-disabled);
+}
 .chrome-user-chip.is-guest .chip-avatar{
   background:#f3eaea;
   color:#b35c5c}
@@ -314,8 +324,9 @@ header{
   background:#c628281f;
   color:var(--danger, #c62828)}
 .chrome-user-chip.is-guest .chip-action:hover{
-  background:#00838d1f;
-  color:var(--primary, #00838d)}
+  background:var(--tint-teal-active);
+  color:var(--primary, #00838d);
+}
 .chip-action svg{
   width:14px;
   height:14px}
@@ -377,7 +388,8 @@ header{
 .chrome-patient-chip.is-empty .chip-icon{
   background:#fff;
   border:1px solid #cfe4e4;
-  color:#9eb8bb}
+  color:var(--text-disabled);
+}
 .chrome-user-chip.is-logged-in .chip-avatar{
   background:var(--chrome-active-bg, #00838d)}
 }
@@ -398,8 +410,9 @@ header{
 .chrome-chip.chrome-patient-chip .chip-icon,.chrome-patient-chip .chip-icon{
   transition:none!important}
 .chrome-patient-chip.vilda-save-state--hidden .chip-icon{
-  background:#e8eded!important;
-  color:#9eb8bb!important}
+  background:#e8eded !important;
+  color:var(--text-disabled) !important;
+}
 .chrome-patient-chip.vilda-save-state--saved .chip-icon{
   background:linear-gradient(135deg,#15803d,#22c55e)!important;
   color:#fff!important}
@@ -569,17 +582,18 @@ header{
 
 /* ===== Nadpisania Liquid Glass — header (ios26-v2.css 51-73) ===== */
 .liquid-ios26 header{
-  background:var(--lg-surface-light)!important;
-  color:#111!important;
+  background:var(--lg-surface-light) !important;
+  color:var(--text-ink) !important;
   border-bottom:1px solid var(--lg-border);
   backdrop-filter:blur(18px) saturate(120%);
   -webkit-backdrop-filter:blur(18px) saturate(120%);
   border-radius:0 0 var(--lg-radius) var(--lg-radius);
   overflow:hidden;
   box-shadow:var(--lg-shadow);
-  position:sticky!important;
-  top:0!important;
-  z-index:200}
+  position:sticky !important;
+  top:0 !important;
+  z-index:var(--z-header-liquid);
+}
 .liquid-ios26 header,.liquid-ios26 header._glass{
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
@@ -602,8 +616,9 @@ header{
   border-radius:50%!important;
   color:#5f8f91!important}
 .liquid-ios26 .chrome-user-chip .chip-action:hover{
-  background:#c628281f!important;
-  color:#c62828!important}
+  background:#c628281f !important;
+  color:var(--danger) !important;
+}
 
 /* ===== Wysoki kontrast — header (style.css 5157-5162; lista selektorów przycięta do header i header._glass) ===== */
 body.high-contrast-level-1.liquid-ios26 header,body.high-contrast-level-2.liquid-ios26 header,body.high-contrast-level-3.liquid-ios26 header,body.high-contrast-level-1.liquid-ios26 header._glass,body.high-contrast-level-2.liquid-ios26 header._glass,body.high-contrast-level-3.liquid-ios26 header._glass{

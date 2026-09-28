@@ -21,7 +21,7 @@
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: #ccc;
+  background-color: var(--line-neutral);
   transition: .4s;
   border-radius: 26px
 }
@@ -173,8 +173,8 @@
   align-items: center;
   padding: .42rem .68rem;
   border-radius: 999px;
-  background: #00838d14;
-  border: 1px solid rgba(0,131,141,.12);
+  background: var(--tint-teal);
+  border: 1px solid var(--line-teal-soft);
   color: #145861;
   font-size: .82rem;
   font-weight: 600;
@@ -209,7 +209,7 @@
 
 .settings-panel-inner {
   padding-top: 1.2rem;
-  border-top: 1px solid rgba(0,131,141,.12)
+  border-top: 1px solid var(--line-teal-soft)
 }
 
 .settings-section-note {
@@ -283,8 +283,8 @@
   white-space: nowrap;
   padding: .34rem .58rem;
   border-radius: 999px;
-  background: #00838d14;
-  border: 1px solid rgba(0,131,141,.12);
+  background: var(--tint-teal);
+  border: 1px solid var(--line-teal-soft);
   color: #145861;
   font-size: .78rem;
   font-weight: 700;
@@ -316,15 +316,15 @@
   justify-content: center;
   padding: .45rem .7rem;
   border-radius: 12px;
-  background: #00838d14;
-  border: 1px solid rgba(0,131,141,.12);
+  background: var(--tint-teal);
+  border: 1px solid var(--line-teal-soft);
   color: #0b5660;
   font-weight: 700;
   font-size: .92rem
 }
 
 .settings-range-row.is-disabled {
-  opacity: .55
+  opacity: var(--opacity-disabled-label)
 }
 
 .settings-range-row input[type=range]:disabled {
@@ -505,7 +505,7 @@
   display: inline-flex;
   align-items: center;
   gap: .45rem;
-  background: #00838d14;
+  background: var(--tint-teal);
   border: 1px solid rgba(0,131,141,.15);
   border-radius: 12px;
   padding: .45rem .65rem
@@ -627,7 +627,7 @@
 
 .settings-accordion-index--danger {
   background: linear-gradient(135deg,#b000202e,#b0002014);
-  color: #b00020
+  color: var(--danger-strong)
 }
 
 .settings-accordion--danger .settings-accordion-title {
@@ -641,12 +641,12 @@
 .settings-mini-chip--danger {
   background: #b0002012;
   border-color: #b000202e;
-  color: #b00020
+  color: var(--danger-strong)
 }
 
 .settings-accordion--danger .settings-chevron {
   border-color: #b000202e;
-  color: #b00020
+  color: var(--danger-strong)
 }
 
 .settings-danger-card {
@@ -657,7 +657,7 @@
 .settings-tag--danger {
   background: #b0002012;
   border-color: #b000202e;
-  color: #b00020
+  color: var(--danger-strong)
 }
 
 .settings-danger-input {
@@ -665,9 +665,9 @@
 }
 
 .settings-danger-btn {
-  background: #b00020!important;
+  background: var(--danger-strong)!important;
   color: #fff!important;
-  border-color: #b00020!important;
+  border-color: var(--danger-strong)!important;
   min-width: 200px
 }
 
@@ -907,7 +907,7 @@
   border-radius: 8px;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 20;
+  z-index: var(--z-dropdown);
   box-shadow: 0 4px 12px #0000002e
 }
 
@@ -946,7 +946,7 @@
     height: 22px;
     border-radius: 0;
     background: none;
-    color: #5a7274
+    color: var(--text-muted)
   }
   .settings-accordion-index svg {
     width: 17px;
@@ -973,7 +973,7 @@
     height: 22px;
     border: none;
     background: none;
-    color: #5a7274;
+    color: var(--text-muted);
     font-size: 1rem
   }
   .settings-accordion[open] {
@@ -983,14 +983,14 @@
     background: linear-gradient(90deg,#00838d14,#fff0 80%)
   }
   .settings-accordion[open] .settings-accordion-index {
-    color: #00838d
+    color: var(--primary)
   }
   .settings-accordion[open] .settings-accordion-title {
     color: #07363e;
     font-weight: 600
   }
   .settings-accordion[open] .settings-chevron {
-    color: #00838d
+    color: var(--primary)
   }
   .settings-accordion-panel {
     padding: 0 13px 13px

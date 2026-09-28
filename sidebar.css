@@ -83,22 +83,22 @@
   }
   .sidebar-nav a[disabled],
   .sidebar-nav a[aria-disabled=true] {
-    color: #9eb8bb;
+    color: var(--text-disabled);
     cursor: default
   }
   .sidebar-nav a[disabled]:hover,
   .sidebar-nav a[aria-disabled=true]:hover {
     background: transparent;
-    color: #9eb8bb
+    color: var(--text-disabled)
   }
   .mini-summary {
     display: none;
     position: sticky;
     top: 0;
     left: 0;
-    z-index: 5;
+    z-index: var(--z-mini-summary);
     padding: .75rem .5rem;
-    border-top: 1px solid #d0dede;
+    border-top: 1px solid var(--line);
     background: #fff!important;
     font-size: .9rem;
     line-height: 1.35
@@ -118,7 +118,7 @@
   .mini-summary .shortcut-info {
     font-size: .65rem;
     font-weight: 700;
-    color: #5a7274;
+    color: var(--text-muted);
     letter-spacing: .07em;
     text-transform: uppercase;
     margin-bottom: .4rem;
@@ -174,7 +174,7 @@
     pointer-events: none
   }
   .mini-summary .shortcut-link.disabled-shortcut {
-    color: #9eb8bb!important;
+    color: var(--text-disabled)!important;
     pointer-events: auto!important
   }
   .mini-summary .shortcut-remove {
@@ -242,7 +242,7 @@
     width: 100%;
     font-size: .9rem;
     background: var(--card);
-    border: 1px solid #d0dede;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     color: var(--text);
     padding: .25rem .6rem;
@@ -254,7 +254,7 @@
     background: #fff!important;
     backdrop-filter: none!important;
     -webkit-backdrop-filter: none!important;
-    border: 1px solid #d0dede;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     max-height: 24rem!important;
@@ -286,7 +286,7 @@
   }
   .steroid-summary {
     margin-top: .6rem;
-    border-top: 1px solid #d0dede;
+    border-top: 1px solid var(--line);
     padding: .75rem .5rem;
     background: var(--card);
     font-size: .9rem;
@@ -313,7 +313,7 @@
   }
   .steroid-summary .shortcut-link {
     background: var(--card)!important;
-    border: 1px solid #d0dede!important;
+    border: 1px solid var(--line)!important;
     border-radius: var(--radius)!important;
     color: #000!important;
     text-decoration: none!important;
@@ -338,7 +338,7 @@
   }
   .steroid-summary .add-shortcut-btn {
     background: var(--card)!important;
-    border: 1px solid #d0dede!important;
+    border: 1px solid var(--line)!important;
     border-radius: var(--radius)!important;
     color: var(--primary)!important;
     text-decoration: none!important;
@@ -358,7 +358,7 @@
     background: #fff!important;
     backdrop-filter: none!important;
     -webkit-backdrop-filter: none!important;
-    border: 1px solid #d0dede;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: .8rem;
@@ -382,7 +382,7 @@
     font-size: .9rem;
     color: var(--text);
     background: var(--card);
-    border: 1px solid #d0dede;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: .25rem .6rem;
     pointer-events: auto!important
@@ -433,7 +433,7 @@
     gap: .45rem;
     padding: .4rem .7rem;
     border-radius: 999px;
-    background: #00838d14;
+    background: var(--tint-teal);
     border: 1px solid rgba(0,131,141,.2);
     margin-bottom: .5rem;
     text-align: center
@@ -467,7 +467,7 @@
     gap: .4rem;
     padding: .35rem .5rem;
     border-radius: 10px;
-    border: 1px solid #d0dede;
+    border: 1px solid var(--line);
     background: #ffffff8c;
     min-height: 36px;
     box-sizing: border-box
@@ -485,7 +485,7 @@
     background: #c628280f
   }
   .ms-chip--neutral {
-    border-color: #d0dede;
+    border-color: var(--line);
     background: #ffffff8c
   }
   .ms-chip-icon {
@@ -493,7 +493,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #00838d1f;
+    background: var(--tint-teal-active);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -511,7 +511,7 @@
   }
   .ms-chip--neutral .ms-chip-icon {
     background: #5a72741a;
-    color: #5a7274
+    color: var(--text-muted)
   }
   .ms-chip-main {
     flex: 1 1 auto;
@@ -522,7 +522,7 @@
   }
   .ms-chip-label {
     font-size: .64rem;
-    color: #5a7274;
+    color: var(--text-muted);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: .04em
@@ -546,7 +546,7 @@
     color: #7a1a1a
   }
   .ms-chip--neutral .ms-chip-label {
-    color: #5a7274
+    color: var(--text-muted)
   }
   .ms-chip--neutral .ms-chip-value {
     color: #1a3536
@@ -572,7 +572,7 @@
   }
   .ms-chip--neutral .ms-chip-badge {
     background: #5a72741a;
-    color: #5a7274
+    color: var(--text-muted)
   }
 }
 

@@ -17,11 +17,30 @@ function normalizeText(text) {
     .replace(/(^|[\s,(:])0+\.(\d)/g, '$1.$2')
     .replace(/'/g, '"')
     .replace(/\s*([,:;{}])\s*/g, '$1')
-    .replace(/#[0-9A-Fa-f]{3,8}\b/g, (m) => m.toLowerCase());
+    .replace(/#[0-9A-Fa-f]{3,8}\b/g, (m) => m.toLowerCase())
+    .replace(/#([0-9a-f]{3,4})\b/g, (m, h) => `#${[...h].map((c) => c + c).join('')}`);
 }
 
-/** Klucz porównawczy deklaracji: ta sama wartość w innej notacji (0.8 / .8, cudzysłowy, wielkość heksów) to ta sama deklaracja. */
+/**
+ * Zmienne z :root źródeł (nazwa → wartość znormalizowana), ustawiane przez indexSourceRules. Od P-STYLE raty 2a
+ * wartości w arkuszach są tokenami (var(--x)), a partial mógł je jeszcze mieć dosłownie: przy dopasowaniu obie
+ * postaci znaczą to samo, a po dopasowaniu partial dostaje postać źródła.
+ */
+let rootVars = new Map();
+
+function resolveVars(value, depth = 0) {
+  if (depth > 4 || !value.includes('var(--')) return value;
+  const next = value.replace(/var\(--([A-Za-z0-9_-]+)\)/g, (m, name) => (rootVars.has(name) ? rootVars.get(name) : m));
+  return next === value ? value : resolveVars(next, depth + 1);
+}
+
+/** Klucz porównawczy deklaracji: ta sama wartość w innej notacji (0.8 / .8, cudzysłowy, wielkość heksów, var(--x) ↔ jej wartość z :root) to ta sama deklaracja. */
 function declKey(d) {
+  return `${d.prop}:${resolveVars(normalizeText(d.value))}${d.important ? '!important' : ''}`;
+}
+
+/** Klucz dosłowny (bez rozwijania var): decyduje, czy partial ma już postać źródła. */
+function rawKey(d) {
   return `${d.prop}:${normalizeText(d.value)}${d.important ? '!important' : ''}`;
 }
 
@@ -42,6 +61,12 @@ function formatDeclarations(decls) {
 export function indexSourceRules(sourceRules) {
   const index = new Map();
   const keyframes = new Map();
+  rootVars = new Map();
+  for (const rule of sourceRules) {
+    if (rule.type === 'style' && rule.selector.trim() === ':root' && !(rule.media && rule.media.length)) {
+      for (const d of rule.declarations) if (d.prop.startsWith('--') && !rootVars.has(d.prop.slice(2))) rootVars.set(d.prop.slice(2), normalizeText(d.value));
+    }
+  }
   for (const rule of sourceRules) {
     if (rule.type === 'at') {
       if (rule.name === 'keyframes' || rule.name === '-webkit-keyframes') {
@@ -116,7 +141,6 @@ export function resyncPartial(text, source, label) {
       }
     }
     if (!best) { unmatched.push({ file: label, selector: rule.selector.slice(0, 120), media: rule.media.join(' ') }); continue; }
-    if (best.identical) continue;
     const srcRule = best.cand.rule;
     const partialProps = new Set(rule.declarations.map((d) => d.prop));
     const partialHasVars = rule.declarations.some((d) => d.prop.startsWith('--'));
@@ -129,8 +153,9 @@ export function resyncPartial(text, source, label) {
       if (rule.selector.trim() === ':root') continue;
       next.push(d);
     }
-    const before = rule.declarations.map(declKey);
-    const after = next.map(declKey);
+    // porównanie dosłowne: reguła identyczna co do wartości, ale zapisana literałem zamiast var(--x), też jest odświeżana
+    const before = rule.declarations.map(rawKey);
+    const after = next.map(rawKey);
     if (before.join(';') === after.join(';')) continue;
     splices.push({ start: rule.declStart, end: rule.declEnd, text: formatDeclarations(next) });
     changes.push({ file: label, selector: rule.selector.slice(0, 120), source: srcRule.file, kind: 'declarations', before, after });

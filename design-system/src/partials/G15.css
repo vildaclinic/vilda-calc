@@ -993,14 +993,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 
 /* ——— 6. Liquid Glass — ios26-v2.css 85–98: globalna reguła przycisków, która w aplikacji (instrukcja.html ma body.liquid-ios26) nadpisuje tło, obrys, kolor, promień i cień .guide-tile; subskrypcja.html nie ma klasy liquid-ios26, więc .sub-plan__cta jej nie podlega ——— */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 button._pressed{
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
@@ -1054,8 +1055,9 @@ body.high-contrast-level-1.liquid-ios26 .guide-module-badge-doctor,body.high-con
   border-color:#7b2cbf38!important;
   color:#5f3388!important}
 body.high-contrast-level-1.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-shared{
-  background:#00838d14!important;
-  border-color:#07363e2e!important}
+  background:var(--tint-teal) !important;
+  border-color:#07363e2e !important;
+}
 
 /* ——— 8. Wysoki kontrast — „O aplikacji” (style.css 5300–5360; selektory dosłownie, listy przycięte do tej grupy) ——— */
 body.about-page.high-contrast-level-1.liquid-ios26 .about-hero,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero,body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li{

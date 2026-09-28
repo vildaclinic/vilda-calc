@@ -52,14 +52,21 @@ describe('P-MODALE: strony bezpośrednie — każda pełnoekranowa nakładka w C
   // Reguły `position:fixed; inset:0` z jawnym z-index w plikach CSS. Nakładki tworzone w JS mają
   // z-index ≥ 9999 (sprawdzone ręcznie 2026-09-17); tu pilnujemy plików CSS, gdzie siedział wyjątek.
   const css = fs.readdirSync(korzen).filter((f) => f.endsWith('.css'));
+  // z-index bywa tokenem (P-STYLE rata 2a: `z-index: var(--z-…)`) — wartość liczbowa jest w :root style.css
+  const zmienneRoot = new Map();
+  for (const blok of fs.readFileSync(path.join(korzen, 'style.css'), 'utf8').matchAll(/^:root \{\n([\s\S]*?)\n\}/gm)) {
+    for (const d of blok[1].matchAll(/^\s*--([A-Za-z0-9_-]+):\s*([^;]+);?$/gm)) zmienneRoot.set(d[1], d[2].trim());
+  }
   const znalezione = [];
   for (const f of css) {
     const src = fs.readFileSync(path.join(korzen, f), 'utf8');
     const re = /([^{}]+)\{([^{}]*position:\s*fixed;\s*inset:\s*0;[^{}]*)\}/g;
     let m;
     while ((m = re.exec(src))) {
-      const z = m[2].match(/z-index:\s*(-?\d+)/);
-      if (z) znalezione.push({ plik: f, selektor: m[1].trim().slice(-60), z: Number(z[1]) });
+      const z = m[2].match(/z-index:\s*(?:(-?\d+)|var\(--([A-Za-z0-9_-]+)\))/);
+      if (!z) continue;
+      const wartosc = z[1] !== undefined ? Number(z[1]) : Number(zmienneRoot.get(z[2]));
+      znalezione.push({ plik: f, selektor: m[1].trim().slice(-60), z: wartosc });
     }
   }
   it('lista nie jest pusta (kontrola: regex naprawdę coś łapie)', () => {

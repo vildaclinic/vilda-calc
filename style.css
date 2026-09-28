@@ -6,7 +6,78 @@
   --text:#333;
   --radius:8px;
   --shadow:0 2px 6px rgba(0,0,0,.08);
-  --danger:#c62828
+  --danger:#c62828;
+  /* P-STYLE rata 2a: tokeny dotąd wpisywane na sztywno (nazwy i opisy: design-system/src/project/tokens.json) */
+  /* shadow */
+  --shadow-button-glass:0 4px 12px #0000001a;
+  --shadow-main-content:0 4px 14px #0046500d;
+  --shadow-focus-input:0 0 0 2px #00838d40;
+  --shadow-selected:0 8px 18px rgba(0, 131, 141, 0.2);
+  /* color */
+  --text-2:#44535c;
+  --text-muted:#5a7274;
+  --text-soft:#555;
+  --text-strong:#0f2b33;
+  --text-heading:#14393d;
+  --text-ink:#111;
+  --text-disabled:#9eb8bb;
+  --placeholder:#666;
+  --line:#d0dede;
+  --line-neutral:#ccc;
+  --line-teal:rgba(0,131,141,.16);
+  --line-teal-soft:rgba(0,131,141,.12);
+  --tint-teal:#00838d14;
+  --tint-teal-active:#00838d1f;
+  --table-stripe:#00000008;
+  --table-stripe-teal:#00b0a614;
+  --warning:#b45309;
+  --warning-bg:#fff3e0;
+  --error:#b91c1c;
+  --danger-strong:#b00020;
+  --danger-bg:#fdecec;
+  --danger-tint:#c628281a;
+  --focus-ring:#00838d40;
+  --disabled-bg:#f3f3f3;
+  /* zindex */
+  --z-behind:-1;
+  --z-base:0;
+  --z-raised:1;
+  --z-mini-summary:5;
+  --z-search-popover:6;
+  --z-dropdown:20;
+  --z-date-popover:40;
+  --z-header-chrome:50;
+  --z-header-liquid:200;
+  --z-menu:1000;
+  --z-mobile-dock:1100;
+  --z-shell-fab:1150;
+  --z-scroll-top-dock:1201;
+  --z-clcr-live:1202;
+  --z-clcr-help:1300;
+  --z-save-popover:9500;
+  --z-modal:9999;
+  --z-banner:10000;
+  --z-tutorial-overlay:10020;
+  --z-tutorial-frame:10021;
+  --z-tutorial-bubble:10022;
+  --z-clcr-patient-card:10050;
+  --z-practice-sheet:12000;
+  --z-logout-button:99990;
+  --z-drawer:99999;
+  --z-auth-root:999999;
+  --z-auth-sheet:1000000;
+  --z-reminder-dialog:1000001;
+  --z-logout-overlay:2000000;
+  --z-toast:2147483000;
+  --z-copy-toast:2147483001;
+  /* opacity */
+  --opacity-disabled:.45;
+  --opacity-disabled-label:.55;
+  --opacity-slider-tick:.6;
+  --opacity-muted:.8;
+  --opacity-locked:.85;
+  --opacity-pulse-start:.15;
+  --opacity-hidden-dock:.001;
 }
 
 * {
@@ -64,7 +135,7 @@ h1 {
 }
 
 fieldset {
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   background: var(--card);
   padding: 1.4rem 1rem 1rem;
   border-radius: var(--radius);
@@ -96,7 +167,7 @@ option {
   font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   width: 100%;
   padding: .45rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--line-neutral);
   border-radius: 4px;
   font-size: 1rem
 }
@@ -164,7 +235,7 @@ button.icon {
 }
 
 button.icon:hover {
-  opacity: .8
+  opacity: var(--opacity-muted)
 }
 
 button.add-row {
@@ -192,7 +263,7 @@ button.add-row:hover {
   padding: 1rem;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 .activity-time {
@@ -298,7 +369,7 @@ th {
 }
 
 .site-footer__link:hover {
-  color: #00838d
+  color: var(--primary)
 }
 
 .site-footer__disclaimer-wrap {
@@ -340,7 +411,7 @@ th {
 }
 
 .site-footer__vildaclinic:hover {
-  color: #00838d
+  color: var(--primary)
 }
 
 @media(max-width:700px) {
@@ -417,7 +488,7 @@ th {
 
 .wfl-reminder {
   font-size: 1.3rem;
-  color: #c75d00;
+  color: var(--notice-orange);
   font-weight: 600;
   line-height: 1.4;
   margin-top: .5rem
@@ -488,7 +559,7 @@ th {
 .switch-diet .slider {
   position: absolute;
   inset: 0;
-  background: #ccc;
+  background: var(--line-neutral);
   border-radius: 28px;
   cursor: pointer;
   transition: background .3s
@@ -567,7 +638,7 @@ th {
 .current-summary-actions {
   margin-top: .9rem;
   padding-top: .85rem;
-  border-top: 1px solid rgba(0,131,141,.16);
+  border-top: 1px solid var(--line-teal);
   display: flex;
   flex-direction: column;
   gap: .45rem
@@ -585,14 +656,14 @@ th {
   line-height: 1.2;
   cursor: pointer;
   transition: transform .16s ease,box-shadow .16s ease,border-color .16s ease,background-color .16s ease;
-  box-shadow: 0 8px 20px #00838d14;
+  box-shadow: 0 8px 20px var(--tint-teal);
   text-align: center
 }
 
 .patient-report-summary-btn:hover {
   transform: translateY(-1px);
   border-color: #00838d6b;
-  box-shadow: 0 10px 22px #00838d1f;
+  box-shadow: 0 10px 22px var(--tint-teal-active);
   background: linear-gradient(180deg,#fff,#f4fbfb)
 }
 
@@ -616,7 +687,7 @@ th {
 }
 
 .hr-section {
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   padding: .6rem;
   border-radius: 4px;
   background: var(--card);
@@ -653,7 +724,7 @@ th {
 .tutorial-overlay {
   position: fixed;
   inset: 0;
-  z-index: 10020;
+  z-index: var(--z-tutorial-overlay);
   display: none;
   pointer-events: none;
   touch-action: none;
@@ -674,7 +745,7 @@ th {
   border-radius: 12px;
   background: transparent;
   box-shadow: 0 16px 36px #0f172a29;
-  z-index: 10021;
+  z-index: var(--z-tutorial-frame);
   pointer-events: none
 }
 
@@ -686,13 +757,13 @@ th {
   max-height: calc(100dvh - 2rem);
   overflow: auto;
   background: #fff;
-  color: #111;
+  color: var(--text-ink);
   padding: 1.2rem 1rem;
   border-radius: 14px;
   box-shadow: 0 18px 48px #0f172a42;
   text-align: left;
   line-height: 1.45;
-  z-index: 10022;
+  z-index: var(--z-tutorial-bubble);
   pointer-events: auto
 }
 
@@ -841,7 +912,7 @@ input[type=submit]:hover {
 }
 
 button:disabled {
-  opacity: .45;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed
 }
 
@@ -854,7 +925,7 @@ button.icon {
 }
 
 button.icon:hover {
-  background: #c628281a
+  background: var(--danger-tint)
 }
 
 input[type=number],
@@ -872,7 +943,7 @@ input:focus,
 select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px #00838d40
+  box-shadow: var(--shadow-focus-input)
 }
 
 table {
@@ -897,7 +968,7 @@ tbody tr:nth-child(odd) {
 }
 
 tbody tr:hover {
-  background: #00b0a614
+  background: var(--table-stripe-teal)
 }
 
 section.card,
@@ -997,13 +1068,13 @@ input[type=submit]:focus-visible {
   inset: 0;
   background: var(--brand-light);
   opacity: 0;
-  z-index: -1;
+  z-index: var(--z-behind);
   animation: pulseBG 1s ease-out forwards
 }
 
 @keyframes pulseBG {
   0% {
-    opacity: .15
+    opacity: var(--opacity-pulse-start)
   }
   to {
     opacity: 0
@@ -1072,7 +1143,7 @@ input[type=submit]:focus-visible {
 }
 
 .data-card tr:nth-child(2n) {
-  background: #00000008
+  background: var(--table-stripe)
 }
 
 :root {
@@ -1084,7 +1155,7 @@ input[type=submit]:focus-visible {
     box-shadow: 0 0 #c628284d
   }
   70% {
-    box-shadow: 0 0 0 var(--pulse-ring) #c628281a
+    box-shadow: 0 0 0 var(--pulse-ring) var(--danger-tint)
   }
   to {
     box-shadow: 0 0 #c6282800
@@ -1247,7 +1318,7 @@ input[type=submit]:focus-visible {
 .switch-pub .slider {
   position: absolute;
   inset: 0;
-  background: #ccc;
+  background: var(--line-neutral);
   border-radius: 30px;
   cursor: pointer;
   transition: background .3s
@@ -1312,7 +1383,7 @@ input[type=submit]:focus-visible {
 }
 
 #bmiCard {
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 #planCard {
@@ -1332,7 +1403,7 @@ input[type=submit]:focus-visible {
 
 #intakeCard {
   background: var(--card)!important;
-  border: 1px solid #d0dede!important;
+  border: 1px solid var(--line)!important;
   box-shadow: var(--shadow)!important
 }
 
@@ -1350,7 +1421,7 @@ input[type=submit]:focus-visible {
 }
 
 #intakeResults.bmi-warning {
-  border-color: #c75d00!important
+  border-color: var(--notice-orange)!important
 }
 
 #intakeResults.bmi-danger {
@@ -1406,7 +1477,7 @@ input[type=submit]:focus-visible {
 }
 
 #intakeResults .intake-alert.warn {
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 #intakeResults .intake-alert.danger {
@@ -1427,7 +1498,7 @@ input[type=submit]:focus-visible {
 }
 
 #coleInfo.bmi-warning {
-  border-color: #c75d00!important
+  border-color: var(--notice-orange)!important
 }
 
 #coleInfo.bmi-danger {
@@ -1466,7 +1537,7 @@ input[type=submit]:focus-visible {
 }
 
 #bpResult.rr-warning {
-  border-color: #c75d00!important
+  border-color: var(--notice-orange)!important
 }
 
 #bpResult.rr-danger {
@@ -1533,11 +1604,11 @@ input[type=submit]:focus-visible {
 .bp-definition .source-note {
   font-size: .85rem;
   margin-top: .4rem;
-  color: #555
+  color: var(--text-soft)
 }
 
 .bp-placeholder {
-  color: #666;
+  color: var(--placeholder);
   font-style: italic
 }
 
@@ -1548,7 +1619,7 @@ input[type=submit]:focus-visible {
 
 #circHeadResult.rr-warning,
 #circChestResult.rr-warning {
-  border-color: #c75d00!important
+  border-color: var(--notice-orange)!important
 }
 
 #circHeadResult.rr-danger,
@@ -1649,9 +1720,9 @@ input[type=submit]:focus-visible {
 .circ-result-action .circ-action-btn.is-pro-locked:disabled,
 .liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked,
 .liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked:disabled {
-  background: #f3f3f3!important;
+  background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid #cccccc!important;
+  border: 3px solid var(--line-neutral)!important;
   box-shadow: none!important;
   transform: none!important;
   opacity: 1!important;
@@ -1690,11 +1761,11 @@ input[type=submit]:focus-visible {
 .circ-definition .source-note {
   font-size: .85rem;
   margin-top: .4rem;
-  color: #555
+  color: var(--text-soft)
 }
 
 .circ-placeholder {
-  color: #666;
+  color: var(--placeholder);
   font-style: italic
 }
 
@@ -1874,7 +1945,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   max-width: 100%;
   font-size: 1rem;
   margin-top: .4rem;
-  color: #555;
+  color: var(--text-soft);
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1909,12 +1980,12 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   line-height: 1.4;
   margin-top: .5rem;
   font-weight: 600;
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 #coleCard,
 #whrCard {
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 #whrInfo {
@@ -1925,7 +1996,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 #foodTimesSection {
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 .small-50 {
@@ -2101,7 +2172,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 #toNormCard.result-card {
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 .user-card {
@@ -2109,7 +2180,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   font-size: 1.1rem;
   line-height: 1.3;
   box-shadow: var(--shadow);
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   border-radius: var(--radius)
 }
 
@@ -2135,7 +2206,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   box-shadow: var(--shadow);
   font-family: Inter,sans-serif;
   font-size: 1.1rem;
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 #foodTimesSection {
@@ -2623,7 +2694,7 @@ body.professional-bg {
 }
 
 #dietRecommendationsContent {
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
   border-radius: var(--radius);
   position: relative;
@@ -2752,9 +2823,9 @@ body.professional-bg {
 
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled,
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled {
-  background: #f3f3f3!important;
+  background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid #cccccc!important;
+  border: 3px solid var(--line-neutral)!important;
   cursor: not-allowed;
   pointer-events: none
 }
@@ -2785,18 +2856,18 @@ body.professional-bg {
 }
 
 .pro-button:disabled {
-  background: #f3f3f3;
+  background: var(--disabled-bg);
   color: #000;
-  border: 3px solid #cccccc;
+  border: 3px solid var(--line-neutral);
   cursor: not-allowed;
   pointer-events: none;
   opacity: 1
 }
 
 .liquid-ios26 .pro-button:disabled {
-  background: #f3f3f3!important;
+  background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid #cccccc!important;
+  border: 3px solid var(--line-neutral)!important;
   cursor: not-allowed!important;
   pointer-events: none!important;
   opacity: 1!important
@@ -2812,9 +2883,9 @@ body.professional-bg {
 
 #toggleAdvancedGrowth.advanced-growth-btn:disabled,
 #toggleAdvancedGrowth.advanced-growth-btn.disabled {
-  background: #f3f3f3!important;
+  background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid #cccccc!important;
+  border: 3px solid var(--line-neutral)!important;
   cursor: not-allowed;
   pointer-events: none
 }
@@ -2884,9 +2955,9 @@ body.professional-bg {
 #toggleGrowthCalculations.advanced-growth-btn.disabled,
 .liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn:disabled,
 .liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn.disabled {
-  background: #f3f3f3!important;
+  background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid #cccccc!important;
+  border: 3px solid var(--line-neutral)!important;
   cursor: not-allowed;
   pointer-events: none;
   opacity: 1
@@ -2953,17 +3024,17 @@ body.professional-bg {
 }
 
 .data-source-toggle label input:disabled+span {
-  border-color: #ccc;
-  color: #666;
-  background-color: #f3f3f3;
+  border-color: var(--line-neutral);
+  color: var(--placeholder);
+  background-color: var(--disabled-bg);
   cursor: not-allowed;
   pointer-events: none
 }
 
 .liquid-ios26 .data-source-toggle label input:disabled+span {
-  border-color: #ccc!important;
-  color: #666!important;
-  background-color: #f3f3f3!important;
+  border-color: var(--line-neutral)!important;
+  color: var(--placeholder)!important;
+  background-color: var(--disabled-bg)!important;
   cursor: not-allowed!important;
   pointer-events: none!important
 }
@@ -2987,9 +3058,9 @@ body.professional-bg {
 }
 
 #sourcePalczewska:disabled+span {
-  border-color: #ccc;
+  border-color: var(--line-neutral);
   color: #000;
-  background-color: #f3f3f3;
+  background-color: var(--disabled-bg);
   cursor: not-allowed;
   pointer-events: none
 }
@@ -3005,9 +3076,9 @@ body.professional-bg {
 }
 
 .liquid-ios26 #sourcePalczewska:disabled+span {
-  border-color: #ccc!important;
+  border-color: var(--line-neutral)!important;
   color: #000!important;
-  background-color: #f3f3f3!important;
+  background-color: var(--disabled-bg)!important;
   cursor: not-allowed!important;
   pointer-events: none!important
 }
@@ -3079,7 +3150,7 @@ body.professional-bg {
 
 .gh-test-card {
   background: var(--card);
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 1rem;
@@ -3330,7 +3401,7 @@ fieldset.user-card {
   margin-top: 1.4rem!important;
   margin-bottom: 1rem;
   border-radius: var(--radius);
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   box-shadow: var(--shadow)
 }
 
@@ -3503,7 +3574,7 @@ fieldset.user-card {
 #intakeCard .badge {
   display: inline-block;
   padding: .35rem .6rem;
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   background: #fff;
   border-radius: 6px
 }
@@ -3614,7 +3685,7 @@ fieldset.user-card {
 }
 
 #intakeResults table.intake-results-table tbody tr:nth-child(2n) td {
-  background: #00000008
+  background: var(--table-stripe)
 }
 
 #intakeResults .intake-period-main {
@@ -3726,7 +3797,7 @@ fieldset.user-card {
 }
 
 .measure-row-intake .remove-intake-row:hover {
-  opacity: .8
+  opacity: var(--opacity-muted)
 }
 
 @media(max-width:480px) {
@@ -3740,7 +3811,7 @@ fieldset.user-card {
 }
 
 .measure-row-intake[data-locked=true] {
-  opacity: .85
+  opacity: var(--opacity-locked)
 }
 
 .measure-row-intake[data-locked=true] input[disabled] {
@@ -3749,7 +3820,7 @@ fieldset.user-card {
 }
 
 .intake-result-card {
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   background: #fff;
   border-radius: var(--radius);
   padding: .7rem .85rem;
@@ -3818,7 +3889,7 @@ fieldset.user-card {
 }
 
 #whrSuggest {
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 :root {
@@ -3839,9 +3910,9 @@ fieldset.user-card {
 }
 
 .plan-warning-card.notice-orange {
-  border-color: #c75d00;
+  border-color: var(--notice-orange);
   background: #fff!important;
-  color: #c75d00;
+  color: var(--notice-orange);
   text-align: center;
   font-weight: 600
 }
@@ -3878,14 +3949,14 @@ fieldset.user-card {
 .whr-badge {
   display: inline-block;
   padding: .35rem .55rem;
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   background: #fff;
   border-radius: 6px;
   font-size: 1rem
 }
 
 .whr-badge small {
-  opacity: .85;
+  opacity: var(--opacity-locked);
   margin-left: .25rem
 }
 
@@ -3906,11 +3977,11 @@ fieldset.user-card {
 }
 
 .result-box.bmi-warning {
-  border-color: #c75d00!important
+  border-color: var(--notice-orange)!important
 }
 
 .result-box.bmi-warning .result-val {
-  color: #c75d00!important
+  color: var(--notice-orange)!important
 }
 
 .result-box.bmi-danger {
@@ -3922,12 +3993,12 @@ fieldset.user-card {
 }
 
 .result-box.whr-warning {
-  border-color: #c75d00!important
+  border-color: var(--notice-orange)!important
 }
 
 .result-box.whr-warning .whr-number,
 .result-box.whr-warning .whr-status {
-  color: #c75d00!important
+  color: var(--notice-orange)!important
 }
 
 .result-box.whr-danger {
@@ -3940,7 +4011,7 @@ fieldset.user-card {
 }
 
 .whr-status.warn {
-  color: #c75d00;
+  color: var(--notice-orange);
   font-weight: 600
 }
 
@@ -4017,7 +4088,7 @@ fieldset.user-card {
 
 .prev-summary-separator {
   border: none;
-  border-top: 2px solid #d0dede;
+  border-top: 2px solid var(--line);
   width: 90%;
   margin: 0 auto .6rem
 }
@@ -4034,7 +4105,7 @@ fieldset.user-card {
 }
 
 .status-improve {
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 .status-alert {
@@ -4084,7 +4155,7 @@ fieldset.user-card {
 }
 
 .diff-verdict.status-improve {
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 .diff-verdict.status-alert {
@@ -4221,7 +4292,7 @@ fieldset.user-card {
 }
 
 .pt-w.status-improve {
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 .pt-w.status-alert {
@@ -4249,7 +4320,7 @@ fieldset.user-card {
 }
 
 .pt-d.status-improve {
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 .pt-d.status-alert {
@@ -4275,12 +4346,12 @@ fieldset.user-card {
 
 .pt-pill.status-improve {
   background: #fff1e3;
-  color: #c75d00
+  color: var(--notice-orange)
 }
 
 .pt-pill.status-alert {
-  background: #fdecec;
-  color: #c62828
+  background: var(--danger-bg);
+  color: var(--danger)
 }
 
 .pt-brak {
@@ -4335,7 +4406,7 @@ fieldset.user-card {
 }
 
 .porownanie-tempo.status-alert {
-  background: #fdecec;
+  background: var(--danger-bg);
   border-color: #f2b8b8
 }
 
@@ -4349,7 +4420,7 @@ fieldset.user-card {
 }
 
 .porownanie-nota--plec {
-  color: #b45309;
+  color: var(--warning);
   border-left-color: #f3d2a8;
   font-weight: 600
 }
@@ -4450,7 +4521,7 @@ fieldset.user-card {
 }
 
 #downSyndromeCard {
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 #downSyndromeCard .result-box {
@@ -4462,7 +4533,7 @@ fieldset.user-card {
 }
 
 #advancedGrowthForm {
-  border: 1px solid #d0dede
+  border: 1px solid var(--line)
 }
 
 #advResults {
@@ -4475,7 +4546,7 @@ fieldset.user-card {
 .adv-growth-result-block+.adv-growth-result-block {
   margin-top: 1rem;
   padding-top: .95rem;
-  border-top: 1px solid rgba(0,131,141,.12)
+  border-top: 1px solid var(--line-teal-soft)
 }
 
 .adv-growth-result-details {
@@ -4520,7 +4591,7 @@ fieldset.user-card {
   gap: .7rem;
   padding: .95rem 1rem;
   border-radius: 16px;
-  border: 1px solid rgba(0,131,141,.16);
+  border: 1px solid var(--line-teal);
   background: linear-gradient(180deg,#f8fbfbfa,#f4fafafa)
 }
 
@@ -4577,13 +4648,13 @@ fieldset.user-card {
 }
 
 .adv-growth-reliability-badge.is-high {
-  background: #00838d1f;
+  background: var(--tint-teal-active);
   border-color: #00838d42;
   color: #0a5157
 }
 
 .adv-growth-reliability-badge.is-moderate {
-  background: #00838d14;
+  background: var(--tint-teal);
   border-color: #00838d33;
   color: #0a5157
 }
@@ -4595,7 +4666,7 @@ fieldset.user-card {
 }
 
 .adv-growth-reliability-badge.is-low {
-  background: #c628281a;
+  background: var(--danger-tint);
   border-color: #c628283d;
   color: var(--danger)
 }
@@ -4621,7 +4692,7 @@ fieldset.user-card {
   gap: .7rem;
   padding: .95rem 1rem;
   border-radius: 16px;
-  border: 1px solid rgba(0,131,141,.16);
+  border: 1px solid var(--line-teal);
   background: linear-gradient(180deg,#f8fbfbfa,#f4fafafa)
 }
 
@@ -4672,7 +4743,7 @@ fieldset.user-card {
 .adv-growth-profile-reference {
   margin-top: .9rem;
   padding-top: .9rem;
-  border-top: 1px solid rgba(0,131,141,.12);
+  border-top: 1px solid var(--line-teal-soft);
   display: flex;
   flex-direction: column;
   gap: .7rem
@@ -4690,7 +4761,7 @@ fieldset.user-card {
   gap: .55rem;
   padding: .85rem .95rem;
   border-radius: 14px;
-  border: 1px solid rgba(0,131,141,.12);
+  border: 1px solid var(--line-teal-soft);
   background: #ffffff8c
 }
 
@@ -4731,13 +4802,13 @@ fieldset.user-card {
 }
 
 .adv-growth-profile-badge.is-out-of-scope {
-  background: #c628281a;
+  background: var(--danger-tint);
   border-color: #c628283d;
   color: var(--danger)
 }
 
 .adv-growth-model-chip.is-preferred {
-  background: #00838d1f;
+  background: var(--tint-teal-active);
   border-color: #00838d42;
   color: #0a5157
 }
@@ -4793,7 +4864,7 @@ header h1 {
 header {
   background: #fff;
   color: var(--text);
-  border-bottom: 1px solid #d0dede
+  border-bottom: 1px solid var(--line)
 }
 
 .liquid-ios26 header h1 {
@@ -4809,7 +4880,7 @@ header {
   box-shadow: 0 -2px 8px #0000001a;
   padding: 1rem;
   font-size: .9rem;
-  z-index: 10000;
+  z-index: var(--z-banner);
   display: none
 }
 
@@ -4840,7 +4911,7 @@ header {
 
 #consent-decline {
   background-color: #e0e0e0;
-  color: #333
+  color: var(--text)
 }
 
 .main-nav ul {
@@ -4888,7 +4959,7 @@ header {
 #abxDoseInput:disabled {
   background-color: #f5f5f5;
   color: #6b7a7a;
-  border-color: #ccc;
+  border-color: var(--line-neutral);
   cursor: not-allowed
 }
 
@@ -4987,7 +5058,7 @@ header {
   left: 0;
   top: 0;
   font-weight: 800;
-  opacity: .8
+  opacity: var(--opacity-muted)
 }
 
 #thyroidCancerKidsCard .thy-section-title {
@@ -4999,7 +5070,7 @@ header {
 #thyroidCancerKidsCard .thy-note {
   border-radius: var(--radius);
   border: 1px solid rgba(0,0,0,.08);
-  background: #00000008;
+  background: var(--table-stripe);
   line-height: 1.5
 }
 
@@ -5375,7 +5446,7 @@ body.thy-modal-open {
   padding: var(--thy-modal-top) 1rem var(--thy-modal-bottom);
   padding: calc(var(--thy-modal-top) + env(safe-area-inset-top)) 1rem calc(var(--thy-modal-bottom) + env(safe-area-inset-bottom));
   background: #0009;
-  z-index: 9999
+  z-index: var(--z-modal)
 }
 
 #thyTermModal.is-open {
@@ -5429,7 +5500,7 @@ body.thy-modal-open {
     margin-top: .2rem
   }
   #thyTermModal .thy-modal-body table.thy-scale-table tr {
-    border: 1px solid #d0dede;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     background: var(--card);
@@ -5559,7 +5630,7 @@ body.thy-modal-open {
 
 #thyroidCancerKidsCard .thy-glossary details {
   background: var(--card);
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: .65rem .85rem;
@@ -5618,7 +5689,7 @@ body.thy-modal-open {
     margin-top: .2rem
   }
   #thyroidCancerKidsCard #thyInfoSection table.thy-scale-table tr {
-    border: 1px solid #d0dede;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     background: var(--card);
@@ -5846,7 +5917,7 @@ body.thy-modal-open {
 .switch-flu .slider {
   position: absolute;
   inset: 0;
-  background: #ccc;
+  background: var(--line-neutral);
   border-radius: 30px;
   cursor: pointer;
   transition: background .3s
@@ -5967,7 +6038,7 @@ body.thy-modal-open {
   left: 0;
   width: 220px;
   background: var(--card);
-  border: 1px solid #d0dede;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -5979,7 +6050,7 @@ body.thy-modal-open {
   transition: transform .3s ease,opacity .3s ease;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
+  z-index: var(--z-menu);
   align-items: stretch;
   padding-top: 1rem
 }
@@ -6028,7 +6099,7 @@ body.thy-modal-open {
 }
 
 .vertical-menu button:disabled {
-  color: #9eb8bb;
+  color: var(--text-disabled);
   cursor: default;
   background: none!important;
   border: none!important;
@@ -6038,14 +6109,14 @@ body.thy-modal-open {
 }
 
 .vertical-menu a[disabled] {
-  color: #9eb8bb;
+  color: var(--text-disabled);
   pointer-events: auto;
   cursor: default
 }
 
 .vertical-menu a[disabled]:hover {
   background: none;
-  color: #9eb8bb
+  color: var(--text-disabled)
 }
 
 @media(max-width:600px) {
@@ -6089,7 +6160,7 @@ body.thy-modal-open {
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  z-index: 1000;
+  z-index: var(--z-menu);
   transition: background .2s ease
 }
 
@@ -6120,7 +6191,7 @@ body.thy-modal-open {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 10020;
+  z-index: var(--z-tutorial-overlay);
   opacity: 0;
   transition: opacity .2s ease,transform .2s ease;
   transform: translateY(2px);
@@ -6153,7 +6224,7 @@ body.thy-modal-open {
   position: absolute!important;
   left: 12px;
   bottom: calc(100% + 9px);
-  z-index: 10020;
+  z-index: var(--z-tutorial-overlay);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -6293,7 +6364,7 @@ body.thy-modal-open {
 }
 
 .vild-rem-sec-over .vild-rem-sec-head {
-  background: #fff3e0;
+  background: var(--warning-bg);
   color: #a35f00
 }
 
@@ -6378,7 +6449,7 @@ body.thy-modal-open {
 .vild-rem-nm {
   font-size: .92rem;
   font-weight: 600;
-  color: #0f2b33;
+  color: var(--text-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis
@@ -6411,7 +6482,7 @@ body.thy-modal-open {
 }
 
 .vild-rem-when.w-over {
-  background: #fff3e0;
+  background: var(--warning-bg);
   color: #a35f00
 }
 
@@ -6509,7 +6580,7 @@ body.thy-modal-open {
 }
 
 .delete-gh-pt-btn {
-  background: #c628281a;
+  background: var(--danger-tint);
   color: var(--danger);
   border: 1px solid var(--danger);
   border-radius: var(--radius);
@@ -6630,7 +6701,7 @@ body.thy-modal-open {
   width: 2px;
   height: .3rem;
   background: var(--primary);
-  opacity: .6
+  opacity: var(--opacity-slider-tick)
 }
 
 #antibioticTherapyCard .slider-tick-label {
@@ -6840,12 +6911,12 @@ body.thy-modal-open {
   padding: var(--snake-border-thickness);
   border-radius: 14px;
   overflow: hidden;
-  z-index: 0
+  z-index: var(--z-base)
 }
 
 .snake-border>button {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-raised);
   width: 100%
 }
 
@@ -6860,7 +6931,7 @@ body.thy-modal-open {
   background: conic-gradient(var(--snake-color) 0deg 90deg,transparent 90deg 360deg);
   -webkit-mask: radial-gradient(farthest-side,transparent calc(100% - var(--snake-border-thickness)),#000 calc(100% - var(--snake-border-thickness)));
   mask: radial-gradient(farthest-side,transparent calc(100% - var(--snake-border-thickness)),#000 calc(100% - var(--snake-border-thickness)));
-  z-index: 0;
+  z-index: var(--z-base);
   animation: rotate-snake 8s linear infinite;
   transform-origin: center
 }
@@ -6963,7 +7034,7 @@ body.thy-modal-open {
 .abx-switch .slider {
   position: absolute;
   inset: 0;
-  background: #ccc;
+  background: var(--line-neutral);
   border-radius: 30px;
   cursor: pointer;
   transition: background .3s
@@ -6990,13 +7061,13 @@ body.thy-modal-open {
 }
 
 .abx-switch input:disabled+.slider {
-  opacity: .45;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed;
   pointer-events: none
 }
 
 .abx-option-row.is-disabled .abx-option-label {
-  opacity: .55
+  opacity: var(--opacity-disabled-label)
 }
 
 .dose-table {
@@ -7007,7 +7078,7 @@ body.thy-modal-open {
 
 .dose-table th,
 .dose-table td {
-  border: 1px solid #ccc;
+  border: 1px solid var(--line-neutral);
   padding: .4rem .6rem;
   font-size: .9rem;
   text-align: left
@@ -7153,7 +7224,7 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
   top: 0;
   left: 0;
   right: 0;
-  z-index: 10000;
+  z-index: var(--z-banner);
   display: none;
   background: var(--primary);
   color: #fff;
@@ -7231,8 +7302,8 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
 }
 
 .pro-overlay.bmi-warning {
-  color: #c75d00!important;
-  border-color: #c75d00!important
+  color: var(--notice-orange)!important;
+  border-color: var(--notice-orange)!important
 }
 
 .pro-overlay.bmi-danger {
@@ -7429,7 +7500,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 
 .adv-history-analysis-source {
   margin: 0 0 .85rem;
-  color: #555;
+  color: var(--text-soft);
   font-size: .94rem
 }
 
@@ -7515,7 +7586,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   gap: .45rem;
   margin-top: -.5rem;
   font-size: .86rem;
-  color: var(--text-muted,#4a5568);
+  color: #4a5568;
   cursor: pointer
 }
 
@@ -7803,7 +7874,7 @@ body.high-contrast-level-2.liquid-ios26 .version-option.selected,
 body.high-contrast-level-3.liquid-ios26 .version-option.selected {
   background: var(--hc-module-btn-active-bg)!important;
   border-color: var(--hc-module-btn-active-border)!important;
-  box-shadow: 0 0 0 1px #00838d1f,var(--hc-module-btn-active-shadow)!important
+  box-shadow: 0 0 0 1px var(--tint-teal-active),var(--hc-module-btn-active-shadow)!important
 }
 
 body.high-contrast-level-1.liquid-ios26 .version-option.disabled,
@@ -7928,14 +7999,14 @@ body.page-settings.high-contrast-level-1 .settings-accordion[open],
 body.page-settings.high-contrast-level-2 .settings-accordion[open],
 body.page-settings.high-contrast-level-3 .settings-accordion[open] {
   border-color: var(--hc-module-btn-active-border)!important;
-  box-shadow: 0 0 0 1px #00838d14,var(--hc-shadow)!important
+  box-shadow: 0 0 0 1px var(--tint-teal),var(--hc-shadow)!important
 }
 
 body.page-settings.high-contrast-level-1 .settings-accordion[open]>summary,
 body.page-settings.high-contrast-level-2 .settings-accordion[open]>summary,
 body.page-settings.high-contrast-level-3 .settings-accordion[open]>summary {
   background: var(--hc-module-btn-active-bg)!important;
-  box-shadow: inset 0 -1px #00838d1f!important
+  box-shadow: inset 0 -1px var(--tint-teal-active)!important
 }
 
 body.page-settings.high-contrast-level-1 .settings-accordion-title,
@@ -7976,7 +8047,7 @@ body.page-settings.high-contrast-level-2 .settings-accordion[open] .settings-che
 body.page-settings.high-contrast-level-3 .settings-accordion[open] .settings-chevron {
   background: var(--hc-module-btn-active-bg)!important;
   border-color: var(--hc-module-btn-active-border)!important;
-  box-shadow: 0 0 0 1px #00838d14,0 6px 14px #00838d14!important
+  box-shadow: 0 0 0 1px var(--tint-teal),0 6px 14px var(--tint-teal)!important
 }
 
 body.page-settings.high-contrast-level-1 .settings-panel-inner,
@@ -8158,7 +8229,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-module-badge-doctor {
 body.high-contrast-level-1.liquid-ios26 .guide-module-badge-shared,
 body.high-contrast-level-2.liquid-ios26 .guide-module-badge-shared,
 body.high-contrast-level-3.liquid-ios26 .guide-module-badge-shared {
-  background: #00838d14!important;
+  background: var(--tint-teal)!important;
   border-color: #07363e2e!important
 }
 
@@ -8514,7 +8585,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .adult-vitals-result-box.adult-vitals-warning {
-  border-color: #c75d00!important
+  border-color: var(--notice-orange)!important
 }
 
 .adult-vitals-result-box.adult-vitals-danger {
@@ -8602,7 +8673,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   min-height: 30px;
   padding: .35rem .7rem;
   border-radius: 999px;
-  background: #00838d1f;
+  background: var(--tint-teal-active);
   color: var(--primary);
   font-size: .78rem;
   font-weight: 800;
@@ -8697,7 +8768,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   padding: .75rem .85rem;
   border-radius: 12px;
   background: #00838d12;
-  border: 1px solid rgba(0,131,141,.12);
+  border: 1px solid var(--line-teal-soft);
   font-size: .84rem;
   line-height: 1.5;
   color: #335355
@@ -8757,7 +8828,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .adult-vitals-mini-table tr.is-highlighted td {
-  background: #00838d14;
+  background: var(--tint-teal);
   font-weight: 700
 }
 
@@ -8803,7 +8874,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .nutrition-norms-meta {
   margin: .25rem 0 .85rem;
   font-size: .98rem;
-  color: #555;
+  color: var(--text-soft);
   text-align: center;
   line-height: 1.45
 }
@@ -8868,7 +8939,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
 .nutrition-norms-toolbar-help {
   font-size: .9rem;
-  color: #555;
+  color: var(--text-soft);
   line-height: 1.4
 }
 
@@ -9004,7 +9075,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .nutrition-norms-sub {
   margin: .4rem 0 0;
   font-size: .9rem;
-  color: #555;
+  color: var(--text-soft);
   line-height: 1.45
 }
 
@@ -9025,7 +9096,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   border-radius: 12px;
   background: #0b72850d;
   font-size: .88rem;
-  color: #555;
+  color: var(--text-soft);
   line-height: 1.5
 }
 
@@ -9040,11 +9111,11 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .nutrition-norms-quality-details summary {
   cursor: pointer;
   font-weight: 600;
-  color: #111
+  color: var(--text-ink)
 }
 
 .nutrition-norms-quality-details summary::marker {
-  color: #111
+  color: var(--text-ink)
 }
 
 .nutrition-norms-quality-content {
@@ -9059,7 +9130,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   border-radius: 12px;
   background: #0b72850d;
   font-size: .88rem;
-  color: #555;
+  color: var(--text-soft);
   line-height: 1.5
 }
 
@@ -9122,7 +9193,7 @@ body.nutrition-practice-sheet-open {
 .nutrition-practice-sheet {
   position: fixed;
   inset: 0;
-  z-index: 12000;
+  z-index: var(--z-practice-sheet);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9174,7 +9245,7 @@ body.nutrition-practice-sheet-open {
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.3;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-practice-sheet-header p {
@@ -9216,7 +9287,7 @@ body.nutrition-practice-sheet-open {
 .nutrition-practice-sheet-section h4 {
   margin: 0 0 .5rem;
   font-size: .92rem;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-practice-sheet-list {
@@ -9239,7 +9310,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-practice-sheet-item-head strong {
-  color: #14393d;
+  color: var(--text-heading);
   font-size: 1rem;
   line-height: 1.35
 }
@@ -9247,14 +9318,14 @@ body.nutrition-practice-sheet-open {
 .nutrition-practice-sheet-item-portion {
   font-size: 1rem;
   line-height: 1.35;
-  color: #14393d;
+  color: var(--text-heading);
   font-weight: 600
 }
 
 .nutrition-practice-sheet-item-main {
   margin-top: .28rem;
   font-size: .86rem;
-  color: #14393d;
+  color: var(--text-heading);
   line-height: 1.45
 }
 
@@ -9372,7 +9443,7 @@ body.nutrition-practice-sheet-open {
 .nutrition-norms-source {
   margin-top: .95rem;
   font-size: .82rem;
-  color: #666;
+  color: var(--placeholder);
   line-height: 1.45
 }
 
@@ -9393,7 +9464,7 @@ body.nutrition-practice-sheet-open {
 .nutrition-norms-details li {
   margin: .3rem 0;
   font-size: .9rem;
-  color: #555
+  color: var(--text-soft)
 }
 
 .nutrition-norms-table {
@@ -9423,7 +9494,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-norms-pal-cell-main {
-  color: #14393d;
+  color: var(--text-heading);
   font-weight: 600;
   line-height: 1.35
 }
@@ -9475,7 +9546,7 @@ body.nutrition-practice-sheet-open {
   margin: 0 0 .65rem;
   font-size: .98rem;
   font-weight: 700;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-micros-grid {
@@ -9500,7 +9571,7 @@ body.nutrition-practice-sheet-open {
   margin: 0;
   font-size: 1rem;
   line-height: 1.35;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-micros-badge {
@@ -9540,7 +9611,7 @@ body.nutrition-practice-sheet-open {
 .nutrition-micros-details summary {
   cursor: pointer;
   font-weight: 600;
-  color: #111
+  color: var(--text-ink)
 }
 
 .nutrition-micros-table-wrap {
@@ -9590,7 +9661,7 @@ body.nutrition-practice-sheet-open {
   display: block;
   margin: 0 0 .42rem;
   font-weight: 700;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-micros-control-select {
@@ -9624,7 +9695,7 @@ body.nutrition-practice-sheet-open {
   margin: 0 0 .45rem;
   font-size: .92rem;
   font-weight: 700;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 @media(max-width:560px) {
@@ -9646,7 +9717,7 @@ body.nutrition-practice-sheet-open {
   margin: 0 0 .55rem;
   font-size: .98rem;
   font-weight: 700;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-micros-legend-list {
@@ -9692,14 +9763,14 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-abbr:focus-visible {
-  outline: 2px solid #111;
+  outline: 2px solid var(--text-ink);
   outline-offset: 2px;
   border-radius: 3px
 }
 
 .nutrition-micros-tooltip {
   position: fixed;
-  z-index: 2147483000;
+  z-index: var(--z-toast);
   max-width: min(360px,calc(100vw - 16px));
   padding: .66rem .78rem;
   border: 2px solid #000;
@@ -9758,7 +9829,7 @@ body.nutrition-practice-sheet-open {
   border: 1px solid rgba(11,114,133,.2);
   border-radius: 10px;
   background: #0b72850e;
-  color: #14393d;
+  color: var(--text-heading);
   font: inherit;
   font-size: .86rem;
   line-height: 1.3;
@@ -9807,13 +9878,13 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-micros-vitd-title {
   margin: 0 0 .45rem;
-  color: #14393d;
+  color: var(--text-heading);
   font-weight: 800
 }
 
 .nutrition-micros-vitd-dose {
   margin-top: 0!important;
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-micros-vitd-dose strong {
@@ -9907,7 +9978,7 @@ body.nutrition-practice-sheet-open {
   border: 1px solid rgba(11,114,133,.14);
   border-radius: 12px;
   background: #0b72850d;
-  color: #14393d;
+  color: var(--text-heading);
   font-size: .9rem;
   line-height: 1.45
 }
@@ -9975,7 +10046,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-norms-protein-info .nutrition-norms-protein-info-panel strong {
-  color: #14393d
+  color: var(--text-heading)
 }
 
 .nutrition-macro-examples-target p {
@@ -10013,7 +10084,7 @@ body.nutrition-practice-sheet-open {
   border: 1px solid rgba(11,114,133,.14);
   border-radius: 12px;
   background: #0b72850d;
-  color: #14393d;
+  color: var(--text-heading);
   font-size: .9rem;
   line-height: 1.45
 }
@@ -10203,7 +10274,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-survey-counter {
-  color: #555;
+  color: var(--text-soft);
   font-size: .86rem
 }
 
@@ -11555,14 +11626,14 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 
 .vild-rem-more:hover {
   background: #eef6f7!important;
-  color: #0f2b33!important;
+  color: var(--text-strong)!important;
   border-color: #c4dde1!important
 }
 
 .vild-rem-dlg-ov {
   position: fixed;
   inset: 0;
-  z-index: 1000001;
+  z-index: var(--z-reminder-dialog);
   background: #0f2b3357;
   display: flex;
   align-items: center;
@@ -11573,7 +11644,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 
 .vild-rem-dlg {
   background: #fff;
-  color: #0f2b33;
+  color: var(--text-strong);
   border-radius: 16px;
   max-width: 460px;
   width: 100%;
@@ -11626,14 +11697,14 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 .vild-rem-dlg-nm {
   font-size: 1.02rem;
   font-weight: 700;
-  color: #0f2b33;
+  color: var(--text-strong);
   margin: 0
 }
 
 .vild-rem-dlg-ttl {
   font-size: .95rem;
   font-weight: 600;
-  color: #0f2b33;
+  color: var(--text-strong);
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word
@@ -11656,7 +11727,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .vild-rem-dlg-row b {
-  color: #0f2b33;
+  color: var(--text-strong);
   font-weight: 600;
   min-width: 64px;
   flex: 0 0 auto
@@ -11676,7 +11747,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   font-weight: 600!important;
   border: 1px solid #d7e9ec!important;
   background: #fff!important;
-  color: #0f2b33!important;
+  color: var(--text-strong)!important;
   border-radius: 9px!important;
   padding: 8px 11px!important;
   display: inline-flex!important;
@@ -11697,8 +11768,8 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .vild-rem-dlg-acts button.vild-rem-dlg-pri {
-  background: #00838d!important;
-  border-color: #00838d!important;
+  background: var(--primary)!important;
+  border-color: var(--primary)!important;
   color: #fff!important
 }
 
@@ -11718,7 +11789,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 
 .current-summary-prognosis {
   margin-top: .7rem;
-  border-top: 1px solid rgba(0,131,141,.16);
+  border-top: 1px solid var(--line-teal);
   padding-top: .6rem
 }
 
@@ -11772,7 +11843,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   left: 50%;
   bottom: calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px);
   transform: translateX(-50%);
-  z-index: 2147483000;
+  z-index: var(--z-toast);
   box-sizing: border-box;
   max-width: min(88vw,520px);
   padding: .65rem 1.25rem;
@@ -11786,12 +11857,12 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .vilda-dymek--ok {
-  background: #00838d;
+  background: var(--primary);
   color: #fff
 }
 
 .vilda-dymek--info {
-  background: #0f2b33;
+  background: var(--text-strong);
   color: #fff
 }
 
@@ -11890,7 +11961,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .cel-wlasny-seg button:disabled {
-  opacity: .45!important;
+  opacity: var(--opacity-disabled)!important;
   cursor: not-allowed!important
 }
 

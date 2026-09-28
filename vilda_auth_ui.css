@@ -1,7 +1,7 @@
 .vilda-auth-root {
   position: fixed;
   inset: 0;
-  z-index: 999999;
+  z-index: var(--z-auth-root);
   display: none;
   background: #fff;
   overflow-y: auto;
@@ -15,7 +15,7 @@
 
 .vilda-auth-root[data-busy="1"] .vilda-auth-card {
   pointer-events: none;
-  opacity: .6
+  opacity: var(--opacity-slider-tick)
 }
 
 .vilda-auth-overlay {
@@ -70,7 +70,7 @@
 .vilda-auth-brand-name {
   font-size: 22px;
   font-weight: 600;
-  color: #00838d;
+  color: var(--primary);
   letter-spacing: -.01em;
   margin: 0
 }
@@ -94,7 +94,7 @@
   text-align: center;
   font-size: 11px;
   letter-spacing: .18em;
-  color: #00838d;
+  color: var(--primary);
   text-transform: uppercase;
   font-weight: 600;
   margin-bottom: -8px
@@ -178,8 +178,8 @@ input.vilda-auth-input {
 
 .vilda-auth-input:focus {
   outline: none;
-  border-color: #00838d;
-  box-shadow: 0 0 0 4px #00838d1f
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--tint-teal-active)
 }
 
 select.vilda-auth-input {
@@ -229,7 +229,7 @@ select.vilda-auth-input {
 
 .vilda-auth-error {
   background: #fef2f3;
-  color: #b00020;
+  color: var(--danger-strong);
   padding: 12px 16px;
   border-radius: 10px;
   font-size: 13.5px;
@@ -307,9 +307,9 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-btn-primary {
-  background: #00838d;
+  background: var(--primary);
   color: #fff;
-  border-color: #00838d;
+  border-color: var(--primary);
   box-shadow: 0 6px 18px #00838d38
 }
 
@@ -327,14 +327,14 @@ select.vilda-auth-input {
 
 .vilda-auth-btn-ghost:hover {
   background: #f5fafb;
-  border-color: #00838d;
-  color: #00838d
+  border-color: var(--primary);
+  color: var(--primary)
 }
 
 .vilda-auth-btn-danger {
-  background: #b00020;
+  background: var(--danger-strong);
   color: #fff;
-  border-color: #b00020;
+  border-color: var(--danger-strong);
   box-shadow: 0 6px 18px #b0002038
 }
 
@@ -360,20 +360,20 @@ select.vilda-auth-input {
 .vilda-auth-root .vilda-patient-delete-btn {
   flex: 0 0 auto;
   background: #fff!important;
-  color: #b00020!important;
+  color: var(--danger-strong)!important;
   border: 1.5px solid #f0c4cf!important;
   box-shadow: none!important
 }
 
 .vilda-auth-root .vilda-patient-delete-btn:hover {
   background: #fff5f6!important;
-  border-color: #b00020!important;
+  border-color: var(--danger-strong)!important;
   color: #8e0019!important;
   box-shadow: none!important
 }
 
 .vilda-auth-link {
-  color: #00838d;
+  color: var(--primary);
   font-size: 14px;
   text-decoration: none;
   font-weight: 500;
@@ -391,7 +391,7 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-link-muted:hover {
-  color: #b00020
+  color: var(--danger-strong)
 }
 
 .vilda-auth-links {
@@ -403,7 +403,7 @@ select.vilda-auth-input {
 .vilda-auth-logout {
   position: fixed!important;
   inset: 14px 14px auto auto!important;
-  z-index: 99990!important;
+  z-index: var(--z-logout-button)!important;
   display: none;
   align-items: center;
   gap: 8px;
@@ -424,8 +424,8 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-logout:hover {
-  border-color: #00838d;
-  color: #00838d;
+  border-color: var(--primary);
+  color: var(--primary);
   box-shadow: 0 6px 18px #00838d2e
 }
 
@@ -484,7 +484,7 @@ select.vilda-auth-input {
 
 .vilda-auth-search-input:focus-visible,
 .vilda-auth-search-input:focus {
-  border-color: #00838d;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px #00838d26
 }
 
@@ -555,9 +555,9 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-user-card:hover {
-  border-color: #00838d;
+  border-color: var(--primary);
   background: #f5fafb;
-  box-shadow: 0 4px 14px #00838d1f
+  box-shadow: 0 4px 14px var(--tint-teal-active)
 }
 
 .vilda-auth-user-card:active {
@@ -622,7 +622,7 @@ select.vilda-auth-input {
 .vilda-auth-btn-subtle:hover {
   background: #f5fafb;
   border-color: transparent;
-  color: #00838d
+  color: var(--primary)
 }
 
 .vilda-auth-import-list {
@@ -657,7 +657,7 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-import-toolbar-actions a {
-  color: #00838d;
+  color: var(--primary);
   cursor: pointer;
   text-decoration: none;
   font-weight: 500
@@ -702,7 +702,7 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-import-card:hover {
-  border-color: #00838d;
+  border-color: var(--primary);
   background: #f5fafb
 }
 
@@ -725,7 +725,7 @@ select.vilda-auth-input {
   width: 18px;
   height: 18px;
   cursor: inherit;
-  accent-color: #00838d;
+  accent-color: var(--primary);
   margin: 0
 }
 
@@ -788,7 +788,7 @@ select.vilda-auth-input {
   text-align: center;
   font-size: 19px;
   letter-spacing: .1em;
-  color: #00838d;
+  color: var(--primary);
   font-weight: 600;
   user-select: all;
   word-break: break-all
@@ -819,13 +819,13 @@ select.vilda-auth-input {
 .vilda-auth-meter-fill {
   height: 100%;
   width: 0%;
-  background: #b00020;
+  background: var(--danger-strong);
   border-radius: 4px;
   transition: width .2s ease,background-color .2s ease
 }
 
 .vilda-auth-meter-fill[data-strength=very-weak] {
-  background: #b00020
+  background: var(--danger-strong)
 }
 
 .vilda-auth-meter-fill[data-strength=weak] {
@@ -845,7 +845,7 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-meter-fill[data-strength=very-strong] {
-  background: #00838d
+  background: var(--primary)
 }
 
 .vilda-auth-meter-label {
@@ -871,7 +871,7 @@ select.vilda-auth-input {
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: #00838d;
+  background: var(--primary);
   color: #fff;
   display: flex;
   align-items: center;
@@ -879,7 +879,7 @@ select.vilda-auth-input {
   margin: 0 auto 8px;
   font-size: 36px;
   font-weight: 600;
-  box-shadow: 0 8px 24px #00838d40
+  box-shadow: 0 8px 24px var(--focus-ring)
 }
 
 .vilda-patient-card-header {
@@ -956,7 +956,7 @@ select.vilda-auth-input {
 
 .vilda-patient-stat-extra {
   font-size: 12px;
-  color: #c75d00;
+  color: var(--notice-orange);
   font-weight: 700;
   margin-top: 2px;
   line-height: 1.3
@@ -1006,7 +1006,7 @@ select.vilda-auth-input {
   left: 50%;
   bottom: calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px);
   transform: translate(-50%) translateY(8px);
-  z-index: 2147483001;
+  z-index: var(--z-copy-toast);
   max-width: 88vw;
   padding: 10px 16px;
   border-radius: 12px;
@@ -1115,7 +1115,7 @@ select.vilda-auth-input {
   padding: 18px 20px;
   background: #fff;
   border: .5px solid #d7e9ec;
-  border-left: 5px solid #00838d;
+  border-left: 5px solid var(--primary);
   border-radius: 14px;
   margin-bottom: 16px;
   position: relative
@@ -1131,7 +1131,7 @@ select.vilda-auth-input {
 
 .vilda-patient-hero-edit-pill {
   background: #fff!important;
-  color: #00838d!important;
+  color: var(--primary)!important;
   border: 1px solid #bcdfe2!important;
   width: auto!important;
   min-width: 0!important;
@@ -1145,12 +1145,12 @@ select.vilda-auth-input {
 
 .vilda-patient-hero-edit-pill:hover {
   background: #e1f5ee!important;
-  border-color: #00838d!important
+  border-color: var(--primary)!important
 }
 
 .vilda-patient-hero-new-measure-pill {
   background: #fff!important;
-  color: #00838d!important;
+  color: var(--primary)!important;
   border: 1px solid #bcdfe2!important;
   width: auto!important;
   min-width: 0!important;
@@ -1165,7 +1165,7 @@ select.vilda-auth-input {
 
 .vilda-patient-hero-new-measure-pill:hover {
   background: #e1f5ee!important;
-  border-color: #00838d!important
+  border-color: var(--primary)!important
 }
 
 .vilda-patient-hero-info {
@@ -1192,7 +1192,7 @@ select.vilda-auth-input {
 
 .vilda-patient-hero-meta--small {
   font-size: 13px;
-  color: #5a7274;
+  color: var(--text-muted);
   font-weight: 400
 }
 
@@ -1203,7 +1203,7 @@ select.vilda-auth-input {
   padding: 3px 10px;
   border-radius: 999px;
   margin-top: 5px;
-  background: #00838d;
+  background: var(--primary);
   color: #fff;
   white-space: nowrap
 }
@@ -1213,7 +1213,7 @@ select.vilda-auth-input {
 }
 
 .vilda-patient-status-pill--improve {
-  background: #c75d00
+  background: var(--notice-orange)
 }
 
 .vilda-patient-status-pill--alert {
@@ -1277,17 +1277,17 @@ select.vilda-auth-input {
 
 .vilda-patient-tab:hover:not(.vilda-patient-tab--active) {
   background: #eef5f6!important;
-  color: #00838d
+  color: var(--primary)
 }
 
 .vilda-patient-tab--active {
-  background: #00838d!important;
+  background: var(--primary)!important;
   color: #fff!important
 }
 
 .liquid-ios26 .vilda-patient-hero-edit-pill {
   background: #fff!important;
-  color: #00838d!important;
+  color: var(--primary)!important;
   border: 1px solid #bcdfe2!important;
   padding: 8px 14px!important;
   font-size: 15px!important;
@@ -1299,12 +1299,12 @@ select.vilda-auth-input {
 
 .liquid-ios26 .vilda-patient-hero-edit-pill:hover {
   background: #e1f5ee!important;
-  border-color: #00838d!important
+  border-color: var(--primary)!important
 }
 
 .liquid-ios26 .vilda-patient-hero-new-measure-pill {
   background: #fff!important;
-  color: #00838d!important;
+  color: var(--primary)!important;
   border: 1px solid #bcdfe2!important;
   padding: 8px 14px!important;
   font-size: 15px!important;
@@ -1316,7 +1316,7 @@ select.vilda-auth-input {
 
 .liquid-ios26 .vilda-patient-hero-new-measure-pill:hover {
   background: #e1f5ee!important;
-  border-color: #00838d!important
+  border-color: var(--primary)!important
 }
 
 .vilda-patient-hero-edit-pill,
@@ -1358,11 +1358,11 @@ select.vilda-auth-input {
 
 .liquid-ios26 .vilda-patient-tab:hover:not(.vilda-patient-tab--active) {
   background: #eef5f6!important;
-  color: #00838d!important
+  color: var(--primary)!important
 }
 
 .liquid-ios26 .vilda-patient-tab--active {
-  background: #00838d!important;
+  background: var(--primary)!important;
   color: #fff!important
 }
 
@@ -1386,7 +1386,7 @@ select.vilda-auth-input {
 .vilda-patient-section-h {
   font-size: 11.5px;
   font-weight: 600;
-  color: #5a7274;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: .07em;
   margin: 0 0 6px;
@@ -1456,7 +1456,7 @@ select.vilda-auth-input {
 
 .vilda-patient-empty-msg {
   text-align: center;
-  color: #5a7274;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.5;
   padding: 24px 16px;
@@ -1564,7 +1564,7 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-sort-btn--open {
-  color: #00838d
+  color: var(--primary)
 }
 
 .vilda-auth-sort-dropdown {
@@ -1577,7 +1577,7 @@ select.vilda-auth-input {
   border-radius: 14px;
   box-shadow: 0 8px 28px #003c5021;
   overflow: hidden;
-  z-index: 20
+  z-index: var(--z-dropdown)
 }
 
 .vilda-auth-sort-option {
@@ -1617,7 +1617,7 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-sort-option--active .vilda-auth-sort-option-label {
-  color: #00838d
+  color: var(--primary)
 }
 
 .vilda-auth-sort-option--active .vilda-auth-sort-option-label:after {
@@ -1659,7 +1659,7 @@ select.vilda-auth-input {
 }
 
 .liquid-ios26 .vilda-auth-sort-btn--open {
-  color: #00838d!important
+  color: var(--primary)!important
 }
 
 @media(max-width:520px) {
@@ -1719,7 +1719,7 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-btn-biometric:focus-visible {
-  outline: 2px solid #00838d;
+  outline: 2px solid var(--primary);
   outline-offset: 3px
 }
 
@@ -1754,7 +1754,7 @@ select.vilda-auth-input {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 1000000;
+  z-index: var(--z-auth-sheet);
   padding: 0;
   animation: vildaSheetFadeIn .22s ease;
   overscroll-behavior: contain
@@ -1856,9 +1856,9 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-root .vilda-auth-btn-primary {
-  background: #00838d!important;
+  background: var(--primary)!important;
   color: #fff!important;
-  border: 1.5px solid #00838d!important;
+  border: 1.5px solid var(--primary)!important;
   box-shadow: 0 6px 18px #00838d38!important
 }
 
@@ -1877,8 +1877,8 @@ select.vilda-auth-input {
 
 .vilda-auth-root .vilda-auth-btn-ghost:hover {
   background: #f5fafb!important;
-  border-color: #00838d!important;
-  color: #00838d!important;
+  border-color: var(--primary)!important;
+  color: var(--primary)!important;
   box-shadow: none!important
 }
 
@@ -1892,14 +1892,14 @@ select.vilda-auth-input {
 .vilda-auth-root .vilda-auth-btn-subtle:hover {
   background: #00838d0f!important;
   border-color: transparent!important;
-  color: #00838d!important;
+  color: var(--primary)!important;
   box-shadow: none!important
 }
 
 .vilda-auth-root .vilda-auth-btn-danger {
-  background: #b00020!important;
+  background: var(--danger-strong)!important;
   color: #fff!important;
-  border: 1.5px solid #b00020!important;
+  border: 1.5px solid var(--danger-strong)!important;
   box-shadow: 0 6px 18px #b0002038!important
 }
 
@@ -1919,15 +1919,15 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-root .vilda-auth-user-card:hover {
-  border-color: #00838d!important;
+  border-color: var(--primary)!important;
   background: #f5fafb!important;
-  box-shadow: 0 4px 14px #00838d1f!important
+  box-shadow: 0 4px 14px var(--tint-teal-active)!important
 }
 
 .vilda-logout-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000000;
+  z-index: var(--z-logout-overlay);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1953,7 +1953,7 @@ select.vilda-auth-input {
   width: 36px;
   height: 36px;
   border: 3px solid rgba(0,131,141,.18);
-  border-top-color: #00838d;
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: vildaLogoutSpinnerRotate .75s linear infinite;
   flex-shrink: 0
@@ -1980,7 +1980,7 @@ select.vilda-auth-input {
   margin-top: 2px;
   font-size: .78rem;
   font-weight: 500;
-  color: #00838d;
+  color: var(--primary);
   line-height: 1.3;
   letter-spacing: .01em
 }
@@ -2122,7 +2122,7 @@ body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero {
   background: var(--hc-surface)!important;
   box-shadow: var(--hc-shadow)!important;
   border: var(--hc-card-border-width) solid var(--hc-border)!important;
-  border-left: 5px solid #00838d!important
+  border-left: 5px solid var(--primary)!important
 }
 
 body.liquid-ios26.high-contrast-level-1 .vilda-patient-actions,
@@ -2375,7 +2375,7 @@ body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--alert .vilda-patien
 body.liquid-ios26.high-contrast-level-1 .vilda-patient-tab--active,
 body.liquid-ios26.high-contrast-level-2 .vilda-patient-tab--active,
 body.liquid-ios26.high-contrast-level-3 .vilda-patient-tab--active {
-  background: #00838d!important;
+  background: var(--primary)!important;
   color: #fff!important
 }
 
@@ -2395,7 +2395,7 @@ body.liquid-ios26.high-contrast-level-3 .vilda-patient-tab--active {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #00838d;
+  color: var(--primary);
   cursor: pointer;
   line-height: 1;
   flex: 0 0 auto;
@@ -2421,7 +2421,7 @@ body.liquid-ios26.high-contrast-level-3 .vilda-patient-tab--active {
   position: absolute;
   left: 0;
   top: calc(100% + 8px);
-  z-index: 40;
+  z-index: var(--z-date-popover);
   width: 240px;
   max-width: calc(100vw - 32px);
   background: #fff;
@@ -2453,7 +2453,7 @@ body.liquid-ios26.high-contrast-level-3 .vilda-patient-tab--active {
   -webkit-backdrop-filter: none!important;
   border-radius: 0!important;
   transform: none!important;
-  color: #0f2b33!important;
+  color: var(--text-strong)!important;
   font-weight: 400!important;
   display: flex!important;
   width: 100%!important;
@@ -2634,7 +2634,7 @@ body.vilda-modal-alert-open #scrollTopBtn {
   padding: 0 0 0 20px;
   font-size: .86rem;
   line-height: 1.6;
-  color: #0f2b33
+  color: var(--text-strong)
 }
 
 .vilda-auth-conflict-list li {
@@ -2657,7 +2657,7 @@ body.vilda-modal-alert-open #scrollTopBtn {
 .vilda-patient-age-note {
   font-size: .78rem;
   line-height: 1.45;
-  color: #5a7274;
+  color: var(--text-muted);
   background: #f3f8f9;
   border-left: 3px solid #cfe3e5;
   border-radius: 0 8px 8px 0;
@@ -2666,9 +2666,9 @@ body.vilda-modal-alert-open #scrollTopBtn {
 }
 
 .vilda-note-wskazana {
-  outline: 2px solid #00838d;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 6px rgba(0,131,141,.12)
+  box-shadow: 0 0 0 6px var(--line-teal-soft)
 }
 
 .vilda-auth-sheet-info {

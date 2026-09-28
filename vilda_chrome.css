@@ -34,7 +34,7 @@
     background: #fff;
     border-radius: var(--chrome-radius-card);
     padding: 1.25rem 1.25rem 1.5rem;
-    box-shadow: 0 4px 14px #0046500d;
+    box-shadow: var(--shadow-main-content);
     min-width: 0
   }
   .has-sidebar .main-content .container {
@@ -81,7 +81,7 @@
 
 .has-vilda-chrome header {
   position: relative;
-  z-index: 50;
+  z-index: var(--z-header-chrome);
   padding: 0;
   background: var(--chrome-glass-bg);
   backdrop-filter: saturate(160%) blur(14px);
@@ -282,11 +282,11 @@
 
 .chrome-patient-chip.is-empty .chip-icon {
   background: #e8eded;
-  color: #9eb8bb
+  color: var(--text-disabled)
 }
 
 .chrome-patient-chip.is-empty .chip-value {
-  color: #9eb8bb;
+  color: var(--text-disabled);
   font-weight: 500
 }
 
@@ -297,12 +297,12 @@
 }
 
 .chrome-patient-chip.has-patient .chip-icon {
-  background: #00838d;
+  background: var(--primary);
   color: #fff
 }
 
 .chrome-patient-chip.has-patient .chip-label {
-  color: #00838d
+  color: var(--primary)
 }
 
 .chrome-patient-chip.has-patient .chip-value {
@@ -327,7 +327,7 @@
   }
   .chrome-patient-chip.vilda-save-state--dirty .chip-label,
   .chrome-patient-chip.vilda-save-state--dirty .chrome-chip-card {
-    color: #b45309!important
+    color: var(--warning)!important
   }
   .chrome-patient-chip.vilda-save-state--dirty .chip-value {
     color: #7c3a06!important
@@ -349,7 +349,7 @@
   }
   .chrome-patient-chip.vilda-save-state--error .chip-label,
   .chrome-patient-chip.vilda-save-state--error .chrome-chip-card {
-    color: #b91c1c!important
+    color: var(--error)!important
   }
   .chrome-patient-chip.vilda-save-state--error .chip-value {
     color: #7f1d1d!important
@@ -374,7 +374,7 @@
 .chrome-chip-card {
   display: inline-flex;
   align-items: center;
-  color: #00838d;
+  color: var(--primary);
   margin-left: 1px;
   flex-shrink: 0;
   line-height: 1
@@ -402,13 +402,13 @@
 
 .vilda-save-popover {
   position: fixed;
-  z-index: 9500;
+  z-index: var(--z-save-popover);
   width: 290px;
   max-width: calc(100vw - 16px);
   background: #fffffff0;
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border: .5px solid rgba(0,131,141,.16);
+  border: .5px solid var(--line-teal);
   border-radius: var(--chrome-radius-card, 14px);
   box-shadow: 0 12px 34px #00515829,0 3px 8px #0000000f;
   font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
@@ -455,7 +455,7 @@
   height: 30px;
   border-radius: 8px;
   flex-shrink: 0;
-  background: #00838d;
+  background: var(--primary);
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -482,7 +482,7 @@
 }
 
 .vilda-save-popover .vsp-action-go {
-  color: #00838d;
+  color: var(--primary);
   font-size: 17px;
   flex-shrink: 0;
   line-height: 1
@@ -530,7 +530,7 @@
   font-weight: 500;
   letter-spacing: .04em;
   text-transform: uppercase;
-  color: #5a7274
+  color: var(--text-muted)
 }
 
 .vilda-save-popover .vsp-legend {
@@ -571,7 +571,7 @@
 }
 
 .chrome-user-chip.is-loading .chip-avatar {
-  color: #9eb8bb
+  color: var(--text-disabled)
 }
 
 .chrome-user-chip.is-guest .chip-avatar {
@@ -637,7 +637,7 @@
 }
 
 .chrome-user-chip.is-guest .chip-action:hover {
-  background: #00838d1f;
+  background: var(--tint-teal-active);
   color: var(--primary, #00838d)
 }
 
@@ -735,7 +735,7 @@
   .chrome-patient-chip.is-empty .chip-icon {
     background: #fff;
     border: 1px solid #cfe4e4;
-    color: #9eb8bb
+    color: var(--text-disabled)
   }
   .chrome-user-chip.is-logged-in .chip-avatar {
     background: var(--chrome-active-bg, #00838d)
@@ -749,7 +749,7 @@
 .chrome-drawer {
   position: fixed;
   inset: 0;
-  z-index: 99999;
+  z-index: var(--z-drawer);
   display: flex
 }
 
@@ -985,7 +985,7 @@ body.chrome-drawer-open {
   font-size: .85rem;
   font-weight: 700;
   background: #e8eded;
-  color: #9eb8bb;
+  color: var(--text-disabled);
   flex: 0 0 auto
 }
 
@@ -1189,7 +1189,7 @@ body.chrome-drawer-open {
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a:hover,
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a:focus-visible {
-    background: #00838d14;
+    background: var(--tint-teal);
     color: var(--text, #333);
     outline: none
   }
@@ -1237,14 +1237,14 @@ body.chrome-drawer-open {
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-disabled=true],
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[disabled] {
-    color: #9eb8bb!important;
+    color: var(--text-disabled)!important;
     cursor: default;
     background: transparent!important;
     box-shadow: none!important
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-disabled=true] .sidebar-icon,
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[disabled] .sidebar-icon {
-    color: #9eb8bb
+    color: var(--text-disabled)
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-disabled=true]:hover,
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[disabled]:hover {
@@ -1341,7 +1341,7 @@ body.chrome-drawer-open {
 
 .vilda-tip {
   position: fixed;
-  z-index: 99999;
+  z-index: var(--z-drawer);
   max-width: min(280px,calc(100vw - 24px));
   padding: .6rem 1rem;
   border-radius: 10px;
@@ -1612,7 +1612,7 @@ body.chrome-drawer-open {
 }
 
 .chrome-sync-btn[data-cloud-only=true][data-offline=true] {
-  background: #b45309;
+  background: var(--warning);
   color: #fff;
   box-shadow: 0 0 0 2px #b4530940
 }
@@ -1641,7 +1641,7 @@ body.chrome-drawer-open {
 }
 
 .chrome-pro-badge:hover {
-  opacity: .8;
+  opacity: var(--opacity-muted);
   transform: scale(.96)
 }
 
@@ -1653,7 +1653,7 @@ body.chrome-drawer-open {
 
 .chrome-pro-badge[data-pro-state=upgrade] {
   background: #e0f2f3;
-  color: #00838d;
+  color: var(--primary);
   border-color: transparent
 }
 
@@ -1670,7 +1670,7 @@ body.chrome-drawer-open {
 .liquid-ios26 .chrome-reminders-btn:hover {
   background: #f2f9f9!important;
   border-color: #9fd4d8!important;
-  color: #00838d!important
+  color: var(--primary)!important
 }
 
 .liquid-ios26 .chrome-reminders-btn[data-state=overdue] {
@@ -1678,7 +1678,7 @@ body.chrome-drawer-open {
 }
 
 .liquid-ios26 .chrome-reminders-btn[data-state=today] {
-  color: #00838d!important
+  color: var(--primary)!important
 }
 
 .chrome-reminders-btn[data-state=loading],
@@ -1737,7 +1737,7 @@ body.chrome-drawer-open {
 }
 
 .liquid-ios26 .chrome-sync-btn[data-cloud-only=true][data-offline=true] {
-  background: #b45309!important
+  background: var(--warning)!important
 }
 
 .liquid-ios26 .chrome-sync-btn[data-sync-state=ok] {
@@ -1760,7 +1760,7 @@ body.chrome-drawer-open {
 
 .liquid-ios26 .chrome-user-chip .chip-action:hover {
   background: #c628281f!important;
-  color: #c62828!important
+  color: var(--danger)!important
 }
 
 .liquid-ios26 .chrome-pro-badge[data-pro-state=active] {
@@ -1771,7 +1771,7 @@ body.chrome-drawer-open {
 
 .liquid-ios26 .chrome-pro-badge[data-pro-state=upgrade] {
   background: #e0f2f3!important;
-  color: #00838d!important;
+  color: var(--primary)!important;
   border-color: transparent!important
 }
 

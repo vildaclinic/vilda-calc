@@ -43,7 +43,8 @@ button.icon{
   padding:.25rem .5rem;
   line-height:1}
 button.icon:hover{
-  background:#c628281a}
+  background:var(--danger-tint);
+}
 @media(max-width:600px){
 button,input[type=button],input[type=submit]{
   width:100%;
@@ -122,32 +123,34 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 
 .vild-rem-dlg-acts button{
   font:inherit;
-  font-size:.82rem!important;
-  font-weight:600!important;
-  border:1px solid #d7e9ec!important;
-  background:#fff!important;
-  color:#0f2b33!important;
-  border-radius:9px!important;
-  padding:8px 11px!important;
-  display:inline-flex!important;
+  font-size:.82rem !important;
+  font-weight:600 !important;
+  border:1px solid #d7e9ec !important;
+  background:#fff !important;
+  color:var(--text-strong) !important;
+  border-radius:9px !important;
+  padding:8px 11px !important;
+  display:inline-flex !important;
   align-items:center;
   gap:6px;
   white-space:nowrap;
   cursor:pointer;
-  box-shadow:none!important;
-  min-height:0!important;
-  height:auto!important;
-  width:auto!important;
-  min-width:0!important;
-  margin:0!important}
+  box-shadow:none !important;
+  min-height:0 !important;
+  height:auto !important;
+  width:auto !important;
+  min-width:0 !important;
+  margin:0 !important;
+}
 
 .vild-rem-dlg-acts button:hover{
   background:#f5fafb!important}
 
 .vild-rem-dlg-acts button.vild-rem-dlg-pri{
-  background:#00838d!important;
-  border-color:#00838d!important;
-  color:#fff!important}
+  background:var(--primary) !important;
+  border-color:var(--primary) !important;
+  color:#fff !important;
+}
 
 .vild-rem-dlg-acts button.vild-rem-dlg-pri:hover{
   background:#006f78!important}
@@ -195,14 +198,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   display:inline;
   vertical-align:super}
 .circ-result-action .circ-action-btn.is-pro-locked,.circ-result-action .circ-action-btn.is-pro-locked:disabled,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked:disabled{
-  background:#f3f3f3!important;
-  color:#000!important;
-  border:3px solid #cccccc!important;
-  box-shadow:none!important;
-  transform:none!important;
-  opacity:1!important;
-  cursor:not-allowed!important;
-  pointer-events:none!important}
+  background:var(--disabled-bg) !important;
+  color:#000 !important;
+  border:3px solid var(--line-neutral) !important;
+  box-shadow:none !important;
+  transform:none !important;
+  opacity:1 !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+}
 .circ-result-action .circ-action-btn.is-pro-locked .pro-superscript,.circ-result-action .circ-action-btn.is-pro-locked:disabled .pro-superscript,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked .pro-superscript,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked:disabled .pro-superscript{
   color:#90f!important}
 .circ-pro-pill{
@@ -284,11 +288,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   -webkit-backdrop-filter:none!important;
   box-shadow:none!important}
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled,.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled{
-  background:#f3f3f3!important;
-  color:#000!important;
-  border:3px solid #cccccc!important;
+  background:var(--disabled-bg) !important;
+  color:#000 !important;
+  border:3px solid var(--line-neutral) !important;
   cursor:not-allowed;
-  pointer-events:none}
+  pointer-events:none;
+}
 #toggleAdvancedGrowth .adv-pro-tag,.pro-superscript{
   color:#90f;
   font-size:.55em;
@@ -300,29 +305,32 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled .pro-superscript{
   color:#90f!important}
 .pro-button:disabled{
-  background:#f3f3f3;
+  background:var(--disabled-bg);
   color:#000;
-  border:3px solid #cccccc;
+  border:3px solid var(--line-neutral);
   cursor:not-allowed;
   pointer-events:none;
-  opacity:1}
+  opacity:1;
+}
 .liquid-ios26 .pro-button:disabled{
-  background:#f3f3f3!important;
-  color:#000!important;
-  border:3px solid #cccccc!important;
-  cursor:not-allowed!important;
-  pointer-events:none!important;
-  opacity:1!important}
+  background:var(--disabled-bg) !important;
+  color:#000 !important;
+  border:3px solid var(--line-neutral) !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+  opacity:1 !important;
+}
 .pro-button:disabled .pro-superscript{
   color:#90f}
 .liquid-ios26 .pro-button:disabled .pro-superscript{
   color:#90f!important}
 #toggleAdvancedGrowth.advanced-growth-btn:disabled,#toggleAdvancedGrowth.advanced-growth-btn.disabled{
-  background:#f3f3f3!important;
-  color:#000!important;
-  border:3px solid #cccccc!important;
+  background:var(--disabled-bg) !important;
+  color:#000 !important;
+  border:3px solid var(--line-neutral) !important;
   cursor:not-allowed;
-  pointer-events:none}
+  pointer-events:none;
+}
 #nutritionNormsSection,#nutritionMicrosSection,#foodSection,#circSection,#downSyndromeSection,#intakeSection,#growthCalculationsSection,#advancedGrowthSection{
   margin-top:0!important}
 #toggleNutritionNormsCard,#toggleNutritionMicrosCard,#toggleFoodCard,#toggleCircSection,#toggleDownSyndrome,#toggleIntakeCard,#toggleGrowthCalculations.advanced-growth-btn,#toggleAdvancedGrowth.advanced-growth-btn{
@@ -349,12 +357,13 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   -webkit-backdrop-filter:none!important;
   box-shadow:none!important}
 #toggleGrowthCalculations.advanced-growth-btn:disabled,#toggleGrowthCalculations.advanced-growth-btn.disabled,.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn:disabled,.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn.disabled{
-  background:#f3f3f3!important;
-  color:#000!important;
-  border:3px solid #cccccc!important;
+  background:var(--disabled-bg) !important;
+  color:#000 !important;
+  border:3px solid var(--line-neutral) !important;
   cursor:not-allowed;
   pointer-events:none;
-  opacity:1}
+  opacity:1;
+}
 #resultsModeToggleContainer .pro-label{
   color:#90f;
   position:relative}
@@ -507,9 +516,10 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   animation:none}
 }
 .chrome-sync-btn[data-cloud-only=true][data-offline=true]{
-  background:#b45309;
+  background:var(--warning);
   color:#fff;
-  box-shadow:0 0 0 2px #b4530940}
+  box-shadow:0 0 0 2px #b4530940;
+}
 .chrome-sync-btn[data-cloud-only=true][data-offline=true]:hover{
   background:#8a3d05}
 .chrome-pro-badge{
@@ -530,16 +540,18 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   transition:opacity .15s ease,transform .15s ease;
   border:1px solid transparent}
 .chrome-pro-badge:hover{
-  opacity:.8;
-  transform:scale(.96)}
+  opacity:var(--opacity-muted);
+  transform:scale(.96);
+}
 .chrome-pro-badge[data-pro-state=active]{
   background:#ece8fb;
   color:#6d4bd8;
   border-color:transparent}
 .chrome-pro-badge[data-pro-state=upgrade]{
   background:#e0f2f3;
-  color:#00838d;
-  border-color:transparent}
+  color:var(--primary);
+  border-color:transparent;
+}
 @media(max-width:600px){
   .chrome-pro-badge{
   height:34px!important}
@@ -593,10 +605,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   font-size:13px;
   border-radius:10px}
 .vilda-auth-btn-primary{
-  background:#00838d;
+  background:var(--primary);
   color:#fff;
-  border-color:#00838d;
-  box-shadow:0 6px 18px #00838d38}
+  border-color:var(--primary);
+  box-shadow:0 6px 18px #00838d38;
+}
 .vilda-auth-btn-primary:hover{
   background:#006d75;
   border-color:#006d75;
@@ -607,53 +620,59 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   border-color:#d6dde0}
 .vilda-auth-btn-ghost:hover{
   background:#f5fafb;
-  border-color:#00838d;
-  color:#00838d}
+  border-color:var(--primary);
+  color:var(--primary);
+}
 .vilda-auth-btn-danger{
-  background:#b00020;
+  background:var(--danger-strong);
   color:#fff;
-  border-color:#b00020;
-  box-shadow:0 6px 18px #b0002038}
+  border-color:var(--danger-strong);
+  box-shadow:0 6px 18px #b0002038;
+}
 .vilda-auth-btn-danger:hover{
   background:#8e0019;
   border-color:#8e0019;
   box-shadow:0 8px 22px #b000204d}
 .vilda-auth-root .vilda-patient-delete-btn{
   flex:0 0 auto;
-  background:#fff!important;
-  color:#b00020!important;
-  border:1.5px solid #f0c4cf!important;
-  box-shadow:none!important}
+  background:#fff !important;
+  color:var(--danger-strong) !important;
+  border:1.5px solid #f0c4cf !important;
+  box-shadow:none !important;
+}
 .vilda-auth-root .vilda-patient-delete-btn:hover{
-  background:#fff5f6!important;
-  border-color:#b00020!important;
-  color:#8e0019!important;
-  box-shadow:none!important}
+  background:#fff5f6 !important;
+  border-color:var(--danger-strong) !important;
+  color:#8e0019 !important;
+  box-shadow:none !important;
+}
 .vilda-auth-logout{
-  position:fixed!important;
-  inset:14px 14px auto auto!important;
-  z-index:99990!important;
+  position:fixed !important;
+  inset:14px 14px auto auto !important;
+  z-index:var(--z-logout-button) !important;
   display:none;
   align-items:center;
   gap:8px;
-  width:auto!important;
-  max-width:max-content!important;
-  margin:0!important;
-  background:#fff!important;
-  border:1.5px solid #d6dde0!important;
-  border-radius:24px!important;
-  padding:8px 16px!important;
-  font-size:13px!important;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important;
-  font-weight:500!important;
-  color:#08202c!important;
+  width:auto !important;
+  max-width:max-content !important;
+  margin:0 !important;
+  background:#fff !important;
+  border:1.5px solid #d6dde0 !important;
+  border-radius:24px !important;
+  padding:8px 16px !important;
+  font-size:13px !important;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif !important;
+  font-weight:500 !important;
+  color:#08202c !important;
   cursor:pointer;
   box-shadow:0 4px 14px #003c501a;
-  transition:all .15s ease}
+  transition:all .15s ease;
+}
 .vilda-auth-logout:hover{
-  border-color:#00838d;
-  color:#00838d;
-  box-shadow:0 6px 18px #00838d2e}
+  border-color:var(--primary);
+  color:var(--primary);
+  box-shadow:0 6px 18px #00838d2e;
+}
 .vilda-auth-logout:focus-visible{
   outline:3px solid rgba(0,131,141,.3);
   outline-offset:2px}
@@ -681,7 +700,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .vilda-auth-btn-subtle:hover{
   background:#f5fafb;
   border-color:transparent;
-  color:#00838d}
+  color:var(--primary);
+}
 .vilda-copy-summary-row{
   display:flex;
   justify-content:center;
@@ -732,8 +752,9 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   transform:translateY(0);
   box-shadow:none}
 .vilda-auth-btn-biometric:focus-visible{
-  outline:2px solid #00838d;
-  outline-offset:3px}
+  outline:2px solid var(--primary);
+  outline-offset:3px;
+}
 .vilda-auth-biometric-section,.vilda-auth-biometric-section .vilda-auth-actions{
   margin-bottom:0}
 .vilda-auth-root button{
@@ -742,10 +763,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   width:auto!important;
   margin-top:0!important}
 .vilda-auth-root .vilda-auth-btn-primary{
-  background:#00838d!important;
-  color:#fff!important;
-  border:1.5px solid #00838d!important;
-  box-shadow:0 6px 18px #00838d38!important}
+  background:var(--primary) !important;
+  color:#fff !important;
+  border:1.5px solid var(--primary) !important;
+  box-shadow:0 6px 18px #00838d38 !important;
+}
 .vilda-auth-root .vilda-auth-btn-primary:hover{
   background:#006d75!important;
   border-color:#006d75!important;
@@ -756,25 +778,28 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   border:1.5px solid #d6dde0!important;
   box-shadow:none!important}
 .vilda-auth-root .vilda-auth-btn-ghost:hover{
-  background:#f5fafb!important;
-  border-color:#00838d!important;
-  color:#00838d!important;
-  box-shadow:none!important}
+  background:#f5fafb !important;
+  border-color:var(--primary) !important;
+  color:var(--primary) !important;
+  box-shadow:none !important;
+}
 .vilda-auth-root .vilda-auth-btn-subtle{
   background:transparent!important;
   border-color:transparent!important;
   color:#6a8089!important;
   box-shadow:none!important}
 .vilda-auth-root .vilda-auth-btn-subtle:hover{
-  background:#00838d0f!important;
-  border-color:transparent!important;
-  color:#00838d!important;
-  box-shadow:none!important}
+  background:#00838d0f !important;
+  border-color:transparent !important;
+  color:var(--primary) !important;
+  box-shadow:none !important;
+}
 .vilda-auth-root .vilda-auth-btn-danger{
-  background:#b00020!important;
-  color:#fff!important;
-  border:1.5px solid #b00020!important;
-  box-shadow:0 6px 18px #b0002038!important}
+  background:var(--danger-strong) !important;
+  color:#fff !important;
+  border:1.5px solid var(--danger-strong) !important;
+  box-shadow:0 6px 18px #b0002038 !important;
+}
 .vilda-auth-root .vilda-auth-btn-danger:hover{
   background:#8e0019!important;
   border-color:#8e0019!important;
@@ -790,14 +815,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 
 /* ---- Nadpisania .liquid-ios26 — Button (ios26-v2.css 85-117, 122-130, 199-200) ---- */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 .btn-accent{
   background:color-mix(in srgb,var(--lg-accent) 40%,transparent)!important;
   color:#fff!important}
@@ -805,21 +831,23 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
 .liquid-ios26 #toggleIgfTests,.liquid-ios26 #toggleSnp,.liquid-ios26 #toggleTurner,.liquid-ios26 #togglePws,.liquid-ios26 #toggleSga,.liquid-ios26 #toggleIgf1,.liquid-ios26 #toggleAbxTherapy,.liquid-ios26 #toggleFluTherapy,.liquid-ios26 #toggleObesityTherapy,.liquid-ios26 #toggleHypertensionTherapy,.liquid-ios26 #toggleThyroidCancerKids,.liquid-ios26 #toggleGhMonitor{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  justify-content:center}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  justify-content:center;
+}
 .liquid-ios26 #toggleGhMonitor.active-toggle,.liquid-ios26 .active-toggle,.liquid-ios26 #toggleIgfTests.active-toggle,.liquid-ios26 #toggleSnp.active-toggle,.liquid-ios26 #toggleTurner.active-toggle,.liquid-ios26 #togglePws.active-toggle,.liquid-ios26 #toggleSga.active-toggle,.liquid-ios26 #toggleIgf1.active-toggle{
   border-color:var(--brand-light)!important}
 .liquid-ios26 #abxBrandToggle,.liquid-ios26 #abxCopyRec,.liquid-ios26 .abx-brand-option{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 #abxBrandToggle.active-toggle,.liquid-ios26 #abxCopyRec.active-toggle,.liquid-ios26 .abx-brand-option.active-toggle,.liquid-ios26 #toggleAbxTherapy.active-toggle,.liquid-ios26 #toggleFluTherapy.active-toggle,.liquid-ios26 #toggleObesityTherapy.active-toggle,.liquid-ios26 #toggleHypertensionTherapy.active-toggle,.liquid-ios26 #toggleThyroidCancerKids.active-toggle{
   border-color:var(--brand-light)!important}
 .liquid-ios26 .btn-icon{
@@ -848,13 +876,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   -webkit-backdrop-filter:none!important;
   color:#4d8285!important}
 .liquid-ios26 .chrome-reminders-btn:hover{
-  background:#f2f9f9!important;
-  border-color:#9fd4d8!important;
-  color:#00838d!important}
+  background:#f2f9f9 !important;
+  border-color:#9fd4d8 !important;
+  color:var(--primary) !important;
+}
 .liquid-ios26 .chrome-reminders-btn[data-state=overdue]{
   color:#dc2626!important}
 .liquid-ios26 .chrome-reminders-btn[data-state=today]{
-  color:#00838d!important}
+  color:var(--primary) !important;
+}
 .chrome-reminders-btn[data-state=loading],.liquid-ios26 .chrome-reminders-btn[data-state=loading]{
   color:#9aa8aa!important}
 .chrome-reminders-btn[data-state=loading] .chrome-reminders-badge,.liquid-ios26 .chrome-reminders-btn[data-state=loading] .chrome-reminders-badge{
@@ -894,7 +924,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   border-radius:8px!important;
   color:#fff!important}
 .liquid-ios26 .chrome-sync-btn[data-cloud-only=true][data-offline=true]{
-  background:#b45309!important}
+  background:var(--warning) !important;
+}
 .liquid-ios26 .chrome-sync-btn[data-sync-state=ok]{
   color:#16a34a!important}
 .liquid-ios26 .chrome-sync-btn[data-sync-state=error]{
@@ -904,9 +935,10 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   color:#6d4bd8!important;
   border-color:transparent!important}
 .liquid-ios26 .chrome-pro-badge[data-pro-state=upgrade]{
-  background:#e0f2f3!important;
-  color:#00838d!important;
-  border-color:transparent!important}
+  background:#e0f2f3 !important;
+  color:var(--primary) !important;
+  border-color:transparent !important;
+}
 
 /* ---- Wysoki kontrast — Button (style.css 5167-5179; 5196-5198 z listą selektorów przyciętą do button/a) ---- */
 body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-1.liquid-ios26 #toggleGhTests,body.high-contrast-level-2.liquid-ios26 #toggleGhTests,body.high-contrast-level-3.liquid-ios26 #toggleGhTests,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests,body.high-contrast-level-1.liquid-ios26 #toggleActhTests,body.high-contrast-level-2.liquid-ios26 #toggleActhTests,body.high-contrast-level-3.liquid-ios26 #toggleActhTests,body.high-contrast-level-1.liquid-ios26 .version-option,body.high-contrast-level-2.liquid-ios26 .version-option,body.high-contrast-level-3.liquid-ios26 .version-option{
@@ -919,9 +951,10 @@ body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn,body.high-co
 body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-1.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-1.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-1.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-2.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-3.liquid-ios26 .version-option:not(.disabled):hover{
   background:var(--hc-module-btn-hover-bg)!important}
 body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-1.liquid-ios26 .version-option.selected,body.high-contrast-level-2.liquid-ios26 .version-option.selected,body.high-contrast-level-3.liquid-ios26 .version-option.selected{
-  background:var(--hc-module-btn-active-bg)!important;
-  border-color:var(--hc-module-btn-active-border)!important;
-  box-shadow:0 0 0 1px #00838d1f,var(--hc-module-btn-active-shadow)!important}
+  background:var(--hc-module-btn-active-bg) !important;
+  border-color:var(--hc-module-btn-active-border) !important;
+  box-shadow:0 0 0 1px var(--tint-teal-active),var(--hc-module-btn-active-shadow) !important;
+}
 body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
   outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
   outline-offset:2px!important}

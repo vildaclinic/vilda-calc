@@ -5,7 +5,7 @@
 
 .chrome-patient-chip.vilda-save-state--hidden .chip-icon {
   background: #e8eded!important;
-  color: #9eb8bb!important
+  color: var(--text-disabled)!important
 }
 
 .chrome-patient-chip.vilda-save-state--saved .chip-icon {

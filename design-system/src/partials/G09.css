@@ -9,12 +9,13 @@ body.thy-modal-open{
   display:none;
   align-items:flex-start;
   justify-content:center;
-  --thy-modal-top: clamp(.75rem, 6vh, 3rem);
-  --thy-modal-bottom: 1rem;
+  --thy-modal-top:clamp(.75rem, 6vh, 3rem);
+  --thy-modal-bottom:1rem;
   padding:var(--thy-modal-top) 1rem var(--thy-modal-bottom);
   padding:calc(var(--thy-modal-top) + env(safe-area-inset-top)) 1rem calc(var(--thy-modal-bottom) + env(safe-area-inset-bottom));
   background:#0009;
-  z-index:9999}
+  z-index:var(--z-modal);
+}
 #thyTermModal.is-open{
   display:flex}
 #thyTermModal .thy-modal-inner{
@@ -113,17 +114,18 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .vild-rem-dlg-ov{
   position:fixed;
   inset:0;
-  z-index:1000001;
+  z-index:var(--z-reminder-dialog);
   background:#0f2b3357;
   display:flex;
   align-items:center;
   justify-content:center;
   padding:16px;
-  box-sizing:border-box}
+  box-sizing:border-box;
+}
 
 .vild-rem-dlg{
   background:#fff;
-  color:#0f2b33;
+  color:var(--text-strong);
   border-radius:16px;
   max-width:460px;
   width:100%;
@@ -131,7 +133,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   overflow:auto;
   box-shadow:0 18px 50px #00283047;
   font-family:inherit;
-  box-sizing:border-box}
+  box-sizing:border-box;
+}
 
 .vild-rem-dlg-head{
   padding:13px 16px 10px;
@@ -171,16 +174,18 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .vild-rem-dlg-nm{
   font-size:1.02rem;
   font-weight:700;
-  color:#0f2b33;
-  margin:0}
+  color:var(--text-strong);
+  margin:0;
+}
 
 .vild-rem-dlg-ttl{
   font-size:.95rem;
   font-weight:600;
-  color:#0f2b33;
+  color:var(--text-strong);
   margin:0;
   white-space:pre-wrap;
-  word-break:break-word}
+  word-break:break-word;
+}
 
 .vild-rem-dlg-txt{
   font-size:.88rem;
@@ -197,10 +202,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   color:#5b6672}
 
 .vild-rem-dlg-row b{
-  color:#0f2b33;
+  color:var(--text-strong);
   font-weight:600;
   min-width:64px;
-  flex:0 0 auto}
+  flex:0 0 auto;
+}
 
 .vild-rem-dlg-acts{
   display:flex;
@@ -211,32 +217,34 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 
 .vild-rem-dlg-acts button{
   font:inherit;
-  font-size:.82rem!important;
-  font-weight:600!important;
-  border:1px solid #d7e9ec!important;
-  background:#fff!important;
-  color:#0f2b33!important;
-  border-radius:9px!important;
-  padding:8px 11px!important;
-  display:inline-flex!important;
+  font-size:.82rem !important;
+  font-weight:600 !important;
+  border:1px solid #d7e9ec !important;
+  background:#fff !important;
+  color:var(--text-strong) !important;
+  border-radius:9px !important;
+  padding:8px 11px !important;
+  display:inline-flex !important;
   align-items:center;
   gap:6px;
   white-space:nowrap;
   cursor:pointer;
-  box-shadow:none!important;
-  min-height:0!important;
-  height:auto!important;
-  width:auto!important;
-  min-width:0!important;
-  margin:0!important}
+  box-shadow:none !important;
+  min-height:0 !important;
+  height:auto !important;
+  width:auto !important;
+  min-width:0 !important;
+  margin:0 !important;
+}
 
 .vild-rem-dlg-acts button:hover{
   background:#f5fafb!important}
 
 .vild-rem-dlg-acts button.vild-rem-dlg-pri{
-  background:#00838d!important;
-  border-color:#00838d!important;
-  color:#fff!important}
+  background:var(--primary) !important;
+  border-color:var(--primary) !important;
+  color:#fff !important;
+}
 
 .vild-rem-dlg-acts button.vild-rem-dlg-pri:hover{
   background:#006f78!important}
@@ -253,11 +261,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .tutorial-overlay{
   position:fixed;
   inset:0;
-  z-index:10020;
+  z-index:var(--z-tutorial-overlay);
   display:none;
   pointer-events:none;
   touch-action:none;
-  overscroll-behavior:contain}
+  overscroll-behavior:contain;
+}
 .tutorial-blocker{
   position:fixed;
   background:#0f172a94;
@@ -270,8 +279,9 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   border-radius:12px;
   background:transparent;
   box-shadow:0 16px 36px #0f172a29;
-  z-index:10021;
-  pointer-events:none}
+  z-index:var(--z-tutorial-frame);
+  pointer-events:none;
+}
 .tutorial-bubble{
   position:fixed;
   top:1rem;
@@ -280,14 +290,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   max-height:calc(100dvh - 2rem);
   overflow:auto;
   background:#fff;
-  color:#111;
+  color:var(--text-ink);
   padding:1.2rem 1rem;
   border-radius:14px;
   box-shadow:0 18px 48px #0f172a42;
   text-align:left;
   line-height:1.45;
-  z-index:10022;
-  pointer-events:auto}
+  z-index:var(--z-tutorial-bubble);
+  pointer-events:auto;
+}
 .tutorial-overlay.is-temporarily-hidden,.tutorial-bubble.is-temporarily-hidden{
   visibility:hidden!important;
   opacity:0!important;
@@ -361,10 +372,11 @@ body.nav-ui-temporarily-hidden #scrollTopBtn{
   font-size:13px;
   border-radius:10px}
 .vilda-auth-btn-primary{
-  background:#00838d;
+  background:var(--primary);
   color:#fff;
-  border-color:#00838d;
-  box-shadow:0 6px 18px #00838d38}
+  border-color:var(--primary);
+  box-shadow:0 6px 18px #00838d38;
+}
 .vilda-auth-btn-primary:hover{
   background:#006d75;
   border-color:#006d75;
@@ -375,13 +387,15 @@ body.nav-ui-temporarily-hidden #scrollTopBtn{
   border-color:#d6dde0}
 .vilda-auth-btn-ghost:hover{
   background:#f5fafb;
-  border-color:#00838d;
-  color:#00838d}
+  border-color:var(--primary);
+  color:var(--primary);
+}
 .vilda-auth-btn-danger{
-  background:#b00020;
+  background:var(--danger-strong);
   color:#fff;
-  border-color:#b00020;
-  box-shadow:0 6px 18px #b0002038}
+  border-color:var(--danger-strong);
+  box-shadow:0 6px 18px #b0002038;
+}
 .vilda-auth-btn-danger:hover{
   background:#8e0019;
   border-color:#8e0019;
@@ -393,7 +407,7 @@ body.nav-ui-temporarily-hidden #scrollTopBtn{
   left:50%;
   bottom:calc(var(--vilda-dol-wolny,env(safe-area-inset-bottom,0px)) + 16px);
   transform:translate(-50%) translateY(8px);
-  z-index:2147483001;
+  z-index:var(--z-copy-toast);
   max-width:88vw;
   padding:10px 16px;
   border-radius:12px;
@@ -402,7 +416,8 @@ body.nav-ui-temporarily-hidden #scrollTopBtn{
   box-shadow:0 10px 30px #08202c40;
   opacity:0;
   transition:opacity .22s ease,transform .22s ease;
-  pointer-events:none}
+  pointer-events:none;
+}
 .vilda-copy-summary-toast.show{
   opacity:1;
   transform:translate(-50%) translateY(0)}
@@ -425,10 +440,11 @@ body.nav-ui-temporarily-hidden #scrollTopBtn{
   display:flex;
   align-items:flex-end;
   justify-content:center;
-  z-index:1000000;
+  z-index:var(--z-auth-sheet);
   padding:0;
   animation:vildaSheetFadeIn .22s ease;
-  overscroll-behavior:contain}
+  overscroll-behavior:contain;
+}
 @keyframes vildaSheetFadeIn{
   0%{
   opacity:0}
@@ -491,7 +507,7 @@ to{
 .vilda-logout-overlay{
   position:fixed;
   inset:0;
-  z-index:2000000;
+  z-index:var(--z-logout-overlay);
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -501,7 +517,8 @@ to{
   backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px);
   animation:vildaLogoutOverlayFadeIn .12s ease;
-  pointer-events:all}
+  pointer-events:all;
+}
 @keyframes vildaLogoutOverlayFadeIn{
   0%{
   opacity:0}
@@ -512,10 +529,11 @@ to{
   width:36px;
   height:36px;
   border:3px solid rgba(0,131,141,.18);
-  border-top-color:#00838d;
+  border-top-color:var(--primary);
   border-radius:50%;
   animation:vildaLogoutSpinnerRotate .75s linear infinite;
-  flex-shrink:0}
+  flex-shrink:0;
+}
 @keyframes vildaLogoutSpinnerRotate{
   to{
   transform:rotate(360deg)}
@@ -611,7 +629,8 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
   padding:0 0 0 20px;
   font-size:.86rem;
   line-height:1.6;
-  color:#0f2b33}
+  color:var(--text-strong);
+}
 
 .vilda-auth-conflict-list li{
   margin:0 0 4px}
@@ -642,20 +661,21 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
 /* ===== SaveStatusPopover — baza (vilda_chrome.css 283-406; z bloku prefers-reduced-motion pominięto .chrome-chip-card, element spoza komponentu) ===== */
 .vilda-save-popover{
   position:fixed;
-  z-index:9500;
+  z-index:var(--z-save-popover);
   width:290px;
   max-width:calc(100vw - 16px);
   background:#fffffff0;
   backdrop-filter:saturate(180%) blur(14px);
   -webkit-backdrop-filter:saturate(180%) blur(14px);
-  border:.5px solid rgba(0,131,141,.16);
+  border:.5px solid var(--line-teal);
   border-radius:var(--chrome-radius-card, 14px);
   box-shadow:0 12px 34px #00515829,0 3px 8px #0000000f;
   font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   overflow:hidden;
   opacity:0;
   transform:translateY(-6px);
-  transition:opacity .16s ease,transform .16s ease}
+  transition:opacity .16s ease,transform .16s ease;
+}
 .vilda-save-popover.is-visible{
   opacity:1;
   transform:translateY(0)}
@@ -683,11 +703,12 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
   height:30px;
   border-radius:8px;
   flex-shrink:0;
-  background:#00838d;
+  background:var(--primary);
   color:#fff;
   display:inline-flex;
   align-items:center;
-  justify-content:center}
+  justify-content:center;
+}
 .vilda-save-popover .vsp-action-txt{
   flex:1;
   min-width:0}
@@ -702,10 +723,11 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
   color:#6b7280;
   margin-top:1px}
 .vilda-save-popover .vsp-action-go{
-  color:#00838d;
+  color:var(--primary);
   font-size:17px;
   flex-shrink:0;
-  line-height:1}
+  line-height:1;
+}
 .vilda-save-popover .vsp-hero{
   display:flex;
   align-items:center;
@@ -738,7 +760,8 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
   font-weight:500;
   letter-spacing:.04em;
   text-transform:uppercase;
-  color:#5a7274}
+  color:var(--text-muted);
+}
 .vilda-save-popover .vsp-legend{
   padding:0 0 7px}
 .vilda-save-popover .vsp-row{
@@ -765,14 +788,15 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
 
 /* ===== Nadpisania .liquid-ios26 — przycisk globalny i nagłówki (ios26-v2.css 85-99, 191-192); obejmują przyciski stopki modala, samouczka, arkusza i wiersz akcji popovera ===== */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 .btn-accent{
   background:color-mix(in srgb,var(--lg-accent) 40%,transparent)!important;
   color:#fff!important}

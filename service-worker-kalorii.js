@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.89';
+const SW_VERSION = '1.1.90';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -133,6 +133,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=74',
   '/style.css?v=75',
   '/style.css?v=76',
+  '/style.css?v=77',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -203,6 +204,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.css?v=1',
   '/clcr_ui_workflow.css?v=2',
   '/clcr_ui_workflow.css?v=3',
+  '/clcr_ui_workflow.css?v=4',
   '/clcr_ui_workflow.js?v=1',
   '/clcr_ui_workflow.js?v=2',
   '/clcr_ui_workflow.js?v=3',
@@ -269,6 +271,7 @@ const CORE_SHELL_URLS = [
   '/ios26-v2.css?v=18',
   '/ios26-v2.css?v=19',
   '/ios26-v2.css?v=20',
+  '/ios26-v2.css?v=21',
   '/logo_vilda.jpeg',
   '/logo_vilda.webp',
   '/lucide.min.js?v=1',
@@ -1078,6 +1081,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=35',
   '/vilda_chrome.css?v=36',
   '/vilda_chrome.css?v=37',
+  '/vilda_chrome.css?v=38',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -1132,6 +1136,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=68',
   '/vilda_auth_ui.css?v=69',
   '/vilda_auth_ui.css?v=70',
+  '/vilda_auth_ui.css?v=71',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
   '/vilda_file_export.js?v=5',
@@ -1777,8 +1782,10 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.css?v=12',
   '/vilda_shell.css?v=13',
   '/vilda_shell.css?v=14',
+  '/vilda_shell.css?v=15',
   '/vilda_save_status_indicator.css?v=4',
   '/vilda_save_status_indicator.css?v=5',
+  '/vilda_save_status_indicator.css?v=6',
   '/vilda_frame_sync.js',
   '/vilda_frame_sync.js?v=1',
   '/vilda_frame_sync.js?v=2',
@@ -2554,7 +2561,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=25',
   '/vilda_diet_recommendations.js?v=26',
   '/vilda_status_bar.js?v=1',
-  '/vilda_status_bar.css?v=1'
+  '/vilda_status_bar.css?v=1',
+  '/vilda_status_bar.css?v=2'
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];

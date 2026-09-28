@@ -34,14 +34,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   transform:translateY(-1px) scale(1.02);
   box-shadow:var(--shadow-l)}
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 button._pressed{
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
@@ -51,10 +52,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
    ========================================================================== */
 .wfl-reminder{
   font-size:1.3rem;
-  color:#c75d00;
-  font-weight:600;
   line-height:1.4;
-  margin-top:.5rem}
+  margin-top:.5rem;
+  font-weight:600;
+  color:var(--notice-orange);
+}
 .diet-info-note{
   color:var(--primary);
   background:var(--card);
@@ -69,7 +71,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   font-size:1.2rem;
   font-weight:600}
 #intakeResults .intake-alert.warn{
-  color:#c75d00}
+  color:var(--notice-orange);
+}
 #intakeResults .intake-alert.danger{
   color:var(--danger)}
 #intakeResults .intake-reasons{
@@ -166,7 +169,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   text-align:center;
   font-weight:600}
 #whrSuggest{
-  color:#c75d00}
+  color:var(--notice-orange);
+}
 #whrSuggest.plan-warning-card{
   border-color:var(--notice-orange);
   background:#fff!important;
@@ -176,11 +180,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 #whrSuggest.plan-warning-card strong{
   color:inherit}
 .plan-warning-card.notice-orange{
-  border-color:#c75d00;
-  background:#fff!important;
-  color:#c75d00;
+  border-color:var(--notice-orange);
+  background:#fff !important;
+  color:var(--notice-orange);
   text-align:center;
-  font-weight:600}
+  font-weight:600;
+}
 /* lokalne zmienne (nie są tokenami) — style.css 2577-2578 */
 :root{
   --whr-suggest-font-size: 1.5rem;
@@ -319,17 +324,17 @@ body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.li
    display: none;
    }
 html.vilda-pro-active .pro-sync-note {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  margin-top: .85rem;
-  padding: .65rem .85rem;
-  background: #f0f7ff;
-  border: 1px solid rgba(0,100,220,.15);
-  border-radius: .6rem;
-  font-size: .82rem;
-  color: var(--text-2, #555);
-  line-height: 1.4;
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin-top:.85rem;
+  padding:.65rem .85rem;
+  background:#f0f7ff;
+  border:1px solid rgba(0,100,220,.15);
+  border-radius:.6rem;
+  font-size:.82rem;
+  color:var(--text-soft);
+  line-height:1.4;
 }
 .pro-sync-note__icon {
    font-size: 1rem;
@@ -343,17 +348,17 @@ html.vilda-pro-active .pro-sync-note {
    color: #0050b0;
    }
 .notes-pii {
-  display: flex;
-   align-items: flex-start;
-   gap: .7rem;
-  padding: .8rem 1rem;
-   margin-bottom: 1rem;
-  background: #f0f7ff;
-   border: 1px solid rgba(0,100,220,.16);
-   border-radius: 12px;
-  font-size: .85rem;
-   color: var(--text-2, #44535c);
-   line-height: 1.45;
+  display:flex;
+  align-items:flex-start;
+  gap:.7rem;
+  padding:.8rem 1rem;
+  margin-bottom:1rem;
+  background:#f0f7ff;
+  border:1px solid rgba(0,100,220,.16);
+  border-radius:12px;
+  font-size:.85rem;
+  color:var(--text-2);
+  line-height:1.45;
 }
 .notes-pii__icon {
    font-size: 1.05rem;
@@ -513,12 +518,13 @@ body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,body.about-page.hi
   content:"\26a0  "}
 .vilda-auth-error{
   background:#fef2f3;
-  color:#b00020;
+  color:var(--danger-strong);
   padding:12px 16px;
   border-radius:10px;
   font-size:13.5px;
   line-height:1.45;
-  border:1px solid #f3cfd2}
+  border:1px solid #f3cfd2;
+}
 .vilda-auth-error:empty{
   display:none}
 .vilda-auth-search-empty{
@@ -553,16 +559,18 @@ body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,body.about-page.hi
 .vilda-patient-age-note{
   font-size:.78rem;
   line-height:1.45;
-  color:#5a7274;
+  color:var(--text-muted);
   background:#f3f8f9;
   border-left:3px solid #cfe3e5;
   border-radius:0 8px 8px 0;
   padding:7px 10px;
-  margin:0 0 10px}
+  margin:0 0 10px;
+}
 .vilda-note-wskazana{
-  outline:2px solid #00838d;
+  outline:2px solid var(--primary);
   outline-offset:2px;
-  box-shadow:0 0 0 6px rgba(0,131,141,.12)}
+  box-shadow:0 0 0 6px var(--line-teal-soft);
+}
 /* AuthBanner — wysoki kontrast (vilda_auth_ui.css 1452-1471; listy selektorów przycięte do .vilda-auth-info / .vilda-auth-search-empty / .vilda-auth-side-note) */
 body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,body.liquid-ios26.high-contrast-level-3 .vilda-auth-info{
   background:var(--hc-surface)!important;
@@ -596,14 +604,15 @@ body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-empty,body.liquid-ios
   top:0;
   left:0;
   right:0;
-  z-index:10000;
+  z-index:var(--z-banner);
   display:none;
   background:var(--primary);
   color:#fff;
   text-align:center;
   padding:calc(env(safe-area-inset-top,0px) + .5rem) 1rem .5rem;
   padding-top:calc(constant(safe-area-inset-top) + .5rem);
-  box-shadow:0 2px 6px #0003}
+  box-shadow:0 2px 6px #0003;
+}
 #updateBanner button{
   margin-left:1rem;
   background:var(--secondary);
@@ -857,7 +866,8 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
   box-shadow:0 1px 3px #00838d2e}
 .vilda-obesity-banner__btn:hover{
   transform:translateY(-1px);
-  box-shadow:0 2px 6px #00838d40}
+  box-shadow:0 2px 6px var(--focus-ring);
+}
 .vilda-obesity-banner__btn:active{
   transform:translateY(0)}
 @media(max-width:599px){
@@ -877,9 +887,10 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
 @media(prefers-color-scheme:dark){
   .vilda-obesity-banner{
   background:#fff;
-  border-color:#00838d40;
+  border-color:var(--focus-ring);
   color:#1f2937;
-  box-shadow:0 2px 8px #00000059}
+  box-shadow:0 2px 8px #00000059;
+}
 .vilda-obesity-banner__title{
   color:#1f2937}
 .vilda-obesity-banner__sub{
@@ -904,8 +915,9 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
   box-shadow:0 -2px 8px #0000001a;
   padding:1rem;
   font-size:.9rem;
-  z-index:10000;
-  display:none}
+  z-index:var(--z-banner);
+  display:none;
+}
 .cookie-banner ul{
   margin:0 0 1rem;
   padding-left:1.2rem;
@@ -925,7 +937,8 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
   color:#fff}
 #consent-decline{
   background-color:#e0e0e0;
-  color:#333}
+  color:var(--text);
+}
 /* vilda_auth_ui.css 1621 (lista selektorów przycięta do banera) */
 .vilda-embedded body.vilda-auth-embedded-open .cookie-banner,.vilda-embedded body.vilda-auth-embedded-open #cookieBanner{
   display:none!important}
