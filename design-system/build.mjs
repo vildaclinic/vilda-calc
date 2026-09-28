@@ -48,6 +48,7 @@ function readJson(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
 function writeFile(p, text) { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, text); }
 function copyDir(from, to) {
   for (const d of fs.readdirSync(from, { withFileTypes: true })) {
+    if (d.name.startsWith('.')) continue; // pliki z kropką nie są częścią systemu (strona je odrzuca)
     const a = path.join(from, d.name);
     const b = path.join(to, d.name);
     if (d.isDirectory()) { fs.mkdirSync(b, { recursive: true }); copyDir(a, b); } else { fs.mkdirSync(path.dirname(b), { recursive: true }); fs.copyFileSync(a, b); }
@@ -140,6 +141,7 @@ const walk = (dir) => {
   for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, d.name);
     const rel = path.relative(outDir, p).split(path.sep).join('/');
+    if (d.name.startsWith('.')) continue;
     if (d.isDirectory()) { walk(p); continue; }
     if (rel === 'project/design-system.json') continue;
     if (/^project\/assets\/.*\.(png|jpe?g|webp|svg|gif|mp4|webm|pdf)$/i.test(rel)) continue;
