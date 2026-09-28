@@ -30,7 +30,7 @@ body.liquid-ios26:before {
   width: 100%;
   background: #00000038;
   pointer-events: none;
-  z-index: 1000
+  z-index: var(--z-menu)
 }
 
 .liquid-ios26 ._glass {
@@ -64,7 +64,7 @@ body.liquid-ios26:before {
 
 .liquid-ios26 header {
   background: var(--lg-surface-light)!important;
-  color: #111!important;
+  color: var(--text-ink)!important;
   border-bottom: 1px solid var(--lg-border);
   backdrop-filter: blur(18px) saturate(120%);
   -webkit-backdrop-filter: blur(18px) saturate(120%);
@@ -73,7 +73,7 @@ body.liquid-ios26:before {
   box-shadow: var(--lg-shadow);
   position: sticky!important;
   top: 0!important;
-  z-index: 200
+  z-index: var(--z-header-liquid)
 }
 
 .liquid-ios26 header,
@@ -120,11 +120,11 @@ body.liquid-ios26:before {
 .liquid-ios26 input[type=submit] {
   background: #fff3!important;
   border: 1px solid var(--lg-border)!important;
-  color: #111!important;
+  color: var(--text-ink)!important;
   border-radius: 14px!important;
   backdrop-filter: blur(10px) saturate(120%)!important;
   -webkit-backdrop-filter: blur(10px) saturate(120%)!important;
-  box-shadow: 0 4px 12px #0000001a!important;
+  box-shadow: var(--shadow-button-glass)!important;
   transition: transform .12s ease,box-shadow .12s ease,background-color .15s ease!important
 }
 
@@ -152,7 +152,7 @@ body.liquid-ios26:before {
 .liquid-ios26 #toggleGhMonitor {
   background: #fff3!important;
   border: 1px solid var(--lg-border)!important;
-  color: #111!important;
+  color: var(--text-ink)!important;
   justify-content: center
 }
 
@@ -172,11 +172,11 @@ body.liquid-ios26:before {
 .liquid-ios26 .abx-brand-option {
   background: #fff3!important;
   border: 1px solid var(--lg-border)!important;
-  color: #111!important;
+  color: var(--text-ink)!important;
   border-radius: 14px!important;
   backdrop-filter: blur(10px) saturate(120%)!important;
   -webkit-backdrop-filter: blur(10px) saturate(120%)!important;
-  box-shadow: 0 4px 12px #0000001a!important;
+  box-shadow: var(--shadow-button-glass)!important;
   transition: transform .12s ease,box-shadow .12s ease,background-color .15s ease!important
 }
 
@@ -231,10 +231,10 @@ body.liquid-ios26:before {
 .liquid-ios26 .return-recommendation-btn {
   display: none!important;
   background: #fff!important;
-  color: #111!important;
+  color: var(--text-ink)!important;
   border: 1px solid var(--brand-light)!important;
   border-radius: 14px!important;
-  box-shadow: 0 4px 12px #0000001a!important;
+  box-shadow: var(--shadow-button-glass)!important;
   padding: .45rem 1rem!important;
   cursor: pointer;
   margin-left: auto;
@@ -251,7 +251,7 @@ body.liquid-ios26:before {
 .liquid-ios26 .return-recommendation-btn:hover,
 .liquid-ios26 #abxReturnBtn:focus-visible,
 .liquid-ios26 .return-recommendation-btn:focus-visible {
-  background: #f5f9f9!important;
+  background: var(--card)!important;
   box-shadow: 0 4px 12px #0000001f!important;
   transform: translateY(-1px) scale(1.02)!important
 }
@@ -316,7 +316,7 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 .result-number small {
-  opacity: .8
+  opacity: var(--opacity-muted)
 }
 
 .liquid-ios26 #generateCentileChartAdv {
@@ -355,7 +355,7 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 .vertical-menu button:disabled {
-  color: #9eb8bb!important;
+  color: var(--text-disabled)!important;
   background: none!important;
   border: none!important;
   box-shadow: none!important;
@@ -364,7 +364,7 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 .vertical-menu a[disabled] {
-  color: #9eb8bb!important;
+  color: var(--text-disabled)!important;
   pointer-events: auto!important;
   background: none!important;
   border: none!important;
@@ -375,7 +375,7 @@ body.liquid-ios26:before {
 
 .liquid-ios26 .vertical-menu a[disabled]:hover {
   background: none!important;
-  color: #9eb8bb!important
+  color: var(--text-disabled)!important
 }
 
 .liquid-ios26 .edit-gh-pt-btn {
@@ -393,7 +393,7 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 .delete-gh-pt-btn {
-  background: #c628281a!important;
+  background: var(--danger-tint)!important;
   color: var(--danger)!important;
   border: 1px solid var(--danger)!important;
   border-radius: var(--radius)!important;
@@ -441,13 +441,13 @@ body.liquid-ios26:before {
 .liquid-ios26 #antibioticTherapyCard .slider-value-label {
   border: 1px solid var(--lg-border)!important;
   background: #fff3!important;
-  color: #111!important;
+  color: var(--text-ink)!important;
   padding: .25rem .5rem!important;
   border-radius: 6px!important;
   bottom: -.6rem!important;
   pointer-events: auto!important;
   cursor: grab!important;
-  box-shadow: 0 4px 12px #0000001a!important;
+  box-shadow: var(--shadow-button-glass)!important;
   backdrop-filter: blur(10px) saturate(120%)!important;
   -webkit-backdrop-filter: blur(10px) saturate(120%)!important;
   transition: background .2s ease,color .2s ease!important
@@ -502,9 +502,9 @@ body.liquid-ios26:before {
 
 .liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label {
   background: #fff3!important;
-  color: #111!important;
+  color: var(--text-ink)!important;
   border: 1px solid var(--lg-accent)!important;
-  box-shadow: 0 4px 12px #0000001a!important
+  box-shadow: var(--shadow-button-glass)!important
 }
 
 #clearAllDataBtn,
@@ -573,7 +573,7 @@ body.liquid-ios26:before {
   left: max(var(--mobile-dock-side-gap),calc(env(safe-area-inset-left,0px) + .35rem));
   right: max(var(--mobile-dock-side-gap),calc(env(safe-area-inset-right,0px) + .35rem));
   bottom: var(--mobile-dock-anchor-bottom);
-  z-index: 1100;
+  z-index: var(--z-mobile-dock);
   display: none;
   transform: translateY(0);
   opacity: 1;
@@ -621,7 +621,7 @@ body.has-mobile-bottom-dock #mobileBottomDock {
 
 #mobileBottomDock .mobile-bottom-dock__item.is-active {
   color: var(--primary);
-  background: #00838d1f;
+  background: var(--tint-teal-active);
   box-shadow: inset 0 0 0 1px #00838d2e
 }
 
@@ -652,7 +652,7 @@ body.has-mobile-bottom-dock #mobileBottomDock {
 #mobileBottomDock.is-hidden,
 #mobileBottomDock.is-keyboard-hidden {
   transform: translateY(calc(100% + env(safe-area-inset-bottom,0px) + var(--mobile-dock-bottom-gap) + .95rem));
-  opacity: .001;
+  opacity: var(--opacity-hidden-dock);
   pointer-events: none
 }
 
@@ -662,7 +662,7 @@ body.has-mobile-bottom-dock {
 
 body.has-mobile-bottom-dock #scrollTopBtn {
   bottom: var(--scroll-top-btn-bottom, 1rem)!important;
-  z-index: 1201;
+  z-index: var(--z-scroll-top-dock);
   transition: bottom .22s ease,background .2s ease,transform .22s ease,opacity .22s ease
 }
 

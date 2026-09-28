@@ -65,7 +65,7 @@ html.vilda-shell-host body {
 .app-shell-skeleton {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: var(--z-mini-summary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +84,7 @@ html.vilda-shell-host body {
 
 .app-shell-skeleton.is-error {
   pointer-events: auto;
-  color: #44535c
+  color: var(--text-2)
 }
 
 .app-shell-error {
@@ -107,7 +107,7 @@ html.vilda-shell-host body {
 .app-shell-error__btns button {
   border: .5px solid #cfe3e6;
   background: #f2fafb;
-  color: #0f2b33;
+  color: var(--text-strong);
   border-radius: 9px;
   padding: 9px 14px;
   font-size: .85rem;
@@ -146,7 +146,7 @@ html.vilda-shell-host body {
   position: fixed;
   right: 16px;
   bottom: calc(var(--vilda-shell-dock-h, 84px) + 14px);
-  z-index: 1150;
+  z-index: var(--z-shell-fab);
   width: 44px;
   height: 44px;
   display: flex;
@@ -188,7 +188,7 @@ html.vilda-shell-host body {
   position: fixed;
   right: 16px;
   bottom: calc(var(--vilda-shell-dock-h, 84px) + 14px);
-  z-index: 1150;
+  z-index: var(--z-shell-fab);
   width: 54px;
   height: 54px;
   display: flex;
@@ -197,7 +197,7 @@ html.vilda-shell-host body {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #00838d;
+  background: var(--primary);
   color: #fff;
   font-size: 1.7rem;
   line-height: 1;

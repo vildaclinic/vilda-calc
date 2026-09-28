@@ -12,9 +12,10 @@ input,select,option{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   width:100%;
   padding:.45rem;
-  border:1px solid #ccc;
+  border:1px solid var(--line-neutral);
   border-radius:4px;
-  font-size:1rem}
+  font-size:1rem;
+}
 
 /* ==========================================================================
    Zależność: globalne reguły przycisków (style.css 569-590, 630-636, 659-664; ios26-v2.css 85-93).
@@ -49,14 +50,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   transform:translateY(-1px) scale(1.02);
   box-shadow:var(--shadow-l)}
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 button._pressed{
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
@@ -86,7 +88,8 @@ legend{
   padding:1rem;
   border-radius:var(--radius);
   box-shadow:var(--shadow);
-  border:1px solid #d0dede}
+  border:1px solid var(--line);
+}
 .current-summary-card h3{
   margin-top:0}
 .current-summary-card .summary-content{
@@ -111,14 +114,16 @@ section.card,#toNormCard{
   box-shadow:var(--shadow);
   padding:1rem}
 #toNormCard.result-card{
-  border:1px solid #d0dede}
+  border:1px solid var(--line);
+}
 .user-card{
   font-family:Inter,sans-serif;
   font-size:1.1rem;
   line-height:1.3;
   box-shadow:var(--shadow);
-  border:1px solid #d0dede;
-  border-radius:var(--radius)}
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+}
 .user-card legend{
   font-size:1.25rem;
   font-weight:600;
@@ -136,14 +141,16 @@ section.card,#toNormCard{
   box-shadow:var(--shadow);
   font-family:Inter,sans-serif;
   font-size:1.1rem;
-  border:1px solid #d0dede}
+  border:1px solid var(--line);
+}
 .gh-test-card{
   background:var(--card);
-  border:1px solid #d0dede;
+  border:1px solid var(--line);
   border-radius:var(--radius);
   box-shadow:var(--shadow);
   padding:1rem;
-  margin-bottom:1rem}
+  margin-bottom:1rem;
+}
 .gh-test-card:last-child{
   margin-bottom:1rem}
 .gh-test-card p{
@@ -158,11 +165,12 @@ fieldset.user-card{
 .gh-test-card p{
   font-size:1.4rem!important}
 #professionalModule{
-  margin-top:1.4rem!important;
+  margin-top:1.4rem !important;
   margin-bottom:1rem;
   border-radius:var(--radius);
-  border:1px solid #d0dede;
-  box-shadow:var(--shadow)}
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+}
 
 /* ==========================================================================
    SourcePanel — style.css
@@ -179,11 +187,13 @@ fieldset.user-card{
 .bp-definition .source-note{
   font-size:.85rem;
   margin-top:.4rem;
-  color:#555}
+  color:var(--text-soft);
+}
 .circ-definition .source-note{
   font-size:.85rem;
   margin-top:.4rem;
-  color:#555}
+  color:var(--text-soft);
+}
 .circ-chart-result .source-note{
   margin-top:.75rem}
 #respiratoryResult .source-note,#bpResult .source-note{
@@ -191,11 +201,12 @@ fieldset.user-card{
   max-width:100%;
   font-size:1rem;
   margin-top:.4rem;
-  color:#555;
+  color:var(--text-soft);
   white-space:normal;
   overflow-wrap:anywhere;
   word-break:break-word;
-  hyphens:auto}
+  hyphens:auto;
+}
 @media(max-width:640px){
   #respiratoryResult .source-note,#bpResult .source-note{
   font-size:.98rem;
@@ -336,7 +347,8 @@ fieldset.user-card{
   inset:0;
   pointer-events:none;
   background:radial-gradient(circle at top right,rgba(0,168,181,.12),transparent 34%),radial-gradient(circle at bottom left,rgba(4,120,87,.08),transparent 32%);
-  z-index:-1}
+  z-index:var(--z-behind);
+}
 .edu-hero{
   padding:1.35rem 1.4rem}
 .edu-kicker,.edu-card-badge,.edu-chip,.edu-meta-pill{
@@ -437,8 +449,9 @@ fieldset.user-card{
   padding:.45rem;
   border-radius:20px;
   background:linear-gradient(180deg,#00838d14,#ffffffeb);
-  border:1px solid rgba(0,131,141,.12);
-  box-shadow:inset 0 1px #ffffffb3}
+  border:1px solid var(--line-teal-soft);
+  box-shadow:inset 0 1px #ffffffb3;
+}
 .edu-video-frame video{
   width:100%;
   height:auto;
@@ -751,24 +764,24 @@ html[data-clcr-workflow-ui="1"] .clcr-missing-list {
   margin-bottom: 16px;
   }
 .clcr-rail-head {
-  background: #fff;
-  border: 2px solid #00838d;
-  border-radius: 16px;
-  padding: 16px 18px;
-  box-shadow: 0 10px 28px rgba(18,72,77,.06);
-  margin-bottom: 16px;
+  background:#fff;
+  border:2px solid var(--primary);
+  border-radius:16px;
+  padding:16px 18px;
+  box-shadow:0 10px 28px rgba(18,72,77,.06);
+  margin-bottom:16px;
 }
 .clcr-rail-head[hidden] {
   display: none;
   }
 .clcr-rail-kick {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: #00838d;
-  margin-bottom: 4px;
+  display:block;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+  color:var(--primary);
+  margin-bottom:4px;
 }
 .clcr-rail-formula {
   font-size: 12.5px;
@@ -776,12 +789,12 @@ html[data-clcr-workflow-ui="1"] .clcr-missing-list {
   color: #006b73;
   }
 .clcr-rnum {
-  font: 600 2.5rem/1 Inter, sans-serif;
-  letter-spacing: -.02em;
-  color: #00838d;
-  display: inline-flex;
-  align-items: flex-end;
-  margin: 6px 0 2px;
+  font:600 2.5rem/1 Inter, sans-serif;
+  letter-spacing:-.02em;
+  color:var(--primary);
+  display:inline-flex;
+  align-items:flex-end;
+  margin:6px 0 2px;
 }
 .clcr-rnum small {
   font-size: .34em;
@@ -820,20 +833,20 @@ html[data-clcr-workflow-ui="1"] .clcr-missing-list {
   text-transform: uppercase;
 }
 html[data-clcr-workflow-ui="1"] .clcr-fullreport-button {
-  display: block !important;
-  width: 100% !important;
-  min-height: 44px !important;
-  margin: 0 0 16px !important;
-  border: 1px solid var(--clcr-primary) !important;
-  border-radius: 11px !important;
-  background: var(--clcr-primary) !important;
-  color: #fff !important;
-  box-shadow: 0 8px 18px rgba(0, 131, 141, 0.2) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  font: inherit !important;
-  font-weight: 750 !important;
-  cursor: pointer !important;
+  display:block !important;
+  width:100% !important;
+  min-height:44px !important;
+  margin:0 0 16px !important;
+  border:1px solid var(--clcr-primary) !important;
+  border-radius:11px !important;
+  background:var(--clcr-primary) !important;
+  color:#fff !important;
+  box-shadow:var(--shadow-selected) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  font:inherit !important;
+  font-weight:750 !important;
+  cursor:pointer !important;
 }
 html[data-clcr-workflow-ui="1"] .clcr-fullreport-button:hover {
   background: var(--clcr-primary-dark) !important;

@@ -84,7 +84,7 @@ html[data-clcr-workflow-ui="1"] .clcr-workflow__section-title {
 
 html[data-clcr-workflow-ui="1"] .clcr-search {
   position: relative;
-  z-index: 6;
+  z-index: var(--z-search-popover);
   width: min(760px, 100%);
 }
 
@@ -243,7 +243,7 @@ html[data-clcr-workflow-ui="1"] .version-option.selected {
   color: #fff;
   background: var(--clcr-primary);
   border-color: var(--clcr-primary);
-  box-shadow: 0 8px 18px rgba(0, 131, 141, 0.2);
+  box-shadow: var(--shadow-selected);
 }
 
 html[data-clcr-workflow-ui="1"] .version-option:focus-visible {
@@ -338,7 +338,7 @@ html[data-clcr-workflow-ui="1"] .clcr-formula-choice:disabled {
   background: #edf2f2;
   border-color: var(--clcr-border-soft);
   cursor: not-allowed;
-  opacity: 0.8;
+  opacity: var(--opacity-muted);
 }
 
 html[data-clcr-workflow-ui="1"] .clcr-module-variant-select {
@@ -683,7 +683,7 @@ html[data-clcr-workflow-ui="1"] .clcr-field > input:focus,
 html[data-clcr-workflow-ui="1"] .clcr-field > select:focus,
 html[data-clcr-workflow-ui="1"] .clcr-field > textarea:focus {
   border-color: var(--clcr-primary);
-  outline: 3px solid rgba(0, 131, 141, 0.16);
+  outline: 3px solid var(--line-teal);
 }
 
 html[data-clcr-workflow-ui="1"] .clcr-field--choice {
@@ -728,7 +728,7 @@ html[data-clcr-workflow-ui="1"] .clcr-canonical-checkbox {
 html[data-clcr-workflow-ui="1"] .clcr-field__help {
   --clcr-arrow-x: calc(100% - 26px);
   position: fixed;
-  z-index: 1300;
+  z-index: var(--z-clcr-help);
   pointer-events: none;
   margin: 0;
   padding: 10px 12px;
@@ -1216,7 +1216,7 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
         0.5rem
     );
     left: 0.55rem;
-    z-index: 1202;
+    z-index: var(--z-clcr-live);
     max-height: 58vh;
     overscroll-behavior: contain;
   }
@@ -1291,7 +1291,7 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
   min-height: 2.6rem;
   border: 0;
   border-radius: 8px;
-  background: #00838d;
+  background: var(--primary);
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
@@ -1317,8 +1317,8 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
   min-height: 1.2rem;
 }
 .clcr-visit-save .cvs-status.cvs-ok { color: #0f766e; }
-.clcr-visit-save .cvs-status.cvs-err { color: #b91c1c; }
-.clcr-visit-save .cvs-status.cvs-warn { color: #b45309; }
+.clcr-visit-save .cvs-status.cvs-err { color: var(--error); }
+.clcr-visit-save .cvs-status.cvs-warn { color: var(--warning); }
 .clcr-visit-save .cvs-status.cvs-pending { color: #64748b; }
 
 /* ——— Faza 2: panel „Historia wyników" + sparkline (ClcrVisitSave) ——— */
@@ -1339,8 +1339,8 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 }
 .clcr-visit-history .cvs-hist-label { font-weight: 700; font-size: 0.95rem; }
 .clcr-visit-history .cvs-spark { flex: none; }
-.clcr-visit-history .cvs-spark path { stroke: #00838d; }
-.clcr-visit-history .cvs-spark circle { fill: #00838d; }
+.clcr-visit-history .cvs-spark path { stroke: var(--primary); }
+.clcr-visit-history .cvs-spark circle { fill: var(--primary); }
 /* Trend KIERUNKOWY, NEUTRALNY — jeden kolor dla ↑/↓/→ (kierunek niesie strzałka,
    nie kolor: dla eGFR wzrost korzystny, dla wydalania wapnia odwrotnie). */
 .clcr-visit-history .cvs-trend,
@@ -1386,7 +1386,7 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 
 .clcr-patient-card {
   /* P-MODALE: z-index ponad dockiem (1100) i strzałką „na górę" (1201) — 1000 chowało kartę pod nimi na telefonie. */
-  position: fixed; inset: 0; z-index: 10050;
+  position: fixed; inset: 0; z-index: var(--z-clcr-patient-card);
   background: rgba(15, 54, 58, 0.5);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 24px 14px; overflow: auto;
@@ -1402,13 +1402,13 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 }
 .clcr-patient-card .cpc-kick {
   display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.07em;
-  text-transform: uppercase; color: #00838d; margin-bottom: 4px;
+  text-transform: uppercase; color: var(--primary); margin-bottom: 4px;
 }
 .clcr-patient-card .cpc-name { margin: 0; font-size: 20px; }
-.clcr-patient-card .cpc-sub { color: #5a7274; font-size: 13.5px; }
+.clcr-patient-card .cpc-sub { color: var(--text-muted); font-size: 13.5px; }
 .clcr-patient-card .cpc-acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .clcr-patient-card .cpc-btn {
-  border: 1px solid #00838d; background: #00838d; color: #fff;
+  border: 1px solid var(--primary); background: var(--primary); color: #fff;
   border-radius: 11px; min-height: 42px; padding: 9px 15px; font: inherit;
   font-weight: 750; cursor: pointer;
 }
@@ -1424,26 +1424,26 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 .clcr-patient-card .cpc-flow th:first-child,
 .clcr-patient-card .cpc-flow td:first-child { text-align: left; }
 .clcr-patient-card .cpc-flow thead th {
-  font-size: 12px; font-weight: 800; color: #5a7274; text-transform: uppercase;
+  font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 .clcr-patient-card .cpc-flow thead th.nowcol { color: #006b73; }
 .clcr-patient-card .cpc-flow .param { font-weight: 730; }
-.clcr-patient-card .cpc-flow .ref { color: #5a7274; font-weight: 650; }
+.clcr-patient-card .cpc-flow .ref { color: var(--text-muted); font-weight: 650; }
 .clcr-patient-card .cpc-flow td.val { font-variant-numeric: tabular-nums; font-weight: 730; }
-.clcr-patient-card .cpc-flow td.miss { color: #5a7274; font-weight: 600; }
-.clcr-patient-card .cpc-flow td.hi { color: #a91f2a; background: #fdecec; }
-.clcr-patient-card .cpc-flow td.now { outline: 2px solid #00838d; outline-offset: -2px; border-radius: 8px; }
+.clcr-patient-card .cpc-flow td.miss { color: var(--text-muted); font-weight: 600; }
+.clcr-patient-card .cpc-flow td.hi { color: #a91f2a; background: var(--danger-bg); }
+.clcr-patient-card .cpc-flow td.now { outline: 2px solid var(--primary); outline-offset: -2px; border-radius: 8px; }
 .clcr-patient-card .cpc-flow tr:last-child td { border-bottom: 0; }
 /* trend NEUTRALNY — jeden kolor dla ↑/↓/→ (kierunek niesie strzałka) */
 .clcr-patient-card .cpc-flow .tchip {
   display: inline-block; font-size: 11.5px; font-weight: 800;
   border-radius: 999px; padding: 2px 8px; background: #f4fafa; color: #006b73;
 }
-.clcr-patient-card .cpc-flow .cvs-spark path { stroke: #00838d; }
-.clcr-patient-card .cpc-flow .cvs-spark circle { fill: #00838d; }
-.clcr-patient-card .cpc-note { font-size: 12.5px; color: #5a7274; margin-top: 10px; }
-.clcr-patient-card .cpc-empty { color: #5a7274; text-align: center; padding: 24px 12px; }
+.clcr-patient-card .cpc-flow .cvs-spark path { stroke: var(--primary); }
+.clcr-patient-card .cpc-flow .cvs-spark circle { fill: var(--primary); }
+.clcr-patient-card .cpc-note { font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
+.clcr-patient-card .cpc-empty { color: var(--text-muted); text-align: center; padding: 24px 12px; }
 html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
 
 /* ——— Faza 5: chip pacjenta + zwijany blok tożsamości (Wariant C) ——— */
@@ -1457,7 +1457,7 @@ html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
 .clcr-ident-id { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
 .clcr-ident-avatar {
   width: 40px; height: 40px; border-radius: 50%; flex: none;
-  background: #00838d; color: #fff; font-weight: 800; font-size: 14px;
+  background: var(--primary); color: #fff; font-weight: 800; font-size: 14px;
   display: flex; align-items: center; justify-content: center; letter-spacing: 0.02em;
 }
 .clcr-ident-who { display: flex; flex-direction: column; min-width: 0; }
@@ -1471,7 +1471,7 @@ html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
 }
 .clcr-ident-badge--mass { background: #fff8e7; border-color: #ead6a8; color: #8a5400; }
 .clcr-ident-toggle {
-  margin-left: auto; border: 1px solid #d0dede; background: #fff; color: #006b73;
+  margin-left: auto; border: 1px solid var(--line); background: #fff; color: #006b73;
   border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 13px; font-weight: 750;
   cursor: pointer; min-height: 36px;
 }
@@ -1506,17 +1506,17 @@ html[data-clcr-workflow-ui="1"] .clcr-workspace #clcrForm > .patient-card {
 .clcr-result-rail { min-width: 0; }
 .clcr-result-rail > .card { margin-bottom: 16px; }
 .clcr-rail-head {
-  background: #fff; border: 2px solid #00838d; border-radius: 16px;
+  background: #fff; border: 2px solid var(--primary); border-radius: 16px;
   padding: 16px 18px; box-shadow: 0 10px 28px rgba(18,72,77,.06); margin-bottom: 16px;
 }
 .clcr-rail-head[hidden] { display: none; }
 .clcr-rail-kick {
   display: block; font-size: 11px; font-weight: 800; letter-spacing: .07em;
-  text-transform: uppercase; color: #00838d; margin-bottom: 4px;
+  text-transform: uppercase; color: var(--primary); margin-bottom: 4px;
 }
 .clcr-rail-formula { font-size: 12.5px; font-weight: 800; color: #006b73; }
 .clcr-rnum {
-  font: 600 2.5rem/1 Inter, sans-serif; letter-spacing: -.02em; color: #00838d;
+  font: 600 2.5rem/1 Inter, sans-serif; letter-spacing: -.02em; color: var(--primary);
   display: inline-flex; align-items: flex-end; margin: 6px 0 2px;
 }
 .clcr-rnum small { font-size: .34em; margin-left: .35em; color: #444; font-weight: 600; padding-bottom: .25em; }
@@ -1680,7 +1680,7 @@ html[data-clcr-workflow-ui="1"] .clcr-fullreport-button {
   margin: 0 0 16px !important;
   border: 1px solid var(--clcr-primary) !important; border-radius: 11px !important;
   background: var(--clcr-primary) !important; color: #fff !important;
-  box-shadow: 0 8px 18px rgba(0, 131, 141, 0.2) !important;
+  box-shadow: var(--shadow-selected) !important;
   backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
   font: inherit !important; font-weight: 750 !important; cursor: pointer !important;
 }

@@ -3,14 +3,15 @@
 /* ===================== Reguły globalne elementów, na których polegają komponenty grupy (label, input, button). Kolejność jak w aplikacji: ios26-v2.css ładuje się PRZED style.css, więc .liquid-ios26 button stoi przed regułami bazowymi. Te same reguły zawierają G01 (Button) i G02 (FormField). ===================== */
 /* ios26-v2.css 85-93 */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 /* style.css 12-13, 56-66, 569-583, 592-602, 659-663 */
 button,a,label,summary,select,input,textarea,[role=button],[role=menuitem],[role=menuitemradio],[role=tab],[role=switch]{
   touch-action:manipulation}
@@ -22,9 +23,10 @@ input,select,option{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   width:100%;
   padding:.45rem;
-  border:1px solid #ccc;
+  border:1px solid var(--line-neutral);
   border-radius:4px;
-  font-size:1rem}
+  font-size:1rem;
+}
 button,input[type=button],input[type=submit]{
   cursor:pointer;
   font:inherit;
@@ -50,7 +52,8 @@ input[type=number],input[type=text],select{
 input:focus,select:focus{
   outline:none;
   border-color:var(--primary);
-  box-shadow:0 0 0 2px #00838d40}
+  box-shadow:var(--shadow-focus-input);
+}
 button,input[type=submit]{
   transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
 button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
@@ -99,11 +102,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   background-color:var(--primary);
   color:#fff}
 .data-source-toggle label input:disabled+span{
-  border-color:#ccc;
-  color:#666;
-  background-color:#f3f3f3;
+  border-color:var(--line-neutral);
+  color:var(--placeholder);
+  background-color:var(--disabled-bg);
   cursor:not-allowed;
-  pointer-events:none}
+  pointer-events:none;
+}
 /* #sourcePalczewska — opcja PRO (1952-1959, 1962-1967) */
 #sourcePalczewska+span{
   border-color:#90f;
@@ -114,11 +118,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 #sourcePalczewska:checked+span .pro-superscript{
   color:#fff}
 #sourcePalczewska:disabled+span{
-  border-color:#ccc;
+  border-color:var(--line-neutral);
   color:#000;
-  background-color:#f3f3f3;
+  background-color:var(--disabled-bg);
   cursor:not-allowed;
-  pointer-events:none}
+  pointer-events:none;
+}
 /* .adult-vitals-radio-* (5379-5413) + @media 5584/5588-5589 */
 .adult-vitals-radio-group{
   display:inline-flex;
@@ -222,11 +227,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .liquid-ios26 #sourcePalczewska:disabled+span .pro-superscript{
   color:#90f!important}
 .liquid-ios26 .data-source-toggle label input:disabled+span{
-  border-color:#ccc!important;
-  color:#666!important;
-  background-color:#f3f3f3!important;
-  cursor:not-allowed!important;
-  pointer-events:none!important}
+  border-color:var(--line-neutral) !important;
+  color:var(--placeholder) !important;
+  background-color:var(--disabled-bg) !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+}
 .liquid-ios26 #sourcePalczewska:checked+span .pro-superscript{
   color:#fff!important}
 .liquid-ios26 #sourcePalczewska+span{
@@ -236,11 +242,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   background-color:#90f!important;
   color:#fff!important}
 .liquid-ios26 #sourcePalczewska:disabled+span{
-  border-color:#ccc!important;
-  color:#000!important;
-  background-color:#f3f3f3!important;
-  cursor:not-allowed!important;
-  pointer-events:none!important}
+  border-color:var(--line-neutral) !important;
+  color:#000 !important;
+  background-color:var(--disabled-bg) !important;
+  cursor:not-allowed !important;
+  pointer-events:none !important;
+}
 
 /* ===================== Wysoki kontrast — pierścień focus pól i przycisków (style.css 5196-5198); pozostałe warianty przemapowują tokeny --diet-ui-* / --nutrition-ui-* na --hc-* w tokens.css ===================== */
 body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-level-2.liquid-ios26 input:focus-visible,body.high-contrast-level-3.liquid-ios26 input:focus-visible,body.high-contrast-level-1.liquid-ios26 select:focus-visible,body.high-contrast-level-2.liquid-ios26 select:focus-visible,body.high-contrast-level-3.liquid-ios26 select:focus-visible,body.high-contrast-level-1.liquid-ios26 textarea:focus-visible,body.high-contrast-level-2.liquid-ios26 textarea:focus-visible,body.high-contrast-level-3.liquid-ios26 textarea:focus-visible,body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 summary:focus-visible,body.high-contrast-level-2.liquid-ios26 summary:focus-visible,body.high-contrast-level-3.liquid-ios26 summary:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
@@ -252,29 +259,30 @@ body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-l
 .vild-range-host{
   position:relative}
 .vild-range-tip{
-  position:absolute!important;
+  position:absolute !important;
   left:12px;
   bottom:calc(100% + 9px);
-  z-index:10020;
+  z-index:var(--z-tutorial-overlay);
   display:flex;
   align-items:center;
   gap:7px;
   max-width:min(300px,calc(100vw - 28px));
-  background:#fffffff5!important;
-  color:var(--primary)!important;
-  border:1.5px solid rgba(0,131,141,.2)!important;
-  border-radius:10px!important;
-  box-shadow:0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc!important;
+  background:#fffffff5 !important;
+  color:var(--primary) !important;
+  border:1.5px solid rgba(0,131,141,.2) !important;
+  border-radius:10px !important;
+  box-shadow:0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc !important;
   -webkit-backdrop-filter:blur(14px) saturate(1.6);
   backdrop-filter:blur(14px) saturate(1.6);
-  font-size:.83rem!important;
-  font-weight:500!important;
+  font-size:.83rem !important;
+  font-weight:500 !important;
   line-height:1.3;
-  padding:.55rem .85rem!important;
+  padding:.55rem .85rem !important;
   pointer-events:none;
   opacity:0;
   transform:translateY(4px);
-  transition:opacity .18s ease,transform .18s ease}
+  transition:opacity .18s ease,transform .18s ease;
+}
 .vild-range-tip.is-on{
   opacity:1;
   transform:translateY(0)}
@@ -336,7 +344,8 @@ body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-l
   width:2px;
   height:.3rem;
   background:var(--primary);
-  opacity:.6}
+  opacity:var(--opacity-slider-tick);
+}
 #antibioticTherapyCard .slider-tick-label{
   position:absolute;
   top:0;
@@ -434,18 +443,19 @@ body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-l
 
 /* ===================== Slider — nadpisania .liquid-ios26 (ios26-v2.css 277-318, 321-325; pominięto 319-320 #abxReturnBtn) ===================== */
 .liquid-ios26 #antibioticTherapyCard .slider-value-label{
-  border:1px solid var(--lg-border)!important;
-  background:#fff3!important;
-  color:#111!important;
-  padding:.25rem .5rem!important;
-  border-radius:6px!important;
-  bottom:-.6rem!important;
-  pointer-events:auto!important;
-  cursor:grab!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  transition:background .2s ease,color .2s ease!important}
+  border:1px solid var(--lg-border) !important;
+  background:#fff3 !important;
+  color:var(--text-ink) !important;
+  padding:.25rem .5rem !important;
+  border-radius:6px !important;
+  bottom:-.6rem !important;
+  pointer-events:auto !important;
+  cursor:grab !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  transition:background .2s ease,color .2s ease !important;
+}
 .liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label{
   background:color-mix(in srgb,var(--lg-accent) 40%,transparent)!important;
   color:#fff!important}
@@ -476,7 +486,8 @@ body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-l
 .liquid-ios26 #antibioticTherapyCard .slider-ticks .slider-tick-label:last-child{
   padding-right:.5rem!important}
 .liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label{
-  background:#fff3!important;
-  color:#111!important;
-  border:1px solid var(--lg-accent)!important;
-  box-shadow:0 4px 12px #0000001a!important}
+  background:#fff3 !important;
+  color:var(--text-ink) !important;
+  border:1px solid var(--lg-accent) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+}

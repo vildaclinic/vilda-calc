@@ -61,12 +61,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
-  <link href="ios26-v2.css?v=20" rel="stylesheet">
-  <link href="style.css?v=76" rel="stylesheet">
+  <link href="ios26-v2.css?v=21" rel="stylesheet">
+  <link href="style.css?v=77" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
-  <link href="vilda_chrome.css?v=37" rel="stylesheet">
-  <link href="vilda_auth_ui.css?v=70" rel="stylesheet">
-  <link href="ustawienia.css?v=11" rel="stylesheet">
+  <link href="vilda_chrome.css?v=38" rel="stylesheet">
+  <link href="vilda_auth_ui.css?v=71" rel="stylesheet">
+  <link href="ustawienia.css?v=12" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
      Ustawia klasę vilda-pro-active / vilda-pro-inactive na <html>
@@ -101,7 +101,7 @@
 .pro-status-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
 .pro-status-body { flex: 1; min-width: 0; }
 .pro-status-title { font-weight: 700; font-size: 1rem; margin: 0 0 .2rem; }
-.pro-status-desc  { font-size: .88rem; color: var(--text-muted,#555); margin: 0; }
+.pro-status-desc  { font-size: .88rem; color: var(--text-soft); margin: 0; }
 .pro-status-chip  {
   display: inline-flex; align-items: center; gap: .3rem;
   font-size: .78rem; font-weight: 700;
@@ -137,7 +137,7 @@ html.vilda-pro-active .pro-sync-note {
   border: 1px solid rgba(0,100,220,.15);
   border-radius: .6rem;
   font-size: .82rem;
-  color: var(--text-2, #555);
+  color: var(--text-soft);
   line-height: 1.4;
 }
 .pro-sync-note__icon { font-size: 1rem; flex-shrink: 0; }
@@ -914,7 +914,7 @@ html.vilda-pro-active .pro-sync-note {
                   <!-- ── Podsekcja 4: Zaawansowane (zwinięte domyślnie) ── -->
                   <details class="settings-backup-section" id="syncSlotCard" style="border:none;padding:0;margin:0;">
                     <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;
-                                    gap:0.4rem;font-size:0.83rem;color:var(--text-muted,#666);
+                                    gap:0.4rem;font-size:0.83rem;color:var(--placeholder);
                                     padding:0.15rem 0;user-select:none;">
                       <span style="font-size:0.75rem;transition:transform .2s;" class="sync-adv-chevron">▶</span>
                       Pokaż opcje zaawansowane
@@ -1066,7 +1066,7 @@ html.vilda-pro-active .pro-sync-note {
                         <video id="syncQRVideo" autoplay playsinline
                                style="width:100%;max-width:320px;border-radius:8px;display:block;margin:0 auto;
                                       background:#000;aspect-ratio:1/1;object-fit:cover;"></video>
-                        <p style="text-align:center;font-size:0.82rem;color:var(--text-muted);margin:4px 0 0;">
+                        <p style="text-align:center;font-size:0.82rem;margin:4px 0 0;">
                           Skieruj kamerę na kod QR wyświetlony na komputerze
                         </p>
                       </div>
@@ -1080,14 +1080,14 @@ html.vilda-pro-active .pro-sync-note {
                         </button>
                         <input type="file" id="syncQRPhotoInput" accept="image/*" capture="environment"
                                style="display:none;">
-                        <p style="text-align:center;font-size:0.82rem;color:var(--text-muted);margin:6px 0 0;">
+                        <p style="text-align:center;font-size:0.82rem;margin:6px 0 0;">
                           Sfotografuj kod QR z ekranu komputera (działa też na iPhonie z aplikacji)
                         </p>
                       </div>
 
                       <!-- Fallback: wpisz kod ręcznie -->
                       <div id="syncQRManualWrap">
-                        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                        <label style="display:block;font-size:0.85rem;margin-bottom:0.4rem;">
                           Lub wpisz kod ręcznie (jeśli kamera nie działa):
                         </label>
                         <input type="text" id="syncQRTokenInput"
@@ -1096,7 +1096,7 @@ html.vilda-pro-active .pro-sync-note {
                                style="font-family:monospace;font-size:0.82rem;">
                       </div>
 
-                      <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin:0.6rem 0 0.3rem;">
+                      <label style="display:block;font-size:0.85rem;margin:0.6rem 0 0.3rem;">
                         Potwierdź hasłem do konta:
                       </label>
                       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
@@ -1134,7 +1134,7 @@ html.vilda-pro-active .pro-sync-note {
                     </div>
                     <!-- Panel z kodem — domyślnie ukryty -->
                     <div id="syncCodePanel" style="display:none;margin-top:0.75rem;">
-                      <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                      <label style="display:block;font-size:0.85rem;margin-bottom:0.4rem;">
                         Podaj hasło, aby wygenerować kod:
                       </label>
                       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
@@ -1148,7 +1148,7 @@ html.vilda-pro-active .pro-sync-note {
                         </button>
                       </div>
                       <div id="syncCodeOutput" style="display:none;margin-top:0.75rem;">
-                        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                        <label style="display:block;font-size:0.85rem;margin-bottom:0.4rem;">
                           Twój zapasowy kod dostępu (skopiuj i zachowaj):
                         </label>
                         <textarea id="syncCodeText" readonly
@@ -1166,7 +1166,7 @@ html.vilda-pro-active .pro-sync-note {
                             Ukryj
                           </button>
                         </div>
-                        <p style="margin:0.5rem 0 0;font-size:0.78rem;color:var(--text-muted);">
+                        <p style="margin:0.5rem 0 0;font-size:0.78rem;">
                           ⚠ <strong>To ważne:</strong> kod razem z hasłem daje pełny dostęp do konta i danych pacjentów. Kod bez hasła jest bezużyteczny, ale i tak traktuj go jak tajny klucz — zapisz go razem z hasłem w <strong>menedżerze haseł</strong>. <strong>Nie zapisuj go w Zdjęciach ani w galerii</strong> — synchronizują się z chmurą i są skanowane (OCR).
                         </p>
                       </div>

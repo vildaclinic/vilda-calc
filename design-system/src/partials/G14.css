@@ -23,18 +23,18 @@
    min-width: 0;
    }
 .clcr-ident-avatar {
-  width: 40px;
-   height: 40px;
-   border-radius: 50%;
-   flex: none;
-  background: #00838d;
-   color: #fff;
-   font-weight: 800;
-   font-size: 14px;
-  display: flex;
-   align-items: center;
-   justify-content: center;
-   letter-spacing: 0.02em;
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  flex:none;
+  background:var(--primary);
+  color:#fff;
+  font-weight:800;
+  font-size:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  letter-spacing:0.02em;
 }
 .clcr-ident-who {
    display: flex;
@@ -73,17 +73,17 @@
    color: #8a5400;
    }
 .clcr-ident-toggle {
-  margin-left: auto;
-   border: 1px solid #d0dede;
-   background: #fff;
-   color: #006b73;
-  border-radius: 999px;
-   padding: 6px 13px;
-   font: inherit;
-   font-size: 13px;
-   font-weight: 750;
-  cursor: pointer;
-   min-height: 36px;
+  margin-left:auto;
+  border:1px solid var(--line);
+  background:#fff;
+  color:#006b73;
+  border-radius:999px;
+  padding:6px 13px;
+  font:inherit;
+  font-size:13px;
+  font-weight:750;
+  cursor:pointer;
+  min-height:36px;
 }
 .clcr-ident-toggle:hover {
    background: #f4fafa;
@@ -142,10 +142,10 @@ html[data-clcr-workflow-ui="1"] .version-option:hover {
   transform: translateY(-1px);
 }
 html[data-clcr-workflow-ui="1"] .version-option.selected {
-  color: #fff;
-  background: var(--clcr-primary);
-  border-color: var(--clcr-primary);
-  box-shadow: 0 8px 18px rgba(0, 131, 141, 0.2);
+  color:#fff;
+  background:var(--clcr-primary);
+  border-color:var(--clcr-primary);
+  box-shadow:var(--shadow-selected);
 }
 html[data-clcr-workflow-ui="1"] .version-option:focus-visible {
   outline: 3px solid rgba(0, 131, 141, 0.24);
@@ -223,11 +223,11 @@ html[data-clcr-workflow-ui="1"] .clcr-formula-choice[aria-pressed="true"] {
   border-color: var(--clcr-primary);
 }
 html[data-clcr-workflow-ui="1"] .clcr-formula-choice:disabled {
-  color: #819395;
-  background: #edf2f2;
-  border-color: var(--clcr-border-soft);
-  cursor: not-allowed;
-  opacity: 0.8;
+  color:#819395;
+  background:#edf2f2;
+  border-color:var(--clcr-border-soft);
+  cursor:not-allowed;
+  opacity:var(--opacity-muted);
 }
 html[data-clcr-workflow-ui="1"] .clcr-module-variant-select {
   box-sizing: border-box;
@@ -374,8 +374,8 @@ html[data-clcr-workflow-ui="1"] .clcr-protocol-answer {
 html[data-clcr-workflow-ui="1"] .clcr-field > input:focus,
 html[data-clcr-workflow-ui="1"] .clcr-field > select:focus,
 html[data-clcr-workflow-ui="1"] .clcr-field > textarea:focus {
-  border-color: var(--clcr-primary);
-  outline: 3px solid rgba(0, 131, 141, 0.16);
+  border-color:var(--clcr-primary);
+  outline:3px solid var(--line-teal);
 }
 html[data-clcr-workflow-ui="1"] .clcr-field--choice {
   grid-template-columns: minmax(0, 1fr);
@@ -408,21 +408,21 @@ html[data-clcr-workflow-ui="1"] .clcr-canonical-checkbox {
   opacity: 0;
 }
 html[data-clcr-workflow-ui="1"] .clcr-field__help {
-  --clcr-arrow-x: calc(100% - 26px);
-  position: fixed;
-  z-index: 1300;
-  pointer-events: none;
-  margin: 0;
-  padding: 10px 12px;
-  color: var(--clcr-text);
-  background: #fff;
-  border: 1px solid var(--clcr-border);
-  border-top: 3px solid var(--clcr-primary);
-  border-radius: 12px;
-  box-shadow: 0 18px 44px rgba(13, 60, 65, 0.24);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.55;
+  --clcr-arrow-x:calc(100% - 26px);
+  position:fixed;
+  z-index:var(--z-clcr-help);
+  pointer-events:none;
+  margin:0;
+  padding:10px 12px;
+  color:var(--clcr-text);
+  background:#fff;
+  border:1px solid var(--clcr-border);
+  border-top:3px solid var(--clcr-primary);
+  border-radius:12px;
+  box-shadow:0 18px 44px rgba(13, 60, 65, 0.24);
+  font-size:13px;
+  font-weight:500;
+  line-height:1.55;
 }
 html[data-clcr-workflow-ui="1"] .clcr-field__help::before {
   position: absolute;
@@ -610,14 +610,15 @@ html[data-clcr-workflow-ui="1"] .clcr-field__heading {
 
 /* ——— 6. Nadpisania Liquid Glass (ios26-v2.css 85–98, 187–190): globalna reguła .liquid-ios26 button z !important wygrywa w aplikacji z tłem, obrysem, kolorem i promieniem .clcr-formula-choice, .clcr-info-button, .clcr-ident-toggle i legacy .version-option; reguła pól (bez !important) przegrywa specyficznością z regułami .clcr-field > input ——— */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 button._pressed{
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
@@ -637,9 +638,10 @@ body.high-contrast-level-1.liquid-ios26 .version-option,body.high-contrast-level
 body.high-contrast-level-1.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-2.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-3.liquid-ios26 .version-option:not(.disabled):hover{
   background:var(--hc-module-btn-hover-bg)!important}
 body.high-contrast-level-1.liquid-ios26 .version-option.selected,body.high-contrast-level-2.liquid-ios26 .version-option.selected,body.high-contrast-level-3.liquid-ios26 .version-option.selected{
-  background:var(--hc-module-btn-active-bg)!important;
-  border-color:var(--hc-module-btn-active-border)!important;
-  box-shadow:0 0 0 1px #00838d1f,var(--hc-module-btn-active-shadow)!important}
+  background:var(--hc-module-btn-active-bg) !important;
+  border-color:var(--hc-module-btn-active-border) !important;
+  box-shadow:0 0 0 1px var(--tint-teal-active),var(--hc-module-btn-active-shadow) !important;
+}
 body.high-contrast-level-1.liquid-ios26 .version-option.disabled,body.high-contrast-level-2.liquid-ios26 .version-option.disabled,body.high-contrast-level-3.liquid-ios26 .version-option.disabled{
   background:#ffffffc7!important;
   border-color:var(--hc-module-btn-border)!important;

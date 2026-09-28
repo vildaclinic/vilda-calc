@@ -66,7 +66,7 @@
 
 .vilda-obesity-banner__btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px #00838d40
+  box-shadow: 0 2px 6px var(--focus-ring)
 }
 
 .vilda-obesity-banner__btn:active {
@@ -94,7 +94,7 @@
 @media(prefers-color-scheme:dark) {
   .vilda-obesity-banner {
     background: #fff;
-    border-color: #00838d40;
+    border-color: var(--focus-ring);
     color: #1f2937;
     box-shadow: 0 2px 8px #00000059
   }

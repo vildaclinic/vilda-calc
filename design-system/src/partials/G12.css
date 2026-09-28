@@ -42,12 +42,13 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   left:max(var(--mobile-dock-side-gap),calc(env(safe-area-inset-left,0px) + .35rem));
   right:max(var(--mobile-dock-side-gap),calc(env(safe-area-inset-right,0px) + .35rem));
   bottom:var(--mobile-dock-anchor-bottom);
-  z-index:1100;
+  z-index:var(--z-mobile-dock);
   display:none;
   transform:translateY(0);
   opacity:1;
   transition:transform .22s ease,opacity .22s ease,box-shadow .22s ease;
-  -webkit-tap-highlight-color:transparent}
+  -webkit-tap-highlight-color:transparent;
+}
 body.has-mobile-bottom-dock #mobileBottomDock{
   display:block!important}
 #mobileBottomDock .mobile-bottom-dock__list{
@@ -80,8 +81,9 @@ body.has-mobile-bottom-dock #mobileBottomDock{
   transform:scale(.97)}
 #mobileBottomDock .mobile-bottom-dock__item.is-active{
   color:var(--primary);
-  background:#00838d1f;
-  box-shadow:inset 0 0 0 1px #00838d2e}
+  background:var(--tint-teal-active);
+  box-shadow:inset 0 0 0 1px #00838d2e;
+}
 #mobileBottomDock .mobile-bottom-dock__icon{
   width:1.2rem;
   height:1.2rem;
@@ -102,8 +104,9 @@ body.has-mobile-bottom-dock #mobileBottomDock{
   text-overflow:ellipsis}
 #mobileBottomDock.is-hidden,#mobileBottomDock.is-keyboard-hidden{
   transform:translateY(calc(100% + env(safe-area-inset-bottom,0px) + var(--mobile-dock-bottom-gap) + .95rem));
-  opacity:.001;
-  pointer-events:none}
+  opacity:var(--opacity-hidden-dock);
+  pointer-events:none;
+}
 body.has-mobile-bottom-dock{
   padding-bottom:calc(var(--mobile-dock-height) + env(safe-area-inset-bottom,0px) + var(--mobile-dock-extra-offset) + var(--mobile-dock-bottom-gap) + 1rem)!important}
 
@@ -208,8 +211,9 @@ body.mobile-nav-ui-locked #scrollTopBtn {
   justify-content:center;
   align-items:center;
   cursor:pointer;
-  z-index:1000;
-  transition:background .2s ease}
+  z-index:var(--z-menu);
+  transition:background .2s ease;
+}
 #scrollTopBtn:hover{
   background:var(--secondary)}
 #scrollTopBtn i,#scrollTopBtn svg{
@@ -227,9 +231,10 @@ body.mobile-nav-ui-locked #scrollTopBtn {
 
 /* ===== ScrollTopButton — pozycja nad dockiem (ios26-v2.css 434-443) ===== */
 body.has-mobile-bottom-dock #scrollTopBtn{
-  bottom:var(--scroll-top-btn-bottom, 1rem)!important;
-  z-index:1201;
-  transition:bottom .22s ease,background .2s ease,transform .22s ease,opacity .22s ease}
+  bottom:var(--scroll-top-btn-bottom, 1rem) !important;
+  z-index:var(--z-scroll-top-dock);
+  transition:bottom .22s ease,background .2s ease,transform .22s ease,opacity .22s ease;
+}
 body.has-mobile-bottom-dock.mobile-bottom-dock-transitioning #scrollTopBtn{
   transition:background .2s ease,transform .22s ease,opacity .22s ease!important}
 body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn,body.mobile-nav-ui-locked.has-mobile-bottom-dock #scrollTopBtn{
@@ -251,7 +256,7 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   position:fixed;
   right:16px;
   bottom:calc(var(--vilda-shell-dock-h, 84px) + 14px);
-  z-index:1150;
+  z-index:var(--z-shell-fab);
   width:44px;
   height:44px;
   display:flex;
@@ -270,7 +275,8 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   transform:translateY(10px);
   pointer-events:none;
   transition:opacity .22s ease,transform .22s ease;
-  -webkit-tap-highlight-color:transparent}
+  -webkit-tap-highlight-color:transparent;
+}
 #appShellScrollTop.is-visible{
   opacity:1;
   transform:translateY(0);
@@ -285,7 +291,7 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   position:fixed;
   right:16px;
   bottom:calc(var(--vilda-shell-dock-h, 84px) + 14px);
-  z-index:1150;
+  z-index:var(--z-shell-fab);
   width:54px;
   height:54px;
   display:flex;
@@ -294,7 +300,7 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   padding:0;
   border:0;
   border-radius:50%;
-  background:#00838d;
+  background:var(--primary);
   color:#fff;
   font-size:1.7rem;
   line-height:1;
@@ -304,7 +310,8 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   transform:translateY(10px);
   pointer-events:none;
   transition:opacity .22s ease,transform .22s ease,bottom .22s ease;
-  -webkit-tap-highlight-color:transparent}
+  -webkit-tap-highlight-color:transparent;
+}
 #appShellTermFab.is-visible{
   opacity:1;
   transform:translateY(0);
@@ -409,14 +416,15 @@ html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellSc
 
 /* ===== Płynne szkło (.liquid-ios26) — ios26-v2.css 85-93, 97-99: globalna reguła button z !important; w aplikacji obejmuje #scrollTopBtn, #appShellScrollTop, #appShellTermFab i .vilda-status-link (tło #fff3, obrys --lg-border, kolor #111, promień 14px) ===== */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
-  background:#fff3!important;
-  border:1px solid var(--lg-border)!important;
-  color:#111!important;
-  border-radius:14px!important;
-  backdrop-filter:blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
-  box-shadow:0 4px 12px #0000001a!important;
-  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+  background:#fff3 !important;
+  border:1px solid var(--lg-border) !important;
+  color:var(--text-ink) !important;
+  border-radius:14px !important;
+  backdrop-filter:blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  box-shadow:var(--shadow-button-glass) !important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
+}
 .liquid-ios26 button._pressed{
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
