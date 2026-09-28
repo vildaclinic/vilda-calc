@@ -5829,6 +5829,97 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
+
+**Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe
+odroczenie w `resetGrowthHistoryModulesAfterClear` (`vilda_data_import_export.js`), które po „Wyczyść wszystkie pola”
+miało zdjąć flagi `__vildaSuspendAdvIntakeSync`, `__vildaSuspendGrowthHistoryCrossSync`, `__vildaSuspendIntakeUserReset`
+i dopiąć parowanie zaawansowane↔spożycie, ma działać; (2) wiersz spożycia będący lustrem punktu terapii GH ma nieść
+tożsamość punktu, żeby parowanie nie mogło z niego dorobić wiersza „ręcznego”.
+
+**Co ustalono przed kodowaniem (haki na DOM, prawdziwa strona, dane fikcyjne).** Po włączeniu samego odroczenia (na
+racie 1) zestawy `gh-punkty-po-wczytaniu`, `gh-punkt-a-reczny-wiersz` i `gh-znacznik-po-f5` są zielone — rata 1 usunęła
+źródło bliźniaka na tych ścieżkach. Czerwieni się natomiast `odtworz-zapisany-stan-wyscig` („Odtwórz zapis” w trakcie
+powolnego, 1,5-sekundowego importu punktów): `applyLoadedData` po przebudowie tabel z rekordu **od razu** wołało
+`vildaEnsureAdvancedIntakePairing` — dotąd pomijane, bo flagi wisiały — a rekord pacjenta (`intake.history`) nie niesie
+`data-gh-id`; parowanie dorabiało więc z wiersza spożycia 13 l. 1 mies. / 139,9 cm wiersz zaawansowany bez znacznika,
+a import (`ghReczny`) uznawał punkt za przykryty wierszem ręcznym i punkt w ogóle nie wracał. Drugie ustalenie: flagi
+„wiszące od startu” w nowej karcie (wynik 1 raty 1) to skutek tego samego martwego odroczenia — `clearAllData` woła też
+czyszczenie przy logowaniu i starcie karty (`vilda_auth_ui.js`), więc synchronizacja obu tabel w świeżej karcie stała
+do pierwszego odtworzenia stanu.
+
+**Reguły (rata 2).**
+
+1. **Odroczenie po czyszczeniu działa** (`scheduleTimeout` → `setTimeout`): flagi opadają w następnym ticku, po czym
+   idą parowanie i `reconcileGrowthHistoryModules("advanced")`. Skutek dla lekarza: w świeżej karcie i po „Wyczyść”
+   wiersz wpisany w „Zaawansowanych obliczeniach wzrostowych” od razu ma lustro w „Szacowanym spożyciu energii” (i odwrotnie).
+2. **Lustro punktu GH niesie tożsamość** (`vilda_advanced_growth.js`, pomocniki `Ggh0–Ggh3`): wiersz spożycia
+   sparowany z wierszem `data-gh-id` dostaje ten sam `data-gh-id` i `data-gh-sync`. Znacznik dostaje **tylko** wiersz,
+   który był pusty i został wypełniony z wiersza GH (backfill/sync zaawansowane→spożycie), albo ma te same wartości
+   (miesiąc wieku równy, wzrost i masa ±0,05) — wiersz ręczny o innych wartościach sparowany po kolejności z wierszem GH
+   znacznika nie dostaje.
+3. **Parowanie łączy po tożsamości, nie po kolejności**: najpierw pary `data-gh-id` ↔ `data-gh-id`, potem wiersz GH bez
+   lustra szuka nieoznaczonego wiersza spożycia o tych samych wartościach (odzyskanie znacznika po „Nowy pomiar” /
+   rekordzie bez `data-gh-id`), dopiero reszta paruje się po kolejności jak dotąd. Identyfikatory synchronizacji są w jednym
+   przebiegu unikatowe (dotąd mogły się zdublować po przesunięciu indeksów).
+4. **Z lustra nie dorabia się wiersza ręcznego**: `backfillAdvancedIntakeAdvancedRowFromHistoryRow` i
+   `syncAdvancedIntakeHistoryRowToAdvancedRow` odmawiają kopiowania z wiersza `data-gh-id` do wiersza zaawansowanego
+   o innej (lub żadnej) tożsamości.
+5. **Lustro bez punktu jest usuwane, nie awansowane**: wiersz spożycia z `data-gh-id`, dla którego w tabeli zaawansowanej
+   nie ma wiersza o tym identyfikatorze (punkt usunięty w monitorze GH, przykryty identycznym wierszem ręcznym albo
+   import jeszcze nie doszedł), parowanie usuwa; lustro odtwarza się z wiersza GH, gdy ten wraca. Dotąd po usunięciu punktu
+   parowanie robiło z lustra wiersz-ducha 139,9 w tabeli zaawansowanej (po F5, gdy flagi były zdjęte).
+6. **Import punktów paruje od razu po sobie** (`importTherapyPointsToAdvancedGrowth` → `vildaEnsureAdvancedIntakePairing`,
+   w trakcie odtwarzania stanu pomijane przez zawieszenie), więc lustro powstaje i znika razem z punktem.
+7. **Na ścieżce wczytania import ma pierwszeństwo** (`vilda_data_import_export.js`, `Ggh_a`/`Ggh_b`): `applyLoadedData`
+   podnosi flagi przed przebudową tabel i **nie paruje** po niej; flagi opadają, a parowanie i reconcile ruszają dopiero po
+   zakończeniu importu punktów w `ghReimport` (albo od razu, gdy importu nie ma). Zdejmowanie jest bezwarunkowe —
+   `__vildaPersistRestoring` nie jest tu sygnałem, bo `finalizeMainSessionRestore` zdejmuje go z opóźnieniem (rAF + tick);
+   przy próbie bramkowania tą flagą flagi zawieszenia zostawały podniesione po F5 (`110`), a lustra bez znaczników.
+8. **Zapis stanu UI niesie tożsamość lustra** (`vilda_persist_runtime.js`): `intakeRowsUI[i].ghId` w zrzucie, normalizatorze
+   i odtworzeniu (`data-gh-id` + `data-gh-sync` na odtworzonym wierszu). Stare zrzuty bez `ghId` odtwarzają się bez znacznika;
+   parowanie odzyskuje go po wartościach (reguła 3).
+
+**Co się nie zmienia.** Żaden wzór, próg, jednostka ani dane. Rekord pacjenta (`intake.history`, `collectUserData`) bez
+zmian — świadomie nie rozszerzono JSON rekordu o `ghId` (AGENTS §5: zmiana JSON/persistence wymaga osobnej decyzji);
+po „Nowy pomiar” i przy rekordzie sprzed zmiany tożsamość lustra wraca po wartościach. Deduplikacja importu
+(`gh-punkt-a-reczny-wiersz`: identyczny wiersz ręczny wpisany w tabeli zaawansowanej zostaje ręczny) bez zmian.
+
+**Wpływ na to, co widzi lekarz.** (a) Tabela spożycia jest teraz „żywym” lustrem tabeli zaawansowanej także w świeżej
+karcie i po „Wyczyść” (dotąd synchronizacja ruszała dopiero po odtworzeniu stanu) — liczba wierszy historii wchodzących
+do szacowania spożycia może się różnić od stanu sprzed zmiany, bo dotąd lustra bywały nieaktualne. (b) Po usunięciu
+punktu terapii w monitorze GH znika także jego lustro w tabeli spożycia (dotąd zostawało, a po F5 wracało jako
+wiersz „ręczny” w tabeli zaawansowanej). (c) Wiersz spożycia wpisany ręcznie z **dokładnie** tymi samymi wartościami
+co punkt terapii (wiek, wzrost i masa ±0,05) zostanie uznany za jego lustro i zniknie razem z punktem — to ten sam pomiar
+wpisany dwukrotnie; wiersz o innych wartościach zostaje. (d) Znacznika po F5 nie odzyska lustro, którego wartości lekarz
+zmienił ręcznie w tabeli spożycia (różnica > 0,05) — zachowuje się jak przed zmianą.
+
+**Ryzyko resztkowe (udokumentowane, nie zamknięte).** Dwa niezależne mechanizmy odtwarzania po F5 (`vildaPersistRestoreAll`
+i `restoreMainSessionIfAny` → `applyLoadedData`) dzielą te same flagi zawieszenia; gdyby odroczone zdjęcie flag jednego
+trafiło w asynchroniczne okno importu drugiego (IndexedDB), parowanie mogłoby zbudować bliźniaka z nieoznaczonego wiersza
+rekordu. W zmierzonym przebiegu po F5 (haki na DOM, prawdziwa strona) kolejność była: odtworzenie stanu → import → zdjęcie flag →
+`applyLoadedData` → import → zdjęcie flag. Domknięcie wymagałoby `ghId` w rekordzie (`intake.history`) — decyzja właściciela.
+
+**Strażnicy.** `tests/unit/gh-tozsamosc-parowanie.test.mjs` — prawdziwe `pairAdvancedIntakeRowsByOrder`, `backfill*`
+i `sync*` modułu na atrapie DOM (dwa kontenery, wiersze `.adv-*`/`.intake-*`): reguły 2–5 wprost (lustro dostaje znacznik,
+para po id przy odwróconej kolejności, odzyskanie po wartościach, strażnik wartości, usunięcie sieroty bez wiersza-ducha,
+odmowa kopiowania do wiersza o innej tożsamości), **kontrola negatywna** wyłącza odczyt tożsamości (`Ggh0 → ""`) i pokazuje
+zgłoszony przebieg (sierota → wiersz ręczny 139,9), strażnik źródła (parowanie po imporcie, `ghId` w persist).
+`tests/unit/czyszczenie-pol-odswiezenie.test.mjs` — blok „dług zapisany” zamieniony na test naprawy: po `clearAllData`
+flagi ustawione synchronicznie, po ticku zdjęte, parowanie i reconcile wywołane; kontrola negatywna z przywróconym
+`scheduleTimeout`; w pliku nie ma już żadnego `scheduleTimeout(`; kotwice ścieżki wczytania (`Ggh_a`/`Ggh_b`, brak
+parowania przed importem). `tests/e2e/gh-tozsamosc-spozycie.spec.mjs` — prawdziwa strona: (1) po starcie karty i po
+„Wyczyść” flagi opadają w ticku, wiersz zaawansowany od razu ma lustro; (2) lustro punktu ma `data-gh-id`, po zapisie
+i F5 wraca ze znacznikiem bez dubli, po usunięciu punktu znika bez wiersza-ducha. Zestawy `gh-punkty-po-wczytaniu`,
+`gh-punkt-a-reczny-wiersz`, `gh-znacznik-po-f5`, `odtworz-zapisany-stan-wyscig`, `wczytany-pacjent-odswiezenie` — zielone.
+
+SW 1.1.85 → **1.1.86** (równolegle scalony #451 wydał SW 1.1.85 i `vilda_advanced_growth.js?v=71`, więc rata podbija o jeszcze jeden);
+`vilda_advanced_growth.js?v=71→72`, `vilda_data_import_export.js?v=84→85`, `vilda_persist_runtime.js?v=16→17`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania (a)–(d) wyżej i scalenie; ewentualne `ghId` w rekordzie
+pacjenta (domknięcie ryzyka resztkowego). Zmiana nie jest kliniczna (żaden wzór, próg ani dane), ale zmienia skład historii
+pomiarów widocznej w obu tabelach.
+
 ## Wiersze punktów terapii GH przeżywają przebudowę tabeli zaawansowanej (P-GH-TOZSAMOSC rata 1, SW 1.1.83, 2026-09-28)
 
 **Skąd.** Rozstrzygnięcie długu z P-MINI-WYCZYSC („drugie odroczenie”): właściciel wybrał **opcję (a) w dwóch
@@ -5869,7 +5960,7 @@ dodaje i usuwa (rozpoznaje je po `data-gh-id`). Po poprawce po F5 tabela ma `123
 zostaje ręczny) bez zmian. Flagi zawieszenia po czyszczeniu — bez zmian w tej racie (martwe odroczenie
 w `resetGrowthHistoryModulesAfterClear` zostaje do raty 2).
 
-**Rata 2 (do zrobienia, ta sama decyzja właściciela).** Zdjęcie flag zawieszenia po „Wyczyść wszystkie pola”
+**Rata 2 (plan z raty 1; zrealizowana jako P-GH-TOZSAMOSC rata 2, SW 1.1.86 — wpis wyżej; w realizacji zamiast przenoszenia znacznika przez `backfillAdvRowFromIntake` przyjęto parowanie po tożsamości i zakaz dorabiania wiersza z lustra).** Zdjęcie flag zawieszenia po „Wyczyść wszystkie pola”
 (przywrócenie odroczenia w `resetGrowthHistoryModulesAfterClear`) wymaga, by bliźniak nie mógł powstać także na
 ścieżce „Wyczyść → Wczytaj → Odtwórz zapis”, gdzie kontener jest czyszczony celowo i nie ma czego zachować:
 sparowany wiersz spożycia ma nieść tożsamość punktu (`data-gh-id`), zrzut `intakeRowsUI` ma ją zapisywać,
