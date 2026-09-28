@@ -1,0 +1,50 @@
+<!-- @dsCard group="Nakładki" height=640 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>AuthSheet</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.ds-row{display:flex;gap:16px;align-items:stretch}
+.ds-col{flex:3 3 0;min-width:0}
+.ds-col--stack{flex:2 2 0;display:flex;flex-direction:column;align-items:center;gap:12px}
+/* w aplikacji nakładki i dymek są position:fixed nad całą stroną — w podglądzie nakładki stoją w kolumnach, dymki w przepływie dokumentu */
+.ds-col .vilda-auth-overlay-sheet,.ds-col .vilda-logout-overlay{position:relative!important}
+.ds-col .vilda-copy-summary-toast{position:static!important;transform:none!important}
+</style></head><body class="liquid-ios26">
+<div class="ds-row">
+  <div class="ds-col">
+    <div class="vilda-auth-overlay vilda-auth-overlay-sheet">
+      <div class="vilda-auth-sheet" role="alertdialog" aria-modal="true">
+        <h3 class="vilda-auth-sheet-title">Chcesz logować się przez Touch ID?</h3>
+        <p class="vilda-auth-sheet-body">Następnym razem jeden dotyk wystarczy — bez wpisywania hasła.</p>
+        <div class="vilda-auth-sheet-actions">
+          <button class="vilda-auth-btn vilda-auth-btn-primary" type="button">Tak, włącz Touch ID</button>
+          <button class="vilda-auth-btn vilda-auth-btn-ghost" type="button">Nie teraz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ds-col">
+    <div class="vilda-auth-overlay vilda-auth-overlay-sheet">
+      <div class="vilda-auth-sheet vilda-auth-sheet-conflict" role="alertdialog" aria-modal="true" aria-label="Ktoś inny zmienił ten rekord po wczytaniu danych">
+        <h3 class="vilda-auth-sheet-title">Ktoś inny zmienił ten rekord po wczytaniu danych</h3>
+        <p class="vilda-auth-sheet-body">Od chwili wczytania danych do formularza w rekordzie tego pacjenta pojawiła się zmiana zapisana na innym urządzeniu.</p>
+        <ul class="vilda-auth-conflict-list">
+          <li>Wzrost: 116 cm → 117,5 cm</li>
+          <li>Masa ciała: 26 kg → 26,4 kg</li>
+        </ul>
+        <div class="vilda-auth-sheet-actions">
+          <button class="vilda-auth-btn vilda-auth-btn-primary" type="button">Przyjmij dane z bazy</button>
+          <button class="vilda-auth-btn vilda-auth-btn-ghost" type="button">Zapisz to, co w formularzu</button>
+          <button class="vilda-auth-btn vilda-auth-btn-ghost" type="button">Anuluj zapis</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ds-col ds-col--stack">
+    <div class="vilda-logout-overlay" role="status" aria-live="polite">
+      <div class="vilda-logout-overlay__spinner" aria-hidden="true"></div>
+      <div class="vilda-logout-overlay__label">Trwa wylogowywanie…</div>
+    </div>
+    <div class="vilda-copy-summary-toast ok show" role="status">✓ Dane skopiowane do schowka</div>
+    <div class="vilda-copy-summary-toast err show" role="status">Nie udało się skopiować — spróbuj ponownie.</div>
+  </div>
+</div>
+</body></html>

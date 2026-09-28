@@ -1,0 +1,39 @@
+<!-- @dsCard group="Wyniki i dane" height=470 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>SummaryGrid</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.col-a{flex:1 1 280px;min-width:0;max-width:340px}
+.col-b{flex:2 1 420px;min-width:0}
+</style></head><body class="liquid-ios26">
+<div class="row">
+  <div class="col-a">
+    <div class="prev-summary-label">Podsumowanie pomiaru</div>
+    <div class="summary-grid">
+      <span class="label">Masa ciała</span><span class="val"><span class="result-val">32,4 kg</span></span>
+      <span class="label">Wzrost</span><span class="val"><span class="result-val">138 cm</span></span>
+      <span class="label">BMI</span><span class="val"><span class="result-val">17,0</span></span>
+      <span class="label">Centyl BMI</span><span class="val"><span class="muted">48. centyl</span></span>
+      <div class="diff-section">
+        <div class="diff-row"><span class="label">Zmiana masy</span><span class="val"><span class="result-val status-improve">+1,2 kg</span></span></div>
+        <div class="diff-verdict status-ok">Tempo przyrostu w normie.</div>
+      </div>
+    </div>
+    <hr class="prev-summary-separator">
+    <div class="current-summary-row"><span class="current-summary-param">Wskaźnik Cole’a</span><span class="current-summary-dots"></span><span class="current-summary-value">98,5 %</span></div>
+    <div class="current-summary-row"><span class="current-summary-param">WHR</span><span class="current-summary-dots"></span><span class="current-summary-value">0,84</span></div>
+  </div>
+  <div class="col-b">
+    <div class="porownanie-chipy"><span class="porownanie-chip">Poprzedni pomiar: 12.03.2026</span><span class="porownanie-chip porownanie-chip--szara">wiek 8 lat 2 mies.</span><span id="porownanieOdstep" class="porownanie-chip porownanie-chip--szara">6 miesięcy temu</span><span id="porownanieKontekst" class="porownanie-chip porownanie-chip--kontekst">pomiar z wizyty</span><span class="porownanie-chip porownanie-chip--szara">źródło: OLAF</span></div>
+    <table class="porownanie-tabela">
+      <thead><tr><th>Parametr</th><th class="pt-kol-poprzednio">Poprzednio</th><th>Dziś</th><th>Zmiana</th></tr></thead>
+      <tbody>
+        <tr data-klucz="wzrost"><td>Wzrost</td><td class="pt-kol-poprzednio"><span class="pt-w">135,5<small>&nbsp;cm</small></span><span class="pt-s">50. centyl</span></td><td class="pt-dzis"><span class="pt-w">138,0<small>&nbsp;cm</small></span><span class="pt-s">52. centyl</span><span class="pt-s pt-byl">było 135,5 cm, 50. centyl</span></td><td class="pt-zmiana"><span class="pt-d status-ok">+2,5 cm</span><span class="pt-s pt-tempo">5,1 cm/rok</span><span class="pt-pill status-ok">w normie</span></td></tr>
+        <tr data-klucz="masa"><td>Waga</td><td class="pt-kol-poprzednio"><span class="pt-w">31,2<small>&nbsp;kg</small></span><span class="pt-s">45. centyl</span></td><td class="pt-dzis"><span class="pt-w status-improve">32,4<small>&nbsp;kg</small></span><span class="pt-s">47. centyl</span><span class="pt-s pt-byl">było 31,2 kg, 45. centyl</span></td><td class="pt-zmiana"><span class="pt-d status-improve">+1,2 kg</span><span class="pt-pill status-improve">warto obserwować</span></td></tr>
+        <tr data-klucz="bmi"><td>BMI</td><td class="pt-kol-poprzednio"><span class="pt-w pt-brak">—</span></td><td class="pt-dzis"><span class="pt-w status-alert">17,0</span><span class="pt-s">48. centyl</span></td><td class="pt-zmiana"><span class="pt-d status-alert">+0,5</span><span class="pt-pill status-alert">poniżej normy</span></td></tr>
+      </tbody>
+    </table>
+    <div class="porownanie-tempo status-improve">Tempo wzrastania 5,1 cm/rok — warto obserwować.</div>
+    <div class="porownanie-nota">Tempo wzrastania wyliczono tylko wtedy, gdy odstęp od poprzedniego punktu wynosił co najmniej 6 miesięcy i w obu punktach wpisano wzrost.</div>
+  </div>
+</div>
+</body></html>

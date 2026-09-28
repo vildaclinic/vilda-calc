@@ -1,0 +1,14 @@
+<!-- @dsCard group="Mobile" height=150 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>ScrollTopButton</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+/* w aplikacji przyciski są przypięte do prawego dolnego rogu (position:fixed) — w podglądzie stoją w przepływie */
+body #scrollTopBtn,body #appShellScrollTop,body #appShellTermFab{position:static!important;transform:none!important}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:28px}
+.ground{display:flex;align-items:center;justify-content:center;padding:14px 18px;border-radius:12px;background:rgba(0,131,141,.06);border:1px solid rgba(0,0,0,.08)}
+</style></head><body class="liquid-ios26">
+<div class="row">
+  <span class="ground"><button id="scrollTopBtn" type="button" aria-label="Powrót na górę strony" data-ios26-injected="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up" aria-hidden="true" focusable="false"><path d="M12 19V5"></path><path d="m5 12 7-7 7 7"></path></svg></button></span>
+  <span class="ground"><button id="appShellScrollTop" type="button" class="is-visible" aria-label="Przewiń na górę"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button></span>
+  <span class="ground"><button id="appShellTermFab" type="button" class="is-visible" aria-label="Nowy termin">+</button></span>
+</div>
+</body></html>

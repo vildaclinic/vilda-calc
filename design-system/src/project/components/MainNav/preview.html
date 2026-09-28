@@ -1,0 +1,43 @@
+<!-- @dsCard group="Nawigacja" height=390 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>MainNav</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.ground{background:#fff;padding:0 0 8px;margin-bottom:16px}
+.ground--open{padding-bottom:0;margin-bottom:196px}
+</style></head><body class="liquid-ios26">
+<div class="ground"><nav class="main-nav" aria-label="Menu główne">
+  <ul>
+    <li class="menu-toggle">
+      <input type="checkbox" id="navToggleClosed" class="nav-toggle">
+      <label for="navToggleClosed" aria-label="Menu"><span class="bar"></span><span class="bar"></span><span class="bar"></span></label>
+      <ul class="vertical-menu">
+        <li><a href="o-aplikacji.html">O aplikacji</a></li>
+        <li><a href="kontakt.html">Kontakt</a></li>
+        <li><a href="docpro.html" disabled>DocPro</a></li>
+        <li><button type="button" disabled>Wyloguj się</button></li>
+      </ul>
+    </li>
+    <li><a href="index.html">Kalkulator</a></li>
+    <li><a href="docpro.html">DocPro</a></li>
+    <li><a href="materialy-edukacyjne.html">Wiedza</a></li>
+    <li><a href="ustawienia.html">Ustawienia</a></li>
+  </ul>
+</nav></div>
+<div class="ground ground--open"><nav class="main-nav" aria-label="Menu główne">
+  <ul>
+    <li class="menu-toggle">
+      <input type="checkbox" id="navToggleOpen" class="nav-toggle" checked>
+      <label for="navToggleOpen" aria-label="Menu"><span class="bar"></span><span class="bar"></span><span class="bar"></span></label>
+      <ul class="vertical-menu">
+        <li><a href="o-aplikacji.html">O aplikacji</a></li>
+        <li><a href="kontakt.html">Kontakt</a></li>
+        <li><a href="docpro.html" disabled>DocPro</a></li>
+        <li><button type="button" disabled>Wyloguj się</button></li>
+      </ul>
+    </li>
+    <li><a href="index.html">Kalkulator</a></li>
+    <li><a href="docpro.html">DocPro</a></li>
+    <li><a href="materialy-edukacyjne.html">Wiedza</a></li>
+    <li><a href="ustawienia.html">Ustawienia</a></li>
+  </ul>
+</nav></div>
+</body></html>

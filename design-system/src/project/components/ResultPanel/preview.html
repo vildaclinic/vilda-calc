@@ -1,0 +1,29 @@
+<!-- @dsCard group="Wyniki i dane" height=450 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>ResultPanel</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.row > *{flex:1 1 260px;min-width:0}
+.row .result-box{margin:0}
+.stack{display:flex;flex-direction:column;gap:16px;max-width:900px}
+</style></head><body class="liquid-ios26">
+<div class="stack">
+  <div class="row">
+    <div id="bmiResult" class="result-box"><strong>BMI:</strong> <span class="result-val">17,4</span><br><small>48. centyl</small></div>
+    <div class="result-box bmi-warning"><strong>BMI:</strong> <span class="result-val">24,8</span><br><small>&gt;90. centyla</small></div>
+    <div class="result-box bmi-danger"><strong>BMI:</strong> <span class="result-val">31,2</span><br><small>&gt;97. centyla</small></div>
+  </div>
+  <div class="row">
+    <section id="intakeCard" class="result-card">
+      <h2 class="intake-title">Szacowane spożycie energii</h2>
+      <div class="result-number">1850<small>kcal</small></div>
+    </section>
+    <div id="whrInfo" class="result-box whr-warning">
+      <div class="whr-result">
+        <div class="whr-topline"><span class="whr-label">WHR:</span><span class="whr-number">0,92</span></div>
+        <div class="whr-badges"><span class="whr-badge">Talia 84 cm</span><span class="whr-badge">Biodra 91 cm</span></div>
+        <div class="whr-status warn">Rozmieszczenie tkanki tłuszczowej — warto obserwować.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

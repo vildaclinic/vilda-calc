@@ -1,0 +1,58 @@
+<!-- @dsCard group="Konto i stopka" height=1170 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>AuthCard</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+/* korzeń jest w aplikacji position:fixed na całym ekranie — w podglądzie tylko pozycja w przepływie */
+body .vilda-auth-root.vilda-auth-root{position:relative!important;inset:auto!important;flex:0 0 auto}
+.vilda-auth-screen + .vilda-auth-screen{margin-top:40px}
+</style></head><body class="liquid-ios26">
+<div class="vilda-auth-root" aria-live="polite" style="display:block">
+  <div class="vilda-auth-overlay">
+    <div class="vilda-auth-card" role="dialog" aria-modal="true">
+      <div class="vilda-auth-brand">
+        <h1 class="vilda-auth-brand-name">wagaiwzrost.pl</h1>
+        <p class="vilda-auth-brand-tag">Vilda Clinic</p>
+      </div>
+      <div class="vilda-auth-screen vilda-auth-login">
+        <h2 class="vilda-auth-title">Kto się loguje?</h2>
+        <p class="vilda-auth-subtitle">Wybierz konto, aby kontynuować.</p>
+        <div class="vilda-auth-user-list">
+          <button class="vilda-auth-user-card" type="button" title="Zaloguj jako dr Testowa (Touch ID dostępny)" data-has-passkey="1">
+            <div class="vilda-auth-user-avatar">D</div>
+            <div class="vilda-auth-user-info">
+              <div class="vilda-auth-user-name">dr Testowa</div>
+              <div class="vilda-auth-user-passkey-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Touch ID</div>
+              <div class="vilda-auth-user-meta">Ostatnio: przed chwilą</div>
+            </div>
+            <span class="vilda-auth-user-arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="vilda-auth-user-card" type="button" title="Zaloguj jako Gabinet testowy" data-has-passkey="0">
+            <div class="vilda-auth-user-avatar">G</div>
+            <div class="vilda-auth-user-info">
+              <div class="vilda-auth-user-name">Gabinet testowy</div>
+              <div class="vilda-auth-user-meta">Ostatnio: 3 dni temu</div>
+            </div>
+            <span class="vilda-auth-user-arrow" aria-hidden="true">›</span>
+          </button>
+          <button class="vilda-auth-user-card" type="button" title="Zaloguj jako Konto bez nazwy" data-has-passkey="0">
+            <div class="vilda-auth-user-avatar">K</div>
+            <div class="vilda-auth-user-info">
+              <div class="vilda-auth-user-name">Konto bez nazwy</div>
+            </div>
+            <span class="vilda-auth-user-arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
+        <div class="vilda-auth-divider"><span>lub</span></div>
+        <div class="vilda-auth-links"><a class="vilda-auth-link" href="#">← Wybierz inne konto</a></div>
+        <div class="vilda-auth-links"><a class="vilda-auth-link vilda-auth-link-muted" href="#">Zapomniałem hasła</a></div>
+      </div>
+      <div class="vilda-auth-screen vilda-auth-setup">
+        <div class="vilda-auth-step">Krok 2 z 4</div>
+        <h2 class="vilda-auth-title">Twój klucz odzyskiwania</h2>
+        <p class="vilda-auth-subtitle">Zapisz go teraz — to jedyny sposób na odzyskanie konta, jeśli zapomnisz hasła. Możesz go skopiować lub pobrać jako plik.</p>
+        <div class="vilda-auth-recovery-key">TEST-0000-DEMO-1111-FAKE-2222</div>
+        <div class="vilda-auth-info"><div style="font-weight:600; color:#08202C; margin-bottom:6px;">Masz już zapisaną bazę pacjentów?</div><p class="vilda-auth-side-note" style="margin:0 0 4px 0;">Jeśli masz wcześniejsze pliki kopii (.wiw lub starsze .vilda — np. z innego urządzenia, OneDrive lub iCloud), możesz je teraz wczytać do swojego nowego konta. Aplikacja poprosi o hasło, którym te pliki były zaszyfrowane.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

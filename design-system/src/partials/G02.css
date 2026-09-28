@@ -1,0 +1,705 @@
+/* G02 Pola formularza — źródło: src/css/style.css (label/input/select, .measure-row*, .user-card, .vild-range-invalid, #abxDoseInput, .switch*, .doctor-*, .diet-survey-chip, high-contrast), src/css/ios26-v2.css (.liquid-ios26 input/select), src/html-styles/index.css (index.html <style> #4: .vild-age-row, .vild-dob-*, .vild-weeks-row), src/css/vilda_auth_ui.css (.vilda-auth-input, -search-, -meter-, -checkbox-row, -pw-toggle, high-contrast) */
+
+/* ===================== FormField — reguły bazowe (style.css) ===================== */
+label{
+  display:block;
+  margin-top:.7rem;
+  font-size:.95rem}
+input,select,option{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  width:100%;
+  padding:.45rem;
+  border:1px solid #ccc;
+  border-radius:4px;
+  font-size:1rem}
+.flex{
+  display:flex;
+  gap:1rem;
+  flex-wrap:wrap}
+.snack-row,.meal-row,.food-row{
+  display:grid;
+  grid-template-columns:1fr 100px 34px;
+  gap:.5rem;
+  align-items:center;
+  margin-top:.5rem}
+.measure-row{
+  display:block;
+  margin:.5rem 0 0}
+.measure-row-sep{
+  height:3px;
+  background:#00767e40;
+  margin:.6rem 0}
+.measure-row-top{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:.5rem;
+  align-items:end}
+.measure-row-bot{
+  display:grid;
+  grid-template-columns:1fr 1fr 34px;
+  gap:.5rem;
+  align-items:end;
+  margin-top:.35rem}
+.measure-row-top label,.measure-row-bot label{
+  font-size:.95rem}
+.measure-row-bot .icon{
+  align-self:center;
+  justify-self:end}
+input[type=number],input[type=text],select{
+  width:100%;
+  max-width:100%;
+  padding:.45rem .65rem;
+  border:1px solid #d0d7da;
+  border-radius:var(--radius);
+  transition:border-color .2s ease,box-shadow .2s ease}
+input:focus,select:focus{
+  outline:none;
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px #00838d40}
+#name[disabled],#advName[disabled]{
+  background:#f1f5f5;
+  color:#6b7a7a}
+.half{
+  flex:0 1 50%;
+  max-width:50%;
+  margin:0 auto}
+@media(max-width:600px){
+  .half{
+  flex:1 1 100%;
+  max-width:100%;
+  margin:0}
+}
+.user-card input,.user-card select{
+  font-family:Inter,sans-serif;
+  font-size:1.05rem;
+  padding:.65rem .85rem;
+  border-radius:.4rem;
+  border:1px solid #c0c8c8}
+#calcForm .half{
+  margin:0}
+#abxDoseInput.dose-out-of-range{
+  border:1px solid var(--danger)!important}
+#abxDoseInput:disabled{
+  background-color:#f5f5f5;
+  color:#6b7a7a;
+  border-color:#ccc;
+  cursor:not-allowed}
+.abx-disabled-label{
+  color:#6b7a7a!important}
+.vild-range-invalid{
+  border-color:var(--primary)!important;
+  box-shadow:0 0 0 3px #00838d24!important}
+.muted{
+  color:#6b7a7a;
+  font-size:.92rem}
+
+/* ---- FormField — index.html <style> #4 (src/html-styles/index.css) ---- */
+.vild-age-row{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  }
+.vild-age-row input.vild-age-auto,
+input#dobInput[readonly]{
+  background:#eef3f4;
+  border-color:#cfdcde;
+  color:#5a6f73;
+  }
+.vild-dob-note{
+  margin-top:5px;
+  font-size:.78rem;
+  line-height:1.35;
+  color:#0f6e56;
+  }
+input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{
+  background:#eef3f4;
+  border-color:#cfdcde;
+  color:#5a6f73;
+  opacity:1;
+  }
+.vild-dob-error{
+  margin-top:5px;
+  font-size:.78rem;
+  line-height:1.35;
+  color:#a32d2d;
+  }
+.vild-dob-clear{
+  margin-top:6px;
+  padding:0;
+  background:none;
+  border:0;
+  box-shadow:none;
+  font-family:inherit;
+  font-size:.78rem;
+  color:#00838d;
+  text-decoration:underline;
+  cursor:pointer;
+  }
+.vild-weeks-row{
+  margin-top:.7rem;
+  padding:9px 10px;
+  background:#eaf4f5;
+  border:1px solid #cfe3e5;
+  border-radius:6px;
+  }
+.vild-weeks-row > label{
+  margin-top:0;
+  }
+.vild-age-row > label{
+  flex:1 1 0;
+  min-width:0;
+  }
+.vild-age-row > label.vild-age-years{
+  flex:1.1 1 0;
+  }
+@media (max-width:360px){
+   .vild-age-row{
+  flex-direction:column;
+  gap:0;
+  }
+ }
+
+/* ===================== AuthInput — reguły bazowe (vilda_auth_ui.css) ===================== */
+.vilda-auth-input,input.vilda-auth-input{
+  width:100%;
+  box-sizing:border-box;
+  padding:14px 16px;
+  border-radius:12px;
+  border:1.5px solid #d6dde0;
+  background:#fff;
+  font-size:16px;
+  line-height:1.5;
+  font-family:inherit;
+  color:#08202c;
+  transition:border-color .15s ease,box-shadow .15s ease}
+.vilda-auth-input::placeholder{
+  color:#9ca8ad}
+.vilda-auth-input:focus{
+  outline:none;
+  border-color:#00838d;
+  box-shadow:0 0 0 4px #00838d1f}
+select.vilda-auth-input{
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  padding-right:40px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca8ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 14px center}
+.vilda-auth-recovery-input{
+  font-family:SF Mono,Menlo,Consolas,Liberation Mono,monospace;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  text-align:center;
+  font-size:15px}
+.vilda-auth-checkbox-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:12px;
+  padding:12px 14px;
+  background:var(--vilda-surface-alt, #f5f7fa);
+  border-radius:8px;
+  cursor:pointer}
+.vilda-auth-checkbox-row input[type=checkbox]{
+  width:18px;
+  height:18px;
+  flex-shrink:0;
+  cursor:pointer;
+  accent-color:var(--vilda-primary, #00838d)}
+.vilda-auth-checkbox-label{
+  font-size:14px;
+  line-height:1.4;
+  color:var(--vilda-text, #1a1a1a);
+  cursor:pointer;
+  user-select:none}
+.vilda-auth-search-wrap{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px;
+  margin-top:8px}
+.vilda-auth-search-input{
+  flex:1;
+  min-width:0;
+  box-sizing:border-box;
+  padding:12px 14px;
+  font-size:16px;
+  font-family:inherit;
+  color:#08202c;
+  background:#fff;
+  border:1.5px solid #d6dde0;
+  border-radius:12px;
+  outline:none;
+  transition:border-color .15s ease,box-shadow .15s ease}
+.vilda-auth-search-input::placeholder{
+  color:#6c8084}
+.vilda-auth-search-input:focus-visible,.vilda-auth-search-input:focus{
+  border-color:#00838d;
+  box-shadow:0 0 0 3px #00838d26}
+.vilda-auth-search-counter{
+  width:100%;
+  min-height:1em;
+  font-size:12px;
+  color:#6c8084;
+  text-align:right;
+  padding:0 4px}
+.vilda-auth-search-empty{
+  padding:28px 16px;
+  text-align:center;
+  color:#6c8084;
+  font-size:14px;
+  font-style:italic}
+.vilda-auth-user-card[hidden],.vilda-auth-search-empty[hidden]{
+  display:none!important}
+.vilda-auth-meter-wrap{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:-8px}
+.vilda-auth-meter{
+  flex:1;
+  height:6px;
+  background:#eef2f3;
+  border-radius:4px;
+  overflow:hidden}
+.vilda-auth-meter-fill{
+  height:100%;
+  width:0%;
+  background:#b00020;
+  border-radius:4px;
+  transition:width .2s ease,background-color .2s ease}
+.vilda-auth-meter-fill[data-strength=very-weak]{
+  background:#b00020}
+.vilda-auth-meter-fill[data-strength=weak]{
+  background:#e57c2c}
+.vilda-auth-meter-fill[data-strength=fair]{
+  background:#d4a30b}
+.vilda-auth-meter-fill[data-strength=good]{
+  background:#5fa84a}
+.vilda-auth-meter-fill[data-strength=strong]{
+  background:#1f8a3a}
+.vilda-auth-meter-fill[data-strength=very-strong]{
+  background:#00838d}
+.vilda-auth-meter-label{
+  font-size:12px;
+  color:#6a8089;
+  white-space:nowrap}
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle,.vilda-auth-pw-wrap .vilda-auth-pw-toggle:hover,.vilda-auth-pw-wrap .vilda-auth-pw-toggle:focus,.vilda-auth-pw-wrap .vilda-auth-pw-toggle:focus-visible,.vilda-auth-pw-wrap .vilda-auth-pw-toggle:active{
+  background:transparent!important;
+  box-shadow:none!important;
+  transform:translateY(-50%)!important;
+  border:0!important;
+  outline:none!important}
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle:focus-visible{
+  outline:2px solid rgba(0,131,141,.35)!important;
+  outline-offset:-2px!important}
+
+/* ===================== Checkbox — reguły bazowe (style.css) ===================== */
+#professionalModule{
+  margin-top:1.4rem!important;
+  margin-bottom:1rem;
+  border-radius:var(--radius);
+  border:1px solid #d0dede;
+  box-shadow:var(--shadow)}
+.professional-message{
+  text-align:center;
+  font-size:.98rem;
+  line-height:1;
+  margin-top:.5rem;
+  font-family:Inter,sans-serif;
+  font-weight:600;
+  color:#ce0000}
+#professionalModule h3{
+  text-align:center;
+  color:#ce0000}
+.doctor-wrapper{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  width:100%;
+  margin-top:.7rem}
+.doctor-checkbox{
+  appearance:none;
+  -webkit-appearance:none;
+  width:28px;
+  height:28px;
+  border:2px solid var(--primary);
+  border-radius:4px;
+  position:relative;
+  cursor:pointer;
+  margin-top:.6rem}
+.doctor-checkbox:checked{
+  background-color:var(--primary)}
+.doctor-checkbox:checked:after{
+  content:"";
+  position:absolute;
+  left:7px;
+  top:3px;
+  width:6px;
+  height:12px;
+  border:solid #fff;
+  border-width:0 2px 2px 0;
+  transform:rotate(45deg)}
+.doctor-label{
+  font-size:1.425rem;
+  color:var(--primary);
+  font-weight:500;
+  user-select:none;
+  cursor:pointer;
+  text-align:center;
+  line-height:1.2;
+  margin-bottom:.2rem}
+.doctor-subtitle{
+  font-size:1.175rem;
+  color:var(--primary);
+  font-weight:400;
+  text-align:center;
+  line-height:1.2}
+.doctor-wrapper.compact .doctor-label{
+  font-size:1.175rem}
+.doctor-wrapper.compact .doctor-subtitle{
+  font-size:.925rem}
+.doctor-wrapper.compact .doctor-checkbox{
+  width:24px;
+  height:24px;
+  margin-top:.4rem}
+#pwzContainer label{
+  display:flex!important;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  width:100%}
+#pwzContainer{
+  text-align:center;
+  margin-bottom:1rem}
+#pwzContainer input[type=text]{
+  max-width:320px;
+  width:100%;
+  margin-left:auto;
+  margin-right:auto}
+.diet-survey-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.45rem}
+.diet-survey-chip{
+  display:grid;
+  grid-template-columns:1.05rem minmax(0,1fr);
+  align-items:flex-start;
+  gap:.45rem;
+  min-width:0;
+  width:100%;
+  margin:0!important;
+  padding:.48rem .55rem;
+  border:1px solid #dedede;
+  border-radius:.65rem;
+  background:#fff;
+  cursor:pointer;
+  line-height:1.25;
+  font-size:.86rem}
+.diet-survey-chip input[type=checkbox]{
+  appearance:auto;
+  -webkit-appearance:checkbox;
+  width:1.05rem!important;
+  min-width:1.05rem!important;
+  max-width:1.05rem!important;
+  height:1.05rem!important;
+  min-height:1.05rem!important;
+  max-height:1.05rem!important;
+  padding:0!important;
+  margin:.08rem 0 0!important;
+  border-radius:.2rem;
+  flex:0 0 1.05rem;
+  accent-color:#9900ff;
+  box-shadow:none!important}
+.diet-survey-chip span{
+  display:block;
+  min-width:0;
+  overflow-wrap:anywhere;
+  word-break:normal}
+.diet-survey-chip:has(input:checked){
+  border-color:#90f;
+  background:#9900ff12}
+#dietRecommendationsContent .diet-option-check input[type=checkbox],#dietRecommendationsContent .diet-survey-chip input[type=checkbox]{
+  accent-color:var(--diet-ui-accent)!important}
+
+/* ===================== Switch — reguły bazowe (style.css) ===================== */
+.diet-toggle-group{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.6rem;
+  min-width:0;
+  margin-bottom:0}
+.diet-toggle-group .toggle-label{
+  flex:1 1 auto;
+  min-width:0;
+  font-size:.88rem;
+  line-height:1.2;
+  margin-bottom:0;
+  font-weight:500}
+.switch-diet{
+  position:relative;
+  display:inline-block;
+  width:52px;
+  height:28px;
+  flex-shrink:0;
+  margin-top:0;
+  vertical-align:middle}
+.switch-diet input{
+  display:none}
+.switch-diet .slider{
+  position:absolute;
+  inset:0;
+  background:#ccc;
+  border-radius:28px;
+  cursor:pointer;
+  transition:background .3s}
+.switch-diet .slider:before{
+  content:"";
+  position:absolute;
+  left:2px;
+  top:2px;
+  width:24px;
+  height:24px;
+  background:#fff;
+  border-radius:50%;
+  transition:transform .3s}
+.switch-diet input:checked+.slider{
+  background:var(--primary)}
+.switch-diet input:checked+.slider:before{
+  transform:translate(24px)}
+@media(max-width:380px){
+  .diet-toggle-group .toggle-label{
+  font-size:.84rem}
+}
+.publication-toggle-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:.8rem}
+.publication-toggle-label{
+  font-size:.95rem;
+  font-weight:500}
+.switch-pub{
+  position:relative;
+  display:inline-block;
+  width:60px;
+  height:30px}
+.switch-pub input{
+  display:none}
+.switch-pub .slider{
+  position:absolute;
+  inset:0;
+  background:#ccc;
+  border-radius:30px;
+  cursor:pointer;
+  transition:background .3s}
+.switch-pub .slider:before{
+  content:"";
+  position:absolute;
+  left:2px;
+  top:2px;
+  width:26px;
+  height:26px;
+  background:#fff;
+  border-radius:50%;
+  transition:transform .3s}
+.switch-pub input:checked+.slider{
+  background:#90f}
+.switch-pub input:checked+.slider:before{
+  transform:translate(30px)}
+.toggle-wrap{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin:.6rem 0 1rem}
+.switch{
+  position:relative;
+  display:inline-block;
+  width:60px;
+  height:30px;
+  margin:0 .75rem}
+.switch input{
+  display:none}
+.switch .slider{
+  position:absolute;
+  inset:0;
+  background:var(--primary);
+  border-radius:30px;
+  cursor:pointer;
+  transition:background .3s}
+.switch .slider:before{
+  content:"";
+  position:absolute;
+  left:2px;
+  top:2px;
+  width:26px;
+  height:26px;
+  background:#fff;
+  border-radius:50%;
+  transition:transform .3s}
+#dataToggle:checked+.slider:before{
+  left:auto;
+  right:2px;
+  transform:none}
+#bpDataToggle:checked+.slider:before{
+  left:auto;
+  right:2px;
+  transform:none}
+#bpDataToggle:disabled+.slider{
+  background:#ddd!important;
+  cursor:not-allowed}
+#resultsModeToggle:checked~.slider:before{
+  left:auto;
+  right:2px;
+  transform:none}
+#resultsModeToggle:checked~.slider{
+  background:#90f}
+#adultBpGuidelineToggle+.slider:before,#adultBpGuidelineToggle~.slider:before{
+  left:2px;
+  right:auto;
+  transform:translate(0)}
+#adultBpGuidelineToggle:checked+.slider:before,#adultBpGuidelineToggle:checked~.slider:before{
+  left:2px;
+  right:auto;
+  transform:translate(30px)}
+.label-left,.label-right{
+  font-weight:600;
+  font-size:1rem;
+  font-family:Inter,sans-serif;
+  color:var(--primary);
+  user-select:none}
+@media(max-width:480px){
+  .label-left,.label-right{
+  font-size:.9rem}
+}
+#resultsModeToggleContainer .pro-label{
+  color:#90f;
+  position:relative}
+#resultsModeToggleContainer .pro-label .pro-tag{
+  color:#90f;
+  font-size:.55em;
+  font-weight:700;
+  vertical-align:super;
+  margin-left:.1rem}
+.switch-flu{
+  position:relative;
+  display:inline-block;
+  width:60px;
+  height:30px}
+.switch-flu input{
+  display:none}
+.switch-flu .slider{
+  position:absolute;
+  inset:0;
+  background:#ccc;
+  border-radius:30px;
+  cursor:pointer;
+  transition:background .3s}
+.switch-flu .slider:before{
+  content:"";
+  position:absolute;
+  left:2px;
+  top:2px;
+  width:26px;
+  height:26px;
+  background:#fff;
+  border-radius:50%;
+  transition:transform .3s}
+.switch-flu input:checked+.slider{
+  background:var(--primary)}
+.switch-flu input:checked+.slider:before{
+  transform:translate(30px)}
+#fluCard #fluSwitches .flu-switch-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%}
+#fluCard #fluSwitches .flu-switch-label{
+  font-size:.9rem}
+/* style.css 4553-4567 — wiersz ustawień; --field nie jest zdefiniowane w żadnym źródle (tło pozostaje przezroczyste, jak w aplikacji) */
+.settings-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:1rem}
+.setting-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:.6rem .8rem;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--field)}
+.setting-item span{
+  flex:1;
+  font-size:.95rem}
+.settings-grid .switch .slider{
+  background:#ccd9d9}
+.settings-grid .switch input:checked+.slider{
+  background:var(--primary)}
+.settings-grid .switch input:checked+.slider:before{
+  left:auto;
+  right:2px;
+  transform:none}
+.settings-grid .switch input:disabled+.slider{
+  background:#ddd!important;
+  cursor:not-allowed}
+#stabilizationGroup .toggle-label{
+  margin-bottom:0;
+  margin-right:0}
+#dietRecommendationsContent .switch-diet input:checked+.slider{
+  background:#90f!important}
+#dietRecommendationsContent .switch-diet .slider{
+  background:var(--diet-ui-switch-bg)!important}
+#dietRecommendationsContent .switch-diet .slider:before{
+  background:var(--diet-ui-switch-thumb)!important}
+#dietRecommendationsContent .switch-diet input:checked+.slider{
+  background:var(--diet-ui-active-bg)!important}
+#dietRecommendationsContent .switch-diet input:checked+.slider:before{
+  background:var(--diet-ui-switch-thumb)!important}
+
+/* ===================== Nadpisania Liquid Glass (.liquid-ios26) ===================== */
+/* ios26-v2.css */
+.liquid-ios26 input[type=text],.liquid-ios26 input[type=number],.liquid-ios26 select{
+  background:#ffffffd9;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:12px}
+/* style.css — Switch w panelu diety */
+.liquid-ios26 #dietRecommendationsContent .switch-diet input:checked+.slider{
+  background:#90f!important}
+
+/* ===================== Wysoki kontrast (style.css) ===================== */
+body.high-contrast-level-1.liquid-ios26 input[type=text],body.high-contrast-level-2.liquid-ios26 input[type=text],body.high-contrast-level-3.liquid-ios26 input[type=text],body.high-contrast-level-1.liquid-ios26 input[type=number],body.high-contrast-level-2.liquid-ios26 input[type=number],body.high-contrast-level-3.liquid-ios26 input[type=number],body.high-contrast-level-1.liquid-ios26 select,body.high-contrast-level-2.liquid-ios26 select,body.high-contrast-level-3.liquid-ios26 select,body.high-contrast-level-1.liquid-ios26 textarea,body.high-contrast-level-2.liquid-ios26 textarea,body.high-contrast-level-3.liquid-ios26 textarea{
+  background:var(--hc-input-bg)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  color:var(--hc-text)!important;
+  box-shadow:0 1px #ffffffb8,0 4px 12px #0000000d!important}
+body.high-contrast-level-1.liquid-ios26 input::placeholder,body.high-contrast-level-2.liquid-ios26 input::placeholder,body.high-contrast-level-3.liquid-ios26 input::placeholder,body.high-contrast-level-1.liquid-ios26 textarea::placeholder,body.high-contrast-level-2.liquid-ios26 textarea::placeholder,body.high-contrast-level-3.liquid-ios26 textarea::placeholder{
+  color:var(--hc-muted)!important;
+  opacity:1!important}
+body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-level-2.liquid-ios26 input:focus-visible,body.high-contrast-level-3.liquid-ios26 input:focus-visible,body.high-contrast-level-1.liquid-ios26 select:focus-visible,body.high-contrast-level-2.liquid-ios26 select:focus-visible,body.high-contrast-level-3.liquid-ios26 select:focus-visible,body.high-contrast-level-1.liquid-ios26 textarea:focus-visible,body.high-contrast-level-2.liquid-ios26 textarea:focus-visible,body.high-contrast-level-3.liquid-ios26 textarea:focus-visible,body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 summary:focus-visible,body.high-contrast-level-2.liquid-ios26 summary:focus-visible,body.high-contrast-level-3.liquid-ios26 summary:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+  outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
+  outline-offset:2px!important}
+
+/* ===================== Wysoki kontrast — AuthInput (vilda_auth_ui.css) ===================== */
+/* Lista selektorów reguł powierzchni i tekstu pomocniczego ograniczona do elementów tej grupy (pełna lista obejmuje AuthCard/Patients); deklaracje bez zmian. */
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-meter,body.liquid-ios26.high-contrast-level-1 .vilda-auth-checkbox-row,body.liquid-ios26.high-contrast-level-2 .vilda-auth-meter,body.liquid-ios26.high-contrast-level-2 .vilda-auth-checkbox-row,body.liquid-ios26.high-contrast-level-3 .vilda-auth-meter,body.liquid-ios26.high-contrast-level-3 .vilda-auth-checkbox-row{
+  background:var(--hc-surface)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important;
+  box-shadow:var(--hc-shadow)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-meter-label,body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-counter,body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-2 .vilda-auth-meter-label,body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-counter,body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-empty,body.liquid-ios26.high-contrast-level-3 .vilda-auth-meter-label,body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-counter,body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-empty{
+  color:var(--hc-muted)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-input,body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-input,body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-input,body.liquid-ios26.high-contrast-level-2 .vilda-auth-input,body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-input,body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-input,body.liquid-ios26.high-contrast-level-3 .vilda-auth-input,body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-input,body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-input{
+  background:var(--hc-input-bg)!important;
+  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
+  color:var(--hc-text)!important}
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-input:focus,body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-input:focus,body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-input:focus,body.liquid-ios26.high-contrast-level-2 .vilda-auth-input:focus,body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-input:focus,body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-input:focus,body.liquid-ios26.high-contrast-level-3 .vilda-auth-input:focus,body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-input:focus,body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-input:focus{
+  border-color:#00838da6!important;
+  box-shadow:0 0 0 var(--hc-focus-width) var(--hc-focus-color)!important;
+  outline:none!important}
+
+/* ===================== Ciemne tło ===================== */
+/* Brak reguł dla pól formularza, przełączników i pól wyboru pod body.dark-bg-level-N — tryb zmienia tylko tło strony (var(--bg) z tokens.css). */

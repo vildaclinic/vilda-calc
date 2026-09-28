@@ -1,0 +1,38 @@
+<!-- @dsCard group="Akcje" height=380 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>AuthButton</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.wrap{max-width:720px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}
+/* .vilda-auth-logout jest w aplikacji przypięty w rogu (position:fixed) i ukryty do czasu zalogowania — w podglądzie tylko pozycja i widoczność */
+body .vilda-auth-root .vilda-auth-logout{position:static!important;inset:auto!important;display:inline-flex!important}
+/* .vilda-auth-root jest w aplikacji nakładką position:fixed ukrytą do czasu otwarcia — w podglądzie tylko pozycja i widoczność */
+body .vilda-auth-root{position:static!important;inset:auto!important;display:block!important;opacity:1!important;visibility:visible!important;transform:none!important;pointer-events:auto!important;background:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;padding:0!important;min-height:0!important;height:auto!important;overflow:visible!important}
+</style></head><body class="liquid-ios26">
+<div class="vilda-auth-root wrap">
+  <div class="vilda-auth-biometric-section">
+    <div class="vilda-auth-actions">
+      <button class="vilda-auth-btn vilda-auth-btn-biometric" type="button">🪪  Zaloguj przez Touch ID</button>
+    </div>
+  </div>
+  <div class="vilda-auth-actions vilda-auth-actions-end">
+    <button class="vilda-auth-btn vilda-auth-btn-ghost" type="button">Nie teraz</button>
+    <button class="vilda-auth-btn vilda-auth-btn-primary" type="button">Tak, włącz synchronizację</button>
+  </div>
+  <div class="row">
+    <button class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-danger" type="button">Wyloguj wszystkie urządzenia</button>
+    <button class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle" type="button">🎲 Zaproponuj silne hasło</button>
+    <button class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small" type="button">Kopiuj token</button>
+  </div>
+  <div class="row">
+    <button class="vilda-auth-btn vilda-auth-btn-ghost vilda-patient-delete-btn" type="button">Usuń pacjenta</button>
+    <button class="vilda-auth-btn vilda-copy-summary-btn" type="button">Skopiuj podsumowanie wyników</button>
+    <button type="button" class="vilda-auth-logout"><span class="vilda-auth-logout-icon" aria-hidden="true">⏻</span><span>Wyloguj się</span></button>
+  </div>
+</div>
+<!-- poza .vilda-auth-root (ustawienia.html): wygrywa późniejsza reguła .vilda-auth-btn-danger — biała z bordowym tekstem -->
+<div class="row wrap">
+  <button type="button" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn">Wybierz folder kopii</button>
+  <button type="button" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn" disabled>Eksportuj dziennik</button>
+  <button type="button" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-danger">Wyloguj wszystkie urządzenia</button>
+</div>
+</body></html>

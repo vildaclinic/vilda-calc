@@ -1,0 +1,28 @@
+<!-- @dsCard group="Chrome" height=96 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>UserChip</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+</style></head><body class="liquid-ios26 has-vilda-chrome">
+<div class="row">
+  <div class="chrome-chip chrome-user-chip is-loading" id="vildaUserChip" aria-live="polite">
+    <span class="chip-avatar" id="vildaUserAvatar" aria-hidden="true">…</span>
+    <span class="chip-content"><span class="chip-label">Konto</span><span class="chip-value" id="vildaUserValue">…</span></span>
+    <button type="button" class="chip-action" id="vildaUserAction" title="Wyloguj się" aria-label="Wyloguj się"><span data-lucide="log-out" aria-hidden="true" class="chrome-icon-fallback chrome-icon-fallback--small">&#x21AA;</span></button>
+  </div>
+  <div class="chrome-chip chrome-user-chip is-guest" aria-live="polite">
+    <span class="chip-avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>
+    <span class="chip-content"><span class="chip-label">Konto</span><span class="chip-value">Niezalogowany</span></span>
+    <button type="button" class="chip-action" title="Zaloguj się" aria-label="Zaloguj się"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg></button>
+  </div>
+  <div class="chrome-chip chrome-user-chip is-guest" aria-live="polite">
+    <span class="chip-avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>
+    <span class="chip-content"><span class="chip-label">Konto</span><span class="chip-value">Tryb gościa</span></span>
+    <button type="button" class="chip-action" title="Zaloguj się" aria-label="Zaloguj się"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg></button>
+  </div>
+  <div class="chrome-chip chrome-user-chip is-logged-in" aria-live="polite">
+    <span class="chip-avatar" aria-hidden="true">DT</span>
+    <span class="chip-content"><span class="chip-label">Konto</span><span class="chip-value" role="link" tabindex="0" title="Przejdź do ustawień konta">dr Testowa</span></span>
+    <button type="button" class="chip-action" title="Wyloguj się" aria-label="Wyloguj się"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+  </div>
+</div>
+</body></html>

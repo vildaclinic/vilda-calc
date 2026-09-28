@@ -1,0 +1,30 @@
+<!-- @dsCard group="Etykiety" height=450 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>StepBadge</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+/* tylko stabilny zrzut: animacje wejścia i pulsowania z przelicznika wyłączone w podglądzie */
+body .lab-step,body .lab-step-num.is-active{animation:none!important}
+</style></head><body class="liquid-ios26 about-page contact-page page-cukrzyca">
+<div class="grid">
+  <div class="col">
+    <ol class="flow-steps">
+      <li>Punktem wyjścia są dane wpisane w polu <span class="inline-label">Dane użytkownika</span>, przede wszystkim <strong>wiek, płeć, wzrost i masa ciała</strong>.</li>
+      <li>Na tej podstawie aplikacja dobiera odpowiedni sposób liczenia, zakres norm i siatki odniesienia.</li>
+    </ol>
+    <ol class="contact-steps">
+      <li>Podaj krótki temat wiadomości i opisz, czego dotyczy sprawa.</li>
+    </ol>
+  </div>
+  <div class="col">
+    <div>
+      <div class="lab-step" id="labStep1"><div class="lab-step-num is-done" id="labStep1Num">1</div><div class="lab-step-body"><div class="lab-step-label">Substancja</div>Glukoza</div></div>
+      <div class="lab-step" id="labStep2"><div class="lab-step-num is-active" id="labStep2Num">2</div><div class="lab-step-body"><div class="lab-step-label">Wartość i jednostka</div>5,6 mmol/L</div></div>
+      <div class="lab-step" id="labStep3"><div class="lab-step-num" id="labStep3Num">3</div><div class="lab-step-body"><div class="lab-step-label">Jednostka docelowa</div>mg/dL</div></div>
+    </div>
+    <div class="diab-day-step"><span class="diab-day-step__num">1</span><div><strong>Wczoraj</strong><p>Patrzysz, jaka była glikemia przed posiłkiem, ile było węglowodanów, ile podano insuliny i jaka była glikemia 2–3 godziny później.</p></div></div>
+    <div class="row"><span class="diab-module-card__step">Krok 1</span><span class="diab-module-card__step">Krok 2</span><span class="guide-accordion-index">1</span><span class="guide-accordion-index">2</span></div>
+  </div>
+</div>
+</body></html>

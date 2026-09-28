@@ -1,0 +1,37 @@
+<!-- @dsCard group="Pola formularza" height=240 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>AuthInput</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.pv-col{flex:1 1 260px;max-width:300px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.pv-col .vilda-auth-checkbox-row{margin-top:0}
+</style></head><body class="liquid-ios26">
+<div class="pv-row">
+  <div class="pv-col">
+    <input class="vilda-auth-input" type="text" placeholder="Twoje imię (np. dr Testowa)" autocomplete="off">
+    <div class="vilda-auth-pw-wrap" style="position: relative; display: block; margin: inherit;">
+      <input class="vilda-auth-input" type="password" placeholder="Hasło (min. 12 znaków, 3 z 4 typów)" autocomplete="new-password" value="Zielona-Ryba-2026" style="padding-right:44px" autofocus>
+      <button type="button" class="vilda-auth-pw-toggle" aria-label="Pokaż hasło" aria-pressed="false" title="Pokaż hasło" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);width: 40px; height: 24px;display: flex; align-items: center; justify-content: center;background: transparent; border: 0; padding: 0; border-radius: 0;color: #5b6672; cursor: pointer;transition: color .15s ease;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    <div class="vilda-auth-meter-wrap">
+      <div class="vilda-auth-meter"><div class="vilda-auth-meter-fill" data-strength="good" style="width:70%"></div></div>
+      <span class="vilda-auth-meter-label">Siła hasła: dobra</span>
+    </div>
+  </div>
+  <div class="pv-col">
+    <select class="vilda-auth-input">
+      <option>Opiekun</option>
+      <option selected>Lekarz</option>
+      <option>Pielęgniarka</option>
+    </select>
+    <input class="vilda-auth-input vilda-auth-recovery-input" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" value="K7QD-3MZP-8RWA-XX2F-Q9LN-B4TH">
+    <label class="vilda-auth-checkbox-row"><input type="checkbox" checked><span class="vilda-auth-checkbox-label">Zapisałem klucz odzyskiwania w bezpiecznym miejscu</span></label>
+  </div>
+  <div class="pv-col">
+    <div class="vilda-auth-search-wrap">
+      <input class="vilda-auth-search-input" type="search" placeholder="Szukaj pacjenta…">
+      <div class="vilda-auth-search-counter">3 z 12</div>
+    </div>
+    <div class="vilda-auth-search-empty">Brak wpisów w Terminarzu dla tej osoby.</div>
+  </div>
+</div>
+</body></html>
