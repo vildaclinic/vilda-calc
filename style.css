@@ -78,6 +78,91 @@
   --opacity-locked:.85;
   --opacity-pulse-start:.15;
   --opacity-hidden-dock:.001;
+  /* P-STYLE rata 2b: tokeny dotąd wpisywane na sztywno (nazwy i opisy: design-system/src/project/tokens.json) */
+  /* spacing */
+  --space-0-25:.25rem;
+  --space-0-3:.3rem;
+  --space-0-35:.35rem;
+  --space-0-4:.4rem;
+  --space-0-45:.45rem;
+  --space-0-5:.5rem;
+  --space-0-55:.55rem;
+  --space-0-6:.6rem;
+  --space-0-65:.65rem;
+  --space-0-7:.7rem;
+  --space-0-75:.75rem;
+  --space-0-8:.8rem;
+  --space-0-85:.85rem;
+  --space-0-9:.9rem;
+  --space-0-95:.95rem;
+  --space-1:1rem;
+  --space-1-1:1.1rem;
+  --space-1-2:1.2rem;
+  --space-1-25:1.25rem;
+  --space-1-4:1.4rem;
+  --space-1-5:1.5rem;
+  --space-2:2rem;
+  --space-2-5:2.5rem;
+  --space-4px:4px;
+  --space-6px:6px;
+  --space-8px:8px;
+  --space-10px:10px;
+  --space-12px:12px;
+  --space-14px:14px;
+  --space-16px:16px;
+  --space-18px:18px;
+  --space-20px:20px;
+  --space-24px:24px;
+  /* radius */
+  --radius-pill:999px;
+  --radius-circle:50%;
+  --radius-4:4px;
+  --radius-6:6px;
+  --radius-8:8px;
+  --radius-9:9px;
+  --radius-10:10px;
+  --radius-11:11px;
+  --radius-12:12px;
+  --radius-13:13px;
+  --radius-14:14px;
+  --radius-16:16px;
+  --radius-18:18px;
+  --radius-20:20px;
+  --radius-0-5rem:0.5rem;
+  /* border */
+  --border-hairline:1px;
+  --border-emphasis:2px;
+  --border-pro:3px;
+  /* blur */
+  --blur-card:blur(14px);
+  --blur-card-saturate:saturate(115%);
+  --blur-glass:blur(16px);
+  --blur-header:blur(18px);
+  --blur-button:blur(10px);
+  --blur-button-saturate:saturate(120%);
+  --blur-dock:blur(24px);
+  --blur-dock-saturate:saturate(155%);
+  --blur-chrome-header-saturate:saturate(160%);
+  --blur-save-popover-saturate:saturate(180%);
+  --blur-tooltip-saturate:saturate(1.6);
+  --blur-shell-scroll-top:blur(12px);
+  --blur-shell-scroll-top-saturate:saturate(1.4);
+  --blur-drawer-backdrop:blur(2px);
+  --blur-auth-overlay:blur(4px);
+  --blur-logout-overlay:blur(6px);
+  /* layout */
+  --chrome-strip-max-width:1500px;
+  --container-max-width:960px;
+  --content-narrow-max-width:720px;
+  --decor-sidebar-width:230px;
+  --drawer-width:min(86%,320px);
+  --scroll-top-size:4rem;
+  --brand-logo-size:38px;
+  --clcr-result-rail-width:348px;
+  --dialog-width:460px;
+  --measure-copy:72ch;
+  --measure-lead:74ch;
+  --toast-max-width:min(88vw,520px);
 }
 
 * {
@@ -118,7 +203,7 @@ header {
   background: var(--primary);
   color: #fff;
   text-align: center;
-  padding: 1rem
+  padding: var(--space-1)
 }
 
 h1 {
@@ -127,20 +212,20 @@ h1 {
 }
 
 .container {
-  max-width: 960px;
+  max-width: var(--container-max-width);
   margin-inline: auto;
-  padding: 1rem;
+  padding: var(--space-1);
   flex: 1 1 auto;
   width: 100%
 }
 
 fieldset {
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   background: var(--card);
-  padding: 1.4rem 1rem 1rem;
+  padding: var(--space-1-4) var(--space-1) var(--space-1);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-1-5);
   position: relative
 }
 
@@ -148,7 +233,7 @@ legend {
   font-weight: 600;
   color: var(--primary);
   background: var(--card);
-  padding: 0 .6rem;
+  padding: 0 var(--space-0-6);
   font-size: 1rem;
   position: absolute;
   top: -.7rem;
@@ -157,7 +242,7 @@ legend {
 
 label {
   display: block;
-  margin-top: .7rem;
+  margin-top: var(--space-0-7);
   font-size: .95rem
 }
 
@@ -166,15 +251,15 @@ select,
 option {
   font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   width: 100%;
-  padding: .45rem;
-  border: 1px solid var(--line-neutral);
-  border-radius: 4px;
+  padding: var(--space-0-45);
+  border: var(--border-hairline) solid var(--line-neutral);
+  border-radius: var(--radius-4);
   font-size: 1rem
 }
 
 .flex {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-1);
   flex-wrap: wrap
 }
 
@@ -183,35 +268,35 @@ option {
 .food-row {
   display: grid;
   grid-template-columns: 1fr 100px 34px;
-  gap: .5rem;
+  gap: var(--space-0-5);
   align-items: center;
-  margin-top: .5rem
+  margin-top: var(--space-0-5)
 }
 
 .measure-row {
   display: block;
-  margin: .5rem 0 0
+  margin: var(--space-0-5) 0 0
 }
 
 .measure-row-sep {
   height: 3px;
   background: #00767e40;
-  margin: .6rem 0
+  margin: var(--space-0-6) 0
 }
 
 .measure-row-top {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: .5rem;
+  gap: var(--space-0-5);
   align-items: end
 }
 
 .measure-row-bot {
   display: grid;
   grid-template-columns: 1fr 1fr 34px;
-  gap: .5rem;
+  gap: var(--space-0-5);
   align-items: end;
-  margin-top: .35rem
+  margin-top: var(--space-0-35)
 }
 
 .measure-row-top label,
@@ -242,10 +327,10 @@ button.add-row {
   background: var(--secondary);
   color: #fff;
   border: none;
-  padding: .45rem .9rem;
-  border-radius: 4px;
+  padding: var(--space-0-45) var(--space-0-9);
+  border-radius: var(--radius-4);
   cursor: pointer;
-  margin-top: .7rem
+  margin-top: var(--space-0-7)
 }
 
 button.add-row:hover {
@@ -255,19 +340,19 @@ button.add-row:hover {
 #results {
   display: none;
   flex-direction: column;
-  gap: 1.5rem
+  gap: var(--space-1-5)
 }
 
 .card {
   background: var(--card);
-  padding: 1rem;
+  padding: var(--space-1);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 .activity-time {
-  margin: .4rem 0;
+  margin: var(--space-0-4) 0;
   font-size: 1.25rem;
   font-weight: 700
 }
@@ -275,13 +360,13 @@ button.add-row:hover {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: .6rem
+  margin-top: var(--space-0-6)
 }
 
 th,
 td {
-  border: 1px solid #ddd;
-  padding: .6rem;
+  border: var(--border-hairline) solid #ddd;
+  padding: var(--space-0-6);
   text-align: center;
   font-size: .95rem
 }
@@ -293,33 +378,33 @@ th {
 
 .site-footer {
   background: #f4f8f8;
-  border-top: 1px solid #d0e8e8;
+  border-top: var(--border-hairline) solid #d0e8e8;
   position: relative;
   color: #4a7a7a
 }
 
 .site-footer__inner {
-  max-width: 960px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 1.5rem 1rem 1.1rem;
+  padding: var(--space-1-5) var(--space-1) var(--space-1-1);
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr 1fr;
-  gap: 1.5rem;
+  gap: var(--space-1-5);
   box-sizing: border-box
 }
 
 .site-footer__brand-link {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
+  gap: var(--space-0-45);
   text-decoration: none;
-  margin-bottom: .45rem
+  margin-bottom: var(--space-0-45)
 }
 
 .site-footer__brand-icon {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--radius-6);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -352,7 +437,7 @@ th {
   letter-spacing: .08em;
   text-transform: uppercase;
   color: #6fa8a8;
-  margin-bottom: .5rem
+  margin-bottom: var(--space-0-5)
 }
 
 .site-footer__col-title--hidden {
@@ -379,9 +464,9 @@ th {
 }
 
 .site-footer__disclaimer {
-  max-width: 960px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: .6rem 1rem;
+  padding: var(--space-0-6) var(--space-1);
   font-size: .73rem;
   color: #3a6d6d;
   line-height: 1.55;
@@ -393,9 +478,9 @@ th {
 }
 
 .site-footer__bottom {
-  max-width: 960px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: .6rem 1rem;
+  padding: var(--space-0-6) var(--space-1);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -417,7 +502,7 @@ th {
 @media(max-width:700px) {
   .site-footer__inner {
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 1rem .75rem
+    gap: var(--space-1) var(--space-0-75)
   }
   .site-footer__brand {
     grid-column: 1 / -1
@@ -425,8 +510,8 @@ th {
   .site-footer__bottom {
     flex-wrap: wrap;
     justify-content: center;
-    gap: .1rem .5rem;
-    padding: .35rem 1rem
+    gap: .1rem var(--space-0-5);
+    padding: var(--space-0-35) var(--space-1)
   }
 }
 
@@ -434,7 +519,7 @@ th {
   .grid-two {
     display: grid;
     grid-template-columns: minmax(0,1fr) minmax(0,1fr);
-    gap: 1rem
+    gap: var(--space-1)
   }
   .grid-two {
     align-items: start
@@ -446,14 +531,14 @@ th {
   flex-direction: column;
   height: 100%;
   min-width: 0;
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 .left-column {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 #results>.left-column,
@@ -462,9 +547,9 @@ th {
 }
 
 #sw-update-banner .btn {
-  padding: .5rem .9rem;
+  padding: var(--space-0-5) var(--space-0-9);
   border: 0;
-  border-radius: .5rem;
+  border-radius: var(--radius-0-5rem);
   background: var(--secondary, #06b6d4);
   color: #fff;
   cursor: pointer;
@@ -478,7 +563,7 @@ th {
 
 .cole-explanation {
   font-size: .9rem;
-  margin-top: .5rem;
+  margin-top: var(--space-0-5);
   line-height: 1.3
 }
 
@@ -491,7 +576,7 @@ th {
   color: var(--notice-orange);
   font-weight: 600;
   line-height: 1.4;
-  margin-top: .5rem
+  margin-top: var(--space-0-5)
 }
 
 #foodTimesSection {
@@ -501,18 +586,18 @@ th {
 .diet-info-note {
   color: var(--primary);
   background: var(--card);
-  padding: .5rem .8rem;
+  padding: var(--space-0-5) var(--space-0-8);
   border-left: 4px solid var(--secondary);
-  border-radius: 4px;
+  border-radius: var(--radius-4);
   font-size: .9rem;
   text-align: left;
-  margin-bottom: .6rem
+  margin-bottom: var(--space-0-6)
 }
 
 .diet-toggle-columns {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: .85rem;
+  gap: var(--space-0-85);
   align-items: start
 }
 
@@ -521,14 +606,14 @@ th {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 .diet-toggle-group {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .6rem;
+  gap: var(--space-0-6);
   min-width: 0;
   margin-bottom: 0
 }
@@ -573,7 +658,7 @@ th {
   width: 24px;
   height: 24px;
   background: #fff;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   transition: transform .3s
 }
 
@@ -596,14 +681,14 @@ th {
 }
 
 .current-summary-card .summary-content {
-  margin-top: .6rem
+  margin-top: var(--space-0-6)
 }
 
 .current-summary-row {
   display: flex;
   align-items: center;
   font-size: .95rem;
-  margin-top: .4rem
+  margin-top: var(--space-0-4)
 }
 
 .current-summary-row:first-child {
@@ -616,8 +701,8 @@ th {
 
 .current-summary-dots {
   flex-grow: 1;
-  border-bottom: 1px dotted rgba(0,0,0,.3);
-  margin: 0 .4rem;
+  border-bottom: var(--border-hairline) dotted rgba(0,0,0,.3);
+  margin: 0 var(--space-0-4);
   height: 0
 }
 
@@ -628,7 +713,7 @@ th {
 
 .current-summary-columns {
   display: flex;
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 .current-summary-col {
@@ -636,21 +721,21 @@ th {
 }
 
 .current-summary-actions {
-  margin-top: .9rem;
-  padding-top: .85rem;
-  border-top: 1px solid var(--line-teal);
+  margin-top: var(--space-0-9);
+  padding-top: var(--space-0-85);
+  border-top: var(--border-hairline) solid var(--line-teal);
   display: flex;
   flex-direction: column;
-  gap: .45rem
+  gap: var(--space-0-45)
 }
 
 .patient-report-summary-btn {
   appearance: none;
-  border: 1px solid rgba(0,131,141,.28);
+  border: var(--border-hairline) solid rgba(0,131,141,.28);
   background: linear-gradient(180deg,#fff,#f8fbfb);
   color: #0a5157;
-  border-radius: 14px;
-  padding: .78rem .95rem;
+  border-radius: var(--radius-14);
+  padding: .78rem var(--space-0-95);
   font-size: .96rem;
   font-weight: 700;
   line-height: 1.2;
@@ -687,18 +772,18 @@ th {
 }
 
 .hr-section {
-  border: 1px solid var(--line);
-  padding: .6rem;
-  border-radius: 4px;
+  border: var(--border-hairline) solid var(--line);
+  padding: var(--space-0-6);
+  border-radius: var(--radius-4);
   background: var(--card);
   display: flex;
   flex-direction: column;
-  gap: .6rem
+  gap: var(--space-0-6)
 }
 
 .hr-row2 {
   display: flex;
-  gap: .6rem;
+  gap: var(--space-0-6);
   flex-wrap: wrap
 }
 
@@ -709,7 +794,7 @@ th {
 
 .rr-row {
   display: flex;
-  gap: .6rem;
+  gap: var(--space-0-6);
   flex-wrap: wrap
 }
 
@@ -741,8 +826,8 @@ th {
   position: fixed;
   display: none;
   box-sizing: border-box;
-  border: 2px solid rgba(0,131,141,.96);
-  border-radius: 12px;
+  border: var(--border-emphasis) solid rgba(0,131,141,.96);
+  border-radius: var(--radius-12);
   background: transparent;
   box-shadow: 0 16px 36px #0f172a29;
   z-index: var(--z-tutorial-frame);
@@ -758,8 +843,8 @@ th {
   overflow: auto;
   background: #fff;
   color: var(--text-ink);
-  padding: 1.2rem 1rem;
-  border-radius: 14px;
+  padding: var(--space-1-2) var(--space-1);
+  border-radius: var(--radius-14);
   box-shadow: 0 18px 48px #0f172a42;
   text-align: left;
   line-height: 1.45;
@@ -777,7 +862,7 @@ th {
 .tutorial-bubble strong {
   display: block;
   font-size: 1.08rem;
-  margin-bottom: .4rem;
+  margin-bottom: var(--space-0-4);
   color: var(--primary)
 }
 
@@ -787,10 +872,10 @@ th {
 }
 
 .tutorial-bubble button {
-  margin-top: .85rem;
-  padding: .5rem 1rem;
+  margin-top: var(--space-0-85);
+  padding: var(--space-0-5) var(--space-1);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-8);
   font-size: .95rem;
   cursor: pointer;
   box-shadow: 0 2px 8px #0f172a24
@@ -799,7 +884,7 @@ th {
 .tutorial-next {
   background: var(--primary);
   color: #fff;
-  margin-right: .5rem
+  margin-right: var(--space-0-5)
 }
 
 .tutorial-skip {
@@ -827,10 +912,10 @@ body.nav-ui-temporarily-hidden #scrollTopBtn {
 }
 
 .result-box {
-  border: 2px solid var(--brand);
+  border: var(--border-emphasis) solid var(--brand);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin: 12px 0;
+  padding: var(--space-1);
+  margin: var(--space-12px) 0;
   font-size: 1.75rem;
   background: var(--card-bg);
   text-align: center;
@@ -845,7 +930,7 @@ body.nav-ui-temporarily-hidden #scrollTopBtn {
 
 fieldset {
   position: relative;
-  padding-top: 1rem
+  padding-top: var(--space-1)
 }
 
 legend {
@@ -854,7 +939,7 @@ legend {
   left: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  padding: 0 .5rem;
+  padding: 0 var(--space-0-5);
   background: var(--card);
   border-radius: var(--radius)
 }
@@ -898,7 +983,7 @@ input[type=submit] {
   font: inherit;
   border: none;
   border-radius: var(--radius);
-  padding: .55rem 1.1rem;
+  padding: var(--space-0-55) var(--space-1-1);
   background: var(--primary);
   color: #fff;
   transition: background .2s ease,box-shadow .2s ease
@@ -920,7 +1005,7 @@ button.icon {
   background: transparent;
   color: var(--danger);
   font-size: 1.25rem;
-  padding: .25rem .5rem;
+  padding: var(--space-0-25) var(--space-0-5);
   line-height: 1
 }
 
@@ -933,8 +1018,8 @@ input[type=text],
 select {
   width: 100%;
   max-width: 100%;
-  padding: .45rem .65rem;
-  border: 1px solid #d0d7da;
+  padding: var(--space-0-45) var(--space-0-65);
+  border: var(--border-hairline) solid #d0d7da;
   border-radius: var(--radius);
   transition: border-color .2s ease,box-shadow .2s ease
 }
@@ -953,7 +1038,7 @@ table {
 
 th,
 td {
-  padding: .6rem .75rem;
+  padding: var(--space-0-6) var(--space-0-75);
   text-align: left
 }
 
@@ -976,7 +1061,7 @@ section.card,
   border-radius: var(--radius);
   background: var(--card);
   box-shadow: var(--shadow);
-  padding: 1rem
+  padding: var(--space-1)
 }
 
 .table-scroll {
@@ -998,20 +1083,20 @@ section.card,
 @media(max-width:600px) {
   th,
   td {
-    padding: .5rem
+    padding: var(--space-0-5)
   }
   button,
   input[type=button],
   input[type=submit] {
     width: 100%;
-    margin-top: .5rem
+    margin-top: var(--space-0-5)
   }
 }
 
 #advResults {
-  border: 1px solid var(--primary);
+  border: var(--border-hairline) solid var(--primary);
   background: var(--bg);
-  padding: 1rem;
+  padding: var(--space-1);
   border-radius: var(--radius);
   font-size: 1.25rem
 }
@@ -1019,8 +1104,8 @@ section.card,
 .adv-buttons {
   display: flex;
   justify-content: center;
-  gap: 1.5rem;
-  margin-top: 1rem
+  gap: var(--space-1-5);
+  margin-top: var(--space-1)
 }
 
 :root {
@@ -1054,10 +1139,10 @@ input[type=submit]:focus-visible {
 
 .result-card {
   background: var(--card-bg);
-  border: 2px solid var(--brand);
+  border: var(--border-emphasis) solid var(--brand);
   border-radius: var(--radius);
   box-shadow: var(--shadow-s);
-  padding: 1.25rem 1.5rem;
+  padding: var(--space-1-25) var(--space-1-5);
   position: relative;
   overflow: hidden
 }
@@ -1119,10 +1204,10 @@ input[type=submit]:focus-visible {
 
 .data-card {
   background: var(--card);
-  border: 2px solid var(--primary);
+  border: var(--border-emphasis) solid var(--primary);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 1.25rem 1rem;
+  padding: var(--space-1-25) var(--space-1);
   overflow: auto
 }
 
@@ -1138,7 +1223,7 @@ input[type=submit]:focus-visible {
 
 .data-card th,
 .data-card td {
-  padding: .4rem .6rem;
+  padding: var(--space-0-4) var(--space-0-6);
   text-align: center
 }
 
@@ -1206,7 +1291,7 @@ input[type=submit]:focus-visible {
 #planResults {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 #planResults.adult-plan-results {
@@ -1224,16 +1309,16 @@ input[type=submit]:focus-visible {
 .energy-mode-badge-row {
   display: flex;
   align-items: center;
-  gap: .45rem;
+  gap: var(--space-0-45);
   flex-wrap: wrap
 }
 
 .energy-mode-badge-row--inline {
-  margin-top: .45rem
+  margin-top: var(--space-0-45)
 }
 
 .energy-mode-badge-row--results {
-  margin: 0 0 .55rem;
+  margin: 0 0 var(--space-0-55);
   justify-content: flex-start
 }
 
@@ -1244,7 +1329,7 @@ input[type=submit]:focus-visible {
 }
 
 #intakeResults .energy-mode-badge-row--results {
-  margin: 0 0 .65rem
+  margin: 0 0 var(--space-0-65)
 }
 
 .energy-mode-badge {
@@ -1252,11 +1337,11 @@ input[type=submit]:focus-visible {
   align-items: center;
   justify-content: center;
   padding: .28rem .62rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: .82rem;
   font-weight: 700;
   line-height: 1;
-  border: 1px solid rgba(191,87,0,.28);
+  border: var(--border-hairline) solid rgba(191,87,0,.28);
   background: #ff914d1f;
   color: #9c4300
 }
@@ -1284,19 +1369,19 @@ input[type=submit]:focus-visible {
 #generateDsCentileChart,
 #toggleCircSection {
   width: 100%;
-  padding: .55rem 1.1rem!important;
+  padding: var(--space-0-55) var(--space-1-1)!important;
   border-radius: var(--radius)!important;
   background: var(--primary)!important;
   color: #fff!important;
   font-weight: 600!important;
-  margin: .5rem 0!important
+  margin: var(--space-0-5) 0!important
 }
 
 .publication-toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: .8rem
+  margin-top: var(--space-0-8)
 }
 
 .publication-toggle-label {
@@ -1332,7 +1417,7 @@ input[type=submit]:focus-visible {
   width: 26px;
   height: 26px;
   background: #fff;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   transition: transform .3s
 }
 
@@ -1348,7 +1433,7 @@ input[type=submit]:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: .5rem;
+  gap: var(--space-0-5);
   flex-wrap: wrap
 }
 
@@ -1383,11 +1468,11 @@ input[type=submit]:focus-visible {
 }
 
 #bmiCard {
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 #planCard {
-  margin-top: 1rem!important
+  margin-top: var(--space-1)!important
 }
 
 #leftColumnWrap>#planCard,
@@ -1398,17 +1483,17 @@ input[type=submit]:focus-visible {
 #generatePalCentileChart {
   display: block;
   width: 100%!important;
-  margin: .5rem 0!important
+  margin: var(--space-0-5) 0!important
 }
 
 #intakeCard {
   background: var(--card)!important;
-  border: 1px solid var(--line)!important;
+  border: var(--border-hairline) solid var(--line)!important;
   box-shadow: var(--shadow)!important
 }
 
 #intakeResults {
-  border-width: 2px!important;
+  border-width: var(--border-emphasis)!important;
   border-style: solid!important;
   border-color: var(--primary)!important;
   background: var(--card-bg)!important;
@@ -1471,7 +1556,7 @@ input[type=submit]:focus-visible {
 }
 
 #intakeResults .intake-alert {
-  margin-top: .5rem;
+  margin-top: var(--space-0-5);
   font-size: 1.2rem;
   font-weight: 600
 }
@@ -1485,7 +1570,7 @@ input[type=submit]:focus-visible {
 }
 
 #intakeResults .intake-reasons {
-  margin: .25rem 0 .4rem 1.2rem;
+  margin: var(--space-0-25) 0 var(--space-0-4) var(--space-1-2);
   padding: 0
 }
 
@@ -1588,12 +1673,12 @@ input[type=submit]:focus-visible {
 
 .bp-definition {
   font-size: .9rem;
-  margin-top: .6rem;
+  margin-top: var(--space-0-6);
   line-height: 1.35
 }
 
 .bp-definition ul {
-  margin: .4rem 0 0 1.2rem;
+  margin: var(--space-0-4) 0 0 var(--space-1-2);
   padding-left: 0
 }
 
@@ -1603,7 +1688,7 @@ input[type=submit]:focus-visible {
 
 .bp-definition .source-note {
   font-size: .85rem;
-  margin-top: .4rem;
+  margin-top: var(--space-0-4);
   color: var(--text-soft)
 }
 
@@ -1665,7 +1750,7 @@ input[type=submit]:focus-visible {
 .circ-inputs {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: .6rem;
+  gap: var(--space-0-6);
   align-items: start
 }
 
@@ -1681,14 +1766,14 @@ input[type=submit]:focus-visible {
 .circ-results-layout {
   display: flex;
   flex-direction: column;
-  gap: .95rem;
-  margin-top: .9rem
+  gap: var(--space-0-95);
+  margin-top: var(--space-0-9)
 }
 
 .circ-result-block {
   display: flex;
   flex-direction: column;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .circ-result-block .result-box {
@@ -1722,7 +1807,7 @@ input[type=submit]:focus-visible {
 .liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked:disabled {
   background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid var(--line-neutral)!important;
+  border: var(--border-pro) solid var(--line-neutral)!important;
   box-shadow: none!important;
   transform: none!important;
   opacity: 1!important;
@@ -1745,12 +1830,12 @@ input[type=submit]:focus-visible {
 
 .circ-definition {
   font-size: .9rem;
-  margin-top: .6rem;
+  margin-top: var(--space-0-6);
   line-height: 1.35
 }
 
 .circ-definition ul {
-  margin: .4rem 0 0 1.2rem;
+  margin: var(--space-0-4) 0 0 var(--space-1-2);
   padding-left: 0
 }
 
@@ -1760,7 +1845,7 @@ input[type=submit]:focus-visible {
 
 .circ-definition .source-note {
   font-size: .85rem;
-  margin-top: .4rem;
+  margin-top: var(--space-0-4);
   color: var(--text-soft)
 }
 
@@ -1773,16 +1858,16 @@ input[type=submit]:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: .65rem;
+  gap: var(--space-0-65);
   width: 100%;
-  margin-top: .9rem
+  margin-top: var(--space-0-9)
 }
 
 .circ-chart-btn {
   display: block;
   width: 100%;
   margin: 0;
-  padding: .55rem 1.1rem;
+  padding: var(--space-0-55) var(--space-1-1);
   border: none;
   border-radius: var(--radius);
   background: var(--primary);
@@ -1846,7 +1931,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .circ-pro-note {
-  margin-top: .65rem;
+  margin-top: var(--space-0-65);
   text-align: center;
   font-size: .92rem;
   line-height: 1.45
@@ -1855,8 +1940,8 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 .circ-pro-pill {
   display: inline-block;
   margin-left: .18rem;
-  padding: .02rem .35rem;
-  border-radius: 999px;
+  padding: .02rem var(--space-0-35);
+  border-radius: var(--radius-pill);
   background: #6a1b9a;
   color: #fff;
   font-size: .72rem;
@@ -1866,16 +1951,16 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .circ-chart-result {
-  margin-top: .95rem;
-  padding: 1rem
+  margin-top: var(--space-0-95);
+  padding: var(--space-1)
 }
 
 .circ-chart-result-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: .45rem
+  gap: var(--space-1);
+  margin-bottom: var(--space-0-45)
 }
 
 .circ-chart-result-title {
@@ -1885,7 +1970,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .circ-chart-result-copy {
-  margin: 0 0 .8rem;
+  margin: 0 0 var(--space-0-8);
   font-size: .96rem;
   line-height: 1.5;
   color: #24363b
@@ -1893,8 +1978,8 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 
 .circ-chart-canvas-wrap {
   background: #fff;
-  border: 1px solid rgba(0,131,141,.14);
-  border-radius: 14px;
+  border: var(--border-hairline) solid rgba(0,131,141,.14);
+  border-radius: var(--radius-14);
   overflow: hidden
 }
 
@@ -1906,11 +1991,11 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 
 .circ-chart-close {
   flex: 0 0 auto;
-  border: 1px solid rgba(0,131,141,.22);
+  border: var(--border-hairline) solid rgba(0,131,141,.22);
   background: #fff;
   color: #065b63;
-  border-radius: 10px;
-  padding: .45rem .75rem;
+  border-radius: var(--radius-10);
+  padding: var(--space-0-45) var(--space-0-75);
   font-size: .9rem;
   font-weight: 600;
   cursor: pointer
@@ -1929,7 +2014,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .circ-chart-result .source-note {
-  margin-top: .75rem
+  margin-top: var(--space-0-75)
 }
 
 @media(max-width:640px) {
@@ -1944,7 +2029,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   display: block;
   max-width: 100%;
   font-size: 1rem;
-  margin-top: .4rem;
+  margin-top: var(--space-0-4);
   color: var(--text-soft);
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1978,25 +2063,25 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 .wfl-reminder {
   font-size: 1.3rem;
   line-height: 1.4;
-  margin-top: .5rem;
+  margin-top: var(--space-0-5);
   font-weight: 600;
   color: var(--notice-orange)
 }
 
 #coleCard,
 #whrCard {
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 #whrInfo {
-  border-width: 2px;
+  border-width: var(--border-emphasis);
   border-style: solid;
   border-color: var(--primary);
   background: var(--card-bg)
 }
 
 #foodTimesSection {
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 .small-50 {
@@ -2025,7 +2110,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 .plan-result-card h3 {
   font-size: 1.75rem;
   font-weight: 600;
-  margin-bottom: .4rem
+  margin-bottom: var(--space-0-4)
 }
 
 .plan-result-card .result-number {
@@ -2041,14 +2126,14 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   color: var(--danger);
   font-size: 1.5rem;
   font-weight: 600;
-  margin-top: .4rem;
+  margin-top: var(--space-0-4);
   line-height: 1.2
 }
 
 .centile-warning {
   color: var(--danger);
   font-weight: 600;
-  margin-top: .4rem;
+  margin-top: var(--space-0-4);
   line-height: 1.3
 }
 
@@ -2061,7 +2146,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 .centile-monitor-warning {
   color: var(--notice-orange);
   font-weight: 600;
-  margin-top: .4rem;
+  margin-top: var(--space-0-4);
   line-height: 1.3
 }
 
@@ -2078,34 +2163,34 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 .diet-recommend-note {
   font-size: .9rem;
   color: var(--secondary);
-  margin-bottom: .5rem
+  margin-bottom: var(--space-0-5)
 }
 
 .plan-steps {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-1-5);
   align-items: stretch
 }
 
 .plan-step h3 {
   font-size: 1.2rem;
   font-weight: 600;
-  margin-bottom: .5rem;
+  margin-bottom: var(--space-0-5);
   color: var(--primary)
 }
 
 .plan-step select {
   width: 100%;
   max-width: 100%;
-  padding: .6rem .8rem;
-  border: 1px solid #d0d7da;
+  padding: var(--space-0-6) var(--space-0-8);
+  border: var(--border-hairline) solid #d0d7da;
   border-radius: var(--radius);
   font-size: 1rem
 }
 
 .plan-desc {
-  margin-top: .4rem;
+  margin-top: var(--space-0-4);
   font-size: .95rem;
   line-height: 1.3;
   white-space: pre-line;
@@ -2114,7 +2199,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .calorie-info {
-  margin-top: .5rem;
+  margin-top: var(--space-0-5);
   text-align: center;
   font-weight: 600;
   font-size: 1.2rem;
@@ -2126,7 +2211,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   font-weight: 600;
   font-size: 1.4rem;
   text-align: center;
-  margin: 1rem 0;
+  margin: var(--space-1) 0;
   display: none
 }
 
@@ -2135,7 +2220,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   font-weight: 600;
   font-size: 1.2rem;
   text-align: center;
-  margin-top: .5rem
+  margin-top: var(--space-0-5)
 }
 
 #compareInstruction a {
@@ -2150,7 +2235,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 
 .info-card #errorBox {
   margin-top: 0;
-  margin-bottom: .5rem
+  margin-bottom: var(--space-0-5)
 }
 
 .info-card #compareInstruction {
@@ -2172,7 +2257,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 #toNormCard.result-card {
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 .user-card {
@@ -2180,62 +2265,62 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   font-size: 1.1rem;
   line-height: 1.3;
   box-shadow: var(--shadow);
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   border-radius: var(--radius)
 }
 
 .user-card legend {
   font-size: 1.25rem;
   font-weight: 600;
-  padding-inline: .4rem
+  padding-inline: var(--space-0-4)
 }
 
 .user-card input,
 .user-card select {
   font-family: Inter,sans-serif;
   font-size: 1.05rem;
-  padding: .65rem .85rem;
+  padding: var(--space-0-65) var(--space-0-85);
   border-radius: .4rem;
-  border: 1px solid #c0c8c8
+  border: var(--border-hairline) solid #c0c8c8
 }
 
 .plan-card {
   background: var(--card);
   border-radius: var(--radius);
-  padding: 1.25rem 1.5rem;
+  padding: var(--space-1-25) var(--space-1-5);
   box-shadow: var(--shadow);
   font-family: Inter,sans-serif;
   font-size: 1.1rem;
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 #foodTimesSection {
-  margin-bottom: 1.5rem
+  margin-bottom: var(--space-1-5)
 }
 
 #foodTimesSection table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: .5rem
+  margin-top: var(--space-0-5)
 }
 
 #sourceFieldset {
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
-  margin-top: 1.5rem;
-  border: 1px solid rgba(0,131,141,.14);
-  border-radius: 18px;
+  margin-top: var(--space-1-5);
+  border: var(--border-hairline) solid rgba(0,131,141,.14);
+  border-radius: var(--radius-18);
   background: linear-gradient(180deg,#fffffff2,#f0fcfceb);
   box-shadow: 0 8px 28px #00515814;
-  padding: 0 1.1rem 1.2rem
+  padding: 0 var(--space-1-1) var(--space-1-2)
 }
 
 #sourceFieldset legend {
   float: none;
   width: auto;
-  padding: 0 .6rem;
-  margin: 0 0 0 .4rem;
+  padding: 0 var(--space-0-6);
+  margin: 0 0 0 var(--space-0-4);
   font-size: .78rem;
   font-weight: 700;
   letter-spacing: .05em;
@@ -2245,26 +2330,26 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .source-panel {
-  border-radius: 14px;
-  padding: .88rem 1rem;
-  margin-top: .75rem
+  border-radius: var(--radius-14);
+  padding: .88rem var(--space-1);
+  margin-top: var(--space-0-75)
 }
 
 .source-panel--warning {
   background: #b453090e;
-  border: 1px solid rgba(180,83,9,.14)
+  border: var(--border-hairline) solid rgba(180,83,9,.14)
 }
 
 .source-panel--pro {
   background: #0369a10b;
-  border: 1px solid rgba(3,105,161,.12)
+  border: var(--border-hairline) solid rgba(3,105,161,.12)
 }
 
 .source-panel__heading {
   display: flex;
   align-items: center;
-  gap: .5rem;
-  margin-bottom: .55rem
+  gap: var(--space-0-5);
+  margin-bottom: var(--space-0-55)
 }
 
 .source-panel__heading strong {
@@ -2305,7 +2390,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .source-panel p {
-  margin: 0 0 .55rem;
+  margin: 0 0 var(--space-0-55);
   font-size: .875rem;
   line-height: 1.65;
   color: #374151
@@ -2316,29 +2401,29 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .source-panel ul {
-  margin: .4rem 0 0;
-  padding-left: 1.1rem;
+  margin: var(--space-0-4) 0 0;
+  padding-left: var(--space-1-1);
   font-size: .875rem;
   line-height: 1.65;
   color: #374151
 }
 
 .source-panel ul li+li {
-  margin-top: .25rem
+  margin-top: var(--space-0-25)
 }
 
 #sourceFieldset .source-toggle-wrap {
   text-align: center;
-  margin-top: 1rem
+  margin-top: var(--space-1)
 }
 
 #sourceFieldset #toggleSources {
   display: inline-flex;
   align-items: center;
-  gap: .4rem;
-  padding: .44rem 1.1rem;
-  border-radius: 999px;
-  border: 1px solid rgba(0,131,141,.22);
+  gap: var(--space-0-4);
+  padding: .44rem var(--space-1-1);
+  border-radius: var(--radius-pill);
+  border: var(--border-hairline) solid rgba(0,131,141,.22);
   background: #ffffffbf;
   color: var(--primary, #00838d);
   font-size: .82rem;
@@ -2359,11 +2444,11 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   line-height: 1.7;
   color: #4b5563;
   padding-left: 1.35rem;
-  margin-top: .75rem
+  margin-top: var(--space-0-75)
 }
 
 #sourceList li+li {
-  margin-top: .4rem
+  margin-top: var(--space-0-4)
 }
 
 #sourceList a {
@@ -2386,13 +2471,13 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 
 #foodTimesSection th {
   text-align: left;
-  padding: .6rem .75rem;
+  padding: var(--space-0-6) var(--space-0-75);
   font-weight: 600
 }
 
 #foodTimesSection td {
   text-align: left;
-  padding: .6rem .75rem;
+  padding: var(--space-0-6) var(--space-0-75);
   background: #fff;
   color: #000
 }
@@ -2415,7 +2500,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   position: absolute;
   top: .1em;
   left: 1rem;
-  padding: 0 .45rem;
+  padding: 0 var(--space-0-45);
   background: var(--card);
   font-weight: 600;
   line-height: 1.2
@@ -2425,10 +2510,10 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   --pad: 1rem;
   padding: var(--pad);
   background: var(--card-bg, #fff);
-  border: 1px solid var(--card-border, #e2e8ea);
+  border: var(--border-hairline) solid var(--card-border, #e2e8ea);
   border-radius: var(--radius, 6px);
-  margin-top: 1rem;
-  margin-bottom: 1rem
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-1)
 }
 
 .total-card h2 {
@@ -2439,12 +2524,12 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 .kcal-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: .6rem
+  margin-top: var(--space-0-6)
 }
 
 .kcal-table th,
 .kcal-table td {
-  padding: 4px 6px
+  padding: var(--space-4px) var(--space-6px)
 }
 
 .kcal-table th {
@@ -2470,7 +2555,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .food-total-macro-summary {
-  margin-top: .35rem;
+  margin-top: var(--space-0-35);
   font-size: .95rem;
   font-weight: 600;
   color: #164245
@@ -2484,7 +2569,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .food-total-info {
-  margin-top: .45rem;
+  margin-top: var(--space-0-45);
   text-align: center
 }
 
@@ -2492,11 +2577,11 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .35rem;
+  gap: var(--space-0-35);
   min-height: 32px;
-  padding: .28rem .7rem;
-  border: 1px solid rgba(22,66,69,.38);
-  border-radius: 999px;
+  padding: .28rem var(--space-0-7);
+  border: var(--border-hairline) solid rgba(22,66,69,.38);
+  border-radius: var(--radius-pill);
   background: #ffffffdb;
   color: #164245;
   font-size: .82rem;
@@ -2514,13 +2599,13 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .food-total-info .food-total-macro-note {
-  margin: .4rem auto 0;
+  margin: var(--space-0-4) auto 0;
   max-width: 46rem;
   text-align: left
 }
 
 .food-total-goal-share {
-  margin-top: .3rem;
+  margin-top: var(--space-0-3);
   font-size: .88rem;
   font-weight: 600;
   color: #164245;
@@ -2567,7 +2652,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .bsa-info {
-  margin-top: 6px;
+  margin-top: var(--space-6px);
   font-size: 1.35rem;
   font-weight: 600;
   color: var(--primary)
@@ -2577,7 +2662,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: .6rem 0 1rem
+  margin: var(--space-0-6) 0 var(--space-1)
 }
 
 .switch {
@@ -2585,7 +2670,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   display: inline-block;
   width: 60px;
   height: 30px;
-  margin: 0 .75rem
+  margin: 0 var(--space-0-75)
 }
 
 .switch input {
@@ -2609,7 +2694,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   width: 26px;
   height: 26px;
   background: #fff;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   transition: transform .3s
 }
 
@@ -2673,28 +2758,28 @@ body.professional-bg {
 .pro-summary-label {
   display: none;
   position: absolute;
-  border-radius: 4px;
+  border-radius: var(--radius-4);
   background-color: #90f;
   color: #fff;
   font-size: .8rem;
-  padding: .5rem
+  padding: var(--space-0-5)
 }
 
 .pro-summary-card,
 .liquid-ios26 .pro-summary-card {
-  border: 3px solid #9900ff!important
+  border: var(--border-pro) solid #9900ff!important
 }
 
 #dietRecommendationsBtn {
-  border: 3px solid #9900ff
+  border: var(--border-pro) solid #9900ff
 }
 
 .liquid-ios26 #dietRecommendationsBtn {
-  border: 3px solid #9900ff!important
+  border: var(--border-pro) solid #9900ff!important
 }
 
 #dietRecommendationsContent {
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   box-shadow: var(--shadow);
   border-radius: var(--radius);
   position: relative;
@@ -2702,17 +2787,17 @@ body.professional-bg {
   --diet-pro-badge-inline-size: 3rem;
   --diet-pro-badge-block-size: 1.9rem;
   --diet-pro-badge-safe-gap: .55rem;
-  padding: .5rem 1rem 1rem
+  padding: var(--space-0-5) var(--space-1) var(--space-1)
 }
 
 .liquid-ios26 #dietRecommendationsContent {
-  border: 1px solid var(--lg-border)!important;
+  border: var(--border-hairline) solid var(--lg-border)!important;
   box-shadow: var(--lg-shadow)!important;
   border-radius: var(--lg-radius)!important;
   background: var(--lg-surface-light)!important;
-  backdrop-filter: blur(14px) saturate(115%)!important;
-  -webkit-backdrop-filter: blur(14px) saturate(115%)!important;
-  padding: .5rem 1rem 1rem
+  backdrop-filter: var(--blur-card) var(--blur-card-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-card) var(--blur-card-saturate)!important;
+  padding: var(--space-0-5) var(--space-1) var(--space-1)
 }
 
 .diet-info-note {
@@ -2727,8 +2812,8 @@ body.professional-bg {
   box-sizing: border-box;
   margin-right: 0;
   margin-inline-end: 0;
-  padding: .5rem .8rem;
-  margin-bottom: .6rem
+  padding: var(--space-0-5) var(--space-0-8);
+  margin-bottom: var(--space-0-6)
 }
 
 .liquid-ios26 .diet-info-note {
@@ -2747,7 +2832,7 @@ body.professional-bg {
 
 #generateDietBtn,
 #dietRecommendationsPdfBtn {
-  border: 3px solid #9900ff
+  border: var(--border-pro) solid #9900ff
 }
 
 #dietRecommendationsContent #generateDietBtn,
@@ -2756,8 +2841,8 @@ body.professional-bg {
   box-sizing: border-box!important;
   width: 100%!important;
   max-width: 100%!important;
-  margin: .55rem 0 0!important;
-  padding: .55rem 1rem!important;
+  margin: var(--space-0-55) 0 0!important;
+  padding: var(--space-0-55) var(--space-1)!important;
   border-radius: var(--radius)!important;
   font-size: .95rem!important;
   font-weight: 600!important;
@@ -2772,7 +2857,7 @@ body.professional-bg {
 
 .liquid-ios26 #generateDietBtn,
 .liquid-ios26 #dietRecommendationsPdfBtn {
-  border: 3px solid #9900ff!important;
+  border: var(--border-pro) solid #9900ff!important;
   font-weight: 600!important
 }
 
@@ -2799,9 +2884,9 @@ body.professional-bg {
 #toggleAdvancedGrowth.advanced-growth-btn {
   background: #fff;
   color: #000;
-  border: 3px solid #9900ff;
+  border: var(--border-pro) solid #9900ff;
   border-radius: var(--radius);
-  padding: .6rem 1.2rem;
+  padding: var(--space-0-6) var(--space-1-2);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -2814,7 +2899,7 @@ body.professional-bg {
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn {
   background: #fff!important;
   color: #000!important;
-  border: 3px solid #9900ff!important;
+  border: var(--border-pro) solid #9900ff!important;
   border-radius: var(--radius)!important;
   backdrop-filter: none!important;
   -webkit-backdrop-filter: none!important;
@@ -2825,7 +2910,7 @@ body.professional-bg {
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled {
   background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid var(--line-neutral)!important;
+  border: var(--border-pro) solid var(--line-neutral)!important;
   cursor: not-allowed;
   pointer-events: none
 }
@@ -2858,7 +2943,7 @@ body.professional-bg {
 .pro-button:disabled {
   background: var(--disabled-bg);
   color: #000;
-  border: 3px solid var(--line-neutral);
+  border: var(--border-pro) solid var(--line-neutral);
   cursor: not-allowed;
   pointer-events: none;
   opacity: 1
@@ -2867,7 +2952,7 @@ body.professional-bg {
 .liquid-ios26 .pro-button:disabled {
   background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid var(--line-neutral)!important;
+  border: var(--border-pro) solid var(--line-neutral)!important;
   cursor: not-allowed!important;
   pointer-events: none!important;
   opacity: 1!important
@@ -2885,7 +2970,7 @@ body.professional-bg {
 #toggleAdvancedGrowth.advanced-growth-btn.disabled {
   background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid var(--line-neutral)!important;
+  border: var(--border-pro) solid var(--line-neutral)!important;
   cursor: not-allowed;
   pointer-events: none
 }
@@ -2923,15 +3008,15 @@ body.professional-bg {
 #downSyndromeCard,
 #growthCalculationsForm,
 #advancedGrowthForm {
-  margin-top: 1rem!important
+  margin-top: var(--space-1)!important
 }
 
 #toggleGrowthCalculations.advanced-growth-btn {
   background: #fff;
   color: #000;
-  border: 3px solid var(--primary);
+  border: var(--border-pro) solid var(--primary);
   border-radius: var(--radius);
-  padding: .6rem 1.2rem;
+  padding: var(--space-0-6) var(--space-1-2);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -2944,7 +3029,7 @@ body.professional-bg {
 .liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn {
   background: #fff!important;
   color: #000!important;
-  border: 3px solid var(--primary)!important;
+  border: var(--border-pro) solid var(--primary)!important;
   border-radius: var(--radius)!important;
   backdrop-filter: none!important;
   -webkit-backdrop-filter: none!important;
@@ -2957,7 +3042,7 @@ body.professional-bg {
 .liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn.disabled {
   background: var(--disabled-bg)!important;
   color: #000!important;
-  border: 3px solid var(--line-neutral)!important;
+  border: var(--border-pro) solid var(--line-neutral)!important;
   cursor: not-allowed;
   pointer-events: none;
   opacity: 1
@@ -2987,8 +3072,8 @@ body.professional-bg {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: .6rem 0 1rem;
-  gap: .5rem;
+  margin: var(--space-0-6) 0 var(--space-1);
+  gap: var(--space-0-5);
   width: 100%;
   max-width: 360px;
   margin-left: auto;
@@ -3007,9 +3092,9 @@ body.professional-bg {
 
 .data-source-toggle label span {
   display: block;
-  padding: .5rem .8rem;
-  border: 2px solid var(--primary);
-  border-radius: 20px;
+  padding: var(--space-0-5) var(--space-0-8);
+  border: var(--border-emphasis) solid var(--primary);
+  border-radius: var(--radius-20);
   color: var(--primary);
   background-color: transparent;
   font-size: .85rem;
@@ -3084,12 +3169,12 @@ body.professional-bg {
 }
 
 #generatePalCentileChart {
-  border: 3px solid #9900ff;
+  border: var(--border-pro) solid #9900ff;
   border-radius: var(--radius)
 }
 
 .liquid-ios26 #generatePalCentileChart {
-  border: 3px solid #9900ff!important;
+  border: var(--border-pro) solid #9900ff!important;
   border-radius: var(--radius)!important
 }
 
@@ -3123,12 +3208,12 @@ body.professional-bg {
 }
 
 .plan-warning-card {
-  border: 2px solid var(--danger);
+  border: var(--border-emphasis) solid var(--danger);
   background: #ffeaea;
   border-radius: var(--radius);
   color: var(--danger);
-  padding: .75rem 1rem;
-  margin-bottom: 1rem;
+  padding: var(--space-0-75) var(--space-1);
+  margin-bottom: var(--space-1);
   font-size: .95rem
 }
 
@@ -3140,7 +3225,7 @@ body.professional-bg {
   #calcForm {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem
+    gap: var(--space-1)
   }
   #calcForm .half {
     flex: none;
@@ -3150,27 +3235,27 @@ body.professional-bg {
 
 .gh-test-card {
   background: var(--card);
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 1rem;
-  margin-bottom: 1rem
+  padding: var(--space-1);
+  margin-bottom: var(--space-1)
 }
 
 .gh-test-card:last-child {
-  margin-bottom: 1rem
+  margin-bottom: var(--space-1)
 }
 
 .gh-test-card p {
   font-size: .9rem;
-  margin-top: .4rem
+  margin-top: var(--space-0-4)
 }
 
 #ghButtonWrapper {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin: 1rem 0
+  margin: var(--space-1) 0
 }
 
 @media(min-width:700px) {
@@ -3184,7 +3269,7 @@ body.professional-bg {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin: 1rem 0
+  margin: var(--space-1) 0
 }
 
 @media(min-width:700px) {
@@ -3206,7 +3291,7 @@ body.professional-bg {
 
 #ghTestsLeft .gh-test-card:not(:last-child),
 #ghTestsRight .gh-test-card:not(:last-child) {
-  margin-bottom: 1rem
+  margin-bottom: var(--space-1)
 }
 
 @media(min-width:700px) {
@@ -3214,7 +3299,7 @@ body.professional-bg {
   #ghTestsRight.active {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-1);
     height: 100%
   }
   #ghTestsLeft.active .gh-test-card {
@@ -3229,7 +3314,7 @@ body.professional-bg {
   }
   #ghTestsLeft.active .gh-test-card:last-child,
   #ghTestsRight.active .gh-test-card:last-child {
-    margin-bottom: 1rem
+    margin-bottom: var(--space-1)
   }
 }
 
@@ -3251,7 +3336,7 @@ body.professional-bg {
 #ogttTestsRight .gh-test-card:not(:last-child),
 #acthTestsLeft .gh-test-card:not(:last-child),
 #acthTestsRight .gh-test-card:not(:last-child) {
-  margin-bottom: 1rem
+  margin-bottom: var(--space-1)
 }
 
 @media(min-width:700px) {
@@ -3261,7 +3346,7 @@ body.professional-bg {
   #acthTestsRight.active {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-1);
     height: 100%
   }
   #ogttTestsLeft.active .gh-test-card,
@@ -3282,7 +3367,7 @@ body.professional-bg {
   #ogttTestsRight.active .gh-test-card:last-child,
   #acthTestsLeft.active .gh-test-card:last-child,
   #acthTestsRight.active .gh-test-card:last-child {
-    margin-bottom: 1rem
+    margin-bottom: var(--space-1)
   }
   #snpButtonWrapper,
   #turnerButtonWrapper,
@@ -3292,7 +3377,7 @@ body.professional-bg {
     width: 100%;
     display: flex;
     justify-content: center;
-    margin: 1rem 0
+    margin: var(--space-1) 0
   }
   #zscoreCard {
     grid-column: 1 / -1
@@ -3314,14 +3399,14 @@ body.professional-bg {
     width: 100%;
     display: flex;
     justify-content: center;
-    margin: 1rem 0
+    margin: var(--space-1) 0
   }
   #toggleGhMonitor {
     background: var(--secondary);
     color: #fff;
     border: none;
     border-radius: var(--radius);
-    padding: .55rem 1.2rem;
+    padding: var(--space-0-55) var(--space-1-2);
     cursor: pointer;
     font: inherit;
     transition: background .2s ease,box-shadow .2s ease
@@ -3333,27 +3418,27 @@ body.professional-bg {
   #ghTherapyMetricsSection table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: .5rem
+    margin-bottom: var(--space-0-5)
   }
   #ghTherapyMetricsSection th,
   #ghTherapyMetricsSection td {
     text-align: left;
-    border-bottom: 1px solid #ddd;
-    padding: 4px 0
+    border-bottom: var(--border-hairline) solid #ddd;
+    padding: var(--space-4px) 0
   }
   #ghTherapyMetricsSection .view-mode {
     display: flex;
-    gap: .6rem;
+    gap: var(--space-0-6);
     align-items: center;
-    margin: .4rem 0 .6rem
+    margin: var(--space-0-4) 0 var(--space-0-6)
   }
   #ghTherapyMetricsSection select {
-    padding: 6px 10px;
-    border-radius: 10px
+    padding: var(--space-6px) var(--space-10px);
+    border-radius: var(--radius-10)
   }
   #ghTherapyMetricsSection .gh-therapy-view-desc {
     font-size: .85rem;
-    margin: .4rem 0 .6rem;
+    margin: var(--space-0-4) 0 var(--space-0-6);
     line-height: 1.4;
     color: inherit
   }
@@ -3384,9 +3469,9 @@ body.professional-bg {
 }
 
 fieldset.user-card {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-1);
   margin-inline: 0;
-  padding-top: .5rem
+  padding-top: var(--space-0-5)
 }
 
 .gh-test-card strong {
@@ -3398,10 +3483,10 @@ fieldset.user-card {
 }
 
 #professionalModule {
-  margin-top: 1.4rem!important;
-  margin-bottom: 1rem;
+  margin-top: var(--space-1-4)!important;
+  margin-bottom: var(--space-1);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   box-shadow: var(--shadow)
 }
 
@@ -3409,7 +3494,7 @@ fieldset.user-card {
   text-align: center;
   font-size: .98rem;
   line-height: 1;
-  margin-top: .5rem;
+  margin-top: var(--space-0-5);
   font-family: Inter,sans-serif;
   font-weight: 600;
   color: #ce0000
@@ -3426,7 +3511,7 @@ fieldset.user-card {
   align-items: center;
   justify-content: flex-start;
   width: 100%;
-  margin-top: .7rem
+  margin-top: var(--space-0-7)
 }
 
 .doctor-checkbox {
@@ -3434,11 +3519,11 @@ fieldset.user-card {
   -webkit-appearance: none;
   width: 28px;
   height: 28px;
-  border: 2px solid var(--primary);
-  border-radius: 4px;
+  border: var(--border-emphasis) solid var(--primary);
+  border-radius: var(--radius-4);
   position: relative;
   cursor: pointer;
-  margin-top: .6rem
+  margin-top: var(--space-0-6)
 }
 
 .doctor-checkbox:checked {
@@ -3453,7 +3538,7 @@ fieldset.user-card {
   width: 6px;
   height: 12px;
   border: solid #fff;
-  border-width: 0 2px 2px 0;
+  border-width: 0 var(--border-emphasis) var(--border-emphasis) 0;
   transform: rotate(45deg)
 }
 
@@ -3487,7 +3572,7 @@ fieldset.user-card {
 .doctor-wrapper.compact .doctor-checkbox {
   width: 24px;
   height: 24px;
-  margin-top: .4rem
+  margin-top: var(--space-0-4)
 }
 
 #pwzContainer label {
@@ -3500,7 +3585,7 @@ fieldset.user-card {
 
 #pwzContainer {
   text-align: center;
-  margin-bottom: 1rem
+  margin-bottom: var(--space-1)
 }
 
 #pwzContainer input[type=text] {
@@ -3512,20 +3597,20 @@ fieldset.user-card {
 
 @media(max-width:699px) {
   #calcForm {
-    gap: .3rem
+    gap: var(--space-0-3)
   }
   fieldset.user-card {
-    margin-bottom: .3rem
+    margin-bottom: var(--space-0-3)
   }
   .doctor-wrapper {
-    margin-top: .25rem
+    margin-top: var(--space-0-25)
   }
 }
 
 #calcForm {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 #calcForm .half {
@@ -3538,18 +3623,18 @@ fieldset.user-card {
 @media(min-width:700px) {
   #calcForm {
     grid-template-columns: 1fr 1fr;
-    column-gap: 1rem;
-    row-gap: 1rem
+    column-gap: var(--space-1);
+    row-gap: var(--space-1)
   }
   #results {
-    column-gap: 1rem;
-    row-gap: 1.5rem
+    column-gap: var(--space-1);
+    row-gap: var(--space-1-5)
   }
 }
 
 @media(max-width:699px) {
   #calcForm {
-    gap: .3rem
+    gap: var(--space-0-3)
   }
 }
 
@@ -3558,7 +3643,7 @@ fieldset.user-card {
   font-size: 1.25rem;
   font-weight: 600;
   display: block;
-  margin-top: 1rem;
+  margin-top: var(--space-1);
   line-height: 1.3
 }
 
@@ -3566,24 +3651,24 @@ fieldset.user-card {
   background: var(--primary);
   color: #fff;
   border: 0;
-  padding: .6rem 1rem;
+  padding: var(--space-0-6) var(--space-1);
   border-radius: var(--radius);
   cursor: pointer
 }
 
 #intakeCard .badge {
   display: inline-block;
-  padding: .35rem .6rem;
-  border: 1px solid var(--line);
+  padding: var(--space-0-35) var(--space-0-6);
+  border: var(--border-hairline) solid var(--line);
   background: #fff;
-  border-radius: 6px
+  border-radius: var(--radius-6)
 }
 
 .intake-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin: .6rem 0
+  gap: var(--space-1);
+  margin: var(--space-0-6) 0
 }
 
 #intakeTable td input {
@@ -3596,8 +3681,8 @@ fieldset.user-card {
 
 #intakeTable .remove-intake-row {
   background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: var(--border-hairline) solid #ddd;
+  border-radius: var(--radius-6);
   cursor: pointer;
   width: 32px;
   height: 32px;
@@ -3611,13 +3696,13 @@ fieldset.user-card {
 }
 
 #intakeCard {
-  margin-bottom: 1rem
+  margin-bottom: var(--space-1)
 }
 
 #intakeSection {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-1);
   min-width: 0
 }
 
@@ -3669,7 +3754,7 @@ fieldset.user-card {
 
 #intakeResults table.intake-results-table th,
 #intakeResults table.intake-results-table td {
-  padding: .55rem .65rem;
+  padding: var(--space-0-55) var(--space-0-65);
   text-align: left;
   vertical-align: top;
   white-space: normal;
@@ -3695,7 +3780,7 @@ fieldset.user-card {
 }
 
 #intakeResults .intake-period-sub {
-  margin-top: .35rem;
+  margin-top: var(--space-0-35);
   color: #6b7a7a;
   font-size: .88rem
 }
@@ -3703,13 +3788,13 @@ fieldset.user-card {
 #intakeResults .intake-stack-cell {
   display: flex;
   flex-direction: column;
-  gap: .45rem
+  gap: var(--space-0-45)
 }
 
 #intakeResults .intake-metric-row {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
-  gap: .55rem;
+  gap: var(--space-0-55);
   align-items: start
 }
 
@@ -3731,28 +3816,28 @@ fieldset.user-card {
 @media(max-width:980px) {
   #intakeResults table.intake-results-table th,
   #intakeResults table.intake-results-table td {
-    padding: .5rem .55rem;
+    padding: var(--space-0-5) var(--space-0-55);
     font-size: .9rem
   }
   #intakeResults .intake-metric-row {
-    gap: .4rem
+    gap: var(--space-0-4)
   }
 }
 
 .intake-toggle-wrap {
-  margin: 1rem 0
+  margin: var(--space-1) 0
 }
 
 .measure-row-intake {
   display: flex;
   flex-direction: column;
-  gap: .45rem;
-  margin-top: .65rem;
+  gap: var(--space-0-45);
+  margin-top: var(--space-0-65);
   position: relative
 }
 
 #intakeMeasurements>.measure-row-intake.intake-history-row {
-  margin-top: .8rem
+  margin-top: var(--space-0-8)
 }
 
 #intakeMeasurements>.intake-history-divider+.measure-row-intake.intake-history-row {
@@ -3763,8 +3848,8 @@ fieldset.user-card {
   height: 1.5px;
   width: calc(100% - 2.8rem);
   max-width: 34rem;
-  margin: .75rem auto .25rem;
-  border-radius: 999px;
+  margin: var(--space-0-75) auto var(--space-0-25);
+  border-radius: var(--radius-pill);
   pointer-events: none;
   background: linear-gradient(90deg,#1ab5b500,#1ab5b524 10%,#1ab5b547 24%,#1ab5b57a,#1ab5b547 76%,#1ab5b524 90%,#1ab5b500)
 }
@@ -3786,13 +3871,13 @@ fieldset.user-card {
 .measure-row-intake .intake-row-bottom {
   display: grid;
   grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto;
-  gap: .5rem;
+  gap: var(--space-0-5);
   align-items: end
 }
 
 .measure-row-intake .remove-intake-row {
   justify-self: end;
-  margin-top: .25rem;
+  margin-top: var(--space-0-25);
   align-self: end
 }
 
@@ -3806,7 +3891,7 @@ fieldset.user-card {
   }
   .measure-row-intake .remove-intake-row {
     justify-self: end;
-    margin-top: .25rem
+    margin-top: var(--space-0-25)
   }
 }
 
@@ -3820,11 +3905,11 @@ fieldset.user-card {
 }
 
 .intake-result-card {
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   background: #fff;
   border-radius: var(--radius);
-  padding: .7rem .85rem;
-  margin-bottom: .65rem
+  padding: var(--space-0-7) var(--space-0-85);
+  margin-bottom: var(--space-0-65)
 }
 
 .intake-result-card p {
@@ -3843,7 +3928,7 @@ fieldset.user-card {
 .age-mm-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: .35rem
+  gap: var(--space-0-35)
 }
 
 @media(max-width:480px) {
@@ -3919,14 +4004,14 @@ fieldset.user-card {
 
 .whr-result {
   display: grid;
-  gap: .4rem
+  gap: var(--space-0-4)
 }
 
 .whr-topline {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: .5rem;
+  gap: var(--space-0-5);
   flex-wrap: wrap
 }
 
@@ -3941,27 +4026,27 @@ fieldset.user-card {
 
 .whr-badges {
   display: flex;
-  gap: .35rem;
+  gap: var(--space-0-35);
   justify-content: center;
   flex-wrap: wrap
 }
 
 .whr-badge {
   display: inline-block;
-  padding: .35rem .55rem;
-  border: 1px solid var(--line);
+  padding: var(--space-0-35) var(--space-0-55);
+  border: var(--border-hairline) solid var(--line);
   background: #fff;
-  border-radius: 6px;
+  border-radius: var(--radius-6);
   font-size: 1rem
 }
 
 .whr-badge small {
   opacity: var(--opacity-locked);
-  margin-left: .25rem
+  margin-left: var(--space-0-25)
 }
 
 .whr-status {
-  margin-top: .25rem;
+  margin-top: var(--space-0-25);
   text-align: center
 }
 
@@ -4021,7 +4106,7 @@ fieldset.user-card {
 }
 
 #abxDoseInput.dose-out-of-range {
-  border: 1px solid var(--danger)!important
+  border: var(--border-hairline) solid var(--danger)!important
 }
 
 #bmiCard .result-box strong svg {
@@ -4058,14 +4143,14 @@ fieldset.user-card {
   #clearAllDataBtn {
     display: block;
     width: max-content;
-    margin: 1rem auto 0
+    margin: var(--space-1) auto 0
   }
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: .35rem .5rem
+  gap: var(--space-0-35) var(--space-0-5)
 }
 
 .summary-grid .label {
@@ -4088,14 +4173,14 @@ fieldset.user-card {
 
 .prev-summary-separator {
   border: none;
-  border-top: 2px solid var(--line);
+  border-top: var(--border-emphasis) solid var(--line);
   width: 90%;
-  margin: 0 auto .6rem
+  margin: 0 auto var(--space-0-6)
 }
 
 .prev-summary-label {
   text-align: center;
-  margin-bottom: .5rem;
+  margin-bottom: var(--space-0-5);
   font-size: .95rem;
   font-weight: 600
 }
@@ -4113,7 +4198,7 @@ fieldset.user-card {
 }
 
 .diff-section {
-  margin-top: .5rem
+  margin-top: var(--space-0-5)
 }
 
 .summary-grid .diff-section {
@@ -4123,7 +4208,7 @@ fieldset.user-card {
 .diff-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: .35rem .5rem;
+  gap: var(--space-0-35) var(--space-0-5);
   align-items: baseline
 }
 
@@ -4146,7 +4231,7 @@ fieldset.user-card {
   text-align: right;
   font-size: .88rem;
   line-height: 1.3;
-  margin: -.1rem 0 .4rem;
+  margin: -.1rem 0 var(--space-0-4);
   color: #4b5b5b
 }
 
@@ -4177,7 +4262,7 @@ fieldset.user-card {
     grid-column: 1 / -1;
     width: 100%;
     margin-top: -1rem;
-    margin-bottom: 1rem
+    margin-bottom: var(--space-1)
   }
 }
 
@@ -4188,8 +4273,8 @@ fieldset.user-card {
 .porownanie-chipy {
   display: flex;
   flex-wrap: wrap;
-  gap: .35rem;
-  margin: .55rem 0 .15rem
+  gap: var(--space-0-35);
+  margin: var(--space-0-55) 0 .15rem
 }
 
 .porownanie-chip {
@@ -4197,11 +4282,11 @@ fieldset.user-card {
   align-items: center;
   font-size: .8rem;
   font-weight: 600;
-  padding: .15rem .6rem;
-  border-radius: 999px;
+  padding: .15rem var(--space-0-6);
+  border-radius: var(--radius-pill);
   background: #e6f4f5;
   color: #0a6b73;
-  border: 1px solid #cfe2e5;
+  border: var(--border-hairline) solid #cfe2e5;
   white-space: nowrap
 }
 
@@ -4224,7 +4309,7 @@ fieldset.user-card {
 .porownanie-tabela {
   width: 100%;
   border-collapse: collapse;
-  margin-top: .5rem;
+  margin-top: var(--space-0-5);
   font-variant-numeric: tabular-nums;
   table-layout: fixed
 }
@@ -4236,10 +4321,10 @@ fieldset.user-card {
   color: #6b7a7a;
   font-weight: 700;
   text-align: right;
-  padding: 0 .4rem .4rem;
+  padding: 0 var(--space-0-4) var(--space-0-4);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid #e3ecee
+  border-bottom: var(--border-hairline) solid #e3ecee
 }
 
 .porownanie-tabela tbody tr,
@@ -4255,9 +4340,9 @@ fieldset.user-card {
 }
 
 .porownanie-tabela td {
-  padding: .55rem .4rem;
+  padding: var(--space-0-55) var(--space-0-4);
   border: 0;
-  border-bottom: 1px solid #e3ecee;
+  border-bottom: var(--border-hairline) solid #e3ecee;
   vertical-align: top;
   text-align: right;
   overflow-wrap: anywhere;
@@ -4329,11 +4414,11 @@ fieldset.user-card {
 
 .pt-pill {
   display: inline-block;
-  margin-top: .25rem;
+  margin-top: var(--space-0-25);
   font-size: .74rem;
   font-weight: 600;
-  padding: .12rem .5rem;
-  border-radius: 999px;
+  padding: .12rem var(--space-0-5);
+  border-radius: var(--radius-pill);
   line-height: 1.3;
   background: #eef2f3;
   color: #4b5b5b
@@ -4373,10 +4458,10 @@ fieldset.user-card {
   .porownanie-tabela td:first-child {
     width: 29%;
     font-size: .92rem;
-    padding-left: .25rem
+    padding-left: var(--space-0-25)
   }
   .porownanie-tabela td {
-    padding: .5rem .3rem
+    padding: var(--space-0-5) var(--space-0-3)
   }
   .pt-w {
     font-size: 1rem
@@ -4390,11 +4475,11 @@ fieldset.user-card {
 }
 
 .porownanie-tempo {
-  margin-top: .6rem;
-  padding: .55rem .75rem;
-  border-radius: 12px;
+  margin-top: var(--space-0-6);
+  padding: var(--space-0-55) var(--space-0-75);
+  border-radius: var(--radius-12);
   background: #e6f4f5;
-  border: 1px solid #cfe2e5;
+  border: var(--border-hairline) solid #cfe2e5;
   font-size: .9rem;
   color: var(--text);
   line-height: 1.4
@@ -4411,11 +4496,11 @@ fieldset.user-card {
 }
 
 .porownanie-nota {
-  margin-top: .5rem;
+  margin-top: var(--space-0-5);
   font-size: .9rem;
   color: #6b7a7a;
-  border-left: 3px solid #cfe2e5;
-  padding-left: .6rem;
+  border-left: var(--border-pro) solid #cfe2e5;
+  padding-left: var(--space-0-6);
   line-height: 1.4
 }
 
@@ -4426,14 +4511,14 @@ fieldset.user-card {
 }
 
 .porownanie-pozostale {
-  margin-top: .85rem;
-  border-top: 1px solid #e3ecee;
-  padding-top: .6rem;
+  margin-top: var(--space-0-85);
+  border-top: var(--border-hairline) solid #e3ecee;
+  padding-top: var(--space-0-6);
   position: relative
 }
 
 .porownanie-pozostale h4 {
-  margin: 0 0 .35rem;
+  margin: 0 0 var(--space-0-35);
   font-size: .95rem;
   color: var(--text)
 }
@@ -4453,7 +4538,7 @@ fieldset.user-card {
 }
 
 #prevSummaryCard {
-  border: 1px solid var(--primary);
+  border: var(--border-hairline) solid var(--primary);
   width: 100%
 }
 
@@ -4463,8 +4548,8 @@ fieldset.user-card {
 
 @media(max-width:700px) {
   #prevSummaryWrap {
-    margin-top: .4rem;
-    margin-bottom: .7rem
+    margin-top: var(--space-0-4);
+    margin-bottom: var(--space-0-7)
   }
 }
 
@@ -4473,7 +4558,7 @@ fieldset.user-card {
   color: var(--primary);
   border: none;
   cursor: pointer;
-  padding: .3rem .6rem;
+  padding: var(--space-0-3) var(--space-0-6);
   border-radius: var(--radius)
 }
 
@@ -4506,13 +4591,13 @@ fieldset.user-card {
 }
 
 #ghIgfTherapyCard .result-box {
-  border: 2px solid var(--brand)!important
+  border: var(--border-emphasis) solid var(--brand)!important
 }
 
 @media(max-width:699px) {
   #antibioticTherapyCard .flex {
     flex-direction: column!important;
-    gap: .8rem!important
+    gap: var(--space-0-8)!important
   }
   #antibioticTherapyCard .flex>label {
     flex: 1 1 100%!important;
@@ -4521,39 +4606,39 @@ fieldset.user-card {
 }
 
 #downSyndromeCard {
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 #downSyndromeCard .result-box {
   background: var(--card-bg);
-  border: 2px solid var(--brand);
+  border: var(--border-emphasis) solid var(--brand);
   border-radius: var(--radius);
   box-shadow: var(--shadow-s);
-  padding: 1rem
+  padding: var(--space-1)
 }
 
 #advancedGrowthForm {
-  border: 1px solid var(--line)
+  border: var(--border-hairline) solid var(--line)
 }
 
 #advResults {
-  border: 2px solid var(--brand);
+  border: var(--border-emphasis) solid var(--brand);
   background: var(--card-bg);
   border-radius: var(--radius);
   box-shadow: var(--shadow-s)
 }
 
 .adv-growth-result-block+.adv-growth-result-block {
-  margin-top: 1rem;
-  padding-top: .95rem;
-  border-top: 1px solid var(--line-teal-soft)
+  margin-top: var(--space-1);
+  padding-top: var(--space-0-95);
+  border-top: var(--border-hairline) solid var(--line-teal-soft)
 }
 
 .adv-growth-result-details {
   display: flex;
   flex-direction: column;
-  gap: .6rem;
-  margin: .55rem 0 .2rem
+  gap: var(--space-0-6);
+  margin: var(--space-0-55) 0 .2rem
 }
 
 .adv-growth-result-block--reliability .adv-growth-result-details {
@@ -4567,9 +4652,9 @@ fieldset.user-card {
 
 .adv-growth-result-details-panel {
   display: block;
-  padding: .95rem 1rem;
-  border-radius: 14px;
-  border: 1px solid rgba(0,131,141,.14);
+  padding: var(--space-0-95) var(--space-1);
+  border-radius: var(--radius-14);
+  border: var(--border-hairline) solid rgba(0,131,141,.14);
   background: linear-gradient(180deg,#f8fbfbf5,#f4fafaf5)
 }
 
@@ -4588,10 +4673,10 @@ fieldset.user-card {
 .adv-growth-reliability-card {
   display: flex;
   flex-direction: column;
-  gap: .7rem;
-  padding: .95rem 1rem;
-  border-radius: 16px;
-  border: 1px solid var(--line-teal);
+  gap: var(--space-0-7);
+  padding: var(--space-0-95) var(--space-1);
+  border-radius: var(--radius-16);
+  border: var(--border-hairline) solid var(--line-teal);
   background: linear-gradient(180deg,#f8fbfbfa,#f4fafafa)
 }
 
@@ -4611,13 +4696,13 @@ fieldset.user-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: .5rem
+  gap: var(--space-0-5)
 }
 
 .adv-growth-reliability-methods {
   display: flex;
   flex-direction: column;
-  gap: .45rem
+  gap: var(--space-0-45)
 }
 
 .adv-growth-reliability-method-row {
@@ -4625,7 +4710,7 @@ fieldset.user-card {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: .5rem
+  gap: var(--space-0-5)
 }
 
 .adv-growth-reliability-method-name {
@@ -4638,8 +4723,8 @@ fieldset.user-card {
   justify-content: center;
   min-width: 8.75rem;
   padding: .38rem .78rem;
-  border-radius: 999px;
-  border: 1px solid rgba(0,131,141,.18);
+  border-radius: var(--radius-pill);
+  border: var(--border-hairline) solid rgba(0,131,141,.18);
   font-size: .92rem;
   font-weight: 700;
   line-height: 1.2;
@@ -4678,10 +4763,10 @@ fieldset.user-card {
 }
 
 .adv-growth-global-disclaimer {
-  margin-top: .75rem;
-  padding: .9rem 1rem;
-  border-radius: 14px;
-  border: 1px solid rgba(199,93,0,.22);
+  margin-top: var(--space-0-75);
+  padding: var(--space-0-9) var(--space-1);
+  border-radius: var(--radius-14);
+  border: var(--border-hairline) solid rgba(199,93,0,.22);
   background: linear-gradient(180deg,#fff9f0fa,#fff5e6fa);
   color: #6d4a11
 }
@@ -4689,10 +4774,10 @@ fieldset.user-card {
 .adv-growth-profile-card {
   display: flex;
   flex-direction: column;
-  gap: .7rem;
-  padding: .95rem 1rem;
-  border-radius: 16px;
-  border: 1px solid var(--line-teal);
+  gap: var(--space-0-7);
+  padding: var(--space-0-95) var(--space-1);
+  border-radius: var(--radius-16);
+  border: var(--border-hairline) solid var(--line-teal);
   background: linear-gradient(180deg,#f8fbfbfa,#f4fafafa)
 }
 
@@ -4713,14 +4798,14 @@ fieldset.user-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: .5rem
+  gap: var(--space-0-5)
 }
 
 .adv-growth-profile-models,
 .adv-growth-profile-ranking {
   display: flex;
   flex-direction: column;
-  gap: .45rem
+  gap: var(--space-0-45)
 }
 
 .adv-growth-profile-model-row {
@@ -4728,7 +4813,7 @@ fieldset.user-card {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: .5rem
+  gap: var(--space-0-5)
 }
 
 .adv-growth-profile-model-name {
@@ -4737,31 +4822,31 @@ fieldset.user-card {
 
 .adv-growth-profile-list {
   margin: 0;
-  padding-left: 1.1rem
+  padding-left: var(--space-1-1)
 }
 
 .adv-growth-profile-reference {
-  margin-top: .9rem;
-  padding-top: .9rem;
-  border-top: 1px solid var(--line-teal-soft);
+  margin-top: var(--space-0-9);
+  padding-top: var(--space-0-9);
+  border-top: var(--border-hairline) solid var(--line-teal-soft);
   display: flex;
   flex-direction: column;
-  gap: .7rem
+  gap: var(--space-0-7)
 }
 
 .adv-growth-profile-reference-list {
   display: flex;
   flex-direction: column;
-  gap: .7rem
+  gap: var(--space-0-7)
 }
 
 .adv-growth-profile-reference-item {
   display: flex;
   flex-direction: column;
-  gap: .55rem;
-  padding: .85rem .95rem;
-  border-radius: 14px;
-  border: 1px solid var(--line-teal-soft);
+  gap: var(--space-0-55);
+  padding: var(--space-0-85) var(--space-0-95);
+  border-radius: var(--radius-14);
+  border: var(--border-hairline) solid var(--line-teal-soft);
   background: #ffffff8c
 }
 
@@ -4777,8 +4862,8 @@ fieldset.user-card {
   justify-content: center;
   min-width: 8.75rem;
   padding: .38rem .78rem;
-  border-radius: 999px;
-  border: 1px solid rgba(0,131,141,.18);
+  border-radius: var(--radius-pill);
+  border: var(--border-hairline) solid rgba(0,131,141,.18);
   font-size: .92rem;
   font-weight: 700;
   line-height: 1.2
@@ -4837,9 +4922,9 @@ fieldset.user-card {
 }
 
 .adv-growth-profile-warning {
-  padding: .85rem .95rem;
-  border-radius: 14px;
-  border: 1px solid rgba(199,93,0,.22);
+  padding: var(--space-0-85) var(--space-0-95);
+  border-radius: var(--radius-14);
+  border: var(--border-hairline) solid rgba(199,93,0,.22);
   background: linear-gradient(180deg,#fff9f0fa,#fff5e6fa);
   color: #6d4a11
 }
@@ -4864,7 +4949,7 @@ header h1 {
 header {
   background: #fff;
   color: var(--text);
-  border-bottom: 1px solid var(--line)
+  border-bottom: var(--border-hairline) solid var(--line)
 }
 
 .liquid-ios26 header h1 {
@@ -4878,28 +4963,28 @@ header {
   width: 100%;
   background-color: #fff;
   box-shadow: 0 -2px 8px #0000001a;
-  padding: 1rem;
+  padding: var(--space-1);
   font-size: .9rem;
   z-index: var(--z-banner);
   display: none
 }
 
 .cookie-banner ul {
-  margin: 0 0 1rem;
-  padding-left: 1.2rem;
+  margin: 0 0 var(--space-1);
+  padding-left: var(--space-1-2);
   list-style-type: disc
 }
 
 .cookie-buttons {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-1);
   justify-content: flex-start
 }
 
 .cookie-buttons button {
   border: none;
-  padding: .5rem 1rem;
-  border-radius: 4px;
+  padding: var(--space-0-5) var(--space-1);
+  border-radius: var(--radius-4);
   cursor: pointer;
   font-size: .9rem
 }
@@ -4917,9 +5002,9 @@ header {
 .main-nav ul {
   list-style: none;
   padding-left: 0;
-  margin: .5rem 0 0;
+  margin: var(--space-0-5) 0 0;
   display: flex;
-  gap: 1rem;
+  gap: var(--space-1);
   align-items: center
 }
 
@@ -4934,11 +5019,11 @@ header {
 }
 
 .main-nav {
-  max-width: 960px;
+  max-width: var(--container-max-width);
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1.5rem;
-  padding-right: 1rem;
+  padding-left: var(--space-1-5);
+  padding-right: var(--space-1);
   width: 100%;
   background: inherit;
   position: relative
@@ -5009,15 +5094,15 @@ header {
 }
 
 #modulesWrapper #toggleThyroidCancerKids.active-toggle {
-  border: 1px solid var(--brand-light)
+  border: var(--border-hairline) solid var(--brand-light)
 }
 
 #thyroidCancerKidsCard .thy-jump-cancer-preop {
-  border: 3px solid #9900ff!important
+  border: var(--border-pro) solid #9900ff!important
 }
 
 #thyroidCancerKidsCard .thy-disclosure-btn-static {
-  border: 1px solid var(--brand-light)!important
+  border: var(--border-hairline) solid var(--brand-light)!important
 }
 
 #thyroidCancerKidsCard .thy-bullets,
@@ -5029,8 +5114,8 @@ header {
 
 #thyroidCancerKidsCard .thy-bullets>li {
   position: relative;
-  padding-left: 1.25rem;
-  margin: .45rem 0
+  padding-left: var(--space-1-25);
+  margin: var(--space-0-45) 0
 }
 
 #thyroidCancerKidsCard .thy-bullets>li:before {
@@ -5042,14 +5127,14 @@ header {
 }
 
 #thyroidCancerKidsCard .thy-subbullets {
-  padding-left: 1.4rem;
-  margin-top: .35rem
+  padding-left: var(--space-1-4);
+  margin-top: var(--space-0-35)
 }
 
 #thyroidCancerKidsCard .thy-subbullets>li {
   position: relative;
   padding-left: 1.15rem;
-  margin: .35rem 0
+  margin: var(--space-0-35) 0
 }
 
 #thyroidCancerKidsCard .thy-subbullets>li:before {
@@ -5063,38 +5148,38 @@ header {
 
 #thyroidCancerKidsCard .thy-section-title {
   text-align: center;
-  margin: .9rem 0 .45rem
+  margin: var(--space-0-9) 0 var(--space-0-45)
 }
 
 #thyroidCancerKidsCard .thy-eutirads-banner,
 #thyroidCancerKidsCard .thy-note {
   border-radius: var(--radius);
-  border: 1px solid rgba(0,0,0,.08);
+  border: var(--border-hairline) solid rgba(0,0,0,.08);
   background: var(--table-stripe);
   line-height: 1.5
 }
 
 #thyroidCancerKidsCard .thy-eutirads-banner {
-  margin: .9rem auto 0;
+  margin: var(--space-0-9) auto 0;
   max-width: 980px;
-  padding: .85rem .95rem;
+  padding: var(--space-0-85) var(--space-0-95);
   border-color: #9900ff29;
   background: #9900ff14
 }
 
 #thyroidCancerKidsCard .thy-note {
-  padding: .75rem .9rem
+  padding: var(--space-0-75) var(--space-0-9)
 }
 
 #thyroidCancerKidsCard .thy-note .thy-list,
 #thyroidCancerKidsCard .thy-eutirads-banner .thy-list {
-  margin: .4rem 0 0 1.2rem
+  margin: var(--space-0-4) 0 0 var(--space-1-2)
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-wrap {
   display: flex;
   flex-direction: column;
-  gap: .55rem;
+  gap: var(--space-0-55);
   margin: 0 0 1.05rem
 }
 
@@ -5107,10 +5192,10 @@ header {
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-card {
-  border: 1px solid rgba(0,0,0,.1);
+  border: var(--border-hairline) solid rgba(0,0,0,.1);
   border-left: 4px solid #9900ff;
   border-radius: var(--radius);
-  padding: .95rem;
+  padding: var(--space-0-95);
   background: var(--card-bg);
   box-shadow: var(--shadow-s)
 }
@@ -5118,13 +5203,13 @@ header {
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-head {
   display: flex;
   align-items: flex-start;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-index {
   width: 28px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5142,15 +5227,15 @@ header {
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-bullets {
-  margin: .55rem 0 0;
-  padding-left: 1.2rem;
+  margin: var(--space-0-55) 0 0;
+  padding-left: var(--space-1-2);
   list-style: disc
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-modifiers {
-  margin-top: .9rem;
-  padding-top: .85rem;
-  border-top: 1px solid rgba(0,0,0,.08)
+  margin-top: var(--space-0-9);
+  padding-top: var(--space-0-85);
+  border-top: var(--border-hairline) solid rgba(0,0,0,.08)
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-subtitle,
@@ -5159,7 +5244,7 @@ header {
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-subtitle {
-  margin: 0 0 .55rem
+  margin: 0 0 var(--space-0-55)
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-modifiers .thy-switches {
@@ -5173,34 +5258,34 @@ header {
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-group {
-  margin-top: .8rem;
-  padding: .8rem .85rem;
+  margin-top: var(--space-0-8);
+  padding: var(--space-0-8) var(--space-0-85);
   border-radius: var(--radius);
-  border: 1px solid rgba(153,0,255,.12);
+  border: var(--border-hairline) solid rgba(153,0,255,.12);
   background: #9900ff0d
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-group-title {
-  margin: 0 0 .45rem
+  margin: 0 0 var(--space-0-45)
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-group-bullets {
   margin: 0;
-  padding-left: 1.2rem;
+  padding-left: var(--space-1-2);
   list-style: disc
 }
 
 #thyroidCancerKidsCard #thyNoduleResult .thy-rec-group-bullets li {
-  margin: .35rem 0
+  margin: var(--space-0-35) 0
 }
 
 #thyroidCancerKidsCard .thy-disclosure-wrap {
-  margin-top: .95rem
+  margin-top: var(--space-0-95)
 }
 
 #thyroidCancerKidsCard .thy-disclosure-btnwrap {
   text-align: center;
-  margin-bottom: .75rem
+  margin-bottom: var(--space-0-75)
 }
 
 #thyroidCancerKidsCard .thy-disclosure-panel[hidden] {
@@ -5214,7 +5299,7 @@ header {
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-wrap {
   display: flex;
   flex-direction: column;
-  gap: .55rem;
+  gap: var(--space-0-55);
   margin: 0 0 1.05rem
 }
 
@@ -5227,10 +5312,10 @@ header {
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-card {
-  border: 1px solid rgba(0,0,0,.1);
+  border: var(--border-hairline) solid rgba(0,0,0,.1);
   border-left: 4px solid #9900ff;
   border-radius: var(--radius);
-  padding: .95rem;
+  padding: var(--space-0-95);
   background: var(--card-bg);
   box-shadow: var(--shadow-s)
 }
@@ -5238,13 +5323,13 @@ header {
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-head {
   display: flex;
   align-items: flex-start;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-index {
   width: 28px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5262,8 +5347,8 @@ header {
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-bullets {
-  margin: .55rem 0 0;
-  padding-left: 1.2rem;
+  margin: var(--space-0-55) 0 0;
+  padding-left: var(--space-1-2);
   list-style: disc
 }
 
@@ -5272,9 +5357,9 @@ header {
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-modifiers {
-  margin-top: .9rem;
-  padding-top: .85rem;
-  border-top: 1px solid rgba(0,0,0,.08)
+  margin-top: var(--space-0-9);
+  padding-top: var(--space-0-85);
+  border-top: var(--border-hairline) solid rgba(0,0,0,.08)
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-subtitle,
@@ -5283,7 +5368,7 @@ header {
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-subtitle {
-  margin: 0 0 .55rem
+  margin: 0 0 var(--space-0-55)
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-modifiers .thy-switches {
@@ -5297,32 +5382,32 @@ header {
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-group {
-  margin-top: .8rem;
-  padding: .8rem .85rem;
+  margin-top: var(--space-0-8);
+  padding: var(--space-0-8) var(--space-0-85);
   border-radius: var(--radius);
-  border: 1px solid rgba(153,0,255,.12);
+  border: var(--border-hairline) solid rgba(153,0,255,.12);
   background: #9900ff0d
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-group-title {
-  margin: 0 0 .45rem
+  margin: 0 0 var(--space-0-45)
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-group-bullets {
   margin: 0;
-  padding-left: 1.2rem;
+  padding-left: var(--space-1-2);
   list-style: disc
 }
 
 #thyroidCancerKidsCard #thyCancerResult .thy-rec-group-bullets li {
-  margin: .35rem 0
+  margin: var(--space-0-35) 0
 }
 
 #thyroidCancerKidsCard .thy-switches {
   display: flex;
   flex-direction: column;
-  gap: .8rem;
-  margin-top: .9rem;
+  gap: var(--space-0-8);
+  margin-top: var(--space-0-9);
   max-width: 520px;
   margin-left: 0;
   margin-right: 0;
@@ -5332,7 +5417,7 @@ header {
 #thyroidCancerKidsCard .thy-switches .abx-option-row {
   max-width: 520px;
   width: 100%;
-  margin: .35rem 0
+  margin: var(--space-0-35) 0
 }
 
 #thyroidCancerKidsCard .thy-switches .abx-option-label {
@@ -5343,10 +5428,10 @@ header {
   display: flex;
   justify-content: center;
   align-items: stretch;
-  gap: .5rem;
+  gap: var(--space-0-5);
   width: 100%;
   max-width: 760px;
-  margin: .6rem auto 0
+  margin: var(--space-0-6) auto 0
 }
 
 #thyroidCancerKidsCard .thy-mode-toggle label {
@@ -5362,9 +5447,9 @@ header {
 
 #thyroidCancerKidsCard .thy-mode-toggle label span {
   display: block;
-  padding: .55rem .9rem;
-  border: 2px solid var(--primary);
-  border-radius: 999px;
+  padding: var(--space-0-55) var(--space-0-9);
+  border: var(--border-emphasis) solid var(--primary);
+  border-radius: var(--radius-pill);
   color: var(--primary);
   background-color: transparent;
   font-size: .9rem;
@@ -5385,7 +5470,7 @@ header {
 }
 
 #thyroidCancerKidsCard .thy-mode-toggle label input:focus-visible+span {
-  outline: 2px solid var(--brand-light, var(--primary));
+  outline: var(--border-emphasis) solid var(--brand-light, var(--primary));
   outline-offset: 2px
 }
 
@@ -5396,8 +5481,8 @@ header {
   width: 1.25rem!important;
   height: 1.25rem!important;
   padding: 0!important;
-  margin-left: .35rem!important;
-  border-radius: 999px!important;
+  margin-left: var(--space-0-35)!important;
+  border-radius: var(--radius-pill)!important;
   border: 1.5px solid var(--primary)!important;
   background: #00838d1a!important;
   color: var(--primary)!important;
@@ -5420,7 +5505,7 @@ header {
 }
 
 #thyroidCancerKidsCard .thy-info-btn:focus-visible {
-  outline: 2px solid var(--brand-light, var(--primary));
+  outline: var(--border-emphasis) solid var(--brand-light, var(--primary));
   outline-offset: 2px
 }
 
@@ -5443,8 +5528,8 @@ body.thy-modal-open {
   justify-content: center;
   --thy-modal-top: clamp(.75rem, 6vh, 3rem);
   --thy-modal-bottom: 1rem;
-  padding: var(--thy-modal-top) 1rem var(--thy-modal-bottom);
-  padding: calc(var(--thy-modal-top) + env(safe-area-inset-top)) 1rem calc(var(--thy-modal-bottom) + env(safe-area-inset-bottom));
+  padding: var(--thy-modal-top) var(--space-1) var(--thy-modal-bottom);
+  padding: calc(var(--thy-modal-top) + env(safe-area-inset-top)) var(--space-1) calc(var(--thy-modal-bottom) + env(safe-area-inset-bottom));
   background: #0009;
   z-index: var(--z-modal)
 }
@@ -5463,7 +5548,7 @@ body.thy-modal-open {
   color: var(--text);
   border-radius: var(--radius);
   box-shadow: 0 6px 26px #00000040;
-  border: 1px solid rgba(0,0,0,.12);
+  border: var(--border-hairline) solid rgba(0,0,0,.12);
   overflow: hidden;
   display: flex;
   flex-direction: column
@@ -5500,12 +5585,12 @@ body.thy-modal-open {
     margin-top: .2rem
   }
   #thyTermModal .thy-modal-body table.thy-scale-table tr {
-    border: 1px solid var(--line);
+    border: var(--border-hairline) solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     background: var(--card);
-    padding: .65rem .85rem;
-    margin-top: .75rem
+    padding: var(--space-0-65) var(--space-0-85);
+    margin-top: var(--space-0-75)
   }
   #thyTermModal .thy-modal-body table.thy-scale-table td {
     border: none;
@@ -5560,9 +5645,9 @@ body.thy-modal-open {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .8rem;
-  padding: .9rem 1rem;
-  border-bottom: 1px solid rgba(0,0,0,.12);
+  gap: var(--space-0-8);
+  padding: var(--space-0-9) var(--space-1);
+  border-bottom: var(--border-hairline) solid rgba(0,0,0,.12);
   background: #00000005
 }
 
@@ -5579,7 +5664,7 @@ body.thy-modal-open {
   font-size: 1.6rem;
   line-height: 1;
   cursor: pointer;
-  padding: .15rem .35rem!important;
+  padding: .15rem var(--space-0-35)!important;
   border-radius: .6rem!important;
   box-shadow: none!important;
   backdrop-filter: none!important;
@@ -5594,7 +5679,7 @@ body.thy-modal-open {
 }
 
 #thyTermModal .thy-modal-body {
-  padding: .9rem 1rem;
+  padding: var(--space-0-9) var(--space-1);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -5603,20 +5688,20 @@ body.thy-modal-open {
 }
 
 #thyTermModal .thy-modal-body p {
-  margin: 0 0 .65rem
+  margin: 0 0 var(--space-0-65)
 }
 
 #thyTermModal .thy-modal-body ul {
-  margin: .35rem 0 .8rem 1.2rem
+  margin: var(--space-0-35) 0 var(--space-0-8) var(--space-1-2)
 }
 
 #thyTermModal .thy-modal-footer {
   display: flex;
-  gap: .6rem;
+  gap: var(--space-0-6);
   flex-wrap: wrap;
   justify-content: flex-end;
-  padding: .9rem 1rem;
-  border-top: 1px solid rgba(0,0,0,.12);
+  padding: var(--space-0-9) var(--space-1);
+  border-top: var(--border-hairline) solid rgba(0,0,0,.12);
   background: #00000005
 }
 
@@ -5625,16 +5710,16 @@ body.thy-modal-open {
 }
 
 #thyroidCancerKidsCard .thy-glossary {
-  margin-top: .8rem
+  margin-top: var(--space-0-8)
 }
 
 #thyroidCancerKidsCard .thy-glossary details {
   background: var(--card);
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: .65rem .85rem;
-  margin-top: .6rem
+  padding: var(--space-0-65) var(--space-0-85);
+  margin-top: var(--space-0-6)
 }
 
 #thyroidCancerKidsCard .thy-glossary summary {
@@ -5649,7 +5734,7 @@ body.thy-modal-open {
 }
 
 #thyroidCancerKidsCard .thy-glossary .thy-glossary-body {
-  margin-top: .55rem;
+  margin-top: var(--space-0-55);
   font-size: .93rem;
   color: var(--text);
   line-height: 1.45
@@ -5657,8 +5742,8 @@ body.thy-modal-open {
 
 #thyroidCancerKidsCard .thy-glossary .thy-glossary-body code {
   background: #0000000f;
-  padding: .05rem .25rem;
-  border-radius: 6px
+  padding: .05rem var(--space-0-25);
+  border-radius: var(--radius-6)
 }
 
 #thyroidCancerKidsCard #thyInfoSection .table-scroll {
@@ -5689,12 +5774,12 @@ body.thy-modal-open {
     margin-top: .2rem
   }
   #thyroidCancerKidsCard #thyInfoSection table.thy-scale-table tr {
-    border: 1px solid var(--line);
+    border: var(--border-hairline) solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     background: var(--card);
-    padding: .65rem .85rem;
-    margin-top: .75rem
+    padding: var(--space-0-65) var(--space-0-85);
+    margin-top: var(--space-0-75)
   }
   #thyroidCancerKidsCard #thyInfoSection table.thy-scale-table td {
     border: none;
@@ -5779,8 +5864,8 @@ body.thy-modal-open {
 #hypertensionCard .htn-switches {
   display: flex;
   flex-direction: column;
-  gap: .8rem;
-  margin-top: .9rem;
+  gap: var(--space-0-8);
+  margin-top: var(--space-0-9);
   max-width: 520px;
   margin-left: 0;
   margin-right: 0
@@ -5808,7 +5893,7 @@ body.thy-modal-open {
 #hypertensionCard #htnResult .htn-rec-wrap {
   display: flex;
   flex-direction: column;
-  gap: .85rem
+  gap: var(--space-0-85)
 }
 
 #hypertensionCard #htnResult .htn-rec-top {
@@ -5820,10 +5905,10 @@ body.thy-modal-open {
 }
 
 #hypertensionCard #htnResult .htn-rec-card {
-  border: 1px solid rgba(0,0,0,.1);
+  border: var(--border-hairline) solid rgba(0,0,0,.1);
   border-left: 4px solid #9900ff;
   border-radius: var(--radius);
-  padding: .95rem;
+  padding: var(--space-0-95);
   background: var(--card-bg);
   box-shadow: var(--shadow-s)
 }
@@ -5831,13 +5916,13 @@ body.thy-modal-open {
 #hypertensionCard #htnResult .htn-rec-head {
   display: flex;
   align-items: flex-start;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 #hypertensionCard #htnResult .htn-rec-index {
   width: 28px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5857,7 +5942,7 @@ body.thy-modal-open {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: .55rem;
+  gap: var(--space-0-55);
   flex-wrap: wrap
 }
 
@@ -5869,8 +5954,8 @@ body.thy-modal-open {
 #hypertensionCard #htnResult .htn-badge {
   display: inline-flex;
   align-items: center;
-  padding: .16rem .6rem;
-  border-radius: 999px;
+  padding: .16rem var(--space-0-6);
+  border-radius: var(--radius-pill);
   color: #fff;
   font-size: .78rem;
   font-weight: 800;
@@ -5879,12 +5964,12 @@ body.thy-modal-open {
 }
 
 #hypertensionCard #htnResult .htn-rec-bullets {
-  margin: .55rem 0 0;
-  padding-left: 1.2rem
+  margin: var(--space-0-55) 0 0;
+  padding-left: var(--space-1-2)
 }
 
 #hypertensionCard #htnResult .htn-rec-bullets li {
-  margin: .4rem 0
+  margin: var(--space-0-4) 0
 }
 
 #hypertensionCard #htnResult .htn-rec-bullets li strong {
@@ -5931,7 +6016,7 @@ body.thy-modal-open {
   width: 26px;
   height: 26px;
   background: #fff;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   transition: transform .3s
 }
 
@@ -5957,7 +6042,7 @@ body.thy-modal-open {
 #modulesWrapper .module-btn-wrapper {
   display: flex;
   justify-content: center;
-  margin: 1rem 0;
+  margin: var(--space-1) 0;
   width: 100%;
   flex: 0 0 100%;
   max-width: 100%
@@ -5987,7 +6072,7 @@ body.thy-modal-open {
   max-width: 520px;
   border: none;
   border-radius: var(--radius);
-  padding: .6rem 1rem;
+  padding: var(--space-0-6) var(--space-1);
   font-size: 1rem;
   font-family: inherit;
   cursor: pointer;
@@ -6006,13 +6091,13 @@ body.thy-modal-open {
 .main-nav .menu-toggle label {
   background: none;
   border: none;
-  padding: .4rem;
+  padding: var(--space-0-4);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4px);
   width: 32px;
   height: 32px
 }
@@ -6038,7 +6123,7 @@ body.thy-modal-open {
   left: 0;
   width: 220px;
   background: var(--card);
-  border: 1px solid var(--line);
+  border: var(--border-hairline) solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -6052,11 +6137,11 @@ body.thy-modal-open {
   flex-direction: column;
   z-index: var(--z-menu);
   align-items: stretch;
-  padding-top: 1rem
+  padding-top: var(--space-1)
 }
 
 .vertical-menu li {
-  border-bottom: 1px solid #e0e7e7
+  border-bottom: var(--border-hairline) solid #e0e7e7
 }
 
 .vertical-menu li:last-child {
@@ -6065,7 +6150,7 @@ body.thy-modal-open {
 
 .vertical-menu a {
   display: block;
-  padding: .75rem 1rem;
+  padding: var(--space-0-75) var(--space-1);
   color: var(--primary);
   font-weight: 600;
   text-decoration: none
@@ -6079,7 +6164,7 @@ body.thy-modal-open {
 .vertical-menu button {
   display: block;
   width: 100%;
-  padding: .75rem 1rem;
+  padding: var(--space-0-75) var(--space-1);
   color: var(--primary);
   font-weight: 600;
   background: none!important;
@@ -6149,9 +6234,9 @@ body.thy-modal-open {
   position: fixed;
   bottom: 1rem;
   right: 1rem;
-  width: 4rem;
-  height: 4rem;
-  border-radius: 50%;
+  width: var(--scroll-top-size);
+  height: var(--scroll-top-size);
+  border-radius: var(--radius-circle);
   background: var(--primary);
   color: #fff;
   border: none;
@@ -6197,10 +6282,10 @@ body.thy-modal-open {
   transform: translateY(2px);
   background: #fff;
   color: var(--primary);
-  border: 2px solid var(--primary);
+  border: var(--border-emphasis) solid var(--primary);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: .55rem .75rem;
+  padding: var(--space-0-55) var(--space-0-75);
   font-size: 1.5rem;
   line-height: 1.2;
   font-weight: 600;
@@ -6211,7 +6296,7 @@ body.thy-modal-open {
 
 .menu-tooltip.copy-tooltip {
   font-size: .95rem;
-  padding: .45rem .65rem;
+  padding: var(--space-0-45) var(--space-0-65);
   line-height: 1.25;
   max-width: min(320px,calc(100vw - 24px))
 }
@@ -6232,14 +6317,14 @@ body.thy-modal-open {
   background: #fffffff5!important;
   color: var(--primary)!important;
   border: 1.5px solid rgba(0,131,141,.2)!important;
-  border-radius: 10px!important;
+  border-radius: var(--radius-10)!important;
   box-shadow: 0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc!important;
-  -webkit-backdrop-filter: blur(14px) saturate(1.6);
-  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate);
+  backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate);
   font-size: .83rem!important;
   font-weight: 500!important;
   line-height: 1.3;
-  padding: .55rem .85rem!important;
+  padding: var(--space-0-55) var(--space-0-85)!important;
   pointer-events: none;
   opacity: 0;
   transform: translateY(4px);
@@ -6281,8 +6366,8 @@ body.thy-modal-open {
   background: #fffffff5;
   border-right: 1.5px solid rgba(0,131,141,.2);
   border-bottom: 1.5px solid rgba(0,131,141,.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.6);
-  backdrop-filter: blur(14px) saturate(1.6)
+  -webkit-backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate);
+  backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate)
 }
 
 .vild-range-invalid {
@@ -6301,8 +6386,8 @@ body.thy-modal-open {
   flex: 1 1 auto;
   min-height: 0;
   background: #fff!important;
-  border: 1px solid #d8e6e7!important;
-  border-radius: 14px!important;
+  border: var(--border-hairline) solid #d8e6e7!important;
+  border-radius: var(--radius-14)!important;
   overflow: hidden;
   box-shadow: 0 2px 12px #0051580f!important
 }
@@ -6311,7 +6396,7 @@ body.thy-modal-open {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 13px 16px
+  padding: 13px var(--space-16px)
 }
 
 .vild-rem-bell {
@@ -6342,7 +6427,7 @@ body.thy-modal-open {
   font-weight: 800;
   color: #fff;
   background: var(--primary);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 2px 9px
 }
 
@@ -6360,7 +6445,7 @@ body.thy-modal-open {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .04em;
-  padding: 7px 16px
+  padding: 7px var(--space-16px)
 }
 
 .vild-rem-sec-over .vild-rem-sec-head {
@@ -6385,14 +6470,14 @@ body.thy-modal-open {
   font-size: .71rem;
   font-weight: 700;
   letter-spacing: .02em;
-  padding: 6px 16px;
+  padding: var(--space-6px) var(--space-16px);
   cursor: pointer;
-  border-bottom: 1px solid #f3f7f7;
+  border-bottom: var(--border-hairline) solid #f3f7f7;
   user-select: none
 }
 
 .vild-rem-cat-head:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: var(--border-emphasis) solid var(--primary);
   outline-offset: -2px
 }
 
@@ -6419,8 +6504,8 @@ body.thy-modal-open {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 10px 16px;
-  border-bottom: 1px solid #f3f7f7
+  padding: var(--space-10px) var(--space-16px);
+  border-bottom: var(--border-hairline) solid #f3f7f7
 }
 
 .vild-rem-sec:last-child .vild-rem-row:last-child {
@@ -6431,7 +6516,7 @@ body.thy-modal-open {
   flex: 0 0 auto;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6467,7 +6552,7 @@ body.thy-modal-open {
   display: inline-block;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   margin-right: 5px;
   vertical-align: middle
 }
@@ -6477,7 +6562,7 @@ body.thy-modal-open {
   font-size: .73rem;
   font-weight: 700;
   border-radius: 7px;
-  padding: 3px 8px;
+  padding: 3px var(--space-8px);
   white-space: nowrap
 }
 
@@ -6497,8 +6582,8 @@ body.thy-modal-open {
 }
 
 .vild-rem-foot {
-  padding: 10px 16px;
-  border-top: 1px solid #eef2f3;
+  padding: var(--space-10px) var(--space-16px);
+  border-top: var(--border-hairline) solid #eef2f3;
   margin-top: auto
 }
 
@@ -6508,9 +6593,9 @@ body.thy-modal-open {
   font-weight: 600!important;
   color: var(--primary)!important;
   background: #f0fafa!important;
-  border: 1px solid #cfe8e9!important;
-  border-radius: 9px!important;
-  padding: 8px 14px!important;
+  border: var(--border-hairline) solid #cfe8e9!important;
+  border-radius: var(--radius-9)!important;
+  padding: var(--space-8px) var(--space-14px)!important;
   cursor: pointer;
   width: 100%;
   box-shadow: none!important;
@@ -6529,21 +6614,21 @@ body.thy-modal-open {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 22px 16px;
+  padding: 22px var(--space-16px);
   color: #6b8385
 }
 
 .vild-rem-empty-ic {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: #e8f8ec;
   color: #1f7a3d;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
-  margin-bottom: 8px
+  margin-bottom: var(--space-8px)
 }
 
 .vild-rem-empty-t {
@@ -6568,9 +6653,9 @@ body.thy-modal-open {
   color: #fff;
   border: none;
   border-radius: var(--radius);
-  padding: .35rem .65rem;
+  padding: var(--space-0-35) var(--space-0-65);
   font-size: .85rem;
-  margin-right: .3rem;
+  margin-right: var(--space-0-3);
   transition: background .2s ease,box-shadow .2s ease
 }
 
@@ -6582,9 +6667,9 @@ body.thy-modal-open {
 .delete-gh-pt-btn {
   background: var(--danger-tint);
   color: var(--danger);
-  border: 1px solid var(--danger);
+  border: var(--border-hairline) solid var(--danger);
   border-radius: var(--radius);
-  padding: .35rem .65rem;
+  padding: var(--space-0-35) var(--space-0-65);
   font-size: .85rem;
   transition: background .2s ease,box-shadow .2s ease
 }
@@ -6608,11 +6693,11 @@ body.thy-modal-open {
 }
 
 #currentSummaryWrap .current-summary-card {
-  margin-top: 1rem
+  margin-top: var(--space-1)
 }
 
 #currentSummaryWrap .current-summary-card:last-child {
-  margin-bottom: 1rem
+  margin-bottom: var(--space-1)
 }
 
 @media(min-width:700px) {
@@ -6638,10 +6723,10 @@ body.thy-modal-open {
     border-top-right-radius: 0
   }
   #currentSummaryWrap .current-summary-card:first-child {
-    margin-top: 1rem
+    margin-top: var(--space-1)
   }
   #currentSummaryWrap .current-summary-card:last-child {
-    margin-bottom: 1rem
+    margin-bottom: var(--space-1)
   }
 }
 
@@ -6657,7 +6742,7 @@ body.thy-modal-open {
   margin-top: 0;
   margin-left: auto;
   margin-right: auto;
-  margin-bottom: .6rem;
+  margin-bottom: var(--space-0-6);
   position: relative;
   border-radius: var(--metabolic-summary-border-radius)!important;
   border: var(--summary-border-thickness) solid transparent!important;
@@ -6670,9 +6755,9 @@ body.thy-modal-open {
 #antibioticTherapyCard .dose-slider-container {
   position: relative;
   width: 100%;
-  margin-top: .25rem;
-  padding-top: .6rem;
-  padding-bottom: 1.2rem
+  margin-top: var(--space-0-25);
+  padding-top: var(--space-0-6);
+  padding-bottom: var(--space-1-2)
 }
 
 #antibioticTherapyCard .slider-labels {
@@ -6738,7 +6823,7 @@ body.thy-modal-open {
 }
 
 #antibioticTherapyCard input[type=range] {
-  border: 1px solid #d0d7da;
+  border: var(--border-hairline) solid #d0d7da;
   border-radius: var(--radius)
 }
 
@@ -6749,10 +6834,10 @@ body.thy-modal-open {
 }
 
 #antibioticTherapyCard .slider-value-label {
-  border: 1px solid var(--primary);
+  border: var(--border-hairline) solid var(--primary);
   background: var(--card);
-  padding: .25rem .5rem;
-  border-radius: 6px;
+  padding: var(--space-0-25) var(--space-0-5);
+  border-radius: var(--radius-6);
   box-shadow: var(--shadow);
   transition: background .2s ease,box-shadow .2s ease,color .2s ease;
   box-sizing: border-box;
@@ -6771,7 +6856,7 @@ body.thy-modal-open {
   word-break: break-word;
   text-align: center;
   line-height: 1.3;
-  padding: .45rem .65rem
+  padding: var(--space-0-45) var(--space-0-65)
 }
 
 @media(max-width:699px) {
@@ -6795,7 +6880,7 @@ body.thy-modal-open {
 }
 
 #antibioticTherapyCard .dose-slider-container--multiline {
-  padding-bottom: .25rem
+  padding-bottom: var(--space-0-25)
 }
 
 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
@@ -6806,7 +6891,7 @@ body.thy-modal-open {
   transform: none;
   width: min(100%,34rem);
   max-width: 100%;
-  margin: .65rem auto 0;
+  margin: var(--space-0-65) auto 0;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -6819,22 +6904,22 @@ body.thy-modal-open {
 }
 
 #antibioticTherapyCard .slider-ticks .slider-tick-label:first-child {
-  padding-left: .5rem
+  padding-left: var(--space-0-5)
 }
 
 #antibioticTherapyCard .slider-ticks .slider-tick-label:last-child {
-  padding-right: .5rem
+  padding-right: var(--space-0-5)
 }
 
 #antibioticTherapyCard #abxReturnBtn,
 #antibioticTherapyCard .return-recommendation-btn {
-  margin-top: 1.1rem!important
+  margin-top: var(--space-1-1)!important
 }
 
 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label {
   background: var(--card)!important;
   color: var(--primary)!important;
-  border: 1px solid var(--secondary)!important;
+  border: var(--border-hairline) solid var(--secondary)!important;
   box-shadow: var(--shadow)!important
 }
 
@@ -6842,9 +6927,9 @@ body.thy-modal-open {
   display: block;
   background: #fff;
   color: #000;
-  border: 1px solid #000000;
-  border-radius: 4px;
-  padding: .4rem .8rem;
+  border: var(--border-hairline) solid #000000;
+  border-radius: var(--radius-4);
+  padding: var(--space-0-4) var(--space-0-8);
   cursor: pointer;
   font-size: 1rem
 }
@@ -6860,16 +6945,16 @@ body.thy-modal-open {
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 .setting-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: .6rem .8rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--space-0-6) var(--space-0-8);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-6);
   background: var(--field)
 }
 
@@ -6909,7 +6994,7 @@ body.thy-modal-open {
   display: block;
   width: 100%;
   padding: var(--snake-border-thickness);
-  border-radius: 14px;
+  border-radius: var(--radius-14);
   overflow: hidden;
   z-index: var(--z-base)
 }
@@ -6966,8 +7051,8 @@ body.thy-modal-open {
 
 #dietRecommendationsContent .info-icon {
   color: #90f;
-  border: 1px solid #9900ff;
-  border-radius: 50%;
+  border: var(--border-hairline) solid #9900ff;
+  border-radius: var(--radius-circle);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6976,7 +7061,7 @@ body.thy-modal-open {
   font-size: .75rem;
   line-height: 1;
   background-color: #f8f0ff;
-  margin-left: .4rem;
+  margin-left: var(--space-0-4);
   cursor: pointer
 }
 
@@ -6992,7 +7077,7 @@ body.thy-modal-open {
 #stabilizationGroup .stabilization-control {
   display: flex;
   align-items: center;
-  gap: .35rem;
+  gap: var(--space-0-35);
   flex-shrink: 0
 }
 
@@ -7011,7 +7096,7 @@ body.thy-modal-open {
   justify-content: space-between;
   width: 100%;
   max-width: 420px;
-  gap: .8rem
+  gap: var(--space-0-8)
 }
 
 .abx-option-label {
@@ -7048,7 +7133,7 @@ body.thy-modal-open {
   width: 26px;
   height: 26px;
   background: #fff;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   transition: transform .3s
 }
 
@@ -7078,8 +7163,8 @@ body.thy-modal-open {
 
 .dose-table th,
 .dose-table td {
-  border: 1px solid var(--line-neutral);
-  padding: .4rem .6rem;
+  border: var(--border-hairline) solid var(--line-neutral);
+  padding: var(--space-0-4) var(--space-0-6);
   font-size: .9rem;
   text-align: left
 }
@@ -7093,7 +7178,7 @@ body.thy-modal-open {
 #abxCopyRec,
 #obesityCopyRec,
 #htnCopyRec {
-  border: 3px solid #9900ff!important
+  border: var(--border-pro) solid #9900ff!important
 }
 
 body.dark-bg-level-1 {
@@ -7229,18 +7314,18 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
   background: var(--primary);
   color: #fff;
   text-align: center;
-  padding: calc(env(safe-area-inset-top,0px) + .5rem) 1rem .5rem;
+  padding: calc(env(safe-area-inset-top,0px) + .5rem) var(--space-1) var(--space-0-5);
   padding-top: calc(constant(safe-area-inset-top) + .5rem);
   box-shadow: 0 2px 6px #0003
 }
 
 #updateBanner button {
-  margin-left: 1rem;
+  margin-left: var(--space-1);
   background: var(--secondary);
   color: #fff;
   border: none;
-  padding: .35rem .8rem;
-  border-radius: 6px;
+  padding: var(--space-0-35) var(--space-0-8);
+  border-radius: var(--radius-6);
   font-size: .95rem;
   cursor: pointer
 }
@@ -7252,12 +7337,12 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
 
 #updateBanner .dismiss {
   background: transparent;
-  border: 1px solid rgba(255,255,255,.85)
+  border: var(--border-hairline) solid rgba(255,255,255,.85)
 }
 
 @media(max-width:699px) {
   #results {
-    gap: 1rem
+    gap: var(--space-1)
   }
   #circSection,
   #nutritionNormsSection,
@@ -7280,7 +7365,7 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
     margin: 0!important
   }
   #metabolicSummaryBtn {
-    margin-bottom: 1rem!important
+    margin-bottom: var(--space-1)!important
   }
   #dietRecommendationsBtn {
     margin-top: 0!important
@@ -7289,7 +7374,7 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
 
 @media(max-width:700px) {
   #infoMessages {
-    margin-bottom: 1rem
+    margin-bottom: var(--space-1)
   }
 }
 
@@ -7298,7 +7383,7 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  border: 2px solid currentColor
+  border: var(--border-emphasis) solid currentColor
 }
 
 .pro-overlay.bmi-warning {
@@ -7346,7 +7431,7 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
 
 .result-box.pro-hidden-border,
 .result-card.pro-hidden-border {
-  border: 2px solid transparent!important;
+  border: var(--border-emphasis) solid transparent!important;
   box-shadow: none!important
 }
 
@@ -7447,11 +7532,11 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 .adv-history-analysis-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: .7rem
+  margin-top: var(--space-0-7)
 }
 
 .adv-history-analysis-panel {
-  margin-top: .75rem
+  margin-top: var(--space-0-75)
 }
 
 .adv-history-analysis-actions .adv-analyze-btn,
@@ -7460,9 +7545,9 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: .55rem 1rem;
-  border-radius: 10px;
-  border: 2px solid #9900ff;
+  padding: var(--space-0-55) var(--space-1);
+  border-radius: var(--radius-10);
+  border: var(--border-emphasis) solid #9900ff;
   background: #fff;
   color: #90f;
   font-weight: 700;
@@ -7475,16 +7560,16 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 }
 
 .adv-history-analysis-card.result-box {
-  border: 2px solid var(--brand);
+  border: var(--border-emphasis) solid var(--brand);
   background: var(--card-bg);
   border-radius: var(--radius);
   box-shadow: var(--shadow-s);
-  padding: 1rem;
+  padding: var(--space-1);
   font-size: 1rem
 }
 
 .adv-history-analysis-card h3 {
-  margin: 0 0 .65rem;
+  margin: 0 0 var(--space-0-65);
   text-align: center;
   color: var(--primary);
   font-size: 1.05rem
@@ -7493,13 +7578,13 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 .adv-history-analysis-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: .35rem 1rem;
-  margin: 0 0 .45rem;
+  gap: var(--space-0-35) var(--space-1);
+  margin: 0 0 var(--space-0-45);
   font-size: .96rem
 }
 
 .adv-history-analysis-source {
-  margin: 0 0 .85rem;
+  margin: 0 0 var(--space-0-85);
   color: var(--text-soft);
   font-size: .94rem
 }
@@ -7515,7 +7600,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 }
 
 .adv-history-analysis-actions-bottom {
-  margin-top: .9rem;
+  margin-top: var(--space-0-9);
   text-align: center
 }
 
@@ -7533,7 +7618,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 #advButtons button {
@@ -7548,10 +7633,10 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 }
 
 .adv-report-actions {
-  margin-top: .95rem;
+  margin-top: var(--space-0-95);
   display: flex;
   flex-direction: column;
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 .adv-report-actions #advGenerateReportBtn {
@@ -7559,9 +7644,9 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: .72rem 1rem;
-  border-radius: 12px;
-  border: 2px solid #7c3aed;
+  padding: .72rem var(--space-1);
+  border-radius: var(--radius-12);
+  border: var(--border-emphasis) solid #7c3aed;
   background: #fff;
   color: #5b21b6;
   font-weight: 700;
@@ -7583,7 +7668,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 .adv-report-actions .adv-report-anon {
   display: flex;
   align-items: center;
-  gap: .45rem;
+  gap: var(--space-0-45);
   margin-top: -.5rem;
   font-size: .86rem;
   color: #4a5568;
@@ -7598,7 +7683,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 .adv-history-analysis-actions {
   justify-content: center;
   width: 100%;
-  margin-top: .85rem;
+  margin-top: var(--space-0-85);
   text-align: center
 }
 
@@ -7606,7 +7691,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 .adv-history-analysis-actions-bottom .adv-copy-analysis-btn {
   width: auto!important;
   max-width: 100%;
-  padding: .6rem 1.15rem;
+  padding: var(--space-0-6) 1.15rem;
   text-align: center;
   white-space: normal;
   line-height: 1.3
@@ -7617,7 +7702,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 }
 
 .adv-history-analysis-card h3 {
-  margin: 0 0 .45rem;
+  margin: 0 0 var(--space-0-45);
   text-align: center
 }
 
@@ -7631,13 +7716,13 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 }
 
 .adv-history-analysis-source {
-  margin: 0 0 .5rem;
+  margin: 0 0 var(--space-0-5);
   text-align: center
 }
 
 .adv-history-analysis-meta {
   display: block;
-  margin: 0 0 .8rem;
+  margin: 0 0 var(--space-0-8);
   text-align: left
 }
 
@@ -7677,8 +7762,8 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   height: 1px;
   width: calc(100% - 2.8rem);
   max-width: 34rem;
-  margin: 1rem auto .8rem;
-  border-radius: 999px;
+  margin: var(--space-1) auto var(--space-0-8);
+  border-radius: var(--radius-pill);
   background: linear-gradient(90deg,#90f0,#9900ff2e 12%,#9900ff57,#9900ff2e 88%,#90f0)
 }
 
@@ -8506,20 +8591,20 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .adult-vitals-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .adult-vitals-options {
   display: grid;
-  gap: .75rem;
-  margin-top: .85rem
+  gap: var(--space-0-75);
+  margin-top: var(--space-0-85)
 }
 
 .adult-vitals-option-row {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   align-items: center;
-  gap: .65rem 1rem
+  gap: var(--space-0-65) var(--space-1)
 }
 
 .adult-vitals-option-label {
@@ -8533,7 +8618,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   display: inline-flex;
   align-items: center;
   justify-self: end;
-  gap: .5rem;
+  gap: var(--space-0-5);
   flex-wrap: wrap
 }
 
@@ -8555,9 +8640,9 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   align-items: center;
   justify-content: center;
   min-width: 60px;
-  padding: .42rem .9rem;
-  border: 2px solid var(--primary);
-  border-radius: 999px;
+  padding: .42rem var(--space-0-9);
+  border: var(--border-emphasis) solid var(--primary);
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--primary);
   font-size: .88rem;
@@ -8579,7 +8664,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .adult-vitals-result-box {
   position: relative;
   overflow: visible;
-  margin-top: .85rem;
+  margin-top: var(--space-0-85);
   text-align: left;
   font-size: 1rem
 }
@@ -8645,8 +8730,8 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: .75rem;
-  margin-bottom: .65rem
+  gap: var(--space-0-75);
+  margin-bottom: var(--space-0-65)
 }
 
 .adult-vitals-summary-kicker {
@@ -8671,8 +8756,8 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   align-items: center;
   justify-content: center;
   min-height: 30px;
-  padding: .35rem .7rem;
-  border-radius: 999px;
+  padding: var(--space-0-35) var(--space-0-7);
+  border-radius: var(--radius-pill);
   background: var(--tint-teal-active);
   color: var(--primary);
   font-size: .78rem;
@@ -8692,14 +8777,14 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
 .adult-vitals-result-rows {
   display: grid;
-  gap: .6rem
+  gap: var(--space-0-6)
 }
 
 .adult-vitals-result-line {
   margin-top: 0;
   padding: .72rem .82rem;
-  border: 1px solid rgba(0,131,141,.15);
-  border-radius: 12px;
+  border: var(--border-hairline) solid rgba(0,131,141,.15);
+  border-radius: var(--radius-12);
   background: #00838d0f;
   font-size: 1.02rem;
   line-height: 1.5;
@@ -8745,7 +8830,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .adult-vitals-result-separator {
-  margin: 0 .25rem;
+  margin: 0 var(--space-0-25);
   color: inherit
 }
 
@@ -8764,11 +8849,11 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .adult-vitals-guideline-note {
-  margin-top: .85rem;
-  padding: .75rem .85rem;
-  border-radius: 12px;
+  margin-top: var(--space-0-85);
+  padding: var(--space-0-75) var(--space-0-85);
+  border-radius: var(--radius-12);
   background: #00838d12;
-  border: 1px solid var(--line-teal-soft);
+  border: var(--border-hairline) solid var(--line-teal-soft);
   font-size: .84rem;
   line-height: 1.5;
   color: #335355
@@ -8781,19 +8866,19 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .adult-vitals-mini-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
-  gap: .75rem;
-  margin-top: .85rem
+  gap: var(--space-0-75);
+  margin-top: var(--space-0-85)
 }
 
 .adult-vitals-mini-card {
-  border: 1px solid #dfe7e8;
-  border-radius: 10px;
+  border: var(--border-hairline) solid #dfe7e8;
+  border-radius: var(--radius-10);
   background: #ffffffeb;
-  padding: .7rem
+  padding: var(--space-0-7)
 }
 
 .adult-vitals-mini-title {
-  margin: 0 0 .45rem;
+  margin: 0 0 var(--space-0-45);
   font-size: .9rem;
   line-height: 1.35;
   font-weight: 800;
@@ -8813,7 +8898,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .adult-vitals-mini-table th,
 .adult-vitals-mini-table td {
   padding: .38rem .42rem;
-  border-bottom: 1px solid #e6eeef;
+  border-bottom: var(--border-hairline) solid #e6eeef;
   text-align: left;
   vertical-align: top
 }
@@ -8863,7 +8948,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-cta {
-  margin-top: .8rem;
+  margin-top: var(--space-0-8);
   text-align: center
 }
 
@@ -8872,7 +8957,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-meta {
-  margin: .25rem 0 .85rem;
+  margin: var(--space-0-25) 0 var(--space-0-85);
   font-size: .98rem;
   color: var(--text-soft);
   text-align: center;
@@ -8880,7 +8965,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-summary {
-  margin: 0 0 .9rem;
+  margin: 0 0 var(--space-0-9);
   font-size: .92rem;
   color: #444;
   text-align: center;
@@ -8888,7 +8973,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-intro {
-  margin: 0 0 .9rem;
+  margin: 0 0 var(--space-0-9);
   font-size: .92rem;
   color: #444;
   line-height: 1.5
@@ -8896,17 +8981,17 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
 .nutrition-norms-toolbar {
   display: grid;
-  gap: .75rem;
-  margin: 0 0 1rem
+  gap: var(--space-0-75);
+  margin: 0 0 var(--space-1)
 }
 
 .nutrition-norms-toolbar-row {
   display: grid;
-  gap: .5rem
+  gap: var(--space-0-5)
 }
 
 .nutrition-norms-toolbar-row--summary {
-  gap: .4rem
+  gap: var(--space-0-4)
 }
 
 .nutrition-norms-toolbar-row--body-mode {
@@ -8929,7 +9014,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .nutrition-norms-toolbar-state {
@@ -8975,7 +9060,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   position: absolute;
   inset: 0;
   display: block;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #c3ccd1;
   cursor: pointer;
   transition: background-color .25s ease,box-shadow .25s ease
@@ -8988,7 +9073,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   top: 3px;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: #fff;
   box-shadow: 0 1px 2px #0000002e;
   transition: transform .25s ease
@@ -9008,20 +9093,20 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
 .nutrition-norms-grid {
   display: grid;
-  gap: .85rem;
+  gap: var(--space-0-85);
   grid-template-columns: 1fr;
-  margin-bottom: .9rem
+  margin-bottom: var(--space-0-9)
 }
 
 .nutrition-norms-controls {
   display: grid;
-  gap: .85rem;
-  margin-bottom: .95rem
+  gap: var(--space-0-85);
+  margin-bottom: var(--space-0-95)
 }
 
 .nutrition-norms-control {
   display: grid;
-  gap: .4rem
+  gap: var(--space-0-4)
 }
 
 .nutrition-norms-control>span {
@@ -9034,15 +9119,15 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
 .nutrition-norms-select-row {
   align-items: start;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 .nutrition-norms-pal-select {
   width: 100%;
   max-width: none;
-  padding: .55rem .7rem;
-  border: 1px solid #c6d6dc;
-  border-radius: 10px;
+  padding: var(--space-0-55) var(--space-0-7);
+  border: var(--border-hairline) solid #c6d6dc;
+  border-radius: var(--radius-10);
   background: #fff;
   font: inherit
 }
@@ -9054,8 +9139,8 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 .nutrition-norms-body-mode label {
   display: inline-flex;
   align-items: center;
-  gap: .4rem;
-  margin-right: 1rem;
+  gap: var(--space-0-4);
+  margin-right: var(--space-1);
   font-size: .95rem
 }
 
@@ -9065,7 +9150,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
 .nutrition-norms-value {
   display: block;
-  margin-top: .45rem;
+  margin-top: var(--space-0-45);
   font-size: 1.18rem;
   font-weight: 700;
   color: #0b7285;
@@ -9073,7 +9158,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-sub {
-  margin: .4rem 0 0;
+  margin: var(--space-0-4) 0 0;
   font-size: .9rem;
   color: var(--text-soft);
   line-height: 1.45
@@ -9090,10 +9175,10 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-note {
-  margin: .15rem 0 .9rem;
-  padding: .8rem .95rem;
-  border: 1px solid rgba(11,114,133,.18);
-  border-radius: 12px;
+  margin: .15rem 0 var(--space-0-9);
+  padding: var(--space-0-8) var(--space-0-95);
+  border: var(--border-hairline) solid rgba(11,114,133,.18);
+  border-radius: var(--radius-12);
   background: #0b72850d;
   font-size: .88rem;
   color: var(--text-soft);
@@ -9101,11 +9186,11 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-note p {
-  margin: .35rem 0 0
+  margin: var(--space-0-35) 0 0
 }
 
 .nutrition-norms-quality-details {
-  margin: 0 0 .9rem
+  margin: 0 0 var(--space-0-9)
 }
 
 .nutrition-norms-quality-details summary {
@@ -9119,15 +9204,15 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-quality-content {
-  margin-top: .65rem;
+  margin-top: var(--space-0-65);
   display: grid;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 .nutrition-norms-quality-group {
-  padding: .8rem .95rem;
-  border: 1px solid rgba(11,114,133,.18);
-  border-radius: 12px;
+  padding: var(--space-0-8) var(--space-0-95);
+  border: var(--border-hairline) solid rgba(11,114,133,.18);
+  border-radius: var(--radius-12);
   background: #0b72850d;
   font-size: .88rem;
   color: var(--text-soft);
@@ -9140,16 +9225,16 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-quality-group p {
-  margin: .35rem 0 0
+  margin: var(--space-0-35) 0 0
 }
 
 .nutrition-practice-inline {
-  margin-top: .75rem;
+  margin-top: var(--space-0-75);
   display: grid;
-  gap: .5rem;
-  padding: .78rem .9rem;
-  border: 1px dashed rgba(11,114,133,.24);
-  border-radius: 14px;
+  gap: var(--space-0-5);
+  padding: .78rem var(--space-0-9);
+  border: var(--border-hairline) dashed rgba(11,114,133,.24);
+  border-radius: var(--radius-14);
   background: #0b72850d
 }
 
@@ -9166,8 +9251,8 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
   justify-content: center;
   text-align: center;
   padding: .34rem .82rem;
-  border: 1px solid rgba(11,114,133,.22);
-  border-radius: 999px;
+  border: var(--border-hairline) solid rgba(11,114,133,.22);
+  border-radius: var(--radius-pill);
   background: #fff;
   color: #0b7285;
   font-family: inherit;
@@ -9197,7 +9282,7 @@ body.nutrition-practice-sheet-open {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(.75rem,env(safe-area-inset-top,0px)) .75rem max(.75rem,env(safe-area-inset-bottom,0px));
+  padding: max(.75rem,env(safe-area-inset-top,0px)) var(--space-0-75) max(.75rem,env(safe-area-inset-bottom,0px));
   box-sizing: border-box
 }
 
@@ -9213,7 +9298,7 @@ body.nutrition-practice-sheet-open {
   max-height: calc(var(--nutrition-practice-sheet-vh, 100dvh) - 1.5rem - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   display: grid;
   grid-template-rows: auto auto minmax(0,1fr) auto;
-  padding: .7rem 1rem calc(1rem + env(safe-area-inset-bottom,0px));
+  padding: var(--space-0-7) var(--space-1) calc(1rem + env(safe-area-inset-bottom,0px));
   border-radius: 22px;
   background: #fff;
   box-shadow: 0 12px 34px #0f172a38;
@@ -9224,8 +9309,8 @@ body.nutrition-practice-sheet-open {
 .nutrition-practice-sheet-handle {
   width: 48px;
   height: 5px;
-  margin: 0 auto .55rem;
-  border-radius: 999px;
+  margin: 0 auto var(--space-0-55);
+  border-radius: var(--radius-pill);
   background: #d7e0e3
 }
 
@@ -9233,8 +9318,8 @@ body.nutrition-practice-sheet-open {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   align-items: flex-start;
-  gap: .7rem;
-  margin-bottom: .8rem
+  gap: var(--space-0-7);
+  margin-bottom: var(--space-0-8)
 }
 
 .nutrition-practice-sheet-header-copy {
@@ -9264,7 +9349,7 @@ body.nutrition-practice-sheet-open {
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #0b728514;
   font-size: 1rem;
   line-height: 1;
@@ -9276,29 +9361,29 @@ body.nutrition-practice-sheet-open {
   overflow: auto;
   min-height: 0;
   display: grid;
-  gap: .9rem;
+  gap: var(--space-0-9);
   padding-right: .15rem;
-  padding-bottom: .25rem;
+  padding-bottom: var(--space-0-25);
   overscroll-behavior: contain;
   scroll-padding-bottom: .5rem;
   -webkit-overflow-scrolling: touch
 }
 
 .nutrition-practice-sheet-section h4 {
-  margin: 0 0 .5rem;
+  margin: 0 0 var(--space-0-5);
   font-size: .92rem;
   color: var(--text-heading)
 }
 
 .nutrition-practice-sheet-list {
   display: grid;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .nutrition-practice-sheet-item {
-  padding: .8rem .9rem;
-  border: 1px solid rgba(11,114,133,.14);
-  border-radius: 14px;
+  padding: var(--space-0-8) var(--space-0-9);
+  border: var(--border-hairline) solid rgba(11,114,133,.14);
+  border-radius: var(--radius-14);
   background: #0b72850a
 }
 
@@ -9306,7 +9391,7 @@ body.nutrition-practice-sheet-open {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .nutrition-practice-sheet-item-head strong {
@@ -9339,9 +9424,9 @@ body.nutrition-practice-sheet-open {
 .nutrition-practice-chip {
   display: inline-flex;
   align-items: center;
-  margin-top: .35rem;
-  padding: .18rem .5rem;
-  border-radius: 999px;
+  margin-top: var(--space-0-35);
+  padding: .18rem var(--space-0-5);
+  border-radius: var(--radius-pill);
   font-size: .74rem;
   font-weight: 700
 }
@@ -9362,7 +9447,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-practice-sheet-footer {
-  margin-top: .85rem;
+  margin-top: var(--space-0-85);
   font-size: .82rem;
   color: #5b6770;
   line-height: 1.4
@@ -9371,7 +9456,7 @@ body.nutrition-practice-sheet-open {
 @media(max-width:768px) {
   .nutrition-practice-sheet {
     align-items: flex-end;
-    padding: max(.5rem,env(safe-area-inset-top,0px)) .5rem max(.5rem,env(safe-area-inset-bottom,0px))
+    padding: max(.5rem,env(safe-area-inset-top,0px)) var(--space-0-5) max(.5rem,env(safe-area-inset-bottom,0px))
   }
   .nutrition-practice-sheet-panel {
     max-height: calc(var(--nutrition-practice-sheet-vh, 100dvh) - 1rem - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
@@ -9381,7 +9466,7 @@ body.nutrition-practice-sheet-open {
 
 @media(max-width:520px) {
   .nutrition-practice-sheet-header {
-    gap: .55rem
+    gap: var(--space-0-55)
   }
   .nutrition-practice-sheet-header h3 {
     font-size: 1rem
@@ -9402,9 +9487,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-practice-mix {
-  padding: .78rem .9rem;
-  border: 1px dashed rgba(11,114,133,.2);
-  border-radius: 14px;
+  padding: .78rem var(--space-0-9);
+  border: var(--border-hairline) dashed rgba(11,114,133,.2);
+  border-radius: var(--radius-14);
   font-size: .86rem;
   color: #4d5c62;
   line-height: 1.45
@@ -9412,27 +9497,27 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-norms-messages {
   display: grid;
-  gap: .55rem;
-  margin-bottom: .95rem
+  gap: var(--space-0-55);
+  margin-bottom: var(--space-0-95)
 }
 
 .nutrition-norms-message {
   margin-bottom: 0;
-  padding: .7rem .85rem;
-  border-radius: 12px;
+  padding: var(--space-0-7) var(--space-0-85);
+  border-radius: var(--radius-12);
   font-size: .9rem;
   line-height: 1.45
 }
 
 .nutrition-norms-message--info {
   background: #0b728514;
-  border: 1px solid rgba(11,114,133,.2);
+  border: var(--border-hairline) solid rgba(11,114,133,.2);
   color: #0b5563
 }
 
 .nutrition-norms-message--warn {
   background: #f59f001a;
-  border: 1px solid rgba(245,159,0,.22);
+  border: var(--border-hairline) solid rgba(245,159,0,.22);
   color: #7a4e00
 }
 
@@ -9441,14 +9526,14 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-norms-source {
-  margin-top: .95rem;
+  margin-top: var(--space-0-95);
   font-size: .82rem;
   color: var(--placeholder);
   line-height: 1.45
 }
 
 .nutrition-norms-details {
-  margin: 0 0 .9rem
+  margin: 0 0 var(--space-0-9)
 }
 
 .nutrition-norms-details summary {
@@ -9457,12 +9542,12 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-norms-details ul {
-  margin: .55rem 0 0;
-  padding-left: 1.1rem
+  margin: var(--space-0-55) 0 0;
+  padding-left: var(--space-1-1)
 }
 
 .nutrition-norms-details li {
-  margin: .3rem 0;
+  margin: var(--space-0-3) 0;
   font-size: .9rem;
   color: var(--text-soft)
 }
@@ -9470,20 +9555,20 @@ body.nutrition-practice-sheet-open {
 .nutrition-norms-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: .55rem;
+  margin-top: var(--space-0-55);
   table-layout: fixed
 }
 
 .nutrition-norms-range-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: .6rem
+  margin-top: var(--space-0-6)
 }
 
 .nutrition-norms-range-table th,
 .nutrition-norms-range-table td {
-  padding: .42rem .25rem;
-  border-bottom: 1px solid rgba(0,0,0,.08);
+  padding: .42rem var(--space-0-25);
+  border-bottom: var(--border-hairline) solid rgba(0,0,0,.08);
   text-align: left;
   vertical-align: top;
   font-size: .88rem
@@ -9508,8 +9593,8 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-norms-table th,
 .nutrition-norms-table td {
-  padding: .38rem .25rem;
-  border-bottom: 1px solid rgba(0,0,0,.08);
+  padding: .38rem var(--space-0-25);
+  border-bottom: var(--border-hairline) solid rgba(0,0,0,.08);
   text-align: left;
   vertical-align: top;
   font-size: .9rem
@@ -9534,7 +9619,7 @@ body.nutrition-practice-sheet-open {
   .nutrition-norms-body-mode label {
     display: flex;
     margin-right: 0;
-    margin-bottom: .25rem
+    margin-bottom: var(--space-0-25)
   }
 }
 
@@ -9543,7 +9628,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-section-title {
-  margin: 0 0 .65rem;
+  margin: 0 0 var(--space-0-65);
   font-size: .98rem;
   font-weight: 700;
   color: var(--text-heading)
@@ -9551,9 +9636,9 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-micros-grid {
   display: grid;
-  gap: .85rem;
+  gap: var(--space-0-85);
   grid-template-columns: 1fr;
-  margin-bottom: .95rem
+  margin-bottom: var(--space-0-95)
 }
 
 .nutrition-micros-box {
@@ -9564,7 +9649,7 @@ body.nutrition-practice-sheet-open {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: .75rem
+  gap: var(--space-0-75)
 }
 
 .nutrition-micros-box-head h3 {
@@ -9580,8 +9665,8 @@ body.nutrition-practice-sheet-open {
   align-items: center;
   justify-content: center;
   min-width: 2.9rem;
-  padding: .18rem .55rem;
-  border-radius: 999px;
+  padding: .18rem var(--space-0-55);
+  border-radius: var(--radius-pill);
   background: #0b72851a;
   color: #0b7285;
   font-size: .76rem;
@@ -9605,7 +9690,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-details {
-  margin: 0 0 .9rem
+  margin: 0 0 var(--space-0-9)
 }
 
 .nutrition-micros-details summary {
@@ -9616,7 +9701,7 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-micros-table-wrap {
   overflow-x: auto;
-  margin-top: .55rem
+  margin-top: var(--space-0-55)
 }
 
 .nutrition-micros-table {
@@ -9627,8 +9712,8 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-micros-table th,
 .nutrition-micros-table td {
-  padding: .42rem .3rem;
-  border-bottom: 1px solid rgba(0,0,0,.08);
+  padding: .42rem var(--space-0-3);
+  border-bottom: var(--border-hairline) solid rgba(0,0,0,.08);
   text-align: left;
   vertical-align: top;
   font-size: .9rem
@@ -9650,10 +9735,10 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-control-box {
-  margin: 0 0 .95rem;
-  padding: .85rem .9rem;
-  border: 1px solid rgba(11,114,133,.16);
-  border-radius: 12px;
+  margin: 0 0 var(--space-0-95);
+  padding: var(--space-0-85) var(--space-0-9);
+  border: var(--border-hairline) solid rgba(11,114,133,.16);
+  border-radius: var(--radius-12);
   background: #0b72850a
 }
 
@@ -9670,7 +9755,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-control-help {
-  margin: .4rem 0 0;
+  margin: var(--space-0-4) 0 0;
   font-size: .84rem;
   color: #5b6770;
   line-height: 1.45
@@ -9681,18 +9766,18 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-safety-intro {
-  margin: .55rem 0 .75rem;
+  margin: var(--space-0-55) 0 var(--space-0-75);
   font-size: .88rem;
   line-height: 1.5;
   color: #48656a
 }
 
 .nutrition-micros-safety-block+.nutrition-micros-safety-block {
-  margin-top: .85rem
+  margin-top: var(--space-0-85)
 }
 
 .nutrition-micros-safety-title {
-  margin: 0 0 .45rem;
+  margin: 0 0 var(--space-0-45);
   font-size: .92rem;
   font-weight: 700;
   color: var(--text-heading)
@@ -9706,15 +9791,15 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-legend {
-  margin: .2rem 0 1rem;
-  padding: .85rem .9rem;
-  border: 1px solid rgba(11,114,133,.16);
-  border-radius: 12px;
+  margin: .2rem 0 var(--space-1);
+  padding: var(--space-0-85) var(--space-0-9);
+  border: var(--border-hairline) solid rgba(11,114,133,.16);
+  border-radius: var(--radius-12);
   background: #0b72850b
 }
 
 .nutrition-micros-legend-title {
-  margin: 0 0 .55rem;
+  margin: 0 0 var(--space-0-55);
   font-size: .98rem;
   font-weight: 700;
   color: var(--text-heading)
@@ -9723,14 +9808,14 @@ body.nutrition-practice-sheet-open {
 .nutrition-micros-legend-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: .45rem;
+  gap: var(--space-0-45);
   margin: 0
 }
 
 .nutrition-micros-legend-item {
   display: grid;
   grid-template-columns: minmax(3.2rem,auto) 1fr;
-  column-gap: .65rem;
+  column-gap: var(--space-0-65);
   align-items: start
 }
 
@@ -9748,9 +9833,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-legend-note {
-  margin: .65rem 0 0;
+  margin: var(--space-0-65) 0 0;
   padding-top: .62rem;
-  border-top: 1px solid rgba(11,114,133,.14);
+  border-top: var(--border-hairline) solid rgba(11,114,133,.14);
   font-size: .84rem;
   line-height: 1.45;
   color: #48656a
@@ -9763,7 +9848,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-abbr:focus-visible {
-  outline: 2px solid var(--text-ink);
+  outline: var(--border-emphasis) solid var(--text-ink);
   outline-offset: 2px;
   border-radius: 3px
 }
@@ -9773,8 +9858,8 @@ body.nutrition-practice-sheet-open {
   z-index: var(--z-toast);
   max-width: min(360px,calc(100vw - 16px));
   padding: .66rem .78rem;
-  border: 2px solid #000;
-  border-radius: 8px;
+  border: var(--border-emphasis) solid #000;
+  border-radius: var(--radius-8);
   background: #fff;
   color: #000;
   font-size: 1.02rem;
@@ -9814,9 +9899,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-vitd-supplement {
-  margin-top: .7rem;
-  border-top: 1px solid rgba(11,114,133,.12);
-  padding-top: .65rem
+  margin-top: var(--space-0-7);
+  border-top: var(--border-hairline) solid rgba(11,114,133,.12);
+  padding-top: var(--space-0-65)
 }
 
 .nutrition-micros-vitd-toggle {
@@ -9824,10 +9909,10 @@ body.nutrition-practice-sheet-open {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .55rem;
-  padding: .58rem .7rem;
-  border: 1px solid rgba(11,114,133,.2);
-  border-radius: 10px;
+  gap: var(--space-0-55);
+  padding: .58rem var(--space-0-7);
+  border: var(--border-hairline) solid rgba(11,114,133,.2);
+  border-radius: var(--radius-10);
   background: #0b72850e;
   color: var(--text-heading);
   font: inherit;
@@ -9863,8 +9948,8 @@ body.nutrition-practice-sheet-open {
 .nutrition-micros-vitd-panel {
   margin-top: .58rem;
   padding: .72rem .78rem;
-  border: 1px solid rgba(11,114,133,.16);
-  border-radius: 10px;
+  border: var(--border-hairline) solid rgba(11,114,133,.16);
+  border-radius: var(--radius-10);
   background: #ffffffb8;
   color: #36494d;
   font-size: .83rem;
@@ -9873,11 +9958,11 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-vitd-panel p {
-  margin: .45rem 0 0
+  margin: var(--space-0-45) 0 0
 }
 
 .nutrition-micros-vitd-title {
-  margin: 0 0 .45rem;
+  margin: 0 0 var(--space-0-45);
   color: var(--text-heading);
   font-weight: 800
 }
@@ -9896,8 +9981,8 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-vitd-reasons {
-  margin: .5rem 0 0;
-  padding-left: 1.1rem;
+  margin: var(--space-0-5) 0 0;
+  padding-left: var(--space-1-1);
   text-align: left;
   list-style-position: outside
 }
@@ -9919,8 +10004,8 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-vitd-source {
-  padding-top: .45rem;
-  border-top: 1px solid rgba(11,114,133,.12);
+  padding-top: var(--space-0-45);
+  border-top: var(--border-hairline) solid rgba(11,114,133,.12);
   color: #5b6770;
   font-size: .8rem
 }
@@ -9944,7 +10029,7 @@ body.nutrition-practice-sheet-open {
 
 @media(max-width:420px) {
   .nutrition-micros-legend {
-    padding: .75rem .78rem
+    padding: var(--space-0-75) .78rem
   }
   .nutrition-micros-legend-item {
     grid-template-columns: 1fr;
@@ -9953,7 +10038,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-examples-action {
-  margin-top: .65rem;
+  margin-top: var(--space-0-65);
   display: flex;
   justify-content: center
 }
@@ -9970,13 +10055,13 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-examples-sheet .nutrition-practice-sheet-body {
-  gap: .85rem
+  gap: var(--space-0-85)
 }
 
 .nutrition-micros-examples-target {
-  padding: .7rem .8rem;
-  border: 1px solid rgba(11,114,133,.14);
-  border-radius: 12px;
+  padding: var(--space-0-7) var(--space-0-8);
+  border: var(--border-hairline) solid rgba(11,114,133,.14);
+  border-radius: var(--radius-12);
   background: #0b72850d;
   color: var(--text-heading);
   font-size: .9rem;
@@ -9984,7 +10069,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-micros-examples-intro p {
-  margin: .5rem 0 0;
+  margin: var(--space-0-5) 0 0;
   color: #48656a;
   font-size: .88rem;
   line-height: 1.5
@@ -9992,19 +10077,19 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-micros-examples-item .nutrition-practice-chip,
 .nutrition-micros-examples-set .nutrition-practice-chip {
-  margin-top: .45rem
+  margin-top: var(--space-0-45)
 }
 
 .nutrition-micros-examples-cautions ul {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: var(--space-1-1);
   color: #624000;
   font-size: .86rem;
   line-height: 1.5
 }
 
 .nutrition-micros-examples-cautions li+li {
-  margin-top: .25rem
+  margin-top: var(--space-0-25)
 }
 
 @media(max-width:560px) {
@@ -10022,7 +10107,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-norms-protein-info .food-total-macro-note p {
-  margin: .35rem 0 0
+  margin: var(--space-0-35) 0 0
 }
 
 .nutrition-norms-protein-info .food-total-macro-note p:first-child {
@@ -10030,7 +10115,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-norms-protein-info {
-  margin-top: .55rem
+  margin-top: var(--space-0-55)
 }
 
 .nutrition-norms-protein-info .nutrition-norms-protein-info-panel {
@@ -10050,14 +10135,14 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-macro-examples-target p {
-  margin: .45rem 0 0;
+  margin: var(--space-0-45) 0 0;
   color: #48656a;
   font-size: .88rem;
   line-height: 1.5
 }
 
 .nutrition-macro-examples-item .nutrition-practice-chip {
-  margin-top: .45rem
+  margin-top: var(--space-0-45)
 }
 
 .nutrition-macro-examples-item .nutrition-practice-sheet-item-main {
@@ -10076,13 +10161,13 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-macro-examples-sheet .nutrition-practice-sheet-body {
-  gap: .85rem
+  gap: var(--space-0-85)
 }
 
 .nutrition-macro-examples-target {
-  padding: .7rem .8rem;
-  border: 1px solid rgba(11,114,133,.14);
-  border-radius: 12px;
+  padding: var(--space-0-7) var(--space-0-8);
+  border: var(--border-hairline) solid rgba(11,114,133,.14);
+  border-radius: var(--radius-12);
   background: #0b72850d;
   color: var(--text-heading);
   font-size: .9rem;
@@ -10090,7 +10175,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .nutrition-macro-examples-intro p {
-  margin: .5rem 0 0;
+  margin: var(--space-0-5) 0 0;
   color: #48656a;
   font-size: .88rem;
   line-height: 1.5
@@ -10098,7 +10183,7 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-macro-examples-item .nutrition-practice-chip,
 .nutrition-macro-examples-set .nutrition-practice-chip {
-  margin-top: .45rem
+  margin-top: var(--space-0-45)
 }
 
 .nutrition-macro-examples-set .nutrition-practice-sheet-item-main {
@@ -10122,9 +10207,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-personalization-module {
-  margin: .85rem 0 .75rem;
-  padding: .75rem;
-  border: 1px solid #e2d3f5;
+  margin: var(--space-0-85) 0 var(--space-0-75);
+  padding: var(--space-0-75);
+  border: var(--border-hairline) solid #e2d3f5;
   border-radius: var(--radius);
   background: #9900ff09
 }
@@ -10134,7 +10219,7 @@ body.nutrition-practice-sheet-open {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .diet-personalization-head>div {
@@ -10161,7 +10246,7 @@ body.nutrition-practice-sheet-open {
 .diet-smart-goal p,
 .diet-guidance-box p,
 .diet-calculation-details p {
-  margin: .25rem 0 0;
+  margin: var(--space-0-25) 0 0;
   line-height: 1.45
 }
 
@@ -10169,9 +10254,9 @@ body.nutrition-practice-sheet-open {
 .diet-survey-clear {
   background: #fff;
   color: #000;
-  border: 2px solid #9900ff;
+  border: var(--border-emphasis) solid #9900ff;
   border-radius: var(--radius);
-  padding: .45rem .7rem;
+  padding: var(--space-0-45) var(--space-0-7);
   font-size: .88rem;
   font-weight: 600;
   cursor: pointer;
@@ -10179,9 +10264,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-survey-panel {
-  margin-top: .75rem;
-  border-top: 1px solid #eadff5;
-  padding-top: .75rem
+  margin-top: var(--space-0-75);
+  border-top: var(--border-hairline) solid #eadff5;
+  padding-top: var(--space-0-75)
 }
 
 .diet-survey-panel[hidden] {
@@ -10189,13 +10274,13 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-survey-section {
-  margin-top: .75rem
+  margin-top: var(--space-0-75)
 }
 
 .diet-survey-section h4,
 .diet-guidance-box h4,
 .diet-smart-goal h4 {
-  margin: 0 0 .45rem;
+  margin: 0 0 var(--space-0-45);
   font-size: .96rem;
   line-height: 1.25
 }
@@ -10203,19 +10288,19 @@ body.nutrition-practice-sheet-open {
 .diet-survey-grid {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: .45rem
+  gap: var(--space-0-45)
 }
 
 .diet-survey-chip {
   display: grid;
   grid-template-columns: 1.05rem minmax(0,1fr);
   align-items: flex-start;
-  gap: .45rem;
+  gap: var(--space-0-45);
   min-width: 0;
   width: 100%;
   margin: 0!important;
-  padding: .48rem .55rem;
-  border: 1px solid #dedede;
+  padding: .48rem var(--space-0-55);
+  border: var(--border-hairline) solid #dedede;
   border-radius: .65rem;
   background: #fff;
   cursor: pointer;
@@ -10253,9 +10338,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-survey-more {
-  margin-top: .75rem;
-  padding: .6rem .7rem;
-  border: 1px dashed #d8c0ed;
+  margin-top: var(--space-0-75);
+  padding: var(--space-0-6) var(--space-0-7);
+  border: var(--border-hairline) dashed #d8c0ed;
   border-radius: var(--radius);
   background: #ffffffb8
 }
@@ -10269,8 +10354,8 @@ body.nutrition-practice-sheet-open {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .75rem;
-  margin-top: .75rem
+  gap: var(--space-0-75);
+  margin-top: var(--space-0-75)
 }
 
 .diet-survey-counter {
@@ -10279,9 +10364,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-survey-reset-note {
-  margin-top: .75rem;
-  padding: .7rem .8rem;
-  border: 1px dashed #d8c0ed;
+  margin-top: var(--space-0-75);
+  padding: var(--space-0-7) var(--space-0-8);
+  border: var(--border-hairline) dashed #d8c0ed;
   border-radius: var(--radius);
   background: #9900ff0b;
   color: #3f2b4f;
@@ -10289,27 +10374,27 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-personalized-output {
-  margin-top: .8rem
+  margin-top: var(--space-0-8)
 }
 
 .diet-personalized-summary {
   display: flex;
   justify-content: space-between;
-  gap: .8rem;
+  gap: var(--space-0-8);
   align-items: flex-start;
-  padding: .8rem;
-  border: 1px solid #e1d3f0;
+  padding: var(--space-0-8);
+  border: var(--border-hairline) solid #e1d3f0;
   border-radius: var(--radius);
   background: #9900ff0b
 }
 
 .diet-personalized-summary h3 {
-  margin: .15rem 0 .35rem;
+  margin: .15rem 0 var(--space-0-35);
   font-size: 1.05rem
 }
 
 .diet-personalized-summary p {
-  margin: .25rem 0;
+  margin: var(--space-0-25) 0;
   line-height: 1.45
 }
 
@@ -10326,9 +10411,9 @@ body.nutrition-practice-sheet-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: .28rem .5rem;
-  border: 1px solid #d6c3ea;
-  border-radius: 999px;
+  padding: .28rem var(--space-0-5);
+  border: var(--border-hairline) solid #d6c3ea;
+  border-radius: var(--radius-pill);
   color: #5b3a78;
   background: #fff;
   font-size: .75rem;
@@ -10345,16 +10430,16 @@ body.nutrition-practice-sheet-open {
 .diet-smart-goals {
   display: grid;
   grid-template-columns: 1fr;
-  gap: .65rem;
-  margin-top: .7rem
+  gap: var(--space-0-65);
+  margin-top: var(--space-0-7)
 }
 
 .diet-smart-goal {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: .65rem;
-  padding: .75rem;
-  border: 1px solid #e6e6e6;
+  gap: var(--space-0-65);
+  padding: var(--space-0-75);
+  border: var(--border-hairline) solid #e6e6e6;
   border-radius: var(--radius);
   background: #fff
 }
@@ -10365,7 +10450,7 @@ body.nutrition-practice-sheet-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #90f;
   color: #fff;
   font-weight: 700
@@ -10374,13 +10459,13 @@ body.nutrition-practice-sheet-open {
 .diet-guidance-grid {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: .65rem;
-  margin-top: .7rem
+  gap: var(--space-0-65);
+  margin-top: var(--space-0-7)
 }
 
 .diet-guidance-box {
-  padding: .75rem;
-  border: 1px solid #e6e6e6;
+  padding: var(--space-0-75);
+  border: var(--border-hairline) solid #e6e6e6;
   border-radius: var(--radius);
   background: #fff
 }
@@ -10393,8 +10478,8 @@ body.nutrition-practice-sheet-open {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: .55rem;
-  margin-bottom: .35rem
+  gap: var(--space-0-55);
+  margin-bottom: var(--space-0-35)
 }
 
 .diet-myth-box-head h4 {
@@ -10403,9 +10488,9 @@ body.nutrition-practice-sheet-open {
 
 .diet-myth-next-btn {
   flex: 0 0 auto;
-  padding: .32rem .55rem;
-  border: 1px solid #d6c3ea;
-  border-radius: 999px;
+  padding: .32rem var(--space-0-55);
+  border: var(--border-hairline) solid #d6c3ea;
+  border-radius: var(--radius-pill);
   background: #fff;
   color: #5a008f;
   font-size: .78rem;
@@ -10430,10 +10515,10 @@ body.nutrition-practice-sheet-open {
 .diet-swaps-list li {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
-  gap: .35rem;
+  gap: var(--space-0-35);
   align-items: start;
-  padding: .3rem 0;
-  border-bottom: 1px solid #eeeeee;
+  padding: var(--space-0-3) 0;
+  border-bottom: var(--border-hairline) solid #eeeeee;
   line-height: 1.35
 }
 
@@ -10442,9 +10527,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-calculation-details {
-  margin-top: .8rem;
-  padding: .65rem .75rem;
-  border: 1px dashed #d4d4d4;
+  margin-top: var(--space-0-8);
+  padding: var(--space-0-65) var(--space-0-75);
+  border: var(--border-hairline) dashed #d4d4d4;
   border-radius: var(--radius);
   background: #ffffffb3
 }
@@ -10455,7 +10540,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-calculation-details-body {
-  margin-top: .65rem
+  margin-top: var(--space-0-65)
 }
 
 .liquid-ios26 .diet-personalization-module,
@@ -10466,8 +10551,8 @@ body.nutrition-practice-sheet-open {
 .liquid-ios26 .diet-survey-more {
   border-color: #9900ff47!important;
   background: #ffffff8c!important;
-  backdrop-filter: blur(10px) saturate(115%)!important;
-  -webkit-backdrop-filter: blur(10px) saturate(115%)!important
+  backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important
 }
 
 .liquid-ios26 .diet-survey-toggle,
@@ -10515,8 +10600,8 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-card-intro {
-  padding: .85rem .95rem;
-  border: 1px solid #e4d7f4;
+  padding: var(--space-0-85) var(--space-0-95);
+  border: var(--border-hairline) solid #e4d7f4;
   border-radius: var(--radius);
   background: linear-gradient(135deg,#9900ff14,#00838d0d)
 }
@@ -10535,7 +10620,7 @@ body.nutrition-practice-sheet-open {
 .diet-pdf-variant-card p,
 .diet-control-hint,
 .diet-energy-output-head p {
-  margin: .35rem 0 0;
+  margin: var(--space-0-35) 0 0;
   color: #4a4a4a;
   line-height: 1.45
 }
@@ -10543,8 +10628,8 @@ body.nutrition-practice-sheet-open {
 .diet-mode-switch {
   display: grid;
   grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: .6rem;
-  margin-top: .75rem
+  gap: var(--space-0-6);
+  margin-top: var(--space-0-75)
 }
 
 .diet-mode-tab {
@@ -10554,8 +10639,8 @@ body.nutrition-practice-sheet-open {
   justify-content: center;
   min-height: 5.2rem;
   width: 100%;
-  padding: .75rem .85rem!important;
-  border: 2px solid #e4d7f4!important;
+  padding: var(--space-0-75) var(--space-0-85)!important;
+  border: var(--border-emphasis) solid #e4d7f4!important;
   border-radius: var(--radius)!important;
   background: #fff!important;
   color: #1e1e1e!important;
@@ -10602,7 +10687,7 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-mode-panel {
-  margin-top: .8rem
+  margin-top: var(--space-0-8)
 }
 
 .diet-mode-panel[hidden] {
@@ -10610,30 +10695,30 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-panel-lead {
-  padding: .8rem .9rem;
-  border: 1px solid #ece3f7;
+  padding: var(--space-0-8) var(--space-0-9);
+  border: var(--border-hairline) solid #ece3f7;
   border-radius: var(--radius);
   background: #ffffffb8
 }
 
 .diet-energy-options-panel {
-  margin-top: .75rem
+  margin-top: var(--space-0-75)
 }
 
 .diet-energy-controls-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(240px,1fr));
-  gap: .65rem;
-  margin-top: .75rem
+  gap: var(--space-0-65);
+  margin-top: var(--space-0-75)
 }
 
 .diet-energy-control-card,
 .diet-pdf-variant-card,
 .diet-energy-output {
-  border: 1px solid #e4d7f4;
+  border: var(--border-hairline) solid #e4d7f4;
   border-radius: var(--radius);
   background: #fff;
-  padding: .8rem
+  padding: var(--space-0-8)
 }
 
 .diet-control-title {
@@ -10641,21 +10726,21 @@ body.nutrition-practice-sheet-open {
   color: #352045;
   font-size: .88rem;
   font-weight: 800;
-  margin-bottom: .45rem
+  margin-bottom: var(--space-0-45)
 }
 
 .diet-segmented-control {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: .35rem
+  gap: var(--space-0-35)
 }
 
 .diet-segmented-control button {
   width: 100%!important;
   min-width: 0!important;
   margin: 0!important;
-  padding: .55rem!important;
-  border: 1px solid #d8c5eb!important;
+  padding: var(--space-0-55)!important;
+  border: var(--border-hairline) solid #d8c5eb!important;
   border-radius: .75rem!important;
   background: #fff!important;
   color: #2a2a2a!important;
@@ -10685,9 +10770,9 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-energy-extra-options {
-  margin-top: .75rem;
-  padding: .7rem .8rem;
-  border: 1px dashed #d8c0ed;
+  margin-top: var(--space-0-75);
+  padding: var(--space-0-7) var(--space-0-8);
+  border: var(--border-hairline) dashed #d8c0ed;
   border-radius: var(--radius);
   background: #9900ff09
 }
@@ -10701,8 +10786,8 @@ body.nutrition-practice-sheet-open {
 .diet-extra-grid {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: .45rem;
-  margin-top: .65rem
+  gap: var(--space-0-45);
+  margin-top: var(--space-0-65)
 }
 
 #dietRecommendationsContent .diet-option-check {
@@ -10710,10 +10795,10 @@ body.nutrition-practice-sheet-open {
   grid-template-columns: 1.1rem minmax(0,1fr)!important;
   align-items: start!important;
   justify-content: start!important;
-  gap: .45rem!important;
+  gap: var(--space-0-45)!important;
   margin: 0!important;
-  padding: .5rem .58rem!important;
-  border: 1px solid #e2e2e2;
+  padding: var(--space-0-5) .58rem!important;
+  border: var(--border-hairline) solid #e2e2e2;
   border-radius: .7rem;
   background: #fff;
   font-size: .86rem;
@@ -10754,8 +10839,8 @@ body.nutrition-practice-sheet-open {
   box-sizing: border-box!important;
   width: 100%!important;
   max-width: 100%!important;
-  margin: .7rem 0 0!important;
-  padding: .66rem 1rem!important;
+  margin: var(--space-0-7) 0 0!important;
+  padding: .66rem var(--space-1)!important;
   border-radius: var(--radius)!important;
   font-size: .96rem!important;
   font-weight: 700!important;
@@ -10767,14 +10852,14 @@ body.nutrition-practice-sheet-open {
 #dietRecommendationsContent .diet-primary-action,
 #dietRecommendationsContent #generateDietBtn,
 #dietRecommendationsContent #generateEnergyDietBtn {
-  border: 3px solid #9900ff!important;
+  border: var(--border-pro) solid #9900ff!important;
   background: #fff!important;
   color: #000!important
 }
 
 #dietRecommendationsContent .diet-secondary-action,
 #dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
-  border: 2px solid #9900ff!important;
+  border: var(--border-emphasis) solid #9900ff!important;
   background: #fff!important;
   color: #000!important
 }
@@ -10782,8 +10867,8 @@ body.nutrition-practice-sheet-open {
 .diet-result-actions {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: .5rem;
-  margin-top: .65rem
+  gap: var(--space-0-5);
+  margin-top: var(--space-0-65)
 }
 
 .diet-result-actions[hidden] {
@@ -10793,8 +10878,8 @@ body.nutrition-practice-sheet-open {
 .diet-pdf-variant-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: .65rem;
-  margin-top: .75rem
+  gap: var(--space-0-65);
+  margin-top: var(--space-0-75)
 }
 
 .diet-pdf-variant-card {
@@ -10810,9 +10895,9 @@ body.nutrition-practice-sheet-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: .45rem;
+  margin-bottom: var(--space-0-45);
   padding: .22rem .48rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #90f;
   color: #fff;
   font-size: .74rem;
@@ -10821,18 +10906,18 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-energy-output-head {
-  margin-bottom: .65rem;
-  padding-bottom: .55rem;
-  border-bottom: 1px solid #eee4f7
+  margin-bottom: var(--space-0-65);
+  padding-bottom: var(--space-0-55);
+  border-bottom: var(--border-hairline) solid #eee4f7
 }
 
 .diet-energy-output-body ol {
-  margin-top: .45rem;
+  margin-top: var(--space-0-45);
   padding-left: 1.35rem
 }
 
 .diet-energy-output-body li {
-  margin: .45rem 0;
+  margin: var(--space-0-45) 0;
   line-height: 1.45
 }
 
@@ -10843,8 +10928,8 @@ body.nutrition-practice-sheet-open {
 .liquid-ios26 .diet-energy-output {
   border-color: #9900ff47!important;
   background: #ffffff8c!important;
-  backdrop-filter: blur(10px) saturate(115%)!important;
-  -webkit-backdrop-filter: blur(10px) saturate(115%)!important
+  backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important
 }
 
 @media(max-width:760px) {
@@ -10991,8 +11076,8 @@ body.liquid-ios26 #dietRecommendationsContent .diet-guidance-box,
 body.liquid-ios26 #dietRecommendationsContent .diet-calculation-details,
 body.liquid-ios26 #dietRecommendationsContent .diet-survey-more,
 body.liquid-ios26 #dietRecommendationsContent .diet-survey-reset-note {
-  backdrop-filter: blur(10px) saturate(115%)!important;
-  -webkit-backdrop-filter: blur(10px) saturate(115%)!important
+  backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important
 }
 
 body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-card-intro,
@@ -11318,7 +11403,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-practice-sheet {
 .nutrition-practice-sheet .nutrition-practice-sheet-panel {
   color: var(--nutrition-ui-text)!important;
   background: var(--nutrition-ui-surface)!important;
-  border: 1px solid var(--nutrition-ui-border)!important;
+  border: var(--border-hairline) solid var(--nutrition-ui-border)!important;
   box-shadow: var(--nutrition-ui-shadow)!important;
   backdrop-filter: var(--nutrition-ui-panel-blur)!important;
   -webkit-backdrop-filter: var(--nutrition-ui-panel-blur)!important
@@ -11438,7 +11523,7 @@ body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target {
 .nutrition-practice-sheet .nutrition-practice-sheet-close {
   background: var(--nutrition-ui-button-bg)!important;
   color: var(--nutrition-ui-button-text)!important;
-  border: 1px solid var(--nutrition-ui-border-strong)!important;
+  border: var(--border-hairline) solid var(--nutrition-ui-border-strong)!important;
   box-shadow: var(--nutrition-ui-button-shadow)!important
 }
 
@@ -11485,7 +11570,7 @@ body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target {
 
 .nutrition-norms-card .nutrition-norms-switch .nutrition-norms-switch-slider {
   background: var(--nutrition-ui-switch-bg)!important;
-  border: 1px solid var(--nutrition-ui-border)!important
+  border: var(--border-hairline) solid var(--nutrition-ui-border)!important
 }
 
 .nutrition-norms-card .nutrition-norms-switch .nutrition-norms-switch-slider:before {
@@ -11538,13 +11623,13 @@ body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target {
 
 .nutrition-norms-card .nutrition-norms-message--info {
   background: var(--nutrition-ui-surface-soft-strong)!important;
-  border: 1px solid var(--nutrition-ui-border)!important;
+  border: var(--border-hairline) solid var(--nutrition-ui-border)!important;
   color: var(--nutrition-ui-accent-text)!important
 }
 
 .nutrition-norms-card .nutrition-norms-message--warn {
   background: var(--nutrition-ui-warning-bg)!important;
-  border: 1px solid var(--nutrition-ui-warning-border)!important;
+  border: var(--border-hairline) solid var(--nutrition-ui-warning-border)!important;
   color: var(--nutrition-ui-warning-text)!important
 }
 
@@ -11594,7 +11679,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .vild-rem-row:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: var(--border-emphasis) solid var(--primary);
   outline-offset: -2px
 }
 
@@ -11603,8 +11688,8 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   width: 34px!important;
   min-width: 34px!important;
   height: 32px!important;
-  border: 1px solid #d7e9ec!important;
-  border-radius: 8px!important;
+  border: var(--border-hairline) solid #d7e9ec!important;
+  border-radius: var(--radius-8)!important;
   background: transparent!important;
   color: #5b6672!important;
   display: inline-flex!important;
@@ -11638,15 +11723,15 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: var(--space-16px);
   box-sizing: border-box
 }
 
 .vild-rem-dlg {
   background: #fff;
   color: var(--text-strong);
-  border-radius: 16px;
-  max-width: 460px;
+  border-radius: var(--radius-16);
+  max-width: var(--dialog-width);
   width: 100%;
   max-height: 100%;
   overflow: auto;
@@ -11656,11 +11741,11 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .vild-rem-dlg-head {
-  padding: 13px 16px 10px;
+  padding: 13px var(--space-16px) var(--space-10px);
   display: flex;
   align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid #eef2f3
+  gap: var(--space-10px);
+  border-bottom: var(--border-hairline) solid #eef2f3
 }
 
 .vild-rem-dlg-cat {
@@ -11668,8 +11753,8 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .04em;
-  border-radius: 999px;
-  padding: 3px 10px
+  border-radius: var(--radius-pill);
+  padding: 3px var(--space-10px)
 }
 
 .vild-rem-dlg-x {
@@ -11681,7 +11766,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   color: #9aa8aa!important;
   cursor: pointer;
   box-shadow: none!important;
-  padding: 2px 6px!important;
+  padding: 2px var(--space-6px)!important;
   min-height: 0!important;
   height: auto!important;
   width: auto!important;
@@ -11689,9 +11774,9 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .vild-rem-dlg-body {
-  padding: 12px 16px;
+  padding: var(--space-12px) var(--space-16px);
   display: grid;
-  gap: 8px
+  gap: var(--space-8px)
 }
 
 .vild-rem-dlg-nm {
@@ -11721,7 +11806,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 
 .vild-rem-dlg-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8px);
   font-size: .84rem;
   color: #5b6672
 }
@@ -11737,22 +11822,22 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  padding: 10px 16px 14px;
-  border-top: 1px solid #eef2f3
+  padding: var(--space-10px) var(--space-16px) var(--space-14px);
+  border-top: var(--border-hairline) solid #eef2f3
 }
 
 .vild-rem-dlg-acts button {
   font: inherit;
   font-size: .82rem!important;
   font-weight: 600!important;
-  border: 1px solid #d7e9ec!important;
+  border: var(--border-hairline) solid #d7e9ec!important;
   background: #fff!important;
   color: var(--text-strong)!important;
-  border-radius: 9px!important;
-  padding: 8px 11px!important;
+  border-radius: var(--radius-9)!important;
+  padding: var(--space-8px) 11px!important;
   display: inline-flex!important;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6px);
   white-space: nowrap;
   cursor: pointer;
   box-shadow: none!important;
@@ -11788,21 +11873,21 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .current-summary-prognosis {
-  margin-top: .7rem;
-  border-top: 1px solid var(--line-teal);
-  padding-top: .6rem
+  margin-top: var(--space-0-7);
+  border-top: var(--border-hairline) solid var(--line-teal);
+  padding-top: var(--space-0-6)
 }
 
 .current-summary-prognosis>summary {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: .4rem;
+  gap: var(--space-0-4);
   font-size: .9rem;
   font-weight: 600;
   color: var(--primary);
   list-style: none;
-  padding: .25rem 0;
+  padding: var(--space-0-25) 0;
   user-select: none
 }
 
@@ -11821,20 +11906,20 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .current-summary-prognosis>summary:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: var(--border-emphasis) solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px
+  border-radius: var(--radius-4)
 }
 
 .current-summary-prognosis-body {
-  margin-top: .4rem
+  margin-top: var(--space-0-4)
 }
 
 .current-summary-prognosis-nota {
   font-size: .78rem;
   line-height: 1.45;
   color: #5c6d6d;
-  margin-bottom: .45rem
+  margin-bottom: var(--space-0-45)
 }
 
 /* P-DYMKI: jeden dol dla dymkow. `--vilda-dol-wolny` publikuje wlasciciel docka (ios26-ui.js na stronach wprost, vilda_shell.js w powloce i jej ramkach) — to odleglosc od dolu okna do pierwszego wolnego piksela nad paskiem bezpieczenstwa, dockiem i strzalka. Bez zmiennej (komputer) zostaje sam pasek bezpieczenstwa, czyli dotychczasowe polozenie. */
@@ -11845,9 +11930,9 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   transform: translateX(-50%);
   z-index: var(--z-toast);
   box-sizing: border-box;
-  max-width: min(88vw,520px);
-  padding: .65rem 1.25rem;
-  border-radius: 10px;
+  max-width: var(--toast-max-width);
+  padding: var(--space-0-65) var(--space-1-25);
+  border-radius: var(--radius-10);
   font-size: .98rem;
   line-height: 1.35;
   text-align: center;
@@ -11869,12 +11954,12 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 .vilda-dymek--blad {
   background: #fff;
   color: #2f3137;
-  border: 1px solid rgba(211,47,47,.28);
+  border: var(--border-hairline) solid rgba(211,47,47,.28);
   border-left: 4px solid #d32f2f;
-  border-radius: 14px;
+  border-radius: var(--radius-14);
   text-align: left;
   font: 500 14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  padding: 12px 14px;
+  padding: var(--space-12px) var(--space-14px);
   pointer-events: auto
 }
 
@@ -11898,10 +11983,10 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   --cw-teal:var(--primary,#00838d);
   font-size: 1rem;
   text-align: center;
-  margin: .4rem 0 .7rem;
-  padding: .55rem .5rem .6rem;
-  border: 1px solid var(--cw-line);
-  border-radius: 12px;
+  margin: var(--space-0-4) 0 var(--space-0-7);
+  padding: var(--space-0-55) var(--space-0-5) var(--space-0-6);
+  border: var(--border-hairline) solid var(--cw-line);
+  border-radius: var(--radius-12);
   font-variant-numeric: tabular-nums
 }
 
@@ -11917,13 +12002,13 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   text-transform: uppercase;
   letter-spacing: .07em;
   color: var(--cw-muted);
-  margin: 0 0 .3rem
+  margin: 0 0 var(--space-0-3)
 }
 
 .cel-wlasny-seg {
   display: flex;
-  border: 1px solid var(--cw-line);
-  border-radius: 10px;
+  border: var(--border-hairline) solid var(--cw-line);
+  border-radius: var(--radius-10);
   overflow: hidden;
   margin: 0 auto;
   max-width: 22rem
@@ -11933,9 +12018,9 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   font: inherit!important;
   font-size: .8rem!important;
   line-height: 1.3!important;
-  padding: .38rem .3rem!important;
+  padding: .38rem var(--space-0-3)!important;
   border: 0!important;
-  border-left: 1px solid var(--cw-line)!important;
+  border-left: var(--border-hairline) solid var(--cw-line)!important;
   border-radius: 0!important;
   background: transparent!important;
   color: inherit!important;
@@ -11966,7 +12051,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
 }
 
 .cel-wlasny-seg button:focus-visible {
-  outline: 2px solid var(--cw-teal)!important;
+  outline: var(--border-emphasis) solid var(--cw-teal)!important;
   outline-offset: -2px!important
 }
 
@@ -11974,8 +12059,8 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: .4rem;
-  margin: .55rem 0 0;
+  gap: var(--space-0-4);
+  margin: var(--space-0-55) 0 0;
   font-size: .9rem;
   color: inherit
 }
@@ -11986,9 +12071,9 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--cw-teal);
-  padding: .3rem .4rem;
-  border: 1px solid var(--cw-line);
-  border-radius: 8px;
+  padding: var(--space-0-3) var(--space-0-4);
+  border: var(--border-hairline) solid var(--cw-line);
+  border-radius: var(--radius-8);
   text-align: center;
   background: transparent
 }
@@ -11998,7 +12083,7 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   font-size: .74rem;
   color: var(--cw-muted);
   font-style: italic;
-  margin: .45rem .3rem 0;
+  margin: var(--space-0-45) var(--space-0-3) 0;
   line-height: 1.35
 }
 
@@ -12010,6 +12095,6 @@ body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
   font-style: normal;
   color: #7a5a19;
   background: #fdf3e0;
-  border-radius: 8px;
-  padding: .4rem .55rem
+  border-radius: var(--radius-8);
+  padding: var(--space-0-4) var(--space-0-55)
 }

@@ -13,10 +13,11 @@ button,input[type=button],input[type=submit]{
   font:inherit;
   border:none;
   border-radius:var(--radius);
-  padding:.55rem 1.1rem;
+  padding:var(--space-0-55) var(--space-1-1);
   background:var(--primary);
   color:#fff;
-  transition:background .2s ease,box-shadow .2s ease}
+  transition:background .2s ease,box-shadow .2s ease;
+}
 button:hover,input[type=button]:hover,input[type=submit]:hover{
   background:var(--secondary);
   box-shadow:var(--shadow)}
@@ -26,7 +27,8 @@ button:disabled{
 @media(max-width:600px){
 button,input[type=button],input[type=submit]{
   width:100%;
-  margin-top:.5rem}
+  margin-top:var(--space-0-5);
+}
 }
 :root{
   --anim-fast:.15s ease}
@@ -57,13 +59,14 @@ body.has-mobile-bottom-dock #mobileBottomDock{
   gap:.28rem;
   align-items:stretch;
   min-height:var(--mobile-dock-height);
-  padding:.4rem;
+  padding:var(--space-0-4);
   border-radius:1.55rem;
   background:#fffc;
-  border:1px solid rgba(255,255,255,.42);
+  border:var(--border-hairline) solid rgba(255,255,255,.42);
   box-shadow:0 18px 42px #0f172a29,inset 0 1px #ffffff6b;
-  backdrop-filter:blur(24px) saturate(155%);
-  -webkit-backdrop-filter:blur(24px) saturate(155%)}
+  backdrop-filter:var(--blur-dock) var(--blur-dock-saturate);
+  -webkit-backdrop-filter:var(--blur-dock) var(--blur-dock-saturate);
+}
 #mobileBottomDock .mobile-bottom-dock__item{
   min-width:0;
   display:flex;
@@ -200,9 +203,9 @@ body.mobile-nav-ui-locked #scrollTopBtn {
   position:fixed;
   bottom:1rem;
   right:1rem;
-  width:4rem;
-  height:4rem;
-  border-radius:50%;
+  width:var(--scroll-top-size);
+  height:var(--scroll-top-size);
+  border-radius:var(--radius-circle);
   background:var(--primary);
   color:#fff;
   border:none;
@@ -264,10 +267,10 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   justify-content:center;
   padding:0;
   border:.5px solid rgba(255,255,255,.55);
-  border-radius:50%;
+  border-radius:var(--radius-circle);
   background:#ffffffb8;
-  -webkit-backdrop-filter:blur(12px) saturate(1.4);
-  backdrop-filter:blur(12px) saturate(1.4);
+  -webkit-backdrop-filter:var(--blur-shell-scroll-top) var(--blur-shell-scroll-top-saturate);
+  backdrop-filter:var(--blur-shell-scroll-top) var(--blur-shell-scroll-top-saturate);
   box-shadow:0 6px 20px #0f2b332e;
   color:#0f6e56;
   cursor:pointer;
@@ -299,7 +302,7 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   justify-content:center;
   padding:0;
   border:0;
-  border-radius:50%;
+  border-radius:var(--radius-circle);
   background:var(--primary);
   color:#fff;
   font-size:1.7rem;
@@ -323,17 +326,17 @@ html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellSc
 
 /* ===== StatusBar — vilda_status_bar.css 7-163 ===== */
 [data-vilda-status] {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  padding: 0.55rem 0.75rem;
-  border-radius: var(--radius, 8px);
-  border-left: 4px solid var(--vilda-status-ton, #00838d);
-  background: #fff;
-  color: #2c3838;
-  box-shadow: var(--shadow, 0 2px 6px rgba(0, 0, 0, .08));
+  display:flex;
+  align-items:flex-start;
+  gap:var(--space-0-6);
+  font-size:0.9rem;
+  line-height:1.45;
+  padding:var(--space-0-55) var(--space-0-75);
+  border-radius:var(--radius, 8px);
+  border-left:4px solid var(--vilda-status-ton, #00838d);
+  background:#fff;
+  color:#2c3838;
+  box-shadow:var(--shadow, 0 2px 6px rgba(0, 0, 0, .08));
 }
 [data-vilda-status][hidden] {
    display: none !important;
@@ -393,16 +396,16 @@ html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellSc
    text-decoration-thickness: 2px;
    }
 .vilda-status-link:focus-visible {
-  outline: 2px solid var(--vilda-status-ton, #00838d);
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline:var(--border-emphasis) solid var(--vilda-status-ton, #00838d);
+  outline-offset:2px;
+  border-radius:2px;
 }
 #vildaStatusForm {
-   margin-bottom: 0.8rem;
-   }
+  margin-bottom:var(--space-0-8);
+}
 #vildaStatusSide {
-   margin-bottom: 0.8rem;
-   }
+  margin-bottom:var(--space-0-8);
+}
 @media (min-width: 700px) {
   #vildaStatusForm {
    display: none !important;
@@ -417,11 +420,11 @@ html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellSc
 /* ===== Płynne szkło (.liquid-ios26) — ios26-v2.css 85-93, 97-99: globalna reguła button z !important; w aplikacji obejmuje #scrollTopBtn, #appShellScrollTop, #appShellTermFab i .vilda-status-link (tło #fff3, obrys --lg-border, kolor #111, promień 14px) ===== */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
   background:#fff3 !important;
-  border:1px solid var(--lg-border) !important;
+  border:var(--border-hairline) solid var(--lg-border) !important;
   color:var(--text-ink) !important;
-  border-radius:14px !important;
-  backdrop-filter:blur(10px) saturate(120%) !important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  border-radius:var(--radius-14) !important;
+  backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
+  -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
   box-shadow:var(--shadow-button-glass) !important;
   transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
 }

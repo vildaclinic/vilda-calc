@@ -6,10 +6,11 @@ button,input[type=button],input[type=submit]{
   font:inherit;
   border:none;
   border-radius:var(--radius);
-  padding:.55rem 1.1rem;
+  padding:var(--space-0-55) var(--space-1-1);
   background:var(--primary);
   color:#fff;
-  transition:background .2s ease,box-shadow .2s ease}
+  transition:background .2s ease,box-shadow .2s ease;
+}
 button:hover,input[type=button]:hover,input[type=submit]:hover{
   background:var(--secondary);
   box-shadow:var(--shadow)}
@@ -19,7 +20,8 @@ button:disabled{
 @media(max-width:600px){
 button,input[type=button],input[type=submit]{
   width:100%;
-  margin-top:.5rem}
+  margin-top:var(--space-0-5);
+}
 }
 button,input[type=submit]{
   transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
@@ -994,11 +996,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 /* ——— 6. Liquid Glass — ios26-v2.css 85–98: globalna reguła przycisków, która w aplikacji (instrukcja.html ma body.liquid-ios26) nadpisuje tło, obrys, kolor, promień i cień .guide-tile; subskrypcja.html nie ma klasy liquid-ios26, więc .sub-plan__cta jej nie podlega ——— */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
   background:#fff3 !important;
-  border:1px solid var(--lg-border) !important;
+  border:var(--border-hairline) solid var(--lg-border) !important;
   color:var(--text-ink) !important;
-  border-radius:14px !important;
-  backdrop-filter:blur(10px) saturate(120%) !important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  border-radius:var(--radius-14) !important;
+  backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
+  -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
   box-shadow:var(--shadow-button-glass) !important;
   transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
 }

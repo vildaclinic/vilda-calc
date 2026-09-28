@@ -6,7 +6,8 @@
   display:inline-block;
   width:60px;
   height:30px;
-  margin:0 .75rem}
+  margin:0 var(--space-0-75);
+}
 .switch input{
   display:none}
 .switch .slider{
@@ -24,20 +25,23 @@
   width:26px;
   height:26px;
   background:#fff;
-  border-radius:50%;
-  transition:transform .3s}
+  border-radius:var(--radius-circle);
+  transition:transform .3s;
+}
 .settings-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:1rem}
+  gap:var(--space-1);
+}
 .setting-item{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:.6rem .8rem;
-  border:1px solid var(--line);
-  border-radius:6px;
-  background:var(--field)}
+  padding:var(--space-0-6) var(--space-0-8);
+  border:var(--border-hairline) solid var(--line);
+  border-radius:var(--radius-6);
+  background:var(--field);
+}
 .setting-item span{
   flex:1;
   font-size:.95rem}
@@ -80,8 +84,9 @@
   top:2px;
   background-color:#fff;
   transition:.4s;
-  border-radius:50%;
-  box-shadow:0 0 2px #0003}
+  border-radius:var(--radius-circle);
+  box-shadow:0 0 2px #0003;
+}
 .switch input:checked+.slider{
   background-color:var(--primary, #00838d)}
 .switch input:checked+.slider:before{
@@ -89,17 +94,19 @@
 .settings-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(270px,1fr));
-  gap:1rem}
+  gap:var(--space-1);
+}
 .setting-item{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:1rem;
-  padding:1rem 1.05rem;
+  gap:var(--space-1);
+  padding:var(--space-1) 1.05rem;
   border-radius:var(--settings-card-radius);
-  border:1px solid var(--settings-card-border);
+  border:var(--border-hairline) solid var(--settings-card-border);
   background:var(--settings-card-bg);
-  box-shadow:0 12px 28px #07363e0d}
+  box-shadow:0 12px 28px #07363e0d;
+}
 .setting-item span{
   color:#07363e;
   font-size:.96rem;
@@ -109,18 +116,21 @@
 /* ===== SettingsAccordion — ustawienia.css ===== */
 .settings-accordion-list{
   display:grid;
-  gap:1rem}
+  gap:var(--space-1);
+}
 .settings-group-label{
-  padding:1.2rem .15rem .3rem;
+  padding:var(--space-1-2) .15rem var(--space-0-3);
   font-size:.72rem;
   font-weight:700;
   text-transform:uppercase;
   letter-spacing:.08em;
   color:var(--chrome-label-color, #5a7274);
-  border-bottom:1px solid rgba(0,131,141,.1);
-  margin-bottom:-.25rem}
+  border-bottom:var(--border-hairline) solid rgba(0,131,141,.1);
+  margin-bottom:-.25rem;
+}
 .settings-accordion-list>.settings-group-label:first-child{
-  padding-top:.25rem}
+  padding-top:var(--space-0-25);
+}
 .settings-mini-chip--expert{
   background:#6e460014;
   border-color:#6e460029;
@@ -131,13 +141,14 @@
   color:#005f68;
   font-weight:700}
 .settings-accordion{
-  border:1px solid var(--settings-card-border);
+  border:var(--border-hairline) solid var(--settings-card-border);
   border-radius:26px;
   background:linear-gradient(180deg,#fffffff2,#f6fcfcc7);
   box-shadow:0 18px 46px #07363e0f;
   overflow:hidden;
   scroll-margin-top:calc(var(--chrome-strip-height, 64px) + 12px);
-  container-type:inline-size}
+  container-type:inline-size;
+}
 .settings-accordion[open]{
   border-color:#00838d42;
   box-shadow:0 24px 56px #07363e17}
@@ -146,23 +157,26 @@
   display:grid;
   grid-template-columns:auto minmax(0,1fr) auto auto;
   align-items:center;
-  gap:1rem;
-  padding:1.15rem 1.25rem;
-  cursor:pointer}
+  gap:var(--space-1);
+  padding:1.15rem var(--space-1-25);
+  cursor:pointer;
+}
 .settings-accordion>summary::-webkit-details-marker{
   display:none}
 .settings-accordion>summary:focus-visible,.tech-chart-settings-btn:focus-visible{
-  outline:3px solid rgba(0,131,141,.24);
-  outline-offset:3px}
+  outline:var(--border-pro) solid rgba(0,131,141,.24);
+  outline-offset:3px;
+}
 .settings-accordion-index{
   width:2.6rem;
   height:2.6rem;
   flex:0 0 2.6rem;
   display:grid;
   place-items:center;
-  border-radius:14px;
+  border-radius:var(--radius-14);
   background:linear-gradient(135deg,#00b3b32e,#00838d14);
-  color:var(--primary, #00838d)}
+  color:var(--primary, #00838d);
+}
 .settings-accordion-index svg{
   width:20px;
   height:20px;
@@ -170,10 +184,11 @@
 .settings-accordion-copy{
   min-width:0}
 .settings-accordion-title{
-  margin:0 0 .25rem;
+  margin:0 0 var(--space-0-25);
   font-size:1.06rem;
   line-height:1.2;
-  color:#07363e}
+  color:#07363e;
+}
 .settings-accordion-text{
   margin:0;
   color:#567076;
@@ -183,15 +198,16 @@
   display:flex;
   flex-wrap:wrap;
   justify-content:flex-end;
-  gap:.45rem;
-  max-width:20rem}
+  gap:var(--space-0-45);
+  max-width:20rem;
+}
 .settings-mini-chip{
   display:inline-flex;
   align-items:center;
   padding:.42rem .68rem;
-  border-radius:999px;
+  border-radius:var(--radius-pill);
   background:var(--tint-teal);
-  border:1px solid var(--line-teal-soft);
+  border:var(--border-hairline) solid var(--line-teal-soft);
   color:#145861;
   font-size:.82rem;
   font-weight:600;
@@ -205,47 +221,53 @@
   height:2.6rem;
   display:grid;
   place-items:center;
-  border-radius:999px;
-  border:1px solid rgba(0,131,141,.14);
+  border-radius:var(--radius-pill);
+  border:var(--border-hairline) solid rgba(0,131,141,.14);
   background:#ffffffc7;
   color:#0f5f68;
   font-size:1.15rem;
   font-weight:700;
   line-height:1;
-  transition:transform .22s ease}
+  transition:transform .22s ease;
+}
 .settings-accordion[open] .settings-chevron{
   transform:rotate(180deg)}
 .settings-accordion-panel{
-  padding:0 1.25rem 1.25rem}
+  padding:0 var(--space-1-25) var(--space-1-25);
+}
 .settings-panel-inner{
-  padding-top:1.2rem;
-  border-top:1px solid var(--line-teal-soft);
+  padding-top:var(--space-1-2);
+  border-top:var(--border-hairline) solid var(--line-teal-soft);
 }
 .settings-section-note{
-  margin:0 0 1rem;
+  margin:0 0 var(--space-1);
   color:#54686e;
   font-size:.93rem;
   line-height:1.6;
-  max-width:880px}
+  max-width:880px;
+}
 
 /* ===== BackupCard — ustawienia.css ===== */
 .settings-control-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:1rem}
+  gap:var(--space-1);
+}
 .settings-control-card{
-  padding:1.05rem 1.1rem;
-  border-radius:20px;
-  border:1px solid var(--settings-card-border);
+  padding:1.05rem var(--space-1-1);
+  border-radius:var(--radius-20);
+  border:var(--border-hairline) solid var(--settings-card-border);
   background:var(--settings-card-bg);
-  box-shadow:0 12px 30px #07363e0d}
+  box-shadow:0 12px 30px #07363e0d;
+}
 .settings-control-card--wide{
   grid-column:1 / -1}
 .settings-control-header{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
-  gap:.85rem}
+  gap:var(--space-0-85);
+}
 .settings-control-title{
   margin:0;
   font-size:1rem;
@@ -256,41 +278,45 @@
   align-items:center;
   white-space:nowrap;
   padding:.34rem .58rem;
-  border-radius:999px;
+  border-radius:var(--radius-pill);
   background:var(--tint-teal);
-  border:1px solid var(--line-teal-soft);
+  border:var(--border-hairline) solid var(--line-teal-soft);
   color:#145861;
   font-size:.78rem;
   font-weight:700;
   letter-spacing:.02em;
 }
 .settings-control-desc{
-  margin:.48rem 0 .95rem;
+  margin:.48rem 0 var(--space-0-95);
   color:#566b71;
   font-size:.9rem;
-  line-height:1.55}
+  line-height:1.55;
+}
 .settings-card-toggle-row{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:1rem;
+  gap:var(--space-1);
   flex-wrap:wrap;
-  margin-bottom:.95rem}
+  margin-bottom:var(--space-0-95);
+}
 .settings-card-toggle-copy{
   flex:1 1 220px;
   min-width:0}
 .settings-control-hint{
-  margin:.65rem 0 0;
+  margin:var(--space-0-65) 0 0;
   color:#566b71;
   font-size:.82rem;
-  line-height:1.5}
+  line-height:1.5;
+}
 .settings-inline-actions{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:1rem;
+  gap:var(--space-1);
   flex-wrap:wrap;
-  margin-bottom:.95rem}
+  margin-bottom:var(--space-0-95);
+}
 .settings-inline-note{
   margin:0;
   color:#586d72;
@@ -300,7 +326,8 @@
 .settings-backup-card{
   padding:0}
 .settings-backup-section{
-  padding:1.05rem 1.1rem}
+  padding:1.05rem var(--space-1-1);
+}
 .settings-backup-sep{
   height:1px;
   background:#00838d1a;
@@ -313,16 +340,18 @@
 .settings-backup-controls-row{
   display:flex;
   align-items:center;
-  gap:.85rem;
+  gap:var(--space-0-85);
   flex-wrap:wrap;
-  margin-bottom:.5rem}
+  margin-bottom:var(--space-0-5);
+}
 .settings-backup-checkbox-label{
   display:flex;
   align-items:center;
-  gap:.5rem;
+  gap:var(--space-0-5);
   cursor:pointer;
   font-size:.95rem;
-  color:#07363e}
+  color:#07363e;
+}
 .settings-backup-checkbox{
   width:18px;
   height:18px;
@@ -331,24 +360,28 @@
 .settings-backup-interval-label{
   display:flex;
   align-items:center;
-  gap:.5rem;
+  gap:var(--space-0-5);
   font-size:.9rem;
-  color:#566b71}
+  color:#566b71;
+}
 .settings-backup-select{
   width:auto;
-  padding:6px 10px}
+  padding:var(--space-6px) var(--space-10px);
+}
 .settings-backup-run-btn{
   min-width:140px}
 .settings-backup-note{
-  margin-top:.55rem}
+  margin-top:var(--space-0-55);
+}
 .settings-note-warn{
-  margin-top:.55rem;
-  padding:.6rem .75rem;
-  border:1px solid #b4540033;
-  border-radius:12px;
+  margin-top:var(--space-0-55);
+  padding:var(--space-0-6) var(--space-0-75);
+  border:var(--border-hairline) solid #b4540033;
+  border-radius:var(--radius-12);
   background:#b454000f;
   color:#6e4600;
-  font-weight:600}
+  font-weight:600;
+}
 
 /* ===== SettingsAccordion / BackupCard — wariant --danger (ustawienia.css 443-481) ===== */
 .settings-accordion--danger{
@@ -383,7 +416,8 @@
   color:var(--danger-strong);
 }
 .settings-danger-input{
-  margin-bottom:.65rem}
+  margin-bottom:var(--space-0-65);
+}
 .settings-danger-btn{
   background:var(--danger-strong) !important;
   color:#fff !important;
@@ -394,7 +428,8 @@
   background:#8a0018!important;
   border-color:#8a0018!important}
 .settings-danger-status{
-  margin-top:.65rem}
+  margin-top:var(--space-0-65);
+}
 
 /* ===== SettingsAccordion — układ responsywny (ustawienia.css 482-555; pominięto reguły .tech-chart-* i .settings-range-* spoza grupy) ===== */
 @container (max-width: 660px){
@@ -424,12 +459,14 @@
 @media(max-width:720px){
   .settings-accordion>summary{
   grid-template-columns:auto minmax(0,1fr) auto;
-  padding:1rem}
+  padding:var(--space-1);
+}
 .settings-chevron{
   width:2.35rem;
   height:2.35rem}
 .settings-accordion-panel{
-  padding:0 1rem 1rem}
+  padding:0 var(--space-1) var(--space-1);
+}
 .settings-inline-actions{
   align-items:stretch}
 }
@@ -482,8 +519,8 @@
   color:#fff;
   font-size:.78rem;
   font-weight:500;
-  padding:.38rem .75rem;
-  border-radius:8px;
+  padding:.38rem var(--space-0-75);
+  border-radius:var(--radius-8);
   white-space:nowrap;
   pointer-events:none;
   z-index:var(--z-dropdown);
@@ -502,15 +539,18 @@
 /* ===== SettingsAccordion — tryb kompaktowy <=560px (ustawienia.css 661-715) ===== */
 @media(max-width:560px){
   .settings-accordion-list{
-  gap:4px}
+  gap:var(--space-4px);
+}
 .settings-accordion{
-  border-radius:10px;
-  box-shadow:0 2px 8px #07363e0d}
+  border-radius:var(--radius-10);
+  box-shadow:0 2px 8px #07363e0d;
+}
 .settings-accordion>summary{
   grid-template-columns:auto minmax(0,1fr) auto;
   align-items:center;
   padding:11px 13px;
-  gap:10px}
+  gap:var(--space-10px);
+}
 .settings-accordion-index{
   grid-row:1;
   align-self:center;
@@ -564,15 +604,16 @@
 .vilda-auth-input,input.vilda-auth-input{
   width:100%;
   box-sizing:border-box;
-  padding:14px 16px;
-  border-radius:12px;
+  padding:var(--space-14px) var(--space-16px);
+  border-radius:var(--radius-12);
   border:1.5px solid #d6dde0;
   background:#fff;
   font-size:16px;
   line-height:1.5;
   font-family:inherit;
   color:#08202c;
-  transition:border-color .15s ease,box-shadow .15s ease}
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
 .vilda-auth-input::placeholder{
   color:#9ca8ad}
 .vilda-auth-input:focus{
@@ -592,24 +633,27 @@ select.vilda-auth-input{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  padding:14px 22px;
-  border-radius:12px;
+  padding:var(--space-14px) 22px;
+  border-radius:var(--radius-12);
   border:1.5px solid transparent;
   font-size:15px;
   font-weight:500;
   font-family:inherit;
   cursor:pointer;
   transition:background-color .15s ease,border-color .15s ease,transform .05s ease,box-shadow .15s ease;
-  text-decoration:none}
+  text-decoration:none;
+}
 .vilda-auth-btn:active{
   transform:translateY(1px)}
 .vilda-auth-btn:focus-visible{
-  outline:3px solid rgba(0,131,141,.3);
-  outline-offset:2px}
+  outline:var(--border-pro) solid rgba(0,131,141,.3);
+  outline-offset:2px;
+}
 .vilda-auth-btn-small{
-  padding:10px 16px;
+  padding:var(--space-10px) var(--space-16px);
   font-size:13px;
-  border-radius:10px}
+  border-radius:var(--radius-10);
+}
 .vilda-auth-btn-primary{
   background:var(--primary);
   color:#fff;
@@ -632,14 +676,15 @@ select.vilda-auth-input{
 
 /* ===== Accordion — style.css: #thyroidCancerKidsCard .thy-glossary (3654-3678), .current-summary-prognosis (7466-7499) + .current-summary-row (365-372), .adv-growth-result-details (2913-2934) ===== */
 #thyroidCancerKidsCard .thy-glossary{
-  margin-top:.8rem}
+  margin-top:var(--space-0-8);
+}
 #thyroidCancerKidsCard .thy-glossary details{
   background:var(--card);
-  border:1px solid var(--line);
+  border:var(--border-hairline) solid var(--line);
   border-radius:var(--radius);
   box-shadow:var(--shadow);
-  padding:.65rem .85rem;
-  margin-top:.6rem;
+  padding:var(--space-0-65) var(--space-0-85);
+  margin-top:var(--space-0-6);
 }
 #thyroidCancerKidsCard .thy-glossary summary{
   cursor:pointer;
@@ -649,30 +694,33 @@ select.vilda-auth-input{
 #thyroidCancerKidsCard .thy-glossary summary::-webkit-details-marker{
   transform:scale(.9)}
 #thyroidCancerKidsCard .thy-glossary .thy-glossary-body{
-  margin-top:.55rem;
+  margin-top:var(--space-0-55);
   font-size:.93rem;
   color:var(--text);
-  line-height:1.45}
+  line-height:1.45;
+}
 #thyroidCancerKidsCard .thy-glossary .thy-glossary-body code{
   background:#0000000f;
-  padding:.05rem .25rem;
-  border-radius:6px}
+  padding:.05rem var(--space-0-25);
+  border-radius:var(--radius-6);
+}
 .current-summary-prognosis{
-  margin-top:.7rem;
-  border-top:1px solid var(--line-teal);
-  padding-top:.6rem;
+  margin-top:var(--space-0-7);
+  border-top:var(--border-hairline) solid var(--line-teal);
+  padding-top:var(--space-0-6);
 }
 .current-summary-prognosis>summary{
   cursor:pointer;
   display:flex;
   align-items:center;
-  gap:.4rem;
+  gap:var(--space-0-4);
   font-size:.9rem;
   font-weight:600;
   color:var(--primary);
   list-style:none;
-  padding:.25rem 0;
-  user-select:none}
+  padding:var(--space-0-25) 0;
+  user-select:none;
+}
 .current-summary-prognosis>summary::-webkit-details-marker{
   display:none}
 .current-summary-prognosis>summary::before{
@@ -682,28 +730,33 @@ select.vilda-auth-input{
 .current-summary-prognosis[open]>summary::before{
   content:"\25BE"}
 .current-summary-prognosis>summary:focus-visible{
-  outline:2px solid var(--primary);
+  outline:var(--border-emphasis) solid var(--primary);
   outline-offset:2px;
-  border-radius:4px}
+  border-radius:var(--radius-4);
+}
 .current-summary-prognosis-body{
-  margin-top:.4rem}
+  margin-top:var(--space-0-4);
+}
 .current-summary-prognosis-nota{
   font-size:.78rem;
   line-height:1.45;
   color:#5c6d6d;
-  margin-bottom:.45rem}
+  margin-bottom:var(--space-0-45);
+}
 .current-summary-row{
   display:flex;
   align-items:center;
   font-size:.95rem;
-  margin-top:.4rem}
+  margin-top:var(--space-0-4);
+}
 .current-summary-row:first-child{
   margin-top:0}
 .adv-growth-result-details{
   display:flex;
   flex-direction:column;
-  gap:.6rem;
-  margin:.55rem 0 .2rem}
+  gap:var(--space-0-6);
+  margin:var(--space-0-55) 0 .2rem;
+}
 .adv-growth-result-block--reliability .adv-growth-result-details{
   margin-top:0}
 .adv-growth-result-details-btn{
@@ -711,10 +764,11 @@ select.vilda-auth-input{
   display:block}
 .adv-growth-result-details-panel{
   display:block;
-  padding:.95rem 1rem;
-  border-radius:14px;
-  border:1px solid rgba(0,131,141,.14);
-  background:linear-gradient(180deg,#f8fbfbf5,#f4fafaf5)}
+  padding:var(--space-0-95) var(--space-1);
+  border-radius:var(--radius-14);
+  border:var(--border-hairline) solid rgba(0,131,141,.14);
+  background:linear-gradient(180deg,#f8fbfbf5,#f4fafaf5);
+}
 .adv-growth-result-details-panel[hidden]{
   display:none!important}
 .adv-growth-result-details-panel p{
@@ -725,18 +779,19 @@ select.vilda-auth-input{
 /* ===== Płynne szkło (.liquid-ios26) — ios26-v2.css 85-93, 187-190: globalne reguły button/select, które w aplikacji spłaszczają przyciski AuthButton i select w karcie kopii ===== */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
   background:#fff3 !important;
-  border:1px solid var(--lg-border) !important;
+  border:var(--border-hairline) solid var(--lg-border) !important;
   color:var(--text-ink) !important;
-  border-radius:14px !important;
-  backdrop-filter:blur(10px) saturate(120%) !important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  border-radius:var(--radius-14) !important;
+  backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
+  -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
   box-shadow:var(--shadow-button-glass) !important;
   transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
 }
 .liquid-ios26 input[type=text],.liquid-ios26 input[type=number],.liquid-ios26 select{
   background:#ffffffd9;
-  border:1px solid rgba(0,0,0,.12);
-  border-radius:12px}
+  border:var(--border-hairline) solid rgba(0,0,0,.12);
+  border-radius:var(--radius-12);
+}
 
 /* ===== Wysoki kontrast — style.css 5157-5234 (selektory body.page-settings.high-contrast-level-N zapisane jako body.high-contrast-level-N.page-settings — ten sam selektor złożony; z list selektorów 5157 i 5193 zostawiono tylko elementy tej grupy) ===== */
 body.high-contrast-level-1.page-settings .settings-control-card,body.high-contrast-level-2.page-settings .settings-control-card,body.high-contrast-level-3.page-settings .settings-control-card,body.high-contrast-level-1.page-settings .setting-item,body.high-contrast-level-2.page-settings .setting-item,body.high-contrast-level-3.page-settings .setting-item{

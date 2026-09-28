@@ -8,39 +8,45 @@ label{
 input,select,option{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   width:100%;
-  padding:.45rem;
-  border:1px solid var(--line-neutral);
-  border-radius:4px;
+  padding:var(--space-0-45);
+  border:var(--border-hairline) solid var(--line-neutral);
+  border-radius:var(--radius-4);
   font-size:1rem;
 }
 .flex{
   display:flex;
-  gap:1rem;
-  flex-wrap:wrap}
+  gap:var(--space-1);
+  flex-wrap:wrap;
+}
 .snack-row,.meal-row,.food-row{
   display:grid;
   grid-template-columns:1fr 100px 34px;
-  gap:.5rem;
+  gap:var(--space-0-5);
   align-items:center;
-  margin-top:.5rem}
+  margin-top:var(--space-0-5);
+}
 .measure-row{
   display:block;
-  margin:.5rem 0 0}
+  margin:var(--space-0-5) 0 0;
+}
 .measure-row-sep{
   height:3px;
   background:#00767e40;
-  margin:.6rem 0}
+  margin:var(--space-0-6) 0;
+}
 .measure-row-top{
   display:grid;
   grid-template-columns:1fr 1fr 1fr;
-  gap:.5rem;
-  align-items:end}
+  gap:var(--space-0-5);
+  align-items:end;
+}
 .measure-row-bot{
   display:grid;
   grid-template-columns:1fr 1fr 34px;
-  gap:.5rem;
+  gap:var(--space-0-5);
   align-items:end;
-  margin-top:.35rem}
+  margin-top:var(--space-0-35);
+}
 .measure-row-top label,.measure-row-bot label{
   font-size:.95rem}
 .measure-row-bot .icon{
@@ -49,10 +55,11 @@ input,select,option{
 input[type=number],input[type=text],select{
   width:100%;
   max-width:100%;
-  padding:.45rem .65rem;
-  border:1px solid #d0d7da;
+  padding:var(--space-0-45) var(--space-0-65);
+  border:var(--border-hairline) solid #d0d7da;
   border-radius:var(--radius);
-  transition:border-color .2s ease,box-shadow .2s ease}
+  transition:border-color .2s ease,box-shadow .2s ease;
+}
 input:focus,select:focus{
   outline:none;
   border-color:var(--primary);
@@ -74,13 +81,15 @@ input:focus,select:focus{
 .user-card input,.user-card select{
   font-family:Inter,sans-serif;
   font-size:1.05rem;
-  padding:.65rem .85rem;
+  padding:var(--space-0-65) var(--space-0-85);
   border-radius:.4rem;
-  border:1px solid #c0c8c8}
+  border:var(--border-hairline) solid #c0c8c8;
+}
 #calcForm .half{
   margin:0}
 #abxDoseInput.dose-out-of-range{
-  border:1px solid var(--danger)!important}
+  border:var(--border-hairline) solid var(--danger) !important;
+}
 #abxDoseInput:disabled{
   background-color:#f5f5f5;
   color:#6b7a7a;
@@ -166,15 +175,16 @@ input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{
 .vilda-auth-input,input.vilda-auth-input{
   width:100%;
   box-sizing:border-box;
-  padding:14px 16px;
-  border-radius:12px;
+  padding:var(--space-14px) var(--space-16px);
+  border-radius:var(--radius-12);
   border:1.5px solid #d6dde0;
   background:#fff;
   font-size:16px;
   line-height:1.5;
   font-family:inherit;
   color:#08202c;
-  transition:border-color .15s ease,box-shadow .15s ease}
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
 .vilda-auth-input::placeholder{
   color:#9ca8ad}
 .vilda-auth-input:focus{
@@ -199,12 +209,13 @@ select.vilda-auth-input{
 .vilda-auth-checkbox-row{
   display:flex;
   align-items:center;
-  gap:10px;
-  margin-top:12px;
-  padding:12px 14px;
+  gap:var(--space-10px);
+  margin-top:var(--space-12px);
+  padding:var(--space-12px) var(--space-14px);
   background:var(--vilda-surface-alt, #f5f7fa);
-  border-radius:8px;
-  cursor:pointer}
+  border-radius:var(--radius-8);
+  cursor:pointer;
+}
 .vilda-auth-checkbox-row input[type=checkbox]{
   width:18px;
   height:18px;
@@ -221,21 +232,23 @@ select.vilda-auth-input{
   display:flex;
   flex-wrap:wrap;
   align-items:center;
-  gap:6px;
-  margin-top:8px}
+  gap:var(--space-6px);
+  margin-top:var(--space-8px);
+}
 .vilda-auth-search-input{
   flex:1;
   min-width:0;
   box-sizing:border-box;
-  padding:12px 14px;
+  padding:var(--space-12px) var(--space-14px);
   font-size:16px;
   font-family:inherit;
   color:#08202c;
   background:#fff;
   border:1.5px solid #d6dde0;
-  border-radius:12px;
+  border-radius:var(--radius-12);
   outline:none;
-  transition:border-color .15s ease,box-shadow .15s ease}
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
 .vilda-auth-search-input::placeholder{
   color:#6c8084}
 .vilda-auth-search-input:focus-visible,.vilda-auth-search-input:focus{
@@ -248,31 +261,35 @@ select.vilda-auth-input{
   font-size:12px;
   color:#6c8084;
   text-align:right;
-  padding:0 4px}
+  padding:0 var(--space-4px);
+}
 .vilda-auth-search-empty{
-  padding:28px 16px;
+  padding:28px var(--space-16px);
   text-align:center;
   color:#6c8084;
   font-size:14px;
-  font-style:italic}
+  font-style:italic;
+}
 .vilda-auth-user-card[hidden],.vilda-auth-search-empty[hidden]{
   display:none!important}
 .vilda-auth-meter-wrap{
   display:flex;
   align-items:center;
-  gap:12px;
-  margin-top:-8px}
+  gap:var(--space-12px);
+  margin-top:-8px;
+}
 .vilda-auth-meter{
   flex:1;
   height:6px;
   background:#eef2f3;
-  border-radius:4px;
-  overflow:hidden}
+  border-radius:var(--radius-4);
+  overflow:hidden;
+}
 .vilda-auth-meter-fill{
   height:100%;
   width:0%;
   background:var(--danger-strong);
-  border-radius:4px;
+  border-radius:var(--radius-4);
   transition:width .2s ease,background-color .2s ease;
 }
 .vilda-auth-meter-fill[data-strength=very-weak]{
@@ -300,25 +317,27 @@ select.vilda-auth-input{
   border:0!important;
   outline:none!important}
 .vilda-auth-pw-wrap .vilda-auth-pw-toggle:focus-visible{
-  outline:2px solid rgba(0,131,141,.35)!important;
-  outline-offset:-2px!important}
+  outline:var(--border-emphasis) solid rgba(0,131,141,.35) !important;
+  outline-offset:-2px !important;
+}
 
 /* ===================== Checkbox — reguły bazowe (style.css) ===================== */
 #professionalModule{
-  margin-top:1.4rem !important;
-  margin-bottom:1rem;
+  margin-top:var(--space-1-4) !important;
+  margin-bottom:var(--space-1);
   border-radius:var(--radius);
-  border:1px solid var(--line);
+  border:var(--border-hairline) solid var(--line);
   box-shadow:var(--shadow);
 }
 .professional-message{
   text-align:center;
   font-size:.98rem;
   line-height:1;
-  margin-top:.5rem;
+  margin-top:var(--space-0-5);
   font-family:Inter,sans-serif;
   font-weight:600;
-  color:#ce0000}
+  color:#ce0000;
+}
 #professionalModule h3{
   text-align:center;
   color:#ce0000}
@@ -328,17 +347,19 @@ select.vilda-auth-input{
   align-items:center;
   justify-content:flex-start;
   width:100%;
-  margin-top:.7rem}
+  margin-top:var(--space-0-7);
+}
 .doctor-checkbox{
   appearance:none;
   -webkit-appearance:none;
   width:28px;
   height:28px;
-  border:2px solid var(--primary);
-  border-radius:4px;
+  border:var(--border-emphasis) solid var(--primary);
+  border-radius:var(--radius-4);
   position:relative;
   cursor:pointer;
-  margin-top:.6rem}
+  margin-top:var(--space-0-6);
+}
 .doctor-checkbox:checked{
   background-color:var(--primary)}
 .doctor-checkbox:checked:after{
@@ -349,8 +370,9 @@ select.vilda-auth-input{
   width:6px;
   height:12px;
   border:solid #fff;
-  border-width:0 2px 2px 0;
-  transform:rotate(45deg)}
+  border-width:0 var(--border-emphasis) var(--border-emphasis) 0;
+  transform:rotate(45deg);
+}
 .doctor-label{
   font-size:1.425rem;
   color:var(--primary);
@@ -373,7 +395,8 @@ select.vilda-auth-input{
 .doctor-wrapper.compact .doctor-checkbox{
   width:24px;
   height:24px;
-  margin-top:.4rem}
+  margin-top:var(--space-0-4);
+}
 #pwzContainer label{
   display:flex!important;
   flex-direction:column;
@@ -382,7 +405,8 @@ select.vilda-auth-input{
   width:100%}
 #pwzContainer{
   text-align:center;
-  margin-bottom:1rem}
+  margin-bottom:var(--space-1);
+}
 #pwzContainer input[type=text]{
   max-width:320px;
   width:100%;
@@ -391,22 +415,24 @@ select.vilda-auth-input{
 .diet-survey-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:.45rem}
+  gap:var(--space-0-45);
+}
 .diet-survey-chip{
   display:grid;
   grid-template-columns:1.05rem minmax(0,1fr);
   align-items:flex-start;
-  gap:.45rem;
+  gap:var(--space-0-45);
   min-width:0;
   width:100%;
-  margin:0!important;
-  padding:.48rem .55rem;
-  border:1px solid #dedede;
+  margin:0 !important;
+  padding:.48rem var(--space-0-55);
+  border:var(--border-hairline) solid #dedede;
   border-radius:.65rem;
   background:#fff;
   cursor:pointer;
   line-height:1.25;
-  font-size:.86rem}
+  font-size:.86rem;
+}
 .diet-survey-chip input[type=checkbox]{
   appearance:auto;
   -webkit-appearance:checkbox;
@@ -438,9 +464,10 @@ select.vilda-auth-input{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:.6rem;
+  gap:var(--space-0-6);
   min-width:0;
-  margin-bottom:0}
+  margin-bottom:0;
+}
 .diet-toggle-group .toggle-label{
   flex:1 1 auto;
   min-width:0;
@@ -474,8 +501,9 @@ select.vilda-auth-input{
   width:24px;
   height:24px;
   background:#fff;
-  border-radius:50%;
-  transition:transform .3s}
+  border-radius:var(--radius-circle);
+  transition:transform .3s;
+}
 .switch-diet input:checked+.slider{
   background:var(--primary)}
 .switch-diet input:checked+.slider:before{
@@ -488,7 +516,8 @@ select.vilda-auth-input{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  margin-top:.8rem}
+  margin-top:var(--space-0-8);
+}
 .publication-toggle-label{
   font-size:.95rem;
   font-weight:500}
@@ -515,8 +544,9 @@ select.vilda-auth-input{
   width:26px;
   height:26px;
   background:#fff;
-  border-radius:50%;
-  transition:transform .3s}
+  border-radius:var(--radius-circle);
+  transition:transform .3s;
+}
 .switch-pub input:checked+.slider{
   background:#90f}
 .switch-pub input:checked+.slider:before{
@@ -525,13 +555,15 @@ select.vilda-auth-input{
   display:flex;
   justify-content:center;
   align-items:center;
-  margin:.6rem 0 1rem}
+  margin:var(--space-0-6) 0 var(--space-1);
+}
 .switch{
   position:relative;
   display:inline-block;
   width:60px;
   height:30px;
-  margin:0 .75rem}
+  margin:0 var(--space-0-75);
+}
 .switch input{
   display:none}
 .switch .slider{
@@ -549,8 +581,9 @@ select.vilda-auth-input{
   width:26px;
   height:26px;
   background:#fff;
-  border-radius:50%;
-  transition:transform .3s}
+  border-radius:var(--radius-circle);
+  transition:transform .3s;
+}
 #dataToggle:checked+.slider:before{
   left:auto;
   right:2px;
@@ -618,8 +651,9 @@ select.vilda-auth-input{
   width:26px;
   height:26px;
   background:#fff;
-  border-radius:50%;
-  transition:transform .3s}
+  border-radius:var(--radius-circle);
+  transition:transform .3s;
+}
 .switch-flu input:checked+.slider{
   background:var(--primary)}
 .switch-flu input:checked+.slider:before{
@@ -635,15 +669,17 @@ select.vilda-auth-input{
 .settings-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:1rem}
+  gap:var(--space-1);
+}
 .setting-item{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:.6rem .8rem;
-  border:1px solid var(--line);
-  border-radius:6px;
-  background:var(--field)}
+  padding:var(--space-0-6) var(--space-0-8);
+  border:var(--border-hairline) solid var(--line);
+  border-radius:var(--radius-6);
+  background:var(--field);
+}
 .setting-item span{
   flex:1;
   font-size:.95rem}
@@ -676,8 +712,9 @@ select.vilda-auth-input{
 /* ios26-v2.css */
 .liquid-ios26 input[type=text],.liquid-ios26 input[type=number],.liquid-ios26 select{
   background:#ffffffd9;
-  border:1px solid rgba(0,0,0,.12);
-  border-radius:12px}
+  border:var(--border-hairline) solid rgba(0,0,0,.12);
+  border-radius:var(--radius-12);
+}
 /* style.css — Switch w panelu diety */
 .liquid-ios26 #dietRecommendationsContent .switch-diet input:checked+.slider{
   background:#90f!important}

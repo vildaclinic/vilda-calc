@@ -24,8 +24,8 @@
   .has-sidebar .desktop-layout {
     grid-template-columns: var(--chrome-sidebar-width) 1fr;
     align-items: start;
-    gap: 1rem;
-    padding: 1rem 0 2rem;
+    gap: var(--space-1);
+    padding: var(--space-1) 0 var(--space-2);
     max-width: none;
     margin: 0;
     box-sizing: border-box
@@ -33,7 +33,7 @@
   .has-sidebar .main-content {
     background: #fff;
     border-radius: var(--chrome-radius-card);
-    padding: 1.25rem 1.25rem 1.5rem;
+    padding: var(--space-1-25) var(--space-1-25) var(--space-1-5);
     box-shadow: var(--shadow-main-content);
     min-width: 0
   }
@@ -45,13 +45,13 @@
   .has-sidebar .main-content .homa-container,
   .has-sidebar .main-content .clcr-container,
   .has-sidebar .main-content .doc-shell {
-    max-width: 720px
+    max-width: var(--content-narrow-max-width)
   }
 }
 
 @media(min-width:1400px) {
   .has-sidebar .desktop-layout {
-    grid-template-columns: var(--chrome-sidebar-width) 1fr 230px
+    grid-template-columns: var(--chrome-sidebar-width) 1fr var(--decor-sidebar-width)
   }
 }
 
@@ -84,9 +84,9 @@
   z-index: var(--z-header-chrome);
   padding: 0;
   background: var(--chrome-glass-bg);
-  backdrop-filter: saturate(160%) blur(14px);
-  -webkit-backdrop-filter: saturate(160%) blur(14px);
-  border-bottom: 1px solid var(--chrome-glass-border);
+  backdrop-filter: var(--blur-chrome-header-saturate) var(--blur-card);
+  -webkit-backdrop-filter: var(--blur-chrome-header-saturate) var(--blur-card);
+  border-bottom: var(--border-hairline) solid var(--chrome-glass-border);
   box-shadow: 0 1px #fff9 inset,0 6px 18px #0046500f
 }
 
@@ -104,10 +104,10 @@
 .chrome-strip {
   display: flex;
   align-items: center;
-  gap: .75rem;
+  gap: var(--space-0-75);
   height: var(--chrome-strip-height);
-  padding: 0 1rem;
-  max-width: 1500px;
+  padding: 0 var(--space-1);
+  max-width: var(--chrome-strip-max-width);
   margin: 0 auto;
   box-sizing: border-box
 }
@@ -122,8 +122,8 @@
   max-height: 40px!important;
   flex: 0 0 auto;
   align-self: center!important;
-  border-radius: 12px!important;
-  border: 1px solid var(--chrome-glass-border)!important;
+  border-radius: var(--radius-12)!important;
+  border: var(--border-hairline) solid var(--chrome-glass-border)!important;
   background: #fff9!important;
   color: var(--primary, #00838d)!important;
   cursor: pointer;
@@ -165,17 +165,17 @@
 .chrome-brand {
   display: inline-flex;
   align-items: center;
-  gap: .6rem;
+  gap: var(--space-0-6);
   text-decoration: none;
   color: var(--text, #333);
   flex: 0 0 auto
 }
 
 .chrome-brand-logo {
-  width: 38px;
-  height: 38px;
+  width: var(--brand-logo-size);
+  height: var(--brand-logo-size);
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: var(--radius-10);
   flex: 0 0 auto
 }
 
@@ -203,7 +203,7 @@
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: .55rem;
+  gap: var(--space-0-55);
   flex: 0 1 auto;
   min-width: 0
 }
@@ -211,8 +211,8 @@
 .chrome-chip {
   display: inline-flex;
   align-items: center;
-  gap: .5rem;
-  padding: .25rem .4rem;
+  gap: var(--space-0-5);
+  padding: var(--space-0-25) var(--space-0-4);
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -234,7 +234,7 @@
   width: 28px;
   height: 28px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: linear-gradient(135deg,#e2f1f2,#cfe9ec);
   color: var(--primary, #00838d);
   font-size: .78rem;
@@ -276,8 +276,8 @@
 
 .chrome-patient-chip.is-empty {
   background: #fff;
-  border: 1px solid #cfe4e4;
-  border-radius: 9px
+  border: var(--border-hairline) solid #cfe4e4;
+  border-radius: var(--radius-9)
 }
 
 .chrome-patient-chip.is-empty .chip-icon {
@@ -292,8 +292,8 @@
 
 .chrome-patient-chip.has-patient {
   background: #e6f4f5;
-  border: 1px solid #9fd4d8;
-  border-radius: 9px
+  border: var(--border-hairline) solid #9fd4d8;
+  border-radius: var(--radius-9)
 }
 
 .chrome-patient-chip.has-patient .chip-icon {
@@ -390,7 +390,7 @@
 }
 
 .chrome-patient-chip:focus-visible {
-  outline: 2px solid var(--primary, #00838d);
+  outline: var(--border-emphasis) solid var(--primary, #00838d);
   outline-offset: 2px
 }
 
@@ -406,8 +406,8 @@
   width: 290px;
   max-width: calc(100vw - 16px);
   background: #fffffff0;
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: var(--blur-save-popover-saturate) var(--blur-card);
+  -webkit-backdrop-filter: var(--blur-save-popover-saturate) var(--blur-card);
   border: .5px solid var(--line-teal);
   border-radius: var(--chrome-radius-card, 14px);
   box-shadow: 0 12px 34px #00515829,0 3px 8px #0000000f;
@@ -430,9 +430,9 @@
 .vilda-save-popover .vsp-action {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10px);
   width: 100%;
-  padding: 12px 14px;
+  padding: var(--space-12px) var(--space-14px);
   border: 0;
   border-bottom: .5px solid rgba(0,0,0,.05);
   background: #00838d12;
@@ -453,7 +453,7 @@
 .vilda-save-popover .vsp-action-ic {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: var(--radius-8);
   flex-shrink: 0;
   background: var(--primary);
   color: #fff;
@@ -492,14 +492,14 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 14px;
+  padding: var(--space-14px);
   border-bottom: .5px solid rgba(0,0,0,.05)
 }
 
 .vilda-save-popover .vsp-hero-ic {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -525,7 +525,7 @@
 }
 
 .vilda-save-popover .vsp-legend-head {
-  padding: 9px 14px 3px;
+  padding: 9px var(--space-14px) 3px;
   font-size: 10.5px;
   font-weight: 500;
   letter-spacing: .04em;
@@ -541,14 +541,14 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 6px 14px;
+  padding: var(--space-6px) var(--space-14px);
   font-size: 12px
 }
 
 .vilda-save-popover .vsp-dot {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   flex-shrink: 0
 }
 
@@ -586,8 +586,8 @@
 
 .chrome-user-chip.is-logged-in {
   background: #fff;
-  border: 1px solid #cfe4e4;
-  border-radius: 9px
+  border: var(--border-hairline) solid #cfe4e4;
+  border-radius: var(--radius-9)
 }
 
 .chrome-user-chip.is-logged-in .chip-value {
@@ -609,7 +609,7 @@
 }
 
 .chrome-user-chip.is-logged-in .chip-value:focus-visible {
-  outline: 2px solid var(--primary, #00838d);
+  outline: var(--border-emphasis) solid var(--primary, #00838d);
   outline-offset: 2px;
   border-radius: 3px
 }
@@ -620,7 +620,7 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: transparent;
   border: 0;
   color: var(--chrome-label-color);
@@ -654,8 +654,8 @@
 
 @media(max-width:991px) {
   .chrome-strip {
-    padding: 0 .75rem;
-    gap: .55rem
+    padding: 0 var(--space-0-75);
+    gap: var(--space-0-55)
   }
   .chrome-brand {
     display: none!important
@@ -686,10 +686,10 @@
 
 @media(max-width:600px) {
   .chrome-strip {
-    gap: .4rem
+    gap: var(--space-0-4)
   }
   .chrome-chip {
-    padding: .3rem .45rem .3rem .35rem
+    padding: var(--space-0-3) var(--space-0-45) var(--space-0-3) var(--space-0-35)
   }
   .chrome-chip .chip-content,
   .chrome-chip .chip-action {
@@ -697,7 +697,7 @@
   }
   .chrome-patient-chip,
   .chrome-user-chip {
-    padding: .3rem
+    padding: var(--space-0-3)
   }
   .chip-icon,
   .chip-avatar {
@@ -730,11 +730,11 @@
   .chrome-user-chip.is-logged-in .chip-avatar {
     width: 34px;
     height: 34px;
-    border-radius: 8px
+    border-radius: var(--radius-8)
   }
   .chrome-patient-chip.is-empty .chip-icon {
     background: #fff;
-    border: 1px solid #cfe4e4;
+    border: var(--border-hairline) solid #cfe4e4;
     color: var(--text-disabled)
   }
   .chrome-user-chip.is-logged-in .chip-avatar {
@@ -761,8 +761,8 @@
   position: absolute;
   inset: 0;
   background: #0f1c1e73;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: var(--blur-drawer-backdrop);
+  -webkit-backdrop-filter: var(--blur-drawer-backdrop);
   cursor: pointer;
   opacity: 0;
   transition: opacity .26s ease
@@ -770,7 +770,7 @@
 
 .chrome-drawer-panel {
   position: relative;
-  width: min(86%,320px);
+  width: var(--drawer-width);
   background: #fff;
   height: 100%;
   margin-left: 0;
@@ -801,8 +801,8 @@ body.chrome-drawer-open .chrome-drawer-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: .9rem 1rem;
-  border-bottom: 1px solid #e5eded
+  padding: var(--space-0-9) var(--space-1);
+  border-bottom: var(--border-hairline) solid #e5eded
 }
 
 .chrome-drawer-title {
@@ -817,8 +817,8 @@ body.chrome-drawer-open .chrome-drawer-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  border: 1px solid #e5eded!important;
+  border-radius: var(--radius-10);
+  border: var(--border-hairline) solid #e5eded!important;
   background: #fff!important;
   color: #08202c!important;
   cursor: pointer;
@@ -857,12 +857,12 @@ body.chrome-drawer-open .chrome-drawer-panel {
 
 .chrome-drawer-body {
   overflow-y: auto;
-  padding: .5rem .5rem 1.2rem;
+  padding: var(--space-0-5) var(--space-0-5) var(--space-1-2);
   flex: 1 1 auto
 }
 
 .chrome-drawer-section {
-  margin-top: 1rem
+  margin-top: var(--space-1)
 }
 
 .chrome-drawer-section:first-child {
@@ -875,7 +875,7 @@ body.chrome-drawer-open .chrome-drawer-panel {
   letter-spacing: .08em;
   color: var(--chrome-label-color);
   font-weight: 700;
-  padding: .5rem .85rem .25rem
+  padding: var(--space-0-5) var(--space-0-85) var(--space-0-25)
 }
 
 .chrome-drawer-nav ul {
@@ -888,13 +888,13 @@ body.chrome-drawer-open .chrome-drawer-panel {
 .chrome-drawer-nav .chrome-drawer-btn {
   display: flex;
   align-items: center;
-  gap: .7rem;
-  padding: .7rem .85rem;
+  gap: var(--space-0-7);
+  padding: var(--space-0-7) var(--space-0-85);
   text-decoration: none;
   color: var(--text, #333);
   font-weight: 500;
-  border-radius: 10px;
-  margin: .05rem .25rem;
+  border-radius: var(--radius-10);
+  margin: .05rem var(--space-0-25);
   transition: background .12s ease,color .12s ease
 }
 
@@ -962,23 +962,23 @@ body.chrome-drawer-open {
 .chrome-drawer-account {
   display: flex;
   flex-direction: column;
-  gap: .6rem;
-  padding: .85rem .85rem .95rem;
-  margin: 0 0 .6rem;
-  border-bottom: 1px solid #e5eded;
+  gap: var(--space-0-6);
+  padding: var(--space-0-85) var(--space-0-85) var(--space-0-95);
+  margin: 0 0 var(--space-0-6);
+  border-bottom: var(--border-hairline) solid #e5eded;
   background: linear-gradient(180deg,#00838d0f,#00838d00)
 }
 
 .chrome-drawer-account-row {
   display: flex;
   align-items: center;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .chrome-drawer-account-avatar {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1028,11 +1028,11 @@ body.chrome-drawer-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .5rem;
+  gap: var(--space-0-5);
   width: 100%;
-  padding: .6rem .8rem;
-  border-radius: 10px;
-  border: 1px solid var(--primary, #00838d);
+  padding: var(--space-0-6) var(--space-0-8);
+  border-radius: var(--radius-10);
+  border: var(--border-hairline) solid var(--primary, #00838d);
   background: #fff;
   color: var(--primary, #00838d);
   font-size: .92rem;
@@ -1056,9 +1056,9 @@ body.chrome-drawer-open {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: .5rem;
-  padding: .4rem .1rem 0;
-  border-top: 1px dashed rgba(0,131,141,.18);
+  gap: var(--space-0-5);
+  padding: var(--space-0-4) .1rem 0;
+  border-top: var(--border-hairline) dashed rgba(0,131,141,.18);
   margin-top: .2rem
 }
 
@@ -1091,9 +1091,9 @@ body.chrome-drawer-open {
     justify-self: stretch;
     grid-column: 1;
     background: var(--chrome-glass-bg)!important;
-    backdrop-filter: saturate(160%) blur(14px);
-    -webkit-backdrop-filter: saturate(160%) blur(14px);
-    border: 1px solid var(--chrome-glass-border);
+    backdrop-filter: var(--blur-chrome-header-saturate) var(--blur-card);
+    -webkit-backdrop-filter: var(--blur-chrome-header-saturate) var(--blur-card);
+    border: var(--border-hairline) solid var(--chrome-glass-border);
     border-radius: 0 var(--chrome-radius-card) var(--chrome-radius-card) 0;
     border-left: 0;
     box-shadow: var(--chrome-glass-shadow);
@@ -1122,19 +1122,19 @@ body.chrome-drawer-open {
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-inner::-webkit-scrollbar-thumb {
     background: #00838d2e;
-    border-radius: 4px
+    border-radius: var(--radius-4)
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    padding: .4rem 0;
+    padding: var(--space-0-4) 0;
     margin: 0
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-section {
-    padding: .35rem 0 .55rem
+    padding: var(--space-0-35) 0 var(--space-0-55)
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-section+.sidebar-section {
-    border-top: 1px solid rgba(0,131,141,.08);
+    border-top: var(--border-hairline) solid rgba(0,131,141,.08);
     margin-top: .15rem
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-section-title {
@@ -1143,12 +1143,12 @@ body.chrome-drawer-open {
     letter-spacing: .08em;
     color: var(--chrome-label-color);
     font-weight: 700;
-    padding: .4rem var(--chrome-sidebar-pad-x) .3rem
+    padding: var(--space-0-4) var(--chrome-sidebar-pad-x) var(--space-0-3)
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-section ul {
     list-style: none;
     margin: 0;
-    padding: 0 .45rem;
+    padding: 0 var(--space-0-45);
     display: flex;
     flex-direction: column;
     gap: 2px
@@ -1156,9 +1156,9 @@ body.chrome-drawer-open {
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a {
     display: flex;
     align-items: center;
-    gap: .6rem;
-    padding: .55rem .7rem;
-    border-radius: 10px;
+    gap: var(--space-0-6);
+    padding: var(--space-0-55) var(--space-0-7);
+    border-radius: var(--radius-10);
     text-decoration: none;
     font-weight: 500;
     font-size: .93rem;
@@ -1207,8 +1207,8 @@ body.chrome-drawer-open {
     letter-spacing: .05em;
     color: var(--secondary, #00b0a6);
     background: #00b0a61f;
-    padding: .1rem .35rem;
-    border-radius: 999px;
+    padding: .1rem var(--space-0-35);
+    border-radius: var(--radius-pill);
     margin-left: auto
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-current=page],
@@ -1255,17 +1255,17 @@ body.chrome-drawer-open {
     margin-top: .2rem
   }
   .has-vilda-chrome aside.sidebar-v2 .mini-summary {
-    margin: .5rem 0 0;
-    padding: .75rem .6rem!important;
-    border-radius: 10px;
-    border: 1px solid rgba(0,131,141,.1);
+    margin: var(--space-0-5) 0 0;
+    padding: var(--space-0-75) var(--space-0-6)!important;
+    border-radius: var(--radius-10);
+    border: var(--border-hairline) solid rgba(0,131,141,.1);
     background: #ffffffd9!important
   }
   .has-vilda-chrome aside.sidebar-v2 .steroid-summary {
-    margin: .5rem 0 0;
-    padding: .75rem .6rem;
-    border-radius: 10px;
-    border: 1px solid rgba(0,131,141,.1);
+    margin: var(--space-0-5) 0 0;
+    padding: var(--space-0-75) var(--space-0-6);
+    border-radius: var(--radius-10);
+    border: var(--border-hairline) solid rgba(0,131,141,.1);
     background: #ffffffd9
   }
   .has-vilda-chrome header>.container {
@@ -1277,7 +1277,7 @@ body.chrome-drawer-open {
   @media(min-width:1400px) {
     .has-vilda-chrome .decor-sidebar {
       background: var(--chrome-glass-bg)!important;
-      border: 1px solid var(--chrome-glass-border);
+      border: var(--border-hairline) solid var(--chrome-glass-border);
       border-radius: var(--chrome-radius-card) 0 0 var(--chrome-radius-card);
       border-right: 0;
       box-shadow: var(--chrome-glass-shadow);
@@ -1290,7 +1290,7 @@ body.chrome-drawer-open {
       scrollbar-width: thin;
       scrollbar-color: rgba(0,131,141,.25) transparent;
       margin: 0!important;
-      padding: .5rem .6rem!important;
+      padding: var(--space-0-5) var(--space-0-6)!important;
       box-sizing: border-box
     }
     .has-vilda-chrome .decor-sidebar::-webkit-scrollbar {
@@ -1298,19 +1298,19 @@ body.chrome-drawer-open {
     }
     .has-vilda-chrome .decor-sidebar::-webkit-scrollbar-thumb {
       background: #00838d2e;
-      border-radius: 4px
+      border-radius: var(--radius-4)
     }
     .has-vilda-chrome .decor-sidebar .mini-summary {
       position: static;
       background: transparent!important;
       border: 0;
-      padding: .25rem 0
+      padding: var(--space-0-25) 0
     }
     .has-vilda-chrome .decor-sidebar .steroid-summary {
       background: transparent!important;
       border: 0;
-      margin: .6rem 0 0;
-      padding: .25rem 0
+      margin: var(--space-0-6) 0 0;
+      padding: var(--space-0-25) 0
     }
   }
 }
@@ -1322,7 +1322,7 @@ body.chrome-drawer-open {
   }
   .has-vilda-chrome .desktop-layout {
     display: block;
-    padding: .3rem 0 1rem
+    padding: var(--space-0-3) 0 var(--space-1)
   }
   .has-vilda-chrome .main-content {
     padding: .2rem 0
@@ -1334,17 +1334,17 @@ body.chrome-drawer-open {
 
 .has-vilda-chrome a:focus-visible,
 .has-vilda-chrome button:focus-visible {
-  outline: 2px solid var(--primary, #00838d);
+  outline: var(--border-emphasis) solid var(--primary, #00838d);
   outline-offset: 2px;
-  border-radius: 8px
+  border-radius: var(--radius-8)
 }
 
 .vilda-tip {
   position: fixed;
   z-index: var(--z-drawer);
   max-width: min(280px,calc(100vw - 24px));
-  padding: .6rem 1rem;
-  border-radius: 10px;
+  padding: var(--space-0-6) var(--space-1);
+  border-radius: var(--radius-10);
   font-family: inherit;
   font-size: .83rem;
   font-weight: 500;
@@ -1353,8 +1353,8 @@ body.chrome-drawer-open {
   background: #fffffff5;
   border: 1.5px solid rgba(0,131,141,.2);
   box-shadow: 0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc;
-  backdrop-filter: blur(14px) saturate(1.6);
-  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate);
+  -webkit-backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate);
   pointer-events: none;
   white-space: normal;
   opacity: 0;
@@ -1393,13 +1393,13 @@ body.chrome-drawer-open {
   background: #fffffff5!important;
   color: var(--primary, #00838d)!important;
   border: 1.5px solid rgba(0,131,141,.2)!important;
-  border-radius: 10px!important;
+  border-radius: var(--radius-10)!important;
   box-shadow: 0 4px 20px #00515821,0 1px 4px #0000000f,inset 0 1px #fffc!important;
-  backdrop-filter: blur(14px) saturate(1.6)!important;
-  -webkit-backdrop-filter: blur(14px) saturate(1.6)!important;
+  backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-card) var(--blur-tooltip-saturate)!important;
   font-size: .83rem!important;
   font-weight: 500!important;
-  padding: .6rem 1rem!important;
+  padding: var(--space-0-6) var(--space-1)!important;
   transform: translate(6px)!important;
   transition: opacity .18s ease,transform .18s ease!important
 }
@@ -1423,8 +1423,8 @@ body.chrome-drawer-open {
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid #cfe4e4;
-  border-radius: 8px;
+  border: var(--border-hairline) solid #cfe4e4;
+  border-radius: var(--radius-8);
   background: #fff;
   color: #4d8285;
   cursor: pointer;
@@ -1478,7 +1478,7 @@ body.chrome-drawer-open {
 
 .chrome-sync-btn[data-cloud-only=true] {
   display: inline-flex;
-  border-radius: 8px;
+  border-radius: var(--radius-8);
   border-color: transparent;
   background: var(--primary, #00838d);
   color: #fff
@@ -1515,8 +1515,8 @@ body.chrome-drawer-open {
   height: 30px;
   padding: 0;
   margin: 0;
-  border: 1px solid #cfe4e4;
-  border-radius: 8px;
+  border: var(--border-hairline) solid #cfe4e4;
+  border-radius: var(--radius-8);
   background: #fff;
   color: #4d8285;
   cursor: pointer;
@@ -1549,7 +1549,7 @@ body.chrome-drawer-open {
 }
 
 .chrome-reminders-btn:focus-visible {
-  outline: 2px solid var(--primary, #00838d);
+  outline: var(--border-emphasis) solid var(--primary, #00838d);
   outline-offset: 2px
 }
 
@@ -1559,7 +1559,7 @@ body.chrome-drawer-open {
   right: -4px;
   min-width: 16px;
   height: 16px;
-  padding: 0 4px;
+  padding: 0 var(--space-4px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1568,7 +1568,7 @@ body.chrome-drawer-open {
   line-height: 1;
   color: #fff;
   background: #6b7280;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1.5px solid #fff;
   box-shadow: 0 1px 3px #00283026;
   letter-spacing: -.02em;
@@ -1626,8 +1626,8 @@ body.chrome-drawer-open {
   align-items: center;
   justify-content: center;
   height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
+  padding: 0 var(--space-10px);
+  border-radius: var(--radius-8);
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: .05em;
@@ -1637,7 +1637,7 @@ body.chrome-drawer-open {
   white-space: nowrap;
   box-sizing: border-box;
   transition: opacity .15s ease,transform .15s ease;
-  border: 1px solid transparent
+  border: var(--border-hairline) solid transparent
 }
 
 .chrome-pro-badge:hover {
@@ -1659,8 +1659,8 @@ body.chrome-drawer-open {
 
 .liquid-ios26 .chrome-reminders-btn {
   background: #fff!important;
-  border: 1px solid #cfe4e4!important;
-  border-radius: 8px!important;
+  border: var(--border-hairline) solid #cfe4e4!important;
+  border-radius: var(--radius-8)!important;
   box-shadow: none!important;
   backdrop-filter: none!important;
   -webkit-backdrop-filter: none!important;
@@ -1696,7 +1696,7 @@ body.chrome-drawer-open {
   top: -3px;
   right: -3px;
   background: transparent!important;
-  border: 2px solid rgba(0,131,141,.25);
+  border: var(--border-emphasis) solid rgba(0,131,141,.25);
   border-top-color: var(--primary, #00838d);
   color: transparent!important;
   box-shadow: none!important;
@@ -1717,8 +1717,8 @@ body.chrome-drawer-open {
 
 .liquid-ios26 .chrome-sync-btn {
   background: #fff!important;
-  border: 1px solid #cfe4e4!important;
-  border-radius: 8px!important;
+  border: var(--border-hairline) solid #cfe4e4!important;
+  border-radius: var(--radius-8)!important;
   box-shadow: none!important;
   color: #4d8285!important
 }
@@ -1732,7 +1732,7 @@ body.chrome-drawer-open {
 .liquid-ios26 .chrome-sync-btn[data-cloud-only=true] {
   background: var(--primary, #00838d)!important;
   border-color: transparent!important;
-  border-radius: 8px!important;
+  border-radius: var(--radius-8)!important;
   color: #fff!important
 }
 
@@ -1754,7 +1754,7 @@ body.chrome-drawer-open {
   box-shadow: none!important;
   backdrop-filter: none!important;
   -webkit-backdrop-filter: none!important;
-  border-radius: 50%!important;
+  border-radius: var(--radius-circle)!important;
   color: #5f8f91!important
 }
 
@@ -1798,7 +1798,7 @@ body.chrome-drawer-open {
     top: 22px;
     height: 470px;
     background: repeating-linear-gradient(to bottom,rgba(13,68,76,.08) 0 13px,transparent 13px 40px);
-    border-radius: 8px;
+    border-radius: var(--radius-8);
     pointer-events: none
   }
   aside.sidebar,

@@ -26,10 +26,11 @@ button,input[type=button],input[type=submit]{
   font:inherit;
   border:none;
   border-radius:var(--radius);
-  padding:.55rem 1.1rem;
+  padding:var(--space-0-55) var(--space-1-1);
   background:var(--primary);
   color:#fff;
-  transition:background .2s ease,box-shadow .2s ease}
+  transition:background .2s ease,box-shadow .2s ease;
+}
 button:hover,input[type=button]:hover,input[type=submit]:hover{
   background:var(--secondary);
   box-shadow:var(--shadow)}
@@ -48,7 +49,8 @@ button.icon:hover{
 @media(max-width:600px){
 button,input[type=button],input[type=submit]{
   width:100%;
-  margin-top:.5rem}
+  margin-top:var(--space-0-5);
+}
 }
 button,input[type=submit]{
   transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
@@ -57,12 +59,13 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   box-shadow:var(--shadow-l)}
 #toggleAdvancedGrowth,#generateCentileChart,#generateCentileChartBasic,#toggleIntakeCard,#toggleFoodCard,#toggleNutritionMicrosCard,#toggleNutritionNormsCard,#toggleDownSyndrome,#generateDsCentileChart,#toggleCircSection{
   width:100%;
-  padding:.55rem 1.1rem!important;
-  border-radius:var(--radius)!important;
-  background:var(--primary)!important;
-  color:#fff!important;
-  font-weight:600!important;
-  margin:.5rem 0!important}
+  padding:var(--space-0-55) var(--space-1-1) !important;
+  border-radius:var(--radius) !important;
+  background:var(--primary) !important;
+  color:#fff !important;
+  font-weight:600 !important;
+  margin:var(--space-0-5) 0 !important;
+}
 #toggleAdvancedGrowth:hover,#generateCentileChart:hover,#generateCentileChartBasic:hover,#toggleIntakeCard:hover,#toggleFoodCard:hover,#toggleNutritionMicrosCard:hover,#toggleNutritionNormsCard:hover,#toggleDownSyndrome:hover,#generateDsCentileChart:hover,#toggleCircSection:hover{
   background:var(--secondary)!important;
   transform:translateY(-1px) scale(1.02);
@@ -71,23 +74,26 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   background:var(--primary);
   color:#fff;
   border:0;
-  padding:.6rem 1rem;
+  padding:var(--space-0-6) var(--space-1);
   border-radius:var(--radius);
-  cursor:pointer}
+  cursor:pointer;
+}
 .secondary-btn{
   background:transparent;
   color:var(--primary);
   border:none;
   cursor:pointer;
-  padding:.3rem .6rem;
-  border-radius:var(--radius)}
+  padding:var(--space-0-3) var(--space-0-6);
+  border-radius:var(--radius);
+}
 #modulesWrapper .module-btn-wrapper{
   display:flex;
   justify-content:center;
-  margin:1rem 0;
+  margin:var(--space-1) 0;
   width:100%;
   flex:0 0 100%;
-  max-width:100%}
+  max-width:100%;
+}
 @media(min-width:700px){
   #modulesWrapper .module-btn-wrapper{
   flex:0 0 calc(50% - .5rem);
@@ -97,7 +103,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   width:100%;
   max-width:520px}
 #modulesWrapper #toggleThyroidCancerKids.active-toggle{
-  border:1px solid var(--brand-light)}
+  border:var(--border-hairline) solid var(--brand-light);
+}
 #modulesWrapper #toggleThyroidCancerKids{
   width:100%!important;
   max-width:520px!important}
@@ -106,33 +113,35 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   max-width:520px;
   border:none;
   border-radius:var(--radius);
-  padding:.6rem 1rem;
+  padding:var(--space-0-6) var(--space-1);
   font-size:1rem;
   font-family:inherit;
   cursor:pointer;
   box-shadow:var(--shadow);
-  transition:background .2s ease,box-shadow .2s ease}
+  transition:background .2s ease,box-shadow .2s ease;
+}
 .module-btn:hover{
   box-shadow:0 4px 8px #00000026}
 .vild-rem-dlg-acts{
   display:flex;
   flex-wrap:wrap;
   gap:7px;
-  padding:10px 16px 14px;
-  border-top:1px solid #eef2f3}
+  padding:var(--space-10px) var(--space-16px) var(--space-14px);
+  border-top:var(--border-hairline) solid #eef2f3;
+}
 
 .vild-rem-dlg-acts button{
   font:inherit;
   font-size:.82rem !important;
   font-weight:600 !important;
-  border:1px solid #d7e9ec !important;
+  border:var(--border-hairline) solid #d7e9ec !important;
   background:#fff !important;
   color:var(--text-strong) !important;
-  border-radius:9px !important;
-  padding:8px 11px !important;
+  border-radius:var(--radius-9) !important;
+  padding:var(--space-8px) 11px !important;
   display:inline-flex !important;
   align-items:center;
-  gap:6px;
+  gap:var(--space-6px);
   white-space:nowrap;
   cursor:pointer;
   box-shadow:none !important;
@@ -200,7 +209,7 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .circ-result-action .circ-action-btn.is-pro-locked,.circ-result-action .circ-action-btn.is-pro-locked:disabled,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked,.liquid-ios26 .circ-result-action .circ-action-btn.is-pro-locked:disabled{
   background:var(--disabled-bg) !important;
   color:#000 !important;
-  border:3px solid var(--line-neutral) !important;
+  border:var(--border-pro) solid var(--line-neutral) !important;
   box-shadow:none !important;
   transform:none !important;
   opacity:1 !important;
@@ -212,14 +221,15 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .circ-pro-pill{
   display:inline-block;
   margin-left:.18rem;
-  padding:.02rem .35rem;
-  border-radius:999px;
+  padding:.02rem var(--space-0-35);
+  border-radius:var(--radius-pill);
   background:#6a1b9a;
   color:#fff;
   font-size:.72rem;
   font-weight:700;
   letter-spacing:.04em;
-  vertical-align:baseline}
+  vertical-align:baseline;
+}
 .pro-link{
   color:#90f;
   font-weight:600;
@@ -230,37 +240,44 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .pro-summary-label{
   display:none;
   position:absolute;
-  border-radius:4px;
+  border-radius:var(--radius-4);
   background-color:#90f;
   color:#fff;
   font-size:.8rem;
-  padding:.5rem}
+  padding:var(--space-0-5);
+}
 .pro-summary-card,.liquid-ios26 .pro-summary-card{
-  border:3px solid #9900ff!important}
+  border:var(--border-pro) solid #9900ff !important;
+}
 #dietRecommendationsBtn{
-  border:3px solid #9900ff}
+  border:var(--border-pro) solid #9900ff;
+}
 .liquid-ios26 #dietRecommendationsBtn{
-  border:3px solid #9900ff!important}
+  border:var(--border-pro) solid #9900ff !important;
+}
 #generateDietBtn,#dietRecommendationsPdfBtn{
-  border:3px solid #9900ff}
+  border:var(--border-pro) solid #9900ff;
+}
 #dietRecommendationsContent #generateDietBtn,#dietRecommendationsPdfBtn.diet-report-pdf-btn{
-  display:block!important;
-  box-sizing:border-box!important;
-  width:100%!important;
-  max-width:100%!important;
-  margin:.55rem 0 0!important;
-  padding:.55rem 1rem!important;
-  border-radius:var(--radius)!important;
-  font-size:.95rem!important;
-  font-weight:600!important;
+  display:block !important;
+  box-sizing:border-box !important;
+  width:100% !important;
+  max-width:100% !important;
+  margin:var(--space-0-55) 0 0 !important;
+  padding:var(--space-0-55) var(--space-1) !important;
+  border-radius:var(--radius) !important;
+  font-size:.95rem !important;
+  font-weight:600 !important;
   cursor:pointer;
-  text-align:center}
+  text-align:center;
+}
 #dietRecommendationsPdfBtn.diet-report-pdf-btn{
   background:#fff;
   color:#000}
 .liquid-ios26 #generateDietBtn,.liquid-ios26 #dietRecommendationsPdfBtn{
-  border:3px solid #9900ff!important;
-  font-weight:600!important}
+  border:var(--border-pro) solid #9900ff !important;
+  font-weight:600 !important;
+}
 .pro-summary-card .pro-summary-label{
   display:block;
   top:.5rem;
@@ -269,28 +286,30 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 #toggleAdvancedGrowth.advanced-growth-btn{
   background:#fff;
   color:#000;
-  border:3px solid #9900ff;
+  border:var(--border-pro) solid #9900ff;
   border-radius:var(--radius);
-  padding:.6rem 1.2rem;
+  padding:var(--space-0-6) var(--space-1-2);
   font-size:1rem;
   font-weight:600;
   cursor:pointer;
   display:block;
   margin:0 auto;
   width:100%;
-  text-align:center}
+  text-align:center;
+}
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn{
-  background:#fff!important;
-  color:#000!important;
-  border:3px solid #9900ff!important;
-  border-radius:var(--radius)!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  box-shadow:none!important}
+  background:#fff !important;
+  color:#000 !important;
+  border:var(--border-pro) solid #9900ff !important;
+  border-radius:var(--radius) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  box-shadow:none !important;
+}
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled,.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled{
   background:var(--disabled-bg) !important;
   color:#000 !important;
-  border:3px solid var(--line-neutral) !important;
+  border:var(--border-pro) solid var(--line-neutral) !important;
   cursor:not-allowed;
   pointer-events:none;
 }
@@ -307,7 +326,7 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .pro-button:disabled{
   background:var(--disabled-bg);
   color:#000;
-  border:3px solid var(--line-neutral);
+  border:var(--border-pro) solid var(--line-neutral);
   cursor:not-allowed;
   pointer-events:none;
   opacity:1;
@@ -315,7 +334,7 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .liquid-ios26 .pro-button:disabled{
   background:var(--disabled-bg) !important;
   color:#000 !important;
-  border:3px solid var(--line-neutral) !important;
+  border:var(--border-pro) solid var(--line-neutral) !important;
   cursor:not-allowed !important;
   pointer-events:none !important;
   opacity:1 !important;
@@ -327,7 +346,7 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 #toggleAdvancedGrowth.advanced-growth-btn:disabled,#toggleAdvancedGrowth.advanced-growth-btn.disabled{
   background:var(--disabled-bg) !important;
   color:#000 !important;
-  border:3px solid var(--line-neutral) !important;
+  border:var(--border-pro) solid var(--line-neutral) !important;
   cursor:not-allowed;
   pointer-events:none;
 }
@@ -338,28 +357,30 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 #toggleGrowthCalculations.advanced-growth-btn{
   background:#fff;
   color:#000;
-  border:3px solid var(--primary);
+  border:var(--border-pro) solid var(--primary);
   border-radius:var(--radius);
-  padding:.6rem 1.2rem;
+  padding:var(--space-0-6) var(--space-1-2);
   font-size:1rem;
   font-weight:600;
   cursor:pointer;
   display:block;
   margin:0 auto;
   width:100%;
-  text-align:center}
+  text-align:center;
+}
 .liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn{
-  background:#fff!important;
-  color:#000!important;
-  border:3px solid var(--primary)!important;
-  border-radius:var(--radius)!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  box-shadow:none!important}
+  background:#fff !important;
+  color:#000 !important;
+  border:var(--border-pro) solid var(--primary) !important;
+  border-radius:var(--radius) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  box-shadow:none !important;
+}
 #toggleGrowthCalculations.advanced-growth-btn:disabled,#toggleGrowthCalculations.advanced-growth-btn.disabled,.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn:disabled,.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn.disabled{
   background:var(--disabled-bg) !important;
   color:#000 !important;
-  border:3px solid var(--line-neutral) !important;
+  border:var(--border-pro) solid var(--line-neutral) !important;
   cursor:not-allowed;
   pointer-events:none;
   opacity:1;
@@ -374,7 +395,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   vertical-align:super;
   margin-left:.1rem}
 #thyroidCancerKidsCard .thy-jump-cancer-preop{
-  border:3px solid #9900ff!important}
+  border:var(--border-pro) solid #9900ff !important;
+}
 /* style.css 4825-4826 — reguła leży w źródle wewnątrz większego bloku @media(max-width:699px) (od linii 4820); obudowa odtworzona, deklaracja bez zmian */
 @media(max-width:699px){
 #toggleCircSection,#toggleNutritionNormsCard,#toggleNutritionMicrosCard,#toggleFoodCard,#toggleDownSyndrome,#toggleIntakeCard,#toggleGrowthCalculations.advanced-growth-btn,#toggleAdvancedGrowth.advanced-growth-btn{
@@ -389,15 +411,16 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   width:30px;
   height:30px;
   padding:0;
-  border:1px solid #cfe4e4;
-  border-radius:8px;
+  border:var(--border-hairline) solid #cfe4e4;
+  border-radius:var(--radius-8);
   background:#fff;
   color:#4d8285;
   cursor:pointer;
   flex-shrink:0;
   box-sizing:border-box;
   transition:color .15s ease,background .15s ease,border-color .15s ease;
-  text-decoration:none}
+  text-decoration:none;
+}
 .chrome-sync-btn.is-enabled{
   display:inline-flex}
 .chrome-sync-btn:hover{
@@ -424,10 +447,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 }
 .chrome-sync-btn[data-cloud-only=true]{
   display:inline-flex;
-  border-radius:8px;
+  border-radius:var(--radius-8);
   border-color:transparent;
   background:var(--primary, #00838d);
-  color:#fff}
+  color:#fff;
+}
 .chrome-sync-btn[data-cloud-only=true]:hover{
   background:#006c75;
   color:#fff}
@@ -449,15 +473,16 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   height:30px;
   padding:0;
   margin:0;
-  border:1px solid #cfe4e4;
-  border-radius:8px;
+  border:var(--border-hairline) solid #cfe4e4;
+  border-radius:var(--radius-8);
   background:#fff;
   color:#4d8285;
   cursor:pointer;
   flex-shrink:0;
   box-sizing:border-box;
   transition:color .15s ease,background .15s ease,border-color .15s ease,transform .1s ease;
-  font-family:inherit}
+  font-family:inherit;
+}
 .chrome-reminders-inner{
   display:flex;
   align-items:center;
@@ -473,15 +498,16 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .chrome-reminders-btn:active{
   transform:scale(.95)}
 .chrome-reminders-btn:focus-visible{
-  outline:2px solid var(--primary, #00838d);
-  outline-offset:2px}
+  outline:var(--border-emphasis) solid var(--primary, #00838d);
+  outline-offset:2px;
+}
 .chrome-reminders-badge{
   position:absolute;
   top:-4px;
   right:-4px;
   min-width:16px;
   height:16px;
-  padding:0 4px;
+  padding:0 var(--space-4px);
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -490,11 +516,12 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   line-height:1;
   color:#fff;
   background:#6b7280;
-  border-radius:999px;
+  border-radius:var(--radius-pill);
   border:1.5px solid #fff;
   box-shadow:0 1px 3px #00283026;
   letter-spacing:-.02em;
-  pointer-events:none}
+  pointer-events:none;
+}
 .chrome-reminders-btn[data-state=overdue]{
   color:#dc2626}
 .chrome-reminders-btn[data-state=overdue] .chrome-reminders-badge{
@@ -527,8 +554,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   align-items:center;
   justify-content:center;
   height:30px;
-  padding:0 10px;
-  border-radius:8px;
+  padding:0 var(--space-10px);
+  border-radius:var(--radius-8);
   font-size:10.5px;
   font-weight:700;
   letter-spacing:.05em;
@@ -538,7 +565,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   white-space:nowrap;
   box-sizing:border-box;
   transition:opacity .15s ease,transform .15s ease;
-  border:1px solid transparent}
+  border:var(--border-hairline) solid transparent;
+}
 .chrome-pro-badge:hover{
   opacity:var(--opacity-muted);
   transform:scale(.96);
@@ -564,12 +592,14 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .vilda-auth-buttons{
   display:flex;
   flex-direction:column;
-  gap:12px;
-  margin-top:4px}
+  gap:var(--space-12px);
+  margin-top:var(--space-4px);
+}
 .vilda-auth-actions{
   display:flex;
-  gap:12px;
-  margin-top:8px}
+  gap:var(--space-12px);
+  margin-top:var(--space-8px);
+}
 .vilda-auth-actions .vilda-auth-btn{
   flex:1}
 .vilda-auth-actions-end{
@@ -586,24 +616,27 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  padding:14px 22px;
-  border-radius:12px;
+  padding:var(--space-14px) 22px;
+  border-radius:var(--radius-12);
   border:1.5px solid transparent;
   font-size:15px;
   font-weight:500;
   font-family:inherit;
   cursor:pointer;
   transition:background-color .15s ease,border-color .15s ease,transform .05s ease,box-shadow .15s ease;
-  text-decoration:none}
+  text-decoration:none;
+}
 .vilda-auth-btn:active{
   transform:translateY(1px)}
 .vilda-auth-btn:focus-visible{
-  outline:3px solid rgba(0,131,141,.3);
-  outline-offset:2px}
+  outline:var(--border-pro) solid rgba(0,131,141,.3);
+  outline-offset:2px;
+}
 .vilda-auth-btn-small{
-  padding:10px 16px;
+  padding:var(--space-10px) var(--space-16px);
   font-size:13px;
-  border-radius:10px}
+  border-radius:var(--radius-10);
+}
 .vilda-auth-btn-primary{
   background:var(--primary);
   color:#fff;
@@ -652,14 +685,14 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   z-index:var(--z-logout-button) !important;
   display:none;
   align-items:center;
-  gap:8px;
+  gap:var(--space-8px);
   width:auto !important;
   max-width:max-content !important;
   margin:0 !important;
   background:#fff !important;
   border:1.5px solid #d6dde0 !important;
   border-radius:24px !important;
-  padding:8px 16px !important;
+  padding:var(--space-8px) var(--space-16px) !important;
   font-size:13px !important;
   font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif !important;
   font-weight:500 !important;
@@ -674,8 +707,9 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   box-shadow:0 6px 18px #00838d2e;
 }
 .vilda-auth-logout:focus-visible{
-  outline:3px solid rgba(0,131,141,.3);
-  outline-offset:2px}
+  outline:var(--border-pro) solid rgba(0,131,141,.3);
+  outline-offset:2px;
+}
 .vilda-auth-logout-icon{
   display:inline-flex;
   align-items:center;
@@ -686,12 +720,13 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   line-height:1}
 @media(max-width:520px){
   .vilda-auth-logout{
-  top:8px!important;
-  right:8px!important;
-  padding:6px 12px!important;
-  font-size:12px!important;
-  width:auto!important;
-  max-width:max-content!important}
+  top:8px !important;
+  right:8px !important;
+  padding:var(--space-6px) var(--space-12px) !important;
+  font-size:12px !important;
+  width:auto !important;
+  max-width:max-content !important;
+}
 }
 .vilda-auth-btn-subtle{
   background:transparent;
@@ -705,15 +740,17 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .vilda-copy-summary-row{
   display:flex;
   justify-content:center;
-  margin:24px 0 0}
+  margin:var(--space-24px) 0 0;
+}
 .vilda-auth-btn.vilda-copy-summary-btn{
-  width:auto!important;
-  padding:10px 20px!important;
-  border:1.5px solid #c4b5fd!important;
-  color:#5b21b6!important;
-  background:#ede9fe!important;
-  box-shadow:0 3px 10px #7c3aed33!important;
-  font-weight:650}
+  width:auto !important;
+  padding:var(--space-10px) var(--space-20px) !important;
+  border:1.5px solid #c4b5fd !important;
+  color:#5b21b6 !important;
+  background:#ede9fe !important;
+  box-shadow:0 3px 10px #7c3aed33 !important;
+  font-weight:650;
+}
 .vilda-auth-btn.vilda-copy-summary-btn:hover{
   background:#e3ddfc!important}
 .vilda-auth-btn.vilda-copy-summary-btn:active{
@@ -752,7 +789,7 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   transform:translateY(0);
   box-shadow:none}
 .vilda-auth-btn-biometric:focus-visible{
-  outline:2px solid var(--primary);
+  outline:var(--border-emphasis) solid var(--primary);
   outline-offset:3px;
 }
 .vilda-auth-biometric-section,.vilda-auth-biometric-section .vilda-auth-actions{
@@ -816,11 +853,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 /* ---- Nadpisania .liquid-ios26 — Button (ios26-v2.css 85-117, 122-130, 199-200) ---- */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
   background:#fff3 !important;
-  border:1px solid var(--lg-border) !important;
+  border:var(--border-hairline) solid var(--lg-border) !important;
   color:var(--text-ink) !important;
-  border-radius:14px !important;
-  backdrop-filter:blur(10px) saturate(120%) !important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  border-radius:var(--radius-14) !important;
+  backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
+  -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
   box-shadow:var(--shadow-button-glass) !important;
   transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
 }
@@ -832,7 +869,7 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   box-shadow:0 2px 8px #0000001f!important}
 .liquid-ios26 #toggleIgfTests,.liquid-ios26 #toggleSnp,.liquid-ios26 #toggleTurner,.liquid-ios26 #togglePws,.liquid-ios26 #toggleSga,.liquid-ios26 #toggleIgf1,.liquid-ios26 #toggleAbxTherapy,.liquid-ios26 #toggleFluTherapy,.liquid-ios26 #toggleObesityTherapy,.liquid-ios26 #toggleHypertensionTherapy,.liquid-ios26 #toggleThyroidCancerKids,.liquid-ios26 #toggleGhMonitor{
   background:#fff3 !important;
-  border:1px solid var(--lg-border) !important;
+  border:var(--border-hairline) solid var(--lg-border) !important;
   color:var(--text-ink) !important;
   justify-content:center;
 }
@@ -840,11 +877,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   border-color:var(--brand-light)!important}
 .liquid-ios26 #abxBrandToggle,.liquid-ios26 #abxCopyRec,.liquid-ios26 .abx-brand-option{
   background:#fff3 !important;
-  border:1px solid var(--lg-border) !important;
+  border:var(--border-hairline) solid var(--lg-border) !important;
   color:var(--text-ink) !important;
-  border-radius:14px !important;
-  backdrop-filter:blur(10px) saturate(120%) !important;
-  -webkit-backdrop-filter:blur(10px) saturate(120%) !important;
+  border-radius:var(--radius-14) !important;
+  backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
+  -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate) !important;
   box-shadow:var(--shadow-button-glass) !important;
   transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease !important;
 }
@@ -853,7 +890,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .liquid-ios26 .btn-icon{
   display:inline-flex;
   align-items:center;
-  gap:.5rem}
+  gap:var(--space-0-5);
+}
 .liquid-ios26 .btn-icon svg{
   width:20px;
   height:20px;
@@ -864,17 +902,19 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 
 /* ---- Nadpisania .liquid-ios26 — ProButton (ios26-v2.css 118-119) ---- */
 .liquid-ios26 #thyroidCancerKidsCard .thy-jump-cancer-preop{
-  border:3px solid #9900ff!important}
+  border:var(--border-pro) solid #9900ff !important;
+}
 
 /* ---- Nadpisania .liquid-ios26 — ChromeActionButton (vilda_chrome.css 1193-1252, 1264-1271) ---- */
 .liquid-ios26 .chrome-reminders-btn{
-  background:#fff!important;
-  border:1px solid #cfe4e4!important;
-  border-radius:8px!important;
-  box-shadow:none!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  color:#4d8285!important}
+  background:#fff !important;
+  border:var(--border-hairline) solid #cfe4e4 !important;
+  border-radius:var(--radius-8) !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  color:#4d8285 !important;
+}
 .liquid-ios26 .chrome-reminders-btn:hover{
   background:#f2f9f9 !important;
   border-color:#9fd4d8 !important;
@@ -888,19 +928,20 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .chrome-reminders-btn[data-state=loading],.liquid-ios26 .chrome-reminders-btn[data-state=loading]{
   color:#9aa8aa!important}
 .chrome-reminders-btn[data-state=loading] .chrome-reminders-badge,.liquid-ios26 .chrome-reminders-btn[data-state=loading] .chrome-reminders-badge{
-  display:inline-flex!important;
+  display:inline-flex !important;
   width:14px;
   min-width:14px;
   height:14px;
   padding:0;
   top:-3px;
   right:-3px;
-  background:transparent!important;
-  border:2px solid rgba(0,131,141,.25);
+  background:transparent !important;
+  border:var(--border-emphasis) solid rgba(0,131,141,.25);
   border-top-color:var(--primary, #00838d);
-  color:transparent!important;
-  box-shadow:none!important;
-  animation:chrome-rem-spin .7s linear infinite}
+  color:transparent !important;
+  box-shadow:none !important;
+  animation:chrome-rem-spin .7s linear infinite;
+}
 @keyframes chrome-rem-spin{
   to{
   transform:rotate(360deg)}
@@ -909,20 +950,22 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   color:#b3c2c4!important;
   opacity:.72}
 .liquid-ios26 .chrome-sync-btn{
-  background:#fff!important;
-  border:1px solid #cfe4e4!important;
-  border-radius:8px!important;
-  box-shadow:none!important;
-  color:#4d8285!important}
+  background:#fff !important;
+  border:var(--border-hairline) solid #cfe4e4 !important;
+  border-radius:var(--radius-8) !important;
+  box-shadow:none !important;
+  color:#4d8285 !important;
+}
 .liquid-ios26 .chrome-sync-btn:hover{
   background:#f2f9f9!important;
   border-color:#9fd4d8!important;
   color:var(--primary, #00838d)!important}
 .liquid-ios26 .chrome-sync-btn[data-cloud-only=true]{
-  background:var(--primary, #00838d)!important;
-  border-color:transparent!important;
-  border-radius:8px!important;
-  color:#fff!important}
+  background:var(--primary, #00838d) !important;
+  border-color:transparent !important;
+  border-radius:var(--radius-8) !important;
+  color:#fff !important;
+}
 .liquid-ios26 .chrome-sync-btn[data-cloud-only=true][data-offline=true]{
   background:var(--warning) !important;
 }

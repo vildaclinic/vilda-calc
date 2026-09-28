@@ -13,7 +13,7 @@ header{
 header{
   background:#fff;
   color:var(--text);
-  border-bottom:1px solid var(--line);
+  border-bottom:var(--border-hairline) solid var(--line);
 }
 
 /* ===== ChromeStrip — nagłówek z chrome (vilda_chrome.css 43-72) ===== */
@@ -34,9 +34,9 @@ header{
   z-index:var(--z-header-chrome);
   padding:0;
   background:var(--chrome-glass-bg);
-  backdrop-filter:saturate(160%) blur(14px);
-  -webkit-backdrop-filter:saturate(160%) blur(14px);
-  border-bottom:1px solid var(--chrome-glass-border);
+  backdrop-filter:var(--blur-chrome-header-saturate) var(--blur-card);
+  -webkit-backdrop-filter:var(--blur-chrome-header-saturate) var(--blur-card);
+  border-bottom:var(--border-hairline) solid var(--chrome-glass-border);
   box-shadow:0 1px #fff9 inset,0 6px 18px #0046500f;
 }
 @media(min-width:992px){
@@ -51,34 +51,36 @@ header{
 .chrome-strip{
   display:flex;
   align-items:center;
-  gap:.75rem;
+  gap:var(--space-0-75);
   height:var(--chrome-strip-height);
-  padding:0 1rem;
-  max-width:1500px;
+  padding:0 var(--space-1);
+  max-width:var(--chrome-strip-max-width);
   margin:0 auto;
-  box-sizing:border-box}
+  box-sizing:border-box;
+}
 
 /* ===== MobileTopNav — przycisk menu i ikony zastępcze (vilda_chrome.css 82-119) ===== */
 .chrome-mobile-menu-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:40px!important;
-  height:40px!important;
-  min-height:40px!important;
-  max-height:40px!important;
+  width:40px !important;
+  height:40px !important;
+  min-height:40px !important;
+  max-height:40px !important;
   flex:0 0 auto;
-  align-self:center!important;
-  border-radius:12px!important;
-  border:1px solid var(--chrome-glass-border)!important;
-  background:#fff9!important;
-  color:var(--primary, #00838d)!important;
+  align-self:center !important;
+  border-radius:var(--radius-12) !important;
+  border:var(--border-hairline) solid var(--chrome-glass-border) !important;
+  background:#fff9 !important;
+  color:var(--primary, #00838d) !important;
   cursor:pointer;
-  padding:0!important;
-  margin:0!important;
-  line-height:1!important;
-  box-sizing:border-box!important;
-  transition:background .15s ease,transform .1s ease}
+  padding:0 !important;
+  margin:0 !important;
+  line-height:1 !important;
+  box-sizing:border-box !important;
+  transition:background .15s ease,transform .1s ease;
+}
 .chrome-mobile-menu-btn:hover{
   background:#ffffffe6!important}
 .chrome-mobile-menu-btn:active{
@@ -102,16 +104,18 @@ header{
 .chrome-brand{
   display:inline-flex;
   align-items:center;
-  gap:.6rem;
+  gap:var(--space-0-6);
   text-decoration:none;
   color:var(--text, #333);
-  flex:0 0 auto}
+  flex:0 0 auto;
+}
 .chrome-brand-logo{
-  width:38px;
-  height:38px;
+  width:var(--brand-logo-size);
+  height:var(--brand-logo-size);
   object-fit:cover;
-  border-radius:10px;
-  flex:0 0 auto}
+  border-radius:var(--radius-10);
+  flex:0 0 auto;
+}
 .chrome-brand-text{
   display:inline-flex;
   flex-direction:column;
@@ -130,23 +134,25 @@ header{
   margin-left:auto;
   display:inline-flex;
   align-items:center;
-  gap:.55rem;
+  gap:var(--space-0-55);
   flex:0 1 auto;
-  min-width:0}
+  min-width:0;
+}
 
 /* ===== PatientChip / UserChip — szkielet chipa (vilda_chrome.css 154-203) ===== */
 .chrome-chip{
   display:inline-flex;
   align-items:center;
-  gap:.5rem;
-  padding:.25rem .4rem;
+  gap:var(--space-0-5);
+  padding:var(--space-0-25) var(--space-0-4);
   background:transparent;
   border:0;
   box-shadow:none;
   border-radius:var(--chrome-radius-pill);
   transition:background .15s ease;
   max-width:240px;
-  min-width:0}
+  min-width:0;
+}
 .chrome-chip:hover{
   background:#ffffff8c}
 .chip-icon,.chip-avatar{
@@ -156,12 +162,13 @@ header{
   width:28px;
   height:28px;
   flex:0 0 auto;
-  border-radius:50%;
+  border-radius:var(--radius-circle);
   background:linear-gradient(135deg,#e2f1f2,#cfe9ec);
   color:var(--primary, #00838d);
   font-size:.78rem;
   font-weight:700;
-  letter-spacing:.02em}
+  letter-spacing:.02em;
+}
 .chip-icon svg,.chip-avatar svg{
   width:16px;
   height:16px}
@@ -189,8 +196,9 @@ header{
 /* ===== PatientChip — stany pacjenta i tinty zapisu (vilda_chrome.css 204-281) ===== */
 .chrome-patient-chip.is-empty{
   background:#fff;
-  border:1px solid #cfe4e4;
-  border-radius:9px}
+  border:var(--border-hairline) solid #cfe4e4;
+  border-radius:var(--radius-9);
+}
 .chrome-patient-chip.is-empty .chip-icon{
   background:#e8eded;
   color:var(--text-disabled);
@@ -201,8 +209,9 @@ header{
 }
 .chrome-patient-chip.has-patient{
   background:#e6f4f5;
-  border:1px solid #9fd4d8;
-  border-radius:9px}
+  border:var(--border-hairline) solid #9fd4d8;
+  border-radius:var(--radius-9);
+}
 .chrome-patient-chip.has-patient .chip-icon{
   background:var(--primary);
   color:#fff;
@@ -267,8 +276,9 @@ header{
 .chrome-patient-chip.is-empty .chrome-chip-card{
   display:none}
 .chrome-patient-chip:focus-visible{
-  outline:2px solid var(--primary, #00838d);
-  outline-offset:2px}
+  outline:var(--border-emphasis) solid var(--primary, #00838d);
+  outline-offset:2px;
+}
 @media(max-width:600px){
   .chrome-chip-card{
   display:none}
@@ -290,8 +300,9 @@ header{
   color:#fff}
 .chrome-user-chip.is-logged-in{
   background:#fff;
-  border:1px solid #cfe4e4;
-  border-radius:9px}
+  border:var(--border-hairline) solid #cfe4e4;
+  border-radius:var(--radius-9);
+}
 .chrome-user-chip.is-logged-in .chip-value{
   color:#0c3a3e}
 .chrome-user-chip.is-logged-in .chip-action{
@@ -302,16 +313,17 @@ header{
   text-decoration:underline;
   text-underline-offset:2px}
 .chrome-user-chip.is-logged-in .chip-value:focus-visible{
-  outline:2px solid var(--primary, #00838d);
+  outline:var(--border-emphasis) solid var(--primary, #00838d);
   outline-offset:2px;
-  border-radius:3px}
+  border-radius:3px;
+}
 .chip-action{
   display:inline-flex;
   align-items:center;
   justify-content:center;
   width:24px;
   height:24px;
-  border-radius:50%;
+  border-radius:var(--radius-circle);
   background:transparent;
   border:0;
   color:var(--chrome-label-color);
@@ -319,7 +331,8 @@ header{
   padding:0;
   margin-left:.15rem;
   flex:0 0 auto;
-  transition:background .15s ease,color .15s ease}
+  transition:background .15s ease,color .15s ease;
+}
 .chip-action:hover{
   background:#c628281f;
   color:var(--danger, #c62828)}
@@ -338,8 +351,9 @@ header{
 }
 @media(max-width:991px){
   .chrome-strip{
-  padding:0 .75rem;
-  gap:.55rem}
+  padding:0 var(--space-0-75);
+  gap:var(--space-0-55);
+}
 .chrome-brand{
   display:none!important}
 }
@@ -363,13 +377,16 @@ header{
 }
 @media(max-width:600px){
   .chrome-strip{
-  gap:.4rem}
+  gap:var(--space-0-4);
+}
 .chrome-chip{
-  padding:.3rem .45rem .3rem .35rem}
+  padding:var(--space-0-3) var(--space-0-45) var(--space-0-3) var(--space-0-35);
+}
 .chrome-chip .chip-content,.chrome-chip .chip-action{
   display:none}
 .chrome-patient-chip,.chrome-user-chip{
-  padding:.3rem}
+  padding:var(--space-0-3);
+}
 .chip-icon,.chip-avatar{
   width:32px;
   height:32px}
@@ -384,10 +401,11 @@ header{
 .chrome-patient-chip.has-patient .chip-icon,.chrome-patient-chip.is-empty .chip-icon,.chrome-user-chip.is-logged-in .chip-avatar{
   width:34px;
   height:34px;
-  border-radius:8px}
+  border-radius:var(--radius-8);
+}
 .chrome-patient-chip.is-empty .chip-icon{
   background:#fff;
-  border:1px solid #cfe4e4;
+  border:var(--border-hairline) solid #cfe4e4;
   color:var(--text-disabled);
 }
 .chrome-user-chip.is-logged-in .chip-avatar{
@@ -398,9 +416,10 @@ header{
 
 /* ===== Fokus i przejście widoku (vilda_chrome.css 960-963, 1293-1296) ===== */
 .has-vilda-chrome a:focus-visible,.has-vilda-chrome button:focus-visible{
-  outline:2px solid var(--primary, #00838d);
+  outline:var(--border-emphasis) solid var(--primary, #00838d);
   outline-offset:2px;
-  border-radius:8px}
+  border-radius:var(--radius-8);
+}
 @media(min-width:992px){
   .has-sidebar header{
   view-transition-name:vilda-header}
@@ -467,10 +486,11 @@ header{
 .main-nav ul{
   list-style:none;
   padding-left:0;
-  margin:.5rem 0 0;
+  margin:var(--space-0-5) 0 0;
   display:flex;
-  gap:1rem;
-  align-items:center}
+  gap:var(--space-1);
+  align-items:center;
+}
 .main-nav a{
   color:var(--primary);
   font-weight:600;
@@ -478,14 +498,15 @@ header{
 .main-nav a:hover{
   text-decoration:underline}
 .main-nav{
-  max-width:960px;
+  max-width:var(--container-max-width);
   margin-left:auto;
   margin-right:auto;
-  padding-left:1.5rem;
-  padding-right:1rem;
+  padding-left:var(--space-1-5);
+  padding-right:var(--space-1);
   width:100%;
   background:inherit;
-  position:relative}
+  position:relative;
+}
 .main-nav ul li a{
   font-size:1rem;
   display:flex;
@@ -496,15 +517,16 @@ header{
 .main-nav .menu-toggle label{
   background:none;
   border:none;
-  padding:.4rem;
+  padding:var(--space-0-4);
   cursor:pointer;
   display:flex;
   flex-direction:column;
   justify-content:center;
   align-items:center;
-  gap:4px;
+  gap:var(--space-4px);
   width:32px;
-  height:32px}
+  height:32px;
+}
 .main-nav .menu-toggle .bar{
   display:block;
   width:24px;
@@ -584,9 +606,9 @@ header{
 .liquid-ios26 header{
   background:var(--lg-surface-light) !important;
   color:var(--text-ink) !important;
-  border-bottom:1px solid var(--lg-border);
-  backdrop-filter:blur(18px) saturate(120%);
-  -webkit-backdrop-filter:blur(18px) saturate(120%);
+  border-bottom:var(--border-hairline) solid var(--lg-border);
+  backdrop-filter:var(--blur-header) var(--blur-button-saturate);
+  -webkit-backdrop-filter:var(--blur-header) var(--blur-button-saturate);
   border-radius:0 0 var(--lg-radius) var(--lg-radius);
   overflow:hidden;
   box-shadow:var(--lg-shadow);
@@ -608,13 +630,14 @@ header{
 
 /* ===== Nadpisania Liquid Glass — przycisk akcji chipa konta (vilda_chrome.css 1253-1263) ===== */
 .liquid-ios26 .chrome-user-chip .chip-action{
-  background:transparent!important;
-  border:0!important;
-  box-shadow:none!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  border-radius:50%!important;
-  color:#5f8f91!important}
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  border-radius:var(--radius-circle) !important;
+  color:#5f8f91 !important;
+}
 .liquid-ios26 .chrome-user-chip .chip-action:hover{
   background:#c628281f !important;
   color:var(--danger) !important;

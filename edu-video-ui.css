@@ -21,14 +21,14 @@
 .edu-watch-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding-block: 1rem 2rem
+  gap: var(--space-1-25);
+  padding-block: var(--space-1) var(--space-2)
 }
 
 .edu-watch-page {
-  max-width: 960px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding-inline: .5rem
+  padding-inline: var(--space-0-5)
 }
 
 .edu-hero,
@@ -48,7 +48,7 @@
 .edu-video-shell.card,
 .edu-info-card.card {
   background: var(--edu-surface);
-  border: 1px solid var(--edu-border);
+  border: var(--border-hairline) solid var(--edu-border);
   box-shadow: var(--edu-card-shadow)
 }
 
@@ -66,7 +66,7 @@
 }
 
 .edu-hero {
-  padding: 1.35rem 1.4rem
+  padding: 1.35rem var(--space-1-4)
 }
 
 .edu-kicker,
@@ -75,8 +75,8 @@
 .edu-meta-pill {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
-  border-radius: 999px;
+  gap: var(--space-0-45);
+  border-radius: var(--radius-pill);
   white-space: nowrap
 }
 
@@ -84,7 +84,7 @@
   align-self: flex-start;
   padding: .48rem .82rem;
   background: #ffffffe6;
-  border: 1px solid var(--edu-border-strong);
+  border: var(--border-hairline) solid var(--edu-border-strong);
   color: #0f4b48;
   font-weight: 800;
   font-size: .92rem;
@@ -114,7 +114,7 @@
 }
 
 .edu-title {
-  margin: .85rem 0 .7rem;
+  margin: var(--space-0-85) 0 var(--space-0-7);
   font-size: clamp(1.55rem,3vw,2.25rem);
   line-height: 1.14;
   color: var(--edu-text-strong);
@@ -123,7 +123,7 @@
 
 .edu-lead {
   margin: 0;
-  max-width: 74ch;
+  max-width: var(--measure-lead);
   color: var(--edu-text);
   line-height: 1.7;
   text-wrap: pretty
@@ -134,18 +134,18 @@
 .resource-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .edu-chip-row {
-  margin-top: 1rem
+  margin-top: var(--space-1)
 }
 
 .edu-chip,
 .edu-meta-pill {
-  padding: .46rem .8rem;
+  padding: .46rem var(--space-0-8);
   background: #ffffffe0;
-  border: 1px solid rgba(22,76,71,.1);
+  border: var(--border-hairline) solid rgba(22,76,71,.1);
   color: #0f4b48;
   font-weight: 700;
   box-shadow: 0 8px 24px #0f2d2a0a
@@ -162,7 +162,7 @@
 .edu-section-head {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  gap: var(--space-0-5);
   align-items: center;
   text-align: center
 }
@@ -179,47 +179,47 @@
   margin: 0;
   color: var(--edu-text-muted);
   line-height: 1.62;
-  max-width: 72ch
+  max-width: var(--measure-copy)
 }
 
 .video-grid {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: 1.1rem;
+  gap: var(--space-1-1);
   align-items: stretch
 }
 
 .presentation-list {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
-  gap: 1rem
+  gap: var(--space-1)
 }
 
 .edu-resource-card,
 .edu-presentation-card,
 .edu-video-shell,
 .edu-info-card {
-  padding: 1rem 1.05rem 1.1rem
+  padding: var(--space-1) 1.05rem var(--space-1-1)
 }
 
 .edu-resource-card,
 .edu-presentation-card {
   display: flex;
   flex-direction: column;
-  gap: .9rem
+  gap: var(--space-0-9)
 }
 
 .edu-card-top {
   display: flex;
   flex-direction: column;
-  gap: .7rem
+  gap: var(--space-0-7)
 }
 
 .edu-card-badge {
   align-self: flex-start;
   padding: .36rem .72rem;
   background: #00a8b51f;
-  border: 1px solid rgba(0,168,181,.18);
+  border: var(--border-hairline) solid rgba(0,168,181,.18);
   color: #0f6665;
   font-size: .82rem;
   font-weight: 800;
@@ -246,10 +246,10 @@
 }
 
 .edu-video-frame {
-  padding: .45rem;
-  border-radius: 20px;
+  padding: var(--space-0-45);
+  border-radius: var(--radius-20);
   background: linear-gradient(180deg,#00838d14,#ffffffeb);
-  border: 1px solid var(--line-teal-soft);
+  border: var(--border-hairline) solid var(--line-teal-soft);
   box-shadow: inset 0 1px #ffffffb3
 }
 
@@ -257,7 +257,7 @@
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 16px;
+  border-radius: var(--radius-16);
   background: #000
 }
 
@@ -266,7 +266,7 @@
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  gap: .9rem
+  gap: var(--space-0-9)
 }
 
 .edu-video-shell--portrait .edu-video-frame {
@@ -299,14 +299,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .5rem;
+  gap: var(--space-0-5);
   min-height: 46px;
-  padding: .8rem 1.1rem;
-  border-radius: 14px;
+  padding: var(--space-0-8) var(--space-1-1);
+  border-radius: var(--radius-14);
   text-decoration: none;
   font-weight: 700;
   text-align: center;
-  border: 1px solid rgba(0,131,141,.18);
+  border: var(--border-hairline) solid rgba(0,131,141,.18);
   background: #ffffffd6;
   color: var(--edu-text-strong);
   box-shadow: 0 10px 22px #0f2d2a14;
@@ -346,7 +346,7 @@
 
 .edu-info-card h2 {
   font-size: 1.18rem;
-  margin-bottom: .9rem
+  margin-bottom: var(--space-0-9)
 }
 
 .chapter-list {
@@ -354,7 +354,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: .65rem
+  gap: var(--space-0-65)
 }
 
 .chapter-list li {
@@ -364,13 +364,13 @@
 .chapter-list a {
   display: flex;
   align-items: flex-start;
-  gap: .75rem;
+  gap: var(--space-0-75);
   text-decoration: none;
   color: var(--edu-text-strong);
-  padding: .82rem .9rem;
-  border-radius: 16px;
+  padding: .82rem var(--space-0-9);
+  border-radius: var(--radius-16);
   background: #ffffffe0;
-  border: 1px solid rgba(22,76,71,.1);
+  border: var(--border-hairline) solid rgba(22,76,71,.1);
   box-shadow: 0 8px 24px #0f2d2a0a;
   transition: transform .18s ease,background .18s ease,border-color .18s ease
 }
@@ -390,7 +390,7 @@
 }
 
 .notice {
-  margin: .95rem 0 0;
+  margin: var(--space-0-95) 0 0;
   font-size: .92rem;
   color: var(--edu-text-muted);
   line-height: 1.55
@@ -408,14 +408,14 @@
 
 .faq-container {
   background: var(--edu-surface-soft);
-  border: 1px solid var(--edu-border);
+  border: var(--border-hairline) solid var(--edu-border);
   border-radius: var(--edu-card-radius);
   box-shadow: var(--edu-card-shadow);
-  padding: 1rem
+  padding: var(--space-1)
 }
 
 .faq-item+.faq-item {
-  margin-top: .8rem
+  margin-top: var(--space-0-8)
 }
 
 .faq-question {
@@ -425,11 +425,11 @@
   align-items: center;
   width: 100%;
   cursor: pointer;
-  padding: .9rem 1rem;
-  border-radius: 16px;
+  padding: var(--space-0-9) var(--space-1);
+  border-radius: var(--radius-16);
   box-sizing: border-box;
   background: #ffffffd1;
-  border: 1px solid rgba(22,76,71,.1);
+  border: var(--border-hairline) solid rgba(22,76,71,.1);
   color: var(--edu-text-strong);
   font-size: 1rem;
   font-weight: 700
@@ -453,16 +453,16 @@
   max-height: 0;
   overflow: hidden;
   transition: max-height .35s ease,margin-top .35s ease;
-  padding: 0 1rem
+  padding: 0 var(--space-1)
 }
 
 .faq-item.open .faq-answer {
   max-height: 240px;
-  margin-top: .5rem
+  margin-top: var(--space-0-5)
 }
 
 .faq-answer p {
-  margin: 0 0 .5rem;
+  margin: 0 0 var(--space-0-5);
   line-height: 1.6;
   color: var(--edu-text)
 }
@@ -476,25 +476,25 @@
 @media(max-width:700px) {
   .edu-shell,
   .edu-watch-page {
-    gap: 1rem;
-    padding-block: .85rem 1.6rem
+    gap: var(--space-1);
+    padding-block: var(--space-0-85) 1.6rem
   }
   .edu-hero,
   .edu-resource-card,
   .edu-presentation-card,
   .edu-video-shell,
   .edu-info-card {
-    border-radius: 20px
+    border-radius: var(--radius-20)
   }
   .edu-hero,
   .edu-resource-card,
   .edu-presentation-card,
   .edu-video-shell,
   .edu-info-card {
-    padding: .95rem
+    padding: var(--space-0-95)
   }
   .edu-title {
-    margin-top: .75rem;
+    margin-top: var(--space-0-75);
     font-size: clamp(1.4rem,6vw,1.9rem)
   }
   .edu-lead,
@@ -506,7 +506,7 @@
     width: 100%
   }
   .chapter-list a {
-    padding: .75rem .82rem
+    padding: var(--space-0-75) .82rem
   }
   .chapter-time {
     min-width: 3.5rem
@@ -518,8 +518,8 @@
 .liquid-ios26 .edu-meta-pill,
 .liquid-ios26 .chapter-list a,
 .liquid-ios26 .resource-button {
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%)
+  backdrop-filter: var(--blur-button) var(--blur-button-saturate);
+  -webkit-backdrop-filter: var(--blur-button) var(--blur-button-saturate)
 }
 
 body.edu-page {
@@ -873,7 +873,7 @@ body.edu-page .faq-question:focus-visible {
 
 body.edu-page footer {
   background: var(--edu-footer-bg);
-  border-top: 1px solid var(--edu-footer-border);
+  border-top: var(--border-hairline) solid var(--edu-footer-border);
   color: var(--edu-text-muted);
   backdrop-filter: var(--edu-control-backdrop);
   -webkit-backdrop-filter: var(--edu-control-backdrop)
