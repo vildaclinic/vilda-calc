@@ -53,12 +53,14 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     expect(r.lines.some((l) => /^Proporcja masy do wysokości/.test(l))).toBe(true); // linia istnieje, ale nie wchodzi do nagłówka
     expect(r.h.badge).toBe('Otyłość'); expect(r.h.tone).toBe('danger');
     expect(r.h.title).toBe('Masa ciała i BMI są obecnie wyraźnie powyżej typowych wartości dla wieku.');
-    // P-DIETA rata G2 (decyzja właściciela 2026-09-26): 9-latka jest w stabilizacji (wiek) — cel na ten etap to utrzymanie masy
-    expect(r.h.text).toBe(`Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 52,6${NB}kg).`);
+    // P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): otyłość 6–11 lat — domyślnie redukcja, więc nagłówek podaje pierwszy krok
+    // (dotąd, od raty G2, stabilizacja wg wieku: „Na tym etapie celem jest utrzymanie obecnej masy ciała”).
+    expect(r.h.text).toBe(`Pierwszy krok to ok. 50,4${NB}kg (koniec otyłości), czyli około 2,2${NB}kg mniej.`);
+    expect(r.h.text).not.toContain('utrzymanie obecnej masy ciała');
     for (const z of ['Równocześnie', 'jeszcze jeden parametr', 'inne parametry', 'Wymaga omówienia', 'Wynik nieprawidłowy']) expect(r.html, z).not.toContain(z);
     expect(r.cole).toBe(`149,1${NB}%`);
     expect(r.lines.find((l) => l.startsWith('Wskaźnik Cole'))).toBe(`Wskaźnik Cole’a: 149,1${NB}%`);
-    expect(r.nut.badge).toBe('umiarkowana aktywność'); expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku.'); // P-PAL rata 1: 4–9 lat → 1,6; PAL nietknięty → oznaczony jako domyślny
+    expect(r.nut.badge).toBe('mała aktywność'); expect(r.nut.note).toBe('Poziom aktywności przyjęto domyślnie dla wieku.'); // P-DIETA-STAB rata 1: 4–9 lat z otyłością → 1,4 (dotąd 1,6); PAL nietknięty → oznaczony jako domyślny
     expect(r.nut.rows.find((x) => x.startsWith('Białko'))).toMatch(/^Białko: ok\.\u00A0\d+\u00A0g\/d$/); // P-NORMY rata B1
     expect(r.html).not.toMatch(/PAL 1,4|Henry/);
   });
@@ -99,7 +101,8 @@ test.describe('P-RAPORT rata R — nagłówek z faktów', () => {
     expect(r.h.badge).toBe('Niski wzrost');
     expect(r.h.title).toMatch(new RegExp(`^Wzrost jest wyraźnie niski jak na wiek: 123,9${NB}cm, (poniżej 1\\. centyla|[12]\\. centyl)\\.$`)); // P8 (rata S): etykieta jak w kartach
     expect(r.h.text).toContain('Dodatkowo masa ciała i BMI są wyraźnie powyżej typowych wartości dla wieku');
-    expect(r.h.text).toContain(`Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 41,5${NB}kg).`); // rata G2: stabilizacja (wiek)
+    // P-DIETA-STAB rata 1: otyłość 6–11 lat — domyślnie redukcja, w „Dodatkowo” pierwszy krok masy (dotąd stabilizacja wg wieku)
+    expect(r.h.text).toContain(`Pierwszy krok to ok. 38,0${NB}kg, czyli około 3,5${NB}kg mniej`);
     expect(r.h.subtext).toContain('tempa wzrastania');
   });
 

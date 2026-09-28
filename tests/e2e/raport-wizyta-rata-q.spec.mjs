@@ -22,6 +22,9 @@ async function ustaw(page, s) {
     set('bpSystolic', s.bp ? s.bp[0] : ''); set('bpDiastolic', s.bp ? s.bp[1] : ''); set('heartRate', s.hr || '');
     set('adultBpSystolic', s.bp ? s.bp[0] : ''); set('adultBpDiastolic', s.bp ? s.bp[1] : ''); set('adultHeartRate', s.hr || '');
     if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
+    // P-DIETA-STAB rata 1: jawny wybór strategii przyciskiem (jak lekarz), gdy test pyta o strategię inną niż domyślna
+    window.__vildaDietStrategyTouched = false;
+    if (s.strategia) { const bt = document.querySelector('[data-diet-strategy-choice="' + s.strategia + '"]'); if (bt) bt.click(); }
     window.update();
     await new Promise((r) => { setTimeout(r, 400); });
   }, s);
@@ -65,7 +68,8 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
   test('RQ-1: dziewczynka 9 lat z otyłością — energia z generatora, masa wg wzrostu, pierwszy krok, bez „Normy”', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
-    const s = { age: 9, months: 3, sex: 'F', w: 52.6, h: 146.2, bp: [104, 61], hr: 86 };
+    // P-DIETA-STAB rata 1: 9-latka z otyłością ma domyślnie redukcję — kartę stabilizacji sprawdzamy przy jawnym wyborze
+    const s = { age: 9, months: 3, sex: 'F', w: 52.6, h: 146.2, bp: [104, 61], hr: 86, strategia: 'stabilization' };
     await ustaw(page, s);
     const r = await modelZOdniesieniem(page, s);
     expect(r.dane.nadmiar).toBe(true);
@@ -74,17 +78,18 @@ test.describe('P-RAPORT rata Q — Raport po wizycie', () => {
     expect(r.nut.badge).toBe(r.dane.pal === 1.4 ? 'mała aktywność' : 'umiarkowana aktywność'); // rata R
     expect(r.nut.badge).not.toBe('Normy');
     // wartość główna = liczba planu z generatora; wiersz celu = funkcja produkcyjna dla masy docelowej generatora
-    // P-DIETA rata G1 (F0, decyzja właściciela 2026-09-24): 9-latka z otyłością ma domyślnie stabilizację, a stabilizacja
-    // dziecka to utrzymanie masy — zapotrzebowanie przy obecnej masie (jak zdanie „W strategii stabilizacji …”), bez „≤”
-    // i nazwy diety. Dotąd karta pokazywała tu „≤” diety lekkiej, choć zalecenia mówiły „bez dodatkowego deficytu”.
+    // P-DIETA rata G1 (F0, decyzja właściciela 2026-09-24): stabilizacja dziecka to utrzymanie masy — zapotrzebowanie przy
+    // obecnej masie (jak zdanie „W strategii stabilizacji …”), bez nazwy diety. P-DIETA-STAB rata 1: 9-latka z otyłością
+    // ma domyślnie redukcję (stabilizacja tu z jawnego wyboru), a liczba stabilizacji jest górną granicą dnia („≤”).
     // „≤” przy redukcji dziecka (rata V pkt 1) pilnują: e2e dieta-tempo-rata-g1 (G1-4) i unit raport-wizyta-rata-q.
     expect(r.dane.strategia).toBe('stabilization');
-    expect(r.nut.value).toBe(kcal(r.dane.podaz));
+    // P-DIETA-STAB rata 1 (2026-09-28): stabilizacja też jako górna granica dnia — „≤” jak przy dietach
+    expect(r.nut.value).toBe('\u2264\u202F' + kcal(r.dane.podaz));
     expect(r.nut.rows[0]).toBe(`Dla masy prawidłowej (${r.dane.cel.toFixed(1).replace('.', ',')} kg): ${kcal(r.teeCel)}`);
     // rata V: ta sama liczba co „zapotrzebowanie dla masy docelowej” planu (bez ×1,01 na wzrastanie), nie osobne przeliczenie
     expect(r.teeCel).toBe(r.planTeeCel);
     expect(Math.round(r.teeRawCel)).not.toBe(r.planTeeCel);
-    expect(r.nut.rows[1]).toBe(`Plan: utrzymanie masy ciała: ${kcal(r.dane.podaz)}`);
+    expect(r.nut.rows[1]).toBe(`Plan: utrzymanie masy ciała: \u2264\u202F${kcal(r.dane.podaz)}`);
     expect(r.nut.rows.join(' ')).not.toContain('Przy obecnej masie');
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.tee));
     expect(r.nut.rows.join(' ')).not.toContain(kcal(r.dane.utrzymanie));

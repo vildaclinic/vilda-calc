@@ -185,16 +185,16 @@ test('dziecko 6–11 lat: flaga ograniczonego tempa idzie razem ze zdaniem o lim
   test.setTimeout(120_000);
   await otworz(page);
 
-  // Domyslna strategia w tym wieku jest stabilizacja — limit tempa wypisuje sie dopiero
-  // po wybraniu redukcji przez lekarza.
-  const stab = await policz(page, { age: 8, months: 3, sex: 'M', w: 45, h: 130 });
+  // P-DIETA-STAB rata 1: przy otylosci 6–11 lat < 99c domyslna jest redukcja lekka — limit tempa znika dopiero
+  // po wybraniu stabilizacji przez lekarza.
+  const stab = await policz(page, { age: 8, months: 3, sex: 'M', w: 45, h: 130, strategia: 'stabilization' });
   expect(stab.dane.strategia).toBe('stabilization');
   // kontrola ujemna: sama „ograniczona" dieta nie wystarczy — bez zdania o limicie flaga
   // musi byc falszywa, inaczej raport napisze pacjentowi o limicie, ktorego nikt nie podal
   expect(norm(stab.text)).not.toContain('ograniczono do ok. 0,5 kg/mies.');
   expect(stab.dane.energia.tempoOgraniczone).toBe(false);
 
-  const w = await policz(page, { age: 8, months: 3, sex: 'M', w: 45, h: 130, strategia: 'reduction' });
+  const w = await policz(page, { age: 8, months: 3, sex: 'M', w: 45, h: 130 });
   expect(w.dane.strategia).toBe('reduction');
   expect(w.dane.energia.tempoOgraniczone).toBe(true);
   expect(norm(w.text)).toContain(norm('tempo ubytku masy ograniczono do ok. 0,5 kg/mies.'));

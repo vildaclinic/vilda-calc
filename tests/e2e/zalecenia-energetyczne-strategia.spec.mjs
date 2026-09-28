@@ -55,28 +55,13 @@ function run(page, { age, months = 0, sex, w, h, click = null }) {
   }, { age, months, sex, w, h, click });
 }
 
-test('8-latka (97–99c): domyślna stabilizacja — karta i Droga w trybie utrzymania masy, spójne z narracją; klik „Redukcja" → −130 wszędzie', async ({ page }) => {
+// P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): otyłość 6–11 lat (także 97.–99. centyl) — domyślnie redukcja
+// (dieta lekka 0,5 kg/mies.); stabilizacja zostaje do wyboru przyciskiem i podaje kaloryczność jako górną granicę dnia.
+test('8-latka (97–99c): domyślna redukcja lekka −126 wszędzie; klik „Stabilizacja” → karta i Droga w trybie utrzymania masy z górną granicą, spójne z narracją', async ({ page }) => {
   test.setTimeout(150_000);
   await openAll(page);
-  const r = await run(page, { age: 8, sex: 'F', w: 40, h: 130 });
-  expect(r.active).toBe('stabilization');
-  expect(r.touched).toBe(false);
-  const kcal = Math.round(r.maint / 100) * 100;
-  expect(r.text).toContain(`tj. około ${kcal} kcal dziennie`);
-  expect(r.plan).toContain('energia utrzymania (stabilizacja masy ciała)');
-  expect(r.plan).toContain(`${kcal} kcal/dzień`);
-  expect(r.plan).toContain('Utrzymując obecną masę ciała osiągniesz górną granicę normy BMI dzięki dalszemu wzrastaniu');
-  expect(r.plan).toContain(`${String(r.stabMonths).replace('.', ',')} mies.`);
-  expect(r.plan).toContain('bez deficytu · utrzymanie masy ciała');
-  expect(r.plan).not.toContain('−126 kcal/dzień · ok.');
-  expect(r.journey).toContain('utrzymanie masy + wzrastanie');
-  expect(r.journey).toContain('Cel: utrzymanie masy ok. 40,0 kg');
-  expect(r.journey).not.toContain('Cel: −');
-  expect(r.journey).toContain(`${String(kcal).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} kcal/dzień`);
-  expect(r.pdf && r.pdf.available).toBe(false);
-
-  const red = await run(page, { age: 8, sex: 'F', w: 40, h: 130, click: 'reduction' });
-  expect(red.touched).toBe(true);
+  const red = await run(page, { age: 8, sex: 'F', w: 40, h: 130 });
+  expect(red.touched).toBe(false);
   expect(red.active).toBe('reduction');
   expect(red.diets).toEqual([['light', red.maint - 126, 126]]);
   expect(red.text).toContain('wynosi około 126 kcal');
@@ -89,6 +74,25 @@ test('8-latka (97–99c): domyślna stabilizacja — karta i Droga w trybie utrz
   expect(red.journey).toContain('(z uwzględnieniem wzrastania)');
   expect(red.journey).toContain('Cel: −8,4 kg');
   expect(red.journey).toContain('−126 kcal/d');
+
+  const r = await run(page, { age: 8, sex: 'F', w: 40, h: 130, click: 'stabilization' });
+  expect(r.active).toBe('stabilization');
+  expect(r.touched).toBe(true);
+  const kcal = Math.floor(r.maint / 50) * 50;
+  expect(r.text).toContain(`nie powinna przekraczać ${kcal} kcal dziennie`);
+  expect(r.text).toMatch(/Kontrola za 12 tygodni \(ok\. [^)]+\): masa ciała powinna pozostać na poziomie ok\. [\d,]+ kg/u);
+  expect(r.plan).toContain('górna granica dnia — stabilizacja masy ciała (nie cel do dobicia)');
+  expect(r.plan).toMatch(new RegExp(`≤\\s?${kcal}\\s?kcal/dzień`));
+  expect(r.plan).toContain('Utrzymując obecną masę ciała osiągniesz górną granicę normy BMI dzięki dalszemu wzrastaniu');
+  expect(r.plan).toContain(`${String(r.stabMonths).replace('.', ',')} mies.`);
+  expect(r.plan).toContain('bez deficytu · utrzymanie masy ciała');
+  expect(r.plan).not.toContain('−126 kcal/dzień · ok.');
+  expect(r.journey).toContain('utrzymanie masy + wzrastanie');
+  expect(r.journey).toContain('Cel: utrzymanie masy ok. 40,0 kg');
+  expect(r.journey).not.toContain('Cel: −');
+  expect(r.journey).toContain('górna granica dnia — stabilizacja masy ciała');
+  expect(r.journey).toMatch(new RegExp(`≤\\s?${String(kcal).replace(/\B(?=(\d{3})+(?!\d))/g, '\\s?')}\\s?kcal/dzień`));
+  expect(r.pdf && r.pdf.available).toBe(false);
 });
 
 test('18-latka: tempo wzrastania 0 → bez „Wzrastanie nadal trwa" i bez dopisku o wzrastaniu; domyślnie redukcja', async ({ page }) => {

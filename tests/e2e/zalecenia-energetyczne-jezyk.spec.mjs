@@ -81,12 +81,14 @@ test('J2: 18-latka — konsultacja bez rodziców i psychologa dziecięcego, bez 
 test('J3: stabilizacja 8-latki — cel raz, „bez dodatkowego deficytu", bez „rosła minimalnie", normy z podstawą w nawiasie', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
-  const r = await run(page, { age: 8, sex: 'F', w: 40, h: 130 });
+  // P-DIETA-STAB rata 1: 8-latka z otyłością (98 c) ma domyślnie redukcję — stabilizację wybiera przycisk strategii
+  const r = await run(page, { age: 8, sex: 'F', w: 40, h: 130, click: 'stabilization' });
   expect(r.active).toBe('stabilization');
   expect(count(r.text, 'utrzymanie obecnej masy ciała')).toBe(1);
   // ENERGY-REC-KROTKO2 (2026-09-13, decyzja właściciela): narracja bez wyjaśnień technicznych
   // — bez źródła korekty, PAL i powtórzonego celu; podstawę planu podaje karta planu.
-  expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu: podaż energii dziecka odpowiada zapotrzebowaniu przy obecnej masie ciała, tj. około');
+  // P-DIETA-STAB rata 1: liczba jako górna granica dnia
+  expect(r.text).toMatch(/W strategii stabilizacji nie planuje się dodatkowego deficytu: podaż energii dziecka nie powinna przekraczać \d+ kcal dziennie \(zapotrzebowanie przy obecnej masie ciała\) — to górna granica dnia, nie cel do dobicia\./u);
   expect(r.text).not.toContain('Hofsteenge');
   expect(r.text).not.toContain('REE');
   expect(r.text).not.toMatch(/przy PAL \d/u);

@@ -129,39 +129,43 @@ test('12–18 lat, narracja redukcyjna: kaloryczność jako górna granica dnia 
   expect(text).not.toContain('stabilizacji');
 });
 
-test('6–11 lat przy BMI < 99c: tylko lekka −126 kcal (0,5 kg/mies.), ostrzeżenie o tempie, domyślna strategia = stabilizacja bez deficytu', async ({ page }) => {
+// P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): otyłość 6–11 lat < 99c → domyślnie redukcja lekka (0,5 kg/mies.);
+// stabilizacja do wyboru przyciskiem, z kalorycznością jako górną granicą dnia i kontrolą po 12 tygodniach.
+test('6–11 lat, otyłość < 99c: tylko lekka −126 kcal (0,5 kg/mies.), ostrzeżenie o tempie, domyślna strategia = redukcja lekka; stabilizacja jako górna granica', async ({ page }) => {
   test.setTimeout(120_000);
   await openAll(page);
   const r = await fill(page, { age: 10, sex: 'M', w: 55, h: 145 });
   expect(r.state.stage).toBe('age_6_11');
   expect(r.state.diets).toEqual([['light', r.state.base - 126, 126]]);
   expect(r.dietOptions.length).toBe(1);
-  // ENERGY-REC-2: domyślna strategia 6–11 lat < 99c = stabilizacja → karta w trybie utrzymania masy
-  expect(r.plan).toContain('energia utrzymania (stabilizacja masy ciała)');
-  expect(r.plan).toContain(`${Math.round(r.state.base / 100) * 100} kcal/dzień`);
-  // jawny wybór redukcji (przycisk strategii = świadomy wybór) → dieta lekka −130 z ostrzeżeniem o tempie
-  const redPlan = await page.evaluate(() => {
-    const bt = document.querySelector('[data-diet-strategy-choice="reduction"]');
+  // domyślna strategia: redukcja — karta z dietą lekką i ostrzeżeniem, które strategię nazywa
+  expect(r.plan).toContain('Wiek 6–11 lat, otyłość poniżej 99. centyla');
+  expect(r.plan).toContain('domyślna strategia to redukcja (dieta lekka)');
+  expect(r.plan).toContain('tempo ograniczone do ok. 0,5 kg/mies.');
+  expect(r.plan).toContain('−126 kcal/dzień');
+  // jawny wybór stabilizacji (przycisk strategii) → karta w trybie utrzymania masy z górną granicą dnia
+  const g = Math.floor(r.state.base / 50) * 50;
+  const stabPlan = await page.evaluate(() => {
+    const bt = document.querySelector('[data-diet-strategy-choice="stabilization"]');
     if (bt) bt.click();
     window.update();
     return (document.getElementById('planResults')?.textContent || '').replace(/\s+/g, ' ').trim();
   });
-  expect(redPlan).toContain('Wiek 6–11 lat przy BMI poniżej 99. centyla');
-  expect(redPlan).toContain('tempo ograniczone do ok. 0,5 kg/mies.');
-  expect(redPlan).toContain('−126 kcal/dzień');
-  await page.evaluate(() => { const bt = document.querySelector('[data-diet-strategy-choice="stabilization"]'); if (bt) bt.click(); window.__vildaDietStrategyTouched = false; });
-  const text = await recommend(page, { strategy: null, diet: 'light' });
-  const kcal = Math.round(r.state.base / 100) * 100;
+  expect(stabPlan).toContain('górna granica dnia — stabilizacja masy ciała (nie cel do dobicia)');
+  expect(stabPlan).toContain(`${g} kcal/dzień`);
+  const text = await recommend(page, { strategy: 'stabilization', diet: 'light' });
   expect(text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
   // ENERGY-REC-KROTKO2: zdanie stabilizacji bez PAL, źródła i powtórzonego celu
-  expect(text).toContain(`tj. około ${kcal} kcal dziennie.`);
+  expect(text).toContain(`nie powinna przekraczać ${g} kcal dziennie`);
+  expect(text).toContain('Kontrola za 12 tygodni');
   expect(text).not.toMatch(/przy PAL \d/u);
   expect(text).not.toContain('Hofsteenge');
-  expect(text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie`);
+  expect(text).toContain(`Przy planie żywieniowym zakładającym około ${g} kcal dziennie`);
   expect(text).not.toContain('z korektą na otyłość');
   expect(text).not.toMatch(/Taki plan daje deficyt|wynosi około \d+ kcal, co przekłada/u);
-  // jawna redukcja: dieta lekka −130 kcal, 0,1 kg/tydz.
-  const red = await recommend(page, { strategy: 'reduction', diet: 'light' });
+  // redukcja (domyślna po wyczyszczeniu wyboru): dieta lekka −126 kcal, 0,1 kg/tydz.
+  await page.evaluate(() => { window.__vildaDietStrategyTouched = false; });
+  const red = await recommend(page, { strategy: null, diet: 'light' });
   expect(red).toContain('wynosi około 126 kcal');
   expect(red).not.toContain('stabilizacji nie stosuje się');
 });
@@ -175,7 +179,8 @@ test('2–5 lat (tryb profesjonalny): karta stabilizacji z energią utrzymania; 
   expect(r.planVisible).toBe(true);
   expect(r.plan).toContain('Stabilizacja masy ciała');
   expect(r.plan).toContain('W wieku 2–5 lat nie zaleca się deficytu energetycznego');
-  expect(r.plan).toContain(`${Math.round(r.state.base / 100) * 100} kcal/dzień`);
+  // P-DIETA-STAB rata 1: górna granica dnia (w dół do 50 kcal)
+  expect(r.plan).toContain(`≤ ${Math.floor(r.state.base / 50) * 50} kcal/dzień (górna granica dnia, nie cel do dobicia)`);
   const text = await recommend(page, { strategy: 'reduction', diet: 'light' });
   expect(text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
   expect(text).not.toMatch(/potrzebę redukcji|Deficyt kaloryczny/u);

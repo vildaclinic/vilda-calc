@@ -5892,12 +5892,17 @@ CDC 2000 ok. 133 % 95. centyla (AAP 2023: otyłość ciężka klasy 2; obliczeni
   stabilizacja masy ciała (nie cel do dobicia)”, także karta 2–5 lat i „Brak diety”; ostrzeżenie 6–11 lat rozróżnia otyłość
   < 99. centyla (domyślna redukcja lekka) od nadwagi (domyślna stabilizacja); opis diety umiarkowanej u dziecka 6–11 lat bez
   „domyślnej u nastolatka”.
-- `vilda_diet_recommendations.js` (`?v=63`): zdanie stabilizacji „podaż energii (dziecka) nie powinna przekraczać X kcal dziennie
+- `vilda_diet_recommendations.js` (`?v=63`): zdanie stabilizacji „W strategii stabilizacji nie planuje się dodatkowego deficytu: podaż energii (dziecka) nie powinna przekraczać X kcal dziennie
   (zapotrzebowanie przy obecnej masie ciała) — to górna granica dnia, nie cel do dobicia”; przy strategii stabilizacji zdanie
   kontroli („Kontrola za 12 tygodni (ok. …): masa ciała powinna pozostać na poziomie ok. … kg (dzisiejsza masa i przyrost
   wynikający z samego wzrastania). Jeśli masa będzie wyższa niż … kg … należy odjąć 100–200 kcal (do … kcal dziennie).”)
-  i `dane.kontrola`; `dane.energia.podazZaokrKcal` = górna granica, `gornaGranica: true` także przy stabilizacji; zapasowa reguła
-  `dietDefaultStrategyForState` jak silnik.
+  i `dane.kontrola`; `dane.energia.podazZaokrKcal` = górna granica, `gornaGranica: true` także przy stabilizacji; zdanie o normach
+  żywieniowych liczone od tej samej górnej granicy (dotąd od zapotrzebowania zaokrąglonego do 100 — dwie różne liczby w jednym
+  dokumencie); zapasowa reguła `dietDefaultStrategyForState` jak silnik.
+- Skutki w „Raporcie po wizycie” (bez zmiany kodu raportu): karta „Zapotrzebowanie energetyczne” przy stabilizacji dziecka
+  pokazuje „≤ X kcal/d”; u dziecka 6–11 lat z otyłością (domyślnie redukcja) nagłówek podaje „Pierwszy krok to ok. … kg” zamiast
+  „Na tym etapie celem jest utrzymanie obecnej masy ciała” (rata G2) — także przy niskim wzroście bez alarmu tempa wzrastania
+  (alarm tempa z raty G1 nadal wymusza stabilizację).
 - `vilda_raport_plan.js` (`?v=19`): sekcja kontroli przy stabilizacji — kafel „masa przy stabilizacji / dziś X kg + wzrastanie”,
   próg „> X kg” (przy redukcji bez zmian: „≥”).
 - `vilda_bmi_journey.js` (`?v=25`): „Droga do normy” w trybie stabilizacji — „≤ X kcal/dzień, górna granica dnia —
@@ -5927,10 +5932,18 @@ w planie PDF. Kategoria otyłości (i przez nią PAL i strategia) zależy od wyb
 **Zastępuje** decyzję „PAL 1,6 u dziecka 4–9 lat z otyłością” (P-PAL rata 2, 2026-09-24) i sufit 0,5 / 1 / 1,5 kg/mies. dla
 6–11 lat ≥ 99. centyla (ENERGY-CHILD-MID1); wpisy zostają jako historia.
 
+**Testy.** Nowy `tests/unit/p-dieta-stab-rata1.test.mjs` (przypadek zgłoszenia i pięć grup wieku na prawdziwym silniku, sekcja
+kontroli planu PDF). Zaktualizowane oczekiwania (skutki decyzji 1–4, bez zmniejszania liczby asercji): unit
+`energy-dziecko-otylosc`, `rata-n2-nadwaga-sufit`, `rata-w-kontrola-wzrastanie` (reguła 12 tygodni pokazana na otyłości < 99. centyla,
+40 kg), `zalecenia-energetyczne-strategia`; e2e `dieta-dziecko-otylosc`, `zalecenia-energetyczne-strategia`, `-krytyczne`, `-jezyk`,
+`dane-zalecen-energetycznych`, `diet-plan-logic`, `dieta-rata-w`, `dieta-rata-x`, `dieta-tempo-rata-g1`, `dieta-tempo-blokada-rata-g3`,
+`pal-jedna-tabela`, `raport-wizyta-rata-q`, `raport-wizyta-rata-r`.
+
 **Walidacja.** `npm test` (unit, lint, składnia, PRO) i `npm run test:e2e` — wyniki w PR.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna po przeglądzie PR; ewentualny margines tolerancji progu kontroli
-stabilizacji; wybór siatki odniesienia dla kategorii otyłości; scalenie i wdrożenie.
+stabilizacji; czy dziecko 6–11 lat z otyłością i niskim wzrostem (bez alarmu tempa) ma dostawać domyślnie redukcję; wybór siatki
+odniesienia dla kategorii otyłości; scalenie i wdrożenie.
 
 ## Przełączanie paneli powłoki (Start → DocPro) po wczytaniu pacjenta: pusty albo częściowy formularz i karta porównania (P-POWLOKA-PANELE, SW 1.1.88, 2026-09-28)
 
