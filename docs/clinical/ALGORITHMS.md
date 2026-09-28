@@ -5863,9 +5863,25 @@ dwie wizyty, wiersz ręczny, punkt GH).** Identycznie na `audyt` i na gałęzi r
   wskrzeszeniem wyczyszczonych danych przez autozapis; (1) `Gp_a` — wymuszony zapis sesji głównej na końcu
   `applyLoadedData` i `restoreLoadedState`, przed pingiem `vilda:sharedLoadSeq` (żeby panele w tle odtwarzały już nową
   sesję), pomijany przy odtwarzaniu sesji (dane pochodzą z niej samej), z ponowieniem po końcu okna blokady, gdyby ktoś je
-  jeszcze uzbroił; (2) zdarzenie `input`/`change` w oknie zawieszenia nadal planuje zapis (dotąd `Pe` od razu odmawiało),
-  a timer (`Gp_t`) ponawia zapis co 300 ms zamiast go porzucić (do 20 razy); (3) `pagehide` zapisuje z `force`, jak
-  `vildaPersistFlushNow`; (4) `vildaSession.saveNow({force:true})` dla powłoki.
+  jeszcze uzbroił; (2) planowanie zapisu z `input`/`change` (`Pe`) pozostaje **identyczne jak w `audyt`**: odmowa w oknie
+  zawieszenia, timer porzuca zapis (pierwsza wersja tej naprawy ponawiała taki zapis po zdjęciu okna — cofnięte po czerwonym
+  CI, patrz niżej); (3) `pagehide` zapisuje z `force`, jak `vildaPersistFlushNow`; (4) `vildaSession.saveNow({force:true})`
+  dla powłoki; (5) strażnicy zapisu sesji głównej w `saveMainSessionNow`: (a) `Gp_k` — **żaden zapis, także wymuszony, nie
+  nadpisuje istniejącej sesji, zanim ta strona nie spróbowała jej odtworzyć** (latka `Ke` z `restoreMainSessionIfAny`), bo do
+  tej chwili formularz może być częściowy; (b) `Gp_r` — wymuszony zapis pomijany w trakcie odtwarzania stanu
+  (`__vildaPersistRestoring`, odtwarzanie sesji w toku); (c) wymuszony zapis przy pustym formularzu nie woła
+  `clearMainSession` (zwykły zapis pustego formularza czyści sesję jak dotąd, bo to skutek „Wyczyść”).
+
+  **Pierwszy przebieg CI tej naprawy (`E2E odłamek 3/3`) był czerwony — zmierzona przyczyna.** Trzy testy F5 po wczytaniu
+  pacjenta (`tozsamosc-po-wczytaniu`, `wczytany-pacjent-odswiezenie`) kończyły się pustym nazwiskiem i odblokowaną
+  tożsamością; lokalnie odtworzone przy 4 workerach (2/15 czerwone), z hakami na `sessionStorage` i sondą formularza co
+  20 ms. Przebieg po F5: odtworzenie wspólnego stanu (`vildaPersistRestoreAll`, ok. DOMContentLoaded) wypełnia pomiary,
+  datę i `lastLoadedData`, **ale nie nazwisko**, i odpala `input`/`change`; odtworzenie sesji głównej
+  (`restoreMainSessionIfAny`) rusza dopiero po `vildaAppOnReady` (podwójny rAF), 0,4–1,2 s później. Ponawiany timer
+  pierwszej wersji zapisywał częściowy formularz, gdy tylko minęło okno zawieszenia — jeśli zdążył przed odtworzeniem sesji,
+  odtworzenie czytało już sesję bez nazwiska. Na `audyt` ten sam przebieg był bezpieczny, bo `Pe` porzucało zapis z okna
+  zawieszenia. Stąd cofnięcie ponawiania i strażnik `Gp_k`, który zamyka tę samą lukę także dla zapisów wymuszonych
+  (`pagehide`, powłoka) wykonanych, zanim strona odtworzyła sesję.
 - `vilda_shell.js` (`Gp_*`): przed przełączeniem panel źródłowy zapisuje wspólny stan i sesję główną z `force` (`Gp_f`);
   panel docelowy — jeśli sesja główna zmieniła się od jego ostatniego odtworzenia (odcisk `Gp_s`: długość i skrót JSON
   sesji bez pola `timestampISO`, zapamiętywany przy `load` panelu i po każdym pushu) — odtwarza wspólny stan
@@ -5882,10 +5898,13 @@ na obu panelach dokładnie wtedy, gdy Start ją pokazuje. Skutek uboczny do świ
 sesja główna się zmieniła, uruchamia w panelu docelowym pełne odtworzenie (jak przy F5 tej strony).
 
 **Strażnicy.** `tests/unit/sesja-glowna-po-wczytaniu.test.mjs` — prawdziwy moduł na atrapie okna z atrapą adaptera:
-`saveNow({force:true})` zapisuje w oknie zawieszenia (bez force nadal nie), zapis z `input` w oknie zawieszenia jest ponawiany
-i wykonuje się dokładnie raz, adapter odmawiający w oknie po czyszczeniu i zapis po jego końcu, `pagehide` z force; kontrola
-negatywna ze starym timerem (zapis przepada); strażnicy źródła obu modułów (kolejność zapisu przed pingiem, odcisk bez
-`timestampISO`, kolejność odtworzenia w panelu docelowym). `tests/e2e/powloka-przelaczanie-paneli.spec.mjs` — prawdziwa
+`saveNow({force:true})` zapisuje w oknie zawieszenia (bez force nadal nie), zapis z `input` w oknie zawieszenia przepada
+jak dotąd (poza oknem działa), adapter odmawiający w oknie po czyszczeniu i zapis po jego końcu, przed własną próbą odtworzenia
+sesji zapis (także z force) jest odmawiany, a po niej działa, `pagehide` z force, zapis z force przy pustym formularzu nie
+kasuje sesji (a zwykły nadal tak), zapis z force w trakcie `__vildaPersistRestoring` jest pomijany; kontrola negatywna bez
+`Gp_k` (wymuszony zapis nadpisuje sesję formularzem bez nazwiska przed jej odtworzeniem — zgłoszony przebieg z CI);
+strażnicy źródła obu modułów (kolejność zapisu przed pingiem, `Pe` jak w `audyt`, odcisk bez `timestampISO`, kolejność
+odtworzenia w panelu docelowym). `tests/e2e/powloka-przelaczanie-paneli.spec.mjs` — prawdziwa
 powłoka: (1) „Odtwórz zapis” i natychmiastowe przejście na DocPro tworzony dopiero teraz — komplet z datą, podsumowaniem i
 `lastLoadedData`, bez karty porównania; (2) DocPro otwarty wcześniej — po szybkim przełączeniu komplet z datą i bazą, nie tylko
 lustro; (3) „Nowy pomiar” — DocPro pokazuje to samo co Start (data, wiek, płeć, puste masa i wzrost, karta porównania).
