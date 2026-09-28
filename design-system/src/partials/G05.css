@@ -679,17 +679,22 @@ tbody tr:hover{
 
 /* ===================== Wysoki kontrast (style.css 5157-5166, 5193-5195) ===================== */
 /* Listy selektorów ograniczone do elementów tej grupy (pełne listy w źródle obejmują header, ._glass, .card, .plan-card, fieldset, #timesCard, .info-card, .source-note, karty ustawień); deklaracje bez zmian. */
-body.high-contrast-level-1.liquid-ios26 .result-card,body.high-contrast-level-2.liquid-ios26 .result-card,body.high-contrast-level-3.liquid-ios26 .result-card,body.high-contrast-level-1.liquid-ios26 .data-card,body.high-contrast-level-2.liquid-ios26 .data-card,body.high-contrast-level-3.liquid-ios26 .data-card,body.high-contrast-level-1.liquid-ios26 #intakeCard,body.high-contrast-level-2.liquid-ios26 #intakeCard,body.high-contrast-level-3.liquid-ios26 #intakeCard{
+body.high-contrast-level-1.liquid-ios26 .result-card,
+body.high-contrast-level-2.liquid-ios26 .result-card,
+body.high-contrast-level-3.liquid-ios26 .result-card,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .data-card,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #intakeCard{
   background:var(--hc-surface)!important;
   border:var(--hc-card-border-width) solid var(--hc-border)!important;
   box-shadow:var(--hc-shadow)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important}
-body.high-contrast-level-1.liquid-ios26 .result-box,body.high-contrast-level-2.liquid-ios26 .result-box,body.high-contrast-level-3.liquid-ios26 .result-box{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .result-box{
   background:var(--hc-result-bg)!important;
   color:var(--hc-text)!important;
   box-shadow:0 6px 18px #00000017!important}
-body.high-contrast-level-1.liquid-ios26 .result-number small,body.high-contrast-level-2.liquid-ios26 .result-number small,body.high-contrast-level-3.liquid-ios26 .result-number small,body.high-contrast-level-1.liquid-ios26 small,body.high-contrast-level-2.liquid-ios26 small,body.high-contrast-level-3.liquid-ios26 small{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .result-number small,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 small{
   color:var(--hc-muted)!important;
   opacity:1!important}
 

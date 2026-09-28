@@ -845,14 +845,21 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
   letter-spacing:-.015em}
 
 /* ===== Wysoki kontrast — AuthSheet (vilda_auth_ui.css 1452-1459, 1468-1469; listy selektorów przycięte do tej rodziny) ===== */
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-overlay,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-auth-overlay,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-auth-overlay,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost{
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-overlay,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sheet,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost,
+body.liquid-ios26.high-contrast-level-2 .vilda-auth-overlay,
+body.liquid-ios26.high-contrast-level-3 .vilda-auth-overlay{
   background:var(--hc-surface)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important;
   box-shadow:var(--hc-shadow)!important}
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost{
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost{
   border:var(--hc-card-border-width) solid var(--hc-border)!important}
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet-title,body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet-body,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-1 .vilda-logout-overlay,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet-title,body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet-body,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-logout-overlay,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet-title,body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet-body,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-logout-overlay{
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sheet-title,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sheet-body,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-logout-overlay{
   color:var(--hc-text)!important}
 
 /* ===== Wysoki kontrast — fokus przycisków (style.css 5196-5198; lista selektorów przycięta do button) ===== */

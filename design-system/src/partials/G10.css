@@ -644,7 +644,10 @@ header{
 }
 
 /* ===== Wysoki kontrast — header (style.css 5157-5162; lista selektorów przycięta do header i header._glass) ===== */
-body.high-contrast-level-1.liquid-ios26 header,body.high-contrast-level-2.liquid-ios26 header,body.high-contrast-level-3.liquid-ios26 header,body.high-contrast-level-1.liquid-ios26 header._glass,body.high-contrast-level-2.liquid-ios26 header._glass,body.high-contrast-level-3.liquid-ios26 header._glass{
+body.high-contrast-level-1.liquid-ios26 header,
+body.high-contrast-level-2.liquid-ios26 header,
+body.high-contrast-level-3.liquid-ios26 header,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 header._glass{
   background:var(--hc-surface)!important;
   border:var(--hc-card-border-width) solid var(--hc-border)!important;
   box-shadow:var(--hc-shadow)!important;

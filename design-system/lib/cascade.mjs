@@ -1,7 +1,7 @@
 // Kaskada dla własności niestandardowych: wylicza efektywną wartość tokenu w danym motywie
 // (klasy body ustawiane przez ios26-ui.js: liquid-ios26, glass-level-N, high-contrast-level-N,
 // dark-bg-level-N) przy desktopowym oknie 1200 px i jasnym schemacie systemowym.
-import { splitTopLevel, specificity } from './css.mjs';
+import { expandContrastLevels, splitTopLevel, specificity } from './css.mjs';
 
 export const THEMES = {
   light: { glass: 0, hc: 0, dark: 0 },
@@ -66,7 +66,8 @@ export function resolveCustomProperty(name, rules, theme) {
     const decls = rule.declarations.filter((d) => d.prop === prop);
     if (!decls.length) continue;
     if (!mediaApplies(rule.media)) continue;
-    const parts = splitTopLevel(rule.selector, ',').map((p) => p.trim()).filter(Boolean);
+    // P-STYLE rata 3: część z :is(.high-contrast-level-1, -2, -3) to trzy części po jednej na poziom
+    const parts = splitTopLevel(rule.selector, ',').map((p) => p.trim()).filter(Boolean).flatMap((p) => expandContrastLevels(p));
     const applicable = parts.filter((p) => partApplies(p, theme));
     if (!applicable.length) continue;
     const spec = Math.max(...applicable.map((p) => specificity(p)));

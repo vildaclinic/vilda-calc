@@ -938,13 +938,28 @@ html[data-clcr-workflow-ui="1"] .clcr-fullreport-button[hidden] {
 /* ==========================================================================
    Wysoki kontrast — style.css
    ========================================================================== */
-body.high-contrast-level-1.liquid-ios26 header,body.high-contrast-level-2.liquid-ios26 header,body.high-contrast-level-3.liquid-ios26 header,body.high-contrast-level-1.liquid-ios26 header._glass,body.high-contrast-level-2.liquid-ios26 header._glass,body.high-contrast-level-3.liquid-ios26 header._glass,body.high-contrast-level-1.liquid-ios26 ._glass,body.high-contrast-level-2.liquid-ios26 ._glass,body.high-contrast-level-3.liquid-ios26 ._glass,body.high-contrast-level-1.liquid-ios26 .card,body.high-contrast-level-2.liquid-ios26 .card,body.high-contrast-level-3.liquid-ios26 .card,body.high-contrast-level-1.liquid-ios26 .plan-card,body.high-contrast-level-2.liquid-ios26 .plan-card,body.high-contrast-level-3.liquid-ios26 .plan-card,body.high-contrast-level-1.liquid-ios26 .result-card,body.high-contrast-level-2.liquid-ios26 .result-card,body.high-contrast-level-3.liquid-ios26 .result-card,body.high-contrast-level-1.liquid-ios26 .data-card,body.high-contrast-level-2.liquid-ios26 .data-card,body.high-contrast-level-3.liquid-ios26 .data-card,body.high-contrast-level-1.liquid-ios26 fieldset,body.high-contrast-level-2.liquid-ios26 fieldset,body.high-contrast-level-3.liquid-ios26 fieldset,body.high-contrast-level-1.liquid-ios26 #timesCard,body.high-contrast-level-2.liquid-ios26 #timesCard,body.high-contrast-level-3.liquid-ios26 #timesCard,body.high-contrast-level-1.liquid-ios26 #intakeCard,body.high-contrast-level-2.liquid-ios26 #intakeCard,body.high-contrast-level-3.liquid-ios26 #intakeCard,body.page-settings.high-contrast-level-1 .settings-control-card,body.page-settings.high-contrast-level-2 .settings-control-card,body.page-settings.high-contrast-level-3 .settings-control-card,body.page-settings.high-contrast-level-1 .setting-item,body.page-settings.high-contrast-level-2 .setting-item,body.page-settings.high-contrast-level-3 .setting-item,body.page-settings.high-contrast-level-1 .tech-chart-setting-row,body.page-settings.high-contrast-level-2 .tech-chart-setting-row,body.page-settings.high-contrast-level-3 .tech-chart-setting-row{
+body.high-contrast-level-1.liquid-ios26 header,
+body.high-contrast-level-2.liquid-ios26 header,
+body.high-contrast-level-3.liquid-ios26 header,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 header._glass,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 ._glass,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .card,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .plan-card,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .result-card,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .data-card,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 fieldset,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #timesCard,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #intakeCard,
+body.page-settings:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .settings-control-card,
+body.page-settings:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .setting-item,
+body.page-settings:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .tech-chart-setting-row{
   background:var(--hc-surface)!important;
   border:var(--hc-card-border-width) solid var(--hc-border)!important;
   box-shadow:var(--hc-shadow)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important}
-body.high-contrast-level-1.liquid-ios26 .result-box,body.high-contrast-level-2.liquid-ios26 .result-box,body.high-contrast-level-3.liquid-ios26 .result-box,body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.liquid-ios26 .info-card,body.high-contrast-level-3.liquid-ios26 .info-card{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .result-box,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .info-card{
   background:var(--hc-result-bg)!important;
   color:var(--hc-text)!important;
   box-shadow:0 6px 18px #00000017!important}

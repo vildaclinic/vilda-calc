@@ -794,47 +794,57 @@ select.vilda-auth-input{
 }
 
 /* ===== Wysoki kontrast — style.css 5157-5234 (selektory body.page-settings.high-contrast-level-N zapisane jako body.high-contrast-level-N.page-settings — ten sam selektor złożony; z list selektorów 5157 i 5193 zostawiono tylko elementy tej grupy) ===== */
-body.high-contrast-level-1.page-settings .settings-control-card,body.high-contrast-level-2.page-settings .settings-control-card,body.high-contrast-level-3.page-settings .settings-control-card,body.high-contrast-level-1.page-settings .setting-item,body.high-contrast-level-2.page-settings .setting-item,body.high-contrast-level-3.page-settings .setting-item{
+body.high-contrast-level-1.page-settings .settings-control-card,
+body.high-contrast-level-2.page-settings .settings-control-card,
+body.high-contrast-level-3.page-settings .settings-control-card,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .setting-item{
   background:var(--hc-surface)!important;
   border:var(--hc-card-border-width) solid var(--hc-border)!important;
   box-shadow:var(--hc-shadow)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important}
-body.high-contrast-level-1.page-settings .settings-control-desc,body.high-contrast-level-2.page-settings .settings-control-desc,body.high-contrast-level-3.page-settings .settings-control-desc,body.high-contrast-level-1.page-settings .settings-section-note,body.high-contrast-level-2.page-settings .settings-section-note,body.high-contrast-level-3.page-settings .settings-section-note,body.high-contrast-level-1.page-settings .settings-inline-note,body.high-contrast-level-2.page-settings .settings-inline-note,body.high-contrast-level-3.page-settings .settings-inline-note,body.high-contrast-level-1.page-settings .settings-control-hint,body.high-contrast-level-2.page-settings .settings-control-hint,body.high-contrast-level-3.page-settings .settings-control-hint{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-control-desc,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-section-note,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-inline-note,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-control-hint{
   color:var(--hc-muted)!important;
   opacity:1!important}
-body.high-contrast-level-1.page-settings .settings-accordion,body.high-contrast-level-2.page-settings .settings-accordion,body.high-contrast-level-3.page-settings .settings-accordion{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion{
   background:var(--hc-surface)!important;
   border:var(--hc-card-border-width) solid var(--hc-border)!important;
   box-shadow:var(--hc-shadow)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important}
-body.high-contrast-level-1.page-settings .settings-accordion>summary,body.high-contrast-level-2.page-settings .settings-accordion>summary,body.high-contrast-level-3.page-settings .settings-accordion>summary{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion>summary{
   background:var(--hc-module-btn-bg)!important;
   color:var(--hc-text)!important}
-body.high-contrast-level-1.page-settings .settings-accordion>summary:hover,body.high-contrast-level-2.page-settings .settings-accordion>summary:hover,body.high-contrast-level-3.page-settings .settings-accordion>summary:hover{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion>summary:hover{
   background:var(--hc-module-btn-hover-bg)!important}
-body.high-contrast-level-1.page-settings .settings-accordion[open],body.high-contrast-level-2.page-settings .settings-accordion[open],body.high-contrast-level-3.page-settings .settings-accordion[open]{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion[open]{
   border-color:var(--hc-module-btn-active-border) !important;
   box-shadow:0 0 0 1px var(--tint-teal),var(--hc-shadow) !important;
 }
-body.high-contrast-level-1.page-settings .settings-accordion[open]>summary,body.high-contrast-level-2.page-settings .settings-accordion[open]>summary,body.high-contrast-level-3.page-settings .settings-accordion[open]>summary{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion[open]>summary{
   background:var(--hc-module-btn-active-bg) !important;
   box-shadow:inset 0 -1px var(--tint-teal-active) !important;
 }
-body.high-contrast-level-1.page-settings .settings-accordion-title,body.high-contrast-level-2.page-settings .settings-accordion-title,body.high-contrast-level-3.page-settings .settings-accordion-title,body.high-contrast-level-1.page-settings .settings-accordion-index,body.high-contrast-level-2.page-settings .settings-accordion-index,body.high-contrast-level-3.page-settings .settings-accordion-index,body.high-contrast-level-1.page-settings .settings-chevron,body.high-contrast-level-2.page-settings .settings-chevron,body.high-contrast-level-3.page-settings .settings-chevron{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion-title,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion-index,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-chevron{
   color:var(--hc-text)!important}
-body.high-contrast-level-1.page-settings .settings-accordion-text,body.high-contrast-level-2.page-settings .settings-accordion-text,body.high-contrast-level-3.page-settings .settings-accordion-text{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion-text{
   color:var(--hc-muted)!important;
   opacity:1!important}
-body.high-contrast-level-1.page-settings .settings-accordion-index,body.high-contrast-level-2.page-settings .settings-accordion-index,body.high-contrast-level-3.page-settings .settings-accordion-index,body.high-contrast-level-1.page-settings .settings-mini-chip,body.high-contrast-level-2.page-settings .settings-mini-chip,body.high-contrast-level-3.page-settings .settings-mini-chip,body.high-contrast-level-1.page-settings .settings-chevron,body.high-contrast-level-2.page-settings .settings-chevron,body.high-contrast-level-3.page-settings .settings-chevron{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion-index,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-mini-chip,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-chevron{
   background:var(--hc-button-bg)!important;
   border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
   box-shadow:0 6px 16px #0000000f!important}
-body.high-contrast-level-1.page-settings .settings-accordion[open] .settings-chevron,body.high-contrast-level-2.page-settings .settings-accordion[open] .settings-chevron,body.high-contrast-level-3.page-settings .settings-accordion[open] .settings-chevron{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-accordion[open] .settings-chevron{
   background:var(--hc-module-btn-active-bg) !important;
   border-color:var(--hc-module-btn-active-border) !important;
   box-shadow:0 0 0 1px var(--tint-teal),0 6px 14px var(--tint-teal) !important;
 }
-body.high-contrast-level-1.page-settings .settings-panel-inner,body.high-contrast-level-2.page-settings .settings-panel-inner,body.high-contrast-level-3.page-settings .settings-panel-inner{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).page-settings .settings-panel-inner{
   border-top-color:#07363e24!important}

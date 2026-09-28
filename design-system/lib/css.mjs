@@ -321,10 +321,25 @@ function splitCompound(compound) {
   return simples;
 }
 
+/** Dzieli selektor na złożenia i kombinatory po białych znakach POZA nawiasami (:is(a, b) to jedno złożenie). */
+function selectorTokens(s) {
+  const tokens = [];
+  let cur = '';
+  let depth = 0;
+  for (const c of s) {
+    if (c === '(' || c === '[') depth++;
+    if (c === ')' || c === ']') depth = Math.max(0, depth - 1);
+    if (depth === 0 && /\s/.test(c)) { if (cur) tokens.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  if (cur) tokens.push(cur);
+  return tokens;
+}
+
 /** Postać kanoniczna jednego selektora (bez listy): w każdym złożeniu proste selektory posortowane. */
 export function canonicalSelector(part) {
   const s = normalizeWhitespace(part).replace(/\s*([>+~])\s*/g, ' $1 ');
-  const tokens = s.split(/\s+/).filter(Boolean);
+  const tokens = selectorTokens(s);
   const out = [];
   for (const tok of tokens) {
     if (tok === '>' || tok === '+' || tok === '~') { out.push(tok); continue; }
@@ -336,8 +351,19 @@ export function canonicalSelector(part) {
   return out.join(' ');
 }
 
+// P-STYLE rata 3: reguły wysokiego kontrastu mają jeden selektor z :is(.high-contrast-level-1, .high-contrast-level-2,
+// .high-contrast-level-3) zamiast trzech części na poziom; do porównań lista jest rozwijana do trzech części, więc
+// partial zapisany w dowolnej z obu postaci pasuje do źródła w dowolnej z nich.
+const HC_IS = /:is\(\s*\.high-contrast-level-1\s*,\s*\.high-contrast-level-2\s*,\s*\.high-contrast-level-3\s*\)/g;
+
+export function expandContrastLevels(part) {
+  if (!HC_IS.test(part)) { HC_IS.lastIndex = 0; return [part]; }
+  HC_IS.lastIndex = 0;
+  return ['1', '2', '3'].map((lv) => part.replace(HC_IS, `.high-contrast-level-${lv}`));
+}
+
 export function canonicalSelectorList(selector) {
-  return splitTopLevel(selector, ',').map((p) => canonicalSelector(p)).filter(Boolean);
+  return splitTopLevel(selector, ',').flatMap((p) => expandContrastLevels(p)).map((p) => canonicalSelector(p)).filter(Boolean);
 }
 
 /** Swoistość jednego selektora jako liczba (ids*10000 + klasy*100 + elementy). */
@@ -346,7 +372,7 @@ export function specificity(part) {
   let classes = 0;
   let elements = 0;
   const s = part.replace(/\s*([>+~])\s*/g, ' ').trim();
-  for (const tok of s.split(/\s+/).filter(Boolean)) {
+  for (const tok of selectorTokens(s)) {
     for (const simple of splitCompound(tok)) {
       if (simple.startsWith('#')) ids++;
       else if (simple.startsWith('.') || simple.startsWith('[')) classes++;

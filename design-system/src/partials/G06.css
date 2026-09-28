@@ -1020,7 +1020,11 @@ body.page-cukrzyca.liquid-ios26 .diab-film-frame {
 
 /* ===================== Wysoki kontrast ===================== */
 /* style.css 5258-5264 — liczniki i odznaki instrukcji */
-body.high-contrast-level-1.liquid-ios26 .guide-inline-count,body.high-contrast-level-2.liquid-ios26 .guide-inline-count,body.high-contrast-level-3.liquid-ios26 .guide-inline-count,body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+body.high-contrast-level-1.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-2.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-3.liquid-ios26 .guide-inline-count,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge{
   background:var(--hc-button-bg)!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
@@ -1028,33 +1032,48 @@ body.high-contrast-level-1.liquid-ios26 .guide-inline-count,body.high-contrast-l
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
 /* style.css 5276-5278 */
-body.high-contrast-level-1.liquid-ios26 .guide-lead,body.high-contrast-level-2.liquid-ios26 .guide-lead,body.high-contrast-level-3.liquid-ios26 .guide-lead,body.high-contrast-level-1.liquid-ios26 .guide-tile-copy,body.high-contrast-level-2.liquid-ios26 .guide-tile-copy,body.high-contrast-level-3.liquid-ios26 .guide-tile-copy,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+body.high-contrast-level-1.liquid-ios26 .guide-lead,
+body.high-contrast-level-2.liquid-ios26 .guide-lead,
+body.high-contrast-level-3.liquid-ios26 .guide-lead,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-copy,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge{
   color:var(--hc-muted)!important;
   opacity:1!important}
 /* style.css 5279-5283 — indeks akordeonu instrukcji */
-body.high-contrast-level-1.liquid-ios26 .guide-tile-icon,body.high-contrast-level-2.liquid-ios26 .guide-tile-icon,body.high-contrast-level-3.liquid-ios26 .guide-tile-icon,body.high-contrast-level-1.liquid-ios26 .guide-accordion-index,body.high-contrast-level-2.liquid-ios26 .guide-accordion-index,body.high-contrast-level-3.liquid-ios26 .guide-accordion-index{
+body.high-contrast-level-1.liquid-ios26 .guide-tile-icon,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-icon,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-icon,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-accordion-index{
   background:#ffffffdb!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   box-shadow:0 4px 12px #0000000f!important}
 /* style.css 5284-5285 */
-body.high-contrast-level-1.liquid-ios26 .guide-tile-footer,body.high-contrast-level-2.liquid-ios26 .guide-tile-footer,body.high-contrast-level-3.liquid-ios26 .guide-tile-footer,body.high-contrast-level-1.liquid-ios26 .guide-inline-count,body.high-contrast-level-2.liquid-ios26 .guide-inline-count,body.high-contrast-level-3.liquid-ios26 .guide-inline-count,body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count{
+body.high-contrast-level-1.liquid-ios26 .guide-tile-footer,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-footer,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-footer,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-inline-count,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count{
   color:var(--hc-text)!important}
 /* style.css 5289-5299 */
 body.high-contrast-level-1.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-user{
   background:#00b0a61f!important;
   border-color:#00838d38!important;
   color:#0b5e65!important}
-body.high-contrast-level-1.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-doctor{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge-doctor{
   background:#9900ff1a!important;
   border-color:#7b2cbf38!important;
   color:#5f3388!important}
-body.high-contrast-level-1.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-shared{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge-shared{
   background:var(--tint-teal) !important;
   border-color:#07363e2e !important;
 }
 /* style.css 5321-5327 — odznaki „O aplikacji” */
-body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,body.about-page.high-contrast-level-1.liquid-ios26 .about-chip,body.about-page.high-contrast-level-2.liquid-ios26 .about-chip,body.about-page.high-contrast-level-3.liquid-ios26 .about-chip,body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,body.about-page.high-contrast-level-3.liquid-ios26 .inline-label{
+body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-chip,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .inline-label{
   background:var(--hc-button-bg)!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
@@ -1066,13 +1085,12 @@ body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li:before,body.ab
   background:linear-gradient(135deg,#00838de6,#14b8a6e0)!important;
   color:#fff!important;
   box-shadow:0 10px 20px #00838d2e!important}
-/* przelicznik-jednostek.css 4547-4555, 4625-4628 */
+/* przelicznik-jednostek.css 4547-4555,
+4625-4628 */
 body.liquid-ios26.high-contrast-level-1 .lab-step-label,
 body.liquid-ios26.high-contrast-level-2 .lab-step-label,
 body.liquid-ios26.high-contrast-level-3 .lab-step-label,
-body.liquid-ios26.high-contrast-level-1 .lab-result-title,
-body.liquid-ios26.high-contrast-level-2 .lab-result-title,
-body.liquid-ios26.high-contrast-level-3 .lab-result-title {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .lab-result-title {
   color: var(--hc-muted) !important;
 }
 body.liquid-ios26.high-contrast-level-2 .lab-step-num,
