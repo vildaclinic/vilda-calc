@@ -220,7 +220,8 @@ describe('rata 5: masa i BMI — nakładka masa↔BMI działa na oknach fazy', (
     expect(html).toContain('↳ wcześniej 12 lat 4 mies. → 14 lat 3 mies.: BMI rośnie szybciej niż wzrastanie — do obserwacji (81c → 88c, ΔSDS +0,30)');
     // opis pacjenta: zdanie o BMI z fazy i z wcześniejszym okresem
     const z = g.VildaPatientNarrative.compose(model, {}).sentences.find((s) => s.id === 'masa');
-    expect(norm(z.text)).toBe('Od pomiaru w wieku 14 lat i 3 miesięcy BMI utrzymuje się w kanale 75–90 c. (ΔbmiSDS +0,02); tor jest stabilny, ale BMI utrzymuje się w paśmie nadwagi (85.–97. centyl). Wcześniej, w wieku od 12 lat i 4 miesięcy do 14 lat i 3 miesięcy, BMI pozostawało w kanale 75–90 c. (ΔbmiSDS +0,30); BMI rosło szybciej niż wzrastanie — do obserwacji.');
+    // Audyt składu 2026-09-27: „pozostaje w kanale", bo „utrzymuje się" stoi już w nakładce poziomu tego samego zdania.
+    expect(norm(z.text)).toBe('Od pomiaru w wieku 14 lat i 3 miesięcy BMI pozostaje w kanale 75–90 c. (ΔbmiSDS +0,02); tor jest stabilny, ale BMI utrzymuje się w paśmie nadwagi (85.–97. centyl). Wcześniej, w wieku od 12 lat i 4 miesięcy do 14 lat i 3 miesięcy, BMI pozostawało w kanale 75–90 c. (ΔbmiSDS +0,30); BMI rosło szybciej niż wzrastanie — do obserwacji.');
   });
 });
 

@@ -363,10 +363,9 @@ describe('Kontrola końcowa 2026-09-07 — usterki składu znalezione na siatce'
     expect(h.total.l, 'karta nałożyła werdykt pozycyjny').toBe('tor stabilny, ale poniżej 3. centyla — niedobór wzrostu');
     expect(zdanie(wynik, 'przebieg')).toContain('; tor jest stabilny, ale poniżej 3. centyla — niedobór wzrostu.');
     expect(zdanie(wynik, 'przebieg')).not.toContain('co wskazuje na tor stabilny');
-    if (zdanie(wynik, 'odcinek')) {
-      expect(zdanie(wynik, 'odcinek')).toMatch(/^W wieku od .* tor był stabilny, ale poniżej 3\. centyla — niedobór wzrostu\.$/);
-      expect(zdanie(wynik, 'odcinek')).not.toContain('zaobserwowano');
-    }
+    // Audyt składu 2026-09-27: stan nie jest zdarzeniem — „W wieku od 7 do 8 lat tor był stabilny,
+    // ale poniżej 3. centyla" powtarzało tylko zdanie o przebiegu z węższym oknem.
+    expect(zdanie(wynik, 'odcinek'), 'nakładka poziomu nie dostaje zdania o odcinku').toBeNull();
   });
 
   it('nota karty po skoku pokwitaniowym i flaga poza oknem — dosłownie, bez „wieku chłopca"', () => {
@@ -892,3 +891,164 @@ describe('DOB-AGE-3 — niemowlę opisane w tygodniach, nie w miesiącach', () =
   });
 });
 
+
+// ── Audyt składu 2026-09-27 — zdania puste, powtórzenia i werdykty karty, których opis nie mówił ──
+//
+// Przegląd na siatce scenariuszy z PRAWDZIWYMI vilda_werdykt.js, vilda_trajectory_analysis.js
+// i vilda_tempo_wzrastania.js. Żaden próg ani werdykt się nie zmienia — zmienia się to, KTÓRE
+// z policzonych przez kartę wielkości dostają zdanie i jak są łączone.
+
+describe('Audyt składu 2026-09-27 — opis mówi to, co nagłówek karty', () => {
+  it('flaga spadku + ostatnia faza: po zdaniu o fladze idzie zdanie o fazie (plateau), jak nagłówek karty', () => {
+    // Rata 5: 75c → 25c w 3 lata, od 2 lat stabilnie. Karta: flaga w dół zostaje, nagłówek = „stabilny tor".
+    // Do audytu opis kończył się na spadku sprzed lat i milczał o plateau.
+    const M = [84, 96, 108, 120, 132, 144];
+    const H = [0.67, 0.40, 0.05, -0.67, -0.64, -0.66];
+    const tabela = {};
+    M.forEach((m, i) => { tabela[`HT|${m}`] = H[i]; });
+    const g = srodowisko(tabela);
+    const { model, wynik } = opis(g, {
+      measurements: [124, 129, 133, 137, 142].map((h, i) => ({ ageMonths: M[i], height: h })),
+      currentAgeMonths: 144,
+      currentHeight: 150,
+      sex: 'M',
+      source: 'OLAF',
+    });
+    const h = model.metrics.find((m) => m.metric === 'height');
+    expect(h.redFlag, 'karta trzyma flagę').not.toBeNull();
+    expect(h.naglowek.l, 'nagłówek karty to faza').toBe('stabilny tor wzrastania');
+    const t = zdanie(wynik, 'przebieg');
+    expect(t).toMatch(/^Od pomiaru w wieku 7 lat pozycja centylowa wzrostu obniżyła się o 1,3 SD/);
+    expect(t).toContain(' Od pomiaru w wieku 10 lat wzrost mieści się w kanale 25–50 c. (ΔhSDS +0,01), co wskazuje na stabilny tor wzrastania.');
+  });
+
+  it('flaga spadku u dziecka na GH: werdykt odpowiedzi na GH z nagłówka karty nie ginie', () => {
+    // Trzy lata na GH, flaga w wariancie P0 (bez nadrabiania): do audytu opis nie miał ANI SŁOWA o GH.
+    const g = srodowisko({ 'HT|48': 0.0, 'HT|72': -1.0, 'HT|96': -2.2, 'HT|120': -2.15, 'HT|132': -2.1 });
+    const { model, wynik } = opis(g, {
+      measurements: [
+        { ageMonths: 48, height: 104 }, { ageMonths: 72, height: 113 },
+        { ageMonths: 96, height: 120 }, { ageMonths: 120, height: 126 },
+      ],
+      currentAgeMonths: 132,
+      currentHeight: 130,
+      sex: 'M',
+      source: 'OLAF',
+      context: { gh: { a: 96, b: null } },
+    });
+    const h = model.metrics.find((m) => m.metric === 'height');
+    expect(h.naglowek.l).toBe('słaba odpowiedź na GH — do oceny, nadal poniżej 3. centyla');
+    expect(zdanie(wynik, 'przebieg'))
+      .toContain(' Od pomiaru w wieku 8 lat wzrost mieści się w kanale <3 c. (ΔhSDS +0,10), co wskazuje na słabą odpowiedź na GH — do oceny, nadal poniżej 3. centyla.');
+  });
+
+  it('bez fazy w nagłówku zdanie o fladze brzmi jak dotąd', () => {
+    const g = srodowisko(DECELERACJA.tabela);
+    const { wynik } = opis(g, DECELERACJA.wejscie);
+    expect(zdanie(wynik, 'przebieg'))
+      .toBe('Od pomiaru w wieku 4 lat pozycja centylowa wzrostu obniżyła się o 1,4 SD, co wskazuje na decelerację tempa wzrastania.');
+  });
+
+  it('aktywne leczenie redukcyjne: zdanie o BMI z okna kursu, także przy dobrej odpowiedzi', () => {
+    // Rata 6: nagłówkiem wiersza masy/BMI przy aktywnym kursie jest chip leczenia. Do audytu opis
+    // czytał całość i milczał, bo ton „good" nie przechodził przez bramkę „tylko ostrzeżenia".
+    const tabela = { 'HT|120': 0, 'HT|126': 0, 'HT|132': 0, 'HT|138': 0,
+      'WT|120': 1.9, 'WT|126': 1.95, 'WT|132': 1.6, 'WT|138': 1.3,
+      'BMI|120': 2.0, 'BMI|126': 2.05, 'BMI|132': 1.7, 'BMI|138': 1.4 };
+    const g = srodowisko(tabela);
+    const { model, wynik } = opis(g, {
+      measurements: [
+        { ageMonths: 120, height: 140, weight: 55 }, { ageMonths: 126, height: 143, weight: 57 },
+        { ageMonths: 132, height: 146, weight: 55 },
+      ],
+      currentAgeMonths: 138,
+      currentHeight: 149,
+      currentWeight: 54,
+      sex: 'M',
+      source: 'OLAF',
+      context: { red: { a: 126, b: null, label: 'Saxenda' } },
+    });
+    const b = model.metrics.find((m) => m.metric === 'bmi');
+    expect(b.treatment && b.treatment.aktywne, 'karta ma aktywny chip leczenia').toBe(true);
+    expect(b.naglowek.l).toBe('redukcja w trakcie leczenia');
+    const z = wynik.sentences.find((s) => s.id === 'masa');
+    expect(z, 'zdanie o BMI jest mimo dobrej odpowiedzi').toBeTruthy();
+    expect(z.tone).toBe('plain');
+    expect(z.text).toBe('W okresie leczenia redukcyjnego (Saxenda), od pomiaru w wieku 10 lat i 6 miesięcy, BMI przesunęło się z kanału >97 c. do kanału 90–97 c. (ΔbmiSDS −0,65), co wskazuje na redukcję w trakcie leczenia.');
+  });
+
+  it('niemowlę: „od urodzenia do wieku 1 roku", nie „od 0 do 1 lat"', () => {
+    const g = srodowisko({ 'HT|0': -0.2, 'HT|12': -0.6 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 0, height: 50 }],
+      currentAgeMonths: 12,
+      currentHeight: 74,
+      sex: 'M',
+      source: 'OLAF',
+    });
+    expect(zdanie(wynik, 'przebieg')).toContain('wzrost chłopca od urodzenia do wieku 1 roku mieści się w kanale');
+    expect(zdanie(wynik, 'przebieg')).not.toMatch(/od 0 do|1 lat\b/);
+  });
+
+  it('wzrost równy potencjałowi: „odpowiada potencjałowi", nie „0,0 SD powyżej"', () => {
+    const g = srodowisko({ 'HT|72': -0.4, 'HT|84': -0.4 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 72, height: 113 }],
+      currentAgeMonths: 84,
+      currentHeight: 118,
+      sex: 'M',
+      source: 'OLAF',
+      context: { mpSds: -0.4 },
+    }, { motherHeight: 158, fatherHeight: 172, mph: 165, mphSds: -0.4 });
+    const t = zdanie(wynik, 'potencjal');
+    expect(t).toContain('Aktualny wzrost dziecka odpowiada potencjałowi genetycznemu.');
+    expect(t).not.toMatch(/0,0 SD/);
+  });
+
+  it('norma tempa wg wieku kostnego albo Tannera: „w normie", bez „dla wieku"', () => {
+    const g = srodowisko({ 'HT|120': -0.5, 'HT|132': -0.5 });
+    const { wynik } = opis(g, {
+      measurements: [{ ageMonths: 120, height: 133 }],
+      currentAgeMonths: 132,
+      currentHeight: 138.5,
+      sex: 'M',
+      source: 'OLAF',
+      context: { boneAge: { baMonths: 108, atAgeMonths: 132 } },
+    });
+    expect(zdanie(wynik, 'tempo'))
+      .toBe('Tempo wzrastania liczone z ostatnich 12 miesięcy obserwacji wynosi 5,5 cm/rok i mieści się w normie (norma ≥5 cm/rok — wg wieku kostnego 9 lat).');
+    // Norma z wieku metrykalnego — „dla wieku" zostaje, jak dotąd.
+    const g2 = srodowisko({ 'HT|72': -0.4, 'HT|84': -0.4 });
+    const { wynik: w2 } = opis(g2, {
+      measurements: [{ ageMonths: 72, height: 113 }],
+      currentAgeMonths: 84,
+      currentHeight: 118,
+      sex: 'M',
+      source: 'OLAF',
+    });
+    expect(zdanie(w2, 'tempo')).toContain('mieści się w normie dla wieku (norma ≥5 cm/rok)');
+  });
+
+  it('wiek kostny oznaczony dawniej: porównanie z wiekiem metrykalnym z chwili oznaczenia, w czasie przeszłym', () => {
+    const g = srodowisko({ 'HT|72': -0.4, 'HT|96': -0.6 });
+    const wej = {
+      measurements: [{ ageMonths: 72, height: 113 }],
+      currentAgeMonths: 96,
+      currentHeight: 120,
+      sex: 'M',
+      source: 'OLAF',
+    };
+    // 5,5 roku wieku kostnego oznaczone 20 mies. temu, czyli w wieku 6 lat i 4 mies. Do audytu
+    // opis porównywał je z DZISIEJSZYM wiekiem (8 lat) i mówił o opóźnieniu 2 lat i 6 mies.
+    const { wynik } = opis(g, wej, { boneAgeYears: 5.5, boneAgeMonthsAgo: 20 });
+    expect(zdanie(wynik, 'wiekKostny'))
+      .toBe('Wiek kostny oceniono na 5 lat i 6 miesięcy przy wieku metrykalnym 6 lat i 4 miesięcy; był on opóźniony o 10 miesięcy.');
+    expect(zdanie(wynik, 'zastrzezenia')).toContain('Wiek kostny oznaczono 20 miesięcy temu');
+    // Jawny wiek oznaczenia ma pierwszeństwo.
+    expect(zdanie(opis(g, wej, { boneAgeYears: 5.5, boneAgeAtAgeMonths: 90 }).wynik, 'wiekKostny'))
+      .toBe('Wiek kostny oceniono na 5 lat i 6 miesięcy przy wieku metrykalnym 7 lat i 6 miesięcy; był on opóźniony o 2 lata.');
+    // Bez żadnej daty — „teraz", jak dotąd.
+    expect(zdanie(opis(g, wej, { boneAgeYears: 7 }).wynik, 'wiekKostny'))
+      .toBe('Wiek kostny oceniono na 7 lat przy wieku metrykalnym 8 lat; jest on opóźniony o 1 rok.');
+  });
+});

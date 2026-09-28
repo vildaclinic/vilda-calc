@@ -267,3 +267,41 @@ describe('DOB-AGE-3 — tygodnie wchodzą do opisu tylko wtedy, gdy pasują do p
   });
 });
 
+
+// Audyt składu 2026-09-27: karta dobiera normę tempa wg wieku kostnego z OSTATNIEGO wiersza historii,
+// gdy pole formularza jest puste (vilda_advanced_growth.js → context.boneAge z atAgeMonths tamtej
+// wizyty). Opis czyta ten sam kontekst, więc mówi o tym samym wieku kostnym co karta i datuje go
+// tak samo — dotąd milczał, a zdanie o normie tempa cytowało wiek kostny, którego opis nie znał.
+describe('buildInput — wiek kostny z kontekstu karty, gdy pole formularza jest puste', () => {
+  const MODEL = {
+    sex: 'M',
+    context: { boneAge: { baMonths: 126, atAgeMonths: 120 } },
+    metrics: [{ metric: 'height', last: { ageMonths: 144, value: 150, sd: -0.5, c: 31 } }],
+  };
+
+  it('pole formularza ma pierwszeństwo i jest „teraz"', () => {
+    const we = okno().VildaPatientNarrativeUI.buildInput({ boneAgeMonths: 132 }, MODEL);
+    expect(we.boneAgeYears).toBeCloseTo(11, 5);
+    expect(we.boneAgeAtAgeMonths).toBeNull();
+    expect(we.boneAgeMonthsAgo).toBeNull();
+  });
+
+  it('bez pola: wiek kostny z kontekstu karty, datowany wiekiem tamtej wizyty', () => {
+    const we = okno().VildaPatientNarrativeUI.buildInput({}, MODEL);
+    expect(we.boneAgeYears).toBeCloseTo(10.5, 5);
+    expect(we.boneAgeAtAgeMonths).toBe(120);
+    expect(we.boneAgeMonthsAgo).toBe(24);
+  });
+
+  it('oznaczenie z bieżącej wizyty albo bez daty — bez datowania; bez kontekstu — bez wieku kostnego', () => {
+    const teraz = okno().VildaPatientNarrativeUI.buildInput({}, { ...MODEL, context: { boneAge: { baMonths: 126, atAgeMonths: 144 } } });
+    expect(teraz.boneAgeYears).toBeCloseTo(10.5, 5);
+    expect(teraz.boneAgeAtAgeMonths).toBeNull();
+    expect(teraz.boneAgeMonthsAgo).toBeNull();
+    const bezDaty = okno().VildaPatientNarrativeUI.buildInput({}, { ...MODEL, context: { boneAge: { baMonths: 126 } } });
+    expect(bezDaty.boneAgeYears).toBeCloseTo(10.5, 5);
+    expect(bezDaty.boneAgeMonthsAgo).toBeNull();
+    expect(okno().VildaPatientNarrativeUI.buildInput({}, { metrics: [] }).boneAgeYears).toBeNull();
+    expect(okno().VildaPatientNarrativeUI.buildInput({}, null).boneAgeYears).toBeNull();
+  });
+});

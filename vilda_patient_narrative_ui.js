@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '5';
+  var VERSION = '6';
   var ATTR = 'data-patient-narrative-copy-btn';
   var ETYKIETA = 'Kopiuj opis pacjenta';
 
@@ -236,11 +236,30 @@
     } catch (e) { return null; }
   }
 
+  // Wiek kostny: pole formularza jest „teraz" (tak samo datuje je karta: atAgeMonths = wiek
+  // biezacy). Gdy pole jest puste, karta bierze wiek kostny z OSTATNIEGO wiersza historii, ktory
+  // go ma, razem z wiekiem metrykalnym tamtej wizyty — i na tej podstawie dobiera norme tempa
+  // (vilda_tempo_wzrastania.js, BONE_AGE_FRESH_M). Opis czyta ten sam kontekst modelu, wiec mowi
+  // o tym samym wieku kostnym co karta i datuje go tak samo; przy oznaczeniu starszym niz
+  // STARY_WIEK_KOSTNY_M silnik opisu dopisze zastrzezenie (audyt skladu 2026-09-27).
+  function wiekKostny(d, model) {
+    var baM = num(d.boneAgeMonths);
+    if (baM != null && baM > 0) return { years: baM / 12, atAgeMonths: null, monthsAgo: null };
+    var cb = model && model.context && model.context.boneAge ? model.context.boneAge : null;
+    var cbM = cb ? num(cb.baMonths) : null;
+    if (cbM == null || cbM <= 0) return { years: null, atAgeMonths: null, monthsAgo: null };
+    var at = num(cb.atAgeMonths);
+    var ost = model && model.metrics ? metrykaWzrostu(model) : null;
+    var teraz = ost && typeof ost.ageMonths === 'number' && isFinite(ost.ageMonths) ? ost.ageMonths : null;
+    var dawno = at != null && teraz != null && teraz - at > 0;
+    return { years: cbM / 12, atAgeMonths: dawno ? at : null, monthsAgo: dawno ? teraz - at : null };
+  }
+
   function buildInput(d, model) {
     d = d || {};
     var mpSds = d.targetStats && num(d.targetStats.sd) != null ? num(d.targetStats.sd)
       : (model && model.context && num(model.context.mpSds) != null ? num(model.context.mpSds) : null);
-    var baM = num(d.boneAgeMonths);
+    var wk = wiekKostny(d, model);
     var zgodnosc = d.finalHeightPrediction && d.finalHeightPrediction.agreementLabel
       ? d.finalHeightPrediction.agreementLabel
       : (d.predictionReliability && d.predictionReliability.agreementLabel) || null;
@@ -249,10 +268,10 @@
       fatherHeight: num(d.fatherHeight) != null ? num(d.fatherHeight) : polePliku('advFatherHeight'),
       mph: num(d.targetHeight),
       mphSds: mpSds,
-      boneAgeYears: baM != null && baM > 0 ? baM / 12 : null,
-      // Wiek kostny i pomiar z formularza sa „teraz" — nie ma czego datowac.
-      boneAgeAtAgeMonths: null,
-      boneAgeMonthsAgo: null,
+      boneAgeYears: wk.years,
+      // Pomiar z formularza jest „teraz" — nie ma czego datowac. Wiek kostny: patrz wiekKostny().
+      boneAgeAtAgeMonths: wk.atAgeMonths,
+      boneAgeMonthsAgo: wk.monthsAgo,
       lastMeasuredMonthsAgo: null,
       predictions: prognozy(d),
       predictionAgreement: zgodnosc || null,
