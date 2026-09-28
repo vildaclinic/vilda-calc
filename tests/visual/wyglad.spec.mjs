@@ -88,15 +88,56 @@ async function daneSyntetyczne(page) {
   await expect(page.locator('#bmiResult')).toContainText('BMI');
 }
 
+/** Wysokość dokumentu próbkowana co 150 ms, aż cztery kolejne próbki będą równe (najwyżej 8 s). */
+async function ustabilizowanaWysokosc(page) {
+  const probki = [];
+  const start = Date.now();
+  for (;;) {
+    probki.push(await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)));
+    const n = probki.length;
+    if (n >= 4 && probki[n - 1] === probki[n - 2] && probki[n - 2] === probki[n - 3] && probki[n - 3] === probki[n - 4]) break;
+    if (Date.now() - start > 8000) break;
+    await page.waitForTimeout(150);
+  }
+  return { wysokosc: probki[probki.length - 1], probki };
+}
+
+/**
+ * Kadr całej strony bez `fullPage`: okno dostaje wysokość treści zaokrągloną w górę do 16 px
+ * i zrzut obejmuje dokładnie okno. Dwa powody. Po pierwsze, `fullPage` renderuje stronę w oknie
+ * powiększonym tylko na czas zrzutu (captureBeyondViewport), więc wszystko, co zależy od `vh`
+ * (przyklejona nawigacja ustawień, `min-height: 100vh`), układa się inaczej niż w chwili pomiaru —
+ * w CI dawało to dwa kolejne zrzuty strony ustawień różne o 1 px wysokości i czerwony test bez
+ * żadnej zmiany stylów. Po drugie, zaokrąglenie daje obrazowi stałe wymiary: zmiana wysokości
+ * treści o piksel jest różnicą pikseli (z progiem z konfiguracji), a nie niezgodnością wymiarów.
+ * Zwraca próbki wysokości do logu — przy czerwonym teście widać w CI, czy strona się jeszcze układała.
+ */
+async function kadrCalejStrony(page, szerokosc) {
+  let okno = 0;
+  let ostatnie = [];
+  for (let i = 0; i < 3; i++) {
+    const { wysokosc, probki } = await ustabilizowanaWysokosc(page);
+    ostatnie = probki;
+    const nowe = Math.max(320, Math.ceil(wysokosc / 16) * 16);
+    if (nowe === okno) break;
+    okno = nowe;
+    await page.setViewportSize({ width: szerokosc, height: okno });
+  }
+  return { okno, probki: ostatnie };
+}
+
 for (const strona of STRONY) {
   for (const [id, tryb] of Object.entries(TRYBY)) {
-    test(`${strona.nazwa} w trybie ${tryb.opis}`, async ({ page }) => {
+    test(`${strona.nazwa} w trybie ${tryb.opis}`, async ({ page }, info) => {
       await otworz(page, strona, tryb);
       if (strona.dane) await daneSyntetyczne(page);
       await page.evaluate(() => document.fonts.ready);
       // dławiki odświeżania (odznaki, pasek statusu) kończą pracę w ułamku sekundy
       await page.waitForTimeout(600);
-      await expect(page).toHaveScreenshot(`${strona.nazwa}--${id}.png`, { fullPage: true });
+      const { okno, probki } = await kadrCalejStrony(page, page.viewportSize().width);
+      // ślad do logu CI: wysokości próbek i okno kadru (diagnostyka bez pobierania obrazów)
+      console.log(`[wygląd] ${info.project.name} ${strona.nazwa}/${id}: wysokość ${probki.join('→')} px, okno ${okno} px`);
+      await expect(page).toHaveScreenshot(`${strona.nazwa}--${id}.png`, { fullPage: false });
     });
   }
 }
