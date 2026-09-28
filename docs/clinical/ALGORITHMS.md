@@ -5829,7 +5829,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Toast „Zalecenia zostały uaktualnione” modułu VAR tylko przy widocznej karcie (P-VAR-TOAST, SW 1.1.93, 2026-09-28)
+## Toast „Zalecenia zostały uaktualnione” modułu VAR tylko przy widocznej karcie (P-VAR-TOAST, SW 1.1.94, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28).** Na `docpro.html`, także przy pustym formularzu, kliknięcie „Wyczyść
 wszystkie pola” wywoływało przy lewej krawędzi ekranu fragment dymka: biała etykieta na turkusowym tle, kończąca
@@ -5859,7 +5859,7 @@ pola” na pustym formularzu `#varResult` się przelicza, a toast nie pojawia si
 VAR toast pojawia się w granicach ekranu, nad środkiem karty. Kontrola negatywna e2e na kodzie sprzed poprawki:
 pierwszy test czerwony z x = −156 px. Oba testy e2e przechodzą także na 390 px.
 
-SW 1.1.92 → **1.1.93**; `flu_therapy.js?v=7→8` (precache append-only), fixture wersji odświeżony.
+SW 1.1.93 → **1.1.94** (1.1.93 zajęło równolegle P-STYLE rata 4a); `flu_therapy.js?v=7→8` (precache append-only), fixture wersji odświeżony.
 
 ## Przełączanie paneli powłoki (Start → DocPro) po wczytaniu pacjenta: pusty albo częściowy formularz i karta porównania (P-POWLOKA-PANELE, SW 1.1.88, 2026-09-28)
 
