@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '7';
+  var VERSION = '8';
 
   // Progi UJAWNIANIA, nie progi kliniczne. Bramkuja wylacznie zdania o wieku danych,
   // czyli decyduja o tym, KIEDY opis przyznaje sie do starych danych — nigdy o tym, jak
@@ -166,10 +166,13 @@
   // Zakres wieku: „w wieku od 5 do 6 lat" dla pelnych lat, inaczej pelna forma obu koncow.
   // Swiadomie BEZ liczebnikow porzadkowych („5. rok zycia" oznacza wiek 4–5, nie 5) —
   // ta sama decyzja, ktora zapadla przy audycie jezykowym epikryzy 2026-08-08.
+  // Poczatek w dniu urodzenia dostaje „od urodzenia": „w wieku od 0 do 1 lat" (audyt skladu
+  // 2026-09-27) bylo bledem gramatycznym („1 lat") i logicznym (wiek 0 to nie „0 lat").
   function zakresWieku(a, b) {
     var ra = rozbij(a), rb = rozbij(b);
     if (!ra || !rb) return 'w wieku —';
-    if (!ra.m && !rb.m && ra.y !== 1) return 'w wieku od ' + ra.y + ' do ' + rb.y + ' lat';
+    if (ra.total === 0) return 'od urodzenia do wieku ' + wiekDop(b);
+    if (!ra.m && !rb.m && ra.y !== 1 && rb.y !== 1) return 'w wieku od ' + ra.y + ' do ' + rb.y + ' lat';
     return 'w wieku od ' + wiekDop(a) + ' do ' + wiekDop(b);
   }
 
@@ -248,6 +251,10 @@
   // Etykiety, ktore sa juz zdaniem albo okolicznikiem, nie rzeczownikiem — nie wchodza
   // po „co wskazuje na". Dostaja wlasne orzeczenie: terazniejsze do przebiegu calosci,
   // przeszle do odcinka, ktory juz minal.
+  // `stan: true` oznacza nakladke POZIOMU (tor stabilny, ale …): to opis stanu, nie zdarzenia.
+  // Zdanie o najglebszym odcinku takiej etykiety nie dostaje — „W wieku od 8 do 9 lat tor byl
+  // stabilny, ale ponizej 3. centyla" powtarzalo tylko to, co juz powiedzialo zdanie o stanie
+  // biezacym i o przebiegu (audyt skladu 2026-09-27).
   var ZDANIOWE = {
     'nadrabia względem kanału rodzicielskiego': {
       teraz: 'wzrost nadrabia względem kanału rodzicielskiego',
@@ -259,35 +266,42 @@
     },
     'stabilnie (poniżej kanału rodzicielskiego)': {
       teraz: 'tor jest stabilny, choć poniżej kanału rodzicielskiego',
-      wtedy: 'tor był stabilny, choć poniżej kanału rodzicielskiego'
+      wtedy: 'tor był stabilny, choć poniżej kanału rodzicielskiego',
+      stan: true
     },
     'w kanale rodzicielskim': {
       teraz: 'wzrost pozostaje w kanale rodzicielskim',
-      wtedy: 'wzrost pozostawał w kanale rodzicielskim'
+      wtedy: 'wzrost pozostawał w kanale rodzicielskim',
+      stan: true
     },
     // Nakladki pozycyjne karty: to stan, nie zdarzenie — „tor stabilny … zaobserwowano"
     // czytalo sie jak zdarzenie (przeglad 2026-09-07).
     'tor stabilny, ale poniżej 3. centyla': {
       teraz: 'tor jest stabilny, ale poniżej 3. centyla',
-      wtedy: 'tor był stabilny, ale poniżej 3. centyla'
+      wtedy: 'tor był stabilny, ale poniżej 3. centyla',
+      stan: true
     },
     'tor stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego': {
       teraz: 'tor jest stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego',
-      wtedy: 'tor był stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego'
+      wtedy: 'tor był stabilny w dolnym paśmie normy (3.–10. centyl), poniżej kanału rodzicielskiego',
+      stan: true
     },
     // Galaz poziomu masy i BMI przy stabilnym torze (P-WERDYKT rata 2). Tak samo jak
     // nakladki powyzej: to STAN, nie zdarzenie — stad wlasne orzeczenie, a nie „zaobserwowano".
     'tor stabilny, ale masa ciała znacznie powyżej typowego zakresu (>97c)': {
       teraz: 'tor jest stabilny, ale masa ciała utrzymuje się znacznie powyżej typowego zakresu (>97c)',
-      wtedy: 'tor był stabilny, ale masa ciała utrzymywała się znacznie powyżej typowego zakresu (>97c)'
+      wtedy: 'tor był stabilny, ale masa ciała utrzymywała się znacznie powyżej typowego zakresu (>97c)',
+      stan: true
     },
     'tor stabilny, masa ciała poniżej 3. centyla': {
       teraz: 'tor jest stabilny, a masa ciała pozostaje poniżej 3. centyla',
-      wtedy: 'tor był stabilny, a masa ciała pozostawała poniżej 3. centyla'
+      wtedy: 'tor był stabilny, a masa ciała pozostawała poniżej 3. centyla',
+      stan: true
     },
     'tor stabilny, ale BMI znacznie poniżej typowego zakresu (<5c)': {
       teraz: 'tor jest stabilny, ale BMI utrzymuje się znacznie poniżej typowego zakresu (<5c)',
-      wtedy: 'tor był stabilny, ale BMI utrzymywało się znacznie poniżej typowego zakresu (<5c)'
+      wtedy: 'tor był stabilny, ale BMI utrzymywało się znacznie poniżej typowego zakresu (<5c)',
+      stan: true
     },
     // Hamulec catch-upu masy (P-WERDYKT rata 3): doganianie niedoboru przestaje byc dobra
     // wiadomoscia, gdy dojechalo do pasma nadmiaru. Miara nazwana, bo BMI i wskaznik Cole'a
@@ -308,19 +322,23 @@
     // Poziom nadwagi przy stabilnym torze (P-WERDYKT rata 5): STAN, jak nakladki poziomu z raty 2.
     'tor stabilny, ale BMI w paśmie nadwagi (85.–97. centyl)': {
       teraz: 'tor jest stabilny, ale BMI utrzymuje się w paśmie nadwagi (85.–97. centyl)',
-      wtedy: 'tor był stabilny, ale BMI utrzymywało się w paśmie nadwagi (85.–97. centyl)'
+      wtedy: 'tor był stabilny, ale BMI utrzymywało się w paśmie nadwagi (85.–97. centyl)',
+      stan: true
     },
     'tor masy ciała stabilny, ale BMI w paśmie nadwagi (≥85c)': {
       teraz: 'tor masy ciała jest stabilny, ale BMI jest w paśmie nadwagi (≥85c)',
-      wtedy: 'tor masy ciała był stabilny, ale BMI było w paśmie nadwagi (≥85c)'
+      wtedy: 'tor masy ciała był stabilny, ale BMI było w paśmie nadwagi (≥85c)',
+      stan: true
     },
     'tor masy ciała stabilny, ale BMI w paśmie otyłości (≥97c)': {
       teraz: 'tor masy ciała jest stabilny, ale BMI jest w paśmie otyłości (≥97c)',
-      wtedy: 'tor masy ciała był stabilny, ale BMI było w paśmie otyłości (≥97c)'
+      wtedy: 'tor masy ciała był stabilny, ale BMI było w paśmie otyłości (≥97c)',
+      stan: true
     },
     'tor masy ciała stabilny, ale wskaźnik Cole\'a sięga 110%': {
       teraz: 'tor masy ciała jest stabilny, ale wskaźnik Cole\'a sięga 110%',
-      wtedy: 'tor masy ciała był stabilny, ale wskaźnik Cole\'a sięgał 110%'
+      wtedy: 'tor masy ciała był stabilny, ale wskaźnik Cole\'a sięgał 110%',
+      stan: true
     },
     // P-WERDYKT rata 6: okno w kursie GH krótsze niż 6 mies. (ogon z długością okna wraca na koniec).
     'za wcześnie na ocenę odpowiedzi na GH': {
@@ -379,6 +397,24 @@
   }
 
   // ── Zdania ──────────────────────────────────────────────────────────────────
+
+  // Ruch pozycji centylowej miedzy dwoma punktami — jeden slownik dla przebiegu calosci,
+  // ostatniej fazy i okna „wczesniej", zeby te same kanaly byly nazywane tym samym slowem.
+  function ruchWzrostu(a, b, czas) {
+    var kA = kanal(a.c), kB = kanal(b.c), byl = czas === 'wtedy';
+    if (kA && kB && kA !== kB) return ' przesunął się z kanału ' + kA + ' do kanału ' + kB;
+    if (kB) return (byl ? ' pozostawał w kanale ' : ' mieści się w kanale ') + kB;
+    return byl ? ' utrzymywał pozycję centylową' : ' utrzymuje pozycję centylową';
+  }
+  // „pozostaje", nie „utrzymuje się": nakladka poziomu („BMI utrzymuje się w paśmie nadwagi")
+  // stoi w tym samym zdaniu, a dwa razy „utrzymuje się" czytalo sie jak zajakniecie
+  // (audyt skladu 2026-09-27).
+  function ruchBmi(a, b, czas) {
+    var kA = kanal(a.c), kB = kanal(b.c), byl = czas === 'wtedy';
+    if (kA && kB && kA !== kB) return ' przesunęło się z kanału ' + kA + ' do kanału ' + kB;
+    if (kB) return (byl ? ' pozostawało w kanale ' : ' pozostaje w kanale ') + kB;
+    return byl ? ' utrzymywało pozycję centylową' : ' zmieniło pozycję centylową';
+  }
 
   // 1. Stan biezacy — pomiar zapisany jednym zdaniem, z wiekiem i osoba.
   function zdanieStan(model, extra) {
@@ -478,14 +514,21 @@
       // P-TRAJ rata T4: kontekst flagi (wariant, ton, fraza) liczy vilda_trajectory_analysis.js — tu tylko czytamy.
       var kf = m.redFlag.kontekst || null;
       var zolta = !!(kf && kf.ton === 'warn');
-      return {
-        id: 'przebieg',
-        tone: zolta ? 'warn' : 'bad',
-        text: kropka('Od pomiaru w wieku ' + wiekDop(m.redFlag.baseAgeMonths)
-          + ' pozycja centylowa wzrostu obniżyła się o ' + fmtSdsAbs(m.redFlag.dSds) + ' SD'
-          + (kf && kf.fraza ? ' ' + kf.fraza : '')
-          + (zolta ? '' : ', co wskazuje na decelerację tempa wzrastania'))
-      };
+      var flaga = 'Od pomiaru w wieku ' + wiekDop(m.redFlag.baseAgeMonths)
+        + ' pozycja centylowa wzrostu obniżyła się o ' + fmtSdsAbs(m.redFlag.dSds) + ' SD'
+        + (kf && kf.fraza ? ' ' + kf.fraza : '')
+        + (zolta ? '' : ', co wskazuje na decelerację tempa wzrastania');
+      // Flaga mowi o spadku liczonym od dawnej bazy. Gdy naglowkiem wiersza wzrostu w karcie
+      // jest juz ostatnia faza (plateau po spadku, odpowiedz na GH), opis mowi o niej osobnym
+      // zdaniem — do audytu skladu 2026-09-27 milczal i lekarz czytal o spadku sprzed lat,
+      // a nie o tym, co karta pokazuje jako werdykt biezacy.
+      var fz = fazaNaglowka(m);
+      if (fz) {
+        flaga = kropka(flaga) + ' Od pomiaru w wieku ' + wiekDop(fz.a.ageMonths) + ' wzrost'
+          + ruchWzrostu(fz.a, fz.b, 'teraz') + ' (ΔhSDS ' + fmtSds(fz.dSds) + ')'
+          + konkluzja(fz.verdict.l, 'teraz');
+      }
+      return { id: 'przebieg', tone: zolta ? 'warn' : 'bad', text: kropka(flaga) };
     }
     if (!m.total) return null;
     var o = osoba(model.sex);
@@ -494,21 +537,15 @@
     var f = fazaNaglowka(m);
     var od = f ? f.a : m.first, doP = m.last;
     var v = f ? f.verdict : m.total;
-    var kA = kanal(od.c), kB = kanal(doP.c);
     var dSds = doP.sd != null && od.sd != null ? doP.sd - od.sd : null;
-    var ruch = kA && kB && kA !== kB
-      ? ' przesunął się z kanału ' + kA + ' do kanału ' + kB
-      : (kB ? ' mieści się w kanale ' + kB : ' utrzymuje pozycję centylową');
     var txt = 'Z analizy siatki centylowej wynika, że wzrost ' + o.kogo + ' '
-      + zakresWieku(od.ageMonths, doP.ageMonths) + ruch
+      + zakresWieku(od.ageMonths, doP.ageMonths) + ruchWzrostu(od, doP, 'teraz')
       + (dSds != null ? ' (ΔhSDS ' + fmtSds(dSds) + ')' : '')
       + konkluzja(v.l, 'teraz');
     var w = f && f.wczesniej && f.wczesniej.verdict ? f.wczesniej : null;
     if (w) {
-      var kW = kanal(w.a.c), kW2 = kanal(w.b.c);
-      var ruchW = kW && kW2 && kW !== kW2 ? ' przesunął się z kanału ' + kW + ' do kanału ' + kW2 : (kW2 ? ' pozostawał w kanale ' + kW2 : ' utrzymywał pozycję centylową');
-      txt = kropka(txt) + ' Wcześniej, ' + zakresWieku(w.a.ageMonths, w.b.ageMonths) + ', wzrost' + ruchW
-        + ' (ΔhSDS ' + fmtSds(w.dSds) + ')' + konkluzja(w.verdict.l, 'wtedy');
+      txt = kropka(txt) + ' Wcześniej, ' + zakresWieku(w.a.ageMonths, w.b.ageMonths) + ', wzrost'
+        + ruchWzrostu(w.a, w.b, 'wtedy') + ' (ΔhSDS ' + fmtSds(w.dSds) + ')' + konkluzja(w.verdict.l, 'wtedy');
     }
     return {
       id: 'przebieg',
@@ -533,6 +570,10 @@
     if (!m || !m.worst || !m.worst.verdict) return null;
     if (m.segments.length < 2) return null;
     if (m.worst.verdict.t !== 'bad' && m.worst.verdict.t !== 'warn') return null;
+    // Nakladka poziomu to stan, nie zdarzenie — patrz `stan` w ZDANIOWE.
+    var e = rozbijEtykiete(m.worst.verdict.l);
+    var z = ZDANIOWE[e.glowa];
+    if (z && z.stan) return null;
     var kiedy = zakresWieku(m.worst.a.ageMonths, m.worst.b.ageMonths);
     var delta = ' (ΔhSDS ' + fmtSds(m.worst.dSds) + ')';
     var b = biernikEtykiety(m.worst.verdict.l);
@@ -540,8 +581,6 @@
     if (b) {
       txt = duza(b.tekst) + ' zaobserwowano ' + kiedy + delta + (b.ogon ? ' — ' + b.ogon : '');
     } else {
-      var e = rozbijEtykiete(m.worst.verdict.l);
-      var z = ZDANIOWE[e.glowa];
       txt = z
         ? duza(kiedy) + delta + ' ' + z.wtedy + (e.ogon ? ' — ' + e.ogon : '')
         : duza(kiedy) + ' zaobserwowano największą zmianę pozycji centylowej' + delta
@@ -570,7 +609,10 @@
     var reszta = '';
     if (a && a.cls === 'bad') reszta = ' i znajduje się ' + a.short + norma;
     else if (a && a.cls === 'warn') reszta = ' i wymaga oceny' + norma;
-    else if (a && a.cls === 'good') reszta = ' i mieści się ' + a.short + ' dla wieku' + norma;
+    // „dla wieku" tylko wtedy, gdy norma karty jest z wieku metrykalnego — przy normie wg wieku
+    // kostnego albo stadium Tannera „w normie dla wieku (… wg wieku kostnego 9 lat)" przeczylo
+    // samo sobie (audyt skladu 2026-09-27). Slowa karty w nawiasie zostaja bez zmian.
+    else if (a && a.cls === 'good') reszta = ' i mieści się ' + a.short + (a.note && /wieku kostnego|Tanner/.test(a.note) ? '' : ' dla wieku') + norma;
     // Flaga aboveNormAge dotyczy wieku metrykalnego ALBO kostnego — stad doslowny tekst
     // karty, bez „wiek chłopca", ktore bywaloby nieprawdziwe.
     else if (a && v.aboveNormAge) reszta = ' — ' + a.text;
@@ -615,27 +657,37 @@
   function zdanieMasa(model) {
     var m = metryka(model, 'bmi');
     if (!m || !m.total || !m.first || !m.last) return null;
+    var ostrz = function (x) { return x && (x.t === 'bad' || x.t === 'warn'); };
+    // P-WERDYKT rata 6: przy AKTYWNYM kursie leczenia redukcyjnego naglowkiem wiersza w karcie
+    // jest chip leczenia (chipNaglowka), a nie faza ani calosc — opis mowi to samo. Zdanie
+    // powstaje przy KAZDYM tonie: odpowiedz na leczenie jest w dokumentacji potrzebna takze
+    // wtedy, gdy jest dobra. Do audytu skladu 2026-09-27 opis pomijal BMI dziecka w trakcie
+    // leczenia, gdy odpowiedz byla dobra, a przy zlej mowil o calym okresie, nie o kursie.
+    var tr = m.treatment && m.treatment.verdict && m.treatment.aktywne ? m.treatment : null;
+    if (tr) {
+      var txtT = 'W okresie leczenia redukcyjnego' + (tr.label ? ' (' + tr.label + ')' : '')
+        + ', od pomiaru w wieku ' + wiekDop(tr.a.ageMonths) + ', BMI' + ruchBmi(tr.a, tr.b, 'teraz')
+        + ' (ΔbmiSDS ' + fmtSds(tr.dSds) + ')' + konkluzja(tr.verdict.l, 'teraz');
+      return {
+        id: 'masa',
+        tone: tr.verdict.t === 'bad' ? 'bad' : (tr.verdict.t === 'warn' ? 'warn' : 'plain'),
+        text: kropka(txtT)
+      };
+    }
     // P-WERDYKT rata 5: ostatnia faza BMI (jak dla wzrostu); zdanie tylko przy ostrzeżeniu w nagłówku
     // ALBO we wcześniejszym okresie (żeby historia przyrostu nie znikała z opisu).
     var f = fazaNaglowka(m);
     var v = f ? f.verdict : m.total;
     var w = f && f.wczesniej && f.wczesniej.verdict ? f.wczesniej : null;
-    var ostrz = function (x) { return x && (x.t === 'bad' || x.t === 'warn'); };
     if (!ostrz(v) && !(w && ostrz(w.verdict))) return null;
     var od = f ? f.a : m.first;
     var dSds = m.last.sd != null && od.sd != null ? m.last.sd - od.sd : null;
-    var kA = kanal(od.c), kB = kanal(m.last.c);
-    var ruch = kA && kB && kA !== kB
-      ? ' przesunęło się z kanału ' + kA + ' do kanału ' + kB
-      : (kB ? ' utrzymuje się w kanale ' + kB : ' zmieniło pozycję centylową');
-    var txt = 'Od pomiaru w wieku ' + wiekDop(od.ageMonths) + ' BMI' + ruch
+    var txt = 'Od pomiaru w wieku ' + wiekDop(od.ageMonths) + ' BMI' + ruchBmi(od, m.last, 'teraz')
       + (dSds != null ? ' (ΔbmiSDS ' + fmtSds(dSds) + ')' : '')
       + konkluzja(v.l, 'teraz');
     if (w) {
-      var kW = kanal(w.a.c), kW2 = kanal(w.b.c);
-      var ruchW = kW && kW2 && kW !== kW2 ? ' przesunęło się z kanału ' + kW + ' do kanału ' + kW2 : (kW2 ? ' pozostawało w kanale ' + kW2 : ' utrzymywało pozycję centylową');
-      txt = kropka(txt) + ' Wcześniej, ' + zakresWieku(w.a.ageMonths, w.b.ageMonths) + ', BMI' + ruchW
-        + ' (ΔbmiSDS ' + fmtSds(w.dSds) + ')' + konkluzja(w.verdict.l, 'wtedy');
+      txt = kropka(txt) + ' Wcześniej, ' + zakresWieku(w.a.ageMonths, w.b.ageMonths) + ', BMI'
+        + ruchBmi(w.a, w.b, 'wtedy') + ' (ΔbmiSDS ' + fmtSds(w.dSds) + ')' + konkluzja(w.verdict.l, 'wtedy');
     }
     var ton = ostrz(v) ? v.t : w.verdict.t;
     return {
@@ -671,8 +723,13 @@
     var h = metryka(model, 'height');
     if (mpSds != null && h && h.last && h.last.sd != null) {
       var d = h.last.sd - mpSds;
-      txt += ' Aktualny wzrost dziecka znajduje się ' + fmtSdsAbs(d) + ' SD '
-        + (d < 0 ? 'poniżej' : 'powyżej') + ' potencjału genetycznego.';
+      var dAbs = fmtSdsAbs(d);
+      // „0,0 SD powyżej potencjału" to zdanie bez tresci — po zaokragleniu roznica znika, wiec
+      // opis mowi wprost, ze wzrost odpowiada potencjalowi (audyt skladu 2026-09-27).
+      txt += dAbs === '0,0'
+        ? ' Aktualny wzrost dziecka odpowiada potencjałowi genetycznemu.'
+        : ' Aktualny wzrost dziecka znajduje się ' + dAbs + ' SD '
+          + (d < 0 ? 'poniżej' : 'powyżej') + ' potencjału genetycznego.';
     }
     return txt.trim() ? { id: 'potencjal', tone: 'plain', text: txt.trim() } : null;
   }
@@ -681,17 +738,24 @@
   function zdanieWiekKostny(model, extra) {
     var ba = num(extra.boneAgeYears);
     if (ba == null || ba <= 0) return null;
+    var h = metryka(model, 'height');
+    var teraz = h && h.last ? h.last.ageMonths : null;
     var przy = num(extra.boneAgeAtAgeMonths);
     if (przy == null) {
-      var h = metryka(model, 'height');
-      przy = h && h.last ? h.last.ageMonths : null;
+      // Wiek kostny oznaczony N mies. temu porownuje sie z wiekiem metrykalnym Z CHWILI
+      // oznaczenia. Do audytu skladu 2026-09-27 porownywano go z dzisiejszym wiekiem, wiec
+      // „opoznienie" roslo z kazdym miesiacem od badania. Bez zadnej daty zostaje „teraz".
+      var temu = num(extra.boneAgeMonthsAgo);
+      przy = teraz != null ? (temu != null && temu > 0 ? teraz - temu : teraz) : null;
     }
     if (przy == null) return null;
+    var dawny = teraz != null && Math.round(teraz - przy) >= 1;
     var baM = Math.round(ba * 12);
     var roznica = baM - przy;
+    var orzeczenie = dawny ? 'był on' : 'jest on';
     var opis;
-    if (Math.abs(roznica) < 3) opis = 'jest on zgodny z wiekiem metrykalnym';
-    else opis = 'jest on ' + (roznica < 0 ? 'opóźniony' : 'przyspieszony') + ' o ' + trwanie(Math.abs(roznica));
+    if (Math.abs(roznica) < 3) opis = orzeczenie + ' zgodny z wiekiem metrykalnym';
+    else opis = orzeczenie + ' ' + (roznica < 0 ? 'opóźniony' : 'przyspieszony') + ' o ' + trwanie(Math.abs(roznica));
     return {
       id: 'wiekKostny',
       tone: 'plain',

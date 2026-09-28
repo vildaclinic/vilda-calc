@@ -608,12 +608,12 @@
   "sha256": "70e9784e63bd9c4ec6c83f3fcd8497b3fc927919981ed47d435d1570403705e6"
  },
  "vilda_patient_narrative.js": {
-  "v": 19,
-  "sha256": "67d4e3cb907c1e57c7fdf794ac962ffe4caa18f45f9256ea9cbcd00261e443d1"
+  "v": 20,
+  "sha256": "b5488d8f4bc4b9a8ce327bc0e433a7345662a64ed16338214fa032785a7f5672"
  },
  "vilda_patient_narrative_ui.js": {
-  "v": 9,
-  "sha256": "f82ae91c53ceefc4394342a9ea3d4254454620b6330e112ed8e048a0333d09c5"
+  "v": 10,
+  "sha256": "1c749df2b39f7cd2d994814236d6be1874db4f69f4eda1fed7f82072a210cc52"
  },
  "vilda_patient_report.js": {
   "v": 45,
