@@ -1,0 +1,37 @@
+<!-- @dsCard group="Powierzchnie" height=490 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Card</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;max-width:928px}
+.pv > *{margin:0}
+.pv .col{display:flex;flex-direction:column;gap:16px}
+</style></head><body class="liquid-ios26">
+<div class="pv">
+  <fieldset class="user-card">
+    <legend>Dane pacjenta</legend>
+    <label>Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
+      <input type="text" id="lastName" autocomplete="off" value="Testowa">
+    </label>
+    <label>Wzrost (cm):
+      <input type="number" id="height" value="148">
+    </label>
+  </fieldset>
+  <div class="col">
+    <div class="card summary-card porownanie-karta">
+      <h3 style="margin:0;">Porównanie z poprzednim pomiarem</h3>
+      <div class="porownanie">Masa ciała: 41,5 kg (+1,2 kg od 14.03.2026)</div>
+    </div>
+    <div class="card gh-test-card">
+      <strong>Test z klonidyną</strong>
+      <p style="margin-top:0.3rem;">Wprowadź wagę i wzrost, aby obliczyć dawkę.</p>
+    </div>
+  </div>
+  <div class="plan-card">
+    <h3 style="margin:0 0 .4rem;">Plan żywieniowy</h3>
+    Szacowane zapotrzebowanie energetyczne: 1850 kcal/dobę.
+  </div>
+  <section class="card">
+    <h2 style="text-align:center;margin:0 0 .5rem;">Ciśnienie i tętno u&nbsp;dorosłych</h2>
+    <p style="margin:0;">Wynik interpretowany według wytycznych PTNT 2019.</p>
+  </section>
+</div>
+</body></html>

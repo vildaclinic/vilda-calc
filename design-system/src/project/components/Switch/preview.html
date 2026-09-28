@@ -1,0 +1,65 @@
+<!-- @dsCard group="Pola formularza" height=236 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Switch</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.pv-col{flex:1 1 260px;max-width:440px;min-width:0}
+.pv-col>.toggle-wrap:first-child{margin-top:0}
+.pv-col>.diet-toggle-group+.diet-toggle-group{margin-top:.6rem}
+.pv-col>.settings-grid{margin-top:.6rem}
+</style></head><body class="liquid-ios26">
+<div class="pv-row">
+  <div class="pv-col">
+    <div id="resultsModeToggleContainer" class="toggle-wrap">
+      <span class="label-left">Wyniki standardowe</span>
+      <label class="switch">
+        <input type="checkbox" id="resultsModeToggle" checked>
+        <span class="slider"></span>
+      </label>
+      <span class="label-right pro-label">Wyniki profesjonalne<sup class="pro-tag">PRO</sup></span>
+    </div>
+    <div class="toggle-wrap">
+      <span class="label-left">AHA</span>
+      <label class="switch">
+        <input type="checkbox" id="adultBpGuidelineToggle">
+        <span class="slider"></span>
+      </label>
+      <span class="label-right">ESC/PTK</span>
+    </div>
+    <div id="publicationToggleRow" class="publication-toggle-row">
+      <span class="publication-toggle-label">Siatki do publikacji</span>
+      <label class="switch-pub">
+        <input type="checkbox" id="publicationChartsToggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+  <div class="pv-col">
+    <div class="diet-toggle-group">
+      <span class="toggle-label" id="reduceToggleLabel">Redukcja masy</span>
+      <label class="switch-diet"><input type="checkbox" id="reduceToggle" checked><span class="slider"></span></label>
+    </div>
+    <div class="diet-toggle-group" id="stabilizationGroup">
+      <span class="toggle-label">Stabilizacja masy</span>
+      <label class="switch-diet"><input type="checkbox" id="stabilizationToggle"><span class="slider"></span></label>
+    </div>
+    <div id="fluCard"><div id="fluSwitches">
+      <div class="flu-switch-row">
+        <span class="flu-switch-label">Dodaj profilaktykę dla domowników</span>
+        <label class="switch-flu">
+          <input type="checkbox" id="fluProphylaxis" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div></div>
+    <div class="settings-grid">
+      <div class="setting-item">
+        <span>Pokaż etykietę wartości przy ostatnim pomiarze wzrostu (cm)</span>
+        <label class="switch">
+          <input type="checkbox" id="centileShowHeightLabelToggle" disabled>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

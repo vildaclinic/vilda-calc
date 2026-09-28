@@ -1,0 +1,43 @@
+<!-- @dsCard group="Wyniki i dane" height=420 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>DataTable</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.row > *{flex:1 1 280px;min-width:0}
+.row .total-card{margin:0}
+.stack{display:flex;flex-direction:column;gap:16px;max-width:900px}
+</style></head><body class="liquid-ios26">
+<div class="stack">
+  <div class="row">
+    <div id="whrChildTable" class="data-card">
+      <table>
+        <thead><tr><th>Parametr</th><th>Wartość</th><th>Centyl</th></tr></thead>
+        <tbody>
+          <tr><td>Obwód talii</td><td>62,0 cm</td><td>75. centyl</td></tr>
+          <tr><td>Obwód bioder</td><td>74,0 cm</td><td>60. centyl</td></tr>
+          <tr><td>WHR</td><td>0,84</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="total-card">
+      <h2>Kalorie posiłków</h2>
+      <table class="kcal-table">
+        <thead><tr><th>Posiłek</th><th class="text-right">kcal</th></tr></thead>
+        <tbody>
+          <tr><td>Śniadanie</td><td>420</td></tr>
+          <tr><td>Obiad</td><td>610</td></tr>
+          <tr><td>Kolacja</td><td>380</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Wiek</th><th>P3</th><th>P10</th><th>P50</th><th>P90</th><th>P97</th></tr></thead>
+      <tbody>
+        <tr><td>8 lat</td><td>0,78</td><td>0,80</td><td>0,85</td><td>0,90</td><td>0,93</td></tr>
+        <tr><td>9 lat</td><td>0,77</td><td>0,79</td><td>0,84</td><td>0,89</td><td>0,92</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body></html>

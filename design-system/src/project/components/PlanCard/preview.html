@@ -1,0 +1,47 @@
+<!-- @dsCard group="Marketing" height=620 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>PlanCard</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.stack{max-width:900px;padding-top:14px}
+.stack .sub-plans{margin-bottom:0}</style></head><body>
+<div class="stack">
+  <div class="sub-plans" role="list">
+    <div class="sub-plan" role="listitem" aria-label="Plan Bezpłatny">
+      <div class="sub-plan__header">
+        <div class="sub-plan__name">Bezpłatny</div>
+        <div class="sub-plan__price">0 zł <span>/ mies.</span></div>
+        <p class="sub-plan__price-note">Zawsze dostępny, bez rejestracji.</p>
+      </div>
+      <hr class="sub-plan__sep">
+      <ul class="sub-plan__features">
+        <li><span class="sub-plan__check sub-plan__check--teal" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Kalkulator BMI, wagi i wzrostu</li>
+        <li><span class="sub-plan__check sub-plan__check--teal" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Centyle WHO (0–5 lat) i OLAF (3–18 lat)</li>
+        <li><span class="sub-plan__check sub-plan__check--teal" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Plan diety i kaloryczności</li>
+        <li><span class="sub-plan__check sub-plan__check--teal" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Kalkulatory HOMA-IR i klirens/eGFR</li>
+      </ul>
+      <a href="index.html" class="sub-plan__cta sub-plan__cta--secondary">Przejdź do aplikacji</a>
+    </div>
+    <div class="sub-plan sub-plan--pro" role="listitem" aria-label="Plan Vilda PRO">
+      <span class="sub-plan__badge">★ Polecany</span>
+      <div class="sub-plan__header">
+        <div class="sub-plan__name">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" class="sub-plan__name-pro" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span class="sub-plan__name-pro">Vilda PRO</span>
+        </div>
+        <div class="sub-plan__price" id="subProPrice">49 zł <span>/ mies.</span></div>
+        <p class="sub-plan__price-trial">Pierwsze 30 dni bezpłatnie</p>
+        <p class="sub-plan__price-note">Bez karty kredytowej.</p>
+      </div>
+      <hr class="sub-plan__sep">
+      <ul class="sub-plan__features">
+        <li><span class="sub-plan__check sub-plan__check--pro" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Wszystko z planu bezpłatnego</li>
+        <li><span class="sub-plan__check sub-plan__check--pro" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Centyle Palczewskiej (0–18 lat) — polskie siatki kliniczne</li>
+        <li><span class="sub-plan__check sub-plan__check--pro" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Wyniki Z-score wagi, wzrostu i BMI</li>
+        <li><span class="sub-plan__check sub-plan__check--pro" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Moduł DocPro — protokoły endokrynologiczne</li>
+      </ul>
+      <div id="subTrialStatus" class="sub-trial-status sub-trial-status--success" role="status" aria-live="polite">Okres próbny aktywny do 28.10.2026.</div>
+      <button class="sub-plan__cta sub-plan__cta--pro" type="button">Rozpocznij 30 dni za darmo</button>
+      <p class="sub-login-note">Masz już konto? <a href="#">Zaloguj się</a>, aby aktywować PRO.</p>
+    </div>
+  </div>
+</div>
+</body></html>

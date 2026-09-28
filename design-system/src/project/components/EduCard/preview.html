@@ -1,0 +1,39 @@
+<!-- @dsCard group="Powierzchnie" height=660 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>EduCard</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.pv{display:flex;flex-direction:column;gap:16px;max-width:928px}
+.pv-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+</style></head><body class="liquid-ios26 edu-page">
+<div class="pv">
+  <section class="card edu-hero" aria-labelledby="watch-title">
+    <span class="edu-kicker"><span class="edu-kicker-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></span><span>Film instruktażowy</span></span>
+    <h1 id="watch-title" class="edu-title">Genotropin – instrukcja podawania</h1>
+    <p class="edu-lead">Film prowadzi krok po kroku przez przygotowanie wstrzykiwacza i igły, ustawienie dawki oraz podanie leku.</p>
+    <div class="edu-meta-row"><span class="edu-meta-pill"><span class="edu-meta-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg></span><span>Czas filmu: 03:05</span></span></div>
+  </section>
+  <div class="pv-row">
+    <article class="card edu-resource-card">
+      <div class="edu-card-top">
+        <span class="edu-card-badge">Film</span>
+        <h3 class="edu-card-title">Ngenla – instrukcja podawania</h3>
+        <p class="edu-card-description">Przygotowanie wstrzykiwacza, wybór miejsca wkłucia i podanie dawki.</p>
+      </div>
+      <div class="resource-actions"><a class="resource-button primary" href="#">Obejrzyj film</a><a class="resource-button secondary" href="#">Pobierz PDF</a></div>
+    </article>
+    <section class="card edu-video-shell">
+      <div class="edu-video-frame"><video id="video-player" controls preload="metadata"></video></div>
+      <div class="edu-meta-row"><span class="edu-meta-pill"><span>Czas filmu: 03:05</span></span></div>
+      <div class="resource-actions center"><a class="resource-button primary" href="#">Wróć do materiałów</a></div>
+    </section>
+    <section class="card edu-info-card">
+      <h2>Sekcje filmu</h2>
+      <ol class="chapter-list">
+        <li><a href="#video-player"><span class="chapter-time">00:00</span><span>Wprowadzenie</span></a></li>
+        <li><a href="#video-player"><span class="chapter-time">00:42</span><span>Przygotowanie wstrzykiwacza</span></a></li>
+        <li><a href="#video-player"><span class="chapter-time">02:10</span><span>Podanie leku</span></a></li>
+      </ol>
+      <p class="notice">Materiał edukacyjny nie zastępuje instrukcji producenta.</p>
+    </section>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,53 @@
+<!-- @dsCard group="Nakładki" height=520 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Modal</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.ds-row{display:flex;gap:16px;align-items:stretch}
+.ds-row>*{flex:1 1 0;min-width:0}
+/* w aplikacji oba okna są position:fixed nad całą stroną — w podglądzie stoją w przepływie dokumentu */
+body #thyTermModal.thy-modal,body .vild-rem-dlg-ov{position:relative!important}
+</style></head><body class="liquid-ios26">
+<div class="ds-row">
+  <div id="thyTermModal" class="thy-modal is-open" aria-hidden="false">
+    <div class="thy-modal-inner" role="dialog" aria-modal="true" aria-labelledby="thyTermModalTitle">
+      <div class="thy-modal-header">
+        <h3 id="thyTermModalTitle">Bethesda III (AUS/FLUS) u dzieci</h3>
+        <button type="button" id="thyTermModalClose" class="thy-modal-close" aria-label="Zamknij okno">×</button>
+      </div>
+      <div id="thyTermModalBody" class="thy-modal-body">
+        <p><strong>Kategoria Bethesda III</strong> oznacza wynik BACC/FNAB, w którym materiał nie jest jednoznacznie łagodny, ale też nie spełnia kryteriów „podejrzenia złośliwości”. Jest to kategoria <strong>pośrednia / nieokreślona</strong>.</p>
+        <ul>
+          <li><strong>AUS</strong> i <strong>FLUS</strong> to synonimy – pracownia wybiera jedną nazwę i stosuje ją konsekwentnie.</li>
+          <li>Wartości referencyjne mają charakter orientacyjny.</li>
+        </ul>
+      </div>
+      <div class="thy-modal-footer">
+        <button type="button" id="thyTermModalMore">Informacje dodatkowe</button>
+        <button type="button" id="thyTermModalClose2">Zamknij</button>
+      </div>
+    </div>
+  </div>
+  <div class="vild-rem-dlg-ov">
+    <div class="vild-rem-dlg" role="dialog" aria-modal="true">
+      <div class="vild-rem-dlg-head">
+        <span class="vild-rem-dlg-cat" style="color:#A32D2D;background:#FCEBEB">Lek</span>
+        <button type="button" class="vild-rem-dlg-x" aria-label="Zamknij">×</button>
+      </div>
+      <div class="vild-rem-dlg-body">
+        <div class="vild-rem-dlg-nm">Jan Testowy</div>
+        <div class="vild-rem-dlg-ttl">Kontrola dawki hormonu wzrostu</div>
+        <div class="vild-rem-dlg-txt">Sprawdź masę ciała przed zmianą dawki.</div>
+        <div class="vild-rem-dlg-row"><b>Termin</b><span>poniedziałek, 5 października 2026 · dziś</span></div>
+        <div class="vild-rem-dlg-row"><b>Lek</b><span>Somatropina — zmiana dawki</span></div>
+        <div class="vild-rem-dlg-row"><b>Dawka</b><span>1,2 mg (poprzednio 1,0 mg)</span></div>
+      </div>
+      <div class="vild-rem-dlg-acts">
+        <button type="button" class="vilda-auth-btn vilda-auth-btn-small vild-rem-dlg-pri">👤 Otwórz kartę pacjenta</button>
+        <button type="button" class="vilda-auth-btn vilda-auth-btn-small">✓ Zrobione</button>
+        <button type="button" class="vilda-auth-btn vilda-auth-btn-small">📅 Przełóż…</button>
+        <button type="button" class="vilda-auth-btn vilda-auth-btn-small vild-rem-dlg-destr">✕ Nie zgłosił się</button>
+        <button type="button" class="vilda-auth-btn vilda-auth-btn-small vild-rem-dlg-ghost">Zamknij</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

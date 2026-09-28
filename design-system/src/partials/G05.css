@@ -1,0 +1,637 @@
+/* G05 Wyniki i dane — źródło: style.css (ResultPanel 525-537, 637-642, 664-695, 2332-2333, 923-930, 956-961, 1263-1273, 1640-1644, 2447-2461, 2472-2480, 2512-2572, 2904-2908, 5414-5423, 2329-2331, 4866-4872; SummaryGrid 365-381, 2601-2659, 2674-2701, 2702-2854; DataTable 134-145, 603-616, 622-632, 711-728, 1543-1566, 2334-2371, 4745-4746), ios26-v2.css (nadpisania .liquid-ios26: 74-84, 193-194), style.css (wysoki kontrast: 5157-5166, 5193-5195). Reguły skopiowane dosłownie z czytelnych kopii; kolejność: baza → .liquid-ios26 → wysoki kontrast. Brak reguł ciemnego tła dla tej grupy. */
+
+/* ===================== ResultPanel — baza (style.css) ===================== */
+/* .result-box, .result-val (525-537) */
+.result-box{
+  border:2px solid var(--brand);
+  border-radius:var(--radius);
+  padding:1rem;
+  margin:12px 0;
+  font-size:1.75rem;
+  background:var(--card-bg);
+  text-align:center;
+  box-shadow:var(--shadow-s)}
+.result-val{
+  color:var(--primary);
+  font-size:1.75rem;
+  font-weight:600}
+/* #advResults — pierwsza (637-642) i późniejsza (2904-2908) definicja, obie zachowane w kolejności kaskady */
+#advResults{
+  border:1px solid var(--primary);
+  background:var(--bg);
+  padding:1rem;
+  border-radius:var(--radius);
+  font-size:1.25rem}
+#advResults{
+  border:2px solid var(--brand);
+  background:var(--card-bg);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-s)}
+/* .result-card, --pulse, @keyframes pulseBG, .result-number (664-695) */
+.result-card{
+  background:var(--card-bg);
+  border:2px solid var(--brand);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-s);
+  padding:1.25rem 1.5rem;
+  position:relative;
+  overflow:hidden}
+.result-card.--pulse:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:var(--brand-light);
+  opacity:0;
+  z-index:-1;
+  animation:pulseBG 1s ease-out forwards}
+@keyframes pulseBG{
+  0%{
+  opacity:.15}
+to{
+  opacity:0}
+}
+.result-number{
+  font:600 1.75rem/1 Inter,sans-serif;
+  letter-spacing:-.02em;
+  color:var(--brand);
+  display:inline-flex;
+  align-items:flex-end}
+.result-number small{
+  font-size:.65em;
+  margin-left:.1em;
+  color:#444}
+/* #intakeCard (z #intakeResults) — szerokość (2329-2331) i h2.intake-title (2332-2333) */
+#intakeCard,#intakeResults,#intakeResults .intake-results-table-wrap{
+  min-width:0;
+  max-width:100%}
+
+#intakeCard h2.intake-title{
+  text-align:center}
+/* #intakeResults .intake-alert (923-930) */
+#intakeResults .intake-alert{
+  margin-top:.5rem;
+  font-size:1.2rem;
+  font-weight:600}
+#intakeResults .intake-alert.warn{
+  color:#c75d00}
+#intakeResults .intake-alert.danger{
+  color:var(--danger)}
+/* #bpResult i modyfikatory ciśnienia .rr-warning/.rr-danger (956-961); animacje pierścienia .pulse-* opisuje karta Pulse */
+#bpResult{
+  position:relative}
+#bpResult.rr-warning{
+  border-color:#c75d00!important}
+#bpResult.rr-danger{
+  border-color:var(--danger)!important}
+/* .plan-result-card (1263-1273) */
+.plan-result-card{
+  text-align:center}
+.plan-result-card h3{
+  font-size:1.75rem;
+  font-weight:600;
+  margin-bottom:.4rem}
+.plan-result-card .result-number{
+  font-size:2rem;
+  font-weight:600}
+.plan-result-card small{
+  font-size:1.5rem}
+/* .bsa-info (1640-1644) */
+.bsa-info{
+  margin-top:6px;
+  font-size:1.35rem;
+  font-weight:600;
+  color:var(--primary)}
+/* .intake-result-card (2447-2461, 2472-2480) */
+.intake-result-card{
+  border:1px solid #d0dede;
+  background:#fff;
+  border-radius:var(--radius);
+  padding:.7rem .85rem;
+  margin-bottom:.65rem}
+.intake-result-card p{
+  margin:.14rem 0;
+  font-size:1.05rem;
+  line-height:1.35;
+  text-align:left}
+#intakeResults .intake-results-note{
+  font-size:.84rem;
+  line-height:1.35;
+  text-align:left}
+.intake-result-card p strong{
+  color:var(--primary)}
+@media(max-width:700px){
+  .intake-result-card p{
+  font-size:1.05rem;
+  text-align:left}
+#intakeResults .intake-results-note{
+  font-size:.82rem}
+}
+/* .whr-result, .whr-number, .whr-badge, .whr-status, modyfikatory .bmi-warning/.bmi-danger i .whr-warning/.whr-danger (2512-2572) */
+.whr-result{
+  display:grid;
+  gap:.4rem}
+.whr-topline{
+  display:flex;
+  align-items:baseline;
+  justify-content:center;
+  gap:.5rem;
+  flex-wrap:wrap}
+.whr-label{
+  font-weight:600}
+.whr-number{
+  font:600 1.75rem/1 Inter,sans-serif;
+  color:var(--primary)}
+.whr-badges{
+  display:flex;
+  gap:.35rem;
+  justify-content:center;
+  flex-wrap:wrap}
+.whr-badge{
+  display:inline-block;
+  padding:.35rem .55rem;
+  border:1px solid #d0dede;
+  background:#fff;
+  border-radius:6px;
+  font-size:1rem}
+.whr-badge small{
+  opacity:.85;
+  margin-left:.25rem}
+.whr-status{
+  margin-top:.25rem;
+  text-align:center}
+.whr-status.ok{
+  color:var(--primary);
+  font-weight:600}
+#idealWeightInfo{
+  font-size:1.2rem;
+  font-weight:600;
+  color:var(--primary)}
+.result-box.bmi-warning{
+  border-color:#c75d00!important}
+.result-box.bmi-warning .result-val{
+  color:#c75d00!important}
+.result-box.bmi-danger{
+  border-color:var(--danger)!important}
+.result-box.bmi-danger .result-val{
+  color:var(--danger)!important}
+.result-box.whr-warning{
+  border-color:#c75d00!important}
+.result-box.whr-warning .whr-number,.result-box.whr-warning .whr-status{
+  color:#c75d00!important}
+.result-box.whr-danger{
+  border-color:var(--danger)!important}
+.result-box.whr-danger .whr-number,.result-box.whr-danger .whr-status{
+  color:var(--danger)!important}
+.whr-status.warn{
+  color:#c75d00;
+  font-weight:600}
+.whr-status.bad{
+  color:var(--danger);
+  font-weight:600}
+/* .adult-vitals-result-box (5414-5423) */
+.adult-vitals-result-box{
+  position:relative;
+  overflow:visible;
+  margin-top:.85rem;
+  text-align:left;
+  font-size:1rem}
+.adult-vitals-result-box.adult-vitals-warning{
+  border-color:#c75d00!important}
+.adult-vitals-result-box.adult-vitals-danger{
+  border-color:var(--danger)!important}
+
+/* stany PRO: ukryta ramka i kolory wartości (4866-4872) */
+.result-box.pro-hidden-border,.result-card.pro-hidden-border{
+  border:2px solid transparent!important;
+  box-shadow:none!important}
+.result-val.pro-warning{
+  color:var(--notice-orange)!important}
+.result-val.pro-danger{
+  color:var(--danger)!important}
+
+/* ===================== SummaryGrid — baza (style.css) ===================== */
+/* .current-summary-row / -param / -dots / -value (365-381) */
+.current-summary-row{
+  display:flex;
+  align-items:center;
+  font-size:.95rem;
+  margin-top:.4rem}
+.current-summary-row:first-child{
+  margin-top:0}
+.current-summary-param{
+  font-weight:600}
+.current-summary-dots{
+  flex-grow:1;
+  border-bottom:1px dotted rgba(0,0,0,.3);
+  margin:0 .4rem;
+  height:0}
+.current-summary-value{
+  white-space:nowrap;
+  text-align:right}
+/* .summary-grid, .prev-summary-*, .status-*, .diff-* (2601-2659) */
+.summary-grid{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:.35rem .5rem}
+.summary-grid .label{
+  color:var(--text);
+  font-size:.95rem}
+.summary-grid .val{
+  text-align:right}
+.summary-grid .val .result-val{
+  font-size:1.35rem}
+.summary-grid .muted{
+  color:#6b7a7a;
+  font-size:.92rem}
+.prev-summary-separator{
+  border:none;
+  border-top:2px solid #d0dede;
+  width:90%;
+  margin:0 auto .6rem}
+.prev-summary-label{
+  text-align:center;
+  margin-bottom:.5rem;
+  font-size:.95rem;
+  font-weight:600}
+.status-ok{
+  color:var(--secondary)}
+.status-improve{
+  color:#c75d00}
+.status-alert{
+  color:var(--danger)}
+.diff-section{
+  margin-top:.5rem}
+.summary-grid .diff-section{
+  grid-column:1 / -1}
+.diff-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:.35rem .5rem;
+  align-items:baseline}
+.diff-row .label{
+  color:var(--text);
+  font-size:.95rem}
+.diff-row .val{
+  text-align:right}
+.diff-row .val .result-val{
+  font-size:1.35rem}
+/* P-OSTATNI-1: werdykt pary pomiarow / zdanie tempa pod wierszem roznicy — ten sam slownik, co Karta pacjenta */.diff-verdict{
+  grid-column:1 / -1;
+  text-align:right;
+  font-size:.88rem;
+  line-height:1.3;
+  margin:-.1rem 0 .4rem;
+  color:#4b5b5b}
+.diff-verdict.status-ok{
+  color:var(--secondary)}
+.diff-verdict.status-improve{
+  color:#c75d00}
+.diff-verdict.status-alert{
+  color:var(--danger)}
+/* #prevSummaryCard.porownanie-karta, .porownanie-chipy, .porownanie-chip i modyfikatory --szara/--kontekst/[hidden] (2674-2701) */
+#prevSummaryCard.porownanie-karta{
+  position:relative}
+.porownanie-chipy{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem;
+  margin:.55rem 0 .15rem}
+.porownanie-chip{
+  display:inline-flex;
+  align-items:center;
+  font-size:.8rem;
+  font-weight:600;
+  padding:.15rem .6rem;
+  border-radius:999px;
+  background:#e6f4f5;
+  color:#0a6b73;
+  border:1px solid #cfe2e5;
+  white-space:nowrap}
+.porownanie-chip--szara{
+  background:transparent;
+  color:#6b7a7a;
+  border-color:#e3ecee}
+.porownanie-chip--kontekst{
+  background:#eef3ff;
+  color:#2f4b8a;
+  border-color:#d5def5}
+.porownanie-chip[hidden]{
+  display:none}
+/* .porownanie-tabela, .pt-*, @media(max-width:559px), .porownanie-tempo, .porownanie-nota, .porownanie-pozostale (2702-2854) */
+.porownanie-tabela{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:.5rem;
+  font-variant-numeric:tabular-nums;
+  table-layout:fixed}
+.porownanie-tabela th{
+  font-size:.72rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:#6b7a7a;
+  font-weight:700;
+  text-align:right;
+  padding:0 .4rem .4rem;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid #e3ecee}
+.porownanie-tabela tbody tr,.porownanie-tabela tbody tr:nth-child(odd),.porownanie-tabela tbody tr:hover{
+  background:transparent}
+.porownanie-tabela th:first-child,.porownanie-tabela td:first-child{
+  text-align:left;
+  width:22%}
+.porownanie-tabela td{
+  padding:.55rem .4rem;
+  border:0;
+  border-bottom:1px solid #e3ecee;
+  vertical-align:top;
+  text-align:right;
+  overflow-wrap:anywhere;
+  background:transparent}
+.porownanie-tabela td:first-child{
+  overflow-wrap:normal;
+  hyphens:manual}
+.porownanie-tabela tr:last-child td{
+  border-bottom:0}
+.porownanie-tabela td:first-child{
+  font-weight:600;
+  color:var(--text)}
+.pt-w{
+  display:block;
+  font-weight:700;
+  color:var(--primary);
+  font-size:1.12rem;
+  line-height:1.15}
+.pt-w small{
+  font-size:.72em;
+  font-weight:600}
+.pt-w.status-improve{
+  color:#c75d00}
+.pt-w.status-alert{
+  color:var(--danger)}
+.pt-s{
+  display:block;
+  font-size:.78rem;
+  color:#6b7a7a;
+  margin-top:.1rem;
+  line-height:1.3}
+.pt-d{
+  display:block;
+  font-weight:700;
+  font-size:1.05rem;
+  line-height:1.15;
+  color:var(--text)}
+.pt-d.status-ok{
+  color:var(--secondary)}
+.pt-d.status-improve{
+  color:#c75d00}
+.pt-d.status-alert{
+  color:var(--danger)}
+.pt-pill{
+  display:inline-block;
+  margin-top:.25rem;
+  font-size:.74rem;
+  font-weight:600;
+  padding:.12rem .5rem;
+  border-radius:999px;
+  line-height:1.3;
+  background:#eef2f3;
+  color:#4b5b5b}
+.pt-pill.status-ok{
+  background:#e7f5ec;
+  color:#1f8a4c}
+.pt-pill.status-improve{
+  background:#fff1e3;
+  color:#c75d00}
+.pt-pill.status-alert{
+  background:#fdecec;
+  color:#c62828}
+.pt-brak{
+  color:#9fb0b3}
+.pt-byl{
+  display:none}
+@media(max-width:559px){
+  .porownanie-tabela .pt-kol-poprzednio{
+  display:none}
+.pt-byl{
+  display:block}
+.porownanie-tabela th:first-child,.porownanie-tabela td:first-child{
+  width:29%;
+  font-size:.92rem;
+  padding-left:.25rem}
+.porownanie-tabela td{
+  padding:.5rem .3rem}
+.pt-w{
+  font-size:1rem}
+.pt-s{
+  font-size:.74rem}
+.pt-pill{
+  font-size:.7rem}
+}
+.porownanie-tempo{
+  margin-top:.6rem;
+  padding:.55rem .75rem;
+  border-radius:12px;
+  background:#e6f4f5;
+  border:1px solid #cfe2e5;
+  font-size:.9rem;
+  color:var(--text);
+  line-height:1.4}
+.porownanie-tempo.status-improve{
+  background:#fff1e3;
+  border-color:#f3d2a8}
+.porownanie-tempo.status-alert{
+  background:#fdecec;
+  border-color:#f2b8b8}
+.porownanie-nota{
+  margin-top:.5rem;
+  font-size:.9rem;
+  color:#6b7a7a;
+  border-left:3px solid #cfe2e5;
+  padding-left:.6rem;
+  line-height:1.4}
+.porownanie-nota--plec{
+  color:#b45309;
+  border-left-color:#f3d2a8;
+  font-weight:600}
+.porownanie-pozostale{
+  margin-top:.85rem;
+  border-top:1px solid #e3ecee;
+  padding-top:.6rem;
+  position:relative}
+.porownanie-pozostale h4{
+  margin:0 0 .35rem;
+  font-size:.95rem;
+  color:var(--text)}
+.porownanie-pozostale .pro-summary-label{
+  top:.45rem;
+  right:0;
+  transform:none}
+.porownanie-pozostale.pro .pro-summary-label{
+  display:block}
+.porownanie-pozostale .summary-content{
+  margin-top:.2rem}
+
+/* ===================== DataTable — baza (style.css) ===================== */
+/* table, th, td — pierwsza definicja (134-145) */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:.6rem}
+th,td{
+  border:1px solid #ddd;
+  padding:.6rem;
+  text-align:center;
+  font-size:.95rem}
+th{
+  background:var(--secondary);
+  color:#fff}
+/* table, th, td, thead th, paski, hover — późniejsza definicja (603-616) */
+table{
+  width:100%;
+  border-collapse:collapse}
+th,td{
+  padding:.6rem .75rem;
+  text-align:left}
+thead th{
+  background:var(--primary);
+  color:#fff;
+  font-weight:600}
+tbody tr:nth-child(odd){
+  background:var(--card)}
+tbody tr:hover{
+  background:#00b0a614}
+/* .table-scroll, .text-center, .text-right (622-629) i @media(max-width:600px) th,td (630-632; reguła przycisków z tego samego bloku pominięta — poza komponentem) */
+.table-scroll{
+  overflow-x:auto}
+.table-scroll>table{
+  min-width:520px}
+/* późniejsza reguła przewijania poziomego (4745-4746); lista selektorów ze źródła zachowana w całości */
+.table-scroll,#intakeResults .intake-results-table-wrap,.adult-vitals-mini-table-wrap,.nutrition-micros-table-wrap{
+  overscroll-behavior-x:contain}
+.text-center{
+  text-align:center}
+.text-right{
+  text-align:right}
+@media(max-width:600px){
+  th,td{
+  padding:.5rem}
+}
+/* .data-card (711-728) */
+.data-card{
+  background:var(--card);
+  border:2px solid var(--primary);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:1.25rem 1rem;
+  overflow:auto}
+.data-card table{
+  width:100%;
+  border-collapse:collapse}
+.data-card thead{
+  background:var(--primary);
+  color:#fff}
+.data-card th,.data-card td{
+  padding:.4rem .6rem;
+  text-align:center}
+.data-card tr:nth-child(2n){
+  background:#00000008}
+/* .total-card, .kcal-table (1543-1566) */
+/* deklaracja --pad: 1rem pominięta — token z tokens.css */
+.total-card{
+  padding:var(--pad);
+  background:var(--card-bg, #fff);
+  border:1px solid var(--card-border, #e2e8ea);
+  border-radius:var(--radius, 6px);
+  margin-top:1rem;
+  margin-bottom:1rem}
+.total-card h2{
+  text-align:center;
+  margin:0}
+.kcal-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:.6rem}
+.kcal-table th,.kcal-table td{
+  padding:4px 6px}
+.kcal-table th{
+  text-align:left;
+  color:#f9fafa}
+.kcal-table td:last-child{
+  text-align:right}
+.kcal-table--macro td{
+  vertical-align:top}
+/* #intakeResults table.intake-results-table (2334-2371) */
+#intakeResults .intake-results-table-wrap{
+  width:100%;
+  overflow-x:auto}
+#intakeResults table.intake-results-table{
+  width:100%;
+  min-width:0;
+  margin-top:0;
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout:fixed}
+#intakeResults table.intake-results-table thead th:nth-child(1){
+  width:25%}
+#intakeResults table.intake-results-table thead th:nth-child(2){
+  width:37.5%}
+#intakeResults table.intake-results-table thead th:nth-child(3){
+  width:37.5%}
+#intakeResults table.intake-results-table th,#intakeResults table.intake-results-table td{
+  padding:.55rem .65rem;
+  text-align:left;
+  vertical-align:top;
+  white-space:normal;
+  word-break:break-word;
+  overflow-wrap:anywhere}
+#intakeResults table.intake-results-table th{
+  background:var(--secondary);
+  color:#fff;
+  font-size:.92rem;
+  font-weight:600}
+#intakeResults table.intake-results-table tbody tr:nth-child(2n) td{
+  background:#00000008}
+#intakeResults .intake-period-main{
+  color:var(--primary);
+  font-weight:700;
+  line-height:1.3}
+#intakeResults .intake-period-sub{
+  margin-top:.35rem;
+  color:#6b7a7a;
+  font-size:.88rem}
+
+/* ===================== Liquid Glass — nadpisania .liquid-ios26 (ios26-v2.css 74-84, 193-194) ===================== */
+/* Lista selektorów reguły kart szklanych ograniczona do elementów tej grupy (pełna lista w źródle obejmuje też .card, .plan-card, fieldset, #timesCard); deklaracje bez zmian. */
+.liquid-ios26 .result-card,.liquid-ios26 .data-card,.liquid-ios26 #intakeCard{
+  background:var(--lg-surface-light)!important;
+  border:1px solid var(--lg-border)!important;
+  box-shadow:var(--lg-shadow)!important;
+  border-radius:var(--lg-radius)!important;
+  backdrop-filter:blur(14px) saturate(115%)!important;
+  -webkit-backdrop-filter:blur(14px) saturate(115%)!important}
+.liquid-ios26 .result-box{
+  background:#ffffff8c;
+  border-color:var(--lg-accent)!important;
+  box-shadow:0 2px 10px #00000014}
+.liquid-ios26 .result-number small{
+  opacity:.8}
+
+/* ===================== Wysoki kontrast (style.css 5157-5166, 5193-5195) ===================== */
+/* Listy selektorów ograniczone do elementów tej grupy (pełne listy w źródle obejmują header, ._glass, .card, .plan-card, fieldset, #timesCard, .info-card, .source-note, karty ustawień); deklaracje bez zmian. */
+body.high-contrast-level-1.liquid-ios26 .result-card,body.high-contrast-level-2.liquid-ios26 .result-card,body.high-contrast-level-3.liquid-ios26 .result-card,body.high-contrast-level-1.liquid-ios26 .data-card,body.high-contrast-level-2.liquid-ios26 .data-card,body.high-contrast-level-3.liquid-ios26 .data-card,body.high-contrast-level-1.liquid-ios26 #intakeCard,body.high-contrast-level-2.liquid-ios26 #intakeCard,body.high-contrast-level-3.liquid-ios26 #intakeCard{
+  background:var(--hc-surface)!important;
+  border:var(--hc-card-border-width) solid var(--hc-border)!important;
+  box-shadow:var(--hc-shadow)!important;
+  backdrop-filter:var(--hc-blur)!important;
+  -webkit-backdrop-filter:var(--hc-blur)!important}
+body.high-contrast-level-1.liquid-ios26 .result-box,body.high-contrast-level-2.liquid-ios26 .result-box,body.high-contrast-level-3.liquid-ios26 .result-box{
+  background:var(--hc-result-bg)!important;
+  color:var(--hc-text)!important;
+  box-shadow:0 6px 18px #00000017!important}
+body.high-contrast-level-1.liquid-ios26 .result-number small,body.high-contrast-level-2.liquid-ios26 .result-number small,body.high-contrast-level-3.liquid-ios26 .result-number small,body.high-contrast-level-1.liquid-ios26 small,body.high-contrast-level-2.liquid-ios26 small,body.high-contrast-level-3.liquid-ios26 small{
+  color:var(--hc-muted)!important;
+  opacity:1!important}
+
+/* ===================== Ciemne tło ===================== */
+/* Brak reguł dla paneli wyników, siatek podsumowań i tabel pod body.dark-bg-level-N — tryb zmienia tylko tło strony (var(--bg) z tokens.css). */

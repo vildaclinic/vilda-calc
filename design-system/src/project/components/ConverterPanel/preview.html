@@ -1,0 +1,74 @@
+<!-- @dsCard group="Moduły treści" height=1000 -->
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>ConverterPanel</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>/* tylko układ podglądu */
+body{margin:0;padding:16px;background:var(--bg)}
+.lab-container .lab-toast{position:static!important;transform:none!important;display:inline-block;margin:16px auto 0}
+.toast-slot{text-align:center}
+/* tylko podgląd: bez animacji wejścia kroków, żeby zrzut był stabilny (w aplikacji krok wjeżdża 0.3 s) */
+.lab-container .lab-step{animation:none!important}
+</style></head><body class="liquid-ios26">
+<div class="lab-container">
+  <div class="lab-card lab-full lab-smart-card" id="labResultsCard">
+    <h1>Przelicznik jednostek laboratoryjnych</h1>
+    <div class="lab-step" id="labStep1">
+      <div class="lab-step-num is-done" id="labStep1Num">1</div>
+      <div class="lab-step-body">
+        <div class="lab-step-label">Substancja</div>
+        <div class="lab-search-wrap">
+          <div class="lab-substance-input-wrap">
+            <input type="text" id="labSubstance" class="lab-substance" placeholder="kliknij i wybierz lub zacznij wpisywać…" autocomplete="off" spellcheck="false" inputmode="search" role="combobox" aria-autocomplete="list" aria-expanded="false" value="Glukoza">
+            <button type="button" id="labSubstanceClear" class="lab-substance-clear" aria-label="Wyczyść pole substancji" title="Wyczyść">×</button>
+          </div>
+          <div id="labSubstanceHint" class="lab-substance-hint" aria-live="polite">Glukoza (glucose) · masa cząsteczkowa 180,16 g/mol</div>
+        </div>
+      </div>
+    </div>
+    <div class="lab-step" id="labStep2">
+      <div class="lab-step-num is-active" id="labStep2Num">2</div>
+      <div class="lab-step-body">
+        <div class="lab-step-label">Wartość wyniku + jednostka źródłowa</div>
+        <div class="lab-input-row">
+          <input type="text" id="labValue" inputmode="decimal" placeholder="" autocomplete="off" value="5,4">
+          <select id="labUnit" aria-label="Jednostka źródłowa"><option>mmol/l</option><option>mg/dl</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="lab-step" id="labStep3">
+      <div class="lab-step-num" id="labStep3Num">3</div>
+      <div class="lab-step-body">
+        <div class="lab-step-label">Przelicz na <span class="lab-step-label-hint" id="labStep3Hint">— domyślnie SI</span></div>
+        <div class="lab-step-target-row">
+          <span class="lab-step-target-arrow">→</span>
+          <select id="labUnitTarget" aria-label="Jednostka docelowa"><option>mg/dl</option><option>mmol/l</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="lab-step" id="labStep4">
+      <div class="lab-step-num" id="labStep4Num">4</div>
+      <div class="lab-step-body">
+        <div class="lab-step-label">Pora pomiaru i protokół <span class="lab-step-label-opt">— opcjonalnie</span></div>
+        <div class="lab-field" id="labMeasFieldTime">
+          <div class="lab-mini-pills" id="labMeasTimePills"><button type="button" class="lab-mini-pill is-active">Rano (7:00–10:00)</button><button type="button" class="lab-mini-pill">Popołudnie / wieczór (14:00–22:00)</button><button type="button" class="lab-mini-pill">Północ (22:00–02:00) — diagnostyka Cushinga</button></div>
+        </div>
+        <div class="lab-step-hint" id="labStep4DefaultHint" style="font-style:italic;">Dla wybranej substancji pora i protokół nie wpływają na zakres referencyjny.</div>
+      </div>
+    </div>
+    <div class="lab-result-section" id="labResultSection">
+      <div class="lab-result-head">
+        <span class="lab-result-title">Wynik</span>
+        <span id="labResultStatus"><span class="lab-range-status is-normal">W normie</span></span>
+      </div>
+      <div class="lab-result-big" id="labResultBig"><span class="lab-result-big-value is-normal">97</span><span class="lab-result-big-unit">mg/dl</span></div>
+      <div id="labRangeBlock">
+        <div class="lab-range-card">
+          <div class="lab-range-header"><span class="lab-range-title">Zakres referencyjny</span></div>
+          <div class="lab-range-scale" style="--low-pct:44.21%;--high-pct:62.50%;--low-dark-pct:12.00%;--high-dark-pct:88.00%"><div class="lab-range-marker is-normal" style="--marker-pct:60.94%" title="Twoja wartość: 5,4 mmol/l"></div></div>
+        </div>
+      </div>
+      <div class="lab-result-source" id="labResultSourceLine">Zakres referencyjny: <strong>70–99 mg/dl</strong> (3,9–5,5 mmol/l)</div>
+      <button type="button" class="lab-show-all-toggle" id="labShowAllToggle" aria-expanded="false" aria-controls="labConversionsTableWrap"><span>Pokaż wszystkie konwersje</span><span class="arr">▼</span></button>
+    </div>
+    <button type="button" id="labClearBtn" class="lab-clear-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg> Wyczyść wszystkie pola</button>
+  </div>
+  <div class="toast-slot"><div class="lab-toast is-visible" role="status">Skopiowano</div></div>
+</div>
+</body></html>

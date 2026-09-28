@@ -1,0 +1,427 @@
+/* G12 Mobile — źródło: ios26-v2.css (:root 353-364 — tylko zmienne calc(), reszta w tokens.css; dock i pozycjonowanie #scrollTopBtn nad dockiem 365-443; media 444-482), style.css (globalne reguły button 569-583, 631-635 i 659-663, bo #scrollTopBtn, #appShellScrollTop, #appShellTermFab i .vilda-status-link są elementami <button>; tutorial body.nav-ui-temporarily-hidden 517-525; #scrollTopBtn 4022-4052; wysoki kontrast 5196-5198 z listą selektorów przyciętą do button/a :focus-visible), vilda_shell.css (.vilda-shell-host #scrollTopBtn 15-16; .vilda-embedded 74-75 z listą przyciętą do docka i strzałki; #appShellScrollTop 82-114; #appShellTermFab 115-145; .vilda-shell-host #mobileBottomDock 146-147; html.vilda-pane-auth-open 161-162; html.vilda-pane-modal-open 163-165), vilda_auth_ui.css (1626-1629, 1664-1667), clcr_ui_workflow.css (2196-2200), vilda_status_bar.css (cały plik 7-163), ios26-v2.css 85-93 i 97-99 (globalne szkło .liquid-ios26 button — z !important, więc w aplikacji nadpisuje kształt i kolor #scrollTopBtn, przycisków powłoki i odnośników paska statusu), style wstrzykiwane z ios26-ui.js (#vildaNavigationVisibilityPrefsStyle, #vildaLockedMobileNavigationStyle — skopiowane z tekstu skryptu). Kolejność: baza → .liquid-ios26 → wysoki kontrast. Brak reguł ciemnego tła dla tej grupy. */
+
+/* ===== Zmienne lokalne, nieeksportowane do tokens.css (ios26-v2.css :root 360-363; zawierają calc()/env()/var(); --anim-fast ze style.css 653-657 deklarowana niżej przy regule, która jej używa) ===== */
+:root{
+  --mobile-dock-anchor-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  --mobile-dock-effective-height: var(--mobile-dock-measured-height, var(--mobile-dock-height));
+  --mobile-dock-pinned-visible-lift: calc(var(--mobile-dock-effective-height) + var(--mobile-dock-anchor-bottom));
+  --mobile-dock-pinned-scroll-top-bottom: calc(var(--mobile-dock-pinned-visible-lift) + var(--mobile-dock-scroll-top-gap))}
+
+/* ===== Globalne reguły button (style.css 569-583, 631-635, 659-663) — obejmują #scrollTopBtn, #appShellScrollTop, #appShellTermFab i .vilda-status-link ===== */
+button,input[type=button],input[type=submit]{
+  cursor:pointer;
+  font:inherit;
+  border:none;
+  border-radius:var(--radius);
+  padding:.55rem 1.1rem;
+  background:var(--primary);
+  color:#fff;
+  transition:background .2s ease,box-shadow .2s ease}
+button:hover,input[type=button]:hover,input[type=submit]:hover{
+  background:var(--secondary);
+  box-shadow:var(--shadow)}
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed}
+@media(max-width:600px){
+button,input[type=button],input[type=submit]{
+  width:100%;
+  margin-top:.5rem}
+}
+:root{
+  --anim-fast:.15s ease}
+button,input[type=submit]{
+  transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
+button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
+  transform:translateY(-1px) scale(1.02);
+  box-shadow:var(--shadow-l)}
+
+/* ===== MobileDock — ios26-v2.css 365-433 ===== */
+#mobileBottomDock{
+  position:fixed;
+  left:max(var(--mobile-dock-side-gap),calc(env(safe-area-inset-left,0px) + .35rem));
+  right:max(var(--mobile-dock-side-gap),calc(env(safe-area-inset-right,0px) + .35rem));
+  bottom:var(--mobile-dock-anchor-bottom);
+  z-index:1100;
+  display:none;
+  transform:translateY(0);
+  opacity:1;
+  transition:transform .22s ease,opacity .22s ease,box-shadow .22s ease;
+  -webkit-tap-highlight-color:transparent}
+body.has-mobile-bottom-dock #mobileBottomDock{
+  display:block!important}
+#mobileBottomDock .mobile-bottom-dock__list{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:.28rem;
+  align-items:stretch;
+  min-height:var(--mobile-dock-height);
+  padding:.4rem;
+  border-radius:1.55rem;
+  background:#fffc;
+  border:1px solid rgba(255,255,255,.42);
+  box-shadow:0 18px 42px #0f172a29,inset 0 1px #ffffff6b;
+  backdrop-filter:blur(24px) saturate(155%);
+  -webkit-backdrop-filter:blur(24px) saturate(155%)}
+#mobileBottomDock .mobile-bottom-dock__item{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:.2rem;
+  padding:.42rem .28rem;
+  border-radius:1.2rem;
+  color:#52606d;
+  text-decoration:none;
+  text-align:center;
+  transition:background-color .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease}
+#mobileBottomDock .mobile-bottom-dock__item:active{
+  transform:scale(.97)}
+#mobileBottomDock .mobile-bottom-dock__item.is-active{
+  color:var(--primary);
+  background:#00838d1f;
+  box-shadow:inset 0 0 0 1px #00838d2e}
+#mobileBottomDock .mobile-bottom-dock__icon{
+  width:1.2rem;
+  height:1.2rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center}
+#mobileBottomDock .mobile-bottom-dock__icon svg{
+  width:100%;
+  height:100%}
+#mobileBottomDock .mobile-bottom-dock__label{
+  display:block;
+  width:100%;
+  font-size:.68rem;
+  font-weight:600;
+  line-height:1.1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis}
+#mobileBottomDock.is-hidden,#mobileBottomDock.is-keyboard-hidden{
+  transform:translateY(calc(100% + env(safe-area-inset-bottom,0px) + var(--mobile-dock-bottom-gap) + .95rem));
+  opacity:.001;
+  pointer-events:none}
+body.has-mobile-bottom-dock{
+  padding-bottom:calc(var(--mobile-dock-height) + env(safe-area-inset-bottom,0px) + var(--mobile-dock-extra-offset) + var(--mobile-dock-bottom-gap) + 1rem)!important}
+
+/* ===== MobileDock — media (ios26-v2.css 444-482); pominięto deklarację tokenu w @media(max-width:480px){:root{--mobile-dock-height: 80px}} — to token (w tokens.css jako --mobile-dock-height-compact), nie reguła komponentu ===== */
+@media(max-width:991.98px){
+  #mobileBottomDock{
+  display:block}
+}
+@media(max-width:480px){
+  #mobileBottomDock .mobile-bottom-dock__label{
+  font-size:.63rem}
+}
+@media(prefers-reduced-motion:reduce){
+  #mobileBottomDock,#mobileBottomDock .mobile-bottom-dock__item{
+  transition:none!important}
+}
+@media(display-mode:standalone)and (pointer:coarse){
+  :root{
+  --mobile-dock-anchor-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset))}
+#mobileBottomDock{
+  bottom:var(--mobile-dock-anchor-bottom)!important}
+#mobileBottomDock.is-hidden,#mobileBottomDock.is-keyboard-hidden{
+  transform:translateY(calc(100% + var(--mobile-dock-anchor-bottom) + .75rem))!important}
+body.has-mobile-bottom-dock{
+  padding-bottom:calc(var(--mobile-dock-height) + var(--mobile-dock-anchor-bottom) + .75rem)!important}
+body.has-mobile-bottom-dock{
+  min-height:calc(100% + 120px)}
+}
+@media(pointer:coarse){
+  html.display-mode-standalone{
+  --mobile-dock-anchor-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset))}
+body.display-mode-standalone #mobileBottomDock{
+  bottom:var(--mobile-dock-anchor-bottom)!important}
+body.display-mode-standalone #mobileBottomDock.is-hidden,body.display-mode-standalone #mobileBottomDock.is-keyboard-hidden{
+  transform:translateY(calc(100% + var(--mobile-dock-anchor-bottom) + .75rem))!important}
+body.display-mode-standalone.has-mobile-bottom-dock{
+  padding-bottom:calc(var(--mobile-dock-height) + var(--mobile-dock-anchor-bottom) + .75rem)!important}
+body.display-mode-standalone.has-mobile-bottom-dock{
+  min-height:calc(100% + 120px)}
+}
+
+/* ===== MobileDock + ScrollTopButton — stany ukrycia z innych modułów: tutorial (style.css 517-525), okna auth (vilda_auth_ui.css 1626-1629, 1664-1667), powłoka (vilda_shell.css 74-75 lista przycięta, 146-147, 163-165), ramka osadzona (index.html <style>, src/html-styles/index.css 2 — lista przycięta do docka i strzałki) ===== */
+body.nav-ui-temporarily-hidden #mobileBottomDock,body.nav-ui-temporarily-hidden #scrollTopBtn{
+  display:none!important;
+  opacity:0!important;
+  pointer-events:none!important}
+body.nav-ui-temporarily-hidden #mobileBottomDock{
+  transform:translateY(calc(100% + env(safe-area-inset-bottom,0px) + var(--mobile-dock-bottom-gap, 4px) + .95rem))!important}
+body.nav-ui-temporarily-hidden #scrollTopBtn{
+  transform:none!important}
+body.vilda-password-alert-open #mobileBottomDock,body.vilda-password-alert-open #scrollTopBtn{
+  display:none!important;
+  opacity:0!important;
+  pointer-events:none!important}
+body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrollTopBtn{
+  display:none!important;
+  opacity:0!important;
+  pointer-events:none!important}
+.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{
+  display:none!important}
+.vilda-shell-host #mobileBottomDock{
+  will-change:transform}
+html.vilda-pane-modal-open #mobileBottomDock,html.vilda-pane-modal-open #appShellTermFab,html.vilda-pane-modal-open #appShellScrollTop{
+  visibility:hidden!important;
+  pointer-events:none!important}
+
+/* ===== MobileDock + ScrollTopButton — style wstrzykiwane z ios26-ui.js: #vildaNavigationVisibilityPrefsStyle (preferencje widoczności) i #vildaLockedMobileNavigationStyle (blokada animacji) ===== */
+body.user-hides-mobile-dock #mobileBottomDock {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 1.2rem)) !important;
+}
+body.user-hides-nav-arrow #scrollTopBtn {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: none !important;
+}
+body.mobile-nav-ui-locked #mobileBottomDock,
+body.mobile-nav-ui-locked #scrollTopBtn {
+  transition: none !important;
+  animation: none !important;
+}
+body.mobile-nav-ui-locked #scrollTopBtn {
+  transform: none !important;
+}
+
+/* ===== ScrollTopButton — wariant strony #scrollTopBtn (style.css 4022-4052) ===== */
+#scrollTopBtn{
+  position:fixed;
+  bottom:1rem;
+  right:1rem;
+  width:4rem;
+  height:4rem;
+  border-radius:50%;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  box-shadow:var(--shadow);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  cursor:pointer;
+  z-index:1000;
+  transition:background .2s ease}
+#scrollTopBtn:hover{
+  background:var(--secondary)}
+#scrollTopBtn i,#scrollTopBtn svg{
+  width:3rem;
+  height:3rem;
+  pointer-events:none}
+@media(max-width:699px){
+  #scrollTopBtn{
+  display:flex}
+}
+@media(min-width:700px){
+  #scrollTopBtn{
+  display:flex}
+}
+
+/* ===== ScrollTopButton — pozycja nad dockiem (ios26-v2.css 434-443) ===== */
+body.has-mobile-bottom-dock #scrollTopBtn{
+  bottom:var(--scroll-top-btn-bottom, 1rem)!important;
+  z-index:1201;
+  transition:bottom .22s ease,background .2s ease,transform .22s ease,opacity .22s ease}
+body.has-mobile-bottom-dock.mobile-bottom-dock-transitioning #scrollTopBtn{
+  transition:background .2s ease,transform .22s ease,opacity .22s ease!important}
+body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn,body.mobile-nav-ui-locked.has-mobile-bottom-dock #scrollTopBtn{
+  bottom:var(--mobile-dock-pinned-scroll-top-bottom, var(--scroll-top-btn-bottom, 1rem))!important}
+body.mobile-nav-ui-locked.user-hides-mobile-dock #scrollTopBtn{
+  bottom:var(--mobile-dock-anchor-bottom, calc(env(safe-area-inset-bottom, 0px) + 4px) )!important}
+
+/* ===== ScrollTopButton — ukrycie w wyszukiwarce klirensu (clcr_ui_workflow.css 2196-2200) ===== */
+html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ===== ScrollTopButton — powłoka app.html (vilda_shell.css 15-16, 82-145, 161-162) ===== */
+.vilda-shell-host #scrollTopBtn{
+  display:none!important}
+#appShellScrollTop{
+  position:fixed;
+  right:16px;
+  bottom:calc(var(--vilda-shell-dock-h, 84px) + 14px);
+  z-index:1150;
+  width:44px;
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  border:.5px solid rgba(255,255,255,.55);
+  border-radius:50%;
+  background:#ffffffb8;
+  -webkit-backdrop-filter:blur(12px) saturate(1.4);
+  backdrop-filter:blur(12px) saturate(1.4);
+  box-shadow:0 6px 20px #0f2b332e;
+  color:#0f6e56;
+  cursor:pointer;
+  opacity:0;
+  transform:translateY(10px);
+  pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease;
+  -webkit-tap-highlight-color:transparent}
+#appShellScrollTop.is-visible{
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto}
+#appShellScrollTop:active{
+  transform:translateY(0) scale(.94)}
+#appShellScrollTop svg{
+  width:22px;
+  height:22px;
+  display:block}
+#appShellTermFab{
+  position:fixed;
+  right:16px;
+  bottom:calc(var(--vilda-shell-dock-h, 84px) + 14px);
+  z-index:1150;
+  width:54px;
+  height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:#00838d;
+  color:#fff;
+  font-size:1.7rem;
+  line-height:1;
+  box-shadow:0 6px 18px #00606a59;
+  cursor:pointer;
+  opacity:0;
+  transform:translateY(10px);
+  pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease,bottom .22s ease;
+  -webkit-tap-highlight-color:transparent}
+#appShellTermFab.is-visible{
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto}
+#appShellTermFab:active{
+  transform:translateY(0) scale(.94)}
+html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellScrollTop{
+  display:none!important}
+
+/* ===== StatusBar — vilda_status_bar.css 7-163 ===== */
+[data-vilda-status] {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius, 8px);
+  border-left: 4px solid var(--vilda-status-ton, #00838d);
+  background: #fff;
+  color: #2c3838;
+  box-shadow: var(--shadow, 0 2px 6px rgba(0, 0, 0, .08));
+}
+[data-vilda-status][hidden] {
+   display: none !important;
+   }
+[data-vilda-status][data-ton="ok"] {
+   --vilda-status-ton: #15803d;
+   background: #f2fbf5;
+   }
+[data-vilda-status][data-ton="uwaga"] {
+   --vilda-status-ton: #b45309;
+   background: #fffaf1;
+   }
+[data-vilda-status][data-ton="blad"] {
+   --vilda-status-ton: #c62828;
+   background: #fdf4f4;
+   }
+[data-vilda-status][data-ton="info"] {
+   --vilda-status-ton: #00838d;
+   background: #f3fafa;
+   }
+[data-vilda-status][data-ton="nowy"] {
+   --vilda-status-ton: #6d28d9;
+   background: #f9f5ff;
+   }
+.vilda-status-znak {
+  flex: 0 0 auto;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--vilda-status-ton, #00838d);
+}
+.vilda-status-tresc {
+   display: flex;
+   flex-direction: column;
+   gap: 0.1rem;
+   min-width: 0;
+   }
+.vilda-status-tekst {
+   overflow-wrap: anywhere;
+   }
+.vilda-status-meta {
+  font-size: 0.76rem;
+  color: #5c6d6d;
+  font-variant-numeric: tabular-nums;
+}
+.vilda-status-link {
+  font: inherit;
+  color: var(--vilda-status-ton, #00838d);
+  background: none;
+  border: 0;
+  padding: 0;
+  width: auto;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.vilda-status-link:hover {
+   text-decoration-thickness: 2px;
+   }
+.vilda-status-link:focus-visible {
+  outline: 2px solid var(--vilda-status-ton, #00838d);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+#vildaStatusForm {
+   margin-bottom: 0.8rem;
+   }
+#vildaStatusSide {
+   margin-bottom: 0.8rem;
+   }
+@media (min-width: 700px) {
+  #vildaStatusForm {
+   display: none !important;
+   }
+}
+@media (max-width: 699px) {
+  #vildaStatusSide {
+   display: none !important;
+   }
+}
+
+/* ===== Płynne szkło (.liquid-ios26) — ios26-v2.css 85-93, 97-99: globalna reguła button z !important; w aplikacji obejmuje #scrollTopBtn, #appShellScrollTop, #appShellTermFab i .vilda-status-link (tło #fff3, obrys --lg-border, kolor #111, promień 14px) ===== */
+.liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
+  background:#fff3!important;
+  border:1px solid var(--lg-border)!important;
+  color:#111!important;
+  border-radius:14px!important;
+  backdrop-filter:blur(10px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(120%)!important;
+  box-shadow:0 4px 12px #0000001a!important;
+  transition:transform .12s ease,box-shadow .12s ease,background-color .15s ease!important}
+.liquid-ios26 button._pressed{
+  transform:scale(.96);
+  box-shadow:0 2px 8px #0000001f!important}
+
+/* ===== Wysoki kontrast — style.css 5196-5198 (lista selektorów przycięta do button/a :focus-visible: dock to <a>, strzałki i odnośniki statusu to <button>) ===== */
+body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+  outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
+  outline-offset:2px!important}
