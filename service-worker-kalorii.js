@@ -1613,6 +1613,7 @@ const OPTIONAL_ASSETS = [
   '/flu_therapy.js?v=5',
   '/flu_therapy.js?v=6',
   '/flu_therapy.js?v=7',
+  '/flu_therapy.js?v=8',
   '/bisphos_therapy.js',
   '/bisphos_therapy.js?v=4',
   '/bisphos_therapy.js?v=5',
