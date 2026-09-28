@@ -200,8 +200,6 @@ body {
 }
 
 header {
-  background: var(--primary);
-  color: #fff;
   text-align: center;
   padding: var(--space-1)
 }
@@ -220,11 +218,7 @@ h1 {
 }
 
 fieldset {
-  border: var(--border-hairline) solid var(--line);
-  background: var(--card);
   padding: var(--space-1-4) var(--space-1) var(--space-1);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
   margin-bottom: var(--space-1-5);
   position: relative
 }
@@ -314,7 +308,6 @@ button.icon {
   border: none;
   font-size: 1.35rem;
   cursor: pointer;
-  color: var(--danger);
   font-weight: 900;
   line-height: 1
 }
@@ -344,11 +337,7 @@ button.add-row:hover {
 }
 
 .card {
-  background: var(--card);
-  padding: var(--space-1);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border: var(--border-hairline) solid var(--line)
+  padding: var(--space-1)
 }
 
 .activity-time {
@@ -584,13 +573,7 @@ th {
 }
 
 .diet-info-note {
-  color: var(--primary);
-  background: var(--card);
   padding: var(--space-0-5) var(--space-0-8);
-  border-left: 4px solid var(--secondary);
-  border-radius: var(--radius-4);
-  font-size: .9rem;
-  text-align: left;
   margin-bottom: var(--space-0-6)
 }
 
@@ -981,12 +964,7 @@ input[type=button],
 input[type=submit] {
   cursor: pointer;
   font: inherit;
-  border: none;
-  border-radius: var(--radius);
-  padding: var(--space-0-55) var(--space-1-1);
-  background: var(--primary);
-  color: #fff;
-  transition: background .2s ease,box-shadow .2s ease
+  padding: var(--space-0-55) var(--space-1-1)
 }
 
 button:hover,
@@ -1003,7 +981,6 @@ button:disabled {
 
 button.icon {
   background: transparent;
-  color: var(--danger);
   font-size: 1.25rem;
   padding: var(--space-0-25) var(--space-0-5);
   line-height: 1
@@ -1124,11 +1101,6 @@ section.card,
   color: #6b7a7a
 }
 
-button,
-input[type=submit] {
-  transition: transform var(--anim-fast),box-shadow var(--anim-fast)
-}
-
 button:hover,
 input[type=submit]:hover,
 button:focus-visible,
@@ -1138,10 +1110,6 @@ input[type=submit]:focus-visible {
 }
 
 .result-card {
-  background: var(--card-bg);
-  border: var(--border-emphasis) solid var(--brand);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
   padding: var(--space-1-25) var(--space-1-5);
   position: relative;
   overflow: hidden
@@ -1203,10 +1171,6 @@ input[type=submit]:focus-visible {
 }
 
 .data-card {
-  background: var(--card);
-  border: var(--border-emphasis) solid var(--primary);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
   padding: var(--space-1-25) var(--space-1);
   overflow: auto
 }
@@ -1484,12 +1448,6 @@ input[type=submit]:focus-visible {
   display: block;
   width: 100%!important;
   margin: var(--space-0-5) 0!important
-}
-
-#intakeCard {
-  background: var(--card)!important;
-  border: var(--border-hairline) solid var(--line)!important;
-  box-shadow: var(--shadow)!important
 }
 
 #intakeResults {
@@ -1893,12 +1851,7 @@ input[type=submit]:focus-visible {
 
 .circ-chart-btn[disabled],
 .circ-chart-btn.is-pro-locked {
-  background: #d5dde1!important;
-  color: #738089!important;
   cursor: not-allowed;
-  box-shadow: none!important;
-  transform: none!important;
-  border: none!important;
   opacity: 1
 }
 
@@ -2285,13 +2238,9 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 }
 
 .plan-card {
-  background: var(--card);
-  border-radius: var(--radius);
   padding: var(--space-1-25) var(--space-1-5);
-  box-shadow: var(--shadow);
   font-family: Inter,sans-serif;
-  font-size: 1.1rem;
-  border: var(--border-hairline) solid var(--line)
+  font-size: 1.1rem
 }
 
 #foodTimesSection {
@@ -2770,18 +2719,11 @@ body.professional-bg {
   border: var(--border-pro) solid #9900ff!important
 }
 
-#dietRecommendationsBtn {
-  border: var(--border-pro) solid #9900ff
-}
-
 .liquid-ios26 #dietRecommendationsBtn {
   border: var(--border-pro) solid #9900ff!important
 }
 
 #dietRecommendationsContent {
-  border: var(--border-hairline) solid var(--line);
-  box-shadow: var(--shadow);
-  border-radius: var(--radius);
   position: relative;
   --diet-pro-badge-offset: .5rem;
   --diet-pro-badge-inline-size: 3rem;
@@ -2801,17 +2743,6 @@ body.professional-bg {
 }
 
 .diet-info-note {
-  color: #000;
-  background: none;
-  border: none;
-  border-left: none;
-  border-radius: 0;
-  font-size: 1rem;
-  text-align: left;
-  display: block;
-  box-sizing: border-box;
-  margin-right: 0;
-  margin-inline-end: 0;
   padding: var(--space-0-5) var(--space-0-8);
   margin-bottom: var(--space-0-6)
 }
@@ -2828,11 +2759,6 @@ body.professional-bg {
   box-sizing: border-box!important;
   margin-right: 0!important;
   margin-inline-end: 0!important
-}
-
-#generateDietBtn,
-#dietRecommendationsPdfBtn {
-  border: var(--border-pro) solid #9900ff
 }
 
 #dietRecommendationsContent #generateDietBtn,
@@ -2861,10 +2787,6 @@ body.professional-bg {
   font-weight: 600!important
 }
 
-#dietRecommendationsContent .switch-diet input:checked+.slider {
-  background: #90f!important
-}
-
 .liquid-ios26 #dietRecommendationsContent .switch-diet input:checked+.slider {
   background: #90f!important
 }
@@ -2882,10 +2804,6 @@ body.professional-bg {
 }
 
 #toggleAdvancedGrowth.advanced-growth-btn {
-  background: #fff;
-  color: #000;
-  border: var(--border-pro) solid #9900ff;
-  border-radius: var(--radius);
   padding: var(--space-0-6) var(--space-1-2);
   font-size: 1rem;
   font-weight: 600;
@@ -2924,29 +2842,12 @@ body.professional-bg {
   margin-left: .1rem
 }
 
-#sourcePalczewska:disabled+span .pro-superscript {
-  color: #90f!important
-}
-
 .liquid-ios26 #sourcePalczewska:disabled+span .pro-superscript {
   color: #90f!important
 }
 
-#toggleAdvancedGrowth.advanced-growth-btn:disabled .pro-superscript {
-  color: #90f
-}
-
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled .pro-superscript {
   color: #90f!important
-}
-
-.pro-button:disabled {
-  background: var(--disabled-bg);
-  color: #000;
-  border: var(--border-pro) solid var(--line-neutral);
-  cursor: not-allowed;
-  pointer-events: none;
-  opacity: 1
 }
 
 .liquid-ios26 .pro-button:disabled {
@@ -2958,19 +2859,12 @@ body.professional-bg {
   opacity: 1!important
 }
 
-.pro-button:disabled .pro-superscript {
-  color: #90f
-}
-
 .liquid-ios26 .pro-button:disabled .pro-superscript {
   color: #90f!important
 }
 
 #toggleAdvancedGrowth.advanced-growth-btn:disabled,
 #toggleAdvancedGrowth.advanced-growth-btn.disabled {
-  background: var(--disabled-bg)!important;
-  color: #000!important;
-  border: var(--border-pro) solid var(--line-neutral)!important;
   cursor: not-allowed;
   pointer-events: none
 }
@@ -3012,10 +2906,6 @@ body.professional-bg {
 }
 
 #toggleGrowthCalculations.advanced-growth-btn {
-  background: #fff;
-  color: #000;
-  border: var(--border-pro) solid var(--primary);
-  border-radius: var(--radius);
   padding: var(--space-0-6) var(--space-1-2);
   font-size: 1rem;
   font-weight: 600;
@@ -3108,14 +2998,6 @@ body.professional-bg {
   color: #fff
 }
 
-.data-source-toggle label input:disabled+span {
-  border-color: var(--line-neutral);
-  color: var(--placeholder);
-  background-color: var(--disabled-bg);
-  cursor: not-allowed;
-  pointer-events: none
-}
-
 .liquid-ios26 .data-source-toggle label input:disabled+span {
   border-color: var(--line-neutral)!important;
   color: var(--placeholder)!important;
@@ -3124,30 +3006,8 @@ body.professional-bg {
   pointer-events: none!important
 }
 
-#sourcePalczewska+span {
-  border-color: #90f;
-  color: #90f
-}
-
-#sourcePalczewska:checked+span {
-  background-color: #90f;
-  color: #fff
-}
-
-#sourcePalczewska:checked+span .pro-superscript {
-  color: #fff
-}
-
 .liquid-ios26 #sourcePalczewska:checked+span .pro-superscript {
   color: #fff!important
-}
-
-#sourcePalczewska:disabled+span {
-  border-color: var(--line-neutral);
-  color: #000;
-  background-color: var(--disabled-bg);
-  cursor: not-allowed;
-  pointer-events: none
 }
 
 .liquid-ios26 #sourcePalczewska+span {
@@ -3166,11 +3026,6 @@ body.professional-bg {
   background-color: var(--disabled-bg)!important;
   cursor: not-allowed!important;
   pointer-events: none!important
-}
-
-#generatePalCentileChart {
-  border: var(--border-pro) solid #9900ff;
-  border-radius: var(--radius)
 }
 
 .liquid-ios26 #generatePalCentileChart {
@@ -4942,13 +4797,7 @@ fieldset.user-card {
   }
 }
 
-header h1 {
-  color: var(--primary)
-}
-
 header {
-  background: #fff;
-  color: var(--text);
   border-bottom: var(--border-hairline) solid var(--line)
 }
 
@@ -5095,10 +4944,6 @@ header {
 
 #modulesWrapper #toggleThyroidCancerKids.active-toggle {
   border: var(--border-hairline) solid var(--brand-light)
-}
-
-#thyroidCancerKidsCard .thy-jump-cancer-preop {
-  border: var(--border-pro) solid #9900ff!important
 }
 
 #thyroidCancerKidsCard .thy-disclosure-btn-static {
@@ -6163,45 +6008,17 @@ body.thy-modal-open {
 
 .vertical-menu button {
   display: block;
-  width: 100%;
-  padding: var(--space-0-75) var(--space-1);
-  color: var(--primary);
-  font-weight: 600;
-  background: none!important;
-  border: none!important;
-  box-shadow: none!important;
-  backdrop-filter: none!important;
-  -webkit-backdrop-filter: none!important;
-  text-align: left;
   font-family: inherit;
   font-size: inherit;
   cursor: pointer
 }
 
-.vertical-menu button:hover {
-  background: var(--secondary);
-  color: #fff
-}
-
 .vertical-menu button:disabled {
-  color: var(--text-disabled);
-  cursor: default;
-  background: none!important;
-  border: none!important;
-  box-shadow: none!important;
-  backdrop-filter: none!important;
-  -webkit-backdrop-filter: none!important
-}
-
-.vertical-menu a[disabled] {
-  color: var(--text-disabled);
-  pointer-events: auto;
   cursor: default
 }
 
-.vertical-menu a[disabled]:hover {
-  background: none;
-  color: var(--text-disabled)
+.vertical-menu a[disabled] {
+  cursor: default
 }
 
 @media(max-width:600px) {
@@ -6649,39 +6466,12 @@ body.thy-modal-open {
 }
 
 .edit-gh-pt-btn {
-  background: var(--secondary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  padding: var(--space-0-35) var(--space-0-65);
-  font-size: .85rem;
   margin-right: var(--space-0-3);
   transition: background .2s ease,box-shadow .2s ease
 }
 
-.edit-gh-pt-btn:hover {
-  background: var(--primary);
-  box-shadow: var(--shadow)
-}
-
 .delete-gh-pt-btn {
-  background: var(--danger-tint);
-  color: var(--danger);
-  border: var(--border-hairline) solid var(--danger);
-  border-radius: var(--radius);
-  padding: var(--space-0-35) var(--space-0-65);
-  font-size: .85rem;
   transition: background .2s ease,box-shadow .2s ease
-}
-
-.delete-gh-pt-btn:hover {
-  background: #c6282833;
-  box-shadow: var(--shadow)
-}
-
-.editing-gh-pt-row td {
-  background: #c6282814!important;
-  box-shadow: 0 0 0 2px var(--danger) inset!important
 }
 
 #btnGhStart.gh-selected,
@@ -6802,14 +6592,10 @@ body.thy-modal-open {
 #antibioticTherapyCard .slider-value-label {
   position: absolute;
   left: 0;
-  bottom: -.6rem;
   transform: translate(-50%);
   font-size: 1rem;
   font-weight: 600;
-  color: var(--primary);
-  white-space: nowrap;
-  pointer-events: auto;
-  cursor: grab
+  white-space: nowrap
 }
 
 #antibioticTherapyCard .slider-value-label.active {
@@ -6834,12 +6620,6 @@ body.thy-modal-open {
 }
 
 #antibioticTherapyCard .slider-value-label {
-  border: var(--border-hairline) solid var(--primary);
-  background: var(--card);
-  padding: var(--space-0-25) var(--space-0-5);
-  border-radius: var(--radius-6);
-  box-shadow: var(--shadow);
-  transition: background .2s ease,box-shadow .2s ease,color .2s ease;
   box-sizing: border-box;
   max-width: calc(100% - .5rem)
 }
@@ -6867,60 +6647,6 @@ body.thy-modal-open {
     width: calc(100% - .5rem);
     font-size: .95rem
   }
-}
-
-#antibioticTherapyCard .dose-slider-container:hover .slider-value-label {
-  background: var(--secondary);
-  color: #fff;
-  box-shadow: 0 4px 12px #00000026
-}
-
-#antibioticTherapyCard .slider-value-label:active {
-  cursor: grabbing
-}
-
-#antibioticTherapyCard .dose-slider-container--multiline {
-  padding-bottom: var(--space-0-25)
-}
-
-#antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
-  position: relative;
-  display: block;
-  left: auto;
-  bottom: auto;
-  transform: none;
-  width: min(100%,34rem);
-  max-width: 100%;
-  margin: var(--space-0-65) auto 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  text-wrap: balance;
-  text-align: center;
-  line-height: 1.35;
-  box-sizing: border-box;
-  cursor: default;
-  pointer-events: none
-}
-
-#antibioticTherapyCard .slider-ticks .slider-tick-label:first-child {
-  padding-left: var(--space-0-5)
-}
-
-#antibioticTherapyCard .slider-ticks .slider-tick-label:last-child {
-  padding-right: var(--space-0-5)
-}
-
-#antibioticTherapyCard #abxReturnBtn,
-#antibioticTherapyCard .return-recommendation-btn {
-  margin-top: var(--space-1-1)!important
-}
-
-#antibioticTherapyCard .dose-slider-container:hover .slider-value-label {
-  background: var(--card)!important;
-  color: var(--primary)!important;
-  border: var(--border-hairline) solid var(--secondary)!important;
-  box-shadow: var(--shadow)!important
 }
 
 #antibioticTherapyCard .custom-dose-btn {
@@ -9536,8 +9262,6 @@ body.nutrition-practice-sheet-open {
   padding: .66rem .78rem;
   border: var(--border-emphasis) solid #000;
   border-radius: var(--radius-8);
-  background: #fff;
-  color: #000;
   font-size: 1.02rem;
   font-weight: 500;
   line-height: 1.42;
@@ -9886,8 +9610,7 @@ body.nutrition-practice-sheet-open {
   margin: var(--space-0-85) 0 var(--space-0-75);
   padding: var(--space-0-75);
   border: var(--border-hairline) solid #e2d3f5;
-  border-radius: var(--radius);
-  background: #9900ff09
+  border-radius: var(--radius)
 }
 
 .diet-personalization-head {
@@ -9934,7 +9657,6 @@ body.nutrition-practice-sheet-open {
   border-radius: var(--radius);
   padding: var(--space-0-45) var(--space-0-7);
   font-size: .88rem;
-  font-weight: 600;
   cursor: pointer;
   white-space: nowrap
 }
@@ -10017,8 +9739,7 @@ body.nutrition-practice-sheet-open {
   margin-top: var(--space-0-75);
   padding: var(--space-0-6) var(--space-0-7);
   border: var(--border-hairline) dashed #d8c0ed;
-  border-radius: var(--radius);
-  background: #ffffffb8
+  border-radius: var(--radius)
 }
 
 .diet-survey-more summary {
@@ -10060,8 +9781,7 @@ body.nutrition-practice-sheet-open {
   align-items: flex-start;
   padding: var(--space-0-8);
   border: var(--border-hairline) solid #e1d3f0;
-  border-radius: var(--radius);
-  background: #9900ff0b
+  border-radius: var(--radius)
 }
 
 .diet-personalized-summary h3 {
@@ -10116,8 +9836,7 @@ body.nutrition-practice-sheet-open {
   gap: var(--space-0-65);
   padding: var(--space-0-75);
   border: var(--border-hairline) solid #e6e6e6;
-  border-radius: var(--radius);
-  background: #fff
+  border-radius: var(--radius)
 }
 
 .diet-smart-goal-number {
@@ -10142,8 +9861,7 @@ body.nutrition-practice-sheet-open {
 .diet-guidance-box {
   padding: var(--space-0-75);
   border: var(--border-hairline) solid #e6e6e6;
-  border-radius: var(--radius);
-  background: #fff
+  border-radius: var(--radius)
 }
 
 .diet-guidance-box--wide {
@@ -10206,8 +9924,7 @@ body.nutrition-practice-sheet-open {
   margin-top: var(--space-0-8);
   padding: var(--space-0-65) var(--space-0-75);
   border: var(--border-hairline) dashed #d4d4d4;
-  border-radius: var(--radius);
-  background: #ffffffb3
+  border-radius: var(--radius)
 }
 
 .diet-calculation-details summary {
@@ -10278,8 +9995,7 @@ body.nutrition-practice-sheet-open {
 .diet-card-intro {
   padding: var(--space-0-85) var(--space-0-95);
   border: var(--border-hairline) solid #e4d7f4;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg,#9900ff14,#00838d0d)
+  border-radius: var(--radius)
 }
 
 .diet-card-intro h3,
@@ -10373,8 +10089,7 @@ body.nutrition-practice-sheet-open {
 .diet-panel-lead {
   padding: var(--space-0-8) var(--space-0-9);
   border: var(--border-hairline) solid #ece3f7;
-  border-radius: var(--radius);
-  background: #ffffffb8
+  border-radius: var(--radius)
 }
 
 .diet-energy-options-panel {
@@ -10393,7 +10108,6 @@ body.nutrition-practice-sheet-open {
 .diet-energy-output {
   border: var(--border-hairline) solid #e4d7f4;
   border-radius: var(--radius);
-  background: #fff;
   padding: var(--space-0-8)
 }
 
@@ -10930,10 +10644,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   background: var(--diet-ui-switch-thumb)!important
 }
 
-#dietRecommendationsContent .switch-diet input:checked+.slider {
-  background: var(--diet-ui-active-bg)!important
-}
-
 #dietRecommendationsContent .switch-diet input:checked+.slider:before {
   background: var(--diet-ui-switch-thumb)!important
 }
@@ -11282,12 +10992,6 @@ body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target {
 
 .nutrition-micros-card .nutrition-micros-abbr:focus-visible {
   outline-color: var(--nutrition-ui-heading)!important
-}
-
-body .nutrition-micros-tooltip {
-  background: #fff!important;
-  color: #000!important;
-  border-color: #000!important
 }
 
 body.liquid-ios26 .nutrition-micros-tooltip {

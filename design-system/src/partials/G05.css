@@ -32,13 +32,10 @@
 }
 /* .result-card, --pulse, @keyframes pulseBG, .result-number (664-695) */
 .result-card{
-  background:var(--card-bg);
-  border:2px solid var(--brand);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow-s);
-  padding:1.25rem 1.5rem;
+  padding:var(--space-1-25) var(--space-1-5);
   position:relative;
-  overflow:hidden}
+  overflow:hidden;
+}
 .result-card.--pulse:after{
   content:"";
   position:absolute;
@@ -570,12 +567,9 @@ tbody tr:hover{
 }
 /* .data-card (711-728) */
 .data-card{
-  background:var(--card);
-  border:2px solid var(--primary);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:1.25rem 1rem;
-  overflow:auto}
+  padding:var(--space-1-25) var(--space-1);
+  overflow:auto;
+}
 .data-card table{
   width:100%;
   border-collapse:collapse}

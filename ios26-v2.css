@@ -223,10 +223,6 @@ body.liquid-ios26:before {
   }
 }
 
-#abxCopyRec {
-  border: var(--border-pro) solid #9900ff!important
-}
-
 .liquid-ios26 #abxReturnBtn,
 .liquid-ios26 .return-recommendation-btn {
   display: none!important;

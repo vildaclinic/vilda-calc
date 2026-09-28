@@ -9,12 +9,7 @@
 button,input[type=button],input[type=submit]{
   cursor:pointer;
   font:inherit;
-  border:none;
-  border-radius:var(--radius);
-  padding:var(--space-0-55) var(--space-1-1);
-  background:var(--primary);
-  color:#fff;
-  transition:background .2s ease,box-shadow .2s ease;
+  padding:var(--space-0-55) var(--space-1-1)
 }
 button:hover,input[type=button]:hover,input[type=submit]:hover{
   background:var(--secondary);
@@ -30,8 +25,6 @@ button,input[type=button],input[type=submit]{
 }
 :root{
   --anim-fast:.15s ease}
-button,input[type=submit]{
-  transition:transform var(--anim-fast),box-shadow var(--anim-fast)}
 button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
   transform:translateY(-1px) scale(1.02);
   box-shadow:var(--shadow-l)}
@@ -60,13 +53,7 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   color:var(--notice-orange);
 }
 .diet-info-note{
-  color:var(--primary);
-  background:var(--card);
   padding:var(--space-0-5) var(--space-0-8);
-  border-left:4px solid var(--secondary);
-  border-radius:var(--radius-4);
-  font-size:.9rem;
-  text-align:left;
   margin-bottom:var(--space-0-6);
 }
 #intakeResults .intake-alert{
@@ -140,17 +127,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .info-card #compareInstruction{
   margin-top:0}
 .diet-info-note{
-  color:#000;
-  background:none;
-  border:none;
-  border-left:none;
-  border-radius:0;
-  font-size:1rem;
-  text-align:left;
-  display:block;
-  box-sizing:border-box;
-  margin-right:0;
-  margin-inline-end:0;
   padding:var(--space-0-5) var(--space-0-8);
   margin-bottom:var(--space-0-6);
 }

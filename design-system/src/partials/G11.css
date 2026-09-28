@@ -105,40 +105,15 @@
   color:#fff}
 .vertical-menu button{
   display:block;
-  width:100%;
-  padding:var(--space-0-75) var(--space-1);
-  color:var(--primary);
-  font-weight:600;
-  background:none !important;
-  border:none !important;
-  box-shadow:none !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-  text-align:left;
   font-family:inherit;
   font-size:inherit;
   cursor:pointer;
 }
-.vertical-menu button:hover{
-  background:var(--secondary);
-  color:#fff}
 .vertical-menu button:disabled{
-  color:var(--text-disabled);
-  cursor:default;
-  background:none !important;
-  border:none !important;
-  box-shadow:none !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
+  cursor:default
 }
 .vertical-menu a[disabled]{
-  color:var(--text-disabled);
-  pointer-events:auto;
   cursor:default;
-}
-.vertical-menu a[disabled]:hover{
-  background:none;
-  color:var(--text-disabled);
 }
 @media(max-width:600px){
   .vertical-menu{
