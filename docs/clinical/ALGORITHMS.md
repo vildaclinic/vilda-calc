@@ -5870,7 +5870,9 @@ dwie wizyty, wiersz ręczny, punkt GH).** Identycznie na `audyt` i na gałęzi r
   nadpisuje istniejącej sesji, zanim ta strona nie spróbowała jej odtworzyć** (latka `Ke` z `restoreMainSessionIfAny`), bo do
   tej chwili formularz może być częściowy; (b) `Gp_r` — wymuszony zapis pomijany w trakcie odtwarzania stanu
   (`__vildaPersistRestoring`, odtwarzanie sesji w toku); (c) wymuszony zapis przy pustym formularzu nie woła
-  `clearMainSession` (zwykły zapis pustego formularza czyści sesję jak dotąd, bo to skutek „Wyczyść”).
+  `clearMainSession` (zwykły zapis pustego formularza czyści sesję jak dotąd, bo to skutek „Wyczyść”); (6) `Gp_o` — po
+  zakończeniu odtwarzania sesji (finalizacja po klatce i ticku, czyli już po przeliczeniu głównego formularza zaplanowanym
+  przez `requestAnimationFrame`) karta „Podsumowanie wyników” jest odświeżana (`updateProfessionalSummaryCard`).
 
   **Pierwszy przebieg CI tej naprawy (`E2E odłamek 3/3`) był czerwony — zmierzona przyczyna.** Trzy testy F5 po wczytaniu
   pacjenta (`tozsamosc-po-wczytaniu`, `wczytany-pacjent-odswiezenie`) kończyły się pustym nazwiskiem i odblokowaną
@@ -5882,11 +5884,24 @@ dwie wizyty, wiersz ręczny, punkt GH).** Identycznie na `audyt` i na gałęzi r
   odtworzenie czytało już sesję bez nazwiska. Na `audyt` ten sam przebieg był bezpieczny, bo `Pe` porzucało zapis z okna
   zawieszenia. Stąd cofnięcie ponawiania i strażnik `Gp_k`, który zamyka tę samą lukę także dla zapisów wymuszonych
   (`pagehide`, powłoka) wykonanych, zanim strona odtworzyła sesję.
+
+  **Drugi przebieg CI (`E2E odłamek 2/3`) — jeden czerwony test, własny spec tej naprawy („DocPro otwarty wcześniej”).**
+  Panel DocPro po przełączeniu miał komplet pól (data, wiek, płeć, masa, wzrost, nazwisko, `lastLoadedData`), ale przez 8 s
+  „Podsumowanie wyników” bez BMI. Zmierzone lokalnie (haki na `update`, `updateProfessionalSummaryCard`, sonda formularza):
+  karta liczy linie wprost z pól formularza (`generateMetabolicSummary`, `vildaGetMainAnthroValidationSnapshot`), więc
+  wymaga tylko wywołania `updateProfessionalSummaryCard` po tym, jak pola są kompletne. Ścieżka `applyLoadedData` (także
+  przy odtwarzaniu sesji) renderuje kartę synchronicznie, a przeliczenie głównego formularza planuje przez
+  `requestAnimationFrame`, które w ukrytym panelu może czekać na widoczność; dla dziecka nic potem karty nie odświeża —
+  lokalnie robiły to jeszcze pakiety lustra formularza (180/1000/2600 ms) i pingi wspólnego stanu, w CI przełączenie
+  następowało już po nich. Naprawa: `Gp_o` w module (wyżej) i `Gp_u` w powłoce — po każdym przełączeniu panel docelowy
+  odświeża kartę po dwu klatkach.
 - `vilda_shell.js` (`Gp_*`): przed przełączeniem panel źródłowy zapisuje wspólny stan i sesję główną z `force` (`Gp_f`);
   panel docelowy — jeśli sesja główna zmieniła się od jego ostatniego odtworzenia (odcisk `Gp_s`: długość i skrót JSON
   sesji bez pola `timestampISO`, zapamiętywany przy `load` panelu i po każdym pushu) — odtwarza wspólny stan
   (`vildaPersistRestoreAll`) i sesję główną (`vildaSession.restore`) w kolejności jak przy starcie strony (`Gp_p`); panel
-  tworzony dopiero teraz startuje już po zapisie. Odcisk chroni przed pełnym odtwarzaniem przy każdym przełączeniu.
+  tworzony dopiero teraz startuje już po zapisie. Odcisk chroni przed pełnym odtwarzaniem przy każdym przełączeniu. Po każdym
+  przełączeniu panel docelowy odświeża kartę „Podsumowanie wyników” po dwu klatkach (`Gp_u`), bo przeliczenie formularza
+  zaplanowane przez `requestAnimationFrame` mogło czekać na widoczność panelu.
 
 **Co się nie zmienia.** Lustro formularza (sześć pól, bez daty) i push `vildaPersistRestoreAll()` po pingu — bez zmian.
 Semantyka „Nowy pomiar” (puste pola nowej wizyty, karta porównania) — bez zmian; DocPro pokazuje teraz to samo co Start.
@@ -5903,12 +5918,14 @@ jak dotąd (poza oknem działa), adapter odmawiający w oknie po czyszczeniu i z
 sesji zapis (także z force) jest odmawiany, a po niej działa, `pagehide` z force, zapis z force przy pustym formularzu nie
 kasuje sesji (a zwykły nadal tak), zapis z force w trakcie `__vildaPersistRestoring` jest pomijany; kontrola negatywna bez
 `Gp_k` (wymuszony zapis nadpisuje sesję formularzem bez nazwiska przed jej odtworzeniem — zgłoszony przebieg z CI);
+po odtworzeniu sesji karta podsumowania jest odświeżana po klatce i ticku (atrapa `updateProfessionalSummaryCard`);
 strażnicy źródła obu modułów (kolejność zapisu przed pingiem, `Pe` jak w `audyt`, odcisk bez `timestampISO`, kolejność
 odtworzenia w panelu docelowym). `tests/e2e/powloka-przelaczanie-paneli.spec.mjs` — prawdziwa
 powłoka: (1) „Odtwórz zapis” i natychmiastowe przejście na DocPro tworzony dopiero teraz — komplet z datą, podsumowaniem i
 `lastLoadedData`, bez karty porównania; (2) DocPro otwarty wcześniej — po szybkim przełączeniu komplet z datą i bazą, nie tylko
-lustro; (3) „Nowy pomiar” — DocPro pokazuje to samo co Start (data, wiek, płeć, puste masa i wzrost, karta porównania).
-Przed poprawką (1) i (2) czerwone (zmierzone: pusty panel / brak daty i bazy).
+lustro; (3) DocPro otwarty wcześniej, przełączenie po 3,5 s (po rozgłoszeniu lustra, przebieg z CI) — komplet pól i
+podsumowanie z BMI; (4) „Nowy pomiar” — DocPro pokazuje to samo co Start (data, wiek, płeć, puste masa i wzrost, karta
+porównania). Przed poprawką (1) i (2) czerwone (zmierzone: pusty panel / brak daty i bazy), (3) czerwone w CI.
 
 SW 1.1.87 → **1.1.88**; `vilda_data_import_export.js?v=85→86`, `vilda_shell.js?v=56→57`.
 

@@ -20,6 +20,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //      odtworzyć (`Gp_k`, latka `Ke`); po próbie odtworzenia zapis działa;
 //   4. wymuszony zapis nie kasuje sesji przy pustym formularzu i jest pomijany w trakcie odtwarzania;
 //   5. pagehide zapisuje z force (jak flush persist);
+//   5b. po zakończeniu odtwarzania sesji (finalizacja po klatce i ticku) karta „Podsumowanie wyników” jest
+//      odświeżana (`Gp_o`) — applyLoadedData renderuje ją przed przeliczeniem głównego formularza
+//      (requestAnimationFrame), a dla dziecka nic jej potem nie odświeżało (czerwony „E2E odłamek 2/3” w CI:
+//      komplet pól w panelu DocPro, podsumowanie bez BMI);
 //   6. strażnicy źródła: wymuszony zapis na końcu applyLoadedData i restoreLoadedState przed pingiem
 //      vilda:sharedLoadSeq, pomijany przy odtwarzaniu sesji; `Pe` identyczne z audyt; powłoka zapisuje
 //      panel źródłowy przed przełączeniem i odtwarza docelowy po zmianie odcisku sesji.
@@ -34,6 +38,7 @@ function atrapaOkna(sesjaStart) {
   const nasluchy = { doc: {}, win: {} };
   const zapisy = [];
   let sesja = sesjaStart || null;
+  let odswiezenia = 0;
   const win = {
     setTimeout: setTimeout.bind(globalThis), clearTimeout: clearTimeout.bind(globalThis),
     requestAnimationFrame: (f) => setTimeout(f, 0),
@@ -58,8 +63,9 @@ function atrapaOkna(sesjaStart) {
       clearMainSession: () => { sesja = null; },
     },
   };
+  win.updateProfessionalSummaryCard = () => { odswiezenia += 1; };
   win.window = win; win.self = win; win.top = win; win.parent = win;
-  return { win, nasluchy, zapisy, sesja: () => sesja };
+  return { win, nasluchy, zapisy, sesja: () => sesja, odswiezenia: () => odswiezenia };
 }
 
 const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
@@ -75,7 +81,9 @@ async function uruchom(src, opcje) {
   expect(typeof api.initMainSessionPersistence).toBe('function');
   // kolektor jest podmienialny: test „pustego formularza” przełącza go na pusty rekord
   env.rekord = REKORD();
-  expect(api.initMainSessionPersistence({ collectUserData: () => env.rekord })).toBe(true);
+  const init = { collectUserData: () => env.rekord };
+  if (typeof o.applyLoadedData === 'function') init.applyLoadedData = o.applyLoadedData;
+  expect(api.initMainSessionPersistence(init)).toBe(true);
   expect(env.win.vildaSession && typeof env.win.vildaSession.saveNow, 'moduł wystawia vildaSession').toBe('function');
   if (!o.przedOdtworzeniem) await czekaj(30);
   return env;
@@ -166,6 +174,16 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(zapisy).toHaveLength(1);
   });
 
+  it('po odtworzeniu sesji karta podsumowania jest odświeżana po klatce i ticku — nie tylko synchronicznie w applyLoadedData', async () => {
+    const zastosowane = [];
+    const env = await uruchom(null, { przedOdtworzeniem: true, sesja: REKORD(), applyLoadedData: (p, o) => { zastosowane.push({ name: p.name, sesja: !!(o && o.isSessionRestore) }); } });
+    expect(env.odswiezenia(), 'przed odtworzeniem nic').toBe(0);
+    await czekaj(60); // start persistence → restoreMainSessionIfAny → finalizacja (rAF + tick)
+    expect(zastosowane, 'odtworzenie sesji weszło przez applyLoadedData z isSessionRestore').toEqual([{ name: 'Fikcyjna Ewa', sesja: true }]);
+    expect(env.odswiezenia(), 'po finalizacji odtworzenia karta odświeżona').toBeGreaterThanOrEqual(1);
+    expect(env.win.__vildaPersistRestoring, 'flaga odtwarzania zdjęta').toBe(false);
+  });
+
   it('pagehide zapisuje z force, także w oknie zawieszenia', async () => {
     const { win, nasluchy, zapisy } = await uruchom();
     win.__vildaPersistPauseUntil = Date.now() + 5000;
@@ -195,10 +213,17 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(ie).toContain('function Pe(e,t){const a=pe(t);if(!ge(a)||Be(a))return!1;');
     expect(ie).toContain('return $&&clearTimeout($),$=setTimeout(()=>{$=null,!Be(a)&&oe(a)},300),!0}');
     expect(ie).not.toContain('Gp_t');
+    // finalizacja odtworzenia sesji odświeża kartę podsumowania po zapisie
+    expect(ie).toContain('try{oe(a)}catch(i){l("vilda_data_import_export:finalizeMainSessionRestore:saveNow",i)}Gp_o()};');
+    expect(ie).toContain('function Gp_o(){try{typeof r.updateProfessionalSummaryCard=="function"&&r.updateProfessionalSummaryCard()}');
     const sh = czytaj('vilda_shell.js');
     expect(sh).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');
     expect(sh).toContain('function w(t){t=y(t);var Gp_c=c;c&&c!==t&&Gp_f(c);var e=_(t);');
     expect(sh).toContain('Gp_c!==t&&Gp_p(t,e);');
+    // panel docelowy: odtworzenie tylko przy zmianie odcisku, odświeżenie podsumowania po dwu klatkach zawsze
+    expect(sh).toContain('var r=Gp_s();if(r!==e.sessionStamp){e.sessionStamp=r;');
+    expect(sh).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}\}Gp_u\(n\)\}/);
+    expect(sh).toContain('function Gp_u(n){try{if(!n||typeof n.requestAnimationFrame!="function")return;n.requestAnimationFrame(function(){n.requestAnimationFrame(function(){try{typeof n.updateProfessionalSummaryCard=="function"&&n.updateProfessionalSummaryCard()}catch{}})})}catch{}}');
     expect(sh).toContain('n.loaded=!0,n.sessionStamp=Gp_s(),');
     // odcisk sesji bez pola czasu — inaczej każde przełączenie odtwarzałoby panel od nowa
     expect(sh).toContain('var n=Object.assign({},r);delete n.timestampISO;');

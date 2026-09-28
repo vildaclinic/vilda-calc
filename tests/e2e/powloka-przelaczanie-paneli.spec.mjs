@@ -165,6 +165,31 @@ test('DocPro otwarty wcześniej: po „Odtwórz zapis” na Start i szybkim prze
     .toMatchObject({ dob: PELNY.dob, age: PELNY.age, ageM: PELNY.ageM, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true });
 });
 
+// Przebieg z czerwonego CI (E2E odłamek 2/3): DocPro otwarty wcześniej, a przełączenie dopiero po chwili — gdy
+// lustro formularza i pingi wspólnego stanu już przeszły. Panel miał komplet pól, ale „Podsumowanie wyników” bez BMI:
+// karta była renderowana przed przeliczeniem głównego formularza (requestAnimationFrame, w ukrytym panelu może czekać
+// na widoczność) i nic jej potem nie odświeżało. Po poprawce panel docelowy odświeża kartę po przełączeniu.
+test('DocPro otwarty wcześniej, przełączenie po chwili (po rozgłoszeniu lustra): podsumowanie z BMI, nie tylko komplet pól', async ({ page }) => {
+  test.setTimeout(180_000);
+  const start = await otworzPowloke(page);
+  const pid = await pacjentkaWSejfie(page, start);
+
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka(page, 'DocPro');
+  await gotowa(docpro);
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.VildaShell.navigate('start'));
+  await page.waitForTimeout(500);
+
+  await wczytajZKarty(page, start, pid, 'odtworz');
+  await expect.poll(() => stan(start).then((s) => s.h)).toBe('149.2');
+  const PELNY = await pelny(start);
+  await page.waitForTimeout(3500); // lustro formularza (180/1000/2600 ms) i pingi wspólnego stanu już przeszły
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  await expect.poll(() => stan(docpro), { timeout: 8000, message: 'DocPro po zwłoce: komplet pól i podsumowanie z BMI' })
+    .toMatchObject({ dob: PELNY.dob, age: PELNY.age, ageM: PELNY.ageM, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true, porownanie: false });
+});
+
 test('„Nowy pomiar” i przejście na DocPro: ten sam stan co na Start — dane pacjentki bez masy i wzrostu, karta porównania na obu panelach', async ({ page }) => {
   test.setTimeout(180_000);
   const start = await otworzPowloke(page);
