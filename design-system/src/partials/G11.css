@@ -762,10 +762,6 @@ body.chrome-drawer-open .chrome-drawer-panel{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  border-radius:var(--radius-10);
-  border:var(--border-hairline) solid #e5eded !important;
-  background:#fff !important;
-  color:#08202c !important;
   cursor:pointer;
   flex:0 0 auto;
 }
@@ -919,18 +915,10 @@ body.chrome-drawer-open{
   gap:var(--space-0-5);
   width:100%;
   padding:var(--space-0-6) var(--space-0-8);
-  border-radius:var(--radius-10);
-  border:var(--border-hairline) solid var(--primary, #00838d);
-  background:#fff;
-  color:var(--primary, #00838d);
   font-size:.92rem;
   font-weight:600;
-  cursor:pointer;
-  transition:background .15s ease,color .15s ease;
+  cursor:pointer
 }
-.chrome-drawer-account-action:hover{
-  background:var(--primary, #00838d);
-  color:#fff}
 .chrome-drawer-account-action svg{
   width:16px;
   height:16px;

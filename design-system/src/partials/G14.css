@@ -74,10 +74,6 @@
    }
 .clcr-ident-toggle {
   margin-left:auto;
-  border:var(--border-hairline) solid var(--line);
-  background:#fff;
-  color:#006b73;
-  border-radius:var(--radius-pill);
   padding:var(--space-6px) 13px;
   font:inherit;
   font-size:13px;
@@ -85,9 +81,6 @@
   cursor:pointer;
   min-height:36px;
 }
-.clcr-ident-toggle:hover {
-   background: #f4fafa;
-   }
 .patient-card.clcr-ident-collapsed > #patientSet {
    display: none !important;
    }

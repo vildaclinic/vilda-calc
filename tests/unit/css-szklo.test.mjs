@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { arkuszeZeStronami, bezSkorki, martweDeklaracje, martweWKaskadzie, parsuj, usunMartwe } from '../support/szklo-css.mjs';
+import { arkuszeZeStronami, bezSkorki, martweDeklaracje, martweWKaskadzie, parsuj, pokrywaCzesc, usunMartwe } from '../support/szklo-css.mjs';
+import { wiedzaDom } from '../support/wiedza-dom.mjs';
 
 // P-STYLE rata 4a (decyzja właściciela 2026-09-28): skórka .liquid-ios26 jest zawsze włączona, a jej nadpisania
 // z !important wygrywają z regułami bazowymi o tym samym selektorze. Deklaracje bazowe, których nigdy nie widać,
 // są usunięte; strażnik pilnuje, by nie wróciły (node tests/scripts/usun-martwe-css.mjs), i sprawdza samą analizę
 // na małych przykładach: kiedy deklaracja jest martwa, a kiedy nie wolno jej ruszyć.
+// Rata 4b rozszerza pokrycie: nadpisanie pokrywa regułę bazową także wtedy, gdy każdy element bazowy pasuje do
+// nadpisania (skrajne złożenie bazy zawiera proste selektory nadpisania, typ może wynikać z wiedzy o DOM), a nadpisanie
+// nieważne zasłania nieważną deklarację bazową wyższą swoistością.
 
 describe('P-STYLE rata 4a: martwe deklaracje bazowe nie wracają do arkuszy', () => {
   const arkusze = arkuszeZeStronami();
-  const wynik = martweWKaskadzie(arkusze);
+  const wynik = martweWKaskadzie(arkusze, wiedzaDom());
 
   it('cztery arkusze są globalne (ładowane na każdej stronie): ios26-v2, style, sidebar, vilda_chrome', () => {
     expect(arkusze.filter((a) => a.globalny).map((a) => a.nazwa)).toEqual(['ios26-v2.css', 'sidebar.css', 'style.css', 'vilda_chrome.css']);
@@ -101,27 +105,47 @@ describe('martweDeklaracje i usunMartwe', () => {
   });
 
   it('martwa jest tylko ta sama własność, pod nadpisaniem !important o pokrywającym selektorze i w tym samym kontekście', () => {
-    const { martwe } = martweDeklaracje(zrodlo);
+    const { martwe, martweCzesci } = martweDeklaracje(zrodlo);
     const opis = martwe.map((m) => `${m.regula.kontekst.join('|') || '-'} ${m.regula.prelude} ${m.deklaracja.prop}`);
     expect(opis).toEqual([
-      '- .card background', // color w nadpisaniu nie jest !important, padding nie jest nadpisany
+      '- .card background',
+      '- .card color', // nadpisanie nieważne, ale o wyższej swoistości niż nieważna baza (rata 4b); padding nie jest nadpisany
       '@media (max-width: 600px) .card background', // ten sam kontekst @media
       '- .only opacity', // nadpisanie pokrywa .only (i więcej)
+      '@supports (backdrop-filter: blur(1px)) .glass background', // nadpisanie poza kontekstem obowiązuje zawsze (rata 4b)
     ]);
-    // .plan-card, .result-card: nadpisanie pokrywa tylko .plan-card — border zostaje żywy dla .result-card
-    // .glass w @supports: nadpisanie poza @supports — inny kontekst, zostaje
+    // .plan-card, .result-card: nadpisanie pokrywa tylko .plan-card — border zostaje żywy dla .result-card,
+    // ale część .plan-card jest martwa (każda deklaracja reguły ma dla niej zwycięzcę? nie: margin nie jest nadpisany)
+    expect(martweCzesci).toEqual([]);
+  });
+
+  it('rata 4b: martwa część selektora znika z listy, gdy każda deklaracja reguły ma dla niej zwycięzcę', () => {
+    const css = '.a, .b {\n  color: red;\n  background: blue\n}\n\n.liquid-ios26 .a {\n  color: green !important;\n  background: white !important\n}\n';
+    const { martwe, martweCzesci } = martweDeklaracje(css);
+    expect(martwe).toEqual([]); // .b nie jest pokryte — żadna deklaracja nie jest martwa dla całej reguły
+    expect(martweCzesci.map((c) => c.nr)).toEqual([0]);
+    const { text, czesci } = usunMartwe(css);
+    expect(czesci).toBe(1);
+    expect(text).toContain('.b {\n  color: red;\n  background: blue\n}');
+    expect(text).not.toContain('.a, .b');
+  });
+
+  it('rata 4b: pusty blok @media po usunięciu reguły znika w całości', () => {
+    const css = '@media (max-width: 600px) {\n  .x {\n    color: red\n  }\n}\n\n.liquid-ios26 .x {\n  color: blue !important\n}\n';
+    const { text } = usunMartwe(css);
+    expect(text).toBe('.liquid-ios26 .x {\n  color: blue !important\n}\n');
   });
 
   it('usuwa martwe deklaracje, a regułę bez deklaracji w całości; reszta tekstu bez zmian', () => {
     const { text, usuniete, reguly } = usunMartwe(zrodlo);
-    expect(usuniete).toBe(3);
-    expect(reguly).toBe(1);
-    expect(text).toContain('.card {\n  color: #333;\n  padding: 1rem\n}');
+    expect(usuniete).toBe(5);
+    expect(reguly).toBe(2);
+    expect(text).toContain('.card {\n  padding: 1rem\n}');
     expect(text).toContain('  .card {\n    padding: .5rem\n  }');
     expect(text).not.toContain('.only {');
     expect(text).toContain('.liquid-ios26 .only, .liquid-ios26 .other {\n  opacity: 1 !important\n}');
     expect(text).toContain('.plan-card, .result-card {\n  border: 1px solid #ccc;\n  margin: 0\n}');
-    expect(text).toContain('.glass {\n    background: red\n  }');
+    expect(text).not.toContain('@supports'); // reguła .glass w całości martwa, pusty blok @supports znika
     expect(martweDeklaracje(text).martwe).toEqual([]);
   });
 
@@ -135,6 +159,32 @@ describe('martweDeklaracje i usunMartwe', () => {
     // arkusz lokalny może zasłaniać własne reguły bazowe
     const wlasny = martweWKaskadzie([{ nazwa: 'ustawienia.css', css: baza + nadpisanie, globalny: false }]);
     expect(wlasny.get('ustawienia.css').martwe.map((m) => m.deklaracja.prop)).toEqual(['background']);
+  });
+
+  it('rata 4b: pokrycie elementowe — każdy element bazy pasuje do nadpisania', () => {
+    expect(pokrywaCzesc('.card', '.card.special')).toBe(true);
+    expect(pokrywaCzesc('.card', '.sidebar .card:hover')).toBe(true);
+    expect(pokrywaCzesc('button', 'button.add-row')).toBe(true);
+    expect(pokrywaCzesc('button:hover', 'button.add-row')).toBe(false); // stan w nadpisaniu, którego baza nie wymaga
+    expect(pokrywaCzesc('.card', '.card:after')).toBe(false); // inny pseudoelement
+    expect(pokrywaCzesc('.card:after', '.card.x:after')).toBe(true);
+    expect(pokrywaCzesc('.a .b', '.a .b.c')).toBe(true);
+    expect(pokrywaCzesc('.a .b', '.x .b.c')).toBe(false);
+    expect(pokrywaCzesc('.a > .b', '.a > .b.c')).toBe(false); // kombinatory inne niż potomek: tylko równość
+    expect(pokrywaCzesc('button', '.faq')).toBe(false);
+    const wiedza = { klasy: new Map([['faq', { tagi: new Set(['button']), wolna: false }], ['luz', { tagi: new Set(['button', 'a']), wolna: false }], ['dyn', { tagi: new Set(['button']), wolna: true }]]), idy: new Map() };
+    expect(pokrywaCzesc('button', '.faq', wiedza)).toBe(true); // klasa tylko na button
+    expect(pokrywaCzesc('button', '.luz', wiedza)).toBe(false); // także na <a>
+    expect(pokrywaCzesc('button', '.dyn', wiedza)).toBe(false); // klasa zapisywana w JS na nieznanym odbiorcy
+    expect(pokrywaCzesc('button', 'a.faq', wiedza)).toBe(false); // jawny typ bazy przeważa
+  });
+
+  it('rata 4b: nadpisanie nieważne zasłania tylko nieważną bazę i tylko wyższą swoistością', () => {
+    const css = '.x {\n  color: red;\n  background: blue !important\n}\n\n.liquid-ios26 .x {\n  color: green;\n  background: white\n}\n';
+    const { martwe } = martweDeklaracje(css);
+    expect(martwe.map((m) => m.deklaracja.prop)).toEqual(['color']); // background bazy jest !important — nieważne nadpisanie go nie zasłania
+    const rowna = '.x {\n  color: red\n}\n\n.liquid-ios26 .y, .liquid-ios26 .x {\n  color: green\n}\n';
+    expect(martweDeklaracje(rowna).martwe.map((m) => m.deklaracja.prop)).toEqual(['color']);
   });
 
   it('nie tyka łańcuchów, komentarzy ani reguł @keyframes', () => {
