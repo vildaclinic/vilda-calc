@@ -6,7 +6,7 @@
   .desktop-layout {
     display: grid;
     grid-template-columns: 260px 1fr;
-    gap: .5rem;
+    gap: var(--space-0-5);
     align-items: stretch;
     flex: 1 0 auto
   }
@@ -19,7 +19,7 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     margin: 0;
-    padding: 1rem 0;
+    padding: var(--space-1) 0;
     align-self: start;
     position: sticky;
     top: calc(var(--chrome-strip-height, 64px) + 1rem);
@@ -29,7 +29,7 @@
   .main-content .container {
     max-width: none;
     margin: 0;
-    padding: 1rem .5rem
+    padding: var(--space-1) var(--space-0-5)
   }
   .sidebar-nav {
     padding: 0;
@@ -48,9 +48,9 @@
   .sidebar-nav a {
     display: flex;
     align-items: center;
-    gap: .6rem;
+    gap: var(--space-0-6);
     width: 100%;
-    padding: .75rem 1.5rem;
+    padding: var(--space-0-75) var(--space-1-5);
     text-decoration: none;
     font-weight: 600;
     font-size: .95rem;
@@ -97,23 +97,23 @@
     top: 0;
     left: 0;
     z-index: var(--z-mini-summary);
-    padding: .75rem .5rem;
-    border-top: 1px solid var(--line);
+    padding: var(--space-0-75) var(--space-0-5);
+    border-top: var(--border-hairline) solid var(--line);
     background: #fff!important;
     font-size: .9rem;
     line-height: 1.35
   }
   .mini-summary .ms-row+.ms-row {
-    margin-top: .35rem
+    margin-top: var(--space-0-35)
   }
   .mini-summary .result-val {
     font-weight: 600;
     font-size: 1rem
   }
   .mini-summary .mini-shortcuts {
-    margin-top: .55rem;
-    border-top: 1px solid rgba(0,131,141,.15);
-    padding-top: .5rem
+    margin-top: var(--space-0-55);
+    border-top: var(--border-hairline) solid rgba(0,131,141,.15);
+    padding-top: var(--space-0-5)
   }
   .mini-summary .shortcut-info {
     font-size: .65rem;
@@ -121,7 +121,7 @@
     color: var(--text-muted);
     letter-spacing: .07em;
     text-transform: uppercase;
-    margin-bottom: .4rem;
+    margin-bottom: var(--space-0-4);
     padding-left: .1rem;
     text-align: left
   }
@@ -129,10 +129,10 @@
     display: flex;
     align-items: center;
     gap: 0;
-    margin-top: .3rem;
-    padding: .45rem .75rem;
-    border-radius: 10px;
-    border: 1px solid rgba(0,0,0,.07);
+    margin-top: var(--space-0-3);
+    padding: var(--space-0-45) var(--space-0-75);
+    border-radius: var(--radius-10);
+    border: var(--border-hairline) solid rgba(0,0,0,.07);
     background: #fff;
     box-shadow: none!important;
     cursor: pointer;
@@ -151,7 +151,7 @@
     color: var(--primary, #00838d);
     font-size: 1.1rem;
     line-height: 1;
-    margin-right: .55rem;
+    margin-right: var(--space-0-55);
     flex: 0 0 auto
   }
   .mini-summary .shortcut-row[title] {
@@ -191,7 +191,7 @@
     font-size: 1.1rem;
     line-height: 1;
     cursor: pointer;
-    padding: 0 0 0 .4rem!important;
+    padding: 0 0 0 var(--space-0-4)!important;
     margin-left: auto;
     pointer-events: auto!important
   }
@@ -219,10 +219,10 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    margin-top: .3rem;
-    padding: .45rem .75rem!important;
-    border-radius: 10px!important;
-    border: 1px solid rgba(0,0,0,.07)!important;
+    margin-top: var(--space-0-3);
+    padding: var(--space-0-45) var(--space-0-75)!important;
+    border-radius: var(--radius-10)!important;
+    border: var(--border-hairline) solid rgba(0,0,0,.07)!important;
     background: #fff!important;
     box-shadow: none!important;
     color: var(--primary, #00838d)!important;
@@ -238,23 +238,23 @@
     box-shadow: none!important
   }
   .mini-summary #shortcutSelect {
-    margin-top: .5rem;
+    margin-top: var(--space-0-5);
     width: 100%;
     font-size: .9rem;
     background: var(--card);
-    border: 1px solid var(--line);
+    border: var(--border-hairline) solid var(--line);
     border-radius: var(--radius);
     color: var(--text);
-    padding: .25rem .6rem;
+    padding: var(--space-0-25) var(--space-0-6);
     pointer-events: auto!important
   }
   .mini-summary .shortcut-dropdown {
-    margin-top: .5rem;
+    margin-top: var(--space-0-5);
     width: 100%;
     background: #fff!important;
     backdrop-filter: none!important;
     -webkit-backdrop-filter: none!important;
-    border: 1px solid var(--line);
+    border: var(--border-hairline) solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     max-height: 24rem!important;
@@ -262,11 +262,11 @@
     pointer-events: auto!important
   }
   .mini-summary .shortcut-option {
-    padding: .7rem 1.2rem!important;
+    padding: var(--space-0-7) var(--space-1-2)!important;
     cursor: pointer;
     color: #000!important;
     font-size: .9rem;
-    border-bottom: 1px solid #e0eae6;
+    border-bottom: var(--border-hairline) solid #e0eae6;
     pointer-events: auto!important;
     white-space: normal!important;
     word-break: break-word!important;
@@ -285,9 +285,9 @@
     color: var(--danger)!important
   }
   .steroid-summary {
-    margin-top: .6rem;
-    border-top: 1px solid var(--line);
-    padding: .75rem .5rem;
+    margin-top: var(--space-0-6);
+    border-top: var(--border-hairline) solid var(--line);
+    padding: var(--space-0-75) var(--space-0-5);
     background: var(--card);
     font-size: .9rem;
     line-height: 1.35
@@ -295,7 +295,7 @@
   .steroid-summary .shortcut-info {
     font-size: .8rem;
     color: #6c757d;
-    margin-bottom: .4rem
+    margin-bottom: var(--space-0-4)
   }
   .steroid-summary .steroid-shortcuts {
     margin: 0;
@@ -305,7 +305,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: .5rem;
+    margin-top: var(--space-0-5);
     pointer-events: auto!important
   }
   .steroid-summary .shortcut-row:first-child {
@@ -313,12 +313,12 @@
   }
   .steroid-summary .shortcut-link {
     background: var(--card)!important;
-    border: 1px solid var(--line)!important;
+    border: var(--border-hairline) solid var(--line)!important;
     border-radius: var(--radius)!important;
     color: #000!important;
     text-decoration: none!important;
     cursor: pointer;
-    padding: .25rem .6rem!important;
+    padding: var(--space-0-25) var(--space-0-6)!important;
     font-size: .9rem;
     flex-grow: 1;
     text-align: left;
@@ -330,7 +330,7 @@
     border: none!important;
     color: var(--danger)!important;
     cursor: pointer;
-    margin-left: .5rem;
+    margin-left: var(--space-0-5);
     padding: 0;
     font-size: 1.1rem;
     line-height: 1;
@@ -338,43 +338,43 @@
   }
   .steroid-summary .add-shortcut-btn {
     background: var(--card)!important;
-    border: 1px solid var(--line)!important;
+    border: var(--border-hairline) solid var(--line)!important;
     border-radius: var(--radius)!important;
     color: var(--primary)!important;
     text-decoration: none!important;
     cursor: pointer;
-    padding: .25rem .6rem!important;
+    padding: var(--space-0-25) var(--space-0-6)!important;
     font-size: .9rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    margin-top: .5rem;
+    margin-top: var(--space-0-5);
     pointer-events: auto!important
   }
   .steroid-summary .steroid-dropdown {
-    margin-top: .5rem;
+    margin-top: var(--space-0-5);
     width: 100%;
     background: #fff!important;
     backdrop-filter: none!important;
     -webkit-backdrop-filter: none!important;
-    border: 1px solid var(--line);
+    border: var(--border-hairline) solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: .8rem;
+    padding: var(--space-0-8);
     pointer-events: auto!important
   }
   .steroid-summary .pair-row {
     display: flex;
     flex-direction: column;
-    margin-bottom: .8rem
+    margin-bottom: var(--space-0-8)
   }
   .steroid-summary .pair-row:last-child {
     margin-bottom: 0
   }
   .steroid-summary .pair-row label {
     font-weight: 600;
-    margin-bottom: .25rem;
+    margin-bottom: var(--space-0-25);
     font-size: .9rem
   }
   .steroid-summary .pair-row select {
@@ -382,9 +382,9 @@
     font-size: .9rem;
     color: var(--text);
     background: var(--card);
-    border: 1px solid var(--line);
+    border: var(--border-hairline) solid var(--line);
     border-radius: var(--radius);
-    padding: .25rem .6rem;
+    padding: var(--space-0-25) var(--space-0-6);
     pointer-events: auto!important
   }
   .steroid-summary .hidden-shortcut-add-btn {
@@ -393,14 +393,14 @@
   .steroid-summary .pair-actions {
     display: flex;
     justify-content: space-between;
-    margin-top: .6rem
+    margin-top: var(--space-0-6)
   }
   .steroid-summary .confirm-pair {
     background: var(--primary);
     color: #fff;
     border: none;
     border-radius: var(--radius);
-    padding: .4rem 1rem;
+    padding: var(--space-0-4) var(--space-1);
     font-size: .9rem;
     cursor: pointer
   }
@@ -409,7 +409,7 @@
     color: #fff;
     border: none;
     border-radius: var(--radius);
-    padding: .4rem 1rem;
+    padding: var(--space-0-4) var(--space-1);
     font-size: .9rem;
     cursor: pointer
   }
@@ -430,18 +430,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: .45rem;
-    padding: .4rem .7rem;
-    border-radius: 999px;
+    gap: var(--space-0-45);
+    padding: var(--space-0-4) var(--space-0-7);
+    border-radius: var(--radius-pill);
     background: var(--tint-teal);
-    border: 1px solid rgba(0,131,141,.2);
-    margin-bottom: .5rem;
+    border: var(--border-hairline) solid rgba(0,131,141,.2);
+    margin-bottom: var(--space-0-5);
     text-align: center
   }
   .ms-avatar-wiek {
     flex: 0 0 auto;
-    padding: .1rem .45rem;
-    border-radius: 6px;
+    padding: .1rem var(--space-0-45);
+    border-radius: var(--radius-6);
     background: var(--primary, #00838d);
     color: #fff;
     font-size: .62rem;
@@ -459,15 +459,15 @@
   .ms-chips {
     display: flex;
     flex-direction: column;
-    gap: .3rem
+    gap: var(--space-0-3)
   }
   .ms-chip {
     display: flex;
     align-items: center;
-    gap: .4rem;
-    padding: .35rem .5rem;
-    border-radius: 10px;
-    border: 1px solid var(--line);
+    gap: var(--space-0-4);
+    padding: var(--space-0-35) var(--space-0-5);
+    border-radius: var(--radius-10);
+    border: var(--border-hairline) solid var(--line);
     background: #ffffff8c;
     min-height: 36px;
     box-sizing: border-box
@@ -492,7 +492,7 @@
     flex: 0 0 auto;
     width: 22px;
     height: 22px;
-    border-radius: 50%;
+    border-radius: var(--radius-circle);
     background: var(--tint-teal-active);
     display: flex;
     align-items: center;
@@ -556,7 +556,7 @@
     font-size: .64rem;
     font-weight: 700;
     padding: .12rem .38rem;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: #00838d24;
     color: #00535a;
     white-space: nowrap;
@@ -589,7 +589,7 @@
 
 @media(min-width:1400px) {
   .desktop-layout {
-    grid-template-columns: 230px 1fr 230px
+    grid-template-columns: var(--decor-sidebar-width) 1fr var(--decor-sidebar-width)
   }
   .decor-sidebar {
     display: block;
@@ -612,11 +612,11 @@
     box-shadow: var(--shadow);
     margin-top: 1em;
     margin-bottom: 1em;
-    padding: 1rem 0
+    padding: var(--space-1) 0
   }
   .decor-sidebar .steroid-summary {
-    margin: .5rem .25rem;
-    padding: .5rem
+    margin: var(--space-0-5) var(--space-0-25);
+    padding: var(--space-0-5)
   }
 }
 
@@ -626,13 +626,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-bottom: 1rem;
+    padding-bottom: var(--space-1);
     text-align: center
   }
   .sidebar-logo img {
     max-width: 160px;
     border-radius: var(--radius);
-    margin-bottom: .5rem;
+    margin-bottom: var(--space-0-5);
     display: block;
     margin-left: auto;
     margin-right: auto

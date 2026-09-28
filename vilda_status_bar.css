@@ -7,10 +7,10 @@
 [data-vilda-status] {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
+  gap: var(--space-0-6);
   font-size: 0.9rem;
   line-height: 1.45;
-  padding: 0.55rem 0.75rem;
+  padding: var(--space-0-55) var(--space-0-75);
   border-radius: var(--radius, 8px);
   border-left: 4px solid var(--vilda-status-ton, #00838d);
   background: #fff;
@@ -54,15 +54,15 @@
 }
 .vilda-status-link:hover { text-decoration-thickness: 2px; }
 .vilda-status-link:focus-visible {
-  outline: 2px solid var(--vilda-status-ton, #00838d);
+  outline: var(--border-emphasis) solid var(--vilda-status-ton, #00838d);
   outline-offset: 2px;
   border-radius: 2px;
 }
 
 /* Wariant B — góra formularza. Widoczny TYLKO przy zwiniętych kolumnach. */
-#vildaStatusForm { margin-bottom: 0.8rem; }
+#vildaStatusForm { margin-bottom: var(--space-0-8); }
 /* Wariant D — prawa kolumna. Widoczny TYLKO przy dwóch kolumnach. */
-#vildaStatusSide { margin-bottom: 0.8rem; }
+#vildaStatusSide { margin-bottom: var(--space-0-8); }
 
 @media (min-width: 700px) {
   #vildaStatusForm { display: none !important; }

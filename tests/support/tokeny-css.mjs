@@ -1,4 +1,4 @@
-// P-STYLE rata 2a (decyzja właściciela 2026-09-28): wartości wpisane dotąd na sztywno w arkuszach
+// P-STYLE rata 2a i 2b (decyzja właściciela 2026-09-28): wartości wpisane dotąd na sztywno w arkuszach
 // są zastępowane zmiennymi z :root, nazwanymi jak tokeny design systemu
 // (design-system/src/project/tokens.json). Ten moduł zna RODZINY tokenów objęte tokenizacją
 // (własności, w których dana rodzina występuje, i sposób dzielenia wartości na atomy), buduje
@@ -10,6 +10,11 @@
 // jest zadeklarowana w :root (style.css, ładowany na każdej stronie) i nigdzie nie jest nadpisywana.
 // Tokeny, które zmieniają wartość między trybami wyglądu (wielowartościowe w tokens.json), są
 // celowo POZA mapą: podmiana literału na taką zmienną zmieniłaby wygląd w trybach kontrastu.
+//
+// Rata 2a: kolory, cienie, z-index, przezroczystość. Rata 2b: odstępy, promienie, grubości obramowań,
+// rozmycie tła, wymiary układu — każda rodzina TYLKO we własnościach, w których niesie to znaczenie
+// (12px w padding to odstęp, w border-radius promień, w width wymiar; ta sama liczba w font-size zostaje).
+// Punkty przełamania (@media) nie mogą być zmiennymi (var() w prelude @media jest niedozwolone) i zostają.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,15 +30,29 @@ export function arkuszeAplikacji() {
 const WLASNOSCI_KOLORU = /^(color|background|background-color|border|border-color|border-(top|right|bottom|left)|border-(top|right|bottom|left)-color|border-block|border-inline|outline|outline-color|fill|stroke|box-shadow|text-shadow|text-decoration-color|caret-color|accent-color|column-rule-color|scrollbar-color)$/;
 
 /**
- * Rodziny objęte ratą 2a. `atomy`: 'slowa' — wartość dzielona na elementy po spacjach i przecinkach
+ * Rodziny objęte ratami 2a i 2b. `atomy`: 'slowa' — wartość dzielona na elementy po spacjach i przecinkach
  * poza nawiasami i łańcuchami; 'warstwy' — tylko po przecinkach (warstwy cienia); 'calosc' — cała wartość.
+ * Rodziny wymiarowe (2b) mają zasięg własności: literał tej samej liczby poza nim zostaje.
  */
 export const RODZINY = Object.freeze({
   shadow: { wlasnosci: /^(box-shadow)$/, atomy: 'warstwy' },
   color: { wlasnosci: WLASNOSCI_KOLORU, atomy: 'slowa' },
   zindex: { wlasnosci: /^z-index$/, atomy: 'calosc' },
   opacity: { wlasnosci: /^opacity$/, atomy: 'calosc' },
+  // rata 2b — odstępy: tylko marginesy, dopełnienia i odstępy siatki/flexa (tak liczył je design system)
+  spacing: { wlasnosci: /^(margin|padding)(-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end))?$|^(gap|row-gap|column-gap|grid-gap|grid-row-gap|grid-column-gap)$/, atomy: 'slowa' },
+  // promienie: skrót i formy długie (także logiczne)
+  radius: { wlasnosci: /^border-(radius|(top|bottom)-(left|right)-radius|(start|end)-(start|end)-radius)$/, atomy: 'slowa' },
+  // grubości obramowań i konturów: atom długości w skrócie (1px solid …) i formy -width
+  border: { wlasnosci: /^(border|border-(top|right|bottom|left|block|inline))(-width)?$|^outline(-width)?$/, atomy: 'slowa' },
+  // rozmycie tła: funkcje blur()/saturate() w backdrop-filter (skórka liquid-glass)
+  blur: { wlasnosci: /^(-webkit-)?backdrop-filter$/, atomy: 'slowa' },
+  // wymiary układu: szerokości/wysokości i kolumny siatek
+  layout: { wlasnosci: /^((min|max)-)?(width|height|inline-size|block-size)$|^flex-basis$|^grid-template-(columns|rows)$/, atomy: 'slowa' },
 });
+
+/** Rodziny raty 2b (wymiarowe). */
+export const RODZINY_2B = Object.freeze(['spacing', 'radius', 'border', 'blur', 'layout']);
 
 /** Tokeny nazwane od literału (nic nie znaczą jako nazwy) — zostają literałami. */
 export const POMIJANE_TOKENY = new Set([
@@ -46,10 +65,22 @@ export const POMIJANE_TOKENY = new Set([
   'success',
   // aliasy i zmienne modułów z dalszych bloków :root style.css: ta sama wartość ma nazwę kanoniczną (primary, bg…)
   'brand', 'brand-light', 'card-bg', 'snake-color',
+  // rata 2b — zero nie jest odstępem (617 użyć w resetach marginesów); „80px" to ponowna deklaracja --mobile-dock-height
+  // w zapytaniu o media, nie literał w regule; --radius (12px efektywnie, 8px w martwej pierwszej deklaracji) i zmienne
+  // modułów w dalszych blokach :root style.css (pulse-ring, metabolic-summary-border-radius, snake-/summary-border-thickness)
+  // niosą znaczenie komponentu — literał tej samej liczby dostaje nazwę ze skali (radius-12, space-12px, border-pro)
+  'space-0', 'mobile-dock-height-compact', 'radius', 'pulse-ring', 'metabolic-summary-border-radius', 'snake-border-thickness', 'summary-border-thickness',
+  // rata 2b — tokeny układu nazwane od komponentu, których wartość dzielą niepowiązane elementy (44px to nie tylko strzałka
+  // powłoki, 520px nie tylko kadr wideo edu, 760px nie tylko modal tarczycowy): var(--shell-scroll-top-size) na awatarze
+  // logowania wprowadzałby w błąd — zostają literałami do czasu nadania nazw ze skali (decyzja właściciela);
+  // pozostałe cztery nie występują w arkuszach (tylko w stylach inline stron)
+  'auth-card-max-width', 'auth-sheet-width', 'edu-portrait-max-width', 'icon-column-width', 'shell-scroll-top-size',
+  'shell-term-fab-size', 'sidebar-legacy-width', 'thy-modal-inner-max-height',
+  'measure-diab-lead', 'notes-shell-max-width', 'sub-hero-max-width', 'select-unified-width-mob',
 ]);
 
-/** Wartości, które zostają literałami niezależnie od tokenu: biel i czerń nic nie znaczą jako nazwy. */
-export const POMIJANE_WARTOSCI = new Set(['#ffffff', '#000000']);
+/** Wartości, które zostają literałami niezależnie od tokenu: biel i czerń nic nie znaczą jako nazwy; zero nie jest wymiarem. */
+export const POMIJANE_WARTOSCI = new Set(['#ffffff', '#000000', '0', '0px', '0rem']);
 
 /** Zmienne zadeklarowane w bloku :root na początku style.css (arkusz ładowany na każdej stronie). */
 export function zmienneGlobalne(styleCss = fs.readFileSync(path.join(korzen, 'style.css'), 'utf8')) {
@@ -59,13 +90,29 @@ export function zmienneGlobalne(styleCss = fs.readFileSync(path.join(korzen, 'st
   return nazwy;
 }
 
-/** Gdy kilka tokenów ma tę samą wartość, tę nazwę dostaje literał (reszta to aliasy lub zmienne o zasięgu modułu). */
+/**
+ * Gdy kilka tokenów jednej rodziny ma tę samą wartość, tę nazwę dostaje literał (reszta to aliasy lub zmienne
+ * o zasięgu modułu). Klucz zewnętrzny: rodzina — ta sama liczba w innej rodzinie to inny token (12px: radius-12 / space-12px).
+ */
 export const KANONICZNE = Object.freeze({
-  '#00838d': 'primary',
-  '#5a7274': 'text-muted',
-  '#d0dede': 'line',
-  '#14393d': 'text-heading',
-  '#c62828': 'danger',
+  color: {
+    '#00838d': 'primary',
+    '#5a7274': 'text-muted',
+    '#d0dede': 'line',
+    '#14393d': 'text-heading',
+    '#c62828': 'danger',
+  },
+  // rata 2b: kilka nazw syntetycznych design systemu ma tę samą wartość (blur(14px): karta, dymek, popover, nagłówek chrome);
+  // literał dostaje nazwę najczęstszego użycia, pozostałe nazwy nie dostają zmiennej
+  blur: {
+    'blur(14px)': 'blur-card',
+    'blur(16px)': 'blur-glass',
+    'blur(10px)': 'blur-button',
+    'blur(12px)': 'blur-shell-scroll-top',
+    'saturate(115%)': 'blur-card-saturate',
+    'saturate(120%)': 'blur-button-saturate',
+    'saturate(118%)': 'edu-surface-backdrop-saturate',
+  },
 });
 
 const OBSERWOWANY = /zaobserwowan|nazwa syntetyczna/i;
@@ -102,7 +149,7 @@ export function mapaWartosci(tokens = JSON.parse(fs.readFileSync(PLIK_TOKENOW, '
     for (const t of kandydaci) {
       const klucz = normalizuj(t.value);
       if (POMIJANE_WARTOSCI.has(klucz)) continue;
-      const kanon = KANONICZNE[klucz];
+      const kanon = (KANONICZNE[rodzina] || {})[klucz];
       if (kanon) { if (t.name === kanon) m.set(klucz, t.name); continue; }
       const dotychczas = kandydaci.find((x) => x.name === m.get(klucz));
       if (!dotychczas || (t.obserwowany && !dotychczas.obserwowany)) m.set(klucz, t.name);
@@ -145,9 +192,9 @@ export function podzielAtomy(wartosc, tryb) {
 }
 
 /**
- * Przepisuje deklaracje arkusza. `fn(prop, wartosc)` dostaje nazwę własności i wartość bez `!important`
- * i zwraca nową wartość albo null (bez zmiany). Własności `--nazwa`, prelude reguł, łańcuchy i komentarze
- * są nietykane; układ białych znaków zostaje.
+ * Przepisuje deklaracje arkusza. `fn(prop, wartosc, selektor)` dostaje nazwę własności, wartość bez `!important`
+ * i prelude reguły (z otaczającymi @media, rozdzielone „ » ") i zwraca nową wartość albo null (bez zmiany).
+ * Własności `--nazwa`, prelude reguł, łańcuchy i komentarze są nietykane; układ białych znaków zostaje.
  */
 export function przepiszDeklaracje(css, fn) {
   let wynik = '';
@@ -156,12 +203,14 @@ export function przepiszDeklaracje(css, fn) {
   let glebokosc = 0;
   let poczatek = 0; // początek bieżącego segmentu
   let nawiasy = 0;
+  const preludia = []; // stos prelude otwartych bloków (bez komentarzy)
   const wypisz = (koniec, terminator) => {
     const segment = css.slice(poczatek, koniec);
+    if (terminator === '{') preludia.push(segment.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim());
     if (terminator !== '{' && glebokosc > 0) {
       const m = /^(\s*)([A-Za-z-][A-Za-z0-9-]*)(\s*:\s*)([\s\S]*?)(\s*!important)?(\s*)$/.exec(segment);
       if (m && !m[2].startsWith('--') && m[4].trim()) {
-        const nowa = fn(m[2].toLowerCase(), m[4]);
+        const nowa = fn(m[2].toLowerCase(), m[4], preludia.join(' » '));
         if (nowa != null && nowa !== m[4]) { wynik += `${m[1]}${m[2]}${m[3]}${nowa}${m[5] || ''}${m[6]}`; return; }
       }
     }
@@ -176,17 +225,17 @@ export function przepiszDeklaracje(css, fn) {
     if (nawiasy > 0) { i++; continue; }
     if (c === '{') { wypisz(i, '{'); wynik += c; glebokosc++; poczatek = i + 1; i++; continue; }
     if (c === ';') { wypisz(i, ';'); wynik += c; poczatek = i + 1; i++; continue; }
-    if (c === '}') { wypisz(i, '}'); wynik += c; glebokosc = Math.max(0, glebokosc - 1); poczatek = i + 1; i++; continue; }
+    if (c === '}') { wypisz(i, '}'); wynik += c; glebokosc = Math.max(0, glebokosc - 1); preludia.pop(); poczatek = i + 1; i++; continue; }
     i++;
   }
   wypisz(n, '}');
   return wynik;
 }
 
-/** Zamienia literały na var(--token) w arkuszu; zwraca nowy tekst i listę zamian. */
+/** Zamienia literały na var(--token) w arkuszu; zwraca nowy tekst i listę zamian (z selektorem reguły). */
 export function tokenizuj(css, mapa) {
   const zamiany = [];
-  const text = przepiszDeklaracje(css, (prop, wartosc) => {
+  const text = przepiszDeklaracje(css, (prop, wartosc, selektor) => {
     let biezaca = wartosc;
     for (const [rodzina, opis] of Object.entries(RODZINY)) {
       if (!opis.wlasnosci.test(prop)) continue;
@@ -198,7 +247,7 @@ export function tokenizuj(css, mapa) {
         if (!cz.atom) continue;
         const token = m.get(normalizuj(cz.tekst));
         if (!token) continue;
-        zamiany.push({ prop, rodzina, literal: cz.tekst, token });
+        zamiany.push({ prop, rodzina, literal: cz.tekst, token, selektor });
         cz.tekst = `var(--${token})`;
         zmienione = true;
       }
@@ -209,15 +258,28 @@ export function tokenizuj(css, mapa) {
   return { text, zamiany };
 }
 
-/** Literały w objętych własnościach, które NIE mają tokenu (kandydaci do nazwania) — tylko kolory hex/rgb. */
-export function literalyBezTokenu(css, mapa) {
+/** Czy atom wygląda na literał danej rodziny (kandydat do nazwania, gdy nie ma tokenu). */
+const WYGLADA_NA = Object.freeze({
+  color: (k) => /^(#[0-9a-f]{6,8}|rgba?\([^)]*\))$/.test(k),
+  spacing: (k) => /^-?\d*\.?\d+(px|rem|em)$/.test(k) && !/^-?0+(\.0+)?(px|rem|em)$/.test(k),
+  radius: (k) => /^\d*\.?\d+(px|rem|em|%)$/.test(k) && !/^0+(\.0+)?(px|rem|em|%)$/.test(k),
+  border: (k) => /^\d*\.?\d+px$/.test(k) && !/^0+px$/.test(k),
+  blur: (k) => /^(blur|saturate)\([^)]*\)$/.test(k),
+  layout: (k) => /^\d*\.?\d+(px|rem|ch|vw|vh)$/.test(k) && !/^0+(\.0+)?(px|rem|ch|vw|vh)$/.test(k),
+});
+
+/** Literały w objętych własnościach rodziny, które NIE mają tokenu (kandydaci do nazwania). */
+export function literalyBezTokenu(css, mapa, rodzina = 'color') {
   const wynik = new Map();
+  const opis = RODZINY[rodzina];
+  const wyglada = WYGLADA_NA[rodzina];
+  if (!opis || !wyglada) return wynik;
   przepiszDeklaracje(css, (prop, wartosc) => {
-    if (!RODZINY.color.wlasnosci.test(prop)) return null;
-    for (const cz of podzielAtomy(wartosc, 'slowa')) {
+    if (!opis.wlasnosci.test(prop)) return null;
+    for (const cz of podzielAtomy(wartosc, opis.atomy === 'calosc' ? 'calosc' : 'slowa')) {
       if (!cz.atom) continue;
       const k = normalizuj(cz.tekst);
-      if (/^(#[0-9a-f]{6,8}|rgba?\([^)]*\))$/.test(k) && !mapa.color.get(k)) wynik.set(k, (wynik.get(k) || 0) + 1);
+      if (wyglada(k) && !(mapa[rodzina] && mapa[rodzina].get(k))) wynik.set(k, (wynik.get(k) || 0) + 1);
     }
     return null;
   });

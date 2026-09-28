@@ -35,9 +35,9 @@ body.liquid-ios26:before {
 
 .liquid-ios26 ._glass {
   background: var(--lg-surface-light);
-  border: 1px solid var(--lg-border);
-  backdrop-filter: blur(16px) saturate(115%);
-  -webkit-backdrop-filter: blur(16px) saturate(115%);
+  border: var(--border-hairline) solid var(--lg-border);
+  backdrop-filter: var(--blur-glass) var(--blur-card-saturate);
+  -webkit-backdrop-filter: var(--blur-glass) var(--blur-card-saturate);
   border-radius: var(--lg-radius);
   box-shadow: var(--lg-shadow);
   position: relative
@@ -65,9 +65,9 @@ body.liquid-ios26:before {
 .liquid-ios26 header {
   background: var(--lg-surface-light)!important;
   color: var(--text-ink)!important;
-  border-bottom: 1px solid var(--lg-border);
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  border-bottom: var(--border-hairline) solid var(--lg-border);
+  backdrop-filter: var(--blur-header) var(--blur-button-saturate);
+  -webkit-backdrop-filter: var(--blur-header) var(--blur-button-saturate);
   border-radius: 0 0 var(--lg-radius) var(--lg-radius);
   overflow: hidden;
   box-shadow: var(--lg-shadow);
@@ -102,11 +102,11 @@ body.liquid-ios26:before {
 .liquid-ios26 #timesCard,
 .liquid-ios26 #intakeCard {
   background: var(--lg-surface-light)!important;
-  border: 1px solid var(--lg-border)!important;
+  border: var(--border-hairline) solid var(--lg-border)!important;
   box-shadow: var(--lg-shadow)!important;
   border-radius: var(--lg-radius)!important;
-  backdrop-filter: blur(14px) saturate(115%)!important;
-  -webkit-backdrop-filter: blur(14px) saturate(115%)!important
+  backdrop-filter: var(--blur-card) var(--blur-card-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-card) var(--blur-card-saturate)!important
 }
 
 .liquid-ios26 .result-box {
@@ -119,11 +119,11 @@ body.liquid-ios26:before {
 .liquid-ios26 input[type=button],
 .liquid-ios26 input[type=submit] {
   background: #fff3!important;
-  border: 1px solid var(--lg-border)!important;
+  border: var(--border-hairline) solid var(--lg-border)!important;
   color: var(--text-ink)!important;
-  border-radius: 14px!important;
-  backdrop-filter: blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter: blur(10px) saturate(120%)!important;
+  border-radius: var(--radius-14)!important;
+  backdrop-filter: var(--blur-button) var(--blur-button-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-button) var(--blur-button-saturate)!important;
   box-shadow: var(--shadow-button-glass)!important;
   transition: transform .12s ease,box-shadow .12s ease,background-color .15s ease!important
 }
@@ -151,7 +151,7 @@ body.liquid-ios26:before {
 .liquid-ios26 #toggleThyroidCancerKids,
 .liquid-ios26 #toggleGhMonitor {
   background: #fff3!important;
-  border: 1px solid var(--lg-border)!important;
+  border: var(--border-hairline) solid var(--lg-border)!important;
   color: var(--text-ink)!important;
   justify-content: center
 }
@@ -171,11 +171,11 @@ body.liquid-ios26:before {
 .liquid-ios26 #abxCopyRec,
 .liquid-ios26 .abx-brand-option {
   background: #fff3!important;
-  border: 1px solid var(--lg-border)!important;
+  border: var(--border-hairline) solid var(--lg-border)!important;
   color: var(--text-ink)!important;
-  border-radius: 14px!important;
-  backdrop-filter: blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter: blur(10px) saturate(120%)!important;
+  border-radius: var(--radius-14)!important;
+  backdrop-filter: var(--blur-button) var(--blur-button-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-button) var(--blur-button-saturate)!important;
   box-shadow: var(--shadow-button-glass)!important;
   transition: transform .12s ease,box-shadow .12s ease,background-color .15s ease!important
 }
@@ -192,7 +192,7 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 #thyroidCancerKidsCard .thy-jump-cancer-preop {
-  border: 3px solid #9900ff!important
+  border: var(--border-pro) solid #9900ff!important
 }
 
 .liquid-ios26 #thyroidCancerKidsCard .thy-disclosure-btn-static {
@@ -202,7 +202,7 @@ body.liquid-ios26:before {
 .liquid-ios26 .btn-icon {
   display: inline-flex;
   align-items: center;
-  gap: .5rem
+  gap: var(--space-0-5)
 }
 
 .liquid-ios26 .btn-icon svg {
@@ -224,7 +224,7 @@ body.liquid-ios26:before {
 }
 
 #abxCopyRec {
-  border: 3px solid #9900ff!important
+  border: var(--border-pro) solid #9900ff!important
 }
 
 .liquid-ios26 #abxReturnBtn,
@@ -232,10 +232,10 @@ body.liquid-ios26:before {
   display: none!important;
   background: #fff!important;
   color: var(--text-ink)!important;
-  border: 1px solid var(--brand-light)!important;
-  border-radius: 14px!important;
+  border: var(--border-hairline) solid var(--brand-light)!important;
+  border-radius: var(--radius-14)!important;
   box-shadow: var(--shadow-button-glass)!important;
-  padding: .45rem 1rem!important;
+  padding: var(--space-0-45) var(--space-1)!important;
   cursor: pointer;
   margin-left: auto;
   margin-right: auto;
@@ -305,8 +305,8 @@ body.liquid-ios26:before {
 .liquid-ios26 input[type=number],
 .liquid-ios26 select {
   background: #ffffffd9;
-  border: 1px solid rgba(0,0,0,.12);
-  border-radius: 12px
+  border: var(--border-hairline) solid rgba(0,0,0,.12);
+  border-radius: var(--radius-12)
 }
 
 .liquid-ios26 h1,
@@ -344,7 +344,7 @@ body.liquid-ios26:before {
   border-radius: 0!important;
   color: var(--primary)!important;
   font-weight: 600!important;
-  padding: .75rem 1rem!important;
+  padding: var(--space-0-75) var(--space-1)!important;
   width: 100%!important;
   text-align: left!important
 }
@@ -382,7 +382,7 @@ body.liquid-ios26:before {
   background: var(--secondary)!important;
   color: #fff!important;
   border-radius: var(--radius)!important;
-  padding: .35rem .65rem!important;
+  padding: var(--space-0-35) var(--space-0-65)!important;
   font-size: .85rem!important;
   border: none!important
 }
@@ -395,9 +395,9 @@ body.liquid-ios26:before {
 .liquid-ios26 .delete-gh-pt-btn {
   background: var(--danger-tint)!important;
   color: var(--danger)!important;
-  border: 1px solid var(--danger)!important;
+  border: var(--border-hairline) solid var(--danger)!important;
   border-radius: var(--radius)!important;
-  padding: .35rem .65rem!important;
+  padding: var(--space-0-35) var(--space-0-65)!important;
   font-size: .85rem!important
 }
 
@@ -417,7 +417,7 @@ body.liquid-ios26:before {
 }
 
 .mini-summary .shortcut-option {
-  padding: .7rem 1.2rem!important;
+  padding: var(--space-0-7) var(--space-1-2)!important;
   line-height: 1.4!important;
   white-space: normal!important;
   word-break: break-word!important;
@@ -439,17 +439,17 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 #antibioticTherapyCard .slider-value-label {
-  border: 1px solid var(--lg-border)!important;
+  border: var(--border-hairline) solid var(--lg-border)!important;
   background: #fff3!important;
   color: var(--text-ink)!important;
-  padding: .25rem .5rem!important;
-  border-radius: 6px!important;
+  padding: var(--space-0-25) var(--space-0-5)!important;
+  border-radius: var(--radius-6)!important;
   bottom: -.6rem!important;
   pointer-events: auto!important;
   cursor: grab!important;
   box-shadow: var(--shadow-button-glass)!important;
-  backdrop-filter: blur(10px) saturate(120%)!important;
-  -webkit-backdrop-filter: blur(10px) saturate(120%)!important;
+  backdrop-filter: var(--blur-button) var(--blur-button-saturate)!important;
+  -webkit-backdrop-filter: var(--blur-button) var(--blur-button-saturate)!important;
   transition: background .2s ease,color .2s ease!important
 }
 
@@ -463,7 +463,7 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 #antibioticTherapyCard .dose-slider-container--multiline {
-  padding-bottom: .25rem!important
+  padding-bottom: var(--space-0-25)!important
 }
 
 .liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
@@ -474,7 +474,7 @@ body.liquid-ios26:before {
   transform: none!important;
   width: min(100%,34rem)!important;
   max-width: 100%!important;
-  margin: .65rem auto 0!important;
+  margin: var(--space-0-65) auto 0!important;
   white-space: normal!important;
   overflow-wrap: anywhere!important;
   word-break: break-word!important;
@@ -487,23 +487,23 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 #antibioticTherapyCard .slider-ticks .slider-tick-label:first-child {
-  padding-left: .5rem!important
+  padding-left: var(--space-0-5)!important
 }
 
 .liquid-ios26 #antibioticTherapyCard .slider-ticks .slider-tick-label:last-child {
-  padding-right: .5rem!important
+  padding-right: var(--space-0-5)!important
 }
 
 .liquid-ios26 #antibioticTherapyCard #abxReturnBtn,
 .liquid-ios26 #antibioticTherapyCard .return-recommendation-btn,
 .liquid-ios26 .return-recommendation-btn {
-  margin-top: 1.1rem!important
+  margin-top: var(--space-1-1)!important
 }
 
 .liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label {
   background: #fff3!important;
   color: var(--text-ink)!important;
-  border: 1px solid var(--lg-accent)!important;
+  border: var(--border-hairline) solid var(--lg-accent)!important;
   box-shadow: var(--shadow-button-glass)!important
 }
 
@@ -591,13 +591,13 @@ body.has-mobile-bottom-dock #mobileBottomDock {
   gap: .28rem;
   align-items: stretch;
   min-height: var(--mobile-dock-height);
-  padding: .4rem;
+  padding: var(--space-0-4);
   border-radius: 1.55rem;
   background: #fffc;
-  border: 1px solid rgba(255,255,255,.42);
+  border: var(--border-hairline) solid rgba(255,255,255,.42);
   box-shadow: 0 18px 42px #0f172a29,inset 0 1px #ffffff6b;
-  backdrop-filter: blur(24px) saturate(155%);
-  -webkit-backdrop-filter: blur(24px) saturate(155%)
+  backdrop-filter: var(--blur-dock) var(--blur-dock-saturate);
+  -webkit-backdrop-filter: var(--blur-dock) var(--blur-dock-saturate)
 }
 
 #mobileBottomDock .mobile-bottom-dock__item {

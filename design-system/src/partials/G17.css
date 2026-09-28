@@ -25,9 +25,10 @@
   align-items:center;
   justify-content:flex-start;
   min-height:100vh;
-  padding:56px 24px 48px;
+  padding:56px var(--space-24px) 48px;
   box-sizing:border-box;
-  background:radial-gradient(circle at top right,rgba(0,131,141,.05),transparent 70%),radial-gradient(circle at bottom left,rgba(0,131,141,.04),transparent 60%),#fff}
+  background:radial-gradient(circle at top right,rgba(0,131,141,.05),transparent 70%),radial-gradient(circle at bottom left,rgba(0,131,141,.04),transparent 60%),#fff;
+}
 .vilda-auth-card{
   width:100%;
   max-width:540px;
@@ -53,9 +54,10 @@
   max-width:180px;
   width:100%;
   height:auto;
-  border-radius:14px;
-  margin-bottom:14px;
-  display:block}
+  border-radius:var(--radius-14);
+  margin-bottom:var(--space-14px);
+  display:block;
+}
 .vilda-auth-brand-name{
   font-size:22px;
   font-weight:600;
@@ -66,14 +68,16 @@
 .vilda-auth-brand-tag{
   font-size:11px;
   color:#6a8089;
-  margin:4px 0 0;
+  margin:var(--space-4px) 0 0;
   letter-spacing:.18em;
   text-transform:uppercase;
-  font-weight:500}
+  font-weight:500;
+}
 .vilda-auth-screen{
   display:flex;
   flex-direction:column;
-  gap:18px}
+  gap:var(--space-18px);
+}
 .vilda-auth-step{
   text-align:center;
   font-size:11px;
@@ -99,14 +103,15 @@
   color:#4a6168;
   text-align:center}
 .vilda-auth-info{
-  margin:12px 0 0;
-  padding:18px 22px;
+  margin:var(--space-12px) 0 0;
+  padding:var(--space-18px) 22px;
   background:#f5fafb;
-  border:1px solid #e0eef0;
-  border-radius:14px;
+  border:var(--border-hairline) solid #e0eef0;
+  border-radius:var(--radius-14);
   font-size:13px;
   line-height:1.6;
-  color:#3b5560}
+  color:#3b5560;
+}
 /* odnośniki pod formularzem (277-294) */
 .vilda-auth-link{
   color:var(--primary);
@@ -127,28 +132,31 @@
 .vilda-auth-links{
   display:flex;
   justify-content:center;
-  margin-top:8px}
+  margin-top:var(--space-8px);
+}
 /* lista kont (377-451) */
 .vilda-auth-user-card[hidden],.vilda-auth-search-empty[hidden]{
   display:none!important}
 .vilda-auth-user-list{
   display:flex;
   flex-direction:column;
-  gap:10px;
-  margin-top:4px}
+  gap:var(--space-10px);
+  margin-top:var(--space-4px);
+}
 .vilda-auth-user-card{
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:var(--space-14px);
   width:100%;
-  padding:14px 16px;
+  padding:var(--space-14px) var(--space-16px);
   background:#fff;
   border:1.5px solid #e0eef0;
-  border-radius:14px;
+  border-radius:var(--radius-14);
   font-family:inherit;
   cursor:pointer;
   text-align:left;
-  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .05s ease}
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .05s ease;
+}
 .vilda-auth-user-card:hover{
   border-color:var(--primary);
   background:#f5fafb;
@@ -157,13 +165,14 @@
 .vilda-auth-user-card:active{
   transform:translateY(1px)}
 .vilda-auth-user-card:focus-visible{
-  outline:3px solid rgba(0,131,141,.3);
-  outline-offset:2px}
+  outline:var(--border-pro) solid rgba(0,131,141,.3);
+  outline-offset:2px;
+}
 .vilda-auth-user-avatar{
   flex:0 0 44px;
   width:44px;
   height:44px;
-  border-radius:50%;
+  border-radius:var(--radius-circle);
   background:linear-gradient(135deg,#00838d,#00a4b1);
   color:#fff;
   display:flex;
@@ -171,7 +180,8 @@
   justify-content:center;
   font-size:18px;
   font-weight:600;
-  text-transform:uppercase}
+  text-transform:uppercase;
+}
 .vilda-auth-user-info{
   flex:1;
   display:flex;
@@ -197,8 +207,8 @@
 .vilda-auth-recovery-key{
   font-family:SF Mono,Menlo,Consolas,Liberation Mono,monospace;
   background:#f5fafb;
-  border:2px dashed #b0d4d8;
-  border-radius:14px;
+  border:var(--border-emphasis) dashed #b0d4d8;
+  border-radius:var(--radius-14);
   padding:22px;
   text-align:center;
   font-size:19px;
@@ -218,10 +228,11 @@
 .vilda-auth-divider{
   display:flex;
   align-items:center;
-  gap:10px;
-  margin:14px 0 10px;
+  gap:var(--space-10px);
+  margin:var(--space-14px) 0 var(--space-10px);
   color:#9aafb5;
-  font-size:.82rem}
+  font-size:.82rem;
+}
 .vilda-auth-divider:before,.vilda-auth-divider:after{
   content:"";
   flex:1;
@@ -260,7 +271,8 @@
 /* responsywność ≤520px (1208-1226; pominięto reguły .vilda-auth-actions i .vilda-patient-delete-btn spoza komponentu) */
 @media(max-width:520px){
   .vilda-auth-overlay{
-  padding:32px 18px 28px}
+  padding:32px var(--space-18px) 28px;
+}
 .vilda-auth-logo{
   max-width:140px}
 .vilda-auth-brand-name{
@@ -274,8 +286,9 @@
   font-size:14px}
 .vilda-auth-recovery-key{
   font-size:15px;
-  padding:18px;
-  letter-spacing:.06em}
+  padding:var(--space-18px);
+  letter-spacing:.06em;
+}
 }
 /* safe-area, dok mobilny i wariant osadzony .vilda-embedded (1580-1606) */
 .vilda-auth-root{
@@ -297,13 +310,15 @@
 .vilda-embedded .vilda-auth-root{
   padding-top:0}
 .vilda-embedded .vilda-auth-overlay{
-  padding-top:14px}
+  padding-top:var(--space-14px);
+}
 @media(pointer:coarse)and (max-width:1366px){
   .vilda-embedded .vilda-auth-root{
   bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
 .vilda-embedded .vilda-auth-overlay{
-  padding-bottom:24px;
-  min-height:100%}
+  padding-bottom:var(--space-24px);
+  min-height:100%;
+}
 }
 
 /* ===================== AuthCard — wysoki kontrast (vilda_auth_ui.css 1452-1458, 1468-1471; selektory dosłownie „body.liquid-ios26.high-contrast-level-N”; listy selektorów zawierają też klasy .vilda-auth-sheet, .vilda-patient-* spoza komponentu — skopiowane w całości) ===================== */
@@ -322,32 +337,36 @@ body.liquid-ios26.high-contrast-level-1 .vilda-auth-brand-tag,body.liquid-ios26.
 /* ===================== SiteFooter — reguły bazowe (style.css 146-246) ===================== */
 .site-footer{
   background:#f4f8f8;
-  border-top:1px solid #d0e8e8;
+  border-top:var(--border-hairline) solid #d0e8e8;
   position:relative;
-  color:#4a7a7a}
+  color:#4a7a7a;
+}
 .site-footer__inner{
-  max-width:960px;
+  max-width:var(--container-max-width);
   margin:0 auto;
-  padding:1.5rem 1rem 1.1rem;
+  padding:var(--space-1-5) var(--space-1) var(--space-1-1);
   display:grid;
   grid-template-columns:1.5fr 1fr 1fr 1fr;
-  gap:1.5rem;
-  box-sizing:border-box}
+  gap:var(--space-1-5);
+  box-sizing:border-box;
+}
 .site-footer__brand-link{
   display:inline-flex;
   align-items:center;
-  gap:.45rem;
+  gap:var(--space-0-45);
   text-decoration:none;
-  margin-bottom:.45rem}
+  margin-bottom:var(--space-0-45);
+}
 .site-footer__brand-icon{
   width:22px;
   height:22px;
-  border-radius:6px;
+  border-radius:var(--radius-6);
   overflow:hidden;
   display:flex;
   align-items:center;
   justify-content:center;
-  flex-shrink:0}
+  flex-shrink:0;
+}
 .site-footer__brand-icon img{
   width:22px;
   height:22px;
@@ -367,7 +386,8 @@ body.liquid-ios26.high-contrast-level-1 .vilda-auth-brand-tag,body.liquid-ios26.
   letter-spacing:.08em;
   text-transform:uppercase;
   color:#6fa8a8;
-  margin-bottom:.5rem}
+  margin-bottom:var(--space-0-5);
+}
 .site-footer__col-title--hidden{
   visibility:hidden}
 .site-footer__link{
@@ -385,25 +405,27 @@ body.liquid-ios26.high-contrast-level-1 .vilda-auth-brand-tag,body.liquid-ios26.
   border-top:.5px solid rgba(0,131,141,.14);
   border-bottom:.5px solid rgba(0,131,141,.14)}
 .site-footer__disclaimer{
-  max-width:960px;
+  max-width:var(--container-max-width);
   margin:0 auto;
-  padding:.6rem 1rem;
+  padding:var(--space-0-6) var(--space-1);
   font-size:.73rem;
   color:#3a6d6d;
   line-height:1.55;
-  box-sizing:border-box}
+  box-sizing:border-box;
+}
 .site-footer__disclaimer:before{
   content:"\2695\a0"}
 .site-footer__bottom{
-  max-width:960px;
+  max-width:var(--container-max-width);
   margin:0 auto;
-  padding:.6rem 1rem;
+  padding:var(--space-0-6) var(--space-1);
   display:flex;
   justify-content:space-between;
   align-items:center;
   font-size:.72rem;
   color:#a0b8b8;
-  box-sizing:border-box}
+  box-sizing:border-box;
+}
 .site-footer__vildaclinic{
   color:#7ababd;
   text-decoration:none;
@@ -414,12 +436,14 @@ body.liquid-ios26.high-contrast-level-1 .vilda-auth-brand-tag,body.liquid-ios26.
 @media(max-width:700px){
   .site-footer__inner{
   grid-template-columns:1fr 1fr 1fr;
-  gap:1rem .75rem}
+  gap:var(--space-1) var(--space-0-75);
+}
 .site-footer__brand{
   grid-column:1 / -1}
 .site-footer__bottom{
   flex-wrap:wrap;
   justify-content:center;
-  gap:.1rem .5rem;
-  padding:.35rem 1rem}
+  gap:.1rem var(--space-0-5);
+  padding:var(--space-0-35) var(--space-1);
+}
 }
