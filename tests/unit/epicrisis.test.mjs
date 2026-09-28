@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { zwartyCss } from '../support/css-zwarty.mjs';
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -707,7 +708,8 @@ describe('epikryza P6 — przycisk „Generuj epikryzę” w karcie (geometria i
   });
 
   it('kontener akcji raportu układa przyciski w kolumnę z odstępem 1rem (równym z odstępem do siatek)', () => {
-    const css = fs.readFileSync(path.join(repositoryRoot, 'style.css'), 'utf8');
+    // arkusz jest sformatowany (P-STYLE rata 1); cytaty niżej są w postaci zwartej
+    const css = zwartyCss(fs.readFileSync(path.join(repositoryRoot, 'style.css'), 'utf8'));
     expect(css).toContain('.adv-report-actions{margin-top:.95rem;display:flex;flex-direction:column;gap:1rem}');
     expect(css).toContain('.adv-buttons{display:flex;justify-content:center;gap:1.5rem;margin-top:1rem}');
   });

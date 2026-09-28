@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { zwartyCss } from '../support/css-zwarty.mjs';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -202,7 +203,8 @@ describe('modal potwierdzenia jest wpięty w warstwę logowania', () => {
 });
 
 describe('modal nie wchodzi w konflikt z nawigacją mobilną', () => {
-  const css = () => readFileSync(path.join(repoRoot, 'vilda_auth_ui.css'), 'utf8');
+  // arkusz jest sformatowany (P-STYLE rata 1); cytaty niżej są w postaci zwartej
+  const css = () => zwartyCss(readFileSync(path.join(repoRoot, 'vilda_auth_ui.css'), 'utf8'));
 
   it('chowa dock i strzałkę nawigacyjną na czas modala', () => {
     const t = css();
