@@ -2479,72 +2479,56 @@ body.glass-level-4.liquid-ios26 .lab-substance-dropdown {
   0 6px 12px rgba(0,0,0,0.10);
 }
 
-/* ----- ConverterPanel — wysoki kontrast (4517-4675): karty, sekcja wyniku, etykiety, pola, lista, numerki, pigułki, marker, status ----- */
+/* ----- ConverterPanel — wysoki kontrast (4517-4675): karty,
+sekcja wyniku,
+etykiety,
+pola,
+lista,
+numerki,
+pigułki,
+marker,
+status ----- */
 body.high-contrast-level-1.liquid-ios26 .lab-smart-card,
 body.high-contrast-level-2.liquid-ios26 .lab-smart-card,
 body.high-contrast-level-3.liquid-ios26 .lab-smart-card,
-body.high-contrast-level-1.liquid-ios26 .lab-card.lab-full,
-body.high-contrast-level-2.liquid-ios26 .lab-card.lab-full,
-body.high-contrast-level-3.liquid-ios26 .lab-card.lab-full {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-card.lab-full {
   background: var(--hc-surface) !important;
   border: var(--hc-card-border-width) solid var(--hc-border) !important;
   box-shadow: var(--hc-shadow) !important;
   backdrop-filter: var(--hc-blur) !important;
   -webkit-backdrop-filter: var(--hc-blur) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .lab-result-section,
-body.high-contrast-level-2.liquid-ios26 .lab-result-section,
-body.high-contrast-level-3.liquid-ios26 .lab-result-section {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-result-section {
   background: var(--hc-result-bg);
   border-top: var(--hc-card-border-width) solid var(--hc-border) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .lab-step-label,
-body.high-contrast-level-2.liquid-ios26 .lab-step-label,
-body.high-contrast-level-3.liquid-ios26 .lab-step-label,
-body.high-contrast-level-1.liquid-ios26 .lab-result-title,
-body.high-contrast-level-2.liquid-ios26 .lab-result-title,
-body.high-contrast-level-3.liquid-ios26 .lab-result-title {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-step-label,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-result-title {
   color: var(--hc-muted) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .lab-step input[type="text"],
-body.high-contrast-level-2.liquid-ios26 .lab-step input[type="text"],
-body.high-contrast-level-3.liquid-ios26 .lab-step input[type="text"],
-body.high-contrast-level-1.liquid-ios26 .lab-step input[type="number"],
-body.high-contrast-level-2.liquid-ios26 .lab-step input[type="number"],
-body.high-contrast-level-3.liquid-ios26 .lab-step input[type="number"],
-body.high-contrast-level-1.liquid-ios26 .lab-step select,
-body.high-contrast-level-2.liquid-ios26 .lab-step select,
-body.high-contrast-level-3.liquid-ios26 .lab-step select {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-step input[type="text"],
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-step input[type="number"],
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-step select {
   background: var(--hc-input-bg) !important;
   border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
   color: var(--hc-text) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .lab-step input:focus,
-body.high-contrast-level-2.liquid-ios26 .lab-step input:focus,
-body.high-contrast-level-3.liquid-ios26 .lab-step input:focus,
-body.high-contrast-level-1.liquid-ios26 .lab-step select:focus,
-body.high-contrast-level-2.liquid-ios26 .lab-step select:focus,
-body.high-contrast-level-3.liquid-ios26 .lab-step select:focus {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-step input:focus,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-step select:focus {
   border-color: rgba(0,131,141,0.65) !important;
   box-shadow: 0 0 0 var(--hc-focus-width) var(--hc-focus-color) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .lab-substance-dropdown,
-body.high-contrast-level-2.liquid-ios26 .lab-substance-dropdown,
-body.high-contrast-level-3.liquid-ios26 .lab-substance-dropdown {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-substance-dropdown {
   background: var(--hc-surface) !important;
   border: var(--hc-card-border-width) solid var(--hc-border) !important;
   box-shadow: var(--hc-shadow) !important;
   backdrop-filter: var(--hc-blur) !important;
   -webkit-backdrop-filter: var(--hc-blur) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .lab-substance-option,
-body.high-contrast-level-2.liquid-ios26 .lab-substance-option,
-body.high-contrast-level-3.liquid-ios26 .lab-substance-option {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-substance-option {
   color: var(--hc-text) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .lab-substance-option.is-active,
-body.high-contrast-level-2.liquid-ios26 .lab-substance-option.is-active,
-body.high-contrast-level-3.liquid-ios26 .lab-substance-option.is-active {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .lab-substance-option.is-active {
   background: rgba(0,131,141,0.16) !important;
   border-left-color: #00838d !important;
 }

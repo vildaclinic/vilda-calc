@@ -7,7 +7,7 @@
 // raportowana osobno (bywa niedeterministyczna o piksel).
 //
 //   node tests/scripts/porownaj-style-obliczone.mjs --baza origin/audyt
-//     [--strony index.html,ustawienia.html] [--tryby jasny,szklo-4,kontrast-2,ciemne-tlo-1] [--okna desktop,mobile]
+//     [--strony index.html,ustawienia.html] [--tryby jasny,szklo-4,kontrast-2,ciemne-tlo-1 | --tryby wszystkie] [--okna desktop,mobile]
 // Kod wyjścia 1 przy różnicy stylu. Wymaga Chromium Playwrighta (jak zestaw e2e).
 import fs from 'node:fs';
 import os from 'node:os';
@@ -28,13 +28,23 @@ if (!/^[A-Za-z0-9_./~^-]{1,80}$/.test(baza)) { console.error('nieprawidłowa rew
 const WSZYSTKIE_STRONY = fs.readdirSync(korzen).filter((f) => f.endsWith('.html')).sort();
 const strony = opcja('--strony', '').split(',').filter(Boolean).filter((s) => WSZYSTKIE_STRONY.includes(s));
 const listaStron = strony.length ? strony : WSZYSTKIE_STRONY;
+// Cztery tryby domyślne to te z siatki zrzutów; pozostałe poziomy (szkło 1–3, kontrast 1 i 3, ciemne tło 2) wchodzą
+// przez --tryby wszystkie albo wyliczone po przecinku — potrzebne, gdy zmiana dotyka warstwy trybów (P-STYLE rata 3).
 const TRYBY = {
   jasny: { preferencje: {}, klasa: 'glass-level-0' },
   'szklo-4': { preferencje: { glassLevel: '4' }, klasa: 'glass-level-4' },
   'kontrast-2': { preferencje: { highContrastEnabled: 'true', highContrastLevel: '2' }, klasa: 'high-contrast-level-2' },
   'ciemne-tlo-1': { preferencje: { darkBgLevel: '1' }, klasa: 'dark-bg-level-1' },
+  'szklo-1': { preferencje: { glassLevel: '1' }, klasa: 'glass-level-1' },
+  'szklo-2': { preferencje: { glassLevel: '2' }, klasa: 'glass-level-2' },
+  'szklo-3': { preferencje: { glassLevel: '3' }, klasa: 'glass-level-3' },
+  'kontrast-1': { preferencje: { highContrastEnabled: 'true', highContrastLevel: '1' }, klasa: 'high-contrast-level-1' },
+  'kontrast-3': { preferencje: { highContrastEnabled: 'true', highContrastLevel: '3' }, klasa: 'high-contrast-level-3' },
+  'ciemne-tlo-2': { preferencje: { darkBgLevel: '2' }, klasa: 'dark-bg-level-2' },
 };
-const tryby = opcja('--tryby', Object.keys(TRYBY).join(',')).split(',').filter((t) => TRYBY[t]);
+const TRYBY_DOMYSLNE = ['jasny', 'szklo-4', 'kontrast-2', 'ciemne-tlo-1'];
+const trybyOpcja = opcja('--tryby', TRYBY_DOMYSLNE.join(','));
+const tryby = (trybyOpcja === 'wszystkie' ? Object.keys(TRYBY) : trybyOpcja.split(',')).filter((t) => TRYBY[t]);
 const OKNA = {
   desktop: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } },
   mobile: { ...(devices['iPhone 15 Pro'] || devices['iPhone 13']), browserName: 'chromium' },

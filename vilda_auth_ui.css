@@ -2002,379 +2002,179 @@ select.vilda-auth-input {
   outline-offset: -2px!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-root,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-overlay,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-dropdown,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-key,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-meter,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-checkbox-row,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-card-header,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-wrap,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-sparkline-wrap,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-empty-msg,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-tabs,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-edit-pill,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-new-measure-pill,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-delete-btn,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-root,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-overlay,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-dropdown,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-key,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-meter,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-checkbox-row,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-card-header,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-wrap,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-sparkline-wrap,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-empty-msg,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-tabs,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-edit-pill,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-new-measure-pill,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-delete-btn,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-root,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-overlay,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-dropdown,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-key,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-meter,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-checkbox-row,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-card-header,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-wrap,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-sparkline-wrap,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-empty-msg,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-tabs,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-edit-pill,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-new-measure-pill,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-delete-btn {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-root,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-overlay,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sheet,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sort-dropdown,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-info,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-recovery-key,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-meter,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-checkbox-row,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-logout,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-user-card,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-import-card,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-card-header,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-chart-wrap,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-sparkline-wrap,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-empty-msg,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-tabs,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero-edit-pill,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero-new-measure-pill,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-delete-btn {
   background: var(--hc-surface)!important;
   backdrop-filter: var(--hc-blur)!important;
   -webkit-backdrop-filter: var(--hc-blur)!important;
   box-shadow: var(--hc-shadow)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-key,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-card-header,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-wrap,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-sparkline-wrap,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-empty-msg,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-tabs,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-edit-pill,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-new-measure-pill,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-key,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-card-header,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-wrap,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-sparkline-wrap,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-empty-msg,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-tabs,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-edit-pill,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-new-measure-pill,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-key,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-card-header,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-wrap,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-sparkline-wrap,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-empty-msg,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-tabs,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-edit-pill,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-new-measure-pill {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-info,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-recovery-key,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-logout,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-user-card,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-import-card,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-card-header,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-chart-wrap,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-sparkline-wrap,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-empty-msg,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-tabs,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero-edit-pill,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero-new-measure-pill {
   border: var(--hc-card-border-width) solid var(--hc-border)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero {
   background: var(--hc-surface)!important;
   box-shadow: var(--hc-shadow)!important;
   border: var(--hc-card-border-width) solid var(--hc-border)!important;
   border-left: 5px solid var(--primary)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-actions,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-actions,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-actions {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-actions {
   border-top: var(--hc-card-border-width) solid var(--hc-border)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-option,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-option,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-option {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sort-option {
   border-bottom: var(--border-hairline) solid var(--hc-border)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-title,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet-title,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sheet-body,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-root,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-name,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card-name,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-option-label,
-body.liquid-ios26.high-contrast-level-1 .vilda-logout-overlay,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-name,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-tab,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-title,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet-title,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sheet-body,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-root,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-name,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card-name,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-option-label,
-body.liquid-ios26.high-contrast-level-2 .vilda-logout-overlay,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-name,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-tab,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-title,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet-title,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sheet-body,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-root,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-info,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-card,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-name,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card-name,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-option-label,
-body.liquid-ios26.high-contrast-level-3 .vilda-logout-overlay,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-name,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-tab {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-title,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sheet-title,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sheet-body,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-root,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-info,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-logout,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-user-card,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-user-name,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-import-card-name,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sort-option-label,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-logout-overlay,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero-name,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat-label,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat-value,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-tab {
   color: var(--hc-text)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-brand-tag,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-divider,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card-filename,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-card-meta,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-toolbar,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-import-toolbar-actions,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-link-muted,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-meter-label,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-counter,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-empty,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-side-note,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-btn,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-sort-option-sub,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-subtitle,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-arrow,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-user-meta,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-subtle,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-disclaimer,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-chart-legend,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-meta,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-hero-meta--small,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-section-h,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-sparkline-label,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-brand-tag,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-divider,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card-filename,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-card-meta,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-toolbar,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-import-toolbar-actions,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-link-muted,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-meter-label,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-counter,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-empty,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-side-note,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-btn,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-sort-option-sub,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-subtitle,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-arrow,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-user-meta,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-subtle,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-disclaimer,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-chart-legend,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-meta,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-hero-meta--small,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-section-h,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-sparkline-label,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-brand-tag,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-divider,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card-filename,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-card-meta,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-toolbar,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-import-toolbar-actions,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-link-muted,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-meter-label,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-counter,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-empty,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-side-note,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-btn,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-sort-option-sub,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-subtitle,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-arrow,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-user-meta,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-subtle,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-disclaimer,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-chart-legend,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-meta,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-hero-meta--small,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-section-h,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-sparkline-label,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat-sub {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-brand-tag,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-divider,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-import-card-filename,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-import-card-meta,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-import-toolbar,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-import-toolbar-actions,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-link-muted,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-meter-label,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-counter,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-empty,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-side-note,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sort-btn,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-sort-option-sub,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-subtitle,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-user-arrow,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-user-meta,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-subtle,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-chart-disclaimer,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-chart-legend,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero-meta,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-hero-meta--small,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-section-h,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-sparkline-label,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat-sub {
   color: var(--hc-muted)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-input,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-input,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-input,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-input,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-input,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-input,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-input,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-input,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-input {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-input,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-input,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-recovery-input {
   background: var(--hc-input-bg)!important;
   border: var(--hc-card-border-width) solid var(--hc-input-border)!important;
   color: var(--hc-text)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-input:focus,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-search-input:focus,
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-recovery-input:focus,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-input:focus,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-search-input:focus,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-recovery-input:focus,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-input:focus,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-search-input:focus,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-recovery-input:focus {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-input:focus,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-input:focus,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-recovery-input:focus {
   border-color: #00838da6!important;
   box-shadow: 0 0 0 var(--hc-focus-width) var(--hc-focus-color)!important;
   outline: none!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--ok,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--ok,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--ok {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--ok {
   background: #00838d29!important;
   border: var(--hc-card-border-width) solid rgba(0,131,141,.55)!important;
   box-shadow: var(--hc-shadow)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--ok .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--ok .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--ok .vilda-patient-stat-label {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--ok .vilda-patient-stat-label {
   color: #143034!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--ok .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--ok .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--ok .vilda-patient-stat-value {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--ok .vilda-patient-stat-value {
   color: #00535a!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--ok .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--ok .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--ok .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--ok .vilda-patient-stat-extra,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--ok .vilda-patient-stat-extra,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--ok .vilda-patient-stat-extra {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--ok .vilda-patient-stat-sub,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--ok .vilda-patient-stat-extra {
   color: #1d5a61!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--improve,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--improve,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--improve {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--improve {
   background: #c75d0029!important;
   border: var(--hc-card-border-width) solid rgba(199,93,0,.55)!important;
   box-shadow: var(--hc-shadow)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--improve .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--improve .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--improve .vilda-patient-stat-label {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--improve .vilda-patient-stat-label {
   color: #4a2300!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--improve .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--improve .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--improve .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--improve .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--improve .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--improve .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--improve .vilda-patient-stat-extra,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--improve .vilda-patient-stat-extra,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--improve .vilda-patient-stat-extra {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--improve .vilda-patient-stat-value,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--improve .vilda-patient-stat-sub,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--improve .vilda-patient-stat-extra {
   color: #8a3e00!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--alert,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--alert,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--alert {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--alert {
   background: #c6282826!important;
   border: var(--hc-card-border-width) solid rgba(198,40,40,.55)!important;
   box-shadow: var(--hc-shadow)!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--alert .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--alert .vilda-patient-stat-label,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--alert .vilda-patient-stat-label {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--alert .vilda-patient-stat-label {
   color: #4a0808!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--alert .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--alert .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--alert .vilda-patient-stat-value,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--alert .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--alert .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--alert .vilda-patient-stat-sub,
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-stat--alert .vilda-patient-stat-extra,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-stat--alert .vilda-patient-stat-extra,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-stat--alert .vilda-patient-stat-extra {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--alert .vilda-patient-stat-value,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--alert .vilda-patient-stat-sub,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-stat--alert .vilda-patient-stat-extra {
   color: #9e1414!important
 }
 
-body.liquid-ios26.high-contrast-level-1 .vilda-patient-tab--active,
-body.liquid-ios26.high-contrast-level-2 .vilda-patient-tab--active,
-body.liquid-ios26.high-contrast-level-3 .vilda-patient-tab--active {
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-tab--active {
   background: var(--primary)!important;
   color: #fff!important
 }

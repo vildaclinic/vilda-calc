@@ -1015,99 +1015,120 @@ body.high-contrast-level-1.liquid-ios26 .guide-hero,body.high-contrast-level-2.l
   box-shadow:var(--hc-shadow)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important}
-body.high-contrast-level-1.liquid-ios26 .guide-tile,body.high-contrast-level-2.liquid-ios26 .guide-tile,body.high-contrast-level-3.liquid-ios26 .guide-tile{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile{
   background:var(--hc-module-btn-bg)!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
   box-shadow:var(--hc-module-btn-shadow)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
-body.high-contrast-level-1.liquid-ios26 .guide-tile:hover,body.high-contrast-level-2.liquid-ios26 .guide-tile:hover,body.high-contrast-level-3.liquid-ios26 .guide-tile:hover{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile:hover{
   background:var(--hc-module-btn-hover-bg)!important;
   border-color:var(--hc-module-btn-border)!important}
-body.high-contrast-level-1.liquid-ios26 .guide-tile.is-active,body.high-contrast-level-2.liquid-ios26 .guide-tile.is-active,body.high-contrast-level-3.liquid-ios26 .guide-tile.is-active{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile.is-active{
   background:var(--hc-module-btn-active-bg)!important;
   border-color:var(--hc-module-btn-active-border)!important;
   box-shadow:0 0 0 1px #00838d1a,var(--hc-module-btn-active-shadow)!important}
-body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge{
   background:var(--hc-button-bg)!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   box-shadow:0 4px 12px #0000000f!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
-body.high-contrast-level-1.liquid-ios26 .guide-title,body.high-contrast-level-2.liquid-ios26 .guide-title,body.high-contrast-level-3.liquid-ios26 .guide-title,body.high-contrast-level-1.liquid-ios26 .guide-tile-title,body.high-contrast-level-2.liquid-ios26 .guide-tile-title,body.high-contrast-level-3.liquid-ios26 .guide-tile-title{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-title,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-title{
   color:var(--hc-text)!important}
-body.high-contrast-level-1.liquid-ios26 .guide-lead,body.high-contrast-level-2.liquid-ios26 .guide-lead,body.high-contrast-level-3.liquid-ios26 .guide-lead,body.high-contrast-level-1.liquid-ios26 .guide-tile-copy,body.high-contrast-level-2.liquid-ios26 .guide-tile-copy,body.high-contrast-level-3.liquid-ios26 .guide-tile-copy,body.high-contrast-level-1.liquid-ios26 .guide-module-badge,body.high-contrast-level-2.liquid-ios26 .guide-module-badge,body.high-contrast-level-3.liquid-ios26 .guide-module-badge{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-lead,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-copy,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge{
   color:var(--hc-muted)!important;
   opacity:1!important}
-body.high-contrast-level-1.liquid-ios26 .guide-tile-icon,body.high-contrast-level-2.liquid-ios26 .guide-tile-icon,body.high-contrast-level-3.liquid-ios26 .guide-tile-icon{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-icon{
   background:#ffffffdb!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   box-shadow:0 4px 12px #0000000f!important}
-body.high-contrast-level-1.liquid-ios26 .guide-tile-footer,body.high-contrast-level-2.liquid-ios26 .guide-tile-footer,body.high-contrast-level-3.liquid-ios26 .guide-tile-footer,body.high-contrast-level-1.liquid-ios26 .guide-tile-count,body.high-contrast-level-2.liquid-ios26 .guide-tile-count,body.high-contrast-level-3.liquid-ios26 .guide-tile-count{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-footer,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count{
   color:var(--hc-text)!important}
-body.high-contrast-level-1.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-user{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge-user{
   background:#00b0a61f!important;
   border-color:#00838d38!important;
   color:#0b5e65!important}
-body.high-contrast-level-1.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-doctor,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-doctor{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge-doctor{
   background:#9900ff1a!important;
   border-color:#7b2cbf38!important;
   color:#5f3388!important}
-body.high-contrast-level-1.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-shared,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-shared{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge-shared{
   background:var(--tint-teal) !important;
   border-color:#07363e2e !important;
 }
 
 /* ——— 8. Wysoki kontrast — „O aplikacji” (style.css 5300–5360; selektory dosłownie, listy przycięte do tej grupy) ——— */
-body.about-page.high-contrast-level-1.liquid-ios26 .about-hero,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero,body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li{
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-hero,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-hero,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .flow-steps li{
   background:var(--hc-surface)!important;
   border:var(--hc-card-border-width) solid var(--hc-border)!important;
   box-shadow:var(--hc-shadow)!important;
   color:var(--hc-text)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,body.about-page.high-contrast-level-2.liquid-ios26 .hero-note,body.about-page.high-contrast-level-3.liquid-ios26 .hero-note{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .hero-note{
   background:var(--hc-result-bg)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   box-shadow:0 8px 22px #00000014!important;
   color:var(--hc-text)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-link-card,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-quick-links a{
   background:var(--hc-module-btn-bg)!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
   box-shadow:var(--hc-module-btn-shadow)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,body.about-page.high-contrast-level-3.liquid-ios26 .inline-label{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-badge,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .inline-label{
   background:var(--hc-button-bg)!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   box-shadow:0 6px 18px #0000000f!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card:hover,body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a:hover,body.about-page.high-contrast-level-1.liquid-ios26 .about-badge:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge:hover{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-link-card:hover,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-quick-links a:hover,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-badge:hover{
   background:var(--hc-module-btn-hover-bg)!important;
   border-color:var(--hc-module-btn-border)!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a.warning-link,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a.warning-link,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a.warning-link{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-quick-links a.warning-link{
   background:linear-gradient(180deg,#fffcf8fc,#fff6eef7)!important;
   border-color:#b4530942!important;
   color:#7c360a!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a.warning-link:hover,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a.warning-link:hover,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a.warning-link:hover{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-quick-links a.warning-link:hover{
   background:linear-gradient(180deg,#fffefb,#fff9f2fa)!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-hero:before,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero:before,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero:before{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-hero:before{
   background:radial-gradient(circle at top right,rgba(0,131,141,.08),transparent 36%),radial-gradient(circle at bottom left,rgba(0,131,141,.05),transparent 34%)!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-hero h2,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero h2,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero h2,body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card,body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a,body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,body.about-page.high-contrast-level-3.liquid-ios26 .inline-label,body.about-page.high-contrast-level-1.liquid-ios26 .hero-note strong,body.about-page.high-contrast-level-2.liquid-ios26 .hero-note strong,body.about-page.high-contrast-level-3.liquid-ios26 .hero-note strong,body.about-page.high-contrast-level-1.liquid-ios26 .about-hero strong,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero strong,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero strong{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-hero h2,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-link-card,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-quick-links a,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-badge,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .inline-label,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .hero-note strong,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-hero strong{
   color:var(--hc-text)!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-hero p,body.about-page.high-contrast-level-2.liquid-ios26 .about-hero p,body.about-page.high-contrast-level-3.liquid-ios26 .about-hero p,body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li,body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,body.about-page.high-contrast-level-2.liquid-ios26 .hero-note,body.about-page.high-contrast-level-3.liquid-ios26 .hero-note{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-hero p,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .flow-steps li,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .hero-note{
   color:var(--hc-text)!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card .sidebar-icon,body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card .sidebar-icon,body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card .sidebar-icon,body.about-page.high-contrast-level-1.liquid-ios26 .about-badge .sidebar-icon,body.about-page.high-contrast-level-2.liquid-ios26 .about-badge .sidebar-icon,body.about-page.high-contrast-level-3.liquid-ios26 .about-badge .sidebar-icon{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-link-card .sidebar-icon,
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .about-badge .sidebar-icon{
   color:#0b6a71!important}
-body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li:before,body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li:before,body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li:before{
+body.about-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .flow-steps li:before{
   background:linear-gradient(135deg,#00838de6,#14b8a6e0)!important;
   color:#fff!important;
   box-shadow:0 10px 20px #00838d2e!important}

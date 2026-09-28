@@ -433,6 +433,9 @@ html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellSc
   box-shadow:0 2px 8px #0000001f!important}
 
 /* ===== Wysoki kontrast — style.css 5196-5198 (lista selektorów przycięta do button/a :focus-visible: dock to <a>, strzałki i odnośniki statusu to <button>) ===== */
-body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+body.high-contrast-level-1.liquid-ios26 button:focus-visible,
+body.high-contrast-level-2.liquid-ios26 button:focus-visible,
+body.high-contrast-level-3.liquid-ios26 button:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 a:focus-visible{
   outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
   outline-offset:2px!important}

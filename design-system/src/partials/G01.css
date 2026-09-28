@@ -984,33 +984,54 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 }
 
 /* ---- Wysoki kontrast — Button (style.css 5167-5179; 5196-5198 z listą selektorów przyciętą do button/a) ---- */
-body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn,body.high-contrast-level-1.liquid-ios26 #toggleGhTests,body.high-contrast-level-2.liquid-ios26 #toggleGhTests,body.high-contrast-level-3.liquid-ios26 #toggleGhTests,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests,body.high-contrast-level-1.liquid-ios26 #toggleActhTests,body.high-contrast-level-2.liquid-ios26 #toggleActhTests,body.high-contrast-level-3.liquid-ios26 #toggleActhTests,body.high-contrast-level-1.liquid-ios26 .version-option,body.high-contrast-level-2.liquid-ios26 .version-option,body.high-contrast-level-3.liquid-ios26 .version-option{
+body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn,
+body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn,
+body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleGhTests,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleOgttTests,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleActhTests,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .version-option{
   background:var(--hc-module-btn-bg)!important;
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-module-btn-border)!important;
   box-shadow:var(--hc-module-btn-shadow)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
-body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn:hover,body.high-contrast-level-1.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleGhTests:hover,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests:hover,body.high-contrast-level-1.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-2.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-3.liquid-ios26 #toggleActhTests:hover,body.high-contrast-level-1.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-2.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-3.liquid-ios26 .version-option:not(.disabled):hover{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #modulesWrapper .module-btn:hover,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleGhTests:hover,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleOgttTests:hover,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleActhTests:hover,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .version-option:not(.disabled):hover{
   background:var(--hc-module-btn-hover-bg)!important}
-body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleGhTests.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleOgttTests.active-toggle,body.high-contrast-level-1.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-2.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-3.liquid-ios26 #toggleActhTests.active-toggle,body.high-contrast-level-1.liquid-ios26 .version-option.selected,body.high-contrast-level-2.liquid-ios26 .version-option.selected,body.high-contrast-level-3.liquid-ios26 .version-option.selected{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #modulesWrapper .module-btn.active-toggle,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleGhTests.active-toggle,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleOgttTests.active-toggle,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #toggleActhTests.active-toggle,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .version-option.selected{
   background:var(--hc-module-btn-active-bg) !important;
   border-color:var(--hc-module-btn-active-border) !important;
   box-shadow:0 0 0 1px var(--tint-teal-active),var(--hc-module-btn-active-shadow) !important;
 }
-body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 button:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 a:focus-visible{
   outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
   outline-offset:2px!important}
 
 /* ---- Wysoki kontrast — AuthButton (vilda_auth_ui.css 1452-1458, 1468-1471; listy selektorów przycięte do przycisków tej rodziny) ---- */
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-1 .vilda-patient-delete-btn,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-patient-delete-btn,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-patient-delete-btn{
+body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-delete-btn,
+body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,
+body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout{
   background:var(--hc-surface)!important;
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important;
   box-shadow:var(--hc-shadow)!important}
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost{
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-logout,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost{
   border:var(--hc-card-border-width) solid var(--hc-border)!important}
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-ghost,body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-ghost{
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-logout,
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost{
   color:var(--hc-text)!important}
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-btn-subtle,body.liquid-ios26.high-contrast-level-2 .vilda-auth-btn-subtle,body.liquid-ios26.high-contrast-level-3 .vilda-auth-btn-subtle{
+body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-subtle{
   color:var(--hc-muted)!important}

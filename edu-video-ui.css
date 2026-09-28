@@ -702,9 +702,7 @@ body.edu-page.liquid-ios26.glass-level-4 {
   --edu-footer-bg: rgba(251, 252, 252, .96)
 }
 
-body.edu-page.high-contrast-level-1.liquid-ios26,
-body.edu-page.high-contrast-level-2.liquid-ios26,
-body.edu-page.high-contrast-level-3.liquid-ios26 {
+body.edu-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 {
   --edu-card-border-width: var(--hc-card-border-width);
   --edu-control-border-width: var(--hc-card-border-width);
   --edu-surface: var(--hc-surface);

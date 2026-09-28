@@ -635,27 +635,36 @@ body.high-contrast-level-1.liquid-ios26 .version-option,body.high-contrast-level
   box-shadow:var(--hc-module-btn-shadow)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important}
-body.high-contrast-level-1.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-2.liquid-ios26 .version-option:not(.disabled):hover,body.high-contrast-level-3.liquid-ios26 .version-option:not(.disabled):hover{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .version-option:not(.disabled):hover{
   background:var(--hc-module-btn-hover-bg)!important}
-body.high-contrast-level-1.liquid-ios26 .version-option.selected,body.high-contrast-level-2.liquid-ios26 .version-option.selected,body.high-contrast-level-3.liquid-ios26 .version-option.selected{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .version-option.selected{
   background:var(--hc-module-btn-active-bg) !important;
   border-color:var(--hc-module-btn-active-border) !important;
   box-shadow:0 0 0 1px var(--tint-teal-active),var(--hc-module-btn-active-shadow) !important;
 }
-body.high-contrast-level-1.liquid-ios26 .version-option.disabled,body.high-contrast-level-2.liquid-ios26 .version-option.disabled,body.high-contrast-level-3.liquid-ios26 .version-option.disabled{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .version-option.disabled{
   background:#ffffffc7!important;
   border-color:var(--hc-module-btn-border)!important;
   color:var(--hc-muted)!important;
   opacity:.72!important}
-body.high-contrast-level-1.liquid-ios26 input[type=text],body.high-contrast-level-2.liquid-ios26 input[type=text],body.high-contrast-level-3.liquid-ios26 input[type=text],body.high-contrast-level-1.liquid-ios26 input[type=number],body.high-contrast-level-2.liquid-ios26 input[type=number],body.high-contrast-level-3.liquid-ios26 input[type=number],body.high-contrast-level-1.liquid-ios26 select,body.high-contrast-level-2.liquid-ios26 select,body.high-contrast-level-3.liquid-ios26 select,body.high-contrast-level-1.liquid-ios26 textarea,body.high-contrast-level-2.liquid-ios26 textarea,body.high-contrast-level-3.liquid-ios26 textarea{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 input[type=text],
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 input[type=number],
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 select,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 textarea{
   background:var(--hc-input-bg)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   color:var(--hc-text)!important;
   box-shadow:0 1px #ffffffb8,0 4px 12px #0000000d!important}
-body.high-contrast-level-1.liquid-ios26 input::placeholder,body.high-contrast-level-2.liquid-ios26 input::placeholder,body.high-contrast-level-3.liquid-ios26 input::placeholder,body.high-contrast-level-1.liquid-ios26 textarea::placeholder,body.high-contrast-level-2.liquid-ios26 textarea::placeholder,body.high-contrast-level-3.liquid-ios26 textarea::placeholder{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 input::placeholder,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 textarea::placeholder{
   color:var(--hc-muted)!important;
   opacity:1!important}
-body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-level-2.liquid-ios26 input:focus-visible,body.high-contrast-level-3.liquid-ios26 input:focus-visible,body.high-contrast-level-1.liquid-ios26 select:focus-visible,body.high-contrast-level-2.liquid-ios26 select:focus-visible,body.high-contrast-level-3.liquid-ios26 select:focus-visible,body.high-contrast-level-1.liquid-ios26 textarea:focus-visible,body.high-contrast-level-2.liquid-ios26 textarea:focus-visible,body.high-contrast-level-3.liquid-ios26 textarea:focus-visible,body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 summary:focus-visible,body.high-contrast-level-2.liquid-ios26 summary:focus-visible,body.high-contrast-level-3.liquid-ios26 summary:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 input:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 select:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 textarea:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 button:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 summary:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 a:focus-visible{
   outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
   outline-offset:2px!important}
 

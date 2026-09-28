@@ -258,7 +258,14 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 }
 
 /* ===================== Wysoki kontrast — pierścień focus pól i przycisków (style.css 5196-5198); pozostałe warianty przemapowują tokeny --diet-ui-* / --nutrition-ui-* na --hc-* w tokens.css ===================== */
-body.high-contrast-level-1.liquid-ios26 input:focus-visible,body.high-contrast-level-2.liquid-ios26 input:focus-visible,body.high-contrast-level-3.liquid-ios26 input:focus-visible,body.high-contrast-level-1.liquid-ios26 select:focus-visible,body.high-contrast-level-2.liquid-ios26 select:focus-visible,body.high-contrast-level-3.liquid-ios26 select:focus-visible,body.high-contrast-level-1.liquid-ios26 textarea:focus-visible,body.high-contrast-level-2.liquid-ios26 textarea:focus-visible,body.high-contrast-level-3.liquid-ios26 textarea:focus-visible,body.high-contrast-level-1.liquid-ios26 button:focus-visible,body.high-contrast-level-2.liquid-ios26 button:focus-visible,body.high-contrast-level-3.liquid-ios26 button:focus-visible,body.high-contrast-level-1.liquid-ios26 summary:focus-visible,body.high-contrast-level-2.liquid-ios26 summary:focus-visible,body.high-contrast-level-3.liquid-ios26 summary:focus-visible,body.high-contrast-level-1.liquid-ios26 a:focus-visible,body.high-contrast-level-2.liquid-ios26 a:focus-visible,body.high-contrast-level-3.liquid-ios26 a:focus-visible{
+body.high-contrast-level-1.liquid-ios26 input:focus-visible,
+body.high-contrast-level-2.liquid-ios26 input:focus-visible,
+body.high-contrast-level-3.liquid-ios26 input:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 select:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 textarea:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 button:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 summary:focus-visible,
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 a:focus-visible{
   outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
   outline-offset:2px!important}
 
