@@ -17,15 +17,17 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // dopiero po 3200 ms — z timera lustra formularza, które po kliknięciu „Wyczyść" wysyła `change`
 // po wszystkich polach; zmierzone Playwrightem przed poprawką: 3203 ms.
 //
-// DRUGIE, NIENAPRAWIONE ODROCZENIE. Ten sam nieistniejący `scheduleTimeout` woła w tym pliku także
-// krok po wykasowaniu tabel historii, który miał zdjąć flagi zawieszenia synchronizacji
-// (__vildaSuspendAdvIntakeSync, __vildaSuspendGrowthHistoryCrossSync, __vildaSuspendIntakeUserReset)
-// i dopiąć parowanie zaawansowane↔spożycie. Włączenie go zmienia przebieg „Wyczyść" → „Wczytaj tego
-// pacjenta" → „Odtwórz zapis": parowanie dokleja z tabeli spożycia wiersz-bliźniak punktu terapii GH,
-// a import punktów uznaje go za wiersz ręczny i punktu nie oznacza (e2e gh-punkty-po-wczytaniu
-// i gh-punkt-a-reczny-wiersz czerwienią się). To zmiana funkcjonalna poza zgłoszeniem, więc zostaje
-// jako dług do decyzji właściciela — patrz docs/clinical/ALGORITHMS.md, P-MINI-WYCZYSC. Trzeci blok
-// testów pilnuje, żeby ten stan był zapisany, a nie zapomniany.
+// DRUGIE ODROCZENIE — naprawione w P-GH-TOZSAMOSC rata 2 (decyzja właściciela 2026-09-28, opcja (a)).
+// Ten sam nieistniejący `scheduleTimeout` wołał w tym pliku także krok po wykasowaniu tabel historii,
+// który miał zdjąć flagi zawieszenia synchronizacji (__vildaSuspendAdvIntakeSync,
+// __vildaSuspendGrowthHistoryCrossSync, __vildaSuspendIntakeUserReset) i dopiąć parowanie
+// zaawansowane↔spożycie. Flagi wisiały więc po „Wyczyść" (i po czyszczeniu przy logowaniu oraz starcie
+// karty) do przeładowania albo odtworzenia stanu — w świeżej karcie synchronizacja obu tabel stała.
+// Włączenie go „na sucho" psuło „Wyczyść" → „Wczytaj tego pacjenta" → „Odtwórz zapis" (parowanie
+// dorabiało z tabeli spożycia bliźniaka punktu terapii GH, import uznawał punkt za przykryty), dlatego
+// w P-MINI-WYCZYSC zostało jako dług. Rata 2 zdejmuje flagi (setTimeout) i jednocześnie uczy parowanie
+// tożsamości punktów GH (vilda_advanced_growth.js) oraz daje importowi pierwszeństwo na ścieżce
+// wczytania (ghReimport). Trzeci blok testów pilnuje nowego zachowania.
 //
 // Test uruchamia PRAWDZIWY moduł na atrapie okna i woła prawdziwe `clearAllData`. Kontrola
 // negatywna przywraca `scheduleTimeout` w kroku zdarzeń i pokazuje, że wtedy zdarzenia nie lecą.
@@ -35,7 +37,8 @@ const czytaj = (plik) => readFileSync(path.join(korzen, plik), 'utf8');
 const POLA_Z_ODSWIEZENIEM = ['age', 'ageMonths', 'height', 'weight', 'sex'];
 const XT_NAPRAWIONE = 'function Xt(){try{setTimeout(';
 const XT_ZEPSUTE = 'function Xt(){try{scheduleTimeout(';
-const QE_DLUG = 'try{scheduleTimeout(()=>{try{r.__vildaSuspendAdvIntakeSync=!1';
+const QE_NAPRAWIONE = 'try{setTimeout(()=>{try{r.__vildaSuspendAdvIntakeSync=!1';
+const QE_ZEPSUTE = QE_NAPRAWIONE.replace('try{setTimeout(', 'try{scheduleTimeout(');
 
 function makeStorage() {
   const m = Object.create(null);
@@ -130,26 +133,55 @@ describe('P-MINI-WYCZYSC — „Wyczyść wszystkie pola" odświeża nasłuchy p
   });
 });
 
-describe('P-MINI-WYCZYSC — dług zapisany, nie naprawiony w tej racie: flagi zawieszenia po wyczyszczeniu', () => {
-  it('drugie odroczenie nadal woła nieistniejące scheduleTimeout — i tylko ono', () => {
-    const src = czytaj('vilda_data_import_export.js');
-    // Kontrola negatywna dla rejestru: gdy ktoś to naprawi, ten test ma zmusić do zdjęcia wpisu
-    // „co zostaje otwarte" z ALGORITHMS i do przejrzenia e2e gh-punkty-po-wczytaniu oraz
-    // gh-punkt-a-reczny-wiersz, a nie zgnić jako nieprawdziwy komentarz.
-    expect(src.match(/scheduleTimeout\(/g), 'jedno pozostałe wywołanie').toHaveLength(1);
-    expect(src).toContain(QE_DLUG);
-    expect(src).toContain('P-MINI-WYCZYSC: to drugie odroczenie');
-  });
+describe('P-GH-TOZSAMOSC rata 2 — po wyczyszczeniu flagi zawieszenia opadają w następnym ticku', () => {
+  const zeSpiegami = (win) => {
+    const wywolania = { parowanie: 0, reconcile: [] };
+    win.vildaEnsureAdvancedIntakePairing = () => { wywolania.parowanie += 1; };
+    win.reconcileGrowthHistoryModules = (k) => { wywolania.reconcile.push(k); };
+    return wywolania;
+  };
 
-  it('po clearAllData flagi zawieszenia zostają ustawione (dzisiejsze zachowanie, na którym stoją e2e punktów GH)', async () => {
+  it('po clearAllData wszystkie trzy flagi są ustawione synchronicznie, a po ticku opadają; parowanie i reconcile ruszają', async () => {
     const { win, pola } = atrapaOkna();
     loadBrowserScript('vilda_data_import_export.js', win);
+    const wywolania = zeSpiegami(win);
     wypelnij(pola);
     expect(win.VildaDataImportExport.clearAllData({})).toBe(true);
-    await tick(); await tick();
-    expect(win.__vildaSuspendAdvIntakeSync, 'flaga wisi do przeładowania albo odtworzenia stanu').toBe(true);
+    expect(win.__vildaSuspendAdvIntakeSync, 'w trakcie kasowania tabel synchronizacja stoi').toBe(true);
     expect(win.__vildaSuspendGrowthHistoryCrossSync).toBe(true);
     expect(win.__vildaSuspendIntakeUserReset).toBe(true);
+    expect(wywolania.parowanie, 'parowanie dopiero po ticku').toBe(0);
+    await tick(); await tick();
+    expect(win.__vildaSuspendAdvIntakeSync, 'flaga nie wisi już do przeładowania').toBe(false);
+    expect(win.__vildaSuspendGrowthHistoryCrossSync).toBe(false);
+    expect(win.__vildaSuspendIntakeUserReset).toBe(false);
+    expect(wywolania.parowanie).toBe(1);
+    expect(wywolania.reconcile).toEqual(['advanced']);
+  });
+
+  it('kontrola negatywna: z przywróconym `scheduleTimeout` flagi wiszą po ticku (stary, martwy krok)', async () => {
+    const src = czytaj('vilda_data_import_export.js').replace(QE_NAPRAWIONE, QE_ZEPSUTE);
+    expect(src, 'kontrola negatywna musi odtworzyć zepsute wywołanie').toContain(QE_ZEPSUTE);
+    const { win, pola } = atrapaOkna();
+    new Function('window', 'globalThis', src)(win, win);
+    const wywolania = zeSpiegami(win);
+    wypelnij(pola);
+    expect(win.VildaDataImportExport.clearAllData({}), 'błąd był połykany — czyszczenie melduje sukces').toBe(true);
+    await tick(); await tick();
+    expect(win.__vildaSuspendAdvIntakeSync, 'to był zgłoszony stan: flaga wisi').toBe(true);
+    expect(wywolania.parowanie).toBe(0);
+  });
+
+  it('w pliku nie ma już żadnego wywołania scheduleTimeout, a odroczenie niesie komentarz rejestru', () => {
+    const src = czytaj('vilda_data_import_export.js');
+    expect(src.match(/scheduleTimeout\(/g), 'oba martwe odroczenia naprawione').toBeNull();
+    expect(src).toContain(QE_NAPRAWIONE);
+    expect(src).toContain('P-GH-TOZSAMOSC rata 2 (decyzja wlasciciela 2026-09-28): to odroczenie zdejmuje flagi zawieszenia');
+    // ścieżka wczytania: import punktów GH ma pierwszeństwo przed parowaniem
+    expect(src).toContain('x("suspend-pairing-until-gh-import",Ggh_a,["applyLoadedData"])');
+    expect(src).not.toContain('x("ensure-advanced-intake-pairing",r.vildaEnsureAdvancedIntakePairing,[])');
+    expect(src).toContain('Ggh_b("ghReimport")};');
+    expect(src).toContain('m||ghReimport(a)||Ggh_b("applyLoadedData:no-reimport")');
   });
 });
 
