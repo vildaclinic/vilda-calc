@@ -122,6 +122,8 @@ Czego to nie zamyka:
 
 Pełne domknięcie wymagałoby plików z hashem w nazwie albo katalogów per wydanie, co jest osobną decyzją o modelu wdrożenia. Dlatego silnik diety trzyma `henryPrzejsciowo()` co najmniej 3 miesiące po wydaniu SW 1.1.66.
 
+**Precache stron i kolejność instalacji (P-SW-DOCPRO, zlecenie właściciela 2026-09-28; kolejność instalacji czeka na akceptację).** Każdy zasób, który strona z `OPTIONAL_DOCUMENTS` (albo dokument główny) ładuje — z `?v=` i bez — oraz każdy adres `?v=` doładowywany z pliku JS musi być w tablicach precache pod tym samym adresem. Pilnuje tego `tests/unit/sw-precache-stron.test.mjs` (nazwane wyjątki z powodem), a prawdziwe otwarcie każdej takiej strony bez sieci sprawdza `tests/e2e/pwa-strony-offline.spec.mjs` (lista stron czytana z `OPTIONAL_DOCUMENTS`). Instalacja pobiera kolejno: wymagany rdzeń (`CORE_SHELL_URLS`, w całości — inaczej nowa wersja SW nie wchodzi), dokumenty, wpisy bieżące (bez `?v=`, z nieliczbowym `?v=` albo z najwyższym `?v=` danego pliku), a na końcu historię. Powód: pełny precache zajmuje w Chromium ok. 1,2 GB (473 MB plików, bo każdy historyczny `?v=` to pełna kopia bieżącego pliku, plus pamięć podręczna kodu), a przy wyczerpanym limicie źródła `cache.put` jest odrzucany — ma ginąć historia, nie wersje bieżące. Odwołanie do starszej wersji pliku spoza rdzenia (np. w doładowaniu z JS) zginęłoby pierwsze; strażnik to zgłasza. Rozmiar samego rdzenia (ok. 0,88 GB w Chromium; historia to 88 % jego adresów i 96 % bajtów) jest otwartą decyzją właściciela — szczegóły i pomiary w `docs/clinical/ALGORITHMS.md`, wpis P-SW-DOCPRO.
+
 ## Testy i CI
 
 `package.json` nie jest częścią runtime aplikacji. Definiuje narzędzia jakości:

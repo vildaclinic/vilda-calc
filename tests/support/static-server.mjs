@@ -115,7 +115,8 @@ const server = http.createServer((request, response) => {
 });
 
 server.listen(port, host, () => {
-  process.stdout.write(`vilda-calc test server: http://${host}:${port}\n`);
+  // Rzeczywisty port — przy PORT=0 wybiera go system (P-SW-DOCPRO: test offline stawia własny serwer).
+  process.stdout.write(`vilda-calc test server: http://${host}:${server.address().port}\n`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
