@@ -41,7 +41,7 @@ npm run design-system:check           # renderuje każdy podgląd w Chromium i s
 
 1. `npm run design-system -- --update`, potem `git diff design-system/src` — diff pokazuje dokładnie, które wartości i reguły się zmieniły.
 2. Przejrzyj `design-system/out/SYNC-REPORT.md`: nowe własności bez tokenu wymagają wpisu w `tokens.json` z opisem po polsku; reguły nieodnalezione w źródłach wymagają ręcznej korekty partiala; nowy komponent wymaga nowej karty (README, podgląd, typy) i nowej grupy w partialu.
-3. `npm run design-system:check` i obejrzyj zrzuty (`--shots <katalog>`), gdy raport zgłasza przycięcie albo pusty pas.
+3. `npm run design-system:check` i obejrzyj zrzuty (`-- --shots` zapisuje je do `design-system/out/shots/`), gdy raport zgłasza przycięcie albo pusty pas.
 4. Opublikuj `out/` do artefaktu z Claude Code: narzędzie Artifact, `url` z `src/system.json`, `root` = `design-system/out`, `file_path` = `design-system/out/project/design-system.json`, `files` = zawartość `out/publish-files-map.json`. Obrazy pod `assets/` są już w magazynie artefaktu i nie są wysyłane ponownie; nowy plik ikony trzeba wgrać jako zasób i dopisać do `src/system.json`.
 
 Publikacja jest krokiem osobnym od odbudowy, bo artefakt nie ma publicznego API do zapisu z CI. `--strict` w CI wykrywa rozjazd stylów ze `src/` bez publikowania.

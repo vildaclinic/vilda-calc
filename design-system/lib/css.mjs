@@ -164,13 +164,42 @@ export function normalizeWhitespace(text) {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Bloki <style>…</style> z tekstu (dokument HTML albo literał w JS). Skaner indeksowy zamiast wyrażenia
+ * regularnego: znacznik otwierający kończy się na '>' poza cudzysłowami, zamykający to "</style" + '>'
+ * (ewentualnie ze spacjami, także zapis "<\/style" w literałach JS).
+ */
+export function findStyleBlocks(text) {
+  const blocks = [];
+  const lower = text.toLowerCase();
+  let i = 0;
+  while ((i = lower.indexOf('<style', i)) >= 0) {
+    const after = lower[i + 6];
+    if (after !== '>' && after !== ' ' && after !== '\t' && after !== '\n' && after !== '\r' && after !== '/') { i += 6; continue; }
+    let k = i + 6;
+    let quote = null;
+    while (k < text.length) {
+      const c = text[k];
+      if (quote) { if (c === quote) quote = null; k++; continue; }
+      if (c === '"' || c === "'") { quote = c; k++; continue; }
+      if (c === '>') break;
+      k++;
+    }
+    const start = k + 1;
+    // znacznik zamykający: "</style>" albo, w literałach JS, "<\/style>"; ewentualne spacje przed ">"
+    const closeRe = /<\\?\/style\s*>/g;
+    closeRe.lastIndex = start;
+    const close = closeRe.exec(lower);
+    if (!close) break;
+    blocks.push(text.slice(start, close.index));
+    i = close.index + close[0].length;
+  }
+  return blocks;
+}
+
 /** Bloki <style> z dokumentu HTML. */
 export function extractHtmlStyles(html) {
-  const blocks = [];
-  const re = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
-  let m;
-  while ((m = re.exec(html))) blocks.push(m[1]);
-  return blocks;
+  return findStyleBlocks(html);
 }
 
 function unescapeJsString(css) {
@@ -191,10 +220,9 @@ function unescapeJsString(css) {
 export function extractJsStyles(js) {
   const blocks = [];
   const seen = new Set();
-  const tagRe = /<style\b[^>]*>([\s\S]*?)<\\?\/style>/gi;
   let m;
-  while ((m = tagRe.exec(js))) {
-    const css = unescapeJsString(m[1]);
+  for (const block of findStyleBlocks(js)) {
+    const css = unescapeJsString(block);
     seen.add(css.slice(0, 200));
     // fragmenty łączone przez "+" albo `${…}` zostają jak są: reguła z wyrażeniem nie sparsuje się jako deklaracja i zostanie pominięta
     blocks.push(css);

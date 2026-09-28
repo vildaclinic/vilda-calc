@@ -18,8 +18,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..');
 const srcDir = path.join(here, 'src');
 const args = new Set(process.argv.slice(2).filter((a) => a.startsWith('--')));
-const outArg = process.argv.slice(2).find((a, i, arr) => arr[i - 1] === '--out');
-const outDir = path.resolve(outArg || path.join(here, 'out'));
+// Wynik zawsze w design-system/out (ścieżka stała, nie z argumentów: skrypt usuwa ten katalog przed zapisem).
+const outDir = path.join(here, 'out');
 const update = args.has('--update');
 const strict = args.has('--strict');
 

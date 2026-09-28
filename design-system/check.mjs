@@ -3,8 +3,8 @@
 // jest renderowany w Chromium tak, jak robi to strona (tokens.css + bundle.css, <html data-theme>),
 // przy 960 px szerokości, w wybranych motywach. Sprawdzane są: wysokość treści względem znacznika
 // @dsCard, przewijanie poziome, brak widocznego tekstu, błędy konsoli, kontrakt pliku.
-//   node design-system/check.mjs [--themes light,high-contrast-2,glass-4,dark-bg-1] [--shots <katalog>] [--only Nazwa]
-// Wymaga zainstalowanego Chromium Playwrighta (npx playwright install chromium).
+//   node design-system/check.mjs [--themes light,high-contrast-2,glass-4,dark-bg-1] [--shots] [--only Nazwa]
+// --shots zapisuje zrzuty do design-system/out/shots/. Wymaga Chromium Playwrighta (npx playwright install chromium).
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -16,12 +16,40 @@ const { chromium } = require('playwright');
 
 const argv = process.argv.slice(2);
 const opt = (name, def) => { const i = argv.indexOf(name); return i >= 0 && argv[i + 1] ? argv[i + 1] : def; };
-const themes = opt('--themes', 'light,high-contrast-2,glass-4,dark-bg-1').split(',');
-const shots = opt('--shots', '');
-const only = opt('--only', '');
+const KNOWN_THEMES = ['light', 'glass-4', 'high-contrast-1', 'high-contrast-2', 'high-contrast-3', 'dark-bg-1', 'dark-bg-2'];
+const themes = opt('--themes', 'light,high-contrast-2,glass-4,dark-bg-1').split(',').filter((t) => KNOWN_THEMES.includes(t));
+if (!themes.length) { console.error(`Nieznany motyw; dostępne: ${KNOWN_THEMES.join(', ')}.`); process.exit(2); }
+const only = opt('--only', '').replace(/[^A-Za-z0-9]/g, '');
 const outDir = path.join(here, 'out');
+const shots = argv.includes('--shots') ? path.join(outDir, 'shots') : '';
 const comp = path.join(outDir, 'project', 'components');
 if (!fs.existsSync(comp)) { console.error('Brak design-system/out — najpierw uruchom npm run design-system.'); process.exit(2); }
+
+/** Prosty skaner znaczników: zwraca [{name, attrs}] dla każdego znacznika otwierającego w dokumencie. */
+function listTags(html) {
+  const tags = [];
+  let i = 0;
+  while ((i = html.indexOf('<', i)) >= 0) {
+    const m = /^<([a-zA-Z][a-zA-Z0-9-]*)/.exec(html.slice(i, i + 40));
+    if (!m) { i++; continue; }
+    let k = i + m[0].length;
+    let quote = null;
+    while (k < html.length) {
+      const c = html[k];
+      if (quote) { if (c === quote) quote = null; k++; continue; }
+      if (c === '"' || c === "'") { quote = c; k++; continue; }
+      if (c === '>') break;
+      k++;
+    }
+    tags.push({ name: m[1].toLowerCase(), attrs: html.slice(i + m[0].length, k) });
+    i = k + 1;
+  }
+  return tags;
+}
+function attrValue(attrs, name) {
+  const m = new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'>]+))`, 'i').exec(attrs);
+  return m ? (m[1] ?? m[2] ?? m[3] ?? '') : null;
+}
 
 // Podglądy, których korzeń wypełnia okno (min-height: 100vh w źródle): wysokość treści rośnie z ramką, więc nie jest miarą.
 const VIEWPORT_BOUND = new Set(['AuthCard', 'AuthSheet']);
@@ -48,11 +76,14 @@ for (const name of names) {
   const body = src.replace(/^<!--[^>]*-->\s*/, '');
   const entry = { name, markerHeight: height, problems: [] };
   if (!marker) entry.problems.push('brak znacznika @dsCard w pierwszej linii');
-  if (!/<html[^>]*lang="pl"/i.test(body)) entry.problems.push('html bez lang="pl"');
-  if (!NO_GLASS.has(name) && !/<body[^>]*class="[^"]*liquid-ios26/i.test(body)) entry.problems.push('body bez klasy liquid-ios26');
-  if (/<script[^>]*src=/i.test(body)) entry.problems.push('zewnętrzny <script src>');
-  if (/<iframe|<object|<embed|<frame/i.test(body)) entry.problems.push('niedozwolony element osadzający');
-  if (/<img[^>]*src="(?!data:|\/_blob\/)/i.test(body)) entry.problems.push('zewnętrzny obraz');
+  const tags = listTags(body);
+  const htmlTag = tags.find((t) => t.name === 'html');
+  const bodyTag = tags.find((t) => t.name === 'body');
+  if (!htmlTag || attrValue(htmlTag.attrs, 'lang') !== 'pl') entry.problems.push('html bez lang="pl"');
+  if (!NO_GLASS.has(name) && !(bodyTag && (attrValue(bodyTag.attrs, 'class') || '').split(/\s+/).includes('liquid-ios26'))) entry.problems.push('body bez klasy liquid-ios26');
+  if (tags.some((t) => t.name === 'script' && attrValue(t.attrs, 'src') !== null)) entry.problems.push('zewnętrzny <script src>');
+  if (tags.some((t) => ['iframe', 'object', 'embed', 'frame', 'portal'].includes(t.name))) entry.problems.push('niedozwolony element osadzający');
+  if (tags.some((t) => { if (t.name !== 'img') return false; const src = attrValue(t.attrs, 'src') || ''; return !(src.startsWith('data:') || src.startsWith('/_blob/')); })) entry.problems.push('zewnętrzny obraz');
 
   for (const theme of themes) {
     const page = await browser.newPage({ viewport: { width: 960, height: Math.max(200, (height || 300) + 40) } });
