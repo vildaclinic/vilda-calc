@@ -5829,6 +5829,73 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Przełączanie paneli powłoki (Start → DocPro) po wczytaniu pacjenta: pusty albo częściowy formularz i karta porównania (P-POWLOKA-PANELE, SW 1.1.88, 2026-09-28)
+
+**Zgłoszenie właściciela (2026-09-28).** W powłoce `app.html` po wczytaniu pacjenta na Start i przejściu na DocPro formularz
+główny DocPro „albo nie jest w pełni wypełniony — jest tylko data urodzenia, wiek i płeć — albo wypełnia się z opóźnieniem”,
+przez co karta „Podsumowanie wyników” liczy się z niepełnych danych; „często” pojawia się też karta „Porównanie z poprzednim
+pomiarem”.
+
+**Co zmierzono (haki na DOM, sondy stanu persistence, prawdziwa powłoka, dane fikcyjne: dziewczynka 14 lat z datą urodzenia,
+dwie wizyty, wiersz ręczny, punkt GH).** Identycznie na `audyt` i na gałęzi raty 2 — problem sprzed P-GH-TOZSAMOSC.
+1. Panel DocPro utworzony ~2,5 s po „Odtwórz zapis” zostawał **pusty** przez całe 7 s obserwacji (bez daty, wieku, płci, masy,
+   wzrostu, nazwiska; `vilda:persist-restored` w ogóle nie padało). Ten sam panel utworzony 8 s później wypełniał się w całości
+   po ~1,1 s.
+2. Sesja główna (`writeMainSession`, jedyny kanał niosący cały rekord z datą urodzenia przez `lastLoadedData`) powstawała
+   dopiero **~3,9 s po „Odtwórz zapis”**. Dwie przyczyny: (a) wczytanie z Karty pacjenta zaczyna się od `clearAllData`, które
+   uzbraja okno blokady `__vildaPersistClearUntil` (2,5 s, także `vildaPersistClearAfterUserClear`); adapter
+   `VildaPersistence` odmawia w tym oknie **każdego** zapisu (`writeMainSession`, `writeShared`), również wymuszonego
+   (`isClearInProgress`), a po jego końcu nic zapisu nie ponawia; (b) zapis sesji głównej szedł wyłącznie z zdarzeń
+   `input`/`change` (debounce 300 ms) i był porzucany, gdy timer trafiał w okno zawieszenia (`__vildaPersistPauseUntil`,
+   odtwarzanie w toku). Pierwszy zapis robiło w praktyce lustro formularza (`custom-fixes.js`) timerem 3200 ms po
+   `vilda:state-restored`, plus 300 ms debounce.
+3. Panel otwarty wcześniej (w tle) dostawał przy przełączeniu tylko strumień lustra formularza (nazwisko, wiek, masa, wzrost,
+   płeć — data urodzenia celowo nie wędruje lustrem) i push `vildaPersistRestoreAll()` z powłoki; `lastLoadedData` nie było
+   ustawiane, data urodzenia pusta, podsumowanie liczone z częściowych danych. Przełączenie paneli nie wywołuje `pagehide`,
+   więc nie ma wymuszonego zapisu jak przy zwykłej nawigacji między stronami.
+4. „Tylko data urodzenia, wiek i płeć” z widoczną kartą „Porównanie z poprzednim pomiarem” to stan po **„Nowy pomiar”**
+   (Start celowo czyści masę i wzrost nowej wizyty i pokazuje porównanie z poprzednią) — na DocPro powinien być taki sam
+   i po poprawce jest; przed poprawką zależał od tego, który kanał zdążył.
+
+**Naprawa (niekliniczna: żaden wzór, próg ani dane; zmienia się moment zapisu stanu i sposób odtworzenia panelu).**
+- `vilda_data_import_export.js` (`Gp_*`): (0) `Gp_b` — wczytanie i odtworzenie pacjenta **kończą okno blokady po
+  czyszczeniu** (`__vildaPersistClearUntil = 0`): nowe dane w formularzu unieważniają jego cel, czyli ochronę przed
+  wskrzeszeniem wyczyszczonych danych przez autozapis; (1) `Gp_a` — wymuszony zapis sesji głównej na końcu
+  `applyLoadedData` i `restoreLoadedState`, przed pingiem `vilda:sharedLoadSeq` (żeby panele w tle odtwarzały już nową
+  sesję), pomijany przy odtwarzaniu sesji (dane pochodzą z niej samej), z ponowieniem po końcu okna blokady, gdyby ktoś je
+  jeszcze uzbroił; (2) zdarzenie `input`/`change` w oknie zawieszenia nadal planuje zapis (dotąd `Pe` od razu odmawiało),
+  a timer (`Gp_t`) ponawia zapis co 300 ms zamiast go porzucić (do 20 razy); (3) `pagehide` zapisuje z `force`, jak
+  `vildaPersistFlushNow`; (4) `vildaSession.saveNow({force:true})` dla powłoki.
+- `vilda_shell.js` (`Gp_*`): przed przełączeniem panel źródłowy zapisuje wspólny stan i sesję główną z `force` (`Gp_f`);
+  panel docelowy — jeśli sesja główna zmieniła się od jego ostatniego odtworzenia (odcisk `Gp_s`: długość i skrót JSON
+  sesji bez pola `timestampISO`, zapamiętywany przy `load` panelu i po każdym pushu) — odtwarza wspólny stan
+  (`vildaPersistRestoreAll`) i sesję główną (`vildaSession.restore`) w kolejności jak przy starcie strony (`Gp_p`); panel
+  tworzony dopiero teraz startuje już po zapisie. Odcisk chroni przed pełnym odtwarzaniem przy każdym przełączeniu.
+
+**Co się nie zmienia.** Lustro formularza (sześć pól, bez daty) i push `vildaPersistRestoreAll()` po pingu — bez zmian.
+Semantyka „Nowy pomiar” (puste pola nowej wizyty, karta porównania) — bez zmian; DocPro pokazuje teraz to samo co Start.
+Okno blokady po samym „Wyczyść wszystkie pola” (bez wczytania) — bez zmian.
+
+**Wpływ dla lekarza.** Po wczytaniu pacjenta przejście na DocPro (i z powrotem) pokazuje ten sam, pełny stan co panel
+źródłowy, także od razu po „Odtwórz zapis”; „Podsumowanie wyników” liczy się z kompletu danych; karta porównania jest widoczna
+na obu panelach dokładnie wtedy, gdy Start ją pokazuje. Skutek uboczny do świadomej akceptacji: przełączenie panelu, po którym
+sesja główna się zmieniła, uruchamia w panelu docelowym pełne odtworzenie (jak przy F5 tej strony).
+
+**Strażnicy.** `tests/unit/sesja-glowna-po-wczytaniu.test.mjs` — prawdziwy moduł na atrapie okna z atrapą adaptera:
+`saveNow({force:true})` zapisuje w oknie zawieszenia (bez force nadal nie), zapis z `input` w oknie zawieszenia jest ponawiany
+i wykonuje się dokładnie raz, adapter odmawiający w oknie po czyszczeniu i zapis po jego końcu, `pagehide` z force; kontrola
+negatywna ze starym timerem (zapis przepada); strażnicy źródła obu modułów (kolejność zapisu przed pingiem, odcisk bez
+`timestampISO`, kolejność odtworzenia w panelu docelowym). `tests/e2e/powloka-przelaczanie-paneli.spec.mjs` — prawdziwa
+powłoka: (1) „Odtwórz zapis” i natychmiastowe przejście na DocPro tworzony dopiero teraz — komplet z datą, podsumowaniem i
+`lastLoadedData`, bez karty porównania; (2) DocPro otwarty wcześniej — po szybkim przełączeniu komplet z datą i bazą, nie tylko
+lustro; (3) „Nowy pomiar” — DocPro pokazuje to samo co Start (data, wiek, płeć, puste masa i wzrost, karta porównania).
+Przed poprawką (1) i (2) czerwone (zmierzone: pusty panel / brak daty i bazy).
+
+SW 1.1.87 → **1.1.88**; `vilda_data_import_export.js?v=85→86`, `vilda_shell.js?v=56→57`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja pełnego odtworzenia panelu docelowego po zmianie sesji (skutek uboczny wyżej)
+i scalenie.
+
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
 **Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe
