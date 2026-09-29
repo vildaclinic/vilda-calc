@@ -5829,6 +5829,122 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Dziecko z otyłością: PAL 1,4 także w wieku 4–9 lat, sufit tempa 1 / 1,5 / 2 kg/mies. przy ≥ 99. centylu w wieku 6–11 lat, redukcja domyślna przy otyłości 6–11 lat, stabilizacja jako górna granica z kontrolą po 12 tygodniach (P-DIETA-STAB rata 1, SW 1.1.95, 2026-09-28)
+
+**Zgłoszenie właściciela (2026-09-28, endokrynolog dziecięcy).** Chłopiec 7 l. 3 mies., 44 kg, 131 cm, BMI 25,6
+(99,2. centyl OLAF, bmiSDS +2,42), strategia „stabilizacja” wybrana ręcznie: zalecenia podawały „podaż energii dziecka odpowiada
+zapotrzebowaniu przy obecnej masie ciała, tj. około 2200 kcal dziennie”. Ocena właściciela: dziecko nie jest aktywne na PAL 1,6
+i nie powinno jeść 2200 kcal.
+
+**Stan przed zmianą (prawdziwy silnik).** 2209 kcal = REE Henry’ego 2005 dla masy aktualnej (chłopcy 3–10 lat, postać MJ × 239:
+1381 kcal) × PAL 1,6 (`ENERGY_PAL_DOMYSLNY.child_4_9`, P-PAL rata 2), bez dodatku na wzrastanie, zaokrąglone do 100. Redukcja
+tego samego dziecka: sufit tempa 0,5 / 1 / 1,5 kg/mies. wiązał wszystkie trzy diety (≤ 2050 / 1950 / 1800 kcal), wzór Mazura
+(masa docelowa − 200/350/500 kcal: 1710 / 1560 / 1410 kcal przy PAL 1,6) nie decydował w żadnym sprawdzonym przypadku
+dziecięcym. Ta sama osoba ma według innych siatek: WHO 2007 z +4,01, Palczewska z +3,30 (obie „otyłość olbrzymia” w silniku),
+CDC 2000 ok. 133 % 95. centyla (AAP 2023: otyłość ciężka klasy 2; obliczenie z tablic LMS CDC poza aplikacją).
+
+**Piśmiennictwo (pełne teksty dostarczone przez właściciela albo z PMC; liczby sprawdzone w tekście).**
+- Puyau M, Shypailo R, Butte NF, Musaad S, Bacha F. Am J Clin Nutr 2025;121:284–292,
+  [doi:10.1016/j.ajcnut.2024.12.003](https://doi.org/10.1016/j.ajcnut.2024.12.003) (1155 dzieci 5–19 lat, kalorymetria
+  pokojowa): równanie CNRC (chłopcy: 11,72·masa + 695,3·wzrost[m] − 26,94·wiek + 131) daje temu dziecku 1362 kcal, wariant
+  masa+wiek 1350 — Henry w aplikacji 1381 (+1–2 %). Uwaga: „Oxford” w pracy dla chłopców 3–10 lat to postać kcal z 74,2·H
+  (błąd druku opisany w `vilda_ree_rownania_data.js`), więc tamtejsze +11 % u chłopców z nadwagą/otyłością nie dotyczy postaci
+  z aplikacji. Wniosek: o nadmiarze decyduje PAL, nie REE.
+- PAL maleje z otłuszczeniem u chłopców w tym wieku: Ball 2001 (AJCN 74:524, [doi:10.1093/ajcn/74.4.524](https://doi.org/10.1093/ajcn/74.4.524)),
+  r = −0,37 z BMI; Abbott i Davies 2004 ([doi:10.1038/sj.ejcn.1601780](https://doi.org/10.1038/sj.ejcn.1601780)), r = −0,45;
+  rozrzut PAL ±0,17–0,22 (Davidsson 2016: zakres 1,39–2,08). Kim 2022 i Davidsson 2016 (podstawa P-PAL rata 2) to średnie
+  populacyjne; Davidsson liczy PAL względem REE przewidywanego (Schofield), nie zmierzonego.
+- Barlow SE. Pediatrics 2007;120 Suppl 4:S164, [doi:10.1542/peds.2007-2329C](https://doi.org/10.1542/peds.2007-2329C),
+  tab. 8 (s. S184): 6–11 lat, 95.–99. centyl — „Gradual weight loss (1 lb/mo or 0.5 kg/mo)”; > 99. centyl — „Weight loss
+  (maximum is 2 lb/wk)”; 85.–94. centyl — „Weight maintenance”. Spear BA i wsp., tamże S254,
+  [doi:10.1542/peds.2007-2329F](https://doi.org/10.1542/peds.2007-2329F): etap 3 „planned negative energy balance”; w przeglądzie
+  dowodów (nie w zaleceniu) dieta o obniżonej energii „not less than 1200 kcal/day” u 6–12 lat, Traffic Light Diet 900–1500 kcal.
+- Styne DM i wsp. J Clin Endocrinol Metab 2017;102:709, [doi:10.1210/jc.2016-2573](https://doi.org/10.1210/jc.2016-2573):
+  zal. 4.1 „promote a decrease in BMI”; zal. 4.3 „calorie-controlled diet”, „calorie reduction for weight loss or maintenance”
+  pod nadzorem dietetyka; „Seven percent weight loss may be a more realistic goal … with extreme obesity” (s. 727).
+- Hampl SE i wsp. (AAP). Pediatrics 2023;151:e2022060640, [doi:10.1542/peds.2022-060640](https://doi.org/10.1542/peds.2022-060640):
+  „no evidence to support either watchful waiting” (s. 54); leczenie od razu, najwyższej dostępnej intensywności; brak liczby kcal
+  dla dzieci.
+- Mazur A i wsp. Nutrients 2022;14:3806, [doi:10.3390/nu14183806](https://doi.org/10.3390/nu14183806): stabilizacja „for those
+  children with overweight and mild obesity”; „a well-balanced hypocaloric diet should be initiated among all obese children”;
+  energia od masy należnej − 200–500 kcal, nie mniej niż 1000 kcal; „A weight loss of up to 1–2 kg/month is safe” (opinia ekspertów).
+- Epstein LH, Valoski A, McCurley J. Am J Dis Child 1993;147:1076,
+  [doi:10.1001/archpedi.1993.02160340062015](https://doi.org/10.1001/archpedi.1993.02160340062015) (abstrakt): umiarkowane
+  ograniczenie energii u 6–12 lat bez niekorzystnego wpływu na wzrastanie w 10 latach.
+
+**Decyzje właściciela (2026-09-28).**
+1. Domyślny PAL 1,4 przy otyłości (≥ 97. centyl wg `childBmiClass`) także w wieku 4–9 lat (dotąd 1,6 — P-PAL rata 2); 1,6 zostaje
+   do wyboru lekarza. Uzasadnienie: REE Henry’ego zgodne z kalorymetrią, PAL maleje z otłuszczeniem, a błąd jest niesymetryczny —
+   zawyżony wydatek przy stabilizacji to dalszy przyrost masy.
+2. Sufit tempa 6–11 lat ≥ 99. centyla: 1 / 1,5 / 2 kg/mies. (dotąd 0,5 / 1 / 1,5), jak otyłość 12–18 lat.
+3. Domyślna strategia 6–11 lat: stabilizacja tylko przy nadwadze; przy otyłości (także 97.–99. centyl) redukcja — poniżej
+   99. centyla jedyna dostępna dieta lekka 0,5 kg/mies. (bez zmian sufitu).
+4. Stabilizacja jako górna granica dnia (w dół do 50 kcal, nie poniżej podłogi) i kontrola po 12 tygodniach: masa na kontroli
+   powinna wynosić dzisiejszą + przyrost z samego wzrastania (mediana BMI × przyrost wzrostu², jak rata W); przy masie wyższej —
+   obniżka 100–200 kcal (nie poniżej podłogi).
+
+**Zmiana (kliniczna).**
+- `vilda_diet_plan_ui.js` (`?v=36`): `ENERGY_PAL_DOMYSLNY.otylosc.child_4_9 = 1,4`; `CHILD_RATE_KG_MONTH.age_6_11_severe =
+  {1; 1,5; 2}`; `energyResolveStrategy` — 6–11 lat stabilizacja przy `!bmiClass.obese`; stan planu dostaje
+  `maintenanceGornaKcal` (`energyGornaGranicaKcal(maintenanceKcal, floorKcal)`); `energyKontrolaPlanu` przyjmuje wiersz
+  `{stabilizacja:true, weeklyLoss:0}` (odstęp 12 tygodni, bo tempo < 1 kg/mies.; próg = spodziewana masa; wynik niesie
+  `stabilizacja:true`); wiersz bez tempa bez tej flagi nadal zwraca `null`. Karta planu: „≤ X kcal/dzień — górna granica dnia —
+  stabilizacja masy ciała (nie cel do dobicia)”, także karta 2–5 lat i „Brak diety”; ostrzeżenie 6–11 lat rozróżnia otyłość
+  < 99. centyla (domyślna redukcja lekka) od nadwagi (domyślna stabilizacja); opis diety umiarkowanej u dziecka 6–11 lat bez
+  „domyślnej u nastolatka”.
+- `vilda_diet_recommendations.js` (`?v=63`): zdanie stabilizacji „W strategii stabilizacji nie planuje się dodatkowego deficytu: podaż energii (dziecka) nie powinna przekraczać X kcal dziennie
+  (zapotrzebowanie przy obecnej masie ciała) — to górna granica dnia, nie cel do dobicia”; przy strategii stabilizacji zdanie
+  kontroli („Kontrola za 12 tygodni (ok. …): masa ciała powinna pozostać na poziomie ok. … kg (dzisiejsza masa i przyrost
+  wynikający z samego wzrastania). Jeśli masa będzie wyższa niż … kg … należy odjąć 100–200 kcal (do … kcal dziennie).”)
+  i `dane.kontrola`; `dane.energia.podazZaokrKcal` = górna granica, `gornaGranica: true` także przy stabilizacji; zdanie o normach
+  żywieniowych liczone od tej samej górnej granicy (dotąd od zapotrzebowania zaokrąglonego do 100 — dwie różne liczby w jednym
+  dokumencie); zapasowa reguła `dietDefaultStrategyForState` jak silnik.
+- Skutki w „Raporcie po wizycie” (bez zmiany kodu raportu): karta „Zapotrzebowanie energetyczne” przy stabilizacji dziecka
+  pokazuje „≤ X kcal/d”; u dziecka 6–11 lat z otyłością (domyślnie redukcja) nagłówek podaje „Pierwszy krok to ok. … kg” zamiast
+  „Na tym etapie celem jest utrzymanie obecnej masy ciała” (rata G2) — także przy niskim wzroście bez alarmu tempa wzrastania
+  (alarm tempa z raty G1 nadal wymusza stabilizację).
+- `vilda_raport_plan.js` (`?v=19`): sekcja kontroli przy stabilizacji — kafel „masa przy stabilizacji / dziś X kg + wzrastanie”,
+  próg „> X kg” (przy redukcji bez zmian: „≥”).
+- `vilda_bmi_journey.js` (`?v=25`): „Droga do normy” w trybie stabilizacji — „≤ X kcal/dzień, górna granica dnia —
+  stabilizacja masy ciała, nie cel do dobicia”.
+- Strony (`index.html`, `docpro.html`, `kalkulator-klirens.html`, lista smoke) i precache SW (append-only), SW 1.1.94 → 1.1.95 (1.1.93 i 1.1.94 zajęły równolegle P-STYLE rata 4a i P-VAR-TOAST),
+  fixture wersji odświeżony.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne; prawdziwy silnik; `tests/unit/p-dieta-stab-rata1.test.mjs`).**
+
+| Pacjent | Przed | Po |
+|---|---|---|
+| chł. 7 l. 3 mies., 131 cm, 44 kg (otyłość, 99,2 c) | PAL 1,6; stabilizacja 2209 („ok. 2200”); redukcja ≤ 2050 / 1950 / 1800 (0,5 / 1 / 1,5 kg/mies.) | PAL 1,4; stabilizacja 1933 → **≤ 1900**; kontrola po 12 tyg.: próg ok. 44,5 kg, obniżka do 1700–1800; redukcja **≤ 1650 / 1550 / 1400** (1 / 1,5 / 2 kg/mies.); domyślnie redukcja (bez zmian) |
+| dz. 9 l., 134 cm, 48 kg (99,0 c) | stabilizacja 2230; redukcja ≤ 2100 / 1950 / 1850 | ≤ 1950; redukcja ≤ 1650 / 1550 / 1400 |
+| chł. 4 l., 105 cm, 22 kg (otyłość) | stabilizacja 1547 | PAL 1,4: ≤ 1350 (2–5 lat bez diet — bez zmian) |
+| dz. 8 l., 130 cm, 40 kg (otyłość, 98,3 c) | domyślnie stabilizacja | domyślnie redukcja lekka ≤ 1600 kcal, 0,5 kg/mies. |
+| chł. 10,5 l., 145 cm, 58 kg (otyłość, 97,8 c) | domyślnie stabilizacja | domyślnie redukcja lekka ≤ 1900 (Molnár, PAL 1,4 bez zmian) |
+| chł. 7 l., 124 cm, 30 kg (nadwaga, 92 c) | PAL 1,6, stabilizacja 1836 | bez zmian liczby; stabilizacja jako ≤ 1800 z kontrolą |
+| nastolatki 12–18 lat i dorośli | — | PAL, sufity i strategie bez zmian; stabilizacja nastolatka (jeśli wybrana) jako górna granica z kontrolą |
+
+**Ograniczenia.** Liczby kcal i tempa we wszystkich wytycznych to opinia ekspertów (Barlow, Mazur piszą to wprost). Puyau 2025
+nie podaje wyników dla grup wieku ani osobno dla otyłości (nadwaga i otyłość razem, otyli chłopcy średnio ok. 12 lat). Sufit tempa
+nadal wiąże w każdym sprawdzonym przypadku dziecięcym — wzór Mazura decyduje tylko u dziecka tuż nad 85. centylem. Próg kontroli
+stabilizacji nie ma marginesu na wahania pomiaru (ubranie, pora dnia) poza zaokrągleniem do 0,1 kg; zdanie o sposobie ważenia jest
+w planie PDF. Kategoria otyłości (i przez nią PAL i strategia) zależy od wybranej siatki — ten sam chłopiec ma z +2,42 (OLAF) i +4,01
+(WHO).
+
+**Zastępuje** decyzję „PAL 1,6 u dziecka 4–9 lat z otyłością” (P-PAL rata 2, 2026-09-24) i sufit 0,5 / 1 / 1,5 kg/mies. dla
+6–11 lat ≥ 99. centyla (ENERGY-CHILD-MID1); wpisy zostają jako historia.
+
+**Testy.** Nowy `tests/unit/p-dieta-stab-rata1.test.mjs` (przypadek zgłoszenia i pięć grup wieku na prawdziwym silniku, sekcja
+kontroli planu PDF). Zaktualizowane oczekiwania (skutki decyzji 1–4, bez zmniejszania liczby asercji): unit
+`energy-dziecko-otylosc`, `rata-n2-nadwaga-sufit`, `rata-w-kontrola-wzrastanie` (reguła 12 tygodni pokazana na otyłości < 99. centyla,
+40 kg), `zalecenia-energetyczne-strategia`; e2e `dieta-dziecko-otylosc`, `zalecenia-energetyczne-strategia`, `-krytyczne`, `-jezyk`,
+`dane-zalecen-energetycznych`, `diet-plan-logic`, `dieta-rata-w`, `dieta-rata-x`, `dieta-tempo-rata-g1`, `dieta-tempo-blokada-rata-g3`,
+`pal-jedna-tabela`, `raport-wizyta-rata-q`, `raport-wizyta-rata-r`.
+
+**Walidacja.** `npm test` (unit, lint, składnia, PRO) i `npm run test:e2e` — wyniki w PR.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna po przeglądzie PR; ewentualny margines tolerancji progu kontroli
+stabilizacji; czy dziecko 6–11 lat z otyłością i niskim wzrostem (bez alarmu tempa) ma dostawać domyślnie redukcję; wybór siatki
+odniesienia dla kategorii otyłości; scalenie i wdrożenie.
+
 ## Toast „Zalecenia zostały uaktualnione” modułu VAR tylko przy widocznej karcie (P-VAR-TOAST, SW 1.1.94, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28).** Na `docpro.html`, także przy pustym formularzu, kliknięcie „Wyczyść
@@ -6968,6 +7084,8 @@ wiersza `otylosc.child_4_9`) i e2e `pal-jedna-tabela` PAL-4 (8-latek z otyłośc
 raporcie).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
+**Zastąpione (2026-09-28).** Decyzja o PAL 1,6 przy otyłości 4–9 lat zmieniona na 1,4 — patrz P-DIETA-STAB rata 1.
 
 ## Obniżenie pozycji wzrostu na siatce: baza flagi od 36 mies. i fakt w „Raporcie po wizycie” (P-RAPORT rata T3, SW 1.1.68, 2026-09-24)
 

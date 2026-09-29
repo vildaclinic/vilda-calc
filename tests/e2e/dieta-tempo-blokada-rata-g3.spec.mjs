@@ -77,7 +77,7 @@ test.describe('P-DIETA rata G3 — tempo poniżej normy a blokada stabilizacji z
     expect(r.przelaczniki).toEqual({ stabWylaczona: false, stab: true, redukcja: false });
     expect(r.dymek).toBe(DYMEK_ALARM);
     expect(r.strategia).toBe('stabilization');
-    expect(r.podaz).toBe(2200);
+    expect(r.podaz).toBe(2150); // P-DIETA-STAB rata 1: górna granica dnia (w dół do 50 kcal)
     expect(r.deficyt).toBeNull();
     expect(r.zdanieTempa).toBe(`${B1_ZDANIE}, dlatego plan ma charakter stabilizacji masy ciała. Wzrost jest mierzony na każdej wizycie kontrolnej.`);
     expect(r.powodWKarcie).toBe(true);
@@ -116,7 +116,7 @@ test.describe('P-DIETA rata G3 — tempo poniżej normy a blokada stabilizacji z
     expect(r.przelaczniki).toBeNull();
     expect(r.blokada).toBe(true);
     expect(r.strategia).toBe('stabilization');
-    expect(r.podaz).toBe(2200);
+    expect(r.podaz).toBe(2150); // P-DIETA-STAB rata 1: górna granica dnia (w dół do 50 kcal)
     expect(r.zdanieTempa).toBe(`${B1_ZDANIE}, dlatego plan ma charakter stabilizacji masy ciała. Wzrost jest mierzony na każdej wizycie kontrolnej.`);
   });
 });
