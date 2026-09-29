@@ -6026,6 +6026,49 @@ P-SW-PIERWSZA-WIZYTA). Żaden plik strony się nie zmienia.
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
 
+## Karta „Zaawansowane obliczenia wzrostowe” bez poziomego przewijania dokumentu (P-ADV-PRZEWIJANIE, SW 1.1.110, `style.css` 85, 2026-09-29)
+
+**Zgłoszenie właściciela (2026-09-29).** Na `index.html`, gdy karta ma wyniki, dokument przewijał się w poziomie:
+`documentElement.scrollWidth − clientWidth` = 39 px przy 390×844 i 31 px przy 1280×900 (Chromium, czysty `audyt` 391d63b).
+Skan `body *` wskazywał tabelę odcinków trajektorii i `span.vtap-chip` w jej komórkach.
+
+**Przyczyna (pomiar, nie założenie).** Tabela jest poszlaką fałszywą: stoi w `.vtap-tb { overflow-x: auto }` wewnątrz
+`.vtap { overflow: hidden }` (`vilda_trajectory_analysis.js`), więc przewija się we własnym kontenerze i nie dokłada nic do
+szerokości dokumentu — `#advResults` ma `scrollWidth` równy `clientWidth`. Ukrywanie kolejnych elementów karty wskazało
+`#advReportActions` → `label.adv-report-anon` → `input#advReportAnon`: globalne `input, select, option { width: 100% }` ze
+`style.css` rozciągało checkbox „Anonimizuj — tylko inicjały” na całą szerokość karty (317 px przy 390, 428 px przy 1280),
+a `.adv-report-actions .adv-report-anon input { flex: none }` nie pozwalało mu się skurczyć. Opis checkboxa (węzeł tekstowy,
+dlatego niewidoczny dla skanu elementów) lądował za prawą krawędzią karty — do 429 px przy oknie 390 i 1311 px przy 1280.
+Na ekranie widać było sam checkbox pośrodku pustego pola, bez opisu.
+
+**Co jest.** Ta sama reguła dostała `width: auto` — checkbox ma swój rozmiar (13 px), a opis stoi obok niego w karcie.
+Styl w arkuszu, jako klasa istniejącej reguły: bez `style=`, bez `!important`, bez `.liquid-ios26`, bez nowego progu `@media`.
+Tabela odcinków bez zmian (już przewija się we własnym kontenerze).
+
+**Wpływ kliniczny.** Brak: wyniki, treść tabel, raport i jego anonimizacja bez zmian. Zmienia się tylko wygląd — opis
+checkboxa anonimizacji jest widoczny.
+
+**Przypadki (`tests/e2e/zaawansowane-wzrostowe-uklad-mobile.spec.mjs`, dane fikcyjne).** Dziewczynka 10 l., 135 cm, 30 kg,
+pomiary historyczne 4/5/6 lat (101,5/107,9/113,8 cm, 15,8/17,6/19,9 kg), karta otwarta, tabela odcinków rozwinięta:
+przy 390×844 (telefon) i 1280×900 (desktop) `scrollWidth ≤ clientWidth`, opis anonimizacji w granicach karty, checkbox
+węższy niż 40 px, `.vtap-tb` z `overflow-x: auto`. Na bazie test pada: 444 > 390 (telefon), 1311 > 1280 (desktop).
+
+**Walidacja.** `npm run css:dowod -- --baza origin/audyt` na `index.html` (4 tryby wyglądu × desktop i telefon): w każdym
+przebiegu różni się dokładnie jeden element — `input#advReportAnon: width: 100% → auto`, zero różnic geometrii; na
+`docpro.html` i `kalkulator-klirens.html` (strony z `vilda_advanced_growth.js`) 0 różnic. `npm test` zielony. Pełny zestaw
+e2e (4 workery): 848 zaliczonych, 1 błąd — `pwa.spec` „strona główna offline” przekroczył 60 s przy obciążeniu (jak w
+ratach wyżej); osobno `pwa.spec` i `pwa-strony-offline.spec` 9/9 w trzech powtórzeniach. Po przeniesieniu na `audyt`
+0f1e0a7 (z P-HISTORIA-ZWIJANA): `npm test` zielony, pięć plików e2e service workera 8/8, dowód stylów bez zmian (jeden
+element). Test `historia-pomiarow-zwijanie.spec` „…w payloadzie synchronizacji” (z P-HISTORIA-ZWIJANA) jest niestabilny
+także na czystym 0f1e0a7 (1 z 3 przebiegów, pojedynczy worker): karta zaawansowana bywa zamknięta, gdy test klika
+„Dodaj kolejny pomiar” — do osobnej naprawy.
+
+**Wersje.** `style.css` 84 → 85 na 22 stronach; `/style.css?v=85` dopisany do `CORE_SHELL_URLS` obok historii (append-only);
+`SW_VERSION` 1.1.109 → 1.1.110 (+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.109 to P-HISTORIA-ZWIJANA, #479);
+`tests/fixtures/wersje-zasobow.json` odświeżony.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
