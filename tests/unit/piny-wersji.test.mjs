@@ -141,3 +141,26 @@ describe('Zasoby poza wstępnym pobraniem service workera', () => {
     expect(poza.length, 'lista skurczyła się — zaktualizuj ZNANE').toBe(ZNANE.length);
   });
 });
+
+// Rata 4b bis / recenzja #462 (2026-09-29): skrypty też dokładają zasoby z `?v=` — `vilda_chrome.js` i
+// `vilda_session_bridge.js` wstrzykiwały `vilda_auth_ui.css?v=17`, `vilda_vault.js?v=11`, `vilda_auth_ui.js?v=53`…
+// na 14 stronach bez własnych linków, podczas gdy strony linkowały 75, 187, 465. Pod kontrolą service workera klucz
+// historyczny trzyma bieżącą treść (precache pobiera go na nowo przy każdej wersji SW), ale bez SW o świeżości decyduje
+// pamięć HTTP przeglądarki. Ten test pilnuje, by adres wstrzykiwany z JS miał tę samą wersję, którą linkują strony.
+describe('Adresy wstrzykiwane z JS mają wersję ze stron', () => {
+  const JS = fs.readdirSync(korzen).filter((f) => f.endsWith('.js') && !f.startsWith('service-worker')).sort();
+  it('każdy token plik?v=N w skrypcie zgadza się z wersją tego pliku na stronach', () => {
+    const naStronach = new Map();
+    for (const { plik, wersja } of tokenyStron()) naStronach.set(plik, wersja);
+    const rozjazdy = [];
+    for (const skrypt of JS) {
+      for (const m of czytaj(skrypt).matchAll(WZORZEC)) {
+        const plik = m[2].replace(/^\//, '');
+        const wersja = Number(m[3]);
+        if (!naStronach.has(plik)) continue; // plik ładowany wyłącznie ze skryptu: skrypt jest źródłem wersji
+        if (naStronach.get(plik) !== wersja) rozjazdy.push(`${skrypt}: ${plik}?v=${wersja}, strony ładują ?v=${naStronach.get(plik)}`);
+      }
+    }
+    expect([...new Set(rozjazdy)], rozjazdy.join('\n')).toEqual([]);
+  });
+});
