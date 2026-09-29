@@ -73,7 +73,8 @@ Po zmianie zasobu ładowanego przez stronę:
 - sprawdź wszystkie odwołania `?v=`;
 - przeanalizuj wpływ na `SW_VERSION` i listę cache;
 - nie usuwaj historycznych, wersjonowanych adresów z cache bez planu migracji;
-- uruchom test instalacji, aktualizacji i pracy offline;
+- zasób ładowany przez stronę z precache (albo doładowywany z pliku JS) dopisz do tablic SW pod dokładnie tym adresem (z tym samym `?v=`), którego używa strona — pilnuje tego `tests/unit/sw-precache-stron.test.mjs` (P-SW-DOCPRO);
+- uruchom test instalacji, aktualizacji i pracy offline; brak sieci w teście przeglądarkowym rób zatrzymaniem serwera (wzór: `tests/e2e/pwa-strony-offline.spec.mjs`), bo `context.setOffline(true)` nie odcinał niezawodnie sieci service workera (zmierzone w P-SW-DOCPRO na Chromium 141 z Playwright 1.61.1);
 - sprawdź widok mobilny bez poziomego przewijania.
 
 Jeżeli dostępny jest czytelny plik źródłowy i generowany artefakt, zmieniaj źródło i odtwórz artefakt kontrolowanym procesem. Nie poprawiaj tylko zminifikowanej kopii.

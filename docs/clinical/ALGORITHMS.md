@@ -2190,7 +2190,7 @@ Ten sam plik pod dwoma kluczami cache. Nie jest to awaria — service worker od�
 
 **Sprawdzone na sobie.** Przy najbliższym wydaniu podbiłem `?v=` celowo tylko w `index.html`. Test zapalił się na czerwono i **nazwał obie pominięte strony** — `docpro.html` i `kalkulator-klirens.html`.
 
-**Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła.
+**Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła. *Aktualizacja (P-SW-DOCPRO, SW 1.1.97, 2026-09-28):* decyzją właściciela sześć pierwszych dopisano do precache (bez nich DocPro nie startował offline), `lab_clinical_panels.js` wrócił wcześniej w P-SLOWA-MPH rata 3; na liście został wyłącznie `lab_pin_result.js`, z powodem opisanym we wpisie P-SW-DOCPRO.
 
 ### P-ZAPIS-OBIETNICA — `saveUserData()` pozwala poczekać na zapis (SW 1.0.936, 2026-09-14, zlecenie właściciela)
 
@@ -5828,6 +5828,96 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
+
+## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.97, 2026-09-28)
+
+**Zgłoszenie właściciela (2026-09-28).** `docpro.html` stoi w `OPTIONAL_DOCUMENTS`, ale DocPro nie startował offline. W prawdziwym
+Chromium (produkcyjny SW zarejestrowany przez `ios26-ui.js`, instalacja zakończona, potem `context.setOffline(true)` i przeładowanie
+`/docpro.html`) `window.VildaVault` zostawał `undefined`, wiele skryptów kończyło się `net::ERR_FAILED`, a potem powtarzał się błąd
+strony `OLAF_DATA_MIN_AGE is not defined`. Statyczne porównanie `docpro.html` z tablicami SW znalazło pięć brakujących adresów,
+ale offline padały też adresy, które w tablicy SĄ (np. `vilda_vault.js?v=187`, `vilda_auth_ui.js?v=465`).
+
+**Co zmierzono (Chromium 141 z Playwright 1.61.1, `tests/support/static-server.mjs`, pełny `service-worker-kalorii.js`).** Dwie
+niezależne przyczyny, obie na `audyt` sprzed zmiany. To nie była kaskada ani niezgodność klucza cache — brakujących wpisów nie było
+w pamięci powłoki.
+1. **Brakujące wpisy.** Strony z `OPTIONAL_DOCUMENTS` ładowały zasoby bez wstępnego pobrania: `vilda_sync.js?v=32`,
+   `vilda_sync_integration.js?v=45`, `vilda_data_safety_explainer.js?v=5`, `vilda_obesity_banner.css?v=6` (DocPro, strona główna,
+   Klirens, Ustawienia, Notatki, Terminarz, Subskrypcja, `app.html` — w różnych zestawach), `vilda_session_bridge.js?v=3` (wszystkie
+   strony), `ustawienia.css?v=13` (Ustawienia) i `edu-video-ui.css?v=20261001v4` / `?v=20261001v7` (pięć stron instrukcji wideo; tego
+   strażnik `piny-wersji` nie widział, bo wartość `?v=` nie jest liczbą). Ratował je tylko cache czasu działania — pod warunkiem, że
+   strona była wcześniej otwarta online już pod kontrolą SW i że zapis w runtime się zmieścił. Strona otwarta pierwszy raz dopiero
+   offline (np. DocPro w powłoce `app.html`) startowała bez nich.
+2. **Wyczerpany limit pamięci źródła.** Tablice precache to 2474 adresy (wymagany rdzeń 1452, dokumenty 20, zasoby opcjonalne 1003),
+   razem 473 MB na dysku — hosting ignoruje `?v=`, więc każdy historyczny adres to pełna kopia bieżącego pliku (sam `vilda_auth_ui.js`:
+   387 wersji, 233 MB). W Chromium precache zajmuje **1,20 GB** (profil trwały; Chromium dokłada pamięć podręczną kodu skryptów).
+   Limit źródła w kontekście incognito jest w Chromium losowany — zmierzone 0,91 i 1,12 GB na maszynie z 16 GB RAM. Gdy limit się
+   kończy, `cache.put` jest odrzucany, a błąd wpisu opcjonalnego połykany. Nowe wersje dopisuje się zwykle na końcu tablic, więc
+   ginęły **wersje bieżące**: przy 1,12 GB nie weszło 90 z ostatnich 92 wpisów tablicy (od `vilda_auth_ui.js?v=436` do końca), w tym `app.js?v=228`
+   (stąd `OLAF_DATA_MIN_AGE is not defined`), `vilda_auth_ui.js?v=465` i `vilda_advanced_growth.js?v=72`; przy niższym limicie także
+   `vilda_vault.js?v=187` (stąd `VildaVault` = `undefined`).
+
+DocPro offline przy limicie ustalonym przez CDP (`Storage.overrideQuotaForOrigin`):
+
+| limit | SW 1.1.93 (przed zmianą) | SW z tą zmianą |
+|---|---|---|
+| 0,85 GB | instalacja przerwana — wymagany rdzeń (ok. 0,88 GB w Chromium) się nie mieści | tak samo |
+| 0,92 GB | SW aktywny, brak `app.js?v=228`, `vilda_vault.js?v=187` i pozostałych wersji bieżących | komplet wersji bieżących |
+| 1,0 GB | `VildaVault` = `undefined`, 85 nieudanych żądań, `OLAF_DATA_MIN_AGE is not defined` | sejf zainicjowany, 0 nieudanych żądań, 0 błędów strony |
+| 20 GB, strona otwarta pierwszy raz offline | braki z punktu 1 na każdej stronie, która je ładuje | 0 nieudanych żądań (poza wyjątkami niżej) |
+
+**Naprawa (niekliniczna: żaden wzór, próg, jednostka ani dane; zmienia się wyłącznie to, co service worker wstępnie pobiera, i
+kolejność pobierania).**
+- Jedenaście adresów dopisanych na końcu `OPTIONAL_ASSETS` (append-only): sześć z punktu 1, dwa `edu-video-ui.css`
+  i trzy klucze, które P-STYLE rata 4b podbiła na stronach bez dopisania do precache (`ustawienia.css?v=14`,
+  `edu-video-ui.css?v=20261002v4`/`v7` — wyłapał je strażnik tej raty po scaleniu `audyt`). Ścieżki
+  `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_session_bridge.js`, `vilda_data_safety_explainer.js`,
+  `vilda_obesity_banner.css` i `ustawienia.css` przechodzą przez to z trasy runtime (TTL 30 dni, limit 96 wpisów) na trasę powłoki;
+  obie trasy traktują adres z `?v=` jako niezmienny (P-SW rata 1), więc strategia odpowiedzi się nie zmienia.
+- `orderOptionalPrecacheUrls` ustala kolejność opcjonalnej części instalacji: najpierw dokumenty, potem wpisy bieżące (adres bez
+  `?v=`, z nieliczbowym `?v=` albo z najwyższym `?v=` danego pliku we wszystkich tablicach), dopiero potem historia, w kolejności
+  tablicy. Żaden adres nie znika; adres obecny już w rdzeniu nie jest pobierany drugi raz (dotąd `/sga_intergrowth_data.js` szedł
+  dwa razy). Wymagany rdzeń idzie pierwszy i w całości, jak dotąd. Przy wyczerpanym limicie giną teraz wpisy historyczne, a nie
+  bieżące: część bieżąca to 20 dokumentów i 173 wpisy (razem 11,1 MB na dysku), historia opcjonalna — 837 wpisów (117 MB).
+  Zgłoszenie dotyczyło brakujących wpisów; nowa kolejność instalacji jest propozycją tej raty i czeka na akceptację właściciela.
+- `SW_VERSION` 1.1.96 → **1.1.97** (z pinem w `tests/unit/klirens-ui-model.test.mjs`; 1.1.94–1.1.96 zajęły równolegle P-VAR-TOAST,
+  P-DIETA-STAB rata 1 i P-STYLE rata 4b);
+  pole `optionalPrecacheOrder` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
+
+**Świadomie poza zakresem.** `lab_pin_result.js?v=4` (Przelicznik jednostek): adres `/lab_pin_result.js` stoi
+w `OPTIONAL_DOCUMENTS`, więc precache zapisuje go pod kluczem dokumentu bez `?v=`, a strona prosi o `?v=4` — samo dopisanie adresu
+nic nie da, naprawa wymaga zmiany kluczy dokumentów w SW (osobna decyzja). Plakaty `/posters/*.png` są w tablicy, ale plików nie
+ma w repozytorium (404 także online). Filmy `/videos/` SW omija z założenia. `edu-video-ui.css` jest ładowany w dwóch wersjach
+(`v4` na czterech stronach, `v7` na jednej) z nieliczbowym `?v=`, którego nie widzą strażniki `piny-wersji` i `wersje-zasobow`.
+Strony prawne (`polityka-prywatnosci.html`, `regulamin.html`) nie są w precache. Zasoby obcego pochodzenia (np. Google Fonts) nie są
+częścią precache. Znany wcześniej mechanizm: dokument HTML odświeża się w tle, więc po wdrożeniu stary SW może trzymać nowy HTML,
+którego nowe adresy `?v=` wejdą do pamięci dopiero przy pierwszym użyciu online albo z instalacją nowego SW.
+
+**Co zostaje decyzją właściciela.** Wymagany rdzeń to w większości historia: 1278 z 1452 adresów (88 %), 333 z 346 MB na dysku
+(96 %), ok. 0,88 GB w Chromium. Tam, gdzie limit źródła jest niski (incognito, profil gościa, mało wolnego miejsca), SW nie instaluje
+się wcale. Przy aktualizacji stara i nowa pamięć powłoki istnieją jednocześnie (ok. 2,4 GB w Chromium), więc u użytkownika, któremu
+stara pamięć zajęła cały limit, nowa wersja SW — także ta — może się nie zainstalować i poprawka do niego nie dotrze. Każda
+aktualizacja pobiera przy tym całą tablicę od nowa (`cache: 'reload'`). Zmniejszenie wymaga udokumentowanej migracji historycznych adresów (AGENTS.md § 6) albo zmiany sposobu
+instalacji (np. kopiowania niezmiennych wpisów `?v=` z poprzedniej pamięci powłoki) — to nie jest sprzątanie i nie wchodzi w tę ratę.
+
+**Testy.**
+- `tests/unit/sw-precache-stron.test.mjs` (8, nowy) wykonuje prawdziwy plik SW z atrapą Cache Storage z limitem bajtów i atrapą
+  sieci oddającą rozmiary plików z dysku. Po instalacji każdy zasób każdej strony z precache — z `?v=` (także nieliczbowym) i bez —
+  jest w pamięci pod kluczem, o który strona poprosi (`readFromShellCache`); to samo dla adresów `?v=` doładowywanych z plików JS
+  (np. leniwe moduły sejfu z `vilda_chrome.js`); każdy wyjątek jest nadal prawdziwy; kolejność na przykładzie syntetycznym; żaden adres
+  nie znika z instalacji; odwołanie strony albo doładowania z pliku JS stoi w rdzeniu albo przed całą historią; limit mieszczący rdzeń
+  i wersje bieżące wystarcza, by każda strona miała komplet. Sprawdzony mutacjami: przywrócenie starej pętli instalacji, kolejność
+  tablicy w funkcji porządkującej, usunięcie jednego dopisanego adresu, usunięcie z rdzenia adresu doładowywanego z JS i plik SW
+  z `audyt` — każda zapala go na czerwono.
+- `tests/e2e/pwa-strony-offline.spec.mjs` (nowy, ok. 1,5–2 min): prawdziwy SW w profilu trwałym (limit liczony od dysku; w incognito
+  Chromium go losuje), rejestracja z pustej strony; po instalacji serwer testowy jest **zatrzymywany**, a sonda potwierdza brak sieci
+  przed obchodem i po nim. Potem strony z `OPTIONAL_DOCUMENTS` i dokument główny (lista czytana z pliku SW, dziś 20) otwierają się
+  pierwszy raz offline; test przechodzi dalej, gdy strona przestaje prosić o zasoby. DocPro musi mieć zainicjowany sejf; zero żądań
+  własnego pochodzenia zakończonych błędem (poza trzema nazwanymi wyjątkami; żądania przerwane nawigacją, `net::ERR_ABORTED`, się nie
+  liczą) i zero błędów strony. Na SW z `audyt` test pada i wymienia braki na wszystkich stronach. `context.setOffline(true)` **nie
+  nadaje się** do tego pomiaru: po nawigacji fetch z SW znów dochodził do serwera (zmierzone sondą na Chromium 141 z Playwright
+  1.61.1; CI używa Chromium 149 z Playwrighta). Test nie ocenia zasobów obcego pochodzenia.
+- `tests/unit/piny-wersji.test.mjs`: lista `ZNANE` skurczyła się do `lab_pin_result.js`.
+- `tests/support/static-server.mjs` wypisuje rzeczywisty port (przy `PORT=0` wybiera go system).
 
 ## Dziecko z otyłością: PAL 1,4 także w wieku 4–9 lat, sufit tempa 1 / 1,5 / 2 kg/mies. przy ≥ 99. centylu w wieku 6–11 lat, redukcja domyślna przy otyłości 6–11 lat, stabilizacja jako górna granica z kontrolą po 12 tygodniach (P-DIETA-STAB rata 1, SW 1.1.95, 2026-09-28)
 
