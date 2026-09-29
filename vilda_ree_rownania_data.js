@@ -1,7 +1,8 @@
 /* Vilda — równania spoczynkowego wydatku energii (REE) jako DANE.
    P-DIETA rata V (decyzja właściciela 2026-09-23): u dziecka 10–18 lat z OTYŁOŚCIĄ (BMI ≥ 97. centyla)
    REE liczy się równaniem Molnára 1995 z podziałem na płeć (1A chłopcy, 1B dziewczęta) zamiast
-   Henry'ego/Oxford × 0,9. Przy nadwadze i poniżej 10 lat zostaje Henry 2005 bez korekty.
+   Henry'ego/Oxford × 0,9. Poniżej 10 lat zostaje Henry 2005 bez korekty.
+   P-DIETA-STAB rata 3 (decyzja właściciela 2026-09-29): Molnár także przy NADWADZE 10–18 lat (BMI ≥ 85. centyla).
    P-DIETA rata H1 (2026-09-24): współczynniki Henry'ego 2005 też są tutaj (HENRY_2005.wspolczynnikiWgEtapu) i silnik
    (energyHenryREEkcal) liczy z nich; jego kopia przejściowa działa tylko wtedy, gdy tego pliku (albo tej tabeli) brak.
    Reguła „normy zawsze jako dane” (docs/ARCHITECTURE.md, „Kierunek: wielopopulacyjność”): współczynniki,
@@ -15,7 +16,7 @@
     MOLNAR_1995: {
       id: 'MOLNAR_1995',
       nazwa: 'Molnár 1995',
-      krotko: 'REE wg Molnára 1995, zwalidowane u nastolatków z otyłością',
+      krotko: 'REE wg Molnára 1995, zwalidowane u nastolatków z nadwagą i otyłością',
       wzor: 'REE wg Molnára 1995',
       cytowanie: 'Molnár D, Jeges S, Erhardt E, Schutz Y. Measured and predicted resting metabolic rate in obese and nonobese adolescents. J Pediatr 1995;127(4):571–7.',
       doi: '10.1016/s0022-3476(95)70114-1',
@@ -29,8 +30,8 @@
       zmienne: { masa: 'kg', wzrost: 'cm', wiek: 'lata (dziesiętnie)' },
       wiekOdLat: 10,
       wiekDoLat: 18,
-      wskazanie: 'otylosc',
-      ograniczenia: 'Opracowane dla 10–16 lat, zwalidowane w 12–18 lat; populacja europejska (Węgry, Holandia). Poniżej 10 lat i przy samej nadwadze nie stosowane.',
+      wskazanie: 'nadmiar',
+      ograniczenia: 'Opracowane dla 10–16 lat, zwalidowane w 12–18 lat; populacja europejska (Węgry, Holandia). Poniżej 10 lat nie stosowane. P-DIETA-STAB rata 3 (2026-09-29): stosowane przy nadwadze i otyłości (dotąd tylko przy otyłości) — walidacja Hofsteenge 2010 objęła nastolatków z nadwagą lub otyłością.',
       wspolczynniki: {
         M: { masaKg: 50.9, wzrostCm: 25.3, wiekLat: -50.3, stala: 26.9 },
         F: { masaKg: 51.2, wzrostCm: 24.5, wiekLat: -207.5, stala: 1629.8 }
@@ -112,7 +113,7 @@
   }
   zamroz(ZRODLA);
   w.VildaReeRownania = Object.freeze({
-    wersja: '1.1.0',
+    wersja: '1.2.0',
     kjNaKcal: 4.184,
     zrodla: ZRODLA,
     lista: function () { return Object.keys(ZRODLA); }

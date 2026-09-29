@@ -456,8 +456,8 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 37,
-  "sha256": "2dc56030272247871bcb2312b48d24713c82493fa8dbc63c943c947b1c0c9e37"
+  "v": 38,
+  "sha256": "984ea4cba9d5346dce9da28c113f205977bedbce305b16f2050a42445839dfe5"
  },
  "vilda_diet_recommendations.js": {
   "v": 64,
@@ -700,8 +700,8 @@
   "sha256": "a26618beb0e56e10210b395af98b15f53d473a5d0e1934181e91d3f5927b6362"
  },
  "vilda_ree_rownania_data.js": {
-  "v": 2,
-  "sha256": "96ab0d7986136205364410ebc8a0b3a84314ae8eed4e4ed421c3f4564529f1cf"
+  "v": 3,
+  "sha256": "fb08b8aa168a2faa7b99b86e261ce8c96c0a4e65947fced039d4ec1d68392181"
  },
  "vilda_reminders_collapse.js": {
   "v": 2,

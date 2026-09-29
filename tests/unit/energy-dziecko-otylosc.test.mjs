@@ -104,7 +104,7 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
     expect(win.energyDefaultPlanPal(30, 0)).toBe(1.6);
   });
   it('tabela jako dane (ENERGY_PAL_DOMYSLNY) — normy nie są założeniem wbudowanym w silnik', () => {
-    expect(win.ENERGY_PAL_DOMYSLNY).toEqual({ child_1_3: 1.4, child_4_9: 1.6, child_10_18: 1.6, adult: 1.6, otylosc: { child_4_9: 1.4, child_10_18: 1.4, adult: 1.4 } });
+    expect(win.ENERGY_PAL_DOMYSLNY).toEqual({ child_1_3: 1.4, child_4_9: 1.6, child_10_18: 1.6, adult: 1.6, otylosc: { child_4_9: 1.4, child_10_18: 1.4, adult: 1.4 }, nadwaga: { child_10_18: 1.4 } });
     expect(Object.isFrozen(win.ENERGY_PAL_DOMYSLNY)).toBe(true);
   });
   it('dorosły: otyłość (BMI ≥ 30) → 1,4; nadwaga, norma i NIEDOWAGA → 1,6 (niedowaga nigdy nie obniża PAL)', () => {
@@ -138,7 +138,8 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
     expect(st.reeAdjustedKcal).toBe(Math.round(mol));
     expect(st.maintenanceKcal).toBe(Math.round(mol * 1.4));
   });
-  it('ENERGY-CHILD-MID3: nastolatek z otyłością (≥ 97c) → 1,4; z samą nadwagą (85–97c) → 1,6', () => {
+  // P-DIETA-STAB rata 3 (decyzja właściciela 2026-09-29): nadwaga 10–18 lat też 1,4 (dotąd 1,6 z MID3)
+  it('ENERGY-CHILD-MID3 + P-DIETA-STAB rata 3: nastolatek z otyłością (≥ 97c) i z samą nadwagą (85–97c) → 1,4', () => {
     // chłopiec 14 l, 165 cm: 85 kg to otyłość wg OLAF, 66 kg to nadwaga bez otyłości
     const otyly = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165 });
     const nadwaga = win.energyChildBmiClass({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165 });
@@ -147,16 +148,18 @@ describe('Domyślny PAL planu (P-PAL rata 1): jedna tabela wg wieku 1,4 / 1,6 / 
     expect(nadwaga.obese).toBe(false);
     // klasa BMI podana wprost
     expect(win.energyDefaultPlanPal(14, 0, otyly)).toBe(1.4);
-    expect(win.energyDefaultPlanPal(14, 0, nadwaga)).toBe(1.6);
+    expect(win.energyDefaultPlanPal(14, 0, nadwaga)).toBe(1.4);
     // albo sama antropometria — moduł liczy klasę sam (ścieżka formularza)
     expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 85, heightCm: 165 })).toBe(1.4);
-    expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 66, heightCm: 165 })).toBe(1.6);
+    expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 66, heightCm: 165 })).toBe(1.4);
+    // masa prawidłowa 10–18 lat zostaje 1,6
+    expect(win.energyDefaultPlanPal(14, 0, { sex: 'M', weightKg: 55, heightCm: 165 })).toBe(1.6);
     // P-DIETA-STAB rata 1: poniżej 10 lat otyłość także obniża do 1,4 (dotąd 1,6 z P-PAL rata 2)
     expect(win.energyDefaultPlanPal(8, 0, { sex: 'M', weightKg: 45, heightCm: 130 })).toBe(1.4);
   });
   it('ENERGY-CHILD-MID3: silnik bez jawnego PAL bierze wartość zależną od klasy BMI', () => {
     expect(plan({ sex: 'M', ageYears: 14, weightKg: 85, heightCm: 165, palInput: null }).palUsed).toBe(1.4);
-    expect(plan({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165, palInput: null }).palUsed).toBe(1.6);
+    expect(plan({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165, palInput: null }).palUsed).toBe(1.4); // P-DIETA-STAB rata 3
   });
   it('etykieta opcji 1,4 w selekcie planu 10–18 lat: „częsta przy otyłości", bez „poza Normami 2024"', () => {
     const el = { value: '', innerHTML: '' };
