@@ -5834,7 +5834,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Zapisany PAL: wybór lekarza czy wartość domyślna (P-PAL-ZAPIS, SW 1.1.101, 2026-09-29)
+## Zapisany PAL: wybór lekarza czy wartość domyślna (P-PAL-ZAPIS, SW 1.1.102, 2026-09-29)
 
 **Zgłoszenie właściciela (2026-09-29, po scaleniu P-DIETA-STAB rata 3).** Chłopiec 13 l., 76 kg, 168 cm (nadwaga, OLAF) nadal
 miał w stabilizacji PAL 1,6. Wpisany ręcznie dostaje 1,4 i ≤ 2500 kcal, a wczytany z zapisu sprzed raty 3 — **1,6 i ≤ 2850 kcal**
@@ -5855,7 +5855,8 @@ były domyślne) są traktowane jako domyślne i przeliczane według aktualnej r
   tej funkcji, a wartość domyślną zapamiętują jako ostatnią domyślną, więc następne przeliczenie podmienia ją na aktualną.
 - Ryzyko przyjęte przez właściciela: świadomy wybór 1,4 lub 1,6 w zapisie sprzed poprawki zostanie przeliczony według reguły
   domyślnej (lekarz wybierze go ponownie; nowy zapis zachowa go ze znacznikiem).
-- SW 1.1.100 → 1.1.101, precache append-only, `?v=` na stronach i w smoke, fixture wersji.
+- SW 1.1.101 → 1.1.102 (1.1.101 zajęło równolegle P-PINY wstrzykiwane, #467), precache append-only, `?v=` na stronach i w smoke,
+  fixture wersji.
 
 **Przypadki `wejście → oczekiwany wynik` (fikcyjne; `tests/e2e/pal-zapis.spec.mjs`, `tests/unit/pal-zapis-wybrany.test.mjs`).**
 
