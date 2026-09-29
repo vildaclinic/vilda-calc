@@ -60,6 +60,8 @@ describe('plan wyciągnięcia', () => {
       '  <script defer src="x.js"></script>',
       '  <style>',
       '    .b{color:blue}',
+      '    .b:hover{',
+      '      color:navy}',
       '  </style>',
       '  <script>x()</script>',
       '  <style>.c{color:green}</style>',
@@ -79,7 +81,8 @@ describe('plan wyciągnięcia', () => {
       ['inline_moja_strona_03.css'],
     ]);
     expect(plan[0].pliki['inline_moja_strona_00.css']).toBe('.vilda-embedded #tzFab{display:none!important}\n');
-    expect(plan[1].pliki['inline_moja_strona_01.css']).toBe('.a{color:red}\n.b{color:blue}\n');
+    // treść bloku dosłownie (przycięte tylko brzegi): wcięcie kontynuacji wartości wielowierszowej jest częścią wartości w CSSOM
+    expect(plan[1].pliki['inline_moja_strona_01.css']).toBe('.a{color:red}\n.b{color:blue}\n    .b:hover{\n      color:navy}\n');
     expect(plan[3].pliki['inline_moja_strona_03.css']).toBe('.d{color:black}\n.e{color:white}\n');
     expect(zastosuj(html, plan)).toBe([
       '<html><head>',
