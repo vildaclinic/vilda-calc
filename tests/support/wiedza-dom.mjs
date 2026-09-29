@@ -72,17 +72,47 @@ export function zlozenieSkrajne(czesc) {
   return wynik;
 }
 
-/** Typy elementów, do których może pasować złożenie (null = dowolny; pusty zbiór = do żadnego) wg wiedzy o DOM. */
+/**
+ * Typy elementów, do których może pasować złożenie wg wiedzy o DOM: null = dowolny, pusty zbiór = do żadnego. Nazwa
+ * nierozpoznana przez skaner: gdy nie ma jej nigdzie w kodzie (`wiedza.tokeny`), nic do niej nie pasuje (reguła martwa);
+ * gdy jest w kodzie, lecz skaner nie ustalił jej typu (stała w JS, `classList.add(zmienna)`, atrybut w szablonie
+ * z wyrażeniem) albo da się ją skleić z tokenu-prefiksu/sufiksu z łącznikiem, nie zawęża — może być na dowolnym elemencie
+ * (rata 4b bis). Bez `tokeny` nazwa nierozpoznana nie zawęża.
+ */
+/**
+ * Predykat „nazwy nie ma w kodzie” dla zbioru tokenów kodu: nazwa jest nieobecna, gdy nie jest tokenem ANI nie da się jej
+ * skleić z tokenu-prefiksu kończącego się `-`/`_` (`'high-contrast-level-' + n`, `'cvs-' + stan`) ani z tokenu-sufiksu
+ * zaczynającego się `-`/`_` (`x + '-high'`). Sklejanie dwóch gołych tokenów bez łącznika pozostaje niewidoczne (ryzyko
+ * resztkowe, rata 4b bis). Wynik jest zapamiętywany per zbiór tokenów.
+ */
+const PAMIEC = new WeakMap();
+export function nieobecnosc(tokeny) {
+  if (PAMIEC.has(tokeny)) return PAMIEC.get(tokeny);
+  const prefiksy = [...tokeny].filter((x) => /[-_]$/.test(x));
+  const sufiksy = [...tokeny].filter((x) => /^[-_]/.test(x) && x.length > 1);
+  const wyniki = new Map();
+  const f = (n) => {
+    if (wyniki.has(n)) return wyniki.get(n);
+    const w = !tokeny.has(n) && !prefiksy.some((x) => n.length > x.length && n.startsWith(x)) && !sufiksy.some((x) => n.length > x.length && n.endsWith(x));
+    wyniki.set(n, w);
+    return w;
+  };
+  PAMIEC.set(tokeny, f);
+  return f;
+}
+
 export function mozliweTypy(z, wiedza) {
   let typy = z.typ ? new Set([z.typ]) : null;
-  const zawez = (wpis) => {
-    if (!wpis) { typy = new Set(); return; }
+  const nieobecna = wiedza && wiedza.tokeny ? nieobecnosc(wiedza.tokeny) : null;
+  const zawez = (wpis, nazwa) => {
+    // nazwa nierozpoznana: nieobecna w kodzie (nieobecnosc(tokeny)) → nic nie pasuje; obecna albo sklejalna → nie zawęża
+    if (!wpis) { if (nieobecna && nieobecna(nazwa)) typy = new Set(); return; }
     if (wpis.wolna) return;
     typy = typy ? new Set([...typy].filter((t) => wpis.tagi.has(t))) : new Set(wpis.tagi);
   };
   if (wiedza) {
-    for (const k of z.klasy) zawez(wiedza.klasy.get(k));
-    if (z.id) zawez(wiedza.idy.get(z.id));
+    for (const k of z.klasy) zawez(wiedza.klasy.get(k), k);
+    if (z.id) zawez(wiedza.idy.get(z.id), z.id);
   }
   return typy;
 }
@@ -228,6 +258,11 @@ export function wiedzaDom(czytaj = (p) => fs.readFileSync(path.join(korzen, p), 
       if (znane) { w.wolna = false; w.tagi = tagi; w.fakt = w.fakt || `podzbiór: ${sel.join(', ')}`; }
     }
   }
-  return { klasy, idy, slady, podzbiory };
+  // 4. tokeny kodu: każdy wyraz z HTML (bez bloków <style>) i z JS. Nazwy, której tu nie ma, nie ma w kodzie — mogłaby powstać
+  //    tylko przez sklejanie w JS (audyt takich miejsc: docs/ARCHITECTURE.md, rata 4b bis). Nazwa obecna w kodzie, lecz
+  //    nierozpoznana przez skaner (stała w JS, atrybut w szablonie z wyrażeniem), jest wolna.
+  const tokeny = new Set();
+  for (const { plik, tekst } of teksty) for (const m of (plik.endsWith('.html') ? tekst.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '') : tekst).matchAll(/[A-Za-z_-][\w-]*/g)) tokeny.add(m[0]);
+  return { klasy, idy, slady, podzbiory, tokeny };
 }
 
