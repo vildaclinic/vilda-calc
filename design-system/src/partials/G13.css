@@ -1,4 +1,4 @@
-/* G13 Ustawienia — źródło: style.css (.switch 1650-1674, .settings-grid/.setting-item 4553-4578, akordeony 3654-3678/7466-7499/2913-2934/365-372 (.current-summary-row), wysoki kontrast 5157-5234), ustawienia.css (5-35, 40-55, 56-159, 160-268, 389-481, 482-555, 625-715), vilda_auth_ui.css (124-149, 209-247; BackupCard składa się z AuthButton i AuthInput — kopie dosłowne), ios26-v2.css (85-93, 187-190; globalne szkło dla button/select, bo w aplikacji nadpisuje przyciski i select karty kopii) */
+/* G13 Ustawienia — źródło: style.css (.switch 1650-1674, .settings-grid/.setting-item 4553-4578, akordeony 3654-3678/7466-7499/2913-2934/365-372 (.current-summary-row), wysoki kontrast 5157-5234), ustawienia.css (5-35, 40-55, 56-159, 160-268, 389-481, 482-555, 625-715), vilda_auth_ui.css (124-149, 209-247; BackupCard składa się z AuthButton i AuthInput — kopie dosłowne), ios26-v2.css (85-93, 187-190; globalne szkło dla button/select, bo w aplikacji nadpisuje przyciski i select karty kopii), inline_index_00.css (nagłówek „Poprzednie pomiary”, P-HISTORIA-ZWIJANA) */
 
 /* ===== SettingItem — reguły bazowe (style.css, ładowany przed ustawienia.css) ===== */
 .switch{
@@ -761,6 +761,125 @@ select.vilda-auth-input{
   margin:0}
 .adv-growth-result-details-copy{
   color:inherit}
+/* ===== Accordion — nagłówek listy z licznikiem (P-HISTORIA-ZWIJANA): inline_index_00.css, karta „Zaawansowane obliczenia wzrostowe” na index.html ===== */
+#advHistoryHeading[hidden],
+.adv-history-toggle[hidden],
+.adv-history-toggle [hidden],
+.adv-history-bottom[hidden] {
+  display: none;
+}
+.adv-history-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0-65);
+  width: 100%;
+  min-height: 52px;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-0-65) var(--space-0-75) var(--space-0-65) var(--space-0-65);
+  text-align: left;
+  line-height: 1.3;
+  scroll-margin-top: calc(var(--chrome-strip-height, 64px) + 12px);
+}
+.adv-history-chevron {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: var(--border-hairline) solid #cfe2e5;
+  border-radius: var(--radius-pill);
+  background: #e6f4f5;
+  color: var(--primary);
+}
+.adv-history-chevron svg {
+  transition: transform .18s ease;
+}
+.adv-history-toggle[aria-expanded="true"] .adv-history-chevron svg {
+  transform: rotate(90deg);
+}
+.adv-history-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.adv-history-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6px) var(--space-8px);
+}
+.adv-history-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+.adv-history-count {
+  line-height: 1.3;
+}
+.adv-history-invalid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4px);
+  margin-top: 0;
+  padding: 2px var(--space-8px);
+  border-radius: var(--radius-pill);
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.adv-history-summary {
+  font-size: .8125rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+.adv-history-action {
+  flex: 0 0 auto;
+  padding-left: var(--space-4px);
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.adv-history-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-0-35);
+  width: auto;
+  min-height: 44px;
+  margin: var(--space-1) auto 0;
+  padding: var(--space-0-35) var(--space-1);
+  font-size: .875rem;
+  font-weight: 600;
+}
+.adv-history-bottom svg {
+  color: var(--primary);
+}
+#advMeasurements.adv-history-collapsed > .measure-row[data-adv-history="ukryty"] {
+  display: none;
+}
+#advMeasurements.adv-history-collapsed > .measure-row[data-adv-history="nowy"]::before {
+  content: "Nowy pomiar";
+  display: block;
+  width: fit-content;
+  margin: var(--space-0-85) auto 0;
+  padding: .15rem var(--space-0-6);
+  border: var(--border-hairline) solid #cfe2e5;
+  border-radius: var(--radius-pill);
+  background: #e6f4f5;
+  color: #0a6b73;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .adv-history-chevron svg {
+    transition: none;
+  }
+}
+
 
 /* ===== Płynne szkło (.liquid-ios26) — ios26-v2.css 85-93, 187-190: globalne reguły button/select, które w aplikacji spłaszczają przyciski AuthButton i select w karcie kopii ===== */
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{

@@ -113,7 +113,7 @@
      Wariant B (fioletowy) — zalogowany, brak PRO.
      Wariant E (turkus)    — niezalogowany.
      Klasy HTML: vilda-pro-active/inactive (bootstrap), vilda-logged-in (auth_ui). -->
-<link href="inline_index_00.css?v=1" rel="stylesheet">
+<link href="inline_index_00.css?v=2" rel="stylesheet">
 
 <!-- Auth-gate — chowa interfejs aplikacji do czasu rozstrzygnięcia logowania,
      żeby przed pojawieniem się ekranu logowania (oraz po wylogowaniu) na ułamek
@@ -128,7 +128,7 @@
 
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=26"></script>
+<script defer src="vilda_persistence_adapter.js?v=27"></script>
 <script defer src="vilda_session_bridge.js?v=5"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
@@ -202,6 +202,7 @@
 <script defer src="vilda_patient_narrative.js?v=20"></script>
 <script defer src="vilda_patient_narrative_ui.js?v=10"></script>
 <script defer src="vilda_advanced_growth.js?v=72"></script>
+<script defer src="vilda_adv_history_collapse.js?v=1"></script>
 <script defer src="vilda_growth_method_ledger.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation_model.js?v=3"></script>
 <script defer src="vilda_growth_prediction_validation.js?v=14"></script>
@@ -1405,8 +1406,25 @@
           <!-- Pole na komentarz; ukryte dopóki przełącznik nie jest zaznaczony -->
           <input type="text" id="advCurrentArrowComment" placeholder="Wpisz komentarz" style="display:none; margin-top:.35rem;">
         </div>
-        <p style="font-weight:600;margin-top:0.8rem;text-align:center;">Wprowadź poprzednie pomiary</p>
+        <!-- P-HISTORIA-ZWIJANA (decyzja właściciela 2026-09-29): gdy lista ma co najmniej jeden
+             pomiar, nagłówek zastępuje przycisk „Poprzednie pomiary” z licznikiem, który zwija
+             wiersze z danymi; stan per pacjent, synchronizowany (vilda_adv_history_collapse.js).
+             Przyciski stoją POZA #advMeasurements — kliknięcia w kontenerze uruchamiają autozapis. -->
+        <p id="advHistoryHeading" style="font-weight:600;margin-top:0.8rem;text-align:center;">Wprowadź poprzednie pomiary</p>
+        <button type="button" id="advHistoryToggle" class="adv-history-toggle" aria-expanded="true" aria-controls="advMeasurements" hidden>
+          <span class="adv-history-chevron" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m9 18 6-6-6-6"/></svg></span>
+          <span class="adv-history-main">
+            <span class="adv-history-line">
+              <span class="adv-history-title">Poprzednie pomiary</span>
+              <span id="advHistoryCount" class="porownanie-chip adv-history-count"></span>
+              <span id="advHistoryInvalid" class="pt-pill status-improve adv-history-invalid" hidden><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span id="advHistoryInvalidText"></span></span>
+            </span>
+            <span id="advHistorySummary" class="adv-history-summary" hidden></span>
+          </span>
+          <span id="advHistoryAction" class="adv-history-action">Zwiń</span>
+        </button>
         <div id="advMeasurements"></div>
+        <button type="button" id="advHistoryCollapseBottom" class="adv-history-bottom" aria-controls="advMeasurements" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m18 15-6-6-6 6"/></svg>Zwiń poprzednie pomiary</button>
         <div id="advAddMeasurementDivider" class="adv-add-divider" aria-hidden="true"></div>
         <button type="button" id="advAddMeasurementBtn" style="margin-top:0.8rem;display:block;margin-left:auto;margin-right:auto;">Dodaj kolejny pomiar</button>
         <div id="advResults" style="margin-top:1rem;"></div>

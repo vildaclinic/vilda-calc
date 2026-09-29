@@ -5834,6 +5834,86 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Zwijana lista „Poprzednie pomiary” z licznikiem, stan per pacjent (P-HISTORIA-ZWIJANA, SW 1.1.109, 2026-09-29)
+
+**Decyzja właściciela (2026-09-29).** W karcie „Zaawansowane obliczenia wzrostowe” lista „Wprowadź poprzednie pomiary”
+ma się zwijać; w wierszu, który ją rozwija, ma być licznik wpisów historycznych, a stan zwinięcia ma być zapamiętany per
+pacjent. Makieta desktopowa i mobilna zaakceptowana z jedną poprawką (etykieta „Nowy pomiar” wyśrodkowana, bez dopisku).
+Rozstrzygnięcia: synchronizacja na wszystkie urządzenia, pacjent bez wpisu — lista rozwinięta (jak dotąd), podsumowanie
+pod nagłówkiem zostaje, zakres — tylko karta na stronie głównej, tytuł „Poprzednie pomiary”.
+
+**Co było.** Nagłówek był zwykłym akapitem, a każdy wiersz pomiaru ma dwa rzędy pól. Zmierzone na syntetycznej pacjentce
+z sześcioma pomiarami: lista zajmowała ok. 940 px na desktopie i ok. 1220 px na telefonie (390 px).
+
+**Co jest.**
+- Gdy lista ma co najmniej jeden pomiar (wiersz z wiekiem i co najmniej jedną wartością), akapit zastępuje przycisk
+  `#advHistoryToggle` (`aria-expanded`, `aria-controls="advMeasurements"`): strzałka, „Poprzednie pomiary”, licznik
+  („1 pomiar”, „2–4 pomiary”, „5+ pomiarów”), akcja „Rozwiń”/„Zwiń”. W stanie zwiniętym pod tytułem jedna linia
+  podsumowania, np. „wiek 4 l. – 9 l. · najnowszy: 129,1 cm · 27,0 kg” — wartości przepisane z pól, bez przeliczeń.
+  Bez pomiarów zostaje dawny nagłówek „Wprowadź poprzednie pomiary”.
+- Zwinięcie oznacza wiersze z danymi atrybutem `data-adv-history="ukryty"`, a CSS chowa je tylko przy klasie kontenera
+  `adv-history-collapsed`. Wiersz dopisany przy zwiniętej liście dostaje `data-adv-history="nowy"`, zostaje widoczny
+  z etykietą „Nowy pomiar” (pseudoelement) do następnego zwinięcia — kolejną wizytę dopisuje się bez rozwijania historii.
+- Ukryty wiersz z polem poza zakresem ustalonym atrybutami `min`/`max` samego pola (albo z `aria-invalid`) daje w nagłówku
+  znacznik „Do poprawy: N”. Moduł nie wprowadza progów; krok pola (`step`) nie jest traktowany jako błąd.
+- Od trzech pomiarów pod rozwiniętą listą stoi drugi przycisk „Zwiń poprzednie pomiary”; po zwinięciu z dołu fokus
+  wraca na nagłówek, a strona przewija się do niego, gdy uciekł nad pasek chrome.
+- Kod: nowy, czytelny moduł `vilda_adv_history_collapse.js` (wzorzec `vilda_reminders_collapse.js`), ładowany po
+  `vilda_advanced_growth.js`; zminifikowany silnik karty jest nietknięty. Style w `inline_index_00.css`, jako reguły
+  bazowe, bez `.liquid-ios26` i `!important`; wygląd przycisku daje skórka szkła.
+
+**Przechowywanie.** Preferencja konta `advHistoryCollapsed` zarejestrowana w `vilda_persistence_adapter.js` (1.7.1) jako
+`scope:"ui", kind:"preference", storage:"cloud-synced"` — ten sam tor co `cardCollapseState` i zwijanie przypomnień
+(`onPreferenceWrite` → `userPreferences` sejfu → zaszyfrowany payload synchronizacji; przy scalaniu wygrywa nowszy zapis
+całego klucza). Wartość to mapa `{ <UUID pacjenta>: 1 }`: tylko pacjenci ze zwiniętą listą (rozwinięta jest domyślna, więc
+nie zostawia wpisu), bez dat, najwyżej 300 wpisów (najdawniej przełączone wypadają), wpis znika po usunięciu pacjenta
+z sejfu. Identyfikator to losowy UUID z sejfu, nie nazwisko. Pacjent niezapisany: stan w pamięci strony; pierwszy zapis
+(`vilda:patient-loaded`, `source:"save"`) przenosi go pod nadany identyfikator. Zapis stanu idzie z `force:true` (okno
+blokady po wczytaniu pacjenta wstrzymuje zapis danych, a to jest preferencja widoku). Gdy wskaźnik zapisu mówi „nowy
+pacjent”, stan nie trafia pod identyfikator poprzedniej osoby, tylko do pamięci strony.
+
+**Kolejność zdarzeń (zmierzona w kodzie).** Przy wyborze pacjenta z sejfu wiersze odbudowuje `applyLoadedData`, potem
+przychodzi `vilda:patient-loaded` (z identyfikatorem), a `vilda:json-imported` jeszcze później (`setTimeout 0`). Moduł
+nakłada stan na `patient-loaded` i ignoruje `json-imported` w oknie 1,5 s po nim (tak robi wskaźnik zapisu); poza tym
+oknem `json-imported` oznacza import pliku, czyli pacjenta bez identyfikatora. Wiersze dokładane później (import GH,
+synchronizacja z kartą spożycia) łapie `MutationObserver` na `#advMeasurements`.
+
+**Czego zmiana nie robi.** Nie usuwa, nie przestawia i nie zmienia wierszy ani wartości: `collectAdvancedMeasurements()`
+i obliczenia czytają wszystkie wiersze niezależnie od widoczności. Nie zapisuje niczego w rekordzie pacjenta ani w sesji
+głównej; przyciski stoją POZA `#advMeasurements`, bo kliknięcia w kontenerze uruchamiają autozapis
+(`vilda_persist_runtime.js`), a wskaźnik zapisu reaguje wyłącznie na zmianę danych. DocPro (ta sama karta, te same `id`)
+i karta „Obliczenia wzrostowe” — bez zmian, zgodnie z decyzją o zakresie.
+
+**Wpływ kliniczny.** Brak. Zmienia się tylko widoczność wierszy formularza; wyniki, prognozy, siatki, raporty i zapis są
+liczone z tych samych danych co dotąd.
+
+**Przypadki (syntetyczne).** Pacjentka „Anna Testowa”, 6 pomiarów (4–9 lat, 101,5–129,1 cm): zwinięcie → 0 widocznych
+wierszy, licznik „6 pomiarów”, `collectAdvancedMeasurements()` i tekst `#advResults` po przeliczeniu identyczne jak przed
+zwinięciem. Dwoje zapisanych pacjentów: zwinięte u Anny, rozwinięte u „Jana Próbnego”, stan wraca przy przełączaniu
+i po F5; mapa w `exportSyncPayload().userPreferences`. Literówka 1138 cm w ukrytym wierszu → „Do poprawy: 1”;
+113,85 cm (krok 0,1) → bez znacznika.
+
+**Strażnicy.** `tests/unit/historia-pomiarow-zwijanie.test.mjs` (15): odmiana, definicja pomiaru, podsumowanie z twardymi
+spacjami, walidacja i limit mapy, klasa `cloud-synced` klucza, droga A → B przez prawdziwy sejf, kontrole kształtu (moduł
+nie przypisuje `.value`, nie pisze danych pacjenta, nie ustawia stylów; przyciski poza kontenerem, kolejność skryptów).
+`tests/e2e/historia-pomiarow-zwijanie.spec.mjs` (9): wyniki i zbiór pomiarów bez zmian, brak „niezapisanych zmian” po
+przełączaniu, stan per pacjent przy wczytaniu i F5, payload synchronizacji, pacjent niezapisany → zapis, nowy pomiar przy
+zwiniętej liście, „Do poprawy”, dolny przycisk i fokus, brak pomiarów, telefon 390 px. Mutacja (klucz bez rejestracji):
+2 testy jednostkowe i test payloadu padają.
+
+**Obserwacja przy okazji (bez zmian w tym PR).** `window.addAdvMeasurementRow()` wołane bez przycisku zostawia wiersz bez
+pary w karcie spożycia, a synchronizacja kart usuwa go przy pierwszym wpisie — zmierzone tak samo na gałęzi bazowej. Testy
+dokładają wiersze prawdziwym przyciskiem. Poziome przewijanie strony głównej (39 px na telefonie, 31 px na desktopie przy
+otwartej karcie z wynikami) pochodzi z tabeli w wynikach karty i jest identyczne przed zmianą i po niej.
+
+**Wersje.** `vilda_adv_history_collapse.js?v=1` (nowy), `vilda_persistence_adapter.js` `?v=26` → `?v=27` na 22 stronach,
+`inline_index_00.css` `?v=1` → `?v=2`; nowe adresy w precache; `SW_VERSION` 1.1.108 → 1.1.109 (+ pin w
+`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` odświeżony. Design system: wariant
+„nagłówek listy” w karcie Accordion (README, podgląd, typy, partial G13).
+
+**Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages) i publikacja
+odświeżonego design systemu do artefaktu.
+
 ## Pierwsze przejęcie strony przez service workera bez przeładowania (P-SW-PIERWSZA-WIZYTA, SW 1.1.107, `ios26-ui.js` 43, 2026-09-29)
 
 **Decyzja właściciela (2026-09-29).** Po P-SW-PRECACHE instalacja SW trwa sekundy zamiast ok. 85 s, więc przeładowanie strony

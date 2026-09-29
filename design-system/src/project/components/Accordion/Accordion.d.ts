@@ -29,10 +29,27 @@ export interface DetailsPanelProps {
   children: HTMLElement | HTMLElement[];
 }
 
-/** Natywny <details> w trzech wariantach: "glossary" | "summary" | "panel". */
+/** Nagłówek listy z licznikiem — <button class="adv-history-toggle" aria-expanded aria-controls> przed kontenerem wierszy (P-HISTORIA-ZWIJANA). */
+export interface ListHeaderProps {
+  /** Tytuł span.adv-history-title, np. „Poprzednie pomiary”. */
+  title: string;
+  /** Liczba pomiarów w liście (także ukrytych); licznik span.porownanie-chip z odmianą: 1 pomiar, 2–4 pomiary, 5+ pomiarów. */
+  count: number;
+  /** Zwinięta lista: aria-expanded="false", akcja „Rozwiń”, widoczne podsumowanie. */
+  collapsed?: boolean;
+  /** Linia span.adv-history-summary (tylko przy zwiniętej liście), np. „wiek 4 l. – 9 l. · najnowszy: 129,1 cm · 27,0 kg”. */
+  summary?: string;
+  /** Liczba ukrytych wierszy z polem poza zakresem min/max — znacznik „Do poprawy: N” (0 = ukryty). */
+  invalidCount?: number;
+  /** id kontenera wierszy dla aria-controls, np. "advMeasurements". */
+  controls: string;
+}
+
+/** Natywny <details> w trzech wariantach: "glossary" | "summary" | "panel"; nagłówek listy to wariant "list-header". */
 export type AccordionProps =
   | ({ variant: 'glossary' } & GlossaryAccordionProps)
   | ({ variant: 'summary' } & SummaryDisclosureProps)
-  | ({ variant: 'panel' } & DetailsPanelProps);
+  | ({ variant: 'panel' } & DetailsPanelProps)
+  | ({ variant: 'list-header' } & ListHeaderProps);
 
-export declare const Accordion: (props: AccordionProps) => HTMLDetailsElement | HTMLDivElement;
+export declare const Accordion: (props: AccordionProps) => HTMLDetailsElement | HTMLDivElement | HTMLButtonElement;
