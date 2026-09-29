@@ -5,6 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 
+// Projekt desktop-chromium domyślnie blokuje SW (playwright.config.mjs), a launchPersistentContext
+// dziedziczy tę opcję; ten plik sprawdza prawdziwy SW, więc go włącza.
+test.use({ serviceWorkers: 'allow' });
+
 // P-SW-DOCPRO (zlecenie właściciela 2026-09-28): DocPro nie startował offline.
 //
 // Test używa PRAWDZIWEGO service workera (pełne tablice precache, nie przycięty wariant
@@ -15,10 +19,11 @@ import { expect, test } from '@playwright/test';
 //    znów dochodził do serwera, więc strona „działała offline", ciągnąc brakujące pliki z sieci.
 //    Test stawia własny serwer, po instalacji SW go zabija, a sonda (fetch adresu spoza precache)
 //    pilnuje, że sieci naprawdę nie ma — przed obchodem i po nim.
-// 2. Profil trwały, nie incognito. Pełny precache zajmuje w Chromium ok. 1,2 GB, a limit pamięci
+// 2. Profil trwały, nie incognito. Do SW 1.1.104 pełny precache zajmował w Chromium ok. 1,2 GB, a limit pamięci
 //    źródła w kontekście incognito jest losowany (zmierzone 0,91 i 1,12 GB na maszynie z 16 GB RAM):
-//    przy niskim losie nie mieści się nawet wymagany rdzeń. Profil trwały ma limit liczony od dysku.
-//    Zachowanie przy wyczerpanym limicie mierzy tests/unit/sw-precache-stron.test.mjs.
+//    przy niskim losie nie mieścił się nawet wymagany rdzeń. Od P-SW-PRECACHE instalacja bierze tylko wpisy
+//    bieżące (ok. 50 MiB), ale profil trwały zostaje — to warunki użytkownika, a limit nie jest wtedy losowy.
+//    Zachowanie przy wyczerpanym limicie mierzą tests/unit/sw-precache-stron.test.mjs i pwa-precache-migracja.spec.mjs.
 // 3. SW rejestruje pusta strona (fixture), nie DocPro: każda strona otwiera się pierwszy raz dopiero
 //    bez sieci, więc nic nie ratuje jej z cache czasu działania — liczy się tylko wstępne pobranie.
 //
@@ -85,7 +90,7 @@ function sledzRuch(page) {
 }
 
 test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują bez brakujących zasobów', async ({ playwright, browserName, launchOptions }) => {
-  // Instalacja pełnego precache to ok. 2,5 tys. pobrań po kolei (lokalnie ~55 s, pod obciążeniem
+  // Instalacja to ok. 400 pobrań po kolei (P-SW-PRECACHE; do SW 1.1.104 ok. 2,5 tys. — lokalnie ~55 s, pod obciążeniem
   // pełnego zestawu ~90 s), potem ~20 stron — każda najwyżej 10 s na uspokojenie ruchu.
   test.setTimeout(420_000);
   expect(STRONY.length, 'lista stron czytana z OPTIONAL_DOCUMENTS').toBeGreaterThan(15);
