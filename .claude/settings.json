@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(git push -u origin claude/*)",
-      "Bash(git push origin claude/*)"
+      "Bash(git push origin claude/*)",
+      "Read(//home/user/vilda-source/**)",
+      "Edit(//home/user/vilda-source/**)",
+      "Bash(git -C /home/user/vilda-source *)",
+      "Bash(git clone --depth 1 https://github.com/vildaclinic/vilda-source /home/user/vilda-source)",
+      "mcp__github__merge_pull_request"
     ]
   }
 }
