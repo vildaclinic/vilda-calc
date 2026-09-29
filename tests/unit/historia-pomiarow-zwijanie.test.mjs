@@ -84,32 +84,64 @@ describe('podsumowanie pod nagłówkiem', () => {
 });
 
 describe('mapa stanu w preferencji', () => {
-  it('z magazynu zostają tylko identyfikatory sejfu z wartością 1', () => {
-    const wejscie = { [UUID_A]: 1, [UUID_B]: true, 'Anna Testowa': 1, ab: 1, [`${UUID_A}x`]: 0 };
-    expect(I.normalizujMape(wejscie)).toEqual({ [UUID_A]: 1 });
-    expect(I.normalizujMape([UUID_A])).toEqual({});
-    expect(I.normalizujMape('x')).toEqual({});
-    expect(I.normalizujMape(null)).toEqual({});
+  const T1 = '2026-09-29T10:00:00.000Z';
+  const T2 = '2026-09-29T11:00:00.000Z';
+  const TERAZ = '2026-09-29T12:00:00.000Z';
+
+  it('z magazynu zostają tylko identyfikatory sejfu z wpisem zwiniętym albo nagrobkiem', () => {
+    const wejscie = {
+      [UUID_A]: { z: 1, updatedAtISO: T1 },
+      [UUID_B]: { deleted: true, updatedAtISO: T2 },
+      'Anna Testowa': { z: 1, updatedAtISO: T1 },
+      ab: { z: 1, updatedAtISO: T1 },
+      [`${UUID_A}x`]: 0,
+      'pacjent-0001-test': { z: 2, updatedAtISO: T1 },
+      'pacjent-0002-test': true,
+    };
+    expect(I.normalizujMape(wejscie, TERAZ)).toEqual({
+      [UUID_A]: { z: 1, updatedAtISO: T1 },
+      [UUID_B]: { deleted: true, updatedAtISO: T2 },
+    });
+    expect(I.normalizujMape([UUID_A], TERAZ)).toEqual({});
+    expect(I.normalizujMape('x', TERAZ)).toEqual({});
+    expect(I.normalizujMape(null, TERAZ)).toEqual({});
   });
 
-  it('zwinięcie przenosi wpis na koniec, rozwinięcie go usuwa (rozwinięta lista to stan domyślny)', () => {
-    let m = I.zmienMape({}, UUID_A, true);
-    m = I.zmienMape(m, UUID_B, true);
-    m = I.zmienMape(m, UUID_A, true);
-    expect(Object.keys(m)).toEqual([UUID_B, UUID_A]);
-    expect(I.zmienMape(m, UUID_B, false)).toEqual({ [UUID_A]: 1 });
-    expect(I.zmienMape(m, 'Anna Testowa', true), 'nazwisko zamiast identyfikatora niczego nie dopisuje').toEqual(m);
+  it('wpis z wersji 1 ({ id: 1 }) jest zwinięty i najstarszy; nagrobek starszy niż rok znika', () => {
+    const m = I.normalizujMape({ [UUID_A]: 1, [UUID_B]: { deleted: true, updatedAtISO: '2025-09-01T00:00:00.000Z' } }, TERAZ);
+    expect(m).toEqual({ [UUID_A]: { z: 1, updatedAtISO: '1970-01-01T00:00:00.000Z' } });
+    expect(I.czyZwiniety(m, UUID_A)).toBe(true);
+    expect(I.maStaryFormat({ [UUID_A]: 1 })).toBe(true);
+    expect(I.maStaryFormat({ [UUID_A]: { z: 1, updatedAtISO: T1 } })).toBe(false);
+  });
+
+  it('zwinięcie zapisuje chwilę przełączenia, rozwinięcie zostawia nagrobek (scalanie per wpis przenosi go dalej)', () => {
+    let m = I.zmienMape({}, UUID_A, true, T1);
+    m = I.zmienMape(m, UUID_B, true, T1);
+    expect(I.czyZwiniety(m, UUID_A)).toBe(true);
+    m = I.zmienMape(m, UUID_A, false, T2);
+    expect(m).toEqual({
+      [UUID_A]: { deleted: true, updatedAtISO: T2 },
+      [UUID_B]: { z: 1, updatedAtISO: T1 },
+    });
+    expect(I.czyZwiniety(m, UUID_A)).toBe(false);
+    expect(I.czyZwiniety(m, UUID_B)).toBe(true);
+    expect(I.zmienMape(m, 'Anna Testowa', true, T2), 'nazwisko zamiast identyfikatora niczego nie dopisuje').toEqual(m);
   });
 
   it(`ma limit ${I.LIMIT_WPISOW} wpisów — wypadają najdawniej przełączone`, () => {
     let m = {};
     const id = (i) => `pacjent-${String(i).padStart(4, '0')}-test`;
-    for (let i = 0; i < I.LIMIT_WPISOW + 5; i++) m = I.zmienMape(m, id(i), true);
-    const klucze = Object.keys(m);
+    const chwila = (i) => new Date(Date.parse(T1) + i * 1000).toISOString();
+    for (let i = 0; i < I.LIMIT_WPISOW + 5; i++) m = I.zmienMape(m, id(i), true, chwila(i));
+    const klucze = Object.keys(m).sort();
     expect(klucze).toHaveLength(I.LIMIT_WPISOW);
     expect(klucze[0]).toBe(id(5));
     expect(klucze.at(-1)).toBe(id(I.LIMIT_WPISOW + 4));
-    expect(Object.keys(I.normalizujMape({ ...m, [id(9999)]: 1 }))).toHaveLength(I.LIMIT_WPISOW);
+    const zNowym = I.normalizujMape({ ...m, [id(9999)]: { z: 1, updatedAtISO: TERAZ } }, TERAZ);
+    expect(Object.keys(zNowym)).toHaveLength(I.LIMIT_WPISOW);
+    expect(zNowym[id(9999)], 'najświeższy zostaje').toBeTruthy();
+    expect(zNowym[id(5)], 'najstarszy wypada').toBeUndefined();
   });
 });
 
@@ -160,19 +192,66 @@ describe('preferencja advHistoryCollapsed jedzie między urządzeniami', () => {
     expect(modul().PREF_KEY, 'moduł pisze pod tym samym kluczem').toBe('advHistoryCollapsed');
   });
 
-  it('stan zwinięcia zapisany na A jest po scaleniu na B', async () => {
+  async function dwaUrzadzenia() {
     const haslo = 'Historia#Sync!2026x';
     const A = loadDevice();
     const utworzone = await A.createUser(haslo, { label: 'A', iterations: 10000 });
     const B = loadDevice();
     await B.createUser(haslo, { label: 'B', iterations: 10000, recoveryKey: utworzone.recoveryKey });
-
-    expect(A.__prefs.writePreferenceJSON('advHistoryCollapsed', { [UUID_A]: 1 }, { force: true })).toBe(true);
+    return { A, B };
+  }
+  const zapisz = async (U, mapa) => {
+    expect(U.__prefs.writePreferenceJSON('advHistoryCollapsed', mapa, { force: true })).toBe(true);
     await new Promise((r) => { setTimeout(r, 0); });
+  };
+  const czytaj = (U) => U.__prefs.readPreferenceJSON('advHistoryCollapsed', {});
+  const scal = async (Z, Do) => Do.mergeSyncPayload(await Z.exportSyncPayload());
 
-    const wynik = await B.mergeSyncPayload(await A.exportSyncPayload());
+  it('stan zwinięcia zapisany na A jest po scaleniu na B', async () => {
+    const { A, B } = await dwaUrzadzenia();
+    await zapisz(A, I.zmienMape({}, UUID_A, true, '2026-09-29T10:00:00.000Z'));
+
+    const wynik = await scal(A, B);
     expect(wynik.updatedPreferenceCount).toBeGreaterThan(0);
-    expect(B.__prefs.readPreferenceJSON('advHistoryCollapsed', {})).toEqual({ [UUID_A]: 1 });
+    expect(I.czyZwiniety(I.normalizujMape(czytaj(B)), UUID_A)).toBe(true);
+  });
+
+  it('dwa urządzenia offline, różni pacjenci: po scaleniu w obie strony oba wpisy zostają (uwaga Codex do #479)', async () => {
+    const { A, B } = await dwaUrzadzenia();
+    await zapisz(A, I.zmienMape({}, UUID_A, true, '2026-09-29T10:00:00.000Z'));
+    await zapisz(B, I.zmienMape({}, UUID_B, true, '2026-09-29T10:05:00.000Z'));
+
+    await scal(A, B);
+    await scal(B, A);
+    for (const [nazwa, U] of [['A', A], ['B', B]]) {
+      const m = I.normalizujMape(czytaj(U));
+      expect(I.czyZwiniety(m, UUID_A), `${nazwa}: pacjent z A`).toBe(true);
+      expect(I.czyZwiniety(m, UUID_B), `${nazwa}: pacjent z B`).toBe(true);
+    }
+  });
+
+  it('rozwinięcie na A (nagrobek) przechodzi na B i nie rusza wpisu innego pacjenta', async () => {
+    const { A, B } = await dwaUrzadzenia();
+    let naA = I.zmienMape({}, UUID_A, true, '2026-09-29T10:00:00.000Z');
+    await zapisz(A, naA);
+    await zapisz(B, I.zmienMape({}, UUID_B, true, '2026-09-29T10:05:00.000Z'));
+    await scal(A, B);
+    await scal(B, A);
+
+    naA = I.zmienMape(I.normalizujMape(czytaj(A)), UUID_A, false, '2026-09-29T11:00:00.000Z');
+    await zapisz(A, naA);
+    await scal(A, B);
+    const m = I.normalizujMape(czytaj(B));
+    expect(I.czyZwiniety(m, UUID_A), 'rozwinięte na A → rozwinięte na B').toBe(false);
+    expect(I.czyZwiniety(m, UUID_B)).toBe(true);
+  });
+
+  it('starsza zmiana tego samego pacjenta z drugiego urządzenia nie cofa nowszej', async () => {
+    const { A, B } = await dwaUrzadzenia();
+    await zapisz(A, I.zmienMape({}, UUID_A, false, '2026-09-29T12:00:00.000Z'));
+    await zapisz(B, I.zmienMape({}, UUID_A, true, '2026-09-29T09:00:00.000Z'));
+    await scal(B, A);
+    expect(I.czyZwiniety(I.normalizujMape(czytaj(A)), UUID_A)).toBe(false);
   });
 });
 

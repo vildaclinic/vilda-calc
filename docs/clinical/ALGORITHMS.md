@@ -5834,7 +5834,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Zwijana lista „Poprzednie pomiary” z licznikiem, stan per pacjent (P-HISTORIA-ZWIJANA, SW 1.1.109, 2026-09-29)
+## Zwijana lista „Poprzednie pomiary” z licznikiem, stan per pacjent (P-HISTORIA-ZWIJANA, SW 1.1.109, scalanie per pacjent SW 1.1.111, 2026-09-29)
 
 **Decyzja właściciela (2026-09-29).** W karcie „Zaawansowane obliczenia wzrostowe” lista „Wprowadź poprzednie pomiary”
 ma się zwijać; w wierszu, który ją rozwija, ma być licznik wpisów historycznych, a stan zwinięcia ma być zapamiętany per
@@ -5864,13 +5864,26 @@ z sześcioma pomiarami: lista zajmowała ok. 940 px na desktopie i ok. 1220 px n
 
 **Przechowywanie.** Preferencja konta `advHistoryCollapsed` zarejestrowana w `vilda_persistence_adapter.js` (1.7.1) jako
 `scope:"ui", kind:"preference", storage:"cloud-synced"` — ten sam tor co `cardCollapseState` i zwijanie przypomnień
-(`onPreferenceWrite` → `userPreferences` sejfu → zaszyfrowany payload synchronizacji; przy scalaniu wygrywa nowszy zapis
-całego klucza). Wartość to mapa `{ <UUID pacjenta>: 1 }`: tylko pacjenci ze zwiniętą listą (rozwinięta jest domyślna, więc
-nie zostawia wpisu), bez dat, najwyżej 300 wpisów (najdawniej przełączone wypadają), wpis znika po usunięciu pacjenta
-z sejfu. Identyfikator to losowy UUID z sejfu, nie nazwisko. Pacjent niezapisany: stan w pamięci strony; pierwszy zapis
-(`vilda:patient-loaded`, `source:"save"`) przenosi go pod nadany identyfikator. Zapis stanu idzie z `force:true` (okno
-blokady po wczytaniu pacjenta wstrzymuje zapis danych, a to jest preferencja widoku). Gdy wskaźnik zapisu mówi „nowy
-pacjent”, stan nie trafia pod identyfikator poprzedniej osoby, tylko do pamięci strony.
+(`onPreferenceWrite` → `userPreferences` sejfu → zaszyfrowany payload synchronizacji). Wartość to mapa per pacjent:
+`{ <UUID pacjenta>: { z: 1, updatedAtISO } }` dla zwiniętej listy, a po rozwinięciu nagrobek `{ deleted: true, updatedAtISO }`
+(żyje rok, jak nagrobki `wlsched`). Jedyna data w mapie to chwila przełączenia. Najwyżej 300 wpisów, najdawniej przełączone
+wypadają; usunięcie pacjenta z sejfu zamienia wpis w nagrobek. Identyfikator to losowy UUID z sejfu, nie nazwisko.
+Pacjent niezapisany: stan w pamięci strony; pierwszy zapis (`vilda:patient-loaded`, `source:"save"`) przenosi go pod
+nadany identyfikator. Zapis stanu idzie z `force:true` (okno blokady po wczytaniu pacjenta wstrzymuje zapis danych,
+a to jest preferencja widoku). Gdy wskaźnik zapisu mówi „nowy pacjent”, stan nie trafia pod identyfikator poprzedniej
+osoby, tylko do pamięci strony.
+
+**Scalanie per pacjent (poprawka po recenzji Codex do #479, SW 1.1.111).** W pierwszej wersji (SW 1.1.109) mapa
+`{ <UUID>: 1 }` była scalana jak każda preferencja: wygrywał nowszy zapis całego klucza. Dwa urządzenia, które offline
+przełączyły listy RÓŻNYCH pacjentów, nadpisywały się przy synchronizacji i stan jednego z nich przepadał. Teraz
+`mergeSyncPayload` w `vilda_vault.js` scala `advHistoryCollapsed` per wpis, tą samą funkcją co `wlsched`/`wllists`
+(nowszy `updatedAtISO` wpisu wygrywa, nagrobek przenosi rozwinięcie), i odkłada wynik do lokalnej preferencji przez
+`VildaPersistence.applyPreferenceFromCloud`. Mapa z wersji 1 jest przy starcie modułu (i po scaleniu) przepisywana
+w nowym formacie, a wpis `1` czytany jako zwinięty i najstarszy. Okres przejściowy: urządzenie ze starą wersją
+(SW ≤ 1.1.110) nie czyta nowego formatu, więc pokazuje listy rozwinięte, a jego przełączenia (wpisy `1`) nie są
+przenoszone na nowe urządzenia; znika po aktualizacji aplikacji. Testy: `tests/unit/historia-pomiarow-zwijanie.test.mjs`
+(dwa urządzenia na prawdziwym sejfie — różni pacjenci w obie strony, nagrobek, starsza zmiana nie cofa nowszej; mutacja:
+bez tej zmiany w sejfie padają dwa z tych testów).
 
 **Kolejność zdarzeń (zmierzona w kodzie).** Przy wyborze pacjenta z sejfu wiersze odbudowuje `applyLoadedData`, potem
 przychodzi `vilda:patient-loaded` (z identyfikatorem), a `vilda:json-imported` jeszcze później (`setTimeout 0`). Moduł
@@ -6069,7 +6082,7 @@ także na czystym 0f1e0a7 (1 z 3 przebiegów, pojedynczy worker): karta zaawanso
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
-## Karta pacjenta bez punktu „Włączenie leczenia” GH: brak punktu nazwany wprost, nie wiek pierwszej kontroli (P-GH-BEZ-STARTU, SW 1.1.111, `vilda_auth_ui.js` 466, 2026-09-29)
+## Karta pacjenta bez punktu „Włączenie leczenia” GH: brak punktu nazwany wprost, nie wiek pierwszej kontroli (P-GH-BEZ-STARTU, SW 1.1.112, `vilda_auth_ui.js` 466, 2026-09-29)
 
 **Zgłoszenie właściciela (2026-09-29).** Pacjent ma w monitorze terapii GH punkty „Kontynuacja”, ale nie ma punktu
 „Włączenie leczenia”. Monitor mówi wtedy „Brak punktu włączenia leczenia. Dodaj go (także wstecznie)…”, a karta
@@ -6111,9 +6124,11 @@ wzrastania 12 cm/rok od 1. punktu (z 5 mies., krótki odstęp)”, ΔhSDS „od 
 pada („Włączeniew wieku 9 l. 7 mies.”), kontrolny przechodzi.
 
 **Wersje.** `vilda_auth_ui.js` 465 → 466 na 8 stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` i
-`vilda_session_bridge.js`, więc te dwa też podbite: `vilda_chrome.js` 77 → 78, `vilda_session_bridge.js` 5 → 6 na 22
-stronach; nowe adresy dopisane do precache obok historii (append-only); `SW_VERSION` 1.1.110 → 1.1.111 (+ pin w
-`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` odświeżony.
+`vilda_session_bridge.js`, więc te dwa też podbite: `vilda_chrome.js` 78 → 79, `vilda_session_bridge.js` 6 → 7 na 22
+stronach (78/6 i SW 1.1.111 wydał równolegle P-HISTORIA-ZWIJANA #484 z inną treścią — `vilda_vault.js?v=188` — więc ta
+zmiana podbija o jeden; ten sam klucz cache nie może nieść dwóch treści); nowe adresy dopisane do precache obok historii
+(append-only); `SW_VERSION` 1.1.111 → 1.1.112 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
+`tests/fixtures/wersje-zasobow.json` odświeżony.
 
 **Co pozostaje decyzją właściciela.** Akceptacja brzmień; czy ta sama poprawka ma objąć kartę „Leczenie otyłości”
 (`Cl`/`Ml` w `vilda_auth_ui.js` mają identyczny zastępczy start `r||(r=n[0])`, a panel otyłości liczy od niego okna
