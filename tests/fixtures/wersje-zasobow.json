@@ -328,8 +328,8 @@
   "sha256": "befb7b63b5a1e2695a308949d6dc9848ce718cad37deecd0c08e8b8a89840b4e"
  },
  "ios26-ui.js": {
-  "v": 42,
-  "sha256": "8d6316816f54b79bee7dce8ef1c43d70c7d135b4d811af2b8ac9683b36886a25"
+  "v": 43,
+  "sha256": "b7579a809c394b3d7f4e64ec32ec24932425e1520671bf7e99fbc20aff24602f"
  },
  "ios26-v2.css": {
   "v": 26,
@@ -616,8 +616,8 @@
   "sha256": "7c0c3219853e1fba70d40b9866b163a4f226acc79ca8f86352a1648d9e28dab5"
  },
  "vilda_gh_therapy_resource_audit.js": {
-  "v": 32,
-  "sha256": "4dccbd3e90fd88a853b9deb965505c4c320bbd052962b2187fd70d5f004abb0c"
+  "v": 33,
+  "sha256": "47bbd3952446a332481521abe0b6f628313a75926a3b8318e8ba5e8a03d23177"
  },
  "vilda_growth_card_c.js": {
   "v": 27,

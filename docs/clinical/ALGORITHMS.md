@@ -5834,6 +5834,47 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Pierwsze przejęcie strony przez service workera bez przeładowania (P-SW-PIERWSZA-WIZYTA, SW 1.1.107, `ios26-ui.js` 43, 2026-09-29)
+
+**Decyzja właściciela (2026-09-29).** Po P-SW-PRECACHE instalacja SW trwa sekundy zamiast ok. 85 s, więc przeładowanie strony
+po pierwszej instalacji zaczęło spotykać użytkowników w trakcie pracy. Przy pierwszej wizycie przeładowania ma nie być; przy
+aktualizacji po „Aktualizuj” zostaje.
+
+**Co było.** Słuchacz `controllerchange` w `ios26-ui.js` przy pierwszym takim zdarzeniu w dokumencie uruchamiał migrację stanu
+(`WAGAIWZROST_STATE`, `schemaVersion`) i `location.reload()`. SW w `activate` woła `clients.claim()`, więc strona bez kontrolera
+(pierwsza wizyta, profil po wyczyszczeniu danych, urządzenie, na którym instalacja dotąd się nie udawała) dostawała
+`controllerchange` i przeładowywała się, choć przyszła właśnie z sieci w bieżącej wersji. Do SW 1.1.104 instalacja trwała ok. 85 s
+albo nie kończyła się wcale (limit 5 minut), więc przeładowanie rzadko kogo spotykało; od 1.1.105 przychodzi po ok. 4,5 s
+(pomiar we wpisie P-SW-PRECACHE, „Konfiguracja e2e”).
+
+**Co jest.** Słuchacz pamięta, czy strona ma kontrolera (na starcie i po każdym `controllerchange`). Przejście „bez kontrolera →
+kontroler”: tylko migracja stanu, bez przeładowania. Przejście „kontroler → nowy kontroler” (aktualizacja po „Aktualizuj” w tej
+albo innej karcie): migracja i jedno przeładowanie jak dotąd. Baner „Aktualizuj” już wcześniej pokazywał się tylko stronie
+z kontrolerem — przeładowanie stosuje teraz tę samą regułę. Nowe pola stanu (`window.__vildaServiceWorkerClientLifecycle`
+i migawka audytu cyklu życia): `controllerchangeHadControllerAtStart`, `controllerchangeFirstClaimCount`,
+`controllerchangeFirstClaimNoReloadGuard`.
+
+**Źródło kodu.** `ios26-ui.js` jest zminifikowany i nie ma czytelnego źródła w repozytorium. Zmiana wprowadzona w artefakcie
+za zgodą właściciela, ograniczona do jednej funkcji (słuchacz `controllerchange`) i dwóch obiektów stanu. Jeżeli czytelne
+źródło istnieje poza repozytorium, trzeba w nim powtórzyć tę samą zmianę — inaczej następne zbudowanie pliku ją cofnie.
+
+**Wpływ kliniczny.** Brak: wyniki, dane, zapis i synchronizacja bez zmian. Zmienia się tylko to, czy strona przeładowuje się,
+gdy SW przejmie ją po pierwszej instalacji.
+
+**Przypadki (`tests/e2e/pwa-pierwsza-wizyta.spec.mjs`, prawdziwy SW i strona główna, bez danych):**
+- świeży profil: SW przejmuje stronę, dokument ładuje się raz, `controllerchangeFirstClaimCount` = 1, brak przeładowania;
+  na `ios26-ui.js` sprzed zmiany ten test pada (sprawdzone);
+- druga wizyta (strona pod kontrolą SW), nowa wersja SW, baner → „Aktualizuj”: strona przeładowuje się i działa pod nowym SW;
+  ten test przechodzi także na `ios26-ui.js` sprzed zmiany (ścieżka aktualizacji bez zmian).
+
+**Wersje.** `ios26-ui.js?v=43` na 24 stronach, nowy adres w precache (append-only), `SW_VERSION` 1.1.106 → 1.1.107 (1.1.106 zajęło P-DIETA-AUDYT2 rata 1) (+ pin
+w `tests/unit/klirens-ui-model.test.mjs`), `tests/fixtures/wersje-zasobow.json`.
+
+**Ryzyko resztkowe.** Strona otwarta z pominięciem SW (twarde odświeżenie) nie ma kontrolera; jeśli w tym czasie inna karta
+zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci, więc ma wersję bieżącą w chwili otwarcia.
+
+**Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
+
 ## Audyt zaleceń dietetycznych — rata 1: błędy kodu i niespójności (P-DIETA-AUDYT2 rata 1, SW 1.1.106, 2026-09-29)
 
 **Zgłoszenie i metoda.** Właściciel zlecił pełny audyt funkcji zaleceń dietetycznych we wszystkich grupach wieku i scenariuszach.
