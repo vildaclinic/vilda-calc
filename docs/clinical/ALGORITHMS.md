@@ -5857,6 +5857,10 @@ i migawka audytu cyklu życia): `controllerchangeHadControllerAtStart`, `control
 **Źródło kodu.** `ios26-ui.js` jest zminifikowany i nie ma czytelnego źródła w repozytorium. Zmiana wprowadzona w artefakcie
 za zgodą właściciela, ograniczona do jednej funkcji (słuchacz `controllerchange`) i dwóch obiektów stanu. Jeżeli czytelne
 źródło istnieje poza repozytorium, trzeba w nim powtórzyć tę samą zmianę — inaczej następne zbudowanie pliku ją cofnie.
+*Aktualizacja (P-ZRODLA, 2026-09-29):* w żadnym repozytorium GitHub właściciela nie ma czytelnego `ios26-ui.js` nowszego niż
+`e5106bbf` (2026-05-29); prywatne `vilda-source` ma tylko kopię artefaktu z 2026-06-29. Czytelne łatki tej zmiany i #344 (P-DYMKI)
+dla ewentualnego lokalnego źródła, sposób ich sprawdzenia i inwentarz wszystkich artefaktów zmienionych po ostatnim wgraniu:
+`docs/ZRODLA_ARTEFAKTOW.md`.
 
 **Wpływ kliniczny.** Brak: wyniki, dane, zapis i synchronizacja bez zmian. Zmienia się tylko to, czy strona przeładowuje się,
 gdy SW przejmie ją po pierwszej instalacji.
