@@ -49,15 +49,18 @@
   <!-- APP-SHELL (B1): gdy strona ładuje się jako panel iframe (?embedded=1),
        chowamy jej własny chrome, by nie dublować ramki shella (app.html). -->
   <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
-  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}.vilda-embedded #tzFab,.vilda-embedded .tz-fab{display:none!important}</style>
+  <style>.vilda-embedded header,
+.vilda-embedded .sidebar,
+.vilda-embedded #mobileBottomDock,
+.vilda-embedded #scrollTopBtn{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}.vilda-embedded #tzFab,.vilda-embedded .tz-fab{display:none!important}</style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
-  <link href="ios26-v2.css?v=25" rel="stylesheet">
-  <link href="style.css?v=82" rel="stylesheet">
+  <link href="ios26-v2.css?v=26" rel="stylesheet">
+  <link href="style.css?v=83" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
-  <link href="vilda_chrome.css?v=42" rel="stylesheet">
-  <link href="vilda_auth_ui.css?v=75" rel="stylesheet">
+  <link href="vilda_chrome.css?v=43" rel="stylesheet">
+  <link href="vilda_auth_ui.css?v=76" rel="stylesheet">
 
 <script>
 (function(){
@@ -283,7 +286,7 @@
   <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
 <script defer src="vilda_persistence_adapter.js?v=26"></script>
-<script defer src="vilda_session_bridge.js?v=4"></script>
+<script defer src="vilda_session_bridge.js?v=5"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -312,7 +315,7 @@
 
   <script src="lucide.min.js?v=1" defer></script>
   <script src="ios26-ui.js?v=42" defer></script>
-<script defer src="vilda_chrome.js?v=76"></script>
+<script defer src="vilda_chrome.js?v=77"></script>
 <script defer src="vilda_terminarz.js?v=191"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>

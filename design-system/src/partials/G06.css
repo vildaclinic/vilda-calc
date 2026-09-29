@@ -250,38 +250,6 @@
   font-weight:700;
   line-height:1.2;
 }
-/* .diet-personalized-badge (6596-6612), .diet-recommended-badge (6925-6936) */
-.diet-personalized-badge{
-  flex:0 0 auto;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:.28rem var(--space-0-5);
-  border:var(--border-hairline) solid #d6c3ea;
-  border-radius:var(--radius-pill);
-  color:#5b3a78;
-  background:#fff;
-  font-size:.75rem;
-  font-weight:700;
-  white-space:nowrap;
-}
-.diet-personalized-badge--active{
-  border-color:#90f;
-  color:#5a008f;
-  background:#9900ff14}
-.diet-recommended-badge{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  margin-bottom:var(--space-0-45);
-  padding:.22rem .48rem;
-  border-radius:var(--radius-pill);
-  background:#90f;
-  color:#fff;
-  font-size:.74rem;
-  font-weight:800;
-  letter-spacing:.02em;
-}
 /* .circ-pro-pill (1150-1160) */
 .circ-pro-pill{
   display:inline-block;
@@ -295,30 +263,11 @@
   letter-spacing:.04em;
   vertical-align:baseline;
 }
-/* skórki modułów diety i mikroskładników (7065-7078, 7191-7192, 7210-7211) — wymagają kontenera #dietRecommendationsContent / .nutrition-micros-card */
-#dietRecommendationsContent .diet-personalized-badge{
-  background:var(--diet-ui-button-bg)!important;
-  color:var(--diet-ui-muted-strong)!important;
-  border-color:var(--diet-ui-border)!important}
-#dietRecommendationsContent .diet-mode-tab.is-active,#dietRecommendationsContent .diet-segmented-control button.is-active,#dietRecommendationsContent .diet-option-check:has(input:checked),#dietRecommendationsContent .diet-survey-chip:has(input:checked),#dietRecommendationsContent .diet-pdf-variant-card--recommended,#dietRecommendationsContent .diet-personalized-badge--active{
-  background:color-mix(in srgb,var(--diet-ui-surface) 80%,var(--diet-ui-accent) 20%)!important;
-  border-color:var(--diet-ui-active-border)!important}
-#dietRecommendationsContent .diet-recommended-badge,#dietRecommendationsContent .diet-smart-goal-number{
-  background:var(--diet-ui-active-bg)!important;
-  color:var(--diet-ui-active-text)!important}
 .nutrition-norms-card .nutrition-norms-value,.nutrition-micros-card .nutrition-micros-value,.nutrition-micros-card .nutrition-micros-badge,.nutrition-micros-card .nutrition-micros-vitd-dose strong{
   color:var(--nutrition-ui-accent-text)!important}
 .nutrition-micros-card .nutrition-micros-badge{
   background:var(--nutrition-ui-chip-bg)!important}
 
-/* ===================== EduKicker, EduChip, MetaPill — baza (edu-video-ui.css 43-69, 82-99) ===================== */
-.edu-kicker,.edu-card-badge,.edu-chip,.edu-meta-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:var(--space-0-45);
-  border-radius:var(--radius-pill);
-  white-space:nowrap;
-}
 .edu-kicker{
   align-self:flex-start;
   padding:.48rem .82rem;
@@ -502,22 +451,6 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
   backdrop-filter: var(--contact-control-backdrop);
   -webkit-backdrop-filter: var(--contact-control-backdrop);
 }
-.contact-page .contact-badge .sidebar-icon,
-.contact-page .contact-section-heading .sidebar-icon,
-.contact-page .contact-topic-card h4 .sidebar-icon,
-.contact-page .contact-action .sidebar-icon,
-.contact-page .contact-method-head .sidebar-icon,
-.contact-page .contact-link-card .sidebar-icon,
-.contact-page .contact-kicker .sidebar-icon {
-  width: 1rem;
-  height: 1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  align-self: center;
-  line-height: 0;
-}
 .contact-page .sidebar-icon svg {
   width: 100%;
   height: 100%;
@@ -544,21 +477,6 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
     width: 100%;
     justify-content: center;
   }
-}
-/* MarketingBadge — instrukcja.css */
-.guide-tile-count{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:.28rem .65rem;
-  border-radius:999px;
-  border:1px solid rgba(0,131,141,0.15);
-  background:#fff;
-  color:var(--primary);
-  font-size:.82rem;
-  font-weight:800;
-  white-space:nowrap;
-  min-height:2rem;
 }
 .guide-module-meta{
   display:flex;
@@ -825,47 +743,6 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
   white-space: nowrap;
   flex: 0 0 auto;
 }
-/* skórka body.page-cukrzyca (6431-6454, 6620-6636, 6818-6824) */
-body.page-cukrzyca .diab-day-step,
-body.page-cukrzyca .diab-case,
-body.page-cukrzyca .diab-note,
-body.page-cukrzyca .diab-metric,
-body.page-cukrzyca .diab-solution__summary > div,
-body.page-cukrzyca .diab-solution__source-item,
-body.page-cukrzyca .diab-solution__today-item,
-body.page-cukrzyca .diab-solution__balance-box,
-body.page-cukrzyca .diab-mini-formula,
-body.page-cukrzyca .diab-macro-row,
-body.page-cukrzyca .diab-macro-empty,
-body.page-cukrzyca .diab-macro-state--soft,
-body.page-cukrzyca .diab-calc-empty,
-body.page-cukrzyca .diab-calc-table-wrap,
-body.page-cukrzyca .diab-launchpad__path,
-body.page-cukrzyca .diab-path-item,
-body.page-cukrzyca .diab-dose-source,
-body.page-cukrzyca .diab-reward-badge {
-  background: var(--diab-surface-1) !important;
-  border-color: var(--diab-border-1) !important;
-  box-shadow: var(--diab-shadow-1) !important;
-  color: var(--diab-text-1) !important;
-}
-body.page-cukrzyca .diab-day-step__num,
-body.page-cukrzyca .diab-badge,
-body.page-cukrzyca .diab-launchpad__eyebrow,
-body.page-cukrzyca .diab-topic-chip,
-body.page-cukrzyca .diab-path-item__num,
-body.page-cukrzyca .diab-module-card__icon,
-body.page-cukrzyca .diab-module-card__step,
-body.page-cukrzyca .diab-macro-row__index,
-body.page-cukrzyca .diab-macro-chip,
-body.page-cukrzyca .diab-calc-day-badge,
-body.page-cukrzyca .diab-calc-balance-chip--stable,
-body.page-cukrzyca .diab-dose-source,
-body.page-cukrzyca .diab-accordion-icon {
-  background: var(--diab-surface-accent) !important;
-  border-color: var(--diab-border-2) !important;
-  color: var(--primary) !important;
-}
 body.page-cukrzyca .diab-day-step p,
 body.page-cukrzyca .diab-video-cta__note,
 body.page-cukrzyca .diab-note-box p:last-child,
@@ -998,40 +875,6 @@ body.page-cukrzyca .diab-macro-empty {
   backdrop-filter:var(--blur-button) var(--blur-button-saturate);
   -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate)
 }
-/* cukrzyca.css 6485-6504 */
-body.page-cukrzyca.liquid-ios26 .diab-day-step,
-body.page-cukrzyca.liquid-ios26 .diab-case,
-body.page-cukrzyca.liquid-ios26 .diab-note,
-body.page-cukrzyca.liquid-ios26 .diab-metric,
-body.page-cukrzyca.liquid-ios26 .diab-solution__summary > div,
-body.page-cukrzyca.liquid-ios26 .diab-solution__source-item,
-body.page-cukrzyca.liquid-ios26 .diab-solution__today-item,
-body.page-cukrzyca.liquid-ios26 .diab-solution__balance-box,
-body.page-cukrzyca.liquid-ios26 .diab-mini-formula,
-body.page-cukrzyca.liquid-ios26 .diab-macro-row,
-body.page-cukrzyca.liquid-ios26 .diab-calc-table-wrap,
-body.page-cukrzyca.liquid-ios26 .diab-launchpad__hero,
-body.page-cukrzyca.liquid-ios26 .diab-launchpad__path,
-body.page-cukrzyca.liquid-ios26 .diab-path-item,
-body.page-cukrzyca.liquid-ios26 .diab-video-modal__dialog,
-body.page-cukrzyca.liquid-ios26 .diab-film-frame {
-  -webkit-backdrop-filter: var(--diab-card-filter) !important;
-  backdrop-filter: var(--diab-card-filter) !important;
-}
-
-/* ===================== Wysoki kontrast ===================== */
-/* style.css 5258-5264 — liczniki i odznaki instrukcji */
-body.high-contrast-level-1.liquid-ios26 .guide-inline-count,
-body.high-contrast-level-2.liquid-ios26 .guide-inline-count,
-body.high-contrast-level-3.liquid-ios26 .guide-inline-count,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge{
-  background:var(--hc-button-bg)!important;
-  color:var(--hc-text)!important;
-  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
-  box-shadow:0 4px 12px #0000000f!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important}
 /* style.css 5276-5278 */
 body.high-contrast-level-1.liquid-ios26 .guide-lead,
 body.high-contrast-level-2.liquid-ios26 .guide-lead,
@@ -1049,13 +892,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   box-shadow:0 4px 12px #0000000f!important}
-/* style.css 5284-5285 */
-body.high-contrast-level-1.liquid-ios26 .guide-tile-footer,
-body.high-contrast-level-2.liquid-ios26 .guide-tile-footer,
-body.high-contrast-level-3.liquid-ios26 .guide-tile-footer,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-inline-count,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count{
-  color:var(--hc-text)!important}
 /* style.css 5289-5299 */
 body.high-contrast-level-1.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-2.liquid-ios26 .guide-module-badge-user,body.high-contrast-level-3.liquid-ios26 .guide-module-badge-user{
   background:#00b0a61f!important;

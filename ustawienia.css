@@ -374,15 +374,6 @@
   margin: 0
 }
 
-.tech-chart-settings-note {
-  text-align: left;
-  max-width: none;
-  margin: 0;
-  font-size: .92rem;
-  line-height: 1.6;
-  color: #586d72
-}
-
 .tech-chart-settings-actions {
   display: flex;
   justify-content: flex-start;

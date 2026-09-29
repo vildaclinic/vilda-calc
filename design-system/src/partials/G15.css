@@ -158,18 +158,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       color: #0f3533;
     }
 
-/* ——— 1b. MarketingHero — strona kontaktowa (kontakt.css 347–356, 371–536) ——— */
-    .contact-page .contact-hero,
-    .contact-page .contact-panel,
-    .contact-page .contact-card,
-    .contact-page .contact-profile-card {
-      background: var(--contact-surface);
-      border: 1px solid var(--contact-border);
-      border-radius: 24px;
-      box-shadow: var(--contact-shadow);
-      backdrop-filter: var(--contact-surface-backdrop);
-      -webkit-backdrop-filter: var(--contact-surface-backdrop);
-    }
     .contact-page .contact-hero {
       position: relative;
       overflow: hidden;
@@ -206,22 +194,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       backdrop-filter: var(--contact-control-backdrop);
       -webkit-backdrop-filter: var(--contact-control-backdrop);
     }
-    .contact-page .contact-badge .sidebar-icon,
-    .contact-page .contact-section-heading .sidebar-icon,
-    .contact-page .contact-topic-card h4 .sidebar-icon,
-    .contact-page .contact-action .sidebar-icon,
-    .contact-page .contact-method-head .sidebar-icon,
-    .contact-page .contact-link-card .sidebar-icon,
-    .contact-page .contact-kicker .sidebar-icon {
-      width: 1rem;
-      height: 1rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      align-self: center;
-      line-height: 0;
-    }
     .contact-page .sidebar-icon svg {
       width: 100%;
       height: 100%;
@@ -241,26 +213,11 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       text-wrap: balance;
       color: var(--contact-text-strong);
     }
-    .contact-page .hero-lead,
-    .contact-page .contact-panel p,
-    .contact-page .contact-panel li,
-    .contact-page .contact-card p,
-    .contact-page .contact-profile-card p {
-      color: var(--contact-text-muted);
-      line-height: 1.72;
-    }
     .contact-page .hero-lead {
       margin: 0 auto;
       max-width: 64ch;
       font-size: 1.05rem;
     }
-    .contact-page .contact-hero strong,
-    .contact-page .contact-panel strong,
-    .contact-page .contact-card strong,
-    .contact-page .contact-profile-card strong {
-      color: var(--contact-text-strong);
-    }
-
 /* ——— 1c. MarketingHero — subskrypcja (subskrypcja.css 37–119) ——— */
     .sub-hero {
       text-align: center;
@@ -342,36 +299,29 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
     }
   }
   .guide-tile{
-    width:100%;
-    min-height:176px;
-    margin:0;
-    appearance:none;
-    -webkit-appearance:none;
-    color:inherit;
-    border:1px solid rgba(0,131,141,0.16);
-    border-radius:18px;
-    padding:1.1rem;
-    background:linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
-    box-shadow:0 12px 30px rgba(0,0,0,0.06);
-    display:grid;
-    gap:.75rem;
-    text-align:left;
-    cursor:pointer;
-    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
-  }
+  width:100%;
+  min-height:176px;
+  margin:0;
+  appearance:none;
+  -webkit-appearance:none;
+  color:inherit;
+  border:1px solid rgba(0,131,141,0.16);
+  border-radius:18px;
+  padding:1.1rem;
+  background:linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
+  box-shadow:0 12px 30px rgba(0,0,0,0.06);
+  display:grid;
+  gap:.75rem;
+  text-align:left;
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
   .guide-tile:hover{
-    transform:translateY(-2px);
-    box-shadow:0 18px 42px rgba(0,0,0,0.09);
-    border-color:rgba(0,131,141,0.24);
+    transform:translateY(-2px)
   }
   .guide-tile:focus-visible{
     outline:3px solid rgba(0,176,166,0.34);
     outline-offset:3px;
-  }
-  .guide-tile.is-active{
-    border-color:rgba(0,131,141,0.34);
-    background:linear-gradient(180deg, #ffffff 0%, rgba(0,176,166,0.08) 100%);
-    box-shadow:0 18px 42px rgba(0,0,0,0.09);
   }
   .guide-tile-top{
     display:flex;
@@ -389,20 +339,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
     background:rgba(0,131,141,0.1);
     color:var(--primary);
     flex:0 0 auto;
-  }
-  .guide-tile-count{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:.28rem .65rem;
-    border-radius:999px;
-    border:1px solid rgba(0,131,141,0.15);
-    background:#fff;
-    color:var(--primary);
-    font-size:.82rem;
-    font-weight:800;
-    white-space:nowrap;
-    min-height:2rem;
   }
   .guide-tile-title{
     margin:0;
@@ -595,18 +531,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       border-color: var(--contact-primary-border);
       box-shadow: var(--contact-primary-shadow);
     }
-    .contact-page .contact-action:not(.primary):hover,
-    .contact-page .contact-action:not(.primary):focus-visible,
-    .contact-page .contact-link-card:hover,
-    .contact-page .contact-link-card:focus-visible,
-    .contact-page .contact-method:hover,
-    .contact-page .contact-method:focus-visible {
-      transform: translateY(-1px);
-      box-shadow: var(--contact-hover-shadow);
-      background: var(--contact-surface-soft);
-      border-color: var(--contact-border-strong);
-      outline: none;
-    }
     .contact-page .contact-action.primary:hover,
     .contact-page .contact-action.primary:focus-visible {
       transform: translateY(-1px);
@@ -614,11 +538,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       box-shadow: var(--contact-primary-hover-shadow);
       border-color: var(--contact-primary-border);
       outline: none;
-    }
-    .contact-page .contact-action:focus-visible,
-    .contact-page .contact-link-card:focus-visible,
-    .contact-page .contact-method:focus-visible {
-      box-shadow: var(--contact-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
     }
     .contact-page .contact-action.primary:focus-visible {
       box-shadow: var(--contact-primary-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
@@ -656,12 +575,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       height: 1.05rem;
       color: var(--contact-icon);
     }
-    .contact-page .contact-method-label {
-      display: block;
-      font-size: 0.9rem;
-      color: var(--contact-text-subtle);
-      margin-bottom: 0.25rem;
-    }
     .contact-page .contact-method-value {
       display: block;
       font-size: 1rem;
@@ -670,41 +583,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       color: var(--contact-text);
       overflow-wrap: anywhere;
     }
-    .contact-page .contact-method-note {
-      display: block;
-      margin-top: 0.5rem;
-      color: var(--contact-text-soft);
-      font-size: 0.9rem;
-      line-height: 1.55;
-    }
-    .contact-page .contact-link-grid {
-      display: grid;
-      gap: 0.75rem;
-    }
-    .contact-page .contact-link-card {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      align-items: center;
-      gap: 0.8rem;
-      padding: 0.95rem 1rem;
-      border-radius: 18px;
-      background: var(--contact-surface-elevated);
-      border: 1px solid var(--contact-border-strong);
-      text-decoration: none;
-      color: var(--contact-text-action);
-      font-weight: 800;
-      box-shadow: var(--contact-card-shadow);
-      backdrop-filter: var(--contact-control-backdrop);
-      -webkit-backdrop-filter: var(--contact-control-backdrop);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
-    }
-    .contact-page .contact-link-card .sidebar-icon:first-child {
-      color: var(--contact-icon);
-    }
-    .contact-page .contact-link-card span:nth-child(2) {
-      line-height: 1.25;
-    }
-
 /* ——— 4. PlanCard (subskrypcja.css 121–595) ——— */
     .sub-plans {
       display: grid;
@@ -873,13 +751,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       cursor: default;
       transform: none;
     }
-    .sub-plan__cta--active {
-      background: #e8faf0 !important;
-      color: #00693e !important;
-      border: 1.5px solid #a3e6c3 !important;
-      box-shadow: none !important;
-      cursor: default;
-    }
     .sub-trial-status {
       font-size: 0.84rem;
       text-align: center;
@@ -911,21 +782,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       color: #9e1b1b;
       border: 1px solid #f5a5a5;
     }
-    .sub-login-note {
-      font-size: 0.8rem;
-      color: #7a9999;
-      text-align: center;
-      line-height: 1.45;
-    }
-    .sub-login-note a {
-      color: var(--primary);
-      font-weight: 600;
-      text-decoration: none;
-    }
-    .sub-login-note a:hover {
-   text-decoration: underline;
-   }
-
 /* ——— 5. Responsywność (o-aplikacji.css 1006–1077 przycięte do grupy; kontakt.css 1291–1334 przycięte; instrukcja.css 622–626; subskrypcja.css 1532–1541) ——— */
     @media (max-width: 780px) {
       .about-page .about-quick-links {
@@ -956,13 +812,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
       }
     }
     @media (max-width: 640px) {
-      .contact-page .contact-hero,
-      .contact-page .contact-panel,
-      .contact-page .contact-card,
-      .contact-page .contact-profile-card {
-        padding: 1.1rem;
-        border-radius: 20px;
-      }
       .contact-page .contact-action,
       .contact-page .contact-badge {
         width: 100%;
@@ -1019,14 +868,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   background:var(--hc-module-btn-active-bg)!important;
   border-color:var(--hc-module-btn-active-border)!important;
   box-shadow:0 0 0 1px #00838d1a,var(--hc-module-btn-active-shadow)!important}
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge{
-  background:var(--hc-button-bg)!important;
-  color:var(--hc-text)!important;
-  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
-  box-shadow:0 4px 12px #0000000f!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important}
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-title,
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-title{
   color:var(--hc-text)!important}
@@ -1040,9 +881,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   color:var(--hc-text)!important;
   border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
   box-shadow:0 4px 12px #0000000f!important}
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-footer,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count{
-  color:var(--hc-text)!important}
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge-user{
   background:#00b0a61f!important;
   border-color:#00838d38!important;

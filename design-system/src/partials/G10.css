@@ -499,17 +499,6 @@ header{
   background:var(--primary);
   border-radius:1px;
   transition:transform .3s ease,opacity .3s ease}
-.nav-toggle{
-  position:absolute;
-  opacity:0;
-  pointer-events:none}
-.nav-toggle:checked+label .bar:nth-child(1){
-  transform:translateY(6px) rotate(45deg)}
-.nav-toggle:checked+label .bar:nth-child(2){
-  opacity:1;
-  transform:none}
-.nav-toggle:checked+label .bar:nth-child(3){
-  transform:translateY(-6px) rotate(-45deg)}
 .main-nav{
   box-sizing:border-box}
 @media(max-width:600px){

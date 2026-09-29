@@ -213,26 +213,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .liquid-ios26 #dietRecommendationsBtn{
   border:var(--border-pro) solid #9900ff !important;
 }
-#dietRecommendationsContent #generateDietBtn,#dietRecommendationsPdfBtn.diet-report-pdf-btn{
-  display:block !important;
-  box-sizing:border-box !important;
-  width:100% !important;
-  max-width:100% !important;
-  margin:var(--space-0-55) 0 0 !important;
-  padding:var(--space-0-55) var(--space-1) !important;
-  border-radius:var(--radius) !important;
-  font-size:.95rem !important;
-  font-weight:600 !important;
-  cursor:pointer;
-  text-align:center;
-}
-#dietRecommendationsPdfBtn.diet-report-pdf-btn{
-  background:#fff;
-  color:#000}
-#generateDietBtn {
-  border:var(--border-pro) solid #9900ff;
-  font-weight:600
-}
 .liquid-ios26 #dietRecommendationsPdfBtn {
   border:var(--border-pro) solid #9900ff!important;
   font-weight:600!important
@@ -267,12 +247,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   border:var(--border-pro) solid var(--line-neutral) !important;
   pointer-events:none;
 }
-#toggleAdvancedGrowth .adv-pro-tag,.pro-superscript{
-  color:#90f;
-  font-size:.55em;
-  font-weight:700;
-  vertical-align:super;
-  margin-left:.1rem}
 .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled .pro-superscript{
   color:#90f!important}
 .liquid-ios26 .pro-button:disabled{
@@ -469,11 +443,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 }
 .vilda-auth-actions .vilda-auth-btn{
   flex:1}
-.vilda-auth-actions-end{
-  justify-content:flex-end}
-.vilda-auth-actions-end .vilda-auth-btn{
-  flex:0 0 auto;
-  min-width:140px}
 .vilda-auth-actions-center{
   justify-content:center}
 .vilda-auth-actions-center .vilda-auth-btn{
@@ -513,19 +482,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   background:#006d75;
   border-color:#006d75;
   box-shadow:0 8px 22px #00838d4d}
-.vilda-auth-root .vilda-patient-delete-btn{
-  flex:0 0 auto;
-  background:#fff !important;
-  color:var(--danger-strong) !important;
-  border:1.5px solid #f0c4cf !important;
-  box-shadow:none !important;
-}
-.vilda-auth-root .vilda-patient-delete-btn:hover{
-  background:#fff5f6 !important;
-  border-color:var(--danger-strong) !important;
-  color:#8e0019 !important;
-  box-shadow:none !important;
-}
 .vilda-auth-logout{
   position:fixed !important;
   inset:14px 14px auto auto !important;
@@ -596,11 +552,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 @media(max-width:520px){
 .vilda-auth-actions{
   flex-direction:column-reverse}
-.vilda-auth-actions-end .vilda-auth-btn{
-  width:100%}
-.vilda-auth-root .vilda-patient-delete-btn{
-  width:100%!important;
-  flex:1 1 auto}
 }
 .vilda-auth-btn-biometric{
   font-weight:600;
@@ -837,16 +788,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   outline:var(--hc-focus-width) solid var(--hc-focus-color)!important;
   outline-offset:2px!important}
 
-/* ---- Wysoki kontrast — AuthButton (vilda_auth_ui.css 1452-1458, 1468-1471; listy selektorów przycięte do przycisków tej rodziny) ---- */
-body.liquid-ios26.high-contrast-level-1 .vilda-auth-logout,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-patient-delete-btn,
-body.liquid-ios26.high-contrast-level-2 .vilda-auth-logout,
-body.liquid-ios26.high-contrast-level-3 .vilda-auth-logout{
-  background:var(--hc-surface)!important;
-  backdrop-filter:var(--hc-blur)!important;
-  -webkit-backdrop-filter:var(--hc-blur)!important;
-  box-shadow:var(--hc-shadow)!important}
 body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-logout,
 body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-btn-ghost{
   border:var(--hc-card-border-width) solid var(--hc-border)!important}
