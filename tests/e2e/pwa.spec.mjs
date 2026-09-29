@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+// Projekt desktop-chromium domyślnie blokuje SW (playwright.config.mjs); ten plik sprawdza SW, więc go włącza.
+test.use({ serviceWorkers: 'allow' });
+
 test('manifest wskazuje istniejące ikony aplikacji', async ({ request }) => {
   const response = await request.get('/manifest.json');
   expect(response.ok()).toBe(true);

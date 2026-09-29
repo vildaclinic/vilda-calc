@@ -61,7 +61,16 @@ export default defineConfig({
       testIgnore: /mobile\.spec\.mjs/,
       use: {
         ...devices['Desktop Chrome'],
-        viewport: { width: 1440, height: 1000 }
+        viewport: { width: 1440, height: 1000 },
+        // Service worker domyślnie zablokowany, jak w projekcie mobilnym i w 73 plikach, które
+        // robiły to u siebie. Przy pierwszej wizycie SW instaluje się, przejmuje stronę
+        // (clients.claim) i ios26-ui.js robi `location.reload()` na `controllerchange`.
+        // Instalacja trwała ~85 s (474 MB historii), więc reload rzadko trafiał w test; od
+        // P-SW-PRECACHE (SW 1.1.105) trwa kilka sekund i przeładowuje stronę w środku testu
+        // („Execution context was destroyed”). Pliki, które sprawdzają SW, włączają go jawnie:
+        // test.use({ serviceWorkers: 'allow' }) — także te z własnym launchPersistentContext,
+        // bo Playwright podaje mu opcje kontekstu z `use` jako domyślne.
+        serviceWorkers: 'block'
       }
     },
     {

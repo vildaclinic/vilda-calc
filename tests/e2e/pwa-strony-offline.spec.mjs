@@ -5,6 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 
+// Projekt desktop-chromium domyślnie blokuje SW (playwright.config.mjs), a launchPersistentContext
+// dziedziczy tę opcję; ten plik sprawdza prawdziwy SW, więc go włącza.
+test.use({ serviceWorkers: 'allow' });
+
 // P-SW-DOCPRO (zlecenie właściciela 2026-09-28): DocPro nie startował offline.
 //
 // Test używa PRAWDZIWEGO service workera (pełne tablice precache, nie przycięty wariant

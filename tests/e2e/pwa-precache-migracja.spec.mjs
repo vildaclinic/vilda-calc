@@ -5,6 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 
+// Projekt desktop-chromium domyślnie blokuje SW (playwright.config.mjs), a launchPersistentContext
+// dziedziczy tę opcję; ten plik sprawdza prawdziwy SW, więc go włącza.
+test.use({ serviceWorkers: 'allow' });
+
 // P-SW-PRECACHE (decyzja właściciela 2026-09-29): migracja z SW, który instalował całą historię precache.
 //
 // Zmierzone na SW 1.1.103 (Chromium, profil trwały, limit źródła ustalony przez CDP): stara instalacja wypełniała
