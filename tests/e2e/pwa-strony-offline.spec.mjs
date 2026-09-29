@@ -45,8 +45,8 @@ const POMIJANE = [
   { wzorzec: /^\/videos\//, powod: 'filmy są poza cache z założenia' },
   // Plakaty filmów są w tablicy precache, ale plików nie ma w repozytorium (404 także online).
   { wzorzec: /^\/posters\//, powod: 'brak plików w repozytorium' },
-  // Wyjątek opisany w tests/unit/sw-precache-stron.test.mjs (klucz dokumentu bez ?v=).
-  { wzorzec: /^\/lab_pin_result\.js\?v=/, powod: 'lab_pin_result.js w OPTIONAL_DOCUMENTS' },
+  // P-SW-LAB-PIN (2026-09-29): lab_pin_result.js?v=4 jest już w precache — wyjątek usunięty, więc ten test
+  // pilnuje, że Przelicznik jednostek ładuje go offline.
 ];
 
 async function uruchomSerwer() {
