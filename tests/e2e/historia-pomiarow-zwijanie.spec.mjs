@@ -27,6 +27,8 @@ async function otworz(page) {
         'vilda-terms-accepted-v1',
         JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }),
       );
+      // Baner zgody na analitykę leży na dole ekranu i przechwytuje kliknięcia w kartę.
+      window.localStorage.setItem('analyticsConsent', 'denied');
     } catch (_) { /* brak storage — pomiń */ }
   });
   await page.goto('/index.html', { waitUntil: 'load' });
@@ -40,12 +42,23 @@ async function otworz(page) {
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
-  await page.waitForFunction(() => Boolean(window.VildaAdvHistoryCollapse));
+  await page.waitForFunction(() => Boolean(window.VildaAdvHistoryCollapse && window.VildaProAccess));
+  // Karta jest funkcją PRO w trybie profesjonalnym: updateAdvancedGrowthAccess() chowa ją przy
+  // każdym zapisie i czyszczeniu, gdy dostępu nie ma. Dostęp podmieniamy jak w innych testach
+  // (wymaga podpisanego tokenu), tryb profesjonalny włączamy tak, jak robi to użytkownik.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (tryb && !tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
 }
 
-// Zapis i wczytanie zwijają kartę zaawansowaną — przed klikaniem w nią trzeba ją odsłonić.
-// Karta bywa zwijana z opóźnieniem po otwarciu (odtwarzanie stanu kart), więc odsłanianie
-// jest ponawiane, aż karta zostanie widoczna.
+// Odsłonięcie karty przyciskiem sekcji. Ponawiane, bo przycisk podpina się leniwie, a sekcja
+// bywa chwilę ukryta, zanim formularz główny przeliczy dane (updateAdvancedGrowthAccess).
 async function pokazKarte(page) {
   await expect.poll(() => page.evaluate(() => {
     const t = document.getElementById('toggleAdvancedGrowth');
@@ -53,6 +66,13 @@ async function pokazKarte(page) {
     if (f && getComputedStyle(f).display === 'none' && t) { t.disabled = false; t.click(); }
     return Boolean(f) && f.getClientRects().length > 0;
   }), { message: 'karta zaawansowana odsłonięta' }).toBe(true);
+}
+
+// Prawdziwe kliknięcie (zaufane zdarzenie, jak u użytkownika) w odsłoniętą kartę. Jedno — klik
+// „Dodaj kolejny pomiar” nie jest idempotentny, więc nie wolno go ponawiać.
+async function kliknij(page, selektor) {
+  await pokazKarte(page);
+  await page.locator(selektor).click();
 }
 
 // Karta zaawansowana podpina uchwyt przycisku LENIWIE i dopiero wtedy tworzy pierwszy wiersz —
@@ -83,7 +103,7 @@ async function pacjent(page, { nazwisko, imie, pomiary }) {
   // kart usuwa go przy pierwszym wpisie — tak jest też na gałęzi bazowej, bez tego modułu.
   const wiersze = page.locator('#advMeasurements > .measure-row');
   for (let i = 0; i < pomiary.length; i++) {
-    if (i > 0) await page.locator('#advAddMeasurementBtn').click();
+    if (i > 0) await kliknij(page, '#advAddMeasurementBtn');
     await expect(wiersze).toHaveCount(i + 1);
     const w = wiersze.nth(i);
     await w.locator('.adv-age-years').fill(pomiary[i][0]);
@@ -166,7 +186,7 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     });
     expect(przed.wyniki.length, 'karta coś policzyła — inaczej porównanie jest puste').toBeGreaterThan(50);
 
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
     s = await stan(page);
     expect(s).toMatchObject({ rozwiniete: 'false', akcja: 'Rozwiń', dolny: false, wiersze: 6, widoczne: 0 });
     expect(s.podsumowanie).toBe(`wiek 4${NBSP}l. – 9${NBSP}l. · najnowszy: 129,1${NBSP}cm · 27,0${NBSP}kg`);
@@ -181,7 +201,7 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     expect(po.zbior, 'obliczenia czytają także zwinięte wiersze').toBe(przed.zbior);
     expect(po.wyniki, 'wynik karty bez zmian').toBe(przed.wyniki);
 
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
     expect(await stan(page)).toMatchObject({ rozwiniete: 'true', widoczne: 6, podsumowanie: null });
   });
 
@@ -190,7 +210,7 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     await pacjent(page, { nazwisko: 'Testowa', imie: 'Anna', pomiary: SZESC.slice(0, 3) });
     await zapisz(page, null);
 
-    for (let i = 0; i < 3; i++) await page.locator('#advHistoryToggle').click();
+    for (let i = 0; i < 3; i++) await kliknij(page, '#advHistoryToggle');
     expect((await stan(page)).rozwiniete).toBe('false');
     // Wskaźnik zapisu przelicza stan z opóźnieniem 400 ms — dajemy mu wyraźnie więcej.
     await page.waitForTimeout(1200);
@@ -201,7 +221,7 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     await otworz(page);
     await pacjent(page, { nazwisko: 'Testowa', imie: 'Anna', pomiary: SZESC.slice(0, 3) });
     const anna = await zapisz(page, null);
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
     expect(await mapa(page)).toEqual({ [anna]: 1 });
 
     const wPayloadzie = await page.evaluate(async () => {
@@ -239,7 +259,7 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
   test('pacjent niezapisany: stan w pamięci strony, przy zapisie przechodzi pod nadany identyfikator', async ({ page }) => {
     await otworz(page);
     await pacjent(page, { nazwisko: 'Testowa', imie: 'Ewa', pomiary: SZESC.slice(0, 3) });
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
     expect((await stan(page)).rozwiniete).toBe('false');
     expect(await mapa(page), 'bez identyfikatora nic nie trafia do preferencji konta').toEqual({});
 
@@ -251,8 +271,8 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
   test('pomiar dopisany przy zwiniętej liście zostaje widoczny z etykietą „Nowy pomiar”', async ({ page }) => {
     await otworz(page);
     await pacjent(page, { nazwisko: 'Testowa', imie: 'Anna', pomiary: SZESC.slice(0, 3) });
-    await page.locator('#advHistoryToggle').click();
-    await page.locator('#advAddMeasurementBtn').click();
+    await kliknij(page, '#advHistoryToggle');
+    await kliknij(page, '#advAddMeasurementBtn');
 
     let s = await stan(page);
     expect(s).toMatchObject({ wiersze: 4, widoczne: 1, licznik: '3 pomiary' });
@@ -270,8 +290,8 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     expect((await stan(page)).widoczne, 'wpisywany pomiar nie znika spod ręki').toBe(1);
     expect(await page.evaluate(() => window.collectAdvancedMeasurements().length)).toBe(4);
 
-    await page.locator('#advHistoryToggle').click();
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
+    await kliknij(page, '#advHistoryToggle');
     expect(await stan(page), 'kolejne zwinięcie chowa także nowy pomiar')
       .toMatchObject({ rozwiniete: 'false', widoczne: 0 });
   });
@@ -285,11 +305,11 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
       // Krok pola to 0,1 — dwie cyfry po przecinku nie są błędem i nie mogą dawać znacznika.
       rows[2].querySelector('.adv-height').value = '113.85';
     });
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
     await expect(page.locator('#advHistoryInvalid')).toBeVisible();
     await expect(page.locator('#advHistoryInvalidText')).toHaveText('Do poprawy: 1');
 
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
     await expect(page.locator('#advHistoryInvalid'), 'po rozwinięciu wiersz widać, znacznik zbędny').toBeHidden();
   });
 
@@ -297,13 +317,13 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     await otworz(page);
     await pacjent(page, { nazwisko: 'Testowa', imie: 'Anna', pomiary: SZESC.slice(0, 2) });
     expect((await stan(page)).dolny, 'przy dwóch pomiarach drugi przycisk jest zbędny').toBe(false);
-    await page.locator('#advAddMeasurementBtn').click();
+    await kliknij(page, '#advAddMeasurementBtn');
     const rows = page.locator('#advMeasurements > .measure-row');
     await rows.nth(2).locator('.adv-age-years').fill('6');
     await rows.nth(2).locator('.adv-height').fill('113.8');
     await expect(page.locator('#advHistoryCollapseBottom')).toBeVisible();
 
-    await page.locator('#advHistoryCollapseBottom').click();
+    await kliknij(page, '#advHistoryCollapseBottom');
     expect(await stan(page)).toMatchObject({ rozwiniete: 'false', widoczne: 0, dolny: false });
     expect(await page.evaluate(() => document.activeElement && document.activeElement.id))
       .toBe('advHistoryToggle');
@@ -334,7 +354,7 @@ test.describe('Poprzednie pomiary — telefon', () => {
       };
     });
     expect(await miesci()).toMatchObject({ wEkranie: true, bezPrzewijania: true });
-    await page.locator('#advHistoryToggle').click();
+    await kliknij(page, '#advHistoryToggle');
     const z = await miesci();
     expect(z).toMatchObject({ wEkranie: true, bezPrzewijania: true });
     expect(z.wysokosc, 'cel dotykowy').toBeGreaterThanOrEqual(44);
