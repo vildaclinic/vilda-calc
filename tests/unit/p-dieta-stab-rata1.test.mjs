@@ -74,7 +74,10 @@ describe('Przypadek zgłoszenia: chłopiec 7 l. 3 mies., 44 kg, 131 cm (otyłoś
     expect(k.ubytekDietyKg).toBe(0);
     expect(k.przyrostKg).toBeGreaterThan(0.3);
     expect(k.masaSpodziewanaKg).toBe(Math.round((44 + k.przyrostKg) * 10) / 10);
-    expect(k.progKg).toBe(k.masaSpodziewanaKg);
+    // P-DIETA-STAB rata 2: próg = spodziewana masa + margines 1 % masy (0,3–1 kg) na wahania pomiaru
+    expect(k.tolerancjaKg).toBe(0.44);
+    expect(k.progKg).toBe(Math.round((44 + k.przyrostKg + 0.44) * 10) / 10);
+    expect(k.progKg).toBeGreaterThan(k.masaSpodziewanaKg);
     expect(k.gornaKcal).toBe(1900);
     expect(k.podazPoObnizceKcal).toEqual([1700, 1800]);
   });
@@ -130,6 +133,30 @@ describe('Inne grupy wieku i klasy BMI', () => {
     const st = plan({ sex: 'M', ageYears: 30, ageMonthsOpt: 0, weightKg: 110, heightCm: 178 });
     expect(st.maintenanceKcal).toBeNull();
     expect(st.maintenanceGornaKcal).toBeNull();
+  });
+});
+
+describe('P-DIETA-STAB rata 2: margines progu kontroli stabilizacji — 1 % masy, nie mniej niż 0,3 kg, nie więcej niż 1 kg', () => {
+  const przypadki = [
+    [{ sex: 'M', ageYears: 4, ageMonthsOpt: 0, weightKg: 22, heightCm: 105 }, 0.3], // 0,22 → minimum 0,3
+    [{ sex: 'F', ageYears: 8, ageMonthsOpt: 0, weightKg: 40, heightCm: 130 }, 0.4],
+    [{ sex: 'M', ageYears: 14, ageMonthsOpt: 0, weightKg: 85, heightCm: 165 }, 0.85],
+    [{ sex: 'M', ageYears: 16, ageMonthsOpt: 0, weightKg: 130, heightCm: 180 }, 1], // 1,3 → maksimum 1
+  ];
+  for (const [p, tol] of przypadki) {
+    it(`${p.sex} ${p.ageYears} l., ${p.weightKg} kg → margines ${tol} kg, próg = dziś + przyrost + margines`, () => {
+      const k = kontrolaStab(p);
+      expect(win.ENERGY_KONTROLA_PLANU.stabilizacjaTolerancja).toEqual({ czescMasy: 0.01, minKg: 0.3, maxKg: 1 });
+      expect(k.tolerancjaKg).toBe(tol);
+      expect(k.progKg).toBe(Math.round((p.weightKg + k.przyrostKg + tol) * 10) / 10);
+    });
+  }
+  it('dieta (wiersz redukcji) bez marginesu stabilizacji — reguła raty W bez zmian', () => {
+    const st = plan(CHLOPIEC);
+    const d = st.diets[0];
+    const k = win.energyKontrolaPlanu(d, { weightKg: 44, floorKcal: st.floorKcal, dzis: DZIS, sex: 'M', ageYears: 7.25, ageMonthsOpt: 3, heightCm: 131 });
+    expect(k.tolerancjaKg).toBe(0);
+    expect(k.progKg).toBe(Math.round((44 + k.przyrostKg - k.ubytekDietyKg * 0.5) * 10) / 10);
   });
 });
 

@@ -95,7 +95,7 @@ test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktual
   expect(r.plan).toMatch(new RegExp(`≤\\s?${Math.floor(r.state.diets[1][1] / 50) * 50}\\s?kcal/dzień\\s?górna granica dnia — dieta umiarkowana \\(nie cel do dobicia\\)`));
   // rata U: podstawa od masy docelowej (Mazur 2022); rata V: zapotrzebowanie aktualne z REE Molnára 1995 (nazwa równania z danych)
   expect(r.plan).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok.');
-  expect(r.plan).toContain('(REE wg Molnára 1995, zwalidowane u nastolatków z otyłością)');
+  expect(r.plan).toContain('(REE wg Molnára 1995, zwalidowane u nastolatków z nadwagą i otyłością)');
   expect(r.plan).not.toContain('korektą −10 %');
   expect(r.plan).not.toContain('Hofsteenge');
   expect(r.plan).toContain('85. centyl BMI');

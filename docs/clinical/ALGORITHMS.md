@@ -2190,7 +2190,7 @@ Ten sam plik pod dwoma kluczami cache. Nie jest to awaria — service worker od�
 
 **Sprawdzone na sobie.** Przy najbliższym wydaniu podbiłem `?v=` celowo tylko w `index.html`. Test zapalił się na czerwono i **nazwał obie pominięte strony** — `docpro.html` i `kalkulator-klirens.html`.
 
-**Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła.
+**Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła. *Aktualizacja (P-SW-DOCPRO, SW 1.1.97, 2026-09-28):* decyzją właściciela sześć pierwszych dopisano do precache (bez nich DocPro nie startował offline), `lab_clinical_panels.js` wrócił wcześniej w P-SLOWA-MPH rata 3; na liście został wyłącznie `lab_pin_result.js`, z powodem opisanym we wpisie P-SW-DOCPRO.
 
 ### P-ZAPIS-OBIETNICA — `saveUserData()` pozwala poczekać na zapis (SW 1.0.936, 2026-09-14, zlecenie właściciela)
 
@@ -2927,6 +2927,8 @@ Obie ścieżki podają teraz antropometrię: silnik (`energyBuildPlanReductionSt
 **Czego nie skrócono** (bez decyzji właściciela): zdania stabilizacji („zapotrzebowanie przy obecnej masie ciała, z korektą −10 % REE na otyłość (Hofsteenge 2010) … celem pozostaje masa docelowa ok. X kg (85. centyl BMI)") ani nawiasu w zdaniu o normach żywieniowych („od zapotrzebowania przy obecnej masie ciała z korektą na otyłość"). Oba mają tę samą wadę co zdania wyżej i są kandydatami na kolejne cięcie.
 
 *Strażnicy:* `tests/unit/energy-dziecko-otylosc.test.mjs` (21: PAL 1,4 przy otyłości i 1,6 przy nadwadze — z klasy BMI podanej wprost i z samej antropometrii, poniżej 10 lat bez zmian, silnik bierze tę samą wartość co formularz); `tests/e2e/diet-plan-logic.spec.mjs` (PLAN-PAL-DEFAULT-TEEN dla otyłości i PLAN-PAL-DEFAULT-TEEN-OVERWEIGHT dla nadwagi — ten drugi sprawdza ścieżkę formularza, czyli przekazanie antropometrii przez `vilda_update_prep`); `tests/e2e/diet-recommendations-logic.spec.mjs` i `tests/e2e/dieta-dziecko-otylosc.spec.mjs` (skrócone zdania: brak etykiety metody i brak nawiasu z metodologią przy kaloryczności).
+
+**Zastąpione (2026-09-29).** PAL 1,6 przy nadwadze 10–18 lat zmieniony na 1,4 — patrz P-DIETA-STAB rata 3.
 
 ### ENERGY-CHILD-MID2 — cel leczenia z 85. centyla BMI i domyślny PAL 1,6 dla 10–18 lat (SW 1.0.908, 2026-09-13, decyzja właściciela)
 
@@ -5829,6 +5831,206 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Nastolatek z nadwagą: REE wg Molnára 1995 i domyślny PAL 1,4 jak przy otyłości (10–18 lat), kategoria z siatki karty „Centyle i BMI” (P-DIETA-STAB rata 3, SW 1.1.99, 2026-09-29)
+
+**Zgłoszenie właściciela (2026-09-29, endokrynolog dziecięcy).** Chłopiec 13 l., 76 kg, 168 cm, BMI 26,9 (96. centyl OLAF,
+bmiSDS +1,77), strategia „stabilizacja”: aplikacja podawała ok. 3100 kcal dziennie. Ocena właściciela: za dużo.
+
+**Stan przed zmianą (prawdziwy silnik).** Nadwaga (85.–97. centyl) 10–18 lat liczyła się z REE Henry’ego 2005 (1931 kcal) ×
+PAL 1,6 (ENERGY-CHILD-MID3) = 3090 kcal → „≤ 3050”. Ten sam chłopiec przy 78,5 kg przekracza 97. centyl OLAF i dostaje Molnára
+× PAL 1,4 = 2549 kcal — o ok. 540 kcal mniej przy większej masie. Ten skok na granicy 97. centyla był artefaktem dwóch progów
+(równanie i PAL), a nie cechą fizjologii.
+
+**Piśmiennictwo.**
+- Hofsteenge GH i wsp. Am J Clin Nutr 2010;91:1244–54, [doi:10.3945/ajcn.2009.28330](https://doi.org/10.3945/ajcn.2009.28330):
+  walidacja w grupie 121 nastolatków 12–18 lat **z nadwagą lub otyłością** (nie tylko z otyłością); Molnár najtrafniejszy
+  (73–74 % trafnych ±10 %, błąd ok. −1 %), Schofield/Henry na masie aktualnej zawyża (+10,7 %).
+- Molnár D i wsp. J Pediatr 1995;127:571, [doi:10.1016/s0022-3476(95)70114-1](https://doi.org/10.1016/s0022-3476(95)70114-1):
+  równanie opracowane u nastolatków otyłych i nieotyłych 10–16 lat.
+- Puyau M i wsp. Am J Clin Nutr 2025;121:284–292, [doi:10.1016/j.ajcnut.2024.12.003](https://doi.org/10.1016/j.ajcnut.2024.12.003):
+  Oxford (Henry) zawyża BEE u chłopców z nadwagą/otyłością średnio o ok. 11 % (nadwaga i otyłość raportowane razem).
+- PAL maleje z otłuszczeniem: Ball 2001 ([doi:10.1093/ajcn/74.4.524](https://doi.org/10.1093/ajcn/74.4.524)), Abbott i Davies
+  2004 ([doi:10.1038/sj.ejcn.1601780](https://doi.org/10.1038/sj.ejcn.1601780)) — jak w P-DIETA-STAB rata 1.
+
+**Decyzje właściciela (2026-09-29).**
+1. „Opcja A”: REE wg Molnára 1995 także przy nadwadze 10–18 lat (dotąd tylko otyłość — rata V, decyzja V1).
+2. Domyślny PAL 1,4 przy nadwadze 10–18 lat (dotąd 1,6 — ENERGY-CHILD-MID3); 1,6 i wyższe zostają do wyboru lekarza.
+3. Kategoria nadwagi/otyłości (a przez nią równanie, PAL i strategia domyślna) liczona z siatki wybranej w karcie „Centyle i BMI”,
+   tak by była spójna z „Podsumowaniem wyników”.
+
+**Zmiana (kliniczna: inne REE i domyślny PAL u nastolatków z nadwagą).**
+- `vilda_diet_plan_ui.js` (`?v=38`): bramka Molnára w `energyBuildPlanReductionState` — plan dziecka z nadwagą lub otyłością
+  (dotąd `cls.obese === true`); zakres wieku 10–18 lat nadal z danych (`wiekOdLat`/`wiekDoLat`). `ENERGY_PAL_DOMYSLNY` dostaje
+  wiersz danych `nadwaga: {child_10_18: 1,4}`; `energyDefaultPlanPal` bierze kolejno: otyłość → nadwaga → pasmo normatywne.
+  Formularz (`vildaUpdatePrepResolvePlanPalValue`) korzysta z tej samej funkcji, więc select PAL i silnik pokazują tę samą liczbę.
+- `vilda_ree_rownania_data.js` (`?v=3`, `wersja` 1.2.0): `MOLNAR_1995.wskazanie = 'nadmiar'`, `krotko` „REE wg Molnára 1995,
+  zwalidowane u nastolatków z nadwagą i otyłością” (pokazywane w karcie planu), `ograniczenia` z datą decyzji.
+- Siatka (decyzja 3): **bez zmiany kodu** — `childBmiClass` już czyta globalne `bmiSource` (`dietBmiZrodlo()`), ustawiane przez
+  przełącznik źródła danych w karcie „Centyle i BMI”; to samo źródło liczy bmiSDS „Podsumowania wyników”. Rata dodaje strażników
+  (unit i e2e), że z-score klasy diety = z-score karty dla OLAF, WHO i Palczewskiej.
+- Strony (`index.html`, `docpro.html`, `kalkulator-klirens.html`, lista smoke), precache SW (append-only), SW 1.1.98 → 1.1.99,
+  pin w `klirens-ui-model`, fixture wersji.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne; prawdziwy silnik; `tests/unit/p-dieta-stab-rata3.test.mjs`,
+`rata-n2-nadwaga-sufit`, `rata-u-dieta-dziecka`).**
+
+| Pacjent (siatka OLAF) | Przed (Henry × 1,6) | Po (Molnár × 1,4) |
+|---|---|---|
+| chł. 13 l., 168 cm, 76 kg (nadwaga, 96 c) | stabilizacja 3090 → ≤ 3050 | stabilizacja 2507 → **≤ 2500**; redukcja ≤ 2350 / 2250 / 2100 |
+| chł. 13 l., 168 cm, 78 kg vs 78,5 kg (granica 97 c) | 3140 vs 2549 (skok ok. 590 kcal) | różnica < 20 kcal (sam przyrost masy) |
+| chł. 13 l., 155 cm, 55 kg | redukcja ≤ 2350 / 2250 / 2100 | ≤ 1900 / 1750 / 1650 |
+| chł. 13 l., 155 cm, 60 kg | ≤ 2500 / 2350 / 2250 | ≤ 1950 / 1850 / 1700 |
+| dz. 12 l., 152 cm, 52 kg | ≤ 2000 / 1850 / 1700 | ≤ 1700 / 1550 / 1450 |
+| dz. 15 l., 162 cm, 66 kg | ≤ 2250 / 2100 / 1950 | ≤ 1800 / 1700 / 1550 |
+| chł. 17 l., 178 cm, 80 kg | ≤ 3100 / 2950 / 2850 | ≤ 2450 / 2300 / 2200 |
+| nadwaga < 10 lat, masa prawidłowa, otyłość, dorośli | — | bez zmian |
+
+Ten sam chłopiec 13 l., 76 kg: OLAF → nadwaga, domyślnie stabilizacja; WHO 2007 i Palczewska → otyłość, domyślnie redukcja.
+Energia utrzymania we wszystkich trzech siatkach jest teraz taka sama (2507 kcal) — siatka zmienia kategorię i strategię, nie REE.
+
+**Wpływ kliniczny.** U nastolatków 10–18 lat z nadwagą energia utrzymania i diety spadają o ok. 13–20 % (w przypadkach z tabeli:
+chłopcy ok. −19 %, dziewczęta −13…−17 %; sam PAL 1,6 → 1,4 to −12,5 %, reszta to Molnár zamiast Henry’ego). Strategia domyślna, sufity tempa (N2) i podłogi bez zmian. Zapisani pacjenci z jawnie
+wybranym PAL zachowują wybór.
+
+**Ograniczenia.** Hofsteenge 2010 i Puyau 2025 nie raportują osobno grupy z samą nadwagą. PAL 1,4 to średnia dla nastolatków z
+otyłością; u aktywnego nastolatka z nadwagą lekarz powinien wybrać PAL wyższy. Molnár opracowany dla 10–16 lat.
+
+**Testy.** Unit `p-dieta-stab-rata3` (9: przypadek zgłoszenia, brak skoku na 97. centylu, granice zmiany, dziewczynka 15 l.,
+siatka z karty `Centyle i BMI`), zaktualizowane oczekiwania: `energy-dziecko-otylosc`, `rata-u-dieta-dziecka`,
+`rata-v-ree-molnar`, `rata-n2-nadwaga-sufit`, `rata-h1-henry-dane`; e2e `p-dieta-stab-rata3` (przełącznik siatki: z-score klasy
+diety = bmiSDS podsumowania) i zaktualizowane specyfikacje nastolatków z nadwagą.
+
+**Zastępuje** decyzję V1 z raty V („Molnár tylko przy otyłości”) i PAL 1,6 przy nadwadze 10–18 lat (ENERGY-CHILD-MID3);
+wpisy zostają jako historia.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
+
+## Margines progu kontroli stabilizacji: 1 % masy ciała, 0,3–1 kg (P-DIETA-STAB rata 2, SW 1.1.98, 2026-09-29)
+
+**Zgłoszenie (otwarta decyzja z P-DIETA-STAB rata 1).** Kontrola po 12 tygodniach przy stabilizacji porównywała masę
+z „dzisiejsza masa + przyrost z samego wzrastania” bez żadnego marginesu (poza zaokrągleniem do 0,1 kg). Wahania pomiaru
+(ubranie, pora dnia, wypełnienie przewodu pokarmowego i pęcherza) mogły więc dawać fałszywe „obniż podaż o 100–200 kcal”.
+Diety redukcyjne mają margines od raty V (połowa spodziewanego ubytku), stabilizacja — nie, bo spodziewany ubytek wynosi 0.
+
+**Decyzja właściciela (2026-09-29).** Margines = 1 % masy dzisiejszej, nie mniej niż 0,3 kg i nie więcej niż 1 kg.
+Dolna granica 0,3 kg odpowiada ubraniu (ta sama wartość jest w uzasadnieniu raty W); górna chroni przed przesłonięciem realnego
+przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela — piśmiennictwo nie podaje standardu dla tego progu.
+
+**Zmiana (kliniczna: inny próg obniżki podaży przy stabilizacji; diety bez zmian).**
+- `vilda_diet_plan_ui.js` (`?v=37`): `KONTROLA_PLANU.stabilizacjaTolerancja = {czescMasy: 0,01; minKg: 0,3; maxKg: 1}` (dane);
+  `energyKontrolaPlanu` dla wiersza `stabilizacja:true` liczy `prog = masa dziś + przyrost ze wzrastania + margines` i oddaje
+  `tolerancjaKg`; wiersze diet — `tolerancjaKg: 0`, reguła raty W bez zmian.
+- `vilda_diet_recommendations.js` (`?v=64`): zdanie kontroli „Jeśli masa będzie wyższa niż X kg (z marginesem Y kg na wahania
+  pomiaru), …”; `dane.kontrola.tolerancjaKg`.
+- Plan PDF bez zmian w kodzie — kafel „> X kg” pokazuje próg z marginesem.
+- SW 1.1.97 → 1.1.98 (1.1.97 zajęło równolegle P-SW-DOCPRO), precache append-only, `?v=` na stronach i w smoke, fixture wersji.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne; `tests/unit/p-dieta-stab-rata1.test.mjs`).**
+
+| Pacjent | Margines | Próg kontroli (przed → po) |
+|---|---|---|
+| chł. 7 l. 3 mies., 44 kg, 131 cm | 0,44 kg | ok. 44,5 → **ok. 45,0 kg** |
+| chł. 4 l., 22 kg | 0,3 kg (minimum) | dziś + przyrost + 0,3 kg |
+| dz. 8 l., 40 kg | 0,4 kg | dziś + przyrost + 0,4 kg |
+| chł. 10 l., 52 kg (e2e G1-1) | 0,52 kg | 52,7 → **53,2 kg** |
+| chł. 14 l., 85 kg | 0,85 kg | dziś + przyrost + 0,85 kg |
+| chł. 16 l., 130 kg | 1 kg (maksimum) | dziś + przyrost + 1 kg |
+
+**Testy.** Unit `p-dieta-stab-rata1` (margines i obie granice na prawdziwym silniku; dieta bez marginesu); e2e
+`dieta-tempo-rata-g1` (G1-1, G1-3: kafel progu w planie PDF), `zalecenia-energetyczne-krytyczne` (K2: zdanie z marginesem).
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
+## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.97, 2026-09-28)
+
+**Zgłoszenie właściciela (2026-09-28).** `docpro.html` stoi w `OPTIONAL_DOCUMENTS`, ale DocPro nie startował offline. W prawdziwym
+Chromium (produkcyjny SW zarejestrowany przez `ios26-ui.js`, instalacja zakończona, potem `context.setOffline(true)` i przeładowanie
+`/docpro.html`) `window.VildaVault` zostawał `undefined`, wiele skryptów kończyło się `net::ERR_FAILED`, a potem powtarzał się błąd
+strony `OLAF_DATA_MIN_AGE is not defined`. Statyczne porównanie `docpro.html` z tablicami SW znalazło pięć brakujących adresów,
+ale offline padały też adresy, które w tablicy SĄ (np. `vilda_vault.js?v=187`, `vilda_auth_ui.js?v=465`).
+
+**Co zmierzono (Chromium 141 z Playwright 1.61.1, `tests/support/static-server.mjs`, pełny `service-worker-kalorii.js`).** Dwie
+niezależne przyczyny, obie na `audyt` sprzed zmiany. To nie była kaskada ani niezgodność klucza cache — brakujących wpisów nie było
+w pamięci powłoki.
+1. **Brakujące wpisy.** Strony z `OPTIONAL_DOCUMENTS` ładowały zasoby bez wstępnego pobrania: `vilda_sync.js?v=32`,
+   `vilda_sync_integration.js?v=45`, `vilda_data_safety_explainer.js?v=5`, `vilda_obesity_banner.css?v=6` (DocPro, strona główna,
+   Klirens, Ustawienia, Notatki, Terminarz, Subskrypcja, `app.html` — w różnych zestawach), `vilda_session_bridge.js?v=3` (wszystkie
+   strony), `ustawienia.css?v=13` (Ustawienia) i `edu-video-ui.css?v=20261001v4` / `?v=20261001v7` (pięć stron instrukcji wideo; tego
+   strażnik `piny-wersji` nie widział, bo wartość `?v=` nie jest liczbą). Ratował je tylko cache czasu działania — pod warunkiem, że
+   strona była wcześniej otwarta online już pod kontrolą SW i że zapis w runtime się zmieścił. Strona otwarta pierwszy raz dopiero
+   offline (np. DocPro w powłoce `app.html`) startowała bez nich.
+2. **Wyczerpany limit pamięci źródła.** Tablice precache to 2474 adresy (wymagany rdzeń 1452, dokumenty 20, zasoby opcjonalne 1003),
+   razem 473 MB na dysku — hosting ignoruje `?v=`, więc każdy historyczny adres to pełna kopia bieżącego pliku (sam `vilda_auth_ui.js`:
+   387 wersji, 233 MB). W Chromium precache zajmuje **1,20 GB** (profil trwały; Chromium dokłada pamięć podręczną kodu skryptów).
+   Limit źródła w kontekście incognito jest w Chromium losowany — zmierzone 0,91 i 1,12 GB na maszynie z 16 GB RAM. Gdy limit się
+   kończy, `cache.put` jest odrzucany, a błąd wpisu opcjonalnego połykany. Nowe wersje dopisuje się zwykle na końcu tablic, więc
+   ginęły **wersje bieżące**: przy 1,12 GB nie weszło 90 z ostatnich 92 wpisów tablicy (od `vilda_auth_ui.js?v=436` do końca), w tym `app.js?v=228`
+   (stąd `OLAF_DATA_MIN_AGE is not defined`), `vilda_auth_ui.js?v=465` i `vilda_advanced_growth.js?v=72`; przy niższym limicie także
+   `vilda_vault.js?v=187` (stąd `VildaVault` = `undefined`).
+
+DocPro offline przy limicie ustalonym przez CDP (`Storage.overrideQuotaForOrigin`):
+
+| limit | SW 1.1.93 (przed zmianą) | SW z tą zmianą |
+|---|---|---|
+| 0,85 GB | instalacja przerwana — wymagany rdzeń (ok. 0,88 GB w Chromium) się nie mieści | tak samo |
+| 0,92 GB | SW aktywny, brak `app.js?v=228`, `vilda_vault.js?v=187` i pozostałych wersji bieżących | komplet wersji bieżących |
+| 1,0 GB | `VildaVault` = `undefined`, 85 nieudanych żądań, `OLAF_DATA_MIN_AGE is not defined` | sejf zainicjowany, 0 nieudanych żądań, 0 błędów strony |
+| 20 GB, strona otwarta pierwszy raz offline | braki z punktu 1 na każdej stronie, która je ładuje | 0 nieudanych żądań (poza wyjątkami niżej) |
+
+**Naprawa (niekliniczna: żaden wzór, próg, jednostka ani dane; zmienia się wyłącznie to, co service worker wstępnie pobiera, i
+kolejność pobierania).**
+- Jedenaście adresów dopisanych na końcu `OPTIONAL_ASSETS` (append-only): sześć z punktu 1, dwa `edu-video-ui.css`
+  i trzy klucze, które P-STYLE rata 4b podbiła na stronach bez dopisania do precache (`ustawienia.css?v=14`,
+  `edu-video-ui.css?v=20261002v4`/`v7` — wyłapał je strażnik tej raty po scaleniu `audyt`). Ścieżki
+  `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_session_bridge.js`, `vilda_data_safety_explainer.js`,
+  `vilda_obesity_banner.css` i `ustawienia.css` przechodzą przez to z trasy runtime (TTL 30 dni, limit 96 wpisów) na trasę powłoki;
+  obie trasy traktują adres z `?v=` jako niezmienny (P-SW rata 1), więc strategia odpowiedzi się nie zmienia.
+- `orderOptionalPrecacheUrls` ustala kolejność opcjonalnej części instalacji: najpierw dokumenty, potem wpisy bieżące (adres bez
+  `?v=`, z nieliczbowym `?v=` albo z najwyższym `?v=` danego pliku we wszystkich tablicach), dopiero potem historia, w kolejności
+  tablicy. Żaden adres nie znika; adres obecny już w rdzeniu nie jest pobierany drugi raz (dotąd `/sga_intergrowth_data.js` szedł
+  dwa razy). Wymagany rdzeń idzie pierwszy i w całości, jak dotąd. Przy wyczerpanym limicie giną teraz wpisy historyczne, a nie
+  bieżące: część bieżąca to 20 dokumentów i 173 wpisy (razem 11,1 MB na dysku), historia opcjonalna — 837 wpisów (117 MB).
+  Zgłoszenie dotyczyło brakujących wpisów; nowa kolejność instalacji jest propozycją tej raty i czeka na akceptację właściciela.
+- `SW_VERSION` 1.1.96 → **1.1.97** (z pinem w `tests/unit/klirens-ui-model.test.mjs`; 1.1.94–1.1.96 zajęły równolegle P-VAR-TOAST,
+  P-DIETA-STAB rata 1 i P-STYLE rata 4b);
+  pole `optionalPrecacheOrder` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
+
+**Świadomie poza zakresem.** `lab_pin_result.js?v=4` (Przelicznik jednostek): adres `/lab_pin_result.js` stoi
+w `OPTIONAL_DOCUMENTS`, więc precache zapisuje go pod kluczem dokumentu bez `?v=`, a strona prosi o `?v=4` — samo dopisanie adresu
+nic nie da, naprawa wymaga zmiany kluczy dokumentów w SW (osobna decyzja). Plakaty `/posters/*.png` są w tablicy, ale plików nie
+ma w repozytorium (404 także online). Filmy `/videos/` SW omija z założenia. `edu-video-ui.css` jest ładowany w dwóch wersjach
+(`v4` na czterech stronach, `v7` na jednej) z nieliczbowym `?v=`, którego nie widzą strażniki `piny-wersji` i `wersje-zasobow`.
+Strony prawne (`polityka-prywatnosci.html`, `regulamin.html`) nie są w precache. Zasoby obcego pochodzenia (np. Google Fonts) nie są
+częścią precache. Znany wcześniej mechanizm: dokument HTML odświeża się w tle, więc po wdrożeniu stary SW może trzymać nowy HTML,
+którego nowe adresy `?v=` wejdą do pamięci dopiero przy pierwszym użyciu online albo z instalacją nowego SW.
+
+**Co zostaje decyzją właściciela.** Wymagany rdzeń to w większości historia: 1278 z 1452 adresów (88 %), 333 z 346 MB na dysku
+(96 %), ok. 0,88 GB w Chromium. Tam, gdzie limit źródła jest niski (incognito, profil gościa, mało wolnego miejsca), SW nie instaluje
+się wcale. Przy aktualizacji stara i nowa pamięć powłoki istnieją jednocześnie (ok. 2,4 GB w Chromium), więc u użytkownika, któremu
+stara pamięć zajęła cały limit, nowa wersja SW — także ta — może się nie zainstalować i poprawka do niego nie dotrze. Każda
+aktualizacja pobiera przy tym całą tablicę od nowa (`cache: 'reload'`). Zmniejszenie wymaga udokumentowanej migracji historycznych adresów (AGENTS.md § 6) albo zmiany sposobu
+instalacji (np. kopiowania niezmiennych wpisów `?v=` z poprzedniej pamięci powłoki) — to nie jest sprzątanie i nie wchodzi w tę ratę.
+
+**Testy.**
+- `tests/unit/sw-precache-stron.test.mjs` (8, nowy) wykonuje prawdziwy plik SW z atrapą Cache Storage z limitem bajtów i atrapą
+  sieci oddającą rozmiary plików z dysku. Po instalacji każdy zasób każdej strony z precache — z `?v=` (także nieliczbowym) i bez —
+  jest w pamięci pod kluczem, o który strona poprosi (`readFromShellCache`); to samo dla adresów `?v=` doładowywanych z plików JS
+  (np. leniwe moduły sejfu z `vilda_chrome.js`); każdy wyjątek jest nadal prawdziwy; kolejność na przykładzie syntetycznym; żaden adres
+  nie znika z instalacji; odwołanie strony albo doładowania z pliku JS stoi w rdzeniu albo przed całą historią; limit mieszczący rdzeń
+  i wersje bieżące wystarcza, by każda strona miała komplet. Sprawdzony mutacjami: przywrócenie starej pętli instalacji, kolejność
+  tablicy w funkcji porządkującej, usunięcie jednego dopisanego adresu, usunięcie z rdzenia adresu doładowywanego z JS i plik SW
+  z `audyt` — każda zapala go na czerwono.
+- `tests/e2e/pwa-strony-offline.spec.mjs` (nowy, ok. 1,5–2 min): prawdziwy SW w profilu trwałym (limit liczony od dysku; w incognito
+  Chromium go losuje), rejestracja z pustej strony; po instalacji serwer testowy jest **zatrzymywany**, a sonda potwierdza brak sieci
+  przed obchodem i po nim. Potem strony z `OPTIONAL_DOCUMENTS` i dokument główny (lista czytana z pliku SW, dziś 20) otwierają się
+  pierwszy raz offline; test przechodzi dalej, gdy strona przestaje prosić o zasoby. DocPro musi mieć zainicjowany sejf; zero żądań
+  własnego pochodzenia zakończonych błędem (poza trzema nazwanymi wyjątkami; żądania przerwane nawigacją, `net::ERR_ABORTED`, się nie
+  liczą) i zero błędów strony. Na SW z `audyt` test pada i wymienia braki na wszystkich stronach. `context.setOffline(true)` **nie
+  nadaje się** do tego pomiaru: po nawigacji fetch z SW znów dochodził do serwera (zmierzone sondą na Chromium 141 z Playwright
+  1.61.1; CI używa Chromium 149 z Playwrighta). Test nie ocenia zasobów obcego pochodzenia.
+- `tests/unit/piny-wersji.test.mjs`: lista `ZNANE` skurczyła się do `lab_pin_result.js`.
+- `tests/support/static-server.mjs` wypisuje rzeczywisty port (przy `PORT=0` wybiera go system).
+
 ## Dziecko z otyłością: PAL 1,4 także w wieku 4–9 lat, sufit tempa 1 / 1,5 / 2 kg/mies. przy ≥ 99. centylu w wieku 6–11 lat, redukcja domyślna przy otyłości 6–11 lat, stabilizacja jako górna granica z kontrolą po 12 tygodniach (P-DIETA-STAB rata 1, SW 1.1.95, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28, endokrynolog dziecięcy).** Chłopiec 7 l. 3 mies., 44 kg, 131 cm, BMI 25,6
@@ -7665,6 +7867,9 @@ Molnár 1995, Lazzer 2006 i 2014 oraz Trumbo 2002 i zapytał o „czynnik ludzki
 korekty), **punkt 1** (liczba jako górna granica dnia, zaokrąglana w dół) i **punkt 3** (kontrola za 6 tygodni z progiem) —
 kontrola tylko w planie PDF, karcie „Droga do normy BMI” i zaleceniach; trzeci kafel kontroli: „≥ próg” / „odejmij od planu” /
 „100–200 kcal”, bez zdania o realnym spożyciu. Punkt 2 (zdanie o skutku +100 kcal) odrzucony.
+
+**Zastąpione (2026-09-29).** Decyzja V1 („Molnár tylko przy otyłości”) rozszerzona na nadwagę 10–18 lat — patrz
+P-DIETA-STAB rata 3.
 
 **Źródła.**
 - Molnár D, Jeges S, Erhardt E, Schutz Y. *Measured and predicted resting metabolic rate in obese and nonobese adolescents.*

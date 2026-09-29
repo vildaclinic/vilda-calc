@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.97';
+const SW_VERSION = '1.1.100';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -82,7 +82,9 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   // (shell albo runtime) oddaje zapisaną treść BEZ odświeżania w tle. Dokumenty HTML i klucze bez ?v=
   // zostają przy cache-first + odświeżanie w tle.
   versionedAssets: 'cache-first-immutable-no-background-refresh',
-  immutableVersionedKeysApplied: true
+  immutableVersionedKeysApplied: true,
+  // P-SW-DOCPRO (2026-09-28): przy wyczerpanym limicie pamięci giną wpisy historyczne, a nie bieżące.
+  optionalPrecacheOrder: 'documents-and-current-versions-before-history'
 });
 
 // Minimalny shell wymagany do natychmiastowego startu aplikacji z cache.
@@ -1315,6 +1317,7 @@ const CORE_SHELL_URLS = [
   '/vilda_ree_rownania_data.js',
   '/vilda_ree_rownania_data.js?v=1',
   '/vilda_ree_rownania_data.js?v=2',
+  '/vilda_ree_rownania_data.js?v=3',
   '/vilda_diet_plan_ui.js',
   '/vilda_diet_plan_ui.js?v=1',
   '/vilda_diet_plan_ui.js?v=2',
@@ -2456,6 +2459,8 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=34',
   '/vilda_diet_plan_ui.js?v=35',
   '/vilda_diet_plan_ui.js?v=36',
+  '/vilda_diet_plan_ui.js?v=37',
+  '/vilda_diet_plan_ui.js?v=38',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -2493,6 +2498,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=61',
   '/vilda_diet_recommendations.js?v=62',
   '/vilda_diet_recommendations.js?v=63',
+  '/vilda_diet_recommendations.js?v=64',
   '/vilda_auth_ui.js?v=432',
   '/vilda_auth_ui.js?v=433',
   '/vilda_auth_ui.js?v=434',
@@ -2590,7 +2596,21 @@ const OPTIONAL_ASSETS = [
   '/vilda_status_bar.css?v=1',
   '/vilda_status_bar.css?v=2',
   '/vilda_status_bar.css?v=3',
-  '/vilda_status_bar.css?v=4'
+  '/vilda_status_bar.css?v=4',
+  // P-SW-DOCPRO (decyzja właściciela 2026-09-28): zasoby stron z OPTIONAL_DOCUMENTS, które dotąd
+  // nie miały wstępnego pobrania — bez nich DocPro nie startował offline.
+  '/vilda_sync.js?v=32',
+  '/vilda_sync_integration.js?v=45',
+  '/vilda_session_bridge.js?v=3',
+  '/vilda_data_safety_explainer.js?v=5',
+  '/vilda_obesity_banner.css?v=6',
+  '/ustawienia.css?v=13',
+  '/edu-video-ui.css?v=20261001v4',
+  '/edu-video-ui.css?v=20261001v7',
+  // P-STYLE rata 4b podbiła te arkusze na stronach — bieżące klucze też muszą być offline.
+  '/ustawienia.css?v=14',
+  '/edu-video-ui.css?v=20261002v4',
+  '/edu-video-ui.css?v=20261002v7'
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
@@ -2606,6 +2626,52 @@ const SHELL_PATHS = new Set(
     })
     .filter(Boolean)
 );
+
+// P-SW-DOCPRO (2026-09-28): kolejność pobierania opcjonalnej części precache.
+// Tablice trzymają historię wszystkich wydań, a nowe wersje dopisuje się zwykle na końcu. Hosting ignoruje ?v=, więc
+// każdy historyczny adres to pełna kopia bieżącego pliku — instalacja pobiera kilkaset MB, jeden adres po drugim.
+// Gdy przeglądarka wyczerpie limit pamięci źródła (quota), cache.put odrzuca kolejne wpisy, a błąd wpisu
+// opcjonalnego jest połykany. Ginął więc ogon OPTIONAL_ASSETS, czyli właśnie wersje BIEŻĄCE (zmierzone
+// w Chromium: app.js?v=228, vilda_auth_ui.js?v=465 i dalsze), a strona startowała offline bez nich.
+// Teraz po dokumentach idą najpierw wpisy bieżące (adres bez ?v=, z nieliczbowym ?v= albo z najwyższym ?v= danego
+// pliku we wszystkich tablicach — pozycja w tablicy nie ma znaczenia), dopiero potem historia, w kolejności tablicy. Żaden adres nie znika — zmienia się
+// tylko kolejność pobierania. Wymagany rdzeń (CORE_SHELL_URLS) idzie pierwszy i w całości, jak dotąd.
+function getVersionedPrecacheEntry(url) {
+  const match = /^([^?#]+)\?v=(\d+)$/.exec(url);
+  return match ? { pathname: match[1], version: Number(match[2]) } : null;
+}
+
+function orderOptionalPrecacheUrls(coreUrls, documentUrls, assetUrls) {
+  const newestVersionByPath = new Map();
+  for (const url of [...coreUrls, ...documentUrls, ...assetUrls]) {
+    const entry = getVersionedPrecacheEntry(url);
+    if (!entry) continue;
+    const newest = newestVersionByPath.get(entry.pathname);
+    if (newest === undefined || entry.version > newest) {
+      newestVersionByPath.set(entry.pathname, entry.version);
+    }
+  }
+
+  // Adres z rdzenia (albo powtórzony w tablicy) nie jest pobierany drugi raz.
+  const alreadyQueued = new Set(coreUrls);
+  const current = [];
+  const history = [];
+  for (const url of [...documentUrls, ...assetUrls]) {
+    if (alreadyQueued.has(url)) continue;
+    alreadyQueued.add(url);
+
+    const entry = getVersionedPrecacheEntry(url);
+    if (!entry || newestVersionByPath.get(entry.pathname) === entry.version) {
+      current.push(url);
+    } else {
+      history.push(url);
+    }
+  }
+
+  return [...current, ...history];
+}
+
+const OPTIONAL_PRECACHE_ORDER = orderOptionalPrecacheUrls(CORE_SHELL_URLS, OPTIONAL_DOCUMENTS, OPTIONAL_ASSETS);
 
 // ── PWA-SUBPATH (2026-06-05): aplikacja na GitHub Pages żyje pod /vilda-calc/,
 // a cały SW (precache, klucze cache, DOCUMENT_PATHS) myśli w przestrzeni „/x".
@@ -3089,7 +3155,8 @@ async function installShell() {
 
   // Następnie dodatkowe strony i zasoby pobieramy spokojnie, jeden po drugim,
   // żeby nie zapychać łącza użytkownika przy słabym internecie.
-  for (const url of [...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS]) {
+  // P-SW-DOCPRO: najpierw dokumenty i wersje bieżące, potem historia (patrz orderOptionalPrecacheUrls).
+  for (const url of OPTIONAL_PRECACHE_ORDER) {
     try {
       await fetchAndStorePrecacheUrl(url, { required: false });
     } catch (_) {

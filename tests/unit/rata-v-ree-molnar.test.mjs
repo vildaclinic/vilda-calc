@@ -42,9 +42,9 @@ describe('rata V: równanie Molnára jako dane (reguła „normy zawsze jako dan
     expect(m.doi).toBe('10.1016/s0022-3476(95)70114-1');
     expect(m.walidacjaDoi).toBe('10.3945/ajcn.2009.28330');
     expect(m.jednostka).toBe('kJ/24 h');
-    expect([m.wiekOdLat, m.wiekDoLat, m.wskazanie]).toEqual([10, 18, 'otylosc']);
+    expect([m.wiekOdLat, m.wiekDoLat, m.wskazanie]).toEqual([10, 18, 'nadmiar']); // P-DIETA-STAB rata 3: nadwaga i otyłość
     expect(m.populacja).toContain('371 dzieci 10–16 lat');
-    expect(m.krotko).toBe('REE wg Molnára 1995, zwalidowane u nastolatków z otyłością');
+    expect(m.krotko).toBe('REE wg Molnára 1995, zwalidowane u nastolatków z nadwagą i otyłością');
     expect(R.zrodla.HENRY_2005.doi).toBe('10.1079/phn2005801');
   });
   it('współczynniki pliku danych = tabela V publikacji (1A chłopcy, 1B dziewczęta)', () => {
@@ -66,7 +66,7 @@ describe('rata V: równanie Molnára jako dane (reguła „normy zawsze jako dan
   });
 });
 
-describe('rata V: silnik planu na Molnárze tylko przy otyłości 10–18 lat', () => {
+describe('rata V + P-DIETA-STAB rata 3: silnik planu na Molnárze przy nadwadze i otyłości 10–18 lat', () => {
   it('chłopiec z raportu: REE 2 199, zapotrzebowanie 3 079, dla masy docelowej 2 731, umiarkowana 2 700 (rata U: 2 638)', () => {
     const st = plan(CHLOPIEC);
     expect(st.reeRownanie).toMatchObject({ id: 'MOLNAR_1995', nazwa: 'Molnár 1995' });
@@ -92,11 +92,13 @@ describe('rata V: silnik planu na Molnárze tylko przy otyłości 10–18 lat', 
     expect(st.reeFactor).toBeGreaterThan(0.9);
     expect(st.reeFactor).toBeLessThan(1);
   });
-  it('nadwaga 13 l i otyłość 8 l: Henry bez korekty, nazwany w wyniku', () => {
+  // P-DIETA-STAB rata 3 (decyzja właściciela 2026-09-29): nadwaga 10–18 lat też na Molnárze; poniżej 10 lat Henry
+  it('nadwaga 13 l: Molnár (P-DIETA-STAB rata 3); otyłość 8 l: Henry bez korekty, nazwany w wyniku', () => {
     const n = plan({ sex: 'M', ageYears: 13, weightKg: 60, heightCm: 155 });
     expect(n.bmiClass.obese).toBe(false);
-    expect(n.reeRownanie.id).toBe('HENRY_2005');
-    expect(n.reeAdjustedKcal).toBe(Math.round(n.reeKcal));
+    expect(n.bmiClass.overweight).toBe(true);
+    expect(n.reeRownanie.id).toBe('MOLNAR_1995');
+    expect(n.reeAdjustedKcal).toBe(Math.round(molnar('M', 60, 155, 13)));
     const o8 = plan({ sex: 'M', ageYears: 8, weightKg: 45, heightCm: 130 });
     expect(o8.bmiClass.obese).toBe(true);
     expect(o8.reeRownanie.id).toBe('HENRY_2005');
@@ -145,7 +147,8 @@ describe('rata V pkt 3: kontrola za 6 tygodni', () => {
       obnizkaKcal: [100, 200], obnizkaMozliwa: true, podazPoObnizceKcal: [2500, 2600], dietaKlucz: 'moderate',
     });
     // rata W: bez wieku, płci i wzrostu (tu nie podane) reguła raty V bez zmian; nowe pola odstępu dla wolnego tempa
-    expect(win.ENERGY_KONTROLA_PLANU).toEqual({ tygodnie: 6, tygodnieWolne: 12, tempoWolneKgMies: 1, progCzescUbytku: 0.5, obnizkaKcal: [100, 200] });
+    // P-DIETA-STAB rata 2: margines progu kontroli stabilizacji jako dane (1 % masy, 0,3–1 kg)
+    expect(win.ENERGY_KONTROLA_PLANU).toEqual({ tygodnie: 6, tygodnieWolne: 12, tempoWolneKgMies: 1, progCzescUbytku: 0.5, obnizkaKcal: [100, 200], stabilizacjaTolerancja: { czescMasy: 0.01, minKg: 0.3, maxKg: 1 } });
     expect(k.przyrostKg).toBe(0);
     expect(k.wzrastanie).toBe(false);
   });

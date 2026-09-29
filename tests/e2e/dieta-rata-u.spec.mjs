@@ -69,7 +69,7 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     expect(r.silnik.diety.map((x) => x.zal)).toEqual([false, true, false]);
     expect(r.energia).toEqual({ podaz: 2700, def: 379, dieta: 'moderate', baza: 2731, defCelu: 350, sufit: true });
     expect(r.kafle.slice(0, 3)).toEqual(['≤ 2 700 kcal dziennie', '−379 kcal na dobę', '−0,3 kg tygodniowo']);
-    expect(r.nota).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok. 82,1 kg (85. centyl BMI): ok. 2731 kcal/dzień przy PAL 1,4, pomniejszonego o 200–500 kcal (Mazur 2022), nie szybciej niż 1–2 kg/mies.; zapotrzebowanie przy obecnej masie ciała ok. 3079 kcal/dzień (REE wg Molnára 1995, zwalidowane u nastolatków z otyłością); minimum 2199 kcal/dzień (spoczynkowa przemiana materii)');
+    expect(r.nota).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok. 82,1 kg (85. centyl BMI): ok. 2731 kcal/dzień przy PAL 1,4, pomniejszonego o 200–500 kcal (Mazur 2022), nie szybciej niż 1–2 kg/mies.; zapotrzebowanie przy obecnej masie ciała ok. 3079 kcal/dzień (REE wg Molnára 1995, zwalidowane u nastolatków z nadwagą i otyłością); minimum 2199 kcal/dzień (spoczynkowa przemiana materii)');
     expect(r.nota).not.toContain('korektą');
     expect(r.plan).toContain('od zapotrzebowania dla masy docelowej ok. 2731 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.; Mazur 2022: bezpiecznie do 1–2 kg/mies.)');
     expect(r.journey).toContain('od zapotrzebowania dla masy docelowej ok. 2 731 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
@@ -106,15 +106,17 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
 
   // P-DIETA rata N2 (2026-09-24): przy samej nadwadze 12–18 lat domyślnie stabilizacja, a redukcja ma sufit 0,5 / 1 / 1,5 kg/mies.
   // — sufit 0,5 kg/mies. (126 kcal) jest niższy niż deficyt Mazura 200 kcal, więc wiąże także tuż nad celem.
-  test('RU-4: chłopiec 13 l, 155 cm, 55 kg (nadwaga tuż nad celem) — bez korekty, PAL 1,6; domyślnie stabilizacja; redukcja lekka z sufitem 0,5 kg/mies. (rata N2)', async ({ page }) => {
+  // P-DIETA-STAB rata 3 (2026-09-29): nadwaga 10–18 lat — REE Molnára i PAL 1,4 (dotąd Henry bez korekty i PAL 1,6).
+  test('RU-4: chłopiec 13 l, 155 cm, 55 kg (nadwaga tuż nad celem) — REE Molnára, PAL 1,4 (P-DIETA-STAB rata 3); domyślnie stabilizacja; redukcja lekka z sufitem 0,5 kg/mies. (rata N2)', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const s = await stan(page, { sex: 'M', y: 13, m: 0, w: 55, h: 155 });
     expect(s.journey).toContain('utrzymanie masy');
     const r = await stan(page, { sex: 'M', y: 13, m: 0, w: 55, h: 155, redukcja: true });
     expect(r.dietLevel).toBe('light');
-    expect(r.silnik.fac).toBe(1); expect(r.silnik.pal).toBe(1.6);
-    expect(r.silnik.reeAdj).toBe(Math.round(r.silnik.ree));
+    const molnar13 = (50.9 * 55 + 25.3 * 155 - 50.3 * 13 + 26.9) / 4.184; // Molnár 1995, 1A
+    expect(r.silnik.fac).toBeCloseTo(molnar13 / r.silnik.ree, 6); expect(r.silnik.pal).toBe(1.4);
+    expect(r.silnik.reeAdj).toBe(Math.round(molnar13));
     const lekka = r.silnik.diety[0];
     expect(lekka.sufit).toBe(true); expect(lekka.zal).toBe(true);
     expect(lekka.def).toBe(126);
