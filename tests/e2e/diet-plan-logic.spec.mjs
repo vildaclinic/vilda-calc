@@ -124,8 +124,9 @@ test('PLAN-S2-FLOOR-CHILD: podłoga planu dziecka = max(minimum wieku, REE po ko
     window.update();
     return [...document.getElementById('dietLevel').options].map((o) => o.textContent);
   }, pal);
-  // ENERGY-CHILD-MID1: dziewczynka 7 l, 118 cm, 35 kg (BMI ≥ 99c). Baza = REE(35 kg) × 0,9 × PAL,
-  // deficyty z tempa 0,5 / 1 / 1,5 kg/mies. (126 / 253 / 379 kcal), podłoga = max(1000, REE × 0,9).
+  // ENERGY-CHILD-MID1: dziewczynka 7 l, 118 cm, 35 kg (BMI ≥ 99c). Baza = REE(35 kg) × PAL,
+  // podłoga = max(1000, REE). P-DIETA-STAB rata 1: deficyty z tempa 1 / 1,5 / 2 kg/mies. (253 / 379 / 506 kcal);
+  // przy PAL 1,4 intensywna schodzi poniżej REE, więc zostają lekka i umiarkowana.
   await renderPlan(page, { age: 7, months: 0, sex: 'F', weight: 35, height: 118 });
   const low = await diets('1.4');
   expect(low.some((t) => t.includes('lekka'))).toBe(true);
@@ -133,8 +134,9 @@ test('PLAN-S2-FLOOR-CHILD: podłoga planu dziecka = max(minimum wieku, REE po ko
     ageYears: 7, ageMonthsOpt: 0, sex: 'F', weightKg: 35, heightCm: 118, palInput: 1.4,
   }));
   expect(st.floorKcal).toBe(Math.max(1000, st.reeAdjustedKcal));
-  expect(st.diets.map((d) => d.deficit)).toEqual([126, 253, 379]);
-  expect(st.diets.map((d) => d.monthlyLossKg)).toEqual([0.5, 1, 1.5]);
+  expect(st.diets.map((d) => d.deficit)).toEqual([253, 379]);
+  expect(st.diets.map((d) => d.monthlyLossKg)).toEqual([1, 1.5]);
+  expect(st.dietUnavailable.intense).toContain('spoczynkowej przemiany materii');
   expect(Math.min(...st.diets.map((d) => d.intake))).toBeGreaterThanOrEqual(st.floorKcal);
   // przy wyższym PAL baza rośnie, więc kaloryczności rosną, a podłoga zostaje ta sama
   const hi = await page.evaluate(() => window.energyBuildPlanReductionState({

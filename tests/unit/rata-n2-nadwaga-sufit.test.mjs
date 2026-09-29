@@ -22,12 +22,13 @@ const gorne = (st) => st.diets.map((d) => d.gornaKcal);
 const tempo = (st) => st.diets.map((d) => d.monthlyLossKg);
 
 describe('rata N2: sufit tempa przy samej nadwadze 12–18 lat', () => {
-  it('stałe: nowy wiersz 0,5 / 1 / 1,5 kg/mies.; otyłość 12–18 i 6–11 bez zmian', () => {
+  // P-DIETA-STAB rata 1 (2026-09-28): 6–11 lat ≥ 99c podniesione do 1 / 1,5 / 2 kg/mies. (jak otyłość 12–18)
+  it('stałe: nowy wiersz 0,5 / 1 / 1,5 kg/mies.; otyłość 12–18 bez zmian; 6–11 ≥ 99c 1 / 1,5 / 2', () => {
     const R = win.DIET_RATE_CHILD_KG_MONTH;
     expect(R.age_12_18_nadwaga).toEqual({ light: 0.5, moderate: 1, intense: 1.5 });
     expect(R.age_12_18).toEqual({ light: 1, moderate: 1.5, intense: 2 });
     expect(R.age_6_11).toEqual({ light: 0.5 });
-    expect(R.age_6_11_severe).toEqual({ light: 0.5, moderate: 1, intense: 1.5 });
+    expect(R.age_6_11_severe).toEqual({ light: 1, moderate: 1.5, intense: 2 });
   });
 
   it('przypadki z propozycji (górna granica dnia, kcal; tempo kg/mies.)', () => {
