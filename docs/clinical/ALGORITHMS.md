@@ -5834,6 +5834,41 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Zapisany PAL: wybór lekarza czy wartość domyślna (P-PAL-ZAPIS, SW 1.1.102, 2026-09-29)
+
+**Zgłoszenie właściciela (2026-09-29, po scaleniu P-DIETA-STAB rata 3).** Chłopiec 13 l., 76 kg, 168 cm (nadwaga, OLAF) nadal
+miał w stabilizacji PAL 1,6. Wpisany ręcznie dostaje 1,4 i ≤ 2500 kcal, a wczytany z zapisu sprzed raty 3 — **1,6 i ≤ 2850 kcal**
+(zmierzone na prawdziwej stronie).
+
+**Przyczyna (kod, nie reguła kliniczna).** `collectUserData` zapisywał wartość selecta PAL (`plan.palFactor`) bez informacji,
+czy lekarz ją wybrał, czy była wartością domyślną. Obie ścieżki wczytania (`applyLoadedData` — pacjent z sejfu, plik JSON,
+odtworzenie sesji karty; oraz „Odtwórz zapisany stan”) ustawiały wtedy `__vildaPlanPalTouched = true`, czyli każdą zapisaną
+wartość traktowały jak świadomy wybór. Pacjent zapisany przy starej wartości domyślnej zostawał na niej na zawsze, a PAL
+wczytanego pacjenta przestawał iść za regułą domyślną także przy zmianie masy.
+
+**Decyzja właściciela (2026-09-29).** Zapis niesie znacznik; w zapisach bez znacznika 1,4 i 1,6 (jedyne wartości, które kiedykolwiek
+były domyślne) są traktowane jako domyślne i przeliczane według aktualnej reguły, a 1,8 i 2,0 — jako wybór lekarza.
+
+**Zmiana (funkcjonalna: zapis i wczytanie; wzory, progi i tabela PAL bez zmian).**
+- `vilda_data_import_export.js` (`?v=87`): `plan.palWybrany` (`true` = wybór lekarza) w `collectUserData`; `vildaPalZapisuWybrany(plan)`
+  (znacznik, a bez niego lista `PAL_DOMYSLNE_HISTORYCZNE = [1,4; 1,6]`, dane); obie ścieżki wczytania ustawiają „wybrany” według
+  tej funkcji, a wartość domyślną zapamiętują jako ostatnią domyślną, więc następne przeliczenie podmienia ją na aktualną.
+- Ryzyko przyjęte przez właściciela: świadomy wybór 1,4 lub 1,6 w zapisie sprzed poprawki zostanie przeliczony według reguły
+  domyślnej (lekarz wybierze go ponownie; nowy zapis zachowa go ze znacznikiem).
+- SW 1.1.101 → 1.1.102 (1.1.101 zajęło równolegle P-PINY wstrzykiwane, #467), precache append-only, `?v=` na stronach i w smoke,
+  fixture wersji.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne; `tests/e2e/pal-zapis.spec.mjs`, `tests/unit/pal-zapis-wybrany.test.mjs`).**
+
+| Zapis | Przed | Po |
+|---|---|---|
+| chł. 13 l. 2 mies., 76/168, `palFactor 1,6` bez znacznika | PAL 1,6, ≤ 2850 kcal | **PAL 1,4 (domyślny), ≤ 2500 kcal** |
+| ten sam, `palFactor 1,8` bez znacznika | 1,8 | 1,8 (wybór lekarza) |
+| lekarz wybiera 1,6 → zapis → wczytanie | 1,6 | 1,6 (`palWybrany: true`) |
+| odtworzenie sesji z `palWybrany: false`, potem masa 52 kg | PAL zostaje 1,4 | PAL idzie za regułą (1,6 przy masie prawidłowej) |
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Nastolatek z nadwagą: REE wg Molnára 1995 i domyślny PAL 1,4 jak przy otyłości (10–18 lat), kategoria z siatki karty „Centyle i BMI” (P-DIETA-STAB rata 3, SW 1.1.99, 2026-09-29)
 
 **Zgłoszenie właściciela (2026-09-29, endokrynolog dziecięcy).** Chłopiec 13 l., 76 kg, 168 cm, BMI 26,9 (96. centyl OLAF,
