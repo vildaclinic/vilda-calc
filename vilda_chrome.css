@@ -80,21 +80,10 @@
 }
 
 .has-vilda-chrome header {
-  position: relative;
   z-index: var(--z-header-chrome);
   padding: 0;
-  background: var(--chrome-glass-bg);
-  backdrop-filter: var(--blur-chrome-header-saturate) var(--blur-card);
-  -webkit-backdrop-filter: var(--blur-chrome-header-saturate) var(--blur-card);
   border-bottom: var(--border-hairline) solid var(--chrome-glass-border);
   box-shadow: 0 1px #fff9 inset,0 6px 18px #0046500f
-}
-
-@media(min-width:992px) {
-  .has-vilda-chrome header {
-    position: sticky;
-    top: 0
-  }
 }
 
 .has-vilda-chrome header>[data-vilda-chrome-wrap] {
@@ -122,16 +111,11 @@
   max-height: 40px!important;
   flex: 0 0 auto;
   align-self: center!important;
-  border-radius: var(--radius-12)!important;
-  border: var(--border-hairline) solid var(--chrome-glass-border)!important;
-  background: #fff9!important;
-  color: var(--primary, #00838d)!important;
   cursor: pointer;
   padding: 0!important;
   margin: 0!important;
   line-height: 1!important;
-  box-sizing: border-box!important;
-  transition: background .15s ease,transform .1s ease
+  box-sizing: border-box!important
 }
 
 .chrome-mobile-menu-btn:hover {
@@ -433,21 +417,9 @@
   gap: var(--space-10px);
   width: 100%;
   padding: var(--space-12px) var(--space-14px);
-  border: 0;
-  border-bottom: .5px solid rgba(0,0,0,.05);
-  background: #00838d12;
   cursor: pointer;
   text-align: left;
-  font-family: inherit;
-  color: #0c3a3e
-}
-
-.vilda-save-popover .vsp-action:hover {
-  background: #00838d21
-}
-
-.vilda-save-popover .vsp-action:active {
-  background: #00838d2e
+  font-family: inherit
 }
 
 .vilda-save-popover .vsp-action-ic {
@@ -594,10 +566,6 @@
   color: #0c3a3e
 }
 
-.chrome-user-chip.is-logged-in .chip-action {
-  color: #5f8f91
-}
-
 .chrome-user-chip.is-logged-in .chip-avatar,
 .chrome-user-chip.is-logged-in .chip-value {
   cursor: pointer
@@ -620,25 +588,10 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-circle);
-  background: transparent;
-  border: 0;
-  color: var(--chrome-label-color);
   cursor: pointer;
   padding: 0;
   margin-left: .15rem;
-  flex: 0 0 auto;
-  transition: background .15s ease,color .15s ease
-}
-
-.chip-action:hover {
-  background: #c628281f;
-  color: var(--danger, #c62828)
-}
-
-.chrome-user-chip.is-guest .chip-action:hover {
-  background: var(--tint-teal-active);
-  color: var(--primary, #00838d)
+  flex: 0 0 auto
 }
 
 .chip-action svg {
@@ -817,10 +770,6 @@ body.chrome-drawer-open .chrome-drawer-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-10);
-  border: var(--border-hairline) solid #e5eded!important;
-  background: #fff!important;
-  color: #08202c!important;
   cursor: pointer;
   flex: 0 0 auto
 }
@@ -1031,19 +980,9 @@ body.chrome-drawer-open {
   gap: var(--space-0-5);
   width: 100%;
   padding: var(--space-0-6) var(--space-0-8);
-  border-radius: var(--radius-10);
-  border: var(--border-hairline) solid var(--primary, #00838d);
-  background: #fff;
-  color: var(--primary, #00838d);
   font-size: .92rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background .15s ease,color .15s ease
-}
-
-.chrome-drawer-account-action:hover {
-  background: var(--primary, #00838d);
-  color: #fff
+  cursor: pointer
 }
 
 .chrome-drawer-account-action svg {
@@ -1434,16 +1373,8 @@ body.chrome-drawer-open {
   display: inline-flex
 }
 
-.chrome-sync-btn[data-sync-state=syncing] {
-  color: var(--primary, #00838d)
-}
-
 .chrome-sync-btn[data-sync-state=syncing] svg {
   animation: vildaSyncPulse 1.1s ease-in-out infinite
-}
-
-.chrome-sync-btn[data-sync-state=stale] {
-  color: #b45400
 }
 
 @keyframes vildaSyncPulse {
@@ -1462,28 +1393,8 @@ body.chrome-drawer-open {
   display: inline-flex
 }
 
-.chrome-sync-btn[data-cloud-only=true]:hover {
-  background: #006c75;
-  color: #fff
-}
-
-.chrome-sync-btn[data-cloud-only=true][data-sync-state=syncing] {
-  background: var(--primary, #00838d);
-  color: #fff
-}
-
 .chrome-sync-btn[data-cloud-only=true][data-sync-state=syncing] svg {
   animation: vildaSyncPulse 1.1s ease-in-out infinite
-}
-
-.chrome-sync-btn[data-cloud-only=true][data-sync-state=ok] {
-  background: #16a34a;
-  color: #fff
-}
-
-.chrome-sync-btn[data-cloud-only=true][data-sync-state=error] {
-  background: #dc2626;
-  color: #fff
 }
 
 .chrome-reminders-btn {
@@ -1496,7 +1407,6 @@ body.chrome-drawer-open {
   cursor: pointer;
   flex-shrink: 0;
   box-sizing: border-box;
-  transition: color .15s ease,background .15s ease,border-color .15s ease,transform .1s ease;
   font-family: inherit
 }
 
@@ -1569,15 +1479,6 @@ body.chrome-drawer-open {
   .chrome-reminders-btn .chrome-reminders-badge {
     animation: none
   }
-}
-
-.chrome-sync-btn[data-cloud-only=true][data-offline=true] {
-  color: #fff;
-  box-shadow: 0 0 0 2px #b4530940
-}
-
-.chrome-sync-btn[data-cloud-only=true][data-offline=true]:hover {
-  background: #8a3d05
 }
 
 .chrome-pro-badge {
@@ -1662,37 +1563,37 @@ body.chrome-drawer-open {
   opacity: .72
 }
 
-.liquid-ios26 .chrome-sync-btn {
-  background: #fff!important;
-  border: var(--border-hairline) solid #cfe4e4!important;
-  border-radius: var(--radius-8)!important;
-  box-shadow: none!important;
-  color: #4d8285!important
+.chrome-sync-btn {
+  background: #fff;
+  border: var(--border-hairline) solid #cfe4e4;
+  border-radius: var(--radius-8);
+  box-shadow: none;
+  color: #4d8285
 }
 
-.liquid-ios26 .chrome-sync-btn:hover {
-  background: #f2f9f9!important;
-  border-color: #9fd4d8!important;
-  color: var(--primary, #00838d)!important
+.chrome-sync-btn:hover {
+  background: #f2f9f9;
+  border-color: #9fd4d8;
+  color: var(--primary, #00838d)
 }
 
-.liquid-ios26 .chrome-sync-btn[data-cloud-only=true] {
-  background: var(--primary, #00838d)!important;
-  border-color: transparent!important;
-  border-radius: var(--radius-8)!important;
-  color: #fff!important
+.chrome-sync-btn[data-cloud-only=true] {
+  background: var(--primary, #00838d);
+  border-color: transparent;
+  border-radius: var(--radius-8);
+  color: #fff
 }
 
-.liquid-ios26 .chrome-sync-btn[data-cloud-only=true][data-offline=true] {
-  background: var(--warning)!important
+.chrome-sync-btn[data-cloud-only=true][data-offline=true] {
+  background: var(--warning)
 }
 
-.liquid-ios26 .chrome-sync-btn[data-sync-state=ok] {
-  color: #16a34a!important
+.chrome-sync-btn[data-sync-state=ok] {
+  color: #16a34a
 }
 
-.liquid-ios26 .chrome-sync-btn[data-sync-state=error] {
-  color: #dc2626!important
+.chrome-sync-btn[data-sync-state=error] {
+  color: #dc2626
 }
 
 .liquid-ios26 .chrome-user-chip .chip-action {

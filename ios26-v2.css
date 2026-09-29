@@ -22,8 +22,11 @@ body.liquid-ios26 {
   padding-left: env(safe-area-inset-left)
 }
 
+body:before {
+  content: ""
+}
+
 body.liquid-ios26:before {
-  content: "";
   position: fixed;
   inset: 0 auto auto 0;
   height: env(safe-area-inset-top);
@@ -34,10 +37,7 @@ body.liquid-ios26:before {
 }
 
 .liquid-ios26 ._glass {
-  background: var(--lg-surface-light);
   border: var(--border-hairline) solid var(--lg-border);
-  backdrop-filter: var(--blur-glass) var(--blur-card-saturate);
-  -webkit-backdrop-filter: var(--blur-glass) var(--blur-card-saturate);
   border-radius: var(--lg-radius);
   box-shadow: var(--lg-shadow);
   position: relative
@@ -56,18 +56,9 @@ body.liquid-ios26:before {
   pointer-events: none
 }
 
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .liquid-ios26 ._glass {
-    background: #ffffff80
-  }
-}
-
 .liquid-ios26 header {
-  background: var(--lg-surface-light)!important;
   color: var(--text-ink)!important;
   border-bottom: var(--border-hairline) solid var(--lg-border);
-  backdrop-filter: var(--blur-header) var(--blur-button-saturate);
-  -webkit-backdrop-filter: var(--blur-header) var(--blur-button-saturate);
   border-radius: 0 0 var(--lg-radius) var(--lg-radius);
   overflow: hidden;
   box-shadow: var(--lg-shadow);
@@ -76,7 +67,15 @@ body.liquid-ios26:before {
   z-index: var(--z-header-liquid)
 }
 
-.liquid-ios26 header,
+header {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none
+}
+
+.liquid-ios26 header {
+  background: linear-gradient(180deg,#ffffffe6,#fffc)!important
+}
+
 .liquid-ios26 header._glass {
   backdrop-filter: none!important;
   -webkit-backdrop-filter: none!important;
@@ -138,6 +137,21 @@ body.liquid-ios26:before {
   box-shadow: 0 2px 8px #0000001f!important
 }
 
+#toggleIgfTests,
+#toggleSnp,
+#toggleTurner,
+#togglePws,
+#toggleSga,
+#toggleIgf1,
+#toggleAbxTherapy,
+#toggleFluTherapy,
+#toggleObesityTherapy,
+#toggleHypertensionTherapy,
+#toggleThyroidCancerKids,
+#toggleGhMonitor {
+  justify-content: center
+}
+
 .liquid-ios26 #toggleIgfTests,
 .liquid-ios26 #toggleSnp,
 .liquid-ios26 #toggleTurner,
@@ -152,8 +166,7 @@ body.liquid-ios26:before {
 .liquid-ios26 #toggleGhMonitor {
   background: #fff3!important;
   border: var(--border-hairline) solid var(--lg-border)!important;
-  color: var(--text-ink)!important;
-  justify-content: center
+  color: var(--text-ink)!important
 }
 
 .liquid-ios26 #toggleGhMonitor.active-toggle,
@@ -195,8 +208,8 @@ body.liquid-ios26:before {
   border: var(--border-pro) solid #9900ff!important
 }
 
-.liquid-ios26 #thyroidCancerKidsCard .thy-disclosure-btn-static {
-  border-color: var(--brand-light)!important
+#thyroidCancerKidsCard .thy-disclosure-btn-static {
+  border-color: var(--brand-light)
 }
 
 .liquid-ios26 .btn-icon {
@@ -205,11 +218,14 @@ body.liquid-ios26:before {
   gap: var(--space-0-5)
 }
 
+.btn-icon svg {
+  stroke-width: 1.75
+}
+
 .liquid-ios26 .btn-icon svg {
   width: 20px;
   height: 20px;
-  stroke: currentColor;
-  stroke-width: 1.75
+  stroke: currentColor
 }
 
 @keyframes ios-enter {
@@ -223,7 +239,23 @@ body.liquid-ios26:before {
   }
 }
 
-.liquid-ios26 #abxReturnBtn,
+#abxReturnBtn {
+  cursor: pointer
+}
+
+.liquid-ios26 #abxReturnBtn {
+  display: none!important;
+  background: #fff!important;
+  color: var(--text-ink)!important;
+  border: var(--border-hairline) solid var(--brand-light)!important;
+  border-radius: var(--radius-14)!important;
+  box-shadow: var(--shadow-button-glass)!important;
+  padding: var(--space-0-45) var(--space-1)!important;
+  margin-left: auto;
+  margin-right: auto;
+  transition: background-color .15s ease,transform .12s ease,box-shadow .12s ease!important
+}
+
 .liquid-ios26 .return-recommendation-btn {
   display: none!important;
   background: #fff!important;
@@ -305,9 +337,9 @@ body.liquid-ios26:before {
   border-radius: var(--radius-12)
 }
 
-.liquid-ios26 h1,
-.liquid-ios26 h2,
-.liquid-ios26 h3 {
+h1,
+h2,
+h3 {
   letter-spacing: -.015em
 }
 
@@ -449,17 +481,18 @@ body.liquid-ios26:before {
   transition: background .2s ease,color .2s ease!important
 }
 
-.liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label {
-  background: color-mix(in srgb,var(--lg-accent) 40%,transparent)!important;
-  color: #fff!important
-}
-
 .liquid-ios26 #antibioticTherapyCard .slider-value-label:active {
   cursor: grabbing!important
 }
 
 .liquid-ios26 #antibioticTherapyCard .dose-slider-container--multiline {
   padding-bottom: var(--space-0-25)!important
+}
+
+#antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-sizing: border-box
 }
 
 .liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
@@ -472,12 +505,9 @@ body.liquid-ios26:before {
   max-width: 100%!important;
   margin: var(--space-0-65) auto 0!important;
   white-space: normal!important;
-  overflow-wrap: anywhere!important;
-  word-break: break-word!important;
   text-wrap: balance!important;
   text-align: center!important;
   line-height: 1.35!important;
-  box-sizing: border-box!important;
   cursor: default!important;
   pointer-events: none!important
 }
@@ -509,8 +539,7 @@ body.liquid-ios26:before {
   background: transparent!important;
   color: var(--primary, #00838d)!important;
   border: 1.5px solid var(--primary, #00838d)!important;
-  border-radius: var(--radius)!important;
-  transition: background .18s,color .18s
+  border-radius: var(--radius)!important
 }
 
 #clearAllDataBtn:hover,
@@ -658,8 +687,7 @@ body.has-mobile-bottom-dock {
 
 body.has-mobile-bottom-dock #scrollTopBtn {
   bottom: var(--scroll-top-btn-bottom, 1rem)!important;
-  z-index: var(--z-scroll-top-dock);
-  transition: bottom .22s ease,background .2s ease,transform .22s ease,opacity .22s ease
+  z-index: var(--z-scroll-top-dock)
 }
 
 body.has-mobile-bottom-dock.mobile-bottom-dock-transitioning #scrollTopBtn {

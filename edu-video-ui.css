@@ -42,16 +42,6 @@
   border-radius: var(--edu-card-radius)
 }
 
-.edu-hero.card,
-.edu-resource-card.card,
-.edu-presentation-card.card,
-.edu-video-shell.card,
-.edu-info-card.card {
-  background: var(--edu-surface);
-  border: var(--border-hairline) solid var(--edu-border);
-  box-shadow: var(--edu-card-shadow)
-}
-
 .edu-hero:before,
 .edu-resource-card:before,
 .edu-presentation-card:before,
@@ -426,17 +416,9 @@
   width: 100%;
   cursor: pointer;
   padding: var(--space-0-9) var(--space-1);
-  border-radius: var(--radius-16);
   box-sizing: border-box;
-  background: #ffffffd1;
-  border: var(--border-hairline) solid rgba(22,76,71,.1);
-  color: var(--edu-text-strong);
   font-size: 1rem;
   font-weight: 700
-}
-
-.faq-question:hover {
-  background: #ffffffeb
 }
 
 .faq-question:after {
@@ -513,11 +495,11 @@
   }
 }
 
-.liquid-ios26 .edu-kicker,
-.liquid-ios26 .edu-chip,
-.liquid-ios26 .edu-meta-pill,
-.liquid-ios26 .chapter-list a,
-.liquid-ios26 .resource-button {
+.edu-kicker,
+.edu-chip,
+.edu-meta-pill,
+.chapter-list a,
+.resource-button {
   backdrop-filter: var(--blur-button) var(--blur-button-saturate);
   -webkit-backdrop-filter: var(--blur-button) var(--blur-button-saturate)
 }
@@ -743,11 +725,6 @@ body.edu-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-
   --edu-footer-border: var(--hc-border)
 }
 
-body.edu-page .edu-hero.card,
-body.edu-page .edu-resource-card.card,
-body.edu-page .edu-presentation-card.card,
-body.edu-page .edu-video-shell.card,
-body.edu-page .edu-info-card.card,
 body.edu-page .faq-container {
   background: var(--edu-surface);
   border: var(--edu-card-border-width) solid var(--edu-border);
@@ -831,8 +808,7 @@ body.edu-page .edu-video-frame {
 }
 
 body.edu-page .resource-button,
-body.edu-page .chapter-list a,
-body.edu-page .faq-question {
+body.edu-page .chapter-list a {
   background: var(--edu-button-bg);
   border: var(--edu-control-border-width) solid var(--edu-button-border);
   color: var(--edu-text-strong);
@@ -853,10 +829,7 @@ body.edu-page .resource-button.secondary {
 body.edu-page .resource-button:hover,
 body.edu-page .resource-button:focus-visible,
 body.edu-page .chapter-list a:hover,
-body.edu-page .chapter-list a:focus-visible,
-body.edu-page .faq-question:hover,
-body.edu-page .faq-question:focus-visible,
-body.edu-page .faq-item.open .faq-question {
+body.edu-page .chapter-list a:focus-visible {
   background: var(--edu-button-hover-bg);
   border-color: var(--edu-border-strong);
   box-shadow: var(--edu-button-hover-shadow)

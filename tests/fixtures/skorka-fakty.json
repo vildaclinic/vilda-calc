@@ -1,0 +1,100 @@
+{
+ "opis": "P-STYLE rata 4b: fakty o DOM spoza analizy statycznej. `klasy`/`idy`: nazwa zapisywana w JS na odbiorcach, których typu nie da się ustalić z kodu, dostaje jawny zbiór typów elementów. `podzbiory`: klasa dodawana wyłącznie elementom pasującym do listy selektorów (element z tą klasą zawsze pasuje do którejś części). Każdy fakt ma źródło, a przebieg node tests/scripts/zloz-skorke-css.mjs --dom sprawdza w Chromium, że w spoczynku żaden element nie łamie faktu.",
+ "klasy": {
+  "_glass": {
+   "tagi": [
+    "header",
+    "section",
+    "div",
+    "fieldset"
+   ],
+   "zrodlo": "ios26-ui.js glassify(): klasa dodawana do elementów z listy header, .card, .plan-card, .result-card, .data-card, fieldset, #timesCard, #intakeCard (typy tych klas i id wg wiedzy o DOM)"
+  },
+  "btn-accent": {
+   "tagi": [
+    "button"
+   ],
+   "zrodlo": "ios26-ui.js glassify(): #generateCentileChart, #generateDsCentileChart, #generateCentileChartAdv, #toggleAdvancedGrowth, #toggleIntakeCard — przyciski; w HTML i szablonach tylko button"
+  },
+  "btn-icon": {
+   "tagi": [
+    "button"
+   ],
+   "zrodlo": "ios26-ui.js glassify(): #toggleIgfTests, #toggleSnp, #toggleTurner, #togglePws, #toggleSga, #toggleIgf1 — przyciski; w HTML i szablonach tylko button"
+  },
+  "card": {
+   "tagi": [
+    "section",
+    "div",
+    "fieldset"
+   ],
+   "zrodlo": "HTML: section/div/fieldset; JS: kalkulator-klirens prevClcrCard (div), nutrition_norms/nutrition_micros (div), cukrzyca.js panel dawki (className na elemencie panelu) — zapis na odbiorcy spoza fabryki"
+  },
+  "result-box": {
+   "tagi": [
+    "div"
+   ],
+   "zrodlo": "HTML: 35 × div; JS: bp_module, circumference_module, adult_vitals ustawiają className na elementach wyników #bpResult, #circHeadResult, #circChestResult, #adultVitalsResult — wszystkie <div> w HTML"
+  },
+  "result-card": {
+   "tagi": [
+    "section",
+    "div"
+   ],
+   "zrodlo": "HTML: section; JS: app.js dodaje klasę elementom .result-box (div) i #toNormCard/#dietPlanCard (div), antibiotic_therapy/gh_igf_therapy tworzą section"
+  },
+  "sidebar": {
+   "tagi": [
+    "aside"
+   ],
+   "zrodlo": "HTML: <aside class=\"sidebar\">; JS: vilda_chrome.js montuje na aside[data-vilda-chrome-sidebar] albo aside.sidebar"
+  },
+  "pt-w": {
+   "tagi": [
+    "span"
+   ],
+   "zrodlo": "HTML/szablony: span; JS vilda_summary_cards.js: className=\"pt-w\"+ton na elemencie znalezionym przez querySelector(\".pt-w\") — ten sam element"
+  },
+  "porownanie-tempo": {
+   "tagi": [
+    "div"
+   ],
+   "zrodlo": "HTML/szablony: div; JS vilda_summary_cards.js: className=\"porownanie-tempo\"+ton na elemencie .porownanie-tempo — ten sam element"
+  },
+  "pro-summary-card": {
+   "tagi": [
+    "div",
+    "section"
+   ],
+   "zrodlo": "HTML: <div id=\"currentSummaryCard\">; JS app.js dodaje klasę #currentSummaryCard (div), cukrzyca.js przełącza ją na karcie zadania (element panelu)"
+  },
+  "vild-range-invalid": {
+   "tagi": [
+    "input"
+   ],
+   "zrodlo": "vilda_update_prep.js: klasa dodawana polu zakresu (input), przy którym stoi dymek .vild-range-tip; zapis na parametrze funkcji"
+  },
+  "porownanie-nota": {
+   "tagi": [
+    "div"
+   ],
+   "zrodlo": "HTML/szablony: div; JS vilda_summary_cards.js: className=\"porownanie-nota\"+ton na elemencie .porownanie-nota — ten sam element"
+  }
+ },
+ "idy": {},
+ "podzbiory": {
+  "_glass": {
+   "selektory": [
+    "header",
+    ".card",
+    ".plan-card",
+    ".result-card",
+    ".data-card",
+    "fieldset",
+    "#timesCard",
+    "#intakeCard"
+   ],
+   "zrodlo": "ios26-ui.js glassify(): klasa _glass jest dodawana wyłącznie elementom pasującym do tej listy selektorów — element z _glass zawsze pasuje do którejś z jej części"
+  }
+ }
+}

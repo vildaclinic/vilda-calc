@@ -10,7 +10,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { canonicalSelectorList } from '../../design-system/lib/css.mjs';
+import { canonicalSelector, canonicalSelectorList, specificity, splitTopLevel } from '../../design-system/lib/css.mjs';
+import { mozliweTypy, proste, tokeny, zlozenieSkrajne } from './wiedza-dom.mjs';
+import { longhandy } from './longhandy.mjs';
+
+/** Czy własność `skrot` obejmuje wszystkie longhandy własności `prop` (ta sama własność też). */
+function obejmuje(skrot, prop) {
+  if (skrot === prop) return true;
+  const s = new Set(longhandy(skrot));
+  const l = longhandy(prop);
+  return l.length > 0 && l.every((x) => s.has(x)) && (s.size > l.length || skrot !== prop);
+}
 
 export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const KLASA_SKORKI = 'liquid-ios26';
@@ -95,44 +105,128 @@ export function bezSkorki(czesc) {
   return `${zdjete}${reszta}`;
 }
 
-/** Czy lista selektorów nadpisania (bez skórki) zawiera każdą część selektora bazowego. */
-function pokrywa(czesciNadpisania, czesciBazy) {
-  const zbior = new Set(czesciNadpisania);
-  return czesciBazy.every((c) => zbior.has(c));
+/** Złożenia selektora (tylko kombinatory potomka; null przy `>`, `+`, `~`). */
+function zlozenia(czesc) {
+  const t = tokeny(canonicalSelector(czesc));
+  return t.some((x) => x === '>' || x === '+' || x === '~') ? null : t;
 }
 
-/** Nadpisania skórki w regułach: [{ regula, czesci (Set kanoniczny bez skórki), wazne (Set własności), kontekst }]. */
+/**
+ * Czy część nadpisania P (bez skórki) POKRYWA część bazową B: każdy element pasujący do B pasuje też do P.
+ * Tak jest przy równości kanonicznej, a także gdy P i B mają tylko kombinatory potomka, P ma jedno złożenie
+ * (porównywane ze skrajnym złożeniem B — przodkowie w B tylko zawężają) albo tyle samo złożeń co B, i każde złożenie
+ * B zawiera wszystkie proste selektory odpowiadającego złożenia P. Typ elementu w P może też wynikać z wiedzy o DOM:
+ * klasy i id złożenia B występują wyłącznie na elementach tego typu (P-STYLE rata 4b).
+ */
+export function pokrywaCzesc(P, B, wiedza = null) {
+  if (P === B) return true;
+  const zp = zlozenia(P);
+  const zb = zlozenia(B);
+  if (!zp || !zb || (zp.length !== 1 && zp.length !== zb.length)) return false;
+  const pary = zp.length === 1 ? [[zp[0], zb[zb.length - 1]]] : zp.map((z, i) => [z, zb[i]]);
+  // pseudoelement to inny „element”: reguła bez ::after nie dotyczy ::after (i odwrotnie)
+  if ((zlozenieSkrajne(P).pseudoelement || null) !== (zlozenieSkrajne(B).pseudoelement || null)) return false;
+  return pary.every(([p, b]) => {
+    const wB = new Set(proste(b));
+    return proste(p).every((simple) => {
+      if (simple === '*' || wB.has(simple)) return true;
+      if (!/^[a-zA-Z]/.test(simple) || !wiedza) return false;
+      const typy = mozliweTypy(zlozenieSkrajne(b), wiedza);
+      return Boolean(typy && typy.size) && [...typy].every((t) => t === simple.toLowerCase());
+    });
+  });
+}
+
+/**
+ * Nadpisania skórki w regułach: [{ regula, czesci: [{ bez, spec }], wazne (Set własności z !important),
+ * niewazne (Set własności bez !important), kontekst }]; `bez` — część bez skórki w postaci kanonicznej, `spec` —
+ * swoistość części ze skórką.
+ */
 function nadpisaniaSkorki(reguly) {
   return reguly
     .map((r) => {
-      const czesci = r.prelude.split(',').map((p) => p.trim()).filter(Boolean);
-      if (!czesci.every((p) => p.includes(`.${KLASA_SKORKI}`))) return null;
+      const czesci = splitTopLevel(r.prelude, ',').map((p) => p.trim()).filter(Boolean);
+      if (!czesci.length || !czesci.every((p) => p.includes(`.${KLASA_SKORKI}`))) return null;
       const bez = czesci.map(bezSkorki);
       if (bez.some((b) => b == null)) return null;
       const wazne = r.deklaracje.filter((d) => d.important);
-      if (!wazne.length) return null;
-      return { regula: r, czesci: new Set(canonicalSelectorList(bez.join(', '))), wazne: new Set(wazne.map((d) => d.prop)), kontekst: r.kontekst.join('|') };
+      const niewazne = r.deklaracje.filter((d) => !d.important);
+      if (!wazne.length && !niewazne.length) return null;
+      return {
+        regula: r,
+        czesci: czesci.map((p, i) => ({ bez: canonicalSelector(bez[i]), spec: specificity(p) })),
+        wazne: new Set(wazne.map((d) => d.prop)),
+        niewazne: new Set(niewazne.map((d) => d.prop)),
+        kontekst: r.kontekst.join('|'),
+      };
     })
     .filter(Boolean);
 }
 
-/** Martwe deklaracje reguł bazowych `reguly` pod nadpisaniami `nadpisania` (dowolnego pochodzenia). */
-function martwePod(reguly, nadpisania) {
+/**
+ * Martwe deklaracje reguł `reguly` (z arkusza `arkusz`; także reguł skórki — pod INNYMI regułami skórki) pod
+ * nadpisaniami `nadpisania` (każde z polem `arkusz`). Deklaracja własności P jest martwa, gdy każdą część jej selektora pokrywa (pokrywaCzesc) część
+ * jakiegoś nadpisania w tym samym kontekście @-reguł (albo bez kontekstu — obowiązuje zawsze), które deklaruje P i zawsze wygrywa: ważne z nieważną bazą;
+ * przy tej samej ważności — wyższa swoistość części, a przy równej swoistości — późniejsza pozycja w TYM SAMYM
+ * arkuszu (kolejność między arkuszami zależy od strony, więc nie liczy się). Wynik ma też pole `martweCzesci`:
+ * części selektora, dla których KAŻDA deklaracja reguły ma zwycięzcę (część do usunięcia z listy selektorów).
+ */
+function martwePod(reguly, nadpisania, arkusz = null, wiedza = null) {
   const martwe = [];
+  const martweCzesci = [];
+  const podzbiory = (wiedza && wiedza.podzbiory) || new Map();
+  // część z klasą-podzbiorem (np. `._glass` ⊆ header, .card, …) to tyle części, ile selektorów listy: każdą trzeba pokryć
+  const rozwin = (czesc) => {
+    const skrajne = zlozenieSkrajne(czesc);
+    const klasa = skrajne.klasy.find((k) => podzbiory.has(k));
+    if (!klasa) return [czesc];
+    const t = tokeny(canonicalSelector(czesc));
+    const przedrostek = t.slice(0, -1).join(' ');
+    return podzbiory.get(klasa).map((sel) => {
+      const ts = tokeny(canonicalSelector(sel));
+      const ostatni = ts[ts.length - 1];
+      const zlozenie = canonicalSelector(`${t[t.length - 1]}${ostatni.startsWith('.') || ostatni.startsWith('#') || ostatni.startsWith('[') || ostatni.startsWith(':') ? ostatni : ostatni.replace(/^([a-zA-Z*][\w-]*)(.*)$/, (m, typ, reszta) => (skrajne.typ ? reszta : `${typ}${reszta}`))}`);
+      const zTypem = !skrajne.typ && /^[a-zA-Z*]/.test(ostatni) ? canonicalSelector(`${ostatni.replace(/^([a-zA-Z*][\w-]*).*$/, '$1')}${t[t.length - 1]}`) : zlozenie;
+      return [ts.slice(0, -1).join(' '), przedrostek, zTypem].filter(Boolean).join(' ');
+    });
+  };
   for (const r of reguly) {
-    if (r.prelude.includes(`.${KLASA_SKORKI}`)) continue;
     if (!r.deklaracje.length) continue;
-    const czesciBazy = canonicalSelectorList(r.prelude.split(',').map((p) => bezSkorki(p)).join(', '));
-    if (!czesciBazy.length) continue;
+    // część bazowa: kanon bez skórki (do pokrycia), swoistość PEŁNEJ części (reguła skórki jako baza ma klasę skórki w swoistości)
+    const czesciBazy = splitTopLevel(r.prelude, ',').map((p, i) => ({ nr: i, pelna: p.trim(), bez: bezSkorki(p) })).filter((p) => p.bez && p.bez.trim()).map((p) => ({ nr: p.nr, kanon: canonicalSelector(p.bez), spec: specificity(p.pelna), rozwiniete: rozwin(p.bez) }));
+    if (!czesciBazy.length || czesciBazy.length !== splitTopLevel(r.prelude, ',').length) continue;
     const kontekst = r.kontekst.join('|');
-    const pasujace = nadpisania.filter((o) => o.kontekst === kontekst && pokrywa(o.czesci, czesciBazy));
-    if (!pasujace.length) continue;
-    for (const d of r.deklaracje) {
-      const o = pasujace.find((x) => x.wazne.has(d.prop));
-      if (o) martwe.push({ regula: r, deklaracja: d, nadpisanie: o.regula });
+    // nadpisanie w tym samym kontekście @-reguł albo poza wszelkim kontekstem (obowiązuje zawsze, więc i wtedy, gdy baza)
+    const wKontekscie = nadpisania.filter((o) => o.regula !== r && (o.kontekst === kontekst || o.kontekst === ''));
+    if (!wKontekscie.length) continue;
+    // dla każdej części bazowej (i każdego jej rozwinięcia): nadpisania z częścią pokrywającą, z jej swoistością
+    const pokrycia = czesciBazy.map((b) => b.rozwiniete.map((kanon) => wKontekscie.flatMap((o) => o.czesci.filter((c) => pokrywaCzesc(c.bez, kanon, wiedza)).map((c) => ({ o, spec: c.spec })))));
+    // nadpisanie deklaruje własność P bazy, gdy ma P albo skrót obejmujący wszystkie longhandy P (np. `background`
+    // zasłania `background-color`; `border-color` nie zasłania `border`)
+    const wygrywa = (d, o, spec, b) => {
+      const wazne = o.wazne.has(d.prop) || [...o.wazne].some((p) => obejmuje(p, d.prop));
+      const niewazne = o.niewazne.has(d.prop) || [...o.niewazne].some((p) => obejmuje(p, d.prop));
+      const ma = d.important ? wazne : (wazne || niewazne);
+      if (!ma) return false;
+      if (wazne && !d.important) return true;
+      if (spec > b.spec) return true;
+      return spec === b.spec && o.arkusz === arkusz && o.regula.start > r.start;
+    };
+    // zwycięzca dla (deklaracja, część): nadpisanie wygrywające na każdym rozwinięciu części
+    const zwyciezca = (d, i) => { const w = pokrycia[i].map((lista) => lista.find((p) => wygrywa(d, p.o, p.spec, czesciBazy[i]))); return w.every(Boolean) ? w[0].o : null; };
+    const tabela = r.deklaracje.map((d) => czesciBazy.map((b, i) => zwyciezca(d, i)));
+    for (let k = 0; k < r.deklaracje.length; k++) {
+      if (tabela[k].every(Boolean)) martwe.push({ regula: r, deklaracja: r.deklaracje[k], nadpisanie: tabela[k][0].regula });
+    }
+    // część martwa: każda deklaracja reguły ma zwycięzcę dla tej części (a nie każda dla wszystkich części)
+    const martweDekl = new Set(r.deklaracje.filter((d, k) => tabela[k].every(Boolean)));
+    if (martweDekl.size < r.deklaracje.length) {
+      for (let i = 0; i < czesciBazy.length; i++) {
+        if (r.deklaracje.every((d, k) => tabela[k][i])) martweCzesci.push({ regula: r, nr: i, nadpisanie: tabela[0][i].regula });
+      }
     }
   }
-  return martwe;
+  return { martwe, martweCzesci };
 }
 
 /**
@@ -140,9 +234,10 @@ function martwePod(reguly, nadpisania) {
  * [{ regula, deklaracja, nadpisanie }]. Reguła nadpisująca musi zawierać klasę skórki w każdej części selektora,
  * deklarować własność z !important i stać w tym samym kontekście @-reguł co reguła bazowa.
  */
-export function martweDeklaracje(css) {
+export function martweDeklaracje(css, wiedza = null, arkusz = 'arkusz') {
   const reguly = parsuj(css);
-  return { reguly, martwe: martwePod(reguly, nadpisaniaSkorki(reguly)) };
+  const { martwe, martweCzesci } = martwePod(reguly, nadpisaniaSkorki(reguly).map((o) => ({ ...o, arkusz })), arkusz, wiedza);
+  return { reguly, martwe, martweCzesci };
 }
 
 /**
@@ -151,25 +246,29 @@ export function martweDeklaracje(css) {
  * (ładowany na każdej stronie aplikacji). Kolejność ładowania nie ma znaczenia: ważne wygrywa z nieważnym, a przy
  * dwóch ważnych nadpisanie ma wyższą swoistość. Zwraca Map nazwa → martwe (jak martweDeklaracje).
  */
-export function martweWKaskadzie(arkusze) {
+export function martweWKaskadzie(arkusze, wiedza = null) {
   const sparsowane = arkusze.map((a) => ({ ...a, reguly: parsuj(a.css), nadpisania: null }));
   for (const a of sparsowane) a.nadpisania = nadpisaniaSkorki(a.reguly).map((o) => ({ ...o, arkusz: a.nazwa }));
   const wynik = new Map();
   for (const a of sparsowane) {
     const dostepne = sparsowane.filter((b) => b.nazwa === a.nazwa || b.globalny).flatMap((b) => b.nadpisania);
-    wynik.set(a.nazwa, { reguly: a.reguly, martwe: martwePod(a.reguly, dostepne) });
+    const { martwe, martweCzesci } = martwePod(a.reguly, dostepne, a.nazwa, wiedza);
+    wynik.set(a.nazwa, { reguly: a.reguly, martwe, martweCzesci });
   }
   return wynik;
 }
 
 /**
- * Usuwa martwe deklaracje (domyślnie z analizy jednego arkusza; `martweGotowe` — np. z martweWKaskadzie); reguła, która
- * zostaje bez deklaracji, znika w całości (z otaczającym pustym wierszem). Zwraca { text, usuniete, reguly, usunieteReguly }.
+ * Usuwa martwe deklaracje (domyślnie z analizy jednego arkusza; `martweGotowe` i `martweCzesci` — np. z martweWKaskadzie);
+ * reguła, która zostaje bez deklaracji, znika w całości (z otaczającym pustym wierszem), martwa część selektora znika
+ * z listy, pusty blok @media/@supports znika. Zwraca { text, usuniete, reguly, usunieteReguly, czesci }.
  */
-export function usunMartwe(css, martweGotowe = null) {
-  const martwe = martweGotowe || martweDeklaracje(css).martwe;
+export function usunMartwe(css, martweGotowe = null, martweCzesci = null) {
+  const analiza = martweGotowe ? null : martweDeklaracje(css);
+  const martwe = martweGotowe || analiza.martwe;
+  const czesci = martweCzesci || (analiza ? analiza.martweCzesci : []);
   const usunieteReguly = [];
-  if (!martwe.length) return { text: css, usuniete: 0, reguly: 0, usunieteReguly };
+  if (!martwe.length && !czesci.length) return { text: css, usuniete: 0, reguly: 0, usunieteReguly, czesci: 0 };
   const doUsuniecia = []; // [start, end]
   let reguly = 0;
   const wgReguly = new Map();
@@ -206,12 +305,29 @@ export function usunMartwe(css, martweGotowe = null) {
       if (nowaOstatnia && css[nowaOstatnia.end - 1] === ';') doUsuniecia.push([nowaOstatnia.end - 1, nowaOstatnia.end]);
     }
   }
+  // martwe części selektora: część znika z listy razem z przecinkiem i swoim wierszem (sformatowany arkusz: część w wierszu)
+  const wgRegulyCzesci = new Map();
+  for (const c of czesci) { if (wgReguly.has(c.regula) && wgReguly.get(c.regula).length === c.regula.deklaracje.length) continue; if (!wgRegulyCzesci.has(c.regula)) wgRegulyCzesci.set(c.regula, new Set()); wgRegulyCzesci.get(c.regula).add(c.nr); }
+  let usunieteCzesci = 0;
+  for (const [regula, numery] of wgRegulyCzesci) {
+    const klamra = css.indexOf('{', regula.start);
+    const surowe = css.slice(regula.start, klamra);
+    const czesciTekst = splitTopLevel(surowe, ',');
+    if (numery.size >= czesciTekst.length) continue;
+    const zostaja = czesciTekst.filter((_, i) => !numery.has(i)).map((t) => t.trim());
+    const wciecie = /^\s*/.exec(css.slice(css.lastIndexOf('\n', regula.start - 1) + 1, regula.start))[0];
+    const ogon = /\s*$/.exec(surowe)[0];
+    doUsuniecia.push([regula.start, klamra, `${zostaja.join(`,\n${wciecie}`)}${ogon}`]);
+    usunieteCzesci += numery.size;
+  }
   doUsuniecia.sort((a, b) => a[0] - b[0]);
   let text = '';
   let poz = 0;
-  for (const [s, e] of doUsuniecia) { text += css.slice(poz, s); poz = e; }
+  for (const [s, e, zamiast] of doUsuniecia) { text += css.slice(poz, s) + (zamiast || ''); poz = e; }
   text += css.slice(poz);
-  return { text, usuniete: martwe.length, reguly, usunieteReguly };
+  // blok @media/@supports, który został pusty, znika w całości
+  for (let i = 0; i < 3; i++) text = text.replace(/^[ \t]*@(?:media|supports)[^{}]*\{\s*\}\n?(\n)?/gm, '');
+  return { text, usuniete: martwe.length, reguly, usunieteReguly, czesci: usunieteCzesci };
 }
 
 /**
@@ -239,7 +355,7 @@ export function arkuszeZeStronami(czytaj = (p) => fs.readFileSync(path.join(korz
  * Martwe deklaracje w tekście `css` (np. partialu design systemu, który składa reguły z wielu arkuszy) pod nadpisaniami
  * skórki z podanych arkuszy źródłowych — używane z arkuszami globalnymi, bo pochodzenie reguł partialu nie jest znane.
  */
-export function martwePodArkuszami(css, arkuszeNadpisujace) {
-  const nadpisania = arkuszeNadpisujace.flatMap((a) => nadpisaniaSkorki(parsuj(a.css)));
-  return martwePod(parsuj(css), nadpisania);
+export function martwePodArkuszami(css, arkuszeNadpisujace, wiedza = null) {
+  const nadpisania = arkuszeNadpisujace.flatMap((a) => nadpisaniaSkorki(parsuj(a.css)).map((o) => ({ ...o, arkusz: a.nazwa })));
+  return martwePod(parsuj(css), nadpisania, null, wiedza).martwe;
 }

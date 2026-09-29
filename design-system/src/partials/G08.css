@@ -243,9 +243,7 @@
   padding:var(--space-1);
   margin:var(--space-12px) 0;
   font-size:1.75rem;
-  background:var(--card-bg);
-  text-align:center;
-  box-shadow:var(--shadow-s);
+  text-align:center
 }
 .result-val{
   color:var(--primary);

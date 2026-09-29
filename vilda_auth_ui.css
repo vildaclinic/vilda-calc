@@ -71,7 +71,6 @@
   font-size: 22px;
   font-weight: 600;
   color: var(--primary);
-  letter-spacing: -.01em;
   margin: 0
 }
 
@@ -105,7 +104,6 @@
   font-size: 28px;
   font-weight: 600;
   color: #08202c;
-  letter-spacing: -.015em;
   line-height: 1.2;
   text-align: center
 }
@@ -302,8 +300,7 @@ select.vilda-auth-input {
 
 .vilda-auth-btn-small {
   padding: var(--space-10px) var(--space-16px);
-  font-size: 13px;
-  border-radius: var(--radius-10)
+  font-size: 13px
 }
 
 .vilda-auth-btn-primary {
@@ -317,31 +314,6 @@ select.vilda-auth-input {
   background: #006d75;
   border-color: #006d75;
   box-shadow: 0 8px 22px #00838d4d
-}
-
-.vilda-auth-btn-ghost {
-  background: #fff;
-  color: #08202c;
-  border-color: #d6dde0
-}
-
-.vilda-auth-btn-ghost:hover {
-  background: #f5fafb;
-  border-color: var(--primary);
-  color: var(--primary)
-}
-
-.vilda-auth-btn-danger {
-  background: var(--danger-strong);
-  color: #fff;
-  border-color: var(--danger-strong);
-  box-shadow: 0 6px 18px #b0002038
-}
-
-.vilda-auth-btn-danger:hover {
-  background: #8e0019;
-  border-color: #8e0019;
-  box-shadow: 0 8px 22px #b000204d
 }
 
 .vilda-patient-delete-row {
@@ -410,23 +382,11 @@ select.vilda-auth-input {
   width: auto!important;
   max-width: max-content!important;
   margin: 0!important;
-  background: #fff!important;
-  border: 1.5px solid #d6dde0!important;
-  border-radius: 24px!important;
   padding: var(--space-8px) var(--space-16px)!important;
   font-size: 13px!important;
   font-family: Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important;
   font-weight: 500!important;
-  color: #08202c!important;
-  cursor: pointer;
-  box-shadow: 0 4px 14px #003c501a;
-  transition: all .15s ease
-}
-
-.vilda-auth-logout:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  box-shadow: 0 6px 18px #00838d2e
+  cursor: pointer
 }
 
 .vilda-auth-logout:focus-visible {
@@ -611,18 +571,6 @@ select.vilda-auth-input {
   font-size: 22px;
   font-weight: 300;
   line-height: 1
-}
-
-.vilda-auth-btn-subtle {
-  background: transparent;
-  border-color: transparent;
-  color: #6a8089
-}
-
-.vilda-auth-btn-subtle:hover {
-  background: #f5fafb;
-  border-color: transparent;
-  color: var(--primary)
 }
 
 .vilda-auth-import-list {
@@ -1236,7 +1184,6 @@ select.vilda-auth-input {
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: background .12s ease,color .12s ease;
   -webkit-tap-highlight-color: transparent
 }
 
@@ -1564,42 +1511,48 @@ select.vilda-auth-input {
   content: " \2713"
 }
 
+.vilda-auth-sort-option {
+  background: none;
+  border: none;
+  border-bottom: var(--border-hairline) solid #f0f4f5;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  margin: 0;
+  padding: var(--space-12px) var(--space-16px)
+}
+
 .liquid-ios26 .vilda-auth-sort-option {
-  background: none!important;
-  border: none!important;
-  border-bottom: var(--border-hairline) solid #f0f4f5!important;
-  border-radius: 0!important;
-  box-shadow: none!important;
-  backdrop-filter: none!important;
-  -webkit-backdrop-filter: none!important;
-  margin: 0!important;
-  width: 100%!important;
-  padding: var(--space-12px) var(--space-16px)!important
+  width: 100%!important
 }
 
-.liquid-ios26 .vilda-auth-sort-option:last-child {
-  border-bottom: none!important
+.vilda-auth-sort-option:last-child {
+  border-bottom: none
 }
 
-.liquid-ios26 .vilda-auth-sort-option:hover {
-  background: #f5fafb!important
+.vilda-auth-sort-option:hover {
+  background: #f5fafb
+}
+
+.vilda-auth-sort-btn {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 0;
+  color: #8a9aa1
 }
 
 .liquid-ios26 .vilda-auth-sort-btn {
-  background: transparent!important;
-  border: none!important;
-  border-radius: 0!important;
-  box-shadow: none!important;
-  backdrop-filter: none!important;
-  -webkit-backdrop-filter: none!important;
   width: 32px!important;
-  height: 32px!important;
-  padding: 0!important;
-  color: #8a9aa1!important
+  height: 32px!important
 }
 
-.liquid-ios26 .vilda-auth-sort-btn--open {
-  color: var(--primary)!important
+.vilda-auth-sort-btn--open {
+  color: var(--primary)
 }
 
 @media(max-width:520px) {
@@ -1640,22 +1593,16 @@ select.vilda-auth-input {
 }
 
 .vilda-auth-btn-biometric {
-  background: linear-gradient(135deg,#00838d,#00b0a6);
-  color: #fff;
-  border: none;
   font-weight: 600;
   letter-spacing: .01em
 }
 
 .vilda-auth-btn-biometric:hover {
-  background: linear-gradient(135deg,#006d77,#009a91);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px #00838d47
+  transform: translateY(-1px)
 }
 
 .vilda-auth-btn-biometric:active {
-  transform: translateY(0);
-  box-shadow: none
+  transform: translateY(0)
 }
 
 .vilda-auth-btn-biometric:focus-visible {
@@ -2133,18 +2080,10 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   width: 18px;
   height: 18px;
   padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--primary);
   cursor: pointer;
   line-height: 1;
   flex: 0 0 auto;
   -webkit-tap-highlight-color: transparent
-}
-
-.vilda-dob-info-btn:hover,
-.vilda-dob-info-btn[aria-expanded=true] {
-  color: #006d75
 }
 
 .vilda-dob-info-btn svg {
@@ -2185,6 +2124,10 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   display: none
 }
 
+.vilda-timeline-measure-menu button {
+  box-sizing: border-box
+}
+
 .liquid-ios26 .vilda-timeline-measure-menu button {
   background: #fff!important;
   border: 0!important;
@@ -2197,7 +2140,6 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   font-weight: 400!important;
   display: flex!important;
   width: 100%!important;
-  box-sizing: border-box!important;
   margin: 0!important
 }
 
@@ -2311,12 +2253,6 @@ body.vilda-password-alert-open #scrollTopBtn {
   font-size: .86rem;
   line-height: 1.5;
   margin: 0 0 var(--space-18px)
-}
-
-.vilda-auth-btn-danger {
-  color: #9f1239!important;
-  border-color: #f0c2cd!important;
-  background: #fff!important
 }
 
 @media(min-width:700px) {

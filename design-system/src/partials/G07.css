@@ -11,9 +11,6 @@ button,input[type=button],input[type=submit]{
   font:inherit;
   padding:var(--space-0-55) var(--space-1-1)
 }
-button:hover,input[type=button]:hover,input[type=submit]:hover{
-  background:var(--secondary);
-  box-shadow:var(--shadow)}
 button:disabled{
   opacity:.45;
   cursor:not-allowed}
@@ -26,8 +23,8 @@ button,input[type=button],input[type=submit]{
 :root{
   --anim-fast:.15s ease}
 button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
-  transform:translateY(-1px) scale(1.02);
-  box-shadow:var(--shadow-l)}
+  transform:translateY(-1px) scale(1.02)
+}
 .liquid-ios26 button,.liquid-ios26 input[type=button],.liquid-ios26 input[type=submit]{
   background:#fff3 !important;
   border:var(--border-hairline) solid var(--lg-border) !important;
@@ -200,17 +197,17 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 }
 /* Notice — szkło */
 .liquid-ios26 .diet-info-note{
-  color:#000!important;
-  background:none!important;
-  border:none!important;
-  border-left:none!important;
-  border-radius:0!important;
-  font-size:1rem!important;
-  text-align:left!important;
-  display:block!important;
-  box-sizing:border-box!important;
-  margin-right:0!important;
-  margin-inline-end:0!important}
+  color:#000 !important;
+  background:none !important;
+  border:none !important;
+  border-left:none !important;
+  border-radius:0 !important;
+  font-size:1rem !important;
+  text-align:left !important;
+  display:block !important;
+  margin-right:0 !important;
+  margin-inline-end:0 !important;
+}
 /* Notice — wysoki kontrast (style.css 5163; lista selektorów przycięta do .info-card) */
 body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.liquid-ios26 .info-card,body.high-contrast-level-3.liquid-ios26 .info-card{
   background:var(--hc-result-bg)!important;
@@ -594,16 +591,9 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
    ========================================================================== */
 #sw-update-banner .btn{
   padding:var(--space-0-5) var(--space-0-9);
-  border:0;
-  border-radius:var(--radius-0-5rem);
-  background:var(--secondary, #06b6d4);
-  color:#fff;
   cursor:pointer;
   font-size:.95rem;
 }
-#sw-update-banner .btn:nth-child(2){
-  background:#e5e7eb;
-  color:#111827}
 #updateBanner{
   position:fixed;
   top:0;
@@ -620,11 +610,7 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 }
 #updateBanner button{
   margin-left:var(--space-1);
-  background:var(--secondary);
-  color:#fff;
-  border:none;
   padding:var(--space-0-35) var(--space-0-8);
-  border-radius:var(--radius-6);
   font-size:.95rem;
   cursor:pointer;
 }
@@ -941,18 +927,9 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
   justify-content:flex-start;
 }
 .cookie-buttons button{
-  border:none;
   padding:var(--space-0-5) var(--space-1);
-  border-radius:var(--radius-4);
   cursor:pointer;
   font-size:.9rem;
-}
-#consent-accept{
-  background-color:#007c8d;
-  color:#fff}
-#consent-decline{
-  background-color:#e0e0e0;
-  color:var(--text);
 }
 /* vilda_auth_ui.css 1621 (lista selektorów przycięta do banera) */
 .vilda-embedded body.vilda-auth-embedded-open .cookie-banner,.vilda-embedded body.vilda-auth-embedded-open #cookieBanner{

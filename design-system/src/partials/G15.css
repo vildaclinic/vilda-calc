@@ -6,9 +6,6 @@ button,input[type=button],input[type=submit]{
   font:inherit;
   padding:var(--space-0-55) var(--space-1-1)
 }
-button:hover,input[type=button]:hover,input[type=submit]:hover{
-  background:var(--secondary);
-  box-shadow:var(--shadow)}
 button:disabled{
   opacity:.45;
   cursor:not-allowed}
@@ -19,8 +16,8 @@ button,input[type=button],input[type=submit]{
 }
 }
 button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
-  transform:translateY(-1px) scale(1.02);
-  box-shadow:var(--shadow-l)}
+  transform:translateY(-1px) scale(1.02)
+}
 
 /* ——— 1. MarketingHero — „O aplikacji” (o-aplikacji.css 10–74, 75–84, 103–168, 170–198, 209–298, 987–989) ——— */
     .about-page .about-panel,

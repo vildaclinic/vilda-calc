@@ -13,20 +13,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { arkuszeAplikacji, arkuszeZeStronami, korzen, martwePodArkuszami, martweWKaskadzie, parsuj, usunMartwe } from '../support/szklo-css.mjs';
+import { wiedzaDom } from '../support/wiedza-dom.mjs';
 import { canonicalSelectorList } from '../../design-system/lib/css.mjs';
 
 const argumenty = process.argv.slice(2);
 const flaga = (f) => argumenty.includes(f);
 const opcja = (f, domyslna) => { const i = argumenty.indexOf(f); return i >= 0 && argumenty[i + 1] ? argumenty[i + 1] : domyslna; };
 const sprawdz = flaga('--sprawdz') || flaga('--raport');
+const wiedza = wiedzaDom();
 
 if (flaga('--partiale')) {
   const baza = opcja('--baza', 'origin/audyt');
   if (!/^[A-Za-z0-9_./~^-]{1,80}$/.test(baza)) { console.error('nieprawidłowa rewizja'); process.exit(2); }
-  const klucz = (r) => `${r.kontekst.join('|')}::${canonicalSelectorList(r.prelude).join(',')}`;
-  const zbior = (czytaj) => { const s = new Set(); for (const a of arkuszeAplikacji()) { let css; try { css = czytaj(a); } catch { continue; } for (const r of parsuj(css)) s.add(klucz(r)); } return s; };
-  const teraz = zbior((a) => fs.readFileSync(path.join(korzen, a), 'utf8'));
-  const wBazie = zbior((a) => execFileSync('git', ['show', `${baza}:${a}`], { cwd: korzen, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  // reguła partiala odpowiada regule arkusza, gdy jej kanoniczne części są podzbiorem części reguły arkusza w tym samym
+  // kontekście (tak dopasowuje producent; partial bywa wycinkiem listy selektorów)
+  const lista = (czytaj) => { const s = []; for (const a of arkuszeAplikacji()) { let css; try { css = czytaj(a); } catch { continue; } for (const r of parsuj(css)) s.push({ kontekst: r.kontekst.join('|'), czesci: new Set(canonicalSelectorList(r.prelude)) }); } return s; };
+  const zawiera = (lista, r) => { const k = r.kontekst.join('|'); const cz = canonicalSelectorList(r.prelude); return cz.length > 0 && lista.some((x) => x.kontekst === k && cz.every((c) => x.czesci.has(c))); };
+  const terazLista = lista((a) => fs.readFileSync(path.join(korzen, a), 'utf8'));
+  const wBazieLista = lista((a) => execFileSync('git', ['show', `${baza}:${a}`], { cwd: korzen, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  const teraz = { has: (r) => zawiera(terazLista, r) };
+  const wBazie = { has: (r) => zawiera(wBazieLista, r) };
+  const klucz = (r) => r;
   const katalog = path.join(korzen, 'design-system/src/partials');
   const globalne = arkuszeZeStronami().filter((a) => a.globalny);
   let razem = 0;
@@ -43,9 +50,10 @@ if (flaga('--partiale')) {
       razem += wynikStale.reguly;
       console.log(`${plik}: usunięto reguł ${wynikStale.reguly}: ${stale.map((r) => r.prelude.slice(0, 60)).join(' | ').slice(0, 300)}`);
     }
-    // 2) deklaracje martwe pod nadpisaniami skórki z arkuszy globalnych (partial składa reguły z wielu arkuszy;
-    //    to, co usunięte nadmiarowo, przywraca `npm run design-system -- --update` z reguły źródłowej)
-    const martwe = martwePodArkuszami(css, globalne);
+    // 2) deklaracje martwe pod nadpisaniami skórki z arkuszy globalnych — tylko w regułach pochodzących z arkuszy
+    //    (reguły z bloków <style> i z JS zostają: ich źródła nie były czyszczone; to, co usunięte nadmiarowo, przywraca
+    //    `npm run design-system -- --update` z reguły źródłowej)
+    const martwe = martwePodArkuszami(css, globalne, wiedza).filter((m) => teraz.has(m.regula));
     if (martwe.length) {
       const wynikDekl = usunMartwe(css, martwe);
       css = wynikDekl.text;
@@ -60,26 +68,29 @@ if (flaga('--partiale')) {
 }
 
 const arkusze = arkuszeZeStronami();
-const wynik = martweWKaskadzie(arkusze);
+const wynik = martweWKaskadzie(arkusze, wiedza);
 let razem = 0;
 let regulyRazem = 0;
+let czesciRazem = 0;
 const wiersze = [];
 const wlasnosci = new Map();
 console.log(`arkusze globalne (na każdej stronie): ${arkusze.filter((a) => a.globalny).map((a) => a.nazwa).join(', ')}`);
 for (const a of arkusze) {
-  const { martwe } = wynik.get(a.nazwa);
-  if (!martwe.length) continue;
+  const { martwe, martweCzesci } = wynik.get(a.nazwa);
+  if (!martwe.length && !martweCzesci.length) continue;
   for (const m of martwe) wlasnosci.set(m.deklaracja.prop, (wlasnosci.get(m.deklaracja.prop) || 0) + 1);
   if (flaga('--raport')) {
     console.log(`\n== ${a.nazwa}`);
     for (const m of martwe) console.log(`  ${m.regula.kontekst.length ? `[${m.regula.kontekst.join(' » ')}] ` : ''}${m.regula.prelude.slice(0, 90)} { ${m.deklaracja.prop}: ${m.deklaracja.value}${m.deklaracja.important ? ' !important' : ''} }  ← ${m.nadpisanie.prelude.slice(0, 80)}`);
+    for (const c of martweCzesci) console.log(`  część #${c.nr} ${c.regula.prelude.slice(0, 90)}  ← ${c.nadpisanie.prelude.slice(0, 80)}`);
   }
-  const { text, usuniete, reguly } = usunMartwe(a.css, martwe);
+  const { text, usuniete, reguly, czesci } = usunMartwe(a.css, martwe, martweCzesci);
   razem += usuniete;
   regulyRazem += reguly;
-  wiersze.push(`${a.nazwa}: deklaracji ${usuniete}, całych reguł ${reguly}`);
+  czesciRazem += czesci;
+  wiersze.push(`${a.nazwa}: deklaracji ${usuniete}, całych reguł ${reguly}, martwych części selektorów ${czesci}`);
   if (!sprawdz) fs.writeFileSync(path.join(korzen, a.nazwa), text);
 }
-console.log(`${sprawdz ? 'do usunięcia' : 'usunięto'}: ${razem} martwych deklaracji (w tym ${regulyRazem} całych reguł)${wiersze.length ? `\n  ${wiersze.join('\n  ')}` : ''}`);
+console.log(`${sprawdz ? 'do usunięcia' : 'usunięto'}: ${razem} martwych deklaracji (w tym ${regulyRazem} całych reguł) i ${czesciRazem} martwych części selektorów${wiersze.length ? `\n  ${wiersze.join('\n  ')}` : ''}`);
 if (wlasnosci.size) console.log(`własności: ${[...wlasnosci].sort((a, b) => b[1] - a[1]).map(([p, n]) => `${p} ×${n}`).join(', ')}`);
-if (sprawdz && razem) process.exit(1);
+if (sprawdz && (razem || czesciRazem)) process.exit(1);
