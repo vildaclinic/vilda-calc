@@ -121,7 +121,7 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.pdf.kafle).toHaveLength(4);
     expect(r.pdf.kafle[0]).toBe('≤ 2 350 | kcal dziennie | górna granica dnia, nie cel');
     expect(r.pdf.kafle[1]).toMatch(/^\d{1,2} [IVX]+ \| \d{4} \| termin kontroli \(ok\. 12 tygodni\)$/u);
-    expect(r.pdf.kafle.slice(2)).toEqual(['ok. 52,7 kg | masa przy stabilizacji | dziś 52,0 kg + wzrastanie', '&gt; 52,7 kg | odejmij od planu | 100–200 kcal']);
+    expect(r.pdf.kafle.slice(2)).toEqual(['ok. 52,7 kg | masa przy stabilizacji | dziś 52,0 kg + wzrastanie', '&gt; 53,2 kg | odejmij od planu | 100–200 kcal']); // P-DIETA-STAB rata 2: próg + margines 1 % masy (0,52 kg)
     expect(r.pdf.ramka).toEqual([]);
     expect(r.karta).toMatchObject({ value: '≤ 2350 kcal/d' }); // P-DIETA-STAB rata 1: górna granica dnia
     expect(r.karta.rows).toContain('Plan: utrzymanie masy ciała: ≤ 2350 kcal/d');
@@ -162,7 +162,7 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.pdf.kafle).toHaveLength(4);
     expect(r.pdf.kafle[0]).toBe('≤ 2 150 | kcal dziennie | górna granica dnia, nie cel');
     expect(r.pdf.kafle[1]).toMatch(/^\d{1,2} [IVX]+ \| \d{4} \| termin kontroli \(ok\. 12 tygodni\)$/u);
-    expect(r.pdf.kafle.slice(2)).toEqual(['ok. 75,3 kg | masa przy stabilizacji | dziś 75,0 kg + wzrastanie', '&gt; 75,3 kg | odejmij od planu | 100–200 kcal']);
+    expect(r.pdf.kafle.slice(2)).toEqual(['ok. 75,3 kg | masa przy stabilizacji | dziś 75,0 kg + wzrastanie', '&gt; 76,0 kg | odejmij od planu | 100–200 kcal']); // P-DIETA-STAB rata 2: próg + margines 1 % masy (0,75 kg)
     expect(r.pdf.ramka).toEqual(['vrp-tempo-alarm', ZD_ALARM_STAB]);
     expect(r.pdf.zacheta).toBe(false);
     expect(r.karta.rows).toContain('Plan: utrzymanie masy ciała: ≤ 2150 kcal/d'); // P-DIETA-STAB rata 1

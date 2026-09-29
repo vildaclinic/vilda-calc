@@ -145,7 +145,8 @@ describe('rata V pkt 3: kontrola za 6 tygodni', () => {
       obnizkaKcal: [100, 200], obnizkaMozliwa: true, podazPoObnizceKcal: [2500, 2600], dietaKlucz: 'moderate',
     });
     // rata W: bez wieku, płci i wzrostu (tu nie podane) reguła raty V bez zmian; nowe pola odstępu dla wolnego tempa
-    expect(win.ENERGY_KONTROLA_PLANU).toEqual({ tygodnie: 6, tygodnieWolne: 12, tempoWolneKgMies: 1, progCzescUbytku: 0.5, obnizkaKcal: [100, 200] });
+    // P-DIETA-STAB rata 2: margines progu kontroli stabilizacji jako dane (1 % masy, 0,3–1 kg)
+    expect(win.ENERGY_KONTROLA_PLANU).toEqual({ tygodnie: 6, tygodnieWolne: 12, tempoWolneKgMies: 1, progCzescUbytku: 0.5, obnizkaKcal: [100, 200], stabilizacjaTolerancja: { czescMasy: 0.01, minKg: 0.3, maxKg: 1 } });
     expect(k.przyrostKg).toBe(0);
     expect(k.wzrastanie).toBe(false);
   });

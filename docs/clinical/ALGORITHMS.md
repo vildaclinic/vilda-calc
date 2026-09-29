@@ -5829,6 +5829,42 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Margines progu kontroli stabilizacji: 1 % masy ciała, 0,3–1 kg (P-DIETA-STAB rata 2, SW 1.1.98, 2026-09-29)
+
+**Zgłoszenie (otwarta decyzja z P-DIETA-STAB rata 1).** Kontrola po 12 tygodniach przy stabilizacji porównywała masę
+z „dzisiejsza masa + przyrost z samego wzrastania” bez żadnego marginesu (poza zaokrągleniem do 0,1 kg). Wahania pomiaru
+(ubranie, pora dnia, wypełnienie przewodu pokarmowego i pęcherza) mogły więc dawać fałszywe „obniż podaż o 100–200 kcal”.
+Diety redukcyjne mają margines od raty V (połowa spodziewanego ubytku), stabilizacja — nie, bo spodziewany ubytek wynosi 0.
+
+**Decyzja właściciela (2026-09-29).** Margines = 1 % masy dzisiejszej, nie mniej niż 0,3 kg i nie więcej niż 1 kg.
+Dolna granica 0,3 kg odpowiada ubraniu (ta sama wartość jest w uzasadnieniu raty W); górna chroni przed przesłonięciem realnego
+przyrostu u nastolatka. Wartość przyjęta jako opinia ekspercka właściciela — piśmiennictwo nie podaje standardu dla tego progu.
+
+**Zmiana (kliniczna: inny próg obniżki podaży przy stabilizacji; diety bez zmian).**
+- `vilda_diet_plan_ui.js` (`?v=37`): `KONTROLA_PLANU.stabilizacjaTolerancja = {czescMasy: 0,01; minKg: 0,3; maxKg: 1}` (dane);
+  `energyKontrolaPlanu` dla wiersza `stabilizacja:true` liczy `prog = masa dziś + przyrost ze wzrastania + margines` i oddaje
+  `tolerancjaKg`; wiersze diet — `tolerancjaKg: 0`, reguła raty W bez zmian.
+- `vilda_diet_recommendations.js` (`?v=64`): zdanie kontroli „Jeśli masa będzie wyższa niż X kg (z marginesem Y kg na wahania
+  pomiaru), …”; `dane.kontrola.tolerancjaKg`.
+- Plan PDF bez zmian w kodzie — kafel „> X kg” pokazuje próg z marginesem.
+- SW 1.1.97 → 1.1.98 (1.1.97 zajęło równolegle P-SW-DOCPRO), precache append-only, `?v=` na stronach i w smoke, fixture wersji.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne; `tests/unit/p-dieta-stab-rata1.test.mjs`).**
+
+| Pacjent | Margines | Próg kontroli (przed → po) |
+|---|---|---|
+| chł. 7 l. 3 mies., 44 kg, 131 cm | 0,44 kg | ok. 44,5 → **ok. 45,0 kg** |
+| chł. 4 l., 22 kg | 0,3 kg (minimum) | dziś + przyrost + 0,3 kg |
+| dz. 8 l., 40 kg | 0,4 kg | dziś + przyrost + 0,4 kg |
+| chł. 10 l., 52 kg (e2e G1-1) | 0,52 kg | 52,7 → **53,2 kg** |
+| chł. 14 l., 85 kg | 0,85 kg | dziś + przyrost + 0,85 kg |
+| chł. 16 l., 130 kg | 1 kg (maksimum) | dziś + przyrost + 1 kg |
+
+**Testy.** Unit `p-dieta-stab-rata1` (margines i obie granice na prawdziwym silniku; dieta bez marginesu); e2e
+`dieta-tempo-rata-g1` (G1-1, G1-3: kafel progu w planie PDF), `zalecenia-energetyczne-krytyczne` (K2: zdanie z marginesem).
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.97, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28).** `docpro.html` stoi w `OPTIONAL_DOCUMENTS`, ale DocPro nie startował offline. W prawdziwym

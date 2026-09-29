@@ -456,12 +456,12 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 36,
-  "sha256": "11f08888a0d08e67563eb10c27b32a4b48b656164be96eb79b8ac4d39e1fc878"
+  "v": 37,
+  "sha256": "2dc56030272247871bcb2312b48d24713c82493fa8dbc63c943c947b1c0c9e37"
  },
  "vilda_diet_recommendations.js": {
-  "v": 63,
-  "sha256": "70ce7caf897a02bd1a3a3ac4e5bbff7b1e37b8f26b9a200bf182a86a60e4d981"
+  "v": 64,
+  "sha256": "fdb91a24646acf0b540d110dfa7d2d0aec10c85fda7c33f74643c6689bff95dd"
  },
  "vilda_dob_age.js": {
   "v": 7,
