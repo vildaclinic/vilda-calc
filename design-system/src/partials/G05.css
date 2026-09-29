@@ -57,11 +57,6 @@
   font-size:.65em;
   margin-left:.1em;
   color:#444}
-/* #intakeCard (z #intakeResults) — szerokość (2329-2331) i h2.intake-title (2332-2333) */
-#intakeCard,#intakeResults,#intakeResults .intake-results-table-wrap{
-  min-width:0;
-  max-width:100%}
-
 #intakeCard h2.intake-title{
   text-align:center}
 /* #intakeResults .intake-alert (923-930) */
@@ -236,84 +231,12 @@
 }
 .current-summary-row:first-child{
   margin-top:0}
-.current-summary-param{
-  font-weight:600}
-.current-summary-dots{
-  flex-grow:1;
-  border-bottom:var(--border-hairline) dotted rgba(0,0,0,.3);
-  margin:0 var(--space-0-4);
-  height:0;
-}
-.current-summary-value{
-  white-space:nowrap;
-  text-align:right}
-/* .summary-grid, .prev-summary-*, .status-*, .diff-* (2601-2659) */
-.summary-grid{
-  display:grid;
-  grid-template-columns:1fr auto;
-  gap:var(--space-0-35) var(--space-0-5);
-}
-.summary-grid .label{
-  color:var(--text);
-  font-size:.95rem}
-.summary-grid .val{
-  text-align:right}
-.summary-grid .val .result-val{
-  font-size:1.35rem}
-.summary-grid .muted{
-  color:#6b7a7a;
-  font-size:.92rem}
-.prev-summary-separator{
-  border:none;
-  border-top:var(--border-emphasis) solid var(--line);
-  width:90%;
-  margin:0 auto var(--space-0-6);
-}
-.prev-summary-label{
-  text-align:center;
-  margin-bottom:var(--space-0-5);
-  font-size:.95rem;
-  font-weight:600;
-}
 .status-ok{
   color:var(--secondary)}
 .status-improve{
   color:var(--notice-orange);
 }
 .status-alert{
-  color:var(--danger)}
-.diff-section{
-  margin-top:var(--space-0-5);
-}
-.summary-grid .diff-section{
-  grid-column:1 / -1}
-.diff-row{
-  display:grid;
-  grid-template-columns:1fr auto;
-  gap:var(--space-0-35) var(--space-0-5);
-  align-items:baseline;
-}
-.diff-row .label{
-  color:var(--text);
-  font-size:.95rem}
-.diff-row .val{
-  text-align:right}
-.diff-row .val .result-val{
-  font-size:1.35rem}
-/* P-OSTATNI-1: werdykt pary pomiarow / zdanie tempa pod wierszem roznicy — ten sam slownik, co Karta pacjenta */.diff-verdict{
-  grid-column:1 / -1;
-  text-align:right;
-  font-size:.88rem;
-  line-height:1.3;
-  margin:-.1rem 0 var(--space-0-4);
-  color:#4b5b5b;
-}
-.diff-verdict.status-ok{
-  color:var(--secondary)}
-.diff-verdict.status-improve{
-  color:var(--notice-orange);
-}
-.diff-verdict.status-alert{
   color:var(--danger)}
 /* #prevSummaryCard.porownanie-karta, .porownanie-chipy, .porownanie-chip i modyfikatory --szara/--kontekst/[hidden] (2674-2701) */
 #prevSummaryCard.porownanie-karta{
@@ -552,13 +475,8 @@ tbody tr:hover{
   overflow-x:auto}
 .table-scroll>table{
   min-width:520px}
-/* późniejsza reguła przewijania poziomego (4745-4746); lista selektorów ze źródła zachowana w całości */
-.table-scroll,#intakeResults .intake-results-table-wrap,.adult-vitals-mini-table-wrap,.nutrition-micros-table-wrap{
-  overscroll-behavior-x:contain}
 .text-center{
   text-align:center}
-.text-right{
-  text-align:right}
 @media(max-width:600px){
   th,td{
   padding:.5rem}
@@ -608,49 +526,6 @@ tbody tr:hover{
   text-align:right}
 .kcal-table--macro td{
   vertical-align:top}
-/* #intakeResults table.intake-results-table (2334-2371) */
-#intakeResults .intake-results-table-wrap{
-  width:100%;
-  overflow-x:auto}
-#intakeResults table.intake-results-table{
-  width:100%;
-  min-width:0;
-  margin-top:0;
-  border-collapse:separate;
-  border-spacing:0;
-  table-layout:fixed}
-#intakeResults table.intake-results-table thead th:nth-child(1){
-  width:25%}
-#intakeResults table.intake-results-table thead th:nth-child(2){
-  width:37.5%}
-#intakeResults table.intake-results-table thead th:nth-child(3){
-  width:37.5%}
-#intakeResults table.intake-results-table th,#intakeResults table.intake-results-table td{
-  padding:var(--space-0-55) var(--space-0-65);
-  text-align:left;
-  vertical-align:top;
-  white-space:normal;
-  word-break:break-word;
-  overflow-wrap:anywhere;
-}
-#intakeResults table.intake-results-table th{
-  background:var(--secondary);
-  color:#fff;
-  font-size:.92rem;
-  font-weight:600}
-#intakeResults table.intake-results-table tbody tr:nth-child(2n) td{
-  background:var(--table-stripe);
-}
-#intakeResults .intake-period-main{
-  color:var(--primary);
-  font-weight:700;
-  line-height:1.3}
-#intakeResults .intake-period-sub{
-  margin-top:var(--space-0-35);
-  color:#6b7a7a;
-  font-size:.88rem;
-}
-
 /* ===================== Liquid Glass — nadpisania .liquid-ios26 (ios26-v2.css 74-84, 193-194) ===================== */
 /* Lista selektorów reguły kart szklanych ograniczona do elementów tej grupy (pełna lista w źródle obejmuje też .card, .plan-card, fieldset, #timesCard); deklaracje bez zmian. */
 .liquid-ios26 .result-card,.liquid-ios26 .data-card,.liquid-ios26 #intakeCard{

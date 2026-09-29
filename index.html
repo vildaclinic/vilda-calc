@@ -63,7 +63,10 @@
     <!-- APP-SHELL (B1): gdy strona ładuje się jako panel iframe (?embedded=1),
          chowamy jej własny chrome, by nie dublować ramki shella (app.html). -->
     <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
-    <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
+    <style>.vilda-embedded header,
+.vilda-embedded .sidebar,
+.vilda-embedded #mobileBottomDock,
+.vilda-embedded #scrollTopBtn{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Zaktualizowany opis: akcentujemy markę Waga i wzrost oraz kluczowe funkcje aplikacji -->
     <meta name="description" content="Waga i wzrost – kompleksowy kalkulator BMI, siatek centylowych, WHR, BMR oraz zapotrzebowania kalorycznego. Zawiera moduł lekarski z testami hormonalnymi i terapią GH/IGF‑1. Darmowe narzędzie edukacyjne Vilda Clinic">
@@ -86,14 +89,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
-<link href="ios26-v2.css?v=25" rel="stylesheet">
-<link href="style.css?v=82" rel="stylesheet">
+<link href="ios26-v2.css?v=26" rel="stylesheet">
+<link href="style.css?v=83" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
-<link href="vilda_chrome.css?v=42" rel="stylesheet">
-<link href="vilda_auth_ui.css?v=75" rel="stylesheet">
+<link href="vilda_chrome.css?v=43" rel="stylesheet">
+<link href="vilda_auth_ui.css?v=76" rel="stylesheet">
 <link href="vilda_save_status_indicator.css?v=6" rel="stylesheet">
 <link href="vilda_status_bar.css?v=4" rel="stylesheet">
-<link href="vilda_obesity_banner.css?v=6" rel="stylesheet">
+<link href="vilda_obesity_banner.css?v=7" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
      Musi być po linkach CSS (żeby reguły pro-gate działały od razu)
@@ -1479,7 +1482,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=82, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=83, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->

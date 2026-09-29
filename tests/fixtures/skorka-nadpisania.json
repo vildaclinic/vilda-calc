@@ -1506,63 +1506,39 @@
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#0",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#0",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#1",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#1",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#2",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#2",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#3",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#0",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#4",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#1",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#0",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#2",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#1",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#0",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#2",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#1",
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#3",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#4",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#0",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#1",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#2",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#3",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#4",
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#2",
    "powod": "behawioralna"
   },
   {
@@ -1794,14 +1770,6 @@
    "powod": "behawioralna"
   },
   {
-   "klucz": "style.css||body.liquid-ios26 .circ-chart-btn[disabled], body.liquid-ios26 .circ-chart-btn.is-pro-locked|transform#0|część#0",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "style.css||body.liquid-ios26 .circ-chart-btn[disabled], body.liquid-ios26 .circ-chart-btn.is-pro-locked|transform#0|część#1",
-   "powod": "behawioralna"
-  },
-  {
    "klucz": "style.css||body.liquid-ios26 .nutrition-micros-tooltip|background#0|część#0",
    "powod": "kaskada"
   },
@@ -1924,18 +1892,6 @@
   {
    "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|backdrop-filter#0|część#4",
    "powod": "kaskada"
-  },
-  {
-   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-auth-sort-btn|height#0|część#0",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-auth-sort-btn|width#0|część#0",
-   "powod": "behawioralna"
-  },
-  {
-   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-auth-sort-option|width#0|część#0",
-   "powod": "behawioralna"
   },
   {
    "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill:hover|background#0|część#0",

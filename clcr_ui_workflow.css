@@ -1506,8 +1506,6 @@ html[data-clcr-workflow-ui="1"] .clcr-workspace #clcrForm > .patient-card {
   display: inline-flex; align-items: flex-end; margin: var(--space-6px) 0 2px;
 }
 .clcr-rnum small { font-size: .34em; margin-left: .35em; color: #444; font-weight: 600; padding-bottom: .25em; }
-.clcr-rail-empty { color: #557074; font-size: 13.5px; }
-
 @media (min-width: 980px) {
   .clcr-workspace {
     display: grid; grid-template-columns: minmax(0, 1fr) var(--clcr-result-rail-width); gap: var(--space-20px); align-items: start;

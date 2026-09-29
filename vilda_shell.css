@@ -113,10 +113,7 @@ html.vilda-shell-host body {
 
 .vilda-embedded header,
 .vilda-embedded .sidebar,
-.vilda-embedded #mobileBottomDock,
-.vilda-embedded #scrollTopArrow,
-.vilda-embedded .scroll-top-arrow,
-.vilda-embedded .vilda-scroll-top {
+.vilda-embedded #mobileBottomDock {
   display: none!important
 }
 

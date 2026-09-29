@@ -10,13 +10,6 @@
   --edu-text-muted: #567375
 }
 
-.site-brand {
-  margin: 0;
-  font-size: clamp(1.35rem,3vw,1.9rem);
-  font-weight: 700;
-  color: var(--text)
-}
-
 .edu-shell,
 .edu-watch-page {
   display: flex;
@@ -32,8 +25,6 @@
 }
 
 .edu-hero,
-.edu-resource-card,
-.edu-presentation-card,
 .edu-video-shell,
 .edu-info-card {
   position: relative;
@@ -43,8 +34,6 @@
 }
 
 .edu-hero:before,
-.edu-resource-card:before,
-.edu-presentation-card:before,
 .edu-video-shell:before,
 .edu-info-card:before {
   content: "";
@@ -60,7 +49,6 @@
 }
 
 .edu-kicker,
-.edu-card-badge,
 .edu-chip,
 .edu-meta-pill {
   display: inline-flex;
@@ -149,90 +137,14 @@
   font-size: .88rem
 }
 
-.edu-section-head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0-5);
-  align-items: center;
-  text-align: center
-}
-
-.edu-section-title {
-  width: 100%;
-  margin: 0;
-  text-align: center;
-  font-size: clamp(1.25rem,2.6vw,1.75rem);
-  color: var(--edu-text-strong)
-}
-
-.edu-section-copy {
-  margin: 0;
-  color: var(--edu-text-muted);
-  line-height: 1.62;
-  max-width: var(--measure-copy)
-}
-
-.video-grid {
-  display: grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: var(--space-1-1);
-  align-items: stretch
-}
-
-.presentation-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
-  gap: var(--space-1)
-}
-
-.edu-resource-card,
-.edu-presentation-card,
 .edu-video-shell,
 .edu-info-card {
   padding: var(--space-1) 1.05rem var(--space-1-1)
 }
 
-.edu-resource-card,
-.edu-presentation-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0-9)
-}
-
-.edu-card-top {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0-7)
-}
-
-.edu-card-badge {
-  align-self: flex-start;
-  padding: .36rem .72rem;
-  background: #00a8b51f;
-  border: var(--border-hairline) solid rgba(0,168,181,.18);
-  color: #0f6665;
-  font-size: .82rem;
-  font-weight: 800;
-  letter-spacing: .01em
-}
-
-.edu-card-title,
-.edu-presentation-card h3,
 .edu-info-card h2 {
   margin: 0;
   color: var(--edu-text-strong)
-}
-
-.edu-card-title {
-  font-size: 1.14rem;
-  line-height: 1.32
-}
-
-.edu-card-description,
-.edu-presentation-card p {
-  margin: 0;
-  color: #476766;
-  line-height: 1.66
 }
 
 .edu-video-frame {
@@ -449,12 +361,6 @@
   color: var(--edu-text)
 }
 
-@media(max-width:900px) {
-  .video-grid {
-    grid-template-columns: 1fr
-  }
-}
-
 @media(max-width:700px) {
   .edu-shell,
   .edu-watch-page {
@@ -462,15 +368,11 @@
     padding-block: var(--space-0-85) 1.6rem
   }
   .edu-hero,
-  .edu-resource-card,
-  .edu-presentation-card,
   .edu-video-shell,
   .edu-info-card {
     border-radius: var(--radius-20)
   }
   .edu-hero,
-  .edu-resource-card,
-  .edu-presentation-card,
   .edu-video-shell,
   .edu-info-card {
     padding: var(--space-0-95)
@@ -479,9 +381,7 @@
     margin-top: var(--space-0-75);
     font-size: clamp(1.4rem,6vw,1.9rem)
   }
-  .edu-lead,
-  .edu-card-description,
-  .edu-presentation-card p {
+  .edu-lead {
     line-height: 1.6
   }
   .resource-button {
@@ -738,8 +638,6 @@ body.edu-page .faq-container {
 }
 
 body.edu-page .edu-hero:before,
-body.edu-page .edu-resource-card:before,
-body.edu-page .edu-presentation-card:before,
 body.edu-page .edu-video-shell:before,
 body.edu-page .edu-info-card:before {
   background: radial-gradient(circle at top right,var(--edu-highlight-1),transparent 34%),radial-gradient(circle at bottom left,var(--edu-highlight-2),transparent 32%)
@@ -764,34 +662,20 @@ body.edu-page .edu-meta-pill {
   -webkit-backdrop-filter: var(--edu-control-backdrop)
 }
 
-body.edu-page .edu-card-badge {
-  background: var(--edu-accent-bg);
-  border: var(--edu-control-border-width) solid var(--edu-accent-border);
-  color: var(--edu-accent-text);
-  backdrop-filter: var(--edu-control-backdrop);
-  -webkit-backdrop-filter: var(--edu-control-backdrop)
-}
-
 body.edu-page .edu-title,
-body.edu-page .edu-section-title,
 body.edu-page .presentation-heading,
-body.edu-page .edu-card-title,
-body.edu-page .edu-presentation-card h3,
 body.edu-page .edu-info-card h2 {
   color: var(--edu-text-strong)
 }
 
 body.edu-page .edu-lead,
-body.edu-page .edu-card-description,
-body.edu-page .edu-presentation-card p,
 body.edu-page .faq-answer p,
 body.edu-page .page-summary {
   color: var(--edu-text)
 }
 
 body.edu-page .breadcrumbs,
-body.edu-page .notice,
-body.edu-page .edu-section-copy {
+body.edu-page .notice {
   color: var(--edu-text-muted)
 }
 

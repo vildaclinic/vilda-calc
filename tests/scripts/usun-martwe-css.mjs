@@ -14,6 +14,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { arkuszeAplikacji, arkuszeZeStronami, korzen, martwePodArkuszami, martweWKaskadzie, parsuj, usunMartwe } from '../support/szklo-css.mjs';
 import { wiedzaDom } from '../support/wiedza-dom.mjs';
+import { zrodlaStron } from '../support/skorka-css.mjs';
 import { canonicalSelectorList } from '../../design-system/lib/css.mjs';
 
 const argumenty = process.argv.slice(2);
@@ -27,7 +28,15 @@ if (flaga('--partiale')) {
   if (!/^[A-Za-z0-9_./~^-]{1,80}$/.test(baza)) { console.error('nieprawidłowa rewizja'); process.exit(2); }
   // reguła partiala odpowiada regule arkusza, gdy jej kanoniczne części są podzbiorem części reguły arkusza w tym samym
   // kontekście (tak dopasowuje producent; partial bywa wycinkiem listy selektorów)
-  const lista = (czytaj) => { const s = []; for (const a of arkuszeAplikacji()) { let css; try { css = czytaj(a); } catch { continue; } for (const r of parsuj(css)) s.push({ kontekst: r.kontekst.join('|'), czesci: new Set(canonicalSelectorList(r.prelude)) }); } return s; };
+  // źródła: arkusze aplikacji i bloki <style> stron (partiale producenta powstają z obu; krok 7 usuwa reguły także z bloków)
+  const lista = (czytaj) => {
+    const s = [];
+    const dodaj = (css) => { for (const r of parsuj(css)) s.push({ kontekst: r.kontekst.join('|'), czesci: new Set(canonicalSelectorList(r.prelude)) }); };
+    for (const a of arkuszeAplikacji()) { let css; try { css = czytaj(a); } catch { continue; } dodaj(css); }
+    let strony; try { strony = zrodlaStron(czytaj); } catch { strony = new Map(); }
+    for (const zr of strony.values()) for (const z of zr) if (z.typ === 'style') dodaj(z.css);
+    return s;
+  };
   const zawiera = (lista, r) => { const k = r.kontekst.join('|'); const cz = canonicalSelectorList(r.prelude); return cz.length > 0 && lista.some((x) => x.kontekst === k && cz.every((c) => x.czesci.has(c))); };
   const terazLista = lista((a) => fs.readFileSync(path.join(korzen, a), 'utf8'));
   const wBazieLista = lista((a) => execFileSync('git', ['show', `${baza}:${a}`], { cwd: korzen, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));

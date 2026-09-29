@@ -38,7 +38,10 @@
   <!-- App-shell (B1): jako panel w app.html (?embedded=1) chowamy własny nagłówek/sidebar/dock —
        chrome dostarcza shell. Identyczne jak w pozostałych hostowanych stronach. -->
   <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
-  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
+  <style>.vilda-embedded header,
+.vilda-embedded .sidebar,
+.vilda-embedded #mobileBottomDock,
+.vilda-embedded #scrollTopBtn{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
 <!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
      GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
      Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
@@ -67,12 +70,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
   <!-- Podstawowe arkusze stylów stosowane w aplikacji: motyw Liquid Glass oraz główne style i układ sidebara. -->
-  <link rel="stylesheet" href="ios26-v2.css?v=25" />
-  <link rel="stylesheet" href="style.css?v=82" />
+  <link rel="stylesheet" href="ios26-v2.css?v=26" />
+  <link rel="stylesheet" href="style.css?v=83" />
   <link rel="stylesheet" href="sidebar.css" />
 
   
-  <link href="vilda_chrome.css?v=42" rel="stylesheet">
+  <link href="vilda_chrome.css?v=43" rel="stylesheet">
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=26"></script>
@@ -155,14 +158,6 @@
 
     .homa-card input[type="radio"] {
       margin-right: 0.3rem;
-    }
-
-    /* Ustawiamy grupę przełączników obok siebie. */
-    .homa-inline-radio {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-top: 0.5rem;
     }
 
     .homa-card button {

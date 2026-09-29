@@ -550,16 +550,6 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   transition:all .12s;
   white-space:nowrap;
 }
-.notes-filter:hover {
-  border-color: var(--primary, #00838d);
-  color: var(--primary, #00838d);
-}
-.notes-filter.is-active {
-  background: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
-  color: #fff;
-  border-color: transparent;
-}
-
 /* ----- NoteItem — notatki.css 298-491: siatka i karta notatki ----- */
 .notes-grid {
   display: grid;
@@ -614,20 +604,20 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   color: #6d4bc0;
 }
 .note-pin {
-  margin-left: auto;
-  flex-shrink: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #9aa8aa;
-  transition: color .12s, background .12s, transform .12s;
+  margin-left:auto;
+  flex-shrink:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:#9aa8aa;
+  transition:color .12s, background .12s, transform .12s;
 }
 .note-pin svg {
   width: 18px;
@@ -636,12 +626,12 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   display: block;
 }
 .note-pin:hover {
-  color: var(--primary, #00838d);
-  transform: scale(1.08);
+  color:var(--primary, #00838d);
+  transform:scale(1.08);
 }
 .note-pin.is-on {
-  color: var(--primary, #00838d);
-  background: rgba(0,131,141,0.16) !important;
+  color:var(--primary, #00838d);
+  background:rgba(0,131,141,0.16) !important;
 }
 .note-pin.is-on svg {
   stroke: var(--primary, #00838d);
@@ -685,20 +675,6 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   cursor:pointer;
   transition:all .12s;
 }
-.note-act:hover {
-  border-color: var(--primary, #00838d);
-  color: var(--primary, #00838d);
-}
-.note-act--copy.is-done {
-  background: #f0fff4;
-  color: #148f3f;
-  border-color: rgba(20,143,63,.3);
-}
-.note-act--danger:hover {
-  border-color: #c0395a;
-  color: #c0395a;
-}
-
 /* ----- NoteItem — notatki.css 492-519: stan pusty ----- */
 .notes-empty {
   text-align:center;
@@ -781,16 +757,13 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   color: var(--text, #0f2b33);
 }
 .note-editor__close {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1.4rem;
-  color: #5a7274;
-  line-height: 1;
-  padding: .1rem .4rem;
-}
-.note-editor__close:hover {
-  color: #0f2b33;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  font-size:1.4rem;
+  color:#5a7274;
+  line-height:1;
+  padding:.1rem .4rem;
 }
 .note-editor__body {
   flex: 1;
@@ -849,10 +822,6 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   font-weight:600;
   cursor:pointer;
   transition:all .12s;
-}
-.note-btn-ghost:hover {
-  border-color: #c0395a;
-  color: #c0395a;
 }
 .note-editor__err {
   font-size: .82rem;
@@ -1200,12 +1169,6 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   font-weight: 600;
   margin: 0 0 0.75rem;
 }
-.lab-card .lab-subtitle {
-  text-align: center;
-  color: #555;
-  font-size: 0.95rem;
-  margin: 0 0 1.25rem;
-}
 .lab-field label {
   display: block;
   font-weight: 600;
@@ -1283,13 +1246,6 @@ html.vrc-overdue-collapsed .vild-rem-sec-over > *:not(.vild-rem-sec-head){
   color: #00838d;
   margin: 0 0 1.3rem 0;
   text-align: center;
-}
-.lab-smart-card .lab-subtitle {
-  font-size: 0.85rem;
-  color: #7a8587;
-  text-align: center;
-  margin: 0 0 1.4rem 0;
-  line-height: 1.45;
 }
 .lab-step {
   display: flex;
@@ -1721,23 +1677,20 @@ button.lab-mini-pill.is-active:hover,
   font-weight: 600;
 }
 .lab-show-all-toggle {
-  margin-top: 1rem;
-  padding: 0.6rem 0.85rem;
-  background: rgba(0,131,141,0.04);
-  border: 0.5px solid rgba(0,131,141,0.12);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.83rem;
-  color: #5a6a6e;
-  width: 100%;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-.lab-show-all-toggle:hover {
-  background: rgba(0,131,141,0.08);
+  margin-top:1rem;
+  padding:0.6rem 0.85rem;
+  background:rgba(0,131,141,0.04);
+  border:0.5px solid rgba(0,131,141,0.12);
+  border-radius:8px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:0.83rem;
+  color:#5a6a6e;
+  width:100%;
+  font-family:inherit;
+  transition:background 0.15s;
 }
 .lab-show-all-toggle .arr {
   color: #00838d;
@@ -1989,23 +1942,6 @@ button.lab-mini-pill.is-active:hover,
   color: #a6491e;
   line-height: 1;
 }
-.lab-range-value-num.is-normal {
-  color: #00838d;
-}
-.lab-range-value-num.is-below  {
-  color: #c75d00;
-}
-.lab-range-value-num.is-above  {
-  color: #b91c1c;
-}
-.lab-range-value-num.is-uwaga-high {
-  color: #911c1c;
-  animation: lab-value-glow-red 0.9s ease-in-out infinite;
-}
-.lab-range-value-num.is-uwaga-low {
-  color: #a6491e;
-  animation: lab-value-glow-amber 0.9s ease-in-out infinite;
-}
 .lab-range-uwaga-note {
   margin-top: 0.7rem;
   padding: 0.55rem 0.75rem;
@@ -2031,62 +1967,6 @@ button.lab-mini-pill.is-active:hover,
   flex-shrink: 0;
   width: 14px;
   height: 14px;
-}
-.lab-range-labels {
-  position: relative;
-  height: 1.4rem;
-  margin-top: 0.2rem;
-  font-size: 0.72rem;
-  color: #5a6a6e;
-  font-variant-numeric: tabular-nums;
-}
-.lab-range-labels span {
-  position: absolute;
-  white-space: nowrap;
-  top: 0.45rem;
-  transform: translateX(-50%);
-}
-.lab-range-labels span::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -0.45rem;
-  width: 1px;
-  height: 0.35rem;
-  background: rgba(0,131,141,0.45);
-  transform: translateX(-50%);
-}
-.lab-range-labels .lab-range-label-edge-left  {
-  transform: translateX(0);
-}
-.lab-range-labels .lab-range-label-edge-left::before  {
-  left: 0;
-}
-.lab-range-labels .lab-range-label-edge-right {
-  transform: translateX(-100%);
-}
-.lab-range-labels .lab-range-label-edge-right::before {
-  left: 100%;
-}
-.lab-range-labels .lab-range-label-combined {
-  transform: translateX(-50%);
-}
-.lab-range-labels .lab-range-label-combined::before {
-  display: none;
-}
-.lab-range-labels .lab-range-label-zero {
-  left: 0;
-  transform: none;
-}
-.lab-range-labels .lab-range-label-zero::before {
-  display: none;
-}
-.lab-range-labels .lab-range-label-max  {
-  right: 0;
-  transform: none;
-}
-.lab-range-labels .lab-range-label-max::before {
-  display: none;
 }
 .lab-range-empty {
   margin-top: 1rem;
@@ -2373,24 +2253,24 @@ button#labClearBtn:hover,
 }
 /* --- chipy proponowanych badań (3155-3229) --- */
 button.lab-suggest-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: 1rem;
-  background: #fff !important;
-  border: 1px solid rgba(42, 138, 138, 0.45) !important;
-  color: #1d6363;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
-  user-select: none;
-  position: relative;
-  font-family: inherit;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: none !important;
+  display:inline-flex;
+  align-items:center;
+  gap:0.35rem;
+  padding:0.45rem 0.85rem;
+  border-radius:1rem;
+  background:#fff !important;
+  border:1px solid rgba(42, 138, 138, 0.45) !important;
+  color:#1d6363;
+  cursor:pointer;
+  font-size:0.9rem;
+  font-weight:500;
+  transition:background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+  user-select:none;
+  position:relative;
+  font-family:inherit;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  box-shadow:none !important;
 }
 button.lab-suggest-chip:hover {
   background: rgba(42, 138, 138, 0.08) !important;
@@ -2404,11 +2284,11 @@ button.lab-suggest-chip:focus-visible {
   outline-offset: 2px;
 }
 button.lab-suggest-chip.is-selected {
-  background: rgba(42, 138, 138, 0.28) !important;
-  border-color: rgba(42, 138, 138, 0.85) !important;
-  color: #134848;
-  font-weight: 600;
-  box-shadow: 0 0 0 3px rgba(42, 138, 138, 0.12) !important;
+  background:rgba(42, 138, 138, 0.28) !important;
+  border-color:rgba(42, 138, 138, 0.85) !important;
+  color:#134848;
+  font-weight:600;
+  box-shadow:0 0 0 3px rgba(42, 138, 138, 0.12) !important;
 }
 /* --- czytelność treści klinicznej (4050-4054: z listy selektorów zostawiono elementy tej grupy) --- */
 .lab-range-status,

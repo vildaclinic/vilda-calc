@@ -158,8 +158,6 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
   display:none!important;
   opacity:0!important;
   pointer-events:none!important}
-.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{
-  display:none!important}
 .vilda-shell-host #mobileBottomDock{
   will-change:transform}
 html.vilda-pane-modal-open #mobileBottomDock,html.vilda-pane-modal-open #appShellTermFab,html.vilda-pane-modal-open #appShellScrollTop{

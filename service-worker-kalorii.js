@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.100';
+const SW_VERSION = '1.1.102';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -141,6 +141,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=80',
   '/style.css?v=81',
   '/style.css?v=82',
+  '/style.css?v=83',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -214,6 +215,7 @@ const CORE_SHELL_URLS = [
   '/clcr_ui_workflow.css?v=4',
   '/clcr_ui_workflow.css?v=5',
   '/clcr_ui_workflow.css?v=6',
+  '/clcr_ui_workflow.css?v=7',
   '/clcr_ui_workflow.js?v=1',
   '/clcr_ui_workflow.js?v=2',
   '/clcr_ui_workflow.js?v=3',
@@ -285,6 +287,7 @@ const CORE_SHELL_URLS = [
   '/ios26-v2.css?v=23',
   '/ios26-v2.css?v=24',
   '/ios26-v2.css?v=25',
+  '/ios26-v2.css?v=26',
   '/logo_vilda.jpeg',
   '/logo_vilda.webp',
   '/lucide.min.js?v=1',
@@ -1099,6 +1102,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=40',
   '/vilda_chrome.css?v=41',
   '/vilda_chrome.css?v=42',
+  '/vilda_chrome.css?v=43',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -1158,6 +1162,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=73',
   '/vilda_auth_ui.css?v=74',
   '/vilda_auth_ui.css?v=75',
+  '/vilda_auth_ui.css?v=76',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
   '/vilda_file_export.js?v=5',
@@ -1808,6 +1813,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.css?v=15',
   '/vilda_shell.css?v=16',
   '/vilda_shell.css?v=17',
+  '/vilda_shell.css?v=18',
   '/vilda_save_status_indicator.css?v=4',
   '/vilda_save_status_indicator.css?v=5',
   '/vilda_save_status_indicator.css?v=6',
@@ -2604,13 +2610,17 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=3',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
+  '/vilda_obesity_banner.css?v=7',
   '/ustawienia.css?v=13',
   '/edu-video-ui.css?v=20261001v4',
   '/edu-video-ui.css?v=20261001v7',
   // P-STYLE rata 4b podbiła te arkusze na stronach — bieżące klucze też muszą być offline.
   '/ustawienia.css?v=14',
+  '/ustawienia.css?v=15',
   '/edu-video-ui.css?v=20261002v4',
-  '/edu-video-ui.css?v=20261002v7'
+  '/edu-video-ui.css?v=20261003v4',
+  '/edu-video-ui.css?v=20261002v7',
+  '/edu-video-ui.css?v=20261003v7'
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];
