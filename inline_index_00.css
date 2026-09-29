@@ -98,3 +98,125 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { di
 html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay) {
   visibility: hidden !important;
 }
+
+/* === P-HISTORIA-ZWIJANA: „Poprzednie pomiary” w karcie „Zaawansowane obliczenia wzrostowe” ===
+   Nagłówek-przełącznik z licznikiem (vilda_adv_history_collapse.js). Wygląd przycisku (szkło)
+   bierze się ze skórki; tu tylko układ i treść. Wiersze chowa znacznik data-adv-history
+   nadawany przez moduł, ale wyłącznie przy klasie kontenera adv-history-collapsed. */
+#advHistoryHeading[hidden],
+.adv-history-toggle[hidden],
+.adv-history-toggle [hidden],
+.adv-history-bottom[hidden] {
+  display: none;
+}
+.adv-history-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0-65);
+  width: 100%;
+  min-height: 52px;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-0-65) var(--space-0-75) var(--space-0-65) var(--space-0-65);
+  text-align: left;
+  line-height: 1.3;
+  scroll-margin-top: calc(var(--chrome-strip-height, 64px) + 12px);
+}
+.adv-history-chevron {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: var(--border-hairline) solid #cfe2e5;
+  border-radius: var(--radius-pill);
+  background: #e6f4f5;
+  color: var(--primary);
+}
+.adv-history-chevron svg {
+  transition: transform .18s ease;
+}
+.adv-history-toggle[aria-expanded="true"] .adv-history-chevron svg {
+  transform: rotate(90deg);
+}
+.adv-history-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.adv-history-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6px) var(--space-8px);
+}
+.adv-history-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+.adv-history-count {
+  line-height: 1.3;
+}
+.adv-history-invalid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4px);
+  margin-top: 0;
+  padding: 2px var(--space-8px);
+  border-radius: var(--radius-pill);
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.adv-history-summary {
+  font-size: .8125rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+.adv-history-action {
+  flex: 0 0 auto;
+  padding-left: var(--space-4px);
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.adv-history-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-0-35);
+  width: auto;
+  min-height: 44px;
+  margin: var(--space-1) auto 0;
+  padding: var(--space-0-35) var(--space-1);
+  font-size: .875rem;
+  font-weight: 600;
+}
+.adv-history-bottom svg {
+  color: var(--primary);
+}
+#advMeasurements.adv-history-collapsed > .measure-row[data-adv-history="ukryty"] {
+  display: none;
+}
+#advMeasurements.adv-history-collapsed > .measure-row[data-adv-history="nowy"]::before {
+  content: "Nowy pomiar";
+  display: block;
+  width: fit-content;
+  margin: var(--space-0-85) auto 0;
+  padding: .15rem var(--space-0-6);
+  border: var(--border-hairline) solid #cfe2e5;
+  border-radius: var(--radius-pill);
+  background: #e6f4f5;
+  color: #0a6b73;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .adv-history-chevron svg {
+    transition: none;
+  }
+}
