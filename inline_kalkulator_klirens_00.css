@@ -81,8 +81,6 @@ header {
      ale ujednolicamy wysokość paska nagłówka z innymi podstronami.
      Ustawiamy stały padding 1 rem z każdej strony, aby nagłówek miał
      tę samą wysokość co na stronie głównej. */
-  background: var(--primary);
-  color: #fff;
   text-align: center;
   padding: var(--space-1);
 }
@@ -99,11 +97,7 @@ h1 { margin: 0; font-size: clamp(1.4rem,3vw,2rem); }
   }
 }
 fieldset {
-  border: var(--border-hairline) solid var(--line);
-  background: var(--card);
   padding: var(--space-1-4) var(--space-1) var(--space-1);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
   margin-bottom: var(--space-1-5);
   position: relative;
 }
@@ -179,25 +173,17 @@ input, select, option {
   align-items: flex-start;
 }
 button.icon {
-  background: none;
-  border: none;
   font-size: 1.35rem;
   cursor: pointer;
-  color: var(--danger);
   font-weight: 900;
   line-height: 1;
 }
 button.icon:hover { opacity: var(--opacity-muted); }
 button.add-row {
-  background: var(--secondary);
-  color: #fff;
-  border: none;
   padding: var(--space-0-45) var(--space-0-9);
-  border-radius: var(--radius-4);
   cursor: pointer;
   margin-top: var(--space-0-7);
 }
-button.add-row:hover { background: var(--primary); }
 #results {
   display: none;
   flex-direction: column;
@@ -205,10 +191,7 @@ button.add-row:hover { background: var(--primary); }
 }
 .card {
   /* Przywracamy oryginalny kolor tła kart (tzw. card), aby całe sekcje wyników pozostały w barwie motywu */
-  background: var(--card);
-  padding: var(--space-1);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  padding: var(--space-1)
 }
 table {
   width: 100%;
@@ -246,10 +229,8 @@ th {
   margin: var(--space-12px) 0;
   font-size: 1.3rem;
   /* Domyślnie tło wyników ustawiamy na białe, aby kontenery były jaśniejsze */
-  background: #ffffff;
-  text-align: center;
+  text-align: center
   /* Dodajemy delikatny cień, aby pola wyników były spójne z kartami */
-  box-shadow: var(--shadow);
 }
 
 /* --- legenda wewnątrz ramek fieldset --- */
@@ -372,7 +353,6 @@ input[type="submit"] {
   color: #fff;
   transition: background 0.2s ease, box-shadow 0.2s ease;
 }
-button:hover,
 input[type="button"]:hover,
 input[type="submit"]:hover {
   background: var(--secondary);
@@ -385,16 +365,10 @@ button:disabled {
 
 /* Icon (×) buttons inside rows */
 button.icon {
-  background: transparent;
-  color: var(--danger);
   font-size: 1.25rem;
   padding: var(--space-0-25) var(--space-0-5);
   line-height: 1;
 }
-button.icon:hover {
-  background: rgba(198,40,40,0.1);
-}
-
 /* Inputs & selects */
 input[type="number"],
 input[type="text"],
@@ -575,11 +549,7 @@ section.card,
  * oraz zaokrąglone narożniki.  Po najechaniu kursorem przycisk
  * staje się delikatnie jaśniejszy. */
 #clearBtn {
-  background: var(--danger);
-  color: #fff;
-  border: none;
   padding: var(--space-0-6) var(--space-1-2);
-  border-radius: var(--radius-4);
   cursor: pointer;
   font-size: 1rem;
 }
@@ -644,7 +614,6 @@ section.card,
   opacity: 0.5;
   cursor: not-allowed;
 }
-button,
 input[type="submit"] {
   transition: transform var(--anim-fast), box-shadow var(--anim-fast);
 }
@@ -657,10 +626,6 @@ input[type="submit"]:focus-visible {
 }
 
 .result-card {
-  background: var(--card-bg);
-  border: var(--border-emphasis) solid var(--brand);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
   padding: var(--space-1-25) var(--space-1-5);
   position: relative;
   overflow: hidden;
@@ -706,10 +671,6 @@ input[type="submit"]:focus-visible {
 
 /* === DATA CARDS 2025‑06‑29 ===================== */
 .data-card {
-  background: var(--card);
-  border: var(--border-emphasis) solid var(--primary);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
   padding: var(--space-1-25) var(--space-1);
   overflow: auto;
 }
@@ -748,11 +709,6 @@ input[type="submit"]:focus-visible {
 
 /* === BMI & BMR BLOCK FRAME PATCH 2025‑06‑30 === */
 #bmiCard {
-  border: var(--border-hairline) solid var(--line);
-}
-
-/* === TIMES CARD FRAME PATCH 2025‑06‑30 === */
-#timesCard {
   border: var(--border-hairline) solid var(--line);
 }
 
@@ -879,15 +835,15 @@ input[type="submit"]:focus-visible {
 /* === OUT-OF-RANGE HIGHLIGHT === */
 /* === STAGE HIGHLIGHT COLORS (KDIGO G3a/G3b) === */
 .result-box.warn-orange {
-  background: var(--warning-bg);   /* jasny pomarańczowy */
-  border-color: #ffa726; /* pomarańcz */
+  background: var(--warning-bg)   /* jasny pomarańczowy */
+ /* pomarańcz */
 }
 .result-box.warn-orange strong {
   color: #ef6c00;
 }
 .result-box.warn-yellow {
-  background: #fffde7;   /* jasny żółty */
-  border-color: #fff176; /* żółty */
+  background: #fffde7   /* jasny żółty */
+ /* żółty */
 }
 .result-box.warn-yellow strong {
   color: #fbc02d;
@@ -976,7 +932,7 @@ input[type="submit"]:focus-visible {
   }
   /* simple cards used for extra sections (e.g. advanced KT/V) */
   /* Ujednolicony wygląd kart – zaokrąglone narożniki jak w innych sekcjach */
-  .card{ border: var(--border-hairline) solid var(--disabled-border); padding: var(--space-12px); margin: var(--space-12px) 0; border-radius: var(--radius); }
+  .card{  padding: var(--space-12px); margin: var(--space-12px) 0  }
   .card h2{ margin-top: 0; font-size: 1.1rem; text-align: left; }
 
   /* Layout for advanced KT/V fields: use flex instead of grid to align labels and icons like other inputs */
@@ -1137,16 +1093,11 @@ input[type="submit"]:focus-visible {
   /* przycisk Info */
   .info-btn{
     flex:0 0 auto;
-    background:var(--secondary);      /* turkus – dopasuj do motywu */
-    color:#fff;
+      /* turkus – dopasuj do motywu */
     font-weight:600;
-    border:none;
-    border-radius:var(--radius,6px);
     padding:var(--space-0-5) var(--space-1);
-    cursor:pointer;
-    transition:background .2s,transform .15s;
+    cursor:pointer
   }
-  .info-btn:hover{background:var(--primary);}
   .info-btn:focus{
     outline:var(--border-emphasis) solid var(--primary);
     outline-offset:2px;

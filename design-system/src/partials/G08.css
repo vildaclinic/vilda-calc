@@ -265,7 +265,7 @@
   animation:pulseBG 1s ease-out forwards;
 }
 @keyframes pulseBG{
-  0% { opacity: 0.15; }
+  0% { opacity: var(--opacity-pulse-start); }
   100% { opacity: 0; }
 }
 @keyframes fadeSlideUp{

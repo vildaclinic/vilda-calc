@@ -8,8 +8,8 @@
         /* P-TOZSAMOSC: pola tożsamości z kartoteki — wygląd „tylko do odczytu" jak data urodzenia. */
         input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;opacity:1;}
         .vild-dob-error{margin-top:5px;font-size:.78rem;line-height:1.35;color:#a32d2d;}
-        .vild-dob-clear{margin-top:var(--space-6px);padding:0;background:none;border:0;box-shadow:none;
-          font-family:inherit;font-size:.78rem;color:var(--primary);text-decoration:underline;cursor:pointer;}
+        .vild-dob-clear{margin-top:var(--space-6px);padding:0;
+          font-family:inherit;font-size:.78rem;text-decoration:underline;cursor:pointer;}
         .vild-weeks-row{margin-top:var(--space-0-7);padding:9px var(--space-10px);background:#eaf4f5;border:var(--border-hairline) solid #cfe3e5;border-radius:var(--radius-6);}
         .vild-weeks-row > label{margin-top:0;}
         /* Tanner toggle — wygląd jak makieta. !important + prefiks .liquid-ios26, bo motyw
@@ -71,7 +71,7 @@
         #obesityMonitorSection .obm-date{font-size:.68rem;color:var(--text-muted);margin-top:2px}
         #obesityMonitorSection .obm-red.good{color:#1a8f5c;font-weight:800}
         #obesityMonitorSection .obm-red.bad{color:#c0453b;font-weight:800}
-        #obesityMonitorSection .obm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}.obm-edit{color:#1a6b7a;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem;margin-right:var(--space-6px)}.obm-edit:hover,.obm-edit:focus-visible{color:#0f4a55;text-decoration:underline}.obm-edit-bar{margin:var(--space-0-9) 0 .2rem;padding:var(--space-0-55) var(--space-0-7);border:var(--border-hairline) solid rgba(26,107,122,.35);background:rgba(26,107,122,.07);border-radius:var(--radius-10);font-size:.82rem;color:#1f3b41;display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-0-25)}.obm-edit-bar .obm-edit-hint{color:#54707a}.obm-prefill{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-0-5);margin:0 0 var(--space-0-7)}.obm-prefill-hint{font-size:.76rem;color:var(--text-muted);flex:1 1 14rem}
+        #obesityMonitorSection .obm-del{cursor:pointer;font-weight:800;font-size:.95rem}.obm-edit{cursor:pointer;font-weight:800;font-size:.95rem;margin-right:var(--space-6px)}.obm-edit:hover,.obm-edit:focus-visible{text-decoration:underline}.obm-edit-bar{margin:var(--space-0-9) 0 .2rem;padding:var(--space-0-55) var(--space-0-7);border:var(--border-hairline) solid rgba(26,107,122,.35);background:rgba(26,107,122,.07);border-radius:var(--radius-10);font-size:.82rem;color:#1f3b41;display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-0-25)}.obm-edit-bar .obm-edit-hint{color:#54707a}.obm-prefill{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-0-5);margin:0 0 var(--space-0-7)}.obm-prefill-hint{font-size:.76rem;color:var(--text-muted);flex:1 1 14rem}
         #obesityMonitorSection .obm-empty{text-align:center;color:var(--text-muted);font-size:.85rem;padding:var(--space-18px);border:var(--border-hairline) dashed #e0eef0;border-radius:var(--radius-10)}
 #bisphosCard .bp-tabs{display:flex!important;gap:var(--space-6px)!important;background:#eef4f3!important;border-radius:var(--radius-13)!important;padding:var(--space-4px)!important;margin:var(--space-14px) 0 var(--space-16px)!important;box-shadow:none!important}
       #bisphosCard button.bp-tab{flex:1 1 0!important;width:0!important;min-width:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:0!important;border-radius:var(--radius-10)!important;padding:var(--space-10px) var(--space-8px)!important;margin:0!important;font-family:inherit!important;font-size:.9rem!important;font-weight:700!important;color:#33464e!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;min-height:0!important;height:auto!important;text-transform:none!important;letter-spacing:normal!important}
@@ -98,6 +98,6 @@
           #bisphosMonitorSection .bpm-good{color:#1a8f5c;font-weight:800}
           #bisphosMonitorSection .bpm-bad{color:#c0453b;font-weight:800}
           #bisphosMonitorSection .bpm-warn{color:#b26a00;font-weight:800}
-          #bisphosMonitorSection .bpm-del{color:#c0453b;background:none;border:0;cursor:pointer;font-weight:800;font-size:.95rem}
+          #bisphosMonitorSection .bpm-del{cursor:pointer;font-weight:800;font-size:.95rem}
           #bisphosMonitorSection .bpm-empty{text-align:center;color:var(--text-muted);font-size:.85rem;padding:var(--space-16px);border:var(--border-hairline) dashed #e0eef0;border-radius:var(--radius-10)}
           #bisphosMonitorSection .bpm-bone-h{margin:var(--space-20px) 0 var(--space-6px);font-size:.9rem;font-weight:800;color:#153b34}

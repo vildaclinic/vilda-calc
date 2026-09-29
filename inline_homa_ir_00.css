@@ -46,16 +46,10 @@
       padding: var(--space-0-75) 1.6rem;
       font-size: 1rem;
       font-weight: 600;
-      border: none;
-      border-radius: var(--radius);
-      color: #fff;
-      background: var(--primary);
-      cursor: pointer;
-      transition: background 0.25s, transform 0.25s;
+      cursor: pointer
     }
 
     .homa-card button:hover {
-      background: var(--secondary);
       transform: translateY(-1px);
     }
 
@@ -171,16 +165,8 @@
       font-size: 1rem;
       font-weight: 600;
       border: var(--border-emphasis) solid var(--danger) !important;
-      border-radius: var(--radius);
-      background: transparent;
-      color: var(--danger);
-      cursor: pointer;
-      transition: background 0.25s;
+      cursor: pointer
     }
-    .homa-card .clear-btn:hover {
-      background: rgba(198, 40, 40, 0.1);
-    }
-
     /* Dodatkowe reguły dla suwaka wyboru grupy (Dorosły/Dziecko).
        Wyśrodkuj cały przełącznik i przesuń białą kropkę w prawo po zaznaczeniu. */
     .homa-toggle {

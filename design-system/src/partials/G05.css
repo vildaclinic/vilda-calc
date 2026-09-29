@@ -44,7 +44,7 @@
   animation:pulseBG 1s ease-out forwards;
 }
 @keyframes pulseBG{
-  0% { opacity: 0.15; }
+  0% { opacity: var(--opacity-pulse-start); }
   100% { opacity: 0; }
 }
 .result-number{
@@ -445,12 +445,14 @@
 table{
   width:100%;
   border-collapse:collapse;
-  margin-top:.6rem}
+  margin-top:var(--space-0-6);
+}
 th,td{
-  border:1px solid #ddd;
-  padding:.6rem;
+  border:var(--border-hairline) solid #ddd;
+  padding:var(--space-0-6);
   text-align:center;
-  font-size:.95rem}
+  font-size:0.95rem;
+}
 th{
   background:var(--secondary);
   color:#fff}
@@ -459,8 +461,9 @@ table{
   width:100%;
   border-collapse:collapse}
 th,td{
-  padding:.6rem .75rem;
-  text-align:left}
+  padding:var(--space-0-6) var(--space-0-75);
+  text-align:left;
+}
 thead th{
   background:var(--primary);
   color:#fff;
@@ -479,7 +482,8 @@ tbody tr:hover{
   text-align:center}
 @media(max-width:600px){
   th,td{
-  padding:.5rem}
+  padding:var(--space-0-5);
+}
 }
 /* .data-card (711-728) */
 .data-card{
@@ -493,8 +497,9 @@ tbody tr:hover{
   background:var(--primary);
   color:#fff}
 .data-card th,.data-card td{
-  padding:.4rem .6rem;
-  text-align:center}
+  padding:var(--space-0-4) var(--space-0-6);
+  text-align:center;
+}
 .data-card tr:nth-child(2n){
   background:var(--table-stripe);
 }

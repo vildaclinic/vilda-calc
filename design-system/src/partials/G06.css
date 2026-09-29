@@ -329,25 +329,25 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
 /* ===================== MarketingBadge — baza (o-aplikacji.css) ===================== */
 .about-page .about-badges,
 .about-page .about-chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--space-0-55);
 }
 .about-page .about-badge,
 .about-page .about-quick-links a,
 .about-page .about-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.88);
-  border: 1px solid rgba(0, 168, 181, 0.16);
-  color: #0f4b48;
-  font-weight: 700;
-  text-decoration: none;
-  box-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-0-45);
+  padding:var(--space-0-5) var(--space-0-8);
+  border-radius:var(--radius-pill);
+  background:rgba(255,255,255,0.88);
+  border:var(--border-hairline) solid rgba(0, 168, 181, 0.16);
+  color:#0f4b48;
+  font-weight:700;
+  text-decoration:none;
+  box-shadow:0 8px 24px rgba(15, 45, 42, 0.05);
+  transition:transform 0.2s ease, box-shadow 0.2s ease;
 }
 .about-page .about-badge .sidebar-icon,
 .about-page .about-chip .sidebar-icon {
@@ -368,34 +368,34 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
   justify-content: center;
 }
 .about-page .inline-label {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.14rem 0.45rem;
-  border-radius: 999px;
-  background: rgba(0, 168, 181, 0.12);
-  border: 1px solid rgba(0, 168, 181, 0.22);
-  color: #0a6261;
-  font-weight: 700;
-  white-space: nowrap;
+  display:inline-flex;
+  align-items:center;
+  padding:0.14rem var(--space-0-45);
+  border-radius:var(--radius-pill);
+  background:rgba(0, 168, 181, 0.12);
+  border:var(--border-hairline) solid rgba(0, 168, 181, 0.22);
+  color:#0a6261;
+  font-weight:700;
+  white-space:nowrap;
 }
 .about-page .disclaimer-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1rem 0 0.75rem;
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--space-0-5);
+  margin:var(--space-1) 0 var(--space-0-75);
 }
 .about-page .disclaimer-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.32rem;
-  background: rgba(180, 83, 9, 0.07);
-  border: 1px solid rgba(180, 83, 9, 0.18);
-  border-radius: 100px;
-  padding: 0.28rem 0.8rem 0.28rem 0.6rem;
-  font-size: 0.79rem;
-  font-weight: 500;
-  color: #92400e;
-  line-height: 1.4;
+  display:inline-flex;
+  align-items:center;
+  gap:0.32rem;
+  background:rgba(180, 83, 9, 0.07);
+  border:var(--border-hairline) solid rgba(180, 83, 9, 0.18);
+  border-radius:100px;
+  padding:0.28rem var(--space-0-8) 0.28rem var(--space-0-6);
+  font-size:0.79rem;
+  font-weight:500;
+  color:#92400e;
+  line-height:1.4;
 }
 .about-page .disclaimer-chip .sidebar-icon {
   color: #c2410c;
@@ -404,18 +404,18 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
   flex-shrink: 0;
 }
 .about-page .pro-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  background: linear-gradient(135deg, #0284c7, #0891b2);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 0.22rem 0.65rem;
-  border-radius: 100px;
-  vertical-align: middle;
-  margin-left: 0.35rem;
+  display:inline-flex;
+  align-items:center;
+  gap:0.28rem;
+  background:linear-gradient(135deg, #0284c7, #0891b2);
+  color:#fff;
+  font-size:0.72rem;
+  font-weight:700;
+  letter-spacing:0.06em;
+  padding:0.22rem var(--space-0-65);
+  border-radius:100px;
+  vertical-align:middle;
+  margin-left:var(--space-0-35);
 }
 .about-page .about-badge:hover,
 .about-page .about-chip:hover {
@@ -432,24 +432,24 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
 }
 /* MarketingBadge — kontakt.css */
 .contact-page .contact-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  justify-content: center;
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--space-0-55);
+  justify-content:center;
 }
 .contact-page .contact-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.52rem 0.82rem;
-  border-radius: 999px;
-  background: var(--contact-badge-bg);
-  border: 1px solid var(--contact-badge-border);
-  color: var(--contact-text-action);
-  font-weight: 700;
-  box-shadow: var(--contact-card-shadow);
-  backdrop-filter: var(--contact-control-backdrop);
-  -webkit-backdrop-filter: var(--contact-control-backdrop);
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-0-45);
+  padding:0.52rem 0.82rem;
+  border-radius:var(--radius-pill);
+  background:var(--contact-badge-bg);
+  border:var(--border-hairline) solid var(--contact-badge-border);
+  color:var(--contact-text-action);
+  font-weight:700;
+  box-shadow:var(--contact-card-shadow);
+  backdrop-filter:var(--contact-control-backdrop);
+  -webkit-backdrop-filter:var(--contact-control-backdrop);
 }
 .contact-page .sidebar-icon svg {
   width: 100%;
@@ -457,20 +457,20 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
   display: block;
 }
 .contact-page .contact-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.38rem 0.7rem;
-  border-radius: 999px;
-  background: var(--contact-pill-bg);
-  border: 1px solid var(--contact-pill-border);
-  color: var(--contact-pill-text);
-  font-weight: 800;
-  font-size: 0.88rem;
-  margin: 0 0 0.9rem;
-  box-shadow: var(--contact-card-shadow);
-  backdrop-filter: var(--contact-control-backdrop);
-  -webkit-backdrop-filter: var(--contact-control-backdrop);
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-0-45);
+  padding:0.38rem var(--space-0-7);
+  border-radius:var(--radius-pill);
+  background:var(--contact-pill-bg);
+  border:var(--border-hairline) solid var(--contact-pill-border);
+  color:var(--contact-pill-text);
+  font-weight:800;
+  font-size:0.88rem;
+  margin:0 0 var(--space-0-9);
+  box-shadow:var(--contact-card-shadow);
+  backdrop-filter:var(--contact-control-backdrop);
+  -webkit-backdrop-filter:var(--contact-control-backdrop);
 }
 @media (max-width: 640px) {
   .contact-page .contact-badge {
@@ -481,8 +481,8 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
 .guide-module-meta{
   display:flex;
   flex-wrap:wrap;
-  gap:.45rem;
-  margin:0 0 .7rem;
+  gap:var(--space-0-45);
+  margin:0 0 var(--space-0-7);
 }
 .guide-module-badge{
   display:inline-flex;
@@ -490,12 +490,12 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
   justify-content:center;
   min-height:1.7rem;
   padding:.22rem .62rem;
-  border-radius:999px;
+  border-radius:var(--radius-pill);
   font-size:.76rem;
   font-weight:800;
   line-height:1.2;
   letter-spacing:.01em;
-  border:1px solid rgba(0,131,141,0.14);
+  border:var(--border-hairline) solid rgba(0,131,141,0.14);
   background:#ffffff;
   color:#31585b;
 }
@@ -516,165 +516,165 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
 }
 /* MarketingBadge — subskrypcja.css */
 .sub-hero__pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: var(--pro-light);
-  color: var(--pro-dark);
-  border: 1px solid var(--pro-border);
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 0.28rem 0.9rem;
-  margin-bottom: 1.1rem;
-  text-transform: uppercase;
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-0-4);
+  background:var(--pro-light);
+  color:var(--pro-dark);
+  border:var(--border-hairline) solid var(--pro-border);
+  border-radius:var(--radius-pill);
+  font-size:0.78rem;
+  font-weight:700;
+  letter-spacing:0.03em;
+  padding:0.28rem var(--space-0-9);
+  margin-bottom:var(--space-1-1);
+  text-transform:uppercase;
 }
 .sub-hero__pill::before {
   content: "★";
   font-size: 0.7rem;
 }
 .sub-plan__badge {
-  position: absolute;
-  top: -13px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(90deg, var(--pro-dark), var(--pro-color));
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  padding: 0.22rem 0.9rem;
-  border-radius: 999px;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(153, 0, 255, 0.35);
+  position:absolute;
+  top:-13px;
+  left:50%;
+  transform:translateX(-50%);
+  background:linear-gradient(90deg, var(--pro-dark), var(--pro-color));
+  color:#fff;
+  font-size:0.72rem;
+  font-weight:700;
+  letter-spacing:0.07em;
+  text-transform:uppercase;
+  padding:0.22rem var(--space-0-9);
+  border-radius:var(--radius-pill);
+  white-space:nowrap;
+  box-shadow:0 2px 8px rgba(153, 0, 255, 0.35);
 }
 
 /* ===================== StepBadge — baza ===================== */
 /* o-aplikacji.css 543-593 */
 .about-page .flow-steps {
-  counter-reset: aboutStep;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 0.9rem;
+  counter-reset:aboutStep;
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:var(--space-0-9);
 }
 .about-page .flow-steps li {
-  counter-increment: aboutStep;
-  position: relative;
-  padding: 1rem 1rem 1rem 3.25rem;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.88);
-  border: 1px solid rgba(22, 76, 71, 0.1);
+  counter-increment:aboutStep;
+  position:relative;
+  padding:var(--space-1) var(--space-1) var(--space-1) 3.25rem;
+  border-radius:var(--radius-20);
+  background:rgba(255,255,255,0.88);
+  border:var(--border-hairline) solid rgba(22, 76, 71, 0.1);
 }
 .about-page .flow-steps li::before {
-  content: counter(aboutStep);
-  position: absolute;
-  left: 1rem;
-  top: 1rem;
-  width: 1.6rem;
-  height: 1.6rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0891b2, #14b8a6);
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+  content:counter(aboutStep);
+  position:absolute;
+  left:1rem;
+  top:1rem;
+  width:1.6rem;
+  height:1.6rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:var(--radius-circle);
+  background:linear-gradient(135deg, #0891b2, #14b8a6);
+  color:#fff;
+  font-weight:800;
+  box-shadow:0 10px 20px rgba(8, 145, 178, 0.22);
 }
 /* kontakt.css 934-1007 */
 .contact-page .contact-steps {
-  counter-reset: contactStep;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 0.85rem;
+  counter-reset:contactStep;
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:var(--space-0-85);
 }
 .contact-page .contact-steps li {
-  counter-increment: contactStep;
-  position: relative;
-  padding: 1rem 1rem 1rem 3.15rem;
-  border-radius: 20px;
-  background: var(--contact-surface-elevated);
-  border: 1px solid var(--contact-border);
-  color: var(--contact-text-muted);
-  line-height: 1.62;
-  box-shadow: var(--contact-card-shadow);
-  backdrop-filter: var(--contact-control-backdrop);
-  -webkit-backdrop-filter: var(--contact-control-backdrop);
+  counter-increment:contactStep;
+  position:relative;
+  padding:var(--space-1) var(--space-1) var(--space-1) 3.15rem;
+  border-radius:var(--radius-20);
+  background:var(--contact-surface-elevated);
+  border:var(--border-hairline) solid var(--contact-border);
+  color:var(--contact-text-muted);
+  line-height:1.62;
+  box-shadow:var(--contact-card-shadow);
+  backdrop-filter:var(--contact-control-backdrop);
+  -webkit-backdrop-filter:var(--contact-control-backdrop);
 }
 .contact-page .contact-steps li::before {
-  content: counter(contactStep);
-  position: absolute;
-  left: 1rem;
-  top: 1rem;
-  width: 1.6rem;
-  height: 1.6rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--contact-step-badge-bg);
-  color: var(--contact-step-badge-text);
-  font-weight: 800;
-  box-shadow: var(--contact-step-badge-shadow);
+  content:counter(contactStep);
+  position:absolute;
+  left:1rem;
+  top:1rem;
+  width:1.6rem;
+  height:1.6rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:var(--radius-circle);
+  background:var(--contact-step-badge-bg);
+  color:var(--contact-step-badge-text);
+  font-weight:800;
+  box-shadow:var(--contact-step-badge-shadow);
 }
 /* przelicznik-jednostek.css 854-931, 1859-1878 */
 .lab-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding-bottom: 1rem;
-  margin-bottom: 1rem;
-  border-bottom: 0.5px solid rgba(0,131,141,0.10);
-  animation: lab-step-slidein 0.3s ease-out;
+  display:flex;
+  align-items:flex-start;
+  gap:var(--space-0-85);
+  padding-bottom:var(--space-1);
+  margin-bottom:var(--space-1);
+  border-bottom:0.5px solid rgba(0,131,141,0.10);
+  animation:lab-step-slidein 0.3s ease-out;
 }
 .lab-step:last-of-type {
-  border-bottom: none;
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
+  border-bottom:none;
+  padding-bottom:var(--space-0-5);
+  margin-bottom:var(--space-0-5);
 }
 .lab-step.is-hidden {
   display: none;
 }
 .lab-step-num {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 500;
-  flex-shrink: 0;
-  background: rgba(0,131,141,0.08);
-  color: #7a8587;
+  width:26px;
+  height:26px;
+  border-radius:var(--radius-circle);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:0.8rem;
+  font-weight:500;
+  flex-shrink:0;
+  background:rgba(0,131,141,0.08);
+  color:#7a8587;
 }
 .lab-step-num.is-done {
   background: #1D9E75;
   color: #fff;
 }
 .lab-step-num.is-active {
-  background: #00838d;
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(0,131,141,0.15);
-  animation: lab-step-glow 2s ease-in-out infinite;
+  background:var(--primary);
+  color:#fff;
+  box-shadow:0 0 0 4px rgba(0,131,141,0.15);
+  animation:lab-step-glow 2s ease-in-out infinite;
 }
 .lab-step-body {
   flex: 1;
   min-width: 0;
 }
 .lab-step-label {
-  font-size: 0.72rem;
-  color: #1a1a1a;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.35rem;
-  font-weight: 600;
+  font-size:0.72rem;
+  color:#1a1a1a;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-bottom:var(--space-0-35);
+  font-weight:600;
 }
 @keyframes lab-step-slidein {
   from {
@@ -686,37 +686,30 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
     transform: translateY(0);
   }
 }
-@keyframes lab-step-glow    {
-  0%, 100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
+@keyframes lab-step-glow    { 0%, 100% { opacity: var(--opacity-disabled-label); } 50% { opacity: 1; } }
 /* cukrzyca.css 267-300, 315-330, 6061-6073 */
 .diab-day-step {
-  border-radius: var(--radius);
-  padding: 0.75rem 0.85rem;
-  background: rgba(255,255,255,0.82);
-  border: 1px solid #d7e5e5;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.7rem;
-  align-items: start;
+  border-radius:var(--radius);
+  padding:var(--space-0-75) var(--space-0-85);
+  background:rgba(255,255,255,0.82);
+  border:var(--border-hairline) solid #d7e5e5;
+  display:grid;
+  grid-template-columns:auto minmax(0, 1fr);
+  gap:var(--space-0-7);
+  align-items:start;
 }
 .diab-day-step__num {
-  width: 1.7rem;
-  height: 1.7rem;
-  border-radius: 999px;
-  background: rgba(0,131,141,0.12);
-  color: var(--primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.9rem;
-  margin-top: 0.05rem;
+  width:1.7rem;
+  height:1.7rem;
+  border-radius:var(--radius-pill);
+  background:var(--line-teal-soft);
+  color:var(--primary);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  font-size:0.9rem;
+  margin-top:0.05rem;
 }
 .diab-day-step strong {
   display: block;
@@ -730,18 +723,18 @@ body.edu-page .edu-chip,body.edu-page .edu-meta-pill{
   color: #4f6060;
 }
 .diab-module-card__step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.32rem 0.68rem;
-  border-radius: 999px;
-  border: 1px solid rgba(0,131,141,0.16);
-  background: rgba(0,131,141,0.10);
-  color: var(--primary);
-  font-size: 0.79rem;
-  font-weight: 800;
-  white-space: nowrap;
-  flex: 0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0.32rem 0.68rem;
+  border-radius:var(--radius-pill);
+  border:var(--border-hairline) solid var(--line-teal);
+  background:rgba(0,131,141,0.10);
+  color:var(--primary);
+  font-size:0.79rem;
+  font-weight:800;
+  white-space:nowrap;
+  flex:0 0 auto;
 }
 body.page-cukrzyca .diab-day-step p,
 body.page-cukrzyca .diab-video-cta__note,
@@ -754,7 +747,7 @@ body.page-cukrzyca .diab-macro-empty {
 .guide-accordion-index{
   width:2rem;
   height:2rem;
-  border-radius:999px;
+  border-radius:var(--radius-pill);
   display:inline-flex;
   align-items:center;
   justify-content:center;

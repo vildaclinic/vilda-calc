@@ -180,34 +180,15 @@ html.vilda-pro-active   #proGateBanner { display: none; }
           flex-wrap: wrap;
         }
         #professionalOverlay .professional-confirm-btn {
-          background: var(--secondary);
-          color: #fff;
-          border: none;
-          border-radius: var(--radius);
           padding: var(--space-0-55) var(--space-1-2);
           cursor: pointer;
-          font: inherit;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
-        }
-        #professionalOverlay .professional-confirm-btn:hover {
-          background: var(--primary);
-          box-shadow: var(--shadow);
+          font: inherit
         }
         #professionalOverlay .professional-exit-btn {
-          background: #ffffff;
-          color: var(--primary);
-          border: var(--border-hairline) solid var(--line);
-          border-radius: var(--radius);
           padding: var(--space-0-55) var(--space-1-2);
           cursor: pointer;
-          font: inherit;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
+          font: inherit
         }
-        #professionalOverlay .professional-exit-btn:hover {
-          background: var(--card);
-          box-shadow: var(--shadow);
-        }
-
         /* === Overlay zapamiętywania numeru PWZ ===
          * Druga pełnoekranowa warstwa służąca do zadania pytania, czy
          * zapamiętać numer prawa wykonywania zawodu w przeglądarce.
@@ -254,34 +235,15 @@ html.vilda-pro-active   #proGateBanner { display: none; }
           flex-wrap: wrap;
         }
         #rememberPwzOverlay .remember-yes-btn {
-          background: var(--secondary);
-          color: #fff;
-          border: none;
-          border-radius: var(--radius);
           padding: var(--space-0-55) var(--space-1-2);
           cursor: pointer;
-          font: inherit;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
-        }
-        #rememberPwzOverlay .remember-yes-btn:hover {
-          background: var(--primary);
-          box-shadow: var(--shadow);
+          font: inherit
         }
         #rememberPwzOverlay .remember-no-btn {
-          background: #ffffff;
-          color: var(--primary);
-          border: var(--border-hairline) solid var(--line);
-          border-radius: var(--radius);
           padding: var(--space-0-55) var(--space-1-2);
           cursor: pointer;
-          font: inherit;
-          transition: background 0.2s ease, box-shadow 0.2s ease;
+          font: inherit
         }
-        #rememberPwzOverlay .remember-no-btn:hover {
-          background: var(--card);
-          box-shadow: var(--shadow);
-        }
-
         /* === Dwukolumnowy układ list testów (GH, OGTT/GnRH, ACTH/TRH) ===
          *
          * Kontenery z testami (np. #ghTestsLeft/#ghTestsRight) mają klasę
@@ -500,13 +462,8 @@ html.vilda-pro-active   #proGateBanner { display: none; }
           border: 1px solid var(--lg-border) !important;
           background: transparent !important;
           padding: var(--space-0-45) var(--space-1);
-          border-radius: var(--radius);
           cursor: pointer;
         }
-        .zscore-source-buttons button.active-toggle {
-          border-color: var(--primary);
-        }
-
         /* === Z‑score batch loading overlay ===
          * This overlay appears when the user starts the Z‑score (batch) calculation.  It dims
          * the page and centers a Lottie animation to give the impression of ongoing
@@ -798,10 +755,6 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 }
 .sga-birth-secondary-btn {
   appearance: none;
-  border: var(--border-hairline) solid var(--lg-border);
-  border-radius: var(--radius);
-  background: transparent;
-  color: inherit;
   padding: 0.72rem var(--space-1-1);
   font: inherit;
   font-weight: 600;

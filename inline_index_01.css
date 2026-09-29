@@ -6,8 +6,8 @@
         /* P-TOZSAMOSC: pola tożsamości z kartoteki — wygląd „tylko do odczytu" jak data urodzenia. */
         input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;opacity:1;}
         .vild-dob-error{margin-top:5px;font-size:.78rem;line-height:1.35;color:#a32d2d;}
-        .vild-dob-clear{margin-top:var(--space-6px);padding:0;background:none;border:0;box-shadow:none;
-          font-family:inherit;font-size:.78rem;color:var(--primary);text-decoration:underline;cursor:pointer;}
+        .vild-dob-clear{margin-top:var(--space-6px);padding:0;
+          font-family:inherit;font-size:.78rem;text-decoration:underline;cursor:pointer;}
         .vild-weeks-row{margin-top:var(--space-0-7);padding:9px var(--space-10px);background:#eaf4f5;border:var(--border-hairline) solid #cfe3e5;border-radius:var(--radius-6);}
         .vild-weeks-row > label{margin-top:0;}
         .vild-age-row > label{flex:1 1 0;min-width:0;}

@@ -492,21 +492,16 @@
 
     .sub-faq__q {
       width: 100%;
-      background: none;
-      border: none;
       padding: var(--space-0-9) var(--space-1-1);
       text-align: left;
       font-size: 0.92rem;
       font-weight: 600;
-      color: #1a2e30;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: var(--space-0-5);
     }
-
-    .sub-faq__q:hover { background: #f8fbfb; }
 
     .sub-faq__q::after {
       content: "+";
@@ -763,26 +758,13 @@
     .sub-preview__action-btn {
       flex: 1;
       padding: var(--space-0-5) var(--space-0-6);
-      border-radius: var(--radius-8);
       font-size: 0.78rem;
       font-weight: 700;
-      border: none;
       cursor: default;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: var(--space-0-35);
-    }
-
-    .sub-preview__action-btn--copy {
-      background: var(--pro-light);
-      color: var(--pro-dark);
-    }
-
-    .sub-preview__action-btn--pdf {
-      background: #f0fafa;
-      color: var(--primary, #009999);
-      border: var(--border-hairline) solid #c0dddd;
     }
 
     .sub-preview__caption {

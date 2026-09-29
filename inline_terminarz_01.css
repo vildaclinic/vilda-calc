@@ -35,11 +35,9 @@
 .notes-pii__icon { font-size: 1.05rem; flex-shrink: 0; }
 .notes-pii__body { flex: 1 1 auto; min-width: 0; }
 .notes-pii__close {
-  flex-shrink: 0; border: 0; background: transparent; cursor: pointer;
-  color: var(--text-muted); font-size: 1.1rem; line-height: 1; padding: .1rem var(--space-0-35);
+  flex-shrink: 0;   cursor: pointer;
+ font-size: 1.1rem; line-height: 1; padding: .1rem var(--space-0-35);
 }
-.notes-pii__close:hover { color: var(--text-strong); }
-
 /* Toolbar: szukajka + filtry kategorii */
 .notes-toolbar { margin-bottom: var(--space-1-1); }
 .notes-search {
@@ -63,17 +61,10 @@
 }
 .notes-filters { display: flex; gap: var(--space-0-45); flex-wrap: wrap; }
 .notes-filter {
-  border: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.16));
-  background: var(--card-bg, #fff); color: var(--text-2);
-  padding: var(--space-0-35) var(--space-0-85); border-radius: var(--radius-pill); font-size: .82rem; font-weight: 600;
-  cursor: pointer; transition: all .12s; white-space: nowrap;
+ 
+  padding: var(--space-0-35) var(--space-0-85);  font-size: .82rem; font-weight: 600;
+  cursor: pointer;  white-space: nowrap;
 }
-.notes-filter:hover { border-color: var(--primary, #00838d); color: var(--primary, #00838d); }
-.notes-filter.is-active {
-  background: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
-  color: #fff; border-color: transparent;
-}
-
 /* Lista kart */
 .notes-grid {
   display: grid; gap: var(--space-0-85);
@@ -99,17 +90,17 @@
 .note-cat--wywiad    { background: #fff5e6; color: #b8730e; }
 .note-cat--wlasne    { background: #f1eefc; color: #6d4bc0; }
 .note-pin {
-  margin-left: auto; flex-shrink: 0; border: 0; background: transparent; cursor: pointer;
-  width: 32px; height: 32px; border-radius: var(--radius-pill); padding: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  color: #9aa8aa; transition: color .12s, background .12s, transform .12s;
+  margin-left: auto; flex-shrink: 0;   cursor: pointer;
+  width: 32px; height: 32px;  padding: 0;
+  display: inline-flex; align-items: center; justify-content: center
+ 
 }
 .note-pin svg { width: 18px; height: 18px; stroke: currentColor; display: block; }
-.note-pin:hover { color: var(--primary, #00838d); transform: scale(1.08); }
+.note-pin:hover {  transform: scale(1.08); }
 /* Pill aktywnego stanu — półprzezroczysty turkus, widoczny też na turkusowym
    „szklanym" tle karty (czyste #E1F5EE zlewałoby się z tłem). !important bije
    globalne button{background:var(--primary)}. */
-.note-pin.is-on { color: var(--primary, #00838d); background: var(--line-teal) !important; }
+.note-pin.is-on {  background: var(--line-teal) !important; }
 .note-pin.is-on svg { stroke: var(--primary, #00838d); }
 .note-card__title { font-size: 1rem; font-weight: 600; color: var(--text, #0f2b33); margin: 0; word-break: break-word; }
 .note-card__body {
@@ -120,15 +111,10 @@
 .note-card__actions { display: flex; gap: var(--space-0-4); margin-top: var(--space-0-35); flex-wrap: wrap; }
 .note-act {
   display: inline-flex; align-items: center; gap: var(--space-0-3);
-  border: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.16));
-  background: var(--card-bg, #fff); color: var(--text-2);
-  padding: var(--space-0-4) var(--space-0-8); border-radius: var(--radius-9); font-size: .8rem; font-weight: 600;
-  cursor: pointer; transition: all .12s;
+ 
+  padding: var(--space-0-4) var(--space-0-8);  font-size: .8rem; font-weight: 600;
+  cursor: pointer 
 }
-.note-act:hover { border-color: var(--primary, #00838d); color: var(--primary, #00838d); }
-.note-act--copy.is-done { background: #f0fff4; color: #148f3f; border-color: rgba(20,143,63,.3); }
-.note-act--danger:hover { border-color: var(--danger-rose); color: var(--danger-rose); }
-
 /* Empty / locked state */
 .notes-empty {
   text-align: center; padding: 3.5rem var(--space-1); color: var(--text-muted);
@@ -156,8 +142,7 @@
   padding: var(--space-1-1) var(--space-1-25); border-bottom: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.12));
 }
 .note-editor__head h2 { font-size: 1.1rem; font-weight: 700; margin: 0; flex: 1; color: var(--text, #0f2b33); }
-.note-editor__close { border: 0; background: transparent; cursor: pointer; font-size: 1.4rem; color: var(--text-muted); line-height: 1; padding: .1rem var(--space-0-4); }
-.note-editor__close:hover { color: var(--text-strong); }
+.note-editor__close {   cursor: pointer; font-size: 1.4rem;  line-height: 1; padding: .1rem var(--space-0-4); }
 .note-editor__body { flex: 1; overflow-y: auto; padding: var(--space-1-25); display: flex; flex-direction: column; gap: var(--space-1); }
 .note-field label { display: block; font-size: .82rem; font-weight: 600; color: var(--text-2); margin-bottom: var(--space-0-35); }
 .note-field input, .note-field select, .note-field textarea {
@@ -176,11 +161,10 @@
 }
 .note-editor__foot .notes-btn-primary { flex: 1; justify-content: center; }
 .note-btn-ghost {
-  padding: var(--space-0-6) 1.15rem; border: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.16));
-  border-radius: var(--radius-pill); background: var(--card-bg,#fff); color: var(--text-2);
-  font-size: .92rem; font-weight: 600; cursor: pointer; transition: all .12s;
+  padding: var(--space-0-6) 1.15rem; 
+  
+  font-size: .92rem; font-weight: 600; cursor: pointer 
 }
-.note-btn-ghost:hover { border-color: var(--danger-rose); color: var(--danger-rose); }
 .note-editor__err { font-size: .82rem; color: var(--danger-rose); margin: 0; display: none; }
 .note-editor__err.is-shown { display: block; }
 

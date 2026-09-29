@@ -3,8 +3,9 @@
 /* ===================== FormField — reguły bazowe (style.css) ===================== */
 label{
   display:block;
-  margin-top:.7rem;
-  font-size:.95rem}
+  margin-top:var(--space-0-7);
+  font-size:0.95rem;
+}
 input,select,option{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   width:100%;
@@ -99,9 +100,9 @@ input:focus,select:focus{
 /* ---- FormField — index.html <style> #4 (src/html-styles/index.css) ---- */
 .vild-age-row{
   display:flex;
-  gap:12px;
+  gap:var(--space-12px);
   align-items:flex-start;
-  }
+}
 .vild-age-row input.vild-age-auto,
 input#dobInput[readonly]{
   background:#eef3f4;
@@ -127,24 +128,20 @@ input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{
   color:#a32d2d;
   }
 .vild-dob-clear{
-  margin-top:6px;
+  margin-top:var(--space-6px);
   padding:0;
-  background:none;
-  border:0;
-  box-shadow:none;
   font-family:inherit;
   font-size:.78rem;
-  color:#00838d;
   text-decoration:underline;
   cursor:pointer;
 }
 .vild-weeks-row{
-  margin-top:.7rem;
-  padding:9px 10px;
+  margin-top:var(--space-0-7);
+  padding:9px var(--space-10px);
   background:#eaf4f5;
-  border:1px solid #cfe3e5;
-  border-radius:6px;
-  }
+  border:var(--border-hairline) solid #cfe3e5;
+  border-radius:var(--radius-6);
+}
 .vild-weeks-row > label{
   margin-top:0;
   }

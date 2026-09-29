@@ -222,13 +222,6 @@
       border-color: rgba(155, 89, 182, 0.30);
     }
     .lab-patient-context.is-pediatric .lab-patient-summary { color: #5d2c75; }
-    .lab-patient-context.is-pediatric .lab-patient-toggle {
-      border-color: rgba(155, 89, 182, 0.4);
-      color: #5d2c75;
-    }
-    .lab-patient-context.is-pediatric .lab-patient-toggle:hover {
-      background: rgba(155, 89, 182, 0.10);
-    }
     .lab-patient-summary {
       display: flex;
       align-items: center;
@@ -241,16 +234,9 @@
     .lab-patient-summary .lab-patient-text { flex: 1 1 auto; min-width: 0; }
     .lab-patient-summary .lab-patient-text.is-missing { color: #a25500; }
     .lab-patient-summary button.lab-patient-toggle {
-      background: transparent;
-      border: var(--border-hairline) solid rgba(42, 138, 138, 0.4);
-      color: #1d4f4f;
       padding: 0.2rem var(--space-0-55);
       font-size: 0.82rem;
-      border-radius: 0.4rem;
       cursor: pointer;
-    }
-    .lab-patient-summary button.lab-patient-toggle:hover {
-      background: rgba(42, 138, 138, 0.1);
     }
     .lab-patient-clinical-hint {
       margin-top: var(--space-0-4);
@@ -321,16 +307,10 @@
     .lab-patient-override .lab-override-reset {
       grid-column: 1 / -1;
       justify-self: end;
-      background: transparent;
-      border: var(--border-hairline) solid rgba(198, 40, 40, 0.4);
-      color: var(--danger);
       padding: var(--space-0-25) var(--space-0-7);
       font-size: 0.82rem;
-      border-radius: 0.35rem;
       cursor: pointer;
     }
-    .lab-patient-override .lab-override-reset:hover { background: rgba(198, 40, 40, 0.07); }
-
     /* Sekcja źródeł — przycisk + rozwijana lista cytowań aktualnej substancji. */
     .lab-sources-wrap {
       margin-top: var(--space-0-9);
@@ -737,10 +717,7 @@
     .lab-step-hint strong { color: #2a3a3c; font-weight: 500; }
     .lab-step-edit {
       font-size: 0.78rem;
-      color: var(--primary);
       cursor: pointer;
-      background: none;
-      border: none;
       padding: 0;
       font-family: inherit;
     }
@@ -831,20 +808,14 @@
     .lab-show-all-toggle {
       margin-top: var(--space-1);
       padding: var(--space-0-6) var(--space-0-85);
-      background: rgba(0,131,141,0.04);
-      border: 0.5px solid var(--line-teal-soft);
-      border-radius: var(--radius-8);
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 0.83rem;
-      color: #5a6a6e;
       width: 100%;
-      font-family: inherit;
-      transition: background 0.15s;
+      font-family: inherit
     }
-    .lab-show-all-toggle:hover { background: rgba(0,131,141,0.08); }
     .lab-show-all-toggle .arr {
       color: var(--primary);
       transition: transform 0.2s;
@@ -1394,14 +1365,11 @@
       align-items: center;
       gap: var(--space-0-35);
       padding: var(--space-0-45) var(--space-0-85);
-      border-radius: 1rem;
       background: #fff !important;
       border: var(--border-hairline) solid rgba(42, 138, 138, 0.45) !important;
-      color: #1d6363;
       cursor: pointer;
       font-size: 0.9rem;
       font-weight: 500;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
       user-select: none;
       position: relative;
       font-family: inherit;
@@ -1423,7 +1391,6 @@
     button.lab-suggest-chip.is-selected {
       background: rgba(42, 138, 138, 0.28) !important;
       border-color: rgba(42, 138, 138, 0.85) !important;
-      color: #134848;
       font-weight: 600;
       box-shadow: 0 0 0 3px rgba(42, 138, 138, 0.12) !important;
     }
@@ -1851,31 +1818,20 @@
       align-items: center;
       gap: var(--space-0-35);
       padding: var(--space-0-5) var(--space-0-95);
-      background: var(--primary, #2a8a8a);
-      color: #fff;
-      border: none;
-      border-radius: 0.45rem;
       font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s ease;
       font-family: inherit;
     }
-    .lab-test-details-load:hover { background: #226e6e; }
     .lab-test-details-load:active { transform: scale(0.98); }
     .lab-test-details-close {
       display: inline-flex;
       align-items: center;
       padding: var(--space-0-5) var(--space-0-85);
-      background: transparent;
-      color: var(--placeholder);
-      border: var(--border-hairline) solid var(--disabled-border);
-      border-radius: 0.45rem;
       font-size: 0.88rem;
       cursor: pointer;
       font-family: inherit;
     }
-    .lab-test-details-close:hover { background: #f5f7f7; }
     .lab-test-details-hint {
       font-size: 0.78rem;
       color: #777;

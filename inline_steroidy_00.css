@@ -199,10 +199,8 @@ select.srcDrug {
   /* Używamy ich do prezentacji poszczególnych przeliczeń w formie spójnej z
      podsumowaniem. Każdy fieldset otrzymuje obramowanie i odstępy. */
   .result-fieldset {
-    border: var(--border-hairline) solid var(--disabled-border);
     padding: var(--space-0-75) var(--space-1);
-    margin-bottom: 0rem;
-    border-radius: var(--radius-6);
+    margin-bottom: 0rem
   }
   
   .result-fieldset p{
@@ -321,17 +319,12 @@ select.srcDrug {
    */
   /* Kontenery w sekcji wyników (card) – border w kolorze turkusowym */
   #results .card {
-    border-color: var(--btn-color, #1e7fc7);
     /* Zeruj górny margines i wypełnienie, aby obie kolumny zaczynały się
        w tej samej linii. Przy okazji poprawiamy zapis jednostek (1rem bez spacji). */
     margin-top: 0;
     padding-top: 1.0 rem;
     /* Upewnij się, że elementy są wyrównane do górnej krawędzi w układzie grid */
     align-self: start;
-  }
-  /* Fieldsety w sekcji wynikowej – identyczny kolor obramowania */
-  .result-fieldset {
-    border-color: var(--btn-color, #1e7fc7);
   }
   /* Stały odstęp nad sekcją wynikową */
   #results {
