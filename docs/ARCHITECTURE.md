@@ -6,7 +6,7 @@ Stan zweryfikowany dla bazowego commita `audyt` `4c36d8120018087d47cdba3f4aa153e
 
 `vilda-calc` jest publicznym repozytorium statycznej aplikacji wdrożeniowej i narzędzi jakości. Produkcja nie wymaga kompilacji w tym repozytorium: przeglądarka ładuje wersjonowane pliki HTML, CSS, JS, JSON i obrazy bezpośrednio.
 
-Znaczna część JavaScriptu jest zminifikowanym artefaktem. Pełniejszy zestaw czytelnych źródeł, materiałów medycznych i kod usługi synchronizacji jest utrzymywany poza tym publicznym drzewem. Rozdział nie jest jednak kompletny: repozytorium nadal zawiera czytelne moduły, service workera oraz historyczne dokumenty wewnętrzne, m.in. dotyczące synchronizacji, PRO i wdrożeń. Ich przegląd i przeniesienie do przyszłego prywatnego repozytorium źródłowego pozostają długiem migracyjnym.
+Znaczna część JavaScriptu jest zminifikowanym artefaktem. Pełniejszy zestaw czytelnych źródeł, materiałów medycznych i kod usługi synchronizacji jest utrzymywany poza tym publicznym drzewem. Rozdział nie jest jednak kompletny: repozytorium nadal zawiera czytelne moduły, service workera oraz historyczne dokumenty wewnętrzne, m.in. dotyczące synchronizacji, PRO i wdrożeń. Ich przegląd i przeniesienie do przyszłego prywatnego repozytorium źródłowego pozostają długiem migracyjnym. Ostatnie wgranie plików zbudowanych poza GitHubem było 2026-07-29 (#22); od tego czasu zminifikowane artefakty zmieniano bezpośrednio w tym repozytorium, więc są jedynym aktualnym stanem kodu, a lokalne źródła (jeżeli istnieją) są nieaktualne. Ustalenia, czytelne łatki dla `ios26-ui.js` i inwentarz zmienionych artefaktów: `docs/ZRODLA_ARTEFAKTOW.md`.
 
 ## Widok całości
 
