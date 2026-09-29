@@ -620,7 +620,7 @@
         typeof snapshotFn === 'function' &&
         !!(snapshot && snapshot.readOnly === true && snapshot.moduleOnly === true && snapshot.didRenderDom === false && snapshot.didWriteStorage === false && snapshot.didWriteWindowState === false) &&
         !!(empty && empty.branch === 'empty-rows-message' && empty.html.indexOf('Uzupełnij co najmniej dwa wiersze') !== -1 && empty.mutatesDom === false && empty.mutatesWindowState === false) &&
-        !!(maintenance && maintenance.branch === 'single-row-maintenance' && maintenance.html.indexOf('Utrzymanie masy') !== -1 && maintenance.html.indexOf('PAL 1.4') !== -1 && maintenance.hasModeBadge === true) &&
+        !!(maintenance && maintenance.branch === 'single-row-maintenance' && maintenance.html.indexOf('Utrzymanie masy') !== -1 && maintenance.html.indexOf('PAL 1,4') !== -1 && maintenance.hasModeBadge === true) &&
         !!(infantUnder6 && infantUnder6.html.indexOf('poniżej 6 miesięcy') !== -1) &&
         !!(infantButte && infantButte.html.indexOf('Butte') !== -1) &&
         !!(multi && multi.branch === 'multi-row-interval-render' && multi.legendVisible === true && multi.html.indexOf('Oczekiwany przyrost') !== -1 && multi.html.indexOf('intake-results-note') !== -1) &&

@@ -115,7 +115,8 @@ test.describe('A2 — czas do normy: miesiące wieku liczone raz, stabilizacja z
     expect(r.tekst).not.toContain('pozostanie zbliżona do obecnej');
     expect(r.tekst).toMatch(/masa ciała dziecka będzie przybywać tylko w tempie wynikającym ze wzrastania \(ok\. \d+,\d+ kg\/mies\.\)/);
     const sym = await page.evaluate(() => window.energySimulateMonthsToBmiTarget({ ageYears: 8, ageMonthsOpt: 0, sex: 'M', weightKg: 33, heightCm: 130, weeklyLossKg: 0, target: 'norm' }));
-    expect(r.dane.czasDoNormy.miesiaceLabel).toBe(String(sym.months).replace('.', ','));
+    // powyżej roku etykieta w pełnych miesiącach (symulacja liczy co 0,5 mies.)
+    expect(r.dane.czasDoNormy.miesiaceLabel).toBe(String(Math.ceil(sym.months * 4.345) > 52 ? Math.round(sym.months) : sym.months).replace('.', ','));
     expect(sym.przyrostMasyKg).toBeGreaterThan(0);
   });
 });

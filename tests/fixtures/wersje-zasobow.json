@@ -373,7 +373,7 @@
  },
  "nutrition_norms.js": {
   "v": 49,
-  "sha256": "44daca0c60298be78b41d4813b663114cafb4d1a2e62dfd799c95bf15dadbc79"
+  "sha256": "527ecc2509f62f5cf4bc76087557b7fd9624ceb92fca3814a39b40013df12bf9"
  },
  "obesity_response_criteria.js": {
   "v": 4,
@@ -541,7 +541,7 @@
  },
  "vilda_diet_recommendations.js": {
   "v": 65,
-  "sha256": "86617a69c2c4b6b67058a86fa35009a800e733a3199e0aeacf8027a992580c0b"
+  "sha256": "0b95ca4dd72bd00be247e616c5840df5f7de2bdf9bcc4e25fa261ff6039571c0"
  },
  "vilda_dob_age.js": {
   "v": 7,

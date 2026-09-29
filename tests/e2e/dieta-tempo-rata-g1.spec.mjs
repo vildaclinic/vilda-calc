@@ -272,7 +272,8 @@ test.describe('P-DIETA rata G1a — zdania w głosie lekarza, wariant wg strateg
     expect(r.strategia).toBe('stabilization');
     expect(r.tekst).toContain(`Tempo wzrastania jest poniżej normy: 3,0 cm/rok (norma ≥ 5 cm/rok). ${OCENA}. Wzrost dziecka jest mierzony na każdej wizycie kontrolnej.`);
     expect(r.tekst).not.toContain('dlatego plan ma charakter stabilizacji');
-    expect(r.kartaPlanu).toContain('strategia domyślna dla wieku 2–5 lat oraz 6–11 lat przy BMI poniżej 99. centyla (Barlow 2007)');
+    // P-DIETA-AUDYT2 A7: powód z faktycznej reguły — BMI 22,5 to 95,9. centyl (OLAF: nadwaga, otyłość od 97. c.); dotąd zawsze „2–5 lat oraz 6–11 lat < 99. c.”
+    expect(r.kartaPlanu).toContain('strategia domyślna przy nadwadze w wieku 6–11 lat (Barlow 2007)');
   });
 
   test('G1a-4: dziewczynka 6 l., redukcja wybrana ręcznie, żadna dieta nie spełnia minimum — stabilizacja i zdanie w wariancie stabilizacji', async ({ page }) => {
