@@ -72,7 +72,7 @@ Po zmianie zasobu ładowanego przez stronę:
 
 - sprawdź wszystkie odwołania `?v=` — także adresy wstrzykiwane ze skryptów (`vilda_chrome.js`, `vilda_session_bridge.js`, `vilda_gh_therapy_resource_audit.js`): podbij je razem ze stronami; pilnuje tego `tests/unit/piny-wersji.test.mjs` (P-PINY-WERSJI, ósme twierdzenie);
 - przeanalizuj wpływ na `SW_VERSION` i listę cache;
-- nie usuwaj historycznych, wersjonowanych adresów z cache bez planu migracji;
+- nie usuwaj historycznych, wersjonowanych adresów z cache bez planu migracji; od P-SW-PRECACHE instalacja i tak pobiera tylko bieżący wpis każdego pliku (najwyższy `?v=`), więc nowy `?v=` dopisujesz obok starego, a strona musi odwoływać się do najwyższego — odwołanie do starszej wersji nie trafi do pamięci offline (pilnuje tego `tests/unit/sw-precache-stron.test.mjs`, razem z budżetem instalacji: poniżej 40 MB i 600 żądań, bo Chromium przerywa instalację trwającą ponad 5 minut); zmianę sposobu instalacji mierz `node tests/scripts/pomiar-instalacji-sw.mjs` (limit pamięci, wolne łącze, migracja ze starszego SW);
 - zasób ładowany przez stronę z precache (albo doładowywany z pliku JS) dopisz do tablic SW pod dokładnie tym adresem (z tym samym `?v=`), którego używa strona — pilnuje tego `tests/unit/sw-precache-stron.test.mjs` (P-SW-DOCPRO);
 - uruchom test instalacji, aktualizacji i pracy offline; brak sieci w teście przeglądarkowym rób zatrzymaniem serwera (wzór: `tests/e2e/pwa-strony-offline.spec.mjs`), bo `context.setOffline(true)` nie odcinał niezawodnie sieci service workera (zmierzone w P-SW-DOCPRO na Chromium 141 z Playwright 1.61.1);
 - sprawdź widok mobilny bez poziomego przewijania.

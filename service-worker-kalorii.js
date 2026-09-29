@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.104';
+const SW_VERSION = '1.1.105';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -84,7 +84,12 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   versionedAssets: 'cache-first-immutable-no-background-refresh',
   immutableVersionedKeysApplied: true,
   // P-SW-DOCPRO (2026-09-28): przy wyczerpanym limicie pamięci giną wpisy historyczne, a nie bieżące.
-  optionalPrecacheOrder: 'documents-and-current-versions-before-history'
+  optionalPrecacheOrder: 'documents-and-current-versions-before-history',
+  // P-SW-PRECACHE (decyzja właściciela 2026-09-29): instalacja pobiera tylko wpisy bieżące (historia zostaje
+  // w tablicach, ale nie jest pobierana), wpis z ?v= obecny w poprzedniej pamięci powłoki jest kopiowany zamiast
+  // pobierany, a historia w starszych pamięciach powłoki jest przycinana przed instalacją.
+  precacheInstall: 'current-entries-only-copy-immutable-from-previous-shell-prune-previous-history',
+  precacheHistoryInstalled: false
 });
 
 // Minimalny shell wymagany do natychmiastowego startu aplikacji z cache.
@@ -2686,9 +2691,9 @@ function getVersionedPrecacheEntry(url) {
   return match ? { pathname: match[1], version: Number(match[2]) } : null;
 }
 
-function orderOptionalPrecacheUrls(coreUrls, documentUrls, assetUrls) {
+function newestPrecacheVersionByPath(urls) {
   const newestVersionByPath = new Map();
-  for (const url of [...coreUrls, ...documentUrls, ...assetUrls]) {
+  for (const url of urls) {
     const entry = getVersionedPrecacheEntry(url);
     if (!entry) continue;
     const newest = newestVersionByPath.get(entry.pathname);
@@ -2696,6 +2701,11 @@ function orderOptionalPrecacheUrls(coreUrls, documentUrls, assetUrls) {
       newestVersionByPath.set(entry.pathname, entry.version);
     }
   }
+  return newestVersionByPath;
+}
+
+function orderOptionalPrecacheUrls(coreUrls, documentUrls, assetUrls) {
+  const newestVersionByPath = newestPrecacheVersionByPath([...coreUrls, ...documentUrls, ...assetUrls]);
 
   // Adres z rdzenia (albo powtórzony w tablicy) nie jest pobierany drugi raz.
   const alreadyQueued = new Set(coreUrls);
@@ -2717,6 +2727,24 @@ function orderOptionalPrecacheUrls(coreUrls, documentUrls, assetUrls) {
 }
 
 const OPTIONAL_PRECACHE_ORDER = orderOptionalPrecacheUrls(CORE_SHELL_URLS, OPTIONAL_DOCUMENTS, OPTIONAL_ASSETS);
+
+// P-SW-PRECACHE (decyzja właściciela 2026-09-29): instalacja pobiera wyłącznie wpisy BIEŻĄCE — adres bez ?v=,
+// z nieliczbowym ?v= albo z najwyższym ?v= danego pliku we wszystkich tablicach. Historia zostaje w tablicach
+// (append-only, AGENTS.md § 6), ale nie jest pobierana: hosting ignoruje ?v=, więc historyczny adres dostawał przy
+// instalacji treść BIEŻĄCEGO pliku — nie chronił starej wersji, tylko zajmował miejsce. Zmierzone w Chromium
+// (SW 1.1.103): 2542 adresy, 474 MB pobrania i 1,15 GB pamięci przy każdej instalacji i każdej aktualizacji;
+// przy łączu 20 Mb/s instalacja przekraczała 5 minut i przeglądarka przerywała zdarzenie install (SW nie wchodził
+// wcale). Wpisy bieżące to ok. 390 adresów i 24 MB. Chybienie na historycznym kluczu (np. karta otwarta przed
+// aktualizacją) idzie jak dotąd: online raz z sieci, offline — błąd sieci zamiast bieżącej treści pod starym kluczem.
+const NEWEST_PRECACHE_VERSION_BY_PATH = newestPrecacheVersionByPath([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS]);
+
+function isCurrentPrecacheUrl(url) {
+  const entry = getVersionedPrecacheEntry(url);
+  return !entry || NEWEST_PRECACHE_VERSION_BY_PATH.get(entry.pathname) === entry.version;
+}
+
+const INSTALL_CORE_URLS = CORE_SHELL_URLS.filter(isCurrentPrecacheUrl);
+const INSTALL_OPTIONAL_URLS = OPTIONAL_PRECACHE_ORDER.filter(isCurrentPrecacheUrl);
 
 // ── PWA-SUBPATH (2026-06-05): aplikacja na GitHub Pages żyje pod /vilda-calc/,
 // a cały SW (precache, klucze cache, DOCUMENT_PATHS) myśli w przestrzeni „/x".
@@ -3169,15 +3197,96 @@ async function updateRuntimeFromNetwork(request) {
   return networkResponse;
 }
 
-async function fetchAndStorePrecacheUrl(url, { required = false } = {}) {
+// P-SW-PRECACHE: pamięci powłoki starszych wersji SW. Wpis z ?v= jest w nich niezmienny od SW 1.1.66
+// (P-SW rata 1) — starsza pamięć mogła mieć pod kluczem ?v= treść nowszego wydania, więc z niej nie kopiujemy.
+const MIN_SHELL_VERSION_FOR_IMMUTABLE_REUSE = [1, 1, 66];
+
+function parseShellCacheVersion(cacheName) {
+  const prefix = `${CACHE_PREFIX}-shell-v`;
+  if (typeof cacheName !== 'string' || !cacheName.startsWith(prefix) || cacheName === SHELL_CACHE) return null;
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(cacheName.slice(prefix.length));
+  return match ? match.slice(1).map(Number) : [];
+}
+
+function isVersionAtLeast(version, minimum) {
+  for (let i = 0; i < minimum.length; i += 1) {
+    if ((version[i] || 0) !== minimum[i]) return (version[i] || 0) > minimum[i];
+  }
+  return true;
+}
+
+// Klucz ?v= spoza dokumentów — ten sam warunek co isImmutableVersionedRequest, dla adresu z tablicy.
+function isImmutableVersionedPrecacheUrl(url) {
+  const parsed = toURL(url);
+  if (!parsed || !parsed.searchParams.has('v')) return false;
+  return !DOCUMENT_PATHS.has(normalizeNavigationPath(parsed.pathname));
+}
+
+// Przed instalacją: w pamięciach powłoki starszych wersji zostaje tylko najwyższy ?v= każdego pliku (to, o co prosi
+// ich HTML), historia idzie do kosza. Stary SW działa dalej na swoich wpisach bieżących, a użytkownik, któremu stara
+// pamięć zajęła cały limit źródła, może zainstalować nową wersję — bez tego instalacja padała na pierwszym wpisie
+// (zmierzone przy limicie 1000 MiB). Stare pamięci i tak znikają przy aktywacji.
+async function pruneHistoryInPreviousShellCaches() {
+  for (const name of await caches.keys()) {
+    if (parseShellCacheVersion(name) === null) continue;
+    try {
+      const cache = await caches.open(name);
+      const requests = await cache.keys();
+      const entryOf = (request) => {
+        const parsed = toURL(request.url || request);
+        return parsed ? getVersionedPrecacheEntry(`${parsed.pathname}${parsed.search}`) : null;
+      };
+      const newest = new Map();
+      for (const request of requests) {
+        const entry = entryOf(request);
+        if (entry && !(newest.get(entry.pathname) >= entry.version)) newest.set(entry.pathname, entry.version);
+      }
+      for (const request of requests) {
+        const entry = entryOf(request);
+        if (entry && entry.version < newest.get(entry.pathname)) await cache.delete(request);
+      }
+    } catch (_) {
+      void _;
+    }
+  }
+}
+
+async function openReusablePreviousShellCaches() {
+  const reusable = [];
+  for (const name of await caches.keys()) {
+    const version = parseShellCacheVersion(name);
+    if (!version || !version.length || !isVersionAtLeast(version, MIN_SHELL_VERSION_FOR_IMMUTABLE_REUSE)) continue;
+    try {
+      reusable.push(await caches.open(name));
+    } catch (_) {
+      void _;
+    }
+  }
+  return reusable;
+}
+
+async function fetchAndStorePrecacheUrl(url, { required = false, previousShellCaches = [] } = {}) {
   const cache = await caches.open(SHELL_CACHE);
-  // PWA-SUBPATH: fetch pod realny URL w zasięgu SW; klucz cache zostaje w „/x".
-  const request = new Request(scopeHref(url), { cache: 'reload', redirect: 'follow' });
-  const response = await fetch(request);
   const pathname = getPathname(url);
   const cacheKey = DOCUMENT_PATHS.has(pathname)
     ? normalizeNavigationPath(pathname)
     : getShellCacheKeyFromStaticUrl(url);
+
+  // P-SW-PRECACHE: niezmienny wpis ?v= z poprzedniej pamięci powłoki — kopia zamiast pobrania. Aktualizacja pobiera
+  // wtedy tylko pliki z nowym ?v=, dokumenty i adresy bez ?v=.
+  if (cacheKey && previousShellCaches.length && isImmutableVersionedPrecacheUrl(url)) {
+    for (const previous of previousShellCaches) {
+      const cached = await previous.match(cacheKey);
+      if (cached) {
+        await cache.put(cacheKey, cached);
+        return;
+      }
+    }
+  }
+
+  // PWA-SUBPATH: fetch pod realny URL w zasięgu SW; klucz cache zostaje w „/x".
+  const request = new Request(scopeHref(url), { cache: 'reload', redirect: 'follow' });
+  const response = await fetch(request);
   const safeResponse = DOCUMENT_PATHS.has(cacheKey)
     ? await makeNavigationResponseSafe(response)
     : response;
@@ -3193,17 +3302,22 @@ async function fetchAndStorePrecacheUrl(url, { required = false } = {}) {
 }
 
 async function installShell() {
+  // P-SW-PRECACHE: najpierw miejsce (historia starszych pamięci powłoki do kosza), potem pamięci do kopiowania.
+  await pruneHistoryInPreviousShellCaches();
+  const previousShellCaches = await openReusablePreviousShellCaches();
+
   // Najpierw minimalny shell – jeśli to się nie uda, nowa wersja SW nie powinna wejść.
-  for (const url of CORE_SHELL_URLS) {
-    await fetchAndStorePrecacheUrl(url, { required: true });
+  // P-SW-PRECACHE: tylko wpisy bieżące rdzenia (INSTALL_CORE_URLS).
+  for (const url of INSTALL_CORE_URLS) {
+    await fetchAndStorePrecacheUrl(url, { required: true, previousShellCaches });
   }
 
   // Następnie dodatkowe strony i zasoby pobieramy spokojnie, jeden po drugim,
   // żeby nie zapychać łącza użytkownika przy słabym internecie.
-  // P-SW-DOCPRO: najpierw dokumenty i wersje bieżące, potem historia (patrz orderOptionalPrecacheUrls).
-  for (const url of OPTIONAL_PRECACHE_ORDER) {
+  // P-SW-DOCPRO: najpierw dokumenty i wersje bieżące (patrz orderOptionalPrecacheUrls); P-SW-PRECACHE: bez historii.
+  for (const url of INSTALL_OPTIONAL_URLS) {
     try {
-      await fetchAndStorePrecacheUrl(url, { required: false });
+      await fetchAndStorePrecacheUrl(url, { required: false, previousShellCaches });
     } catch (_) {
     void _;
   }
