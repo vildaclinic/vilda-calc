@@ -120,7 +120,9 @@ describe('Dietetyka — jedna kaskada prognozy wzrastania', () => {
 
   it('zalecenia nie mają już kopii kaskady obserwowane → mediana → tabela', () => {
     const src = zrodlo('vilda_diet_recommendations.js');
-    expect(src).toContain('const Tk=olk||(typeof energyChildGrowthOutlook=="function"?energyChildGrowthOutlook({ageYears:e,sex:o,heightCm:a}):null)');
+    // P-DIETA-AUDYT2 A2: czas stabilizacji liczy symulacja silnika (energySimulateMonthsToBmiTarget → childGrowthOutlook), więc w zaleceniach nie ma nawet odwołania do kaskady
+    expect(src).toContain('r0=sf({ageYears:e,ageMonthsOpt:0,sex:o,weightKg:_,heightCm:a,weeklyLossKg:0,target:"norm",growthEnded:Ce,trajektoria:!0})');
+    expect(src, 'własna pętla czasu stabilizacji zniknęła').not.toContain('toNormalBMITarget(_,G,zi,o)');
     expect(src, 'tabela wiekowa w kopii zniknęła').not.toContain('(e<5?m=6:e<10?m=5.5:e<13?m=6.5:e<15?m=5:e<17?m=3.5:m=2)');
   });
 });

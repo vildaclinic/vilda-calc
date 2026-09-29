@@ -105,6 +105,7 @@ describe('rata Z: strażnicy źródeł', () => {
     expect(gen).toMatch(/kDor=\(\)=>\{if\(!gG0\|\|typeof energyKontrolaPlanu!="function"\)return;const kt=energyKontrolaPlanu\(s,\{weightKg:o,floorKcal:s\.floorKcal,sex:a,ageYears:t,heightCm:d\}\)/);
   });
   it('karta drogi: górna granica i kontrola także u dorosłego (dziecko nadal tylko z planem otyłości, bez celu własnego)', () => {
-    expect(journey).toContain('return ctx.isChild ? !ctx.customGoal && !!(lastEngineState && lastEngineState.childObesityPlan) : true;');
+    // P-DIETA-AUDYT2 A4: ścieżka planu dziecka do 19 lat (planDziecko), ocena BMI dorosła od 18 (isChild)
+    expect(journey).toContain('return ctx.planDziecko ? !ctx.customGoal && !!(lastEngineState && lastEngineState.childObesityPlan) : true;');
   });
 });

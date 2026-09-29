@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.104';
+const SW_VERSION = '1.1.105';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1337,6 +1337,7 @@ const CORE_SHELL_URLS = [
   '/vilda_estimated_intake_ui.js',
   '/vilda_estimated_intake_ui.js?v=1',
   '/vilda_estimated_intake_ui.js?v=2',
+  '/vilda_estimated_intake_ui.js?v=3',
   '/vilda_estimated_intake_runtime.js',
   '/vilda_estimated_intake_runtime.js?v=1',
   '/vilda_estimated_intake_input_model.js',
@@ -1401,6 +1402,7 @@ const CORE_SHELL_URLS = [
   '/nutrition_norms.js?v=46',
   '/nutrition_norms.js?v=47',
   '/nutrition_norms.js?v=48',
+  '/nutrition_norms.js?v=49',
   '/nutrition_micros.js',
   '/nutrition_micros.js?v=25',
   '/nutrition_micros.js?v=26',
@@ -2258,6 +2260,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=86',
   '/vilda_data_import_export.js?v=87',
   '/vilda_data_import_export.js?v=88',
+  '/vilda_data_import_export.js?v=89',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_pola_tozsamosci.js?v=1',
   '/vilda_pola_tozsamosci.js?v=2',
@@ -2295,6 +2298,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_raport_plan.js?v=17',
   '/vilda_raport_plan.js?v=18',
   '/vilda_raport_plan.js?v=19',
+  '/vilda_raport_plan.js?v=20',
   '/vilda_masa.js?v=1',
   '/vilda_werdykt.js?v=1',
   '/vilda_werdykt.js?v=2',
@@ -2476,6 +2480,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=37',
   '/vilda_diet_plan_ui.js?v=38',
   '/vilda_diet_plan_ui.js?v=39',
+  '/vilda_diet_plan_ui.js?v=40',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -2514,6 +2519,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=62',
   '/vilda_diet_recommendations.js?v=63',
   '/vilda_diet_recommendations.js?v=64',
+  '/vilda_diet_recommendations.js?v=65',
   '/vilda_auth_ui.js?v=432',
   '/vilda_auth_ui.js?v=433',
   '/vilda_auth_ui.js?v=434',
@@ -2604,6 +2610,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_bmi_journey.js?v=23',
   '/vilda_bmi_journey.js?v=24',
   '/vilda_bmi_journey.js?v=25',
+  '/vilda_bmi_journey.js?v=26',
   '/vilda_diet_recommendations.js?v=23',
   '/vilda_diet_recommendations.js?v=24',
   '/vilda_diet_recommendations.js?v=25',
