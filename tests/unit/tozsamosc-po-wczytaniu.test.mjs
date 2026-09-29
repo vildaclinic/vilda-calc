@@ -134,6 +134,10 @@ describe('vilda_pola_tozsamosci.js — reguła blokady', () => {
   });
 });
 
+// Style stron żyją w arkuszach linkowanych w miejscu dawnych bloków <style> (P-STYLE krok 5a).
+const arkuszeStrony = (html) => [...html.matchAll(/<link href="(inline_[a-z0-9_]+\.css)\?v=\d+" rel="stylesheet">/g)]
+  .map((m) => zrodlo(m[1])).join('\n');
+
 describe('Obie strony mają ten sam formularz główny i tę samą blokadę', () => {
   const index = zrodlo('index.html');
   const docpro = zrodlo('docpro.html');
@@ -150,7 +154,7 @@ describe('Obie strony mają ten sam formularz główny i tę samą blokadę', ()
     const tag = /<script defer src="inline_index_02\.js\?v=\d+"><\/script>/;
     expect(index).toMatch(tag);
     expect(docpro).toMatch(tag);
-    expect(docpro).toContain('.vild-tanner-toggle');
+    expect(arkuszeStrony(docpro)).toContain('.vild-tanner-toggle');
   });
 
   it('obie strony ładują vilda_pola_tozsamosci.js po module bazy i mają notkę #tozsamoscNote', () => {
@@ -160,7 +164,7 @@ describe('Obie strony mają ten sam formularz główny i tę samą blokadę', ()
       expect(baza).toBeGreaterThan(-1);
       expect(modul).toBeGreaterThan(baza);
       expect(h).toContain('id="tozsamoscNote"');
-      expect(h).toContain('input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]');
+      expect(arkuszeStrony(h)).toContain('input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]');
     });
   });
 

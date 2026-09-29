@@ -84,7 +84,7 @@ export function zrodlaStron(czytaj = (p) => fs.readFileSync(path.join(korzen, p)
   const wynik = new Map();
   for (const strona of lista) {
     const html = czytaj(strona);
-    const body = html.indexOf('<body');
+    const body = html.replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length)).indexOf('<body'); // <body> w komentarzu (index.html) to nie granica
     const zrodla = [];
     let nr = 0;
     for (const m of html.matchAll(/<link\b[^>]*>|<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {

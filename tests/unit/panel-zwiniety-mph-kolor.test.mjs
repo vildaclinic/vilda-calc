@@ -58,9 +58,16 @@ describe('Panel pokwitaniowy domyślnie zwinięty (inline_index_02.js)', () => {
   });
 });
 
+// Style stron żyją w arkuszach linkowanych w miejscu dawnych bloków <style> (P-STYLE krok 5a): reguły strony to
+// treść jej arkuszy inline_<strona>_<NN>.css.
+const arkuszeStrony = (html) => [...html.matchAll(/<link href="(inline_[a-z0-9_]+\.css)\?v=\d+" rel="stylesheet">/g)]
+  .map((m) => zrodlo(m[1])).join('\n');
+
 describe('Wiersz wieku na docpro jak na index', () => {
   const index = zrodlo('index.html');
   const docpro = zrodlo('docpro.html');
+  const styleIndex = arkuszeStrony(index);
+  const styleDocpro = arkuszeStrony(docpro);
   const blok = (h) => (h.match(/<div class="vild-age-row">[\s\S]*?<\/div>/) || [null])[0];
 
   it('blok .vild-age-row (lata + miesiące w jednym wierszu) jest identyczny na obu stronach', () => {
@@ -68,13 +75,14 @@ describe('Wiersz wieku na docpro jak na index', () => {
     expect(blok(docpro)).toBe(blok(index));
   });
 
-  it('docpro ma te same reguły CSS wiersza wieku', () => {
-    ['.vild-age-row{display:flex;gap:12px;align-items:flex-start;}',
+  it('docpro ma te same reguły CSS wiersza wieku (w arkuszach stron; odstęp tokenem z raty 2b)', () => {
+    expect(styleIndex.length).toBeGreaterThan(100);
+    ['.vild-age-row{display:flex;gap:var(--space-12px);align-items:flex-start;}',
       '.vild-age-row > label{flex:1 1 0;min-width:0;}',
       '.vild-age-row > label.vild-age-years{flex:1.1 1 0;}',
       '@media (max-width:360px){ .vild-age-row{flex-direction:column;gap:0;} }'].forEach((r) => {
-      expect(index).toContain(r);
-      expect(docpro).toContain(r);
+      expect(styleIndex).toContain(r);
+      expect(styleDocpro).toContain(r);
     });
   });
 });

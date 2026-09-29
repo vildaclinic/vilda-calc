@@ -163,6 +163,27 @@
   --measure-copy:72ch;
   --measure-lead:74ch;
   --toast-max-width:min(88vw,520px);
+  /* P-STYLE rata 5a: tokeny dotąd wpisywane na sztywno (nazwy i opisy: design-system/src/project/tokens.json) */
+  /* shadow */
+  --shadow-focus-ring:0 0 0 3px rgba(0,131,141,.12);
+  --shadow-focus-ring-diab:0 0 0 4px rgba(0,131,141,0.12);
+  --shadow-focus-ring-input:0 0 0 2px rgba(0,131,141,0.25);
+  --shadow-card-hover:0 12px 30px rgba(0,81,88,.13);
+  --shadow-hero:0 16px 42px rgba(15, 45, 42, 0.08);
+  /* color */
+  --danger-rose:#c0395a;
+  --info:#0891b2;
+  --disabled-border:#cccccc;
+  /* zindex */
+  --z-range-marker:3;
+  --z-film-controls:4;
+  --z-reward:2200;
+  --z-video-modal:9998;
+  --z-pwz-overlay:10001;
+  --z-loading-overlay:20000;
+  --z-note-editor:2000010;
+  /* spacing */
+  --space-3:3rem;
 }
 
 * {

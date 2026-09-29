@@ -1,0 +1,208 @@
+/* ============ MODUŁ NOTATKI (N4) ============
+   Spójny wizualnie z vilda_chrome.css (tokeny --primary/--secondary,
+   --chrome-radius-card). Nowoczesny, lekki, kafelkowy. */
+.notes-shell { max-width: 1080px; margin: 0 auto; }
+
+.notes-head {
+  display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap;
+  margin-bottom: var(--space-1-1);
+}
+.notes-head__titles { flex: 1 1 auto; min-width: 0; }
+.notes-head h1 {
+  font-size: 1.5rem; font-weight: 700; margin: 0 0 .15rem;
+  color: var(--text, #0f2b33); letter-spacing: -0.01em;
+}
+.notes-head__sub { font-size: .9rem; color: var(--text-muted); margin: 0; }
+
+.notes-btn-primary {
+  display: inline-flex; align-items: center; gap: var(--space-0-45);
+  padding: var(--space-0-6) 1.15rem; border: 0; border-radius: var(--radius-pill); cursor: pointer;
+  font-size: .92rem; font-weight: 600; color: #fff; white-space: nowrap;
+  background: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
+  box-shadow: 0 6px 18px rgba(0, 131, 141, 0.22);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.notes-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 9px 24px rgba(0,131,141,.28); }
+.notes-btn-primary:active { transform: translateY(0); }
+
+/* PII edukacyjny banner */
+.notes-pii {
+  display: flex; align-items: flex-start; gap: var(--space-0-7);
+  padding: var(--space-0-8) var(--space-1); margin-bottom: var(--space-1);
+  background: #f0f7ff; border: var(--border-hairline) solid rgba(0,100,220,.16); border-radius: var(--radius-12);
+  font-size: .85rem; color: var(--text-2); line-height: 1.45;
+}
+.notes-pii__icon { font-size: 1.05rem; flex-shrink: 0; }
+.notes-pii__body { flex: 1 1 auto; min-width: 0; }
+.notes-pii__close {
+  flex-shrink: 0;   cursor: pointer;
+ font-size: 1.1rem; line-height: 1; padding: .1rem var(--space-0-35);
+}
+/* Alert akcji — niepowodzenie usuwania/przypinania. Do PR N1+N2: wcześniej te
+   operacje miały puste catch{} i padały bez śladu. */
+.notes-alert {
+  display: none; align-items: flex-start; gap: var(--space-0-7);
+  padding: var(--space-0-8) var(--space-1); margin-bottom: var(--space-1);
+  background: #fff5f5; border: var(--border-hairline) solid rgba(192,57,90,.24); border-radius: var(--radius-12);
+  font-size: .85rem; color: #8a2338; line-height: 1.45;
+}
+.notes-alert__icon { font-size: 1.05rem; flex-shrink: 0; }
+.notes-alert__body { flex: 1 1 auto; min-width: 0; }
+.notes-alert__close {
+  flex-shrink: 0;   cursor: pointer;
+ font-size: 1.1rem; line-height: 1; padding: .1rem var(--space-0-35);
+}
+.notes-empty--error .notes-empty__title { color: #8a2338; }
+.notes-empty__retry { margin-top: var(--space-1-1); }
+
+/* Toolbar: szukajka + filtry kategorii */
+.notes-toolbar { margin-bottom: var(--space-1-1); }
+.notes-search {
+  position: relative; margin-bottom: var(--space-0-8);
+}
+.notes-search input {
+  width: 100%; box-sizing: border-box;
+  padding: var(--space-0-65) var(--space-0-9) var(--space-0-65) 2.3rem;
+  border: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.16));
+  border-radius: var(--radius-12); font-size: .92rem; font-family: inherit;
+  background: var(--card-bg, #fff); color: var(--text, #0f2b33);
+  transition: border-color .12s, box-shadow .12s;
+}
+.notes-search input:focus {
+  outline: none; border-color: var(--primary, #00838d);
+  box-shadow: var(--shadow-focus-ring);
+}
+.notes-search__icon {
+  position: absolute; left: .8rem; top: 50%; transform: translateY(-50%);
+  color: #8aa3a6; pointer-events: none; font-size: 1rem;
+}
+.notes-filters { display: flex; gap: var(--space-0-45); flex-wrap: wrap; }
+.notes-filter {
+ 
+  padding: var(--space-0-35) var(--space-0-85);  font-size: .82rem; font-weight: 600;
+  cursor: pointer;  white-space: nowrap;
+}
+/* Lista kart */
+.notes-grid {
+  display: grid; gap: var(--space-0-85);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.note-card {
+  display: flex; flex-direction: column; gap: var(--space-0-55);
+  padding: var(--space-1) 1.05rem; border-radius: var(--chrome-radius-card, 14px);
+  background: var(--card-bg, #fff);
+  border: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.14));
+  box-shadow: var(--chrome-glass-shadow, 0 8px 28px rgba(0,81,88,.07));
+  transition: transform .12s, box-shadow .12s;
+}
+.note-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+.note-card.is-pinned { border-color: rgba(0,131,141,.4); }
+.note-card__top { display: flex; align-items: center; gap: var(--space-0-5); }
+.note-cat {
+  font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  padding: .2rem var(--space-0-55); border-radius: var(--radius-6);
+}
+.note-cat--badanie   { background: #e8f6f7; color: var(--primary); }
+.note-cat--zalecenia { background: #fef0f4; color: var(--danger-rose); }
+.note-cat--wywiad    { background: #fff5e6; color: #b8730e; }
+.note-cat--wlasne    { background: #f1eefc; color: #6d4bc0; }
+.note-pin {
+  margin-left: auto; flex-shrink: 0;   cursor: pointer;
+  width: 32px; height: 32px;  padding: 0;
+  display: inline-flex; align-items: center; justify-content: center
+ 
+}
+.note-pin svg { width: 18px; height: 18px; stroke: currentColor; display: block; }
+.note-pin:hover {  transform: scale(1.08); }
+/* Pill aktywnego stanu — półprzezroczysty turkus, widoczny też na turkusowym
+   „szklanym" tle karty (czyste #E1F5EE zlewałoby się z tłem). !important bije
+   globalne button{background:var(--primary)}. */
+.note-pin.is-on {  background: var(--line-teal) !important; }
+.note-pin.is-on svg { stroke: var(--primary, #00838d); }
+.note-card__title { font-size: 1rem; font-weight: 600; color: var(--text, #0f2b33); margin: 0; word-break: break-word; }
+.note-card__body {
+  font-size: .86rem; color: var(--text-muted); line-height: 1.5; margin: 0;
+  white-space: pre-wrap; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.note-card__actions { display: flex; gap: var(--space-0-4); margin-top: var(--space-0-35); flex-wrap: wrap; }
+.note-act {
+  display: inline-flex; align-items: center; gap: var(--space-0-3);
+ 
+  padding: var(--space-0-4) var(--space-0-8);  font-size: .8rem; font-weight: 600;
+  cursor: pointer 
+}
+/* Empty / locked state */
+.notes-empty {
+  text-align: center; padding: 3.5rem var(--space-1); color: var(--text-muted);
+}
+.notes-empty__icon { font-size: 2.6rem; opacity: var(--opacity-disabled-label); margin-bottom: var(--space-0-6); }
+.notes-empty__title { font-size: 1.05rem; font-weight: 600; color: var(--text, #0f2b33); margin: 0 0 var(--space-0-3); }
+.notes-empty__desc { font-size: .9rem; margin: 0; }
+
+/* Editor — slide-in panel (overlay) */
+.note-editor-overlay {
+  position: fixed; inset: 0; z-index: var(--z-note-editor);
+  background: rgba(8, 30, 35, 0.42); backdrop-filter: blur(3px);
+  display: none; align-items: stretch; justify-content: flex-end;
+}
+.note-editor-overlay.is-open { display: flex; animation: noteFadeIn .18s ease-out; }
+@keyframes noteFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.note-editor {
+  width: min(520px, 100%); height: 100%; background: var(--card-bg, #fff);
+  display: flex; flex-direction: column; box-shadow: -10px 0 40px rgba(0,0,0,.18);
+  animation: noteSlideIn .22s cubic-bezier(.22,.61,.36,1);
+}
+@keyframes noteSlideIn { from { transform: translateX(40px); opacity: var(--opacity-slider-tick); } to { transform: translateX(0); opacity: 1; } }
+.note-editor__head {
+  display: flex; align-items: center; gap: var(--space-0-6);
+  padding: var(--space-1-1) var(--space-1-25); border-bottom: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.12));
+}
+.note-editor__head h2 { font-size: 1.1rem; font-weight: 700; margin: 0; flex: 1; color: var(--text, #0f2b33); }
+.note-editor__close {   cursor: pointer; font-size: 1.4rem;  line-height: 1; padding: .1rem var(--space-0-4); }
+.note-editor__body { flex: 1; overflow-y: auto; padding: var(--space-1-25); display: flex; flex-direction: column; gap: var(--space-1); }
+.note-field label { display: block; font-size: .82rem; font-weight: 600; color: var(--text-2); margin-bottom: var(--space-0-35); }
+.note-field input, .note-field select, .note-field textarea {
+  width: 100%; box-sizing: border-box; padding: var(--space-0-65) var(--space-0-8);
+  border: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.16)); border-radius: var(--radius-10);
+  font-size: .92rem; font-family: inherit; background: var(--card-bg, #fff); color: var(--text, #0f2b33);
+  transition: border-color .12s, box-shadow .12s;
+}
+.note-field input:focus, .note-field select:focus, .note-field textarea:focus {
+  outline: none; border-color: var(--primary, #00838d); box-shadow: var(--shadow-focus-ring);
+}
+.note-field textarea { min-height: 240px; resize: vertical; line-height: 1.55; }
+.note-editor__foot {
+  display: flex; gap: var(--space-0-6); padding: var(--space-1) var(--space-1-25);
+  border-top: var(--border-hairline) solid var(--chrome-glass-border, rgba(0,131,141,.12));
+}
+.note-editor__foot .notes-btn-primary { flex: 1; justify-content: center; }
+.note-btn-ghost {
+  padding: var(--space-0-6) 1.15rem; 
+  
+  font-size: .92rem; font-weight: 600; cursor: pointer 
+}
+.note-editor__err { font-size: .82rem; color: var(--danger-rose); margin: 0; display: none; }
+.note-editor__err.is-shown { display: block; }
+
+@media (max-width: 600px) {
+  .note-editor-overlay { align-items: stretch; justify-content: center; }
+  .note-editor { width: 100%; }
+  .notes-grid { grid-template-columns: 1fr; }
+  /* Globalny style.css ma @media(max-width:600px){ button{ width:100%; margin-top:.5rem } } —
+     rozpychał przyciski modułu (zwłaszcza „×" w bannerze PII → tekst łamał się po słowie).
+     Neutralizujemy to dla przycisków Notatek; layout flex sam dobiera szerokości. */
+  .notes-btn-primary, .notes-filter, .note-act, .note-btn-ghost,
+  .notes-pii__close, .note-editor__close {
+    width: auto !important;
+    margin-top: 0 !important;
+  }
+  /* Pin: okrągły przycisk-ikona o stałym rozmiarze (nie auto, nie 100%). */
+  .note-pin { width: 32px !important; height: 32px !important; margin-top: 0 !important; }
+  /* „Nowa notatka" w nagłówku — pełna szerokość czytelniejsza na wąskim ekranie. */
+  .notes-head { flex-direction: column; align-items: stretch; }
+  .notes-head .notes-btn-primary { width: 100% !important; justify-content: center; }
+  /* PII banner — pewny układ: ikona | tekst (rośnie) | × (stały, mały). */
+  .notes-pii { align-items: flex-start; }
+  .notes-pii__body { flex: 1 1 auto; min-width: 0; }
+}

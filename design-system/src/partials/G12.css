@@ -14,8 +14,9 @@ button,input[type=button],input[type=submit]{
   padding:var(--space-0-55) var(--space-1-1)
 }
 button:disabled{
-  opacity:.45;
-  cursor:not-allowed}
+  opacity:var(--opacity-disabled);
+  cursor:not-allowed;
+}
 @media(max-width:600px){
 button,input[type=button],input[type=submit]{
   width:100%;

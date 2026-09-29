@@ -6,8 +6,9 @@
    ========================================================================== */
 label{
   display:block;
-  margin-top:.7rem;
-  font-size:.95rem}
+  margin-top:var(--space-0-7);
+  font-size:0.95rem;
+}
 input,select,option{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   width:100%;
@@ -28,8 +29,9 @@ button,input[type=button],input[type=submit]{
   padding:var(--space-0-55) var(--space-1-1)
 }
 button:disabled{
-  opacity:.45;
-  cursor:not-allowed}
+  opacity:var(--opacity-disabled);
+  cursor:not-allowed;
+}
 @media(max-width:600px){
 button,input[type=button],input[type=submit]{
   width:100%;
@@ -91,16 +93,18 @@ legend{
   left:0;
   font-size:1.1rem;
   font-weight:600;
-  padding:0 .5rem;
+  padding:0 var(--space-0-5);
   background:var(--card);
-  border-radius:var(--radius)}
+  border-radius:var(--radius);
+}
 #toNormCard h2{
   text-align:center}
 section.card,#toNormCard{
   border-radius:var(--radius);
   background:var(--card);
   box-shadow:var(--shadow);
-  padding:1rem}
+  padding:var(--space-1);
+}
 .user-card{
   font-family:Inter,sans-serif;
   font-size:1.1rem;

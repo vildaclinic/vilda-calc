@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.102';
+const SW_VERSION = '1.1.103';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -142,6 +142,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=81',
   '/style.css?v=82',
   '/style.css?v=83',
+  '/style.css?v=84',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -2626,7 +2627,30 @@ const OPTIONAL_ASSETS = [
   '/edu-video-ui.css?v=20261002v4',
   '/edu-video-ui.css?v=20261003v4',
   '/edu-video-ui.css?v=20261002v7',
-  '/edu-video-ui.css?v=20261003v7'
+  '/edu-video-ui.css?v=20261003v7',
+  // P-STYLE krok 5a: dawne bloki <style> stron jako arkusze linkowane w tym samym miejscu dokumentu (vilda_embedded.css
+  // to wspólny blok powłoki osadzonej z 10 stron).
+  '/inline_cukrzyca_00.css?v=1',
+  '/inline_docpro_00.css?v=1',
+  '/inline_docpro_01.css?v=1',
+  '/inline_homa_ir_00.css?v=1',
+  '/inline_index_00.css?v=1',
+  '/inline_index_01.css?v=1',
+  '/inline_instrukcja_00.css?v=1',
+  '/inline_kalkulator_klirens_00.css?v=1',
+  '/inline_kontakt_00.css?v=1',
+  '/inline_materialy_edukacyjne_00.css?v=1',
+  '/inline_notatki_00.css?v=1',
+  '/inline_o_aplikacji_00.css?v=1',
+  '/inline_polityka_prywatnosci_00.css?v=1',
+  '/inline_przelicznik_jednostek_00.css?v=1',
+  '/inline_regulamin_00.css?v=1',
+  '/inline_steroidy_00.css?v=1',
+  '/inline_subskrypcja_00.css?v=1',
+  '/inline_terminarz_00.css?v=1',
+  '/inline_terminarz_01.css?v=1',
+  '/inline_ustawienia_00.css?v=1',
+  '/vilda_embedded.css?v=1',
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];

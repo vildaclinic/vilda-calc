@@ -34,10 +34,7 @@
   <!-- App-shell (B1): jako panel w app.html (?embedded=1) chowamy własny nagłówek/sidebar/dock —
        chrome dostarcza shell. Identyczne jak w pozostałych hostowanych stronach. -->
   <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
-  <style>.vilda-embedded header,
-.vilda-embedded .sidebar,
-.vilda-embedded #mobileBottomDock,
-.vilda-embedded #scrollTopBtn{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
+  <link href="vilda_embedded.css?v=1" rel="stylesheet">
 <!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
      GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
      Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
@@ -59,7 +56,7 @@
   <meta name="description" content="Wiedza Vilda Clinic: praktyczny przewodnik po cukrzycy typu 1 (kalkulatory węglowodanów i dawki insuliny), filmy instruktażowe i prezentacje o preparatach hormonu wzrostu Omnitrope, Genotropin i Ngenla.">
   <meta name="robots" content="index,follow,max-image-preview:large,max-video-preview:-1">
   <link rel="canonical" href="https://wagaiwzrost.pl/materialy-edukacyjne.html">
-  <link href="style.css?v=83" rel="stylesheet">
+  <link href="style.css?v=84" rel="stylesheet">
   <link href="ios26-v2.css?v=26" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=43" rel="stylesheet">
@@ -210,45 +207,7 @@
 
 <main class="container">
   <div class="edu-shell">
-    <style>
-      .wk-wrap{width:100%;max-width:820px;margin:0 auto;padding:.5rem 0 1rem;box-sizing:border-box;}
-      .wk-h1{font-size:1.7rem;font-weight:600;color:#06403f;margin:0 0 1rem;}
-      .vilda-embedded .wk-h1{font-size:1.5rem;}
-      .wk-search{display:flex;align-items:center;gap:9px;background:#f7fbfb;border:1px solid rgba(0,131,141,.16);border-radius:999px;padding:.6rem 1rem;margin:0 0 1.1rem;}
-      .wk-search svg{width:18px;height:18px;color:#7a9396;flex:0 0 auto;}
-      .wk-search input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:.95rem;color:#0f2b33;outline:none;}
-      .wk-search input::placeholder{color:#9aacae;}
-      .wk-layout{display:flex;gap:14px;align-items:flex-start;}
-      .wk-rail{flex:0 0 140px;display:flex;flex-direction:column;gap:7px;}
-      /* Pigułki kategorii — wymuszamy własny wygląd ponad motyw Liquid iOS26,
-         który stylowałby każdy <button> na szkło (.liquid-ios26 button !important).
-         Aktywna pigułka = DOKŁADNIE ten sam highlight co aktywna pozycja sidebara
-         (--chrome-active-bg, biały tekst, cień), patrz vilda_chrome.css. */
-      .wk-rail .wk-pill{display:flex;align-items:center;gap:8px;font-size:.86rem;color:#3f5a5c !important;background:#fff !important;border:1px solid rgba(0,131,141,.12) !important;border-radius:11px !important;padding:.6rem .75rem;cursor:pointer;text-align:left;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;transition:background .15s,border-color .15s,color .15s;}
-      .wk-rail .wk-pill svg{width:17px;height:17px;flex:0 0 auto;}
-      .wk-rail .wk-pill:hover{border-color:rgba(0,131,141,.3) !important;}
-      .wk-rail .wk-pill.is-active{color:#fff !important;background:var(--chrome-active-bg,linear-gradient(135deg,var(--primary,#00838d),var(--secondary,#00b0a6))) !important;border-color:transparent !important;font-weight:700;box-shadow:0 4px 12px rgba(0,131,141,.22) !important;}
-      .wk-rail .wk-pill.is-active svg{color:#fff !important;}
-      .wk-grid{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;align-content:start;min-width:0;}
-      .wk-card{display:flex;flex-direction:column;text-decoration:none;background:#fff;border:1px solid rgba(0,131,141,.14);border-radius:14px;box-shadow:0 8px 28px rgba(0,81,88,.07);padding:.8rem;transition:transform .12s,box-shadow .12s;}
-      .wk-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,81,88,.13);}
-      .wk-card__top{display:flex;align-items:center;justify-content:space-between;}
-      .wk-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
-      .wk-ic svg{width:17px;height:17px;}
-      .wk-badge{font-size:.62rem;font-weight:600;padding:.12rem .5rem;border-radius:999px;white-space:nowrap;}
-      .wk-card__title{font-size:.9rem;font-weight:600;color:#0f2b33;margin-top:.55rem;}
-      .wk-card__desc{font-size:.76rem;color:#5a7274;margin-top:1px;}
-      .wk-cat-przewodnik .wk-ic,.wk-cat-przewodnik .wk-badge{background:#e8f6f7;color:#00838d;}
-      .wk-cat-film .wk-ic,.wk-cat-film .wk-badge{background:#fff5e6;color:#b8730e;}
-      .wk-cat-prezentacja .wk-ic,.wk-cat-prezentacja .wk-badge{background:#f1eefc;color:#6d4bc0;}
-      .wk-empty{grid-column:1/-1;text-align:center;color:#8a948f;font-size:.9rem;padding:1.5rem 0;}
-      @media (max-width:640px){
-        .wk-layout{flex-direction:column;}
-        .wk-rail{flex:none;flex-direction:row;width:100%;overflow-x:auto;gap:6px;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
-        .wk-rail .wk-pill{white-space:nowrap;padding:.5rem .8rem;border-radius:999px !important;}
-        .wk-grid{width:100%;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));}
-      }
-    </style>
+    <link href="inline_materialy_edukacyjne_00.css?v=1" rel="stylesheet">
 
     <div class="wk-wrap">
       <h1 class="wk-h1">Baza wiedzy</h1>

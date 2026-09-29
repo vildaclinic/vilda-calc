@@ -12,8 +12,9 @@ button,input[type=button],input[type=submit]{
   padding:var(--space-0-55) var(--space-1-1)
 }
 button:disabled{
-  opacity:.45;
-  cursor:not-allowed}
+  opacity:var(--opacity-disabled);
+  cursor:not-allowed;
+}
 @media(max-width:600px){
 button,input[type=button],input[type=submit]{
   width:100%;
@@ -219,49 +220,49 @@ body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.li
    cukrzyca.css, ustawienia.css, ustawienia.html <style>, notatki.css (= terminarz.css), subskrypcja.css
    ========================================================================== */
 .about-page .hero-note {
-  margin-top: 1rem;
-  padding: 1rem 1.05rem;
-  border-radius: 20px;
-  background: rgba(8, 145, 178, 0.09);
-  border: 1px solid rgba(8, 145, 178, 0.18);
-  width: 100%;
-  box-sizing: border-box;
-  text-align: justify;
-  text-justify: inter-word;
+  margin-top:var(--space-1);
+  padding:var(--space-1) 1.05rem;
+  border-radius:var(--radius-20);
+  background:rgba(8, 145, 178, 0.09);
+  border:var(--border-hairline) solid rgba(8, 145, 178, 0.18);
+  width:100%;
+  box-sizing:border-box;
+  text-align:justify;
+  text-justify:inter-word;
 }
 .about-page .hero-note strong {
   color: #0f4b48;
 }
 .about-page .about-callout {
-  margin-top: 1rem;
-  padding: 1rem 1.05rem;
-  border-left: 4px solid #0891b2;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.8);
+  margin-top:var(--space-1);
+  padding:var(--space-1) 1.05rem;
+  border-left:4px solid var(--info);
+  border-radius:var(--radius-18);
+  background:rgba(255,255,255,0.8);
 }
 .guide-placeholder{
   margin:0;
-  padding:.9rem 1rem;
-  border-radius:12px;
-  border:1px dashed rgba(0,131,141,0.24);
+  padding:var(--space-0-9) var(--space-1);
+  border-radius:var(--radius-12);
+  border:var(--border-hairline) dashed rgba(0,131,141,0.24);
   background:rgba(0,131,141,0.05);
   color:#5a7375;
   line-height:1.55;
 }
 .guide-module-copy{
   margin:0;
-  padding:.95rem 1rem;
-  border-radius:12px;
-  border:1px solid rgba(0,131,141,0.14);
+  padding:var(--space-0-95) var(--space-1);
+  border-radius:var(--radius-12);
+  border:var(--border-hairline) solid rgba(0,131,141,0.14);
   background:linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
   color:#456467;
   line-height:1.62;
 }
 .diab-note-box {
-  border: 1px solid #d7e5e5;
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
-  background: rgba(255,255,255,0.65);
+  border:var(--border-hairline) solid #d7e5e5;
+  border-radius:var(--radius);
+  padding:var(--space-0-85) var(--space-1);
+  background:rgba(255,255,255,0.65);
 }
 .diab-note-box--accent {
   border-color: rgba(0,131,141,0.24);
@@ -297,11 +298,11 @@ body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.li
 html.vilda-pro-active .pro-sync-note {
   display:flex;
   align-items:center;
-  gap:.6rem;
-  margin-top:.85rem;
-  padding:.65rem .85rem;
+  gap:var(--space-0-6);
+  margin-top:var(--space-0-85);
+  padding:var(--space-0-65) var(--space-0-85);
   background:#f0f7ff;
-  border:1px solid rgba(0,100,220,.15);
+  border:var(--border-hairline) solid rgba(0,100,220,.15);
   border-radius:.6rem;
   font-size:.82rem;
   color:var(--text-soft);
@@ -321,12 +322,12 @@ html.vilda-pro-active .pro-sync-note {
 .notes-pii {
   display:flex;
   align-items:flex-start;
-  gap:.7rem;
-  padding:.8rem 1rem;
-  margin-bottom:1rem;
+  gap:var(--space-0-7);
+  padding:var(--space-0-8) var(--space-1);
+  margin-bottom:var(--space-1);
   background:#f0f7ff;
-  border:1px solid rgba(0,100,220,.16);
-  border-radius:12px;
+  border:var(--border-hairline) solid rgba(0,100,220,.16);
+  border-radius:var(--radius-12);
   font-size:.85rem;
   color:var(--text-2);
   line-height:1.45;
@@ -341,26 +342,23 @@ html.vilda-pro-active .pro-sync-note {
    }
 .notes-pii__close {
   flex-shrink:0;
-  border:0;
-  background:transparent;
   cursor:pointer;
-  color:#5a7274;
   font-size:1.1rem;
   line-height:1;
-  padding:.1rem .35rem;
+  padding:.1rem var(--space-0-35);
 }
 .notes-alert {
-  display: none;
-   align-items: flex-start;
-   gap: .7rem;
-  padding: .8rem 1rem;
-   margin-bottom: 1rem;
-  background: #fff5f5;
-   border: 1px solid rgba(192,57,90,.24);
-   border-radius: 12px;
-  font-size: .85rem;
-   color: #8a2338;
-   line-height: 1.45;
+  display:none;
+  align-items:flex-start;
+  gap:var(--space-0-7);
+  padding:var(--space-0-8) var(--space-1);
+  margin-bottom:var(--space-1);
+  background:#fff5f5;
+  border:var(--border-hairline) solid rgba(192,57,90,.24);
+  border-radius:var(--radius-12);
+  font-size:.85rem;
+  color:#8a2338;
+  line-height:1.45;
 }
 .notes-alert__icon {
    font-size: 1.05rem;
@@ -372,13 +370,10 @@ html.vilda-pro-active .pro-sync-note {
    }
 .notes-alert__close {
   flex-shrink:0;
-  border:0;
-  background:transparent;
   cursor:pointer;
-  color:#8a2338;
   font-size:1.1rem;
   line-height:1;
-  padding:.1rem .35rem;
+  padding:.1rem var(--space-0-35);
 }
 @media (max-width: 600px) {
   .notes-pii__close {
@@ -394,14 +389,14 @@ html.vilda-pro-active .pro-sync-note {
    }
 }
 .sub-preview__free-notice {
-  margin-top: 0.9rem;
-  padding: 0.6rem 0.8rem;
-  background: #f5f9f9;
-  border: 1px dashed #c0d0d0;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  color: #8aadad;
-  text-align: center;
+  margin-top:var(--space-0-9);
+  padding:var(--space-0-6) var(--space-0-8);
+  background:var(--card);
+  border:var(--border-hairline) dashed #c0d0d0;
+  border-radius:var(--radius-8);
+  font-size:0.78rem;
+  color:#8aadad;
+  text-align:center;
 }
 /* Callout — drabinka strony cukrzyca.html (listy selektorów przycięte do .diab-note-box*; body ma klasę page-cukrzyca) */
 body.page-cukrzyca .diab-note-box {
@@ -678,42 +673,42 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
    display: flex;
    }
 .vilda-pro-gate-banner {
-  width: 100%;
-  box-sizing: border-box;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: .45rem .55rem;
-  font-size: .82rem;
-  border-radius: 10px;
-  padding: .4rem .55rem .4rem .8rem;
-  line-height: 1.3;
+  width:100%;
+  box-sizing:border-box;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:var(--space-0-45) var(--space-0-55);
+  font-size:.82rem;
+  border-radius:var(--radius-10);
+  padding:var(--space-0-4) var(--space-0-55) var(--space-0-4) var(--space-0-8);
+  line-height:1.3;
 }
 .vilda-pro-gate-banner__text {
   flex: 1 1 150px;
 }
 .vilda-pro-gate-banner__btn {
-  border: none !important;
-  border-radius: 999px !important;
-  padding: .24rem .75rem !important;
-  background: transparent;
-  font-size: .78rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  flex: 0 0 auto;
-  transition: background .15s;
+  border:none !important;
+  border-radius:var(--radius-pill) !important;
+  padding:.24rem var(--space-0-75) !important;
+  background:transparent;
+  font-size:.78rem;
+  font-weight:600;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  white-space:nowrap;
+  flex:0 0 auto;
+  transition:background .15s;
 }
 @media (max-width: 540px) {
   .vilda-pro-gate-banner {
-    flex-direction: column;
-    align-items: stretch;
-    padding: .55rem .8rem;
-    gap: .5rem;
-  }
+  flex-direction:column;
+  align-items:stretch;
+  padding:var(--space-0-55) var(--space-0-8);
+  gap:var(--space-0-5);
+}
   .vilda-pro-gate-banner__text {
     flex: none;
     width: 100%;
@@ -725,9 +720,9 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
   }
 }
 .vilda-pro-gate-banner--upgrade {
-  background: #f5eeff;
-  border: 1px solid rgba(153,0,255,.28);
-  color: #5c008a;
+  background:#f5eeff;
+  border:var(--border-hairline) solid rgba(153,0,255,.28);
+  color:#5c008a;
 }
 .vilda-pro-gate-banner--upgrade .vilda-pro-gate-banner__btn {
   background: #9900ff !important;
@@ -737,13 +732,13 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
    background: #7a00cc !important;
    }
 .vilda-pro-gate-banner--login {
-  background: #e5f9fb;
-  border: 1px solid rgba(0,131,141,.28);
-  color: #005a61;
+  background:#e5f9fb;
+  border:var(--border-hairline) solid rgba(0,131,141,.28);
+  color:#005a61;
 }
 .vilda-pro-gate-banner--login .vilda-pro-gate-banner__btn {
-  background: #00838d !important;
-  color: #fff !important;
+  background:var(--primary) !important;
+  color:#fff !important;
 }
 .vilda-pro-gate-banner--login .vilda-pro-gate-banner__btn:hover {
    background: #006b73 !important;

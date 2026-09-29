@@ -7,7 +7,8 @@ button.icon{
   font-weight:900;
   line-height:1}
 button.icon:hover{
-  opacity:.8}
+  opacity:var(--opacity-muted);
+}
 button.add-row{
   padding:var(--space-0-45) var(--space-0-9);
   cursor:pointer;
@@ -19,8 +20,9 @@ button,input[type=button],input[type=submit]{
   padding:var(--space-0-55) var(--space-1-1)
 }
 button:disabled{
-  opacity:.45;
-  cursor:not-allowed}
+  opacity:var(--opacity-disabled);
+  cursor:not-allowed;
+}
 button.icon{
   font-size:1.25rem;
   padding:var(--space-0-25) var(--space-0-5);
@@ -136,32 +138,32 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 /* ---- Button — .vild-tanner-toggle (index.html inline <style> = src/html-styles/index.css 305-342; ten sam blok w docpro.html) ---- */
   .vild-tanner-toggle,
   .liquid-ios26 .vild-tanner-toggle{
-  display:block!important;
-  width:fit-content!important;
-  margin:0.7rem auto 0!important;
-  padding:8px 12px!important;
-  font-size:.82rem!important;
-  font-weight:600!important;
-  background:transparent!important;
-  border:1px solid #cfe0e3!important;
-  border-radius:9px!important;
-  color:#5a7274!important;
-  cursor:pointer!important;
-  font-family:inherit!important;
-  line-height:1.2!important;
-  height:auto!important;
-  min-height:0!important;
-  box-shadow:none!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  text-align:center!important;
-  }
+  display:block !important;
+  width:fit-content !important;
+  margin:var(--space-0-7) auto 0 !important;
+  padding:var(--space-8px) var(--space-12px) !important;
+  font-size:.82rem !important;
+  font-weight:600 !important;
+  background:transparent !important;
+  border:var(--border-hairline) solid #cfe0e3 !important;
+  border-radius:var(--radius-9) !important;
+  color:var(--text-muted) !important;
+  cursor:pointer !important;
+  font-family:inherit !important;
+  line-height:1.2 !important;
+  height:auto !important;
+  min-height:0 !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  text-align:center !important;
+}
   .vild-tanner-toggle:hover,
   .liquid-ios26 .vild-tanner-toggle:hover{
-  border-color:#00838d!important;
-  color:#00838d!important;
-  background:transparent!important;
-  }
+  border-color:var(--primary) !important;
+  color:var(--primary) !important;
+  background:transparent !important;
+}
 
 /* ---- ProButton — baza + nadpisania .liquid-ios26 w kolejności źródła (style.css 1053-1066, 1150-1160, 1702-1722, 1767-1786, 1791-1795, 1799-1831, 1836-1863, 1866-1869, 1872-1899, 1996-2004, 3226-3227, 4825-4826) ---- */
 .circ-result-action .circ-action-btn .pro-superscript{

@@ -1,0 +1,30 @@
+.vild-age-row{display:flex;gap:var(--space-12px);align-items:flex-start;}
+        /* DOB-AGE-1: pola wieku liczone z daty urodzenia — wygląd „tylko do odczytu". */
+        .vild-age-row input.vild-age-auto,
+        input#dobInput[readonly]{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;}
+        .vild-dob-note{margin-top:5px;font-size:.78rem;line-height:1.35;color:#0f6e56;}
+        /* P-TOZSAMOSC: pola tożsamości z kartoteki — wygląd „tylko do odczytu" jak data urodzenia. */
+        input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{background:#eef3f4;border-color:#cfdcde;color:#5a6f73;opacity:1;}
+        .vild-dob-error{margin-top:5px;font-size:.78rem;line-height:1.35;color:#a32d2d;}
+        .vild-dob-clear{margin-top:var(--space-6px);padding:0;
+          font-family:inherit;font-size:.78rem;text-decoration:underline;cursor:pointer;}
+        .vild-weeks-row{margin-top:var(--space-0-7);padding:9px var(--space-10px);background:#eaf4f5;border:var(--border-hairline) solid #cfe3e5;border-radius:var(--radius-6);}
+        .vild-weeks-row > label{margin-top:0;}
+        .vild-age-row > label{flex:1 1 0;min-width:0;}
+        .vild-age-row > label.vild-age-years{flex:1.1 1 0;}
+        @media (max-width:360px){ .vild-age-row{flex-direction:column;gap:0;} }
+        /* Tanner toggle — wygląd jak makieta. !important + prefiks .liquid-ios26, bo motyw
+           liquid glass nadpisuje `button` (background/border/box-shadow) z !important. */
+        .vild-tanner-toggle,
+        .liquid-ios26 .vild-tanner-toggle{
+          /* blok o szerokości treści, w rytmie formularza: 0.7rem nad i (przez margin-top
+             następnej etykiety) 0.7rem pod → symetrycznie między Płcią a Wagą.
+             Wyśrodkowany (margin auto) — decyzja właściciela 2026-09-09. */
+          display:block!important;width:fit-content!important;margin:var(--space-0-7) auto 0!important;
+          padding:var(--space-8px) var(--space-12px)!important;font-size:.82rem!important;font-weight:600!important;
+          background:transparent!important;border:var(--border-hairline) solid #cfe0e3!important;border-radius:var(--radius-9)!important;
+          color:var(--text-muted)!important;cursor:pointer!important;font-family:inherit!important;line-height:1.2!important;
+          height:auto!important;min-height:0!important;
+          box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;text-align:center!important;}
+        .vild-tanner-toggle:hover,
+        .liquid-ios26 .vild-tanner-toggle:hover{border-color:var(--primary)!important;color:var(--primary)!important;background:transparent!important;}
