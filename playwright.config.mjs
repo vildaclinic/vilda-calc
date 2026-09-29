@@ -63,9 +63,9 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 1000 },
         // Service worker domyślnie zablokowany, jak w projekcie mobilnym i w 73 plikach, które
-        // robiły to u siebie. Do SW 1.1.105 ios26-ui.js przeładowywał stronę, gdy SW przejął ją
+        // robiły to u siebie. Do SW 1.1.106 ios26-ui.js przeładowywał stronę, gdy SW przejął ją
         // po pierwszej instalacji, a od P-SW-PRECACHE instalacja trwa kilka sekund — reload
-        // trafiał w środek testu („Execution context was destroyed”). Od SW 1.1.106
+        // trafiał w środek testu („Execution context was destroyed”). Od SW 1.1.107
         // (P-SW-PIERWSZA-WIZYTA) tego przeładowania nie ma; blokada zostaje, bo bez niej każdy
         // test pobierałby w tle ok. 24 MB precache. Pliki, które sprawdzają SW, włączają go jawnie:
         // test.use({ serviceWorkers: 'allow' }) — także te z własnym launchPersistentContext,

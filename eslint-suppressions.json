@@ -194,7 +194,7 @@
   },
   "vilda_diet_recommendations.js": {
     "no-useless-assignment": {
-      "count": 6
+      "count": 5
     },
     "no-useless-escape": {
       "count": 3

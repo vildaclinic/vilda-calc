@@ -185,11 +185,11 @@ test('nawodnienie: norma łącznie z jedzeniem plus pasmo dla napojów (70–80 
   expect(n.plyny && n.plyny.litry).toBe(2.35);
   expect(n.plyny.napojeOdL).toBeCloseTo(2.35 * 0.7, 6);
   expect(n.plyny.napojeDoL).toBeCloseTo(2.35 * 0.8, 6);
-  expect(norm(n.text)).toContain('Zalecane jest odpowiednie nawodnienie: według polskich norm żywienia wystarczające spożycie płynów w tym wieku i tej płci wynosi około 2,35 l dziennie, licząc też wodę z jedzenia. Około jednej piątej tej ilości dają posiłki (zupy, owoce, warzywa, nabiał), więc w napojach potrzeba ok. 1,6–1,9 l dziennie, najlepiej wody i napojów niesłodzonych.');
+  expect(norm(n.text)).toContain('Zalecane jest odpowiednie nawodnienie: według polskich norm żywienia wystarczające spożycie płynów w tym wieku i tej płci wynosi około 2,35 l dziennie, licząc też wodę z jedzenia. Około 20–30 % tej ilości dają posiłki (zupy, owoce, warzywa, nabiał), więc w napojach potrzeba ok. 1,6–1,9 l dziennie, najlepiej wody i napojów niesłodzonych.');
   expect(n.text).not.toContain('łącznie z wodą zawartą w pożywieniu');
   expect(norm(n.raport.replace(/<[^>]+>/g, ' '))).toContain('2,35 l dziennie licząc wodę z jedzenia; w napojach ok. 1,6–1,9 l, najlepiej woda i napoje niesłodzone');
   const d = await policz(page, { age: 3, sex: 'F', w: 22, h: 100 });
-  expect(norm(d.text)).toContain('wynosi około 1,25 l dziennie, licząc też wodę z jedzenia. Około jednej piątej tej ilości dają posiłki (zupy, owoce, warzywa, nabiał), więc w napojach potrzeba ok. 0,9–1,0 l dziennie');
+  expect(norm(d.text)).toContain('wynosi około 1,25 l dziennie, licząc też wodę z jedzenia. Około 20–30 % tej ilości dają posiłki (zupy, owoce, warzywa, nabiał), więc w napojach potrzeba ok. 0,9–1,0 l dziennie');
 });
 
 test('zapis PDF: iOS z ekranu głównego → arkusz udostępniania z plikiem PDF; poza nim pobranie; toast wg drogi', async ({ page }) => {

@@ -99,7 +99,7 @@
     'vilda_gh_therapy_resource_audit.js?v=33',
     'vilda_app_helpers.js?v=3',
     'vilda_macro_practice.js?v=2',
-    'vilda_data_import_export.js?v=88',
+    'vilda_data_import_export.js?v=89',
     'vilda_baseline_pacjenta.js?v=1',
     'vilda_dob_age.js?v=7',
     'vilda_food_summary.js?v=2',
@@ -114,16 +114,16 @@
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=2',
     'vilda_ree_rownania_data.js?v=3',
-    'vilda_diet_plan_ui.js?v=39',
-    'vilda_bmi_journey.js?v=25',
-    'vilda_estimated_intake_ui.js?v=2',
+    'vilda_diet_plan_ui.js?v=40',
+    'vilda_bmi_journey.js?v=26',
+    'vilda_estimated_intake_ui.js?v=3',
     'vilda_estimated_intake_runtime.js?v=1',
     'vilda_estimated_intake_input_model.js?v=1',
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=229',
     'vilda_smoke_tests.js?v=77',
-    'vilda_diet_recommendations.js?v=64',
-    'nutrition_norms.js?v=48',
+    'vilda_diet_recommendations.js?v=65',
+    'nutrition_norms.js?v=49',
     'nutrition_micros.js?v=28'
   ]);
   const MANIFEST = Object.freeze([
@@ -620,7 +620,7 @@
         typeof snapshotFn === 'function' &&
         !!(snapshot && snapshot.readOnly === true && snapshot.moduleOnly === true && snapshot.didRenderDom === false && snapshot.didWriteStorage === false && snapshot.didWriteWindowState === false) &&
         !!(empty && empty.branch === 'empty-rows-message' && empty.html.indexOf('Uzupełnij co najmniej dwa wiersze') !== -1 && empty.mutatesDom === false && empty.mutatesWindowState === false) &&
-        !!(maintenance && maintenance.branch === 'single-row-maintenance' && maintenance.html.indexOf('Utrzymanie masy') !== -1 && maintenance.html.indexOf('PAL 1.4') !== -1 && maintenance.hasModeBadge === true) &&
+        !!(maintenance && maintenance.branch === 'single-row-maintenance' && maintenance.html.indexOf('Utrzymanie masy') !== -1 && maintenance.html.indexOf('PAL 1,4') !== -1 && maintenance.hasModeBadge === true) &&
         !!(infantUnder6 && infantUnder6.html.indexOf('poniżej 6 miesięcy') !== -1) &&
         !!(infantButte && infantButte.html.indexOf('Butte') !== -1) &&
         !!(multi && multi.branch === 'multi-row-interval-render' && multi.legendVisible === true && multi.html.indexOf('Oczekiwany przyrost') !== -1 && multi.html.indexOf('intake-results-note') !== -1) &&

@@ -388,7 +388,9 @@
     }
 
     // P-DIETA-CEL-WLASNY rata C: nagłówek sekcji wg strategii generatora — bez „redukcji” przy utrzymaniu.
-    var naglowek = dane.strategia === 'utrzymanie' || stabilizacja ? 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)'
+    // P-DIETA-AUDYT2 A5: dorosły, u którego żadna dieta nie mieści się nad minimum — kafel pokazuje zapotrzebowanie, więc nagłówek utrzymania.
+    var bezDiety = !!(dane.dorosly && dane.strategia === 'reduction' && dane.energia && !dane.energia.dietaKlucz);
+    var naglowek = dane.strategia === 'utrzymanie' || stabilizacja || bezDiety ? 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)'
       : dane.strategia === 'przyrost' ? 'ZAPOTRZEBOWANIE ENERGETYCZNE I PRZYROST MASY CIAŁA'
       : dane.strategia === 'cel-wlasny' ? 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI DO CELU WŁASNEGO'
       : 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
