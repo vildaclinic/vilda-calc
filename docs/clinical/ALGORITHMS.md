@@ -5834,7 +5834,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Zwijana lista „Poprzednie pomiary” z licznikiem, stan per pacjent (P-HISTORIA-ZWIJANA, SW 1.1.109, 2026-09-29)
+## Zwijana lista „Poprzednie pomiary” z licznikiem, stan per pacjent (P-HISTORIA-ZWIJANA, SW 1.1.109, scalanie per pacjent SW 1.1.111, 2026-09-29)
 
 **Decyzja właściciela (2026-09-29).** W karcie „Zaawansowane obliczenia wzrostowe” lista „Wprowadź poprzednie pomiary”
 ma się zwijać; w wierszu, który ją rozwija, ma być licznik wpisów historycznych, a stan zwinięcia ma być zapamiętany per
@@ -5864,13 +5864,26 @@ z sześcioma pomiarami: lista zajmowała ok. 940 px na desktopie i ok. 1220 px n
 
 **Przechowywanie.** Preferencja konta `advHistoryCollapsed` zarejestrowana w `vilda_persistence_adapter.js` (1.7.1) jako
 `scope:"ui", kind:"preference", storage:"cloud-synced"` — ten sam tor co `cardCollapseState` i zwijanie przypomnień
-(`onPreferenceWrite` → `userPreferences` sejfu → zaszyfrowany payload synchronizacji; przy scalaniu wygrywa nowszy zapis
-całego klucza). Wartość to mapa `{ <UUID pacjenta>: 1 }`: tylko pacjenci ze zwiniętą listą (rozwinięta jest domyślna, więc
-nie zostawia wpisu), bez dat, najwyżej 300 wpisów (najdawniej przełączone wypadają), wpis znika po usunięciu pacjenta
-z sejfu. Identyfikator to losowy UUID z sejfu, nie nazwisko. Pacjent niezapisany: stan w pamięci strony; pierwszy zapis
-(`vilda:patient-loaded`, `source:"save"`) przenosi go pod nadany identyfikator. Zapis stanu idzie z `force:true` (okno
-blokady po wczytaniu pacjenta wstrzymuje zapis danych, a to jest preferencja widoku). Gdy wskaźnik zapisu mówi „nowy
-pacjent”, stan nie trafia pod identyfikator poprzedniej osoby, tylko do pamięci strony.
+(`onPreferenceWrite` → `userPreferences` sejfu → zaszyfrowany payload synchronizacji). Wartość to mapa per pacjent:
+`{ <UUID pacjenta>: { z: 1, updatedAtISO } }` dla zwiniętej listy, a po rozwinięciu nagrobek `{ deleted: true, updatedAtISO }`
+(żyje rok, jak nagrobki `wlsched`). Jedyna data w mapie to chwila przełączenia. Najwyżej 300 wpisów, najdawniej przełączone
+wypadają; usunięcie pacjenta z sejfu zamienia wpis w nagrobek. Identyfikator to losowy UUID z sejfu, nie nazwisko.
+Pacjent niezapisany: stan w pamięci strony; pierwszy zapis (`vilda:patient-loaded`, `source:"save"`) przenosi go pod
+nadany identyfikator. Zapis stanu idzie z `force:true` (okno blokady po wczytaniu pacjenta wstrzymuje zapis danych,
+a to jest preferencja widoku). Gdy wskaźnik zapisu mówi „nowy pacjent”, stan nie trafia pod identyfikator poprzedniej
+osoby, tylko do pamięci strony.
+
+**Scalanie per pacjent (poprawka po recenzji Codex do #479, SW 1.1.111).** W pierwszej wersji (SW 1.1.109) mapa
+`{ <UUID>: 1 }` była scalana jak każda preferencja: wygrywał nowszy zapis całego klucza. Dwa urządzenia, które offline
+przełączyły listy RÓŻNYCH pacjentów, nadpisywały się przy synchronizacji i stan jednego z nich przepadał. Teraz
+`mergeSyncPayload` w `vilda_vault.js` scala `advHistoryCollapsed` per wpis, tą samą funkcją co `wlsched`/`wllists`
+(nowszy `updatedAtISO` wpisu wygrywa, nagrobek przenosi rozwinięcie), i odkłada wynik do lokalnej preferencji przez
+`VildaPersistence.applyPreferenceFromCloud`. Mapa z wersji 1 jest przy starcie modułu (i po scaleniu) przepisywana
+w nowym formacie, a wpis `1` czytany jako zwinięty i najstarszy. Okres przejściowy: urządzenie ze starą wersją
+(SW ≤ 1.1.110) nie czyta nowego formatu, więc pokazuje listy rozwinięte, a jego przełączenia (wpisy `1`) nie są
+przenoszone na nowe urządzenia; znika po aktualizacji aplikacji. Testy: `tests/unit/historia-pomiarow-zwijanie.test.mjs`
+(dwa urządzenia na prawdziwym sejfie — różni pacjenci w obie strony, nagrobek, starsza zmiana nie cofa nowszej; mutacja:
+bez tej zmiany w sejfie padają dwa z tych testów).
 
 **Kolejność zdarzeń (zmierzona w kodzie).** Przy wyborze pacjenta z sejfu wiersze odbudowuje `applyLoadedData`, potem
 przychodzi `vilda:patient-loaded` (z identyfikatorem), a `vilda:json-imported` jeszcze później (`setTimeout 0`). Moduł
