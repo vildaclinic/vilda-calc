@@ -5834,6 +5834,43 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Audyt zaleceń dietetycznych — rata 1: błędy kodu i niespójności (P-DIETA-AUDYT2 rata 1, SW 1.1.106, 2026-09-29)
+
+**Zgłoszenie i metoda.** Właściciel zlecił pełny audyt funkcji zaleceń dietetycznych we wszystkich grupach wieku i scenariuszach.
+Przegląd prawdziwej strony: 780 scenariuszy (0,25–80 lat, obie płcie, niedowaga → ciężka otyłość, strategia domyślna,
+redukcja i stabilizacja), porównanie liczb i tekstów między zaleceniami, kartą planu, planem PDF, raportem po wizycie,
+„Drogą do normy”, kartą spożycia i kartą norm; równolegle trzy przeglądy kodu (generator, silnik planu, spójność konsumentów).
+Część A raportu (błędy kodu i niespójności) — **decyzja właściciela 2026-09-29: „koduj ratę 1”**. Część B (progi i wybory
+kliniczne: skok PAL na 97. centylu u 4–9 lat, na 85. centylu u 10–18 lat, BMI 30 u dorosłego, 18/19 lat, zakres Molnára u dziewcząt,
+sufit tempa przy ciężkiej otyłości, symulacja stałego tempa wzrastania, seniorzy) czeka na osobne decyzje.
+
+**Zmiany (kliniczne w rozumieniu AGENTS.md: zmieniają wyświetlane liczby lub zdania; reguły kliniczne z wcześniejszych decyzji bez zmian).**
+
+| Punkt | Było | Jest |
+|---|---|---|
+| A1 dieta domyślna | raz ustawiona zostawała po zmianie masy, pacjenta i „Wyczyść wszystkie pola”; otyły 13-latek (160 cm, 81 kg) po pacjencie z nadwagą: lekka ≤ 2250 | idzie za zaleceniem silnika (umiarkowana ≤ 2100), dopóki lekarz jej nie wybierze; wybór w zapisie (`plan.dietaWybrana`), zapis bez znacznika = domyślna |
+| A2 czas do normy | `energySimulateMonthsToBmiTarget` dodawał pole miesięcy do wieku dziesiętnego (13 l. 6 mies.: 17,5 mies. w zaleceniach wobec 18 mies. w „Drodze do normy”); stabilizacja: własna pętla ze STAŁĄ masą | wiek jak w klasie BMI (`dietAgeMonthsExact`); stabilizacja z przyrostem masy ze wzrastania (ta sama masa co kontrola po 12 tygodniach z P-DIETA-STAB rata 1), zalecenia z symulacji silnika; chł. 8 l., 33 kg, 130 cm: ok. 3 → ok. 7 mies., zdanie „masa przybywa tylko w tempie wynikającym ze wzrastania (ok. 0,19 kg/mies.)” |
+| A3 karta „Normy żywieniowe” | dziecko z nadmiarem masy: Henry × PAL × 1,01 z podpisem „Jak w planie” (13-latek z nadwagą 2399 wobec 2206 w planie); PAL 1,2 dorosłego zamieniany na 1,6; nota „ocena kliniczna… Henry × PAL × 1 %” | energia jak plan (REE z równania-danych, bez dodatku na wzrastanie; 13-latek 76/168: 2507 = plan); PAL 1,2 dorosłego przyjmowany, gdy karta dziedziczy go z planu („Jak w planie (PAL 1,2)”, PAL poza normami); ręcznie na karcie nadal niedostępny (NORM-PAL14); nota zgodna z wiekiem i z planem |
+| A4 18,0–18,99 lat | „powyżej 99. centyla – nadwaga (85.–97. centyl)”; masa docelowa z P85 siatki (78,9 kg) obok zapotrzebowania dla BMI 24,9 (80,7 kg); „Droga do normy” liczyła redukcję mimo stabilizacji | zdanie z progami dorosłymi; masa docelowa z silnika (BMI 24,9); „Droga do normy” rozróżnia ocenę BMI (dorosła od 18 lat) i ścieżkę planu (do 19 lat, `planDziecko`) |
+| A5 dorosły bez miejsca na deficyt | „deficyt 500–750 kcal” (K 70 l., zapotrzebowanie 1400 kcal → 650–900 kcal); PDF „Tempo redukcji” | zdanie o minimum (`MIN_INTAKE_ADULT`), nagłówek i tytuł PDF bez „redukcji” |
+| A6 < 2 lat | plan „W wieku 2–5 lat” i „≤ 1000 kcal” (minimum) ponad zapotrzebowanie 770–900 kcal | plan dla nadmiaru masy od 2 lat — dziecko < 2 lat z nadmiarem masy bez zaleceń energetycznych (komunikat „od 2. roku życia”), bez nadmiaru masy bez zmian (rata E: klasyfikacja, normy, ruch, kontrola); `maintenanceKcal` = zapotrzebowanie (bez podłogi), górna granica stabilizacji nigdy wyższa od zapotrzebowania |
+| A7 sprzeczne zdania | po zakończonym wzrastaniu „U rosnącego nastolatka… BMI obniża się przy dalszym wzrastaniu”; karta planu: powód stabilizacji „2–5 i 6–11 lat < 99. c.” (nieaktualny), „podaż równa zapotrzebowaniu” obok „≤”, „nie szybciej niż 1–2 kg/mies.” obok „0,5 kg/mies.” | zdania warunkowane zakończeniem wzrastania (flaga lub praktycznie zakończone); powód z reguły albo z wyboru lekarza; „nie większa niż”; tempo z diet silnika |
+| A8 pozostałe | tytuł PDF „plan redukcji” przy przyroście; dziecko bez klasy BMI → procentowe diety dorosłego; cel własny nastolatka „ok. X” do 100 kcal i notka „deficyt do 15 %, maks. 500 kcal”; `dane.energia.reeKcal` Henry’ego przy Molnárze; flagi „Wit. D”/„Picie płynów” bez skutku u dziecka bez nadmiaru masy; „PAL 1.4” z kropką | tytuł „Twój plan przyrostu masy ciała”; brak planu; górna granica dnia z silnika i „tempo do 1 kg/mies.”; REE/TEE po korekcie; zdania wit. D (Płudowski 2023) i płynów u każdego dziecka; „około jednej piątej” wody z posiłków → „około 20–30 %” (spójnie z pasmem napojów 70–80 % i EFSA 2010); „PAL 1,4” |
+
+**Pliki.** `vilda_diet_plan_ui.js` (`?v=40`), `vilda_diet_recommendations.js` (`?v=65`), `vilda_data_import_export.js` (`?v=89`),
+`nutrition_norms.js` (`?v=49`), `vilda_bmi_journey.js` (`?v=26`), `vilda_raport_plan.js` (`?v=20`), `vilda_estimated_intake_ui.js` (`?v=3`);
+SW 1.1.105 → 1.1.106 (po P-SW-PRECACHE), precache append-only, `?v=` na stronach i w smoke, fixture wersji; baza wyjątków ESLint o jeden wpis mniejsza
+(usunięta zbędna zmienna generatora).
+
+**Testy.** Nowe: `tests/e2e/dieta-audyt2.spec.mjs` (A1–A8, 20 przypadków na prawdziwej stronie), `tests/unit/dieta-audyt2.test.mjs`
+(5 przypadków na silniku; na kodzie sprzed zmiany 5/5 czerwone). Zaktualizowane oczekiwania (liczba asercji nie maleje):
+`rata-x-czas-do-normy-wzrastanie` (stabilizacja z przyrostem masy), `zalecenia-energetyczne-strategia` (atrapa progu 22 —
+scenariusz 60,5 kg), strażnicy źródeł `raport-plan-stabilizacja-rata-g2`, `rata-z-dorosly-gorna-kontrola`, `tempo-gh-porownanie`,
+`spozycie-utrzymanie` (PAL z przecinkiem), smoke `estimated-intake-ui` („PAL 1,4”), `dieta-tempo-rata-g1` G1a-3 (powód stabilizacji
+„przy nadwadze w wieku 6–11 lat” — BMI 95,9. c. to nadwaga), `poprawki-zalecen-rata-j` i `zalecenia-energetyczne-tresci` („20–30 %”).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna raty 1; część B raportu audytu; scalenie i wdrożenie.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.

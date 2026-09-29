@@ -35,7 +35,7 @@ async function pacjent(page, { sex, age, months, weight, height }) {
 test('SP-1: chłopiec 13 l., 76 kg, 168 cm — karta spożycia 2507 kcal (REE wg Molnára), tyle samo co plan; dotąd 2731', async ({ page }) => {
   test.setTimeout(120_000);
   const r = await pacjent(page, { sex: 'M', age: 13, months: 0, weight: 76, height: 168 });
-  expect(r.karta).toEqual({ kcal: 2507, pal: '1.4', dopisek: '; REE wg Molnára 1995' });
+  expect(r.karta).toEqual({ kcal: 2507, pal: '1,4', dopisek: '; REE wg Molnára 1995' });
   expect(r.planPal).toBe(1.4);
   expect(r.planUtrzymanie).toBe(2507);
   expect(r.podaz).toBe(2500);
@@ -60,7 +60,7 @@ test('SP-2: 13-latek z masą prawidłową (52 kg) — bez zmian: Henry z dodatki
 test('SP-3: PAL karty spożycia idzie za planem, dopóki lekarz go nie zmieni; wybór lekarza zostaje po zmianie masy', async ({ page }) => {
   test.setTimeout(120_000);
   const r = await pacjent(page, { sex: 'M', age: 13, months: 0, weight: 76, height: 168 });
-  expect(r.karta.pal).toBe('1.4');
+  expect(r.karta.pal).toBe('1,4');
   // lekarz wybiera w karcie spożycia PAL 1,8 (select bywa w zwiniętej karcie — zmiana wartości i zdarzenie change)
   await page.evaluate(() => { const el = document.getElementById('intakePal'); el.value = '1.8'; el.dispatchEvent(new Event('change', { bubbles: true })); window.update(); });
   await page.waitForTimeout(1200);
@@ -72,7 +72,7 @@ test('SP-3: PAL karty spożycia idzie za planem, dopóki lekarz go nie zmieni; w
     const m = norm(document.body.innerText).match(/Utrzymanie masy: ok\. (\d+) kcal\/d \(PAL ([\d.,]+)/);
     return { pal: m && m[2], kcal: m && Number(m[1]), planPal: window.buildDietEnergyRecommendationResult().dane.energia.palUzyty };
   });
-  expect(po.pal).toBe('1.8');
+  expect(po.pal).toBe('1,8');
   expect(po.planPal).toBe(1.4);
   expect(po.kcal).toBe(Math.round((50.9 * 78 + 25.3 * 168 - 50.3 * 13 + 26.9) / 4.184 * 1.8));
 });

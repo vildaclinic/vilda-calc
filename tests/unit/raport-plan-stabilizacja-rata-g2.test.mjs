@@ -54,7 +54,11 @@ describe('rata G2: „Twoja droga” w planie PDF przy stabilizacji dziecka', ()
 describe('rata G2: tytuł planu PDF (generator zaleceń)', () => {
   it('stabilizacja dziecka → „Twój plan utrzymania masy ciała”; pozostałe tytuły bez zmian', () => {
     const src = czytaj('vilda_diet_recommendations.js');
-    expect(src).toContain('d.dane&&d.dane.strategia==="stabilization"&&!d.dane.dorosly?"Tw\\xF3j plan utrzymania masy cia\\u0142a":d.dane&&d.dane.masa&&d.dane.masa.docelowaKg!=null?"Tw\\xF3j plan redukcji masy cia\\u0142a":"Tw\\xF3j plan \\u017Cywieniowy"');
+    expect(src).toContain('d.dane&&d.dane.strategia==="stabilization"&&!d.dane.dorosly?"Tw\\xF3j plan utrzymania masy cia\\u0142a"');
+    // P-DIETA-AUDYT2 A5/A8: przyrost masy i redukcja bez dostępnej diety (dorosły) mają własne tytuły; reszta łańcucha bez zmian
+    expect(src).toContain('d.dane&&d.dane.strategia==="przyrost"?"Tw\\xF3j plan przyrostu masy cia\\u0142a"');
+    expect(src).toContain('d.dane&&d.dane.strategia==="reduction"&&d.dane.energia&&!d.dane.energia.dietaKlucz&&d.dane.dorosly?"Tw\\xF3j plan \\u017Cywieniowy"');
+    expect(src).toContain(':d.dane&&d.dane.masa&&d.dane.masa.docelowaKg!=null?"Tw\\xF3j plan redukcji masy cia\\u0142a":"Tw\\xF3j plan \\u017Cywieniowy"');
   });
 });
 

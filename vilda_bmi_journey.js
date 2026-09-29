@@ -62,7 +62,7 @@
   // (6,07 → 6,5); przy PAL 1,4 wyniki zbiegały się przypadkiem, przy 1,6 rozjechały.
   // ENERGY-REC-2: stabilizacja u dziecka — czas z tej samej symulacji przy tempie 0 (sam wzrost).
   function timeToNormStab(ctx) {
-    if (!ctx.isChild || typeof w.energySimulateMonthsToBmiTarget !== 'function') return null;
+    if (!ctx.planDziecko || typeof w.energySimulateMonthsToBmiTarget !== 'function') return null;
     try {
       var geEl = d.getElementById('growthEndedFlag');
       var sim = w.energySimulateMonthsToBmiTarget({
@@ -164,7 +164,7 @@
      12–18 lat z otyłością, lekka u pozostałych dzieci); bez flagi — dawna reguła. */
   function zalecanaDieta(diets, ctx) {
     for (var i = 0; i < (diets || []).length; i += 1) if (diets[i] && diets[i].zalecana) return diets[i].key;
-    return ctx && ctx.isChild ? 'light' : 'moderate';
+    return ctx && ctx.planDziecko ? 'light' : 'moderate';
   }
   function computeModel(ctx) {
     var diets = resolveDiets(ctx);
@@ -202,7 +202,7 @@
     var kk = kcalPerKg();
     var comboT = totalWeek > 0 ? timeToNorm(ctx, totalWeek / kk) : null;
     var dietT = dietOn && deficitDay > 0 ? timeToNorm(ctx, deficitDay * 7 / kk) : null;
-    var strategy = ctx.isChild && lastEngineState && lastEngineState.childObesityPlan && typeof w.energyResolveStrategyFromDom === 'function'
+    var strategy = ctx.planDziecko && lastEngineState && lastEngineState.childObesityPlan && typeof w.energyResolveStrategyFromDom === 'function'
       ? w.energyResolveStrategyFromDom(lastEngineState, { ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm })
       : 'reduction';
     if (strategy === 'stabilization' && fin(lastEngineState && lastEngineState.maintenanceKcal)) {
@@ -389,7 +389,7 @@
      P-DIETA rata Z (decyzja właściciela 2026-09-23): także u dorosłego, łącznie z celem własnym (wiersze G i Gcw) */
   function gornaGranica(found, ctx) {
     if (!(found && found.gornaGranica && fin(found.gornaKcal) && ctx)) return false;
-    return ctx.isChild ? !ctx.customGoal && !!(lastEngineState && lastEngineState.childObesityPlan) : true;
+    return ctx.planDziecko ? !ctx.customGoal && !!(lastEngineState && lastEngineState.childObesityPlan) : true;
   }
   /* rata V pkt 3 (decyzja właściciela 2026-09-23): kontrola za 6 tygodni — liczby z silnika (energyKontrolaPlanu):
      spodziewana masa przy samej diecie i próg (połowa spodziewanego ubytku); przy masie ≥ progu odjąć 100–200 kcal. */
@@ -485,7 +485,10 @@
     }
     return badge + hero + growth + horizon + gainPill(model, ctx) + goalbox + kcal
       + palSegment() + dietSegment(model)
-      + (ctx.customGoal ? '<div class="bmi-journey-pal-note">Cel własny nie jest wskazaniem medycznym: tylko dieta lekka (deficyt do 15\u202F%, maks. 500\u202Fkcal/d); podaż nie schodzi poniżej minimum kalorycznego.</div>' : '')
+      // P-DIETA-AUDYT2 A8: cel własny nastolatka (16–18 lat) ma tempo do 1 kg/mies. (proposeCustomGoalDietTeen), nie regułę dorosłego
+      + (ctx.customGoal ? '<div class="bmi-journey-pal-note">Cel własny nie jest wskazaniem medycznym: '
+        + (lastEngineState && lastEngineState.customGoal && lastEngineState.customGoal.teen ? 'tempo do 1\u202Fkg/mies.' : 'tylko dieta lekka (deficyt do 15\u202F%, maks. 500\u202Fkcal/d)')
+        + '; podaż nie schodzi poniżej minimum kalorycznego.</div>' : '')
       + moveChips
       + detailsSection(ctx, model) + warningsSection(ctx, model);
   }
@@ -612,6 +615,11 @@
       ageYears: Number(ctx.ageYears),
       sex: ctx.sex === 'F' ? 'F' : 'M',
       isChild: !!ctx.isChild,
+      // P-DIETA-AUDYT2 A4 (2026-09-29): isChild opisuje ocenę BMI (progi dorosłe od 18 lat), a ŚCIEŻKA PLANU silnika
+      // (strategia, stabilizacja, górna granica diety dziecka) trwa do 19 lat. Dotąd 18-latek dostawał tu redukcję,
+      // choć zalecenia, plan PDF i raport mówiły o stabilizacji wybranej przez lekarza.
+      planDziecko: ctx.planDziecko != null ? !!ctx.planDziecko
+        : fin(Number(ctx.ageYears)) && Number(ctx.ageYears) < (typeof w.ENERGY_ADULT_START_AGE === 'number' ? w.ENERGY_ADULT_START_AGE : 19),
       targetBmi: fin(ctx.targetBmi) ? Number(ctx.targetBmi) : 25,
       // P-DIETA-CEL-WLASNY rata C: cel własny dorosłego (BMI 23,0–24,9) zamiast górnej granicy normy
       customGoal: !!ctx.customGoal,

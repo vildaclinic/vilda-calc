@@ -85,7 +85,8 @@ describe('Resolver strategii — kolejność reguł', () => {
 
 describe('Symulacja przy tempie 0 (stabilizacja) i opisy diet wg klasy BMI', () => {
   it('dziecko: tempo 0 kg/tydz. liczy termin z samego wzrastania; dorosły przy 0 → brak wyniku', () => {
-    const child = win.energySimulateMonthsToBmiTarget({ ageYears: 14, ageMonthsOpt: 0, sex: 'M', weightKg: 62, heightCm: 165, weeklyLossKg: 0, target: 'norm' });
+    // P-DIETA-AUDYT2 A2: przy stabilizacji masa przybywa ze wzrastaniem, więc przy stałym progu 22 (atrapa) 62 kg nie schodzi pod próg przed 19 r.ż. — 60,5 kg (BMI 22,2) schodzi
+    const child = win.energySimulateMonthsToBmiTarget({ ageYears: 14, ageMonthsOpt: 0, sex: 'M', weightKg: 60.5, heightCm: 165, weeklyLossKg: 0, target: 'norm' });
     expect(child.growthAware).toBe(true);
     expect(child.months).toBeGreaterThan(0);
     const adult = win.energySimulateMonthsToBmiTarget({ ageYears: 30, ageMonthsOpt: 0, sex: 'M', weightKg: 80, heightCm: 175, weeklyLossKg: 0, target: 'norm' });

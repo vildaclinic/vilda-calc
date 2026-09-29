@@ -83,7 +83,8 @@ test('8-latka (97–99c): domyślna redukcja lekka −126 wszędzie; klik „Sta
   expect(r.text).toMatch(/Kontrola za 12 tygodni \(ok\. [^)]+\): masa ciała powinna pozostać na poziomie ok\. [\d,]+ kg/u);
   expect(r.plan).toContain('górna granica dnia — stabilizacja masy ciała (nie cel do dobicia)');
   expect(r.plan).toMatch(new RegExp(`≤\\s?${kcal}\\s?kcal/dzień`));
-  expect(r.plan).toContain('Utrzymując obecną masę ciała osiągniesz górną granicę normy BMI dzięki dalszemu wzrastaniu');
+  // P-DIETA-AUDYT2 A2/A7: czas z przyrostem masy ze wzrastania (jak kontrola po 12 tygodniach), nie przy stałej masie
+  expect(r.plan).toContain('Bez deficytu — gdy masa przybywa tylko w tempie wynikającym ze wzrastania — osiągniesz górną granicę normy BMI');
   expect(r.plan).toContain(`${String(r.stabMonths).replace('.', ',')} mies.`);
   expect(r.plan).toContain('bez deficytu · utrzymanie masy ciała');
   expect(r.plan).not.toContain('−126 kcal/dzień · ok.');

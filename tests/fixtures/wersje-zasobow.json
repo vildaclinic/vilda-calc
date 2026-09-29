@@ -372,8 +372,8 @@
   "sha256": "83d2e2f592be8e799c6e2db502b4a7d55c533fa5d2cfc523c52eed98dc15d280"
  },
  "nutrition_norms.js": {
-  "v": 48,
-  "sha256": "9eab5b0c617aeb9709d6934907620b133de6846295120931140508a3a4aabf67"
+  "v": 49,
+  "sha256": "527ecc2509f62f5cf4bc76087557b7fd9624ceb92fca3814a39b40013df12bf9"
  },
  "obesity_response_criteria.js": {
   "v": 4,
@@ -488,8 +488,8 @@
   "sha256": "fe4ce966476f329f411cbbf75ab61d9b8e635d2c8e3fc1a586a78a3c6c56e698"
  },
  "vilda_bmi_journey.js": {
-  "v": 25,
-  "sha256": "ae23440795ec815b288e0711655166907ca4cbad576792f398f6ecb57f9145a3"
+  "v": 26,
+  "sha256": "939cbd3699b377b9d8041f0e9acf7f3ef0fa8c6a6243564ca32b18725bf43ea4"
  },
  "vilda_centile_chart_header.js": {
   "v": 1,
@@ -524,8 +524,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_data_import_export.js": {
-  "v": 88,
-  "sha256": "55107fde42b71e3ceb09a520b84369603cb1489b0796b28e7d23b249ad0dad0d"
+  "v": 89,
+  "sha256": "42565345a5c1df9bba05ab6a42efe0a08bdbb4428dd0a1cd639e05538197314d"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -536,12 +536,12 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 39,
-  "sha256": "ec41c49ac9f05b179f6e19ddb0f475a4932e1a8f587d685635c4182e2ee2c35b"
+  "v": 40,
+  "sha256": "e2b2bc08288f9d2c395e74a8a6f3f356724d8e95ed3c6ab9401dbd5015d3d978"
  },
  "vilda_diet_recommendations.js": {
-  "v": 64,
-  "sha256": "fdb91a24646acf0b540d110dfa7d2d0aec10c85fda7c33f74643c6689bff95dd"
+  "v": 65,
+  "sha256": "0b95ca4dd72bd00be247e616c5840df5f7de2bdf9bcc4e25fa261ff6039571c0"
  },
  "vilda_dob_age.js": {
   "v": 7,
@@ -588,8 +588,8 @@
   "sha256": "dc9ecce09f1b6a93bed7bf17978732e47eddf2e0426e8761e7de22ffc37d1a3c"
  },
  "vilda_estimated_intake_ui.js": {
-  "v": 2,
-  "sha256": "d7696db3105d2c172c7d1dd1eb32ee87fc1102fdfb4c9ae750c377058a49c841"
+  "v": 3,
+  "sha256": "60705db21e46c0ff2dab069116b2d981894d9d799d96ab8fb4738e6710dbdd45"
  },
  "vilda_farmakoterapia.js": {
   "v": 1,
@@ -776,8 +776,8 @@
   "sha256": "4faaefb451e372c17eb1127ba54464187a235107d3fca7e679f33f893d4908d2"
  },
  "vilda_raport_plan.js": {
-  "v": 19,
-  "sha256": "19c5b2e260742d1c62636ab4b7124047ccaae73edbf980eca92ca6477bb4c6ea"
+  "v": 20,
+  "sha256": "042683efe9df09df040be80a8c7f7b39c380e36ec9f2335deba8f13c55d02077"
  },
  "vilda_realtime.js": {
   "v": 7,
