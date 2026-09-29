@@ -140,6 +140,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=79',
   '/style.css?v=80',
   '/style.css?v=81',
+  '/style.css?v=82',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -283,6 +284,7 @@ const CORE_SHELL_URLS = [
   '/ios26-v2.css?v=22',
   '/ios26-v2.css?v=23',
   '/ios26-v2.css?v=24',
+  '/ios26-v2.css?v=25',
   '/logo_vilda.jpeg',
   '/logo_vilda.webp',
   '/lucide.min.js?v=1',
@@ -1097,6 +1099,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=39',
   '/vilda_chrome.css?v=40',
   '/vilda_chrome.css?v=41',
+  '/vilda_chrome.css?v=42',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',

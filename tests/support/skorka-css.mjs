@@ -20,12 +20,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { KLASA_SKORKI, arkuszeAplikacji, bezSkorki, korzen, parsuj, pokrywaCzesc } from './szklo-css.mjs';
 import { canonicalSelector, canonicalSelectorList, specificity, splitTopLevel } from '../../design-system/lib/css.mjs';
-import { mozliweTypy, rozlaczne, wiedzaDom, zlozenieSkrajne } from './wiedza-dom.mjs';
+import { mozliweTypy, nieobecnosc, rozlaczne, wiedzaDom, zlozenieSkrajne } from './wiedza-dom.mjs';
 import { ALIASY, longhandy } from './longhandy.mjs';
 
 export { longhandy } from './longhandy.mjs';
 
-export { faktyDom, mozliweTypy, rozlaczne, wiedzaDom, zlozenieSkrajne } from './wiedza-dom.mjs';
+export { faktyDom, mozliweTypy, nieobecnosc, rozlaczne, wiedzaDom, zlozenieSkrajne } from './wiedza-dom.mjs';
 
 export const KLASY_TRYBOW = /\.(?:high-contrast-level|dark-bg-level|glass-level)-\d/;
 
@@ -34,15 +34,22 @@ export const WLASNOSCI_BEHAWIORALNE = new Set([
   'display', 'visibility', 'pointer-events', 'opacity', 'transform', 'position', 'top', 'right', 'bottom', 'left', 'inset',
   'width', 'height', 'min-width', 'max-width', 'min-height', 'max-height', 'z-index', 'overflow', 'overflow-x', 'overflow-y',
   'animation', 'transition',
+  'all', // resetuje każdą własność naraz: nadpisanie skórki z `all` zostaje (rata 4b bis)
 ]);
 
 /** Arkusze dokładane do strony przez skrypt (link dopisywany na końcu <head>), gdy strona sama ich nie linkuje. */
 export const WSTRZYKIWANE = [{ skrypt: 'vilda_chrome.js', arkusz: 'vilda_auth_ui.css' }];
+const KLUCZ_ALL = '*all*'; // klucz indeksu deklaracji `all`
 
 /** Czy dwie własności mają wspólny longhand (konkurują o ten sam wynik kaskady). */
 export function nakladajaSie(a, b) {
-  const s = new Set(longhandy(a));
-  return longhandy(b).some((x) => s.has(x));
+  const la = longhandy(a);
+  const lb = longhandy(b);
+  // `all` resetuje każdą własność poza własnymi (`--*`): nakłada się na wszystko, czego nie da się wyliczyć longhandami (rata 4b bis)
+  if (la.includes('all')) return !lb[0].startsWith('--');
+  if (lb.includes('all')) return !la[0].startsWith('--');
+  const s = new Set(la);
+  return lb.some((x) => s.has(x));
 }
 
 /**
@@ -168,9 +175,12 @@ export function analizaSkorki({ zrodla = zrodlaStron(), czytaj = (p) => fs.readF
       obecnosc.get(z.id).set(strona, pozycja);
     });
   }
-  // 2. indeks deklaracji po longhandach
+  // 2. indeks deklaracji po longhandach; deklaracja `all` (resetuje każdą własność poza własnymi) dodatkowo pod kluczem
+  //    wspólnym, który przegląda każdy kandydat o własności innej niż własna (rata 4b bis)
   const indeks = new Map();
-  for (const z of teksty.values()) for (const r of z.reguly) for (const d of r.deklaracje) for (const l of longhandy(d.prop)) { if (!indeks.has(l)) indeks.set(l, []); indeks.get(l).push({ zrodlo: z.id, regula: r, deklaracja: d }); }
+  const longhandyIndeksu = (prop) => (longhandy(prop).includes('all') ? ['all', KLUCZ_ALL] : longhandy(prop));
+  const longhandyKonkurentow = (prop) => (prop.startsWith('--') || longhandy(prop).includes('all') ? longhandy(prop) : [...longhandy(prop), KLUCZ_ALL]);
+  for (const z of teksty.values()) for (const r of z.reguly) for (const d of r.deklaracje) for (const l of longhandyIndeksu(d.prop)) { if (!indeks.has(l)) indeks.set(l, []); indeks.get(l).push({ zrodlo: z.id, regula: r, deklaracja: d }); }
   // 3. kandydaci: pary (deklaracja, część) czystych reguł skórki w arkuszach (nie w blokach <style>)
   const kandydaci = [];
   const pozostale = [];
@@ -224,7 +234,7 @@ export function analizaSkorki({ zrodla = zrodlaStron(), czytaj = (p) => fs.readF
     const stronyK = obecnosc.get(arkusz);
     const widziane = new Set();
     const zlozonaK = (nr) => nr === i || (kluczCzesci(d, nr) ? zalozenie(kluczCzesci(d, nr)) : false);
-    for (const l of longhandy(d.prop)) {
+    for (const l of longhandyKonkurentow(d.prop)) {
       for (const e of indeks.get(l) || []) {
         if (e.regula === K || widziane.has(e.deklaracja)) continue;
         widziane.add(e.deklaracja);
@@ -309,7 +319,12 @@ export function analizaSkorki({ zrodla = zrodlaStron(), czytaj = (p) => fs.readF
     }
   }
   const zlozone = kandydaci.filter((k) => jestKandydatem(k.klucz));
-  return { arkusze, kandydaci, zlozone, pozostale, obecnosc };
+  // 5. nazwy klas i id w selektorach analizowanych źródeł, których nie ma nigdzie w kodzie (HTML bez <style>, JS): na ich
+  //    nieobecności opiera się rozłączność (reguła martwa) — strażnik trzyma tę listę jawnie w fixture (rata 4b bis)
+  const nieobecne = new Set();
+  const nieobecna = wiedza && wiedza.tokeny ? nieobecnosc(wiedza.tokeny) : null;
+  if (nieobecna) for (const z of teksty.values()) for (const r of z.reguly) for (const c of r.czesci) for (const m of c.tekst.matchAll(/[.#]([A-Za-z_-][\w-]*)/g)) if (nieobecna(m[1])) nieobecne.add(m[1]);
+  return { arkusze, kandydaci, zlozone, pozostale, obecnosc, nieobecne: [...nieobecne].sort((a, b) => a.localeCompare(b, 'pl')) };
 }
 
 function wciecieLinii(css, poz) {

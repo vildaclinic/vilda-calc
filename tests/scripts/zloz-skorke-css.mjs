@@ -21,6 +21,7 @@ const argumenty = process.argv.slice(2);
 const flaga = (f) => argumenty.includes(f);
 const sprawdz = flaga('--sprawdz') || flaga('--raport');
 const FIXTURE = path.join(korzen, 'tests/fixtures/skorka-nadpisania.json');
+const FIXTURE_NIEOBECNE = path.join(korzen, 'tests/fixtures/skorka-nieobecne.json'); // nazwy z selektorów nieobecne w kodzie (rata 4b bis)
 const FIXTURE_DOM = path.join(korzen, 'test-results/skorka-dom.json'); // wynik przebiegu --dom (katalog ignorowany przez git)
 const FIXTURE_FAKTY = path.join(korzen, 'tests/fixtures/skorka-fakty.json');
 const fakty = fs.existsSync(FIXTURE_FAKTY) ? JSON.parse(fs.readFileSync(FIXTURE_FAKTY, 'utf8')) : null;
@@ -64,6 +65,7 @@ const powody = new Map();
 for (const p of pozostale) powody.set(p.powod, (powody.get(p.powod) || 0) + 1);
 const dekl = (lista) => new Set(lista.map((k) => k.deklaracja)).size;
 console.log(`pary (deklaracja, część) czystych reguł skórki: ${kandydaci.length} (deklaracji ${dekl(kandydaci)}); do złożenia: ${zlozone.length} par (deklaracji w całości ${zlozone.filter((k) => k.regula.czesci.every((c, nr) => zlozone.some((x) => x.deklaracja === k.deklaracja && x.nr === nr))).length / 1 | 0}); zostają: ${pozostale.length} par (${[...powody].map(([k, v]) => `${k} ${v}`).join(', ')})`);
+console.log(`nazwy z selektorów nieobecne nigdzie w kodzie (reguły martwe, rozłączność z założenia): ${analiza.nieobecne.length}`);
 if (flaga('--raport')) {
   console.log('\n== do złożenia');
   for (const k of zlozone) console.log(`  ${k.arkusz} ${k.regula.kontekst.length ? `[${k.regula.kontekst.join(' » ')}] ` : ''}${k.regula.czesci[k.nr].tekst.slice(0, 90)} { ${k.deklaracja.prop}${k.deklaracja.important ? ' !' : ''} }`);
@@ -76,6 +78,9 @@ if (flaga('--zapisz')) {
   const lista = pozostale.map((p) => ({ klucz: p.klucz, powod: ['js', 'inline'].includes(p.powod) ? p.szczegoly : p.powod })).sort((a, b) => a.klucz.localeCompare(b.klucz, 'pl'));
   fs.writeFileSync(FIXTURE, `${JSON.stringify({ opis: 'P-STYLE rata 4b: deklaracje czystych reguł skórki .liquid-ios26, które zostają nadpisaniami, z powodem (kaskada: konkurent w kaskadzie strony; grupa: wspólny longhand z deklaracją, która zostaje; behawioralna: własność poza ratą; inline: styl inline na dopasowanym elemencie z przebiegu --dom; dynamiczna: konkurent w arkuszu wstrzykiwanym z JS; js: skrypt ustawia własność inline — przegląd). Odświeżanie: node tests/scripts/zloz-skorke-css.mjs --zapisz', pozostale: lista }, null, 1)}\n`);
   console.log(`zapisano ${path.relative(korzen, FIXTURE)}: ${lista.length} deklaracji`);
+  const nieobecne = { opis: 'Nazwy klas i id z selektorów arkuszy i bloków <style>, których nie ma nigdzie w HTML (poza <style>) ani w JS. Analiza złożenia skórki traktuje regułę z taką nazwą jako martwą (niczego nie dopasowuje) — na tym opiera się rozłączność. Nazwa, która pojawi się w kodzie, ożywia reguły złożone bez !important: sprawdź ich kaskadę i odśwież listę: node tests/scripts/zloz-skorke-css.mjs --zapisz', nazwy: analiza.nieobecne };
+  fs.writeFileSync(FIXTURE_NIEOBECNE, `${JSON.stringify(nieobecne, null, 2)}\n`);
+  console.log(`zapisano ${path.relative(korzen, FIXTURE_NIEOBECNE)}: ${analiza.nieobecne.length} nazw`);
 }
 
 if (flaga('--js')) {

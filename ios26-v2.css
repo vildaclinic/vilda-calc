@@ -208,8 +208,8 @@ header {
   border: var(--border-pro) solid #9900ff!important
 }
 
-#thyroidCancerKidsCard .thy-disclosure-btn-static {
-  border-color: var(--brand-light)
+.liquid-ios26 #thyroidCancerKidsCard .thy-disclosure-btn-static {
+  border-color: var(--brand-light)!important
 }
 
 .liquid-ios26 .btn-icon {
@@ -337,9 +337,9 @@ header {
   border-radius: var(--radius-12)
 }
 
-h1,
-h2,
-h3 {
+.liquid-ios26 h1,
+.liquid-ios26 h2,
+.liquid-ios26 h3 {
   letter-spacing: -.015em
 }
 
