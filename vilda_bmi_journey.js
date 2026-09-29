@@ -212,7 +212,7 @@
         rows: [], moveWeek: 0, totalWeek: 0,
         monthsCombo: stabT ? stabT.months : null, monthsDiet: null,
         growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null,
-        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, targetWeightKg: lastEngineState.targetWeightKg,
+        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, maintenanceGornaKcal: lastEngineState.maintenanceGornaKcal, targetWeightKg: lastEngineState.targetWeightKg,
         // P-DIETA rata G1a: stabilizacja przy tempie wzrastania poniżej normy (alarm modelu tempa)
         tempoAlarm: (function () { try { var o = typeof w.energyChildGrowthOutlook === 'function' ? w.energyChildGrowthOutlook({ ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm }) : null; return !!(o && o.tempoAlarm); } catch (e) { return false; } })()
       };
@@ -457,9 +457,10 @@
         + szczebleHtml(ctx, model)
         + '</div>';
     var kcal = model.stabMode
-      ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">' + fmtInt(Math.round(model.maintenanceKcal / 100) * 100)
+      /* P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): stabilizacja też jako górna granica dnia (silnik: maintenanceGornaKcal) */
+      ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">\u2264\u202F' + fmtInt(fin(model.maintenanceGornaKcal) ? model.maintenanceGornaKcal : Math.round(model.maintenanceKcal / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
-        + '<div class="bmi-journey-kcalcap">energia utrzymania (stabilizacja masy ciała' + (fin(model.targetWeightKg) ? ', cel: masa docelowa ok. ' + fmt(model.targetWeightKg, 1) + '\u202Fkg (85. centyl BMI)' : '') + ')</div></div>'
+        + '<div class="bmi-journey-kcalcap">górna granica dnia — stabilizacja masy ciała, nie cel do dobicia' + (fin(model.targetWeightKg) ? ' (cel: masa docelowa ok. ' + fmt(model.targetWeightKg, 1) + '\u202Fkg, 85. centyl BMI)' : '') + '</div></div>'
       : model.found && gornaGranica(model.found, ctx)
       /* rata V pkt 1 (decyzja właściciela 2026-09-23): u dziecka z planem otyłości liczba to górna granica dnia
          (silnik: gornaKcal, w dół do 50 kcal), nie cel do dobicia */

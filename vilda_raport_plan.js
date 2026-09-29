@@ -409,13 +409,19 @@
     var k = dane.kontrola, e = dane.energia || {};
     if (!k || e.gornaGranica !== true || liczba(k.progKg) == null || liczba(k.masaSpodziewanaKg) == null) return '';
     var ob = Array.isArray(k.obnizkaKcal) && k.obnizkaKcal.length === 2 ? k.obnizkaKcal : null;
+    /* P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): przy stabilizacji dziecka kontrola po 12 tygodniach —
+       masa ma zostać na poziomie dzisiejszym (plus przyrost z samego wzrastania); obniżka, gdy masa jest WYŻSZA niż próg. */
+    var stab = dane.strategia === 'stabilization';
+    var znakProgu = stab ? '> ' : '\u2265 ';
     var kafle = [
       [k.terminKrotki || '', String(k.terminRok || ''), 'termin kontroli (ok. ' + (liczba(k.tygodnie) || 6) + ' tygodni)'],
       /* rata W: u rosnącego dziecka spodziewana masa zawiera przyrost ze wzrastania */
-      ['ok. ' + fmt(k.masaSpodziewanaKg, 1) + ' kg', 'spodziewana masa', (k.wzrastanie === true ? 'z dietą i wzrastaniem' : 'przy tej diecie') + ' (dziś ' + fmt(k.masaDzisKg, 1) + ' kg)'],
+      stab
+        ? ['ok. ' + fmt(k.masaSpodziewanaKg, 1) + ' kg', 'masa przy stabilizacji', 'dziś ' + fmt(k.masaDzisKg, 1) + ' kg' + (k.wzrastanie === true ? ' + wzrastanie' : '')]
+        : ['ok. ' + fmt(k.masaSpodziewanaKg, 1) + ' kg', 'spodziewana masa', (k.wzrastanie === true ? 'z dietą i wzrastaniem' : 'przy tej diecie') + ' (dziś ' + fmt(k.masaDzisKg, 1) + ' kg)'],
       k.obnizkaMozliwa && ob
-        ? ['\u2265 ' + fmt(k.progKg, 1) + ' kg', 'odejmij od planu', calk(ob[0]) + '\u2013' + calk(ob[1]) + ' kcal']
-        : ['\u2265 ' + fmt(k.progKg, 1) + ' kg', 'plan do omówienia', 'kaloryczność już przy minimum']
+        ? [znakProgu + fmt(k.progKg, 1) + ' kg', 'odejmij od planu', calk(ob[0]) + '\u2013' + calk(ob[1]) + ' kcal']
+        : [znakProgu + fmt(k.progKg, 1) + ' kg', 'plan do omówienia', 'kaloryczność już przy minimum']
     ];
     return '<section class="vrp-blok">'
       + '<div class="vrp-nag-blok"><span>KONTROLA ZA ' + esc(String(liczba(k.tygodnie) || 6)) + ' TYGODNI</span></div>'

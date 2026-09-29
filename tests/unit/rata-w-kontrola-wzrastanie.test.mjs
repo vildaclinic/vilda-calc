@@ -36,36 +36,40 @@ const przyrostWyrocznia = (p, tyg) => {
 };
 const r1 = (x) => Math.round(x * 10) / 10;
 const DZ8 = { sex: 'F', ageYears: 8, weightKg: 45, heightCm: 130 };
+// P-DIETA-STAB rata 1 (2026-09-28): ≥ 99c w wieku 6–11 lat dieta lekka to już 1 kg/mies. (6 tygodni), więc regułę 12 tygodni
+// (tempo < 1 kg/mies.) pokazuje dziewczynka z otyłością PONIŻEJ 99. centyla — domyślnie redukcja lekka 0,5 kg/mies.
+const DZ8B = { sex: 'F', ageYears: 8, weightKg: 40, heightCm: 130 };
 
-describe('rata W: dziewczynka 8 l, 130 cm, 45 kg (≥ 99c), dieta lekka 0,5 kg/mies.', () => {
-  const { st, d, k } = kontrola(DZ8, 'light');
+describe('rata W: dziewczynka 8 l, 130 cm, 40 kg (otyłość < 99c), dieta lekka 0,5 kg/mies.', () => {
+  const { st, d, k } = kontrola(DZ8B, 'light');
   it('dieta lekka domyślna, tempo 0,5 kg/mies. → kontrola po 12 tygodniach (16 grudnia 2026)', () => {
-    expect(st.bmiClass.severe).toBe(true);
+    expect(st.bmiClass.obese).toBe(true);
+    expect(st.bmiClass.severe).toBe(false);
     expect(d.zalecana).toBe(true);
     expect(d.monthlyLossKg).toBe(0.5);
     expect(k.tygodnie).toBe(12);
     expect(k.terminTekst).toBe('16 grudnia 2026');
     expect(k.terminKrotki).toBe('16 XII');
   });
-  it('spodziewana masa i próg z przyrostem ze wzrastania: ok. 44,2 kg, próg 44,8 kg', () => {
-    const ub = d.weeklyLoss * 12, p = przyrostWyrocznia(DZ8, 12);
+  it('spodziewana masa i próg z przyrostem ze wzrastania: ok. 39,2 kg, próg 39,8 kg', () => {
+    const ub = d.weeklyLoss * 12, p = przyrostWyrocznia(DZ8B, 12);
     expect(k.ubytekDietyKg).toBeCloseTo(ub, 2);
     expect(k.przyrostKg).toBeCloseTo(p, 2);
     expect(k.przyrostKg).toBeGreaterThan(0.4);
-    expect(k.masaSpodziewanaKg).toBe(r1(45 - ub + p));
-    expect(k.progKg).toBe(r1(45 + p - ub / 2));
-    expect([k.masaSpodziewanaKg, k.progKg]).toEqual([44.2, 44.8]);
+    expect(k.masaSpodziewanaKg).toBe(r1(40 - ub + p));
+    expect(k.progKg).toBe(r1(40 + p - ub / 2));
+    expect([k.masaSpodziewanaKg, k.progKg]).toEqual([39.2, 39.8]);
     expect(k.wzrastanie).toBe(true);
     expect(k.wzrostZakonczony).toBe(false);
   });
   it('dziecko w 100 % zgodne z planem mieści się ok. 0,7 kg pod progiem (dawna reguła po 6 tygodniach: ok. 0,1 kg)', () => {
-    const zgodne = 45 - d.weeklyLoss * 12 + przyrostWyrocznia(DZ8, 12);
+    const zgodne = 40 - d.weeklyLoss * 12 + przyrostWyrocznia(DZ8B, 12);
     expect(k.progKg - zgodne).toBeGreaterThan(0.6);
-    const dawneZgodne6 = 45 - d.weeklyLoss * 6 + przyrostWyrocznia(DZ8, 6);
-    expect(r1(45 - d.weeklyLoss * 3) - dawneZgodne6).toBeLessThan(0.2);
+    const dawneZgodne6 = 40 - d.weeklyLoss * 6 + przyrostWyrocznia(DZ8B, 6);
+    expect(r1(40 - d.weeklyLoss * 3) - dawneZgodne6).toBeLessThan(0.2);
   });
-  it('ta sama dziewczynka na diecie umiarkowanej (1 kg/mies.): 6 tygodni, przyrost też w progu', () => {
-    const u = kontrola(DZ8, 'moderate').k;
+  it('dziewczynka 45 kg (≥ 99c) na diecie lekkiej (od P-DIETA-STAB 1 kg/mies.): 6 tygodni, przyrost też w progu', () => {
+    const u = kontrola(DZ8, 'light').k;
     expect(u.tygodnie).toBe(6);
     expect(u.przyrostKg).toBeCloseTo(przyrostWyrocznia(DZ8, 6), 2);
     expect(u.wzrastanie).toBe(true);

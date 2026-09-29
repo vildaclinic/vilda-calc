@@ -45,17 +45,18 @@ const r1 = (x) => Math.round(x * 10) / 10;
 const WAZENIE = 'Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.';
 
 test.describe('P-DIETA rata W — kontrola z uwzględnieniem wzrastania', () => {
-  test('RW-1: dziewczynka 8 l, 130 cm, 45 kg (≥ 99c), dieta lekka — kontrola po 12 tygodniach z przyrostem ze wzrastania, wszędzie te same liczby', async ({ page }) => {
+  // P-DIETA-STAB rata 1: ≥ 99c w wieku 6–11 lat lekka ma już 1 kg/mies. (6 tygodni) — regułę 12 tygodni pokazuje otyłość < 99c (40 kg)
+  test('RW-1: dziewczynka 8 l, 130 cm, 40 kg (otyłość < 99c), dieta lekka — kontrola po 12 tygodniach z przyrostem ze wzrastania, wszędzie te same liczby', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
-    const r = await stan(page, { sex: 'F', y: 8, w: 45, h: 130 });
+    const r = await stan(page, { sex: 'F', y: 8, w: 40, h: 130 });
     expect(r.strategia).toBe('reduction');
     expect(r.dieta).toBe('light');
     const K = r.kontrola;
-    expect(K).toMatchObject({ tygodnie: 12, wzrastanie: true, wzrostZakonczony: false, masaDzisKg: 45 });
+    expect(K).toMatchObject({ tygodnie: 12, wzrastanie: true, wzrostZakonczony: false, masaDzisKg: 40 });
     expect(K.przyrostKg).toBeGreaterThan(0.3); expect(K.przyrostKg).toBeLessThan(0.8);
-    expect(K.masaSpodziewanaKg).toBe(r1(45 - K.ubytekDietyKg + K.przyrostKg));
-    expect(K.progKg).toBe(r1(45 + K.przyrostKg - K.ubytekDietyKg / 2));
+    expect(K.masaSpodziewanaKg).toBe(r1(40 - K.ubytekDietyKg + K.przyrostKg));
+    expect(K.progKg).toBe(r1(40 + K.przyrostKg - K.ubytekDietyKg / 2));
     expect(K.progKg - K.masaSpodziewanaKg).toBeGreaterThan(0.6); // połowa efektu diety po 12 tyg. ≈ 0,69 kg
     // karta drogi
     expect(r.kontrolaBox).toContain(`Kontrola za 12 tygodni (ok. ${K.terminTekst}): spodziewana masa ok. ${f1(K.masaSpodziewanaKg)} kg (z uwzględnieniem wzrastania). Jeśli będzie ${f1(K.progKg)} kg lub więcej, odejmij od planu 100–200 kcal`);
@@ -64,7 +65,7 @@ test.describe('P-DIETA rata W — kontrola z uwzględnieniem wzrastania', () => 
     // plan PDF
     expect(r.sekcje).toContain('KONTROLA ZA 12 TYGODNI');
     expect(r.kafle).toContain(`${K.terminKrotki} | ${K.terminRok} | termin kontroli (ok. 12 tygodni)`);
-    expect(r.kafle).toContain(`ok. ${f1(K.masaSpodziewanaKg)} kg | spodziewana masa | z dietą i wzrastaniem (dziś 45,0 kg)`);
+    expect(r.kafle).toContain(`ok. ${f1(K.masaSpodziewanaKg)} kg | spodziewana masa | z dietą i wzrastaniem (dziś 40,0 kg)`);
     expect(r.kafle).toContain(`≥ ${f1(K.progKg)} kg | odejmij od planu | 100–200 kcal`);
     expect(r.podkafle.join(' ')).toContain(WAZENIE);
   });

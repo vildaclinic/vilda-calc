@@ -88,10 +88,12 @@ test('K2: 3-latek — flaga „Wzrost zakończony" wyłączona i ignorowana, nar
   const r = await generate(page, { age: 3, sex: 'M', w: 20, h: 98, growthEnded: true, strategy: 'reduction' });
   expect(r.geChecked).toBe(false);
   expect(r.geDisabled).toBe(true);
-  const kcal = Math.round(r.maint / 100) * 100;
+  // P-DIETA-STAB rata 1: stabilizacja jako górna granica dnia (w dół do 50 kcal) i kontrola po 12 tygodniach
+  const kcal = Math.floor(r.maint / 50) * 50;
   expect(r.text).not.toMatch(/Wzrost dziecka jest już zakończony|redukcji masy ciała/u);
   expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
-  expect(r.text).toContain(`tj. około ${kcal} kcal dziennie`);
+  expect(r.text).toContain(`nie powinna przekraczać ${kcal} kcal dziennie (zapotrzebowanie przy obecnej masie ciała) — to górna granica dnia, nie cel do dobicia.`);
+  expect(r.text).toMatch(/Kontrola za 12 tygodni \(ok\. [^)]+\): masa ciała powinna pozostać na poziomie ok\. [\d,]+ kg/u);
   expect(r.text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie zalecane ilości składników to:`);
   expect(r.plan).toContain('Stabilizacja masy ciała');
 });
@@ -106,9 +108,9 @@ test('K2b: dziecko z otyłością, jawna redukcja, żadna dieta nie spełnia min
   const r = await generate(page, { age: 6, sex: 'F', w: 17, h: 85, strategy: 'reduction', pal: 1.4 });
   expect(r.diets).toEqual([]);
   expect(r.floor).toBe(1000);
-  const kcal = Math.round(r.maint / 100) * 100;
+  const kcal = Math.floor(r.maint / 50) * 50; // P-DIETA-STAB rata 1: górna granica dnia
   expect(r.text).toContain('Żadna dieta redukcyjna nie spełnia minimum kalorycznego dla wieku (1000 kcal/dzień), dlatego zalecana jest stabilizacja masy ciała.');
-  expect(r.text).toContain(`tj. około ${kcal} kcal dziennie`);
+  expect(r.text).toContain(`nie powinna przekraczać ${kcal} kcal dziennie`);
   expect(r.text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie zalecane ilości składników to:`);
   // ENERGY-REC-KROTKO2: bez nawiasu z podstawą — narracja podaje samą kaloryczność
   expect(r.text).not.toContain('z korektą na otyłość');

@@ -81,11 +81,12 @@ test.describe('P-PAL rata 1 — jedna tabela PAL, karta norm z planu, raport z o
     expect(w.raport.badge).toBe('aktywny tryb życia'); expect(w.raport.note).toBe('');
   });
 
-  test('PAL-4: dziecko 8 lat z otyłością zostaje przy 1,6; 2-latek 1,4', async ({ page }) => {
+  // P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): otyłość 4–9 lat → 1,4 (dotąd 1,6)
+  test('PAL-4: dziecko 8 lat z otyłością → 1,4 (P-DIETA-STAB); 2-latek 1,4', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const o8 = await stan(page, { age: 8, months: 0, sex: 'M', w: 45, h: 130, reset: true });
-    expect(o8.pal).toBe('1.6'); expect(o8.silnik.palUsed).toBe(1.6); expect(o8.silnik.obesityPlan).toBe(true);
+    expect(o8.pal).toBe('1.4'); expect(o8.silnik.palUsed).toBe(1.4); expect(o8.silnik.obesityPlan).toBe(true);
     const m2 = await stan(page, { age: 2, months: 0, sex: 'M', w: 13, h: 88, reset: true });
     expect(m2.pal).toBe('1.4'); expect(m2.silnik.palUsed).toBe(1.4);
   });

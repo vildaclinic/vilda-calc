@@ -15,10 +15,10 @@ async function stan(page, c) {
     const set = (id, v) => { const el = document.getElementById(id); if (!el) return; el.value = v == null ? '' : String(v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
     const flag = (id, on) => { const el = document.getElementById(id); if (el) { el.disabled = false; el.checked = on; } };
     window.professionalMode = true; window.intakeHistory = null; window.lastLoadedData = null; window.hasUserModifiedAfterLoad = false;
-    window.__vildaPlanPalTouched = false; window.__vildaDietStrategyTouched = !!c.redukcja;
+    window.__vildaPlanPalTouched = false; window.__vildaDietStrategyTouched = !!(c.redukcja || c.stabilizacja);
     set('name', 'Testowa Fikcyjna'); set('sex', c.sex); set('age', c.y); set('ageMonths', 0); set('weight', c.w); set('height', c.h); set('customGoalKg', '');
     if (typeof window.ensureDietRecommendationsElements === 'function') window.ensureDietRecommendationsElements();
-    flag('reduceToggle', !!c.redukcja); flag('stabilizationToggle', false); flag('growthEndedFlag', !!c.wzrostZakonczony);
+    flag('reduceToggle', !!c.redukcja); flag('stabilizationToggle', !!c.stabilizacja); flag('growthEndedFlag', !!c.wzrostZakonczony);
     const jf = document.getElementById('journeyFlag'); if (jf) { jf.checked = !c.bezDrogi; jf.dispatchEvent(new Event('change', { bubbles: true })); }
     window.update();
     await new Promise((r) => { setTimeout(r, 700); });
@@ -46,10 +46,11 @@ test.describe('P-DIETA rata X — czas do normy z masą przybywającą ze wzrast
     expect(p.plan).toMatch(new RegExp(`^uwzględnia dalsze wzrastanie \\(ok\\. [\\d,]+ cm/rok\\) i masę przybywającą z nim \\(ok\\. ${kg} kg/mies\\.\\)$`));
   });
 
+  // P-DIETA-STAB rata 1: 8-latka 97–99c ma domyślnie redukcję — stabilizację wybiera lekarz (jawny wybór)
   test('RX-2: 8-latka 97–99c w stabilizacji — bez dopisku; 11-latek z „Wzrost zakończony” — bez wzrastania i bez przyrostu', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
-    const s = await stan(page, { sex: 'F', y: 8, w: 40, h: 130 });
+    const s = await stan(page, { sex: 'F', y: 8, w: 40, h: 130, stabilizacja: true });
     expect(s.droga).toContain('uwzględnia dalsze wzrastanie');
     expect(s.droga).not.toContain('masę przybywającą');
     const z = await stan(page, { sex: 'M', y: 11, w: 60, h: 150, redukcja: true, wzrostZakonczony: true });
