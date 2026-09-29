@@ -12,8 +12,8 @@
   "sha256": "b52fd3ace2e4d73edea28097d5ad246f047227fa66195b18aa8e06103fe62c4b"
  },
  "app.js": {
-  "v": 228,
-  "sha256": "27184ae54723ebbfa3134ec4d6c6cf661b242ab4d49b378c51c60e463521f0d3"
+  "v": 229,
+  "sha256": "fbbfeca4324a9be06328d4fd187762b7808017fedd077c365f32054897fd2be3"
  },
  "bisphos_therapy.js": {
   "v": 8,
@@ -524,8 +524,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_data_import_export.js": {
-  "v": 87,
-  "sha256": "6acb74363afbfba327289e11628c96028e2abce543e7c88eb1acd79f941f4bff"
+  "v": 88,
+  "sha256": "55107fde42b71e3ceb09a520b84369603cb1489b0796b28e7d23b249ad0dad0d"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -536,8 +536,8 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 38,
-  "sha256": "984ea4cba9d5346dce9da28c113f205977bedbce305b16f2050a42445839dfe5"
+  "v": 39,
+  "sha256": "ec41c49ac9f05b179f6e19ddb0f475a4932e1a8f587d685635c4182e2ee2c35b"
  },
  "vilda_diet_recommendations.js": {
   "v": 64,
@@ -588,8 +588,8 @@
   "sha256": "dc9ecce09f1b6a93bed7bf17978732e47eddf2e0426e8761e7de22ffc37d1a3c"
  },
  "vilda_estimated_intake_ui.js": {
-  "v": 1,
-  "sha256": "85a252c1df58027f41c827a388cf786f976dd5d4d8fcb0d536ee398f99fb4193"
+  "v": 2,
+  "sha256": "d7696db3105d2c172c7d1dd1eb32ee87fc1102fdfb4c9ae750c377058a49c841"
  },
  "vilda_farmakoterapia.js": {
   "v": 1,
@@ -880,8 +880,8 @@
   "sha256": "24c58ed5ec36bb21278feeb35441df3ccddfbde2b018c2f2fd2aca8f9e5f2e1f"
  },
  "vilda_update_prep.js": {
-  "v": 91,
-  "sha256": "78fac66386b2dd33ed2117d83cca45b6234e77edd26ebd8532623941a59e9aad"
+  "v": 92,
+  "sha256": "e1a93075263ed723d9171399a9defd00e4dabbf8e50be5f9d92f1223f3321c19"
  },
  "vilda_vault.js": {
   "v": 187,
