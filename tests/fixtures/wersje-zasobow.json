@@ -428,8 +428,8 @@
   "sha256": "7243c1b07688e51b2b15ec52cda9c1386902432148196c2519ee99c412e0c1f0"
  },
  "vilda_chrome.js": {
-  "v": 75,
-  "sha256": "df8b1bffb370196e28386717cf67d494b2d6e7b734ebbb14012b471775d718e7"
+  "v": 76,
+  "sha256": "ba6413a3253e844973d29488e677edd0ae32535fe003ea10aa18e3db41d829c5"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -532,8 +532,8 @@
   "sha256": "7c0c3219853e1fba70d40b9866b163a4f226acc79ca8f86352a1648d9e28dab5"
  },
  "vilda_gh_therapy_resource_audit.js": {
-  "v": 31,
-  "sha256": "19c714270a6ad18cc40d247879471f4fe2973e920ae9aeca26a3b5c22d90e465"
+  "v": 32,
+  "sha256": "4dccbd3e90fd88a853b9deb965505c4c320bbd052962b2187fd70d5f004abb0c"
  },
  "vilda_growth_card_c.js": {
   "v": 27,
@@ -728,8 +728,8 @@
   "sha256": "10902bf33b86f2fe48b86468ab5188d751fa810da777736a89bf939d17e8cbba"
  },
  "vilda_session_bridge.js": {
-  "v": 3,
-  "sha256": "c334cc07c39f1956481cf9fb0ec4ded4bba890b21b7bee203d0805fa028f90f0"
+  "v": 4,
+  "sha256": "f7b35b678116841d3e496eb8640bd506cb2f187113b577118cc47dcac827e099"
  },
  "vilda_sga_catchup.js": {
   "v": 2,

@@ -70,7 +70,7 @@ W szczególności rozdzielone warstwy modelu wejściowego, obliczeń, UI, runtim
 
 Po zmianie zasobu ładowanego przez stronę:
 
-- sprawdź wszystkie odwołania `?v=`;
+- sprawdź wszystkie odwołania `?v=` — także adresy wstrzykiwane ze skryptów (`vilda_chrome.js`, `vilda_session_bridge.js`, `vilda_gh_therapy_resource_audit.js`): podbij je razem ze stronami; pilnuje tego `tests/unit/piny-wersji.test.mjs` (P-PINY-WERSJI, ósme twierdzenie);
 - przeanalizuj wpływ na `SW_VERSION` i listę cache;
 - nie usuwaj historycznych, wersjonowanych adresów z cache bez planu migracji;
 - zasób ładowany przez stronę z precache (albo doładowywany z pliku JS) dopisz do tablic SW pod dokładnie tym adresem (z tym samym `?v=`), którego używa strona — pilnuje tego `tests/unit/sw-precache-stron.test.mjs` (P-SW-DOCPRO);
