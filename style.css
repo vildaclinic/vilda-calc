@@ -6437,6 +6437,7 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 }
 
 .adv-report-actions .adv-report-anon input {
+  width: auto;
   margin: 0;
   flex: none
 }
