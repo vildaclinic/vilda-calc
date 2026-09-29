@@ -257,8 +257,6 @@ option {
   flex-wrap: wrap
 }
 
-.snack-row,
-.meal-row,
 .food-row {
   display: grid;
   grid-template-columns: 1fr 100px 34px;
@@ -328,12 +326,6 @@ button.add-row {
 
 .card {
   padding: var(--space-1)
-}
-
-.activity-time {
-  margin: var(--space-0-4) 0;
-  font-size: 1.25rem;
-  font-weight: 700
 }
 
 table {
@@ -658,22 +650,6 @@ th {
   margin-top: 0
 }
 
-.current-summary-param {
-  font-weight: 600
-}
-
-.current-summary-dots {
-  flex-grow: 1;
-  border-bottom: var(--border-hairline) dotted rgba(0,0,0,.3);
-  margin: 0 var(--space-0-4);
-  height: 0
-}
-
-.current-summary-value {
-  white-space: nowrap;
-  text-align: right
-}
-
 .current-summary-columns {
   display: flex;
   gap: var(--space-1)
@@ -712,12 +688,6 @@ th {
   transform: none
 }
 
-.patient-report-summary-hint {
-  font-size: .82rem;
-  color: #5a6f70;
-  text-align: left
-}
-
 @media(max-width:700px) {
   .patient-report-summary-btn {
     width: 100%
@@ -754,93 +724,6 @@ th {
 .rr-row label {
   flex: 1 1 150px;
   margin-top: 0
-}
-
-.tutorial-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-tutorial-overlay);
-  display: none;
-  pointer-events: none;
-  touch-action: none;
-  overscroll-behavior: contain
-}
-
-.tutorial-blocker {
-  position: fixed;
-  background: #0f172a94;
-  pointer-events: auto
-}
-
-.tutorial-highlight-frame {
-  position: fixed;
-  display: none;
-  box-sizing: border-box;
-  border: var(--border-emphasis) solid rgba(0,131,141,.96);
-  border-radius: var(--radius-12);
-  background: transparent;
-  box-shadow: 0 16px 36px #0f172a29;
-  z-index: var(--z-tutorial-frame);
-  pointer-events: none
-}
-
-.tutorial-bubble {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  width: min(320px,calc(100vw - 2rem));
-  max-height: calc(100dvh - 2rem);
-  overflow: auto;
-  background: #fff;
-  color: var(--text-ink);
-  padding: var(--space-1-2) var(--space-1);
-  border-radius: var(--radius-14);
-  box-shadow: 0 18px 48px #0f172a42;
-  text-align: left;
-  line-height: 1.45;
-  z-index: var(--z-tutorial-bubble);
-  pointer-events: auto
-}
-
-.tutorial-overlay.is-temporarily-hidden,
-.tutorial-bubble.is-temporarily-hidden {
-  visibility: hidden!important;
-  opacity: 0!important;
-  pointer-events: none!important
-}
-
-.tutorial-bubble strong {
-  display: block;
-  font-size: 1.08rem;
-  margin-bottom: var(--space-0-4);
-  color: var(--primary)
-}
-
-.tutorial-bubble p {
-  margin: 0;
-  font-size: .98rem
-}
-
-.tutorial-bubble button {
-  margin-top: var(--space-0-85);
-  padding: var(--space-0-5) var(--space-1);
-  font-size: .95rem;
-  cursor: pointer
-}
-
-.tutorial-next {
-  background: var(--primary);
-  color: #fff;
-  margin-right: var(--space-0-5)
-}
-
-.tutorial-skip {
-  background: #e6ebee;
-  color: #22303a
-}
-
-.tutorial-highlight {
-  position: relative
 }
 
 body.nav-ui-temporarily-hidden #mobileBottomDock,
@@ -999,10 +882,6 @@ section.card,
 
 .text-center {
   text-align: center
-}
-
-.text-right {
-  text-align: right
 }
 
 @media(max-width:600px) {
@@ -1758,81 +1637,6 @@ input[type=submit]:focus-visible {
   font-style: italic
 }
 
-.circ-chart-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-0-65);
-  width: 100%;
-  margin-top: var(--space-0-9)
-}
-
-.circ-chart-btn {
-  display: block;
-  width: 100%;
-  margin: 0;
-  padding: var(--space-0-55) var(--space-1-1);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--primary);
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-  line-height: 1.35;
-  white-space: normal;
-  appearance: none;
-  opacity: 1;
-  transition: transform var(--anim-fast),box-shadow var(--anim-fast),background-color .16s ease;
-  box-shadow: none
-}
-
-.circ-chart-btn:hover:not([disabled]),
-.circ-chart-btn:focus-visible:not([disabled]) {
-  background: var(--secondary);
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: var(--shadow-l)
-}
-
-.circ-chart-btn[disabled],
-.circ-chart-btn.is-pro-locked {
-  cursor: not-allowed;
-  opacity: 1
-}
-
-.circ-chart-btn:not([disabled]):not(.is-pro-locked) {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  text-shadow: none
-}
-
-.circ-chart-btn:hover:not([disabled]):not(.is-pro-locked),
-.circ-chart-btn:focus-visible:not([disabled]):not(.is-pro-locked) {
-  background: var(--secondary);
-  box-shadow: var(--shadow-l)
-}
-
-.circ-chart-btn[disabled],
-.circ-chart-btn.is-pro-locked {
-  background: #d5dde1;
-  color: #738089;
-  box-shadow: none;
-  border: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none
-}
-
-body.liquid-ios26 .circ-chart-btn[disabled],
-body.liquid-ios26 .circ-chart-btn.is-pro-locked {
-  transform: none!important
-}
-
 .circ-pro-note {
   margin-top: var(--space-0-65);
   text-align: center;
@@ -1851,80 +1655,6 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   font-weight: 700;
   letter-spacing: .04em;
   vertical-align: baseline
-}
-
-.circ-chart-result {
-  margin-top: var(--space-0-95);
-  padding: var(--space-1)
-}
-
-.circ-chart-result-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-1);
-  margin-bottom: var(--space-0-45)
-}
-
-.circ-chart-result-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #065b63
-}
-
-.circ-chart-result-copy {
-  margin: 0 0 var(--space-0-8);
-  font-size: .96rem;
-  line-height: 1.5;
-  color: #24363b
-}
-
-.circ-chart-canvas-wrap {
-  background: #fff;
-  border: var(--border-hairline) solid rgba(0,131,141,.14);
-  border-radius: var(--radius-14);
-  overflow: hidden
-}
-
-.circ-chart-canvas-wrap canvas {
-  display: block;
-  width: 100%;
-  height: auto
-}
-
-.circ-chart-close {
-  flex: 0 0 auto;
-  border: var(--border-hairline) solid rgba(0,131,141,.22);
-  background: #fff;
-  color: #065b63;
-  border-radius: var(--radius-10);
-  padding: var(--space-0-45) var(--space-0-75);
-  font-size: .9rem;
-  font-weight: 600;
-  cursor: pointer
-}
-
-.circ-chart-close:hover,
-.circ-chart-close:focus-visible {
-  background: #f0fbfc
-}
-
-.circ-chart-message {
-  margin: 0;
-  font-size: .96rem;
-  line-height: 1.5;
-  color: #2b3d42
-}
-
-.circ-chart-result .source-note {
-  margin-top: var(--space-0-75)
-}
-
-@media(max-width:640px) {
-  .circ-chart-result-header {
-    flex-direction: column;
-    align-items: flex-start
-  }
 }
 
 #respiratoryResult .source-note,
@@ -2061,12 +1791,6 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
 
 #dietLevel option.recommended {
   color: var(--primary)
-}
-
-.diet-recommend-note {
-  font-size: .9rem;
-  color: var(--secondary);
-  margin-bottom: var(--space-0-5)
 }
 
 .plan-steps {
@@ -2219,94 +1943,6 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   text-transform: uppercase;
   color: var(--chrome-label-color, #5a7274);
   line-height: 1
-}
-
-.source-panel {
-  border-radius: var(--radius-14);
-  padding: .88rem var(--space-1);
-  margin-top: var(--space-0-75)
-}
-
-.source-panel--warning {
-  background: #b453090e;
-  border: var(--border-hairline) solid rgba(180,83,9,.14)
-}
-
-.source-panel--pro {
-  background: #0369a10b;
-  border: var(--border-hairline) solid rgba(3,105,161,.12)
-}
-
-.source-panel__heading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-0-5);
-  margin-bottom: var(--space-0-55)
-}
-
-.source-panel__heading strong {
-  font-size: .88rem;
-  font-weight: 700;
-  line-height: 1.25
-}
-
-.source-panel--warning .source-panel__heading strong {
-  color: #8a3d0a
-}
-
-.source-panel--pro .source-panel__heading strong {
-  color: #0c4a6e
-}
-
-.source-panel__icon {
-  flex-shrink: 0;
-  width: 15px;
-  height: 15px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center
-}
-
-.source-panel--warning .source-panel__icon {
-  color: #c2410c
-}
-
-.source-panel--pro .source-panel__icon {
-  color: #0284c7
-}
-
-.source-panel__icon svg {
-  display: block;
-  width: 100%;
-  height: 100%
-}
-
-.source-panel p {
-  margin: 0 0 var(--space-0-55);
-  font-size: .875rem;
-  line-height: 1.65;
-  color: #374151
-}
-
-.source-panel p:last-child {
-  margin-bottom: 0
-}
-
-.source-panel ul {
-  margin: var(--space-0-4) 0 0;
-  padding-left: var(--space-1-1);
-  font-size: .875rem;
-  line-height: 1.65;
-  color: #374151
-}
-
-.source-panel ul li+li {
-  margin-top: var(--space-0-25)
-}
-
-#sourceFieldset .source-toggle-wrap {
-  text-align: center;
-  margin-top: var(--space-1)
 }
 
 #sourceFieldset #toggleSources {
@@ -2584,12 +2220,6 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked {
   transition: transform .3s
 }
 
-#dataToggle:checked+.slider:before {
-  left: auto;
-  right: 2px;
-  transform: none
-}
-
 #bpDataToggle:checked+.slider:before {
   left: auto;
   right: 2px;
@@ -2700,31 +2330,6 @@ body.professional-bg {
   margin-inline-end: 0!important
 }
 
-#dietRecommendationsContent #generateDietBtn,
-#dietRecommendationsPdfBtn.diet-report-pdf-btn {
-  display: block!important;
-  box-sizing: border-box!important;
-  width: 100%!important;
-  max-width: 100%!important;
-  margin: var(--space-0-55) 0 0!important;
-  padding: var(--space-0-55) var(--space-1)!important;
-  border-radius: var(--radius)!important;
-  font-size: .95rem!important;
-  font-weight: 600!important;
-  cursor: pointer;
-  text-align: center
-}
-
-#dietRecommendationsPdfBtn.diet-report-pdf-btn {
-  background: #fff;
-  color: #000
-}
-
-#generateDietBtn {
-  border: var(--border-pro) solid #9900ff;
-  font-weight: 600
-}
-
 .liquid-ios26 #dietRecommendationsPdfBtn {
   border: var(--border-pro) solid #9900ff!important;
   font-weight: 600!important
@@ -2739,11 +2344,6 @@ body.professional-bg {
   top: .5rem;
   right: .5rem;
   transform: none
-}
-
-#dataToggle:disabled+.slider {
-  background: #ddd!important;
-  cursor: not-allowed
 }
 
 #toggleAdvancedGrowth.advanced-growth-btn {
@@ -2780,7 +2380,6 @@ body.professional-bg {
   pointer-events: none
 }
 
-#toggleAdvancedGrowth .adv-pro-tag,
 .pro-superscript {
   color: #90f;
   font-size: .55em;
@@ -3275,15 +2874,6 @@ fieldset.user-card {
   color: #ce0000
 }
 
-.doctor-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-  margin-top: var(--space-0-7)
-}
-
 .doctor-checkbox {
   appearance: none;
   -webkit-appearance: none;
@@ -3312,39 +2902,6 @@ fieldset.user-card {
   transform: rotate(45deg)
 }
 
-.doctor-label {
-  font-size: 1.425rem;
-  color: var(--primary);
-  font-weight: 500;
-  user-select: none;
-  cursor: pointer;
-  text-align: center;
-  line-height: 1.2;
-  margin-bottom: .2rem
-}
-
-.doctor-subtitle {
-  font-size: 1.175rem;
-  color: var(--primary);
-  font-weight: 400;
-  text-align: center;
-  line-height: 1.2
-}
-
-.doctor-wrapper.compact .doctor-label {
-  font-size: 1.175rem
-}
-
-.doctor-wrapper.compact .doctor-subtitle {
-  font-size: .925rem
-}
-
-.doctor-wrapper.compact .doctor-checkbox {
-  width: 24px;
-  height: 24px;
-  margin-top: var(--space-0-4)
-}
-
 #pwzContainer label {
   display: flex!important;
   flex-direction: column;
@@ -3371,9 +2928,6 @@ fieldset.user-card {
   }
   fieldset.user-card {
     margin-bottom: var(--space-0-3)
-  }
-  .doctor-wrapper {
-    margin-top: var(--space-0-25)
   }
 }
 
@@ -3437,22 +2991,6 @@ fieldset.user-card {
   margin: var(--space-0-6) 0
 }
 
-#intakeTable td input {
-  width: 100%
-}
-
-#intakeTable td:last-child {
-  width: 36px
-}
-
-#intakeTable .remove-intake-row {
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  line-height: 28px;
-  text-align: center
-}
-
 .muted {
   color: #6b7a7a;
   font-size: .92rem
@@ -3479,112 +3017,13 @@ fieldset.user-card {
 }
 
 #intakeCard,
-#intakeResults,
-#intakeResults .intake-results-table-wrap {
+#intakeResults {
   min-width: 0;
   max-width: 100%
 }
 
 #intakeCard h2.intake-title {
   text-align: center
-}
-
-#intakeResults .intake-results-table-wrap {
-  width: 100%;
-  overflow-x: auto
-}
-
-#intakeResults table.intake-results-table {
-  width: 100%;
-  min-width: 0;
-  margin-top: 0;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed
-}
-
-#intakeResults table.intake-results-table thead th:nth-child(1) {
-  width: 25%
-}
-
-#intakeResults table.intake-results-table thead th:nth-child(2) {
-  width: 37.5%
-}
-
-#intakeResults table.intake-results-table thead th:nth-child(3) {
-  width: 37.5%
-}
-
-#intakeResults table.intake-results-table th,
-#intakeResults table.intake-results-table td {
-  padding: var(--space-0-55) var(--space-0-65);
-  text-align: left;
-  vertical-align: top;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere
-}
-
-#intakeResults table.intake-results-table th {
-  background: var(--secondary);
-  color: #fff;
-  font-size: .92rem;
-  font-weight: 600
-}
-
-#intakeResults table.intake-results-table tbody tr:nth-child(2n) td {
-  background: var(--table-stripe)
-}
-
-#intakeResults .intake-period-main {
-  color: var(--primary);
-  font-weight: 700;
-  line-height: 1.3
-}
-
-#intakeResults .intake-period-sub {
-  margin-top: var(--space-0-35);
-  color: #6b7a7a;
-  font-size: .88rem
-}
-
-#intakeResults .intake-stack-cell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0-45)
-}
-
-#intakeResults .intake-metric-row {
-  display: grid;
-  grid-template-columns: minmax(0,1fr) auto;
-  gap: var(--space-0-55);
-  align-items: start
-}
-
-#intakeResults .intake-metric-row span {
-  color: #355;
-  line-height: 1.3
-}
-
-#intakeResults .intake-metric-row strong {
-  line-height: 1.3;
-  text-align: right
-}
-
-#intakeResults .intake-metric-row.is-key strong {
-  color: var(--primary);
-  font-size: 1rem
-}
-
-@media(max-width:980px) {
-  #intakeResults table.intake-results-table th,
-  #intakeResults table.intake-results-table td {
-    padding: var(--space-0-5) var(--space-0-55);
-    font-size: .9rem
-  }
-  #intakeResults .intake-metric-row {
-    gap: var(--space-0-4)
-  }
 }
 
 .intake-toggle-wrap {
@@ -3716,11 +3155,6 @@ fieldset.user-card {
   #intakeResults .intake-results-note {
     font-size: .82rem
   }
-}
-
-#intakeTable .remove-intake-row:before {
-  content: "\d7";
-  font-size: 1.25rem
 }
 
 @media(min-width:700px) {
@@ -3910,44 +3344,6 @@ fieldset.user-card {
   }
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-0-35) var(--space-0-5)
-}
-
-.summary-grid .label {
-  color: var(--text);
-  font-size: .95rem
-}
-
-.summary-grid .val {
-  text-align: right
-}
-
-.summary-grid .val .result-val {
-  font-size: 1.35rem
-}
-
-.summary-grid .muted {
-  color: #6b7a7a;
-  font-size: .92rem
-}
-
-.prev-summary-separator {
-  border: none;
-  border-top: var(--border-emphasis) solid var(--line);
-  width: 90%;
-  margin: 0 auto var(--space-0-6)
-}
-
-.prev-summary-label {
-  text-align: center;
-  margin-bottom: var(--space-0-5);
-  font-size: .95rem;
-  font-weight: 600
-}
-
 .status-ok {
   color: var(--secondary)
 }
@@ -3957,56 +3353,6 @@ fieldset.user-card {
 }
 
 .status-alert {
-  color: var(--danger)
-}
-
-.diff-section {
-  margin-top: var(--space-0-5)
-}
-
-.summary-grid .diff-section {
-  grid-column: 1 / -1
-}
-
-.diff-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-0-35) var(--space-0-5);
-  align-items: baseline
-}
-
-.diff-row .label {
-  color: var(--text);
-  font-size: .95rem
-}
-
-.diff-row .val {
-  text-align: right
-}
-
-.diff-row .val .result-val {
-  font-size: 1.35rem
-}
-
-/* P-OSTATNI-1: werdykt pary pomiarow / zdanie tempa pod wierszem roznicy — ten sam slownik, co Karta pacjenta */
-.diff-verdict {
-  grid-column: 1 / -1;
-  text-align: right;
-  font-size: .88rem;
-  line-height: 1.3;
-  margin: -.1rem 0 var(--space-0-4);
-  color: #4b5b5b
-}
-
-.diff-verdict.status-ok {
-  color: var(--secondary)
-}
-
-.diff-verdict.status-improve {
-  color: var(--notice-orange)
-}
-
-.diff-verdict.status-alert {
   color: var(--danger)
 }
 
@@ -5823,12 +5169,6 @@ body.thy-modal-open {
   transition: transform .3s ease,opacity .3s ease
 }
 
-.nav-toggle {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none
-}
-
 .vertical-menu {
   position: absolute;
   top: 100%;
@@ -5892,26 +5232,6 @@ body.thy-modal-open {
   .vertical-menu {
     width: 40%
   }
-}
-
-.nav-toggle:checked+label+.vertical-menu {
-  max-height: 500px;
-  opacity: 1;
-  transform: scaleY(1);
-  pointer-events: auto
-}
-
-.nav-toggle:checked+label .bar:nth-child(1) {
-  transform: translateY(6px) rotate(45deg)
-}
-
-.nav-toggle:checked+label .bar:nth-child(2) {
-  opacity: 1;
-  transform: none
-}
-
-.nav-toggle:checked+label .bar:nth-child(3) {
-  transform: translateY(-6px) rotate(-45deg)
 }
 
 #scrollTopBtn {
@@ -6397,17 +5717,6 @@ body.thy-modal-open {
   padding-bottom: var(--space-1-2)
 }
 
-#antibioticTherapyCard .slider-labels {
-  position: absolute;
-  bottom: -.3rem;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  font-size: .8rem;
-  pointer-events: none
-}
-
 #antibioticTherapyCard .slider-ticks {
   position: absolute;
   top: 0;
@@ -6415,15 +5724,6 @@ body.thy-modal-open {
   right: 0;
   height: .6rem;
   pointer-events: none
-}
-
-#antibioticTherapyCard .slider-tick-line {
-  position: absolute;
-  top: .3rem;
-  width: 2px;
-  height: .3rem;
-  background: var(--primary);
-  opacity: var(--opacity-slider-tick)
 }
 
 #antibioticTherapyCard .slider-tick-label {
@@ -6469,30 +5769,6 @@ body.thy-modal-open {
 #antibioticTherapyCard .slider-value-label {
   box-sizing: border-box;
   max-width: calc(100% - .5rem)
-}
-
-#antibioticTherapyCard .dose-slider-container.has-message-label {
-  padding-bottom: 2.8rem
-}
-
-#antibioticTherapyCard .slider-value-label.slider-value-label--message {
-  width: min(28rem,calc(100% - .5rem));
-  max-width: calc(100% - .5rem);
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  text-align: center;
-  line-height: 1.3
-}
-
-@media(max-width:699px) {
-  #antibioticTherapyCard .dose-slider-container.has-message-label {
-    padding-bottom: 3.4rem
-  }
-  #antibioticTherapyCard .slider-value-label.slider-value-label--message {
-    width: calc(100% - .5rem);
-    font-size: .95rem
-  }
 }
 
 #antibioticTherapyCard .custom-dose-btn {
@@ -6553,38 +5829,6 @@ body.thy-modal-open {
   --summary-border-thickness: 3px
 }
 
-.snake-border {
-  position: relative;
-  display: block;
-  width: 100%;
-  padding: var(--snake-border-thickness);
-  border-radius: var(--radius-14);
-  overflow: hidden;
-  z-index: var(--z-base)
-}
-
-.snake-border>button {
-  position: relative;
-  z-index: var(--z-raised);
-  width: 100%
-}
-
-.snake-border:before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background: conic-gradient(var(--snake-color) 0deg 90deg,transparent 90deg 360deg);
-  -webkit-mask: radial-gradient(farthest-side,transparent calc(100% - var(--snake-border-thickness)),#000 calc(100% - var(--snake-border-thickness)));
-  mask: radial-gradient(farthest-side,transparent calc(100% - var(--snake-border-thickness)),#000 calc(100% - var(--snake-border-thickness)));
-  z-index: var(--z-base);
-  animation: rotate-snake 8s linear infinite;
-  transform-origin: center
-}
-
 @keyframes rotate-snake {
   0% {
     transform: rotate(0)
@@ -6636,13 +5880,6 @@ body.thy-modal-open {
 #stabilizationGroup .toggle-label {
   margin-bottom: 0;
   margin-right: 0
-}
-
-#stabilizationGroup .stabilization-control {
-  display: flex;
-  align-items: center;
-  gap: var(--space-0-35);
-  flex-shrink: 0
 }
 
 #stabilizationGroup .info-icon {
@@ -6788,7 +6025,6 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
 }
 
 .table-scroll,
-#intakeResults .intake-results-table-wrap,
 .adult-vitals-mini-table-wrap,
 .nutrition-micros-table-wrap {
   overscroll-behavior-x: contain
@@ -6858,45 +6094,11 @@ html.vilda-auth-locked body>*:not(#vilda-auth-ui-root):not(.vilda-logout-overlay
 }
 
 .liquid-ios26 .sidebar._enter,
-.liquid-ios26 .sidebar-logo._enter,
-.liquid-ios26 .sidebar-logo img._enter,
 .liquid-ios26 .card._enter,
 .liquid-ios26 fieldset._enter {
   animation: none!important;
   transform: none!important;
   opacity: 1!important
-}
-
-#updateBanner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: var(--z-banner);
-  display: none;
-  background: var(--primary);
-  color: #fff;
-  text-align: center;
-  padding: calc(env(safe-area-inset-top,0px) + .5rem) var(--space-1) var(--space-0-5);
-  padding-top: calc(constant(safe-area-inset-top) + .5rem);
-  box-shadow: 0 2px 6px #0003
-}
-
-#updateBanner button {
-  margin-left: var(--space-1);
-  padding: var(--space-0-35) var(--space-0-8);
-  font-size: .95rem;
-  cursor: pointer
-}
-
-#updateBanner button:disabled {
-  opacity: .75;
-  cursor: not-allowed
-}
-
-#updateBanner .dismiss {
-  background: transparent;
-  border: var(--border-hairline) solid rgba(255,255,255,.85)
 }
 
 @media(max-width:699px) {
@@ -7466,7 +6668,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .result-number small,
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 small,
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .source-note,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .patient-report-summary-hint,
 body.page-settings:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .settings-control-desc,
 body.page-settings:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .settings-section-note,
 body.page-settings:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .settings-inline-note,
@@ -7586,7 +6787,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 }
 
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-inline-count,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count,
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-module-badge {
   background: var(--hc-button-bg)!important;
   color: var(--hc-text)!important;
@@ -7633,8 +6833,7 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 }
 
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-footer,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-inline-count,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-tile-count {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 .guide-inline-count {
   color: var(--hc-text)!important
 }
 
@@ -8161,15 +7360,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   scroll-margin-top: 1rem
 }
 
-.nutrition-norms-cta {
-  margin-top: var(--space-0-8);
-  text-align: center
-}
-
-.nutrition-norms-cta a {
-  font-weight: 600
-}
-
 .nutrition-norms-meta {
   margin: var(--space-0-25) 0 var(--space-0-85);
   font-size: .98rem;
@@ -8183,13 +7373,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   font-size: .92rem;
   color: #444;
   text-align: center;
-  line-height: 1.5
-}
-
-.nutrition-norms-intro {
-  margin: 0 0 var(--space-0-9);
-  font-size: .92rem;
-  color: #444;
   line-height: 1.5
 }
 
@@ -8312,47 +7495,11 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   margin-bottom: var(--space-0-9)
 }
 
-.nutrition-norms-controls {
-  display: grid;
-  gap: var(--space-0-85);
-  margin-bottom: var(--space-0-95)
-}
-
-.nutrition-norms-control {
-  display: grid;
-  gap: var(--space-0-4)
-}
-
-.nutrition-norms-control>span {
-  font-weight: 600
-}
-
-.nutrition-norms-control select {
-  max-width: 100%
-}
-
-.nutrition-norms-select-row {
-  align-items: start;
-  gap: var(--space-0-75)
-}
-
 .nutrition-norms-pal-select {
   width: 100%;
   max-width: none;
   padding: var(--space-0-55) var(--space-0-7);
   font: inherit
-}
-
-.nutrition-norms-body-mode {
-  align-items: start
-}
-
-.nutrition-norms-body-mode label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-0-4);
-  margin-right: var(--space-1);
-  font-size: .95rem
 }
 
 .nutrition-norms-box {
@@ -8383,21 +7530,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   font-size: 1rem;
   font-weight: 700;
   color: #33464d
-}
-
-.nutrition-norms-note {
-  margin: .15rem 0 var(--space-0-9);
-  padding: var(--space-0-8) var(--space-0-95);
-  border: var(--border-hairline) solid rgba(11,114,133,.18);
-  border-radius: var(--radius-12);
-  background: #0b72850d;
-  font-size: .88rem;
-  color: var(--text-soft);
-  line-height: 1.5
-}
-
-.nutrition-norms-note p {
-  margin: var(--space-0-35) 0 0
 }
 
 .nutrition-norms-quality-details {
@@ -8684,15 +7816,6 @@ body.nutrition-practice-sheet-open {
   }
 }
 
-.nutrition-practice-mix {
-  padding: .78rem var(--space-0-9);
-  border: var(--border-hairline) dashed rgba(11,114,133,.2);
-  border-radius: var(--radius-14);
-  font-size: .86rem;
-  color: #4d5c62;
-  line-height: 1.45
-}
-
 .nutrition-norms-messages {
   display: grid;
   gap: var(--space-0-55);
@@ -8723,13 +7846,6 @@ body.nutrition-practice-sheet-open {
   text-align: center
 }
 
-.nutrition-norms-source {
-  margin-top: var(--space-0-95);
-  font-size: .82rem;
-  color: var(--placeholder);
-  line-height: 1.45
-}
-
 .nutrition-norms-details {
   margin: 0 0 var(--space-0-9)
 }
@@ -8748,13 +7864,6 @@ body.nutrition-practice-sheet-open {
   margin: var(--space-0-3) 0;
   font-size: .9rem;
   color: var(--text-soft)
-}
-
-.nutrition-norms-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: var(--space-0-55);
-  table-layout: fixed
 }
 
 .nutrition-norms-range-table {
@@ -8787,38 +7896,6 @@ body.nutrition-practice-sheet-open {
   color: #5b6770;
   font-size: .8rem;
   line-height: 1.35
-}
-
-.nutrition-norms-table th,
-.nutrition-norms-table td {
-  padding: .38rem var(--space-0-25);
-  border-bottom: var(--border-hairline) solid rgba(0,0,0,.08);
-  text-align: left;
-  vertical-align: top;
-  font-size: .9rem
-}
-
-.nutrition-norms-table th {
-  font-weight: 700
-}
-
-.nutrition-norms-table tr:last-child td {
-  border-bottom: 0
-}
-
-@media(min-width:720px) {
-  .nutrition-norms-controls {
-    grid-template-columns: minmax(220px,260px) 1fr;
-    align-items: end
-  }
-}
-
-@media(max-width:560px) {
-  .nutrition-norms-body-mode label {
-    display: flex;
-    margin-right: 0;
-    margin-bottom: var(--space-0-25)
-  }
 }
 
 .nutrition-micros-card {
@@ -9396,388 +8473,6 @@ body.nutrition-practice-sheet-open {
   overflow-anchor: none
 }
 
-.diet-personalization-module {
-  margin: var(--space-0-85) 0 var(--space-0-75);
-  padding: var(--space-0-75);
-  border: var(--border-hairline) solid #e2d3f5;
-  border-radius: var(--radius)
-}
-
-.diet-personalization-head {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: var(--space-0-65)
-}
-
-.diet-personalization-head>div {
-  width: 100%;
-  min-width: 0
-}
-
-.diet-personalization-head .diet-survey-toggle {
-  align-self: center;
-  width: min(100%,24rem);
-  max-width: 100%;
-  text-align: center;
-  white-space: normal
-}
-
-.diet-personalization-head strong {
-  display: block;
-  font-size: .98rem;
-  line-height: 1.25
-}
-
-.diet-personalization-head p,
-.diet-survey-help,
-.diet-smart-goal p,
-.diet-guidance-box p,
-.diet-calculation-details p {
-  margin: var(--space-0-25) 0 0;
-  line-height: 1.45
-}
-
-.diet-survey-toggle,
-.diet-survey-clear {
-  background: #fff;
-  color: #000;
-  border: var(--border-emphasis) solid #9900ff;
-  border-radius: var(--radius);
-  padding: var(--space-0-45) var(--space-0-7);
-  font-size: .88rem;
-  cursor: pointer;
-  white-space: nowrap
-}
-
-.diet-survey-panel {
-  margin-top: var(--space-0-75);
-  border-top: var(--border-hairline) solid #eadff5;
-  padding-top: var(--space-0-75)
-}
-
-.diet-survey-panel[hidden] {
-  display: none!important
-}
-
-.diet-survey-section {
-  margin-top: var(--space-0-75)
-}
-
-.diet-survey-section h4,
-.diet-guidance-box h4,
-.diet-smart-goal h4 {
-  margin: 0 0 var(--space-0-45);
-  font-size: .96rem;
-  line-height: 1.25
-}
-
-.diet-survey-grid {
-  display: grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: var(--space-0-45)
-}
-
-.diet-survey-chip {
-  display: grid;
-  grid-template-columns: 1.05rem minmax(0,1fr);
-  align-items: flex-start;
-  gap: var(--space-0-45);
-  min-width: 0;
-  width: 100%;
-  margin: 0!important;
-  padding: .48rem var(--space-0-55);
-  border: var(--border-hairline) solid #dedede;
-  border-radius: .65rem;
-  background: #fff;
-  cursor: pointer;
-  line-height: 1.25;
-  font-size: .86rem
-}
-
-.diet-survey-chip input[type=checkbox] {
-  appearance: auto;
-  -webkit-appearance: checkbox;
-  width: 1.05rem!important;
-  min-width: 1.05rem!important;
-  max-width: 1.05rem!important;
-  height: 1.05rem!important;
-  min-height: 1.05rem!important;
-  max-height: 1.05rem!important;
-  padding: 0!important;
-  margin: .08rem 0 0!important;
-  border-radius: .2rem;
-  flex: 0 0 1.05rem;
-  accent-color: #9900ff;
-  box-shadow: none!important
-}
-
-.diet-survey-chip span {
-  display: block;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: normal
-}
-
-.diet-survey-chip:has(input:checked) {
-  border-color: #90f;
-  background: #9900ff12
-}
-
-.diet-survey-more {
-  margin-top: var(--space-0-75);
-  padding: var(--space-0-6) var(--space-0-7);
-  border: var(--border-hairline) dashed #d8c0ed;
-  border-radius: var(--radius)
-}
-
-.diet-survey-more summary {
-  cursor: pointer;
-  font-weight: 600
-}
-
-.diet-survey-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-0-75);
-  margin-top: var(--space-0-75)
-}
-
-.diet-survey-counter {
-  color: var(--text-soft);
-  font-size: .86rem
-}
-
-.diet-survey-reset-note {
-  margin-top: var(--space-0-75);
-  padding: var(--space-0-7) var(--space-0-8);
-  border: var(--border-hairline) dashed #d8c0ed;
-  border-radius: var(--radius);
-  background: #9900ff0b;
-  color: #3f2b4f;
-  line-height: 1.45
-}
-
-.diet-personalized-output {
-  margin-top: var(--space-0-8)
-}
-
-.diet-personalized-summary {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-0-8);
-  align-items: flex-start;
-  padding: var(--space-0-8);
-  border: var(--border-hairline) solid #e1d3f0;
-  border-radius: var(--radius)
-}
-
-.diet-personalized-summary h3 {
-  margin: .15rem 0 var(--space-0-35);
-  font-size: 1.05rem
-}
-
-.diet-personalized-summary p {
-  margin: var(--space-0-25) 0;
-  line-height: 1.45
-}
-
-.diet-personalized-kicker {
-  font-size: .78rem;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: #6f2ba0;
-  font-weight: 700
-}
-
-.diet-personalized-badge {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: .28rem var(--space-0-5);
-  border: var(--border-hairline) solid #d6c3ea;
-  border-radius: var(--radius-pill);
-  color: #5b3a78;
-  background: #fff;
-  font-size: .75rem;
-  font-weight: 700;
-  white-space: nowrap
-}
-
-.diet-personalized-badge--active {
-  border-color: #90f;
-  color: #5a008f;
-  background: #9900ff14
-}
-
-.diet-smart-goals {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-0-65);
-  margin-top: var(--space-0-7)
-}
-
-.diet-smart-goal {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-0-65);
-  padding: var(--space-0-75);
-  border: var(--border-hairline) solid #e6e6e6;
-  border-radius: var(--radius)
-}
-
-.diet-smart-goal-number {
-  width: 2rem;
-  height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-pill);
-  background: #90f;
-  color: #fff;
-  font-weight: 700
-}
-
-.diet-guidance-grid {
-  display: grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: var(--space-0-65);
-  margin-top: var(--space-0-7)
-}
-
-.diet-guidance-box {
-  padding: var(--space-0-75);
-  border: var(--border-hairline) solid #e6e6e6;
-  border-radius: var(--radius)
-}
-
-.diet-guidance-box--wide {
-  grid-column: 1 / -1
-}
-
-.diet-myth-box-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-0-55);
-  margin-bottom: var(--space-0-35)
-}
-
-.diet-myth-box-head h4 {
-  margin-bottom: 0!important
-}
-
-.diet-myth-next-btn {
-  flex: 0 0 auto;
-  padding: .32rem var(--space-0-55);
-  border: var(--border-hairline) solid #d6c3ea;
-  border-radius: var(--radius-pill);
-  background: #fff;
-  color: #5a008f;
-  font-size: .78rem;
-  line-height: 1.2;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap
-}
-
-.diet-myth-next-btn:hover,
-.diet-myth-next-btn:focus-visible {
-  border-color: #90f;
-  background: #9900ff12
-}
-
-.diet-swaps-list {
-  list-style: none;
-  padding: 0;
-  margin: 0
-}
-
-.diet-swaps-list li {
-  display: grid;
-  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
-  gap: var(--space-0-35);
-  align-items: start;
-  padding: var(--space-0-3) 0;
-  border-bottom: var(--border-hairline) solid #eeeeee;
-  line-height: 1.35
-}
-
-.diet-swaps-list li:last-child {
-  border-bottom: none
-}
-
-.diet-calculation-details {
-  margin-top: var(--space-0-8);
-  padding: var(--space-0-65) var(--space-0-75);
-  border: var(--border-hairline) dashed #d4d4d4;
-  border-radius: var(--radius)
-}
-
-.diet-calculation-details summary {
-  cursor: pointer;
-  font-weight: 700
-}
-
-.diet-calculation-details-body {
-  margin-top: var(--space-0-65)
-}
-
-.diet-personalization-module,
-.diet-personalized-summary,
-.diet-smart-goal,
-.diet-guidance-box,
-.diet-calculation-details,
-.diet-survey-more {
-  border-color: #9900ff47;
-  background: #ffffff8c;
-  backdrop-filter: var(--blur-button) var(--blur-card-saturate);
-  -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)
-}
-
-.diet-survey-toggle,
-.diet-survey-clear {
-  border-color: #90f;
-  font-weight: 600
-}
-
-@media(max-width:640px) {
-  .diet-personalization-head,
-  .diet-personalized-summary,
-  .diet-survey-footer {
-    flex-direction: column;
-    align-items: stretch
-  }
-  .diet-survey-toggle,
-  .diet-survey-clear {
-    width: 100%;
-    white-space: normal
-  }
-  #dietRecommendationsPdfBtn.diet-report-pdf-btn {
-    width: 100%;
-    max-width: 100%
-  }
-  .diet-survey-grid,
-  .diet-guidance-grid,
-  .diet-swaps-list li {
-    grid-template-columns: 1fr
-  }
-  .diet-myth-box-head {
-    flex-direction: column;
-    align-items: stretch
-  }
-  .diet-myth-next-btn {
-    width: 100%;
-    white-space: normal
-  }
-  .diet-swaps-list li strong {
-    display: none
-  }
-}
-
 .diet-card-modern {
   overflow: hidden
 }
@@ -9789,7 +8484,6 @@ body.nutrition-practice-sheet-open {
 
 .diet-card-intro h3,
 .diet-panel-lead h4,
-.diet-pdf-variant-card h4,
 .diet-energy-output-head h3 {
   margin: 0;
   color: #241334;
@@ -9798,73 +8492,11 @@ body.nutrition-practice-sheet-open {
 
 .diet-card-intro p,
 .diet-panel-lead p,
-.diet-pdf-variant-card p,
 .diet-control-hint,
 .diet-energy-output-head p {
   margin: var(--space-0-35) 0 0;
   color: #4a4a4a;
   line-height: 1.45
-}
-
-.diet-mode-switch {
-  display: grid;
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: var(--space-0-6);
-  margin-top: var(--space-0-75)
-}
-
-.diet-mode-tab {
-  display: flex!important;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 5.2rem;
-  width: 100%;
-  padding: var(--space-0-75) var(--space-0-85)!important;
-  border: var(--border-emphasis) solid #e4d7f4!important;
-  border-radius: var(--radius)!important;
-  background: #fff!important;
-  color: #1e1e1e!important;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: 0 6px 18px #1c14240a
-}
-
-.diet-mode-tab strong {
-  display: block;
-  font-size: .96rem;
-  line-height: 1.2;
-  font-weight: 800
-}
-
-.diet-mode-tab span {
-  display: block;
-  margin-top: .28rem;
-  font-size: .8rem;
-  line-height: 1.25;
-  color: #5e5e5e
-}
-
-.diet-mode-tab.is-active {
-  border-color: #90f!important;
-  background: #9900ff24!important;
-  box-shadow: 0 10px 24px #9900ff1f
-}
-
-.diet-mode-tab.is-active strong {
-  color: #5a008f
-}
-
-.diet-mode-tab {
-  min-width: 0
-}
-
-.diet-mode-tab strong,
-.diet-mode-tab span {
-  overflow-wrap: break-word;
-  word-break: break-word;
-  hyphens: auto;
-  max-width: 100%
 }
 
 .diet-mode-panel {
@@ -9893,7 +8525,6 @@ body.nutrition-practice-sheet-open {
 }
 
 .diet-energy-control-card,
-.diet-pdf-variant-card,
 .diet-energy-output {
   border: var(--border-hairline) solid #e4d7f4;
   border-radius: var(--radius);
@@ -10011,9 +8642,7 @@ body.nutrition-practice-sheet-open {
 
 #dietRecommendationsContent .diet-primary-action,
 #dietRecommendationsContent .diet-secondary-action,
-#dietRecommendationsContent #generateDietBtn,
-#dietRecommendationsContent #generateEnergyDietBtn,
-#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+#dietRecommendationsContent #generateEnergyDietBtn {
   display: block!important;
   box-sizing: border-box!important;
   width: 100%!important;
@@ -10029,15 +8658,13 @@ body.nutrition-practice-sheet-open {
 }
 
 #dietRecommendationsContent .diet-primary-action,
-#dietRecommendationsContent #generateDietBtn,
 #dietRecommendationsContent #generateEnergyDietBtn {
   border: var(--border-pro) solid #9900ff!important;
   background: #fff!important;
   color: #000!important
 }
 
-#dietRecommendationsContent .diet-secondary-action,
-#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+#dietRecommendationsContent .diet-secondary-action {
   border: var(--border-emphasis) solid #9900ff!important;
   background: #fff!important;
   color: #000!important
@@ -10052,36 +8679,6 @@ body.nutrition-practice-sheet-open {
 
 .diet-result-actions[hidden] {
   display: none!important
-}
-
-.diet-pdf-variant-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-0-65);
-  margin-top: var(--space-0-75)
-}
-
-.diet-pdf-variant-card {
-  position: relative
-}
-
-.diet-pdf-variant-card--recommended {
-  border-color: #90f;
-  background: linear-gradient(135deg,#9900ff14,#fffffff2)
-}
-
-.diet-recommended-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--space-0-45);
-  padding: .22rem .48rem;
-  border-radius: var(--radius-pill);
-  background: #90f;
-  color: #fff;
-  font-size: .74rem;
-  font-weight: 800;
-  letter-spacing: .02em
 }
 
 .diet-energy-output-head {
@@ -10110,22 +8707,11 @@ body.nutrition-practice-sheet-open {
   -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important
 }
 
-.diet-pdf-variant-card {
-  border-color: #9900ff47;
-  background: #ffffff8c;
-  backdrop-filter: var(--blur-button) var(--blur-card-saturate);
-  -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)
-}
-
 @media(max-width:760px) {
-  .diet-mode-switch,
   .diet-energy-controls-grid,
   .diet-extra-grid,
   .diet-result-actions {
     grid-template-columns: 1fr
-  }
-  .diet-mode-tab {
-    min-height: auto
   }
 }
 
@@ -10193,39 +8779,23 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 #dietRecommendationsContent .diet-card-intro,
 #dietRecommendationsContent .diet-panel-lead,
 #dietRecommendationsContent .diet-energy-control-card,
-#dietRecommendationsContent .diet-pdf-variant-card,
 #dietRecommendationsContent .diet-energy-output,
-#dietRecommendationsContent .diet-energy-extra-options,
-#dietRecommendationsContent .diet-personalization-module,
-#dietRecommendationsContent .diet-personalized-summary,
-#dietRecommendationsContent .diet-smart-goal,
-#dietRecommendationsContent .diet-guidance-box,
-#dietRecommendationsContent .diet-calculation-details,
-#dietRecommendationsContent .diet-survey-more,
-#dietRecommendationsContent .diet-survey-reset-note {
+#dietRecommendationsContent .diet-energy-extra-options {
   border-color: var(--diet-ui-border)!important;
   color: var(--diet-ui-text)!important
 }
 
-#dietRecommendationsContent .diet-card-intro,
-#dietRecommendationsContent .diet-personalization-module,
-#dietRecommendationsContent .diet-personalized-summary,
-#dietRecommendationsContent .diet-survey-reset-note {
+#dietRecommendationsContent .diet-card-intro {
   background: var(--diet-ui-surface-soft)!important
 }
 
 #dietRecommendationsContent .diet-panel-lead,
-#dietRecommendationsContent .diet-energy-extra-options,
-#dietRecommendationsContent .diet-calculation-details,
-#dietRecommendationsContent .diet-survey-more {
+#dietRecommendationsContent .diet-energy-extra-options {
   background: var(--diet-ui-surface-alt)!important
 }
 
 #dietRecommendationsContent .diet-energy-control-card,
-#dietRecommendationsContent .diet-pdf-variant-card,
-#dietRecommendationsContent .diet-energy-output,
-#dietRecommendationsContent .diet-smart-goal,
-#dietRecommendationsContent .diet-guidance-box {
+#dietRecommendationsContent .diet-energy-output {
   background: var(--diet-ui-surface)!important
 }
 
@@ -10238,31 +8808,11 @@ body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options {
   -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)!important
 }
 
-#dietRecommendationsContent .diet-pdf-variant-card,
-#dietRecommendationsContent .diet-personalization-module,
-#dietRecommendationsContent .diet-personalized-summary,
-#dietRecommendationsContent .diet-smart-goal,
-#dietRecommendationsContent .diet-guidance-box,
-#dietRecommendationsContent .diet-calculation-details,
-#dietRecommendationsContent .diet-survey-more,
-#dietRecommendationsContent .diet-survey-reset-note {
-  backdrop-filter: var(--blur-button) var(--blur-card-saturate);
-  -webkit-backdrop-filter: var(--blur-button) var(--blur-card-saturate)
-}
-
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-card-intro,
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-panel-lead,
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-energy-control-card,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-pdf-variant-card,
 body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-energy-output,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-personalization-module,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-personalized-summary,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-smart-goal,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-guidance-box,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-calculation-details,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-survey-more,
-body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-survey-reset-note {
+body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options {
   backdrop-filter: var(--hc-blur)!important;
   -webkit-backdrop-filter: var(--hc-blur)!important;
   box-shadow: var(--hc-shadow)!important
@@ -10270,39 +8820,17 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 
 #dietRecommendationsContent .diet-card-intro h3,
 #dietRecommendationsContent .diet-panel-lead h4,
-#dietRecommendationsContent .diet-pdf-variant-card h4,
 #dietRecommendationsContent .diet-energy-output-head h3,
-#dietRecommendationsContent .diet-personalization-head strong,
-#dietRecommendationsContent .diet-survey-section h4,
-#dietRecommendationsContent .diet-survey-more summary,
-#dietRecommendationsContent .diet-guidance-box h4,
-#dietRecommendationsContent .diet-smart-goal h4,
-#dietRecommendationsContent .diet-myth-box-head h4,
 #dietRecommendationsContent .diet-control-title,
-#dietRecommendationsContent .diet-personalized-summary h3,
 #dietRecommendationsContent .diet-energy-extra-options summary {
   color: var(--diet-ui-heading)!important
 }
 
-#dietRecommendationsContent .diet-personalized-kicker {
-  color: var(--diet-ui-accent-strong)!important
-}
-
 #dietRecommendationsContent .diet-card-intro p,
 #dietRecommendationsContent .diet-panel-lead p,
-#dietRecommendationsContent .diet-pdf-variant-card p,
 #dietRecommendationsContent .diet-control-hint,
 #dietRecommendationsContent .diet-energy-output-head p,
-#dietRecommendationsContent .diet-personalization-head p,
-#dietRecommendationsContent .diet-survey-help,
-#dietRecommendationsContent .diet-smart-goal p,
-#dietRecommendationsContent .diet-guidance-box p,
-#dietRecommendationsContent .diet-calculation-details p,
-#dietRecommendationsContent .diet-survey-counter,
-#dietRecommendationsContent .diet-survey-reset-note,
-#dietRecommendationsContent .diet-recommend-note,
-#dietRecommendationsContent .diet-info-note,
-#dietRecommendationsContent .diet-mode-tab span {
+#dietRecommendationsContent .diet-info-note {
   color: var(--diet-ui-muted)!important
 }
 
@@ -10310,111 +8838,49 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   border-bottom-color: var(--diet-ui-divider)!important
 }
 
-#dietRecommendationsContent .diet-survey-panel {
-  border-top-color: var(--diet-ui-divider)!important
-}
-
-#dietRecommendationsContent .diet-swaps-list li {
-  border-bottom-color: var(--diet-ui-divider)!important
-}
-
-#dietRecommendationsContent .diet-mode-tab,
 #dietRecommendationsContent .diet-segmented-control button,
 #dietRecommendationsContent .diet-option-check,
-#dietRecommendationsContent .diet-survey-chip,
-#dietRecommendationsContent .diet-survey-toggle,
-#dietRecommendationsContent .diet-survey-clear,
-#dietRecommendationsContent .diet-myth-next-btn,
 #dietRecommendationsContent .diet-primary-action,
 #dietRecommendationsContent .diet-secondary-action,
-#dietRecommendationsContent #generateDietBtn,
-#dietRecommendationsContent #generateEnergyDietBtn,
-#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+#dietRecommendationsContent #generateEnergyDietBtn {
   background: var(--diet-ui-button-bg)!important;
   color: var(--diet-ui-button-text)!important
 }
 
-#dietRecommendationsContent .diet-mode-tab,
 #dietRecommendationsContent .diet-segmented-control button,
-#dietRecommendationsContent .diet-option-check,
-#dietRecommendationsContent .diet-survey-chip {
+#dietRecommendationsContent .diet-option-check {
   border-color: var(--diet-ui-neutral-border)!important
 }
 
-#dietRecommendationsContent .diet-survey-toggle,
-#dietRecommendationsContent .diet-survey-clear,
-#dietRecommendationsContent .diet-myth-next-btn,
 #dietRecommendationsContent .diet-primary-action,
 #dietRecommendationsContent .diet-secondary-action,
-#dietRecommendationsContent #generateDietBtn,
-#dietRecommendationsContent #generateEnergyDietBtn,
-#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+#dietRecommendationsContent #generateEnergyDietBtn {
   border-color: var(--diet-ui-accent)!important
 }
 
-#dietRecommendationsContent .diet-personalized-badge {
-  background: var(--diet-ui-button-bg)!important;
-  color: var(--diet-ui-muted-strong)!important;
-  border-color: var(--diet-ui-border)!important
-}
-
-#dietRecommendationsContent .diet-mode-tab.is-active,
 #dietRecommendationsContent .diet-segmented-control button.is-active,
-#dietRecommendationsContent .diet-option-check:has(input:checked),
-#dietRecommendationsContent .diet-survey-chip:has(input:checked),
-#dietRecommendationsContent .diet-pdf-variant-card--recommended,
-#dietRecommendationsContent .diet-personalized-badge--active {
+#dietRecommendationsContent .diet-option-check:has(input:checked) {
   background: color-mix(in srgb,var(--diet-ui-surface) 80%,var(--diet-ui-accent) 20%)!important;
   border-color: var(--diet-ui-active-border)!important
 }
 
-#dietRecommendationsContent .diet-mode-tab strong {
-  color: var(--diet-ui-heading)!important
-}
-
-#dietRecommendationsContent .diet-mode-tab.is-active strong,
 #dietRecommendationsContent .diet-segmented-control button.is-active {
   color: var(--diet-ui-accent-strong)!important
 }
 
-#dietRecommendationsContent .diet-recommended-badge,
-#dietRecommendationsContent .diet-smart-goal-number {
-  background: var(--diet-ui-active-bg)!important;
-  color: var(--diet-ui-active-text)!important
-}
-
-#dietRecommendationsContent .diet-survey-toggle:hover,
-#dietRecommendationsContent .diet-survey-toggle:focus-visible,
-#dietRecommendationsContent .diet-survey-clear:hover,
-#dietRecommendationsContent .diet-survey-clear:focus-visible,
-#dietRecommendationsContent .diet-myth-next-btn:hover,
-#dietRecommendationsContent .diet-myth-next-btn:focus-visible,
 #dietRecommendationsContent .diet-primary-action:hover,
 #dietRecommendationsContent .diet-primary-action:focus-visible,
 #dietRecommendationsContent .diet-secondary-action:hover,
 #dietRecommendationsContent .diet-secondary-action:focus-visible,
-#dietRecommendationsContent #generateDietBtn:hover,
-#dietRecommendationsContent #generateDietBtn:focus-visible,
 #dietRecommendationsContent #generateEnergyDietBtn:hover,
 #dietRecommendationsContent #generateEnergyDietBtn:focus-visible,
-#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn:hover,
-#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn:focus-visible,
-#dietRecommendationsContent .diet-mode-tab:hover,
-#dietRecommendationsContent .diet-mode-tab:focus-visible,
 #dietRecommendationsContent .diet-option-check:hover,
-#dietRecommendationsContent .diet-survey-chip:hover,
 #dietRecommendationsContent .diet-segmented-control button:hover:not(.is-active),
 #dietRecommendationsContent .diet-segmented-control button:focus-visible:not(.is-active) {
   background: var(--diet-ui-button-hover-bg)!important
 }
 
-#dietRecommendationsContent .diet-mode-tab.is-active:hover,
-#dietRecommendationsContent .diet-mode-tab.is-active:focus-visible {
-  background: var(--diet-ui-accent-soft)!important
-}
-
-#dietRecommendationsContent .diet-option-check input[type=checkbox],
-#dietRecommendationsContent .diet-survey-chip input[type=checkbox] {
+#dietRecommendationsContent .diet-option-check input[type=checkbox] {
   accent-color: var(--diet-ui-accent)!important
 }
 
@@ -10557,13 +9023,10 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 
 .nutrition-norms-card .nutrition-norms-meta,
 .nutrition-norms-card .nutrition-norms-summary,
-.nutrition-norms-card .nutrition-norms-intro,
 .nutrition-norms-card .nutrition-norms-toolbar-state,
 .nutrition-norms-card .nutrition-norms-toolbar-help,
 .nutrition-norms-card .nutrition-norms-sub,
-.nutrition-norms-card .nutrition-norms-note,
 .nutrition-norms-card .nutrition-norms-quality-group,
-.nutrition-norms-card .nutrition-norms-source,
 .nutrition-norms-card .nutrition-norms-pal-cell-sub,
 .nutrition-norms-card .food-total-macro-note,
 .nutrition-micros-card .nutrition-micros-sub,
@@ -10597,7 +9060,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   color: var(--nutrition-ui-text)!important
 }
 
-.nutrition-norms-card .nutrition-norms-note,
 .nutrition-norms-card .nutrition-norms-quality-group,
 .nutrition-norms-card .nutrition-practice-inline,
 .nutrition-micros-card .nutrition-micros-control-box,
@@ -10610,11 +9072,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   background: var(--nutrition-ui-surface-soft)!important;
   border-color: var(--nutrition-ui-border)!important;
   color: var(--nutrition-ui-text)!important
-}
-
-.nutrition-norms-card .nutrition-norms-note {
-  backdrop-filter: var(--nutrition-ui-panel-blur);
-  -webkit-backdrop-filter: var(--nutrition-ui-panel-blur)
 }
 
 body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group,
@@ -10708,8 +9165,6 @@ body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target {
 
 .nutrition-norms-card .nutrition-norms-range-table th,
 .nutrition-norms-card .nutrition-norms-range-table td,
-.nutrition-norms-card .nutrition-norms-table th,
-.nutrition-norms-card .nutrition-norms-table td,
 .nutrition-micros-card .nutrition-micros-table th,
 .nutrition-micros-card .nutrition-micros-table td {
   border-bottom-color: var(--nutrition-ui-divider)!important;
@@ -10717,7 +9172,6 @@ body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target {
 }
 
 .nutrition-norms-card .nutrition-norms-range-table th,
-.nutrition-norms-card .nutrition-norms-table th,
 .nutrition-micros-card .nutrition-micros-table th {
   color: var(--nutrition-ui-heading)!important
 }

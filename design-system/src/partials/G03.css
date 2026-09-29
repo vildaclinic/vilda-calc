@@ -50,14 +50,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   transform:translateY(-1px) scale(1.02)
 }
 
-/* ===================== SegmentedControl — reguły bazowe (style.css) ===================== */
-/* .pro-superscript (1826-1833) */
-#toggleAdvancedGrowth .adv-pro-tag,.pro-superscript{
-  color:#90f;
-  font-size:.55em;
-  font-weight:700;
-  vertical-align:super;
-  margin-left:.1rem}
 /* .data-source-toggle (1910-1945) */
 .data-source-toggle{
   display:flex;
@@ -180,20 +172,6 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
   border-color:#90f!important;
   background:#9900ff24!important;
   color:#5a008f!important}
-/* #dietRecommendationsContent — wariant tokenowy modułu diety (7058-7062, 7069-7071, 7074-7075, 7079-7080) */
-#dietRecommendationsContent .diet-mode-tab,#dietRecommendationsContent .diet-segmented-control button,#dietRecommendationsContent .diet-option-check,#dietRecommendationsContent .diet-survey-chip,#dietRecommendationsContent .diet-survey-toggle,#dietRecommendationsContent .diet-survey-clear,#dietRecommendationsContent .diet-myth-next-btn,#dietRecommendationsContent .diet-primary-action,#dietRecommendationsContent .diet-secondary-action,#dietRecommendationsContent #generateDietBtn,#dietRecommendationsContent #generateEnergyDietBtn,#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn{
-  background:var(--diet-ui-button-bg)!important;
-  color:var(--diet-ui-button-text)!important}
-#dietRecommendationsContent .diet-mode-tab,#dietRecommendationsContent .diet-segmented-control button,#dietRecommendationsContent .diet-option-check,#dietRecommendationsContent .diet-survey-chip{
-  border-color:var(--diet-ui-neutral-border)!important}
-#dietRecommendationsContent .diet-mode-tab.is-active,#dietRecommendationsContent .diet-segmented-control button.is-active,#dietRecommendationsContent .diet-option-check:has(input:checked),#dietRecommendationsContent .diet-survey-chip:has(input:checked),#dietRecommendationsContent .diet-pdf-variant-card--recommended,#dietRecommendationsContent .diet-personalized-badge--active{
-  background:color-mix(in srgb,var(--diet-ui-surface) 80%,var(--diet-ui-accent) 20%)!important;
-  border-color:var(--diet-ui-active-border)!important}
-#dietRecommendationsContent .diet-mode-tab.is-active strong,#dietRecommendationsContent .diet-segmented-control button.is-active{
-  color:var(--diet-ui-accent-strong)!important}
-#dietRecommendationsContent .diet-survey-toggle:hover,#dietRecommendationsContent .diet-survey-toggle:focus-visible,#dietRecommendationsContent .diet-survey-clear:hover,#dietRecommendationsContent .diet-survey-clear:focus-visible,#dietRecommendationsContent .diet-myth-next-btn:hover,#dietRecommendationsContent .diet-myth-next-btn:focus-visible,#dietRecommendationsContent .diet-primary-action:hover,#dietRecommendationsContent .diet-primary-action:focus-visible,#dietRecommendationsContent .diet-secondary-action:hover,#dietRecommendationsContent .diet-secondary-action:focus-visible,#dietRecommendationsContent #generateDietBtn:hover,#dietRecommendationsContent #generateDietBtn:focus-visible,#dietRecommendationsContent #generateEnergyDietBtn:hover,#dietRecommendationsContent #generateEnergyDietBtn:focus-visible,#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn:hover,#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn:focus-visible,#dietRecommendationsContent .diet-mode-tab:hover,#dietRecommendationsContent .diet-mode-tab:focus-visible,#dietRecommendationsContent .diet-option-check:hover,#dietRecommendationsContent .diet-survey-chip:hover,#dietRecommendationsContent .diet-segmented-control button:hover:not(.is-active),#dietRecommendationsContent .diet-segmented-control button:focus-visible:not(.is-active){
-  background:var(--diet-ui-button-hover-bg)!important}
-
 /* ===================== SegmentedControl — nadpisania .liquid-ios26 (style.css 1834-1835, 1946-1951, 1960-1961, 1968-1979) ===================== */
 .liquid-ios26 #sourcePalczewska:disabled+span .pro-superscript{
   color:#90f!important}
@@ -302,15 +280,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   padding-top:var(--space-0-6);
   padding-bottom:var(--space-1-2);
 }
-#antibioticTherapyCard .slider-labels{
-  position:absolute;
-  bottom:-.3rem;
-  left:0;
-  right:0;
-  display:flex;
-  justify-content:space-between;
-  font-size:.8rem;
-  pointer-events:none}
 #antibioticTherapyCard .slider-ticks{
   position:absolute;
   top:0;
@@ -318,14 +287,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   right:0;
   height:.6rem;
   pointer-events:none}
-#antibioticTherapyCard .slider-tick-line{
-  position:absolute;
-  top:.3rem;
-  width:2px;
-  height:.3rem;
-  background:var(--primary);
-  opacity:var(--opacity-slider-tick);
-}
 #antibioticTherapyCard .slider-tick-label{
   position:absolute;
   top:0;
@@ -359,24 +320,6 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
 #antibioticTherapyCard .slider-value-label{
   box-sizing:border-box;
   max-width:calc(100% - .5rem);
-}
-#antibioticTherapyCard .dose-slider-container.has-message-label{
-  padding-bottom:2.8rem}
-#antibioticTherapyCard .slider-value-label.slider-value-label--message{
-  width:min(28rem,calc(100% - .5rem));
-  max-width:calc(100% - .5rem);
-  white-space:normal;
-  overflow-wrap:anywhere;
-  word-break:break-word;
-  text-align:center;
-  line-height:1.3
-}
-@media(max-width:699px){
-  #antibioticTherapyCard .dose-slider-container.has-message-label{
-  padding-bottom:3.4rem}
-#antibioticTherapyCard .slider-value-label.slider-value-label--message{
-  width:calc(100% - .5rem);
-  font-size:.95rem}
 }
 /* ===================== Slider — nadpisania .liquid-ios26 (ios26-v2.css 277-318, 321-325; pominięto 319-320 #abxReturnBtn) ===================== */
 .liquid-ios26 #antibioticTherapyCard .slider-value-label{

@@ -239,17 +239,6 @@ body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.li
   border-radius: 18px;
   background: rgba(255,255,255,0.8);
 }
-.contact-page .contact-callout {
-  margin-top: 1rem;
-  padding: 1rem 1.05rem;
-  border-radius: 20px;
-  background: var(--contact-callout-bg);
-  border: 1px solid var(--contact-callout-border);
-  color: var(--contact-callout-text);
-  box-shadow: var(--contact-card-shadow);
-  backdrop-filter: var(--contact-control-backdrop);
-  -webkit-backdrop-filter: var(--contact-control-backdrop);
-}
 .guide-placeholder{
   margin:0;
   padding:.9rem 1rem;
@@ -267,15 +256,6 @@ body.high-contrast-level-1.liquid-ios26 .info-card,body.high-contrast-level-2.li
   background:linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
   color:#456467;
   line-height:1.62;
-}
-.helper-box {
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: #555;
-  background: #eef4f4;
-  border: 1px dashed var(--primary);
-  border-radius: var(--radius);
-  padding: 0.6rem;
 }
 .diab-note-box {
   border: 1px solid #d7e5e5;
@@ -360,18 +340,15 @@ html.vilda-pro-active .pro-sync-note {
    min-width: 0;
    }
 .notes-pii__close {
-  flex-shrink: 0;
-   border: 0;
-   background: transparent;
-   cursor: pointer;
-  color: #5a7274;
-   font-size: 1.1rem;
-   line-height: 1;
-   padding: .1rem .35rem;
+  flex-shrink:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  color:#5a7274;
+  font-size:1.1rem;
+  line-height:1;
+  padding:.1rem .35rem;
 }
-.notes-pii__close:hover {
-   color: #0f2b33;
-   }
 .notes-alert {
   display: none;
    align-items: flex-start;
@@ -394,18 +371,15 @@ html.vilda-pro-active .pro-sync-note {
    min-width: 0;
    }
 .notes-alert__close {
-  flex-shrink: 0;
-   border: 0;
-   background: transparent;
-   cursor: pointer;
-  color: #8a2338;
-   font-size: 1.1rem;
-   line-height: 1;
-   padding: .1rem .35rem;
+  flex-shrink:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  color:#8a2338;
+  font-size:1.1rem;
+  line-height:1;
+  padding:.1rem .35rem;
 }
-.notes-alert__close:hover {
-   color: #5e1626;
-   }
 @media (max-width: 600px) {
   .notes-pii__close {
     width: auto !important;
@@ -593,33 +567,6 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   padding:var(--space-0-5) var(--space-0-9);
   cursor:pointer;
   font-size:.95rem;
-}
-#updateBanner{
-  position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  z-index:var(--z-banner);
-  display:none;
-  background:var(--primary);
-  color:#fff;
-  text-align:center;
-  padding:calc(env(safe-area-inset-top,0px) + .5rem) var(--space-1) var(--space-0-5);
-  padding-top:calc(constant(safe-area-inset-top) + .5rem);
-  box-shadow:0 2px 6px #0003;
-}
-#updateBanner button{
-  margin-left:var(--space-1);
-  padding:var(--space-0-35) var(--space-0-8);
-  font-size:.95rem;
-  cursor:pointer;
-}
-#updateBanner button:disabled{
-  opacity:.75;
-  cursor:not-allowed}
-#updateBanner .dismiss{
-  background:transparent;
-  border:var(--border-hairline) solid rgba(255,255,255,.85);
 }
 /* #sw-update-banner — deklaracje, które ios26-ui.js ustawia w i.style.cssText (w aplikacji są stylem inline) */
 #sw-update-banner{
@@ -840,10 +787,6 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
 .vilda-obesity-banner__title{
   font-weight:600;
   color:#1f2937}
-.vilda-obesity-banner__sub{
-  font-size:11.5px;
-  color:#6b7280;
-  margin-top:1px}
 .vilda-obesity-banner__btn{
   display:inline-flex;
   align-items:center;
@@ -891,8 +834,6 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login {
 }
 .vilda-obesity-banner__title{
   color:#1f2937}
-.vilda-obesity-banner__sub{
-  color:#6b7280}
 }
 @media(prefers-reduced-motion:reduce){
   .vilda-obesity-banner__btn{

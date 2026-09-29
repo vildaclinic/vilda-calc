@@ -42,9 +42,7 @@
     margin: 0;
     padding: 0
   }
-  .has-sidebar .main-content .homa-container,
-  .has-sidebar .main-content .clcr-container,
-  .has-sidebar .main-content .doc-shell {
+  .has-sidebar .main-content .homa-container {
     max-width: var(--content-narrow-max-width)
   }
 }

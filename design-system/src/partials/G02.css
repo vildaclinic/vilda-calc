@@ -18,13 +18,6 @@ input,select,option{
   gap:var(--space-1);
   flex-wrap:wrap;
 }
-.snack-row,.meal-row,.food-row{
-  display:grid;
-  grid-template-columns:1fr 100px 34px;
-  gap:var(--space-0-5);
-  align-items:center;
-  margin-top:var(--space-0-5);
-}
 .measure-row{
   display:block;
   margin:var(--space-0-5) 0 0;
@@ -144,7 +137,7 @@ input.vild-pole-z-kartoteki[readonly], select.vild-pole-z-kartoteki[disabled]{
   color:#00838d;
   text-decoration:underline;
   cursor:pointer;
-  }
+}
 .vild-weeks-row{
   margin-top:.7rem;
   padding:9px 10px;
@@ -226,41 +219,6 @@ select.vilda-auth-input{
   color:var(--vilda-text, #1a1a1a);
   cursor:pointer;
   user-select:none}
-.vilda-auth-search-wrap{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:var(--space-6px);
-  margin-top:var(--space-8px);
-}
-.vilda-auth-search-input{
-  flex:1;
-  min-width:0;
-  box-sizing:border-box;
-  padding:var(--space-12px) var(--space-14px);
-  font-size:16px;
-  font-family:inherit;
-  color:#08202c;
-  background:#fff;
-  border:1.5px solid #d6dde0;
-  border-radius:var(--radius-12);
-  outline:none;
-  transition:border-color .15s ease,box-shadow .15s ease;
-}
-.vilda-auth-search-input::placeholder{
-  color:#6c8084}
-.vilda-auth-search-input:focus-visible,.vilda-auth-search-input:focus{
-  border-color:var(--primary);
-  box-shadow:0 0 0 3px #00838d26;
-}
-.vilda-auth-search-counter{
-  width:100%;
-  min-height:1em;
-  font-size:12px;
-  color:#6c8084;
-  text-align:right;
-  padding:0 var(--space-4px);
-}
 .vilda-auth-search-empty{
   padding:28px var(--space-16px);
   text-align:center;
@@ -339,14 +297,6 @@ select.vilda-auth-input{
 #professionalModule h3{
   text-align:center;
   color:#ce0000}
-.doctor-wrapper{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-start;
-  width:100%;
-  margin-top:var(--space-0-7);
-}
 .doctor-checkbox{
   appearance:none;
   -webkit-appearance:none;
@@ -371,30 +321,6 @@ select.vilda-auth-input{
   border-width:0 var(--border-emphasis) var(--border-emphasis) 0;
   transform:rotate(45deg);
 }
-.doctor-label{
-  font-size:1.425rem;
-  color:var(--primary);
-  font-weight:500;
-  user-select:none;
-  cursor:pointer;
-  text-align:center;
-  line-height:1.2;
-  margin-bottom:.2rem}
-.doctor-subtitle{
-  font-size:1.175rem;
-  color:var(--primary);
-  font-weight:400;
-  text-align:center;
-  line-height:1.2}
-.doctor-wrapper.compact .doctor-label{
-  font-size:1.175rem}
-.doctor-wrapper.compact .doctor-subtitle{
-  font-size:.925rem}
-.doctor-wrapper.compact .doctor-checkbox{
-  width:24px;
-  height:24px;
-  margin-top:var(--space-0-4);
-}
 #pwzContainer label{
   display:flex!important;
   flex-direction:column;
@@ -410,53 +336,6 @@ select.vilda-auth-input{
   width:100%;
   margin-left:auto;
   margin-right:auto}
-.diet-survey-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:var(--space-0-45);
-}
-.diet-survey-chip{
-  display:grid;
-  grid-template-columns:1.05rem minmax(0,1fr);
-  align-items:flex-start;
-  gap:var(--space-0-45);
-  min-width:0;
-  width:100%;
-  margin:0 !important;
-  padding:.48rem var(--space-0-55);
-  border:var(--border-hairline) solid #dedede;
-  border-radius:.65rem;
-  background:#fff;
-  cursor:pointer;
-  line-height:1.25;
-  font-size:.86rem;
-}
-.diet-survey-chip input[type=checkbox]{
-  appearance:auto;
-  -webkit-appearance:checkbox;
-  width:1.05rem!important;
-  min-width:1.05rem!important;
-  max-width:1.05rem!important;
-  height:1.05rem!important;
-  min-height:1.05rem!important;
-  max-height:1.05rem!important;
-  padding:0!important;
-  margin:.08rem 0 0!important;
-  border-radius:.2rem;
-  flex:0 0 1.05rem;
-  accent-color:#9900ff;
-  box-shadow:none!important}
-.diet-survey-chip span{
-  display:block;
-  min-width:0;
-  overflow-wrap:anywhere;
-  word-break:normal}
-.diet-survey-chip:has(input:checked){
-  border-color:#90f;
-  background:#9900ff12}
-#dietRecommendationsContent .diet-option-check input[type=checkbox],#dietRecommendationsContent .diet-survey-chip input[type=checkbox]{
-  accent-color:var(--diet-ui-accent)!important}
-
 /* ===================== Switch — reguły bazowe (style.css) ===================== */
 .diet-toggle-group{
   display:flex;
@@ -582,10 +461,6 @@ select.vilda-auth-input{
   border-radius:var(--radius-circle);
   transition:transform .3s;
 }
-#dataToggle:checked+.slider:before{
-  left:auto;
-  right:2px;
-  transform:none}
 #bpDataToggle:checked+.slider:before{
   left:auto;
   right:2px;
@@ -747,22 +622,5 @@ body.liquid-ios26.high-contrast-level-3 .vilda-auth-meter{
   backdrop-filter:var(--hc-blur)!important;
   -webkit-backdrop-filter:var(--hc-blur)!important;
   box-shadow:var(--hc-shadow)!important}
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-meter-label,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-counter,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-empty{
-  color:var(--hc-muted)!important}
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-input,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-input,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-recovery-input{
-  background:var(--hc-input-bg)!important;
-  border:var(--hc-card-border-width) solid var(--hc-input-border)!important;
-  color:var(--hc-text)!important}
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-input:focus,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-search-input:focus,
-body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) .vilda-auth-recovery-input:focus{
-  border-color:#00838da6!important;
-  box-shadow:0 0 0 var(--hc-focus-width) var(--hc-focus-color)!important;
-  outline:none!important}
-
 /* ===================== Ciemne tło ===================== */
 /* Brak reguł dla pól formularza, przełączników i pól wyboru pod body.dark-bg-level-N — tryb zmienia tylko tło strony (var(--bg) z tokens.css). */

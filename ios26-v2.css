@@ -454,16 +454,8 @@ header {
   overflow: visible!important
 }
 
-.mini-summary .cancel-option {
-  color: var(--danger)!important
-}
-
 .steroid-summary .steroid-dropdown {
   background: #fff!important
-}
-
-.steroid-summary .hidden-shortcut-add-btn {
-  display: none!important
 }
 
 .liquid-ios26 #antibioticTherapyCard .slider-value-label {

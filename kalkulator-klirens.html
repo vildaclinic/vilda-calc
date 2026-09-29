@@ -57,16 +57,19 @@
 <title>Kalkulator klirensu kreatyniny / eGFR – Waga i wzrost</title>
     <!-- Integrate the calculator with the Waga i wzrost site styles -->
     <script>try{if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('vilda-embedded');}catch(_){}</script>
-  <style>.vilda-embedded header,.vilda-embedded .sidebar,.vilda-embedded #mobileBottomDock,.vilda-embedded #scrollTopBtn,.vilda-embedded #scrollTopArrow,.vilda-embedded .scroll-top-arrow,.vilda-embedded .vilda-scroll-top{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
-  <link href="style.css?v=82" rel="stylesheet" />
+  <style>.vilda-embedded header,
+.vilda-embedded .sidebar,
+.vilda-embedded #mobileBottomDock,
+.vilda-embedded #scrollTopBtn{display:none!important}.vilda-embedded body.liquid-ios26::before{display:none!important}.vilda-embedded .desktop-layout{display:block!important;padding-top:0!important}.vilda-embedded .main-content{margin:0!important;padding-top:0!important}.vilda-embedded body{padding-top:0!important;padding-bottom:0!important}</style>
+  <link href="style.css?v=83" rel="stylesheet" />
     <link href="sidebar.css" rel="stylesheet" />
-    <link href="vilda_chrome.css?v=42" rel="stylesheet">
-    <link href="vilda_auth_ui.css?v=75" rel="stylesheet" />
+    <link href="vilda_chrome.css?v=43" rel="stylesheet">
+    <link href="vilda_auth_ui.css?v=76" rel="stylesheet" />
     <link href="vilda_save_status_indicator.css?v=6" rel="stylesheet" />
     <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
 <script defer src="vilda_persistence_adapter.js?v=26"></script>
-<script defer src="vilda_session_bridge.js?v=4"></script>
+<script defer src="vilda_session_bridge.js?v=5"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
@@ -124,7 +127,7 @@
 <script src="vilda_update_prep.js?v=91" defer></script>
     
 <script defer src="inline_kalkulator_klirens_00.js?v=1"></script>
-<link href="ios26-v2.css?v=25" rel="stylesheet" />
+<link href="ios26-v2.css?v=26" rel="stylesheet" />
     <!-- Use the same Inter font as the main site -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -318,13 +321,6 @@ input, select, option {
   /* Zapobiegamy rozciąganiu elementów na jednakową wysokość, aby uniknąć dużych pustych przestrzeni w polu „Parametry z surowicy i DZM” */
   align-items: flex-start;
 }
-.snack-row, .meal-row {
-  display: grid;
-  grid-template-columns: 1fr 100px 34px;
-  gap: 0.5rem;
-  align-items: center;
-  margin-top: 0.5rem;
-}
 button.icon {
   background: none;
   border: none;
@@ -356,11 +352,6 @@ button.add-row:hover { background: var(--primary); }
   padding: 1rem;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-}
-.activity-time {
-  margin: 0.4rem 0;
-  font-size: 1.25rem;
-  font-weight: 700;
 }
 table {
   width: 100%;
@@ -655,8 +646,6 @@ section.card,
 
 /* Utility */
 .text-center { text-align: center; }
-.text-right { text-align: right; }
-
   /*
    * Dodatkowe dostosowania dla kart wyników i przycisków „Info”.
    *
@@ -1076,17 +1065,6 @@ input[type="submit"]:focus-visible {
   display: flex;
   flex-direction: column;
 }
-/* helper boxes (optional) fill remaining flex space */
-.helper-box {
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: #555;
-  background: #eef4f4;
-  border: 1px dashed var(--primary);
-  border-radius: var(--radius);
-  padding: 0.6rem;
-}
-
 #clcrForm {
   /* Finalna definicja formularza wykorzystuje flexbox w pionie,
      zapewniając równe odstępy między sekcjami bez sztucznego wydłużania wierszy. */
@@ -1139,10 +1117,6 @@ input[type="submit"]:focus-visible {
   .info-icon:hover {
     color: var(--primary);
   }
-  /* additional classes for validation and tooltips */
-  .input-error    { border: 2px solid #d00 !important; }
-  .tooltip-icon   { cursor: help; font-weight: bold; color: #36c; margin-left: 4px; }
-
   /* simple cards used for extra sections (e.g. advanced KT/V) */
   /* Ujednolicony wygląd kart – zaokrąglone narożniki jak w innych sekcjach */
   .card{ border: 1px solid #ccc; padding: 12px; margin: 12px 0; border-radius: var(--radius); }
@@ -1627,8 +1601,8 @@ input[type="submit"]:focus-visible {
      w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script defer src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
-<script defer src="vilda_chrome.js?v=76"></script>
-<link href="clcr_ui_workflow.css?v=6" rel="stylesheet" />
+<script defer src="vilda_chrome.js?v=77"></script>
+<link href="clcr_ui_workflow.css?v=7" rel="stylesheet" />
 </head>
 
 <body class="js-loading liquid-ios26 has-sidebar">

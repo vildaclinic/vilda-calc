@@ -62,10 +62,6 @@
   background:var(--primary);
   border-radius:1px;
   transition:transform .3s ease,opacity .3s ease}
-.nav-toggle{
-  position:absolute;
-  opacity:0;
-  pointer-events:none}
 .vertical-menu{
   position:absolute;
   top:100%;
@@ -119,19 +115,6 @@
   .vertical-menu{
   width:40%}
 }
-.nav-toggle:checked+label+.vertical-menu{
-  max-height:500px;
-  opacity:1;
-  transform:scaleY(1);
-  pointer-events:auto}
-.nav-toggle:checked+label .bar:nth-child(1){
-  transform:translateY(6px) rotate(45deg)}
-.nav-toggle:checked+label .bar:nth-child(2){
-  opacity:1;
-  transform:none}
-.nav-toggle:checked+label .bar:nth-child(3){
-  transform:translateY(-6px) rotate(-45deg)}
-
 /* MainNav — wariant mobilny (style.css 4881-4935) */
 .main-nav{
   box-sizing:border-box}
@@ -281,29 +264,6 @@ header .main-nav{
   text-underline-offset:.18em}
 
 /* Sidebar legacy — logo (sidebar.css 516-536 z @media(min-width:992px)) */
-  .sidebar-logo{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  padding-bottom:var(--space-1);
-  text-align:center;
-}
-.sidebar-logo img{
-  max-width:160px;
-  border-radius:var(--radius);
-  margin-bottom:var(--space-0-5);
-  display:block;
-  margin-left:auto;
-  margin-right:auto;
-}
-.sidebar-logo h1{
-  margin:0;
-  font-size:1.5rem;
-  color:var(--primary)}
-.sidebar-logo a{
-  display:block;
-  text-align:center}
 
 /* ——— 3. MiniSummary (sidebar.css 74-93 z @media(min-width:992px); 361-391) i wiersze .ms-chip potrzebne w treści (sidebar.css 392-480) ——— */
 .mini-summary{
@@ -317,9 +277,6 @@ header .main-nav{
   background:#fff !important;
   font-size:.9rem;
   line-height:1.35;
-}
-.mini-summary .ms-row+.ms-row{
-  margin-top:var(--space-0-35);
 }
 .mini-summary .result-val{
   font-weight:600;
@@ -988,9 +945,4 @@ body.chrome-drawer-open{
   background:none !important;
   color:var(--text-disabled) !important;
 }
-.liquid-ios26 .sidebar._enter,.liquid-ios26 .sidebar-logo._enter,.liquid-ios26 .sidebar-logo img._enter,.liquid-ios26 .card._enter,.liquid-ios26 fieldset._enter{
-  animation:none!important;
-  transform:none!important;
-  opacity:1!important}
-
 /* ——— 7. Wysoki kontrast i ciemne tło: brak reguł dla selektorów tej grupy w źródle. ——— */
