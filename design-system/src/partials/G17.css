@@ -62,7 +62,6 @@
   font-size:22px;
   font-weight:600;
   color:var(--primary);
-  letter-spacing:-.01em;
   margin:0;
 }
 .vilda-auth-brand-tag{
@@ -92,7 +91,6 @@
   font-size:28px;
   font-weight:600;
   color:#08202c;
-  letter-spacing:-.015em;
   line-height:1.2;
   text-align:center}
 .vilda-auth-subtitle{
@@ -456,7 +454,6 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 .site-footer__col-title{
   font-size:.65rem;
   font-weight:600;
-  letter-spacing:.08em;
   text-transform:uppercase;
   color:#6fa8a8;
   margin-bottom:var(--space-0-5);

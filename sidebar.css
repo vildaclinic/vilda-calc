@@ -396,19 +396,11 @@
     margin-top: var(--space-0-6)
   }
   .steroid-summary .confirm-pair {
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
     padding: var(--space-0-4) var(--space-1);
     font-size: .9rem;
     cursor: pointer
   }
   .steroid-summary .cancel-pair {
-    background: var(--danger);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
     padding: var(--space-0-4) var(--space-1);
     font-size: .9rem;
     cursor: pointer

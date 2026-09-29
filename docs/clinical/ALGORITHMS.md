@@ -2190,7 +2190,7 @@ Ten sam plik pod dwoma kluczami cache. Nie jest to awaria — service worker od�
 
 **Sprawdzone na sobie.** Przy najbliższym wydaniu podbiłem `?v=` celowo tylko w `index.html`. Test zapalił się na czerwono i **nazwał obie pominięte strony** — `docpro.html` i `kalkulator-klirens.html`.
 
-**Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła. *Aktualizacja (P-SW-DOCPRO, SW 1.1.96, 2026-09-28):* decyzją właściciela sześć pierwszych dopisano do precache (bez nich DocPro nie startował offline), `lab_clinical_panels.js` wrócił wcześniej w P-SLOWA-MPH rata 3; na liście został wyłącznie `lab_pin_result.js`, z powodem opisanym we wpisie P-SW-DOCPRO.
+**Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła. *Aktualizacja (P-SW-DOCPRO, SW 1.1.97, 2026-09-28):* decyzją właściciela sześć pierwszych dopisano do precache (bez nich DocPro nie startował offline), `lab_clinical_panels.js` wrócił wcześniej w P-SLOWA-MPH rata 3; na liście został wyłącznie `lab_pin_result.js`, z powodem opisanym we wpisie P-SW-DOCPRO.
 
 ### P-ZAPIS-OBIETNICA — `saveUserData()` pozwala poczekać na zapis (SW 1.0.936, 2026-09-14, zlecenie właściciela)
 
@@ -5829,7 +5829,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.96, 2026-09-28)
+## Strony z precache startują offline: brakujące zasoby i kolejność instalacji przy wyczerpanym limicie pamięci (P-SW-DOCPRO, SW 1.1.97, 2026-09-28)
 
 **Zgłoszenie właściciela (2026-09-28).** `docpro.html` stoi w `OPTIONAL_DOCUMENTS`, ale DocPro nie startował offline. W prawdziwym
 Chromium (produkcyjny SW zarejestrowany przez `ios26-ui.js`, instalacja zakończona, potem `context.setOffline(true)` i przeładowanie
@@ -5867,7 +5867,9 @@ DocPro offline przy limicie ustalonym przez CDP (`Storage.overrideQuotaForOrigin
 
 **Naprawa (niekliniczna: żaden wzór, próg, jednostka ani dane; zmienia się wyłącznie to, co service worker wstępnie pobiera, i
 kolejność pobierania).**
-- Osiem adresów dopisanych na końcu `OPTIONAL_ASSETS` (append-only): sześć z punktu 1 i dwa `edu-video-ui.css`. Ścieżki
+- Jedenaście adresów dopisanych na końcu `OPTIONAL_ASSETS` (append-only): sześć z punktu 1, dwa `edu-video-ui.css`
+  i trzy klucze, które P-STYLE rata 4b podbiła na stronach bez dopisania do precache (`ustawienia.css?v=14`,
+  `edu-video-ui.css?v=20261002v4`/`v7` — wyłapał je strażnik tej raty po scaleniu `audyt`). Ścieżki
   `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_session_bridge.js`, `vilda_data_safety_explainer.js`,
   `vilda_obesity_banner.css` i `ustawienia.css` przechodzą przez to z trasy runtime (TTL 30 dni, limit 96 wpisów) na trasę powłoki;
   obie trasy traktują adres z `?v=` jako niezmienny (P-SW rata 1), więc strategia odpowiedzi się nie zmienia.
@@ -5877,8 +5879,8 @@ kolejność pobierania).**
   dwa razy). Wymagany rdzeń idzie pierwszy i w całości, jak dotąd. Przy wyczerpanym limicie giną teraz wpisy historyczne, a nie
   bieżące: część bieżąca to 20 dokumentów i 173 wpisy (razem 11,1 MB na dysku), historia opcjonalna — 837 wpisów (117 MB).
   Zgłoszenie dotyczyło brakujących wpisów; nowa kolejność instalacji jest propozycją tej raty i czeka na akceptację właściciela.
-- `SW_VERSION` 1.1.95 → **1.1.96** (z pinem w `tests/unit/klirens-ui-model.test.mjs`; 1.1.94 i 1.1.95 zajęły równolegle P-VAR-TOAST
-  i P-DIETA-STAB rata 1);
+- `SW_VERSION` 1.1.96 → **1.1.97** (z pinem w `tests/unit/klirens-ui-model.test.mjs`; 1.1.94–1.1.96 zajęły równolegle P-VAR-TOAST,
+  P-DIETA-STAB rata 1 i P-STYLE rata 4b);
   pole `optionalPrecacheOrder` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
 
 **Świadomie poza zakresem.** `lab_pin_result.js?v=4` (Przelicznik jednostek): adres `/lab_pin_result.js` stoi

@@ -96,9 +96,6 @@ button,input[type=button],input[type=submit]{
   font:inherit;
   padding:var(--space-0-55) var(--space-1-1)
 }
-button:hover,input[type=button]:hover,input[type=submit]:hover{
-  background:var(--secondary);
-  box-shadow:var(--shadow)}
 button:disabled{
   opacity:.45;
   cursor:not-allowed}
@@ -109,8 +106,8 @@ button,input[type=button],input[type=submit]{
 }
 }
 button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
-  transform:translateY(-1px) scale(1.02);
-  box-shadow:var(--shadow-l)}
+  transform:translateY(-1px) scale(1.02)
+}
 
 /* ===== Modal — okno przypomnienia z wierszem akcji .vild-rem-dlg-acts (style.css 7328-7465) ===== */
 .vild-rem-dlg-ov{
@@ -157,13 +154,9 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 
 .vild-rem-dlg-x{
   margin-left:auto;
-  background:transparent !important;
-  border:none !important;
   font-size:20px;
   line-height:1;
-  color:#9aa8aa !important;
   cursor:pointer;
-  box-shadow:none !important;
   padding:2px var(--space-6px) !important;
   min-height:0 !important;
   height:auto !important;
@@ -323,11 +316,8 @@ button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:fo
 .tutorial-bubble button{
   margin-top:var(--space-0-85);
   padding:var(--space-0-5) var(--space-1);
-  border:none;
-  border-radius:var(--radius-8);
   font-size:.95rem;
-  cursor:pointer;
-  box-shadow:0 2px 8px #0f172a24;
+  cursor:pointer
 }
 .tutorial-next{
   background:var(--primary);
@@ -383,8 +373,7 @@ body.nav-ui-temporarily-hidden #scrollTopBtn{
 }
 .vilda-auth-btn-small{
   padding:var(--space-10px) var(--space-16px);
-  font-size:13px;
-  border-radius:var(--radius-10);
+  font-size:13px
 }
 .vilda-auth-btn-primary{
   background:var(--primary);
@@ -396,26 +385,6 @@ body.nav-ui-temporarily-hidden #scrollTopBtn{
   background:#006d75;
   border-color:#006d75;
   box-shadow:0 8px 22px #00838d4d}
-.vilda-auth-btn-ghost{
-  background:#fff;
-  color:#08202c;
-  border-color:#d6dde0}
-.vilda-auth-btn-ghost:hover{
-  background:#f5fafb;
-  border-color:var(--primary);
-  color:var(--primary);
-}
-.vilda-auth-btn-danger{
-  background:var(--danger-strong);
-  color:#fff;
-  border-color:var(--danger-strong);
-  box-shadow:0 6px 18px #b0002038;
-}
-.vilda-auth-btn-danger:hover{
-  background:#8e0019;
-  border-color:#8e0019;
-  box-shadow:0 8px 22px #b000204d}
-
 /* ===== AuthSheet — dymek kopiowania (vilda_auth_ui.css 736-761) ===== */
 .vilda-copy-summary-toast{
   position:fixed;
@@ -604,11 +573,6 @@ body.vilda-password-alert-open #mobileBottomDock,body.vilda-password-alert-open 
   margin:0 0 var(--space-18px);
 }
 
-.vilda-auth-btn-danger{
-  color:#9f1239!important;
-  border-color:#f0c2cd!important;
-  background:#fff!important}
-
 @media(min-width:700px){
   .vilda-auth-sheet-password{
   max-height:82vh;
@@ -713,18 +677,10 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
   gap:var(--space-10px);
   width:100%;
   padding:var(--space-12px) var(--space-14px);
-  border:0;
-  border-bottom:.5px solid rgba(0,0,0,.05);
-  background:#00838d12;
   cursor:pointer;
   text-align:left;
-  font-family:inherit;
-  color:#0c3a3e;
+  font-family:inherit
 }
-.vilda-save-popover .vsp-action:hover{
-  background:#00838d21}
-.vilda-save-popover .vsp-action:active{
-  background:#00838d2e}
 .vilda-save-popover .vsp-action-ic{
   width:30px;
   height:30px;
@@ -834,8 +790,11 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
 .liquid-ios26 button._pressed{
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
-.liquid-ios26 h1,.liquid-ios26 h2,.liquid-ios26 h3{
-  letter-spacing:-.015em}
+h1,
+h2,
+h3 {
+  letter-spacing:-.015em
+}
 
 /* ===== Wysoki kontrast — AuthSheet (vilda_auth_ui.css 1452-1459, 1468-1469; listy selektorów przycięte do tej rodziny) ===== */
 body.liquid-ios26.high-contrast-level-1 .vilda-auth-overlay,

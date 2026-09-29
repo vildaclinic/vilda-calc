@@ -43,9 +43,6 @@
 
 .vilda-status-link {
   font: inherit;
-  color: var(--vilda-status-ton, #00838d);
-  background: none;
-  border: 0;
   padding: 0;
   width: auto;
   text-decoration: underline;
@@ -55,8 +52,7 @@
 .vilda-status-link:hover { text-decoration-thickness: 2px; }
 .vilda-status-link:focus-visible {
   outline: var(--border-emphasis) solid var(--vilda-status-ton, #00838d);
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline-offset: 2px
 }
 
 /* Wariant B — góra formularza. Widoczny TYLKO przy zwiniętych kolumnach. */

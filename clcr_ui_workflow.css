@@ -531,11 +531,7 @@ html[data-clcr-workflow-ui="1"] #clcrForm fieldset {
   gap: var(--space-0-75);
   width: 100%;
   margin: 0;
-  padding: var(--space-1);
-  background: var(--clcr-surface);
-  border: var(--border-hairline) solid var(--clcr-border-soft);
-  border-radius: var(--radius-16);
-  box-shadow: none;
+  padding: var(--space-1)
 }
 
 html[data-clcr-workflow-ui="1"] #clcrForm fieldset + fieldset {
@@ -1143,8 +1139,7 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
   }
 
   html[data-clcr-workflow-ui="1"] #clcrForm fieldset {
-    padding: var(--space-0-7);
-    border-radius: var(--radius-14);
+    padding: var(--space-0-7)
   }
 
   html[data-clcr-workflow-ui="1"] .clcr-field {
@@ -1289,18 +1284,11 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 .clcr-visit-save .cvs-btn {
   padding: var(--space-0-6) var(--space-1-1);
   min-height: 2.6rem;
-  border: 0;
-  border-radius: var(--radius-8);
-  background: var(--primary);
-  color: #fff;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
 }
-.clcr-visit-save .cvs-btn:hover:not([disabled]) { background: #006b73; }
 .clcr-visit-save .cvs-btn[disabled] {
-  background: #cbd5e1;
-  color: #64748b;
   cursor: not-allowed;
 }
 .clcr-visit-save .cvs-hint {
@@ -1379,7 +1367,7 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 /* ——— Faza 3: wejście „Karta pacjenta →" + widok Karta pacjenta (flowsheet) ——— */
 .clcr-visit-save .cvs-open-row { text-align: center; margin: var(--space-0-4) 0 0; }
 .clcr-visit-save .cvs-link {
-  border: 0; background: transparent; color: #006b73; font: inherit;
+   font: inherit;
   font-weight: 700; font-size: 0.95rem; cursor: pointer; padding: var(--space-4px) var(--space-6px);
 }
 .clcr-visit-save .cvs-link:hover { text-decoration: underline; }
@@ -1408,11 +1396,10 @@ html[data-clcr-workflow-ui="1"] #U_PCR {
 .clcr-patient-card .cpc-sub { color: var(--text-muted); font-size: 13.5px; }
 .clcr-patient-card .cpc-acts { display: flex; gap: var(--space-8px); flex-wrap: wrap; }
 .clcr-patient-card .cpc-btn {
-  border: var(--border-hairline) solid var(--primary); background: var(--primary); color: #fff;
-  border-radius: var(--radius-11); min-height: 42px; padding: 9px 15px; font: inherit;
+  
+ min-height: 42px; padding: 9px 15px; font: inherit;
   font-weight: 750; cursor: pointer;
 }
-.clcr-patient-card .cpc-btn.cpc-ghost { background: #fff; color: #006b73; }
 .clcr-patient-card .cpc-flowwrap { overflow-x: auto; }
 .clcr-patient-card .cpc-flow {
   width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px;
@@ -1471,11 +1458,10 @@ html.clcr-card-open, html.clcr-card-open body { overflow: hidden; }
 }
 .clcr-ident-badge--mass { background: #fff8e7; border-color: #ead6a8; color: #8a5400; }
 .clcr-ident-toggle {
-  margin-left: auto; border: var(--border-hairline) solid var(--line); background: #fff; color: #006b73;
-  border-radius: var(--radius-pill); padding: var(--space-6px) 13px; font: inherit; font-size: 13px; font-weight: 750;
+  margin-left: auto;   
+ padding: var(--space-6px) 13px; font: inherit; font-size: 13px; font-weight: 750;
   cursor: pointer; min-height: 36px;
 }
-.clcr-ident-toggle:hover { background: #f4fafa; }
 /* Zwinięty stan (pacjent z karty): chowamy pola tożsamości, chip zostaje.
    Używamy KLASY (nie właściwości .hidden pól), więc logika widoczności
    sekcji per-formuła (sectionHasVisibleFields czyta .hidden) nie chowa karty. */

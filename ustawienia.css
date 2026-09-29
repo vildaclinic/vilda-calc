@@ -393,19 +393,10 @@
 
 .tech-chart-settings-btn {
   appearance: none;
-  border: var(--border-hairline) solid rgba(0,131,141,.22);
-  background: #ffffffe0;
-  color: #004f54;
   padding: .78rem var(--space-1);
-  border-radius: var(--radius-14);
   font-size: .95rem;
   font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 8px 22px #0000000f
-}
-
-.tech-chart-settings-btn:hover {
-  background: #fffffff5
+  cursor: pointer
 }
 
 .tech-chart-settings-status {
@@ -665,9 +656,6 @@
 }
 
 .settings-danger-btn {
-  background: var(--danger-strong)!important;
-  color: #fff!important;
-  border-color: var(--danger-strong)!important;
   min-width: 200px
 }
 

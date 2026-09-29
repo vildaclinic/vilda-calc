@@ -419,9 +419,6 @@
   margin-bottom:var(--space-0-65);
 }
 .settings-danger-btn{
-  background:var(--danger-strong) !important;
-  color:#fff !important;
-  border-color:var(--danger-strong) !important;
   min-width:200px;
 }
 .settings-danger-btn:hover{
@@ -651,8 +648,7 @@ select.vilda-auth-input{
 }
 .vilda-auth-btn-small{
   padding:var(--space-10px) var(--space-16px);
-  font-size:13px;
-  border-radius:var(--radius-10);
+  font-size:13px
 }
 .vilda-auth-btn-primary{
   background:var(--primary);
@@ -664,16 +660,6 @@ select.vilda-auth-input{
   background:#006d75;
   border-color:#006d75;
   box-shadow:0 8px 22px #00838d4d}
-.vilda-auth-btn-ghost{
-  background:#fff;
-  color:#08202c;
-  border-color:#d6dde0}
-.vilda-auth-btn-ghost:hover{
-  background:#f5fafb;
-  border-color:var(--primary);
-  color:var(--primary);
-}
-
 /* ===== Accordion — style.css: #thyroidCancerKidsCard .thy-glossary (3654-3678), .current-summary-prognosis (7466-7499) + .current-summary-row (365-372), .adv-growth-result-details (2913-2934) ===== */
 #thyroidCancerKidsCard .thy-glossary{
   margin-top:var(--space-0-8);

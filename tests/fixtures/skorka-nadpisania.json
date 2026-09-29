@@ -1,0 +1,2221 @@
+{
+ "opis": "P-STYLE rata 4b: deklaracje czystych reguł skórki .liquid-ios26, które zostają nadpisaniami, z powodem (kaskada: konkurent w kaskadzie strony; grupa: wspólny longhand z deklaracją, która zostaje; behawioralna: własność poza ratą; inline: styl inline na dopasowanym elemencie z przebiegu --dom; dynamiczna: konkurent w arkuszu wstrzykiwanym z JS; js: skrypt ustawia własność inline — przegląd). Odświeżanie: node tests/scripts/zloz-skorke-css.mjs --zapisz",
+ "pozostale": [
+  {
+   "klucz": "ios26-v2.css|@media(max-width:991px)|.liquid-ios26 header|position#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css|@media(max-width:991px)|.liquid-ios26 header|top#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css|@media(prefers-reduced-motion:reduce)|.liquid-ios26 ._enter, .liquid-ios26 ._pop, .liquid-ios26 ._bounce|animation#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css|@media(prefers-reduced-motion:reduce)|.liquid-ios26 ._enter, .liquid-ios26 ._pop, .liquid-ios26 ._bounce|animation#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css|@media(prefers-reduced-motion:reduce)|.liquid-ios26 ._enter, .liquid-ios26 ._pop, .liquid-ios26 ._bounce|animation#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._bounce|animation#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._enter|animation#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|border-top-left-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|border-top-right-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|content#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|height#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|left#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|position#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|right#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass:after|top#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._glass|position#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 ._pop|animation#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-accent|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-accent|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-icon svg|height#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-icon svg|stroke#0|część#0",
+   "powod": "dynamiczna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-icon svg|width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-icon|align-items#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-icon|display#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .btn-icon|gap#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|-webkit-backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|-webkit-backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|-webkit-backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|-webkit-backdrop-filter#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|-webkit-backdrop-filter#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|-webkit-backdrop-filter#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|backdrop-filter#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|backdrop-filter#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|backdrop-filter#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|background#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|background#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|background#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|background#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|background#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border-radius#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border-radius#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border-radius#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border-radius#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border-radius#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border-radius#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|border#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|box-shadow#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|box-shadow#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|box-shadow#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|box-shadow#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|box-shadow#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .card, .liquid-ios26 .plan-card, .liquid-ios26 .result-card, .liquid-ios26 .data-card, .liquid-ios26 fieldset, .liquid-ios26 #timesCard, .liquid-ios26 #intakeCard|box-shadow#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn:hover|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn|font-size#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .delete-gh-pt-btn|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn:hover|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn|font-size#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .edit-gh-pt-btn|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .editing-gh-pt-row td|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .editing-gh-pt-row td|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .result-box|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .result-box|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .result-box|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .result-number small|opacity#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|cursor#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|display#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|margin-left#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|margin-right#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .return-recommendation-btn|transition#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]:hover|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu a[disabled]|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:disabled|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:disabled|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:disabled|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:disabled|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:disabled|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:disabled|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button:hover|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|font-weight#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|text-align#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 .vertical-menu button|width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|-webkit-backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|-webkit-backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|background#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|border-radius#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|border-radius#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|border#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|border#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|box-shadow#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|box-shadow#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|color#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|color#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|transition#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|transition#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle, .liquid-ios26 #abxCopyRec, .liquid-ios26 .abx-brand-option|transition#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxBrandToggle.active-toggle, .liquid-ios26 #abxCopyRec.active-toggle, .liquid-ios26 .abx-brand-option.active-toggle, .liquid-ios26 #toggleAbxTherapy.active-toggle, .liquid-ios26 #toggleFluTherapy.active-toggle, .liquid-ios26 #toggleObesityTherapy.active-toggle, .liquid-ios26 #toggleHypertensionTherapy.active-toggle, .liquid-ios26 #toggleThyroidCancerKids.active-toggle|border-color#0|część#7",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|background#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|background#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|box-shadow#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|box-shadow#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|box-shadow#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|transform#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|transform#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|transform#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn:hover, .liquid-ios26 .return-recommendation-btn:hover, .liquid-ios26 #abxReturnBtn:focus-visible, .liquid-ios26 .return-recommendation-btn:focus-visible|transform#0|część#3",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn.show-return, .liquid-ios26 .return-recommendation-btn.show-return|display#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn.show-return, .liquid-ios26 .return-recommendation-btn.show-return|display#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|display#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|margin-left#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|margin-right#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #abxReturnBtn|transition#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .dose-slider-container--multiline|padding-bottom#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .dose-slider-container:hover .slider-value-label|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-ticks .slider-tick-label:first-child|padding-left#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-ticks .slider-tick-label:last-child|padding-right#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label:active|cursor#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|bottom#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|cursor#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|display#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|left#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|line-height#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|margin#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|max-width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|position#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|text-align#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|text-wrap#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|transform#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|white-space#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline|width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|bottom#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|cursor#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard .slider-value-label|transition#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard #abxReturnBtn, .liquid-ios26 #antibioticTherapyCard .return-recommendation-btn, .liquid-ios26 .return-recommendation-btn|margin-top#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard #abxReturnBtn, .liquid-ios26 #antibioticTherapyCard .return-recommendation-btn, .liquid-ios26 .return-recommendation-btn|margin-top#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #antibioticTherapyCard #abxReturnBtn, .liquid-ios26 #antibioticTherapyCard .return-recommendation-btn, .liquid-ios26 .return-recommendation-btn|margin-top#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #generateCentileChartAdv|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #generateCentileChartAdv|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #generateCentileChartAdv|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #thyroidCancerKidsCard .thy-jump-cancer-preop|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleGhMonitor.active-toggle, .liquid-ios26 .active-toggle, .liquid-ios26 #toggleIgfTests.active-toggle, .liquid-ios26 #toggleSnp.active-toggle, .liquid-ios26 #toggleTurner.active-toggle, .liquid-ios26 #togglePws.active-toggle, .liquid-ios26 #toggleSga.active-toggle, .liquid-ios26 #toggleIgf1.active-toggle|border-color#0|część#7",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#10",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#11",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#7",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#8",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|background#0|część#9",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#10",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#11",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#7",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#8",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|border#0|część#9",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#10",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#11",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#7",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#8",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 #toggleIgfTests, .liquid-ios26 #toggleSnp, .liquid-ios26 #toggleTurner, .liquid-ios26 #togglePws, .liquid-ios26 #toggleSga, .liquid-ios26 #toggleIgf1, .liquid-ios26 #toggleAbxTherapy, .liquid-ios26 #toggleFluTherapy, .liquid-ios26 #toggleObesityTherapy, .liquid-ios26 #toggleHypertensionTherapy, .liquid-ios26 #toggleThyroidCancerKids, .liquid-ios26 #toggleGhMonitor|color#0|część#9",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|-webkit-backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|-webkit-backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|background#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|border-radius#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|border-radius#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|border#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|border#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|box-shadow#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|box-shadow#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|color#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|color#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|transition#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|transition#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button, .liquid-ios26 input[type=button], .liquid-ios26 input[type=submit]|transition#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button._pressed|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button._pressed|transform#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 button.icon|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header img|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header._glass|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header._glass|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header._glass|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|border-bottom#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|overflow#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|position#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|top#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 header|z-index#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|background#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|border-radius#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|border-radius#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|border#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||.liquid-ios26 input[type=text], .liquid-ios26 input[type=number], .liquid-ios26 select|border#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26:before|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26:before|height#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26:before|inset#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26:before|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26:before|position#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26:before|width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26:before|z-index#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26|padding-bottom#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26|padding-left#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26|padding-right#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "ios26-v2.css||body.liquid-ios26|padding-top#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .data-source-toggle label input:disabled+span|background-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .data-source-toggle label input:disabled+span|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .data-source-toggle label input:disabled+span|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .data-source-toggle label input:disabled+span|cursor#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .data-source-toggle label input:disabled+span|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|-webkit-backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|-webkit-backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|-webkit-backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|background#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|background#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|border-color#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|border-color#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-card-intro, .liquid-ios26 .diet-panel-lead, .liquid-ios26 .diet-energy-control-card, .liquid-ios26 .diet-energy-output|border-color#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|border-left#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|display#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|font-size#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|margin-inline-end#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|margin-right#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .diet-info-note|text-align#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .pro-button:disabled .pro-superscript|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .pro-button:disabled|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .pro-button:disabled|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .pro-button:disabled|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .pro-button:disabled|cursor#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .pro-button:disabled|opacity#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .pro-button:disabled|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#3",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|animation#0|część#4",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#3",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|opacity#0|część#4",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#3",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 .sidebar._enter, .liquid-ios26 .sidebar-logo._enter, .liquid-ios26 .sidebar-logo img._enter, .liquid-ios26 .card._enter, .liquid-ios26 fieldset._enter|transform#0|część#4",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsBtn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent .switch-diet input:checked+.slider|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #dietRecommendationsContent|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #generatePalCentileChart|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #generatePalCentileChart|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:checked+span .pro-superscript|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:checked+span|background-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:checked+span|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:disabled+span .pro-superscript|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:disabled+span|background-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:disabled+span|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:disabled+span|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:disabled+span|cursor#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska:disabled+span|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska+span|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #sourcePalczewska+span|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled .pro-superscript|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|background#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|border#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|color#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|pointer-events#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn:disabled, .liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn.disabled|pointer-events#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleAdvancedGrowth.advanced-growth-btn|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header h1|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|animation#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|animation#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|animation#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|opacity#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|opacity#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|opacity#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|transform#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|transform#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||.liquid-ios26 header._enter, .liquid-ios26 .main-content._enter, .liquid-ios26 .container._enter|transform#0|część#2",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .circ-chart-btn[disabled], body.liquid-ios26 .circ-chart-btn.is-pro-locked|transform#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .circ-chart-btn[disabled], body.liquid-ios26 .circ-chart-btn.is-pro-locked|transform#0|część#1",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-micros-tooltip|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-micros-tooltip|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-micros-tooltip|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#7",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|-webkit-backdrop-filter#0|część#8",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#5",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#6",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#7",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group, body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel, body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item, body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target, body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target|backdrop-filter#0|część#8",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|-webkit-backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|-webkit-backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|-webkit-backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|-webkit-backdrop-filter#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|backdrop-filter#0|część#1",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|backdrop-filter#0|część#2",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|backdrop-filter#0|część#3",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "style.css||body.liquid-ios26 #dietRecommendationsContent .diet-card-intro, body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead, body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card, body.liquid-ios26 #dietRecommendationsContent .diet-energy-output, body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options|backdrop-filter#0|część#4",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-auth-sort-btn|height#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-auth-sort-btn|width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-auth-sort-option|width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill:hover|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|font-size#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-edit-pill|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill:hover|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|font-size#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-hero-new-measure-pill|padding#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab--active|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab--active|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab:hover:not(.vilda-patient-tab--active)|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab:hover:not(.vilda-patient-tab--active)|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-patient-tab|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button:hover|background#0|część#0",
+   "powod": "js: vilda_auth_ui.js tworzy przyciski menu pomiaru ze stylem inline (background, border, border-bottom, color) i onmouseover/onmouseout ustawiającym background — dziś !important skórki przykrywa te style, po złożeniu wygrałby styl inline"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button.is-danger:hover|background#0|część#0",
+   "powod": "js: vilda_auth_ui.js tworzy przyciski menu pomiaru ze stylem inline (background, border, border-bottom, color) i onmouseover/onmouseout ustawiającym background — dziś !important skórki przykrywa te style, po złożeniu wygrałby styl inline"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button.is-danger|color#0|część#0",
+   "powod": "js: vilda_auth_ui.js tworzy przyciski menu pomiaru ze stylem inline (background, border, border-bottom, color) i onmouseover/onmouseout ustawiającym background — dziś !important skórki przykrywa te style, po złożeniu wygrałby styl inline"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button+button|border-top#0|część#0",
+   "powod": "js: vilda_auth_ui.js tworzy przyciski menu pomiaru ze stylem inline (background, border, border-bottom, color) i onmouseover/onmouseout ustawiającym background — dziś !important skórki przykrywa te style, po złożeniu wygrałby styl inline"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|background#0|część#0",
+   "powod": "js: vilda_auth_ui.js tworzy przyciski menu pomiaru ze stylem inline (background, border, border-bottom, color) i onmouseover/onmouseout ustawiającym background — dziś !important skórki przykrywa te style, po złożeniu wygrałby styl inline"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|border#0|część#0",
+   "powod": "js: vilda_auth_ui.js tworzy przyciski menu pomiaru ze stylem inline (background, border, border-bottom, color) i onmouseover/onmouseout ustawiającym background — dziś !important skórki przykrywa te style, po złożeniu wygrałby styl inline"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|color#0|część#0",
+   "powod": "js: vilda_auth_ui.js tworzy przyciski menu pomiaru ze stylem inline (background, border, border-bottom, color) i onmouseover/onmouseout ustawiającym background — dziś !important skórki przykrywa te style, po złożeniu wygrałby styl inline"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|display#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|font-weight#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|margin#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|transform#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "vilda_auth_ui.css||.liquid-ios26 .vilda-timeline-measure-menu button|width#0|część#0",
+   "powod": "behawioralna"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-pro-badge[data-pro-state=active]|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-pro-badge[data-pro-state=active]|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-pro-badge[data-pro-state=active]|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-pro-badge[data-pro-state=upgrade]|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-pro-badge[data-pro-state=upgrade]|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-pro-badge[data-pro-state=upgrade]|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn:hover|border-color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn:hover|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn[data-state=overdue]|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn[data-state=today]|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-reminders-btn|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action:hover|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action:hover|color#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action|-webkit-backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action|backdrop-filter#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action|background#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action|border-radius#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action|border#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action|box-shadow#0|część#0",
+   "powod": "kaskada"
+  },
+  {
+   "klucz": "vilda_chrome.css||.liquid-ios26 .chrome-user-chip .chip-action|color#0|część#0",
+   "powod": "kaskada"
+  }
+ ]
+}

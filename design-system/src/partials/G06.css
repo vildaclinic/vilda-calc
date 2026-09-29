@@ -991,11 +991,12 @@ body.page-cukrzyca .diab-macro-empty {
   color:var(--text-muted);
 }
 
-/* ===================== Nadpisania .liquid-ios26 ===================== */
-/* edu-video-ui.css 333-335 */
-.liquid-ios26 .edu-kicker,.liquid-ios26 .edu-chip,.liquid-ios26 .edu-meta-pill,.liquid-ios26 .chapter-list a,.liquid-ios26 .resource-button{
+.edu-chip,
+.edu-meta-pill,
+.chapter-list a,
+.resource-button {
   backdrop-filter:var(--blur-button) var(--blur-button-saturate);
-  -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate);
+  -webkit-backdrop-filter:var(--blur-button) var(--blur-button-saturate)
 }
 /* cukrzyca.css 6485-6504 */
 body.page-cukrzyca.liquid-ios26 .diab-day-step,

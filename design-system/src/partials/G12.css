@@ -13,9 +13,6 @@ button,input[type=button],input[type=submit]{
   font:inherit;
   padding:var(--space-0-55) var(--space-1-1)
 }
-button:hover,input[type=button]:hover,input[type=submit]:hover{
-  background:var(--secondary);
-  box-shadow:var(--shadow)}
 button:disabled{
   opacity:.45;
   cursor:not-allowed}
@@ -28,8 +25,8 @@ button,input[type=button],input[type=submit]{
 :root{
   --anim-fast:.15s ease}
 button:hover,input[type=submit]:hover,button:focus-visible,input[type=submit]:focus-visible{
-  transform:translateY(-1px) scale(1.02);
-  box-shadow:var(--shadow-l)}
+  transform:translateY(-1px) scale(1.02)
+}
 
 /* ===== MobileDock — ios26-v2.css 365-433 ===== */
 #mobileBottomDock{
@@ -198,20 +195,12 @@ body.mobile-nav-ui-locked #scrollTopBtn {
   right:1rem;
   width:var(--scroll-top-size);
   height:var(--scroll-top-size);
-  border-radius:var(--radius-circle);
-  background:var(--primary);
-  color:#fff;
-  border:none;
-  box-shadow:var(--shadow);
   display:none;
   justify-content:center;
   align-items:center;
   cursor:pointer;
-  z-index:var(--z-menu);
-  transition:background .2s ease;
+  z-index:var(--z-menu)
 }
-#scrollTopBtn:hover{
-  background:var(--secondary)}
 #scrollTopBtn i,#scrollTopBtn svg{
   width:3rem;
   height:3rem;
@@ -228,8 +217,7 @@ body.mobile-nav-ui-locked #scrollTopBtn {
 /* ===== ScrollTopButton — pozycja nad dockiem (ios26-v2.css 434-443) ===== */
 body.has-mobile-bottom-dock #scrollTopBtn{
   bottom:var(--scroll-top-btn-bottom, 1rem) !important;
-  z-index:var(--z-scroll-top-dock);
-  transition:bottom .22s ease,background .2s ease,transform .22s ease,opacity .22s ease;
+  z-index:var(--z-scroll-top-dock)
 }
 body.has-mobile-bottom-dock.mobile-bottom-dock-transitioning #scrollTopBtn{
   transition:background .2s ease,transform .22s ease,opacity .22s ease!important}
@@ -259,18 +247,10 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   align-items:center;
   justify-content:center;
   padding:0;
-  border:.5px solid rgba(255,255,255,.55);
-  border-radius:var(--radius-circle);
-  background:#ffffffb8;
-  -webkit-backdrop-filter:var(--blur-shell-scroll-top) var(--blur-shell-scroll-top-saturate);
-  backdrop-filter:var(--blur-shell-scroll-top) var(--blur-shell-scroll-top-saturate);
-  box-shadow:0 6px 20px #0f2b332e;
-  color:#0f6e56;
   cursor:pointer;
   opacity:0;
   transform:translateY(10px);
   pointer-events:none;
-  transition:opacity .22s ease,transform .22s ease;
   -webkit-tap-highlight-color:transparent;
 }
 #appShellScrollTop.is-visible{
@@ -294,18 +274,12 @@ html[data-clcr-workflow-ui="1"].clcr-search-open #scrollTopBtn {
   align-items:center;
   justify-content:center;
   padding:0;
-  border:0;
-  border-radius:var(--radius-circle);
-  background:var(--primary);
-  color:#fff;
   font-size:1.7rem;
   line-height:1;
-  box-shadow:0 6px 18px #00606a59;
   cursor:pointer;
   opacity:0;
   transform:translateY(10px);
   pointer-events:none;
-  transition:opacity .22s ease,transform .22s ease,bottom .22s ease;
   -webkit-tap-highlight-color:transparent;
 }
 #appShellTermFab.is-visible{
@@ -376,9 +350,6 @@ html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellSc
 }
 .vilda-status-link {
   font: inherit;
-  color: var(--vilda-status-ton, #00838d);
-  background: none;
-  border: 0;
   padding: 0;
   width: auto;
   text-decoration: underline;
@@ -390,8 +361,7 @@ html.vilda-pane-auth-open #appShellTermFab,html.vilda-pane-auth-open #appShellSc
    }
 .vilda-status-link:focus-visible {
   outline:var(--border-emphasis) solid var(--vilda-status-ton, #00838d);
-  outline-offset:2px;
-  border-radius:2px;
+  outline-offset:2px
 }
 #vildaStatusForm {
   margin-bottom:var(--space-0-8);
