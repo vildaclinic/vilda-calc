@@ -49,7 +49,7 @@ const tylkoLiczby = (tab) => Object.fromEntries(Object.entries(tab).map(([e, w])
 describe('rata H1: współczynniki Henry 2005 jako dane', () => {
   it('rejestr: HENRY_2005 niesie współczynniki dla każdego etapu silnika, obie płcie, bez zmiany listy źródeł', () => {
     expect(win.VildaReeRownania.lista()).toEqual(['MOLNAR_1995', 'HENRY_2005']);
-    expect(win.VildaReeRownania.wersja).toBe('1.1.0');
+    expect(win.VildaReeRownania.wersja).toBe('1.2.0');
     expect(Object.keys(H.wspolczynnikiWgEtapu)).toEqual(ETAPY);
     for (const e of ETAPY) for (const p of ['M', 'F']) {
       const k = H.wspolczynnikiWgEtapu[e][p];

@@ -69,32 +69,33 @@ describe('rata U: chłopiec 15 l 3 mies., 102,5 kg / 186,7 cm (przypadek z rapor
 
 // P-DIETA rata N2 (decyzja właściciela 2026-09-24): przy samej nadwadze 12–18 lat sufit tempa 0,5 / 1 / 1,5 kg/mies.
 // (dawniej 1 / 1,5 / 2 jak przy otyłości) — sufit wiąże od pierwszego kilograma nad celem.
-describe('rata U + N2: sama nadwaga — bez korekty, PAL 1,6; sufit tempa 0,5 / 1 / 1,5 kg/mies.', () => {
-  it('chłopiec 13 l, 155 cm, 60 kg (BMI 25,0, nadwaga): reeFactor 1, PAL 1,6; 6 kg nad celem → sufit tempa 0,5 / 1 / 1,5 wiąże', () => {
+// P-DIETA-STAB rata 3 (decyzja właściciela 2026-09-29): sama nadwaga 10–18 lat — REE Molnára i PAL 1,4 (dotąd Henry i 1,6)
+describe('rata U + N2 + P-DIETA-STAB rata 3: sama nadwaga — REE Molnára, PAL 1,4; sufit tempa 0,5 / 1 / 1,5 kg/mies.', () => {
+  it('chłopiec 13 l, 155 cm, 60 kg (BMI 25,0, nadwaga): REE Molnára, PAL 1,4; 6 kg nad celem → sufit tempa 0,5 / 1 / 1,5 wiąże', () => {
     const st = plan({ sex: 'M', ageYears: 13, weightKg: 60, heightCm: 155 });
-    const tee = henryBoy10_17(60, 1.55) * 1.6;
+    const tee = molnar('M', 60, 155, 13) * 1.4;
     expect(st.bmiClass.overweight).toBe(true);
     expect(st.bmiClass.obese).toBe(false);
-    expect(st.reeFactor).toBe(1);
-    expect(st.palUsed).toBe(1.6);
+    expect(st.reeRownanie.id).toBe('MOLNAR_1995');
+    expect(st.palUsed).toBe(1.4);
     expect(st.maintenanceKcal).toBe(Math.round(tee));
-    const teeT = henryBoy10_17(st.targetWeightKg, 1.55) * 1.6;
+    const teeT = molnar('M', st.targetWeightKg, 155, 13) * 1.4;
     expect(st.targetTeeKcal).toBe(Math.round(teeT));
-    // rata N2: dieta z sufitu 0,5 / 1 / 1,5 kg/mies.: 2 510 / 2 383 / 2 257 (dawniej 2 383 / 2 257 / 2 130)
-    expect(tee - teeT).toBeGreaterThan(defFor(1) - 200);
+    // rata N2: dieta z sufitu 0,5 / 1 / 1,5 kg/mies.; P-DIETA-STAB rata 3: 1 998 / 1 871 / 1 745 (przed ratą 3: 2 510 / 2 383 / 2 257)
+    expect(tee - teeT).toBeGreaterThan(defFor(0.5) - 200);
     expect(st.diets.map((d) => d.tempoSufit)).toEqual([true, true, true]);
     expect(st.diets.map((d) => d.tempoNadwagi)).toEqual([true, true, true]);
     expect(st.diets.map((d) => d.sufitTempaKgMies)).toEqual([0.5, 1, 1.5]);
     expect(st.diets.map((d) => d.intake)).toEqual([0.5, 1, 1.5].map((r) => Math.round(tee - defFor(r))));
-    expect(st.diets.map((d) => d.intake)).toEqual([2510, 2383, 2257]);
+    expect(st.diets.map((d) => d.intake)).toEqual([1998, 1871, 1745]);
     expect(st.diets.map((d) => d.zalecana)).toEqual([true, false, false]); // lekka domyślna poza otyłością 12–18
   });
   it('chłopiec 13 l, 155 cm, 55 kg (ok. 1 kg nad celem 85c): rata N2 — sufit 0,5 kg/mies. jest niższy niż deficyt Mazura (200), więc wiąże', () => {
     const st = plan({ sex: 'M', ageYears: 13, weightKg: 55, heightCm: 155 });
     expect(st.childObesityPlan).toBe(true);
     expect(st.bmiClass.obese).toBe(false);
-    const tee = henryBoy10_17(55, 1.55) * 1.6;
-    const teeT = henryBoy10_17(st.targetWeightKg, 1.55) * 1.6;
+    const tee = molnar('M', 55, 155, 13) * 1.4; // P-DIETA-STAB rata 3
+    const teeT = molnar('M', st.targetWeightKg, 155, 13) * 1.4;
     expect(55 - st.targetWeightKg).toBeLessThan(2.2);
     const lekka = st.diets[0];
     // podstawa od masy docelowej dałaby teeT − 200, ale deficyt przekroczyłby sufit 0,5 kg/mies. (126 kcal)
@@ -108,7 +109,7 @@ describe('rata U + N2: sama nadwaga — bez korekty, PAL 1,6; sufit tempa 0,5 / 
 });
 
 describe('rata U/V: bramka wieku równania i strażnik minimalnego deficytu', () => {
-  it('rata V: otyłość 11 lat → Molnár; otyłość 9 lat → Henry bez korekty; nadwaga 14 lat → Henry bez korekty', () => {
+  it('rata V: otyłość 11 lat → Molnár; otyłość 9 lat → Henry bez korekty; nadwaga 14 lat → Molnár (P-DIETA-STAB rata 3)', () => {
     const o11 = plan({ sex: 'M', ageYears: 11, weightKg: 65, heightCm: 150 });
     expect(o11.bmiClass.obese).toBe(true); expect(o11.reeRownanie.id).toBe('MOLNAR_1995');
     expect(o11.reeAdjustedKcal).toBe(Math.round(molnar('M', 65, 150, 11)));
@@ -116,8 +117,9 @@ describe('rata U/V: bramka wieku równania i strażnik minimalnego deficytu', ()
     expect(o9.bmiClass.obese).toBe(true); expect(o9.reeFactor).toBe(1); expect(o9.reeRownanie.id).toBe('HENRY_2005');
     expect(o9.reeAdjustedKcal).toBe(Math.round(o9.reeKcal));
     const n14 = plan({ sex: 'M', ageYears: 14, weightKg: 66, heightCm: 165 });
-    expect(n14.bmiClass.overweight).toBe(true); expect(n14.bmiClass.obese).toBe(false); expect(n14.reeFactor).toBe(1);
-    expect(n14.reeRownanie.id).toBe('HENRY_2005');
+    expect(n14.bmiClass.overweight).toBe(true); expect(n14.bmiClass.obese).toBe(false); expect(n14.reeFactor).toBeCloseTo(molnar('M', 66, 165, 14) / n14.reeKcal, 9);
+    expect(n14.reeRownanie.id).toBe('MOLNAR_1995');
+    expect(n14.reeAdjustedKcal).toBe(Math.round(molnar('M', 66, 165, 14)));
   });
   it('żadna dieta nie ma deficytu mniejszego niż 200/350/500 wobec zapotrzebowania aktualnego (skorygowanego) ani szybszego niż sufit', () => {
     const przypadki = [
