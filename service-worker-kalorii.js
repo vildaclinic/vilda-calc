@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.96';
+const SW_VERSION = '1.1.97';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2453,6 +2453,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=34',
   '/vilda_diet_plan_ui.js?v=35',
   '/vilda_diet_plan_ui.js?v=36',
+  '/vilda_diet_plan_ui.js?v=37',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -2490,6 +2491,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=61',
   '/vilda_diet_recommendations.js?v=62',
   '/vilda_diet_recommendations.js?v=63',
+  '/vilda_diet_recommendations.js?v=64',
   '/vilda_auth_ui.js?v=432',
   '/vilda_auth_ui.js?v=433',
   '/vilda_auth_ui.js?v=434',

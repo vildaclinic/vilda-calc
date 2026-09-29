@@ -94,6 +94,8 @@ test('K2: 3-latek — flaga „Wzrost zakończony" wyłączona i ignorowana, nar
   expect(r.text).toContain('W strategii stabilizacji nie planuje się dodatkowego deficytu');
   expect(r.text).toContain(`nie powinna przekraczać ${kcal} kcal dziennie (zapotrzebowanie przy obecnej masie ciała) — to górna granica dnia, nie cel do dobicia.`);
   expect(r.text).toMatch(/Kontrola za 12 tygodni \(ok\. [^)]+\): masa ciała powinna pozostać na poziomie ok\. [\d,]+ kg/u);
+  // P-DIETA-STAB rata 2: próg z marginesem na wahania pomiaru (3-latek 20 kg → minimum 0,3 kg)
+  expect(r.text).toMatch(/Jeśli masa będzie wyższa niż [\d,]+ kg \(z marginesem 0,3 kg na wahania pomiaru\)/u);
   expect(r.text).toContain(`Przy planie żywieniowym zakładającym około ${kcal} kcal dziennie zalecane ilości składników to:`);
   expect(r.plan).toContain('Stabilizacja masy ciała');
 });
