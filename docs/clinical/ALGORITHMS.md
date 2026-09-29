@@ -2176,7 +2176,7 @@ Aplikacja ma swoją odpowiedź i miała ją także wtedy: **ważony konsensus me
 
 Ten sam plik pod dwoma kluczami cache. Nie jest to awaria — service worker odświeża całą tablicę przy każdym wydaniu, a cache czasu działania łata resztę — ale między wydaniami przeglądarka mogła podawać jednej stronie świeży moduł, a drugiej ten sam moduł sprzed kilku wersji. Przy module sejfu to jest ryzyko, na które nie ma powodu się godzić. **Wyrównane: 67 podbić na 21 stronach**, każda do wersji już obecnej w tablicy service workera (żadnego nowego zasobu).
 
-**Co pilnuje test** (`tests/unit/piny-wersji.test.mjs`, 7):
+**Co pilnuje test** (`tests/unit/piny-wersji.test.mjs`, 8):
 
 | twierdzenie | co łapie |
 | --- | --- |
@@ -2187,10 +2187,13 @@ Ten sam plik pod dwoma kluczami cache. Nie jest to awaria — service worker od�
 | `SW_VERSION` zgadza się z pinem Klirensu | potknięcie z tego dnia, dwukrotne |
 | wersja kolektora zgadza się z pinem w smoke | rozjazd stałej modułu |
 | lista plików bez wstępnego pobrania nie rośnie | zasób dołożony do strony i pominięty w tablicy SW |
+| adres wstrzykiwany z JS ma wersję ze stron | skrypt dokładający zasób pod starym `?v=` (usterka niżej) |
 
 **Sprawdzone na sobie.** Przy najbliższym wydaniu podbiłem `?v=` celowo tylko w `index.html`. Test zapalił się na czerwono i **nazwał obie pominięte strony** — `docpro.html` i `kalkulator-klirens.html`.
 
 **Osiem zasobów zostaje bez wstępnego pobrania** (`vilda_session_bridge.js`, `vilda_sync.js`, `vilda_sync_integration.js`, `vilda_data_safety_explainer.js`, `vilda_obesity_banner.css`, `ustawienia.css`, `lab_pin_result.js`, `lab_clinical_panels.js`). Nie dopisałem ich do tablicy: to zmiana w tym, co działa offline, czyli decyzja właściciela, a nie sprzątanie. Ratuje je cache czasu działania — po pierwszej wizycie online. Test pilnuje, żeby ta lista nie rosła. *Aktualizacja (P-SW-DOCPRO, SW 1.1.97, 2026-09-28):* decyzją właściciela sześć pierwszych dopisano do precache (bez nich DocPro nie startował offline), `lab_clinical_panels.js` wrócił wcześniej w P-SLOWA-MPH rata 3; na liście został wyłącznie `lab_pin_result.js`, z powodem opisanym we wpisie P-SW-DOCPRO.
+
+**Piąta usterka, znaleziona przez recenzję scalonej raty P-STYLE 4b (Codex, #462; SW 1.1.101, 2026-09-29).** Skrypty też dokładają zasoby: `vilda_chrome.js` i `vilda_session_bridge.js` na 14 stronach bez własnych linków wstrzykiwały `vilda_auth_ui.css?v=17`, `vilda_crypto.js?v=4`, `vilda_vault.js?v=11`, `vilda_auth_ui.js?v=53` i `vilda_pro_access.js?v=2`, podczas gdy strony linkowały 75, 15, 187, 465 i 10; `vilda_gh_therapy_resource_audit.js` ładował `ios26-ui.js?v=18` (strony: 42). Pod kontrolą service workera klucz historyczny trzyma bieżącą treść, bo precache pobiera każdy adres na nowo przy każdej wersji SW; bez SW (pierwsza wizyta przed aktywacją, nieudana instalacja przy niskim limicie pamięci z P-SW-DOCPRO) o świeżości decydowała pamięć HTTP przeglądarki. Wszystkie wstrzykiwane adresy zrównane z wersjami stron (żadnego nowego zasobu w precache poza podbiciem trzech zmienionych skryptów); ósme twierdzenie testu pilnuje, by adres `plik?v=N` w dowolnym skrypcie z korzenia miał wersję, którą linkują strony (plik ładowany wyłącznie ze skryptu jest poza porównaniem — skrypt jest wtedy źródłem wersji).
 
 ### P-ZAPIS-OBIETNICA — `saveUserData()` pozwala poczekać na zapis (SW 1.0.936, 2026-09-14, zlecenie właściciela)
 
