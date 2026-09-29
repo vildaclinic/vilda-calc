@@ -5834,6 +5834,46 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
+## Karta „Szacowane spożycie energii”: utrzymanie masy tym samym wzorem co plan diety (P-SPOZYCIE-REE, SW 1.1.104, 2026-09-29)
+
+**Zgłoszenie (po P-DIETA-STAB rata 3 i P-PAL-ZAPIS).** Dla chłopca 13 l., 76 kg, 168 cm (nadwaga, OLAF) plan diety podawał
+utrzymanie masy 2507 kcal (REE Molnára 1791 × PAL 1,4), a karta „Szacowane spożycie energii” — „Utrzymanie masy: ok. 2731 kcal/d
+(PAL 1.4)”, czyli REE Henry’ego 1931 × PAL 1,4 × 1,01 (dodatek na wzrastanie). Dwie liczby dla tego samego pacjenta; karta
+spożycia liczy z tej podstawy także spożycie z trendu masy (podstawa + nadwyżka/deficyt), więc zawyżała i je.
+
+**Decyzja właściciela (2026-09-29, opcja A).** Karta spożycia liczy utrzymanie masy tym samym wzorem co plan.
+
+**Zmiana (kliniczna: inna podstawa energetyczna karty spożycia u dzieci z nadmiarem masy).**
+- `vilda_diet_plan_ui.js` (`?v=39`), `energyBuildIntakeObservedState`: u dziecka z nadwagą lub otyłością (klasa z siatki karty
+  „Centyle i BMI”) kontekst bez dodatku na wzrastanie (`growthMultiplierOverride 1`) i korekta REE tymi samymi wyrażeniami co
+  `energyBuildPlanReductionState` (Molnár 1995 z danych w wieku 10–18 lat, `fac = Molnár / Henry`); wynik niesie `reeFactor`,
+  `reeAdjustedKcal`, `reeRownanie`, `bmiClass`. Zmiana obejmuje jeden pomiar („Utrzymanie masy”) i przedziały między pomiarami
+  (spożycie z trendu). Dziecko bez nadmiaru masy, niemowlę i dorosły — bez zmian.
+- `vilda_estimated_intake_ui.js` (`?v=2`): przy równaniu innym niż Henry dopisek „(PAL 1.4; REE wg Molnára 1995)”.
+- PAL karty spożycia (`#intakePal`) idzie za PAL-em planu, dopóki lekarz go nie zmieni. Dotąd kopiowany raz przy wypełnieniu
+  karty, często zanim PAL planu przeszedł z 1,6 na 1,4 (zmierzone: karta przy PAL 1,6, plan przy 1,4 — po samej zmianie wzoru karta pokazałaby 2865 zamiast 2507 kcal), a każde
+  ponowne wypełnienie karty nadpisywało wybór lekarza. Reguła jak P-PAL rata 1: za wybór uznaje się odejście od ostatniej wartości
+  domyślnej. `app.js` (`?v=229`: `intakeAutofill`, `refreshEstimatedIntakeVisibility`), `vilda_update_prep.js` (`?v=92`: po
+  ustaleniu PAL planu nietknięty PAL karty dostaje aktualny), `vilda_data_import_export.js` (`?v=88`: wyczyszczenie pól
+  i wczytanie zapisu zerują znacznik — PAL karty znów idzie za planem).
+- SW 1.1.103 → 1.1.104, precache append-only, `?v=` na stronach i w smoke, fixture wersji.
+
+**Przypadki `wejście → oczekiwany wynik` (fikcyjne; `tests/unit/spozycie-utrzymanie-jak-plan.test.mjs`,
+`tests/e2e/spozycie-utrzymanie.spec.mjs`).**
+
+| Pacjent | Karta spożycia przed | Po (= plan) |
+|---|---|---|
+| chł. 13 l., 76/168, nadwaga, PAL 1,4 | 2731 kcal (Henry × 1,4 × 1,01) | **2507 kcal (Molnár × 1,4)** |
+| 9 przypadków nadwagi/otyłości 4–17 lat × PAL 1,4 / 1,6 / 1,8 | różne od planu | równe `maintenanceKcal` planu |
+| nadmiar masy < 10 lat | Henry × PAL × dodatek na wzrastanie | Henry × PAL (bez dodatku, jak plan) |
+| 13 l., 52 kg (masa prawidłowa) | Henry × PAL × dodatek | bez zmian |
+| lekarz wybiera w karcie PAL 1,8, potem zmiana masy | PAL wracał do planu | 1,8 zostaje |
+
+**Ograniczenia.** Jak P-DIETA-STAB rata 3 (Molnár opracowany dla 10–16 lat; brak osobnych danych dla samej nadwagi). Zapisany
+PAL karty spożycia po wczytaniu pacjenta ustępuje PAL-owi planu (wybór PAL planu zachowuje P-PAL-ZAPIS).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
+
 ## Zapisany PAL: wybór lekarza czy wartość domyślna (P-PAL-ZAPIS, SW 1.1.102, 2026-09-29)
 
 **Zgłoszenie właściciela (2026-09-29, po scaleniu P-DIETA-STAB rata 3).** Chłopiec 13 l., 76 kg, 168 cm (nadwaga, OLAF) nadal
