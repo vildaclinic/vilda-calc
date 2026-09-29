@@ -130,9 +130,7 @@
       --contact-footer-bg: rgba(251, 252, 252, 0.96);
     }
 
-    body.contact-page.high-contrast-level-1.liquid-ios26,
-    body.contact-page.high-contrast-level-2.liquid-ios26,
-    body.contact-page.high-contrast-level-3.liquid-ios26 {
+    body.contact-page:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 {
       --contact-surface: var(--hc-surface);
       --contact-surface-elevated: var(--hc-module-btn-bg);
       --contact-surface-soft: var(--hc-module-btn-hover-bg);

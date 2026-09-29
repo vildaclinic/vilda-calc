@@ -3255,9 +3255,7 @@
       --diab-card-filter: blur(10px) saturate(108%);
     }
 
-    body.page-cukrzyca.high-contrast-level-1.liquid-ios26,
-    body.page-cukrzyca.high-contrast-level-2.liquid-ios26,
-    body.page-cukrzyca.high-contrast-level-3.liquid-ios26 {
+    body.page-cukrzyca:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).liquid-ios26 {
       --diab-surface-1: var(--hc-surface);
       --diab-surface-2: var(--hc-button-bg);
       --diab-surface-3: var(--hc-result-bg);
