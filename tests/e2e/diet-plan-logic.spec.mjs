@@ -418,9 +418,10 @@ test('PLAN-PAL-DEFAULT-TEEN: nietknięty formularz 12-latka z otyłością dosta
   expect(out.note).toBe(true);
 });
 
-// ENERGY-CHILD-MID3: ten sam formularz przy samej nadwadze (bez otyłości) dostaje 1,6.
-// Sprawdza ścieżkę formularza: vilda_update_prep przekazuje antropometrię do energyDefaultPlanPal.
-test('PLAN-PAL-DEFAULT-TEEN-OVERWEIGHT: nietknięty formularz 14-latka z samą nadwagą dostaje PAL 1,6', async ({ page }) => {
+// ENERGY-CHILD-MID3 dawał tu 1,6; P-DIETA-STAB rata 3 (decyzja właściciela 2026-09-29): przy samej nadwadze 10–18 lat
+// także 1,4 (ENERGY_PAL_DOMYSLNY.nadwaga). Sprawdza ścieżkę formularza: vilda_update_prep przekazuje antropometrię
+// do energyDefaultPlanPal — select i silnik mówią tą samą liczbą.
+test('PLAN-PAL-DEFAULT-TEEN-OVERWEIGHT: nietknięty formularz 14-latka z samą nadwagą dostaje PAL 1,4 (P-DIETA-STAB rata 3)', async ({ page }) => {
   test.setTimeout(90_000);
   await openIndex(page);
   await renderPlan(page, { age: 14, months: 0, sex: 'M', weight: 68, height: 165 });
@@ -435,8 +436,8 @@ test('PLAN-PAL-DEFAULT-TEEN-OVERWEIGHT: nietknięty formularz 14-latka z samą n
   });
   expect(out.overweight).toBe(true);
   expect(out.obese).toBe(false);
-  expect(out.engineDefault).toBe(1.6);
-  expect(out.pal).toBe('1.6');
+  expect(out.engineDefault).toBe(1.4);
+  expect(out.pal).toBe('1.4');
 });
 
 // P-PAL rata 1 (decyzja właściciela 2026-09-22): dorosły bez otyłości dostaje 1,6 (umiarkowana aktywność);

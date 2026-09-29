@@ -108,7 +108,7 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.outlook).toMatchObject({ alarm: false, ocena: false, cm: 6, norma: 4, pe: false });
     expect(r.przelaczniki).toEqual({ redukcja: false, stabilizacja: true });
     expect(r.strategia).toBe('stabilization');
-    expect(r.energia).toEqual({ podaz: 2350, gorna: true, deficyt: null, dieta: null }); // P-DIETA-STAB rata 1: górna granica dnia
+    expect(r.energia).toEqual({ podaz: 1950, gorna: true, deficyt: null, dieta: null }); // P-DIETA-STAB rata 1: górna granica dnia; rata 3: nadwaga 10–18 lat — Molnár × PAL 1,4 = 1954 (dotąd Henry × 1,6 → 2350)
     expect(r.tempoWzrastania).toBeNull();
     expect(r.tekst).toContain(ZD_A_OSOBNE);
     expect(r.tekst).toContain('Dziecko wciąż rośnie');
@@ -119,12 +119,12 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.pdf.sekcje).not.toContain(NAG_RED);
     // P-DIETA-STAB rata 1: stabilizacja jako górna granica dnia + kontrola po 12 tygodniach (masa dziś + wzrastanie)
     expect(r.pdf.kafle).toHaveLength(4);
-    expect(r.pdf.kafle[0]).toBe('≤ 2 350 | kcal dziennie | górna granica dnia, nie cel');
+    expect(r.pdf.kafle[0]).toBe('≤ 1 950 | kcal dziennie | górna granica dnia, nie cel');
     expect(r.pdf.kafle[1]).toMatch(/^\d{1,2} [IVX]+ \| \d{4} \| termin kontroli \(ok\. 12 tygodni\)$/u);
     expect(r.pdf.kafle.slice(2)).toEqual(['ok. 52,7 kg | masa przy stabilizacji | dziś 52,0 kg + wzrastanie', '&gt; 53,2 kg | odejmij od planu | 100–200 kcal']); // P-DIETA-STAB rata 2: próg + margines 1 % masy (0,52 kg)
     expect(r.pdf.ramka).toEqual([]);
-    expect(r.karta).toMatchObject({ value: '≤ 2350 kcal/d' }); // P-DIETA-STAB rata 1: górna granica dnia
-    expect(r.karta.rows).toContain('Plan: utrzymanie masy ciała: ≤ 2350 kcal/d');
+    expect(r.karta).toMatchObject({ value: '≤ 1950 kcal/d' }); // P-DIETA-STAB rata 1: górna granica dnia
+    expect(r.karta.rows).toContain('Plan: utrzymanie masy ciała: ≤ 1950 kcal/d');
   });
 
   test('G1-2 (B2): ten sam chłopiec, 3 cm/rok — tempo „do oceny”: zdanie i żółta ramka, plan bez zmian', async ({ page }) => {
@@ -134,7 +134,7 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.tempo).toEqual({ cm: 3, alarm: false, sev: 'warn' });
     expect(r.outlook).toMatchObject({ alarm: false, ocena: true });
     expect(r.strategia).toBe('stabilization');
-    expect(r.energia).toEqual({ podaz: 2350, gorna: true, deficyt: null, dieta: null }); // P-DIETA-STAB rata 1: górna granica dnia
+    expect(r.energia).toEqual({ podaz: 1950, gorna: true, deficyt: null, dieta: null }); // P-DIETA-STAB rata 1: górna granica dnia; rata 3: nadwaga 10–18 lat — Molnár × PAL 1,4 = 1954 (dotąd Henry × 1,6 → 2350)
     expect(r.tempoWzrastania).toEqual({ ocena: 'do-oceny', cmRok: 3, normaCmRok: 4, zdanie: ZD_DO_OCENY });
     expect(r.tekst).toContain(ZD_DO_OCENY);
     expect(r.tekst).toContain('Dziecko wciąż rośnie');

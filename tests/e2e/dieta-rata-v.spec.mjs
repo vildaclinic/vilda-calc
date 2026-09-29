@@ -97,12 +97,13 @@ test.describe('P-DIETA rata V — REE Molnára, górna granica dnia, kontrola za
     expect(r.kontrola.progKg).toBe(Math.round((70 + r.kontrola.przyrostKg - r.kontrola.ubytekDietyKg / 2) * 10) / 10);
   });
 
-  test('RV-3: nadwaga 13 l (Henry, bez korekty) — górna granica i kontrola też są; dorosły — od raty Z także', async ({ page }) => {
+  // P-DIETA-STAB rata 3 (2026-09-29): nadwaga 10–18 lat liczy się Molnárem (dotąd Henry bez korekty).
+  test('RV-3: nadwaga 13 l (Molnár od P-DIETA-STAB rata 3) — górna granica i kontrola też są; dorosły — od raty Z także', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     // rata N2: nadwaga 12–18 lat — domyślnie stabilizacja; górną granicę i kontrolę sprawdzamy na wybranej redukcji
     const n = await stan(page, { sex: 'M', y: 13, m: 0, w: 60, h: 155, redukcja: true });
-    expect(n.energia.ree).toBe('HENRY_2005');
+    expect(n.energia.ree).toBe('MOLNAR_1995');
     expect(n.energia.gorna).toBe(true);
     expect(n.energia.podaz % 50).toBe(0);
     expect(n.tekst).toContain('Dieta lekka: nie więcej niż');
