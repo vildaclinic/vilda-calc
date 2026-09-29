@@ -113,11 +113,11 @@
  },
  "inline_cukrzyca_00.css": {
   "v": 1,
-  "sha256": "f8d7edd7088f44626f550242e4887c838ceb04264a8d18f25658ade5e8b89873"
+  "sha256": "aef8aecbd3dff82f1c64b0b1942fbc4c2be7bc1deeef80d0a4b80b270c82f4ba"
  },
  "inline_docpro_00.css": {
   "v": 1,
-  "sha256": "8a964b53e48db01985c677af132c94b5b03319890580121a15b94fb9e9de28c5"
+  "sha256": "de312a38c0c203d81d3dd23a4dbc934cbf83f54794121afd41e20b49b40da7e3"
  },
  "inline_docpro_00.js": {
   "v": 1,
@@ -125,7 +125,7 @@
  },
  "inline_docpro_01.css": {
   "v": 1,
-  "sha256": "33aaa9bfc4187e1aa19681bd522d02330d574ede72e13aae51fc884c3910b544"
+  "sha256": "34661008057394094ee35cf5fb8c2e1dd5fc5fe770f47cd31ac06ca57459d668"
  },
  "inline_docpro_03.js": {
   "v": 3,
@@ -137,11 +137,11 @@
  },
  "inline_homa_ir_00.css": {
   "v": 1,
-  "sha256": "57238550611bd719ad392c46d3debd17d67132ac749078d045428014cd9dbf71"
+  "sha256": "2f48129ce9ca824cafebd6bf96c23cfb13c54a31c5037d7fab310599a01dd7fa"
  },
  "inline_index_00.css": {
   "v": 1,
-  "sha256": "d53438a21c0f33c105babbd37c6d8b6ce380191c4edc542c7220713d36465cb9"
+  "sha256": "3ec9a713e1c5a17e4c7c3c9f132c14549f3c34dfb6b9b73902cac989f6373049"
  },
  "inline_index_00.js": {
   "v": 1,
@@ -149,7 +149,7 @@
  },
  "inline_index_01.css": {
   "v": 1,
-  "sha256": "059c886057acfd50531cb29e36cefcb43c8b079bbfe853c6cf08c4236967c073"
+  "sha256": "27a17f5297dbf037e47d16578f5ba3c038686638d9cc0c1da2752c60475fc166"
  },
  "inline_index_01.js": {
   "v": 1,
@@ -189,11 +189,11 @@
  },
  "inline_instrukcja_00.css": {
   "v": 1,
-  "sha256": "b3abb36748afb45df5d2fd5281d2af131f7549db3af7a290091f6b91056c0aca"
+  "sha256": "11f7abd65fd444bec198e1a78d0505caa73ff7413890239a5dbdc39e09a16c2c"
  },
  "inline_kalkulator_klirens_00.css": {
   "v": 1,
-  "sha256": "057d2d030bd743278e1ffcb735b8d3df6879c14db1211c573a592f5dbbf60000"
+  "sha256": "e16d8bf0557205c7b290f97325cbd91ad40bb9a215d97acc314885c6070c8e14"
  },
  "inline_kalkulator_klirens_00.js": {
   "v": 1,
@@ -237,15 +237,15 @@
  },
  "inline_kontakt_00.css": {
   "v": 1,
-  "sha256": "60bba347d8014d595ba783a7e06d3b8c486698c6f6df0026ab3a67d914e07997"
+  "sha256": "4a7d3e8873adc44642e0226a5ecc368a51b98a9a7271592c462376664eb4c176"
  },
  "inline_materialy_edukacyjne_00.css": {
   "v": 1,
-  "sha256": "27d2815747145bf3ea3d6d9cf5fad006a1f2bee86151e81575bef28397274f31"
+  "sha256": "51715d9104f2ce919083813bf9ee749cd1f6861704c1c0859bf7ef12db1120c9"
  },
  "inline_notatki_00.css": {
   "v": 1,
-  "sha256": "73b0650738b482160eb4613f847ff3e398afa79f261b4553bec6a49058ed7276"
+  "sha256": "e5e546b616d5d268263123aea938a14eaafc185d16a41e92da906964e7aa5329"
  },
  "inline_notatki_00.js": {
   "v": 8,
@@ -253,27 +253,27 @@
  },
  "inline_o_aplikacji_00.css": {
   "v": 1,
-  "sha256": "483e854b8d79ad3bf7c433e077524ac95058de287d4c6e12cb769094e7eb1edf"
+  "sha256": "b7b7f17d7523373640c095ef7dbc31eb3e30c6f7ea10ce45285fc77bde3571cd"
  },
  "inline_polityka_prywatnosci_00.css": {
   "v": 1,
-  "sha256": "51a32a7389d731e575716091cfe6391bfa50aceb716fb6fbf4b82d680176c506"
+  "sha256": "22c5b3ec86177c574023351c8d5a0576a49652efbc28df0df99288778cfc526d"
  },
  "inline_przelicznik_jednostek_00.css": {
   "v": 1,
-  "sha256": "5050e3e14c1dcf07cf664d516b720b440bce776ac8fdf8ead85cc7cd80b62acc"
+  "sha256": "5d8e45f40284467b4d16ed71ccae5d0b2e814aafb9c3208ec8d037b6bcb9711f"
  },
  "inline_regulamin_00.css": {
   "v": 1,
-  "sha256": "8ee9824b4851e5b15bdfd1ef9c539824788fd0e904955e84aaf1c8f9f0968e2e"
+  "sha256": "eaafc3dca0805a00a5cdca7e8ffa64e2fc4c603f912b6d1032fa982243e5244b"
  },
  "inline_steroidy_00.css": {
   "v": 1,
-  "sha256": "cdb655dc4fa58076edb6784a8a50d3721af3abf1ace2962aa32b3b53fa7b5971"
+  "sha256": "dfa42c3864146762848054efeab86825a9a5779a910c413bd932698bc0ba8323"
  },
  "inline_subskrypcja_00.css": {
   "v": 1,
-  "sha256": "dfab0cf16b783e75a58fc720b130b1a46d11d5a4586d33c1c9cee204fc830093"
+  "sha256": "556b128e5b44d9f445d0ed585661b6f683d3cc683ef08bdebb26cf938c0444c1"
  },
  "inline_subskrypcja_00.js": {
   "v": 2,
@@ -289,11 +289,11 @@
  },
  "inline_terminarz_01.css": {
   "v": 1,
-  "sha256": "d1dfd290fde81482b6ac91ef49a3c3bef88e4e48f7f13f6b822f4b3147bbbea9"
+  "sha256": "862a11018c24140e379800a7ba2ef16a25ede83bbbc22f5b92e1acfa931089c8"
  },
  "inline_ustawienia_00.css": {
   "v": 1,
-  "sha256": "6440e5d19d5ce234fead34d38477a3feaeb77f06ad6e805bf7bdd649cec80128"
+  "sha256": "240beb3c0d688a2eb706e08d933760cf4121015cc323170e8c24e1c3d301b216"
  },
  "inline_ustawienia_00.js": {
   "v": 1,
@@ -416,8 +416,8 @@
   "sha256": "5aeeca8b3c38e265de4117f0b5ccc99d010216c11e6d56e4f9ab3ebbe40ab665"
  },
  "style.css": {
-  "v": 83,
-  "sha256": "bd17db855fcc2d3e5766ced705da27ad073ce8172c37e3a1580fd90d0ce509b3"
+  "v": 84,
+  "sha256": "1f682b933dba6f985826bfb1961ab79c7fd705828ae08e4a66f923d6afaf8182"
  },
  "thyroid_cancer_kids.js": {
   "v": 4,

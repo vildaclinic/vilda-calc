@@ -5,24 +5,24 @@
 .pro-status-banner {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.1rem 1.25rem;
+  gap: var(--space-1);
+  padding: var(--space-1-1) var(--space-1-25);
   border-radius: .9rem;
-  border: 1px solid rgba(153,0,255,.18);
+  border: var(--border-hairline) solid rgba(153,0,255,.18);
   background: var(--card-bg, #fff);
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--space-1-25);
 }
 .pro-status-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
 .pro-status-body { flex: 1; min-width: 0; }
 .pro-status-title { font-weight: 700; font-size: 1rem; margin: 0 0 .2rem; }
 .pro-status-desc  { font-size: .88rem; color: var(--text-soft); margin: 0; }
 .pro-status-chip  {
-  display: inline-flex; align-items: center; gap: .3rem;
+  display: inline-flex; align-items: center; gap: var(--space-0-3);
   font-size: .78rem; font-weight: 700;
-  padding: .22rem .7rem; border-radius: 999px;
+  padding: .22rem var(--space-0-7); border-radius: var(--radius-pill);
 }
-.pro-status-chip.active   { background: #f0fff4; color: #148f3f; border: 1px solid rgba(20,143,63,.25); }
-.pro-status-chip.inactive { background: #f5eeff; color: #9900ff; border: 1px solid rgba(153,0,255,.25); }
+.pro-status-chip.active   { background: #f0fff4; color: #148f3f; border: var(--border-hairline) solid rgba(20,143,63,.25); }
+.pro-status-chip.inactive { background: #f5eeff; color: #9900ff; border: var(--border-hairline) solid rgba(153,0,255,.25); }
 /* Chip statusu — pokazuj właściwy wariant przez klasy na <html> */
 .pro-chip-active   { display: none; }
 .pro-chip-inactive { display: none; }
@@ -30,8 +30,8 @@ html.vilda-pro-active   .pro-chip-active   { display: inline-flex; }
 html.vilda-pro-inactive .pro-chip-inactive { display: inline-flex; }
 /* Przycisk zarządzania planem */
 .pro-manage-btn {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .55rem 1.25rem; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: var(--space-0-35);
+  padding: var(--space-0-55) var(--space-1-25); border-radius: var(--radius-pill);
   font-size: .9rem; font-weight: 600; text-decoration: none;
   background: #9900ff; color: #fff;
   transition: background .15s; white-space: nowrap; flex-shrink: 0;
@@ -44,11 +44,11 @@ html.vilda-pro-active .pro-manage-btn:hover { background: var(--surface-3,#e4e4e
 html.vilda-pro-active .pro-sync-note {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  margin-top: .85rem;
-  padding: .65rem .85rem;
+  gap: var(--space-0-6);
+  margin-top: var(--space-0-85);
+  padding: var(--space-0-65) var(--space-0-85);
   background: #f0f7ff;
-  border: 1px solid rgba(0,100,220,.15);
+  border: var(--border-hairline) solid rgba(0,100,220,.15);
   border-radius: .6rem;
   font-size: .82rem;
   color: var(--text-soft);

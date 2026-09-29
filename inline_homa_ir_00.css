@@ -1,49 +1,49 @@
 /* Kontener otaczający cały kalkulator. Ustawiamy maksymalną szerokość i centrowanie. */
     .homa-container {
       max-width: 600px;
-      margin: 2rem auto;
+      margin: var(--space-2) auto;
     }
 
     /* Karta kalkulatora – otrzymuje tło i obramowanie identyczne jak inne karty w serwisie. */
     .homa-card {
       background: var(--card);
-      padding: 1.5rem;
+      padding: var(--space-1-5);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      border: 1px solid #d0dede;
+      border: var(--border-hairline) solid var(--line);
     }
 
     .homa-card h1 {
       font-size: 1.5rem;
       font-weight: 600;
       margin-top: 0;
-      margin-bottom: 1rem;
+      margin-bottom: var(--space-1);
     }
 
     .homa-card label {
       display: block;
-      margin-top: 1rem;
+      margin-top: var(--space-1);
       font-weight: 600;
     }
 
     .homa-card input[type="number"],
     .homa-card select {
       width: 100%;
-      padding: 0.55rem 0.75rem;
-      margin-top: 0.35rem;
+      padding: var(--space-0-55) var(--space-0-75);
+      margin-top: var(--space-0-35);
       font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
+      border: var(--border-hairline) solid var(--disabled-border);
+      border-radius: var(--radius-0-5rem);
     }
 
     .homa-card input[type="radio"] {
-      margin-right: 0.3rem;
+      margin-right: var(--space-0-3);
     }
 
     .homa-card button {
       display: inline-block;
       margin-top: 1.7rem;
-      padding: 0.75rem 1.6rem;
+      padding: var(--space-0-75) 1.6rem;
       font-size: 1rem;
       font-weight: 600;
       border: none;
@@ -61,7 +61,7 @@
 
     .homa-card #wynik {
       margin-top: 1.6rem;
-      padding: 0.6rem 0.9rem;
+      padding: var(--space-0-6) var(--space-0-9);
       /* Domyślne obramowanie; zostanie nadpisane przez klasy good/warn/risk */
       border: 2px solid #d8e1e6;
       border-radius: 0.6rem;
@@ -77,7 +77,7 @@
        Ustawiamy również większy rozmiar czcionki (1.2rem) i pogrubienie. */
     .homa-card .good { color: #2a8a2a; font-size: 1.2rem; font-weight: 700; }
     .homa-card .warn { color: #b58900; font-size: 1.2rem; font-weight: 700; }
-    .homa-card .risk { color: #c62828; font-size: 1.2rem; font-weight: 700; }
+    .homa-card .risk { color: var(--danger); font-size: 1.2rem; font-weight: 700; }
 
     /* Klasy na polu #wynik sterujące kolorem obwódki i animacją.  
        Używamy istniejących animacji pulseOrange i pulseRed z głównego arkusza stylów. */
@@ -86,7 +86,7 @@
       animation: none;
     }
     .homa-card #wynik.warn {
-      border-color: #c75d00;
+      border-color: var(--notice-orange);
       animation: pulseOrange 1.25s ease-in-out infinite;
     }
     .homa-card #wynik.risk {
@@ -95,35 +95,35 @@
     }
 
     .homa-card #interp {
-      margin-top: 0.8rem;
+      margin-top: var(--space-0-8);
     }
     .homa-card #norms {
-      margin-top: 0.8rem;
+      margin-top: var(--space-0-8);
     }
     .homa-card #visit {
-      margin-top: 0.8rem;
+      margin-top: var(--space-0-8);
     }
     .homa-card #visit ul {
-      margin: 0.4rem 0 0;
+      margin: var(--space-0-4) 0 0;
       padding: 0;
       list-style: none;
     }
     .homa-card #visit li {
-      margin: 0.45rem 0;
+      margin: var(--space-0-45) 0;
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: var(--space-0-6);
     }
     .homa-card .avatar {
       width: 48px;
       height: 48px;
-      border-radius: 50%;
+      border-radius: var(--radius-circle);
       object-fit: cover;
     }
     .homa-card small {
       display: block;
-      margin-top: 1.2rem;
-      color: #666;
+      margin-top: var(--space-1-2);
+      color: var(--placeholder);
       font-size: 0.85rem;
       line-height: 1.4;
     }
@@ -142,12 +142,12 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
+      margin-top: var(--space-1);
       font-size: 0.9rem;
     }
     th, td {
-      border: 1px solid #ddd;
-      padding: 0.4rem 0.3rem;
+      border: var(--border-hairline) solid #ddd;
+      padding: var(--space-0-4) var(--space-0-3);
       text-align: left;
     }
     th {
@@ -157,8 +157,8 @@
     }
     #sources {
       font-size: 0.8rem;
-      color: #555;
-      margin-top: 0.6rem;
+      color: var(--text-soft);
+      margin-top: var(--space-0-6);
       line-height: 1.35;
     }
 
@@ -167,10 +167,10 @@
     .homa-card .clear-btn {
       display: block;
       margin: 1.7rem auto 0;
-      padding: 0.75rem 1.6rem;
+      padding: var(--space-0-75) 1.6rem;
       font-size: 1rem;
       font-weight: 600;
-      border: 2px solid var(--danger) !important;
+      border: var(--border-emphasis) solid var(--danger) !important;
       border-radius: var(--radius);
       background: transparent;
       color: var(--danger);

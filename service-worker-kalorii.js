@@ -142,6 +142,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=81',
   '/style.css?v=82',
   '/style.css?v=83',
+  '/style.css?v=84',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)

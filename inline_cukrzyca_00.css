@@ -32,7 +32,7 @@
 
     @media (min-width: 1400px) {
       .desktop-layout {
-        grid-template-columns: 230px minmax(0, 1fr) 230px;
+        grid-template-columns: var(--decor-sidebar-width) minmax(0, 1fr) var(--decor-sidebar-width);
       }
 
       .desktop-layout > .sidebar {
@@ -51,12 +51,12 @@
 
     .diab-page {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     .diab-hero {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
       align-items: start;
     }
 
@@ -70,11 +70,11 @@
     .diab-eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: var(--space-0-4);
       font-size: 0.9rem;
       font-weight: 600;
       color: var(--primary);
-      margin-bottom: 0.35rem;
+      margin-bottom: var(--space-0-35);
     }
 
     .diab-subtle {
@@ -89,9 +89,9 @@
     }
 
     .diab-note-box {
-      border: 1px solid #d7e5e5;
+      border: var(--border-hairline) solid #d7e5e5;
       border-radius: var(--radius);
-      padding: 0.85rem 1rem;
+      padding: var(--space-0-85) var(--space-1);
       background: rgba(255,255,255,0.65);
     }
 
@@ -120,8 +120,8 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 0.75rem;
-      margin-top: 0.9rem;
+      gap: var(--space-0-75);
+      margin-top: var(--space-0-9);
     }
 
     .diab-inline-actions > * {
@@ -130,26 +130,26 @@
 
     .diab-day-flow {
       display: grid;
-      gap: 0.65rem;
-      margin-top: 0.8rem;
+      gap: var(--space-0-65);
+      margin-top: var(--space-0-8);
     }
 
     .diab-day-step {
       border-radius: var(--radius);
-      padding: 0.75rem 0.85rem;
+      padding: var(--space-0-75) var(--space-0-85);
       background: rgba(255,255,255,0.82);
-      border: 1px solid #d7e5e5;
+      border: var(--border-hairline) solid #d7e5e5;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
-      gap: 0.7rem;
+      gap: var(--space-0-7);
       align-items: start;
     }
 
     .diab-day-step__num {
       width: 1.7rem;
       height: 1.7rem;
-      border-radius: 999px;
-      background: rgba(0,131,141,0.12);
+      border-radius: var(--radius-pill);
+      background: var(--line-teal-soft);
       color: var(--primary);
       display: inline-flex;
       align-items: center;
@@ -180,7 +180,7 @@
 
     .diab-grid {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     /* Karty "Jak liczyć" i "Konfiguracja" mają być jedna pod drugą (bez układu 2-kolumnowego). */
@@ -196,14 +196,14 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.8rem;
+      gap: var(--space-0-8);
       text-align: center;
       appearance: none;
-      border: 1px solid rgba(0,131,141,0.28);
+      border: var(--border-hairline) solid rgba(0,131,141,0.28);
       border-radius: calc(var(--radius) - 2px);
       background: rgba(255,255,255,0.92);
       box-shadow: inset 0 0 0 1px rgba(0,131,141,0.05);
-      padding: 0.95rem 1rem;
+      padding: var(--space-0-95) var(--space-1);
       cursor: pointer;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
@@ -216,7 +216,7 @@
     .diab-accordion-btn:focus-visible {
       outline: none;
       border-color: rgba(0,131,141,0.44);
-      box-shadow: 0 0 0 4px rgba(0,131,141,0.12), inset 0 0 0 1px rgba(0,131,141,0.08);
+      box-shadow: var(--shadow-focus-ring-diab), inset 0 0 0 1px rgba(0,131,141,0.08);
     }
 
     .diab-accordion-label {
@@ -242,7 +242,7 @@
       justify-content: center;
       width: 1.6rem;
       height: 1.6rem;
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
       background: rgba(255,255,255,0.22);
       font-size: 1.15rem;
       line-height: 1;
@@ -255,7 +255,7 @@
     }
 
     .diab-accordion-content {
-      margin-top: 0.95rem;
+      margin-top: var(--space-0-95);
     }
 
     .diab-card {
@@ -268,31 +268,31 @@
     }
 
     .diab-steps {
-      margin: 0.9rem 0 0;
-      padding-left: 1.2rem;
+      margin: var(--space-0-9) 0 0;
+      padding-left: var(--space-1-2);
     }
 
     .diab-steps li {
-      margin-bottom: 0.55rem;
+      margin-bottom: var(--space-0-55);
       line-height: 1.5;
     }
 
     .diab-cases {
       display: grid;
-      gap: 0.7rem;
-      margin-top: 1rem;
+      gap: var(--space-0-7);
+      margin-top: var(--space-1);
     }
 
     .diab-case {
       border-radius: var(--radius);
-      padding: 0.85rem 1rem;
-      border: 1px solid #d8e3e3;
+      padding: var(--space-0-85) var(--space-1);
+      border: var(--border-hairline) solid #d8e3e3;
       background: rgba(255,255,255,0.6);
     }
 
     .diab-case strong {
       display: block;
-      margin-bottom: 0.25rem;
+      margin-bottom: var(--space-0-25);
     }
 
     .diab-case--ok {
@@ -309,12 +309,12 @@
 
     .diab-form {
       display: grid;
-      gap: 0.8rem;
+      gap: var(--space-0-8);
     }
 
     .diab-form-grid {
       display: grid;
-      gap: 0.8rem;
+      gap: var(--space-0-8);
     }
 
     @media (min-width: 700px) {
@@ -329,18 +329,18 @@
 
     .diab-help {
       display: block;
-      margin-top: 0.3rem;
+      margin-top: var(--space-0-3);
       font-size: 0.85rem;
       color: #586565;
       line-height: 1.45;
     }
 
     .diab-status {
-      margin-top: 0.5rem;
-      padding: 0.75rem 0.9rem;
+      margin-top: var(--space-0-5);
+      padding: var(--space-0-75) var(--space-0-9);
       border-radius: var(--radius);
       background: rgba(198,40,40,0.08);
-      border: 1px solid rgba(198,40,40,0.18);
+      border: var(--border-hairline) solid rgba(198,40,40,0.18);
       color: var(--danger);
       font-weight: 600;
     }
@@ -348,14 +348,14 @@
     .diab-task {
       position: relative;
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     .diab-task__header {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
-      gap: 0.8rem;
+      gap: var(--space-0-8);
       align-items: start;
     }
 
@@ -373,18 +373,18 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
+      padding: var(--space-0-35) var(--space-0-7);
+      border-radius: var(--radius-pill);
       font-size: 0.82rem;
       font-weight: 700;
-      background: rgba(0,131,141,0.12);
+      background: var(--line-teal-soft);
       color: var(--primary);
-      border: 1px solid rgba(0,131,141,0.18);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
       white-space: nowrap;
     }
 
     .diab-badge--ok {
-      background: rgba(0,131,141,0.12);
+      background: var(--line-teal-soft);
       color: var(--primary);
     }
 
@@ -408,9 +408,9 @@
 
     .diab-note {
       border-radius: var(--radius);
-      padding: 0.85rem 1rem;
+      padding: var(--space-0-85) var(--space-1);
       background: rgba(255,255,255,0.62);
-      border: 1px solid #dde8e8;
+      border: var(--border-hairline) solid #dde8e8;
       font-size: 0.95rem;
       line-height: 1.5;
     }
@@ -422,7 +422,7 @@
 
     .diab-metrics {
       display: grid;
-      gap: 0.8rem;
+      gap: var(--space-0-8);
     }
 
     @media (min-width: 700px) {
@@ -439,9 +439,9 @@
 
     .diab-metric {
       border-radius: var(--radius);
-      padding: 0.9rem 1rem;
+      padding: var(--space-0-9) var(--space-1);
       background: rgba(255,255,255,0.72);
-      border: 1px solid #dbe6e6;
+      border: var(--border-hairline) solid #dbe6e6;
       box-shadow: var(--shadow-s);
     }
 
@@ -449,7 +449,7 @@
       display: block;
       font-size: 0.84rem;
       color: #5b6a6a;
-      margin-bottom: 0.25rem;
+      margin-bottom: var(--space-0-25);
     }
 
     .diab-metric__value {
@@ -461,12 +461,12 @@
 
     .diab-answer-wrap {
       display: grid;
-      gap: 0.85rem;
+      gap: var(--space-0-85);
     }
 
     .diab-answer-fields {
       display: grid;
-      gap: 0.85rem;
+      gap: var(--space-0-85);
       grid-template-columns: minmax(0, 1fr);
       align-items: start;
     }
@@ -486,13 +486,13 @@
       font-weight: 800;
       font-size: 1.25rem;
       line-height: 1.2;
-      margin-bottom: 0.35rem;
+      margin-bottom: var(--space-0-35);
       text-align: center;
     }
 
     /* Turkusowa ramka dla pola odpowiedzi (musi nadpisać style globalne) */
     #patientAnswer {
-      border: 2px solid var(--primary) !important;
+      border: var(--border-emphasis) solid var(--primary) !important;
       box-shadow: none !important;
     }
 
@@ -506,7 +506,7 @@
     .diab-answer-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.7rem;
+      gap: var(--space-0-7);
     }
 
     .diab-answer-actions button {
@@ -520,9 +520,9 @@
     }
 
     .diab-pro-question {
-      padding: 0.85rem 0.95rem;
+      padding: var(--space-0-85) var(--space-0-95);
       border-radius: var(--radius);
-      border: 1px solid rgba(153,0,255,0.18);
+      border: var(--border-hairline) solid rgba(153,0,255,0.18);
       background: rgba(153,0,255,0.05);
     }
 
@@ -532,11 +532,11 @@
 
     .diab-pro-questions {
       display: grid;
-      gap: 0.85rem;
+      gap: var(--space-0-85);
     }
 
     .diab-pro-question__title {
-      margin: 0 0 0.7rem;
+      margin: 0 0 var(--space-0-7);
       font-size: 0.96rem;
       line-height: 1.45;
       color: #6a00cc;
@@ -555,7 +555,7 @@
 
     .diab-pro-options {
       display: grid;
-      gap: 0.55rem;
+      gap: var(--space-0-55);
       min-width: 0;
       max-width: 100%;
     }
@@ -563,13 +563,13 @@
     .diab-pro-option {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
-      gap: 0.7rem;
+      gap: var(--space-0-7);
       align-items: flex-start;
       width: 100%;
       max-width: 100%;
-      padding: 0.75rem 0.85rem;
+      padding: var(--space-0-75) var(--space-0-85);
       border-radius: var(--radius);
-      border: 1px solid rgba(153,0,255,0.16);
+      border: var(--border-hairline) solid rgba(153,0,255,0.16);
       background: rgba(255,255,255,0.75);
       cursor: pointer;
       transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
@@ -597,7 +597,7 @@
       margin: 0.15rem 0 0;
       padding: 0;
       border: 0;
-      border-radius: 50%;
+      border-radius: var(--radius-circle);
       background: transparent;
       box-shadow: none;
       accent-color: #9900ff;
@@ -616,12 +616,12 @@
 
     @media (max-width: 680px) {
       .diab-pro-question {
-        padding: 0.75rem 0.8rem;
+        padding: var(--space-0-75) var(--space-0-8);
       }
 
       .diab-pro-option {
-        padding: 0.65rem 0.75rem;
-        gap: 0.6rem;
+        padding: var(--space-0-65) var(--space-0-75);
+        gap: var(--space-0-6);
       }
 
       .diab-pro-question__title {
@@ -631,51 +631,51 @@
 
     .diab-feedback {
       border-radius: var(--radius);
-      padding: 0.9rem 1rem;
+      padding: var(--space-0-9) var(--space-1);
       font-size: 0.96rem;
       line-height: 1.55;
     }
 
     .diab-feedback--success {
       background: rgba(0,131,141,0.08);
-      border: 1px solid rgba(0,131,141,0.18);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
       color: var(--primary);
     }
 
     .diab-feedback--error {
       background: rgba(198,40,40,0.08);
-      border: 1px solid rgba(198,40,40,0.16);
+      border: var(--border-hairline) solid rgba(198,40,40,0.16);
       color: var(--danger);
     }
 
     .diab-solution {
-      border-top: 1px solid #d9e5e5;
-      padding-top: 1rem;
+      border-top: var(--border-hairline) solid #d9e5e5;
+      padding-top: var(--space-1);
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     .diab-solution__intro p {
-      margin: 0.6rem 0 0;
+      margin: var(--space-0-6) 0 0;
       line-height: 1.5;
     }
 
     .diab-solution__steps {
       margin: 0;
-      padding-left: 1.2rem;
+      padding-left: var(--space-1-2);
     }
 
     .diab-solution__steps li {
-      margin-bottom: 0.75rem;
+      margin-bottom: var(--space-0-75);
       line-height: 1.55;
     }
 
 
     .diab-explain-strip {
-      padding: 0.85rem 1rem;
+      padding: var(--space-0-85) var(--space-1);
       border-radius: var(--radius);
       background: rgba(0,131,141,0.07);
-      border: 1px solid rgba(0,131,141,0.18);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
       font-size: 0.95rem;
       line-height: 1.55;
     }
@@ -683,7 +683,7 @@
     .diab-solution__source-grid,
     .diab-solution__today {
       display: grid;
-      gap: 0.75rem;
+      gap: var(--space-0-75);
     }
 
     .diab-solution__source-grid,
@@ -695,14 +695,14 @@
     .diab-solution__today-item,
     .diab-solution__balance-box {
       border-radius: var(--radius);
-      padding: 0.85rem 0.95rem;
+      padding: var(--space-0-85) var(--space-0-95);
       background: rgba(255,255,255,0.72);
-      border: 1px solid #dce7e7;
+      border: var(--border-hairline) solid #dce7e7;
     }
 
     .diab-solution__today-item > strong {
       display: block;
-      margin-bottom: 0.25rem;
+      margin-bottom: var(--space-0-25);
     }
 
     .diab-solution__source-note,
@@ -717,24 +717,24 @@
       display: block;
       font-size: 0.82rem;
       color: #5c6a6a;
-      margin-bottom: 0.25rem;
+      margin-bottom: var(--space-0-25);
     }
 
     .diab-solution__source-value {
       display: block;
       font-weight: 700;
-      margin-bottom: 0.25rem;
+      margin-bottom: var(--space-0-25);
     }
 
     .diab-solution__balance-wrap {
       display: grid;
-      gap: 0.65rem;
+      gap: var(--space-0-65);
     }
 
     .diab-solution__balance {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
-      gap: 0.7rem;
+      gap: var(--space-0-7);
       align-items: stretch;
     }
 
@@ -753,7 +753,7 @@
 
     .diab-solution__today-number {
       display: block;
-      margin-top: 0.25rem;
+      margin-top: var(--space-0-25);
       font-size: 1.05rem;
       font-weight: 800;
       color: var(--primary);
@@ -796,7 +796,7 @@
 
     .diab-case small {
       display: block;
-      margin-top: 0.35rem;
+      margin-top: var(--space-0-35);
       color: #556666;
       line-height: 1.45;
     }
@@ -821,7 +821,7 @@
 
     .diab-section-credit {
       margin-top: 1.15rem;
-      padding: 0.15rem 1rem 0.4rem;
+      padding: 0.15rem var(--space-1) var(--space-0-4);
       text-align: center;
       color: #5f6c6c;
       font-size: 0.96rem;
@@ -834,7 +834,7 @@
       width: min(100%, calc(100% - 2.5rem));
       max-width: 760px;
       height: 1px;
-      margin: 0 auto 0.9rem;
+      margin: 0 auto var(--space-0-9);
       background: linear-gradient(
         90deg,
         transparent 0%,
@@ -854,11 +854,11 @@
 
     .diab-mini-formula {
       display: inline-block;
-      margin-top: 0.4rem;
-      padding: 0.45rem 0.7rem;
-      border-radius: 10px;
+      margin-top: var(--space-0-4);
+      padding: var(--space-0-45) var(--space-0-7);
+      border-radius: var(--radius-10);
       background: rgba(255,255,255,0.75);
-      border: 1px solid #dde8e8;
+      border: var(--border-hairline) solid #dde8e8;
       font-weight: 600;
     }
 
@@ -877,8 +877,8 @@
       justify-content: center;
       align-items: center;
       flex-wrap: wrap;
-      gap: 0.6rem;
-      margin: 0.9rem 0 0.4rem;
+      gap: var(--space-0-6);
+      margin: var(--space-0-9) 0 var(--space-0-4);
     }
 
     .diab-pro-toggle .label-left,
@@ -924,10 +924,10 @@
 
     .diab-pro-panel {
       display: grid;
-      gap: 0.8rem;
-      padding: 0.95rem 1rem;
+      gap: var(--space-0-8);
+      padding: var(--space-0-95) var(--space-1);
       border-radius: var(--radius);
-      border: 1px solid rgba(153,0,255,0.22);
+      border: var(--border-hairline) solid rgba(153,0,255,0.22);
       background: rgba(153,0,255,0.05);
     }
 
@@ -944,10 +944,10 @@
 
     .diab-pro-conflict {
       display: grid;
-      gap: 0.65rem;
-      padding: 0.85rem 0.95rem;
+      gap: var(--space-0-65);
+      padding: var(--space-0-85) var(--space-0-95);
       border-radius: var(--radius);
-      border: 1px solid rgba(178,107,0,0.22);
+      border: var(--border-hairline) solid rgba(178,107,0,0.22);
       background: rgba(178,107,0,0.08);
       color: #6b4a00;
       line-height: 1.5;
@@ -961,7 +961,7 @@
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
-      gap: 0.7rem;
+      gap: var(--space-0-7);
     }
 
     .diab-pro-conflict__actions button {
@@ -987,19 +987,19 @@
     .diab-pro-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.55rem;
-      margin-top: 0.35rem;
+      gap: var(--space-0-55);
+      margin-top: var(--space-0-35);
     }
 
     .diab-pro-chip {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.35rem 0.65rem;
-      border-radius: 999px;
+      gap: var(--space-0-35);
+      padding: var(--space-0-35) var(--space-0-65);
+      border-radius: var(--radius-pill);
       font-size: 0.84rem;
       font-weight: 700;
-      border: 1px solid rgba(153,0,255,0.16);
+      border: var(--border-hairline) solid rgba(153,0,255,0.16);
       background: rgba(153,0,255,0.06);
       color: #7d17d6;
     }
@@ -1011,10 +1011,10 @@
 
     .diab-solution__pro {
       display: grid;
-      gap: 0.75rem;
-      padding: 0.95rem 1rem;
+      gap: var(--space-0-75);
+      padding: var(--space-0-95) var(--space-1);
       border-radius: var(--radius);
-      border: 1px solid rgba(153,0,255,0.18);
+      border: var(--border-hairline) solid rgba(153,0,255,0.18);
       background: rgba(153,0,255,0.05);
     }
 
@@ -1039,7 +1039,7 @@
     }
 
     .diab-pro-summary li {
-      margin-bottom: 0.55rem;
+      margin-bottom: var(--space-0-55);
       line-height: 1.55;
     }
 
@@ -1048,7 +1048,7 @@
       inset: 0;
       overflow: hidden;
       pointer-events: none;
-      z-index: 2200;
+      z-index: var(--z-reward);
     }
 
     .diab-reward-layer[hidden] {
@@ -1061,14 +1061,14 @@
       top: clamp(4.5rem, 14vh, 7.5rem);
       transform: translateX(-50%);
       min-width: min(90vw, 320px);
-      padding: 0.9rem 1.2rem;
-      border-radius: 999px;
+      padding: var(--space-0-9) var(--space-1-2);
+      border-radius: var(--radius-pill);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.65rem;
+      gap: var(--space-0-65);
       background: rgba(255,255,255,0.96);
-      border: 1px solid rgba(0,131,141,0.18);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
       color: var(--primary);
       box-shadow: 0 16px 34px rgba(0,0,0,0.16);
       font-size: clamp(1.1rem, 2.6vw, 1.45rem);
@@ -1087,7 +1087,7 @@
       left: calc(var(--x) * 1%);
       width: 12px;
       height: 20px;
-      border-radius: 4px;
+      border-radius: var(--radius-4);
       background: var(--c);
       opacity: 0;
       transform: translate3d(0, -10vh, 0) rotate(0deg);
@@ -1098,7 +1098,7 @@
     .diab-confetti--line {
       width: 6px;
       height: 24px;
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
     }
 
     .diab-balloon {
@@ -1107,7 +1107,7 @@
       left: calc(var(--x) * 1%);
       width: 46px;
       height: 58px;
-      border-radius: 50% 50% 46% 46%;
+      border-radius: var(--radius-circle) var(--radius-circle) 46% 46%;
       background: var(--c);
       box-shadow: inset -10px -14px 0 rgba(255,255,255,0.18);
       opacity: 0;
@@ -1256,7 +1256,7 @@
     }
 
     .diab-video-cta {
-      margin-top: 0.85rem;
+      margin-top: var(--space-0-85);
     }
 
     .diab-video-btn,
@@ -1275,7 +1275,7 @@
       font-size: clamp(1rem, 2vw, 1.08rem);
       font-weight: 700;
       line-height: 1.4;
-      padding: 0.95rem 1rem;
+      padding: var(--space-0-95) var(--space-1);
       cursor: pointer;
       text-align: center;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -1292,17 +1292,17 @@
     .liquid-ios26 .diab-video-btn:focus-visible {
       outline: none !important;
       border-color: rgba(0,131,141,0.48) !important;
-      box-shadow: 0 0 0 4px rgba(0,131,141,0.12) !important;
+      box-shadow: var(--shadow-focus-ring-diab) !important;
     }
 
     .diab-video-modal {
       position: fixed;
       inset: 0;
-      z-index: 9998;
+      z-index: var(--z-video-modal);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      padding: var(--space-1);
     }
 
     .diab-video-modal[hidden] {
@@ -1317,14 +1317,14 @@
 
     .diab-video-modal__dialog {
       position: relative;
-      z-index: 1;
+      z-index: var(--z-raised);
       width: min(100%, 34rem);
       max-height: calc(100vh - 2rem);
       max-height: calc(100dvh - 2rem);
       display: grid;
-      gap: 1rem;
-      padding: 1rem;
-      border-radius: 20px;
+      gap: var(--space-1);
+      padding: var(--space-1);
+      border-radius: var(--radius-20);
       background: rgba(255,255,255,0.98);
       box-shadow: 0 24px 60px rgba(0,0,0,0.28);
       overflow: auto;
@@ -1334,7 +1334,7 @@
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     .diab-video-modal__heading {
@@ -1345,7 +1345,7 @@
     }
 
     .diab-video-modal__desc {
-      margin: 0.35rem 0 0;
+      margin: var(--space-0-35) 0 0;
       font-size: 0.95rem;
       line-height: 1.5;
       color: #566565;
@@ -1356,8 +1356,8 @@
       width: 2.75rem;
       height: 2.75rem;
       flex: 0 0 2.75rem;
-      border: 1px solid rgba(0,131,141,0.2);
-      border-radius: 999px;
+      border: var(--border-hairline) solid rgba(0,131,141,0.2);
+      border-radius: var(--radius-pill);
       background: rgba(255,255,255,0.96);
       color: var(--primary);
       display: inline-flex;
@@ -1378,11 +1378,11 @@
     .diab-video-modal__close:focus-visible {
       outline: none;
       border-color: rgba(0,131,141,0.44);
-      box-shadow: 0 0 0 4px rgba(0,131,141,0.12);
+      box-shadow: var(--shadow-focus-ring-diab);
     }
 
     .diab-video-modal__player-wrap {
-      border-radius: 18px;
+      border-radius: var(--radius-18);
       overflow: hidden;
       background: #000000;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
@@ -1405,15 +1405,15 @@
 
     @media (max-width: 640px) {
       .diab-video-modal {
-        padding: 0.75rem;
+        padding: var(--space-0-75);
       }
 
       .diab-video-modal__dialog {
         width: min(100%, 30rem);
         max-height: calc(100vh - 1.5rem);
       max-height: calc(100dvh - 1.5rem);
-        padding: 0.85rem;
-        border-radius: 16px;
+        padding: var(--space-0-85);
+        border-radius: var(--radius-16);
       }
 
       .diab-video-modal__heading {
@@ -1438,7 +1438,7 @@
     .diab-film-modal {
       position: fixed;
       inset: 0;
-      z-index: 9999;
+      z-index: var(--z-modal);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1480,12 +1480,12 @@
 
     @media (min-width: 520px) {
       .diab-film-panel {
-        padding: 1.25rem;
+        padding: var(--space-1-25);
       }
       .diab-film-frame {
         width: min(460px, 100vw);
         height: min(92vh, 900px);
-        border-radius: 16px;
+        border-radius: var(--radius-16);
       }
     }
 
@@ -1502,7 +1502,7 @@
 
     .diab-film-stage {
       flex: 2 0 0;
-      padding: 1.25rem;
+      padding: var(--space-1-25);
       padding-top: calc(3.25rem + env(safe-area-inset-top, 0px));
       box-sizing: border-box;
       white-space: pre-wrap;
@@ -1512,7 +1512,7 @@
 
     .diab-film-sub {
       flex: 1 0 0;
-      padding: 1.25rem;
+      padding: var(--space-1-25);
       box-sizing: border-box;
       white-space: pre-wrap;
       font-size: clamp(1rem, 2.6vh, 1.4rem);
@@ -1529,15 +1529,15 @@
       bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
       display: flex;
       justify-content: center;
-      gap: 0.8rem;
-      z-index: 4;
+      gap: var(--space-0-8);
+      z-index: var(--z-film-controls);
     }
 
     .diab-film-ctrl {
       width: 52px;
       height: 52px;
-      border-radius: 999px;
-      border: 1px solid #000000;
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid #000000;
       background: #ffffff;
       color: #000000;
       display: inline-flex;
@@ -1565,12 +1565,12 @@
       position: absolute;
       top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
       left: 0.75rem;
-      padding: 0.35rem 0.6rem;
-      border-radius: 999px;
-      border: 1px solid #000000;
+      padding: var(--space-0-35) var(--space-0-6);
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid #000000;
       background: #ffffff;
       font-size: 0.9rem;
-      z-index: 4;
+      z-index: var(--z-film-controls);
     }
 
     .diab-film-close {
@@ -1579,15 +1579,15 @@
       right: 0.75rem;
       width: 44px;
       height: 44px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid rgba(255, 255, 255, 0.9);
       background: rgba(0, 0, 0, 0.55);
       color: #ffffff;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      z-index: 6;
+      z-index: var(--z-search-popover);
       font-size: 28px;
       line-height: 1;
     }
@@ -1599,23 +1599,23 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
+      gap: var(--space-1);
       flex-wrap: wrap;
-      margin-bottom: 0.55rem;
+      margin-bottom: var(--space-0-55);
     }
 
     .diab-back-btn {
       appearance: none;
-      border: 1px solid rgba(0,131,141,0.24);
-      border-radius: 999px;
+      border: var(--border-hairline) solid rgba(0,131,141,0.24);
+      border-radius: var(--radius-pill);
       background: rgba(255,255,255,0.96);
       color: var(--primary);
       font: inherit;
       font-weight: 700;
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.65rem 1rem;
+      gap: var(--space-0-5);
+      padding: var(--space-0-65) var(--space-1);
       cursor: pointer;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
@@ -1665,7 +1665,7 @@
     .diab-accordion-btn:focus-visible,
     .liquid-ios26 .diab-accordion-btn:focus-visible {
       border-color: rgba(0,131,141,0.48) !important;
-      box-shadow: 0 0 0 4px rgba(0,131,141,0.12) !important;
+      box-shadow: var(--shadow-focus-ring-diab) !important;
       outline: none !important;
     }
 
@@ -1744,7 +1744,7 @@
 
     .diab-macro-layout {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
       align-items: start;
     }
 
@@ -1758,8 +1758,8 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 0.55rem;
-      margin: 0.35rem 0 0.9rem;
+      gap: var(--space-0-55);
+      margin: var(--space-0-35) 0 var(--space-0-9);
     }
 
     .diab-macro-example-chip,
@@ -1771,9 +1771,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.35rem;
-      border-radius: 999px;
-      border: 1px solid rgba(0,131,141,0.18);
+      gap: var(--space-0-35);
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
       background: rgba(255,255,255,0.82);
       color: var(--primary);
       font-weight: 700;
@@ -1794,32 +1794,32 @@
     }
 
     .diab-macro-example-chip {
-      padding: 0.55rem 0.9rem;
+      padding: var(--space-0-55) var(--space-0-9);
       font-size: 0.88rem;
       line-height: 1.35;
     }
 
     .diab-macro-rowlist {
       display: grid;
-      gap: 0.95rem;
+      gap: var(--space-0-95);
       margin-top: 0.1rem;
     }
 
     .diab-macro-row {
       border-radius: var(--radius);
-      border: 1px solid #dbe7e7;
+      border: var(--border-hairline) solid #dbe7e7;
       background: rgba(255,255,255,0.82);
       box-shadow: var(--shadow-s);
-      padding: 0.95rem 1rem;
+      padding: var(--space-0-95) var(--space-1);
       display: grid;
-      gap: 0.85rem;
+      gap: var(--space-0-85);
     }
 
     .diab-macro-row__head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: var(--space-0-75);
       flex-wrap: wrap;
     }
 
@@ -1827,9 +1827,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
-      border: 1px solid rgba(0,131,141,0.16);
+      padding: var(--space-0-35) var(--space-0-7);
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid var(--line-teal);
       background: rgba(0,131,141,0.08);
       color: var(--primary);
       font-size: 0.84rem;
@@ -1840,11 +1840,11 @@
     button.secondary-btn.diab-macro-row__remove,
     .liquid-ios26 .diab-macro-row__remove,
     .liquid-ios26 button.secondary-btn.diab-macro-row__remove {
-      padding: 0.48rem 0.8rem;
+      padding: 0.48rem var(--space-0-8);
       font-size: 0.84rem;
       -webkit-appearance: none;
       appearance: none;
-      border: 1px solid rgba(201, 79, 79, 0.48) !important;
+      border: var(--border-hairline) solid rgba(201, 79, 79, 0.48) !important;
       border-style: solid !important;
       background: rgba(255, 248, 248, 0.96) !important;
       color: #a34a58 !important;
@@ -1859,7 +1859,7 @@
     .liquid-ios26 .diab-macro-row__remove:focus-visible,
     .liquid-ios26 button.secondary-btn.diab-macro-row__remove:hover,
     .liquid-ios26 button.secondary-btn.diab-macro-row__remove:focus-visible {
-      border: 1px solid rgba(201, 79, 79, 0.66) !important;
+      border: var(--border-hairline) solid rgba(201, 79, 79, 0.66) !important;
       background: rgba(201, 79, 79, 0.08) !important;
       color: #933847 !important;
       box-shadow: inset 0 0 0 1px rgba(201, 79, 79, 0.08), 0 14px 28px rgba(21,31,50,0.07);
@@ -1869,7 +1869,7 @@
     button.secondary-btn.diab-macro-row__remove:disabled,
     .liquid-ios26 .diab-macro-row__remove:disabled,
     .liquid-ios26 button.secondary-btn.diab-macro-row__remove:disabled {
-      border: 1px solid rgba(201, 79, 79, 0.24) !important;
+      border: var(--border-hairline) solid rgba(201, 79, 79, 0.24) !important;
       background: rgba(255,255,255,0.82) !important;
       color: rgba(147, 56, 71, 0.55) !important;
       box-shadow: none;
@@ -1877,7 +1877,7 @@
 
     .diab-macro-row__fields {
       display: grid;
-      gap: 0.8rem 0.7rem;
+      gap: var(--space-0-8) var(--space-0-7);
       grid-template-columns: repeat(4, minmax(0, 1fr));
       align-items: start;
     }
@@ -1885,7 +1885,7 @@
     .diab-macro-row__field {
       margin-top: 0;
       display: grid;
-      gap: 0.35rem;
+      gap: var(--space-0-35);
       min-width: 0;
       align-content: start;
     }
@@ -1910,7 +1910,7 @@
     @media (max-width: 640px) {
       .diab-macro-row__fields {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.75rem 0.65rem;
+        gap: var(--space-0-75) var(--space-0-65);
       }
 
       .diab-macro-row__field--name {
@@ -1924,22 +1924,22 @@
 
     .diab-macro-row__result {
       display: grid;
-      gap: 0.55rem;
+      gap: var(--space-0-55);
     }
 
     .diab-macro-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.55rem;
+      gap: var(--space-0-55);
     }
 
     .diab-macro-chip {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.4rem 0.72rem;
-      border-radius: 999px;
-      border: 1px solid rgba(0,131,141,0.16);
+      gap: var(--space-0-35);
+      padding: var(--space-0-4) 0.72rem;
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid var(--line-teal);
       background: rgba(0,131,141,0.06);
       color: var(--primary);
       font-size: 0.84rem;
@@ -1966,8 +1966,8 @@
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
-      gap: 0.7rem;
-      margin-top: 0.4rem;
+      gap: var(--space-0-7);
+      margin-top: var(--space-0-4);
     }
 
     .diab-macro-actions button {
@@ -1992,8 +1992,8 @@
 
     .diab-macro-empty {
       border-radius: var(--radius);
-      padding: 1rem;
-      border: 1px dashed rgba(0,131,141,0.28);
+      padding: var(--space-1);
+      border: var(--border-hairline) dashed rgba(0,131,141,0.28);
       background: rgba(255,255,255,0.72);
       text-align: center;
       color: #4f6060;
@@ -2002,13 +2002,13 @@
 
     .diab-macro-summary {
       display: grid;
-      gap: 0.9rem;
+      gap: var(--space-0-9);
     }
 
     .diab-macro-state {
       border-radius: var(--radius);
-      padding: 0.95rem 1rem;
-      border: 1px solid rgba(0,131,141,0.16);
+      padding: var(--space-0-95) var(--space-1);
+      border: var(--border-hairline) solid var(--line-teal);
       background: rgba(0,131,141,0.06);
       color: #295158;
       line-height: 1.55;
@@ -2046,7 +2046,7 @@
     }
 
     #calcMacroTransferStatus {
-      margin-top: 0.85rem;
+      margin-top: var(--space-0-85);
     }
 
     #calculatorContent #calculatorMainHeading,
@@ -2075,7 +2075,7 @@
 
     .diab-dose-grid {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     .diab-dose-settings-card {
@@ -2092,7 +2092,7 @@
       isolation: isolate;
       overflow: hidden;
       background: #ffffff !important;
-      border: 1px solid rgba(0,131,141,0.16) !important;
+      border: var(--border-hairline) solid var(--line-teal) !important;
       box-shadow: 0 16px 36px rgba(21,31,50,0.06) !important;
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
@@ -2110,7 +2110,7 @@
 
     .diab-dose-panel > * {
       position: relative;
-      z-index: 1;
+      z-index: var(--z-raised);
     }
 
     .diab-dose-fieldset,
@@ -2127,7 +2127,7 @@
 
     .diab-dose-fieldset legend {
       padding: 0;
-      margin: 0 0 0.35rem;
+      margin: 0 0 var(--space-0-35);
       font: inherit;
       font-weight: 600;
       color: var(--text);
@@ -2135,7 +2135,7 @@
 
     .diab-dose-fieldset__title {
       display: block;
-      margin: 0 0 0.75rem;
+      margin: 0 0 var(--space-0-75);
       font: inherit;
       font-weight: 600;
       line-height: 1.35;
@@ -2150,7 +2150,7 @@
 
     .diab-dose-source-toggle label span {
       font-weight: 700;
-      padding: 0.62rem 0.9rem;
+      padding: 0.62rem var(--space-0-9);
     }
 
     .diab-dose-source-toggle--compact {
@@ -2159,12 +2159,12 @@
     }
 
     .diab-dose-fieldset + .diab-dose-fieldset {
-      margin-top: 1rem;
+      margin-top: var(--space-1);
     }
 
     .diab-dose-control-grid {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
       margin-top: 0.2rem;
     }
 
@@ -2180,7 +2180,7 @@
 
     .diab-dose-control-title {
       display: block;
-      margin: 0 0 0.55rem;
+      margin: 0 0 var(--space-0-55);
       font-weight: 600;
       line-height: 1.4;
       color: var(--text);
@@ -2188,7 +2188,7 @@
 
     .diab-dose-control-help {
       display: block;
-      margin-top: 0.45rem;
+      margin-top: var(--space-0-45);
       font-size: 0.92rem;
       line-height: 1.45;
       color: #556565;
@@ -2196,13 +2196,13 @@
 
     .diab-dose-result-notes {
       display: grid;
-      gap: 0.85rem;
-      margin-top: 0.95rem;
+      gap: var(--space-0-85);
+      margin-top: var(--space-0-95);
     }
 
     #doseResultAlert,
     #doseHypoCarbsAlert {
-      margin: 0 0 0.85rem;
+      margin: 0 0 var(--space-0-85);
       text-align: center;
     }
 
@@ -2215,7 +2215,7 @@
 
     .diab-status__subtitle {
       display: block;
-      margin-top: 0.35rem;
+      margin-top: var(--space-0-35);
       font-size: 0.98rem;
       line-height: 1.5;
       font-weight: 600;
@@ -2230,18 +2230,18 @@
     }
 
     .diab-metrics--dose {
-      gap: 0.85rem;
+      gap: var(--space-0-85);
     }
 
     .diab-metrics--dose .diab-metric {
       text-align: center;
-      padding: 1rem 1.05rem;
+      padding: var(--space-1) 1.05rem;
     }
 
     .diab-metrics--dose .diab-metric__label {
       font-size: 0.92rem;
       font-weight: 700;
-      margin-bottom: 0.35rem;
+      margin-bottom: var(--space-0-35);
     }
 
     .diab-metrics--dose .diab-metric__value {
@@ -2264,7 +2264,7 @@
 
     .diab-metric--support {
       background: linear-gradient(180deg, rgba(252,254,254,0.99), rgba(246,250,250,0.99));
-      border: 1px solid rgba(0,131,141,0.15);
+      border: var(--border-hairline) solid rgba(0,131,141,0.15);
       box-shadow: 0 14px 30px rgba(21,31,50,0.05);
     }
 
@@ -2355,20 +2355,20 @@
 
     .diab-status--warn {
       background: rgba(178,107,0,0.12);
-      border: 1px solid rgba(178,107,0,0.18);
+      border: var(--border-hairline) solid rgba(178,107,0,0.18);
       color: #8b5300;
     }
 
     .diab-status--danger {
       background: rgba(198,40,40,0.10);
-      border: 1px solid rgba(198,40,40,0.18);
+      border: var(--border-hairline) solid rgba(198,40,40,0.18);
       color: var(--danger);
     }
 
 
     .diab-calc-grid {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     @media (min-width: 960px) {
@@ -2381,8 +2381,8 @@
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
-      gap: 0.7rem;
-      margin-top: 0.35rem;
+      gap: var(--space-0-7);
+      margin-top: var(--space-0-35);
     }
 
     .diab-calc-actions button {
@@ -2397,13 +2397,13 @@
 
     .diab-status--success {
       background: rgba(0,131,141,0.08);
-      border: 1px solid rgba(0,131,141,0.18);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
       color: var(--primary);
     }
 
     .diab-status--info {
       background: rgba(0,131,141,0.05);
-      border: 1px solid rgba(0,131,141,0.12);
+      border: var(--border-hairline) solid var(--line-teal-soft);
       color: #4f6060;
     }
 
@@ -2418,9 +2418,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.35rem 0.75rem;
-      border-radius: 999px;
-      border: 1px solid rgba(0,131,141,0.18);
+      padding: var(--space-0-35) var(--space-0-75);
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
       background: rgba(0,131,141,0.08);
       color: var(--primary);
       font-size: 0.85rem;
@@ -2430,8 +2430,8 @@
 
     .diab-calc-empty {
       border-radius: var(--radius);
-      padding: 1rem;
-      border: 1px dashed rgba(0,131,141,0.28);
+      padding: var(--space-1);
+      border: var(--border-hairline) dashed rgba(0,131,141,0.28);
       background: rgba(255,255,255,0.7);
       text-align: center;
       color: #4f6060;
@@ -2440,7 +2440,7 @@
 
     .diab-calc-table-wrap {
       overflow-x: auto;
-      border: 1px solid #dce7e7;
+      border: var(--border-hairline) solid #dce7e7;
       border-radius: var(--radius);
       background: rgba(255,255,255,0.82);
     }
@@ -2455,15 +2455,15 @@
     .diab-calc-table caption {
       caption-side: top;
       text-align: left;
-      padding: 0 0 0.8rem;
+      padding: 0 0 var(--space-0-8);
       font-weight: 700;
       color: var(--text);
     }
 
     .diab-calc-table th,
     .diab-calc-table td {
-      padding: 0.75rem 0.8rem;
-      border-bottom: 1px solid #dde8e8;
+      padding: var(--space-0-75) var(--space-0-8);
+      border-bottom: var(--border-hairline) solid #dde8e8;
       vertical-align: top;
     }
 
@@ -2493,17 +2493,17 @@
     }
 
     .diab-calc-note {
-      margin: 0 0 0.9rem;
+      margin: 0 0 var(--space-0-9);
       font-size: 0.95rem;
       line-height: 1.55;
       color: #566565;
     }
 
     .diab-calc-sensitivity {
-      margin: 0 0 0.9rem;
-      padding: 0.95rem 1rem;
+      margin: 0 0 var(--space-0-9);
+      padding: var(--space-0-95) var(--space-1);
       border-radius: var(--radius);
-      border: 1px solid rgba(124,58,237,0.28);
+      border: var(--border-hairline) solid rgba(124,58,237,0.28);
       background: rgba(124,58,237,0.08);
       color: #5b21b6;
       line-height: 1.55;
@@ -2519,7 +2519,7 @@
 
     .diab-calc-sensitivity small {
       display: block;
-      margin-top: 0.35rem;
+      margin-top: var(--space-0-35);
       font-size: inherit;
       line-height: 1.55;
       color: #6d28d9;
@@ -2532,7 +2532,7 @@
     }
 
     .diab-calc-table tr.diab-calc-table__detail-row td {
-      padding: 0.78rem 0.85rem 0.9rem;
+      padding: 0.78rem var(--space-0-85) var(--space-0-9);
       background: rgba(124,58,237,0.04);
       color: #314040;
       font-size: 0.92rem;
@@ -2547,30 +2547,30 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.28rem 0.6rem;
-      border-radius: 999px;
+      padding: 0.28rem var(--space-0-6);
+      border-radius: var(--radius-pill);
       font-size: 0.8rem;
       font-weight: 700;
-      margin-right: 0.55rem;
+      margin-right: var(--space-0-55);
       vertical-align: middle;
     }
 
     .diab-calc-balance-chip--stable {
-      background: rgba(0,131,141,0.12);
+      background: var(--line-teal-soft);
       color: var(--primary);
-      border: 1px solid rgba(0,131,141,0.18);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
     }
 
     .diab-calc-balance-chip--warn {
       background: rgba(178,107,0,0.12);
       color: #8b5300;
-      border: 1px solid rgba(178,107,0,0.18);
+      border: var(--border-hairline) solid rgba(178,107,0,0.18);
     }
 
     .diab-calc-balance-chip--danger {
       background: rgba(198,40,40,0.10);
       color: var(--danger);
-      border: 1px solid rgba(198,40,40,0.16);
+      border: var(--border-hairline) solid rgba(198,40,40,0.16);
     }
 
     .diab-calc-balance-main {
@@ -2581,7 +2581,7 @@
 
     .diab-calc-balance-sub {
       display: block;
-      margin-top: 0.35rem;
+      margin-top: var(--space-0-35);
       font-size: 0.88rem;
       color: #5f6c6c;
     }
@@ -2590,9 +2590,9 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
-      gap: 0.85rem;
+      gap: var(--space-0-85);
       align-items: start;
-      margin-bottom: 0.9rem;
+      margin-bottom: var(--space-0-9);
     }
 
     .diab-calc-header > div {
@@ -2603,7 +2603,7 @@
 
     /* ===== Dodatkowe poprawki kalkulatora doposiłkowego ===== */
     .diab-calc-assumptions {
-      margin-top: 0.9rem;
+      margin-top: var(--space-0-9);
     }
 
     .diab-calc-assumptions .diab-accordion-label {
@@ -2613,17 +2613,17 @@
     .diab-calc-table th.diab-calc-table__highlight,
     .diab-calc-table td.diab-calc-table__highlight {
       background: rgba(124,58,237,0.08);
-      border-left: 2px solid rgba(124,58,237,0.5);
-      border-right: 2px solid rgba(124,58,237,0.5);
+      border-left: var(--border-emphasis) solid rgba(124,58,237,0.5);
+      border-right: var(--border-emphasis) solid rgba(124,58,237,0.5);
     }
 
     .diab-calc-table thead th.diab-calc-table__highlight {
       color: #5b21b6;
-      border-top: 2px solid rgba(124,58,237,0.5);
+      border-top: var(--border-emphasis) solid rgba(124,58,237,0.5);
     }
 
     .diab-calc-table tbody tr:last-child td.diab-calc-table__highlight {
-      border-bottom: 2px solid rgba(124,58,237,0.5);
+      border-bottom: var(--border-emphasis) solid rgba(124,58,237,0.5);
     }
 
     .diab-calc-table td.diab-calc-table__highlight strong {
@@ -2666,7 +2666,7 @@
 
       .diab-calc-table tbody tr.diab-calc-table__main-row {
         overflow: visible;
-        border: 1px solid #dce7e7;
+        border: var(--border-hairline) solid #dce7e7;
         border-bottom: none;
         border-radius: var(--radius) var(--radius) 0 0;
         background: rgba(255,255,255,0.88);
@@ -2674,20 +2674,20 @@
       }
 
       .diab-calc-table tbody tr.diab-calc-table__detail-row {
-        border: 1px solid #dce7e7;
+        border: var(--border-hairline) solid #dce7e7;
         border-top: none;
         border-radius: 0 0 var(--radius) var(--radius);
         background: rgba(124,58,237,0.05);
         box-shadow: 0 8px 18px rgba(21,31,50,0.04);
-        margin-bottom: 0.9rem;
+        margin-bottom: var(--space-0-9);
       }
 
       .diab-calc-table th[scope="row"] {
         display: block;
-        padding: 0.85rem 0.95rem;
+        padding: var(--space-0-85) var(--space-0-95);
         background: rgba(0,131,141,0.08);
         color: var(--primary);
-        border-bottom: 1px solid #dde8e8;
+        border-bottom: var(--border-hairline) solid #dde8e8;
         border-radius: var(--radius) var(--radius) 0 0;
         white-space: normal;
       }
@@ -2695,10 +2695,10 @@
       .diab-calc-table td {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
-        gap: 0.8rem;
+        gap: var(--space-0-8);
         align-items: center;
-        padding: 0.72rem 0.95rem;
-        border-bottom: 1px solid #dde8e8;
+        padding: 0.72rem var(--space-0-95);
+        border-bottom: var(--border-hairline) solid #dde8e8;
         text-align: right;
         white-space: normal;
         font-variant-numeric: tabular-nums;
@@ -2709,7 +2709,7 @@
         color: #4f6060;
         font-weight: 600;
         text-align: left;
-        padding-right: 0.45rem;
+        padding-right: var(--space-0-45);
       }
 
       .diab-calc-table td[data-role="number"] {
@@ -2723,7 +2723,7 @@
 
       .diab-calc-table tbody tr.diab-calc-table__detail-row td {
         display: block;
-        padding: 0.78rem 0.95rem 0.92rem;
+        padding: 0.78rem var(--space-0-95) 0.92rem;
         text-align: left;
         border-bottom: none;
         background: transparent;
@@ -2735,9 +2735,9 @@
 
       .diab-calc-table td.diab-calc-table__highlight {
         position: relative;
-        z-index: 1;
+        z-index: var(--z-raised);
         width: auto;
-        margin: 0.55rem 0.75rem 0.9rem;
+        margin: var(--space-0-55) var(--space-0-75) var(--space-0-9);
         border: none;
         border-radius: 0.9rem;
         background: rgba(124,58,237,0.1);
@@ -2750,7 +2750,7 @@
 
       .diab-calc-balance-chip {
         margin-right: 0;
-        margin-bottom: 0.45rem;
+        margin-bottom: var(--space-0-45);
       }
 
       .diab-calc-balance-main {
@@ -2760,12 +2760,12 @@
 
     .diab-video-cta {
       display: grid;
-      gap: 0.75rem;
+      gap: var(--space-0-75);
     }
 
     .diab-video-cta__actions {
       display: grid;
-      gap: 0.75rem;
+      gap: var(--space-0-75);
     }
 
     .diab-video-link,
@@ -2784,7 +2784,7 @@
       font-size: 1rem;
       font-weight: 700;
       line-height: 1.4;
-      padding: 0.95rem 1rem;
+      padding: var(--space-0-95) var(--space-1);
       text-align: center;
       text-decoration: none;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
@@ -2819,14 +2819,14 @@
     /* ===== Launchpad / pierwszy widok ===== */
     .diab-launchpad {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
     }
 
     .diab-launchpad__hero {
       position: relative;
       overflow: hidden;
       background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(245,253,253,0.98));
-      border: 1px solid rgba(0,131,141,0.18);
+      border: var(--border-hairline) solid rgba(0,131,141,0.18);
     }
 
     .diab-launchpad__hero::after {
@@ -2836,7 +2836,7 @@
       right: -4rem;
       width: 18rem;
       height: 18rem;
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
       background: radial-gradient(circle, rgba(0,176,166,0.13), rgba(0,176,166,0));
       pointer-events: none;
       z-index: 0;
@@ -2844,9 +2844,9 @@
 
     .diab-launchpad__hero-grid {
       position: relative;
-      z-index: 1;
+      z-index: var(--z-raised);
       display: grid;
-      gap: 0.95rem;
+      gap: var(--space-0-95);
       align-items: start;
     }
 
@@ -2856,7 +2856,7 @@
     }
 
     .diab-launchpad__intro {
-      max-width: 72ch;
+      max-width: var(--measure-copy);
     }
 
     .diab-launchpad__title {
@@ -2868,7 +2868,7 @@
     }
 
     .diab-launchpad__lead {
-      margin: 0.9rem 0 0;
+      margin: var(--space-0-9) 0 0;
       max-width: 60ch;
       font-size: 1rem;
       line-height: 1.65;
@@ -2877,12 +2877,12 @@
 
     .diab-launchpad__path {
       display: grid;
-      gap: 0.8rem;
-      border: 1px solid rgba(0,131,141,0.14);
+      gap: var(--space-0-8);
+      border: var(--border-hairline) solid rgba(0,131,141,0.14);
       border-radius: calc(var(--radius) + 6px);
       background: rgba(255,255,255,0.72);
       box-shadow: inset 0 0 0 1px rgba(0,131,141,0.03);
-      padding: 0.95rem 1rem 1rem;
+      padding: var(--space-0-95) var(--space-1) var(--space-1);
     }
 
     .diab-launchpad__path-kicker {
@@ -2899,7 +2899,7 @@
       margin: 0;
       padding: 0;
       display: grid;
-      gap: 0.75rem;
+      gap: var(--space-0-75);
       grid-template-columns: 1fr;
       align-items: stretch;
     }
@@ -2919,11 +2919,11 @@
     .diab-path-item {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
-      gap: 0.7rem;
+      gap: var(--space-0-7);
       align-items: start;
       padding: 0.82rem 0.88rem;
       border-radius: calc(var(--radius) + 2px);
-      border: 1px solid rgba(0,131,141,0.14);
+      border: var(--border-hairline) solid rgba(0,131,141,0.14);
       background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,253,253,0.95));
       box-shadow: 0 10px 22px rgba(21,31,50,0.04);
       min-height: 100%;
@@ -2932,12 +2932,12 @@
     .diab-path-item__num {
       width: 1.9rem;
       height: 1.9rem;
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0,131,141,0.12);
-      border: 1px solid rgba(0,131,141,0.16);
+      background: var(--line-teal-soft);
+      border: var(--border-hairline) solid var(--line-teal);
       color: var(--primary);
       font-weight: 800;
       font-size: 0.9rem;
@@ -2961,19 +2961,19 @@
 
     @media (max-width: 639px) {
       .diab-launchpad__path {
-        padding: 0.9rem;
+        padding: var(--space-0-9);
       }
     }
 
     .diab-launchpad__modules {
       display: grid;
-      gap: 0.9rem;
+      gap: var(--space-0-9);
     }
 
     .diab-launchpad__section-head {
       display: grid;
       justify-items: center;
-      gap: 0.35rem;
+      gap: var(--space-0-35);
       text-align: center;
     }
 
@@ -2993,7 +2993,7 @@
     .diab-launchpad__actions {
       display: grid;
       justify-items: center;
-      gap: 0.45rem;
+      gap: var(--space-0-45);
       margin-top: 0.15rem;
     }
 
@@ -3005,9 +3005,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.45rem;
+      gap: var(--space-0-45);
       padding: 0.78rem 1.15rem;
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
       border: 1.5px solid var(--diab-button-border, rgba(0,131,141,0.24)) !important;
       background: var(--diab-module-bg, linear-gradient(180deg, rgba(255,255,255,0.99), rgba(246,253,253,0.98))) !important;
       box-shadow: 0 0 0 1px rgba(0,131,141,0.04), var(--diab-shadow-1, 0 10px 24px rgba(21,31,50,0.05)) !important;
@@ -3039,7 +3039,7 @@
 
     .diab-launchpad__grid {
       display: grid;
-      gap: 1rem;
+      gap: var(--space-1);
       grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
       align-items: stretch;
     }
@@ -3054,7 +3054,7 @@
       background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(246,253,253,0.98)) !important;
       box-shadow: 0 0 0 1px rgba(0,131,141,0.04), 0 18px 40px rgba(21,31,50,0.06) !important;
       display: grid;
-      gap: 0.85rem;
+      gap: var(--space-0-85);
       align-content: start;
       text-align: left;
       cursor: pointer;
@@ -3073,7 +3073,7 @@
     .liquid-ios26 .diab-module-card:focus-visible {
       outline: none !important;
       border-color: rgba(0,131,141,0.48) !important;
-      box-shadow: 0 0 0 4px rgba(0,131,141,0.12), 0 22px 46px rgba(21,31,50,0.10) !important;
+      box-shadow: var(--shadow-focus-ring-diab), 0 22px 46px rgba(21,31,50,0.10) !important;
     }
 
     .diab-module-card--featured,
@@ -3085,17 +3085,17 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: var(--space-0-75);
     }
 
     .diab-module-card__icon {
       width: 2.6rem;
       height: 2.6rem;
-      border-radius: 12px;
+      border-radius: var(--radius-12);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid rgba(0,131,141,0.14);
+      border: var(--border-hairline) solid rgba(0,131,141,0.14);
       background: rgba(0,131,141,0.09);
       color: var(--primary);
       flex: 0 0 auto;
@@ -3106,8 +3106,8 @@
       align-items: center;
       justify-content: center;
       padding: 0.32rem 0.68rem;
-      border-radius: 999px;
-      border: 1px solid rgba(0,131,141,0.16);
+      border-radius: var(--radius-pill);
+      border: var(--border-hairline) solid var(--line-teal);
       background: rgba(0,131,141,0.10);
       color: var(--primary);
       font-size: 0.79rem;
@@ -3139,7 +3139,7 @@
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      gap: 0.55rem 0.9rem;
+      gap: var(--space-0-55) var(--space-0-9);
       padding-top: 0.1rem;
     }
 
@@ -3324,7 +3324,7 @@
     body.page-cukrzyca .diab-dose-panel,
     body.page-cukrzyca .diab-film-frame {
       background: var(--diab-hero-bg) !important;
-      border: 1px solid var(--diab-border-2) !important;
+      border: var(--border-hairline) solid var(--diab-border-2) !important;
       box-shadow: var(--diab-shadow-2) !important;
       color: var(--diab-text-1) !important;
     }
