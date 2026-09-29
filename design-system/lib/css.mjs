@@ -272,8 +272,20 @@ export function loadSources(repoRoot, config) {
     files.push(name);
   }
   if (config.html !== false) {
+    const loaded = new Set(files);
     for (const name of fs.readdirSync(repoRoot).filter((f) => f.endsWith('.html')).sort()) {
       const text = fs.readFileSync(path.join(repoRoot, name), 'utf8');
+      // Arkusze stron (P-STYLE krok 5a: dawne bloki <style>, linkowane w tym samym miejscu dokumentu) — linki spoza
+      // listy kanonicznej, w kolejności dokumentu, każdy raz, przed blokami <style> tej strony.
+      for (const m of text.matchAll(/<link\b[^>]*\brel=["']stylesheet["'][^>]*>/gi)) {
+        const href = /\bhref=["']([a-z0-9_-]+\.css)(?:\?[^"']*)?["']/i.exec(m[0]);
+        if (!href || loaded.has(href[1]) || !fs.existsSync(path.join(repoRoot, href[1]))) continue;
+        const parsed = parseCss(fs.readFileSync(path.join(repoRoot, href[1]), 'utf8'), { file: href[1], kind: 'css', orderBase });
+        orderBase += parsed.length;
+        rules.push(...parsed);
+        files.push(href[1]);
+        loaded.add(href[1]);
+      }
       extractHtmlStyles(text).forEach((block, idx) => {
         const parsed = parseCss(block, { file: `${name}#style${idx + 1}`, kind: 'html', orderBase });
         orderBase += parsed.length;

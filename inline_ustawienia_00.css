@@ -1,0 +1,59 @@
+/* Strzałka przy zaawansowanych opcjach sync */
+#syncSlotCard[open] .sync-adv-chevron { transform: rotate(90deg); }
+#syncSlotCard summary::-webkit-details-marker { display: none; }
+
+.pro-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: .9rem;
+  border: 1px solid rgba(153,0,255,.18);
+  background: var(--card-bg, #fff);
+  margin-bottom: 1.25rem;
+}
+.pro-status-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+.pro-status-body { flex: 1; min-width: 0; }
+.pro-status-title { font-weight: 700; font-size: 1rem; margin: 0 0 .2rem; }
+.pro-status-desc  { font-size: .88rem; color: var(--text-soft); margin: 0; }
+.pro-status-chip  {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .78rem; font-weight: 700;
+  padding: .22rem .7rem; border-radius: 999px;
+}
+.pro-status-chip.active   { background: #f0fff4; color: #148f3f; border: 1px solid rgba(20,143,63,.25); }
+.pro-status-chip.inactive { background: #f5eeff; color: #9900ff; border: 1px solid rgba(153,0,255,.25); }
+/* Chip statusu — pokazuj właściwy wariant przez klasy na <html> */
+.pro-chip-active   { display: none; }
+.pro-chip-inactive { display: none; }
+html.vilda-pro-active   .pro-chip-active   { display: inline-flex; }
+html.vilda-pro-inactive .pro-chip-inactive { display: inline-flex; }
+/* Przycisk zarządzania planem */
+.pro-manage-btn {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .55rem 1.25rem; border-radius: 999px;
+  font-size: .9rem; font-weight: 600; text-decoration: none;
+  background: #9900ff; color: #fff;
+  transition: background .15s; white-space: nowrap; flex-shrink: 0;
+}
+.pro-manage-btn:hover { background: #7a00cc; }
+html.vilda-pro-active .pro-manage-btn { background: var(--surface-2,#f0f0f3); color: var(--text,#111); }
+html.vilda-pro-active .pro-manage-btn:hover { background: var(--surface-3,#e4e4e8); }
+/* Notka o synchronizacji — widoczna tylko gdy PRO aktywne */
+.pro-sync-note { display: none; }
+html.vilda-pro-active .pro-sync-note {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-top: .85rem;
+  padding: .65rem .85rem;
+  background: #f0f7ff;
+  border: 1px solid rgba(0,100,220,.15);
+  border-radius: .6rem;
+  font-size: .82rem;
+  color: var(--text-soft);
+  line-height: 1.4;
+}
+.pro-sync-note__icon { font-size: 1rem; flex-shrink: 0; }
+.pro-sync-note a { color: #0064dc; text-decoration: underline; }
+.pro-sync-note a:hover { color: #0050b0; }

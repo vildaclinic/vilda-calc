@@ -1,0 +1,197 @@
+/* Kontener otaczający cały kalkulator. Ustawiamy maksymalną szerokość i centrowanie. */
+    .homa-container {
+      max-width: 600px;
+      margin: 2rem auto;
+    }
+
+    /* Karta kalkulatora – otrzymuje tło i obramowanie identyczne jak inne karty w serwisie. */
+    .homa-card {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid #d0dede;
+    }
+
+    .homa-card h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+
+    .homa-card label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+
+    .homa-card input[type="number"],
+    .homa-card select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      margin-top: 0.35rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+    }
+
+    .homa-card input[type="radio"] {
+      margin-right: 0.3rem;
+    }
+
+    .homa-card button {
+      display: inline-block;
+      margin-top: 1.7rem;
+      padding: 0.75rem 1.6rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      background: var(--primary);
+      cursor: pointer;
+      transition: background 0.25s, transform 0.25s;
+    }
+
+    .homa-card button:hover {
+      background: var(--secondary);
+      transform: translateY(-1px);
+    }
+
+    .homa-card #wynik {
+      margin-top: 1.6rem;
+      padding: 0.6rem 0.9rem;
+      /* Domyślne obramowanie; zostanie nadpisane przez klasy good/warn/risk */
+      border: 2px solid #d8e1e6;
+      border-radius: 0.6rem;
+      /* Wynik zawsze ma białe tło, niezależnie od motywu. */
+      background: #ffffff;
+      font-weight: 600;
+      font-size: 1.25rem;
+      /* Nie pokazujemy kontenera, dopóki użytkownik nie wykona obliczenia.  */
+      display: none;
+    }
+
+    /* Tekstowe klasy kolorystyczne dla interpretacji (używane w polu #interp). 
+       Ustawiamy również większy rozmiar czcionki (1.2rem) i pogrubienie. */
+    .homa-card .good { color: #2a8a2a; font-size: 1.2rem; font-weight: 700; }
+    .homa-card .warn { color: #b58900; font-size: 1.2rem; font-weight: 700; }
+    .homa-card .risk { color: #c62828; font-size: 1.2rem; font-weight: 700; }
+
+    /* Klasy na polu #wynik sterujące kolorem obwódki i animacją.  
+       Używamy istniejących animacji pulseOrange i pulseRed z głównego arkusza stylów. */
+    .homa-card #wynik.good {
+      border-color: var(--primary);
+      animation: none;
+    }
+    .homa-card #wynik.warn {
+      border-color: #c75d00;
+      animation: pulseOrange 1.25s ease-in-out infinite;
+    }
+    .homa-card #wynik.risk {
+      border-color: var(--danger);
+      animation: pulseRed 1.25s ease-in-out infinite;
+    }
+
+    .homa-card #interp {
+      margin-top: 0.8rem;
+    }
+    .homa-card #norms {
+      margin-top: 0.8rem;
+    }
+    .homa-card #visit {
+      margin-top: 0.8rem;
+    }
+    .homa-card #visit ul {
+      margin: 0.4rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .homa-card #visit li {
+      margin: 0.45rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .homa-card .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .homa-card small {
+      display: block;
+      margin-top: 1.2rem;
+      color: #666;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    /* Pola wyświetlane tylko w przypadku wyboru grupy "Dziecko" są
+       wstępnie ukryte i rozsuwają się łagodnie po zaznaczeniu odpowiedniej opcji. */
+    #childFields {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+    #child:checked ~ #childFields {
+      max-height: 400px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.4rem 0.3rem;
+      text-align: left;
+    }
+    th {
+      background: var(--secondary);
+      color: #fff;
+      font-weight: 600;
+    }
+    #sources {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 0.6rem;
+      line-height: 1.35;
+    }
+
+    /* Stylowanie przycisku czyszczącego formularz.  Wyśrodkowujemy go w karcie,
+       nadajemy 2‑pikselową czerwoną obwódkę i zachowujemy stylistykę guzików aplikacji. */
+    .homa-card .clear-btn {
+      display: block;
+      margin: 1.7rem auto 0;
+      padding: 0.75rem 1.6rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: 2px solid var(--danger) !important;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--danger);
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+    .homa-card .clear-btn:hover {
+      background: rgba(198, 40, 40, 0.1);
+    }
+
+    /* Dodatkowe reguły dla suwaka wyboru grupy (Dorosły/Dziecko).
+       Wyśrodkuj cały przełącznik i przesuń białą kropkę w prawo po zaznaczeniu. */
+    .homa-toggle {
+      justify-content: center;
+    }
+    /* Używamy selektora ogólnego rodzeństwa (~) zamiast sąsiedniego (+), aby
+       reguła działała także wtedy, gdy w HTML pomiędzy <input> a <span>
+       znajdują się białe znaki (np. znaki nowej linii).  Przesuwamy uchwyt
+       z lewej strony na prawą, gdy #groupToggle jest zaznaczony. */
+    #groupToggle:checked ~ .slider::before {
+      left: auto;
+      right: 2px;
+      transform: none;
+    }
