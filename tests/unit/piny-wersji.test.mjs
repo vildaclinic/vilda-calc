@@ -122,10 +122,9 @@ describe('Zasoby poza wstępnym pobraniem service workera', () => {
   // P-SLOWA-MPH rata 3 (2026-09-28): lab_clinical_panels.js wrócił do precache (wpis ?v=143), lista skurczyła się o jeden.
   // P-SW-DOCPRO (decyzja właściciela 2026-09-28): vilda_sync, vilda_sync_integration, vilda_session_bridge,
   // vilda_data_safety_explainer, vilda_obesity_banner.css i ustawienia.css dopisane do precache — bez nich
-  // DocPro nie startował offline. lab_pin_result.js zostaje: powód w tests/unit/sw-precache-stron.test.mjs.
-  const ZNANE = [
-    'lab_pin_result.js',
-  ];
+  // DocPro nie startował offline. P-SW-LAB-PIN (2026-09-29): lab_pin_result.js wrócił do precache jako ?v=4 —
+  // lista jest pusta i ma taka zostać.
+  const ZNANE = [];
 
   it('lista plików bez wstępnego pobrania nie rośnie', () => {
     const precache = precacheSW();

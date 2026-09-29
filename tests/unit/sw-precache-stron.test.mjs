@@ -38,12 +38,10 @@ const POMIJANE_W_JS = {
 };
 
 // Zasoby stron z precache, które ŚWIADOMIE zostają bez wstępnego pobrania — każdy z powodem.
-const WYJATKI = {
-  'lab_pin_result.js':
-    'adres /lab_pin_result.js stoi w OPTIONAL_DOCUMENTS, więc precache zapisuje go pod kluczem dokumentu bez ?v=, '
-    + 'a przelicznik-jednostek.html prosi o lab_pin_result.js?v=4 — samo dopisanie adresu do tablicy nic nie da; '
-    + 'naprawa wymaga zmiany kluczy dokumentów w SW (osobna decyzja)',
-};
+// P-SW-LAB-PIN (decyzja właściciela 2026-09-29): ostatni wyjątek, lab_pin_result.js, zamknięty — adres przeszedł
+// z OPTIONAL_DOCUMENTS (klucz dokumentu bez ?v=) do OPTIONAL_ASSETS jako /lab_pin_result.js?v=4, pod tym samym
+// adresem, o który prosi przelicznik-jednostek.html. Lista zostaje na przyszłe wyjątki, każdy z powodem.
+const WYJATKI = {};
 
 function uruchomSW({ caches = null, fetch = null } = {}) {
   const self = {

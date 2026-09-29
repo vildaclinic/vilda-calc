@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.107';
+const SW_VERSION = '1.1.108';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1598,7 +1598,6 @@ const OPTIONAL_DOCUMENTS = [
   '/notatki.html',
   '/terminarz.html',
   '/przelicznik-jednostek.html',
-  '/lab_pin_result.js',
   '/app.html'
 ];
 
@@ -1709,6 +1708,7 @@ const OPTIONAL_ASSETS = [
   '/lab_unit_converter.js',
   '/lab_unit_converter.js?v=1',
   '/lab_unit_converter.js?v=4',
+  '/lab_pin_result.js?v=4',
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',

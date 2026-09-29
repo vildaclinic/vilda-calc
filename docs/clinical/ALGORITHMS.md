@@ -5912,6 +5912,36 @@ scenariusz 60,5 kg), strażnicy źródeł `raport-plan-stabilizacja-rata-g2`, `r
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna raty 1; część B raportu audytu; scalenie i wdrożenie.
 
+## `lab_pin_result.js` w precache pod adresem, o który prosi strona (P-SW-LAB-PIN, SW 1.1.108, 2026-09-29)
+
+**Decyzja właściciela (2026-09-29).** Naprawić ostatni wyjątek z P-SW-DOCPRO: przycisk „📌 Przypnij do wizyty” / „Zapisz do karty”
+w Przeliczniku jednostek (`lab_pin_result.js`) nie działał offline.
+
+**Co było.** `przelicznik-jednostek.html` ładuje `lab_pin_result.js?v=4`, a tablice SW miały ten plik tylko na liście dokumentów
+(`OPTIONAL_DOCUMENTS`) jako `/lab_pin_result.js`, bez `?v=`. Precache zapisywał go pod kluczem dokumentu, o który strona nigdy nie
+prosi, a żądanie `?v=4` nie trafiało w pamięć powłoki. Samo dopisanie `?v=4` nie wystarczało: dopóki ścieżka była na liście
+dokumentów, SW traktował ją jak stronę HTML (odświeżanie w tle, bez niezmienności `?v=`). Pomiar na SW 1.1.106
+(`tests/e2e/pwa-strony-offline.spec.mjs` bez wyjątku): offline `/lab_pin_result.js?v=4` → `net::ERR_FAILED` na
+`przelicznik-jednostek.html` i w przeliczniku osadzonym w `app.html`.
+
+**Co jest.** `/lab_pin_result.js` usunięty z `OPTIONAL_DOCUMENTS` (adres bez `?v=`, błędnie zaliczony do dokumentów — nie
+historyczny adres wersjonowany; usunięcie za zgodą właściciela), a `/lab_pin_result.js?v=4` dopisany do `OPTIONAL_ASSETS` obok
+`lab_unit_converter.js`. Plik jest teraz zwykłym zasobem z niezmiennym `?v=`, pobieranym przy instalacji (ok. 9,5 kB).
+Wyjątek zniknął z trzech strażników: `WYJATKI` w `tests/unit/sw-precache-stron.test.mjs` i `ZNANE` w
+`tests/unit/piny-wersji.test.mjs` są puste, a `tests/e2e/pwa-strony-offline.spec.mjs` nie pomija już tego adresu.
+
+**Wpływ kliniczny.** Brak: działanie przycisku przypinania, przeliczenia i zapis do karty bez zmian. Zmienia się tylko to,
+że skrypt jest dostępny offline.
+
+**Przypadki.** Przelicznik jednostek offline (prawdziwy SW, serwer zatrzymany): zero nieudanych żądań, także
+`lab_pin_result.js?v=4`, samodzielnie i w `app.html`. Mutacja (stary SW z nowymi strażnikami): 3 testy jednostkowe
+i test offline padają dokładnie na `/lab_pin_result.js?v=4`.
+
+**Wersje.** `SW_VERSION` 1.1.106 → 1.1.108 (+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.107 ma równoległy
+P-SW-PIERWSZA-WIZYTA). Żaden plik strony się nie zmienia.
+
+**Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
@@ -6198,7 +6228,7 @@ kolejność pobierania).**
   P-DIETA-STAB rata 1 i P-STYLE rata 4b);
   pole `optionalPrecacheOrder` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
 
-**Świadomie poza zakresem.** `lab_pin_result.js?v=4` (Przelicznik jednostek): adres `/lab_pin_result.js` stoi
+**Świadomie poza zakresem.** *(Aktualizacja: `lab_pin_result.js` naprawiony w P-SW-LAB-PIN, SW 1.1.108 — wpis wyżej.)* `lab_pin_result.js?v=4` (Przelicznik jednostek): adres `/lab_pin_result.js` stoi
 w `OPTIONAL_DOCUMENTS`, więc precache zapisuje go pod kluczem dokumentu bez `?v=`, a strona prosi o `?v=4` — samo dopisanie adresu
 nic nie da, naprawa wymaga zmiany kluczy dokumentów w SW (osobna decyzja). Plakaty `/posters/*.png` są w tablicy, ale plików nie
 ma w repozytorium (404 także online). Filmy `/videos/` SW omija z założenia. `edu-video-ui.css` jest ładowany w dwóch wersjach
