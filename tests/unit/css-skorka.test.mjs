@@ -14,6 +14,7 @@ import { parsuj } from '../support/szklo-css.mjs';
 // przykładach: rozłączność selektorów, wiedza o DOM, konkurenci, dominatory, podział reguły.
 
 const FIXTURE = path.join(korzen, 'tests/fixtures/skorka-nadpisania.json');
+const FIXTURE_NIEOBECNE = path.join(korzen, 'tests/fixtures/skorka-nieobecne.json');
 
 describe.skipIf(!fs.existsSync(FIXTURE))('P-STYLE rata 4b: nadpisania skórki w arkuszach są dokładnie tymi z fixture i żadne nie da się złożyć', () => {
   const fixture = fs.existsSync(FIXTURE) ? JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) : { pozostale: [] };
@@ -30,6 +31,17 @@ describe.skipIf(!fs.existsSync(FIXTURE))('P-STYLE rata 4b: nadpisania skórki w 
 
   it('żadna para nie jest do złożenia (analiza statyczna z aktualną wiedzą o DOM)', () => {
     expect(analiza.zlozone.map((k) => `${k.arkusz} ${k.regula.czesci[k.nr].tekst} { ${k.deklaracja.prop} }`)).toEqual([]);
+  });
+
+  it('nazwy z selektorów nieobecne nigdzie w kodzie (rozłączność z założenia „reguła martwa”) są dokładnie tymi z fixture', () => {
+    // rata 4b bis: nazwa klasy lub id, której nie ma w HTML (poza <style>) ani w JS, nie dopasowuje niczego — na tym opiera się
+    // rozłączność części złożonych reguł. Nazwa, która pojawi się w kodzie, ożywia reguły złożone bez !important.
+    const nieobecne = fs.existsSync(FIXTURE_NIEOBECNE) ? JSON.parse(fs.readFileSync(FIXTURE_NIEOBECNE, 'utf8')).nazwy : [];
+    const teraz = analiza.nieobecne;
+    const ozywione = nieobecne.filter((n) => !teraz.includes(n));
+    expect(ozywione, `nazwy dotąd nieobecne w kodzie pojawiły się w HTML/JS — reguły z nimi przestały być martwe; sprawdź ich kaskadę (po złożeniu są bez !important) i odśwież listę: node tests/scripts/zloz-skorke-css.mjs --zapisz:\n${ozywione.join('\n')}`).toEqual([]);
+    const nowe = teraz.filter((n) => !nieobecne.includes(n));
+    expect(nowe, `nowe nazwy w selektorach bez odpowiednika w kodzie — odśwież listę: node tests/scripts/zloz-skorke-css.mjs --zapisz:\n${nowe.join('\n')}`).toEqual([]);
   });
 
   it('powody z fixture zgadzają się z analizą: behawioralna = własność z listy, kaskada/grupa = konflikt w kaskadzie', () => {
@@ -51,6 +63,10 @@ describe('longhandy i selektor po złożeniu', () => {
     expect(nakladajaSie('background', 'background-color')).toBe(true);
     expect(nakladajaSie('padding', 'margin')).toBe(false);
     expect(nakladajaSie('white-space', 'text-wrap')).toBe(true);
+    // `all` resetuje każdą własność poza własnymi (rata 4b bis)
+    expect(nakladajaSie('all', 'color')).toBe(true);
+    expect(nakladajaSie('border', 'all')).toBe(true);
+    expect(nakladajaSie('all', '--x')).toBe(false);
   });
 
   it('zdejmuje klasę skórki (i gołe body przed potomkiem), zostawia body przed kombinatorem dziecka', () => {
@@ -83,12 +99,25 @@ describe('rozłączność skrajnych złożeń i wiedza o DOM', () => {
     expect(mozliweTypy(z('.btn'), wiedza)).toEqual(new Set(['button']));
     expect(mozliweTypy(z('.btn.luz'), wiedza)).toEqual(new Set(['button']));
     expect(mozliweTypy(z('.dyn'), wiedza)).toBeNull();
-    expect(mozliweTypy(z('.nieznana'), wiedza)).toEqual(new Set());
+    expect(mozliweTypy(z('.nieznana'), wiedza)).toBeNull(); // nazwa nieznana: może być budowana dynamicznie, nie zawęża
     expect(rozlaczne(z('header'), z('.btn'), wiedza)).toBe(true);
     expect(rozlaczne(z('a'), z('.luz'), wiedza)).toBe(false);
     expect(rozlaczne(z('header'), z('.dyn'), wiedza)).toBe(false); // klasa wolna: może być wszędzie
-    expect(rozlaczne(z('header'), z('.nieznana'), wiedza)).toBe(true); // klasy nie ma nigdzie: nic nie pasuje
+    expect(rozlaczne(z('header'), z('.nieznana'), wiedza)).toBe(false); // bez tokenów kodu nazwa nieznana nie dowodzi rozłączności (rata 4b bis)
     expect(rozlaczne(z('button'), z('#name[disabled]'), wiedza)).toBe(true);
+  });
+  it('nazwa nierozpoznana: nieobecna w kodzie nic nie dopasowuje, obecna (np. stała w JS) nie zawęża', () => {
+    const w = { ...wiedza, tokeny: new Set(['btn', 'luz', 'dyn', 'name', 'stala']) };
+    expect(mozliweTypy(z('.nieznana'), w)).toEqual(new Set()); // nie ma jej nigdzie w HTML ani JS: reguła martwa
+    expect(rozlaczne(z('header'), z('.nieznana'), w)).toBe(true);
+    expect(mozliweTypy(z('.stala'), w)).toBeNull(); // jest w kodzie, skaner nie zna typu: może być wszędzie
+    expect(rozlaczne(z('header'), z('.stala'), w)).toBe(false);
+    expect(rozlaczne(z('header'), z('button.stala'), w)).toBe(true); // typ nadal rozstrzyga
+    // nazwa sklejalna z tokenu-prefiksu (`'is-' + stan`) albo sufiksu (`x + '-high'`) nie jest nieobecna
+    const w2 = { ...wiedza, tokeny: new Set(['btn', 'is-', '-high']) };
+    expect(mozliweTypy(z('.is-active'), w2)).toBeNull();
+    expect(mozliweTypy(z('.tone-high'), w2)).toBeNull();
+    expect(mozliweTypy(z('.nieznana'), w2)).toEqual(new Set());
   });
   it('wiedza z kodu: znaczniki, szablony, fabryki i zapisy w JS', () => {
     const pliki = { 'a.html': '<body><button class="x y" id="ok">a</button><span data-lucide="x" class="ikona"></span><script>var e=document.createElement("div");e.className="fab";var q=document.getElementById("ok");q.classList.add("z");t.classList.add("w");f("section",{class:"fabr"});e("input",Object.assign({class:"pole"},{}));</script></body>' };
@@ -106,7 +135,7 @@ describe('rozłączność skrajnych złożeń i wiedza o DOM', () => {
 describe('analiza złożenia na małej kaskadzie', () => {
   const html = '<html><head><link rel="stylesheet" href="skin.css"><link rel="stylesheet" href="base.css"></head><body><button class="btn">a</button><div class="card special">b</div></body></html>';
   const uruchom = (skin, base, opcje = {}) => {
-    const pliki = { 'index.html': html, 'skin.css': skin, 'base.css': base };
+    const pliki = { 'index.html': opcje.html || html, 'skin.css': skin, 'base.css': base };
     const czytaj = (p) => { if (!(p in pliki)) throw new Error(p); return pliki[p]; };
     const wiedza = wiedzaDom(czytaj, ['index.html'], null);
     const { zrodlaStron } = opcje;
@@ -124,6 +153,27 @@ describe('analiza złożenia na małej kaskadzie', () => {
   it('konkurent o wyższej swoistości później w kaskadzie blokuje; rozłączny (inny typ) nie', () => {
     const a = opis(uruchom('.liquid-ios26 .card {\n  color: red !important\n}\n\n.liquid-ios26 button {\n  color: blue !important\n}\n', '.card.special {\n  color: green\n}\n\n.x header {\n  color: black\n}\n'));
     expect(a.zlozone).toEqual(['.liquid-ios26 button color']);
+    expect(a.pozostale[0]).toMatch(/^\.liquid-ios26 \.card color: kaskada/);
+  });
+
+  it('konkurent z nazwą obecną w kodzie, lecz nierozpoznaną przez skaner (stała w JS), blokuje', () => {
+    // `.card.stala` (0,2,0) wygrałby po złożeniu z `.card` (0,1,0); klasa `stala` jest tylko w stałej JS, więc skaner nie zna
+    // jej typu — może być wszędzie (rata 4b bis; wcześniej nazwa spoza wiedzy uchodziła za niedopasowywalną)
+    const a = opis(uruchom('.liquid-ios26 .card {\n  color: red !important\n}\n', '.card.stala {\n  color: green\n}\n', { html: html.replace('</body>', '<script>var KLASA = "stala"; el.classList.add(KLASA);</script></body>') }));
+    expect(a.zlozone).toEqual([]);
+    expect(a.pozostale[0]).toMatch(/^\.liquid-ios26 \.card color: kaskada/);
+  });
+
+  it('konkurent z nazwą nieobecną nigdzie w kodzie nie blokuje (reguła martwa)', () => {
+    const a = opis(uruchom('.liquid-ios26 .card {\n  color: red !important\n}\n', '.card.nigdzie {\n  color: green\n}\n'));
+    expect(a.zlozone).toEqual(['.liquid-ios26 .card color']);
+  });
+
+  it('konkurent ze skrótem `all` blokuje każdą własność poza własnymi', () => {
+    // `.special { all: unset }` stoi później w kaskadzie o tej samej swoistości co `.card`: po złożeniu wygrałby z `color`,
+    // a własności własnej (`--x`) `all` nie dotyka
+    const a = opis(uruchom('.liquid-ios26 .card {\n  color: red !important;\n  --x: 1 !important\n}\n', '.special {\n  all: unset\n}\n'));
+    expect(a.zlozone).toEqual(['.liquid-ios26 .card --x']);
     expect(a.pozostale[0]).toMatch(/^\.liquid-ios26 \.card color: kaskada/);
   });
 

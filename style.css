@@ -2720,10 +2720,14 @@ body.professional-bg {
   color: #000
 }
 
-#generateDietBtn,
-#dietRecommendationsPdfBtn {
+#generateDietBtn {
   border: var(--border-pro) solid #9900ff;
   font-weight: 600
+}
+
+.liquid-ios26 #dietRecommendationsPdfBtn {
+  border: var(--border-pro) solid #9900ff!important;
+  font-weight: 600!important
 }
 
 .liquid-ios26 #dietRecommendationsContent .switch-diet input:checked+.slider {

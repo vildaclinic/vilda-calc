@@ -790,9 +790,9 @@ body.vilda-modal-alert-open #mobileBottomDock,body.vilda-modal-alert-open #scrol
 .liquid-ios26 button._pressed{
   transform:scale(.96);
   box-shadow:0 2px 8px #0000001f!important}
-h1,
-h2,
-h3 {
+.liquid-ios26 h1,
+.liquid-ios26 h2,
+.liquid-ios26 h3 {
   letter-spacing:-.015em
 }
 
