@@ -5834,7 +5834,7 @@ w planie”) i raporcie z notą o wartości domyślnej; mężczyzna 40 l., 100 k
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna (decyzje 1–6 z 2026-09-22 przed kodowaniem); ewentualna
 osobna decyzja o dziecku 4–9 lat z otyłością (+27 %); scalenie i wdrożenie.
 
-## Audyt zaleceń dietetycznych — rata 1: błędy kodu i niespójności (P-DIETA-AUDYT2 rata 1, SW 1.1.105, 2026-09-29)
+## Audyt zaleceń dietetycznych — rata 1: błędy kodu i niespójności (P-DIETA-AUDYT2 rata 1, SW 1.1.106, 2026-09-29)
 
 **Zgłoszenie i metoda.** Właściciel zlecił pełny audyt funkcji zaleceń dietetycznych we wszystkich grupach wieku i scenariuszach.
 Przegląd prawdziwej strony: 780 scenariuszy (0,25–80 lat, obie płcie, niedowaga → ciężka otyłość, strategia domyślna,
@@ -5859,7 +5859,7 @@ sufit tempa przy ciężkiej otyłości, symulacja stałego tempa wzrastania, sen
 
 **Pliki.** `vilda_diet_plan_ui.js` (`?v=40`), `vilda_diet_recommendations.js` (`?v=65`), `vilda_data_import_export.js` (`?v=89`),
 `nutrition_norms.js` (`?v=49`), `vilda_bmi_journey.js` (`?v=26`), `vilda_raport_plan.js` (`?v=20`), `vilda_estimated_intake_ui.js` (`?v=3`);
-SW 1.1.104 → 1.1.105, precache append-only, `?v=` na stronach i w smoke, fixture wersji; baza wyjątków ESLint o jeden wpis mniejsza
+SW 1.1.105 → 1.1.106 (po P-SW-PRECACHE), precache append-only, `?v=` na stronach i w smoke, fixture wersji; baza wyjątków ESLint o jeden wpis mniejsza
 (usunięta zbędna zmienna generatora).
 
 **Testy.** Nowe: `tests/e2e/dieta-audyt2.spec.mjs` (A1–A8, 20 przypadków na prawdziwej stronie), `tests/unit/dieta-audyt2.test.mjs`
@@ -5870,6 +5870,53 @@ scenariusz 60,5 kg), strażnicy źródeł `raport-plan-stabilizacja-rata-g2`, `r
 „przy nadwadze w wieku 6–11 lat” — BMI 95,9. c. to nadwaga), `poprawki-zalecen-rata-j` i `zalecenia-energetyczne-tresci` („20–30 %”).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna raty 1; część B raportu audytu; scalenie i wdrożenie.
+
+## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
+
+**Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
+
+**Co zmierzono (Chromium 141 z Playwright 1.61.1, profil trwały, prawdziwy `service-worker-kalorii.js` 1.1.103 z pełnymi tablicami, serwer ignorujący `?v=` jak GitHub Pages; limit źródła przez CDP `Storage.overrideQuotaForOrigin`, łącze dławione na serwerze — jedno łącze, opóźnienie na każde żądanie).** Tablice precache to 2542 adresy i 474 MB plików, podczas gdy każdy z 298 plików pobrany raz to 18 MB — sam `vilda_auth_ui.js` występował 388 razy (233 MB, 318 wpisów w wymaganym rdzeniu).
+
+| Scenariusz (SW 1.1.103) | Instalacja | Aktualizacja do następnej wersji |
+|---|---|---|
+| łącze bez dławienia | udana w 85 s; 2543 żądania, 474 MB; 1146 MiB w pamięci | znowu 474 MB; szczyt pamięci 2292 MiB (stara i nowa pamięć naraz) |
+| 20 Mb/s, 60 ms na żądanie | **przerwana po 300 s** (rdzeń kompletny, część opcjonalna w toku); 358 MB na darmo, 871 MiB śmieci w pamięci | — |
+| 8 Mb/s, 80 ms na żądanie | **przerwana po 303 s**, rdzeń 670 z 1470 | — |
+| limit źródła 500 MiB | nieudana (rdzeń 641 z 1470), 500 MiB śmieci | — |
+| limit źródła 1000 MiB | udana (część historii nie weszła) | **nieudana od razu** — stara pamięć zajmuje cały limit |
+| limit źródła 1500 MiB | udana | nieudana w połowie |
+| limit źródła 2000 MiB | udana | udana (część historii nie weszła) |
+
+Całe precache było jednym zdarzeniem `install`, a Chromium przerywa zdarzenie service workera, które nie skończy się w 5 minut — przy wolniejszym łączu SW nie instalował się wcale. Nieudana instalacja zostawia pamięć powłoki z częścią wpisów (śmieci do następnej udanej aktywacji). Użytkownik, któremu stara pamięć zajęła limit, zostawał na starej wersji aplikacji na stałe. Kontekst: Safari od wersji 17 daje źródłu do 60 % dysku, także aplikacji z ekranu głównego (WebKit, „Updates to Storage Policy”), więc limit źródła uderza głównie przy małej ilości wolnego miejsca; limit 5 minut dotyczy każdego użytkownika Chromium.
+
+**Naprawa (niekliniczna: żaden wzór, próg, jednostka ani dane; zmienia się wyłącznie to, co service worker pobiera przy instalacji, i porządki w starych pamięciach powłoki).**
+- Instalacja pobiera tylko wpisy bieżące: adres bez `?v=`, z nieliczbowym `?v=` albo z najwyższym `?v=` danego pliku we wszystkich tablicach (`INSTALL_CORE_URLS` 174 adresy / 12,4 MB z 1471 w rdzeniu, `INSTALL_OPTIONAL_URLS` 218; razem 392 adresy i 23,6 MB). Tablice się nie zmieniają (append-only, AGENTS.md § 6) — historia zostaje w nich jako zapis, ale nie jest pobierana; kolejność `orderOptionalPrecacheUrls` z P-SW-DOCPRO zostaje.
+- Wpis `?v=` obecny w pamięci powłoki poprzedniej wersji jest kopiowany zamiast pobierany (`fetchAndStorePrecacheUrl` z `previousShellCaches`), tylko z pamięci od SW 1.1.66 — od P-SW rata 1 wpis `?v=` jest tam niezmienny; starsza pamięć mogła mieć pod kluczem `?v=` treść nowszego wydania.
+- Przed instalacją w pamięciach powłoki starszych wersji zostaje tylko najwyższy `?v=` każdego pliku (`pruneHistoryInPreviousShellCaches`) — stary SW działa dalej na swoich wpisach bieżących, a miejsce zwolnione z historii mieści nową instalację. Stare pamięci znikają jak dotąd przy aktywacji.
+- `SW_VERSION` 1.1.104 → **1.1.105** (pin w `tests/unit/klirens-ui-model.test.mjs`); pola `precacheInstall` i `precacheHistoryInstalled` w `SW_FETCH_CACHE_STRATEGY_AUDIT`.
+
+**Po zmianie (ten sam pomiar: `node tests/scripts/pomiar-instalacji-sw.mjs`; w każdym scenariuszu z `--offline` DocPro, strona główna, Klirens i Ustawienia startują bez sieci bez nieudanych żądań).**
+
+| Scenariusz (SW 1.1.105) | Instalacja | Aktualizacja do następnej wersji |
+|---|---|---|
+| łącze bez dławienia | 6 s; 393 żądania, 24 MB; 47 MiB | 6 s; 161 żądań, 11 MB (reszta z kopii); szczyt 93 MiB |
+| 20 Mb/s, 60 ms | 39 s | 18 s |
+| 8 Mb/s, 80 ms | 61 s | 28 s |
+| limit źródła 150 MiB | udana | udana |
+| przejście z SW 1.1.104 przy limicie 1000 MiB (stara instalacja zajęła cały limit) | — | **udana** w 6 s; 161 żądań, 11 MB; szczyt 93 MiB (bez przycięcia: nieudana od razu, jak w tabeli wyżej) |
+| przejście z SW 1.1.104 bez limitu | — | 6 s; 161 żądań, 11 MB |
+
+**Świadomie poza zakresem i ryzyko resztkowe.**
+- Karta otwarta przed aktualizacją, która doładuje starszą wersję modułu: online raz z sieci (jak dotąd), offline — błąd sieci. Do SW 1.1.104 dostawała bieżącą treść pod starym kluczem, czyli mieszankę wersji — ten sam mechanizm, który w racie H1 dał fałszywy komunikat kliniczny.
+- Na czas aktualizacji potrzeba miejsca na dwa komplety wpisów bieżących (ok. 2 × 47 MiB w Chromium): stara pamięć po przycięciu trzyma swoje wpisy bieżące, nowa kopiuje je obok.
+- Nieliczbowy `?v=` (`edu-video-ui.css?v=20261003v4`) nie ma porządku wersji, więc wszystkie jego warianty są „bieżące” i instalowane (kilka kB).
+- Pięć adresów z tablic wskazuje pliki, których nie ma w repozytorium (`/normy-02.01.pdf`, cztery `/posters/*.png`): 404 przy instalacji, błąd wpisu opcjonalnego połykany — jak dotąd.
+- Nie mierzono Safari/WebKit ani powtórnych prób po nieudanej instalacji (strona rejestruje SW przy każdej wizycie).
+
+**Testy.**
+- `tests/unit/sw-precache-stron.test.mjs` (13; było 8): atrapa Cache Storage ma teraz osobne pamięci pod nazwami i jeden limit bajtów źródła. Nowe: lista instalacji to dokładnie wpisy bieżące tablic; instalacja nie pobiera żadnego adresu historycznego i mieści się w budżecie (poniżej 40 MB i 600 żądań); wpisy `?v=` z poprzedniej pamięci powłoki idą z kopii, dokumenty i adresy bez `?v=` z sieci; pamięć sprzed 1.1.66 nie jest źródłem kopii; przycięcie zostawia najwyższy `?v=` i adresy bez `?v=`, pamięci czasu działania nie rusza; przy limicie zajętym przez starą instalację (rdzeń z historią) nowa wersja się instaluje. Zmienione: test „żaden adres nie znika z instalacji” pilnuje teraz, że kolejka nadal obejmuje każdy adres tablic, a instalacja bierze z niej tylko wpisy bieżące; odwołanie strony do historycznego `?v=` jest błędem także w rdzeniu. Sprawdzony mutacjami: instalacja z historią, bez przycięcia, bez kopii, bez progu 1.1.66 — każda zapala właściwy test.
+- `tests/e2e/pwa-precache-migracja.spec.mjs` (nowy, prawdziwy Chromium): pamięć powłoki `pwa-kalorii-shell-v1.1.104` wypełniona w kolejności starej instalacji aż do QuotaExceededError (limit 400 MiB — wpisy zapisane ze strony nie dostają pamięci podręcznej kodu, więc zajmują tyle co pliki), instalacja prawdziwego SW: aktywny, stara pamięć usunięta, żaden wpis `?v=` obecny w starej pamięci nie idzie z sieci (licznik w `tests/support/static-server.mjs`: `/__test-pobrania`), DocPro (`VildaVault`) i strona główna startują bez sieci. Sprawdzony mutacjami: bez przycięcia SW się nie instaluje, bez kopii wpisy idą z sieci.
+- `tests/e2e/pwa-strony-offline.spec.mjs` bez zmian w logice (komentarze z liczbami sprzed zmiany).
 
 ## Karta „Szacowane spożycie energii”: utrzymanie masy tym samym wzorem co plan diety (P-SPOZYCIE-REE, SW 1.1.104, 2026-09-29)
 
@@ -6124,7 +6171,7 @@ którego nowe adresy `?v=` wejdą do pamięci dopiero przy pierwszym użyciu onl
 się wcale. Przy aktualizacji stara i nowa pamięć powłoki istnieją jednocześnie (ok. 2,4 GB w Chromium), więc u użytkownika, któremu
 stara pamięć zajęła cały limit, nowa wersja SW — także ta — może się nie zainstalować i poprawka do niego nie dotrze. Każda
 aktualizacja pobiera przy tym całą tablicę od nowa (`cache: 'reload'`). Zmniejszenie wymaga udokumentowanej migracji historycznych adresów (AGENTS.md § 6) albo zmiany sposobu
-instalacji (np. kopiowania niezmiennych wpisów `?v=` z poprzedniej pamięci powłoki) — to nie jest sprzątanie i nie wchodzi w tę ratę.
+instalacji (np. kopiowania niezmiennych wpisów `?v=` z poprzedniej pamięci powłoki) — to nie jest sprzątanie i nie wchodzi w tę ratę. *Aktualizacja (P-SW-PRECACHE, SW 1.1.105, 2026-09-29): decyzją właściciela instalacja pobiera tylko wpisy bieżące, kopiuje niezmienne wpisy `?v=` z poprzedniej pamięci powłoki i przycina historię starych pamięci — wpis wyżej.*
 
 **Testy.**
 - `tests/unit/sw-precache-stron.test.mjs` (8, nowy) wykonuje prawdziwy plik SW z atrapą Cache Storage z limitem bajtów i atrapą

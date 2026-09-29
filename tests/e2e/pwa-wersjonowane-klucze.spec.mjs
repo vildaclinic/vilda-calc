@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+// Projekt desktop-chromium domyślnie blokuje SW (playwright.config.mjs); ten plik sprawdza SW, więc go włącza.
+test.use({ serviceWorkers: 'allow' });
+
 // P-SW rata 1 (decyzja właściciela 2026-09-24): wpis cache z ?v= jest NIEZMIENNY — service worker oddaje
 // zapisaną treść bez odświeżania w tle (shell i runtime). Dokumenty HTML i adresy bez ?v= odświeżają się
 // w tle jak dotąd. Serwer testowy (tests/support/static-server.mjs) oddaje pod /__test-zmienny.js

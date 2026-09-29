@@ -55,7 +55,8 @@ function uruchomSW({ caches = null, fetch = null } = {}) {
   };
   const wykonaj = new Function('self', 'caches', 'fetch', `${ZRODLO_SW}
 return { CORE_SHELL_URLS, OPTIONAL_DOCUMENTS, OPTIONAL_ASSETS, DOCUMENT_PATHS, OPTIONAL_PRECACHE_ORDER,
-  orderOptionalPrecacheUrls, installShell, readFromShellCache };`);
+  orderOptionalPrecacheUrls, installShell, readFromShellCache, INSTALL_CORE_URLS, INSTALL_OPTIONAL_URLS,
+  isCurrentPrecacheUrl, SHELL_CACHE };`);
   return wykonaj(self, caches, fetch);
 }
 
@@ -75,23 +76,40 @@ async function siec(request) {
     : new Response('', { status: 200, headers: { 'x-rozmiar': String(rozmiar) } });
 }
 
-// Atrapa Cache Storage z limitem bajtów, jak quota źródła: put ponad limit jest odrzucany.
+// Atrapa Cache Storage: osobne pamięci pod nazwami, jeden limit bajtów na całe źródło (jak quota) — put ponad limit
+// jest odrzucany, delete zwalnia miejsce. Klucz to ścieżka z query (adres względny albo pełny w tym samym źródle).
+// `wpisy` to pamięć powłoki instalowanej wersji SW.
 function pamiec(limit = Infinity) {
-  const wpisy = new Map();
+  const pamieci = new Map();
   let zajete = 0;
-  const cache = {
-    async put(klucz, odpowiedz) {
-      const rozmiar = Number(odpowiedz.headers.get('x-rozmiar')) || 0;
-      const poprzedni = wpisy.has(klucz) ? Number(wpisy.get(klucz).headers.get('x-rozmiar')) || 0 : 0;
-      if (zajete - poprzedni + rozmiar > limit) throw new DOMException('Quota exceeded', 'QuotaExceededError');
-      wpisy.set(klucz, odpowiedz);
-      zajete += rozmiar - poprzedni;
-    },
-    async match(klucz) {
-      return wpisy.get(klucz);
-    },
+  const klucz = (k) => { const u = new URL(typeof k === 'string' ? k : k.url, POCHODZENIE); return `${u.pathname}${u.search}`; };
+  const rozmiarOdp = (o) => Number(o?.headers?.get('x-rozmiar')) || 0;
+  const otworz = (nazwa) => {
+    if (!pamieci.has(nazwa)) {
+      const wpisy = new Map();
+      pamieci.set(nazwa, {
+        wpisy,
+        async put(k, odpowiedz) {
+          const kk = klucz(k);
+          const poprzedni = wpisy.has(kk) ? rozmiarOdp(wpisy.get(kk)) : 0;
+          if (zajete - poprzedni + rozmiarOdp(odpowiedz) > limit) throw new DOMException('Quota exceeded', 'QuotaExceededError');
+          wpisy.set(kk, odpowiedz);
+          zajete += rozmiarOdp(odpowiedz) - poprzedni;
+        },
+        async match(k) { return wpisy.get(klucz(k)); },
+        async keys() { return [...wpisy.keys()].map((kk) => new Request(`${POCHODZENIE}${kk}`)); },
+        async delete(k) { const kk = klucz(k); if (!wpisy.has(kk)) return false; zajete -= rozmiarOdp(wpisy.get(kk)); wpisy.delete(kk); return true; },
+      });
+    }
+    return pamieci.get(nazwa);
   };
-  return { caches: { open: async () => cache }, wpisy };
+  const caches = {
+    open: async (nazwa) => otworz(nazwa),
+    keys: async () => [...pamieci.keys()],
+    has: async (nazwa) => pamieci.has(nazwa),
+    delete: async (nazwa) => { const c = pamieci.get(nazwa); if (!c) return false; for (const o of c.wpisy.values()) zajete -= rozmiarOdp(o); pamieci.delete(nazwa); return true; },
+  };
+  return { caches, otworz, get zajete() { return zajete; }, get wpisy() { return otworz(sw.SHELL_CACHE).wpisy; } };
 }
 
 const sw = uruchomSW();
@@ -201,11 +219,14 @@ describe('P-SW-DOCPRO: przy wyczerpanym limicie pamięci giną wpisy historyczne
     )).toEqual(['/x.html', '/a.js?v=2', '/c.js?v=3', '/d.png', '/c.js?v=1', '/c.js?v=2']);
   });
 
-  it('żaden adres nie znika z instalacji — zmienia się tylko kolejność (append-only)', () => {
+  it('kolejka opcjonalna obejmuje każdy adres tablic (tablice append-only), a instalacja bierze z niej tylko wpisy bieżące', () => {
     const oczekiwane = [...new Set([...sw.OPTIONAL_DOCUMENTS, ...sw.OPTIONAL_ASSETS])].filter((u) => !RDZEN.has(u));
     expect(sw.OPTIONAL_PRECACHE_ORDER.length).toBe(oczekiwane.length);
     expect([...sw.OPTIONAL_PRECACHE_ORDER].sort()).toEqual([...oczekiwane].sort());
     expect(sw.OPTIONAL_PRECACHE_ORDER.slice(0, sw.OPTIONAL_DOCUMENTS.length)).toEqual(sw.OPTIONAL_DOCUMENTS);
+    // P-SW-PRECACHE: listy instalacji to dokładnie wpisy bieżące tablic (historia zostaje w tablicach, nie w instalacji).
+    expect(sw.INSTALL_OPTIONAL_URLS).toEqual(sw.OPTIONAL_PRECACHE_ORDER.filter((u) => !historyczny(u)));
+    expect(sw.INSTALL_CORE_URLS).toEqual(sw.CORE_SHELL_URLS.filter((u) => !historyczny(u)));
   });
 
   it('zasób strony albo doładowywany z pliku JS stoi w rdzeniu albo przed całą historią', () => {
@@ -215,11 +236,10 @@ describe('P-SW-DOCPRO: przy wyczerpanym limicie pamięci giną wpisy historyczne
       .toBe(true);
 
     const zaHistoria = [...TOKENY_STRON, ...TOKENY_JS]
-      .filter(({ token }) => PRECACHE.has(token) && !RDZEN.has(token))
-      .filter(({ token }) => sw.OPTIONAL_PRECACHE_ORDER.indexOf(token) >= pierwszaHistoria)
+      .filter(({ token }) => PRECACHE.has(token) && historyczny(token))
       .map(({ strona, token }) => `${strona}: ${token}`);
-    // Tu trafia odwołanie do STAREJ wersji pliku spoza rdzenia — przy wyczerpanym limicie zginie
-    // pierwsze. Odwołuj się do najwyższej wersji albo przenieś adres do CORE_SHELL_URLS.
+    // Tu trafia odwołanie do STAREJ wersji pliku (także z rdzenia) — P-SW-PRECACHE: instalacja pobiera tylko wpisy
+    // bieżące, więc takiego adresu nie ma w pamięci offline. Odwołuj się do najwyższej wersji.
     expect(zaHistoria, zaHistoria.join('\n')).toEqual([]);
   });
 
@@ -233,7 +253,8 @@ describe('P-SW-DOCPRO: przy wyczerpanym limicie pamięci giną wpisy historyczne
     await sluzba.installShell();
 
     const istniejace = [...PRECACHE].filter((u) => rozmiarPliku(u) !== null);
-    expect(wpisy.size, 'limit naprawdę zadziałał — część historii nie weszła').toBeLessThan(istniejace.length);
+    expect(wpisy.size, 'historia nie weszła — pamięć ma mniej wpisów niż tablice').toBeLessThan(istniejace.length);
+    expect([...wpisy.keys()].filter(historyczny), 'P-SW-PRECACHE: żaden wpis historyczny nie jest instalowany').toEqual([]);
 
     const braki = [];
     for (const { strona, token } of TOKENY_STRON) {
@@ -241,5 +262,94 @@ describe('P-SW-DOCPRO: przy wyczerpanym limicie pamięci giną wpisy historyczne
       if (!(await trafienie(sluzba, token))) braki.push(`${strona}: ${token}`);
     }
     expect(braki, braki.join('\n')).toEqual([]);
+  });
+});
+
+// P-SW-PRECACHE (decyzja właściciela 2026-09-29): instalacja pobiera tylko wpisy bieżące, niezmienne wpisy ?v= kopiuje
+// z poprzedniej pamięci powłoki, a historię starszych pamięci przycina przed instalacją. Zmierzone w Chromium na SW 1.1.103:
+// 474 MB przy każdej instalacji i aktualizacji, przy łączu 20 Mb/s zdarzenie install przekraczało 5 minut i przeglądarka
+// je przerywała; przy limicie źródła 1000 MiB aktualizacja padała na pierwszym wpisie. Opis: docs/clinical/ALGORITHMS.md.
+describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, przycięcie historii', () => {
+  // Pobrania atrapy sieci: ścieżka z query, tak jak w tablicach.
+  const siecLiczaca = () => {
+    const pobrane = [];
+    return { pobrane, fetch: async (request) => { const u = new URL(request.url); pobrane.push(`${u.pathname}${u.search}`); return siec(request); } };
+  };
+  const doInstalacji = () => [...new Set([...sw.INSTALL_CORE_URLS, ...sw.INSTALL_OPTIONAL_URLS])];
+  const wersjonowany = (adres) => /\?v=/.test(adres) && !sw.DOCUMENT_PATHS.has(adres.split('?')[0]);
+
+  it('instalacja pobiera dokładnie wpisy bieżące, bez historii, w budżecie, który mieści się w limicie 5 minut na wolnym łączu', async () => {
+    const { caches } = pamiec();
+    const { pobrane, fetch } = siecLiczaca();
+    await uruchomSW({ caches, fetch }).installShell();
+
+    expect([...new Set(pobrane)].sort()).toEqual(doInstalacji().sort());
+    expect(pobrane.filter(historyczny), 'żaden adres historyczny nie jest pobierany').toEqual([]);
+    // Budżet: dziś ok. 390 adresów i 24 MB. Chromium przerywa zdarzenie install po 5 minutach — przy 8 Mb/s i 80 ms
+    // opóźnienia na żądanie 24 MB zajęło 64 s, a 474 MB (historia) nie mieściło się nawet przy 20 Mb/s.
+    const bajty = pobrane.reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
+    expect(bajty, `instalacja pobiera ${(bajty / 1e6).toFixed(1)} MB`).toBeLessThan(40e6);
+    expect(pobrane.length, `instalacja wysyła ${pobrane.length} żądań`).toBeLessThan(600);
+  });
+
+  it('aktualizacja kopiuje niezmienne wpisy ?v= z poprzedniej pamięci powłoki; dokumenty i adresy bez ?v= pobiera', async () => {
+    const magazyn = pamiec();
+    const stara = magazyn.otworz('pwa-kalorii-shell-v1.1.104');
+    for (const adres of doInstalacji().filter(wersjonowany)) {
+      if (rozmiarPliku(adres) !== null) await stara.put(adres, await siec(new Request(`${POCHODZENIE}${adres}`)));
+    }
+    const { pobrane, fetch } = siecLiczaca();
+    await uruchomSW({ caches: magazyn.caches, fetch }).installShell();
+
+    expect(pobrane.filter((adres) => wersjonowany(adres) && rozmiarPliku(adres) !== null), 'wpis ?v= z poprzedniej pamięci nie idzie z sieci').toEqual([]);
+    expect(pobrane.length, 'dokumenty i adresy bez ?v= nadal z sieci').toBeGreaterThan(20);
+    const brakujace = doInstalacji().filter((adres) => rozmiarPliku(adres) !== null && !magazyn.wpisy.has(adres));
+    expect(brakujace, 'nowa pamięć powłoki ma komplet wpisów bieżących').toEqual([]);
+  });
+
+  it('pamięć sprzed SW 1.1.66 (zanim ?v= był niezmienny) nie jest źródłem kopii', async () => {
+    const magazyn = pamiec();
+    const stara = magazyn.otworz('pwa-kalorii-shell-v1.1.65');
+    const wersjonowane = doInstalacji().filter((adres) => wersjonowany(adres) && rozmiarPliku(adres) !== null);
+    for (const adres of wersjonowane) await stara.put(adres, await siec(new Request(`${POCHODZENIE}${adres}`)));
+    const { pobrane, fetch } = siecLiczaca();
+    await uruchomSW({ caches: magazyn.caches, fetch }).installShell();
+
+    const zSieci = new Set(pobrane);
+    expect(wersjonowane.filter((adres) => !zSieci.has(adres)), 'każdy wpis ?v= z sieci').toEqual([]);
+  });
+
+  it('przed instalacją historia w starszych pamięciach powłoki idzie do kosza; najwyższy ?v= i adresy bez ?v= zostają', async () => {
+    const magazyn = pamiec();
+    const stara = magazyn.otworz('pwa-kalorii-shell-v1.1.90');
+    const inna = magazyn.otworz('pwa-kalorii-runtime');
+    const odp = () => new Response('', { headers: { 'x-rozmiar': '10' } });
+    for (const adres of ['/a.js?v=1', '/a.js?v=3', '/a.js?v=2', '/b.css?v=7', '/index.html', '/c.js', '/d.css?v=20261001v4']) await stara.put(adres, odp());
+    await inna.put('/a.js?v=1', odp());
+    await uruchomSW({ caches: magazyn.caches, fetch: siec }).installShell();
+
+    expect([...stara.wpisy.keys()].sort()).toEqual(['/a.js?v=3', '/b.css?v=7', '/c.js', '/d.css?v=20261001v4', '/index.html']);
+    expect([...inna.wpisy.keys()], 'pamięć czasu działania nie jest przycinana').toEqual(['/a.js?v=1']);
+  });
+
+  it('użytkownik, któremu stara pamięć zajęła cały limit źródła, instaluje nową wersję', async () => {
+    const bajtyInstalacji = doInstalacji().reduce((suma, adres) => suma + (rozmiarPliku(adres) || 0), 0);
+    // Po przycięciu stara pamięć trzyma swoje wpisy bieżące, a nowa kopiuje je obok — na czas aktualizacji potrzeba
+    // miejsca na dwa komplety wpisów bieżących (w Chromium ok. 2 × 47 MiB). Zmierzony przypadek: limit 1000 MiB.
+    const limit = Math.round(bajtyInstalacji * 3);
+    const magazyn = pamiec(limit);
+    const stara = magazyn.otworz('pwa-kalorii-shell-v1.1.103');
+    // Stara instalacja: wpisy bieżące, a potem historia, dopóki starczy miejsca (jak SW ≤ 1.1.104).
+    const kolejka = [...doInstalacji(), ...[...PRECACHE].filter(historyczny)].filter((adres) => rozmiarPliku(adres) !== null);
+    for (const adres of kolejka) {
+      try { await stara.put(adres, await siec(new Request(`${POCHODZENIE}${adres}`))); } catch { break; }
+    }
+    expect(limit - magazyn.zajete, 'stara pamięć zajmuje prawie cały limit').toBeLessThan(bajtyInstalacji * 0.1);
+
+    const sluzba = uruchomSW({ caches: magazyn.caches, fetch: siec });
+    await expect(sluzba.installShell()).resolves.toBeUndefined();
+    const brakujace = sw.INSTALL_CORE_URLS.filter((adres) => !magazyn.wpisy.has(adres));
+    expect(brakujace, 'rdzeń nowej wersji w komplecie').toEqual([]);
+    expect([...stara.wpisy.keys()].filter(historyczny), 'historia starej pamięci przycięta').toEqual([]);
   });
 });

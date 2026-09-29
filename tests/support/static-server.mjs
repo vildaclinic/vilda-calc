@@ -29,6 +29,10 @@ const serviceWorkerPath = path.join(root, 'service-worker-kalorii.js');
 // `/__test-zmienny.js` jest w ścieżkach powłoki testowego SW, `/__test-zmienny-runtime.js` — nie.
 const licznikiZmiennych = new Map();
 
+// P-SW-PRECACHE: e2e migracji sprawdza, które adresy z ?v= poszły z sieci (a nie z kopii poprzedniej pamięci powłoki).
+// /__test-pobrania oddaje listę obsłużonych plików z ?v= od ostatniego /__test-pobrania?reset=1.
+let pobraniaWersjonowane = [];
+
 function createE2eServiceWorker(source, wersja) {
   const zWersja = wersja && /^[0-9A-Za-z.-]{1,32}$/.test(wersja)
     ? source.replace(/const SW_VERSION = '[^']*';/, `const SW_VERSION = '${wersja}';`)
@@ -74,6 +78,12 @@ const server = http.createServer((request, response) => {
     response.end(JSON.stringify({ n: licznikiZmiennych.get(klucz) || 0 }));
     return;
   }
+  if (pathname === '/__test-pobrania') {
+    if (requestUrl.searchParams.has('reset')) pobraniaWersjonowane = [];
+    response.writeHead(200, { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ zWersja: pobraniaWersjonowane }));
+    return;
+  }
   if (pathname === '/__test-service-worker-kalorii.js') {
     fs.readFile(serviceWorkerPath, 'utf8', (readError, source) => {
       if (readError) {
@@ -106,6 +116,7 @@ const server = http.createServer((request, response) => {
       return;
     }
 
+    if (requestUrl.searchParams.has('v')) pobraniaWersjonowane.push(`${pathname}${requestUrl.search}`);
     response.writeHead(200, {
       'Cache-Control': 'no-cache',
       'Content-Type': contentTypes.get(path.extname(absolutePath).toLowerCase()) || 'application/octet-stream'

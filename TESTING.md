@@ -28,7 +28,7 @@ Kontrola `test:repo` działa na plikach śledzonych przez Git oraz lokalnych pli
 
 Testy przeglądarkowe same uruchamiają lokalny serwer na `127.0.0.1:4173`.
 
-Scenariusz offline wykonuje rzeczywisty kod produkcyjnego service workera, ale serwer testowy skraca jego listę precache do trzech podstawowych zasobów. Dzięki temu CI sprawdza przepływ `install`/`activate`/`fetch` i przeładowanie offline bez sekwencyjnego zapisywania ponad tysiąca historycznie wersjonowanych wpisów. Testy układu mobilnego blokują service workery, ponieważ cache nie jest częścią sprawdzanego tam zachowania.
+Scenariusz offline wykonuje rzeczywisty kod produkcyjnego service workera, ale serwer testowy skraca jego listę precache do trzech podstawowych zasobów. Dzięki temu CI sprawdza przepływ `install`/`activate`/`fetch` i przeładowanie offline bez sekwencyjnego zapisywania ponad tysiąca historycznie wersjonowanych wpisów. Oba projekty Playwrighta (desktop i mobilny) domyślnie blokują service workery: przy pierwszej wizycie SW instaluje się, przejmuje stronę, a `ios26-ui.js` przeładowuje ją na `controllerchange`. Od SW 1.1.105 instalacja trwa kilka sekund, więc takie przeładowanie trafiałoby w środek zwykłych testów. Plik, który sprawdza SW, włącza go jawnie przez `test.use({ serviceWorkers: 'allow' })` — dotyczy to także plików z własnym `launchPersistentContext`, bo dziedziczy on opcje kontekstu z konfiguracji.
 
 ESLint kontroluje cały kod JavaScript. Zastane naruszenia starego, w dużej części zminifikowanego kodu są zapisane liczbowo w `eslint-suppressions.json`. Baseline nie ukrywa nowych kategorii błędów ani wzrostu liczby naruszeń w danym pliku. Po świadomym usunięciu starego naruszenia można odświeżyć baseline poleceniem:
 
