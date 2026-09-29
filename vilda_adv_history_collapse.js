@@ -28,9 +28,14 @@
  *
  * STAN
  *   • Preferencja konta `advHistoryCollapsed` (klasa cloud-synced w vilda_persistence_adapter.js):
- *     mapa { <identyfikator pacjenta>: 1 } — wyłącznie pacjenci ze zwiniętą listą, bez dat,
- *     najwyżej LIMIT_WPISOW wpisów (najdawniej przełączone wypadają pierwsze); wpis znika po
- *     usunięciu pacjenta z sejfu. Identyfikator to losowy UUID z sejfu, nie nazwisko.
+ *     mapa { <identyfikator pacjenta>: { z: 1, updatedAtISO } } dla zwiniętej listy, a po
+ *     rozwinięciu nagrobek { deleted: true, updatedAtISO } (żyje rok). Chwila przełączenia to
+ *     jedyna data w mapie. Najwyżej LIMIT_WPISOW wpisów (najdawniej przełączone wypadają
+ *     pierwsze); po usunięciu pacjenta z sejfu wpis staje się nagrobkiem. Identyfikator to
+ *     losowy UUID z sejfu, nie nazwisko.
+ *   • Sejf scala tę preferencję per wpis (vilda_vault.js, jak wlsched/wllists), więc zmiany
+ *     różnych pacjentów na dwóch urządzeniach offline nie nadpisują się nawzajem (uwaga Codex
+ *     do #479). Mapa z wersji 1 ({ id: 1 }) jest przy starcie przepisywana w nowym formacie.
  *   • Pacjent niezapisany (brak identyfikatora) — stan tylko w pamięci strony; przy pierwszym
  *     zapisie (`vilda:patient-loaded`, source "save") przechodzi pod nadany identyfikator.
  *   • Przy wyborze pacjenta z sejfu wiersze odbudowuje applyLoadedData, a `vilda:patient-loaded`
@@ -50,7 +55,7 @@
   if (w.VildaAdvHistoryCollapse && w.VildaAdvHistoryCollapse.__init) return;
 
   var doc = w.document;
-  var VERSION = '1';
+  var VERSION = '2';
   var PREF_KEY = 'advHistoryCollapsed';
   var LIMIT_WPISOW = 300;
   var OKNO_WCZYTANIA_MS = 1500;
@@ -140,35 +145,83 @@
     return czesci.join(' · ');
   }
 
+  // Wpis mapy: { z: 1, updatedAtISO } — lista zwinięta; { deleted: true, updatedAtISO } — nagrobek
+  // po rozwinięciu. Nagrobek zostaje, żeby scalanie per wpis w sejfie (vilda_vault.js, jak
+  // wlsched/wllists) przeniosło rozwinięcie na drugie urządzenie zamiast wskrzesić stary wpis.
+  // Wpis z pierwszej wersji modułu (wartość 1, bez daty) czytamy jako zwinięty i najstarszy.
+  var CZAS_LEGACY = '1970-01-01T00:00:00.000Z';
+  var ZYCIE_NAGROBKA_MS = 365 * 24 * 60 * 60 * 1000; // jak nagrobki wlsched w sejfie
+
+  function czasWpisu(x) {
+    return x && typeof x.updatedAtISO === 'string' ? x.updatedAtISO : '';
+  }
+
+  function teraz() {
+    return new Date().toISOString();
+  }
+
+  /** Najwyżej LIMIT_WPISOW wpisów; wypadają najdawniej przełączone (nagrobki też). */
   function przytnij(mapa) {
     var klucze = Object.keys(mapa);
     if (klucze.length <= LIMIT_WPISOW) return mapa;
+    klucze.sort(function (a, b) {
+      var ta = czasWpisu(mapa[a]);
+      var tb = czasWpisu(mapa[b]);
+      return ta < tb ? -1 : ta > tb ? 1 : (a < b ? -1 : a > b ? 1 : 0);
+    });
     var wynik = {};
     klucze.slice(klucze.length - LIMIT_WPISOW).forEach(function (k) {
-      wynik[k] = 1;
+      wynik[k] = mapa[k];
     });
     return wynik;
   }
 
-  /** Odczyt z magazynu jest danymi, nie zaufaniem: zostają tylko identyfikatory o kształcie
-   *  identyfikatora sejfu z wartością 1. */
-  function normalizujMape(v) {
+  /** Odczyt z magazynu jest danymi, nie zaufaniem: zostają identyfikatory o kształcie
+   *  identyfikatora sejfu z wpisem zwiniętym albo nagrobkiem; nagrobki starsze niż rok znikają. */
+  function normalizujMape(v, chwila) {
     var wynik = {};
     if (!v || typeof v !== 'object' || Array.isArray(v)) return wynik;
+    var granica = new Date(Date.parse(chwila || teraz()) - ZYCIE_NAGROBKA_MS).toISOString();
     Object.keys(v).forEach(function (k) {
-      if (ID_PACJENTA.test(k) && v[k] === 1) wynik[k] = 1;
+      if (!ID_PACJENTA.test(k)) return;
+      var x = v[k];
+      if (x === 1) {
+        wynik[k] = { z: 1, updatedAtISO: CZAS_LEGACY };
+        return;
+      }
+      if (!x || typeof x !== 'object' || Array.isArray(x)) return;
+      var t = czasWpisu(x);
+      if (!t || isNaN(Date.parse(t))) t = CZAS_LEGACY;
+      if (x.deleted === true) {
+        if (t >= granica) wynik[k] = { deleted: true, updatedAtISO: t };
+      } else if (x.z === 1) {
+        wynik[k] = { z: 1, updatedAtISO: t };
+      }
     });
     return przytnij(wynik);
   }
 
-  /** Nowa mapa po przełączeniu: zwinięcie przenosi wpis na koniec (najświeższy), rozwinięcie
-   *  go usuwa, bo rozwinięta lista jest stanem domyślnym. */
-  function zmienMape(mapa, id, zwiniete) {
+  function czyZwiniety(mapa, id) {
+    var x = mapa && id ? mapa[id] : null;
+    return !!(x && x.z === 1 && x.deleted !== true);
+  }
+
+  /** Czy w magazynie leży mapa z pierwszej wersji modułu (wartości 1)? */
+  function maStaryFormat(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+    return Object.keys(v).some(function (k) { return v[k] === 1; });
+  }
+
+  /** Nowa mapa po przełączeniu jednego pacjenta, z chwilą przełączenia. Rozwinięcie zostawia
+   *  nagrobek; pozostałe wpisy bez zmian. */
+  function zmienMape(mapa, id, zwiniete, chwila) {
     var wynik = {};
     Object.keys(mapa || {}).forEach(function (k) {
-      if (k !== id) wynik[k] = 1;
+      wynik[k] = mapa[k];
     });
-    if (zwiniete && ID_PACJENTA.test(String(id || ''))) wynik[id] = 1;
+    if (!ID_PACJENTA.test(String(id || ''))) return wynik;
+    var t = chwila || teraz();
+    wynik[id] = zwiniete ? { z: 1, updatedAtISO: t } : { deleted: true, updatedAtISO: t };
     return przytnij(wynik);
   }
 
@@ -369,7 +422,7 @@
   }
 
   function stanDla(id) {
-    return id ? czytajMape()[id] === 1 : zwinieteNiezapisanego;
+    return id ? czyZwiniety(czytajMape(), id) : zwinieteNiezapisanego;
   }
 
   function zastosuj(id) {
@@ -457,6 +510,7 @@
   }
 
   function poScaleniu() {
+    przeniesStaryFormat();
     // Stan przyszedł z innego urządzenia. Nie przestawiamy listy pod ręką kogoś, kto właśnie
     // ją przełączył na tym ekranie.
     if (!przelaczonoRecznie) {
@@ -477,7 +531,7 @@
         var id = poprawneId(e && e.patientId);
         if (!id) return;
         var mapa = czytajMape();
-        if (mapa[id] === 1) zapiszMape(zmienMape(mapa, id, false));
+        if (czyZwiniety(mapa, id)) zapiszMape(zmienMape(mapa, id, false));
       });
     } catch (e) {
       zglos('usuwanie-pacjenta', e);
@@ -508,6 +562,20 @@
     obserwator.observe(lista, { childList: true });
   }
 
+  /** Mapa z pierwszej wersji modułu ({ id: 1 }) nie przejdzie przez scalanie per wpis w sejfie,
+   *  które bierze tylko wpisy-obiekty — przepisujemy ją raz w nowym formacie. Wywołanie przy starcie
+   *  i po scaleniu (wpis mógł przyjść z urządzenia ze starą wersją). */
+  function przeniesStaryFormat() {
+    var P = adapter();
+    if (!P || mapaZapasowa) return;
+    try {
+      var surowa = P.readPreferenceJSON(PREF_KEY, {});
+      if (maStaryFormat(surowa)) zapiszMape(normalizujMape(surowa));
+    } catch (e) {
+      zglos('stary-format', e);
+    }
+  }
+
   function start() {
     var e = elementy();
     if (!e.lista || !e.przelacznik) return;
@@ -533,6 +601,7 @@
       w.addEventListener('load', wepnijUsuwaniePacjenta);
     }
     wepnijUsuwaniePacjenta();
+    przeniesStaryFormat();
 
     zastosuj(biezacyPacjent());
   }
@@ -553,6 +622,8 @@
       wiekOpis: wiekOpis,
       podsumowanie: podsumowanie,
       normalizujMape: normalizujMape,
+      czyZwiniety: czyZwiniety,
+      maStaryFormat: maStaryFormat,
       zmienMape: zmienMape
     })
   });

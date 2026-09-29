@@ -136,6 +136,9 @@ function stan(page) {
   });
 }
 
+// Wpis mapy: chwila przełączenia i znacznik zwinięcia (scalanie per wpis w sejfie, uwaga Codex do #479).
+const ZWINIETA = { z: 1, updatedAtISO: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) };
+
 const mapa = (page) => page.evaluate(
   () => window.VildaPersistence.readPreferenceJSON('advHistoryCollapsed', {}),
 );
@@ -222,21 +225,21 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     await pacjent(page, { nazwisko: 'Testowa', imie: 'Anna', pomiary: SZESC.slice(0, 3) });
     const anna = await zapisz(page, null);
     await kliknij(page, '#advHistoryToggle');
-    expect(await mapa(page)).toEqual({ [anna]: 1 });
+    expect(await mapa(page)).toEqual({ [anna]: ZWINIETA });
 
     const wPayloadzie = await page.evaluate(async () => {
       const pl = await window.VildaVault.exportSyncPayload();
       return (pl.userPreferences || {}).advHistoryCollapsed || null;
     });
     expect(wPayloadzie, 'stan listy jest w payloadzie synchronizacji').toBeTruthy();
-    expect(JSON.parse(wPayloadzie.value)).toEqual({ [anna]: 1 });
+    expect(JSON.parse(wPayloadzie.value)).toEqual({ [anna]: ZWINIETA });
 
     // Drugi pacjent zaczyna od stanu domyślnego (rozwinięta lista).
     await page.evaluate(() => window.clearAllData());
     await pacjent(page, { nazwisko: 'Próbny', imie: 'Jan', pomiary: SZESC.slice(0, 2) });
     expect((await stan(page)).rozwiniete, 'nowy pacjent — domyślnie rozwinięte').toBe('true');
     const jan = await zapisz(page, anna);
-    expect(await mapa(page), 'rozwinięta lista nie zostawia wpisu').toEqual({ [anna]: 1 });
+    expect(await mapa(page), 'lista Jana nie była przełączana — brak wpisu').toEqual({ [anna]: ZWINIETA });
 
     await wczytaj(page, anna);
     await expect.poll(async () => (await stan(page)).rozwiniete).toBe('false');
@@ -264,7 +267,7 @@ test.describe('Poprzednie pomiary — zwijanie z licznikiem', () => {
     expect(await mapa(page), 'bez identyfikatora nic nie trafia do preferencji konta').toEqual({});
 
     const ewa = await zapisz(page, null);
-    expect(await mapa(page)).toEqual({ [ewa]: 1 });
+    expect(await mapa(page)).toEqual({ [ewa]: ZWINIETA });
     expect((await stan(page)).rozwiniete, 'zapis nie przestawia listy').toBe('false');
   });
 
