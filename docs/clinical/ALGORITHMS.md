@@ -6767,6 +6767,38 @@ odłamek 2/3 był zielony; drugi scalony PR podbija `SW_VERSION` o jeden.
 (`tozsamosc-pacjenta-duplikaty.spec:226`, `historia-pomiarow-zwijanie.spec:200`, `docpro-dziedziczy-pokwitanie.spec:92`)
 są poza tą zmianą.
 
+## Karta porównania pokazana w DocPro przed „Odtwórz zapis” nie wraca po wyborze (P-POWLOKA-WYSCIG-2, SW 1.1.114, `vilda_summary_cards.js` 51, 2026-09-30)
+
+**Zgłoszenie.** Po P-POWLOKA-WYSCIG (#486) odłamek e2e 2/3 na #487 nadal padał na `powloka-przelaczanie-paneli.spec`
+(`:165` i `:190` — dawne `:147` i `:172`, także po powtórce): DocPro z kompletem pól, `podsumowanieBMI: false`,
+`porownanie: true`. Nowe testy #486 (spóźniony odczyt z sejfu) przechodziły — to druga droga tego samego objawu.
+
+**Przyczyna (odtworzona deterministycznie).** DocPro otwarty wcześniej zdąża pokazać kartę porównania w oknie między
+„Wczytaj tego pacjenta” (Start ustawia wspólny klucz `vildaPrevSummaryPid`) a „Odtwórz zapis”: każde odświeżenie monitora
+GH w DocPro (`vilda:therapy-points-changed` — ping wspólnego stanu, BroadcastChannel) przy ustawionym kluczu wywołuje Y,
+a ta pokazuje kartę i ustawia `dataset.loaded="true"`. Po „Odtwórz zapis” #486 chowała kartę w DocPro (zdarzenie `storage`),
+ale znacznik zostawał, a obsługa pól w `vilda_data_import_export.js` (`disableLoad`) na każdym `input`/`change` pól
+name/age/weight/height… pokazuje kartę ze znacznikiem z powrotem — lustro formularza i odtworzenie sesji wysyłają takie
+zdarzenia. Przy widocznej karcie `updateProfessionalSummaryCard` czyści podsumowanie. Wywołanie odświeżenia monitora GH
+w DocPro wprost w tym oknie daje stan z CI za każdym razem (`dataset.loaded: "true"`).
+
+**Co jest.** `vilda_summary_cards.js`: nasłuch `storage` (klucz usunięty w innej ramce) zdejmuje `dataset.loaded`
+z `#prevSummaryWrap` i `#prevSummaryCard` — tak jak `restoreLoadedState` na Start — i dopiero potem chowa kartę (`G()`).
+
+**Wpływ kliniczny.** Brak zmiany wyników. Po „Odtwórz zapis” DocPro nie pokazuje karty porównania, której lekarz nie
+wybrał, i „Podsumowanie wyników” nie znika.
+
+**Przypadek (e2e, dane fikcyjne jak w P-POWLOKA-WYSCIG).** DocPro otwarty wcześniej; po „Wczytaj tego pacjenta” i
+powrocie odczytu odświeżenie monitora GH w DocPro pokazuje tam kartę porównania; „Odtwórz zapis”, 3,5 s, przełączenie →
+DocPro: komplet pól, podsumowanie z BMI, bez karty porównania, także 2,5 s później. Na bazie `a6e6153` pada.
+
+**Walidacja.** `npm test` zielony; `powloka-przelaczanie-paneli` 21/21 (`--repeat-each=3`, 4 workery), w tym „Nowy pomiar”
+(karta porównania na obu panelach) i testy #486; spec-e karty porównania 11/11.
+
+**Wersje.** `vilda_summary_cards.js` 50 → 51 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
+(append-only), `SW_VERSION` 1.1.113 → 1.1.114 (+ pin), fixture wersji. Ta sama poprawka jest przeniesiona do
+P-OTYLOSC-BEZ-STARTU (#487), który przechodzi na `SW_VERSION` 1.1.115.
+
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
 **Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe

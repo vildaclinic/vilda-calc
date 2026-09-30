@@ -270,3 +270,40 @@ test('„Nowy pomiar” przy wolnym odczycie z sejfu: karta porównania nadal na
   await expect.poll(() => stan(docpro), { timeout: 8000, message: 'DocPro pokazuje to samo co Start' })
     .toMatchObject({ dob: naStart.dob, age: naStart.age, ageM: naStart.ageM, sex: 'F', h: '', w: '', name: 'Probna Alicja', baza: true, porownanie: true });
 });
+
+// P-POWLOKA-WYSCIG-2 (odłamek e2e 2/3 nadal czerwony na #487 po #486, :165/:190): druga droga tego samego objawu.
+// DocPro otwarty wcześniej zdążył pokazać kartę porównania w oknie między „Wczytaj tego pacjenta” a „Odtwórz zapis”
+// (odświeżenie monitora GH przy ustawionym kluczu). #486 chowała ją po usunięciu klucza w Start, ale karta miała
+// dataset.loaded="true", a obsługa pól (vilda_data_import_export.js) na każdym input/change pokazywała ją z powrotem,
+// czyszcząc podsumowanie. Tu odświeżenie w DocPro wywołujemy wprost, więc przebieg jest deterministyczny.
+test('DocPro pokazał kartę porównania przed „Odtwórz zapis”: po wyborze znika na stałe, podsumowanie z BMI', async ({ page }) => {
+  test.setTimeout(180_000);
+  const start = await otworzPowloke(page);
+  const pid = await pacjentkaWSejfie(page, start);
+
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka(page, 'DocPro');
+  await gotowa(docpro);
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.VildaShell.navigate('start'));
+  await page.waitForTimeout(500);
+
+  await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
+  await start.waitForSelector('.vhv-tile', { state: 'visible' });
+  await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+  await start.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
+  await expect.poll(() => start.evaluate(() => sessionStorage.getItem('vildaPrevSummaryPid')), { message: 'odczyt dla karty porównania wrócił' }).not.toBeNull();
+  await docpro.evaluate(() => document.dispatchEvent(new Event('vilda:therapy-points-changed')));
+  await expect.poll(() => stan(docpro).then((s) => s.porownanie), { message: 'DocPro pokazał kartę porównania przed wyborem' }).toBe(true);
+
+  await start.click('#vildaLcmRestore');
+  await start.waitForSelector('#vildaLoadChoiceModal', { state: 'detached', timeout: 8000 }).catch(() => {});
+  await expect.poll(() => stan(start).then((s) => s.h)).toBe('149.2');
+  const PELNY = await pelny(start);
+  await page.waitForTimeout(3500); // lustro formularza i pingi wspólnego stanu (input/change w DocPro) już przeszły
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const OCZEKIWANY = { dob: PELNY.dob, age: PELNY.age, ageM: PELNY.ageM, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true, porownanie: false };
+  await expect.poll(() => stan(docpro), { timeout: 8000, message: 'DocPro: komplet pól i podsumowanie z BMI' }).toMatchObject(OCZEKIWANY);
+  await page.waitForTimeout(2500);
+  expect(await stan(docpro), 'DocPro nadal bez karty porównania').toMatchObject(OCZEKIWANY);
+});
