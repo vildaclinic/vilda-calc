@@ -65,6 +65,14 @@
 
   /* ---------- zbieranie modelu widoku ---------- */
 
+  /* P-DIETA-B5: zalecenia 19-latka idą ścieżką dorosłą (dane.dorosly), ale u pacjenta z zespołem Downa
+     BMI do 20 lat ocenia siatka DS — generator oznacza to w klasyfikacji (celDorosly: false). Drabinka,
+     kafelek BMI i opis celu końcowego idą za oceną BMI, reszta raportu za ścieżką zaleceń. */
+  function bmiDorosly(dane) {
+    var k = dane && dane.klasyfikacja;
+    return k && k.celDorosly === false ? false : !!(dane && dane.dorosly);
+  }
+
   function drabinka(dane) {
     var B = root.VildaBmi;
     if (!B || typeof B.drabinkaCelow !== 'function' || !dane) return null;
@@ -76,7 +84,7 @@
         plec: p.plec,
         wiekMies: p.wiekMies,
         zrodlo: root.bmiSource,
-        dorosly: !!dane.dorosly
+        dorosly: bmiDorosly(dane)
       });
     }, null);
   }
@@ -124,7 +132,7 @@
     var k = dane.klasyfikacja || {};
     if (liczba(p.bmi) == null) return '';
     var dod = '';
-    if (!dane.dorosly && k.klasaBmi) {
+    if (!bmiDorosly(dane) && k.klasaBmi) {
       var c = liczba(k.klasaBmi.percentile), z = liczba(k.klasaBmi.z);
       var czesci = [];
       if (c != null) czesci.push(fmt(c, 1) + '. centyl');
@@ -257,7 +265,7 @@
     if (liczba(m.docelowaKg) != null) {
       /* Silnik oddaje etykietę dorosłego jako „BMI 24.9" — z kropką. W raporcie po polsku
          liczbę składamy własnym formaterem; u dziecka etykieta („85. centyl") zostaje. */
-      var opisCeluKoncowego = dane.dorosly
+      var opisCeluKoncowego = bmiDorosly(dane)
         ? (liczba(drab.cel.bmi) != null ? 'BMI ' + fmt(drab.cel.bmi, 1) : '')
         : (drab.cel.etykieta || '');
       stopka.push('Cel końcowy: <b>' + esc(fmt(m.docelowaKg, 1)) + ' kg</b>'
