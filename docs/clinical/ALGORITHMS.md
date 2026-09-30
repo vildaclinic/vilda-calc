@@ -6887,7 +6887,7 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
-## Kosz i retencja: poprawki po przeglądzie (P-KOSZ-POPRAWKI, SW 1.1.134, `vilda_vault.js` 193, `vilda_kosz_zapisow.js` 2, 2026-09-30)
+## Kosz i retencja: poprawki po przeglądzie (P-KOSZ-POPRAWKI, SW 1.1.135, `vilda_vault.js` 193, `vilda_kosz_zapisow.js` 2, 2026-09-30)
 
 **Zlecenie.** Trzy uwagi Codex P1 do scalonych #501 (P-KOSZ-ZAPISOW) i #502 (P-RETENCJA-NAGROBKI), zweryfikowane w kodzie;
 zgoda właściciela 2026-09-30 („rób ten nowy PR”). Po #509 (P-BLOKADA-ZAPISU-WERSJI) przypięcie, poprawka i usuwanie wersji
@@ -6943,8 +6943,8 @@ koszt — testem zachowania jej nie widać.
 usunięcia, a usunięcie (kosz, retencja) nie kasuje wersji zmienionej po decyzji.
 
 **Wersje.** `vilda_vault.js` 193 (8 stron + wstrzyknięcia: `vilda_chrome.js` 86, `vilda_session_bridge.js` 14 na 22
-stronach), `vilda_kosz_zapisow.js` 2, precache, `SW_VERSION` 1.1.133 → 1.1.134 (+ pin), fixture wersji — nadane przez
-`npm run podbij-wersje` względem `origin/audyt` (`f07ecf4`); pin kolejności skryptów w `spojnosc-zapisow.test.mjs`
+stronach), `vilda_kosz_zapisow.js` 2, precache, `SW_VERSION` 1.1.134 → 1.1.135 (+ pin), fixture wersji — nadane przez
+`npm run podbij-wersje` względem `origin/audyt` (`ca9638d`, po #510); pin kolejności skryptów w `spojnosc-zapisow.test.mjs`
 przestawiony ręcznie („Do decyzji” skryptu).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; czy scalanie synchronizacji ma brać blokadę pacjenta.
