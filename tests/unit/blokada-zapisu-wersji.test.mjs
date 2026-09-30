@@ -238,7 +238,10 @@ for (const [tryb, opcje] of [['kolejka strony (bez Web Locks)', () => ({})], ['W
       let czekal = 0;
       const naCzekanie = { onLockWait: () => { czekal += 1; } };
       const a = await v.savePatient(payload([60]), { dedup: false });
+      // Odstęp między zapisami jak u człowieka: dwie wersje z tej samej milisekundy porządkuje inna reguła
+      // (P-KOLEJNOSC-WERSJI), a przypięcie starszej z nich mogłoby wtedy zrobić z niej bieżącą.
       for (const w of [[60, 66], [60, 66, 72], [60, 66, 72, 78]]) {
+        await chwila(5);
         await v.savePatient(payload(w), { patientId: a.patientId, dedup: false });
       }
       const pid = a.patientId;

@@ -204,8 +204,9 @@ describe('P13 — ekran edycji pacjenta', () => {
   it('czyta rekord ponownie tuż przed zapisem', () => {
     expect(kod, 'kontrola głowy rekordu przed zapisem')
       .toContain('showPatientEditScreen getPatient(kontrola przed zapisem)');
+    // P-BLOKADA-ZAPISU-WERSJI: ten sam zapis przekazuje też sygnał czekania na blokadę pacjenta („Czekam…”).
     expect(kod, 'zapis deklaruje sejfowi, na jakiej wersji powstał')
-      .toContain('await o.savePatient(At,{patientId:t,dedup:!1,baseSnapshotId:Ga5})');
+      .toContain('await o.savePatient(At,{patientId:t,dedup:!1,baseSnapshotId:Ga5,onLockWait:Bzw_czekaj(L)})');
   });
 
   it('przy rozjeździe pyta, zamiast scalać po cichu', () => {

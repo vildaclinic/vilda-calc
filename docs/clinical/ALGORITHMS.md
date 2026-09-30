@@ -6926,7 +6926,7 @@ w trakcie sprawdzania — padają licznik wywołań zapisujących i strażnik ź
 
 **Co pozostaje decyzją właściciela.** Akceptacja reguł; scalenie i wdrożenie; narzędzie do usuwania.
 
-## Edycja i usuwanie pomiaru, poprawka, przypięcie i usunięcie wersji pod blokadą pacjenta; czekanie do 30 s jak przy „Zapisz dane” (P-BLOKADA-ZAPISU-WERSJI, SW WERSJA_SW, `vilda_vault.js` WERSJA_VAULT, `vilda_auth_ui.js` WERSJA_AUTH, 2026-09-30)
+## Edycja i usuwanie pomiaru, poprawka, przypięcie i usunięcie wersji pod blokadą pacjenta; czekanie do 30 s jak przy „Zapisz dane” (P-BLOKADA-ZAPISU-WERSJI, SW 1.1.132, `vilda_vault.js` 192, `vilda_auth_ui.js` 469, 2026-09-30)
 
 **Decyzja właściciela (2026-09-30).** Pytanie 3 z P-ZAPISY-DWIE-KARTY (#495), czy tą samą blokadą objąć pozostałe operacje
 zapisu: „b) teraz jako osobny PR, a c) później, po analizie synchronizacji”. Czyli teraz operacje uruchamiane przez
@@ -6940,7 +6940,7 @@ w karcie A zapis czeka na odpowiedź na pytanie bramy „Ktoś inny zmienił ten
 lekarz poprawia wzrost pomiaru 5;6 na 150 cm — poprawka ląduje w wersji sprzed zapisu A, a bieżącą wersją zostaje zapis A
 z 123 cm; pomiar usunięty w B w tym samym oknie wraca w bieżącej wersji razem z zapisem A.
 
-**Sejf (`vilda_vault.js` WERSJA_VAULT, blok `Bzw_*`, czytelny).**
+**Sejf (`vilda_vault.js` 192, blok `Bzw_*`, czytelny).**
 - `updateSnapshotPayload`, `deleteSnapshot`, `updateMeasurementRow`, `deleteMeasurementRow` i `setSnapshotPinned` idą pod
   tą samą blokadą pacjenta co zapis (`vilda-save-pat:<id>`, wspólna dla kart i ramek powłoki): wolna — rusza od razu;
   zajęta — sygnał `onLockWait` i czekanie najwyżej `lockTimeoutMs` (domyślnie 30 s); po limicie błąd `vildaSaveBusy`
@@ -6955,7 +6955,7 @@ z 123 cm; pomiar usunięty w B w tym samym oknie wraca w bieżącej wersji razem
 - Sejf zablokowany albo brak identyfikatora pacjenta — od razu ten sam błąd co dotąd, bez czekania.
 - `restoreSnapshotAsNew` kończy się `savePatient`, więc blokadę brał już od #495; kosz i przywrócenie z kosza — od #501.
 
-**Komunikaty (te same teksty co przy „Zapisz dane”, `vilda_auth_ui.js` WERSJA_AUTH).**
+**Komunikaty (te same teksty co przy „Zapisz dane”, `vilda_auth_ui.js` 469).**
 - okno szybkiego pomiaru (dodanie, „Popraw pomiar”, korekta wiersza) i ekran edycji pacjenta („Zapisz zmiany”): podczas
   czekania pod polem błędu okna stoi „Czekam — ten pacjent jest zapisywany w innej karcie” (styl ostrzeżenia
   `.vilda-auth-warning-banner`, bez stylu inline); po limicie pole błędu: „Nie zapisano — ten pacjent jest nadal zapisywany
@@ -7003,7 +7003,9 @@ i usunięcie wersji WEWNĄTRZ sekcji retencji pod blokadą — teraz te operacje
 tam, gdzie mogą się teraz zdarzyć: przypięcie po odczycie planu, a przed blokadą; „scalanie bez blokady” prosto
 z magazynu, jak w synchronizacji. Asercje bez zmian; strażnik źródła wskazuje `Bzw_usunWersje` zamiast `Ar`.
 
-**Wersje.** WERSJE_OPIS
+**Wersje (nadane przez `npm run podbij-wersje` względem `audyt` c386c67).** `vilda_vault.js` 191 → 192 i `vilda_auth_ui.js`
+468 → 469 (strony oraz wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`), `vilda_chrome.js` 84 → 85,
+`vilda_session_bridge.js` 12 → 13, precache (append-only), `SW_VERSION` 1.1.131 → 1.1.132 (+ pin), fixture wersji.
 
 ## Zapisy tego samego pacjenta z dwóch kart idą po kolei; drugi czeka najwyżej 30 s (P-ZAPISY-DWIE-KARTY, SW 1.1.123, `vilda_vault.js` 189, `vilda_data_import_export.js` 93, 2026-09-30)
 
