@@ -5186,7 +5186,9 @@ Trzy testy, które właściciel widział jako flaki, to dokładnie te trzy, któ
 
 ## Dwa niestabilne pliki e2e: kliknięcie ginie w trwającym przewijaniu, odtworzenie sesji nadpisuje pole po wczytaniu pacjenta (P-BRAMKI-5, 2026-09-30)
 
-**Skąd znalezisko.** Niestabilny `tests/e2e/klirens-stage2-stage3.spec.mjs` („wynik kamicowy nie zaokrągla przez próg…") — `locator.check: Clicking the checkbox did not change its state`, zielono przy ponowieniu. **Nie jest to usterka produktu** — żaden plik aplikacji nie był ruszany.
+**Zlecenie właściciela (2026-09-30):** naprawić niestabilny `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs` i sprawdzić podobny przypadek kliknięcia w `klirens-stage2-stage3.spec.mjs`. Oba naprawione po stronie testów; pytania o produkt — w „Do odnotowania”. Poniżej najpierw Klirens, potem pokwitanie. **Żaden plik aplikacji nie był ruszany.**
+
+**Skąd znalezisko (Klirens).** Niestabilny `tests/e2e/klirens-stage2-stage3.spec.mjs` („wynik kamicowy nie zaokrągla przez próg…") — `locator.check: Clicking the checkbox did not change its state`, zielono przy ponowieniu. **Nie jest to usterka produktu** — żaden plik aplikacji nie był ruszany.
 
 To drugi objaw **przyczyny pierwszej z P-BRAMKI-4** (animowane przewijanie), tym razem bez „element is not stable": Playwright uznaje pole za stabilne, klika, a potem zgłasza, że stan się nie zmienił.
 
