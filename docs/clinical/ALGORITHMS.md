@@ -6035,6 +6035,65 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
 
+## Przejście 18/19 lat: granica ścieżki planu jako dane i ocena BMI pacjenta z zespołem Downa (P-DIETA-B5, SW 1.1.134, 2026-09-30)
+
+**Decyzje właściciela (2026-09-30), po punkcie B5 audytu zaleceń dietetycznych:**
+1. wariant A′ teraz, wariant B później. Liczby planu bez zmian (poza DS), granice wieku jako dane, notka o przejściu tylko dla lekarza, tabela obu klifów i testy par granicznych. Wariant B — przełączenie na ścieżkę dorosłą po zakończeniu wzrastania — wymaga nowego pola stanu pacjenta i czeka na osobną decyzję;
+2. DS: od 19 lat o nadmiarze masy decyduje silnik BMI z populacją pacjenta (`VildaBmi.ocen`). Populacja ogólna bez zmian; u pacjenta z zespołem Downa w wieku 19,0–19,99 decyduje centyl siatki DS, tak jak w 18,99;
+3. notka o przejściu tylko w karcie lekarza („Strategia”), 18,0–19,99 lat, bez tempa kg/mies. i czasu do normy, nigdy w zaleceniach, raporcie ani PDF — **wdrożenie po akceptacji makiety** (poza tym wpisem).
+
+**Problem.**
+- Dwie granice wieku leżą obok siebie i żadna wytyczna nie wyznacza wieku przejścia z planu redukcji dziecka na plan dorosłego:
+  - kryterium BMI dorosłego (18 lat; DS 20 lat) należy do silnika BMI;
+  - ścieżka planu (19 lat) była liczbą `k=19` wpisaną w silnik diety.
+- U pacjenta z DS silnik BMI ocenia BMI z siatki DS do 20 lat (decyzja D3), a ścieżka dorosła planu od 19 lat liczyła nadmiar z surowego BMI (25 / 30). Przykład: dz. z DS 150 cm / 68 kg (BMI 30,2, ok. 50.–60. centyla DS) — w 18;11 „masa prawidłowa, bez planu”, w 19;0 plan redukcji (umiarkowana ≤ 1450 kcal, PAL 1,4) i zdanie „BMI wynosi 30,2 (otyłość I stopnia)… BMI 24,9”.
+- Ta sama niespójność była w domyślnym PAL dorosłego (otyłość = BMI ≥ 30), w bramce karty „Strategia”, w zdaniach zaleceń dorosłego, w drabince planu PDF i w „Drodze do normy BMI” (drabinka dorosłego od 18 lat także u DS).
+
+**Reguła.**
+1. **Granica ścieżki planu jako dane** (`vilda_diet_plan_ui.js`): `ENERGY_GRANICE_WIEKU = { planSciezkaDoroslaOdLat: 19, zrodlo, uwaga }`; `k` i `ENERGY_ADULT_START_AGE` pochodzą z tych danych. Liczba bez zmian (refaktoryzacja). Kryterium BMI dorosłego nie jest tu kopiowane — zostaje w `vilda_bmi.js` (`G.DOROSLY_M` 216 mies., `G.DS_MAX_M` 240 mies.).
+2. **Nadmiar masy na ścieżce dorosłej** (`energyNadmiarSciezkiDoroslej`): ta sama klasa co u dziecka (`childBmiClass` → `VildaBmi.ocen` z `populacja` pacjenta i `VildaBmi.celNormy`).
+   - Populacja ogólna od 19 lat: kategoria dorosłego z surowego BMI (nadwaga ≥ 25, otyłość ≥ 30) — wynik identyczny z dotychczasowym (test: siatka BMI 16–45 × wiek 19–80 × płeć, 8 000+ punktów).
+   - DS 19,0–19,99: kategoria z centyla siatki DS (nadwaga ≥ 85. c., otyłość ≥ 97. c.), cel = 85. centyl DS (`celDorosly: false`).
+   - Bez silnika BMI: dotychczasowe progi `ADULT_BMI` (25 / 30).
+3. **Konsumenci tej samej klasy:** brak planu redukcji (`adultNormal`), domyślny PAL dorosłego (`energyDefaultPlanPal`: 1,4 tylko przy otyłości wg klasy), bramka karty „Strategia” (`vilda_diet_recommendations.js`), mediana celu w symulacji (BMI 22 dopiero, gdy `VildaBmi.dorosly` z populacją — `energyBmiDoroslyWgSilnika`; dotąd mediana siatki) i podpis znacznika w karcie planu („50. centyl BMI” zamiast „BMI 22”).
+4. **Zalecenia dorosłego u pacjenta z DS 19,0–19,99** (`yi`): klasa, masa docelowa (85. c. DS) i zdania z tej samej klasy; bez drabinki dorosłego (BMI 35 / 30 / −5 %). Brzmienia:
+   - norma: „BMI wynosi X i według siatki dla zespołu Downa (stosowanej do 20. roku życia) mieści się w zakresie prawidłowym.”;
+   - nadmiar: „BMI wynosi X (nadwaga wg siatki dla zespołu Downa). Do 20. roku życia BMI ocenia się według siatki dla zespołu Downa; do zejścia poniżej jej 85. centyla potrzebna byłaby redukcja masy ciała o ok. Y kg – odpowiada to masie ok. Z kg.”;
+   - niedowaga: „BMI wynosi X (niedowaga wg siatki dla zespołu Downa; siatkę dla zespołu Downa stosuje się do 20. roku życia).”
+   - `dane.klasyfikacja` niesie `celDorosly: false` i `klasaBmi` (centyl, bmiSDS, siatka DS); plan PDF (`vilda_raport_plan.js`, `bmiDorosly`) rysuje wtedy drabinkę dziecka i kafelek z centylem, reszta raportu idzie ścieżką dorosłą.
+5. **„Droga do normy BMI”** (`vilda_update_prep.js`, `vildaUpdatePrepDrogaDziecko`): ocena BMI jak w silniku (`VildaBmi.dorosly` z populacją) — populacja ogólna od 18 lat jak dotąd, DS od 20 lat. Karta główna BMI (ostrzeżenie „Otyłość I stopnia wg BMI” u DS 18–19,99) nie jest częścią tej zmiany — zgłoszona osobno.
+
+**Tabela obu klifów (populacja ogólna, PAL domyślny; dane fikcyjne, silnik produkcyjny).**
+
+| Para | 18,0 — kryterium BMI dorosłego | 19,0 — ścieżka planu |
+|---|---|---|
+| Co się zmienia | cel 85. c. → BMI 24,9; REE przy nadmiarze masy Molnár (× korekta) → Henry 18–30, przy masie prawidłowej Henry 10–18 → 18–30; plan dziecka zostaje | plan dziecka → plan dorosłego: deficyt z limitu tempa → 15 / 22 / 30 % wydatku; PAL domyślny dorosłego; bez wzrastania (× 1,01) i bez stabilizacji; minimum REE → 1200 / 1600 kcal |
+| M 175 cm / 79 kg (BMI 25,8) | 17;11 → 18;0: REE 1997 (Molnár) → 1798 (Henry); minimum 1810 → 1798; lekka ≤ 2400 → ≤ 2350 (zalecana); umiarkowana ≤ 2250; intensywna ≤ 2150 → ≤ 2100 | 18;11 → 19;0: PAL 1,4 → 1,6; TEE 2518 → 2877; lekka ≤ 2350 (zalecana) → ≤ 2400; umiarkowana ≤ 2250 → ≤ 2200 (domyślna u dorosłego); intensywna ≤ 2100 → ≤ 2000; minimum 1798 → 1600; stabilizacja niedostępna |
+| K 165 cm / 105 kg (BMI 38,6) | — | 18;11 → 19;0: PAL 1,4 → 1,4; umiarkowana ≤ 2150 (zalecana) → ≤ 1950; lekka ≤ 2300 → ≤ 2150; intensywna ≤ 2000 → ≤ 1750 (poniżej REE 1825) |
+| M 175 cm / 76 kg (masa prawidłowa) | TEE 3151 → 2836 (17;11 → 18;0) | bez planu po obu stronach |
+| DS, dz. 150 cm / 68 kg | — | 18;11 i 19;0–19;11: bez planu, PAL 1,6 (dotąd 19;0: plan, umiarkowana ≤ 1450, PAL 1,4); 20;0: plan dorosłego, PAL 1,4, ≤ 1600 / 1450 / 1300 |
+
+Znane artefakty (bez zmian, do wariantu B): u 19-latka z nadwagą dieta może zrobić się łagodniejsza (M 175/79: zalecana lekka ≤ 2350 → domyślna umiarkowana ≤ 2200, ale dostępna lekka ≤ 2400), a przy otyłości ostrzejsza (K 165/105: intensywna poniżej REE); w 18,0 zmienia się tylko cel i równanie REE.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; `tests/unit/dieta-b5-przejscie-19.test.mjs`, 13 przypadków, prawdziwy silnik planu i BMI):
+- dane: `ENERGY_GRANICE_WIEKU.planSciezkaDoroslaOdLat` = 19, zamrożone; `ENERGY_ADULT_START_AGE` = 19; pasmo PAL 18;11 `child_10_18`, 19;0 `adult`; w kodzie nie ma już `k=19`;
+- pary graniczne z tabeli (M 175/79 w 17;11/18;0 i 18;11/19;0; K 165/105 w 18;11/19;0);
+- DS dz. 150/68: 18;11, 19;0, 19,99 → bez planu (PAL 1,6); 20;0 → plan, PAL 1,4; bez DS 19;0 → plan, PAL 1,4 (jak dotąd);
+- DS dz. 150/88, 19;3 → nadwaga wg siatki DS (87. c.), cel 86,2 kg, PAL 1,6, diety ≤ 2100 / 1900 / 1700;
+- symulacja mediany: DS dz. 150/72, 19;0 → < 4 mies. (mediana DS); bez DS → > 9 mies. (BMI 22);
+- populacja ogólna 19–80 lat: nadmiar ⇔ BMI ≥ 25, otyłość ⇔ BMI ≥ 30 (bez zmiany wyników); bez silnika — progi `ADULT_BMI`.
+
+E2E `tests/e2e/dieta-b5-przejscie.spec.mjs` (3 przypadki na prawdziwej stronie): DS 19;3 150/68 — zdanie o siatce DS, strategia „utrzymanie”, karta „Strategia” ukryta; DS 19;3 150/88 — zdanie z 85. centylem DS, „Droga do normy” z 85. centylem, znacznik „50. centyl BMI”, plan PDF „Cel końcowy: 86,2 kg (85. centyl)”; bez DS — jak dotąd (otyłość I st., drabinka dorosłego, BMI 22).
+
+**Źródła i ograniczenia.**
+- Granica 19 lat: grupy dorosłych w normach energii — Normy żywienia dla populacji Polski (NIZP PZH-PIB, 2024) i NASEM 2023 (Dietary Reference Intakes for Energy): dorośli od 19 lat. Żadna wytyczna nie wyznacza wieku przejścia z planu redukcji dziecka na plan dorosłego — 19 lat to decyzja właściciela.
+- Siatka DS i jej zakres (do 20 lat): Zemel BS i wsp. Pediatrics 2015;136:e1204-11, doi:10.1542/peds.2015-1652 (decyzja D3, P-DS-1).
+- Zalecenia dorosłego dla DS 19,x korzystają z ogólnych zdań dorosłego (talerz, ruch, cel 5–10 % masy) — bez osobnych zaleceń dla DS; cel własny dorosłego zostaje w paśmie surowego BMI 23,0–24,9.
+
+**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (numery nadane `npm run podbij-wersje`).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; makieta i wdrożenie notki o przejściu (B5-c); wariant B (ścieżka dorosła po zakończeniu wzrastania — nowe pole stanu pacjenta); pozostałe punkty części B (Z1/Z2 — zasada domyślnego PAL i strategia przy nadwadze, B9 — seniorzy, zakres × 0,85 u dorosłych 19–64 lat, definicja „praktycznie zakończonego” wzrastania).
+
 ## Czas dojścia do normy BMI: wzrastanie wg mediany siatki i dwa scenariusze stabilizacji (P-DIETA-B8, SW 1.1.132, 2026-09-30)
 
 **Decyzje właściciela (2026-09-30), po punkcie B8 audytu zaleceń dietetycznych:**
@@ -6631,6 +6690,74 @@ rata 3; karta porównania, „Postępy” i R6 (zmiana substancji zaczyna nowy c
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia per cykl i brzmień nagłówków, podglądu
 przydziału, powodów i banera; scalenie i wdrożenie; raty 3–4.
+
+## Cykle leczenia otyłości — rata 3: Karta pacjenta w cyklach, werdykt ChPL wstrzymany przy niezgodnym zapisie, ocena zakończonego cyklu (P-OTYLOSC-CYKLE rata 3, 2026-09-30)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej);
+„ruszaj z ratą 3” — tego samego dnia. Źródło progów i okien bez zmian: moduł kryteriów `ObesityResponseCriteria`
+(ChPL — wpisy P-KRYTERIA i P-KOTWICA wyżej); ta rata zmienia tylko to, **który zestaw punktów** jest oceniany i jak
+brzmi werdykt.
+
+**Zmiany kliniczne.**
+1. **Wstrzymanie werdyktu przy niezgodnym zapisie (D5).** Gdy zapis ocenianego cyklu łamie reguły cykli (dwa Włączenia
+   bez Zakończenia, wizyta przed Włączeniem, Zakończenie bez wizyt — kody `niezgodnosci` z `VildaCykleLeczenia.podziel`),
+   panel „Dane analityczne — otyłość” nie wydaje werdyktu wg ChPL: „Zapis cyklu wymaga uporządkowania — ocena wg ChPL
+   wstrzymana” (styl „wait”), znika kafelek „Redukcja do oceny”. Dotąd werdykt liczył się od pierwszego Włączenia
+   bieżącego kursu i mógł brzmieć „kontynuować leczenie”. Kafelki opisowe (masa przy włączeniu, redukcja, tempo, czas)
+   zostają — liczone od Włączenia cyklu z modułu, tak jak w monitorze (rata 2). Nic nie jest poprawiane samo.
+2. **Zakończony cykl oceniany na dzień Zakończenia.** Gdy oceniany cykl ma Zakończenie, ocena jest ta sama (te same
+   progi i okno), ale bez zaleceń na dziś: tytuły „Cykl zakończony — odpowiedź była wystarczająca wg ChPL”, „Cykl
+   zakończony — odpowiedź była niewystarczająca wg ChPL”, „Cykl zakończony przed oknem oceny”; opis zaczyna się od
+   „Cykl zakończony DD.MM.RRRR — ocena na dzień Zakończenia, bez zaleceń na dziś.”. Pozostałe tytuły (np. „Ocena kliniczna
+   — brak twardego progu SmPC”) zostają, z tym samym początkiem opisu. Dotąd zakończone leczenie dostawało „Odpowiedź
+   wystarczająca — kontynuować leczenie” albo „… wg ChPL odstawić i ponownie ocenić” / „Przed oknem oceny — oceń po …”.
+3. **Wykres i kafelki panelu per cykl.** Wykres „Dawka a przebieg leczenia” pokazuje punkty ocenianego cyklu; dotąd —
+   wszystkie punkty ze wszystkich kursów. Kafelki i werdykt bieżącego cyklu — liczby jak dotąd (bieżący cykl = dotychczasowy
+   bieżący kurs z P-OTYLOSC-BEZ-STARTU: ta sama granica, Zakończenie).
+4. **Brzmienie.** „kurs” → „cykl” w podpowiedziach o braku Włączenia (karta, panel, monitor DocPro).
+
+**Karta pacjenta (`vilda_auth_ui.js`).**
+- Podsumowanie „Leczenie otyłości” opisuje bieżący (ostatni) cykl; przy więcej niż jednym cyklu — znacznik „cykl N z M”,
+  „Punkty kontrolne: X w cyklu (Y łącznie)” i sekcja „Poprzednie cykle”: jedna linia na cykl, najnowszy na górze (D7) —
+  „Cykl N · lek · okres · czas (tyg. z dat albo mies. z wieku) · zmiana masy od Włączenia” (bez Włączenia — „od 1.
+  punktu”; z niezgodnością — „do uporządkowania”).
+- Nota na karcie, gdy zapis bieżącego cyklu wymaga uporządkowania: „Zapis bieżącego cyklu wymaga uporządkowania: … Popraw
+  go w monitorze DocPro — do tego czasu ocena odpowiedzi wg ChPL jest wstrzymana.”
+- Panel: przełącznik cykli (zakładki, najnowszy pierwszy, „Cykl N · lek · bieżący/ostatni”), gdy cykli jest więcej niż
+  jeden; kafelki, werdykt i wykres liczą wybrany cykl. Wybór cyklu to stan widoku, nie dane pacjenta.
+- `vilda_cykle_leczenia.js` ładowany na 7 kolejnych stronach z Kartą pacjenta (app, index, kalkulator-klirens, notatki,
+  subskrypcja, terminarz, ustawienia; DocPro — od raty 1). Bez modułu karta liczy jeden bieżący kurs jak dotąd (bez
+  historii i bez wstrzymania D5; zakończony kurs — brzmienie z pkt 2).
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 40 l., 170 cm; cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024
+99,0 kg, Z 15.10.2024 97,5 kg; cykl 2 — Wegovy: W 12.11.2024 98,5 kg, K 12.02.2025 95,5 kg, K 10.05.2025 93,0 kg):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+|---|---|---|---|
+| CK-1 | dwa cykle — karta | „cykl 2 z 2”; „Punkty kontrolne 3 w cyklu (6 łącznie)”; „Poprzednie cykle: Cykl 1 · Saxenda · 12.01.2024 – 15.10.2024 · 39,6 tyg. · −6,3% masy” | „Punkty kontrolne 6”, bez historii |
+| CK-2 | dwa cykle — panel, cykl 2 | przełącznik „Cykl 2 · Wegovy · bieżący” / „Cykl 1 · Saxenda”; 98,5 → 93,0 kg, −5,6%, „Ocena kliniczna …”; wykres: 3 punkty | liczby i werdykt te same; wykres: 6 punktów obu kursów |
+| CK-3 | dwa cykle — panel, cykl 1 | 104,0 → 97,5 kg, −6,3%, 40 tyg.; „Cykl zakończony — odpowiedź była wystarczająca wg ChPL”, opis „Cykl zakończony 15.10.2024 — …” | cykl 1 niedostępny w panelu |
+| CK-4 | tylko cykl 1 (zakończony) | „Cykl zakończony — odpowiedź była wystarczająca wg ChPL”, bez przełącznika | „Odpowiedź wystarczająca — kontynuować leczenie” |
+| CK-5 | stary zapis: W 12.01.2024 104, K 12.04.2024 99, W 03.05.2024 99, K 01.09.2024 96 (Saxenda) | „Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana”, bez „Redukcja do oceny”; nota na karcie; kafelki opisowe od 104 kg (−7,7%) | „Odpowiedź wystarczająca — kontynuować leczenie” (−7,7% od 104 kg po 29 tyg. dawki podtrzymującej) |
+| CK-6 | Saxenda: W 12.01.2024 104, K 12.03.2024 102, Z 10.05.2024 101 | „Cykl zakończony — odpowiedź była niewystarczająca wg ChPL” (−2,9%, okno 16 tyg.) | „Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić” |
+| CK-7 | Saxenda: W 12.01.2024 104, Z 23.02.2024 102 | „Cykl zakończony przed oknem oceny”, opis „Cykl zakończony 23.02.2024 — …” | „Przed oknem oceny — oceń po …” |
+
+**Testy.** `tests/e2e/karta-otylosc-cykle-rata-3.spec.mjs` 5 (prawdziwa Karta pacjenta z sejfem testowym: CK-1–CK-3,
+CK-5, CK-4, CK-6 i CK-7, telefon 390 px bez poziomego przewijania). Zaktualizowane: `karta-otylosc-bez-punktu-wlaczenia.spec.mjs`
+KURS-1 i MON-3 — brzmienie „cykl” zamiast „kurs” (celowa zmiana tej raty; liczby bez zmian). Bez zmian i zielone:
+P-OTYLOSC-BEZ-STARTU (OB-1–OB-5, KURS-2, MON-1, MON-2), P-KOTWICA, kryteria ChPL, „Postępy”, monitor (raty 1–2).
+
+**Ograniczenia i kolejne raty.** Karta porównania, „Postępy” i R6 (zmiana substancji zaczyna nowy cykl) — rata 4.
+Strony, na które `vilda_auth_ui.js` wstrzykują `vilda_chrome.js` / `vilda_session_bridge.js`, nie ładują modułu cykli
+(jak innych pomocników karty) — tam karta liczy jeden bieżący kurs jak przed tą ratą. Werdykt zakończonego cyklu jest
+opisem przeszłości; aplikacja nie ocenia, czy decyzja o zakończeniu była właściwa.
+
+**Wersje** (`npm run podbij-wersje`, baza `audyt` ca9638d). `obesity_therapy_monitor.js` 25, `vilda_auth_ui.js` 470,
+`vilda_chrome.js` 86, `vilda_session_bridge.js` 14; `vilda_cykle_leczenia.js` 2 na 7 kolejnych stronach; precache
+(append-only); `SW_VERSION` 1.1.134 → 1.1.135 (+ pin; 1.1.134 wydał P-DIETA-B5, #510); fixture wersji.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wstrzymania werdyktu przy niezgodnym zapisie, brzmień
+werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scalenie i wdrożenie; rata 4.
 
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
