@@ -6127,9 +6127,8 @@ pada („Włączeniew wieku 9 l. 7 mies.”), kontrolny przechodzi.
 `vilda_session_bridge.js`, więc te dwa też podbite: `vilda_chrome.js` 78 → 79, `vilda_session_bridge.js` 6 → 7 na 22
 stronach (78/6 i SW 1.1.111 wydał równolegle P-HISTORIA-ZWIJANA #484 z inną treścią — `vilda_vault.js?v=188` — więc ta
 zmiana podbija o jeden; ten sam klucz cache nie może nieść dwóch treści); nowe adresy dopisane do precache obok historii
-(append-only); `SW_VERSION` 1.1.111 → 1.1.113 (+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.112 zajmuje
-P-POWLOKA-WYSCIG #486, którego poprawka jest tu przeniesiona razem z `vilda_summary_cards.js` 50, żeby odłamek e2e 2/3
-był zielony); `tests/fixtures/wersje-zasobow.json` odświeżony.
+(append-only); `SW_VERSION` 1.1.112 → 1.1.113 (+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.112 wydał
+P-POWLOKA-WYSCIG #486, który naprawił czerwony odłamek e2e 2/3 tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
 
 **Co pozostaje decyzją właściciela.** Akceptacja brzmień; czy ta sama poprawka ma objąć kartę „Leczenie otyłości”
 (`Cl`/`Ml` w `vilda_auth_ui.js` mają identyczny zastępczy start `r||(r=n[0])`, a panel otyłości liczy od niego okna
