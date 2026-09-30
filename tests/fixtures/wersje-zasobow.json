@@ -64,8 +64,8 @@
   "sha256": "d5800474ac1017ad72a7d563b448ad537ad9e6ee6d58c0d6d2b81351dd094631"
  },
  "docpro_state_persist.js": {
-  "v": 5,
-  "sha256": "a29910a7d0880763769622f5b75c9fe5725bbb35493994feb2f5f7001ab37596"
+  "v": 6,
+  "sha256": "b97de4c39a1de0a8a9246e6badb748bd8474e7543d4d8801f7de4172270c5616"
  },
  "ds_lms.js": {
   "v": 4,
@@ -612,8 +612,8 @@
   "sha256": "6cee63ab224518b3e5ab3ddaf58427f25d37d98be2e477834ab44e9b5a122a52"
  },
  "vilda_frame_sync.js": {
-  "v": 2,
-  "sha256": "c944a5eadc91aa3a4e4628edb8b693d06633527b9cb4a7380f39ae61a64ad14e"
+  "v": 3,
+  "sha256": "706809de8d1774bd843878ad442efce0ffcae887794f57bd24ce6cadbb0d0b9a"
  },
  "vilda_gh_response_b64.js": {
   "v": 2,

@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.116';
+const SW_VERSION = '1.1.118';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1707,6 +1707,7 @@ const OPTIONAL_ASSETS = [
   '/docpro_state_persist.js',
   '/docpro_state_persist.js?v=4',
   '/docpro_state_persist.js?v=5',
+  '/docpro_state_persist.js?v=6',
   '/lab_units_data.js',
   '/lab_units_data.js?v=1',
   '/lab_units_data.js?v=35',
@@ -1839,6 +1840,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_frame_sync.js',
   '/vilda_frame_sync.js?v=1',
   '/vilda_frame_sync.js?v=2',
+  '/vilda_frame_sync.js?v=3',
   '/vilda_advanced_growth.js?v=30',
   '/inline_index_07.js?v=2',
   '/vilda_publication_creator.js?v=1',

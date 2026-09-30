@@ -6955,7 +6955,7 @@ B 11 lat bez danych okołoporodowych; C 10 lat, 39 tc).**
 | DocPro z A → wczytanie C w ramce Start → powrót do DocPro → cykl synchronizacji | tożsamość ramki = C, notatka dla C | przechodzi; z bramką czytającą najpierw zmienną okna pada (okno = A, notatka dla A) |
 | Kontrola: samodzielny `docpro.html`, skok z A do B z danymi okołoporodowymi | karta SGA i ściąga B.64 z danymi B (40 tc) | przechodzi |
 
-**Czego to nie naprawia.** *(1)* Nowe znalezisko z czwartego scenariusza, niezależne od tej regresji (ta sama
+**Czego to nie naprawia.** *(1)* **Aktualizacja: naprawione w P-TOZSAMOSC-RAMEK (niżej).** Nowe znalezisko z czwartego scenariusza, niezależne od tej regresji (ta sama
 obserwacja na bazie i po poprawce): gdy pacjenta C wczytano w ramce Start, a DocPro w tle miał pacjenta A z kartą SGA,
 po powrocie do DocPro formularz i tożsamość są C, ale karta SGA nadal pokazuje dane urodzeniowe A (34 tc, 1650 g,
 41 cm, 29 cm). Odtworzenie stanu ramki przez powłokę nie przechodzi przez `identityReset` z `applyLoadedData()`.
@@ -6968,6 +6968,68 @@ porównania, skoku GH, ściągi B.64, danych okołoporodowych i powłoki zielone
 
 **Wersje.** `vilda_summary_cards.js` 51 → 52 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
 (append-only), `SW_VERSION` 1.1.115 → 1.1.116 (+ pin), fixture wersji.
+
+## Ramki powłoki idą za zmianą pacjenta w innej ramce; stan kart DocPro należy do pacjenta (P-TOZSAMOSC-RAMEK, SW 1.1.118, `vilda_frame_sync.js` 3, `docpro_state_persist.js` 6, 2026-09-30)
+
+**Zgłoszenie.** Punkt 1 „Czego to nie naprawia” w P-TOZSAMOSC-RAMKI oraz nowe znalezisko z tej samej diagnozy.
+Ramki powłoki `app.html` dzielą `sessionStorage` (w nim `vildaCurrentPatientId` i stan kart DocPro
+`wagaiwzrost:docproUi:v2`), ale każda ma własną zmienną okna `_vildaCurrentPatientId` i własny DOM. Zmiana pacjenta
+w jednej ramce nie docierała do pozostałych. Zmierzone na `audyt` `21046aa` (po #489):
+
+- **Start z A → wczytanie B w DocPro → powrót na Start.** Formularz Start pokazuje B, zmienna okna Start — A.
+  „Dodaj notatkę do wizyty” (`custom-fixes.js` czyta najpierw zmienną okna) otwiera edytor dla A: notatka z wizyty B
+  trafia do rekordu A. To zwykły przebieg pracy Start ↔ DocPro.
+- **DocPro z A (karta SGA wypełniona) → wczytanie C na Start → powrót do DocPro.** Formularz i tożsamość są C, ale
+  karta SGA niesie dane urodzeniowe A (34 tc, 1650 g, 41 cm, 29 cm), a ściąga B.64 dla C pokazuje kryterium 1 jako
+  „SPEŁNIONE” (masa −2,94 SD; długość −3,27 SD; 34 tc) — choć C urodził się w 39 tc z masą 3300 g. Stan utrzymuje się
+  po przeładowaniu samej ramki DocPro.
+- **Bez powłoki, w jednej karcie przeglądarki:** `docpro.html` z A → `index.html`, wczytanie C bez „Wyczyść”
+  (autouzupełnianie nazwiska) → `docpro.html`: karta SGA znów z danymi A. Stan kart DocPro jest jeden na kartę
+  przeglądarki i był odtwarzany przy starcie strony bez sprawdzenia, czyj to stan. („Wyczyść” na stronie głównej
+  czyści ten stan, więc droga „Wyczyść → Wczytaj” była bezpieczna.)
+
+**Co jest.**
+- `vilda_frame_sync.js` (ładowany przez powłokę i strony w ramkach): zdarzenie `storage` dla `sessionStorage`
+  przychodzi tylko z innych ramek tej samej karty przeglądarki. Zmiana `vildaCurrentPatientId` ustawia zmienną okna
+  ramki na nowego pacjenta (albo zeruje ją, gdy klucz usunięto) i ogłasza w ramce `vilda:patient-changed-elsewhere`
+  (`from`, `to`).
+- `docpro_state_persist.js`:
+  - zapisywany stan kart jest znakowany pacjentem (`patientId`, bieżący `vildaCurrentPatientId`);
+  - przy starcie strony stan innego pacjenta nie odtwarza kart (`moduleStates`: SGA, terapia GH/IGF, antybiotyk,
+    monitor GH) ani pól bez identyfikatora; układ strony (otwarte karty, przełączniki) wraca jak dotąd; stan bez
+    znacznika (zapisany przed tą zmianą) odtwarza się jak dotąd;
+  - po `vilda:patient-changed-elsewhere` karty SGA i terapii GH/IGF są czyszczone tak jak przy resecie tożsamości
+    w `applyLoadedData`, a stan zapisuje się ze znacznikiem nowego pacjenta. Prefill karty SGA wypełnia ją potem danymi
+    nowego pacjenta (sekcja „Dane okołoporodowe”).
+
+Ablacja: bez zmiany w `vilda_frame_sync.js` padają scenariusze powłoki (notatka na Start i karta SGA); bez zmiany
+w `docpro_state_persist.js` padają scenariusze karty SGA; bez filtra przy starcie strony pada scenariusz bez powłoki;
+bez czyszczenia po zmianie w innej ramce pada scenariusz karty SGA w powłoce.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna (integralność danych), bez zmian wzorów, progów i danych referencyjnych.
+Karta SGA, ściąga B.64 (kryterium urodzeniowe) i adresat notatki do wizyty wskazują pacjenta widocznego w formularzu.
+Ręcznie wpisany w DocPro stan karty SGA i terapii GH/IGF jest porzucany, gdy w innej ramce albo stronie tej karty
+przeglądarki wczytano innego pacjenta — tak samo jak przy wczytaniu innego pacjenta w samym DocPro.
+
+**Przypadki (e2e, dane fikcyjne: A 8 lat, 34+2 tc, 1650 g, 41 cm, 29 cm; B 11 lat; C 10 lat, 39 tc, 3300 g, 53 cm, 34 cm).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie `21046aa` |
+|---|---|---|
+| powłoka: Start z A → wczytanie B w DocPro → powrót na Start → „Dodaj notatkę do wizyty” | tożsamość ramki Start = B, notatka dla B | pada (okno = A, notatka dla A) |
+| powłoka: DocPro z A → wczytanie C na Start → powrót do DocPro → cykl synchronizacji; potem przeładowanie ramki DocPro | karta SGA = dane C; ściąga B.64 bez „34 tc”; po przeładowaniu bez danych A | pada (karta SGA z danymi A) |
+| bez powłoki: `docpro.html` z A → `index.html`, wczytanie C bez „Wyczyść” → `docpro.html` | karta SGA bez danych A | pada |
+| Kontrola: DocPro z A → Start bez zmiany pacjenta → powrót; ręczna poprawka długości w karcie SGA → przeładowanie ramki | karta SGA A zostaje; poprawka wraca po przeładowaniu | przechodzi |
+
+**Czego to nie naprawia.** Monitor GH i karta antybiotyku w ramce DocPro w tle nie są czyszczone po zmianie pacjenta
+w innej ramce (reset tożsamości przy wczytaniu też ich nie czyści); przy starcie strony ich stan innego pacjenta już nie
+wraca. Punkty monitora GH przychodzą z sesji nowego pacjenta przy powrocie do DocPro.
+
+**Walidacja.** `tests/e2e/powloka-zmiana-pacjenta.spec.mjs` (4 scenariusze z tabeli), ablacja i mutanty jak wyżej.
+`npm test` i powiązane spec-e — wyniki w PR.
+
+**Wersje.** `vilda_frame_sync.js` 2 → 3 (app, docpro, index, kalkulator-klirens, notatki, przelicznik-jednostek,
+terminarz, ustawienia), `docpro_state_persist.js` 5 → 6 (docpro), precache (append-only), `SW_VERSION` 1.1.116 → 1.1.118
+(+ pin; 1.1.117 bierze P-SESJA-OBCA, #492), fixture wersji.
 
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
