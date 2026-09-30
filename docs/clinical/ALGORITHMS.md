@@ -6241,6 +6241,37 @@ tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
 - Znane wcześniej: kotwica dawki podtrzymującej zawsze nominalna (`weeksFromAnchor` nie jest przekazywane); werdykt
   ocenia ostatni punkt, a nie redukcję w chwili okna.
 
+## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
+
+**Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH
+(`docs/AUDYT-PRZEPLYW-GH.md`) i decyzja właściciela z 2026-09-30.
+
+**Zmiana.** Mostek `importTherapyPointsToAdvancedGrowth` (`vilda_advanced_growth.js`, wewnętrznie `fn()`) dokłada do
+karty zaawansowanej wiersze punktów terapii GH. Dotąd, zależnie od rodzaju pamięci zwracanego przez adapter
+(a także gdy adaptera nie było), pytał najpierw pomocniczą kopię punktów w IndexedDB `ghTherapyDB`. Pamięć modułu
+czytał dopiero przy pustej kopii, a potem nadpisywał tą kopią pamięć modułu i `window.ghTherapyPoints`. Kopia mogła
+być nieaktualna wobec pamięci modułu. Teraz jedynym źródłem jest pamięć modułu `GH_THERAPY_POINTS`: ta sama, którą
+czyta monitor GH i którą ustawia wczytanie pacjenta (`applyLoadedData`). W mostku nie ma już żadnego `await`, więc
+import w każdej konfiguracji kończy się synchronicznie. Zapis kopii przez monitor (`gh_therapy_monitor.js`) i jej
+czyszczenie zostają bez zmian — to osobna, następna zmiana.
+
+**Co się nie zmienia.** Żaden wzór, próg, jednostka ani dane; reguły deduplikacji mostka (GROWTH-HV-UI10,
+P-GH-TOZSAMOSC) bez zmian; format rekordu pacjenta bez zmian. W konfiguracji, w której mostek czytał dotąd kopię,
+karta zaawansowana pokazuje teraz te same punkty co monitor GH.
+
+**Strażnik.** `tests/unit/gh-import-zrodlo-punktow.test.mjs` (4) — prawdziwy mostek modułu na atrapie DOM: dla trzech
+rodzajów pamięci (bez adaptera, sesja, pamięć lokalna) wiersze GH, `window.ghTherapyPoints` i zapis pamięci modułu
+pochodzą z pamięci modułu, a kopia w IndexedDB nie jest pytana; pusta pamięć modułu daje brak wierszy GH, choć kopia
+zawiera punkty. **Zmierzone czerwone** na kodzie sprzed zmiany: **3 z 4** (przypadek „sesja” jest kontrolą, zielony
+po obu stronach).
+
+**Wersje.** `vilda_advanced_growth.js` 72 → 73 (`index.html`, `docpro.html`, `kalkulator-klirens.html`); precache
+(append-only); `SW_VERSION` 1.1.119 → 1.1.120 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
+`tests/fixtures/wersje-zasobow.json` odświeżony.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
+przez monitor i skasowanie bazy.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
@@ -6814,7 +6845,7 @@ SW 1.1.87 → **1.1.88**; `vilda_data_import_export.js?v=85→86`, `vilda_shell.
 **Co pozostaje decyzją właściciela.** Akceptacja pełnego odtworzenia panelu docelowego po zmianie sesji (skutek uboczny wyżej)
 i scalenie.
 
-## Wiek i masa niezapisanego pacjenta nie przechodzą do rekordu wczytanego pacjenta (P-SESJA-OBCA, SW 1.1.120, `vilda_data_import_export.js` 91, 2026-09-30)
+## Wiek i masa niezapisanego pacjenta nie przechodzą do rekordu wczytanego pacjenta (P-SESJA-OBCA, SW 1.1.121, `vilda_data_import_export.js` 91, 2026-09-30)
 
 **Zgłoszenie.** Znalezisko recenzji poprawki „Cel własny” (2026-09-30): na `docpro.html` niezapisana Celina (35 lat, 66 kg),
 skok z notatki do punktu GH Beaty (40 lat, 65 kg), F5 — formularz Beaty pokazuje 35 lat i 66 kg, a „Zapisz” dopisuje do
@@ -6874,7 +6905,7 @@ niezapisana).**
 kontroli jak wyżej. `npm test` i pełny zestaw e2e (desktop) — wyniki w PR.
 
 **Wersje.** `vilda_data_import_export.js` 90 → 91 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`; 90 wydał
-P-POWLOKA-ID, #491), precache (append-only), `SW_VERSION` 1.1.119 → 1.1.120 (+ pin; 1.1.119 wydał #493 P-TOZSAMOSC-RAMEK), fixture wersji.
+P-POWLOKA-ID, #491), precache (append-only), `SW_VERSION` 1.1.120 → 1.1.121 (+ pin; 1.1.119 wydał #493 P-TOZSAMOSC-RAMEK, 1.1.120 #490 P-GH-ZRODLO), fixture wersji.
 
 ## Karta porównania po „Odtwórz zapis”: spóźniony odczyt z sejfu nie przywraca porównania na Start ani w DocPro (P-POWLOKA-WYSCIG, SW 1.1.112, `vilda_summary_cards.js` 50, 2026-09-30)
 
