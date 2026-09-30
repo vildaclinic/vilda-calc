@@ -5184,6 +5184,67 @@ Trzy testy, które właściciel widział jako flaki, to dokładnie te trzy, któ
 1. `html,body{scroll-behavior:smooth}` w `style.css` obowiązuje **bez** `@media (prefers-reduced-motion: reduce)`. To pytanie o dostępność produktu, nie o test, i osobna decyzja — dlatego poprawka siedzi w teście, a nie w CSS. Gdyby ta reguła dostała warunek, pozostałe pliki e2e też przestałyby płacić za animowane przewijanie.
 2. Ten sam wzorzec — `click()`/`check()` bez upewnienia się, że element stoi — jest w innych plikach e2e dotykających `kalkulator-klirens.html`. Tutaj byłoby to poszerzeniem zlecenia; moduł `uklad-czekanie.mjs` jest gotowy do ponownego użycia.
 
+## Kliknięcie w pole wyboru ginie, gdy przewijanie trwa między `mousedown` a `mouseup` (P-BRAMKI-5, 2026-09-30)
+
+**Skąd znalezisko.** Niestabilny `tests/e2e/klirens-stage2-stage3.spec.mjs` („wynik kamicowy nie zaokrągla przez próg…") — `locator.check: Clicking the checkbox did not change its state`, zielono przy ponowieniu. **Nie jest to usterka produktu** — żaden plik aplikacji nie był ruszany.
+
+To drugi objaw **przyczyny pierwszej z P-BRAMKI-4** (animowane przewijanie), tym razem bez „element is not stable": Playwright uznaje pole za stabilne, klika, a potem zgłasza, że stan się nie zmienił.
+
+### Odtworzenie
+
+Samo spowolnienie przez CDP (`Emulation.setCPUThrottlingRate`, 6×) nie odtwarza błędu — 0 z 12 przebiegów. Odtwarza go rzeczywista rywalizacja o rdzenie: cztery równoległe przeglądarki i dwa procesy zajmujące rdzenie, w każdej sekwencja z testu — pacjent, zbiórka, dziewięć `check()` (sześć potwierdzeń zbiórki i trzy potwierdzenia kamicowe). Wynik: **11 z 72 sekwencji** z błędem (trzy serie: 7/24, 3/24, 1/24), w różnych polach — także w pierwszym.
+
+### Mechanizm
+
+Zapis zdarzeń myszy (faza przechwytywania na `window`, cel, współrzędne, prostokąt pola, `scrollY`) z nieudanego przebiegu:
+
+| zdarzenie | cel | `scrollY` | prostokąt pola (y) |
+|---|---|---|---|
+| `pointerdown`, `mousedown` | `INPUT#collectionFinalVoidIncluded` | 2997 | 655 |
+| (przewijanie trwa) | | 2995 → 2979 → 2964 | |
+| `mouseup`, `click` | `FIELDSET#dzmSet` | 2964 | 688 |
+
+Położenie pola **w dokumencie** się nie zmienia (655 + 2997 = 688 + 2964 = 3652 px) — to czyste przewinięcie, nie przeskok układu. `mouseup` trafia 33 px obok pola, przeglądarka wysyła `click` do wspólnego przodka obu celów i pole się nie przełącza. W innych przebiegach: przejazd 2997 → 3079 i `mouseup` w `LABEL.inline-checkbox-label`.
+
+Kto przewija: haki na `scrollIntoView`, `scrollTo`, `scrollBy`, `scroll`, `scrollTop` i `focus` **nie odnotowały żadnego wywołania z kodu strony**. Przejazd to przewinięcie, którym Playwright sam sprowadza cel do widoku, rozłożone na klatki przez `html,body{scroll-behavior:smooth}` — na tej stronie ustawiają to **dwa** arkusze: `style.css` i `inline_kalkulator_klirens_00.css`.
+
+Dlaczego Playwright nie ponawia: stabilność to ten sam prostokąt w dwóch kolejnych klatkach — przy zagłodzonym wątku głównym animacja potrafi w nich stać w miejscu i ruszyć dalej zaraz po `mousedown`. Przechwytywacz trafienia Playwrighta sprawdza **tylko pierwsze** zdarzenie (`pointerdown`), a to trafiło w pole — więc akcja uchodzi za wykonaną, a końcowa kontrola stanu jest błędem nienaprawialnym, bez ponowienia.
+
+**Próba przyczynowa (A/B).** Te same sekwencje z arkuszem `html,body{scroll-behavior:auto!important}` wstrzykniętym przed załadowaniem strony: **0 z 24**. Z płynnym przewijaniem: 11 z 72.
+
+### Poprawka
+
+`klirens-stage2-stage3` przechodzi na bramki z P-BRAMKI-4 (`tests/support/uklad-czekanie.mjs`) — tak jak wcześniej `klirens-stage0`:
+
+- `kliknij` dla „Korzystaj bez logowania" i `czekajNaUstabilizowanyUklad` na końcu `openCalculator`;
+- `zaznacz` zamiast `check()` — wszystkie 15 miejsc w pliku, nie tylko zgłoszony test (potwierdzenia zbiórki, kamicowe i Kt/V, `#spotSameSpecimen`, `#ktvToggle`, `#ktvTreatmentsDelivered`, `#stonePhPersistent`, `#stoneKnownCystinuria`);
+- `ustawNaMiejscu` przed jedynym `uncheck()` (`#ktvSameSession`).
+
+`ustawNaMiejscu` przewija `behavior: 'instant'`, co przerywa trwającą animację, i czeka na trzy klatki z tym samym prostokątem **i tym samym `scrollY`** — po niej Playwright nie ma już czego przewijać. W komentarzu modułu `uklad-czekanie.mjs` dopisany ten drugi objaw.
+
+**Asercje bez zmian.** Żaden `expect` nie został ruszony, dodany ani osłabiony; `check()`, `uncheck()` i `click()` nadal przechodzą pełną kontrolę „actionability" Playwrighta. **Bez zmian w produkcie**, więc bez podbicia `?v=` i `SW_VERSION`.
+
+### Walidacja
+
+Te same warunki co przy odtworzeniu (sześć workerów Playwrighta i dwa procesy zajmujące rdzenie), `--project=desktop-chromium --repeat-each=6` — cały plik, 12 testów × 6:
+
+| wariant | wynik |
+|---|---|
+| plik sprzed poprawki (kopia z `origin/audyt`) | **71/72**, jeden błąd „Clicking the checkbox did not change its state" — tym razem w teście Kt/V, nie w zgłoszonym; stąd poprawka całego pliku |
+| plik po poprawce | **72/72** |
+
+Uczciwie: przy tej częstości (1 na 72 w pełnym pliku) sam zielony przebieg niewiele dowodzi. Dowodem jest zapis zdarzeń myszy (`mouseup` obok pola po przewinięciu) i próba A/B z wyłączonym płynnym przewijaniem (11/72 → 0/24).
+
+### `docpro-dziedziczy-pokwitanie.spec.mjs` — nieodtworzony, bez zmian
+
+W tym samym zleceniu sprawdzany był niestabilny `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs` (odczyt `#tannerStage` zaraz po wczytaniu pacjenta). Na bieżącym `audyt` **nie dał się odtworzyć**: 24 z 24 przebiegów zielonych pod obciążeniem, a ślady przy 1× i 6× spowolnieniu CPU pokazują, że `applyLoadedData` wypełnia pole synchronicznie i nic go potem nie nadpisuje. Bez ustalonej przyczyny test zostaje bez zmian.
+
+### Do odnotowania, nie do naprawy tutaj
+
+1. **Etykieta pola wskazuje przycisk „i", a nie pole.** `decorateField` w `clcr_ui_workflow.js` wstawia nagłówek z przyciskiem informacji do `<label>` **bez atrybutu `for`**, przed samym polem. Etykieta bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu — teraz jest nim przycisk. Zmierzone w przeglądarce: `label.control` to `BUTTON.clcr-info-button` dla `collectionStartVoidDiscarded`, `stoneTwoCollectionsConfirmed`, `age` i `V24`; kliknięcie w nazwę pola „zbiórki" **nie zaznacza pola, tylko otwiera dymek pomocy**. W zapisie zdarzeń widać to wprost: `click` na etykiecie przekazany do `BUTTON.clcr-info-button`. To zachowanie produktu (UX, nie kliniczne) i osobna decyzja.
+2. Ten sam wzorzec — `check()` bez bramki — zostaje w `klirens-stage1-specimens.spec.mjs` (12 miejsc) i `klirens-ui-reorganization.spec.mjs` (1).
+3. Uzupełnienie punktu 1 z P-BRAMKI-4: warunek `prefers-reduced-motion` w `clcr_ui_workflow.css` dotyczy selektora `html[data-clcr-workflow-ui="1"] *`, czyli potomków `html`, a nie samego `html` — przewijanie widoku bierze `scroll-behavior` z elementu głównego, więc ta reguła płynnego przewijania okna nie wyłącza.
+
 ## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
 
 **Skąd to się wzięło.** Audyt całej funkcji postępów, zlecony przez właściciela po zamknięciu planu P-POSTEPY. Znalezisko F1 — najpoważniejsze w audycie.
