@@ -7,7 +7,7 @@ import { DOMYSLNA_BAZA, opiszPlan, sprawdzSwiezoscBazy, zaplanuj, zastosuj } fro
 const POMOC = `Użycie: npm run podbij-wersje [-- opcje]
 
   (bez opcji)     wylicza i zapisuje wersje względem ${DOMYSLNA_BAZA}
-  --sprawdz       tylko raport; kod wyjścia 1, gdy coś trzeba zmienić albo jest błąd
+  --sprawdz       tylko raport; kod wyjścia 1, gdy coś trzeba zmienić, jest błąd albo baza jest nieaktualna
   --baza=<ref>    inna gałąź bazowa (domyślnie ${DOMYSLNA_BAZA})
   --bez-sieci     nie porównuj lokalnego ${DOMYSLNA_BAZA} z serwerem (git ls-remote)
   --pomoc         ten opis
@@ -38,7 +38,9 @@ try {
   process.exit(2);
 }
 
-const przeszkody = [...plan.bledy];
+// Przeszkody poza planem: baza spoza historii gałęzi i baza starsza niż na serwerze. Obie oznaczają, że
+// numery policzone teraz mogą się zderzyć z już scalonym PR.
+const przeszkody = [];
 if (!plan.bazaWHistorii) przeszkody.push(`gałąź nie zawiera ${baza} — najpierw: git fetch origin audyt && git merge ${baza}`);
 if (!argumenty.includes('--bez-sieci')) {
   const swiezosc = sprawdzSwiezoscBazy({ baza });
@@ -49,11 +51,10 @@ if (!argumenty.includes('--bez-sieci')) {
 }
 
 console.log(opiszPlan(plan));
+for (const p of przeszkody) if (plan.bazaWHistorii || !p.startsWith('gałąź nie zawiera')) console.log(`UWAGA: ${p}`);
 
-if (sprawdz) {
-  for (const p of przeszkody) if (!plan.bledy.includes(p)) console.log(`UWAGA: ${p}`);
-  process.exit(plan.zmiany.size || plan.bledy.length ? 1 : 0);
-}
+if (sprawdz) process.exit(plan.zmiany.size || plan.bledy.length || przeszkody.length ? 1 : 0);
+przeszkody.unshift(...plan.bledy);
 if (przeszkody.length) {
   console.error(`\nNic nie zapisano:\n  ${przeszkody.join('\n  ')}`);
   process.exit(1);

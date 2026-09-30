@@ -11,29 +11,33 @@ import { czyZrodloWersji, korzen, skanujWersje, WZGLEDNY_PLIK_STANU, WZORZEC_WER
 // w pamięci z treścią tylko pierwszej (service worker trzyma wpisy ?v= jako niezmienne, P-SW rata 1).
 //
 // Ten moduł wylicza wersje WYŁĄCZNIE z dwóch rzeczy: z gałęzi bazowej (domyślnie origin/audyt) i z treści
-// plików w drzewie roboczym. Plik o treści innej niż w bazie dostaje ?v= = wersja w bazie + 1, plik
-// niezmieniony — wersję z bazy; SW_VERSION = wersja z bazy + 1, jeżeli zmienił się jakikolwiek zasób
-// z pamięci service workera (albo sam SW), inaczej wersję z bazy. Wynik nie zależy od tego, co wątek
-// wpisał wcześniej, więc konflikt w liniach wersji rozwiązuje się mechanicznie: dowolna strona konfliktu,
-// potem ponowne uruchomienie (npm run podbij-wersje). Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”.
+// plików w drzewie roboczym. Plik o treści innej niż w bazie (tokeny ?v= innych plików liczone jak w bazie)
+// dostaje ?v= o jeden większe niż najwyższe ?v= tego pliku w bazie — na stronach i w tablicach SW; plik
+// niezmieniony — wersję z bazy. Skrypt, który wstrzykuje plik z nowym ?v=, zmienia przez to treść i też
+// dostaje nowe ?v=. SW_VERSION = wersja z bazy + 1, jeżeli zmienił się jakikolwiek zasób z pamięci service
+// workera (albo sam SW), inaczej wersja z bazy. Wynik nie zależy od tego, co wątek wpisał wcześniej, więc
+// konflikt w liniach wersji rozwiązuje się mechanicznie, a potem skrypt uruchamia się ponownie
+// (npm run podbij-wersje). Procedura: docs/GITHUB_WORKFLOW.md, „Kilka wątków naraz”.
 //
 // Granice (celowo): wpisy precache obecne w bazie są nietykalne (append-only, AGENTS.md § 6) — ich brak jest
-// błędem; skrypt dopisuje i poprawia tylko wpisy dodane na tej gałęzi. Nowego pliku nie dopisuje do tablic SW
-// (wybór CORE_SHELL_URLS / OPTIONAL_ASSETS należy do autora) i nie zmienia pinów wersji w testach poza pinem
-// SW_VERSION — wypisuje je do sprawdzenia. Wersje nieliczbowe (np. edu-video-ui.css?v=20261003v4) zostają ręczne.
+// błędem; skrypt dopisuje i poprawia tylko wpisy plików znanych z bazy, dodane na tej gałęzi. Nowego pliku
+// ani nowej strony nie dopisuje do tablic SW (wybór tablicy należy do autora) i nie zmienia pinów wersji
+// w testach poza pinem SW_VERSION — zgłasza je. Wersje nieliczbowe (np. edu-video-ui.css?v=20261003v4)
+// zostają ręczne.
 
 export const DOMYSLNA_BAZA = 'origin/audyt';
 export const PLIK_SW = 'service-worker-kalorii.js';
-const LINIA_SW_VERSION = /^const SW_VERSION = '(\d+)\.(\d+)\.(\d+)';$/m;
-const WPIS_PRECACHE = /^(\s*)'\/([A-Za-z0-9_./-]+)\?v=(\d+)',[ \t]*$/;
+const LINIA_SW_VERSION = /^const SW_VERSION = '(\d+)\.(\d+)\.(\d+)';\r?$/m;
+// Jeden wpis w linii; ostatni element tablicy nie ma przecinka, a po wpisie może stać komentarz.
+const WPIS_PRECACHE = /^(\s*)'\/([A-Za-z0-9_./-]+)\?v=(\d+)'(,?)[ \t]*(?:\/\/.*)?\r?$/;
 // Pliki z pinem SW_VERSION — ta sama lista, której pilnuje tests/unit/piny-wersji.test.mjs. Jawna, bo tekst
 // „const SW_VERSION = '…'” występuje w testach także jako treść syntetycznych service workerów.
 export const PINY_SW = ['tests/unit/klirens-ui-model.test.mjs'];
 const PIN_SW = /(const SW_VERSION = ')(\d+\.\d+\.\d+)(')/g;
 const SCIEZKA_W_SW = /'\/([A-Za-z0-9_./-]+?)(?:\?[^'\s]*)?'/g;
 const TOKEN_DOWOLNY = /(['"])([A-Za-z0-9_./-]+\.(?:js|css|mjs))\?v=([A-Za-z0-9._-]+)\1/g;
-const ZNACZNIK_KONFLIKTU = /^(?:<{7}|>{7})(?: |$)/m;
-const MAKS_PRZEBIEGOW = 50;
+const ZNACZNIK_KONFLIKTU = /^(?:<{7}|>{7})(?: |\r?$)/m;
+const TEKSTOWY = /\.(?:html|js|mjs|css|json|txt|svg|xml|webmanifest)$/i;
 
 const skrot = (bufor) => crypto.createHash('sha256').update(bufor).digest('hex');
 const normalizuj = (sciezka) => sciezka.replace(/^\.?\//, '');
@@ -78,8 +82,15 @@ function czytajZRewizji(katalog, rewizja, sciezki) {
   return wynik;
 }
 
+/** Pliki z korzenia, które git śledzi albo mógłby śledzić — bez ignorowanych (makiety, ._* z macOS). */
 function plikiKorzenia(katalog) {
-  return fs.readdirSync(katalog, { withFileTypes: true }).filter((d) => d.isFile()).map((d) => d.name).sort();
+  const lista = git(katalog, ['ls-files', '-z', '--cached', '--others', '--exclude-standard']).split('\0');
+  return [...new Set(lista.filter((p) => p && !p.includes('/')))]
+    .filter((p) => {
+      const abs = path.join(katalog, p);
+      return fs.existsSync(abs) && fs.statSync(abs).isFile();
+    })
+    .sort();
 }
 
 function plikiTestow(katalog) {
@@ -110,7 +121,12 @@ function wpisyPrecache(tekst) {
   const out = [];
   tekst.split('\n').forEach((linia, nr) => {
     const m = WPIS_PRECACHE.exec(linia);
-    if (m) out.push({ nr, wciecie: m[1], plik: m[2], v: Number(m[3]), klucz: `${m[2]}?v=${m[3]}` });
+    if (m) {
+      out.push({
+        nr, wciecie: m[1], plik: m[2], v: Number(m[3]), klucz: `${m[2]}?v=${m[3]}`,
+        przecinek: m[4] === ',', cr: linia.endsWith('\r') ? '\r' : '',
+      });
+    }
   });
   return out;
 }
@@ -157,6 +173,29 @@ export function sprawdzSwiezoscBazy({ katalog = korzen, baza = DOMYSLNA_BAZA } =
   return { sprawdzono: true, aktualna: zdalnie === lokalnie, lokalnie, zdalnie };
 }
 
+
+function tokenyNieliczbowe(teksty) {
+  const out = new Map();
+  for (const t of teksty) {
+    if (!t) continue;
+    for (const m of t.toString('utf8').matchAll(TOKEN_DOWOLNY)) {
+      if (/^\d+$/.test(m[3])) continue;
+      const p = normalizuj(m[2]);
+      if (!out.has(p)) out.set(p, new Set());
+      out.get(p).add(m[3]);
+    }
+  }
+  return out;
+}
+
+/** Ustawia tokeny ?v= plików, dla których wersjaDla(plik) zwraca liczbę; pozostałe zostawia. */
+function ustawTokeny(tekst, wersjaDla) {
+  return tekst.replace(new RegExp(WZORZEC_WERSJI.source, 'g'), (cale, cudzyslow, sciezka, v) => {
+    const w = wersjaDla(normalizuj(sciezka));
+    return w === undefined || Number(v) === w ? cale : `${cudzyslow}${sciezka}?v=${w}${cudzyslow}`;
+  });
+}
+
 /**
  * Wylicza wszystkie zmiany bez zapisu. Rzuca błąd, gdy nie da się liczyć (brak bazy, znaczniki konfliktu,
  * zły format SW). Problemy, które wymagają ręcznej decyzji, trafiają do `bledy` i `ostrzezenia`.
@@ -164,8 +203,19 @@ export function sprawdzSwiezoscBazy({ katalog = korzen, baza = DOMYSLNA_BAZA } =
 export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   const rewizja = gitProbuj(katalog, ['rev-parse', '--verify', '--quiet', `${baza}^{commit}`]);
   if (!rewizja) throw new Error(`nie ma rewizji bazowej ${baza} — najpierw: git fetch origin audyt`);
+  // Skrypt porównuje bajty drzewa roboczego z blobami bazy; konwersja końców linii by to zafałszowała.
+  if (gitProbuj(katalog, ['config', '--get', 'core.autocrlf']) === 'true'
+    || !git(katalog, ['check-attr', 'text', 'eol', 'filter', '--', PLIK_SW]).split('\n').every((l) => l.endsWith(': unspecified'))) {
+    throw new Error('ta kopia konwertuje końce linii (core.autocrlf=true albo atrybuty text/eol/filter) — ' +
+      'skrypt porównuje bajty z bazą i nie policzy tego wiarygodnie; ustaw: git config core.autocrlf false');
+  }
+  const nierozwiazane = [...new Set(git(katalog, ['diff', '--name-only', '--diff-filter=U']).split('\n').filter(Boolean))]
+    .filter((p) => p !== WZGLEDNY_PLIK_STANU);
+  if (nierozwiazane.length) {
+    throw new Error(`scalanie ma nierozwiązane pliki — rozwiąż je i oznacz (git add), potem uruchom ponownie:\n  ${nierozwiazane.join('\n  ')}`);
+  }
 
-  // --- drzewo robocze (treści w pamięci; skrypt zmienia je dopiero w zastosuj()) ---
+  // --- drzewo robocze (treści w pamięci; pliki zmienia dopiero zastosuj()) ---
   const oryginaly = new Map();
   const tresci = new Map();
   const czytaj = (p) => {
@@ -181,40 +231,35 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
     czytaj(p);
     tresci.set(p, Buffer.from(tekst, 'utf8'));
   };
+  const istniejeTeraz = (p) => czytaj(p) !== null;
 
   const korzenTeraz = plikiKorzenia(katalog);
   const zrodlaTeraz = korzenTeraz.filter(czyZrodloWersji);
   // Tokeny ?v= przepisujemy w każdej stronie i każdym skrypcie z korzenia — także w vilda_smoke_tests.js
   // (EXPECTED_BROWSER_SCRIPTS musi mówić to samo co index.html, P-PINY-WERSJI). Service worker osobno.
   const doPrzepisania = korzenTeraz.filter((f) => (f.endsWith('.html') || f.endsWith('.js')) && f !== PLIK_SW);
-  const pinyTestow = PINY_SW.filter((p) => czytaj(p) !== null);
-
-  const zKonfliktem = [...doPrzepisania, PLIK_SW, ...pinyTestow].filter((p) => {
-    const buf = czytaj(p);
-    return buf && ZNACZNIK_KONFLIKTU.test(buf.toString('utf8'));
-  });
-  if (zKonfliktem.length) {
-    throw new Error(
-      `pliki mają nierozwiązane znaczniki konfliktu — rozwiąż je najpierw (w liniach wersji dowolna strona, ` +
-      `w tablicach precache strona ${baza}), potem uruchom ponownie:\n  ${zKonfliktem.join('\n  ')}`,
-    );
-  }
-  for (const p of doPrzepisania) {
-    const buf = czytaj(p);
-    if (!Buffer.from(buf.toString('utf8'), 'utf8').equals(buf)) throw new Error(`${p} nie jest poprawnym UTF-8 — skrypt go nie przepisze`);
-  }
+  const doPrzepisaniaZbior = new Set(doPrzepisania);
+  const pinyTestow = PINY_SW.filter(istniejeTeraz);
 
   // --- baza ---
   const drzewoBazy = new Set(git(katalog, ['ls-tree', '-r', '-z', '--name-only', rewizja]).split('\0').filter(Boolean));
   const zrodlaBazy = [...drzewoBazy].filter((p) => !p.includes('/') && czyZrodloWersji(p)).sort();
   const odczyt1 = czytajZRewizji(katalog, rewizja, [...zrodlaBazy, PLIK_SW]);
   const wersjeBazy = skanujWersje(zrodlaBazy, (p) => odczyt1.get(p), (p) => drzewoBazy.has(p));
+  const nieliczboweBazy = tokenyNieliczbowe(zrodlaBazy.map((p) => odczyt1.get(p)));
   const swBazy = odczyt1.get(PLIK_SW)?.toString('utf8');
   if (!swBazy) throw new Error(`w ${baza} nie ma ${PLIK_SW}`);
   const wersjaSWBazy = wersjaSW(swBazy, baza);
+  const wpisyBazy = wpisyPrecache(swBazy);
+  const liczBazy = new Map();
+  const maksWSWBazy = new Map();
+  for (const w of wpisyBazy) {
+    liczBazy.set(w.klucz, (liczBazy.get(w.klucz) || 0) + 1);
+    maksWSWBazy.set(w.plik, Math.max(maksWSWBazy.get(w.plik) || 0, w.v));
+  }
 
-  const istniejeTeraz = (p) => czytaj(p) !== null;
   const wersjePrzed = skanujWersje(zrodlaTeraz, czytaj, istniejeTeraz);
+  const nieliczboweTeraz = tokenyNieliczbowe(zrodlaTeraz.map(czytaj));
   const swTeraz = czytaj(PLIK_SW)?.toString('utf8');
   if (!swTeraz) throw new Error(`w drzewie roboczym nie ma ${PLIK_SW}`);
   const wersjaSWPrzed = wersjaSW(swTeraz, 'drzewo robocze');
@@ -225,54 +270,97 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
     ...korzenTeraz.filter((p) => p.endsWith('.html')),
   ]);
   zasobyPamieci.delete(PLIK_SW);
-  const potrzebneZBazy = [...new Set([...wersjeBazy.keys(), ...wersjePrzed.keys(), ...zasobyPamieci])].filter((p) => drzewoBazy.has(p));
+
+  // --- znaczniki konfliktu we wszystkim, co skrypt przepisuje albo porównuje z bazą (stan wersji skrypt
+  // przepisuje w całości, więc tam znaczniki nie przeszkadzają) ---
+  const sprawdzane = new Set([
+    ...doPrzepisania, PLIK_SW, ...pinyTestow, ...wersjePrzed.keys(), ...nieliczboweTeraz.keys(),
+    ...[...zasobyPamieci].filter((p) => TEKSTOWY.test(p)),
+  ]);
+  const zKonfliktem = [...sprawdzane].filter((p) => {
+    const buf = istniejeTeraz(p) ? czytaj(p) : null;
+    return buf && ZNACZNIK_KONFLIKTU.test(buf.toString('utf8'));
+  }).sort();
+  if (zKonfliktem.length) {
+    throw new Error(
+      'pliki mają nierozwiązane znaczniki konfliktu — rozwiąż je najpierw (tabela w docs/GITHUB_WORKFLOW.md, ' +
+      `„Kilka wątków naraz”), potem uruchom ponownie:\n  ${zKonfliktem.join('\n  ')}`,
+    );
+  }
+  for (const p of doPrzepisania) {
+    const buf = czytaj(p);
+    if (!Buffer.from(buf.toString('utf8'), 'utf8').equals(buf)) throw new Error(`${p} nie jest poprawnym UTF-8 — skrypt go nie przepisze`);
+  }
+
+  const potrzebneZBazy = [...new Set([...wersjeBazy.keys(), ...wersjePrzed.keys(), ...nieliczboweTeraz.keys(), ...zasobyPamieci])]
+    .filter((p) => drzewoBazy.has(p));
   const odczyt2 = czytajZRewizji(katalog, rewizja, potrzebneZBazy);
   const skrotBazy = (p) => {
     const buf = odczyt2.get(p);
     return buf ? skrot(buf) : null;
   };
 
-  // --- punkt stały: przepisanie tokenu zmienia treść skryptu, który go wstrzykuje (vilda_chrome.js →
-  // vilda_auth_ui.css), więc ten skrypt też musi dostać nowe ?v= — aż nic się nie zmienia. ---
-  let cele;
-  let wersjePo;
-  for (let przebieg = 0; ; przebieg++) {
-    if (przebieg >= MAKS_PRZEBIEGOW) throw new Error('wersje nie zbiegają się — zgłoś to jako błąd skryptu');
-    wersjePo = skanujWersje(zrodlaTeraz, czytaj, istniejeTeraz);
-    cele = new Map();
-    for (const plik of wersjePo.keys()) {
-      const vBazy = wersjeBazy.get(plik);
-      if (vBazy === undefined) continue; // nowy plik: wersja należy do autora
-      const zmieniony = skrot(czytaj(plik)) !== skrotBazy(plik);
-      cele.set(plik, { vBazy, cel: zmieniony ? vBazy + 1 : vBazy, zmieniony });
+  // --- wersje: najmniejszy punkt stały ---
+  // Plik zarządzany = ładowany z liczbowym ?v= i teraz, i w bazie. Zmieniony „sam z siebie”: treść różna od
+  // bazy po ustawieniu tokenów plików zarządzanych na wersje z bazy — dzięki temu wynik nie zależy od numerów
+  // wpisanych wcześniej (także przy skryptach, które wstrzykują się nawzajem). Potem propagacja: skrypt, który
+  // wstrzykuje plik zmieniony, dostaje nowy token, więc też się zmienia.
+  const zarzadzane = [...wersjePrzed.keys()].filter((p) => wersjeBazy.has(p)).sort();
+  const zarzadzaneZbior = new Set(zarzadzane);
+  const wersjaBazyDla = (p) => (zarzadzaneZbior.has(p) ? wersjeBazy.get(p) : undefined);
+  const zmienioneSame = new Set();
+  const odwolania = new Map();
+  for (const p of zarzadzane) {
+    const buf = czytaj(p);
+    const tekstowy = doPrzepisaniaZbior.has(p);
+    const znormalizowana = tekstowy ? Buffer.from(ustawTokeny(buf.toString('utf8'), wersjaBazyDla), 'utf8') : buf;
+    if (skrot(znormalizowana) !== skrotBazy(p)) zmienioneSame.add(p);
+    if (tekstowy) {
+      const cele = [...buf.toString('utf8').matchAll(new RegExp(WZORZEC_WERSJI.source, 'g'))]
+        .map((m) => normalizuj(m[2]))
+        .filter((q) => q !== p && zarzadzaneZbior.has(q));
+      if (cele.length) odwolania.set(p, new Set(cele));
     }
-    let zmiana = false;
-    for (const f of doPrzepisania) {
-      const stara = czytaj(f).toString('utf8');
-      const nowa = stara.replace(new RegExp(WZORZEC_WERSJI.source, 'g'), (cale, cudzyslow, sciezka, v) => {
-        // Każdy token pliku dostaje cel — także niższy niż w bazie: tak wygląda konflikt rozwiązany stroną wątku
-        // dla pliku podbitego tylko w bazie. Jeden plik ma jedną wersję w całym korzeniu (P-PINY-WERSJI).
-        const c = cele.get(normalizuj(sciezka));
-        if (!c || Number(v) === c.cel) return cale;
-        return `${cudzyslow}${sciezka}?v=${c.cel}${cudzyslow}`;
-      });
-      if (nowa !== stara) {
-        ustaw(f, nowa);
+  }
+  const zmienione = new Set(zmienioneSame);
+  for (let zmiana = true; zmiana;) {
+    zmiana = false;
+    for (const [p, cele] of odwolania) {
+      if (!zmienione.has(p) && [...cele].some((q) => zmienione.has(q))) {
+        zmienione.add(p);
         zmiana = true;
       }
     }
-    if (!zmiana) break;
   }
+  const cele = new Map();
+  for (const p of zarzadzane) {
+    const vBazy = wersjeBazy.get(p);
+    const zmieniony = zmienione.has(p);
+    // Najwyższe ?v= w bazie liczy też tablice SW: klucz ?v= z precache bazy klient może już mieć w pamięci.
+    const najwyzsza = Math.max(vBazy, maksWSWBazy.get(p) || 0);
+    cele.set(p, {
+      vBazy, cel: zmieniony ? najwyzsza + 1 : vBazy, zmieniony,
+      przezWstrzykniecie: zmieniony && !zmienioneSame.has(p), zHistoriiSW: zmieniony && najwyzsza > vBazy ? najwyzsza : null,
+    });
+  }
+  for (const f of doPrzepisania) {
+    const stara = czytaj(f).toString('utf8');
+    const nowa = ustawTokeny(stara, (p) => cele.get(p)?.cel);
+    if (nowa !== stara) ustaw(f, nowa);
+  }
+  for (const [p, c] of cele) {
+    if ((skrot(czytaj(p)) !== skrotBazy(p)) !== c.zmieniony) throw new Error(`niespójna wersja ${p} — zgłoś to jako błąd skryptu`);
+  }
+  const wersjePo = skanujWersje(zrodlaTeraz, czytaj, istniejeTeraz);
 
   const bledy = [];
   const ostrzezenia = [];
 
   // --- wpisy precache ---
-  const wpisyBazy = new Map();
-  for (const w of wpisyPrecache(swBazy)) wpisyBazy.set(w.klucz, (wpisyBazy.get(w.klucz) || 0) + 1);
+  const wpisyTeraz = wpisyPrecache(swTeraz);
   const liczTeraz = new Map();
-  for (const w of wpisyPrecache(swTeraz)) liczTeraz.set(w.klucz, (liczTeraz.get(w.klucz) || 0) + 1);
-  for (const [klucz, ile] of wpisyBazy) {
+  for (const w of wpisyTeraz) liczTeraz.set(w.klucz, (liczTeraz.get(w.klucz) || 0) + 1);
+  for (const [klucz, ile] of liczBazy) {
     if ((liczTeraz.get(klucz) || 0) < ile) {
       bledy.push(`usunięto historyczny wpis precache '/${klucz}' obecny w ${baza} (append-only, AGENTS.md § 6) — przywróć go`);
     }
@@ -280,14 +368,23 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
 
   const linie = swTeraz.split('\n');
   const doUsuniecia = new Set();
+  const zamienione = new Map(); // numer linii → nowa treść (przecinek po dawnym ostatnim elemencie)
   const doWstawienia = new Map(); // numer linii → linie wstawiane PO niej
   const dodane = [];
   const usuniete = [];
-  const wpisyTeraz = wpisyPrecache(swTeraz);
-  for (const [plik, c] of cele) {
+  // Korekta obejmuje pliki ładowane teraz i pliki znane z bazy, którym ta gałąź dopisała wpis (np. plik,
+  // którego strony już nie ładują). Wpisy nowych plików należą do autora.
+  const doKorekty = new Set([
+    ...cele.keys(),
+    ...wpisyTeraz.filter((w) => wersjeBazy.has(w.plik) && !liczBazy.has(w.klucz)).map((w) => w.plik),
+  ]);
+  for (const plik of [...doKorekty].sort()) {
+    const c = cele.get(plik);
+    const kluczCelu = c ? `${plik}?v=${c.cel}` : null;
+    // Wpis bieżącej wersji jest dozwolony także dla pliku bez zmian — tak dopisuje się brakujący wpis
+    // (P-SW-LAB-PIN: lab_pin_result.js?v=4).
+    const dozwolone = (klucz) => (liczBazy.get(klucz) || 0) + (klucz === kluczCelu && !liczBazy.has(klucz) ? 1 : 0);
     const wlasne = wpisyTeraz.filter((w) => w.plik === plik);
-    const kluczCelu = `${plik}?v=${c.cel}`;
-    const dozwolone = (klucz) => (wpisyBazy.get(klucz) || 0) + (klucz === kluczCelu && c.cel > c.vBazy && !wpisyBazy.has(klucz) ? 1 : 0);
     const widziane = new Map();
     for (const w of wlasne) {
       const ile = (widziane.get(w.klucz) || 0) + 1;
@@ -297,55 +394,71 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
         usuniete.push(`'/${w.klucz}'`);
       }
     }
-    if (c.cel > c.vBazy && !wlasne.some((w) => w.klucz === kluczCelu && !doUsuniecia.has(w.nr))) {
-      const pozostale = wlasne.filter((w) => !doUsuniecia.has(w.nr));
-      if (!pozostale.length) {
-        ostrzezenia.push(`${plik}: brak jakiegokolwiek wpisu w tablicach ${PLIK_SW} — dopisz '/${kluczCelu}' ręcznie albo uzasadnij pominięcie`);
-        continue;
-      }
-      const po = pozostale.reduce((a, b) => (b.v >= a.v ? b : a));
-      if (!doWstawienia.has(po.nr)) doWstawienia.set(po.nr, []);
-      doWstawienia.get(po.nr).push(`${po.wciecie}'/${kluczCelu}',`);
-      dodane.push(`'/${kluczCelu}' (po '/${po.klucz}')`);
+    if (!c) continue;
+    const pozostale = wlasne.filter((w) => !doUsuniecia.has(w.nr));
+    if (pozostale.some((w) => w.klucz === kluczCelu)) continue;
+    if (c.cel === c.vBazy) {
+      if (pozostale.length) ostrzezenia.push(`bieżąca wersja '/${kluczCelu}' nie ma wpisu w tablicach ${PLIK_SW} (tak było już w bazie)`);
+      continue;
     }
+    if (!pozostale.length) {
+      ostrzezenia.push(`${plik}: brak jakiegokolwiek wpisu w tablicach ${PLIK_SW} — dopisz '/${kluczCelu}' ręcznie albo uzasadnij pominięcie`);
+      continue;
+    }
+    const po = pozostale.reduce((a, b) => (b.v >= a.v ? b : a));
+    if (!doWstawienia.has(po.nr)) doWstawienia.set(po.nr, []);
+    if (po.przecinek) {
+      doWstawienia.get(po.nr).push(`${po.wciecie}'/${kluczCelu}',${po.cr}`);
+    } else {
+      zamienione.set(po.nr, (zamienione.get(po.nr) ?? linie[po.nr]).replace(`'/${po.klucz}'`, `'/${po.klucz}',`));
+      doWstawienia.get(po.nr).push(`${po.wciecie}'/${kluczCelu}'${po.cr}`);
+    }
+    dodane.push(`'/${kluczCelu}' (po '/${po.klucz}')`);
   }
   const noweLinie = [];
   linie.forEach((linia, nr) => {
-    if (!doUsuniecia.has(nr)) noweLinie.push(linia);
+    if (!doUsuniecia.has(nr)) noweLinie.push(zamienione.get(nr) ?? linia);
     if (doWstawienia.has(nr)) noweLinie.push(...doWstawienia.get(nr));
   });
   let noweSW = noweLinie.join('\n');
 
-  for (const plik of wersjePo.keys()) {
-    if (wersjeBazy.has(plik)) continue;
+  // --- pliki spoza bazy ---
+  for (const plik of [...wersjePo.keys()].filter((p) => !wersjeBazy.has(p)).sort()) {
+    const v = wersjePo.get(plik);
+    const maks = maksWSWBazy.get(plik);
+    if (maks !== undefined && v <= maks && skrot(czytaj(plik)) !== skrotBazy(plik)) {
+      bledy.push(`${plik}?v=${v}: precache bazy ma już ten plik do ?v=${maks} z inną treścią — nadaj ?v=${maks + 1} lub wyższe`);
+    }
     if (!wpisyTeraz.some((w) => w.plik === plik)) {
-      ostrzezenia.push(`nowy plik ${plik}?v=${wersjePo.get(plik)} nie ma wpisu w tablicach ${PLIK_SW} — dopisz go do CORE_SHELL_URLS albo OPTIONAL_ASSETS`);
+      ostrzezenia.push(`nowy plik ${plik}?v=${v} nie ma wpisu w tablicach ${PLIK_SW} — dopisz go do CORE_SHELL_URLS albo OPTIONAL_ASSETS`);
     }
   }
-  for (const m of new Set([...korzenTeraz.filter((f) => f.endsWith('.html') || f.endsWith('.js'))
-    .flatMap((f) => [...czytaj(f).toString('utf8').matchAll(TOKEN_DOWOLNY)])
-    .filter((t) => !/^\d+$/.test(t[3])).map((t) => normalizuj(t[2]))])) {
-    if (drzewoBazy.has(m) && istniejeTeraz(m) && skrot(czytaj(m)) !== skrotBazy(m)) {
-      ostrzezenia.push(`${m} ma nieliczbowe ?v= i zmienioną treść — podbij jego wersję ręcznie na stronach i w precache`);
+  const sciezkiNowegoSW = sciezkiSW(noweSW);
+  for (const strona of korzenTeraz.filter((p) => p.endsWith('.html') && !drzewoBazy.has(p) && !sciezkiNowegoSW.has(p))) {
+    ostrzezenia.push(`nowa strona ${strona} nie jest w tablicach ${PLIK_SW} — dopisz ją do OPTIONAL_DOCUMENTS albo uzasadnij pominięcie`);
+  }
+  for (const [plik, zestaw] of [...nieliczboweTeraz].sort(([a], [b]) => a.localeCompare(b))) {
+    if (!drzewoBazy.has(plik) || !istniejeTeraz(plik) || skrot(czytaj(plik)) === skrotBazy(plik)) continue;
+    const wBazie = nieliczboweBazy.get(plik) || new Set();
+    if (zestaw.size === wBazie.size && [...zestaw].every((v) => wBazie.has(v))) {
+      ostrzezenia.push(`${plik} ma nieliczbowe ?v= (${[...zestaw].join(', ')}) i zmienioną treść — podbij jego wersję ręcznie na stronach i w precache`);
     }
   }
 
   // --- SW_VERSION ---
-  const zarzadzane = new Set(wersjeBazy.keys());
+  const dodaneKlucze = new Set([...cele].filter(([, c]) => c.cel !== c.vBazy).map(([p, c]) => `${p}?v=${c.cel}`)
+    .filter((k) => !liczBazy.has(k)));
   const bezWersji = (tekst) => tekst.split('\n')
     .filter((l) => {
       const m = WPIS_PRECACHE.exec(l);
-      return !(m && zarzadzane.has(m[2]));
+      return !(m && dodaneKlucze.has(`${m[2]}?v=${m[3]}`));
     })
+    .map((l) => l.replace(/^(\s*'\/[A-Za-z0-9_./-]+\?v=\d+'),/, '$1'))
     .join('\n')
     .replace(LINIA_SW_VERSION, "const SW_VERSION = '#';");
   const podbite = [...cele].filter(([, c]) => c.cel !== c.vBazy).map(([plik]) => plik);
   const zmienioneZasoby = [...zasobyPamieci]
-    .filter((p) => {
-      const przed = drzewoBazy.has(p) ? skrotBazy(p) : null;
-      const po = istniejeTeraz(p) ? skrot(czytaj(p)) : null;
-      return przed !== po;
-    })
+    .filter((p) => (drzewoBazy.has(p) ? skrotBazy(p) : null) !== (istniejeTeraz(p) ? skrot(czytaj(p)) : null))
     .sort();
   const swInaczej = bezWersji(swBazy) !== bezWersji(noweSW);
   const powody = [];
@@ -354,7 +467,7 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   if (zmienioneBezPodbic.length) powody.push(`zmienione zasoby z pamięci SW: ${skrocListe(zmienioneBezPodbic)}`);
   if (swInaczej) powody.push(`zmieniony sam ${PLIK_SW}`);
   const celSW = powody.length ? [wersjaSWBazy[0], wersjaSWBazy[1], wersjaSWBazy[2] + 1] : wersjaSWBazy;
-  noweSW = noweSW.replace(LINIA_SW_VERSION, `const SW_VERSION = '${tekstWersji(celSW)}';`);
+  noweSW = noweSW.replace(LINIA_SW_VERSION, (linia) => linia.replace(/'[^']+'/, `'${tekstWersji(celSW)}'`));
   if (noweSW !== swTeraz) ustaw(PLIK_SW, noweSW);
 
   for (const p of pinyTestow) {
@@ -370,15 +483,16 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   const stanPlik = czytaj(WZGLEDNY_PLIK_STANU);
   if (!stanPlik || stanPlik.toString('utf8') !== stanTekst) ustaw(WZGLEDNY_PLIK_STANU, stanTekst);
 
-  // --- testy, które wspominają przesuwane wersje (do ręcznego przeglądu, bez zmian) ---
+  // --- piny wersji plików w testach (zgłaszane, bez zmian): każdy token podbitego pliku od wersji z bazy
+  // wzwyż, który nie jest nową wersją — niezależnie od tego, co było w drzewie przed uruchomieniem ---
   const testyDoSprawdzenia = [];
-  const przesuniete = new Map([...cele].filter(([plik, c]) => c.cel !== wersjePrzed.get(plik)));
-  if (przesuniete.size) {
+  const podbiteCele = new Map([...cele].filter(([, c]) => c.cel !== c.vBazy));
+  if (podbiteCele.size) {
     for (const p of plikiTestow(katalog)) {
       czytaj(p).toString('utf8').split('\n').forEach((linia, i) => {
         for (const m of linia.matchAll(new RegExp(WZORZEC_WERSJI.source, 'g'))) {
-          const c = przesuniete.get(normalizuj(m[2]));
-          if (c && Number(m[3]) >= c.vBazy && Number(m[3]) !== c.cel) testyDoSprawdzenia.push(`${p}:${i + 1}: ${normalizuj(m[2])}?v=${m[3]} (teraz ${c.cel})`);
+          const c = podbiteCele.get(normalizuj(m[2]));
+          if (c && Number(m[3]) >= c.vBazy && Number(m[3]) !== c.cel) testyDoSprawdzenia.push(`${p}:${i + 1}: ${normalizuj(m[2])}?v=${m[3]} (nowa wersja ${c.cel})`);
         }
       });
     }
@@ -391,7 +505,10 @@ export function zaplanuj({ katalog = korzen, baza = DOMYSLNA_BAZA } = {}) {
   }
 
   const pliki = [...cele]
-    .map(([plik, c]) => ({ plik, vBazy: c.vBazy, vPrzed: wersjePrzed.get(plik), cel: c.cel, zmieniony: c.zmieniony }))
+    .map(([plik, c]) => ({
+      plik, vBazy: c.vBazy, vPrzed: wersjePrzed.get(plik), cel: c.cel, zmieniony: c.zmieniony,
+      przezWstrzykniecie: c.przezWstrzykniecie, zHistoriiSW: c.zHistoriiSW,
+    }))
     .filter((w) => w.cel !== w.vBazy || w.vPrzed !== w.cel)
     .sort((a, b) => a.plik.localeCompare(b.plik));
 
@@ -421,7 +538,9 @@ export function opiszPlan(plan) {
   if (plan.pliki.length) {
     out.push('Wersje plików:');
     for (const w of plan.pliki) {
-      const opis = w.zmieniony ? 'treść zmieniona względem bazy' : 'treść jak w bazie';
+      let opis = 'treść jak w bazie';
+      if (w.zmieniony) opis = w.przezWstrzykniecie ? 'wstrzykuje plik z nowym ?v=' : 'treść zmieniona względem bazy';
+      if (w.zHistoriiSW) opis += `; precache bazy ma już ?v=${w.zHistoriiSW}`;
       const przed = w.vPrzed === w.cel ? 'bez zmian' : `było ${w.vPrzed}`;
       out.push(`  ${w.plik}: baza ${w.vBazy} → ${w.cel} (${opis}; ${przed})`);
     }
@@ -434,10 +553,7 @@ export function opiszPlan(plan) {
   else out.push('Nic do zmiany — wersje są spójne z bazą.');
   for (const b of plan.bledy) out.push(`BŁĄD: ${b}`);
   for (const o of plan.ostrzezenia) out.push(`Do decyzji: ${o}`);
-  if (plan.testyDoSprawdzenia.length) {
-    out.push('Testy wspominające przesuwane wersje (sprawdź, czy pinują bieżącą wersję):');
-    for (const t of plan.testyDoSprawdzenia) out.push(`  ${t}`);
-  }
+  for (const t of plan.testyDoSprawdzenia) out.push(`Do decyzji: pin wersji w teście — ${t}`);
   const podbite = plan.pliki.filter((w) => w.cel !== w.vBazy).map((w) => `${w.plik} ${w.cel}`);
   if (podbite.length || plan.sw.cel !== plan.sw.baza) {
     out.push(`Do opisu PR: Wersje: ${podbite.length ? `${podbite.join(', ')}; ` : ''}SW ${plan.sw.baza} → ${plan.sw.cel}.`);
