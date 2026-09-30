@@ -31,7 +31,13 @@
  * z niezgodnością — tak samo, jak bieżący kurs wyznacza dziś Karta pacjenta (`Ob_ks`).
  *
  * ZASADA: moduł niczego nie zapisuje i nie liczy żadnej wartości klinicznej. `sprawdz` oddaje
- * nową tablicę punktów (te same obiekty, zmieniona tylko lista) albo powód odmowy z komunikatem.
+ * nową tablicę punktów (te same obiekty, zmieniona tylko lista) albo powód odmowy z komunikatem
+ * (`komunikat` — pełne zdanie przy przyciskach; `krotko` — powód pod wyłączonym przyciskiem).
+ *
+ * RATA 2 (P-OTYLOSC-CYKLE rata 2): monitor rysuje tabelę z `podziel` (bloki cykli) i na bieżąco
+ * wyłącza przyciski rodzaju wizyty z powodem `krotko`. Zakończenie wpisane między dwa Włączenia
+ * starego zapisu (niezgodność `dwa-wlaczenia`) jest poprawką, nie rozcięciem cyklu — odcięta część
+ * zaczyna się od Włączenia, więc staje się zwykłym cyklem.
  */
 (function (w) {
   'use strict';
@@ -213,32 +219,43 @@
             return blad('polaczenie-cykli', 'Usunięcie tego Zakończenia połączyłoby cykl ' + n1 + ' z cyklem ' + n2 + '. ' +
               (c2 && c2.wlaczenie
                 ? 'Najpierw usuń albo zmień Włączenie cyklu ' + n2 + ' (' + opisPunktu(c2.wlaczenie) + ').'
-                : 'Najpierw usuń albo przenieś wizyty cyklu ' + n2 + '.'));
+                : 'Najpierw usuń albo przenieś wizyty cyklu ' + n2 + '.'),
+              { krotko: 'Połączyłoby cykl ' + n1 + ' z cyklem ' + n2 });
           }
           return blad('polaczenie-cykli', 'Ta zmiana połączyłaby cykl ' + n1 + ' z cyklem ' + n2 + '. Zakończenie cyklu ' + n1 +
-            ' musi zostać jego ostatnim punktem, przed wizytami cyklu ' + n2 + '.');
+            ' musi zostać jego ostatnim punktem, przed wizytami cyklu ' + n2 + '.',
+            { krotko: 'Połączyłoby cykl ' + n1 + ' z cyklem ' + n2 });
         }
       }
     }
 
-    // 2. Rozcięcie cyklu (Zakończenie wpisane przed jego późniejszymi punktami).
+    // 2. Rozcięcie cyklu (Zakończenie wpisane przed jego późniejszymi punktami). Wyjątek: odcięta
+    //    część zaczyna się od Włączenia — to rozdzielenie dwóch Włączeń starego zapisu na dwa cykle.
+    function pozycjaPo(k) { return nowy.punkty.indexOf(poKluczu[k]); }
+    var sprawdzone = {};
     for (i = 0; i < wspolne.length; i++) {
-      for (j = i + 1; j < wspolne.length; j++) {
-        a = wspolne[i];
-        b = wspolne[j];
-        if (mP[a] === mP[b] && mN[a] !== mN[b]) {
-          var nc = mP[a];
-          var czlonkowie = wspolne.filter(function (k) { return mP[k] === nc; });
-          var najmniejszy = Math.min.apply(null, czlonkowie.map(function (k) { return mN[k]; }));
-          var odciete = czlonkowie.filter(function (k) { return mN[k] > najmniejszy; }).map(function (k) { return poKluczu[k]; });
-          if (odciete.length === 1 && odciete[0].type === 'end') {
-            return blad('drugie-zakonczenie', 'Cykl ' + nc + ' ma już Zakończenie (' + opisPunktu(odciete[0]) + ').');
-          }
-          var wizyty = odciete.filter(function (p) { return p.type !== 'end'; }).length;
-          return blad('zakonczenie-nie-ostatnie', 'Po ' + (kand ? opisPunktu(kand) : 'tym punkcie') + ' w cyklu ' + nc +
-            ' są jeszcze wizyty (' + wizyty + '). Zakończenie musi być ostatnim punktem cyklu.');
-        }
+      var nc = mP[wspolne[i]];
+      if (sprawdzone[nc]) continue;
+      sprawdzone[nc] = 1;
+      var czlonkowie = wspolne.filter(function (k) { return mP[k] === nc; });
+      var numery = czlonkowie.map(function (k) { return mN[k]; });
+      var najmniejszy = Math.min.apply(null, numery);
+      if (Math.max.apply(null, numery) === najmniejszy) continue;
+      var odciete = czlonkowie.filter(function (k) { return mN[k] > najmniejszy; })
+        .sort(function (x, y) { return pozycjaPo(x) - pozycjaPo(y); })
+        .map(function (k) { return poKluczu[k]; });
+      var grupy = {};
+      odciete.forEach(function (p) { var g = mN[kl(p)]; if (!grupy[g]) grupy[g] = p; });
+      var wszystkieOdWlaczenia = Object.keys(grupy).every(function (g) { return grupy[g].type === 'start'; });
+      if (wszystkieOdWlaczenia) continue;
+      if (odciete.length === 1 && odciete[0].type === 'end') {
+        return blad('drugie-zakonczenie', 'Cykl ' + nc + ' ma już Zakończenie (' + opisPunktu(odciete[0]) + ').',
+          { krotko: 'Cykl ' + nc + ' ma już Zakończenie (' + opisPunktu(odciete[0]) + ')' });
       }
+      var wizyty = odciete.filter(function (p) { return p.type !== 'end'; }).length;
+      return blad('zakonczenie-nie-ostatnie', 'Po ' + (kand ? opisPunktu(kand) : 'tym punkcie') + ' w cyklu ' + nc +
+        ' są jeszcze wizyty (' + wizyty + '). Zakończenie musi być ostatnim punktem cyklu.',
+        { krotko: 'Po tej dacie są jeszcze wizyty cyklu ' + nc });
     }
 
     // 3. Nowa niezgodność (stare, sprzed akcji, nie blokują — D5: nie poprawiamy po cichu).
@@ -290,33 +307,40 @@
     var poprz = c.numer > 1 ? nowy.cykle[c.numer - 2] : null;
     if (n.kod === 'dwa-wlaczenia') {
       var inne = n.punkty.filter(function (p) { return p !== kand; })[0] || n.punkty[0];
-      return blad('dwa-wlaczenia', 'Cykl ' + c.numer + ' ma już Włączenie (' + opisPunktu(inne) + '). Nowy cykl rozpoczniesz po Zakończeniu cyklu ' + c.numer + '.');
+      return blad('dwa-wlaczenia', 'Cykl ' + c.numer + ' ma już Włączenie (' + opisPunktu(inne) + '). Nowy cykl rozpoczniesz po Zakończeniu cyklu ' + c.numer + '.',
+        { krotko: 'Cykl ' + c.numer + ' ma już Włączenie (' + opisPunktu(inne) + ')' });
     }
     if (n.kod === 'wlaczenie-nie-pierwsze') {
       var wl = n.punkty[0];
       var pierwszy = n.punkty[1];
       if (kand && wl === kand) {
         return blad('wlaczenie-w-trakcie', momentPunktu(kand) + ' wypada w trakcie cyklu ' + c.numer + ' — wcześniej są już jego wizyty (pierwsza: ' +
-          opisPunktu(pierwszy) + '). Włączenie musi być pierwszym punktem cyklu.');
+          opisPunktu(pierwszy) + '). Włączenie musi być pierwszym punktem cyklu.',
+          { krotko: 'Ta data wypada w trakcie cyklu ' + c.numer });
       }
       if (kand && pierwszy === kand) {
         if (poprz && poprz.zakonczenie) {
           return blad('przerwa', momentPunktu(kand) + ' wypada w przerwie między cyklem ' + poprz.numer + ' (zakończony ' + opisPunktu(poprz.zakonczenie) +
-            ') a cyklem ' + c.numer + ' (Włączenie ' + opisPunktu(wl) + '). Popraw datę wizyty.');
+            ') a cyklem ' + c.numer + ' (Włączenie ' + opisPunktu(wl) + '). Popraw datę wizyty.',
+            { krotko: 'Data w przerwie między cyklem ' + poprz.numer + ' a ' + c.numer });
         }
         return blad('przed-wlaczeniem', momentPunktu(kand) + ' jest wcześniej niż Włączenie (' + opisPunktu(wl) +
-          '). Wizyta sprzed Włączenia nie należy do cyklu leczenia — popraw datę albo zapisz ją jako Włączenie.');
+          '). Wizyta sprzed Włączenia nie należy do cyklu leczenia — popraw datę albo zapisz ją jako Włączenie.',
+          { krotko: 'Data przed Włączeniem (' + opisPunktu(wl) + ')' });
       }
-      return blad('wlaczenie-nie-pierwsze', 'Po tej zmianie Włączenie cyklu ' + c.numer + ' (' + opisPunktu(wl) + ') nie byłoby jego pierwszym punktem.');
+      return blad('wlaczenie-nie-pierwsze', 'Po tej zmianie Włączenie cyklu ' + c.numer + ' (' + opisPunktu(wl) + ') nie byłoby jego pierwszym punktem.',
+        { krotko: 'Włączenie nie byłoby pierwszym punktem cyklu' });
     }
     if (n.kod === 'zakonczenie-bez-wizyt') {
       if (poprz && poprz.zakonczenie) {
         return blad('drugie-zakonczenie', 'Cykl ' + poprz.numer + ' jest już zakończony (' + opisPunktu(poprz.zakonczenie) +
-          '). Drugie Zakończenie nie ma czego zamknąć — nowy cykl zaczyna Włączenie.');
+          '). Drugie Zakończenie nie ma czego zamknąć — nowy cykl zaczyna Włączenie.',
+          { krotko: 'Cykl ' + poprz.numer + ' jest już zakończony' });
       }
-      return blad('zakonczenie-bez-wizyt', 'Zakończenie nie może być pierwszym punktem — w tym cyklu nie ma jeszcze wizyt.');
+      return blad('zakonczenie-bez-wizyt', 'Zakończenie nie może być pierwszym punktem — w tym cyklu nie ma jeszcze wizyt.',
+        { krotko: 'W cyklu nie ma jeszcze wizyt' });
     }
-    return blad('niezgodnosc', 'Ta zmiana narusza reguły cykli leczenia.');
+    return blad('niezgodnosc', 'Ta zmiana narusza reguły cykli leczenia.', { krotko: 'Narusza reguły cykli leczenia' });
   }
 
   function sprawdz(lista, akcja, opcje) {
@@ -385,7 +409,8 @@
       if (wymagana) {
         return blad('brak-daty', kand.type === 'start'
           ? 'Punkt „Włączenie” wymaga daty wizyty — od niej liczą się okna oceny wg ChPL i granice cykli.'
-          : 'Punkt „Zakończenie” wymaga daty wizyty — wyznacza koniec cyklu leczenia.');
+          : 'Punkt „Zakończenie” wymaga daty wizyty — wyznacza koniec cyklu leczenia.',
+          { krotko: 'Wymaga daty wizyty' });
       }
     }
 

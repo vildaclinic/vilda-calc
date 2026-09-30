@@ -199,12 +199,17 @@ test.describe('P-OTYLOSC-BEZ-STARTU — monitor DocPro', () => {
         dose: '3,0 mg', dateISO, drug: 'Saxenda (liraglutyd) – s.c. 1×/dobę', substance: 'liraglutide',
       })));
       const hint = document.getElementById('obesityTherapyStartHint');
-      const txt = (id) => (document.getElementById(id) || {}).textContent || '';
+      // P-OTYLOSC-CYKLE rata 2: tabela w blokach cykli, najnowszy na górze; nagłówki i redukcje każdego cyklu osobno.
+      const cykle = [...document.querySelectorAll('#obesityTherapyTableWrap .obm-cycle')].map((b) => ({
+        naglowki: [...b.querySelectorAll('th.obm-th-red')].map((th) => th.textContent),
+        redukcje: [...b.querySelectorAll('tbody tr')].map((tr) => [...tr.children].slice(7, 9).map((td) => td.textContent)),
+      }));
       return {
         widoczna: !!hint && getComputedStyle(hint).display !== 'none',
         tekst: hint ? hint.textContent : null,
-        naglowki: [txt('obesityRedMasaTh'), txt('obesityRedBmiTh')],
-        redukcje: [...document.querySelectorAll('#obesityTherapyTbody tr')].map((tr) => [...tr.children].slice(7, 9).map((td) => td.textContent)),
+        naglowki: cykle.length ? cykle[0].naglowki : [],
+        redukcje: cykle.length ? cykle[0].redukcje : [],
+        cykle,
       };
     }, punkty);
   }
@@ -228,6 +233,11 @@ test.describe('P-OTYLOSC-BEZ-STARTU — monitor DocPro', () => {
     const m = await monitor(page, [['start', '2025-01-06', 100], ['end', '2025-06-02', 90], ['continue', '2025-11-03', 108], ['continue', '2026-04-27', 101]]);
     expect(m.widoczna).toBe(true);
     expect(m.tekst).toContain('Bieżący kurs leczenia (po punkcie „Zakończenie”) nie ma punktu „Włączenie”');
-    expect(m.naglowki, 'start jest w historii — liczby i nagłówki jak dotąd').toEqual(['Redukcja masy', 'Redukcja BMI']);
+    // P-OTYLOSC-CYKLE rata 2: bieżący cykl bez „Włączenia” liczy redukcję od SWOJEGO 1. punktu (108 kg), z podpisem;
+    // dotąd liczył od startu poprzedniego kursu (100 kg: +8,0% i +1,0%). Cykl 1 — od swojego Włączenia.
+    expect(m.naglowki).toEqual(['Redukcja masy (od 1. punktu)', 'Redukcja BMI (od 1. punktu)']);
+    expect(m.redukcje).toEqual([['—', '—'], ['−6,5%', '−6,5%']]);
+    expect(m.cykle[1].naglowki).toEqual(['Redukcja masy', 'Redukcja BMI']);
+    expect(m.cykle[1].redukcje).toEqual([['—', '—'], ['−10,0%', '−10,0%']]);
   });
 });
