@@ -104,7 +104,7 @@
     'vilda_dob_age.js?v=7',
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
-    'vilda_update_prep.js?v=92',
+    'vilda_update_prep.js?v=93',
     'vilda_growth_reference_data.js?v=1',
     'vilda_professional_module.js?v=11',
     'vilda_persist_runtime.js?v=18',
@@ -114,7 +114,7 @@
     'vilda_tw2_prediction.js?v=4',
     'vilda_puberty_profile.js?v=2',
     'vilda_ree_rownania_data.js?v=3',
-    'vilda_diet_plan_ui.js?v=42',
+    'vilda_diet_plan_ui.js?v=43',
     'vilda_bmi_journey.js?v=28',
     'vilda_estimated_intake_ui.js?v=3',
     'vilda_estimated_intake_runtime.js?v=1',
@@ -122,7 +122,7 @@
     'vilda_estimated_intake_dom_mount.js?v=1',
     'app.js?v=229',
     'vilda_smoke_tests.js?v=77',
-    'vilda_diet_recommendations.js?v=67',
+    'vilda_diet_recommendations.js?v=68',
     'nutrition_norms.js?v=49',
     'nutrition_micros.js?v=28'
   ]);
