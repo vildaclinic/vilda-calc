@@ -6729,6 +6729,60 @@ odświeżony.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna, scalenie i wdrożenie.
 
+## Wiersze punktów terapii GH na stronie głównej tylko do odczytu (P-GH-BLOKADA, SW 1.1.135, `vilda_advanced_growth.js` 74, 2026-09-30)
+
+**Skąd.** Audyt przepływu pomiarów GH (`docs/AUDYT-PRZEPLYW-GH.md`, U1) i decyzja właściciela z 2026-09-30:
+po P-GH-ZRODLO i P-GH-DOCPRO kolejna zmiana to blokada pól wierszy punktów na stronie głównej, zamiast zapisu
+zwrotnego z wiersza do punktu.
+
+**Zmierzone na `audyt` `ca9638d`** (Chromium, własne konto sejfu, dane fikcyjne; dziewczynka 14 l., wiersz ręczny
+11 l. / 123,9 cm / 35 kg, punkt GH 13 l. 1 mies. / 139,9 cm / 45 kg). Wiersz punktu w karcie „Zaawansowane
+obliczenia wzrostowe” ma lustro w tabeli „Szacowane spożycie” (wiersze sparowane, edycja przechodzi w obie strony).
+- **Karta:** zablokowany był tylko wiek. Wzrost 139,9 → 140,4 przechodził do lustra w tabeli spożycia, punkt zostawał
+  przy 139,9. Ponowny import cofał kartę do 139,9, a tabela spożycia zostawała przy 140,4.
+- **Tabela spożycia:** lustro było w pełni edytowalne, także wiek. Wzrost 141,1 wpisany w tabeli przechodził do
+  karty, punkt zostawał przy 139,9; po imporcie karta wracała, tabela nie.
+- **×** przy wierszu punktu (w karcie i w tabeli) usuwał wiersz i lustro, a punkt zostawał; wiersz wracał przy
+  następnym imporcie.
+
+**Zmiana (`vilda_advanced_growth.js`, osobny blok na końcu pliku).** W każdym wierszu z `data-gh-id` (albo
+`data-gh-sync="true"`) w `#advMeasurements` i `#intakeMeasurements`:
+- karta: wzrost, masa i wiek kostny — `disabled`, jak wiek (który blokuje już mostek `fn()`);
+- tabela spożycia: wiek, wzrost i masa — `readOnly` z klasą `vild-pole-z-kartoteki` (szare pole, jak pola z kartoteki).
+  Nie `disabled`: odtwarzanie stanu (`vilda_persist_runtime.js`) zapisuje flagi `disabled` pól wiersza i przy braku
+  bieżącego pomiaru uznaje wiersz z czterema polami `disabled` za zablokowany wiersz bieżącego pomiaru;
+- × — `disabled`, z podpowiedzią „Punkt terapii — usuń go w module »Monitorowanie leczenia hormonem wzrostu«”.
+Podpowiedź pól: „Pomiar punktu terapii — edytuj w module »Monitorowanie leczenia hormonem wzrostu«”. Blokadę nakłada
+`MutationObserver` na obu kontenerach (dodanie wiersza, zmiana `data-gh-id`/`data-gh-sync`), niezależnie od ścieżki,
+która zbudowała wiersz; wiersz, który przestaje być wierszem punktu, wraca do poprzedniego stanu (własny znacznik
+`data-gh-lock`, zapamiętany `title`). Wiersze ręczne i zablokowany wiersz bieżącego pomiaru — bez zmian.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (integralność danych) bez zmiany wzorów, progów, jednostek,
+dawkowania i formatu rekordu. Pomiar punktu terapii ma jedną wartość w karcie, w tabeli spożycia, w monitorze
+i w zapisie; lekarz poprawia go wyłącznie w monitorze na DocPro. Źródło medyczne: nie dotyczy.
+
+**Strażnik.** `tests/e2e/gh-wiersze-start-blokada.spec.mjs` (4, prawdziwa strona `index.html`):
+- A: wzrost, masa, wiek kostny i × wiersza punktu w karcie — `disabled`; wiersz ręczny edytowalny, × z tytułem
+  „Usuń ten pomiar”;
+- B: lustro w tabeli spożycia — pola `readOnly` (nie `disabled`), × `disabled`, bez `data-locked`; wiersz ręczny
+  edytowalny; wiersz bieżącego pomiaru zablokowany jak dotąd;
+- C: po F5 karta, lustro i punkt mają 139,9 cm / 45 kg, lustro nie staje się wierszem bieżącym i zostaje tylko do odczytu;
+- D: wiersz, który traci tożsamość punktu, wraca do edycji; po usunięciu punktu wiersz ręczny jest edytowalny.
+**Zmierzone czerwone** na `ca9638d`: A, B, C (3 z 4; D jest strażnikiem nadmiernej blokady, zielony po obu stronach).
+Mutant „`disabled` zamiast `readOnly` w tabeli spożycia” wykrywa B. Ryzyka z odtwarzaniem stanu (brak bieżącego
+pomiaru przy F5) nie odtworzono przez interfejs — bez bieżącego wzrostu i masy karta zaawansowana się nie otwiera.
+
+**Czego to nie zmienia.** Punkt nadal zmienia się tylko w monitorze GH (formularz edycji i usuwania). Strzałka
+z komentarzem w wierszu punktu — bez zmian (nie jest częścią pomiaru). Kolejne kroki audytu: pomiar ścieżki
+„Nowy pomiar”, pakiet „dawka podawana”, wspólne API punktów, funkcja „punkt z wiersza karty zaawansowanej”, U2.
+
+**Wersje.** `vilda_advanced_growth.js` 73 → 74 (`index.html`, `docpro.html`, `kalkulator-klirens.html`); precache
+(append-only); `SW_VERSION` 1.1.134 → 1.1.135 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
+`tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje` względem `audyt` `ca9638d`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania (edycja pomiaru punktu tylko w monitorze),
+scalenie i wdrożenie.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
