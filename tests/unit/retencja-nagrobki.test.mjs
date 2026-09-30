@@ -158,16 +158,18 @@ describe('retencja stawia nagrobki bez treści', () => {
     let wywolania = 0;
     let wTrakcie = false;
     // 1. odczyt: plan (getPatient); 2. odczyt: już pod blokadą pacjenta. Między nimi ktoś przypina wersję z planu.
+    // Przypięcie bierze tę samą blokadę pacjenta (P-BLOKADA-ZAPISU-WERSJI), więc zdąży tylko przed nią: plan dostaje
+    // odczyt sprzed przypięcia, a przypięcie kończy się, zanim retencja wejdzie pod blokadę.
     pamiec.listSnapshotsForUser = async function (...x) {
-      if (!wTrakcie) {
-        wywolania += 1;
-        if (wywolania === 2) {
-          wTrakcie = true;
-          await A.setSnapshotPinned(patientId, przypieta, true);
-          wTrakcie = false;
-        }
+      if (wTrakcie) return oryginal.apply(this, x);
+      wywolania += 1;
+      const odczyt = await oryginal.apply(this, x);
+      if (wywolania === 1) {
+        wTrakcie = true;
+        await A.setSnapshotPinned(patientId, przypieta, true);
+        wTrakcie = false;
       }
-      return oryginal.apply(this, x);
+      return odczyt;
     };
     ustawZegar(DZIEN_PRZYCIECIA);
     let wynik;
@@ -191,17 +193,11 @@ describe('retencja stawia nagrobki bez treści', () => {
     const pamiec = adaptery.get(A);
     const oryginal = pamiec.listSnapshotsForUser;
     let wywolania = 0;
-    let wTrakcie = false;
-    // Jak scalanie z nagrobkiem z innego urządzenia: ostatnia wersja dnia 1 znika bez blokady pacjenta.
+    // Jak scalanie z nagrobkiem z innego urządzenia: ostatnia wersja dnia 1 znika bez blokady pacjenta — prosto
+    // z magazynu, jak w scalaniu (deleteSnapshot bierze już blokadę pacjenta, P-BLOKADA-ZAPISU-WERSJI).
     pamiec.listSnapshotsForUser = async function (...x) {
-      if (!wTrakcie) {
-        wywolania += 1;
-        if (wywolania === 2) {
-          wTrakcie = true;
-          await A.deleteSnapshot(patientId, zostaja[0]);
-          wTrakcie = false;
-        }
-      }
+      wywolania += 1;
+      if (wywolania === 2) await pamiec.removeSnapshotForUser(x[0], zostaja[0]);
       return oryginal.apply(this, x);
     };
     ustawZegar(DZIEN_PRZYCIECIA);
@@ -224,17 +220,11 @@ describe('retencja stawia nagrobki bez treści', () => {
     const pamiec = adaptery.get(A);
     const oryginal = pamiec.listSnapshotsForUser;
     let wywolania = 0;
-    let wTrakcie = false;
-    // 1. odczyt: plan; 2.: pod blokadą; 3.: deleteSnapshot pierwszej wersji — tuż przed nim wersję usuwa „scalanie”.
+    // 1. odczyt: plan; 2.: pod blokadą; 3.: usunięcie pierwszej wersji — tuż przed nim wersję usuwa „scalanie”,
+    // prosto z magazynu, bez blokady pacjenta.
     pamiec.listSnapshotsForUser = async function (...x) {
-      if (!wTrakcie) {
-        wywolania += 1;
-        if (wywolania === 3) {
-          wTrakcie = true;
-          await A.deleteSnapshot(patientId, pierwsza);
-          wTrakcie = false;
-        }
-      }
+      wywolania += 1;
+      if (wywolania === 3) await pamiec.removeSnapshotForUser(x[0], pierwsza);
       return oryginal.apply(this, x);
     };
     ustawZegar(DZIEN_PRZYCIECIA);
@@ -441,7 +431,9 @@ describe('strażniki źródła', () => {
     expect(blok.indexOf('await ct(patientId)'), 'odczyt wszystkich wersji przed blokadą').toBeLessThan(blok.indexOf("return Ap('pat:'"));
     expect(blok.indexOf('!bezZmian(s)'), 'sprawdzenie planu pod blokadą').toBeGreaterThan(blok.indexOf("return Ap('pat:'"));
     expect(blok.indexOf('await Bkz_zmienListe(nagrobki, [])')).toBeGreaterThan(0);
-    expect(blok.indexOf('await Bkz_zmienListe(nagrobki, [])')).toBeLessThan(blok.indexOf('await Ar(patientId, id)'));
+    // Pod blokadą — wariant usuwania bez blokady (P-BLOKADA-ZAPISU-WERSJI: Web Locks nie są wielobieżne).
+    expect(blok.indexOf('await Bzw_usunWersje(patientId, id)')).toBeGreaterThan(0);
+    expect(blok.indexOf('await Bkz_zmienListe(nagrobki, [])')).toBeLessThan(blok.indexOf('await Bzw_usunWersje(patientId, id)'));
     expect(src).toContain('async function wr(t,e){return Bkz_przytnij(t,e)}');
   });
 

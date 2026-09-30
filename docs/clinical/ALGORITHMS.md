@@ -7111,6 +7111,88 @@ w trakcie sprawdzania — padają licznik wywołań zapisujących i strażnik ź
 
 **Co pozostaje decyzją właściciela.** Akceptacja reguł; scalenie i wdrożenie; narzędzie do usuwania.
 
+## Edycja i usuwanie pomiaru, poprawka, przypięcie i usunięcie wersji pod blokadą pacjenta; czekanie do 30 s jak przy „Zapisz dane” (P-BLOKADA-ZAPISU-WERSJI, SW 1.1.133, `vilda_vault.js` 192, `vilda_auth_ui.js` 469, 2026-09-30)
+
+**Decyzja właściciela (2026-09-30).** Pytanie 3 z P-ZAPISY-DWIE-KARTY (#495), czy tą samą blokadą objąć pozostałe operacje
+zapisu: „b) teraz jako osobny PR, a c) później, po analizie synchronizacji”. Czyli teraz operacje uruchamiane przez
+lekarza, a scalanie z synchronizacji — po osobnej analizie.
+
+**Usterka.** Poza `savePatient` rekord pacjenta zmieniają w miejscu: `updateMeasurementRow` i `deleteMeasurementRow`
+(korekta i usunięcie pomiaru w Karcie Pacjenta: odczyt bieżącej wersji → zmiana wiersza → zapis tej wersji),
+`updateSnapshotPayload` (korekta wersji w miejscu, dopisanie wpisu historycznego, poprawka nazwiska), `setSnapshotPinned`
+i `deleteSnapshot`. Żadna nie brała blokady pacjenta. Zmierzone na kodzie sprzed zmiany (sejf w pamięci, dane fikcyjne):
+w karcie A zapis czeka na odpowiedź na pytanie bramy „Ktoś inny zmienił ten rekord” (trzyma blokadę), a w karcie B
+lekarz poprawia wzrost pomiaru 5;6 na 150 cm — poprawka ląduje w wersji sprzed zapisu A, a bieżącą wersją zostaje zapis A
+z 123 cm; pomiar usunięty w B w tym samym oknie wraca w bieżącej wersji razem z zapisem A.
+
+**Sejf (`vilda_vault.js` 192, blok `Bzw_*`, czytelny).**
+- `updateSnapshotPayload`, `deleteSnapshot`, `updateMeasurementRow`, `deleteMeasurementRow` i `setSnapshotPinned` idą pod
+  tą samą blokadą pacjenta co zapis (`vilda-save-pat:<id>`, wspólna dla kart i ramek powłoki): wolna — rusza od razu;
+  zajęta — sygnał `onLockWait` i czekanie najwyżej `lockTimeoutMs` (domyślnie 30 s); po limicie błąd `vildaSaveBusy`
+  i nic nie zostaje zapisane. Korekta i usunięcie pomiaru czytają bieżącą wersję już pod blokadą, więc trafiają do wersji,
+  która jest bieżąca po zapisie z drugiej karty.
+- Nowy, opcjonalny ostatni argument `{ onLockWait, lockTimeoutMs }` — te same nazwy co w `savePatient`. Publiczne API
+  i format rekordu bez zmian.
+- Web Locks nie są wielobieżne (druga prośba o tę samą blokadę czeka na pierwszą), więc kod, który już ją trzyma — kosz
+  (`moveSnapshotToTrash`), retencja (`pruneSnapshotsForPatient`), korekta, usunięcie pomiaru i przypięcie — woła warianty
+  bez blokady (`Bzw_aktualizujWersje`, `Bzw_usunWersje`). Powiadomienie `onPatientSaved` idzie, jak w koszu, jeszcze pod
+  blokadą.
+- Sejf zablokowany albo brak identyfikatora pacjenta — od razu ten sam błąd co dotąd, bez czekania.
+- `restoreSnapshotAsNew` kończy się `savePatient`, więc blokadę brał już od #495; kosz i przywrócenie z kosza — od #501.
+
+**Komunikaty (te same teksty co przy „Zapisz dane”, `vilda_auth_ui.js` 469).**
+- okno szybkiego pomiaru (dodanie, „Popraw pomiar”, korekta wiersza) i ekran edycji pacjenta („Zapisz zmiany”): podczas
+  czekania pod polem błędu okna stoi „Czekam — ten pacjent jest zapisywany w innej karcie” (styl ostrzeżenia
+  `.vilda-auth-warning-banner`, bez stylu inline); po limicie pole błędu: „Nie zapisano — ten pacjent jest nadal zapisywany
+  w innej karcie. Dokończ tam zapis i kliknij „‹nazwa przycisku›” ponownie.” (np. „Zapisz korektę”, „Zapisz pomiar”,
+  „Zapisz zmiany”); okno i formularz zostają;
+- „Usuń pomiar” z osi czasu Karty Pacjenta: czeka bez komunikatu „Czekam” (menu zamyka się po potwierdzeniu, nie ma gdzie
+  go pokazać); po limicie okno: „Nie usunięto — ten pacjent jest nadal zapisywany w innej karcie. Dokończ tam zapis i usuń
+  pomiar ponownie.”
+
+**Wpływ kliniczny.** Zmiana funkcjonalna (integralność danych), bez zmian wzorów, progów, jednostek, formatu rekordu
+i synchronizacji. Korekta albo usunięcie pomiaru wykonane, gdy ten sam pacjent jest zapisywany w innej karcie, nie gubi
+się już w poprzedniej wersji.
+
+**Przypadki (dane fikcyjne: Testowy Jan, pomiary 5;0, 5;6 i 6;8; karta A zapisuje 6;2 i czeka na pytanie bramy o 6;8).**
+
+| Scenariusz w karcie B | Oczekiwany wynik | Na bazie |
+|---|---|---|
+| „Popraw pomiar” 5;6: wzrost 150 cm | okno pokazuje „Czekam…”; po odpowiedzi w A okno się zamyka; bieżąca wersja ma 5;0, 5;6 (150 cm), 6;2 i 6;8 | pada: bez czekania, bieżąca wersja ma 5;6 ze 123 cm |
+| usunięcie pomiaru 6;8 | czeka; po odpowiedzi w A bieżąca wersja ma 5;0, 5;6 i 6;2 | pada: 6;8 wraca w bieżącej wersji |
+| „Zapisz zmiany” w edycji pacjenta, a A nie odpowiada | „Czekam…”, po 30 s „Nie zapisano — … kliknij „Zapisz zmiany” ponownie.”, bez nowej wersji | pada: bez „Czekam”, po 30 s „Nie udało się zapisać zmian.” |
+| korekta, przypięcie, poprawka w miejscu i usunięcie wersji w czasie pytania bramy | czekają; licznik wersji w nagłówku równy liczbie wersji | pada (bez czekania) |
+| to samo z limitem 150 ms | błąd `vildaSaveBusy`, rekord bez zmian; po odpowiedzi w A ta sama operacja przechodzi | pada |
+| kosz, retencja, korekta, usunięcie i przypięcie tej samej karty po kolei, nikt inny nie zapisuje | bez czekania i bez komunikatu „Czekam” | zielone (kontrola) |
+
+**Czego to NIE rozwiązuje.**
+- Scalania z synchronizacji (wariant c) — nadal bez blokady; osobna analiza i decyzja właściciela.
+- `updateSnapshotPayload` dostaje gotową treść od wołającego. „Popraw pomiar” bez wskazania wiersza, dopisanie wpisu
+  historycznego (pomiar starszy niż bieżący) i poprawka nazwiska budują ją z odczytu sprzed czekania, więc gdy w tym czasie
+  powstała nowsza wersja, poprawka trafia do wersji, którą wskazał wołający — jak dotąd. Blokada porządkuje sam zapis, nie
+  odczyt wołającego. Kandydat do osobnej zmiany (odczyt pod blokadą, jak w korekcie wiersza).
+- Przypięcie w historii wersji czeka bez komunikatu; po limicie gwiazdka zostaje bez zmian, a błąd trafia tylko do
+  konsoli — jak dotąd przy każdym błędzie przypięcia. „Przywróć tę wersję” po limicie: „Nie udało się przywrócić: Ten
+  pacjent jest nadal zapisywany w innej karcie.” — bez zmian. Poprawka nazwiska w tle po limicie działa tylko w tej sesji,
+  jak przy każdym błędzie zapisu.
+- Istniejące zachowanie spoza zakresu: `updateSnapshotPayload` na starszej wersji (np. przypięcie starszej wersji)
+  przepisuje nagłówek karty — nazwę na liście pacjentów — treścią tej starszej wersji. Zmierzone: po przypięciu wersji
+  „Testowy Jan” lista pokazuje „Testowy Jan”, choć bieżąca wersja to „Testowy Janusz”. Do osobnej decyzji.
+- Teksty komunikatów zależą od pytań 1 i 2 z #495 (tekst po 30 s; „inny panel” zamiast „inna karta”) — do decyzji
+  właściciela.
+
+**Walidacja.** `tests/unit/blokada-zapisu-wersji.test.mjs` (15: kolejka strony bez Web Locks i atrapa Web Locks z limitem;
+na bazie 10 czerwonych, 5 kontroli zielonych) i `tests/e2e/blokada-zapisu-wersji.spec.mjs` (3, prawdziwe Web Locks
+w dwóch kartach; na bazie wszystkie czerwone). `tests/unit/retencja-nagrobki.test.mjs`: trzy testy symulowały przypięcie
+i usunięcie wersji WEWNĄTRZ sekcji retencji pod blokadą — teraz te operacje czekają na tę blokadę, więc symulacja idzie
+tam, gdzie mogą się teraz zdarzyć: przypięcie po odczycie planu, a przed blokadą; „scalanie bez blokady” prosto
+z magazynu, jak w synchronizacji. Asercje bez zmian; strażnik źródła wskazuje `Bzw_usunWersje` zamiast `Ar`.
+
+**Wersje (nadane przez `npm run podbij-wersje` względem `audyt` 8916b1a).** `vilda_vault.js` 191 → 192 i `vilda_auth_ui.js`
+468 → 469 (strony oraz wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`), `vilda_chrome.js` 84 → 85,
+`vilda_session_bridge.js` 12 → 13, precache (append-only), `SW_VERSION` 1.1.132 → 1.1.133 (+ pin; 1.1.132 wydał P-OTYLOSC-CYKLE rata 2, #508), fixture
+wersji.
+
 ## Zapisy tego samego pacjenta z dwóch kart idą po kolei; drugi czeka najwyżej 30 s (P-ZAPISY-DWIE-KARTY, SW 1.1.123, `vilda_vault.js` 189, `vilda_data_import_export.js` 93, 2026-09-30)
 
 **Usterka.** `savePatient()` czyta głowę rekordu, na jej podstawie decyduje — brama P14 pyta „Ktoś inny zmienił ten
@@ -7152,7 +7234,9 @@ następnym zapisie), wpisów synchronizacji, edycji wersji w miejscu (`updateSna
 idzie przez `savePatient`, więc ją bierze). Dwa równoczesne zapisy NOWEGO pacjenta z dwóch kart nadal mogą założyć duplikat
 (rozpoznanie pacjenta jest poza sekcją). Szybki pomiar w Karcie pacjenta czeka tak samo, ale bez komunikatu „Czekam”.
 Tekst okna bramy („na innym urządzeniu albo przez synchronizację”) przy zmianie z innej karty tej samej przeglądarki
-jest nieprecyzyjny — kandydat do zmiany tekstu (decyzja właściciela).
+jest nieprecyzyjny — kandydat do zmiany tekstu (decyzja właściciela). *(Aktualizacja 2026-09-30, P-BLOKADA-ZAPISU-WERSJI: edycja
+wersji w miejscu, korekta i usunięcie pomiaru, przypięcie i usunięcie wersji biorą teraz tę samą blokadę — osobny wpis;
+`restoreSnapshotAsNew` brał ją już tutaj, bo kończy się `savePatient`.)*
 
 **Walidacja.** `tests/unit/zapisy-dwie-karty.test.mjs` (7: kolejka strony bez Web Locks i blokada z limitem na atrapie
 Web Locks; na bazie 5 czerwonych, 2 kontrole zielone) i `tests/e2e/zapisy-dwie-karty.spec.mjs` (2, prawdziwe Web Locks
