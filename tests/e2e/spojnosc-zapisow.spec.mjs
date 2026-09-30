@@ -45,17 +45,19 @@ async function zasiej(page) {
   return page.evaluate(async () => {
     const v = window.VildaVault;
     const krok = () => new Promise((r) => { const t = Date.now(); const f = () => (Date.now() > t + 1 ? r() : setTimeout(f, 1)); f(); });
-    const osoba = (lastName, firstName, dobISO, sex, height, weight, name) => ({
-      name: name || `${lastName} ${firstName}`,
-      user: { lastName, firstName, dobISO, sex, height, weight },
+    // Wiek jest w każdym zapisie aplikacji (bez niego „Zapisz” odmawia) — P-KOSZ-ZAPISOW porównuje po nim pomiary.
+    const osoba = (lastName, firstName, dobISO, sex, height, weight, age, ageMonths) => ({
+      name: `${lastName} ${firstName}`,
+      user: { lastName, firstName, dobISO, sex, height, weight, age, ageMonths },
     });
     const zapisz = async (p, o = {}) => { await krok(); return v.savePatient(p, { dedup: false, ...o }); };
-    const a = await zapisz(osoba('Innyrecz', 'Adam', '2016-03-12', 'M', 120, 22));
-    await zapisz(osoba('Innyrecz', 'Adam', '2016-03-12', 'M', 121, 22.5), { patientId: a.patientId });
-    const b = await zapisz(osoba('Probna', 'Alicja', '2012-08-05', 'F', 148, 50));
-    await zapisz(osoba('Probna', 'Alicja', '2012-08-05', 'F', 149.2, 51.4), { patientId: a.patientId });
-    const c = await zapisz(osoba('Testowy', 'Jan', '2019-11-21', 'M', 115.9, 20.1));
-    await zapisz(osoba('Testowy', 'Jan Piotr', '2019-11-21', 'M', 118.4, 21), { patientId: c.patientId });
+    const a = await zapisz(osoba('Innyrecz', 'Adam', '2016-03-12', 'M', 120, 22, 10, 6));
+    await zapisz(osoba('Innyrecz', 'Adam', '2016-03-12', 'M', 121, 22.5, 10, 6), { patientId: a.patientId });
+    // Alicja ma ten pomiar we własnej karcie; pomylony zapis z DocPro wpisał go też do karty Adama.
+    const b = await zapisz(osoba('Probna', 'Alicja', '2012-08-05', 'F', 149.2, 51.4, 14, 1));
+    await zapisz(osoba('Probna', 'Alicja', '2012-08-05', 'F', 149.2, 51.4, 14, 1), { patientId: a.patientId });
+    const c = await zapisz(osoba('Testowy', 'Jan', '2019-11-21', 'M', 115.9, 20.1, 6, 10));
+    await zapisz(osoba('Testowy', 'Jan Piotr', '2019-11-21', 'M', 118.4, 21, 6, 10), { patientId: c.patientId });
     return { a: a.patientId, b: b.patientId, c: c.patientId };
   });
 }
@@ -116,7 +118,9 @@ test.describe('P-SPOJNOSC-ZAPISOW — sprawdzenie spójności zapisów', () => {
     await expect(adam.locator('tbody tr')).toHaveCount(3);
     await expect(adam.locator('.settings-spojnosc-dowod'))
       .toHaveText(/^Zapis z .+ ma nazwisko, datę urodzenia i płeć innej osoby\. „Probna Alicja” \(ur\. 05\.08\.2012\) ma w sejfie własną kartę\.$/);
-    await expect(adam.getByRole('button')).toHaveText(['Otwórz historię wersji', 'Otwórz kartę: Probna Alicja']);
+    // P-KOSZ-ZAPISOW: pomiar z pomylonego zapisu (149,2 cm · 51,4 kg) jest też w karcie Alicji — usunięcie dozwolone.
+    await expect(adam.locator('.settings-spojnosc-stan--ok')).toHaveText('Pomiary z tego zapisu są też w karcie „Probna Alicja” — usunięcie niczego nie skasuje.');
+    await expect(adam.getByRole('button')).toHaveText(['Usuń pomylony zapis…', 'Otwórz historię wersji', 'Otwórz kartę: Probna Alicja']);
 
     const jan = karty.nth(1);
     await expect(jan.locator('h4')).toHaveText('Karta: Testowy Jan');
@@ -124,7 +128,7 @@ test.describe('P-SPOJNOSC-ZAPISOW — sprawdzenie spójności zapisów', () => {
     await expect(jan.locator('tr.settings-spojnosc-wiersz--pisownia td').nth(1)).toHaveText('Testowy Jan Piotr');
     await expect(jan.getByRole('button')).toHaveText(['Otwórz historię wersji']);
 
-    await expect(wynik(page).locator('aside')).toContainText('Usunięcie pomylonego zapisu nie jest jeszcze dostępne.');
+    await expect(wynik(page).locator('aside')).toContainText('Usunięty zapis trafia do kosza na 30 dni.');
     expect(await odcisk(page), 'sprawdzenie niczego w sejfie nie zmieniło').toBe(przed);
 
     // „Otwórz kartę” pokazuje tamtą kartę tylko do podglądu — bez „Wczytaj tego pacjenta”.

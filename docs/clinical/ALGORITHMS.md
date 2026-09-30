@@ -6479,6 +6479,97 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
+## Usuwanie pomylonego zapisu do kosza; nagrobki zapisów w synchronizacji (P-KOSZ-ZAPISOW, SW 1.1.128, `vilda_vault.js` 190, `vilda_kosz_zapisow.js` 1, 2026-09-30)
+
+**Decyzje właściciela (2026-09-30).** Po analizie kodu (rekomendacje do czterech punktów z P-SPOJNOSC-ZAPISOW) i makiecie
+(9 ekranów, desktop i telefon) właściciel zaakceptował całość: nagrobki tylko dla ręcznego usunięcia (retencja bez zmian),
+kosz w sejfie na 30 dni zamiast samej kopii w pliku, „Odepnij i usuń” w jednym oknie dla zapisów przypiętych, blokada
+usunięcia, gdy karta drugiej osoby nie ma pomiarów z pomylonego zapisu, blokada także wtedy, gdy ta osoba nie ma w sejfie
+własnej karty, kosz widoczny także w historii wersji karty, brak przycisku „Opróżnij kosz”.
+
+**Problem, który rozwiązuje warstwa sejfu.** `deleteSnapshot` usuwał wersję tylko na jednym urządzeniu, a scalanie
+synchronizacji (`mergeSyncPayload`) dodaje każdą wersję, której lokalnie nie ma — usunięta wersja wracała przy pierwszej
+synchronizacji (sprawdzone na prawdziwym sejfie przed zmianą). Automatyczna kopia konta nadpisuje ten sam plik także po
+usunięciu, więc nie przechowuje stanu sprzed niego.
+
+**Sejf (`vilda_vault.js` 190; blok `Bkz_*`, czytelny, z komentarzem).**
+- `moveSnapshotToTrash(patientId, snapshotId, { odepnij })` — pod tą samą blokadą co zapis pacjenta (`vilda-save-pat:<id>`).
+  Odmawia dla ostatniej wersji karty (`ostatni`), wersji nieczytelnej i przypiętej bez `odepnij` (`przypiety`). Najpierw
+  zapisuje nagrobek z treścią i sprawdza, że jest, dopiero potem usuwa wersję (`deleteSnapshot`: nagłówek karty z
+  poprzedniej wersji, zdarzenie zapisu → synchronizacja). Po usunięciu sprawdza nagrobek jeszcze raz.
+- Nagrobek `{patientId, snapshotId, deletedAtISO, savedAtISO, rev, updatedAtISO, seq, payloadCipher}` w metadanych konta
+  (`userMeta.snapshotTombstones`, jak nagrobki kluczy dostępu); każda zmiana listy pod blokadą, na świeżym odczycie.
+  Przez 30 dni niesie zaszyfrowaną treść wersji (kosz), potem treść znika, a sam nagrobek żyje 365 dni (jak nagrobek pacjenta).
+- `listTrashedSnapshots()`, `restoreTrashedSnapshot(patientId, snapshotId)` — wersja wraca na swoje miejsce (`savedAtISO`
+  bez zmian), z nową chwilą zmiany i `rev + 1`; przypięcie wraca razem z treścią; nagłówek karty z najnowszej wersji.
+- Synchronizacja: `exportSyncPayload` niesie `snapshotTombstones` (treść jawna wewnątrz ładunku szyfrowanego kluczem sync);
+  `mergeSyncPayload` pomija wersje z ładunku, które przegrywają z nagrobkiem, usuwa je lokalnie, przebudowuje nagłówki
+  dotkniętych kart i zwraca `trashedSnapshotCount`.
+- Reguła konfliktu jak u pacjentów: nagrobek wygrywa z wersją, której ostatnia zmiana (`updatedAtISO`, bez niej `savedAtISO`)
+  nie jest późniejsza niż usunięcie. Wersja zmieniona później (przypięcie, poprawka pomiaru, przywrócenie) zostaje, a nagrobek
+  znika. Nagrobek nigdy nie usuwa ostatniej wersji karty.
+- Jawny import (`importPatientFromEnvelope`, scalenie kopii konta) zdejmuje nagrobki importowanych wersji i nadaje im nową
+  chwilę zmiany — jak import zdejmuje nagrobek pacjenta.
+- Bez zmian: retencja i `deleteSnapshot` (bez nagrobka, jak dotąd); format zapisu pacjenta; kopia konta.
+
+**Interfejs (`vilda_kosz_zapisow.js` 1; `vilda_spojnosc_zapisow.js` 2; `ustawienia.css` 17).**
+- Karta „prawdopodobna pomyłka” w wyniku sprawdzenia: przy każdym zapisie „inna osoba” wstępna wskazówka (pomiary są /
+  części nie ma / osoba bez karty / zapis bez pomiarów) i „Usuń pomylony zapis…”. Samo sprawdzenie dalej niczego nie
+  zmienia (strażnik: moduł sprawdzenia woła z sejfu tylko odczyty); wszystkie zapisy do sejfu są w `vilda_kosz_zapisow.js`.
+- Okno czyta obie karty na nowo i decyduje: brak zapisu → informacja; osoba bez karty → blokada (z „Otwórz historię
+  wersji”); pomiar pomylonego zapisu, którego nie ma w żadnym zapisie karty drugiej osoby → blokada z tabelą
+  (wiek, wartości, „jest”/„brak”) i „Otwórz kartę”; inaczej potwierdzenie: co się stanie (nic nie zginie, nazwa karty po
+  usunięciu, kosz 30 dni, inne dane zapisu nie są porównywane, wpis w dzienniku), nieobowiązkowa kopia karty `.wiw`
+  pod nazwą `wagaiwzrost_pacjent_<skrót>_przed_usunieciem_<data_godzina>.wiw` (nieudana kopia = brak usunięcia; w trybie
+  „tylko chmura” pole znika). Przypięty: ostrzeżenie i „Odepnij i usuń do kosza”.
+- Po usunięciu karta wyniku zamienia się w potwierdzenie z „Cofnij” i „Otwórz kosz zapisów”.
+- „Kosz zapisów” w Ustawieniach (Kopie zapasowe pacjentów) i „Kosz tej karty” pod listą wersji w historii wersji (8 stron
+  z historią wersji; klasy historii, bez nowego CSS) — każdy wpis z „Przywróć”; „zostało N dni”, od 3 dni wyróżnione.
+- Dziennik dostępu: `snapshot.trash` („Usunięcie zapisu do kosza”), `snapshot.restore` („Przywrócenie zapisu z kosza”).
+- Okno jako nakładka `position: fixed` z `z-index: var(--z-modal)` (powłoka chowa dock, P-MODALE), pułapka fokusu, Escape,
+  powrót fokusu; na telefonie panel od dołu, przyciski na całą szerokość. Przycisk usuwania nadpisuje skórkę jak
+  `.delete-gh-pt-btn` (wpis w `tests/fixtures/skorka-nadpisania.json`).
+
+**Reguła porównania pomiarów.** Pomiar = (wiek w pełnych miesiącach, wzrost, masa): bieżąca wizyta (`user.age` lat +
+`user.ageMonths` miesięcy) i wiersze historii (`advanced`, `growthBasic`: `ageMonths`). Pomiar jest w karcie drugiej osoby,
+gdy w którymkolwiek jej zapisie jest pomiar z tym samym miesiącem i tymi samymi wartościami (tolerancja 0,05; brak wartości
+po jednej stronie = inny pomiar). Pozostałe sekcje zapisu (terapie, badania, plan) nie są porównywane — okno mówi to
+wprost, a zapis zostaje w koszu 30 dni.
+
+**Przypadki syntetyczne** (`tests/unit/kosz-zapisow.test.mjs`, prawdziwy sejf, dwa urządzenia):
+
+| Sytuacja | Wynik |
+|---|---|
+| A usuwa pomylony zapis; A scala stary ładunek B | zapis nie wraca na A |
+| B scala ładunek A | B usuwa zapis, nagłówek „Innyrecz Adam”, kosz B ma treść; „Przywróć” na B wraca na A |
+| B przypina zapis po usunięciu na A | zapis zostaje na obu urządzeniach, nagrobek znika |
+| 31 dni po usunięciu | kosz pusty, nagrobek bez treści dalej blokuje powrót; po roku nagrobek znika |
+| import pliku karty sprzed usunięcia | zapis wraca, starszy nagrobek z innego urządzenia go nie usuwa |
+| pomylony zapis 14 l. 1 mies. 150,0 cm 52,0 kg; karta Alicji ma tylko 13 l. 10 mies. | blokada, brakuje 1 pomiaru; po dopisaniu go w karcie Alicji — można usunąć |
+
+**Testy.** Jednostkowe 22 (warstwa sejfu 14, w tym brak zbędnego zapisu metadanych przy scalaniu; interfejs i strażniki 8) + zaktualizowany `spojnosc-zapisow.test.mjs`;
+e2e `tests/e2e/kosz-zapisow.spec.mjs` 7 (potwierdzenie → usunięcie → kosz → dziennik → „Cofnij”; blokada z tabelą; osoba
+bez karty; przypięty; kopia `.wiw`; kosz w historii wersji; telefon 390 px) + zaktualizowany `spojnosc-zapisow.spec.mjs`.
+Mutacje: nagrobek zawsze wygrywa → padają 2 testy konfliktu; import bez zdjęcia nagrobka → pada test importu; bez przebudowy
+nagłówka → pada test B; usuwanie ostatniej wersji → pada test „ostatni zapis”; bez pominięcia w pętli scalania → strażnik
+źródła (zachowanie chroni jeszcze drugi krok scalania).
+
+**Ograniczenia.** Urządzenie ze starszą wersją aplikacji wyśle chmurze sejf bez nagrobków; zaktualizowane urządzenie usunie
+zapis ponownie przy kolejnym scaleniu (znika po aktualizacji PWA). Urządzenie offline dłużej niż rok może wskrzesić zapis
+(ważność nagrobka jak u pacjentów). Zmiana listy nagrobków i zapisy innych pól metadanych konta nie są jedną transakcją —
+stąd zapis kosza przed usunięciem i sprawdzenie po nim. Kopia konta (`exportVaultBackup`) nie niesie kosza.
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach i wynikach. Zmiana dotyczy danych: pozwala usunąć (do kosza) wersję karty
+z danymi innej osoby — tylko po potwierdzeniu, tylko gdy pomiary tej osoby są w jej karcie, z możliwością cofnięcia przez 30 dni.
+
+**Wersje.** `vilda_vault.js` 190 (8 stron + wstrzyknięcia: `vilda_chrome.js` 83, `vilda_session_bridge.js` 11 na 22
+stronach), `vilda_version_history_ui.js` 13 i nowy `vilda_kosz_zapisow.js` 1 (8 stron z historią wersji),
+`vilda_spojnosc_zapisow.js` 2, `ustawienia.css` 17, `inline_ustawienia_04.js` 15, precache (append-only), `SW_VERSION`
+1.1.127 → 1.1.128 (+ pin), fixture wersji, fixture skórki.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie. Na później: czy retencja ma stawiać nagrobki (dziś przycinanie
+nie rozchodzi się między urządzeniami); tworzenie karty osoby bez karty z pomylonego zapisu (etap 3).
+
 ## Sprawdzenie spójności zapisów w sejfie, tylko do odczytu (P-SPOJNOSC-ZAPISOW, SW 1.1.125, `vilda_spojnosc_zapisow.js` 1, 2026-09-30)
 
 **Zlecenie i decyzje właściciela (2026-09-30).** Po P-POWLOKA-ID (#491) — osobne, tylko do odczytu sprawdzenie, czy
@@ -6554,7 +6645,8 @@ Zablokowanie sejfu w trakcie przenosi na ekran logowania; sprawdzenie się urywa
 **Przyszłe narzędzie do usuwania pomylonych zapisów (decyzja właściciela 2026-09-30, osobna zmiana).** Sejf ma
 `deleteSnapshot`, ale synchronizacja scala zapisy per identyfikator bez nagrobków zapisów, więc usunięty zapis wróciłby
 z chmury albo z innego urządzenia. Narzędzie wymaga nagrobków zapisów w synchronizacji, reguły wobec retencji i zapisów
-przypiętych, kopii przed usunięciem i własnej makiety.
+przypiętych, kopii przed usunięciem i własnej makiety. Zrobione w P-KOSZ-ZAPISOW (SW 1.1.128): usuwanie do kosza przy karcie z wynikiem, nagrobki zapisów
+w synchronizacji, kosz 30 dni.
 
 **Wpływ kliniczny.** Brak: nie zmienia wzorów, progów, wyników, danych pacjentów, zapisu ani synchronizacji. Reguły
 dotyczą spójności danych (która osoba jest w zapisie), nie interpretacji klinicznej; wskazanie „prawdopodobna pomyłka”
