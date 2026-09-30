@@ -124,8 +124,8 @@
   "sha256": "ad284b7291f9dbc0462009850e5b8ca8b7130ef9bfe0f715fd2e7c590143f690"
  },
  "inline_docpro_01.css": {
-  "v": 1,
-  "sha256": "f7da2bada857b84800e2fd6d18d0d5a7e9c521d49f2afd0be69163d5b3ad1065"
+  "v": 2,
+  "sha256": "44cf7b6738eb2e866e3a181f9687966a4cf2f76a033a14432c85e810b7ea0f94"
  },
  "inline_docpro_03.js": {
   "v": 3,
@@ -384,8 +384,8 @@
   "sha256": "5f99a80f03bccde51b898db72e4cb62e5cbdb7a880c0cb0c80cfe8656bc48936"
  },
  "obesity_therapy_monitor.js": {
-  "v": 21,
-  "sha256": "24fd7c5399f6365759b4d69cee06fd8c9355762d7a4c91ed1c1d0e95ecb2b908"
+  "v": 22,
+  "sha256": "3db63c8a3656153984f9a809b077874e42986b7375684d46ce1c72fbae3afb11"
  },
  "pdfmake.min.js": {
   "v": 1,
@@ -468,8 +468,8 @@
   "sha256": "401a9cb3d8c83dd6185f50a63a0337e260565b8c15b421c451105a4b0dea8cdb"
  },
  "vilda_auth_ui.js": {
-  "v": 466,
-  "sha256": "516021ee858107e7a3f385f5056b27f6a8b29a6c31b810871b8280b4df7e91a7"
+  "v": 467,
+  "sha256": "62b0e0c16b70e981153c29350acde6b53c2a0dd982cdc91f610a4ead79eeefe5"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -512,8 +512,8 @@
   "sha256": "6d4c92bb7827503bdaff53fe550c981ff356ec769cc0107e7dab906e9b6171ff"
  },
  "vilda_chrome.js": {
-  "v": 79,
-  "sha256": "5642912677da20a3aec391d72721c170ec9205f353fe5632522b072f8e079640"
+  "v": 80,
+  "sha256": "f3b9729011baa7e696c1d139fd66e01ecc44b05ad1578ab6f6828df860c29c54"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -816,8 +816,8 @@
   "sha256": "10902bf33b86f2fe48b86468ab5188d751fa810da777736a89bf939d17e8cbba"
  },
  "vilda_session_bridge.js": {
-  "v": 7,
-  "sha256": "1d4dd692e80c777bc9bb2813704ce00af78143afc4fcc6fe58aa1162f89a8213"
+  "v": 8,
+  "sha256": "a90ff634eb2885b9632e65ded9cc6fad0b6183643205092dfecb13f811346ee9"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
