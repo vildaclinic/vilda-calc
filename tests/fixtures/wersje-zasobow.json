@@ -60,8 +60,8 @@
   "sha256": "e4858029b2edec7d28658533f7a2ddb38dabb66d593a32781eb84747cdff347a"
  },
  "custom-fixes.js": {
-  "v": 70,
-  "sha256": "d5800474ac1017ad72a7d563b448ad537ad9e6ee6d58c0d6d2b81351dd094631"
+  "v": 71,
+  "sha256": "3eb130872b2b8588ffdf376349bf458d77c1fc0c07b33443e4f73596e2890a70"
  },
  "docpro_state_persist.js": {
   "v": 5,
@@ -528,8 +528,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_data_import_export.js": {
-  "v": 90,
-  "sha256": "e44a1c71d8c52350c841f27fc726cc83e7eb65cb308983e4859d1e967f967e83"
+  "v": 91,
+  "sha256": "e95c37e4be8b8832be8ba4e01757e73f7fabbd900e744df594ebd4d1e0767d67"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -716,8 +716,8 @@
   "sha256": "95161ccfe4b79076f38686d4a95cd72bc1ec7fbcdb50813cb64e74b530b6af6a"
  },
  "vilda_persist_runtime.js": {
-  "v": 17,
-  "sha256": "1626722e242777b49c74722420918c1899f763aa62c58a74d25e1baec3500cfe"
+  "v": 18,
+  "sha256": "6b0664b717b7177fce120075cbee7f99fd17248e35ae93f860f173cf5e08fabb"
  },
  "vilda_persistence_adapter.js": {
   "v": 27,
