@@ -2251,7 +2251,7 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 
 **Numer trzeba przenosić.** Rekord wersji jest przepisywany w ośmiu miejscach — edycja treści, synchronizacja (dwie gałęzie), import z koperty, odtworzenie kopii zapasowej (dwie gałęzie). Pominięcie choćby jednego kasowałoby numer **po cichu**, a wersja wracałaby do losowania; żaden test zachowaniowy by tego nie zauważył, dopóki nie trafiłby akurat w tę samą milisekundę. Stąd osobny strażnik spisowy.
 
-**Czego to NIE rozwiązuje** (powiedziane wprost, bo łatwo o złudzenie kompletności): dwóch **równoległych** zapisów tego samego pacjenta z dwóch kart naraz. Obie odczytałyby tę samą głowę i dostały ten sam numer — wtedy zostaje stara, losowa rozstrzygalność. Kolejność między urządzeniami i tak nie ma lokalnego sensu, a prawdziwe rozwiązanie wymagałoby transakcji.
+**Czego to NIE rozwiązuje** (powiedziane wprost, bo łatwo o złudzenie kompletności): dwóch **równoległych** zapisów tego samego pacjenta z dwóch kart naraz. Obie odczytałyby tę samą głowę i dostały ten sam numer — wtedy zostaje stara, losowa rozstrzygalność. Kolejność między urządzeniami i tak nie ma lokalnego sensu, a prawdziwe rozwiązanie wymagałoby transakcji. *(Aktualizacja 2026-09-30, P-ZAPISY-DWIE-KARTY: zapisy tego samego pacjenta z dwóch kart jednej przeglądarki idą teraz po kolei pod blokadą per pacjent — osobny wpis.)*
 
 **Zaobserwowane przy okazji, nietknięte:** edycja starszej wersji przesuwa ją na czoło listy, bo `updatedAtISO` jest kryterium wyższym niż numer. To reguła sprzed tej zmiany; zapisana tutaj, żeby nie wyglądała na skutek uboczny.
 
@@ -6359,6 +6359,111 @@ PAL karty spożycia po wczytaniu pacjenta ustępuje PAL-owi planu (wybór PAL pl
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
 
+## Zapisy tego samego pacjenta z dwóch kart idą po kolei; drugi czeka najwyżej 30 s (P-ZAPISY-DWIE-KARTY, SW 1.1.123, `vilda_vault.js` 189, `vilda_data_import_export.js` 93, 2026-09-30)
+
+**Usterka.** `savePatient()` czyta głowę rekordu, na jej podstawie decyduje — brama P14 pyta „Ktoś inny zmienił ten
+rekord”, anti-clobber dociąga pomiary, numer wersji to głowa + 1, licznik wersji to nagłówek + 1 — i dopiero potem
+pisze. Dwa zapisy tego samego pacjenta, których okna się nakładały, czytały tę samą głowę: ten sam numer wersji, licznik
+mniejszy od liczby wersji i — najgorsze — pomiar zapisany przez jeden zapis znikał z bieżącej wersji bez pytania.
+Najdłuższe okno otwierało samo pytanie bramy: głowa jest czytana przed oknem, a zapis idzie po odpowiedzi lekarza.
+
+**Jak to widział lekarz** (odtworzone na prawdziwej stronie): ten sam pacjent w kartach A i B; B dopisuje pomiar
+i zapisuje; A dopisuje inny i zapisuje — sejf słusznie pyta o pomiar z B; lekarz zostawia pytanie, w karcie B dopisuje
+kolejny pomiar i zapisuje („Zapisano (snapshot 3)”); wraca do A, „Przyjmij dane z bazy”. Bieżącą wersją zostawał zapis
+z A, policzony na głowie sprzed zapisu B: pomiar potwierdzony w B znikał z „Historii”, a dwie wersje miały ten sam numer.
+
+**Decyzja właściciela (2026-09-30): „czekaj z limitem”.** Odczyt głowy → decyzje (z pytaniem bramy) → zapis wersji
+i nagłówka to sekcja krytyczna per pacjent pod blokadą Web Locks (`vilda-save-pat:<id>`, wspólna dla kart i ramek
+powłoki tego originu):
+- blokada wolna — zapis rusza od razu, jak dotąd;
+- blokada zajęta (zapis tego pacjenta trwa w innej karcie albo panelu, np. czeka tam pytanie bramy) — pasek statusu
+  pokazuje „Czekam — ten pacjent jest zapisywany w innej karcie” i zapis czeka najwyżej 30 s; gdy blokada się zwolni,
+  czyta świeżą głowę, więc sam zapyta o to, co w tym czasie doszło, zamiast to cofnąć;
+- po 30 s — zapis kończy się komunikatem „Nie zapisano — ten pacjent jest nadal zapisywany w innej karcie. Dokończ tam
+  zapis i kliknij „Zapisz dane” ponownie.”, niczego nie zapisuje, chip pacjenta przechodzi w błąd, formularz zostaje.
+Bez Web Locks (bardzo stare przeglądarki) działa sama kolejka w obrębie strony, jak przy notatkach (K2). Poza sekcją:
+rozpoznanie pacjenta, pytanie o tożsamość i powiadomienia po zapisie. Format rekordu, synchronizacja i wzory bez zmian.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna (integralność danych), bez zmian wzorów, progów i jednostek. Pomiar potwierdzony
+w jednej karcie nie znika już z bieżącej wersji przez zapis z drugiej; kolejne wersje mają różne numery.
+
+**Przypadki (e2e na prawdziwym sejfie, dwie karty jednej przeglądarki, dane fikcyjne: Testowy Jan, pomiary 5;0 i 5;6).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie (#494) |
+|---|---|---|
+| B zapisuje 6;8 → A zapisuje 6;2 (pytanie bramy otwarte) → B dopisuje 7;8 i zapisuje → A „Przyjmij dane z bazy” | B pokazuje „Czekam…”; po odpowiedzi w A oba zapisy kończą się; „Historia” ma 112, 116 i 121 cm; numery wersji różne | pada (brak czekania; pomiar 7;8 znikał) |
+| jak wyżej, ale w A nikt nie odpowiada | po 30 s B: „Nie zapisano…”, żadnej nowej wersji, formularz B nadal ma 7;8; po odpowiedzi w A ponowny zapis B dopisuje 7;8 | pada |
+
+**Czego to NIE rozwiązuje.** Zapisu tego samego pacjenta na dwóch urządzeniach (osobne bazy — to robi brama P14 przy
+następnym zapisie), wpisów synchronizacji, edycji wersji w miejscu (`updateSnapshotPayload`), usuwania wersji,
+`restoreSnapshotAsNew` ani przenumerowania przy scalaniu duplikatów — te ścieżki nie biorą blokady (końcowy zapis scalania
+idzie przez `savePatient`, więc ją bierze). Dwa równoczesne zapisy NOWEGO pacjenta z dwóch kart nadal mogą założyć duplikat
+(rozpoznanie pacjenta jest poza sekcją). Szybki pomiar w Karcie pacjenta czeka tak samo, ale bez komunikatu „Czekam”.
+Tekst okna bramy („na innym urządzeniu albo przez synchronizację”) przy zmianie z innej karty tej samej przeglądarki
+jest nieprecyzyjny — kandydat do zmiany tekstu (decyzja właściciela).
+
+**Walidacja.** `tests/unit/zapisy-dwie-karty.test.mjs` (7: kolejka strony bez Web Locks i blokada z limitem na atrapie
+Web Locks; na bazie 5 czerwonych, 2 kontrole zielone) i `tests/e2e/zapisy-dwie-karty.spec.mjs` (2, prawdziwe Web Locks
+w dwóch kartach; na bazie oba czerwone). `npm test` i powiązane spec-e — wyniki w PR.
+
+**Wersje.** `vilda_vault.js` 188 → 189 (8 stron oraz wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`),
+`vilda_chrome.js` 80 → 81 i `vilda_session_bridge.js` 8 → 9 (wszystkie strony), `vilda_data_import_export.js` 92 → 93,
+precache (append-only), `SW_VERSION` 1.1.122 → 1.1.123 (+ pin; 1.1.120 wydał P-GH-ZRODLO #490, 1.1.121 bierze P-SESJA-OBCA #492, 1.1.122 P-CEL-WLASNY-ZAPIS #494), fixture wersji.
+
+## „Cel własny” zapisuje się w rekordzie pacjenta; nowa wizyta zaczyna się bez celu (P-CEL-WLASNY-ZAPIS, SW 1.1.122, `vilda_data_import_export.js` 92, 2026-09-30)
+
+**Zgłoszenie i decyzja właściciela (2026-09-30).** „Cel własny” (P-DIETA-CEL-WLASNY rata C i C′, pole `#customGoalKg`
+na `index.html` i `docpro.html`) żył tylko w polu formularza i w autozapisie karty przeglądarki. Zmierzone:
+
+1. Pacjentka zapisana z celem własnym i wczytana w nowej karcie („Wczytaj tego pacjenta” → „Odtwórz zapis”) wracała
+   BEZ celu: karta „Droga do normy BMI” pokazywała zwykły tekst górnej normy, a zalecenia i raport pacjenta wracały do
+   utrzymania masy.
+2. Po „Wyczyść wszystkie pola” i wczytaniu innej pacjentki (bez celu) cel poprzedniej zostawał w polu i napędzał panel
+   oraz plan NOWEJ pacjentki („Cel własny: −3,0 kg”, ≤ 1 550 kcal/dzień).
+3. „Wczytaj → Nowy pomiar” przenosił cel poprzedniej wizyty na nową.
+
+Decyzja: cel zapisuje się w rekordzie; wraca przy „Odtwórz zapis” i po F5, ale nie przy „Wczytaj → Nowy pomiar”.
+
+**Co jest (`vilda_data_import_export.js`).**
+- `collectUserData`: `plan.customGoalKg` (liczba > 0 albo `null` = bez celu) na stronie z polem celu; na stronie bez pola
+  (klirens) klucza nie ma. Precedens: P-PAL-ZAPIS (wybór lekarza w sekcji `plan`).
+- „Odtwórz zapis” (`restoreLoadedState`): cel z rekordu wraca do pola i wyboru „Cel własny”; pole dostaje zdarzenie
+  `input`, więc trafia do autozapisu formularza i wraca po F5.
+- Zwykłe wczytanie (`applyLoadedData` poza odtwarzaniem sesji: „Nowy pomiar”, skok do punktu GH, autouzupełnianie
+  nazwiska) zaczyna wizytę bez celu. Odtworzenie sesji (F5, powłoka) pola nie rusza — wraca z autozapisu jak dotąd.
+- „Wyczyść wszystkie pola” czyści pole i wybór celu; reset tożsamości przy wczytaniu usuwa pole z autozapisu formularza
+  (lista `na`), więc F5 po wczytaniu innej osoby bez „Wyczyść” nie wskrzesza cudzego celu.
+
+Liczy tylko zapisana liczba: pasmo BMI, minimum, tempo i blokadę ryzyka silnik planu (`energyCustomGoalAssess`) liczy po
+wczytaniu na nowo, więc cel, który przestał spełniać warunki (np. inny wiek albo masa), wraca jako niedostępny.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna — progi, pasma i wzory celu własnego bez zmian. Zmienia się, które liczby
+widzi lekarz: zapisany cel wraca z rekordu przy „Odtwórz zapis”; nowa wizyta i inny pacjent nie dostają cudzego celu.
+
+**Przypadki (e2e, dane fikcyjne: Celina K 35 lat, 164 cm, 66 kg, cel 62 kg; Beata K 40 lat, 164 cm, 65 kg, bez celu).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie (#492) |
+|---|---|---|
+| index: Celina z celem 62 kg → „Zapisz” → nowa karta → „Wczytaj” → „Odtwórz zapis”; zalecenia; F5 | panel „Cel własny: −4,0 kg”, pole 62, zalecenia z celem 62,0 kg; po F5 cel zostaje | pada (bez celu) |
+| index: Beata bez celu, Celina z celem → „Wyczyść” → „Wczytaj” Beatę → „Odtwórz zapis”; F5; powrót do Celiny | „Wyczyść” czyści pole i wybór; Beata bez celu (także po F5); Celina wraca z celem | pada (pole 62 po „Wyczyść”) |
+| index: Celina z celem → „Wczytaj” → „Nowy pomiar”; F5; potem „Odtwórz zapis” | nowa wizyta bez masy i bez celu, także po F5; „Odtwórz zapis” przywraca 62 | pada (cel przechodzi na nową wizytę) |
+| docpro: Beata zapisana; niezapisana Celina z celem 62 → skok z notatki do punktu GH Beaty → F5 → „Zapisz” | Beata bez celu po skoku i po F5; rekord Beaty bez `customGoalKg` | przechodzi (cel nie był zapisywany) — strażnik |
+
+Mutanty (każdy łamie co najmniej jeden scenariusz): bez zapisu w `collectUserData`; bez odtworzenia w
+`restoreLoadedState`; wczytanie przywracające cel z rekordu zamiast zaczynać bez celu; bez usuwania pola z autozapisu
+przy resecie tożsamości; bez czyszczenia pola w „Wyczyść”; bez zdarzenia `input` po „Odtwórz zapis”; bez zerowania wyboru
+celu w „Wyczyść”.
+
+**Otwarte (decyzja właściciela).** Nastolatek (rata C′): zapisuje się sama liczba celu, bez znacznika zakończenia
+wzrastania. Cel wraca zablokowany z powodem „wzrastanie”, ale zostaje w polu i w rekordzie i może się uaktywnić przy
+kolejnej wizycie po zaznaczeniu znacznika, bez świadomego ponownego ustalenia celu.
+
+**Walidacja.** `tests/e2e/cel-wlasny-zapis.spec.mjs` (4 scenariusze), mutanty jak wyżej; `npm test` i powiązane spec-e —
+wyniki w PR.
+
+**Wersje.** `vilda_data_import_export.js` 91 → 92 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
+(append-only), `SW_VERSION` 1.1.121 → 1.1.122 (+ pin; 1.1.119 wydał P-TOZSAMOSC-RAMEK #493, 1.1.120 P-GH-ZRODLO #490, 1.1.121 bierze P-SESJA-OBCA #492), fixture wersji.
+
 ## Zapisany PAL: wybór lekarza czy wartość domyślna (P-PAL-ZAPIS, SW 1.1.102, 2026-09-29)
 
 **Zgłoszenie właściciela (2026-09-29, po scaleniu P-DIETA-STAB rata 3).** Chłopiec 13 l., 76 kg, 168 cm (nadwaga, OLAF) nadal
@@ -10371,6 +10476,11 @@ podpowiedź kursywą (blokada z historii masy jako bursztynowa nota). Ten sam st
 
 **Znane ograniczenia.** Cel nie jest zapisywany w rekordzie pacjenta (żyje w stanie sesji jak PAL);
 klasyczny PDF „Droga do normy" nie ma sekcji panelu przy celu własnym (używa `distanceToNormalBMI`).
+**Aktualizacja 2026-09-30 (P-CEL-WLASNY-ZAPIS):** cel jest zapisywany w rekordzie (`plan.customGoalKg`) — opis
+w osobnym wpisie. Zdanie o klasycznym PDF było nieaktualne już w dniu zapisu: przycisk `#downloadPDF` miał atrybut
+`hidden`, a 20.09 usunięto go w #392 (`29ad54d4`), więc nasłuch tej sekcji nie jest rejestrowany na żadnej stronie.
+Żywy raport pacjenta (zalecenia dietetyczne → raport jednostronicowy, `VildaRaportPlan`, `getPdfModel`) obsługuje
+cel własny.
 
 SW 1.1.32 → **1.1.33**; `vilda_diet_plan_ui.js?v=20→21`, `vilda_bmi_journey.js?v=13→14`,
 `vilda_update_prep.js?v=87→88`, `vilda_diet_recommendations.js?v=37→38`, `vilda_raport_plan.js?v=2→3`,
