@@ -91,7 +91,7 @@ const ZD_ALARM_STAB = `Tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma �
 const ZD_ALARM_RED = `Tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma ≥ 4 cm/rok). ${OCENA}. W czasie diety redukcyjnej wzrost jest mierzony na każdej wizycie kontrolnej.`;
 const ZD_DO_OCENY = 'Tempo wzrastania wymaga oceny: 3,0 cm/rok (norma ≥ 4 cm/rok). W tym wieku zależy ono od etapu dojrzewania, dlatego wzrost dziecka jest mierzony na kolejnych wizytach kontrolnych. Jeśli tempo pozostanie poniżej 4 cm/rok, wymaga to dalszej oceny, m.in. w kierunku przyczyn hormonalnych.';
 const ZD_A_OSOBNE = 'Na każdej wizycie kontrolnej mierzone są masa ciała i wzrost dziecka; tempo wzrastania ocenia się na podstawie pomiarów wykonanych w odstępie co najmniej 6 miesięcy.';
-const ZD_A_KONTROLA = 'Na kontroli mierzony jest także wzrost — prawidłowo prowadzona dieta nie spowalnia wzrastania.';
+const ZD_A_KONTROLA = 'Na kontroli mierzony jest także wzrost — zbyt szybkie odchudzanie może spowolnić wzrastanie, dlatego tempo jest ograniczone i sprawdzane na każdej wizycie.';
 const PDF_A = ZD_A_KONTROLA; // rata G1a: plan PDF cytuje zdanie generatora (bez „mierzymy”/„dobrze”)
 const NAG_UTRZ = 'ZAPOTRZEBOWANIE ENERGETYCZNE (UTRZYMANIE MASY CIAŁA)';
 const NAG_RED = 'KALORYCZNOŚĆ DIETY I TEMPO REDUKCJI MASY CIAŁA';
@@ -208,7 +208,7 @@ test.describe('P-DIETA rata G1 — tempo wzrastania w planie diety dziecka', () 
     expect(r.kontrola).toEqual({ tygodnie: 6, pomiarWzrostu: true });
     expect(r.tempoWzrastania).toBeNull();
     expect(r.tekst).toContain('Wzrastanie nadal trwa');
-    expect(r.tekst).toMatch(/Kontrola za 6 tygodni \(ok\. [^)]+\): .*\(do 1600–1700 kcal dziennie\)\. Na kontroli mierzony jest także wzrost — prawidłowo prowadzona dieta nie spowalnia wzrastania\./);
+    expect(r.tekst).toMatch(/Kontrola za 6 tygodni \(ok\. [^)]+\): .*\(do 1600–1700 kcal dziennie\)\. Na kontroli mierzony jest także wzrost — zbyt szybkie odchudzanie może spowolnić wzrastanie, dlatego tempo jest ograniczone i sprawdzane na każdej wizycie\./);
     expect(r.tekst).not.toContain(ZD_A_OSOBNE);
     expect(r.pdf.pomiarWzrostu).toBe(PDF_A);
     expect(r.pdf.ramka).toEqual([]);

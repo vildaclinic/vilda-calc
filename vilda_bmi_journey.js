@@ -317,9 +317,12 @@
       var extra = typeof w.energyDietBulletsExtra === 'function' ? w.energyDietBulletsExtra(model.dietKey, lastEngineState) : w.DIET_BULLETS[model.dietKey].slice(2);
       var items = [((lastEngineState && lastEngineState.childObesityPlan) || (model.found && model.found.fixedDeficit)
         /* rata U: to samo zdanie, co w karcie planu — podstawa od masy docelowej (Mazur 2022), sufit tempa, deficyt wobec masy aktualnej */
-        ? (fin(model.found.bazaCeluKcal)
-            ? 'od zapotrzebowania dla masy docelowej ok.\u202F' + fmtInt(model.found.bazaCeluKcal) + '\u202Fkcal odjęto ' + fmtInt(model.found.deficytCeluKcal) + '\u202Fkcal (Mazur 2022)'
-              + (model.found.tempoSufit && fin(model.found.sufitTempaKgMies) ? ', a tempo ograniczono do ok.\u202F' + fmt(model.found.sufitTempaKgMies, 1) + '\u202Fkg/mies.' : '') + '; '
+        /* P-DIETA-AUDYT2 rata 2: przy wiążącym limicie tempa liczba wynika z zapotrzebowania przy obecnej masie − limit, nie z reguły Mazura — to samo zdanie co karta planu */
+        ? (model.found.tempoSufit && fin(model.found.sufitTempaKgMies)
+            ? 'limit tempa ok.\u202F' + fmt(model.found.sufitTempaKgMies, 1) + '\u202Fkg/mies.'
+              + (fin(model.found.bazaCeluKcal) ? ' (reguła „masa docelowa − ' + fmtInt(model.found.deficytCeluKcal) + '\u202Fkcal”, Mazur 2022, dałaby tu szybszy ubytek)' : '') + '; '
+            : fin(model.found.bazaCeluKcal)
+            ? 'od zapotrzebowania dla masy docelowej ok.\u202F' + fmtInt(model.found.bazaCeluKcal) + '\u202Fkcal odjęto ' + fmtInt(model.found.deficytCeluKcal) + '\u202Fkcal (Mazur 2022); '
             : '')
           + 'deficyt ok.\u202F' + fmtInt(model.found.deficit) + '\u202Fkcal/dzień względem zapotrzebowania przy obecnej masie ciała'
           + (fin(model.found.monthlyLossKg) ? ' (tempo ok.\u202F' + fmt(model.found.monthlyLossKg, 1) + '\u202Fkg/mies.)' : '')
@@ -460,7 +463,7 @@
       /* P-DIETA-STAB rata 1 (decyzja właściciela 2026-09-28): stabilizacja też jako górna granica dnia (silnik: maintenanceGornaKcal) */
       ? '<div class="bmi-journey-kcal"><span class="bmi-journey-kcaln">\u2264\u202F' + fmtInt(fin(model.maintenanceGornaKcal) ? model.maintenanceGornaKcal : Math.round(model.maintenanceKcal / 100) * 100)
         + '</span> <span class="bmi-journey-kcalu">kcal/dzień</span>'
-        + '<div class="bmi-journey-kcalcap">górna granica dnia — stabilizacja masy ciała, nie cel do dobicia' + (fin(model.targetWeightKg) ? ' (cel: masa docelowa ok. ' + fmt(model.targetWeightKg, 1) + '\u202Fkg, 85. centyl BMI)' : '') + '</div></div>'
+        + '<div class="bmi-journey-kcalcap">górna granica dnia — stabilizacja masy ciała, nie cel do dobicia' + (fin(model.targetWeightKg) ? ' (cel: masa docelowa ok. ' + fmt(model.targetWeightKg, 1) + '\u202Fkg, ' + (typeof w.energyCelPodpis === 'function' ? w.energyCelPodpis(lastEngineState && lastEngineState.bmiClass) : '85. centyl BMI') + ')' : '') + '</div></div>'
       : model.found && gornaGranica(model.found, ctx)
       /* rata V pkt 1 (decyzja właściciela 2026-09-23): u dziecka z planem otyłości liczba to górna granica dnia
          (silnik: gornaKcal, w dół do 50 kcal), nie cel do dobicia */

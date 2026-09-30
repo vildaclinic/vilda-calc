@@ -69,10 +69,11 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     expect(r.silnik.diety.map((x) => x.zal)).toEqual([false, true, false]);
     expect(r.energia).toEqual({ podaz: 2700, def: 379, dieta: 'moderate', baza: 2731, defCelu: 350, sufit: true });
     expect(r.kafle.slice(0, 3)).toEqual(['≤ 2 700 kcal dziennie', '−379 kcal na dobę', '−0,3 kg tygodniowo']);
-    expect(r.nota).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok. 82,1 kg (85. centyl BMI): ok. 2731 kcal/dzień przy PAL 1,4, pomniejszonego o 200–500 kcal (Mazur 2022), nie szybciej niż 1–2 kg/mies.; zapotrzebowanie przy obecnej masie ciała ok. 3079 kcal/dzień (REE wg Molnára 1995, zwalidowane u nastolatków z nadwagą i otyłością); minimum 2199 kcal/dzień (spoczynkowa przemiana materii)');
+    // P-DIETA-AUDYT2 rata 2: limit tempa wiąże → notka i punkt diety opisują faktyczne wyliczenie (zapotrzebowanie przy obecnej masie − limit), nie regułę Mazura
+    expect(r.nota).toContain('dieta liczona od zapotrzebowania przy obecnej masie ciała: ok. 3079 kcal/dzień przy PAL 1,4 (REE wg Molnára 1995, zwalidowane u nastolatków z nadwagą i otyłością), pomniejszonego tak, by ubytek nie przekraczał 1–2 kg/mies. — reguła „masa docelowa − 200–500 kcal” (Mazur 2022) dałaby tu szybszy ubytek; minimum 2199 kcal/dzień (spoczynkowa przemiana materii)');
     expect(r.nota).not.toContain('korektą');
-    expect(r.plan).toContain('od zapotrzebowania dla masy docelowej ok. 2731 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.; Mazur 2022: bezpiecznie do 1–2 kg/mies.)');
-    expect(r.journey).toContain('od zapotrzebowania dla masy docelowej ok. 2 731 kcal odjęto 350 kcal (Mazur 2022), a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
+    expect(r.plan).toContain('limit tempa ok. 1,5 kg/mies. (reguła „masa docelowa − 350 kcal”, Mazur 2022, dałaby tu szybszy ubytek); deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.; Mazur 2022: bezpiecznie do 1–2 kg/mies.)');
+    expect(r.journey).toContain('limit tempa ok. 1,5 kg/mies. (reguła „masa docelowa − 350 kcal”, Mazur 2022, dałaby tu szybszy ubytek); deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
     expect(r.journey).toMatch(/≤ ?2 ?700 kcal\/dzień ?górna granica dnia — dieta umiarkowana \(nie cel do dobicia\)/);
     expect(r.journey).toMatch(/Kontrola za 6 tygodni \(ok\. \d{1,2} [a-ząćęłńóśźż]+ \d{4}\): spodziewana masa ok\. [\d,]+ kg \(z uwzględnieniem wzrastania\)\. Jeśli będzie [\d,]+ kg lub więcej, odejmij od planu 100–200 kcal \(do 2 ?500–2 ?600 kcal\), bo realne spożycie jest wyższe, niż liczymy\./);
     expect(r.tekst).toContain('Dieta umiarkowana: nie więcej niż 2700 kcal dziennie — to górna granica dnia, nie cel do dobicia. Deficyt kaloryczny przy tej diecie wynosi około 379 kcal');
@@ -123,7 +124,7 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     expect(lekka.kcal).toBe(r.silnik.maint - 126);
     expect(lekka.mies).toBe(0.5);
     expect(r.energia.sufit).toBe(true); expect(r.energia.defCelu).toBe(200);
-    expect(r.plan).toContain(`od zapotrzebowania dla masy docelowej ok. ${r.silnik.teeT} kcal odjęto 200 kcal (Mazur 2022), a tempo ograniczono do ok. 0,5 kg/mies.`);
+    expect(r.plan).toContain('limit tempa ok. 0,5 kg/mies. (reguła „masa docelowa − 200 kcal”, Mazur 2022, dałaby tu szybszy ubytek)');
     expect(r.plan).toContain('przy nadwadze ubytek stopniowy: do 0,5–1,5 kg/mies.');
     expect(r.plan).toContain('Nadwaga u nastolatka 12–18 lat: zalecane utrzymanie masy ciała');
     expect(r.tekst).toContain('Przy nadwadze u nastolatka ubytek masy powinien być stopniowy — tempo ograniczono do ok. 0,5 kg/mies.');
@@ -134,7 +135,7 @@ test.describe('P-DIETA rata U — dieta dziecka z otyłością od masy docelowej
     await otworz(page);
     const m8 = await stan(page, { sex: 'M', y: 8, m: 0, w: 45, h: 130 });
     expect(m8.silnik.fac).toBe(1); expect(m8.silnik.reeAdj).toBe(Math.round(m8.silnik.ree)); expect(m8.dietLevel).toBe('light');
-    expect(m8.nota).toContain('dieta liczona od zapotrzebowania dla masy docelowej');
+    expect(m8.nota).toContain('dieta liczona od zapotrzebowania przy obecnej masie ciała'); // rata 2: limit tempa wiąże
     expect(m8.nota).not.toContain('korektą');
     const m11 = await stan(page, { sex: 'M', y: 11, m: 0, w: 65, h: 150 });
     const molnar11 = (50.9 * 65 + 25.3 * 150 - 50.3 * 11 + 26.9) / 4.184; // Molnár 1995, 1A

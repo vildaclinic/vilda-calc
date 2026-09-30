@@ -104,7 +104,9 @@ test('18-latka: tempo wzrastania 0 → bez „Wzrastanie nadal trwa" i bez dopis
   expect(r.outlook.practicallyEnded).toBe(true);
   expect(r.active).toBe('reduction');
   expect(r.text).not.toContain('Wzrastanie nadal trwa');
-  expect(r.text).toContain('Wzrost prawie się zakończył');
+  // P-DIETA-AUDYT2 rata 2: bez pomiaru tempa (wartość populacyjna 0 cm/rok) nie ma „pozostało nie więcej niż 3 cm” — zdanie mówi, skąd założenie
+  expect(r.text).toContain('Brak pomiaru tempa wzrastania — wzrastanie przyjęto jako praktycznie zakończone na podstawie wartości populacyjnej');
+  expect(r.text).not.toContain('pozostało nie więcej niż 3');
   expect(r.plan).not.toContain('uwzględnia dalsze wzrastanie');
   expect(r.journey).not.toContain('uwzględnia dalsze wzrastanie');
 });

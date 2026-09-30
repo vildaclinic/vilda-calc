@@ -94,12 +94,13 @@ test('12–18 lat z otyłością: PAL domyślnie 1,4 (MID3), plan od masy aktual
   // rata V pkt 1: hero karty planu to górna granica dnia — w dół do 50 kcal, ze znakiem „≤”
   expect(r.plan).toMatch(new RegExp(`≤\\s?${Math.floor(r.state.diets[1][1] / 50) * 50}\\s?kcal/dzień\\s?górna granica dnia — dieta umiarkowana \\(nie cel do dobicia\\)`));
   // rata U: podstawa od masy docelowej (Mazur 2022); rata V: zapotrzebowanie aktualne z REE Molnára 1995 (nazwa równania z danych)
-  expect(r.plan).toContain('dieta liczona od zapotrzebowania dla masy docelowej ok.');
+  // P-DIETA-AUDYT2 rata 2: limit tempa wiąże we wszystkich dietach — notka mówi o zapotrzebowaniu przy obecnej masie
+  expect(r.plan).toContain('dieta liczona od zapotrzebowania przy obecnej masie ciała: ok.');
   expect(r.plan).toContain('(REE wg Molnára 1995, zwalidowane u nastolatków z nadwagą i otyłością)');
   expect(r.plan).not.toContain('korektą −10 %');
   expect(r.plan).not.toContain('Hofsteenge');
   expect(r.plan).toContain('85. centyl BMI');
-  expect(r.plan).toContain('a tempo ograniczono do ok. 1,5 kg/mies.; deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.');
+  expect(r.plan).toContain('limit tempa ok. 1,5 kg/mies. (reguła „masa docelowa − 350 kcal”, Mazur 2022, dałaby tu szybszy ubytek); deficyt ok. 379 kcal dziennie względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.');
   expect(r.plan).not.toMatch(/deficyt ok\. \d+ % całkowitego wydatku/u);
   expect(r.journey).toContain('deficyt ok. 379 kcal/dzień względem zapotrzebowania przy obecnej masie ciała (tempo ok. 1,5 kg/mies.)');
   expect(r.journey).toContain('−379 kcal/d');
