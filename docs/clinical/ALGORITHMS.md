@@ -6991,7 +6991,7 @@ w trakcie sprawdzania — padają licznik wywołań zapisujących i strażnik ź
 
 **Co pozostaje decyzją właściciela.** Akceptacja reguł; scalenie i wdrożenie; narzędzie do usuwania.
 
-## Edycja i usuwanie pomiaru, poprawka, przypięcie i usunięcie wersji pod blokadą pacjenta; czekanie do 30 s jak przy „Zapisz dane” (P-BLOKADA-ZAPISU-WERSJI, SW 1.1.132, `vilda_vault.js` 192, `vilda_auth_ui.js` 469, 2026-09-30)
+## Edycja i usuwanie pomiaru, poprawka, przypięcie i usunięcie wersji pod blokadą pacjenta; czekanie do 30 s jak przy „Zapisz dane” (P-BLOKADA-ZAPISU-WERSJI, SW 1.1.133, `vilda_vault.js` 192, `vilda_auth_ui.js` 469, 2026-09-30)
 
 **Decyzja właściciela (2026-09-30).** Pytanie 3 z P-ZAPISY-DWIE-KARTY (#495), czy tą samą blokadą objąć pozostałe operacje
 zapisu: „b) teraz jako osobny PR, a c) później, po analizie synchronizacji”. Czyli teraz operacje uruchamiane przez
@@ -7068,9 +7068,10 @@ i usunięcie wersji WEWNĄTRZ sekcji retencji pod blokadą — teraz te operacje
 tam, gdzie mogą się teraz zdarzyć: przypięcie po odczycie planu, a przed blokadą; „scalanie bez blokady” prosto
 z magazynu, jak w synchronizacji. Asercje bez zmian; strażnik źródła wskazuje `Bzw_usunWersje` zamiast `Ar`.
 
-**Wersje (nadane przez `npm run podbij-wersje` względem `audyt` c386c67).** `vilda_vault.js` 191 → 192 i `vilda_auth_ui.js`
+**Wersje (nadane przez `npm run podbij-wersje` względem `audyt` 8916b1a).** `vilda_vault.js` 191 → 192 i `vilda_auth_ui.js`
 468 → 469 (strony oraz wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`), `vilda_chrome.js` 84 → 85,
-`vilda_session_bridge.js` 12 → 13, precache (append-only), `SW_VERSION` 1.1.131 → 1.1.132 (+ pin), fixture wersji.
+`vilda_session_bridge.js` 12 → 13, precache (append-only), `SW_VERSION` 1.1.132 → 1.1.133 (+ pin; 1.1.132 wydał P-OTYLOSC-CYKLE rata 2, #508), fixture
+wersji.
 
 ## Zapisy tego samego pacjenta z dwóch kart idą po kolei; drugi czeka najwyżej 30 s (P-ZAPISY-DWIE-KARTY, SW 1.1.123, `vilda_vault.js` 189, `vilda_data_import_export.js` 93, 2026-09-30)
 
