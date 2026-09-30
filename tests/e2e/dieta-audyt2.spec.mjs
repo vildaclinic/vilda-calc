@@ -105,7 +105,8 @@ test.describe('A2 — czas do normy: miesiące wieku liczone raz, stabilizacja z
     expect(r.dane.czasDoNormy.miesiaceLabel).toBe('18,0'); // dotąd 17,5 — miesiące wieku liczone dwa razy
   });
 
-  test('A2-2: stabilizacja (chłopiec 8 l., 33 kg, 130 cm) — czas z przyrostem masy ze wzrastania, zdanie nie obiecuje normy przy „masie zbliżonej do obecnej”', async ({ page }) => {
+  // P-DIETA-B8 (decyzja właściciela 2026-09-30): nagłówek = S1 (masa stała), czas z przyrostem masy ze wzrastania (A2) jako drugie zdanie (S2)
+  test('A2-2: stabilizacja (chłopiec 8 l., 33 kg, 130 cm) — nagłówek przy stałej masie (S1), drugie zdanie z przyrostem masy ze wzrastania (S2)', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     await page.evaluate(() => { const jf = document.getElementById('journeyFlag'); if (jf && !jf.checked) { jf.checked = true; jf.dispatchEvent(new Event('change', { bubbles: true })); } });
@@ -113,11 +114,13 @@ test.describe('A2 — czas do normy: miesiące wieku liczone raz, stabilizacja z
     const r = await stan(page);
     expect(r.strategia).toBe('stabilization');
     expect(r.tekst).not.toContain('pozostanie zbliżona do obecnej');
-    expect(r.tekst).toMatch(/masa ciała dziecka będzie przybywać tylko w tempie wynikającym ze wzrastania \(ok\. \d+,\d+ kg\/mies\.\)/);
+    expect(r.tekst).toMatch(/Przy utrzymaniu obecnej masy ciała dziecka i dalszym wzrastaniu — w najbliższym roku ok\. \d+,\d cm, potem coraz wolniej, jak mediana wzrostu \(siatka OLAF\) — BMI może wejść w górną granicę normy orientacyjnie za/);
+    expect(r.tekst).toMatch(/Jeżeli masa będzie rosła do górnej granicy planu \(ok\. \d+,\d+ kg\/mies\.\) — za ok\./);
     const sym = await page.evaluate(() => window.energySimulateMonthsToBmiTarget({ ageYears: 8, ageMonthsOpt: 0, sex: 'M', weightKg: 33, heightCm: 130, weeklyLossKg: 0, target: 'norm' }));
     // powyżej roku etykieta w pełnych miesiącach (symulacja liczy co 0,5 mies.)
     expect(r.dane.czasDoNormy.miesiaceLabel).toBe(String(Math.ceil(sym.months * 4.345) > 52 ? Math.round(sym.months) : sym.months).replace('.', ','));
-    expect(sym.przyrostMasyKg).toBeGreaterThan(0);
+    expect(sym.przyrostMasyKg).toBe(0);
+    expect(sym.gornaGranica.przyrostMasyKg).toBeGreaterThan(0);
   });
 });
 

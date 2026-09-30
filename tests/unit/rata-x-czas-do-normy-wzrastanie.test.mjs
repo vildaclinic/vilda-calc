@@ -67,12 +67,16 @@ describe('rata X: redukcja u rosnącego dziecka — przyrost masy ze wzrastania 
 describe('rata X: czego reguła nie rusza', () => {
   // P-DIETA-AUDYT2 A2 (2026-09-29): stabilizacja także z przyrostem masy ze wzrastania — ta sama masa, którą przyjmuje kontrola
   // po 12 tygodniach (P-DIETA-STAB rata 1). Dotąd masa stała: czas do normy obiecywał BMI, którego kontrola nie wymagała.
-  it('stabilizacja (tempo 0): masa przybywa ze wzrastaniem (P-DIETA-AUDYT2 A2) — czas jak wyrocznia z przyrostem', () => {
+  // P-DIETA-B8 (decyzja właściciela 2026-09-30): stabilizacja ma dwa czasy — nagłówek S1 (masa stała, jak górna granica kcal
+  // i Mazur 2022 §4.1) oraz S2 (`gornaGranica`: masa przybywa ze wzrastaniem, jak kontrola po 12 tygodniach — dawny wynik A2).
+  it('stabilizacja (tempo 0): S1 jak wyrocznia bez przyrostu, S2 jak wyrocznia z przyrostem (P-DIETA-AUDYT2 A2)', () => {
     const P = { sex: 'F', ageYears: 8, weightKg: 40, heightCm: 130, weeklyLossKg: 0 };
     const s = sym(P);
-    expect(s.przyrostMasyKgMies).toBeGreaterThan(0);
-    expect(s.przyrostMasyKg).toBeGreaterThan(0);
-    expect(s.months).toBe(wyrocznia(P, true));
+    expect(s.gornaGranica.przyrostMasyKgMies).toBeGreaterThan(0);
+    expect(s.gornaGranica.przyrostMasyKg).toBeGreaterThan(0);
+    expect(s.gornaGranica.months).toBe(wyrocznia(P, true));
+    expect(s.months).toBe(wyrocznia(P, false));
+    expect(s.przyrostMasyKg).toBe(0);
   });
   it('„Wzrost zakończony”: bez wzrastania i bez przyrostu masy', () => {
     const s = sym({ sex: 'M', ageYears: 15.25, weightKg: 102.5, heightCm: 186.7, weeklyLossKg: UMIARK_15, growthEnded: true });

@@ -32,7 +32,7 @@ ve=st?"light":"moderate",
 capLbl=cwOn2?m&&m.gornaGranica?"g\u00F3rna granica dnia \u2014 cel w\u0142asny, dieta lekka (nie cel do dobicia)":"kaloryczno\u015B\u0107 diety \u2014 cel w\u0142asny (dieta lekka)":stabMode?"g\u00F3rna granica dnia \u2014 stabilizacja masy cia\u0142a (nie cel do dobicia)":m&&m.gornaGranica?`g\u00F3rna granica dnia \u2014 dieta ${String(m.name||"").toLowerCase()} (nie cel do dobicia)`:m&&y===ve?"zalecana kaloryczno\u015B\u0107 diety":"kaloryczno\u015B\u0107 wybranej diety",
 dietAcc=y==="light"?"lekk\u0105":y==="intense"?"intensywn\u0105":"umiarkowan\u0105",
 mark2Lbl=st?"50. centyl BMI":"BMI\u202F22",
-gw=st&&simN&&simN.growthAware&&f(simN.annualGrowthCm)&&simN.annualGrowthCm>0?`<small class="plan2-note plan-growth-note">uwzgl\u0119dnia dalsze wzrastanie (ok. ${simN.annualGrowthCm.toFixed(1).replace(".",",")}\u00A0cm/rok)${f(simN.przyrostMasyKgMies)&&simN.przyrostMasyKgMies>=.05?` i mas\u0119 przybywaj\u0105c\u0105 z nim (ok. ${simN.przyrostMasyKgMies.toFixed(1).replace(".",",")}\u00A0kg/mies.)`:""}</small>`:"",
+/* P-DIETA-B8: opis wzrastania bez „stalego tempa” (w najblizszym roku X cm, potem jak mediana siatki); przy stabilizacji naglowek to masa stala, wiec bez dopisku o przyroscie masy */gw=st&&simN&&energyOpisWzrastania(simN)?`<small class="plan2-note plan-growth-note">uwzgl\u0119dnia dalsze wzrastanie: ${energyOpisWzrastania(simN)}${f(simN.przyrostMasyKgMies)&&simN.przyrostMasyKgMies>=.05?`; masa przybywaj\u0105ca z nim ok. ${simN.przyrostMasyKgMies.toFixed(1).replace(".",",")}\u00A0kg/mies.`:""}</small>`:"",
 hz=Ne&&simN.months>18?'<small class="plan2-note plan-horizon-note">szacunek orientacyjny \u2014 wzrost warto mierzy\u0107 co 3\u20136 miesi\u0119cy</small>':"",
 nt=document.getElementById("dietCalorieInfo");nt&&(nt.style.display="none");
 const at=document.getElementById("dietDesc");at&&(at.style.display="none");
@@ -44,7 +44,10 @@ if(Ne){
   tl=`<div class="plan2-tl"><div class="plan2-track"><div class="plan2-fill" style="width:${p1.toFixed(1)}%"></div></div><div class="plan2-marks"><span class="plan2-mark" style="left:${p1.toFixed(1)}%"><b>${fmtM(simN.months)}\u202Fmies.</b>${cwOn2?"cel w\u0142asny":"granica normy"}</span>${p2!=null?`<span class="plan2-mark" style="left:${p2.toFixed(1)}%"><b>${fmtM(simM.months)}\u202Fmies.</b>${mark2Lbl}</span>`:""}</div></div>`;
 }
 const sentence=stabMode
-  ?Ne?`Bez deficytu \u2014 gdy masa przybywa tylko w tempie wynikaj\u0105cym ze wzrastania \u2014 osi\u0105gniesz g\xF3rn\u0105 granic\u0119 normy BMI <b>${w(energyDateAfterMonthsPl(simN.months))}</b> (za ok. <b>${w(energyMonthsWordPl(simN.months))}</b>).`:stabTempo?"Przy obecnym tempie wzrastania samo utrzymanie masy cia\u0142a nie doprowadzi do normy BMI; kolejny etap planu zale\u017Cy od wyniku dalszej oceny.":"Przy praktycznie zako\u0144czonym wzrastaniu samo utrzymanie masy cia\u0142a nie doprowadzi do normy BMI \u2014 rozwa\u017C strategi\u0119 redukcji."
+  /* P-DIETA-B8 (decyzja wlasciciela 2026-09-30): naglowek = S1 (masa stala), drugie zdanie = S2 (masa do gornej granicy planu);
+     bez czasu przy alarmie tempa i gdy norma przyszlaby dopiero ze zmiana kryterium w 18. r.z. „Praktycznie zakonczone” tylko wtedy,
+     gdy prognoza tak mowi (P-DIETA-AUDYT2 A7: dotad to zdanie padalo takze przy trwajacym wzrastaniu). */
+  ?Ne?`Bez deficytu \u2014 przy utrzymaniu obecnej masy cia\u0142a \u2014 BMI mo\u017Ce wej\u015B\u0107 w g\xF3rn\u0105 granic\u0119 normy <b>${w(energyDateAfterMonthsPl(simN.months))}</b> (za ok. <b>${w(energyMonthsWordPl(simN.months))}</b>).${cwOn2?"":(z2=>z2?" "+w(z2):"")(energyZdanieStabS2(simN))}`:stabTempo?"Tempo wzrastania wymaga oceny \u2014 czasu doj\u015Bcia do normy BMI nie podano; kolejny etap planu zale\u017Cy od wyniku dalszej oceny.":(()=>{try{const o2=stabOl||childGrowthOutlook({ageYears:e,sex:c,heightCm:d});return!!(o2&&o2.practicallyEnded)}catch(_e){return!1}})()?"Przy praktycznie zako\u0144czonym wzrastaniu samo utrzymanie masy cia\u0142a nie doprowadzi do normy BMI \u2014 rozwa\u017C strategi\u0119 redukcji.":w(energyZdanieStabBrak(simN))
   :Ne
   ?`Stosuj\u0105c diet\u0119 <b>${dietAcc}</b> osi\u0105gniesz ${cwOn2?"cel w\u0142asny":"g\xF3rn\u0105 granic\u0119 normy BMI"} <b>${w(energyDateAfterMonthsPl(simN.months))}</b> (za ok. <b>${w(energyMonthsWordPl(simN.months))}</b>).`
   :"Dla tej diety nie mo\u017Cna wyznaczy\u0107 terminu osi\u0105gni\u0119cia normy BMI.";
@@ -117,21 +120,80 @@ typeof a<"u"&&a&&a.VildaBmiJourney&&typeof a.VildaBmiJourney.refresh=="function"
    z zerem u dziewczat >=17 i chlopcow >=18 lat; pozostaly wzrost z prognozy ostatecznej / MPH. „Praktycznie
    zakonczone" = tempo < 1 cm/rok lub pozostalo <= 3 cm. Strategia (redukcja/stabilizacja) rozwiazywana
    w jednym miejscu dla karty planu, Drogi do normy i zalecen. */
-function childGrowthOutlook({ageYears:e,sex:l,heightCm:n}={}){
-  const age0=Number(e)||0,sx=xe(l),h0=Number(n),agd=typeof a<"u"&&a?a.advancedGrowthData:null;
+/* P-DIETA-B8 (decyzje wlasciciela 2026-09-30: model B′ — trajektoria wg mediany siatki; naglowek stabilizacji S1 — masa stala;
+   koniec wzrastania = koniec siatki). Dotad tempo liczone RAZ dla wieku startu i trzymane stale do 19 lat, bez sufitu bez karty:
+   12-latka „rosla” +36,8 cm zamiast +11,3 cm (OLAF, Kulaga 2011, doi:10.1007/s00431-010-1329-x), a od A2 fikcyjny wzrost dawal
+   fikcyjny przyrost masy (+13–25 kg) i zawyzone czasy do normy. Teraz wzrost rosnie ROWNOLEGLE do mediany wzrostu siatki pacjenta:
+   ta sama regula siatki i populacji co hSDS (VildaSdsWzrostu; zrodlo bmiSource, populacja z resolvera — DS -> siatka DS), przyrosty
+   mediany liczone W OBREBIE JEDNEJ SIATKI (bez roznic miedzy siatkami na szwie 36 mies.), po ostatnim miesiacu siatki glownej wzrost
+   staly. Tempo zmierzone (karta zaawansowana): nizsze od mediany skaluje caly przebieg; wyzsze obowiazuje przez rok, a lacznie nie
+   wiecej niz pozostaly wzrost wg mediany (wczesniejsze pokwitanie przy otylosci — He 2001, Holmgren 2017, de Groot 2017). Sufit:
+   prognoza wzrostu koncowego / MPH tylko, gdy PRZEKRACZA obecny wzrost — wartosc <= wzrostu (np. GROWTH-PRED-CLAMP) nie jest ani
+   sufitem, ani dowodem konca wzrastania. Parametry ponizej to DANE; normy wzrostu z plikow siatek. */
+const ENERGY_WZRASTANIE=Object.freeze({
+  krokMies:.5,
+  horyzontMies:240,
+  zakonczoneCmRok:1,
+  zakonczonePozostaloCm:3,
+  notaPokwitaniaCm:6,
+  notaPokwitaniaOdLat:Object.freeze({F:8,M:9})
+});
+const energyWzrastanieCache=new Map();
+function energyTrajektoriaWzrostu({sex:l,ageMonths:am,zrodlo:zz,populacja:pp}={}){
+  const T=typeof a<"u"&&a?a.VildaSdsWzrostu:null;
+  if(!T||typeof T.mediana!="function")return null;
+  const sx=xe(l),M0=Number(am);
+  if(!(isFinite(M0)&&M0>=0))return null;
+  const zr=String(zz||dietBmiZrodlo()).toUpperCase(),
+    pop=typeof T.populacjaZOpcji=="function"?T.populacjaZOpcji(pp!=null?{populacja:pp}:{}):"OGOLNA",
+    key=[sx,zr,pop,M0.toFixed(4)].join("|");
+  if(energyWzrastanieCache.has(key))return energyWzrastanieCache.get(key);
+  const K0=ENERGY_WZRASTANIE.krokMies,HOR=ENERGY_WZRASTANIE.horyzontMies,glowna=pop==="DS"?"DS":zr,
+    naSiatce=(m,s)=>{try{const r=T.mediana(sx,m,s,pop);return r&&r.siatka===s&&isFinite(r.mediana)?r.mediana:null}catch(_e){return null}},
+    wLancuchu=m=>{try{const r=T.mediana(sx,m,zr,pop);return r&&isFinite(r.mediana)?r:null}catch(_e){return null}};
+  let koniec=null;
+  {const kk=[sx,zr,pop,"koniec"].join("|");if(energyWzrastanieCache.has(kk))koniec=energyWzrastanieCache.get(kk);else{for(let m=0;m<=HOR;m+=K0)naSiatce(m,glowna)!=null&&(koniec=m);energyWzrastanieCache.set(kk,koniec)}}
+  if(koniec==null)return null;
+  const krok=(x,y)=>{const ra=wLancuchu(x);if(!ra)return 0;const vb=naSiatce(y,ra.siatka);if(vb!=null)return vb-ra.mediana;const rb=wLancuchu(y);if(!rb)return 0;const va=naSiatce(x,rb.siatka);return va!=null?rb.mediana-va:0};
+  const n=Math.round(HOR/K0),cum=[0];let s=0;
+  for(let i=1;i<=n;i++){const x=M0+(i-1)*K0,y=M0+i*K0;x<koniec&&(s+=Math.max(0,krok(x,Math.min(y,koniec))));cum.push(s)}
+  const dMed=t=>{const q=Math.max(0,Number(t)||0)/K0,i=Math.floor(q);if(i>=n)return cum[n];const fr=q-i;return cum[i]+(cum[i+1]-cum[i])*fr};
+  const out=Object.freeze({zrodlo:zr,populacja:pop,siatka:glowna,etykieta:typeof T.etykieta=="function"?T.etykieta(glowna):glowna,
+    startMies:M0,koniecMies:koniec,pozostaloCm:dMed(Math.max(0,koniec-M0)),dMed});
+  energyWzrastanieCache.size>400&&energyWzrastanieCache.clear();
+  energyWzrastanieCache.set(key,out);
+  return out;
+}
+/* Wspolny przebieg wzrostu dla prognozy (childGrowthOutlook) i symulacji czasu do normy: pola prognozy + funkcja hAt(t) (cm po t mies.,
+   bez sufitu). Bez silnika siatek (izolowany modul) — dawny model zapasowy: stale tempo (roznica median 12 mies. albo tabela wiekowa) do 19 lat. */
+function energyPrzebiegWzrostu({ageYears:e,sex:l,heightCm:n}={}){
+  const W=ENERGY_WZRASTANIE,age0=Number(e)||0,sx=xe(l),h0=Number(n),agd=typeof a<"u"&&a?a.advancedGrowthData:null;
   let g=null,observed=false,source="fallback";
   /* P-TEMPO etap 4: obserwowane tempo z modelu karty (advancedGrowthData.tempo), w zapasie z pola growthVelocity. */
   const tv=agd&&agd.tempo&&typeof agd.tempo.cmPerYear=="number"&&isFinite(agd.tempo.cmPerYear)?agd.tempo.cmPerYear:(agd&&typeof agd.growthVelocity=="number"&&isFinite(agd.growthVelocity)?agd.growthVelocity:null);
   if(tv!=null&&tv>0){g=tv;observed=true;source="observed"}
-  if(g==null&&typeof medianHeightForAgeMonths=="function"){try{
-    const m0=Math.round(age0*12),h1=medianHeightForAgeMonths(sx,m0),h2=medianHeightForAgeMonths(sx,Math.min(k*12,m0+12));
-    if(isFinite(h1)&&isFinite(h2)){g=Math.max(0,h2-h1);source="median"}
-  }catch(err){}}
-  if(g==null)g=(sx==="F"&&age0>=17)||(sx==="M"&&age0>=18)?0:age0<5?6:age0<10?5.5:age0<13?6.5:age0<15?5:age0<17?3.5:2;
   let finalCm=null;
   if(agd&&agd.finalHeightPrediction&&typeof agd.finalHeightPrediction.cm=="number"&&isFinite(agd.finalHeightPrediction.cm)&&agd.finalHeightPrediction.cm>0)finalCm=agd.finalHeightPrediction.cm;
   else if(agd&&typeof agd.targetHeight=="number"&&isFinite(agd.targetHeight)&&agd.targetHeight>0)finalCm=agd.targetHeight;
-  const remaining=finalCm!=null&&f(h0)&&h0>0?finalCm-h0:null,capCm=finalCm!=null&&f(h0)&&finalCm>h0?finalCm:null;
+  const hOk=f(h0)&&h0>0,capCm=finalCm!=null&&hOk&&finalCm>h0?finalCm:null,remaining=capCm!=null?capCm-h0:null,
+    prognozaNie=finalCm!=null&&hOk&&!(finalCm>h0);
+  let tr=null;
+  if(age0<k&&hOk){try{tr=energyTrajektoriaWzrostu({sex:sx,ageMonths:age0*12})}catch(_e){tr=null}}
+  let hAt,skala=null,model="mediana";
+  if(tr){
+    const d12=tr.dMed(12),dT=tr.pozostaloCm;
+    if(!observed){hAt=t=>h0+tr.dMed(t);source="median"}
+    else{skala=d12>0?g/d12:Infinity;const v=g;hAt=skala<=1?t=>h0+skala*tr.dMed(t):t=>t<=12?h0+v*t/12:h0+Math.max(v,Math.min(dT,v+tr.dMed(t)-d12))}
+    g=Math.max(0,(capCm!=null?Math.min(capCm,hAt(12)):hAt(12))-h0);
+  }else{
+    model="stale";
+    if(g==null&&typeof medianHeightForAgeMonths=="function"){try{
+      const m0=Math.round(age0*12),h1=medianHeightForAgeMonths(sx,m0),h2=medianHeightForAgeMonths(sx,Math.min(k*12,m0+12));
+      if(isFinite(h1)&&isFinite(h2)){g=Math.max(0,h2-h1);source="median"}
+    }catch(err){}}
+    if(g==null)g=(sx==="F"&&age0>=17)||(sx==="M"&&age0>=18)?0:age0<5?6:age0<10?5.5:age0<13?6.5:age0<15?5:age0<17?3.5:2;
+    const gm=g/12,gMax=Math.max(0,(k-age0)*12);hAt=t=>h0+gm*Math.min(t,gMax);
+  }
   /* P-DIETA rata G1 (decyzja wlasciciela 2026-09-24): ocena zmierzonego tempa z tego samego modelu karty, co czerwony baner
      tempa (advancedGrowthData.tempo z VildaTempoWzrastania / trajektorii): alarm = ponizej normy dla wieku (poziom „danger”:
      < 10 lat albo Tanner I od 10 lat), do oceny = „warn”. Przy alarmie wzrastanie NIE jest „praktycznie zakonczone” — dziecko
@@ -140,10 +202,18 @@ function childGrowthOutlook({ageYears:e,sex:l,heightCm:n}={}){
   const tp=agd&&agd.tempo&&typeof agd.tempo.cmPerYear=="number"&&isFinite(agd.tempo.cmPerYear)?agd.tempo:null,
     tpAlarm=!!(tp&&tp.alarm===!0),tpWarn=!!(tp&&!tpAlarm&&tp.severity==="warn"),
     tpNm=tp&&typeof tp.normLabel=="string"?tp.normLabel.match(/\u2265\s*(\d+(?:[.,]\d+)?)\s*cm\/rok/):null,
-    tpNorma=tpNm?Number(tpNm[1].replace(",",".")):(tp&&tp.threshold&&f(Number(tp.threshold.threshold))?Number(tp.threshold.threshold):null);
-  return{annualGrowthCm:g,observedGrowth:observed,source,finalHeightCm:finalCm,remainingCm:remaining,capCm,practicallyEnded:age0<k&&!tpAlarm&&(g<1||(remaining!=null&&remaining<=3)),/* rata G1a: stan bez alarmu tempa — do ustalenia, czy to tempo zmienilo domyslna strategie */practicallyEndedBezAlarmu:age0<k&&(g<1||(remaining!=null&&remaining<=3)),
-    tempoAlarm:tpAlarm,tempoDoOceny:tpWarn,tempoCmRok:tp?tp.cmPerYear:null,tempoNormaCmRok:tpNorma};
+    tpNorma=tpNm?Number(tpNm[1].replace(",",".")):(tp&&tp.threshold&&f(Number(tp.threshold.threshold))?Number(tp.threshold.threshold):null),
+    konczy=age0<k&&(g<W.zakonczoneCmRok||(remaining!=null&&remaining<=W.zakonczonePozostaloCm)),
+    pozMed=tr?Math.round(tr.pozostaloCm*10)/10:null;
+  return{annualGrowthCm:g,observedGrowth:observed,source,finalHeightCm:finalCm,remainingCm:remaining,capCm,practicallyEnded:konczy&&!tpAlarm,/* rata G1a: stan bez alarmu tempa — do ustalenia, czy to tempo zmienilo domyslna strategie */practicallyEndedBezAlarmu:konczy,
+    tempoAlarm:tpAlarm,tempoDoOceny:tpWarn,tempoCmRok:tp?tp.cmPerYear:null,tempoNormaCmRok:tpNorma,
+    /* P-DIETA-B8 */modelWzrastania:model,zrodloWzrastania:tr?tr.etykieta:null,siatkaWzrastania:tr?tr.siatka:null,koniecWzrastaniaMies:tr?tr.koniecMies:null,
+    pozostalyWzrostMedianaCm:pozMed,skalaTempa:skala==null?null:isFinite(skala)?Math.round(skala*100)/100:null,prognozaNiePrzekraczaWzrostu:prognozaNie,
+    notaPokwitania:!!(tr&&capCm==null&&!tpAlarm&&pozMed>W.notaPokwitaniaCm&&age0>=(W.notaPokwitaniaOdLat[sx]||W.notaPokwitaniaOdLat.F)),
+    hAt};
 }
+/* Prognoza wzrastania dla kart i generatora — te same pola co przebieg, bez funkcji (dane do porownan i zapisu). */
+function childGrowthOutlook(o={}){const p=energyPrzebiegWzrostu(o),r={};for(const q in p)q!=="hAt"&&(r[q]=p[q]);return r}
 /* P-DIETA rata G1a: czy to tempo wzrastania ponizej normy zmienilo domyslna strategie na stabilizacje (bez alarmu i bez recznego wyboru domyslna bylaby redukcja). Wspolny dla generatora zalecen (wariant zdania B1) i karty planu (powod strategii). */function energyStabilizacjaZPowoduTempa({state:st,ageYears:e,growthEnded:ge=!1,stabDisabled:sd=!1,outlook:ol=null}={}){if(!st||!st.childObesityPlan||st.childPlanStage==="age_2_5"||!ol||ol.tempoAlarm!==!0)return!1;/* rata G3: kontrfakt „bez alarmu” uwzglednia blokade z prognozy (app.js), ktora przy alarmie nie wylacza juz przelacznika */const sdBez=sd||(typeof window<"u"&&typeof window.vildaStabilizacjaZablokowanaPrognoza=="function"&&(()=>{try{return window.vildaStabilizacjaZablokowanaPrognoza()===!0}catch(_e){return!1}})());return energyResolveStrategy({state:st,ageYears:e,growthEnded:ge,stabDisabled:sdBez,outlook:Object.assign({},ol,{tempoAlarm:!1,practicallyEnded:!!ol.practicallyEndedBezAlarmu})})==="reduction"}
 function energyResolveStrategy({state:st,ageYears:e,growthEnded:ge=!1,stabDisabled:sd=!1,reduceChecked:rc=!1,stabChecked:sc=!1,outlook:ol=null}={}){
   const age=Number(e)||0;
@@ -211,30 +281,74 @@ function energySimulateMonthsToBmiTarget(opts){
     {const T=dietBmiSilnik();if(T){try{const m=T.mediana(sx,aa*12,dietBmiZrodlo(),dietPopulacja());if(m&&isFinite(m.mediana))return m.mediana}catch(err){}}}
     return null;
   };
-  let g=0,observed=false,cap=Infinity,ended=false;
-  if(grow){const ol=childGrowthOutlook({ageYears:age0,sex:sx,heightCm:h0});g=ol.annualGrowthCm;observed=ol.observedGrowth;ol.capCm!=null&&(cap=ol.capCm);ended=!!ol.practicallyEnded}
-  const gm=g/12,mLoss=pace*(52/12),growMonthsMax=grow?Math.max(0,(k-age0)*12):0,
+  let g=0,observed=false,cap=Infinity,pw=null;
+  if(grow){pw=energyPrzebiegWzrostu({ageYears:age0,sex:sx,heightCm:h0});g=pw.annualGrowthCm;observed=pw.observedGrowth;pw.capCm!=null&&(cap=pw.capCm)}
+  const mLoss=pace*(52/12),stab=pace===0&&grow,
+    /* P-DIETA-B8: zmiana kryterium celu (dziecko 85. centyl -> dorosly BMI 24,9) z silnika BMI (18 lat; DS 20 lat). Norma „osiagnieta”
+       dopiero po tej zmianie nie jest skutkiem wzrastania ani diety, tylko zmiany definicji — wynik niesie flage. Cel wlasny (stale BMI) bez zmiany. */
+    T0=dietBmiSilnik(),popB=dietPopulacja(),
+    dorKryt=aa=>tgt==="custom"?!1:tgt==="median"?aa>=k:T0&&typeof T0.dorosly=="function"?T0.dorosly(aa*12,popB):aa>=18,
+    startDziecko=!dorKryt(age0),
+    hAt=t=>grow?pw.hAt(t):h0,
     /* P-DIETA rata X (decyzja wlasciciela 2026-09-23): przy REDUKCJI u rosnacego dziecka masa w symulacji = dzis - tempo diety x czas
-       + PRZYROST MASY ZE WZRASTANIA (ta sama regula co kontrola z raty W: mediana BMI dla wieku x przyrost wzrost^2, krok po kroku).
-       Bez tego czas do normy byl optymistyczny o ok. 30-40 % przy diecie lekkiej 6-11 lat. Od P-DIETA-AUDYT2 A2 takze przy stabilizacji (pace 0) — patrz nizej;
-       nie przy „Wzrost zakonczony” (grow=false) i nie przy praktycznie zakonczonym wzrastaniu. */
-    /* P-DIETA-AUDYT2 A2 (2026-09-29): takze przy STABILIZACJI (pace 0) — kontrola po 12 tygodniach (P-DIETA-STAB rata 1) przyjmuje „dzisiejsza masa + przyrost ze wzrastania”, wiec czas do normy liczy sie z ta sama masa, a nie ze stala. */leanOn=grow&&pace>=0&&!ended&&g>0,bm0=leanOn?childMedianBmi(sx,age0):null,
-    leanMies=leanOn&&f(bm0)&&bm0>0?bm0*(Math.pow(Math.min(cap,h0+gm)/100,2)-Math.pow(h0/100,2)):0;
-  let capped=false,lean=0,hPrev=h0;const traj=o.trajektoria===!0?[]:null;
-  for(let t2=0;t2<=240;t2+=0.5){
-    const aa=age0+t2/12,
-      hRaw=h0+gm*Math.min(t2,growMonthsMax),
-      hh=child?Math.min(cap,hRaw):h0;
-    if(leanOn&&t2>0&&hh>hPrev){const bm=childMedianBmi(sx,aa);f(bm)&&bm>0&&(lean+=bm*(Math.pow(hh/100,2)-Math.pow(hPrev/100,2)))}
-    hPrev=hh;
-    const ww=Math.max(1,w0-mLoss*t2+lean),
-      bt=targetAt(ww,hh,aa);
-    traj&&traj.push({miesiac:t2,wzrostCm:hh,masaKg:ww,bmi:ww/Math.pow(hh/100,2)});
-    child&&hRaw>cap&&(capped=true);
-    if(isFinite(bt)&&bt>0&&ww/Math.pow(hh/100,2)<=bt)
-      return{months:t2,growthAware:grow,annualGrowthCm:grow?g:0,observedGrowth:observed,cappedByFinalHeight:capped,przyrostMasyKgMies:Math.round(Math.max(0,leanMies)*100)/100,przyrostMasyKg:Math.round(lean*100)/100,trajektoria:traj};
+       + PRZYROST MASY ZE WZRASTANIA (mediana BMI dla wieku x przyrost wzrost^2, krok po kroku). P-DIETA-B8: takze przy praktycznie
+       zakonczonym wzrastaniu (przyrost idzie za trajektoria, wiec jest wtedy maly). */
+    bieg=(leanOn,zTraj)=>{
+      let capped=!1,lean=0,hPrev=h0;const traj=zTraj?[]:null;
+      for(let t2=0;t2<=240;t2+=.5){
+        const aa=age0+t2/12,hRaw=hAt(t2),hh=child?Math.min(cap,hRaw):h0;
+        if(leanOn&&t2>0&&hh>hPrev){const bm=childMedianBmi(sx,aa);f(bm)&&bm>0&&(lean+=bm*(Math.pow(hh/100,2)-Math.pow(hPrev/100,2)))}
+        hPrev=hh;
+        const ww=Math.max(1,w0-mLoss*t2+lean),bt=targetAt(ww,hh,aa);
+        traj&&traj.push({miesiac:t2,wzrostCm:hh,masaKg:ww,bmi:ww/Math.pow(hh/100,2)});
+        child&&hRaw>cap&&(capped=!0);
+        if(isFinite(bt)&&bt>0&&ww/Math.pow(hh/100,2)<=bt)return{months:t2,capped,lean,traj,poZmianie:startDziecko&&dorKryt(aa)};
+      }
+      return{months:null,capped,lean,traj,poZmianie:!1};
+    },
+    mies1=on=>{if(!on)return 0;const bm0=childMedianBmi(sx,age0),h1=Math.min(cap,hAt(1));return f(bm0)&&bm0>0&&h1>h0?Math.round(bm0*(Math.pow(h1/100,2)-Math.pow(h0/100,2))*100)/100:0},
+    wspolne={growthAware:grow,annualGrowthCm:grow?g:0,observedGrowth:observed,
+      modelWzrastania:pw?pw.modelWzrastania:null,zrodloWzrastania:pw?pw.zrodloWzrastania:null,koniecWzrastaniaMies:pw?pw.koniecWzrastaniaMies:null,
+      prognozaNiePrzekraczaWzrostu:!!(pw&&pw.prognozaNiePrzekraczaWzrostu),notaPokwitania:!!(pw&&pw.notaPokwitania)};
+  if(stab){
+    /* P-DIETA-B8 (decyzja wlasciciela 2026-09-30): stabilizacja ma DWA czasy na tej samej trajektorii wzrostu.
+       S1 (naglowek, `months`) — masa stala: gorna granica kcal to zapotrzebowanie przy OBECNEJ masie, a Mazur 2022 §4.1
+       (doi:10.3390/nu14183806) definiuje stabilizacje jako utrzymanie stalej masy. S2 (`gornaGranica`) — masa rosnie do gornej
+       granicy planu (kontrola po 12 tyg., P-DIETA-STAB rata 1; dotad jedyna liczba od A2). Czas „po zmianie kryterium” (18. r.z.)
+       oraz alarm tempa wzrastania (G1) nie daja czasu: `months` = null, powod we flagach. */
+    const alarm=!!(pw&&pw.tempoAlarm),s1=bieg(!1,o.trajektoria===!0),s2=bieg(!0,!1),
+      czas=x=>alarm||x.months==null||x.poZmianie?null:x.months;
+    return Object.assign({months:czas(s1)},wspolne,{cappedByFinalHeight:s1.capped,przyrostMasyKgMies:0,przyrostMasyKg:0,trajektoria:s1.traj,
+      scenariusz:"masa-stala",tempoAlarm:alarm,celPoZmianieKryterium:!alarm&&s1.poZmianie,
+      gornaGranica:{months:czas(s2),celPoZmianieKryterium:!alarm&&s2.poZmianie,przyrostMasyKgMies:mies1(!0),przyrostMasyKg:Math.round(s2.lean*100)/100}});
   }
-  return{months:null,growthAware:grow,annualGrowthCm:grow?g:0,observedGrowth:observed,cappedByFinalHeight:capped,przyrostMasyKgMies:Math.round(Math.max(0,leanMies)*100)/100,przyrostMasyKg:Math.round(lean*100)/100,trajektoria:traj};
+  const leanOn=grow&&pace>0&&g>0,r=bieg(leanOn,o.trajektoria===!0);
+  return Object.assign({months:r.months},wspolne,{cappedByFinalHeight:r.capped,przyrostMasyKgMies:mies1(leanOn),przyrostMasyKg:Math.round(r.lean*100)/100,trajektoria:r.traj,
+    celPoZmianieKryterium:r.poZmianie});
+}
+/* P-DIETA-B8: wspolne brzmienie dla karty planu, Drogi do normy, zalecen i PDF — opis wzrastania bez „stalego tempa” i bez
+   prognozowanego wzrostu w cm; zdania o dwoch scenariuszach stabilizacji; wiek zmiany kryterium BMI z silnika (18 lat; DS 20 lat). */
+function energyWiekKryteriumDoroslegoLat(){try{const T=dietBmiSilnik(),G=T&&T.G;if(G){const ds=dietPopulacja()==="DS"&&f(G.DS_MAX_M);return Math.round((ds?G.DS_MAX_M:G.DOROSLY_M)/12)}}catch(_e){}return 18}
+function energyOpisWzrastania(s,krotko){
+  if(!s||!s.growthAware||!(f(s.annualGrowthCm)&&s.annualGrowthCm>0))return"";
+  const x=s.annualGrowthCm.toFixed(1).replace(".",",");
+  if(s.modelWzrastania!=="mediana")return`ok.\u00A0${x}\u00A0cm/rok`;
+  const z=String(s.zrodloWzrastania||""),zs=z?(/^siatka/i.test(z)?z:"siatka "+z):"",sk=zs?` (${zs})`:"";
+  if(krotko)return(s.observedGrowth?"zmierzone tempo na najbli\u017Cszy rok, potem ":"")+"wg mediany wzrostu"+(zs?", "+zs:"");
+  return s.observedGrowth?`zmierzone tempo ok.\u00A0${x}\u00A0cm/rok przyj\u0119to na najbli\u017Cszy rok, potem coraz wolniej, jak mediana wzrostu${sk}`:`w najbli\u017Cszym roku ok.\u00A0${x}\u00A0cm, potem coraz wolniej, jak mediana wzrostu${sk}`;
+}
+function energyZdanieStabBrak(s){
+  if(s&&s.tempoAlarm)return"Tempo wzrastania wymaga oceny \u2014 czasu doj\u015Bcia do normy BMI nie podano.";
+  const W=energyWiekKryteriumDoroslegoLat();
+  return`Samo utrzymanie obecnej masy cia\u0142a prawdopodobnie nie obni\u017Cy BMI poni\u017Cej 85. centyla przed uko\u0144czeniem ${W} lat (potem obowi\u0105zuje kryterium doros\u0142ych: BMI 24,9).`;
+}
+function energyZdanieStabS2(s){
+  const gg=s&&s.gornaGranica;
+  if(!gg||s.tempoAlarm)return"";
+  const kg=f(gg.przyrostMasyKgMies)&&gg.przyrostMasyKgMies>=.05?` (ok.\u00A0${gg.przyrostMasyKgMies.toFixed(1).replace(".",",")}\u00A0kg/mies.)`:"";
+  if(gg.months!=null)return`Je\u017Celi masa b\u0119dzie ros\u0142a do g\u00F3rnej granicy planu${kg} \u2014 za ok. ${energyMonthsWordPl(gg.months)}.`;
+  const W=energyWiekKryteriumDoroslegoLat();
+  return`Je\u017Celi masa b\u0119dzie ros\u0142a do g\u00F3rnej granicy planu${kg}, BMI prawdopodobnie nie zejdzie poni\u017Cej 85. centyla przed uko\u0144czeniem ${W} lat (potem obowi\u0105zuje kryterium doros\u0142ych: BMI 24,9).`;
 }
 function energyMonthsWordPl(m2){
   const v=Number(m2);
@@ -298,7 +412,7 @@ function energyDateAfterMonthsPl(m2){
   const dt2=new Date();dt2.setDate(dt2.getDate()+Math.round(Number(m2)*30.44));
   return MONTHS_LOC_PL[dt2.getMonth()]+" "+dt2.getFullYear();
 }
-function qe(){a&&(a.DIET_LEVELS=$,a.DIET_LEVELS_CHILD=DIET_CHILD,a.MIN_INTAKE_CHILD_UNDER10=CHILD_FLOOR_KCAL.under10,a.CHILD_REE_OBESITY_FACTOR=CHILD_REE_OBESITY_FACTOR,a.CHILD_REE_FACTOR_OD_LAT=CHILD_REE_FACTOR_OD_LAT,a.CHILD_REE_OTYLOSC_ZRODLO=CHILD_REE_OTYLOSC_ZRODLO,a.ENERGY_KONTROLA_PLANU=KONTROLA_PLANU,a.ENERGY_GORNA_KROK_KCAL=GORNA_KROK_KCAL,a.energyReeZRownania=energyReeZRownania,a.energyGornaGranicaKcal=energyGornaGranicaKcal,a.energyKontrolaPlanu=energyKontrolaPlanu,a.energyCelPodpis=energyCelPodpis,a.energyBadgeWgKlasy=energyBadgeWgKlasy,a.energyTempoUbytkuZHistorii=energyTempoUbytkuZHistorii,a.energyLimitAlarmuUbytku=energyLimitAlarmuUbytku,a.ENERGY_ALARM_UBYTKU=ENERGY_ALARM_UBYTKU,a.ENERGY_RYZYKO_BEZ_KOREKTY=ENERGY_RYZYKO_BEZ_KOREKTY,a.DIET_RATE_CHILD_KG_MONTH=CHILD_RATE_KG_MONTH,a.energyChildBmiClass=childBmiClass,a.energyChildPlanStage=childPlanStage,a.energyChildGrowthOutlook=childGrowthOutlook,a.energyResolveStrategy=energyResolveStrategy,a.energyStabilizacjaZPowoduTempa=energyStabilizacjaZPowoduTempa,a.energyResolveStrategyFromDom=energyResolveStrategyFromDom,a.energyDietBulletsExtra=energyDietBulletsExtra,a.energyChildMedianBmi=childMedianBmi,a.proposeChildDietsFromBase=Gc,a.DIET_DESCRIPTIONS=De,a.DIET_BULLETS=Q,a.ENERGY_ADULT_START_AGE=k,a.ENERGY_CHILD_GROWTH_MULTIPLIER=Se,a.ENERGY_REFERENCE_INFANT_TABLE=ee,a.ENERGY_REFERENCE_CHILD_TABLE=te,a.ENERGY_PAL_META=B,a.ENERGY_PAL_LABELS=Te,a.ENERGY_PAL_TABLE_LABELS=rt,a.ENERGY_PAL_TABLE_HINTS=ot,a.PAL_DESCRIPTIONS=it,a.MIN_INTAKE_ADULT=He,a.MIN_INTAKE_CHILD=Ge,a.updateDietDescription=V,a.updatePalDescription=Fe,a.energyResolveEquationStage=se,a.energyNormalizeSex=xe,a.energyGetCompletedYears=H,a.energyGetCompletedMonths=ue,a.energyGetReferenceAgeBand=X,a.energyGetReferenceEntry=de,a.energyReferenceWeightKg=ge,a.energyResolveReferenceAnthropometry=Z,a.energyResolveAnthropometry=ye,a.energyHenryREEkcal=me,a.energyButteTEEkcal=pe,a.energyStageUsesGrowthMultiplier=he,a.energyResolveBodyModeFromPolicy=Oe,a.energyResolvePalSelection=fe,a.energyResolveLegacyPreset=$e,a.energyBuildContext=S,a.energyConvertLegacyParams=be,a.energyProjectLegacyEstimate=_e,a.energyEstimate=ke,a.energyIsNumeric=f,a.energyGetPalMeta=j,a.energyGetPalOptionLabel=ne,a.energyGetPalDescription=ae,a.energyFormatPalCodeLabel=le,a.energyFormatPalRangeLabel=we,a.energyGetPresetConfig=re,a.energyResolvePalBand=W,a.energyGetAllowedPals=Y,a.energyDefaultPlanPal=Dd,a.ENERGY_PAL_DOMYSLNY=ENERGY_PAL_DOMYSLNY,a.energyNormalizePal=oe,a.BMR=Ue,a.proposeDietsFromTEE=G,a.energyMaybeApplyRiskAdjustment=x,a.energyGetContextModeBadge=D,a.energyRenderModeBadgeHtml=F,a.energyBuildIntakeObservedState=Re,a.energyBuildPlanReductionState=J,a.energySimulateMonthsToBmiTarget=energySimulateMonthsToBmiTarget,a.energyCustomGoalAssess=energyCustomGoalAssess,a.energyGainAssess=energyGainAssess,a.ENERGY_GAIN_PLAN=GAIN_PLAN,a.energyCustomGoalAssessTeen=energyCustomGoalAssessTeen,a.proposeCustomGoalDietTeen=Gcwt,a.energyCustomGoalHint=energyCustomGoalHint,a.energyReadCustomGoalKg=readCustomGoalKgFromDom,a.ENERGY_CUSTOM_GOAL=CUSTOM_GOAL,a.proposeCustomGoalDiet=Gcw,a.energyDateAfterMonthsPl=energyDateAfterMonthsPl,a.energyPopulatePalSelect=ce,a.energyPopulatePalSelectByPreset=q,a.energyPopulatePlanPalSelect=Ee,a.energyPopulateIntakePalSelect=Pe,a.fillDietSelect=Ce,a.updatePlanFromDiet=Ye,je=!0)}function Ve(){return qe(),Be=!0,Ze}function Xe(){const e=function(l){return!!(a&&typeof a[l]=="function")};return Object.freeze({version:ze,step:Le,readOnly:!0,moduleOnly:!0,initialized:!!Be,globalsExposed:!!(je&&e("updatePlanFromDiet")&&e("fillDietSelect")&&e("updateDietDescription")&&e("updatePalDescription")&&e("BMR")&&e("energyBuildContext")&&e("energyBuildPlanReductionState")&&e("energyBuildIntakeObservedState")),didRenderDom:!1,didWriteStorage:!1,didCallWindowUpdate:!1})}const Ze=Object.freeze({VERSION:ze,STEP:Le,init:Ve,initDietPlanUI:Ve,getSnapshot:Xe,updateDietDescription:V,updatePalDescription:Fe,energyBuildContext:S,energyBuildPlanReductionState:J,energyBuildIntakeObservedState:Re,energyChildBmiClass:childBmiClass,energyChildPlanStage:childPlanStage,proposeChildDietsFromBase:Gc,energySimulateMonthsToBmiTarget:energySimulateMonthsToBmiTarget,energyEstimate:ke,energyIsNumeric:f,BMR:Ue,proposeDietsFromTEE:G,fillDietSelect:Ce,updatePlanFromDiet:Ye,energyPopulatePalSelect:ce,energyPopulatePlanPalSelect:Ee,energyPopulateIntakePalSelect:Pe,energyMaybeApplyRiskAdjustment:x,energyGetContextModeBadge:D,energyRenderModeBadgeHtml:F});qe(),a&&(a.VildaDietPlanUI=Ze,a.vildaGetDietPlanUiSnapshot=Xe)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+function qe(){a&&(a.DIET_LEVELS=$,a.DIET_LEVELS_CHILD=DIET_CHILD,a.MIN_INTAKE_CHILD_UNDER10=CHILD_FLOOR_KCAL.under10,a.CHILD_REE_OBESITY_FACTOR=CHILD_REE_OBESITY_FACTOR,a.CHILD_REE_FACTOR_OD_LAT=CHILD_REE_FACTOR_OD_LAT,a.CHILD_REE_OTYLOSC_ZRODLO=CHILD_REE_OTYLOSC_ZRODLO,a.ENERGY_KONTROLA_PLANU=KONTROLA_PLANU,a.ENERGY_GORNA_KROK_KCAL=GORNA_KROK_KCAL,a.energyReeZRownania=energyReeZRownania,a.energyGornaGranicaKcal=energyGornaGranicaKcal,a.energyKontrolaPlanu=energyKontrolaPlanu,a.energyCelPodpis=energyCelPodpis,a.energyBadgeWgKlasy=energyBadgeWgKlasy,a.energyTempoUbytkuZHistorii=energyTempoUbytkuZHistorii,a.energyLimitAlarmuUbytku=energyLimitAlarmuUbytku,a.ENERGY_ALARM_UBYTKU=ENERGY_ALARM_UBYTKU,a.ENERGY_RYZYKO_BEZ_KOREKTY=ENERGY_RYZYKO_BEZ_KOREKTY,a.DIET_RATE_CHILD_KG_MONTH=CHILD_RATE_KG_MONTH,a.energyChildBmiClass=childBmiClass,a.energyChildPlanStage=childPlanStage,a.energyChildGrowthOutlook=childGrowthOutlook,a.energyOpisWzrastania=energyOpisWzrastania,a.energyZdanieStabBrak=energyZdanieStabBrak,a.energyZdanieStabS2=energyZdanieStabS2,a.energyWiekKryteriumDoroslegoLat=energyWiekKryteriumDoroslegoLat,a.energyTrajektoriaWzrostu=energyTrajektoriaWzrostu,a.ENERGY_WZRASTANIE=ENERGY_WZRASTANIE,a.energyResolveStrategy=energyResolveStrategy,a.energyStabilizacjaZPowoduTempa=energyStabilizacjaZPowoduTempa,a.energyResolveStrategyFromDom=energyResolveStrategyFromDom,a.energyDietBulletsExtra=energyDietBulletsExtra,a.energyChildMedianBmi=childMedianBmi,a.proposeChildDietsFromBase=Gc,a.DIET_DESCRIPTIONS=De,a.DIET_BULLETS=Q,a.ENERGY_ADULT_START_AGE=k,a.ENERGY_CHILD_GROWTH_MULTIPLIER=Se,a.ENERGY_REFERENCE_INFANT_TABLE=ee,a.ENERGY_REFERENCE_CHILD_TABLE=te,a.ENERGY_PAL_META=B,a.ENERGY_PAL_LABELS=Te,a.ENERGY_PAL_TABLE_LABELS=rt,a.ENERGY_PAL_TABLE_HINTS=ot,a.PAL_DESCRIPTIONS=it,a.MIN_INTAKE_ADULT=He,a.MIN_INTAKE_CHILD=Ge,a.updateDietDescription=V,a.updatePalDescription=Fe,a.energyResolveEquationStage=se,a.energyNormalizeSex=xe,a.energyGetCompletedYears=H,a.energyGetCompletedMonths=ue,a.energyGetReferenceAgeBand=X,a.energyGetReferenceEntry=de,a.energyReferenceWeightKg=ge,a.energyResolveReferenceAnthropometry=Z,a.energyResolveAnthropometry=ye,a.energyHenryREEkcal=me,a.energyButteTEEkcal=pe,a.energyStageUsesGrowthMultiplier=he,a.energyResolveBodyModeFromPolicy=Oe,a.energyResolvePalSelection=fe,a.energyResolveLegacyPreset=$e,a.energyBuildContext=S,a.energyConvertLegacyParams=be,a.energyProjectLegacyEstimate=_e,a.energyEstimate=ke,a.energyIsNumeric=f,a.energyGetPalMeta=j,a.energyGetPalOptionLabel=ne,a.energyGetPalDescription=ae,a.energyFormatPalCodeLabel=le,a.energyFormatPalRangeLabel=we,a.energyGetPresetConfig=re,a.energyResolvePalBand=W,a.energyGetAllowedPals=Y,a.energyDefaultPlanPal=Dd,a.ENERGY_PAL_DOMYSLNY=ENERGY_PAL_DOMYSLNY,a.energyNormalizePal=oe,a.BMR=Ue,a.proposeDietsFromTEE=G,a.energyMaybeApplyRiskAdjustment=x,a.energyGetContextModeBadge=D,a.energyRenderModeBadgeHtml=F,a.energyBuildIntakeObservedState=Re,a.energyBuildPlanReductionState=J,a.energySimulateMonthsToBmiTarget=energySimulateMonthsToBmiTarget,a.energyCustomGoalAssess=energyCustomGoalAssess,a.energyGainAssess=energyGainAssess,a.ENERGY_GAIN_PLAN=GAIN_PLAN,a.energyCustomGoalAssessTeen=energyCustomGoalAssessTeen,a.proposeCustomGoalDietTeen=Gcwt,a.energyCustomGoalHint=energyCustomGoalHint,a.energyReadCustomGoalKg=readCustomGoalKgFromDom,a.ENERGY_CUSTOM_GOAL=CUSTOM_GOAL,a.proposeCustomGoalDiet=Gcw,a.energyDateAfterMonthsPl=energyDateAfterMonthsPl,a.energyPopulatePalSelect=ce,a.energyPopulatePalSelectByPreset=q,a.energyPopulatePlanPalSelect=Ee,a.energyPopulateIntakePalSelect=Pe,a.fillDietSelect=Ce,a.updatePlanFromDiet=Ye,je=!0)}function Ve(){return qe(),Be=!0,Ze}function Xe(){const e=function(l){return!!(a&&typeof a[l]=="function")};return Object.freeze({version:ze,step:Le,readOnly:!0,moduleOnly:!0,initialized:!!Be,globalsExposed:!!(je&&e("updatePlanFromDiet")&&e("fillDietSelect")&&e("updateDietDescription")&&e("updatePalDescription")&&e("BMR")&&e("energyBuildContext")&&e("energyBuildPlanReductionState")&&e("energyBuildIntakeObservedState")),didRenderDom:!1,didWriteStorage:!1,didCallWindowUpdate:!1})}const Ze=Object.freeze({VERSION:ze,STEP:Le,init:Ve,initDietPlanUI:Ve,getSnapshot:Xe,updateDietDescription:V,updatePalDescription:Fe,energyBuildContext:S,energyBuildPlanReductionState:J,energyBuildIntakeObservedState:Re,energyChildBmiClass:childBmiClass,energyChildPlanStage:childPlanStage,proposeChildDietsFromBase:Gc,energySimulateMonthsToBmiTarget:energySimulateMonthsToBmiTarget,energyEstimate:ke,energyIsNumeric:f,BMR:Ue,proposeDietsFromTEE:G,fillDietSelect:Ce,updatePlanFromDiet:Ye,energyPopulatePalSelect:ce,energyPopulatePlanPalSelect:Ee,energyPopulateIntakePalSelect:Pe,energyMaybeApplyRiskAdjustment:x,energyGetContextModeBadge:D,energyRenderModeBadgeHtml:F});qe(),a&&(a.VildaDietPlanUI=Ze,a.vildaGetDietPlanUiSnapshot=Xe)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
 
 /* PAL touched (2026-08-13): ręczna zmiana selecta #palFactor (natywne 'change' nie jest
    emitowane przy programowym .value=) oznacza świadomy wybór — od tej chwili

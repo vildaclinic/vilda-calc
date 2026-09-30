@@ -36,7 +36,8 @@ describe('rata G2: „Twoja droga” w planie PDF przy stabilizacji dziecka', ()
 
   it('zachęta o wzrastaniu tylko wtedy, gdy generator ją podaje (przy tempie poniżej normy — nie podaje)', () => {
     const z = droga(html(DANE({ wzrastanie: { tempoCmRokLabel: '6,0' } })));
-    expect(tekst(z)).toContain('Wzrastanie wciąż trwa (ok. 6,0 cm/rok) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała.');
+    // P-DIETA-B8: wzrastanie zwalnia jak mediana siatki — „w najbliższym roku ok. X cm”, nie stałe „cm/rok”
+    expect(tekst(z)).toContain('Wzrastanie wciąż trwa (w najbliższym roku ok. 6,0 cm) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała.');
     expect(droga(html(DANE({ wzrastanie: null, tempoWzrastania: { ocena: 'ponizej', zdanie: 'x' } })))).not.toContain('Wzrastanie wciąż trwa');
   });
 
