@@ -6228,9 +6228,8 @@ poprzednich ratach). Telefon 393 px i desktop 1440 px: bez poziomego przewijania
 
 **Wersje.** `vilda_auth_ui.js` 466 → 467 (8 stron) i w adresach wstrzykiwanych przez `vilda_chrome.js` (79 → 80) i
 `vilda_session_bridge.js` (7 → 8, 22 strony); `obesity_therapy_monitor.js` 21 → 22; `inline_docpro_01.css` 1 → 2;
-precache (append-only); `SW_VERSION` 1.1.113 → 1.1.115 (+ pin; 1.1.114 zajmuje P-POWLOKA-WYSCIG-2 #488, którego poprawka
-`vilda_summary_cards.js` 51 jest tu przeniesiona, żeby odłamek e2e 2/3 był zielony); `tests/fixtures/wersje-zasobow.json`
-odświeżony.
+precache (append-only); `SW_VERSION` 1.1.114 → 1.1.115 (+ pin; 1.1.114 wydał P-POWLOKA-WYSCIG-2 #488, który naprawił czerwony odłamek e2e 2/3
+tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
 
 **Otwarte (poza tą zmianą, do decyzji właściciela).**
 - Bez startu kafelek „Próg ChPL” i reguła w nocie pochodzą z grupy wybranej wg wieku w 1. zapisanym punkcie — przy
