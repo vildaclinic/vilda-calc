@@ -5972,7 +5972,7 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
 
-## Audyt zaleceń dietetycznych — rata 2: bezpieczeństwo i teksty, bez obniżania kcal (P-DIETA-AUDYT2 rata 2, SW 1.1.124, 2026-09-30)
+## Audyt zaleceń dietetycznych — rata 2: bezpieczeństwo i teksty, bez obniżania kcal (P-DIETA-AUDYT2 rata 2, SW 1.1.125, 2026-09-30)
 
 **Zlecenie właściciela (2026-09-30).** Po przeglądzie części B audytu (rekomendacje dla progów B1–B9) właściciel zlecił
 ratę 2: poprawki bezpieczeństwa i błędnych tekstów, które nie wymagają decyzji o progach i nie obniżają kaloryczności.
@@ -6014,7 +6014,7 @@ Decyzje o progach (zasada domyślnego PAL, strategia przy nadwadze, model wzrast
 E2E `tests/e2e/dieta-audyt2-rata2.spec.mjs` (7 przypadków na prawdziwej stronie: notka, zdanie o wzrastaniu, minimum, podpis 18-latka, zdanie bez pomiaru tempa, alarm w karcie planu, plakietka PAL).
 
 **Pliki.** `vilda_diet_plan_ui.js` (`?v=41`), `vilda_diet_recommendations.js` (`?v=66`), `vilda_bmi_journey.js` (`?v=27`);
-SW 1.1.123 → 1.1.124, precache append-only, `?v=` na stronach i w smoke, fixture wersji. Zaktualizowane oczekiwania tekstowe
+SW 1.1.124 → 1.1.125 (po P-NAME-FIX-WYSCIG), precache append-only, `?v=` na stronach i w smoke, fixture wersji. Zaktualizowane oczekiwania tekstowe
 (liczba asercji nie maleje): `dieta-tempo-wzrastania-rata-g1` (unit), `dieta-tempo-rata-g1`, `zalecenia-energetyczne-strategia`,
 `dieta-rata-u`, `dieta-dziecko-otylosc`, `dieta-audyt2` (e2e).
 
