@@ -6537,6 +6537,74 @@ po obu stronach).
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
 przez monitor i skasowanie bazy.
 
+## Ukryta karta zaawansowana na DocPro nie zmienia punktów terapii GH ani wierszy ręcznych; monitor bez kopii w IndexedDB (P-GH-DOCPRO, SW 1.1.131, `gh_therapy_monitor.js` 46, `docpro_state_persist.js` 7, 2026-09-30)
+
+**Skąd.** Audyt przepływu pomiarów GH (`docs/AUDYT-PRZEPLYW-GH.md`, U3 i U5) i decyzja właściciela z 2026-09-30:
+kolejna zmiana po P-GH-ZRODLO obejmuje ukrytą kartę zaawansowaną na DocPro i kopię punktów w IndexedDB. Hipotezę
+z audytu (odtworzenie stanu DocPro wysyła `change` w wierszach ukrytej karty) zmierzono przed zmianą.
+
+**Zmierzone na `audyt` `567597c`** (Chromium, własne konto sejfu, dane fikcyjne; dziewczynka 14 l., punkt GH
+13 l. 1 mies. / 139,9 cm / 45 kg, 0,033 mg/kg/d = 1,49 mg/d):
+- Stan kart DocPro (`docpro_state_persist.js`) zapisuje pola bez `id` pod kluczem z **pozycji w DOM** i przy starcie
+  strony odtwarza je z wysłaniem `input` i `change`. Wiersze karty zaawansowanej (`#advMeasurements`) to lista
+  dynamiczna: skład buduje wspólny stan pacjenta (wiersze ręczne) i monitor GH (wiersze punktów, `ue()`).
+- **Usunięcie wiersza ręcznego na Start między wizytami w DocPro** (wiersze 11 l. / 123,9 / 35 i 12 l. / 131,3 / 40,3
+  → usunięty 12 l.): po powrocie na DocPro wiersz punktu dostał wartości usuniętego wiersza, a zapis zwrotny
+  monitora zmienił **sam punkt**: 139,9 → 131,3 cm, 45 → 40,3 kg, 1,49 → 1,33 mg/d. Punkt w pamięci modułu (więc
+  i na Start, i w zapisie) niósł zmienione wartości; lekarz nie dostawał żadnego sygnału.
+- **Dodanie wiersza ręcznego na Start** (12 l. / 131,3 / 40,3) między wizytami: nowy wiersz na DocPro dostał wartości
+  punktu (13 l. 1 mies. / 139,9 / 45) i ta ręczna kopia wróciła na Start — **pomiar 12 l. zniknął**, a wiersz punktu
+  schował się pod ręczną kopią.
+- Zapis zwrotny wiersz → punkt (nasłuch `change` w monitorze) przy zmianie masy przeliczał dawkę w mg/d
+  (45 → 47,1 kg: 1,49 → 1,55 mg/d) — sprzecznie z decyzją właściciela, że pierwotna jest dawka podawana.
+- Po usunięciu **ostatniego** punktu `F()` kończyło się przed `ue()` i wiersz punktu zostawał w ukrytej karcie
+  i w `window.advancedGrowthData` DocPro do przeładowania.
+- Monitor kopiował pełną listę punktów do IndexedDB `ghTherapyDB` przy każdej zmianie; po P-GH-ZRODLO nikt tej kopii
+  nie czyta.
+
+**Zmiana.**
+- `docpro_state_persist.js`: pola wewnątrz `#advMeasurements` nie należą do stanu kart DocPro — nie są zapisywane
+  ani odtwarzane (także ze zrzutów zapisanych przed zmianą). Wiersze karty mają własne źródła (wspólny stan pacjenta
+  i monitor GH), co zmierzono: po powrocie na DocPro skład i wartości wierszy są takie jak na Start.
+- `gh_therapy_monitor.js`:
+  - usunięty zapis zwrotny wiersz karty zaawansowanej → punkt; punkt zmienia się wyłącznie w monitorze;
+  - `F()` przy pustej liście też odświeża lustro w karcie zaawansowanej (`ue()`);
+  - lista punktów nie jest kopiowana do IndexedDB; sygnał `gh-therapy-sync` `{type:"update"}` idzie od razu (moduł
+    jest zapisany wcześniej, synchronicznie); dawna baza `ghTherapyDB` jest usuwana przy starcie monitora i przy
+    resecie jego stanu (wcześniej reset czyścił bazę, czyli ją otwierał i tworzył).
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (integralność danych) o znaczeniu klinicznym: bez zmiany
+wzorów, progów, jednostek, dawkowania i formatu rekordu. Usuwa trzy drogi, którymi pomiary i dawka w mg/d zmieniały
+się bez udziału lekarza (punkt po usunięciu wiersza, wiersz ręczny po dodaniu wiersza, masa i mg/d w ukrytym
+wierszu) oraz wiersz-duch po usunięciu ostatniego punktu. Rekordów zmienionych wcześniej tą drogą zmiana nie odtwarza.
+Źródło medyczne: nie dotyczy (bez zmiany wiedzy klinicznej). Wymaga akceptacji właściciela.
+
+**Strażnik.** `tests/e2e/gh-docpro-karta-ukryta.spec.mjs` (5, prawdziwe strony `index.html` i `docpro.html`):
+- A: usunięcie wiersza ręcznego między wizytami → punkt 139,9 cm / 45 kg / 1,49 mg/d, wiersz punktu bez zmian;
+- B: wiersz ręczny 12 l. / 131,3 / 40,3 dodany na Start zostaje na DocPro i po powrocie na Start, bez ręcznej kopii
+  punktu;
+- C: zmiana masy (47,1) i wzrostu w wierszu punktu w ukrytej karcie → punkt i dawka bez zmian;
+- D: usunięcie ostatniego punktu przyciskiem monitora → brak wiersza punktu i wartości 139,9 w `advancedGrowthData`;
+- E: baza `ghTherapyDB` z poprzedniej wersji znika przy starcie DocPro i nie wraca po zmianie listy w monitorze.
+
+**Zmierzone czerwone** na `567597c`: **5 z 5**. Mutanty: bez zmiany w `docpro_state_persist.js` padają A i B; bez
+`ue()` przy pustej liście pada D; C i E padają na kodzie sprzed zmiany niezależnie od pozostałych części.
+
+**Czego to nie naprawia.**
+- Pola wzrostu, masy i wieku kostnego w wierszach punktów na Start nadal są edytowalne i się rozjeżdżają (U1) —
+  następna zmiana.
+- W `app.js` zostają funkcje odczytu i czyszczenia bazy (`getTherapyPointsFromDB`, `clearTherapyPointsInDB`), a w monitorze
+  nieużywane funkcje otwarcia i zapisu; opisuje je inwentarz `vilda_gh_therapy_resource_audit.js` i test dymny.
+  Odczytu nikt nie woła; „Wyczyść wszystkie pola” może utworzyć pustą bazę (bez punktów), którą skasuje najbliższy
+  start monitora. Ich usunięcie razem z inwentarzem — osobna zmiana porządkowa.
+- Wiersze punktów w ukrytej karcie zostają (moduły DocPro czytają `advancedGrowthData`).
+
+**Wersje.** `gh_therapy_monitor.js` 45 → 46, `docpro_state_persist.js` 6 → 7 (`docpro.html`); precache (append-only);
+`SW_VERSION` 1.1.130 → 1.1.131 (po #504; + pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
+odświeżony.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna, scalenie i wdrożenie.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
