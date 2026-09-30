@@ -77,12 +77,15 @@ test('OBESITY-EDIT-1: drugie „Włączenie" jest odrzucane — punkt odniesieni
   const przed = await dwaPunkty(page);
 
   const out = await page.evaluate((id) => {
+    // P-OTYLOSC-CYKLE rata 1: komunikat stoi w miejscu przycisków (#obesityTherapyActionMsg), nie w okienku.
     const komunikaty = [];
     const alert = window.alert;
     window.alert = (m) => { komunikaty.push(String(m)); };
     window.obesityEditTherapyPoint(id);
     const zapisano = window.obesitySaveTherapyPointEdit('start');
     window.alert = alert;
+    const pole = document.getElementById('obesityTherapyActionMsg');
+    if (pole && !pole.hidden) komunikaty.push(pole.textContent);
     return {
       zapisano,
       komunikaty,
