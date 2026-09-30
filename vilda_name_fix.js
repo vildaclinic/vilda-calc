@@ -54,6 +54,13 @@
  *   - Kolejność zdarzeń: monotoniczny licznik `loadSeq` unieważnia w locie starsze,
  *     jeszcze nieukończone odczyty (w tym oczekującą ponowną próbę), gdy nadejdzie
  *     nowsze 'vilda:patient-loaded' — stan pól zawsze odpowiada OSTATNIEMU zdarzeniu.
+ *   - ZMIANA FORMULARZA W TRAKCIE ODCZYTU (v3, P-NAME-FIX-WYSCIG 2026-09-30): odczyt sejfu
+ *     trwa (od ułamka sekundy do ok. 1 s pod obciążeniem, dłużej w chmurze, +1,2 s przy
+ *     ponownej próbie). Jeżeli w tym czasie pola tożsamości zmieniły się i nie pokazują
+ *     już nazwy tego rekordu (inne nazwisko, wyczyszczony formularz), spóźniona odpowiedź
+ *     NIE rusza pól i nie pokazuje pytania — inaczej nazwisko wczytanego pacjenta wracało
+ *     do formularza z danymi innego dziecka. Ta sama nazwa w innej kolejności lub
+ *     wielkości liter nie jest zmianą pacjenta, więc korekta wtedy działa jak dotąd.
  *   - Nie zmieniamy matematyki silnika ani innych funkcji.
  */
 (function (w) {
@@ -92,6 +99,25 @@
   function tokens(nameStr) { var n = norm(nameStr); return n ? n.split(' ') : []; }
   function warn(msg) { try { if (w.console && w.console.warn) w.console.warn('[vilda_name_fix] ' + msg); } catch (_) {} }
   function getVault() { return w.VildaVault || null; }
+
+  // --- Czy formularz nadal pokazuje wczytany rekord (por. BEZPIECZNIKI, v3) ------------
+  // Słowa nazwy bez względu na kolejność i wielkość liter — ta sama miara co blokada pól
+  // tożsamości (vilda_pola_tozsamosci.js), bo tu też chodzi o „tego samego pacjenta”.
+  function wordKey(x) { var n = norm(x).toLowerCase(); return n ? n.split(' ').sort().join(' ') : ''; }
+  function readFields() { return { name: str(nameEl.value), ln: str(lastNameEl.value), fn: str(firstNameEl.value) }; }
+  // Formularz „poszedł dalej”: od zdarzenia pola się zmieniły i żadna z nazw rekordu nie
+  // zgadza się z tym, co w nich teraz jest. Niezmienione pola zawsze przepuszczamy — tak
+  // działają ścieżki, w których formularz nie dostał jeszcze nazwy przed zdarzeniem.
+  function formMovedOn(atEvent, recordNames) {
+    var now = readFields();
+    if (now.name === atEvent.name && now.ln === atEvent.ln && now.fn === atEvent.fn) return false;
+    var shown = [wordKey(now.name), wordKey(now.ln + ' ' + now.fn)];
+    for (var i = 0; i < recordNames.length; i++) {
+      var k = wordKey(recordNames[i]);
+      if (k && shown.indexOf(k) !== -1) return false;
+    }
+    return true;
+  }
 
   // --- Ustawianie pól bez psucia przez P-SPLIT ---------------------------------------
   // Kolejność ma znaczenie: najpierw #name (kanon) — hook P-SPLIT może je błędnie
@@ -451,6 +477,9 @@
     // Prompt już otwarty dla tego samego pacjenta → nic nie rób (bez podwójnego pytania/rekurencji).
     if (patientId && currentPromptId === patientId) return;
 
+    // Stan pól w chwili zdarzenia — po odczycie sprawdzamy, czy formularz nie poszedł dalej.
+    var atEvent = readFields();
+
     var rec = await loadRecord(patientId);
     if (seq !== loadSeq) return; // w trakcie odczytu nadeszło nowsze zdarzenie
 
@@ -487,6 +516,13 @@
 
     // Nazwa do analizy: payload.name → header.name → aktualne #name (kolejność zaufania).
     var nameStr = norm(payload.name) || norm(rec.header && rec.header.name) || norm(nameEl.value);
+
+    // W trakcie odczytu formularz dostał innego pacjenta albo został wyczyszczony — spóźniona
+    // odpowiedź nie może tego cofnąć (por. BEZPIECZNIKI, v3). Bez nazw w logu: to dane pacjenta.
+    if (formMovedOn(atEvent, [payload.name, rec.header && rec.header.name, explicitLn + ' ' + explicitFn])) {
+      warn('pola tożsamości zmieniły się w trakcie odczytu patientId=' + (patientId || '(brak)') + ' — pomijam');
+      return;
+    }
 
     // (1) JAWNE części → ustaw wprost, bez pytania i bez zapisu.
     if (hasExplicit) {
@@ -527,7 +563,7 @@
   // Publiczny znacznik gotowości (dla testów/diagnostyki; nie zmienia zachowania aplikacji).
   w.VildaNameFix = {
     __init: true,
-    version: '2',
+    version: '3',
     resolvedCount: function () { return resolved.size; }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

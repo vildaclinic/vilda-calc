@@ -279,3 +279,176 @@ test('Rekord JEDNOTOKENOWY — całość w Nazwisko, Imię puste, bez promptu', 
   await expect(page.locator('#vnfFix')).toBeHidden();
   await expect(page.locator('#vnfDone')).toBeHidden();
 });
+
+// P-NAME-FIX-WYSCIG (2026-09-30) — spóźniona odpowiedź sejfu nie może cofnąć zmian formularza.
+//
+// Handler 'vilda:patient-loaded' czyta rekord z sejfu ASYNCHRONICZNIE i dopiero potem ustawia
+// pola. Zmierzone na audyt 5cac96d (12 przebiegów, 4 workery): odczyt kończy się 172–943 ms po
+// zdarzeniu, a test tozsamosc-pacjenta-duplikaty.spec.mjs (kontrola „inne nazwisko…”) zaczyna pisać
+// nowe nazwisko 33–452 ms później. Gdy odczyt się spóźnił (CI, run 36695159393, obie próby), moduł wpisywał
+// z powrotem nazwisko WCZYTANEGO pacjenta w formularz z danymi innego dziecka — stos wywołań:
+// handlePatientLoaded → applyFields. Opóźnienie odczytu o 250 ms odtwarzało dokładnie ten błąd.
+//
+// Zamiast mierzyć czas, test wstrzymuje odpowiedzi sejfu dla wczytanego pacjenta, zmienia
+// formularz i dopiero wtedy je zwalnia — kolejność jest więc zawsze ta z CI.
+//
+// Wczytanie idzie tą samą drogą co „Wczytaj tego pacjenta”: applyLoadedData + zdarzenie.
+
+async function wstrzymajOdczyty(page, patientId) {
+  await page.evaluate((pid) => {
+    const V = window.VildaVault;
+    const orig = V.getPatient.bind(V);
+    let zwolnij = null;
+    const bramka = new Promise((res) => { zwolnij = res; });
+    window.__vnfBramka = { wejscia: 0, wyjscia: 0, zwolnij: () => zwolnij() };
+    V.getPatient = async (id) => {
+      const wstrzymaj = id === pid;
+      if (wstrzymaj) window.__vnfBramka.wejscia += 1;
+      const rec = await orig(id);
+      if (wstrzymaj) {
+        await bramka;
+        window.__vnfBramka.wyjscia += 1;
+      }
+      return rec;
+    };
+  }, patientId);
+}
+
+/* Zwalnia wstrzymane odczyty i czeka, aż wszystkie wrócą. Każde page.evaluate to osobne
+   zadanie przeglądarki, więc kontynuacje handlera (mikrozadania) wykonają się przed asercjami. */
+async function zwolnijOdczyty(page) {
+  const oczekiwane = await page.evaluate(() => {
+    window.__vnfBramka.zwolnij();
+    return window.__vnfBramka.wejscia;
+  });
+  expect(oczekiwane, 'moduł nie wywołał odczytu sejfu dla wczytanego pacjenta').toBeGreaterThan(0);
+  await expect
+    .poll(() => page.evaluate(() => window.__vnfBramka.wyjscia), { timeout: 15000 })
+    .toBeGreaterThanOrEqual(oczekiwane);
+  await page.evaluate(() => new Promise((res) => { setTimeout(res, 0); }));
+}
+
+async function zapiszIWczytaj(page, payload) {
+  const patientId = await page.evaluate(async (p) => {
+    const saved = await window.VildaVault.savePatient(p);
+    return saved.patientId || saved.id || (saved.patient && saved.patient.patientId);
+  }, payload);
+  expect(patientId.length).toBeGreaterThan(0);
+  await wstrzymajOdczyty(page, patientId);
+  await page.evaluate(({ pid, p }) => {
+    window.applyLoadedData(p);
+    document.dispatchEvent(
+      new CustomEvent('vilda:patient-loaded', { detail: { patientId: pid, source: 'pick' } }),
+    );
+  }, { pid: patientId, p: payload });
+  return patientId;
+}
+
+const polaTozsamosci = (page) => page.evaluate(() => ({
+  name: document.getElementById('name').value,
+  lastName: document.getElementById('lastName').value,
+  firstName: document.getElementById('firstName').value,
+}));
+
+test.describe('Spóźniona odpowiedź sejfu nie cofa zmian formularza', () => {
+  test('inne nazwisko wpisane przed odpowiedzią sejfu zostaje w formularzu i w kolektorze', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    // Rekord tak, jak zapisuje go aplikacja: jawne części w user.* (ścieżka (1) modułu).
+    await zapiszIWczytaj(page, {
+      name: 'Fikcyjny-Wyscig Adam',
+      user: { firstName: 'Adam', lastName: 'Fikcyjny-Wyscig', age: 6, sex: 'M', weight: 21, height: 118 },
+    });
+    expect(await polaTozsamosci(page)).toEqual({
+      name: 'Fikcyjny-Wyscig Adam', lastName: 'Fikcyjny-Wyscig', firstName: 'Adam',
+    });
+
+    // Dane INNEGO dziecka — tak jak w kontroli „inne nazwisko…” (pola pisane programowo).
+    await page.evaluate(() => {
+      [['firstName', 'Bartek'], ['lastName', 'Inny-Wyscig']].forEach(([id, v]) => {
+        const el = document.getElementById(id);
+        el.value = v;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+    expect((await polaTozsamosci(page)).name).toBe('Inny-Wyscig Bartek');
+
+    await zwolnijOdczyty(page);
+
+    expect(await polaTozsamosci(page)).toEqual({
+      name: 'Inny-Wyscig Bartek', lastName: 'Inny-Wyscig', firstName: 'Bartek',
+    });
+    // Kolektor — to on idzie do zapisu i do bramki tożsamości.
+    const zebrane = await page.evaluate(() => {
+      const d = window.collectUserData() || {};
+      return { name: d.name || '', lastName: (d.user && d.user.lastName) || '' };
+    });
+    expect(zebrane.name).toContain('Inny-Wyscig');
+    expect(zebrane.name).not.toContain('Fikcyjny-Wyscig');
+    expect(zebrane.lastName).toBe('Inny-Wyscig');
+  });
+
+  test('formularz wyczyszczony przed odpowiedzią sejfu zostaje pusty, bez pytania o rozdzielenie', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    // Stary rekord jednopolowy — bez tej poprawki spóźniona odpowiedź wpisywała nazwę do
+    // wyczyszczonego formularza i pokazywała pytanie o rozdzielenie (ścieżka (2) modułu).
+    await zapiszIWczytaj(page, {
+      name: 'Fikcyjna Wyscigowa',
+      user: { age: 7, sex: 'F', weight: 23, height: 121 },
+    });
+    expect((await polaTozsamosci(page)).name).toBe('Fikcyjna Wyscigowa');
+
+    // Prawdziwa ścieżka lekarza: „Nowy pomiar” w oknie wyboru, potem „Wyczyść wszystkie pola”.
+    await page.locator('#vildaLcmNew').click();
+    await page.locator('#clearAllDataBtn').click();
+    expect(await polaTozsamosci(page)).toEqual({ name: '', lastName: '', firstName: '' });
+
+    await zwolnijOdczyty(page);
+
+    expect(await polaTozsamosci(page)).toEqual({ name: '', lastName: '', firstName: '' });
+    await expect(page.locator('#vnfFix')).toBeHidden();
+  });
+
+  test('kontrola: formularz niezmieniony — spóźniona korekta nadal ustawia pola z części', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    // name w kolejności „Imię Nazwisko” — P-SPLIT dzieli ją odwrotnie, a moduł ma to poprawić.
+    await zapiszIWczytaj(page, {
+      name: 'Szymon Fikcyjny',
+      user: { firstName: 'Szymon', lastName: 'Fikcyjny', age: 9, sex: 'M', weight: 28, height: 132 },
+    });
+    expect(await polaTozsamosci(page)).toEqual({
+      name: 'Szymon Fikcyjny', lastName: 'Szymon', firstName: 'Fikcyjny',
+    });
+
+    await zwolnijOdczyty(page);
+
+    expect(await polaTozsamosci(page)).toEqual({
+      name: 'Fikcyjny Szymon', lastName: 'Fikcyjny', firstName: 'Szymon',
+    });
+  });
+
+  test('kontrola: pola przepisane tą samą nazwą (inna wielkość liter) — korekta nadal działa', async ({ page }) => {
+    await openIndexGuest(page);
+    await createSyntheticVault(page);
+    await zapiszIWczytaj(page, {
+      name: 'Szymon Fikcyjny',
+      user: { firstName: 'Szymon', lastName: 'Fikcyjny', age: 9, sex: 'M', weight: 28, height: 132 },
+    });
+
+    // Inny moduł wpisuje ponownie TĘ SAMĄ nazwę (np. kolejna fala odtwarzania) — to nie jest
+    // zmiana pacjenta, więc korekta z rekordu ma się wykonać.
+    await page.evaluate(() => { document.getElementById('name').value = 'SZYMON fikcyjny'; });
+    expect(await polaTozsamosci(page)).toEqual({
+      name: 'SZYMON fikcyjny', lastName: 'SZYMON', firstName: 'fikcyjny',
+    });
+
+    await zwolnijOdczyty(page);
+
+    expect(await polaTozsamosci(page)).toEqual({
+      name: 'Fikcyjny Szymon', lastName: 'Fikcyjny', firstName: 'Szymon',
+    });
+  });
+});
