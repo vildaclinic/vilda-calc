@@ -840,8 +840,8 @@
   "sha256": "0345302f147c2eb15091b9413e40791131366aa80eb0ca4fa77d3e0062d33813"
  },
  "vilda_summary_cards.js": {
-  "v": 50,
-  "sha256": "12963cb3c9b7bdf239f54785112b5ce1c98ffdcb7e18e56c6ecbe0d01658ac7c"
+  "v": 51,
+  "sha256": "20ac8071e9ca4a004fd90920731a007beb6d4f634d7ff8aadf0acc9028b7cd42"
  },
  "vilda_sync.js": {
   "v": 32,
