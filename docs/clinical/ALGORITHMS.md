@@ -6241,6 +6241,37 @@ tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
 - Znane wcześniej: kotwica dawki podtrzymującej zawsze nominalna (`weeksFromAnchor` nie jest przekazywane); werdykt
   ocenia ostatni punkt, a nie redukcję w chwili okna.
 
+## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
+
+**Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH
+(`docs/AUDYT-PRZEPLYW-GH.md`) i decyzja właściciela z 2026-09-30.
+
+**Zmiana.** Mostek `importTherapyPointsToAdvancedGrowth` (`vilda_advanced_growth.js`, wewnętrznie `fn()`) dokłada do
+karty zaawansowanej wiersze punktów terapii GH. Dotąd, zależnie od rodzaju pamięci zwracanego przez adapter
+(a także gdy adaptera nie było), pytał najpierw pomocniczą kopię punktów w IndexedDB `ghTherapyDB`. Pamięć modułu
+czytał dopiero przy pustej kopii, a potem nadpisywał tą kopią pamięć modułu i `window.ghTherapyPoints`. Kopia mogła
+być nieaktualna wobec pamięci modułu. Teraz jedynym źródłem jest pamięć modułu `GH_THERAPY_POINTS`: ta sama, którą
+czyta monitor GH i którą ustawia wczytanie pacjenta (`applyLoadedData`). W mostku nie ma już żadnego `await`, więc
+import w każdej konfiguracji kończy się synchronicznie. Zapis kopii przez monitor (`gh_therapy_monitor.js`) i jej
+czyszczenie zostają bez zmian — to osobna, następna zmiana.
+
+**Co się nie zmienia.** Żaden wzór, próg, jednostka ani dane; reguły deduplikacji mostka (GROWTH-HV-UI10,
+P-GH-TOZSAMOSC) bez zmian; format rekordu pacjenta bez zmian. W konfiguracji, w której mostek czytał dotąd kopię,
+karta zaawansowana pokazuje teraz te same punkty co monitor GH.
+
+**Strażnik.** `tests/unit/gh-import-zrodlo-punktow.test.mjs` (4) — prawdziwy mostek modułu na atrapie DOM: dla trzech
+rodzajów pamięci (bez adaptera, sesja, pamięć lokalna) wiersze GH, `window.ghTherapyPoints` i zapis pamięci modułu
+pochodzą z pamięci modułu, a kopia w IndexedDB nie jest pytana; pusta pamięć modułu daje brak wierszy GH, choć kopia
+zawiera punkty. **Zmierzone czerwone** na kodzie sprzed zmiany: **3 z 4** (przypadek „sesja” jest kontrolą, zielony
+po obu stronach).
+
+**Wersje.** `vilda_advanced_growth.js` 72 → 73 (`index.html`, `docpro.html`, `kalkulator-klirens.html`); precache
+(append-only); `SW_VERSION` 1.1.119 → 1.1.120 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
+`tests/fixtures/wersje-zasobow.json` odświeżony.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
+przez monitor i skasowanie bazy.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.

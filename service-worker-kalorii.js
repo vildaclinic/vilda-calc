@@ -2613,6 +2613,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=70',
   '/vilda_advanced_growth.js?v=71',
   '/vilda_advanced_growth.js?v=72',
+  '/vilda_advanced_growth.js?v=73',
   '/vilda_adv_history_collapse.js?v=1',
   '/vilda_adv_history_collapse.js?v=2',
   '/inline_index_02.js?v=11',
