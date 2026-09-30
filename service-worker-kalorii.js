@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.120';
+const SW_VERSION = '1.1.121';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1708,6 +1708,7 @@ const OPTIONAL_ASSETS = [
   '/docpro_state_persist.js',
   '/docpro_state_persist.js?v=4',
   '/docpro_state_persist.js?v=5',
+  '/docpro_state_persist.js?v=6',
   '/lab_units_data.js',
   '/lab_units_data.js?v=1',
   '/lab_units_data.js?v=35',
