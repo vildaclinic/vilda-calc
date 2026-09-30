@@ -86,7 +86,7 @@ test.describe('P-DIETA rata G2 — plan PDF i raport przy stabilizacji dziecka',
     const r = await stan(page, { sex: 'M', age: 10, w: 52, h: 145, historia: [{ age: 9, h: 139, w: 47 }] });
     expect(r.strategia).toBe('stabilization');
     expect(r.tytul).toBe('Twój plan utrzymania masy ciała');
-    expect(r.droga).toMatch(/^TWOJA DROGA \| CEL NA TEN ETAP \| 52,0 kg \| utrzymanie obecnej masy ciała \| Wzrastanie wciąż trwa \(ok\. 6,0 cm\/rok\) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała\. \| Górna granica normy BMI przy obecnym wzroście: 43,2 kg \(85\. centyl\)\. Dojście do normy BMI przy stałej masie ciała: .+\.$/);
+    expect(r.droga).toMatch(/^TWOJA DROGA \| CEL NA TEN ETAP \| 52,0 kg \| utrzymanie obecnej masy ciała \| Wzrastanie wciąż trwa \(w najbliższym roku ok\. 6,0 cm\) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała\. \| Górna granica normy BMI przy obecnym wzroście: 43,2 kg \(85\. centyl\)\. Dojście do normy BMI przy stałej masie ciała: .+\.$/);
     expect(r.droga).not.toMatch(/PIERWSZY CEL|pierwszy krok|Cel końcowy/);
     expect(r.naglowek).toBe('Na tym etapie celem jest utrzymanie obecnej masy ciała (ok. 52,0 kg). Najważniejsze jest, aby w kolejnych pomiarach masa ciała rosła wolniej niż wzrost.');
   });

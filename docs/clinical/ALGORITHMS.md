@@ -146,6 +146,8 @@ Wpływ na dotychczasowe wyniki: dodanie KR **nie zmienia** prognoz Bayley–Pinn
 
 **Zakres wdrożenia**: silnik KR (`vilda_khamis_roche.js`), silnik RWT i budowniczy linii podsumowania (`vilda_advanced_growth.js`), karta C (`vilda_growth_card_c.js`), linia KR podsumowania (`vilda_summary_cards.js`), widełki wykresu prognoz (`vilda_auth_ui.js`). Konsumenci progu wzrastania (zalecenia dietetyczne, symulacja wzrastania) mieli już strażniki `prognoza > wzrost` — po ograniczeniu równość oznacza dla nich to samo, co wcześniej wartość niższa (stabilizacja/fallback MPH), więc decyzje nie ulegają zmianie.
 
+**Nota P-DIETA-B8 (2026-09-30).** Dla symulacji czasu do normy BMI i prognozy wzrastania zaleceń dietetycznych prognoza ograniczona do aktualnego wzrostu (albo MPH ≤ wzrostu) oznacza „jak bez prognozy”: nie jest sufitem ani dowodem końca wzrastania (`prognozaNiePrzekraczaWzrostu`). Dotąd dawała „praktycznie zakończone” wzrastanie i najkrótszy czas stabilizacji.
+
 **Przypadek syntetyczny** (dane fikcyjne; test `tests/unit/final-height-clamp.test.mjs` wywołuje realne silniki): chłopiec 17,5 l (210 mies.), wzrost 176 cm, masa 55 kg, rodzice 165/177 → KR raw 175,16 cm; wynik: `predictedAdultHeightCm 176,0`, przedział 176,0–180,5 cm (175,16 + 5,3), `clampedToCurrentHeight:true`.
 
 **Wpływ kliniczny**: zmiana dotyczy wyłącznie przypadków, w których równanie zwraca wynik poniżej zmierzonego wzrostu (pacjenci tuż przy końcu wzrastania); prognoza punktowa może wzrosnąć maksymalnie o wielkość artefaktu (tu 0,8 cm, zawsze wewnątrz błędu metody), a górne granice przedziałów pozostają niezmienione. Status: wdrożenie zaakceptowane kierunkowo przez właściciela (rozmowa 2026-08-13); nie nadaje metodom statusu „zwalidowane klinicznie".
@@ -5971,6 +5973,124 @@ w `tests/unit/klirens-ui-model.test.mjs`), `tests/fixtures/wersje-zasobow.json`.
 zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci, więc ma wersję bieżącą w chwili otwarcia.
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
+
+## Czas dojścia do normy BMI: wzrastanie wg mediany siatki i dwa scenariusze stabilizacji (P-DIETA-B8, SW 1.1.132, 2026-09-30)
+
+**Decyzje właściciela (2026-09-30), po punkcie B8 audytu zaleceń dietetycznych:**
+1. model trajektorii B′ — wzrost równoległy do mediany wzrostu siatki pacjenta;
+2. nagłówek czasu przy stabilizacji = S1 (masa stała), drugie zdanie = S2 (masa rośnie do górnej granicy planu);
+3. koniec wzrastania = ostatni miesiąc siatki głównej, nie 19 lat.
+
+Pozostałe punkty wdrożono według rekomendacji audytu. Właściciel może je jeszcze zmienić:
+- prognoza lub MPH ≤ wzrostu nie jest sufitem;
+- reguła tempa zmierzonego;
+- przyrost masy przy redukcji także przy „praktycznie zakończonym” wzrastaniu;
+- brzmienia i nota o pokwitaniu;
+- zapasowa tabela tempa bez zmian.
+
+**Problem (stan do SW 1.1.128).** `childGrowthOutlook` liczył tempo wzrastania RAZ dla wieku startu, a `energySimulateMonthsToBmiTarget` trzymał je stałe do 19. urodzin. Bez karty zaawansowanej nie było sufitu.
+- Skutek: 12-latka „rosła” +36,8 cm (do 190,6 cm), a mediana OLAF daje +11,3 cm (Kułaga 2011). Suma median DONALD i Kelly to +10,6–12,4 cm.
+- Od P-DIETA-AUDYT2 A2 fikcyjny wzrost dawał też fikcyjny przyrost masy (+13–25 kg). Czasy przy stabilizacji wychodziły 47 i 70 mies. zamiast ok. 18–28 mies. przy stałej masie.
+- Prognoza z karty ≤ wzrostu (GROWTH-PRED-CLAMP) dawała „praktycznie zakończone” wzrastanie, redukcję i jednocześnie NAJKRÓTSZY czas stabilizacji (wzrost bez sufitu i bez przyrostu masy).
+- U chłopców ze wzrostem 178 cm strategia skakała: 17;3–17;6 redukcja, a 17;7–17;11 z tabeli zapasowej 2,0 cm/rok i stabilizacja.
+
+**Reguła (`vilda_diet_plan_ui.js`).**
+
+1. **Źródło (dane, nie stała).**
+   - Mediana wzrostu pochodzi z `VildaSdsWzrostu.mediana` — ta sama reguła siatki i populacji co hSDS. Źródło to `bmiSource`, populacja pochodzi z resolvera `VildaPopulacjaPacjenta` (DS → siatka DS).
+   - Parametry są w obiekcie danych `ENERGY_WZRASTANIE`: krok 0,5 mies., horyzont 240 mies., progi „praktycznie zakończone” 1 cm/rok i 3 cm, nota o pokwitaniu 6 cm i od 8 l. u dziewcząt / 9 l. u chłopców.
+   - Wynik niesie `zrodloWzrastania`, `siatkaWzrastania`, `koniecWzrastaniaMies` i `modelWzrastania`.
+2. **Przyrost mediany** `ΔMed(m0 → m0+t)` (`energyTrajektoriaWzrostu`) to suma przyrostów w krokach 0,5 mies., liczonych w obrębie JEDNEJ siatki łańcucha: dla kroku [a, b] siatka z wieku a, a gdy nie ma punktu b — siatka z wieku b.
+   - Nigdy nie jest to różnica median dwóch siatek (szew 36 mies. Palczewska → OLAF bez skoku poziomu). Przykład dz. 24 → 216 mies.: 77,96 cm, a surowa różnica 78,62 cm.
+   - Koniec wzrastania = ostatni miesiąc siatki głównej (OLAF i WHO 216, Palczewska 222, DS 240); potem wzrost stały.
+3. **Trajektoria** h(t):
+   - bez tempa zmierzonego: h0 + ΔMed(t);
+   - tempo zmierzone v, r = v / ΔMed(12):
+     - r ≤ 1: h0 + r·ΔMed(t), czyli skalowanie całego przebiegu;
+     - r > 1: przez 12 mies. h0 + v·t/12, potem h0 + max(v, min(ΔMedCałk, v + ΔMed(t) − ΔMed(12))), czyli łącznie nie więcej niż pozostały wzrost wg mediany. Uzasadnienie: wcześniejsze pokwitanie przy otyłości — He 2001, Holmgren 2017, de Groot 2017.
+4. **Sufit**: prognoza wzrostu końcowego albo MPH tylko wtedy, gdy PRZEKRACZA obecny wzrost.
+   - Wartość ≤ wzrostu (także `clampedToCurrentHeight`) nie jest sufitem ani dowodem końca wzrastania. Wynik niesie flagę `prognozaNiePrzekraczaWzrostu`, a `remainingCm` = null.
+5. **Tempo roczne i koniec wzrastania.**
+   - `annualGrowthCm = min(sufit, h(12)) − h0` to tempo wygładzone, nie prognoza indywidualna. Korzysta z niego kontrola po 6/12 tygodniach (wzór bez zmian) i `practicallyEnded`.
+   - Definicja `practicallyEnded` bez zmian: < 1 cm/rok albo 0 < sufit − h0 ≤ 3 cm; alarm tempa ją znosi. Progi przeniesiono do danych.
+   - Bez silnika siatek (izolowany moduł) działa dawny model zapasowy (`modelWzrastania: 'stale'`).
+6. **Masa.**
+   - Stabilizacja (tempo 0) na tej samej trajektorii daje dwa czasy:
+     - **S1** (`months`, nagłówek): masa stała. Uzasadnienie: górna granica kcal to zapotrzebowanie przy obecnej masie; Mazur 2022 §4.1: „maintenance of a stable weight … BMI will decrease as children gain height”.
+     - **S2** (`gornaGranica.months`): masa rośnie do górnej granicy planu, czyli mediana BMI × Δwzrost² jak w kontroli po 12 tyg. (dawny wynik A2).
+   - Czas, w którym norma przyszłaby dopiero po zmianie kryterium (dziecko 85. centyl → dorosły BMI 24,9; `VildaBmi.dorosly`: 18 lat, DS 20 lat), jest `null` z flagą `celPoZmianieKryterium`.
+   - Przy alarmie tempa wzrastania (G1) oba czasy są `null` (`tempoAlarm`).
+   - Redukcja jak w racie X (przyrost masy ze wzrastania), bez wyjątku „praktycznie zakończone”: przyrost idzie za trajektorią, więc jest wtedy mały.
+7. **Teksty** (`energyOpisWzrastania`, `energyZdanieStabS2`, `energyZdanieStabBrak`; karta planu, „Droga do normy”, zalecenia, plan PDF).
+   - Opis wzrastania: „w najbliższym roku ok. X cm, potem coraz wolniej, jak mediana wzrostu (siatka OLAF)”. Przy tempie zmierzonym: „zmierzone tempo ok. X cm/rok przyjęto na najbliższy rok, potem …”.
+   - Nagłówek S1: „przy utrzymaniu obecnej masy ciała BMI może wejść w górną granicę normy …”.
+   - S2: „Jeżeli masa będzie rosła do górnej granicy planu (ok. Y kg/mies.) — za ok. M mies.” albo „…BMI prawdopodobnie nie zejdzie poniżej 85. centyla przed ukończeniem 18 lat (potem obowiązuje kryterium dorosłych: BMI 24,9)”.
+   - Bez S1: to samo zdanie o 18 latach, albo „Tempo wzrastania wymaga oceny — czasu dojścia do normy BMI nie podano”.
+   - „Przy praktycznie zakończonym wzrastaniu…” pada tylko wtedy, gdy prognoza tak mówi (dotąd także przy trwającym wzrastaniu).
+   - Zalecenia podają przebieg BMI bez prognozowanego wzrostu w cm. Nota o pokwitaniu pojawia się bez sufitu z karty, przy pozostałym wzroście > 6 cm i od 8/9 lat.
+   - Plan PDF: „Wzrastanie wciąż trwa (w najbliższym roku ok. X cm)”.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; `tests/unit/dieta-b8-wzrastanie-mediana.test.mjs` wywołuje `energySimulateMonthsToBmiTarget`, `energyChildGrowthOutlook` i `energyTrajektoriaWzrostu` na prawdziwych tablicach wzrostu, 19 przypadków):
+
+| Przypadek | Dotąd | Teraz |
+|---|---|---|
+| dz. 12;0, 153,8 cm, 58,7 kg, stabilizacja | 47 mies., 174,4 cm, +13,08 kg | S1 18,5 mies. (13,5 l., 160,8 cm); S2 — po zmianie kryterium (bez czasu) |
+| dz. 12;0, 153,8 cm, 77,1 kg | brak, 190,6 cm w 19. r.ż. | S1 i S2 brak; wzrost do 165,0 cm |
+| chł. 12;0, 150 cm, 58 kg | 47,5 mies., 178,8 cm | S1 17,5 mies. (160,5 cm); S2 51 mies. |
+| dz. 12;0, 152 cm, 56 kg | 35,5 mies. | S1 14; S2 46,5 mies. |
+| T1 + prognoza 153,8 cm (ograniczona) | redukcja, stabilizacja 17 mies. | prognoza ignorowana, `practicallyEnded` false, S1 18,5 mies. |
+| T1 + prognoza 156,8 cm | — | sufit, 3,0 cm/rok, praktycznie zakończone; S1 63 mies. |
+| T1 + tempo zmierzone 7,8 cm/rok | 37,5 mies., 178,2 cm | r 1,48; S1 13 mies.; najwyżej 165,0 cm |
+| T1 + tempo zmierzone 3,0 cm/rok | 68 mies. | r 0,57; S1 31,5 mies. |
+| T1 + alarm tempa | czas podawany | bez czasu |
+| chł. 178 cm, 17;0 / 17;1 / 17;7 | 1,13 / 1,04 / 2,0 cm/rok (powrót do stabilizacji) | 1,07 / 0,98 / 0,45 (bez powrotu) |
+| dz. 2;0, 86 cm, 15,5 kg | 9,86 cm/rok (szew +0,66) | 9,20; S1 12, S2 65 mies. |
+| DS, dz. 12 l., 140 cm | 2,19 cm/rok (siatka DS) | 2,19, koniec 240 mies. |
+| redukcja: dz. 12 l. 77,1 kg / 8 l. 42,3 kg / 8 l. 45 kg / chł. 13 l. 93,8 kg | 15,5 / 17 / 21 / 25,5 | bez zmian |
+| dorosła 25 l., 165/80, 0,115 kg/tydz. | 25 mies. | bez zmian |
+
+Siatka wyników (wzrost = mediana OLAF, masa z centyla BMI; S1/S2 w mies.; „brak” = bez czasu przed zmianą kryterium; zgodna z prototypem audytu, potwierdzona na silniku produkcyjnym):
+- dziewczęta:
+  - 8 l. 95. c.: 11,5/25;
+  - 10 l. 97. c.: 18,5/47,5;
+  - 11 l. 95. c.: 13,5/38;
+  - 12 l. 90. c.: 6,5/14,5;
+  - 13 l. 95. c.: 46/brak;
+  - 14 l. 95. c.: brak/brak;
+- chłopcy:
+  - 10 l. 95. c.: 17/39;
+  - 12 l. 95. c.: 17/50;
+  - 14 l. 95. c.: 23/brak;
+  - 16 l. 90. c.: 10,5/15,5.
+
+**Ograniczenia.**
+- Żadna z metod (mediana, kanał SDS, normy tempa DONALD/Kelly) nie jest zwalidowana dla czasu dojścia do normy BMI; pewność średnia.
+- Przebieg zakłada przeciętny czas dojrzewania. U dziecka z otyłością po menarche bez prognozy w karcie S1 może być zaniżony (dz. 12 l., 150/58: 27,5 mies.; przy sufice +6 cm: 63 mies.). Łagodzi to nota o pokwitaniu, ale nie liczba.
+- Skok strategii na progach „praktycznie zakończone” (1 cm/rok, 3 cm) zostaje — definicja do osobnej decyzji. U chłopców próg przesuwa się z 17;3 na 17;1, ale znika powrót w 17;7.
+- Niezależna blokada stabilizacji w `app.js` (prognoza) pozostaje bez zmian.
+
+**Źródła.**
+- Kułaga Z i wsp. Eur J Pediatr 2011;170:599-609, doi:10.1007/s00431-010-1329-x (OLAF).
+- Mazur A i wsp. Nutrients 2022;14:3806, doi:10.3390/nu14183806 (§4.1, §3.2.4).
+- He Q, Karlberg J. Pediatr Res 2001;49:244-51, doi:10.1203/00006450-200102000-00019.
+- Holmgren A i wsp. Pediatr Res 2017;81:448-54, doi:10.1038/pr.2016.253.
+- de Groot CJ i wsp. Horm Res Paediatr 2017;87:254-63, doi:10.1159/000467393.
+- Cole TJ, Wright CM. Ann Hum Biol 2011;38:662-8, doi:10.3109/03014460.2011.598189.
+- Wright CM, Cheetham TD. Arch Dis Child 1999;81:257-60, doi:10.1136/adc.81.3.257.
+- Abbassi V. Pediatrics 1998;102:507-11.
+- Kelly A i wsp. J Clin Endocrinol Metab 2014;99:2104-12, doi:10.1210/jc.2013-4455.
+- Duran I i wsp. J Pediatr Endocrinol Metab 2025;38:887-97, doi:10.1515/jpem-2025-0225.
+- Gaete X i wsp. 2016 (doi:10.1515/jpem-2016-0035) i 2024 (doi:10.1159/000536506) — tylko próg noty o pokwitaniu.
+- Hall KD i wsp. Lancet Diabetes Endocrinol 2013;1:97-105 — tylko kierunek dla scenariusza masy stałej.
+
+**Pliki.**
+- `vilda_diet_plan_ui.js` (?v=42): silnik, karta planu, eksporty `energyTrajektoriaWzrostu`, `ENERGY_WZRASTANIE`, `energyOpisWzrastania`, `energyZdanieStabS2`, `energyZdanieStabBrak`, `energyWiekKryteriumDoroslegoLat`.
+- `vilda_bmi_journey.js` (?v=28).
+- `vilda_diet_recommendations.js` (?v=67).
+- `vilda_raport_plan.js` (?v=21).
+- SW 1.1.131 → 1.1.132 (numery 1.1.129–1.1.131 zajęły #502, #504 i #505; wersje nadane `npm run podbij-wersje`).
+
+Testy zaktualizowane pod S1/S2: `dieta-audyt2`, `rata-x-czas-do-normy-wzrastanie`, `raport-plan-stabilizacja-rata-g2`. E2E: `tests/e2e/dieta-b8-wzrastanie.spec.mjs`.
 
 ## Audyt zaleceń dietetycznych — rata 2: bezpieczeństwo i teksty, bez obniżania kcal (P-DIETA-AUDYT2 rata 2, SW 1.1.126, 2026-09-30)
 

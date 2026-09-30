@@ -41,9 +41,11 @@ test.describe('P-DIETA rata X — czas do normy z masą przybywającą ze wzrast
     const r = await stan(page, { sex: 'F', y: 8, w: 45, h: 130 });
     expect(r.sim.przyrostMasyKgMies).toBeGreaterThan(0.15);
     const kg = r.sim.przyrostMasyKgMies.toFixed(1).replace('.', ',');
-    expect(r.droga).toMatch(new RegExp(`^uwzględnia dalsze wzrastanie \\(ok\\. [\\d,]+ cm/rok\\) i masę przybywającą z nim \\(ok\\. ${kg} kg/mies\\.\\)$`));
+    // P-DIETA-B8: wzrastanie wg mediany siatki („w najbliższym roku ok. X cm, potem coraz wolniej”), nie stałe „cm/rok”
+    const wzr = `^uwzględnia dalsze wzrastanie: w najbliższym roku ok\\. [\\d,]+ cm, potem coraz wolniej, jak mediana wzrostu \\(siatka OLAF\\); masa przybywająca z nim ok\\. ${kg} kg/mies\\.$`;
+    expect(r.droga).toMatch(new RegExp(wzr));
     const p = await stan(page, { sex: 'F', y: 8, w: 45, h: 130, bezDrogi: true });
-    expect(p.plan).toMatch(new RegExp(`^uwzględnia dalsze wzrastanie \\(ok\\. [\\d,]+ cm/rok\\) i masę przybywającą z nim \\(ok\\. ${kg} kg/mies\\.\\)$`));
+    expect(p.plan).toMatch(new RegExp(wzr));
   });
 
   // P-DIETA-STAB rata 1: 8-latka 97–99c ma domyślnie redukcję — stabilizację wybiera lekarz (jawny wybór)
