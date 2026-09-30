@@ -6241,7 +6241,7 @@ tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
 - Znane wcześniej: kotwica dawki podtrzymującej zawsze nominalna (`weeksFromAnchor` nie jest przekazywane); werdykt
   ocenia ostatni punkt, a nie redukcję w chwili okna.
 
-## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.116, `vilda_advanced_growth.js` 73, 2026-09-30)
+## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.118, `vilda_advanced_growth.js` 73, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH
 (`docs/AUDYT-PRZEPLYW-GH.md`) i decyzja właściciela z 2026-09-30.
@@ -6266,7 +6266,7 @@ zawiera punkty. **Zmierzone czerwone** na kodzie sprzed zmiany: **3 z 4** (przyp
 po obu stronach).
 
 **Wersje.** `vilda_advanced_growth.js` 72 → 73 (`index.html`, `docpro.html`, `kalkulator-klirens.html`); precache
-(append-only); `SW_VERSION` 1.1.115 → 1.1.116 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
+(append-only); `SW_VERSION` 1.1.117 → 1.1.118 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
 `tests/fixtures/wersje-zasobow.json` odświeżony.
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
