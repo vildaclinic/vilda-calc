@@ -545,11 +545,11 @@
  },
  "vilda_diet_plan_ui.js": {
   "v": 44,
-  "sha256": "6062d165ad390ec944c7fad6bc44fea44f4b5e9b3e0f851b9042ef2d901117fb"
+  "sha256": "7ca4dc72f2886e34eeeb829897d3264cadbb8b0aca4131aaf89c61e25aa11bd0"
  },
  "vilda_diet_recommendations.js": {
   "v": 69,
-  "sha256": "69187ec3b3064cb6f6166863d51d70963c6294bba462dd04aa19ac3752a2480d"
+  "sha256": "192eca6778965abb383d7266d05456e315d085712583b4654f96448f1e9ad966"
  },
  "vilda_dob_age.js": {
   "v": 7,

@@ -6005,6 +6005,7 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
    - Silnik planu liczony dwa razy dla tych samych danych i PAL domyślnego: po stronie dziecka (teraz albo 18;11) i dorosłego (19;0 albo teraz). Wiersze: model deficytu, PAL domyślny, TEE, górne granice lekkiej / umiarkowanej / intensywnej (bez oznaczenia domyślnej), stabilizacja, minimum podaży.
    - Nagłówek przed 19 lat: „Plan dorosłego od 19 lat — za N mies. te same dane dadzą inne liczby planu”; po: „…— do 18;11 ten sam pacjent miał plan dziecka”.
    - Bez tempa kg/mies. i czasu do normy; nie trafia do `textOutput`, `dane`, raportu ani PDF.
+   - Stabilizacja po stronie dziecka jest „dostępna” tylko wtedy, gdy karta pozwala ją wybrać (flaga „Wzrost zakończony”, blokada z prognozy wzrostu → `stabilizationToggle.disabled`). Gdy u dorosłego żadna dieta nie mieści się nad minimum (np. M 18;6, 136 cm, 55,5 kg: TEE 1873), wiersz „Diety … → żadna powyżej minimum”, minimum z `MIN_INTAKE_ADULT` (K 1200, M 1600).
 5. **„Droga do normy BMI”** (`vilda_update_prep.js`, `vildaUpdatePrepDrogaDziecko`): ocena BMI jak w silniku (`VildaBmi.dorosly` z populacją) — populacja ogólna od 18 lat jak dotąd, DS od 20 lat. Karta główna BMI (ostrzeżenie „Otyłość I stopnia wg BMI” u DS 18–19,99) nie jest częścią tej zmiany — zgłoszona osobno.
 
 **Tabela obu klifów (populacja ogólna, PAL domyślny; dane fikcyjne, silnik produkcyjny).**
@@ -6036,7 +6037,7 @@ E2E `tests/e2e/dieta-b5-przejscie.spec.mjs` (4 przypadki na prawdziwej stronie; 
 - Siatka DS i jej zakres (do 20 lat): Zemel BS i wsp. Pediatrics 2015;136:e1204-11, doi:10.1542/peds.2015-1652 (decyzja D3, P-DS-1).
 - Zalecenia dorosłego dla DS 19,x korzystają z ogólnych zdań dorosłego (talerz, ruch, cel 5–10 % masy) — bez osobnych zaleceń dla DS; cel własny dorosłego zostaje w paśmie surowego BMI 23,0–24,9.
 
-**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`, `style.css`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (PR #510); notka B5-c: `vilda_diet_plan_ui.js` 44, `vilda_diet_recommendations.js` 69, `style.css` 86, SW 1.1.135 → 1.1.136 (1.1.135 zajął #511; numery nadane `npm run podbij-wersje`).
+**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`, `style.css`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (PR #510); notka B5-c: `vilda_diet_plan_ui.js` 44, `vilda_diet_recommendations.js` 69, `style.css` 86, SW 1.1.136 → 1.1.137 (1.1.135 i 1.1.136 zajęły #511 i #514; numery nadane `npm run podbij-wersje`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; wariant B (ścieżka dorosła po zakończeniu wzrastania — nowe pole stanu pacjenta); pozostałe punkty części B (Z1/Z2 — zasada domyślnego PAL i strategia przy nadwadze, B9 — seniorzy, zakres × 0,85 u dorosłych 19–64 lat, definicja „praktycznie zakończonego” wzrastania).
 
