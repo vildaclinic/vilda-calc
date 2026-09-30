@@ -365,14 +365,17 @@ describe('strażniki źródła', () => {
     expect(src).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write/);
   });
 
-  it('Ustawienia ładują moduł po historii wersji i trzymają kartę w sekcji kopii zapasowych', () => {
+  it('Ustawienia ładują moduł po historii wersji i kosz przed nim; karta w sekcji kopii zapasowych', () => {
     const html = plik('ustawienia.html');
     const i = html.indexOf('vilda_version_history_ui.js?v=');
-    const j = html.indexOf('<script defer src="vilda_spojnosc_zapisow.js?v=1"></script>');
+    const k = html.indexOf('<script defer src="vilda_kosz_zapisow.js?v=1"></script>');
+    const j = html.indexOf('<script defer src="vilda_spojnosc_zapisow.js?v=2"></script>');
     expect(i).toBeGreaterThan(0);
-    expect(j).toBeGreaterThan(i);
+    expect(k, 'P-KOSZ-ZAPISOW: kosz po historii wersji').toBeGreaterThan(i);
+    expect(j, 'sprawdzenie po module kosza').toBeGreaterThan(k);
     const sekcja = html.slice(html.indexOf('id="settings-section-backup"'));
     expect(sekcja.indexOf('id="recordConsistencyCard"')).toBeGreaterThan(sekcja.indexOf('id="vaultBackupCard"'));
-    expect(sekcja.indexOf('id="recordConsistencyCard"')).toBeLessThan(sekcja.indexOf('id="autoVaultBackupCard"'));
+    expect(sekcja.indexOf('id="recordTrashCard"'), 'kosz zaraz po sprawdzeniu').toBeGreaterThan(sekcja.indexOf('id="recordConsistencyCard"'));
+    expect(sekcja.indexOf('id="recordTrashCard"')).toBeLessThan(sekcja.indexOf('id="autoVaultBackupCard"'));
   });
 });

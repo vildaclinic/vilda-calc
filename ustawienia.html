@@ -67,7 +67,7 @@
   <link href="vilda_chrome.css?v=43" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=76" rel="stylesheet">
 <link href="vilda_urodzeniowe_rozbieznosc.css?v=1" rel="stylesheet" />
-  <link href="ustawienia.css?v=16" rel="stylesheet">
+  <link href="ustawienia.css?v=17" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
      Ustawia klasę vilda-pro-active / vilda-pro-inactive na <html>
@@ -89,12 +89,12 @@
   <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
 <script defer src="vilda_persistence_adapter.js?v=28"></script>
-<script defer src="vilda_session_bridge.js?v=10"></script>
+<script defer src="vilda_session_bridge.js?v=11"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
 <script defer src="vilda_cloud_cache_warm.js?v=2"></script>
-<script defer src="vilda_vault.js?v=189"></script>
+<script defer src="vilda_vault.js?v=190"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=32"></script>
 <script defer src="vilda_sync_integration.js?v=45"></script>
@@ -114,8 +114,9 @@
 <script defer src="vilda_trajectory_analysis.js?v=39"></script>
 <script defer src="vilda_auth_ui.js?v=468"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
-<script defer src="vilda_version_history_ui.js?v=12"></script>
-<script defer src="vilda_spojnosc_zapisow.js?v=1"></script>
+<script defer src="vilda_version_history_ui.js?v=13"></script>
+<script defer src="vilda_kosz_zapisow.js?v=1"></script>
+<script defer src="vilda_spojnosc_zapisow.js?v=2"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -129,7 +130,7 @@
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="lucide.min.js?v=1" defer></script>
   <script src="ios26-ui.js?v=43" defer></script>
-<script defer src="vilda_chrome.js?v=82"></script>
+<script defer src="vilda_chrome.js?v=83"></script>
 </head>
 <body class="js-loading liquid-ios26 page-settings has-sidebar">
   <header>
@@ -681,7 +682,7 @@
                     <div class="settings-backup-section settings-spojnosc" id="recordConsistencyCard">
                       <div class="settings-control-header">
                         <h3 class="settings-control-title" id="recordConsistencyTitle">Sprawdzenie spójności zapisów</h3>
-                        <span class="settings-tag">Tylko odczyt</span>
+                        <span class="settings-tag">Sprawdzenie bez zmian w sejfie</span>
                       </div>
                       <div id="recordConsistencyIntro">
                         <p class="settings-control-desc">
@@ -689,7 +690,7 @@
                           W każdej karcie porównuje zapisy między sobą: nazwisko, datę urodzenia i płeć.
                         </p>
                         <ul class="settings-spojnosc-lista settings-spojnosc-lista--wstep">
-                          <li>Niczego nie zmienia, nie usuwa i nie wysyła.</li>
+                          <li>Samo sprawdzenie niczego nie zmienia ani nie wysyła. Pomylony zapis usuniesz osobno, po potwierdzeniu.</li>
                           <li>Działa na tym urządzeniu, w odblokowanym sejfie.</li>
                           <li>Wynik widać tylko na tej stronie; znika po jej zamknięciu.</li>
                         </ul>
@@ -718,6 +719,23 @@
                       </div>
                       <div class="settings-spojnosc-wynik" id="recordConsistencyResult" hidden></div>
                       <p class="settings-spojnosc-ogloszenie" id="recordConsistencyLive" role="status" aria-live="polite"></p>
+                    </div>
+
+                    <div class="settings-backup-sep" role="separator"></div>
+
+                    <!-- ── Podsekcja: Kosz zapisów (P-KOSZ-ZAPISOW; vilda_kosz_zapisow.js) ── -->
+                    <div class="settings-backup-section settings-kosz" id="recordTrashCard">
+                      <div class="settings-control-header">
+                        <h3 class="settings-control-title" id="recordTrashTitle">Kosz zapisów</h3>
+                        <span class="settings-tag">30 dni</span>
+                      </div>
+                      <p class="settings-control-desc">
+                        Zapisy usunięte jako pomyłka. Przez 30 dni możesz je przywrócić na każdym urządzeniu; potem ich treść znika na stałe.
+                        Przywrócony zapis wraca na swoje miejsce w historii karty — jeśli był najnowszy, karta znów przyjmie jego nazwę.
+                      </p>
+                      <ul class="settings-kosz-lista" id="recordTrashList" aria-labelledby="recordTrashTitle" hidden></ul>
+                      <p class="settings-inline-note" id="recordTrashStatus">Zaloguj się, aby zobaczyć kosz.</p>
+                      <p class="settings-spojnosc-drobny settings-kosz-stopka">Kosz nie ma przycisku „Opróżnij” — zapisy znikają same po 30 dniach.</p>
                     </div>
 
                     <div class="settings-backup-sep" role="separator"></div>
@@ -2329,7 +2347,7 @@
   </script>
 
   <script defer src="jsQR.min.js?v=1"></script>
-  <script defer src="inline_ustawienia_04.js?v=14"></script>
+  <script defer src="inline_ustawienia_04.js?v=15"></script>
 
   <script defer src="inline_ustawienia_05.js?v=2"></script>
 

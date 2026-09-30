@@ -13,8 +13,10 @@
  *   karty, w których któryś zapis wygląda na zapis innej osoby. Wynik jest tylko na tej stronie.
  *
  * CZEGO MODUŁ NIE ROBI
- *   • Nie zmienia, nie usuwa i nie wysyła niczego: z sejfu woła wyłącznie listPatients() i
- *     getPatient(), które tylko odczytują i odszyfrowują. Nie pisze do dziennika dostępu.
+ *   • Samo sprawdzenie nie zmienia, nie usuwa i nie wysyła niczego: z sejfu woła wyłącznie
+ *     listPatients() i getPatient(), które tylko odczytują i odszyfrowują. Nie pisze do dziennika dostępu.
+ *     Usunięcie pomylonego zapisu (P-KOSZ-ZAPISOW) to osobna, jawna akcja przy karcie z wynikiem —
+ *     okno, ponowny odczyt, zapis i kosz należą do vilda_kosz_zapisow.js, nie do tego pliku.
  *   • Nie trzyma wyniku poza pamięcią strony. Jedyny zapis to chwila ostatniego zakończonego
  *     sprawdzenia (klucz recordConsistencyLastCheck, local-persistent, preferencja konta — przeżywa
  *     „Wyczyść wszystkie pola”; bez danych pacjentów).
@@ -126,6 +128,9 @@
       plec: plec(u.sex),
       wzrost: liczba(u.height),
       masa: liczba(u.weight),
+      // P-KOSZ-ZAPISOW: pomiary wzrostu i masy (bieżąca wizyta i historia) do porównania z kartą drugiej osoby.
+      pomiary: w.VildaKoszZapisow && typeof w.VildaKoszZapisow.pomiaryZapisu === 'function'
+        ? w.VildaKoszZapisow.pomiaryZapisu(p) : [],
     };
   }
 
@@ -232,6 +237,24 @@
     return karty;
   }
 
+  // P-KOSZ-ZAPISOW: czy pomiary zapisu „inna osoba” są w karcie tej osoby (w dowolnym jej zapisie). Tylko wstępna
+  // wskazówka przy wyniku — okno usuwania liczy to jeszcze raz na świeżym odczycie obu kart.
+  function uzupelnijPokrycie(karty) {
+    var K = w.VildaKoszZapisow;
+    if (!K || typeof K.pokrycie !== 'function') return karty;
+    var poKarcie = Object.create(null);
+    karty.forEach(function (k) {
+      poKarcie[k.patientId] = [].concat.apply([], k.ocenione.map(function (o) { return o.wiersz.pomiary || []; }));
+    });
+    karty.forEach(function (k) {
+      k.ocenione.forEach(function (o) {
+        if (o.ocena !== 'obcy' || !o.innaKarta) return;
+        o.pokrycie = K.pokrycie(o.wiersz.pomiary || [], poKarcie[o.innaKarta.patientId] || []);
+      });
+    });
+    return karty;
+  }
+
   // Wiersze do pokazania: wszystkie oznaczone + dwa najnowsze bez uwag; reszta tylko liczbą.
   function wierszeDoPokazania(karta) {
     var odNajnowszego = karta.ocenione.slice().sort(function (a, b) {
@@ -295,7 +318,7 @@
       }
       postep(i + 1, lista.length);
     }
-    wynik.oceny = uzupelnijInnymiKartami(karty);
+    wynik.oceny = uzupelnijPokrycie(uzupelnijInnymiKartami(karty));
     wynik.pomylki = wynik.oceny.filter(function (k) { return k.poziom === 'pomylka'; }).length;
     wynik.doSprawdzenia = wynik.oceny.filter(function (k) { return k.poziom === 'sprawdzic'; }).length;
     wynik.bezUwag = wynik.karty - wynik.pomylki - wynik.doSprawdzenia;
@@ -569,13 +592,169 @@
         }
       });
     }
+    var obce = pomylka ? karta.ocenione.filter(function (o) { return o.ocena === 'obcy'; }) : [];
+    var usuwanie = w.VildaKoszZapisow && typeof w.VildaKoszZapisow.otworzUsuwanie === 'function';
     var akcje = el('div', 'settings-spojnosc-akcje');
+    if (usuwanie) {
+      obce.forEach(function (o) {
+        art.appendChild(stanUsuwania(o));
+        var etykieta = obce.length > 1 ? 'Usuń zapis z ' + formatChwili(o.wiersz.savedAtISO) + '…' : 'Usuń pomylony zapis…';
+        var b = przycisk('settings-kosz-btn-usun', etykieta, function () { usunZapis(art, karta, o, b); });
+        b.insertBefore(ikonaKosza(), b.firstChild);
+        if (obce.length > 1) {
+          var rzad = el('div', 'settings-spojnosc-akcje');
+          rzad.appendChild(b);
+          art.appendChild(rzad);
+        } else {
+          akcje.appendChild(b);
+        }
+      });
+    }
     akcje.appendChild(przycisk('', 'Otwórz historię wersji', function () { otworzHistorie(karta); }));
     inneKarty.forEach(function (k) {
       akcje.appendChild(przycisk('', 'Otwórz kartę: ' + k.nazwa, function () { otworzKarte(k.patientId); }));
     });
     art.appendChild(akcje);
     return art;
+  }
+
+  // ── P-KOSZ-ZAPISOW: usuwanie pomylonego zapisu z karty wyniku ─────────────────────────────────
+
+  var SVG = 'http://www.w3.org/2000/svg';
+
+  function ikonaSvg(sciezki) {
+    var s = doc.createElementNS(SVG, 'svg');
+    [['viewBox', '0 0 24 24'], ['fill', 'none'], ['stroke', 'currentColor'], ['stroke-width', '2'],
+      ['stroke-linecap', 'round'], ['stroke-linejoin', 'round'], ['aria-hidden', 'true'], ['focusable', 'false'],
+      ['class', 'settings-spojnosc-ikona']].forEach(function (a) { s.setAttribute(a[0], a[1]); });
+    sciezki.forEach(function (d) {
+      var p = doc.createElementNS(SVG, 'path');
+      p.setAttribute('d', d);
+      s.appendChild(p);
+    });
+    return s;
+  }
+
+  function ikonaKosza() { return ikonaSvg(['M3 6h18', 'M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6', 'M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2']); }
+  function ikonaOk() { return ikonaSvg(['M20 6 9 17l-5-5']); }
+  function ikonaUwagi() { return ikonaSvg(['m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3', 'M12 9v4', 'M12 17h.01']); }
+  function ikonaCofnij() { return ikonaSvg(['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5']); }
+
+  // Wstępna wskazówka przy wyniku (z danych sprawdzenia); decyduje okno po świeżym odczycie.
+  function stanUsuwania(o) {
+    var ok, tekst;
+    if (!o.innaKarta) {
+      ok = false;
+      tekst = 'Osoba z tego zapisu nie ma w sejfie własnej karty — tego zapisu nie można usunąć.';
+    } else if (!o.pokrycie || !o.pokrycie.wiersze.length) {
+      ok = true;
+      tekst = 'Ten zapis nie ma pomiarów wzrostu ani masy.';
+    } else if (!o.pokrycie.brakuje) {
+      ok = true;
+      tekst = 'Pomiary z tego zapisu są też w karcie „' + o.innaKarta.nazwa + '” — usunięcie niczego nie skasuje.';
+    } else {
+      ok = false;
+      tekst = 'Części pomiarów z tego zapisu nie ma w karcie „' + o.innaKarta.nazwa + '” — najpierw trzeba je tam dopisać.';
+    }
+    var p = el('p', ok ? 'settings-spojnosc-stan settings-spojnosc-stan--ok' : 'settings-spojnosc-stan settings-spojnosc-stan--uwaga');
+    p.appendChild(ok ? ikonaOk() : ikonaUwagi());
+    p.appendChild(el('span', null, tekst));
+    return p;
+  }
+
+  function formatDnia(iso) {
+    var d = new Date(iso);
+    if (!iso || isNaN(d.getTime())) return '—';
+    try {
+      return new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    } catch (e) {
+      var dw = function (x) { return (x < 10 ? '0' : '') + x; };
+      return dw(d.getDate()) + '.' + dw(d.getMonth() + 1) + '.' + d.getFullYear();
+    }
+  }
+
+  function otworzKosz() {
+    var kosz = doc.getElementById('recordTrashCard');
+    if (!kosz) return;
+    var sekcja = kosz.closest ? kosz.closest('details') : null;
+    if (sekcja && !sekcja.open) sekcja.open = true;
+    var tytul = doc.getElementById('recordTrashTitle');
+    try { kosz.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { /* bez przewijania */ }
+    if (tytul) {
+      tytul.setAttribute('tabindex', '-1');
+      try { tytul.focus({ preventScroll: true }); } catch (e) { /* bez fokusu */ }
+    }
+  }
+
+  function usunZapis(art, karta, o, przyciskUsun) {
+    // Bez disabled: wyłączony przycisk traci fokus, a okno oddaje fokus temu, co go miało przy otwarciu.
+    if (przyciskUsun.getAttribute('aria-busy') === 'true') return;
+    przyciskUsun.setAttribute('aria-busy', 'true');
+    Promise.resolve().then(function () {
+      return w.VildaKoszZapisow.otworzUsuwanie({
+        patientId: karta.patientId,
+        snapshotId: o.wiersz.snapshotId,
+        nazwaKarty: karta.wzorzec.nazwa,
+        innaKarta: o.innaKarta,
+        poUsunieciu: function (wynik) { pokazUsuniety(art, karta, wynik); },
+      });
+    }).catch(function (e) {
+      var blad = el('p', 'settings-spojnosc-stan settings-spojnosc-stan--uwaga');
+      blad.setAttribute('role', 'alert');
+      blad.appendChild(ikonaUwagi());
+      blad.appendChild(el('span', null, e && e.message ? e.message : 'Nie udało się otworzyć okna usuwania.'));
+      art.appendChild(blad);
+    }).then(function () { przyciskUsun.removeAttribute('aria-busy'); });
+  }
+
+  // Stan po usunięciu (makieta „Po usunięciu”): karta z wynikiem zamienia się w potwierdzenie z „Cofnij”.
+  function pokazUsuniety(art, karta, wynik) {
+    licznikId += 1;
+    var nowy = el('article', 'settings-spojnosc-karta settings-spojnosc-karta--usunieta');
+    var idTytulu = 'recordConsistencyCard' + licznikId;
+    nowy.setAttribute('aria-labelledby', idTytulu);
+    var gora = el('div', 'settings-spojnosc-stan-usuniecia');
+    gora.setAttribute('role', 'status');
+    gora.appendChild(ikonaOk());
+    var teksty = el('div', 'settings-spojnosc-stan-teksty');
+    var h = el('h4', 'settings-spojnosc-karta-tytul', 'Karta: ' + karta.wzorzec.nazwa + ' — zapis w koszu');
+    h.id = idTytulu;
+    teksty.appendChild(h);
+    var opis = 'Zapis z ' + formatChwili(wynik.savedAtISO) + (wynik.nazwaZapisu ? ' („' + wynik.nazwaZapisu + '”)' : '') +
+      ' jest w koszu do ' + formatDnia(wynik.expiresAtISO) + '. ' +
+      (wynik.zmianaNazwy ? 'Karta znów nazywa się „' + wynik.zmianaNazwy.nazwa + '”.' : 'Nazwa karty się nie zmieniła.');
+    if (karta.ocenione.filter(function (x) { return x.ocena === 'obcy'; }).length > 1) opis += ' Sprawdź zapisy ponownie, by zobaczyć pozostałe.';
+    teksty.appendChild(el('p', 'settings-spojnosc-notka', opis));
+    gora.appendChild(teksty);
+    nowy.appendChild(gora);
+    var akcje = el('div', 'settings-spojnosc-akcje settings-spojnosc-akcje--wciecie');
+    var blad = el('p', 'settings-spojnosc-stan settings-spojnosc-stan--uwaga');
+    blad.setAttribute('role', 'alert');
+    blad.hidden = true;
+    var cofnij = przycisk('', 'Cofnij', function () {
+      cofnij.disabled = true;
+      blad.hidden = true;
+      w.VildaKoszZapisow.przywroc(wynik.patientId, wynik.snapshotId).then(function () {
+        h.textContent = 'Karta: ' + karta.wzorzec.nazwa + ' — zapis przywrócony';
+        teksty.lastChild.textContent = 'Zapis wrócił na swoje miejsce w historii karty. Sprawdź zapisy ponownie, by zobaczyć aktualny stan.';
+        nowy.classList.add('settings-spojnosc-karta--cofnieta');
+        cofnij.hidden = true;
+      }).catch(function (e) {
+        cofnij.disabled = false;
+        while (blad.firstChild) blad.removeChild(blad.firstChild);
+        blad.appendChild(ikonaUwagi());
+        blad.appendChild(el('span', null, 'Nie udało się przywrócić' + (e && e.message ? ': ' + e.message : '.')));
+        blad.hidden = false;
+      });
+    });
+    cofnij.insertBefore(ikonaCofnij(), cofnij.firstChild);
+    cofnij.id = 'recordConsistencyUndoBtn';
+    akcje.appendChild(cofnij);
+    akcje.appendChild(przycisk('', 'Otwórz kosz zapisów', otworzKosz));
+    nowy.appendChild(akcje);
+    nowy.appendChild(blad);
+    art.parentNode.replaceChild(nowy, art);
+    try { cofnij.focus(); } catch (e) { /* bez fokusu */ }
   }
 
   function podsumowanieWyniku(wynik, chwilaISO) {
@@ -623,9 +802,9 @@
     aside.appendChild(h);
     var ul = el('ul', 'settings-spojnosc-lista');
     [
-      'Sprawdzenie niczego nie naprawia. Pomylony zapis obejrzysz w historii wersji karty.',
-      '„Przywróć jako nowy” przy ostatnim prawidłowym zapisie przywraca nazwę karty. Pomylony zapis zostaje wtedy w historii.',
-      'Usunięcie pomylonego zapisu nie jest jeszcze dostępne.',
+      'Pomylony zapis usuniesz tylko wtedy, gdy jego pomiary są w karcie osoby, której dotyczy.',
+      'Usunięty zapis trafia do kosza na 30 dni. Przywrócisz go w „Koszu zapisów” na każdym urządzeniu.',
+      'Po usunięciu karta wraca do nazwy z poprzedniego zapisu.',
     ].forEach(function (t) { ul.appendChild(el('li', null, t)); });
     aside.appendChild(ul);
     return aside;
@@ -765,6 +944,7 @@
       wzorzecKarty: wzorzecKarty,
       ocenKarte: ocenKarte,
       uzupelnijInnymiKartami: uzupelnijInnymiKartami,
+      uzupelnijPokrycie: uzupelnijPokrycie,
       wierszeDoPokazania: wierszeDoPokazania,
       odmiana: odmiana,
       formatDaty: formatDaty,
