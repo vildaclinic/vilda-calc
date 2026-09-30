@@ -1,19 +1,20 @@
 import { expect, test } from '../support/test-czas.mjs';
 
-// P-TOZSAMOSC-RAMEK (2026-09-30): ramki powłoki app.html nie dowiadywały się o zmianie pacjenta w innej ramce.
+// P-TOZSAMOSC-RAMEK (2026-09-30): stan kart DocPro należy do pacjenta, a ramka DocPro w tle dowiaduje się o zmianie
+// pacjenta w innej ramce.
 //
-// Ramki dzielą sessionStorage (w nim `vildaCurrentPatientId` i stan kart DocPro `wagaiwzrost:docproUi:v2`), ale każda
-// ma własną zmienną okna `_vildaCurrentPatientId` i własny DOM. Zmierzone na `audyt` (po P-TOZSAMOSC-RAMKI, #489):
-//  - Start z A → wczytanie B w DocPro → powrót na Start: formularz pokazuje B, zmienna okna Start — A, więc
-//    „Dodaj notatkę do wizyty” (custom-fixes.js czyta najpierw zmienną okna) zapisuje notatkę u A;
-//  - DocPro z A (karta SGA wypełniona) → wczytanie C na Start → powrót do DocPro: karta SGA dalej ma dane
-//    urodzeniowe A, a ściąga B.64 dla C pokazuje kryterium 1 jako „SPEŁNIONE” z liczb A (34 tc, −2,94 SD);
-//    to samo po przeładowaniu ramki DocPro i po zwykłej nawigacji index ↔ docpro w jednej karcie, bo stan kart
-//    DocPro jest odtwarzany z magazynu bez sprawdzenia, czyj to stan.
+// Ramki powłoki dzielą sessionStorage (w nim `vildaCurrentPatientId` i stan kart DocPro `wagaiwzrost:docproUi:v2`),
+// ale każda ma własny DOM. Zmierzone na `audyt` (po P-TOZSAMOSC-RAMKI #489 i P-POWLOKA-ID #491): DocPro z A (karta SGA
+// wypełniona) → wczytanie C na Start → powrót do DocPro: karta SGA dalej ma dane urodzeniowe A, a ściąga B.64 dla C
+// pokazuje kryterium 1 jako „SPEŁNIONE” z liczb A (34 tc, −2,94 SD); to samo po przeładowaniu ramki DocPro i po zwykłej
+// nawigacji index ↔ docpro w jednej karcie bez „Wyczyść”, bo stan kart DocPro jest odtwarzany z magazynu bez
+// sprawdzenia, czyj to stan.
 //
-// Poprawka: vilda_frame_sync.js przenosi zmianę `vildaCurrentPatientId` na zmienną okna każdej ramki tej samej
-// karty i ogłasza `vilda:patient-changed-elsewhere`; docpro_state_persist.js znakuje stan kart pacjentem, przy starcie
-// strony nie odtwarza stanu innego pacjenta, a po zmianie pacjenta w innej ramce czyści karty SGA i terapii GH/IGF.
+// Poprawka (docpro_state_persist.js): stan kart jest znakowany pacjentem; przy starcie strony stan innego pacjenta nie
+// odtwarza kart; zmiana `vildaCurrentPatientId` w innej ramce (zdarzenie storage) czyści karty SGA i terapii GH/IGF.
+//
+// Pierwszy scenariusz (notatka do wizyty na Start po wczytaniu B w DocPro) padał na 21046aa; od P-POWLOKA-ID (#491)
+// przechodzi — zostaje jako strażnik kierunku Start.
 //
 // Dane wyłącznie fikcyjne, własne konto sejfu w efemerycznym profilu przeglądarki.
 test.use({ serviceWorkers: 'block' });
