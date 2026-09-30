@@ -302,7 +302,7 @@ test.describe('A7 — bez sprzecznych zdań', () => {
     expect(r.strategia).toBe('reduction');
     k = await karta(page);
     expect(k).not.toContain('nie szybciej niż 1–2 kg/mies.');
-    expect(k).toContain('nie szybciej niż 0,5 kg/mies.');
+    expect(k).toContain('by ubytek nie przekraczał 0,5 kg/mies.'); // rata 2: limit tempa wiąże — notka opisuje faktyczne wyliczenie
   });
 });
 

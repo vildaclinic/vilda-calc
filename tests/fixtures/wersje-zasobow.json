@@ -492,8 +492,8 @@
   "sha256": "fe4ce966476f329f411cbbf75ab61d9b8e635d2c8e3fc1a586a78a3c6c56e698"
  },
  "vilda_bmi_journey.js": {
-  "v": 26,
-  "sha256": "939cbd3699b377b9d8041f0e9acf7f3ef0fa8c6a6243564ca32b18725bf43ea4"
+  "v": 27,
+  "sha256": "af1b895cb2e44f3022638ba20138797bf00f6b0495dc61e390a4dd9b8e696967"
  },
  "vilda_centile_chart_header.js": {
   "v": 1,
@@ -540,12 +540,12 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 40,
-  "sha256": "e2b2bc08288f9d2c395e74a8a6f3f356724d8e95ed3c6ab9401dbd5015d3d978"
+  "v": 41,
+  "sha256": "a241cf04230e82b7e93c9aefeb87a127ba9e0aacfc777215ac44c45fd556507b"
  },
  "vilda_diet_recommendations.js": {
-  "v": 65,
-  "sha256": "0b95ca4dd72bd00be247e616c5840df5f7de2bdf9bcc4e25fa261ff6039571c0"
+  "v": 66,
+  "sha256": "d7e983d7ae6483b15da5cb34dc532aa03f015194e1fbc8866290da549b122401"
  },
  "vilda_dob_age.js": {
   "v": 7,
