@@ -81,7 +81,7 @@ Po zmianie ładowanego JS/CSS/HTML sprawdź:
 
 Historyczne, wersjonowane adresy cache są traktowane jako append-only, dopóki udokumentowana migracja nie stanowi inaczej. Nie usuwaj ich „dla porządku”.
 
-Numery `?v=`, wpisy precache, `SW_VERSION`, pin SW w testach i `tests/fixtures/wersje-zasobow.json` ustawia `npm run podbij-wersje` (względem `origin/audyt`) — jako ostatni krok przed oddaniem PR, nie na początku pracy. Nie wpisuj ich ręcznie. Nowy plik dopisujesz do tablic SW sam; skrypt tylko zgłasza brak wpisu. Zasady dla kilku wątków naraz: § 9.
+Liczbowe `?v=` plików znanych z bazy, ich wpisy precache, `SW_VERSION`, pin SW w `tests/unit/klirens-ui-model.test.mjs` i `tests/fixtures/wersje-zasobow.json` ustawia `npm run podbij-wersje` (względem `origin/audyt`) — jako ostatni krok przed oddaniem PR, nie na początku pracy. Tych numerów nie wpisuj ręcznie. Ręcznie zostaje to, co skrypt tylko zgłasza („Do decyzji”): `?v=` i wpis precache nowego pliku, nowa strona w tablicach SW, wersje nieliczbowe i piny wersji plików w testach. Zasady dla kilku wątków naraz: § 9.
 
 ## 7. Minimalna walidacja
 
@@ -113,7 +113,7 @@ W podsumowaniu podaj:
 Kilka wątków (sesji agentów) może pracować równolegle, ale ich PR-y wchodzą do `audyt` po kolei. Każdy PR zmienia te same linie wersji, więc drugi z dwóch równoległych PR-ów zawsze jest nieaktualny po scaleniu pierwszego. Pełna procedura z tabelą rozwiązywania konfliktów: `docs/GITHUB_WORKFLOW.md`, sekcja „Kilka wątków naraz”.
 
 - Jeden obszar — jeden wątek. Przed startem przejrzyj otwarte PR-y do `audyt`. Jeżeli twoja praca dotyka tych samych modułów co cudzy otwarty PR, powiedz o tym właścicielowi, zanim zaczniesz.
-- Po scaleniu innego PR do `audyt` albo po powiadomieniu o konflikcie: `git fetch origin audyt`, `git merge origin/audyt` (na cudzej gałęzi bez rebase i force-push), rozwiąż konflikty według tabeli, potem `npm run podbij-wersje`, `npm test` i push. Zrób to także wtedy, gdy scalenie przeszło bez konfliktu — dwa wątki mogły nadać ten sam numer i git scala takie linie po cichu.
+- Po scaleniu innego PR do `audyt` albo po powiadomieniu o konflikcie: `git fetch origin audyt`, `git merge origin/audyt` (na cudzej gałęzi bez rebase i force-push), rozwiąż konflikty według tabeli, potem `npm run podbij-wersje`, walidacja z § 7, commit (kończy też scalanie) i push. Zrób to także wtedy, gdy scalenie przeszło bez konfliktu — dwa wątki mogły nadać ten sam numer i git scala takie linie po cichu.
 - Konfliktu w `tests/fixtures/wersje-zasobow.json` nie rozwiązuj samym `node tests/scripts/wersje-zasobow.mjs --zapisz`. Utrwala on kolizję: dwie różne treści pod jednym `?v=`.
 - Wpis w `docs/clinical/ALGORITHMS.md` dopisuj w sekcji swojego modułu. Przy konflikcie zachowaj oba wpisy.
 - Kolejność scalania ustala właściciel. Agent nie scala.
