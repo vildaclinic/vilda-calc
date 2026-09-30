@@ -6134,6 +6134,113 @@ P-POWLOKA-WYSCIG #486, który naprawił czerwony odłamek e2e 2/3 tego PR); `tes
 (`Cl`/`Ml` w `vilda_auth_ui.js` mają identyczny zastępczy start `r||(r=n[0])`, a panel otyłości liczy od niego okna
 odpowiedzi ChPL — tam brak startu dotyka oceny, nie tylko etykiety); scalenie i wdrożenie.
 
+## Leczenie otyłości bez punktu „Włączenie”: werdykt wg ChPL wstrzymany, ocena bieżącego kursu, podpowiedź w monitorze (P-OTYLOSC-BEZ-STARTU, SW 1.1.115, `vilda_auth_ui.js` 467, `obesity_therapy_monitor.js` 22, 2026-09-30)
+
+**Zgłoszenie i decyzje właściciela (2026-09-30).** Po P-GH-BEZ-STARTU (#483): karta „Leczenie otyłości” i panel „Dane
+analityczne — otyłość” w Karcie pacjenta mają ten sam zastępczy start co dawna karta GH, ale tu od niego liczy się też
+werdykt wg ChPL. Decyzje (odpowiedzi właściciela na pytania z analizy):
+1. bez punktu „Włączenie” automatyczny werdykt ChPL (zaliczony / „odstawić” / „przed oknem”) jest **wstrzymany** —
+   zamiast niego kafel „Brak punktu „Włączenie” — ocena wg ChPL niedostępna” z regułą ChPL i wskazówką, by dodać start
+   tylko z udokumentowaną masą i datą; liczby redukcji zostają z podpisem „od 1. punktu”; z punktem startu bez zmian;
+2. wznowiony kurs (po „Zakończeniu” nowe punkty) jest **oceniany w obrębie bieżącego kursu**; bez własnego „Włączenia”
+   w tym kursie — jak brak startu (werdykt wstrzymany);
+3. monitor otyłości w DocPro dostaje **miękką podpowiedź** (jak monitor GH) i podpis „od 1. punktu” w nagłówkach kolumn
+   redukcji — **bez nowych liczb** i bez werdyktów.
+
+**Przyczyna (kod, `vilda_auth_ui.js`).** `Cl` (karta) i `Ml` (panel) brały pierwszy punkt typu `start` w całej historii,
+a bez niego najwcześniejszy punkt (`r||(r=n[0])`, `l||(l=o[0])`). Od tego punktu `Ml` liczy masę i BMI początkowe,
+redukcje, ΔBMI-SDS, czas leczenia, grupę wiekową ChPL (`getCriterion(lek, substancja, wiek w tym punkcie)`) i wejście do
+`ObesityResponseCriteria.evaluate` (tygodnie, % masy, % BMI). Pole „Włączenie” podawało wiek tego punktu, a chip
+„leczenie zakończone” zapalał każdy punkt „Zakończenie” w historii, także przed nowym kursem.
+
+**Skutki zmierzone na prawdziwym module `obesity_response_criteria.js` (przed zmianą).**
+- Saxenda, dorosły, same „Kontynuacje” 100 → 98 kg w 16 tyg. → `fail-stop` („✗ wg ChPL odstawić”), choć masa sprzed
+  leczenia jest nieznana (np. od 110 kg byłoby −10,9 % i „kontynuować”).
+- Mysimba, dorosły, 104 → 98,5 kg w 17 tyg. → `pass` („✓ kontynuować”), choć od nieznanej masy początkowej 100 kg
+  wynik to −1,5 % i `fail-stop`.
+- Wegovy, 15 lat, dwa punkty 8 tyg. od siebie → `before-window` i „Trwa zwiększanie dawki”, choć dawka mogła być już
+  podtrzymująca od miesięcy.
+- Wznowiony kurs (start 06.01.2025 100 kg, zakończenie 02.06.2025 90 kg, nowy kurs od 03.11.2025 108 kg, kontrola
+  27.04.2026 101 kg) → oceniany od startu kursu 1: 68 tyg., +1 % → `fail-stop`; od własnego startu kursu 2 (108 kg,
+  25 tyg., −6,5 %) wynik to `pass`.
+
+**Co jest.**
+- Bieżący kurs (`Ob_ks`): punkty posortowane jak dotąd (`Kr`: po datach, gdy wszystkie mają datę, inaczej po wieku); kurs
+  zaczyna się po ostatnim punkcie „Zakończenie”, po którym są jeszcze punkty (bez takiego — cała lista); jego start to
+  pierwszy punkt „Włączenie” w tym kursie albo brak.
+- Karta (`Cl`): „Włączenie” = wiek i data startu bieżącego kursu albo „brak punktu” + pomarańczowa nota („Brak punktu
+  „Włączenie” (pierwszy zapisany punkt: w wieku X). Dodaj go w monitorze DocPro (także wstecznie) — tylko z udokumentowaną
+  masą i datą; do tego czasu ocena odpowiedzi wg ChPL jest niedostępna.”; dla wznowionego kursu: „Bieżący kurs leczenia
+  (po punkcie „Zakończenie”) nie ma punktu „Włączenie” (pierwszy zapisany punkt kursu: …)”). Chip „leczenie zakończone”
+  tylko, gdy ostatni punkt to „Zakończenie”; wznowiony kurs = „aktywne”.
+- Panel (`Ml`): punkt odniesienia = start bieżącego kursu albo, bez niego, pierwszy punkt tego kursu. Bez startu kafelki
+  mówią „Masa w 1. punkcie”, „… od 1. punktu”, „średnio od 1. punktu”, „Czas od 1. punktu”; kafelek „Redukcja do oceny”
+  znika; werdykt: dla grup z progiem (Saxenda 6–11 / 12–17 / dorośli, Mysimba, Wegovy 12–17) kafel „Brak punktu
+  „Włączenie” — ocena wg ChPL niedostępna” (neutralny, z regułą grupy); dla grup bez progu (Wegovy, Mounjaro — dorośli)
+  „Ocena kliniczna” z „Obecnie: x % masy od 1. zapisanego punktu (brak punktu „Włączenie”)”; lek nierozpoznany — opis
+  mówi o wieku w 1. zapisanym punkcie i o braku startu. Z punktem „Włączenie” w bieżącym kursie ścieżka werdyktu jest
+  bajt w bajt ta sama (wywołanie `evaluate` nietknięte), tylko od startu bieżącego kursu.
+- Monitor DocPro (`obesity_therapy_monitor.js`, `docpro.html`, klasa `.obm-start-hint` w `inline_docpro_01.css`):
+  podpowiedź, gdy bieżący kurs nie ma „Włączenia” (dwie treści: brak startu w ogóle / wznowiony kurs bez startu); gdy
+  w całej liście nie ma startu — nagłówki „Redukcja masy (od 1. punktu)”, „Redukcja BMI (od 1. punktu)”. Liczby w tabeli
+  bez zmian (punkt odniesienia tabeli jak dotąd: pierwszy start w historii, bez niego pierwszy punkt).
+
+**Czego zmiana nie robi.** Nie zmienia progów, okien, kotwic ChPL ani modułu `obesity_response_criteria.js`
+(P-CHPL, P-KOTWICA), danych, zapisu i synchronizacji. Nie zmienia zakładki „Postępy” dorosłego
+(`vilda_postepy_doroslego*`, która już nazywa brak punktu „Włączenie” — P-POSTEPY-FIX rata A), analizy trajektorii
+(kursy P-WERDYKT), wykresu dawki (`Al`) ani liczb w tabeli monitora.
+
+**Wpływ kliniczny.** Zmiana interpretacji: bez punktu „Włączenie” (w bieżącym kursie) aplikacja przestaje wydawać
+werdykt wg ChPL — ani fałszywego „odstawić”, ani fałszywego „kontynuować”, ani „przed oknem”. Lekarz widzi liczby od
+pierwszego zapisanego punktu, podpisane jako takie, oraz regułę ChPL. Pozostałe ryzyko: u rzeczywistego braku odpowiedzi
+bez zapisanego startu nie pojawi się automatyczny sygnał „odstawić” — nota prowadzi do dopisania startu, który przywraca
+werdykt. Wznowiony kurs z własnym startem jest oceniany od niego (wcześniej od startu poprzedniego kursu — w przykładzie
+wyżej fałszywe „odstawić” zamiast „kontynuować”). Wymaga akceptacji klinicznej właściciela.
+
+**Przypadki (`tests/e2e/karta-otylosc-bez-punktu-wlaczenia.spec.mjs`, dane fikcyjne; dorosły 40 l., 170 cm, jeśli nie
+podano inaczej).**
+- OB-1: Saxenda, „Kontynuacja” 05.01.2026 100 kg i 27.04.2026 98 kg → werdykt wstrzymany (klasa neutralna, reguła
+  „Saxenda dorośli”), karta „Włączenie: brak punktu” + nota, „Masa w 1. punkcie 100 kg”, „Redukcja masy −2,0 kg −2,0 %
+  od 1. punktu”, „Czas od 1. punktu 16 tyg.”. Na bazie: „odstawić”.
+- OB-1K (kontrola): to samo z pierwszym punktem „Włączenie” → „odstawić”, „nominalnego czasu zwiększania dawki”,
+  „Masa przy włączeniu 100 kg”, „Redukcja do oceny” — jak dotąd (przechodzi też na bazie).
+- OB-2: Mysimba 104 → 98,5 kg w 17 tyg., bez startu → werdykt wstrzymany (na bazie „kontynuować”).
+- OB-3: Wegovy, 15 lat, 82 → 80 kg w 8 tyg., bez startu → werdykt wstrzymany, bez „Trwa zwiększanie dawki”, ΔBMI-SDS
+  „od 1. punktu”.
+- OB-4: jeden punkt „Kontynuacja” → werdykt wstrzymany, podpowiedź „Jeden punkt terapii bez punktu „Włączenie””.
+- OB-5: Wegovy, dorosły, 100 → 96 kg bez startu → „Ocena kliniczna”, „Obecnie: −4,0% masy od 1. zapisanego punktu
+  (brak punktu „Włączenie”).”
+- KURS-1: start 100 kg (2025-01-06), zakończenie 90 kg, „Kontynuacja” 108 kg (2025-11-03) i 101 kg (2026-04-27) →
+  werdykt wstrzymany, chip „aktywne”, nota o bieżącym kursie, „Masa w 1. punkcie 108 kg” (na bazie: „odstawić”,
+  „leczenie zakończone”).
+- KURS-2: jak KURS-1, ale 2025-11-03 to „Włączenie” → „kontynuować” (klasa good), „Włączenie: w wieku 40 l. 0 mies.
+  (03.11.2025)”, „Masa przy włączeniu 108 kg” (na bazie: „odstawić” od startu kursu 1).
+- MON-1/2/3 (monitor DocPro): bez startu — podpowiedź i nagłówki „(od 1. punktu)”, redukcje „—” i „−2,0 %” jak dotąd;
+  ze startem — bez podpowiedzi; wznowiony kurs bez startu — podpowiedź o bieżącym kursie, nagłówki bez zmian.
+Na bazie `a6e6153` pada 10 z 11 testów (przechodzi tylko kontrola OB-1K).
+
+**Walidacja.** `npm test` zielony (w tym strażnicy stylów na elementach, tokenów CSS i wersji; pin `evaluate`
+w `bmi-karta-monitor.test.mjs` i teksty KOTWICA nietknięte); `npm run design-system -- --strict` bez dryfu. E2E: nowy
+spec 11/11; `kotwica-okna-chpl`, `otylosc-edycja-punktu`, `otylosc-kryteria-chpl`, `porownanie-kontekst`,
+`porownanie-rata-7`, `postepy-doroslego-zakladka`, `werdykt-kursy-rata-6`, karty GH, `powloka-przelaczanie-paneli` —
+zielone; spec-e PWA/SW 9/9 osobno (`pwa.spec` „offline” przekracza 60 s tylko przy 4 równoległych workerach, jak w
+poprzednich ratach). Telefon 393 px i desktop 1440 px: bez poziomego przewijania (karta z rozwiniętym panelem, monitor).
+
+**Wersje.** `vilda_auth_ui.js` 466 → 467 (8 stron) i w adresach wstrzykiwanych przez `vilda_chrome.js` (79 → 80) i
+`vilda_session_bridge.js` (7 → 8, 22 strony); `obesity_therapy_monitor.js` 21 → 22; `inline_docpro_01.css` 1 → 2;
+precache (append-only); `SW_VERSION` 1.1.114 → 1.1.115 (+ pin; 1.1.114 wydał P-POWLOKA-WYSCIG-2 #488, który naprawił czerwony odłamek e2e 2/3
+tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
+
+**Otwarte (poza tą zmianą, do decyzji właściciela).**
+- Bez startu kafelek „Próg ChPL” i reguła w nocie pochodzą z grupy wybranej wg wieku w 1. zapisanym punkcie — przy
+  granicy 6/12/18 lat grupa może różnić się od tej z dnia włączenia (werdykt i tak jest wstrzymany).
+- Dwa punkty „Włączenie” w jednym kursie (monitor przy dodawaniu tego nie blokuje, przy edycji tak): liczy się pierwszy.
+- Tabela monitora liczy redukcje od pierwszego startu w całej historii — dla wznowionego kursu inaczej niż panel Karty
+  (decyzja „bez nowych liczb” w monitorze).
+- Zakładka „Postępy” dorosłego bierze pierwszy start w historii (bez pojęcia kursu).
+- Znane wcześniej: kotwica dawki podtrzymującej zawsze nominalna (`weeksFromAnchor` nie jest przekazywane); werdykt
+  ocenia ostatni punkt, a nie redukcję w chwili okna.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
