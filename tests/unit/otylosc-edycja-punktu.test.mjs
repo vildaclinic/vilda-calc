@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const zrodlo = (p) => fs.readFileSync(path.join(korzen, p), 'utf8');
@@ -15,8 +16,11 @@ const zrodlo = (p) => fs.readFileSync(path.join(korzen, p), 'utf8');
 // i uruchamianej wprost:
 //   • komplet wiek/masa/wzrost, tak samo jak przy dodawaniu;
 //   • poprawny rodzaj wizyty;
-//   • BRAK drugiego punktu „Włączenie" — kod bierze pierwszy `start` jako punkt odniesienia całej
-//     oceny odpowiedzi na leczenie, więc dwa starty po cichu przestawiłyby baseline;
+//   • BRAK drugiego punktu „Włączenie" W TYM SAMYM CYKLU — kod bierze pierwszy `start` cyklu jako
+//     punkt odniesienia oceny odpowiedzi na leczenie, więc dwa starty po cichu przestawiłyby baseline.
+//     Od P-OTYLOSC-CYKLE rata 1 (decyzja właściciela 2026-09-30) regułę zna produkcyjny moduł
+//     vilda_cykle_leczenia.js, wczytywany tu tak jak na stronie; bez niego zostaje stara reguła
+//     (jedno Włączenie w całej liście), przez którą nie dało się poprawić Włączenia nowego cyklu;
 //   • przeliczenie zapisanego `bmi`, które inaczej pojechałoby stare w eksporcie.
 //
 // Dane wyłącznie FIKCYJNE.
@@ -38,7 +42,11 @@ function pomocnik() {
   return new Function(`${L}\n${f}\n${Ed}\nreturn Ed;`)();
 }
 
-const Ed = pomocnik();
+const EdSurowe = pomocnik();
+const okno = {};
+loadBrowserScript('vilda_cykle_leczenia.js', okno);
+// Ed() dostaje moduł cykli czwartym argumentem — na stronie bierze go z window.VildaCykleLeczenia.
+const Ed = (lista, id, late) => EdSurowe(lista, id, late, okno.VildaCykleLeczenia);
 
 const PUNKTY = Object.freeze([
   { id: 'p1', type: 'start', ageYears: 13, ageMonths: 0, weight: 92, height: 165, bmi: 33.8, drug: 'Saxenda', substance: 'liraglutide', dose: '3,0 mg', dateISO: '2026-01-10' },
@@ -111,6 +119,37 @@ describe('Monitor otyłości — czego edycja nie przepuści', () => {
   it('mówi, czy ruszany punkt był odniesieniem — po to, by zapytać przed przeliczeniem oceny', () => {
     expect(Ed(PUNKTY, 'p1', late({ type: 'continue' })).wasBaseline).toBe(true);
     expect(Ed(PUNKTY, 'p2', late()).wasBaseline).toBe(false);
+  });
+});
+
+describe('Monitor otyłości — cykle leczenia (P-OTYLOSC-CYKLE rata 1)', () => {
+  // Cykl 1 zakończony, cykl 2 z własnym Włączeniem. Dane FIKCYJNE.
+  const DWA_CYKLE = Object.freeze([
+    ...PUNKTY,
+    { id: 'p3', type: 'end', ageYears: 13, ageMonths: 6, weight: 86, height: 166, bmi: 31.2, drug: 'Saxenda', substance: 'liraglutide', dose: '3,0 mg', dateISO: '2026-07-10' },
+    { id: 'p4', type: 'start', ageYears: 13, ageMonths: 9, weight: 90, height: 167, bmi: 32.3, drug: 'Wegovy', substance: 'semaglutide', dose: '0,25 mg', dateISO: '2026-10-05' },
+  ]);
+  const lateP4 = (nad = {}) => late(Object.assign({ type: 'start', ageMonthsTotal: 165, weight: 89.5, height: 167, dose: '0,25 mg', dateISO: '2026-10-05' }, nad));
+
+  it('CY-3: Włączenie nowego cyklu da się poprawić i zapisać jako Włączenie (dotąd „drugi-start")', () => {
+    const w = Ed(DWA_CYKLE, 'p4', lateP4());
+    expect(w.ok).toBe(true);
+    expect(w.point.type).toBe('start');
+    expect(w.point.weight).toBe(89.5);
+    expect(w.points.map((p) => p.id)).toEqual(['p1', 'p2', 'p3', 'p4']);
+    expect(w.wasBaseline).toBe(true);
+  });
+
+  it('drugie Włączenie w cyklu 2 nadal jest odrzucane z komunikatem modułu', () => {
+    const lista = [...DWA_CYKLE, { id: 'p5', type: 'continue', ageYears: 14, ageMonths: 0, weight: 88, height: 167, drug: 'Wegovy', dose: '0,5 mg', dateISO: '2027-01-04' }];
+    const w = Ed(lista, 'p5', late({ type: 'start', ageMonthsTotal: 168, weight: 88, height: 167, dateISO: '2027-01-04' }));
+    expect(w.ok).toBe(false);
+    expect(w.reason).toBe('drugi-start');
+    expect(w.message).toBe('Cykl 2 ma już Włączenie (05.10.2026). Nowy cykl rozpoczniesz po Zakończeniu cyklu 2.');
+  });
+
+  it('bez modułu cykli zostaje dawna reguła — jedno Włączenie w całej liście', () => {
+    expect(EdSurowe(DWA_CYKLE, 'p4', lateP4()).reason).toBe('drugi-start');
   });
 });
 

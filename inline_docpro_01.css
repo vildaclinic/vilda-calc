@@ -75,6 +75,16 @@
         #obesityMonitorSection .obm-empty{text-align:center;color:var(--text-muted);font-size:.85rem;padding:var(--space-18px);border:var(--border-hairline) dashed #e0eef0;border-radius:var(--radius-10)}
         /* P-OTYLOSC-BEZ-STARTU: podpowiedź „brak punktu Włączenie” — wygląd noty #ghTherapyStartHint z monitora GH. */
         #obesityMonitorSection .obm-start-hint{margin:0 0 var(--space-0-6);padding:9px 11px;border:var(--border-hairline) solid #EF9F27;border-radius:var(--radius-8);background:#FAEEDA;color:#633806;font-size:.8rem;line-height:1.45}
+        /* P-OTYLOSC-CYKLE rata 1: komunikat o regułach cykli leczenia w miejscu przycisków (błąd albo wybór „nowy cykl”); przyciski wyboru w skórce aplikacji jak reszta monitora. */
+        #obesityMonitorSection .obm-msg{margin:var(--space-6px) 0 var(--space-4px);padding:9px 11px;border-radius:var(--radius-8);font-size:.82rem;line-height:1.45;display:flex;flex-direction:column;gap:var(--space-8px)}
+        #obesityMonitorSection .obm-msg[hidden]{display:none}
+        #obesityMonitorSection .obm-msg.err{border:var(--border-emphasis) solid var(--danger);background:#ffeaea;color:#8e1c1c}
+        #obesityMonitorSection .obm-msg.warn{border:var(--border-hairline) solid #EF9F27;background:#FAEEDA;color:#633806}
+        #obesityMonitorSection .obm-msg-actions{display:flex;flex-wrap:wrap;gap:var(--space-6px)}
+        #obesityMonitorSection .obm-msg-btn{font-size:.8rem;line-height:1.3;min-width:0;max-width:100%;white-space:normal;text-align:left;margin:0}
+        #obesityMonitorSection .obm-msg-btn:focus-visible{outline:var(--border-emphasis) solid var(--primary);outline-offset:2px}
+        @media(max-width:560px){#obesityMonitorSection .obm-msg-btn{min-height:44px;width:100%}}
+
 #bisphosCard .bp-tabs{display:flex!important;gap:var(--space-6px)!important;background:#eef4f3!important;border-radius:var(--radius-13)!important;padding:var(--space-4px)!important;margin:var(--space-14px) 0 var(--space-16px)!important;box-shadow:none!important}
       #bisphosCard button.bp-tab{flex:1 1 0!important;width:0!important;min-width:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:0!important;border-radius:var(--radius-10)!important;padding:var(--space-10px) var(--space-8px)!important;margin:0!important;font-family:inherit!important;font-size:.9rem!important;font-weight:700!important;color:#33464e!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;min-height:0!important;height:auto!important;text-transform:none!important;letter-spacing:normal!important}
       #bisphosCard button.bp-tab.on{background:#fff!important;color:var(--primary)!important;box-shadow:0 2px 8px rgba(14,42,48,.08)!important}
