@@ -140,7 +140,7 @@ describe('rata G1: plan PDF — stabilizacja jako utrzymanie masy, ramka tempa, 
   it('A: sekcja kontroli — zdanie o pomiarze wzrostu tylko przy fladze pomiarWzrostu (osobny element, zdanie o ważeniu bez zmian)', () => {
     const k = { tygodnie: 6, terminTekst: '5 listopada 2026', terminKrotki: '5 XI', terminRok: 2026, masaDzisKg: 75, masaSpodziewanaKg: 73.4, progKg: 74.4, gornaKcal: 1800, obnizkaKcal: [100, 200], obnizkaMozliwa: true, podazPoObnizceKcal: [1600, 1700], przyrostKg: 0.3, wzrastanie: true };
     // rata G1a: zdanie z generatora (to samo co w zaleceniach), moduł PDF niczego nie pisze od siebie; bez zdania — bez linii
-    const ZD = 'Na kontroli mierzony jest także wzrost dziecka — prawidłowo prowadzona dieta nie spowalnia wzrastania.';
+    const ZD = 'Na kontroli mierzony jest także wzrost dziecka — zbyt szybkie odchudzanie może spowolnić wzrastanie, dlatego tempo jest ograniczone i sprawdzane na każdej wizycie.';
     const z = html(dane({ kontrola: { ...k, pomiarWzrostu: true, zdanieWzrostu: ZD } }));
     expect(z).toContain(`Ważenie: rano, po toalecie, w bieliźnie, na tej samej wadze.</div><div class="vrp-podkafle vrp-podkafle-wzrost">${ZD}</div>`);
     expect(z).not.toContain('mierzymy');

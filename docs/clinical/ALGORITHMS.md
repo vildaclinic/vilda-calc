@@ -5972,6 +5972,55 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
 
+## Audyt zaleceń dietetycznych — rata 2: bezpieczeństwo i teksty, bez obniżania kcal (P-DIETA-AUDYT2 rata 2, SW 1.1.126, 2026-09-30)
+
+**Zlecenie właściciela (2026-09-30).** Po przeglądzie części B audytu (rekomendacje dla progów B1–B9) właściciel zlecił
+ratę 2: poprawki bezpieczeństwa i błędnych tekstów, które nie wymagają decyzji o progach i nie obniżają kaloryczności.
+Decyzje o progach (zasada domyślnego PAL, strategia przy nadwadze, model wzrastania, seniorzy) pozostają otwarte.
+
+**Zmiany (kliniczne: interpretacja i jedna zmiana liczby w bezpieczną stronę).**
+
+| # | Było | Jest |
+|---|---|---|
+| R2-1 | sygnał ryzyka zaburzeń odżywiania z historii masy mnożył bazę planu × 0,85 (`vilda_anorexia_risk.js`, `correction.teeFactor`) także u dziecka realizującego plan: 8-latka 61,7 → 59,6 kg w 42 dni (1,5 kg/mies., zgodnie z planem) dostawała 1868 zamiast 2197 kcal i tylko dietę lekką ≤ 1600 | u dziecka z nadmiarem masy (od 2 lat) i u osoby ≥ 65 lat baza planu bez obniżki, ostrzeżenie zostaje (`riskBezKorekty`, notka w karcie planu); dorośli 19–64 lat bez zmian (decyzja właściciela). Nowy alarm, gdy ubytek z historii (odstęp ≥ 14 dni) przekracza najwyższy sufit tempa wiersza (6–11 l. ≥ 99. c. i otyłość 12–18 l.: 2 kg/mies.; 6–11 l. < 99. c.: 0,5; nadwaga 12–18 l.: 1,5; 2–5 l.: 0,45 kg/mies. = 1 lb/mies., Barlow 2007): „Oceń przyczynę zbyt szybkiego ubytku; nie pogłębiaj deficytu” (`tempoZaSzybkie`). Karta spożycia liczy tak samo (parytet z P-SPOZYCIE-REE) |
+| R2-2 | „prawidłowo prowadzona dieta nie spowalnia wzrastania” | „zbyt szybkie odchudzanie może spowolnić wzrastanie, dlatego tempo jest ograniczone i sprawdzane na każdej wizycie” (Dietz 1985; Mazur 2022 §4.1) |
+| R2-3 | notka pod dietą i punkt diety (karta planu, „Droga do normy”) opisywały „masa docelowa − 200–500 kcal (Mazur 2022)”, choć przy wiążącym limicie tempa dieta = zapotrzebowanie przy obecnej masie − limit (np. 8-latka 61,7 kg: nota „1573 kcal − 200”, dieta ≤ 1950) | gdy limit wiąże we wszystkich dietach: „dieta liczona od zapotrzebowania przy obecnej masie ciała: ok. 2244 kcal/dzień przy PAL 1,4, pomniejszonego tak, by ubytek nie przekraczał 1–2 kg/mies. — reguła „masa docelowa − 200–500 kcal” (Mazur 2022) dałaby tu szybszy ubytek”, z masą docelową na końcu; punkt diety: „limit tempa ok. X kg/mies. (reguła „masa docelowa − D kcal”, Mazur 2022, dałaby tu szybszy ubytek)”. Bez limitu — jak dotąd |
+| R2-4 | plakietka „PAL 1,4 … typowa przy otyłości (Ekelund 2002)” także przy nadwadze (Ekelund: BMI > 30) | przy nadwadze: „przyjęto jak przy otyłości — brak pomiarów PAL dla samej nadwagi; przy aktywnym dziecku wybierz PAL wg wywiadu” (`energyBadgeWgKlasy`) |
+| R2-5 | pozostałość po A4: u 18-latka ze stabilizacją podpis celu „85. centyl BMI”, choć cel to BMI 24,9 | podpis z rodzaju celu silnika BMI (`bmiClass.celDorosly`, `energyCelPodpis`): „BMI 24,9” albo „85. centyl BMI” — karta planu (trzy miejsca) i „Droga do normy” |
+| R2-6 | „Wzrost prawie się zakończył (pozostało nie więcej niż 3 cm)” także bez pomiaru tempa (wartość populacyjna / tabela zapasowa) | zdanie o 3 cm tylko przy zmierzonym tempie albo znanym wzroście końcowym; bez pomiaru: „Brak pomiaru tempa wzrastania — wzrastanie przyjęto jako praktycznie zakończone na podstawie wartości populacyjnej; pomiar wzrostu na kontroli zweryfikuje to założenie.” (także podpowiedź celu własnego nastolatka) |
+| R2-7 | „minimum 1200 kcal/dzień (spoczynkowa przemiana materii)” także gdy REE < 1200 (stan planu nie zwracał minimum bezwzględnego) | stan zwraca `floorAbsoluteKcal`; dopisek tylko gdy minimum = REE; punkt diety podaje właściwe minimum wieku (1000 poniżej 10 lat) |
+| R2-8 | `energyBuildIntakeObservedState` bez PAL: pierwsza pozycja listy (1,4 przed 10 l., 1,6 od 10 l. — odwrotnie niż plan) | domyślny PAL planu (`energyDefaultPlanPal`) |
+| R2-9 | brak testu skoków na progach | „mapa skoków” — test charakteryzujący na prawdziwym silniku (niżej) |
+
+**Mapa skoków (stan przypięty świadomie, nie ocena poprawności; decyzje w części B).** Siatka OLAF, PAL domyślny, dane fikcyjne:
+- 97. c., 4–9 l.: chł. 7;0, 124,6 cm, 33,4 → 33,5 kg: PAL 1,6 → 1,4; utrzymanie 1921 → 1683 (≤ 1900 → dieta lekka ≤ 1550);
+- 10. urodziny przy nadwadze: chł. 46 kg / 141,5 cm: 2310 (Henry × 1,6) → 1822 (Molnár × 1,4);
+- 85. c., 10–18 l.: chł. 13;0, 168 cm: 63,1 kg → karta 2796 (Henry × 1,6 × 1,01, bez planu); 63,2 kg → plan 2289, ≤ 2250;
+- BMI 30, dorosły: M 40 l., 175 cm: umiarkowana ≤ 2300 → ≤ 2000; BMI 35 ≤ 2200;
+- 19. urodziny: M 175/79: PAL 1,4, lekka ≤ 2350 (zalecana) → PAL 1,6, umiarkowana ≤ 2200;
+- 18. urodziny, masa prawidłowa: M 175/76: TEE 3151 → 2836 (Henry 10–18 → 18–30);
+- 4. urodziny przy nadwadze: chł. 100 cm, 19,5 kg: 1279 → 1462;
+- 60. urodziny: K 160/82: umiarkowana ≤ 1550 → ≤ 1500; 65. urodziny: bez zmiany kcal;
+- siatka: chł. 7;0, 124,6 cm, 33,2 kg — OLAF nadwaga (1,6; 1916), WHO otyłość (1,4; 1677).
+
+**Przypadki `wejście → oczekiwany wynik`** (`tests/unit/dieta-audyt2-rata2.test.mjs`, 19 przypadków; na kodzie sprzed zmiany 10 przypadków poprawek czerwonych, 9 przypadków mapy zielonych):
+- dz. 8;0, 130 cm, 59,6 kg, historia 61,7 → 59,6 kg w 42 dni → utrzymanie 2197 (dotąd 1868), diety ≤ 1900/1800/1650, `riskBezKorekty` true, tempo obserwowane 1,52 kg/mies., bez alarmu;
+- ta sama, historia 63,7 → 59,6 kg → alarm {2,97 kg/mies.; limit 2; 42 dni}, plan bez obniżki;
+- K 40 l., 165 cm, 80 kg, historia 84 → 80 kg → bez zmian: umiarkowana ≤ 1800 → ≤ 1550 (× 0,85);
+- K 70 l., 165 cm, 80 kg, ta sama historia → diety jak bez historii, ostrzeżenie zostaje;
+- dz. 17;6, 145 cm, 61 kg → minimum 1200 bez „spoczynkowej przemiany materii” (REE Molnára 1117);
+- M 18;0, 175/79 → podpis „BMI 24,9”; M 13;0, 168/76 → „85. centyl BMI”;
+- M 9,9 i 10,0 l., 141 cm, 45 kg → PAL karty spożycia = PAL planu (1,6 i 1,4).
+E2E `tests/e2e/dieta-audyt2-rata2.spec.mjs` (7 przypadków na prawdziwej stronie: notka, zdanie o wzrastaniu, minimum, podpis 18-latka, zdanie bez pomiaru tempa, alarm w karcie planu, plakietka PAL).
+
+**Pliki.** `vilda_diet_plan_ui.js` (`?v=41`), `vilda_diet_recommendations.js` (`?v=66`), `vilda_bmi_journey.js` (`?v=27`);
+SW 1.1.125 → 1.1.126 (po P-NAME-FIX-WYSCIG i P-SPOJNOSC-ZAPISOW), precache append-only, `?v=` na stronach i w smoke, fixture wersji. Zaktualizowane oczekiwania tekstowe
+(liczba asercji nie maleje): `dieta-tempo-wzrastania-rata-g1` (unit), `dieta-tempo-rata-g1`, `zalecenia-energetyczne-strategia`,
+`dieta-rata-u`, `dieta-dziecko-otylosc`, `dieta-audyt2` (e2e).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna raty 2; zasady części B (domyślny PAL wg klasy BMI, strategia przy
+nadwadze), model wzrastania w symulacji (B8), ścieżka seniorów (B9), zakres korekty × 0,85 u dorosłych 19–64 lat.
+
 ## Audyt zaleceń dietetycznych — rata 1: błędy kodu i niespójności (P-DIETA-AUDYT2 rata 1, SW 1.1.106, 2026-09-29)
 
 **Zgłoszenie i metoda.** Właściciel zlecił pełny audyt funkcji zaleceń dietetycznych we wszystkich grupach wieku i scenariuszach.
