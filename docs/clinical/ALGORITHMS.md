@@ -6797,7 +6797,7 @@ odświeżony.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna, scalenie i wdrożenie.
 
-## Wiersze punktów terapii GH na stronie głównej tylko do odczytu (P-GH-BLOKADA, SW 1.1.135, `vilda_advanced_growth.js` 74, 2026-09-30)
+## Wiersze punktów terapii GH na stronie głównej tylko do odczytu (P-GH-BLOKADA, SW 1.1.136, `vilda_advanced_growth.js` 74, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów GH (`docs/AUDYT-PRZEPLYW-GH.md`, U1) i decyzja właściciela z 2026-09-30:
 po P-GH-ZRODLO i P-GH-DOCPRO kolejna zmiana to blokada pól wierszy punktów na stronie głównej, zamiast zapisu
@@ -6845,8 +6845,8 @@ z komentarzem w wierszu punktu — bez zmian (nie jest częścią pomiaru). Kole
 „Nowy pomiar”, pakiet „dawka podawana”, wspólne API punktów, funkcja „punkt z wiersza karty zaawansowanej”, U2.
 
 **Wersje.** `vilda_advanced_growth.js` 73 → 74 (`index.html`, `docpro.html`, `kalkulator-klirens.html`); precache
-(append-only); `SW_VERSION` 1.1.134 → 1.1.135 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
-`tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje` względem `audyt` `ca9638d`.
+(append-only); `SW_VERSION` 1.1.135 → 1.1.136 (po #511; + pin w `tests/unit/klirens-ui-model.test.mjs`);
+`tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje` względem `audyt` `a3d1796`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania (edycja pomiaru punktu tylko w monitorze),
 scalenie i wdrożenie.
