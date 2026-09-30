@@ -321,6 +321,95 @@ describe('jawny import zdejmuje nagrobek (jak u pacjentów)', () => {
   });
 });
 
+// P-KOSZ-POPRAWKI (uwagi Codex P1 do scalonych #501 i #502, zgoda właściciela 2026-09-30). Scalanie synchronizacji
+// nie bierze blokady pacjenta, a okno potwierdzenia może stać otwarte, gdy karty się zmieniają.
+describe('P-KOSZ-POPRAWKI: treść najnowszego usunięcia i wersja sprawdzana przed usunięciem', () => {
+  // Jak scalanie bez blokady pacjenta: tuż po zapisie listy nagrobków z tym zapisem wpisuje jego nowszą wersję
+  // (np. przypiętą albo poprawioną na innym urządzeniu).
+  function nowszaWersjaPoNagrobku(v, patientId, snapshotId) {
+    const pamiec = adaptery.get(v);
+    const oryginal = pamiec.putUserMeta;
+    let raz = false;
+    pamiec.putUserMeta = async function (...x) {
+      const wynik = await oryginal.apply(this, x);
+      const lista = x[1] && x[1].snapshotTombstones;
+      if (!raz && Array.isArray(lista) && lista.some((n) => n.snapshotId === snapshotId)) {
+        raz = true;
+        const rekord = (await pamiec.listSnapshotsForUser(x[0], patientId)).find((s) => s.snapshotId === snapshotId);
+        await pamiec.putSnapshotForUser(x[0], { ...rekord, rev: (rekord.rev || 0) + 1, updatedAtISO: new Date(Date.now() + 1000).toISOString() });
+      }
+      return wynik;
+    };
+    return () => { pamiec.putUserMeta = oryginal; };
+  }
+
+  it('nowsze usunięcie z innego urządzenia przynosi do kosza swoją treść od razu (A był offline ze starym wpisem)', async () => {
+    sztucznyZegar();
+    const A = await urzadzenie();
+    const B = await urzadzenie();
+    const { patientId, zly } = await kartaZPomylka(A);
+    await B.mergeSyncPayload(await A.exportSyncPayload());
+    przesunZegar(DZIEN);
+    await A.moveSnapshotToTrash(patientId, zly);
+    await B.mergeSyncPayload(await A.exportSyncPayload()); // A i B: w koszu treść sprzed poprawki
+
+    przesunZegar(DZIEN);
+    await B.restoreTrashedSnapshot(patientId, zly);
+    przesunZegar(60e3);
+    const tresc = (await B.getPatient(patientId)).snapshots.find((s) => s.snapshotId === zly).payload;
+    await B.updateSnapshotPayload(patientId, zly, { ...tresc, user: { ...tresc.user, weight: 52.6 } }, { preserveSavedAt: true });
+    przesunZegar(60e3);
+    await B.moveSnapshotToTrash(patientId, zly); // nowsze usunięcie, treść po poprawce
+
+    await A.mergeSyncPayload(await B.exportSyncPayload());
+    const kosz = await A.listTrashedSnapshots();
+    expect(kosz.map((k) => k.snapshotId), 'A: wpis kosza nie znika').toEqual([zly]);
+    expect(kosz[0].payload.user.weight, 'A: treść najnowszego usunięcia, nie stara').toBe(52.6);
+    const zapisy = [];
+    const pamiec = adaptery.get(A);
+    const oryginal = pamiec.putUserMeta;
+    pamiec.putUserMeta = (...x) => { zapisy.push(x[1] && x[1].snapshotTombstones); return oryginal.apply(pamiec, x); };
+    await A.mergeSyncPayload(await B.exportSyncPayload()); // to samo usunięcie — bez ponownego szyfrowania
+    pamiec.putUserMeta = oryginal;
+    expect(zapisy, 'tylko znacznik scalania').toHaveLength(1);
+  });
+
+  it('oczekiwana wersja: zapis zmieniony od sprawdzenia — odmowa „zmieniony”, nic się nie zmienia', async () => {
+    sztucznyZegar();
+    const v = await urzadzenie();
+    const { patientId, zly } = await kartaZPomylka(v);
+    const przed = (await v.getPatient(patientId)).snapshots.find((s) => s.snapshotId === zly);
+    przesunZegar(60e3);
+    await v.updateSnapshotPayload(patientId, zly, { ...przed.payload, user: { ...przed.payload.user, weight: 51.9 } }, { preserveSavedAt: true });
+    przesunZegar(60e3);
+    await expect(v.moveSnapshotToTrash(patientId, zly, { oczekiwana: { rev: przed.rev, updatedAtISO: przed.updatedAtISO } }))
+      .rejects.toMatchObject({ code: 'zmieniony' });
+    expect(await idWersji(v, patientId)).toContain(zly);
+    expect(await v.listTrashedSnapshots()).toEqual([]);
+
+    const teraz = (await v.getPatient(patientId)).snapshots.find((s) => s.snapshotId === zly);
+    await v.moveSnapshotToTrash(patientId, zly, { oczekiwana: { rev: teraz.rev, updatedAtISO: teraz.updatedAtISO } });
+    expect(await idWersji(v, patientId)).not.toContain(zly);
+  });
+
+  it('scalanie wpisuje nowszą wersję między zapisem kosza a usunięciem: wersja zostaje, kosz pusty, „zmieniony”', async () => {
+    sztucznyZegar();
+    const v = await urzadzenie();
+    const { patientId, zly } = await kartaZPomylka(v);
+    przesunZegar(DZIEN);
+    const przywroc = nowszaWersjaPoNagrobku(v, patientId, zly);
+    try {
+      await expect(v.moveSnapshotToTrash(patientId, zly)).rejects.toMatchObject({ code: 'zmieniony' });
+    } finally {
+      przywroc();
+    }
+    const wersja = (await v.getPatient(patientId)).snapshots.find((s) => s.snapshotId === zly);
+    expect(wersja, 'nowsza wersja zostaje w karcie').toBeTruthy();
+    expect(await v.listTrashedSnapshots()).toEqual([]);
+    expect((await v.exportSyncPayload()).snapshotTombstones, 'bez nagrobka').toEqual([]);
+  });
+});
+
 describe('strażniki źródła', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
 
@@ -399,6 +488,29 @@ describe('pomiary zapisu i pokrycie w karcie drugiej osoby', () => {
     const przypiety = { snapshots: [zap('m', '2026-09-29T14:12:00Z', 'Probna Alicja', { age: 14, ageMonths: 1, height: 150, weight: 52 }, { _pinned: true }), A.snapshots[1]] };
     expect(I.ocenUsuniecie(przypiety, 'm', Bpelna).przypiety).toBe(true);
     expect(I.ocenUsuniecie({ snapshots: [A.snapshots[0]] }, 'm', Bpelna).stan, 'jedyny zapis').toBe('brak');
+  });
+
+  it('P-KOSZ-POPRAWKI: przy potwierdzeniu ta sama decyzja co przy otwarciu — inaczej okno otwiera się od nowa', () => {
+    const I = K.__internals;
+    const zap = (id, savedAtISO, name, user, extra = {}) => ({
+      snapshotId: id, savedAtISO, rev: extra.rev || 0, updatedAtISO: extra.updatedAtISO || savedAtISO,
+      payload: { name, user, ...(extra._pinned ? { _pinned: true } : {}) }, pinned: !!extra._pinned,
+    });
+    const alicja = { age: 14, ageMonths: 1, height: 150, weight: 52 };
+    const karta = (m) => ({ snapshots: [m, zap('a1', '2026-09-29T13:38:00Z', 'Innyrecz Adam', { age: 10, ageMonths: 6, height: 120, weight: 22 })] });
+    const m = zap('m', '2026-09-29T14:12:00Z', 'Probna Alicja', alicja);
+    const B = { snapshots: [zap('b1', '2026-09-29T14:20:00Z', 'Probna Alicja', alicja)] };
+    const przy = I.ocenUsuniecie(karta(m), 'm', B);
+    expect(I.takaSamaOcena(przy, I.ocenUsuniecie(karta(m), 'm', B)), 'nic się nie zmieniło').toBe(true);
+    const poprawiony = zap('m', '2026-09-29T14:12:00Z', 'Probna Alicja', alicja, { rev: 1, updatedAtISO: '2026-09-30T09:00:00Z' });
+    expect(I.takaSamaOcena(przy, I.ocenUsuniecie(karta(poprawiony), 'm', B)), 'inna wersja zapisu').toBe(false);
+    const przypiety = zap('m', '2026-09-29T14:12:00Z', 'Probna Alicja', alicja, { _pinned: true });
+    expect(I.takaSamaOcena(przy, I.ocenUsuniecie(karta(przypiety), 'm', B)), 'przypięty w międzyczasie').toBe(false);
+    const Bbez = { snapshots: [zap('b1', '2026-09-29T14:20:00Z', 'Probna Alicja', { ...alicja, weight: 52.4 })] };
+    expect(I.takaSamaOcena(przy, I.ocenUsuniecie(karta(m), 'm', Bbez)), 'pomiar zniknął z karty drugiej osoby').toBe(false);
+    const nowszy = { snapshots: [zap('n', '2026-09-30T08:00:00Z', 'Innyrecz Adam', { age: 10, ageMonths: 7, height: 121, weight: 22.6 }), ...karta(m).snapshots] };
+    expect(I.takaSamaOcena(przy, I.ocenUsuniecie(nowszy, 'm', B)), 'inna nazwa karty po usunięciu').toBe(false);
+    expect(I.takaSamaOcena(przy, I.ocenUsuniecie({ snapshots: [] }, 'm', B)), 'zapisu już nie ma').toBe(false);
   });
 
   it('teksty kosza: odmiana dni, wiek, nazwa pliku kopii (osobna od automatycznej kopii pacjenta)', () => {
