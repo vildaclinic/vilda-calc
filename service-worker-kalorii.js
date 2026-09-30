@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.126';
+const SW_VERSION = '1.1.127';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -923,6 +923,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=79',
   '/vilda_chrome.js?v=80',
   '/vilda_chrome.js?v=81',
+  '/vilda_chrome.js?v=82',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1178,6 +1179,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=74',
   '/vilda_auth_ui.css?v=75',
   '/vilda_auth_ui.css?v=76',
+  '/vilda_urodzeniowe_rozbieznosc.css?v=1',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
   '/vilda_file_export.js?v=5',
@@ -2096,6 +2098,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=36',
   '/vilda_perinatal_source.js?v=1',
   '/vilda_perinatal_source.js?v=2',
+  '/vilda_urodzeniowe_rozbieznosc.js?v=1',
   '/vilda_zrodla_pacjenta.js?v=1',
   '/vilda_ds_source.js?v=1',
   '/vilda_ds_source.js?v=2',
@@ -2414,6 +2417,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_epicrisis_ui.js?v=23',
   '/vilda_epicrisis_ui.js?v=24',
   '/vilda_epicrisis_ui.js?v=25',
+  '/vilda_epicrisis_ui.js?v=26',
   '/vilda_patient_report.js?v=18',
   '/vilda_patient_report.js?v=19',
   '/vilda_patient_report.js?v=20',
@@ -2586,6 +2590,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=465',
   '/vilda_auth_ui.js?v=466',
   '/vilda_auth_ui.js?v=467',
+  '/vilda_auth_ui.js?v=468',
   '/app.js?v=205',
   '/app.js?v=206',
   '/app.js?v=207',
@@ -2668,6 +2673,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=7',
   '/vilda_session_bridge.js?v=8',
   '/vilda_session_bridge.js?v=9',
+  '/vilda_session_bridge.js?v=10',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

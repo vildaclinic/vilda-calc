@@ -1,0 +1,218 @@
+/* vilda_urodzeniowe_rozbieznosc.css — wygląd ostrzeżenia o rozbieżnych danych urodzeniowych
+ * (vilda_urodzeniowe_rozbieznosc.js, P-URODZENIOWE-ROZBIEZNOSC). Makieta zaakceptowana przez
+ * właściciela 2026-09-30: karta SGA, Karta Pacjenta, krok „Dane urodzeniowe" epikryzy.
+ * Kolory ostrzeżenia z rodziny ostrzeżeń design systemu: obramowanie --notice-orange,
+ * tło --warning-bg, tytuł i podpisy --warning (4,58:1 na --warning-bg). */
+
+.vilda-ur-miejsce[hidden] {
+  display: none;
+}
+
+.vilda-ur-miejsce {
+  margin-top: var(--space-1);
+}
+
+.vilda-ur {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-6);
+  margin: 0 0 var(--space-1);
+  padding: var(--space-0-85) var(--space-1) var(--space-1);
+  background: var(--warning-bg);
+  border: var(--border-emphasis) solid var(--notice-orange);
+  border-radius: var(--radius-12);
+  color: var(--text);
+  text-align: left;
+}
+
+.vilda-ur__naglowek {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0-6);
+}
+
+.vilda-ur__ikona {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--warning);
+}
+
+.vilda-ur__tytul {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--warning);
+  text-align: left;
+}
+
+.vilda-ur__tekst {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.vilda-ur__tabela {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: var(--border-hairline) solid var(--line);
+  border-radius: var(--radius-10);
+  font-variant-numeric: tabular-nums;
+}
+
+.vilda-ur__wiersz {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-0-75);
+  padding: var(--space-0-6) var(--space-0-85);
+}
+
+.vilda-ur__wiersz + .vilda-ur__wiersz {
+  border-top: var(--border-hairline) solid var(--line);
+}
+
+.vilda-ur__wiersz--glowa .vilda-ur__kom {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.vilda-ur__wiersz--glowa .vilda-ur__kom + .vilda-ur__kom,
+.vilda-ur__kom--liczba {
+  text-align: right;
+}
+
+.vilda-ur__kom {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.vilda-ur__kom--nazwa {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.vilda-ur__kom--liczba {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.vilda-ur__stopka {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.vilda-ur__uwaga {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.vilda-ur__przycisk {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: var(--space-0-55) var(--space-1-1);
+  border: var(--border-hairline) solid var(--primary);
+  border-radius: var(--radius-12);
+  background: var(--card-bg);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vilda-ur__przycisk:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Pole z wartością różną od drugiego zapisu. !important, bo generator epikryzy ustawia
+ * obramowanie pól inline przy fokusie i utracie fokusu. */
+.vilda-ur-pole {
+  border: var(--border-emphasis) solid var(--notice-orange) !important;
+}
+
+.vilda-ur-podpis {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0-35);
+  margin-top: var(--space-0-25);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--warning);
+}
+
+.vilda-ur-podpis__ikona {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+/* Plakietka w nagłówku sekcji „Dane okołoporodowe" — widoczna także po zwinięciu sekcji. */
+.vilda-ur-plakietka {
+  margin-left: auto;
+  padding: 3px 9px;
+  border: var(--border-hairline) solid var(--notice-orange);
+  border-radius: var(--radius-pill);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ve-coll-head:has(.vilda-ur-plakietka) {
+  flex-wrap: wrap !important;
+}
+
+@media (max-width: 600px) {
+  .vilda-ur {
+    padding: var(--space-0-75);
+  }
+
+  /* Na wąskim ekranie nazwa pola dostaje własną linię na całą szerokość, a wartości stoją
+   * pod nią w dwóch kolumnach — bez łamania słów w środku. */
+  .vilda-ur__wiersz {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-0-25) var(--space-0-5);
+    padding: var(--space-0-5) var(--space-0-6);
+  }
+
+  .vilda-ur__kom--nazwa {
+    grid-column: 1 / -1;
+  }
+
+  .vilda-ur__wiersz--glowa .vilda-ur__kom:first-child {
+    display: none;
+  }
+
+  .vilda-ur__wiersz--glowa .vilda-ur__kom {
+    font-size: 0.66rem;
+  }
+
+  .vilda-ur__stopka {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vilda-ur__przycisk {
+    width: 100%;
+  }
+
+  .vilda-ur-plakietka {
+    margin-left: 0;
+  }
+}

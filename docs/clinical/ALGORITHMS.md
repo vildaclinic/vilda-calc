@@ -6408,6 +6408,77 @@ PAL karty spożycia po wczytaniu pacjenta ustępuje PAL-owi planu (wybór PAL pl
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
 
+## Ostrzeżenie o rozbieżnych danych urodzeniowych w karcie SGA, Karcie Pacjenta i epikryzie (P-URODZENIOWE-ROZBIEZNOSC, SW 1.1.127, `vilda_urodzeniowe_rozbieznosc.js` 1, 2026-09-30)
+
+**Usterka (diagnoza 2026-09-30, punkt W5).** Dane urodzeniowe są w rekordzie dwa razy i nic ich nie synchronizuje:
+sekcja `birth` (karta SGA w DocPro) i sekcja `perinatal` (Karta Pacjenta → „Dane okołoporodowe”). Karta SGA, opis
+pacjenta, ściąga B.64 i Blum ISS biorą liczby z karty SGA albo z `birth` (pierwszeństwo: `vilda_perinatal_source.js`),
+a generator epikryzy wypełnia się z `perinatal`. Przy dwóch różnych wpisach ta sama pacjentka jest SGA w jednym miejscu
+i nie jest w drugim — bez żadnego sygnału dla lekarza.
+
+**Decyzja właściciela (2026-09-30): „Najpierw ostrzeżenie”.** Pokazać rozbieżność, NIE zmieniać żadnych danych. Makieta
+(komputer i telefon, trzy miejsca) zaakceptowana 2026-09-30.
+
+**Gdzie.**
+- Karta SGA (docpro.html): ramka pod opisem karty. Porównuje stan karty z sekcją `perinatal` bieżącego pacjenta
+  (`VildaPerinatalSource.zKartyPacjenta()`). Przycisk „Otwórz Kartę Pacjenta” tylko otwiera edycję pacjenta
+  (`VildaAuthUI.showPatientEditScreen`).
+- Karta Pacjenta → „Dane okołoporodowe”: plakietka w nagłówku sekcji (widoczna także po zwinięciu) i ramka na początku
+  sekcji. Sekcja z rozbieżnością rozwija się przy otwarciu edycji. Porównuje wpisywane pola z żywą kartą SGA, gdy
+  edytowany pacjent jest pacjentem strony i karta ma dane, a w przeciwnym razie z sekcją `birth` edytowanego rekordu.
+- Generator epikryzy → krok „Dane urodzeniowe”: ramka pod tytułem kroku. Porównuje pola formularza z kartą SGA (albo
+  z `birth` bieżącego pacjenta, gdy karty na stronie nie ma — index.html).
+- W każdym miejscu rozbieżne pole ma pomarańczowe obramowanie i podpis z drugą wartością („Karta SGA: 2700 g”).
+  Ostrzeżenie przelicza się przy każdej zmianie pól i znika, gdy wartości się zrównają.
+
+**Reguły porównania (czyste funkcje, `VildaUrodzeniowaRozbieznosc.porownaj`/`model`).**
+- Porównywane pola: wiek ciążowy (tygodnie × 7 + dni; tygodnie bez dni = +0), masa (g, po zaokrągleniu do grama),
+  długość i obwód głowy (cm, po zaokrągleniu do 0,1). Przecinek i kropka dziesiętna są równoważne.
+- Pole liczy się tylko wtedy, gdy jest wypełnione PO OBU stronach. Pusta wartość po jednej stronie nie jest
+  rozbieżnością.
+- Wiersz SDS: `VildaSgaBirth.compute` (produkcyjny silnik karty SGA) dla obu zapisów, z tą samą płcią i tymi samymi
+  normami (pierwsze źródło karty SGA, w epikryzie wybrane źródło kroku). Pokazywany dla miar obecnych po obu stronach,
+  gdy SDS po zaokrągleniu do 0,01 się różni. Bez płci albo bez silnika na stronie wiersza SDS nie ma. Moduł nie ma
+  własnego wzoru ani progu i nie nazywa wyniku („SGA”) — pokazuje tylko liczby.
+- Tekst mówi, które miejsca liczą z której wartości, i kończy się zdaniem „Nic nie zostało zmienione.”
+
+**Przypadki syntetyczne (wejście → wynik)** — `tests/unit/urodzeniowe-rozbieznosc.test.mjs` (moduł i prawdziwy
+`sga_birth_module.js` w jednym oknie) i `tests/e2e/urodzeniowe-rozbieznosc.spec.mjs`. Dane fikcyjne: Testowa Anna,
+dziewczynka.
+
+| Karta SGA (`birth`) | Karta Pacjenta (`perinatal`) | Wynik |
+|---|---|---|
+| 38+0 tc, 2700 g, 48 cm, Niklasson | 38+0 tc, 2100 g, 48 cm | karta SGA: „Dane urodzeniowe różnią się między kartami”; wiersze „Masa urodzeniowa 2700 g / 2100 g” i „SDS masy · Niklasson −1,21 / −3,20”; „Wiek ciążowy (38+0 tc) i długość (48 cm) są zgodne.” |
+| jak wyżej | jak wyżej | Karta Pacjenta: „Karta SGA ma inną masę urodzeniową”, plakietka „Inna masa niż w karcie SGA”, kolumny odwrócone (ta sekcja 2100 g, karta SGA 2700 g) |
+| jak wyżej | epikryza wypełniona z Karty Pacjenta: 2100 g | „Karta SGA ma inną masę urodzeniową”; „Epikryza użyje wartości z tego formularza.” |
+| jak wyżej, normy Malewski | jak wyżej | wiersz SDS tylko dla masy |
+| 38+0 tc, 2700 g, 48 cm | 36+3 tc, 2100 g, 48 cm | „Karta SGA ma inne dane urodzeniowe”; wiersze wieku, masy, SDS masy i SDS długości |
+| 38+0 tc, 2700 g, 48 cm | 38+0 tc, 2700 g, 48 cm | brak ostrzeżenia i plakietki; sekcja w Karcie Pacjenta zostaje zwinięta |
+| 38+0 tc, 2700 g | 38+0 tc, masa pusta | brak ostrzeżenia |
+
+**Wpływ kliniczny.** Zmiana funkcjonalna o znaczeniu klinicznym: nowa informacja, która może zmienić decyzję
+użytkownika (sprawdzenie dokumentacji urodzeniowej przed kwalifikacją SGA / B.64). Wzory, progi, normy, jednostki,
+zapis, synchronizacja i pierwszeństwo źródeł bez zmian; żadna wartość nie jest poprawiana automatycznie.
+
+**Ograniczenia.**
+- Moduł ładują strony z Kartą Pacjenta w znaczniku (app, docpro, index, kalkulator-klirens, notatki, subskrypcja,
+  terminarz, ustawienia). Na stronach, które doładowują Kartę Pacjenta dopiero na żądanie (`vilda_chrome.js`,
+  `vilda_session_bridge.js`), ostrzeżenia w Karcie Pacjenta nie ma.
+- Wiersz SDS jest tylko tam, gdzie strona ładuje silnik karty SGA (docpro.html, index.html).
+- Karta SGA odtwarza wartości programowo, bez zdarzeń `input`, więc widoczna karta jest sprawdzana co 1,5 s. Zmiana
+  DOM następuje tylko przy zmianie treści ostrzeżenia.
+- Nie obejmuje norm urodzeniowych zapisanych w Karcie Pacjenta (Karta Pacjenta ich nie niesie) ani ciąży/porodu.
+
+**Wersje.** Nowe `vilda_urodzeniowe_rozbieznosc.js` 1 i `vilda_urodzeniowe_rozbieznosc.css` 1 (8 stron z Kartą
+Pacjenta); `vilda_auth_ui.js` 467 → 468 (8 stron i wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`),
+`vilda_chrome.js` 81 → 82 i `vilda_session_bridge.js` 9 → 10 (22 strony), `vilda_epicrisis_ui.js` 25 → 26 (index),
+docpro.html (kontener `#sgaBirthRozbieznosc`), precache (append-only), `SW_VERSION` 1.1.126 → 1.1.127 (+ pin; 1.1.126 wydał P-DIETA-AUDYT2 rata 2, #499), fixture
+wersji.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie. Osobno: czy ostrzeżenie ma trafić
+także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
+(to już zmiana danych — poza tą decyzją).
+
 ## Sprawdzenie spójności zapisów w sejfie, tylko do odczytu (P-SPOJNOSC-ZAPISOW, SW 1.1.125, `vilda_spojnosc_zapisow.js` 1, 2026-09-30)
 
 **Zlecenie i decyzje właściciela (2026-09-30).** Po P-POWLOKA-ID (#491) — osobne, tylko do odczytu sprawdzenie, czy
