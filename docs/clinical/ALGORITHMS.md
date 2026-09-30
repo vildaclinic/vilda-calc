@@ -6408,6 +6408,99 @@ PAL karty spożycia po wczytaniu pacjenta ustępuje PAL-owi planu (wybór PAL pl
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
 
+## Sprawdzenie spójności zapisów w sejfie, tylko do odczytu (P-SPOJNOSC-ZAPISOW, SW 1.1.125, `vilda_spojnosc_zapisow.js` 1, 2026-09-30)
+
+**Zlecenie i decyzje właściciela (2026-09-30).** Po P-POWLOKA-ID (#491) — osobne, tylko do odczytu sprawdzenie, czy
+przed poprawką „Zapisz” w DocPro otwartym w powłoce nie dopisał danych jednego pacjenta do karty innego. Makieta
+(desktop i telefon: stan wyjściowy, w trakcie, wynik, brak uwag) zaakceptowana 2026-09-30. Narzędzie do usuwania
+pomylonych zapisów powstanie później jako osobna zmiana (niżej, „Przyszłe narzędzie”).
+
+**Dlaczego nie wystarczy lista pacjentów.** Nagłówek karty (nazwa na liście, data urodzenia, płeć) sejf odbudowuje
+z OSTATNIEGO zapisu. Po pomyłce karta pacjenta A widnieje na liście jako B, więc porównanie listy z czymkolwiek nic
+nie pokaże. Sprawdzenie porównuje zapisy jednej karty między sobą.
+
+**Gdzie i jak.** Ustawienia → „Kopie zapasowe pacjentów” → „Sprawdzenie spójności zapisów” (po „Pełnej kopii konta”).
+Przycisk „Sprawdź zapisy” przechodzi po kartach z `listPatients()` (bez osób spoza bazy) i dla każdej czyta
+`getPatient()`; pasek postępu „N z M”, „Przerwij” zatrzymuje między kartami. Wynik: zdanie podsumowania, liczniki
+(prawdopodobne pomyłki / do sprawdzenia / bez uwag), karty do przejrzenia z tabelą zapisów (na telefonie wiersze
+jako bloki), zdanie dowodowe, „Otwórz historię wersji” i — gdy obca osoba ma własną kartę — „Otwórz kartę: …”
+(podgląd bez „Wczytaj tego pacjenta”), na końcu „Co dalej”.
+
+**Reguły (czyste funkcje w `VildaSpojnoscZapisow.__internals`).**
+- Nazwisko w zapisie: `payload.name`, a gdy puste — `user.lastName` + `user.firstName`. Porównanie po normalizacji:
+  małe litery, bez znaków diakrytycznych, „ł” → „l”, znaki inne niż litery i cyfry jako odstęp, słowa bez powtórzeń
+  i w dowolnej kolejności („Testowy Jan” = „Jan Testowy”).
+- Data urodzenia: `user.dobISO` w postaci RRRR-MM-DD (inna postać = brak). Płeć: `user.sex` F → K, M → M.
+- Wzorzec karty: osoba z NAJSTARSZEGO czytelnego zapisu z nazwiskiem (dla niej karta powstała); spośród zapisów, które
+  względem niej nie są „obce”, najczęstsza pisownia (remis: starsza); data urodzenia i płeć — najczęstsze w zapisach
+  z tą pisownią. Pomyłka dopisuje zapisy na końcu historii, więc nie przejmuje wzorca nawet wtedy, gdy ma ich więcej.
+- Ocena zapisu względem wzorca:
+
+| Zapis | Ocena |
+|---|---|
+| to samo nazwisko; data zgodna albo nieznana | bez uwag |
+| to samo nazwisko; inna data urodzenia | do sprawdzenia („inna data urodzenia”) |
+| wspólne słowo (co najmniej dwie litery); data zgodna albo nieznana | do sprawdzenia („inna pisownia”) |
+| wspólne słowo; inna data urodzenia (np. rodzeństwo) | prawdopodobna pomyłka („inna osoba”) |
+| brak wspólnego słowa | prawdopodobna pomyłka („inna osoba”) |
+
+- Druga faza, po wzorcach wszystkich kart: zapis „do sprawdzenia”, którego nazwisko jest wzorcem INNEJ karty, staje się
+  prawdopodobną pomyłką ze wskazaniem tej karty — chyba że obie karty mają tę samą datę urodzenia (duplikat tej samej
+  osoby) albo data zapisu przeczy tamtej karcie; imiennik z „inną datą urodzenia” tylko wtedy, gdy data zapisu jest
+  równa dacie tamtej karty. Zapis „obcy” dostaje wskazanie karty, jeśli taka jest („… ma w sejfie własną kartę”).
+- Sama płeć niczego nie oznacza (formularz podstawia „M” przy pustym polu); trafia tylko do zdania o różnicach.
+- Karta z jednym zapisem nie ma czego porównać, ale jej wzorzec służy do wskazań. Zapis, którego nie da się odszyfrować,
+  jest liczony osobno i pomijany.
+- Widok: wszystkie oznaczone zapisy i dwa najnowsze bez uwag, reszta liczbą („Oraz N starszych zapisów bez uwag”).
+- Notka „Na liście pacjentów ta karta widnieje jako …” pojawia się, gdy nazwa na liście nie jest wzorcem karty.
+
+**Przypadki syntetyczne (wejście → wynik)** — `tests/unit/spojnosc-zapisow.test.mjs`, prawdziwy `vilda_vault.js`:
+
+| Sejf | Wynik |
+|---|---|
+| „Innyrecz Adam” ×2 (ur. 12.03.2016, M); „Probna Alicja” (ur. 05.08.2012, K) we własnej karcie i jeden zapis z identyfikatorem karty Adama | karta Adama: prawdopodobna pomyłka; notka „widnieje jako „Probna Alicja””; „… ma nazwisko, datę urodzenia i płeć innej osoby. „Probna Alicja” (ur. 05.08.2012) ma w sejfie własną kartę.” |
+| „Testowy Jan” i „Testowy Jan Piotr”, ta sama data i płeć | do sprawdzenia: „Jeden zapis ma inną pisownię nazwiska; data urodzenia i płeć się zgadzają. …” |
+| podsumowanie tych trzech kart | „Sprawdzono 3 karty i 6 zapisów. 2 karty do przejrzenia.” |
+
+**Tylko odczyt.** Z sejfu moduł woła wyłącznie `isUnlocked`, `getCurrentUser`, `listPatients` i `getPatient` (strażnik
+źródła); test na prawdziwym sejfie liczy wywołania zapisujące adaptera (`put*`, `update*`, `remove*`, …) — zero,
+a e2e porównuje odcisk sejfu (karty, zapisy, rewizje, chwile zmian, nazwy) przed i po. Nie pisze do dziennika dostępu
+(„Otwórz kartę” zapisuje tam „patient.view”, jak każde otwarcie karty). Wynik żyje w pamięci strony. Jedyny zapis:
+`recordConsistencyLastCheck` (adapter 1.7.2, klasa `local-persistent`, rodzaj „preference”, zakres konta — jak
+`passwordChangedRemotelyAt`, więc „Wyczyść wszystkie pola” go nie kasuje) — mapa {identyfikator konta: chwila
+ostatniego ZAKOŃCZONEGO sprawdzenia}, najwyżej 20 kont, bez danych pacjentów; przerwanie jej nie zmienia. Nazwiska z sejfu
+trafiają do DOM wyłącznie przez `textContent` (e2e: nazwisko ze znacznikiem `<img onerror>` zostaje tekstem).
+Zablokowanie sejfu w trakcie przenosi na ekran logowania; sprawdzenie się urywa, nic nie zostaje zapisane.
+
+**Ograniczenia.**
+- To heurystyka spójności danych, nie dowód. Fałszywe alarmy: zmiana nazwiska, dopisane imię, poprawiona data. Braki:
+  pomyłka między osobami o tym samym nazwisku i imieniu bez dat urodzenia; karta, w której pomyłek było tyle, że
+  retencja (od 10 zapisów) usunęła wszystkie zapisy właściciela karty — taka karta wygląda na spójną z obcą osobą.
+- Sprawdza sejf na tym urządzeniu (po synchronizacji — to, co tu widać).
+- Niczego nie naprawia. „Przywróć jako nowy” przy ostatnim prawidłowym zapisie przywraca nazwę karty; pomylony zapis
+  zostaje w historii.
+
+**Przyszłe narzędzie do usuwania pomylonych zapisów (decyzja właściciela 2026-09-30, osobna zmiana).** Sejf ma
+`deleteSnapshot`, ale synchronizacja scala zapisy per identyfikator bez nagrobków zapisów, więc usunięty zapis wróciłby
+z chmury albo z innego urządzenia. Narzędzie wymaga nagrobków zapisów w synchronizacji, reguły wobec retencji i zapisów
+przypiętych, kopii przed usunięciem i własnej makiety.
+
+**Wpływ kliniczny.** Brak: nie zmienia wzorów, progów, wyników, danych pacjentów, zapisu ani synchronizacji. Reguły
+dotyczą spójności danych (która osoba jest w zapisie), nie interpretacji klinicznej; wskazanie „prawdopodobna pomyłka”
+kieruje tylko do przejrzenia karty przez lekarza.
+
+**Testy.** `tests/unit/spojnosc-zapisow.test.mjs` (26: normalizacja, ocena, wzorzec, druga faza, teksty, przebieg na
+sejfie, przerwanie, zablokowany sejf, klucz „Ostatnie sprawdzenie”, strażniki źródła). `tests/e2e/spojnosc-zapisow.spec.mjs`
+(6: wynik z pomyłką i inną pisownią bez zmian w sejfie, „Otwórz kartę” jako podgląd; brak uwag i „Ostatnie sprawdzenie”
+po odświeżeniu; nazwisko jako tekst; „Przerwij”; telefon 390 px bez poziomego przewijania; blokada sejfu w trakcie).
+Mutacje: wzorzec z większości wszystkich zapisów — pada „pomyłka dopisana na końcu nie przejmuje wzorca”; zapis w sejfie
+w trakcie sprawdzania — padają licznik wywołań zapisujących i strażnik źródła.
+
+**Wersje.** `vilda_spojnosc_zapisow.js` 1 (nowy), `ustawienia.css` 16, `vilda_persistence_adapter.js` 1.7.2 (?v=28 na
+22 stronach), precache (append-only), `SW_VERSION` 1.1.125 (+ pin; 1.1.124 wydał #497 P-NAME-FIX-WYSCIG), fixture wersji.
+
+**Co pozostaje decyzją właściciela.** Akceptacja reguł; scalenie i wdrożenie; narzędzie do usuwania.
+
 ## Zapisy tego samego pacjenta z dwóch kart idą po kolei; drugi czeka najwyżej 30 s (P-ZAPISY-DWIE-KARTY, SW 1.1.123, `vilda_vault.js` 189, `vilda_data_import_export.js` 93, 2026-09-30)
 
 **Usterka.** `savePatient()` czyta głowę rekordu, na jej podstawie decyduje — brama P14 pyta „Ktoś inny zmienił ten
@@ -7245,7 +7338,7 @@ inny panel, sesja karty się zmienia, a zmienna DocPro — nie. Zmierzone na `21
 
 **Czego zmiana nie robi.** Nie zmienia wzorów, progów, treści kart, synchronizacji ani formatu zapisu; zmienia tylko to,
 którego pacjenta dotyczy zapis i notatka z panelu powłoki. Nie naprawia zapisów już pomylonych — do tego osobne,
-tylko do odczytu sprawdzenie danych (decyzja właściciela 2026-09-30, najpierw makieta).
+tylko do odczytu sprawdzenie danych (decyzja właściciela 2026-09-30, najpierw makieta) — P-SPOJNOSC-ZAPISOW.
 
 **Testy.** `tests/e2e/powloka-przelaczanie-paneli.spec.mjs`, dwa przebiegi z dwoma fikcyjnymi pacjentami:
 „Odtwórz zapis” — DocPro bez karty porównania, z pacjentem B; zapis z DocPro (także przy cofniętej celowo zmiennej
