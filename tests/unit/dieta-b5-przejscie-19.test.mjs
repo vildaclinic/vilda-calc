@@ -194,3 +194,31 @@ describe('B5-a: populacja ogólna od 19 lat — klasa silnika BMI = dotychczasow
     } finally { win.VildaBmi = B; }
   });
 });
+
+describe('B5-c: notka o przejściu (karta lekarza „Strategia”, 18,0–19,99 lat) — liczby z silnika po obu stronach granicy', () => {
+  it('chł. 175/79, 18;7: teraz plan dziecka → od 19 lat plan dorosłego; za 5 mies.; bez tempa i czasu do normy', () => {
+    const m = win.energyPrzejscie19({ sex: 'M', ageYears: 18 + 7 / 12, weightKg: 79, heightCm: 175 });
+    expect(m.przed).toBe(true);
+    expect(m.miesiacyDo).toBe(5);
+    expect(m.dziecko).toEqual({ pal: 1.4, teeKcal: 2518, diety: { light: 2350, moderate: 2250, intense: 2100 }, stabilizacja: true, minimumKcal: 1798, minimumRee: true });
+    expect(m.dorosly).toEqual({ pal: 1.6, teeKcal: 2877, diety: { light: 2400, moderate: 2200, intense: 2000 }, stabilizacja: false, minimumKcal: 1600, bezPlanu: false });
+    const t = win.energyPrzejscie19Html(m).replace(/<[^>]+>/g, ' ').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ');
+    expect(t).toContain('Plan dorosłego od 19 lat — za 5 mies. te same dane dadzą inne liczby planu');
+    expect(t).toContain('PAL domyślny 1,4 → 1,6');
+    expect(t).toContain('Lekka ≤ 2350 → ≤ 2400 kcal');
+    expect(t).toContain('Min. podaży 1798 (REE) → 1600 kcal');
+    expect(t).not.toMatch(/kg\/mies|kg\/tydz|do normy|zalecan/);
+    expect(win.energyPrzejscie19Html(m)).toMatch(/^<details class="diet-przejscie"[^>]*><summary>/); // domyślnie zwinięta
+  });
+
+  it('dz. 165/105, 19;2: do 18;11 plan dziecka → teraz plan dorosłego; poza 18,0–19,99 notki nie ma', () => {
+    const m = win.energyPrzejscie19({ sex: 'F', ageYears: 19 + 2 / 12, weightKg: 105, heightCm: 165 });
+    expect(m.przed).toBe(false);
+    expect(m.miesiacyDo).toBeNull();
+    expect(m.wiekDzieckaLabel).toBe('18;11');
+    expect(m.dziecko.diety).toEqual({ light: 2300, moderate: 2150, intense: 2000 });
+    expect(m.dorosly.diety).toEqual({ light: 2150, moderate: 1950, intense: 1750 });
+    expect(win.energyPrzejscie19({ sex: 'F', ageYears: 17.99, weightKg: 105, heightCm: 165 })).toBeNull();
+    expect(win.energyPrzejscie19({ sex: 'F', ageYears: 20, weightKg: 105, heightCm: 165 })).toBeNull();
+  });
+});

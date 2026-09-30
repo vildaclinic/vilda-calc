@@ -41,6 +41,7 @@ function policz(page, s) {
     return {
       text: norm(r.textOutput), klas: d.klasyfikacja || {}, strategia: d.strategia, masa: d.masa || {},
       karta: !!cc && cc.style.display !== 'none',
+      nota: (() => { const n = cc && cc.querySelector('[data-diet-przejscie]'); return n && !n.hidden ? { tekst: norm(n.textContent), otwarta: !!(n.querySelector('details') || {}).open } : null; })(),
       droga: norm((document.getElementById('bmiJourneyMount') || {}).textContent),
       plan: norm((document.getElementById('planResults') || {}).textContent),
       raport: norm(String(html).replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ')),
@@ -92,5 +93,22 @@ test.describe('P-DIETA-B5 — zespół Downa 19,0–19,99: ocena BMI z siatki DS
     expect(r.karta).toBe(true);
     expect(r.droga).toContain('do górnej granicy normy BMI (24,9)');
     expect(r.plan).toContain('BMI 22');
+  });
+
+  test('B5-c: notka o przejściu tylko w karcie lekarza — chł. 175/79: 18;7 zwinięta z liczbami, 17;11 i 20;0 brak; nie ma jej w zaleceniach ani planie PDF', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const r = await policz(page, { ds: false, sex: 'M', age: 18, months: 7, w: 79, h: 175 });
+    expect(r.nota).not.toBeNull();
+    expect(r.nota.otwarta).toBe(false);
+    expect(r.nota.tekst).toContain('Plan dorosłego od 19 lat — za 5 mies. te same dane dadzą inne liczby planu');
+    expect(r.nota.tekst).toContain('TEE2518 → 2877 kcal');
+    expect(r.nota.tekst).toContain('Umiarkowana≤ 2250 → ≤ 2200 kcal');
+    expect(r.nota.tekst).toContain('Stabilizacjadostępna → niedostępna');
+    for (const t of [r.text, r.raport]) expect(t).not.toMatch(/Plan dorosłego od 19 lat|te same dane dadzą/);
+    const po = await policz(page, { ds: false, sex: 'M', age: 19, months: 2, w: 79, h: 175 });
+    expect(po.nota.tekst).toContain('do 18;11 ten sam pacjent miał plan dziecka');
+    expect((await policz(page, { ds: false, sex: 'M', age: 17, months: 11, w: 79, h: 175 })).nota).toBeNull();
+    expect((await policz(page, { ds: false, sex: 'M', age: 20, months: 0, w: 79, h: 175 })).nota).toBeNull();
   });
 });
