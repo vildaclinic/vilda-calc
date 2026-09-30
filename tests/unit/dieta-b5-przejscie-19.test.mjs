@@ -201,7 +201,7 @@ describe('B5-c: notka o przejściu (karta lekarza „Strategia”, 18,0–19,99 
     expect(m.przed).toBe(true);
     expect(m.miesiacyDo).toBe(5);
     expect(m.dziecko).toEqual({ pal: 1.4, teeKcal: 2518, diety: { light: 2350, moderate: 2250, intense: 2100 }, stabilizacja: true, minimumKcal: 1798, minimumRee: true });
-    expect(m.dorosly).toEqual({ pal: 1.6, teeKcal: 2877, diety: { light: 2400, moderate: 2200, intense: 2000 }, stabilizacja: false, minimumKcal: 1600, bezPlanu: false });
+    expect(m.dorosly).toEqual({ pal: 1.6, teeKcal: 2877, diety: { light: 2400, moderate: 2200, intense: 2000 }, stabilizacja: false, minimumKcal: 1600, bezPlanu: false, bezDiety: false });
     const t = win.energyPrzejscie19Html(m).replace(/<[^>]+>/g, ' ').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ');
     expect(t).toContain('Plan dorosłego od 19 lat — za 5 mies. te same dane dadzą inne liczby planu');
     expect(t).toContain('PAL domyślny 1,4 → 1,6');
@@ -220,5 +220,18 @@ describe('B5-c: notka o przejściu (karta lekarza „Strategia”, 18,0–19,99 
     expect(m.dorosly.diety).toEqual({ light: 2150, moderate: 1950, intense: 1750 });
     expect(win.energyPrzejscie19({ sex: 'F', ageYears: 17.99, weightKg: 105, heightCm: 165 })).toBeNull();
     expect(win.energyPrzejscie19({ sex: 'F', ageYears: 20, weightKg: 105, heightCm: 165 })).toBeNull();
+  });
+
+  it('stabilizacja zablokowana w karcie (flaga „Wzrost zakończony” albo prognoza) → notka: niedostępna; dorosły bez diety nad minimum → „żadna powyżej minimum” i minimum 1600', () => {
+    const m = win.energyPrzejscie19({ sex: 'M', ageYears: 18 + 7 / 12, weightKg: 79, heightCm: 175, stabilizacjaZablokowana: true });
+    expect(m.dziecko.stabilizacja).toBe(false);
+    const n = win.energyPrzejscie19({ sex: 'M', ageYears: 18.5, weightKg: 55.5, heightCm: 136 });
+    expect(n.dorosly.bezDiety).toBe(true);
+    expect(n.dorosly.minimumKcal).toBe(1600);
+    expect(n.dorosly.diety).toEqual({ light: null, moderate: null, intense: null });
+    const t = win.energyPrzejscie19Html(n).replace(/<[^>]+>/g, ' ').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ');
+    expect(t).toContain('Diety ≤ 1600 / ≤ 1450 / ≤ 1350 → żadna powyżej minimum');
+    expect(t).toContain('Min. podaży 1338 (REE) → 1600 kcal');
+    expect(win.energyPrzejscie19({ sex: 'F', ageYears: 18.5, weightKg: 105, heightCm: 165 }).dorosly.bezDiety).toBe(false);
   });
 });

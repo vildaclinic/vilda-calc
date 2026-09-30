@@ -28,9 +28,10 @@ function policz(page, s) {
     if (tgl && !tgl.checked) { tgl.checked = true; tgl.dispatchEvent(new Event('change', { bubbles: true })); }
     window.professionalMode = true; window.__vildaPlanPalTouched = false; window.__vildaDietStrategyTouched = false; window.__vildaDietGoalChoice = null;
     window.intakeHistory = null;
+    window.advancedGrowthData = s.prognozaCm != null ? { finalHeightPrediction: { cm: s.prognozaCm } } : {};
     set('age', s.age); set('ageMonths', s.months || 0); set('sex', s.sex); set('weight', s.w); set('height', s.h); set('customGoalKg', '');
     window.ensureDietRecommendationsElements();
-    flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', false); flag('journeyFlag', true);
+    flag('reduceToggle', false); flag('stabilizationToggle', false); flag('growthEndedFlag', !!s.ge); flag('journeyFlag', true);
     window.update();
     await new Promise((res) => { setTimeout(res, 200); });
     const r = window.VildaDietRecommendations.buildEnergyRecommendationResult();
@@ -41,6 +42,7 @@ function policz(page, s) {
     return {
       text: norm(r.textOutput), klas: d.klasyfikacja || {}, strategia: d.strategia, masa: d.masa || {},
       karta: !!cc && cc.style.display !== 'none',
+      stabDisabled: !!(document.getElementById('stabilizationToggle') || {}).disabled,
       nota: (() => { const n = cc && cc.querySelector('[data-diet-przejscie]'); return n && !n.hidden ? { tekst: norm(n.textContent), otwarta: !!(n.querySelector('details') || {}).open } : null; })(),
       droga: norm((document.getElementById('bmiJourneyMount') || {}).textContent),
       plan: norm((document.getElementById('planResults') || {}).textContent),
@@ -110,5 +112,22 @@ test.describe('P-DIETA-B5 — zespół Downa 19,0–19,99: ocena BMI z siatki DS
     expect(po.nota.tekst).toContain('do 18;11 ten sam pacjent miał plan dziecka');
     expect((await policz(page, { ds: false, sex: 'M', age: 17, months: 11, w: 79, h: 175 })).nota).toBeNull();
     expect((await policz(page, { ds: false, sex: 'M', age: 20, months: 0, w: 79, h: 175 })).nota).toBeNull();
+  });
+
+  test('B5-c: notka nie obiecuje stabilizacji, której karta nie pozwala wybrać; u dorosłego bez diety nad minimum mówi to wprost', async ({ page }) => {
+    test.setTimeout(120_000);
+    await otworz(page);
+    const ge = await policz(page, { ds: false, sex: 'M', age: 18, months: 7, w: 79, h: 175, ge: true });
+    expect(ge.nota.tekst).toContain('Stabilizacjaniedostępna → niedostępna');
+    const pr = await policz(page, { ds: false, sex: 'M', age: 18, months: 7, w: 79, h: 175, prognozaCm: 175.5 });
+    expect(pr.stabDisabled).toBe(true);
+    expect(pr.nota.tekst).toContain('Stabilizacjaniedostępna → niedostępna');
+    const ok = await policz(page, { ds: false, sex: 'M', age: 18, months: 7, w: 79, h: 175 });
+    expect(ok.stabDisabled).toBe(false);
+    expect(ok.nota.tekst).toContain('Stabilizacjadostępna → niedostępna');
+    const niski = await policz(page, { ds: false, sex: 'M', age: 18, months: 6, w: 55.5, h: 136 });
+    expect(niski.nota.tekst).toContain('Diety≤ 1600 / ≤ 1450 / ≤ 1350 → żadna powyżej minimum');
+    expect(niski.nota.tekst).toContain('Min. podaży1338 (REE) → 1600 kcal');
+    expect(niski.nota.tekst).not.toContain('Lekka');
   });
 });
