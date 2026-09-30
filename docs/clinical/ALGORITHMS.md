@@ -6691,9 +6691,9 @@ Strony, na które `vilda_auth_ui.js` wstrzykują `vilda_chrome.js` / `vilda_sess
 (jak innych pomocników karty) — tam karta liczy jeden bieżący kurs jak przed tą ratą. Werdykt zakończonego cyklu jest
 opisem przeszłości; aplikacja nie ocenia, czy decyzja o zakończeniu była właściwa.
 
-**Wersje** (`npm run podbij-wersje`, baza `audyt` f07ecf4). `obesity_therapy_monitor.js` 25, `vilda_auth_ui.js` 470,
+**Wersje** (`npm run podbij-wersje`, baza `audyt` ca9638d). `obesity_therapy_monitor.js` 25, `vilda_auth_ui.js` 470,
 `vilda_chrome.js` 86, `vilda_session_bridge.js` 14; `vilda_cykle_leczenia.js` 2 na 7 kolejnych stronach; precache
-(append-only); `SW_VERSION` 1.1.133 → 1.1.134 (+ pin); fixture wersji.
+(append-only); `SW_VERSION` 1.1.134 → 1.1.135 (+ pin; 1.1.134 wydał P-DIETA-B5, #510); fixture wersji.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna wstrzymania werdyktu przy niezgodnym zapisie, brzmień
 werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scalenie i wdrożenie; rata 4.
