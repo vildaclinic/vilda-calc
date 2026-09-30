@@ -124,8 +124,8 @@
   "sha256": "ad284b7291f9dbc0462009850e5b8ca8b7130ef9bfe0f715fd2e7c590143f690"
  },
  "inline_docpro_01.css": {
-  "v": 3,
-  "sha256": "fda33379bee4a2a605fdbb7070833fd652de9737a48baa8f401a4dd442ade816"
+  "v": 4,
+  "sha256": "2ef8b94b2a6f0cc315deb0796bba6a0bfe760c5e5bb15292334ca29f3d7c1613"
  },
  "inline_docpro_03.js": {
   "v": 3,
@@ -384,8 +384,8 @@
   "sha256": "5f99a80f03bccde51b898db72e4cb62e5cbdb7a880c0cb0c80cfe8656bc48936"
  },
  "obesity_therapy_monitor.js": {
-  "v": 23,
-  "sha256": "d0ef5f788d7bd315bf4261f2a2cf34141274440686ca5ef8477fdf4f8cbe8a1c"
+  "v": 24,
+  "sha256": "0f24f52c1de1a0ac1a10fddd2f5a1269228a765f785ed9eddb4a77a1020f9aa4"
  },
  "pdfmake.min.js": {
   "v": 1,
@@ -528,8 +528,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_cykle_leczenia.js": {
-  "v": 1,
-  "sha256": "b3408069a7de184da93fa53866d19e4909c5dcb1434a476a5fc5cf2a0bc974c5"
+  "v": 2,
+  "sha256": "8fdeb3275d729a2296a55ef4ef6503878f622827a4d5dfbd61d2fdcf500f7c8a"
  },
  "vilda_data_import_export.js": {
   "v": 93,

@@ -84,6 +84,34 @@
         #obesityMonitorSection .obm-msg-btn{font-size:.8rem;line-height:1.3;min-width:0;max-width:100%;white-space:normal;text-align:left;margin:0}
         #obesityMonitorSection .obm-msg-btn:focus-visible{outline:var(--border-emphasis) solid var(--primary);outline-offset:2px}
         @media(max-width:560px){#obesityMonitorSection .obm-msg-btn{min-height:44px;width:100%}}
+        /* P-OTYLOSC-CYKLE rata 2: przyciski rodzaju wizyty z powodem, przydział do cyklu, baner porządkowania, bloki cykli z przerwami. */
+        #obesityMonitorSection .obm-vbtn{flex:1;min-width:130px;display:flex;flex-direction:column;gap:3px}
+        #obesityMonitorSection .obm-vbtn button{flex:none;min-width:0;width:100%}
+        #obesityMonitorSection .obm-visit button[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
+        #obesityMonitorSection .obm-why{font-size:.7rem;line-height:1.3;color:var(--text-muted);text-align:center}
+        #obesityMonitorSection .obm-assign{margin:var(--space-8px) 0 0;padding:var(--space-6px) var(--space-10px);border:var(--border-hairline) dashed #8fcfc9;border-radius:var(--radius-8);background:#eef8f7;color:var(--text-strong);font-size:.8rem;line-height:1.4}
+        #obesityMonitorSection .obm-fix{margin:0 0 var(--space-0-6);padding:9px 11px;border:var(--border-hairline) solid #EF9F27;border-radius:var(--radius-8);background:#FAEEDA;color:#633806;font-size:.8rem;line-height:1.45}
+        #obesityMonitorSection .obm-fix-list{margin:var(--space-6px) 0 0;padding-left:var(--space-18px);display:flex;flex-direction:column;gap:var(--space-8px)}
+        #obesityMonitorSection .obm-fix-list .obm-msg-actions{margin-top:5px}
+        #obesityMonitorSection .obm-cycle{border:var(--border-hairline) solid #cfe3e1;border-radius:var(--radius-12);overflow:hidden;background:#fff;margin:0 0 var(--space-4px)}
+        #obesityMonitorSection .obm-cycle.closed{background:var(--card)}
+        #obesityMonitorSection .obm-cycle.warn{border-color:#EF9F27}
+        #obesityMonitorSection .obm-chead{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-6px) var(--space-8px);padding:var(--space-8px) var(--space-12px);background:#f0f8f7}
+        #obesityMonitorSection .obm-cycle.closed .obm-chead{background:var(--card)}
+        #obesityMonitorSection .obm-ctable{overflow-x:auto;border-top:var(--border-hairline) solid #d9ebe9}
+        #obesityMonitorSection .obm-cycle thead th:first-child,#obesityMonitorSection .obm-cycle thead th:last-child{border-radius:0}
+        #obesityMonitorSection .obm-cnum{font-weight:800;color:#0b5443;font-size:.86rem}
+        #obesityMonitorSection .obm-chip{font-size:.66rem;font-weight:800;border-radius:var(--radius-pill);padding:2px var(--space-8px);white-space:nowrap}
+        #obesityMonitorSection .obm-chip.act{background:#0F6E56;color:#fff}
+        #obesityMonitorSection .obm-chip.end{background:#e3e8ea;color:#4d5b60}
+        #obesityMonitorSection .obm-chip.nos{background:#FAEEDA;color:#633806;border:var(--border-hairline) solid #EF9F27}
+        #obesityMonitorSection .obm-chip.warn{background:#ffeaea;color:#8e1c1c;border:var(--border-hairline) solid #e2a39c}
+        #obesityMonitorSection .obm-cmeta{font-size:.78rem;color:var(--text-muted);flex:1 1 14rem;min-width:0}
+        #obesityMonitorSection .obm-cres{font-size:.78rem;color:var(--text-muted);white-space:nowrap}
+        #obesityMonitorSection .obm-ctoggle{font-size:.76rem;font-weight:600;padding:var(--space-4px) var(--space-10px);min-width:0;margin:0}
+        #obesityMonitorSection .obm-gap{display:flex;align-items:center;gap:var(--space-10px);font-size:.74rem;color:var(--text-muted);margin:var(--space-6px) 0}
+        #obesityMonitorSection .obm-gap::before,#obesityMonitorSection .obm-gap::after{content:"";flex:1;border-top:var(--border-hairline) dashed #b9d0cf}
+        @media(max-width:560px){#obesityMonitorSection .obm-cres{white-space:normal}#obesityMonitorSection .obm-ctoggle{min-height:44px}}
 
 #bisphosCard .bp-tabs{display:flex!important;gap:var(--space-6px)!important;background:#eef4f3!important;border-radius:var(--radius-13)!important;padding:var(--space-4px)!important;margin:var(--space-14px) 0 var(--space-16px)!important;box-shadow:none!important}
       #bisphosCard button.bp-tab{flex:1 1 0!important;width:0!important;min-width:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:0!important;border-radius:var(--radius-10)!important;padding:var(--space-10px) var(--space-8px)!important;margin:0!important;font-family:inherit!important;font-size:.9rem!important;font-weight:700!important;color:#33464e!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;min-height:0!important;height:auto!important;text-transform:none!important;letter-spacing:normal!important}

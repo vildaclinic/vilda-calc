@@ -37,7 +37,8 @@ test('OBESITY-EDIT-1: ołówek poprawia punkt, a rekord zachowuje identyfikator'
   expect(przed.length).toBe(2);
 
   // W każdym wierszu tabeli stoi przycisk edycji — tego wcześniej nie było.
-  const olowki = await page.evaluate(() => document.querySelectorAll('#obesityTherapyTbody .obm-edit').length);
+  // P-OTYLOSC-CYKLE rata 2: tabela jest rysowana w blokach cykli wewnątrz #obesityTherapyTableWrap.
+  const olowki = await page.evaluate(() => document.querySelectorAll('#obesityTherapyTableWrap .obm-edit').length);
   expect(olowki).toBe(2);
 
   const po = await page.evaluate((id) => {
