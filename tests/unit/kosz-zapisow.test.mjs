@@ -172,7 +172,7 @@ describe('kosz: przeniesienie, lista, przywrócenie', () => {
     expect((await v.listTrashedSnapshots()).map((k) => k.snapshotId).sort()).toEqual([z1.snapshotId, z2.snapshotId].sort());
   });
 
-  it('retencja i deleteSnapshot działają jak dotąd — bez nagrobka i bez kosza', async () => {
+  it('deleteSnapshot działa jak dotąd — bez nagrobka i bez kosza (retencja: retencja-nagrobki.test.mjs)', async () => {
     sztucznyZegar();
     const v = await urzadzenie();
     const { patientId, zly } = await kartaZPomylka(v);
@@ -324,14 +324,16 @@ describe('jawny import zdejmuje nagrobek (jak u pacjentów)', () => {
 describe('strażniki źródła', () => {
   const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
 
-  it('nagrobek stawia wyłącznie moveSnapshotToTrash; retencja nadal woła zwykłe deleteSnapshot', () => {
+  it('nagrobek z treścią (kosz) stawia wyłącznie moveSnapshotToTrash; retencja od P-RETENCJA-NAGROBKI stawia własny, bez treści', () => {
     expect(src).toContain('moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,');
-    expect(src).toMatch(/for\(let s=0;s<o\.length;s\+=1\)try\{await Ar\(t,o\[s\]\)/);
+    expect(src).toContain('pruneSnapshotsForPatient:wr,');
+    expect(src).toContain('async function wr(t,e){return Bkz_przytnij(t,e)}');
+    expect(src, 'stara retencja bez nagrobka zniknęła').not.toMatch(/for\(let s=0;s<o\.length;s\+=1\)try\{await Ar\(t,o\[s\]\)/);
   });
 
   it('scalanie sprawdza nagrobek w obu pętlach wersji i zwraca liczbę przeniesionych do kosza', () => {
     expect(src.match(/if\(Bkz_pomin\(Bkz_S,F\.patientId,[SY]\)\)continue;/g)).toHaveLength(2);
-    expect(src).toContain('trashedSnapshotCount:Bkz_n');
+    expect(src).toContain('trashedSnapshotCount:Bkz_n,prunedSnapshotCount:Bkz_S.przyciete||0');
     expect(src).toContain('snapshotTombstones:await Bkz_eksport()');
   });
 });

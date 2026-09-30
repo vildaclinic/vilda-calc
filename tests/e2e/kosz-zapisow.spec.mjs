@@ -184,7 +184,9 @@ test.describe('P-KOSZ-ZAPISOW — usuwanie pomylonego zapisu do kosza', () => {
     await karta(page, 'Karta: Innyrecz Adam').getByRole('button', { name: 'Usuń pomylony zapis…' }).click();
     const o = okno(page);
     await o.getByLabel(/Pobierz też kopię tej karty/).check();
-    const pobranie = page.waitForEvent('download');
+    // Po zapisach z zasiej() z opóźnieniem rusza też automatyczna kopia konta (wagaiwzrost_konto_*.wiw); pod
+    // obciążeniem jej pobranie potrafi wyprzedzić kopię karty, więc czekamy na plik kopii karty.
+    const pobranie = page.waitForEvent('download', { predicate: (d) => d.suggestedFilename().startsWith('wagaiwzrost_pacjent_') });
     await o.getByRole('button', { name: 'Usuń do kosza' }).click();
     const plik = await pobranie;
     expect(plik.suggestedFilename()).toMatch(/^wagaiwzrost_pacjent_[0-9a-f]{8}_przed_usunieciem_\d{4}-\d{2}-\d{2}_\d{4}\.wiw$/);
