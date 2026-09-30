@@ -1247,7 +1247,7 @@ Czwarta droga jest po stronie konsumenta i zamyka przypadek, w którym ramka doc
 
 **G27b — skok mówi wreszcie reszcie aplikacji, że zmienił się pacjent (odłożone z raty 1).** Rata 1 domknęła sam rozjazd id (skok zapisuje oba magazyny), ale świadomie nie rozgłaszała zdarzenia, bo słucha go wiele miejsc. Policzone: **24 rejestracje `vilda:patient-loaded` w 21 plikach, z czego 19 aktywnych na `docpro.html`**. Przeglądnięte po kolei; jedyny, który zrobiłby coś szkodliwego, to modal „Co chcesz zrobić?" w `custom-fixes.js` — nakładka `inset:0; z-index:99999` zasłoniłaby wiersz, który skok podświetla 450 ms później, i wymusiłaby wybór, o który lekarz nie prosił (kliknął konkretny punkt na siatce). Skok rozgłasza więc `vilda:patient-loaded` z detalem 1:1 jak ścieżki `source:"pick"`, plus znacznikiem `skipLoadChoice`, na który reaguje **wyłącznie** ten jeden nasłuch. Zwykłe wczytanie pacjenta z listy dostaje modal jak dotąd. Rozgłoszenie jest **synchroniczne** — `setTimeout` zepsułby okno wyciszenia `vilda:json-imported` we wskaźniku zapisu. Dochodzi odświeżenie chipa pacjenta (`VildaChrome.refreshPatientChip`), bo robią to wszystkie trzy istniejące ścieżki `source:"pick"`, a bez niego chip zostałby przy poprzednim nazwisku — nowa niespójność w miejscu, które ta rata właśnie porządkuje.
 
-**Czego to nie naprawia — żeby nie przecenić zysku.** *(1)* `VildaPerinatalSource.biezace()` ma pierwszeństwo **karty SGA** przed rekordem i cache'em, a prefill karty wpisuje tylko do pól **pustych** — przy niepustej karcie SGA liczby poprzedniego pacjenta nadal wygrywają. Rozgłoszenie odświeża cache sekcji „Dane okołoporodowe", nie czyści karty SGA; to odrębne znalezisko. *(2)* Przycisk „Odtwórz zapisany stan" zostaje po skoku **widoczny** — modal chował go sam przy otwarciu, a teraz modalu nie ma. To jest zamierzone: droga ręczna zostaje otwarta. *(3)* Z 19 aktywnych nasłuchów jeden jest jednorazowy i normalnie niezałożony (`gh_igf_therapy.js`), a jeden to własny nasłuch monitora — realnych odbiorców-osób trzecich jest 17.
+**Czego to nie naprawia — żeby nie przecenić zysku.** *(1)* `VildaPerinatalSource.biezace()` ma pierwszeństwo **karty SGA** przed rekordem i cache'em, a prefill karty wpisuje tylko do pól **pustych** — przy niepustej karcie SGA liczby poprzedniego pacjenta nadal wygrywają. Rozgłoszenie odświeża cache sekcji „Dane okołoporodowe", nie czyści karty SGA; to odrębne znalezisko. **Aktualizacja 2026-09-30 (P-TOZSAMOSC-RAMKI):** ta droga nie zachodzi — skok przechodzi przez `identityReset`, który czyści kartę SGA. Objaw był prawdziwy, ale w powłoce `app.html` i z innej przyczyny: tożsamość ramki DocPro wracała do poprzedniego pacjenta (regresja z P-WERDYKT rata 7); opis i poprawka w osobnym wpisie. *(2)* Przycisk „Odtwórz zapisany stan" zostaje po skoku **widoczny** — modal chował go sam przy otwarciu, a teraz modalu nie ma. To jest zamierzone: droga ręczna zostaje otwarta. *(3)* Z 19 aktywnych nasłuchów jeden jest jednorazowy i normalnie niezałożony (`gh_igf_therapy.js`), a jeden to własny nasłuch monitora — realnych odbiorców-osób trzecich jest 17.
 
 **Testy.** `tests/unit/skok-gh-rozgloszenie.test.mjs` — 13 strażników źródła: mostek powłoki i jego zgodność ze wzorcem przycisku Terminarza, syntetyczne `hashchange`, zejście na `docpro.html` ze strony bez monitora, kolejność „zapis zamiaru przed nawigacją", nasłuch `storage` z nietkniętą gałęzią punktów GH, kształt detalu, synchroniczność rozgłoszenia, odświeżenie chipa, wąskość bramki. **Zmierzone przed poprawką: 9 z 13 czerwonych** (cztery zielone to kontrole pozytywne na stanie zastanym). `tests/e2e/skok-gh-rozgloszenie.spec.mjs` — 3 scenariusze na prawdziwym `docpro.html`, klikające prawdziwy przycisk „↗ Siatki / punkt GH": skok wczytuje pacjenta B, rozgłasza ze znacznikiem i nie pokazuje modalu ani dialogu niezapisanych zmian; **drugi skok z tego samego dokumentu też dochodzi do skutku** (to sedno G27c); kontrola pozytywna, że to samo zdarzenie **bez** znacznika modal nadal pokazuje. **Zmierzone przed poprawką: 2 czerwone, 1 zielony** — zielony jest ten trzeci, bo pierwszy skok na samodzielnym docpro z pustym hashem działał i wcześniej. Osobno zmierzone, że bramka jest realnie pokryta: z rozgłoszeniem, ale bez bramki w `custom-fixes.js`, pierwszy scenariusz czerwienieje dokładnie na asercji o modalu.
 
@@ -6874,7 +6874,7 @@ niezapisana).**
 kontroli jak wyżej. `npm test` i pełny zestaw e2e (desktop) — wyniki w PR.
 
 **Wersje.** `vilda_data_import_export.js` 89 → 90 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
-(append-only), `SW_VERSION` 1.1.115 → 1.1.117 (+ pin; 1.1.116 bierze P-TOZSAMOSC-RAMKI), fixture wersji.
+(append-only), `SW_VERSION` 1.1.116 → 1.1.117 (+ pin), fixture wersji.
 
 ## Karta porównania po „Odtwórz zapis”: spóźniony odczyt z sejfu nie przywraca porównania na Start ani w DocPro (P-POWLOKA-WYSCIG, SW 1.1.112, `vilda_summary_cards.js` 50, 2026-09-30)
 
@@ -6967,6 +6967,69 @@ DocPro: komplet pól, podsumowanie z BMI, bez karty porównania, także 2,5 s p�
 **Wersje.** `vilda_summary_cards.js` 50 → 51 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
 (append-only), `SW_VERSION` 1.1.113 → 1.1.114 (+ pin), fixture wersji. Ta sama poprawka jest przeniesiona do
 P-OTYLOSC-BEZ-STARTU (#487), który przechodzi na `SW_VERSION` 1.1.115.
+
+## Ramka DocPro w powłoce po wczytaniu pacjenta B wracała do poprzedniego pacjenta A (P-TOZSAMOSC-RAMKI, SW 1.1.116, `vilda_summary_cards.js` 52, 2026-09-30)
+
+**Zgłoszenie.** Punkt 1 „Czego to nie naprawia” z P-NOTATKI rata 3d: po skoku „↗ Siatki / punkt GH” do pacjenta B
+karta SGA mogła pokazywać liczby poprzedniego pacjenta A. Diagnoza z 2026-09-30 odtworzyła objaw, ale z innej
+przyczyny niż hipoteza z raty 3d, i szerszy niż sam skok.
+
+**Hipoteza z raty 3d nie zachodzi.** Skok woła `applyLoadedData()`, a ono przy zmianie tożsamości (`identityReset`)
+czyści kartę SGA przez `vildaSgaBirthPersistApi.resetState`. Na samodzielnym `docpro.html` niepusta karta SGA pacjenta A
+po skoku do B niesie dane B — zielone przed poprawką i po niej (test kontrolny).
+
+**Przyczyna (regresja z P-WERDYKT rata 7, #443).** W powłoce `app.html` DocPro żyje w ramce. Kilkadziesiąt ms po
+wczytaniu pacjenta B w tej ramce (zwykłym z listy albo skokiem z notatki) powłoka odświeża ramkę:
+`vildaPersistRestoreAll` → `refreshGHTherapyMonitor` → `vilda:therapy-points-changed`. Nasłuch karty porównania
+dodany w racie 7 wołał wtedy `Y()` z kotwicą `vildaPrevSummaryPid`, która jest jeszcze A (odczyt B z sejfu w `Y()`
+trwa), a `Y()` zapisuje swój argument w `window._vildaCurrentPatientId`. Formularz i `sessionStorage` mówiły B,
+zmienna okna ramki — A. Skutki dla pacjenta B:
+
+- karta „Porównanie z poprzednim pomiarem” pokazywała pomiar A („wiek 8 lat”, 126 cm, 25 kg przy B 11 lat);
+- „Dodaj notatkę do wizyty” (`custom-fixes.js` czyta najpierw zmienną okna) otwierała edytor notatki dla A,
+  czyli notatka z wizyty B trafiała do rekordu A;
+- najbliższy cykl synchronizacji (`vilda:sync-status-changed`) albo `vilda:auth-hidden` uruchamiał prefill karty SGA
+  i źródło danych okołoporodowych dla A: pusta karta B dostawała 34 tc, 1650 g, 41 cm, 29 cm pacjenta A, a ściąga B.64
+  dla B liczyła kryterium urodzeniowe z tych liczb.
+
+**Co jest.** `vilda_summary_cards.js`, nasłuch `vilda:therapy-points-changed`: karta jest odświeżana tylko wtedy,
+gdy kotwica jest bieżącym pacjentem. Bieżący pacjent jest czytany **najpierw z `sessionStorage`**
+(`vildaCurrentPatientId` — wspólny dla ramek powłoki i ustawiany synchronicznie przy wczytaniu), dopiero potem ze
+zmiennej okna. Kolejność ma znaczenie: pierwsza wersja bramki czytała najpierw zmienną okna i zawodziła, gdy pacjenta C
+wczytano w ramce Start przy DocPro z pacjentem A w tle — ramka w tle ma wtedy nieaktualną zmienną okna, a wspólna
+kotwica i `sessionStorage` mówią już C; notatka z DocPro szła wtedy do A. Bramka w `Z` (`auth-hidden`, synchronizacja)
+zostaje bez zmian.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna, bez zmiany wzorów, progów i danych referencyjnych. Wyniki zmieniają się
+wyłącznie tam, gdzie dotąd były liczone z danych innego pacjenta: karta porównania, prefill karty SGA, ściąga B.64
+i adresat notatki do wizyty wskazują pacjenta widocznego w formularzu. Czy „Zapisz dane” w stanie z tożsamością A
+zapisywał pomiar B u A, diagnoza nie rozstrzygnęła (w scenariuszach z przyciskiem zapis nie powstał); poprawka usuwa
+ten stan u źródła.
+
+**Przypadki (e2e na prawdziwej powłoce, dane fikcyjne: A 8 lat z danymi okołoporodowymi 34+2 tc, 1650 g, 41 cm, 29 cm;
+B 11 lat bez danych okołoporodowych; C 10 lat, 39 tc).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie `1661041` |
+|---|---|---|
+| DocPro z A → skok z Terminarza do punktu GH pacjenta B → cykl synchronizacji | karta SGA pusta, ściąga B.64 „— BRAK DANYCH” bez „34 tc”, tożsamość ramki = B | pada (karta SGA z liczbami A, 34 tc w ściądze, okno = A) |
+| DocPro z A → wczytanie B → cykl synchronizacji → „Dodaj notatkę do wizyty” | karta SGA pusta, tożsamość = B, notatka dla B | pada (liczby A, okno = A, notatka dla A) |
+| A z dwiema wizytami → wczytanie B w DocPro | karta porównania „wiek 11 lat”, bez „wiek 8 lat” | pada (poprzedni pomiar A) |
+| DocPro z A → wczytanie C w ramce Start → powrót do DocPro → cykl synchronizacji | tożsamość ramki = C, notatka dla C | przechodzi; z bramką czytającą najpierw zmienną okna pada (okno = A, notatka dla A) |
+| Kontrola: samodzielny `docpro.html`, skok z A do B z danymi okołoporodowymi | karta SGA i ściąga B.64 z danymi B (40 tc) | przechodzi |
+
+**Czego to nie naprawia.** *(1)* Nowe znalezisko z czwartego scenariusza, niezależne od tej regresji (ta sama
+obserwacja na bazie i po poprawce): gdy pacjenta C wczytano w ramce Start, a DocPro w tle miał pacjenta A z kartą SGA,
+po powrocie do DocPro formularz i tożsamość są C, ale karta SGA nadal pokazuje dane urodzeniowe A (34 tc, 1650 g,
+41 cm, 29 cm). Odtworzenie stanu ramki przez powłokę nie przechodzi przez `identityReset` z `applyLoadedData()`.
+Do osobnej poprawki. *(2)* Prefill karty SGA gubi dni ciąży (34+2 → 34+0), bo pole dni ma domyślnie „0”, a prefill
+wpisuje tylko do pól pustych — zmiana kliniczna, osobno i z akceptacją właściciela.
+
+**Walidacja.** `tests/e2e/powloka-tozsamosc-ramki.spec.mjs`, 5 scenariuszy z tabeli: 5/5 po poprawce; na bazie
+3 pierwsze padają, 2 ostatnie przechodzą; czwarty pada na pierwszej wersji bramki. `npm test` zielony; spec-e karty
+porównania, skoku GH, ściągi B.64, danych okołoporodowych i powłoki zielone.
+
+**Wersje.** `vilda_summary_cards.js` 51 → 52 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
+(append-only), `SW_VERSION` 1.1.115 → 1.1.116 (+ pin), fixture wersji.
 
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
