@@ -420,7 +420,7 @@
       <!-- DOB-AGE-1 (decyzja właściciela 2026-09-13): data urodzenia w formularzu głównym.
            Pole OPCJONALNE; po wpisaniu poprawnej daty wiek w latach i miesiącach wypełnia się
            sam (ukończone pełne miesiące) i staje się tylko do odczytu. Logika: vilda_dob_age.js. -->
-      <link href="inline_docpro_01.css?v=2" rel="stylesheet">
+      <link href="inline_docpro_01.css?v=3" rel="stylesheet">
       <label>Data urodzenia <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
         <input type="text" id="dobInput" inputmode="numeric" maxlength="10" placeholder="DD-MM-RRRR" autocomplete="bday">
       </label>
@@ -1065,6 +1065,8 @@
         <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button>
         <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button>
       </div>
+      <!-- P-OTYLOSC-CYKLE rata 1: komunikat o regułach cykli leczenia w miejscu przycisków (zamiast okienka); treść i przyciski wyboru wstawia obesity_therapy_monitor.js. -->
+      <div id="obesityTherapyActionMsg" class="obm-msg" role="status" aria-live="polite" hidden></div>
             <!-- OBESITY-EDIT-1: pasek trybu edycji — wypełnia go monitor, gdy wczytasz punkt ołówkiem. -->
       <div id="obesityEditBar" class="obm-edit-bar" style="display:none;"></div>
       <h4 style="margin:1rem 0 0.4rem;">Punkty terapii (<span id="obesityTherapyCount">0</span>)</h4>
@@ -2927,7 +2929,9 @@
          aby korzystał z już zainicjowanych elementów DOM (np. pola wagi i wieku). -->
     <script src="flu_therapy.js?v=8" defer></script>
 <script src="obesity_therapy.js?v=10" defer></script>
-<script src="obesity_therapy_monitor.js?v=22" defer></script>
+<!-- P-OTYLOSC-CYKLE rata 1: reguły cykli leczenia (jedno Włączenie, jedno Zakończenie, nowy cykl po Zakończeniu) — czysty moduł, wołany przez monitor otyłości. -->
+<script src="vilda_cykle_leczenia.js?v=1" defer></script>
+<script src="obesity_therapy_monitor.js?v=23" defer></script>
 <script src="hypertension_therapy.js?v=10" defer></script>
 <script src="thyroid_cancer_kids.js?v=4" defer></script>
 
