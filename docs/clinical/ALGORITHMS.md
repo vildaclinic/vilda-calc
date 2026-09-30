@@ -6599,6 +6599,102 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
+## Retencja z nagrobkiem w synchronizacji (P-RETENCJA-NAGROBKI, SW 1.1.129, `vilda_vault.js` 191, 2026-09-30)
+
+**Decyzje właściciela (2026-09-30).** Po P-KOSZ-ZAPISOW (#501) dwa pytania na później: czy automatyczne przerzedzanie
+starszych wersji ma oznaczać je jako usunięte w synchronizacji — **tak**; czy z pomylonego zapisu tworzyć kartę osobie,
+która nie ma własnej karty — **nie** (okno usuwania dalej blokuje usunięcie w takim przypadku; kartę tej osoby zakłada
+się zwykłym zapisem, a pomiary dopisuje się ręcznie).
+
+**Problem.** Retencja (`vilda_retention.js`, uruchamiana po zapisie karty, która ma co najmniej 10 wersji) usuwała wersje
+zwykłym `deleteSnapshot`, tylko na tym urządzeniu. Scalanie synchronizacji dodaje każdą wersję, której lokalnie nie ma, więc
+przycięte wersje wracały z innego urządzenia albo z chmury, a każde urządzenie przycinało je od nowa przy kolejnym zapisie.
+Retencja działała też poza blokadą pacjenta, równolegle z zapisem albo przypięciem w innej karcie przeglądarki.
+
+**Reguły retencji (co zostaje) — bez zmian.** Najnowsza wersja, przypięte, wszystkie z ostatnich 24 h, do 30 dni ostatnia
+wersja z każdego dnia (dzień z `savedAtISO`, UTC), starsze — ostatnia z miesiąca; razem najwyżej 40 (limit nie usuwa
+przypiętych ani najnowszej). Próg 10 wersji i wyłącznik `localStorage.vildaRetention = "0"` bez zmian.
+
+**Sejf (`vilda_vault.js` 191; `Bkz_przytnij` w bloku `Bkz_*`, czytelny; `pruneSnapshotsForPatient` to nadal `wr`).**
+- Plan (odczyt i odszyfrowanie wszystkich wersji karty) liczony jest poza blokadą, żeby kolejny zapis tego pacjenta nie
+  czekał z komunikatem „Czekam — ten pacjent jest zapisywany w innej karcie”. Pod blokadą pacjenta (`vilda-save-pat:<id>`,
+  jak zapis i kosz) tylko sprawdzenie planu, nagrobki i usunięcie: wersja zmieniona od planu (przypięcie, poprawka) zostaje;
+  gdy zniknęła wersja, którą plan zostawia, nic nie jest usuwane (`skipped: 'plan-nieaktualny'`) — retencja policzy od nowa
+  przy następnym zapisie.
+- Najpierw nagrobki całej listy do usunięcia jednym zapisem metadanych konta i sprawdzenie, że są; dopiero potem
+  `deleteSnapshot` każdej wersji. Bez zapisanych nagrobków nic nie jest usuwane (`skipped: 'nagrobki'`). Nagrobek wersji,
+  której nie udało się usunąć i która dalej jest w karcie, jest zdejmowany; wersja usunięta w tym czasie przez scalanie
+  (scalanie nie bierze blokady pacjenta) zachowuje nagrobek.
+- Nagrobek retencji: `{patientId, snapshotId, deletedAtISO, savedAtISO, rev, updatedAtISO, seq, powod: 'retencja'}` — bez
+  treści, więc nie trafia do kosza (Ustawienia, historia wersji). Ważność 365 dni, jak każdy nagrobek wersji.
+- Scalanie: te same reguły co dla kosza (późniejsza zmiana wersji wygrywa; ostatniej wersji karty nie usuwa żaden
+  nagrobek), a do tego **nagrobek retencji przegrywa z wersją przypiętą** — urządzenie, które przycinało, mogło nie wiedzieć
+  o przypięciu z innego urządzenia. Wersję sprawdza się w ładunku (treść jawna) albo lokalnie (po odszyfrowaniu); wersji
+  nieczytelnej nie rusza, a nagrobek zostaje dla urządzeń, które ją czytają.
+- Nagrobek retencji nigdy nie wciąga treści do kosza. Dwa nagrobki tego samego zapisu (kosz na jednym urządzeniu, retencja
+  na drugim): późniejsze usunięcie wygrywa; treść kosza ze starszego nagrobka przechodzi na nowszy **tylko wtedy, gdy oba
+  opisują tę samą wersję** (rewizja i chwila zmiany). Wpis z treścią zostaje wpisem kosza. Gdy zapis przywrócono i
+  poprawiono, a potem przycięto, stara treść z kosza urządzenia, które było offline, jest nieaktualna — „Przywróć”
+  wskrzesiłby ją, więc nie przechodzi (ta sama reguła zamyka część uwagi Codex P1 do #501).
+- `mergeSyncPayload` zwraca osobno `trashedSnapshotCount` (kosz) i `prunedSnapshotCount` (retencja).
+- Urządzenie z wyłączoną retencją samo nie przycina, ale przyjmuje nagrobki innych urządzeń.
+- Jawny import karty albo kopii konta zdejmuje nagrobki importowanych wersji (jak w koszu); retencja może je przyciąć
+  ponownie przy następnym zapisie.
+
+**Dlaczego suma przycięć z kilku urządzeń nie usuwa wszystkich wersji z dnia lub miesiąca.** Każde urządzenie zostawia
+w danym dniu (miesiącu) najpóźniejszą wersję, jaką zna, albo przypiętą. Najpóźniejszej wersji dnia spośród wszystkich
+urządzeń nie przytnie żadne urządzenie, które ją ma, a przypiętych chroni reguła wyżej. Wyjątek to limit 40, który z
+założenia usuwa najstarsze.
+
+**Interfejs.** Opis pod listą wersji w historii wersji (`vilda_version_history_ui.js` 14) mówił „Retencja (starsze wersje
+przerzedzane) dojdzie w kolejnym etapie”, choć retencja działała. Teraz: „Gdy karta ma co najmniej 10 wersji, zapis
+przerzedza starsze na wszystkich urządzeniach: z ostatnich 24 h zostają wszystkie, do 30 dni — ostatnia z każdego dnia,
+starsze — ostatnia z miesiąca (najwyżej 40). Przypięte zostają zawsze.” (test pilnuje zgodności z `vilda_retention.js`).
+
+**Przypadki syntetyczne** (`tests/unit/retencja-nagrobki.test.mjs`, prawdziwy sejf i `vilda_retention.js`, dwa urządzenia;
+karta: dni 1–3 po trzy zapisy, dzień 4 dwa — 11 wersji; przycinanie 11.09, 12:00 UTC):
+
+| Sytuacja | Wynik |
+|---|---|
+| A przycina | zostaje ostatnia wersja z każdego dnia (4), 7 nagrobków „retencja” bez treści, kosz pusty |
+| A scala stary ładunek B | przycięte wersje nie wracają na A |
+| B (retencja wyłączona) scala ładunek A | B ma te same 4 wersje, `prunedSnapshotCount` 7, `trashedSnapshotCount` 0, kosz pusty |
+| B przypiął wersję, zanim A ją przyciął | wersja zostaje na B i wraca na A (przypięta); jej nagrobek znika, 6 zostaje |
+| B poprawił wersję po przycięciu na A | wersja zostaje na obu urządzeniach |
+| wersja w koszu na A, później przycięta na B | na obu urządzeniach zostaje w koszu, z treścią |
+| C ma wersję w koszu; na A przywrócona, poprawiona i przycięta | kosz C pusty, nagrobek „retencja” bez treści |
+| zapis metadanych konta się nie udaje | nic nie jest usuwane |
+| wersja z planu przypięta, zanim retencja weszła pod blokadę | zostaje, przypięta; 6 przyciętych |
+| z karty zniknęła wersja, którą plan zostawia | nic nie jest usuwane (`plan-nieaktualny`) |
+| wersję z planu w tym czasie usunęło scalanie | jej nagrobek zostaje; retencja przycina pozostałe 6 |
+| dwa przycięcia naraz | każda wersja usunięta raz, 7 nagrobków |
+| import pliku karty sprzed przycięcia | 7 wersji wraca, nagrobki z B ich nie usuwają |
+
+**Testy.** Jednostkowe 16 (retencja na jednym urządzeniu 7, synchronizacja 6, strażniki 2, opis w historii 1); w
+`kosz-zapisow.test.mjs` strażnik „retencja bez nagrobka” zastąpiony nową regułą. E2e `tests/e2e/retencja-nagrobki.spec.mjs`
+2 (opis w historii wersji: desktop; telefon 390 px bez poziomego przewijania). Mutacje (każda wywraca co najmniej jeden
+test): bez ochrony przypiętej w pętli ładunku albo w kroku lokalnym; nagrobek retencji wciąga treść do kosza; wpis z
+treścią zostaje „retencją”; eksport bez powodu; przycinanie mimo niezapisanych nagrobków; brak nagrobków; retencja
+liczona jako kosz; bez sprawdzenia zmian od planu; bez sprawdzenia, że plan jest aktualny; bez blokady; zdejmowanie
+nagrobka wersji, którą w tym czasie usunęło scalanie; treść kosza łączona z nagrobkiem innej wersji.
+
+**Ograniczenia.** Starsza wersja aplikacji nie zna nagrobków i dalej wysyła przycięte wersje; zaktualizowane urządzenie je
+pomija. Wersja z P-KOSZ-ZAPISOW (SW 1.1.128) nie zna pola `powod`: nagrobek retencji potraktuje jak nagrobek kosza —
+dołoży do kosza treść przyciętej wersji i nie zastosuje ochrony przypiętej (wersja trafi do kosza na 30 dni, nie zginie).
+Dlatego 1.1.128 i 1.1.129 najlepiej wdrożyć razem: urządzenia przejdą wtedy z wersji, która nagrobki ignoruje, od razu na tę. Urządzenie offline dłużej niż rok może je wskrzesić. Przesunięty zegar urządzenia przesuwa też chwilę usunięcia
+(jak u nagrobków pacjentów). Lista nagrobków rośnie z liczbą przycięć (ok. 260 bajtów na wersję, 365 dni) i jedzie w
+każdym ładunku synchronizacji — to ułamek rozmiaru samych przyciętych wersji, które dotąd jechały w ładunku.
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach, wynikach i w tym, które wersje retencja zostawia. Zmiana dotyczy
+danych: przerzedzenie historii wersji obejmuje teraz wszystkie urządzenia konta, zamiast wracać przy synchronizacji.
+Bieżący stan karty (najnowsza wersja) i wersje przypięte nie są ruszane.
+
+**Wersje.** `vilda_vault.js` 191 (8 stron + wstrzyknięcia: `vilda_chrome.js` 84, `vilda_session_bridge.js` 12 na 22
+stronach), `vilda_version_history_ui.js` 14 (8 stron), precache (append-only), `SW_VERSION` 1.1.128 → 1.1.129 (+ pin),
+fixture wersji.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
+
 ## Usuwanie pomylonego zapisu do kosza; nagrobki zapisów w synchronizacji (P-KOSZ-ZAPISOW, SW 1.1.128, `vilda_vault.js` 190, `vilda_kosz_zapisow.js` 1, 2026-09-30)
 
 **Decyzje właściciela (2026-09-30).** Po analizie kodu (rekomendacje do czterech punktów z P-SPOJNOSC-ZAPISOW) i makiecie
@@ -6630,7 +6726,8 @@ usunięciu, więc nie przechowuje stanu sprzed niego.
   znika. Nagrobek nigdy nie usuwa ostatniej wersji karty.
 - Jawny import (`importPatientFromEnvelope`, scalenie kopii konta) zdejmuje nagrobki importowanych wersji i nadaje im nową
   chwilę zmiany — jak import zdejmuje nagrobek pacjenta.
-- Bez zmian: retencja i `deleteSnapshot` (bez nagrobka, jak dotąd); format zapisu pacjenta; kopia konta.
+- Bez zmian: retencja i `deleteSnapshot` (bez nagrobka, jak dotąd); format zapisu pacjenta; kopia konta. Od SW 1.1.129
+  retencja stawia własny nagrobek, bez treści — P-RETENCJA-NAGROBKI wyżej.
 
 **Interfejs (`vilda_kosz_zapisow.js` 1; `vilda_spojnosc_zapisow.js` 2; `ustawienia.css` 17).**
 - Karta „prawdopodobna pomyłka” w wyniku sprawdzenia: przy każdym zapisie „inna osoba” wstępna wskazówka (pomiary są /
@@ -6689,6 +6786,7 @@ stronach), `vilda_version_history_ui.js` 13 i nowy `vilda_kosz_zapisow.js` 1 (8 
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie. Na później: czy retencja ma stawiać nagrobki (dziś przycinanie
 nie rozchodzi się między urządzeniami); tworzenie karty osoby bez karty z pomylonego zapisu (etap 3).
+Rozstrzygnięte 2026-09-30: retencja stawia nagrobki — tak (P-RETENCJA-NAGROBKI); karta z pomylonego zapisu — nie.
 
 ## Sprawdzenie spójności zapisów w sejfie, tylko do odczytu (P-SPOJNOSC-ZAPISOW, SW 1.1.125, `vilda_spojnosc_zapisow.js` 1, 2026-09-30)
 
