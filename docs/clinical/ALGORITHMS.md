@@ -6814,6 +6814,68 @@ SW 1.1.87 → **1.1.88**; `vilda_data_import_export.js?v=85→86`, `vilda_shell.
 **Co pozostaje decyzją właściciela.** Akceptacja pełnego odtworzenia panelu docelowego po zmianie sesji (skutek uboczny wyżej)
 i scalenie.
 
+## Wiek i masa niezapisanego pacjenta nie przechodzą do rekordu wczytanego pacjenta (P-SESJA-OBCA, SW 1.1.117, `vilda_data_import_export.js` 90, 2026-09-30)
+
+**Zgłoszenie.** Znalezisko recenzji poprawki „Cel własny” (2026-09-30): na `docpro.html` niezapisana Celina (35 lat, 66 kg),
+skok z notatki do punktu GH Beaty (40 lat, 65 kg), F5 — formularz Beaty pokazuje 35 lat i 66 kg, a „Zapisz” dopisuje do
+rekordu Beaty wersję z wiekiem i masą Celiny. Naruszenie integralności danych pacjenta; u dziecka zły wiek przesuwa
+wszystkie centyle i SDS.
+
+**Kiedy.** Wczytanie rekordu **bez „Wyczyść”**: skok „↗ Siatki / punkt GH” z notatki (docpro), autouzupełnianie nazwiska
+(`vilda_auth_ui.js`), wczytanie po „Odrzuć” w oknie niezapisanych zmian (to okno nie czyści formularza). Po takim
+wczytaniu pola wizyty (wiek, masa) są puste — lekarz wybiera „Odtwórz zapis” albo „Nowy pomiar”, a skok zostawia wybór
+ręczny (P-NOTATKI rata 3d). Zwykła droga „Wyczyść → Wczytaj” nie była dotknięta, bo „Wyczyść” czyści sesję główną i wspólny
+stan.
+
+**Przyczyna — trzy kanały, zmierzone śladem zapisów do `sessionStorage` na prawdziwej stronie.**
+
+1. *Sesja główna na stronach bez `#intakePal` (docpro, klirens).* `saveMainSessionNow` uzupełnia puste pola nowej sesji
+   wartościami z poprzedniej (`Et`, „uzupełnij puste”), żeby nie gubić pól innych stron. Po wczytaniu Beaty poprzednia
+   sesja była sesją Celiny, więc puste pola wizyty Beaty dostawały wiek i masę Celiny.
+2. *Wspólny stan (`sharedUserData`).* Reset tożsamości przy wczytaniu (`identityReset`) czyści z niego tylko pola
+   z listy `na` (karta zaawansowana, parametry życiowe, PAL…). Imię i nazwisko, data urodzenia i pola wizyty, które
+   `userData.js` i odtworzenie po F5 wpisują do formularza, zostawały przy Celinie — także na stronie głównej.
+3. *Kopia robocza `vilda_persist_runtime.js`.* Reset tożsamości miał ją unieważnić (`__vildaPersistInvalidatePendingRoot`),
+   ale wołał ją przez `safeCall(...)` — funkcję, której nie ma w tym module ani nigdzie w repozytorium (wywołanie jest tam
+   od pierwszego wgrania pliku). `ReferenceError` połykał `catch`, więc kopia pobrana przy zdarzeniach czyszczenia pól —
+   jeszcze z danymi Celiny — była zapisywana ok. 30 ms po świeżym zapisie danych Beaty (`syncSharedUserDataFromLoadedData`)
+   i ponownie ok. 1,2 s później. Ten kanał wskrzeszał też klucze, które reset z listy `na` już usunął.
+
+**Co jest.** `vilda_data_import_export.js`:
+- reset tożsamości unieważnia kopię roboczą bezpośrednim, zabezpieczonym wywołaniem;
+- reset tożsamości usuwa ze wspólnego stanu imię i nazwisko, datę urodzenia (`dobInput`), wiek, masę, wzrost, płeć
+  i stadium Tannera poprzedniej osoby (`byId` i klucze najwyższego poziomu); wczytanie wypełnia je z rekordu i formularza
+  na nowo;
+- pierwszy zapis sesji głównej po wczytaniu rekordu nie scala jej z poprzednią, gdy imię i nazwisko albo data urodzenia
+  się różnią. Dla tej samej osoby scalanie działa jak dotąd.
+
+Ablacja na teście e2e: wariant bez którejkolwiek z trzech zmian przepuszcza liczby Celiny do rekordu Beaty.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna (integralność danych), bez zmian wzorów, progów i danych referencyjnych.
+Po wczytaniu pacjenta bez „Wyczyść” i F5 formularz pokazuje to samo, co przed F5 (puste pola wizyty do wyboru
+„Odtwórz zapis” / „Nowy pomiar”), zamiast wieku, masy i danych poprzedniej osoby; rekord wczytanego pacjenta nie dostaje
+cudzych liczb. Skutek uboczny zamierzony: pola z listy `na` poprzedniej osoby (m.in. ciśnienie, tętno, obwody talii
+i bioder, PAL, wiek kostny) po takim wczytaniu i F5 już nie wracają — dotąd reset tożsamości miał je usuwać, ale kanał 3
+je wskrzeszał.
+
+**Przypadki (e2e na prawdziwych stronach, dane fikcyjne: Beata 40 lat, 164 cm, 65 kg — zapisana; Celina 35 lat, 66 kg —
+niezapisana).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie `3c4abb1` |
+|---|---|---|
+| docpro: Beata zapisana → „Wyczyść” → Celina wpisana → prawdziwy skok z notatki do punktu GH Beaty → F5 → „Zapisz” | sesja i formularz po F5 bez 35 lat i 66 kg; rekord Beaty bez wersji 35/66 | pada: sesja 35/66, po F5 35 i 66, rekord Beaty dostaje wersję 35/66 |
+| index: to samo przez autouzupełnianie nazwiska i „Nowy pomiar” → F5 | formularz po F5 bez 35 lat i 66 kg | pada: po F5 35 i 66 |
+| Kontrola: docpro, sesja Beaty z potrawą (pole strony głównej) → ponowne wczytanie rekordu Beaty | sesja nadal ma potrawę (scalanie dla tej samej osoby) | przechodzi; pada na wariancie „po wczytaniu nigdy nie scalaj” |
+
+**Czego to nie naprawia.** Karta SGA w ramce DocPro powłoki po wczytaniu innego pacjenta w ramce Start (P-TOZSAMOSC-RAMKI,
+„Czego to nie naprawia” 1) — odtworzenie sesji w ramce nie przechodzi przez reset tożsamości; osobna poprawka.
+
+**Walidacja.** `tests/e2e/sesja-bez-cudzych-danych.spec.mjs` (3 scenariusze z tabeli). Ablacja trzech zmian i mutant
+kontroli jak wyżej. `npm test` i pełny zestaw e2e (desktop) — wyniki w PR.
+
+**Wersje.** `vilda_data_import_export.js` 89 → 90 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
+(append-only), `SW_VERSION` 1.1.115 → 1.1.117 (+ pin; 1.1.116 bierze P-TOZSAMOSC-RAMKI), fixture wersji.
+
 ## Karta porównania po „Odtwórz zapis”: spóźniony odczyt z sejfu nie przywraca porównania na Start ani w DocPro (P-POWLOKA-WYSCIG, SW 1.1.112, `vilda_summary_cards.js` 50, 2026-09-30)
 
 **Zgłoszenie (2026-09-29).** Test `tests/e2e/powloka-przelaczanie-paneli.spec.mjs` (`:147`, `:172`, oba z P-POWLOKA-PANELE)
