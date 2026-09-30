@@ -1,5 +1,7 @@
 // P-SW rata 1: odświeża tests/fixtures/wersje-zasobow.json (plik → najwyższe ?v= i SHA-256 treści).
 // Uruchom PO podbiciu ?v= zmienionych plików. Bez --zapisz tylko wypisuje różnice.
+// Zwykle nie trzeba: npm run podbij-wersje nadaje wersje względem origin/audyt i sam przepisuje ten stan.
+// Konfliktu w stanie po scaleniu audyt NIE rozwiązuj samym --zapisz — utrwaliłby dwie treści pod jednym ?v=.
 import fs from 'node:fs';
 import { biezaceWersje, PLIK_STANU, zapisaneWersje } from '../support/wersje-zasobow.mjs';
 
