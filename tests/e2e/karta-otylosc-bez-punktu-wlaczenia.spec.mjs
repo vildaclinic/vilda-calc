@@ -169,7 +169,8 @@ test.describe('P-OTYLOSC-BEZ-STARTU — Karta pacjenta', () => {
     expect(w.karta, 'leczenie trwa — nowy kurs po „Zakończeniu”').toContain('aktywne');
     expect(w.karta).not.toContain('leczenie zakończone');
     expect(w.karta).toContain('Włączeniebrak punktu');
-    expect(w.karta).toContain('Bieżący kurs leczenia (po punkcie „Zakończenie”) nie ma punktu „Włączenie” (pierwszy zapisany punkt kursu: w wieku 40 l. 0 mies.)');
+    // P-OTYLOSC-CYKLE rata 3: słownictwo jak w monitorze — „cykl”, nie „kurs”.
+    expect(w.karta).toContain('Bieżący cykl leczenia (po punkcie „Zakończenie”) nie ma punktu „Włączenie” (pierwszy zapisany punkt cyklu: w wieku 40 l. 0 mies.)');
     expect(w.panel, 'redukcja od 1. punktu bieżącego kursu (108 kg), nie od 100 kg z 2025-01').toContain('Masa w 1. punkcie108 kg');
   });
 
@@ -232,7 +233,7 @@ test.describe('P-OTYLOSC-BEZ-STARTU — monitor DocPro', () => {
   test('MON-3: wznowiony kurs bez własnego „Włączenia” — podpowiedź o bieżącym kursie', async ({ page }) => {
     const m = await monitor(page, [['start', '2025-01-06', 100], ['end', '2025-06-02', 90], ['continue', '2025-11-03', 108], ['continue', '2026-04-27', 101]]);
     expect(m.widoczna).toBe(true);
-    expect(m.tekst).toContain('Bieżący kurs leczenia (po punkcie „Zakończenie”) nie ma punktu „Włączenie”');
+    expect(m.tekst).toContain('Bieżący cykl leczenia (po punkcie „Zakończenie”) nie ma punktu „Włączenie”');
     // P-OTYLOSC-CYKLE rata 2: bieżący cykl bez „Włączenia” liczy redukcję od SWOJEGO 1. punktu (108 kg), z podpisem;
     // dotąd liczył od startu poprzedniego kursu (100 kg: +8,0% i +1,0%). Cykl 1 — od swojego Włączenia.
     expect(m.naglowki).toEqual(['Redukcja masy (od 1. punktu)', 'Redukcja BMI (od 1. punktu)']);
