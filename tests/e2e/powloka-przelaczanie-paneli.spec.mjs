@@ -307,3 +307,84 @@ test('DocPro pokazał kartę porównania przed „Odtwórz zapis”: po wyborze 
   await page.waitForTimeout(2500);
   expect(await stan(docpro), 'DocPro nadal bez karty porównania').toMatchObject(OCZEKIWANY);
 });
+
+// P-POWLOKA-ID (2026-09-30): panel powłoki trzymał własny window._vildaCurrentPatientId. DocPro otwarty przy pacjencie A
+// zostawał przy A, gdy Start wczytał pacjentkę B — wspólna jest tylko sesja karty (sessionStorage vildaCurrentPatientId).
+// Zmierzone na 21046aa (po #486, #488 i #489): „Zapisz” w DocPro dopisywał dane B do rekordu A. Przed #486/#488 ten sam
+// mechanizm rysował w DocPro kartę porównania z zapisów A obok formularza B. Dane wyłącznie FIKCYJNE.
+async function drugiPacjentWczytany(page, start) {
+  await wpisz(start, { lastName: 'Innyrecz', firstName: 'Adam', dobInput: await dataUr(start), sex: 'M', height: '120.0', weight: '22.0' });
+  await page.waitForTimeout(600);
+  expect(await start.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1000);
+  await wpisz(start, { height: '121.0', weight: '22.5' });
+  await page.waitForTimeout(600);
+  expect(await start.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await page.waitForTimeout(1000);
+  return start.evaluate(() => window._vildaCurrentPatientId);
+}
+
+const zapisy = (start, ids) => start.evaluate(async (m) => {
+  const o = {};
+  for (const [k, id] of Object.entries(m)) {
+    const p = await window.VildaVault.getPatient(id);
+    o[k] = { liczba: p.snapshots.length, nazwisko: p.snapshots[0] && p.snapshots[0].payload && p.snapshots[0].payload.name };
+  }
+  return o;
+}, ids);
+
+const poprzednio = (fr) => fr.evaluate(() => [...document.querySelectorAll('#prevSummaryCard .pt-kol-poprzednio .pt-w')]
+  .map((x) => x.textContent.replace(/\s+/g, ' ').trim()).slice(0, 2));
+
+// A zapisany na Start → DocPro otwarty (zna A) → powrót → wczytanie B → DocPro.
+async function docProPrzyA(page, start) {
+  const pidB = await pacjentkaWSejfie(page, start);
+  const pidA = await drugiPacjentWczytany(page, start);
+  expect(pidA).not.toBe(pidB);
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka(page, 'DocPro');
+  await gotowa(docpro);
+  await page.waitForTimeout(1500);
+  expect(await docpro.evaluate(() => window._vildaCurrentPatientId), 'DocPro otwarty przy A').toBe(pidA);
+  await page.evaluate(() => window.VildaShell.navigate('start'));
+  await page.waitForTimeout(500);
+  return { pidA, pidB, docpro };
+}
+
+test('DocPro otwarty przy innym pacjencie, na Start „Odtwórz zapis” pacjentki B: DocPro przejmuje B — bez porównania z zapisów A, zapis trafia do B', async ({ page }) => {
+  test.setTimeout(180_000);
+  const start = await otworzPowloke(page);
+  const { pidA, pidB, docpro } = await docProPrzyA(page, start);
+
+  await wczytajZKarty(page, start, pidB, 'odtworz');
+  await expect.poll(() => stan(start).then((s) => s.h)).toBe('149.2');
+  const PELNY = await pelny(start);
+  await page.waitForTimeout(3500);
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  await expect.poll(() => stan(docpro), { timeout: 8000, message: 'DocPro: formularz B, podsumowanie z BMI, bez karty porównania' })
+    .toMatchObject({ dob: PELNY.dob, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true, porownanie: false });
+  expect(await docpro.evaluate(() => window._vildaCurrentPatientId), 'DocPro przejął pacjenta z sesji karty').toBe(pidB);
+
+  // Cel zapisu bierze pacjenta z sesji karty także wtedy, gdy zmienna panelu jest nieaktualna (tu cofnięta celowo do A).
+  await docpro.evaluate((id) => { window._vildaCurrentPatientId = id; }, pidA);
+  const przed = await zapisy(start, { A: pidA, B: pidB });
+  expect(await docpro.evaluate(async () => Boolean(await window.saveUserData()))).toBe(true);
+  await expect.poll(() => zapisy(start, { A: pidA, B: pidB }), { message: 'zapis z DocPro w rekordzie B, rekord A nietknięty' })
+    .toEqual({ A: przed.A, B: { liczba: przed.B.liczba + 1, nazwisko: 'Probna Alicja' } });
+});
+
+test('DocPro otwarty przy innym pacjencie, na Start „Nowy pomiar” pacjentki B: porównanie w DocPro z poprzedniego pomiaru B, nie A', async ({ page }) => {
+  test.setTimeout(180_000);
+  const start = await otworzPowloke(page);
+  const { pidB, docpro } = await docProPrzyA(page, start);
+
+  await wczytajZKarty(page, start, pidB, 'nowy');
+  await expect.poll(() => stan(start).then((s) => s.porownanie)).toBe(true);
+  const naStart = await poprzednio(start);
+  expect(naStart[0], 'Start: poprzedni pomiar B').toContain('149,2');
+  await page.waitForTimeout(3500);
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  await expect.poll(() => stan(docpro), { timeout: 8000 }).toMatchObject({ name: 'Probna Alicja', porownanie: true });
+  await expect.poll(() => poprzednio(docpro), { timeout: 8000, message: 'DocPro: poprzedni pomiar B (149,2 cm), nie A (120/121 cm)' }).toEqual(naStart);
+  expect(await docpro.evaluate(() => window._vildaCurrentPatientId)).toBe(pidB);
+});

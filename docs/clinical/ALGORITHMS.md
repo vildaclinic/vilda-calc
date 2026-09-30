@@ -6969,6 +6969,43 @@ porównania, skoku GH, ściągi B.64, danych okołoporodowych i powłoki zielone
 **Wersje.** `vilda_summary_cards.js` 51 → 52 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), precache
 (append-only), `SW_VERSION` 1.1.115 → 1.1.116 (+ pin), fixture wersji.
 
+## Panel powłoki przejmuje pacjenta z sesji karty: zapis i notatki z DocPro trafiają do wczytanego pacjenta (P-POWLOKA-ID, SW 1.1.117, 2026-09-30)
+
+**Zlecenie właściciela (2026-09-29/30).** Naprawić wyścig z `powloka-przelaczanie-paneli.spec` (karta porównania w DocPro
+po „Odtwórz zapis”). W trakcie diagnozy (instrumentacja setterów `style.display` kart porównania, `sessionStorage`
+i `VildaVault.getPatient` w obu ramkach; prawdziwa powłoka; dane fikcyjne) wyszła trzecia droga, niezależna od
+P-POWLOKA-WYSCIG i P-POWLOKA-WYSCIG-2 — i poważniejsza, bo dotyczy celu zapisu. Właściciel zdecydował o publicznym opisie.
+Różnica wobec P-TOZSAMOSC-RAMKI (#489): tam DocPro, w którym wczytano B, wracał do A przez nasłuch porównania; tu
+pacjenta B wczytuje **Start**, a zmienna DocPro w ogóle się nie zmienia.
+
+**Co było.** Każdy panel powłoki trzyma własny `window._vildaCurrentPatientId`: ustawia go przy starcie ze wspólnej sesji
+karty (`sessionStorage.vildaCurrentPatientId`) i przy `vilda:patient-loaded` we własnym dokumencie. Gdy pacjenta wczytuje
+inny panel, sesja karty się zmienia, a zmienna DocPro — nie. Zmierzone na `21046aa` (po #486, #488 i #489) w przebiegu
+„pacjent A zapisany na Start → DocPro otwarty (zna A) → powrót → wczytanie pacjentki B („Odtwórz zapis”) → DocPro”:
+- DocPro pokazuje formularz B, a jego `_vildaCurrentPatientId` wskazuje A;
+- „Zapisz” w DocPro dopisuje dane B jako nowy zapis w rekordzie **A** (`BdupId` w `vilda_data_import_export.js`
+  przedkładał zmienną panelu nad sesję karty, a porównanie nazwisk sprawdzało tylko `lastLoadedData` z formularzem);
+- bramka i cel „Dodaj notatkę do wizyty” (`custom-fixes.js`) brały pacjenta tak samo;
+- przed #486/#488 ten sam mechanizm rysował w DocPro kartę porównania z poprzedniego zapisu A obok formularza B.
+
+**Co jest.**
+- `vildaPersistRestoreAll` (`vilda_persist_runtime.js`, 18) przyjmuje pacjenta z sesji karty, zanim cokolwiek sięgnie
+  po identyfikator. Odtworzenie wywołuje powłoka na ping `vilda:sharedLoadSeq` (panel w tle) i przy przełączeniu, więc
+  DocPro po przejściu ma pacjenta wczytanego na Start. Pusta sesja niczego nie zeruje.
+- `BdupId` (`vilda_data_import_export.js`, 90) i notatki do wizyty (`custom-fixes.js`, 71) biorą pacjenta z sesji karty,
+  a zmienną panelu tylko wtedy, gdy sesja go nie zna — ta sama zasada co w P-NOTATKI-1 dla skoku do punktu GH.
+  To druga, niezależna ochrona celu zapisu.
+
+**Czego zmiana nie robi.** Nie zmienia wzorów, progów, treści kart, synchronizacji ani formatu zapisu; zmienia tylko to,
+którego pacjenta dotyczy zapis i notatka z panelu powłoki. Nie naprawia zapisów już pomylonych — do tego osobne,
+tylko do odczytu sprawdzenie danych (decyzja właściciela 2026-09-30, najpierw makieta).
+
+**Testy.** `tests/e2e/powloka-przelaczanie-paneli.spec.mjs`, dwa przebiegi z dwoma fikcyjnymi pacjentami:
+„Odtwórz zapis” — DocPro bez karty porównania, z pacjentem B; zapis z DocPro (także przy cofniętej celowo zmiennej
+panelu) w rekordzie B, rekord A nietknięty; „Nowy pomiar” — porównanie z poprzedniego pomiaru B (strażnik). Mutacje:
+bez przejęcia pacjenta pada sprawdzenie identyfikatora DocPro, bez `BdupId`/notatek — sprawdzenie celu zapisu, bez
+obu — zapis ląduje w A (stan `21046aa`). Wersje na stronach, precache (append-only), SW 1.1.117.
+
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
 **Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe
