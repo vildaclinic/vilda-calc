@@ -66,7 +66,7 @@
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=43" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=76" rel="stylesheet">
-  <link href="ustawienia.css?v=15" rel="stylesheet">
+  <link href="ustawienia.css?v=16" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
      Ustawia klasę vilda-pro-active / vilda-pro-inactive na <html>
@@ -87,7 +87,7 @@
 
   <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=27"></script>
+<script defer src="vilda_persistence_adapter.js?v=28"></script>
 <script defer src="vilda_session_bridge.js?v=9"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
@@ -113,6 +113,7 @@
 <script defer src="vilda_trajectory_analysis.js?v=39"></script>
 <script defer src="vilda_auth_ui.js?v=467"></script>
 <script defer src="vilda_version_history_ui.js?v=12"></script>
+<script defer src="vilda_spojnosc_zapisow.js?v=1"></script>
 <script defer src="vilda_audit_log.js?v=1"></script>
 <script defer src="vilda_data_safety_explainer.js?v=5"></script>
 <script defer src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -670,6 +671,51 @@
                       <p class="settings-inline-note settings-backup-note" id="vaultBackupStatus">
                         Plik trafi do wybranego folderu kopii (jeśli ustawiony) lub do folderu Pobrane.
                       </p>
+                    </div>
+
+                    <div class="settings-backup-sep" role="separator"></div>
+
+                    <!-- ── Podsekcja: Sprawdzenie spójności zapisów (P-SPOJNOSC-ZAPISOW, tylko odczyt; vilda_spojnosc_zapisow.js) ── -->
+                    <div class="settings-backup-section settings-spojnosc" id="recordConsistencyCard">
+                      <div class="settings-control-header">
+                        <h3 class="settings-control-title" id="recordConsistencyTitle">Sprawdzenie spójności zapisów</h3>
+                        <span class="settings-tag">Tylko odczyt</span>
+                      </div>
+                      <div id="recordConsistencyIntro">
+                        <p class="settings-control-desc">
+                          Szuka w sejfie zapisów, które trafiły do karty innego pacjenta. Mogło się to zdarzyć przy zapisie z DocPro w powłoce przed poprawką z 30.09.2026.
+                          W każdej karcie porównuje zapisy między sobą: nazwisko, datę urodzenia i płeć.
+                        </p>
+                        <ul class="settings-spojnosc-lista settings-spojnosc-lista--wstep">
+                          <li>Niczego nie zmienia, nie usuwa i nie wysyła.</li>
+                          <li>Działa na tym urządzeniu, w odblokowanym sejfie.</li>
+                          <li>Wynik widać tylko na tej stronie; znika po jej zamknięciu.</li>
+                        </ul>
+                        <div class="settings-card-toggle-row settings-backup-btn-row settings-spojnosc-akcje">
+                          <button type="button" id="recordConsistencyRunBtn" class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn">
+                            Sprawdź zapisy
+                          </button>
+                          <span class="settings-spojnosc-ostatnie" id="recordConsistencyLast" hidden>Ostatnie sprawdzenie: nigdy</span>
+                        </div>
+                        <p class="settings-inline-note settings-backup-note" id="recordConsistencyNote" hidden></p>
+                      </div>
+                      <div id="recordConsistencyProgress" tabindex="-1" hidden>
+                        <p class="settings-control-desc">Porównuje zapisy w każdej karcie między sobą: nazwisko, datę urodzenia i płeć. Niczego nie zmienia.</p>
+                        <div class="settings-spojnosc-postep">
+                          <div class="settings-spojnosc-postep-wiersz">
+                            <span class="settings-spojnosc-postep-tytul">Sprawdzanie kart pacjentów…</span>
+                            <span class="settings-spojnosc-licznik" id="recordConsistencyCounter">0 z 0</span>
+                          </div>
+                          <progress class="settings-spojnosc-pasek" id="recordConsistencyBar" max="1" value="0" aria-label="Postęp sprawdzania kart"></progress>
+                          <span class="settings-spojnosc-drobny">Nie zamykaj strony do końca sprawdzenia. Przerwanie niczego nie zmienia w sejfie.</span>
+                        </div>
+                        <div class="settings-spojnosc-akcje">
+                          <button type="button" class="vilda-auth-btn vilda-auth-btn-small settings-backup-btn" disabled>Sprawdzanie…</button>
+                          <button type="button" id="recordConsistencyStopBtn" class="vilda-auth-btn vilda-auth-btn-small settings-backup-btn">Przerwij</button>
+                        </div>
+                      </div>
+                      <div class="settings-spojnosc-wynik" id="recordConsistencyResult" hidden></div>
+                      <p class="settings-spojnosc-ogloszenie" id="recordConsistencyLive" role="status" aria-live="polite"></p>
                     </div>
 
                     <div class="settings-backup-sep" role="separator"></div>

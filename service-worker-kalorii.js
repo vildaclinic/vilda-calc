@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.124';
+const SW_VERSION = '1.1.125';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -324,6 +324,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=25',
   '/vilda_persistence_adapter.js?v=26',
   '/vilda_persistence_adapter.js?v=27',
+  '/vilda_persistence_adapter.js?v=28',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -2621,6 +2622,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_advanced_growth.js?v=73',
   '/vilda_adv_history_collapse.js?v=1',
   '/vilda_adv_history_collapse.js?v=2',
+  '/vilda_spojnosc_zapisow.js?v=1',
   '/inline_index_02.js?v=11',
   '/inline_index_02.js?v=12',
   '/inline_index_02.js?v=13',
@@ -2672,6 +2674,7 @@ const OPTIONAL_ASSETS = [
   // P-STYLE rata 4b podbiła te arkusze na stronach — bieżące klucze też muszą być offline.
   '/ustawienia.css?v=14',
   '/ustawienia.css?v=15',
+  '/ustawienia.css?v=16',
   '/edu-video-ui.css?v=20261002v4',
   '/edu-video-ui.css?v=20261003v4',
   '/edu-video-ui.css?v=20261002v7',
