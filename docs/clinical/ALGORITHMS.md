@@ -6410,6 +6410,102 @@ tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
 - Znane wcześniej: kotwica dawki podtrzymującej zawsze nominalna (`weeksFromAnchor` nie jest przekazywane); werdykt
   ocenia ostatni punkt, a nie redukcję w chwili okna.
 
+## Cykle leczenia otyłości — rata 1: wspólna funkcja cykli i reguły w monitorze (P-OTYLOSC-CYKLE rata 1, SW 1.1.130, `vilda_cykle_leczenia.js` 1, `obesity_therapy_monitor.js` 23, 2026-09-30)
+
+**Zgłoszenie i decyzje właściciela (2026-09-30).** „Nie powinno być możliwe wybranie dwóch punktów włączenia leczenia
+w przebiegu jednego cyklu” — monitorowanie ma się dzielić na cykle z jednym Włączeniem, jednym Zakończeniem
+i kontynuacjami w środku. Analiza i projekt z makietami (komputer i telefon) przedstawione tego dnia; właściciel przyjął
+wszystkie rekomendacje:
+- **D1** cykle **wyliczane** z punktów Włączenie/Zakończenie jedną wspólną funkcją, **bez nowego pola** w zapisie;
+- **D2** cykl bez Włączenia tylko **świadomie** („leczenie rozpoczęte poza monitorowaniem”), z wstrzymaną oceną wg ChPL;
+- **D3** zmiana substancji czynnej zaczyna nowy cykl (rata 4);
+- **D4** Włączenie i Zakończenie **wymagają daty** wizyty (nowe punkty; stare bez daty zostają);
+- **D5** zapis łamiący reguły nie jest poprawiany po cichu; werdykt ChPL takiego cyklu wstrzymany (rata 3);
+- **D6** karta porównania dla otyłości: granicą są Zakończenie i Włączenie, bez progu przerwy 3 mies. (rata 4);
+- **D7** najnowszy cykl na górze listy (rata 2); **D8** monitor GH — osobny projekt po ratach 1–4.
+
+Plan w ratach: **1** — wspólna funkcja cykli i reguły w monitorze (ten wpis, bez zmiany liczb); **2** — monitor
+pogrupowany w cykle, redukcja od Włączenia cyklu, baner porządkowania starego zapisu; **3** — Karta pacjenta (historia
+cykli, przełącznik, wstrzymanie werdyktu przy niezgodności); **4** — karta porównania i zakładka „Postępy” na cyklach, R6.
+
+**Stan przed zmianą (sprawdzony na kodzie).** Kurs leczenia wyznaczało sześć miejsc, każde inną regułą: tabela monitora
+(pierwsze Włączenie w całej liście), dodawanie w monitorze (brak kontroli — drugie Włączenie w trakcie leczenia
+przechodziło), edycja w monitorze (`Ed()`: jedno Włączenie w **całej** liście — Włączenia nowego kursu po Zakończeniu nie
+dało się poprawić, np. literówki w masie, bez zamiany go w Kontynuację: odmowa `drugi-start`), Karta pacjenta (`Ob_ks`:
+punkty po ostatnim Zakończeniu), analiza trajektorii (`therapyIntervals`: Zakończenie + przerwa ≥ 3 mies., Włączenie
+nie jest granicą) i zakładka „Postępy” (pierwsze Włączenie w kolejności wpisywania, „odstawione” przy jakimkolwiek
+Zakończeniu).
+
+**Reguły (rata 1 pilnuje ich przy wpisywaniu).**
+- R1 cykl zaczyna się od Włączenia; najwyżej jedno i zawsze jako pierwszy punkt cyklu;
+- R2 cykl kończy Zakończenie; najwyżej jedno i zawsze jako ostatni punkt cyklu;
+- R3 nowy cykl dopiero po Zakończeniu poprzedniego; Zakończenie i nowe Włączenie mogą mieć tę samą datę (zmiana leku bez
+  przerwy) — przy remisie dat punkt trafia w tablicy przed kolejnymi remisami, jeśli tylko tak spełnia reguły;
+- R4 (D2) wizyta, która otwierałaby cykl bez Włączenia (Kontynuacja po zakończonym cyklu albo pierwszy punkt listy), nie
+  zapisuje się sama — lekarz wybiera „Zapisz jako Włączenie (nowego cyklu)” albo „Cykl bez Włączenia — leczenie rozpoczęte
+  poza monitorowaniem”;
+- R5 wizyta trafia do cyklu według daty; data w przerwie między cyklami i Kontynuacja sprzed pierwszego Włączenia są
+  odrzucane; edycja przenosząca punkt do innego cyklu pyta o potwierdzenie; usunięcie Zakończenia między cyklami i edycja,
+  która by je połączyła, są odrzucane; usunięcie Włączenia pyta z podaniem skutku dla Karty pacjenta;
+- R7 (D4) nowe Włączenie i Zakończenie bez daty są odrzucane (dotąd Włączenie bez daty przechodziło po potwierdzeniu);
+  stare Włączenie bez daty da się poprawiać bez dopisywania daty, dopóki nie zmienia rodzaju.
+
+**Kolejność i granice.** Kolejność jak w tabeli monitora i w Karcie pacjenta: po datach, gdy datę ma każdy punkt, inaczej
+po wieku w miesiącach; remisy w kolejności tablicy. Granicę cyklu wyznacza **wyłącznie Zakończenie** — dwa Włączenia bez
+Zakończenia między nimi to jeden cykl z niezgodnością `dwa-wlaczenia` (tak jak bieżący kurs wyznacza `Ob_ks`), a nie dwa
+cykle. Niezgodności starego zapisu (`dwa-wlaczenia`, `wlaczenie-nie-pierwsze`, `zakonczenie-bez-wizyt`) **nie blokują**
+innych akcji; blokowana jest akcja, która wprowadza nową niezgodność albo łączy lub rozcina istniejące cykle.
+
+**Kod.**
+- `vilda_cykle_leczenia.js` 1 (nowy, czytelny; `window.VildaCykleLeczenia`): `uporzadkuj`, `podziel` (cykle, stan,
+  Włączenie, Zakończenie, niezgodności), `sprawdz(punkty, {rodzaj: 'dodaj'|'edytuj'|'usun', …}, {bezWlaczenia})` — oddaje
+  nową tablicę (te same obiekty) i miejsce wstawienia albo kod i komunikat odmowy; `wybor: true` dla R4; `potwierdz` dla
+  przeniesienia i usunięcia Włączenia. Bez norm, progów i zapisu.
+- `obesity_therapy_monitor.js` 23: dodawanie (`vt`), edycja (`Ed`, `Eb`) i usuwanie (`Cd`) przez moduł; komunikat
+  w miejscu przycisków (`#obesityTherapyActionMsg`, `role="status"`, klasy `.obm-msg err|warn`) zamiast `alert()` —
+  także „Uzupełnij co najmniej wiek, masę i wzrost”; potwierdzenia (`confirm`) jak dotąd. `Ed(t,e,n)` bierze moduł
+  z 4. argumentu albo z `window`; bez modułu zostaje dawna reguła (monitor działa jak przed ratą 1). Kod odmowy
+  `dwa-wlaczenia` wraca z `Ed` jako `drugi-start` (zgodność z dotychczasowym API).
+- `docpro.html`: `vilda_cykle_leczenia.js?v=1` przed monitorem, kontener komunikatu; `inline_docpro_01.css` 3: style
+  komunikatu (tokeny; na telefonie przyciski wyboru na całą szerokość, min. 44 px).
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm; cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024
+99,0 kg, Z 15.10.2024 97,5 kg; cykl 2 — Wegovy: W 12.11.2024 98,5 kg, K 12.02.2025, K 10.05.2025):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+|---|---|---|---|
+| CY-1 | W, K cyklu 1; dodaj W 10.06.2024 | odmowa: „Cykl 1 ma już Włączenie (12.01.2024). Nowy cykl rozpoczniesz po Zakończeniu cyklu 1.” | dodane |
+| CY-2 | cykl 1 zakończony; dodaj W 12.11.2024 | cykl 2, aktywny | dodane |
+| CY-3 | dwa cykle; popraw masę we W 12.11.2024, zapis jako Włączenie | zapisane | odmowa `drugi-start` |
+| CY-4 | dwa cykle; dodaj K 01.11.2024 | odmowa: data w przerwie między cyklem 1 (zakończony 15.10.2024) a cyklem 2 (Włączenie 12.11.2024) | dodane |
+| CY-5 | W, K 12.04.2024; dodaj Z 10.03.2024 | odmowa: „Po 10.03.2024 w cyklu 1 są jeszcze wizyty (1)…” | dodane |
+| CY-6 | dwa cykle; usuń Z 15.10.2024 | odmowa bez pytania: połączyłoby cykl 1 z cyklem 2 | usunięte po „Usunąć?” |
+| CY-7 | stary zapis W, K, W, K bez Z | jeden cykl, niezgodność `dwa-wlaczenia`; dopisanie K przechodzi; zamiana drugiego W w K usuwa niezgodność | — |
+| CY-8 | W, K; dodaj Z 15.10.2024, potem W 15.10.2024 | dwa cykle, Z przed W | zależnie od kolejności wpisania |
+| D2 | cykl 1 zakończony; dodaj K 10.01.2025 | pytanie z trzema przyciskami; „Cykl bez Włączenia…” zapisuje K, „Zapisz jako Włączenie nowego cyklu” zapisuje W | K dodane bez pytania |
+| R7 | brak punktów; dodaj W bez daty | odmowa: „Punkt „Włączenie” wymaga daty wizyty…” | dodane po potwierdzeniu |
+
+**Testy.** `tests/unit/cykle-leczenia.test.mjs` 30 (prawdziwy moduł); `tests/unit/otylosc-edycja-punktu.test.mjs` +3
+(CY-3, drugie Włączenie w cyklu 2 z komunikatem modułu, droga bez modułu), dotychczasowe asercje bez zmian — `Ed()`
+wołane z modułem; `tests/e2e/otylosc-cykle-rata-1.spec.mjs` 8 (prawdziwy DocPro: CY-1, CY-2+CY-3, CY-4, D2 oba wybory,
+R7, CY-6 z usunięciem Włączenia, telefon 390 px); `tests/e2e/otylosc-edycja-punktu.spec.mjs` — komunikat „drugie
+Włączenie” czytany z pola komunikatu zamiast z `alert()` (ta sama asercja).
+
+**Wpływ kliniczny.** Liczby, progi, okna i werdykty **bez zmian** (tabela monitora, Karta pacjenta, karta porównania,
+„Postępy” liczą jak dotąd). Zmieniają się reguły wpisywania: monitor nie przyjmie drugiego Włączenia w cyklu, wizyty
+w przerwie między cyklami, Zakończenia przed późniejszą wizytą cyklu, Włączenia i Zakończenia bez daty; cykl bez
+Włączenia wymaga świadomego wyboru; Włączenie nowego cyklu da się poprawić. Istniejące zapisy nie są zmieniane.
+
+**Ograniczenia i punkty na kolejne raty.** Tabela monitora nadal liczy redukcję od pierwszego Włączenia w historii
+(rata 2); Karta pacjenta, karta porównania i „Postępy” nie korzystają jeszcze z modułu (raty 3–4); import punktów
+z notatek (`obesity_migration_assist.js`) i `obesityTherapyMonitorSetPoints` nie przechodzą przez reguły (baner
+porządkowania — rata 2); przydział do cyklu na żywo i przyciski wyłączone z podanym powodem — rata 2.
+
+**Wersje.** Nowy `vilda_cykle_leczenia.js` 1, `obesity_therapy_monitor.js` 22 → 23, `inline_docpro_01.css` 2 → 3
+(`docpro.html`), precache (append-only), `SW_VERSION` 1.1.129 → 1.1.130 (+ pin; 1.1.129 wydał P-RETENCJA-NAGROBKI #502), fixture wersji.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna reguł i brzmień komunikatów; scalenie i wdrożenie; raty 2–4.
+
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH
