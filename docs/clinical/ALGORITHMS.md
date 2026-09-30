@@ -6408,7 +6408,7 @@ PAL karty spożycia po wczytaniu pacjenta ustępuje PAL-owi planu (wybór PAL pl
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
 
-## Ostrzeżenie o rozbieżnych danych urodzeniowych w karcie SGA, Karcie Pacjenta i epikryzie (P-URODZENIOWE-ROZBIEZNOSC, SW 1.1.126, `vilda_urodzeniowe_rozbieznosc.js` 1, 2026-09-30)
+## Ostrzeżenie o rozbieżnych danych urodzeniowych w karcie SGA, Karcie Pacjenta i epikryzie (P-URODZENIOWE-ROZBIEZNOSC, SW 1.1.127, `vilda_urodzeniowe_rozbieznosc.js` 1, 2026-09-30)
 
 **Usterka (diagnoza 2026-09-30, punkt W5).** Dane urodzeniowe są w rekordzie dwa razy i nic ich nie synchronizuje:
 sekcja `birth` (karta SGA w DocPro) i sekcja `perinatal` (Karta Pacjenta → „Dane okołoporodowe”). Karta SGA, opis
@@ -6472,7 +6472,7 @@ zapis, synchronizacja i pierwszeństwo źródeł bez zmian; żadna wartość nie
 **Wersje.** Nowe `vilda_urodzeniowe_rozbieznosc.js` 1 i `vilda_urodzeniowe_rozbieznosc.css` 1 (8 stron z Kartą
 Pacjenta); `vilda_auth_ui.js` 467 → 468 (8 stron i wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`),
 `vilda_chrome.js` 81 → 82 i `vilda_session_bridge.js` 9 → 10 (22 strony), `vilda_epicrisis_ui.js` 25 → 26 (index),
-docpro.html (kontener `#sgaBirthRozbieznosc`), precache (append-only), `SW_VERSION` 1.1.125 → 1.1.126 (+ pin), fixture
+docpro.html (kontener `#sgaBirthRozbieznosc`), precache (append-only), `SW_VERSION` 1.1.126 → 1.1.127 (+ pin; 1.1.126 wydał P-DIETA-AUDYT2 rata 2, #499), fixture
 wersji.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie. Osobno: czy ostrzeżenie ma trafić
