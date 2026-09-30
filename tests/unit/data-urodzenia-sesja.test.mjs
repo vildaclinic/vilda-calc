@@ -28,7 +28,10 @@ function srodowisko() {
   return { win, pola, D: win.VildaDobAge };
 }
 
-const ISO = () => { const d = new Date(); const u = new Date(d.getFullYear() - 6, d.getMonth() - 2, 5); const z = (n) => String(n).padStart(2, '0'); return { iso: `${u.getFullYear()}-${z(u.getMonth() + 1)}-${z(u.getDate())}`, pole: `${z(u.getDate())}-${z(u.getMonth() + 1)}-${u.getFullYear()}` }; };
+// Dzień 1., nie 5.: przy dniu miesiąca większym niż dzisiejszy wiek pożycza miesiąc („1 mies.” zamiast
+// „2 mies.”) i test padał w dniach 1–4 każdego miesiąca — w strefie testów (Pacific/Chatham, UTC+13:45)
+// już od ok. 10:15 UTC ostatniego dnia poprzedniego miesiąca. Pierwszy dzień miesiąca nigdy nie pożycza.
+const ISO = () => { const d = new Date(); const u = new Date(d.getFullYear() - 6, d.getMonth() - 2, 1); const z = (n) => String(n).padStart(2, '0'); return { iso: `${u.getFullYear()}-${z(u.getMonth() + 1)}-${z(u.getDate())}`, pole: `${z(u.getDate())}-${z(u.getMonth() + 1)}-${u.getFullYear()}` }; };
 
 describe('setFromSession — data po odświeżeniu strony', () => {
   it('data z kartoteki wraca jako tylko do odczytu i wylicza wiek', () => {
