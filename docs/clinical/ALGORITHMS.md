@@ -6417,7 +6417,7 @@ po obu stronach).
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
 przez monitor i skasowanie bazy.
 
-## Ukryta karta zaawansowana na DocPro nie zmienia punktów terapii GH ani wierszy ręcznych; monitor bez kopii w IndexedDB (P-GH-DOCPRO, SW 1.1.130, `gh_therapy_monitor.js` 46, `docpro_state_persist.js` 7, 2026-09-30)
+## Ukryta karta zaawansowana na DocPro nie zmienia punktów terapii GH ani wierszy ręcznych; monitor bez kopii w IndexedDB (P-GH-DOCPRO, SW 1.1.131, `gh_therapy_monitor.js` 46, `docpro_state_persist.js` 7, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów GH (`docs/AUDYT-PRZEPLYW-GH.md`, U3 i U5) i decyzja właściciela z 2026-09-30:
 kolejna zmiana po P-GH-ZRODLO obejmuje ukrytą kartę zaawansowaną na DocPro i kopię punktów w IndexedDB. Hipotezę
@@ -6480,7 +6480,7 @@ wierszu) oraz wiersz-duch po usunięciu ostatniego punktu. Rekordów zmienionych
 - Wiersze punktów w ukrytej karcie zostają (moduły DocPro czytają `advancedGrowthData`).
 
 **Wersje.** `gh_therapy_monitor.js` 45 → 46, `docpro_state_persist.js` 6 → 7 (`docpro.html`); precache (append-only);
-`SW_VERSION` 1.1.129 → 1.1.130 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
+`SW_VERSION` 1.1.130 → 1.1.131 (po #504; + pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
 odświeżony.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna, scalenie i wdrożenie.
