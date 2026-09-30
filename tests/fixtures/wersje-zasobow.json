@@ -436,8 +436,8 @@
   "sha256": "b7243addf7108b90179e4f9cf997405fa450e78ab3afc8ede56e4c1f253a082c"
  },
  "ustawienia.css": {
-  "v": 15,
-  "sha256": "ad645ddff794d044f80a42bc63e6154d6d88286348bfe74322f6c7c6e63d3d04"
+  "v": 16,
+  "sha256": "d4747fc4e6bc739ff68dbfb8ed16551f4e8d4ba6e0a93a946d3a26a56a8e49f4"
  },
  "vilda_activity_burn.js": {
   "v": 1,
@@ -720,8 +720,8 @@
   "sha256": "6b0664b717b7177fce120075cbee7f99fd17248e35ae93f860f173cf5e08fabb"
  },
  "vilda_persistence_adapter.js": {
-  "v": 27,
-  "sha256": "87ec96c9f6725bafe8c210bd3d73951a4e4eb34d5fdc0fe422693778071ff372"
+  "v": 28,
+  "sha256": "c65f5bc0b43c6e9637de0ee52cc68d2dd757d58f63bc758bf231c4b3265046f0"
  },
  "vilda_pola_tozsamosci.js": {
   "v": 4,
@@ -830,6 +830,10 @@
  "vilda_shell.js": {
   "v": 57,
   "sha256": "4d3b0322732000dda7dec1c1c9a423ae58cc7c31c876426f5b937a42182218d7"
+ },
+ "vilda_spojnosc_zapisow.js": {
+  "v": 1,
+  "sha256": "27f41ad67be637c7a69a5a7e3f3f5feee5a5c34d11992e3ebe312b352abdcb97"
  },
  "vilda_status_bar.css": {
   "v": 4,
