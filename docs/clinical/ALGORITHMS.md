@@ -6386,6 +6386,70 @@ porządkowania — rata 2); przydział do cyklu na żywo i przyciski wyłączone
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna reguł i brzmień komunikatów; scalenie i wdrożenie; raty 2–4.
 
+## Cykle leczenia otyłości — rata 2: monitor w blokach cykli, redukcja od Włączenia cyklu, baner porządkowania (P-OTYLOSC-CYKLE rata 2, 2026-09-30)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej);
+„ruszaj z ratą 2” — tego samego dnia. Makiety (komputer i telefon) z projektu zaakceptowane razem z rekomendacjami.
+
+**Zmiana kliniczna — punkt odniesienia tabeli monitora.** Redukcja masy i BMI w tabeli monitora DocPro liczy się od
+**Włączenia tego cyklu**; w cyklu bez Włączenia — od jego **1. punktu**, z podpisem „(od 1. punktu)” w nagłówkach kolumn.
+Dotąd punktem odniesienia całej tabeli było pierwsze Włączenie w całej liście (bez Włączenia — pierwszy punkt listy),
+więc wznowione leczenie liczyło się od startu poprzedniego kursu. Progi, okna, kotwice ChPL, BMI-SDS, Karta pacjenta,
+karta porównania i „Postępy” — bez zmian (raty 3–4). Zapis punktów bez zmian.
+
+**Monitor (`obesity_therapy_monitor.js`, `docpro.html`, `inline_docpro_01.css`).**
+- Tabela w blokach cykli z `VildaCykleLeczenia.podziel`: **najnowszy cykl na górze** (D7), punkty w cyklu od najstarszego.
+  Nagłówek cyklu: numer, stan („aktywny” / „zakończony”), „bez Włączenia”, „do uporządkowania” (niezgodność), lek
+  (preparat z punktu odniesienia), okres, czas trwania (tygodnie z dat albo miesiące z wieku), liczba punktów, wynik:
+  „od Włączenia x%” (aktywny), „wynik x%” (zakończony), „od 1. punktu …” (bez Włączenia) — masa ostatniego punktu
+  względem punktu odniesienia cyklu.
+- Między cyklami: „przerwa N dni · data Zakończenia → data 1. punktu następnego cyklu” (bez dat — „przerwa ok. N mies.”;
+  ten sam dzień — „bez przerwy · nowy cykl tego samego dnia”).
+- Zakończone cykle są zwinięte do nagłówka („Pokaż punkty (N) ▾”), gdy cykli jest więcej niż jeden; rozwinięte zostają:
+  cykl z niezgodnością i cykl z punktem właśnie edytowanym. Zwinięcie to stan widoku (w pamięci strony), nie dane pacjenta.
+- Przydział na żywo (`#obesityTherapyAssign`): po wpisaniu daty lub wieku — „Ta wizyta trafi do cyklu N (aktywny, od …)”,
+  „… (zakończony …)”, „Ta wizyta rozpocznie cykl N.” albo „… rozpocznie nowy cykl — przy zapisie wybierzesz, czy to
+  Włączenie.”. Przyciski rodzaju wizyty, których reguły nie przepuszczą, dostają `aria-disabled` i krótki powód pod spodem
+  (`krotko` z modułu, np. „Cykl 2 ma już Włączenie (12.11.2024)”, „Data w przerwie między cyklem 1 a 2”, „Wymaga daty
+  wizyty”). Kliknięcie nadal działa i pokazuje pełny komunikat raty 1 — klawiatura i czytnik ekranu nie są blokowane.
+- Baner „Zapis wymaga uporządkowania” (`#obesityTherapyFixBanner`) nad listą, gdy zapis łamie reguły (np. import z notatek
+  albo zapis sprzed raty 1). Pozycje i poprawki jednym kliknięciem: dwa Włączenia w cyklu — „Zmień <data> na Kontynuację”
+  (z potwierdzeniem) albo „Dopisz Zakończenie przed <data>” (podpowiedź w miejscu przycisków; dopisane Zakończenie
+  rozdziela zapis na dwa cykle); wizyta przed Włączeniem cyklu — „Edytuj wizytę <data>”; Zakończenie bez wizyt — „Usuń to
+  Zakończenie”; Włączenie lub Zakończenie bez daty — „Uzupełnij datę”. Nic nie zmienia się samo (D5).
+- Bez modułu cykli — jedna tabela jak dotąd (pierwsze Włączenie w całej liście).
+
+**Moduł (`vilda_cykle_leczenia.js`).** Odmowy niosą `krotko` (powód pod przyciskiem). Zakończenie wpisane między dwa
+Włączenia starego zapisu nie jest rozcięciem cyklu, gdy odcięta część zaczyna się od Włączenia — to poprawka niezgodności
+`dwa-wlaczenia`. Zakończenie w środku poprawnego cyklu nadal jest odrzucane.
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm; cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024 99,0 kg,
+Z 15.10.2024 97,5 kg; cykl 2 — Wegovy: W 12.11.2024 98,5 kg, K 12.02.2025 95,5 kg, K 10.05.2025 93,0 kg):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+|---|---|---|---|
+| CR-1 | dwa cykle | bloki: cykl 2 na górze, redukcje cyklu 2: —, −3,0%, −5,6%; nagłówek „… 25,6 tyg. · 3 punkty od Włączenia −5,6%”; przerwa 28 dni; cykl 1 zwinięty, „wynik −6,3%” | jedna tabela; cykl 2: −5,3%, −8,2%, −10,6% (od 104,0 kg) |
+| CR-2 | W 06.01.2025 100 kg, Z 02.06.2025 90 kg, K 03.11.2025 108 kg, K 27.04.2026 101 kg | cykl 2 bez Włączenia: „(od 1. punktu)”, —, −6,5%; cykl 1: —, −10,0% | +8,0%, +1,0% (od 100 kg) |
+| CR-3 | dwa cykle; data 10.06.2025 | „Ta wizyta trafi do cyklu 2 (aktywny, od 12.11.2024).”; Włączenie wyłączone: „Cykl 2 ma już Włączenie (12.11.2024)” | brak podglądu |
+| CR-4 | dwa cykle; data 01.11.2024 | wszystkie trzy przyciski wyłączone z powodem, bez przydziału | brak podglądu |
+| CR-5 | stary zapis W 12.01.2024, K, W 03.05.2024, K | baner; „Zmień 03.05.2024 na Kontynuację” → jeden poprawny cykl | brak sygnału |
+| CR-6 | jak CR-5; „Dopisz Zakończenie przed 03.05.2024”, Z 30.04.2024 | dwa cykle, baner znika; cykl 2: „od Włączenia −3,0%” | Z odrzucone (rata 1) albo brak sygnału |
+
+**Testy.** `tests/unit/cykle-leczenia.test.mjs` +3 (krótkie powody, rozdzielenie starego zapisu, Zakończenie w środku
+poprawnego cyklu); `tests/e2e/otylosc-cykle-rata-2.spec.mjs` 6 (prawdziwy DocPro: CR-1, CR-3/CR-4 z wizytą wsteczną do
+cyklu 1, CR-5, CR-6, cykl bez Włączenia, telefon 390 px). Zaktualizowane: `karta-otylosc-bez-punktu-wlaczenia.spec.mjs`
+MON-3 (nowe liczby i podpis — celowa zmiana tej raty; MON-1 i MON-2 bez zmian), `otylosc-cykle-rata-1.spec.mjs`
+(zdarzenia `input`, przyciski z powodem, rozwinięcie zwiniętego cyklu), `otylosc-edycja-punktu.spec.mjs` (selektor tabeli).
+
+**Ograniczenia i kolejne raty.** Karta pacjenta (historia cykli, przełącznik, wstrzymanie werdyktu przy niezgodności) —
+rata 3; karta porównania, „Postępy” i R6 (zmiana substancji zaczyna nowy cykl) — rata 4. Import z notatek i
+`obesityTherapyMonitorSetPoints` nadal nie przechodzą przez reguły — niezgodność pokazuje baner.
+
+**Wersje.** WERSJE_RATA_2
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia per cykl i brzmień nagłówków, podglądu
+przydziału, powodów i banera; scalenie i wdrożenie; raty 3–4.
+
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH

@@ -62,7 +62,8 @@ async function otworzMonitor(page, punkty) {
 
 async function wpisz(page, pola) {
   await page.evaluate((p) => {
-    const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = String(v); };
+    // Zdarzenie „input” jak przy pisaniu — od raty 2 monitor przelicza wtedy przyciski i przydział do cyklu.
+    const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = String(v); e.dispatchEvent(new Event('input', { bubbles: true })); } };
     set('obesityAge', p.lata); set('obesityAgeMonths', p.mies);
     set('obesityWeight', p.masa); set('obesityHeight', 170);
     set('obesityDose', p.dawka || ''); set('obesityDate', p.data);
@@ -77,7 +78,10 @@ test('CY-1: drugie Włączenie w trakcie cyklu nie zostaje dodane, a komunikat s
   test.setTimeout(120_000);
   await otworzMonitor(page, CYKL1.slice(0, 2));
   await wpisz(page, { lata: 40, mies: 5, masa: 98, data: '2024-06-10' });
-  await przycisk(page, 'Włączenie leczenia').click();
+  // Rata 2: przycisk jest wyłączony (aria-disabled) z krótkim powodem; kliknięcie nadal pokazuje pełny komunikat.
+  await expect(przycisk(page, 'Włączenie leczenia')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#obesityWhy-start')).toHaveText('Cykl 1 ma już Włączenie (12.01.2024)');
+  await przycisk(page, 'Włączenie leczenia').click({ force: true });
 
   await expect(komunikat(page)).toBeVisible();
   await expect(komunikat(page)).toHaveClass(/\berr\b/);
@@ -123,7 +127,8 @@ test('CY-4: Kontynuacja z datą w przerwie między cyklami jest odrzucana', asyn
   test.setTimeout(120_000);
   await otworzMonitor(page, [...CYKL1, ...CYKL2]);
   await wpisz(page, { lata: 40, mies: 9, masa: 97, data: '2024-11-01' });
-  await przycisk(page, 'Kontynuacja leczenia').click();
+  await expect(page.locator('#obesityWhy-continue')).toHaveText('Data w przerwie między cyklem 1 a 2');
+  await przycisk(page, 'Kontynuacja leczenia').click({ force: true });
   await expect(komunikat(page)).toHaveText('Data 01.11.2024 wypada w przerwie między cyklem 1 (zakończony 15.10.2024) a cyklem 2 (Włączenie 12.11.2024). Popraw datę wizyty.');
   expect(await punkty(page)).toHaveLength(5);
 });
@@ -159,7 +164,8 @@ test('R7: Włączenie bez daty wizyty nie zostaje dodane', async ({ page }) => {
   test.setTimeout(120_000);
   await otworzMonitor(page, []);
   await wpisz(page, { lata: 41, mies: 0, masa: 100, data: '' });
-  await przycisk(page, 'Włączenie leczenia').click();
+  await expect(page.locator('#obesityWhy-start')).toHaveText('Wymaga daty wizyty');
+  await przycisk(page, 'Włączenie leczenia').click({ force: true });
   await expect(komunikat(page)).toHaveText('Punkt „Włączenie” wymaga daty wizyty — od niej liczą się okna oceny wg ChPL i granice cykli.');
   expect(await punkty(page)).toEqual([]);
 });
@@ -170,12 +176,14 @@ test('CY-6: usunięcie Zakończenia między cyklami jest odrzucane bez pytania, 
   const pytania = [];
   page.on('dialog', async (d) => { pytania.push(d.message()); await d.dismiss(); });
 
-  await page.locator('#obesityTherapyTbody .obm-del[data-id="c"]').click();
+  // Rata 2: zakończony cykl 1 jest zwinięty — rozwijamy go, żeby dostać się do jego punktów.
+  await page.locator('#obesityTherapyTableWrap .obm-cycle[data-cykl="1"] .obm-ctoggle').click();
+  await page.locator('#obesityTherapyTableWrap .obm-del[data-id="c"]').click();
   await expect(komunikat(page)).toHaveText('Usunięcie tego Zakończenia połączyłoby cykl 1 z cyklem 2. Najpierw usuń albo zmień Włączenie cyklu 2 (12.11.2024).');
   expect(pytania).toEqual([]);
   expect(await punkty(page)).toHaveLength(5);
 
-  await page.locator('#obesityTherapyTbody .obm-del[data-id="d"]').click();
+  await page.locator('#obesityTherapyTableWrap .obm-del[data-id="d"]').click();
   await expect.poll(() => pytania.length).toBe(1);
   expect(pytania[0]).toContain('Cykl 2 straci punkt odniesienia (Włączenie 12.11.2024).');
   // Odmowa w oknie potwierdzenia zostawia punkt.

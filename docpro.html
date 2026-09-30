@@ -1059,11 +1059,14 @@
         <label>Dawka<input id="obesityDose" placeholder="np. 2,4 mg"></label>
         <label>Data wizyty<input id="obesityDate" type="date"></label>
       </div>
+      <!-- P-OTYLOSC-CYKLE rata 2: do którego cyklu trafi wizyta (na żywo, z daty i wieku); treść ustawia obesity_therapy_monitor.js. -->
+      <div id="obesityTherapyAssign" class="obm-assign" role="status" aria-live="polite" hidden></div>
       <div style="font-size:.75rem;color:#5a7274;margin-top:10px;">Rodzaj wizyty:</div>
+      <!-- P-OTYLOSC-CYKLE rata 2: przycisk, którego reguły cykli nie przepuszczą, dostaje aria-disabled i krótki powód pod spodem (.obm-why). -->
       <div class="obm-visit">
-        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('start')">Włączenie leczenia</button>
-        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button>
-        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button>
+        <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="start" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('start')">Włączenie leczenia</button><small id="obesityWhy-start" class="obm-why" hidden></small></div>
+        <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="continue" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button><small id="obesityWhy-continue" class="obm-why" hidden></small></div>
+        <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="end" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button><small id="obesityWhy-end" class="obm-why" hidden></small></div>
       </div>
       <!-- P-OTYLOSC-CYKLE rata 1: komunikat o regułach cykli leczenia w miejscu przycisków (zamiast okienka); treść i przyciski wyboru wstawia obesity_therapy_monitor.js. -->
       <div id="obesityTherapyActionMsg" class="obm-msg" role="status" aria-live="polite" hidden></div>
@@ -1072,15 +1075,11 @@
       <h4 style="margin:1rem 0 0.4rem;">Punkty terapii (<span id="obesityTherapyCount">0</span>)</h4>
       <!-- P-OTYLOSC-BEZ-STARTU: podpowiedź „brak punktu Włączenie” (jak #ghTherapyStartHint w monitorze GH); treść i widoczność ustawia obesity_therapy_monitor.js. -->
       <div id="obesityTherapyStartHint" class="obm-start-hint" hidden></div>
+      <!-- P-OTYLOSC-CYKLE rata 2: zapis łamiący reguły cykli — co i gdzie, z poprawką jednym kliknięciem; treść wstawia obesity_therapy_monitor.js. -->
+      <div id="obesityTherapyFixBanner" class="obm-fix" role="region" aria-label="Zapis wymaga uporządkowania" hidden></div>
       <div id="obesityTherapyEmpty" class="obm-empty">Brak punktów. Dodaj „Włączenie leczenia" — to baseline, od którego liczymy redukcję i odpowiedź na leczenie.</div>
-      <div id="obesityTherapyTableWrap" style="display:none; overflow-x:auto;">
-        <table>
-          <thead><tr>
-            <th>Rodzaj wizyty</th><th>Wiek</th><th>Masa (kg)</th><th>Wzrost (cm)</th><th>BMI</th><th>BMI-SDS</th><th>Dawka</th><th id="obesityRedMasaTh">Redukcja masy</th><th id="obesityRedBmiTh">Redukcja BMI</th><th>Akcje</th>
-          </tr></thead>
-          <tbody id="obesityTherapyTbody"></tbody>
-        </table>
-      </div>
+      <!-- P-OTYLOSC-CYKLE rata 2: bloki cykli (nagłówek cyklu + tabela punktów, przerwy między cyklami) rysuje obesity_therapy_monitor.js. -->
+      <div id="obesityTherapyTableWrap" style="display:none; overflow-x:auto;"></div>
     </div>
     </div><!-- /obesityTabMonPanel -->
   </div>
