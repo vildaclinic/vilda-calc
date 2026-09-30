@@ -193,7 +193,9 @@
     }).join('') + '</div>';
   }
 
-  /* P-DIETA rata G2 (decyzja właściciela 2026-09-26): stabilizacja dziecka = utrzymanie masy. Cel na ten etap to obecna masa;
+  /* P-DIETA-B8 (2026-09-30): wzrastanie „w najbliższym roku ok. X cm” (dalej coraz wolniej, jak mediana siatki), nie stałe „cm/rok”;
+     „Dojście do normy BMI przy stałej masie ciała” = nagłówek S1 silnika (masa stała).
+     P-DIETA rata G2 (decyzja właściciela 2026-09-26): stabilizacja dziecka = utrzymanie masy. Cel na ten etap to obecna masa;
      bez osi w kilogramach i bez „pierwszego kroku” (sugerowały chudnięcie). Zachęta o wzrastaniu tylko wtedy, gdy generator ją podaje
      (przy tempie wzrastania poniżej normy jej nie ma). Stopka tym samym brzmieniem co karta „Droga do normy BMI”. Nic tu nie jest liczone. */
   function sekcjaUtrzymanieDziecka(dane) {
@@ -201,8 +203,8 @@
     if (teraz == null) return '';
     var zacheta = '';
     if (dane.wzrastanie && dane.wzrastanie.tempoCmRokLabel) {
-      zacheta = 'Wzrastanie wciąż trwa (ok. ' + esc(dane.wzrastanie.tempoCmRokLabel)
-        + ' cm/rok) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała.';
+      zacheta = 'Wzrastanie wciąż trwa (w najbliższym roku ok. ' + esc(dane.wzrastanie.tempoCmRokLabel)
+        + ' cm) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała.';
     }
     var stopka = [];
     var m = dane.masa || {};
@@ -246,8 +248,8 @@
     /* Zdanie zachęty: u dziecka mówimy o wzrastaniu TYLKO wtedy, gdy generator też o nim mówi. */
     var zacheta = '';
     if (!dane.dorosly && dane.wzrastanie && dane.wzrastanie.tempoCmRokLabel) {
-      zacheta = 'Wzrastanie wciąż trwa (ok. ' + esc(dane.wzrastanie.tempoCmRokLabel)
-        + ' cm/rok) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała.';
+      zacheta = 'Wzrastanie wciąż trwa (w najbliższym roku ok. ' + esc(dane.wzrastanie.tempoCmRokLabel)
+        + ' cm) i każdy centymetr sam obniża BMI, nawet przy niezmienionej masie ciała.';
     }
 
     var stopka = [];

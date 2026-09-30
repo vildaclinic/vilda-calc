@@ -237,10 +237,11 @@ test.describe('P-DIETA rata G1a — zdania w głosie lekarza, wariant wg strateg
     expect(r.tekst).toContain(ZD_ALARM_STAB);
     expect(r.tekst).toContain('Zalecane jest utrzymanie obecnej masy ciała podczas dalszego wzrastania, aby BMI mogło stopniowo się obniżać.');
     expect(r.tekst).not.toMatch(/lekarsk|ograniczeniem kalorii/);
-    expect(r.kartaPlanu).toContain('Przy obecnym tempie wzrastania samo utrzymanie masy ciała nie doprowadzi do normy BMI; kolejny etap planu zależy od wyniku dalszej oceny.');
+    // P-DIETA-B8: przy alarmie tempa czasu nie podaje się — bez twierdzenia, że utrzymanie masy „nie doprowadzi” do normy
+    expect(r.kartaPlanu).toContain('Tempo wzrastania wymaga oceny — czasu dojścia do normy BMI nie podano; kolejny etap planu zależy od wyniku dalszej oceny.');
     expect(r.kartaPlanu).toContain('strategia domyślna przy tempie wzrastania poniżej normy');
     expect(r.kartaPlanu).not.toMatch(/praktycznie zakończonym|rozważ strategię redukcji|BMI obniża się wraz ze wzrostem|Barlow 2007/);
-    expect(r.droga).toContain('przy obecnym tempie wzrastania samo utrzymanie masy nie doprowadzi do normy BMI');
+    expect(r.droga).toContain('tempo wzrastania wymaga oceny — czasu dojścia do normy nie podano');
     expect(r.droga).toContain('Kolejny etap planu zależy od wyniku dalszej oceny.');
     expect(r.droga).not.toMatch(/praktycznie zakończonym|BMI obniży się dzięki dalszemu wzrastaniu/);
     expect(r.naglowek).toContain('Dodatkowo tempo wzrastania jest poniżej normy: 2,0 cm/rok (norma ≥ 4 cm/rok).');

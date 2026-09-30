@@ -110,8 +110,9 @@ test('J4: czas dojścia — 14-latek ≤ 52 tyg. „około N tygodni (ok. X mies
   expect(r14.text).toMatch(/można szacować na około \d+ tygodni \(ok\. \d+(,\d)? miesi(ąca|ęcy)\)\. Regularna aktywność/u);
   expect(r14.text).not.toContain('mies.)');
   const r3 = await run(page, { age: 3, sex: 'F', w: 22, h: 100 });
-  expect(r3.text).toMatch(/może zająć około \d+ miesięcy\. Przykładowy przebieg/u);
-  expect(r3.text).not.toMatch(/może zająć około \d+ tygodni/u);
+  // P-DIETA-B8: zdanie S1 („przy utrzymaniu obecnej masy … orientacyjnie za …”), przebieg BMI bez wzrostu w cm
+  expect(r3.text).toMatch(/orientacyjnie za około \d+ miesięcy\.[^]*?Przykładowy przebieg BMI przy stałej masie/u);
+  expect(r3.text).not.toMatch(/orientacyjnie za około \d+ tygodni/u);
   const a = await run(page, { age: 35, sex: 'M', w: 105, h: 175 });
   expect(a.text).toMatch(/na poziomie „[^”]+” \(PAL \d,\d\)/u);
   expect(a.text).toMatch(/można szacować na około \d+ tygodni \(ok\. \d+(,\d)? miesi(ąca|ęcy)\)\.|można szacować na około \d+(,\d)? miesi(ąca|ęcy)\./u);

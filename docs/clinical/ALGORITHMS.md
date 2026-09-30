@@ -146,6 +146,8 @@ Wpływ na dotychczasowe wyniki: dodanie KR **nie zmienia** prognoz Bayley–Pinn
 
 **Zakres wdrożenia**: silnik KR (`vilda_khamis_roche.js`), silnik RWT i budowniczy linii podsumowania (`vilda_advanced_growth.js`), karta C (`vilda_growth_card_c.js`), linia KR podsumowania (`vilda_summary_cards.js`), widełki wykresu prognoz (`vilda_auth_ui.js`). Konsumenci progu wzrastania (zalecenia dietetyczne, symulacja wzrastania) mieli już strażniki `prognoza > wzrost` — po ograniczeniu równość oznacza dla nich to samo, co wcześniej wartość niższa (stabilizacja/fallback MPH), więc decyzje nie ulegają zmianie.
 
+**Nota P-DIETA-B8 (2026-09-30).** Dla symulacji czasu do normy BMI i prognozy wzrastania zaleceń dietetycznych prognoza ograniczona do aktualnego wzrostu (albo MPH ≤ wzrostu) oznacza „jak bez prognozy”: nie jest sufitem ani dowodem końca wzrastania (`prognozaNiePrzekraczaWzrostu`). Dotąd dawała „praktycznie zakończone” wzrastanie i najkrótszy czas stabilizacji.
+
 **Przypadek syntetyczny** (dane fikcyjne; test `tests/unit/final-height-clamp.test.mjs` wywołuje realne silniki): chłopiec 17,5 l (210 mies.), wzrost 176 cm, masa 55 kg, rodzice 165/177 → KR raw 175,16 cm; wynik: `predictedAdultHeightCm 176,0`, przedział 176,0–180,5 cm (175,16 + 5,3), `clampedToCurrentHeight:true`.
 
 **Wpływ kliniczny**: zmiana dotyczy wyłącznie przypadków, w których równanie zwraca wynik poniżej zmierzonego wzrostu (pacjenci tuż przy końcu wzrastania); prognoza punktowa może wzrosnąć maksymalnie o wielkość artefaktu (tu 0,8 cm, zawsze wewnątrz błędu metody), a górne granice przedziałów pozostają niezmienione. Status: wdrożenie zaakceptowane kierunkowo przez właściciela (rozmowa 2026-08-13); nie nadaje metodom statusu „zwalidowane klinicznie".
@@ -5972,6 +5974,124 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
 
+## Czas dojścia do normy BMI: wzrastanie wg mediany siatki i dwa scenariusze stabilizacji (P-DIETA-B8, SW 1.1.132, 2026-09-30)
+
+**Decyzje właściciela (2026-09-30), po punkcie B8 audytu zaleceń dietetycznych:**
+1. model trajektorii B′ — wzrost równoległy do mediany wzrostu siatki pacjenta;
+2. nagłówek czasu przy stabilizacji = S1 (masa stała), drugie zdanie = S2 (masa rośnie do górnej granicy planu);
+3. koniec wzrastania = ostatni miesiąc siatki głównej, nie 19 lat.
+
+Pozostałe punkty wdrożono według rekomendacji audytu. Właściciel może je jeszcze zmienić:
+- prognoza lub MPH ≤ wzrostu nie jest sufitem;
+- reguła tempa zmierzonego;
+- przyrost masy przy redukcji także przy „praktycznie zakończonym” wzrastaniu;
+- brzmienia i nota o pokwitaniu;
+- zapasowa tabela tempa bez zmian.
+
+**Problem (stan do SW 1.1.128).** `childGrowthOutlook` liczył tempo wzrastania RAZ dla wieku startu, a `energySimulateMonthsToBmiTarget` trzymał je stałe do 19. urodzin. Bez karty zaawansowanej nie było sufitu.
+- Skutek: 12-latka „rosła” +36,8 cm (do 190,6 cm), a mediana OLAF daje +11,3 cm (Kułaga 2011). Suma median DONALD i Kelly to +10,6–12,4 cm.
+- Od P-DIETA-AUDYT2 A2 fikcyjny wzrost dawał też fikcyjny przyrost masy (+13–25 kg). Czasy przy stabilizacji wychodziły 47 i 70 mies. zamiast ok. 18–28 mies. przy stałej masie.
+- Prognoza z karty ≤ wzrostu (GROWTH-PRED-CLAMP) dawała „praktycznie zakończone” wzrastanie, redukcję i jednocześnie NAJKRÓTSZY czas stabilizacji (wzrost bez sufitu i bez przyrostu masy).
+- U chłopców ze wzrostem 178 cm strategia skakała: 17;3–17;6 redukcja, a 17;7–17;11 z tabeli zapasowej 2,0 cm/rok i stabilizacja.
+
+**Reguła (`vilda_diet_plan_ui.js`).**
+
+1. **Źródło (dane, nie stała).**
+   - Mediana wzrostu pochodzi z `VildaSdsWzrostu.mediana` — ta sama reguła siatki i populacji co hSDS. Źródło to `bmiSource`, populacja pochodzi z resolvera `VildaPopulacjaPacjenta` (DS → siatka DS).
+   - Parametry są w obiekcie danych `ENERGY_WZRASTANIE`: krok 0,5 mies., horyzont 240 mies., progi „praktycznie zakończone” 1 cm/rok i 3 cm, nota o pokwitaniu 6 cm i od 8 l. u dziewcząt / 9 l. u chłopców.
+   - Wynik niesie `zrodloWzrastania`, `siatkaWzrastania`, `koniecWzrastaniaMies` i `modelWzrastania`.
+2. **Przyrost mediany** `ΔMed(m0 → m0+t)` (`energyTrajektoriaWzrostu`) to suma przyrostów w krokach 0,5 mies., liczonych w obrębie JEDNEJ siatki łańcucha: dla kroku [a, b] siatka z wieku a, a gdy nie ma punktu b — siatka z wieku b.
+   - Nigdy nie jest to różnica median dwóch siatek (szew 36 mies. Palczewska → OLAF bez skoku poziomu). Przykład dz. 24 → 216 mies.: 77,96 cm, a surowa różnica 78,62 cm.
+   - Koniec wzrastania = ostatni miesiąc siatki głównej (OLAF i WHO 216, Palczewska 222, DS 240); potem wzrost stały.
+3. **Trajektoria** h(t):
+   - bez tempa zmierzonego: h0 + ΔMed(t);
+   - tempo zmierzone v, r = v / ΔMed(12):
+     - r ≤ 1: h0 + r·ΔMed(t), czyli skalowanie całego przebiegu;
+     - r > 1: przez 12 mies. h0 + v·t/12, potem h0 + max(v, min(ΔMedCałk, v + ΔMed(t) − ΔMed(12))), czyli łącznie nie więcej niż pozostały wzrost wg mediany. Uzasadnienie: wcześniejsze pokwitanie przy otyłości — He 2001, Holmgren 2017, de Groot 2017.
+4. **Sufit**: prognoza wzrostu końcowego albo MPH tylko wtedy, gdy PRZEKRACZA obecny wzrost.
+   - Wartość ≤ wzrostu (także `clampedToCurrentHeight`) nie jest sufitem ani dowodem końca wzrastania. Wynik niesie flagę `prognozaNiePrzekraczaWzrostu`, a `remainingCm` = null.
+5. **Tempo roczne i koniec wzrastania.**
+   - `annualGrowthCm = min(sufit, h(12)) − h0` to tempo wygładzone, nie prognoza indywidualna. Korzysta z niego kontrola po 6/12 tygodniach (wzór bez zmian) i `practicallyEnded`.
+   - Definicja `practicallyEnded` bez zmian: < 1 cm/rok albo 0 < sufit − h0 ≤ 3 cm; alarm tempa ją znosi. Progi przeniesiono do danych.
+   - Bez silnika siatek (izolowany moduł) działa dawny model zapasowy (`modelWzrastania: 'stale'`).
+6. **Masa.**
+   - Stabilizacja (tempo 0) na tej samej trajektorii daje dwa czasy:
+     - **S1** (`months`, nagłówek): masa stała. Uzasadnienie: górna granica kcal to zapotrzebowanie przy obecnej masie; Mazur 2022 §4.1: „maintenance of a stable weight … BMI will decrease as children gain height”.
+     - **S2** (`gornaGranica.months`): masa rośnie do górnej granicy planu, czyli mediana BMI × Δwzrost² jak w kontroli po 12 tyg. (dawny wynik A2).
+   - Czas, w którym norma przyszłaby dopiero po zmianie kryterium (dziecko 85. centyl → dorosły BMI 24,9; `VildaBmi.dorosly`: 18 lat, DS 20 lat), jest `null` z flagą `celPoZmianieKryterium`.
+   - Przy alarmie tempa wzrastania (G1) oba czasy są `null` (`tempoAlarm`).
+   - Redukcja jak w racie X (przyrost masy ze wzrastania), bez wyjątku „praktycznie zakończone”: przyrost idzie za trajektorią, więc jest wtedy mały.
+7. **Teksty** (`energyOpisWzrastania`, `energyZdanieStabS2`, `energyZdanieStabBrak`; karta planu, „Droga do normy”, zalecenia, plan PDF).
+   - Opis wzrastania: „w najbliższym roku ok. X cm, potem coraz wolniej, jak mediana wzrostu (siatka OLAF)”. Przy tempie zmierzonym: „zmierzone tempo ok. X cm/rok przyjęto na najbliższy rok, potem …”.
+   - Nagłówek S1: „przy utrzymaniu obecnej masy ciała BMI może wejść w górną granicę normy …”.
+   - S2: „Jeżeli masa będzie rosła do górnej granicy planu (ok. Y kg/mies.) — za ok. M mies.” albo „…BMI prawdopodobnie nie zejdzie poniżej 85. centyla przed ukończeniem 18 lat (potem obowiązuje kryterium dorosłych: BMI 24,9)”.
+   - Bez S1: to samo zdanie o 18 latach, albo „Tempo wzrastania wymaga oceny — czasu dojścia do normy BMI nie podano”.
+   - „Przy praktycznie zakończonym wzrastaniu…” pada tylko wtedy, gdy prognoza tak mówi (dotąd także przy trwającym wzrastaniu).
+   - Zalecenia podają przebieg BMI bez prognozowanego wzrostu w cm. Nota o pokwitaniu pojawia się bez sufitu z karty, przy pozostałym wzroście > 6 cm i od 8/9 lat.
+   - Plan PDF: „Wzrastanie wciąż trwa (w najbliższym roku ok. X cm)”.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; `tests/unit/dieta-b8-wzrastanie-mediana.test.mjs` wywołuje `energySimulateMonthsToBmiTarget`, `energyChildGrowthOutlook` i `energyTrajektoriaWzrostu` na prawdziwych tablicach wzrostu, 19 przypadków):
+
+| Przypadek | Dotąd | Teraz |
+|---|---|---|
+| dz. 12;0, 153,8 cm, 58,7 kg, stabilizacja | 47 mies., 174,4 cm, +13,08 kg | S1 18,5 mies. (13,5 l., 160,8 cm); S2 — po zmianie kryterium (bez czasu) |
+| dz. 12;0, 153,8 cm, 77,1 kg | brak, 190,6 cm w 19. r.ż. | S1 i S2 brak; wzrost do 165,0 cm |
+| chł. 12;0, 150 cm, 58 kg | 47,5 mies., 178,8 cm | S1 17,5 mies. (160,5 cm); S2 51 mies. |
+| dz. 12;0, 152 cm, 56 kg | 35,5 mies. | S1 14; S2 46,5 mies. |
+| T1 + prognoza 153,8 cm (ograniczona) | redukcja, stabilizacja 17 mies. | prognoza ignorowana, `practicallyEnded` false, S1 18,5 mies. |
+| T1 + prognoza 156,8 cm | — | sufit, 3,0 cm/rok, praktycznie zakończone; S1 63 mies. |
+| T1 + tempo zmierzone 7,8 cm/rok | 37,5 mies., 178,2 cm | r 1,48; S1 13 mies.; najwyżej 165,0 cm |
+| T1 + tempo zmierzone 3,0 cm/rok | 68 mies. | r 0,57; S1 31,5 mies. |
+| T1 + alarm tempa | czas podawany | bez czasu |
+| chł. 178 cm, 17;0 / 17;1 / 17;7 | 1,13 / 1,04 / 2,0 cm/rok (powrót do stabilizacji) | 1,07 / 0,98 / 0,45 (bez powrotu) |
+| dz. 2;0, 86 cm, 15,5 kg | 9,86 cm/rok (szew +0,66) | 9,20; S1 12, S2 65 mies. |
+| DS, dz. 12 l., 140 cm | 2,19 cm/rok (siatka DS) | 2,19, koniec 240 mies. |
+| redukcja: dz. 12 l. 77,1 kg / 8 l. 42,3 kg / 8 l. 45 kg / chł. 13 l. 93,8 kg | 15,5 / 17 / 21 / 25,5 | bez zmian |
+| dorosła 25 l., 165/80, 0,115 kg/tydz. | 25 mies. | bez zmian |
+
+Siatka wyników (wzrost = mediana OLAF, masa z centyla BMI; S1/S2 w mies.; „brak” = bez czasu przed zmianą kryterium; zgodna z prototypem audytu, potwierdzona na silniku produkcyjnym):
+- dziewczęta:
+  - 8 l. 95. c.: 11,5/25;
+  - 10 l. 97. c.: 18,5/47,5;
+  - 11 l. 95. c.: 13,5/38;
+  - 12 l. 90. c.: 6,5/14,5;
+  - 13 l. 95. c.: 46/brak;
+  - 14 l. 95. c.: brak/brak;
+- chłopcy:
+  - 10 l. 95. c.: 17/39;
+  - 12 l. 95. c.: 17/50;
+  - 14 l. 95. c.: 23/brak;
+  - 16 l. 90. c.: 10,5/15,5.
+
+**Ograniczenia.**
+- Żadna z metod (mediana, kanał SDS, normy tempa DONALD/Kelly) nie jest zwalidowana dla czasu dojścia do normy BMI; pewność średnia.
+- Przebieg zakłada przeciętny czas dojrzewania. U dziecka z otyłością po menarche bez prognozy w karcie S1 może być zaniżony (dz. 12 l., 150/58: 27,5 mies.; przy sufice +6 cm: 63 mies.). Łagodzi to nota o pokwitaniu, ale nie liczba.
+- Skok strategii na progach „praktycznie zakończone” (1 cm/rok, 3 cm) zostaje — definicja do osobnej decyzji. U chłopców próg przesuwa się z 17;3 na 17;1, ale znika powrót w 17;7.
+- Niezależna blokada stabilizacji w `app.js` (prognoza) pozostaje bez zmian.
+
+**Źródła.**
+- Kułaga Z i wsp. Eur J Pediatr 2011;170:599-609, doi:10.1007/s00431-010-1329-x (OLAF).
+- Mazur A i wsp. Nutrients 2022;14:3806, doi:10.3390/nu14183806 (§4.1, §3.2.4).
+- He Q, Karlberg J. Pediatr Res 2001;49:244-51, doi:10.1203/00006450-200102000-00019.
+- Holmgren A i wsp. Pediatr Res 2017;81:448-54, doi:10.1038/pr.2016.253.
+- de Groot CJ i wsp. Horm Res Paediatr 2017;87:254-63, doi:10.1159/000467393.
+- Cole TJ, Wright CM. Ann Hum Biol 2011;38:662-8, doi:10.3109/03014460.2011.598189.
+- Wright CM, Cheetham TD. Arch Dis Child 1999;81:257-60, doi:10.1136/adc.81.3.257.
+- Abbassi V. Pediatrics 1998;102:507-11.
+- Kelly A i wsp. J Clin Endocrinol Metab 2014;99:2104-12, doi:10.1210/jc.2013-4455.
+- Duran I i wsp. J Pediatr Endocrinol Metab 2025;38:887-97, doi:10.1515/jpem-2025-0225.
+- Gaete X i wsp. 2016 (doi:10.1515/jpem-2016-0035) i 2024 (doi:10.1159/000536506) — tylko próg noty o pokwitaniu.
+- Hall KD i wsp. Lancet Diabetes Endocrinol 2013;1:97-105 — tylko kierunek dla scenariusza masy stałej.
+
+**Pliki.**
+- `vilda_diet_plan_ui.js` (?v=42): silnik, karta planu, eksporty `energyTrajektoriaWzrostu`, `ENERGY_WZRASTANIE`, `energyOpisWzrastania`, `energyZdanieStabS2`, `energyZdanieStabBrak`, `energyWiekKryteriumDoroslegoLat`.
+- `vilda_bmi_journey.js` (?v=28).
+- `vilda_diet_recommendations.js` (?v=67).
+- `vilda_raport_plan.js` (?v=21).
+- SW 1.1.131 → 1.1.132 (numery 1.1.129–1.1.131 zajęły #502, #504 i #505; wersje nadane `npm run podbij-wersje`).
+
+Testy zaktualizowane pod S1/S2: `dieta-audyt2`, `rata-x-czas-do-normy-wzrastanie`, `raport-plan-stabilizacja-rata-g2`. E2E: `tests/e2e/dieta-b8-wzrastanie.spec.mjs`.
+
 ## Audyt zaleceń dietetycznych — rata 2: bezpieczeństwo i teksty, bez obniżania kcal (P-DIETA-AUDYT2 rata 2, SW 1.1.126, 2026-09-30)
 
 **Zlecenie właściciela (2026-09-30).** Po przeglądzie części B audytu (rekomendacje dla progów B1–B9) właściciel zlecił
@@ -6386,6 +6506,71 @@ porządkowania — rata 2); przydział do cyklu na żywo i przyciski wyłączone
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna reguł i brzmień komunikatów; scalenie i wdrożenie; raty 2–4.
 
+## Cykle leczenia otyłości — rata 2: monitor w blokach cykli, redukcja od Włączenia cyklu, baner porządkowania (P-OTYLOSC-CYKLE rata 2, 2026-09-30)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej);
+„ruszaj z ratą 2” — tego samego dnia. Makiety (komputer i telefon) z projektu zaakceptowane razem z rekomendacjami.
+
+**Zmiana kliniczna — punkt odniesienia tabeli monitora.** Redukcja masy i BMI w tabeli monitora DocPro liczy się od
+**Włączenia tego cyklu**; w cyklu bez Włączenia — od jego **1. punktu**, z podpisem „(od 1. punktu)” w nagłówkach kolumn.
+Dotąd punktem odniesienia całej tabeli było pierwsze Włączenie w całej liście (bez Włączenia — pierwszy punkt listy),
+więc wznowione leczenie liczyło się od startu poprzedniego kursu. Progi, okna, kotwice ChPL, BMI-SDS, Karta pacjenta,
+karta porównania i „Postępy” — bez zmian (raty 3–4). Zapis punktów bez zmian.
+
+**Monitor (`obesity_therapy_monitor.js`, `docpro.html`, `inline_docpro_01.css`).**
+- Tabela w blokach cykli z `VildaCykleLeczenia.podziel`: **najnowszy cykl na górze** (D7), punkty w cyklu od najstarszego.
+  Nagłówek cyklu: numer, stan („aktywny” / „zakończony”), „bez Włączenia”, „do uporządkowania” (niezgodność), lek
+  (preparat z punktu odniesienia), okres, czas trwania (tygodnie z dat albo miesiące z wieku), liczba punktów, wynik:
+  „od Włączenia x%” (aktywny), „wynik x%” (zakończony), „od 1. punktu …” (bez Włączenia) — masa ostatniego punktu
+  względem punktu odniesienia cyklu.
+- Między cyklami: „przerwa N dni · data Zakończenia → data 1. punktu następnego cyklu” (bez dat — „przerwa ok. N mies.”;
+  ten sam dzień — „bez przerwy · nowy cykl tego samego dnia”).
+- Zakończone cykle są zwinięte do nagłówka („Pokaż punkty (N) ▾”), gdy cykli jest więcej niż jeden; rozwinięte zostają:
+  cykl z niezgodnością i cykl z punktem właśnie edytowanym. Zwinięcie to stan widoku (w pamięci strony), nie dane pacjenta.
+- Przydział na żywo (`#obesityTherapyAssign`): po wpisaniu daty lub wieku — „Ta wizyta trafi do cyklu N (aktywny, od …)”,
+  „… (zakończony …)”, „Ta wizyta rozpocznie cykl N.” albo „… rozpocznie nowy cykl — przy zapisie wybierzesz, czy to
+  Włączenie.”. Przyciski rodzaju wizyty, których reguły nie przepuszczą, dostają `aria-disabled` i krótki powód pod spodem
+  (`krotko` z modułu, np. „Cykl 2 ma już Włączenie (12.11.2024)”, „Data w przerwie między cyklem 1 a 2”, „Wymaga daty
+  wizyty”). Kliknięcie nadal działa i pokazuje pełny komunikat raty 1 — klawiatura i czytnik ekranu nie są blokowane.
+- Baner „Zapis wymaga uporządkowania” (`#obesityTherapyFixBanner`) nad listą, gdy zapis łamie reguły (np. import z notatek
+  albo zapis sprzed raty 1). Pozycje i poprawki jednym kliknięciem: dwa Włączenia w cyklu — „Zmień <data> na Kontynuację”
+  (z potwierdzeniem) albo „Dopisz Zakończenie przed <data>” (podpowiedź w miejscu przycisków; dopisane Zakończenie
+  rozdziela zapis na dwa cykle); wizyta przed Włączeniem cyklu — „Edytuj wizytę <data>”; Zakończenie bez wizyt — „Usuń to
+  Zakończenie”; Włączenie lub Zakończenie bez daty — „Uzupełnij datę”. Nic nie zmienia się samo (D5).
+- Bez modułu cykli — jedna tabela jak dotąd (pierwsze Włączenie w całej liście).
+
+**Moduł (`vilda_cykle_leczenia.js`).** Odmowy niosą `krotko` (powód pod przyciskiem). Zakończenie wpisane między dwa
+Włączenia starego zapisu nie jest rozcięciem cyklu, gdy odcięta część zaczyna się od Włączenia — to poprawka niezgodności
+`dwa-wlaczenia`. Zakończenie w środku poprawnego cyklu nadal jest odrzucane.
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm; cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024 99,0 kg,
+Z 15.10.2024 97,5 kg; cykl 2 — Wegovy: W 12.11.2024 98,5 kg, K 12.02.2025 95,5 kg, K 10.05.2025 93,0 kg):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+|---|---|---|---|
+| CR-1 | dwa cykle | bloki: cykl 2 na górze, redukcje cyklu 2: —, −3,0%, −5,6%; nagłówek „… 25,6 tyg. · 3 punkty od Włączenia −5,6%”; przerwa 28 dni; cykl 1 zwinięty, „wynik −6,3%” | jedna tabela; cykl 2: −5,3%, −8,2%, −10,6% (od 104,0 kg) |
+| CR-2 | W 06.01.2025 100 kg, Z 02.06.2025 90 kg, K 03.11.2025 108 kg, K 27.04.2026 101 kg | cykl 2 bez Włączenia: „(od 1. punktu)”, —, −6,5%; cykl 1: —, −10,0% | +8,0%, +1,0% (od 100 kg) |
+| CR-3 | dwa cykle; data 10.06.2025 | „Ta wizyta trafi do cyklu 2 (aktywny, od 12.11.2024).”; Włączenie wyłączone: „Cykl 2 ma już Włączenie (12.11.2024)” | brak podglądu |
+| CR-4 | dwa cykle; data 01.11.2024 | wszystkie trzy przyciski wyłączone z powodem, bez przydziału | brak podglądu |
+| CR-5 | stary zapis W 12.01.2024, K, W 03.05.2024, K | baner; „Zmień 03.05.2024 na Kontynuację” → jeden poprawny cykl | brak sygnału |
+| CR-6 | jak CR-5; „Dopisz Zakończenie przed 03.05.2024”, Z 30.04.2024 | dwa cykle, baner znika; cykl 2: „od Włączenia −3,0%” | Z odrzucone (rata 1) albo brak sygnału |
+
+**Testy.** `tests/unit/cykle-leczenia.test.mjs` +3 (krótkie powody, rozdzielenie starego zapisu, Zakończenie w środku
+poprawnego cyklu); `tests/e2e/otylosc-cykle-rata-2.spec.mjs` 6 (prawdziwy DocPro: CR-1, CR-3/CR-4 z wizytą wsteczną do
+cyklu 1, CR-5, CR-6, cykl bez Włączenia, telefon 390 px). Zaktualizowane: `karta-otylosc-bez-punktu-wlaczenia.spec.mjs`
+MON-3 (nowe liczby i podpis — celowa zmiana tej raty; MON-1 i MON-2 bez zmian), `otylosc-cykle-rata-1.spec.mjs`
+(zdarzenia `input`, przyciski z powodem, rozwinięcie zwiniętego cyklu), `otylosc-edycja-punktu.spec.mjs` (selektor tabeli).
+
+**Ograniczenia i kolejne raty.** Karta pacjenta (historia cykli, przełącznik, wstrzymanie werdyktu przy niezgodności) —
+rata 3; karta porównania, „Postępy” i R6 (zmiana substancji zaczyna nowy cykl) — rata 4. Import z notatek i
+`obesityTherapyMonitorSetPoints` nadal nie przechodzą przez reguły — niezgodność pokazuje baner.
+
+**Wersje** (`npm run podbij-wersje`, baza `audyt` c386c67). `inline_docpro_01.css` 4, `obesity_therapy_monitor.js` 24,
+`vilda_cykle_leczenia.js` 2 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.131 → 1.1.132 (+ pin); fixture wersji.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia per cykl i brzmień nagłówków, podglądu
+przydziału, powodów i banera; scalenie i wdrożenie; raty 3–4.
+
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH
@@ -6416,6 +6601,74 @@ po obu stronach).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; następna zmiana: usunięcie zapisu kopii w IndexedDB
 przez monitor i skasowanie bazy.
+
+## Ukryta karta zaawansowana na DocPro nie zmienia punktów terapii GH ani wierszy ręcznych; monitor bez kopii w IndexedDB (P-GH-DOCPRO, SW 1.1.131, `gh_therapy_monitor.js` 46, `docpro_state_persist.js` 7, 2026-09-30)
+
+**Skąd.** Audyt przepływu pomiarów GH (`docs/AUDYT-PRZEPLYW-GH.md`, U3 i U5) i decyzja właściciela z 2026-09-30:
+kolejna zmiana po P-GH-ZRODLO obejmuje ukrytą kartę zaawansowaną na DocPro i kopię punktów w IndexedDB. Hipotezę
+z audytu (odtworzenie stanu DocPro wysyła `change` w wierszach ukrytej karty) zmierzono przed zmianą.
+
+**Zmierzone na `audyt` `567597c`** (Chromium, własne konto sejfu, dane fikcyjne; dziewczynka 14 l., punkt GH
+13 l. 1 mies. / 139,9 cm / 45 kg, 0,033 mg/kg/d = 1,49 mg/d):
+- Stan kart DocPro (`docpro_state_persist.js`) zapisuje pola bez `id` pod kluczem z **pozycji w DOM** i przy starcie
+  strony odtwarza je z wysłaniem `input` i `change`. Wiersze karty zaawansowanej (`#advMeasurements`) to lista
+  dynamiczna: skład buduje wspólny stan pacjenta (wiersze ręczne) i monitor GH (wiersze punktów, `ue()`).
+- **Usunięcie wiersza ręcznego na Start między wizytami w DocPro** (wiersze 11 l. / 123,9 / 35 i 12 l. / 131,3 / 40,3
+  → usunięty 12 l.): po powrocie na DocPro wiersz punktu dostał wartości usuniętego wiersza, a zapis zwrotny
+  monitora zmienił **sam punkt**: 139,9 → 131,3 cm, 45 → 40,3 kg, 1,49 → 1,33 mg/d. Punkt w pamięci modułu (więc
+  i na Start, i w zapisie) niósł zmienione wartości; lekarz nie dostawał żadnego sygnału.
+- **Dodanie wiersza ręcznego na Start** (12 l. / 131,3 / 40,3) między wizytami: nowy wiersz na DocPro dostał wartości
+  punktu (13 l. 1 mies. / 139,9 / 45) i ta ręczna kopia wróciła na Start — **pomiar 12 l. zniknął**, a wiersz punktu
+  schował się pod ręczną kopią.
+- Zapis zwrotny wiersz → punkt (nasłuch `change` w monitorze) przy zmianie masy przeliczał dawkę w mg/d
+  (45 → 47,1 kg: 1,49 → 1,55 mg/d) — sprzecznie z decyzją właściciela, że pierwotna jest dawka podawana.
+- Po usunięciu **ostatniego** punktu `F()` kończyło się przed `ue()` i wiersz punktu zostawał w ukrytej karcie
+  i w `window.advancedGrowthData` DocPro do przeładowania.
+- Monitor kopiował pełną listę punktów do IndexedDB `ghTherapyDB` przy każdej zmianie; po P-GH-ZRODLO nikt tej kopii
+  nie czyta.
+
+**Zmiana.**
+- `docpro_state_persist.js`: pola wewnątrz `#advMeasurements` nie należą do stanu kart DocPro — nie są zapisywane
+  ani odtwarzane (także ze zrzutów zapisanych przed zmianą). Wiersze karty mają własne źródła (wspólny stan pacjenta
+  i monitor GH), co zmierzono: po powrocie na DocPro skład i wartości wierszy są takie jak na Start.
+- `gh_therapy_monitor.js`:
+  - usunięty zapis zwrotny wiersz karty zaawansowanej → punkt; punkt zmienia się wyłącznie w monitorze;
+  - `F()` przy pustej liście też odświeża lustro w karcie zaawansowanej (`ue()`);
+  - lista punktów nie jest kopiowana do IndexedDB; sygnał `gh-therapy-sync` `{type:"update"}` idzie od razu (moduł
+    jest zapisany wcześniej, synchronicznie); dawna baza `ghTherapyDB` jest usuwana przy starcie monitora i przy
+    resecie jego stanu (wcześniej reset czyścił bazę, czyli ją otwierał i tworzył).
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (integralność danych) o znaczeniu klinicznym: bez zmiany
+wzorów, progów, jednostek, dawkowania i formatu rekordu. Usuwa trzy drogi, którymi pomiary i dawka w mg/d zmieniały
+się bez udziału lekarza (punkt po usunięciu wiersza, wiersz ręczny po dodaniu wiersza, masa i mg/d w ukrytym
+wierszu) oraz wiersz-duch po usunięciu ostatniego punktu. Rekordów zmienionych wcześniej tą drogą zmiana nie odtwarza.
+Źródło medyczne: nie dotyczy (bez zmiany wiedzy klinicznej). Wymaga akceptacji właściciela.
+
+**Strażnik.** `tests/e2e/gh-docpro-karta-ukryta.spec.mjs` (5, prawdziwe strony `index.html` i `docpro.html`):
+- A: usunięcie wiersza ręcznego między wizytami → punkt 139,9 cm / 45 kg / 1,49 mg/d, wiersz punktu bez zmian;
+- B: wiersz ręczny 12 l. / 131,3 / 40,3 dodany na Start zostaje na DocPro i po powrocie na Start, bez ręcznej kopii
+  punktu;
+- C: zmiana masy (47,1) i wzrostu w wierszu punktu w ukrytej karcie → punkt i dawka bez zmian;
+- D: usunięcie ostatniego punktu przyciskiem monitora → brak wiersza punktu i wartości 139,9 w `advancedGrowthData`;
+- E: baza `ghTherapyDB` z poprzedniej wersji znika przy starcie DocPro i nie wraca po zmianie listy w monitorze.
+
+**Zmierzone czerwone** na `567597c`: **5 z 5**. Mutanty: bez zmiany w `docpro_state_persist.js` padają A i B; bez
+`ue()` przy pustej liście pada D; C i E padają na kodzie sprzed zmiany niezależnie od pozostałych części.
+
+**Czego to nie naprawia.**
+- Pola wzrostu, masy i wieku kostnego w wierszach punktów na Start nadal są edytowalne i się rozjeżdżają (U1) —
+  następna zmiana.
+- W `app.js` zostają funkcje odczytu i czyszczenia bazy (`getTherapyPointsFromDB`, `clearTherapyPointsInDB`), a w monitorze
+  nieużywane funkcje otwarcia i zapisu; opisuje je inwentarz `vilda_gh_therapy_resource_audit.js` i test dymny.
+  Odczytu nikt nie woła; „Wyczyść wszystkie pola” może utworzyć pustą bazę (bez punktów), którą skasuje najbliższy
+  start monitora. Ich usunięcie razem z inwentarzem — osobna zmiana porządkowa.
+- Wiersze punktów w ukrytej karcie zostają (moduły DocPro czytają `advancedGrowthData`).
+
+**Wersje.** `gh_therapy_monitor.js` 45 → 46, `docpro_state_persist.js` 6 → 7 (`docpro.html`); precache (append-only);
+`SW_VERSION` 1.1.130 → 1.1.131 (po #504; + pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
+odświeżony.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna, scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
@@ -6858,6 +7111,88 @@ w trakcie sprawdzania — padają licznik wywołań zapisujących i strażnik ź
 
 **Co pozostaje decyzją właściciela.** Akceptacja reguł; scalenie i wdrożenie; narzędzie do usuwania.
 
+## Edycja i usuwanie pomiaru, poprawka, przypięcie i usunięcie wersji pod blokadą pacjenta; czekanie do 30 s jak przy „Zapisz dane” (P-BLOKADA-ZAPISU-WERSJI, SW 1.1.133, `vilda_vault.js` 192, `vilda_auth_ui.js` 469, 2026-09-30)
+
+**Decyzja właściciela (2026-09-30).** Pytanie 3 z P-ZAPISY-DWIE-KARTY (#495), czy tą samą blokadą objąć pozostałe operacje
+zapisu: „b) teraz jako osobny PR, a c) później, po analizie synchronizacji”. Czyli teraz operacje uruchamiane przez
+lekarza, a scalanie z synchronizacji — po osobnej analizie.
+
+**Usterka.** Poza `savePatient` rekord pacjenta zmieniają w miejscu: `updateMeasurementRow` i `deleteMeasurementRow`
+(korekta i usunięcie pomiaru w Karcie Pacjenta: odczyt bieżącej wersji → zmiana wiersza → zapis tej wersji),
+`updateSnapshotPayload` (korekta wersji w miejscu, dopisanie wpisu historycznego, poprawka nazwiska), `setSnapshotPinned`
+i `deleteSnapshot`. Żadna nie brała blokady pacjenta. Zmierzone na kodzie sprzed zmiany (sejf w pamięci, dane fikcyjne):
+w karcie A zapis czeka na odpowiedź na pytanie bramy „Ktoś inny zmienił ten rekord” (trzyma blokadę), a w karcie B
+lekarz poprawia wzrost pomiaru 5;6 na 150 cm — poprawka ląduje w wersji sprzed zapisu A, a bieżącą wersją zostaje zapis A
+z 123 cm; pomiar usunięty w B w tym samym oknie wraca w bieżącej wersji razem z zapisem A.
+
+**Sejf (`vilda_vault.js` 192, blok `Bzw_*`, czytelny).**
+- `updateSnapshotPayload`, `deleteSnapshot`, `updateMeasurementRow`, `deleteMeasurementRow` i `setSnapshotPinned` idą pod
+  tą samą blokadą pacjenta co zapis (`vilda-save-pat:<id>`, wspólna dla kart i ramek powłoki): wolna — rusza od razu;
+  zajęta — sygnał `onLockWait` i czekanie najwyżej `lockTimeoutMs` (domyślnie 30 s); po limicie błąd `vildaSaveBusy`
+  i nic nie zostaje zapisane. Korekta i usunięcie pomiaru czytają bieżącą wersję już pod blokadą, więc trafiają do wersji,
+  która jest bieżąca po zapisie z drugiej karty.
+- Nowy, opcjonalny ostatni argument `{ onLockWait, lockTimeoutMs }` — te same nazwy co w `savePatient`. Publiczne API
+  i format rekordu bez zmian.
+- Web Locks nie są wielobieżne (druga prośba o tę samą blokadę czeka na pierwszą), więc kod, który już ją trzyma — kosz
+  (`moveSnapshotToTrash`), retencja (`pruneSnapshotsForPatient`), korekta, usunięcie pomiaru i przypięcie — woła warianty
+  bez blokady (`Bzw_aktualizujWersje`, `Bzw_usunWersje`). Powiadomienie `onPatientSaved` idzie, jak w koszu, jeszcze pod
+  blokadą.
+- Sejf zablokowany albo brak identyfikatora pacjenta — od razu ten sam błąd co dotąd, bez czekania.
+- `restoreSnapshotAsNew` kończy się `savePatient`, więc blokadę brał już od #495; kosz i przywrócenie z kosza — od #501.
+
+**Komunikaty (te same teksty co przy „Zapisz dane”, `vilda_auth_ui.js` 469).**
+- okno szybkiego pomiaru (dodanie, „Popraw pomiar”, korekta wiersza) i ekran edycji pacjenta („Zapisz zmiany”): podczas
+  czekania pod polem błędu okna stoi „Czekam — ten pacjent jest zapisywany w innej karcie” (styl ostrzeżenia
+  `.vilda-auth-warning-banner`, bez stylu inline); po limicie pole błędu: „Nie zapisano — ten pacjent jest nadal zapisywany
+  w innej karcie. Dokończ tam zapis i kliknij „‹nazwa przycisku›” ponownie.” (np. „Zapisz korektę”, „Zapisz pomiar”,
+  „Zapisz zmiany”); okno i formularz zostają;
+- „Usuń pomiar” z osi czasu Karty Pacjenta: czeka bez komunikatu „Czekam” (menu zamyka się po potwierdzeniu, nie ma gdzie
+  go pokazać); po limicie okno: „Nie usunięto — ten pacjent jest nadal zapisywany w innej karcie. Dokończ tam zapis i usuń
+  pomiar ponownie.”
+
+**Wpływ kliniczny.** Zmiana funkcjonalna (integralność danych), bez zmian wzorów, progów, jednostek, formatu rekordu
+i synchronizacji. Korekta albo usunięcie pomiaru wykonane, gdy ten sam pacjent jest zapisywany w innej karcie, nie gubi
+się już w poprzedniej wersji.
+
+**Przypadki (dane fikcyjne: Testowy Jan, pomiary 5;0, 5;6 i 6;8; karta A zapisuje 6;2 i czeka na pytanie bramy o 6;8).**
+
+| Scenariusz w karcie B | Oczekiwany wynik | Na bazie |
+|---|---|---|
+| „Popraw pomiar” 5;6: wzrost 150 cm | okno pokazuje „Czekam…”; po odpowiedzi w A okno się zamyka; bieżąca wersja ma 5;0, 5;6 (150 cm), 6;2 i 6;8 | pada: bez czekania, bieżąca wersja ma 5;6 ze 123 cm |
+| usunięcie pomiaru 6;8 | czeka; po odpowiedzi w A bieżąca wersja ma 5;0, 5;6 i 6;2 | pada: 6;8 wraca w bieżącej wersji |
+| „Zapisz zmiany” w edycji pacjenta, a A nie odpowiada | „Czekam…”, po 30 s „Nie zapisano — … kliknij „Zapisz zmiany” ponownie.”, bez nowej wersji | pada: bez „Czekam”, po 30 s „Nie udało się zapisać zmian.” |
+| korekta, przypięcie, poprawka w miejscu i usunięcie wersji w czasie pytania bramy | czekają; licznik wersji w nagłówku równy liczbie wersji | pada (bez czekania) |
+| to samo z limitem 150 ms | błąd `vildaSaveBusy`, rekord bez zmian; po odpowiedzi w A ta sama operacja przechodzi | pada |
+| kosz, retencja, korekta, usunięcie i przypięcie tej samej karty po kolei, nikt inny nie zapisuje | bez czekania i bez komunikatu „Czekam” | zielone (kontrola) |
+
+**Czego to NIE rozwiązuje.**
+- Scalania z synchronizacji (wariant c) — nadal bez blokady; osobna analiza i decyzja właściciela.
+- `updateSnapshotPayload` dostaje gotową treść od wołającego. „Popraw pomiar” bez wskazania wiersza, dopisanie wpisu
+  historycznego (pomiar starszy niż bieżący) i poprawka nazwiska budują ją z odczytu sprzed czekania, więc gdy w tym czasie
+  powstała nowsza wersja, poprawka trafia do wersji, którą wskazał wołający — jak dotąd. Blokada porządkuje sam zapis, nie
+  odczyt wołającego. Kandydat do osobnej zmiany (odczyt pod blokadą, jak w korekcie wiersza).
+- Przypięcie w historii wersji czeka bez komunikatu; po limicie gwiazdka zostaje bez zmian, a błąd trafia tylko do
+  konsoli — jak dotąd przy każdym błędzie przypięcia. „Przywróć tę wersję” po limicie: „Nie udało się przywrócić: Ten
+  pacjent jest nadal zapisywany w innej karcie.” — bez zmian. Poprawka nazwiska w tle po limicie działa tylko w tej sesji,
+  jak przy każdym błędzie zapisu.
+- Istniejące zachowanie spoza zakresu: `updateSnapshotPayload` na starszej wersji (np. przypięcie starszej wersji)
+  przepisuje nagłówek karty — nazwę na liście pacjentów — treścią tej starszej wersji. Zmierzone: po przypięciu wersji
+  „Testowy Jan” lista pokazuje „Testowy Jan”, choć bieżąca wersja to „Testowy Janusz”. Do osobnej decyzji.
+- Teksty komunikatów zależą od pytań 1 i 2 z #495 (tekst po 30 s; „inny panel” zamiast „inna karta”) — do decyzji
+  właściciela.
+
+**Walidacja.** `tests/unit/blokada-zapisu-wersji.test.mjs` (15: kolejka strony bez Web Locks i atrapa Web Locks z limitem;
+na bazie 10 czerwonych, 5 kontroli zielonych) i `tests/e2e/blokada-zapisu-wersji.spec.mjs` (3, prawdziwe Web Locks
+w dwóch kartach; na bazie wszystkie czerwone). `tests/unit/retencja-nagrobki.test.mjs`: trzy testy symulowały przypięcie
+i usunięcie wersji WEWNĄTRZ sekcji retencji pod blokadą — teraz te operacje czekają na tę blokadę, więc symulacja idzie
+tam, gdzie mogą się teraz zdarzyć: przypięcie po odczycie planu, a przed blokadą; „scalanie bez blokady” prosto
+z magazynu, jak w synchronizacji. Asercje bez zmian; strażnik źródła wskazuje `Bzw_usunWersje` zamiast `Ar`.
+
+**Wersje (nadane przez `npm run podbij-wersje` względem `audyt` 8916b1a).** `vilda_vault.js` 191 → 192 i `vilda_auth_ui.js`
+468 → 469 (strony oraz wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`), `vilda_chrome.js` 84 → 85,
+`vilda_session_bridge.js` 12 → 13, precache (append-only), `SW_VERSION` 1.1.132 → 1.1.133 (+ pin; 1.1.132 wydał P-OTYLOSC-CYKLE rata 2, #508), fixture
+wersji.
+
 ## Zapisy tego samego pacjenta z dwóch kart idą po kolei; drugi czeka najwyżej 30 s (P-ZAPISY-DWIE-KARTY, SW 1.1.123, `vilda_vault.js` 189, `vilda_data_import_export.js` 93, 2026-09-30)
 
 **Usterka.** `savePatient()` czyta głowę rekordu, na jej podstawie decyduje — brama P14 pyta „Ktoś inny zmienił ten
@@ -6899,7 +7234,9 @@ następnym zapisie), wpisów synchronizacji, edycji wersji w miejscu (`updateSna
 idzie przez `savePatient`, więc ją bierze). Dwa równoczesne zapisy NOWEGO pacjenta z dwóch kart nadal mogą założyć duplikat
 (rozpoznanie pacjenta jest poza sekcją). Szybki pomiar w Karcie pacjenta czeka tak samo, ale bez komunikatu „Czekam”.
 Tekst okna bramy („na innym urządzeniu albo przez synchronizację”) przy zmianie z innej karty tej samej przeglądarki
-jest nieprecyzyjny — kandydat do zmiany tekstu (decyzja właściciela).
+jest nieprecyzyjny — kandydat do zmiany tekstu (decyzja właściciela). *(Aktualizacja 2026-09-30, P-BLOKADA-ZAPISU-WERSJI: edycja
+wersji w miejscu, korekta i usunięcie pomiaru, przypięcie i usunięcie wersji biorą teraz tę samą blokadę — osobny wpis;
+`restoreSnapshotAsNew` brał ją już tutaj, bo kończy się `savePatient`.)*
 
 **Walidacja.** `tests/unit/zapisy-dwie-karty.test.mjs` (7: kolejka strony bez Web Locks i blokada z limitem na atrapie
 Web Locks; na bazie 5 czerwonych, 2 kontrole zielone) i `tests/e2e/zapisy-dwie-karty.spec.mjs` (2, prawdziwe Web Locks

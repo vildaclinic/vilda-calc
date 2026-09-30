@@ -64,8 +64,8 @@
   "sha256": "3eb130872b2b8588ffdf376349bf458d77c1fc0c07b33443e4f73596e2890a70"
  },
  "docpro_state_persist.js": {
-  "v": 6,
-  "sha256": "76ef35bad5809ed6837c6b67b0af4279dbc21659c2a6f742a844fb231377840d"
+  "v": 7,
+  "sha256": "3511575dec7845d56a95c4a1f0e4cedac87c2666cf647b4400f0d116dfa7c75a"
  },
  "ds_lms.js": {
   "v": 4,
@@ -80,8 +80,8 @@
   "sha256": "0c2b6f3d51e4518b5e281921018d7488341d1013476d1b4d9a6086726e7c96f3"
  },
  "gh_therapy_monitor.js": {
-  "v": 45,
-  "sha256": "9e864fc3e869726b67645790a2e4694158608388ad81e5a8e079e0856ee515e2"
+  "v": 46,
+  "sha256": "94609a5eee6d4e49b83a64cd57754c5a27d3e7164e0ce54a18b785aef3ff16ff"
  },
  "gh_therapy_segments.js": {
   "v": 4,
@@ -124,8 +124,8 @@
   "sha256": "ad284b7291f9dbc0462009850e5b8ca8b7130ef9bfe0f715fd2e7c590143f690"
  },
  "inline_docpro_01.css": {
-  "v": 3,
-  "sha256": "fda33379bee4a2a605fdbb7070833fd652de9737a48baa8f401a4dd442ade816"
+  "v": 4,
+  "sha256": "2ef8b94b2a6f0cc315deb0796bba6a0bfe760c5e5bb15292334ca29f3d7c1613"
  },
  "inline_docpro_03.js": {
   "v": 3,
@@ -384,8 +384,8 @@
   "sha256": "5f99a80f03bccde51b898db72e4cb62e5cbdb7a880c0cb0c80cfe8656bc48936"
  },
  "obesity_therapy_monitor.js": {
-  "v": 23,
-  "sha256": "d0ef5f788d7bd315bf4261f2a2cf34141274440686ca5ef8477fdf4f8cbe8a1c"
+  "v": 24,
+  "sha256": "0f24f52c1de1a0ac1a10fddd2f5a1269228a765f785ed9eddb4a77a1020f9aa4"
  },
  "pdfmake.min.js": {
   "v": 1,
@@ -468,8 +468,8 @@
   "sha256": "401a9cb3d8c83dd6185f50a63a0337e260565b8c15b421c451105a4b0dea8cdb"
  },
  "vilda_auth_ui.js": {
-  "v": 468,
-  "sha256": "0542542d08ee0f30d6c26a5dc830f75a1b5b38ebed74b67413eb5e7e9e5cfb0d"
+  "v": 469,
+  "sha256": "ecb32cc8b2250585f16c2d8d5f2f8e664807825b5e2181e88d587a9d66561a16"
  },
  "vilda_b64_checklist.js": {
   "v": 2,
@@ -492,8 +492,8 @@
   "sha256": "fe4ce966476f329f411cbbf75ab61d9b8e635d2c8e3fc1a586a78a3c6c56e698"
  },
  "vilda_bmi_journey.js": {
-  "v": 27,
-  "sha256": "af1b895cb2e44f3022638ba20138797bf00f6b0495dc61e390a4dd9b8e696967"
+  "v": 28,
+  "sha256": "8755d9d0107606617e45faafda4d2898f15c0ad29ad853c2f44c90e87d308c55"
  },
  "vilda_centile_chart_header.js": {
   "v": 1,
@@ -512,8 +512,8 @@
   "sha256": "6d4c92bb7827503bdaff53fe550c981ff356ec769cc0107e7dab906e9b6171ff"
  },
  "vilda_chrome.js": {
-  "v": 84,
-  "sha256": "f962d060f8428ccf06adaa91829891cd41d680e6bc0c956958ba0d5b4a721b07"
+  "v": 85,
+  "sha256": "65eb3f780047b2d5cd151374cfa0ae09b3fcd2e3df7e199f1e536fab9a5cadff"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
@@ -528,8 +528,8 @@
   "sha256": "326ea4b7ce7710cc24181edcdff104a4d67d83ae56878a552448c30dff0b7e2b"
  },
  "vilda_cykle_leczenia.js": {
-  "v": 1,
-  "sha256": "b3408069a7de184da93fa53866d19e4909c5dcb1434a476a5fc5cf2a0bc974c5"
+  "v": 2,
+  "sha256": "8fdeb3275d729a2296a55ef4ef6503878f622827a4d5dfbd61d2fdcf500f7c8a"
  },
  "vilda_data_import_export.js": {
   "v": 93,
@@ -544,12 +544,12 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 41,
-  "sha256": "a241cf04230e82b7e93c9aefeb87a127ba9e0aacfc777215ac44c45fd556507b"
+  "v": 42,
+  "sha256": "a698c30313e41ebd66957d63ec1d5bcc088e4cf65dae10530fa17308c48c98df"
  },
  "vilda_diet_recommendations.js": {
-  "v": 66,
-  "sha256": "d7e983d7ae6483b15da5cb34dc532aa03f015194e1fbc8866290da549b122401"
+  "v": 67,
+  "sha256": "180a2fe52322eff9189ea64e874c6720615abcd2b7868cd90ff70abf985955c5"
  },
  "vilda_dob_age.js": {
   "v": 7,
@@ -788,8 +788,8 @@
   "sha256": "4faaefb451e372c17eb1127ba54464187a235107d3fca7e679f33f893d4908d2"
  },
  "vilda_raport_plan.js": {
-  "v": 20,
-  "sha256": "042683efe9df09df040be80a8c7f7b39c380e36ec9f2335deba8f13c55d02077"
+  "v": 21,
+  "sha256": "ac2bd822188121108b5f8db7ad025c183fa7a02b417fd29b135cd99c2d1a4053"
  },
  "vilda_realtime.js": {
   "v": 7,
@@ -824,8 +824,8 @@
   "sha256": "10902bf33b86f2fe48b86468ab5188d751fa810da777736a89bf939d17e8cbba"
  },
  "vilda_session_bridge.js": {
-  "v": 12,
-  "sha256": "2edaebee2bc020216ba8ec84901419ebd96842c471338b3e621e6f409a6a7329"
+  "v": 13,
+  "sha256": "43ed22e10bf4318bf4265976a660d80d7aebbef8569dcc45f3a9f2d8ae27f2d8"
  },
  "vilda_sga_catchup.js": {
   "v": 2,
@@ -908,8 +908,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 191,
-  "sha256": "03976cad225cad996509d42985d51265a440a649675e5a321fa73a7ecda9bbdd"
+  "v": 192,
+  "sha256": "9fb6b31e26cf2fed8aae7e12f441c36729266ebf8c863ddefdb8c1ddd55c96c9"
  },
  "vilda_version_history_ui.js": {
   "v": 14,

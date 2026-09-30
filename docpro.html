@@ -132,12 +132,12 @@
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
 <script defer src="vilda_persistence_adapter.js?v=28"></script>
-<script defer src="vilda_session_bridge.js?v=12"></script>
+<script defer src="vilda_session_bridge.js?v=13"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
 <script defer src="vilda_cloud_cache_warm.js?v=2"></script>
-<script defer src="vilda_vault.js?v=191"></script>
+<script defer src="vilda_vault.js?v=192"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=32"></script>
 <script defer src="vilda_sync_integration.js?v=45"></script>
@@ -154,7 +154,7 @@
 <script defer src="vilda_postepy_doroslego_ui.js?v=7"></script>
 <script defer src="vilda_postepy_doroslego_wydruk.js?v=5"></script>
 <script defer src="vilda_werdykt.js?v=7"></script>
-<script defer src="vilda_auth_ui.js?v=468"></script>
+<script defer src="vilda_auth_ui.js?v=469"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
 <script defer src="vilda_name_fix.js?v=3"></script>
 <script defer src="vilda_version_history_ui.js?v=14"></script>
@@ -193,7 +193,7 @@
 <script defer src="vilda_puberty_profile.js?v=2"></script>
 <script defer src="vilda_growth_card_c.js?v=27"></script>
 <script defer src="vilda_sds_wzrostu.js?v=4"></script>
-<script defer src="vilda_bmi.js?v=8"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=20"></script>
+<script defer src="vilda_bmi.js?v=8"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=21"></script>
 <script defer src="vilda_tempo_wzrastania.js?v=1"></script>
 <script defer src="vilda_trajectory_analysis.js?v=39"></script>
 <script defer src="vilda_prediction_drift.js?v=1"></script>
@@ -309,7 +309,7 @@
            user data fields into two columns on larger screens and hide the
            standard results section that is not relevant to the professional
            module. -->
-<script defer src="vilda_chrome.js?v=84"></script>
+<script defer src="vilda_chrome.js?v=85"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
@@ -420,7 +420,7 @@
       <!-- DOB-AGE-1 (decyzja właściciela 2026-09-13): data urodzenia w formularzu głównym.
            Pole OPCJONALNE; po wpisaniu poprawnej daty wiek w latach i miesiącach wypełnia się
            sam (ukończone pełne miesiące) i staje się tylko do odczytu. Logika: vilda_dob_age.js. -->
-      <link href="inline_docpro_01.css?v=3" rel="stylesheet">
+      <link href="inline_docpro_01.css?v=4" rel="stylesheet">
       <label>Data urodzenia <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
         <input type="text" id="dobInput" inputmode="numeric" maxlength="10" placeholder="DD-MM-RRRR" autocomplete="bday">
       </label>
@@ -1059,11 +1059,14 @@
         <label>Dawka<input id="obesityDose" placeholder="np. 2,4 mg"></label>
         <label>Data wizyty<input id="obesityDate" type="date"></label>
       </div>
+      <!-- P-OTYLOSC-CYKLE rata 2: do którego cyklu trafi wizyta (na żywo, z daty i wieku); treść ustawia obesity_therapy_monitor.js. -->
+      <div id="obesityTherapyAssign" class="obm-assign" role="status" aria-live="polite" hidden></div>
       <div style="font-size:.75rem;color:#5a7274;margin-top:10px;">Rodzaj wizyty:</div>
+      <!-- P-OTYLOSC-CYKLE rata 2: przycisk, którego reguły cykli nie przepuszczą, dostaje aria-disabled i krótki powód pod spodem (.obm-why). -->
       <div class="obm-visit">
-        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('start')">Włączenie leczenia</button>
-        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button>
-        <button type="button" class="igf-btn" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button>
+        <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="start" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('start')">Włączenie leczenia</button><small id="obesityWhy-start" class="obm-why" hidden></small></div>
+        <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="continue" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('continue')">Kontynuacja leczenia</button><small id="obesityWhy-continue" class="obm-why" hidden></small></div>
+        <div class="obm-vbtn"><button type="button" class="igf-btn" data-typ="end" onclick="window.obesityAddTherapyPoint && window.obesityAddTherapyPoint('end')">Zakończenie leczenia</button><small id="obesityWhy-end" class="obm-why" hidden></small></div>
       </div>
       <!-- P-OTYLOSC-CYKLE rata 1: komunikat o regułach cykli leczenia w miejscu przycisków (zamiast okienka); treść i przyciski wyboru wstawia obesity_therapy_monitor.js. -->
       <div id="obesityTherapyActionMsg" class="obm-msg" role="status" aria-live="polite" hidden></div>
@@ -1072,15 +1075,11 @@
       <h4 style="margin:1rem 0 0.4rem;">Punkty terapii (<span id="obesityTherapyCount">0</span>)</h4>
       <!-- P-OTYLOSC-BEZ-STARTU: podpowiedź „brak punktu Włączenie” (jak #ghTherapyStartHint w monitorze GH); treść i widoczność ustawia obesity_therapy_monitor.js. -->
       <div id="obesityTherapyStartHint" class="obm-start-hint" hidden></div>
+      <!-- P-OTYLOSC-CYKLE rata 2: zapis łamiący reguły cykli — co i gdzie, z poprawką jednym kliknięciem; treść wstawia obesity_therapy_monitor.js. -->
+      <div id="obesityTherapyFixBanner" class="obm-fix" role="region" aria-label="Zapis wymaga uporządkowania" hidden></div>
       <div id="obesityTherapyEmpty" class="obm-empty">Brak punktów. Dodaj „Włączenie leczenia" — to baseline, od którego liczymy redukcję i odpowiedź na leczenie.</div>
-      <div id="obesityTherapyTableWrap" style="display:none; overflow-x:auto;">
-        <table>
-          <thead><tr>
-            <th>Rodzaj wizyty</th><th>Wiek</th><th>Masa (kg)</th><th>Wzrost (cm)</th><th>BMI</th><th>BMI-SDS</th><th>Dawka</th><th id="obesityRedMasaTh">Redukcja masy</th><th id="obesityRedBmiTh">Redukcja BMI</th><th>Akcje</th>
-          </tr></thead>
-          <tbody id="obesityTherapyTbody"></tbody>
-        </table>
-      </div>
+      <!-- P-OTYLOSC-CYKLE rata 2: bloki cykli (nagłówek cyklu + tabela punktów, przerwy między cyklami) rysuje obesity_therapy_monitor.js. -->
+      <div id="obesityTherapyTableWrap" style="display:none; overflow-x:auto;"></div>
     </div>
     </div><!-- /obesityTabMonPanel -->
   </div>
@@ -2905,18 +2904,18 @@
 <script defer src="vilda_raport_naglowek.js?v=10"></script>
 <script defer src="vilda_summary_cards.js?v=52"></script>
 <script defer src="vilda_ree_rownania_data.js?v=3"></script>
-<script defer src="vilda_diet_plan_ui.js?v=41"></script>
+<script defer src="vilda_diet_plan_ui.js?v=42"></script>
 <script defer src="vilda_estimated_intake_ui.js?v=3"></script>
 <script defer src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script src="app.js?v=229" defer></script>
-<script src="vilda_diet_recommendations.js?v=66" defer></script>
+<script src="vilda_diet_recommendations.js?v=67" defer></script>
 <script src="vilda_patient_report.js?v=45" defer></script>
 <!-- po app.js -->
 <script src="vilda_module_monitor_badges.js?v=1" defer></script>
 <script src="gh_igf_therapy.js?v=27" defer></script>
-<script src="gh_therapy_monitor.js?v=45" defer></script>
+<script src="gh_therapy_monitor.js?v=46" defer></script>
 <!-- Skrypt kalkulatora antybiotykoterapii – generuje kartę dawek antybiotyków.
      Ładowany po głównym pliku app.js i module GH/IGF, aby skorzystać z już zainicjowanych
      elementów DOM oraz funkcji (np. pobierania masy ciała). Plik antibiotic_therapy.js
@@ -2930,8 +2929,8 @@
     <script src="flu_therapy.js?v=8" defer></script>
 <script src="obesity_therapy.js?v=10" defer></script>
 <!-- P-OTYLOSC-CYKLE rata 1: reguły cykli leczenia (jedno Włączenie, jedno Zakończenie, nowy cykl po Zakończeniu) — czysty moduł, wołany przez monitor otyłości. -->
-<script src="vilda_cykle_leczenia.js?v=1" defer></script>
-<script src="obesity_therapy_monitor.js?v=23" defer></script>
+<script src="vilda_cykle_leczenia.js?v=2" defer></script>
+<script src="obesity_therapy_monitor.js?v=24" defer></script>
 <script src="hypertension_therapy.js?v=10" defer></script>
 <script src="thyroid_cancer_kids.js?v=4" defer></script>
 
@@ -3076,7 +3075,7 @@
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
   <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=71" defer></script>
-  <script src="docpro_state_persist.js?v=6" defer></script>
+  <script src="docpro_state_persist.js?v=7" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts
          the batch Z‑score calculation, this overlay is displayed for a short

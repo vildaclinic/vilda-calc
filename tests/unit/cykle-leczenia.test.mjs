@@ -248,3 +248,32 @@ describe('stary zapis łamiący reguły (D5): nic nie zmienia się samo, poprawk
     expect(dodaj(STARY, P('x', 'start', 40, 10, 95, '2024-11-01')).kod).toBe('dwa-wlaczenia');
   });
 });
+
+describe('rata 2: krótkie powody i rozdzielenie starego zapisu', () => {
+  const STARY = Object.freeze([...CYKL1.slice(0, 2), P('g', 'start', 40, 4, 99, '2024-05-03'), P('h', 'continue', 40, 8, 96, '2024-09-01')]);
+
+  it('każda odmowa dodania ma krótki powód pod przycisk', () => {
+    expect(dodaj(CYKL1.slice(0, 2), P('x', 'start', 40, 5, 98, '2024-06-10')).krotko).toBe('Cykl 1 ma już Włączenie (12.01.2024)');
+    expect(dodaj(OBA, P('x', 'continue', 40, 9, 97, '2024-11-01')).krotko).toBe('Data w przerwie między cyklem 1 a 2');
+    expect(dodaj(CYKL1.slice(0, 2), P('x', 'end', 40, 2, 100, '2024-03-10')).krotko).toBe('Po tej dacie są jeszcze wizyty cyklu 1');
+    expect(dodaj(CYKL1, P('x', 'end', 41, 0, 96, '2024-12-01')).krotko).toBe('Cykl 1 jest już zakończony');
+    expect(dodaj(CYKL1, P('x', 'end', 40, 5, 98, '2024-06-01')).krotko).toBe('Cykl 1 ma już Zakończenie (15.10.2024)');
+    expect(dodaj(CYKL1, P('x', 'continue', 39, 11, 105, '2023-12-01')).krotko).toBe('Data przed Włączeniem (12.01.2024)');
+    expect(dodaj([], P('x', 'start', 41, 0, 100, '')).krotko).toBe('Wymaga daty wizyty');
+    expect(C.sprawdz(OBA, { rodzaj: 'usun', id: 'c' }).krotko).toBe('Połączyłoby cykl 1 z cyklem 2');
+  });
+
+  it('Zakończenie dopisane między dwa Włączenia starego zapisu rozdziela je na dwa poprawne cykle', () => {
+    const r = dodaj(STARY, P('z', 'end', 40, 3, 99, '2024-04-30'));
+    expect(r.ok).toBe(true);
+    const w = C.podziel(r.punkty);
+    expect(w.cykle.map((c) => c.punkty.map((p) => p.id).join(''))).toEqual(['abz', 'gh']);
+    expect(w.niezgodnosci).toEqual([]);
+  });
+
+  it('Zakończenie w środku poprawnego cyklu nadal jest odrzucane — odcięta część nie zaczyna się od Włączenia', () => {
+    const r = dodaj([...CYKL1.slice(0, 2), P('k', 'continue', 40, 6, 97, '2024-07-12')], P('z', 'end', 40, 4, 98, '2024-05-01'));
+    expect(r.ok).toBe(false);
+    expect(r.kod).toBe('zakonczenie-nie-ostatnie');
+  });
+});
