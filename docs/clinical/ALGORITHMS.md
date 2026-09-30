@@ -6630,6 +6630,74 @@ rata 3; karta porównania, „Postępy” i R6 (zmiana substancji zaczyna nowy c
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia per cykl i brzmień nagłówków, podglądu
 przydziału, powodów i banera; scalenie i wdrożenie; raty 3–4.
 
+## Cykle leczenia otyłości — rata 3: Karta pacjenta w cyklach, werdykt ChPL wstrzymany przy niezgodnym zapisie, ocena zakończonego cyklu (P-OTYLOSC-CYKLE rata 3, 2026-09-30)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej);
+„ruszaj z ratą 3” — tego samego dnia. Źródło progów i okien bez zmian: moduł kryteriów `ObesityResponseCriteria`
+(ChPL — wpisy P-KRYTERIA i P-KOTWICA wyżej); ta rata zmienia tylko to, **który zestaw punktów** jest oceniany i jak
+brzmi werdykt.
+
+**Zmiany kliniczne.**
+1. **Wstrzymanie werdyktu przy niezgodnym zapisie (D5).** Gdy zapis ocenianego cyklu łamie reguły cykli (dwa Włączenia
+   bez Zakończenia, wizyta przed Włączeniem, Zakończenie bez wizyt — kody `niezgodnosci` z `VildaCykleLeczenia.podziel`),
+   panel „Dane analityczne — otyłość” nie wydaje werdyktu wg ChPL: „Zapis cyklu wymaga uporządkowania — ocena wg ChPL
+   wstrzymana” (styl „wait”), znika kafelek „Redukcja do oceny”. Dotąd werdykt liczył się od pierwszego Włączenia
+   bieżącego kursu i mógł brzmieć „kontynuować leczenie”. Kafelki opisowe (masa przy włączeniu, redukcja, tempo, czas)
+   zostają — liczone od Włączenia cyklu z modułu, tak jak w monitorze (rata 2). Nic nie jest poprawiane samo.
+2. **Zakończony cykl oceniany na dzień Zakończenia.** Gdy oceniany cykl ma Zakończenie, ocena jest ta sama (te same
+   progi i okno), ale bez zaleceń na dziś: tytuły „Cykl zakończony — odpowiedź była wystarczająca wg ChPL”, „Cykl
+   zakończony — odpowiedź była niewystarczająca wg ChPL”, „Cykl zakończony przed oknem oceny”; opis zaczyna się od
+   „Cykl zakończony DD.MM.RRRR — ocena na dzień Zakończenia, bez zaleceń na dziś.”. Pozostałe tytuły (np. „Ocena kliniczna
+   — brak twardego progu SmPC”) zostają, z tym samym początkiem opisu. Dotąd zakończone leczenie dostawało „Odpowiedź
+   wystarczająca — kontynuować leczenie” albo „… wg ChPL odstawić i ponownie ocenić” / „Przed oknem oceny — oceń po …”.
+3. **Wykres i kafelki panelu per cykl.** Wykres „Dawka a przebieg leczenia” pokazuje punkty ocenianego cyklu; dotąd —
+   wszystkie punkty ze wszystkich kursów. Kafelki i werdykt bieżącego cyklu — liczby jak dotąd (bieżący cykl = dotychczasowy
+   bieżący kurs z P-OTYLOSC-BEZ-STARTU: ta sama granica, Zakończenie).
+4. **Brzmienie.** „kurs” → „cykl” w podpowiedziach o braku Włączenia (karta, panel, monitor DocPro).
+
+**Karta pacjenta (`vilda_auth_ui.js`).**
+- Podsumowanie „Leczenie otyłości” opisuje bieżący (ostatni) cykl; przy więcej niż jednym cyklu — znacznik „cykl N z M”,
+  „Punkty kontrolne: X w cyklu (Y łącznie)” i sekcja „Poprzednie cykle”: jedna linia na cykl, najnowszy na górze (D7) —
+  „Cykl N · lek · okres · czas (tyg. z dat albo mies. z wieku) · zmiana masy od Włączenia” (bez Włączenia — „od 1.
+  punktu”; z niezgodnością — „do uporządkowania”).
+- Nota na karcie, gdy zapis bieżącego cyklu wymaga uporządkowania: „Zapis bieżącego cyklu wymaga uporządkowania: … Popraw
+  go w monitorze DocPro — do tego czasu ocena odpowiedzi wg ChPL jest wstrzymana.”
+- Panel: przełącznik cykli (zakładki, najnowszy pierwszy, „Cykl N · lek · bieżący/ostatni”), gdy cykli jest więcej niż
+  jeden; kafelki, werdykt i wykres liczą wybrany cykl. Wybór cyklu to stan widoku, nie dane pacjenta.
+- `vilda_cykle_leczenia.js` ładowany na 7 kolejnych stronach z Kartą pacjenta (app, index, kalkulator-klirens, notatki,
+  subskrypcja, terminarz, ustawienia; DocPro — od raty 1). Bez modułu karta liczy jeden bieżący kurs jak dotąd (bez
+  historii i bez wstrzymania D5; zakończony kurs — brzmienie z pkt 2).
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 40 l., 170 cm; cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024
+99,0 kg, Z 15.10.2024 97,5 kg; cykl 2 — Wegovy: W 12.11.2024 98,5 kg, K 12.02.2025 95,5 kg, K 10.05.2025 93,0 kg):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+|---|---|---|---|
+| CK-1 | dwa cykle — karta | „cykl 2 z 2”; „Punkty kontrolne 3 w cyklu (6 łącznie)”; „Poprzednie cykle: Cykl 1 · Saxenda · 12.01.2024 – 15.10.2024 · 39,6 tyg. · −6,3% masy” | „Punkty kontrolne 6”, bez historii |
+| CK-2 | dwa cykle — panel, cykl 2 | przełącznik „Cykl 2 · Wegovy · bieżący” / „Cykl 1 · Saxenda”; 98,5 → 93,0 kg, −5,6%, „Ocena kliniczna …”; wykres: 3 punkty | liczby i werdykt te same; wykres: 6 punktów obu kursów |
+| CK-3 | dwa cykle — panel, cykl 1 | 104,0 → 97,5 kg, −6,3%, 40 tyg.; „Cykl zakończony — odpowiedź była wystarczająca wg ChPL”, opis „Cykl zakończony 15.10.2024 — …” | cykl 1 niedostępny w panelu |
+| CK-4 | tylko cykl 1 (zakończony) | „Cykl zakończony — odpowiedź była wystarczająca wg ChPL”, bez przełącznika | „Odpowiedź wystarczająca — kontynuować leczenie” |
+| CK-5 | stary zapis: W 12.01.2024 104, K 12.04.2024 99, W 03.05.2024 99, K 01.09.2024 96 (Saxenda) | „Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana”, bez „Redukcja do oceny”; nota na karcie; kafelki opisowe od 104 kg (−7,7%) | „Odpowiedź wystarczająca — kontynuować leczenie” (−7,7% od 104 kg po 29 tyg. dawki podtrzymującej) |
+| CK-6 | Saxenda: W 12.01.2024 104, K 12.03.2024 102, Z 10.05.2024 101 | „Cykl zakończony — odpowiedź była niewystarczająca wg ChPL” (−2,9%, okno 16 tyg.) | „Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić” |
+| CK-7 | Saxenda: W 12.01.2024 104, Z 23.02.2024 102 | „Cykl zakończony przed oknem oceny”, opis „Cykl zakończony 23.02.2024 — …” | „Przed oknem oceny — oceń po …” |
+
+**Testy.** `tests/e2e/karta-otylosc-cykle-rata-3.spec.mjs` 5 (prawdziwa Karta pacjenta z sejfem testowym: CK-1–CK-3,
+CK-5, CK-4, CK-6 i CK-7, telefon 390 px bez poziomego przewijania). Zaktualizowane: `karta-otylosc-bez-punktu-wlaczenia.spec.mjs`
+KURS-1 i MON-3 — brzmienie „cykl” zamiast „kurs” (celowa zmiana tej raty; liczby bez zmian). Bez zmian i zielone:
+P-OTYLOSC-BEZ-STARTU (OB-1–OB-5, KURS-2, MON-1, MON-2), P-KOTWICA, kryteria ChPL, „Postępy”, monitor (raty 1–2).
+
+**Ograniczenia i kolejne raty.** Karta porównania, „Postępy” i R6 (zmiana substancji zaczyna nowy cykl) — rata 4.
+Strony, na które `vilda_auth_ui.js` wstrzykują `vilda_chrome.js` / `vilda_session_bridge.js`, nie ładują modułu cykli
+(jak innych pomocników karty) — tam karta liczy jeden bieżący kurs jak przed tą ratą. Werdykt zakończonego cyklu jest
+opisem przeszłości; aplikacja nie ocenia, czy decyzja o zakończeniu była właściwa.
+
+**Wersje** (`npm run podbij-wersje`, baza `audyt` ca9638d). `obesity_therapy_monitor.js` 25, `vilda_auth_ui.js` 470,
+`vilda_chrome.js` 86, `vilda_session_bridge.js` 14; `vilda_cykle_leczenia.js` 2 na 7 kolejnych stronach; precache
+(append-only); `SW_VERSION` 1.1.134 → 1.1.135 (+ pin; 1.1.134 wydał P-DIETA-B5, #510); fixture wersji.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wstrzymania werdyktu przy niezgodnym zapisie, brzmień
+werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scalenie i wdrożenie; rata 4.
+
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH
@@ -6887,7 +6955,7 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
-## Kosz i retencja: poprawki po przeglądzie (P-KOSZ-POPRAWKI, SW 1.1.135, `vilda_vault.js` 193, `vilda_kosz_zapisow.js` 2, 2026-09-30)
+## Kosz i retencja: poprawki po przeglądzie (P-KOSZ-POPRAWKI, SW 1.1.136, `vilda_vault.js` 193, `vilda_kosz_zapisow.js` 2, 2026-09-30)
 
 **Zlecenie.** Trzy uwagi Codex P1 do scalonych #501 (P-KOSZ-ZAPISOW) i #502 (P-RETENCJA-NAGROBKI), zweryfikowane w kodzie;
 zgoda właściciela 2026-09-30 („rób ten nowy PR”). Po #509 (P-BLOKADA-ZAPISU-WERSJI) przypięcie, poprawka i usuwanie wersji
@@ -6942,9 +7010,9 @@ koszt — testem zachowania jej nie widać.
 **Wpływ kliniczny.** Brak zmian we wzorach, progach i wynikach. Zmiana dotyczy danych: kosz niesie treść najnowszego
 usunięcia, a usunięcie (kosz, retencja) nie kasuje wersji zmienionej po decyzji.
 
-**Wersje.** `vilda_vault.js` 193 (8 stron + wstrzyknięcia: `vilda_chrome.js` 86, `vilda_session_bridge.js` 14 na 22
-stronach), `vilda_kosz_zapisow.js` 2, precache, `SW_VERSION` 1.1.134 → 1.1.135 (+ pin), fixture wersji — nadane przez
-`npm run podbij-wersje` względem `origin/audyt` (`ca9638d`, po #510); pin kolejności skryptów w `spojnosc-zapisow.test.mjs`
+**Wersje.** `vilda_vault.js` 193 (8 stron + wstrzyknięcia: `vilda_chrome.js` 87, `vilda_session_bridge.js` 15 na 22
+stronach), `vilda_kosz_zapisow.js` 2, precache, `SW_VERSION` 1.1.135 → 1.1.136 (+ pin), fixture wersji — nadane przez
+`npm run podbij-wersje` względem `origin/audyt` (`a3d1796`, po #510 i #511); pin kolejności skryptów w `spojnosc-zapisow.test.mjs`
 przestawiony ręcznie („Do decyzji” skryptu).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; czy scalanie synchronizacji ma brać blokadę pacjenta.
