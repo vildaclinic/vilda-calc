@@ -6082,6 +6082,58 @@ także na czystym 0f1e0a7 (1 z 3 przebiegów, pojedynczy worker): karta zaawanso
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie.
 
+## Karta pacjenta bez punktu „Włączenie leczenia” GH: brak punktu nazwany wprost, nie wiek pierwszej kontroli (P-GH-BEZ-STARTU, SW 1.1.113, `vilda_auth_ui.js` 466, 2026-09-29)
+
+**Zgłoszenie właściciela (2026-09-29).** Pacjent ma w monitorze terapii GH punkty „Kontynuacja”, ale nie ma punktu
+„Włączenie leczenia”. Monitor mówi wtedy „Brak punktu włączenia leczenia. Dodaj go (także wstecznie)…”, a karta
+„Leczony hormonem wzrostu (rhGH)” w Karcie pacjenta pokazywała w polu „Włączenie” wiek pacjenta z pierwszego punktu
+kontrolnego — czyli podawała datę włączenia, której nikt nie wpisał.
+
+**Przyczyna (kod).** `vilda_auth_ui.js`, karta podsumowania GH (`wl`) i panel „Dane analityczne” (`kl`): punkt startu to
+pierwszy punkt typu `start`, a przy jego braku — najwcześniejszy punkt z listy (`r||(r=n[0])`, `c||(c=d[0])`). Ten zastępczy
+punkt był podpisywany tak samo jak prawdziwy start: „Włączenie: w wieku …”, „Wzrost przy włączeniu”, „Przyrost całkowity”,
+„Tempo … od włączenia”, „Odpowiedź (ΔhSDS) … catch-up od włączenia”. Zmierzone na bazie `7b2a999`: pacjent z dwoma punktami
+„Kontynuacja” (9 l. 7 mies. i 10 l. 0 mies.) → karta „Włączenie: w wieku 9 l. 7 mies.”.
+
+**Co jest.** Karta i panel rozróżniają prawdziwy punkt „Włączenie leczenia” od pierwszego punktu kontrolnego:
+- karta podsumowania: pole „Włączenie” = „brak punktu”; pod siatką pomarańczowa nota (styl noty z monitora): „Brak punktu
+  włączenia leczenia (pierwszy zapisany punkt kontrolny: w wieku X). Dodaj punkt „Włączenie leczenia” w monitorze terapii
+  (także wstecznie), aby zmiany liczyły się od startu.”;
+- panel „Dane analityczne”: „Wzrost w 1. punkcie” (zamiast „Wzrost przy włączeniu”), „Przyrost od 1. punktu” (zamiast
+  „Przyrost całkowity”), tempo „od 1. punktu (z N mies. …)” (zamiast „od włączenia”), ΔhSDS „od 1. punktu (brak punktu
+  włączenia)” (zamiast „catch-up od włączenia”).
+Z punktem „Włączenie leczenia” karta i panel wyglądają jak dotąd. Program, preparat, dawka, liczba punktów i ostatnia
+kontrola bez zmian (program/preparat nadal z pierwszego punktu, gdy brak startu — to fakt z punktu, nie data włączenia).
+
+**Czego zmiana nie robi.** Nie zmienia żadnej liczby: baza przyrostu, tempa i ΔhSDS to nadal pierwszy punkt (tak liczy też
+monitor — „Zmiana od włączenia (Δ od pierwszego pomiaru)”), progi „good/bad” bez zmian. Nie dotyka zapisu, danych pacjenta
+ani synchronizacji. Nie zmienia monitora terapii, analizy trajektorii (kursy leczenia liczone od pierwszego punktu — osobna,
+zaakceptowana reguła rat P-WERDYKT) ani karty leczenia otyłości.
+
+**Wpływ kliniczny.** Zmiana prezentacji i interpretacji (etykiety), bez zmiany wartości. Karta przestaje sugerować wiek
+włączenia rhGH, którego nie wpisano; lekarz widzi, że zmiany są liczone od pierwszej kontroli, a nie od startu leczenia.
+Wymaga akceptacji właściciela.
+
+**Przypadki (`tests/e2e/karta-gh-bez-punktu-wlaczenia.spec.mjs`, dane fikcyjne).** Chłopiec 10 l. 0 mies., 127 cm; punkty
+„Kontynuacja” 9 l. 7 mies. / 122 cm i 10 l. 0 mies. / 127 cm, SNP, Genotropin 12 mg 0,025 mg/kg/d → karta „Włączenie: brak
+punktu”, nota „…(pierwszy zapisany punkt kontrolny: w wieku 9 l. 7 mies.)…”, „Punkty kontrolne 2”, „Ostatnia kontrola:
+w wieku 10 l. 0 mies.”; panel „Wzrost w 1. punkcie 122 cm”, „Przyrost od 1. punktu +5,0 cm przez 5 mies.”, „Tempo
+wzrastania 12 cm/rok od 1. punktu (z 5 mies., krótki odstęp)”, ΔhSDS „od 1. punktu (brak punktu włączenia)”, bez frazy
+„od włączenia”. Kontrola: ten sam pacjent z pierwszym punktem jako „Włączenie leczenia” → „Włączenie: w wieku 9 l. 7 mies.”,
+„Wzrost przy włączeniu”, „Przyrost całkowity”, „od włączenia”, „catch-up od włączenia”, bez noty. Na bazie pierwszy test
+pada („Włączeniew wieku 9 l. 7 mies.”), kontrolny przechodzi.
+
+**Wersje.** `vilda_auth_ui.js` 465 → 466 na 8 stronach i w adresach wstrzykiwanych przez `vilda_chrome.js` i
+`vilda_session_bridge.js`, więc te dwa też podbite: `vilda_chrome.js` 78 → 79, `vilda_session_bridge.js` 6 → 7 na 22
+stronach (78/6 i SW 1.1.111 wydał równolegle P-HISTORIA-ZWIJANA #484 z inną treścią — `vilda_vault.js?v=188` — więc ta
+zmiana podbija o jeden; ten sam klucz cache nie może nieść dwóch treści); nowe adresy dopisane do precache obok historii
+(append-only); `SW_VERSION` 1.1.112 → 1.1.113 (+ pin w `tests/unit/klirens-ui-model.test.mjs`; 1.1.112 wydał
+P-POWLOKA-WYSCIG #486, który naprawił czerwony odłamek e2e 2/3 tego PR); `tests/fixtures/wersje-zasobow.json` odświeżony.
+
+**Co pozostaje decyzją właściciela.** Akceptacja brzmień; czy ta sama poprawka ma objąć kartę „Leczenie otyłości”
+(`Cl`/`Ml` w `vilda_auth_ui.js` mają identyczny zastępczy start `r||(r=n[0])`, a panel otyłości liczy od niego okna
+odpowiedzi ChPL — tam brak startu dotyka oceny, nie tylko etykiety); scalenie i wdrożenie.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.

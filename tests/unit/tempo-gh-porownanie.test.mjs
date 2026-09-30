@@ -78,7 +78,8 @@ describe('Panel porównania i warstwa GH Karty pacjenta liczą przez odcinek()',
 
   it('kafelek „Tempo wzrastania" w warstwie GH: odcinek() i odstęp w podpisie, bez velocityCmPerYear', () => {
     expect(src).toContain('Tq.odcinek({ageMonths:Se(M),height:M.height},{ageMonths:D,height:p.height})');
-    expect(src).toContain('(M||Mk&&Mk!==c?"ost. okres":"od w\\u0142\\u0105czenia")+" (z "+Math.round(Fo.gapM)+" mies."+(Fo.krotki?", kr\\u00F3tki odst\\u0119p":"")+")"');
+    // P-GH-BEZ-STARTU (2026-09-29): bez punktu „Włączenie leczenia" (Gk=false) podpis mówi „od 1. punktu", nie „od włączenia".
+    expect(src).toContain('(M||Mk&&Mk!==c?"ost. okres":Gk?"od w\\u0142\\u0105czenia":"od 1. punktu")+" (z "+Math.round(Fo.gapM)+" mies."+(Fo.krotki?", kr\\u00F3tki odst\\u0119p":"")+")"');
     // P-TEMPO decyzja 1 (zgłoszenie właściciela 2026-09-15): pacjent leczony 5 mies. miał pusty
     // kafelek „—", choć przyrost całkowity był liczony. Bez punktu ≥ 6 mies. wstecz tempo idzie
     // z ostatniego dostępnego odcinka, z oznaczeniem i bez zielonego werdyktu.
