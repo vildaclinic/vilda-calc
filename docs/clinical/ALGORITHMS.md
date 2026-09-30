@@ -6655,6 +6655,66 @@ SW 1.1.87 → **1.1.88**; `vilda_data_import_export.js?v=85→86`, `vilda_shell.
 **Co pozostaje decyzją właściciela.** Akceptacja pełnego odtworzenia panelu docelowego po zmianie sesji (skutek uboczny wyżej)
 i scalenie.
 
+## Karta porównania po „Odtwórz zapis”: spóźniony odczyt z sejfu nie przywraca porównania na Start ani w DocPro (P-POWLOKA-WYSCIG, SW 1.1.112, `vilda_summary_cards.js` 50, 2026-09-30)
+
+**Zgłoszenie (2026-09-29).** Test `tests/e2e/powloka-przelaczanie-paneli.spec.mjs` (`:147`, `:172`, oba z P-POWLOKA-PANELE)
+padał w CI (odłamek e2e 2/3) na wielu PR-ach, także po powtórce Playwrighta (#475, #479/#484, #483), a na kolejnych
+przechodził dopiero przy powtórce (m.in. #474, #476, #480, #485). Objaw: DocPro po przełączeniu ma komplet pól i
+`lastLoadedData`, ale „Podsumowanie wyników” jest bez BMI, a w `:172` widać kartę „Porównanie z poprzednim pomiarem”.
+Lokalnie (4 workery, `CI=1`, cały odłamek 2/3) test przechodził — wyścig zależał od szybkości runnera.
+
+**Przyczyna (pomiar, nie założenie).** „Wczytaj tego pacjenta” wysyła `vilda:patient-loaded` (`source: "pick"`), a
+`vilda_summary_cards.js` (funkcja Y) uruchamia asynchroniczny odczyt pacjenta z sejfu (`VildaVault.getPatient`: IndexedDB
+i odszyfrowanie wszystkich wizyt). Modal wyboru otwiera się, nie czekając na ten odczyt. Gdy lekarz (albo test) wybierze
+„Odtwórz zapis” wcześniej, niż odczyt wróci, `vilda:state-restored` usuwa wspólny klucz `vildaPrevSummaryPid` / `Anchor`
+(sessionStorage wspólny dla ramek powłoki), a spóźniony wynik odczytu pokazuje kartę porównania na Start i ustawia klucz
+z powrotem — Y nie sprawdzał, czy wynik jest jeszcze aktualny. Po przejściu na DocPro odświeżenie monitora GH
+(`vilda:therapy-points-changed`) widzi klucz, DocPro wywołuje Y, pokazuje kartę porównania, a `updateProfessionalSummaryCard`
+przy widocznej karcie porównania czyści podsumowanie (P-OSTATNI-2a). Odtworzone deterministycznie: opóźnienie
+`getPatient` na Start o 1,5 s albo 3 s daje za każdym razem stan z CI (klucz ustawiony po odtworzeniu, karta porównania na
+Start, w DocPro `podsumowanieBMI: false`, `porownanie: true`).
+
+**Co jest.** W `vilda_summary_cards.js`, tylko w warstwie widoku:
+- `vilda:state-restored` („Odtwórz zapis”) podbija licznik `vildaPrevSummaryEpoch` w sessionStorage (wspólny dla ramek)
+  i jak dotąd czyści klucz porównania.
+- Y zapamiętuje licznik przed odczytem z sejfu; wynik, który wraca po jego zmianie, jest porzucany — nie pokazuje karty
+  i nie ustawia klucza.
+- Ramka, w której inna ramka usunęła klucz (zdarzenie `storage` na sessionStorage), chowa swoją kartę porównania i przelicza
+  podsumowanie (`G()` bez czyszczenia klucza).
+
+Pierwsza wersja podbijała licznik przy każdym czyszczeniu klucza (`G({clearKey})`) i porzucała też wynik po usunięciu klucza.
+To psuło „Nowy pomiar” na zwykłej stronie (10 testów e2e: karta porównania nie pojawiała się): ta ścieżka czyści stan po
+drodze i polega na tym, że odczyt uruchomiony przy „Wczytaj” pokaże kartę później. Stąd licznik tylko przy „Odtwórz zapis”.
+
+**Czego zmiana nie robi.** Nie zmienia wyboru „Nowy pomiar” (klucz nie jest wtedy czyszczony, karta porównania zostaje na
+obu panelach), obliczeń, danych pacjenta, zapisu, synchronizacji ani treści podsumowania i karty porównania. Nowy klucz
+sessionStorage `vildaPrevSummaryEpoch` to licznik stanu widoku karty (bez danych pacjenta), żyje tyle co karta przeglądarki.
+
+**Wpływ kliniczny.** Brak zmiany wyników. Po „Odtwórz zapis” lekarz nie widzi już karty porównania, której nie wybrał,
+i „Podsumowanie wyników” w DocPro nie znika.
+
+**Przypadki (e2e, dane fikcyjne; pacjentka 14 l. 1 mies., 149,2 cm, 51,4 kg, dwie wizyty, punkt GH).**
+- „Odtwórz zapis”, odczyt z sejfu na Start opóźniony o 3 s, DocPro otwarty wcześniej → po odczycie klucz porównania pusty,
+  Start bez karty porównania; DocPro: komplet pól, podsumowanie z BMI, bez karty porównania — także 2,5 s po przełączeniu.
+  Na bazie `c1c7b2b` test pada (klucz wraca po odtworzeniu).
+- Kontrola: „Nowy pomiar” z tym samym opóźnieniem → karta porównania na Start i w DocPro (przechodzi na bazie i po zmianie).
+- Istniejące `:129`, `:147`, `:172`, `:193` bez zmian.
+
+**Walidacja.** `npm test` zielony. E2E: `powloka-przelaczanie-paneli` 18/18 (`--repeat-each=3`, 4 workery); spec-e karty
+porównania i podsumowania (`ostatni-pomiar-porownanie`, `porownanie-kontekst`, `porownanie-rata-7`,
+`porownanie-uklad-mobile`) 17/17; 24 spec-e z „Odtwórz zapis” / „Nowy pomiar” / Kartą pacjenta 107/108 — jedyny błąd
+(`odtworz-zapisany-stan-wyscig`, `#advancedGrowthForm` ukryty w przygotowaniu testu przez bramkę PRO) występuje tak samo
+na bazie (1/12 powtórzeń i tu, i tam).
+
+**Wersje.** `vilda_summary_cards.js` 49 → 50 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`), nowy adres
+w precache obok historii (append-only), `SW_VERSION` 1.1.111 → 1.1.112 (+ pin w `tests/unit/klirens-ui-model.test.mjs`),
+`tests/fixtures/wersje-zasobow.json` odświeżony. Ta sama poprawka jest przeniesiona do PR P-GH-BEZ-STARTU (#483), żeby jego
+odłamek 2/3 był zielony; drugi scalony PR podbija `SW_VERSION` o jeden.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie. Inne niestabilne testy widziane przy tym przeglądzie CI
+(`tozsamosc-pacjenta-duplikaty.spec:226`, `historia-pomiarow-zwijanie.spec:200`, `docpro-dziedziczy-pokwitanie.spec:92`)
+są poza tą zmianą.
+
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
 **Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe

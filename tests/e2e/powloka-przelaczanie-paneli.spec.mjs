@@ -123,6 +123,24 @@ async function wczytajZKarty(page, start, pid, wybor) {
   await start.waitForSelector('#vildaLoadChoiceModal', { state: 'detached', timeout: 8000 }).catch(() => {});
 }
 
+// P-POWLOKA-WYSCIG: odczyt pacjenta z sejfu (VildaVault.getPatient: IndexedDB + odszyfrowanie) na Start trwa
+// dłużej niż wybór w modalu — tak jak na obciążonym runnerze CI. Opóźnienie ustawiamy po otwarciu Karty pacjenta,
+// więc dotyczy odczytu uruchamianego przez „Wczytaj tego pacjenta” (karta porównania, vilda_summary_cards.js).
+const opoznijOdczytPacjenta = (fr, ms) => fr.evaluate((d) => {
+  const V = window.VildaVault; const org = V.getPatient;
+  V.getPatient = function () { const a = arguments, s = this; return new Promise((r) => { setTimeout(r, d); }).then(() => org.apply(s, a)); };
+}, ms);
+
+async function wczytajZKartyWolnyOdczyt(page, start, pid, wybor, ms) {
+  await start.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (r) => { if (r) window.applyLoadedData(r); }, null), pid);
+  await start.waitForSelector('.vhv-tile', { state: 'visible' });
+  await opoznijOdczytPacjenta(start, ms);
+  await start.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+  await start.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 8000 });
+  await start.click(wybor === 'nowy' ? '#vildaLcmNew' : '#vildaLcmRestore');
+  await start.waitForSelector('#vildaLoadChoiceModal', { state: 'detached', timeout: 8000 }).catch(() => {});
+}
+
 // Oczekiwany stan DocPro = stan Start po wczytaniu (data, wiek z daty, płeć, ostatnia wizyta, nazwisko).
 const pelny = async (start) => { const s = await stan(start); return { dob: s.dob, age: s.age, ageM: s.ageM, sex: 'F', h: '149.2', w: '51.4', name: 'Probna Alicja' }; };
 
@@ -200,6 +218,52 @@ test('„Nowy pomiar” i przejście na DocPro: ten sam stan co na Start — dan
   expect(naStart, 'Start po „Nowy pomiar": tożsamość i data, pola nowej wizyty puste, porównanie z poprzednią wizytą widoczne')
     .toMatchObject({ sex: 'F', h: '', w: '', name: 'Probna Alicja', porownanie: true });
   expect(naStart.age, 'wiek z daty urodzenia').toMatch(/^\d+$/);
+
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka(page, 'DocPro');
+  await expect.poll(() => stan(docpro), { timeout: 8000, message: 'DocPro pokazuje to samo co Start' })
+    .toMatchObject({ dob: naStart.dob, age: naStart.age, ageM: naStart.ageM, sex: 'F', h: '', w: '', name: 'Probna Alicja', baza: true, porownanie: true });
+});
+
+// P-POWLOKA-WYSCIG (czerwone CI odłamka 2/3 na wielu PR-ach: :147 i :172 z „podsumowanieBMI: false”, w :172 też
+// „porownanie: true”). Zmierzone: odczyt pacjenta dla karty porównania (Y w vilda_summary_cards.js) kończył się po
+// „Odtwórz zapis” i ustawiał z powrotem wspólny klucz vildaPrevSummaryPid, który odtworzenie właśnie usunęło. Po
+// przełączeniu DocPro odświeżał monitor GH, widział klucz, pokazywał kartę porównania i czyścił podsumowanie. Na
+// odblokowanej maszynie wyścig zdarzał się rzadko; opóźnienie odczytu o 3 s odtwarza go za każdym razem.
+test('„Odtwórz zapis” przy wolnym odczycie z sejfu: spóźniony wynik nie przywraca karty porównania na żadnym panelu', async ({ page }) => {
+  test.setTimeout(180_000);
+  const start = await otworzPowloke(page);
+  const pid = await pacjentkaWSejfie(page, start);
+
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const docpro = await ramka(page, 'DocPro');
+  await gotowa(docpro);
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.VildaShell.navigate('start'));
+  await page.waitForTimeout(500);
+
+  await wczytajZKartyWolnyOdczyt(page, start, pid, 'odtworz', 3000);
+  await expect.poll(() => stan(start).then((s) => s.h)).toBe('149.2');
+  const PELNY = await pelny(start);
+  await page.waitForTimeout(3000 + 2500); // spóźniony odczyt już wrócił
+  expect(await start.evaluate(() => sessionStorage.getItem('vildaPrevSummaryPid')), 'klucz porównania po „Odtwórz zapis”').toBeNull();
+  expect((await stan(start)).porownanie, 'Start bez karty porównania').toBe(false);
+
+  await page.evaluate(() => window.VildaShell.navigate('docpro'));
+  const OCZEKIWANY = { dob: PELNY.dob, age: PELNY.age, ageM: PELNY.ageM, sex: 'F', h: PELNY.h, w: PELNY.w, name: PELNY.name, podsumowanieBMI: true, baza: true, porownanie: false };
+  await expect.poll(() => stan(docpro), { timeout: 8000, message: 'DocPro: komplet pól i podsumowanie z BMI' }).toMatchObject(OCZEKIWANY);
+  await page.waitForTimeout(2500); // odświeżenia po przełączeniu (monitor GH, sesja) już przeszły
+  expect(await stan(docpro), 'DocPro nadal z podsumowaniem, bez karty porównania').toMatchObject(OCZEKIWANY);
+});
+
+test('„Nowy pomiar” przy wolnym odczycie z sejfu: karta porównania nadal na obu panelach (kontrola poprawki wyścigu)', async ({ page }) => {
+  test.setTimeout(180_000);
+  const start = await otworzPowloke(page);
+  const pid = await pacjentkaWSejfie(page, start);
+  await wczytajZKartyWolnyOdczyt(page, start, pid, 'nowy', 3000);
+  await expect.poll(() => stan(start), { timeout: 10000, message: 'Start po „Nowy pomiar”: porównanie z poprzednią wizytą widoczne' })
+    .toMatchObject({ sex: 'F', h: '', w: '', name: 'Probna Alicja', porownanie: true });
+  const naStart = await stan(start);
 
   await page.evaluate(() => window.VildaShell.navigate('docpro'));
   const docpro = await ramka(page, 'DocPro');
