@@ -7257,6 +7257,79 @@ i powiązane spec-e — wyniki w PR.
 **Wersje.** `docpro_state_persist.js` 5 → 6 (docpro), precache (append-only), `SW_VERSION` 1.1.117 → 1.1.119 (+ pin;
 1.1.117 wydał P-POWLOKA-ID, #491, a 1.1.118 bierze P-SESJA-OBCA, #492), fixture wersji.
 
+## Spóźniona odpowiedź sejfu w korekcie nazwiska nie cofa zmian formularza (P-NAME-FIX-WYSCIG, SW 1.1.124, `vilda_name_fix.js` 3, 2026-09-30)
+
+**Zgłoszenie.** CI PR #493 (commit `fa578176`, odłamek e2e 3/3, run 36695159393): kontrola
+`tozsamosc-pacjenta-duplikaty.spec.mjs` „inne nazwisko w formularzu zakłada nowego pacjenta, nie nadpisuje
+wczytanego” padła w obu próbach. Po wpisaniu imienia i nazwiska innego dziecka i potwierdzeniu ich w kolektorze
+wpisy wieku, masy i wzrostu nie pomagały — kolektor przez ok. 3–4 s widział nazwisko WCZYTANEGO pacjenta.
+Po ponownym uruchomieniu joba test przeszedł; lokalnie przechodził też przy 4 workerach × 20 powtórzeń i przy
+spowolnieniu CPU ×4 i ×8 (spowolnienie skaluje także stronę testu, więc nie zmienia kolejności).
+
+**Przyczyna (zmierzona na `audyt` `5cac96d`).** Przechwycenie settera `.value` pól `#name`, `#lastName`, `#firstName`
+ze stosem wywołań i zapisów `sessionStorage`: jedynym zapisem starej nazwy po wpisaniu nowej jest
+`vilda_name_fix.js` `handlePatientLoaded → applyFields`. Handler `vilda:patient-loaded` czyta rekord z sejfu
+asynchronicznie (`getPatient`) i dopiero potem ustawia pola z jawnych części (`user.lastName/firstName`). Po odczycie
+sprawdzał tylko, czy nie przyszło nowsze `vilda:patient-loaded` (`loadSeq`) — nie, czy formularz nie zmienił się
+w międzyczasie.
+- W 12 przebiegach (4 workery) odczyt kończył się 172–943 ms po wczytaniu, a test zaczynał wpisywać nowe nazwisko
+  33–452 ms później. Gdy odczyt się spóźnił, stara nazwa wracała po potwierdzeniu nowej, a drugi krok testu wpisuje
+  już tylko pomiary — stąd trwały stan z CI.
+- Opóźnienie odpowiedzi sejfu o 150 i 250 ms odtwarzało dokładnie komunikat z CI. Przy 350 ms skutek był gorszy:
+  stara nazwa wracała między potwierdzeniem kolektora a zapisem i **pomiary drugiego dziecka (7 lat, 20,1 kg,
+  110 cm) zapisały się jako nowa wersja rekordu wczytanego pacjenta**, bez drugiego pacjenta.
+- Na `index.html` (tam działa ten test) `vildaPersistRestoreAll` (P-POWLOKA-ID, #491), odtwarzanie pól
+  z `sharedUserData` w `userData.js` ani kopia robocza w `vilda_persist_runtime.js` nie zapisywały pól tożsamości po
+  wczytaniu.
+
+**Drugi wyścig, w powłoce — usunięty przez P-SESJA-OBCA (#492).** Pierwsza wersja tej poprawki, na `5cac96d`, wywróciła
+4 testy powłoki (`powloka-tozsamosc-ramki` ×3, `powloka-zmiana-pacjenta` ×1, obie próby). Ślad zapisów w ramce DocPro:
+wczytanie B (t+71–99 ms) → ping `vilda:sharedLoadSeq` → `vilda_shell.js` woła `vildaPersistRestoreAll()` w ramkach poza
+Start → t+301 ms nazwisko A wraca do `#name`, `#lastName`, `#firstName` i `#advName` z nieaktualnego wspólnego stanu
+(kanał 2 z P-SESJA-OBCA). Na `5cac96d` przykrywał to spóźniony `vilda_name_fix` (t+362 ms), przywracając B w trzech
+polach — `#advName` zostawał z nazwiskiem A, a przy odczycie sejfu szybszym niż odtwarzanie A wygrywało i tam. Po #492
+(`aadd127`) odtwarzanie nie dotyka pól tożsamości (ślad: tylko wczytanie B i korekta przy niezmienionym formularzu),
+a te 4 testy przechodzą z tą poprawką. Poprawka wymaga więc #492 w bazie; bez niego odsłania tamten błąd zamiast go
+maskować.
+
+**Zasięg w interfejsie.** Po wczytaniu nazwisko i imię są tylko do odczytu (P-TOZSAMOSC), a formularz zasłania okno
+„Co chcesz zrobić?”, więc lekarz nie wpisze innego nazwiska w trakcie odczytu. Odczyt trwa jednak lokalnie ułamek
+sekundy, dłużej pod obciążeniem, na wolnym urządzeniu i w chmurze, a przy ponownej próbie modułu ponad 1,2 s. W tym
+czasie pola zmieniają też inne ścieżki: „Nowy pomiar” → „Wyczyść wszystkie pola” (spóźniona odpowiedź wpisywała nazwę
+do wyczyszczonego formularza, a przy starym rekordzie jednopolowym pokazywała pytanie o rozdzielenie), zapisy
+programowe i odtwarzanie stanu.
+
+**Co jest (`vilda_name_fix.js` v3).** Handler zapamiętuje pola tożsamości w chwili zdarzenia. Po odczycie, zanim
+ustawi pola albo pokaże pytanie: jeżeli pola się zmieniły i żadna z nazw rekordu (`payload.name`, nagłówek, jawne
+części) nie zgadza się z tym, co w nich teraz jest, nic nie robi i zostawia w konsoli ostrzeżenie bez danych
+osobowych. Zgodność = te same słowa bez względu na kolejność i wielkość liter, jak w blokadzie
+`vilda_pola_tozsamosci.js`. Pola niezmienione od zdarzenia albo przepisane tą samą nazwą — korekta jak dotąd.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna (integralność danych: który rekord dostaje zapis), bez zmian wzorów, progów,
+jednostek i danych referencyjnych. Nie zmienia żadnego wyniku ani interpretacji.
+
+**Przypadki (e2e, dane fikcyjne; test wstrzymuje odpowiedzi sejfu dla wczytanego pacjenta, zmienia formularz
+i dopiero wtedy je zwalnia).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie `5cac96d` |
+|---|---|---|
+| rekord z jawnymi częściami „Fikcyjny-Wyscig Adam” → przed odpowiedzią sejfu wpisane „Inny-Wyscig Bartek” → odpowiedź | pola i kolektor: „Inny-Wyscig Bartek” | pada (wraca „Fikcyjny-Wyscig Adam”) |
+| stary rekord jednopolowy „Fikcyjna Wyscigowa” → „Nowy pomiar” → „Wyczyść wszystkie pola” → odpowiedź | pola puste, bez pytania o rozdzielenie | pada (nazwa wraca do pola Nazwisko) |
+| Kontrola: „Szymon Fikcyjny” z jawnymi częściami, formularz niezmieniony → odpowiedź | Nazwisko „Fikcyjny”, Imię „Szymon” | przechodzi |
+| Kontrola: jw., w trakcie odczytu `#name` = „SZYMON fikcyjny” → odpowiedź | Nazwisko „Fikcyjny”, Imię „Szymon” | przechodzi |
+
+Mutanty: bez przepustki „ta sama nazwa” pada czwarty scenariusz; bez przepustki „pola niezmienione” pada 5
+dotychczasowych testów `name-fix.spec.mjs` (tam zdarzenie przychodzi przy pustym formularzu).
+
+**Walidacja.** `tests/e2e/name-fix.spec.mjs` (4 scenariusze z tabeli + 5 dotychczasowych); na `aadd127` bez poprawki
+oba scenariusze wyścigu padają 6/6 przy 3 powtórzeniach. Plik `tozsamosc-pacjenta-duplikaty.spec.mjs` z odpowiedziami
+sejfu opóźnionymi o 150/250/350 ms (kopia robocza testu): na bazie 1/1/3 z 9 przebiegów pada, po poprawce 0 z 9 dla
+150–600 ms. Test `tozsamosc-pacjenta-duplikaty.spec.mjs` bez zmian. `npm test`, pełne e2e — wyniki w PR.
+
+**Wersje.** `vilda_name_fix.js` 2 → 3 (index, docpro), precache (append-only), `SW_VERSION` 1.1.121 → 1.1.124 (+ pin;
+1.1.121 wydał P-SESJA-OBCA, #492; 1.1.122 bierze P-CEL-WLASNY-ZAPIS, #494, a 1.1.123 P-ZAPISY-DWIE-KARTY, #495), fixture
+wersji.
+
 ## Tożsamość punktu terapii GH w tabeli spożycia i zdjęcie flag zawieszenia po „Wyczyść” (P-GH-TOZSAMOSC rata 2, SW 1.1.86, 2026-09-28)
 
 **Skąd.** Druga rata decyzji właściciela z 2026-09-28 (opcja (a) w dwóch ratach; rata 1 poniżej). Zakres: (1) martwe
