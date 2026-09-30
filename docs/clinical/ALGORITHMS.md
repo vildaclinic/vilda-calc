@@ -5974,7 +5974,7 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
 
-## Czas dojścia do normy BMI: wzrastanie wg mediany siatki i dwa scenariusze stabilizacji (P-DIETA-B8, SW 1.1.129, 2026-09-30)
+## Czas dojścia do normy BMI: wzrastanie wg mediany siatki i dwa scenariusze stabilizacji (P-DIETA-B8, SW 1.1.130, 2026-09-30)
 
 **Decyzje właściciela (2026-09-30), po punkcie B8 audytu zaleceń dietetycznych:**
 1. model trajektorii B′ — wzrost równoległy do mediany wzrostu siatki pacjenta;
@@ -6088,7 +6088,7 @@ Siatka wyników (wzrost = mediana OLAF, masa z centyla BMI; S1/S2 w mies.; „br
 - `vilda_bmi_journey.js` (?v=28).
 - `vilda_diet_recommendations.js` (?v=67).
 - `vilda_raport_plan.js` (?v=21).
-- SW 1.1.128 → 1.1.129.
+- SW 1.1.129 → 1.1.130 (1.1.129 zajął P-RETENCJA-NAGROBKI, #502).
 
 Testy zaktualizowane pod S1/S2: `dieta-audyt2`, `rata-x-czas-do-normy-wzrastanie`, `raport-plan-stabilizacja-rata-g2`. E2E: `tests/e2e/dieta-b8-wzrastanie.spec.mjs`.
 
