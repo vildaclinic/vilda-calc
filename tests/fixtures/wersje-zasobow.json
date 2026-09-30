@@ -417,7 +417,7 @@
  },
  "style.css": {
   "v": 86,
-  "sha256": "ec5bee2aace0dc2595ba1bbf180ba9eedf947f209085ee1bc067e841fb8f8644"
+  "sha256": "139c3a1615f6826b501de823be7f452177ebeceff98302e17a41f4acea567835"
  },
  "thyroid_cancer_kids.js": {
   "v": 4,
@@ -544,11 +544,11 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 43,
+  "v": 44,
   "sha256": "6062d165ad390ec944c7fad6bc44fea44f4b5e9b3e0f851b9042ef2d901117fb"
  },
  "vilda_diet_recommendations.js": {
-  "v": 68,
+  "v": 69,
   "sha256": "69187ec3b3064cb6f6166863d51d70963c6294bba462dd04aa19ac3752a2480d"
  },
  "vilda_dob_age.js": {
