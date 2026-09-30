@@ -64,8 +64,8 @@
   "sha256": "3eb130872b2b8588ffdf376349bf458d77c1fc0c07b33443e4f73596e2890a70"
  },
  "docpro_state_persist.js": {
-  "v": 6,
-  "sha256": "76ef35bad5809ed6837c6b67b0af4279dbc21659c2a6f742a844fb231377840d"
+  "v": 7,
+  "sha256": "3511575dec7845d56a95c4a1f0e4cedac87c2666cf647b4400f0d116dfa7c75a"
  },
  "ds_lms.js": {
   "v": 4,
@@ -80,8 +80,8 @@
   "sha256": "0c2b6f3d51e4518b5e281921018d7488341d1013476d1b4d9a6086726e7c96f3"
  },
  "gh_therapy_monitor.js": {
-  "v": 45,
-  "sha256": "9e864fc3e869726b67645790a2e4694158608388ad81e5a8e079e0856ee515e2"
+  "v": 46,
+  "sha256": "94609a5eee6d4e49b83a64cd57754c5a27d3e7164e0ce54a18b785aef3ff16ff"
  },
  "gh_therapy_segments.js": {
   "v": 4,
