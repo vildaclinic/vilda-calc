@@ -6717,6 +6717,36 @@ Całe precache było jednym zdarzeniem `install`, a Chromium przerywa zdarzenie 
 - `tests/e2e/pwa-precache-migracja.spec.mjs` (nowy, prawdziwy Chromium): pamięć powłoki `pwa-kalorii-shell-v1.1.104` wypełniona w kolejności starej instalacji aż do QuotaExceededError (limit 400 MiB — wpisy zapisane ze strony nie dostają pamięci podręcznej kodu, więc zajmują tyle co pliki), instalacja prawdziwego SW: aktywny, stara pamięć usunięta, żaden wpis `?v=` obecny w starej pamięci nie idzie z sieci (licznik w `tests/support/static-server.mjs`: `/__test-pobrania`), DocPro (`VildaVault`) i strona główna startują bez sieci. Sprawdzony mutacjami: bez przycięcia SW się nie instaluje, bez kopii wpisy idą z sieci.
 - `tests/e2e/pwa-strony-offline.spec.mjs` bez zmian w logice (komentarze z liczbami sprzed zmiany).
 
+## Test „strona główna offline” na produkcyjnym service workerze (P-PWA-TEST-SW, bez zmiany SW, 2026-09-30)
+
+**Zgłoszenie.** `tests/e2e/pwa.spec.mjs` „produkcyjna logika service workera uruchamia stronę główną offline” przekraczał
+limit 60 s na `page.reload` offline przy obciążeniu (wpisy „przekroczył 60 s przy obciążeniu” w ratach wyżej, pełny zestaw
+w PR #497). Odtworzone na `audyt` `f07ecf4`: przy 4 workerach z `name-fix` i `powloka-zmiana-pacjenta` (×3) padał
+2 razy na 3.
+
+**Przyczyna — test, nie produkt.** Test rejestrował przycięty wariant `/__test-service-worker-kalorii.js` (powłoka:
+dokument, manifest, `style.css`), z czasów, gdy pełna instalacja pobierała 474 MB (~85 s). Od P-SW-PRECACHE to 24 MB
+i ok. 4,5 s. Przycięty wariant działał już inaczej niż produkcja:
+- wszystkie ok. 170 zasobów strony głównej szły ścieżką pamięci czasu działania. Każdy zapis tam woła
+  `pruneRuntimeCache`, który czyta metadane każdego wpisu — koszt kwadratowy; limit 96 wpisów wyrzucał przy tym część
+  zasobów przed przejściem offline;
+- strona sama rejestruje `service-worker-kalorii.js` (`ios26-ui.js`), więc w tle trwała druga, pełna instalacja.
+
+Bez obciążenia test trwał 25–31 s (wczytanie online 12–15 s, przeładowanie offline 11–14 s). W produkcji żaden zasób
+`index.html`, `app.html` ani `docpro.html` nie idzie ścieżką czasu działania — wszystkie są w tablicach powłoki
+(zmierzone: 173, 293 i 160 żądań, 0 poza powłoką), więc kwadratowy koszt przycinania produkcji nie dotyczy.
+
+**Co jest.** Test rejestruje produkcyjny `service-worker-kalorii.js` z pełnymi tablicami — ten sam plik, który
+rejestruje strona. Asercje bez zmian (tytuł, widoczna treść po przeładowaniu offline) plus nowa: kontrolerem strony
+offline jest `/service-worker-kalorii.js`. Czas: ok. 7–9 s (instalacja 4,4 s). Przycięty wariant zostaje dla
+`pwa-precache-migracja` i `pwa-wersjonowane-klucze`.
+
+**Wpływ kliniczny.** Brak — zmiana wyłącznie testu; service worker, strony i wersje bez zmian.
+
+**Walidacja.** Ten sam zestaw pod obciążeniem (4 workery, ×3): przed zmianą 2 z 3 przebiegów PWA padają, po zmianie
+42/42. Mutant SW bez obsługi nawigacji łamie test (`net::ERR_INTERNET_DISCONNECTED`). Prawdziwy brak sieci (zatrzymany
+serwer) dla wszystkich stron z precache nadal sprawdza `pwa-strony-offline.spec.mjs`.
+
 ## Karta „Szacowane spożycie energii”: utrzymanie masy tym samym wzorem co plan diety (P-SPOZYCIE-REE, SW 1.1.104, 2026-09-29)
 
 **Zgłoszenie (po P-DIETA-STAB rata 3 i P-PAL-ZAPIS).** Dla chłopca 13 l., 76 kg, 168 cm (nadwaga, OLAF) plan diety podawał
