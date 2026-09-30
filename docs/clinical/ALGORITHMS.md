@@ -5974,6 +5974,65 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 
 **Co pozostaje decyzją właściciela.** Scalenie (scalenie do `audyt` uruchamia wdrożenie GitHub Pages).
 
+## Przejście 18/19 lat: granica ścieżki planu jako dane i ocena BMI pacjenta z zespołem Downa (P-DIETA-B5, SW 1.1.134, 2026-09-30)
+
+**Decyzje właściciela (2026-09-30), po punkcie B5 audytu zaleceń dietetycznych:**
+1. wariant A′ teraz, wariant B później. Liczby planu bez zmian (poza DS), granice wieku jako dane, notka o przejściu tylko dla lekarza, tabela obu klifów i testy par granicznych. Wariant B — przełączenie na ścieżkę dorosłą po zakończeniu wzrastania — wymaga nowego pola stanu pacjenta i czeka na osobną decyzję;
+2. DS: od 19 lat o nadmiarze masy decyduje silnik BMI z populacją pacjenta (`VildaBmi.ocen`). Populacja ogólna bez zmian; u pacjenta z zespołem Downa w wieku 19,0–19,99 decyduje centyl siatki DS, tak jak w 18,99;
+3. notka o przejściu tylko w karcie lekarza („Strategia”), 18,0–19,99 lat, bez tempa kg/mies. i czasu do normy, nigdy w zaleceniach, raporcie ani PDF — **wdrożenie po akceptacji makiety** (poza tym wpisem).
+
+**Problem.**
+- Dwie granice wieku leżą obok siebie i żadna wytyczna nie wyznacza wieku przejścia z planu redukcji dziecka na plan dorosłego:
+  - kryterium BMI dorosłego (18 lat; DS 20 lat) należy do silnika BMI;
+  - ścieżka planu (19 lat) była liczbą `k=19` wpisaną w silnik diety.
+- U pacjenta z DS silnik BMI ocenia BMI z siatki DS do 20 lat (decyzja D3), a ścieżka dorosła planu od 19 lat liczyła nadmiar z surowego BMI (25 / 30). Przykład: dz. z DS 150 cm / 68 kg (BMI 30,2, ok. 50.–60. centyla DS) — w 18;11 „masa prawidłowa, bez planu”, w 19;0 plan redukcji (umiarkowana ≤ 1450 kcal, PAL 1,4) i zdanie „BMI wynosi 30,2 (otyłość I stopnia)… BMI 24,9”.
+- Ta sama niespójność była w domyślnym PAL dorosłego (otyłość = BMI ≥ 30), w bramce karty „Strategia”, w zdaniach zaleceń dorosłego, w drabince planu PDF i w „Drodze do normy BMI” (drabinka dorosłego od 18 lat także u DS).
+
+**Reguła.**
+1. **Granica ścieżki planu jako dane** (`vilda_diet_plan_ui.js`): `ENERGY_GRANICE_WIEKU = { planSciezkaDoroslaOdLat: 19, zrodlo, uwaga }`; `k` i `ENERGY_ADULT_START_AGE` pochodzą z tych danych. Liczba bez zmian (refaktoryzacja). Kryterium BMI dorosłego nie jest tu kopiowane — zostaje w `vilda_bmi.js` (`G.DOROSLY_M` 216 mies., `G.DS_MAX_M` 240 mies.).
+2. **Nadmiar masy na ścieżce dorosłej** (`energyNadmiarSciezkiDoroslej`): ta sama klasa co u dziecka (`childBmiClass` → `VildaBmi.ocen` z `populacja` pacjenta i `VildaBmi.celNormy`).
+   - Populacja ogólna od 19 lat: kategoria dorosłego z surowego BMI (nadwaga ≥ 25, otyłość ≥ 30) — wynik identyczny z dotychczasowym (test: siatka BMI 16–45 × wiek 19–80 × płeć, 8 000+ punktów).
+   - DS 19,0–19,99: kategoria z centyla siatki DS (nadwaga ≥ 85. c., otyłość ≥ 97. c.), cel = 85. centyl DS (`celDorosly: false`).
+   - Bez silnika BMI: dotychczasowe progi `ADULT_BMI` (25 / 30).
+3. **Konsumenci tej samej klasy:** brak planu redukcji (`adultNormal`), domyślny PAL dorosłego (`energyDefaultPlanPal`: 1,4 tylko przy otyłości wg klasy), bramka karty „Strategia” (`vilda_diet_recommendations.js`), mediana celu w symulacji (BMI 22 dopiero, gdy `VildaBmi.dorosly` z populacją — `energyBmiDoroslyWgSilnika`; dotąd mediana siatki) i podpis znacznika w karcie planu („50. centyl BMI” zamiast „BMI 22”).
+4. **Zalecenia dorosłego u pacjenta z DS 19,0–19,99** (`yi`): klasa, masa docelowa (85. c. DS) i zdania z tej samej klasy; bez drabinki dorosłego (BMI 35 / 30 / −5 %). Brzmienia:
+   - norma: „BMI wynosi X i według siatki dla zespołu Downa (stosowanej do 20. roku życia) mieści się w zakresie prawidłowym.”;
+   - nadmiar: „BMI wynosi X (nadwaga wg siatki dla zespołu Downa). Do 20. roku życia BMI ocenia się według siatki dla zespołu Downa; do zejścia poniżej jej 85. centyla potrzebna byłaby redukcja masy ciała o ok. Y kg – odpowiada to masie ok. Z kg.”;
+   - niedowaga: „BMI wynosi X (niedowaga wg siatki dla zespołu Downa; siatkę dla zespołu Downa stosuje się do 20. roku życia).”
+   - `dane.klasyfikacja` niesie `celDorosly: false` i `klasaBmi` (centyl, bmiSDS, siatka DS); plan PDF (`vilda_raport_plan.js`, `bmiDorosly`) rysuje wtedy drabinkę dziecka i kafelek z centylem, reszta raportu idzie ścieżką dorosłą.
+5. **„Droga do normy BMI”** (`vilda_update_prep.js`, `vildaUpdatePrepDrogaDziecko`): ocena BMI jak w silniku (`VildaBmi.dorosly` z populacją) — populacja ogólna od 18 lat jak dotąd, DS od 20 lat. Karta główna BMI (ostrzeżenie „Otyłość I stopnia wg BMI” u DS 18–19,99) nie jest częścią tej zmiany — zgłoszona osobno.
+
+**Tabela obu klifów (populacja ogólna, PAL domyślny; dane fikcyjne, silnik produkcyjny).**
+
+| Para | 18,0 — kryterium BMI dorosłego | 19,0 — ścieżka planu |
+|---|---|---|
+| Co się zmienia | cel 85. c. → BMI 24,9; REE przy nadmiarze masy Molnár (× korekta) → Henry 18–30, przy masie prawidłowej Henry 10–18 → 18–30; plan dziecka zostaje | plan dziecka → plan dorosłego: deficyt z limitu tempa → 15 / 22 / 30 % wydatku; PAL domyślny dorosłego; bez wzrastania (× 1,01) i bez stabilizacji; minimum REE → 1200 / 1600 kcal |
+| M 175 cm / 79 kg (BMI 25,8) | 17;11 → 18;0: REE 1997 (Molnár) → 1798 (Henry); minimum 1810 → 1798; lekka ≤ 2400 → ≤ 2350 (zalecana); umiarkowana ≤ 2250; intensywna ≤ 2150 → ≤ 2100 | 18;11 → 19;0: PAL 1,4 → 1,6; TEE 2518 → 2877; lekka ≤ 2350 (zalecana) → ≤ 2400; umiarkowana ≤ 2250 → ≤ 2200 (domyślna u dorosłego); intensywna ≤ 2100 → ≤ 2000; minimum 1798 → 1600; stabilizacja niedostępna |
+| K 165 cm / 105 kg (BMI 38,6) | — | 18;11 → 19;0: PAL 1,4 → 1,4; umiarkowana ≤ 2150 (zalecana) → ≤ 1950; lekka ≤ 2300 → ≤ 2150; intensywna ≤ 2000 → ≤ 1750 (poniżej REE 1825) |
+| M 175 cm / 76 kg (masa prawidłowa) | TEE 3151 → 2836 (17;11 → 18;0) | bez planu po obu stronach |
+| DS, dz. 150 cm / 68 kg | — | 18;11 i 19;0–19;11: bez planu, PAL 1,6 (dotąd 19;0: plan, umiarkowana ≤ 1450, PAL 1,4); 20;0: plan dorosłego, PAL 1,4, ≤ 1600 / 1450 / 1300 |
+
+Znane artefakty (bez zmian, do wariantu B): u 19-latka z nadwagą dieta może zrobić się łagodniejsza (M 175/79: zalecana lekka ≤ 2350 → domyślna umiarkowana ≤ 2200, ale dostępna lekka ≤ 2400), a przy otyłości ostrzejsza (K 165/105: intensywna poniżej REE); w 18,0 zmienia się tylko cel i równanie REE.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; `tests/unit/dieta-b5-przejscie-19.test.mjs`, 13 przypadków, prawdziwy silnik planu i BMI):
+- dane: `ENERGY_GRANICE_WIEKU.planSciezkaDoroslaOdLat` = 19, zamrożone; `ENERGY_ADULT_START_AGE` = 19; pasmo PAL 18;11 `child_10_18`, 19;0 `adult`; w kodzie nie ma już `k=19`;
+- pary graniczne z tabeli (M 175/79 w 17;11/18;0 i 18;11/19;0; K 165/105 w 18;11/19;0);
+- DS dz. 150/68: 18;11, 19;0, 19,99 → bez planu (PAL 1,6); 20;0 → plan, PAL 1,4; bez DS 19;0 → plan, PAL 1,4 (jak dotąd);
+- DS dz. 150/88, 19;3 → nadwaga wg siatki DS (87. c.), cel 86,2 kg, PAL 1,6, diety ≤ 2100 / 1900 / 1700;
+- symulacja mediany: DS dz. 150/72, 19;0 → < 4 mies. (mediana DS); bez DS → > 9 mies. (BMI 22);
+- populacja ogólna 19–80 lat: nadmiar ⇔ BMI ≥ 25, otyłość ⇔ BMI ≥ 30 (bez zmiany wyników); bez silnika — progi `ADULT_BMI`.
+
+E2E `tests/e2e/dieta-b5-przejscie.spec.mjs` (3 przypadki na prawdziwej stronie): DS 19;3 150/68 — zdanie o siatce DS, strategia „utrzymanie”, karta „Strategia” ukryta; DS 19;3 150/88 — zdanie z 85. centylem DS, „Droga do normy” z 85. centylem, znacznik „50. centyl BMI”, plan PDF „Cel końcowy: 86,2 kg (85. centyl)”; bez DS — jak dotąd (otyłość I st., drabinka dorosłego, BMI 22).
+
+**Źródła i ograniczenia.**
+- Granica 19 lat: grupy dorosłych w normach energii — Normy żywienia dla populacji Polski (NIZP PZH-PIB, 2024) i NASEM 2023 (Dietary Reference Intakes for Energy): dorośli od 19 lat. Żadna wytyczna nie wyznacza wieku przejścia z planu redukcji dziecka na plan dorosłego — 19 lat to decyzja właściciela.
+- Siatka DS i jej zakres (do 20 lat): Zemel BS i wsp. Pediatrics 2015;136:e1204-11, doi:10.1542/peds.2015-1652 (decyzja D3, P-DS-1).
+- Zalecenia dorosłego dla DS 19,x korzystają z ogólnych zdań dorosłego (talerz, ruch, cel 5–10 % masy) — bez osobnych zaleceń dla DS; cel własny dorosłego zostaje w paśmie surowego BMI 23,0–24,9.
+
+**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (numery nadane `npm run podbij-wersje`).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; makieta i wdrożenie notki o przejściu (B5-c); wariant B (ścieżka dorosła po zakończeniu wzrastania — nowe pole stanu pacjenta); pozostałe punkty części B (Z1/Z2 — zasada domyślnego PAL i strategia przy nadwadze, B9 — seniorzy, zakres × 0,85 u dorosłych 19–64 lat, definicja „praktycznie zakończonego” wzrastania).
+
 ## Czas dojścia do normy BMI: wzrastanie wg mediany siatki i dwa scenariusze stabilizacji (P-DIETA-B8, SW 1.1.132, 2026-09-30)
 
 **Decyzje właściciela (2026-09-30), po punkcie B8 audytu zaleceń dietetycznych:**
