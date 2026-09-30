@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { czekajNaOdtworzenieSesji } from '../support/sesja-czekanie.mjs';
 
 // P-DOCPRO-POKWITANIE (zgłoszenie właściciela 2026-09-14) — DocPro ma kartę „Zaawansowane
 // obliczenia wzrostowe", ale nie miał ANI JEDNEGO pola pokwitaniowego. Pierwsza poprawka
@@ -55,6 +56,9 @@ async function otworzZKontem(page, url) {
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => typeof window.applyLoadedData === 'function'
     && typeof window.collectUserData === 'function');
+  // Startowe odtworzenie sesji karty idzie dwie klatki po DOMContentLoaded i woła
+  // applyLoadedData z migawką — wczytany pacjent i zmienione pola nie mogą go wyprzedzić.
+  await czekajNaOdtworzenieSesji(page);
 }
 
 /* Wczytanie pacjenta dokładnie tą drogą, którą chodzi Karta Pacjenta: rekord ląduje w sejfie,

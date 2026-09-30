@@ -5184,7 +5184,7 @@ Trzy testy, które właściciel widział jako flaki, to dokładnie te trzy, któ
 1. `html,body{scroll-behavior:smooth}` w `style.css` obowiązuje **bez** `@media (prefers-reduced-motion: reduce)`. To pytanie o dostępność produktu, nie o test, i osobna decyzja — dlatego poprawka siedzi w teście, a nie w CSS. Gdyby ta reguła dostała warunek, pozostałe pliki e2e też przestałyby płacić za animowane przewijanie.
 2. Ten sam wzorzec — `click()`/`check()` bez upewnienia się, że element stoi — jest w innych plikach e2e dotykających `kalkulator-klirens.html`. Tutaj byłoby to poszerzeniem zlecenia; moduł `uklad-czekanie.mjs` jest gotowy do ponownego użycia.
 
-## Kliknięcie w pole wyboru ginie, gdy przewijanie trwa między `mousedown` a `mouseup` (P-BRAMKI-5, 2026-09-30)
+## Dwa niestabilne pliki e2e: kliknięcie ginie w trwającym przewijaniu, odtworzenie sesji nadpisuje pole po wczytaniu pacjenta (P-BRAMKI-5, 2026-09-30)
 
 **Skąd znalezisko.** Niestabilny `tests/e2e/klirens-stage2-stage3.spec.mjs` („wynik kamicowy nie zaokrągla przez próg…") — `locator.check: Clicking the checkbox did not change its state`, zielono przy ponowieniu. **Nie jest to usterka produktu** — żaden plik aplikacji nie był ruszany.
 
@@ -5235,15 +5235,33 @@ Te same warunki co przy odtworzeniu (sześć workerów Playwrighta i dwa procesy
 
 Uczciwie: przy tej częstości (1 na 72 w pełnym pliku) sam zielony przebieg niewiele dowodzi. Dowodem jest zapis zdarzeń myszy (`mouseup` obok pola po przewinięciu) i próba A/B z wyłączonym płynnym przewijaniem (11/72 → 0/24).
 
-### `docpro-dziedziczy-pokwitanie.spec.mjs` — nieodtworzony, bez zmian
+### Drugi flake: `docpro-dziedziczy-pokwitanie.spec.mjs` — odtworzenie sesji nadpisuje pole po wczytaniu pacjenta
 
-W tym samym zleceniu sprawdzany był niestabilny `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs` (odczyt `#tannerStage` zaraz po wczytaniu pacjenta). Na bieżącym `audyt` **nie dał się odtworzyć**: 24 z 24 przebiegów zielonych pod obciążeniem, a ślady przy 1× i 6× spowolnieniu CPU pokazują, że `applyLoadedData` wypełnia pole synchronicznie i nic go potem nie nadpisuje. Bez ustalonej przyczyny test zostaje bez zmian.
+W tym samym zleceniu sprawdzany był niestabilny `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs`. Pierwsze próby (test „docpro.html: … rekord wypełnia etap", 24 przebiegi pod obciążeniem, ślady przy 1× i 6× spowolnieniu CPU) były zielone. Pełny przebieg e2e tej gałęzi dał jednak czerwony drugi test pliku — „index.html: pole opróżnione przez lekarza nadal wygrywa z rekordem": `VildaPubertalStatus.dane().etap` to 3 zamiast `null`, choć test chwilę wcześniej wyczyścił `#tannerStage`. Ślad Playwrighta: bez nawigacji, między wyczyszczeniem a odczytem ~100 ms.
+
+**Co nadpisuje pole.** Hak na setter `value` (oraz `selectedIndex` i `option.selected`) pól pokwitaniowych, sekwencja z testu, cztery równoległe przeglądarki pod obciążeniem. Stos zapisu „3" po wyczyszczeniu: `requestAnimationFrame` → `restoreMainSessionIfAny` (`vilda_data_import_export.js`) → `applyLoadedData` (`app.js`). To **startowe odtworzenie sesji karty**: rejestruje się w VildaInit przy DOMContentLoaded (`app:main-session-restore-init`), a samo odtworzenie czeka jeszcze dwie klatki animacji i wtedy nakłada migawkę sesji z `sessionStorage` — tutaj zapisaną po wczytaniu pacjenta, więc z etapem 3.
+
+**Dlaczego tylko czasem — i dlaczego wcześniej się nie odtwarzało.** Plik korzysta z `tests/support/test-czas.mjs`, czyli z `page.clock.install` + `resume`, a zegar Playwrighta podmienia także `requestAnimationFrame`. Pierwsze próby szły bez tego zegara.
+
+| wariant (sekwencja z testu, 4 × 6 przebiegów pod obciążeniem) | odtworzenie po wyczyszczeniu pola | czerwony test |
+|---|---|---|
+| bez zegara testowego | 0 z 24 | 0 z 24 |
+| z zegarem testowym (jak w pliku) | **4 z 24** | **2 z 24** |
+| z zegarem testowym + bramka (poprawka) | **0 z 24** | **0 z 24** |
+
+Ta sama przyczyna tłumaczy pierwszy test pliku (`docpro.html`: „etap z rekordu trafia do pola"): migawka sprzed wczytania pacjenta, nałożona po nim, zostawia puste pole.
+
+**Poprawka (tylko test).** Nowy `tests/support/sesja-czekanie.mjs` z `czekajNaOdtworzenieSesji(page)`: synchroniczny predykat `VildaInit.isInitialized('app:main-session-restore-init')`, potem dwie klatki animacji zlecone przez test — przeglądarka wykonuje wywołania `requestAnimationFrame` w kolejności zlecenia, więc druga klatka bramki nie wyprzedza drugiej klatki odtworzenia. `otworzZKontem` stawia tę bramkę przed wczytaniem pacjenta, więc dotyczy obu testów pliku. **Asercje bez zmian.**
+
+Sekwencja w tabeli to kopia kroków testu uruchamiana skryptem z hakami na setterach. Pomiar samego pliku testów pod obciążeniem — poniżej.
 
 ### Do odnotowania, nie do naprawy tutaj
 
 1. **Etykieta pola wskazuje przycisk „i", a nie pole.** `decorateField` w `clcr_ui_workflow.js` wstawia nagłówek z przyciskiem informacji do `<label>` **bez atrybutu `for`**, przed samym polem. Etykieta bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu — teraz jest nim przycisk. Zmierzone w przeglądarce: `label.control` to `BUTTON.clcr-info-button` dla `collectionStartVoidDiscarded`, `stoneTwoCollectionsConfirmed`, `age` i `V24`; kliknięcie w nazwę pola „zbiórki" **nie zaznacza pola, tylko otwiera dymek pomocy**. W zapisie zdarzeń widać to wprost: `click` na etykiecie przekazany do `BUTTON.clcr-info-button`. To zachowanie produktu (UX, nie kliniczne) i osobna decyzja.
 2. Ten sam wzorzec — `check()` bez bramki — zostaje w `klirens-stage1-specimens.spec.mjs` (12 miejsc) i `klirens-ui-reorganization.spec.mjs` (1).
 3. Uzupełnienie punktu 1 z P-BRAMKI-4: warunek `prefers-reduced-motion` w `clcr_ui_workflow.css` dotyczy selektora `html[data-clcr-workflow-ui="1"] *`, czyli potomków `html`, a nie samego `html` — przewijanie widoku bierze `scroll-behavior` z elementu głównego, więc ta reguła płynnego przewijania okna nie wyłącza.
+4. `applyLoadedData` wywołuje 36 plików e2e, z czego **25** korzysta z zegara testowego. Bramka z `sesja-czekanie.mjs` stoi na razie tylko w pliku pokwitania, bo tylko tu wyścig został zmierzony; pozostałe mogą być narażone na tę samą przyczynę.
+5. **Pytanie o produkt, niezbadane.** W aplikacji okno między rejestracją a odtworzeniem sesji to dwie klatki animacji po starcie strony — w widocznej karcie ułamek sekundy, przed jakimkolwiek kliknięciem. Nie sprawdzałem, czy da się w nie trafić w realnym użyciu, np. w ukrytym panelu powłoki `app.html`, w którym przeglądarka może wstrzymywać klatki animacji, a który w tym czasie dostanie pacjenta. Warunek pominięcia odtworzenia w `restoreMainSessionIfAny` przepuszcza odtworzenie, gdy pacjent jest wczytany (`_vildaCurrentPatientId`). To decyzja i analiza po stronie właściciela.
 
 ## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
 
