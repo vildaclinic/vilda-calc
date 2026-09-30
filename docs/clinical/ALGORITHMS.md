@@ -6036,7 +6036,7 @@ E2E `tests/e2e/dieta-b5-przejscie.spec.mjs` (4 przypadki na prawdziwej stronie; 
 - Siatka DS i jej zakres (do 20 lat): Zemel BS i wsp. Pediatrics 2015;136:e1204-11, doi:10.1542/peds.2015-1652 (decyzja D3, P-DS-1).
 - Zalecenia dorosłego dla DS 19,x korzystają z ogólnych zdań dorosłego (talerz, ruch, cel 5–10 % masy) — bez osobnych zaleceń dla DS; cel własny dorosłego zostaje w paśmie surowego BMI 23,0–24,9.
 
-**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`, `style.css`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (PR #510); notka B5-c: `vilda_diet_plan_ui.js` 44, `vilda_diet_recommendations.js` 69, `style.css` 86, SW 1.1.134 → 1.1.135 (numery nadane `npm run podbij-wersje`).
+**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`, `style.css`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (PR #510); notka B5-c: `vilda_diet_plan_ui.js` 44, `vilda_diet_recommendations.js` 69, `style.css` 86, SW 1.1.135 → 1.1.136 (1.1.135 zajął #511; numery nadane `npm run podbij-wersje`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; wariant B (ścieżka dorosła po zakończeniu wzrastania — nowe pole stanu pacjenta); pozostałe punkty części B (Z1/Z2 — zasada domyślnego PAL i strategia przy nadwadze, B9 — seniorzy, zakres × 0,85 u dorosłych 19–64 lat, definicja „praktycznie zakończonego” wzrastania).
 
