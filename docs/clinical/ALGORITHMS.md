@@ -2251,7 +2251,7 @@ Migotanie jest **starsze** od obu zmian, a numer kolejny wersji je złagodził. 
 
 **Numer trzeba przenosić.** Rekord wersji jest przepisywany w ośmiu miejscach — edycja treści, synchronizacja (dwie gałęzie), import z koperty, odtworzenie kopii zapasowej (dwie gałęzie). Pominięcie choćby jednego kasowałoby numer **po cichu**, a wersja wracałaby do losowania; żaden test zachowaniowy by tego nie zauważył, dopóki nie trafiłby akurat w tę samą milisekundę. Stąd osobny strażnik spisowy.
 
-**Czego to NIE rozwiązuje** (powiedziane wprost, bo łatwo o złudzenie kompletności): dwóch **równoległych** zapisów tego samego pacjenta z dwóch kart naraz. Obie odczytałyby tę samą głowę i dostały ten sam numer — wtedy zostaje stara, losowa rozstrzygalność. Kolejność między urządzeniami i tak nie ma lokalnego sensu, a prawdziwe rozwiązanie wymagałoby transakcji.
+**Czego to NIE rozwiązuje** (powiedziane wprost, bo łatwo o złudzenie kompletności): dwóch **równoległych** zapisów tego samego pacjenta z dwóch kart naraz. Obie odczytałyby tę samą głowę i dostały ten sam numer — wtedy zostaje stara, losowa rozstrzygalność. Kolejność między urządzeniami i tak nie ma lokalnego sensu, a prawdziwe rozwiązanie wymagałoby transakcji. *(Aktualizacja 2026-09-30, P-ZAPISY-DWIE-KARTY: zapisy tego samego pacjenta z dwóch kart jednej przeglądarki idą teraz po kolei pod blokadą per pacjent — osobny wpis.)*
 
 **Zaobserwowane przy okazji, nietknięte:** edycja starszej wersji przesuwa ją na czoło listy, bo `updatedAtISO` jest kryterium wyższym niż numer. To reguła sprzed tej zmiany; zapisana tutaj, żeby nie wyglądała na skutek uboczny.
 
@@ -6327,6 +6327,57 @@ spożycia liczy z tej podstawy także spożycie z trendu masy (podstawa + nadwy�
 PAL karty spożycia po wczytaniu pacjenta ustępuje PAL-owi planu (wybór PAL planu zachowuje P-PAL-ZAPIS).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; scalenie i wdrożenie.
+
+## Zapisy tego samego pacjenta z dwóch kart idą po kolei; drugi czeka najwyżej 30 s (P-ZAPISY-DWIE-KARTY, SW 1.1.121, `vilda_vault.js` 189, `vilda_data_import_export.js` 93, 2026-09-30)
+
+**Usterka.** `savePatient()` czyta głowę rekordu, na jej podstawie decyduje — brama P14 pyta „Ktoś inny zmienił ten
+rekord”, anti-clobber dociąga pomiary, numer wersji to głowa + 1, licznik wersji to nagłówek + 1 — i dopiero potem
+pisze. Dwa zapisy tego samego pacjenta, których okna się nakładały, czytały tę samą głowę: ten sam numer wersji, licznik
+mniejszy od liczby wersji i — najgorsze — pomiar zapisany przez jeden zapis znikał z bieżącej wersji bez pytania.
+Najdłuższe okno otwierało samo pytanie bramy: głowa jest czytana przed oknem, a zapis idzie po odpowiedzi lekarza.
+
+**Jak to widział lekarz** (odtworzone na prawdziwej stronie): ten sam pacjent w kartach A i B; B dopisuje pomiar
+i zapisuje; A dopisuje inny i zapisuje — sejf słusznie pyta o pomiar z B; lekarz zostawia pytanie, w karcie B dopisuje
+kolejny pomiar i zapisuje („Zapisano (snapshot 3)”); wraca do A, „Przyjmij dane z bazy”. Bieżącą wersją zostawał zapis
+z A, policzony na głowie sprzed zapisu B: pomiar potwierdzony w B znikał z „Historii”, a dwie wersje miały ten sam numer.
+
+**Decyzja właściciela (2026-09-30): „czekaj z limitem”.** Odczyt głowy → decyzje (z pytaniem bramy) → zapis wersji
+i nagłówka to sekcja krytyczna per pacjent pod blokadą Web Locks (`vilda-save-pat:<id>`, wspólna dla kart i ramek
+powłoki tego originu):
+- blokada wolna — zapis rusza od razu, jak dotąd;
+- blokada zajęta (zapis tego pacjenta trwa w innej karcie albo panelu, np. czeka tam pytanie bramy) — pasek statusu
+  pokazuje „Czekam — ten pacjent jest zapisywany w innej karcie” i zapis czeka najwyżej 30 s; gdy blokada się zwolni,
+  czyta świeżą głowę, więc sam zapyta o to, co w tym czasie doszło, zamiast to cofnąć;
+- po 30 s — zapis kończy się komunikatem „Nie zapisano — ten pacjent jest nadal zapisywany w innej karcie. Dokończ tam
+  zapis i kliknij „Zapisz dane” ponownie.”, niczego nie zapisuje, chip pacjenta przechodzi w błąd, formularz zostaje.
+Bez Web Locks (bardzo stare przeglądarki) działa sama kolejka w obrębie strony, jak przy notatkach (K2). Poza sekcją:
+rozpoznanie pacjenta, pytanie o tożsamość i powiadomienia po zapisie. Format rekordu, synchronizacja i wzory bez zmian.
+
+**Wpływ kliniczny.** Zmiana funkcjonalna (integralność danych), bez zmian wzorów, progów i jednostek. Pomiar potwierdzony
+w jednej karcie nie znika już z bieżącej wersji przez zapis z drugiej; kolejne wersje mają różne numery.
+
+**Przypadki (e2e na prawdziwym sejfie, dwie karty jednej przeglądarki, dane fikcyjne: Testowy Jan, pomiary 5;0 i 5;6).**
+
+| Scenariusz | Oczekiwany wynik | Na bazie (#494) |
+|---|---|---|
+| B zapisuje 6;8 → A zapisuje 6;2 (pytanie bramy otwarte) → B dopisuje 7;8 i zapisuje → A „Przyjmij dane z bazy” | B pokazuje „Czekam…”; po odpowiedzi w A oba zapisy kończą się; „Historia” ma 112, 116 i 121 cm; numery wersji różne | pada (brak czekania; pomiar 7;8 znikał) |
+| jak wyżej, ale w A nikt nie odpowiada | po 30 s B: „Nie zapisano…”, żadnej nowej wersji, formularz B nadal ma 7;8; po odpowiedzi w A ponowny zapis B dopisuje 7;8 | pada |
+
+**Czego to NIE rozwiązuje.** Zapisu tego samego pacjenta na dwóch urządzeniach (osobne bazy — to robi brama P14 przy
+następnym zapisie), wpisów synchronizacji, edycji wersji w miejscu (`updateSnapshotPayload`), usuwania wersji,
+`restoreSnapshotAsNew` ani przenumerowania przy scalaniu duplikatów — te ścieżki nie biorą blokady (końcowy zapis scalania
+idzie przez `savePatient`, więc ją bierze). Dwa równoczesne zapisy NOWEGO pacjenta z dwóch kart nadal mogą założyć duplikat
+(rozpoznanie pacjenta jest poza sekcją). Szybki pomiar w Karcie pacjenta czeka tak samo, ale bez komunikatu „Czekam”.
+Tekst okna bramy („na innym urządzeniu albo przez synchronizację”) przy zmianie z innej karty tej samej przeglądarki
+jest nieprecyzyjny — kandydat do zmiany tekstu (decyzja właściciela).
+
+**Walidacja.** `tests/unit/zapisy-dwie-karty.test.mjs` (7: kolejka strony bez Web Locks i blokada z limitem na atrapie
+Web Locks; na bazie 5 czerwonych, 2 kontrole zielone) i `tests/e2e/zapisy-dwie-karty.spec.mjs` (2, prawdziwe Web Locks
+w dwóch kartach; na bazie oba czerwone). `npm test` i powiązane spec-e — wyniki w PR.
+
+**Wersje.** `vilda_vault.js` 188 → 189 (8 stron oraz wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`),
+`vilda_chrome.js` 80 → 81 i `vilda_session_bridge.js` 8 → 9 (wszystkie strony), `vilda_data_import_export.js` 92 → 93,
+precache (append-only), `SW_VERSION` 1.1.120 → 1.1.121 (+ pin), fixture wersji.
 
 ## „Cel własny” zapisuje się w rekordzie pacjenta; nowa wizyta zaczyna się bez celu (P-CEL-WLASNY-ZAPIS, SW 1.1.120, `vilda_data_import_export.js` 92, 2026-09-30)
 
