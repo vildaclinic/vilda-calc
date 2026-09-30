@@ -5255,7 +5255,13 @@ Ta sama przyczyna tłumaczy pierwszy test pliku (`docpro.html`: „etap z rekord
 
 **Poprawka (tylko test).** Nowy `tests/support/sesja-czekanie.mjs` z `czekajNaOdtworzenieSesji(page)`: synchroniczny predykat `VildaInit.isInitialized('app:main-session-restore-init')`, potem dwie klatki animacji zlecone przez test — przeglądarka wykonuje wywołania `requestAnimationFrame` w kolejności zlecenia, więc druga klatka bramki nie wyprzedza drugiej klatki odtworzenia. `otworzZKontem` stawia tę bramkę przed wczytaniem pacjenta, więc dotyczy obu testów pliku. **Asercje bez zmian.**
 
-Sekwencja w tabeli to kopia kroków testu uruchamiana skryptem z hakami na setterach. Pomiar samego pliku testów pod obciążeniem — poniżej.
+Sekwencja w tabeli to kopia kroków testu uruchamiana skryptem z hakami na setterach.
+
+**Pomiar samego pliku** (`--project=desktop-chromium`, pod obciążeniem): plik sprzed poprawki **48/48** (6 workerów, 2 procesy zajmujące rdzenie, `--repeat-each=24`) i **64/64** (8 workerów, 4 procesy, `--repeat-each=32`); plik po poprawce **48/48**. Uczciwie: przy tej częstości pomiar pliku niczego nie rozstrzyga — flake wyszedł raz w pełnym przebiegu e2e (1 z 951 testów) i to z tego przebiegu pochodzi ślad. Dowodem jest stos zapisu i próba A/B na sekwencji z tabeli.
+
+### Walidacja całości
+
+Po scaleniu `origin/audyt` (a3d1796b): `npm test` — polityka repozytorium, lint, składnia, **4007 testów jednostkowych w 229 plikach** (w tym strażnik bramek) i regresja PRO — zielone. `npm run podbij-wersje`: „Nic do zmiany — wersje są spójne z bazą" (SW 1.1.135 bez zmian).
 
 ### Do odnotowania, nie do naprawy tutaj
 
@@ -5264,6 +5270,7 @@ Sekwencja w tabeli to kopia kroków testu uruchamiana skryptem z hakami na sette
 3. Uzupełnienie punktu 1 z P-BRAMKI-4: warunek `prefers-reduced-motion` w `clcr_ui_workflow.css` dotyczy selektora `html[data-clcr-workflow-ui="1"] *`, czyli potomków `html`, a nie samego `html` — przewijanie widoku bierze `scroll-behavior` z elementu głównego, więc ta reguła płynnego przewijania okna nie wyłącza.
 4. `applyLoadedData` wywołuje 36 plików e2e, z czego **25** korzysta z zegara testowego. Bramka z `sesja-czekanie.mjs` stoi na razie tylko w pliku pokwitania, bo tylko tu wyścig został zmierzony; pozostałe mogą być narażone na tę samą przyczynę.
 5. **Pytanie o produkt, niezbadane.** W aplikacji okno między rejestracją a odtworzeniem sesji to dwie klatki animacji po starcie strony — w widocznej karcie ułamek sekundy, przed jakimkolwiek kliknięciem. Nie sprawdzałem, czy da się w nie trafić w realnym użyciu, np. w ukrytym panelu powłoki `app.html`, w którym przeglądarka może wstrzymywać klatki animacji, a który w tym czasie dostanie pacjenta. Warunek pominięcia odtworzenia w `restoreMainSessionIfAny` przepuszcza odtworzenie, gdy pacjent jest wczytany (`_vildaCurrentPatientId`). To decyzja i analiza po stronie właściciela.
+6. **Niestabilny test jednostkowy spoza zakresu.** Pierwszy pełny `npm test` tej gałęzi dał 3989/3990: `tests/unit/zapisy-dwie-karty.test.mjs` › „formularze z tej samej wersji: drugi zapis widzi pierwszy i pyta…" oczekuje, że o pomiar z pierwszego zapisu (72) zapyta drugi, a pytanie dotyczyło 84 — kolejność dwóch równoległych zapisów się odwróciła. Dane były kompletne (pierwsza asercja, pomiary obu formularzy w bieżącej wersji, przeszła). W izolacji 5/5 zielonych, kolejny pełny `npm test` zielony. Nie badałem, czy test zakłada kolejność, której sejf nie obiecuje, czy kolejka zapisów ma okno przed ustawieniem się w kolejce — to obszar sejfu i osobny wątek.
 
 ## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
 
