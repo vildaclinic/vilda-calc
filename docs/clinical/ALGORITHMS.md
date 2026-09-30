@@ -6445,7 +6445,8 @@ MON-3 (nowe liczby i podpis — celowa zmiana tej raty; MON-1 i MON-2 bez zmian)
 rata 3; karta porównania, „Postępy” i R6 (zmiana substancji zaczyna nowy cykl) — rata 4. Import z notatek i
 `obesityTherapyMonitorSetPoints` nadal nie przechodzą przez reguły — niezgodność pokazuje baner.
 
-**Wersje.** WERSJE_RATA_2
+**Wersje** (`npm run podbij-wersje`, baza `audyt` c386c67). `inline_docpro_01.css` 4, `obesity_therapy_monitor.js` 24,
+`vilda_cykle_leczenia.js` 2 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.131 → 1.1.132 (+ pin); fixture wersji.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia per cykl i brzmień nagłówków, podglądu
 przydziału, powodów i banera; scalenie i wdrożenie; raty 3–4.
