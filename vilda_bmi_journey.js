@@ -71,7 +71,8 @@
         weeklyLossKg: 0, target: 'norm',
         growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
       });
-      return sim ? { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm } : null;
+      /* P-DIETA-B8: cały wynik symulacji (S2, flagi, siatka) — zdania składa silnik (energyOpisWzrastania, energyZdanieStab…) */
+      return sim ? { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm, sim: sim } : null;
     } catch (err) { return null; }
   }
   function timeToNorm(ctx, weeklyLossKg) {
@@ -87,7 +88,7 @@
         });
         if (sim && sim.months != null) {
           /* rata X: przyrost masy ze wzrastania (kg/mies.) z tej samej symulacji — do dopisku w linijce o wzrastaniu */
-          return { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm, przyrostMasyKgMies: fin(sim.przyrostMasyKgMies) ? sim.przyrostMasyKgMies : null };
+          return { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm, przyrostMasyKgMies: fin(sim.przyrostMasyKgMies) ? sim.przyrostMasyKgMies : null, sim: sim };
         }
       } catch (err) { /* fallback liniowy poniżej */ }
     }
@@ -211,7 +212,7 @@
         diets: diets, dietAvailable: dietAvailable, dietOn: false, dietKey: dietKey, found: null,
         rows: [], moveWeek: 0, totalWeek: 0,
         monthsCombo: stabT ? stabT.months : null, monthsDiet: null,
-        growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null,
+        growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null, sim: stabT ? stabT.sim : null,
         stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, maintenanceGornaKcal: lastEngineState.maintenanceGornaKcal, targetWeightKg: lastEngineState.targetWeightKg,
         // P-DIETA rata G1a: stabilizacja przy tempie wzrastania poniżej normy (alarm modelu tempa)
         tempoAlarm: (function () { try { var o = typeof w.energyChildGrowthOutlook === 'function' ? w.energyChildGrowthOutlook({ ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm }) : null; return !!(o && o.tempoAlarm); } catch (e) { return false; } })()
@@ -226,7 +227,8 @@
       monthsDiet: dietT ? dietT.months : null,
       growthAware: !!(comboT && comboT.growthAware),
       annualGrowthCm: comboT ? comboT.annualGrowthCm : null,
-      przyrostMasyKgMies: comboT ? comboT.przyrostMasyKgMies : null
+      przyrostMasyKgMies: comboT ? comboT.przyrostMasyKgMies : null,
+      sim: comboT ? comboT.sim || null : null
     };
   }
 
@@ -428,26 +430,39 @@
     var badge = lastEngineState && lastEngineState.modeBadge && typeof w.energyRenderModeBadgeHtml === 'function'
       ? '<div class="energy-mode-badge-row energy-mode-badge-row--results">' + w.energyRenderModeBadgeHtml(lastEngineState.modeBadge) + '</div>'
       : '';
+    /* P-DIETA-B8: bez czasu przy stabilizacji — alarm tempa, praktycznie zakończone wzrastanie albo norma dopiero po zmianie kryterium w 18. r.ż.
+       (dotąd zawsze „przy praktycznie zakończonym wzrastaniu”, także gdy dziecko jeszcze rośnie — P-DIETA-AUDYT2 A7). */
+    var stabBrakCap = model.tempoAlarm
+      ? 'tempo wzrastania wymaga oceny — czasu dojścia do normy nie podano'
+      : (function () { try { var o = typeof w.energyChildGrowthOutlook === 'function' ? w.energyChildGrowthOutlook({ ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm }) : null; return !!(o && o.practicallyEnded); } catch (e) { return false; } })()
+        ? 'przy praktycznie zakończonym wzrastaniu samo utrzymanie masy nie doprowadzi do normy BMI'
+        : 'samo utrzymanie masy prawdopodobnie nie obniży BMI poniżej 85. centyla przed ukończeniem ' + (typeof w.energyWiekKryteriumDoroslegoLat === 'function' ? w.energyWiekKryteriumDoroslegoLat() : 18) + ' lat';
     var hero = mc != null
       ? '<div class="bmi-journey-hero"><span class="bmi-journey-heron">' + esc(monthsShort(mc)) + '</span>'
         + '<div class="bmi-journey-herocap"><b>' + esc(dateAfterMonths(mc)) + '</b> · '
         + (model.stabMode ? 'utrzymanie masy + wzrastanie' : model.moveWeek > 0 ? 'dieta + ruch' : 'sama dieta') + '</div></div>'
       : model.stabMode
         ? '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
-          + '<div class="bmi-journey-herocap">' + (model.tempoAlarm ? 'przy obecnym tempie wzrastania' : 'przy praktycznie zakończonym wzrastaniu') + ' samo utrzymanie masy nie doprowadzi do normy BMI</div></div>'
+          + '<div class="bmi-journey-herocap">' + esc(stabBrakCap) + '</div></div>'
         : '<div class="bmi-journey-hero"><span class="bmi-journey-heron">\u2013</span>'
           + '<div class="bmi-journey-herocap">zaznacz dietę lub ruch</div></div>';
-    var growth = mc != null && model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
-      ? '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie (ok. ' + esc(fmt(model.annualGrowthCm, 1)) + ' cm/rok)'
-        + (fin(model.przyrostMasyKgMies) && model.przyrostMasyKgMies >= 0.05 ? ' i masę przybywającą z nim (ok. ' + esc(fmt(model.przyrostMasyKgMies, 1)) + ' kg/mies.)' : '') + '</p>'
+    /* P-DIETA-B8: opis wzrastania z silnika (w najbliższym roku X cm, potem jak mediana siatki) zamiast „stałego tempa”;
+       przy stabilizacji nagłówek to masa stała (S1), a drugie zdanie — masa rosnąca do górnej granicy planu (S2). */
+    var opisW = model.sim && typeof w.energyOpisWzrastania === 'function' ? w.energyOpisWzrastania(model.sim) : '';
+    if (!opisW && model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0) opisW = 'ok. ' + fmt(model.annualGrowthCm, 1) + ' cm/rok';
+    var growth = mc != null && model.growthAware && opisW
+      ? '<p class="bmi-journey-growth">uwzględnia dalsze wzrastanie: ' + esc(opisW)
+        + (fin(model.przyrostMasyKgMies) && model.przyrostMasyKgMies >= 0.05 ? '; masa przybywająca z nim ok. ' + esc(fmt(model.przyrostMasyKgMies, 1)) + ' kg/mies.' : '') + '</p>'
       : '';
+    var s2 = model.stabMode && mc != null && model.sim && typeof w.energyZdanieStabS2 === 'function' ? w.energyZdanieStabS2(model.sim) : '';
+    if (s2) growth += '<p class="bmi-journey-growth" data-scenariusz-s2="1">' + esc(s2) + '</p>';
     var horizon = mc != null && mc > 18
       ? '<p class="bmi-journey-growth">szacunek orientacyjny — wzrost warto mierzyć co 3\u20136 miesięcy</p>'
       : '';
     var goalbox = model.stabMode
       ? '<div class="bmi-journey-goalbox">'
         + '<div class="bmi-journey-g1">Cel: <b>utrzymanie masy ok. ' + fmt(ctx.weightKg, 1) + '\u202Fkg</b></div>'
-        + (model.tempoAlarm && mc == null
+        + (mc == null
           ? '<div class="bmi-journey-g2">Kolejny etap planu zależy od wyniku dalszej oceny.</div>'
           : '<div class="bmi-journey-g2">BMI obniży się dzięki dalszemu wzrastaniu — ' + targetLabel + '</div>')
         + '<div class="bmi-journey-g3">Górna granica normy przy obecnym wzroście: <b>' + fmt(goalKg, 1) + '\u202Fkg</b></div>'
@@ -681,7 +696,7 @@
       whenText: 'Przy tym planie osiągniesz ' + (lastCtx.customGoal ? 'cel własny ' : 'normę BMI ') + dateAfterMonths(mc)
         + ' (za ok. ' + monthsWord(mc)
         + (model.growthAware && fin(model.annualGrowthCm) && model.annualGrowthCm > 0
-          ? '; uwzględnia dalsze wzrastanie ok. ' + fmt(model.annualGrowthCm, 1) + ' cm/rok'
+          ? '; uwzględnia dalsze wzrastanie ' + (model.sim && typeof w.energyOpisWzrastania === 'function' && w.energyOpisWzrastania(model.sim, true) || 'ok. ' + fmt(model.annualGrowthCm, 1) + ' cm/rok')
           : '')
         + ').',
       gainText: gainText,
