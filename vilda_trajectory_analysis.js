@@ -21,8 +21,11 @@
  *    (redFlag.kontekst) — JEDNO źródło tonu i treści banera karty, panelu, Karty pacjenta, epikryzy i narracji;
  *    od raty 6 werdyktów także wariant G (aktywny kurs GH, od jego startu wzrost nadrabia ≥ +0,2 SDS);
  *  - KURSY leczenia (P-WERDYKT rata 6, audyt 2, decyzja właściciela 2026-09-27): kontekst niesie listę kursów
- *    GH i leczenia otyłości (przerwa ≥ KURS_PRZERWA_MIN_M między „end" a kolejnym punktem = osobny kurs; dotąd
- *    jeden przedział od pierwszego „start" do ostatniego „end", z przerwą liczoną jako leczenie). Werdykt
+ *    GH i leczenia otyłości (dotąd jeden przedział od pierwszego „start" do ostatniego „end", z przerwą liczoną
+ *    jako leczenie). Kursy GH: przerwa ≥ KURS_PRZERWA_MIN_M między „end" a kolejnym punktem = osobny kurs
+ *    (therapyIntervals). Kursy OTYŁOŚCI od P-OTYLOSC-CYKLE rata 4 (decyzje właściciela 2026-09-30, D1/D6) = cykle
+ *    leczenia ze wspólnego modułu vilda_cykle_leczenia.js — granicą jest wyłącznie Zakończenie (i Włączenie po
+ *    nim), bez progu przerwy; bez modułu cykli dawna reguła (kursyOtylosci). Werdykt
  *    odpowiedzi na leczenie dostaje WYŁĄCZNIE okno leżące w jednym kursie (start ≥ początek − KURS_START_TOL_M,
  *    koniec ≤ koniec kursu, pokrycie ≥ KURS_POKRYCIE_MIN okna); okno mieszane dostaje werdykt populacyjny
  *    z dopiskiem „w tym N mies. na GH / leczenia". Dotąd 6 mies. nakładania w 36-miesięcznym oknie wystarczało,
@@ -38,7 +41,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '31';
+  var VERSION = '32';
 
   // ── Parametry (odwzorowane z istniejących progów aplikacji — patrz nagłówek) ──
   var P = {
@@ -55,8 +58,12 @@
     // KURS_START_TOL_M przed startem (inaczej pierwszy pomiar do KURS_START_TOL_M po starcie); starszy pomiar
     // niósłby miesiące bez leczenia do werdyktu odpowiedzi. Okno „w kursie" musi być pokryte leczeniem
     // co najmniej w połowie (KURS_POKRYCIE_MIN) — odcinek start−5 → start+1 mies. nie jest oceną leczenia.
-    // Przerwa krótsza niż KURS_PRZERWA_MIN_M między „end" a kolejnym punktem to ten sam kurs (zmiana dawki,
-    // wpis porządkowy), dłuższa — osobny kurs (ta sama liczba, co próg nakładania redukcji ≥ 3 mies.).
+    // Kursy otyłości (P-OTYLOSC-CYKLE rata 4): tolerancja startu kończy się na końcu POPRZEDNIEGO kursu otyłości
+    // (dolnaGranicaStartu) — cykle stykają się (Zakończenie i Włączenie tego samego dnia, R3), więc okno ani pomiar
+    // z poprzedniego cyklu nie liczy się jako „w kursie" następnego. GH bez tego przycięcia.
+    // KURS_PRZERWA_MIN_M dotyczy WYŁĄCZNIE kursów GH: przerwa krótsza między „end" a kolejnym punktem to ten sam
+    // kurs (zmiana dawki, wpis porządkowy), dłuższa — osobny kurs (ta sama liczba, co próg nakładania redukcji
+    // ≥ 3 mies.). Kursy otyłości dzieli moduł cykli (bez progu przerwy) — patrz kursyOtylosci.
     KURS_START_TOL_M: 6,
     KURS_POKRYCIE_MIN: 0.5,
     KURS_PRZERWA_MIN_M: 3,
@@ -400,12 +407,34 @@
     for (var i = 0; i < kursy.length; i++) s += overlapM(kursy[i], a0, b0);
     return s;
   }
+  // P-OTYLOSC-CYKLE rata 4: dolna granica tolerancji startu kursu OTYŁOŚCI = max(start − KURS_START_TOL_M, koniec
+  // POPRZEDNIEGO kursu). Cykle leczenia otyłości stykają się (Zakończenie i Włączenie tego samego dnia lub miesiąca, R3);
+  // bez przycięcia okno albo pomiar z poprzedniego cyklu (do 6 mies. przed startem) liczyłby się jako „w kursie"
+  // następnego leku. Poprzedni kurs wyznacza posortowana po starcie lista kursów w miejscu użycia (kontekst spoza
+  // normalizeContext nie musi być posortowany; lista w kontekście nie dostaje nowych pól). Koniec poprzedniego kursu
+  // późniejszy niż start (niespójne wieki punktów) przycina najwyżej do startu. GH tej granicy nie używa. Przycięcie
+  // dotyczy każdej listy kursów otyłości, także z reguły zapasowej (strona bez modułu cykli: kursy rozdziela tam
+  // przerwa ≥ KURS_PRZERWA_MIN_M, więc przycięcie zmienia wynik tylko przy przerwie krótszej niż KURS_START_TOL_M).
+  function dolnaGranicaStartu(k, kursy) {
+    var dol = k.a - P.KURS_START_TOL_M;
+    var srt = (Array.isArray(kursy) ? kursy : []).map(function (x, i) { return { k: x, i: i }; })
+      .filter(function (x) { return x.k && x.k.a != null && isFinite(x.k.a); })
+      .sort(function (x, y) { return x.k.a - y.k.a || x.i - y.i; });
+    for (var j = 0; j < srt.length; j++) {
+      if (srt[j].k !== k) continue;
+      var pop = j > 0 ? srt[j - 1].k : null;
+      if (pop && pop.b != null && isFinite(pop.b)) dol = Math.max(dol, Math.min(pop.b, k.a));
+      break;
+    }
+    return dol;
+  }
   // Kurs, w którym okno [a0,b0] leży W CAŁOŚCI (parametry KURS_* w P). null = okno poza kursem albo mieszane.
-  function kursOkna(kursy, a0, b0) {
+  // przytnij = true (kursy otyłości): tolerancja startu nie sięga przed koniec poprzedniego kursu (dolnaGranicaStartu).
+  function kursOkna(kursy, a0, b0, przytnij) {
     if (!(b0 > a0)) return null;
     for (var i = 0; i < kursy.length; i++) {
       var k = kursy[i];
-      if (a0 < k.a - P.KURS_START_TOL_M) continue;
+      if (a0 < (przytnij ? dolnaGranicaStartu(k, kursy) : k.a - P.KURS_START_TOL_M)) continue;
       if (k.b != null && b0 > k.b) continue;
       if (overlapM(k, a0, b0) < P.KURS_POKRYCIE_MIN * (b0 - a0)) continue;
       return k;
@@ -413,11 +442,13 @@
     return null;
   }
   // Pomiar na starcie kursu i ostatni pomiar w kursie (reguła KURS_START_TOL_M). null, gdy brak pomiaru startowego.
-  function oknoKursu(kurs, series) {
+  // kursy (kursy otyłości): lista, z której dolnaGranicaStartu bierze koniec poprzedniego kursu; bez niej (GH) — jak dotąd.
+  function oknoKursu(kurs, series, kursy) {
     if (!kurs || !series || !series.length) return null;
     var tb = null, te = null, i;
+    var dol = kursy ? dolnaGranicaStartu(kurs, kursy) : kurs.a - P.KURS_START_TOL_M;
     for (i = 0; i < series.length; i++) {
-      if (series[i].ageMonths >= kurs.a - P.KURS_START_TOL_M && series[i].ageMonths <= kurs.a) tb = series[i];
+      if (series[i].ageMonths >= dol && series[i].ageMonths <= kurs.a) tb = series[i];
     }
     if (!tb) for (i = 0; i < series.length; i++) {
       if (series[i].ageMonths > kurs.a && series[i].ageMonths <= kurs.a + P.KURS_START_TOL_M) { tb = series[i]; break; }
@@ -434,7 +465,9 @@
   // a strona glowna i karta porownania z poprzednim pomiarem nie liczyly wcale:
   //  - odcinek terapii GH / leczenia otylosci z punktow monitora (typy start/continue/end; wiek punktu
   //    = ageYears*12 + ageMonths; start = pierwszy punkt „start" albo najmlodszy; koniec = ostatni
-  //    „end", a bez „end" terapia trwa — b = null);
+  //    „end", a bez „end" terapia trwa — b = null); od raty 6 werdyktow obok koperty lista KURSOW:
+  //    GH — therapyIntervals (Zakonczenie + przerwa >= KURS_PRZERWA_MIN_M), otylosc — od P-OTYLOSC-CYKLE
+  //    rata 4 cykle z VildaCykleLeczenia (kursyOtylosci; bez modulu cykli — therapyIntervals);
   //  - etykieta redukcji: nazwa preparatu z ostatniego punktu (lub pierwszego „start"), bez dopisku
   //    w nawiasie / po mysliniku; bez preparatu — „otyłość";
   //  - mpSDS: MPH z wzrostow rodzicow (Tanner 1970: dziewczeta (ojciec − 13 + matka)/2, chlopcy
@@ -449,6 +482,8 @@
   // Rata 6: KURSY leczenia z punktów monitora. Punkty posortowane po wieku; kurs otwiera pierwszy punkt
   // (albo punkt po zamkniętym kursie z przerwą ≥ KURS_PRZERWA_MIN_M), zamyka punkt „end". Punkt po „end"
   // z krótszą przerwą wraca do tego samego kursu. Etykieta kursu = preparat z jego ostatniego punktu.
+  // Od P-OTYLOSC-CYKLE rata 4 ta reguła liczy kursy GH; dla otyłości jest wyłącznie zapasem kursyOtylosci
+  // (strona bez modułu cykli) — zachowanie sprzed raty 4.
   function therapyIntervals(points) {
     try {
       var pts = therapyPointsOf(points).filter(function (p) { return therapyAgeM(p) > 0; })
@@ -469,8 +504,52 @@
       return out;
     } catch (e) { return []; }
   }
-  // Przedział-koperta (pierwszy start → ostatni koniec) — zachowany dla starszych konsumentów (pasek
-  // kontekstu panelu porównania); werdykty liczą na kursach.
+  // P-OTYLOSC-CYKLE rata 4 (decyzje właściciela 2026-09-30, D1 i D6): KURSY LECZENIA OTYŁOŚCI = cykle leczenia
+  // ze wspólnego modułu vilda_cykle_leczenia.js (VildaCykleLeczenia.podziel) — ten sam podział, który widzą monitor
+  // DocPro, Karta pacjenta i „Postępy". Granicą jest WYŁĄCZNIE Zakończenie (i Włączenie po nim), bez progu przerwy
+  // KURS_PRZERWA_MIN_M: Zakończenie i nowe Włączenie tego samego dnia to dwa kursy (zmiana leku), a Kontynuacja
+  // po Zakończeniu w starym zapisie — kurs bez Włączenia. Kolejność kursów = kolejność cykli (po datach, gdy datę
+  // ma każdy punkt, inaczej po wieku — reguła modułu cykli). Kurs: a = wiek pierwszego punktu cyklu z wiekiem > 0;
+  // b = zakończony cykl ? wiek Zakończenia (Zakończenie bez wieku → najstarszy wiek > 0 w cyklu) : null; cykl bez
+  // żadnego punktu z wiekiem > 0 pominięty (jak punkty z wiekiem 0 w therapyIntervals); etykieta = preparat
+  // ostatniego punktu cyklu z lekiem (bez leku null). Cykl bez Włączenia i cykl z niezgodnością zapisu (np. dwa
+  // Włączenia) to ZWYKŁY kurs: werdykt BMI-SDS trajektorii nie jest oceną odpowiedzi wg ChPL (tę Karta pacjenta
+  // wstrzymuje przy niezgodnym zapisie), więc tutaj nic nie jest wstrzymywane.
+  // Moduł cykli czytany w chwili wywołania — na 6 z 8 stron ładuje się PO tym pliku. Bez modułu albo przy wyjątku
+  // w podziel: reguła sprzed raty 4 (therapyIntervals). GH zostaje na therapyIntervals.
+  function kursyOtylosci(points) {
+    var C;
+    try { C = w.VildaCykleLeczenia || null; } catch (e0) { C = null; }
+    if (!C || typeof C.podziel !== 'function') return therapyIntervals(points);
+    try {
+      var podzial = C.podziel(therapyPointsOf(points));
+      if (!podzial || !Array.isArray(podzial.cykle)) return therapyIntervals(points);
+      var out = [];
+      podzial.cykle.forEach(function (c) {
+        var pts = c && Array.isArray(c.punkty) ? c.punkty : [];
+        var a = null, najstarszy = null, label = null;
+        pts.forEach(function (p) {
+          var m = therapyAgeM(p);
+          if (m > 0) {
+            if (a == null) a = m;
+            if (najstarszy == null || m > najstarszy) najstarszy = m;
+          }
+          var d = drugShortName(p.drug);
+          if (d) label = d;
+        });
+        if (a == null) return;
+        var b = null;
+        if (c.stan === 'zakonczony' && c.zakonczenie) {
+          var mz = therapyAgeM(c.zakonczenie);
+          b = mz > 0 ? mz : najstarszy;
+        }
+        out.push({ a: a, b: b, label: label, active: b == null });
+      });
+      return out;
+    } catch (e) { return therapyIntervals(points); }
+  }
+  // Przedział-koperta (pierwszy start → ostatni koniec) — zachowany dla starszych konsumentów; werdykty liczą
+  // na kursach (od P-OTYLOSC-CYKLE rata 4 także pasek kontekstu panelu porównania w Karcie pacjenta).
   function therapyInterval(points) {
     var k = therapyIntervals(points);
     if (!k.length) return null;
@@ -533,11 +612,13 @@
       out.gh = { a: ghK[0].a, b: ghK[ghK.length - 1].b };
       out.ghKursy = ghK.map(function (k) { return { a: k.a, b: k.b, label: null }; });
     }
-    var rdK = therapyIntervals(inp.obesityTherapyPoints);
+    // P-OTYLOSC-CYKLE rata 4: kursy otyłości = cykle leczenia (kursyOtylosci). Koperta `red` jak dotąd (pierwszy
+    // kurs → koniec ostatniego, etykieta z reductionLabel). Kurs bez leku dostaje „otyłość", nie lek INNEGO kursu
+    // (dotąd etykietę globalną). Kształt wpisu {a, b, label} bez nowych pól.
+    var rdK = kursyOtylosci(inp.obesityTherapyPoints);
     if (rdK.length) {
-      var lbl = reductionLabel(inp.obesityTherapyPoints);
-      out.red = { a: rdK[0].a, b: rdK[rdK.length - 1].b, label: lbl };
-      out.redKursy = rdK.map(function (k) { return { a: k.a, b: k.b, label: k.label || lbl }; });
+      out.red = { a: rdK[0].a, b: rdK[rdK.length - 1].b, label: reductionLabel(inp.obesityTherapyPoints) };
+      out.redKursy = rdK.map(function (k) { return { a: k.a, b: k.b, label: k.label || 'otyłość' }; });
     }
     var mp = num(inp.mpSds);
     if (mp != null) out.mpSds = mp;
@@ -583,7 +664,8 @@
     var kursyGH = met === 'height' ? kursyZ(cx, 'gh') : [];
     var kursyRd = met !== 'height' ? kursyZ(cx, 'red') : [];
     var kG = kursOkna(kursyGH, a.ageMonths, b.ageMonths);
-    var kR = kursOkna(kursyRd, a.ageMonths, b.ageMonths);
+    // P-OTYLOSC-CYKLE rata 4: kursy otyłości (cykle) mogą się stykać — tolerancja startu do końca poprzedniego kursu.
+    var kR = kursOkna(kursyRd, a.ageMonths, b.ageMonths, true);
     var ghMix = !kG ? overlapKursy(kursyGH, a.ageMonths, b.ageMonths) : 0;
     var rdMix = !kR ? overlapKursy(kursyRd, a.ageMonths, b.ageMonths) : 0;
     var PR = S ? S.PROGI : null;
@@ -917,7 +999,8 @@
     var treatment = null;
     if (met.key !== 'height' && ctx) {
       var kR = kursyZ(ctx, 'red'); var kOst = kR.length ? kR[kR.length - 1] : null;
-      var ok = kOst ? oknoKursu(kOst, series) : null;
+      // P-OTYLOSC-CYKLE rata 4: pomiar startowy nie z poprzedniego cyklu (dolnaGranicaStartu z listy kursów).
+      var ok = kOst ? oknoKursu(kOst, series, kR) : null;
       if (ok && (ok.b.ageMonths - ok.a.ageMonths) >= P.SEGMENT_MIN_GAP_M) {
         var tp = pairVerdict(ok.a, ok.b);
         if (tp && tp.v && tp.rdOn) {
@@ -1579,8 +1662,10 @@
     '.vtap .vtap-h .tg::after{content:"zwiń ▾"}',
     '.vtap details:not([open])>summary .tg::after{content:"rozwiń ▸"}',
     '.vtap .vtap-meta{padding:8px 14px;background:#f2f9f9;border-bottom:1px solid #e3ecec;display:flex;gap:6px;flex-wrap:wrap}',
-    '.vtap .vtap-mchip{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #d9e8e8;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#39555b;white-space:nowrap}',
-    '.vtap .vtap-mchip .k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7d979b}',
+    // P-OTYLOSC-CYKLE rata 4: żeton dłuższy niż pasek (kurs „… · od 12 lat 1 mies. do 12 lat 10 mies.” w karcie na telefonie)
+    // zawija tekst w sobie zamiast wystawać poza ucięty kontener; gdy się mieści, wygląda jak dotąd (nowrap zostaje na kluczu).
+    '.vtap .vtap-mchip{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #d9e8e8;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#39555b;white-space:normal;max-width:100%}',
+    '.vtap .vtap-mchip .k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7d979b;white-space:nowrap}',
     '.vtap .vtap-flag{padding:9px 14px;background:#fdecea;border-bottom:1px solid #f6d4d0;font-size:12px;font-weight:700;color:#b71c1c;line-height:1.45}',
     '.vtap .vtap-flag.vw{background:#fdf1e5;border-bottom-color:#f6dfc6;color:#c75d00}',
     '.vtap .vtap-row{padding:9px 14px;border-top:1px solid #eef4f4}',
@@ -1645,6 +1730,11 @@
       + (key ? '<span class="k">' + key + '</span>' : '') + esc(val) + '</span>';
   }
 
+  function chipRedukcji(k) {
+    return mchip('⬇ redukcja', (k.label ? k.label + ' · ' : '') + 'od ' + fmtAgeM(k.a) + (k.b != null ? ' do ' + fmtAgeM(k.b) : ' — nadal'),
+      'zamierzona redukcja' + (k.label ? ' (' + k.label + ')' : '') + ' (oznaczone odcinki: ⬇)');
+  }
+
   function metaStripHtml(model) {
     var n = model.points.length;
     var items = [
@@ -1656,8 +1746,12 @@
     if (ctx) {
       if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push(mchip('🧬 MPH', 'SDS ' + fmtP(ctx.mpSds), 'kanał rodzicielski (MPH)'));
       if (ctx.gh) items.push(mchip('💉 GH', 'od ' + fmtAgeM(ctx.gh.a) + (ctx.gh.b != null ? ' do ' + fmtAgeM(ctx.gh.b) : ' — nadal'), 'terapia GH (oznaczone odcinki: 💉)'));
-      if (ctx.red) items.push(mchip('⬇ redukcja', (ctx.red.label ? ctx.red.label + ' · ' : '') + 'od ' + fmtAgeM(ctx.red.a) + (ctx.red.b != null ? ' do ' + fmtAgeM(ctx.red.b) : ' — nadal'),
-        'zamierzona redukcja' + (ctx.red.label ? ' (' + ctx.red.label + ')' : '') + ' (oznaczone odcinki: ⬇)'));
+      // P-OTYLOSC-CYKLE rata 4: przy kilku kursach leczenia otyłości (cyklach) — żeton na KAŻDY kurs, w kolejności
+      // listy kursów; koperta zlewała dwa cykle w jedno „Wegovy · od … — nadal". Przy jednym kursie żeton z koperty,
+      // jak dotąd (ten sam przedział i ta sama etykieta).
+      var kRd = kursyZ(ctx, 'red');
+      if (kRd.length > 1) kRd.forEach(function (k) { items.push(chipRedukcji(k)); });
+      else if (ctx.red) items.push(chipRedukcji(ctx.red));
       var TROMAN = ['I', 'II', 'III', 'IV', 'V'];
       if (ctx.tannerStage != null) items.push(mchip('Tanner', (TROMAN[ctx.tannerStage - 1] || String(ctx.tannerStage))
         + (ctx.tannerAtAgeMonths != null ? ' (z zapisu w wieku ' + fmtAgeM(ctx.tannerAtAgeMonths) + ')' : '')));
@@ -1873,6 +1967,9 @@
     fazaOstatnia: fazaOstatnia,
     // P-WERDYKT rata 6: kursy leczenia i okno chipu (do testów na funkcji produkcyjnej)
     therapyIntervals: therapyIntervals,
+    // P-OTYLOSC-CYKLE rata 4: kursy otyłości z cykli i dolna granica tolerancji startu (do testów)
+    kursyOtylosci: kursyOtylosci,
+    dolnaGranicaStartu: dolnaGranicaStartu,
     kursOkna: kursOkna,
     oknoKursu: oknoKursu,
     chipNaglowka: chipNaglowka,
