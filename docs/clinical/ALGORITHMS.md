@@ -5269,12 +5269,56 @@ Po drugim scaleniu `origin/audyt` (79b72204, P-GH-BLOKADA): `npm test` — **400
 
 ### Do odnotowania, nie do naprawy tutaj
 
-1. **Etykieta pola wskazuje przycisk „i", a nie pole.** `decorateField` w `clcr_ui_workflow.js` wstawia nagłówek z przyciskiem informacji do `<label>` **bez atrybutu `for`**, przed samym polem. Etykieta bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu — teraz jest nim przycisk. Zmierzone w przeglądarce: `label.control` to `BUTTON.clcr-info-button` dla `collectionStartVoidDiscarded`, `stoneTwoCollectionsConfirmed`, `age` i `V24`; kliknięcie w nazwę pola „zbiórki" **nie zaznacza pola, tylko otwiera dymek pomocy**. W zapisie zdarzeń widać to wprost: `click` na etykiecie przekazany do `BUTTON.clcr-info-button`. To zachowanie produktu (UX, nie kliniczne) i osobna decyzja.
+1. **Etykieta pola wskazuje przycisk „i", a nie pole.** `decorateField` w `clcr_ui_workflow.js` wstawia nagłówek z przyciskiem informacji do `<label>` **bez atrybutu `for`**, przed samym polem. Etykieta bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu — teraz jest nim przycisk. Zmierzone w przeglądarce: `label.control` to `BUTTON.clcr-info-button` dla `collectionStartVoidDiscarded`, `stoneTwoCollectionsConfirmed`, `age` i `V24`; kliknięcie w nazwę pola „zbiórki" **nie zaznacza pola, tylko otwiera dymek pomocy**. W zapisie zdarzeń widać to wprost: `click` na etykiecie przekazany do `BUTTON.clcr-info-button`. To zachowanie produktu (UX, nie kliniczne) i osobna decyzja. → Naprawione w P-KLIRENS-ETYKIETY (niżej).
 2. Ten sam wzorzec — `check()` bez bramki — zostaje w `klirens-stage1-specimens.spec.mjs` (12 miejsc) i `klirens-ui-reorganization.spec.mjs` (1).
 3. Uzupełnienie punktu 1 z P-BRAMKI-4: warunek `prefers-reduced-motion` w `clcr_ui_workflow.css` dotyczy selektora `html[data-clcr-workflow-ui="1"] *`, czyli potomków `html`, a nie samego `html` — przewijanie widoku bierze `scroll-behavior` z elementu głównego, więc ta reguła płynnego przewijania okna nie wyłącza.
 4. `applyLoadedData` wywołuje 36 plików e2e, z czego **25** korzysta z zegara testowego. Bramka z `sesja-czekanie.mjs` stoi na razie tylko w pliku pokwitania, bo tylko tu wyścig został zmierzony; pozostałe mogą być narażone na tę samą przyczynę.
 5. **Pytanie o produkt, niezbadane.** W aplikacji okno między rejestracją a odtworzeniem sesji to dwie klatki animacji po starcie strony — w widocznej karcie ułamek sekundy, przed jakimkolwiek kliknięciem. Nie sprawdzałem, czy da się w nie trafić w realnym użyciu, np. w ukrytym panelu powłoki `app.html`, w którym przeglądarka może wstrzymywać klatki animacji, a który w tym czasie dostanie pacjenta. Warunek pominięcia odtworzenia w `restoreMainSessionIfAny` przepuszcza odtworzenie, gdy pacjent jest wczytany (`_vildaCurrentPatientId`). To decyzja i analiza po stronie właściciela.
 6. **Niestabilny test jednostkowy spoza zakresu.** Pierwszy pełny `npm test` tej gałęzi dał 3989/3990: `tests/unit/zapisy-dwie-karty.test.mjs` › „formularze z tej samej wersji: drugi zapis widzi pierwszy i pyta…" oczekuje, że o pomiar z pierwszego zapisu (72) zapyta drugi, a pytanie dotyczyło 84 — kolejność dwóch równoległych zapisów się odwróciła. Dane były kompletne (pierwsza asercja, pomiary obu formularzy w bieżącej wersji, przeszła). W izolacji 5/5 zielonych, kolejny pełny `npm test` zielony. Nie badałem, czy test zakłada kolejność, której sejf nie obiecuje, czy kolejka zapisów ma okno przed ustawieniem się w kolejce — to obszar sejfu i osobny wątek.
+
+## Etykieta pola Klirensu wskazuje pole, a nie przycisk „i" (P-KLIRENS-ETYKIETY, SW 1.1.139, 2026-10-01)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmienia się zachowanie interfejsu: co robi kliknięcie w nazwę pola. Zlecenie właściciela po P-BRAMKI-5 (punkt 1 „Do odnotowania").
+
+### Na czym polegał błąd
+
+`decorateField` (`clcr_ui_workflow.js`) zamienia tekst etykiety pola na nagłówek: nazwa, plakietka statusu i przycisk „i". Nagłówek trafia do `<label>` **przed** samo pole, a etykieta nie ma atrybutu `for`. Taka etykieta wskazuje pierwszy etykietowalny element w swoim wnętrzu — po dekoracji jest nim przycisk „i". Zmierzone na `audyt` (febf0b4a): `label.control` to `BUTTON.clcr-info-button` dla **każdego** udekorowanego pola, nie tylko dla pól zbiórki.
+
+| kontrolka | klik w nazwę pola — przed | po |
+|---|---|---|
+| pole wyboru bez listy odpowiedzi (status „Opcjonalne") | otwiera dymek pomocy | przełącza pole, jak zwykła etykieta |
+| pole tekstowe, liczba, lista | otwiera dymek pomocy | fokus w polu |
+| pole wyboru z listą odpowiedzi („Wymagane potwierdzenie", „Do pełnej interpretacji") | otwiera dymek pomocy | fokus na liście odpowiedzi; **niczego nie potwierdza** |
+| przycisk „i" | otwiera dymek | bez zmian |
+
+Przed dekoracją (sam HTML strony) etykiety obejmowały pole wyboru razem z tekstem, więc klik w tekst przełączał pole. Poprawka przywraca to zachowanie.
+
+### Poprawka
+
+`bindLabelToActiveControl(view)` ustawia `label.htmlFor` na **aktywną kontrolkę** pola. Gdy pole wyboru dostało listę odpowiedzi (`#ui_<id>_answer`, „Tak — potwierdzam / Nie / Nie wiem"), jest nią lista, a w pozostałych przypadkach samo pole. Funkcja jest wołana w `decorateField` i w `ensureProtocolAnswer` po utworzeniu listy. Lista raz utworzona zostaje w polu do końca życia strony, więc etykieta nie wraca już na ukryte pole wyboru.
+
+**Dlaczego lista, a nie ukryte pole wyboru.** Pod listą odpowiedzi zostaje ukryte pole wyboru (`clcr-canonical-checkbox`). Jego zdarzenie `change` ustawia listę na „Tak — potwierdzam". Etykieta wskazująca to pole zamieniałaby więc klik w tekst w potwierdzenie warunku protokołu. Test pilnuje, że klik w nazwę zostawia listę pustą, a ukryte pole niezaznaczone.
+
+Klik w „i" wewnątrz etykiety nie przełącza pola. Przycisk jest elementem interaktywnym, więc etykieta nie przekazuje kliknięcia dalej, a jego własna obsługa i tak woła `preventDefault`. Nazwy dostępne pól się nie zmieniają (`aria-labelledby` na polu, `aria-label` na liście odpowiedzi).
+
+### Walidacja
+
+- Nowy `tests/e2e/klirens-etykiety-pol.spec.mjs`, 5 testów:
+  - każda udekorowana etykieta wskazuje aktywną kontrolkę, sprawdzane w trybie zgodności i na ścieżce ACR z listą odpowiedzi;
+  - klik w nazwę pola wyboru przełącza je, a „i" otwiera pomoc bez przełączania;
+  - klik w nazwę pola tekstowego daje mu fokus;
+  - klik w nazwę pola z listą odpowiedzi daje fokus liście i niczego nie wybiera;
+  - na ekranie telefonu (390 px, dotyk) dotknięcie nazwy przełącza pole, a dotknięcie „i" otwiera pomoc.
+- Na kodzie sprzed poprawki **0/5** (test „wskazuje aktywną kontrolkę" wymienia wszystkie pola strony), po poprawce **5/5**.
+- Wszystkie pliki e2e Klirensu oraz `mobile.spec.mjs` (desktop i telefon): **77/77**.
+
+- Po `npm run podbij-wersje` (`clcr_ui_workflow.js` 3 → 4, SW 1.1.138 → 1.1.139): `npm test` — **4020/4020** + regresja PRO zielone.
+- E2E: wszystkie pliki PWA (pierwsza wizyta, migracja precache, strony offline na zabitym serwerze, wersjonowane klucze), wszystkie pliki Klirensu i `mobile.spec.mjs` — **85/85**.
+- Pin `clcr_ui_workflow.js?v=3` w `tests/unit/klirens-ui-model.test.mjs`: strona ładuje teraz `?v=4`. Sprawdzenie historycznego wpisu precache `?v=3` zostaje (append-only), a obok doszło sprawdzenie nowego `?v=4`.
+
+### Do decyzji właściciela
+
+- **Pola wyboru ze statusem „Opcjonalne" przełączają się teraz kliknięciem w nazwę albo w plakietkę statusu.** Tak działa każda zwykła etykieta i tak działał HTML strony przed dekoracją. Kto dotąd klikał w nazwę, żeby przeczytać pomoc, teraz zaznaczy pole — pomoc otwiera się wyłącznie przyciskiem „i". Pola wymagające potwierdzenia (lista odpowiedzi) są od tego wolne.
 
 ## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
 
