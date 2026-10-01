@@ -7214,6 +7214,92 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
+## Scalanie synchronizacji pod blokadą pacjenta (P-SCALANIE-BLOKADA, SW 1.1.140, `vilda_vault.js` 194, 2026-10-01)
+
+**Decyzja właściciela (2026-10-01).** „Przeanalizuj i wprowadź to” — pytanie zostawione w P-BLOKADA-ZAPISU-WERSJI
+(wariant c) i P-KOSZ-POPRAWKI: czy scalanie synchronizacji ma brać blokadę pacjenta.
+
+**Analiza.** Scalanie (`mergeSyncPayload`; tą samą funkcją idą delty na żywo, `applyEncryptedDelta`) zmieniało rekord
+pacjenta bez blokady, a decyzje liczyło na odczycie sprzed zapisu — część z odczytu na starcie całego scalania. Zmierzone
+na kodzie sprzed zmiany (przypadki niżej):
+- poprawka pomiaru zrobiona w trakcie scalania znikała pod wersją z ładunku;
+- „Usuń do kosza” w trakcie scalania kończyło się odmową `zmieniony` (P-KOSZ-POPRAWKI tylko zawęziło okno), a wersja
+  przeniesiona do kosza po starcie scalania wracała z ładunku do historii (nagrobki przeczytane na starcie);
+- zapis karty w trakcie scalania nagrobka pacjenta z innego urządzenia ginął razem z kartą (ostatni zapis karty
+  przeczytany na starcie); przy otwartym pytaniu bramy karta wracała potem z jednym zapisem zamiast całej historii;
+- nagrobek wersji zapisany po decyzji scalania (kosz w innej karcie) znikał przy końcu scalania razem z treścią kosza.
+
+Sama blokada nie wystarcza: scalanie poczekałoby na kosz, a potem i tak dopisało wersję, która właśnie trafiła do kosza.
+Dlatego decyzje zapadają pod blokadą, na świeżym odczycie.
+
+**Co się zmienia** (`vilda_vault.js`: `Bsl_scalPacjenta`, `Bsl_usunPacjenta`, `Bsl_podBlokada`, `Bsl_odswiezNagrobki`,
+`Bkz_scalKoniec`, `Bkz_zmienListe`).
+- Każdy krok scalania, który zmienia rekord pacjenta, idzie pod tą samą blokadą pacjenta co zapis, kosz, retencja
+  i poprawki (Web Locks `vilda-save-pat:<id>`; bez Web Locks — kolejka strony): wersje i nagłówek karty, usunięcie karty
+  z wygrywającym nagrobkiem, nagrobki wersji z kosza i retencji.
+- Pod blokadą sejf czyta jeszcze raz: czy karta istnieje, wersje karty, nagrobki wersji tego pacjenta zapisane po starcie
+  scalania, ostatni zapis karty przed jej usunięciem. Reguły bez zmian (nagrobek pacjenta wygrywa, gdy usunięcie nie jest
+  wcześniejsze niż ostatni zapis; nagrobek wersji — gdy nie jest wcześniejsze niż ostatnia zmiana wersji).
+- Nagrobek, który w scalaniu przegrał z wersją zmienioną po usunięciu, znika z listy tylko do chwili tego usunięcia;
+  późniejsze usunięcie tej samej wersji zostaje.
+- Zajęta blokada (np. otwarte pytanie „Ktoś inny zmienił ten rekord” w innej karcie): scalanie czeka najwyżej 30 s
+  (opcje `mergeSyncPayload`: `onLockWait`, `lockTimeoutMs` — te same nazwy co w `savePatient`; `vilda_sync.js` ich nie
+  podaje). Po limicie kończy się błędem z kodem `MERGE_BUSY`: „Synchronizacja wstrzymana — pacjent jest właśnie
+  zapisywany w innej karcie. Dokończ tam zapis; nic nie zginęło, synchronizacja spróbuje ponownie.” Pobranie z chmury
+  nie przesuwa wtedy znacznika wersji (ETag), więc wysyłka wymaga świeżego pobrania (412 → pobranie), a następna
+  synchronizacja powtarza scalanie. Lista nagrobków zapisuje się także po przerwaniu (treść kosza dołączona z wersji
+  lokalnej nie ginie). Pominięcie zajętego pacjenta byłoby gorsze: wysyłka zastępuje cały stan w chmurze i zgubiłaby
+  jego wersje z innych urządzeń.
+- Kolejność blokad jak w koszu: najpierw pacjent, potem lista nagrobków; scalanie trzyma najwyżej jedną blokadę pacjenta
+  naraz, więc nie ma zakleszczeń. Szyfrowanie treści z ładunku zostaje poza blokadą (blokada trwa milisekundy).
+
+**Bez zmian.** Reguły scalania (rewizja, chwila zmiany, nagrobki pacjentów i wersji, kosz 30 dni, przypięta wersja
+wygrywa z retencją), format ładunku, liczniki wyniku, `vilda_sync.js`. Sprawdzenie wersji tuż przed usunięciem
+z P-KOSZ-POPRAWKI zostaje: bez Web Locks druga karta nie czeka, a import kopii idzie bez blokady.
+
+**Przypadki syntetyczne** (prawdziwy `vilda_vault.js`; `tests/unit/scalanie-blokada.test.mjs` w dwóch trybach: kolejka
+strony i atrapa Web Locks; `tests/e2e/scalanie-blokada.spec.mjs` — prawdziwe Web Locks w dwóch kartach):
+
+| Sytuacja | Wynik |
+|---|---|
+| karta A czeka na odpowiedź w pytaniu bramy; scalanie ładunku z nowym zapisem tej karty z B | scalanie czeka; po odpowiedzi 4 wersje, licznik 4 |
+| scalanie stoi tuż przed zapisem poprawki z B (wzrost przy 60 mies. → 111); w A poprawka przy 66 mies. → 150 | poprawka A czeka; w bieżącej wersji 111 i 150 |
+| „Usuń do kosza” zapisał nagrobek i stoi przed usunięciem; scalanie ładunku z wersją poprawioną wcześniej na B | scalanie czeka; usunięcie się udaje, wersja w koszu i nie wraca |
+| scalanie przeczytało nagrobki; w tym czasie wersja trafia do kosza | wersja nie wraca z ładunku; 2 wersje, licznik 2 |
+| nagrobek pacjenta z B (usunięcie późniejsze niż zapisy A); w trakcie scalania A zapisuje kartę | karta zostaje z oboma zapisami, bez nagrobka; `deletedPatientCount` 0 |
+| jak wyżej, ale zapis A czeka na pytanie bramy | scalanie czeka; po odpowiedzi karta z 3 wersjami |
+| wersja z B wygrała z pierwszym usunięciem; po tej decyzji scalania wersja trafia do kosza ponownie | drugie usunięcie zostaje, wpis kosza z treścią po poprawce |
+| blokada zajęta, `lockTimeoutMs` 150 ms | `MERGE_BUSY`, jeden sygnał czekania, nic nie dopisane; po zwolnieniu to samo scalanie dopisuje zapis |
+| przerwanie przy nagrobkach (karta drugiej osoby zajęta) | `MERGE_BUSY`; nagrobek pierwszej karty zastosowany, wpis kosza z treścią z wersji lokalnej zapisany |
+
+**Testy.** `tests/unit/scalanie-blokada.test.mjs` — 18 (7 przypadków × 2 tryby, 2 z limitem czasu, 2 strażniki źródła:
+scalanie nie zapisuje rekordu pacjenta poza funkcjami pod blokadą; delty idą tą samą drogą); na bazie 17 czerwonych
+(zielony tylko strażnik drogi delt). `tests/e2e/scalanie-blokada.spec.mjs` — 2, na bazie oba czerwone. Strażnik źródła
+w `kosz-zapisow.test.mjs` przepięty: obie pętle wersji są teraz w `Bsl_scalPacjenta` (asercja ta sama). Mutacje (każda
+wywraca co najmniej jeden test): bez odświeżenia nagrobków; przegrane nagrobki zdejmowane bezwarunkowo; usunięcie karty
+bez świeżego odczytu; usunięcie karty bez blokady; scalanie karty bez blokady; nagrobki wersji bez blokady; bez zapisu
+listy po przerwaniu; przerwanie przy nagrobkach tylko jako ostrzeżenie; błąd limitu bez kodu `MERGE_BUSY`.
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach, jednostkach i wynikach. Zmiana dotyczy danych i synchronizacji:
+scalanie nie nadpisuje poprawek zrobionych w trakcie, nie wskrzesza wersji z kosza i nie usuwa karty zapisanej w trakcie;
+przy zajętej blokadzie synchronizacja czeka albo jest wstrzymana do następnej próby.
+
+**Ograniczenia.**
+- `removePatient` (usunięcie karty) i import kopii (`importPatientFromEnvelope`, `restoreVaultBackup`) nadal bez blokady
+  pacjenta. Ich wyścigi ze scalaniem świeży odczyt zawęża, ale nie wyklucza.
+- Pytanie bramy otwarte długo w innej karcie: każda automatyczna synchronizacja czeka 30 s i kończy się `MERGE_BUSY`;
+  wysyłka z tego urządzenia czeka do odpowiedzi albo zamknięcia tamtej karty. Błąd idzie tą samą drogą co inne błędy
+  pobrania.
+- Pierwsza rejestracja slotu (gałąź 409 w `vilda_sync.js`) połyka każdy błąd scalania, także ten; wysyłkę chroni wtedy
+  strażnik „najpierw pobierz” — bez zmian, dotyczy każdego błędu scalania.
+
+**Wersje.** `vilda_vault.js` 193 → 194 (8 stron + wstrzyknięcia: `vilda_chrome.js` 88, `vilda_session_bridge.js` 16 na
+22 stronach), precache (append-only), `SW_VERSION` 1.1.139 → 1.1.140 (+ pin), fixture wersji — nadane przez
+`npm run podbij-wersje` względem `origin/audyt` (`f254852`, po #515, #512 i #517). „Do decyzji”: brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie. Osobno: czy objąć blokadą pacjenta także `removePatient`
+i import kopii; czy synchronizacja ma pokazywać „Czekam…” (sygnał `onLockWait`) zamiast cichego czekania.
+
 ## Kosz i retencja: poprawki po przeglądzie (P-KOSZ-POPRAWKI, SW 1.1.137, `vilda_vault.js` 193, `vilda_kosz_zapisow.js` 2, 2026-09-30)
 
 **Zlecenie.** Trzy uwagi Codex P1 do scalonych #501 (P-KOSZ-ZAPISOW) i #502 (P-RETENCJA-NAGROBKI), zweryfikowane w kodzie;
@@ -7280,6 +7366,7 @@ stronach), `vilda_kosz_zapisow.js` 2, precache, `SW_VERSION` 1.1.136 → 1.1.137
 przestawiony ręcznie („Do decyzji” skryptu).
 
 **Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; czy scalanie synchronizacji ma brać blokadę pacjenta.
+*(Rozstrzygnięte 2026-10-01: tak — P-SCALANIE-BLOKADA wyżej.)*
 
 ## Retencja z nagrobkiem w synchronizacji (P-RETENCJA-NAGROBKI, SW 1.1.129, `vilda_vault.js` 191, 2026-09-30)
 
@@ -7619,7 +7706,8 @@ się już w poprzedniej wersji.
 | kosz, retencja, korekta, usunięcie i przypięcie tej samej karty po kolei, nikt inny nie zapisuje | bez czekania i bez komunikatu „Czekam” | zielone (kontrola) |
 
 **Czego to NIE rozwiązuje.**
-- Scalania z synchronizacji (wariant c) — nadal bez blokady; osobna analiza i decyzja właściciela.
+- Scalania z synchronizacji (wariant c) — nadal bez blokady; osobna analiza i decyzja właściciela. *(Aktualizacja
+  2026-10-01: zrobione w P-SCALANIE-BLOKADA.)*
 - `updateSnapshotPayload` dostaje gotową treść od wołającego. „Popraw pomiar” bez wskazania wiersza, dopisanie wpisu
   historycznego (pomiar starszy niż bieżący) i poprawka nazwiska budują ją z odczytu sprzed czekania, więc gdy w tym czasie
   powstała nowsza wersja, poprawka trafia do wersji, którą wskazał wołający — jak dotąd. Blokada porządkuje sam zapis, nie
