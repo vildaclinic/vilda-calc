@@ -52,8 +52,8 @@
   "sha256": "669e08d7e64194ad82da4776ecb633dd8b7018c5a6dc071593911ae6201641ef"
  },
  "clcr_ui_workflow.js": {
-  "v": 3,
-  "sha256": "6b94c0ebf00c7588a65a3b210d75d04aca96ff4097074151b277db92564d6142"
+  "v": 4,
+  "sha256": "a17b055e9c493f8160c0f3b9f8844b516e266f62b4a4c75c40476d331ff2a216"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -416,8 +416,8 @@
   "sha256": "5aeeca8b3c38e265de4117f0b5ccc99d010216c11e6d56e4f9ab3ebbe40ab665"
  },
  "style.css": {
-  "v": 85,
-  "sha256": "a6fb5824278925250f2f9949807ea0c52e633fa56bb1098d12eea498a99bd34a"
+  "v": 86,
+  "sha256": "139c3a1615f6826b501de823be7f452177ebeceff98302e17a41f4acea567835"
  },
  "thyroid_cancer_kids.js": {
   "v": 4,
@@ -544,12 +544,12 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 43,
-  "sha256": "d979954117aa8c5e36c8a1a068429d2b7da1919eedb74b3f4ae8e46915008e29"
+  "v": 44,
+  "sha256": "7ca4dc72f2886e34eeeb829897d3264cadbb8b0aca4131aaf89c61e25aa11bd0"
  },
  "vilda_diet_recommendations.js": {
-  "v": 68,
-  "sha256": "ea446d653dab870e20a11136d95b594530673103fcde472526e6e30dd2316022"
+  "v": 69,
+  "sha256": "192eca6778965abb383d7266d05456e315d085712583b4654f96448f1e9ad966"
  },
  "vilda_dob_age.js": {
   "v": 7,

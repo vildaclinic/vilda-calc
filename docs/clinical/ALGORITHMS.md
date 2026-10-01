@@ -5269,12 +5269,56 @@ Po drugim scaleniu `origin/audyt` (79b72204, P-GH-BLOKADA): `npm test` — **400
 
 ### Do odnotowania, nie do naprawy tutaj
 
-1. **Etykieta pola wskazuje przycisk „i", a nie pole.** `decorateField` w `clcr_ui_workflow.js` wstawia nagłówek z przyciskiem informacji do `<label>` **bez atrybutu `for`**, przed samym polem. Etykieta bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu — teraz jest nim przycisk. Zmierzone w przeglądarce: `label.control` to `BUTTON.clcr-info-button` dla `collectionStartVoidDiscarded`, `stoneTwoCollectionsConfirmed`, `age` i `V24`; kliknięcie w nazwę pola „zbiórki" **nie zaznacza pola, tylko otwiera dymek pomocy**. W zapisie zdarzeń widać to wprost: `click` na etykiecie przekazany do `BUTTON.clcr-info-button`. To zachowanie produktu (UX, nie kliniczne) i osobna decyzja.
+1. **Etykieta pola wskazuje przycisk „i", a nie pole.** `decorateField` w `clcr_ui_workflow.js` wstawia nagłówek z przyciskiem informacji do `<label>` **bez atrybutu `for`**, przed samym polem. Etykieta bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu — teraz jest nim przycisk. Zmierzone w przeglądarce: `label.control` to `BUTTON.clcr-info-button` dla `collectionStartVoidDiscarded`, `stoneTwoCollectionsConfirmed`, `age` i `V24`; kliknięcie w nazwę pola „zbiórki" **nie zaznacza pola, tylko otwiera dymek pomocy**. W zapisie zdarzeń widać to wprost: `click` na etykiecie przekazany do `BUTTON.clcr-info-button`. To zachowanie produktu (UX, nie kliniczne) i osobna decyzja. → Naprawione w P-KLIRENS-ETYKIETY (niżej).
 2. Ten sam wzorzec — `check()` bez bramki — zostaje w `klirens-stage1-specimens.spec.mjs` (12 miejsc) i `klirens-ui-reorganization.spec.mjs` (1).
 3. Uzupełnienie punktu 1 z P-BRAMKI-4: warunek `prefers-reduced-motion` w `clcr_ui_workflow.css` dotyczy selektora `html[data-clcr-workflow-ui="1"] *`, czyli potomków `html`, a nie samego `html` — przewijanie widoku bierze `scroll-behavior` z elementu głównego, więc ta reguła płynnego przewijania okna nie wyłącza.
 4. `applyLoadedData` wywołuje 36 plików e2e, z czego **25** korzysta z zegara testowego. Bramka z `sesja-czekanie.mjs` stoi na razie tylko w pliku pokwitania, bo tylko tu wyścig został zmierzony; pozostałe mogą być narażone na tę samą przyczynę.
 5. **Pytanie o produkt, niezbadane.** W aplikacji okno między rejestracją a odtworzeniem sesji to dwie klatki animacji po starcie strony — w widocznej karcie ułamek sekundy, przed jakimkolwiek kliknięciem. Nie sprawdzałem, czy da się w nie trafić w realnym użyciu, np. w ukrytym panelu powłoki `app.html`, w którym przeglądarka może wstrzymywać klatki animacji, a który w tym czasie dostanie pacjenta. Warunek pominięcia odtworzenia w `restoreMainSessionIfAny` przepuszcza odtworzenie, gdy pacjent jest wczytany (`_vildaCurrentPatientId`). To decyzja i analiza po stronie właściciela.
 6. **Niestabilny test jednostkowy spoza zakresu.** Pierwszy pełny `npm test` tej gałęzi dał 3989/3990: `tests/unit/zapisy-dwie-karty.test.mjs` › „formularze z tej samej wersji: drugi zapis widzi pierwszy i pyta…" oczekuje, że o pomiar z pierwszego zapisu (72) zapyta drugi, a pytanie dotyczyło 84 — kolejność dwóch równoległych zapisów się odwróciła. Dane były kompletne (pierwsza asercja, pomiary obu formularzy w bieżącej wersji, przeszła). W izolacji 5/5 zielonych, kolejny pełny `npm test` zielony. Nie badałem, czy test zakłada kolejność, której sejf nie obiecuje, czy kolejka zapisów ma okno przed ustawieniem się w kolejce — to obszar sejfu i osobny wątek.
+
+## Etykieta pola Klirensu wskazuje pole, a nie przycisk „i" (P-KLIRENS-ETYKIETY, SW 1.1.139, 2026-10-01)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka ani interpretacja. Zmienia się zachowanie interfejsu: co robi kliknięcie w nazwę pola. Zlecenie właściciela po P-BRAMKI-5 (punkt 1 „Do odnotowania").
+
+### Na czym polegał błąd
+
+`decorateField` (`clcr_ui_workflow.js`) zamienia tekst etykiety pola na nagłówek: nazwa, plakietka statusu i przycisk „i". Nagłówek trafia do `<label>` **przed** samo pole, a etykieta nie ma atrybutu `for`. Taka etykieta wskazuje pierwszy etykietowalny element w swoim wnętrzu — po dekoracji jest nim przycisk „i". Zmierzone na `audyt` (febf0b4a): `label.control` to `BUTTON.clcr-info-button` dla **każdego** udekorowanego pola, nie tylko dla pól zbiórki.
+
+| kontrolka | klik w nazwę pola — przed | po |
+|---|---|---|
+| pole wyboru bez listy odpowiedzi (status „Opcjonalne") | otwiera dymek pomocy | przełącza pole, jak zwykła etykieta |
+| pole tekstowe, liczba, lista | otwiera dymek pomocy | fokus w polu |
+| pole wyboru z listą odpowiedzi („Wymagane potwierdzenie", „Do pełnej interpretacji") | otwiera dymek pomocy | fokus na liście odpowiedzi; **niczego nie potwierdza** |
+| przycisk „i" | otwiera dymek | bez zmian |
+
+Przed dekoracją (sam HTML strony) etykiety obejmowały pole wyboru razem z tekstem, więc klik w tekst przełączał pole. Poprawka przywraca to zachowanie.
+
+### Poprawka
+
+`bindLabelToActiveControl(view)` ustawia `label.htmlFor` na **aktywną kontrolkę** pola. Gdy pole wyboru dostało listę odpowiedzi (`#ui_<id>_answer`, „Tak — potwierdzam / Nie / Nie wiem"), jest nią lista, a w pozostałych przypadkach samo pole. Funkcja jest wołana w `decorateField` i w `ensureProtocolAnswer` po utworzeniu listy. Lista raz utworzona zostaje w polu do końca życia strony, więc etykieta nie wraca już na ukryte pole wyboru.
+
+**Dlaczego lista, a nie ukryte pole wyboru.** Pod listą odpowiedzi zostaje ukryte pole wyboru (`clcr-canonical-checkbox`). Jego zdarzenie `change` ustawia listę na „Tak — potwierdzam". Etykieta wskazująca to pole zamieniałaby więc klik w tekst w potwierdzenie warunku protokołu. Test pilnuje, że klik w nazwę zostawia listę pustą, a ukryte pole niezaznaczone.
+
+Klik w „i" wewnątrz etykiety nie przełącza pola. Przycisk jest elementem interaktywnym, więc etykieta nie przekazuje kliknięcia dalej, a jego własna obsługa i tak woła `preventDefault`. Nazwy dostępne pól się nie zmieniają (`aria-labelledby` na polu, `aria-label` na liście odpowiedzi).
+
+### Walidacja
+
+- Nowy `tests/e2e/klirens-etykiety-pol.spec.mjs`, 5 testów:
+  - każda udekorowana etykieta wskazuje aktywną kontrolkę, sprawdzane w trybie zgodności i na ścieżce ACR z listą odpowiedzi;
+  - klik w nazwę pola wyboru przełącza je, a „i" otwiera pomoc bez przełączania;
+  - klik w nazwę pola tekstowego daje mu fokus;
+  - klik w nazwę pola z listą odpowiedzi daje fokus liście i niczego nie wybiera;
+  - na ekranie telefonu (390 px, dotyk) dotknięcie nazwy przełącza pole, a dotknięcie „i" otwiera pomoc.
+- Na kodzie sprzed poprawki **0/5** (test „wskazuje aktywną kontrolkę" wymienia wszystkie pola strony), po poprawce **5/5**.
+- Wszystkie pliki e2e Klirensu oraz `mobile.spec.mjs` (desktop i telefon): **77/77**.
+
+- Po `npm run podbij-wersje` (`clcr_ui_workflow.js` 3 → 4, SW 1.1.138 → 1.1.139): `npm test` — **4020/4020** + regresja PRO zielone.
+- E2E: wszystkie pliki PWA (pierwsza wizyta, migracja precache, strony offline na zabitym serwerze, wersjonowane klucze), wszystkie pliki Klirensu i `mobile.spec.mjs` — **85/85**.
+- Pin `clcr_ui_workflow.js?v=3` w `tests/unit/klirens-ui-model.test.mjs`: strona ładuje teraz `?v=4`. Sprawdzenie historycznego wpisu precache `?v=3` zostaje (append-only), a obok doszło sprawdzenie nowego `?v=4`.
+
+### Do decyzji właściciela
+
+- **Pola wyboru ze statusem „Opcjonalne" przełączają się teraz kliknięciem w nazwę albo w plakietkę statusu.** Tak działa każda zwykła etykieta i tak działał HTML strony przed dekoracją. Kto dotąd klikał w nazwę, żeby przeczytać pomoc, teraz zaznaczy pole — pomoc otwiera się wyłącznie przyciskiem „i". Pola wymagające potwierdzenia (lista odpowiedzi) są od tego wolne.
 
 ## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
 
@@ -6071,7 +6115,7 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 **Decyzje właściciela (2026-09-30), po punkcie B5 audytu zaleceń dietetycznych:**
 1. wariant A′ teraz, wariant B później. Liczby planu bez zmian (poza DS), granice wieku jako dane, notka o przejściu tylko dla lekarza, tabela obu klifów i testy par granicznych. Wariant B — przełączenie na ścieżkę dorosłą po zakończeniu wzrastania — wymaga nowego pola stanu pacjenta i czeka na osobną decyzję;
 2. DS: od 19 lat o nadmiarze masy decyduje silnik BMI z populacją pacjenta (`VildaBmi.ocen`). Populacja ogólna bez zmian; u pacjenta z zespołem Downa w wieku 19,0–19,99 decyduje centyl siatki DS, tak jak w 18,99;
-3. notka o przejściu tylko w karcie lekarza („Strategia”), 18,0–19,99 lat, bez tempa kg/mies. i czasu do normy, nigdy w zaleceniach, raporcie ani PDF — **wdrożenie po akceptacji makiety** (poza tym wpisem).
+3. notka o przejściu tylko w karcie lekarza („Strategia”), 18,0–19,99 lat, bez tempa kg/mies. i czasu do normy, nigdy w zaleceniach, raporcie ani PDF; makieta desktop/mobile zaakceptowana 2026-09-30 w wariancie domyślnie zwiniętym.
 
 **Problem.**
 - Dwie granice wieku leżą obok siebie i żadna wytyczna nie wyznacza wieku przejścia z planu redukcji dziecka na plan dorosłego:
@@ -6092,6 +6136,12 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
    - nadmiar: „BMI wynosi X (nadwaga wg siatki dla zespołu Downa). Do 20. roku życia BMI ocenia się według siatki dla zespołu Downa; do zejścia poniżej jej 85. centyla potrzebna byłaby redukcja masy ciała o ok. Y kg – odpowiada to masie ok. Z kg.”;
    - niedowaga: „BMI wynosi X (niedowaga wg siatki dla zespołu Downa; siatkę dla zespołu Downa stosuje się do 20. roku życia).”
    - `dane.klasyfikacja` niesie `celDorosly: false` i `klasaBmi` (centyl, bmiSDS, siatka DS); plan PDF (`vilda_raport_plan.js`, `bmiDorosly`) rysuje wtedy drabinkę dziecka i kafelek z centylem, reszta raportu idzie ścieżką dorosłą.
+6. **Notka o przejściu (B5-c)** (`energyPrzejscie19`, `energyPrzejscie19Html`, `energyPrzejscie19Montuj`; montaż w bramce karty „Strategia”, styl w `style.css`).
+   - Tylko gdy karta „Strategia” jest widoczna (nadmiar masy) i wiek 18,0–19,99; `<details>` domyślnie zwinięte.
+   - Silnik planu liczony dwa razy dla tych samych danych i PAL domyślnego: po stronie dziecka (teraz albo 18;11) i dorosłego (19;0 albo teraz). Wiersze: model deficytu, PAL domyślny, TEE, górne granice lekkiej / umiarkowanej / intensywnej (bez oznaczenia domyślnej), stabilizacja, minimum podaży.
+   - Nagłówek przed 19 lat: „Plan dorosłego od 19 lat — za N mies. te same dane dadzą inne liczby planu”; po: „…— do 18;11 ten sam pacjent miał plan dziecka”.
+   - Bez tempa kg/mies. i czasu do normy; nie trafia do `textOutput`, `dane`, raportu ani PDF.
+   - Stabilizacja po stronie dziecka jest „dostępna” tylko wtedy, gdy karta pozwala ją wybrać (flaga „Wzrost zakończony”, blokada z prognozy wzrostu → `stabilizationToggle.disabled`). Gdy u dorosłego żadna dieta nie mieści się nad minimum (np. M 18;6, 136 cm, 55,5 kg: TEE 1873), wiersz „Diety … → żadna powyżej minimum”, minimum z `MIN_INTAKE_ADULT` (K 1200, M 1600).
 5. **„Droga do normy BMI”** (`vilda_update_prep.js`, `vildaUpdatePrepDrogaDziecko`): ocena BMI jak w silniku (`VildaBmi.dorosly` z populacją) — populacja ogólna od 18 lat jak dotąd, DS od 20 lat. Karta główna BMI (ostrzeżenie „Otyłość I stopnia wg BMI” u DS 18–19,99) nie jest częścią tej zmiany — zgłoszona osobno.
 
 **Tabela obu klifów (populacja ogólna, PAL domyślny; dane fikcyjne, silnik produkcyjny).**
@@ -6106,7 +6156,7 @@ zaktualizuje SW, ta strona się nie przeładuje (dotąd tak). Przyszła z sieci,
 
 Znane artefakty (bez zmian, do wariantu B): u 19-latka z nadwagą dieta może zrobić się łagodniejsza (M 175/79: zalecana lekka ≤ 2350 → domyślna umiarkowana ≤ 2200, ale dostępna lekka ≤ 2400), a przy otyłości ostrzejsza (K 165/105: intensywna poniżej REE); w 18,0 zmienia się tylko cel i równanie REE.
 
-**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; `tests/unit/dieta-b5-przejscie-19.test.mjs`, 13 przypadków, prawdziwy silnik planu i BMI):
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; `tests/unit/dieta-b5-przejscie-19.test.mjs`, prawdziwy silnik planu i BMI):
 - dane: `ENERGY_GRANICE_WIEKU.planSciezkaDoroslaOdLat` = 19, zamrożone; `ENERGY_ADULT_START_AGE` = 19; pasmo PAL 18;11 `child_10_18`, 19;0 `adult`; w kodzie nie ma już `k=19`;
 - pary graniczne z tabeli (M 175/79 w 17;11/18;0 i 18;11/19;0; K 165/105 w 18;11/19;0);
 - DS dz. 150/68: 18;11, 19;0, 19,99 → bez planu (PAL 1,6); 20;0 → plan, PAL 1,4; bez DS 19;0 → plan, PAL 1,4 (jak dotąd);
@@ -6114,16 +6164,18 @@ Znane artefakty (bez zmian, do wariantu B): u 19-latka z nadwagą dieta może zr
 - symulacja mediany: DS dz. 150/72, 19;0 → < 4 mies. (mediana DS); bez DS → > 9 mies. (BMI 22);
 - populacja ogólna 19–80 lat: nadmiar ⇔ BMI ≥ 25, otyłość ⇔ BMI ≥ 30 (bez zmiany wyników); bez silnika — progi `ADULT_BMI`.
 
-E2E `tests/e2e/dieta-b5-przejscie.spec.mjs` (3 przypadki na prawdziwej stronie): DS 19;3 150/68 — zdanie o siatce DS, strategia „utrzymanie”, karta „Strategia” ukryta; DS 19;3 150/88 — zdanie z 85. centylem DS, „Droga do normy” z 85. centylem, znacznik „50. centyl BMI”, plan PDF „Cel końcowy: 86,2 kg (85. centyl)”; bez DS — jak dotąd (otyłość I st., drabinka dorosłego, BMI 22).
+Notka (B5-c): chł. 175/79, 18;7 → za 5 mies.; dziecko PAL 1,4, TEE 2518, ≤ 2350 / 2250 / 2100, stabilizacja, minimum 1798 (REE) → dorosły PAL 1,6, TEE 2877, ≤ 2400 / 2200 / 2000, minimum 1600; dz. 165/105, 19;2 → „do 18;11”, ≤ 2300 / 2150 / 2000 → ≤ 2150 / 1950 / 1750; 17,99 i 20,0 → brak notki (w tym samym pliku, 15 przypadków łącznie).
+
+E2E `tests/e2e/dieta-b5-przejscie.spec.mjs` (4 przypadki na prawdziwej stronie; czwarty — notka zwinięta w 18;7, „do 18;11” w 19;2, brak w 17;11 i 20;0, brak w zaleceniach i planie PDF): DS 19;3 150/68 — zdanie o siatce DS, strategia „utrzymanie”, karta „Strategia” ukryta; DS 19;3 150/88 — zdanie z 85. centylem DS, „Droga do normy” z 85. centylem, znacznik „50. centyl BMI”, plan PDF „Cel końcowy: 86,2 kg (85. centyl)”; bez DS — jak dotąd (otyłość I st., drabinka dorosłego, BMI 22).
 
 **Źródła i ograniczenia.**
 - Granica 19 lat: grupy dorosłych w normach energii — Normy żywienia dla populacji Polski (NIZP PZH-PIB, 2024) i NASEM 2023 (Dietary Reference Intakes for Energy): dorośli od 19 lat. Żadna wytyczna nie wyznacza wieku przejścia z planu redukcji dziecka na plan dorosłego — 19 lat to decyzja właściciela.
 - Siatka DS i jej zakres (do 20 lat): Zemel BS i wsp. Pediatrics 2015;136:e1204-11, doi:10.1542/peds.2015-1652 (decyzja D3, P-DS-1).
 - Zalecenia dorosłego dla DS 19,x korzystają z ogólnych zdań dorosłego (talerz, ruch, cel 5–10 % masy) — bez osobnych zaleceń dla DS; cel własny dorosłego zostaje w paśmie surowego BMI 23,0–24,9.
 
-**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (numery nadane `npm run podbij-wersje`).
+**Pliki.** `vilda_diet_plan_ui.js`, `vilda_diet_recommendations.js`, `vilda_raport_plan.js`, `vilda_update_prep.js`, `style.css`; `?v=` 43 / 68 / 22 / 93, SW 1.1.133 → 1.1.134 (PR #510); notka B5-c: `vilda_diet_plan_ui.js` 44, `vilda_diet_recommendations.js` 69, `style.css` 86, SW 1.1.137 → 1.1.138 (1.1.135–1.1.137 zajęły #511, #514 i #515; numery nadane `npm run podbij-wersje`).
 
-**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; makieta i wdrożenie notki o przejściu (B5-c); wariant B (ścieżka dorosła po zakończeniu wzrastania — nowe pole stanu pacjenta); pozostałe punkty części B (Z1/Z2 — zasada domyślnego PAL i strategia przy nadwadze, B9 — seniorzy, zakres × 0,85 u dorosłych 19–64 lat, definicja „praktycznie zakończonego” wzrastania).
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; wariant B (ścieżka dorosła po zakończeniu wzrastania — nowe pole stanu pacjenta); pozostałe punkty części B (Z1/Z2 — zasada domyślnego PAL i strategia przy nadwadze, B9 — seniorzy, zakres × 0,85 u dorosłych 19–64 lat, definicja „praktycznie zakończonego” wzrastania).
 
 ## Czas dojścia do normy BMI: wzrastanie wg mediany siatki i dwa scenariusze stabilizacji (P-DIETA-B8, SW 1.1.132, 2026-09-30)
 
