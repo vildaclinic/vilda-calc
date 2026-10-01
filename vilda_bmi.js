@@ -415,6 +415,13 @@
     var prog = normPopulacja(populacja) === 'DS' ? G.DS_MAX_M : G.DOROSLY_M;
     return typeof wiekMies === 'number' && isFinite(wiekMies) && wiekMies >= prog;
   }
+  /* P-DS-18 (decyzja właściciela 2026-10-01, „Tylko BMI”): czy BMI TEGO pacjenta ocenia się progami
+     dorosłego — wiek z populacją z resolvera (populacja ogólna od 18 lat, zespół Downa od 20 lat, D3).
+     Jedno pytanie dla karty głównej, podsumowania, schowka i raportu zamiast wieku 18 wpisanego
+     w każdym module; populacja ogólna dostaje dokładnie to samo co dotąd (wiekMies >= 216). */
+  function doroslyWgPacjenta(wiekMies) {
+    return dorosly(liczba(wiekMies), populacjaZOpcji({}));
+  }
   function kategoriaDorosly(x) {
     var v = Number(x), P = PROGI.DOROSLY;
     if (!isFinite(v) || v <= 0) return { etykieta: '', klucz: 'brak', kolor: null, dorosly: true };
@@ -746,7 +753,7 @@
     ustawDane: ustawDane, kandydaci: kandydaci, normPopulacja: normPopulacja, populacjaZOpcji: populacjaZOpcji, lms: lms, interpoluj: interpoluj, zLms: zLms, xLms: xLms,
     bmi: bmi, policz: policz, policzNaSiatce: policzNaSiatce, ocen: ocen,
     mediana: mediana, medianaNaSiatce: medianaNaSiatce, wartoscDlaSds: wartoscDlaSds, wartoscDlaCentyla: wartoscDlaCentyla,
-    kategoria: kategoria, kategoriaDziecko: kategoriaDziecko, kategoriaDorosly: kategoriaDorosly, dorosly: dorosly,
+    kategoria: kategoria, kategoriaDziecko: kategoriaDziecko, kategoriaDorosly: kategoriaDorosly, dorosly: dorosly, doroslyWgPacjenta: doroslyWgPacjenta,
     cole: cole, kategoriaCole: kategoriaCole, celNormy: celNormy, celMasyDorosly: celMasyDorosly, drabinkaCelow: drabinkaCelow, SZCZEBEL_SDS_REINEHR: SZCZEBEL_SDS_REINEHR, SDS_KOMPRESJA: SDS_KOMPRESJA,
     centylZSds: centylZSds, sdsZCentyla: sdsZCentyla, normalCDF: normalCDF, normInv: normInv,
     fmtBmi: fmtBmi, fmtSds: fmtSds, fmtCentyl: fmtCentyl, fmtCole: fmtCole, formatuj: formatuj, etykieta: etykieta,

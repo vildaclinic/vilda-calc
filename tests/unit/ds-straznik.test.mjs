@@ -353,7 +353,7 @@ describe('Strażnik P-DS: siatka DS w silniku, rozpoznanie w rekordzie', () => {
 
   it('karta główna: wiersz BMI nazywa siatkę DS i tylko ją', () => {
     const src = zrodlo('vilda_update_prep.js');
-    const linia = new Function('window', 'formatCentile', 'centylWord', `${funkcjaZ(src, 'vildaUpdatePrepBmiSilnik')}${funkcjaZ(src, 'vildaUpdatePrepFmtSds')}${funkcjaZ(src, 'vildaUpdatePrepNotaSiatki')}${funkcjaZ(src, 'vildaUpdatePrepBuildBmiLine')}return vildaUpdatePrepBuildBmiLine;`)({}, (c) => String(Math.round(c)), () => 'centyl');
+    const linia = new Function('window', 'formatCentile', 'centylWord', `const VILDA_UPDATE_PREP_BMI_DOROSLY_LATA=18;${funkcjaZ(src, 'vildaUpdatePrepBmiDorosly')}${funkcjaZ(src, 'vildaUpdatePrepBmiSilnik')}${funkcjaZ(src, 'vildaUpdatePrepFmtSds')}${funkcjaZ(src, 'vildaUpdatePrepNotaSiatki')}${funkcjaZ(src, 'vildaUpdatePrepBuildBmiLine')}return vildaUpdatePrepBuildBmiLine;`)({}, (c) => String(Math.round(c)), () => 'centyl');
     const stan = { bmiReady: true, bmiText: '22,8', bmi: 22.8, bmiPercentile: 68, bmiZVal: 0.48, proActive: true, age: 10, bmiCat: 'Prawidłowe' };
     const zDs = linia({ ...stan, bmiSiatka: 'DS' });
     expect(zDs).toContain('68 centyl');

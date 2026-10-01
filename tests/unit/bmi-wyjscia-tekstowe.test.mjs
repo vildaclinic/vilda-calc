@@ -150,7 +150,8 @@ describe('Raport PDF (vilda_patient_report.js) — opis BMI i klasa Cole’a', (
     for (const c of [70, 100, 115, 150]) expect(bez.patientReportClassifyCole(c).category, `Cole ${c} bez silnika`).toBe('Brak danych');
   });
   it('karta BMI raportu liczy jeden wynik ocen() (wiek ułamkowy, źródło preferowane); Cole i mediana z silnika', () => {
-    expect(src).toContain('Bm=l&&typeof n=="number"&&isFinite(n)&&patientReportBmiSilnik()?patientReportBmiSilnik().ocen({bmi:n,plec:t,wiekMies:e*12,zrodlo:r})');
+    // P-DS-18: karta BMI w trybie dziecka także u 18–19-latka z DS (lB = BMI nie wg progów dorosłego)
+    expect(src).toContain('Bm=lB&&typeof n=="number"&&isFinite(n)&&patientReportBmiSilnik()?patientReportBmiSilnik().ocen({bmi:n,plec:t,wiekMies:e*12,zrodlo:r})');
     expect(src).toContain('C0=T0?T0.cole({bmi:e.bmi,plec:e.sex,wiekMies:e.ageYears*12,zrodlo:t})');
     expect(src).toContain('if(e==="BMI"){const T0=patientReportBmiSilnik(),m=T0?T0.mediana(t,i*12,r):null;');
     expect(src, 'kolor karty z kategorii silnika (niedowaga <3 c = alarm)').toContain('Bm.kategoria.kolor==="alert"?"danger":Bm.kategoria.kolor==="improve"?"warn":"normal"');
