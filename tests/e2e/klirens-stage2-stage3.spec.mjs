@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { czekajNaUstabilizowanyUklad, kliknij, ustawNaMiejscu, zaznacz } from '../support/uklad-czekanie.mjs';
 
 async function openCalculator(page, version = 'pro') {
   await page.addInitScript(() => {
@@ -10,7 +11,7 @@ async function openCalculator(page, version = 'pro') {
     exact: true
   });
   await guestButton.waitFor({ state: 'visible' });
-  await guestButton.click();
+  await kliknij(guestButton);
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked')
   );
@@ -30,6 +31,9 @@ async function openCalculator(page, version = 'pro') {
     selectedVersion => window.currentVersion === selectedVersion,
     version
   );
+  // Globalne funkcje kalkulatora bywają gotowe, zanim dojdzie odroczony arkusz Google Fonts
+  // i plik fontu Inter — podmiana kroju przesuwa wtedy cały przepływ dokumentu.
+  await czekajNaUstabilizowanyUklad(page);
 }
 
 async function setPatient(page, {
@@ -62,7 +66,7 @@ async function completeTimedCollection(page, {
     'collectionNoExtraVoids',
     'collectionStorageFollowed'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
 }
 
@@ -79,7 +83,7 @@ async function completeAdultKtv(page, overrides = {}) {
     postMethod: 'slow_flow_100ml_15s',
     ...overrides
   };
-  await page.locator('#ktvToggle').check();
+  await zaznacz(page.locator('#ktvToggle'));
   await page.locator('#ktvModality').selectOption('IHD');
   await page.locator('#ktvSessionsPerWeek').fill(String(input.sessions));
   await page.locator('#ktvPidiDays').selectOption(input.pidi);
@@ -97,7 +101,7 @@ async function completeAdultKtv(page, overrides = {}) {
     'ktvPreBeforeDialysis',
     'ktvPreNoDilution'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
 }
 
@@ -111,7 +115,7 @@ test('dorosły panel kamicy przelicza masę i mmol oraz stosuje profile EAU 2026
     'stoneTwoCollectionsConfirmed',
     'stonePhPersistent'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
   await page.locator('#U_Ca').fill('9');
   await page.locator('#U_Mg').fill('50');
@@ -154,10 +158,10 @@ test('pediatryczny Ca w DZM i Ca/Cr używają odrębnych jednostek oraz wstrzymu
     'stoneCollectionPlausibilityReviewed',
     'stoneTwoCollectionsConfirmed'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
   await page.locator('#U_Ca').fill('0.9');
-  await page.locator('#spotSameSpecimen').check();
+  await zaznacz(page.locator('#spotSameSpecimen'));
   await page.locator('#Ca_spot').fill('2.5');
   await page.locator('#Ca_spot_unit').selectOption('mmol/L');
   await page.locator('#Ucr_spot').fill('100');
@@ -182,7 +186,7 @@ test('graniczny pediatryczny Ca/Cr używa dokładnych mas molowych zamiast przyb
     weight: 25,
     height: 125
   });
-  await page.locator('#spotSameSpecimen').check();
+  await zaznacz(page.locator('#spotSameSpecimen'));
   await page.locator('#Ca_spot').fill('0.6');
   await page.locator('#Ca_spot_unit').selectOption('mmol/L');
   await page.locator('#Ucr_spot').fill('1000');
@@ -202,7 +206,7 @@ test('wynik poniżej progu Ca/Cr nie jest zaokrąglany do wartości granicznej',
     weight: 25,
     height: 125
   });
-  await page.locator('#spotSameSpecimen').check();
+  await zaznacz(page.locator('#spotSameSpecimen'));
   await page.locator('#Ca_spot').fill('0.5996');
   await page.locator('#Ca_spot_unit').selectOption('mmol/L');
   await page.locator('#Ucr_spot').fill('1000');
@@ -222,7 +226,7 @@ test('próbka punktowa wymaga własnej postaci chemicznej szczawianu i nazywa kw
     weight: 25,
     height: 125
   });
-  await page.locator('#spotSameSpecimen').check();
+  await zaznacz(page.locator('#spotSameSpecimen'));
   await page.locator('#Ucr_spot').fill('10');
   await page.locator('#Ucr_spot_unit').selectOption('mg/dl');
   await page.locator('#Ox_Cr_spot').fill('1');
@@ -254,7 +258,7 @@ test('progi DZM pozostają wstrzymane, gdy bieżąca zbiórka nie trwa dokładni
     'stoneCollectionPlausibilityReviewed',
     'stoneTwoCollectionsConfirmed'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
   await page.locator('#U_Ca').fill('9');
 
@@ -275,7 +279,7 @@ test('wynik kamicowy nie zaokrągla przez próg i wymaga powtarzalnego profilu p
     'stoneCollectionPlausibilityReviewed',
     'stoneTwoCollectionsConfirmed'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
   await page.locator('#U_Cys').fill('3.005');
   await page.locator('#pH24').fill('5.4999');
@@ -286,11 +290,11 @@ test('wynik kamicowy nie zaokrągla przez próg i wymaga powtarzalnego profilu p
   await expect(stone).toContainText('nie potwierdzono profilu w powtarzanych pomiarach');
   await expect(stone).not.toContainText('wzorzec hiperkwasowego moczu');
 
-  await page.locator('#stonePhPersistent').check();
+  await zaznacz(page.locator('#stonePhPersistent'));
   await expect(stone).toContainText('pH czasowej zbiórki: <5.50');
   await expect(stone).toContainText('wzorzec hiperkwasowego moczu');
 
-  await page.locator('#stoneKnownCystinuria').check();
+  await zaznacz(page.locator('#stoneKnownCystinuria'));
   await expect(stone).toContainText(
     'W rozpoznanej cystynurii nie zastosowano progu przesiewowego'
   );
@@ -309,7 +313,7 @@ test('pH drugiego porannego moczu nie jest zaokrąglane wstecz przez próg dRTA'
     'stoneSpotFasting',
     'stoneUtiExcluded'
   ]) {
-    await page.locator(`#${id}`).check();
+    await zaznacz(page.locator(`#${id}`));
   }
   await page.locator('#spotSampleKind').selectOption('secondMorning');
   await page.locator('#pH24').fill('6.2004');
@@ -329,7 +333,7 @@ test('Kt/V pokazuje exact GFAC, eKt/V, URR i warunkową ocenę z aktualnym Kru',
   await page.locator('#ktvKruMeasuredAt').fill(
     await page.evaluate(() => window.ClcrDialysisSafety.localIsoDate(new Date()))
   );
-  await page.locator('#ktvTreatmentsDelivered').check();
+  await zaznacz(page.locator('#ktvTreatmentsDelivered'));
 
   await expect(page.locator('#ktvResult')).toContainText('1.32');
   await expect(page.locator('#ktvResult')).toContainText('GFAC 0.0080');
@@ -340,6 +344,7 @@ test('Kt/V pokazuje exact GFAC, eKt/V, URR i warunkową ocenę z aktualnym Kru',
     'Minimum osiągnięte; poniżej celu'
   );
 
+  await ustawNaMiejscu(page.locator('#ktvSameSession'));
   await page.locator('#ktvSameSession').uncheck();
   await expect(page.locator('#ktvResult')).toBeHidden();
   await expect(page.locator('#ktvValidation')).toContainText(
