@@ -7026,6 +7026,71 @@ z komentarzem w wierszu punktu — bez zmian (nie jest częścią pomiaru). Kole
 **Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania (edycja pomiaru punktu tylko w monitorze),
 scalenie i wdrożenie.
 
+## „Nowy pomiar” nie dopisuje do historii karty zaawansowanej pomiaru, z którego powstał punkt terapii GH (P-GH-NOWY-POMIAR, SW 1.1.141, `vilda_data_import_export.js` 94, 2026-10-01)
+
+**Skąd.** Audyt przepływu pomiarów GH (`docs/AUDYT-PRZEPLYW-GH.md`): po P-GH-BLOKADA kolejnym krokiem był pomiar
+ścieżki „Nowy pomiar” (okno wyboru przy wczytaniu pacjenta). Pomiar pokazał rozjazd opisany niżej; właściciel wybrał
+2026-10-01 wariant A — nie dopisywać do historii karty zaawansowanej bieżącego pomiaru, z którego powstał punkt GH.
+
+**Zmierzone na `audyt` `f254852` i powtórzone na `767cc10`** (Chromium, własne konto sejfu, dane fikcyjne).
+Wizyta 1: dziewczynka 13 l. 1 mies., bieżący pomiar 139,9 cm / 45 kg, wiersz ręczny 11 l. / 123,9 cm / 35 kg, punkt
+GH z bieżącego pomiaru (13 l. 1 mies. / 139,9 cm / 45 kg). Zapis, wczytanie, „Nowy pomiar”:
+- „Nowy pomiar” (`_ensureCurrentMeasurementInHistory`) dopisał bieżący pomiar wizyty 1 do historii karty jako wiersz
+  ręczny 13 l. 1 mies. / 139,9 cm. Mostek uznał go za ten sam pomiar co punkt (reguła „wiersz ręczny wygrywa”: ten sam
+  miesiąc, wzrost i masa ±0,11) i schował wiersz punktu. Karta i tabela spożycia pokazywały pomiar jako ręczny,
+  edytowalny — bez blokady P-GH-BLOKADA;
+- poprawka tego wiersza na 140,4 cm nie wracała do punktu (139,9);
+- zapis wizyty 2 trzymał ten pomiar dwa razy: w `advanced.data.measurements` (13 l. 1 mies. / 140,4) i w
+  `ghTherapyPoints` (139,9); po F5 i po ponownym imporcie karta miała dwa pomiary z 13 l. 1 mies. (140,4 ręczny
+  i 139,9 punktu), oba w danych karty (`advancedGrowthData.measurements`);
+- kontrola: „Odtwórz zapis” z tego samego zapisu — jeden wiersz punktu, bez kopii ręcznej.
+
+**Zmiana (`vilda_data_import_export.js`, funkcja `_ensureCurrentMeasurementInHistory`).** Bieżący pomiar nie jest
+dopisywany do `advanced.data.measurements` jako nowy wpis, gdy w `ghTherapyPoints` rekordu jest punkt z tym samym
+miesiącem wieku (`ageYears·12 + ageMonths`), wzrostem w granicy ±0,11 cm i — jeżeli oba są podane — masą w granicy
+±0,11 kg. To ta sama reguła i ta sama tolerancja, którą mostek (`ghReczny`, `vilda_advanced_growth.js`) rozpoznaje
+wiersz ręczny jako ten sam pomiar co punkt. Pomiar pokazuje wtedy wiersz punktu dodany przez mostek.
+Bez zmian:
+- historia karty podstawowej (`growthBasic`) dostaje pomiar jak dotąd;
+- istniejący wpis z tego samego miesiąca w historii karty zaawansowanej jest nadpisywany bieżącym pomiarem jak dotąd —
+  zmiana dotyczy wyłącznie dopisania nowego wpisu;
+- pomiar, który różni się od punktu (inny miesiąc, wzrost > 0,11 cm, masa > 0,11 kg), punkt bez wzrostu i bieżący
+  pomiar bez wzrostu — dopisywane jak dotąd.
+Tę samą funkcję woła zapis korekty w oknie „Szybki pomiar” Karty Pacjenta (`vilda_auth_ui.js`, tryb edycji); reguła
+działa tam tak samo. Tej ścieżki nie mierzono osobno w przeglądarce.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (integralność danych) bez zmiany wzorów, progów, jednostek,
+dawkowania i formatu rekordu. Pomiar, z którego powstał punkt terapii, ma w karcie jeden wiersz (punktu, tylko do
+odczytu) zamiast wiersza ręcznego, który chował punkt. Przed zmianą, po poprawce takiego wiersza, do obliczeń karty
+zaawansowanej wchodziły dwa pomiary z tego samego miesiąca (ręczny i punktu); po zmianie — jeden. Bez poprawki wynik
+obliczeń jest ten sam (tempo wzrostu z wizyty 2 liczone z odstępu 6 miesięcy przed i po zmianie). Źródło medyczne:
+nie dotyczy.
+
+**Strażnicy.**
+- `tests/unit/gh-nowy-pomiar-historia.test.mjs` (8, prawdziwa funkcja modułu na atrapie okna): punkt z tego samego
+  pomiaru — historia karty bez nowego wpisu, `growthBasic` z pomiarem; granica wzrostu (0,10 cm — ten sam pomiar,
+  0,15 cm — inny); inna masa (0,5 kg) — dopisany, punkt bez masy — porównanie samego wzrostu; inny miesiąc; brak
+  punktów, brak listy, punkt bez wzrostu; istniejący wpis z tego miesiąca — nadpisany jak dotąd; bieżący pomiar bez
+  wzrostu. **Zmierzone czerwone** na `767cc10`: 3 z 8 (pierwsze trzy przypadki reguły); pozostałe pilnują, że nic
+  poza dopisaniem się nie zmieniło.
+- `tests/e2e/gh-nowy-pomiar.spec.mjs` (3, prawdziwa strona `index.html`, zapis w sejfie, „Wczytaj tego pacjenta”,
+  „Nowy pomiar”): A — w karcie 11 l. ręczny i 13 l. 1 mies. punktu (zablokowany), lustra w tabeli spożycia; wizyta 2
+  z tempem z odstępu 6 miesięcy; zapis bez kopii pomiaru w `advanced.data.measurements`; to samo po F5; B — punkt
+  z innym wzrostem (141,0) obok dopisanego wiersza ręcznego 139,9; C — bez punktu pomiar dopisany jako wiersz ręczny.
+  **Zmierzone czerwone** na `767cc10`: A (B i C zielone po obu stronach).
+
+**Czego to nie zmienia.** Rekordy zapisane wcześniej z kopią ręczną pomiaru punktu nie są przerabiane — mostek
+nadal chowa w nich wiersz punktu, gdy wiersz ręczny ma ten sam pomiar. Ich ewentualne rozpoznanie i połączenie
+z punktem — osobna decyzja. Mostek, blokada P-GH-BLOKADA, monitor GH i format rekordu — bez zmian.
+
+**Wersje.** `vilda_data_import_export.js` 93 → 94 (`index.html`, `docpro.html`, `kalkulator-klirens.html`,
+`vilda_smoke_tests.js`); precache (append-only); `SW_VERSION` 1.1.140 → 1.1.141 (+ pin w
+`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `audyt` `767cc10`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania, scalenie i wdrożenie; decyzja o rekordach
+zapisanych wcześniej z kopią ręczną pomiaru punktu.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
