@@ -392,6 +392,20 @@ describe('P-KOSZ-POPRAWKI: treść najnowszego usunięcia i wersja sprawdzana pr
     expect(await idWersji(v, patientId)).not.toContain(zly);
   });
 
+  it('przypięty w innej karcie po ocenie w oknie: odmowa „zmieniony”, nie „przypiety” (uwaga Codex P2 do #515)', async () => {
+    sztucznyZegar();
+    const v = await urzadzenie();
+    const { patientId, zly } = await kartaZPomylka(v);
+    const przed = (await v.getPatient(patientId)).snapshots.find((s) => s.snapshotId === zly);
+    przesunZegar(60e3);
+    await v.setSnapshotPinned(patientId, zly, true); // między ponowną oceną w oknie a blokadą sejfu
+    przesunZegar(60e3);
+    await expect(v.moveSnapshotToTrash(patientId, zly, { oczekiwana: { rev: przed.rev, updatedAtISO: przed.updatedAtISO } }))
+      .rejects.toMatchObject({ code: 'zmieniony' });
+    expect(await idWersji(v, patientId)).toContain(zly);
+    expect(await v.listTrashedSnapshots()).toEqual([]);
+  });
+
   it('scalanie wpisuje nowszą wersję między zapisem kosza a usunięciem: wersja zostaje, kosz pusty, „zmieniony”', async () => {
     sztucznyZegar();
     const v = await urzadzenie();
@@ -511,6 +525,8 @@ describe('pomiary zapisu i pokrycie w karcie drugiej osoby', () => {
     const nowszy = { snapshots: [zap('n', '2026-09-30T08:00:00Z', 'Innyrecz Adam', { age: 10, ageMonths: 7, height: 121, weight: 22.6 }), ...karta(m).snapshots] };
     expect(I.takaSamaOcena(przy, I.ocenUsuniecie(nowszy, 'm', B)), 'inna nazwa karty po usunięciu').toBe(false);
     expect(I.takaSamaOcena(przy, I.ocenUsuniecie({ snapshots: [] }, 'm', B)), 'zapisu już nie ma').toBe(false);
+    // Odmowy sejfu, po których okno otwiera się od nowa na aktualnym stanie (zamiast ogólnego błędu).
+    expect(Object.keys(I.STAN_ZMIENIONY).sort()).toEqual(['brak', 'ostatni', 'przypiety', 'zmieniony']);
   });
 
   it('teksty kosza: odmiana dni, wiek, nazwa pliku kopii (osobna od automatycznej kopii pacjenta)', () => {

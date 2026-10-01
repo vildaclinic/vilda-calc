@@ -7122,7 +7122,9 @@ przeglądarki poprawiła zapis albo zabrała pomiar z karty drugiej osoby.
   aktualnym stanie (potwierdzenie albo blokada) z notą: „Zapis albo karta zmieniły się, gdy to okno było otwarte (np. przez
   synchronizację). Nic nie zostało usunięte — poniżej aktualny stan.”
 - Sejf przyjmuje w `moveSnapshotToTrash` opcję `oczekiwana: { rev, updatedAtISO }` i pod blokadą pacjenta odmawia kodem
-  `zmieniony`, gdy wersja jest inna; okno traktuje tę odmowę tak samo.
+  `zmieniony`, gdy wersja jest inna. Sprawdza ją przed strażnikami liczonymi z treści wersji: przypięcie w innej karcie
+  zmienia rewizję, więc daje `zmieniony`, a nie `przypiety` (uwaga Codex P2 do #515). Okno przy odmowach `zmieniony`,
+  `przypiety`, `brak` i `ostatni` otwiera się od nowa na aktualnym stanie, zamiast pokazywać ogólny błąd.
 - Kopia `.wiw` powstaje po ponownym sprawdzeniu, przed usunięciem (bez zmian: nieudana kopia = brak usunięcia).
 
 **3. Wersja sprawdzana tuż przed usunięciem** (`Bkz_usunJesliBezZmian`, kosz i retencja). Między zapisem nagrobka a
@@ -7144,12 +7146,15 @@ blokada pacjenta w scalaniu (decyzja właściciela z P-BLOKADA-ZAPISU-WERSJI).
 | scalanie wpisuje nowszą wersję po zapisie nagrobków retencji | ta wersja zostaje bez nagrobka; przycięte pozostałe 6 z 7 |
 | okno otwarte, pomiar znika z karty drugiej osoby; „Usuń do kosza” | okno od nowa: blokada z tabelą i notą; nic nie znika |
 | okno otwarte, pomylony zapis poprawiony; „Usuń do kosza” | okno od nowa: potwierdzenie z notą; usuwa dopiero drugie potwierdzenie |
+| okno otwarte, pomylony zapis przypięty w innej karcie; „Usuń do kosza” | okno od nowa z notą i „Odepnij i usuń do kosza”; nic nie znika |
+| przypięcie w innej karcie między oceną w oknie a blokadą sejfu | `zmieniony` (nie `przypiety`), zapis w karcie, kosz pusty |
 
-**Testy.** Jednostkowe: 4 nowe w `kosz-zapisow.test.mjs` (treść najnowszego usunięcia, oczekiwana wersja, nowsza wersja
-przed usunięciem, porównanie ocen w oknie), 1 w `retencja-nagrobki.test.mjs`; strażnik źródła retencji przepięty na
-usuwanie przez `Bkz_usunJesliBezZmian`. E2e: 2 nowe w `kosz-zapisow.spec.mjs`; nota obejrzana na desktopie i na telefonie
+**Testy.** Jednostkowe: 5 nowych w `kosz-zapisow.test.mjs` (treść najnowszego usunięcia, oczekiwana wersja, przypięcie
+po ocenie w oknie, nowsza wersja przed usunięciem, porównanie ocen i kody odmów w oknie), 1 w `retencja-nagrobki.test.mjs`;
+strażnik źródła retencji przepięty na usuwanie przez `Bkz_usunJesliBezZmian`. E2e: 3 nowe w `kosz-zapisow.spec.mjs`; nota obejrzana na desktopie i na telefonie
 390 px (bez poziomego przewijania). Mutacje (każda wywraca co najmniej jeden test): stara reguła treści; bez oczekiwanej
-wersji; kosz albo retencja bez sprawdzenia przed usunięciem; wersja zawsze „zgodna”; okno bez ponownej oceny (oba e2e).
+wersji; oczekiwana wersja sprawdzana po strażniku przypięcia; kosz albo retencja bez sprawdzenia przed usunięciem; wersja
+zawsze „zgodna”; okno bez ponownej oceny (oba e2e).
 Mutacja „szyfruj treść z ładunku zawsze” nie zmienia wyniku (przy tym samym usunięciu i tak wygrywa lokalny wpis), tylko
 koszt — testem zachowania jej nie widać.
 

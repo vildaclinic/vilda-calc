@@ -669,7 +669,7 @@
  },
  "vilda_kosz_zapisow.js": {
   "v": 2,
-  "sha256": "f81f9dce7a5a16cec77f7ae98000fefa6fa51be166df34a2fe20894aa15bc95d"
+  "sha256": "e5d479dd7fc1f555ad6ef875fd14168fa37f920099ac5f17c4f27453008d8d75"
  },
  "vilda_logger.js": {
   "v": 2,
@@ -909,7 +909,7 @@
  },
  "vilda_vault.js": {
   "v": 193,
-  "sha256": "0f55b49157ead97186278492e08e9d369b539df66fbfbf9b84f05efa99c14acd"
+  "sha256": "bed52ac79b93b2439040c4cda11b132b216b3bba838df11e6cb8ed9666fa1af2"
  },
  "vilda_version_history_ui.js": {
   "v": 14,

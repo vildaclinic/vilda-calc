@@ -434,6 +434,9 @@
 
   // P-KOSZ-POPRAWKI (uwaga Codex P1 do #501). Ta sama decyzja co przy otwarciu okna: dalej „można”, ta sama wersja
   // zapisu (rewizja i chwila zmiany), to samo przypięcie i ta sama nazwa karty po usunięciu.
+  // Kody odmowy sejfu, które znaczą „karta wygląda już inaczej niż w oknie” (moveSnapshotToTrash).
+  var STAN_ZMIENIONY = { zmieniony: true, przypiety: true, brak: true, ostatni: true };
+
   function wersjaOceny(o) {
     return o && o.zapis ? [o.zapis.rev, o.zapis.updatedAtISO || o.zapis.savedAtISO || null] : null;
   }
@@ -612,7 +615,9 @@
                 op.poUsunieciu(Object.assign({}, wynik, { nazwaZapisu: nazwaZ, savedAtISO: ocena.zapis.savedAtISO, zmianaNazwy: ocena.zmianaNazwy }));
               }
             } catch (e) {
-              if (e && e.code === 'zmieniony') {
+              // Stan zmienił się między ponowną oceną a blokadą sejfu (zapis zmieniony, przypięty, usunięty albo
+              // jedyny w karcie) — okno od nowa na aktualnym stanie, zamiast ogólnego błędu.
+              if (e && STAN_ZMIENIONY[e.code]) {
                 otworzPonownie(o);
                 return;
               }
@@ -750,6 +755,7 @@
       tenSamPomiar: tenSamPomiar,
       ocenUsuniecie: ocenUsuniecie,
       takaSamaOcena: takaSamaOcena,
+      STAN_ZMIENIONY: STAN_ZMIENIONY,
       formatWieku: formatWieku,
       formatPomiaru: formatPomiaru,
       tekstPozostalo: tekstPozostalo,

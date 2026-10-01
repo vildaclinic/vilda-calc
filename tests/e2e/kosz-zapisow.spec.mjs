@@ -242,6 +242,23 @@ test.describe('P-KOSZ-ZAPISOW — usuwanie pomylonego zapisu do kosza', () => {
     expect(await wersje(page, id.a)).not.toContain(id.zly);
   });
 
+  test('pomylony zapis przypięty, gdy okno jest otwarte: okno od nowa z notą i „Odepnij i usuń do kosza”', async ({ page }) => {
+    await otworzZKontem(page);
+    const id = await zasiej(page, 'jest');
+    await sprawdz(page);
+    await karta(page, 'Karta: Innyrecz Adam').getByRole('button', { name: 'Usuń pomylony zapis…' }).click();
+    const o = okno(page);
+    await expect(o.getByRole('button', { name: 'Usuń do kosza' })).toBeVisible();
+    await page.evaluate(async ({ a, zly }) => window.VildaVault.setSnapshotPinned(a, zly, true), id); // jak inna karta
+
+    await o.getByRole('button', { name: 'Usuń do kosza' }).click();
+    const nowe = okno(page);
+    await expect(nowe.locator('.settings-kosz-uwaga[role="status"]')).toHaveText(NOTA);
+    await expect(nowe.getByRole('button', { name: 'Odepnij i usuń do kosza' })).toBeVisible();
+    expect(await wersje(page, id.a), 'nic nie zniknęło').toContain(id.zly);
+    await expect(nowe.locator('.settings-kosz-blad')).toBeHidden();
+  });
+
   test('kosz w historii wersji karty: „Przywróć ten zapis”', async ({ page }) => {
     await otworzZKontem(page);
     const id = await zasiej(page, 'jest');

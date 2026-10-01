@@ -252,15 +252,17 @@ async function Bkz_doKosza(patientId, snapshotId, opcje) {
     const zapis = wersje.find(function (s) { return s.snapshotId === snapshotId; });
     if (!zapis) throw Bkz_blad('Tego zapisu nie ma już w karcie.', 'brak');
     if (wersje.length <= 1) throw Bkz_blad('To jedyny zapis tej karty — nie można go usunąć.', 'ostatni');
+    // P-KOSZ-POPRAWKI: okno potwierdzenia podaje wersje, ktora ocenil lekarz; inna wersja = decyzja o innej tresci.
+    // Przed straznikami liczonymi z tresci wersji (przypiecie): przypiecie w innej karcie zmienia rewizje, wiec ma
+    // dac „zmieniony” (okno otwiera sie od nowa), a nie „przypiety” (uwaga Codex P2 do #515).
+    if (op.oczekiwana && !Bkz_wersjaZgodna(zapis, op.oczekiwana)) {
+      throw Bkz_blad('Ten zapis zmienił się od sprawdzenia — nic nie zostało usunięte.', 'zmieniony');
+    }
     let tresc;
     try { tresc = await G(zapis.payloadCipher.iv, zapis.payloadCipher.data); } catch { tresc = null; }
     if (!tresc) throw Bkz_blad('Tego zapisu nie da się odczytać — nie trafi do kosza.', 'nieczytelny');
     const przypiety = !!tresc._pinned;
     if (przypiety && op.odepnij !== true) throw Bkz_blad('Ten zapis jest przypięty.', 'przypiety');
-    // P-KOSZ-POPRAWKI: okno potwierdzenia podaje wersje, ktora ocenil lekarz; inna wersja = decyzja o innej tresci.
-    if (op.oczekiwana && !Bkz_wersjaZgodna(zapis, op.oczekiwana)) {
-      throw Bkz_blad('Ten zapis zmienił się od sprawdzenia — nic nie zostało usunięte.', 'zmieniony');
-    }
     const wpis = Object.assign({
       patientId: patientId,
       snapshotId: snapshotId,
