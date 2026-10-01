@@ -276,6 +276,7 @@
     if (opcje.podtytul) teksty.appendChild(el('span', 'settings-kosz-podtytul', opcje.podtytul));
     naglowek.appendChild(teksty);
     o.appendChild(naglowek);
+    if (opcje.nota) o.appendChild(opcje.nota);
     (opcje.tresc || []).forEach(function (n) { if (n) o.appendChild(n); });
     var blad = el('p', 'settings-kosz-blad');
     blad.setAttribute('role', 'alert');
@@ -431,19 +432,55 @@
     return Object.assign(wynik, { stan: p.brakuje ? 'braki' : 'mozna', pokrycie: p });
   }
 
+  // P-KOSZ-POPRAWKI (uwaga Codex P1 do #501). Ta sama decyzja co przy otwarciu okna: dalej „można”, ta sama wersja
+  // zapisu (rewizja i chwila zmiany), to samo przypięcie i ta sama nazwa karty po usunięciu.
+  // Kody odmowy sejfu, które znaczą „karta wygląda już inaczej niż w oknie” (moveSnapshotToTrash).
+  var STAN_ZMIENIONY = { zmieniony: true, przypiety: true, brak: true, ostatni: true };
+
+  function wersjaOceny(o) {
+    return o && o.zapis ? [o.zapis.rev, o.zapis.updatedAtISO || o.zapis.savedAtISO || null] : null;
+  }
+  function takaSamaOcena(a, b) {
+    return !!a && !!b && b.stan === 'mozna' && a.stan === b.stan && a.przypiety === b.przypiety
+      && JSON.stringify(wersjaOceny(a)) === JSON.stringify(wersjaOceny(b))
+      && JSON.stringify(a.zmianaNazwy || null) === JSON.stringify(b.zmianaNazwy || null);
+  }
+
+  async function wczytajOcene(v, op) {
+    var kartaA = await v.getPatient(op.patientId);
+    var kartaB = op.innaKarta && op.innaKarta.patientId ? await v.getPatient(op.innaKarta.patientId) : null;
+    return { kartaA: kartaA, ocena: ocenUsuniecie(kartaA, op.snapshotId, kartaB) };
+  }
+
   async function otworzUsuwanie(opcje) {
     var op = opcje || {};
     if (!odblokowany()) throw new Error('Zaloguj się, aby usunąć zapis.');
     var v = sejf();
-    var kartaA = await v.getPatient(op.patientId);
-    var kartaB = op.innaKarta && op.innaKarta.patientId ? await v.getPatient(op.innaKarta.patientId) : null;
+    var odczyt = await wczytajOcene(v, op);
+    var kartaA = odczyt.kartaA;
     var nazwaA = op.nazwaKarty || (kartaA && kartaA.header && kartaA.header.name) || '';
     var nazwaB = op.innaKarta && op.innaKarta.nazwa ? op.innaKarta.nazwa : '';
-    var ocena = ocenUsuniecie(kartaA, op.snapshotId, kartaB);
+    var ocena = odczyt.ocena;
     var zamknij = function (o) { o.zamknij(); };
+    // Okno otwarte ponownie, bo przy potwierdzeniu karty wyglądały już inaczej niż przy otwarciu (P-KOSZ-POPRAWKI).
+    var nota = null;
+    if (op.zmienione) {
+      nota = el('div', 'settings-kosz-uwaga');
+      nota.setAttribute('role', 'status');
+      nota.appendChild(ikona('info'));
+      nota.appendChild(el('span', null, 'Zapis albo karta zmieniły się, gdy to okno było otwarte (np. przez synchronizację). Nic nie zostało usunięte — poniżej aktualny stan.'));
+    }
+    function otworzPonownie(o) {
+      o.zajmij(false);
+      o.zamknij();
+      otworzUsuwanie(Object.assign({}, op, { zmienione: true })).catch(function (e) {
+        try { w.console.warn('[kosz zapisów] ponowne otwarcie okna', e); } catch (e2) { /* cicho */ }
+      });
+    }
 
     if (ocena.stan === 'brak') {
       return okno({
+        nota: nota,
         tytul: 'Tego zapisu nie ma już w karcie',
         podtytul: 'Karta: ' + nazwaA,
         ikona: 'info',
@@ -457,6 +494,7 @@
 
     if (ocena.stan === 'bez-karty') {
       return okno({
+        nota: nota,
         tytul: 'Tego zapisu nie można usunąć',
         podtytul: podtytulBlokady,
         ikona: 'uwaga',
@@ -474,6 +512,7 @@
     if (ocena.stan === 'braki') {
       var n = ocena.pokrycie.brakuje;
       return okno({
+        nota: nota,
         tytul: 'Tego zapisu nie można jeszcze usunąć',
         podtytul: podtytulBlokady,
         ikona: 'uwaga',
@@ -528,6 +567,7 @@
     }
 
     return okno({
+      nota: nota,
       tytul: 'Usunąć pomylony zapis?',
       podtytul: 'Karta: ' + nazwaA,
       tresc: tresc,
@@ -539,6 +579,20 @@
           akcja: async function (o) {
             o.pokazBlad('');
             o.zajmij(true);
+            // Decyzja na świeżym odczycie obu kart: gdy okno było otwarte, synchronizacja albo inna karta przeglądarki
+            // mogły zmienić zapis albo zabrać pomiar z karty drugiej osoby (P-KOSZ-POPRAWKI).
+            var teraz;
+            try {
+              teraz = (await wczytajOcene(v, op)).ocena;
+            } catch (e) {
+              o.zajmij(false);
+              o.pokazBlad('Nie udało się odczytać kart — nic nie zostało usunięte.');
+              return;
+            }
+            if (!takaSamaOcena(ocena, teraz)) {
+              otworzPonownie(o);
+              return;
+            }
             try {
               if (kopia && kopia.checked) {
                 var skrot = typeof v.shortHashOfPatientId === 'function' ? v.shortHashOfPatientId(op.patientId) : '';
@@ -550,13 +604,23 @@
               return;
             }
             try {
-              var wynik = await doKosza(op.patientId, op.snapshotId, { odepnij: ocena.przypiety });
+              // Sejf sprawdza tę wersję jeszcze raz pod blokadą pacjenta i tuż przed usunięciem.
+              var wynik = await doKosza(op.patientId, op.snapshotId, {
+                odepnij: ocena.przypiety,
+                oczekiwana: { rev: teraz.zapis.rev, updatedAtISO: teraz.zapis.updatedAtISO || teraz.zapis.savedAtISO || null },
+              });
               o.zajmij(false);
               o.zamknij();
               if (typeof op.poUsunieciu === 'function') {
                 op.poUsunieciu(Object.assign({}, wynik, { nazwaZapisu: nazwaZ, savedAtISO: ocena.zapis.savedAtISO, zmianaNazwy: ocena.zmianaNazwy }));
               }
             } catch (e) {
+              // Stan zmienił się między ponowną oceną a blokadą sejfu (zapis zmieniony, przypięty, usunięty albo
+              // jedyny w karcie) — okno od nowa na aktualnym stanie, zamiast ogólnego błędu.
+              if (e && STAN_ZMIENIONY[e.code]) {
+                otworzPonownie(o);
+                return;
+              }
               o.zajmij(false);
               o.pokazBlad(e && e.code === 'zablokowany'
                 ? 'Sejf jest zablokowany — zaloguj się i spróbuj ponownie. Nic nie zostało usunięte.'
@@ -690,6 +754,8 @@
     __internals: {
       tenSamPomiar: tenSamPomiar,
       ocenUsuniecie: ocenUsuniecie,
+      takaSamaOcena: takaSamaOcena,
+      STAN_ZMIENIONY: STAN_ZMIENIONY,
       formatWieku: formatWieku,
       formatPomiaru: formatPomiaru,
       tekstPozostalo: tekstPozostalo,

@@ -194,6 +194,71 @@ test.describe('P-KOSZ-ZAPISOW — usuwanie pomylonego zapisu do kosza', () => {
     expect(await wersje(page, id.a)).not.toContain(id.zly);
   });
 
+  // P-KOSZ-POPRAWKI (uwaga Codex P1 do #501): okno stoi otwarte, a karty zmieniają się pod nim (synchronizacja, inna
+  // karta przeglądarki). Potwierdzenie ocenia obie karty jeszcze raz; zmieniony stan — okno od nowa, z notą.
+  const NOTA = 'Zapis albo karta zmieniły się, gdy to okno było otwarte (np. przez synchronizację). Nic nie zostało usunięte — poniżej aktualny stan.';
+  const poprawWersje = (page, pid, sid, zmiana) => page.evaluate(async ({ p, s, z }) => {
+    const w = (await window.VildaVault.getPatient(p)).snapshots.find((x) => x.snapshotId === s);
+    await window.VildaVault.updateSnapshotPayload(p, s, { ...w.payload, ...z, user: { ...w.payload.user, ...(z.user || {}) } }, { preserveSavedAt: true });
+  }, { p: pid, s: sid, z: zmiana });
+
+  test('pomiar znika z karty drugiej osoby, gdy okno jest otwarte: przy „Usuń do kosza” blokada z notą, nic nie znika', async ({ page }) => {
+    await otworzZKontem(page);
+    const id = await zasiej(page, 'jest');
+    await sprawdz(page);
+    await karta(page, 'Karta: Innyrecz Adam').getByRole('button', { name: 'Usuń pomylony zapis…' }).click();
+    const o = okno(page);
+    await expect(o.locator('h2')).toHaveText('Usunąć pomylony zapis?');
+    const zapisAlicji = await page.evaluate(async (b) => (await window.VildaVault.getPatient(b)).snapshots[0].snapshotId, id.b);
+    await poprawWersje(page, id.b, zapisAlicji, { user: { weight: 52.4 } }); // jak poprawka z innego urządzenia
+
+    await o.getByRole('button', { name: 'Usuń do kosza' }).click();
+    const nowe = okno(page);
+    await expect(nowe.locator('h2')).toHaveText('Tego zapisu nie można jeszcze usunąć');
+    await expect(nowe.locator('.settings-kosz-uwaga[role="status"]')).toHaveText(NOTA);
+    await expect(nowe.locator('.settings-kosz-tabela')).toBeVisible();
+    expect(await wersje(page, id.a), 'zapis zostaje w karcie').toContain(id.zly);
+    expect(await page.evaluate(async () => (await window.VildaVault.listTrashedSnapshots()).length)).toBe(0);
+    await expect(page.locator('.settings-kosz-okno[role="dialog"]'), 'jedno okno naraz').toHaveCount(1);
+  });
+
+  test('pomylony zapis poprawiony, gdy okno jest otwarte: okno od nowa z notą, usuwa dopiero drugie potwierdzenie', async ({ page }) => {
+    await otworzZKontem(page);
+    const id = await zasiej(page, 'jest');
+    await sprawdz(page);
+    await karta(page, 'Karta: Innyrecz Adam').getByRole('button', { name: 'Usuń pomylony zapis…' }).click();
+    const o = okno(page);
+    await expect(o.locator('h2')).toHaveText('Usunąć pomylony zapis?');
+    await poprawWersje(page, id.a, id.zly, { testowaPoprawka: 1 }); // nowa wersja zapisu, te same pomiary
+
+    await o.getByRole('button', { name: 'Usuń do kosza' }).click();
+    const nowe = okno(page);
+    await expect(nowe.locator('.settings-kosz-uwaga[role="status"]')).toHaveText(NOTA);
+    await expect(nowe.locator('h2')).toHaveText('Usunąć pomylony zapis?');
+    expect(await wersje(page, id.a), 'pierwsze potwierdzenie niczego nie usunęło').toContain(id.zly);
+
+    await nowe.getByRole('button', { name: 'Usuń do kosza' }).click();
+    await expect(page.locator('.settings-kosz-okno[role="dialog"]')).toHaveCount(0);
+    expect(await wersje(page, id.a)).not.toContain(id.zly);
+  });
+
+  test('pomylony zapis przypięty, gdy okno jest otwarte: okno od nowa z notą i „Odepnij i usuń do kosza”', async ({ page }) => {
+    await otworzZKontem(page);
+    const id = await zasiej(page, 'jest');
+    await sprawdz(page);
+    await karta(page, 'Karta: Innyrecz Adam').getByRole('button', { name: 'Usuń pomylony zapis…' }).click();
+    const o = okno(page);
+    await expect(o.getByRole('button', { name: 'Usuń do kosza' })).toBeVisible();
+    await page.evaluate(async ({ a, zly }) => window.VildaVault.setSnapshotPinned(a, zly, true), id); // jak inna karta
+
+    await o.getByRole('button', { name: 'Usuń do kosza' }).click();
+    const nowe = okno(page);
+    await expect(nowe.locator('.settings-kosz-uwaga[role="status"]')).toHaveText(NOTA);
+    await expect(nowe.getByRole('button', { name: 'Odepnij i usuń do kosza' })).toBeVisible();
+    expect(await wersje(page, id.a), 'nic nie zniknęło').toContain(id.zly);
+    await expect(nowe.locator('.settings-kosz-blad')).toBeHidden();
+  });
+
   test('kosz w historii wersji karty: „Przywróć ten zapis”', async ({ page }) => {
     await otworzZKontem(page);
     const id = await zasiej(page, 'jest');
