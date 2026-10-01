@@ -28,6 +28,10 @@ const ZALEZNOSCI = {
   // Modul wydruku sklada dokument z tego, co narysowal widok; bez widoku oddaje pusty napis,
   // czyli znowu cicha zmiane wyniku zamiast glosnej awarii.
   'vilda_postepy_doroslego_wydruk.js': ['vilda_postepy_doroslego_ui.js'],
+  // Modul cykli (P-OTYLOSC-CYKLE rata 4, R6) rozpoznaje substancje czynna punktu przez kryteria
+  // ChPL. Bez nich kazdy punkt jest „neutralny”, R6 milknie i zmiana leku w cyklu przechodzi
+  // bez odmowy — test czytalby sie jak brak regresji, a bylby brakiem wsadu.
+  'vilda_cykle_leczenia.js': ['obesity_response_criteria.js'],
 };
 
 // Zaleznosci sa PRZECHODNIE i wykonywane RAZ na dane okno.

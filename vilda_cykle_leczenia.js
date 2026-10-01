@@ -20,8 +20,9 @@
  *      tę samą datę (zmiana leku bez przerwy) — wtedy Zakończenie jest pierwsze;
  *   R4 cykl bez Włączenia tylko świadomie (opcja `bezWlaczenia`);
  *   R5 wizyta trafia do cyklu według daty; data w przerwie między cyklami jest odrzucana;
+ *   R6 (D3) zmiana substancji czynnej zaczyna nowy cykl: w obrębie cyklu wszystkie punkty
+ *      z rozpoznanym lekiem mają tę samą substancję czynną (Zakończenie — lek swojego cyklu);
  *   R7 Włączenie i Zakończenie wymagają daty wizyty.
- *   (R6 — zmiana substancji czynnej zaczyna nowy cykl — to rata 4.)
  *
  * KOLEJNOŚĆ PUNKTÓW jest ta sama co w tabeli monitora i w Karcie pacjenta: po datach, gdy datę
  * ma KAŻDY punkt, inaczej po wieku w miesiącach; remisy zostają w kolejności tablicy.
@@ -38,11 +39,24 @@
  * wyłącza przyciski rodzaju wizyty z powodem `krotko`. Zakończenie wpisane między dwa Włączenia
  * starego zapisu (niezgodność `dwa-wlaczenia`) jest poprawką, nie rozcięciem cyklu — odcięta część
  * zaczyna się od Włączenia, więc staje się zwykłym cyklem.
+ *
+ * RATA 4 (P-OTYLOSC-CYKLE rata 4, R6): substancję czynną punktu rozpoznaje ta sama funkcja, którą
+ * Karta pacjenta wybiera kryteria ChPL — `ObesityResponseCriteria.resolveDrug(drug, substance)`,
+ * czytana w chwili wywołania. Punkt bez leku albo z lekiem nierozpoznanym (np. Ozempic) jest
+ * NEUTRALNY: nie tworzy przejścia i nie jest blokowany. Bez modułu kryteriów R6 nie działa (zasada
+ * sprzed raty 4). R6 NIE jest granicą cyklu (D1 — granicą jest wyłącznie Zakończenie): przejście
+ * substancji wewnątrz cyklu to niezgodność `zmiana-substancji` { punkty: [ostatni punkt starej
+ * substancji, pierwszy punkt nowej], z, na } — stary zapis z takim przejściem zostaje jednym cyklem
+ * (D5: nic nie poprawiamy po cichu; Karta wstrzymuje ocenę wg ChPL tego cyklu). Sygnatura przejścia
+ * przy sprawdzaniu akcji to para substancji i numer jej wystąpienia, nie punkty — przesunięcie
+ * starego przejścia na inny punkt nie jest nowym przejściem. R6 nigdy nie blokuje usunięcia.
+ * Zakończenie wpisane tuż przed pierwszym punktem nowej substancji starego zapisu jest poprawką
+ * (jak rozdzielenie dwóch Włączeń w racie 2) — odcięta część staje się cyklem bez Włączenia.
  */
 (function (w) {
   'use strict';
 
-  var VERSION = '1';
+  var VERSION = '2';
   var RODZAJE = { start: 1, 'continue': 1, end: 1 };
 
   // ── Daty i wiek: te same reguły co monitor (H, K, A, D w obesity_therapy_monitor.js) ──────
@@ -93,6 +107,56 @@
   function momentPunktu(p) {
     var d = czescDaty(p && p.dateISO);
     return d ? 'Data ' + dwieCyfry(d.d) + '.' + dwieCyfry(d.mo) + '.' + d.y : 'Wiek ' + opisWieku(p);
+  }
+
+  // ── Substancja czynna (R6) ─────────────────────────────────────────────────────────────
+
+  function tekst(v) {
+    return v == null ? '' : String(v).trim();
+  }
+
+  // Klucz substancji czynnej punktu ('liraglutide', 'semaglutide', …) albo null („punkt
+  // neutralny”). Monitor zapisuje w `drug` tekst opcji leku, a w `substance` etykietę substancji
+  // (starsze punkty i import — klucz, polską nazwę albo nic), więc surowych pól nie porównujemy:
+  // rozpoznaje je ta sama funkcja, którą Karta pacjenta wybiera kryteria ChPL. Moduł kryteriów
+  // czytany w chwili wywołania; brak modułu, brak dopasowania, pusty lek albo wyjątek → null.
+  function substancja(p) {
+    try {
+      if (!p || typeof p !== 'object') return null;
+      var lek = tekst(p.drug);
+      var sub = tekst(p.substance);
+      if (!lek && !sub) return null;
+      var K = w.ObesityResponseCriteria;
+      if (!K || typeof K.resolveDrug !== 'function') return null;
+      var r = K.resolveDrug(lek, sub);
+      return r && typeof r.substanceKey === 'string' && r.substanceKey ? r.substanceKey : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Tekst przed pierwszym z podanych separatorów (gdy separator nie stoi na samym początku).
+  function doSeparatora(s, separatory) {
+    var koniec = s.length;
+    separatory.forEach(function (sep) {
+      var i = s.indexOf(sep);
+      if (i > 0 && i < koniec) koniec = i;
+    });
+    return s.slice(0, koniec).trim();
+  }
+
+  // Krótka nazwa leku do komunikatów: „Saxenda (liraglutyd) – s.c. 1×/dobę” → „Saxenda”;
+  // bez leku — etykieta substancji przed nawiasem; w ostateczności klucz substancji.
+  function nazwaLeku(p) {
+    try {
+      var lek = doSeparatora(tekst(p && p.drug), [' (', ' –']);
+      if (lek) return lek;
+      var sub = doSeparatora(tekst(p && p.substance), [' (']);
+      if (sub) return sub;
+      return substancja(p) || '';
+    } catch (e) {
+      return '';
+    }
   }
 
   // ── Kolejność i podział na cykle ───────────────────────────────────────────────────────
@@ -146,6 +210,18 @@
       if (starty.length > 1) c.niezgodnosci.push({ kod: 'dwa-wlaczenia', punkty: starty });
       if (starty.length && pts[0] !== starty[0]) c.niezgodnosci.push({ kod: 'wlaczenie-nie-pierwsze', punkty: [starty[0], pts[0]] });
       if (pts.length === 1 && ostatni.type === 'end') c.niezgodnosci.push({ kod: 'zakonczenie-bez-wizyt', punkty: [ostatni] });
+      // R6: każde przejście substancji czynnej w obrębie cyklu (punkty neutralne pominięte).
+      // Dopisywane po pozostałych kodach, żeby np. drugie Włączenie z innym lekiem dalej było
+      // zgłaszane jako `dwa-wlaczenia`.
+      var znanaS = null;
+      var znanyP = null;
+      pts.forEach(function (p) {
+        var s = substancja(p);
+        if (!s) return;
+        if (znanaS && s !== znanaS) c.niezgodnosci.push({ kod: 'zmiana-substancji', punkty: [znanyP, p], z: znanaS, na: s });
+        znanaS = s;
+        znanyP = p;
+      });
       c.niezgodnosci.forEach(function (n) {
         n.cykl = c.numer;
         niezgodnosci.push(n);
@@ -229,9 +305,15 @@
       }
     }
 
-    // 2. Rozcięcie cyklu (Zakończenie wpisane przed jego późniejszymi punktami). Wyjątek: odcięta
-    //    część zaczyna się od Włączenia — to rozdzielenie dwóch Włączeń starego zapisu na dwa cykle.
+    // 2. Rozcięcie cyklu (Zakończenie wpisane przed jego późniejszymi punktami). Wyjątki: odcięta
+    //    część zaczyna się od Włączenia — to rozdzielenie dwóch Włączeń starego zapisu na dwa cykle;
+    //    albo od pierwszego punktu nowej substancji, która już PRZED akcją zmieniała się w cyklu
+    //    (R6) — to poprawka starego zapisu, a odcięta część staje się cyklem bez Włączenia.
     function pozycjaPo(k) { return nowy.punkty.indexOf(poKluczu[k]); }
+    var poczatekNowejSubstancji = {};
+    przed.niezgodnosci.forEach(function (n) {
+      if (n.kod === 'zmiana-substancji') poczatekNowejSubstancji[kl(n.punkty[1])] = 1;
+    });
     var sprawdzone = {};
     for (i = 0; i < wspolne.length; i++) {
       var nc = mP[wspolne[i]];
@@ -246,8 +328,10 @@
         .map(function (k) { return poKluczu[k]; });
       var grupy = {};
       odciete.forEach(function (p) { var g = mN[kl(p)]; if (!grupy[g]) grupy[g] = p; });
-      var wszystkieOdWlaczenia = Object.keys(grupy).every(function (g) { return grupy[g].type === 'start'; });
-      if (wszystkieOdWlaczenia) continue;
+      var poprawkaStaregoZapisu = Object.keys(grupy).every(function (g) {
+        return grupy[g].type === 'start' || poczatekNowejSubstancji[kl(grupy[g])] === 1;
+      });
+      if (poprawkaStaregoZapisu) continue;
       if (odciete.length === 1 && odciete[0].type === 'end') {
         return blad('drugie-zakonczenie', 'Cykl ' + nc + ' ma już Zakończenie (' + opisPunktu(odciete[0]) + ').',
           { krotko: 'Cykl ' + nc + ' ma już Zakończenie (' + opisPunktu(odciete[0]) + ')' });
@@ -259,13 +343,26 @@
     }
 
     // 3. Nowa niezgodność (stare, sprzed akcji, nie blokują — D5: nie poprawiamy po cichu).
-    function syg(n) {
-      return n.kod + '|' + n.punkty.map(kl).join(',');
+    //    Przejście substancji (R6) rozpoznajemy po parze substancji i numerze jej wystąpienia
+    //    w całej liście, nie po punktach: stare przejście przesunięte na inny punkt albo do cyklu
+    //    o innym numerze nie jest nowe. Usunięcia R6 nie blokuje nigdy.
+    function sygnatury(lista) {
+      var ile = {};
+      return lista.map(function (n) {
+        if (n.kod !== 'zmiana-substancji') return n.kod + '|' + n.punkty.map(kl).join(',');
+        var para = n.z + '>' + n.na;
+        ile[para] = (ile[para] || 0) + 1;
+        return n.kod + '|' + para + '#' + ile[para];
+      });
     }
     var bylo = {};
-    przed.niezgodnosci.forEach(function (n) { bylo[syg(n)] = 1; });
-    var nowe = nowy.niezgodnosci.filter(function (n) { return !bylo[syg(n)]; });
-    if (nowe.length) return komunikatNiezgodnosci(nowe[0], nowy, kand);
+    sygnatury(przed.niezgodnosci).forEach(function (s) { bylo[s] = 1; });
+    var sygNowe = sygnatury(nowy.niezgodnosci);
+    var nowe = nowy.niezgodnosci.filter(function (n, ix) {
+      if (bylo[sygNowe[ix]]) return false;
+      return !(rodzaj === 'usun' && n.kod === 'zmiana-substancji');
+    });
+    if (nowe.length) return komunikatNiezgodnosci(wybierzNiezgodnosc(nowe, nowy, kand), nowy, kand, rodzaj, oryg);
 
     var cN = kand ? cyklPunktu(nowy, kand) : null;
     var wynik = { ok: true, cykl: cN ? { numer: cN.numer, stan: cN.stan } : null };
@@ -302,9 +399,61 @@
     return null;
   }
 
-  function komunikatNiezgodnosci(n, nowy, kand) {
+  // Która z nowych niezgodności trafia do komunikatu. Kody sprzed R6 (dwa Włączenia, wizyta przed
+  // Włączeniem, Zakończenie bez wizyt) mają pierwszeństwo — np. drugie Włączenie z innym lekiem
+  // w aktywnym cyklu to dalej `dwa-wlaczenia`. Przy R6 numer wystąpienia pary nie mówi, KTÓRE
+  // przejście jest nowe (nowe przejście wcześniej w liście przesuwa numerację starego), więc spośród
+  // przejść tych par wybieramy to z kandydatem: najpierw jako pierwszy punkt nowej substancji,
+  // potem jako ostatni punkt starej.
+  function wybierzNiezgodnosc(nowe, nowy, kand) {
+    var i;
+    for (i = 0; i < nowe.length; i++) if (nowe[i].kod !== 'zmiana-substancji') return nowe[i];
+    if (kand) {
+      var pary = {};
+      nowe.forEach(function (n) { pary[n.z + '>' + n.na] = 1; });
+      var r6 = nowy.niezgodnosci.filter(function (n) { return n.kod === 'zmiana-substancji' && pary[n.z + '>' + n.na] === 1; });
+      for (i = 0; i < r6.length; i++) if (r6[i].punkty[1] === kand) return r6[i];
+      for (i = 0; i < r6.length; i++) if (r6[i].punkty[0] === kand) return r6[i];
+    }
+    return nowe[0];
+  }
+
+  // R6: komunikat zależny od roli kandydata w przejściu substancji. {Z} — lek ostatniego punktu
+  // starej substancji, {NA} — lek pierwszego punktu nowej. Edycja, która nie zmienia substancji
+  // punktu, a tylko jego miejsce (np. data przenosi wizytę do cyklu z innym lekiem), dostaje opis
+  // ogólny — rada „zapisz Zakończenie, a tę wizytę jako Włączenie” byłaby wtedy myląca.
+  function komunikatZmianySubstancji(n, c, kand, rodzaj, oryg) {
+    var pZ = n.punkty[0];
+    var pNa = n.punkty[1];
+    var lekZ = nazwaLeku(pZ) || n.z;
+    var lekNa = nazwaLeku(pNa) || n.na;
+    var N = c.numer;
+    var tylkoMiejsce = rodzaj === 'edytuj' && !!oryg && substancja(oryg) === substancja(kand);
+    if (kand && !tylkoMiejsce && kand === pNa && kand.type === 'continue') {
+      return blad('zmiana-substancji', 'Ta wizyta ma inną substancję czynną (' + lekNa + ') niż wcześniejsze wizyty cyklu ' + N + ' (' + lekZ +
+        '). Zmiana substancji czynnej zaczyna nowy cykl: zapisz najpierw Zakończenie cyklu ' + N + ' z lekiem ' + lekZ +
+        ' (może mieć tę samą datę), a tę wizytę jako Włączenie nowego cyklu.',
+        { krotko: 'Inna substancja niż w cyklu ' + N + ' (' + lekZ + ')' });
+    }
+    if (kand && !tylkoMiejsce && kand === pNa && kand.type === 'end') {
+      return blad('zmiana-substancji', 'Zakończenie zamyka cykl ' + N + ' — zapisz je z lekiem tego cyklu (' + lekZ + '). Nowy lek (' + lekNa +
+        ') zapiszesz potem jako Włączenie nowego cyklu, także tego samego dnia.',
+        { krotko: 'Zakończenie z lekiem cyklu ' + N + ' (' + lekZ + ')' });
+    }
+    if (kand && !tylkoMiejsce && kand === pZ && kand.type === 'start') {
+      return blad('zmiana-substancji', 'Wizyty cyklu ' + N + ' mają inną substancję czynną (' + lekNa + ') niż to Włączenie (' + lekZ +
+        '). Włączenie musi mieć lek swojego cyklu — popraw lek albo datę.',
+        { krotko: 'Inna substancja niż wizyty cyklu ' + N + ' (' + lekNa + ')' });
+    }
+    return blad('zmiana-substancji', 'Po tej zmianie w cyklu ' + N + ' zmieniałaby się substancja czynna (' + lekZ + ' → ' + lekNa +
+      ') bez Zakończenia między wizytami. Zmiana substancji czynnej zaczyna nowy cykl — popraw lek albo datę.',
+      { krotko: 'Zmiana substancji w cyklu ' + N });
+  }
+
+  function komunikatNiezgodnosci(n, nowy, kand, rodzaj, oryg) {
     var c = nowy.cykle[n.cykl - 1];
     var poprz = c.numer > 1 ? nowy.cykle[c.numer - 2] : null;
+    if (n.kod === 'zmiana-substancji') return komunikatZmianySubstancji(n, c, kand, rodzaj, oryg);
     if (n.kod === 'dwa-wlaczenia') {
       var inne = n.punkty.filter(function (p) { return p !== kand; })[0] || n.punkty[0];
       return blad('dwa-wlaczenia', 'Cykl ' + c.numer + ' ma już Włączenie (' + opisPunktu(inne) + '). Nowy cykl rozpoczniesz po Zakończeniu cyklu ' + c.numer + '.',
@@ -414,8 +563,16 @@
       }
     }
 
+    // Gdy żadne miejsce nie przechodzi, oddajemy odmowę z pierwszego (najbardziej naturalnego) —
+    // chyba że któreś odpadło przez zmianę substancji (R6): ta przyczyna nie zależy od miejsca
+    // w remisie, a odmowa z pierwszego miejsca (np. „wypada w trakcie cyklu”) by ją zasłoniła.
+    // Pytanie o cykl bez Włączenia (D2, `wybor`) nie jest odmową — w tym miejscu wizyta przejdzie
+    // po świadomym wyborze (np. Kontynuacja z nowym lekiem w dniu Zakończenia), więc ma
+    // pierwszeństwo przed R6.
     var miejsca = pozycje(baza, kand, ie);
     var pierwszy = null;
+    var substancjaOdmowa = null;
+    var pytanie = null;
     for (var j = 0; j < miejsca.length; j++) {
       var po = baza.slice();
       po.splice(miejsca[j], 0, kand);
@@ -426,8 +583,10 @@
         return r2;
       }
       if (!pierwszy) pierwszy = r2;
+      if (!substancjaOdmowa && r2.kod === 'zmiana-substancji') substancjaOdmowa = r2;
+      if (!pytanie && r2.wybor) pytanie = r2;
     }
-    return pierwszy;
+    return substancjaOdmowa ? pytanie || substancjaOdmowa : pierwszy;
   }
 
   w.VildaCykleLeczenia = {
@@ -435,6 +594,8 @@
     uporzadkuj: uporzadkuj,
     podziel: podziel,
     sprawdz: sprawdz,
-    opisPunktu: opisPunktu
+    opisPunktu: opisPunktu,
+    substancja: substancja,
+    nazwaLeku: nazwaLeku
   };
 }(typeof window !== 'undefined' ? window : this));
