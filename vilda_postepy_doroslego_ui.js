@@ -23,7 +23,7 @@
 (function (w) {
   'use strict';
 
-  var WERSJA = '1';
+  var WERSJA = '2';
 
   var C = {
     teal: '#00838d',
@@ -553,9 +553,9 @@
     });
 
     var pas = pasmaIOdzysk(model, S, waski);
-    var podpisX = 'tygodnie od ' + (model.punktOdniesienia
-      && model.punktOdniesienia.zrodlo === 'start-leczenia'
-      ? 'włączenia leczenia' : 'pierwszego pomiaru');
+    var zrodloOdn = model.punktOdniesienia && model.punktOdniesienia.zrodlo;
+    var podpisX = 'tygodnie od ' + (zrodloOdn === 'start-leczenia' ? 'włączenia leczenia'
+      : (zrodloOdn === 'pierwszy-pomiar-cyklu' ? 'pierwszego pomiaru bieżącego cyklu' : 'pierwszego pomiaru'));
 
     return korzenSvg('vilda-pd-svg-masa', G, wys, 'Wykres masy ciała w czasie', opcje)
       + titracja(model, S, waski) + siatkaPozioma(S) + pas.svg
@@ -711,19 +711,38 @@
    * w silniku `zmianaMasyKg = p.masa - masaOdn`. Bez tego zdania kafelek „Zmiana masy ciała”
    * da się przeczytać na dwa sposoby, a przy pacjencie po nadirze te dwa odczyty mówią coś
    * przeciwnego. Treść zależy od `punktOdniesienia.zrodlo`, więc mówi prawdę także wtedy,
-   * gdy pacjenta przejęto w trakcie terapii i punktu „Włączenie” w rekordzie nie ma. */
+   * gdy pacjenta przejęto w trakcie terapii i punktu „Włączenie” w rekordzie nie ma.
+   *
+   * CYKLE LECZENIA (P-OTYLOSC-CYKLE rata 4). Przy więcej niż jednym cyklu odniesieniem jest
+   * Włączenie BIEŻĄCEGO cyklu, nie pierwsze w historii — i zdanie to mówi, z numerem cyklu,
+   * bo lekarz pamiętający masę sprzed pierwszego leku inaczej przeczytałby każdy procent.
+   * Przy jednym cyklu brzmienie zostaje co do litery. Moduł wydruku ma bliźniaczą funkcję. */
   function odniesienieOpis(model) {
     var o = model.punktOdniesienia;
     if (!o) return '';
-    var co = o.zrodlo === 'start-leczenia'
-      ? 'masy ciała przy włączeniu leczenia (' + liczbaPl(o.masa, 1) + ' kg'
-        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')'
-      : 'pierwszego zapisanego pomiaru (' + liczbaPl(o.masa, 1) + ' kg'
-        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')';
-    var dop = o.zrodlo === 'start-leczenia' ? ''
-      : ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    var dane = liczbaPl(o.masa, 1) + ' kg' + (o.dateISO ? ', ' + dataPl(o.dateISO) : '');
+    var cy = cyklOpis(model);
+    var co;
+    var dop = '';
+    if (o.zrodlo === 'start-leczenia') {
+      co = cy ? 'masy ciała przy włączeniu bieżącego cyklu leczenia (' + cy + '; ' + dane + ')'
+        : 'masy ciała przy włączeniu leczenia (' + dane + ')';
+    } else if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
+      co = 'pierwszego pomiaru bieżącego cyklu leczenia (' + (cy ? cy + '; ' : '') + dane + ')';
+      dop = ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    } else {
+      co = 'pierwszego zapisanego pomiaru (' + dane + ')';
+      dop = ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    }
     return '<p class="vilda-pd-odn">Wszystkie zmiany liczone od ' + esc(co) + esc(dop)
       + ', nie od poprzedniej wizyty.</p>';
+  }
+
+  /* „cykl N z M” — tylko przy więcej niż jednym cyklu; przy jednym pusty napis. */
+  function cyklOpis(model) {
+    var c = model && model.cykl;
+    return c && typeof c.liczba === 'number' && c.liczba > 1 && typeof c.numer === 'number'
+      ? 'cykl ' + c.numer + ' z ' + c.liczba : '';
   }
 
   /* ILE BRAKUJE DO NAJBLIŻSZEGO PASMA — liczba z SILNIKA (`doNastepnegoPasma`).

@@ -26,6 +26,11 @@
  *   punkt odniesienia — masa, od której liczymy procenty: masa w punkcie „Włączenie” leczenia,
  *                       a gdy leczenia nie ma — pierwszy pomiar serii. Wynik mówi który
  *                       (`punktOdniesienia.zrodlo`), bo od tego zależy KAŻDY procent na wykresie.
+ *                       Od raty 4 cykli (P-OTYLOSC-CYKLE) — Włączenie BIEŻĄCEGO cyklu leczenia
+ *                       (`VildaCykleLeczenia.podziel`, granicą jest Zakończenie); w cyklu nr ≥ 2
+ *                       bez Włączenia — pierwszy pomiar tego cyklu (`pierwszy-pomiar-cyklu`).
+ *   cykl              — bieżący cykl leczenia: numer, liczba cykli, stan, brak Włączenia
+ *                       i kody niezgodności zapisu; `null` bez modułu cykli albo bez punktów.
  *   ubytekPct         — DODATNI odsetek ubytku masy wobec punktu odniesienia (0 przy przyroście).
  *   zmianaMasyPct     — ta sama wielkość ze znakiem (ujemna = ubytek), do wykresu.
  *   tydzien           — pełne tygodnie od punktu odniesienia; ujemny dla pomiarów sprzed niego.
@@ -52,12 +57,13 @@
  *   leczenie          — czy pacjent jest na leku. Ta sama frakcja znaczy co innego na leczeniu
  *                       (spadek poniżej progu to rzadkie zdarzenie i realny sygnał) i po jego
  *                       odstawieniu (przeciętna trajektoria przekracza próg w ciągu kwartału).
- *                       Silnik tego nie interpretuje — oddaje stan, żeby widok mógł.
+ *                       Silnik tego nie interpretuje — oddaje stan, żeby widok mógł. Z modułem
+ *                       cykli stan i lek dotyczą bieżącego (ostatniego) cyklu.
  */
 (function (w) {
   'use strict';
 
-  var WERSJA = '1';
+  var WERSJA = '2';
 
   var MS_TYDZIEN = 7 * 24 * 60 * 60 * 1000;
   var MIES_NA_TYDZ = 30.4375 / 7;   // średni miesiąc gregoriański w tygodniach
@@ -146,6 +152,15 @@
     return lata * 12 + mies;
   }
 
+  /* Miejsce punktu na osi czasu: data i wiek, BEZ wymagania masy. Potrzebne tam, gdzie
+     liczy się sam moment, a nie pomiar — Zakończenie leczenia bywa zapisane bez masy
+     (np. z importu), a i tak wyznacza dzień odstawienia (P-OTYLOSC-CYKLE rata 4). */
+  function osPunktu(p) {
+    if (!p || typeof p !== 'object') return null;
+    var dateISO = String(p.dateISO != null ? p.dateISO : (p.date != null ? p.date : '')).trim();
+    return { dateISO: dateISO || null, wiekMies: wiekWMiesiacach(p), ms: czasMs(dateISO) };
+  }
+
   /* Pomiar → { masa, wzrost, dateISO, wiekMies, ms, klucz } albo null. Masa jest wymagana:
      bez niej punkt nie mówi nic o postępie i tylko udawałby daną. */
   function normPomiar(p) {
@@ -154,14 +169,13 @@
     if (masa == null || !(masa > 0)) return null;
     var wzrost = liczba(p.height != null ? p.height : p.wzrost);
     if (wzrost != null && !(wzrost > 0)) wzrost = null;
-    var wiekMies = wiekWMiesiacach(p);
-    var dateISO = String(p.dateISO != null ? p.dateISO : (p.date != null ? p.date : '')).trim();
+    var miejsce = osPunktu(p);
     return {
       masa: masa,
       wzrost: wzrost,
-      dateISO: dateISO || null,
-      wiekMies: wiekMies,
-      ms: czasMs(dateISO),
+      dateISO: miejsce.dateISO,
+      wiekMies: miejsce.wiekMies,
+      ms: miejsce.ms,
       typ: String(p.type == null ? '' : p.type) || null,
       lek: p.drug != null ? String(p.drug) : null,
       substancja: p.substance != null ? String(p.substance) : null,
@@ -471,6 +485,73 @@
     };
   }
 
+  /* ---------- cykle leczenia (P-OTYLOSC-CYKLE rata 4) ---------- */
+
+  /* BIEŻĄCY CYKL LECZENIA — z jednego źródła, `VildaCykleLeczenia.podziel`.
+   *
+   * Decyzja właściciela 2026-09-30 (D1): cykle są WYLICZANE z punktów monitora, a granicę
+   * cyklu wyznacza wyłącznie Zakończenie. Do raty 4 ta zakładka nie znała pojęcia cyklu:
+   * brała PIERWSZE Włączenie w kolejności wpisywania i ogłaszała „odstawione” przy
+   * JAKIMKOLWIEK Zakończeniu. Pacjent, który zakończył Saxendę i od miesięcy jest na Wegovy,
+   * dostawał procenty od masy sprzed Saxendy, drabinkę i punkt ChPL liraglutydu oraz zdanie
+   * „Leczenie odstawione” — a przy innej kolejności wpisu „odstawione w −4. tygodniu”.
+   *
+   * DZIELIMY SUROWE PUNKTY, nie znormalizowane: `normPomiar` gubi `type` i `id`, a punkt bez
+   * masy (Zakończenie z importu) wyrzuca w całości — `podziel` dostałby wtedy pustą listę albo
+   * inne granice niż Karta pacjenta i monitor. O przynależności punktu do cyklu decyduje
+   * WYŁĄCZNIE moduł cykli (własne reguły dat i wieku), ta zakładka jej nie odtwarza.
+   *
+   * Moduł czytamy LENIWIE, w chwili wywołania: na większości stron ładuje się po tym pliku.
+   * Bez modułu (albo gdy `podziel` rzuci) zwracamy `null` i silnik liczy dawną regułą —
+   * tak samo jak Karta pacjenta (`Ob_cy` → `Ob_ks`). */
+  function cyklBiezacy(punktyLeczenia) {
+    var M = w && w.VildaCykleLeczenia;
+    if (!M || typeof M.podziel !== 'function') return null;
+    try {
+      var podzial = M.podziel(Array.isArray(punktyLeczenia) ? punktyLeczenia : []);
+      var cykle = podzial && Array.isArray(podzial.cykle) ? podzial.cykle : null;
+      if (!cykle) return null;
+      var c = cykle.length ? cykle[cykle.length - 1] : null;
+      if (c && !Array.isArray(c.punkty)) return null;
+      return { cykl: c, liczba: cykle.length };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* Punkt odniesienia cyklu nr ≥ 2 BEZ Włączenia (stara Kontynuacja po Zakończeniu).
+   *
+   * Pierwszy pomiar serii z kluczem osi nie wcześniejszym niż PIERWSZY punkt tego cyklu —
+   * nie pierwszy pomiar całej serii, bo ten pochodzi z poprzedniego cyklu (np. masa sprzed
+   * Saxendy u pacjenta na Wegovy). Przy remisie (Zakończenie poprzedniego cyklu i wizyta
+   * tego cyklu tego samego dnia, o różnej masie) wygrywa pomiar, który JEST punktem tego
+   * cyklu. Gdy seria takiego pomiaru nie ma (wołający podał same pomiary z osi czasu) —
+   * pierwszy punkt cyklu z masą. */
+  function pierwszyPomiarCyklu(cykl, uporzadkowane, punktyCyklu, os) {
+    var granica = null;
+    for (var i = 0; i < cykl.punkty.length; i++) {
+      var m = osPunktu(cykl.punkty[i]);
+      var k = m ? klucz(m, os) : null;
+      if (k != null && (granica == null || k < granica)) granica = k;
+    }
+    if (granica == null) return null;
+    var wlasne = {};
+    for (var j = 0; j < punktyCyklu.length; j++) wlasne[kluczPomiaru(punktyCyklu[j])] = 1;
+    var pierwszy = null;
+    for (var s = 0; s < uporzadkowane.length; s++) {
+      var ks = klucz(uporzadkowane[s], os);
+      if (ks == null || ks < granica) continue;
+      if (pierwszy && ks !== klucz(pierwszy, os)) break;
+      if (!pierwszy) pierwszy = uporzadkowane[s];
+      if (wlasne[kluczPomiaru(uporzadkowane[s])]) return uporzadkowane[s];
+    }
+    if (pierwszy) return pierwszy;
+    for (var q = 0; q < punktyCyklu.length; q++) {
+      if (klucz(punktyCyklu[q], os) != null) return punktyCyklu[q];
+    }
+    return null;
+  }
+
   /* ---------- silnik ---------- */
 
   function analizuj(opts) {
@@ -479,9 +560,15 @@
     var brama = dostepne(o);
 
     var seria = normSeria(o.pomiary);
-    var punkty = normSeria(o.punktyLeczenia).filter(function (p) {
+    /* Punkty leczenia do odniesienia, leku i stanu = punkty BIEŻĄCEGO cyklu (rata 4).
+       Seria pomiarów zostaje cała: pomiary poprzednich cykli stoją na wykresie z ujemnymi
+       tygodniami i bez kamieni — tak jak dotąd pomiary sprzed Włączenia. */
+    var podzial = cyklBiezacy(o.punktyLeczenia);
+    var cyklB = podzial ? podzial.cykl : null;
+    var punkty = normSeria(cyklB ? cyklB.punkty : o.punktyLeczenia).filter(function (p) {
       return p.typ === 'start' || p.typ === 'continue' || p.typ === 'end';
     });
+    var niezgodnyZapis = !!(cyklB && Array.isArray(cyklB.niezgodnosci) && cyklB.niezgodnosci.length);
 
     var wiekMies = liczba(o.wiekMies);
     if (wiekMies == null && liczba(o.wiekLat) != null) wiekMies = liczba(o.wiekLat) * 12;
@@ -491,7 +578,9 @@
        zapisany w punktach leczenia — wołający nie powinien musieć go stamtąd wyłuskiwać
        i podawać osobno. Do rata 2 Karta Pacjenta wołała z `lek: null` i pacjent na
        liraglutydzie dostawał drabinkę ogólną zamiast swojej oraz żadnego punktu oceny.
-       Jawny argument nadal wygrywa — wołający może chcieć porównania „co gdyby”. */
+       Jawny argument nadal wygrywa — wołający może chcieć porównania „co gdyby”.
+       Od raty 4 cykli lek szukamy wyłącznie w BIEŻĄCYM cyklu (`punkty` wyżej): pacjent po
+       Zakończeniu Saxendy i Włączeniu Wegovy ma drabinkę i ChPL Wegovy, nie Saxendy. */
     var lek = o.lek != null && String(o.lek).trim() ? o.lek : null;
     var substancja = o.substancja != null && String(o.substancja).trim() ? o.substancja : null;
     if (lek == null && substancja == null) {
@@ -543,6 +632,16 @@
       kamienie: [],
       zdarzenia: [],
       punktDecyzyjny: punktDecyzyjny(lek, substancja, wiekLat),
+      /* Bieżący cykl leczenia (rata 4) — `null`, gdy modułu cykli nie ma albo nie ma punktów
+         leczenia. Widok mówi o cyklach dopiero wtedy, gdy jest ich więcej niż jeden. */
+      cykl: cyklB ? {
+        numer: cyklB.numer,
+        liczba: podzial.liczba,
+        stan: cyklB.stan,
+        bezWlaczenia: !cyklB.wlaczenie,
+        niezgodnosci: Array.isArray(cyklB.niezgodnosci)
+          ? cyklB.niezgodnosci.map(function (n) { return n && n.kod; }) : [],
+      } : null,
       ostrzezenia: [],
     };
 
@@ -594,9 +693,18 @@
       }
       break;
     }
-    var odniesienie = start || uporzadkowane[0];
+    /* Bez Włączenia (rata 4): w cyklu nr 1 — jak dotąd pierwszy pomiar serii (F1); w cyklu
+       nr ≥ 2 — pierwszy pomiar TEGO cyklu, bo pierwszy pomiar serii należy do poprzedniego
+       leczenia i procenty liczyłyby się od masy sprzed innego leku. */
+    var zrodloOdn = start ? 'start-leczenia' : 'pierwszy-pomiar';
+    var odniesienie = start;
+    if (!odniesienie && cyklB && cyklB.numer > 1) {
+      odniesienie = pierwszyPomiarCyklu(cyklB, uporzadkowane, punkty, os);
+      if (odniesienie) zrodloOdn = 'pierwszy-pomiar-cyklu';
+    }
+    if (!odniesienie) odniesienie = uporzadkowane[0];
     wynik.punktOdniesienia = {
-      zrodlo: start ? 'start-leczenia' : 'pierwszy-pomiar',
+      zrodlo: zrodloOdn,
       masa: odniesienie.masa,
       wzrost: odniesienie.wzrost,
       dateISO: odniesienie.dateISO,
@@ -606,7 +714,9 @@
       substancja: start ? start.substancja : null,
       opis: start
         ? 'Procenty liczone od masy w punkcie „Włączenie” leczenia.'
-        : 'Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.',
+        : (zrodloOdn === 'pierwszy-pomiar-cyklu'
+          ? 'Bieżący cykl leczenia (po Zakończeniu poprzedniego) nie ma punktu „Włączenie” — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed leczenia.'
+          : 'Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.'),
     };
     if (dataOdzyskana) {
       wynik.ostrzezenia.push('Punkt „Włączenie” nie ma własnej daty — oś czasu wzięta z pokrywającego się pomiaru w serii.');
@@ -624,13 +734,31 @@
      *
      * Reguła z ChPL ZOSTAJE w wyniku (zdanie, próg, okno, kotwica) — znika wyłącznie jej
      * POZYCJA na wykresie. `nominalna` gaśnie razem z nią, więc widok przestaje rysować i
-     * znacznik, i pas „zwiększanie dawki”: jedna flaga w silniku, zero zmian w warstwie widoku. */
-    if (wynik.punktDecyzyjny && wynik.punktDecyzyjny.jest
+     * znacznik, i pas „zwiększanie dawki”: jedna flaga w silniku, zero zmian w warstwie widoku.
+     *
+     * NIEZGODNY ZAPIS BIEŻĄCEGO CYKLU (P-OTYLOSC-CYKLE rata 4, za D5 z raty 3) — ten sam
+     * mechanizm, inna przyczyna. Gdy cykl łamie reguły cykli (np. dwa Włączenia bez
+     * Zakończenia, zmiana substancji czynnej w trakcie cyklu), nie wiadomo, od którego punktu
+     * i według którego leku liczyć okno ChPL. Karta pacjenta wstrzymuje wtedy werdykt; ta
+     * zakładka nie może w tym samym czasie stawiać znacznika oceny na wykresie. Pasma zostają —
+     * to podziałka masy, nie ocena wg ChPL. Kod niezgodności nie gra roli: każda wstrzymuje
+     * ocenę. Ostrzeżenie o niezgodności zastępuje F1 (jedno zdanie o znaczniku, nie dwa), a
+     * pojawia się także przy leku bez punktu oceny — zapis i tak wymaga uporządkowania. */
+    if (niezgodnyZapis) {
+      if (wynik.punktDecyzyjny && wynik.punktDecyzyjny.jest) {
+        wynik.punktDecyzyjny.tydzienOdOdniesienia = null;
+        wynik.punktDecyzyjny.nominalna = false;
+        wynik.punktDecyzyjny.bezOsi = 'niezgodny-zapis-cyklu';
+      }
+      wynik.ostrzezenia.push('Zapis bieżącego cyklu leczenia wymaga uporządkowania w monitorze DocPro — punktu oceny wg ChPL nie postawiono (ocena wg ChPL tego cyklu jest wstrzymana, jak w Karcie pacjenta).');
+    } else if (wynik.punktDecyzyjny && wynik.punktDecyzyjny.jest
         && wynik.punktOdniesienia.zrodlo !== 'start-leczenia') {
       wynik.punktDecyzyjny.tydzienOdOdniesienia = null;
       wynik.punktDecyzyjny.nominalna = false;
       wynik.punktDecyzyjny.bezOsi = 'brak-punktu-wlaczenia';
-      wynik.ostrzezenia.push('Punktu oceny wg ChPL nie postawiono na wykresie: bez punktu „Włączenie” oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru, nie od masy początkowej z ChPL.');
+      wynik.ostrzezenia.push('Punktu oceny wg ChPL nie postawiono na wykresie: bez punktu „Włączenie” oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru'
+        + (wynik.punktOdniesienia.zrodlo === 'pierwszy-pomiar-cyklu' ? ' bieżącego cyklu' : '')
+        + ', nie od masy początkowej z ChPL.');
     }
 
     var masaOdn = odniesienie.masa;
@@ -679,11 +807,19 @@
 
     /* Stan leczenia. „brak-danych” NIE znaczy „nie leczony” — zakładka należy się każdemu
        dorosłemu z dwoma pomiarami, więc brak punktów terapii może oznaczać i pacjenta bez
-       farmakoterapii, i pacjenta, u którego jej po prostu nie wpisano. Nie zgadujemy. */
+       farmakoterapii, i pacjenta, u którego jej po prostu nie wpisano. Nie zgadujemy.
+       Z modułem cykli (rata 4) stan mówi o BIEŻĄCYM cyklu: „odstawione” tylko wtedy, gdy
+       ostatni cykl jest zakończony, z datą jego Zakończenia — także Zakończenia bez masy,
+       którego normalizacja nie przepuszcza — i tygodniem od odniesienia tego cyklu. */
     var koniec = null;
-    for (var e = 0; e < punkty.length; e++) if (punkty[e].typ === 'end') koniec = punkty[e];
+    if (cyklB) {
+      if (cyklB.stan === 'zakonczony' && cyklB.zakonczenie) koniec = osPunktu(cyklB.zakonczenie);
+    } else {
+      for (var e = 0; e < punkty.length; e++) if (punkty[e].typ === 'end') koniec = punkty[e];
+    }
     wynik.leczenie = {
-      stan: punkty.length === 0 ? 'brak-danych' : (koniec ? 'odstawione' : 'na-leczeniu'),
+      stan: cyklB ? (cyklB.stan === 'zakonczony' ? 'odstawione' : 'na-leczeniu')
+        : (punkty.length === 0 ? 'brak-danych' : (koniec ? 'odstawione' : 'na-leczeniu')),
       odstawienieDateISO: koniec ? koniec.dateISO : null,
       odstawienieTydzien: koniec ? zaokraglTydzien(tygodnieMiedzy(odniesienie, koniec, os)) : null,
       /* Lek bierzemy z punktu odniesienia, a gdy tam go nie ma — z leku ROZPOZNANEGO wyżej

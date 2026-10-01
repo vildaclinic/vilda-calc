@@ -1,0 +1,384 @@
+import { describe, expect, it } from 'vitest';
+import { zrodlo } from '../support/silnik-bmi.mjs';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
+
+// P-OTYLOSC-CYKLE rata 4 (decyzja właściciela 2026-09-30: rekomendacje D1–D8 projektu „Cykle leczenia
+// otyłości” przyjęte; 2026-10-01: „ruszaj z ratą 4”). Zakładka „Postępy” dorosłego liczy punkt odniesienia,
+// lek i stan leczenia z BIEŻĄCEGO cyklu (`VildaCykleLeczenia.podziel`, granica = Zakończenie). Do tej raty
+// brała pierwsze Włączenie w kolejności wpisywania i ogłaszała „odstawione” przy jakimkolwiek Zakończeniu.
+//
+// Testy wołają PRAWDZIWE `scalSerie` → `analizuj` (dokładnie tak, jak Karta pacjenta w vilda_auth_ui.js),
+// `buildHtml` i `buildDokument` (AGENTS.md §3 pkt 5). Dane pacjentów wyłącznie FIKCYJNE (§4).
+
+function moduly(win = {}) {
+  const g = loadBrowserScript('vilda_postepy_doroslego_wydruk.js', win);
+  return { g, P: g.VildaPostepyDoroslego, U: g.VildaPostepyDoroslegoUI, W: g.VildaPostepyDoroslegoWydruk };
+}
+
+const SAXENDA = { drug: 'Saxenda (liraglutyd) – s.c. 1×/dobę', substance: 'liraglutide', dose: '3,0 mg / dobę' };
+const WEGOVY = { drug: 'Wegovy (semaglutyd) – s.c. 1×/tydz.', substance: 'semaglutide', dose: '2,4 mg / tydz.' };
+
+/* Dorosły 170 cm, urodzony 12.01.1984 — wiek w konwencji monitora (lata + RESZTA miesięcy) zgodny z datą. */
+const pkt = (type, dateISO, weight, lek, lata, mies) => {
+  const p = { id: `${type}-${dateISO}`, type, dateISO, height: 170, ageYears: lata, ageMonths: mies, ...lek };
+  if (weight != null) { p.weight = weight; p.bmi = +(weight / 2.89).toFixed(1); }
+  return p;
+};
+
+/* Przypadek syntetyczny projektu (CY-10): cykl 1 Saxenda zakończony, cykl 2 Wegovy aktywny. */
+const CYKL_1 = [
+  pkt('start', '2024-01-12', 104, SAXENDA, 40, 0),
+  pkt('continue', '2024-04-12', 99, SAXENDA, 40, 3),
+  pkt('end', '2024-10-15', 97.5, SAXENDA, 40, 9),
+];
+const CYKL_2 = [
+  pkt('start', '2024-11-12', 98.5, WEGOVY, 40, 10),
+  pkt('continue', '2025-02-12', 95.5, WEGOVY, 41, 1),
+  pkt('continue', '2025-05-10', 93, WEGOVY, 41, 3),
+];
+const CY10 = [...CYKL_1, ...CYKL_2];
+const WIEK_MIES = 41 * 12 + 3;
+
+/** To samo wywołanie co Karta pacjenta (vilda_auth_ui.js, panel „Postępy”): scalona seria + surowe punkty. */
+function zKarty(P, punkty, pomiaryOsi = []) {
+  const ser = P.scalSerie({ pomiary: pomiaryOsi, punktyLeczenia: punkty });
+  return P.analizuj({
+    wiekMies: WIEK_MIES,
+    pomiary: ser.pomiary.map((c) => ({ ageMonthsTotal: c.wiekMies, weight: c.masa, height: c.wzrost, dateISO: c.dateISO })),
+    punktyLeczenia: punkty,
+  });
+}
+
+const tekstHtml = (h) => h.replace(/<svg[\s\S]*?<\/svg>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+/** Cały tekst dokumentu pdfmake, niezależnie od zagnieżdżenia. */
+function tekstem(w) {
+  if (w == null) return '';
+  if (typeof w === 'string' || typeof w === 'number') return String(w);
+  if (Array.isArray(w)) return w.map(tekstem).join(' ');
+  if (typeof w !== 'object') return '';
+  return [w.text, w.stack, w.columns, w.content, w.table && w.table.body, w.ul, w.ol].map(tekstem).join(' ');
+}
+
+const OPCJE_DRUKU = { pacjent: 'Testowy Fikcyjny', wiekLat: 41, dataWydruku: '2025-05-12' };
+
+/* Kolejności wpisu: chronologiczna, odwrócona i przemieszana. Wynik ma od nich nie zależeć. */
+const KOLEJNOSCI = [
+  ['chronologicznie', CY10],
+  ['odwrotnie', CY10.slice().reverse()],
+  ['cykl 2 przed cyklem 1', [...CYKL_2, ...CYKL_1]],
+  ['przemieszane', [CY10[4], CY10[0], CY10[5], CY10[2], CY10[3], CY10[1]]],
+];
+
+describe('CY-10 — dwa cykle: „Postępy” liczą bieżący cykl', () => {
+  it.each(KOLEJNOSCI)('odniesienie, lek i stan z cyklu 2 (Wegovy) — kolejność wpisu: %s', (_, punkty) => {
+    const m = zKarty(moduly().P, punkty);
+    expect(m.cykl).toEqual({ numer: 2, liczba: 2, stan: 'aktywny', bezWlaczenia: false, niezgodnosci: [] });
+    expect(m.punktOdniesienia.zrodlo).toBe('start-leczenia');
+    expect(m.punktOdniesienia.masa, 'masa przy Włączeniu Wegovy, nie 104 kg sprzed Saxendy').toBe(98.5);
+    expect(m.punktOdniesienia.dateISO).toBe('2024-11-12');
+    expect(m.leczenie.stan, 'Zakończenie Saxendy nie odstawia Wegovy').toBe('na-leczeniu');
+    expect(m.leczenie.odstawienieTydzien).toBeNull();
+    expect(m.leczenie.odstawienieDateISO).toBeNull();
+    expect(m.leczenie.lek).toBe(WEGOVY.drug);
+    expect(m.leczenie.substancja).toBe('semaglutide');
+    expect(m.zestaw.id, 'drabinka Wegovy (ogólna), nie liraglutydu').toBe('OGOLNY');
+    expect(m.punktDecyzyjny.jest, 'ChPL semaglutydu nie podaje progu ani terminu').toBe(false);
+    expect(m.kamienie.filter((k) => k.typ === 'punkt-chpl')).toHaveLength(0);
+    expect(m.ostrzezenia).toEqual([]);
+  });
+
+  it('pomiary cyklu 1 zostają na wykresie z ujemnymi tygodniami i bez kamieni', () => {
+    const m = zKarty(moduly().P, CY10);
+    expect(m.seria.map((s) => s.tydzien)).toEqual([-44, -31, -4, 0, 13, 26]);
+    expect(m.seria.map((s) => s.przedOdniesieniem)).toEqual([true, true, true, false, false, false]);
+    // Jedyny kamień: 5 % od 98,5 kg (10.05.2025). Przejście „Otyłość II → I” z cyklu 1 to kontekst, nie kamień.
+    expect(m.kamienie.map((k) => `${k.tydzien}:${k.typ}`)).toEqual(['26:pasmo-osiagniete']);
+    expect(m.przekroczenia[0]).toMatchObject({ prog: 5, osiagniety: true, dateISO: '2025-05-10', masa: 93 });
+    expect(m.seria[5].zmianaMasyKg).toBeCloseTo(-5.5, 6);
+    expect(m.seria[5].zmianaMasyPct).toBeCloseTo(-5.584, 3);
+  });
+
+  it('ostatni cykl zakończony → „odstawione”, tydzień od JEGO Włączenia', () => {
+    const z = pkt('end', '2025-06-01', 92.5, WEGOVY, 41, 4);
+    for (const punkty of [[...CY10, z], [z, ...CY10.slice().reverse()]]) {
+      const m = zKarty(moduly().P, punkty);
+      expect(m.cykl).toMatchObject({ numer: 2, liczba: 2, stan: 'zakonczony' });
+      expect(m.leczenie.stan).toBe('odstawione');
+      expect(m.leczenie.odstawienieDateISO).toBe('2025-06-01');
+      // 12.11.2024 → 01.06.2025 = 201 dni = 28,7 tyg. Dotąd 72 — od Włączenia Saxendy.
+      expect(m.leczenie.odstawienieTydzien).toBe(29);
+      expect(m.punktOdniesienia.masa).toBe(98.5);
+    }
+  });
+
+  it('Zakończenie bez masy (np. z importu) nadal odstawia leczenie', () => {
+    // `normPomiar` wyrzuca punkt bez masy, więc dotąd taki punkt znikał i stan brzmiał „na leczeniu”.
+    const z = pkt('end', '2025-06-01', null, WEGOVY, 41, 4);
+    const m = zKarty(moduly().P, [...CY10, z]);
+    expect(m.leczenie.stan).toBe('odstawione');
+    expect(m.leczenie.odstawienieDateISO).toBe('2025-06-01');
+    expect(m.leczenie.odstawienieTydzien).toBe(29);
+    expect(m.seria, 'punkt bez masy nie trafia do serii').toHaveLength(6);
+    const h = tekstHtml(moduly().U.buildHtml(m));
+    expect(h).toContain('Leczenie odstawione w 29. tygodniu');
+  });
+
+  it('jeden cykl → wynik.cykl „1 z 1” i ten sam wynik co dotąd', () => {
+    const m = zKarty(moduly().P, CYKL_1);
+    expect(m.cykl).toEqual({ numer: 1, liczba: 1, stan: 'zakonczony', bezWlaczenia: false, niezgodnosci: [] });
+    expect(m.punktOdniesienia.masa).toBe(104);
+    expect(m.leczenie.stan).toBe('odstawione');
+    expect(m.leczenie.odstawienieTydzien).toBe(40);
+    expect(m.zestaw.id).toBe('LIRAGLUTYD');
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+  });
+
+  it('bez punktów leczenia wynik.cykl jest null, a stan „brak-danych” jak dotąd', () => {
+    const { P } = moduly();
+    const m = P.analizuj({ wiekLat: 47, pomiary: [
+      { dateISO: '2026-01-08', weight: 112.4, height: 167 },
+      { dateISO: '2026-05-14', weight: 96.2, height: 167 },
+    ] });
+    expect(m.cykl).toBeNull();
+    expect(m.leczenie.stan).toBe('brak-danych');
+    const zamknieta = P.analizuj({ wiekLat: 9, pomiary: [], punktyLeczenia: CY10 });
+    expect(zamknieta.dostepne.ok).toBe(false);
+    expect(zamknieta.cykl, 'kształt wyniku stały także przy zamkniętej bramie').toMatchObject({ numer: 2, liczba: 2 });
+  });
+});
+
+describe('Cykl nr 2 bez Włączenia — odniesienie z tego cyklu, nie z poprzedniego', () => {
+  /* Stary zapis: Kontynuacja po Zakończeniu → `podziel` daje cykl 2 bez Włączenia. */
+  const KPOZ = [...CYKL_1, pkt('continue', '2024-11-12', 98.5, WEGOVY, 40, 10), CYKL_2[1], CYKL_2[2]];
+
+  it('procenty od pierwszego pomiaru cyklu 2 (98,5 kg), nie od 104 kg z cyklu 1', () => {
+    const m = zKarty(moduly().P, KPOZ);
+    expect(m.cykl).toEqual({ numer: 2, liczba: 2, stan: 'aktywny', bezWlaczenia: true, niezgodnosci: [] });
+    expect(m.punktOdniesienia.zrodlo).toBe('pierwszy-pomiar-cyklu');
+    expect(m.punktOdniesienia.masa).toBe(98.5);
+    expect(m.punktOdniesienia.dateISO).toBe('2024-11-12');
+    expect(m.punktOdniesienia.opis).toBe('Bieżący cykl leczenia (po Zakończeniu poprzedniego) nie ma punktu „Włączenie” — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed leczenia.');
+    expect(m.leczenie.stan).toBe('na-leczeniu');
+    expect(m.leczenie.lek).toBe(WEGOVY.drug);
+    expect(m.seria.map((s) => s.tydzien)).toEqual([-44, -31, -4, 0, 13, 26]);
+  });
+
+  it('podpis osi i opis odniesienia mówią o pierwszym pomiarze bieżącego cyklu', () => {
+    const { P, U } = moduly();
+    const h = U.buildHtml(zKarty(P, KPOZ));
+    expect(h).toContain('tygodnie od pierwszego pomiaru bieżącego cyklu');
+    expect(tekstHtml(h)).toContain('Wszystkie zmiany liczone od pierwszego pomiaru bieżącego cyklu leczenia (cykl 2 z 2; 98,5 kg, 12.11.2024) — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia, nie od poprzedniej wizyty.');
+  });
+
+  it('lek z ChPL w cyklu bez Włączenia: znacznik ChPL znika jak w F1 (bez wspólnego zera)', () => {
+    const kpozSax = [...CYKL_1,
+      pkt('continue', '2024-11-12', 98.5, SAXENDA, 40, 10), pkt('continue', '2025-02-12', 95.5, SAXENDA, 41, 1)];
+    const m = zKarty(moduly().P, kpozSax);
+    expect(m.zestaw.id).toBe('LIRAGLUTYD');
+    expect(m.punktDecyzyjny.jest).toBe(true);
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBeNull();
+    expect(m.punktDecyzyjny.bezOsi).toBe('brak-punktu-wlaczenia');
+    expect(m.ostrzezenia.join(' ')).toContain('procenty liczą się od pierwszego pomiaru bieżącego cyklu, nie od masy początkowej z ChPL');
+  });
+
+  it('remis dat z Zakończeniem poprzedniego cyklu: wygrywa pomiar, który jest punktem bieżącego cyklu', () => {
+    // Pierwszy krok poprawki starego zapisu w monitorze: Zakończenie Saxendy z datą pierwszej
+    // Kontynuacji Wegovy. Ten sam dzień, inna masa — dwa pomiary w serii o tej samej dacie.
+    const punkty = [CYKL_1[0], CYKL_1[1], pkt('end', '2024-11-12', 98.7, SAXENDA, 40, 10),
+      pkt('continue', '2024-11-12', 98.5, WEGOVY, 40, 10), CYKL_2[1]];
+    const m = zKarty(moduly().P, punkty);
+    expect(m.cykl).toMatchObject({ numer: 2, bezWlaczenia: true });
+    expect(m.punktOdniesienia.masa, 'masa wizyty cyklu 2, nie Zakończenia cyklu 1').toBe(98.5);
+  });
+
+  it('seria bez pomiarów cyklu (same pomiary z osi czasu sprzed cyklu) → pierwszy punkt cyklu', () => {
+    const { P } = moduly();
+    const m = P.analizuj({
+      wiekMies: WIEK_MIES,
+      pomiary: [{ dateISO: '2024-01-12', weight: 104, height: 170 }, { dateISO: '2024-04-12', weight: 99, height: 170 }],
+      punktyLeczenia: KPOZ,
+    });
+    expect(m.punktOdniesienia.zrodlo).toBe('pierwszy-pomiar-cyklu');
+    expect(m.punktOdniesienia.masa).toBe(98.5);
+  });
+});
+
+describe('Niezgodny zapis bieżącego cyklu — znacznik ChPL wstrzymany jak w Karcie (D5)', () => {
+  /* CK-5 / CY-7: dwa Włączenia Saxendy bez Zakończenia między nimi. */
+  const DWA_W = [
+    pkt('start', '2024-01-12', 104, SAXENDA, 40, 0), pkt('continue', '2024-04-12', 99, SAXENDA, 40, 3),
+    pkt('start', '2024-05-03', 99, SAXENDA, 40, 3), pkt('continue', '2024-09-01', 96, SAXENDA, 40, 7),
+  ];
+  const OSTRZ = 'Zapis bieżącego cyklu leczenia wymaga uporządkowania w monitorze DocPro — punktu oceny wg ChPL nie postawiono (ocena wg ChPL tego cyklu jest wstrzymana, jak w Karcie pacjenta).';
+
+  it('dwa Włączenia: bezOsi, ostrzeżenie, brak kamienia ChPL; pasma zostają', () => {
+    const m = zKarty(moduly().P, DWA_W);
+    expect(m.cykl).toEqual({ numer: 1, liczba: 1, stan: 'aktywny', bezWlaczenia: false, niezgodnosci: ['dwa-wlaczenia'] });
+    expect(m.punktDecyzyjny.jest, 'reguła ChPL zostaje w wyniku').toBe(true);
+    expect(m.punktDecyzyjny.tygodnie).toBe(12);
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia, 'dotąd 16. tydzień od pierwszego Włączenia').toBeNull();
+    expect(m.punktDecyzyjny.nominalna).toBe(false);
+    expect(m.punktDecyzyjny.bezOsi).toBe('niezgodny-zapis-cyklu');
+    expect(m.kamienie.filter((k) => k.typ === 'punkt-chpl')).toHaveLength(0);
+    expect(m.ostrzezenia).toContain(OSTRZ);
+    expect(m.ostrzezenia.join(' '), 'jedno zdanie o znaczniku, nie dwa').not.toContain('wspólnego zera');
+    expect(m.zestaw.id, 'drabinka liraglutydu zostaje').toBe('LIRAGLUTYD');
+    expect(m.punktOdniesienia.masa).toBe(104);
+  });
+
+  it('widok: bez znacznika i pasa zwiększania dawki, ostrzeżenie widoczne', () => {
+    const { P, U } = moduly();
+    const m = zKarty(P, DWA_W);
+    const h = U.buildHtml(m);
+    expect(h).not.toContain('nominalnym czasie zwiększania dawki');
+    expect(U.legendaMasy(m).map((l) => l.tekst).join(' ')).not.toMatch(/zwiększanie dawki|ocena wg ChPL/);
+    expect(tekstHtml(h)).toContain(OSTRZ);
+    expect(tekstHtml(h)).toContain('−5 %');
+  });
+
+  it('wydruk do dokumentacji niesie to samo ostrzeżenie', () => {
+    const { P, W } = moduly();
+    const d = W.buildDokument(zKarty(P, DWA_W), { ...OPCJE_DRUKU, wariant: 'kliniczny' });
+    expect(tekstem(d.content)).toContain(OSTRZ);
+  });
+
+  it('dowolny kod niezgodności wstrzymuje znacznik (np. zmiana substancji po R6)', () => {
+    // Atrapa modułu cykli z kodem, którego „Postępy” nie znają — kod ma być ogólny, nie lista przypadków.
+    const win = {};
+    const { P } = moduly(win);
+    const prawdziwy = win.VildaCykleLeczenia;
+    win.VildaCykleLeczenia = {
+      podziel(lista) {
+        const r = prawdziwy.podziel(lista);
+        const c = r.cykle[r.cykle.length - 1];
+        c.niezgodnosci.push({ kod: 'zmiana-substancji', punkty: [c.punkty[0], c.punkty[1]], cykl: c.numer });
+        return r;
+      },
+    };
+    const m = zKarty(P, CYKL_1.slice(0, 2));
+    expect(m.cykl.niezgodnosci).toEqual(['zmiana-substancji']);
+    expect(m.punktDecyzyjny.bezOsi).toBe('niezgodny-zapis-cyklu');
+    expect(m.ostrzezenia).toContain(OSTRZ);
+  });
+
+  it('niezgodność w POPRZEDNIM cyklu nie wstrzymuje oceny bieżącego', () => {
+    const punkty = [...DWA_W, pkt('end', '2024-10-15', 95, SAXENDA, 40, 9),
+      pkt('start', '2024-11-12', 95, SAXENDA, 40, 10), pkt('continue', '2025-02-12', 90, SAXENDA, 41, 1)];
+    const m = zKarty(moduly().P, punkty);
+    expect(m.cykl).toMatchObject({ numer: 2, liczba: 2, niezgodnosci: [] });
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+    expect(m.punktDecyzyjny.bezOsi).toBeUndefined();
+    expect(m.ostrzezenia.join(' ')).not.toContain('wymaga uporządkowania');
+  });
+});
+
+describe('CY-10 — teksty widoku i wydruku', () => {
+  it('panel: odniesienie z numerem cyklu, podpis osi, lek, bez „Leczenie odstawione”', () => {
+    const { P, U } = moduly();
+    const h = U.buildHtml(zKarty(P, CY10));
+    const t = tekstHtml(h);
+    expect(t).toContain('Wszystkie zmiany liczone od masy ciała przy włączeniu bieżącego cyklu leczenia (cykl 2 z 2; 98,5 kg, 12.11.2024), nie od poprzedniej wizyty.');
+    expect(h).toContain('tygodnie od włączenia leczenia');
+    expect(h).toContain('Lek: <b>Wegovy (semaglutyd) – s.c. 1×/tydz.</b>');
+    expect(t).not.toContain('Leczenie odstawione');
+    expect(t).toContain('98,5');
+    expect(t).toContain('93,0');
+  });
+
+  it('jeden cykl: brzmienie panelu bez zmian, bez „cykl 1 z 1”', () => {
+    const { P, U } = moduly();
+    const t = tekstHtml(U.buildHtml(zKarty(P, CYKL_2)));
+    expect(t).toContain('Wszystkie zmiany liczone od masy ciała przy włączeniu leczenia (98,5 kg, 12.11.2024), nie od poprzedniej wizyty.');
+    expect(t).not.toContain('cykl 1 z 1');
+    expect(t).not.toContain('bieżącego cyklu');
+  });
+
+  it('kartka pacjenta: „Od włączenia bieżącego leczenia (data)” zamiast „Od początku obserwacji”', () => {
+    const { P, W } = moduly();
+    const t = tekstem(W.buildDokument(zKarty(P, CY10), { ...OPCJE_DRUKU, wariant: 'pacjent' }).content);
+    expect(t).toContain('Od włączenia bieżącego leczenia (12.11.2024) masa ciała zmniejszyła się o 5,5 kg (5,6 % masy początkowej).');
+    expect(t).not.toContain('Od początku obserwacji');
+    expect(t).toContain('Wszystkie zmiany liczone od masy ciała przy włączeniu bieżącego cyklu leczenia (cykl 2 z 2; 98,5 kg, 12.11.2024), nie od poprzedniej wizyty.');
+  });
+
+  it('kartka pacjenta przy przyroście masy w bieżącym cyklu: to samo „od włączenia bieżącego leczenia”', () => {
+    const { P, W } = moduly();
+    const punkty = [...CYKL_1, CYKL_2[0], pkt('continue', '2025-02-12', 100, WEGOVY, 41, 1)];
+    const t = tekstem(W.buildDokument(zKarty(P, punkty), { ...OPCJE_DRUKU, wariant: 'pacjent' }).content);
+    expect(t).toContain('Od włączenia bieżącego leczenia (12.11.2024) masa ciała zwiększyła się o 1,5 kg.');
+  });
+
+  it('kartka do dokumentacji: punkt odniesienia z numerem cyklu i lek bieżącego cyklu', () => {
+    const { P, W } = moduly();
+    const t = tekstem(W.buildDokument(zKarty(P, CY10), { ...OPCJE_DRUKU, wariant: 'kliniczny' }).content);
+    expect(t).toContain('Punkt odniesienia: włączenie bieżącego cyklu leczenia (cykl 2 z 2)');
+    expect(t).toContain('lek: Wegovy (semaglutyd) – s.c. 1×/tydz.');
+    expect(t).not.toContain('Saxenda');
+  });
+
+  it('jeden cykl: kartki brzmią jak dotąd', () => {
+    const { P, W } = moduly();
+    const m = zKarty(P, CYKL_2);
+    expect(tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'pacjent' }).content))
+      .toContain('Od początku obserwacji masa ciała zmniejszyła się o 5,5 kg');
+    expect(tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'kliniczny' }).content))
+      .toContain('Punkt odniesienia: włączenie leczenia ');
+  });
+
+  it('cykl 2 bez Włączenia: kartki nazywają pierwszy pomiar bieżącego cyklu', () => {
+    const { P, W } = moduly();
+    const kpoz = [...CYKL_1, pkt('continue', '2024-11-12', 98.5, WEGOVY, 40, 10), CYKL_2[1], CYKL_2[2]];
+    const m = zKarty(P, kpoz);
+    expect(tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'pacjent' }).content))
+      .toContain('Od pierwszego pomiaru w bieżącym leczeniu (12.11.2024) masa ciała zmniejszyła się o 5,5 kg');
+    expect(tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'kliniczny' }).content))
+      .toContain('Punkt odniesienia: pierwszy pomiar bieżącego cyklu leczenia (cykl 2 z 2)');
+  });
+});
+
+describe('Bez modułu cykli — reguła sprzed raty 4 (test negatywny)', () => {
+  function bezModulu(podmiana) {
+    const win = {};
+    const m = moduly(win);
+    if (podmiana === undefined) delete win.VildaCykleLeczenia;
+    else win.VildaCykleLeczenia = podmiana;
+    return m;
+  }
+
+  it.each([
+    ['brak modułu', undefined],
+    ['podziel rzuca', { podziel() { throw new Error('awaria'); } }],
+    ['podziel oddaje śmieci', { podziel() { return { cykle: 'nie-tablica' }; } }],
+  ])('%s → pierwsze Włączenie w kolejności wpisu i „odstawione” przy jakimkolwiek Zakończeniu', (_, podmiana) => {
+    const { P, U, W } = bezModulu(podmiana);
+    const m = zKarty(P, CY10);
+    expect(m.cykl).toBeNull();
+    expect(m.punktOdniesienia.masa, 'dawna reguła: Włączenie Saxendy').toBe(104);
+    expect(m.punktOdniesienia.dateISO).toBe('2024-01-12');
+    expect(m.leczenie.stan).toBe('odstawione');
+    expect(m.leczenie.odstawienieTydzien).toBe(40);
+    expect(m.zestaw.id).toBe('LIRAGLUTYD');
+    expect(m.punktDecyzyjny.tydzienOdOdniesienia).toBe(16);
+    const t = tekstHtml(U.buildHtml(m));
+    expect(t).toContain('przy włączeniu leczenia (104,0 kg, 12.01.2024)');
+    expect(t).toContain('Leczenie odstawione w 40. tygodniu');
+    expect(tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'kliniczny' }).content))
+      .toContain('Punkt odniesienia: włączenie leczenia ');
+  });
+
+  it('moduł czytany w chwili wywołania — działa, gdy ładuje się PO silniku (kolejność na stronach)', () => {
+    // Na 6 z 8 stron `vilda_cykle_leczenia.js` stoi za modułami „Postępów”.
+    const win = {};
+    win.window = win;
+    const wykonaj = (plik) => new Function('window', 'globalThis', zrodlo(plik))(win, win);
+    ['vilda_bmi.js', 'obesity_response_criteria.js', 'vilda_postepy_doroslego_dane.js'].forEach((p) => loadBrowserScript(p, win));
+    wykonaj('vilda_postepy_doroslego.js');
+    expect(win.VildaCykleLeczenia, 'jeszcze nie załadowany').toBeUndefined();
+    expect(zKarty(win.VildaPostepyDoroslego, CY10).cykl, 'na razie dawna reguła').toBeNull();
+    wykonaj('vilda_cykle_leczenia.js');
+    const m = zKarty(win.VildaPostepyDoroslego, CY10);
+    expect(m.cykl).toMatchObject({ numer: 2, liczba: 2 });
+    expect(m.punktOdniesienia.masa).toBe(98.5);
+  });
+});
