@@ -6868,11 +6868,16 @@ cyklu (z dotychczasowym lekiem) i Włączenie nowego cyklu — także tego sameg
   jako `dwa-wlaczenia`).
 - Dodanie i edycja, które wprowadzają **nowe** przejście, są odrzucane (bez `wybor` — wybór jest zarezerwowany dla D2).
   Przejście rozpoznaje się po parze substancji i numerze jej wystąpienia w zapisie, nie po punktach: stare przejście
-  przesunięte na inny punkt (np. dopisana wcześniejsza wizyta starego leku, poprawka leku pierwszej wizyty nowego) nie jest
-  nowe. Usunięcia R6 nie blokuje nigdy.
+  przesunięte na inny punkt w tym samym cyklu (np. dopisana wcześniejsza wizyta starego leku, poprawka leku pierwszej wizyty
+  nowego) albo do cyklu o innym numerze po przenumerowaniu nie jest nowe. Mimo zgodnej pary i numeru przejście jest
+  **nowe**, gdy (a) w jego cyklu — rozpoznanym po pozostałych punktach, nie po numerze — przed akcją nie było przejścia tej
+  pary (zmiana daty nie przenosi starego przejścia do innego, poprawnego cyklu), albo (b) pierwszym punktem nowej
+  substancji staje się dopiero tą akcją Zakończenie (Zakończenie ma lek swojego cyklu). Stare Zakończenie z lekiem nowej
+  substancji wolno edytować (D5). Usunięcia R6 nie blokuje nigdy.
 - Stary zapis ze zmianą substancji w cyklu (D5) nie jest poprawiany sam. Zakończenie wpisane tak, że odcięta część cyklu
   zaczyna się od pierwszego punktu nowej substancji, jest poprawką (jak rozdzielenie dwóch Włączeń w racie 2): odcięta
-  część staje się cyklem bez Włączenia, a lekarz zmienia potem tę wizytę na Włączenie.
+  część staje się cyklem bez Włączenia, a lekarz zmienia potem tę wizytę na Włączenie. Takie Zakończenie musi mieć lek
+  zamykanego cyklu albo być bez leku — z lekiem nowej substancji jest odrzucane (b).
 - Remis dat: gdy żadne miejsce w remisie nie przechodzi, a któreś odpadło przez R6, komunikat mówi o zmianie substancji
   (przyczyna niezależna od miejsca), nie o „dacie w trakcie cyklu”. Wyjątek: pytanie o cykl bez Włączenia (D2) nie jest
   odmową — Kontynuacja z nowym lekiem w dniu Zakończenia poprzedniego cyklu dostaje pytanie „Zapisz jako Włączenie nowego
@@ -6880,17 +6885,19 @@ cyklu (z dotychczasowym lekiem) i Włączenie nowego cyklu — także tego sameg
 - Bez modułu kryteriów (np. offline bez pliku z `OPTIONAL_ASSETS`) R6 nie działa — zasada sprzed raty 4.
 
 **Komunikaty** (`kod: 'zmiana-substancji'`; {N} — numer cyklu, {Z}/{NA} — krótka nazwa leku punktu starej/nowej substancji):
-- wizyta (Kontynuacja) z nowym lekiem: „Ta wizyta ma inną substancję czynną ({NA}) niż wcześniejsze wizyty cyklu {N} ({Z}).
-  Zmiana substancji czynnej zaczyna nowy cykl: zapisz najpierw Zakończenie cyklu {N} z lekiem {Z} (może mieć tę samą datę),
-  a tę wizytę jako Włączenie nowego cyklu.” — pod przyciskiem „Inna substancja niż w cyklu {N} ({Z})”;
+- wizyta (Kontynuacja) z nowym lekiem na końcu cyklu, który nie ma jeszcze Zakończenia (tylko tam radę da się wykonać):
+  „Ta wizyta ma inną substancję czynną ({NA}) niż wcześniejsze wizyty cyklu {N} ({Z}). Zmiana substancji czynnej zaczyna
+  nowy cykl: zapisz najpierw Zakończenie cyklu {N} z lekiem {Z} (może mieć tę samą datę), a tę wizytę jako Włączenie nowego
+  cyklu.” — pod przyciskiem „Inna substancja niż w cyklu {N} ({Z})”;
 - Zakończenie z nowym lekiem: „Zakończenie zamyka cykl {N} — zapisz je z lekiem tego cyklu ({Z}). Nowy lek ({NA}) zapiszesz
   potem jako Włączenie nowego cyklu, także tego samego dnia.” — „Zakończenie z lekiem cyklu {N} ({Z})”;
 - Włączenie z innym lekiem niż wizyty jego cyklu (dopisane wstecz albo edycja leku Włączenia): „Wizyty cyklu {N} mają inną
   substancję czynną ({NA}) niż to Włączenie ({Z}). Włączenie musi mieć lek swojego cyklu — popraw lek albo datę.” —
   „Inna substancja niż wizyty cyklu {N} ({NA})”;
-- pozostałe (np. zmiana daty przenosząca wizytę do cyklu z innym lekiem): „Po tej zmianie w cyklu {N} zmieniałaby się
-  substancja czynna ({Z} → {NA}) bez Zakończenia między wizytami. Zmiana substancji czynnej zaczyna nowy cykl — popraw lek
-  albo datę.” — „Zmiana substancji w cyklu {N}”.
+- pozostałe (np. zmiana daty przenosząca wizytę do cyklu z innym lekiem; wizyta z nowym lekiem w środku cyklu albo
+  w cyklu, który ma już Zakończenie — także w remisie z nim — gdzie drugiego Zakończenia nie da się wpisać): „Po tej zmianie
+  w cyklu {N} zmieniałaby się substancja czynna ({Z} → {NA}) bez Zakończenia między wizytami. Zmiana substancji czynnej
+  zaczyna nowy cykl — popraw lek albo datę.” — „Zmiana substancji w cyklu {N}”.
 
 **Kod.** `vilda_cykle_leczenia.js` (VERSION '1' → '2'): `substancja(p)` i `nazwaLeku(p)` (eksportowane — dla monitora
 i Karty w drugiej fali), niezgodność `zmiana-substancji` w `podziel`, sygnatura przejścia po parze substancji, wyjątek
@@ -6913,14 +6920,18 @@ substancji):
 | R6-P | jak R6-S; dodaj Z Saxenda 12.02.2025, potem zmień K 12.02.2025 na W | cykle „W, K, Z” i „K, K” (bez Włączenia), potem „W, K” — bez niezgodności | Z odrzucone (rozcięcie cyklu) |
 | R6-R | K 10.01.2025, K 10.04.2025 (Saxenda, cykl bez Włączenia); dodaj W 10.01.2025 z Wegovy | odmowa „Wizyty cyklu 1 mają inną substancję czynną (Saxenda) niż to Włączenie (Wegovy)…” | dodane jako Włączenie cyklu |
 | R6-K | cykl 1 Saxenda zakończony 15.10.2024; dodaj K 15.10.2024 z Wegovy | pytanie D2 „… Ta wizyta rozpocznie cykl 2.” (Włączenie nowego cyklu albo cykl bez Włączenia) | dodana do cyklu 1 przed Zakończeniem |
+| R6-KZ | jak R6-K, ale istnieje już cykl 2 (W 12.11.2024, K 12.02.2025 Wegovy); dodaj K 15.10.2024 z Wegovy | odmowa „Po tej zmianie w cyklu 1 zmieniałaby się substancja czynna (Saxenda → Wegovy)… — popraw lek albo datę.” (bez rady o dopisaniu Zakończenia — cykl 1 już je ma) | dodana do cyklu 1 przed Zakończeniem |
+| R6-ZP | jak R6-S; dodaj Z 10.11.2024 albo 12.02.2025 z Wegovy | odmowa „Zakończenie zamyka cykl 1 — zapisz je z lekiem tego cyklu (Saxenda)…”; Z bez leku — jak Z z Saxendą (R6-P) | Z odrzucone (rozcięcie cyklu) |
+| R6-PD | cykl 1: W, K Saxenda, K 12.07.2024 Wegovy, Z Saxenda; cykl 2: W 12.11.2024, K 12.02.2025 Saxenda; zmień datę K Wegovy na 01.03.2025 | odmowa „Po tej zmianie w cyklu 2 zmieniałaby się substancja czynna (Saxenda → Wegovy)…”; gdy cykl 2 to Wegovy — pytanie o przeniesienie, zapis bez niezgodności | pytanie o przeniesienie |
 
-**Testy.** `tests/unit/cykle-leczenia.test.mjs` 33 → 60 (prawdziwy moduł z prawdziwymi kryteriami ChPL — loader
+**Testy.** `tests/unit/cykle-leczenia.test.mjs` 33 → 66 (prawdziwy moduł z prawdziwymi kryteriami ChPL — loader
 `tests/support/load-browser-script.mjs` ładuje je teraz jako zależność modułu cykli): przypadki z tabeli, rozpoznanie
-substancji i nazwa leku, przesunięcie starego przejścia, wybór komunikatu przy nowym przejściu wcześniej w zapisie niż stare,
-Kontynuacja z nowym lekiem w dniu Zakończenia (pytanie D2), kontrola negatywna bez kryteriów, kryteria załadowane po
-module, awaria kryteriów (punkt neutralny, bez wyjątku). Test „zmiana daty przenosząca punkt do innego cyklu wymaga
-potwierdzenia” przenosi teraz wizytę z lekiem cyklu docelowego (z innym lekiem — osobny test odmowy R6). `tests/e2e/otylosc-cykle-rata-4-modul.spec.mjs` 4 (prawdziwy DocPro: CY-11 i
-Zakończenie z nowym lekiem odrzucone przy kliknięciu, CY-8 przechodzi, edycja leku Włączenia odrzucona przy zapisie,
+substancji i nazwa leku, przesunięcie starego przejścia, przenumerowanie cykli, wybór komunikatu przy nowym przejściu
+wcześniej w zapisie niż stare, rada o Zakończeniu tylko tam, gdzie da się ją wykonać, edycja starego Zakończenia z lekiem
+nowej substancji, Kontynuacja z nowym lekiem w dniu Zakończenia (pytanie D2), kontrola negatywna bez kryteriów, kryteria
+załadowane po module, awaria kryteriów (punkt neutralny, bez wyjątku). Test „zmiana daty przenosząca punkt do innego
+cyklu wymaga potwierdzenia” przenosi teraz wizytę z lekiem cyklu docelowego (z innym lekiem — osobny test odmowy R6).
+`tests/e2e/otylosc-cykle-rata-4-modul.spec.mjs` 4 (prawdziwy DocPro: CY-11 i Zakończenie z nowym lekiem odrzucone przy kliknięciu, CY-8 przechodzi, edycja leku Włączenia odrzucona przy zapisie,
 telefon 390 px bez poziomego przewijania). Bez zmian i zielone: `otylosc-edycja-punktu.test.mjs`, e2e monitora (raty 1–2,
 edycja punktu), Karty (rata 3, P-OTYLOSC-BEZ-STARTU), P-KOTWICA, kryteriów ChPL, porównania, „Postępów” i kursów raty 6.
 
@@ -6934,11 +6945,10 @@ leczenia”, a baner monitora nie ma pozycji dla tego kodu (poprawka: Zakończen
 **Ograniczenia.** Rozpoznanie substancji = lista kryteriów ChPL (cztery preparaty z monitora); preparaty spoza niej są
 neutralne. `obesityTherapyMonitorSetPoints` (import) i `obesityTherapyMonitorAssignDrug` (masowe przypisanie leku) nie
 przechodzą przez reguły — przejście wykryje dopiero `podziel` (niezgodność, baner). Sygnatura po parze substancji oznacza, że
-w zapisie, który już ma przejście A → B, przejście A → B w innym miejscu nie jest „nowe” i przechodzi (np. w starym zapisie
-A, A, B, B Zakończenie z lekiem B wpisane między ostatnią wizytą A a pierwszą B) — cykl zostaje wtedy „do uporządkowania”
-z wstrzymanym werdyktem. Błędnie wpisanego leku
-cyklu z kilkoma wizytami nie da się poprawić pojedynczą edycją (każda pierwsza zmiana tworzy przejście) — w tej racie
-tylko odmowa; zostaje usunięcie wizyt i wpisanie ich ponownie (zrywa powiązanie `obesityPointId` z osią czasu Karty).
+w cyklu, który już ma przejście A → B, przejście A → B przesunięte na inny punkt tego cyklu nie jest „nowe” i przechodzi
+(np. Kontynuacja z lekiem B dopisana przed pierwszą wizytą B) — cykl zostaje wtedy „do uporządkowania” z wstrzymanym
+werdyktem. Błędnie wpisanego leku cyklu z kilkoma wizytami nie da się poprawić pojedynczą edycją (każda pierwsza zmiana
+tworzy przejście) — w tej racie tylko odmowa; zostaje usunięcie wizyt i wpisanie ich ponownie (zrywa powiązanie `obesityPointId` z osią czasu Karty).
 
 **Wersje.** VERSION modułu '1' → '2'. Tokeny `?v=`, precache i `SW_VERSION` — `npm run podbij-wersje` przy integracji raty 4.
 

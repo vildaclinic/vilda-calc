@@ -49,9 +49,11 @@
  * substancji, pierwszy punkt nowej], z, na } — stary zapis z takim przejściem zostaje jednym cyklem
  * (D5: nic nie poprawiamy po cichu; Karta wstrzymuje ocenę wg ChPL tego cyklu). Sygnatura przejścia
  * przy sprawdzaniu akcji to para substancji i numer jej wystąpienia, nie punkty — przesunięcie
- * starego przejścia na inny punkt nie jest nowym przejściem. R6 nigdy nie blokuje usunięcia.
+ * starego przejścia na inny punkt w tym samym cyklu nie jest nowym przejściem; przeniesienie go
+ * (zmianą daty) do cyklu, w którym tej pary nie było — jest. R6 nigdy nie blokuje usunięcia.
  * Zakończenie wpisane tuż przed pierwszym punktem nowej substancji starego zapisu jest poprawką
- * (jak rozdzielenie dwóch Włączeń w racie 2) — odcięta część staje się cyklem bez Włączenia.
+ * (jak rozdzielenie dwóch Włączeń w racie 2) — odcięta część staje się cyklem bez Włączenia;
+ * samo Zakończenie musi i wtedy mieć lek zamykanego cyklu (albo być bez leku).
  */
 (function (w) {
   'use strict';
@@ -345,7 +347,12 @@
     // 3. Nowa niezgodność (stare, sprzed akcji, nie blokują — D5: nie poprawiamy po cichu).
     //    Przejście substancji (R6) rozpoznajemy po parze substancji i numerze jej wystąpienia
     //    w całej liście, nie po punktach: stare przejście przesunięte na inny punkt albo do cyklu
-    //    o innym numerze nie jest nowe. Usunięcia R6 nie blokuje nigdy.
+    //    o innym numerze nie jest nowe. Mimo zgodnej sygnatury przejście jest NOWE, gdy:
+    //    (a) w jego cyklu — rozpoznanym po pozostałych punktach, nie po numerze — przed akcją nie
+    //        było przejścia tej pary (zmiana daty nie przenosi starego przejścia do innego cyklu);
+    //    (b) jego pierwszym punktem nowej substancji staje się dopiero tą akcją Zakończenie
+    //        (Zakończenie ma lek swojego cyklu — także przy poprawce starego zapisu z kroku 2).
+    //    Usunięcia R6 nie blokuje nigdy.
     function sygnatury(lista) {
       var ile = {};
       return lista.map(function (n) {
@@ -355,12 +362,26 @@
         return n.kod + '|' + para + '#' + ile[para];
       });
     }
+    var paryPrzed = przed.cykle.map(function (c) {
+      var s = {};
+      c.niezgodnosci.forEach(function (n) { if (n.kod === 'zmiana-substancji') s[n.z + '>' + n.na] = 1; });
+      return s;
+    });
+    function przejscieNowe(n) {
+      if (kand && kand.type === 'end' && n.punkty[1] === kand && poczatekNowejSubstancji[kKand] !== 1) return true;
+      var para = n.z + '>' + n.na;
+      return !nowy.cykle[n.cykl - 1].punkty.some(function (p) {
+        var k = kl(p);
+        return k !== kKand && mP[k] != null && paryPrzed[mP[k] - 1][para] === 1;
+      });
+    }
     var bylo = {};
     sygnatury(przed.niezgodnosci).forEach(function (s) { bylo[s] = 1; });
     var sygNowe = sygnatury(nowy.niezgodnosci);
     var nowe = nowy.niezgodnosci.filter(function (n, ix) {
-      if (bylo[sygNowe[ix]]) return false;
-      return !(rodzaj === 'usun' && n.kod === 'zmiana-substancji');
+      if (n.kod !== 'zmiana-substancji') return !bylo[sygNowe[ix]];
+      if (rodzaj === 'usun') return false;
+      return !bylo[sygNowe[ix]] || przejscieNowe(n);
     });
     if (nowe.length) return komunikatNiezgodnosci(wybierzNiezgodnosc(nowe, nowy, kand), nowy, kand, rodzaj, oryg);
 
@@ -418,18 +439,30 @@
     return nowe[0];
   }
 
+  // Czy po odmowie wizyty da się wykonać radę „zapisz najpierw Zakończenie cyklu (może mieć tę samą
+  // datę), a tę wizytę jako Włączenie nowego cyklu”: cykl nie ma jeszcze Zakończenia i po wizycie
+  // nie ma jego późniejszych punktów (remis daty się nie liczy — Zakończenie stanie po remisach).
+  // W cyklu już zakończonym (także w remisie z jego Zakończeniem) drugie Zakończenie jest
+  // odrzucane, a w środku cyklu Zakończenie odcięłoby jego późniejsze wizyty.
+  function radaZakonczenia(c, kand, tr) {
+    if (c.zakonczenie) return false;
+    var k = klucz(kand, tr);
+    return c.punkty.slice(c.punkty.indexOf(kand) + 1).every(function (p) { return klucz(p, tr) === k; });
+  }
+
   // R6: komunikat zależny od roli kandydata w przejściu substancji. {Z} — lek ostatniego punktu
   // starej substancji, {NA} — lek pierwszego punktu nowej. Edycja, która nie zmienia substancji
   // punktu, a tylko jego miejsce (np. data przenosi wizytę do cyklu z innym lekiem), dostaje opis
-  // ogólny — rada „zapisz Zakończenie, a tę wizytę jako Włączenie” byłaby wtedy myląca.
-  function komunikatZmianySubstancji(n, c, kand, rodzaj, oryg) {
+  // ogólny — rada „zapisz Zakończenie, a tę wizytę jako Włączenie” byłaby wtedy myląca. Tę radę
+  // dostaje też tylko wizyta, po której da się ją wykonać (`radaZakonczenia`).
+  function komunikatZmianySubstancji(n, c, kand, rodzaj, oryg, tr) {
     var pZ = n.punkty[0];
     var pNa = n.punkty[1];
     var lekZ = nazwaLeku(pZ) || n.z;
     var lekNa = nazwaLeku(pNa) || n.na;
     var N = c.numer;
     var tylkoMiejsce = rodzaj === 'edytuj' && !!oryg && substancja(oryg) === substancja(kand);
-    if (kand && !tylkoMiejsce && kand === pNa && kand.type === 'continue') {
+    if (kand && !tylkoMiejsce && kand === pNa && kand.type === 'continue' && radaZakonczenia(c, kand, tr)) {
       return blad('zmiana-substancji', 'Ta wizyta ma inną substancję czynną (' + lekNa + ') niż wcześniejsze wizyty cyklu ' + N + ' (' + lekZ +
         '). Zmiana substancji czynnej zaczyna nowy cykl: zapisz najpierw Zakończenie cyklu ' + N + ' z lekiem ' + lekZ +
         ' (może mieć tę samą datę), a tę wizytę jako Włączenie nowego cyklu.',
@@ -453,7 +486,7 @@
   function komunikatNiezgodnosci(n, nowy, kand, rodzaj, oryg) {
     var c = nowy.cykle[n.cykl - 1];
     var poprz = c.numer > 1 ? nowy.cykle[c.numer - 2] : null;
-    if (n.kod === 'zmiana-substancji') return komunikatZmianySubstancji(n, c, kand, rodzaj, oryg);
+    if (n.kod === 'zmiana-substancji') return komunikatZmianySubstancji(n, c, kand, rodzaj, oryg, nowy.tryb);
     if (n.kod === 'dwa-wlaczenia') {
       var inne = n.punkty.filter(function (p) { return p !== kand; })[0] || n.punkty[0];
       return blad('dwa-wlaczenia', 'Cykl ' + c.numer + ' ma już Włączenie (' + opisPunktu(inne) + '). Nowy cykl rozpoczniesz po Zakończeniu cyklu ' + c.numer + '.',

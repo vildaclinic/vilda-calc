@@ -340,6 +340,8 @@ describe('R6: rozpoznanie substancji czynnej i nazwa leku', () => {
     expect(C.nazwaLeku({ drug: 'Saxenda' })).toBe('Saxenda');
     expect(C.nazwaLeku(WEGOVY)).toBe('Wegovy');
     expect(C.nazwaLeku({ drug: 'Mysimba (naltrekson/bupropion) – p.o.' })).toBe('Mysimba');
+    // Separator „ –” bez nawiasu przed nim (np. lek z importu albo z dawnej listy).
+    expect(C.nazwaLeku({ drug: 'Saxenda – s.c. 1×/dobę' })).toBe('Saxenda');
     expect(C.nazwaLeku({ drug: '', substance: 'Liraglutyd (agonista receptora GLP\u20111)' })).toBe('Liraglutyd');
     expect(C.nazwaLeku({ drug: '', substance: 'semaglutide' })).toBe('semaglutide');
     expect(C.nazwaLeku({})).toBe('');
@@ -462,6 +464,43 @@ describe('R6: zmiana substancji w cyklu jest odrzucana przy dodawaniu i edycji',
     expect(sax.ok).toBe(true);
     expect(cykleId(sax.punkty)).toEqual(['abxc']);
   });
+
+  it('rada „zapisz Zakończenie, a tę wizytę jako Włączenie” tylko tam, gdzie da się ją wykonać', () => {
+    const OGOLNY_C1 = 'Po tej zmianie w cyklu 1 zmieniałaby się substancja czynna (Saxenda → Wegovy) bez Zakończenia między wizytami. Zmiana substancji czynnej zaczyna nowy cykl — popraw lek albo datę.';
+    const cykl1 = [W_SAX, K_SAX, M('c', 'end', 40, 9, 97.5, '2024-10-15')];
+    const oba = [...cykl1, M('d', 'start', 40, 10, 98.5, '2024-11-12', WEGOVY), M('e', 'continue', 41, 1, 95.5, '2025-02-12', WEGOVY)];
+    // Remis z Zakończeniem cyklu 1, gdy cykl 2 już jest: przed Zakończeniem — R6, po nim — przerwa.
+    const remis = dodaj(oba, M('x', 'continue', 40, 9, 97.5, '2024-10-15', WEGOVY));
+    expect(remis.ok).toBe(false);
+    expect(remis.kod).toBe('zmiana-substancji');
+    expect(remis.komunikat).toBe(OGOLNY_C1);
+    expect(remis.krotko).toBe('Zmiana substancji w cyklu 1');
+    // Rada byłaby tu niewykonalna: drugie Zakończenie cyklu 1 i Włączenie przed Włączeniem cyklu 2 są odrzucane.
+    expect(dodaj(oba, M('z', 'end', 40, 9, 97.5, '2024-10-15')).kod).toBe('drugie-zakonczenie');
+    expect(dodaj(oba, M('x', 'start', 40, 9, 97.5, '2024-10-15', WEGOVY)).kod).toBe('dwa-wlaczenia');
+    // Wizyta w środku cyklu zakończonego i w środku trwającego (dopisana albo zmieniona) — też opis ogólny.
+    expect(dodaj(cykl1, M('x', 'continue', 40, 6, 98, '2024-07-12', WEGOVY)).komunikat).toBe(OGOLNY_C1);
+    const trwa = [W_SAX, K_SAX, M('k', 'continue', 40, 6, 98, '2024-07-12')];
+    expect(dodaj(trwa, M('x', 'continue', 40, 5, 98.5, '2024-06-12', WEGOVY)).komunikat).toBe(OGOLNY_C1);
+    expect(C.sprawdz(trwa, { rodzaj: 'edytuj', id: 'b', punkt: { ...K_SAX, ...WEGOVY } }).komunikat).toBe(OGOLNY_C1);
+    // Kontrola: wizyta po ostatniej (tu w remisie z nią) w trwającym cyklu — rada zostaje i da się ją wykonać.
+    const naKoncu = dodaj(trwa, M('x', 'continue', 40, 6, 98, '2024-07-12', WEGOVY));
+    expect(naKoncu.krotko).toBe('Inna substancja niż w cyklu 1 (Saxenda)');
+    const z = dodaj(trwa, M('z', 'end', 40, 6, 98, '2024-07-12'));
+    expect(z.ok).toBe(true);
+    const w = dodaj(z.punkty, M('x', 'start', 40, 6, 98, '2024-07-12', WEGOVY));
+    expect(w.ok).toBe(true);
+    expect(cykleId(w.punkty)).toEqual(['abkz', 'x']);
+    // Remis przy edycji: zmiana leku pierwszej z dwóch wizyt tego samego dnia na końcu cyklu — rada
+    // zostaje (Zakończenie stanie po obu), i da się ją wykonać.
+    const dwie = [W_SAX, K_SAX, M('k', 'continue', 40, 3, 99, '2024-04-12')];
+    expect(C.sprawdz(dwie, { rodzaj: 'edytuj', id: 'b', punkt: { ...K_SAX, ...WEGOVY } }).krotko).toBe('Inna substancja niż w cyklu 1 (Saxenda)');
+    const z2 = dodaj(dwie, M('z', 'end', 40, 3, 99, '2024-04-12'));
+    expect(z2.ok).toBe(true);
+    const w2 = C.sprawdz(z2.punkty, { rodzaj: 'edytuj', id: 'b', punkt: { ...K_SAX, ...WEGOVY, type: 'start' } });
+    expect(w2.ok).toBe(true);
+    expect(cykleId(w2.punkty)).toEqual(['akz', 'b']);
+  });
 });
 
 describe('R6: stary zapis ze zmianą substancji w cyklu (D5) — nic nie zmienia się samo, poprawka przechodzi', () => {
@@ -512,7 +551,19 @@ describe('R6: stary zapis ze zmianą substancji w cyklu (D5) — nic nie zmienia
     expect(kody(lista)).toEqual(['zmiana-substancji']);
     const r = dodaj(lista, M('x', 'continue', 40, 1, 102, '2024-02-12', WEGOVY));
     expect(r.ok).toBe(false);
-    expect(r.komunikat).toBe('Ta wizyta ma inną substancję czynną (Wegovy) niż wcześniejsze wizyty cyklu 1 (Saxenda). Zmiana substancji czynnej zaczyna nowy cykl: zapisz najpierw Zakończenie cyklu 1 z lekiem Saxenda (może mieć tę samą datę), a tę wizytę jako Włączenie nowego cyklu.');
+    // Cykl 1 jest zakończony — bez rady o dopisaniu Zakończenia (opis ogólny), ale z cyklem
+    // i kierunkiem przejścia kandydata (nie Wegovy → Saxenda za nim, nie stare przejście cyklu 2).
+    expect(r.komunikat).toBe('Po tej zmianie w cyklu 1 zmieniałaby się substancja czynna (Saxenda → Wegovy) bez Zakończenia między wizytami. Zmiana substancji czynnej zaczyna nowy cykl — popraw lek albo datę.');
+    expect(r.krotko).toBe('Zmiana substancji w cyklu 1');
+  });
+
+  it('nowe przejście przed starym w tym samym cyklu: komunikat o przejściu do wizyty kandydata', () => {
+    // Wegovy dopisana między Włączenie a Kontynuację Saxendy starego zapisu: przejście Saxenda →
+    // Wegovy przed kandydatem jest „#1” (para już była), a numerację przejmuje stare (b, e) jako „#2”.
+    const r = dodaj(STARY_R6, M('x', 'continue', 40, 1, 102, '2024-02-12', WEGOVY));
+    expect(r.ok).toBe(false);
+    expect(r.kod).toBe('zmiana-substancji');
+    expect(r.komunikat).toBe('Po tej zmianie w cyklu 1 zmieniałaby się substancja czynna (Saxenda → Wegovy) bez Zakończenia między wizytami. Zmiana substancji czynnej zaczyna nowy cykl — popraw lek albo datę.');
   });
 
   it('poprawka w dwóch krokach: Zakończenie Saxendy w dniu pierwszej wizyty Wegovy, potem ta wizyta jako Włączenie', () => {
@@ -532,6 +583,66 @@ describe('R6: stary zapis ze zmianą substancji w cyklu (D5) — nic nie zmienia
     const r3 = dodaj(STARY_R6, M('z', 'end', 40, 10, 98, '2024-11-10'));
     expect(r3.ok).toBe(true);
     expect(cykleId(r3.punkty)).toEqual(['abz', 'ef']);
+  });
+
+  it('Zakończenie z lekiem nowej substancji nie jest poprawką starego zapisu — Zakończenie ma lek swojego cyklu', () => {
+    const Z_KOMUNIKAT = 'Zakończenie zamyka cykl 1 — zapisz je z lekiem tego cyklu (Saxenda). Nowy lek (Wegovy) zapiszesz potem jako Włączenie nowego cyklu, także tego samego dnia.';
+    // Przed pierwszą wizytą Wegovy i w jej dniu (remis) — para Saxenda → Wegovy już była, ale
+    // przejście na Zakończenie jest nowe.
+    for (const z of [M('z', 'end', 40, 10, 98, '2024-11-10', WEGOVY), M('z', 'end', 41, 1, 95.5, '2025-02-12', WEGOVY)]) {
+      const r = dodaj(STARY_R6, z);
+      expect(r.ok).toBe(false);
+      expect(r.kod).toBe('zmiana-substancji');
+      expect(r.komunikat).toBe(Z_KOMUNIKAT);
+      expect(r.krotko).toBe('Zakończenie z lekiem cyklu 1 (Saxenda)');
+      expect(r.punkty).toBeUndefined();
+    }
+    // Zakończenie bez leku (punkt neutralny) jest poprawką jak Zakończenie z Saxendą.
+    const bezLeku = dodaj(STARY_R6, M('z', 'end', 40, 10, 98, '2024-11-10', { drug: '', substance: '' }));
+    expect(bezLeku.ok).toBe(true);
+    expect(cykleId(bezLeku.punkty)).toEqual(['abz', 'ef']);
+    expect(kody(bezLeku.punkty)).toEqual([]);
+  });
+
+  it('stare Zakończenie z lekiem nowej substancji wolno edytować (D5); poprawka leku usuwa niezgodność', () => {
+    const lista = [W_SAX, K_SAX, M('z', 'end', 40, 9, 97.5, '2024-10-15', WEGOVY)];
+    expect(C.podziel(lista).niezgodnosci.map((n) => n.punkty.map((p) => p.id).join(','))).toEqual(['b,z']);
+    const masa = C.sprawdz(lista, { rodzaj: 'edytuj', id: 'z', punkt: { ...lista[2], weight: 97 } });
+    expect(masa.ok).toBe(true);
+    expect(kody(masa.punkty)).toEqual(['zmiana-substancji']);
+    const lek = C.sprawdz(lista, { rodzaj: 'edytuj', id: 'z', punkt: { ...lista[2], ...SAXENDA } });
+    expect(lek.ok).toBe(true);
+    expect(kody(lek.punkty)).toEqual([]);
+  });
+
+  it('stare przejście nie przenosi się zmianą daty do innego cyklu, w którym tej pary nie było', () => {
+    // Cykl 1: stary zapis W, K Saxenda, K Wegovy, Z Saxenda; cykl 2: W, K Saxenda — poprawny, oceniany wg ChPL.
+    const lista = [W_SAX, K_SAX, M('e', 'continue', 40, 6, 97, '2024-07-12', WEGOVY), M('z', 'end', 40, 9, 97, '2024-10-15'),
+      M('d', 'start', 40, 10, 98.5, '2024-11-12'), M('g', 'continue', 41, 1, 95.5, '2025-02-12')];
+    expect(C.podziel(lista).niezgodnosci.map((n) => `${n.punkty.map((p) => p.id).join(',')}:${n.cykl}`)).toEqual(['b,e:1', 'e,z:1']);
+    // Sygnatura (para + numer wystąpienia) by przepuściła: przed — Saxenda → Wegovy #1, po — też #1 (w cyklu 2).
+    const r = C.sprawdz(lista, { rodzaj: 'edytuj', id: 'e', punkt: { ...lista[2], dateISO: '2025-03-01', ageYears: 41, ageMonths: 2 } });
+    expect(r.ok).toBe(false);
+    expect(r.kod).toBe('zmiana-substancji');
+    expect(r.komunikat).toBe('Po tej zmianie w cyklu 2 zmieniałaby się substancja czynna (Saxenda → Wegovy) bez Zakończenia między wizytami. Zmiana substancji czynnej zaczyna nowy cykl — popraw lek albo datę.');
+    expect(r.potwierdz).toBeUndefined();
+    // Kontrola: to samo przeniesienie do cyklu Wegovy porządkuje zapis — pytanie o przeniesienie, bez niezgodności.
+    const doWegovy = lista.map((p) => (p.id === 'd' || p.id === 'g' ? { ...p, ...WEGOVY } : p));
+    const ok = C.sprawdz(doWegovy, { rodzaj: 'edytuj', id: 'e', punkt: { ...doWegovy[2], dateISO: '2025-03-01', ageYears: 41, ageMonths: 2 } });
+    expect(ok.ok).toBe(true);
+    expect(ok.uwaga).toBe('przeniesienie');
+    expect(kody(ok.punkty)).toEqual([]);
+  });
+
+  it('przenumerowanie cykli nie robi ze starego przejścia nowego (cykl rozpoznany po punktach, nie po numerze)', () => {
+    // Stary zapis z dwoma Włączeniami: W, K 2023, potem W, K Saxenda i K, K Wegovy — jeden cykl. Zakończenie
+    // przed drugim Włączeniem rozdziela go (rata 2), a stare przejście przechodzi z cyklu 1 do cyklu 2.
+    const lista = [M('p', 'start', 39, 0, 110, '2023-01-12'), M('q', 'continue', 39, 3, 108, '2023-04-12'), ...STARY_R6];
+    expect(kody(lista)).toEqual(['dwa-wlaczenia', 'zmiana-substancji']);
+    const r = dodaj(lista, M('z', 'end', 39, 6, 107, '2023-07-12'));
+    expect(r.ok).toBe(true);
+    expect(cykleId(r.punkty)).toEqual(['pqz', 'abef']);
+    expect(C.podziel(r.punkty).niezgodnosci.map((n) => `${n.kod}:${n.cykl}`)).toEqual(['zmiana-substancji:2']);
   });
 
   it('Zakończenie w środku cyklu, po którym nie zaczyna się nowa substancja, nadal jest odrzucane', () => {
