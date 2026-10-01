@@ -1460,7 +1460,7 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 *Strażnicy:* `tests/unit/schowek.test.mjs` (12) — tekst zaczynający się od `Waga:` dostaje **dokładnie jeden** U+2060, a reszta treści zostaje bit w bit; U+2060 nie jest odstępem i przeżywa `trim()`; teksty, które nie wyglądają jak adres (`Augmentin –`, `Pow. ciała:`, `Wskaźnik Cole'a:`, `63,4 kg`) **nie** dostają nic; ścieżka zapasowa kopiuje tę samą zabezpieczoną treść; przy dostępnym Clipboard API `execCommand` nie rusza ani razu. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku: pierwszy znak wklejonej treści to U+2060, zaraz za nim `Waga:`.
 
-### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW @@SW@@, 2026-10-01)
+### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.141, 2026-10-01)
 
 **Decyzja właściciela (2026-10-01): „Tylko BMI”.** Ocena BMI (kategoria, ostrzeżenie, klasa, Cole, sugestia WHR, „idealna masa”, nagłówek i karta BMI raportu) idzie za silnikiem BMI i decyzją D3 — siatka DS do 20 lat. Masa, wzrost, ciśnienie, tętno i opisy dorosłego **zostają przy wieku 18 lat** (raport: 18, PDF: 19) — osobna decyzja, jeśli kiedyś.
 
@@ -1487,7 +1487,7 @@ Testy: `tests/unit/ds-bmi-dorosly-wg-pacjenta.test.mjs` (7: silnik co 0,5 mies. 
 
 **Ograniczenia.** Masa i wzrost 18–19-latka z DS w karcie głównej, podsumowaniu i raporcie nadal mają opisy dorosłego („brak porównania do dorosłej populacji”), choć siatki Zemel sięgają 20 lat — świadomie poza zakresem („Tylko BMI”). Interpretacja WHR (progi WHO dla dorosłych od 18 lat) bez zmian.
 
-**Pliki.** `vilda_bmi.js`, `vilda_update_prep.js`, `app.js`, `vilda_summary_cards.js`, `vilda_patient_summary_copy.js`, `vilda_patient_report.js`; wersje: @@WERSJE@@.
+**Pliki.** `vilda_bmi.js`, `vilda_update_prep.js`, `app.js`, `vilda_summary_cards.js`, `vilda_patient_summary_copy.js`, `vilda_patient_report.js`; `app.js` 230, `vilda_bmi.js` 9, `vilda_patient_report.js` 46, `vilda_patient_summary_copy.js` 14, `vilda_summary_cards.js` 53, `vilda_update_prep.js` 94; SW 1.1.140 → 1.1.141 (numery nadane `npm run podbij-wersje`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy masa i wzrost 18–19-latka z DS mają też przejść na siatki DS do 20 lat.
 
