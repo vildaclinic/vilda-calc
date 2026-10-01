@@ -241,6 +241,39 @@ describe('retencja stawia nagrobki bez treści', () => {
       .toEqual(posortowane(przyciete));
   });
 
+  it('scalanie wpisuje nowszą wersję po zapisie nagrobków, przed usunięciem: ta wersja zostaje, bez nagrobka (P-KOSZ-POPRAWKI)', async () => {
+    sztucznyZegar();
+    const A = await urzadzenie();
+    const { patientId, zostaja, przyciete } = await kartaZHistoria(A);
+    const nowsza = przyciete[3];
+    const pamiec = adaptery.get(A);
+    const oryginal = pamiec.putUserMeta;
+    let raz = false;
+    // Scalanie nie bierze blokady pacjenta: tuż po zapisie nagrobków wpisuje nowszą wersję jednego z zapisów planu
+    // (np. poprawioną na innym urządzeniu po przycięciu).
+    pamiec.putUserMeta = async function (...x) {
+      const wynik = await oryginal.apply(this, x);
+      const lista = x[1] && x[1].snapshotTombstones;
+      if (!raz && Array.isArray(lista) && lista.some((n) => n.snapshotId === nowsza)) {
+        raz = true;
+        const rekord = (await pamiec.listSnapshotsForUser(x[0], patientId)).find((s) => s.snapshotId === nowsza);
+        await pamiec.putSnapshotForUser(x[0], { ...rekord, rev: (rekord.rev || 0) + 1, updatedAtISO: new Date(Date.now() + 1000).toISOString() });
+      }
+      return wynik;
+    };
+    ustawZegar(DZIEN_PRZYCIECIA);
+    let wynik;
+    try {
+      wynik = await A.pruneSnapshotsForPatient(patientId);
+    } finally {
+      pamiec.putUserMeta = oryginal;
+    }
+    expect(wynik.prunedCount).toBe(6);
+    expect(wynik.prunedIds).not.toContain(nowsza);
+    expect(await idWersji(A, patientId)).toEqual(posortowane([...zostaja, nowsza]));
+    expect((await A.exportSyncPayload()).snapshotTombstones.map((n) => n.snapshotId), 'nagrobek nowszej wersji zdjęty').not.toContain(nowsza);
+  });
+
   it('dwa równoległe przycięcia: każda wersja usunięta raz, żaden nagrobek nie ginie', async () => {
     sztucznyZegar();
     const A = await urzadzenie();
@@ -431,9 +464,13 @@ describe('strażniki źródła', () => {
     expect(blok.indexOf('await ct(patientId)'), 'odczyt wszystkich wersji przed blokadą').toBeLessThan(blok.indexOf("return Ap('pat:'"));
     expect(blok.indexOf('!bezZmian(s)'), 'sprawdzenie planu pod blokadą').toBeGreaterThan(blok.indexOf("return Ap('pat:'"));
     expect(blok.indexOf('await Bkz_zmienListe(nagrobki, [])')).toBeGreaterThan(0);
-    // Pod blokadą — wariant usuwania bez blokady (P-BLOKADA-ZAPISU-WERSJI: Web Locks nie są wielobieżne).
-    expect(blok.indexOf('await Bzw_usunWersje(patientId, id)')).toBeGreaterThan(0);
-    expect(blok.indexOf('await Bkz_zmienListe(nagrobki, [])')).toBeLessThan(blok.indexOf('await Bzw_usunWersje(patientId, id)'));
+    // Pod blokadą — wariant usuwania bez blokady (P-BLOKADA-ZAPISU-WERSJI: Web Locks nie są wielobieżne), od
+    // P-KOSZ-POPRAWKI przez ostatnie sprawdzenie wersji tuż przed usunięciem (scalanie idzie bez blokady).
+    const usuwanie = 'await Bkz_usunJesliBezZmian(patientId, id, nagrobki[i])';
+    expect(blok.indexOf(usuwanie)).toBeGreaterThan(0);
+    expect(blok.indexOf('await Bkz_zmienListe(nagrobki, [])')).toBeLessThan(blok.indexOf(usuwanie));
+    const pomocnik = src.slice(src.indexOf('async function Bkz_usunJesliBezZmian('), src.indexOf('async function Bkz_usunJesliBezZmian(') + 600);
+    expect(pomocnik).toContain('return Bzw_usunWersje(patientId, snapshotId);');
     expect(src).toContain('async function wr(t,e){return Bkz_przytnij(t,e)}');
   });
 

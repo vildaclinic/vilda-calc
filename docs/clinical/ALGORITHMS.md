@@ -7131,6 +7131,73 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
+## Kosz i retencja: poprawki po przeglądzie (P-KOSZ-POPRAWKI, SW 1.1.137, `vilda_vault.js` 193, `vilda_kosz_zapisow.js` 2, 2026-09-30)
+
+**Zlecenie.** Trzy uwagi Codex P1 do scalonych #501 (P-KOSZ-ZAPISOW) i #502 (P-RETENCJA-NAGROBKI), zweryfikowane w kodzie;
+zgoda właściciela 2026-09-30 („rób ten nowy PR”). Po #509 (P-BLOKADA-ZAPISU-WERSJI) przypięcie, poprawka i usuwanie wersji
+idą pod blokadą pacjenta; scalanie synchronizacji nadal bez niej (osobna decyzja właściciela) — stąd poprawka 3.
+
+**1. Treść najnowszego usunięcia w koszu** (`Bkz_scalStart`). Scalanie brało treść kosza z ładunku tylko wtedy, gdy
+lokalny nagrobek jej nie miał. Urządzenie, które było offline ze starym wpisem kosza, po usunięciu → przywróceniu →
+poprawce → ponownym usunięciu na innym urządzeniu nie brało nowej treści; od P-RETENCJA-NAGROBKI (reguła „ta sama
+wersja”) wpis tracił wtedy treść do następnej synchronizacji. Teraz treść z ładunku jest brana także wtedy, gdy zdalne
+usunięcie jest późniejsze niż lokalne. Przy tym samym usunięciu (kolejna synchronizacja) treść nie jest szyfrowana od
+nowa, więc scalanie bez zmian nadal nie zapisuje metadanych konta.
+
+**2. Ponowne sprawdzenie przy „Usuń do kosza”** (`vilda_kosz_zapisow.js`, `moveSnapshotToTrash`). Okno oceniało obie
+karty przy otwarciu, a kliknięcie usuwało na tej ocenie — także gdy w tym czasie synchronizacja albo inna karta
+przeglądarki poprawiła zapis albo zabrała pomiar z karty drugiej osoby.
+- Przy kliknięciu okno czyta obie karty jeszcze raz. Decyzja musi być ta sama: dalej „można”, ta sama wersja zapisu
+  (rewizja i chwila zmiany), to samo przypięcie i ta sama nazwa karty po usunięciu. Inaczej okno otwiera się od nowa na
+  aktualnym stanie (potwierdzenie albo blokada) z notą: „Zapis albo karta zmieniły się, gdy to okno było otwarte (np. przez
+  synchronizację). Nic nie zostało usunięte — poniżej aktualny stan.”
+- Sejf przyjmuje w `moveSnapshotToTrash` opcję `oczekiwana: { rev, updatedAtISO }` i pod blokadą pacjenta odmawia kodem
+  `zmieniony`, gdy wersja jest inna. Sprawdza ją przed strażnikami liczonymi z treści wersji: przypięcie w innej karcie
+  zmienia rewizję, więc daje `zmieniony`, a nie `przypiety` (uwaga Codex P2 do #515). Okno przy odmowach `zmieniony`,
+  `przypiety`, `brak` i `ostatni` otwiera się od nowa na aktualnym stanie, zamiast pokazywać ogólny błąd.
+- Kopia `.wiw` powstaje po ponownym sprawdzeniu, przed usunięciem (bez zmian: nieudana kopia = brak usunięcia).
+
+**3. Wersja sprawdzana tuż przed usunięciem** (`Bkz_usunJesliBezZmian`, kosz i retencja). Między zapisem nagrobka a
+usunięciem scalanie mogło wpisać nowszą wersję tego zapisu (przypiętą albo poprawioną na innym urządzeniu); usuwanie
+kasowało ją bez sprawdzenia, a scalanie zdejmowało potem nagrobek jako przegrany. Teraz tuż przed usunięciem sejf czyta
+wersję jeszcze raz: inna rewizja albo chwila zmiany — wersja zostaje, jej nagrobek znika (kosz: odmowa `zmieniony`,
+nic nie trafia do kosza; retencja: pozostałe wersje z planu są przycinane). Wersji już nie ma (usunęło ją scalanie) —
+nagrobek zostaje. To zawęża okno wyścigu do odczytu i usunięcia w magazynie; pełną niepodzielność dałaby dopiero
+blokada pacjenta w scalaniu (decyzja właściciela z P-BLOKADA-ZAPISU-WERSJI).
+
+**Przypadki syntetyczne** (prawdziwy `vilda_vault.js`; `kosz-zapisow.test.mjs`, `retencja-nagrobki.test.mjs`,
+`kosz-zapisow.spec.mjs`):
+
+| Sytuacja | Wynik |
+|---|---|
+| A offline ze starym wpisem kosza; na B zapis przywrócony, poprawiony (masa 52,6 kg) i usunięty ponownie; A scala | kosz A: ten zapis z treścią po poprawce (52,6 kg); drugie scalenie tego samego: jeden zapis metadanych (znacznik scalania) |
+| `moveSnapshotToTrash` z wersją sprzed poprawki | odmowa `zmieniony`, zapis w karcie, kosz pusty; z aktualną wersją — usunięty |
+| scalanie wpisuje nowszą wersję po zapisie kosza, przed usunięciem | odmowa `zmieniony`, nowsza wersja zostaje, kosz pusty, bez nagrobka |
+| scalanie wpisuje nowszą wersję po zapisie nagrobków retencji | ta wersja zostaje bez nagrobka; przycięte pozostałe 6 z 7 |
+| okno otwarte, pomiar znika z karty drugiej osoby; „Usuń do kosza” | okno od nowa: blokada z tabelą i notą; nic nie znika |
+| okno otwarte, pomylony zapis poprawiony; „Usuń do kosza” | okno od nowa: potwierdzenie z notą; usuwa dopiero drugie potwierdzenie |
+| okno otwarte, pomylony zapis przypięty w innej karcie; „Usuń do kosza” | okno od nowa z notą i „Odepnij i usuń do kosza”; nic nie znika |
+| przypięcie w innej karcie między oceną w oknie a blokadą sejfu | `zmieniony` (nie `przypiety`), zapis w karcie, kosz pusty |
+
+**Testy.** Jednostkowe: 5 nowych w `kosz-zapisow.test.mjs` (treść najnowszego usunięcia, oczekiwana wersja, przypięcie
+po ocenie w oknie, nowsza wersja przed usunięciem, porównanie ocen i kody odmów w oknie), 1 w `retencja-nagrobki.test.mjs`;
+strażnik źródła retencji przepięty na usuwanie przez `Bkz_usunJesliBezZmian`. E2e: 3 nowe w `kosz-zapisow.spec.mjs`; nota obejrzana na desktopie i na telefonie
+390 px (bez poziomego przewijania). Mutacje (każda wywraca co najmniej jeden test): stara reguła treści; bez oczekiwanej
+wersji; oczekiwana wersja sprawdzana po strażniku przypięcia; kosz albo retencja bez sprawdzenia przed usunięciem; wersja
+zawsze „zgodna”; okno bez ponownej oceny (oba e2e).
+Mutacja „szyfruj treść z ładunku zawsze” nie zmienia wyniku (przy tym samym usunięciu i tak wygrywa lokalny wpis), tylko
+koszt — testem zachowania jej nie widać.
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach i wynikach. Zmiana dotyczy danych: kosz niesie treść najnowszego
+usunięcia, a usunięcie (kosz, retencja) nie kasuje wersji zmienionej po decyzji.
+
+**Wersje.** `vilda_vault.js` 193 (8 stron + wstrzyknięcia: `vilda_chrome.js` 87, `vilda_session_bridge.js` 15 na 22
+stronach), `vilda_kosz_zapisow.js` 2, precache, `SW_VERSION` 1.1.136 → 1.1.137 (+ pin), fixture wersji — nadane przez
+`npm run podbij-wersje` względem `origin/audyt` (`79b7220`, po #510, #511 i #514); pin kolejności skryptów w `spojnosc-zapisow.test.mjs`
+przestawiony ręcznie („Do decyzji” skryptu).
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie; czy scalanie synchronizacji ma brać blokadę pacjenta.
+
 ## Retencja z nagrobkiem w synchronizacji (P-RETENCJA-NAGROBKI, SW 1.1.129, `vilda_vault.js` 191, 2026-09-30)
 
 **Decyzje właściciela (2026-09-30).** Po P-KOSZ-ZAPISOW (#501) dwa pytania na później: czy automatyczne przerzedzanie

@@ -120,6 +120,26 @@ function Bkz_blad(komunikat, kod) {
   return e;
 }
 
+/* P-KOSZ-POPRAWKI (uwagi Codex P1 do #501 i #502; decyzja wlasciciela 2026-09-30 „rob ten nowy PR”). Wersja to
+ * rewizja i chwila zmiany (updatedAtISO, bez niej savedAtISO) — tak samo liczone w zapisie z magazynu, w nagrobku
+ * i w odczycie getPatient (ct podaje updatedAtISO || savedAtISO). */
+function Bkz_wersjaZgodna(s, oczekiwana) {
+  if (!s || !oczekiwana) return false;
+  return mt(s) === mt(oczekiwana)
+    && (s.updatedAtISO || s.savedAtISO || null) === (oczekiwana.updatedAtISO || oczekiwana.savedAtISO || null);
+}
+
+// Ostatnie sprawdzenie tuz przed usunieciem (kosz i retencja). Scalanie synchronizacji nie bierze blokady pacjenta
+// (P-BLOKADA-ZAPISU-WERSJI), wiec miedzy zapisem nagrobka a usunieciem moglo wpisac nowsza wersje tego zapisu —
+// przypieta albo poprawiona na innym urzadzeniu. Taka wersja zostaje: { zmieniona: true }. Wersji juz nie ma
+// (usunelo ja w tym czasie scalanie): { brak: true }. Inaczej usuwamy wariantem bez blokady — wolajacy juz ja trzyma.
+async function Bkz_usunJesliBezZmian(patientId, snapshotId, oczekiwana) {
+  const s = (await I().listSnapshotsForUser(b, patientId)).find(function (x) { return x.snapshotId === snapshotId; });
+  if (!s) return { brak: true };
+  if (!Bkz_wersjaZgodna(s, oczekiwana)) return { zmieniona: true };
+  return Bzw_usunWersje(patientId, snapshotId);
+}
+
 // Porzadki: nagrobek starszy niz de znika, a po 30 dniach traci tresc (kosz).
 function Bkz_czysc(lista, terazMs) {
   const granicaNagrobka = new Date(terazMs - de).toISOString();
@@ -232,6 +252,12 @@ async function Bkz_doKosza(patientId, snapshotId, opcje) {
     const zapis = wersje.find(function (s) { return s.snapshotId === snapshotId; });
     if (!zapis) throw Bkz_blad('Tego zapisu nie ma już w karcie.', 'brak');
     if (wersje.length <= 1) throw Bkz_blad('To jedyny zapis tej karty — nie można go usunąć.', 'ostatni');
+    // P-KOSZ-POPRAWKI: okno potwierdzenia podaje wersje, ktora ocenil lekarz; inna wersja = decyzja o innej tresci.
+    // Przed straznikami liczonymi z tresci wersji (przypiecie): przypiecie w innej karcie zmienia rewizje, wiec ma
+    // dac „zmieniony” (okno otwiera sie od nowa), a nie „przypiety” (uwaga Codex P2 do #515).
+    if (op.oczekiwana && !Bkz_wersjaZgodna(zapis, op.oczekiwana)) {
+      throw Bkz_blad('Ten zapis zmienił się od sprawdzenia — nic nie zostało usunięte.', 'zmieniony');
+    }
     let tresc;
     try { tresc = await G(zapis.payloadCipher.iv, zapis.payloadCipher.data); } catch { tresc = null; }
     if (!tresc) throw Bkz_blad('Tego zapisu nie da się odczytać — nie trafi do kosza.', 'nieczytelny');
@@ -249,8 +275,16 @@ async function Bkz_doKosza(patientId, snapshotId, opcje) {
     // Najpierw kosz, potem usuniecie: bez potwierdzonego wpisu w koszu wersja zostaje.
     await Bkz_zmienListe([wpis], []);
     if (!(await Bkz_jest(snapshotId))) throw Bkz_blad('Nie udało się zapisać kosza — zapis zostaje w karcie.', 'kosz');
-    // Juz pod blokada tego pacjenta — wariant bez blokady (Web Locks nie sa wielobiezne), patrz Bzw_podBlokada.
-    const wynik = await Bzw_usunWersje(patientId, snapshotId);
+    // Juz pod blokada tego pacjenta — wariant bez blokady (Web Locks nie sa wielobiezne), patrz Bzw_podBlokada;
+    // tuz przed usunieciem jeszcze raz wersja (P-KOSZ-POPRAWKI, scalanie idzie bez blokady).
+    let wynik = await Bkz_usunJesliBezZmian(patientId, snapshotId, wpis);
+    if (wynik && wynik.zmieniona) {
+      await Bkz_zmienListe([], [snapshotId]);
+      throw Bkz_blad('Ten zapis zmienił się w trakcie usuwania (synchronizacja) — nic nie zostało usunięte.', 'zmieniony');
+    }
+    if (wynik && wynik.brak) {
+      wynik = { remainingSnapshotCount: (await I().listSnapshotsForUser(b, patientId)).length };
+    }
     if (!(await Bkz_jest(snapshotId))) await Bkz_zmienListe([wpis], []);
     return {
       patientId: patientId,
@@ -358,7 +392,12 @@ async function Bkz_scalStart(t) {
       };
       if (typeof z.seq === 'number' && isFinite(z.seq)) e.seq = z.seq;
       const lokalny = ctx.mapa.get(z.snapshotId);
-      if (z.payload && typeof z.payload === 'object' && !(lokalny && lokalny.payloadCipher)) e.payloadCipher = await V(z.payload);
+      // Tresc z ladunku bierzemy, gdy lokalnie jej nie ma albo gdy zdalne usuniecie jest pozniejsze (P-KOSZ-POPRAWKI):
+      // lokalna tresc opisuje wtedy starsza wersje — zapis przywrocono, poprawiono i usunieto ponownie na innym
+      // urzadzeniu. Przy tym samym usunieciu (kolejna synchronizacja) tresci nie szyfrujemy od nowa.
+      const bierzTresc = z.payload && typeof z.payload === 'object'
+        && !(lokalny && lokalny.payloadCipher && lokalny.deletedAtISO >= z.deletedAtISO);
+      if (bierzTresc) e.payloadCipher = await V(z.payload);
       else if (z.powod === 'retencja' && !z.payload) e.powod = 'retencja';
       Bkz_dolacz(ctx.mapa, e);
     }
@@ -525,7 +564,10 @@ async function Bkz_przytnij(patientId, opcje) {
     for (let i = 0; i < nagrobki.length; i += 1) {
       const id = nagrobki[i].snapshotId;
       try {
-        await Bzw_usunWersje(patientId, id); // pod blokada — wariant bez blokady, patrz Bzw_podBlokada
+        // Pod blokada — wariant bez blokady (patrz Bzw_podBlokada), z ostatnim sprawdzeniem wersji (P-KOSZ-POPRAWKI).
+        const w = await Bkz_usunJesliBezZmian(patientId, id, nagrobki[i]);
+        if (w && w.zmieniona) { nieudane.push(id); continue; } // nowsza wersja ze scalania zostaje, bez nagrobka
+        if (w && w.brak) continue; // usunelo ja w tym czasie scalanie — nagrobek zostaje (jest prawdziwy)
         usuniete.push(id);
       } catch (er) {
         try { console.warn('[vault] retention delete', id, er); } catch { /* cicho */ }
