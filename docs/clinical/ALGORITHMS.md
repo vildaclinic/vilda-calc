@@ -12408,6 +12408,25 @@ racie ich nie ruszano, zgodnie z kolejnością wskazaną przez właściciela.
 
 SW 1.1.23 → **1.1.24**; `vilda_bmi.js?v=5→6`, `vilda_bmi_journey.js?v=12→13`.
 
+## Stan wizyty po własnym zapisie i odtworzeniu sesji (2026-10-01)
+
+Poprawka dotyczy cyklu życia formularza i widoczności porównania, bez zmiany wzorów,
+norm, dawek, jednostek ani zapisanych wyników klinicznych.
+
+- Własny zapis nowego pacjenta potwierdza bieżący stan przed utrwaleniem bazy
+  `lastLoadedData`. Nie tworzy oczekującego wczytania; zachowuje istniejący wybór
+  „Odtwórz zapis” albo „Nowy pomiar”. Powiadomienie `source: 'save'` nie kasuje tego wyboru.
+- Odtworzenie sesji przy przejściu Start → DocPro lub F5 nie używa bieżących pól jako
+  poprzedniego pomiaru. W trybie „Nowy pomiar” pozostaje rzeczywisty punkt odniesienia.
+- Ukrycie karty porównania usuwa także jej znacznik `dataset.loaded`. Odczyt rekordu
+  rozpoczęty przed wyborem „Odtwórz zapis” ani późniejszy cykl terapii nie wskrzeszają karty.
+  Rekord bez skończonej wartości wzrostu lub masy nie tworzy pustej tabeli porównania.
+
+Regresje wykonują rzeczywiste moduły importu, wyboru wizyty i karty porównania oraz
+formularze w powłoce `app.html`: pierwszy własny zapis, odtworzenie po edycji historii
+i cyklu GH, przełączanie ramek, F5 i kontrola prawidłowego wyboru „Nowy pomiar”.
+Dane testowe są wyłącznie fikcyjne.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.

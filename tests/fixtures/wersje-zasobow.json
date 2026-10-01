@@ -60,8 +60,8 @@
   "sha256": "e4858029b2edec7d28658533f7a2ddb38dabb66d593a32781eb84747cdff347a"
  },
  "custom-fixes.js": {
-  "v": 71,
-  "sha256": "3eb130872b2b8588ffdf376349bf458d77c1fc0c07b33443e4f73596e2890a70"
+  "v": 72,
+  "sha256": "42c78541d63f9bcaeb2550dfa91d2de01b9e2e1d31fa22169312e300687708b4"
  },
  "docpro_state_persist.js": {
   "v": 7,
@@ -532,8 +532,8 @@
   "sha256": "8fdeb3275d729a2296a55ef4ef6503878f622827a4d5dfbd61d2fdcf500f7c8a"
  },
  "vilda_data_import_export.js": {
-  "v": 94,
-  "sha256": "8c1b1c0ee533c7a72ee75eca5b9f92cd361fc20d21bddf5d7e1c3557f2b164f9"
+  "v": 95,
+  "sha256": "fa7dd53c3331b16723d99d5458d8cb3753e3b50e382142ecc0e297c71d7e1573"
  },
  "vilda_data_safety_explainer.js": {
   "v": 5,
@@ -852,8 +852,8 @@
   "sha256": "0345302f147c2eb15091b9413e40791131366aa80eb0ca4fa77d3e0062d33813"
  },
  "vilda_summary_cards.js": {
-  "v": 52,
-  "sha256": "811137f4cce4a9d81fd56af2d5eaa29a85c59bc767e7367b7c1e9f1627f82d95"
+  "v": 53,
+  "sha256": "373562b76663b68b0c523a31b18af28e23000e07b22d615b682aae033f24a363"
  },
  "vilda_sync.js": {
   "v": 32,
