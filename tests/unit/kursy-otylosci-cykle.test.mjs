@@ -118,6 +118,56 @@ describe('kursy otyłości = cykle leczenia (buildClinicalContext, kursyOtylosci
     expect(J.buildClinicalContext({ obesityTherapyPoints: [{ type: 'start', ageYears: 0, ageMonths: 0 }] })).toBeNull();
   });
 
+  // Recenzja raty 4: Zakończenie bez wieku zamyka kurs TAKŻE przy jednym cyklu, ale tylko w zapisie, w którym datę ma
+  // każdy punkt (moduł cykli porządkuje wtedy po datach). Gdy choć jeden punkt nie ma daty, moduł porządkuje po wieku:
+  // Zakończenie z wiekiem 0 staje na początku jako osobny cykl bez wieku > 0 (pominięty) i kurs trwa — jak dotąd.
+  // Niespójność trybów opisana w ALGORITHMS.md (do decyzji właściciela); test przypina oba warianty.
+  it('Zakończenie bez wieku, jeden cykl: zapis z datami — kurs zamknięty na najstarszym punkcie (dotąd trwał); zapis bez dat — kurs trwa', () => {
+    const M = [140, 143, 145, 148, 151, 154, 157, 160, 163];
+    const tab = {};
+    M.forEach((m) => { const sd = 2.6 - (m - 140) * 0.02; tab[`WT|${m}`] = sd; tab[`BMI|${m}`] = sd; tab[`HT|${m}`] = 0; });
+    const g = srodowisko(tab);
+    const J = g.VildaTrajectoryAnalysis;
+    const waga = (cx) => J.analyze({
+      measurements: M.slice(0, -1).map((m, i) => ({ ageMonths: m, height: 150 + i, weight: 70 - i * 0.5 })),
+      currentAgeMonths: 163, currentHeight: 160, currentWeight: 65, sex: 'F', context: cx,
+    }).metrics.find((m) => m.metric === 'weight');
+    const zDatami = [pkt('start', 145, SAXENDA, '2023-12-15'), pkt('continue', 151, SAXENDA, '2024-06-15'),
+      { type: 'end', ageYears: 0, ageMonths: 0, dateISO: '2024-07-15', ...SAXENDA }];
+    const cx = J.buildClinicalContext({ obesityTherapyPoints: zDatami, sex: 'F' });
+    expect(cx.redKursy).toEqual([{ a: 145, b: 151, label: 'Saxenda' }]);
+    const w = waga(cx);
+    expect([w.treatment.a.ageMonths, w.treatment.b.ageMonths]).toEqual([145, 151]);
+    expect(w.total.l).toBe('redukcja nadmiaru masy ciała — w tym 6 mies. leczenia redukcyjnego');
+    // reguła sprzed raty 4 pomijała punkt z wiekiem 0 — kurs aktywny, chip do ostatniego pomiaru, całość „w trakcie leczenia”
+    expect(J.therapyIntervals(zDatami).map((k) => [k.a, k.b])).toEqual([[145, null]]);
+    const dotad = waga({ red: { a: 145, b: null, label: 'Saxenda' }, redKursy: [{ a: 145, b: null, label: 'Saxenda' }] });
+    expect([dotad.treatment.a.ageMonths, dotad.treatment.b.ageMonths, dotad.total.l]).toEqual([145, 163, 'redukcja w trakcie leczenia']);
+    const bezDat = [pkt('start', 145, SAXENDA), pkt('continue', 151, SAXENDA), { type: 'end', ageYears: 0, ageMonths: 0, ...SAXENDA }];
+    expect(g.VildaCykleLeczenia.podziel(bezDat).cykle.map((c) => [c.numer, c.punkty.length, c.stan])).toEqual([[1, 1, 'zakonczony'], [2, 2, 'aktywny']]);
+    expect(J.buildClinicalContext({ obesityTherapyPoints: bezDat }).redKursy).toEqual([{ a: 145, b: null, label: 'Saxenda' }]);
+  });
+
+  // Recenzja raty 4: stary zapis, w którym Włączenie nowego leku stoi w tablicy PRZED Zakończeniem poprzedniego tego
+  // samego dnia (moduł cykli przy remisie dat zachowuje kolejność tablicy). Włączenie trafia do cyklu 1 („dwa-wlaczenia”),
+  // kurs 2 (cykl bez Włączenia) zaczyna się od pierwszej Kontynuacji — przerwa Z → K nie jest leczeniem.
+  it('stary zapis: Włączenie nowego leku przed Zakończeniem tego samego dnia — kurs 2 od pierwszej Kontynuacji', () => {
+    const g = srodowisko();
+    const J = g.VildaTrajectoryAnalysis;
+    const pts = [pkt('start', 145, SAXENDA, '2023-12-15'), pkt('continue', 148, SAXENDA, '2024-03-15'),
+      pkt('start', 154, WEGOVY, '2024-09-15'), pkt('end', 154, SAXENDA, '2024-09-15'),
+      pkt('continue', 155, WEGOVY, '2024-10-15'), pkt('continue', 160, WEGOVY, '2025-03-15')];
+    const cykle = g.VildaCykleLeczenia.podziel(pts).cykle;
+    expect(cykle.map((c) => [c.numer, c.punkty.map((p) => p.type), c.niezgodnosci.map((n) => n.kod)])).toEqual([
+      [1, ['start', 'continue', 'start', 'end'], ['dwa-wlaczenia']],
+      [2, ['continue', 'continue'], []],
+    ]);
+    expect(J.buildClinicalContext({ obesityTherapyPoints: pts }).redKursy)
+      .toEqual([{ a: 145, b: 154, label: 'Saxenda' }, { a: 155, b: null, label: 'Wegovy' }]);
+    // dotąd jeden kurs (przerwa < 3 mies.)
+    expect(J.therapyIntervals(pts).map((k) => [k.a, k.b, k.label])).toEqual([[145, null, 'Wegovy']]);
+  });
+
   it('GH z tymi samymi punktami co test „wraca do tego samego kursu” — nadal jeden kurs (dawna reguła, bez zmian)', () => {
     const J = srodowisko().VildaTrajectoryAnalysis;
     const pts = [pkt('start', 96), pkt('end', 100), pkt('continue', 101)];
@@ -195,6 +245,54 @@ describe('tolerancja startu przy stykających się kursach otyłości (kursOkna,
     const odcinek = w.segments.find((s) => s.a.ageMonths === 151);
     expect(odcinek.rdOn).toBe(false);
     expect(odcinek.verdict.l).toMatch(/ — w tym 7 mies\. leczenia redukcyjnego$/);
+    // dotąd (reguła sprzed raty 4) jeden kurs od 145 mies.: chip 145 → 161, całość „redukcja w trakcie leczenia”
+    expect(J.therapyIntervals(pts).map((k) => [k.a, k.b])).toEqual([[145, null]]);
+    expect(w.total.l).toBe('redukcja nadmiaru masy ciała — w tym 16 mies. leczenia redukcyjnego');
+  });
+
+  // Recenzja raty 4: przycięcie tolerancji startu zmienia wynik przy KAŻDEJ przerwie krótszej niż KURS_START_TOL_M (6 mies.),
+  // także przy przerwie 3–6 mies., przy której kursy są identyczne z regułą sprzed raty 4.
+  it('przerwa 4 mies. (W 145, Z 151, W 155): kursy jak dotąd, ale para 150 → 161 traci werdykt „w kursie” (karta porównania)', () => {
+    const J = srodowisko().VildaTrajectoryAnalysis;
+    const pts = [pkt('start', 145, SAXENDA), pkt('end', 151, SAXENDA), pkt('start', 155, WEGOVY), pkt('continue', 158, WEGOVY)];
+    const cx = J.buildClinicalContext({ obesityTherapyPoints: pts, sex: 'F' });
+    expect(kursy(cx.redKursy)).toEqual([[145, 151, 'Saxenda'], [155, null, 'Wegovy']]);
+    expect(J.therapyIntervals(pts).map((k) => [k.a, k.b, k.label])).toEqual(kursy(cx.redKursy));
+    const r = J.pairVerdictInContext('weight', { sd: 2.45, c: 99.2, ageMonths: 150, value: 69 }, { sd: 2.1, c: 98.2, ageMonths: 161, value: 66 }, cx);
+    expect(r.v.l).toBe('redukcja nadmiaru masy ciała — w tym 7 mies. leczenia redukcyjnego');
+    expect([r.rdOn, r.wKursieRd, r.kursM, r.kursLabel, r.mieszane]).toEqual([false, false, 0, null, true]);
+    // dotąd (tolerancja start − 6 mies. bez przycięcia) okno 150 → 161 leżało „w kursie Wegovy” (6 mies. leczenia)
+    expect(J.kursOkna(cx.redKursy, 150, 161)).toBe(cx.redKursy[1]);
+    expect(J.kursOkna(cx.redKursy, 150, 161, true)).toBeNull();
+    expect(J.dolnaGranicaStartu(cx.redKursy[1], cx.redKursy)).toBe(151);
+  });
+
+  // Recenzja raty 4: zdublowane Zakończenie w starym zapisie (Z, Z — „zakonczenie-bez-wizyt”) to wg SPEC zwykły kurs
+  // zerowej długości. Jako OSTATNI kurs przejmuje chip okresu leczenia, a oknoKursu nie znajduje w nim okna — chip
+  // prawdziwego kursu znika. Stan po racie 4 przypięty; wariant (pomijać taki cykl / chip z ostatniego kursu z oknem)
+  // do decyzji właściciela (ALGORITHMS.md).
+  it('zdublowane Zakończenie: kurs zerowej długości, chip okresu leczenia znika (stan raty 4 — do decyzji właściciela)', () => {
+    const M = [140, 143, 145, 148, 151, 154, 157, 160, 163];
+    const tab = {};
+    M.forEach((m) => { const sd = 2.6 - (m - 140) * 0.02; tab[`WT|${m}`] = sd; tab[`BMI|${m}`] = sd; tab[`HT|${m}`] = 0; });
+    const g = srodowisko(tab);
+    const J = g.VildaTrajectoryAnalysis;
+    const pts = [pkt('start', 145, SAXENDA, '2023-12-15'), pkt('continue', 148, SAXENDA, '2024-03-15'),
+      pkt('end', 157, SAXENDA, '2024-12-15'), pkt('end', 158, SAXENDA, '2025-01-15')];
+    expect(g.VildaCykleLeczenia.podziel(pts).cykle.map((c) => [c.numer, c.punkty.length, c.niezgodnosci.map((n) => n.kod)]))
+      .toEqual([[1, 3, []], [2, 1, ['zakonczenie-bez-wizyt']]]);
+    const cx = J.buildClinicalContext({ obesityTherapyPoints: pts, sex: 'F' });
+    expect(kursy(cx.redKursy)).toEqual([[145, 157, 'Saxenda'], [158, 158, 'Saxenda']]);
+    const model = J.analyze({
+      measurements: M.slice(0, -1).map((m, i) => ({ ageMonths: m, height: 150 + i, weight: 70 - i * 0.5 })),
+      currentAgeMonths: 163, currentHeight: 160, currentWeight: 65, sex: 'F', context: cx,
+    });
+    const w = model.metrics.find((m) => m.metric === 'weight');
+    expect(w.treatment).toBeNull();
+    // dotąd (therapyIntervals: drugie Zakończenie w < 3 mies. wracało do kursu) jeden kurs 145 → 158 i chip 145 → 157
+    expect(J.therapyIntervals(pts).map((k) => [k.a, k.b])).toEqual([[145, 158]]);
+    const ok = J.oknoKursu(cx.redKursy[0], w.series, cx.redKursy);
+    expect([ok.a.ageMonths, ok.b.ageMonths]).toEqual([145, 157]);
   });
 });
 
@@ -233,10 +331,41 @@ describe('pasek meta analizy trajektorii: żeton na każdy kurs otyłości', () 
     expect(zKursami).toBe(meta(J, { red: cx.red }).html);
   });
 
-  it('bez modułu cykli — jeden żeton z koperty, jak dotąd (test negatywny)', () => {
+  it('bez modułu cykli, przerwa 1 mies. — therapyIntervals skleja cykle w jeden kurs: jeden żeton, jak dotąd (test negatywny)', () => {
     const J = srodowisko(tab, { bezCykli: true }).VildaTrajectoryAnalysis;
     const pts = [pkt('start', 145, SAXENDA), pkt('end', 154, SAXENDA), pkt('start', 155, WEGOVY), pkt('continue', 158, WEGOVY)];
     expect(zetony(meta(J, J.buildClinicalContext({ obesityTherapyPoints: pts, sex: 'F' })).html)).toEqual(['Wegovy · od 12 lat 1 mies. — nadal']);
+  });
+
+  // Recenzja raty 4: ścieżka bez modułu cykli NIE jest w pełni zachowaniem sprzed raty 4. Kursy dzieli dawna reguła
+  // (therapyIntervals), ale żeton na każdy kurs i przycięcie tolerancji startu działają na każdej liście kursów otyłości.
+  // Przy przerwie 3–6 mies. wynik różni się więc od stanu sprzed raty (wtedy: jeden żeton z koperty „Wegovy · od 12 lat
+  // 1 mies. — nadal” i chip 150 → 161 „redukcja w trakcie leczenia”). Stan przypięty; wariant do decyzji właściciela.
+  it('bez modułu cykli, przerwa 4 mies. — kursy z therapyIntervals, ale żeton na każdy kurs i przycięty start chipu (nowe także bez modułu)', () => {
+    const M4 = [145, 150, 158, 161];
+    const SDS4 = { 145: 2.6, 150: 2.45, 158: 2.3, 161: 2.1 };
+    const tab4 = {};
+    M4.forEach((m) => { tab4[`WT|${m}`] = SDS4[m]; tab4[`BMI|${m}`] = SDS4[m]; tab4[`HT|${m}`] = 0; });
+    const pts = [pkt('start', 145, SAXENDA), pkt('end', 151, SAXENDA), pkt('start', 155, WEGOVY), pkt('continue', 158, WEGOVY)];
+    const wynik = (opcje) => {
+      const J = srodowisko(tab4, opcje).VildaTrajectoryAnalysis;
+      const cx = J.buildClinicalContext({ obesityTherapyPoints: pts, sex: 'F' });
+      const model = J.analyze({
+        measurements: M4.slice(0, -1).map((m, i) => ({ ageMonths: m, height: 150 + i, weight: 70 - i })),
+        currentAgeMonths: 161, currentHeight: 160, currentWeight: 64, sex: 'F', context: cx,
+      });
+      const w = model.metrics.find((m) => m.metric === 'weight');
+      const html = (J.buildPatientHtml(model).match(/<div class="vtap-meta">.*?<\/div>/) || [''])[0];
+      return { kursy: kursy(cx.redKursy), chip: [w.treatment.a.ageMonths, w.treatment.b.ageMonths, w.treatment.verdict.l], zetony: zetony(html) };
+    };
+    const bez = wynik({ bezCykli: true });
+    expect(bez).toEqual({
+      kursy: [[145, 151, 'Saxenda'], [155, null, 'Wegovy']],
+      chip: [158, 161, 'redukcja w trakcie leczenia — wstępnie (3 mies.)'],
+      zetony: ['Saxenda · od 12 lat 1 mies. do 12 lat 7 mies.', 'Wegovy · od 12 lat 11 mies. — nadal'],
+    });
+    // z modułem cykli — to samo (kursy identyczne przy przerwie ≥ 3 mies.)
+    expect(wynik({})).toEqual(bez);
   });
 });
 
@@ -273,5 +402,10 @@ describe('Karta pacjenta (vilda_auth_ui.js): kursy otyłości w panelu trajektor
     // przedział głównie w cyklu Saxendy
     expect(f(cx, ovl(146, 156))).toEqual({ m: 9, label: 'Saxenda' });
     expect(f(null, ovl(146, 156))).toEqual({ m: 0, label: '' });
+    // przerwa 4 mies. (kursy jak przed ratą): przerwa nie jest leczeniem — 7 mies. zamiast 11 z koperty
+    const cx4 = J.buildClinicalContext({ obesityTherapyPoints: [pkt('start', 145, SAXENDA), pkt('end', 151, SAXENDA),
+      pkt('start', 155, WEGOVY), pkt('continue', 158, WEGOVY)] });
+    expect(f(cx4, ovl(150, 161))).toEqual({ m: 7, label: 'Wegovy' });
+    expect(f({ red: cx4.red }, ovl(150, 161))).toEqual({ m: 11, label: 'Wegovy' });
   });
 });
