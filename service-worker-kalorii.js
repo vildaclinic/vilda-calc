@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.137';
+const SW_VERSION = '1.1.138';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -149,6 +149,7 @@ const CORE_SHELL_URLS = [
   '/style.css?v=83',
   '/style.css?v=84',
   '/style.css?v=85',
+  '/style.css?v=86',
   '/lab_clinical_panels.js?v=141',
   '/lab_clinical_panels.js?v=143',
   // DEFER-P1c: bloki inline wyniesione do plików defer (39 szt.)
@@ -2538,6 +2539,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=41',
   '/vilda_diet_plan_ui.js?v=42',
   '/vilda_diet_plan_ui.js?v=43',
+  '/vilda_diet_plan_ui.js?v=44',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -2580,6 +2582,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=66',
   '/vilda_diet_recommendations.js?v=67',
   '/vilda_diet_recommendations.js?v=68',
+  '/vilda_diet_recommendations.js?v=69',
   '/vilda_auth_ui.js?v=432',
   '/vilda_auth_ui.js?v=433',
   '/vilda_auth_ui.js?v=434',

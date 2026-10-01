@@ -8860,6 +8860,50 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   border-bottom-color: var(--diet-ui-divider)!important
 }
 
+/* P-DIETA-B5c: notka o przejściu na plan dorosłego (18,0–19,99 lat), tylko karta lekarza „Strategia”; domyślnie zwinięta */
+.diet-przejscie {
+  margin-top: var(--space-0-6);
+  border: var(--border-hairline) solid var(--diet-ui-divider, #e4d7f4);
+  border-radius: var(--radius-8);
+  padding: var(--space-0-45) var(--space-0-6);
+  font-size: .8rem;
+  line-height: 1.35;
+  max-width: 100%;
+  box-sizing: border-box;
+  color: var(--diet-ui-muted, #4a4a4a)
+}
+
+.diet-przejscie summary {
+  cursor: pointer
+}
+
+.diet-przejscie-kol,
+.diet-przejscie-uw {
+  margin: var(--space-0-35) 0 .2rem;
+  font-size: .74rem;
+  opacity: var(--opacity-locked)
+}
+
+.diet-przejscie-tab {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .12rem var(--space-0-6);
+  margin: 0
+}
+
+.diet-przejscie-tab dt {
+  font-weight: 600
+}
+
+.diet-przejscie-tab dd {
+  margin: 0
+}
+
+.diet-przejscie-tab dd:not(.diet-przejscie-t) > span,
+.diet-przejscie-tab dd:not(.diet-przejscie-t) > b {
+  white-space: nowrap
+}
+
 #dietRecommendationsContent .diet-segmented-control button,
 #dietRecommendationsContent .diet-option-check,
 #dietRecommendationsContent .diet-primary-action,
