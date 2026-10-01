@@ -253,7 +253,8 @@
      Wszystkie procenty i delty idą od punktu odniesienia, nie od poprzedniej wizyty. Na kartce
      do dokumentacji to nie jest ozdoba: za rok nikt nie odtworzy, od czego liczono te procenty.
      Przy więcej niż jednym cyklu leczenia (P-OTYLOSC-CYKLE rata 4) zdanie nazywa bieżący cykl —
-     to samo brzmienie co w panelu (`odniesienieOpis` w module widoku). */
+     to samo brzmienie co w panelu (`odniesienieOpis` w module widoku), także drugie zdanie
+     przy bieżącym cyklu bez żadnego pomiaru masy (`brak-pomiaru-cyklu`). */
   function odniesienieOpis(model) {
     var o = model.punktOdniesienia;
     if (!o) return null;
@@ -261,17 +262,22 @@
     var cy = cyklOpis(model);
     var co;
     var dop = '';
+    var dalej = '';
     if (o.zrodlo === 'start-leczenia') {
       co = cy ? 'masy ciała przy włączeniu bieżącego cyklu leczenia (' + cy + '; ' + dane + ')'
         : 'masy ciała przy włączeniu leczenia (' + dane + ')';
     } else if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
       co = 'pierwszego pomiaru bieżącego cyklu leczenia (' + (cy ? cy + '; ' : '') + dane + ')';
       dop = ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    } else if (o.zrodlo === 'brak-pomiaru-cyklu') {
+      co = 'pierwszego zapisanego pomiaru (' + dane + ')';
+      dalej = ' Bieżący cykl leczenia' + (cy ? ' (' + cy + ')' : '')
+        + ' nie ma jeszcze pomiaru masy ciała — wykres pokazuje tylko pomiary sprzed tego cyklu.';
     } else {
       co = 'pierwszego zapisanego pomiaru (' + dane + ')';
       dop = ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
     }
-    return tekst('Wszystkie zmiany liczone od ' + co + dop + ', nie od poprzedniej wizyty.',
+    return tekst('Wszystkie zmiany liczone od ' + co + dop + ', nie od poprzedniej wizyty.' + dalej,
       { fontSize: 7.5, color: C.opis, margin: [0, 0, 0, 10] });
   }
 
@@ -461,6 +467,9 @@
     }
     if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
       return 'pierwszy pomiar bieżącego cyklu leczenia' + (cy ? ' (' + cy + ')' : '');
+    }
+    if (o.zrodlo === 'brak-pomiaru-cyklu') {
+      return 'pierwszy pomiar — bieżący cykl leczenia' + (cy ? ' (' + cy + ')' : '') + ' bez pomiaru masy';
     }
     return 'pierwszy pomiar';
   }

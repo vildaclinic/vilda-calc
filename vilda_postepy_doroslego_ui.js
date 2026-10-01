@@ -716,7 +716,9 @@
    * CYKLE LECZENIA (P-OTYLOSC-CYKLE rata 4). Przy więcej niż jednym cyklu odniesieniem jest
    * Włączenie BIEŻĄCEGO cyklu, nie pierwsze w historii — i zdanie to mówi, z numerem cyklu,
    * bo lekarz pamiętający masę sprzed pierwszego leku inaczej przeczytałby każdy procent.
-   * Przy jednym cyklu brzmienie zostaje co do litery. Moduł wydruku ma bliźniaczą funkcję. */
+   * Przy jednym cyklu brzmienie zostaje co do litery. Moduł wydruku ma bliźniaczą funkcję.
+   * Bieżący cykl bez żadnego pomiaru masy (`brak-pomiaru-cyklu`) dostaje drugie zdanie: liczby
+   * idą wtedy od pierwszego pomiaru serii i nie mówią nic o bieżącym leczeniu. */
   function odniesienieOpis(model) {
     var o = model.punktOdniesienia;
     if (!o) return '';
@@ -724,18 +726,23 @@
     var cy = cyklOpis(model);
     var co;
     var dop = '';
+    var dalej = '';
     if (o.zrodlo === 'start-leczenia') {
       co = cy ? 'masy ciała przy włączeniu bieżącego cyklu leczenia (' + cy + '; ' + dane + ')'
         : 'masy ciała przy włączeniu leczenia (' + dane + ')';
     } else if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
       co = 'pierwszego pomiaru bieżącego cyklu leczenia (' + (cy ? cy + '; ' : '') + dane + ')';
       dop = ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    } else if (o.zrodlo === 'brak-pomiaru-cyklu') {
+      co = 'pierwszego zapisanego pomiaru (' + dane + ')';
+      dalej = ' Bieżący cykl leczenia' + (cy ? ' (' + cy + ')' : '')
+        + ' nie ma jeszcze pomiaru masy ciała — wykres pokazuje tylko pomiary sprzed tego cyklu.';
     } else {
       co = 'pierwszego zapisanego pomiaru (' + dane + ')';
       dop = ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
     }
     return '<p class="vilda-pd-odn">Wszystkie zmiany liczone od ' + esc(co) + esc(dop)
-      + ', nie od poprzedniej wizyty.</p>';
+      + ', nie od poprzedniej wizyty.' + esc(dalej) + '</p>';
   }
 
   /* „cykl N z M” — tylko przy więcej niż jednym cyklu; przy jednym pusty napis. */

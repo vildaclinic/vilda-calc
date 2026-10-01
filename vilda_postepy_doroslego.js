@@ -28,7 +28,10 @@
  *                       (`punktOdniesienia.zrodlo`), bo od tego zależy KAŻDY procent na wykresie.
  *                       Od raty 4 cykli (P-OTYLOSC-CYKLE) — Włączenie BIEŻĄCEGO cyklu leczenia
  *                       (`VildaCykleLeczenia.podziel`, granicą jest Zakończenie); w cyklu nr ≥ 2
- *                       bez Włączenia — pierwszy pomiar tego cyklu (`pierwszy-pomiar-cyklu`).
+ *                       bez Włączenia — pierwszy pomiar tego cyklu (`pierwszy-pomiar-cyklu`), a gdy
+ *                       ten cykl nie ma jeszcze żadnego pomiaru masy — `brak-pomiaru-cyklu` (cała
+ *                       seria sprzed odniesienia). Pomiar wcześniejszego cyklu nigdy nie liczy się
+ *                       jako postęp bieżącego, także przy remisie dat z odniesieniem.
  *   cykl              — bieżący cykl leczenia: numer, liczba cykli, stan, brak Włączenia
  *                       i kody niezgodności zapisu; `null` bez modułu cykli albo bez punktów.
  *   ubytekPct         — DODATNI odsetek ubytku masy wobec punktu odniesienia (0 przy przyroście).
@@ -503,7 +506,11 @@
    *
    * Moduł czytamy LENIWIE, w chwili wywołania: na większości stron ładuje się po tym pliku.
    * Bez modułu (albo gdy `podziel` rzuci) zwracamy `null` i silnik liczy dawną regułą —
-   * tak samo jak Karta pacjenta (`Ob_cy` → `Ob_ks`). */
+   * tak samo jak Karta pacjenta (`Ob_cy` → `Ob_ks`).
+   *
+   * `wczesniejsze` — surowe punkty WSZYSTKICH cykli przed bieżącym. Silnik rozpoznaje po nich
+   * pomiary poprzednich cykli w serii (`pomiarZCykli`), które nie mogą liczyć się jako postęp
+   * bieżącego cyklu nawet wtedy, gdy wypadają tego samego dnia co jego punkt odniesienia. */
   function cyklBiezacy(punktyLeczenia) {
     var M = w && w.VildaCykleLeczenia;
     if (!M || typeof M.podziel !== 'function') return null;
@@ -513,21 +520,41 @@
       if (!cykle) return null;
       var c = cykle.length ? cykle[cykle.length - 1] : null;
       if (c && !Array.isArray(c.punkty)) return null;
-      return { cykl: c, liczba: cykle.length };
+      var wczesniejsze = [];
+      for (var i = 0; i < cykle.length - 1; i++) {
+        if (cykle[i] && Array.isArray(cykle[i].punkty)) wczesniejsze = wczesniejsze.concat(cykle[i].punkty);
+      }
+      return { cykl: c, liczba: cykle.length, wczesniejsze: wczesniejsze };
     } catch (e) {
       return null;
     }
+  }
+
+  /* Czy pomiar serii JEST którymś z podanych (znormalizowanych) punktów leczenia — ta sama
+     reguła, którą `scalSerie` uznaje dwa wpisy za jedną wizytę: ten sam klucz sejfu
+     (`kluczPomiaru`) i zgodna data (równa albo brak jej po którejś stronie). Data w porównaniu
+     chroni przed pomyleniem wizyty z innym pomiarem o tej samej masie w tym samym miesiącu. */
+  function pomiarZCykli(s, punktyCykli) {
+    var ks = kluczPomiaru(s);
+    for (var i = 0; i < punktyCykli.length; i++) {
+      var p = punktyCykli[i];
+      if (kluczPomiaru(p) !== ks) continue;
+      if (!s.dateISO || !p.dateISO || s.dateISO === p.dateISO) return true;
+    }
+    return false;
   }
 
   /* Punkt odniesienia cyklu nr ≥ 2 BEZ Włączenia (stara Kontynuacja po Zakończeniu).
    *
    * Pierwszy pomiar serii z kluczem osi nie wcześniejszym niż PIERWSZY punkt tego cyklu —
    * nie pierwszy pomiar całej serii, bo ten pochodzi z poprzedniego cyklu (np. masa sprzed
-   * Saxendy u pacjenta na Wegovy). Przy remisie (Zakończenie poprzedniego cyklu i wizyta
-   * tego cyklu tego samego dnia, o różnej masie) wygrywa pomiar, który JEST punktem tego
-   * cyklu. Gdy seria takiego pomiaru nie ma (wołający podał same pomiary z osi czasu) —
-   * pierwszy punkt cyklu z masą. */
-  function pierwszyPomiarCyklu(cykl, uporzadkowane, punktyCyklu, os) {
+   * Saxendy u pacjenta na Wegovy). Pomiar, który JEST punktem wcześniejszego cyklu
+   * (`zPoprzednich`), nie wchodzi w grę nigdy — także przy remisie dat (Zakończenie
+   * poprzedniego cyklu i wizyta tego cyklu tego samego dnia, o różnej masie). Przy remisie
+   * z pomiarem spoza punktów leczenia wygrywa pomiar, który JEST punktem tego cyklu. Gdy seria
+   * takiego pomiaru nie ma (wołający podał same pomiary z osi czasu) — pierwszy punkt cyklu
+   * z masą. Gdy i tego nie ma — `null`: bieżący cykl nie ma jeszcze pomiaru masy. */
+  function pierwszyPomiarCyklu(cykl, uporzadkowane, punktyCyklu, os, zPoprzednich) {
     var granica = null;
     for (var i = 0; i < cykl.punkty.length; i++) {
       var m = osPunktu(cykl.punkty[i]);
@@ -535,15 +562,14 @@
       if (k != null && (granica == null || k < granica)) granica = k;
     }
     if (granica == null) return null;
-    var wlasne = {};
-    for (var j = 0; j < punktyCyklu.length; j++) wlasne[kluczPomiaru(punktyCyklu[j])] = 1;
     var pierwszy = null;
     for (var s = 0; s < uporzadkowane.length; s++) {
       var ks = klucz(uporzadkowane[s], os);
       if (ks == null || ks < granica) continue;
+      if (zPoprzednich(uporzadkowane[s])) continue;
       if (pierwszy && ks !== klucz(pierwszy, os)) break;
       if (!pierwszy) pierwszy = uporzadkowane[s];
-      if (wlasne[kluczPomiaru(uporzadkowane[s])]) return uporzadkowane[s];
+      if (pomiarZCykli(uporzadkowane[s], punktyCyklu)) return uporzadkowane[s];
     }
     if (pierwszy) return pierwszy;
     for (var q = 0; q < punktyCyklu.length; q++) {
@@ -569,6 +595,18 @@
       return p.typ === 'start' || p.typ === 'continue' || p.typ === 'end';
     });
     var niezgodnyZapis = !!(cyklB && Array.isArray(cyklB.niezgodnosci) && cyklB.niezgodnosci.length);
+    /* POMIAR WCZEŚNIEJSZEGO CYKLU NIGDY NIE JEST POSTĘPEM BIEŻĄCEGO (rata 4, poprawka po recenzji).
+       Zwykle wystarcza ujemny tydzień, ale nie przy remisie: Zakończenie poprzedniego cyklu i
+       Włączenie bieżącego bywają zapisane tego samego dnia (CY-8, poprawka dwukrokowa starego
+       zapisu) — z RÓŻNĄ masą. Pomiar Zakończenia dostawał wtedy tydzień 0, był liczony „po
+       odniesieniu” i przy niższej masie zostawał nadirem, z którego silnik ogłaszał „istotny
+       odzysk” o wadze „alarm” — z danych poprzedniego leczenia. Rozpoznajemy go po punktach
+       wcześniejszych cykli (ta sama reguła wizyty co w `scalSerie`); pomiar, który jest też
+       punktem bieżącego cyklu (ta sama wizyta zapisana raz), zostaje w bieżącym. */
+    var punktyWczesniejsze = podzial && cyklB && cyklB.numer > 1 ? normSeria(podzial.wczesniejsze) : [];
+    var zPoprzednich = function (s) {
+      return punktyWczesniejsze.length > 0 && pomiarZCykli(s, punktyWczesniejsze) && !pomiarZCykli(s, punkty);
+    };
 
     var wiekMies = liczba(o.wiekMies);
     if (wiekMies == null && liczba(o.wiekLat) != null) wiekMies = liczba(o.wiekLat) * 12;
@@ -695,12 +733,22 @@
     }
     /* Bez Włączenia (rata 4): w cyklu nr 1 — jak dotąd pierwszy pomiar serii (F1); w cyklu
        nr ≥ 2 — pierwszy pomiar TEGO cyklu, bo pierwszy pomiar serii należy do poprzedniego
-       leczenia i procenty liczyłyby się od masy sprzed innego leku. */
+       leczenia i procenty liczyłyby się od masy sprzed innego leku.
+
+       CYKL NR ≥ 2 BEZ ŻADNEGO POMIARU MASY (np. jedyna Kontynuacja z importu bez masy) — stan
+       `brak-pomiaru-cyklu`. Do poprawki po recenzji silnik cofał się tu po cichu do pierwszego
+       pomiaru serii, z tekstem „w rekordzie nie ma punktu „Włączenie”” (choć cykl 1 je ma) i
+       z kamieniami poprzedniego leczenia. Arytmetyka zostaje ta sama (pierwszy pomiar serii —
+       innej masy po prostu nie ma), ale WSZYSTKIE pomiary idą do części sprzed odniesienia:
+       żaden nie jest postępem bieżącego cyklu, więc nie ma kamieni, nadiru, odzysku ani pasm,
+       a widok i ostrzeżenie mówią wprost, że bieżący cykl nie ma jeszcze pomiaru. */
     var zrodloOdn = start ? 'start-leczenia' : 'pierwszy-pomiar';
     var odniesienie = start;
+    var brakPomiaruCyklu = false;
     if (!odniesienie && cyklB && cyklB.numer > 1) {
-      odniesienie = pierwszyPomiarCyklu(cyklB, uporzadkowane, punkty, os);
+      odniesienie = pierwszyPomiarCyklu(cyklB, uporzadkowane, punkty, os, zPoprzednich);
       if (odniesienie) zrodloOdn = 'pierwszy-pomiar-cyklu';
+      else { zrodloOdn = 'brak-pomiaru-cyklu'; brakPomiaruCyklu = true; }
     }
     if (!odniesienie) odniesienie = uporzadkowane[0];
     wynik.punktOdniesienia = {
@@ -716,10 +764,15 @@
         ? 'Procenty liczone od masy w punkcie „Włączenie” leczenia.'
         : (zrodloOdn === 'pierwszy-pomiar-cyklu'
           ? 'Bieżący cykl leczenia (po Zakończeniu poprzedniego) nie ma punktu „Włączenie” — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed leczenia.'
-          : 'Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.'),
+          : (brakPomiaruCyklu
+            ? 'Bieżący cykl leczenia (po Zakończeniu poprzedniego) nie ma jeszcze pomiaru masy ciała — procenty liczone od pierwszego pomiaru w serii, a wszystkie pomiary pochodzą sprzed tego cyklu.'
+            : 'Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.')),
     };
     if (dataOdzyskana) {
       wynik.ostrzezenia.push('Punkt „Włączenie” nie ma własnej daty — oś czasu wzięta z pokrywającego się pomiaru w serii.');
+    }
+    if (brakPomiaruCyklu) {
+      wynik.ostrzezenia.push('Bieżący cykl leczenia nie ma jeszcze pomiaru masy ciała — wykres pokazuje wyłącznie pomiary sprzed tego cyklu, bez kamieni milowych i bez oceny postępu.');
     }
 
     /* PUNKT OCENY WG ChPL MA WŁASNE ZERO — I MUSI TO BYĆ ZERO LECZENIA (audyt 2026-09-20).
@@ -764,7 +817,11 @@
     var masaOdn = odniesienie.masa;
 
     /* Seria wyliczona. Pomiary sprzed punktu odniesienia zostają, z ujemnym tygodniem —
-       pokazują, co działo się przed leczeniem, i nie mogą udawać jego efektu. */
+       pokazują, co działo się przed leczeniem, i nie mogą udawać jego efektu.
+       `przedOdniesieniem` znaczy więc „nie liczy się do postępu bieżącego leczenia”: oprócz
+       pomiarów z ujemnym tygodniem obejmuje (rata 4) pomiary wcześniejszych cykli także przy
+       remisie dat z odniesieniem (tydzień 0 zostaje na wykresie) oraz — w stanie
+       `brak-pomiaru-cyklu` — całą serię. */
     for (var j = 0; j < uporzadkowane.length; j++) {
       var p = uporzadkowane[j];
       var tydz = tygodnieMiedzy(odniesienie, p, os);
@@ -776,7 +833,7 @@
         wiekMies: p.wiekMies,
         tydzien: tydz == null ? null : Math.round(tydz),
         tydzienDokladny: tydz,
-        przedOdniesieniem: tydz != null && tydz < 0,
+        przedOdniesieniem: (tydz != null && tydz < 0) || brakPomiaruCyklu || zPoprzednich(p),
         masa: p.masa,
         wzrost: p.wzrost,
         bmi: bmi,
@@ -821,7 +878,10 @@
       stan: cyklB ? (cyklB.stan === 'zakonczony' ? 'odstawione' : 'na-leczeniu')
         : (punkty.length === 0 ? 'brak-danych' : (koniec ? 'odstawione' : 'na-leczeniu')),
       odstawienieDateISO: koniec ? koniec.dateISO : null,
-      odstawienieTydzien: koniec ? zaokraglTydzien(tygodnieMiedzy(odniesienie, koniec, os)) : null,
+      /* W stanie `brak-pomiaru-cyklu` zero osi należy do wcześniejszego cyklu — tydzień
+         odstawienia liczony od niego byłby tygodniem cudzego leczenia, więc go nie ma. */
+      odstawienieTydzien: koniec && !brakPomiaruCyklu
+        ? zaokraglTydzien(tygodnieMiedzy(odniesienie, koniec, os)) : null,
       /* Lek bierzemy z punktu odniesienia, a gdy tam go nie ma — z leku ROZPOZNANEGO wyżej
          (audyt 2026-09-20). Do tej poprawki pacjent bez datowanego punktu „Włączenie” miał
          `lek: null`, choć silnik wiedział, czym jest leczony: dobrał mu drabinkę i punkt

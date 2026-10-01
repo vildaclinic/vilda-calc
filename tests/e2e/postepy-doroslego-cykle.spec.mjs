@@ -10,8 +10,8 @@ import { expect, test } from '../support/test-czas.mjs';
 test.use({ serviceWorkers: 'block' });
 
 const HASLO = 'E2e#PostepyCykle!26';
-const SAXENDA = { drug: 'Saxenda (liraglutyd) – s.c. 1×/dobę', substance: 'liraglutide', dose: '3,0 mg / dobę' };
-const WEGOVY = { drug: 'Wegovy (semaglutyd) – s.c. 1×/tydz.', substance: 'semaglutide', dose: '2,4 mg / tydz.' };
+const SAXENDA = { drug: 'Saxenda (liraglutyd) – s.c. 1×/dobę', substance: 'Liraglutyd (agonista receptora GLP\u20111)', dose: '3,0 mg / dobę' };
+const WEGOVY = { drug: 'Wegovy (semaglutyd) – s.c. 1×/tydz.', substance: 'Semaglutyd (agonista receptora GLP\u20111)', dose: '2,4 mg / tydz.' };
 
 async function otworzZKontem(page) {
   await page.addInitScript(() => {
@@ -106,6 +106,24 @@ test('ostatni cykl zakończony: „Leczenie odstawione” liczone od Włączenia
   // 12.11.2024 → 01.06.2025: 29. tydzień (dotąd 72. — od Włączenia Saxendy).
   expect(t).toContain('Leczenie odstawione w 29. tygodniu');
   expect(t).toContain('(cykl 2 z 2; 98,5 kg, 12.11.2024)');
+});
+
+test('CY-8: Zakończenie i Włączenie tego samego dnia — pomiar Zakończenia nie daje nadiru ani alarmu odzysku', async ({ page }) => {
+  // Poprawka po recenzji raty 4: Zakończenie Saxendy 97,0 kg i Włączenie Wegovy 98,5 kg 12.11.2024. Pomiar
+  // Zakończenia liczył się „po odniesieniu” (tydzień 0) i silnik ogłaszał „Odzyskano ponad 25 %…”.
+  test.setTimeout(150_000);
+  await otworzZKontem(page);
+  const pid = await pacjent(page, 'Postepy-CykleRemis', [
+    ['start', '2024-01-12', 104, SAXENDA, 40, 0], ['continue', '2024-04-12', 99, SAXENDA, 40, 3],
+    ['end', '2024-11-12', 97, SAXENDA, 40, 10], ['start', '2024-11-12', 98.5, WEGOVY, 40, 10],
+    ['continue', '2025-02-12', 98.2, WEGOVY, 41, 1],
+  ]);
+  const panel = await zakladkaPostepy(page, pid);
+  const t = norm(await panel.textContent());
+  expect(t).toContain('(cykl 2 z 2; 98,5 kg, 12.11.2024)');
+  expect(t).not.toContain('Odzyskano');
+  expect(t).not.toContain('Najniższa masa ciała');
+  expect(t).toContain('Masa ciała na początku98,5 kg12.11.2024');
 });
 
 test('telefon (390 px): „Postępy” z dwoma cyklami bez poziomego przewijania', async ({ page }) => {

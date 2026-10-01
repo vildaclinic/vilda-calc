@@ -6856,10 +6856,18 @@ werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scale
    początkowa, każdy procent i kilogram, delta BMI, pasma, nadir, odzysk, kamienie i tydzień na osi. Pożyczka daty
    Włączenia od „bliźniaczki” w serii (audyt F1) — bez zmian, ale tylko dla Włączenia bieżącego cyklu.
 2. **Cykl nr ≥ 2 bez Włączenia** (stara Kontynuacja po Zakończeniu): odniesieniem jest pierwszy pomiar serii z kluczem
-   osi nie wcześniejszym niż pierwszy punkt tego cyklu (przy remisie dat — pomiar będący punktem tego cyklu; gdy seria
-   takiego pomiaru nie ma — pierwszy punkt cyklu z masą), `zrodlo: 'pierwszy-pomiar-cyklu'`; znacznik ChPL zdjęty jak w F1
+   osi nie wcześniejszym niż pierwszy punkt tego cyklu, z pominięciem pomiarów będących punktami wcześniejszych cykli
+   (przy remisie dat z pomiarem spoza punktów leczenia — pomiar będący punktem tego cyklu; gdy seria takiego pomiaru nie
+   ma — pierwszy punkt cyklu z masą), `zrodlo: 'pierwszy-pomiar-cyklu'`; znacznik ChPL zdjęty jak w F1
    (`bezOsi: 'brak-punktu-wlaczenia'`). Dotąd: pierwsze Włączenie poprzedniego cyklu. Cykl nr 1 bez Włączenia — bez zmian
    (F1: pierwszy pomiar serii).
+   **Cykl nr ≥ 2 bez żadnego pomiaru masy** (np. jedyna Kontynuacja z importu bez masy; poprawka po recenzji raty):
+   `zrodlo: 'brak-pomiaru-cyklu'`. Arytmetyka od pierwszego pomiaru serii (innej masy nie ma), ale WSZYSTKIE pomiary są
+   „sprzed odniesienia”: bez kamieni, nadiru, odzysku, pasm osiągniętych i werdyktu kafelka zmiany; ostrzeżenie
+   „Bieżący cykl leczenia nie ma jeszcze pomiaru masy ciała — wykres pokazuje wyłącznie pomiary sprzed tego cyklu, bez
+   kamieni milowych i bez oceny postępu.”; tydzień odstawienia pusty (zero osi należy do wcześniejszego cyklu). Przed
+   poprawką: cichy powrót do pierwszego pomiaru serii jako `pierwszy-pomiar`, z kamieniami cyklu 1 i tekstem „w rekordzie
+   nie ma punktu „Włączenie””.
 3. **Lek** (drabinka pasm, punkt oceny wg ChPL, „Lek:” w opisie, „lek:” na kartce do dokumentacji): Włączenie bieżącego
    cyklu z lekiem, inaczej pierwszy punkt tego cyklu z lekiem. Dotąd: pierwsze Włączenie z lekiem w kolejności zapisu.
 4. **Stan leczenia:** „odstawione” wyłącznie wtedy, gdy ostatni cykl jest zakończony; data — z jego Zakończenia (także
@@ -6872,7 +6880,13 @@ werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scale
    uporządkowania w monitorze DocPro — punktu oceny wg ChPL nie postawiono (ocena wg ChPL tego cyklu jest wstrzymana,
    jak w Karcie pacjenta).” (zastępuje ostrzeżenie F1, jedno zdanie o znaczniku). Pasma zostają. Dotąd: znacznik w 16.
    tyg. od pierwszego Włączenia, bez ostrzeżenia — przy werdykcie Karty „wstrzymana” (D5, rata 3).
-6. **Bez zmian:** seria pomiarów i `scalSerie` (wszystkie pomiary i punkty; pomiary poprzednich cykli zostają na
+6. **Pomiar wcześniejszego cyklu nigdy nie jest postępem bieżącego** (poprawka po recenzji raty). Pomiar serii, który
+   jest punktem wcześniejszego cyklu (ta sama reguła wizyty co w `scalSerie`: klucz sejfu i zgodna data), a nie jest
+   punktem bieżącego, ma `przedOdniesieniem: true` — także przy remisie dat z odniesieniem (Zakończenie poprzedniego
+   cyklu i Włączenie bieżącego tego samego dnia, CY-8; krok 1 poprawki dwukrokowej starego zapisu). Tydzień 0 zostaje na
+   wykresie; pomiar nie wchodzi do pasm, nadiru, odzysku ani kamieni. Przed poprawką pomiar Zakończenia o niższej masie
+   zostawał nadirem w 0. tyg. i dawał zdarzenie „istotny odzysk” (waga „alarm”) w panelu i na kartce pacjenta.
+7. **Bez zmian:** seria pomiarów i `scalSerie` (wszystkie pomiary i punkty; pomiary poprzednich cykli zostają na
    wykresie z ujemnymi tygodniami, bez kamieni — jak dotąd pomiary sprzed Włączenia), progi, pasma, `OPIS_PASM`.
 
 **Wynik silnika.** Nowe pole `cykl = { numer, liczba, stan ('aktywny'|'zakonczony'), bezWlaczenia, niezgodnosci: [kody] }`;
@@ -6890,6 +6904,11 @@ werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scale
 - podpis osi wykresu masy: bez zmian („tygodnie od włączenia leczenia”); cykl bez Włączenia: „tygodnie od pierwszego
   pomiaru bieżącego cyklu”; ostrzeżenie F1 w cyklu nr ≥ 2: „…od pierwszego pomiaru bieżącego cyklu, nie od masy
   początkowej z ChPL.”
+- cykl nr ≥ 2 bez żadnego pomiaru masy: opis odniesienia (panel i obie kartki) „Wszystkie zmiany liczone od pierwszego
+  zapisanego pomiaru (X kg, DD.MM.RRRR), nie od poprzedniej wizyty. Bieżący cykl leczenia (cykl N z M) nie ma jeszcze
+  pomiaru masy ciała — wykres pokazuje tylko pomiary sprzed tego cyklu.”; kartka do dokumentacji „Punkt odniesienia:
+  pierwszy pomiar — bieżący cykl leczenia (cykl N z M) bez pomiaru masy”; kartka pacjenta „Od początku obserwacji…”
+  (zdanie prawdziwe: liczby idą od pierwszego pomiaru serii); podpis osi „tygodnie od pierwszego pomiaru”.
 
 **Bez modułu cykli** (strony, które go nie ładują; offline bez pliku z `OPTIONAL_ASSETS`; wyjątek w `podziel`) — reguła
 sprzed raty 4, bez zmian w wyniku. Moduł czytany w chwili wywołania (na 6 z 8 stron ładuje się po „Postępach”).
@@ -6905,28 +6924,37 @@ cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024 99,0 kg, Z 15.10.2024 97
 | CY-10-KpoZ | cykl 1 + K Wegovy 12.11.2024 98,5 kg (bez Włączenia) + K, K | `pierwszy-pomiar-cyklu`, 98,5 kg; podpis osi „…pierwszego pomiaru bieżącego cyklu” | 104,0 kg, „odstawione w 40. tygodniu”, liraglutyd |
 | CK-5 | W 12.01.2024 104, K 12.04.2024 99, W 03.05.2024 99, K 01.09.2024 96 (Saxenda) | bez znacznika i pasa ChPL, ostrzeżenie „Zapis bieżącego cyklu leczenia wymaga uporządkowania…”; drabinka liraglutydu i −7,7 % od 104 kg zostają | znacznik ChPL w 16. tyg., bez ostrzeżenia |
 | jeden cykl | W, K, Z bez masy (Saxenda) | „odstawione w 40. tygodniu”, data 15.10.2024 | „na leczeniu” |
+| CY-8 | W Saxenda 12.01.2024 104, K 12.04.2024 99, Z 12.11.2024 97,0, W Wegovy 12.11.2024 98,5, K 12.02.2025 98,2 (zapis przyjęty przez `sprawdz`) | odniesienie 98,5 kg; pomiar Z 97,0 kg w 0. tyg. „sprzed odniesienia”; nadir 98,2 kg (ostatni); bez kamieni i zdarzeń | wersja raty przed recenzją: nadir 97,0 kg w 0. tyg., zdarzenie „istotny odzysk” (alarm) i „Odzyskano ponad 25 %…” w panelu i na kartce pacjenta |
+| CY-8-KpoZ | jak CY-8, ale cykl 2 zaczyna K Wegovy 12.11.2024 98,5 (bez Włączenia) | `pierwszy-pomiar-cyklu`, 98,5 kg; Z 97,0 kg „sprzed odniesienia”; bez kamieni | jak wyżej (nadir 97,0, „istotny odzysk”) |
+| cykl 2 bez masy | cykl 1 + K Wegovy 12.11.2024 bez masy | `brak-pomiaru-cyklu`; wszystkie pomiary „sprzed odniesienia”; bez kamieni; ostrzeżenie | wersja raty przed recenzją: `pierwszy-pomiar` 104 kg, kamienie 13: zmiana klasy i 40: pasmo 5 %, „w rekordzie nie ma punktu „Włączenie”” |
 
-**Testy.** `tests/unit/postepy-doroslego-cykle.test.mjs` (30; prawdziwe `scalSerie` → `analizuj`, `buildHtml`,
+**Testy.** `tests/unit/postepy-doroslego-cykle.test.mjs` (39; prawdziwe `scalSerie` → `analizuj`, `buildHtml`,
 `buildDokument`: CY-10 w czterech kolejnościach zapisu, zakończony ostatni cykl, Zakończenie bez masy, cykl nr 2 bez
-Włączenia z remisem dat, niezgodność `dwa-wlaczenia` i dowolny kod przez atrapę, niezgodność tylko w poprzednim cyklu,
-teksty panelu i obu kartek, test negatywny bez modułu / z wyjątkiem w `podziel`, moduł ładowany po silniku);
-`tests/e2e/postepy-doroslego-cykle.spec.mjs` (3; prawdziwa Karta pacjenta z sejfem testowym: CY-10 z cyklem 2 wpisanym
-przed cyklem 1, CY-10-Z, telefon 390 px bez poziomego przewijania). `tests/support/load-browser-script.mjs`: moduł cykli
+Włączenia z remisem dat, CY-8 przez prawdziwe `sprawdz` z masą Zakończenia niższą, wyższą i równą masie Włączenia, krok 1
+poprawki dwukrokowej, pierwszy punkt cyklu 2 bez masy w dniu Zakończenia, cykl 2 bez żadnego pomiaru masy (silnik,
+teksty, zakończony, pomiar z osi czasu), niezgodność `dwa-wlaczenia` i dowolny kod przez atrapę, niezgodność tylko w
+poprzednim cyklu, teksty panelu i obu kartek, test negatywny bez modułu / z wyjątkiem w `podziel`, moduł ładowany po
+silniku; dane leków jak w monitorze — `substance` to etykieta substancji);
+`tests/e2e/postepy-doroslego-cykle.spec.mjs` (4; prawdziwa Karta pacjenta z sejfem testowym: CY-10 z cyklem 2 wpisanym
+przed cyklem 1, CY-10-Z, CY-8 bez „Odzyskano…” i bez kafelka najniższej masy, telefon 390 px bez poziomego przewijania). `tests/support/load-browser-script.mjs`: moduł cykli
 w zależnościach silnika „Postępów” (bez niego testy cicho szłyby dawną regułą). Istniejące testy „Postępów” (jeden
 cykl) — bez zmian asercji; komentarz testu „punkt „Włączenie” wygrywa z późniejszym punktem o innym leku” opisuje R6.
 
 **Ograniczenia.** Po R6 stary zapis ze zmianą substancji w jednym cyklu dostaje niezgodność: znacznik ChPL zdjęty, ale
 drabinka pasm i „Lek:” nadal pochodzą z Włączenia cyklu (lek sprzed zmiany). `OPIS_PASM` (rozwijany opis) mówi ogólnie
 o „włączeniu leczenia”. Granica cyklu nie jest rysowana na wykresie. Przynależność punktu do cyklu wyznacza moduł cykli
-(daty lokalne, ISO i DD.MM.RRRR), a oś „Postępów” — daty ISO; przy dacie DD.MM.RRRR w Zakończeniu tydzień odstawienia
-zostaje pusty.
+(daty lokalne, ISO i DD.MM.RRRR), a oś „Postępów” — daty ISO. Zakończenie z datą DD.MM.RRRR BEZ masy: stan
+„odstawione”, tydzień odstawienia pusty. Takie Zakończenie Z masą trafia do serii, więc cała oś przechodzi na wiek
+(zachowanie sprzed raty): tydzień odstawienia jest wtedy przybliżony z wieku (np. 26 zamiast 29 z dat), a
+`odstawienieDateISO` niesie napis nie-ISO.
 
 **Wersje** — `npm run podbij-wersje` przy scaleniu raty (integrator). Wewnętrzne: `VildaPostepyDoroslego` 1 → 2,
 `VildaPostepyDoroslegoUI` 1 → 2, `VildaPostepyDoroslegoWydruk` 2 → 3 (bez pinów w testach).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia z bieżącego cyklu, odniesienia cyklu bez
 Włączenia, stanu „odstawione” per cykl i wstrzymania znacznika ChPL przy niezgodnym zapisie; brzmienia dla cyklu bez
-Włączenia (nie były w specyfikacji raty); scalenie i wdrożenie.
+Włączenia (nie były w specyfikacji raty); wyłączenia pomiarów wcześniejszych cykli z postępu bieżącego przy remisie
+dat oraz stanu „brak-pomiaru-cyklu” z jego brzmieniami (poprawki po recenzji); scalenie i wdrożenie.
 
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
