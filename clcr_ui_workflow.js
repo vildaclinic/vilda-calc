@@ -1022,8 +1022,23 @@
       answerSelect: null,
       originalParent: label.parentNode,
     };
+    bindLabelToActiveControl(view);
     state.fieldViews.set(control.id, view);
     return view;
+  }
+
+  /* Etykieta pola wskazuje jego AKTYWNĄ kontrolkę (P-KLIRENS-ETYKIETY, 2026-10-01).
+   * <label> bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu, a nagłówek
+   * z przyciskiem „i" stoi przed polem — klik w nazwę otwierał więc pomoc zamiast zaznaczyć
+   * pole albo dać mu fokus. Pole wyboru z listą odpowiedzi: etykieta wskazuje listę, więc klik
+   * w nazwę daje jej fokus i niczego nie potwierdza — ukryte pole wyboru pod listą nie może
+   * się przełączyć kliknięciem w tekst. */
+  function bindLabelToActiveControl(view) {
+    if (!view || !view.wrapper) return;
+    const target = view.answerSelect || view.control;
+    if (target && target.id && view.wrapper.htmlFor !== target.id) {
+      view.wrapper.htmlFor = target.id;
+    }
   }
 
   function currentProtocolValueVault() {
@@ -1115,6 +1130,7 @@
     });
     view.wrapper.insertBefore(answer, view.helpPanel);
     view.answerSelect = answer;
+    bindLabelToActiveControl(view);
     return answer;
   }
 
