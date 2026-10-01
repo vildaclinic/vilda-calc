@@ -17,6 +17,11 @@
  *     `page.emulateMedia({ reducedMotion: 'reduce' })' tego NIE wyłącza (zmierzone: 2702 ms),
  *     więc bramka musi sama ustawić element na miejscu — przewinięciem `behavior: 'instant'`,
  *     które unieważnia animację i sprawia, że Playwright nie ma już czego przewijać.
+ *     Pod obciążeniem CPU ta sama animacja daje drugi objaw (P-BRAMKI-5, 2026-09-30): Playwright
+ *     uznaje element za stabilny, `mousedown` trafia w pole, a przewijanie trwa dalej — `mouseup`
+ *     ląduje 33–82 px obok (np. w `FIELDSET#dzmSet`), `click` dostaje wspólny przodek i pole się
+ *     nie przełącza: „Clicking the checkbox did not change its state". Przechwytywacz trafienia
+ *     Playwrighta sprawdza tylko pierwsze zdarzenie, więc tej akcji już nie ponawia.
  *
  *  2. UKŁAD DOMYKA SIĘ PO BRAMKACH `openCalculator`. Strona dociąga arkusz Google Fonts
  *     linkiem `media="print" onload="this.media='all'"`, czyli CELOWO poza ścieżką renderu;

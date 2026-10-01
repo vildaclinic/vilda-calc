@@ -5184,6 +5184,98 @@ Trzy testy, które właściciel widział jako flaki, to dokładnie te trzy, któ
 1. `html,body{scroll-behavior:smooth}` w `style.css` obowiązuje **bez** `@media (prefers-reduced-motion: reduce)`. To pytanie o dostępność produktu, nie o test, i osobna decyzja — dlatego poprawka siedzi w teście, a nie w CSS. Gdyby ta reguła dostała warunek, pozostałe pliki e2e też przestałyby płacić za animowane przewijanie.
 2. Ten sam wzorzec — `click()`/`check()` bez upewnienia się, że element stoi — jest w innych plikach e2e dotykających `kalkulator-klirens.html`. Tutaj byłoby to poszerzeniem zlecenia; moduł `uklad-czekanie.mjs` jest gotowy do ponownego użycia.
 
+## Dwa niestabilne pliki e2e: kliknięcie ginie w trwającym przewijaniu, odtworzenie sesji nadpisuje pole po wczytaniu pacjenta (P-BRAMKI-5, 2026-09-30)
+
+**Zlecenie właściciela (2026-09-30):** naprawić niestabilny `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs` i sprawdzić podobny przypadek kliknięcia w `klirens-stage2-stage3.spec.mjs`. Oba naprawione po stronie testów; pytania o produkt — w „Do odnotowania”. Poniżej najpierw Klirens, potem pokwitanie. **Żaden plik aplikacji nie był ruszany.**
+
+**Skąd znalezisko (Klirens).** Niestabilny `tests/e2e/klirens-stage2-stage3.spec.mjs` („wynik kamicowy nie zaokrągla przez próg…") — `locator.check: Clicking the checkbox did not change its state`, zielono przy ponowieniu. **Nie jest to usterka produktu** — żaden plik aplikacji nie był ruszany.
+
+To drugi objaw **przyczyny pierwszej z P-BRAMKI-4** (animowane przewijanie), tym razem bez „element is not stable": Playwright uznaje pole za stabilne, klika, a potem zgłasza, że stan się nie zmienił.
+
+### Odtworzenie
+
+Samo spowolnienie przez CDP (`Emulation.setCPUThrottlingRate`, 6×) nie odtwarza błędu — 0 z 12 przebiegów. Odtwarza go rzeczywista rywalizacja o rdzenie: cztery równoległe przeglądarki i dwa procesy zajmujące rdzenie, w każdej sekwencja z testu — pacjent, zbiórka, dziewięć `check()` (sześć potwierdzeń zbiórki i trzy potwierdzenia kamicowe). Wynik: **11 z 72 sekwencji** z błędem (trzy serie: 7/24, 3/24, 1/24), w różnych polach — także w pierwszym.
+
+### Mechanizm
+
+Zapis zdarzeń myszy (faza przechwytywania na `window`, cel, współrzędne, prostokąt pola, `scrollY`) z nieudanego przebiegu:
+
+| zdarzenie | cel | `scrollY` | prostokąt pola (y) |
+|---|---|---|---|
+| `pointerdown`, `mousedown` | `INPUT#collectionFinalVoidIncluded` | 2997 | 655 |
+| (przewijanie trwa) | | 2995 → 2979 → 2964 | |
+| `mouseup`, `click` | `FIELDSET#dzmSet` | 2964 | 688 |
+
+Położenie pola **w dokumencie** się nie zmienia (655 + 2997 = 688 + 2964 = 3652 px) — to czyste przewinięcie, nie przeskok układu. `mouseup` trafia 33 px obok pola, przeglądarka wysyła `click` do wspólnego przodka obu celów i pole się nie przełącza. W innych przebiegach: przejazd 2997 → 3079 i `mouseup` w `LABEL.inline-checkbox-label`.
+
+Kto przewija: haki na `scrollIntoView`, `scrollTo`, `scrollBy`, `scroll`, `scrollTop` i `focus` **nie odnotowały żadnego wywołania z kodu strony**. Przejazd to przewinięcie, którym Playwright sam sprowadza cel do widoku, rozłożone na klatki przez `html,body{scroll-behavior:smooth}` — na tej stronie ustawiają to **dwa** arkusze: `style.css` i `inline_kalkulator_klirens_00.css`.
+
+Dlaczego Playwright nie ponawia: stabilność to ten sam prostokąt w dwóch kolejnych klatkach — przy zagłodzonym wątku głównym animacja potrafi w nich stać w miejscu i ruszyć dalej zaraz po `mousedown`. Przechwytywacz trafienia Playwrighta sprawdza **tylko pierwsze** zdarzenie (`pointerdown`), a to trafiło w pole — więc akcja uchodzi za wykonaną, a końcowa kontrola stanu jest błędem nienaprawialnym, bez ponowienia.
+
+**Próba przyczynowa (A/B).** Te same sekwencje z arkuszem `html,body{scroll-behavior:auto!important}` wstrzykniętym przed załadowaniem strony: **0 z 24**. Z płynnym przewijaniem: 11 z 72.
+
+### Poprawka
+
+`klirens-stage2-stage3` przechodzi na bramki z P-BRAMKI-4 (`tests/support/uklad-czekanie.mjs`) — tak jak wcześniej `klirens-stage0`:
+
+- `kliknij` dla „Korzystaj bez logowania" i `czekajNaUstabilizowanyUklad` na końcu `openCalculator`;
+- `zaznacz` zamiast `check()` — wszystkie 15 miejsc w pliku, nie tylko zgłoszony test (potwierdzenia zbiórki, kamicowe i Kt/V, `#spotSameSpecimen`, `#ktvToggle`, `#ktvTreatmentsDelivered`, `#stonePhPersistent`, `#stoneKnownCystinuria`);
+- `ustawNaMiejscu` przed jedynym `uncheck()` (`#ktvSameSession`).
+
+`ustawNaMiejscu` przewija `behavior: 'instant'`, co przerywa trwającą animację, i czeka na trzy klatki z tym samym prostokątem **i tym samym `scrollY`** — po niej Playwright nie ma już czego przewijać. W komentarzu modułu `uklad-czekanie.mjs` dopisany ten drugi objaw.
+
+**Asercje bez zmian.** Żaden `expect` nie został ruszony, dodany ani osłabiony; `check()`, `uncheck()` i `click()` nadal przechodzą pełną kontrolę „actionability" Playwrighta. **Bez zmian w produkcie**, więc bez podbicia `?v=` i `SW_VERSION`.
+
+### Walidacja
+
+Te same warunki co przy odtworzeniu (sześć workerów Playwrighta i dwa procesy zajmujące rdzenie), `--project=desktop-chromium --repeat-each=6` — cały plik, 12 testów × 6:
+
+| wariant | wynik |
+|---|---|
+| plik sprzed poprawki (kopia z `origin/audyt`) | **71/72**, jeden błąd „Clicking the checkbox did not change its state" — tym razem w teście Kt/V, nie w zgłoszonym; stąd poprawka całego pliku |
+| plik po poprawce | **72/72** |
+
+Uczciwie: przy tej częstości (1 na 72 w pełnym pliku) sam zielony przebieg niewiele dowodzi. Dowodem jest zapis zdarzeń myszy (`mouseup` obok pola po przewinięciu) i próba A/B z wyłączonym płynnym przewijaniem (11/72 → 0/24).
+
+### Drugi flake: `docpro-dziedziczy-pokwitanie.spec.mjs` — odtworzenie sesji nadpisuje pole po wczytaniu pacjenta
+
+W tym samym zleceniu sprawdzany był niestabilny `tests/e2e/docpro-dziedziczy-pokwitanie.spec.mjs`. Pierwsze próby (test „docpro.html: … rekord wypełnia etap", 24 przebiegi pod obciążeniem, ślady przy 1× i 6× spowolnieniu CPU) były zielone. Pełny przebieg e2e tej gałęzi dał jednak czerwony drugi test pliku — „index.html: pole opróżnione przez lekarza nadal wygrywa z rekordem": `VildaPubertalStatus.dane().etap` to 3 zamiast `null`, choć test chwilę wcześniej wyczyścił `#tannerStage`. Ślad Playwrighta: bez nawigacji, między wyczyszczeniem a odczytem ~100 ms.
+
+**Co nadpisuje pole.** Hak na setter `value` (oraz `selectedIndex` i `option.selected`) pól pokwitaniowych, sekwencja z testu, cztery równoległe przeglądarki pod obciążeniem. Stos zapisu „3" po wyczyszczeniu: `requestAnimationFrame` → `restoreMainSessionIfAny` (`vilda_data_import_export.js`) → `applyLoadedData` (`app.js`). To **startowe odtworzenie sesji karty**: rejestruje się w VildaInit przy DOMContentLoaded (`app:main-session-restore-init`), a samo odtworzenie czeka jeszcze dwie klatki animacji i wtedy nakłada migawkę sesji z `sessionStorage` — tutaj zapisaną po wczytaniu pacjenta, więc z etapem 3.
+
+**Dlaczego tylko czasem — i dlaczego wcześniej się nie odtwarzało.** Plik korzysta z `tests/support/test-czas.mjs`, czyli z `page.clock.install` + `resume`, a zegar Playwrighta podmienia także `requestAnimationFrame`. Pierwsze próby szły bez tego zegara.
+
+| wariant (sekwencja z testu, 4 × 6 przebiegów pod obciążeniem) | odtworzenie po wyczyszczeniu pola | czerwony test |
+|---|---|---|
+| bez zegara testowego | 0 z 24 | 0 z 24 |
+| z zegarem testowym (jak w pliku) | **4 z 24** | **2 z 24** |
+| z zegarem testowym + bramka (poprawka) | **0 z 24** | **0 z 24** |
+
+Ta sama przyczyna tłumaczy pierwszy test pliku (`docpro.html`: „etap z rekordu trafia do pola"): migawka sprzed wczytania pacjenta, nałożona po nim, zostawia puste pole.
+
+**Poprawka (tylko test).** Nowy `tests/support/sesja-czekanie.mjs` z `czekajNaOdtworzenieSesji(page)`: synchroniczny predykat `VildaInit.isInitialized('app:main-session-restore-init')`, potem dwie klatki animacji zlecone przez test — przeglądarka wykonuje wywołania `requestAnimationFrame` w kolejności zlecenia, więc druga klatka bramki nie wyprzedza drugiej klatki odtworzenia. `otworzZKontem` stawia tę bramkę przed wczytaniem pacjenta, więc dotyczy obu testów pliku. **Asercje bez zmian.**
+
+Sekwencja w tabeli to kopia kroków testu uruchamiana skryptem z hakami na setterach.
+
+**Pomiar samego pliku** (`--project=desktop-chromium`, pod obciążeniem): plik sprzed poprawki **48/48** (6 workerów, 2 procesy zajmujące rdzenie, `--repeat-each=24`) i **64/64** (8 workerów, 4 procesy, `--repeat-each=32`); plik po poprawce **48/48**. Uczciwie: przy tej częstości pomiar pliku niczego nie rozstrzyga — flake wyszedł raz w pełnym przebiegu e2e (1 z 951 testów) i to z tego przebiegu pochodzi ślad. Dowodem jest stos zapisu i próba A/B na sekwencji z tabeli.
+
+### Walidacja całości
+
+Po scaleniu `origin/audyt` (a3d1796b): `npm test` — polityka repozytorium, lint, składnia, **4007 testów jednostkowych w 229 plikach** (w tym strażnik bramek) i regresja PRO — zielone. `npm run podbij-wersje`: „Nic do zmiany — wersje są spójne z bazą" (SW 1.1.135 bez zmian).
+
+Pełne `npm run test:e2e` po scaleniu: **958/959**. Oba zmienione pliki zielone. Jedyny czerwony to `tests/e2e/gh-punkty-po-wczytaniu.spec.mjs:144`, plik nieruszany w tej zmianie: karta „Zaawansowane obliczenia wzrostowe" nie pokazała się po kliknięciu przełącznika. W izolacji 1 z 10 czerwony, w kolejnych 30 przebiegach 0. To istniejący flake na `audyt`. Plik też korzysta z zegara testowego i wypełnia formularz zaraz po starcie strony, więc jest kandydatem na przyczynę z części o pokwitaniu. Nie weryfikowałem tego — artefakty nieudanego przebiegu nadpisały kolejne uruchomienia. Pierwszy pełny przebieg e2e tej gałęzi (przed scaleniem, bez poprawki pokwitania): 950/951, czerwony był test pokwitania opisany wyżej.
+
+Po drugim scaleniu `origin/audyt` (79b72204, P-GH-BLOKADA): `npm test` — **4009/4009** i regresja PRO zielone; `podbij-wersje` — „Nic do zmiany" (SW 1.1.136 bez zmian). Pełny przebieg e2e przerwał restart kontenera, więc uruchomione zostały pliki celowane: oba zmienione, `klirens-stage0` (ten sam pomocnik) oraz dwa pliki GH, w tym nowy `gh-wiersze-start-blokada` — **27/27**. Pełny przebieg zostaje dla CI.
+
+### Do odnotowania, nie do naprawy tutaj
+
+1. **Etykieta pola wskazuje przycisk „i", a nie pole.** `decorateField` w `clcr_ui_workflow.js` wstawia nagłówek z przyciskiem informacji do `<label>` **bez atrybutu `for`**, przed samym polem. Etykieta bez `for` wskazuje pierwszy etykietowalny element w swoim wnętrzu — teraz jest nim przycisk. Zmierzone w przeglądarce: `label.control` to `BUTTON.clcr-info-button` dla `collectionStartVoidDiscarded`, `stoneTwoCollectionsConfirmed`, `age` i `V24`; kliknięcie w nazwę pola „zbiórki" **nie zaznacza pola, tylko otwiera dymek pomocy**. W zapisie zdarzeń widać to wprost: `click` na etykiecie przekazany do `BUTTON.clcr-info-button`. To zachowanie produktu (UX, nie kliniczne) i osobna decyzja.
+2. Ten sam wzorzec — `check()` bez bramki — zostaje w `klirens-stage1-specimens.spec.mjs` (12 miejsc) i `klirens-ui-reorganization.spec.mjs` (1).
+3. Uzupełnienie punktu 1 z P-BRAMKI-4: warunek `prefers-reduced-motion` w `clcr_ui_workflow.css` dotyczy selektora `html[data-clcr-workflow-ui="1"] *`, czyli potomków `html`, a nie samego `html` — przewijanie widoku bierze `scroll-behavior` z elementu głównego, więc ta reguła płynnego przewijania okna nie wyłącza.
+4. `applyLoadedData` wywołuje 36 plików e2e, z czego **25** korzysta z zegara testowego. Bramka z `sesja-czekanie.mjs` stoi na razie tylko w pliku pokwitania, bo tylko tu wyścig został zmierzony; pozostałe mogą być narażone na tę samą przyczynę.
+5. **Pytanie o produkt, niezbadane.** W aplikacji okno między rejestracją a odtworzeniem sesji to dwie klatki animacji po starcie strony — w widocznej karcie ułamek sekundy, przed jakimkolwiek kliknięciem. Nie sprawdzałem, czy da się w nie trafić w realnym użyciu, np. w ukrytym panelu powłoki `app.html`, w którym przeglądarka może wstrzymywać klatki animacji, a który w tym czasie dostanie pacjenta. Warunek pominięcia odtworzenia w `restoreMainSessionIfAny` przepuszcza odtworzenie, gdy pacjent jest wczytany (`_vildaCurrentPatientId`). To decyzja i analiza po stronie właściciela.
+6. **Niestabilny test jednostkowy spoza zakresu.** Pierwszy pełny `npm test` tej gałęzi dał 3989/3990: `tests/unit/zapisy-dwie-karty.test.mjs` › „formularze z tej samej wersji: drugi zapis widzi pierwszy i pyta…" oczekuje, że o pomiar z pierwszego zapisu (72) zapyta drugi, a pytanie dotyczyło 84 — kolejność dwóch równoległych zapisów się odwróciła. Dane były kompletne (pierwsza asercja, pomiary obu formularzy w bieżącej wersji, przeszła). W izolacji 5/5 zielonych, kolejny pełny `npm test` zielony. Nie badałem, czy test zakłada kolejność, której sejf nie obiecuje, czy kolejka zapisów ma okno przed ustawieniem się w kolejce — to obszar sejfu i osobny wątek.
+
 ## Punkt oceny wg ChPL nie stoi na cudzym zerze (P-POSTEPY-FIX rata A, SW 1.1.15, 2026-09-20)
 
 **Skąd to się wzięło.** Audyt całej funkcji postępów, zlecony przez właściciela po zamknięciu planu P-POSTEPY. Znalezisko F1 — najpoważniejsze w audycie.
