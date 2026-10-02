@@ -516,8 +516,8 @@
   "sha256": "6d4c92bb7827503bdaff53fe550c981ff356ec769cc0107e7dab906e9b6171ff"
  },
  "vilda_chrome.js": {
-  "v": 90,
-  "sha256": "0f3feb9005a9842060f6e1934067e3f6ddbb36242209387164a914db0679c8c5"
+  "v": 91,
+  "sha256": "75b956244300aeef40ec429f90f300d27f38dedff79ef4e97af7a2bf0741f2e0"
  },
  "vilda_cloud_cache_warm.js": {
   "v": 2,
