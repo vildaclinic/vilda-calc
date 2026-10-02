@@ -17,6 +17,16 @@ async function otworzKonto(page) {
   await page.addInitScript(() => {
     window.localStorage.setItem('vilda-terms-accepted-v1',
       JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+    // Uprawnienie tylko dla własnego fikcyjnego konta w tym efemerycznym profilu.
+    // Jawny hook produkcyjnego modułu służy testom UI za bramką DocPro.
+    const planTestowy = () => {
+      const access = window.VildaProAccess;
+      if (!access) return;
+      access.__setTokenModeForTest(false);
+      access.setPlan('pro', '2099-12-31T23:59:59.000Z');
+    };
+    document.addEventListener('DOMContentLoaded', planTestowy, { once: true });
+    document.addEventListener('vilda:session-changed', planTestowy);
   });
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault));
@@ -41,7 +51,8 @@ async function ustawPola(page, pola) {
 }
 
 async function otworzKarteWzrostu(page) {
-  await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]');
+  await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
+    { state: 'attached', timeout: 10_000 });
   await page.evaluate(() => {
     const form = document.getElementById('advancedGrowthForm');
     if (form && getComputedStyle(form).display !== 'none') return;
@@ -65,6 +76,11 @@ async function pierwszaWizyta(page) {
     lastName: 'Fikcyjna', firstName: 'Kostna', sex: 'F',
     age: 10, ageMonths: 3, height: 141, weight: 34,
     advMotherHeight: 165, advFatherHeight: 178,
+  });
+  await page.evaluate(() => {
+    const pro = document.getElementById('resultsModeToggle');
+    pro.checked = true;
+    pro.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await wpiszBadanie(page, 9);
   await page.locator('#saveDataBtnSidebar').click();
@@ -213,8 +229,8 @@ test('nowa wizyta bez badania: jeden marker i niezmienione źródło BA po zapis
   // sprawdzając rzeczywisty model wejścia z wcześniejszym BA oraz przyczynę braku wyniku.
   ostatnieBadanie(docpro, 123, false);
   expect(docpro.predictionReason).toBe('missing-dataset');
-  await otworzKarteWzrostu(page);
-  await expect(page.locator('#advBoneAgeLastInfo')).toBeVisible();
+  // DocPro utrzymuje tę kartę jako ukrytą projekcję wspólnego stanu pacjenta.
+  await expect(page.locator('#advBoneAgeLastInfo')).toContainText('10 lat 3 mies.');
   await sprawdzSzerokosc(page);
   expect((await markerySiatki(page)).length).toBe(1);
 
