@@ -56,8 +56,7 @@ describe('buildInput — wejście opisu z danych karty zaawansowanej', () => {
     expect(we.mph).toBe(178.2);
     expect(we.mphSds).toBe(0.41);
     expect(we.boneAgeYears).toBeCloseTo(5.5, 5);
-    // Dane z formularza są „teraz" — nie ma czego datować, więc zastrzeżeń o wieku
-    // danych opis nie wygeneruje.
+    // Legacy scalar nie zawiera czasu oznaczenia; kolektor go nie dopisuje.
     expect(we.boneAgeMonthsAgo).toBeNull();
     expect(we.lastMeasuredMonthsAgo).toBeNull();
   });
@@ -279,7 +278,7 @@ describe('buildInput — wiek kostny z kontekstu karty, gdy pole formularza jest
     metrics: [{ metric: 'height', last: { ageMonths: 144, value: 150, sd: -0.5, c: 31 } }],
   };
 
-  it('pole formularza ma pierwszeństwo i jest „teraz"', () => {
+  it('legacy scalar zachowuje wartość, ale nie potwierdza czasu oznaczenia', () => {
     const we = okno().VildaPatientNarrativeUI.buildInput({ boneAgeMonths: 132 }, MODEL);
     expect(we.boneAgeYears).toBeCloseTo(11, 5);
     expect(we.boneAgeAtAgeMonths).toBeNull();
@@ -293,11 +292,11 @@ describe('buildInput — wiek kostny z kontekstu karty, gdy pole formularza jest
     expect(we.boneAgeMonthsAgo).toBe(24);
   });
 
-  it('oznaczenie z bieżącej wizyty albo bez daty — bez datowania; bez kontekstu — bez wieku kostnego', () => {
+  it('znany wiek bieżącego badania zostaje; brak daty nie dostaje datowania', () => {
     const teraz = okno().VildaPatientNarrativeUI.buildInput({}, { ...MODEL, context: { boneAge: { baMonths: 126, atAgeMonths: 144 } } });
     expect(teraz.boneAgeYears).toBeCloseTo(10.5, 5);
-    expect(teraz.boneAgeAtAgeMonths).toBeNull();
-    expect(teraz.boneAgeMonthsAgo).toBeNull();
+    expect(teraz.boneAgeAtAgeMonths).toBe(144);
+    expect(teraz.boneAgeMonthsAgo).toBe(0);
     const bezDaty = okno().VildaPatientNarrativeUI.buildInput({}, { ...MODEL, context: { boneAge: { baMonths: 126 } } });
     expect(bezDaty.boneAgeYears).toBeCloseTo(10.5, 5);
     expect(bezDaty.boneAgeMonthsAgo).toBeNull();
