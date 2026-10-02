@@ -70,6 +70,15 @@ async function wpiszBadanie(page, lata) {
   await page.evaluate(() => window.calculateGrowthAdvanced());
 }
 
+async function kliknijZapisz(page) {
+  const przycisk = page.locator('#saveDataBtnSidebar');
+  if (await przycisk.isVisible()) { await przycisk.click(); return; }
+  await page.locator('[data-vilda-chrome-menu-btn]').click();
+  const wMenu = page.locator('[data-vilda-chrome-drawer] [data-drawer-btn="saveDataBtnSidebar"]');
+  await expect(wMenu).toBeVisible();
+  await wMenu.click();
+}
+
 async function pierwszaWizyta(page) {
   await otworzKonto(page);
   await ustawPola(page, {
@@ -83,7 +92,7 @@ async function pierwszaWizyta(page) {
     pro.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await wpiszBadanie(page, 9);
-  await page.locator('#saveDataBtnSidebar').click();
+  await kliknijZapisz(page);
   let id;
   await expect.poll(async () => {
     id = await page.evaluate(async () => {
@@ -102,7 +111,7 @@ const zapis = (page, id) => page.evaluate(async (patientId) => {
 
 async function zapiszWizyte(page, id, wiekMies) {
   const przed = await zapis(page, id);
-  await page.locator('#saveDataBtnSidebar').click();
+  await kliknijZapisz(page);
   await expect.poll(async () => {
     const po = await zapis(page, id);
     const u = po.payload.user;
