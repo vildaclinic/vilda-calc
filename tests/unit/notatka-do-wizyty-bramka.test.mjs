@@ -275,15 +275,49 @@ describe('Historia odróżnia usunięty pomiar od nigdy niezapisanego (G8, decyz
 });
 
 // G19 — szuflada mobilna i powłoka. Zachowanie na żywo wymagałoby telefonu i ramek powłoki;
-// tutaj pilnujemy samych rozgałęzień, bo to po kilka znaków, które łatwo cofnąć (ten sam wzorzec
-// co w karta-pacjenta-notatki-historia.test.mjs).
+// pierwszy test uruchamia otwieranie i lustrzenie produkcyjne, pozostałe pilnują rozgałęzień
+// (ten sam wzorzec co w karta-pacjenta-notatki-historia.test.mjs).
 describe('G19 — wyłączony przycisk nie przekazuje kliknięcia dalej', () => {
   const zrodlo = (plik) => fs.readFileSync(path.join(repositoryRoot, plik), 'utf8');
 
   it('szuflada lustruje stan przycisku przy każdym otwarciu', () => {
     const chrome = zrodlo('vilda_chrome.js');
-    expect(chrome, 'lustrzenie aria-disabled/data-tip na przyciskach szuflady').toContain('function Qdm(e)');
-    expect(chrome, 'lustrzenie odpala się przy otwarciu szuflady').toContain('e.__vildaCloseTimer=null),Qdm(e)');
+    // Wykonujemy pełne produkcyjne Qdm, nt oraz ee; atrapy dotyczą wyłącznie DOM,
+    // timerów i niezależnej obsługi focus/tła. Kształt minifikacji nie jest kontraktem.
+    const mirrorStart = chrome.indexOf('function Qdm(');
+    const openStart = chrome.indexOf('function nt(');
+    const mirrorSource = chrome.slice(mirrorStart, chrome.indexOf('function ', mirrorStart + 9));
+    const drawerSource = chrome.slice(openStart, chrome.indexOf('var de=', openStart));
+    expect(mirrorStart).toBeGreaterThanOrEqual(0);
+    expect(openStart).toBeGreaterThanOrEqual(0);
+    const source = atrapa('addVisitNoteBtnSidebar');
+    const proxy = atrapa('proxy-notatki'); proxy.setAttribute('data-drawer-btn', source.id);
+    const drawer = atrapa('drawer'), panel = atrapa('dialog'), trigger = atrapa('menu');
+    drawer.querySelectorAll = () => [proxy]; drawer.querySelector = () => panel; drawer.contains = () => false;
+    const atShow = []; let hidden = true;
+    Object.defineProperty(drawer, 'hidden', { get: () => hidden, set: (value) => {
+      hidden = value;
+      if (!value) atShow.push({ disabled: proxy.getAttribute('aria-disabled'), tip: proxy.getAttribute('data-tip') });
+    } });
+    const doc = { activeElement: null, body: { classList: { add() {}, remove() {} } },
+      getElementById: (id) => id === source.id ? source : null, querySelector: () => trigger, createElement: () => ({}) };
+    const api = new Function('o', 'r', 'B', 'Cm_cancelFocus', 'Cm_focusFirst', 'Cm_listen', 'Cm_background', 'Cm_release', 'Cm_focus', 'setTimeout', 'clearTimeout',
+      `var Cm_drawer=null,M=null,Cm_key=function(){},Cm_guardFocus=Cm_key,Cm_guardPointer=Cm_key;${mirrorSource}${drawerSource};return {open:nt,close:ee};`)(
+      doc, { matchMedia: () => ({ matches: false }) }, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {},
+      (callback) => { callback(); return 0; }, () => {},
+    );
+    source.setAttribute('aria-disabled', 'true'); source.setAttribute('data-tip', 'Fikcyjna blokada');
+    api.open(drawer, trigger);
+    expect(proxy.getAttribute('aria-disabled')).toBe('true'); expect(proxy.getAttribute('data-tip')).toBe('Fikcyjna blokada');
+    api.close(drawer); source.removeAttribute('aria-disabled'); source.setAttribute('data-tip', 'Fikcyjna aktualizacja');
+    api.open(drawer, trigger);
+    expect(proxy.hasAttribute('aria-disabled')).toBe(false); expect(proxy.getAttribute('data-tip')).toBe('Fikcyjna aktualizacja');
+    api.close(drawer); source.setAttribute('disabled', ''); source.removeAttribute('data-tip');
+    api.open(drawer, trigger);
+    expect(proxy.getAttribute('aria-disabled')).toBe('true'); expect(proxy.hasAttribute('data-tip')).toBe(false);
+    expect(atShow, 'aktualny stan źródła trafia do menu przed każdym pokazaniem').toEqual([
+      { disabled: 'true', tip: 'Fikcyjna blokada' }, { disabled: null, tip: 'Fikcyjna aktualizacja' }, { disabled: 'true', tip: null },
+    ]);
   });
 
   it('szuflada pokazuje dymek na sobie zamiast klikać ukryty przycisk paska', () => {

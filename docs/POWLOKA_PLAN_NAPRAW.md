@@ -1,23 +1,23 @@
-# Plan kolejnej partii napraw powłoki
+# Naprawy powłoki: konto, menu i klawiatura
 
-**Status: plan, bez implementacji.** Dokument przygotowano na bazie audytu `app.html` z 2026-10-02, commit `a222cd7c1bfa3a2dcd9bd8a4b73cd2d5a55d17a2`. Bieżąca gałąź prac: `agent/powloka-nawigacja-1-3`.
+**Status: implementacja punktów 4, 5, 7 i 8.** Dokument wywodzi się z audytu `app.html` z 2026-10-02, commit `a222cd7c1bfa3a2dcd9bd8a4b73cd2d5a55d17a2`. Punkty 1–3 scalono w PR #525. Baza tej partii: `origin/audyt` / `96faeed1`; gałąź: `agent/powloka-konto-menu-klawiatura`.
 
 Numery punktów poniżej odpowiadają kolejności przekazanej właścicielowi; identyfikatory A odnoszą się do audytu. Punkt 7 to A6, a punkt 8 to A7.
 
 | Punkt | Problem | Status |
 |---|---|---|
-| 1 / A1 | Spóźnione otwieranie karty/listy po nowszej decyzji użytkownika | Zaimplementowane w bieżącej partii |
-| 2 / A2 | Zamknięcie nakładki cofa nową trasę powłoki | Zaimplementowane w bieżącej partii |
-| 3 / A3 | Utrata wskazania klinicznego w odnośniku do laboratorium | Zaimplementowane w bieżącej partii |
-| 4 / A4 | Nazwa/avatar konta opuszcza powłokę | Kolejna partia: plan |
-| 5 / A5 | Menu mobilne pozostaje otwarte po wyborze strony | Kolejna partia: plan |
+| 1 / A1 | Spóźnione otwieranie karty/listy po nowszej decyzji użytkownika | Scalone w PR #525 |
+| 2 / A2 | Zamknięcie nakładki cofa nową trasę powłoki | Scalone w PR #525 |
+| 3 / A3 | Utrata wskazania klinicznego w odnośniku do laboratorium | Scalone w PR #525 |
+| 4 / A4 | Nazwa/avatar konta opuszcza powłokę | Zaimplementowane w tej partii |
+| 5 / A5 | Menu mobilne pozostaje otwarte po wyborze strony | Zaimplementowane w tej partii |
 | 6 / A8 | Tryb gościa po zimnym starcie offline | Wyłączony z tej pracy; bez badań i zmian |
-| 7 / A6 | Fokus opuszcza otwarte menu | Kolejna partia: plan |
-| 8 / A7 | Powłoka przechwytuje Ctrl+klik | Kolejna partia: plan |
+| 7 / A6 | Fokus opuszcza otwarte menu | Zaimplementowane w tej partii |
+| 8 / A7 | Powłoka przechwytuje Ctrl+klik | Zaimplementowane w tej partii |
 
-Punkty 1–3 zaimplementowano w bieżącej partii; wyniki walidacji są podane w jej PR. Kolejna partia opisana poniżej pozostaje planem.
+Poniżej zachowano zakres i kryteria akceptacji uzgodnione przed implementacją. Wyniki końcowej walidacji oraz odnośnik do draft PR znajdują się w opisie PR i podsumowaniu pracy. Punkt 6 pozostaje wyłączony.
 
-## Granice kolejnej partii
+## Granice tej partii
 
 Zmiany dotyczą nawigacji i obsługi menu. Nie obejmują wzorów, progów, jednostek ani interpretacji klinicznych, zapisu/synchronizacji kont i pacjentów, przenoszenia danych między magazynami ani nowych zasad autosave. Robocze pola narzędzi pozostają własnością ich utrzymywanych ramek.
 
@@ -74,9 +74,9 @@ Na otwarciu zapamiętać element wywołujący i przenieść focus do widocznej k
 - Odnośnik do laboratorium w iframe: zwykły klik nadal działa wewnątrz powłoki i przenosi `wskazanie`; zmodyfikowany otwiera natywny cel z pełnym query/hash, bez zmiany wskazania w dotychczasowej ramce.
 - Samodzielne strony zachowują natywne otwarcie nowej karty. Zwykłe kliknięcia i Enter nadal przechodzą przez właściwy wariant nawigacji, a menu nie zamyka się ani nie przenosi fokusu starej karty wskutek nieprzejętego zmodyfikowanego kliku.
 
-## Regresje i walidacja przyszłej implementacji
+## Regresje i walidacja
 
-Proponowane nowe pliki E2E, dopiero w kolejnej implementacji:
+Dodane pliki E2E:
 
 - `tests/e2e/powloka-konto-stan-narzedzi.spec.mjs`: konto, cold/warm Ustawienia, HOMA 90/12, tożsamość iframe, historia i kontrola standalone.
 - `tests/e2e/powloka-menu-focus-mobile.spec.mjs`: zamykanie szuflady, Tab/Shift+Tab/Escape, tło/iframe, szerokości 393/320 i akcje otwierające inne modale.
@@ -89,3 +89,17 @@ Ponowić regresje obecnej partii 1–3, istniejące `powloka*.spec.mjs`, `odtwor
 Walidować przypiętym Playwright Chromium, z raportem dokładnych wyników i bez osłabiania asercji. Emulację telefonu opisać jako emulację; przed uznaniem obsługi focus/klawiatury za sprawdzoną na iOS potrzebna jest kontrola Safari i fizycznej klawiatury, jeśli taki wynik ma być deklarowany.
 
 Po zamknięciu implementacji root aktualizuje status tego planu. Wersjonowanie JS/HTML/cache i `npm run podbij-wersje` wykonać jako ostatni etap konkretnej partii względem aktualnego `origin/audyt`; zachować historyczne wpisy cache. Nie scalać ani nie wdrażać w ramach samego planu.
+
+
+## Wykonanie
+
+- Konto korzysta z pełnego celu `VildaShell.navigate`; samodzielne strony zachowują adres Ustawień. Adapter sekcji w Ustawieniach odbiera cel także dla ciepłej ramki i czeka na istniejące odblokowanie sekcji podczas startu sesji. Nie zmienia uprawnień ani zasad logowania. Jawny cel sekcji przewija natychmiast, aby startowa korekta scrolla na telefonie nie przerywała płynnego przewijania. Samodzielne wejście z HOMA do konta pomija przejście wizualne w źródłowym `pageswap`, z kontrolą pełnego docelowego URL. Zapobiega to potwierdzonej blokadzie renderowania przy przejściu z HOMA; pozostałe nawigacje zachowują animacje.
+- Natywny fragment `#settings-section-account` w samodzielnych Ustawieniach przewija bez animacji. Przeglądarka nie wznawia dzięki temu starszego płynnego przewijania po otwarciu i ustawieniu odblokowanej sekcji konta. Reguła obejmuje tylko ten fragment; inne cele i jawne wywołania płynnego przewijania zachowują działanie.
+- Mobilna korekta początkowego przewijania ponownie sprawdza aktualną pozycję, hash i fokus w odroczonej klatce animacji. Starsze zadanie nie nadpisuje nowszego przejścia do sekcji ani rozpoczętej edycji; zwykła korekta na górze dokumentu pozostaje aktywna.
+- Chrome udostępnia `closeDrawer({reason})` i `isPlainNavigationClick`. Zamknięcie kończy blokadę tła synchronicznie. Escape, przycisk i tło zwracają fokus do przycisku menu; nawigacja i przekazanie do modalu pozostawiają fokus nowemu widokowi.
+- Nazwy tras są rozstrzygane do stałych kluczy: nierozpoznany tekst lub obiekt nie jest przekazywany do mapy ramek. Znane trasy i dotychczasowy panel domyślny pozostają zachowane.
+- Powłoka przenosi fokus dopiero po rzeczywistym pokazaniu załadowanego panelu. Nowsza nawigacja, klawiatura, wskaźnik lub ponowne otwarcie menu unieważnia oczekiwanie, również podczas odroczonego Wstecz.
+- Menu cyklicznie obsługuje Tab/Shift+Tab, izoluje tło i iframe oraz przywraca poprzednie atrybuty. Wariant bez natywnego `inert` jest objęty testami rzeczywistych funkcji produkcyjnych.
+- Zmienione kliki i cele innej karty pozostają obsługiwane przez przeglądarkę. Testy Ctrl, środkowego przycisku i `_blank` sprawdzają rzeczywiste nowe karty oraz niezmieniony dokument i dane HOMA w karcie źródłowej.
+
+Kontrole przed zmianą wykazały błędy konta dla zimnej i ciepłej ramki, 4/4 nieudane scenariusze menu oraz 5/9 nieudanych scenariuszy natywnego otwierania kart. Dane testowe są fikcyjne. Nie zmieniono wzorów, danych referencyjnych, zaokrągleń ani magazynów pacjentów. Próby mobilne w Chromium są emulacją; nie stanowią weryfikacji fizycznego Safari/iOS.

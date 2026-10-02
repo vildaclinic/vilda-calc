@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.146';
+const SW_VERSION = '1.1.147';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -941,6 +941,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=90',
   '/vilda_chrome.js?v=91',
   '/vilda_chrome.js?v=92',
+  '/vilda_chrome.js?v=93',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -1136,6 +1137,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.css?v=41',
   '/vilda_chrome.css?v=42',
   '/vilda_chrome.css?v=43',
+  '/vilda_chrome.css?v=44',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
@@ -1223,6 +1225,7 @@ const CORE_SHELL_URLS = [
   '/vilda_gh_therapy_resource_audit.js?v=31',
   '/vilda_gh_therapy_resource_audit.js?v=32',
   '/vilda_gh_therapy_resource_audit.js?v=33',
+  '/vilda_gh_therapy_resource_audit.js?v=34',
   '/vilda_app_helpers.js',
   '/vilda_app_helpers.js?v=2',
   '/vilda_app_helpers.js?v=3',
@@ -1524,6 +1527,7 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js?v=41',
   '/ios26-ui.js?v=42',
   '/ios26-ui.js?v=43',
+  '/ios26-ui.js?v=44',
   '/tutorial.js?v=6',
   '/tutorial.js?v=7',
   '/tutorial.js?v=8',
@@ -1842,6 +1846,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=56',
   '/vilda_shell.js?v=57',
   '/vilda_shell.js?v=58',
+  '/vilda_shell.js?v=59',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -2761,6 +2766,7 @@ const OPTIONAL_ASSETS = [
   '/ustawienia.css?v=15',
   '/ustawienia.css?v=16',
   '/ustawienia.css?v=17',
+  '/ustawienia.css?v=18',
   '/edu-video-ui.css?v=20261002v4',
   '/edu-video-ui.css?v=20261003v4',
   '/edu-video-ui.css?v=20261002v7',
