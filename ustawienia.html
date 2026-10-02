@@ -64,7 +64,7 @@
   <link href="ios26-v2.css?v=26" rel="stylesheet">
   <link href="style.css?v=87" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
-  <link href="vilda_chrome.css?v=43" rel="stylesheet">
+  <link href="vilda_chrome.css?v=44" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=76" rel="stylesheet">
 <link href="vilda_urodzeniowe_rozbieznosc.css?v=1" rel="stylesheet" />
   <link href="ustawienia.css?v=17" rel="stylesheet">
@@ -131,7 +131,7 @@
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="lucide.min.js?v=1" defer></script>
   <script src="ios26-ui.js?v=43" defer></script>
-<script defer src="vilda_chrome.js?v=92"></script>
+<script defer src="vilda_chrome.js?v=93"></script>
 </head>
 <body class="js-loading liquid-ios26 page-settings has-sidebar">
   <header>
@@ -2091,8 +2091,12 @@
         section.open = false;
       });
 
-      function openSectionFromHash() {
-        const hash = window.location.hash;
+      let pendingSection = null;
+      let pendingTask = null;
+
+      function openSectionFromHash(requestedHash) {
+        const hash = typeof requestedHash === 'string' ? requestedHash : window.location.hash;
+        pendingSection = null;
         if (!hash || hash.length < 2) return;
         // `querySelector(hash)` rzucał wyjątkiem na haszu, który nie jest poprawnym selektorem
         // — „#3" albo trasa SPA „#!/start". Wyjątek leciał z bloku DOMContentLoaded, więc
@@ -2102,18 +2106,53 @@
         try { id = decodeURIComponent(id); } catch (_) { /* niedomknięty %XX — bierzemy surowy */ }
         const target = document.getElementById(id);
         if (!target || !target.classList.contains('settings-accordion')) return;
-        // Sekcja pod kłódką (wylogowany użytkownik) zostaje zamknięta — inaczej wynik
-        // zależałby od kolejności skryptów.
-        if (target.classList.contains('settings-accordion--locked')) return;
-        target.open = true;
-        // Samo `open` nie wystarcza: sekcja bywa daleko poniżej ekranu, więc wejście
-        // z linku (np. z modala o zmianie hasła) lądowało na górze strony.
-        try { target.scrollIntoView({ block: 'start' }); } catch (_) { /* starsze przeglądarki */ }
+        pendingSection = target;
+        schedulePendingSection();
+      }
+
+      function schedulePendingSection() {
+        if (!pendingSection || pendingTask !== null) return;
+        // Task po inicjalizacji wszystkich listenerów: mikro-zadanie mogłoby wykonać
+        // się przed ustawieniem kłódek przez następny listener DOMContentLoaded.
+        pendingTask = setTimeout(function() {
+          pendingTask = null;
+          const target = pendingSection;
+          if (!target || target.classList.contains('settings-accordion--locked')) return;
+          pendingSection = null;
+          target.open = true;
+          // Cel deep-linku musi być od razu widoczny. Odziedziczone płynne przewijanie
+          // może zostać przerwane przez mobilną optymalizację paska przeglądarki.
+          try { target.scrollIntoView({ block: 'start', behavior: 'instant' }); } catch (_) { /* starsze przeglądarki */ }
+        }, 0);
       }
 
       // Nasłuch rejestrujemy PRZED pierwszym wywołaniem — gdyby cokolwiek w środku padło,
       // kolejne zmiany hasza mają dalej działać.
       window.addEventListener('hashchange', openSectionFromHash);
+      window.addEventListener('vilda:shell-navigate-target', function(event) {
+        const href = event.detail && event.detail.href;
+        if (typeof href !== 'string') return;
+        let targetURL;
+        try { targetURL = new URL(href, window.location.href); } catch (_) { return; }
+        if (targetURL.origin !== window.location.origin || targetURL.pathname !== window.location.pathname) return;
+        openSectionFromHash(targetURL.hash);
+      });
+      // Zmiana wyboru użytkownika anuluje oczekujący cel. Programowe zamknięcie
+      // sekcji przez kłódkę nie jest takim wyborem i pozostawia cel do odblokowania.
+      document.addEventListener('click', function(event) {
+        if (!event.isTrusted || !pendingSection || !event.target || typeof event.target.closest !== 'function') return;
+        const link = event.target.closest('.settings-subnav-link');
+        const summary = event.target.closest('.settings-accordion > summary');
+        const section = summary && summary.closest('.settings-accordion');
+        const id = link ? link.dataset.target : section && section.id;
+        if (id && id !== pendingSection.id) pendingSection = null;
+      }, true);
+      ['vilda:session-changed', 'vilda:auth-loaded', 'vilda:guest-mode-changed'].forEach(function(name) {
+        document.addEventListener(name, schedulePendingSection);
+      });
+      if (window.VildaVault && typeof window.VildaVault.onUnlock === 'function') {
+        window.VildaVault.onUnlock(schedulePendingSection);
+      }
       openSectionFromHash();
     });
   </script>
