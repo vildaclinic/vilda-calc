@@ -118,3 +118,28 @@ describe('Powłoka: fokus należy do aktualnej intencji menu', () => {
     expect(f.focus).not.toHaveBeenCalled();
   });
 });
+
+
+describe('Powłoka: nazwy tras pochodzą ze stałej listy', () => {
+  it('obsługuje wszystkie opublikowane trasy', () => {
+    const h = powloka();
+    for (const route of Object.keys(h.shell.routes)) {
+      h.shell.navigate(route);
+      expect(h.win.location.hash).toBe('#/' + route);
+    }
+  });
+  it('nie zamienia obiektu użytkownika na dynamiczny klucz cache ramek', () => {
+    const h = powloka();
+    const toString = vi.fn(() => 'homa');
+    h.shell.navigate({ toString });
+    expect(h.win.location.hash).toBe('#/terminarz');
+    expect(toString).not.toHaveBeenCalled();
+    expect(h.ramki.has('homa-ir.html')).toBe(false);
+  });
+  it.each(['__proto__', 'constructor', 'toString', 'nieznana'])('nieznana trasa %s zachowuje dotychczasowy domyślny panel', (route) => {
+    const h = powloka();
+    h.shell.navigate(route);
+    expect(h.win.location.hash).toBe('#/terminarz');
+    expect(h.ramki.has('terminarz.html')).toBe(true);
+  });
+});

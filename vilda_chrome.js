@@ -123,11 +123,13 @@ function Cm_closeDrawer(options){
   return element?ee(element,options):false;
 }
 function Cm_prepareAccountSwap(href){
-  // A4: skip the source snapshot only for this standalone account navigation.
+  // A4: skip only the HOMA source snapshot for standalone account navigation.
   // The handler expires on pageswap and a later attempt replaces a cancelled one.
   try{
     if(Cm_accountSwap){r.removeEventListener("pageswap",Cm_accountSwap);Cm_accountSwap=null}
-    var base=r.location.href,expected=new r.URL(href,base).href;
+    var base=r.location.href;
+    if(!/\/homa-ir\.html$/.test(new r.URL(base).pathname))return;
+    var expected=new r.URL(href,base).href;
     var listener=function(event){
       r.removeEventListener("pageswap",listener);if(Cm_accountSwap===listener)Cm_accountSwap=null;
       try{

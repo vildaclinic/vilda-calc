@@ -168,6 +168,15 @@ describe('Chrome: jednorazowy source ViewTransition konta standalone', () => {
     expect(remove).toHaveBeenCalledWith('pageswap', first); const skipTransition = vi.fn();
     h.win.dispatchEvent({ type: 'pageswap', activation: { entry: { url: target } }, viewTransition: { skipTransition } }); expect(skipTransition).toHaveBeenCalledOnce();
   });
+  it.each(['index.html', 'docpro.html'])('źródło %s zachowuje zwykłą nawigację do konta bez pageswap hooka', (page) => {
+    const h = account(); h.win.location.href = `https://fikcyjne.invalid/${page}?fikcyjne=1#formularz`; const add = vi.spyOn(h.win, 'addEventListener');
+    h.account.click(); expect(add.mock.calls.filter(([name]) => name === 'pageswap')).toHaveLength(0); expect(h.win.location.href).toBe('ustawienia.html#settings-section-account');
+  });
+  it('próba spoza HOMA usuwa wcześniejszy oczekujący hook przed bramką źródła', () => {
+    const h = account(); const add = vi.spyOn(h.win, 'addEventListener'); const remove = vi.spyOn(h.win, 'removeEventListener'); h.account.click();
+    const first = add.mock.calls.find(([name]) => name === 'pageswap')[1]; h.win.location.href = 'https://fikcyjne.invalid/index.html'; h.account.click(); expect(remove).toHaveBeenCalledWith('pageswap', first);
+    const skipTransition = vi.fn(); h.win.dispatchEvent({ type: 'pageswap', activation: { entry: { url: target } }, viewTransition: { skipTransition } }); expect(skipTransition).not.toHaveBeenCalled();
+  });
   it('lokalna ani rodzicielska powłoka nie instaluje hooka cross-document', () => {
     for (const parent of [false, true]) {
       const h = account(); const add = vi.spyOn(h.win, 'addEventListener'); const shell = { navigate: vi.fn() };
