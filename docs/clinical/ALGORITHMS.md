@@ -3780,6 +3780,30 @@ Zmiana to jedna linia wyboru wieku, ale płynie w karcie wszędzie: centyle wzro
 
 **Czego nie ustalono.** Numery **H4 i H5** nie występują nigdzie w repozytorium — ani w kodzie, ani w testach, ani w opisach commitów; nie wiadomo, czy zostały odrzucone, scalone z innymi, czy po prostu pominięte w numeracji. Sam dokument audytu sekcji „Pacjenci" nie zachował się, więc oryginalne sformułowania znalezisk P1–P14 i K1–K4 pozostają nieznane — powyższe odtworzenie opisuje, **co zdecydowano i co robi kod**, nie jak brzmiało zgłoszenie.
 
+**Aktualizacja 2026-10-02 — nawigacja list i karty podczas synchronizacji.**
+
+Odświeżenie P1/P4 mogło wyglądać jak samoczynny krok wstecz: ponowny render listy
+zerował wybraną listę (np. Ngenla), wyszukiwanie i przewinięcie. Karta była odłączana
+także przy sygnale synchronizacji bez zmiany jej danych. Spóźniony odczyt listy
+mógł przykryć kartę, którą lekarz zdążył otworzyć.
+
+- Odświeżenie zachowuje filtr, identyfikator listy, wyszukiwanie, sortowanie,
+  przewinięcie i zaznaczenia. Stan jest odczytywany po zakończeniu oczekiwania,
+  aby uwzględnić także wybór dokonany w trakcie odczytu.
+- Karta porównuje pełny rekord i pełne notatki pacjenta. Bez zmiany danych
+  zachowuje DOM; rzeczywista zmiana nadal odświeża kartę i jej aktywną zakładkę.
+  Sam identyfikator migawki ani oś czasu nie obejmują wszystkich zmian notatek.
+- Tylko bieżący odczyt może wyświetlić wynik. Zmiana widoku, zamknięcie okna
+  lub zablokowanie sejfu unieważnia wcześniejsze odczyty. Otwartego edytora
+  nie zastępuje render, również gdy edytor otwarto już podczas oczekiwania.
+- Spóźniony brak rekordu wcześniej wybranej listy nie zeruje nowej wybranej listy.
+
+Regresje: `tests/unit/nawigacja-pacjentow-odswiezanie.test.mjs`,
+`tests/e2e/nawigacja-pacjentow-bez-cofania.spec.mjs` oraz istniejące testy
+`karta-pacjenta-porzadki`. Przykłady korzystają z fikcyjnych danych.
+To zmiana stanu interfejsu: wzory, źródła norm, dawki, jednostki i progi kliniczne
+pozostają bez zmian; nie zmienia się format ani sposób zapisu danych pacjenta.
+
 ## Masa ciała dostaje silnik; zdanie o rozjeździe masa↔BMI (P-MASA etapy 1–2, SW 1.0.993, 2026-09-18)
 
 **Skąd to się wzięło.** Audyt spójności werdyktów (zakres wybrany przez właściciela: „Narracja i karty podsumowania" × „Spójność między miejscami") rozłożył wyniki aplikacji na rodziny pytań klinicznych. Właściciel zauważył brak: *„a dlaczego w tych rodzinach nie ma wymienionej wagi? werdykt wagi często jest w konflikcie z werdyktem BMI"*. To trafiło w sedno — **masa była jedyną z czterech miar antropometrycznych bez silnika.** Wzrost ma `vilda_sds_wzrostu.js`, BMI ma `vilda_bmi.js`, tempo ma `vilda_tempo_wzrastania.js`; masa liczyła się w pięciu miejscach, każde ze swoim pasmem normy.
