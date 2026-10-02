@@ -65,7 +65,7 @@
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
   <script src="vilda_persistence_adapter.js?v=28"></script>
-  <script src="vilda_session_bridge.js?v=18"></script>
+  <script src="vilda_session_bridge.js?v=19"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -102,7 +102,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=91"></script>
+  <script src="vilda_chrome.js?v=92"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -3759,22 +3759,23 @@
     // Faza 14 — deep link: ?wskazanie=<id> lub #wskazanie=<id> automatycznie
     // wybiera wskazanie kliniczne (np. z głównego kalkulatora dziecka po
     // wykryciu otyłości → otwarcie obesity_kids).
-    (function applyIndicationDeepLink() {
+    function applyIndicationDeepLink(targetLocation) {
+      targetLocation = targetLocation || window.location;
       try {
         var indicationParam = null;
         // 1) Sprawdź ?wskazanie= w query string.
-        if (window.location.search) {
-          var params = new URLSearchParams(window.location.search);
+        if (targetLocation.search) {
+          var params = new URLSearchParams(targetLocation.search);
           indicationParam = params.get('wskazanie') || params.get('indication');
         }
         // 2) Fallback — sprawdź #wskazanie= w hashu.
-        if (!indicationParam && window.location.hash) {
-          var hash = window.location.hash.replace(/^#/, '');
+        if (!indicationParam && targetLocation.hash) {
+          var hash = targetLocation.hash.replace(/^#/, '');
           var hashParams = new URLSearchParams(hash);
           indicationParam = hashParams.get('wskazanie') || hashParams.get('indication');
         }
         if (!indicationParam) return;
-        if (!CLINICAL_INDICATIONS[indicationParam]) return;
+        if (!Object.prototype.hasOwnProperty.call(CLINICAL_INDICATIONS, indicationParam)) return;
         if (!suggestSelectEl) return;
         // Ustaw wartość selektora i wyrenderuj panel; przewiń do sekcji wskazań.
         suggestSelectEl.value = indicationParam;
@@ -3809,7 +3810,19 @@
       } catch (_) {
         // Cicho ignoruj — deep link jest opcjonalny.
       }
-    })();
+    }
+    applyIndicationDeepLink();
+    // Powłoka zachowuje dokument laboratorium między wejściami. Jawny cel
+    // nawigacji może więc zmienić wskazanie również w już otwartej ramce.
+    window.addEventListener('vilda:shell-navigate-target', function (event) {
+      var href = event && event.detail && event.detail.href;
+      if (typeof href !== 'string') return;
+      try {
+        var target = new URL(href, window.location.href);
+        if (target.origin !== window.location.origin || target.pathname !== window.location.pathname) return;
+        applyIndicationDeepLink(target);
+      } catch (_) {}
+    });
     if (suggestBodyEl) {
       suggestBodyEl.addEventListener('click', function (e) {
         var t = e.target;
