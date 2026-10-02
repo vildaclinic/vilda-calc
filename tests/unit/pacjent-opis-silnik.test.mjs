@@ -158,7 +158,7 @@ describe('Zdania opisu — brzmienie karty leczenia', () => {
       currentHeight: 118,
       sex: 'M',
       source: 'OLAF',
-    }, { boneAgeYears: 6 });
+    }, { boneAgeYears: 6, boneAgeAtAgeMonths: 88 });
 
     expect(zdanie(wynik, 'wiekKostny'))
       .toBe('Wiek kostny oceniono na 6 lat przy wieku metrykalnym 7 lat i 4 miesięcy; jest on opóźniony o 1 rok i 4 miesiące.');
@@ -1047,8 +1047,8 @@ describe('Audyt składu 2026-09-27 — opis mówi to, co nagłówek karty', () =
     // Jawny wiek oznaczenia ma pierwszeństwo.
     expect(zdanie(opis(g, wej, { boneAgeYears: 5.5, boneAgeAtAgeMonths: 90 }).wynik, 'wiekKostny'))
       .toBe('Wiek kostny oceniono na 5 lat i 6 miesięcy przy wieku metrykalnym 7 lat i 6 miesięcy; był on opóźniony o 2 lata.');
-    // Bez żadnej daty — „teraz", jak dotąd.
+    // Bez czasu badania opis nie odnosi starego BA do wieku obecnej wizyty.
     expect(zdanie(opis(g, wej, { boneAgeYears: 7 }).wynik, 'wiekKostny'))
-      .toBe('Wiek kostny oceniono na 7 lat przy wieku metrykalnym 8 lat; jest on opóźniony o 1 rok.');
+      .toBe('Wiek kostny oceniono na 7 lat; czas oznaczenia nieznany.');
   });
 });

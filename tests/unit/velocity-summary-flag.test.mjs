@@ -124,6 +124,32 @@ describe('Podsumowanie wyników — wiersz tempa z jednego modelu (vilda_summary
     expect(s).toBe('Tempo wzrastania: 3,8 cm/rok (z 24 mies., poza oknem oceny normy)');
     expect(s).not.toMatch(/obliczono jako średnią|Aktualne/);
   });
+
+  it('fallback normy bierze wiek oznaczenia badania; następna wizyta nie odnawia ważności', () => {
+    const win = makeWindow();
+    const line = loadLine(win);
+    loadBrowserScript('vilda_trajectory_analysis.js', win);
+    loadBrowserScript('vilda_bone_age.js', win);
+    const dane = { growthVelocity: 4.5, growthVelocityGapM: 12, boneAgeMonths: 96, sex: 'M', boneAgeContext: {
+      version: 1, current: null, last: { years: 8, atAgeMonths: 123, source: 'measured' },
+    } };
+    expect(line({ ...dane, currentAgeMonths: 135 })).toContain('do oceny');
+    const po = { ...dane, currentAgeMonths: 136 };
+    const tekst = line(po);
+    expect(tekst).toContain('w normie');
+    expect(tekst).toContain('Wiek kostny pominięty');
+    expect(tekst).toContain('13 mies.');
+  });
+
+  it('legacy scalar bez czasu oznaczenia nie dostaje dzisiejszego wieku', () => {
+    const win = makeWindow();
+    const line = loadLine(win);
+    loadBrowserScript('vilda_trajectory_analysis.js', win);
+    loadBrowserScript('vilda_bone_age.js', win);
+    const tekst = line({ growthVelocity: 4.5, growthVelocityGapM: 12, currentAgeMonths: 136, boneAgeMonths: 96, sex: 'M' });
+    expect(tekst).toContain('w normie');
+    expect(tekst).toContain('nieznany czas oznaczenia');
+  });
 });
 
 describe('Podsumowanie wyników — kolor wiersza tempa (vilda_patient_report.js)', () => {

@@ -141,6 +141,10 @@ test('prawdziwy SW bez sieci: DocPro i pozostałe strony z precache startują be
       // Doładowania leniwe (moduły sejfu z vilda_chrome.js, ramki paneli app.html) ruszają po zdarzeniu
       // load — przechodzimy dalej dopiero, gdy strona przestaje prosić o zasoby.
       await cisza();
+      if (strona === '/docpro.html' || strona === '/index.html') {
+        await expect.poll(() => page.evaluate(() => typeof window.VildaBoneAge?.restoreContext),
+          { message: 'model pochodzenia wieku kostnego działa bez sieci' }).toBe('function');
+      }
       if (strona === '/docpro.html') {
         await expect.poll(() => page.evaluate(() => typeof window.VildaVault), { message: 'sejf DocPro offline' }).toBe('object');
       }
