@@ -3830,6 +3830,22 @@ Regresje: `tests/unit/nawigacja-pacjentow-odswiezanie.test.mjs`,
 To zmiana stanu interfejsu: wzory, źródła norm, dawki, jednostki i progi kliniczne
 pozostają bez zmian; nie zmienia się format ani sposób zapisu danych pacjenta.
 
+**Aktualizacja 2026-10-02 — karta pacjenta z chipa nagłówka (P-CHIP-KARTA).**
+
+Po zapisaniu pacjenta „Otwórz Kartę pacjenta” zamykało dymek bez otwierania
+karty na samodzielnym Start i DocPro: handler obsługiwał wyłącznie `VildaShell`,
+dostępny w `app.html`. Teraz używa lokalnej powłoki lub powłoki rodzica ramki,
+a na samodzielnej stronie — `VildaAuthUI.showPatientCard`. Identyfikator pacjenta
+nadal jest odczytywany w momencie kliknięcia. Karta korzysta z istniejącej blokady
+sejfu i ochrony odczytów; otwieranie jej nie wymaga wcześniejszej wizyty na liście.
+Zmiana dotyczy nawigacji, bez wpływu na obliczenia kliniczne i zapis pacjenta.
+
+Regresje: `tests/unit/chip-karta-pacjenta.test.mjs` wykonuje rzeczywisty listener;
+`tests/e2e/chip-karta-pacjenta.spec.mjs` wpisuje i zapisuje fikcyjnego pacjenta,
+następnie otwiera kartę kliknięciem na Start, DocPro i w powłoce oraz sprawdza
+właściwy rekord po zmianie pacjenta. Przed poprawką: 6/9 unit i 3/4 E2E czerwone;
+działająca ścieżka w powłoce jest kontrolą dodatnią.
+
 ## Masa ciała dostaje silnik; zdanie o rozjeździe masa↔BMI (P-MASA etapy 1–2, SW 1.0.993, 2026-09-18)
 
 **Skąd to się wzięło.** Audyt spójności werdyktów (zakres wybrany przez właściciela: „Narracja i karty podsumowania" × „Spójność między miejscami") rozłożył wyniki aplikacji na rodziny pytań klinicznych. Właściciel zauważył brak: *„a dlaczego w tych rodzinach nie ma wymienionej wagi? werdykt wagi często jest w konflikcie z werdyktem BMI"*. To trafiło w sedno — **masa była jedyną z czterech miar antropometrycznych bez silnika.** Wzrost ma `vilda_sds_wzrostu.js`, BMI ma `vilda_bmi.js`, tempo ma `vilda_tempo_wzrastania.js`; masa liczyła się w pięciu miejscach, każde ze swoim pasmem normy.
