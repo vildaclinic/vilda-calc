@@ -57,6 +57,18 @@ async function otworz(page) {
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Sprawdzamy treść wyników profesjonalnych, więc przygotowujemy ten tryb
+  // jawnie, zamiast polegać na chwilowym odblokowaniu przycisku karty.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (tryb && !tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
 }
 
 // Rozwinięcie panelu „Dane pokwitaniowe" — domyślnie jest zwinięty.
@@ -84,11 +96,8 @@ async function policzPacjentke(page) {
     '#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
     { state: 'attached' },
   );
-  // Przycisk bywa wyłączony bramką trybu — tu mierzymy zawartość karty, nie bramkę.
-  await page.evaluate(() => {
-    const t = document.getElementById('toggleAdvancedGrowth');
-    if (t) { t.disabled = false; t.click(); }
-  });
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
+  await page.locator('#toggleAdvancedGrowth').click();
   await expect(page.locator('#advancedGrowthForm'), 'karta zaawansowana się odsłoniła')
     .toBeVisible();
   await page.waitForSelector('#advMeasurements .measure-row');

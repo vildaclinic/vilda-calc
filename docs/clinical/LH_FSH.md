@@ -174,6 +174,12 @@ Przypięcie przechwytuje kopię bieżącej oceny. Dialog pokazuje jej podgląd i
 
 **Wpływ kliniczny:** aktywacja zmienia widoczne interpretacje LH/FSH względem dawnego przelicznika. Nie zmienia liczb, tabel, jednostek, progów ani wersji silnika/danych PR1; uruchamia ich uzgodnione ograniczenia metodyczne i rozdzielenie ocen. Źródła, populacje, kryteria i przypadki syntetyczne są opisane poniżej. Testy techniczne nie stanowią walidacji klinicznej; przegląd kliniczny, scalenie i wdrożenie pozostają decyzją właściciela.
 
+### Spójność źródła danych pacjenta
+
+`VildaPubertySource.kontekstPacjenta(patientId)` zwraca status `ready`, `loading` albo `unavailable` wraz z kontekstem powiązanym z tym pacjentem. Import z karty jest dostępny wyłącznie dla zgodnego, zakończonego odczytu. Każde nowe żądanie oraz blokada lub wyczyszczenie sesji unieważniają wcześniejsze odczyty. Identyfikator w `sessionStorage` ma pierwszeństwo przed lokalnym stanem ramki.
+
+Zmiana kontekstu usuwa wartości nadal pochodzące z poprzedniego importu i wymaga ponownego potwierdzenia ich przydatności. Podczas ponownego odczytu dane importowane są wyłączone z oceny. Mogą wrócić po zakończeniu odczytu wyłącznie przy identycznym kontekście; nie nadpisują ręcznych zmian dokonanych w tym czasie. Ręczna korekta pola oznacza niezależne dane próbki i nie jest nadpisywana przez późniejszy odczyt karty. Aktualność źródła jest sprawdzana również bezpośrednio przed importem oraz utworzeniem nowej oceny. Niedostępność karty pozwala wpisać dane próbki ręcznie; nie oznacza braku leczenia. Ta poprawka nie zmienia reguł klinicznych ani utrwalonych ocen.
+
 ## PR2 — transport historycznej oceny
 
 PR2 dodaje czytelny moduł `vilda_lab_snapshot.js` (`VildaLabSnapshot`, wersja `1.0.0`) ładowany przed sejfem, także przez oba mechanizmy ładowania na żądanie. Silnik i dane PR1 nadal **nie są ładowane** przez aplikację ani precache. Przelicznik nie produkuje jeszcze nowych ocen; ich tworzenie i prezentację włącza dopiero PR3.

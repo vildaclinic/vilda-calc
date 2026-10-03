@@ -78,7 +78,8 @@
     if (!resultSection || !resultSection.parentNode) return null;
     var fields = {}, wrappers = {}, analyte = null, evaluation = null, context = null, contextKey = null;
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
-    var dirty = {};
+    var dirty = {}, imported = {}, importedContextChanged = false, suspendedImport = null;
+    var confirmationKeys = ['methodConfirmed', 'appliesToSample', 'volumeAppliesToSample', 'localConfirmed'];
     function element(tag, className, content) {
       var node = doc.createElement(tag);
       if (className) node.className = className;
@@ -204,10 +205,13 @@
       return values;
     }
     function clearConfirmations() {
-      ['methodConfirmed', 'appliesToSample', 'volumeAppliesToSample', 'localConfirmed'].forEach(function (key) { fields[key].checked = false; });
+      confirmationKeys.forEach(function (key) { fields[key].checked = false; });
     }
     function notify() { if (typeof opts.onChange === 'function') opts.onChange(); }
     function changed(key) {
+      // Ręczna korekta dotyczy próbki; późniejszy odczyt karty jej nie nadpisuje.
+      delete imported[key];
+      if (suspendedImport) { delete suspendedImport.values[key]; suspendedImport.confirmations = null; }
       dirty[key] = true; evaluation = null;
       if (['sampleDate', 'birthDate', 'sex'].includes(key)) clearConfirmations();
       if (['profile', 'method', 'otherMethod', 'specimen', 'measurementKind'].includes(key)) {
@@ -224,6 +228,7 @@
       notify();
     }
     function clearMethod() {
+      if (suspendedImport) suspendedImport.confirmations = null;
       ['profile', 'method', 'otherMethod'].forEach(function (key) { fields[key].value = ''; });
       fields.methodConfirmed.checked = false;
       Object.keys(fields).filter(function (key) { return key.startsWith('local'); }).forEach(function (key) {
@@ -265,7 +270,8 @@
         if (input.type === 'checkbox') input.checked = false;
         else input.value = input.tagName === 'SELECT' ? input.options[0].value : '';
       });
-      dirty = {}; evaluation = null; contextKey = null; lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
+      dirty = {}; imported = {}; importedContextChanged = false; suspendedImport = null;
+      evaluation = null; contextKey = null; lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
       wrappers.stage.hidden = false; wrappers.otherMethod.hidden = true;
       Object.keys(fields).filter(function (key) { return key.startsWith('local') && key !== 'localEnabled'; }).forEach(function (key) { wrappers[key].hidden = true; });
       assessment.replaceChildren();
@@ -280,32 +286,83 @@
         reset();
         if (typeof opts.onPatientChange === 'function') opts.onPatientChange();
       }
-      else if (context) { clearConfirmations(); evaluation = null; }
+      else if (context) {
+        if (next.sourceStatus === 'loading' && context.sourceStatus === 'ready') {
+          // Odświeżenie nie musi oznaczać zmiany danych. W czasie odczytu import
+          // jest wyłączony z oceny; wróci tylko po potwierdzeniu identycznego źródła.
+          suspendedImport = { key: contextKey, values: {}, confirmations: {}, notice: importedContextChanged };
+          Object.keys(imported).forEach(function (key) { suspendedImport.values[key] = fields[key].value; });
+          confirmationKeys.forEach(function (key) { suspendedImport.confirmations[key] = fields[key].checked; });
+        }
+        // Samo usunięcie checkboxów zostawiałoby skopiowane leczenie i wiek.
+        // Czyścimy tylko wartości nadal pochodzące z poprzedniej wersji karty.
+        Object.keys(imported).forEach(function (key) {
+          fields[key].value = fields[key].tagName === 'SELECT' ? fields[key].options[0].value : '';
+          delete dirty[key];
+          importedContextChanged = true;
+        });
+        imported = {};
+        clearConfirmations(); evaluation = null;
+        if (next.sourceStatus !== 'loading' && suspendedImport) {
+          if (next.sourceStatus === 'ready' && key === suspendedImport.key) {
+            Object.keys(suspendedImport.values).forEach(function (key) { importField(key, suspendedImport.values[key]); });
+            if (suspendedImport.confirmations) confirmationKeys.forEach(function (key) { fields[key].checked = suspendedImport.confirmations[key]; });
+            importedContextChanged = suspendedImport.notice;
+          }
+          suspendedImport = null;
+        }
+      }
       context = JSON.parse(JSON.stringify(next)); contextKey = key;
       if (!dirty.sex) fields.sex.value = ['M', 'F'].includes(next.sex) ? next.sex : '';
       if (!dirty.birthDate) fields.birthDate.value = /^\d{4}-\d{2}-\d{2}$/.test(text(next.birthDateISO)) ? next.birthDateISO : '';
-      var parts = [];
+      updateContextLine(next);
+    }
+    function updateContextLine(next) {
+      var identity = text(next.identityKey), parts = [];
       if (next.sex) parts.push(next.sex);
       if (next.ageYears != null) parts.push(next.ageYears + ' lat' + (next.ageMonths != null ? ' i ' + next.ageMonths + ' mies.' : ''));
       if (next.tanner != null) parts.push('dawny Tanner ' + next.tanner + ' bez typu');
       if (next.gnrhaStatus) parts.push('GnRHa: ' + ({ brak: 'brak leczenia', 'w-trakcie': 'w trakcie', zakonczone: 'zakończone' }[next.gnrhaStatus] || 'wymaga sprawdzenia'));
       contextLine.textContent = parts.length ? 'Dane aktualnej karty: ' + parts.join(' · ') + '. Sprawdź ich zgodność z dniem pobrania. Wiek wizyty nie jest automatycznie wiekiem próbki.' : 'Nie wczytano kontekstu z karty. Możesz podać dane badania tutaj.';
-      useContext.hidden = !parts.length;
+      if (next.sourceStatus === 'loading') contextLine.textContent = 'Trwa odczyt danych aktualnego pacjenta. Poczekaj przed użyciem danych z karty lub wpisz dane badania ręcznie.';
+      else if (identity && next.sourceStatus !== 'ready') contextLine.textContent = 'Dane aktualnego pacjenta są niedostępne. Możesz podać dane badania ręcznie.';
+      else if (importedContextChanged) contextLine.textContent += ' Dane z karty wymagają ponownego sprawdzenia. Użyj ich ponownie lub uzupełnij pola badania ręcznie.';
+      useContext.hidden = !identity && !parts.length;
+      useContext.disabled = !parts.length || !!identity && next.sourceStatus !== 'ready';
+    }
+    function refreshContext() {
+      if (typeof opts.readPatientContext !== 'function') return false;
+      var next, previousKey = contextKey;
+      try { next = opts.readPatientContext(); }
+      catch (_) { next = { identityKey: context && context.identityKey, sourceStatus: 'unavailable' }; }
+      setPatientContext(next);
+      return previousKey !== contextKey;
+    }
+    function importField(key, value) {
+      fields[key].value = text(value);
+      dirty[key] = true; imported[key] = true;
     }
     useContext.addEventListener('click', function () {
-      if (!context) return;
+      var refreshed = refreshContext();
+      if (!context || useContext.disabled) { if (refreshed) notify(); return; }
       clearConfirmations();
-      fields.sex.value = ['M', 'F'].includes(context.sex) ? context.sex : '';
-      fields.birthDate.value = /^\d{4}-\d{2}-\d{2}$/.test(text(context.birthDateISO)) ? context.birthDateISO : '';
-      if (context.ageYears != null) { fields.ageYears.value = text(context.ageYears); fields.ageMonths.value = text(context.ageMonths); fields.ageDays.value = ''; dirty.ageYears = true; dirty.ageMonths = true; }
-      if (context.tanner != null) { fields.kind.value = 'unspecified'; fields.stage.value = text(context.tanner); wrappers.stage.hidden = false; dirty.kind = true; dirty.stage = true; }
-      if (context.gnrhaStatus) { fields.gnrha.value = context.gnrhaStatus === 'brak' ? 'no' : 'yes'; dirty.gnrha = true; }
-      if (context.testicularVolume != null) { fields.testicularVolume.value = text(context.testicularVolume); dirty.testicularVolume = true; }
+      importField('sex', ['M', 'F'].includes(context.sex) ? context.sex : '');
+      importField('birthDate', /^\d{4}-\d{2}-\d{2}$/.test(text(context.birthDateISO)) ? context.birthDateISO : '');
+      if (context.ageYears != null) { importField('ageYears', context.ageYears); importField('ageMonths', context.ageMonths); importField('ageDays', ''); }
+      if (context.tanner != null) { importField('kind', 'unspecified'); importField('stage', context.tanner); wrappers.stage.hidden = false; }
+      if (context.gnrhaStatus) importField('gnrha', context.gnrhaStatus === 'brak' ? 'no' : 'yes');
+      if (context.testicularVolume != null) importField('testicularVolume', context.testicularVolume);
+      importedContextChanged = false;
+      updateContextLine(context);
       evaluation = null; notify();
     });
 
     function render(measurement) {
       if (!analyte) return null;
+      var identity = context && text(context.identityKey);
+      refreshContext();
+      // Zmiana pacjenta może poprzedzać zdarzenie odświeżenia formularza.
+      if (identity !== (context && text(context.identityKey))) measurement = null;
       lastMeasurement = { raw: text(measurement && measurement.raw), unit: text(measurement && measurement.unit), targetUnit: text(measurement && measurement.targetUnit) };
       var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
       var rangeBlock = byId('labRangeBlock');
@@ -362,7 +419,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.0.0', buildInput: buildInput, mount: mount };
+  var api = { version: '1.0.1', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

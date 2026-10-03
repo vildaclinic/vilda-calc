@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '7';
+  var VERSION = '8';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -153,6 +153,42 @@
   // okołoporodowym i w prefillu karty SGA.
 
   var zapamietane = null;
+  var zapamietanyPacjent = null;
+  var sejfPamieci = null;
+  var statusOdczytu = 'unavailable';
+  var generacjaOdczytu = 0;
+  var podpietySejf = null;
+
+  function identyfikator(value) {
+    return tekst(value) || null;
+  }
+
+  function biezacaTozsamosc() {
+    try {
+      if (w.sessionStorage && typeof w.sessionStorage.getItem === 'function') {
+        // W ramce zmienna window może jeszcze wskazywać poprzedniego pacjenta.
+        // Brak klucza w dostępnym magazynie oznacza wyczyszczenie tożsamości.
+        return { znana: true, id: identyfikator(w.sessionStorage.getItem('vildaCurrentPatientId')) };
+      }
+    } catch (e) { /* brak dostępu do magazynu — pozostaje tożsamość okna */ }
+    return { znana: typeof w._vildaCurrentPatientId !== 'undefined', id: identyfikator(w._vildaCurrentPatientId) };
+  }
+
+  function pasujeDoTozsamosci(patientId) {
+    var aktualny = biezacaTozsamosc();
+    return !aktualny.znana || aktualny.id === patientId;
+  }
+
+  function sejfOdblokowany() {
+    try {
+      var V = w.VildaVault;
+      return !!(V && (!sejfPamieci || sejfPamieci === V) && typeof V.isUnlocked === 'function' && V.isUnlocked());
+    } catch (e) { return false; }
+  }
+
+  function pamiecBiezaca() {
+    return !zapamietanyPacjent || (pasujeDoTozsamosci(zapamietanyPacjent) && sejfOdblokowany()) ? zapamietane : null;
+  }
 
   /* Wspólny sygnał zmiany źródeł pacjenta (vilda_zrodla_pacjenta.js) — patrz opis w tamtym
    * pliku. Odczyt rekordu z sejfu jest asynchroniczny; bez ogłoszenia strona liczy dalej na
@@ -160,11 +196,13 @@
   function oglos() {
     try {
       var Z = w.VildaZrodlaPacjenta;
-      if (Z && typeof Z.ogloszJesliInne === 'function') Z.ogloszJesliInne('puberty', zapamietane);
+      if (Z && typeof Z.ogloszJesliInne === 'function') Z.ogloszJesliInne('puberty', {
+        patientId: zapamietanyPacjent, status: statusOdczytu, data: zapamietane
+      });
     } catch (e) { /* brak wspolnego sygnalu — modul dziala jak dotad */ }
   }
 
-  function zapamietaj(payload) {
+  function opublikuj(payload, patientId, status) {
     var p = payload && typeof payload === 'object' && payload.puberty
       && typeof payload.puberty === 'object' ? payload.puberty : null;
     var we = naWejscie(p);
@@ -172,21 +210,48 @@
     zapamietane = (we || stan)
       ? { we: we, stan: stan, plec: plec(payload && payload.user ? payload.user.sex : null) }
       : null;
+    zapamietanyPacjent = patientId;
+    sejfPamieci = patientId ? w.VildaVault || null : null;
+    statusOdczytu = status;
     oglos();
     return zapamietane;
   }
 
+  /* Zachowane synchroniczne API dla konsumentów danych bez sejfu. Bez jawnego ID
+   * sekcja jest dostępna tylko przez dotychczasowe gettery; nie przypisujemy jej
+   * automatycznie do pacjenta aktualnie wyświetlanego w innej części aplikacji. */
+  function zapamietaj(payload, patientId) {
+    generacjaOdczytu += 1;
+    return opublikuj(payload, identyfikator(patientId), 'ready');
+  }
+
   function zapomnij() {
-    zapamietane = null;
-    oglos();
+    generacjaOdczytu += 1;
+    opublikuj(null, null, 'unavailable');
+  }
+
+  /* Odczyt powiązany z tożsamością. Status jest częścią sygnału zmiany, więc
+   * loading -> ready/unavailable odświeża formularz także dla pustej sekcji.
+   * Kopie zapobiegają zmienianiu pamięci źródła przez odbiorcę. */
+  function kontekstPacjenta(patientId) {
+    var id = identyfikator(patientId);
+    var zgodny = id && id === zapamietanyPacjent && pasujeDoTozsamosci(id) && sejfOdblokowany();
+    var status = zgodny ? statusOdczytu : 'unavailable';
+    return {
+      patientId: id, status: status,
+      puberty: status === 'ready' && zapamietane && zapamietane.we ? Object.assign({}, zapamietane.we) : null,
+      state: status === 'ready' && zapamietane && zapamietane.stan ? Object.assign({}, zapamietane.stan) : null
+    };
   }
 
   function zKartyPacjenta() {
-    return zapamietane ? zapamietane.we : null;
+    var pamiec = pamiecBiezaca();
+    return pamiec ? pamiec.we : null;
   }
 
   function stanBiezacy() {
-    return zapamietane ? zapamietane.stan : null;
+    var pamiec = pamiecBiezaca();
+    return pamiec ? pamiec.stan : null;
   }
 
   function pole(id) {
@@ -219,7 +284,8 @@
   }
 
   function plecRekordu() {
-    return zapamietane ? zapamietane.plec : '';
+    var pamiec = pamiecBiezaca();
+    return pamiec ? pamiec.plec : '';
   }
 
   // Dane o pokwitaniu, których w tej chwili ma używać reszta aplikacji.
@@ -243,16 +309,53 @@
   // ── Wczytanie z vaulta ───────────────────────────────────────────────────────
 
   function wczytaj(patientId) {
+    podepnijCyklSejfu();
+    var id = identyfikator(patientId);
+    var generacja = ++generacjaOdczytu;
     var V = w.VildaVault;
-    if (!patientId || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()
-      || typeof V.getPatient !== 'function') return;
+    // Czyścimy również przy ponownym odczycie tego samego pacjenta: wynik starszej
+    // generacji nie jest potwierdzeniem zawartości obecnie wczytywanego rekordu.
+    opublikuj(null, id, id ? 'loading' : 'unavailable');
+    function nadalBiezacy() {
+      return generacja === generacjaOdczytu && zapamietanyPacjent === id;
+    }
+    function niedostepny() {
+      if (nadalBiezacy()) opublikuj(null, id, 'unavailable');
+    }
     try {
-      V.getPatient(patientId).then(function (rec) {
+      if (!id || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()
+        || typeof V.getPatient !== 'function') { niedostepny(); return; }
+      V.getPatient(id).then(function (rec) {
+        if (!nadalBiezacy()) return;
+        if (w.VildaVault !== V || !V.isUnlocked() || !pasujeDoTozsamosci(id)) { niedostepny(); return; }
         var snap = rec && Array.isArray(rec.snapshots) && rec.snapshots.length
           ? rec.snapshots[0] : null;
-        zapamietaj(snap && snap.payload ? snap.payload : null);
-      }).catch(function () { /* rekord nieczytelny — zostaje to, co bylo */ });
-    } catch (e) { /* vault odmowil — jak wyzej */ }
+        if (!snap || !snap.payload || typeof snap.payload !== 'object') { niedostepny(); return; }
+        opublikuj(snap.payload, id, 'ready');
+      }).catch(niedostepny);
+    } catch (e) { niedostepny(); }
+  }
+
+  function odswiez() {
+    var id = biezacaTozsamosc().id;
+    if (id) wczytaj(id);
+    else if (zapamietanyPacjent) zapomnij();
+  }
+
+  /* Samodzielny przelicznik nie musi mieć clearAllData ani komunikatu
+   * user-state-cleared. Wiążemy się także z publicznym cyklem życia sejfu,
+   * ładowanego czasem dopiero po otwarciu logowania. */
+  function podepnijCyklSejfu() {
+    var V = w.VildaVault;
+    if (!V || V === podpietySejf) return;
+    if (typeof V.onLock !== 'function' || typeof V.onUnlock !== 'function') return;
+    podpietySejf = V;
+    V.onLock(function () { if (w.VildaVault === V) zapomnij(); });
+    V.onUnlock(function () {
+      if (w.VildaVault !== V) return;
+      zapomnij();
+      odswiez();
+    });
   }
 
   function podepnij() {
@@ -263,7 +366,7 @@
 
     doc.addEventListener('vilda:patient-loaded', function (ev) {
       var id = ev && ev.detail ? ev.detail.patientId : null;
-      if (id) wczytaj(id);
+      wczytaj(id);
     });
 
     // Wylogowanie i kasowanie stanu leci na WINDOW, nie na document.
@@ -271,15 +374,16 @@
       w.addEventListener('vilda:user-state-cleared', zapomnij);
     }
 
-    var odswiez = function () {
-      try {
-        var id = w._vildaCurrentPatientId || null;
-        if (!id && w.sessionStorage) id = w.sessionStorage.getItem('vildaCurrentPatientId');
-        if (id) wczytaj(id);
-      } catch (e) { /* brak dostepu do sessionStorage */ }
-    };
+    podepnijCyklSejfu();
+    doc.addEventListener('vilda:auth-loaded', function () { podepnijCyklSejfu(); odswiez(); });
     doc.addEventListener('vilda:auth-hidden', odswiez);
     doc.addEventListener('vilda:sync-status-changed', odswiez);
+    doc.addEventListener('vilda:session-changed', odswiez);
+    if (typeof w.addEventListener === 'function') {
+      w.addEventListener('storage', function (ev) {
+        if (!ev || ev.key == null || ev.key === 'vildaCurrentPatientId') odswiez();
+      });
+    }
     if (doc.readyState === 'loading') {
       doc.addEventListener('DOMContentLoaded', function () { setTimeout(odswiez, 0); }, { once: true });
     } else {
@@ -296,6 +400,7 @@
     niesieDane: niesieDane,
     zapamietaj: zapamietaj,
     zapomnij: zapomnij,
+    kontekstPacjenta: kontekstPacjenta,
     zKartyPacjenta: zKartyPacjenta,
     biezace: biezace,
     ocenStart: ocenStart,

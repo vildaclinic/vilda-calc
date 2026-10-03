@@ -36,6 +36,18 @@ async function otworz(page) {
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Pomiar układu wymaga otwartej karty profesjonalnej. Samo wymuszenie
+  // kliknięcia nie włącza trybu, a jego strażnik ponownie ukrywa wyniki.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (tryb && !tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
 }
 
 const POMIARY = [
@@ -58,11 +70,8 @@ async function otworzKarteZWynikami(page) {
     '#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
     { state: 'attached' },
   );
-  // Przycisk bywa wyłączony bramką trybu — tu mierzymy układ karty, nie bramkę.
-  await page.evaluate(() => {
-    const t = document.getElementById('toggleAdvancedGrowth');
-    if (t) { t.disabled = false; t.click(); }
-  });
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
+  await page.locator('#toggleAdvancedGrowth').click();
   await expect(page.locator('#advancedGrowthForm'), 'karta zaawansowana się odsłoniła')
     .toBeVisible();
   const wiersze = page.locator('#advMeasurements .measure-row');
