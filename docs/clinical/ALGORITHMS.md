@@ -56,6 +56,14 @@ Nowy adapter próbki i wspólny renderer zastępują dawną interpretację wył�
 
 Źródła i ograniczenia metod Mayo, populacje, jednostki, kryteria kliniczne oraz pełny kontrakt są w [LH_FSH.md](LH_FSH.md). Regresje wywołują produkcyjny silnik, adapter, renderer, sejf i interfejs przeglądarkowy. Aktywacja nie nadaje statusu walidacji klinicznej; akceptacja kliniczna i scalenie pozostają po stronie właściciela.
 
+#### LAB-PUBERTY — spójność odczytu kontekstu pacjenta, 2026-10-03
+
+Źródło dojrzewania wiąże odczyt z pacjentem i kolejnością żądań. Formularz LH/FSH udostępnia import danych z karty dopiero po odczycie zgodnego kontekstu; zmiana źródła usuwa nadal skopiowane wartości i potwierdzenia. Ręcznie wprowadzone dane próbki pozostają odrębne. Blokada sejfu i wyczyszczenie sesji unieważniają trwające odczyty. Przed użyciem danych oraz utworzeniem snapshotu formularz ponownie sprawdza aktualne źródło, również w ramce aplikacji.
+
+**Wpływ kliniczny:** poprawka dotyczy doboru danych wejściowych. Nie zmienia tabel, metod, progów, jednostek, silnika `1.0.0` ani danych `2026-10-03.1`. Stosuje istniejące reguły i ograniczenia opisane w [LH_FSH.md](LH_FSH.md), w tym katalogi Mayo R1/R2 oraz kontekst leczenia: syntetyczny M14/G4, LH 2 IU/L, surowica, oznaczenie bazalne i zgodna metoda AnshLite przy `gnrha=yes` → brak dopasowanego bazalnego RI oraz `clinical.code=treatment_context`. Nieznane leczenie pozostaje nieznane. Zapisane historyczne oceny nie są przeliczane ani migrowane.
+
+Regresje wywołują produkcyjne źródło, adapter, formularz, silnik i producenta snapshotów; sprawdzają kolejność zakończenia odczytów, niedostępność danych, zmianę źródła oraz ponowne jawne użycie danych. Testy techniczne nie zastępują akceptacji klinicznej właściciela przed scaleniem.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

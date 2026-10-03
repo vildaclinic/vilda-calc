@@ -696,8 +696,8 @@
   "sha256": "7933ff84c4c70ee55e6432187eb8502c05f8ae420eca4750c55f9609318e6e95"
  },
  "vilda_lab_puberty_ui.js": {
-  "v": 1,
-  "sha256": "681d7fd4854710832c985b4226766a17bfdd0dfebeecefe0af2cf1cb4579e677"
+  "v": 2,
+  "sha256": "6b2e438fc45ed2300d29e0b7c4d11640c4cce81fbd7e3c20c79e0690b8e9bbcc"
  },
  "vilda_lab_snapshot.js": {
   "v": 1,
@@ -808,8 +808,8 @@
   "sha256": "5208c017de9df26d9a20740c499e1bfbcb994155530e3ebc81f226c88c182beb"
  },
  "vilda_puberty_source.js": {
-  "v": 7,
-  "sha256": "86ac5582fb49feab7d888110d61576bb87838de95809bd64662531c520c32a47"
+  "v": 8,
+  "sha256": "1ec2ea3898ef806ab05026522ace8dcf4deddd60ddaec0a1b10e95c31fc8d8a1"
  },
  "vilda_publication_creator.js": {
   "v": 20,

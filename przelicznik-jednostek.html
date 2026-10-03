@@ -441,9 +441,9 @@
   <script src="vilda_lab_puberty.js?v=1"></script>
   <script src="vilda_lab_snapshot.js?v=1"></script>
   <script src="vilda_lab_assessment_ui.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=1"></script>
+  <script src="vilda_lab_puberty_ui.js?v=2"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
-  <script src="vilda_puberty_source.js?v=7"></script>
+  <script src="vilda_puberty_source.js?v=8"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -579,28 +579,37 @@
       return !!(substance && (substance.id === 'lh' || substance.id === 'fsh'));
     }
     function readPubertyPatientContext() {
-      var shared = null, patient = null, puberty = null, pubertyState = null;
+      var shared = null, patient = null, puberty = null, pubertyState = null, source = null;
       try { shared = persistence && persistence.readShared ? persistence.readShared(null) : null; } catch (_) {}
       try { patient = window.VildaSession && window.VildaSession.getPatient ? window.VildaSession.getPatient() : null; } catch (_) {}
-      try { puberty = window.VildaPubertySource && window.VildaPubertySource.biezace ? window.VildaPubertySource.biezace() : null; } catch (_) {}
-      try { pubertyState = window.VildaPubertySource && window.VildaPubertySource.stanBiezacy ? window.VildaPubertySource.stanBiezacy() : null; } catch (_) {}
       shared = shared && typeof shared === 'object' ? shared : {};
       patient = patient && typeof patient === 'object' ? patient : {};
       var identity = window._vildaCurrentPatientId || '';
-      try { if (!identity) identity = sessionStorage.getItem('vildaCurrentPatientId') || ''; } catch (_) {}
+      // sessionStorage jest wspólne dla ramek tej karty; global ramki może być starszy.
+      try { identity = sessionStorage.getItem('vildaCurrentPatientId') || ''; } catch (_) {}
+      if (identity) {
+        try { source = window.VildaPubertySource && window.VildaPubertySource.kontekstPacjenta
+          ? window.VildaPubertySource.kontekstPacjenta(identity) : null; } catch (_) {}
+        if (!source || source.patientId !== identity || source.status !== 'ready') {
+          return { identityKey: identity, sourceStatus: source && source.patientId === identity && source.status === 'loading' ? 'loading' : 'unavailable' };
+        }
+        puberty = source.puberty; pubertyState = source.state;
+      }
       return {
         identityKey: identity,
+        sourceStatus: 'ready',
         sex: shared.sex || patient.sex || null,
         birthDateISO: shared.dobISO || null,
         ageYears: shared.age != null && shared.age !== '' ? shared.age : patient.age,
         ageMonths: shared.ageMonths != null && shared.ageMonths !== '' ? shared.ageMonths : patient.ageMonths,
         tanner: extractTannerFromAny(shared) || pubertyState && pubertyState.etap || null,
-        gnrhaStatus: puberty && puberty.gnrhaStatus || shared.puberty && shared.puberty.gnrhaStatus || null,
+        gnrhaStatus: puberty && puberty.gnrhaStatus || !identity && shared.puberty && shared.puberty.gnrhaStatus || null,
         testicularVolume: shared.advanced && shared.advanced.testicularVolume || pubertyState && pubertyState.jadra || null
       };
     }
     var pubertyUI = window.VildaLabPubertyUI && window.VildaLabPubertyUI.mount({
       document: document,
+      readPatientContext: readPubertyPatientContext,
       onPatientChange: function () { if (isPubertySubstance(currentSubstance)) valueEl.value = ''; },
       onChange: function () { if (isPubertySubstance(currentSubstance)) renderResults(currentSubstance); }
     });
@@ -4029,7 +4038,7 @@
     // Nasłuch zmian w sharedUserData (z innej karty/strony głównej).
     window.addEventListener('storage', function (e) {
       // Klucz dla sharedUserData może mieć różne nazwy w zależności od wersji adaptera.
-      if (!e.key || /shared|user/i.test(e.key)) refreshPatientContext();
+      if (!e.key || e.key === 'vildaCurrentPatientId' || /shared|user/i.test(e.key)) refreshPatientContext();
     });
     window.addEventListener('focus', refreshPatientContext);
     window.addEventListener('vilda:user-state-cleared', function () {
