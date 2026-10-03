@@ -18,6 +18,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | RENAL | Klirens, eGFR, BSA, wskaźniki moczowe, kamica i adekwatność HD | `kalkulator-klirens.html`, `inline_kalkulator_klirens_*.js`, `clcr_*.js` | 186 dedykowanych testów jednostkowych Klirens oraz cztery zestawy E2E wywołujące rzeczywisty interfejs; dodatkowo testy składni i PWA | wdrożone do testów; nadal wymaga walidacji prospektywnej i końcowej akceptacji nefrologicznej |
 | HOMA | HOMA-IR i interpretacja | `homa-ir.html` | E2E znanego przypadku | test regresyjny; progi populacyjne do pełnego rejestru |
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
+| LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js` | `tests/unit/lab-puberty.test.mjs`, rzeczywiste funkcje silnika | PR1: przygotowane, bez podłączenia do UI; szczegóły i źródła w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
@@ -28,6 +29,18 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | DIABETES | Kalkulatory diabetologiczne | `cukrzyca.html`, `cukrzyca.js` | kontrola składni; brak dedykowanego E2E lub regresji wyników | źródło do weryfikacji |
 
 ## Długi walidacyjne o najwyższym priorytecie
+
+### LAB-PUBERTY — dane i silnik LH/FSH, PR1, 2026-10-03
+
+**Status: przygotowanie do integracji, bez zmiany wyników w aplikacji.** Moduły nie są ładowane przez HTML ani service worker. Silnik `1.0.0` przyjmuje jawny zestaw danych `2026-10-03.1` i zwraca osobno porównanie biochemiczne względem wieku/stadium oraz ocenę czasu rozwoju. Nie modyfikuje obecnego przelicznika, przypiętych wyników ani zapisów pacjentów. Pełny kontrakt, populacje, jednostki, ograniczenia i zakres faktycznego odczytu źródeł: [LH_FSH.md](LH_FSH.md).
+
+Źródła liczbowe to katalogi Mayo [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) (AnshLite LH CLIA) i [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) (Roche Elecsys FSH ECLIA), odczytane 2026-10-03, surowica, IU/L (równoważne liczbowo mIU/mL). **To zakresy konkretnych metod Mayo, nie uniwersalne normy polskiej populacji.** Dane niosą źródło, wersję, populację, metodę, granice z operatorami i ograniczenia. Kandydaci Johannsen 2018 dla minipuberty pozostają nieaktywni: dokładne brzegi wieku i LOD nie zostały rozstrzygnięte. Brak normy nie uruchamia zakresu dorosłych ani interpolacji.
+
+Kryteria czasu rozwoju: Th≥2 przed 8 lat / G≥2 lub objętość jąder ≥4 mL orchidometrem Pradera przed 9 lat; ocena braku początku od 13/14 lat, z wywiadem i leczeniem. Źródła: Endocrine Society 2026 ([PMID 42287186](https://pubmed.ncbi.nlm.nih.gov/42287186/), oficjalne rekomendacje), ENDO-ERN 2021 ([PMID 33512657](https://pubmed.ncbi.nlm.nih.gov/33512657/)) i przegląd diagnostyki 2025 ([PMID 39911767](https://pubmed.ncbi.nlm.nih.gov/39911767/)). Minipuberty ma odrębny kontekst, nie automatyczne wyłączenie ostrzeżeń; zakres odczytanej literatury i wtórnych tabel opisano w dokumencie modułu. P/Ax i nieokreślony numer Tannera nie są podstawiane jako Th/G.
+
+Syntetyczne regresje wywołują nowe funkcje: chłopiec 6 lat, G4, LH 2 IU/L → w zakresie stadium (1,3–9,8), ponad zakresem wieku (≤0,5), zachowane ostrzeżenie rozwoju. Ten sam kontekst i FSH 2 → w obu zakresach (stadium 0,6–5,1; wiek ≤2,3), nadal ostrzeżenie rozwoju, bez etykiety „FSH wysokie”. Niemowlę 3 mies., LH 2 → odrębny kontekst minipuberty; brak metody lub wcześniactwo blokuje niedopasowane RI. Granice urodzin, nieprecyzyjny wiek, `<LOD`, `<`/`≤`, znany wczesny początek, opóźnienie i leczenie mają osobne przypadki.
+
+Wpływ docelowy: zgodność ze stadium nie będzie kasować niezgodności z wiekiem; silnik nie rozpoznaje automatycznie CPP/etiologii i nie ocenia skuteczności GnRHa. **W PR1 efekt kliniczny w działającym UI jest zerowy.** PR2 przygotuje zapis/odczyt wersjonowanej oceny, PR3 uruchomi cały przepływ w zaakceptowanym układzie. Testy techniczne i akceptacja planu nie nadają modułowi statusu „zwalidowany klinicznie”; scalanie i wdrożenie pozostają decyzją właściciela.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
