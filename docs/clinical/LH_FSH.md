@@ -1,6 +1,6 @@
-# LH/FSH — dane i silnik oceny, PR1
+# LH/FSH — dane, silnik i zapis kontekstu, PR1–PR2
 
-Stan dokumentu: 3 października 2026. Baza prac: `audyt` `68993e35`.
+Stan dokumentu: 3 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`.
 
 ## Status i granice tej raty
 
@@ -156,9 +156,39 @@ Opcjonalny `localReference` ma pola `id`, `version`, `analyte`, `material`, `uni
 
 Lokalny zakres nie rozszerza pediatrycznego zakresu wieku modułu. Wymaga ustanowionego `clinicalProfile.scopeAgeYears` i zgodnego wieku; katalog może korzystać z własnego zakresu wieku przy niedostępnych regułach klinicznych. Gdy ważny lokalny zakres jest podstawą oceny, rozstrzyga biochemiczną część podsumowania. Różnica względem pomocniczego zakresu katalogowego pozostaje w obu porównaniach i kodzie `source_reference_disagreement`; nie nadaje lokalnie prawidłowemu wynikowi etykiety „poza wskazanym zakresem”. Niezależne ostrzeżenie kliniczne ma nadal pierwszeństwo.
 
-W PR2 opcjonalny snapshot oceny ma przechodzić przez przypięcie, whitelist sejfu, import, serie, kartę i edytory. Zachowuje surowy wynik/operator/jednostkę, kontekst dnia pobrania, źródło/metodę/populację, granice z operatorami i zapisane oceny. Nie może zależeć od późniejszych zmian wejścia ani danych referencyjnych. Nie zawiera HTML, referencji DOM, `patientId` ani dat wymyślonych przez silnik. Sam komentarz zachowuje snapshot; zmiana wyniku, daty, kontekstu lub profilu wymaga przeliczenia albo jawnego unieważnienia.
+W PR2 opcjonalny snapshot oceny przechodzi przez przypięcie, whitelist sejfu, import, serie, kartę i edytory. Zachowuje surowy wynik/operator/jednostkę, kontekst dnia pobrania, źródło/metodę/populację, granice z operatorami i zapisane oceny. Nie może zależeć od późniejszych zmian wejścia ani danych referencyjnych. Nie zawiera HTML, referencji DOM, `patientId` ani dat wymyślonych przez silnik. Sam komentarz zachowuje snapshot; zmiana wyniku, daty, kontekstu lub profilu wymaga przeliczenia albo jawnego unieważnienia.
 
 PR3 uruchomi wspólnie UI, producenta snapshotu, treści ostrzeżeń i odczyt ocen. **Bez backfill:** dawne wyniki bez snapshotu nie otrzymują domniemanego Th/G, metody ani dzisiejszego kontekstu. Jawnej niedostępnej oceny nie zastępuje stary trendowy `evaluate` z samą płcią i wiekiem.
+
+## PR2 — transport historycznej oceny
+
+PR2 dodaje czytelny moduł `vilda_lab_snapshot.js` (`VildaLabSnapshot`, wersja `1.0.0`) ładowany przed sejfem, także przez oba mechanizmy ładowania na żądanie. Silnik i dane PR1 nadal **nie są ładowane** przez aplikację ani precache. Przelicznik nie produkuje jeszcze nowych ocen; ich tworzenie i prezentację włącza dopiero PR3.
+
+Opcjonalne pole `labResult.assessment` ma kontrakt:
+
+```js
+{
+  schemaVersion: 1,
+  status: 'recorded', // albo 'invalidated' / 'unavailable'
+  reasonCodes: [],
+  evaluation: { /* kopia kompletnego wyniku evaluate z PR1 */ },
+  binding: { /* pola wyniku i clinicalDateISO, ustalane przy zapisie */ }
+}
+```
+
+`create(evaluation, binding?)` przygotowuje kopię, `normalize(assessment)` weryfikuje ją bez ponownej oceny klinicznej, `reconcile(previousLab, nextLab, previousDateISO, nextDateISO)` obsługuje edycję, a `forSeries(lab, dateISO)` przygotowuje odczyt serii. Wszystkie funkcje działają bez DOM, zegara, magazynów i dostępu do aktualnego pacjenta lub norm. Każdy poziom obiektu ma listę dozwolonych pól; kopia nie przenosi identyfikatorów pacjenta, HTML, obiektów DOM ani dowolnych rozszerzeń. Nieznana lub uszkodzona wersja pozostawia jawny status `unavailable`, zamiast zmieniać wpis w starszy wynik bez oceny.
+
+Ocena przechodzi przez szyfrowany zapis notatki przypiętej do wizyty, odczyt notatek, eksport/import synchronizacji, historię pacjenta i serie laboratoryjne. `linkedAgeMonths` jest kotwicą wizyty; nie zastępuje `evaluation.ageAtSample` ani daty pobrania. Późniejsza zmiana wieku, stadium, leczenia lub norm w aktualnym formularzu nie zmienia zapisanej oceny.
+
+Edytory karty i terminarza zachowują pierwotny wynik, gdy zmienia się tylko komentarz. Zmiana pól wyniku, jednostki, normy albo daty badania unieważnia ocenę; ponowne zapisanie starego obiektu nie przywraca jej ważności. Nowa ocena musi odpowiadać zapisywanemu wynikowi i dacie. Status unieważnienia pozostawia historyczną ocenę do odczytu, lecz nie pozwala użyć jej jako aktualnej interpretacji.
+
+Przypinanie udostępnia nieaktywny domyślnie punkt integracji `VildaLabPinResult.setAssessmentProvider(fn|null)`. Producent PR3 zwróci ocenę przy otwarciu dialogu; dialog przechowuje jej kopię, a sejf weryfikuje zgodność przy zapisie. Brak producenta zachowuje dotychczasowe przypinanie. Dla jawnego snapshotu `labResult.value` zawiera surowy wynik (np. `<0,02`), a jednostka jest osobnym polem; tekst konwersji pozostaje w treści notatki. Starsze przypięcie zachowuje dotychczasowy złożony tekst wyniku. Dialog przyjmuje znaną datę próbki jako datę badania; późniejsza zmiana tej daty unieważnia przechwyconą ocenę, również gdy podano sam wiek bez daty próbki. Kod tej partii nie rejestruje producenta.
+
+**Zgodność starszych danych:** brak pola `assessment` pozostaje brakiem pola, bez masowej migracji i bez dopisywania Th/G, metody, leczenia lub daty. Stare serie zachowują dotychczasową ścieżkę. Wpis z jawną oceną nie wywołuje starego `LabUnitConverter.evaluate` z aktualną płcią i wiekiem. Wynik cenzorowany (`<x`, `<LOD`, `>x`) zachowuje operator i surowy zapis; nie staje się dokładnym punktem trendu na granicy oznaczenia. Prezentacja nowych ocen, ostrzeżeń i cenzorowanych wyników należy do PR3.
+
+Wpływ kliniczny PR2: brak zmian liczb, progów i interpretacji dotychczasowego UI. Dodane zachowanie chroni kontekst nowych zapisów przed utratą lub nieuprawnioną reinterpretacją. Nie jest walidacją medyczną silnika PR1. Wycofanie konsumenta wymaga zachowania dodatkowego pola w kopiach danych; starsza wersja aplikacji może je odrzucić w swojej kopii danych, dlatego nie jest zgodnym edytorem nowych ocen. Bieżący sejf przy scalaniu zachowuje posiadaną ocenę, jeśli starszy klient pominął pole przy zmianie komentarza; zmiana wyniku lub daty przez starszego klienta ją unieważnia. Bez załadowanego modułu transportu odczyt pozostaje jawnie niedostępny, a zapis istniejącej oceny jest blokowany, aby nie utrwalić utraty kontekstu.
+
+Testy PR2: `tests/unit/lab-snapshot.test.mjs` (model), `lab-snapshot-vault.test.mjs` (rzeczywisty sejf, szyfrowanie, import i synchronizacja), `lab-snapshot-ui.test.mjs` (produkcyjne funkcje przypięcia i trendów) oraz `tests/e2e/lab-snapshot.spec.mjs` (przypięcie, przeładowanie, edytory i historia w Chromium).
 
 ## Syntetyczne przypadki akceptacyjne
 
