@@ -1,10 +1,10 @@
-# LH/FSH — dane, silnik i zapis kontekstu, PR1–PR2
+# LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
 Stan dokumentu: 3 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`.
 
-## Status i granice tej raty
+## Etapy wdrożenia
 
-PR1 dodaje czytelne dane `vilda_lab_puberty_data.js` (`VildaLabPubertyData`, wersja `2026-10-03.1`) i silnik `vilda_lab_puberty.js` (`VildaLabPuberty`, wersja `1.0.0`). **Nowe moduły nie są ładowane przez istniejące strony ani service worker.** Nie zmieniają obecnego przelicznika, jego norm, komunikatów, przypiętych wyników ani danych pacjentów. Nie zastępują jeszcze `lab_units_data.js` i `lab_unit_converter.js`.
+PR1 dodaje czytelne dane `vilda_lab_puberty_data.js` (`VildaLabPubertyData`, wersja `2026-10-03.1`) i silnik `vilda_lab_puberty.js` (`VildaLabPuberty`, wersja `1.0.0`). **W PR1 moduły nie były ładowane przez istniejące strony ani service worker.** Nie zmieniają obecnego przelicznika, jego norm, komunikatów, przypiętych wyników ani danych pacjentów. Nie zastępują jeszcze `lab_units_data.js` i `lab_unit_converter.js`.
 
 Silnik jest deterministyczny: nie czyta DOM, magazynów, zegara ani sieci i niczego nie zapisuje. Zestaw danych trzeba przekazać jawnie:
 
@@ -158,7 +158,21 @@ Lokalny zakres nie rozszerza pediatrycznego zakresu wieku modułu. Wymaga ustano
 
 W PR2 opcjonalny snapshot oceny przechodzi przez przypięcie, whitelist sejfu, import, serie, kartę i edytory. Zachowuje surowy wynik/operator/jednostkę, kontekst dnia pobrania, źródło/metodę/populację, granice z operatorami i zapisane oceny. Nie może zależeć od późniejszych zmian wejścia ani danych referencyjnych. Nie zawiera HTML, referencji DOM, `patientId` ani dat wymyślonych przez silnik. Sam komentarz zachowuje snapshot; zmiana wyniku, daty, kontekstu lub profilu wymaga przeliczenia albo jawnego unieważnienia.
 
-PR3 uruchomi wspólnie UI, producenta snapshotu, treści ostrzeżeń i odczyt ocen. **Bez backfill:** dawne wyniki bez snapshotu nie otrzymują domniemanego Th/G, metody ani dzisiejszego kontekstu. Jawnej niedostępnej oceny nie zastępuje stary trendowy `evaluate` z samą płcią i wiekiem.
+PR3 uruchamia wspólnie UI, producenta snapshotu, treści ostrzeżeń i odczyt ocen. **Bez backfill:** dawne wyniki bez snapshotu nie otrzymują domniemanego Th/G, metody ani dzisiejszego kontekstu. Jawnej niedostępnej oceny nie zastępuje stary trendowy `evaluate` z samą płcią i wiekiem.
+
+## PR3 — aktywacja w dotychczasowym układzie przelicznika
+
+Trzecia partia włącza dane i silnik PR1 oraz transport PR2 dla **LH i FSH**. Zachowuje dotychczasowy układ `przelicznik-jednostek.html`: kroki 1–5, dużą wartość wyniku, jednostkę docelową, przeliczenia i położenie sekcji wyniku również na telefonie. Nie wprowadza osobnej strony, dwóch nowych kolumn ani nowej karty wyniku. Dodatkowe pola trafiają do istniejących sekcji próbki i pacjenta; szczegóły pozostają rozwijane. Pozostałe anality zachowują dotychczasową prezentację.
+
+Czytelny `vilda_lab_puberty_ui.js` zbiera kontekst pojedynczego oznaczenia i wywołuje istniejące `VildaLabPuberty.evaluate(input, data)`. `vilda_lab_assessment_ui.js` prezentuje bieżącą i zapisaną ocenę bez ponownego obliczania historii. Stare `selectRange`, pojedynczy pasek/kolor `far_above` oraz nieadekwatne objaśnienia LH/FSH nie stanowią alternatywnej interpretacji nowej ścieżki.
+
+W sekcji wyniku są rozdzielone: komunikat o rozwoju względem wieku, porównanie stężenia z zakresem wieku oraz ze stadium (i kompletnym lokalnym zakresem, jeżeli podano). Zgodność z zakresem stadium nie usuwa ostrzeżenia klinicznego i nie oznacza „pacjent prawidłowy”. FSH mieszczące się w zakresie nie otrzymuje koloru/etykiety wysokiego stężenia tylko dlatego, że czas rozwoju wymaga oceny. Brak metody, normy lub danych nie blokuje prawidłowej konwersji, lecz pozostawia jawną niedostępność odpowiedniego porównania. Ostrzeżenie rozwoju może być widoczne przed wpisaniem liczby.
+
+Pola próbki nie otrzymują domyślnych potwierdzeń metody, surowicy, oznaczenia bazalnego ani braku leczenia. Wybranie profilu referencyjnego jest odrębne od potwierdzenia rzeczywistej metody próbki. Wiek w dniu pobrania pochodzi z dat albo z jawnych części wieku i ich precyzji; formularz nie dopisuje daty pobrania. Dane bieżącego pacjenta są oznaczonym źródłem i wymagają świadomego użycia dla tej próbki. Sam dawny numer Tannera pozostaje nieokreślony, bez domyślnego Th/G; kategoria objętości jąder nie staje się dokładną liczbą ani pomiarem Pradera. Zmiana pacjenta i reset usuwają lokalne potwierdzenia, a zmiana LH ↔ FSH usuwa metodę poprzedniego oznaczenia.
+
+Przypięcie przechwytuje kopię bieżącej oceny. Dialog pokazuje jej podgląd i wyjaśnia unieważnienie po zmianie daty. Widoki wizyt, przypiętych wyników, terminarza i historii odczytują tę kopię, także gdy bieżące dane pacjenta się zmieniły. Wyniki `<x`, `>x` i `<LOD` mają czytelny zapis tekstowy i nie są punktami na granicy oznaczenia. Unieważniona ocena jest jawnie nieaktualna; jej wcześniejsza treść jest dostępna jako szczegół historyczny. Brak pola `assessment` nadal oznacza starszy zapis, bez backfill.
+
+**Wpływ kliniczny:** aktywacja zmienia widoczne interpretacje LH/FSH względem dawnego przelicznika. Nie zmienia liczb, tabel, jednostek, progów ani wersji silnika/danych PR1; uruchamia ich uzgodnione ograniczenia metodyczne i rozdzielenie ocen. Źródła, populacje, kryteria i przypadki syntetyczne są opisane poniżej. Testy techniczne nie stanowią walidacji klinicznej; przegląd kliniczny, scalenie i wdrożenie pozostają decyzją właściciela.
 
 ## PR2 — transport historycznej oceny
 

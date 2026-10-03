@@ -1,0 +1,37 @@
+/* Lokalny formularz kontekstu LH/FSH, bez wpływu na inne anality. */
+.lab-puberty-panel {
+  margin: var(--space-0-5) 0 0;
+  color: var(--text-color, #183c48);
+  min-width: 0;
+}
+.lab-puberty-step-active #labPatientCtx,
+.lab-puberty-step-active #labMeasFieldTime,
+.lab-puberty-step-active #labMeasFieldProtocol,
+.lab-puberty-step-active #labMeasFieldMethod,
+.lab-puberty-step-active #labStep4DefaultHint,
+.lab-puberty-step-active > .lab-step-body > .lab-step-label > .lab-step-label-opt { display: none !important; }
+.lab-puberty-panel[hidden], .lab-puberty-panel [hidden], .lab-puberty-assessment-host[hidden] { display: none !important; }
+.lab-puberty-suppressed,
+.lab-puberty-active.is-empty #labShowAllToggle,
+.lab-puberty-active.is-empty #labConversionsTableWrap { display: none !important; }
+.lab-puberty-active #labRangeBlock { display: block !important; }
+.lab-puberty-active:not(.is-empty) #labShowAllToggle { display: flex !important; }
+.lab-puberty-panel h2 { font-size: 1rem; margin: 0 0 var(--space-0-5); }
+.lab-puberty-hint { font-size: .78rem; line-height: 1.5; color: var(--text-muted, #5e7178); margin: var(--space-0-5) 0 var(--space-0-8); overflow-wrap: anywhere; }
+.lab-puberty-details { border-top: var(--border-hairline) solid var(--border-color, #dce6e9); padding: var(--space-0-8) 0; }
+.lab-puberty-details > summary { cursor: pointer; font-weight: 600; font-size: .88rem; color: inherit; }
+.lab-puberty-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-0-85); margin-top: var(--space-0-85); }
+.lab-puberty-field { display: flex; flex-direction: column; gap: var(--space-0-35); min-width: 0; color: inherit; font-size: .78rem; line-height: 1.4; }
+.lab-puberty-field input:not([type="checkbox"]), .lab-puberty-field select {
+  width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; padding: var(--space-0-6) var(--space-0-65);
+  min-height: 42px; border: var(--border-hairline) solid var(--border-color, #c9d6db); border-radius: var(--radius-8);
+  font: inherit; font-size: 1rem; background: var(--input-bg, #fff); color: var(--text-color, #183c48);
+}
+.lab-puberty-checkbox { grid-column: 1 / -1; flex-direction: row; align-items: flex-start; gap: var(--space-0-55); }
+.lab-puberty-checkbox input { flex: 0 0 auto; width: 18px; height: 18px; margin: .1rem 0 0; }
+.lab-puberty-context-button { border: var(--border-hairline) solid var(--border-color, #9bbec1); border-radius: var(--radius-8); padding: var(--space-0-5) var(--space-0-75); font: inherit; font-size: .78rem; color: var(--text-color, #216a70); background: var(--card-bg, #eff6f6); cursor: pointer; margin: 0 0 var(--space-0-75); max-width: 100%; white-space: normal; }
+.lab-puberty-assessment-host { margin-top: var(--space-0-9); min-width: 0; overflow-wrap: anywhere; }
+.lab-puberty-active.is-empty .lab-puberty-assessment-host { opacity: 1; }
+@media (max-width: 560px) {
+  .lab-puberty-fields { grid-template-columns: minmax(0, 1fr); gap: var(--space-0-7); }
+}

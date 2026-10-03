@@ -1,7 +1,8 @@
 import { expect, test } from '../support/test-czas.mjs';
 
-// PR2 transports saved evaluations. The PR1 engine is injected ONLY by these
-// tests; production pages must still leave the new producer and UI inactive.
+// PR2 transport regressions remain independent of the new form. PR3 loads the
+// engine on the converter; other pages only read snapshots and need a synthetic
+// test producer to prepare historical fixtures.
 // Every test creates a fresh, fictional vault in its isolated browser context.
 const SAMPLE_DATE = '2026-06-17';
 test.use({ serviceWorkers: 'block' });
@@ -23,14 +24,16 @@ async function openVault(page, path = '/index.html') {
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked() && Boolean(window.VildaAuthUI));
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  const converter = path === '/przelicznik-jednostek.html';
   expect(await page.evaluate(() => ({ engine: typeof window.VildaLabPuberty, data: typeof window.VildaLabPubertyData })))
-    .toEqual({ engine: 'undefined', data: 'undefined' });
+    .toEqual({ engine: converter ? 'object' : 'undefined', data: converter ? 'object' : 'undefined' });
   return page.evaluate(async () => (await window.VildaVault.savePatient({
     name: 'Fikcyjny LHFSH', user: { name: 'Fikcyjny LHFSH', sex: 'M', age: 6, ageMonths: 0, height: 115, weight: 20 },
   }, { dedup: false })).patientId);
 }
 
 async function loadTestProducer(page) {
+  if (await page.evaluate(() => Boolean(window.VildaLabPuberty && window.VildaLabPubertyData))) return;
   await page.addScriptTag({ url: '/vilda_lab_puberty_data.js' });
   await page.addScriptTag({ url: '/vilda_lab_puberty.js' });
 }
@@ -145,7 +148,7 @@ test('pin captures a detached assessment, survives reload and leaves legacy pinn
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.VildaVault?.isUnlocked());
   expect((await readNote(page, before[0].id)).labResult.assessment).toEqual(before[0].labResult.assessment);
-  expect(await page.evaluate(() => typeof window.VildaLabPuberty)).toBe('undefined');
+  expect(await page.evaluate(() => typeof window.VildaLabPuberty)).toBe('object');
 });
 
 test('full editor preserves assessment for a comment and invalidates a changed result or sample date', async ({ page }) => {
