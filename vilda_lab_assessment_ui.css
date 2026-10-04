@@ -37,6 +37,7 @@
 .vilda-lab-assessment .vilda-lab-comparison[data-status="within"] .vilda-lab-comparison-status { color: #245c67; background: var(--vilda-lab-soft); }
 .vilda-lab-assessment .vilda-lab-range { font-size: .9rem; font-weight: 600; }
 .vilda-lab-assessment .vilda-lab-note,
+.vilda-lab-assessment .vilda-lab-context-note,
 .vilda-lab-assessment .vilda-lab-metadata,
 .vilda-lab-assessment .vilda-lab-reasons { color: var(--vilda-lab-muted); font-size: .8rem; }
 .vilda-lab-assessment .vilda-lab-reasons { padding-left: var(--space-18px); margin: var(--space-6px) 0; }
@@ -61,6 +62,10 @@
 .vilda-lab-assessment.is-compact .vilda-lab-clinical { margin: var(--space-10px) 0; padding: var(--space-10px); }
 .vilda-lab-assessment.is-compact .vilda-lab-clinical strong { font-size: .9rem; }
 .vilda-lab-assessment.is-compact .vilda-lab-comparison { padding: var(--space-8px) 0; }
+.vilda-lab-assessment .vilda-lab-context-note { border-left: var(--border-emphasis) solid var(--vilda-lab-line); padding-left: var(--space-10px); }
+.vilda-lab-assessment .vilda-lab-reported-range { margin-bottom: var(--space-8px); }
+.vilda-lab-assessment .vilda-lab-reported-range h4 { margin-bottom: var(--space-6px); }
+.vilda-lab-assessment.is-compact .vilda-lab-comparison .vilda-lab-details { padding: var(--space-6px) 0; border-top: 0; margin-top: var(--space-6px); }
 @media (max-width: 480px) {
   .vilda-lab-assessment .vilda-lab-context { grid-template-columns: minmax(0, 1fr); row-gap: 3px; }
   .vilda-lab-assessment .vilda-lab-context dd { margin-bottom: 7px; }

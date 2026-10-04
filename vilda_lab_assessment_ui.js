@@ -27,6 +27,7 @@
     clinical_age_out_of_scope: 'Profil oceny rozwoju nie obejmuje tego wieku.',
     clinical_profile_missing: 'Brak kompletnego, wersjonowanego profilu oceny czasu dojrzewania.',
     clinical_scope_not_established: 'Nie ustalono zakresu wieku pozwalającego zastosować lokalną normę.',
+    configured_profile_version_mismatch: 'Zapisana konfiguracja oznaczenia wymaga sprawdzenia po zmianie wersji profilu.',
     early_development: 'Cechy dojrzewania pojawiły się zbyt wcześnie dla wieku i wymagają oceny przyczyny.',
     early_onset_history: 'Wczesny początek w wywiadzie pozostaje istotny niezależnie od obecnego wieku.',
     early_thelarche: 'Wczesne Th2 wymaga oceny przebiegu i objawów towarzyszących; nie przesądza o rozpoznaniu CPP.',
@@ -42,6 +43,7 @@
     invalid_reference_age_axis: 'Zakres nie ma poprawnie opisanej osi wieku.',
     invalid_reference_profile: 'Wybrany profil referencyjny jest niekompletny.',
     invalid_reference_range: 'Zapis granic zakresu jest nieprawidłowy.',
+    invalid_reported_range: 'Nie można odczytać podanego zakresu. Użyj dwóch granic albo pojedynczego progu z operatorem.',
     invalid_sample_date: 'Data pobrania jest nieprawidłowa.',
     late_onset_history: 'Późny początek w wywiadzie pozostaje istotny mimo obecnego stadium.',
     local_reference_context_mismatch: 'Zakres laboratorium nie odpowiada analitowi, jednostce lub materiałowi próbki.',
@@ -75,6 +77,7 @@
     puberty_not_confirmed_at_sample: 'Nie potwierdzono, że obserwacja rozwoju opisuje dzień pobrania; późniejsze badanie jej nie zastępuje.',
     reported_puberty_regression: 'Zgłoszono cofnięcie wcześniejszych cech dojrzewania; ocena samego czasu początku nie ocenia tego przebiegu.',
     reported_cns_symptoms: 'Zgłoszone objawy OUN wymagają odrębnej oceny klinicznej; moduł nie ustala ich przyczyny ani pilności.',
+    reported_range_reference_disagreement: 'Podany zakres i zakres katalogowy dają różne porównania. Sprawdź zastosowanie zakresu z wydruku i zgodność konfiguracji oznaczenia.',
     early_thelarche_with_cns_symptoms: 'Wczesny rozwój piersi z objawami OUN wymaga sprawnej oceny specjalistycznej; zalecenie samej obserwacji izolowanej thelarche nie obejmuje tej sytuacji.',
     sample_before_birth: 'Data pobrania jest wcześniejsza od daty urodzenia.',
     source_reference_disagreement: 'Zakres laboratorium i pomocniczy zakres katalogowy dają różne porównania. Podstawą biochemiczną pozostaje potwierdzony zakres laboratorium.',
@@ -88,6 +91,7 @@
     unsupported_analyte: 'Moduł ocenia wyłącznie LH i FSH.',
     unsupported_or_unknown_specimen: 'Zakresy dotyczą surowicy; materiał próbki jest nieznany lub inny.',
     unsupported_unit: 'Jednostka nie jest obsługiwana przez ten moduł.',
+    unsupported_reported_range_unit: 'Jednostka podanego zakresu nie jest obsługiwana; dostępne są IU/L i mIU/mL.',
     assessment_binding_mismatch: 'Zapisana ocena nie odpowiada obecnym polom wyniku.',
     assessment_requires_recalculation: 'Wynik wymaga ponownej oceny po zmianie danych.',
     assessment_result_mismatch: 'Zapisana ocena dotyczy innej wartości, jednostki lub analitu.',
@@ -196,7 +200,8 @@
     var labels = { provided: 'Podana informacja', 'clinical-examination': 'Badanie lekarskie', 'reported-history': 'Wywiad', 'patient-record': 'Karta pacjenta', 'local-confirmed': 'Informacja potwierdzona dla próbki' };
     return Object.prototype.hasOwnProperty.call(labels, value) ? labels[value] : text(value) ? 'Podane źródło: ' + text(value) : 'Nie podano';
   }
-  function observationRelation(observation, sampleDateISO, rejected) {
+  function observationRelation(observation, sampleDateISO, rejected, currentContext) {
+    if (currentContext) return observation.appliesToCurrentContext === true && !rejected ? 'Z formularza głównego; bez potwierdzenia dla dnia pobrania' : 'Nieustalony dla bieżącego kontekstu';
     if (rejected) return 'Niepotwierdzony dla dnia pobrania';
     if (sampleDateISO && observation.assessedAtISO && observation.assessedAtISO > sampleDateISO) return 'Obserwacja późniejsza od pobrania — nie opisuje próbki';
     if (observation.appliesToSample === true) return 'Potwierdzony';
@@ -224,22 +229,30 @@
       var citation = Object.prototype.hasOwnProperty.call(CITATIONS, id) ? CITATIONS[id] : null;
       if (citation) { sources.push({ label: citation[0], version: '', organization: '', url: citation[1] }); sourceIds.push(id); }
     });
+    var currentContext = input.contextBasis === 'current-patient';
     var observationRejected = (Array.isArray(e.limitations) ? e.limitations : []).includes('puberty_not_confirmed_at_sample');
     var context = [
-      { label: 'Pobranie', value: date(input.sampleDateISO) },
-      { label: 'Wiek w dniu pobrania', value: ageText(input, e.ageAtSample) },
+      { label: currentContext ? 'Podstawa oceny' : 'Pobranie', value: currentContext ? 'Kontekst z formularza głównego' : date(input.sampleDateISO) },
+      { label: currentContext ? 'Wiek z formularza głównego' : 'Wiek w dniu pobrania', value: ageText(input, e.ageAtSample) },
       { label: 'Płeć dla kryteriów', value: ['F', 'M'].includes(input.sex) ? input.sex : 'Nieznana' },
       { label: 'Obserwacja rozwoju', value: stage(p) },
       { label: 'Data obserwacji', value: date(p.assessedAtISO) },
       { label: 'Źródło obserwacji', value: observationSource(p.source) },
-      { label: 'Związek obserwacji z próbką', value: observationRelation(p, input.sampleDateISO, observationRejected) },
+      { label: currentContext ? 'Związek obserwacji z kontekstem' : 'Związek obserwacji z próbką', value: observationRelation(p, input.sampleDateISO, observationRejected, currentContext) },
       { label: 'Materiał', value: input.specimen === 'serum' ? 'Surowica' : input.specimen === 'urine' ? 'Mocz' : 'Inny lub nieznany' },
       { label: 'Rodzaj oznaczenia', value: input.measurementKind === 'basal' ? 'Bazalne' : input.measurementKind === 'stimulated' ? 'Po stymulacji' : 'Inny lub nieznany' },
-      { label: 'Metoda próbki', value: methodName(assay.methodId) },
-      { label: 'Potwierdzenie metody', value: assay.confirmation === 'reported' ? 'Podana dla rzeczywistej próbki' : 'Niepotwierdzona' },
-      { label: 'Leczenie GnRHa', value: flag(input.treatment && input.treatment.gnrha) },
-      { label: 'Steroidy płciowe', value: flag(input.treatment && input.treatment.sexSteroids) }
+      { label: assay.confirmation === 'configured' ? 'Metoda z konfiguracji' : 'Metoda próbki', value: methodName(assay.methodId) },
+      { label: 'Potwierdzenie metody', value: assay.confirmation === 'configured' ? 'Z zapisanej konfiguracji oznaczenia' + (assay.profileVersion ? ' · wersja profilu: ' + text(assay.profileVersion) : ' · wersja profilu niepodana') : assay.confirmation === 'reported' ? 'Podana dla rzeczywistej próbki' : 'Niepotwierdzona' }
     ];
+    var treatment = input.treatment || {};
+    if (Object.prototype.hasOwnProperty.call(treatment, 'context')) {
+      context.push({ label: 'Kontekst leczenia', value: treatment.context === 'hormonal' ? 'Leczenie hormonalne — bez określenia leku' : treatment.context === 'none' ? (treatment.gnrha === 'no' && treatment.sexSteroids === 'no' ? 'Nie zgłoszono leczenia wpływającego na interpretację LH/FSH' : 'Zadeklarowano brak leczenia; szczegóły wymagają ustalenia') : 'Nie ustalono' });
+      if (['yes', 'no'].includes(treatment.gnrha)) context.push({ label: 'Leczenie GnRHa', value: flag(treatment.gnrha) });
+      if (['yes', 'no'].includes(treatment.sexSteroids)) context.push({ label: 'Steroidy płciowe', value: flag(treatment.sexSteroids) });
+    } else {
+      context.push({ label: 'Leczenie GnRHa', value: flag(treatment.gnrha) });
+      context.push({ label: 'Steroidy płciowe', value: flag(treatment.sexSteroids) });
+    }
     if (input.birthDateISO) context.splice(1, 0, { label: 'Data urodzenia użyta w ocenie', value: date(input.birthDateISO) });
     var onset = input.onset || {};
     if (onset.dateISO || onset.age) {
@@ -249,7 +262,7 @@
     var volume = input.testicularVolume || {};
     if (numeric(volume.value)) {
       context.push({ label: 'Objętość jąder', value: number(volume.value) + ' ' + text(volume.unit) + ' · ' + (volume.method === 'Prader' ? 'Orchidometr Pradera' : text(volume.method) ? 'Metoda: ' + text(volume.method) : 'Nieznana metoda') + ' · ' + date(volume.assessedAtISO) });
-      context.push({ label: 'Związek pomiaru jąder z próbką', value: observationRelation(volume, input.sampleDateISO) });
+      context.push({ label: currentContext ? 'Związek pomiaru jąder z kontekstem' : 'Związek pomiaru jąder z próbką', value: observationRelation(volume, input.sampleDateISO, false, currentContext) });
     }
     var history = input.history || {};
     [['progression', 'Progresja'], ['growthAcceleration', 'Przyspieszenie wzrastania'], ['cnsSymptoms', 'Objawy OUN'], ['regression', 'Regresja']].forEach(function (entry) { context.push({ label: entry[1], value: flag(history[entry[0]]) }); });
@@ -257,12 +270,26 @@
       context.push({ label: 'Wcześniactwo', value: flag(input.preterm) });
       if (numeric(input.gestationalAgeWeeks)) context.push({ label: 'Wiek ciążowy przy urodzeniu', value: number(input.gestationalAgeWeeks) + ' tyg.' });
     }
+    var suppliedRange = record(e.reportedRange) ? e.reportedRange : null;
+    var suppliedStatus = suppliedRange && Object.prototype.hasOwnProperty.call(STATUS, suppliedRange.status) ? suppliedRange.status : 'unavailable';
+    var limitations = reasons(e.limitations);
+    if (currentContext) limitations = limitations.map(function (message) {
+      if (message === REASONS.missing_age) return 'Brak wiarygodnego wieku w formularzu głównym.';
+      if (message === REASONS.missing_typed_stage_at_sample || message === REASONS.puberty_not_confirmed_at_sample) return 'Nie ustalono typowanej obserwacji rozwoju właściwej dla bieżącego kontekstu.';
+      if (message === REASONS.missing_puberty_assessment) return 'Brak odpowiedniej oceny Th/M lub G dla bieżącego kontekstu. P i Ax jej nie zastępują.';
+      return message;
+    });
     return { valid: true, analyte: e.analyte.toUpperCase(),
       result: { text: formatResult({ value: m.raw, unit: m.sourceUnit }), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
         note: m.status === 'valid' && m.isExact === false ? 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
       clinical: { title: text(e.clinical.title), text: text(e.clinical.text), status: text(e.clinical.status), code: text(e.clinical.code) },
       summary: { title: text(e.summary.title), status: e.summary.status }, comparisons: comparisons,
-      context: context, limitations: reasons(e.limitations), sources: sources,
+      context: context, contextBasis: currentContext ? 'current-patient' : 'sample',
+      contextNote: currentContext ? 'Kontekst z formularza głównego — wiek i obserwacje nie potwierdzają dnia pobrania.' : '',
+      assayNote: assay.confirmation === 'configured' ? 'Z zapisanej konfiguracji oznaczenia: ' + methodName(assay.methodId) + (assay.profileVersion ? ' · profil ' + text(assay.profileVersion) : '') : '',
+      reportedRange: suppliedRange ? { status: suppliedStatus, label: ({ within: 'W podanym zakresie', above: 'Powyżej podanego zakresu', below: 'Poniżej podanego zakresu', indeterminate: 'Porównanie z podanym zakresem niejednoznaczne', unavailable: 'Nie można porównać z podanym zakresem' })[suppliedStatus], raw: text(suppliedRange.raw), unit: text(suppliedRange.unit), reasons: reasons(suppliedRange.reasonCodes) } : null,
+      reportedRangeConflict: (Array.isArray(e.limitations) ? e.limitations : []).includes('reported_range_reference_disagreement'),
+      limitations: limitations, sources: sources,
       versions: [e.engineVersion ? 'Silnik: ' + text(e.engineVersion) : '', e.dataVersion ? 'Dane: ' + text(e.dataVersion) : '', provenance.clinicalProfileVersion ? 'Kryteria rozwoju: ' + text(provenance.clinicalProfileVersion) : ''].filter(Boolean) };
   }
 
@@ -279,12 +306,23 @@
     values.forEach(function (value) { add(ul, 'li', '', value); });
   }
   function details(parent, title) { var element = add(parent, 'details', 'vilda-lab-details'); add(element, 'summary', '', title); return element; }
+  function renderComparisonContext(parent, comparison) {
+    if (comparison.primary) add(parent, 'p', 'vilda-lab-note', 'Podstawa porównania biochemicznego');
+    if (comparison.method) add(parent, 'p', 'vilda-lab-metadata', comparison.method + (comparison.scope ? ' · ' + comparison.scope : ''));
+    if (comparison.population) add(parent, 'p', 'vilda-lab-metadata', comparison.population);
+    if (comparison.source) add(parent, 'p', 'vilda-lab-metadata', 'Źródło zakresu: ' + comparison.source.label
+      + ' · ' + (comparison.source.version ? 'wersja źródła: ' + comparison.source.version : 'wersja źródła niepodana')
+      + (comparison.referenceVersion ? ' · wersja zakresu: ' + comparison.referenceVersion : ''));
+    list(parent, comparison.reasons, 'vilda-lab-reasons');
+  }
   function renderContents(parent, view, options) {
+    var compact = !!(options && options.compact);
     if (!options || !options.hideMeasurement) {
       add(parent, 'p', 'vilda-lab-result-label', 'Wynik ' + view.analyte);
       add(parent, 'p', 'vilda-lab-result', view.result.text);
     }
     if (view.result.note) add(parent, 'p', 'vilda-lab-note', view.result.note);
+    if (view.contextNote) add(parent, 'p', 'vilda-lab-context-note', view.contextNote);
     var clinical = add(parent, 'div', 'vilda-lab-clinical');
     clinical.setAttribute('data-clinical-code', /^[a-z_]+$/.test(view.clinical.code) ? view.clinical.code : 'unavailable');
     clinical.setAttribute('data-status', ['warning', 'notice', 'limited', 'out_of_scope', 'no_timing_alert'].includes(view.clinical.status) ? view.clinical.status : 'limited');
@@ -295,8 +333,21 @@
     view.clinical.text.split(/\n\s*\n/).forEach(function (paragraph) { add(clinical, 'p', '', paragraph); });
     if (view.summary.title !== view.clinical.title) add(parent, 'p', 'vilda-lab-summary', view.summary.title);
     add(parent, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
+    if (view.assayNote) add(parent, 'p', 'vilda-lab-note', view.assayNote);
+    if (view.reportedRange) {
+      var supplied = add(parent, 'div', 'vilda-lab-comparison vilda-lab-reported-range');
+      supplied.setAttribute('data-comparison', 'reported');
+      supplied.setAttribute('data-status', view.reportedRange.status);
+      add(supplied, 'h4', '', 'Podany zakres');
+      add(supplied, 'strong', 'vilda-lab-comparison-status', view.reportedRange.label);
+      add(supplied, 'p', 'vilda-lab-range', [view.reportedRange.raw, view.reportedRange.unit].filter(Boolean).join(' '));
+      add(supplied, 'p', 'vilda-lab-note', 'Porównanie liczbowe. Nie potwierdza zastosowania zakresu do wieku, stadium ani metody.');
+      if (!compact) list(supplied, view.reportedRange.reasons, 'vilda-lab-reasons');
+    }
+    if (view.reportedRangeConflict) add(parent, 'p', 'vilda-lab-summary', REASONS.reported_range_reference_disagreement);
     var comparisons = add(parent, 'div', 'vilda-lab-comparisons');
     view.comparisons.forEach(function (comparison) {
+      if (compact && comparison.key === 'local' && comparison.status === 'unavailable') return;
       var row = add(comparisons, 'div', 'vilda-lab-comparison');
       row.setAttribute('data-comparison', comparison.key);
       row.setAttribute('data-status', comparison.status);
@@ -304,13 +355,8 @@
       add(head, 'h4', '', comparison.title);
       add(head, 'span', 'vilda-lab-comparison-status', comparison.label);
       if (comparison.rangeText) add(row, 'p', 'vilda-lab-range', comparison.rangeText);
-      if (comparison.primary) add(row, 'p', 'vilda-lab-note', 'Podstawa porównania biochemicznego');
-      if (comparison.method) add(row, 'p', 'vilda-lab-metadata', comparison.method + (comparison.scope ? ' · ' + comparison.scope : ''));
-      if (comparison.population) add(row, 'p', 'vilda-lab-metadata', comparison.population);
-      if (comparison.source) add(row, 'p', 'vilda-lab-metadata', 'Źródło zakresu: ' + comparison.source.label
-        + ' · ' + (comparison.source.version ? 'wersja źródła: ' + comparison.source.version : 'wersja źródła niepodana')
-        + (comparison.referenceVersion ? ' · wersja zakresu: ' + comparison.referenceVersion : ''));
-      if (comparison.status === 'unavailable' || comparison.status === 'indeterminate') list(row, comparison.reasons, 'vilda-lab-reasons');
+      if (!compact) renderComparisonContext(row, comparison);
+      else if (comparison.key === 'local') renderComparisonContext(details(row, 'Źródło i zastosowanie zakresu'), comparison);
     });
     add(parent, 'p', 'vilda-lab-note', 'Zakresy według wieku i stadium oceniono oddzielnie. Porównanie stężenia nie rozstrzyga przyczyny rozwoju.');
     var context = details(parent, 'Kontekst użyty w ocenie');
@@ -318,6 +364,11 @@
     view.context.forEach(function (row) { add(dl, 'dt', '', row.label); add(dl, 'dd', '', row.value); });
     var more = details(parent, 'Ograniczenia i źródła');
     list(more, view.limitations, 'vilda-lab-limitations');
+    if (compact) view.comparisons.forEach(function (comparison) {
+      add(more, 'h4', '', comparison.title);
+      renderComparisonContext(more, comparison);
+    });
+    if (compact && view.reportedRange) list(more, view.reportedRange.reasons, 'vilda-lab-reasons');
     add(more, 'p', 'vilda-lab-note', 'Ocena nie ustala etiologii, nie rozpoznaje CPP ani nie dobiera leczenia. Zakresy zależą od konkretnej metody i populacji.');
     var sources = add(more, 'ul', 'vilda-lab-sources');
     view.sources.forEach(function (source) {
@@ -365,5 +416,5 @@
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.1.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.2.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });

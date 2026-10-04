@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
 
 // Medical-audit regressions use the production form, evaluator and renderer.
 // Patient records and vaults are fictional and isolated in each browser context.
@@ -52,17 +53,6 @@ async function chooseLH(page) {
   await expect(page.locator('#labPubertyPanel')).toBeVisible();
 }
 
-async function field(page, name) {
-  const input = page.locator(`#labPuberty${name}`);
-  const groups = input.locator('xpath=ancestor::details');
-  for (let i = await groups.count() - 1; i >= 0; i -= 1) {
-    const group = groups.nth(i);
-    if (await group.getAttribute('open') === null) await group.locator(':scope > summary').click();
-  }
-  return input;
-}
-const select = async (page, name, value) => (await field(page, name)).selectOption(value);
-const fill = async (page, name, value) => (await field(page, name)).fill(value);
 const assessment = (page) => page.locator('#labPubertyAssessment .vilda-lab-assessment');
 const clinical = (page) => assessment(page).locator('.vilda-lab-clinical');
 const comparison = (page, kind) => assessment(page).locator(`[data-comparison="${kind}"]`);
@@ -71,19 +61,13 @@ const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.get
 }));
 
 async function sample(page, { sex = 'M', birthDate = '2012-06-17', kind = 'G', stage = '4', gnrha = 'no', value = '2' } = {}) {
-  await select(page, 'Sex', sex);
-  await fill(page, 'BirthDate', birthDate);
   await fill(page, 'SampleDate', SAMPLE_DATE);
+  await fill(page, 'BirthDate', birthDate);
+  await select(page, 'Sex', sex);
   await select(page, 'Kind', kind);
   await select(page, 'Stage', stage);
-  await fill(page, 'AssessedAt', SAMPLE_DATE);
-  await select(page, 'Specimen', 'serum');
-  await select(page, 'MeasurementKind', 'basal');
-  await select(page, 'SexSteroids', 'no');
-  if (gnrha !== null) await select(page, 'Gnrha', gnrha);
-  await select(page, 'Profile', 'mayo-lh-pediatric');
-  await select(page, 'Method', 'anshlite-lh-clia');
-  await (await field(page, 'MethodConfirmed')).check();
+  if (gnrha !== null) await select(page, 'Context', gnrha === 'no' ? 'basal-untreated' : 'hormonal');
+  await configureProfile(page);
   await page.locator('#labValue').fill(value);
 }
 
@@ -123,26 +107,28 @@ test('finished GnRHa requires an explicit sample answer and a source refresh pre
       const context = window.VildaPubertySource.kontekstPacjenta(id);
       return context.status === 'ready' && context.puberty.gnrhaStatus;
     }, patientId)).toBe(status);
-    await expect(page.locator('#labPubertyUsePatientContext')).toBeEnabled();
+
   };
   await refresh('zakonczone');
-  await page.locator('#labPubertyUsePatientContext').click();
   await expect(page.locator('#labPubertyPatientContext')).toContainText('GnRHa: zakończone');
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await sample(page, { gnrha: null });
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
   expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('unknown');
 
-  await select(page, 'Gnrha', 'no');
+  await select(page, 'Context', 'basal-untreated');
   await expectWithinRanges(page);
   await refresh('w-trakcie');
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('no');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('no');
-  await page.locator('#labPubertyUsePatientContext').click();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('yes');
+  await page.locator('#labClearBtn').click();
+  await chooseLH(page);
+  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
+  await page.locator('#labValue').fill('2');
+  expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('yes');
   await refresh('brak');
-  await page.locator('#labPubertyUsePatientContext').click();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('no');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  expect((await snapshot(page)).evaluation.input.treatment).toMatchObject({ gnrha: 'no', sexSteroids: 'unknown' });
 });
 
 test('regression remains a visible clinical warning when both LH ranges are within', async ({ page }) => {
@@ -227,9 +213,8 @@ test('early Th2 with CNS symptoms adds specialist assessment without automatical
 test('infant volume is shown with its missing reference limits and never supplies a Tanner stage', async ({ page }) => {
   await open(page);
   await chooseLH(page);
-  await sample(page, { birthDate: '2026-03-17', kind: '', stage: '' });
+  await sample(page, { birthDate: '2026-03-17', kind: 'unspecified', stage: '' });
   await select(page, 'VolumeMethod', 'Prader');
-  await fill(page, 'VolumeAssessedAt', SAMPLE_DATE);
   for (const value of ['1', '8', '15']) {
     await fill(page, 'TesticularVolume', value);
     const warning = await expectVisibleParagraph(clinical(page), /objętoś/i);

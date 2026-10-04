@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
 
 // LH/FSH A01: real source broker -> converter adapter -> form -> engine/snapshot.
 // Only getPatient's asynchronous storage boundary is controlled. Every browser
@@ -6,7 +7,6 @@ import { expect, test } from '../support/test-czas.mjs';
 test.use({ serviceWorkers: 'block' });
 const A = 'fictional-lh-context-a';
 const B = 'fictional-lh-context-b';
-const SAMPLE_DATE = '2026-06-17';
 
 async function open(page) {
   await page.route('**/*', (route) => {
@@ -85,18 +85,6 @@ async function installBoundary(page) {
   }, { idA: A, idB: B });
 }
 
-async function field(page, name) {
-  const input = page.locator(`#labPuberty${name}`);
-  const groups = input.locator('xpath=ancestor::details');
-  for (let i = await groups.count() - 1; i >= 0; i -= 1) {
-    const group = groups.nth(i);
-    if (await group.getAttribute('open') === null) await group.locator(':scope > summary').click();
-  }
-  return input;
-}
-async function select(page, name, value) { await (await field(page, name)).selectOption(value); }
-async function fill(page, name, value) { await (await field(page, name)).fill(value); }
-const importButton = (page) => page.locator('#labPubertyUsePatientContext');
 const load = (page, id) => page.evaluate((patientId) => window.__lhContext.load(patientId), id);
 const source = (page, id) => page.evaluate((patientId) => window.VildaPubertySource.kontekstPacjenta(patientId), id);
 const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.getAssessment({
@@ -105,76 +93,70 @@ const snapshot = (page) => page.evaluate(() => window.VildaLabPubertyRuntime.get
 
 async function complete(page, id, error = false) {
   await page.evaluate(({ patientId, failed }) => window.__lhContext.complete(patientId, failed), { patientId: id, failed: error });
-  // The broker announces changes through the real batched source signal. Let its
-  // promise callbacks and animation-frame delivery finish before inspecting UI.
+  // The real broker batches its public source signal on animation frames.
   await page.evaluate(() => new Promise((resolve) => { requestAnimationFrame(() => requestAnimationFrame(resolve)); }));
 }
-
 async function ready(page, id = B) {
   await load(page, id);
   await complete(page, id);
   await expect.poll(() => source(page, id).then((context) => context.status)).toBe('ready');
-  await expect(importButton(page)).toBeEnabled();
-  await importButton(page).click();
 }
-
 async function sample(page) {
-  await fill(page, 'SampleDate', SAMPLE_DATE);
-  await fill(page, 'AssessedAt', SAMPLE_DATE);
-  await select(page, 'Specimen', 'serum');
-  await select(page, 'MeasurementKind', 'basal');
-  await select(page, 'SexSteroids', 'no');
-  await select(page, 'Profile', 'mayo-lh-pediatric');
-  await select(page, 'Method', 'anshlite-lh-clia');
-  await (await field(page, 'MethodConfirmed')).check();
+  await configureProfile(page);
   await page.locator('#labValue').fill('2');
 }
+async function restart(page) {
+  await page.locator('#labClearBtn').click();
+  await page.locator('#labSubstance').fill('LH');
+  await page.locator('#labSubstanceDropdown [data-id="lh"]').click();
+}
+const contextSummary = (page) => page.locator('#labPubertyPatientContext');
 
-test('B completing before A keeps only B in the source, imported controls and recorded assessment', async ({ page }) => {
+test('B completing before A keeps only B in the source, automatic controls and recorded assessment', async ({ page }) => {
   await open(page);
   await load(page, A);
   await load(page, B);
-  await expect(importButton(page)).toBeDisabled();
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await complete(page, B);
   expect(await source(page, B)).toMatchObject({ patientId: B, status: 'ready', puberty: { gnrhaStatus: 'w-trakcie' } });
   await complete(page, A);
   expect(await source(page, B)).toMatchObject({ patientId: B, status: 'ready', puberty: { gnrhaStatus: 'w-trakcie' } });
   expect((await source(page, A)).status).toBe('unavailable');
-  await expect(page.locator('#labPubertyPatientContext')).toContainText('GnRHa: w trakcie');
-  await expect(page.locator('#labPubertyPatientContext')).not.toContainText('GnRHa: brak leczenia');
-  await importButton(page).click();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('yes');
+  await expect(contextSummary(page)).toContainText(/GnRHa.*w trakcie/);
+  await expect(contextSummary(page)).not.toContainText('brak GnRHa');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
+  await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await select(page, 'Kind', 'G');
   await sample(page);
   const saved = await snapshot(page);
   expect(saved.status).toBe('recorded');
-  expect(saved.evaluation.input.treatment).toEqual({ gnrha: 'yes', sexSteroids: 'no' });
+  expect(saved.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes', sexSteroids: 'unknown' });
   expect(saved.evaluation.ageAtSample.lowerYears).toBe(14);
   expect(saved.evaluation.biochemical.primary).toBeNull();
   expect(saved.evaluation.biochemical.reasonCodes).toContain('treatment_requires_separate_profile');
   expect(saved.evaluation.clinical.code).toBe('treatment_context');
 });
 
-test('loading and rejected reads block card import without blocking explicit sample entry', async ({ page }) => {
+test('loading and rejected reads suspend automatic data without blocking explicit sample entry', async ({ page }) => {
   await open(page);
   await ready(page, A);
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('no');
+  // No GnRHa in the record is not a statement about all hormone treatment.
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await load(page, B);
-  await expect(importButton(page)).toBeDisabled();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await fill(page, 'AgeYears', '9');
   await select(page, 'Kind', 'G');
   await select(page, 'Stage', '3');
-  await select(page, 'Gnrha', 'no');
+  await select(page, 'Context', 'basal-untreated');
   await sample(page);
   await complete(page, B, true);
   expect(await source(page, B)).toMatchObject({ patientId: B, status: 'unavailable' });
-  await expect(importButton(page)).toBeDisabled();
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');
   await expect(page.locator('#labPubertyStage')).toHaveValue('3');
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('no');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   await expect(page.locator('#labValue')).toHaveValue('2');
   const saved = await snapshot(page);
   expect(saved.status).toBe('recorded');
@@ -186,7 +168,7 @@ test('loading and rejected reads block card import without blocking explicit sam
 test('logout and session reset cannot be reversed by a late patient response', async ({ page }) => {
   await open(page);
   await load(page, A);
-  await expect(importButton(page)).toBeDisabled();
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await page.evaluate(() => {
     window.VildaVault.lock('sync');
     window._vildaCurrentPatientId = null;
@@ -197,84 +179,73 @@ test('logout and session reset cannot be reversed by a late patient response', a
   expect(await page.evaluate(() => window.VildaVault.isUnlocked())).toBe(false);
   expect((await source(page, A)).status).toBe('unavailable');
   expect(await page.evaluate(() => window.VildaPubertySource.biezace())).toBeNull();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
   await expect(page.locator('#labValue')).toHaveValue('');
-  await expect(page.locator('#labPubertyPatientContext')).not.toContainText('GnRHa: brak leczenia');
+  await expect(contextSummary(page)).not.toContainText('brak GnRHa');
 });
 
-test('a current-patient update invalidates copied therapy, age and stage until explicit reimport', async ({ page }) => {
+test('a current-patient update suspends copied context and automatically applies the completed current record', async ({ page }) => {
   await open(page);
   await ready(page);
   await sample(page);
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('yes');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await page.evaluate((id) => window.__lhContext.refresh(id, { age: 15, tannerStage: '5' }, { gnrhaStatus: 'brak' }), B);
-  await expect(importButton(page)).toBeDisabled();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
+  const pending = await snapshot(page);
+  expect(pending.evaluation.input.treatment.gnrha).toBe('unknown');
+  expect(pending.evaluation.input.puberty.stage).toBeNull();
+  expect(pending.evaluation.ageAtSample.status).toBe('unknown');
   await complete(page, B);
-  await expect(importButton(page)).toBeEnabled();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('unknown');
-  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
-  await expect(page.locator('#labPubertyStage')).toHaveValue('');
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
-  // Independently entered sample fields and raw result remain owned by the form.
-  await expect(page.locator('#labPubertySampleDate')).toHaveValue(SAMPLE_DATE);
-  await expect(page.locator('#labPubertyAssessedAt')).toHaveValue(SAMPLE_DATE);
-  await expect(page.locator('#labPubertySexSteroids')).toHaveValue('no');
-  await expect(page.locator('#labValue')).toHaveValue('2');
-  const pendingReview = await snapshot(page);
-  expect(pendingReview.evaluation.input.treatment.gnrha).toBe('unknown');
-  expect(pendingReview.evaluation.input.puberty.stage).toBeNull();
-  expect(pendingReview.evaluation.ageAtSample.status).toBe('unknown');
-
-  await importButton(page).click();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('no');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
   await expect(page.locator('#labPubertyStage')).toHaveValue('5');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
+  // The result and configured assay remain independently owned by the form/device.
+  await expect(page.locator('#labValue')).toHaveValue('2');
+  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
   const reviewed = await snapshot(page);
   expect(reviewed.status).toBe('recorded');
   expect(reviewed.evaluation.input.treatment.gnrha).toBe('no');
+  expect(reviewed.evaluation.input.treatment.sexSteroids).toBe('unknown');
   expect(reviewed.evaluation.input.age.years).toBe(15);
   expect(reviewed.evaluation.input.puberty).toMatchObject({ kind: 'unspecified', stage: 5 });
 });
 
-test('manual sample overrides survive a source refresh and change only after deliberate card reimport', async ({ page }) => {
+test('manual sample overrides survive a source refresh and reset returns to the current card', async ({ page }) => {
   await open(page);
   await ready(page);
   await fill(page, 'AgeYears', '9');
   await select(page, 'Kind', 'G');
   await select(page, 'Stage', '3');
-  await select(page, 'Gnrha', 'no');
+  await select(page, 'Context', 'basal-untreated');
   await sample(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, { age: 15, tannerStage: '5' }, { gnrhaStatus: 'w-trakcie' }), B);
   await complete(page, B);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');
   await expect(page.locator('#labPubertyKind')).toHaveValue('G');
   await expect(page.locator('#labPubertyStage')).toHaveValue('3');
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('no');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   const manual = await snapshot(page);
   expect(manual.evaluation.input.age.years).toBe(9);
   expect(manual.evaluation.input.puberty).toMatchObject({ kind: 'G', stage: 3 });
   expect(manual.evaluation.input.treatment.gnrha).toBe('no');
-
-  await importButton(page).click();
+  await restart(page);
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('15');
   await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
   await expect(page.locator('#labPubertyStage')).toHaveValue('5');
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('yes');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
+  await page.locator('#labValue').fill('2');
   const imported = await snapshot(page);
   expect(imported.evaluation.input.age.years).toBe(15);
   expect(imported.evaluation.input.treatment.gnrha).toBe('yes');
   expect(imported.evaluation.biochemical.primary).toBeNull();
 });
-
 
 test('the app frame uses current session identity B when its old window global still names A', async ({ page }) => {
   await open(page);
@@ -294,9 +265,7 @@ test('the app frame uses current session identity B when its old window global s
   await complete(frame, B);
   expect(await frame.evaluate(() => ({ globalId: window._vildaCurrentPatientId, sessionId: sessionStorage.getItem('vildaCurrentPatientId') })))
     .toEqual({ globalId: A, sessionId: B });
-  await expect(importButton(frame)).toBeEnabled();
-  await importButton(frame).click();
-  await expect(frame.locator('#labPubertyGnrha')).toHaveValue('yes');
+  await expect(frame.locator('#labPubertyContext')).toHaveValue('hormonal');
   await expect(frame.locator('#labPubertyAgeYears')).toHaveValue('14');
   await sample(frame);
   const saved = await snapshot(frame);
@@ -306,50 +275,46 @@ test('the app frame uses current session identity B when its old window global s
   expect(saved.evaluation.biochemical.primary).toBeNull();
 });
 
-test('an unchanged refresh suspends imported data and restores the confirmed sample after the read', async ({ page }) => {
+test('an unchanged refresh suspends imported data and restores the current sample after the read', async ({ page }) => {
   await open(page);
   await ready(page);
   await select(page, 'Kind', 'G');
   await sample(page);
   const before = await snapshot(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
-  await expect(importButton(page)).toBeDisabled();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('unknown');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   const pending = await snapshot(page);
   expect(pending.evaluation.input.treatment.gnrha).toBe('unknown');
   expect(pending.evaluation.biochemical.primary).toBeNull();
-
   await complete(page, B);
-  await expect(importButton(page)).toBeEnabled();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('yes');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
-  await expect(page.locator('#labPubertyMethodConfirmed')).toBeChecked();
-  await expect(page.locator('#labPubertyPatientContext')).not.toContainText('wymagają ponownego sprawdzenia');
+  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
   expect((await snapshot(page)).evaluation.input).toEqual(before.evaluation.input);
 });
 
-test('manual corrections during an unchanged refresh survive without restoring old confirmations', async ({ page }) => {
+test('manual corrections during an unchanged refresh survive without replacing the configured assay', async ({ page }) => {
   await open(page);
   await ready(page);
   await sample(page);
   await page.evaluate((id) => window.__lhContext.refresh(id, {}, {}), B);
-  await expect(importButton(page)).toBeDisabled();
-  await select(page, 'Gnrha', 'no');
+  await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
+  await select(page, 'Context', 'basal-untreated');
   await fill(page, 'AgeYears', '9');
   await complete(page, B);
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('no');
+  await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('9');
   await expect(page.locator('#labPubertyStage')).toHaveValue('4');
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
+  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
   const corrected = await snapshot(page);
   expect(corrected.evaluation.input.treatment.gnrha).toBe('no');
   expect(corrected.evaluation.input.age.years).toBe(9);
-  expect(corrected.evaluation.biochemical.primary).toBeNull();
-
-  await importButton(page).click();
-  await expect(page.locator('#labPubertyGnrha')).toHaveValue('yes');
+  // Unspecified legacy Tanner remains ineligible even after choosing a method.
+  expect(corrected.evaluation.biochemical.byStage.status).toBe('unavailable');
+  await restart(page);
+  await expect(page.locator('#labPubertyContext')).toHaveValue('hormonal');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('14');
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
+  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
 });

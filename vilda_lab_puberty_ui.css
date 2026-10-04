@@ -35,3 +35,22 @@
 @media (max-width: 560px) {
   .lab-puberty-fields { grid-template-columns: minmax(0, 1fr); gap: var(--space-0-7); }
 }
+/* Szybka ścieżka: automatyczny pacjent i jedna zamknięta sekcja danych wyniku. */
+.lab-puberty-summary-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-0-5); min-width: 0; }
+.lab-puberty-summary-row > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.lab-puberty-summary-row .lab-puberty-context-button { flex: 0 0 auto; margin: 0; border-color: transparent; background: transparent; padding: var(--space-0-35) 0; }
+.lab-puberty-stage-row { margin-top: var(--space-0-35); font-size: .85rem; }
+.lab-puberty-method-summary { font-size: .8rem; line-height: 1.5; }
+.lab-puberty-detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-0-35); margin-top: var(--space-0-8); }
+.lab-puberty-detail-actions .lab-puberty-context-button { margin: 0; }
+.lab-puberty-detail-actions [aria-pressed="true"] { background: var(--primary-color, #287578); color: #fff; }
+.lab-puberty-detail-section { border: var(--border-hairline) solid var(--border-color, #dce6e9); border-radius: var(--radius-8); padding: var(--space-0-75); margin-top: var(--space-0-75); }
+.lab-puberty-detail-section h3 { font-size: .88rem; margin: 0 0 var(--space-0-5); }
+#labPubertyMethodSettings .lab-puberty-fields { grid-template-columns: minmax(0, 1fr); }
+.lab-puberty-fields > .lab-puberty-field:only-child { grid-column: 1 / -1; }
+#labPubertyMethodSettings > .lab-puberty-context-button { margin: var(--space-0-75) 0 0; }
+#labPubertySamplePanel > .lab-puberty-checkbox { margin: var(--space-0-5) 0 var(--space-0-75); }
+@media (max-width: 360px) {
+  .lab-puberty-summary-row { flex-wrap: wrap; }
+  .lab-puberty-summary-row .lab-puberty-context-button { margin-left: auto; }
+}

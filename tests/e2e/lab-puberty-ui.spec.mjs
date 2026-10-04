@@ -1,4 +1,5 @@
 import { expect, test } from '../support/test-czas.mjs';
+import { quickSelect as select, quickFill as fill, configureProfile as methodContext } from '../support/lab-puberty-quick.mjs';
 
 // PR3: all assessments below originate from the production form and engine.
 // Vault records are fictional and live only in the isolated browser context.
@@ -34,38 +35,13 @@ async function selectAnalyte(ctx, analyte = 'lh') {
   await expect(ctx.locator('#labPubertyPanel')).toBeVisible();
 }
 
-async function field(ctx, name) {
-  const input = ctx.locator(`#labPuberty${name}`);
-  const groups = input.locator('xpath=ancestor::details');
-  for (let i = await groups.count() - 1; i >= 0; i -= 1) {
-    const group = groups.nth(i);
-    if (await group.getAttribute('open') === null) await group.locator(':scope > summary').click();
-  }
-  await expect(input).toBeVisible();
-  return input;
-}
-
-async function select(ctx, name, value) { await (await field(ctx, name)).selectOption(value); }
-async function fill(ctx, name, value) { await (await field(ctx, name)).fill(value); }
-async function check(ctx, name) { await (await field(ctx, name)).check(); }
-
 async function sampleContext(ctx, { sex = 'M', birthDate = '2020-06-17', kind = 'G', stage = '4' } = {}) {
-  await select(ctx, 'Sex', sex);
-  await fill(ctx, 'BirthDate', birthDate);
   await fill(ctx, 'SampleDate', SAMPLE_DATE);
+  await fill(ctx, 'BirthDate', birthDate);
+  await select(ctx, 'Sex', sex);
   await select(ctx, 'Kind', kind);
   await select(ctx, 'Stage', stage);
-  await fill(ctx, 'AssessedAt', SAMPLE_DATE);
-  await select(ctx, 'Specimen', 'serum');
-  await select(ctx, 'MeasurementKind', 'basal');
-  await select(ctx, 'Gnrha', 'no');
-  await select(ctx, 'SexSteroids', 'no');
-}
-
-async function methodContext(ctx, analyte = 'lh') {
-  await select(ctx, 'Profile', `mayo-${analyte}-pediatric`);
-  await select(ctx, 'Method', analyte === 'lh' ? 'anshlite-lh-clia' : 'roche-elecsys-fsh-eclia');
-  await check(ctx, 'MethodConfirmed');
+  await select(ctx, 'Context', 'basal-untreated');
 }
 
 const assessment = (ctx) => ctx.locator('#labPubertyAssessment .vilda-lab-assessment');
@@ -110,24 +86,24 @@ async function createPatient(page) {
   });
 }
 
-test('unknown context has no adult fallback and an unconfirmed method cannot suppress the independent clinical warning', async ({ page }) => {
+test('unknown context has no adult fallback and an unsaved method cannot suppress the independent clinical warning', async ({ page }) => {
   await openConverter(page);
   await selectAnalyte(page);
   await page.locator('#labValue').fill('2');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
   await expect(assessment(page)).not.toContainText(/faza folikularna|faza lutealna|pacjent prawidłowy/i);
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
-  await expect(page.locator('#labPubertyKind')).toHaveValue('');
+  await expect(page.locator('#labPubertyMethodConfirmed')).toHaveCount(0);
+  await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
 
   await sampleContext(page);
-  await select(page, 'Profile', 'mayo-lh-pediatric');
-  await select(page, 'Method', 'anshlite-lh-clia');
+  await page.locator('#labPubertyMethodSettings > summary').click();
+  await page.locator('#labPubertyConfiguredProfile').selectOption('mayo-lh-pediatric');
   await expectEarlyDevelopment(page);
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
 
-  await check(page, 'MethodConfirmed');
+  await page.locator('#labPubertySaveProfile').click();
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
   await expect(comparison(page, 'age')).toContainText('Powyżej wskazanego zakresu');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
@@ -149,19 +125,23 @@ test('M6 G4: FSH2 is within both independent ranges while early development rema
   await expect(assessment(page)).not.toContainText(/FSH wysokie|Powyżej wskazanego zakresu/);
 });
 
-test('a later G4 examination cannot become the stage of an earlier sample', async ({ page }) => {
+test('a current G4 examination cannot become the stage of an earlier sample', async ({ page }) => {
   await openConverter(page);
   await selectAnalyte(page);
   await page.locator('#labValue').fill('2');
   await sampleContext(page);
   await methodContext(page);
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
-  await fill(page, 'AssessedAt', '2026-06-18');
+  await fill(page, 'SampleDate', '2026-06-16');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('');
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'unavailable');
+  // Date edits also invalidate this sample's context, while the saved assay
+  // preference remains a device setting. Re-establish only the sample context.
+  await select(page, 'Context', 'basal-untreated');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
 });
 
-test('switching analytes, resetting and loading another patient clear confirmations without changing shared patient data', async ({ page }) => {
+test('switching analytes, resetting and loading another patient isolate sample data and preserve configured methods', async ({ page }) => {
   await openConverter(page);
   await page.evaluate(() => {
     window._vildaCurrentPatientId = 'fictional-ui-patient-a';
@@ -170,9 +150,9 @@ test('switching analytes, resetting and loading another patient clear confirmati
   });
   const sharedBefore = await page.evaluate(() => window.VildaPersistence.readShared());
   await selectAnalyte(page);
-  // Legacy Tanner 4 has no type or relation to this sample.
-  await expect(page.locator('#labPubertyKind')).toHaveValue('');
-  await expect(page.locator('#labPubertyStage')).toHaveValue('');
+  // Legacy Tanner 4 is copied as an unspecified type; sex never supplies G.
+  await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('4');
   await page.locator('#labValue').fill('2');
   await sampleContext(page);
   await methodContext(page);
@@ -180,16 +160,17 @@ test('switching analytes, resetting and loading another patient clear confirmati
   expect(await page.evaluate(() => window.VildaPersistence.readShared())).toEqual(sharedBefore);
 
   await selectAnalyte(page, 'fsh');
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
-  await expect(page.locator('#labPubertyMethod')).toHaveValue('');
+  await expect(page.locator('#labPubertyMethodSummary')).not.toContainText('AnshLite');
+  await expect(page.locator('#labPubertyConfiguredProfile')).toHaveValue('');
   await page.locator('#labValue').fill('2');
   await sampleContext(page);
   await methodContext(page, 'fsh');
   await expectEarlyDevelopment(page);
   await page.locator('#labClearBtn').click();
   await selectAnalyte(page);
-  await expect(page.locator('#labPubertyStage')).toHaveValue('');
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
+  await expect(page.locator('#labPubertyKind')).toHaveValue('unspecified');
+  await expect(page.locator('#labPubertyStage')).toHaveValue('4');
+  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
 
   await page.locator('#labValue').fill('2');
   await sampleContext(page);
@@ -200,7 +181,7 @@ test('switching analytes, resetting and loading another patient clear confirmati
     document.dispatchEvent(new CustomEvent('vilda:patient-loaded', { detail: { patientId: 'fictional-ui-patient-b' } }));
   });
   await expect(page.locator('#labPubertyStage')).toHaveValue('');
-  await expect(page.locator('#labPubertyMethodConfirmed')).not.toBeChecked();
+  await expect(page.locator('#labPubertyMethodSummary')).toContainText('AnshLite');
   await expect(page.locator('#labValue')).toHaveValue('');
   await expect(assessment(page).locator('[data-clinical-code="early_development"]')).toHaveCount(0);
 });
