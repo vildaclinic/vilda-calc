@@ -149,6 +149,8 @@ test('loading and rejected reads suspend automatic data without blocking explici
   await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await expect(page.locator('#labPubertyAgeYears')).toHaveValue('');
   await fill(page, 'AgeYears', '9');
+  // The pending record has no usable sex; explicitly provide it before G.
+  await select(page, 'Sex', 'M');
   await select(page, 'Kind', 'G');
   await select(page, 'Stage', '3');
   await select(page, 'Context', 'basal-untreated');

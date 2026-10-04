@@ -11,6 +11,12 @@
     return raw === '' ? null : Number(raw);
   }
   function flag(value) { return value === 'yes' || value === 'no' ? value : 'unknown'; }
+  function pubertyKind(value) {
+    return ({ TH: 'Th', M: 'Th', B: 'Th', G: 'G', P: 'P', PH: 'P', AX: 'Ax' })[text(value).toUpperCase()] || 'unspecified';
+  }
+  function sexAllowsKind(sex, kind) {
+    return kind === 'Th' ? sex === 'F' : kind === 'G' ? sex === 'M' : true;
+  }
   function sourceUrl(value) {
     var raw = text(value);
     if (!/^https?:\/\//i.test(raw)) return '';
@@ -33,24 +39,29 @@
   // Części wieku zachowują rzeczywistą precyzję. Silnik rozstrzyga poprawność.
   function buildInput(fields, measurement) {
     var f = fields || {}, m = measurement || {};
+    var sex = ['M', 'F'].includes(f.sex) ? f.sex : null;
+    var kind = pubertyKind(f.kind), onsetKind = pubertyKind(f.onsetKind);
+    var validKind = !text(f.kind) || text(f.kind).toLowerCase() === 'unspecified' || kind !== 'unspecified';
+    var compatibleKind = validKind && sexAllowsKind(sex, kind), compatibleOnset = sexAllowsKind(sex, onsetKind);
+    var male = sex === 'M';
     var input = {
       analyte: text(m.analyte), value: text(m.raw), unit: text(m.unit),
-      sex: ['M', 'F'].includes(f.sex) ? f.sex : null,
+      sex: sex,
       birthDateISO: text(f.birthDate) || null, sampleDateISO: text(f.sampleDate) || null,
       age: age(f, 'age'), specimen: text(f.specimen) || 'unknown',
       measurementKind: text(f.measurementKind) || 'unknown',
       assay: { profileId: text(f.profile), methodId: text(f.method), confirmation: f.methodConfirmed === true ? 'reported' : 'unknown' },
       puberty: {
-        kind: text(f.kind) || 'unspecified', stage: f.kind === 'Ax' ? null : number(f.stage),
-        assessedAtISO: text(f.assessedAt) || null, appliesToSample: f.appliesToSample === true,
-        source: text(f.observationSource) || 'provided'
+        kind: compatibleKind ? kind : 'unspecified', stage: !compatibleKind || kind === 'Ax' ? null : number(f.stage),
+        assessedAtISO: compatibleKind ? text(f.assessedAt) || null : null, appliesToSample: compatibleKind && f.appliesToSample === true,
+        source: compatibleKind ? text(f.observationSource) || 'provided' : 'provided'
       },
       testicularVolume: {
-        value: number(f.testicularVolume), unit: 'mL', method: text(f.volumeMethod),
-        assessedAtISO: text(f.volumeAssessedAt) || null, appliesToSample: f.volumeAppliesToSample === true
+        value: male ? number(f.testicularVolume) : null, unit: 'mL', method: male ? text(f.volumeMethod) : '',
+        assessedAtISO: male ? text(f.volumeAssessedAt) || null : null, appliesToSample: male && f.volumeAppliesToSample === true
       },
-      onset: { kind: text(f.onsetKind) || 'unspecified', dateISO: text(f.onsetDate) || null,
-        age: age(f, 'onsetAge'), confirmedPubertalOnset: f.onsetConfirmed === true },
+      onset: { kind: compatibleOnset ? onsetKind : 'unspecified', dateISO: compatibleOnset ? text(f.onsetDate) || null : null,
+        age: compatibleOnset ? age(f, 'onsetAge') : null, confirmedPubertalOnset: compatibleOnset && f.onsetConfirmed === true },
       history: { progression: flag(f.progression), growthAcceleration: flag(f.growthAcceleration),
         cnsSymptoms: flag(f.cnsSymptoms), regression: flag(f.regression) },
       treatment: { gnrha: flag(f.gnrha), sexSteroids: flag(f.sexSteroids) },
@@ -71,9 +82,9 @@
       if (f.contextBasis === 'current-patient') {
         input.birthDateISO = null; input.sampleDateISO = null;
         input.puberty.appliesToSample = false; input.testicularVolume.appliesToSample = false;
-        input.puberty.appliesToCurrentContext = true; input.testicularVolume.appliesToCurrentContext = true;
+        input.puberty.appliesToCurrentContext = compatibleKind; input.testicularVolume.appliesToCurrentContext = male;
       } else {
-        input.puberty.appliesToSample = true; input.testicularVolume.appliesToSample = true;
+        input.puberty.appliesToSample = compatibleKind; input.testicularVolume.appliesToSample = male;
       }
       input.treatment.context = ['none', 'hormonal'].includes(f.treatmentContext) ? f.treatmentContext : 'unknown';
       if (f.configuredAssay && typeof f.configuredAssay === 'object') input.assay = {
@@ -101,7 +112,7 @@
     var fields = {}, wrappers = {}, sections = {}, sectionButtons = {};
     var analyte = null, evaluation = null, context = null, contextKey = null, sampleDate = '';
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
-    var dirty = {}, imported = {};
+    var dirty = {}, imported = {}, kindOptionsSex = null, omittedSexContext = false, suspendedSexFields = null;
     // Preferencja ruchu dotyczy wyłącznie prezentacji w tej karcie, nie pacjenta
     // ani zapisywanego snapshotu oceny.
     var motionPaused = false;
@@ -184,7 +195,8 @@
     field(patient, 'ageYears', 'Ukończone lata', 'number', null, { min: '0', max: '120', step: '1' });
     field(patient, 'ageMonths', 'Dodatkowe miesiące — jeśli znane', 'number', null, { min: '0', max: '11', step: '1' });
     var stage = section('stage', 'Stadium', 'Sam numer Tannera nie określa cechy. P i Ax nie zastępują rozwoju gonadalnego.');
-    field(stage, 'kind', 'Rodzaj cechy', 'select', [['unspecified', 'Nie określono'], ['Th', 'Th/M — rozwój piersi'], ['G', 'G — narządy płciowe'], ['P', 'P — owłosienie łonowe'], ['Ax', 'Ax — owłosienie pachowe']]);
+    var kindChoices = [['unspecified', 'Nie określono'], ['Th', 'Th/M — rozwój piersi'], ['G', 'G — narządy płciowe'], ['P', 'P — owłosienie łonowe'], ['Ax', 'Ax — owłosienie pachowe']];
+    field(stage, 'kind', 'Rodzaj cechy', 'select', kindChoices);
     field(stage, 'stage', 'Stadium', 'select', [['', 'Nie podano'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']]);
     var stageHint = element('p', 'lab-puberty-hint'); stageHint.id = 'labPubertyStageHint'; sections.stage.appendChild(stageHint);
     var date = section('date', 'Wcześniejsze badanie', 'Podaj datę tylko wtedy, gdy chcesz odnieść ocenę do dnia pobrania. Dzisiejsze stadium i leczenie nie przechodzą do wcześniejszej próbki.');
@@ -240,9 +252,69 @@
     }
     function clearClinical() {
       ['ageYears', 'ageMonths', 'kind', 'stage', 'context', 'cnsSymptoms', 'regression', 'testicularVolume', 'volumeMethod', 'preterm'].forEach(function (key) { clearField(key); delete dirty[key]; delete imported[key]; });
+      omittedSexContext = false; suspendedSexFields = null;
+    }
+    function clearIncompatible(key) {
+      clearField(key); delete imported[key]; dirty[key] = true;
+    }
+    function setKindOptions(sex, kind) {
+      // Usuwamy niedostępne opcje z DOM: ukryte option nie są respektowane
+      // jednakowo przez natywne listy wyboru na urządzeniach mobilnych.
+      if (kindOptionsSex !== sex) {
+        fields.kind.replaceChildren();
+        kindChoices.filter(function (choice) { return sexAllowsKind(sex, choice[0]); }).forEach(function (choice) {
+          var option = element('option', '', choice[1]); option.value = choice[0]; fields.kind.appendChild(option);
+        });
+        fields.kind.value = kind; kindOptionsSex = sex;
+      }
+    }
+    function syncSexFields() {
+      var sex = fields.sex.value, kind = fields.kind.value || 'unspecified';
+      if (!sexAllowsKind(sex, pubertyKind(kind))) {
+        clearIncompatible('kind'); clearIncompatible('stage');
+        kind = 'unspecified'; omittedSexContext = true;
+      }
+      setKindOptions(sex, kind);
+      var male = sex === 'M';
+      if (!male && (text(fields.testicularVolume.value) || text(fields.volumeMethod.value))) {
+        clearIncompatible('testicularVolume'); clearIncompatible('volumeMethod'); omittedSexContext = true;
+      }
+      ['testicularVolume', 'volumeMethod'].forEach(function (key) { wrappers[key].hidden = !male; fields[key].disabled = !male; });
+      var ax = fields.kind.value === 'Ax';
+      if (ax && fields.stage.value) clearIncompatible('stage');
+      wrappers.stage.hidden = ax; fields.stage.disabled = ax;
+    }
+    function suspendManualSexFields(next) {
+      if (suspendedSexFields || next.sourceStatus === 'ready' || !imported.sex || !['M', 'F'].includes(fields.sex.value)) return;
+      var saved = {};
+      if (dirty.kind && ['Th', 'G'].includes(fields.kind.value)) {
+        saved.kind = fields.kind.value;
+        if (dirty.stage) saved.stage = fields.stage.value;
+        clearField('kind'); clearField('stage');
+      }
+      ['testicularVolume', 'volumeMethod'].forEach(function (key) {
+        if (dirty[key] && text(fields[key].value)) { saved[key] = fields[key].value; clearField(key); }
+      });
+      if (Object.keys(saved).length) suspendedSexFields = { sex: fields.sex.value, values: saved };
+    }
+    function resumeManualSexFields() {
+      if (!suspendedSexFields || !ready()) return;
+      var saved = suspendedSexFields; suspendedSexFields = null;
+      if (fields.sex.value !== saved.sex) {
+        Object.keys(saved.values).forEach(clearIncompatible);
+        if (saved.values.kind) clearIncompatible('stage');
+        omittedSexContext = true; return;
+      }
+      setKindOptions(fields.sex.value, fields.kind.value || 'unspecified');
+      Object.keys(saved.values).forEach(function (key) { fields[key].value = saved.values[key]; });
     }
     function changed(key) {
       if (key === 'configuredProfile') return;
+      if (suspendedSexFields) {
+        if (key === 'sex' || key === 'sampleDate') suspendedSexFields = null;
+        else if (key === 'kind' || key === 'stage') { delete suspendedSexFields.values.kind; delete suspendedSexFields.values.stage; }
+        else if (key === 'testicularVolume' || key === 'volumeMethod') { delete suspendedSexFields.values.testicularVolume; delete suspendedSexFields.values.volumeMethod; }
+      }
       delete imported[key]; dirty[key] = true; evaluation = null;
       if (key === 'sampleDate' && sampleDate !== fields.sampleDate.value) {
         sampleDate = fields.sampleDate.value; clearClinical(); importContext();
@@ -267,11 +339,12 @@
       importField('context', context.gnrhaStatus === 'w-trakcie' ? 'hormonal' : 'unknown');
       // Kategoria objętości z karty nigdy nie staje się dokładnym pomiarem mL.
       var volume = context.testicularVolume;
-      if (volume && typeof volume === 'object' && volume.unit === 'mL' && typeof volume.value === 'number' && Number.isFinite(volume.value)) {
+      if (fields.sex.value === 'M' && context.sex === 'M' && volume && typeof volume === 'object' && volume.unit === 'mL' && typeof volume.value === 'number' && Number.isFinite(volume.value)) {
         importField('testicularVolume', volume.value); importField('volumeMethod', volume.method);
       }
     }
     function updateView() {
+      syncSexFields();
       var current = !text(fields.sampleDate.value), years = text(fields.ageYears.value), months = text(fields.ageMonths.value);
       var ageLabel = years ? years + ' lat' + (months ? ' i ' + months + ' mies.' : '') : 'wiek niepodany';
       var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
@@ -281,8 +354,7 @@
       var kind = fields.kind.value, stageValue = fields.stage.value;
       stageSummary.textContent = kind === 'Ax' ? 'Ax — owłosienie pachowe' : stageValue ? (kind === 'unspecified' ? 'Tanner ' + ['', 'I', 'II', 'III', 'IV', 'V'][Number(stageValue)] + ' — rodzaj niepodany' : kind + stageValue) : 'Stadium niepodane';
       refineStage.textContent = stageValue && kind === 'unspecified' ? 'Doprecyzuj' : 'Zmień stadium';
-      wrappers.stage.hidden = kind === 'Ax';
-      stageHint.textContent = current ? 'Ocena dotyczy bieżącego kontekstu pacjenta. Nie dopisujemy daty pobrania.' : 'Podane tu stadium musi dotyczyć dnia pobrania ' + fields.sampleDate.value + '. Dzisiejszego stadium nie używamy automatycznie.';
+      stageHint.textContent = (['M', 'F'].includes(fields.sex.value) ? '' : 'Wybierz płeć, aby wskazać Th/M lub G. ') + (current ? 'Ocena dotyczy bieżącego kontekstu pacjenta. Nie dopisujemy daty pobrania.' : 'Podane tu stadium musi dotyczyć dnia pobrania ' + fields.sampleDate.value + '. Dzisiejszego stadium nie używamy automatycznie.');
       wrappers.ageYears.querySelector('span').textContent = current ? 'Ukończone lata' : 'Ukończone lata w dniu pobrania';
       var knownBirth = /^\d{4}-\d{2}-\d{2}$/.test(text(fields.birthDate.value));
       wrappers.birthDate.hidden = current || imported.birthDate && knownBirth;
@@ -290,7 +362,6 @@
       dateHint.textContent = current ? 'Bez daty korzystamy z bieżącego wieku i rozwoju, bez przypisywania ich historycznej próbce.' : knownBirth ? 'Wiek obliczamy z daty urodzenia ' + fields.birthDate.value + '. Stadium i kontekst oznaczenia uzupełnij tylko, jeśli są znane dla dnia pobrania.' : 'Brak daty urodzenia. W sekcji „Pacjent” podaj wiek w dniu pobrania; dzisiejszy wiek nie jest używany.';
       var infant = resolvedAge && resolvedAge.status === 'known' && resolvedAge.lowerYears < 1;
       wrappers.preterm.hidden = !infant;
-      wrappers.testicularVolume.hidden = fields.sex.value !== 'M'; wrappers.volumeMethod.hidden = fields.sex.value !== 'M';
       var profile = resolveProfile();
       var profileName = profile && profile.profile && profile.profile.method ? profile.profile.method.name : '';
       methodSummary.textContent = profileName ? fields.unknownMethod.checked ? 'Dla tego wyniku: metoda nieznana lub inna niż ustawiona.' : 'Metoda: ' + profileName + ' · ' + materialLabel(profile.specimen) : 'Metoda laboratorium nieustawiona';
@@ -309,8 +380,11 @@
         treatmentText = context.gnrhaStatus === 'zakonczone' ? 'GnRHa: zakończone. Sam status nie określa leczenia ani wpływu ostatniej dawki dla wyniku; kontekst pozostaje nieznany.' : context.gnrhaStatus === 'w-trakcie' ? 'Z karty: leczenie GnRHa w trakcie.' : context.gnrhaStatus === 'brak' ? 'Z karty: brak GnRHa; nie ustala to pozostałego leczenia hormonalnego.' : '';
         if (treatmentText) parts.push(treatmentText);
       }
-      if (current && ready() && context.onset && context.onset.age && context.onset.age.years != null) parts.push('Początek ' + text(context.onset.kind) + ': ' + context.onset.age.years + ' ukończonych lat — z karty.');
-      if (current && ready() && context.testicularVolume != null && typeof context.testicularVolume !== 'object') parts.push('Objętość jąder w karcie: kategoria; nie traktujemy jej jako dokładnego pomiaru mL.');
+      var onset = current && ready() && context.onset;
+      var incompatibleOnset = onset && !sexAllowsKind(fields.sex.value, pubertyKind(onset.kind));
+      if (onset && !incompatibleOnset && onset.age && onset.age.years != null) parts.push('Początek ' + text(onset.kind) + ': ' + onset.age.years + ' ukończonych lat — z karty.');
+      if (current && ready() && fields.sex.value === 'M' && context.sex === 'M' && context.testicularVolume != null && typeof context.testicularVolume !== 'object') parts.push('Objętość jąder w karcie: kategoria; nie traktujemy jej jako dokładnego pomiaru mL.');
+      if (omittedSexContext || incompatibleOnset) parts.push('Pominięto wcześniejsze cechy niezgodne z wybraną płcią.');
       contextLine.textContent = parts.join(' ');
       treatmentHint.textContent = treatmentText || (current ? 'Brak danych nie oznacza braku leczenia. Ustawienie metody nie ustala kontekstu hormonalnego.' : 'Odpowiedź dotyczy dnia pobrania. Leczenia z bieżącej karty nie przypisujemy starszemu wynikowi.');
     }
@@ -348,11 +422,11 @@
       updateView();
     }
     function reset() {
-      Object.keys(fields).forEach(clearField); dirty = {}; imported = {}; evaluation = null; contextKey = null; sampleDate = '';
+      Object.keys(fields).forEach(clearField); dirty = {}; imported = {}; evaluation = null; contextKey = null; sampleDate = ''; omittedSexContext = false; suspendedSexFields = null;
       lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' }; details.open = false; methodSettings.open = false;
       Object.keys(sections).forEach(function (name) { sections[name].hidden = true; sectionButtons[name].setAttribute('aria-pressed', 'false'); });
       var profile = resolveProfile(); fields.configuredProfile.value = profile && profile.assay ? profile.assay.profileId : '';
-      methodNotice.textContent = ''; assessment.replaceChildren();
+      methodNotice.textContent = ''; assessment.replaceChildren(); syncSexFields();
     }
     function setPatientContext(next) {
       next = next && typeof next === 'object' ? next : {};
@@ -362,9 +436,12 @@
       } else {
         // Odczyt źródła lub nowa jego wersja usuwa wyłącznie importy. Ręczne
         // korekty tej samej osoby zostają, a loading/unavailable nie liczy starych danych.
+        // Ręczna obserwacja tej samej osoby czeka poza formularzem i oceną
+        // na powrót płci ze źródła. Zmiana płci lub osoby nigdy jej nie przywraca.
+        suspendManualSexFields(next);
         Object.keys(imported).forEach(clearField); imported = {}; evaluation = null;
       }
-      context = JSON.parse(JSON.stringify(next)); contextKey = key; importContext(); updateView();
+      context = JSON.parse(JSON.stringify(next)); contextKey = key; importContext(); resumeManualSexFields(); updateView();
     }
     function refreshContext() {
       if (typeof opts.readPatientContext !== 'function') return false;
@@ -379,8 +456,8 @@
       // Zmiana pacjenta może poprzedzać zdarzenie odświeżenia formularza.
       if (identity !== (context && text(context.identityKey))) measurement = null;
       lastMeasurement = { raw: text(measurement && measurement.raw), unit: text(measurement && measurement.unit), targetUnit: text(measurement && measurement.targetUnit) };
-      var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
       updateView();
+      var input = buildInput(readFields(), { analyte: analyte, raw: lastMeasurement.raw, unit: lastMeasurement.unit });
       var rangeBlock = byId('labRangeBlock');
       if (rangeBlock && assessment.parentNode !== rangeBlock) rangeBlock.replaceChildren(assessment);
       var big = byId('labResultBig'), status = byId('labResultStatus');
@@ -446,10 +523,11 @@
       if (!current || !snapshots || typeof snapshots.create !== 'function') return { schemaVersion: 1, status: 'unavailable', reasonCodes: ['snapshot_helper_unavailable'], evaluation: null };
       return snapshots.create(current);
     }
+    syncSexFields();
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.4.0', buildInput: buildInput, mount: mount };
+  var api = { version: '1.5.0', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

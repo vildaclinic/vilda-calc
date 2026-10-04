@@ -43,16 +43,41 @@ function harness({ lazyVault = false } = {}) {
 }
 
 describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
+  it('płeć źródła pozostaje częścią gotowego rekordu i nie wycieka do innej tożsamości ani loading', async () => {
+    const h = harness();
+    h.load(A); await h.resolve(0);
+    const context = h.source.kontekstPacjenta(A);
+    expect(context.sourceSex).toBe('M');
+    context.sourceSex = 'F';
+    expect(h.source.kontekstPacjenta(A).sourceSex).toBe('M');
+    expect(h.source.kontekstPacjenta(B).sourceSex).toBeNull();
+    h.emitDocument('vilda:sync-status-changed');
+    expect(h.source.kontekstPacjenta(A)).toMatchObject({ status: 'loading', sourceSex: null });
+    const updated = record();
+    updated.snapshots[0].payload.user.sex = 'F';
+    await h.resolve(1, updated);
+    expect(h.source.kontekstPacjenta(A).sourceSex).toBe('F');
+    h.lock(false);
+    expect(h.source.kontekstPacjenta(A)).toMatchObject({ status: 'unavailable', sourceSex: null });
+  });
+
+  it.each([undefined, null, '', 'nieznana'])('brak poprawnej płci rekordu (%j) nie tworzy sourceSex', async sex => {
+    const h = harness(), saved = record();
+    saved.snapshots[0].payload.user.sex = sex;
+    h.load(A); await h.resolve(0, saved);
+    expect(h.source.kontekstPacjenta(A)).toMatchObject({ status: 'ready', sourceSex: null });
+  });
+
   it('odczyt scoped jest bierny; synchroniczny setter bez ID zachowuje legacy bez zgadywania pacjenta', () => {
     const h = harness();
-    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', sourceSex: null, puberty: null, state: null });
     expect(h.requests).toHaveLength(0);
     h.source.zapamietaj(record().snapshots[0].payload);
     expect(h.source.biezace().gnrhaStatus).toBe('brak');
     expect(h.source.stanBiezacy().etap).toBe('2');
     h.setId(A);
     expect(h.source.kontekstPacjenta(A).status).toBe('unavailable');
-    expect(h.source.kontekstPacjenta(null)).toEqual({ patientId: null, status: 'unavailable', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(null)).toEqual({ patientId: null, status: 'unavailable', sourceSex: null, puberty: null, state: null });
     expect(h.requests).toHaveLength(0);
   });
 
@@ -61,7 +86,7 @@ describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
     h.load(A); await h.resolve(0);
     expect(h.source.kontekstPacjenta(A).status).toBe('ready');
     h.load(B);
-    expect(h.source.kontekstPacjenta(B)).toEqual({ patientId: B, status: 'loading', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(B)).toEqual({ patientId: B, status: 'loading', sourceSex: null, puberty: null, state: null });
     expect(h.source.kontekstPacjenta(A).status).toBe('unavailable');
     expect(h.source.biezace()).toBeNull();
     expect(h.source.stanBiezacy()).toBeNull();
@@ -99,14 +124,14 @@ describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
     expect(h.source.kontekstPacjenta(A).status).toBe('loading');
     expect(h.source.biezace()).toBeNull();
     await h.reject(1);
-    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', sourceSex: null, puberty: null, state: null });
   });
 
   it('odrzucenie odczytu B nie zachowuje danych A', async () => {
     const h = harness();
     h.load(A); await h.resolve(0);
     h.load(B); await h.reject(1);
-    expect(h.source.kontekstPacjenta(B)).toEqual({ patientId: B, status: 'unavailable', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(B)).toEqual({ patientId: B, status: 'unavailable', sourceSex: null, puberty: null, state: null });
     expect(h.source.biezace()).toBeNull();
   });
 
@@ -144,7 +169,7 @@ describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
     const h = harness();
     h.load(A); await h.resolve(0);
     h.lock(false);
-    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', sourceSex: null, puberty: null, state: null });
     expect(h.source.biezace()).toBeNull();
     expect(h.source.stanBiezacy()).toBeNull();
   });
@@ -209,13 +234,13 @@ describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
   it.each([null, {}, { snapshots: [] }, { snapshots: [{ payload: null }] }])('brak czytelnego payloadu (%j) oznacza unavailable', async result => {
     const h = harness();
     h.load(A); await h.resolve(0, result);
-    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'unavailable', sourceSex: null, puberty: null, state: null });
   });
 
   it('poprawny pusty payload kończy loading bez wymyślania danych i ogłasza ready', async () => {
     const h = harness();
     h.load(A); await h.resolve(0, { snapshots: [{ payload: {} }] });
-    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'ready', puberty: null, state: null });
+    expect(h.source.kontekstPacjenta(A)).toEqual({ patientId: A, status: 'ready', sourceSex: null, puberty: null, state: null });
     expect(h.notices.map(notice => notice.value.status)).toEqual(['loading', 'ready']);
   });
 

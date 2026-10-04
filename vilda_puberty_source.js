@@ -28,7 +28,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '8';
+  var VERSION = '9';
 
   // GROWTH-PRED-TW2B: heightAtMenarcheCm — wzrost w chwili menarche (cm), do prognozy
   // wzrostu ostatecznego; podgrup Kelly'ego nie wybiera.
@@ -239,6 +239,9 @@
     var status = zgodny ? statusOdczytu : 'unavailable';
     return {
       patientId: id, status: status,
+      // Płeć to część pochodzenia zapisanego wywiadu. Konsument nie może
+      // reinterpretować początku pokwitania według późniejszej korekty formularza.
+      sourceSex: status === 'ready' && zapamietane ? zapamietane.plec || null : null,
       puberty: status === 'ready' && zapamietane && zapamietane.we ? Object.assign({}, zapamietane.we) : null,
       state: status === 'ready' && zapamietane && zapamietane.stan ? Object.assign({}, zapamietane.stan) : null
     };

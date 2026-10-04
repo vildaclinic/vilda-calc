@@ -62,7 +62,7 @@
   <link rel="stylesheet" href="sidebar.css" />
   <link href="vilda_chrome.css?v=44" rel="stylesheet">
   <link href="vilda_lab_assessment_ui.css?v=4" rel="stylesheet">
-  <link href="vilda_lab_puberty_ui.css?v=2" rel="stylesheet">
+  <link href="vilda_lab_puberty_ui.css?v=3" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
@@ -442,9 +442,9 @@
   <script src="vilda_lab_snapshot.js?v=3"></script>
   <script src="vilda_lab_assessment_ui.js?v=5"></script>
   <script src="vilda_lab_profile_preferences.js?v=1"></script>
-  <script src="vilda_lab_puberty_ui.js?v=6"></script>
+  <script src="vilda_lab_puberty_ui.js?v=7"></script>
   <script src="vilda_zrodla_pacjenta.js?v=1"></script>
-  <script src="vilda_puberty_source.js?v=8"></script>
+  <script src="vilda_puberty_source.js?v=9"></script>
   <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
@@ -599,11 +599,14 @@
       var sex = shared.sex || patient.sex || null;
       var suppliedPuberty = puberty || !identity && shared.puberty || {};
       var onsetYears = puberty ? puberty.wiekStartuPokwitaniaLat : suppliedPuberty.onsetAgeYears;
+      var onsetSex = identity ? source.sourceSex : sex;
       var onset = null;
       // Pole karty oznacza początek Th2 / osiągnięcie kryterium G, nie sam
       // numer Tannera. Nie odtwarzamy daty ani pozornej dokładności z ułamka lat.
-      if (['M', 'F'].includes(sex) && typeof onsetYears === 'number' && Number.isFinite(onsetYears) && onsetYears >= 0) {
-        onset = { kind: sex === 'M' ? 'G' : 'Th',
+      // Dla rekordu zachowujemy płeć jego źródła. Bieżąca korekta płci nie
+      // zmienia zapisanego rodzaju początku; brak płci źródła nie jest zgodą na domysł.
+      if (['M', 'F'].includes(onsetSex) && typeof onsetYears === 'number' && Number.isFinite(onsetYears) && onsetYears >= 0) {
+        onset = { kind: onsetSex === 'M' ? 'G' : 'Th',
           age: { years: Math.floor(onsetYears), months: null, days: null, precision: 'year' },
           confirmedPubertalOnset: false };
       }
