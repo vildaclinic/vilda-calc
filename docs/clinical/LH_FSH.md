@@ -2,6 +2,44 @@
 
 Stan dokumentu: 4 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`.
 
+## Dobór pól dojrzewania do płci — 4.10.2026
+
+Szybki formularz LH/FSH udostępnia wyłącznie rodzaje obserwacji obsługiwane dla wybranej płci przez istniejący model referencyjny. Nie dodaje nowych pól ani nowego etapu wprowadzania danych.
+
+| Płeć w bieżącym sprawdzeniu | Dostępne rodzaje cechy | Objętość jąder i metoda jej pomiaru |
+|---|---|---|
+| M | Nie określono, G — rozwój narządów płciowych, P — owłosienie łonowe, Ax — owłosienie pachowe | Dostępne opcjonalnie; dokładna objętość w mL. |
+| F | Nie określono, Th/M — rozwój piersi, P, Ax | Ukryte, wyłączone i puste. |
+| Nie podano | Nie określono, P, Ax | Ukryte, wyłączone i puste; Th/G wymaga podania płci. |
+
+Zmiana płci usuwa niezgodny rodzaj cechy razem z przypisanym stadium. **Th3 nie staje się G3, a G3 nie staje się Th3.** Zgodne P/Ax pozostają odrębnymi obserwacjami; Ax nadal nie ma liczbowego stadium. Jawne usunięcie płci również nie zachowuje wcześniej typowanego Th/G. Objętość i metoda pomiaru są usuwane przy odejściu od M i nie wracają przez samo ponowne wybranie M. Te same ograniczenia obowiązują przy tworzeniu nowego wejścia dla silnika, więc samo ukrycie kontrolki nie pozostawia wartości aktywnej w ocenie.
+
+Płeć z formularza głównego steruje listą wyboru po automatycznym odczycie. Ręczna korekta w LH/FSH nadal dotyczy wyłącznie tego sprawdzenia. Ogólny numer Tannera importowany z formularza zachowuje typ „Nie określono”; płeć nie potwierdza, czy oceniono G, Th czy P. Wybór rodzaju jest nadal świadomym doprecyzowaniem obserwacji. Pomiar objętości oraz informacja o początku rozwoju z karty nie są przepisywane pod inny rodzaj gonadalny po zmianie płci.
+
+Przejściowy odczyt `loading/unavailable` wyłącza obserwacje wymagające nieodczytanej jeszcze płci z formularza i oceny. Ręczne dane tej samej osoby mogą wrócić po gotowym odczycie tej samej płci, jeśli w międzyczasie nie zmieniono właściwych pól; nie wracają po zmianie płci, osoby ani przejściu na inną podstawę datowania.
+
+Odczyt gotowego, zgodnego rekordu udostępnia `sourceSex` (M/F lub `null`). Adapter ustala typ początku z tego zapisu według jego płci źródłowej, a nie aktualnej płci formularza. Przy braku płci źródłowej nie tworzy typowanego początku. Jeżeli typ początku nie odpowiada płci bieżącego sprawdzenia, formularz pomija całą tę obserwację (rodzaj, wiek/datę i potwierdzenie), z widoczną informacją o pominięciu. Nie przemianowuje G na Th ani odwrotnie. Bez wybranego rekordu sejfu dane początku z bieżącego formularza pozostają związane z jego bieżącą płcią. Nie zmienia to zapisu karty ani danych formularza głównego.
+
+**Podstawa kliniczna i ograniczenia:** istniejące źródła K2 (Persani i wsp., ENDO-ERN 2021, DOI 10.1007/s12020-021-02626-z) i K3 (Howard 2021, DOI 10.1111/cen.14578) rozdzielają rozwój piersi u dziewcząt oraz rozwój genitaliów i objętość jąder u chłopców. K5 (Rosenfield 2021, DOI 10.1210/endrev/bnab009) wyjaśnia odrębność adrenarche od gonadarche; dlatego P/Ax pozostają dostępne dla obu płci, lecz nie zastępują Th/G. Pełne dane bibliograficzne i zakres wcześniejszego odczytu są w [wykazie źródeł](#źródła-i-rzeczywisty-zakres-odczytu). Reguła dotyczy istniejącej populacji pediatrycznej 0–18 lat i kategorii M/F tego modelu. Nie jest twierdzeniem o niemożliwości wystąpienia innych objawów klinicznych ani algorytmem oceny ginekomastii lub różnic rozwoju płciowego. Nie wyprowadza anatomii, płci ani stadium z wartości hormonów. Kategorie objętości nie są zamieniane na mL, a sam pomiar jąder nie wyznacza pełnego stadium G.
+
+**Wpływ kliniczny:** zmienia się dobór wejścia nowej oceny; sprzeczne lub nieadekwatne pola nie mogą wpływać na nią z ukrycia. Usunięcie niezgodnej obserwacji może zmienić dostępność porównania stadium lub komunikat rozwoju i wymaga ponownego podania właściwej obserwacji. Nie oznacza prawidłowości rozwoju. Silnik `1.3.0`, zakresy i kryteria danych `2026-10-04.1`, jednostki LH/FSH IU/L i mIU/mL oraz ograniczenia metod pozostają bez zmian. Zapisane oceny wizyt, przypięć i historii zachowują własny kontekst i tekst; nie są filtrowane nowym formularzem, przeliczane ani migrowane.
+
+Syntetyczne przypadki akceptacyjne wywołują produkcyjny adapter/formularz i silnik; nie stanowią deklaracji walidacji klinicznej:
+
+| Wejście lub działanie | Oczekiwane zachowanie |
+|---|---|
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda | G jest dostępne, Th nie; istniejące osobne porównania wieku/stadium i ostrzeżenie wczesnego rozwoju pozostają. |
+| F, Th3 → zmiana na M | Th znika z listy, rodzaj i stadium są wyczyszczone; brak automatycznego G3 i porównania dla dawnego Th3. |
+| M, G3, objętość 8 mL metodą Pradera → F → M | Niezgodne G3 oraz objętość/metoda są usunięte i nie odżywają po ponownym wyborze M. |
+| M, P3 → F; dowolna płeć, Ax | P3 pozostaje P3; Ax nie otrzymuje stadium. Żaden przypadek nie staje się gonadalnym Th/G. |
+| Płeć niepodana, ogólny Tanner III → M lub F | Numer może pozostać nieokreślonym Tannerem; wybór płci sam nie nadaje G3/Th3. |
+| Ręczne G3 i pomiar objętości, odświeżenie źródła tej samej osoby | Podczas odczytu brak tych danych w ocenie; powrót M bez edycji przywraca właściwy kontekst, powrót F go usuwa. Spóźniony odczyt innej osoby nie przywraca obserwacji. |
+| Zapis M z początkiem w wieku 6,5 roku, aktualny formularz F | Adapter zachowuje źródłowy typ G i konserwatywny wiek 6 ukończonych lat; formularz LH/FSH pomija niezgodny początek i informuje o tym, bez utworzenia początku Th. |
+| Zapis z wiekiem początku bez zapisanej płci, aktualny formularz M lub F | Brak domniemanego początku G/Th; dzisiejsza płeć nie uzupełnia brakującego źródła. |
+| Zapisana wcześniej ocena po zmianie płci w nowym sprawdzeniu | Odczyt tej samej zapisanej oceny i granic, bez ponownej interpretacji lub backfill. |
+
+Formularz ma wersję `1.5.0`. Regresje wywołują produkcyjny adapter i silnik (`tests/unit/lab-puberty-sex-aware.test.mjs`), źródło i odczyt kontekstu (`tests/unit/lab-puberty-source-provenance.test.mjs`) oraz rzeczywisty formularz (`tests/e2e/lab-puberty-sex-aware.spec.mjs`). Akceptacja kliniczna i scalenie pozostają decyzją właściciela.
+
 ## Prezentacja zakresów i znacznych odchyleń — 4.10.2026
 
 Zaakceptowany widok zachowuje układ formularza, dużą wartość i konwersje. Porównania wieku i stadium otrzymują osobne osie z pasmem zakresu i znacznikiem wyniku, na wspólnej skali liniowej. Granice pochodzą wyłącznie z zakresów utrwalonych w ocenie; wspólna skala nie tworzy wspólnej normy. Nieznana dolna granica pozostaje nieznana: początek osi w zerze nie stanowi nowej dolnej granicy RI, a cenzorowany dolny brzeg, np. `<0,02`, nie jest dokładnym progiem. Pełny zapis granic i operatorów pozostaje dostępny przy porównaniu.
