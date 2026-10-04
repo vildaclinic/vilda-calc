@@ -67,7 +67,7 @@
 
   return deepFreeze({
     schemaVersion: 1,
-    dataVersion: '2026-10-03.1',
+    dataVersion: '2026-10-04.1',
     implementationStatus: 'prepared-not-connected-to-ui',
     unit: 'IU/L',
     knownLimitations: [
@@ -197,6 +197,39 @@
         readScope: 'Full text, including Clinical features and Hormones and stimulation tests.',
         knownLimitations: ['Niskie LH/FSH i standardowy test GnRH nie rozróżniają pewnie CDGP od CHH.']
       },
+      'puberty-hormones-review-2021': {
+        id: 'puberty-hormones-review-2021',
+        version: '2021',
+        title: 'Interpretation of reproductive hormones before, during and after the pubertal transition—Identifying health and disordered puberty',
+        pmid: '34368982',
+        doi: '10.1111/cen.14578',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/',
+        pubmedUrl: 'https://pubmed.ncbi.nlm.nih.gov/34368982/',
+        doiUrl: 'https://doi.org/10.1111/cen.14578',
+        accessedOn: '2026-10-03',
+        readScope: 'Full text, including Precocious puberty and Delayed, arrested or absent puberty; cached text reviewed again for clinical-context messages on 2026-10-04.',
+        knownLimitations: [
+          'Regresja, zatrzymanie dojrzewania i brak aktualnej progresji nie są synonimami.',
+          'Część przedwczesnych cech może ustępować bez leczenia; samo zgłoszenie regresji nie rozpoznaje zaburzenia ani jego przyczyny.'
+        ]
+      },
+      'minipuberty-review-2024': {
+        id: 'minipuberty-review-2024',
+        version: '2024',
+        title: 'Mini-Puberty, Physiological and Disordered: Consequences, and Potential for Therapeutic Replacement',
+        pmid: '38436980',
+        doi: '10.1210/endrev/bnae003',
+        url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11244267/',
+        pubmedUrl: 'https://pubmed.ncbi.nlm.nih.gov/38436980/',
+        doiUrl: 'https://doi.org/10.1210/endrev/bnae003',
+        accessedOn: '2026-10-03',
+        readScope: 'Full clinical text, including Postnatal Mini-Puberty in Males and Table 2; cached text reviewed again for infant-volume limitations on 2026-10-04.',
+        knownLimitations: [
+          'Tabela 2 zestawia różne populacje, metody i statystyki objętości; średnich nie przekształca się w zakresy referencyjne.',
+          'Nie ustanowiono progu alarmowego objętości jąder dla niemowląt w tym module.',
+          'Kryterium początku pokwitania nie jest zweryfikowaną granicą patologii minipuberty.'
+        ]
+      },
       'delayed-puberty-review-2024': {
         id: 'delayed-puberty-review-2024',
         version: '2024',
@@ -259,8 +292,8 @@
     },
     clinicalProfile: {
       id: 'puberty-timing-pediatric',
-      version: '2026-10-03.1',
-      sourceIds: ['endocrine-society-cpp-2026', 'endo-ern-delay-2021', 'delayed-puberty-review-2024', 'cpp-laboratory-review-2025'],
+      version: '2026-10-04.1',
+      sourceIds: ['endocrine-society-cpp-2026', 'endo-ern-delay-2021', 'delayed-puberty-review-2024', 'cpp-laboratory-review-2025', 'puberty-hormones-review-2021', 'minipuberty-review-2024'],
       population: 'Dzieci i młodzież; kryteria kliniczne czasu dojrzewania, niezależne od zakresów konkretnego laboratorium.',
       scopeAgeYears: { lower: bound('>=', 0), upper: bound('<=', 18) },
       infantAgeYears: bound('<', 1),
@@ -290,6 +323,36 @@
         exceptions: ['progression', 'growthAcceleration', 'CNS'],
         sourceComment: 'ES 2026 dopuszcza badanie kontrolne co 4–6 miesięcy przy początkowym Th2 u dziewczynek, zależnie od kontekstu. Th3+, progresja, przyspieszenie wzrastania i objawy OUN zmieniają postępowanie. Ten moduł nie podejmuje automatycznej decyzji o obserwacji lub diagnostyce.',
         initialMessage: 'Wczesny rozwój gruczołów sutkowych — wymaga oceny przebiegu.'
+      },
+      contextMessages: {
+        policy: 'Dodatni wywiad dodaje osobny komunikat i uwagę w podsumowaniu, zachowując ocenę czasu początku i porównania stężenia. Nie rozpoznaje etiologii ani nie wyznacza badania obrazowego.',
+        history: [
+          {
+            field: 'cnsSymptoms', code: 'reported_cns_symptoms',
+            title: 'Objawy OUN wymagają odrębnej oceny',
+            text: 'Objawy OUN: zgłoszone objawy wymagają odrębnej oceny klinicznej. Wynik LH/FSH i ocena czasu początku nie wyjaśniają ich przyczyny; moduł nie określa pilności na podstawie samej odpowiedzi „Tak”.',
+            sourceIds: ['endocrine-society-cpp-2026']
+          },
+          {
+            field: 'regression', code: 'reported_puberty_regression',
+            title: 'Regresja cech dojrzewania wymaga odrębnej oceny',
+            text: 'Regresja cech dojrzewania: zgłoszono cofnięcie wcześniejszych cech. Wymaga to osobnej oceny przebiegu w kontekście badania i leczenia; sama ocena czasu początku ani stężenie LH/FSH nie wyjaśniają przyczyny. Cofnięcie cech nie oznacza automatycznie trwałego zatrzymania dojrzewania.',
+            sourceIds: ['endo-ern-delay-2021', 'puberty-hormones-review-2021']
+          }
+        ],
+        earlyThelarcheWithCns: {
+          code: 'early_thelarche_with_cns_symptoms',
+          text: 'Objawy OUN przy wczesnym rozwoju piersi: wytyczne wskazują sprawną ocenę przez endokrynologa dziecięcego i odpowiednich specjalistów. Zalecenie samej obserwacji izolowanej wczesnej thelarche nie ma tu zastosowania.',
+          sourceIds: ['endocrine-society-cpp-2026']
+        },
+        infantTesticularVolume: {
+          code: 'infant_testicular_volume_not_validated', sex: 'M', unit: 'mL',
+          methods: { Prader: 'orchidometr Pradera', ultrasound: 'USG', other: 'inna metoda' },
+          unknownMethod: 'metoda niepodana lub nieznana',
+          text: 'Objętość jąder w niemowlęctwie: podano {value} {unit}, {method}. Moduł nie ma zweryfikowanego zakresu referencyjnego objętości dla wieku niemowlęcego i metody pomiaru. Pomiar wymaga oceny w tym kontekście oraz weryfikacji jego wiarygodności; nie klasyfikujemy go jako prawidłowy lub nieprawidłowy ani nie odtwarzamy stadium G.',
+          sourceIds: ['minipuberty-review-2024'],
+          policy: 'Komunikat dotyczy każdego potwierdzonego pomiaru dla próbki w kontekście niemowlęcym, bez progu objętości. Nie jest regułą rozpoznawania powiększonych jąder.'
+        }
       },
       knownLimitations: [
         'Niskie LH nie wyklucza CPP; prawidłowe FSH nie usuwa ostrzeżenia wynikającego z czasu rozwoju.',

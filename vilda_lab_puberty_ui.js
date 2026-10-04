@@ -147,8 +147,8 @@
     field(sample, 'method', 'Metoda rzeczywistej próbki', 'select', [['', 'Nie wiadomo'], ['anshlite-lh-clia', 'AnshLite LH CLIA'], ['roche-elecsys-fsh-eclia', 'Roche Elecsys FSH ECLIA'], ['other', 'Inna metoda (podaj niżej)']]);
     field(sample, 'otherMethod', 'Identyfikator innej metody', 'text'); wrappers.otherMethod.hidden = true;
     field(sample, 'methodConfirmed', 'Metoda została sprawdzona w wyniku tej próbki', 'checkbox');
-    field(sample, 'gnrha', 'Leczenie analogiem GnRH', 'select', tri);
-    field(sample, 'sexSteroids', 'Leczenie steroidami płciowymi', 'select', tri);
+    field(sample, 'gnrha', 'GnRHa — kontekst leczenia w dniu pobrania', 'select', tri);
+    field(sample, 'sexSteroids', 'Steroidy płciowe — leczenie w dniu pobrania', 'select', tri);
     samplePanel.appendChild(sample.parentNode);
     var puberty = group('Rozwój i jego datowanie', 'Th/M i G opisują rozwój gonadalny. P i Ax go nie zastępują; Ax nie ma skali 1–5. Dawny sam numer Tannera nie ustala rodzaju cechy.');
     field(puberty, 'kind', 'Oceniana cecha', 'select', kinds);
@@ -326,7 +326,10 @@
       contextLine.textContent = parts.length ? 'Dane aktualnej karty: ' + parts.join(' · ') + '. Sprawdź ich zgodność z dniem pobrania. Wiek wizyty nie jest automatycznie wiekiem próbki.' : 'Nie wczytano kontekstu z karty. Możesz podać dane badania tutaj.';
       if (next.sourceStatus === 'loading') contextLine.textContent = 'Trwa odczyt danych aktualnego pacjenta. Poczekaj przed użyciem danych z karty lub wpisz dane badania ręcznie.';
       else if (identity && next.sourceStatus !== 'ready') contextLine.textContent = 'Dane aktualnego pacjenta są niedostępne. Możesz podać dane badania ręcznie.';
-      else if (importedContextChanged) contextLine.textContent += ' Dane z karty wymagają ponownego sprawdzenia. Użyj ich ponownie lub uzupełnij pola badania ręcznie.';
+      else {
+        if (next.gnrhaStatus === 'zakonczone') contextLine.textContent += ' Zakończenie GnRHa nie ustala leczenia ani możliwego wpływu ostatniej dawki w dniu pobrania. Potwierdź kontekst tej próbki; sam status z karty pozostawia „Nie wiadomo”.';
+        if (importedContextChanged) contextLine.textContent += ' Dane z karty wymagają ponownego sprawdzenia. Użyj ich ponownie lub uzupełnij pola badania ręcznie.';
+      }
       useContext.hidden = !identity && !parts.length;
       useContext.disabled = !parts.length || !!identity && next.sourceStatus !== 'ready';
     }
@@ -350,7 +353,8 @@
       importField('birthDate', /^\d{4}-\d{2}-\d{2}$/.test(text(context.birthDateISO)) ? context.birthDateISO : '');
       if (context.ageYears != null) { importField('ageYears', context.ageYears); importField('ageMonths', context.ageMonths); importField('ageDays', ''); }
       if (context.tanner != null) { importField('kind', 'unspecified'); importField('stage', context.tanner); wrappers.stage.hidden = false; }
-      if (context.gnrhaStatus) importField('gnrha', context.gnrhaStatus === 'brak' ? 'no' : 'yes');
+      // Status historyczny bez dat nie określa leczenia w dniu tej próbki.
+      if (context.gnrhaStatus) importField('gnrha', context.gnrhaStatus === 'brak' ? 'no' : context.gnrhaStatus === 'w-trakcie' ? 'yes' : 'unknown');
       if (context.testicularVolume != null) importField('testicularVolume', context.testicularVolume);
       importedContextChanged = false;
       updateContextLine(context);
@@ -419,7 +423,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.0.1', buildInput: buildInput, mount: mount };
+  var api = { version: '1.1.0', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);

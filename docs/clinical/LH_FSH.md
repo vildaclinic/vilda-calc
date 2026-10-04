@@ -1,6 +1,21 @@
 # LH/FSH — dane, zapis kontekstu i interfejs, PR1–PR3
 
-Stan dokumentu: 3 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`.
+Stan dokumentu: 4 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`.
+
+## Poprawki kontekstu klinicznego — 4.10.2026
+
+Silnik `1.1.0`, dane i profil kliniczny `2026-10-04.1` rozszerzają komunikaty w dotychczasowym układzie LH/FSH. Cztery profile referencyjne, ich wersje, granice, metody, jednostki oraz polityka biochemiczna pozostają bez zmian. Zakres pediatryczny profilu klinicznego to 0–18 lat; szczególny komunikat objętości dotyczy chłopców przed pierwszymi urodzinami, z pomiarem w mL potwierdzonym dla próbki.
+
+- **GnRHa (M01):** import statusu karty „zakończone” daje „Nie wiadomo”, a nie „Tak” ani „Nie”. Status bez dat leczenia i pobrania nie ustala ekspozycji ani wpływu ostatniej dawki. Użytkownik potwierdza kontekst dnia pobrania; nie wprowadzamy okresu wypłukiwania. Automatyczne odświeżenie źródła nie nadpisuje ręcznie podanej odpowiedzi; ponowne jawne użycie danych karty importuje aktualny status. „W trakcie” i „brak” zachowują dotychczasowe mapowanie, z obowiązkiem sprawdzenia zgodności z próbką. Nieznane leczenie nadal blokuje automatyczny bazalny RI [K1,K4].
+- **Regresja (M02):** dodatni wywiad dodaje widoczny akapit o cofnięciu wcześniejszych cech, także przy prawidłowym czasie początku lub trwającym leczeniu. Nie utożsamiamy regresji z brakiem progresji, trwałym zatrzymaniem ani rozpoznaniem choroby [K2,K3].
+- **OUN (M03):** dodatni wywiad ma osobny akapit i uwagę w podsumowaniu niezależnie od wyniku LH/FSH. Potwierdzone wczesne Th≥2 z objawami OUN dodaje informację o sprawnej ocenie specjalistycznej: zalecenie samej obserwacji izolowanej thelarche nie obejmuje tej sytuacji [K1, uwagi do 1.1–1.2]. Samo „Tak” nie określa przyczyny, indywidualnej pilności ani wskazania do MRI.
+- **Objętość jąder niemowlęcia (M04, ograniczona poprawka):** każdy ważny, aktualny pomiar otrzymuje widoczny opis wartości, metody i braku zweryfikowanego zakresu objętości dla wieku/metody. Nie klasyfikujemy go jako prawidłowy lub nieprawidłowy. Próg 4 mL dla początku pokwitania nie staje się alarmowym progiem niemowlęcym; średnie z tabeli 2 przeglądu M1 nie są RI. Ustalenie i walidacja ewentualnego progu alarmowego pozostają otwarte.
+
+Dodatni wywiad zmienia podsumowanie na `attention`, ale zachowuje kod, tytuł i status samej oceny czasu oraz osobne porównania laboratoryjne. Istniejące ostrzeżenie czasu ma pierwszeństwo w tytule podsumowania. Akapity i kody są utrwalane w dotychczasowym `schemaVersion:1`; wspólny renderer pokazuje zapisany tekst również w przypięciu i historii. Odczyt nie uruchamia silnika ani nie dopisuje nowych komunikatów do starszych ocen.
+
+Syntetyczne przypadki produkcyjnej funkcji i przeglądarki: M16/G3, początek G w wieku 12 lat, LH2 IU/L, zgodna metoda → oba RI `within`; dodanie regresji lub OUN → osobny komunikat i `summary=attention`, bez zmiany oceny czasu. F7/Th2 + OUN → komunikat o ocenie specjalistycznej. M3 mies., objętość 1/8/15 mL → w każdym przypadku jawny brak kryterium objętości, bez wymyślonego progu. Import zakończonego GnRHa → `unknown`; ręczne ustalenie kontekstu jest zachowane przy automatycznym odświeżeniu źródła. Testy: `lab-puberty-clinical-context.test.mjs`, `lab-assessment-ui.test.mjs` i `lab-puberty-clinical-context.spec.mjs`.
+
+Ponownie przejrzano pełne dostępne teksty K2/K3/M1 oraz oficjalne rekomendacje K1 z uwagami technicznymi; zakres dostępu opisano w wykazie źródeł. Jest to zmiana interpretacji klinicznej wymagająca oceny właściciela przed scaleniem. Nie zamyka pozostałych punktów audytu technicznego, w tym walidacji chronologii w podstawowym `assessTiming` (A08) i wejścia (A09).
 
 ## Etapy wdrożenia
 

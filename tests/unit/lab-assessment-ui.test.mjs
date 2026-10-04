@@ -96,7 +96,7 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     expect(view.comparisons[0].method).toContain('AnshLite');
     expect(view.comparisons[0].population).toContain('Mayo');
     expect(view.sources.some((source) => source.url.includes('/62999'))).toBe(true);
-    expect(view.versions).toContain('Dane: 2026-10-03.1');
+    expect(view.versions).toContain('Dane: 2026-10-04.1');
   });
 
   it('odczyt lokalnego snapshotu zachowuje konkretną metodę, populację oraz osobne wersje źródła i zakresu', () => {
@@ -160,6 +160,49 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     expect(host.textContent.indexOf('Rozwój płciowy')).toBeLessThan(host.textContent.indexOf('Stężenie'));
     expect(win.VildaLabPuberty.evaluate).not.toHaveBeenCalled();
     expect(win.VildaPubertalStatus.dane).not.toHaveBeenCalled();
+  });
+
+  it('zapisany dodatni wywiad pozostaje widoczny obok oceny czasu i obu prawidłowych porównań', () => {
+    const evaluation = evaluate({
+      birthDateISO: '2010-10-03',
+      puberty: { kind: 'G', stage: 3, assessedAtISO: '2026-10-03', appliesToSample: true },
+      onset: { kind: 'G', age: { years: 12, months: 0, days: 0, precision: 'day' } },
+      history: { regression: 'yes', cnsSymptoms: 'yes' },
+    });
+    const assessment = JSON.parse(JSON.stringify(snapshot.create(evaluation)));
+    const host = documentDouble().createElement('div');
+    ui.renderAssessment(host, assessment, { compact: true });
+    const clinical = descendants(host, (node) => node.className === 'vilda-lab-clinical')[0];
+    const paragraphs = clinical.children.filter((node) => node.tagName === 'p').map((node) => node.textContent);
+    expect(paragraphs).toHaveLength(3);
+    expect(paragraphs[0]).toContain('Ocena dotyczy dostępnych danych o czasie początku');
+    expect(paragraphs[1]).toContain('Objawy OUN:');
+    expect(paragraphs[2]).toContain('Regresja cech dojrzewania:');
+    expect(host.firstChild.getAttribute('data-summary-status')).toBe('attention');
+    expect(assessment.evaluation.biochemical.byAge.status).toBe('within');
+    expect(assessment.evaluation.biochemical.byStage.status).toBe('within');
+    expect(descendants(host, (node) => node.tagName === 'a').some((node) => node.getAttribute('href').includes('PMC9291332'))).toBe(true);
+  });
+
+  it('odczyt dawnego snapshotu nie dopisuje nowych akapitów z dodatniego wywiadu', () => {
+    const evaluation = evaluate();
+    evaluation.engineVersion = '1.0.0';
+    evaluation.dataVersion = '2026-10-03.1';
+    Object.assign(evaluation.input.history, { regression: 'yes', cnsSymptoms: 'yes' });
+    evaluation.clinical.text = 'Treść utrwalona podczas dawnej oceny.';
+    const assessment = JSON.parse(JSON.stringify(snapshot.create(evaluation)));
+    expect(assessment.status).toBe('recorded');
+    const doc = documentDouble();
+    const win = { document: doc, VildaLabSnapshot: snapshot, VildaLabPuberty: { evaluate: vi.fn() } };
+    loadBrowserScript('vilda_lab_assessment_ui.js', win);
+    const host = doc.createElement('div');
+    win.VildaLabAssessmentUI.renderAssessment(host, assessment);
+    const clinical = descendants(host, (node) => node.className === 'vilda-lab-clinical')[0];
+    expect(clinical.children.filter((node) => node.tagName === 'p').map((node) => node.textContent))
+      .toEqual(['Treść utrwalona podczas dawnej oceny.']);
+    expect(host.textContent).not.toContain('Objawy OUN:');
+    expect(host.textContent).not.toContain('Regresja cech dojrzewania:');
+    expect(win.VildaLabPuberty.evaluate).not.toHaveBeenCalled();
   });
 
   it('unieważniona ocena jest neutralna, z poprzednią oceną wyłącznie w zamkniętych szczegółach', () => {
