@@ -35,6 +35,8 @@
 .vilda-lab-assessment .vilda-lab-comparison[data-status="above"] .vilda-lab-comparison-status,
 .vilda-lab-assessment .vilda-lab-comparison[data-status="below"] .vilda-lab-comparison-status { color: var(--vilda-lab-amber); background: var(--vilda-lab-amber-bg); }
 .vilda-lab-assessment .vilda-lab-comparison[data-status="within"] .vilda-lab-comparison-status { color: #245c67; background: var(--vilda-lab-soft); }
+.vilda-lab-assessment .vilda-lab-comparison[data-applicability="conditional"][data-status="within"] .vilda-lab-comparison-status { color: #445a64; background: #f0f2f4; }
+.vilda-lab-assessment .vilda-lab-reference-conditions { margin: var(--space-8px) 0 var(--space-12px); padding: 9px 11px; border-left: var(--border-pro) solid #9aaab0; background: #f4f6f7; color: #445a64; font-size: .82rem; line-height: 1.5; }
 .vilda-lab-assessment .vilda-lab-range { font-size: .9rem; font-weight: 600; }
 .vilda-lab-assessment .vilda-lab-note,
 .vilda-lab-assessment .vilda-lab-context-note,

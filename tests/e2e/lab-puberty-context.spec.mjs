@@ -133,6 +133,7 @@ test('B completing before A keeps only B in the source, automatic controls and r
   const saved = await snapshot(page);
   expect(saved.status).toBe('recorded');
   expect(saved.evaluation.input.treatment).toMatchObject({ context: 'hormonal', gnrha: 'yes', sexSteroids: 'unknown' });
+  expect(saved.evaluation).not.toHaveProperty('referencePreview');
   expect(saved.evaluation.ageAtSample.lowerYears).toBe(14);
   expect(saved.evaluation.biochemical.primary).toBeNull();
   expect(saved.evaluation.biochemical.reasonCodes).toContain('treatment_requires_separate_profile');

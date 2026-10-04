@@ -2,6 +2,20 @@
 
 Stan dokumentu: 4 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`.
 
+## Minimalne dane i porównanie warunkowe — 4.10.2026
+
+Silnik, formularz i renderer `1.3.0`, helper snapshotu `1.2.0`. W poprzednim szybkim formularzu nieustalony kontekst oznaczenia blokował oba porównania, mimo że pole opisano jako opcjonalne. Obecnie wynik, jednostka, płeć, wiarygodny wiek oraz zgodna metoda wystarczają do **warunkowego porównania liczbowego** z dostępnym zakresem wieku. Typowane stadium dodaje osobne porównanie stadium; nie jest wymagane dla zakresu wieku.
+
+Nie ustalamy domyślnie bazalnego protokołu ani braku leczenia. Przy ich nieznanym statusie wejście nadal zawiera `unknown`. Osobne, opcjonalne `evaluation.referencePreview` zawiera `kind='conditional-basal-untreated'`, przyczyny niepewności oraz `byAge`/`byStage` z pełnym pochodzeniem tabeli. Dotychczasowe `biochemical` zachowuje znaczenie porównania o potwierdzonym zastosowaniu; podgląd nie staje się jego `primary`. Wynik pokazuje warunki zastosowania przy liczbach, poza zwijanymi ograniczeniami. Etykieta „Liczbowo w zakresie” nie jest potwierdzeniem prawidłowości wyniku ani rozwoju.
+
+Jawna stymulacja, leczenie hormonalne/GnRHa/steroidami, nieznana lub niezgodna metoda, nieaktywny/stary profil, niewłaściwy materiał, błędny wiek/płeć i ograniczenia niemowlęce nadal blokują niedopasowane porównanie. Nie zmieniają się tabele `2026-10-04.1`, profile, progi, jednostki ani zasady cenzorowania. Potwierdzenie istniejącym wyborem „Bazalne, bez leczenia hormonalnego” usuwa warunkowość. Dodatnie informacje z karty nie są pomijane przez podgląd.
+
+Populacje i metody pozostają przypisane do konkretnych katalogów Mayo: LH pediatryczne AnshLite CLIA oraz FSH Roche Elecsys ECLIA, surowica, IU/L i równoważne mIU/mL. Zakresy i ich ograniczenia są opisane niżej [R1,R2]; kryteria rozwoju i rozróżnienie oznaczenia bazalnego, stymulacji oraz leczenia pozostają zgodne z K1,K3,K4. **Jest to zmiana sposobu udostępniania porównania, wymagająca oceny klinicznej właściciela, a nie nowe kryterium diagnostyczne ani dowód zastosowania normy do nieustalonego protokołu.**
+
+Syntetyczny przypadek produkcyjnego kodu: M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna konfiguracja AnshLite, nieustalony protokół i leczenie → warunkowo powyżej zakresu wieku (`<0,02–0,5`) i w zakresie G3 (`0,09–4,2`), nadal nadrzędne `early_development`. Bez stadium dostępny pozostaje zakres wieku. Znane leczenie lub stymulacja nie otrzymują tego podglądu. `<LOD` nie staje się punktem ani pewnym porównaniem.
+
+Schemat snapshotu pozostaje `1`: rozszerzenie jest opcjonalne, a historia odtwarza zapisaną warunkowość bez bieżących danych i ponownego liczenia. Starsze zapisy nie są uzupełniane nowym podglądem. Starszy odczyt pomijający nieznane rozszerzenie nadal widzi niedostępne porównanie bazalne, więc nie zamienia podglądu w bezwarunkowe „w normie”. Regresje: `lab-puberty-minimal-context`, `lab-minimal-context-snapshot-ui` oraz `lab-puberty-minimal-context.spec.mjs`.
+
 ## Szybkie sprawdzenie — 4.10.2026
 
 Silnik `1.2.0`, formularz `1.2.0`, renderer `1.2.0` i helper snapshotu `1.1.0` upraszczają obsługę po akceptacji makiety przez właściciela. Dane `2026-10-04.1`, cztery profile RI i kryteria liczbowe pozostają bez zmian. To zamierzona zmiana doboru kontekstu i sposobu porównania, nie nowa walidacja metod oznaczeń [R1,R2,K1–K4].

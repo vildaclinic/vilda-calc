@@ -84,7 +84,7 @@ async function expectVisibleParagraph(container, pattern) {
   return paragraph;
 }
 
-test('finished GnRHa requires an explicit sample answer and a source refresh preserves that answer', async ({ page }) => {
+test('finished GnRHa stays unknown despite conditional ranges and a source refresh preserves an explicit answer', async ({ page }) => {
   await open(page);
   const patientId = await createPatient(page);
   await chooseLH(page);
@@ -113,11 +113,17 @@ test('finished GnRHa requires an explicit sample answer and a source refresh pre
   await expect(page.locator('#labPubertyPatientContext')).toContainText('GnRHa: zakończone');
   await expect(page.locator('#labPubertyContext')).toHaveValue('unknown');
   await sample(page, { gnrha: null });
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
-  expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('unknown');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
+  const unknown = await snapshot(page);
+  expect(unknown.evaluation.input.treatment.gnrha).toBe('unknown');
+  expect(unknown.evaluation.biochemical.byAge.status).toBe('unavailable');
+  expect(unknown.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' } });
 
   await select(page, 'Context', 'basal-untreated');
   await expectWithinRanges(page);
+  await expect(comparison(page, 'age')).not.toHaveAttribute('data-applicability', 'conditional');
   await refresh('w-trakcie');
   await expect(page.locator('#labPubertyContext')).toHaveValue('basal-untreated');
   expect((await snapshot(page)).evaluation.input.treatment.gnrha).toBe('no');

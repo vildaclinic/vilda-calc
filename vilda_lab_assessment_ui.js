@@ -28,6 +28,7 @@
     clinical_profile_missing: 'Brak kompletnego, wersjonowanego profilu oceny czasu dojrzewania.',
     clinical_scope_not_established: 'Nie ustalono zakresu wieku pozwalającego zastosować lokalną normę.',
     configured_profile_version_mismatch: 'Zapisana konfiguracja oznaczenia wymaga sprawdzenia po zmianie wersji profilu.',
+    conditional_reference_comparison: 'Porównanie liczbowe jest warunkowe: zakresy dotyczą oznaczenia bazalnego bez leczenia hormonalnego.',
     early_development: 'Cechy dojrzewania pojawiły się zbyt wcześnie dla wieku i wymagają oceny przyczyny.',
     early_onset_history: 'Wczesny początek w wywiadzie pozostaje istotny niezależnie od obecnego wieku.',
     early_thelarche: 'Wczesne Th2 wymaga oceny przebiegu i objawów towarzyszących; nie przesądza o rozpoznaniu CPP.',
@@ -211,13 +212,20 @@
     var e = record(evaluation) ? evaluation : {};
     if (e.schemaVersion !== 1 || !['lh', 'fsh'].includes(e.analyte) || !record(e.input) || !record(e.measurement) || !record(e.ageAtSample) || !record(e.biochemical) || !record(e.clinical) || !record(e.summary) || !['attention', 'limited', 'compared', 'invalid', 'out_of_scope'].includes(e.summary.status)) return { valid: false };
     var input = e.input, m = e.measurement, b = e.biochemical, p = input.puberty || {}, assay = input.assay || {};
+    var preview = record(e.referencePreview) && e.referencePreview.kind === 'conditional-basal-untreated' && b.status === 'unavailable' && b.primary === null ? e.referencePreview : null;
+    var previewReasons = preview && Array.isArray(preview.reasonCodes) ? preview.reasonCodes : [];
+    var unknownProtocol = previewReasons.includes('non_basal_or_unknown_measurement');
+    var unknownTreatment = previewReasons.includes('treatment_context_unknown');
+    var conditionNote = preview ? 'Porównanie z zakresami oznaczenia bazalnego bez leczenia hormonalnego. ' + (unknownProtocol && unknownTreatment ? 'Rodzaju badania i leczenia nie ustalono.' : unknownProtocol ? 'Rodzaju badania nie ustalono.' : 'Leczenia nie ustalono.') : '';
     var sources = [], sourceIds = [];
-    var comparisons = [['age', 'Względem wieku', b.byAge], ['stage', 'Względem stadium', b.byStage], ['local', 'Zakres laboratorium', b.local]].map(function (item) {
+    var comparisons = [['age', 'Względem wieku', preview ? preview.byAge : b.byAge], ['stage', 'Względem stadium', preview ? preview.byStage : b.byStage], ['local', 'Zakres laboratorium', b.local]].map(function (item) {
       var c = item[2] || {}, range = c.range || {}, status = Object.prototype.hasOwnProperty.call(STATUS, c.status) ? c.status : 'unavailable';
+      var conditional = !!preview && item[0] !== 'local' && status !== 'unavailable';
       if (c.range && range.source) {
         if (!sourceIds.includes(range.sourceId)) { sources.push(sourceView(range.source)); sourceIds.push(range.sourceId); }
       }
-      return { key: item[0], title: item[1], status: status, label: STATUS[status], rangeText: formatRange(c.range),
+      return { key: item[0], title: item[1], status: status, conditional: conditional,
+        label: conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + ' — warunkowo' : STATUS[status], rangeText: formatRange(c.range),
         primary: b.primary === item[0], method: range.method ? methodName(range.method.id, range.method.name) : '',
         population: text(range.population && range.population.label), source: c.range ? sourceView(range.source) : null,
         referenceVersion: text(range.profileVersion),
@@ -272,7 +280,9 @@
     }
     var suppliedRange = record(e.reportedRange) ? e.reportedRange : null;
     var suppliedStatus = suppliedRange && Object.prototype.hasOwnProperty.call(STATUS, suppliedRange.status) ? suppliedRange.status : 'unavailable';
-    var limitations = reasons(e.limitations);
+    var limitationCodes = Array.isArray(e.limitations) ? e.limitations : [];
+    if (preview) limitationCodes = limitationCodes.filter(function (code) { return !['non_basal_or_unknown_measurement', 'treatment_context_unknown', 'profile_measurement_kind_mismatch'].includes(code); });
+    var limitations = reasons(limitationCodes);
     if (currentContext) limitations = limitations.map(function (message) {
       if (message === REASONS.missing_age) return 'Brak wiarygodnego wieku w formularzu głównym.';
       if (message === REASONS.missing_typed_stage_at_sample || message === REASONS.puberty_not_confirmed_at_sample) return 'Nie ustalono typowanej obserwacji rozwoju właściwej dla bieżącego kontekstu.';
@@ -283,7 +293,7 @@
       result: { text: formatResult({ value: m.raw, unit: m.sourceUnit }), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
         note: m.status === 'valid' && m.isExact === false ? 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
       clinical: { title: text(e.clinical.title), text: text(e.clinical.text), status: text(e.clinical.status), code: text(e.clinical.code) },
-      summary: { title: text(e.summary.title), status: e.summary.status }, comparisons: comparisons,
+      summary: { title: text(e.summary.title), status: e.summary.status }, comparisons: comparisons, conditionNote: conditionNote,
       context: context, contextBasis: currentContext ? 'current-patient' : 'sample',
       contextNote: currentContext ? 'Kontekst z formularza głównego — wiek i obserwacje nie potwierdzają dnia pobrania.' : '',
       assayNote: assay.confirmation === 'configured' ? 'Z zapisanej konfiguracji oznaczenia: ' + methodName(assay.methodId) + (assay.profileVersion ? ' · profil ' + text(assay.profileVersion) : '') : '',
@@ -334,6 +344,7 @@
     if (view.summary.title !== view.clinical.title) add(parent, 'p', 'vilda-lab-summary', view.summary.title);
     add(parent, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
     if (view.assayNote) add(parent, 'p', 'vilda-lab-note', view.assayNote);
+    if (view.conditionNote) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', 'conditional-basal-untreated');
     if (view.reportedRange) {
       var supplied = add(parent, 'div', 'vilda-lab-comparison vilda-lab-reported-range');
       supplied.setAttribute('data-comparison', 'reported');
@@ -351,6 +362,7 @@
       var row = add(comparisons, 'div', 'vilda-lab-comparison');
       row.setAttribute('data-comparison', comparison.key);
       row.setAttribute('data-status', comparison.status);
+      if (comparison.conditional) row.setAttribute('data-applicability', 'conditional');
       var head = add(row, 'div', 'vilda-lab-comparison-head');
       add(head, 'h4', '', comparison.title);
       add(head, 'span', 'vilda-lab-comparison-status', comparison.label);
@@ -416,5 +428,5 @@
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.2.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.3.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });

@@ -72,7 +72,10 @@
       profileId: 'text', profileVersion: 'text', sourceIds: ['text']
     },
     limitations: ['text'],
-    reportedRange: { status: 'text', raw: 'text', unit: 'text', lower: bound, upper: bound, reasonCodes: ['text'] }
+    reportedRange: { status: 'text', raw: 'text', unit: 'text', lower: bound, upper: bound, reasonCodes: ['text'] },
+    // Older readers discard this extension and retain unavailable biochemical
+    // comparisons; losing the qualifier can never turn a preview into a RI.
+    referencePreview: { kind: 'text', reasonCodes: ['text'], byAge: comparison, byStage: comparison }
   };
   // These schema-1 additions are optional. Reading an older assessment must
   // preserve its original shape and must never infer a current-form context.
@@ -145,8 +148,43 @@
     if (result.status !== 'unavailable' && (!contains(result.unit, ['IU/L', 'mIU/mL']) || !result.lower && !result.upper)) return false;
     return true;
   }
+  function validComparison(value) {
+    return required(value, ['status', 'reasonCodes']) && Array.isArray(value.reasonCodes) && contains(value.status, ['unavailable', 'indeterminate', 'within', 'below', 'above']) &&
+      (value.status === 'unavailable' ? value.range == null : validRange(value.range));
+  }
+  function validReferencePreview(evaluation) {
+    if (!own(evaluation, 'referencePreview')) return true;
+    var preview = evaluation.referencePreview, supplied = evaluation.input, biochemical = evaluation.biochemical;
+    if (!required(preview, Object.keys(evaluationSchema.referencePreview)) || preview.kind !== 'conditional-basal-untreated' || !Array.isArray(preview.reasonCodes)) return false;
+    if (evaluation.measurement.status !== 'valid' || evaluation.ageAtSample.status !== 'known' || !contains(supplied.sex, ['M', 'F']) || supplied.specimen !== 'serum' || !contains(supplied.measurementKind, ['unknown', 'basal'])) return false;
+    var treatment = supplied.treatment, assay = supplied.assay;
+    if (!contains(treatment.gnrha, ['no', 'unknown']) || !contains(treatment.sexSteroids, ['no', 'unknown']) || treatment.context === 'hormonal') return false;
+    var expected = [];
+    if (supplied.measurementKind === 'unknown') expected.push('non_basal_or_unknown_measurement');
+    if (!(treatment.gnrha === 'no' && treatment.sexSteroids === 'no' && (!own(treatment, 'context') || treatment.context === 'none'))) expected.push('treatment_context_unknown');
+    if (!expected.length || expected.length !== preview.reasonCodes.length || !expected.every(function (code) { return preview.reasonCodes.indexOf(code) !== -1; })) return false;
+    if (biochemical.status !== 'unavailable' || biochemical.primary !== null || !['byAge', 'byStage', 'local'].every(function (key) { return biochemical[key].status === 'unavailable'; })) return false;
+    if (!expected.every(function (code) { return biochemical.reasonCodes.indexOf(code) !== -1; })) return false;
+    if (!biochemical.reasonCodes.every(function (code) { return contains(code, ['non_basal_or_unknown_measurement', 'treatment_context_unknown', 'profile_measurement_kind_mismatch']); })) return false;
+    if (!assay.profileId || !assay.methodId || !contains(assay.confirmation, ['reported', 'configured']) || assay.confirmation === 'configured' && !assay.profileVersion) return false;
+    if (!['byAge', 'byStage'].every(function (key) {
+      var item = preview[key];
+      if (!required(item, ['range']) || !validComparison(item)) return false;
+      if (item.status === 'unavailable') return true;
+      var range = item.range;
+      var bounds = range.bounds;
+      if (bounds.lower && bounds.lower.value < 0 || bounds.upper && bounds.upper.value < 0) return false;
+      if (bounds.lower && bounds.upper && (bounds.lower.value > bounds.upper.value || bounds.lower.value === bounds.upper.value && (bounds.lower.operator === '>' || bounds.upper.operator === '<'))) return false;
+      if (bounds.censoredLower && (bounds.lower || bounds.censoredLower.value !== null && bounds.censoredLower.value <= 0)) return false;
+      return range.profileId === assay.profileId && range.method.id === assay.methodId && range.material === supplied.specimen && range.sex === supplied.sex && range.unit === 'IU/L' &&
+        range.profileId === evaluation.provenance.profileId && range.profileVersion === evaluation.provenance.profileVersion &&
+        (assay.confirmation !== 'configured' || range.profileVersion === assay.profileVersion) &&
+        (key === 'byAge' ? !range.stage : record(range.stage) && range.stage.kind === supplied.puberty.kind && range.stage.value === supplied.puberty.stage);
+    })) return false;
+    return preview.byAge.status !== 'unavailable' || preview.byStage.status !== 'unavailable';
+  }
   function validEvaluation(value) {
-    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return key !== 'reportedRange'; })) || value.schemaVersion !== 1 || !value.engineVersion || !contains(value.analyte, ['lh', 'fsh'])) return false;
+    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return !contains(key, ['reportedRange', 'referencePreview']); })) || value.schemaVersion !== 1 || !value.engineVersion || !contains(value.analyte, ['lh', 'fsh'])) return false;
     if (!required(value.input, Object.keys(input).filter(function (key) { return !contains(key, optionalInput); })) || value.input.analyte !== value.analyte) return false;
     if (!['assay', 'puberty', 'testicularVolume', 'onset', 'history', 'treatment'].every(function (key) {
       return required(value.input[key], Object.keys(input[key]).filter(function (field) { return !contains(field, optionalNestedInput[key] || []); }));
@@ -180,12 +218,9 @@
     if (!Array.isArray(m.reasonCodes) || !required(value.ageAtSample, ['status', 'precision', 'source', 'lowerYears', 'upperYears', 'upperInclusive', 'ageDays', 'reasonCodes']) || !contains(value.ageAtSample.status, ['known', 'unknown', 'invalid']) || !Array.isArray(value.ageAtSample.reasonCodes)) return false;
     if (!required(b, Object.keys(evaluationSchema.biochemical)) || !contains(b.status, ['available', 'unavailable']) || !contains(b.primary, [null, 'age', 'stage', 'local'])) return false;
     if (!Array.isArray(b.reasonCodes) || (b.status === 'available') !== (b.primary !== null)) return false;
-    if (!['byAge', 'byStage', 'local'].every(function (key) {
-      var item = b[key];
-      return required(item, ['status', 'reasonCodes']) && Array.isArray(item.reasonCodes) && contains(item.status, ['unavailable', 'indeterminate', 'within', 'below', 'above']) &&
-        (item.status === 'unavailable' ? item.range == null : validRange(item.range));
-    })) return false;
+    if (!['byAge', 'byStage', 'local'].every(function (key) { return validComparison(b[key]); })) return false;
     if (b.primary && b[({ age: 'byAge', stage: 'byStage', local: 'local' })[b.primary]].status === 'unavailable') return false;
+    if (!validReferencePreview(value)) return false;
     return required(c, Object.keys(evaluationSchema.clinical)) && contains(c.status, ['limited', 'warning', 'notice', 'out_of_scope', 'no_timing_alert']) &&
       Array.isArray(c.reasonCodes) && Array.isArray(c.sourceIds) &&
       required(value.summary, Object.keys(evaluationSchema.summary)) && contains(value.summary.status, ['attention', 'limited', 'compared', 'invalid', 'out_of_scope']) &&
@@ -263,5 +298,5 @@
     var value = m && m.status === 'valid' && m.isExact && m.operator === '=' ? m.plotValue : null;
     return { assessment: assessment, valueNum: value, plotValue: value };
   }
-  return Object.freeze({ version: '1.1.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
+  return Object.freeze({ version: '1.2.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
 });
