@@ -62,17 +62,27 @@ async function wizytaPierwsza(page, punkty) {
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Fikstura bada historię pomiarów w trybie profesjonalnym. Samo usunięcie
+  // disabled z przycisku nie włącza tego trybu: kolejna aktualizacja dostępu
+  // ponownie ukrywa formularz, powodując wyścig jeszcze przed pomiarem GH.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (!tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  await expect(page.locator('#resultsModeToggle')).toBeChecked();
 
   await page.fill('#lastName', 'Probna');
   await page.fill('#firstName', 'Alicja');
   await ustawPola(page, { age: '13', ageMonths: '1', sex: 'F', height: '139.9', weight: '45' });
   await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]', { state: 'attached' });
-  await page.evaluate(() => {
-    const t = document.getElementById('toggleAdvancedGrowth');
-    const f = document.getElementById('advancedGrowthForm');
-    if (f && getComputedStyle(f).display !== 'none') return;
-    if (t) { t.disabled = false; t.click(); }
-  });
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
+  if (!await page.locator('#advancedGrowthForm').isVisible()) await page.locator('#toggleAdvancedGrowth').click();
   await expect(page.locator('#advancedGrowthForm')).toBeVisible({ timeout: 10000 });
   await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });
   await page.evaluate(() => {

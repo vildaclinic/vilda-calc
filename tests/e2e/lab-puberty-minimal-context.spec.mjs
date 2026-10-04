@@ -88,11 +88,11 @@ async function expectVisibleConditions(host) {
 async function expectConditionalResult(host, { withStage = true } = {}) {
   await expect(comparison(host, 'age')).toHaveAttribute('data-status', 'above');
   await expect(comparison(host, 'age')).toHaveAttribute('data-applicability', 'conditional');
-  await expect(comparison(host, 'age')).toContainText('Liczbowo powyżej zakresu');
+  await expect(comparison(host, 'age').getByRole('img')).toHaveAccessibleName(/Liczbowo powyżej zakresu/);
   if (withStage) {
     await expect(comparison(host, 'stage')).toHaveAttribute('data-status', 'within');
     await expect(comparison(host, 'stage')).toHaveAttribute('data-applicability', 'conditional');
-    await expect(comparison(host, 'stage')).toContainText('Liczbowo w zakresie');
+    await expect(comparison(host, 'stage').getByRole('img')).toHaveAccessibleName(/Liczbowo w zakresie/);
     await expect(host.locator('[data-clinical-code="early_development"]')).toBeVisible();
     await expect(host).toHaveAttribute('data-summary-status', 'attention');
   }

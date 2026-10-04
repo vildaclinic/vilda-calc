@@ -24,6 +24,20 @@ async function otworz(page) {
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
   await page.waitForFunction(() => Boolean(window.VildaTempoWzrastania) && Boolean(window.VildaTrajectoryAnalysis));
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Porównanie kart wymaga aktywnego trybu profesjonalnego. Ręczne usunięcie
+  // disabled tylko chwilowo otwierało kartę; kolejna aktualizacja dostępu
+  // ukrywała ją ponownie, zanim test odczytał tempo.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (!tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  await expect(page.locator('#resultsModeToggle')).toBeChecked();
 }
 
 /* Dziewczynka `wiekLat`, `wzrost` cm dziś; jeden wiersz historii: `hLat` lat, `hWzrost` cm. */
@@ -36,10 +50,8 @@ async function policz(page, { wiekLat, wzrost, hLat, hWzrost }) {
     if (typeof window.update === 'function') window.update();
   }, { wiekLat, wzrost });
   await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]', { state: 'attached' });
-  await page.evaluate(() => {
-    const t = document.getElementById('toggleAdvancedGrowth');
-    if (t) { t.disabled = false; t.click(); }
-  });
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
+  if (!await page.locator('#advancedGrowthForm').isVisible()) await page.locator('#toggleAdvancedGrowth').click();
   await expect(page.locator('#advancedGrowthForm')).toBeVisible();
   await page.waitForSelector('#advMeasurements .measure-row');
   await page.evaluate(({ hLat, hWzrost }) => {

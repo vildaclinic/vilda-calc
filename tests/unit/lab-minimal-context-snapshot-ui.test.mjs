@@ -145,8 +145,9 @@ describe('LH/FSH — widoczne warunki porównania w wyniku i historii', () => {
     const visible = visibleText(host);
     expect(visible).toContain('Cechy dojrzewania zbyt wcześnie — wymagają oceny');
     expect(visible).toContain('Porównanie z zakresami oznaczenia bazalnego bez leczenia hormonalnego. Rodzaju badania i leczenia nie ustalono.');
-    expect(visible).toContain('Liczbowo powyżej zakresu — warunkowo');
-    expect(visible).toContain('Liczbowo w zakresie — warunkowo');
+    expect(visible).toContain('Znacznie powyżej normy · warunkowo');
+    expect(visible).toContain('W zakresie · warunkowo');
+    expect(descendants(host, (node) => node.getAttribute('role') === 'img').map((axis) => axis.getAttribute('aria-label')).join(' ')).toContain('Liczbowo powyżej zakresu — warunkowo');
     expect(visible).toContain('0,09');
     expect(host.textContent).not.toContain('Rodzaj oznaczenia nie odpowiada wybranemu profilowi.');
     expect(host.children[0].getAttribute('data-summary-status')).toBe('attention');

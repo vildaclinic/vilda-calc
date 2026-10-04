@@ -102,6 +102,13 @@
     var analyte = null, evaluation = null, context = null, contextKey = null, sampleDate = '';
     var lastMeasurement = { raw: '', unit: 'IU/L', targetUnit: 'IU/L' };
     var dirty = {}, imported = {};
+    // Preferencja ruchu dotyczy wyłącznie prezentacji w tej karcie, nie pacjenta
+    // ani zapisywanego snapshotu oceny.
+    var motionPaused = false;
+    function setMotionPaused(paused) {
+      motionPaused = paused === true;
+      resultSection.classList.toggle('is-motion-paused', motionPaused && !!analyte);
+    }
     function element(tag, className, content) {
       var node = doc.createElement(tag);
       if (className) node.className = className;
@@ -331,6 +338,7 @@
       analyte = next; panel.hidden = !next; samplePanel.hidden = !next; assessment.hidden = !next;
       if (changedAnalyte) { var profile = resolveProfile(); fields.configuredProfile.value = profile && profile.assay ? profile.assay.profileId : ''; }
       resultSection.classList.toggle('lab-puberty-active', !!next);
+      setMotionPaused(motionPaused);
       ['labResultSourceLine', 'labSourcesWrap', 'labInfoCard'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-suppressed', !!next); });
       ['labStep4', 'labStep5'].forEach(function (id) { var node = byId(id); if (node) node.classList.toggle('lab-puberty-step-active', !!next); });
       if (sampleLabel && sampleLabel.firstChild) sampleLabel.firstChild.textContent = next ? 'Badanie ' : originalSampleLabel;
@@ -385,18 +393,32 @@
       evaluation = engine.evaluate(input, data);
       var valid = evaluation.measurement.status === 'valid';
       resultSection.classList.toggle('is-empty', !valid);
+      // Wspólny model prezentacji wyprowadza wyróżnienie z obu zapisanych
+      // porównań. Formularz nie oblicza ponownie progów ani zakresów.
+      var view = renderer.renderEvaluation(assessment, evaluation, {
+        compact: true, hideMeasurement: true, motionPaused: motionPaused,
+        onMotionChange: setMotionPaused
+      });
       if (big) {
         big.replaceChildren();
         if (valid) {
           var target = ['IU/L', 'mIU/mL'].includes(lastMeasurement.targetUnit) ? lastMeasurement.targetUnit : input.unit;
           // Obie obsługiwane jednostki są liczbowo równoważne. Zachowujemy zapis
           // operatora i LOD/LOQ, nie zaokrąglamy granicy wyniku cenzorowanego.
-          big.appendChild(element('span', 'lab-result-big-value', evaluation.measurement.raw));
+          var visualState = view && view.valid && view.result ? view.result.visualState : '';
+          var allowedState = ['is-uwaga-high', 'is-uwaga-low', 'is-above', 'is-below'].includes(visualState) ? visualState : '';
+          big.appendChild(element('span', 'lab-result-big-value' + (allowedState ? ' ' + allowedState : ''), evaluation.measurement.raw));
           big.appendChild(doc.createTextNode(' '));
           big.appendChild(element('span', 'lab-result-big-unit', target));
+          var alert = view && view.valid && view.result && view.result.visualAlert;
+          if (alert) {
+            var summary = element('div', 'vilda-lab-severity-summary ' + allowedState);
+            summary.appendChild(element('strong', 'vilda-lab-severity-summary-title', alert.label));
+            summary.appendChild(element('span', 'vilda-lab-severity-summary-scope', alert.scope + (alert.conditional ? ' · warunkowo' : '')));
+            big.appendChild(summary);
+          }
         } else big.appendChild(element('span', 'lab-result-big-placeholder', lastMeasurement.raw ? 'Nieprawidłowy zapis wyniku lub jednostki' : 'Wpisz wynik. Kontekst rozwoju możesz ocenić wcześniej.'));
       }
-      renderer.renderEvaluation(assessment, evaluation, { compact: true, hideMeasurement: true });
       var table = byId('labResultsBody'), meta = byId('labMeta');
       if (table) {
         table.replaceChildren();
@@ -427,7 +449,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.3.0', buildInput: buildInput, mount: mount };
+  var api = { version: '1.4.0', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);
