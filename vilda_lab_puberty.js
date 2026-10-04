@@ -9,7 +9,7 @@
   if (root) root.VildaLabPuberty = api;
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var DAY_MS = 86400000;
   function finite(value) { return typeof value === 'number' && Number.isFinite(value); }
   function text(value, max) { return typeof value === 'string' ? value.trim().slice(0, max || 160) : ''; }
@@ -254,6 +254,39 @@
     if (t.gnrha !== 'no' || t.sexSteroids !== 'no') return result('limited', 'treatment_context', 'Interpretacja zależna od leczenia', 'Nie oceniamy skuteczności leczenia GnRHa ani jego wpływu na dojrzewanie z pojedynczego LH/FSH.', ['treatment_context']);
     return result('no_timing_alert', 'timing_not_abnormal', 'Brak wykrytej niezgodności czasu dojrzewania', 'Ocena dotyczy dostępnych danych o czasie początku, nie całego przebiegu ani etiologii dojrzewania.', onsetKnown ? [] : ['onset_history_missing']);
   }
+  function contextObservationCurrent(observation, input) {
+    if (!observationCurrent(observation, input.sampleDateISO)) return false;
+    var birth = dateISO(input.birthDateISO), assessed = dateISO(observation.assessedAtISO);
+    return !(birth && assessed && assessed.time < birth.time);
+  }
+  function appendClinicalContext(input, profile, clinical, age, puberty) {
+    var policy = profile && profile.contextMessages;
+    if (!policy || clinical.status === 'out_of_scope' || !['lh', 'fsh'].includes(input.analyte)) return null;
+    var history = input.history || {}, attention = null;
+    function append(rule, description) {
+      if (!rule || !rule.code || !(description || rule.text)) return;
+      clinical.text += '\n\n' + (description || rule.text);
+      clinical.reasonCodes = unique(clinical.reasonCodes.concat(rule.code));
+      clinical.sourceIds = unique(clinical.sourceIds.concat(rule.sourceIds || []));
+    }
+    (policy.history || []).forEach(function (rule) {
+      if (flag(history[rule.field]) !== 'yes') return;
+      append(rule);
+      if (!attention) attention = { status: 'attention', code: rule.code, title: rule.title };
+    });
+    var earlyCns = policy.earlyThelarcheWithCns, onsetRule = profile.onset && profile.onset.F;
+    if (earlyCns && onsetRule && input.sex === 'F' && flag(history.cnsSymptoms) === 'yes' && puberty.usable &&
+        puberty.kind === onsetRule.axis && puberty.stage >= onsetRule.stage && contextObservationCurrent(input.puberty, input) &&
+        ageTest(age, profile.earlyAgeYears && profile.earlyAgeYears.F) === 'within') append(earlyCns);
+    var infantVolume = policy.infantTesticularVolume, volume = input.testicularVolume || {};
+    if (infantVolume && input.sex === infantVolume.sex && ageTest(age, profile.infantAgeYears) === 'within' &&
+        finite(volume.value) && volume.value >= 0 && volume.unit === infantVolume.unit && contextObservationCurrent(volume, input)) {
+      var method = text(infantVolume.methods && infantVolume.methods[volume.method]) || infantVolume.unknownMethod;
+      append(infantVolume, infantVolume.text.replace('{value}', String(volume.value).replace('.', ','))
+        .replace('{unit}', volume.unit).replace('{method}', method));
+    }
+    return attention;
+  }
   function unavailable(reason) { return { status: 'unavailable', reasonCodes: Array.isArray(reason) ? unique(reason) : [reason], range: null }; }
   function comparison(measurement, row, profile, data) {
     var c = compareMeasurement(measurement, row.range);
@@ -324,6 +357,7 @@
     input = input || {}; data = data || {};
     var normalized = normalizedInput(input), measurement = parseMeasurement(input.value, input.unit), age = resolveAge(input), puberty = pubertyAtSample(input);
     var clinical = assessTiming(input, data.clinicalProfile);
+    var clinicalAttention = appendClinicalContext(input, data.clinicalProfile, clinical, age, puberty);
     var bio = { status: 'unavailable', primary: null, byAge: unavailable('no_matching_profile'), byStage: unavailable('no_matching_profile'), local: unavailable('no_local_reference'), reasonCodes: [] };
     var profile = Array.isArray(data.profiles) ? data.profiles.find(function (p) { return p && p.id === (input.assay || {}).profileId; }) : null;
     var gates = [], assay = input.assay || {}, t = therapy(input), biochemicalPolicy = data.biochemicalPolicy;
@@ -370,6 +404,7 @@
       clinical = clinicalResult(data.clinicalProfile, 'out_of_scope', 'out_of_scope', 'Analit poza zakresem modułu', 'Moduł dotyczy wyłącznie LH i FSH.', ['unsupported_analyte']);
       summary = { status: 'out_of_scope', code: 'unsupported_analyte', title: 'Analit poza zakresem modułu' };
     } else if (clinical.status === 'warning' || clinical.status === 'notice') summary = { status: 'attention', code: clinical.code, title: clinical.title };
+    else if (clinicalAttention) summary = clinicalAttention;
     else if (measurement.status !== 'valid') summary = { status: 'invalid', code: 'invalid_measurement', title: 'Nieprawidłowy zapis wyniku lub jednostki' };
     else if (abnormal) summary = { status: 'attention', code: 'outside_reference_range', title: 'Wynik poza wskazanym zakresem referencyjnym' };
     else if (clinical.status === 'out_of_scope') summary = { status: 'out_of_scope', code: 'out_of_scope', title: clinical.title };

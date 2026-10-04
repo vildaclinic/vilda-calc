@@ -64,6 +64,14 @@ Nowy adapter próbki i wspólny renderer zastępują dawną interpretację wył�
 
 Regresje wywołują produkcyjne źródło, adapter, formularz, silnik i producenta snapshotów; sprawdzają kolejność zakończenia odczytów, niedostępność danych, zmianę źródła oraz ponowne jawne użycie danych. Testy techniczne nie zastępują akceptacji klinicznej właściciela przed scaleniem.
 
+#### LAB-PUBERTY — kontekst kliniczny po audycie, 2026-10-04
+
+Silnik `1.1.0`, dane i profil kliniczny `2026-10-04.1`. Import zakończonego GnRHa pozostawia kontekst próbki nieznany; nie ustala samodzielnie ekspozycji w dniu pobrania ani okresu wypłukiwania. Regresja i objawy OUN otrzymują niezależne, utrwalane akapity oraz `summary=attention`, przy zachowaniu oceny czasu i porównań stężenia. Wczesne potwierdzone Th≥2 z OUN wskazuje ocenę specjalistyczną, bez automatycznej decyzji o MRI. Pomiar jąder u chłopca <1 roku (mL, potwierdzony dla próbki) dostaje opis braku zweryfikowanego zakresu objętości; nie wprowadzono niemowlęcego progu alarmowego.
+
+**Wpływ kliniczny:** dotychczas pomijany dodatni wywiad staje się widoczny także przy stężeniu w obu RI. Zakresy referencyjne, metody, jednostki i polityka biochemiczna pozostają identyczne. Zapisane wcześniej oceny nie są przeliczane ani uzupełniane dzisiejszymi komunikatami. Populacja: dzieci i młodzież 0–18 lat; ograniczenia wieku, metody i kontekstu próbki pozostają w mocy. Syntetyczny M16/G3, początek 12 lat, LH2 IU/L + regresja/OUN → `within` dla wieku i stadium, zachowany kod czasu, widoczny wywiad i `attention`; F7/Th2 + OUN → osobny komunikat specjalistyczny; M3 mies. z 1/8/15 mL → opis ograniczenia bez klasyfikacji objętości.
+
+Źródła: [oficjalne rekomendacje ES2026](https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty), zwłaszcza uwagi 1.1–1.2; pełne teksty [ENDO-ERN2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8016789/), [Howard2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/) i [Rohayem2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11244267/) (tabela 2 nie stanowi nowego RI). Dokładny kontrakt, wersje źródeł, zakres odczytu i przypadki: [LH_FSH.md](LH_FSH.md#poprawki-kontekstu-klinicznego--4102026). Regresje wywołują rzeczywisty silnik, formularz, snapshot i renderer. Akceptacja kliniczna i scalenie pozostają decyzją właściciela. Brak progu alarmowego objętości niemowlęcej oraz wcześniejsze luki A08/A09 pozostają jawnie otwarte.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

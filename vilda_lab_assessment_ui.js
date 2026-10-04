@@ -33,6 +33,7 @@
     inconsistent_puberty_context: 'Stadium, objętość jąder lub czas początku są niespójne i wymagają uzgodnienia.',
     infant_advanced_or_progressive_features: 'Minipuberty nie wyjaśnia automatycznie zaawansowanych lub postępujących cech płciowych.',
     infant_context: 'Wiek niemowlęcy wymaga odrębnej interpretacji uwzględniającej minipuberty.',
+    infant_testicular_volume_not_validated: 'Moduł nie ma zweryfikowanego zakresu oceny objętości jąder u niemowląt; pomiar wymaga osobnej interpretacji.',
     infant_gestational_context_missing: 'Dla próbki niemowlęcia brakuje informacji o wcześniactwie.',
     infant_onset_not_confirmed: 'Początek cech w niemowlęctwie nie został potwierdzony jako trwały początek pokwitania.',
     invalid_age: 'Wpisany wiek jest nieprawidłowy.',
@@ -72,6 +73,9 @@
     profile_not_active: 'Ten profil nie jest dopuszczony do automatycznej interpretacji.',
     puberty_kind_sex_mismatch: 'Typ oceny rozwoju nie odpowiada płci przyjętej dla kryteriów.',
     puberty_not_confirmed_at_sample: 'Nie potwierdzono, że obserwacja rozwoju opisuje dzień pobrania; późniejsze badanie jej nie zastępuje.',
+    reported_puberty_regression: 'Zgłoszono cofnięcie wcześniejszych cech dojrzewania; ocena samego czasu początku nie ocenia tego przebiegu.',
+    reported_cns_symptoms: 'Zgłoszone objawy OUN wymagają odrębnej oceny klinicznej; moduł nie ustala ich przyczyny ani pilności.',
+    early_thelarche_with_cns_symptoms: 'Wczesny rozwój piersi z objawami OUN wymaga sprawnej oceny specjalistycznej; zalecenie samej obserwacji izolowanej thelarche nie obejmuje tej sytuacji.',
     sample_before_birth: 'Data pobrania jest wcześniejsza od daty urodzenia.',
     source_reference_disagreement: 'Zakres laboratorium i pomocniczy zakres katalogowy dają różne porównania. Podstawą biochemiczną pozostaje potwierdzony zakres laboratorium.',
     stage_age_scope_missing: 'Brak zakresu wieku pozwalającego zastosować normę według stadium.',
@@ -111,6 +115,8 @@
   var CITATIONS = {
     'endocrine-society-cpp-2026': ['Endocrine Society — wytyczne przedwczesnego dojrzewania, 2026', 'https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty'],
     'endo-ern-delay-2021': ['ENDO-ERN — różnicowanie opóźnionego dojrzewania, 2021', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8016789/'],
+    'puberty-hormones-review-2021': ['Howard — interpretacja hormonów w okresie dojrzewania, 2021', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/'],
+    'minipuberty-review-2024': ['Rohayem i wsp. — fizjologiczna i zaburzona minipuberty, 2024', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11244267/'],
     'delayed-puberty-review-2024': ['A Current Perspective on Delayed Puberty and Its Management, 2024', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11629716/'],
     'cpp-laboratory-review-2025': ['Critical appraisal of diagnostic laboratory tests in CPP, 2025', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11795171/'],
     'who-preterm-birth-2023': ['WHO — definicja wcześniactwa, 2023', 'https://www.who.int/news-room/fact-sheets/detail/preterm-birth'],
@@ -284,7 +290,9 @@
     clinical.setAttribute('data-status', ['warning', 'notice', 'limited', 'out_of_scope', 'no_timing_alert'].includes(view.clinical.status) ? view.clinical.status : 'limited');
     add(clinical, 'h3', '', 'Rozwój płciowy');
     add(clinical, 'strong', '', view.clinical.title);
-    add(clinical, 'p', '', view.clinical.text);
+    // Akapity należą do zapisanej oceny. Nie tworzymy nowych ostrzeżeń na
+    // podstawie dzisiejszych reguł podczas odczytu historycznego snapshotu.
+    view.clinical.text.split(/\n\s*\n/).forEach(function (paragraph) { add(clinical, 'p', '', paragraph); });
     if (view.summary.title !== view.clinical.title) add(parent, 'p', 'vilda-lab-summary', view.summary.title);
     add(parent, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
     var comparisons = add(parent, 'div', 'vilda-lab-comparisons');
@@ -357,5 +365,5 @@
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.0.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.1.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });
