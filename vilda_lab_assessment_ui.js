@@ -208,6 +208,49 @@
     if (observation.appliesToSample === true) return 'Potwierdzony';
     return sampleDateISO && sampleDateISO === observation.assessedAtISO ? 'Ta sama data badania i pobrania' : 'Niepotwierdzony';
   }
+  // These are display coordinates and the same emphasis thresholds as the
+  // converter's other hormones, not a new biochemical or clinical assessment.
+  // Bounds, statuses and the measurement come exclusively from this evaluation.
+  function axisBounds(comparison) {
+    var range = comparison && comparison.range, limits = range && range.bounds;
+    if (!comparison || comparison.status === 'unavailable' || !limits || !['IU/L', 'mIU/mL'].includes(range.unit)) return null;
+    var lower = limits.lower, upper = limits.upper;
+    if (lower && (!numeric(lower.value) || lower.value < 0 || !['>', '>='].includes(lower.operator))) return null;
+    if (upper && (!numeric(upper.value) || upper.value < 0 || !['<', '<='].includes(upper.operator))) return null;
+    if ((!lower && !upper) || (lower && limits.censoredLower)) return null;
+    if (lower && upper && (lower.value > upper.value || (lower.value === upper.value && (lower.operator !== '>=' || upper.operator !== '<=')))) return null;
+    return { lower: lower ? lower.value : null, upper: upper ? upper.value : null };
+  }
+  function axisMaximum(bounds, value) {
+    var maximum = Math.max.apply(null, [1].concat(bounds.filter(Boolean).flatMap(function (entry) {
+      return [entry.lower, entry.upper].filter(numeric);
+    }))) * 1.6;
+    if (value !== null) maximum = Math.max(maximum, value * 1.15);
+    if (!numeric(maximum)) return null;
+    var increment = Math.pow(10, Math.floor(Math.log10(maximum))) / 2;
+    var result = Math.ceil(maximum / increment) * increment;
+    return numeric(result) && result > 0 ? result : null;
+  }
+  function visualState(status, bounds, value) {
+    if (!bounds || value === null) return '';
+    if (status === 'above' && bounds.upper !== null && value > bounds.upper * 2) return 'is-uwaga-high';
+    if (status === 'below' && bounds.lower !== null && bounds.lower > 0 && value < bounds.lower * 0.5) return 'is-uwaga-low';
+    return ({ above: 'is-above', below: 'is-below', within: 'is-normal' })[status] || '';
+  }
+  function resultEmphasis(comparisons) {
+    var axes = comparisons.filter(function (comparison) { return comparison.key === 'age' || comparison.key === 'stage'; });
+    var high = axes.filter(function (comparison) { return comparison.visualState === 'is-uwaga-high'; });
+    var low = axes.filter(function (comparison) { return comparison.visualState === 'is-uwaga-low'; });
+    var significant = high.concat(low);
+    if (!significant.length) return { visualState: axes.some(function (c) { return c.visualState === 'is-above'; }) ? 'is-above' : axes.some(function (c) { return c.visualState === 'is-below'; }) ? 'is-below' : '', visualAlert: null };
+    var mixed = high.length > 0 && low.length > 0;
+    return { visualState: high.length ? 'is-uwaga-high' : 'is-uwaga-low', visualAlert: {
+      label: mixed ? 'Uwaga — rozbieżne znaczne odchylenia' : high.length ? 'Uwaga — znacznie powyżej normy' : 'Uwaga — znacznie poniżej normy',
+      scope: mixed ? significant.map(function (c) { return (c.visualState === 'is-uwaga-high' ? 'Powyżej: ' : 'Poniżej: ') + (c.key === 'age' ? 'wiek' : 'stadium ' + c.scope); }).join(' · ')
+        : 'Względem ' + significant.map(function (c) { return c.key === 'age' ? 'wieku' : 'stadium ' + c.scope; }).join(' i '),
+      conditional: significant.some(function (c) { return c.conditional; })
+    } };
+  }
   function buildView(evaluation) {
     var e = record(evaluation) ? evaluation : {};
     if (e.schemaVersion !== 1 || !['lh', 'fsh'].includes(e.analyte) || !record(e.input) || !record(e.measurement) || !record(e.ageAtSample) || !record(e.biochemical) || !record(e.clinical) || !record(e.summary) || !['attention', 'limited', 'compared', 'invalid', 'out_of_scope'].includes(e.summary.status)) return { valid: false };
@@ -218,18 +261,29 @@
     var unknownTreatment = previewReasons.includes('treatment_context_unknown');
     var conditionNote = preview ? 'Porównanie z zakresami oznaczenia bazalnego bez leczenia hormonalnego. ' + (unknownProtocol && unknownTreatment ? 'Rodzaju badania i leczenia nie ustalono.' : unknownProtocol ? 'Rodzaju badania nie ustalono.' : 'Leczenia nie ustalono.') : '';
     var sources = [], sourceIds = [];
-    var comparisons = [['age', 'Względem wieku', preview ? preview.byAge : b.byAge], ['stage', 'Względem stadium', preview ? preview.byStage : b.byStage], ['local', 'Zakres laboratorium', b.local]].map(function (item) {
+    var rawComparisons = [['age', 'Względem wieku', preview ? preview.byAge : b.byAge], ['stage', 'Względem stadium', preview ? preview.byStage : b.byStage], ['local', 'Zakres laboratorium', b.local]];
+    var point = m.status === 'valid' && m.isExact === true && numeric(m.plotValue) && m.plotValue >= 0 ? m.plotValue : null;
+    var axisLimits = rawComparisons.slice(0, 2).map(function (item) { return axisBounds(item[2]); });
+    var maximum = axisMaximum(axisLimits, point);
+    var comparisons = rawComparisons.map(function (item, index) {
       var c = item[2] || {}, range = c.range || {}, status = Object.prototype.hasOwnProperty.call(STATUS, c.status) ? c.status : 'unavailable';
       var conditional = !!preview && item[0] !== 'local' && status !== 'unavailable';
+      var limits = index < 2 && status !== 'unavailable' ? axisLimits[index] : null;
+      var state = visualState(status, limits, point);
+      var scope = range.stage ? stage({ kind: range.stage.kind, stage: range.stage.value }) : '';
+      var visualLabel = state === 'is-uwaga-high' ? 'Znacznie powyżej normy' : state === 'is-uwaga-low' ? 'Znacznie poniżej normy' : ({ above: 'Powyżej zakresu', below: 'Poniżej zakresu', within: 'W zakresie', indeterminate: 'Porównanie niejednoznaczne', unavailable: 'Brak dopasowanej oceny' })[status];
       if (c.range && range.source) {
         if (!sourceIds.includes(range.sourceId)) { sources.push(sourceView(range.source)); sourceIds.push(range.sourceId); }
       }
       return { key: item[0], title: item[1], status: status, conditional: conditional,
+        shortTitle: item[0] === 'age' ? 'Dla wieku' : item[0] === 'stage' ? 'Dla stadium' + (scope ? ' ' + scope : '') : item[1],
+        visualState: state, visualLabel: visualLabel + (conditional ? ' · warunkowo' : ''),
+        axis: limits && maximum ? { min: 0, max: maximum, lower: limits.lower, upper: limits.upper, value: point, unit: 'IU/L' } : null,
         label: conditional ? ({ above: 'Liczbowo powyżej zakresu', below: 'Liczbowo poniżej zakresu', within: 'Liczbowo w zakresie', indeterminate: 'Porównanie liczbowe niejednoznaczne' })[status] + ' — warunkowo' : STATUS[status], rangeText: formatRange(c.range),
         primary: b.primary === item[0], method: range.method ? methodName(range.method.id, range.method.name) : '',
         population: text(range.population && range.population.label), source: c.range ? sourceView(range.source) : null,
         referenceVersion: text(range.profileVersion),
-        scope: range.stage ? stage({ kind: range.stage.kind, stage: range.stage.value }) : '', reasons: reasons(c.reasonCodes) };
+        scope: scope, reasons: reasons(c.reasonCodes) };
     });
     var provenance = e.provenance || {};
     (Array.isArray(provenance.sourceIds) ? provenance.sourceIds : []).forEach(function (id) {
@@ -289,8 +343,10 @@
       if (message === REASONS.missing_puberty_assessment) return 'Brak odpowiedniej oceny Th/M lub G dla bieżącego kontekstu. P i Ax jej nie zastępują.';
       return message;
     });
+    var emphasis = resultEmphasis(comparisons);
     return { valid: true, analyte: e.analyte.toUpperCase(),
       result: { text: formatResult({ value: m.raw, unit: m.sourceUnit }), valid: m.status === 'valid', censored: m.status === 'valid' && m.isExact === false,
+        visualState: emphasis.visualState, visualAlert: emphasis.visualAlert,
         note: m.status === 'valid' && m.isExact === false ? 'Wynik nie jest dokładnym punktem liczbowym; nie kreślimy go na granicy oznaczenia w trendzie.' : m.status === 'invalid' ? 'Nieprawidłowy zapis wyniku lub jednostki.' : '' },
       clinical: { title: text(e.clinical.title), text: text(e.clinical.text), status: text(e.clinical.status), code: text(e.clinical.code) },
       summary: { title: text(e.summary.title), status: e.summary.status }, comparisons: comparisons, conditionNote: conditionNote,
@@ -325,14 +381,81 @@
       + (comparison.referenceVersion ? ' · wersja zakresu: ' + comparison.referenceVersion : ''));
     list(parent, comparison.reasons, 'vilda-lab-reasons');
   }
+  function renderAxis(parent, comparison, result) {
+    var model = comparison.axis;
+    if (!model) return;
+    var axis = add(parent, 'div', 'vilda-lab-axis');
+    var lower = model.lower === null ? 0 : model.lower;
+    var upper = model.upper === null ? model.max : model.upper;
+    axis.setAttribute('data-axis-max', String(model.max));
+    axis.setAttribute('data-range-lower', model.lower === null ? 'unknown' : String(model.lower));
+    axis.setAttribute('data-range-upper', model.upper === null ? 'unknown' : String(model.upper));
+    axis.setAttribute('data-visual-state', comparison.visualState);
+    var style = '--low:' + (lower / model.max * 100) + '%;--high:' + (upper / model.max * 100) + '%;';
+    if (model.value !== null) {
+      axis.setAttribute('data-patient-value', String(model.value));
+      style += '--value:' + (model.value / model.max * 100) + '%;';
+      style += '--label-edge:' + Math.max(34, (number(model.value) + ' ' + model.unit).length * 4.2) + 'px;';
+    }
+    axis.setAttribute('style', style);
+    axis.setAttribute('role', 'img');
+    axis.setAttribute('aria-label', comparison.title + (comparison.scope ? ' ' + comparison.scope : '') + '. ' + comparison.rangeText + '. Wynik ' + result.text + '. ' + comparison.label + '. ' + comparison.visualLabel
+      + (model.value !== null ? '. Skala liniowa od 0 do ' + number(model.max) + ' ' + model.unit + '.' : '. Brak dokładnej pozycji liczbowej wyniku.'));
+    if (model.value !== null) add(axis, 'span', 'vilda-lab-axis-value ' + comparison.status + ' ' + comparison.visualState, number(model.value) + ' ' + model.unit).setAttribute('aria-hidden', 'true');
+    else add(axis, 'span', 'vilda-lab-axis-no-value', 'Wynik ' + result.text + ' — bez pozycji liczbowej').setAttribute('aria-hidden', 'true');
+    var track = add(axis, 'div', 'vilda-lab-axis-track');
+    track.setAttribute('aria-hidden', 'true');
+    if (model.lower !== null && lower > 0) add(track, 'span', 'vilda-lab-axis-below');
+    if (model.upper !== null) add(track, 'span', 'vilda-lab-axis-above');
+    add(track, 'span', 'vilda-lab-axis-band' + (model.lower === null ? ' is-open-lower' : '') + (model.upper === null ? ' is-open-upper' : ''));
+    if (model.lower !== null) add(track, 'span', 'vilda-lab-axis-bound is-lower');
+    if (model.upper !== null) add(track, 'span', 'vilda-lab-axis-bound is-upper');
+    if (model.value !== null) add(track, 'span', 'vilda-lab-axis-marker ' + comparison.status + ' ' + comparison.visualState);
+    add(axis, 'span', 'vilda-lab-axis-min', '0').setAttribute('aria-hidden', 'true');
+    add(axis, 'span', 'vilda-lab-axis-max', number(model.max) + ' ' + model.unit).setAttribute('aria-hidden', 'true');
+  }
+  function renderLegend(parent, comparisons) {
+    var axes = comparisons.filter(function (comparison) { return comparison.axis; });
+    if (!axes.length) return;
+    var legend = add(parent, 'div', 'vilda-lab-axis-legend');
+    var band = add(legend, 'span', '');
+    add(band, 'i', 'vilda-lab-legend-band').setAttribute('aria-hidden', 'true');
+    add(band, 'span', '', 'Zakres odniesienia');
+    if (axes.some(function (comparison) { return comparison.axis.value !== null; })) {
+      var point = add(legend, 'span', '');
+      add(point, 'i', 'vilda-lab-legend-point').setAttribute('aria-hidden', 'true');
+      add(point, 'span', '', 'Wynik pacjenta');
+    }
+    if (axes.length > 1) add(legend, 'span', 'vilda-lab-same-scale', 'Wspólna skala osi');
+  }
+  function renderMotionToggle(parent, section, view, options) {
+    if (!view.result.visualAlert || options && options.historical) return;
+    var paused = !!(options && options.motionPaused);
+    var button = add(parent, 'button', 'vilda-lab-motion-toggle');
+    button.setAttribute('type', 'button');
+    function update() {
+      button.textContent = paused ? 'Wznów animacje' : 'Zatrzymaj animacje';
+      button.setAttribute('aria-pressed', String(paused));
+      section.className = section.className.replace(/\s+is-motion-paused\b/g, '') + (paused ? ' is-motion-paused' : '');
+    }
+    update();
+    if (typeof button.addEventListener === 'function') button.addEventListener('click', function () {
+      paused = !paused;
+      update();
+      if (options && typeof options.onMotionChange === 'function') options.onMotionChange(paused);
+    });
+  }
   function renderContents(parent, view, options) {
-    var compact = !!(options && options.compact);
     if (!options || !options.hideMeasurement) {
       add(parent, 'p', 'vilda-lab-result-label', 'Wynik ' + view.analyte);
-      add(parent, 'p', 'vilda-lab-result', view.result.text);
+      add(parent, 'p', 'vilda-lab-result' + (view.result.visualState ? ' ' + view.result.visualState : ''), view.result.text);
+      if (view.result.visualAlert) {
+        var alert = add(parent, 'div', 'vilda-lab-severity-summary ' + view.result.visualState);
+        add(alert, 'strong', 'vilda-lab-severity-summary-title', view.result.visualAlert.label);
+        add(alert, 'span', 'vilda-lab-severity-summary-scope', view.result.visualAlert.scope + (view.result.visualAlert.conditional ? ' · warunkowo' : ''));
+      }
     }
     if (view.result.note) add(parent, 'p', 'vilda-lab-note', view.result.note);
-    if (view.contextNote) add(parent, 'p', 'vilda-lab-context-note', view.contextNote);
     var clinical = add(parent, 'div', 'vilda-lab-clinical');
     clinical.setAttribute('data-clinical-code', /^[a-z_]+$/.test(view.clinical.code) ? view.clinical.code : 'unavailable');
     clinical.setAttribute('data-status', ['warning', 'notice', 'limited', 'out_of_scope', 'no_timing_alert'].includes(view.clinical.status) ? view.clinical.status : 'limited');
@@ -341,10 +464,11 @@
     // Akapity należą do zapisanej oceny. Nie tworzymy nowych ostrzeżeń na
     // podstawie dzisiejszych reguł podczas odczytu historycznego snapshotu.
     view.clinical.text.split(/\n\s*\n/).forEach(function (paragraph) { add(clinical, 'p', '', paragraph); });
-    if (view.summary.title !== view.clinical.title) add(parent, 'p', 'vilda-lab-summary', view.summary.title);
-    add(parent, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
-    if (view.assayNote) add(parent, 'p', 'vilda-lab-note', view.assayNote);
-    if (view.conditionNote) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', 'conditional-basal-untreated');
+    if (view.summary.status === 'attention' && view.summary.title !== view.clinical.title) add(parent, 'p', 'vilda-lab-summary', view.summary.title);
+    var comparisonHead = add(parent, 'div', 'vilda-lab-comparisons-head');
+    add(comparisonHead, 'h3', 'vilda-lab-biochemistry-title', 'Stężenie — osobne porównania');
+    if (view.conditionNote) add(comparisonHead, 'span', 'vilda-lab-conditional-badge', 'Warunkowo');
+    renderMotionToggle(comparisonHead, parent, view, options);
     if (view.reportedRange) {
       var supplied = add(parent, 'div', 'vilda-lab-comparison vilda-lab-reported-range');
       supplied.setAttribute('data-comparison', 'reported');
@@ -353,34 +477,42 @@
       add(supplied, 'strong', 'vilda-lab-comparison-status', view.reportedRange.label);
       add(supplied, 'p', 'vilda-lab-range', [view.reportedRange.raw, view.reportedRange.unit].filter(Boolean).join(' '));
       add(supplied, 'p', 'vilda-lab-note', 'Porównanie liczbowe. Nie potwierdza zastosowania zakresu do wieku, stadium ani metody.');
-      if (!compact) list(supplied, view.reportedRange.reasons, 'vilda-lab-reasons');
     }
     if (view.reportedRangeConflict) add(parent, 'p', 'vilda-lab-summary', REASONS.reported_range_reference_disagreement);
     var comparisons = add(parent, 'div', 'vilda-lab-comparisons');
     view.comparisons.forEach(function (comparison) {
-      if (compact && comparison.key === 'local' && comparison.status === 'unavailable') return;
+      if (comparison.key === 'local' && comparison.status === 'unavailable') return;
       var row = add(comparisons, 'div', 'vilda-lab-comparison');
       row.setAttribute('data-comparison', comparison.key);
       row.setAttribute('data-status', comparison.status);
+      row.setAttribute('data-visual-state', comparison.visualState);
       if (comparison.conditional) row.setAttribute('data-applicability', 'conditional');
       var head = add(row, 'div', 'vilda-lab-comparison-head');
-      add(head, 'h4', '', comparison.title);
-      add(head, 'span', 'vilda-lab-comparison-status', comparison.label);
+      add(head, 'h4', '', comparison.shortTitle);
+      var status = add(head, 'span', 'vilda-lab-comparison-status' + (comparison.visualState ? ' ' + comparison.visualState : ''));
+      if (comparison.visualState === 'is-uwaga-high' || comparison.visualState === 'is-uwaga-low') add(status, 'span', 'vilda-lab-status-icon', '!').setAttribute('aria-hidden', 'true');
+      add(status, 'span', '', comparison.visualLabel);
+      renderAxis(row, comparison, view.result);
       if (comparison.rangeText) add(row, 'p', 'vilda-lab-range', comparison.rangeText);
-      if (!compact) renderComparisonContext(row, comparison);
-      else if (comparison.key === 'local') renderComparisonContext(details(row, 'Źródło i zastosowanie zakresu'), comparison);
     });
-    add(parent, 'p', 'vilda-lab-note', 'Zakresy według wieku i stadium oceniono oddzielnie. Porównanie stężenia nie rozstrzyga przyczyny rozwoju.');
-    var context = details(parent, 'Kontekst użyty w ocenie');
-    var dl = add(context, 'dl', 'vilda-lab-context');
+    renderLegend(parent, view.comparisons);
+    if (view.conditionNote) add(parent, 'p', 'vilda-lab-reference-conditions', view.conditionNote).setAttribute('data-reference-conditions', 'conditional-basal-untreated');
+    if (view.contextNote) add(parent, 'p', 'vilda-lab-context-note', view.contextNote);
+    var more = details(parent, 'Szczegóły oceny i źródła');
+    if (view.summary.status !== 'attention' && view.summary.title !== view.clinical.title) add(more, 'p', 'vilda-lab-summary', view.summary.title);
+    add(more, 'p', 'vilda-lab-note', 'Zakresy według wieku i stadium oceniono oddzielnie. Porównanie stężenia nie rozstrzyga przyczyny rozwoju.');
+    if (view.assayNote) add(more, 'p', 'vilda-lab-note', view.assayNote);
+    if (view.result.visualAlert) add(more, 'p', 'vilda-lab-note', 'Wyróżnienie znacznego odchylenia stosuje próg wyświetlania wspólny z innymi hormonami: wynik >2 × górna granica albo <0,5 × znana dodatnia dolna granica. Nie jest to próg rozpoznania ani ocena pilności.');
+    add(more, 'h4', '', 'Kontekst użyty w ocenie');
+    var dl = add(more, 'dl', 'vilda-lab-context');
     view.context.forEach(function (row) { add(dl, 'dt', '', row.label); add(dl, 'dd', '', row.value); });
-    var more = details(parent, 'Ograniczenia i źródła');
+    add(more, 'h4', '', 'Ograniczenia i źródła');
     list(more, view.limitations, 'vilda-lab-limitations');
-    if (compact) view.comparisons.forEach(function (comparison) {
+    view.comparisons.forEach(function (comparison) {
       add(more, 'h4', '', comparison.title);
       renderComparisonContext(more, comparison);
     });
-    if (compact && view.reportedRange) list(more, view.reportedRange.reasons, 'vilda-lab-reasons');
+    if (view.reportedRange) list(more, view.reportedRange.reasons, 'vilda-lab-reasons');
     add(more, 'p', 'vilda-lab-note', 'Ocena nie ustala etiologii, nie rozpoznaje CPP ani nie dobiera leczenia. Zakresy zależą od konkretnej metody i populacji.');
     var sources = add(more, 'ul', 'vilda-lab-sources');
     view.sources.forEach(function (source) {
@@ -392,7 +524,7 @@
       if (source.organization || source.version) add(li, 'span', '', ' · ' + [source.organization, source.version].filter(Boolean).join(' · '));
     });
     add(more, 'p', 'vilda-lab-versions', view.versions.join(' · '));
-    if (options && options.expandContext) context.setAttribute('open', '');
+    if (options && options.expandContext) more.setAttribute('open', '');
   }
   function mount(container, status, summary, options) {
     if (!container || !container.ownerDocument || typeof container.appendChild !== 'function') return null;
@@ -424,9 +556,9 @@
       var old = details(section, 'Poprzednia ocena — wyłącznie historycznie');
       old.className += ' vilda-lab-history';
       add(old, 'p', 'vilda-lab-note', 'Poniższe dane i interpretacja pochodzą ze wcześniejszego zapisu.');
-      renderContents(old, historical, options);
+      renderContents(old, historical, Object.assign({}, options, { historical: true }));
     }
     return { valid: false, status: normalized.status };
   }
-  return Object.freeze({ version: '1.3.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
+  return Object.freeze({ version: '1.4.0', formatResult: formatResult, buildView: buildView, renderEvaluation: renderEvaluation, renderAssessment: renderAssessment });
 });

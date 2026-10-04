@@ -105,9 +105,9 @@ test('unknown context has no adult fallback and an unsaved method cannot suppres
 
   await page.locator('#labPubertySaveProfile').click();
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'above');
-  await expect(comparison(page, 'age')).toContainText('Powyżej wskazanego zakresu');
+  await expect(comparison(page, 'age').getByRole('img')).toHaveAccessibleName(/Powyżej wskazanego zakresu/);
   await expect(comparison(page, 'stage')).toHaveAttribute('data-status', 'within');
-  await expect(comparison(page, 'stage')).toContainText('W obrębie wskazanego zakresu');
+  await expect(comparison(page, 'stage').getByRole('img')).toHaveAccessibleName(/W obrębie wskazanego zakresu/);
   await expectEarlyDevelopment(page);
   await expect(assessment(page)).toContainText('G4');
   await expectOriginalLayout(page);

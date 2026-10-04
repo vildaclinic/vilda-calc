@@ -6,6 +6,8 @@
   --vilda-lab-soft: #eff6f6;
   --vilda-lab-amber: #754113;
   --vilda-lab-amber-bg: #fff6e8;
+  --vilda-lab-high: #911c1c;
+  --vilda-lab-low: #a6491e;
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
@@ -15,76 +17,875 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.vilda-lab-assessment * { box-sizing: border-box; min-width: 0; }
-.vilda-lab-assessment p { margin: var(--space-6px) 0; }
-.vilda-lab-assessment h3 { margin: 0 0 7px; font-size: 1rem; line-height: 1.4; }
-.vilda-lab-assessment h4 { margin: 0; font-size: .9rem; line-height: 1.4; }
-.vilda-lab-assessment .vilda-lab-result-label { font-size: .75rem; font-weight: 650; color: var(--vilda-lab-muted); letter-spacing: .04em; }
-.vilda-lab-assessment .vilda-lab-result { font-size: 1.2rem; font-weight: 700; line-height: 1.25; margin-bottom: var(--space-10px); }
-.vilda-lab-assessment .vilda-lab-clinical { padding: 13px var(--space-14px); margin: var(--space-14px) 0; border: var(--border-hairline) solid var(--vilda-lab-line); border-radius: var(--radius-11); background: var(--vilda-lab-soft); }
+
+.vilda-lab-assessment * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.vilda-lab-assessment p {
+  margin: var(--space-6px) 0;
+}
+
+.vilda-lab-assessment h3 {
+  margin: 0 0 7px;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.vilda-lab-assessment h4 {
+  margin: 0;
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.vilda-lab-assessment .vilda-lab-result-label {
+  font-size: .75rem;
+  font-weight: 650;
+  color: var(--vilda-lab-muted);
+  letter-spacing: .04em;
+}
+
+.vilda-lab-assessment .vilda-lab-result {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: var(--space-10px);
+}
+
+.vilda-lab-assessment .vilda-lab-clinical {
+  padding: 13px var(--space-14px);
+  margin: var(--space-14px) 0;
+  border: var(--border-hairline) solid var(--vilda-lab-line);
+  border-left: 4px solid #8fa6af;
+  border-radius: var(--radius-11);
+  background: var(--vilda-lab-soft);
+}
+
 .vilda-lab-assessment .vilda-lab-clinical[data-status="warning"],
-.vilda-lab-assessment .vilda-lab-clinical[data-status="notice"] { color: var(--vilda-lab-amber); border-color: #efd3ae; background: var(--vilda-lab-amber-bg); }
-.vilda-lab-assessment .vilda-lab-clinical h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
-.vilda-lab-assessment .vilda-lab-clinical strong { display: block; font-size: 1rem; }
-.vilda-lab-assessment .vilda-lab-clinical p { font-size: .85rem; }
-.vilda-lab-assessment .vilda-lab-summary { font-size: .85rem; font-weight: 600; margin: var(--space-12px) 0; }
-.vilda-lab-assessment .vilda-lab-biochemistry-title { margin-top: var(--space-18px); }
-.vilda-lab-assessment .vilda-lab-comparison { padding: 11px 0; border-bottom: var(--border-hairline) solid var(--vilda-lab-line); }
-.vilda-lab-assessment .vilda-lab-comparison-head { display: flex; gap: var(--space-8px) var(--space-12px); flex-wrap: wrap; align-items: center; justify-content: space-between; }
-.vilda-lab-assessment .vilda-lab-comparison-status { display: inline-block; padding: 3px 7px; border-radius: 5px; background: #f0f2f4; color: #445a64; font-size: .75rem; font-weight: 600; }
+.vilda-lab-assessment .vilda-lab-clinical[data-status="notice"] {
+  color: var(--vilda-lab-amber);
+  border-color: #efd3ae;
+  border-left-color: #cc862e;
+  background: var(--vilda-lab-amber-bg);
+}
+
+.vilda-lab-assessment .vilda-lab-clinical h3 {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.vilda-lab-assessment .vilda-lab-clinical strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.vilda-lab-assessment .vilda-lab-clinical p {
+  font-size: .85rem;
+}
+
+.vilda-lab-assessment .vilda-lab-summary {
+  font-size: .85rem;
+  font-weight: 600;
+  margin: var(--space-12px) 0;
+}
+
+.vilda-lab-assessment .vilda-lab-comparisons-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8px) var(--space-12px);
+  margin-top: var(--space-18px);
+}
+
+.vilda-lab-assessment .vilda-lab-biochemistry-title {
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: .95rem;
+}
+
+.vilda-lab-assessment .vilda-lab-conditional-badge {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #e9f0f2;
+  color: #526b75;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.vilda-lab-assessment .vilda-lab-motion-toggle {
+  width: auto;
+  min-height: 32px;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-6px) var(--space-8px);
+  border: var(--border-hairline) solid var(--vilda-lab-line);
+  border-radius: var(--radius-6);
+  color: #526b75;
+  background: #fff;
+  font: inherit;
+  font-size: .75rem;
+  line-height: 1.4;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.vilda-lab-assessment .vilda-lab-motion-toggle:hover,
+.vilda-lab-assessment .vilda-lab-motion-toggle[aria-pressed="true"] {
+  color: #355964;
+  border-color: #a8bdc4;
+  background: #eaf1f3;
+}
+
+.vilda-lab-assessment .vilda-lab-comparison {
+  padding: var(--space-14px) 0 15px;
+  border-bottom: var(--border-hairline) solid var(--vilda-lab-line);
+}
+
+.vilda-lab-assessment .vilda-lab-comparison-head {
+  display: flex;
+  gap: var(--space-8px) var(--space-12px);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vilda-lab-assessment .vilda-lab-comparison-head h4 {
+  color: #365761;
+  font-size: .875rem;
+}
+
+.vilda-lab-assessment .vilda-lab-comparison-status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-4px);
+  max-width: 100%;
+  padding: var(--space-4px) var(--space-8px);
+  border-radius: var(--radius-6);
+  background: #f0f2f4;
+  color: #445a64;
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .vilda-lab-assessment .vilda-lab-comparison[data-status="above"] .vilda-lab-comparison-status,
-.vilda-lab-assessment .vilda-lab-comparison[data-status="below"] .vilda-lab-comparison-status { color: var(--vilda-lab-amber); background: var(--vilda-lab-amber-bg); }
-.vilda-lab-assessment .vilda-lab-comparison[data-status="within"] .vilda-lab-comparison-status { color: #245c67; background: var(--vilda-lab-soft); }
-.vilda-lab-assessment .vilda-lab-comparison[data-applicability="conditional"][data-status="within"] .vilda-lab-comparison-status { color: #445a64; background: #f0f2f4; }
-.vilda-lab-assessment .vilda-lab-reference-conditions { margin: var(--space-8px) 0 var(--space-12px); padding: 9px 11px; border-left: var(--border-pro) solid #9aaab0; background: #f4f6f7; color: #445a64; font-size: .82rem; line-height: 1.5; }
-.vilda-lab-assessment .vilda-lab-range { font-size: .9rem; font-weight: 600; }
+.vilda-lab-assessment .vilda-lab-comparison[data-status="below"] .vilda-lab-comparison-status {
+  color: var(--vilda-lab-amber);
+  background: var(--vilda-lab-amber-bg);
+}
+
+.vilda-lab-assessment .vilda-lab-comparison[data-status="within"] .vilda-lab-comparison-status {
+  color: #245c67;
+  background: var(--vilda-lab-soft);
+}
+
+.vilda-lab-assessment .vilda-lab-comparison[data-applicability="conditional"][data-status="within"] .vilda-lab-comparison-status {
+  color: #445a64;
+  background: #f0f2f4;
+}
+
+.vilda-lab-assessment .vilda-lab-reference-conditions {
+  margin: var(--space-8px) 0 var(--space-12px);
+  padding: 9px 11px;
+  border-left: var(--border-pro) solid #9aaab0;
+  background: #f4f6f7;
+  color: #445a64;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.vilda-lab-assessment .vilda-lab-range {
+  font-size: .82rem;
+  font-weight: 400;
+  color: var(--vilda-lab-muted);
+}
+
 .vilda-lab-assessment .vilda-lab-note,
 .vilda-lab-assessment .vilda-lab-context-note,
 .vilda-lab-assessment .vilda-lab-metadata,
-.vilda-lab-assessment .vilda-lab-reasons { color: var(--vilda-lab-muted); font-size: .8rem; }
-.vilda-lab-assessment .vilda-lab-reasons { padding-left: var(--space-18px); margin: var(--space-6px) 0; }
-.vilda-lab-assessment .vilda-lab-details { border-top: var(--border-hairline) solid var(--vilda-lab-line); padding: var(--space-12px) 0; margin-top: var(--space-10px); }
-.vilda-lab-assessment .vilda-lab-details summary { cursor: pointer; font-weight: 600; font-size: .85rem; }
-.vilda-lab-assessment .vilda-lab-details summary:focus-visible,
-.vilda-lab-assessment a:focus-visible { outline: var(--border-emphasis) solid #297d82; outline-offset: 4px; }
-.vilda-lab-assessment .vilda-lab-context { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(0, 1.6fr); column-gap: var(--space-16px); row-gap: var(--space-8px); font-size: .8rem; margin: var(--space-14px) 0 0; }
-.vilda-lab-assessment .vilda-lab-context dt { color: var(--vilda-lab-muted); }
-.vilda-lab-assessment .vilda-lab-context dd { margin: 0; }
-.vilda-lab-assessment .vilda-lab-limitations,
-.vilda-lab-assessment .vilda-lab-sources { padding-left: var(--space-18px); font-size: .8rem; margin: var(--space-12px) 0; }
-.vilda-lab-assessment .vilda-lab-limitations li,
-.vilda-lab-assessment .vilda-lab-sources li { margin: var(--space-6px) 0; }
-.vilda-lab-assessment a { color: #23616d; text-decoration: underline; }
-.vilda-lab-assessment .vilda-lab-versions { color: var(--vilda-lab-muted); font-size: .75rem; }
-.vilda-lab-assessment[data-assessment-status="invalidated"],
-.vilda-lab-assessment[data-assessment-status="unavailable"] { padding: var(--space-12px); border: var(--border-hairline) solid var(--vilda-lab-line); border-radius: var(--radius-9); background: #f5f7f8; }
-.vilda-lab-assessment .vilda-lab-history .vilda-lab-clinical,
-.vilda-lab-assessment .vilda-lab-history .vilda-lab-comparison-status { color: #53636d; border-color: var(--vilda-lab-line); background: #edf0f2; }
-.vilda-lab-assessment.is-compact .vilda-lab-result { font-size: 1.2rem; margin-bottom: var(--space-8px); }
-.vilda-lab-assessment.is-compact .vilda-lab-clinical { margin: var(--space-10px) 0; padding: var(--space-10px); }
-.vilda-lab-assessment.is-compact .vilda-lab-clinical strong { font-size: .9rem; }
-.vilda-lab-assessment.is-compact .vilda-lab-comparison { padding: var(--space-8px) 0; }
-.vilda-lab-assessment .vilda-lab-context-note { border-left: var(--border-emphasis) solid var(--vilda-lab-line); padding-left: var(--space-10px); }
-.vilda-lab-assessment .vilda-lab-reported-range { margin-bottom: var(--space-8px); }
-.vilda-lab-assessment .vilda-lab-reported-range h4 { margin-bottom: var(--space-6px); }
-.vilda-lab-assessment.is-compact .vilda-lab-comparison .vilda-lab-details { padding: var(--space-6px) 0; border-top: 0; margin-top: var(--space-6px); }
-@media (max-width: 480px) {
-  .vilda-lab-assessment .vilda-lab-context { grid-template-columns: minmax(0, 1fr); row-gap: 3px; }
-  .vilda-lab-assessment .vilda-lab-context dd { margin-bottom: 7px; }
-  .vilda-lab-assessment .vilda-lab-comparison-head { align-items: flex-start; }
-  .vilda-lab-assessment .vilda-lab-clinical { padding: 11px; }
+.vilda-lab-assessment .vilda-lab-reasons {
+  color: var(--vilda-lab-muted);
+  font-size: .8rem;
 }
+
+.vilda-lab-assessment .vilda-lab-reasons {
+  padding-left: var(--space-18px);
+  margin: var(--space-6px) 0;
+}
+
+.vilda-lab-assessment .vilda-lab-details {
+  border-top: var(--border-hairline) solid var(--vilda-lab-line);
+  padding: var(--space-12px) 0;
+  margin-top: var(--space-10px);
+}
+
+.vilda-lab-assessment .vilda-lab-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: .85rem;
+}
+
+.vilda-lab-assessment .vilda-lab-details summary:focus-visible,
+.vilda-lab-assessment .vilda-lab-motion-toggle:focus-visible,
+.vilda-lab-assessment a:focus-visible {
+  outline: var(--border-emphasis) solid #297d82;
+  outline-offset: 4px;
+}
+
+.vilda-lab-assessment .vilda-lab-details > h4 {
+  margin-top: var(--space-18px);
+}
+
+.vilda-lab-assessment .vilda-lab-context {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(0, 1.6fr);
+  column-gap: var(--space-16px);
+  row-gap: var(--space-8px);
+  font-size: .8rem;
+  margin: var(--space-14px) 0 0;
+}
+
+.vilda-lab-assessment .vilda-lab-context dt {
+  color: var(--vilda-lab-muted);
+}
+
+.vilda-lab-assessment .vilda-lab-context dd {
+  margin: 0;
+}
+
+.vilda-lab-assessment .vilda-lab-limitations,
+.vilda-lab-assessment .vilda-lab-sources {
+  padding-left: var(--space-18px);
+  font-size: .8rem;
+  margin: var(--space-12px) 0;
+}
+
+.vilda-lab-assessment .vilda-lab-limitations li,
+.vilda-lab-assessment .vilda-lab-sources li {
+  margin: var(--space-6px) 0;
+}
+
+.vilda-lab-assessment a {
+  color: #23616d;
+  text-decoration: underline;
+}
+
+.vilda-lab-assessment .vilda-lab-versions {
+  color: var(--vilda-lab-muted);
+  font-size: .75rem;
+}
+
+.vilda-lab-assessment[data-assessment-status="invalidated"],
+.vilda-lab-assessment[data-assessment-status="unavailable"] {
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--vilda-lab-line);
+  border-radius: var(--radius-9);
+  background: #f5f7f8;
+}
+
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-clinical,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-comparison-status {
+  color: #53636d;
+  border-color: var(--vilda-lab-line);
+  background: #edf0f2;
+}
+
+.vilda-lab-assessment.is-compact .vilda-lab-result {
+  font-size: 1.2rem;
+  margin-bottom: var(--space-8px);
+}
+
+.vilda-lab-assessment.is-compact .vilda-lab-clinical {
+  margin: var(--space-10px) 0;
+  padding: var(--space-10px);
+}
+
+.vilda-lab-assessment.is-compact .vilda-lab-clinical strong {
+  font-size: 1rem;
+}
+
+.vilda-lab-assessment.is-compact .vilda-lab-comparison {
+  padding: var(--space-12px) 0 13px;
+}
+
+.vilda-lab-assessment .vilda-lab-context-note {
+  border-left: var(--border-emphasis) solid var(--vilda-lab-line);
+  padding-left: var(--space-10px);
+}
+
+.vilda-lab-assessment .vilda-lab-reported-range {
+  margin-bottom: var(--space-8px);
+}
+
+.vilda-lab-assessment .vilda-lab-reported-range h4 {
+  margin-bottom: var(--space-6px);
+}
+
+.vilda-lab-assessment.is-compact .vilda-lab-comparison .vilda-lab-details {
+  padding: var(--space-6px) 0;
+  border-top: 0;
+  margin-top: var(--space-6px);
+}
+
+/* The two reference bands share a scale; a censored measurement has no point. */
+.vilda-lab-assessment .vilda-lab-axis {
+  position: relative;
+  height: 70px;
+  margin: 9px var(--space-10px) 0;
+  color: #39535c;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-track {
+  position: absolute;
+  top: 31px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  border-radius: var(--radius-6);
+  background: #e9eeee;
+  box-shadow: inset 0 1px 2px #102e3910;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-below {
+  position: absolute;
+  height: 100%;
+  left: 0;
+  width: var(--low);
+  border-radius: var(--radius-6) 0 0 var(--radius-6);
+  background: #e5bca2;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-above {
+  position: absolute;
+  height: 100%;
+  left: var(--high);
+  right: 0;
+  border-radius: 0 var(--radius-6) var(--radius-6) 0;
+  background: linear-gradient(90deg, #ebc1c2, #ddb1b4);
+}
+
+.vilda-lab-assessment .vilda-lab-axis-band {
+  position: absolute;
+  height: 100%;
+  left: var(--low);
+  width: calc(var(--high) - var(--low));
+  background: #8bc6b5;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-band.is-open-lower {
+  background: linear-gradient(90deg, #dcece6, #8bc6b5 12px);
+  border-radius: var(--radius-6) 0 0 var(--radius-6);
+}
+
+.vilda-lab-assessment .vilda-lab-axis-band.is-open-upper {
+  background: linear-gradient(90deg, #8bc6b5 calc(100% - 12px), #dcece6);
+  border-radius: 0 var(--radius-6) var(--radius-6) 0;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-bound {
+  position: absolute;
+  height: 17px;
+  width: 1px;
+  top: -3px;
+  background: #336c6066;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-bound.is-lower {
+  left: var(--low);
+}
+
+.vilda-lab-assessment .vilda-lab-axis-bound.is-upper {
+  left: var(--high);
+}
+
+.vilda-lab-assessment .vilda-lab-axis-marker {
+  position: absolute;
+  top: 50%;
+  left: var(--value);
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border: var(--border-pro) solid currentColor;
+  border-radius: var(--radius-circle);
+  transform: translate(-50%, -50%);
+  color: #3b7f80;
+  z-index: 2;
+  box-shadow: 0 0 0 4px #ffffffa6;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-marker.above {
+  color: #b43b42;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-marker.below {
+  color: #b76b35;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-value {
+  position: absolute;
+  top: 0;
+  left: clamp(min(50%, var(--label-edge, 34px)), var(--value), calc(100% - min(50%, var(--label-edge, 34px))));
+  transform: translateX(-50%);
+  max-width: min(100%, calc(var(--label-edge, 34px) + var(--label-edge, 34px)));
+  font-size: .82rem;
+  font-weight: 650;
+  line-height: 21px;
+  padding: 1px var(--space-6px);
+  border-radius: 5px;
+  color: #356e75;
+  background: #eaf3f3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-value.above {
+  color: #96343a;
+  background: #fbebec;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-value.below {
+  color: #924818;
+  background: #fff1e2;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-no-value {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  color: #627780;
+  font-size: .75rem;
+  line-height: 21px;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-min,
+.vilda-lab-assessment .vilda-lab-axis-max {
+  position: absolute;
+  top: 50px;
+  color: #657a80;
+  font-size: .69rem;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-min {
+  left: 0;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-max {
+  right: 0;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6px) 17px;
+  align-items: center;
+  color: #5e747c;
+  font-size: .75rem;
+  margin-top: var(--space-12px);
+}
+
+.vilda-lab-assessment .vilda-lab-axis-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6px);
+}
+
+.vilda-lab-assessment .vilda-lab-legend-band {
+  flex: none;
+  width: 19px;
+  height: 7px;
+  border-radius: 3px;
+  background: #8bc6b5;
+}
+
+.vilda-lab-assessment .vilda-lab-legend-point {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-circle);
+  border: var(--border-emphasis) solid #3b7f80;
+  background: #fff;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-legend .vilda-lab-same-scale {
+  font-size: .69rem;
+  color: #627780;
+  margin-left: auto;
+}
+
+/* Match the converter's severe-result motion without reclassifying the patient. */
+.vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-high {
+  border-color: var(--vilda-lab-high);
+  color: var(--vilda-lab-high);
+  background: #fff5f5;
+  animation: vilda-lab-marker-shake .45s ease-in-out infinite, vilda-lab-marker-pulse-red .7s ease-in-out infinite;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-low {
+  border-color: var(--vilda-lab-low);
+  color: var(--vilda-lab-low);
+  background: #fff7f0;
+  animation: vilda-lab-marker-shake .45s ease-in-out infinite, vilda-lab-marker-pulse-amber .7s ease-in-out infinite;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-high::before,
+.vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-low::before {
+  content: '!';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: currentColor;
+  font-size: .85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-high::after,
+.vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-low::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  border-radius: var(--radius-circle);
+  border: var(--border-emphasis) solid currentColor;
+  pointer-events: none;
+  animation: vilda-lab-halo-ripple-fast .9s ease-out infinite;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-value.is-uwaga-high,
+.vilda-lab-assessment .vilda-lab-comparison .vilda-lab-comparison-status.is-uwaga-high {
+  color: var(--vilda-lab-high);
+  background: #fff0f0;
+  font-weight: 700;
+}
+
+.vilda-lab-assessment .vilda-lab-axis-value.is-uwaga-low,
+.vilda-lab-assessment .vilda-lab-comparison .vilda-lab-comparison-status.is-uwaga-low {
+  color: var(--vilda-lab-low);
+  background: #fff1e2;
+  font-weight: 700;
+}
+
+.vilda-lab-assessment .vilda-lab-result.is-above {
+  color: var(--error);
+}
+
+.vilda-lab-assessment .vilda-lab-result.is-below {
+  color: #d8632a;
+}
+
+.vilda-lab-assessment .vilda-lab-result.is-uwaga-high {
+  color: var(--vilda-lab-high);
+  animation: vilda-lab-value-glow-red .9s ease-in-out infinite;
+}
+
+.vilda-lab-assessment .vilda-lab-result.is-uwaga-low {
+  color: var(--vilda-lab-low);
+  animation: vilda-lab-value-glow-amber .9s ease-in-out infinite;
+}
+
+.vilda-lab-assessment .vilda-lab-severity-summary,
+#labResultSection.lab-puberty-active .vilda-lab-severity-summary {
+  align-self: center;
+  flex: 0 1 350px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 7px var(--space-10px);
+  border-left: var(--border-pro) solid #911c1c;
+  border-radius: 0 var(--radius-6) var(--radius-6) 0;
+  color: #7a1414;
+  background: rgba(145, 28, 28, .06);
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+
+#labResultSection.lab-puberty-active #labResultBig > .vilda-lab-severity-summary {
+  margin-left: auto;
+}
+
+.vilda-lab-assessment .vilda-lab-severity-summary.is-uwaga-low,
+#labResultSection.lab-puberty-active .vilda-lab-severity-summary.is-uwaga-low {
+  color: #6a3a14;
+  border-left-color: #a6491e;
+  background: rgba(166, 73, 30, .06);
+}
+
+.vilda-lab-assessment .vilda-lab-severity-summary-title,
+#labResultSection.lab-puberty-active .vilda-lab-severity-summary-title {
+  display: block;
+  color: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+
+.vilda-lab-assessment .vilda-lab-severity-summary-scope,
+#labResultSection.lab-puberty-active .vilda-lab-severity-summary-scope {
+  display: block;
+  margin-top: 2px;
+  color: inherit;
+  font-size: .75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+
+@keyframes vilda-lab-marker-shake {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  10% {
+    transform: translate(-58%, -50%);
+  }
+  20% {
+    transform: translate(-42%, -50%);
+  }
+  30% {
+    transform: translate(-55%, -52%);
+  }
+  40% {
+    transform: translate(-45%, -48%);
+  }
+  50% {
+    transform: translate(-52%, -50%);
+  }
+  60% {
+    transform: translate(-48%, -50%);
+  }
+}
+
+@keyframes vilda-lab-marker-pulse-red {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(185, 28, 28, .7), 0 0 16px rgba(185, 28, 28, .8);
+    border-width: var(--border-pro);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(185, 28, 28, .05), 0 0 28px rgba(185, 28, 28, .9);
+    border-width: 4px;
+  }
+}
+
+@keyframes vilda-lab-marker-pulse-amber {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(216, 90, 48, .7), 0 0 16px rgba(216, 90, 48, .8);
+    border-width: var(--border-pro);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(216, 90, 48, .05), 0 0 28px rgba(216, 90, 48, .9);
+    border-width: 4px;
+  }
+}
+
+@keyframes vilda-lab-halo-ripple-fast {
+  0% {
+    transform: translate(-50%, -50%) scale(.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3.2);
+    opacity: 0;
+  }
+}
+
+@keyframes vilda-lab-value-glow-red {
+  0%,
+  100% {
+    text-shadow: 0 0 12px rgba(185, 28, 28, .35);
+  }
+  50% {
+    text-shadow: 0 0 24px rgba(185, 28, 28, .7);
+  }
+}
+
+@keyframes vilda-lab-value-glow-amber {
+  0%,
+  100% {
+    text-shadow: 0 0 12px rgba(216, 90, 48, .35);
+  }
+  50% {
+    text-shadow: 0 0 24px rgba(216, 90, 48, .7);
+  }
+}
+
+/* A stopped animation retains its warning colour, text and exclamation mark. */
+.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker,
+.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker::after,
+.vilda-lab-assessment.is-motion-paused .vilda-lab-result,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker::after,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-result,
+#labResultSection.lab-puberty-active.is-motion-paused .lab-result-big-value {
+  animation: none;
+}
+
+.vilda-lab-assessment.is-motion-paused .vilda-lab-axis-marker::after,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker::after {
+  opacity: 0;
+}
+
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-marker,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-value,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-comparison .vilda-lab-comparison-status,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-result,
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-severity-summary {
+  color: #53636d;
+  border-color: #9aabb0;
+  background: #edf0f2;
+}
+
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-axis-band {
+  background: #c7d5d8;
+}
+
+.vilda-lab-assessment .vilda-lab-history .vilda-lab-motion-toggle {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .vilda-lab-assessment .vilda-lab-context {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 3px;
+  }
+  .vilda-lab-assessment .vilda-lab-context dd {
+    margin-bottom: 7px;
+  }
+  .vilda-lab-assessment .vilda-lab-comparison-head {
+    align-items: flex-start;
+  }
+  .vilda-lab-assessment .vilda-lab-clinical {
+    padding: 11px;
+  }
+  .vilda-lab-assessment .vilda-lab-motion-toggle {
+    min-height: 44px;
+  }
+  .vilda-lab-assessment .vilda-lab-comparison-head {
+    gap: 5px var(--space-8px);
+  }
+  .vilda-lab-assessment .vilda-lab-comparison-head h4 {
+    font-size: .82rem;
+    padding-top: 3px;
+  }
+  .vilda-lab-assessment .vilda-lab-comparison-status {
+    font-size: .69rem;
+    margin-left: auto;
+    padding: var(--space-4px) var(--space-6px);
+  }
+  .vilda-lab-assessment .vilda-lab-axis {
+    margin: var(--space-8px) 9px 0;
+    height: 69px;
+  }
+  .vilda-lab-assessment .vilda-lab-axis-legend {
+    gap: var(--space-6px) 13px;
+    font-size: .69rem;
+  }
+  .vilda-lab-assessment .vilda-lab-axis-legend .vilda-lab-same-scale {
+    margin-left: 0;
+    width: 100%;
+  }
+  #labResultSection.lab-puberty-active #labResultBig > .vilda-lab-severity-summary {
+    flex: 1 0 100%;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-high,
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-low,
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-high::after,
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-low::after,
+  .vilda-lab-assessment .vilda-lab-result.is-uwaga-high,
+  .vilda-lab-assessment .vilda-lab-result.is-uwaga-low,
+  #labResultSection.lab-puberty-active .lab-result-big-value {
+    animation: none;
+    transition: none;
+  }
+  .vilda-lab-assessment .vilda-lab-axis-marker::after {
+    opacity: 0;
+  }
+}
+
 @media print {
-  .vilda-lab-assessment { color: #000; break-inside: avoid; }
-  .vilda-lab-assessment a { color: #000; }
+  .vilda-lab-assessment {
+    color: #000;
+    break-inside: avoid;
+  }
+  .vilda-lab-assessment a {
+    color: #000;
+  }
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-high,
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-low,
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-high::after,
+  .vilda-lab-assessment .vilda-lab-axis-marker.is-uwaga-low::after,
+  .vilda-lab-assessment .vilda-lab-result.is-uwaga-high,
+  .vilda-lab-assessment .vilda-lab-result.is-uwaga-low,
+  #labResultSection.lab-puberty-active .lab-result-big-value {
+    animation: none;
+    transition: none;
+    text-shadow: none;
+  }
+  .vilda-lab-assessment .vilda-lab-axis-marker::after {
+    display: none;
+  }
+  .vilda-lab-assessment .vilda-lab-motion-toggle {
+    display: none;
+  }
+  .vilda-lab-assessment .vilda-lab-axis-track {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }
 
 /* Saved assessments in existing patient-card and calendar hosts. */
-.vilda-lab-assessment-history { margin-top: var(--space-10px); max-height: 420px; overflow: auto; }
-.vilda-lab-assessment-history .vilda-lab-assessment-history-title { font-weight: 600; margin: 0 0 var(--space-8px); }
-.vilda-lab-assessment-history .vilda-lab-assessment-history-row { margin-bottom: var(--space-10px); }
-.vilda-lab-assessment-history .vilda-lab-assessment-history-label { font-weight: 600; font-size: .85rem; }
-.vilda-lab-trend-section.vilda-lab-trend-no-chart .vilda-lab-trend-foot { display: block !important; }
-.vilda-lab-trend-section.vilda-lab-trend-no-chart .vilda-trend-norm-chip { display: none !important; }
-.tz-pop .vilda-lab-popover-assessment { max-height: min(52vh, 420px); overflow-y: auto; }
-.vilda-lab-pin-date-note { font-size: .78rem; color: #5b6672; line-height: 1.5; }
+.vilda-lab-assessment-history {
+  margin-top: var(--space-10px);
+  max-height: 420px;
+  overflow: auto;
+}
+
+.vilda-lab-assessment-history .vilda-lab-assessment-history-title {
+  font-weight: 600;
+  margin: 0 0 var(--space-8px);
+}
+
+.vilda-lab-assessment-history .vilda-lab-assessment-history-row {
+  margin-bottom: var(--space-10px);
+}
+
+.vilda-lab-assessment-history .vilda-lab-assessment-history-label {
+  font-weight: 600;
+  font-size: .85rem;
+}
+
+.vilda-lab-trend-section.vilda-lab-trend-no-chart .vilda-lab-trend-foot {
+  display: block !important;
+}
+
+.vilda-lab-trend-section.vilda-lab-trend-no-chart .vilda-trend-norm-chip {
+  display: none !important;
+}
+
+.tz-pop .vilda-lab-popover-assessment {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+}
+
+.vilda-lab-pin-date-note {
+  font-size: .78rem;
+  color: #5b6672;
+  line-height: 1.5;
+}

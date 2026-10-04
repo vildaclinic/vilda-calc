@@ -2,6 +2,32 @@
 
 Stan dokumentu: 4 października 2026. Baza PR1: `audyt` `68993e35`; baza PR2 po scaleniu #528: `ad84e67b`; baza poprawek kontekstu klinicznego: `a347eac8`.
 
+## Prezentacja zakresów i znacznych odchyleń — 4.10.2026
+
+Zaakceptowany widok zachowuje układ formularza, dużą wartość i konwersje. Porównania wieku i stadium otrzymują osobne osie z pasmem zakresu i znacznikiem wyniku, na wspólnej skali liniowej. Granice pochodzą wyłącznie z zakresów utrwalonych w ocenie; wspólna skala nie tworzy wspólnej normy. Nieznana dolna granica pozostaje nieznana: początek osi w zerze nie stanowi nowej dolnej granicy RI, a cenzorowany dolny brzeg, np. `<0,02`, nie jest dokładnym progiem. Pełny zapis granic i operatorów pozostaje dostępny przy porównaniu.
+
+Warstwa prezentacji stosuje przyjętą wcześniej dla innych hormonów **konwencję wyróżnienia znacznego odchylenia**: wynik dokładny **większy niż dwukrotność górnej granicy** otrzymuje czerwone wyróżnienie, drżenie znacznika, wykrzyknik i etykietę „Uwaga — znacznie powyżej normy”. Wynik dokładny **mniejszy niż połowa znanej, dodatniej dolnej granicy** otrzymuje analogiczne wyróżnienie bursztynowe „Uwaga — znacznie poniżej normy”. Równość z tymi progami nie uruchamia silnego wyróżnienia. Reguła działa oddzielnie dla wieku i stadium oraz wyłącznie przy odpowiednio zapisanym statusie `above` lub `below`. Duża wartość wskazuje zakres będący podstawą wyróżnienia; sprzeczne kierunki nie są łączone w jedną ocenę prawidłowości.
+
+**To konwencja interfejsu, a nie nowy próg diagnostyczny, kryterium CPP, miara pilności lub zalecenie leczenia.** Źródłem tej konwencji jest istniejące `classifyResultState` w przeliczniku i zaakceptowana makieta, nie katalogi Mayo ani wytyczne. Dane referencyjne `2026-10-04.1`, dobór zakresów, silnik kliniczny, jednostki i statusy biochemiczne pozostają bez zmian. Zakresy nadal dotyczą konkretnych metod, populacji i protokołów R1/R2: surowicy, LH AnshLite CLIA lub FSH Roche Elecsys ECLIA, stężeń w IU/L i równoważnych mIU/mL. Ograniczenia kliniczne K1–K4 zachowują znaczenie.
+
+Warunkowe zestawienie nadal pokazuje warunki zastosowania poza zwijanymi szczegółami; silne wyróżnienie również jest oznaczone jako warunkowe. Nieznana/niezgodna metoda, znane leczenie, stymulacja i pozostałe blokady nie są obchodzone przez wykres. Wyniki `<x`, `≤x`, `>x`, `≥x`, `<LOD` i `<LOQ` zachowują operator: mogą mieć zapisane porównanie przedziałowe, ale nie otrzymują wymyślonego dokładnego punktu ani animowanego wyróżnienia. Zakres przepisany z wydruku pozostaje oddzielnym porównaniem; nie zastępuje zakresów wieku/stadium ani nie wycisza ich rozbieżności.
+
+Ocena rozwoju pozostaje widoczna niezależnie od koloru osi. Tekst zapisanej oceny, w tym dodatkowe akapity dotyczące OUN, regresji i objętości jąder niemowlęcia, zachowuje swoje znaczenie. Metadane, ograniczenia i źródła są zebrane w rozwijanych szczegółach. Kolor pasma „w zakresie” nie oznacza prawidłowości całego obrazu klinicznego. Zatrzymanie animacji oraz preferencja ograniczenia ruchu wyłączają ruch, zachowując kolor, wykrzyknik i tekst. Historyczny odczyt korzysta z zapisanej liczby, granic, warunków, źródeł i akapitów; nie wywołuje silnika ani nie uzupełnia dawnych zapisów dzisiejszym kontekstem. Unieważniona ocena pozostaje jawnie historyczna.
+
+Syntetyczne regresje wywołują produkcyjne funkcje oceny i renderera oraz rzeczywisty formularz:
+
+| Wejście | Oczekiwany widok |
+|---|---|
+| M, 2 lata 9 miesięcy, G3, LH2 IU/L, zgodna metoda, nieustalone leczenie/protokół | Warunkowe czerwone wyróżnienie dla wieku (`≤0,5`), spokojny znacznik w zakresie G3 (`0,09–4,2`), wspólna skala, zachowane ostrzeżenie o zbyt wczesnych cechach. |
+| To samo, LH1 / LH1,001 IU/L | Dokładnie 2× górna granica wieku: zwykłe odchylenie; dopiero LH1,001: silne czerwone wyróżnienie. |
+| M16/G3, LH0,02 IU/L, zgodna metoda, bazalne bez leczenia | Silne bursztynowe wyróżnienie względem znanych dodatnich dolnych granic; nie nowe rozpoznanie opóźnienia. |
+| Wynik równy 0,5× dolna granica / mniejszy od tej wartości | Odpowiednio zwykłe / silne dolne odchylenie; brak takiej reguły dla granicy zerowej, nieznanej lub cenzorowanej. |
+| LH `<LOD` lub `<0,02`, także przy zachowanym ostrzeżeniu klinicznym | Surowy zapis i operator; bez dokładnego punktu i bez silnego efektu. |
+| Znane leczenie, stymulacja lub brak zgodnej metody | Brak nieuprawnionej osi odniesienia i silnego efektu; niezależny komunikat kliniczny pozostaje. |
+| Zapisana ocena po zmianie bieżącego pacjenta | Te same zapisane granice, warunki i treść; brak ponownego wyliczenia lub backfill. |
+
+Formularz i renderer mają wersję `1.4.0`; silnik pozostaje `1.3.0`, a snapshot `1.2.0`. Regresje warstwy prezentacji znajdują się w `tests/unit/lab-assessment-axes.test.mjs`, `tests/unit/lab-assessment-ui.test.mjs`, `tests/unit/lab-minimal-context-snapshot-ui.test.mjs` i `tests/e2e/lab-puberty-result-presentation.spec.mjs`; korzystają z rzeczywistego silnika, renderera i formularza. Zmienia się hierarchia i siła wizualna informacji; nie zmieniają się obliczenia ani utrwalone interpretacje. Przegląd kliniczny właściciela pozostaje wymagany przed scaleniem, ponieważ wyróżnienie wyniku może wpływać na odczyt kliniczny.
+
 ## Minimalne dane i porównanie warunkowe — 4.10.2026
 
 Silnik, formularz i renderer `1.3.0`, helper snapshotu `1.2.0`. W poprzednim szybkim formularzu nieustalony kontekst oznaczenia blokował oba porównania, mimo że pole opisano jako opcjonalne. Obecnie wynik, jednostka, płeć, wiarygodny wiek oraz zgodna metoda wystarczają do **warunkowego porównania liczbowego** z dostępnym zakresem wieku. Typowane stadium dodaje osobne porównanie stadium; nie jest wymagane dla zakresu wieku.

@@ -118,11 +118,13 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     const host = documentDouble().createElement('div');
     ui.renderAssessment(host, assessment, { compact: true });
     const row = descendants(host, (node) => node.getAttribute('data-comparison') === 'local')[0];
-    expect(row.textContent).toContain('synthetic-lh-platform-2024');
-    expect(row.textContent).toContain('Fikcyjna pediatryczna populacja odniesienia');
-    expect(row.textContent).toContain('Fikcyjne Laboratorium Alfa');
-    expect(row.textContent).toContain('wersja źródła: raport-2024.3');
-    expect(row.textContent).toContain('wersja zakresu: range-2024.7');
+    expect(row.textContent).toContain('W zakresie');
+    const more = descendants(host, (node) => node.tagName === 'details')[0];
+    expect(more.textContent).toContain('synthetic-lh-platform-2024');
+    expect(more.textContent).toContain('Fikcyjna pediatryczna populacja odniesienia');
+    expect(more.textContent).toContain('Fikcyjne Laboratorium Alfa');
+    expect(more.textContent).toContain('wersja źródła: raport-2024.3');
+    expect(more.textContent).toContain('wersja zakresu: range-2024.7');
     expect(host.textContent).not.toContain('range-2026.1');
     expect(host.textContent).not.toContain('synthetic-new-platform');
     expect(ui.buildView(assessment.evaluation).context.find((item) => item.label === 'Metoda próbki').value).toContain('synthetic-lh-platform-2024');

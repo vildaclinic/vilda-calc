@@ -181,10 +181,10 @@ describe('LH/FSH — szybki widok i historyczny odczyt', () => {
     expect(visible).toContain('zbyt wcześnie');
     expect(visible).toContain('Objawy OUN:');
     expect(visible).toContain('Regresja cech dojrzewania:');
-    expect(visible).toContain('Względem wieku');
-    expect(visible).toContain('Względem stadium');
-    expect(visible).toContain('Powyżej wskazanego zakresu');
-    expect(visible).toContain('W obrębie wskazanego zakresu');
+    expect(visible).toContain('Dla wieku');
+    expect(visible).toContain('Dla stadium G4');
+    expect(visible).toContain('Znacznie powyżej normy');
+    expect(visible).toContain('W zakresie');
     expect(visible).not.toContain('Zakres laboratorium');
     expect(visible).not.toContain('Mayo');
     const details = descendants(host, (node) => node.tagName === 'details');
