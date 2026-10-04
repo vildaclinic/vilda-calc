@@ -9,7 +9,7 @@
   if (root) root.VildaLabPuberty = api;
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var DAY_MS = 86400000;
   function finite(value) { return typeof value === 'number' && Number.isFinite(value); }
   function text(value, max) { return typeof value === 'string' ? value.trim().slice(0, max || 160) : ''; }
@@ -190,6 +190,20 @@
   }
   function untreated(t) {
     return t.gnrha === 'no' && t.sexSteroids === 'no' && (t.context == null || t.context === 'none');
+  }
+  function previewContextValid(input, treatment) {
+    // Only missing information can support a conditional comparison. Explicit
+    // treatment, stimulation and malformed supplied values cannot be weakened
+    // into unknown context by the usual normalization used for saved inputs.
+    if (![undefined, null, '', 'unknown', 'basal'].includes(input.measurementKind)) return false;
+    if (treatment.context === 'hormonal' || treatment.gnrha === 'yes' || treatment.sexSteroids === 'yes') return false;
+    var supplied = input.treatment;
+    if (supplied == null) return true;
+    if (Object.prototype.toString.call(supplied) !== '[object Object]') return false;
+    if (![undefined, null, '', 'unknown', 'none'].includes(supplied.context)) return false;
+    return ['gnrha', 'sexSteroids'].every(function (key) {
+      return [undefined, null, '', 'unknown', 'no', false].includes(supplied[key]);
+    });
   }
   function clinicalResult(profile, status, code, title, description, reasons) {
     return { status: status, code: code, title: title, text: description, reasonCodes: unique(reasons || []), sourceIds: copy(profile && profile.sourceIds || []) };
@@ -444,10 +458,22 @@
     bio.status = bio.primary ? 'available' : 'unavailable';
     bio.reasonCodes = bio.primary === 'local' ? bio.local.reasonCodes.slice() : unique(gates.concat(profileGates, input.localReference ? bio.local.reasonCodes : [], bio.byAge.reasonCodes, bio.byStage.reasonCodes));
     if (bio.primary === 'local' && [bio.byAge, bio.byStage].some(function (c) { return ['within', 'above', 'below'].includes(c.status) && c.status !== bio.local.status; })) bio.reasonCodes.push('source_reference_disagreement');
+    var preview = null;
+    var unknownContextReasons = ['non_basal_or_unknown_measurement', 'treatment_context_unknown'];
+    var previewReasons = unique(profileGates.filter(function (reason) { return unknownContextReasons.includes(reason); }));
+    if (previewReasons.length && profile && profile.examinationType === 'basal' && previewContextValid(input, t) &&
+        profileGates.every(function (reason) { return unknownContextReasons.includes(reason) || reason === 'profile_measurement_kind_mismatch'; })) {
+      var previewAge = selectComparison(measurement, profile, data, age, input.sex, puberty, false);
+      var previewStage = selectComparison(measurement, profile, data, age, input.sex, puberty, true);
+      if (previewAge.status !== 'unavailable' || previewStage.status !== 'unavailable') {
+        preview = { kind: 'conditional-basal-untreated', reasonCodes: previewReasons, byAge: previewAge, byStage: previewStage };
+      }
+    }
     var all = [bio.local, bio.byAge, bio.byStage];
+    var numericComparisons = preview ? all.concat([preview.byAge, preview.byStage]) : all;
     var reported = reportedComparison(normalized.reportedRange, measurement);
     var hasReportedComparison = reported && reported.status !== 'unavailable';
-    var reportedDisagreement = hasReportedComparison && ['within', 'above', 'below'].includes(reported.status) && all.some(function (c) {
+    var reportedDisagreement = hasReportedComparison && ['within', 'above', 'below'].includes(reported.status) && numericComparisons.some(function (c) {
       return ['within', 'above', 'below'].includes(c.status) && c.status !== reported.status;
     });
     var decisive = hasReportedComparison ? [reported] : bio.primary === 'local' ? [bio.local] : [bio.byAge, bio.byStage];
@@ -460,23 +486,26 @@
     } else if (clinical.status === 'warning' || clinical.status === 'notice') summary = { status: 'attention', code: clinical.code, title: clinical.title };
     else if (clinicalAttention) summary = clinicalAttention;
     else if (measurement.status !== 'valid') summary = { status: 'invalid', code: 'invalid_measurement', title: 'Nieprawidłowy zapis wyniku lub jednostki' };
-    else if (reportedDisagreement) summary = { status: 'attention', code: 'reported_range_reference_disagreement', title: 'Porównania zakresów wymagają uzgodnienia' };
+    else if (reportedDisagreement) summary = { status: 'attention', code: 'reported_range_reference_disagreement', title: preview ? 'Porównania liczbowe zakresów wymagają uzgodnienia' : 'Porównania zakresów wymagają uzgodnienia' };
     else if (abnormal) summary = hasReportedComparison
       ? { status: 'attention', code: 'outside_reported_range', title: 'Wynik poza zakresem przepisanym z wyniku' }
       : { status: 'attention', code: 'outside_reference_range', title: 'Wynik poza wskazanym zakresem referencyjnym' };
     else if (clinical.status === 'out_of_scope') summary = { status: 'out_of_scope', code: 'out_of_scope', title: clinical.title };
+    else if (preview) summary = { status: 'limited', code: 'conditional_reference_comparison', title: 'Porównanie warunkowe — rodzaj badania lub leczenie nieustalone' };
     else if ((!bio.primary && !hasReportedComparison) || (reported && !hasReportedComparison) || uncertain || clinical.status === 'limited') summary = { status: 'limited', code: 'limited_interpretation', title: 'Interpretacja ograniczona dostępnymi danymi' };
     else summary = hasReportedComparison
       ? { status: 'compared', code: 'reported_range_comparison_available', title: 'Wynik porównano z zakresem przepisanym z wyniku' }
       : { status: 'compared', code: 'reference_comparison_available', title: 'Wynik porównano z wybranym zakresem' };
     var limitations = unique(clinical.reasonCodes.concat(bio.reasonCodes, measurement.reasonCodes, reported ? reported.reasonCodes : []));
+    if (preview) limitations.push.apply(limitations, ['conditional_reference_comparison'].concat(preview.byAge.reasonCodes, preview.byStage.reasonCodes));
     if (reportedDisagreement) limitations.push('reported_range_reference_disagreement');
-    if (bio.primary && age.status === 'known' && biochemicalPolicy && ageTest(age, biochemicalPolicy.infantAgeYears) === 'within') limitations.push('broad_infant_reference_not_full_minipuberty_assessment');
+    if ((bio.primary || preview) && age.status === 'known' && biochemicalPolicy && ageTest(age, biochemicalPolicy.infantAgeYears) === 'within') limitations.push('broad_infant_reference_not_full_minipuberty_assessment');
     var evaluation = { schemaVersion: 1, engineVersion: VERSION, dataVersion: data.dataVersion || null, analyte: normalized.analyte,
       input: copy(normalized), measurement: measurement, ageAtSample: age, biochemical: bio, clinical: clinical, summary: summary,
       provenance: { clinicalProfileId: data.clinicalProfile && data.clinicalProfile.id || null, clinicalProfileVersion: data.clinicalProfile && data.clinicalProfile.version || null, biochemicalPolicyId: biochemicalPolicy && biochemicalPolicy.id || null, biochemicalPolicyVersion: biochemicalPolicy && biochemicalPolicy.version || null, profileId: profile && profile.id || null, profileVersion: profile && profile.version || null,
-        sourceIds: unique(clinical.sourceIds.concat(biochemicalPolicy && biochemicalPolicy.sourceIds || [], all.filter(function (c) { return c.range; }).map(function (c) { return c.range.sourceId; }))) }, limitations: unique(limitations) };
+        sourceIds: unique(clinical.sourceIds.concat(biochemicalPolicy && biochemicalPolicy.sourceIds || [], numericComparisons.filter(function (c) { return c.range; }).map(function (c) { return c.range.sourceId; }))) }, limitations: unique(limitations) };
     if (reported) evaluation.reportedRange = reported;
+    if (preview) evaluation.referencePreview = preview;
     return evaluation;
   }
   return Object.freeze({ version: VERSION, evaluate: evaluate, parseMeasurement: parseMeasurement, resolveAge: resolveAge, compareMeasurement: compareMeasurement, assessTiming: assessTiming });

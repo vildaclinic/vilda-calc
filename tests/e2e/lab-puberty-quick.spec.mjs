@@ -141,9 +141,15 @@ test('unknown context never becomes no treatment and a different sample method s
   await page.locator('#labValue').fill('2');
   const unknown = await snapshot(page);
   expect(unknown.evaluation.input.treatment).toMatchObject({ context: 'unknown', gnrha: 'no', sexSteroids: 'unknown' });
-  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
+  expect(unknown.evaluation.biochemical).toMatchObject({ primary: null, byAge: { status: 'unavailable' }, byStage: { status: 'unavailable' } });
+  expect(unknown.evaluation.referencePreview).toMatchObject({ kind: 'conditional-basal-untreated', byAge: { status: 'within' }, byStage: { status: 'within' } });
+  await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  await expect(comparison(page, 'age')).toHaveAttribute('data-applicability', 'conditional');
+  await expect(assessment(page).locator('[data-reference-conditions="conditional-basal-untreated"]')).toBeVisible();
   await select(page, 'Context', 'basal-untreated');
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'within');
+  await expect(comparison(page, 'age')).not.toHaveAttribute('data-applicability', 'conditional');
+  expect((await snapshot(page)).evaluation).not.toHaveProperty('referencePreview');
   await page.locator('#labPubertyUnknownMethod').check();
   await expect(comparison(page, 'age')).toHaveAttribute('data-status', 'unavailable');
   expect((await snapshot(page)).evaluation.input.assay.confirmation).toBe('unknown');

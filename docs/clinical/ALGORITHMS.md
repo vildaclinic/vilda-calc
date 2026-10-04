@@ -80,6 +80,14 @@ Po akceptacji uproszczonej makiety formularz automatycznie wykorzystuje dane akt
 
 Źródła i zakres odczytu: Mayo R1/R2, oficjalne ES2026 K1 oraz pełne teksty K2–K4 w [LH_FSH.md](LH_FSH.md#szybkie-sprawdzenie--4102026). Syntetyczne przypadki produkcyjnego kodu: M6/G4/LH2 z formularza → ostrzeżenie kliniczne mimo RI stadium; konfiguracja LH nie dopasowuje FSH; unknown leczenie blokuje bazalny RI; historyczna próbka nie przejmuje aktualnego stadium; LH15 z ręcznym zakresem0–20 i katalogowym odchyleniem → jawna rozbieżność; operatory `<` i `≤` pozostają różne. Testy silnika, preferencji, snapshotu i UI oraz pełny przepływ przeglądarkowy dokumentują te kontrakty. Akceptacja kliniczna, scalenie i wdrożenie pozostają decyzją właściciela.
 
+#### LAB-PUBERTY — minimalne wejście i warunkowe porównanie, 2026-10-04
+
+Silnik/formularz/renderer `1.3.0`, snapshot `1.2.0`, dane `2026-10-04.1` bez zmian. Nieustalony rodzaj oznaczenia lub leczenie nie ukrywa samego liczbowego zestawienia z tabelą, jeśli pozostałe warunki doboru profilu są spełnione. Osobne `referencePreview` utrwala zakresy i jawną warunkowość „oznaczenie bazalne bez leczenia hormonalnego”; nie zmienia rzeczywistych `unknown` ani dotychczasowego `biochemical.primary`. Warunki są widoczne przy liczbach również w historii. Jawna stymulacja/leczenie i pozostałe blokady metody, populacji, wieku oraz wcześniactwa pozostają skuteczne.
+
+**Wpływ kliniczny:** wcześniej niedostępne porównanie staje się dostępne jako warunkowe zestawienie liczbowe, bez potwierdzenia zastosowania normy do nieustalonego protokołu. Kliniczne ostrzeżenie nadal ma pierwszeństwo. Syntetyczny M2 lata 9 miesięcy/G3/LH2 IU/L, zgodna metoda, protokół i leczenie `unknown` → wiek `above` względem `<0,02–0,5`, stadium `within` względem `0,09–4,2`, nadal `early_development`; bez stadium działa porównanie wieku. GnRHa/steroidy lub stymulacja → brak bazalnego podglądu. Stare oceny nie otrzymują nowego rozszerzenia.
+
+Źródła: pełne katalogi Mayo [LHPED62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) i [FSH602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), odczyt 2–3.10.2026; [ES2026](https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty), [Howard2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/) i [przegląd diagnostyki CPP2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC11795171/). Populacje przypisane do oznaczeń, surowica, IU/L/mIU/mL; pełne ograniczenia i zakres dostępu w [LH_FSH.md](LH_FSH.md#minimalne-dane-i-porównanie-warunkowe--4102026). Regresje wywołują rzeczywisty silnik, snapshot, renderer i UI. Akceptacja kliniczna oraz scalenie pozostają po stronie właściciela.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.

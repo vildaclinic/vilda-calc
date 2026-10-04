@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.153';
+const SW_VERSION = '1.1.154';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -348,21 +348,26 @@ const CORE_SHELL_URLS = [
   '/vilda_bone_age.js?v=1',
   '/vilda_lab_snapshot.js?v=1',
   '/vilda_lab_snapshot.js?v=2',
+  '/vilda_lab_snapshot.js?v=3',
   '/vilda_lab_puberty_data.js?v=1',
   '/vilda_lab_puberty_data.js?v=2',
   '/vilda_lab_puberty.js?v=1',
   '/vilda_lab_puberty.js?v=2',
   '/vilda_lab_puberty.js?v=3',
+  '/vilda_lab_puberty.js?v=4',
   '/vilda_lab_profile_preferences.js?v=1',
   '/vilda_lab_assessment_ui.js?v=1',
   '/vilda_lab_assessment_ui.js?v=2',
   '/vilda_lab_assessment_ui.js?v=3',
+  '/vilda_lab_assessment_ui.js?v=4',
   '/vilda_lab_assessment_ui.css?v=1',
   '/vilda_lab_assessment_ui.css?v=2',
+  '/vilda_lab_assessment_ui.css?v=3',
   '/vilda_lab_puberty_ui.js?v=1',
   '/vilda_lab_puberty_ui.js?v=2',
   '/vilda_lab_puberty_ui.js?v=3',
   '/vilda_lab_puberty_ui.js?v=4',
+  '/vilda_lab_puberty_ui.js?v=5',
   '/vilda_lab_puberty_ui.css?v=1',
   '/vilda_lab_puberty_ui.css?v=2',
   '/vilda_vault.js',
@@ -967,6 +972,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=96',
   '/vilda_chrome.js?v=97',
   '/vilda_chrome.js?v=98',
+  '/vilda_chrome.js?v=99',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2792,6 +2798,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=21',
   '/vilda_session_bridge.js?v=22',
   '/vilda_session_bridge.js?v=23',
+  '/vilda_session_bridge.js?v=24',
   '/vilda_data_safety_explainer.js?v=5',
   '/vilda_obesity_banner.css?v=6',
   '/vilda_obesity_banner.css?v=7',

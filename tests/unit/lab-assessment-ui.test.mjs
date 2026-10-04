@@ -295,11 +295,24 @@ describe('LH/FSH — wspólna prezentacja oceny', () => {
     [{ preterm: 'yes' }, 'wcześniaka'],
     [{ preterm: 'unknown' }, 'wcześniactwie'],
     [{ treatment: { gnrha: 'yes', sexSteroids: 'no' } }, 'wymaga odrębnego profilu'],
-    [{ treatment: { gnrha: 'unknown', sexSteroids: 'unknown' } }, 'Nie ustalono stosowania'],
   ])('ograniczenia niemowlęctwa lub leczenia są zrozumiałym tekstem: %j', (input, expected) => {
     const view = ui.buildView(evaluate({ birthDateISO: '2026-07-03', puberty: {}, ...input }));
     expect(view.limitations.join(' ')).toContain(expected);
     expect(view.comparisons.every((row) => row.status === 'unavailable')).toBe(true);
+  });
+
+  it('nieznane leczenie u donoszonego niemowlęcia daje tylko warunkowe porównanie wieku', () => {
+    const evaluation = evaluate({ birthDateISO: '2026-07-03', puberty: {}, treatment: { gnrha: 'unknown', sexSteroids: 'unknown' } });
+    const assessment = snapshot.create(evaluation);
+    expect(assessment.status).toBe('recorded');
+    expect(assessment.evaluation.input.treatment).toEqual({ gnrha: 'unknown', sexSteroids: 'unknown' });
+    expect(assessment.evaluation.biochemical).toMatchObject({ status: 'unavailable', primary: null });
+    const view = ui.buildView(assessment.evaluation);
+    expect(view.conditionNote).toContain('Leczenia nie ustalono.');
+    expect(view.comparisons.find((row) => row.key === 'age')).toMatchObject({ status: 'within', conditional: true });
+    expect(view.comparisons.find((row) => row.key === 'stage')).toMatchObject({ status: 'unavailable', conditional: false });
+    expect(view.limitations.join(' ')).toContain('Szeroki zakres niemowlęcy');
+    expect(view.clinical.code).toBe('infant_context');
   });
 });
 

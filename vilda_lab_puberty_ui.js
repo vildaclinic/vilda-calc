@@ -185,7 +185,7 @@
     field(date, 'birthDate', 'Data urodzenia — jeśli znana', 'date');
     var dateHint = element('p', 'lab-puberty-hint'); dateHint.id = 'labPubertyDateHint'; sections.date.appendChild(dateHint);
     button(sections.date, 'labPubertyClearDate', 'Wróć do bieżących danych', function () { fields.sampleDate.value = ''; changed('sampleDate'); });
-    var sample = section('context', 'Kontekst oznaczenia', 'Jedna odpowiedź dla tego sprawdzenia. Nie zapamiętujemy leczenia jako ustawienia laboratorium.');
+    var sample = section('context', 'Kontekst oznaczenia', 'Opcjonalnie doprecyzuj, czy zakresy bazalne bez leczenia hormonalnego dotyczą tego wyniku. Badanie po stymulacji lub podczas leczenia wymaga odrębnej oceny.');
     field(sample, 'context', 'Oznaczenie', 'select', [['unknown', 'Nie ustalono'], ['basal-untreated', 'Bazalne, bez leczenia hormonalnego'], ['hormonal', 'W trakcie leczenia hormonalnego'], ['stimulated', 'Po stymulacji']]);
     var treatmentHint = element('p', 'lab-puberty-hint'); treatmentHint.id = 'labPubertyTreatmentHint'; sections.context.appendChild(treatmentHint);
     var range = section('range', 'Zakres z wydruku', 'Proste porównanie z zakresem przepisanym z tego wyniku; nie zastępuje oceny jego zastosowania klinicznego.');
@@ -288,8 +288,8 @@
       var profileName = profile && profile.profile && profile.profile.method ? profile.profile.method.name : '';
       methodSummary.textContent = profileName ? fields.unknownMethod.checked ? 'Dla tego wyniku: metoda nieznana lub inna niż ustawiona.' : 'Metoda: ' + profileName + ' · ' + materialLabel(profile.specimen) : 'Metoda laboratorium nieustawiona';
       editMethod.textContent = profileName ? 'Zmień' : 'Ustaw'; wrappers.unknownMethod.hidden = !profileName;
-      contextSummary.textContent = ({ 'basal-untreated': 'Bazalne · bez leczenia hormonalnego', hormonal: 'Podczas leczenia hormonalnego', stimulated: 'Po stymulacji' }[fields.context.value] || 'Rodzaj badania: nieustalony');
-      editContext.textContent = fields.context.value === 'unknown' ? 'Określ' : 'Zmień';
+      contextSummary.textContent = ({ 'basal-untreated': 'Bazalne · bez leczenia hormonalnego', hormonal: 'Podczas leczenia hormonalnego', stimulated: 'Po stymulacji' }[fields.context.value] || 'Rodzaj badania i leczenie: nieustalone');
+      editContext.textContent = fields.context.value === 'unknown' ? 'Doprecyzuj' : 'Zmień';
       rangeUnit.textContent = 'Jednostka zakresu: ' + (lastMeasurement.unit || 'IU/L') + '.';
       updateContextLine();
     }
@@ -427,7 +427,7 @@
     return { setAnalyte: setAnalyte, setPatientContext: setPatientContext, render: render, getAssessment: getAssessment, reset: reset };
   }
 
-  var api = { version: '1.2.0', buildInput: buildInput, mount: mount };
+  var api = { version: '1.3.0', buildInput: buildInput, mount: mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.VildaLabPubertyUI = api;
 })(typeof window !== 'undefined' ? window : globalThis);
