@@ -237,7 +237,7 @@ describe('LH/FSH — utrwalenie nowych komunikatów i zgodność starszych ocen'
   });
 
   it('wersjonuje zmienioną interpretację niezależnie od niezmienionych profilów RI', () => {
-    expect(engine.version).toBe('1.1.0');
+    expect(engine.version).toBe('1.2.0');
     expect(data.dataVersion).toBe('2026-10-04.1');
     expect(data.clinicalProfile.version).toBe('2026-10-04.1');
     expect(data.biochemicalPolicy.version).toBe('2026-10-03.1');

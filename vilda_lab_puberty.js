@@ -1,4 +1,4 @@
-/* LH/FSH interpretation, preparation stage: not loaded by the application yet.
+/* LH/FSH interpretation with explicit sample or current-patient context.
  * References and clinical thresholds are supplied explicitly by the caller.
  * See docs/clinical/LH_FSH.md. No DOM, storage, network or current-date access.
  */
@@ -9,7 +9,7 @@
   if (root) root.VildaLabPuberty = api;
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var DAY_MS = 86400000;
   function finite(value) { return typeof value === 'number' && Number.isFinite(value); }
   function text(value, max) { return typeof value === 'string' ? value.trim().slice(0, max || 160) : ''; }
@@ -161,10 +161,13 @@
     else return 'unknown';
     return ageMatches(age, b);
   }
-  function observationCurrent(observation, sampleDateISO) {
+  function observationCurrent(observation, input) {
     if (!observation || typeof observation !== 'object') return false;
-    var sample = dateISO(sampleDateISO), assessed = dateISO(observation.assessedAtISO);
+    var sample = dateISO(input.sampleDateISO), assessed = dateISO(observation.assessedAtISO);
     if (observation.assessedAtISO && !assessed) return false;
+    // A current-patient comparison is not a dated sample assessment. Its explicit
+    // observation flag never establishes that today's Tanner applied in the past.
+    if (input.contextBasis === 'current-patient' && !input.sampleDateISO && observation.appliesToCurrentContext === true) return true;
     if (sample && assessed && assessed.time > sample.time) return false;
     return observation.appliesToSample === true || Boolean(sample && assessed && sample.time === assessed.time);
   }
@@ -175,25 +178,31 @@
     var reasons = [];
     if (!validStage) reasons.push('missing_puberty_stage');
     if (k === 'unspecified' && validStage) reasons.push('ambiguous_puberty_kind');
-    if (validStage && !observationCurrent(p, input.sampleDateISO)) reasons.push('puberty_not_confirmed_at_sample');
+    if (validStage && !observationCurrent(p, input)) reasons.push('puberty_not_confirmed_at_sample');
     if (['Th', 'G'].includes(k) && k !== expected) reasons.push('puberty_kind_sex_mismatch');
-    return { kind: k, stage: validStage ? p.stage : null, usable: validStage && k === expected && observationCurrent(p, input.sampleDateISO), reasonCodes: reasons };
+    return { kind: k, stage: validStage ? p.stage : null, usable: validStage && k === expected && observationCurrent(p, input), reasonCodes: reasons };
   }
   function therapy(input) {
     var t = input.treatment || {};
-    return { gnrha: flag(t.gnrha), sexSteroids: flag(t.sexSteroids) };
+    var normalized = { gnrha: flag(t.gnrha), sexSteroids: flag(t.sexSteroids) };
+    if (Object.prototype.hasOwnProperty.call(t, 'context')) normalized.context = ['none', 'hormonal'].includes(t.context) ? t.context : 'unknown';
+    return normalized;
+  }
+  function untreated(t) {
+    return t.gnrha === 'no' && t.sexSteroids === 'no' && (t.context == null || t.context === 'none');
   }
   function clinicalResult(profile, status, code, title, description, reasons) {
     return { status: status, code: code, title: title, text: description, reasonCodes: unique(reasons || []), sourceIds: copy(profile && profile.sourceIds || []) };
   }
   function assessTiming(input, profile) {
     input = input || {};
+    var currentContext = input.contextBasis === 'current-patient';
     var result = function (status, code, title, description, reasons) { return clinicalResult(profile, status, code, title, description, reasons); };
     if (!profile || !profile.earlyAgeYears || !profile.absentOnsetAgeYears || !profile.onset || !boundsInterval(profile.scopeAgeYears) || !profile.thelarche) return result('limited', 'clinical_profile_missing', 'Brak profilu kryteriów klinicznych', 'Nie wybrano wersjonowanych reguł czasu dojrzewania.', ['clinical_profile_missing']);
     var sex = input.sex;
     if (!['M', 'F'].includes(sex)) return result('limited', 'missing_sex', 'Ocena dojrzewania ograniczona', 'Brak płci właściwej dla kryteriów.', ['missing_sex']);
     var age = resolveAge(input);
-    if (age.status !== 'known') return result('limited', 'missing_age', 'Ocena dojrzewania ograniczona', 'Brak wiarygodnego wieku w dniu pobrania.', age.reasonCodes);
+    if (age.status !== 'known') return result('limited', 'missing_age', 'Ocena dojrzewania ograniczona', currentContext ? 'Brak wiarygodnego wieku w bieżącym kontekście pacjenta.' : 'Brak wiarygodnego wieku w dniu pobrania.', age.reasonCodes);
     if (ageTest(age, profile.earlyAgeYears[sex]) === 'unknown' || ageTest(age, profile.absentOnsetAgeYears[sex]) === 'unknown' || ageTest(age, profile.infantAgeYears) === 'unknown') return result('limited', 'clinical_profile_missing', 'Niepełny profil kryteriów klinicznych', 'Brakuje granic wymaganych do oceny czasu rozwoju.', ['clinical_profile_missing']);
     var scope = ageMatches(age, profile.scopeAgeYears);
     if (scope === 'above' || scope === 'below') return result('out_of_scope', 'out_of_scope', 'Poza zakresem pediatrycznym', 'Profil nie obejmuje tego wieku.', ['clinical_age_out_of_scope']);
@@ -204,7 +213,7 @@
     var expected = onsetRule.axis;
     var volume = input.testicularVolume || {};
     var threshold = onsetRule.testisVolume;
-    var volumeUsable = sex === 'M' && threshold && finite(threshold.value) && finite(volume.value) && volume.value >= 0 && volume.unit === threshold.unit && volume.method === threshold.method && observationCurrent(volume, input.sampleDateISO);
+    var volumeUsable = sex === 'M' && threshold && finite(threshold.value) && finite(volume.value) && volume.value >= 0 && volume.unit === threshold.unit && volume.method === threshold.method && observationCurrent(volume, input);
     var volumePresent = Boolean(volumeUsable && ageTest({ status: 'known', lowerYears: volume.value, upperYears: volume.value, upperInclusive: true }, threshold) === 'within');
     var stagePresent = p.usable && p.stage >= onsetRule.stage;
     var present = stagePresent || volumePresent;
@@ -237,7 +246,7 @@
       if (initialThelarche) return result('notice', 'early_thelarche', 'Wczesny rozwój gruczołów sutkowych — ocena przebiegu', 'Th2 przed granicą wieku wymaga oceny progresji i objawów towarzyszących. Nie jest automatycznym rozpoznaniem CPP ani wyborem obserwacji.', ['early_thelarche', 'low_lh_does_not_exclude_cpp']);
       return result('warning', 'early_development', 'Cechy dojrzewania zbyt wcześnie — wymagają oceny', 'Cechy płciowe nie są adekwatne do wieku. Zgodność hormonu z zakresem stadium nie ustala przyczyny ani prawidłowego czasu rozwoju.', ['early_development', 'low_lh_does_not_exclude_cpp']);
     }
-    if (onsetUncertain) return result('limited', 'onset_context_uncertain', 'Czas początku wymaga doprecyzowania', 'Podana data lub dokładność wieku nie pozwala potwierdzić czasu początku względem dnia pobrania.', ['onset_context_uncertain']);
+    if (onsetUncertain) return result('limited', 'onset_context_uncertain', 'Czas początku wymaga doprecyzowania', currentContext ? 'Podana data lub dokładność wieku nie pozwala potwierdzić czasu początku względem wieku w bieżącym kontekście pacjenta.' : 'Podana data lub dokładność wieku nie pozwala potwierdzić czasu początku względem dnia pobrania.', ['onset_context_uncertain']);
     if (onsetKnown) {
       var infancyAtOnset = ageTest(onsetAge, profile.infantAgeYears);
       if (infancyAtOnset === 'within' && onset.confirmedPubertalOnset !== true) return result('limited', 'infant_context', 'Początek w niemowlęctwie wymaga doprecyzowania', 'Nie traktujemy automatycznie zmian związanych z minipuberty jako trwałego początku pokwitania.', ['infant_onset_not_confirmed']);
@@ -246,16 +255,16 @@
       if ([ageTest(onsetAge, profile.infantAgeYears), ageTest(onsetAge, profile.earlyAgeYears[sex]), ageTest(onsetAge, { operator: '>', value: profile.absentOnsetAgeYears[sex].value })].includes('indeterminate')) return result('limited', 'onset_context_uncertain', 'Czas początku wymaga doprecyzowania', 'Podany przedział wieku początku przecina granicę interpretacji.', ['onset_precision_crosses_clinical_boundary']);
     }
     if (absent && late === 'within') {
-      if (t.gnrha !== 'no' || t.sexSteroids !== 'no' || flag(history.regression) === 'yes' || onsetKnown) return result('limited', 'treatment_context', 'Brak cech wymaga uwzględnienia wywiadu', 'Leczenie, wcześniejszy początek lub regresja mogą zmieniać interpretację. Nie rozpoznajemy nowego opóźnienia z samego aktualnego stadium.', ['treatment_or_previous_onset_context']);
+      if (!untreated(t) || flag(history.regression) === 'yes' || onsetKnown) return result('limited', 'treatment_context', 'Brak cech wymaga uwzględnienia wywiadu', 'Leczenie, wcześniejszy początek lub regresja mogą zmieniać interpretację. Nie rozpoznajemy nowego opóźnienia z samego aktualnego stadium.', ['treatment_or_previous_onset_context']);
       return result('warning', 'absent_onset', 'Brak początku dojrzewania — wymaga oceny', sex === 'F' ? 'Brak rozwoju gruczołów sutkowych do granicy wieku. Pojedyncze LH/FSH nie ustala przyczyny.' : 'Brak początku rozwoju narządów płciowych lub powiększenia jąder do kryterium początku w granicznym wieku. Pojedyncze LH/FSH nie ustala przyczyny.', ['absent_onset']);
     }
     if ((present && early === 'indeterminate') || (absent && late === 'indeterminate')) return result('limited', 'missing_age', 'Niewystarczająca dokładność wieku', 'Podany przedział wieku przecina kliniczną granicę decyzji.', ['age_precision_crosses_clinical_boundary']);
     if (!p.usable && !volumeUsable) return result('limited', p.kind === 'unspecified' && p.stage !== null ? 'ambiguous_puberty_kind' : 'missing_puberty_assessment', 'Brak odpowiedniej oceny dojrzewania', 'Potrzebna jest ocena Th/M lub G. P i Ax ani ogólny numer Tannera nie zastępują tej informacji.', p.reasonCodes.concat(['missing_puberty_assessment']));
-    if (t.gnrha !== 'no' || t.sexSteroids !== 'no') return result('limited', 'treatment_context', 'Interpretacja zależna od leczenia', 'Nie oceniamy skuteczności leczenia GnRHa ani jego wpływu na dojrzewanie z pojedynczego LH/FSH.', ['treatment_context']);
+    if (!untreated(t)) return result('limited', 'treatment_context', 'Interpretacja zależna od leczenia', 'Nie oceniamy skuteczności leczenia GnRHa ani jego wpływu na dojrzewanie z pojedynczego LH/FSH.', ['treatment_context']);
     return result('no_timing_alert', 'timing_not_abnormal', 'Brak wykrytej niezgodności czasu dojrzewania', 'Ocena dotyczy dostępnych danych o czasie początku, nie całego przebiegu ani etiologii dojrzewania.', onsetKnown ? [] : ['onset_history_missing']);
   }
   function contextObservationCurrent(observation, input) {
-    if (!observationCurrent(observation, input.sampleDateISO)) return false;
+    if (!observationCurrent(observation, input)) return false;
     var birth = dateISO(input.birthDateISO), assessed = dateISO(observation.assessedAtISO);
     return !(birth && assessed && assessed.time < birth.time);
   }
@@ -323,6 +332,38 @@
     c.range = { id: text(local.id), profileId: 'local', profileVersion: text(local.version), sourceId: text(local.source.id), source: copy(local.source), population: copy(local.population), method: { id: text(local.methodId) }, material: 'serum', unit: local.unit, bounds: copy(local.range), basis: 'local-confirmed-for-patient' };
     return c;
   }
+  // A transcribed range is a numerical comparison, not a verified local RI.
+  // It does not establish the patient's population, specimen or assay method.
+  function reportedComparison(reported, measurement) {
+    if (!reported) return null;
+    var result = { status: 'unavailable', raw: reported.text, unit: reported.unit, lower: null, upper: null, reasonCodes: [] };
+    if (!['IU/L', 'mIU/mL'].includes(reported.unit)) {
+      result.reasonCodes.push('unsupported_reported_range_unit');
+      return result;
+    }
+    var numeric = '((?:\\d+(?:[.,]\\d*)?|[.,]\\d+)(?:e[+-]?\\d+)?)';
+    var pair = reported.text.match(new RegExp('^' + numeric + '\\s*[-–—]\\s*' + numeric + '$', 'i'));
+    var single = reported.text.match(new RegExp('^(<=|>=|<|>|≤|≥)\\s*' + numeric + '$', 'i'));
+    if (pair) {
+      result.lower = { operator: '>=', value: Number(pair[1].replace(',', '.')) };
+      result.upper = { operator: '<=', value: Number(pair[2].replace(',', '.')) };
+    } else if (single) {
+      var bound = { operator: operator(single[1]), value: Number(single[2].replace(',', '.')) };
+      if (['>', '>='].includes(bound.operator)) result.lower = bound;
+      else result.upper = bound;
+    }
+    if (!boundsInterval(result)) {
+      // Keep invalid input as raw text, never as a malformed saved interval.
+      result.lower = null;
+      result.upper = null;
+      result.reasonCodes.push('invalid_reported_range');
+      return result;
+    }
+    var compared = compareMeasurement(measurement, result);
+    result.status = compared.status;
+    result.reasonCodes = compared.reasonCodes;
+    return result;
+  }
   function normalizedAge(age) {
     return age ? { years: finite(age.years) ? age.years : null, months: finite(age.months) ? age.months : null, days: finite(age.days) ? age.days : null, precision: text(age.precision, 16) } : null;
   }
@@ -339,7 +380,7 @@
   }
   function normalizedInput(input) {
     var p = input.puberty || {}, v = input.testicularVolume || {}, a = input.assay || {}, o = input.onset || {}, h = input.history || {};
-    return {
+    var normalized = {
       analyte: text(input.analyte, 8), value: typeof input.value === 'object' && input.value ? { operator: operator(input.value.operator || '='), value: finite(input.value.value) ? input.value.value : null } : typeof input.value === 'number' ? (finite(input.value) ? input.value : null) : text(input.value, 96), unit: text(input.unit, 24),
       sex: ['M', 'F'].includes(input.sex) ? input.sex : null, sampleDateISO: text(input.sampleDateISO, 64) || null, birthDateISO: text(input.birthDateISO, 64) || null,
       age: normalizedAge(input.age),
@@ -352,6 +393,13 @@
       treatment: therapy(input), preterm: flag(input.preterm), gestationalAgeWeeks: finite(input.gestationalAgeWeeks) ? input.gestationalAgeWeeks : null,
       localReference: normalizedLocal(input.localReference)
     };
+    // Optional extensions preserve the shape and meaning of legacy snapshots.
+    if (['current-patient', 'sample'].includes(input.contextBasis)) normalized.contextBasis = input.contextBasis;
+    if (Object.prototype.hasOwnProperty.call(a, 'profileVersion')) normalized.assay.profileVersion = text(a.profileVersion, 80);
+    if (Object.prototype.hasOwnProperty.call(p, 'appliesToCurrentContext')) normalized.puberty.appliesToCurrentContext = p.appliesToCurrentContext === true;
+    if (Object.prototype.hasOwnProperty.call(v, 'appliesToCurrentContext')) normalized.testicularVolume.appliesToCurrentContext = v.appliesToCurrentContext === true;
+    if (input.reportedRange && text(input.reportedRange.text)) normalized.reportedRange = { text: text(input.reportedRange.text), unit: text(input.reportedRange.unit, 24) };
+    return normalized;
   }
   function evaluate(input, data) {
     input = input || {}; data = data || {};
@@ -367,7 +415,7 @@
     if (!['M', 'F'].includes(input.sex)) gates.push('missing_sex');
     if (input.specimen !== 'serum') gates.push('unsupported_or_unknown_specimen');
     if (input.measurementKind !== 'basal') gates.push('non_basal_or_unknown_measurement');
-    if (t.gnrha !== 'no' || t.sexSteroids !== 'no') gates.push(t.gnrha === 'yes' || t.sexSteroids === 'yes' ? 'treatment_requires_separate_profile' : 'treatment_context_unknown');
+    if (!untreated(t)) gates.push(t.context === 'hormonal' || t.gnrha === 'yes' || t.sexSteroids === 'yes' ? 'treatment_requires_separate_profile' : 'treatment_context_unknown');
     if (!biochemicalPolicy || !biochemicalPolicy.id || !biochemicalPolicy.version || ageTest({ status: 'known', lowerYears: 0, upperYears: 0, upperInclusive: true }, biochemicalPolicy.infantAgeYears) === 'unknown' || ageTest({ status: 'known', lowerYears: 0, upperYears: 0, upperInclusive: true }, biochemicalPolicy.pretermGestationalWeeks) === 'unknown') gates.push('biochemical_policy_missing');
     else if (age.status === 'known' && ageTest(age, biochemicalPolicy.infantAgeYears) !== 'above') {
       if (flag(input.preterm) !== 'no') gates.push(flag(input.preterm) === 'yes' ? 'preterm_reference_not_established' : 'infant_gestational_context_missing');
@@ -382,7 +430,8 @@
       if (profile.examinationType !== input.measurementKind) profileGates.push('profile_measurement_kind_mismatch');
       if (profile.active !== true) profileGates.push('profile_not_active');
       if (profile.analyte !== input.analyte) profileGates.push('profile_analyte_mismatch');
-      if (!profile.method || assay.methodId !== profile.method.id || assay.confirmation !== 'reported') profileGates.push('method_not_confirmed');
+      if (!profile.method || assay.methodId !== profile.method.id || !['reported', 'configured'].includes(assay.confirmation)) profileGates.push('method_not_confirmed');
+      if (assay.confirmation === 'configured' && (!assay.profileVersion || assay.profileVersion !== profile.version)) profileGates.push('configured_profile_version_mismatch');
       if (profile.material !== input.specimen) profileGates.push('profile_material_mismatch');
       var scope = ageMatches(age, profile.scope && profile.scope.age);
       if (scope !== 'within') profileGates.push(scope === 'indeterminate' ? 'age_precision_crosses_scope' : 'age_outside_profile');
@@ -396,7 +445,12 @@
     bio.reasonCodes = bio.primary === 'local' ? bio.local.reasonCodes.slice() : unique(gates.concat(profileGates, input.localReference ? bio.local.reasonCodes : [], bio.byAge.reasonCodes, bio.byStage.reasonCodes));
     if (bio.primary === 'local' && [bio.byAge, bio.byStage].some(function (c) { return ['within', 'above', 'below'].includes(c.status) && c.status !== bio.local.status; })) bio.reasonCodes.push('source_reference_disagreement');
     var all = [bio.local, bio.byAge, bio.byStage];
-    var decisive = bio.primary === 'local' ? [bio.local] : [bio.byAge, bio.byStage];
+    var reported = reportedComparison(normalized.reportedRange, measurement);
+    var hasReportedComparison = reported && reported.status !== 'unavailable';
+    var reportedDisagreement = hasReportedComparison && ['within', 'above', 'below'].includes(reported.status) && all.some(function (c) {
+      return ['within', 'above', 'below'].includes(c.status) && c.status !== reported.status;
+    });
+    var decisive = hasReportedComparison ? [reported] : bio.primary === 'local' ? [bio.local] : [bio.byAge, bio.byStage];
     var abnormal = decisive.some(function (c) { return c.status === 'above' || c.status === 'below'; });
     var uncertain = decisive.some(function (c) { return c.status === 'indeterminate'; });
     var summary;
@@ -406,16 +460,24 @@
     } else if (clinical.status === 'warning' || clinical.status === 'notice') summary = { status: 'attention', code: clinical.code, title: clinical.title };
     else if (clinicalAttention) summary = clinicalAttention;
     else if (measurement.status !== 'valid') summary = { status: 'invalid', code: 'invalid_measurement', title: 'Nieprawidłowy zapis wyniku lub jednostki' };
-    else if (abnormal) summary = { status: 'attention', code: 'outside_reference_range', title: 'Wynik poza wskazanym zakresem referencyjnym' };
+    else if (reportedDisagreement) summary = { status: 'attention', code: 'reported_range_reference_disagreement', title: 'Porównania zakresów wymagają uzgodnienia' };
+    else if (abnormal) summary = hasReportedComparison
+      ? { status: 'attention', code: 'outside_reported_range', title: 'Wynik poza zakresem przepisanym z wyniku' }
+      : { status: 'attention', code: 'outside_reference_range', title: 'Wynik poza wskazanym zakresem referencyjnym' };
     else if (clinical.status === 'out_of_scope') summary = { status: 'out_of_scope', code: 'out_of_scope', title: clinical.title };
-    else if (!bio.primary || uncertain || clinical.status === 'limited') summary = { status: 'limited', code: 'limited_interpretation', title: 'Interpretacja ograniczona dostępnymi danymi' };
-    else summary = { status: 'compared', code: 'reference_comparison_available', title: 'Wynik porównano z wybranym zakresem' };
-    var limitations = unique(clinical.reasonCodes.concat(bio.reasonCodes, measurement.reasonCodes));
+    else if ((!bio.primary && !hasReportedComparison) || (reported && !hasReportedComparison) || uncertain || clinical.status === 'limited') summary = { status: 'limited', code: 'limited_interpretation', title: 'Interpretacja ograniczona dostępnymi danymi' };
+    else summary = hasReportedComparison
+      ? { status: 'compared', code: 'reported_range_comparison_available', title: 'Wynik porównano z zakresem przepisanym z wyniku' }
+      : { status: 'compared', code: 'reference_comparison_available', title: 'Wynik porównano z wybranym zakresem' };
+    var limitations = unique(clinical.reasonCodes.concat(bio.reasonCodes, measurement.reasonCodes, reported ? reported.reasonCodes : []));
+    if (reportedDisagreement) limitations.push('reported_range_reference_disagreement');
     if (bio.primary && age.status === 'known' && biochemicalPolicy && ageTest(age, biochemicalPolicy.infantAgeYears) === 'within') limitations.push('broad_infant_reference_not_full_minipuberty_assessment');
-    return { schemaVersion: 1, engineVersion: VERSION, dataVersion: data.dataVersion || null, analyte: normalized.analyte,
+    var evaluation = { schemaVersion: 1, engineVersion: VERSION, dataVersion: data.dataVersion || null, analyte: normalized.analyte,
       input: copy(normalized), measurement: measurement, ageAtSample: age, biochemical: bio, clinical: clinical, summary: summary,
       provenance: { clinicalProfileId: data.clinicalProfile && data.clinicalProfile.id || null, clinicalProfileVersion: data.clinicalProfile && data.clinicalProfile.version || null, biochemicalPolicyId: biochemicalPolicy && biochemicalPolicy.id || null, biochemicalPolicyVersion: biochemicalPolicy && biochemicalPolicy.version || null, profileId: profile && profile.id || null, profileVersion: profile && profile.version || null,
         sourceIds: unique(clinical.sourceIds.concat(biochemicalPolicy && biochemicalPolicy.sourceIds || [], all.filter(function (c) { return c.range; }).map(function (c) { return c.range.sourceId; }))) }, limitations: unique(limitations) };
+    if (reported) evaluation.reportedRange = reported;
+    return evaluation;
   }
   return Object.freeze({ version: VERSION, evaluate: evaluate, parseMeasurement: parseMeasurement, resolveAge: resolveAge, compareMeasurement: compareMeasurement, assessTiming: assessTiming });
 });

@@ -41,12 +41,14 @@
   var comparison = { status: 'text', reasonCodes: ['text'], range: selectedRange };
   var input = {
     analyte: 'text', value: 'measurementInput', unit: 'text', sex: 'text', sampleDateISO: 'text', birthDateISO: 'text', age: age,
-    specimen: 'text', measurementKind: 'text', assay: { profileId: 'text', methodId: 'text', confirmation: 'text' },
-    puberty: { kind: 'text', stage: 'number', assessedAtISO: 'text', appliesToSample: 'boolean', source: 'text' },
-    testicularVolume: { value: 'number', unit: 'text', method: 'text', assessedAtISO: 'text', appliesToSample: 'boolean' },
+    contextBasis: 'text',
+    specimen: 'text', measurementKind: 'text', assay: { profileId: 'text', profileVersion: 'text', methodId: 'text', confirmation: 'text' },
+    puberty: { kind: 'text', stage: 'number', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean', source: 'text' },
+    testicularVolume: { value: 'number', unit: 'text', method: 'text', assessedAtISO: 'text', appliesToSample: 'boolean', appliesToCurrentContext: 'boolean' },
     onset: { kind: 'text', dateISO: 'text', age: age, confirmedPubertalOnset: 'boolean' },
     history: { progression: 'text', growthAcceleration: 'text', cnsSymptoms: 'text', regression: 'text' },
-    treatment: { gnrha: 'text', sexSteroids: 'text' }, preterm: 'text', gestationalAgeWeeks: 'number',
+    treatment: { gnrha: 'text', sexSteroids: 'text', context: 'text' }, preterm: 'text', gestationalAgeWeeks: 'number',
+    reportedRange: { text: 'text', unit: 'text' },
     localReference: {
       id: 'text', version: 'text', analyte: 'text', material: 'text', unit: 'text', methodId: 'text',
       applicabilityConfirmed: 'boolean', source: source, population: population, range: rangeBounds
@@ -69,8 +71,13 @@
       clinicalProfileId: 'text', clinicalProfileVersion: 'text', biochemicalPolicyId: 'text', biochemicalPolicyVersion: 'text',
       profileId: 'text', profileVersion: 'text', sourceIds: ['text']
     },
-    limitations: ['text']
+    limitations: ['text'],
+    reportedRange: { status: 'text', raw: 'text', unit: 'text', lower: bound, upper: bound, reasonCodes: ['text'] }
   };
+  // These schema-1 additions are optional. Reading an older assessment must
+  // preserve its original shape and must never infer a current-form context.
+  var optionalInput = ['contextBasis', 'reportedRange'];
+  var optionalNestedInput = { assay: ['profileVersion'], puberty: ['appliesToCurrentContext'], testicularVolume: ['appliesToCurrentContext'], treatment: ['context'] };
   var bindingSchema = { testKey: 'text', test: 'text', value: 'text', valueNum: 'number', unit: 'text', norm: 'text', clinicalDateISO: 'text' };
 
   function plainText(value) {
@@ -124,10 +131,31 @@
     if (limits.censoredLower != null && !validBound(limits.censoredLower, ['<', '<='], true)) return false;
     return true;
   }
+  function validReportedRange(evaluation) {
+    var hasInput = own(evaluation.input, 'reportedRange'), hasOutput = own(evaluation, 'reportedRange');
+    if (!hasInput && !hasOutput) return true;
+    if (!hasInput || !hasOutput) return false;
+    var supplied = evaluation.input.reportedRange, result = evaluation.reportedRange;
+    if (!required(supplied, ['text', 'unit']) || typeof supplied.text !== 'string' || !supplied.text.trim() || supplied.text.length > 160 || typeof supplied.unit !== 'string' || supplied.unit.length > 24) return false;
+    if (!required(result, Object.keys(evaluationSchema.reportedRange)) || !contains(result.status, ['unavailable', 'indeterminate', 'within', 'below', 'above']) || !Array.isArray(result.reasonCodes)) return false;
+    if (result.raw !== supplied.text || result.unit !== supplied.unit) return false;
+    if (result.lower !== null && (!validBound(result.lower, ['>', '>='], false) || result.lower.value < 0)) return false;
+    if (result.upper !== null && (!validBound(result.upper, ['<', '<='], false) || result.upper.value < 0)) return false;
+    if (result.lower && result.upper && (result.lower.value > result.upper.value || result.lower.value === result.upper.value && (result.lower.operator === '>' || result.upper.operator === '<'))) return false;
+    if (result.status !== 'unavailable' && (!contains(result.unit, ['IU/L', 'mIU/mL']) || !result.lower && !result.upper)) return false;
+    return true;
+  }
   function validEvaluation(value) {
-    if (!required(value, Object.keys(evaluationSchema)) || value.schemaVersion !== 1 || !value.engineVersion || !contains(value.analyte, ['lh', 'fsh'])) return false;
-    if (!required(value.input, Object.keys(input)) || value.input.analyte !== value.analyte) return false;
-    if (!['assay', 'puberty', 'testicularVolume', 'onset', 'history', 'treatment'].every(function (key) { return required(value.input[key], Object.keys(input[key])); })) return false;
+    if (!required(value, Object.keys(evaluationSchema).filter(function (key) { return key !== 'reportedRange'; })) || value.schemaVersion !== 1 || !value.engineVersion || !contains(value.analyte, ['lh', 'fsh'])) return false;
+    if (!required(value.input, Object.keys(input).filter(function (key) { return !contains(key, optionalInput); })) || value.input.analyte !== value.analyte) return false;
+    if (!['assay', 'puberty', 'testicularVolume', 'onset', 'history', 'treatment'].every(function (key) {
+      return required(value.input[key], Object.keys(input[key]).filter(function (field) { return !contains(field, optionalNestedInput[key] || []); }));
+    })) return false;
+    if (own(value.input, 'contextBasis') && !contains(value.input.contextBasis, ['current-patient', 'sample'])) return false;
+    if (own(value.input.assay, 'profileVersion') && (typeof value.input.assay.profileVersion !== 'string' || value.input.assay.profileVersion.length > 80)) return false;
+    if (!['puberty', 'testicularVolume'].every(function (key) { return !own(value.input[key], 'appliesToCurrentContext') || typeof value.input[key].appliesToCurrentContext === 'boolean'; })) return false;
+    if (own(value.input.treatment, 'context') && !contains(value.input.treatment.context, ['unknown', 'none', 'hormonal'])) return false;
+    if (!validReportedRange(value)) return false;
     var m = value.measurement, b = value.biochemical, c = value.clinical;
     if (!required(m, Object.keys(evaluationSchema.measurement)) || !contains(m.status, ['valid', 'invalid']) || typeof m.raw !== 'string' || typeof m.isExact !== 'boolean') return false;
     if (m.status === 'valid' && (!contains(m.operator, ['=', '<', '<=', '>', '>=']) || m.unit !== 'IU/L' || !contains(m.sourceUnit, ['IU/L', 'mIU/mL']))) return false;
@@ -235,5 +263,5 @@
     var value = m && m.status === 'valid' && m.isExact && m.operator === '=' ? m.plotValue : null;
     return { assessment: assessment, valueNum: value, plotValue: value };
   }
-  return Object.freeze({ version: '1.0.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
+  return Object.freeze({ version: '1.1.0', create: create, normalize: normalize, reconcile: reconcile, forSeries: forSeries });
 });
