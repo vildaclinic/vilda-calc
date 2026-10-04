@@ -135,8 +135,8 @@ async function pytanieBramyOtwarte(opcje) {
   const zapisA = v.savePatient(payload([60, 66, 74]), {
     patientId: a.patientId, dedup: false, baselinePayload: kopia(wczytane),
   });
-  await chwila(20);
-  expect(pytania, 'pytanie bramy o pomiar 80 czeka na lekarza').toEqual([[80]]);
+  // Brama musi faktycznie wejść do resolvera po odczycie i deszyfrowaniu.
+  await expect.poll(() => pytania, { timeout: 2000, message: 'pytanie bramy o pomiar 80 czeka na lekarza' }).toEqual([[80]]);
   return { v, patientId: a.patientId, zapisA, odpowiedz };
 }
 
@@ -278,8 +278,7 @@ describe('Sygnał czekania i limit czasu (Web Locks)', () => {
       v.updateSnapshotPayload(patientId, glowa.snapshotId, kopia(glowa.payload),
         { preserveSavedAt: true, ...naCzekanie('poprawka') }),
     ];
-    await chwila(20);
-    expect(sygnaly.slice().sort()).toEqual(['edycja', 'poprawka', 'przypięcie']);
+    await expect.poll(() => sygnaly.slice().sort(), { timeout: 2000 }).toEqual(['edycja', 'poprawka', 'przypięcie']);
 
     odpowiedz.rozwiaz('scal');
     await Promise.all([zapisA, ...operacje]);

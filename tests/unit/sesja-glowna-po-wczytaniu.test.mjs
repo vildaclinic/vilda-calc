@@ -133,7 +133,10 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(env.win.vildaSession.saveNow(), 'bez force przed odtworzeniem: odmowa').toBe(false);
     expect(env.zapisy).toHaveLength(0);
     expect(env.sesja().name, 'sesja z nazwiskiem nietknięta').toBe('Fikcyjna Ewa');
-    await czekaj(30); // strona wykonała próbę odtworzenia (latka Ke)
+    // Gotowość pochodzi z końca finalizacji rAF + tick, nie z upływu 30 ms.
+    // Nie ponawiamy saveNow w poll: każdy zapis ma pozostać pojedynczą operacją.
+    await expect.poll(() => env.odswiezenia(), { timeout: 2000 }).toBeGreaterThanOrEqual(1);
+    expect(env.win.__vildaPersistRestoring).toBe(false);
     expect(env.win.vildaSession.saveNow({ force: true })).toBe(true);
     expect(env.zapisy).toHaveLength(1);
   });
@@ -178,7 +181,7 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     const zastosowane = [];
     const env = await uruchom(null, { przedOdtworzeniem: true, sesja: REKORD(), applyLoadedData: (p, o) => { zastosowane.push({ name: p.name, sesja: !!(o && o.isSessionRestore) }); } });
     expect(env.odswiezenia(), 'przed odtworzeniem nic').toBe(0);
-    await czekaj(60); // start persistence → restoreMainSessionIfAny → finalizacja (rAF + tick)
+    await expect.poll(() => env.odswiezenia(), { timeout: 2000 }).toBeGreaterThanOrEqual(1);
     expect(zastosowane, 'odtworzenie sesji weszło przez applyLoadedData z isSessionRestore').toEqual([{ name: 'Fikcyjna Ewa', sesja: true }]);
     expect(env.odswiezenia(), 'po finalizacji odtworzenia karta odświeżona').toBeGreaterThanOrEqual(1);
     expect(env.win.__vildaPersistRestoring, 'flaga odtwarzania zdjęta').toBe(false);
