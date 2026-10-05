@@ -31,7 +31,9 @@
  *                       bez Włączenia — pierwszy pomiar tego cyklu (`pierwszy-pomiar-cyklu`), a gdy
  *                       ten cykl nie ma jeszcze żadnego pomiaru masy — `brak-pomiaru-cyklu` (cała
  *                       seria sprzed odniesienia). Pomiar wcześniejszego cyklu nigdy nie liczy się
- *                       jako postęp bieżącego, także przy remisie dat z odniesieniem.
+ *                       jako postęp bieżącego, także przy remisie dat z odniesieniem. Włączenie
+ *                       cyklu nr ≥ 2 zapisane bez masy — ta sama arytmetyka, flaga
+ *                       `punktOdniesienia.wlaczenieBezMasy` (teksty nie twierdzą, że Włączenia nie ma).
  *   cykl              — bieżący cykl leczenia: numer, liczba cykli, stan, brak Włączenia
  *                       i kody niezgodności zapisu; `null` bez modułu cykli albo bez punktów.
  *   ubytekPct         — DODATNI odsetek ubytku masy wobec punktu odniesienia (0 przy przyroście).
@@ -504,7 +506,7 @@
    * inne granice niż Karta pacjenta i monitor. O przynależności punktu do cyklu decyduje
    * WYŁĄCZNIE moduł cykli (własne reguły dat i wieku), ta zakładka jej nie odtwarza.
    *
-   * Moduł czytamy LENIWIE, w chwili wywołania: na większości stron ładuje się po tym pliku.
+   * Moduł czytamy LENIWIE, w chwili wywołania: na wszystkich stronach ładuje się po tym pliku.
    * Bez modułu (albo gdy `podziel` rzuci) zwracamy `null` i silnik liczy dawną regułą —
    * tak samo jak Karta pacjenta (`Ob_cy` → `Ob_ks`).
    *
@@ -751,6 +753,15 @@
       else { zrodloOdn = 'brak-pomiaru-cyklu'; brakPomiaruCyklu = true; }
     }
     if (!odniesienie) odniesienie = uporzadkowane[0];
+    /* WŁĄCZENIE BIEŻĄCEGO CYKLU NR ≥ 2 BEZ MASY (rata 4, poprawka po recenzji całości raty).
+       Monitor wymusza masę tylko dla nowych punktów; import albo stary zapis bywa bez niej.
+       `normSeria` odrzuca wtedy Włączenie, więc `start` zostaje pusty i odniesieniem jest
+       pierwszy pomiar tego cyklu — arytmetyka bez zmian. Zmienia się tylko to, co mówią
+       teksty: cykl MA Włączenie (`cykl.bezWlaczenia` = false, monitor i Karta je widzą), więc
+       „ten cykl nie ma punktu „Włączenie”” byłoby nieprawdą. W cyklu nr 1 (jedyny cykl)
+       flagi nie stawiamy — brzmienia jednego cyklu zostają co do litery jak przed ratą 4. */
+    var wlaczenieBezMasy = !start && !!(cyklB && cyklB.numer > 1 && cyklB.wlaczenie)
+      && !normPomiar(cyklB.wlaczenie);
     wynik.punktOdniesienia = {
       zrodlo: zrodloOdn,
       masa: odniesienie.masa,
@@ -758,12 +769,15 @@
       dateISO: odniesienie.dateISO,
       wiekMies: odniesienie.wiekMies,
       dataOdzyskana: dataOdzyskana,
+      wlaczenieBezMasy: wlaczenieBezMasy,
       lek: start ? start.lek : null,
       substancja: start ? start.substancja : null,
       opis: start
         ? 'Procenty liczone od masy w punkcie „Włączenie” leczenia.'
         : (zrodloOdn === 'pierwszy-pomiar-cyklu'
-          ? 'Bieżący cykl leczenia (po Zakończeniu poprzedniego) nie ma punktu „Włączenie” — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed leczenia.'
+          ? (wlaczenieBezMasy
+            ? 'Punkt „Włączenie” bieżącego cyklu leczenia nie ma masy ciała — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed leczenia.'
+            : 'Bieżący cykl leczenia (po Zakończeniu poprzedniego) nie ma punktu „Włączenie” — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed leczenia.')
           : (brakPomiaruCyklu
             ? 'Bieżący cykl leczenia (po Zakończeniu poprzedniego) nie ma jeszcze pomiaru masy ciała — procenty liczone od pierwszego pomiaru w serii, a wszystkie pomiary pochodzą sprzed tego cyklu.'
             : 'Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.')),
@@ -809,7 +823,9 @@
       wynik.punktDecyzyjny.tydzienOdOdniesienia = null;
       wynik.punktDecyzyjny.nominalna = false;
       wynik.punktDecyzyjny.bezOsi = 'brak-punktu-wlaczenia';
-      wynik.ostrzezenia.push('Punktu oceny wg ChPL nie postawiono na wykresie: bez punktu „Włączenie” oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru'
+      wynik.ostrzezenia.push('Punktu oceny wg ChPL nie postawiono na wykresie: '
+        + (wlaczenieBezMasy ? 'bez masy w punkcie „Włączenie”' : 'bez punktu „Włączenie”')
+        + ' oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru'
         + (wynik.punktOdniesienia.zrodlo === 'pierwszy-pomiar-cyklu' ? ' bieżącego cyklu' : '')
         + ', nie od masy początkowej z ChPL.');
     }

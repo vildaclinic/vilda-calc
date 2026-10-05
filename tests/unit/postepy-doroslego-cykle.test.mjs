@@ -124,6 +124,24 @@ describe('CY-10 — dwa cykle: „Postępy” liczą bieżący cykl', () => {
     expect(h).toContain('Leczenie odstawione w 29. tygodniu');
   });
 
+  // Recenzja całości raty 4: jedyna w „Postępach” zmiana wyniku u pacjenta z JEDNYM cyklem i jedną substancją
+  // (ALGORITHMS.md, wiersz „jeden cykl” tabeli przypadków). Dotąd Zakończenie bez masy wypadało w `normPomiar`,
+  // więc stan brzmiał „na leczeniu”; moduł cykli widzi je na surowych punktach.
+  it('jeden cykl, Zakończenie bez masy → „odstawione” w 40. tyg. (dotąd „na leczeniu”)', () => {
+    const { P, U } = moduly();
+    const punkty = [CYKL_1[0], CYKL_1[1], pkt('end', '2024-10-15', null, SAXENDA, 40, 9)];
+    for (const kolejnosc of [punkty, punkty.slice().reverse()]) {
+      const m = zKarty(P, kolejnosc);
+      expect(m.cykl).toEqual({ numer: 1, liczba: 1, stan: 'zakonczony', bezWlaczenia: false, niezgodnosci: [] });
+      expect(m.leczenie.stan).toBe('odstawione');
+      expect(m.leczenie.odstawienieTydzien).toBe(40);
+      expect(m.leczenie.odstawienieDateISO).toBe('2024-10-15');
+      expect(m.punktOdniesienia.masa).toBe(104);
+      expect(m.seria, 'punkt bez masy nie trafia do serii').toHaveLength(2);
+      expect(tekstHtml(U.buildHtml(m))).toContain('Leczenie odstawione w 40. tygodniu');
+    }
+  });
+
   it('jeden cykl → wynik.cykl „1 z 1” i ten sam wynik co dotąd', () => {
     const m = zKarty(moduly().P, CYKL_1);
     expect(m.cykl).toEqual({ numer: 1, liczba: 1, stan: 'zakonczony', bezWlaczenia: false, niezgodnosci: [] });
@@ -348,6 +366,129 @@ describe('Cykl nr ≥ 2 bez żadnego pomiaru masy — stan „brak-pomiaru-cyklu
   });
 });
 
+describe('Włączenie cyklu nr ≥ 2 bez masy — teksty nie twierdzą, że cykl nie ma Włączenia', () => {
+  /* Recenzja całości raty 4. Monitor wymusza masę tylko dla nowych punktów; Włączenie z importu albo ze
+     starego zapisu bywa bez niej. `normSeria` je odrzuca, więc odniesieniem jest pierwszy pomiar cyklu
+     (arytmetyka bez zmian), ale zakładka pisała „ten cykl nie ma punktu „Włączenie”” — choć `cykl.bezWlaczenia`
+     jest false, a monitor i Karta pacjenta to Włączenie pokazują. */
+  const W_BEZ_MASY = pkt('start', '2024-11-12', null, WEGOVY, 40, 10);
+  const CY10_BM = [...CYKL_1, W_BEZ_MASY, CYKL_2[1], CYKL_2[2]];
+  const ODN = 'Wszystkie zmiany liczone od pierwszego pomiaru bieżącego cyklu leczenia (cykl 2 z 2; 95,5 kg, 12.02.2025) — punkt „Włączenie” tego cyklu nie ma masy ciała, więc procenty nie liczą się od masy sprzed leczenia, nie od poprzedniej wizyty.';
+
+  it.each([['chronologicznie', CY10_BM], ['odwrotnie', CY10_BM.slice().reverse()]])(
+    'CY-10 z Włączeniem Wegovy bez masy (%s): odniesienie 95,5 kg z cyklu 2, flaga `wlaczenieBezMasy`', (_, punkty) => {
+      const m = zKarty(moduly().P, punkty);
+      expect(m.cykl).toEqual({ numer: 2, liczba: 2, stan: 'aktywny', bezWlaczenia: false, niezgodnosci: [] });
+      expect(m.punktOdniesienia).toMatchObject({ zrodlo: 'pierwszy-pomiar-cyklu', masa: 95.5, dateISO: '2025-02-12', wlaczenieBezMasy: true });
+      expect(m.punktOdniesienia.opis).toBe('Punkt „Włączenie” bieżącego cyklu leczenia nie ma masy ciała — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed leczenia.');
+      expect(m.leczenie.stan).toBe('na-leczeniu');
+      expect(m.seria.map((s) => s.tydzien)).toEqual([-57, -44, -17, 0, 12]);
+    });
+
+  it('panel i obie kartki: brak masy we Włączeniu, nie brak Włączenia', () => {
+    const { P, U, W } = moduly();
+    const m = zKarty(P, CY10_BM);
+    const h = U.buildHtml(m);
+    expect(tekstHtml(h)).toContain(ODN);
+    // Zdanie o odniesieniu (pod kafelkami); ogólny opis pasm (`OPIS_PASM`, bez zmian w racie) mówi o braku Włączenia warunkowo.
+    const odn = (h.match(/<p class="vilda-pd-odn">([\s\S]*?)<\/p>/) || [])[1];
+    expect(odn).toBeTruthy();
+    expect(odn).not.toContain('nie ma punktu „Włączenie”');
+    expect(m.ostrzezenia).toEqual([]);
+    expect(h, 'podpis osi mówi prawdę i zostaje').toContain('tygodnie od pierwszego pomiaru bieżącego cyklu');
+    const tk = tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'kliniczny' }).content);
+    expect(tk).toContain(ODN);
+    expect(tk).toContain('Punkt odniesienia: pierwszy pomiar bieżącego cyklu leczenia (cykl 2 z 2)');
+    expect(tk).not.toContain('nie ma punktu „Włączenie”');
+    const tp = tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'pacjent' }).content);
+    expect(tp).toContain(ODN);
+    expect(tp).toContain('Od pierwszego pomiaru w bieżącym leczeniu (12.02.2025) masa ciała zmniejszyła się o 2,5 kg (2,6 % masy początkowej).');
+    expect(tp).not.toContain('nie ma punktu „Włączenie”');
+  });
+
+  it('lek z ChPL (Saxenda w cyklu 2): ostrzeżenie mówi o braku masy we Włączeniu', () => {
+    const punkty = [...CYKL_1, pkt('start', '2024-11-12', null, SAXENDA, 40, 10),
+      pkt('continue', '2025-02-12', 95.5, SAXENDA, 41, 1), pkt('continue', '2025-05-10', 93, SAXENDA, 41, 3)];
+    const m = zKarty(moduly().P, punkty);
+    expect(m.punktDecyzyjny.bezOsi).toBe('brak-punktu-wlaczenia');
+    expect(m.ostrzezenia).toEqual(['Punktu oceny wg ChPL nie postawiono na wykresie: bez masy w punkcie „Włączenie” oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru bieżącego cyklu, nie od masy początkowej z ChPL.']);
+  });
+
+  it('cykl nr 2 bez Włączenia (stara Kontynuacja po Zakończeniu): flaga false, brzmienie jak dotąd', () => {
+    const kpoz = [...CYKL_1, pkt('continue', '2024-11-12', 98.5, WEGOVY, 40, 10), CYKL_2[1], CYKL_2[2]];
+    const m = zKarty(moduly().P, kpoz);
+    expect(m.punktOdniesienia.wlaczenieBezMasy).toBe(false);
+    expect(tekstHtml(moduly().U.buildHtml(m))).toContain('— ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia');
+  });
+
+  it('jeden cykl z Włączeniem bez masy: brzmienia co do litery jak przed ratą 4 (flaga `wlaczenieBezMasy` = false)', () => {
+    const { P, U } = moduly();
+    const punkty = [pkt('start', '2024-01-12', null, SAXENDA, 40, 0), pkt('continue', '2024-04-12', 99, SAXENDA, 40, 3),
+      pkt('continue', '2024-07-12', 97, SAXENDA, 40, 6)];
+    const m = zKarty(P, punkty);
+    expect(m.cykl).toMatchObject({ numer: 1, liczba: 1, bezWlaczenia: false });
+    expect(m.punktOdniesienia).toMatchObject({ zrodlo: 'pierwszy-pomiar', masa: 99, wlaczenieBezMasy: false });
+    expect(m.punktOdniesienia.opis).toBe('Brak punktu „Włączenie” — procenty liczone od pierwszego pomiaru w serii.');
+    expect(m.ostrzezenia).toEqual(['Punktu oceny wg ChPL nie postawiono na wykresie: bez punktu „Włączenie” oś nie ma wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru, nie od masy początkowej z ChPL.']);
+    expect(tekstHtml(U.buildHtml(m))).toContain('Wszystkie zmiany liczone od pierwszego zapisanego pomiaru (99,0 kg, 12.04.2024) — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia, nie od poprzedniej wizyty.');
+  });
+});
+
+describe('Zdublowane Zakończenie (stary zapis albo import) — samotne Zakończenie jest bieżącym cyklem', () => {
+  /* Recenzja całości raty 4. Zapis W, K, Z, Z (bez wizyty między Zakończeniami) moduł cykli dzieli na cykl 1
+     i cykl 2 złożony wyłącznie z drugiego Zakończenia (niezgodność `zakonczenie-bez-wizyt`). „Postępy” biorą
+     ostatni cykl jako bieżący (jak Karta pacjenta od raty 3), więc cały cykl 1 trafia do części „sprzed
+     odniesienia”. Monitor od raty 1 nie przyjmie drugiego Zakończenia (`drugie-zakonczenie`); zapis bywa
+     tylko w imporcie i w starych danych, a baner monitora podpowiada „Usuń to Zakończenie”.
+     STAN RATY 4 przypięty; wariant „cykl złożony wyłącznie z Zakończenia nie jest bieżącym cyklem” (wspólny dla
+     Karty, „Postępów” i trajektorii) — do decyzji właściciela (ALGORITHMS.md). Przed ratą (893e7262): 104 kg,
+     −7,0 kg (−6,7 %), kamienie 13/16/40, znacznik ChPL w 16. tyg., „odstawione w 44. tygodniu”. */
+  const Z2 = pkt('end', '2024-11-15', 97, SAXENDA, 40, 10);
+  const DUPZ = [...CYKL_1, Z2];
+
+  it('monitor takiego zapisu nie przyjmie — drugie Zakończenie pochodzi z importu albo ze starych danych', () => {
+    const { g } = moduly();
+    const r = g.VildaCykleLeczenia.sprawdz(CYKL_1, { rodzaj: 'dodaj', punkt: Z2 }, {});
+    expect(r.ok).toBe(false);
+    expect(r.kod).toBe('drugie-zakonczenie');
+    expect(g.VildaCykleLeczenia.podziel(DUPZ).cykle.map((c) => [c.numer, c.punkty.length, c.niezgodnosci.map((n) => n.kod)]))
+      .toEqual([[1, 3, []], [2, 1, ['zakonczenie-bez-wizyt']]]);
+  });
+
+  it('odniesienie z drugiego Zakończenia, cały cykl 1 „sprzed odniesienia”, „odstawione w 0. tygodniu” (stan raty 4 — do decyzji właściciela)', () => {
+    const { P, U, W } = moduly();
+    for (const punkty of [DUPZ, DUPZ.slice().reverse()]) {
+      const m = zKarty(P, punkty);
+      expect(m.cykl).toEqual({ numer: 2, liczba: 2, stan: 'zakonczony', bezWlaczenia: true, niezgodnosci: ['zakonczenie-bez-wizyt'] });
+      expect(m.punktOdniesienia).toMatchObject({ zrodlo: 'pierwszy-pomiar-cyklu', masa: 97, dateISO: '2024-11-15' });
+      expect(m.seria.map((s) => [s.tydzien, s.przedOdniesieniem])).toEqual([[-44, true], [-31, true], [-4, true], [0, false]]);
+      expect(m.kamienie).toEqual([]);
+      expect(m.nadir).toMatchObject({ masa: 97, tydzien: 0 });
+      expect(m.leczenie).toMatchObject({ stan: 'odstawione', odstawienieTydzien: 0, odstawienieDateISO: '2024-11-15' });
+      expect(m.punktDecyzyjny.bezOsi, 'znacznik ChPL zdjęty jak przy każdej niezgodności').toBe('niezgodny-zapis-cyklu');
+    }
+    const m = zKarty(P, DUPZ);
+    const h = tekstHtml(U.buildHtml(m));
+    expect(h).toContain('Leczenie odstawione w 0. tygodniu');
+    expect(h).toContain('Zapis bieżącego cyklu leczenia wymaga uporządkowania w monitorze DocPro');
+    // Kartka pacjenta nie niesie ostrzeżeń — pacjent, który schudł 7 kg, czyta „0,0 kg”.
+    const tp = tekstem(W.buildDokument(m, { ...OPCJE_DRUKU, wariant: 'pacjent' }).content);
+    expect(tp).toContain('Od pierwszego pomiaru w bieżącym leczeniu (15.11.2024) masa ciała zwiększyła się o 0,0 kg.');
+    expect(tp).not.toContain('wymaga uporządkowania');
+  });
+
+  it('drugie Zakończenie bez masy → `brak-pomiaru-cyklu`, „odstawione” bez tygodnia, drabinka ogólna (stan raty 4 — do decyzji właściciela)', () => {
+    const m = zKarty(moduly().P, [...CYKL_1, pkt('end', '2024-11-15', null, SAXENDA, 40, 10)]);
+    expect(m.cykl).toMatchObject({ numer: 2, liczba: 2, bezWlaczenia: true, niezgodnosci: ['zakonczenie-bez-wizyt'] });
+    expect(m.punktOdniesienia).toMatchObject({ zrodlo: 'brak-pomiaru-cyklu', masa: 104 });
+    expect(m.seria.map((s) => s.przedOdniesieniem)).toEqual([true, true, true]);
+    expect(m.kamienie).toEqual([]);
+    expect(m.leczenie).toMatchObject({ stan: 'odstawione', odstawienieTydzien: null, odstawienieDateISO: '2024-11-15' });
+    // Lek szukany wyłącznie w bieżącym cyklu, a jego jedyny punkt (bez masy) odpada w normalizacji.
+    expect(m.zestaw.id).toBe('OGOLNY');
+  });
+});
+
 describe('Niezgodny zapis bieżącego cyklu — znacznik ChPL wstrzymany jak w Karcie (D5)', () => {
   /* CK-5 / CY-7: dwa Włączenia Saxendy bez Zakończenia między nimi. */
   const DWA_W = [
@@ -511,8 +652,18 @@ describe('Bez modułu cykli — reguła sprzed raty 4 (test negatywny)', () => {
       .toContain('Punkt odniesienia: włączenie leczenia ');
   });
 
+  it('brak modułu, jeden cykl z Zakończeniem bez masy → „na leczeniu” (reguła sprzed raty 4)', () => {
+    const { P, U } = bezModulu(undefined);
+    const m = zKarty(P, [CYKL_1[0], CYKL_1[1], pkt('end', '2024-10-15', null, SAXENDA, 40, 9)]);
+    expect(m.cykl).toBeNull();
+    expect(m.leczenie.stan).toBe('na-leczeniu');
+    expect(m.leczenie.odstawienieTydzien).toBeNull();
+    expect(m.leczenie.odstawienieDateISO).toBeNull();
+    expect(tekstHtml(U.buildHtml(m))).not.toContain('Leczenie odstawione');
+  });
+
   it('moduł czytany w chwili wywołania — działa, gdy ładuje się PO silniku (kolejność na stronach)', () => {
-    // Na 6 z 8 stron `vilda_cykle_leczenia.js` stoi za modułami „Postępów”.
+    // Na wszystkich 8 stronach `vilda_cykle_leczenia.js` stoi za modułami „Postępów” (na 6 z 8 także za trajektorią).
     const win = {};
     win.window = win;
     const wykonaj = (plik) => new Function('window', 'globalThis', zrodlo(plik))(win, win);

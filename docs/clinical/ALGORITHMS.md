@@ -7024,8 +7024,10 @@ werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scale
 2026-10-01: „ruszaj z ratą 4”. Rata 4 domyka plan projektu: **D3** (R6 — zmiana substancji czynnej zaczyna nowy cykl),
 **D6** (karta porównania: dla otyłości granicą są Zakończenie i Włączenie, bez progu przerwy 3 mies.; GH bez zmian)
 i zakładka „Postępy” dorosłego na bieżącym cyklu. Progi, okna i kotwice ChPL (`ObesityResponseCriteria`, P-KRYTERIA,
-P-KOTWICA), drabinki pasm (P-POSTEPY) i reguły werdyktów trajektorii (P-WERDYKT) — bez zmian. Zmienia się to, **które
-punkty** tworzą cykl i kurs leczenia oraz kiedy ocena jest wydawana.
+P-KOTWICA), drabinki pasm (P-POSTEPY) i progi werdyktów trajektorii (P-WERDYKT) — bez zmian (wyjątek: reguły 2 i 5
+P-WERDYKT rata 6 dla otyłości — tolerancja startu kursu przycięta do końca poprzedniego kursu, podrozdział „Kursy
+leczenia otyłości = cykle”). Zmienia się to, **które punkty** tworzą cykl i kurs leczenia oraz kiedy ocena jest
+wydawana.
 
 **Części raty** (każda z regułą, przypadkami wejście → wynik, testami i ograniczeniami):
 1. moduł cykli — R6 (podrozdział niżej);
@@ -7034,19 +7036,37 @@ punkty** tworzą cykl i kurs leczenia oraz kiedy ocena jest wydawana.
 4. zakładka „Postępy” dorosłego — bieżący cykl (niżej);
 5. karta porównania i analiza trajektorii — kursy otyłości = cykle: w sekcji modułu trajektorii, podrozdział „Kursy
    leczenia otyłości = cykle” na końcu wpisu P-WERDYKT rata 6 (reguła 1 tamtego wpisu oznaczona „[ZASTĄPIONE dla leczenia
-   otyłości]”).
+   otyłości]”, reguły 2 i 5 — „[ZMIENIONE dla leczenia otyłości]”).
+
+Kolumny „Przed” i „Przed zmianą” w tabelach przypadków wszystkich części opisują **produkcję 893e7262** (moduł cykli
+VERSION 1, bez R6) — względem niej właściciel akceptuje zmianę. Stan pośredni między częściami raty (np. moduł z R6
+przed częścią monitora albo Karty, pierwsza wersja części przed recenzją) pojawia się tylko w nawiasie, tam gdzie
+wyjaśnia poprawkę po recenzji.
 
 **Wpływ kliniczny (zbiorczo).**
-- Pacjent z jednym cyklem i jedną substancją: liczby, werdykty i brzmienia bez zmian (poza przypadkami brzegowymi
-  starego zapisu opisanymi w podrozdziałach).
+- Pacjent z jednym cyklem i jedną substancją: liczby, werdykty i brzmienia bez zmian, z wyjątkami opisanymi
+  w podrozdziałach (każdy zmienia wynik i wymaga akceptacji klinicznej):
+  - **wizyta dopisana wstecz w tym samym miesiącu wieku co Zakończenie** (zwykła droga zapisu w monitorze — `sprawdz`
+    stawia ją w tablicy po Zakończeniu): kurs w analizie trajektorii i w karcie porównania kończy się na Zakończeniu,
+    dotąd trwał; zmienia chip okresu leczenia, nagłówek i werdykty par po Zakończeniu (trajektoria, grupa 5);
+  - Zakończenie bez wieku (stary zapis albo import) w zapisie, w którym każdy punkt ma datę: kurs zamknięty na
+    najstarszym wieku cyklu, dotąd
+    trwał — krótsze okno chipu może zmienić jego werdykt z „redukcja w trakcie leczenia” na „brak istotnej odpowiedzi
+    na leczenie — po N mies.” (trajektoria, grupa 3);
+  - Zakończenie bez masy (np. z importu): „Postępy” pokazują „Leczenie odstawione w N. tygodniu”, dotąd „na leczeniu”;
+  - zdublowane Zakończenie (stary zapis albo import; monitor go nie przyjmie): drugie Zakończenie jest osobnym cyklem —
+    w „Postępach” bieżącym, z odniesieniem od niego (cały kurs „sprzed odniesienia”), w trajektorii kursem zerowej
+    długości bez chipu okresu leczenia; Karta pacjenta — jak od raty 3 (nota i wstrzymany werdykt). Do decyzji
+    właściciela.
 - Istniejący zapis ze zmianą substancji w cyklu bez Zakończenia dostaje niezgodność `zmiana-substancji`: Karta pacjenta
   **wstrzymuje werdykt wg ChPL** tego cyklu (D5, rata 3) i nazywa przejście, „Postępy” zdejmują znacznik oceny wg ChPL,
   monitor pokazuje pozycję banera z poprawką w dwóch krokach. Nic nie zmienia się samo.
 - Monitor nie przyjmie nowej zmiany substancji w trakcie cyklu (dodanie, edycja); przycisk jest wyłączony z powodem.
 - Dziecko z kilkoma cyklami (zmiana leku, wznowienie): karta porównania i analiza trajektorii liczą każdy cykl jako
   osobny kurs. Okno obejmujące dwa cykle dostaje werdykt populacyjny z dopiskiem „— w tym N mies. leczenia
-  redukcyjnego” zamiast „redukcja w trakcie leczenia”, a chip okresu leczenia liczy się od ostatniego cyklu; pośrednio
-  zmienia to też epikryzę i kopiowany opis pacjenta.
+  redukcyjnego” zamiast „redukcja w trakcie leczenia”, a chip okresu leczenia liczy się od ostatniego cyklu — także przy
+  przerwie 3–6 mies. między cyklami, gdy podział na kursy jest taki sam jak dotąd (przycięta tolerancja startu, reguły
+  2 i 5 P-WERDYKT rata 6); pośrednio zmienia to też epikryzę i kopiowany opis pacjenta.
 - Dorosły z kilkoma cyklami: „Postępy” liczą od Włączenia bieżącego cyklu, z drabinką i punktem oceny ChPL jego leku
   (CY-10: 98,5 kg z 12.11.2024 i „na leczeniu” zamiast 104 kg z 12.01.2024 i „Leczenie odstawione w 40. tygodniu”).
 
@@ -7064,8 +7084,11 @@ neutralny).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna wszystkich części (szczegółowe listy w podrozdziałach),
 w szczególności: wstrzymanie werdyktu ChPL istniejącym zapisom z mieszaną substancją; brzmienia komunikatów R6 i pozycji
-banera; odniesienie „Postępów” dla cyklu bez Włączenia i stan „brak pomiaru w cyklu”; przycięcie tolerancji startu
-i werdykty par przez granicę cykli w karcie porównania; scalenie i wdrożenie.
+banera; odniesienie „Postępów” dla cyklu bez Włączenia (także z Włączeniem bez masy) i stan „brak pomiaru w cyklu”;
+przycięcie tolerancji startu i werdykty par przez granicę cykli w karcie porównania; zmiany wyniku u pacjenta z jednym
+cyklem wymienione wyżej (zwłaszcza kurs zamknięty na Zakończeniu przy wizycie dopisanej wstecz); jedno rozstrzygnięcie
+dla zdublowanego Zakończenia we wszystkich obszarach — Karta pacjenta, „Postępy”, trajektoria (stan raty 4 albo
+wariant „cykl złożony wyłącznie z Zakończenia nie jest bieżącym cyklem”); scalenie i wdrożenie.
 
 ### Moduł cykli: zmiana substancji czynnej zaczyna nowy cykl — R6 (`VildaCykleLeczenia` VERSION 2)
 
@@ -7124,8 +7147,9 @@ cyklu (z dotychczasowym lekiem) i Włączenie nowego cyklu — także tego sameg
   w cyklu {N} zmieniałaby się substancja czynna ({Z} → {NA}) bez Zakończenia między wizytami. Zmiana substancji czynnej
   zaczyna nowy cykl — popraw lek albo datę.” — „Zmiana substancji w cyklu {N}”.
 
-**Kod.** `vilda_cykle_leczenia.js` (VERSION '1' → '2'): `substancja(p)` i `nazwaLeku(p)` (eksportowane — dla monitora
-i Karty w drugiej fali), niezgodność `zmiana-substancji` w `podziel`, sygnatura przejścia po parze substancji, wyjątek
+**Kod.** `vilda_cykle_leczenia.js` (VERSION '1' → '2'): `substancja(p)` i `nazwaLeku(p)` (eksportowane; `nazwaLeku`
+używa monitor DocPro — Karta pacjenta ma własną krótką nazwę leku `Ob_ln` → `Vr`; eksportu `substancja` nie woła dziś
+żaden inny plik), niezgodność `zmiana-substancji` w `podziel`, sygnatura przejścia po parze substancji, wyjątek
 rozcięcia dla poprawki starego zapisu, wybór komunikatu i odmowa R6 w remisie dat w `sprawdz`. Kryteria czytane w chwili
 wywołania, w `try/catch` — wyjątek daje punkt neutralny, nigdy wyjątek z `sprawdz` (monitor przy wyjątku dodałby punkt bez
 reguł). Monitor (`vt`, `Ed`/`Eb`) przekazuje lek z formularza bez zmian po swojej stronie.
@@ -7188,8 +7212,9 @@ ewentualna edycja zbiorcza leku cyklu; scalenie i wdrożenie.
   z listy leku (`ht()`, jak `vt`), przy edycji z `Eh()` (lista, a gdy nic nie pokazuje — lek edytowanego punktu, jak `Eb`).
   Przycisk, który R6 odrzuci, dostaje `aria-disabled` i krótki powód z modułu (np. „Inna substancja niż w cyklu 1
   (Saxenda)”, „Zakończenie z lekiem cyklu 1 (Saxenda)”). Zmiana leku na liście (`change` na `#obesityMonDrug`) przelicza
-  podgląd. Dotąd kandydat podglądu nie miał leku (przy edycji — lek zapisany w punkcie), więc przycisk wyglądał na
-  aktywny, a odmowa przychodziła dopiero po kliknięciu.
+  podgląd. Kandydat podglądu nie miał dotąd leku (przy edycji — lek zapisany w punkcie): w produkcji 893e7262 (bez R6)
+  nie miało to znaczenia — przyciski były aktywne, a zapis przechodził; sam moduł z R6 bez tej części dawałby aktywny
+  przycisk i odmowę dopiero po kliknięciu.
 - **Baner „Zapis wymaga uporządkowania”** (`CyB`) — pozycja dla niezgodności `zmiana-substancji`: „W cyklu {N} zmienia się
   substancja czynna: {Z} (do {dZ}) → {NA} (od {dNa}) bez Zakończenia między nimi.” z akcjami „Dopisz Zakończenie przed
   {dNa}” i „Edytuj wizytę {dNa}” (pomyłka w leku). Podpowiedź pierwszej akcji (`CsZ`, w miejscu przycisków, nic nie
@@ -7226,22 +7251,23 @@ ewentualna edycja zbiorcza leku cyklu; scalenie i wdrożenie.
 
 **Wpływ kliniczny.** Liczby, progi, okna, werdykty i zapis punktów — bez zmian; nic nie zmienia się samo (D5). Zmienia się
 to, co lekarz widzi przed kliknięciem (powód pod przyciskiem) i na banerze: stary zapis ze zmianą substancji w cyklu
-(werdykt ChPL w Karcie wstrzymany od części modułu) dostaje pozycję z poprawką w dwóch krokach zamiast ukrytego banera.
+(werdykt ChPL w Karcie wstrzymany przez R6 z części modułu) dostaje pozycję z poprawką w dwóch krokach zamiast ukrytego
+banera (w produkcji 893e7262 baner był ukryty, a cykl nie miał chipu „do uporządkowania”).
 
 **Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm; leki jak w monitorze):
 
-| Przypadek | Wejście | Oczekiwany wynik (po) | Przed |
+| Przypadek | Wejście | Oczekiwany wynik (po) | Przed (produkcja 893e7262) |
 |---|---|---|---|
-| B-1 (CY-11) | W Saxenda 12.01.2024; formularz 12.04.2024, lista Wegovy | Kontynuacja i Zakończenie `aria-disabled`: „Inna substancja niż w cyklu 1 (Saxenda)”, „Zakończenie z lekiem cyklu 1 (Saxenda)”; bez przydziału; po wyborze Saxendy oba aktywne, „Ta wizyta trafi do cyklu 1 (aktywny, od 12.01.2024).” | oba aktywne, przydział „… do cyklu 1 …”; odmowa dopiero po kliknięciu |
-| B-2 | W, K Saxenda; ołówek przy W, lista Wegovy | Włączenie `aria-disabled`: „Inna substancja niż wizyty cyklu 1 (Saxenda)” | aktywne (podgląd brał lek zapisany w punkcie) |
-| B-3 | jak B-2 (cykl 2 Wegovy od 12.11.2024); ołówek przy K 12.04.2024, data 01.03.2025, lista pusta | Kontynuacja `aria-disabled`: „Zmiana substancji w cyklu 2” (zapis weźmie lek punktu); z Wegovy na liście — aktywna (zapis pyta o przeniesienie) | z pustą listą to samo; z Wegovy na liście nadal wyłączona (podgląd brał lek zapisany w punkcie), choć zapis przechodzi |
-| B-4 (R6-S) | W 12.01.2024, K 12.04.2024 (Saxenda), K 12.07.2024, K 12.10.2024 (Wegovy) | baner: „W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.”, chip „do uporządkowania” | baner ukryty, chip „do uporządkowania” |
-| B-5 (R6-P) | jak B-4; „Dopisz Zakończenie przed 12.07.2024” → Z Saxenda 12.07.2024; „Edytuj wizytę 12.07.2024” z przypomnienia (albo ołówek) → Włączenie | podpowiedź `CsZ`; cykle „W, K, Z” i „K, K” (bez Włączenia) i przypomnienie „Zakończenie zapisane. Teraz zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie) — nie dopisuj nowego Włączenia.”; potem nagłówek cyklu 2 „Wegovy (semaglutyd) · od 12.07.2024” z Włączeniem; baner znika | brak pozycji (Zakończenie dopisane ręcznie przechodziło od części modułu); po kroku 1 tylko rada „Dodaj go (także wstecznie)” |
+| B-1 (CY-11) | W Saxenda 12.01.2024; formularz 12.04.2024, lista Wegovy | Kontynuacja i Zakończenie `aria-disabled`: „Inna substancja niż w cyklu 1 (Saxenda)”, „Zakończenie z lekiem cyklu 1 (Saxenda)”; bez przydziału; po wyborze Saxendy oba aktywne, „Ta wizyta trafi do cyklu 1 (aktywny, od 12.01.2024).” | oba aktywne, przydział „Ta wizyta trafi do cyklu 1 (aktywny, od 12.01.2024).”; zapis przechodzi — Kontynuacja i Zakończenie z Wegovy dodane do cyklu Saxendy |
+| B-2 | W, K Saxenda; ołówek przy W, lista Wegovy | Włączenie `aria-disabled`: „Inna substancja niż wizyty cyklu 1 (Saxenda)” | aktywne; zapis przechodzi (Włączenie z Wegovy w cyklu Saxendy) |
+| B-3 | jak B-2 (cykl 2 Wegovy od 12.11.2024); ołówek przy K 12.04.2024, data 01.03.2025, lista pusta | Kontynuacja `aria-disabled`: „Zmiana substancji w cyklu 2” (zapis weźmie lek punktu); z Wegovy na liście — aktywna (zapis pyta o przeniesienie) | aktywna w obu wariantach; zapis pyta „Nowa data przenosi punkt z cyklu 1 do cyklu 2. Zapisać zmiany?” także z lekiem Saxenda |
+| B-4 (R6-S) | W 12.01.2024, K 12.04.2024 (Saxenda), K 12.07.2024, K 12.10.2024 (Wegovy) | baner: „W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.”, chip „do uporządkowania” | baner ukryty, bez chipu „do uporządkowania” (cykl bez niezgodności) |
+| B-5 (R6-P) | jak B-4; „Dopisz Zakończenie przed 12.07.2024” → Z Saxenda 12.07.2024; „Edytuj wizytę 12.07.2024” z przypomnienia (albo ołówek) → Włączenie | podpowiedź `CsZ`; cykle „W, K, Z” i „K, K” (bez Włączenia) i przypomnienie „Zakończenie zapisane. Teraz zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie) — nie dopisuj nowego Włączenia.”; potem nagłówek cyklu 2 „Wegovy (semaglutyd) · od 12.07.2024” z Włączeniem; baner znika | baner ukryty; Zakończenie Saxendy 12.07.2024 odrzucone („Po 12.07.2024 w cyklu 1 są jeszcze wizyty (1). Zakończenie musi być ostatnim punktem cyklu.”) — poprawki nie dało się wpisać (po części modułu Zakończenie przechodziło, a po kroku 1 zostawała tylko rada „Dodaj go (także wstecznie)” — stąd przypomnienie `CsK`) |
 | B-6 | W, K Saxenda, Z 15.10.2024 Wegovy (stary zapis) | „Zakończenie cyklu 1 (15.10.2024) ma inny lek (Wegovy) niż wcześniejsze wizyty tego cyklu (Saxenda, do 12.04.2024)…”, tylko „Edytuj wizytę 15.10.2024” | baner ukryty |
 | B-7 | niezgodność o nieznanym kodzie w cyklu 2 | „W cyklu 2 zapis nie spełnia reguł cykli leczenia.” + „Edytuj wizytę …” | baner ukryty |
 | B-8 | W Saxenda; lista bez leku | przyciski jak przed ratą 4 (punkt neutralny) | to samo |
-| B-9 (A→B→A) | W 12.01.2024, K 12.04.2024 Saxenda, K 12.07.2024 Wegovy, Z 15.10.2024 Saxenda | pozycja R6 jak B-4 oraz „Zakończenie cyklu 1 (15.10.2024) ma inny lek (Saxenda) niż wcześniejsza wizyta tego cyklu (Wegovy, 12.07.2024). Lek zmienia się w tym cyklu więcej niż raz — sprawdź leki tych wizyt.” z „Edytuj wizytę 12.07.2024” i „Edytuj wizytę 15.10.2024”; poprawka leku wizyty 12.07.2024 na Saxendę — baner znika | baner ukryty; po pierwszej wersji tej części: „…niż wcześniejsze wizyty tego cyklu (Wegovy, do 12.07.2024). Zakończenie zapisuje się z lekiem swojego cyklu.” tylko z „Edytuj wizytę 15.10.2024” |
-| B-10 | W, K Saxenda, W 12.07.2024 i K 12.10.2024 Wegovy | „W cyklu 1 są dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.” bez akcji; pozycja R6 jak B-4 z „Dopisz Zakończenie przed 12.07.2024” (podpowiedź bez kroku 2) i „Edytuj wizytę 12.07.2024” | pozycja dwóch Włączeń bez zmian (rata 2); po pierwszej wersji tej części dwa przyciski „Dopisz Zakończenie przed 12.07.2024” z różnymi podpowiedziami i „Zmień 12.07.2024 na Kontynuację” |
+| B-9 (A→B→A) | W 12.01.2024, K 12.04.2024 Saxenda, K 12.07.2024 Wegovy, Z 15.10.2024 Saxenda | pozycja R6 jak B-4 oraz „Zakończenie cyklu 1 (15.10.2024) ma inny lek (Saxenda) niż wcześniejsza wizyta tego cyklu (Wegovy, 12.07.2024). Lek zmienia się w tym cyklu więcej niż raz — sprawdź leki tych wizyt.” z „Edytuj wizytę 12.07.2024” i „Edytuj wizytę 15.10.2024”; poprawka leku wizyty 12.07.2024 na Saxendę — baner znika | baner ukryty (pierwsza wersja tej części przed recenzją: „…niż wcześniejsze wizyty tego cyklu (Wegovy, do 12.07.2024). Zakończenie zapisuje się z lekiem swojego cyklu.” tylko z „Edytuj wizytę 15.10.2024”) |
+| B-10 | W, K Saxenda, W 12.07.2024 i K 12.10.2024 Wegovy | „W cyklu 1 są dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.” bez akcji; pozycja R6 jak B-4 z „Dopisz Zakończenie przed 12.07.2024” (podpowiedź bez kroku 2) i „Edytuj wizytę 12.07.2024” | sama pozycja dwóch Włączeń (rata 2) z akcjami „Zmień 12.07.2024 na Kontynuację” i „Dopisz Zakończenie przed 12.07.2024”, bez pozycji R6 (pierwsza wersja tej części przed recenzją: dwa przyciski „Dopisz Zakończenie przed 12.07.2024” z różnymi podpowiedziami) |
 
 **Testy.** `tests/unit/monitor-otylosci-r6.test.mjs` 27 — funkcje wycięte z pliku produkcyjnego (`CyS`, `CyE`, `Eh`, `ht`,
 `CyB`, `CsB`, `CsU`, `CsZ`, `CsN`, `CsW`, `CsP`, `CsK` z pomocnikami dat) na atrapie DOM z prawdziwym modułem cykli
@@ -7270,10 +7296,15 @@ poprzedniej czynności — podgląd pokazuje to samo, co zrobiłby zapis.
 
 ### Karta pacjenta: nota i wstrzymany werdykt przy zmianie substancji czynnej (`vilda_auth_ui.js`)
 
-**Zmiana.** Karta pacjenta (rata 3, D5) wstrzymywała werdykt wg ChPL każdego cyklu z niezgodnością, ale nowy kod
-`zmiana-substancji` opisywała ogólnie („zapis nie spełnia reguł cykli leczenia”), uzasadniała wstrzymanie zdaniem „Nie
-wiadomo, od którego punktu liczyć odpowiedź.” i zostawiała kafelek „Próg ChPL” z kryterium leku **ostatniego** punktu
-(np. „Wegovy dorośli” w cyklu rozpoczętym Saxendą). Teraz:
+**Zmiana.** W produkcji 893e7262 (moduł cykli VERSION 1, bez R6) cykl ze zmianą substancji czynnej nie miał żadnej
+niezgodności: Karta nie pokazywała noty i wydawała werdykt wg ChPL według kryterium leku **ostatniego** punktu cyklu,
+liczony od masy przy Włączeniu poprzedniego leku — np. „Ocena kliniczna — brak twardego progu SmPC” wg „Wegovy dorośli”
+w cyklu rozpoczętym Saxendą od 104 kg, a w zakończonym cyklu Saxenda → Wegovy → Zakończenie z Saxendą „Cykl
+zakończony — odpowiedź była wystarczająca wg ChPL” wg „Saxenda dorośli”. Od R6 (moduł wyżej) taki cykl ma niezgodność
+`zmiana-substancji`, a Karta (rata 3, D5) wstrzymuje werdykt wg ChPL każdego cyklu z niezgodnością. Sama reguła D5
+opisywałaby jednak nowy kod ogólnie („zapis nie spełnia reguł cykli leczenia”), uzasadniała wstrzymanie zdaniem „Nie
+wiadomo, od którego punktu liczyć odpowiedź.” i zostawiałaby kafelek „Próg ChPL” z kryterium leku ostatniego punktu.
+Ta część raty:
 - nota na karcie i opis w werdykcie (`Ob_bd`) mówią, co jest nie tak: „zmiana substancji czynnej w trakcie cyklu ({Z} do
   {dZ} → {NA} od {dNa}) bez Zakończenia między nimi.” — {Z}/{NA} to krótka nazwa leku punktu jak w Karcie (`Vr(drug)`;
   bez preparatu etykieta substancji; w ostateczności „inny lek”), {dZ}/{dNa} — data punktu (w zapisie bez dat: „do wieku
@@ -7290,21 +7321,23 @@ wiadomo, od którego punktu liczyć odpowiedź.” i zostawiała kafelek „Pró
   o progach różnych dla każdej substancji nie miałoby w tekście podstawy (nie padała nazwa żadnego leku). Nota na karcie
   zostaje przy pierwszej niezgodności — po jej poprawieniu pokaże przejście substancji;
 - inne kody — bez zmian (zdanie „Nie wiadomo, od którego punktu liczyć odpowiedź.”, zdjęty tylko kafelek „Redukcja do
-  oceny”). Bez modułu cykli albo bez kryteriów ChPL niezgodności R6 nie ma — Karta działa jak przed ratą 4.
+  oceny”). Bez modułu cykli albo bez kryteriów ChPL niezgodności R6 nie ma — nota i werdykt Karty jak przed ratą 4
+  (kursy otyłości w panelach „Analiza trajektorii” i „Porównanie pomiarów” zmieniają się także bez modułu — patrz
+  „Ścieżka bez modułu cykli” w podrozdziale „Kursy leczenia otyłości = cykle”).
 
 Progi, okna, wybór kryterium i liczby dla cykli z jedną substancją — bez zmian.
 
 **Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm, wiek realny wg dat; leki zapisane jak w monitorze):
 
-| Przypadek | Wejście | Oczekiwany wynik (po) | Przed zmianą |
+| Przypadek | Wejście | Oczekiwany wynik (po) | Przed zmianą (produkcja 893e7262) |
 |---|---|---|---|
-| R6-K1 | W Saxenda 12.01.2024 104 kg, K Saxenda 12.04.2024 99 kg, K Wegovy 12.07.2024 97 kg, K Wegovy 12.10.2024 95 kg | nota „Zapis bieżącego cyklu wymaga uporządkowania: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Popraw go w monitorze DocPro — do tego czasu ocena odpowiedzi wg ChPL jest wstrzymana.”; werdykt „Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana” (wait) z opisem przejścia i zdaniem o progach i oknach różnych dla każdej substancji; bez kafelków „Redukcja do oceny” i „Próg ChPL” | nota „…: zapis nie spełnia reguł cykli leczenia. …”; werdykt z „Nie wiadomo, od którego punktu liczyć odpowiedź.”; kafelek „Próg ChPL” — „Wegovy dorośli” |
+| R6-K1 | W Saxenda 12.01.2024 104 kg, K Saxenda 12.04.2024 99 kg, K Wegovy 12.07.2024 97 kg, K Wegovy 12.10.2024 95 kg | nota „Zapis bieżącego cyklu wymaga uporządkowania: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Popraw go w monitorze DocPro — do tego czasu ocena odpowiedzi wg ChPL jest wstrzymana.”; werdykt „Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana” (wait) z opisem przejścia i zdaniem o progach i oknach różnych dla każdej substancji; bez kafelków „Redukcja do oceny” i „Próg ChPL” | brak noty, werdykt wydany wg kryterium leku ostatniego punktu („Wegovy dorośli”): „Ocena kliniczna — brak twardego progu SmPC” (wait), „… Obecnie: −8,7% masy.” (od 104 kg); kafelki „Redukcja do oceny” (−8,7%) i „Próg ChPL” (—) |
 | R6-K2 | jak R6-K1, wszystkie punkty z Saxendą (kontrola) | brak noty; werdykt „Odpowiedź wystarczająca — kontynuować leczenie” (−8,7% masy po 39 tyg.); kafelki „Redukcja do oceny” i „Próg ChPL” („Saxenda dorośli”) | to samo |
-| R6-K3 | cykl 1: W, K Saxenda, K Wegovy 12.07.2024, Z Wegovy 15.10.2024 (jedno przejście); cykl 2: W Wegovy 12.11.2024, K Wegovy 12.02.2025 | „Poprzednie cykle”: „Cykl 1 · Saxenda · … · do uporządkowania”; brak noty (bieżący cykl czysty); cykl 1 w panelu: „Cykl zakończony 15.10.2024 — … W tym cyklu: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) … Progi i okna oceny wg ChPL są różne …”, bez kafelków kryterium; cykl 2: „Ocena kliniczna”, kafelki kryterium są | cykl 1: „W tym cyklu: zapis nie spełnia reguł cykli leczenia. Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
+| R6-K3 | cykl 1: W, K Saxenda, K Wegovy 12.07.2024, Z Wegovy 15.10.2024 (jedno przejście); cykl 2: W Wegovy 12.11.2024, K Wegovy 12.02.2025 | „Poprzednie cykle”: „Cykl 1 · Saxenda · … · do uporządkowania”; brak noty (bieżący cykl czysty); cykl 1 w panelu: „Cykl zakończony 15.10.2024 — … W tym cyklu: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) … Progi i okna oceny wg ChPL są różne …”, bez kafelków kryterium; cykl 2: „Ocena kliniczna”, kafelki kryterium są | „Poprzednie cykle”: „Cykl 1 · Saxenda · 12.01.2024 – 15.10.2024 · 39,6 tyg. · −6,3% masy” (bez „do uporządkowania”); cykl 1 w panelu: „Ocena kliniczna — brak twardego progu SmPC” wg „Wegovy dorośli” (lek Zakończenia), „… Obecnie: −6,3% masy.”, z kafelkami kryterium; cykl 2 — jak po zmianie |
 | R6-K4 | W Saxenda 12.01.2024, K Saxenda 12.04.2024, **W** Wegovy 12.07.2024, K Wegovy 12.10.2024 (dwa Włączenia, różne leki) | nota „dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.” (jak dotąd); werdykt „W tym cyklu: dwa punkty „Włączenie” (…) bez Zakończenia między nimi. Ponadto: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Progi i okna oceny wg ChPL są różne …”, bez obu kafelków kryterium | zdanie „Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
-| R6-K5 | jak R6-K1, bez dat (kolejność po wieku) | „(Saxenda do wieku 40 l. 4 mies. → Wegovy od wieku 40 l. 7 mies.)” | „zapis nie spełnia reguł cykli leczenia.” |
+| R6-K5 | jak R6-K1, bez dat (kolejność po wieku) | „(Saxenda do wieku 40 l. 4 mies. → Wegovy od wieku 40 l. 7 mies.)” | jak R6-K1: brak noty, „Ocena kliniczna — brak twardego progu SmPC” (−8,7% masy), oba kafelki kryterium |
 | R6-K6 | K Saxenda 12.01.2024, W Saxenda 12.04.2024, K Wegovy 12.07.2024 (wizyta przed Włączeniem, potem inny lek) | nota „wizyta (12.01.2024) przed Włączeniem (12.04.2024).” (jak dotąd); werdykt „W tym cyklu: wizyta (12.01.2024) przed Włączeniem (12.04.2024). Ponadto: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Progi i okna oceny wg ChPL są różne …”, bez obu kafelków kryterium | zdanie „Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
-| R6-K7 | jak R6-K3, ale Z Saxenda 15.10.2024 (Saxenda → Wegovy → Saxenda: dwa przejścia w cyklu 1) | cykl 1: opis pierwszego przejścia (Saxenda do 12.04.2024 → Wegovy od 12.07.2024), bez „Ponadto:”, zdanie R6, bez kafelków kryterium | jak R6-K3 przed zmianą |
+| R6-K7 | jak R6-K3, ale Z Saxenda 15.10.2024 (Saxenda → Wegovy → Saxenda: dwa przejścia w cyklu 1) | cykl 1: opis pierwszego przejścia (Saxenda do 12.04.2024 → Wegovy od 12.07.2024), bez „Ponadto:”, zdanie R6, bez kafelków kryterium | cykl 1 bez „do uporządkowania”; w panelu wg „Saxenda dorośli” (lek Zakończenia): „Cykl zakończony — odpowiedź była wystarczająca wg ChPL” (good), −6,3% po 36 tyg. dawki podtrzymującej, „Próg ChPL” ≥5 % |
 
 **Testy.** `tests/unit/karta-otylosc-r6.test.mjs` (21): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (`Ob_cy`,
 `Ob_bd`, `Ob_bn`, pomocnicy dat, wieku i nazwy leku) z prawdziwym modułem cykli i kryteriami ChPL; blok wstrzymania werdyktu
@@ -7342,6 +7375,11 @@ Uporządkowanie zapisu (Zakończenie starego leku, potem ta wizyta jako Włącze
    ma — pierwszy punkt cyklu z masą), `zrodlo: 'pierwszy-pomiar-cyklu'`; znacznik ChPL zdjęty jak w F1
    (`bezOsi: 'brak-punktu-wlaczenia'`). Dotąd: pierwsze Włączenie poprzedniego cyklu. Cykl nr 1 bez Włączenia — bez zmian
    (F1: pierwszy pomiar serii).
+   **Włączenie cyklu nr ≥ 2 zapisane bez masy** (import albo stary zapis — monitor wymusza masę tylko dla nowych punktów;
+   poprawka po recenzji całości raty): `normSeria` odrzuca takie Włączenie, więc arytmetyka jest ta sama co w cyklu bez
+   Włączenia (`pierwszy-pomiar-cyklu`, pierwszy pomiar tego cyklu), ale cykl MA Włączenie (`cykl.bezWlaczenia` = false;
+   monitor i Karta pacjenta je pokazują). Flaga `punktOdniesienia.wlaczenieBezMasy` zmienia tylko brzmienia (niżej) —
+   przed poprawką tekst mówił „ten cykl nie ma punktu „Włączenie””.
    **Cykl nr ≥ 2 bez żadnego pomiaru masy** (np. jedyna Kontynuacja z importu bez masy; poprawka po recenzji raty):
    `zrodlo: 'brak-pomiaru-cyklu'`. Arytmetyka od pierwszego pomiaru serii (innej masy nie ma), ale WSZYSTKIE pomiary są
    „sprzed odniesienia”: bez kamieni, nadiru, odzysku, pasm osiągniętych i werdyktu kafelka zmiany; ostrzeżenie
@@ -7371,7 +7409,9 @@ Uporządkowanie zapisu (Zakończenie starego leku, potem ta wizyta jako Włącze
    wykresie z ujemnymi tygodniami, bez kamieni — jak dotąd pomiary sprzed Włączenia), progi, pasma, `OPIS_PASM`.
 
 **Wynik silnika.** Nowe pole `cykl = { numer, liczba, stan ('aktywny'|'zakonczony'), bezWlaczenia, niezgodnosci: [kody] }`;
-`null` bez modułu cykli albo bez punktów leczenia.
+`null` bez modułu cykli albo bez punktów leczenia. Nowa flaga `punktOdniesienia.wlaczenieBezMasy` — `true`, gdy
+odniesieniem nie jest Włączenie, bo Włączenie bieżącego cyklu nr ≥ 2 zapisano bez masy; inaczej `false` (także
+w cyklu nr 1).
 
 **Teksty** (tylko gdy cykli jest więcej niż jeden; przy jednym cyklu brzmienia co do litery jak dotąd):
 - opis odniesienia (panel i obie kartki PDF): „Wszystkie zmiany liczone od masy ciała przy włączeniu bieżącego cyklu
@@ -7385,6 +7425,14 @@ Uporządkowanie zapisu (Zakończenie starego leku, potem ta wizyta jako Włącze
 - podpis osi wykresu masy: bez zmian („tygodnie od włączenia leczenia”); cykl bez Włączenia: „tygodnie od pierwszego
   pomiaru bieżącego cyklu”; ostrzeżenie F1 w cyklu nr ≥ 2: „…od pierwszego pomiaru bieżącego cyklu, nie od masy
   początkowej z ChPL.”
+- Włączenie cyklu nr ≥ 2 bez masy (`wlaczenieBezMasy`): opis odniesienia (panel i obie kartki) „…od pierwszego pomiaru
+  bieżącego cyklu leczenia (cykl N z M; X kg, DD.MM.RRRR) — punkt „Włączenie” tego cyklu nie ma masy ciała, więc
+  procenty nie liczą się od masy sprzed leczenia, nie od poprzedniej wizyty.”; `punktOdniesienia.opis` „Punkt „Włączenie”
+  bieżącego cyklu leczenia nie ma masy ciała — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed
+  leczenia.”; ostrzeżenie F1 „Punktu oceny wg ChPL nie postawiono na wykresie: bez masy w punkcie „Włączenie” oś nie ma
+  wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru bieżącego cyklu, nie od masy początkowej
+  z ChPL.”; kartki pacjenta i do dokumentacji oraz podpis osi — jak dla cyklu bez Włączenia (mówią prawdę). W cyklu
+  nr 1 (jedyny cykl) flagi nie ma — brzmienia co do litery jak przed ratą 4 („Ograniczenia”).
 - cykl nr ≥ 2 bez żadnego pomiaru masy: opis odniesienia (panel i obie kartki) „Wszystkie zmiany liczone od pierwszego
   zapisanego pomiaru (X kg, DD.MM.RRRR), nie od poprzedniej wizyty. Bieżący cykl leczenia (cykl N z M) nie ma jeszcze
   pomiaru masy ciała — wykres pokazuje tylko pomiary sprzed tego cyklu.”; kartka do dokumentacji „Punkt odniesienia:
@@ -7392,30 +7440,38 @@ Uporządkowanie zapisu (Zakończenie starego leku, potem ta wizyta jako Włącze
   (zdanie prawdziwe: liczby idą od pierwszego pomiaru serii); podpis osi „tygodnie od pierwszego pomiaru”.
 
 **Bez modułu cykli** (strony, które go nie ładują; offline bez pliku z `OPTIONAL_ASSETS`; wyjątek w `podziel`) — reguła
-sprzed raty 4, bez zmian w wyniku. Moduł czytany w chwili wywołania (na 6 z 8 stron ładuje się po „Postępach”).
+sprzed raty 4, bez zmian w wyniku. Moduł czytany w chwili wywołania (na wszystkich 8 stronach ładuje się po „Postępach”,
+na 6 z 8 także po trajektorii).
 
 **Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm, wiek monitora zgodny z datami: 40 l. 0 mies. → 41 l. 3 mies.;
 cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024 99,0 kg, Z 15.10.2024 97,5 kg; cykl 2 — Wegovy: W 12.11.2024
 98,5 kg, K 12.02.2025 95,5 kg, K 10.05.2025 93,0 kg; ścieżka `scalSerie` → `analizuj` jak w Karcie pacjenta):
 
-| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą (produkcja 893e7262) |
 |---|---|---|---|
 | CY-10 | dwa cykle, dowolna kolejność zapisu | odniesienie 98,5 kg / 12.11.2024; „na leczeniu”; lek Wegovy, drabinka ogólna, bez punktu ChPL; 98,5 → 93,0 kg, −5,5 kg, −5,6 %; tygodnie −44, −31, −4, 0, 13, 26; kamień: 5 % w 26. tyg.; „cykl 2 z 2” w opisie | 104,0 kg / 12.01.2024; „Leczenie odstawione w 40. tygodniu”; Saxenda, drabinka liraglutydu, znacznik ChPL w 16. tyg.; −11,0 kg, −10,6 % (przy cyklu 2 wpisanym przed 1: „odstawione w -4. tygodniu”) |
 | CY-10-Z | CY-10 + Z Wegovy 01.06.2025 92,5 kg (także bez masy) | „Leczenie odstawione w 29. tygodniu” (od 12.11.2024), data 01.06.2025 | „odstawione w 72. tygodniu” (od 12.01.2024); bez masy — „w 40. tygodniu”, data 15.10.2024 |
 | CY-10-KpoZ | cykl 1 + K Wegovy 12.11.2024 98,5 kg (bez Włączenia) + K, K | `pierwszy-pomiar-cyklu`, 98,5 kg; podpis osi „…pierwszego pomiaru bieżącego cyklu” | 104,0 kg, „odstawione w 40. tygodniu”, liraglutyd |
 | CK-5 | W 12.01.2024 104, K 12.04.2024 99, W 03.05.2024 99, K 01.09.2024 96 (Saxenda) | bez znacznika i pasa ChPL, ostrzeżenie „Zapis bieżącego cyklu leczenia wymaga uporządkowania…”; drabinka liraglutydu i −7,7 % od 104 kg zostają | znacznik ChPL w 16. tyg., bez ostrzeżenia |
-| jeden cykl | W, K, Z bez masy (Saxenda) | „odstawione w 40. tygodniu”, data 15.10.2024 | „na leczeniu” |
-| CY-8 | W Saxenda 12.01.2024 104, K 12.04.2024 99, Z 12.11.2024 97,0, W Wegovy 12.11.2024 98,5, K 12.02.2025 98,2 (zapis przyjęty przez `sprawdz`) | odniesienie 98,5 kg; pomiar Z 97,0 kg w 0. tyg. „sprzed odniesienia”; nadir 98,2 kg (ostatni); bez kamieni i zdarzeń | wersja raty przed recenzją: nadir 97,0 kg w 0. tyg., zdarzenie „istotny odzysk” (alarm) i „Odzyskano ponad 25 %…” w panelu i na kartce pacjenta |
-| CY-8-KpoZ | jak CY-8, ale cykl 2 zaczyna K Wegovy 12.11.2024 98,5 (bez Włączenia) | `pierwszy-pomiar-cyklu`, 98,5 kg; Z 97,0 kg „sprzed odniesienia”; bez kamieni | jak wyżej (nadir 97,0, „istotny odzysk”) |
-| cykl 2 bez masy | cykl 1 + K Wegovy 12.11.2024 bez masy | `brak-pomiaru-cyklu`; wszystkie pomiary „sprzed odniesienia”; bez kamieni; ostrzeżenie | wersja raty przed recenzją: `pierwszy-pomiar` 104 kg, kamienie 13: zmiana klasy i 40: pasmo 5 %, „w rekordzie nie ma punktu „Włączenie”” |
+| jeden cykl | W 12.01.2024 104 kg, K 12.04.2024 99 kg, Z 15.10.2024 **bez masy** (Saxenda; dowolna kolejność zapisu) | „Leczenie odstawione w 40. tygodniu”, data 15.10.2024; odniesienie 104 kg i znacznik ChPL w 16. tyg. bez zmian | „na leczeniu” (także dziś bez modułu cykli) |
+| CY-8 | W Saxenda 12.01.2024 104, K 12.04.2024 99, Z 12.11.2024 97,0, W Wegovy 12.11.2024 98,5, K 12.02.2025 98,2 (zapis przyjęty przez `sprawdz`) | odniesienie 98,5 kg; pomiar Z 97,0 kg w 0. tyg. „sprzed odniesienia”; nadir 98,2 kg (ostatni); bez kamieni i zdarzeń | 104,0 kg / 12.01.2024; „Leczenie odstawione w 44. tygodniu” (12.11.2024); drabinka liraglutydu, znacznik ChPL w 16. tyg.; kamienie 13 (zmiana klasy), 16 (ChPL), 44 (pasmo 5 %), 44 (nadir); nadir 97,0 kg w 44. tyg.; −5,8 kg (−5,6 %); bez zdarzeń (wersja raty przed recenzją: nadir 97,0 kg w 0. tyg., zdarzenie „istotny odzysk” (alarm) i „Odzyskano ponad 25 %…” w panelu i na kartce pacjenta) |
+| CY-8-KpoZ | jak CY-8, ale cykl 2 zaczyna K Wegovy 12.11.2024 98,5 (bez Włączenia) | `pierwszy-pomiar-cyklu`, 98,5 kg; Z 97,0 kg „sprzed odniesienia”; bez kamieni | jak CY-8 (wersja raty przed recenzją: nadir 97,0, „istotny odzysk”) |
+| cykl 2 bez masy | cykl 1 + K Wegovy 12.11.2024 bez masy | `brak-pomiaru-cyklu`; wszystkie pomiary „sprzed odniesienia”; bez kamieni; ostrzeżenie | 104,0 kg / 12.01.2024; „Leczenie odstawione w 40. tygodniu”; drabinka liraglutydu; kamienie 13 (zmiana klasy), 16 (ChPL), 40 (pasmo 5 %) (wersja raty przed recenzją: `pierwszy-pomiar` 104 kg, kamienie 13 i 40, „w rekordzie nie ma punktu „Włączenie””) |
+| Włączenie cyklu 2 bez masy | CY-10, ale W Wegovy 12.11.2024 bez masy (import albo stary zapis; dowolna kolejność zapisu) | `pierwszy-pomiar-cyklu`, 95,5 kg / 12.02.2025, `wlaczenieBezMasy`; „na leczeniu”; tygodnie −57, −44, −17, 0, 12; opis „…(cykl 2 z 2; 95,5 kg, 12.02.2025) — punkt „Włączenie” tego cyklu nie ma masy ciała…”; kartka pacjenta „Od pierwszego pomiaru w bieżącym leczeniu (12.02.2025) masa ciała zmniejszyła się o 2,5 kg (2,6 % masy początkowej).”; z Saxendą w cyklu 2 ostrzeżenie „…bez masy w punkcie „Włączenie”…” | 104,0 kg / 12.01.2024; „Leczenie odstawione w 40. tygodniu”; drabinka liraglutydu, znacznik ChPL w 16. tyg.; −11,0 kg, −10,6 % (przed poprawką po recenzji całości raty: liczby jak po, tekst „ten cykl nie ma punktu „Włączenie””) |
+| zdublowane Z | cykl 1 + Z Saxenda 15.11.2024 97,0 kg, bez wizyty między Zakończeniami (import albo stary zapis — monitor odrzuca `drugie-zakonczenie`) | cykl 2 z 2 = samo drugie Z (`zakonczenie-bez-wizyt`): `pierwszy-pomiar-cyklu` 97,0 kg / 15.11.2024; tygodnie −44, −31, −4 „sprzed odniesienia”, 0; bez kamieni; „Zmiana masy ciała 0,0 kg 0,0 %”; „Leczenie odstawione w 0. tygodniu”; znacznik ChPL zdjęty z ostrzeżeniem „Zapis bieżącego cyklu leczenia wymaga uporządkowania…” (panel, kartka do dokumentacji); kartka pacjenta bez ostrzeżeń: „Od pierwszego pomiaru w bieżącym leczeniu (15.11.2024) masa ciała zwiększyła się o 0,0 kg.” — stan raty 4, do decyzji właściciela | 104,0 kg; −7,0 kg (−6,7 %); drabinka liraglutydu, znacznik ChPL w 16. tyg.; kamienie 13 (zmiana klasy), 16 (ChPL), 40 (pasmo 5 %); „Leczenie odstawione w 44. tygodniu” (przy odwrotnej kolejności zapisu — w 40.) |
+| zdublowane Z bez masy | cykl 1 + Z Saxenda 15.11.2024 bez masy | `brak-pomiaru-cyklu`: wszystkie pomiary „sprzed odniesienia”, bez kamieni; „odstawione” z datą 15.11.2024, bez tygodnia; drabinka ogólna (jedyny punkt cyklu bez masy — lek nieznany) — stan raty 4, do decyzji właściciela | 104,0 kg; „Leczenie odstawione w 40. tygodniu”; drabinka liraglutydu; kamienie 13 (zmiana klasy), 16 (ChPL), 40 (pasmo 5 %) |
 
-**Testy.** `tests/unit/postepy-doroslego-cykle.test.mjs` (39; prawdziwe `scalSerie` → `analizuj`, `buildHtml`,
-`buildDokument`: CY-10 w czterech kolejnościach zapisu, zakończony ostatni cykl, Zakończenie bez masy, cykl nr 2 bez
-Włączenia z remisem dat, CY-8 przez prawdziwe `sprawdz` z masą Zakończenia niższą, wyższą i równą masie Włączenia, krok 1
-poprawki dwukrokowej, pierwszy punkt cyklu 2 bez masy w dniu Zakończenia, cykl 2 bez żadnego pomiaru masy (silnik,
-teksty, zakończony, pomiar z osi czasu), niezgodność `dwa-wlaczenia` i dowolny kod przez atrapę, niezgodność tylko w
-poprzednim cyklu, teksty panelu i obu kartek, test negatywny bez modułu / z wyjątkiem w `podziel`, moduł ładowany po
-silniku; dane leków jak w monitorze — `substance` to etykieta substancji);
+**Testy.** `tests/unit/postepy-doroslego-cykle.test.mjs` (50; prawdziwe `scalSerie` → `analizuj`, `buildHtml`,
+`buildDokument`: CY-10 w czterech kolejnościach zapisu, zakończony ostatni cykl, Zakończenie bez masy (cykl 2 z 2
+i jedyny cykl — wiersz „jeden cykl”, w obu kolejnościach zapisu, także bez modułu: „na leczeniu”), cykl nr 2 bez
+Włączenia z remisem dat, Włączenie cyklu nr 2 bez masy (silnik, panel, obie kartki, ostrzeżenie przy Saxendzie; cykl
+nr 1 z Włączeniem bez masy — brzmienia sprzed raty), zdublowane Zakończenie z masą i bez masy (stan raty 4 — do
+decyzji właściciela; monitor odrzuca drugie Zakończenie), CY-8 przez prawdziwe `sprawdz` z masą Zakończenia niższą,
+wyższą i równą masie Włączenia, krok 1 poprawki dwukrokowej, pierwszy punkt cyklu 2 bez masy w dniu Zakończenia,
+cykl 2 bez żadnego pomiaru masy (silnik, teksty, zakończony, pomiar z osi czasu), niezgodność `dwa-wlaczenia`
+i dowolny kod przez atrapę, niezgodność tylko w poprzednim cyklu, teksty panelu i obu kartek, test negatywny bez
+modułu / z wyjątkiem w `podziel`, moduł ładowany po silniku; dane leków jak w monitorze — `substance` to etykieta
+substancji);
 `tests/e2e/postepy-doroslego-cykle.spec.mjs` (4; prawdziwa Karta pacjenta z sejfem testowym: CY-10 z cyklem 2 wpisanym
 przed cyklem 1, CY-10-Z, CY-8 bez „Odzyskano…” i bez kafelka najniższej masy, telefon 390 px bez poziomego przewijania). `tests/support/load-browser-script.mjs`: moduł cykli
 w zależnościach silnika „Postępów” (bez niego testy cicho szłyby dawną regułą). Istniejące testy „Postępów” (jeden
@@ -7428,14 +7484,29 @@ o „włączeniu leczenia”. Granica cyklu nie jest rysowana na wykresie. Przyn
 „odstawione”, tydzień odstawienia pusty. Takie Zakończenie Z masą trafia do serii, więc cała oś przechodzi na wiek
 (zachowanie sprzed raty): tydzień odstawienia jest wtedy przybliżony z wieku (np. 26 zamiast 29 z dat), a
 `odstawienieDateISO` niesie napis nie-ISO.
+**Zdublowane Zakończenie** (stary zapis albo import; monitor od raty 1 odrzuca drugie Zakończenie): bieżącym cyklem jest
+cykl złożony wyłącznie z drugiego Zakończenia (`zakonczenie-bez-wizyt`) — tak samo jak w Karcie pacjenta od raty 3
+(nota i wstrzymany werdykt „Zakończenie (15.11.2024) bez wizyt w cyklu”). Cały rzeczywisty kurs trafia więc do części
+„sprzed odniesienia”: bez kamieni, „Leczenie odstawione w 0. tygodniu”, a kartka pacjenta (bez ostrzeżeń) mówi
+„…zwiększyła się o 0,0 kg” pacjentowi po redukcji (wiersz „zdublowane Z”; drugie Z bez masy — `brak-pomiaru-cyklu`).
+Panel i kartka do dokumentacji mają ostrzeżenie o zapisie do uporządkowania, a baner monitora — akcję „Usuń to
+Zakończenie”. Rozstrzygnięcie — wspólne dla Karty, „Postępów” i trajektorii — do decyzji właściciela.
+Cykl nr 1 (jedyny cykl) z Włączeniem bez masy mówi jak przed ratą 4 „Brak punktu „Włączenie”…” / „w rekordzie nie ma
+punktu „Włączenie””, choć Włączenie jest (bez masy) — zachowanie F1 sprzed raty, poza jej zakresem (flaga
+`wlaczenieBezMasy` dotyczy tylko cyklu nr ≥ 2).
 
 **Wersje.** `?v=`, precache i `SW_VERSION` — wiersz „Wersje” na początku wpisu raty 4. Wewnętrzne: `VildaPostepyDoroslego` 1 → 2,
 `VildaPostepyDoroslegoUI` 1 → 2, `VildaPostepyDoroslegoWydruk` 2 → 3 (bez pinów w testach).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia z bieżącego cyklu, odniesienia cyklu bez
 Włączenia, stanu „odstawione” per cykl i wstrzymania znacznika ChPL przy niezgodnym zapisie; brzmienia dla cyklu bez
-Włączenia (nie były w specyfikacji raty); wyłączenia pomiarów wcześniejszych cykli z postępu bieżącego przy remisie
-dat oraz stanu „brak-pomiaru-cyklu” z jego brzmieniami (poprawki po recenzji); scalenie i wdrożenie.
+Włączenia (nie były w specyfikacji raty) i dla Włączenia cyklu nr ≥ 2 bez masy (poprawka po recenzji całości raty);
+wyłączenia pomiarów wcześniejszych cykli z postępu bieżącego przy remisie dat oraz stanu „brak-pomiaru-cyklu” z jego
+brzmieniami (poprawki po recenzji); zmiany u pacjenta z jednym cyklem (Zakończenie bez masy → „odstawione”);
+zdublowane Zakończenie — stan raty 4 albo wariant „cykl złożony wyłącznie z Zakończenia nie jest bieżącym cyklem”
+(w `cyklBiezacy` bieżący = ostatni cykl z punktem innym niż Zakończenie; kod niezgodności zostaje w ostrzeżeniu),
+jedno rozstrzygnięcie dla Karty pacjenta (`Ob_cy`), „Postępów” i trajektorii (pkt 5 „Do decyzji właściciela”
+w podrozdziale „Kursy leczenia otyłości = cykle”); scalenie i wdrożenie.
 
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
@@ -9651,6 +9722,9 @@ koduj” (wszystkie R1–R9 w jednej racie).
    leczeniem ≥ 50 % okna. Tylko takie okno dostaje werdykt odpowiedzi na leczenie. Okno mieszane dostaje werdykt
    populacyjny/MPH z dopiskiem „— w tym N mies. na GH” / „— w tym N mies. leczenia redukcyjnego” (dopisek jest
    ogonem etykiety; słowniki opisu i epikryzy odmieniają głowę, ogon wraca na koniec zdania).
+   **[ZMIENIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4: dolna granica tolerancji startu = max(początek kursu
+   − 6 mies., koniec poprzedniego kursu otyłości); GH bez zmian. Blok „Kursy leczenia otyłości = cykle” na końcu tej
+   sekcji.]**
 3. *Odpowiedź na GH na rok*: okno w kursie < 6 mies. → „za wcześnie na ocenę odpowiedzi na GH — N mies.”; ≥ 6 mies. →
    ΔhSDS × 12 / okno z progami ≥ +0,3 dobra, < +0,1 słaba (dotychczasowe liczby aplikacji, PR #63/v388; słaba
    odpowiedź w 1. roku < 0,3 wg konsensusu Bang 2012, doi:10.1111/j.1365-2265.2012.04420.x); okno 6–11 mies. z dopiskiem
@@ -9668,6 +9742,8 @@ koduj” (wszystkie R1–R9 w jednej racie).
    jest nagłówkiem wiersza (jak dotąd). Zakończony kurs: linia „↳ okres leczenia (X → Y, zakończone): ΔSDS … — …”,
    nagłówek wraca do fazy/całości (karta, podsumowanie, opis pacjenta, epikryza). Chip masy przechodzi przez nakładkę
    masa↔BMI, chip BMI przez nakładkę prędkości.
+   **[ZMIENIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4: pomiar na starcie nie starszy niż 6 mies. przed startem
+   i nie wcześniejszy niż koniec poprzedniego kursu otyłości (dolna granica jak w regule 2); GH bez zmian.]**
 6. *Faza* (rata 5) nie przechodzi przez granicę kursu: odcinek w kursie i odcinek poza nim (albo w innym kursie) nie
    sklejają się w jedną fazę, nawet przy tym samym kierunku.
 7. *Krótkie okno wzrostu*: |ΔhSDS| ≥ 0,5 w oknie < 6 mies. → „szybka zmiana w krótkim oknie — do weryfikacji pomiaru”
@@ -9704,7 +9780,8 @@ być także w epikryzie (dziś idzie jako ogon etykiety, więc tak).
 z punktów, granica = wyłącznie Zakończenie; D6: „karta porównania — dla otyłości granicą są Zakończenie i Włączenie,
 bez progu przerwy 3 mies., GH bez zmian”; „Kontynuacja po Zakończeniu w starym zapisie staje się cyklem bez Włączenia”);
 „ruszaj z ratą 4” — 2026-10-01. Źródłem jest decyzja organizacyjna o granicach cyklu, nie nowy próg kliniczny: progi
-odpowiedzi (reguły 2–6 wyżej) się nie zmieniają, zmienia się to, które miesiące są „w kursie”.
+odpowiedzi (reguły 3, 4 i 6 wyżej) się nie zmieniają; zmienia się to, które miesiące są „w kursie”, a w regułach 2 i 5
+tolerancja startu kursu otyłości nie sięga przed koniec poprzedniego kursu (niżej).
 
 **Reguła.** Kursy leczenia otyłości (`redKursy` w kontekście z `buildClinicalContext`) liczy `kursyOtylosci` z cykli
 `VildaCykleLeczenia.podziel` (ten sam podział, co monitor DocPro, Karta pacjenta i „Postępy”): kurs = cykl; `a` = wiek
@@ -9725,14 +9802,25 @@ Dodatkowo:
   „⬇ redukcja Wegovy · od … — nadal”); przy jednym — jak dotąd z koperty. Długi żeton zawija tekst zamiast wystawać.
 - *Karta pacjenta:* panel „Analiza trajektorii” dostaje listę kursów otyłości (dotąd samą kopertę — przerwa między
   kursami liczyła się tam jako leczenie, także po racie 6); pasek kontekstu panelu „Porównanie pomiarów” liczy
-  „🍽 … w przedziale (N mies.)” jako sumę pokryć kursów, z etykietą kursu o największym pokryciu. GH w Karcie bez zmian
+  „🍽 … w przedziale (N mies.)” jako sumę pokryć kursów, z etykietą kursu o największym pokryciu. Przy JEDNYM kursie
+  etykieta koperty — ta sama co żeton paska meta i co przed ratą 4 (kurs i koperta to wtedy ten sam przedział, a
+  etykieta kursu — lek ostatniego punktu cyklu z lekiem — bywa inna niż koperty, np. przy Włączeniu i Zakończeniu bez
+  leku: kurs „Saxenda”, koperta i żeton „otyłość”; poprawka po recenzji całości raty). GH w Karcie bez zmian
   (koperta — osobny wątek).
 
 **Populacja i ograniczenia.** Zmiana widoczna wyłącznie u dzieci (analiza trajektorii i karty porównania wymagają siatek
 centylowych); u dorosłego kontekst liczy się tak samo, ale żaden ekran go nie pokazuje. Wiek kursów pochodzi z pól wieku
 punktów, kolejność cykli z dat — przy niespójnych wiekach i datach kurs może mieć `b < a` (brak okna w kursie). Pasek
 terapii na siatkach Karty pacjenta i `growth-basic-module.js` zostają na kopercie (poza zakresem raty).
-Przypadki brzegowe starego zapisu (stan po racie 4; testy w `tests/unit/kursy-otylosci-cykle.test.mjs`):
+Przypadki brzegowe (stan po racie 4; testy w `tests/unit/kursy-otylosci-cykle.test.mjs`) — pierwszy powstaje zwykłą
+drogą zapisu w monitorze, pozostałe tylko w starym zapisie albo w imporcie:
+- *Wizyta w tym samym miesiącu wieku co Zakończenie, wcześniejsza datą, zapisana w tablicy po Zakończeniu* — zwykła
+  droga zapisu: wizyta dopisana wstecz w monitorze (`sprawdz` stawia ją na końcu tablicy). Moduł cykli porządkuje po
+  datach, więc kurs kończy się na Zakończeniu, także przy JEDNYM cyklu. Dotąd `therapyIntervals` (sortowanie po wieku,
+  remis w kolejności tablicy) widziało wizytę „po” Zakończeniu i otwierało kurs ponownie — leczenie liczyło się jako
+  trwające. Ta sama przyczyna (kolejność z dat zamiast z tablicy) może zmienić etykietę kursu, gdy punkty w remisie
+  mają różny tekst leku tej samej substancji. GH i ścieżka bez modułu cykli zostają przy `therapyIntervals` (dawny
+  wynik).
 - *Zakończenie bez wieku* (wiek 0). Gdy datę ma każdy punkt, moduł cykli porządkuje po datach i Zakończenie zamyka
   cykl — kurs kończy się na najstarszym wieku cyklu, także przy JEDNYM cyklu (dotąd `therapyIntervals` pomijało ten
   punkt i kurs trwał). Gdy choć jeden punkt nie ma daty, moduł porządkuje po wieku: Zakończenie z wiekiem 0 staje na
@@ -9778,9 +9866,24 @@ i bez niego wynik jest ten sam).
   „Wegovy · od 12 lat 11 mies. — nadal”).
 - Zakończenie bez wieku, jeden cykl, zapis z datami (W 145, K 151, Z z wiekiem 0 i datą) → `[[145, 151]]` (dotąd
   `[[145, null]]`): pomiary po 151 mies. nie są „w kursie” — chip okresu leczenia kończy się na 151 mies., okno sięgające
-  dalej dostaje werdykt populacyjny z dopiskiem (pomiary 140–163 co 3 mies., SDS masy malejący o 0,02/mies.: chip dotąd
-  145 → 163 „redukcja w trakcie leczenia”, teraz 145 → 151; całość dotąd „redukcja w trakcie leczenia”, teraz „redukcja
-  nadmiaru masy ciała — w tym 6 mies. leczenia redukcyjnego”). Ten sam zapis bez dat → `[[145, null]]`, jak dotąd.
+  dalej dostaje werdykt populacyjny z dopiskiem. Pomiary 140, 143, 145, 148, 151, 154, 157, 160, 163 mies., SDS masy
+  malejący o 0,02/mies.: chip dotąd 145 → 163 „redukcja w trakcie leczenia” (aktywny kurs; okno 18 mies. oceniane po
+  zmianie skumulowanej, ΔSDS −0,36), teraz 145 → 151 „brak istotnej odpowiedzi na leczenie — po 6 mies.” (ton warn;
+  kurs zakończony; okno 6 mies. przeliczane na rok: ΔSDS −0,12 → −0,24/rok > −0,25); całość dotąd „redukcja w trakcie
+  leczenia”, teraz „redukcja nadmiaru masy ciała — w tym 6 mies. leczenia redukcyjnego”. Ten sam zapis bez dat →
+  `[[145, null]]`, jak dotąd.
+- Jeden cykl, wizyta dopisana wstecz w miesiącu wieku Zakończenia (dziewczynka ur. 05.01.2012; Saxenda: W 10.02.2024
+  145 mies., K 10.05.2024 148, Z 20.08.2024 151; potem dopisana K 08.08.2024 151 — prawdziwe `sprawdz` daje tablicę
+  W, K, Z, K i jeden cykl „zakończony” W, K, K, Z). Pomiary 145, 148, 151, 155, 158, 161, 164 mies., SDS masy 2,60;
+  2,45; 2,30; 2,35; 2,45; 2,55; 2,65. `redKursy` `[[145, 151]]` (dotąd `[[145, null]]`). Chip okresu leczenia teraz
+  „↳ okres leczenia (12 lat 1 mies. → 12 lat 7 mies., zakończone): ΔSDS −0,30 — redukcja w trakcie leczenia”, dotąd
+  „(od 12 lat 1 mies.): ΔSDS +0,05 — brak istotnej odpowiedzi na leczenie — po 19 mies.” jako nagłówek wiersza masy;
+  nagłówek teraz „progresja nadmiaru masy (>97. centyla)”; całość teraz „tor stabilny, ale masa ciała znacznie powyżej
+  typowego zakresu (>97c) — w tym 6 mies. leczenia redukcyjnego”, dotąd „brak istotnej odpowiedzi na leczenie — po
+  19 mies.”. Karta porównania, para 151 → 158 mies.: teraz „tor stabilny, ale masa ciała znacznie powyżej typowego
+  zakresu (>97c)”, dotąd „przyrost masy mimo leczenia redukcyjnego”; pasek „Porównanie pomiarów” w Karcie 151 → 158:
+  bez „🍽 Saxenda w przedziale (7 mies.)” (148 → 164: 3 mies. zamiast 16). Ta sama tablica w kolejności dat (W, K, K, Z)
+  daje `[[145, 151]]` po obu stronach — różnicę robi wyłącznie remis wieku przy kolejności tablicy.
 - Stary zapis W Saxenda 145, K 148, W Wegovy 154 i Z Saxenda 154 (ta sama data, Włączenie wcześniej w tablicy), K 155,
   K 160 → cykle `[W, K, W, Z]` („dwa-wlaczenia”) i `[K, K]`; kursy `[[145, 154, Saxenda], [155, null, Wegovy]]` (dotąd
   `[[145, null, Wegovy]]`).
@@ -9793,7 +9896,7 @@ i bez niego wynik jest ten sam).
   w odcinku” (dotąd 11 mies.).
 
 **Wpływ kliniczny.** Dotyczy dzieci z punktami monitora otyłości (u dorosłego nic nie jest widoczne). Wynik zmienia się
-w czterech grupach — z modułem cykli na stronie; bez niego patrz „Ścieżka bez modułu cykli”:
+w pięciu grupach — z modułem cykli na stronie; bez niego patrz „Ścieżka bez modułu cykli”:
 1. *Zakończenie i kolejny punkt (Włączenie albo Kontynuacja) dzieli mniej niż 3 mies.*, w tym zmiana leku tego samego
    dnia: dwa kursy zamiast jednego. Okno obejmujące oba cykle przestaje być oceną odpowiedzi na leczenie i dostaje werdykt
    populacyjny z dopiskiem „— w tym N mies. leczenia redukcyjnego”; chip okresu leczenia liczy tylko bieżący cykl; pasek
@@ -9806,30 +9909,49 @@ w czterech grupach — z modułem cykli na stronie; bez niego patrz „Ścieżka
    w trakcie leczenia”; chip okresu leczenia zaczyna się od pomiaru nie wcześniejszego niż koniec poprzedniego kursu
    (krótsze okno, może dostać „wstępnie”). Przy przerwie ≥ 6 mies. bez zmian.
 3. *Zakończenie bez wieku w zapisie, w którym każdy punkt ma datę:* kurs zamyka się na najstarszym wieku cyklu, także
-   przy jednym cyklu (dotąd trwał) — pomiary po tym wieku przestają być „w kursie”. W zapisie z choć jednym punktem bez
-   daty ten sam punkt jest pomijany, jak dotąd (niespójność trybów — „Populacja i ograniczenia”).
+   przy jednym cyklu (dotąd trwał) — pomiary po tym wieku przestają być „w kursie”. Krótsze okno chipu okresu leczenia
+   może zmienić jego werdykt, także z „redukcja w trakcie leczenia” na „brak istotnej odpowiedzi na leczenie — po
+   N mies.” (ton warn): okno < 12 mies. jest przeliczane na rok zamiast oceny zmiany skumulowanej (reguła 4). W zapisie
+   z choć jednym punktem bez daty ten sam punkt jest pomijany, jak dotąd (niespójność trybów — „Populacja
+   i ograniczenia”).
 4. *Karta pacjenta* (panel „Analiza trajektorii” i pasek panelu „Porównanie pomiarów”): przerwa między kursami
    (dowolnej długości) przestaje być „leczeniem” — np. przyrost w przerwie nie brzmi już „przyrost masy mimo leczenia
    redukcyjnego”, a „🍽 … w przedziale (N mies.)” liczy sumę pokryć kursów (przerwa 4 mies., przedział 150 → 161:
-   7 mies. zamiast 11).
+   7 mies. zamiast 11). Przy jednym kursie etykieta paska jak dotąd (koperta).
+5. *Jeden cykl z wizytą w tym samym miesiącu wieku co Zakończenie, wcześniejszą datą, ale zapisaną w tablicy po
+   Zakończeniu* (wizyta dopisana wstecz w monitorze — zwykła droga zapisu): punkty w remisie wieku są porządkowane po
+   dacie (gdy datę ma każdy punkt), nie po kolejności tablicy, więc kurs kończy się na Zakończeniu (dotąd był aktywny).
+   Pomiary po Zakończeniu przestają być „w kursie”: chip okresu leczenia zamyka się na Zakończeniu i przestaje być
+   nagłówkiem, odcinki i pary po Zakończeniu tracą werdykty odpowiedzi na leczenie (np. „przyrost masy mimo leczenia
+   redukcyjnego”) na rzecz werdyktu populacyjnego, pasek Karty traci „🍽 … w przedziale”. Wynik jest poprawniejszy
+   (leczenie zakończono), ale zmienia werdykty pacjentowi z jednym cyklem i jedną substancją. Może też zmienić etykietę
+   kursu przy różnym tekście leku punktów w remisie.
 Skutki przechodzą do epikryzy i opisu pacjenta (czytają model trajektorii). Przypadki brzegowe starego zapisu (Włączenie
 przed Zakończeniem tego samego dnia w tablicy, zdublowane Zakończenie) opisuje „Populacja i ograniczenia”. Testy:
 `tests/unit/kursy-otylosci-cykle.test.mjs`, `tests/e2e/kursy-otylosci-cykle.spec.mjs`; test „wraca do tego samego kursu”
 w `werdykt-kursy-rata-6.test.mjs` opisuje odtąd wyłącznie GH.
 
 **Do decyzji właściciela.**
-1. Akceptacja kliniczna grup 1–4 wyżej (każda zmienia wynik; grupy 2 i 3 dotyczą także pacjentów, u których lista kursów
-   przed ratą była taka sama albo był tylko jeden cykl).
+1. Akceptacja kliniczna grup 1–5 wyżej (każda zmienia wynik; grupy 2, 3 i 5 dotyczą także pacjentów, u których lista
+   kursów przed ratą była taka sama albo był tylko jeden cykl — grupa 5 powstaje zwykłą drogą zapisu w monitorze).
 2. Czy zmiana leku bez przerwy (Z i W tego samego dnia) ma przerywać ocenę całości okna.
 3. Przycięcie tolerancji startu przy przerwie 3–6 mies. (grupa 2): zostawić czy ograniczyć do kursów stykających się
    (przerwa < 3 mies.).
 4. Zakończenie bez wieku (grupa 3): zostawić zależność od dat innych wizyt czy ujednolicić (np. zawsze zamykać kurs albo
    zawsze pomijać taki punkt).
 5. Zdublowane Zakończenie: zostawić kurs zerowej długości (stan raty 4), pomijać cykl złożony wyłącznie z Zakończenia
-   (wariant A) albo brać do chipu ostatni kurs, w którym `oknoKursu` znajduje okno (wariant B).
+   (wariant A) albo brać do chipu ostatni kurs, w którym `oknoKursu` znajduje okno (wariant B). Rozstrzygnięcie ma być
+   wspólne dla wszystkich obszarów: Karta pacjenta (`Ob_cy` — dziś samotne Zakończenie jest bieżącym cyklem z notą
+   „Zakończenie (…) bez wizyt w cyklu” i wstrzymanym werdyktem, jak od raty 3) i „Postępy” (`cyklBiezacy` — dziś
+   odniesienie od drugiego Zakończenia, cały kurs „sprzed odniesienia”, „odstawione w 0. tygodniu”; podrozdział
+   „Postępów”, wiersz „zdublowane Z”) liczą tak samo jak trajektoria. Wariant A wymaga zmiany we wszystkich trzech
+   miejscach, inaczej obszary się rozjadą.
 6. Ścieżka bez modułu cykli: zostawić jak opisano wyżej (wariant B) czy uzależnić przycięcie, żetony per kurs i etykietę
    „otyłość” od tego, czy kursy pochodzą z modułu cykli (wariant A — pełne zachowanie sprzed raty 4 bez modułu).
 7. Panel trajektorii w Karcie z `ghKursy` (GH) i pasek terapii na siatkach — osobne wątki.
+8. Poza zakresem raty: czy `therapyIntervals` (GH i ścieżka bez modułu cykli) ma porządkować punkty w remisie wieku po
+   dacie, gdy datę ma każdy punkt (dziś zostawia kolejność tablicy — wizyta dopisana wstecz po Zakończeniu otwiera kurs
+   ponownie, grupa 5).
 
 ## Werdykt trajektorii: ostatnia faza jako nagłówek, poziom nadwagi przy stabilnym torze (P-WERDYKT rata 5, SW 1.1.77, 2026-09-27)
 

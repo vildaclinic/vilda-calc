@@ -718,7 +718,9 @@
    * bo lekarz pamiętający masę sprzed pierwszego leku inaczej przeczytałby każdy procent.
    * Przy jednym cyklu brzmienie zostaje co do litery. Moduł wydruku ma bliźniaczą funkcję.
    * Bieżący cykl bez żadnego pomiaru masy (`brak-pomiaru-cyklu`) dostaje drugie zdanie: liczby
-   * idą wtedy od pierwszego pomiaru serii i nie mówią nic o bieżącym leczeniu. */
+   * idą wtedy od pierwszego pomiaru serii i nie mówią nic o bieżącym leczeniu. Włączenie cyklu
+   * nr ≥ 2 zapisane bez masy (`wlaczenieBezMasy`) — dopisek mówi o braku masy, nie o braku
+   * Włączenia (cykl je ma; monitor i Karta pacjenta je pokazują). */
   function odniesienieOpis(model) {
     var o = model.punktOdniesienia;
     if (!o) return '';
@@ -732,7 +734,9 @@
         : 'masy ciała przy włączeniu leczenia (' + dane + ')';
     } else if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
       co = 'pierwszego pomiaru bieżącego cyklu leczenia (' + (cy ? cy + '; ' : '') + dane + ')';
-      dop = ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+      dop = o.wlaczenieBezMasy
+        ? ' — punkt „Włączenie” tego cyklu nie ma masy ciała, więc procenty nie liczą się od masy sprzed leczenia'
+        : ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
     } else if (o.zrodlo === 'brak-pomiaru-cyklu') {
       co = 'pierwszego zapisanego pomiaru (' + dane + ')';
       dalej = ' Bieżący cykl leczenia' + (cy ? ' (' + cy + ')' : '')

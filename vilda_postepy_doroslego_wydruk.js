@@ -254,7 +254,8 @@
      do dokumentacji to nie jest ozdoba: za rok nikt nie odtworzy, od czego liczono te procenty.
      Przy więcej niż jednym cyklu leczenia (P-OTYLOSC-CYKLE rata 4) zdanie nazywa bieżący cykl —
      to samo brzmienie co w panelu (`odniesienieOpis` w module widoku), także drugie zdanie
-     przy bieżącym cyklu bez żadnego pomiaru masy (`brak-pomiaru-cyklu`). */
+     przy bieżącym cyklu bez żadnego pomiaru masy (`brak-pomiaru-cyklu`) i dopisek przy
+     Włączeniu cyklu nr ≥ 2 zapisanym bez masy (`wlaczenieBezMasy`). */
   function odniesienieOpis(model) {
     var o = model.punktOdniesienia;
     if (!o) return null;
@@ -268,7 +269,9 @@
         : 'masy ciała przy włączeniu leczenia (' + dane + ')';
     } else if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
       co = 'pierwszego pomiaru bieżącego cyklu leczenia (' + (cy ? cy + '; ' : '') + dane + ')';
-      dop = ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+      dop = o.wlaczenieBezMasy
+        ? ' — punkt „Włączenie” tego cyklu nie ma masy ciała, więc procenty nie liczą się od masy sprzed leczenia'
+        : ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
     } else if (o.zrodlo === 'brak-pomiaru-cyklu') {
       co = 'pierwszego zapisanego pomiaru (' + dane + ')';
       dalej = ' Bieżący cykl leczenia' + (cy ? ' (' + cy + ')' : '')

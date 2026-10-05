@@ -178,9 +178,12 @@ function ctxClean(x){return String(x==null?"":x).replace(/[<>]/g,"")}
 // P-OTYLOSC-CYKLE rata 4 (D6): leczenie otyłości w przedziale A–B = suma pokryć KURSÓW (cykle leczenia z
 // VildaCykleLeczenia, cx.redKursy z buildClinicalContext), nie koperty „pierwszy kurs → koniec ostatniego” — przerwa
 // między cyklami nie jest leczeniem. Etykieta = etykieta kursu o największym pokryciu (remis: późniejszy na liście).
+// Przy jednym kursie etykieta koperty (jak żeton paska meta „Analizy trajektorii”) — kurs i koperta to wtedy ten sam
+// przedział, a etykieta kursu (lek ostatniego punktu z lekiem) bywa inna niż koperty (recenzja raty 4).
 // Bez listy kursów (stary kontekst) — koperta cx.red, jak dotąd. GH bez zmian (koperta cx.gh).
 function ctxRdKursy(cx,ovlM){var rk=cx&&Array.isArray(cx.redKursy)&&cx.redKursy.length?cx.redKursy:null;
   if(!rk)return{m:cx?ovlM(cx.red):0,label:cx&&cx.red&&cx.red.label||""};
+  if(rk.length===1)return{m:ovlM(rk[0]),label:cx.red&&cx.red.label||rk[0].label||""};
   var m=0,mx=0,lb="";rk.forEach(function(k){var o=ovlM(k);m+=o;o>0&&o>=mx&&(mx=o,lb=k&&k.label||"")});return{m:m,label:lb}}
 function renderPanel(){var a=Math.min(selA,selB),b=Math.max(selA,selB),dt=ageOf(b)-ageOf(a),tr="",cards="";
   var cx=null;try{cx=host._vildaCmpCtx||null}catch(eC){}
