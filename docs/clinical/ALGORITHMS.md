@@ -7493,7 +7493,10 @@ Panel i kartka do dokumentacji mają ostrzeżenie o zapisie do uporządkowania, 
 Zakończenie”. Rozstrzygnięcie — wspólne dla Karty, „Postępów” i trajektorii — do decyzji właściciela.
 Cykl nr 1 (jedyny cykl) z Włączeniem bez masy mówi jak przed ratą 4 „Brak punktu „Włączenie”…” / „w rekordzie nie ma
 punktu „Włączenie””, choć Włączenie jest (bez masy) — zachowanie F1 sprzed raty, poza jej zakresem (flaga
-`wlaczenieBezMasy` dotyczy tylko cyklu nr ≥ 2).
+`wlaczenieBezMasy` dotyczy tylko cyklu nr ≥ 2). Podobnie Włączenie cyklu nr ≥ 2 Z masą, ale bez daty wizyty i bez
+pomiaru tego dnia w serii („bliźniaczki”, F1) nie da się postawić na osi dat: odniesieniem jest pierwszy pomiar cyklu,
+a tekst mówi „ten cykl nie ma punktu „Włączenie”” — jak dotąd w cyklu nr 1 (F1); monitor od raty 1 (R7) nie przyjmuje
+Włączenia bez daty, więc dotyczy to tylko starych zapisów i importu.
 
 **Wersje.** `?v=`, precache i `SW_VERSION` — wiersz „Wersje” na początku wpisu raty 4. Wewnętrzne: `VildaPostepyDoroslego` 1 → 2,
 `VildaPostepyDoroslegoUI` 1 → 2, `VildaPostepyDoroslegoWydruk` 2 → 3 (bez pinów w testach).
