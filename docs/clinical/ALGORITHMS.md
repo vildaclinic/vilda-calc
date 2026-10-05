@@ -7101,6 +7101,62 @@ tworzy przejście) — w tej racie tylko odmowa; zostaje usunięcie wizyt i wpis
 kryteriów ChPL (preparaty spoza listy neutralne); wstrzymanie werdyktu ChPL istniejącym zapisom z mieszaną substancją;
 ewentualna edycja zbiorcza leku cyklu; scalenie i wdrożenie.
 
+### Monitor DocPro: R6 w podglądzie pod przyciskami i na banerze porządkowania (P-OTYLOSC-CYKLE rata 4, obszar monitora; `obesity_therapy_monitor.js`, 2026-10-05)
+
+**Zmiana.** Reguła R6, odmowy i ich brzmienia — bez zmian (moduł wyżej). Monitor dokłada:
+- **Podgląd pod przyciskami rodzaju wizyty** (`CyS`, `CyE`) liczy wizytę z lekiem z formularza, tak jak zapis: przy dodawaniu
+  z listy leku (`ht()`, jak `vt`), przy edycji z `Eh()` (lista, a gdy nic nie pokazuje — lek edytowanego punktu, jak `Eb`).
+  Przycisk, który R6 odrzuci, dostaje `aria-disabled` i krótki powód z modułu (np. „Inna substancja niż w cyklu 1
+  (Saxenda)”, „Zakończenie z lekiem cyklu 1 (Saxenda)”). Zmiana leku na liście (`change` na `#obesityMonDrug`) przelicza
+  podgląd. Dotąd kandydat podglądu nie miał leku (przy edycji — lek zapisany w punkcie), więc przycisk wyglądał na
+  aktywny, a odmowa przychodziła dopiero po kliknięciu.
+- **Baner „Zapis wymaga uporządkowania”** (`CyB`) — pozycja dla niezgodności `zmiana-substancji`: „W cyklu {N} zmienia się
+  substancja czynna: {Z} (do {dZ}) → {NA} (od {dNa}) bez Zakończenia między nimi.” z akcjami „Dopisz Zakończenie przed
+  {dNa}” i „Edytuj wizytę {dNa}” (pomyłka w leku). Podpowiedź pierwszej akcji (`CsZ`, w miejscu przycisków, nic nie
+  zapisuje): „Wpisz wizytę kończącą leczenie {Z} — datę (najpóźniej {dNa}; może być ten sam dzień), masę i wzrost — wybierz
+  w liście lek {Z} i „Zakończenie leczenia”. Potem zmień wizytę {dNa} na Włączenie (ołówek przy wizycie).” — drugie zdanie
+  pomijane, gdy wizyta {dNa} już jest Włączeniem (wtedy obok stoi też dotychczasowa pozycja dwóch Włączeń albo wizyty
+  przed Włączeniem — bez zmian).
+  Gdy pierwszym punktem nowej substancji jest samo Zakończenie (stary zapis), drugiego Zakończenia cykl nie przyjmie
+  (`drugie-zakonczenie`), więc pozycja brzmi „Zakończenie cyklu {N} ({dNa}) ma inny lek ({NA}) niż wcześniejsze wizyty
+  tego cyklu ({Z}, do {dZ}). Zakończenie zapisuje się z lekiem swojego cyklu.” i ma tylko „Edytuj wizytę {dNa}”. Nieznany
+  kod niezgodności (np. nowsza wersja modułu) — „W cyklu {N} zapis nie spełnia reguł cykli leczenia.” (+ „Edytuj wizytę
+  {d}” dla pierwszego punktu niezgodności): chip cyklu mówi wtedy „do uporządkowania”, więc baner nie może milczeć.
+  {Z}/{NA} — `VildaCykleLeczenia.nazwaLeku` (zapas: nazwa leku z nagłówka cyklu), daty jak w pozostałych pozycjach.
+  Zdanie z „Wpływu klinicznego” wyżej o braku pozycji banera dla tego kodu dotyczy stanu przed tą częścią.
+
+**Wpływ kliniczny.** Liczby, progi, okna, werdykty i zapis punktów — bez zmian; nic nie zmienia się samo (D5). Zmienia się
+to, co lekarz widzi przed kliknięciem (powód pod przyciskiem) i na banerze: stary zapis ze zmianą substancji w cyklu
+(werdykt ChPL w Karcie wstrzymany od części modułu) dostaje pozycję z poprawką w dwóch krokach zamiast ukrytego banera.
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm; leki jak w monitorze):
+
+| Przypadek | Wejście | Oczekiwany wynik (po) | Przed |
+|---|---|---|---|
+| B-1 (CY-11) | W Saxenda 12.01.2024; formularz 12.04.2024, lista Wegovy | Kontynuacja i Zakończenie `aria-disabled`: „Inna substancja niż w cyklu 1 (Saxenda)”, „Zakończenie z lekiem cyklu 1 (Saxenda)”; bez przydziału; po wyborze Saxendy oba aktywne, „Ta wizyta trafi do cyklu 1 (aktywny, od 12.01.2024).” | oba aktywne, przydział „… do cyklu 1 …”; odmowa dopiero po kliknięciu |
+| B-2 | W, K Saxenda; ołówek przy W, lista Wegovy | Włączenie `aria-disabled`: „Inna substancja niż wizyty cyklu 1 (Saxenda)” | aktywne (podgląd brał lek zapisany w punkcie) |
+| B-3 | jak B-2 (cykl 2 Wegovy od 12.11.2024); ołówek przy K 12.04.2024, data 01.03.2025, lista pusta | Kontynuacja `aria-disabled`: „Zmiana substancji w cyklu 2” (zapis weźmie lek punktu); z Wegovy na liście — aktywna (zapis pyta o przeniesienie) | z pustą listą to samo; z Wegovy na liście nadal wyłączona (podgląd brał lek zapisany w punkcie), choć zapis przechodzi |
+| B-4 (R6-S) | W 12.01.2024, K 12.04.2024 (Saxenda), K 12.07.2024, K 12.10.2024 (Wegovy) | baner: „W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.”, chip „do uporządkowania” | baner ukryty, chip „do uporządkowania” |
+| B-5 (R6-P) | jak B-4; „Dopisz Zakończenie przed 12.07.2024” → Z Saxenda 12.07.2024; ołówek przy K 12.07.2024 → Włączenie | podpowiedź `CsZ`; cykle „W, K, Z” i „K, K” (bez Włączenia), potem cykl 2 „Wegovy · od 12.07.2024” z Włączeniem; baner znika | brak pozycji (Zakończenie dopisane ręcznie przechodziło od części modułu) |
+| B-6 | W, K Saxenda, Z 15.10.2024 Wegovy (stary zapis) | „Zakończenie cyklu 1 (15.10.2024) ma inny lek (Wegovy) niż wcześniejsze wizyty tego cyklu (Saxenda, do 12.04.2024)…”, tylko „Edytuj wizytę 15.10.2024” | baner ukryty |
+| B-7 | niezgodność o nieznanym kodzie w cyklu 2 | „W cyklu 2 zapis nie spełnia reguł cykli leczenia.” + „Edytuj wizytę …” | baner ukryty |
+| B-8 | W Saxenda; lista bez leku | przyciski jak przed ratą 4 (punkt neutralny) | to samo |
+
+**Testy.** `tests/unit/monitor-otylosci-r6.test.mjs` 20 — funkcje wycięte z pliku produkcyjnego (`CyS`, `CyE`, `Eh`, `ht`,
+`CyB`, `CsB`, `CsU`, `CsZ`, `CsN` z pomocnikami dat) na atrapie DOM z prawdziwym modułem cykli i kryteriami ChPL: B-1–B-8,
+poprawka dwukrokowa, przejście w cyklu 2, test negatywny bez kryteriów, zapas nazw bez `nazwaLeku`, niepełna niezgodność
+R6 bez wyjątku (pozycja zapasowa — `CyB` stoi w rysowaniu tabeli bez `try`); strażniki tekstowe
+(`j()` z nasłuchem listy, dokładnie 2 odczyty `data-substance`, funkcje `Cs*` bez przesłaniania). Na kodzie sprzed tej
+części pada 14 z 20 (zielone zostają przypadki bez zmiany zachowania); 10 z 10 mutacji kodu zabitych.
+`tests/e2e/otylosc-cykle-rata-4.spec.mjs` 4 (prawdziwy DocPro): B-1 z kliknięciem i odświeżeniem po zmianie leku, B-2,
+B-4/B-5 z akcją „Edytuj wizytę”, telefon 390 px bez poziomego przewijania; na kodzie sprzed tej części padają wszystkie 4.
+Bez zmian i zielone: e2e monitora (raty 1, 2, 4-moduł), edycji punktu, Karty (rata 3, P-OTYLOSC-BEZ-STARTU), P-KOTWICA,
+kryteriów ChPL; testy jednostkowe monitora (`monitor-otylosci-lek`, `otylosc-edycja-punktu`, strażnik stylów).
+
+**Ograniczenia.** Przycisk „Ustaw” podpowiedzi leku z notatek (`obesity_therapy.js`) ustawia listę bez zdarzenia `change` —
+podgląd odświeży się przy następnym wpisie w formularzu; kliknięcie i tak sprawdza regułę. Ołówek przy wizycie nie
+zmienia rodzaju sam — krok 2 poprawki robi lekarz.
+
 ## Cykle leczenia otyłości — rata 4, „Postępy”: zakładka „Postępy” dorosłego liczy bieżący cykl (P-OTYLOSC-CYKLE rata 4, `vilda_postepy_doroslego.js` 2, 2026-10-01)
 
 **Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej);
