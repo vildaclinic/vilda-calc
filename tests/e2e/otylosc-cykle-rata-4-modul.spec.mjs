@@ -5,7 +5,8 @@ import { expect, test } from '@playwright/test';
 // vilda_cykle_leczenia.js — monitor DocPro woła go przy zapisie wizyty i przy edycji bez żadnej
 // zmiany po swojej stronie, a substancję rozpoznają produkcyjne kryteria ChPL ładowane na stronie
 // wcześniej. Ten plik sprawdza tę drogę w prawdziwym DocPro: kliknięcie i zapis edycji. Podgląd
-// pod przyciskami (lek z listy w kandydacie podglądu) i baner porządkowania to druga fala.
+// pod przyciskami (lek z listy w kandydacie podglądu) i baner porządkowania (druga fala) sprawdza
+// otylosc-cykle-rata-4.spec.mjs.
 // Dane wyłącznie FIKCYJNE: dorosły, 170 cm; leki zapisane jak w monitorze (tekst opcji listy
 // i etykieta substancji).
 
