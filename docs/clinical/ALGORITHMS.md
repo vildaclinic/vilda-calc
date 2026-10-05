@@ -13766,6 +13766,33 @@ formularze w powłoce `app.html`: pierwszy własny zapis, odtworzenie po edycji 
 i cyklu GH, przełączanie ramek, F5 i kontrola prawidłowego wyboru „Nowy pomiar”.
 Dane testowe są wyłącznie fikcyjne.
 
+## Świeżo wczytany pacjent wygrywa ze startowym odtworzeniem sesji (P-SWIEZE-WCZYTANIE, SW 1.1.164, 2026-10-05)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, jednostka, dawka ani interpretacja. Zmienia się kolejność dwóch kroków przy starcie strony: odtworzenia sesji karty i wczytania pacjenta. Zlecenie właściciela 2026-10-05.
+
+### Na czym polegał błąd
+
+1. **Odtworzenie sesji nie wiedziało o wczytaniu.** Startowe odtworzenie sesji (`restoreMainSessionIfAny`, `vilda_data_import_export.js`) rusza dwie klatki animacji po `DOMContentLoaded`; w karcie, której przeglądarka nie rysuje, dopiero gdy karta wróci na wierzch. Jeżeli pacjenta wczytano wcześniej (skok do punktu GH, zamiar wczytania z innej strony), odtworzenie nakładało na formularz migawkę sesji poprzedniego pacjenta.
+2. **Zamiar wczytania z innej strony mógł wyprzedzić `DOMContentLoaded`.** `vilda:pendingPatientLoad` (`vilda_chrome.js`) wykonywał się, gdy tylko była funkcja `applyLoadedData` i otwarty sejf — także przed końcem DCL, np. przy wolnym pobraniu `app.js`. Strona nie miała jeszcze wtedy słuchaczy `vilda:patient-loaded`, a inicjalizacja przy DCL odtwarzała identyfikator pacjenta z `sessionStorage`. Formularz pokazywał nowego pacjenta, a identyfikator i baza `lastLoadedData` zostawały po poprzednim.
+
+### Reguła po poprawce
+
+1. Każde wczytanie pacjenta inne niż samo odtworzenie sesji (`applyLoadedData` bez `isSessionRestore`: lista pacjentów, zamiar wczytania z innej strony, skok do punktu GH, plik, historia wersji) zamyka startowe odtworzenie sesji tej strony. Świeżo wczytany pacjent wygrywa z migawką zapisaną wcześniej.
+2. Po takim wczytaniu blokada zapisu sesji „przed pierwszym odtworzeniem” (P-POWLOKA-PANELE, `Gp_k`) już nie obowiązuje, więc migawka sesji od razu należy do wczytanego pacjenta.
+3. Zamiar wczytania z innej strony wykonuje się dopiero po zakończeniu `DOMContentLoaded` (Navigation Timing `domContentLoadedEventEnd`; zapasowo `readyState === 'complete'`). Próby przed DCL nie zużywają limitu 48 ponowień.
+
+Bez zmian: odświeżenie strony bez nowego wczytania (P-ODSWIEZENIE) nadal przywraca niezapisane zmiany, a jawne `vildaSession.restore()` z powłoki nadal odtwarza sesję. Nie zmieniają się format sesji, klucze storage, zapis wersji, synchronizacja, wybór „Odtwórz zapis” / „Nowy pomiar” ani pola wypełniane przy wczytaniu (nazwisko i płeć; liczby po „Odtwórz zapis”).
+
+### Walidacja
+
+- Nowy `tests/e2e/odtworzenie-sesji-swieze-wczytanie.spec.mjs`, 3 testy na własnym, fikcyjnym koncie sejfu:
+  - pacjent Y wczytany przed startowym odtworzeniem (klatki animacji wstrzymane jak w karcie w tle): w formularzu, w `lastLoadedData`, w identyfikatorze i w migawce sesji jest Y; po „Odtwórz zapis” i zmianie wagi zapis dodaje wersję Y, a pacjent X zostaje bez nowej wersji;
+  - zamiar wczytania Y z innej strony przy opóźnionym `app.js`: nazwisko, płeć, identyfikator, `lastLoadedData` i migawka = Y;
+  - kontrola P-ODSWIEZENIE: F5 bez nowego wczytania przywraca niezapisaną zmianę wagi pacjenta X.
+- Kontrole negatywne na kodzie produkcyjnym: bez poprawki testy 1 i 2 są czerwone (w formularzu nazwisko poprzedniego pacjenta). Sama zmiana w `vilda_data_import_export.js` zostawia czerwony test 2, a sama zmiana w `vilda_chrome.js` — test 1.
+
+SW 1.1.163 → **1.1.164**; `vilda_chrome.js?v=102→103`, `vilda_data_import_export.js?v=96→97`.
+
 ## Zasady aktualizacji rejestru
 
 - Nie usuwaj starego wpisu bez pozostawienia informacji, czym został zastąpiony.
