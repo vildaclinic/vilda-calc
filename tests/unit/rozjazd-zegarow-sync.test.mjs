@@ -156,9 +156,13 @@ describe('G17 — droga werdyktu do lekarza', () => {
     expect(SYNC).toContain('function Nv(t){'); // kontrola pozytywna: wzorzec źródłowy zostaje
   });
 
-  it('rozgłasza na OBU ścieżkach scalania, nie tylko na jednej', () => {
-    expect(SYNC).toContain('Nv(Qcw.staleDevice),Qcs(Qcw.clockSkew);');
+  it('rozgłasza na każdej ścieżce scalania, nie tylko na jednej', () => {
+    // Do P-SYNC-STRAZNIK gałąź 409 w syncPush scalała sama (z własnym Nv/Qcs). Teraz woła pełne pobranie Y,
+    // więc jedyne scalenie w vilda_sync.js jest w Y — i ono rozgłasza oba werdykty.
+    expect(SYNC.match(/mergeSyncPayload\(/g), 'jedno miejsce scalania').toHaveLength(1);
     expect(SYNC).toContain('return Nv(J.staleDevice),Qcs(et&&et.clockSkew||null),');
+    const i = SYNC.indexOf('if(v.status===409){');
+    expect(SYNC.slice(i, SYNC.indexOf('else if(v.status===429)', i)), 'gałąź 409 scala przez Y').toContain('await Y()');
   });
 
   it('rozgłasza tylko przy ostrzeżeniu — cisza nie zaśmieca zdarzeniami', () => {

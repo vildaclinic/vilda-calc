@@ -900,12 +900,12 @@
   "sha256": "03cbae2cc9d070ce8b2d2b7bf3f3db93d5250720f7a966834363cab483eeed78"
  },
  "vilda_sync.js": {
-  "v": 32,
-  "sha256": "425f89f8db7a1fd847adb8e3fbbafea074bcb292e40c0406a4e3d8f943b8682b"
+  "v": 33,
+  "sha256": "851a158b7d3ab13dd49ad0fe8cdd434c69c77bd90cb60ff45e9d59e8349fd079"
  },
  "vilda_sync_integration.js": {
-  "v": 45,
-  "sha256": "8b7f9855090993d19ad77b043aaf03c43a9f46f9f819cb9b8b83a408baff7b69"
+  "v": 46,
+  "sha256": "107e3b3a3f49aeb04454a736ebb3f59590e941f060e1210bb837e70d0bae249d"
  },
  "vilda_tab_guard.js": {
   "v": 5,

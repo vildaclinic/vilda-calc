@@ -8010,6 +8010,81 @@ wersji.
 także na strony doładowujące Kartę Pacjenta na żądanie; czy w przyszłości dać narzędzie do wyrównania zapisów
 (to już zmiana danych — poza tą decyzją).
 
+## Wysyłka nie nadpisuje chmury bez scalenia; delty i wysyłka po MERGE_BUSY (P-SYNC-STRAZNIK, SW 1.1.160, `vilda_sync.js` 33, `vilda_sync_integration.js` 46, 2026-10-05)
+
+**Decyzja właściciela (2026-10-05).** „Zaczynaj od punktu 1, zwykły PR do audyt” — punkt 1 przeglądu „co dalej po
+#518” (tylko odczyt, każde znalezisko weryfikowane adwersaryjnie): luki synchronizacji, które P-SCALANIE-BLOKADA
+uczyniło częstszymi, oraz uwaga Codex P1 do #518, dodana po scaleniu i bez odpowiedzi.
+
+**Co było nie tak** (zmierzone na kodzie sprzed zmiany):
+1. **Wysyłka bez ETagu nadpisywała chmurę.** Gdy stan slotu nie miał ETagu — po „Zresetuj stan synchronizacji”
+   i przerwanym pobraniu, po przerwanym „przywróć poprzednią wersję” — `syncPush` brał ETag z `/status` i wysyłał PUT
+   z tym ETagiem, bez scalenia. Chmurę zastępował stan urządzenia, w którym nie było zmian z innych urządzeń od
+   ostatniego pełnego scalenia. Strażnik STALE_DEVICE_GUARD tego nie łapał: pilnuje pobrania w tej sesji, nie scalenia
+   tego ETagu. Pobranie mogło się przerwać z każdego powodu (sieć, odszyfrowanie), ale `MERGE_BUSY` z P-SCALANIE-BLOKADA
+   robiło z tego powtarzalne, 30-sekundowe okno przy otwartym pytaniu bramy w innej karcie.
+2. **Gałąź 409** (slot istnieje, urządzenie nie ma jego stanu): ETag z `/status`, a scalenie bloba w `catch{}` — każdy
+   błąd scalania kończył się tym samym nadpisaniem.
+3. **Delty** (uwaga Codex P1 do #518): delta, której scalenie skończyło się `MERGE_BUSY`, była połykana, a kursor i tak
+   szedł na `headSeq`. Zmiany z niej nie było, dopóki nadawca nie wysłał pełnego stanu; każda kolejna delta w partii
+   czekała osobno 30 s.
+4. **Wysyłka po 5 nieudanych próbach** rezygnowała do następnej zmiany lokalnej; pierwsze udane pobranie po zwolnieniu
+   blokady pokazywało „ok”, choć zmiany z urządzenia nie wyszły.
+
+**Co się zmienia.**
+- `vilda_sync.js`, `syncPush`: ETag chmury wysyłka przyjmuje tylko z udanego scalenia w tej samej operacji. Bez ETagu
+  najpierw pełne pobranie (`syncPull`: status, blob, scalenie, ETag scalonej treści), potem ponowny eksport stanu
+  i PUT z tym ETagiem. Gałąź 409 robi to samo zamiast własnego scalenia w `catch{}`. Błąd pobrania (np. `MERGE_BUSY`)
+  przerywa wysyłkę — chmura zostaje nietknięta. ETag z `/status` zostaje tylko po udanym pobraniu, które ETagu nie dało
+  (w chmurze nie ma bloba).
+- `vilda_sync.js`, delty (`/changes`): `MERGE_BUSY` kończy partię i kursor nie rusza; następne pobranie stosuje partię od
+  nowa (scalanie jest odporne na powtórzenie). Inne błędy jak dotąd: uszkodzona delta nie blokuje kolejki. Delty
+  z WebSocketu (`applyDelta`) kursora nie ruszają, więc wracają tą drogą.
+- `vilda_sync_integration.js`: wysyłka, która się poddała (5 prób, natychmiastowa albo przy zamykaniu karty), zostawia
+  znacznik „niewysłane”; pierwsze udane pobranie planuje wysyłkę od nowa (~1,5 s). Udana wysyłka znacznik gasi.
+
+**Bez zmian.** Reguły scalania, format ładunku, liczniki, sejf (`vilda_vault.js`), interfejs. Rozgłaszanie werdyktów
+G17 (nieaktualne urządzenie, rozjazd zegarów) — teraz jedyne scalenie jest w `syncPull` i ono rozgłasza.
+
+**Przypadki syntetyczne** (prawdziwe `vilda_sync.js` i `vilda_sync_integration.js`, atrapa serwera synchronizacji
+— serwera nie ma w repozytorium; `tests/unit/synchronizacja-straznik.test.mjs`, `tests/e2e/synchronizacja-straznik.spec.mjs`):
+
+| Sytuacja | Wynik |
+|---|---|
+| po resecie stanu pobranie kończy się `MERGE_BUSY`; potem wysyłka | wysyłka `MERGE_BUSY`, PUT 0, chmura bez zmian; po zwolnieniu: scalenie, PUT z `If-Match: "E1"`, w chmurze pacjent zdalny i lokalny |
+| gałąź 409, scalenie zajęte | jak wyżej |
+| e2e: karta A czeka na pytanie bramy, karta B bez stanu slotu wysyła | B: `MERGE_BUSY`, PUT 0, pacjentka z innego urządzenia w chmurze; po odpowiedzi w A: PUT z ETagiem scalonej treści, pacjentka zostaje |
+| znany ETag (kontrola) | PUT bez dodatkowego pobierania |
+| nowy slot bez bloba (kontrola) | rejestracja jak dotąd |
+| delty d1–d3, d2 kończy się `MERGE_BUSY` | stosowane d1, d2; d3 nie; kursor bez zmian; następne pobranie: d1, d2, d3, kursor 3 |
+| delta uszkodzona (kontrola) | d1–d3, kursor 3 |
+| 5 nieudanych wysyłek, potem udane pobranie | wysyłka ponownie po ~1,5 s; kolejne pobranie niczego nie dubluje |
+
+**Testy.** Jednostkowe: 11 nowych (na bazie 6 czerwonych: 4 zachowania i 2 strażniki źródła; kontrole zielone).
+Strażnik G17 w `rozjazd-zegarow-sync.test.mjs` przepięty: jedno miejsce scalania, gałąź 409 scala przez `syncPull`
+(asercji więcej, nie mniej). E2e: 1 (na bazie czerwony: wysyłka nadpisała chmurę). Mutacje (każda wywraca co najmniej
+jeden test): bez pobrania przy braku ETagu; 409 z ETagiem z `/status`; delty bez przerwania partii; kursor mimo
+`MERGE_BUSY`; bez wznowienia wysyłki; rezygnacja bez znacznika; znacznik nie gaśnie po udanej wysyłce.
+
+**Wpływ kliniczny.** Brak zmian we wzorach, progach i wynikach. Zmiana dotyczy danych: wysyłka nie zastępuje stanu
+chmury stanem nie scalonym, delty nie giną przy zajętej blokadzie, zaległa wysyłka wraca sama.
+
+**Ograniczenia.**
+- Tryb starych delt (`/deltas`, gdy przyrostowa synchronizacja jest wyłączona) nie ma kursora po stronie klienta, więc
+  delty z `MERGE_BUSY` nie da się tam zatrzymać do ponowienia; partia kończy się na niej (bez 30 s na każdą kolejną),
+  a zmiana dociera z pełnym stanem nadawcy.
+- Komunikat błędu synchronizacji nadal jest mało widoczny (ikona bez opisu, nota w Ustawieniach nadpisywana) — punkt 5
+  przeglądu, zmiana interfejsu do makiety.
+- Serwer synchronizacji nie jest w repozytorium; zachowanie `If-Match`, `/changes` i 409 przyjęte z kodu klienta.
+
+**Wersje.** `vilda_sync.js` 32 → 33 i `vilda_sync_integration.js` 45 → 46 (8 stron), precache (append-only),
+`SW_VERSION` 1.1.159 → 1.1.160 (+ pin), fixture wersji — nadane przez `npm run podbij-wersje` względem `origin/audyt`
+(`2e12e66`). „Do decyzji”: brak.
+
+**Co pozostaje decyzją właściciela.** Scalenie i wdrożenie. Kolejne punkty przeglądu (2: odświeżenie źródeł DS
+i okołoporodowych przy przejęciu pacjenta z sesji — do potwierdzenia; 3: import karty a nagrobek; 4: blokada
+pozostałych operacji; 5: widoczność błędów synchronizacji).
+
 ## Scalanie synchronizacji pod blokadą pacjenta (P-SCALANIE-BLOKADA, SW 1.1.140, `vilda_vault.js` 194, 2026-10-01)
 
 **Decyzja właściciela (2026-10-01).** „Przeanalizuj i wprowadź to” — pytanie zostawione w P-BLOKADA-ZAPISU-WERSJI
@@ -8043,7 +8118,9 @@ Dlatego decyzje zapadają pod blokadą, na świeżym odczycie.
   podaje). Po limicie kończy się błędem z kodem `MERGE_BUSY`: „Synchronizacja wstrzymana — pacjent jest właśnie
   zapisywany w innej karcie. Dokończ tam zapis; nic nie zginęło, synchronizacja spróbuje ponownie.” Pobranie z chmury
   nie przesuwa wtedy znacznika wersji (ETag), więc wysyłka wymaga świeżego pobrania (412 → pobranie), a następna
-  synchronizacja powtarza scalanie. Lista nagrobków zapisuje się także po przerwaniu (treść kosza dołączona z wersji
+  synchronizacja powtarza scalanie. *(Korekta 2026-10-05, P-SYNC-STRAZNIK: to zdanie było prawdziwe tylko przy znanym
+  ETagu. Po resecie stanu albo w gałęzi 409 wysyłka brała ETag z /status bez scalenia i nadpisywała chmurę — poprawione
+  w P-SYNC-STRAZNIK wyżej.)* Lista nagrobków zapisuje się także po przerwaniu (treść kosza dołączona z wersji
   lokalnej nie ginie). Pominięcie zajętego pacjenta byłoby gorsze: wysyłka zastępuje cały stan w chmurze i zgubiłaby
   jego wersje z innych urządzeń.
 - Kolejność blokad jak w koszu: najpierw pacjent, potem lista nagrobków; scalanie trzyma najwyżej jedną blokadę pacjenta
@@ -8085,9 +8162,13 @@ przy zajętej blokadzie synchronizacja czeka albo jest wstrzymana do następnej 
   pacjenta. Ich wyścigi ze scalaniem świeży odczyt zawęża, ale nie wyklucza.
 - Pytanie bramy otwarte długo w innej karcie: każda automatyczna synchronizacja czeka 30 s i kończy się `MERGE_BUSY`;
   wysyłka z tego urządzenia czeka do odpowiedzi albo zamknięcia tamtej karty. Błąd idzie tą samą drogą co inne błędy
-  pobrania.
+  pobrania. *(Korekta 2026-10-05, P-SYNC-STRAZNIK: wysyłka nie czekała — po 5 próbach rezygnowała do następnej zmiany
+  lokalnej. Teraz wraca po pierwszym udanym pobraniu.)*
 - Pierwsza rejestracja slotu (gałąź 409 w `vilda_sync.js`) połyka każdy błąd scalania, także ten; wysyłkę chroni wtedy
-  strażnik „najpierw pobierz” — bez zmian, dotyczy każdego błędu scalania.
+  strażnik „najpierw pobierz” — bez zmian, dotyczy każdego błędu scalania. *(Korekta 2026-10-05, P-SYNC-STRAZNIK:
+  strażnik „najpierw pobierz” pilnuje pobrania w tej sesji, nie scalenia tego ETagu, więc tej gałęzi nie chronił.
+  Poprawione: gałąź 409 robi pełne pobranie, a jego błąd przerywa wysyłkę. Delty z `MERGE_BUSY` też były gubione —
+  uwaga Codex P1 do #518, poprawiona tamże.)*
 
 **Wersje.** `vilda_vault.js` 193 → 194 (8 stron + wstrzyknięcia: `vilda_chrome.js` 88, `vilda_session_bridge.js` 16 na
 22 stronach), precache (append-only), `SW_VERSION` 1.1.139 → 1.1.140 (+ pin), fixture wersji — nadane przez
