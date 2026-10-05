@@ -1565,6 +1565,37 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 *Strażnicy:* `tests/unit/schowek.test.mjs` (12) — tekst zaczynający się od `Waga:` dostaje **dokładnie jeden** U+2060, a reszta treści zostaje bit w bit; U+2060 nie jest odstępem i przeżywa `trim()`; teksty, które nie wyglądają jak adres (`Augmentin –`, `Pow. ciała:`, `Wskaźnik Cole'a:`, `63,4 kg`) **nie** dostają nic; ścieżka zapasowa kopiuje tę samą zabezpieczoną treść; przy dostępnym Clipboard API `execCommand` nie rusza ani razu. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku: pierwszy znak wklejonej treści to U+2060, zaraz za nim `Waga:`.
 
+### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.157, 2026-10-01)
+
+**Decyzja właściciela (2026-10-01): „Tylko BMI”.** Ocena BMI (kategoria, ostrzeżenie, klasa, Cole, sugestia WHR, „idealna masa”, nagłówek i karta BMI raportu) idzie za silnikiem BMI i decyzją D3 — siatka DS do 20 lat. Masa, wzrost, ciśnienie, tętno i opisy dorosłego **zostają przy wieku 18 lat** (raport: 18, PDF: 19) — osobna decyzja, jeśli kiedyś.
+
+**Problem.** Wiek 18 lat był wpisany na sztywno w każdym module oceniającym BMI, bez populacji pacjenta. Silnik BMI (`VildaBmi.dorosly`) od P-DS-1 mówi: dorosły od 216 mies., przy DS od 240 mies. Skutek dla dziewczyny z DS, 18;6, 150 cm, 68 kg (BMI 30,2, ok. 56. centyla siatki DS) — na jednej stronie jednocześnie:
+- karta główna: „⚠ Otyłość I stopnia wg BMI. Zalecana konsultacja lekarska.”;
+- „Podsumowanie wyników”: „BMI: 30,2 kg/m² – otyłość I stopnia, aby BMI wróciło do zakresu prawidłowego dla dorosłych, należałoby zredukować masę ciała o ok. 12,0 kg”;
+- raport (nagłówek i karta BMI): „Otyłość I stopnia”, tabela zakresów dorosłego;
+- „Droga do normy” i zalecenia (P-DIETA-B5): „Twoje BMI jest już w normie” / masa prawidłowa wg siatki DS.
+
+**Reguła.**
+1. **Jedno pytanie w silniku** (`vilda_bmi.js`): `VildaBmi.doroslyWgPacjenta(wiekMies)` = `dorosly(wiekMies, populacjaZOpcji({}))` — populacja z resolvera pacjenta. Populacja ogólna: dokładnie `wiekMies >= 216`, jak dotąd.
+2. **Karta główna** (`vilda_update_prep.js`): `vildaUpdatePrepBmiDorosly` / `vildaUpdatePrepBmiDziecko` z silnika (bez silnika — 18 lat). Za nimi idą: kategoria i centyl BMI (siatka DS z notą), ostrzeżenie dorosłego (≥ 25/30/35/40), nota niedowagi dorosłego, ukrywanie kategorii przy nadmiarze, kategoria normalizacji, „do normy”, „blisko górnej granicy” (BMI 24–25), kwalifikacja Cole’a. „Droga do normy BMI” (P-DIETA-B5) korzysta z tej samej funkcji.
+3. **`app.js`** (`vildaBmiDoroslyWiek`): ramka wyniku dorosłego, sugestia WHR (BMI ≥ 25 tylko u dorosłego wg silnika; inaczej 85. centyl / Cole), flaga nadmiaru masy, „idealna masa” (BMI 22 tylko u dorosłego wg silnika; inaczej 50. centyl BMI siatki pacjenta).
+4. **„Podsumowanie wyników”** (`vilda_summary_cards.js`) i **schowek Karty pacjenta** (`vilda_patient_summary_copy.js`): linia BMI i Cole’a z silnika (centyl DS z notą), kolory karty poprzedniego pomiaru i odległość od normy (`ee`) — `doroslyWgPacjenta`. Linie masy, wzrostu i parametry życiowe bez zmian.
+5. **Raport** (`vilda_patient_report.js`): `patientReportBmiDoroslyWiek(e)` = dorosły w bieżącym trybie raportu **i** dorosły wg silnika; `patientReportGetCurrentBasics().bmiDorosly`. Za nimi idą: ton linii BMI/masy, wyróżnienia, zdanie o parametrach masy, nagłówek (także wersja „flagowa”), filtr Cole’a, drabinka celów, karta BMI (centyl i mediana siatki DS dla rzeczywistego wieku — bez obcięcia do 18 lat; bez tabeli zakresów dorosłego) i plakietka karty masy (z klasy BMI). Nagłówek z faktów (`patientReportZbierzFaktyNaglowka`) zostaje przy dotychczasowym progu 18 lat niezależnym od trybu PDF, z dołożoną populacją (`patientReportBmiDoroslyWgSilnika`).
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne):
+- dz. z DS 18;6, 150 cm, 68 kg → karta główna „BMI 30,2 – 56 centyl (bmiSDS +0,14) (Prawidłowe) wg siatki dla zespołu Downa (Zemel 2015)”, bez ostrzeżenia; podsumowanie: ta sama linia + „Wskaźnik Cole’a: 103,3 %”; raport: nagłówek „Prawidłowe”, karta BMI 55,7. centyla bez tabeli dorosłego, plakietka masy „Prawidłowe”; bez sugestii WHR (dotąd: otyłość I stopnia wszędzie poza „Drogą do normy”);
+- dz. z DS 19;3, 150 cm, 88 kg (87. centyl DS) → „⚠ Nadwaga wg BMI – zalecana konsultacja dietetyczna”, raport „Nadwaga”, sugestia WHR (dotąd: otyłość II stopnia dorosłego);
+- dz. z DS 20;0, 150 cm, 68 kg i dz. bez DS 18;6, 150 cm, 68 kg → jak dotąd: „Otyłość I stopnia wg BMI”, podsumowanie dorosłego, raport z tabelą dorosłego.
+- Populacja ogólna — porównanie stron przed i po zmianie: 70 przypadków (kobieta 155 cm, 40–95 kg, wiek 17;11 / 18;0 / 18;6 / 19;0 / 19;6 / 20;0 / 30;0, tryb standardowy i profesjonalny; karta główna, karta Cole’a, podsumowanie, WHR, „Droga do normy”, „idealna masa”, nagłówek, linie i wyróżnienia raportu, karty raportu) — **0 różnic** (poza animowaną liczbą BMI, która odlicza w chwili odczytu).
+
+Testy: `tests/unit/ds-bmi-dorosly-wg-pacjenta.test.mjs` (7: silnik co 0,5 mies. od 0 do 960 mies. dla populacji ogólnej, granica 240 mies. przy DS, przypadek 18;6 z DS na silniku, strażnik kodu w sześciu modułach), `tests/e2e/ds-bmi-18-19.spec.mjs` (3, prawdziwa strona). Zaktualizowane izolowane testy funkcji karty głównej (`ds-straznik`, `wsad-data-pomiaru-i-wsds` — dołożony pomocnik) i odcisk karty BMI raportu (`bmi-wyjscia-tekstowe`: `Bm=lB&&…`).
+
+**Ograniczenia.** Masa i wzrost 18–19-latka z DS w karcie głównej, podsumowaniu i raporcie nadal mają opisy dorosłego („brak porównania do dorosłej populacji”), choć siatki Zemel sięgają 20 lat — świadomie poza zakresem („Tylko BMI”). Interpretacja WHR (progi WHO dla dorosłych od 18 lat) bez zmian.
+
+**Pliki.** `vilda_bmi.js`, `vilda_update_prep.js`, `app.js`, `vilda_summary_cards.js`, `vilda_patient_summary_copy.js`, `vilda_patient_report.js`; `app.js` 230, `vilda_bmi.js` 9, `vilda_patient_report.js` 46, `vilda_patient_summary_copy.js` 14, `vilda_summary_cards.js` 55, `vilda_update_prep.js` 94; SW 1.1.156 → 1.1.157 (numery nadane `npm run podbij-wersje`).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy masa i wzrost 18–19-latka z DS mają też przejść na siatki DS do 20 lat.
+
 ### P-DS-6 — obwód głowy pacjenta z zespołem Downa na siatce Zemel 2015 (SW 1.0.973, 2026-09-16, plan P-DS)
 
 Zaległość wskazana w sprostowaniu do P-DS-5 pkt 6 — i **jedyna miara antropometryczna, która po zamknięciu planu czytała się jeszcze z siatki populacyjnej**.

@@ -98,6 +98,8 @@ describe('Jeden zapis SDS: „hSDS", „wSDS", „bmiSDS"', () => {
       ${funkcja(src, 'vildaUpdatePrepFmtSds')}
       ${funkcja(src, 'vildaUpdatePrepBuildWeightCentileLine')}
       ${funkcja(src, 'vildaUpdatePrepBuildHeightCentileLine')}
+      const VILDA_UPDATE_PREP_BMI_DOROSLY_LATA=18;
+      ${funkcja(src, 'vildaUpdatePrepBmiDorosly')}
       ${funkcja(src, 'vildaUpdatePrepBmiSilnik')}
       ${funkcja(src, 'vildaUpdatePrepNotaSiatki')}
       ${funkcja(src, 'vildaUpdatePrepBuildBmiLine')}
