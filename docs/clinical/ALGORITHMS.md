@@ -20,7 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
-| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE) | wysoki priorytet przeglądu klinicznego |
+| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
@@ -8082,6 +8082,55 @@ punktów w sejfie (`vilda_auth_ui.js`, `vilda_vault.js` — tam „Aktualna dawk
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy obniżać procent dawki już zapisanych punktów Increlex
 (zmiana 100% dotyczy też historii); czy „Aktualna dawka” w Karcie pacjenta i historia z sejfu mają pokazywać dawkę na
 podanie; scalenie i wdrożenie.
+
+## Karta pacjenta: „Aktualna dawka” Increlex w dawce na podanie (P-GH-INCRELEX-KARTA, SW 1.1.163, `vilda_auth_ui.js` 477, 2026-10-05)
+
+**Skąd.** Polecenie właściciela z 2026-10-05 („zrób »Aktualna dawka« Increlex w dawce na podanie”), po scaleniu
+P-GH-INCRELEX-PODANIE: karta terapii, monitor i wpis do Terminarza pokazują Increlex w dawce na podanie 2× na dobę,
+a podsumowanie leczenia w Karcie pacjenta nadal w mg/kg/d.
+
+**Źródło.** Jak w P-GH-INCRELEX-PODANIE: ChPL Increlex (EMA, PDF z 26.03.2026), pkt 4.2 — dawka wyrażana na podanie
+(mg/kg) 2× na dobę. Zmienia się tylko sposób pokazania dawki zapisanej w punkcie; liczby się nie zmieniają.
+
+**Zmierzone przed zmianą (`audyt` `72f62e0`, prawdziwa Karta pacjenta na `index.html`, własne fikcyjne konto
+sejfu, te same kroki co w teście e2e).** Punkt Increlex 20 kg (`dose` 0,24 mg/kg/d, `doseAbs` 4,8 mg/d):
+„Aktualna dawka 0,24 mg/kg/d”; stary punkt 13 kg bez `doseAbs` (`dose` 0,08): „Aktualna dawka 0,08 mg/kg/d”.
+
+**Reguła.** Karta „Leczony IGF-1 (mekasermina)” (program IGF-1 albo preparat Increlex, jednostka punktu nie
+tygodniowa), ostatni punkt terapii:
+- „Aktualna dawka” = „2 × {mg na podanie} mg na dobę ({dose / 2} mg/kg na podanie)”;
+- mg na podanie = `doseAbs` / 2 (mg/d — P-GH-INCRELEX-PODANIE); bez `doseAbs` — `dose` × masa punktu / 2; bez masy —
+  tylko „… mg/kg na podanie”;
+- zaokrąglenie wyświetlania: mg do 2 miejsc, mg/kg do 3 miejsc po przecinku, bez końcowych zer (jak dotąd `qt`).
+Preparaty GH bez zmian („… mg/kg/d”, „… mg/kg/tydz”).
+
+**Zmiana.** `vilda_auth_ui.js` — funkcja `Gwl_inc` i jedno wpięcie w podsumowaniu leczenia (`wl`), opisane komentarzem
+`P-GH-INCRELEX-KARTA`. Rekordy punktów bez zmian.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana prezentacji jednostki dawki (kliniczna w rozumieniu AGENTS.md § 3 — jednostka
+wyniku); wartość dawki ta sama. Lekarz widzi w Karcie pacjenta tę samą dawkę co w karcie terapii i w Terminarzu
+(dotąd mg/kg/d, czyli liczbę 2× większą od dawki na kg na podanie). Populacja: dzieci leczone mekaserminą.
+
+**Przypadki `wejście → oczekiwany wynik`.**
+- Increlex, ostatni punkt 20 kg, `dose` 0,24, `doseAbs` 4,8 → „2 × 2,4 mg na dobę (0,12 mg/kg na podanie)”;
+- Increlex, stary punkt 13 kg, `dose` 0,08, bez `doseAbs` → „2 × 0,52 mg na dobę (0,04 mg/kg na podanie)”;
+- Genotropin 12 mg, `dose` 0,025 → „0,025 mg/kg/d” (bez zmian).
+
+**Strażnicy.** `tests/e2e/karta-gh-increlex-dawka.spec.mjs` (3; prawdziwa Karta pacjenta z punktami w sejfie): Increlex z
+`doseAbs`, stary punkt bez `doseAbs`, kontrola GH. Pomiar „przed” tymi samymi krokami na `72f62e0` (dwa pierwsze
+testy czerwone z wartościami jak wyżej, kontrola zielona).
+
+**Czego to nie zmienia.** Tabela „Trend leczenia GH”, wykres dawki, zakres dawek w segmentach i dymki wizyt w Karcie
+pacjenta (nadal mg/kg/d dla Increlex), „% dawki zalecanej” (P-GH-INCRELEX-PODANIE), historia tworzona z punktów w
+sejfie (`vilda_vault.js`).
+
+**Wersje.** `vilda_auth_ui.js` 476 → 477 (wszystkie strony, które go ładują), `vilda_chrome.js` 101 → 102 i
+`vilda_session_bridge.js` 26 → 27 (wstrzykują `vilda_auth_ui.js` z nowym `?v=`); precache (append-only);
+`SW_VERSION` 1.1.162 → 1.1.163 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` —
+wszystko z `npm run podbij-wersje` względem `audyt` `72f62e0`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy pozostałe miejsca Karty pacjenta (tabela trendu,
+wykres, segmenty) też mają pokazywać Increlex na podanie; scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
