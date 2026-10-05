@@ -20,7 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
-| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii | wysoki priorytet przeglądu klinicznego |
+| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
@@ -7733,6 +7733,94 @@ względem `audyt` `767cc10`.
 
 **Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania, scalenie i wdrożenie; decyzja o rekordach
 zapisanych wcześniej z kopią ręczną pomiaru punktu.
+
+## Liczba wkładów, wstrzykiwaczy i fiolek uwzględnia ważność po pierwszym użyciu (P-GH-WAZNOSC, SW 1.1.159, `gh_igf_therapy.js` 28, nowe `vilda_gh_opakowania_dane.js` i `vilda_gh_opakowania.js`, 2026-10-05)
+
+**Skąd.** Porównanie dawkowania w kodzie z ChPL (pakiet „dawka podawana”, przegląd 2026-10-05) pokazało, że karta
+„Leczenie hormonem wzrostu / IGF-1” liczy, ile leku wydać, wyłącznie z ilości leku. Decyzja właściciela z 2026-10-05
+(D4): „uwzględnij ważność po otwarciu — można też dodać informację dla lekarza, że aplikacja to uwzględniła w
+obliczeniach i jaka jest ta ważność”. To pierwszy z trzech PR-ów pakietu (D9).
+
+**Źródła (ChPL, punkt 6.3).**
+- Omnitrope 5, 10 i 15 mg/1,5 ml — informacja o produkcie EMA, wersja polska, PDF z 26.06.2025 (punkt 10 bez daty):
+  „Po pierwszym użyciu wkład powinien pozostać we wstrzykiwaczu i musi być przechowywany w lodówce (2°C - 8°C)
+  maksymalnie przez 28 dni.”
+- Genotropin 5,3 i 12 mg — ChPL URPL, data zmiany tekstu 10.05.2024: „Produkt leczniczy może być przechowywany po
+  rekonstytucji przez 28 dni w temperaturze 2°C-8°C.”
+- Ngenla 24 i 60 mg — informacja o produkcie EMA, wersja angielska, PDF z 16.01.2026 (punkt 10 bez daty):
+  „After first use: 28 days. […] The Ngenla pen should be discarded if it has been used 5 times […]”.
+- Increlex 10 mg/ml (fiolka 40 mg / 4 ml) — informacja o produkcie EMA, wersja angielska, PDF z 26.03.2026 (punkt 10
+  bez daty): „may be stored for a maximum of 30 days at 2°C to 8°C”.
+
+**Zmierzone przed zmianą (`audyt` `b8b2f6b`, prawdziwa karta na `index.html`, dane fikcyjne).**
+- Omnitrope 10 mg, 12 kg, 0,025 mg/kg/d (0,3 mg/d): 3 ampułki na 90 dni i 6 na 180 dni. Wkład 10 mg starczyłby na
+  33 dni, ale wolno go używać 28 dni — potrzeba 4 i 7.
+- Increlex, 10 kg, 0,08 mg/kg/d (2 × 0,4 mg): 2 fiolki na 90 dni (potrzeba 3) i 4 na 180 dni (potrzeba 6).
+- Ngenla 60 mg, 14 kg, 0,66 mg/kg/tydz (9 mg/tydz): 2 wstrzykiwacze na 90 dni (potrzeba 3) i 4 na 180 dni (6).
+- Pod tabelą stało „W obliczeniach zaokrąglamy liczbę ampułek w górę – uwzględnia to typowe straty podczas
+  podawania”, choć wynik niczego poza zaokrągleniem nie uwzględniał.
+Problem dotyczył małych dawek: Omnitrope 10 mg poniżej ok. 0,36 mg/d, Omnitrope 5 mg poniżej ok. 0,18 mg/d,
+Increlex poniżej ok. 1,33 mg/d, Ngenla 60 mg poniżej 12 mg/tydz — czyli głównie małych dzieci.
+
+**Reguła.** Liczba sztuk to większa z dwóch liczb:
+- z ilości leku, jak dotąd: ⌈dawka × okres / zawartość sztuki⌉ (dawka po zaokrągleniu do kroku, jak w karcie);
+- z ważności: preparat dobowy ⌈dni / ważność⌉; Ngenla ⌈liczba dawek / dawek na wstrzykiwacz⌉, gdzie liczba dawek =
+  ⌈dni / 7⌉ (jak dotąd), a dawek na wstrzykiwacz = min(⌊28 / 7⌋ + 1, 5) = 5. Interpretacja: wstrzykiwacz obsłuży dawki
+  z dni 0, 7, 14, 21 i 28 od pierwszego użycia, co zgadza się z limitem 5 użyć z ChPL. Zakładamy jedno wstrzyknięcie na
+  dawkę; dawki wymagające dwóch wstrzyknięć (powyżej 12 mg na wstrzykiwaczu 24 mg, powyżej 30 mg na 60 mg) wyczerpują
+  zawartość wcześniej, niż zadziała limit użyć.
+Ważności nie skracamy o zapas: zostaje zaokrąglenie w górę. Ilości leku na odpowietrzenie (priming) i martwej
+objętości wkładu reguła nie liczy — ChPL Omnitrope i Increlexu jej nie podają, a dla GoQuick i Ngenli to osobna
+decyzja właściciela.
+
+**Zmiana.**
+- Dane: `vilda_gh_opakowania_dane.js` — dla każdej pozycji listy „Preparat” zawartość sztuki, schemat (dobowy /
+  tygodniowy), ważność po pierwszym użyciu, limit użyć i źródło (dokument, punkt, wersja, cytat). Zawartość sztuk jest
+  ta sama co w karcie (test pilnuje zgodności).
+- Silnik: `vilda_gh_opakowania.js` (`window.VildaGhOpakowania`: `policz`, `notka`, `dopisek`) — bezpaństwowy, wynik
+  niesie źródło. Nieznany preparat albo brak modułu → karta liczy jak dotąd.
+- Karta `gh_igf_therapy.js` (wpięcia opisane komentarzem `P-GH-WAZNOSC`): tabela zapotrzebowania na 90 i 180 dni
+  oraz na dowolną liczbę dni, `window.ghTherapyCalc.units90/units180` (z nich korzystają kopiowane zalecenia na 90 i
+  180 dni) i trzy funkcje zaleceń przy ręcznej dacie kontroli (preparaty dobowe, Ngenla, Increlex).
+- Informacja dla lekarza: notka pod tabelą podaje ważność i źródło, np. „Liczba wkładów uwzględnia ważność po
+  pierwszym użyciu: 28 dni (ChPL Omnitrope, pkt 6.3). Po tym czasie wkład się wyrzuca, nawet jeśli w nim został lek.
+  Wynik zaokrąglamy w górę.” Gdy to ważność zdecydowała o wyniku, wiersz tabeli ma dopisek, np. „· uwzględniono
+  ważność 28 dni (z samej ilości leku: 3)”.
+- Nazwy jednostek w karcie i w zaleceniach dla pacjenta („ampułek”, „wstrzykiwaczy”, „fiolek”) — bez zmian.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana kliniczna: zmienia się zalecana ilość wydanego leku (liczba wkładów,
+wstrzykiwaczy i fiolek) na okres do kontroli. Wynik rośnie tylko tam, gdzie otwarta sztuka przeterminowałaby się przed
+zużyciem leku; w pozostałych przypadkach jest identyczny jak dotąd. Dawki, jednostki, zakresy, zaokrąglenie dawki do
+kroku i format rekordu się nie zmieniają. Populacja: dzieci leczone w programach B.19, B.20, B.38, B.41, B.42 i B.64.
+
+**Przypadki `wejście → oczekiwany wynik`** (90 / 180 dni):
+- Omnitrope 10 mg, 0,3 mg/d → 4 / 7 wkładów (z ilości leku 3 / 6);
+- Omnitrope 10 mg, 1,0 mg/d → 9 / 18 (bez zmian, decyduje ilość leku);
+- Genotropin 12 mg, 0,3 mg/d → 4 / 7;
+- Increlex, 0,8 mg/d → 3 / 6 fiolek (z ilości leku 2 / 4); 30 dni → 1, 31 dni → 2;
+- Ngenla 60 mg, 9 mg/tydz → 3 / 6 wstrzykiwaczy (z ilości leku 2 / 4);
+- Ngenla 60 mg, 33 mg/tydz → 8 na 90 dni (bez zmian, decyduje ilość leku).
+
+**Strażnicy.**
+- `tests/unit/gh-opakowania-waznosc.test.mjs` (11, prawdziwe pliki danych i silnika): zgodność listy preparatów i
+  zawartości z kartą, ważność i limit użyć z ChPL, źródła z wersją, przypadki powyżej, teksty notki i dopisku.
+- `tests/e2e/gh-opakowania-waznosc.spec.mjs` (5, prawdziwa karta na `index.html`): A Omnitrope 4 / 7 z dopiskiem i
+  notką; B Omnitrope 1,0 mg/d bez zmian (strażnik nadmiernej zmiany); C Increlex 3 / 6 z notką o fiolce; D Ngenla 3 / 6
+  z notką o 5 dawkach; E zalecenia przy ręcznej dacie kontroli (Omnitrope „4 ampułki”, Increlex „3 fiolki”, Ngenla
+  „3 wstrzykiwacze”). **Zmierzone czerwone** na `b8b2f6b`: A, C, D, E; B zielony po obu stronach.
+
+**Czego to nie zmienia.** Krok wstrzykiwacza i limit dawki na jedno wstrzyknięcie (osobny PR pakietu), Increlex
+(osobny PR pakietu), zapis punktów terapii i monitor GH, notatki Terminarza.
+
+**Wersje.** `gh_igf_therapy.js` 27 → 28 (`index.html` — ładowanie leniwe, `docpro.html`); nowe
+`vilda_gh_opakowania_dane.js` i `vilda_gh_opakowania.js` w wersji 1, ładowane statycznie przed kartą na obu stronach,
+dopisane do rdzenia precache obok karty; precache (append-only); `SW_VERSION` 1.1.158 → 1.1.159 (+ pin w
+`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — numery z `npm run podbij-wersje`
+względem `audyt` `b8b2f6b`, wersje i precache nowych plików wpisane ręcznie (pozycje „Do decyzji”).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy liczyć ilość leku na odpowietrzenie (np. GoQuick
+0,1 / 0,3 mg według instrukcji użycia); czy przekazywać ważność po otwarciu także w zaleceniach dla pacjenta;
+nazwy jednostek („ampułki” wobec „wkłady” z ChPL); scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
