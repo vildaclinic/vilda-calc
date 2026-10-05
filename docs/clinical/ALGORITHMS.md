@@ -7080,7 +7080,12 @@ z notatek wszystkim punktom bez leku, bez względu na cykl) — niezgodność wy
 cyklu; edycja zbiorcza leku cyklu; rozpoznawanie preparatów spoza listy kryteriów ChPL (np. Ozempic — dziś punkt
 neutralny).
 
-**Wersje** (`npm run podbij-wersje`): WERSJE_RATY_4.
+**Wersje** (`npm run podbij-wersje`, baza `audyt` 84a857d). `obesity_therapy_monitor.js` 26, `vilda_auth_ui.js` 476,
+`vilda_chrome.js` 101, `vilda_cykle_leczenia.js` 3, `vilda_postepy_doroslego.js` 7, `vilda_postepy_doroslego_ui.js` 8,
+`vilda_postepy_doroslego_wydruk.js` 6, `vilda_session_bridge.js` 26, `vilda_trajectory_analysis.js` 40; precache
+(append-only); `SW_VERSION` 1.1.157 → 1.1.158 (+ pin); fixture wersji. Wersje wewnętrzne: `VildaCykleLeczenia` 2,
+`VildaTrajectoryAnalysis` 32 (pin w e2e), `VildaPostepyDoroslego` 2, `VildaPostepyDoroslegoUI` 2,
+`VildaPostepyDoroslegoWydruk` 3.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna wszystkich części (szczegółowe listy w podrozdziałach),
 w szczególności: wstrzymanie werdyktu ChPL istniejącym zapisom z mieszaną substancją; brzmienia komunikatów R6 i pozycji
