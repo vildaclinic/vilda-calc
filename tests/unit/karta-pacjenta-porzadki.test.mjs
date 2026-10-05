@@ -30,20 +30,23 @@ describe('P1 — nasłuch zmian z zewnątrz', () => {
   });
 
   it('odświeżenie odtwarza ekran, na którym stoi lekarz', () => {
-    expect(kod).toContain('if(t.screen==="card"&&t.patientId){se(t.patientId,le.onPick,le.listOptions,{activeTab:t.tab||"antro",_navRestore:!0});return}');
-    expect(kod).toContain('if(t.screen==="list"){Be(le.onPick,le.listOptions,!0);return}');
+    expect(kod).toMatch(/if\(t\.screen==="card"&&t\.patientId\)\{[^}]*se\(t\.patientId,le\.onPick,le\.listOptions,\{activeTab:t\.tab\|\|"antro",_navRestore:!0,_syncRefresh:!0\}\);return\}/);
+    expect(kod).toMatch(/if\(t\.screen==="list"\)\{[^}]*Be\(le\.onPick,le\.listOptions,!0\);return\}/);
   });
 
   it('nie przerywa otwartego okna dialogowego', () => {
     expect(kod, 'render pod modalem zabrałby lekarzowi wpisywane dane')
-      .toContain('if(i.document.querySelector(".vilda-auth-overlay-sheet"))return');
+      .toContain('if(i.document.querySelector(".vilda-auth-overlay-sheet")){xa=null;return}');
   });
 });
 
 describe('P4 — pamięć podręczna karty', () => {
-  it('jest unieważniana przy zmianie z zewnątrz', () => {
-    expect(kod, 'xa trzyma gotowy DOM; bez tego powrót celowo odtwarzał stary widok')
-      .toContain('function Gd9(){try{xa=null;');
+  it('porównuje dane przy synchronizacji i unieważnia cache przy odroczonym renderze pod modalem', () => {
+    expect({
+      odczytPrzedZachowaniemDom: kod.includes('if(GdTlo&&GdOdcisk!==null&&xa&&xa.odcisk===GdOdcisk){GdZakonczOdczyt(GdBilet);return}'),
+      odroczonyRenderKasujeCache: kod.includes('if(i.document.querySelector(".vilda-auth-overlay-sheet")){xa=null;return}'),
+    }, 'dynamiczne regresje sprawdzają także wymianę DOM po rzeczywistej zmianie notatki')
+      .toEqual({ odczytPrzedZachowaniemDom: true, odroczonyRenderKasujeCache: true });
   });
 });
 

@@ -100,6 +100,9 @@ Nie zmniejszaj liczby oczekiwanych asercji, nie rozszerzaj baseline ESLint i nie
 
 ## 8. Przekazanie pracy
 
+- Po każdym pushu sprawdź kontrole GitHub dla aktualnego SHA i poczekaj na ich zakończenie. Wynik wcześniejszego commita ani same testy lokalne nie zastępują tej kontroli.
+- Jeżeli kontrola jest czerwona, przeczytaj log i raport, ustal przyczynę, popraw ją w uzgodnionym zakresie i ponownie sprawdź CI po pushu. Nie kończ pracy na samym wypchnięciu zmian. Nierozwiązany błąd lub zewnętrzną blokadę opisz jawnie; nie określaj takiego PR jako gotowego do scalenia. Zasada właściciela z 2026-10-03.
+
 W podsumowaniu podaj:
 
 - co zmieniono i dlaczego;

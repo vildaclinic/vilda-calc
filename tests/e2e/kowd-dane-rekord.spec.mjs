@@ -15,6 +15,8 @@ import { expect, test } from '../support/test-czas.mjs';
 //
 // W obu wypadkach jeden cykl „wczytaj → zapisz" niszczy komplet wejścia KOWD:
 // wiek kostny, objętość jąder, wywiad rodzinny i wykluczenia.
+// P-WIEK-KOSTNY-WIZYTA: wczytanie do nowego pomiaru zachowuje BA jako wcześniejsze
+// badanie w kontekście; puste pole nowego badania i current:null są zamierzone.
 test.use({ serviceWorkers: 'block' });
 
 const REKORD = {
@@ -74,8 +76,14 @@ const kowd = (zebrane) => ({
   familyDelayedPuberty: zebrane.advanced ? zebrane.advanced.familyDelayedPuberty : undefined,
   growthExclusion: zebrane.advanced ? zebrane.advanced.growthExclusion : undefined,
 });
+const POPRZEDNIE_BA = { years: 10.5, atAgeMonths: 144, dateISO: null, source: 'legacy' };
+const zachowaneBadanie = (wynik) => {
+  expect(wynik.zebrane.advanced.boneAgeContext).toEqual({ version: 1, current: null, last: POPRZEDNIE_BA });
+  expect(wynik.zebrane.advanced.data.boneAgeContext).toEqual(wynik.zebrane.advanced.boneAgeContext);
+  expect(wynik.efektywne).toEqual(POPRZEDNIE_BA);
+};
 
-test('index.html: wczytanie i ponowny zapis zachowuje komplet wejścia KOWD', async ({ page }) => {
+test('index.html: nowy pomiar zachowuje wcześniejsze badanie BA i pozostałe wejście KOWD', async ({ page }) => {
   await otworz(page, '/index.html');
   const wynik = await page.evaluate((r) => {
     window.applyLoadedData(JSON.parse(JSON.stringify(r)));
@@ -84,31 +92,34 @@ test('index.html: wczytanie i ponowny zapis zachowuje komplet wejścia KOWD', as
       const el = document.getElementById(id);
       wDom[id] = el ? el.value : '(brak elementu)';
     }
-    return { wDom, zebrane: window.collectUserData() };
+    return { wDom, zebrane: window.collectUserData(), efektywne: window.VildaBoneAge.effective() };
   }, REKORD);
 
-  // Kontrola pozytywna: na index.html te pola istnieją, więc mają pokazać wartości z rekordu.
-  expect(wynik.wDom.advBoneAge).toBe('10.5');
+  // Pole BA jest puste dla nowego badania; wcześniejsza wartość pozostaje w kontekście.
+  expect(wynik.wDom.advBoneAge).toBe('');
   expect(wynik.wDom.advTesticularVolume).toBe('4to6');
   expect(wynik.wDom.advFamilyDelayedPuberty).toBe('yes');
   expect(wynik.wDom.advGrowthExclusion).toBe('no');
 
   expect(kowd(wynik.zebrane)).toEqual({
-    boneAgeYears: 10.5,
+    boneAgeYears: null,
     testicularVolume: '4to6',
     familyDelayedPuberty: 'yes',
     growthExclusion: 'no',
   });
+  zachowaneBadanie(wynik);
 });
 
-test('docpro.html: zapis ze strony BEZ tych pól nie kasuje ich z rekordu', async ({ page }) => {
+test('docpro.html: nowy pomiar zachowuje wcześniejsze BA oraz KOWD z pól i rekordu', async ({ page }) => {
   await otworz(page, '/docpro.html');
   const wynik = await page.evaluate((r) => {
     window.applyLoadedData(JSON.parse(JSON.stringify(r)));
     return {
       polaIstnieja: ['advBoneAge', 'advTesticularVolume', 'advFamilyDelayedPuberty', 'advGrowthExclusion']
         .map((id) => Boolean(document.getElementById(id))),
+      baWDom: document.getElementById('advBoneAge').value,
       zebrane: window.collectUserData(),
+      efektywne: window.VildaBoneAge.effective(),
     };
   }, REKORD);
 
@@ -116,12 +127,14 @@ test('docpro.html: zapis ze strony BEZ tych pól nie kasuje ich z rekordu', asyn
   // potrzebne przeniesienie. Objętość jąder od P-TOZSAMOSC (2026-09-15) mieszka w panelu
   // pokwitaniowym, który docpro ma tak samo jak strona główna — wchodzi więc z pola.
   expect(wynik.polaIstnieja).toEqual([true, true, false, false]);
+  expect(wynik.baWDom).toBe('');
   expect(kowd(wynik.zebrane)).toEqual({
-    boneAgeYears: 10.5,
+    boneAgeYears: null,
     testicularVolume: '4to6',
     familyDelayedPuberty: 'yes',
     growthExclusion: 'no',
   });
+  zachowaneBadanie(wynik);
 });
 
 test('docpro.html: wczytanie pacjenta BEZ danych KOWD nie przenosi ich po poprzednim', async ({ page }) => {
@@ -142,20 +155,26 @@ test('docpro.html: wczytanie pacjenta BEZ danych KOWD nie przenosi ich po poprze
 
 test('index.html: wyczyszczenie pola przez lekarza nadal kasuje wartość', async ({ page }) => {
   await otworz(page, '/index.html');
-  const zebrane = await page.evaluate((r) => {
-    window.applyLoadedData(JSON.parse(JSON.stringify(r)));
+  const wynik = await page.evaluate((r) => {
+    window.applyLoadedData(JSON.parse(JSON.stringify(r)), { isSessionRestore: true });
+    const baPrzed = document.getElementById('advBoneAge').value;
+    const kontekstPrzed = window.VildaBoneAge.capture();
     for (const id of ['advBoneAge', 'advTesticularVolume', 'advFamilyDelayedPuberty', 'advGrowthExclusion']) {
       const el = document.getElementById(id);
       if (el) { el.value = ''; el.dispatchEvent(new Event('change', { bubbles: true })); }
     }
-    return window.collectUserData();
+    return { baPrzed, kontekstPrzed, zebrane: window.collectUserData(), efektywne: window.VildaBoneAge.effective() };
   }, REKORD);
 
   // Przeniesienie NIE może wskrzeszać wartości tam, gdzie pole istnieje i zostało opróżnione.
-  expect(kowd(zebrane)).toEqual({
+  expect(wynik.baPrzed).toBe('10.5');
+  expect(wynik.kontekstPrzed).toEqual({ version: 1, current: POPRZEDNIE_BA, last: null });
+  expect(kowd(wynik.zebrane)).toEqual({
     boneAgeYears: null,
     testicularVolume: null,
     familyDelayedPuberty: null,
     growthExclusion: null,
   });
+  expect(wynik.zebrane.advanced.boneAgeContext).toEqual({ version: 1, current: null, last: null });
+  expect(wynik.efektywne).toBeNull();
 });

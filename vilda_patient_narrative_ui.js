@@ -236,23 +236,24 @@
     } catch (e) { return null; }
   }
 
-  // Wiek kostny: pole formularza jest „teraz" (tak samo datuje je karta: atAgeMonths = wiek
-  // biezacy). Gdy pole jest puste, karta bierze wiek kostny z OSTATNIEGO wiersza historii, ktory
-  // go ma, razem z wiekiem metrykalnym tamtej wizyty — i na tej podstawie dobiera norme tempa
-  // (vilda_tempo_wzrastania.js, BONE_AGE_FRESH_M). Opis czyta ten sam kontekst modelu, wiec mowi
-  // o tym samym wieku kostnym co karta i datuje go tak samo; przy oznaczeniu starszym niz
-  // STARY_WIEK_KOSTNY_M silnik opisu dopisze zastrzezenie (audyt skladu 2026-09-27).
+  // Opis zachowuje wiek oznaczenia badania, także gdy jego wartość nadal służy
+  // prognozie przy następnej wizycie. Legacy scalar nie potwierdza czasu badania.
   function wiekKostny(d, model) {
-    var baM = num(d.boneAgeMonths);
-    if (baM != null && baM > 0) return { years: baM / 12, atAgeMonths: null, monthsAgo: null };
-    var cb = model && model.context && model.context.boneAge ? model.context.boneAge : null;
+    var ost = model && model.metrics ? metrykaWzrostu(model) : null;
+    var teraz = ost && typeof ost.ageMonths === 'number' && isFinite(ost.ageMonths) ? ost.ageMonths : null;
+    var cb = null;
+    try {
+      if (w.VildaBoneAge && typeof w.VildaBoneAge.normContextFor === 'function') cb = w.VildaBoneAge.normContextFor(d, teraz);
+    } catch (e) { cb = null; }
+    if (!cb) {
+      var baM = num(d.boneAgeMonths);
+      if (baM != null && baM > 0) cb = { baMonths: baM, atAgeMonths: null };
+      else cb = model && model.context && model.context.boneAge ? model.context.boneAge : null;
+    }
     var cbM = cb ? num(cb.baMonths) : null;
     if (cbM == null || cbM <= 0) return { years: null, atAgeMonths: null, monthsAgo: null };
     var at = num(cb.atAgeMonths);
-    var ost = model && model.metrics ? metrykaWzrostu(model) : null;
-    var teraz = ost && typeof ost.ageMonths === 'number' && isFinite(ost.ageMonths) ? ost.ageMonths : null;
-    var dawno = at != null && teraz != null && teraz - at > 0;
-    return { years: cbM / 12, atAgeMonths: dawno ? at : null, monthsAgo: dawno ? teraz - at : null };
+    return { years: cbM / 12, atAgeMonths: at, monthsAgo: at != null && teraz != null ? teraz - at : null };
   }
 
   function buildInput(d, model) {
@@ -269,7 +270,7 @@
       mph: num(d.targetHeight),
       mphSds: mpSds,
       boneAgeYears: wk.years,
-      // Pomiar z formularza jest „teraz" — nie ma czego datowac. Wiek kostny: patrz wiekKostny().
+      // Wiek oznaczenia BA pozostaje wiekiem badania, nie wiekiem obecnej wizyty.
       boneAgeAtAgeMonths: wk.atAgeMonths,
       boneAgeMonthsAgo: wk.monthsAgo,
       lastMeasuredMonthsAgo: null,

@@ -88,16 +88,9 @@ async function wpiszIPotwierdz(page, pola, warunek, opis) {
   throw new Error(`formularz nie ustalił się na: ${opis} (ostatnio: ${JSON.stringify(ostatnie)})`);
 }
 
-/* Zapis, który nie może po cichu nie dojść do skutku.
-   Dwa powody, oba zmierzone:
-   1. `saveUserData()` przy niekompletnym formularzu po prostu zwraca null — test
-      przechodziłby pozornie. Stąd sprawdzenie kolektora przed zapisem.
-   2. `saveUserData()` NIE ZWRACA obietnicy zapisu: oddaje payload i zostawia zapis w tle
-      (`return a` po łańcuchu `.then`). `await` na nim niczego więc nie czeka, a odczyt sejfu
-      zaraz potem bywa szybszy niż sam zapis. Przy czterech workerach ten wyścig przegrywał
-      co drugi przebieg — z rekordem `snapshotCount: 1` przy komplecie danych w kolektorze
-      i bez żadnego komunikatu. Dlatego czekamy na SKUTEK w rekordzie, nie na powrót
-      z funkcji. */
+/* Niekompletny formularz może zwrócić null, dlatego najpierw sprawdzamy kolektor.
+   Aktualne saveUserData zwraca obietnicę domkniętego zapisu (P-ZAPIS-OBIETNICA).
+   Po jej zakończeniu sprawdzamy również oczekiwany skutek w kartotece. */
 async function zapiszPewnie(page, potwierdz) {
   const stan = await zebrane(page);
   expect(stan.user.age, 'wiek w kolektorze przed zapisem').not.toBeNull();
@@ -223,14 +216,29 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
     expect(lista[0].snapshotCount).toBeGreaterThan(1);
   });
 
-  test('inne nazwisko w formularzu zakłada nowego pacjenta, nie nadpisuje wczytanego', async ({ page }) => {
+  test('nowy pacjent po wyczyszczeniu formularza nie nadpisuje wczytanego', async ({ page }) => {
     test.setTimeout(120_000);
     await otworzZKontem(page);
-    const pid = (await pierwszaWizyta(page)).patientId;
+    const pierwszy = await pierwszaWizyta(page);
+    const pid = pierwszy.patientId;
+    const pierwszyRekord = await page.evaluate((id) => window.VildaVault.getPatient(id), pid);
 
-    // Lekarz nie czyści formularza i wpisuje dane INNEGO dziecka. Zmiana nazwiska czyści pola
-    // wieku (zachowanie aplikacji sprzed tej zmiany), więc wiek wpisuje na nowo.
+    // Po P-TOZSAMOSC wczytane imię/nazwisko są z kartoteki i tylko do odczytu.
+    // Dawna próba el.value = inne nazwisko omijała UI i ścigała się z jego przywracaniem.
+    // Kończymy wybór wizyty, sprawdzamy blokadę, a dla innego dziecka korzystamy
+    // z prawdziwego przycisku „Wyczyść wszystkie pola”.
     await wczytaj(page, pid);
+    await page.locator('#vildaLcmNew').click();
+    await expect(page.locator('#vildaLoadChoiceModal')).toHaveCount(0);
+    await expect(page.locator('#lastName')).toHaveValue(NAZWISKO);
+    await expect(page.locator('#lastName')).toHaveJSProperty('readOnly', true);
+    await expect(page.locator('#firstName')).toHaveJSProperty('readOnly', true);
+    await page.locator('#clearAllDataBtn').click();
+    await expect(page.locator('#lastName')).toHaveValue('');
+    await expect(page.locator('#firstName')).toHaveValue('');
+    await expect(page.locator('#lastName')).toBeEditable();
+    await expect(page.locator('#firstName')).toBeEditable();
+    expect(await pacjenci(page), 'czyszczenie formularza nie zmienia zapisanej kartoteki').toEqual([pierwszy]);
     await wpiszIPotwierdz(
       page,
       { firstName: 'Drugi', lastName: 'Inny-Fikcyjny' },
@@ -249,6 +257,11 @@ test.describe('Dopisanie daty urodzenia nie tworzy drugiego pacjenta', () => {
     expect(lista).toHaveLength(2);
     const stary = lista.find((p) => p.patientId === pid);
     expect(stary, 'rekord pierwszego pacjenta nadal istnieje').toBeTruthy();
-    expect(stary.name).toContain(NAZWISKO);
+    expect(stary, 'zapis drugiego dziecka nie modyfikuje pierwszego rekordu').toEqual(pierwszy);
+    expect(await page.evaluate((id) => window.VildaVault.getPatient(id), pid),
+      'cała kartoteka pierwszego dziecka, w tym pomiary, pozostaje bez zmian').toEqual(pierwszyRekord);
+    const nowy = lista.find((p) => p.patientId !== pid);
+    expect(nowy.name).toContain('Inny-Fikcyjny');
+    expect(nowy.snapshotCount).toBeGreaterThan(0);
   });
 });

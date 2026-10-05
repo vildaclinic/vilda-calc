@@ -34,6 +34,22 @@ const PUNKT_ADV = { y: '13', m: '1', h: '139.9', gh: true, id: 'gh-e2e-lustro' }
 const RECZNY_SPOZ = { y: '11', m: '0', h: '123.9', gh: false, id: '', locked: false };
 const LUSTRO_SPOZ = { y: '13', m: '1', h: '139.9', gh: true, id: 'gh-e2e-lustro', locked: false };
 
+async function wlaczTrybProfesjonalny(page) {
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Test dotyczy synchronizacji wierszy, a karta wymaga trybu profesjonalnego.
+  // Samo disabled=false pozwalało kliknąć, lecz kolejne update chowało kartę.
+  // Taki sam fikcyjny dostęp stosuje historia-pomiarow-zwijanie.spec.mjs.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (tryb && !tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+}
+
 async function otworz(page) {
   await page.addInitScript(() => {
     try {
@@ -46,6 +62,7 @@ async function otworz(page) {
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await wlaczTrybProfesjonalny(page);
 }
 
 async function wpiszPodstawy(page) {
@@ -62,11 +79,12 @@ async function wpiszPodstawy(page) {
     if (typeof window.update === 'function') window.update();
   });
   await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]', { state: 'attached' });
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
   await page.evaluate(() => {
     const t = document.getElementById('toggleAdvancedGrowth');
     const f = document.getElementById('advancedGrowthForm');
     if (f && getComputedStyle(f).display !== 'none') return;
-    if (t) { t.disabled = false; t.click(); }
+    if (t) t.click();
   });
   await expect(page.locator('#advancedGrowthForm')).toBeVisible({ timeout: 10000 });
   await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });
@@ -126,6 +144,7 @@ test('lustro punktu terapii niesie tożsamość: po F5 zostaje ze znacznikiem, p
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked() && typeof window.calculateGrowthAdvanced === 'function');
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await wlaczTrybProfesjonalny(page);
   await expect(page.locator('#height'), 'F5 odtwarza ostatni pomiar').toHaveValue('148.5', { timeout: 15000 });
   await page.waitForTimeout(3000);
   expect(await wierszeAdv(page), 'po F5: wiersz ręczny i JEDEN punkt ze znacznikiem').toEqual([RECZNY_ADV, PUNKT_ADV]);

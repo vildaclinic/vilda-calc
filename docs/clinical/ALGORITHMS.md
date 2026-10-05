@@ -18,6 +18,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | RENAL | Klirens, eGFR, BSA, wskaźniki moczowe, kamica i adekwatność HD | `kalkulator-klirens.html`, `inline_kalkulator_klirens_*.js`, `clcr_*.js` | 186 dedykowanych testów jednostkowych Klirens oraz cztery zestawy E2E wywołujące rzeczywisty interfejs; dodatkowo testy składni i PWA | wdrożone do testów; nadal wymaga walidacji prospektywnej i końcowej akceptacji nefrologicznej |
 | HOMA | HOMA-IR i interpretacja | `homa-ir.html` | E2E znanego przypadku | test regresyjny; progi populacyjne do pełnego rejestru |
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
+| LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
 | GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
@@ -28,6 +29,84 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | DIABETES | Kalkulatory diabetologiczne | `cukrzyca.html`, `cukrzyca.js` | kontrola składni; brak dedykowanego E2E lub regresji wyników | źródło do weryfikacji |
 
 ## Długi walidacyjne o najwyższym priorytecie
+
+### LAB-PUBERTY — dane i silnik LH/FSH, PR1, 2026-10-03
+
+**Status: przygotowanie do integracji, bez zmiany wyników w aplikacji.** Moduły nie są ładowane przez HTML ani service worker. Silnik `1.0.0` przyjmuje jawny zestaw danych `2026-10-03.1` i zwraca osobno porównanie biochemiczne względem wieku/stadium oraz ocenę czasu rozwoju. Nie modyfikuje obecnego przelicznika, przypiętych wyników ani zapisów pacjentów. Pełny kontrakt, populacje, jednostki, ograniczenia i zakres faktycznego odczytu źródeł: [LH_FSH.md](LH_FSH.md).
+
+Źródła liczbowe to katalogi Mayo [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) (AnshLite LH CLIA) i [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) (Roche Elecsys FSH ECLIA), odczytane 2026-10-03, surowica, IU/L (równoważne liczbowo mIU/mL). **To zakresy konkretnych metod Mayo, nie uniwersalne normy polskiej populacji.** Dane niosą źródło, wersję, populację, metodę, granice z operatorami i ograniczenia. Kandydaci Johannsen 2018 dla minipuberty pozostają nieaktywni: dokładne brzegi wieku i LOD nie zostały rozstrzygnięte. Brak normy nie uruchamia zakresu dorosłych ani interpolacji.
+
+Kryteria czasu rozwoju: Th≥2 przed 8 lat / G≥2 lub objętość jąder ≥4 mL orchidometrem Pradera przed 9 lat; ocena braku początku od 13/14 lat, z wywiadem i leczeniem. Źródła: Endocrine Society 2026 ([PMID 42287186](https://pubmed.ncbi.nlm.nih.gov/42287186/), oficjalne rekomendacje), ENDO-ERN 2021 ([PMID 33512657](https://pubmed.ncbi.nlm.nih.gov/33512657/)) i przegląd diagnostyki 2025 ([PMID 39911767](https://pubmed.ncbi.nlm.nih.gov/39911767/)). Minipuberty ma odrębny kontekst, nie automatyczne wyłączenie ostrzeżeń; zakres odczytanej literatury i wtórnych tabel opisano w dokumencie modułu. P/Ax i nieokreślony numer Tannera nie są podstawiane jako Th/G.
+
+Syntetyczne regresje wywołują nowe funkcje: chłopiec 6 lat, G4, LH 2 IU/L → w zakresie stadium (1,3–9,8), ponad zakresem wieku (≤0,5), zachowane ostrzeżenie rozwoju. Ten sam kontekst i FSH 2 → w obu zakresach (stadium 0,6–5,1; wiek ≤2,3), nadal ostrzeżenie rozwoju, bez etykiety „FSH wysokie”. Niemowlę 3 mies., LH 2 → odrębny kontekst minipuberty; brak metody lub wcześniactwo blokuje niedopasowane RI. Granice urodzin, nieprecyzyjny wiek, `<LOD`, `<`/`≤`, znany wczesny początek, opóźnienie i leczenie mają osobne przypadki.
+
+Wpływ docelowy: zgodność ze stadium nie będzie kasować niezgodności z wiekiem; silnik nie rozpoznaje automatycznie CPP/etiologii i nie ocenia skuteczności GnRHa. **W PR1 efekt kliniczny w działającym UI jest zerowy.** PR2 przygotuje zapis/odczyt wersjonowanej oceny, PR3 uruchomi cały przepływ w zaakceptowanym układzie. Testy techniczne i akceptacja planu nie nadają modułowi statusu „zwalidowany klinicznie”; scalanie i wdrożenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — PR2: zapis i odczyt kontekstu, 2026-10-03
+
+Addytywne `labResult.assessment` przenosi wersjonowaną kopię wyniku PR1 przez przypięcie do wizyty, szyfrowany sejf, import/synchronizację, historię i serie. Czytelny `vilda_lab_snapshot.js` weryfikuje strukturę i zachowuje operatory, wiek w chwili pobrania, pochodzenie norm oraz osobne oceny biochemiczne i kliniczne. Kotwica wizyty pozostaje odrębna od kontekstu próbki. Komentarz nie zmienia oceny; edycja wyniku lub daty unieważnia poprzednią ocenę. Nieznany schemat jest jawnie niedostępny. Brak backfill starszych zapisów; brak wywołania starego silnika trendów dla wpisu z jawną oceną; brak dokładnego punktu dla `<LOD` lub `<x`.
+
+**Wpływ kliniczny: bez zmiany norm, silnika PR1 i obecnego przelicznika.** Nowe UI i producent ocen pozostają wyłączone do PR3. Regresje wywołują rzeczywiste API modelu/sejfu i ścieżki przeglądarkowe na syntetycznych danych: M6/G4/LH2 zachowuje kontekst po zmianie aktualnego pacjenta; zmiana komentarza zachowuje ocenę, zmiana liczby/daty ją unieważnia; `<0,02` nie staje się punktem `0,02`; wpis starszego formatu nie otrzymuje domniemanej metody ani stadium. Szczegóły kontraktu i ograniczenia zgodności z wcześniejszymi wersjami aplikacji: [LH_FSH.md](LH_FSH.md#pr2--transport-historycznej-oceny).
+
+#### LAB-PUBERTY — PR3: aktywacja interfejsu LH/FSH, 2026-10-03
+
+Nowy adapter próbki i wspólny renderer zastępują dawną interpretację wyłącznie LH/FSH, zachowując układ przelicznika, dużą wartość wyniku i konwersje na dotychczasowych miejscach. Ostrzeżenie rozwoju względem wieku jest niezależne od stężenia; zakres wieku i stadium pozostają osobnymi porównaniami. Nie ma uniwersalnego „pacjent prawidłowy”, domyślnego Th/G, metody, braku leczenia ani zastępczej normy dorosłych. Historyczna ocena pochodzi z utrwalonego snapshotu i nie jest przeliczana bieżącym kontekstem; unieważnienie oraz wynik cenzorowany mają jawny widok tekstowy.
+
+**Wpływ kliniczny:** widoczne interpretacje LH/FSH zmieniają się zgodnie z modelem PR1, bez zmiany jego danych `2026-10-03.1` i silnika `1.0.0`. Przykład M6/G4/LH2 zachowuje ostrzeżenie wieku przy `within` dla stadium; M6/G4/FSH2 zachowuje ostrzeżenie bez fałszywego oznaczania FSH jako wysokiego; F7/Th3/LH `<LOD` nie traci ostrzeżenia i nie staje się liczbą na wykresie. Nieznana metoda, stymulacja, GnRHa lub niezgodny kontekst niemowlęcy blokują niedopasowane porównanie, zachowując konwersję i niezależną ocenę kliniczną.
+
+Źródła i ograniczenia metod Mayo, populacje, jednostki, kryteria kliniczne oraz pełny kontrakt są w [LH_FSH.md](LH_FSH.md). Regresje wywołują produkcyjny silnik, adapter, renderer, sejf i interfejs przeglądarkowy. Aktywacja nie nadaje statusu walidacji klinicznej; akceptacja kliniczna i scalenie pozostają po stronie właściciela.
+
+#### LAB-PUBERTY — spójność odczytu kontekstu pacjenta, 2026-10-03
+
+Źródło dojrzewania wiąże odczyt z pacjentem i kolejnością żądań. Formularz LH/FSH udostępnia import danych z karty dopiero po odczycie zgodnego kontekstu; zmiana źródła usuwa nadal skopiowane wartości i potwierdzenia. Ręcznie wprowadzone dane próbki pozostają odrębne. Blokada sejfu i wyczyszczenie sesji unieważniają trwające odczyty. Przed użyciem danych oraz utworzeniem snapshotu formularz ponownie sprawdza aktualne źródło, również w ramce aplikacji.
+
+**Wpływ kliniczny:** poprawka dotyczy doboru danych wejściowych. Nie zmienia tabel, metod, progów, jednostek, silnika `1.0.0` ani danych `2026-10-03.1`. Stosuje istniejące reguły i ograniczenia opisane w [LH_FSH.md](LH_FSH.md), w tym katalogi Mayo R1/R2 oraz kontekst leczenia: syntetyczny M14/G4, LH 2 IU/L, surowica, oznaczenie bazalne i zgodna metoda AnshLite przy `gnrha=yes` → brak dopasowanego bazalnego RI oraz `clinical.code=treatment_context`. Nieznane leczenie pozostaje nieznane. Zapisane historyczne oceny nie są przeliczane ani migrowane.
+
+Regresje wywołują produkcyjne źródło, adapter, formularz, silnik i producenta snapshotów; sprawdzają kolejność zakończenia odczytów, niedostępność danych, zmianę źródła oraz ponowne jawne użycie danych. Testy techniczne nie zastępują akceptacji klinicznej właściciela przed scaleniem.
+
+#### LAB-PUBERTY — kontekst kliniczny po audycie, 2026-10-04
+
+Silnik `1.1.0`, dane i profil kliniczny `2026-10-04.1`. Import zakończonego GnRHa pozostawia kontekst próbki nieznany; nie ustala samodzielnie ekspozycji w dniu pobrania ani okresu wypłukiwania. Regresja i objawy OUN otrzymują niezależne, utrwalane akapity oraz `summary=attention`, przy zachowaniu oceny czasu i porównań stężenia. Wczesne potwierdzone Th≥2 z OUN wskazuje ocenę specjalistyczną, bez automatycznej decyzji o MRI. Pomiar jąder u chłopca <1 roku (mL, potwierdzony dla próbki) dostaje opis braku zweryfikowanego zakresu objętości; nie wprowadzono niemowlęcego progu alarmowego.
+
+**Wpływ kliniczny:** dotychczas pomijany dodatni wywiad staje się widoczny także przy stężeniu w obu RI. Zakresy referencyjne, metody, jednostki i polityka biochemiczna pozostają identyczne. Zapisane wcześniej oceny nie są przeliczane ani uzupełniane dzisiejszymi komunikatami. Populacja: dzieci i młodzież 0–18 lat; ograniczenia wieku, metody i kontekstu próbki pozostają w mocy. Syntetyczny M16/G3, początek 12 lat, LH2 IU/L + regresja/OUN → `within` dla wieku i stadium, zachowany kod czasu, widoczny wywiad i `attention`; F7/Th2 + OUN → osobny komunikat specjalistyczny; M3 mies. z 1/8/15 mL → opis ograniczenia bez klasyfikacji objętości.
+
+Źródła: [oficjalne rekomendacje ES2026](https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty), zwłaszcza uwagi 1.1–1.2; pełne teksty [ENDO-ERN2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8016789/), [Howard2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/) i [Rohayem2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11244267/) (tabela 2 nie stanowi nowego RI). Dokładny kontrakt, wersje źródeł, zakres odczytu i przypadki: [LH_FSH.md](LH_FSH.md#poprawki-kontekstu-klinicznego--4102026). Regresje wywołują rzeczywisty silnik, formularz, snapshot i renderer. Akceptacja kliniczna i scalenie pozostają decyzją właściciela. Brak progu alarmowego objętości niemowlęcej oraz wcześniejsze luki A08/A09 pozostają jawnie otwarte.
+
+#### LAB-PUBERTY — szybki formularz i konfiguracja oznaczenia, 2026-10-04
+
+Po akceptacji uproszczonej makiety formularz automatycznie wykorzystuje dane aktualnego pacjenta, zachowując rozdzielenie bieżącego kontekstu i historycznej próbki. Silnik `1.2.0`, UI `1.2.0`, renderer `1.2.0`, helper snapshotu `1.1.0`; dane i wszystkie RI pozostają niezmienione. Zapisana osobno dla LH/FSH konfiguracja urządzenia wybiera zgodną metodę i wersję profilu; nie zapisuje danych klinicznych ani nie udaje sprawdzenia pojedynczej próbki. Jawny kontekst oznaczenia jest jednym wyborem, bez domniemanego braku leczenia. Numer Tannera wymaga określenia rodzaju cechy; data starszego pobrania nie przenosi dzisiejszego stadium.
+
+**Wpływ kliniczny:** automatyczne porównanie może korzystać z jawnie skonfigurowanej metody oraz wieku z formularza (tak opisanych w wyniku), zamiast wymagać ponownego wpisywania wszystkich danych. Opcjonalny zakres z wydruku to odrębne porównanie liczbowe, nie nowy zwalidowany RI. Konflikt porównań i ostrzeżenia kliniczne pozostają widoczne. Populacja kliniczna 0–18 lat, ograniczenia metod/płci/wieku niezmienione, stężenia IU/L i mIU/mL. Zapisane oceny zachowują kontekst i pochodzenie bez przeliczania historii lub backfill.
+
+Źródła i zakres odczytu: Mayo R1/R2, oficjalne ES2026 K1 oraz pełne teksty K2–K4 w [LH_FSH.md](LH_FSH.md#szybkie-sprawdzenie--4102026). Syntetyczne przypadki produkcyjnego kodu: M6/G4/LH2 z formularza → ostrzeżenie kliniczne mimo RI stadium; konfiguracja LH nie dopasowuje FSH; unknown leczenie blokuje bazalny RI; historyczna próbka nie przejmuje aktualnego stadium; LH15 z ręcznym zakresem0–20 i katalogowym odchyleniem → jawna rozbieżność; operatory `<` i `≤` pozostają różne. Testy silnika, preferencji, snapshotu i UI oraz pełny przepływ przeglądarkowy dokumentują te kontrakty. Akceptacja kliniczna, scalenie i wdrożenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — minimalne wejście i warunkowe porównanie, 2026-10-04
+
+Silnik/formularz/renderer `1.3.0`, snapshot `1.2.0`, dane `2026-10-04.1` bez zmian. Nieustalony rodzaj oznaczenia lub leczenie nie ukrywa samego liczbowego zestawienia z tabelą, jeśli pozostałe warunki doboru profilu są spełnione. Osobne `referencePreview` utrwala zakresy i jawną warunkowość „oznaczenie bazalne bez leczenia hormonalnego”; nie zmienia rzeczywistych `unknown` ani dotychczasowego `biochemical.primary`. Warunki są widoczne przy liczbach również w historii. Jawna stymulacja/leczenie i pozostałe blokady metody, populacji, wieku oraz wcześniactwa pozostają skuteczne.
+
+**Wpływ kliniczny:** wcześniej niedostępne porównanie staje się dostępne jako warunkowe zestawienie liczbowe, bez potwierdzenia zastosowania normy do nieustalonego protokołu. Kliniczne ostrzeżenie nadal ma pierwszeństwo. Syntetyczny M2 lata 9 miesięcy/G3/LH2 IU/L, zgodna metoda, protokół i leczenie `unknown` → wiek `above` względem `<0,02–0,5`, stadium `within` względem `0,09–4,2`, nadal `early_development`; bez stadium działa porównanie wieku. GnRHa/steroidy lub stymulacja → brak bazalnego podglądu. Stare oceny nie otrzymują nowego rozszerzenia.
+
+Źródła: pełne katalogi Mayo [LHPED62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) i [FSH602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), odczyt 2–3.10.2026; [ES2026](https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty), [Howard2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/) i [przegląd diagnostyki CPP2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC11795171/). Populacje przypisane do oznaczeń, surowica, IU/L/mIU/mL; pełne ograniczenia i zakres dostępu w [LH_FSH.md](LH_FSH.md#minimalne-dane-i-porównanie-warunkowe--4102026). Regresje wywołują rzeczywisty silnik, snapshot, renderer i UI. Akceptacja kliniczna oraz scalenie pozostają po stronie właściciela.
+
+#### LAB-PUBERTY — osie zakresów i wyróżnienie znacznego odchylenia, 2026-10-04
+
+Zaakceptowany widok wprowadza osobne osie wieku i stadium na wspólnej skali, z zakresem i znacznikiem dokładnego wyniku. Źródłem granic jest utrwalona ocena, bez ponownego doboru norm lub przeliczenia historii. Silnik, dane `2026-10-04.1`, statusy biochemiczne, jednostki i kryteria rozwoju nie zmieniają się. Nieznana lub cenzorowana dolna granica nie staje się zerem ani dokładnym progiem RI.
+
+**Wpływ kliniczny:** zmienia się hierarchia i siła wizualna informacji. Istniejąca w przeliczniku konwencja `classifyResultState` wyróżnia dokładny wynik `>2 × górna granica` czerwono i `<0,5 × znana dodatnia dolna granica` bursztynowo, z drżeniem znacznika, wykrzyknikiem oraz tekstem „Uwaga — znacznie powyżej/poniżej normy”. Równość nie uruchamia silnego efektu. **Nie jest to próg diagnostyczny LH/FSH, kryterium CPP, pilności ani leczenia pochodzące z publikacji medycznej.** Wyróżnienie jest osobne dla każdej osi; duży wynik wskazuje jego podstawę i ewentualną warunkowość. Zgodność z zakresem stadium nie usuwa ostrzeżenia rozwoju. `<LOD` i inne wyniki niedokładne nie otrzymują punktu ani silnego efektu. Zatrzymanie ruchu nie usuwa tekstu i koloru ostrzeżenia.
+
+Metody, populacje i ograniczenia pozostają przypisane do źródeł: katalogi Mayo [LHPED62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) i [FSH602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), odczyt 2–3.10.2026; surowica, LH AnshLite CLIA / FSH Roche Elecsys ECLIA, IU/L i równoważne mIU/mL. Kryteria i ograniczenia kliniczne nadal wynikają z K1–K4 opisanych w [LH_FSH.md](LH_FSH.md#prezentacja-zakresów-i-znacznych-odchyleń--4102026). Nieznany protokół lub leczenie pozostaje warunkowe; znane leczenie/stymulacja i blokady metody/populacji nadal wyłączają nieadekwatne porównanie. Zapisane teksty OUN, regresji i kontekstu niemowlęcego nie są zastępowane nową interpretacją.
+
+Syntetyczne regresje rzeczywistych funkcji: M2 lata 9 miesięcy/G3/LH2 → silne wyróżnienie względem wieku `≤0,5`, spokojny znacznik względem G3 `0,09–4,2`, nadal ostrzeżenie rozwoju; LH1 wobec granicy0,5 → zwykłe odchylenie, LH1,001 → silne; M16/G3/LH0,02 → silne dolne odchylenie przy znanej dodatniej granicy; `<LOD` → brak punktu; warunkowość i zapis historii pozostają zachowane. Pełny kontrakt, przypadki graniczne i ograniczenia: [LH_FSH.md](LH_FSH.md#prezentacja-zakresów-i-znacznych-odchyleń--4102026). Akceptacja kliniczna, scalenie i wdrożenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — pola dojrzewania zależne od płci, 2026-10-04
+
+Szybki formularz LH/FSH udostępnia dla M: nieokreślony typ, G, P i Ax; dla F: nieokreślony typ, Th, P i Ax; bez płci: nieokreślony typ, P i Ax. Objętość jąder (mL) i metoda pomiaru są dostępne wyłącznie dla M, a poza tą kategorią ukryte, wyłączone i wyczyszczone. Zmiana płci usuwa niezgodny typ razem ze stadium, bez konwersji Th3↔G3 i bez odtwarzania usuniętych wartości po ponownym wyborze płci. P/Ax pozostają odrębnymi cechami; Ax nie ma stadium liczbowego. Typ ogólnego Tannera z formularza głównego nie jest wyprowadzany z płci. Typ początku z zapisu jest związany z płcią źródłowego zapisu, nie z późniejszą zmianą formularza.
+
+**Wpływ kliniczny:** zmienia się dobór danych wejściowych nowej oceny, więc usunięcie sprzecznej obserwacji może zmienić komunikat rozwoju lub dostępność porównania stadium. Nie zmieniają się silnik `1.3.0`, dane referencyjne `2026-10-04.1`, progi, stężenia IU/L/mIU/mL ani metody Mayo. Populacja: dotychczasowy model pediatryczny 0–18 lat z kategoriami M/F; ograniczenie wyboru nie jest algorytmem oceny ginekomastii ani różnic rozwoju płciowego. Brak właściwego stadium pozostaje ograniczeniem, nie potwierdzeniem prawidłowego rozwoju. Historyczne snapshoty nie są czyszczone, przeliczane ani uzupełniane.
+
+Źródła rozdzielenia gonadalnych cech dojrzewania: Persani i wsp., *ENDO-ERN expert opinion on the differential diagnosis of pubertal delay*, 2021, [DOI 10.1007/s12020-021-02626-z](https://doi.org/10.1007/s12020-021-02626-z); Howard, *Interpretation of reproductive hormones before, during and after the pubertal transition*, 2021, [DOI 10.1111/cen.14578](https://doi.org/10.1111/cen.14578). Odrębność adrenarche: Rosenfield, *Normal and Premature Adrenarche*, 2021, [DOI 10.1210/endrev/bnab009](https://doi.org/10.1210/endrev/bnab009). Nie dodano nowych kryteriów rozpoznania. Pełne ograniczenia i zakres wcześniejszego odczytu: [LH_FSH.md](LH_FSH.md#dobór-pól-dojrzewania-do-płci--4102026).
+
+Syntetyczne regresje rzeczywistego adaptera/formularza i silnika: F/Th3→M usuwa Th3 bez nadania G3; M/G3/8 mL Prader→F→M nie przywraca niezgodnych danych; M/P3→F zachowuje P3; ogólny Tanner III nie staje się G3 lub Th3 przez sam wybór płci; zmiana płci formularza nie przepisuje źródłowego rodzaju początku; M2 lata 9 miesięcy/G3/LH2 zachowuje istniejące porównania i ostrzeżenie rozwoju. Akceptacja kliniczna i scalenie pozostają decyzją właściciela.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
@@ -174,7 +253,7 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
 | 1 | Tanner I (formularz) | tempo <4 cm/rok | alarmowy (baner + konsultacja) — konfudent skoku wykluczony badaniem |
 | 1 | Tanner II–III | tempo <4 cm/rok | czujność (chip „do oceny — osłabiony skok?"); bez banera |
 | 1 | Tanner IV–V | — | bez oceny; nota „deceleracja fizjologiczna po skoku" |
-| 2 | wiek kostny (świeży ≤18 mies.) | norma `getVelocityThreshold(BA)`; BA 10–13/10–15 lat → <4 cm/rok | czujność (błąd oceny BA ~±1 rok) |
+| 2 | wiek kostny ze znanym czasem oznaczenia, 0–12 mies. włącznie (decyzja właściciela 2026-10-02; GROWTH-TRAJ-BA-WIZYTA poniżej) | norma `getVelocityThreshold(BA)`; BA 10–13/10–15 lat → <4 cm/rok | czujność (błąd oceny BA ~±1 rok) |
 | 3 | brak danych | dziewczęta 10–13 lat / chłopcy 10–15 lat: <4 cm/rok | czujność („możliwy późny skok pokwitaniowy") |
 
 Źródło etapu Tannera: pole formularza (karty na stronie głównej — stan bieżący) lub `payload.user.tannerStage` z najnowszego zapisu pacjenta (Karta pacjenta); wpis z rekordu jest używany tylko, gdy zapisany w ciągu ostatnich 12 mies. (`TANNER_FRESH_M` — stadium zmienia się w czasie); starszy jest pokazywany w pasku kontekstu jako „nieaktualny, pominięty w ocenie".
@@ -205,6 +284,32 @@ Przypadki syntetyczne: TRAJ-VELO-T1 (12 lat, 3,0 cm/rok, Tanner I → alarm); TR
 - Profesjonalizacja słownika etykiet (decyzja właściciela 2026-08-14, przegląd całego słownika): „narastanie nadmiaru BMI" → „progresja nadwagi (BMI w paśmie 85.–97. centyla)"; „szybkie narastanie BMI" → „szybka progresja nadwagi (BMI)"; „nadrabia niedobór wzrostu" → „wyrównywanie niedoboru wzrostu (catch-up)"; „nadrabia niedobór masy ciała" → „wyrównywanie niedoboru masy ciała"; „zjazd w dolnym paśmie normy…" → „obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl) — do obserwacji"; „obniżenie poniżej 3. centyla masy" → „obniżenie masy ciała poniżej 3. centyla"; „narasta mimo leczenia" → „przyrost masy mimo leczenia redukcyjnego" (zaktualizowany także klucz mapowania prozy w epikryzie). Świadomie zachowane: „narastanie nadmiaru masy ciała" i „nadrabia względem kanału rodzicielskiego" (ocenione przez właściciela jako bardziej informacyjne). Zmiany równoległe w `verdictCh`/`verdictCh2` i module trajektorii (parytet pilnowany testami).
 - Jedyny własny parametr: `SEGMENT_MIN_GAP_M = 3` mies. — strażnik jakości danych (odcinki krótsze są pokazywane bez werdyktu, bo ocena ΔSDS na tak krótkich odstępach jest niestabilna pomiarowo). Nie jest to próg interpretacji klinicznej.
 - Analiza ma charakter przesiewowy i nie zastępuje oceny klinicznej; nie nadaje się jej statusu „zwalidowana klinicznie".
+
+#### GROWTH-TRAJ-BA-WIZYTA — wiek kostny przypisany do badania i jego użycie w normie tempa (akceptacja właściciela 2026-10-02)
+
+**Problem i wpływ kliniczny.** Wynik wieku kostnego (BA) wpisany podczas pierwszej wizyty był kopiowany do kolejnych pomiarów bez nowego badania. Siatka mogła pokazać ten sam wynik przy dwóch wysokościach, a zapis kolejnej wizyty odnawiał pozorny czas oznaczenia używany w ocenie tempa. Od tej zmiany nowe badanie, poprzedni wynik i efektywna wartość do prognoz mają odrębne znaczenie. Może zmienić się podstawa normy tempa i jej werdykt po pominięciu nieaktualnego lub nieudatowanego BA. Status pozostaje wdrożeniem zaakceptowanym przez właściciela; testy techniczne nie nadają mu walidacji klinicznej.
+
+**Źródła i zakres.** Dotychczasowa hierarchia norm tempa opiera się na: Tanner JM, Whitehouse RH. *Clinical longitudinal standards for height, weight, height velocity, weight velocity, and stages of puberty.* Arch Dis Child. 1976;51(3):170–179. PMID [952550](https://pubmed.ncbi.nlm.nih.gov/952550/), doi:[10.1136/adc.51.3.170](https://doi.org/10.1136/adc.51.3.170); Tanner JM, Davies PS. *Clinical longitudinal standards for height and height velocity for North American children.* J Pediatr. 1985;107(3):317–329. PMID [3875704](https://pubmed.ncbi.nlm.nih.gov/3875704/), doi:[10.1016/S0022-3476(85)80501-1](https://doi.org/10.1016/S0022-3476(85)80501-1). Populacje: dzieci i młodzież brytyjska oraz północnoamerykańska; aplikacja nie ma polskich norm tempa. Jest to ocena przesiewowa, z ograniczeniami oceny dojrzałości i BA opisanymi w GROWTH-TRAJ. **Granica 12 miesięcy jest operacyjną decyzją właściciela z bieżącej rozmowy 2026-10-02, a nie granicą dowiedzioną przez te publikacje.** Zastępuje dotychczasowe 18 miesięcy; nie zmienia progów tempa ani priorytetu aktualnego stadium Tannera.
+
+**Model i jednostki.** `vilda_bone_age.js` udostępnia `VildaBoneAge`. Zapis `advanced.boneAgeContext` i `advanced.data.boneAgeContext` (w obliczeniach `advancedGrowthData.boneAgeContext`) ma postać `{version:1,current,last}`. `current` i `last` są badaniem `{years,atAgeMonths,dateISO,source,id?}` albo `null`: BA w latach, wiek metrykalny (CA) przy oznaczeniu w miesiącach, opcjonalna data ISO i pochodzenie `measured`/`history`/`legacy`. Model przyjmuje skończone BA >0 i ≤20 lat; przeliczenie do miesięcy to `Math.round(years*12)`, wiek oznaczenia jest zaokrąglany do pełnych miesięcy. Wzrost jest w cm, tempo w cm/rok. Zakresy osi poszczególnych siatek i tabele referencyjne pozostają dotychczasowe.
+
+- `current` oznacza badanie bieżącej wizyty, związane z jej wiekiem. Nowy pomiar albo zmiana wieku wizyty przenosi wcześniejsze badanie do `last` i pozostawia puste pole BA; zapis, F5 i przejście Start↔DocPro zachowują jego pierwotny wiek oznaczenia. „Odtwórz zapis” odtwarza badanie zapisanej wizyty. Ponowne wpisanie takiej samej liczby w nowej wizycie jest odrębnym rzeczywistym badaniem.
+- `advanced.boneAgeYears`, historyczny `measurement.boneAgeYears` i `ghTherapyPoints[].boneAge` opisują wynik przypisany do danej wizyty. Przy `current:null` nowy pomiar nie dziedziczy BA z `last`. Bieżący marker siatki jest rysowany tylko dla `current` zgodnego z wiekiem wizyty; markery historyczne pozostają przy swoich pomiarach. Identyczny bieżący i historyczny punkt (wiek+wzrost+BA) jest rysowany raz; równe BA z różnych wizyt są zachowane, bez usuwania danych historii.
+- Efektywne `advancedGrowthData.boneAgeMonths` do prognoz pochodzi z `current || last`. Wzory i tabele prognoz są bez zmian. Ostatni wynik pozostaje dostępny bez automatycznego „postarzania” BA o odstęp do kolejnej wizyty; ta wartość nie stanowi dowodu wykonania nowego badania.
+- Legacy bez schematu v1 zachowuje dotychczasowe wartości i historyczne wpisy. Nie rozpoznajemy ani nie usuwamy automatycznie rzekomych duplikatów dawnych badań. Wartość liczbowa odtwarzana z dawnego zapisu może zachować kotwicę wizyty dla zgodności siatki, ale `source:legacy` nie dowodzi czasu oznaczenia: norma tempa otrzymuje czas nieznany, a opis pacjenta mówi to wprost.
+
+**Strażnik normy tempa.** W `vilda_tempo_wzrastania.js` gałąź BA od wieku metrykalnego ≥120 mies. jest dostępna po gałęzi Tannera. BA ze znanym czasem oznaczenia jest dopuszczone, gdy `0 ≤ wiek ocenianego pomiaru − atAgeMonths ≤ 12` miesięcy, **12 włącznie**. Przy 13 miesiącach, nieznanym czasie albo oznaczeniu późniejszym niż oceniany pomiar BA zostaje pominięte; wynik zawiera powód `stale`/`unknown-time`/`future-time` i jawną notę w kartach, opisie/epikryzie. W granicach istniejącego okna generycznego wraca dotychczasowa norma ≥4 cm/rok (dziewczęta do 156, chłopcy do 180 mies.); poza nim pozostaje brak odpowiedniej normy. Poniżej 120 mies. obowiązuje dotychczasowa drabinka wieku metrykalnego oraz reguła Tannera IV–V. Samo BA nie rozstrzyga stadium dojrzewania ani wskazań do leczenia.
+
+**Przypadki syntetyczne (wyłącznie fikcyjne).**
+
+| Wejście | Oczekiwany wynik |
+| --- | --- |
+| BA 9 lat oznaczony przy CA 123 mies., wzrost 141 cm; kontrola CA 125 mies., 142 cm, bez nowego BA | `current:null`, `last:{years:9,atAgeMonths:123}`; wiersz 125 mies. bez BA; jeden marker BA 108 mies. przy 141 cm, bez markera przy 142 cm; efektywny BA nadal 108 mies. |
+| Na kontroli CA 125 mies. wykonano nowe badanie i ponownie wpisano BA 9 lat | dwa rzeczywiste badania przy CA 123/125 mies.; dwa markery przy 141/142 cm, zachowane po zapisie i F5 |
+| BA 8 lat przy CA 123 mies.; chłopiec, bez Tannera, tempo 4,5 cm/rok w odstępie 12 mies.; oceniany CA 125, 135, 136 mies. | przy CA 125 i 135 BA dopuszczone (2 i 12 mies. od oznaczenia): norma ≥5 cm/rok, czujność; przy CA 136 BA pominięte (13 mies.): norma generyczna ≥4 cm/rok i jawna nota o pominięciu |
+| Ten sam BA z czasem nieznanym albo z CA oznaczenia późniejszym niż oceniany punkt | BA pominięte w normie z odpowiednim powodem; bez przesuwania lub zgadywania czasu badania |
+
+**Dowody techniczne.** Testy jednostkowe `wiek-kostny-pochodzenie`, `wiek-kostny-zapis-wizyty`, `wiek-kostny-vault-zapis`, `wiek-kostny-normy-wizyty` i `bone-age-chart-markers` uruchamiają rzeczywiste moduły produkcyjne: zdarzenia formularza, kolektor/import, zapis i odczyt sejfu, punkty GH, silnik tempa, renderery i generatory opisów. Obejmują granice 12/13 mies., czas nieznany/przyszły, niezmieniony priorytet Tannera, równe wyniki odrębnych badań, legacy oraz odtworzenie kontekstu. `tests/e2e/wiek-kostny-kolejne-wizyty.spec.mjs` zawiera 5 scenariuszy prawdziwego zapisu fikcyjnego pacjenta, siatki, F5 i Start↔DocPro; przeciwko bazie sprzed poprawki zmierzono **5/5 czerwonych**. Są to dowody regresji technicznej i zgodności z przyjętym kontraktem, nie klinicznej trafności norm.
 
 #### Reprezentatywne przypadki syntetyczne
 
@@ -1460,7 +1565,7 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 
 *Strażnicy:* `tests/unit/schowek.test.mjs` (12) — tekst zaczynający się od `Waga:` dostaje **dokładnie jeden** U+2060, a reszta treści zostaje bit w bit; U+2060 nie jest odstępem i przeżywa `trim()`; teksty, które nie wyglądają jak adres (`Augmentin –`, `Pow. ciała:`, `Wskaźnik Cole'a:`, `63,4 kg`) **nie** dostają nic; ścieżka zapasowa kopiuje tę samą zabezpieczoną treść; przy dostępnym Clipboard API `execCommand` nie rusza ani razu. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku: pierwszy znak wklejonej treści to U+2060, zaraz za nim `Waga:`.
 
-### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.141, 2026-10-01)
+### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.157, 2026-10-01)
 
 **Decyzja właściciela (2026-10-01): „Tylko BMI”.** Ocena BMI (kategoria, ostrzeżenie, klasa, Cole, sugestia WHR, „idealna masa”, nagłówek i karta BMI raportu) idzie za silnikiem BMI i decyzją D3 — siatka DS do 20 lat. Masa, wzrost, ciśnienie, tętno i opisy dorosłego **zostają przy wieku 18 lat** (raport: 18, PDF: 19) — osobna decyzja, jeśli kiedyś.
 
@@ -1487,7 +1592,7 @@ Testy: `tests/unit/ds-bmi-dorosly-wg-pacjenta.test.mjs` (7: silnik co 0,5 mies. 
 
 **Ograniczenia.** Masa i wzrost 18–19-latka z DS w karcie głównej, podsumowaniu i raporcie nadal mają opisy dorosłego („brak porównania do dorosłej populacji”), choć siatki Zemel sięgają 20 lat — świadomie poza zakresem („Tylko BMI”). Interpretacja WHR (progi WHO dla dorosłych od 18 lat) bez zmian.
 
-**Pliki.** `vilda_bmi.js`, `vilda_update_prep.js`, `app.js`, `vilda_summary_cards.js`, `vilda_patient_summary_copy.js`, `vilda_patient_report.js`; `app.js` 230, `vilda_bmi.js` 9, `vilda_patient_report.js` 46, `vilda_patient_summary_copy.js` 14, `vilda_summary_cards.js` 53, `vilda_update_prep.js` 94; SW 1.1.140 → 1.1.141 (numery nadane `npm run podbij-wersje`).
+**Pliki.** `vilda_bmi.js`, `vilda_update_prep.js`, `app.js`, `vilda_summary_cards.js`, `vilda_patient_summary_copy.js`, `vilda_patient_report.js`; `app.js` 230, `vilda_bmi.js` 9, `vilda_patient_report.js` 46, `vilda_patient_summary_copy.js` 14, `vilda_summary_cards.js` 55, `vilda_update_prep.js` 94; SW 1.1.156 → 1.1.157 (numery nadane `npm run podbij-wersje`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy masa i wzrost 18–19-latka z DS mają też przejść na siatki DS do 20 lat.
 
@@ -3810,6 +3915,46 @@ Zmiana to jedna linia wyboru wieku, ale płynie w karcie wszędzie: centyle wzro
 **Stan strażników tej serii (zmierzone 2026-09-18).** Sześć plików jednostkowych o prefiksie `karta-pacjenta-` (82 testy) i pięć plików e2e (26 scenariuszy) — wszystkie zielone. Liczby są dziś wyższe niż w chwili scalenia, bo P-NOTATKI raty 1–3 dokładały asercje do tych samych plików. Dwunasty plik o tym prefiksie, `tests/e2e/karta-pacjenta-tempo.spec.mjs`, należy do innej serii (P-TEMPO) i jest udokumentowany osobno.
 
 **Czego nie ustalono.** Numery **H4 i H5** nie występują nigdzie w repozytorium — ani w kodzie, ani w testach, ani w opisach commitów; nie wiadomo, czy zostały odrzucone, scalone z innymi, czy po prostu pominięte w numeracji. Sam dokument audytu sekcji „Pacjenci" nie zachował się, więc oryginalne sformułowania znalezisk P1–P14 i K1–K4 pozostają nieznane — powyższe odtworzenie opisuje, **co zdecydowano i co robi kod**, nie jak brzmiało zgłoszenie.
+
+**Aktualizacja 2026-10-02 — nawigacja list i karty podczas synchronizacji.**
+
+Odświeżenie P1/P4 mogło wyglądać jak samoczynny krok wstecz: ponowny render listy
+zerował wybraną listę (np. Ngenla), wyszukiwanie i przewinięcie. Karta była odłączana
+także przy sygnale synchronizacji bez zmiany jej danych. Spóźniony odczyt listy
+mógł przykryć kartę, którą lekarz zdążył otworzyć.
+
+- Odświeżenie zachowuje filtr, identyfikator listy, wyszukiwanie, sortowanie,
+  przewinięcie i zaznaczenia. Stan jest odczytywany po zakończeniu oczekiwania,
+  aby uwzględnić także wybór dokonany w trakcie odczytu.
+- Karta porównuje pełny rekord i pełne notatki pacjenta. Bez zmiany danych
+  zachowuje DOM; rzeczywista zmiana nadal odświeża kartę i jej aktywną zakładkę.
+  Sam identyfikator migawki ani oś czasu nie obejmują wszystkich zmian notatek.
+- Tylko bieżący odczyt może wyświetlić wynik. Zmiana widoku, zamknięcie okna
+  lub zablokowanie sejfu unieważnia wcześniejsze odczyty. Otwartego edytora
+  nie zastępuje render, również gdy edytor otwarto już podczas oczekiwania.
+- Spóźniony brak rekordu wcześniej wybranej listy nie zeruje nowej wybranej listy.
+
+Regresje: `tests/unit/nawigacja-pacjentow-odswiezanie.test.mjs`,
+`tests/e2e/nawigacja-pacjentow-bez-cofania.spec.mjs` oraz istniejące testy
+`karta-pacjenta-porzadki`. Przykłady korzystają z fikcyjnych danych.
+To zmiana stanu interfejsu: wzory, źródła norm, dawki, jednostki i progi kliniczne
+pozostają bez zmian; nie zmienia się format ani sposób zapisu danych pacjenta.
+
+**Aktualizacja 2026-10-02 — karta pacjenta z chipa nagłówka (P-CHIP-KARTA).**
+
+Po zapisaniu pacjenta „Otwórz Kartę pacjenta” zamykało dymek bez otwierania
+karty na samodzielnym Start i DocPro: handler obsługiwał wyłącznie `VildaShell`,
+dostępny w `app.html`. Teraz używa lokalnej powłoki lub powłoki rodzica ramki,
+a na samodzielnej stronie — `VildaAuthUI.showPatientCard`. Identyfikator pacjenta
+nadal jest odczytywany w momencie kliknięcia. Karta korzysta z istniejącej blokady
+sejfu i ochrony odczytów; otwieranie jej nie wymaga wcześniejszej wizyty na liście.
+Zmiana dotyczy nawigacji, bez wpływu na obliczenia kliniczne i zapis pacjenta.
+
+Regresje: `tests/unit/chip-karta-pacjenta.test.mjs` wykonuje rzeczywisty listener;
+`tests/e2e/chip-karta-pacjenta.spec.mjs` wpisuje i zapisuje fikcyjnego pacjenta,
+następnie otwiera kartę kliknięciem na Start, DocPro i w powłoce oraz sprawdza
+właściwy rekord po zmianie pacjenta. Przed poprawką: 6/9 unit i 3/4 E2E czerwone;
+działająca ścieżka w powłoce jest kontrolą dodatnią.
 
 ## Masa ciała dostaje silnik; zdanie o rozjeździe masa↔BMI (P-MASA etapy 1–2, SW 1.0.993, 2026-09-18)
 
@@ -12438,6 +12583,25 @@ racie ich nie ruszano, zgodnie z kolejnością wskazaną przez właściciela.
   i przedstawiona właścicielowi.
 
 SW 1.1.23 → **1.1.24**; `vilda_bmi.js?v=5→6`, `vilda_bmi_journey.js?v=12→13`.
+
+## Stan wizyty po własnym zapisie i odtworzeniu sesji (2026-10-01)
+
+Poprawka dotyczy cyklu życia formularza i widoczności porównania, bez zmiany wzorów,
+norm, dawek, jednostek ani zapisanych wyników klinicznych.
+
+- Własny zapis nowego pacjenta potwierdza bieżący stan przed utrwaleniem bazy
+  `lastLoadedData`. Nie tworzy oczekującego wczytania; zachowuje istniejący wybór
+  „Odtwórz zapis” albo „Nowy pomiar”. Powiadomienie `source: 'save'` nie kasuje tego wyboru.
+- Odtworzenie sesji przy przejściu Start → DocPro lub F5 nie używa bieżących pól jako
+  poprzedniego pomiaru. W trybie „Nowy pomiar” pozostaje rzeczywisty punkt odniesienia.
+- Ukrycie karty porównania usuwa także jej znacznik `dataset.loaded`. Odczyt rekordu
+  rozpoczęty przed wyborem „Odtwórz zapis” ani późniejszy cykl terapii nie wskrzeszają karty.
+  Rekord bez skończonej wartości wzrostu lub masy nie tworzy pustej tabeli porównania.
+
+Regresje wykonują rzeczywiste moduły importu, wyboru wizyty i karty porównania oraz
+formularze w powłoce `app.html`: pierwszy własny zapis, odtworzenie po edycji historii
+i cyklu GH, przełączanie ramek, F5 i kontrola prawidłowego wyboru „Nowy pomiar”.
+Dane testowe są wyłącznie fikcyjne.
 
 ## Zasady aktualizacji rejestru
 

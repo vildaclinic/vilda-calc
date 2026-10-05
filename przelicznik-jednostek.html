@@ -58,14 +58,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
   <link rel="stylesheet" href="ios26-v2.css?v=26" />
-  <link rel="stylesheet" href="style.css?v=86" />
+  <link rel="stylesheet" href="style.css?v=87" />
   <link rel="stylesheet" href="sidebar.css" />
-  <link href="vilda_chrome.css?v=43" rel="stylesheet">
+  <link href="vilda_chrome.css?v=44" rel="stylesheet">
+  <link href="vilda_lab_assessment_ui.css?v=4" rel="stylesheet">
+  <link href="vilda_lab_puberty_ui.css?v=3" rel="stylesheet">
 
   <script src="vilda_logger.js?v=2"></script>
   <script src="vilda_html.js?v=4"></script>
-  <script src="vilda_persistence_adapter.js?v=28"></script>
-  <script src="vilda_session_bridge.js?v=16"></script>
+  <script src="vilda_persistence_adapter.js?v=29"></script>
+  <script src="vilda_session_bridge.js?v=25"></script>
   <script src="vilda_init.js?v=4"></script>
   <script src="vilda_deps.js?v=98"></script>
   <script>
@@ -102,7 +104,7 @@
 
   <link href="inline_przelicznik_jednostek_00.css?v=1" rel="stylesheet">
 
-  <script src="vilda_chrome.js?v=88"></script>
+  <script src="vilda_chrome.js?v=100"></script>
   <script src="lucide.min.js?v=1" defer></script>
   <script defer src="vilda_frame_sync.js?v=2"></script>
 </head>
@@ -430,12 +432,20 @@
     <i data-lucide="arrow-up"></i>
   </button>
 
-  <script src="ios26-ui.js?v=43" defer></script>
+  <script src="ios26-ui.js?v=44" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
   <script src="lab_units_data.js?v=35"></script>
   <script src="lab_unit_converter.js?v=4"></script>
-  <script src="lab_pin_result.js?v=4"></script>
+  <script src="vilda_lab_puberty_data.js?v=2"></script>
+  <script src="vilda_lab_puberty.js?v=4"></script>
+  <script src="vilda_lab_snapshot.js?v=3"></script>
+  <script src="vilda_lab_assessment_ui.js?v=5"></script>
+  <script src="vilda_lab_profile_preferences.js?v=1"></script>
+  <script src="vilda_lab_puberty_ui.js?v=7"></script>
+  <script src="vilda_zrodla_pacjenta.js?v=1"></script>
+  <script src="vilda_puberty_source.js?v=9"></script>
+  <script src="lab_pin_result.js?v=6"></script>
   <!-- P2 (2026-06-07): 939 KB paneli klinicznych ładowane LENIWIE — strona startuje
        bez parsowania największego pliku w aplikacji. Konsument ma bezpieczny getter
        (global_LabClinicalPanels) z fallbackiem do zwykłego wyszukiwania, więc okno
@@ -563,6 +573,73 @@
     var suggestResultsEl  = document.getElementById('labSuggestResults');
     var suggestTitleEl    = document.getElementById('labSuggestResultsTitle');
     var suggestBodyEl     = document.getElementById('labSuggestResultsBody');
+
+    // LH/FSH ma osobny kontekst próbki. Stary pacjent {age,tanner,life_stage}
+    // pozostaje wejściem innych analitów, ale nie jest wejściem nowego silnika.
+    function isPubertySubstance(substance) {
+      return !!(substance && (substance.id === 'lh' || substance.id === 'fsh'));
+    }
+    function readPubertyPatientContext() {
+      var shared = null, patient = null, puberty = null, pubertyState = null, source = null;
+      try { shared = persistence && persistence.readShared ? persistence.readShared(null) : null; } catch (_) {}
+      try { patient = window.VildaSession && window.VildaSession.getPatient ? window.VildaSession.getPatient() : null; } catch (_) {}
+      shared = shared && typeof shared === 'object' ? shared : {};
+      patient = patient && typeof patient === 'object' ? patient : {};
+      var identity = window._vildaCurrentPatientId || '';
+      // sessionStorage jest wspólne dla ramek tej karty; global ramki może być starszy.
+      try { identity = sessionStorage.getItem('vildaCurrentPatientId') || ''; } catch (_) {}
+      if (identity) {
+        try { source = window.VildaPubertySource && window.VildaPubertySource.kontekstPacjenta
+          ? window.VildaPubertySource.kontekstPacjenta(identity) : null; } catch (_) {}
+        if (!source || source.patientId !== identity || source.status !== 'ready') {
+          return { identityKey: identity, sourceStatus: source && source.patientId === identity && source.status === 'loading' ? 'loading' : 'unavailable' };
+        }
+        puberty = source.puberty; pubertyState = source.state;
+      }
+      var sex = shared.sex || patient.sex || null;
+      var suppliedPuberty = puberty || !identity && shared.puberty || {};
+      var onsetYears = puberty ? puberty.wiekStartuPokwitaniaLat : suppliedPuberty.onsetAgeYears;
+      var onsetSex = identity ? source.sourceSex : sex;
+      var onset = null;
+      // Pole karty oznacza początek Th2 / osiągnięcie kryterium G, nie sam
+      // numer Tannera. Nie odtwarzamy daty ani pozornej dokładności z ułamka lat.
+      // Dla rekordu zachowujemy płeć jego źródła. Bieżąca korekta płci nie
+      // zmienia zapisanego rodzaju początku; brak płci źródła nie jest zgodą na domysł.
+      if (['M', 'F'].includes(onsetSex) && typeof onsetYears === 'number' && Number.isFinite(onsetYears) && onsetYears >= 0) {
+        onset = { kind: onsetSex === 'M' ? 'G' : 'Th',
+          age: { years: Math.floor(onsetYears), months: null, days: null, precision: 'year' },
+          confirmedPubertalOnset: false };
+      }
+      var history = {}, sourceHistory = suppliedPuberty.history || {};
+      ['progression', 'growthAcceleration', 'cnsSymptoms', 'regression'].forEach(function (key) {
+        history[key] = ['yes', 'no'].includes(sourceHistory[key]) ? sourceHistory[key] : 'unknown';
+      });
+      return {
+        identityKey: identity,
+        sourceStatus: 'ready',
+        sex: sex,
+        birthDateISO: shared.dobISO || null,
+        ageYears: shared.age != null && shared.age !== '' ? shared.age : patient.age,
+        ageMonths: shared.ageMonths != null && shared.ageMonths !== '' ? shared.ageMonths : patient.ageMonths,
+        tanner: extractTannerFromAny(shared) || pubertyState && pubertyState.etap || null,
+        onset: onset,
+        onsetReportedYears: onset ? onsetYears : null,
+        history: history,
+        gnrhaStatus: puberty && puberty.gnrhaStatus || !identity && shared.puberty && shared.puberty.gnrhaStatus || null,
+        testicularVolume: shared.advanced && shared.advanced.testicularVolume || pubertyState && pubertyState.jadra || null
+      };
+    }
+    var pubertyUI = window.VildaLabPubertyUI && window.VildaLabPubertyUI.mount({
+      document: document,
+      persistence: persistence,
+      readPatientContext: readPubertyPatientContext,
+      onPatientChange: function () { if (isPubertySubstance(currentSubstance)) valueEl.value = ''; },
+      onChange: function () { if (isPubertySubstance(currentSubstance)) renderResults(currentSubstance); }
+    });
+    window.VildaLabPubertyRuntime = pubertyUI;
+    if (pubertyUI && window.VildaLabPinResult) {
+      window.VildaLabPinResult.setAssessmentProvider(function (result) { return pubertyUI.getAssessment(result); });
+    }
 
     // ID substancji, dla których proponujemy link do steroidy.html
     // (te, które są też w słowniku DRUGS na stronie kalkulatora dawek lub
@@ -1163,6 +1240,11 @@
     }
 
     function renderPatientSummary() {
+      if (isPubertySubstance(currentSubstance)) {
+        if (pubertyUI) pubertyUI.setPatientContext(readPubertyPatientContext());
+        if (clinicalHintEl) { clinicalHintEl.textContent = ''; clinicalHintEl.style.display = 'none'; }
+        return;
+      }
       var p = getEffectivePatient();
       var d = describePatient(p);
       patientTextEl.textContent = d.text;
@@ -2699,6 +2781,13 @@
      *   – wartość poprawna → wypełniamy szkielet liczbami.
      */
     function renderResults(substance) {
+      if (isPubertySubstance(substance)) {
+        var pubertyEvaluation = pubertyUI && pubertyUI.render({ raw: valueEl.value, unit: unitEl.value, targetUnit: unitTargetEl && unitTargetEl.value });
+        showError(String(valueEl.value || '').trim() && (!pubertyEvaluation || pubertyEvaluation.measurement.status !== 'valid')
+          ? 'Nieprawidłowy zapis wyniku lub jednostki. Dozwolone są także <0,02, >10 i <LOD.' : '');
+        updateStepStates();
+        return;
+      }
       if (!substance) {
         // Faza 18: smart-card jest zawsze widoczna; tylko sekcja wyniku
         // przechodzi w stan placeholdera.
@@ -2918,6 +3007,11 @@
     }
 
     function renderInfo(substance) {
+      if (isPubertySubstance(substance)) {
+        infoCard.style.display = 'none';
+        clearChildren(rangesEl); clearChildren(notesEl); sourcesEl.textContent = '';
+        return;
+      }
       if (!substance) {
         infoCard.style.display = 'none';
         return;
@@ -3274,6 +3368,9 @@
       var hasInput = !(raw == null || String(raw).trim() === '');
       var n = hasInput ? Conv.parseNumber(raw) : NaN;
       var s2 = s1 && hasInput && isFinite(n) && n >= 0;
+      if (isPubertySubstance(currentSubstance)) {
+        s2 = hasInput && !!(window.VildaLabPuberty && window.VildaLabPuberty.parseMeasurement(raw, unitEl.value).status === 'valid');
+      }
       var s3 = s2;  // krok 3 (jednostka docelowa) ma default = SI → done gdy s2
       var s4 = s2;  // krok 4 (opcjonalny) — mark as done gdy mamy wartość
       var s5 = s2;  // krok 5 (opcjonalny) — mark as done gdy mamy wartość
@@ -3431,6 +3528,7 @@
     }
 
     function applySubstance(substance, rawText) {
+      if (pubertyUI) pubertyUI.setAnalyte(isPubertySubstance(substance) ? substance.id : null);
       renderSubstanceHint(substance, rawText || (substance ? substance.label_pl : ''));
       if (!substance) {
         // Pusty stan: zerujemy bieżącą substancję i czyścimy widok wyników.
@@ -3544,6 +3642,7 @@
     }
 
     function onClear() {
+      if (pubertyUI) pubertyUI.reset();
       // Pełny reset podstrony do stanu startowego:
       //   – oba pola wejściowe puste (substancja, wartość),
       //   – brak wybranej substancji → karta wyników w pustym stanie
@@ -3759,22 +3858,23 @@
     // Faza 14 — deep link: ?wskazanie=<id> lub #wskazanie=<id> automatycznie
     // wybiera wskazanie kliniczne (np. z głównego kalkulatora dziecka po
     // wykryciu otyłości → otwarcie obesity_kids).
-    (function applyIndicationDeepLink() {
+    function applyIndicationDeepLink(targetLocation) {
+      targetLocation = targetLocation || window.location;
       try {
         var indicationParam = null;
         // 1) Sprawdź ?wskazanie= w query string.
-        if (window.location.search) {
-          var params = new URLSearchParams(window.location.search);
+        if (targetLocation.search) {
+          var params = new URLSearchParams(targetLocation.search);
           indicationParam = params.get('wskazanie') || params.get('indication');
         }
         // 2) Fallback — sprawdź #wskazanie= w hashu.
-        if (!indicationParam && window.location.hash) {
-          var hash = window.location.hash.replace(/^#/, '');
+        if (!indicationParam && targetLocation.hash) {
+          var hash = targetLocation.hash.replace(/^#/, '');
           var hashParams = new URLSearchParams(hash);
           indicationParam = hashParams.get('wskazanie') || hashParams.get('indication');
         }
         if (!indicationParam) return;
-        if (!CLINICAL_INDICATIONS[indicationParam]) return;
+        if (!Object.prototype.hasOwnProperty.call(CLINICAL_INDICATIONS, indicationParam)) return;
         if (!suggestSelectEl) return;
         // Ustaw wartość selektora i wyrenderuj panel; przewiń do sekcji wskazań.
         suggestSelectEl.value = indicationParam;
@@ -3809,7 +3909,19 @@
       } catch (_) {
         // Cicho ignoruj — deep link jest opcjonalny.
       }
-    })();
+    }
+    applyIndicationDeepLink();
+    // Powłoka zachowuje dokument laboratorium między wejściami. Jawny cel
+    // nawigacji może więc zmienić wskazanie również w już otwartej ramce.
+    window.addEventListener('vilda:shell-navigate-target', function (event) {
+      var href = event && event.detail && event.detail.href;
+      if (typeof href !== 'string') return;
+      try {
+        var target = new URL(href, window.location.href);
+        if (target.origin !== window.location.origin || target.pathname !== window.location.pathname) return;
+        applyIndicationDeepLink(target);
+      } catch (_) {}
+    });
     if (suggestBodyEl) {
       suggestBodyEl.addEventListener('click', function (e) {
         var t = e.target;
@@ -3949,10 +4061,11 @@
     // Nasłuch zmian w sharedUserData (z innej karty/strony głównej).
     window.addEventListener('storage', function (e) {
       // Klucz dla sharedUserData może mieć różne nazwy w zależności od wersji adaptera.
-      if (!e.key || /shared|user/i.test(e.key)) refreshPatientContext();
+      if (!e.key || e.key === 'vildaCurrentPatientId' || /shared|user/i.test(e.key)) refreshPatientContext();
     });
     window.addEventListener('focus', refreshPatientContext);
     window.addEventListener('vilda:user-state-cleared', function () {
+      if (pubertyUI) pubertyUI.reset();
       localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
       if (overrideSexEl) overrideSexEl.value = '';
       if (overrideAgeEl) overrideAgeEl.value = '';
@@ -3980,6 +4093,14 @@
       } catch (_) { /* noop */ }
       refreshPatientContext();
     });
+
+    document.addEventListener('vilda:patient-loaded', function () {
+      if (pubertyUI) pubertyUI.reset();
+      if (isPubertySubstance(currentSubstance)) { valueEl.value = ''; showError(''); }
+      refreshPatientContext();
+    });
+    document.addEventListener('vilda:session-changed', refreshPatientContext);
+    document.addEventListener('vilda:zrodlo-pacjenta-zmienione', refreshPatientContext);
 
     // Delegacja kliknięć w komórkę wartości → kopiowanie do schowka.
     function handleValueActivation(td) {

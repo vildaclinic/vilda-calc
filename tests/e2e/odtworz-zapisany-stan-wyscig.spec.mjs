@@ -20,6 +20,18 @@ async function otworz(page) {
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Najpierw przygotowujemy tryb wymagany przez kartę. Scenariusz sprawdza
+  // odtwarzanie danych, a nie bramkę dostępu do obliczeń profesjonalnych.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (tryb && !tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
 }
 
 async function policzPacjentke(page) {
@@ -31,11 +43,12 @@ async function policzPacjentke(page) {
     if (typeof window.update === 'function') window.update();
   });
   await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]', { state: 'attached' });
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
   await page.evaluate(() => {
     const t = document.getElementById('toggleAdvancedGrowth');
     const f = document.getElementById('advancedGrowthForm');
     if (f && getComputedStyle(f).display !== 'none') return;
-    if (t) { t.disabled = false; t.click(); }
+    if (t) t.click();
   });
   await expect(page.locator('#advancedGrowthForm')).toBeVisible({ timeout: 10000 });
   await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });

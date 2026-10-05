@@ -4,6 +4,13 @@
   --settings-card-bg: linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(246, 252, 252, .82))
 }
 
+/* Let the unlocked account section own the final scroll position. A pending
+   native smooth fragment scroll can otherwise continue after scrollIntoView. */
+html:has(#settings-section-account:target),
+html:has(#settings-section-account:target) body {
+  scroll-behavior: auto
+}
+
 .switch {
   position: relative;
   display: inline-block;
