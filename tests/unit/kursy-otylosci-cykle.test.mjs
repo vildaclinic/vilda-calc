@@ -158,8 +158,10 @@ describe('kursy otyłości = cykle leczenia (buildClinicalContext, kursyOtylosci
       pkt('start', 154, WEGOVY, '2024-09-15'), pkt('end', 154, SAXENDA, '2024-09-15'),
       pkt('continue', 155, WEGOVY, '2024-10-15'), pkt('continue', 160, WEGOVY, '2025-03-15')];
     const cykle = g.VildaCykleLeczenia.podziel(pts).cykle;
+    // Po R6 (moduł cykli, rata 4) cykl 1 ma też dwie niezgodności „zmiana-substancji” (Saxenda → Wegovy przy
+    // drugim Włączeniu i z powrotem przy Zakończeniu Saxendy). Granice cykli i kursy trajektorii się nie zmieniają.
     expect(cykle.map((c) => [c.numer, c.punkty.map((p) => p.type), c.niezgodnosci.map((n) => n.kod)])).toEqual([
-      [1, ['start', 'continue', 'start', 'end'], ['dwa-wlaczenia']],
+      [1, ['start', 'continue', 'start', 'end'], ['dwa-wlaczenia', 'zmiana-substancji', 'zmiana-substancji']],
       [2, ['continue', 'continue'], []],
     ]);
     expect(J.buildClinicalContext({ obesityTherapyPoints: pts }).redKursy)
