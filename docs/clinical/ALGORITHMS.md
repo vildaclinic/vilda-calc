@@ -6987,12 +6987,61 @@ opisem przeszłości; aplikacja nie ocenia, czy decyzja o zakończeniu była wł
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna wstrzymania werdyktu przy niezgodnym zapisie, brzmień
 werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scalenie i wdrożenie; rata 4.
 
-## Cykle leczenia otyłości — rata 4, moduł: zmiana substancji czynnej zaczyna nowy cykl, R6 (P-OTYLOSC-CYKLE rata 4, `VildaCykleLeczenia` VERSION 2, 2026-10-01)
+## Cykle leczenia otyłości — rata 4: zmiana substancji zaczyna nowy cykl (R6), karta porównania i „Postępy” na cyklach (P-OTYLOSC-CYKLE rata 4, 2026-10-05)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (wpis raty 1);
+2026-10-01: „ruszaj z ratą 4”. Rata 4 domyka plan projektu: **D3** (R6 — zmiana substancji czynnej zaczyna nowy cykl),
+**D6** (karta porównania: dla otyłości granicą są Zakończenie i Włączenie, bez progu przerwy 3 mies.; GH bez zmian)
+i zakładka „Postępy” dorosłego na bieżącym cyklu. Progi, okna i kotwice ChPL (`ObesityResponseCriteria`, P-KRYTERIA,
+P-KOTWICA), drabinki pasm (P-POSTEPY) i reguły werdyktów trajektorii (P-WERDYKT) — bez zmian. Zmienia się to, **które
+punkty** tworzą cykl i kurs leczenia oraz kiedy ocena jest wydawana.
+
+**Części raty** (każda z regułą, przypadkami wejście → wynik, testami i ograniczeniami):
+1. moduł cykli — R6 (podrozdział niżej);
+2. monitor DocPro — R6 w podglądzie pod przyciskami i na banerze porządkowania (niżej);
+3. Karta pacjenta — nota i wstrzymany werdykt przy zmianie substancji czynnej (niżej);
+4. zakładka „Postępy” dorosłego — bieżący cykl (niżej);
+5. karta porównania i analiza trajektorii — kursy otyłości = cykle: w sekcji modułu trajektorii, podrozdział „Kursy
+   leczenia otyłości = cykle” na końcu wpisu P-WERDYKT rata 6 (reguła 1 tamtego wpisu oznaczona „[ZASTĄPIONE dla leczenia
+   otyłości]”).
+
+**Wpływ kliniczny (zbiorczo).**
+- Pacjent z jednym cyklem i jedną substancją: liczby, werdykty i brzmienia bez zmian (poza przypadkami brzegowymi
+  starego zapisu opisanymi w podrozdziałach).
+- Istniejący zapis ze zmianą substancji w cyklu bez Zakończenia dostaje niezgodność `zmiana-substancji`: Karta pacjenta
+  **wstrzymuje werdykt wg ChPL** tego cyklu (D5, rata 3) i nazywa przejście, „Postępy” zdejmują znacznik oceny wg ChPL,
+  monitor pokazuje pozycję banera z poprawką w dwóch krokach. Nic nie zmienia się samo.
+- Monitor nie przyjmie nowej zmiany substancji w trakcie cyklu (dodanie, edycja); przycisk jest wyłączony z powodem.
+- Dziecko z kilkoma cyklami (zmiana leku, wznowienie): karta porównania i analiza trajektorii liczą każdy cykl jako
+  osobny kurs. Okno obejmujące dwa cykle dostaje werdykt populacyjny z dopiskiem „— w tym N mies. leczenia
+  redukcyjnego” zamiast „redukcja w trakcie leczenia”, a chip okresu leczenia liczy się od ostatniego cyklu; pośrednio
+  zmienia to też epikryzę i kopiowany opis pacjenta.
+- Dorosły z kilkoma cyklami: „Postępy” liczą od Włączenia bieżącego cyklu, z drabinką i punktem oceny ChPL jego leku
+  (CY-10: 98,5 kg z 12.11.2024 i „na leczeniu” zamiast 104 kg z 12.01.2024 i „Leczenie odstawione w 40. tygodniu”).
+
+**Sprostowanie do wpisów rat 1–2.** `obesity_migration_assist.js` (import leków z notatek) nie jest ładowany przez żadną
+stronę ani skrypt; wzmianki o nim jako o ścieżce omijającej reguły są nieaktualne. Reguł cykli nadal nie przechodzą:
+`obesityTherapyMonitorSetPoints` (import danych) i `obesityTherapyMonitorAssignDrug` (przypisanie leku podpowiedzianego
+z notatek wszystkim punktom bez leku, bez względu na cykl) — niezgodność wykryje dopiero `podziel` (baner, D5).
+
+**Poza zakresem (osobne wątki).** Pasek terapii na siatkach Karty pacjenta (własna reguła kursu); kursy GH w panelu
+„Analiza trajektorii” Karty (dziś koperta, przerwa GH liczy się tam jako leczenie); przypisanie leku z notatek w obrębie
+cyklu; edycja zbiorcza leku cyklu; rozpoznawanie preparatów spoza listy kryteriów ChPL (np. Ozempic — dziś punkt
+neutralny).
+
+**Wersje** (`npm run podbij-wersje`): WERSJE_RATY_4.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wszystkich części (szczegółowe listy w podrozdziałach),
+w szczególności: wstrzymanie werdyktu ChPL istniejącym zapisom z mieszaną substancją; brzmienia komunikatów R6 i pozycji
+banera; odniesienie „Postępów” dla cyklu bez Włączenia i stan „brak pomiaru w cyklu”; przycięcie tolerancji startu
+i werdykty par przez granicę cykli w karcie porównania; scalenie i wdrożenie.
+
+### Moduł cykli: zmiana substancji czynnej zaczyna nowy cykl — R6 (`VildaCykleLeczenia` VERSION 2)
 
 **Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej),
 w tym **D3** „zmiana substancji czynnej zaczyna nowy cykl”; „ruszaj z ratą 4” — 2026-10-01. Ten wpis opisuje część raty 4
 w module cykli (`vilda_cykle_leczenia.js`); karta porównania, „Postępy”, baner monitora i nota Karty pacjenta dla R6 mają
-własne wpisy raty 4. Źródło progów i okien bez zmian — moduł kryteriów `ObesityResponseCriteria` (ChPL, P-KRYTERIA,
+własne podrozdziały (karta porównania — w sekcji modułu trajektorii). Źródło progów i okien bez zmian — moduł kryteriów `ObesityResponseCriteria` (ChPL, P-KRYTERIA,
 P-KOTWICA); R6 nie zmienia żadnego progu, okna ani liczby, tylko to, **jaki zapis cyklu** wolno wpisać.
 
 **Uzasadnienie kliniczne.** Karta pacjenta wybiera kryteria ChPL cyklu po leku jego ostatniego punktu (a Włączenie jest
@@ -7084,8 +7133,8 @@ edycja punktu), Karty (rata 3, P-OTYLOSC-BEZ-STARTU), P-KOTWICA, kryteriów ChPL
 przyjmie wizyty, Zakończenia ani Włączenia, które wprowadzają zmianę substancji czynnej w trakcie cyklu. **Istniejące
 zapisy** z mieszaną substancją w cyklu dostają niezgodność `zmiana-substancji`: Karta pacjenta (rata 3, D5) **wstrzymuje dla
 takiego cyklu werdykt wg ChPL** („Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana”), a monitor oznacza cykl
-„do uporządkowania”. Dopóki nie wejdzie druga fala raty 4, nota Karty mówi ogólnie „zapis nie spełnia reguł cykli
-leczenia”, a baner monitora nie ma pozycji dla tego kodu (poprawka: Zakończenie starego leku przed pierwszą wizytą nowego).
+„do uporządkowania”; baner monitora prowadzi poprawkę (Zakończenie starego leku przed pierwszą wizytą nowego, potem ta
+wizyta jako Włączenie), a nota Karty nazywa przejście — podrozdziały niżej.
 
 **Ograniczenia.** Rozpoznanie substancji = lista kryteriów ChPL (cztery preparaty z monitora); preparaty spoza niej są
 neutralne. `obesityTherapyMonitorSetPoints` (import) i `obesityTherapyMonitorAssignDrug` (masowe przypisanie leku) nie
@@ -7095,13 +7144,13 @@ w cyklu, który już ma przejście A → B, przejście A → B przesunięte na i
 werdyktem. Błędnie wpisanego leku cyklu z kilkoma wizytami nie da się poprawić pojedynczą edycją (każda pierwsza zmiana
 tworzy przejście) — w tej racie tylko odmowa; zostaje usunięcie wizyt i wpisanie ich ponownie (zrywa powiązanie `obesityPointId` z osią czasu Karty).
 
-**Wersje.** VERSION modułu '1' → '2'. Tokeny `?v=`, precache i `SW_VERSION` — `npm run podbij-wersje` przy integracji raty 4.
+**Wersje.** VERSION modułu '1' → '2'; `?v=`, precache i `SW_VERSION` — wiersz „Wersje” na początku wpisu raty 4.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna R6 i brzmień komunikatów; rozpoznanie substancji przez listę
 kryteriów ChPL (preparaty spoza listy neutralne); wstrzymanie werdyktu ChPL istniejącym zapisom z mieszaną substancją;
 ewentualna edycja zbiorcza leku cyklu; scalenie i wdrożenie.
 
-### Monitor DocPro: R6 w podglądzie pod przyciskami i na banerze porządkowania (P-OTYLOSC-CYKLE rata 4, obszar monitora; `obesity_therapy_monitor.js`, 2026-10-05)
+### Monitor DocPro: R6 w podglądzie pod przyciskami i na banerze porządkowania (`obesity_therapy_monitor.js`)
 
 **Zmiana.** Reguła R6, odmowy i ich brzmienia — bez zmian (moduł wyżej). Monitor dokłada:
 - **Podgląd pod przyciskami rodzaju wizyty** (`CyS`, `CyE`) liczy wizytę z lekiem z formularza, tak jak zapis: przy dodawaniu
@@ -7136,7 +7185,6 @@ ewentualna edycja zbiorcza leku cyklu; scalenie i wdrożenie.
   Nieznany kod niezgodności (np. nowsza wersja modułu) — „W cyklu {N} zapis nie spełnia reguł cykli leczenia.” (+ „Edytuj
   wizytę {d}” dla pierwszego punktu niezgodności): chip cyklu mówi wtedy „do uporządkowania”, więc baner nie może milczeć.
   {Z}/{NA} — `VildaCykleLeczenia.nazwaLeku` (zapas: nazwa leku z nagłówka cyklu), daty jak w pozostałych pozycjach.
-  Zdanie z „Wpływu klinicznego” wyżej o braku pozycji banera dla tego kodu dotyczy stanu przed tą częścią.
 - **Przypomnienie o kroku 2** (`CsK`). Zapis Zakończenia (krok 1) czyści podpowiedź `CsZ`, a cykl bez Włączenia nie jest
   niezgodnością, więc baner znika; zostawała tylko ogólna rada „Dodaj go (także wstecznie)”, która prowadzi do nowego
   Włączenia — drugiej wizyty z tą samą datą — zamiast zmiany istniejącej. `CsZ` zapamiętuje wizytę {dNa} (gdy nie jest
@@ -7189,7 +7237,7 @@ klucz („liraglutide”) — dotyczy modułu cykli, także komunikatów odmów 
 (np. Ozempic) albo bez leku nie zmienia wyboru listy (P-LEK, sprzed raty 4): podgląd i zapis biorą lek z listy z
 poprzedniej czynności — podgląd pokazuje to samo, co zrobiłby zapis.
 
-### Karta pacjenta: nota i wstrzymany werdykt przy zmianie substancji (rata 4, druga fala, `vilda_auth_ui.js`)
+### Karta pacjenta: nota i wstrzymany werdykt przy zmianie substancji czynnej (`vilda_auth_ui.js`)
 
 **Zmiana.** Karta pacjenta (rata 3, D5) wstrzymywała werdykt wg ChPL każdego cyklu z niezgodnością, ale nowy kod
 `zmiana-substancji` opisywała ogólnie („zapis nie spełnia reguł cykli leczenia”), uzasadniała wstrzymanie zdaniem „Nie
@@ -7240,14 +7288,11 @@ asercjach zachowania albo strażnikach źródła. 13 mutacji kodu — każdą wy
 z przełącznikiem cykli, R6-K4 („Ponadto:” w werdykcie), telefon 390 px bez poziomego przewijania. Bez zmian i zielone: e2e
 Karty raty 3, P-OTYLOSC-BEZ-STARTU, P-KOTWICA, kryteriów ChPL, monitora (raty 1, 2, 4-moduł, edycja punktu), „Postępów”.
 
-Zdanie z „Wpływu klinicznego” wpisu modułu wyżej o nocie Karty mówiącej ogólnie „zapis nie spełnia reguł cykli leczenia”
-dotyczy stanu przed tą częścią.
-
 **Ograniczenia.** Wykres „Dawka a przebieg leczenia” w panelu dalej rysuje na jednej osi dawki obu substancji (np. 3 mg/d
 i 2,4 mg/tydz.); pola „Lek”/„Substancja” i odznaka karty pokazują lek ostatniego punktu, a etykieta cyklu — lek Włączenia.
 Uporządkowanie zapisu (Zakończenie starego leku, potem ta wizyta jako Włączenie) przywraca werdykt bez zmian w Karcie.
 
-## Cykle leczenia otyłości — rata 4, „Postępy”: zakładka „Postępy” dorosłego liczy bieżący cykl (P-OTYLOSC-CYKLE rata 4, `vilda_postepy_doroslego.js` 2, 2026-10-01)
+### Zakładka „Postępy” dorosłego liczy bieżący cykl (`vilda_postepy_doroslego.js` VERSION 2)
 
 **Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej);
 2026-10-01: „ruszaj z ratą 4”. Źródła progów, okien i pasm bez zmian: kryteria ChPL z `ObesityResponseCriteria`
@@ -7353,7 +7398,7 @@ o „włączeniu leczenia”. Granica cyklu nie jest rysowana na wykresie. Przyn
 (zachowanie sprzed raty): tydzień odstawienia jest wtedy przybliżony z wieku (np. 26 zamiast 29 z dat), a
 `odstawienieDateISO` niesie napis nie-ISO.
 
-**Wersje** — `npm run podbij-wersje` przy scaleniu raty (integrator). Wewnętrzne: `VildaPostepyDoroslego` 1 → 2,
+**Wersje.** `?v=`, precache i `SW_VERSION` — wiersz „Wersje” na początku wpisu raty 4. Wewnętrzne: `VildaPostepyDoroslego` 1 → 2,
 `VildaPostepyDoroslegoUI` 1 → 2, `VildaPostepyDoroslegoWydruk` 2 → 3 (bez pinów w testach).
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia z bieżącego cyklu, odniesienia cyklu bez
