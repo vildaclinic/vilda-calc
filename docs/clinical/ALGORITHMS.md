@@ -7111,11 +7111,17 @@ wiadomo, od którego punktu liczyć odpowiedź.” i zostawiała kafelek „Pró
   {dZ} → {NA} od {dNa}) bez Zakończenia między nimi.” — {Z}/{NA} to krótka nazwa leku punktu jak w Karcie (`Vr(drug)`;
   bez preparatu etykieta substancji; w ostateczności „inny lek”), {dZ}/{dNa} — data punktu (w zapisie bez dat: „do wieku
   … / od wieku …”). Punkty to `[ostatni punkt starej substancji, pierwszy punkt nowej]` z modułu cykli. Opisywana jest,
-  jak dotąd, pierwsza niezgodność cyklu (drugie Włączenie z innym lekiem dalej opisuje się jako dwa Włączenia);
+  jak dotąd, pierwsza niezgodność cyklu (drugie Włączenie z innym lekiem dalej opisuje się w nocie jako dwa Włączenia),
+  a przy kilku przejściach substancji w cyklu (np. Saxenda → Wegovy → Saxenda) — pierwsze przejście;
 - gdy wśród niezgodności cyklu jest `zmiana-substancji` (`Ob_bz`), werdykt mówi „Progi i okna oceny wg ChPL są różne dla
   każdej substancji, więc nie wiadomo, według którego leku i od którego punktu liczyć odpowiedź.” i zdjęte są **oba**
   kafelki zależne od kryterium — „Redukcja do oceny” i „Próg ChPL”. Liczby przebiegu (masa, redukcja masy i BMI, tempo,
   czas leczenia) zostają — to pomiary, nie ocena wg ChPL;
+- gdy pierwsza niezgodność cyklu jest innego rodzaju (dwa Włączenia, wizyta przed Włączeniem), a `zmiana-substancji` stoi
+  dalej na liście, opis werdyktu dokłada po opisie pierwszej niezgodności „Ponadto: zmiana substancji czynnej w trakcie
+  cyklu ({Z} do {dZ} → {NA} od {dNa}) bez Zakończenia między nimi.” (pierwsze przejście, `Ob_bp`) — bez tego zdanie
+  o progach różnych dla każdej substancji nie miałoby w tekście podstawy (nie padała nazwa żadnego leku). Nota na karcie
+  zostaje przy pierwszej niezgodności — po jej poprawieniu pokaże przejście substancji;
 - inne kody — bez zmian (zdanie „Nie wiadomo, od którego punktu liczyć odpowiedź.”, zdjęty tylko kafelek „Redukcja do
   oceny”). Bez modułu cykli albo bez kryteriów ChPL niezgodności R6 nie ma — Karta działa jak przed ratą 4.
 
@@ -7127,19 +7133,27 @@ Progi, okna, wybór kryterium i liczby dla cykli z jedną substancją — bez zm
 |---|---|---|---|
 | R6-K1 | W Saxenda 12.01.2024 104 kg, K Saxenda 12.04.2024 99 kg, K Wegovy 12.07.2024 97 kg, K Wegovy 12.10.2024 95 kg | nota „Zapis bieżącego cyklu wymaga uporządkowania: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Popraw go w monitorze DocPro — do tego czasu ocena odpowiedzi wg ChPL jest wstrzymana.”; werdykt „Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana” (wait) z opisem przejścia i zdaniem o progach i oknach różnych dla każdej substancji; bez kafelków „Redukcja do oceny” i „Próg ChPL” | nota „…: zapis nie spełnia reguł cykli leczenia. …”; werdykt z „Nie wiadomo, od którego punktu liczyć odpowiedź.”; kafelek „Próg ChPL” — „Wegovy dorośli” |
 | R6-K2 | jak R6-K1, wszystkie punkty z Saxendą (kontrola) | brak noty; werdykt „Odpowiedź wystarczająca — kontynuować leczenie” (−8,7% masy po 39 tyg.); kafelki „Redukcja do oceny” i „Próg ChPL” („Saxenda dorośli”) | to samo |
-| R6-K3 | cykl 1: W, K Saxenda, K Wegovy 12.07.2024, Z Saxenda 15.10.2024; cykl 2: W Wegovy 12.11.2024, K Wegovy 12.02.2025 | „Poprzednie cykle”: „Cykl 1 · Saxenda · … · do uporządkowania”; brak noty (bieżący cykl czysty); cykl 1 w panelu: „Cykl zakończony 15.10.2024 — … W tym cyklu: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) … Progi i okna oceny wg ChPL są różne …”, bez kafelków kryterium; cykl 2: „Ocena kliniczna”, kafelki kryterium są | cykl 1: „W tym cyklu: zapis nie spełnia reguł cykli leczenia. Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
-| R6-K4 | W Saxenda, K Saxenda, **W** Wegovy 12.07.2024, K Wegovy (dwa Włączenia, różne leki) | nota „dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.” (jak dotąd); werdykt ze zdaniem R6 i bez obu kafelków kryterium | zdanie „Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
+| R6-K3 | cykl 1: W, K Saxenda, K Wegovy 12.07.2024, Z Wegovy 15.10.2024 (jedno przejście); cykl 2: W Wegovy 12.11.2024, K Wegovy 12.02.2025 | „Poprzednie cykle”: „Cykl 1 · Saxenda · … · do uporządkowania”; brak noty (bieżący cykl czysty); cykl 1 w panelu: „Cykl zakończony 15.10.2024 — … W tym cyklu: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) … Progi i okna oceny wg ChPL są różne …”, bez kafelków kryterium; cykl 2: „Ocena kliniczna”, kafelki kryterium są | cykl 1: „W tym cyklu: zapis nie spełnia reguł cykli leczenia. Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
+| R6-K4 | W Saxenda 12.01.2024, K Saxenda 12.04.2024, **W** Wegovy 12.07.2024, K Wegovy 12.10.2024 (dwa Włączenia, różne leki) | nota „dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.” (jak dotąd); werdykt „W tym cyklu: dwa punkty „Włączenie” (…) bez Zakończenia między nimi. Ponadto: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Progi i okna oceny wg ChPL są różne …”, bez obu kafelków kryterium | zdanie „Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
 | R6-K5 | jak R6-K1, bez dat (kolejność po wieku) | „(Saxenda do wieku 40 l. 4 mies. → Wegovy od wieku 40 l. 7 mies.)” | „zapis nie spełnia reguł cykli leczenia.” |
+| R6-K6 | K Saxenda 12.01.2024, W Saxenda 12.04.2024, K Wegovy 12.07.2024 (wizyta przed Włączeniem, potem inny lek) | nota „wizyta (12.01.2024) przed Włączeniem (12.04.2024).” (jak dotąd); werdykt „W tym cyklu: wizyta (12.01.2024) przed Włączeniem (12.04.2024). Ponadto: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Progi i okna oceny wg ChPL są różne …”, bez obu kafelków kryterium | zdanie „Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
+| R6-K7 | jak R6-K3, ale Z Saxenda 15.10.2024 (Saxenda → Wegovy → Saxenda: dwa przejścia w cyklu 1) | cykl 1: opis pierwszego przejścia (Saxenda do 12.04.2024 → Wegovy od 12.07.2024), bez „Ponadto:”, zdanie R6, bez kafelków kryterium | jak R6-K3 przed zmianą |
 
-**Testy.** `tests/unit/karta-otylosc-r6.test.mjs` (16): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (`Ob_cy`,
+**Testy.** `tests/unit/karta-otylosc-r6.test.mjs` (21): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (`Ob_cy`,
 `Ob_bd`, `Ob_bn`, pomocnicy dat, wieku i nazwy leku) z prawdziwym modułem cykli i kryteriami ChPL; blok wstrzymania werdyktu
-z wnętrza `Ob_b` wykonywany z podstawionymi zmiennymi (kafelki, zdanie, tytuł); R6-K1…K5, kolejność tablicy odwrócona, nazwa
-leku z etykiety substancji i „inny lek”, kody sprzed raty 4 i nieznany kod bez zmian, kontrola negatywna bez modułu cykli
-i bez kryteriów; strażnicy źródła (kodowanie napisów miejsca: `Ob_bd` w UTF-8, `Ob_b` w `\uXXXX`; dokładnie dwa kafelki
-kryterium). 8 mutacji kodu — każdą wyłapuje co najmniej jeden test. `tests/e2e/karta-otylosc-cykle-rata-4.spec.mjs` (4,
-prawdziwa Karta pacjenta z sejfem testowym): R6-K1, R6-K2, R6-K3 z przełącznikiem cykli, telefon 390 px bez poziomego
-przewijania. Bez zmian i zielone: e2e Karty raty 3, P-OTYLOSC-BEZ-STARTU, P-KOTWICA, kryteriów ChPL, monitora (raty 1, 2,
-4-moduł, edycja punktu), „Postępów”.
+z wnętrza `Ob_b` wykonywany z podstawionymi zmiennymi (kafelki, zdanie, tytuł); R6-K1…K7, kolejność tablicy odwrócona, nazwa
+leku z etykiety substancji i „inny lek”, kody sprzed raty 4 (`dwa-wlaczenia`, `wlaczenie-nie-pierwsze`,
+`zakonczenie-bez-wizyt`) i nieznany kod bez zmian — także w werdykcie (zdanie „Nie wiadomo…”, bez „Ponadto:”), kontrola
+negatywna bez modułu cykli i bez kryteriów; strażnicy źródła (kodowanie napisów miejsca: `Ob_bd` w UTF-8, `Ob_b`
+w `\uXXXX`; dokładnie dwa kafelki kryterium; `Ob_bp` tylko w werdykcie). Testy kontrolne wołają wyłącznie funkcje sprzed tej
+części, więc na kodzie sprzed niej przechodzą (7 z 21) — to dowód niezmienności dla innych kodów; pozostałe 14 padają tam na
+asercjach zachowania albo strażnikach źródła. 13 mutacji kodu — każdą wyłapuje co najmniej jeden test.
+`tests/e2e/karta-otylosc-cykle-rata-4.spec.mjs` (5, prawdziwa Karta pacjenta z sejfem testowym): R6-K1, R6-K2, R6-K3
+z przełącznikiem cykli, R6-K4 („Ponadto:” w werdykcie), telefon 390 px bez poziomego przewijania. Bez zmian i zielone: e2e
+Karty raty 3, P-OTYLOSC-BEZ-STARTU, P-KOTWICA, kryteriów ChPL, monitora (raty 1, 2, 4-moduł, edycja punktu), „Postępów”.
+
+Zdanie z „Wpływu klinicznego” wpisu modułu wyżej o nocie Karty mówiącej ogólnie „zapis nie spełnia reguł cykli leczenia”
+dotyczy stanu przed tą częścią.
 
 **Ograniczenia.** Wykres „Dawka a przebieg leczenia” w panelu dalej rysuje na jednej osi dawki obu substancji (np. 3 mg/d
 i 2,4 mg/tydz.); pola „Lek”/„Substancja” i odznaka karty pokazują lek ostatniego punktu, a etykieta cyklu — lek Włączenia.

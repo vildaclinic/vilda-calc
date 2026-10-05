@@ -6,7 +6,9 @@ import { expect, test } from '../support/test-czas.mjs';
 //  - nota „Zapis … wymaga uporządkowania” mówi, co jest nie tak: lek i data po obu stronach przejścia;
 //  - werdykt ChPL wstrzymany ze zdaniem o różnych progach i oknach ChPL dla każdej substancji;
 //  - bez kafelków „Redukcja do oceny” i „Próg ChPL” — kryterium wybrane po leku ostatniego punktu nie jest
-//    kryterium tego cyklu (dotąd zostawał kafelek progu innego leku, np. „Wegovy dorośli”).
+//    kryterium tego cyklu (dotąd zostawał kafelek progu innego leku, np. „Wegovy dorośli”);
+//  - gdy pierwsza niezgodność cyklu jest innego rodzaju (np. dwa Włączenia), werdykt dokłada „Ponadto:” z opisem
+//    zmiany substancji — inaczej zdanie o progach różnych dla każdej substancji nie miałoby w tekście podstawy.
 // Ten sam zapis z jednym lekiem — werdykt jak dotąd.
 //
 // Dane pacjentów wyłącznie FIKCYJNE; sejf zakładany na potrzeby testu.
@@ -126,9 +128,11 @@ test('kontrola: ten sam zapis z jednym lekiem — werdykt i kafelki kryterium ja
 test('zakończony cykl ze zmianą substancji i czysty cykl bieżący: wstrzymany tylko cykl 1, kafelki wracają w cyklu 2', async ({ page }) => {
   test.setTimeout(150_000);
   await otworzZKontem(page);
+  // Zakończenie z lekiem nowej substancji (Wegovy) — w cyklu 1 jedno przejście (Saxenda → Wegovy), jak w R6-K3
+  // w ALGORITHMS.md i w teście jednostkowym. (Zakończenie z Saxendą dałoby drugie przejście Wegovy → Saxenda.)
   const pid = await pacjent(page, 'R6-DwaCykle', [
     ['start', '2024-01-12', 40, 1, 104, SAXENDA], ['continue', '2024-04-12', 40, 4, 99, SAXENDA],
-    ['continue', '2024-07-12', 40, 7, 97, WEGOVY], ['end', '2024-10-15', 40, 10, 97.5, SAXENDA],
+    ['continue', '2024-07-12', 40, 7, 97, WEGOVY], ['end', '2024-10-15', 40, 10, 97.5, WEGOVY],
     ['start', '2024-11-12', 40, 11, 98.5, WEGOVY], ['continue', '2025-02-12', 41, 2, 95.5, WEGOVY],
   ]);
   const { podsumowanie, panel } = await karta(page, pid);
@@ -157,6 +161,25 @@ test('zakończony cykl ze zmianą substancji i czysty cykl bieżący: wstrzymany
   await przelacznik.nth(0).click();
   await expect(przelacznik.nth(0)).toHaveAttribute('aria-selected', 'true');
   expect((await odczyt(panel)).kafelki).toEqual(expect.arrayContaining(KAFELKI_KRYTERIUM));
+});
+
+test('dwa Włączenia z różnymi lekami: nota o dwóch Włączeniach, werdykt dokłada „Ponadto:” z opisem zmiany substancji', async ({ page }) => {
+  test.setTimeout(150_000);
+  await otworzZKontem(page);
+  const pid = await pacjent(page, 'R6-DwaWlaczenia', [
+    ['start', '2024-01-12', 40, 1, 104, SAXENDA], ['continue', '2024-04-12', 40, 4, 99, SAXENDA],
+    ['start', '2024-07-12', 40, 7, 97, WEGOVY], ['continue', '2024-10-12', 40, 10, 95, WEGOVY],
+  ]);
+  const { podsumowanie, panel } = await karta(page, pid);
+  const DWA_W = 'dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.';
+  // Nota — jak dotąd pierwsza niezgodność cyklu.
+  expect(norm(await podsumowanie.textContent())).toContain(`Zapis bieżącego cyklu wymaga uporządkowania: ${DWA_W} Popraw go`);
+  const w = await odczyt(panel);
+  expect(w.klasa).toContain('wait');
+  expect(w.tytul).toBe(TYTUL_WSTRZYMANY);
+  // Dotąd (pierwsza wersja tej części): samo zdanie o progach różnych dla każdej substancji, bez nazw leków.
+  expect(w.opis).toBe(`W tym cyklu: ${DWA_W} Ponadto: ${OPIS_R6} ${ZDANIE_R6} Popraw zapis w monitorze DocPro (baner „Zapis wymaga uporządkowania”).`);
+  for (const kafelek of KAFELKI_KRYTERIUM) expect(w.kafelki).not.toContain(kafelek);
 });
 
 test('telefon (390 px): nota R6 i wstrzymany werdykt bez poziomego przewijania', async ({ page }) => {
