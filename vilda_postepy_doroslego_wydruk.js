@@ -29,7 +29,7 @@
 (function (w) {
   'use strict';
 
-  var WERSJA = '2';
+  var WERSJA = '3';
 
   var WARIANTY = [
     {
@@ -251,19 +251,45 @@
 
   /* WZGLĘDEM CZEGO LICZĄ SIĘ TE LICZBY — postawione raz, pod kafelkami (właściciel 2026-09-20).
      Wszystkie procenty i delty idą od punktu odniesienia, nie od poprzedniej wizyty. Na kartce
-     do dokumentacji to nie jest ozdoba: za rok nikt nie odtworzy, od czego liczono te procenty. */
+     do dokumentacji to nie jest ozdoba: za rok nikt nie odtworzy, od czego liczono te procenty.
+     Przy więcej niż jednym cyklu leczenia (P-OTYLOSC-CYKLE rata 4) zdanie nazywa bieżący cykl —
+     to samo brzmienie co w panelu (`odniesienieOpis` w module widoku), także drugie zdanie
+     przy bieżącym cyklu bez żadnego pomiaru masy (`brak-pomiaru-cyklu`) i dopisek przy
+     Włączeniu cyklu nr ≥ 2 zapisanym bez masy (`wlaczenieBezMasy`). */
   function odniesienieOpis(model) {
     var o = model.punktOdniesienia;
     if (!o) return null;
-    var co = o.zrodlo === 'start-leczenia'
-      ? 'masy ciała przy włączeniu leczenia (' + liczbaPl(o.masa, 1) + ' kg'
-        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')'
-      : 'pierwszego zapisanego pomiaru (' + liczbaPl(o.masa, 1) + ' kg'
-        + (o.dateISO ? ', ' + dataPl(o.dateISO) : '') + ')';
-    var dop = o.zrodlo === 'start-leczenia' ? ''
-      : ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
-    return tekst('Wszystkie zmiany liczone od ' + co + dop + ', nie od poprzedniej wizyty.',
+    var dane = liczbaPl(o.masa, 1) + ' kg' + (o.dateISO ? ', ' + dataPl(o.dateISO) : '');
+    var cy = cyklOpis(model);
+    var co;
+    var dop = '';
+    var dalej = '';
+    if (o.zrodlo === 'start-leczenia') {
+      co = cy ? 'masy ciała przy włączeniu bieżącego cyklu leczenia (' + cy + '; ' + dane + ')'
+        : 'masy ciała przy włączeniu leczenia (' + dane + ')';
+    } else if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
+      co = 'pierwszego pomiaru bieżącego cyklu leczenia (' + (cy ? cy + '; ' : '') + dane + ')';
+      dop = o.wlaczenieBezMasy
+        ? ' — punkt „Włączenie” tego cyklu nie ma masy ciała, więc procenty nie liczą się od masy sprzed leczenia'
+        : ' — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    } else if (o.zrodlo === 'brak-pomiaru-cyklu') {
+      co = 'pierwszego zapisanego pomiaru (' + dane + ')';
+      dalej = ' Bieżący cykl leczenia' + (cy ? ' (' + cy + ')' : '')
+        + ' nie ma jeszcze pomiaru masy ciała — wykres pokazuje tylko pomiary sprzed tego cyklu.';
+    } else {
+      co = 'pierwszego zapisanego pomiaru (' + dane + ')';
+      dop = ' — w rekordzie nie ma punktu „Włączenie”, więc procenty nie liczą się od masy sprzed leczenia';
+    }
+    return tekst('Wszystkie zmiany liczone od ' + co + dop + ', nie od poprzedniej wizyty.' + dalej,
       { fontSize: 7.5, color: C.opis, margin: [0, 0, 0, 10] });
+  }
+
+  /* „cykl N z M” — tylko przy więcej niż jednym cyklu; przy jednym pusty napis, a wszystkie
+     zdania kartek brzmią co do litery jak przed ratą 4. */
+  function cyklOpis(model) {
+    var c = model && model.cykl;
+    return c && typeof c.liczba === 'number' && c.liczba > 1 && typeof c.numer === 'number'
+      ? 'cykl ' + c.numer + ' z ' + c.liczba : '';
   }
 
   /* ILE BRAKUJE DO NAJBLIŻSZEGO PASMA — liczy SILNIK (`doNastepnegoPasma`).
@@ -365,12 +391,20 @@
     if (!seria.length) return [];
     var ost = seria[seria.length - 1];
     if (typeof ost.zmianaMasyKg !== 'number') return [];
+    /* Przy więcej niż jednym cyklu (rata 4) liczby idą od włączenia BIEŻĄCEGO leczenia, nie od
+       początku obserwacji — „od początku obserwacji” obiecywałoby pacjentowi cały ubytek od
+       pierwszego leku, a kartka pokazuje tylko ten z bieżącego. */
+    var odn = model.punktOdniesienia || {};
+    var dataOdn = odn.dateISO ? ' (' + dataPl(odn.dateISO) + ')' : '';
+    var od = 'Od początku obserwacji';
+    if (odn.zrodlo === 'pierwszy-pomiar-cyklu') od = 'Od pierwszego pomiaru w bieżącym leczeniu' + dataOdn;
+    else if (cyklOpis(model) && odn.zrodlo === 'start-leczenia') od = 'Od włączenia bieżącego leczenia' + dataOdn;
     var zdanie = ost.zmianaMasyKg < 0
-      ? 'Od początku obserwacji masa ciała zmniejszyła się o ' + liczbaPl(-ost.zmianaMasyKg, 1)
+      ? od + ' masa ciała zmniejszyła się o ' + liczbaPl(-ost.zmianaMasyKg, 1)
         + ' kg (' + liczbaPl(ost.ubytekPct, 1) + ' % masy początkowej).'
       /* Przyrost opisujemy tak samo rzeczowo. Wykres i tak go pokazuje, a ominięcie tematu
          na kartce dla pacjenta czytałoby się jak unik. */
-      : 'Od początku obserwacji masa ciała zwiększyła się o ' + liczbaPl(ost.zmianaMasyKg, 1) + ' kg.';
+      : od + ' masa ciała zwiększyła się o ' + liczbaPl(ost.zmianaMasyKg, 1) + ' kg.';
     return [{
       table: { widths: ['*'], body: [[tekst(zdanie, { fontSize: 10.5, margin: [6, 5, 6, 5] })]] },
       layout: {
@@ -425,13 +459,29 @@
     return tekst(cz.join(' '), { fontSize: 7, color: C.opis });
   }
 
+  /* Nagłówek kartki do dokumentacji. Przy więcej niż jednym cyklu (rata 4) mówi, KTÓRE
+     włączenie — bez tego „włączenie leczenia” czytałoby się jak pierwsze w historii. */
+  function punktOdniesieniaKrotko(model) {
+    var o = model.punktOdniesienia;
+    if (!o) return '—';
+    var cy = cyklOpis(model);
+    if (o.zrodlo === 'start-leczenia') {
+      return cy ? 'włączenie bieżącego cyklu leczenia (' + cy + ')' : 'włączenie leczenia';
+    }
+    if (o.zrodlo === 'pierwszy-pomiar-cyklu') {
+      return 'pierwszy pomiar bieżącego cyklu leczenia' + (cy ? ' (' + cy + ')' : '');
+    }
+    if (o.zrodlo === 'brak-pomiaru-cyklu') {
+      return 'pierwszy pomiar — bieżący cykl leczenia' + (cy ? ' (' + cy + ')' : '') + ' bez pomiaru masy';
+    }
+    return 'pierwszy pomiar';
+  }
+
   function naglowek(model, wariant, o) {
     var tytul = wariant === 'pacjent' ? 'Moje postępy' : 'Postępy redukcji masy ciała';
     var pod = wariant === 'pacjent'
       ? 'Zmiany masy ciała w czasie'
-      : ('Punkt odniesienia: ' + (model.punktOdniesienia
-        ? (model.punktOdniesienia.zrodlo === 'start-leczenia' ? 'włączenie leczenia' : 'pierwszy pomiar')
-        : '—'));
+      : ('Punkt odniesienia: ' + punktOdniesieniaKrotko(model));
     var id = [];
     if (o.pacjent) id.push(String(o.pacjent));
     if (wariant === 'kliniczny') {

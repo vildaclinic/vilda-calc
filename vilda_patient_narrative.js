@@ -734,7 +734,7 @@
     return txt.trim() ? { id: 'potencjal', tone: 'plain', text: txt.trim() } : null;
   }
 
-  // 7. Wiek kostny — roznica opisana liczbowo, bez oceny; brzmienie jak w epikryzie.
+  // 7. Wiek kostny — różnica wyłącznie wobec potwierdzonego wieku oznaczenia.
   function zdanieWiekKostny(model, extra) {
     var ba = num(extra.boneAgeYears);
     if (ba == null || ba <= 0) return null;
@@ -744,11 +744,14 @@
     if (przy == null) {
       // Wiek kostny oznaczony N mies. temu porownuje sie z wiekiem metrykalnym Z CHWILI
       // oznaczenia. Do audytu skladu 2026-09-27 porownywano go z dzisiejszym wiekiem, wiec
-      // „opoznienie" roslo z kazdym miesiacem od badania. Bez zadnej daty zostaje „teraz".
+      // „opoznienie" roslo z kazdym miesiacem od badania. Brak czasu badania nie oznacza „teraz”.
       var temu = num(extra.boneAgeMonthsAgo);
-      przy = teraz != null ? (temu != null && temu > 0 ? teraz - temu : teraz) : null;
+      przy = teraz != null && temu != null && temu >= 0 ? teraz - temu : null;
     }
-    if (przy == null) return null;
+    if (przy == null) return {
+      id: 'wiekKostny', tone: 'plain',
+      text: kropka('Wiek kostny oceniono na ' + trwanie(Math.round(ba * 12)) + '; czas oznaczenia nieznany')
+    };
     var dawny = teraz != null && Math.round(teraz - przy) >= 1;
     var baM = Math.round(ba * 12);
     var roznica = baM - przy;

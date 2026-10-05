@@ -18,8 +18,9 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | RENAL | Klirens, eGFR, BSA, wskaźniki moczowe, kamica i adekwatność HD | `kalkulator-klirens.html`, `inline_kalkulator_klirens_*.js`, `clcr_*.js` | 186 dedykowanych testów jednostkowych Klirens oraz cztery zestawy E2E wywołujące rzeczywisty interfejs; dodatkowo testy składni i PWA | wdrożone do testów; nadal wymaga walidacji prospektywnej i końcowej akceptacji nefrologicznej |
 | HOMA | HOMA-IR i interpretacja | `homa-ir.html` | E2E znanego przypadku | test regresyjny; progi populacyjne do pełnego rejestru |
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
+| LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
-| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii | wysoki priorytet przeglądu klinicznego |
+| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
@@ -28,6 +29,84 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | DIABETES | Kalkulatory diabetologiczne | `cukrzyca.html`, `cukrzyca.js` | kontrola składni; brak dedykowanego E2E lub regresji wyników | źródło do weryfikacji |
 
 ## Długi walidacyjne o najwyższym priorytecie
+
+### LAB-PUBERTY — dane i silnik LH/FSH, PR1, 2026-10-03
+
+**Status: przygotowanie do integracji, bez zmiany wyników w aplikacji.** Moduły nie są ładowane przez HTML ani service worker. Silnik `1.0.0` przyjmuje jawny zestaw danych `2026-10-03.1` i zwraca osobno porównanie biochemiczne względem wieku/stadium oraz ocenę czasu rozwoju. Nie modyfikuje obecnego przelicznika, przypiętych wyników ani zapisów pacjentów. Pełny kontrakt, populacje, jednostki, ograniczenia i zakres faktycznego odczytu źródeł: [LH_FSH.md](LH_FSH.md).
+
+Źródła liczbowe to katalogi Mayo [LHPED 62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) (AnshLite LH CLIA) i [FSH 602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753) (Roche Elecsys FSH ECLIA), odczytane 2026-10-03, surowica, IU/L (równoważne liczbowo mIU/mL). **To zakresy konkretnych metod Mayo, nie uniwersalne normy polskiej populacji.** Dane niosą źródło, wersję, populację, metodę, granice z operatorami i ograniczenia. Kandydaci Johannsen 2018 dla minipuberty pozostają nieaktywni: dokładne brzegi wieku i LOD nie zostały rozstrzygnięte. Brak normy nie uruchamia zakresu dorosłych ani interpolacji.
+
+Kryteria czasu rozwoju: Th≥2 przed 8 lat / G≥2 lub objętość jąder ≥4 mL orchidometrem Pradera przed 9 lat; ocena braku początku od 13/14 lat, z wywiadem i leczeniem. Źródła: Endocrine Society 2026 ([PMID 42287186](https://pubmed.ncbi.nlm.nih.gov/42287186/), oficjalne rekomendacje), ENDO-ERN 2021 ([PMID 33512657](https://pubmed.ncbi.nlm.nih.gov/33512657/)) i przegląd diagnostyki 2025 ([PMID 39911767](https://pubmed.ncbi.nlm.nih.gov/39911767/)). Minipuberty ma odrębny kontekst, nie automatyczne wyłączenie ostrzeżeń; zakres odczytanej literatury i wtórnych tabel opisano w dokumencie modułu. P/Ax i nieokreślony numer Tannera nie są podstawiane jako Th/G.
+
+Syntetyczne regresje wywołują nowe funkcje: chłopiec 6 lat, G4, LH 2 IU/L → w zakresie stadium (1,3–9,8), ponad zakresem wieku (≤0,5), zachowane ostrzeżenie rozwoju. Ten sam kontekst i FSH 2 → w obu zakresach (stadium 0,6–5,1; wiek ≤2,3), nadal ostrzeżenie rozwoju, bez etykiety „FSH wysokie”. Niemowlę 3 mies., LH 2 → odrębny kontekst minipuberty; brak metody lub wcześniactwo blokuje niedopasowane RI. Granice urodzin, nieprecyzyjny wiek, `<LOD`, `<`/`≤`, znany wczesny początek, opóźnienie i leczenie mają osobne przypadki.
+
+Wpływ docelowy: zgodność ze stadium nie będzie kasować niezgodności z wiekiem; silnik nie rozpoznaje automatycznie CPP/etiologii i nie ocenia skuteczności GnRHa. **W PR1 efekt kliniczny w działającym UI jest zerowy.** PR2 przygotuje zapis/odczyt wersjonowanej oceny, PR3 uruchomi cały przepływ w zaakceptowanym układzie. Testy techniczne i akceptacja planu nie nadają modułowi statusu „zwalidowany klinicznie”; scalanie i wdrożenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — PR2: zapis i odczyt kontekstu, 2026-10-03
+
+Addytywne `labResult.assessment` przenosi wersjonowaną kopię wyniku PR1 przez przypięcie do wizyty, szyfrowany sejf, import/synchronizację, historię i serie. Czytelny `vilda_lab_snapshot.js` weryfikuje strukturę i zachowuje operatory, wiek w chwili pobrania, pochodzenie norm oraz osobne oceny biochemiczne i kliniczne. Kotwica wizyty pozostaje odrębna od kontekstu próbki. Komentarz nie zmienia oceny; edycja wyniku lub daty unieważnia poprzednią ocenę. Nieznany schemat jest jawnie niedostępny. Brak backfill starszych zapisów; brak wywołania starego silnika trendów dla wpisu z jawną oceną; brak dokładnego punktu dla `<LOD` lub `<x`.
+
+**Wpływ kliniczny: bez zmiany norm, silnika PR1 i obecnego przelicznika.** Nowe UI i producent ocen pozostają wyłączone do PR3. Regresje wywołują rzeczywiste API modelu/sejfu i ścieżki przeglądarkowe na syntetycznych danych: M6/G4/LH2 zachowuje kontekst po zmianie aktualnego pacjenta; zmiana komentarza zachowuje ocenę, zmiana liczby/daty ją unieważnia; `<0,02` nie staje się punktem `0,02`; wpis starszego formatu nie otrzymuje domniemanej metody ani stadium. Szczegóły kontraktu i ograniczenia zgodności z wcześniejszymi wersjami aplikacji: [LH_FSH.md](LH_FSH.md#pr2--transport-historycznej-oceny).
+
+#### LAB-PUBERTY — PR3: aktywacja interfejsu LH/FSH, 2026-10-03
+
+Nowy adapter próbki i wspólny renderer zastępują dawną interpretację wyłącznie LH/FSH, zachowując układ przelicznika, dużą wartość wyniku i konwersje na dotychczasowych miejscach. Ostrzeżenie rozwoju względem wieku jest niezależne od stężenia; zakres wieku i stadium pozostają osobnymi porównaniami. Nie ma uniwersalnego „pacjent prawidłowy”, domyślnego Th/G, metody, braku leczenia ani zastępczej normy dorosłych. Historyczna ocena pochodzi z utrwalonego snapshotu i nie jest przeliczana bieżącym kontekstem; unieważnienie oraz wynik cenzorowany mają jawny widok tekstowy.
+
+**Wpływ kliniczny:** widoczne interpretacje LH/FSH zmieniają się zgodnie z modelem PR1, bez zmiany jego danych `2026-10-03.1` i silnika `1.0.0`. Przykład M6/G4/LH2 zachowuje ostrzeżenie wieku przy `within` dla stadium; M6/G4/FSH2 zachowuje ostrzeżenie bez fałszywego oznaczania FSH jako wysokiego; F7/Th3/LH `<LOD` nie traci ostrzeżenia i nie staje się liczbą na wykresie. Nieznana metoda, stymulacja, GnRHa lub niezgodny kontekst niemowlęcy blokują niedopasowane porównanie, zachowując konwersję i niezależną ocenę kliniczną.
+
+Źródła i ograniczenia metod Mayo, populacje, jednostki, kryteria kliniczne oraz pełny kontrakt są w [LH_FSH.md](LH_FSH.md). Regresje wywołują produkcyjny silnik, adapter, renderer, sejf i interfejs przeglądarkowy. Aktywacja nie nadaje statusu walidacji klinicznej; akceptacja kliniczna i scalenie pozostają po stronie właściciela.
+
+#### LAB-PUBERTY — spójność odczytu kontekstu pacjenta, 2026-10-03
+
+Źródło dojrzewania wiąże odczyt z pacjentem i kolejnością żądań. Formularz LH/FSH udostępnia import danych z karty dopiero po odczycie zgodnego kontekstu; zmiana źródła usuwa nadal skopiowane wartości i potwierdzenia. Ręcznie wprowadzone dane próbki pozostają odrębne. Blokada sejfu i wyczyszczenie sesji unieważniają trwające odczyty. Przed użyciem danych oraz utworzeniem snapshotu formularz ponownie sprawdza aktualne źródło, również w ramce aplikacji.
+
+**Wpływ kliniczny:** poprawka dotyczy doboru danych wejściowych. Nie zmienia tabel, metod, progów, jednostek, silnika `1.0.0` ani danych `2026-10-03.1`. Stosuje istniejące reguły i ograniczenia opisane w [LH_FSH.md](LH_FSH.md), w tym katalogi Mayo R1/R2 oraz kontekst leczenia: syntetyczny M14/G4, LH 2 IU/L, surowica, oznaczenie bazalne i zgodna metoda AnshLite przy `gnrha=yes` → brak dopasowanego bazalnego RI oraz `clinical.code=treatment_context`. Nieznane leczenie pozostaje nieznane. Zapisane historyczne oceny nie są przeliczane ani migrowane.
+
+Regresje wywołują produkcyjne źródło, adapter, formularz, silnik i producenta snapshotów; sprawdzają kolejność zakończenia odczytów, niedostępność danych, zmianę źródła oraz ponowne jawne użycie danych. Testy techniczne nie zastępują akceptacji klinicznej właściciela przed scaleniem.
+
+#### LAB-PUBERTY — kontekst kliniczny po audycie, 2026-10-04
+
+Silnik `1.1.0`, dane i profil kliniczny `2026-10-04.1`. Import zakończonego GnRHa pozostawia kontekst próbki nieznany; nie ustala samodzielnie ekspozycji w dniu pobrania ani okresu wypłukiwania. Regresja i objawy OUN otrzymują niezależne, utrwalane akapity oraz `summary=attention`, przy zachowaniu oceny czasu i porównań stężenia. Wczesne potwierdzone Th≥2 z OUN wskazuje ocenę specjalistyczną, bez automatycznej decyzji o MRI. Pomiar jąder u chłopca <1 roku (mL, potwierdzony dla próbki) dostaje opis braku zweryfikowanego zakresu objętości; nie wprowadzono niemowlęcego progu alarmowego.
+
+**Wpływ kliniczny:** dotychczas pomijany dodatni wywiad staje się widoczny także przy stężeniu w obu RI. Zakresy referencyjne, metody, jednostki i polityka biochemiczna pozostają identyczne. Zapisane wcześniej oceny nie są przeliczane ani uzupełniane dzisiejszymi komunikatami. Populacja: dzieci i młodzież 0–18 lat; ograniczenia wieku, metody i kontekstu próbki pozostają w mocy. Syntetyczny M16/G3, początek 12 lat, LH2 IU/L + regresja/OUN → `within` dla wieku i stadium, zachowany kod czasu, widoczny wywiad i `attention`; F7/Th2 + OUN → osobny komunikat specjalistyczny; M3 mies. z 1/8/15 mL → opis ograniczenia bez klasyfikacji objętości.
+
+Źródła: [oficjalne rekomendacje ES2026](https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty), zwłaszcza uwagi 1.1–1.2; pełne teksty [ENDO-ERN2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8016789/), [Howard2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/) i [Rohayem2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11244267/) (tabela 2 nie stanowi nowego RI). Dokładny kontrakt, wersje źródeł, zakres odczytu i przypadki: [LH_FSH.md](LH_FSH.md#poprawki-kontekstu-klinicznego--4102026). Regresje wywołują rzeczywisty silnik, formularz, snapshot i renderer. Akceptacja kliniczna i scalenie pozostają decyzją właściciela. Brak progu alarmowego objętości niemowlęcej oraz wcześniejsze luki A08/A09 pozostają jawnie otwarte.
+
+#### LAB-PUBERTY — szybki formularz i konfiguracja oznaczenia, 2026-10-04
+
+Po akceptacji uproszczonej makiety formularz automatycznie wykorzystuje dane aktualnego pacjenta, zachowując rozdzielenie bieżącego kontekstu i historycznej próbki. Silnik `1.2.0`, UI `1.2.0`, renderer `1.2.0`, helper snapshotu `1.1.0`; dane i wszystkie RI pozostają niezmienione. Zapisana osobno dla LH/FSH konfiguracja urządzenia wybiera zgodną metodę i wersję profilu; nie zapisuje danych klinicznych ani nie udaje sprawdzenia pojedynczej próbki. Jawny kontekst oznaczenia jest jednym wyborem, bez domniemanego braku leczenia. Numer Tannera wymaga określenia rodzaju cechy; data starszego pobrania nie przenosi dzisiejszego stadium.
+
+**Wpływ kliniczny:** automatyczne porównanie może korzystać z jawnie skonfigurowanej metody oraz wieku z formularza (tak opisanych w wyniku), zamiast wymagać ponownego wpisywania wszystkich danych. Opcjonalny zakres z wydruku to odrębne porównanie liczbowe, nie nowy zwalidowany RI. Konflikt porównań i ostrzeżenia kliniczne pozostają widoczne. Populacja kliniczna 0–18 lat, ograniczenia metod/płci/wieku niezmienione, stężenia IU/L i mIU/mL. Zapisane oceny zachowują kontekst i pochodzenie bez przeliczania historii lub backfill.
+
+Źródła i zakres odczytu: Mayo R1/R2, oficjalne ES2026 K1 oraz pełne teksty K2–K4 w [LH_FSH.md](LH_FSH.md#szybkie-sprawdzenie--4102026). Syntetyczne przypadki produkcyjnego kodu: M6/G4/LH2 z formularza → ostrzeżenie kliniczne mimo RI stadium; konfiguracja LH nie dopasowuje FSH; unknown leczenie blokuje bazalny RI; historyczna próbka nie przejmuje aktualnego stadium; LH15 z ręcznym zakresem0–20 i katalogowym odchyleniem → jawna rozbieżność; operatory `<` i `≤` pozostają różne. Testy silnika, preferencji, snapshotu i UI oraz pełny przepływ przeglądarkowy dokumentują te kontrakty. Akceptacja kliniczna, scalenie i wdrożenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — minimalne wejście i warunkowe porównanie, 2026-10-04
+
+Silnik/formularz/renderer `1.3.0`, snapshot `1.2.0`, dane `2026-10-04.1` bez zmian. Nieustalony rodzaj oznaczenia lub leczenie nie ukrywa samego liczbowego zestawienia z tabelą, jeśli pozostałe warunki doboru profilu są spełnione. Osobne `referencePreview` utrwala zakresy i jawną warunkowość „oznaczenie bazalne bez leczenia hormonalnego”; nie zmienia rzeczywistych `unknown` ani dotychczasowego `biochemical.primary`. Warunki są widoczne przy liczbach również w historii. Jawna stymulacja/leczenie i pozostałe blokady metody, populacji, wieku oraz wcześniactwa pozostają skuteczne.
+
+**Wpływ kliniczny:** wcześniej niedostępne porównanie staje się dostępne jako warunkowe zestawienie liczbowe, bez potwierdzenia zastosowania normy do nieustalonego protokołu. Kliniczne ostrzeżenie nadal ma pierwszeństwo. Syntetyczny M2 lata 9 miesięcy/G3/LH2 IU/L, zgodna metoda, protokół i leczenie `unknown` → wiek `above` względem `<0,02–0,5`, stadium `within` względem `0,09–4,2`, nadal `early_development`; bez stadium działa porównanie wieku. GnRHa/steroidy lub stymulacja → brak bazalnego podglądu. Stare oceny nie otrzymują nowego rozszerzenia.
+
+Źródła: pełne katalogi Mayo [LHPED62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) i [FSH602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), odczyt 2–3.10.2026; [ES2026](https://www.endocrine.org/clinical-practice-guidelines/central-precocious-puberty), [Howard2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC9291332/) i [przegląd diagnostyki CPP2025](https://pmc.ncbi.nlm.nih.gov/articles/PMC11795171/). Populacje przypisane do oznaczeń, surowica, IU/L/mIU/mL; pełne ograniczenia i zakres dostępu w [LH_FSH.md](LH_FSH.md#minimalne-dane-i-porównanie-warunkowe--4102026). Regresje wywołują rzeczywisty silnik, snapshot, renderer i UI. Akceptacja kliniczna oraz scalenie pozostają po stronie właściciela.
+
+#### LAB-PUBERTY — osie zakresów i wyróżnienie znacznego odchylenia, 2026-10-04
+
+Zaakceptowany widok wprowadza osobne osie wieku i stadium na wspólnej skali, z zakresem i znacznikiem dokładnego wyniku. Źródłem granic jest utrwalona ocena, bez ponownego doboru norm lub przeliczenia historii. Silnik, dane `2026-10-04.1`, statusy biochemiczne, jednostki i kryteria rozwoju nie zmieniają się. Nieznana lub cenzorowana dolna granica nie staje się zerem ani dokładnym progiem RI.
+
+**Wpływ kliniczny:** zmienia się hierarchia i siła wizualna informacji. Istniejąca w przeliczniku konwencja `classifyResultState` wyróżnia dokładny wynik `>2 × górna granica` czerwono i `<0,5 × znana dodatnia dolna granica` bursztynowo, z drżeniem znacznika, wykrzyknikiem oraz tekstem „Uwaga — znacznie powyżej/poniżej normy”. Równość nie uruchamia silnego efektu. **Nie jest to próg diagnostyczny LH/FSH, kryterium CPP, pilności ani leczenia pochodzące z publikacji medycznej.** Wyróżnienie jest osobne dla każdej osi; duży wynik wskazuje jego podstawę i ewentualną warunkowość. Zgodność z zakresem stadium nie usuwa ostrzeżenia rozwoju. `<LOD` i inne wyniki niedokładne nie otrzymują punktu ani silnego efektu. Zatrzymanie ruchu nie usuwa tekstu i koloru ostrzeżenia.
+
+Metody, populacje i ograniczenia pozostają przypisane do źródeł: katalogi Mayo [LHPED62999](https://www.mayocliniclabs.com/test-catalog/Overview/62999) i [FSH602753](https://www.mayocliniclabs.com/test-catalog/Overview/602753), odczyt 2–3.10.2026; surowica, LH AnshLite CLIA / FSH Roche Elecsys ECLIA, IU/L i równoważne mIU/mL. Kryteria i ograniczenia kliniczne nadal wynikają z K1–K4 opisanych w [LH_FSH.md](LH_FSH.md#prezentacja-zakresów-i-znacznych-odchyleń--4102026). Nieznany protokół lub leczenie pozostaje warunkowe; znane leczenie/stymulacja i blokady metody/populacji nadal wyłączają nieadekwatne porównanie. Zapisane teksty OUN, regresji i kontekstu niemowlęcego nie są zastępowane nową interpretacją.
+
+Syntetyczne regresje rzeczywistych funkcji: M2 lata 9 miesięcy/G3/LH2 → silne wyróżnienie względem wieku `≤0,5`, spokojny znacznik względem G3 `0,09–4,2`, nadal ostrzeżenie rozwoju; LH1 wobec granicy0,5 → zwykłe odchylenie, LH1,001 → silne; M16/G3/LH0,02 → silne dolne odchylenie przy znanej dodatniej granicy; `<LOD` → brak punktu; warunkowość i zapis historii pozostają zachowane. Pełny kontrakt, przypadki graniczne i ograniczenia: [LH_FSH.md](LH_FSH.md#prezentacja-zakresów-i-znacznych-odchyleń--4102026). Akceptacja kliniczna, scalenie i wdrożenie pozostają decyzją właściciela.
+
+#### LAB-PUBERTY — pola dojrzewania zależne od płci, 2026-10-04
+
+Szybki formularz LH/FSH udostępnia dla M: nieokreślony typ, G, P i Ax; dla F: nieokreślony typ, Th, P i Ax; bez płci: nieokreślony typ, P i Ax. Objętość jąder (mL) i metoda pomiaru są dostępne wyłącznie dla M, a poza tą kategorią ukryte, wyłączone i wyczyszczone. Zmiana płci usuwa niezgodny typ razem ze stadium, bez konwersji Th3↔G3 i bez odtwarzania usuniętych wartości po ponownym wyborze płci. P/Ax pozostają odrębnymi cechami; Ax nie ma stadium liczbowego. Typ ogólnego Tannera z formularza głównego nie jest wyprowadzany z płci. Typ początku z zapisu jest związany z płcią źródłowego zapisu, nie z późniejszą zmianą formularza.
+
+**Wpływ kliniczny:** zmienia się dobór danych wejściowych nowej oceny, więc usunięcie sprzecznej obserwacji może zmienić komunikat rozwoju lub dostępność porównania stadium. Nie zmieniają się silnik `1.3.0`, dane referencyjne `2026-10-04.1`, progi, stężenia IU/L/mIU/mL ani metody Mayo. Populacja: dotychczasowy model pediatryczny 0–18 lat z kategoriami M/F; ograniczenie wyboru nie jest algorytmem oceny ginekomastii ani różnic rozwoju płciowego. Brak właściwego stadium pozostaje ograniczeniem, nie potwierdzeniem prawidłowego rozwoju. Historyczne snapshoty nie są czyszczone, przeliczane ani uzupełniane.
+
+Źródła rozdzielenia gonadalnych cech dojrzewania: Persani i wsp., *ENDO-ERN expert opinion on the differential diagnosis of pubertal delay*, 2021, [DOI 10.1007/s12020-021-02626-z](https://doi.org/10.1007/s12020-021-02626-z); Howard, *Interpretation of reproductive hormones before, during and after the pubertal transition*, 2021, [DOI 10.1111/cen.14578](https://doi.org/10.1111/cen.14578). Odrębność adrenarche: Rosenfield, *Normal and Premature Adrenarche*, 2021, [DOI 10.1210/endrev/bnab009](https://doi.org/10.1210/endrev/bnab009). Nie dodano nowych kryteriów rozpoznania. Pełne ograniczenia i zakres wcześniejszego odczytu: [LH_FSH.md](LH_FSH.md#dobór-pól-dojrzewania-do-płci--4102026).
+
+Syntetyczne regresje rzeczywistego adaptera/formularza i silnika: F/Th3→M usuwa Th3 bez nadania G3; M/G3/8 mL Prader→F→M nie przywraca niezgodnych danych; M/P3→F zachowuje P3; ogólny Tanner III nie staje się G3 lub Th3 przez sam wybór płci; zmiana płci formularza nie przepisuje źródłowego rodzaju początku; M2 lata 9 miesięcy/G3/LH2 zachowuje istniejące porównania i ostrzeżenie rozwoju. Akceptacja kliniczna i scalenie pozostają decyzją właściciela.
 
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
@@ -174,7 +253,7 @@ Moduł `vilda_trajectory_analysis.js` (`window.VildaTrajectoryAnalysis`) analizu
 | 1 | Tanner I (formularz) | tempo <4 cm/rok | alarmowy (baner + konsultacja) — konfudent skoku wykluczony badaniem |
 | 1 | Tanner II–III | tempo <4 cm/rok | czujność (chip „do oceny — osłabiony skok?"); bez banera |
 | 1 | Tanner IV–V | — | bez oceny; nota „deceleracja fizjologiczna po skoku" |
-| 2 | wiek kostny (świeży ≤18 mies.) | norma `getVelocityThreshold(BA)`; BA 10–13/10–15 lat → <4 cm/rok | czujność (błąd oceny BA ~±1 rok) |
+| 2 | wiek kostny ze znanym czasem oznaczenia, 0–12 mies. włącznie (decyzja właściciela 2026-10-02; GROWTH-TRAJ-BA-WIZYTA poniżej) | norma `getVelocityThreshold(BA)`; BA 10–13/10–15 lat → <4 cm/rok | czujność (błąd oceny BA ~±1 rok) |
 | 3 | brak danych | dziewczęta 10–13 lat / chłopcy 10–15 lat: <4 cm/rok | czujność („możliwy późny skok pokwitaniowy") |
 
 Źródło etapu Tannera: pole formularza (karty na stronie głównej — stan bieżący) lub `payload.user.tannerStage` z najnowszego zapisu pacjenta (Karta pacjenta); wpis z rekordu jest używany tylko, gdy zapisany w ciągu ostatnich 12 mies. (`TANNER_FRESH_M` — stadium zmienia się w czasie); starszy jest pokazywany w pasku kontekstu jako „nieaktualny, pominięty w ocenie".
@@ -205,6 +284,32 @@ Przypadki syntetyczne: TRAJ-VELO-T1 (12 lat, 3,0 cm/rok, Tanner I → alarm); TR
 - Profesjonalizacja słownika etykiet (decyzja właściciela 2026-08-14, przegląd całego słownika): „narastanie nadmiaru BMI" → „progresja nadwagi (BMI w paśmie 85.–97. centyla)"; „szybkie narastanie BMI" → „szybka progresja nadwagi (BMI)"; „nadrabia niedobór wzrostu" → „wyrównywanie niedoboru wzrostu (catch-up)"; „nadrabia niedobór masy ciała" → „wyrównywanie niedoboru masy ciała"; „zjazd w dolnym paśmie normy…" → „obniżanie pozycji centylowej w dolnym paśmie normy (3.–10. centyl) — do obserwacji"; „obniżenie poniżej 3. centyla masy" → „obniżenie masy ciała poniżej 3. centyla"; „narasta mimo leczenia" → „przyrost masy mimo leczenia redukcyjnego" (zaktualizowany także klucz mapowania prozy w epikryzie). Świadomie zachowane: „narastanie nadmiaru masy ciała" i „nadrabia względem kanału rodzicielskiego" (ocenione przez właściciela jako bardziej informacyjne). Zmiany równoległe w `verdictCh`/`verdictCh2` i module trajektorii (parytet pilnowany testami).
 - Jedyny własny parametr: `SEGMENT_MIN_GAP_M = 3` mies. — strażnik jakości danych (odcinki krótsze są pokazywane bez werdyktu, bo ocena ΔSDS na tak krótkich odstępach jest niestabilna pomiarowo). Nie jest to próg interpretacji klinicznej.
 - Analiza ma charakter przesiewowy i nie zastępuje oceny klinicznej; nie nadaje się jej statusu „zwalidowana klinicznie".
+
+#### GROWTH-TRAJ-BA-WIZYTA — wiek kostny przypisany do badania i jego użycie w normie tempa (akceptacja właściciela 2026-10-02)
+
+**Problem i wpływ kliniczny.** Wynik wieku kostnego (BA) wpisany podczas pierwszej wizyty był kopiowany do kolejnych pomiarów bez nowego badania. Siatka mogła pokazać ten sam wynik przy dwóch wysokościach, a zapis kolejnej wizyty odnawiał pozorny czas oznaczenia używany w ocenie tempa. Od tej zmiany nowe badanie, poprzedni wynik i efektywna wartość do prognoz mają odrębne znaczenie. Może zmienić się podstawa normy tempa i jej werdykt po pominięciu nieaktualnego lub nieudatowanego BA. Status pozostaje wdrożeniem zaakceptowanym przez właściciela; testy techniczne nie nadają mu walidacji klinicznej.
+
+**Źródła i zakres.** Dotychczasowa hierarchia norm tempa opiera się na: Tanner JM, Whitehouse RH. *Clinical longitudinal standards for height, weight, height velocity, weight velocity, and stages of puberty.* Arch Dis Child. 1976;51(3):170–179. PMID [952550](https://pubmed.ncbi.nlm.nih.gov/952550/), doi:[10.1136/adc.51.3.170](https://doi.org/10.1136/adc.51.3.170); Tanner JM, Davies PS. *Clinical longitudinal standards for height and height velocity for North American children.* J Pediatr. 1985;107(3):317–329. PMID [3875704](https://pubmed.ncbi.nlm.nih.gov/3875704/), doi:[10.1016/S0022-3476(85)80501-1](https://doi.org/10.1016/S0022-3476(85)80501-1). Populacje: dzieci i młodzież brytyjska oraz północnoamerykańska; aplikacja nie ma polskich norm tempa. Jest to ocena przesiewowa, z ograniczeniami oceny dojrzałości i BA opisanymi w GROWTH-TRAJ. **Granica 12 miesięcy jest operacyjną decyzją właściciela z bieżącej rozmowy 2026-10-02, a nie granicą dowiedzioną przez te publikacje.** Zastępuje dotychczasowe 18 miesięcy; nie zmienia progów tempa ani priorytetu aktualnego stadium Tannera.
+
+**Model i jednostki.** `vilda_bone_age.js` udostępnia `VildaBoneAge`. Zapis `advanced.boneAgeContext` i `advanced.data.boneAgeContext` (w obliczeniach `advancedGrowthData.boneAgeContext`) ma postać `{version:1,current,last}`. `current` i `last` są badaniem `{years,atAgeMonths,dateISO,source,id?}` albo `null`: BA w latach, wiek metrykalny (CA) przy oznaczeniu w miesiącach, opcjonalna data ISO i pochodzenie `measured`/`history`/`legacy`. Model przyjmuje skończone BA >0 i ≤20 lat; przeliczenie do miesięcy to `Math.round(years*12)`, wiek oznaczenia jest zaokrąglany do pełnych miesięcy. Wzrost jest w cm, tempo w cm/rok. Zakresy osi poszczególnych siatek i tabele referencyjne pozostają dotychczasowe.
+
+- `current` oznacza badanie bieżącej wizyty, związane z jej wiekiem. Nowy pomiar albo zmiana wieku wizyty przenosi wcześniejsze badanie do `last` i pozostawia puste pole BA; zapis, F5 i przejście Start↔DocPro zachowują jego pierwotny wiek oznaczenia. „Odtwórz zapis” odtwarza badanie zapisanej wizyty. Ponowne wpisanie takiej samej liczby w nowej wizycie jest odrębnym rzeczywistym badaniem.
+- `advanced.boneAgeYears`, historyczny `measurement.boneAgeYears` i `ghTherapyPoints[].boneAge` opisują wynik przypisany do danej wizyty. Przy `current:null` nowy pomiar nie dziedziczy BA z `last`. Bieżący marker siatki jest rysowany tylko dla `current` zgodnego z wiekiem wizyty; markery historyczne pozostają przy swoich pomiarach. Identyczny bieżący i historyczny punkt (wiek+wzrost+BA) jest rysowany raz; równe BA z różnych wizyt są zachowane, bez usuwania danych historii.
+- Efektywne `advancedGrowthData.boneAgeMonths` do prognoz pochodzi z `current || last`. Wzory i tabele prognoz są bez zmian. Ostatni wynik pozostaje dostępny bez automatycznego „postarzania” BA o odstęp do kolejnej wizyty; ta wartość nie stanowi dowodu wykonania nowego badania.
+- Legacy bez schematu v1 zachowuje dotychczasowe wartości i historyczne wpisy. Nie rozpoznajemy ani nie usuwamy automatycznie rzekomych duplikatów dawnych badań. Wartość liczbowa odtwarzana z dawnego zapisu może zachować kotwicę wizyty dla zgodności siatki, ale `source:legacy` nie dowodzi czasu oznaczenia: norma tempa otrzymuje czas nieznany, a opis pacjenta mówi to wprost.
+
+**Strażnik normy tempa.** W `vilda_tempo_wzrastania.js` gałąź BA od wieku metrykalnego ≥120 mies. jest dostępna po gałęzi Tannera. BA ze znanym czasem oznaczenia jest dopuszczone, gdy `0 ≤ wiek ocenianego pomiaru − atAgeMonths ≤ 12` miesięcy, **12 włącznie**. Przy 13 miesiącach, nieznanym czasie albo oznaczeniu późniejszym niż oceniany pomiar BA zostaje pominięte; wynik zawiera powód `stale`/`unknown-time`/`future-time` i jawną notę w kartach, opisie/epikryzie. W granicach istniejącego okna generycznego wraca dotychczasowa norma ≥4 cm/rok (dziewczęta do 156, chłopcy do 180 mies.); poza nim pozostaje brak odpowiedniej normy. Poniżej 120 mies. obowiązuje dotychczasowa drabinka wieku metrykalnego oraz reguła Tannera IV–V. Samo BA nie rozstrzyga stadium dojrzewania ani wskazań do leczenia.
+
+**Przypadki syntetyczne (wyłącznie fikcyjne).**
+
+| Wejście | Oczekiwany wynik |
+| --- | --- |
+| BA 9 lat oznaczony przy CA 123 mies., wzrost 141 cm; kontrola CA 125 mies., 142 cm, bez nowego BA | `current:null`, `last:{years:9,atAgeMonths:123}`; wiersz 125 mies. bez BA; jeden marker BA 108 mies. przy 141 cm, bez markera przy 142 cm; efektywny BA nadal 108 mies. |
+| Na kontroli CA 125 mies. wykonano nowe badanie i ponownie wpisano BA 9 lat | dwa rzeczywiste badania przy CA 123/125 mies.; dwa markery przy 141/142 cm, zachowane po zapisie i F5 |
+| BA 8 lat przy CA 123 mies.; chłopiec, bez Tannera, tempo 4,5 cm/rok w odstępie 12 mies.; oceniany CA 125, 135, 136 mies. | przy CA 125 i 135 BA dopuszczone (2 i 12 mies. od oznaczenia): norma ≥5 cm/rok, czujność; przy CA 136 BA pominięte (13 mies.): norma generyczna ≥4 cm/rok i jawna nota o pominięciu |
+| Ten sam BA z czasem nieznanym albo z CA oznaczenia późniejszym niż oceniany punkt | BA pominięte w normie z odpowiednim powodem; bez przesuwania lub zgadywania czasu badania |
+
+**Dowody techniczne.** Testy jednostkowe `wiek-kostny-pochodzenie`, `wiek-kostny-zapis-wizyty`, `wiek-kostny-vault-zapis`, `wiek-kostny-normy-wizyty` i `bone-age-chart-markers` uruchamiają rzeczywiste moduły produkcyjne: zdarzenia formularza, kolektor/import, zapis i odczyt sejfu, punkty GH, silnik tempa, renderery i generatory opisów. Obejmują granice 12/13 mies., czas nieznany/przyszły, niezmieniony priorytet Tannera, równe wyniki odrębnych badań, legacy oraz odtworzenie kontekstu. `tests/e2e/wiek-kostny-kolejne-wizyty.spec.mjs` zawiera 5 scenariuszy prawdziwego zapisu fikcyjnego pacjenta, siatki, F5 i Start↔DocPro; przeciwko bazie sprzed poprawki zmierzono **5/5 czerwonych**. Są to dowody regresji technicznej i zgodności z przyjętym kontraktem, nie klinicznej trafności norm.
 
 #### Reprezentatywne przypadki syntetyczne
 
@@ -1459,6 +1564,37 @@ Obie szukały winy w **sposobie** kopiowania, nie w treści. Zapis zostaje celow
 **Ograniczenie dowodu.** W repozytorium nie ma WebKita ani iOS, więc skuteczność potwierdza dopiero próba na urządzeniu. Sama **przyczyna** jest natomiast potwierdzona na urządzeniu (adres `waga:` pod łączem), a nie wydedukowana.
 
 *Strażnicy:* `tests/unit/schowek.test.mjs` (12) — tekst zaczynający się od `Waga:` dostaje **dokładnie jeden** U+2060, a reszta treści zostaje bit w bit; U+2060 nie jest odstępem i przeżywa `trim()`; teksty, które nie wyglądają jak adres (`Augmentin –`, `Pow. ciała:`, `Wskaźnik Cole'a:`, `63,4 kg`) **nie** dostają nic; ścieżka zapasowa kopiuje tę samą zabezpieczoną treść; przy dostępnym Clipboard API `execCommand` nie rusza ani razu. `tests/e2e/schowek-podsumowanie.spec.mjs` (3) — na żywej stronie i **systemowym** schowku: pierwszy znak wklejonej treści to U+2060, zaraz za nim `Waga:`.
+
+### P-DS-18 — BMI pacjenta z zespołem Downa w wieku 18,0–19,99 na siatce DS także w karcie głównej, podsumowaniu, schowku i raporcie (SW 1.1.157, 2026-10-01)
+
+**Decyzja właściciela (2026-10-01): „Tylko BMI”.** Ocena BMI (kategoria, ostrzeżenie, klasa, Cole, sugestia WHR, „idealna masa”, nagłówek i karta BMI raportu) idzie za silnikiem BMI i decyzją D3 — siatka DS do 20 lat. Masa, wzrost, ciśnienie, tętno i opisy dorosłego **zostają przy wieku 18 lat** (raport: 18, PDF: 19) — osobna decyzja, jeśli kiedyś.
+
+**Problem.** Wiek 18 lat był wpisany na sztywno w każdym module oceniającym BMI, bez populacji pacjenta. Silnik BMI (`VildaBmi.dorosly`) od P-DS-1 mówi: dorosły od 216 mies., przy DS od 240 mies. Skutek dla dziewczyny z DS, 18;6, 150 cm, 68 kg (BMI 30,2, ok. 56. centyla siatki DS) — na jednej stronie jednocześnie:
+- karta główna: „⚠ Otyłość I stopnia wg BMI. Zalecana konsultacja lekarska.”;
+- „Podsumowanie wyników”: „BMI: 30,2 kg/m² – otyłość I stopnia, aby BMI wróciło do zakresu prawidłowego dla dorosłych, należałoby zredukować masę ciała o ok. 12,0 kg”;
+- raport (nagłówek i karta BMI): „Otyłość I stopnia”, tabela zakresów dorosłego;
+- „Droga do normy” i zalecenia (P-DIETA-B5): „Twoje BMI jest już w normie” / masa prawidłowa wg siatki DS.
+
+**Reguła.**
+1. **Jedno pytanie w silniku** (`vilda_bmi.js`): `VildaBmi.doroslyWgPacjenta(wiekMies)` = `dorosly(wiekMies, populacjaZOpcji({}))` — populacja z resolvera pacjenta. Populacja ogólna: dokładnie `wiekMies >= 216`, jak dotąd.
+2. **Karta główna** (`vilda_update_prep.js`): `vildaUpdatePrepBmiDorosly` / `vildaUpdatePrepBmiDziecko` z silnika (bez silnika — 18 lat). Za nimi idą: kategoria i centyl BMI (siatka DS z notą), ostrzeżenie dorosłego (≥ 25/30/35/40), nota niedowagi dorosłego, ukrywanie kategorii przy nadmiarze, kategoria normalizacji, „do normy”, „blisko górnej granicy” (BMI 24–25), kwalifikacja Cole’a. „Droga do normy BMI” (P-DIETA-B5) korzysta z tej samej funkcji.
+3. **`app.js`** (`vildaBmiDoroslyWiek`): ramka wyniku dorosłego, sugestia WHR (BMI ≥ 25 tylko u dorosłego wg silnika; inaczej 85. centyl / Cole), flaga nadmiaru masy, „idealna masa” (BMI 22 tylko u dorosłego wg silnika; inaczej 50. centyl BMI siatki pacjenta).
+4. **„Podsumowanie wyników”** (`vilda_summary_cards.js`) i **schowek Karty pacjenta** (`vilda_patient_summary_copy.js`): linia BMI i Cole’a z silnika (centyl DS z notą), kolory karty poprzedniego pomiaru i odległość od normy (`ee`) — `doroslyWgPacjenta`. Linie masy, wzrostu i parametry życiowe bez zmian.
+5. **Raport** (`vilda_patient_report.js`): `patientReportBmiDoroslyWiek(e)` = dorosły w bieżącym trybie raportu **i** dorosły wg silnika; `patientReportGetCurrentBasics().bmiDorosly`. Za nimi idą: ton linii BMI/masy, wyróżnienia, zdanie o parametrach masy, nagłówek (także wersja „flagowa”), filtr Cole’a, drabinka celów, karta BMI (centyl i mediana siatki DS dla rzeczywistego wieku — bez obcięcia do 18 lat; bez tabeli zakresów dorosłego) i plakietka karty masy (z klasy BMI). Nagłówek z faktów (`patientReportZbierzFaktyNaglowka`) zostaje przy dotychczasowym progu 18 lat niezależnym od trybu PDF, z dołożoną populacją (`patientReportBmiDoroslyWgSilnika`).
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne):
+- dz. z DS 18;6, 150 cm, 68 kg → karta główna „BMI 30,2 – 56 centyl (bmiSDS +0,14) (Prawidłowe) wg siatki dla zespołu Downa (Zemel 2015)”, bez ostrzeżenia; podsumowanie: ta sama linia + „Wskaźnik Cole’a: 103,3 %”; raport: nagłówek „Prawidłowe”, karta BMI 55,7. centyla bez tabeli dorosłego, plakietka masy „Prawidłowe”; bez sugestii WHR (dotąd: otyłość I stopnia wszędzie poza „Drogą do normy”);
+- dz. z DS 19;3, 150 cm, 88 kg (87. centyl DS) → „⚠ Nadwaga wg BMI – zalecana konsultacja dietetyczna”, raport „Nadwaga”, sugestia WHR (dotąd: otyłość II stopnia dorosłego);
+- dz. z DS 20;0, 150 cm, 68 kg i dz. bez DS 18;6, 150 cm, 68 kg → jak dotąd: „Otyłość I stopnia wg BMI”, podsumowanie dorosłego, raport z tabelą dorosłego.
+- Populacja ogólna — porównanie stron przed i po zmianie: 70 przypadków (kobieta 155 cm, 40–95 kg, wiek 17;11 / 18;0 / 18;6 / 19;0 / 19;6 / 20;0 / 30;0, tryb standardowy i profesjonalny; karta główna, karta Cole’a, podsumowanie, WHR, „Droga do normy”, „idealna masa”, nagłówek, linie i wyróżnienia raportu, karty raportu) — **0 różnic** (poza animowaną liczbą BMI, która odlicza w chwili odczytu).
+
+Testy: `tests/unit/ds-bmi-dorosly-wg-pacjenta.test.mjs` (7: silnik co 0,5 mies. od 0 do 960 mies. dla populacji ogólnej, granica 240 mies. przy DS, przypadek 18;6 z DS na silniku, strażnik kodu w sześciu modułach), `tests/e2e/ds-bmi-18-19.spec.mjs` (3, prawdziwa strona). Zaktualizowane izolowane testy funkcji karty głównej (`ds-straznik`, `wsad-data-pomiaru-i-wsds` — dołożony pomocnik) i odcisk karty BMI raportu (`bmi-wyjscia-tekstowe`: `Bm=lB&&…`).
+
+**Ograniczenia.** Masa i wzrost 18–19-latka z DS w karcie głównej, podsumowaniu i raporcie nadal mają opisy dorosłego („brak porównania do dorosłej populacji”), choć siatki Zemel sięgają 20 lat — świadomie poza zakresem („Tylko BMI”). Interpretacja WHR (progi WHO dla dorosłych od 18 lat) bez zmian.
+
+**Pliki.** `vilda_bmi.js`, `vilda_update_prep.js`, `app.js`, `vilda_summary_cards.js`, `vilda_patient_summary_copy.js`, `vilda_patient_report.js`; `app.js` 230, `vilda_bmi.js` 9, `vilda_patient_report.js` 46, `vilda_patient_summary_copy.js` 14, `vilda_summary_cards.js` 55, `vilda_update_prep.js` 94; SW 1.1.156 → 1.1.157 (numery nadane `npm run podbij-wersje`).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy masa i wzrost 18–19-latka z DS mają też przejść na siatki DS do 20 lat.
 
 ### P-DS-6 — obwód głowy pacjenta z zespołem Downa na siatce Zemel 2015 (SW 1.0.973, 2026-09-16, plan P-DS)
 
@@ -3779,6 +3915,46 @@ Zmiana to jedna linia wyboru wieku, ale płynie w karcie wszędzie: centyle wzro
 **Stan strażników tej serii (zmierzone 2026-09-18).** Sześć plików jednostkowych o prefiksie `karta-pacjenta-` (82 testy) i pięć plików e2e (26 scenariuszy) — wszystkie zielone. Liczby są dziś wyższe niż w chwili scalenia, bo P-NOTATKI raty 1–3 dokładały asercje do tych samych plików. Dwunasty plik o tym prefiksie, `tests/e2e/karta-pacjenta-tempo.spec.mjs`, należy do innej serii (P-TEMPO) i jest udokumentowany osobno.
 
 **Czego nie ustalono.** Numery **H4 i H5** nie występują nigdzie w repozytorium — ani w kodzie, ani w testach, ani w opisach commitów; nie wiadomo, czy zostały odrzucone, scalone z innymi, czy po prostu pominięte w numeracji. Sam dokument audytu sekcji „Pacjenci" nie zachował się, więc oryginalne sformułowania znalezisk P1–P14 i K1–K4 pozostają nieznane — powyższe odtworzenie opisuje, **co zdecydowano i co robi kod**, nie jak brzmiało zgłoszenie.
+
+**Aktualizacja 2026-10-02 — nawigacja list i karty podczas synchronizacji.**
+
+Odświeżenie P1/P4 mogło wyglądać jak samoczynny krok wstecz: ponowny render listy
+zerował wybraną listę (np. Ngenla), wyszukiwanie i przewinięcie. Karta była odłączana
+także przy sygnale synchronizacji bez zmiany jej danych. Spóźniony odczyt listy
+mógł przykryć kartę, którą lekarz zdążył otworzyć.
+
+- Odświeżenie zachowuje filtr, identyfikator listy, wyszukiwanie, sortowanie,
+  przewinięcie i zaznaczenia. Stan jest odczytywany po zakończeniu oczekiwania,
+  aby uwzględnić także wybór dokonany w trakcie odczytu.
+- Karta porównuje pełny rekord i pełne notatki pacjenta. Bez zmiany danych
+  zachowuje DOM; rzeczywista zmiana nadal odświeża kartę i jej aktywną zakładkę.
+  Sam identyfikator migawki ani oś czasu nie obejmują wszystkich zmian notatek.
+- Tylko bieżący odczyt może wyświetlić wynik. Zmiana widoku, zamknięcie okna
+  lub zablokowanie sejfu unieważnia wcześniejsze odczyty. Otwartego edytora
+  nie zastępuje render, również gdy edytor otwarto już podczas oczekiwania.
+- Spóźniony brak rekordu wcześniej wybranej listy nie zeruje nowej wybranej listy.
+
+Regresje: `tests/unit/nawigacja-pacjentow-odswiezanie.test.mjs`,
+`tests/e2e/nawigacja-pacjentow-bez-cofania.spec.mjs` oraz istniejące testy
+`karta-pacjenta-porzadki`. Przykłady korzystają z fikcyjnych danych.
+To zmiana stanu interfejsu: wzory, źródła norm, dawki, jednostki i progi kliniczne
+pozostają bez zmian; nie zmienia się format ani sposób zapisu danych pacjenta.
+
+**Aktualizacja 2026-10-02 — karta pacjenta z chipa nagłówka (P-CHIP-KARTA).**
+
+Po zapisaniu pacjenta „Otwórz Kartę pacjenta” zamykało dymek bez otwierania
+karty na samodzielnym Start i DocPro: handler obsługiwał wyłącznie `VildaShell`,
+dostępny w `app.html`. Teraz używa lokalnej powłoki lub powłoki rodzica ramki,
+a na samodzielnej stronie — `VildaAuthUI.showPatientCard`. Identyfikator pacjenta
+nadal jest odczytywany w momencie kliknięcia. Karta korzysta z istniejącej blokady
+sejfu i ochrony odczytów; otwieranie jej nie wymaga wcześniejszej wizyty na liście.
+Zmiana dotyczy nawigacji, bez wpływu na obliczenia kliniczne i zapis pacjenta.
+
+Regresje: `tests/unit/chip-karta-pacjenta.test.mjs` wykonuje rzeczywisty listener;
+`tests/e2e/chip-karta-pacjenta.spec.mjs` wpisuje i zapisuje fikcyjnego pacjenta,
+następnie otwiera kartę kliknięciem na Start, DocPro i w powłoce oraz sprawdza
+właściwy rekord po zmianie pacjenta. Przed poprawką: 6/9 unit i 3/4 E2E czerwone;
+działająca ścieżka w powłoce jest kontrolą dodatnią.
 
 ## Masa ciała dostaje silnik; zdanie o rozjeździe masa↔BMI (P-MASA etapy 1–2, SW 1.0.993, 2026-09-18)
 
@@ -6842,6 +7018,504 @@ opisem przeszłości; aplikacja nie ocenia, czy decyzja o zakończeniu była wł
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna wstrzymania werdyktu przy niezgodnym zapisie, brzmień
 werdyktu zakończonego cyklu, wykresu per cykl i historii cykli na karcie; scalenie i wdrożenie; rata 4.
 
+## Cykle leczenia otyłości — rata 4: zmiana substancji zaczyna nowy cykl (R6), karta porównania i „Postępy” na cyklach (P-OTYLOSC-CYKLE rata 4, 2026-10-05)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (wpis raty 1);
+2026-10-01: „ruszaj z ratą 4”. Rata 4 domyka plan projektu: **D3** (R6 — zmiana substancji czynnej zaczyna nowy cykl),
+**D6** (karta porównania: dla otyłości granicą są Zakończenie i Włączenie, bez progu przerwy 3 mies.; GH bez zmian)
+i zakładka „Postępy” dorosłego na bieżącym cyklu. Progi, okna i kotwice ChPL (`ObesityResponseCriteria`, P-KRYTERIA,
+P-KOTWICA), drabinki pasm (P-POSTEPY) i progi werdyktów trajektorii (P-WERDYKT) — bez zmian (wyjątek: reguły 2 i 5
+P-WERDYKT rata 6 dla otyłości — tolerancja startu kursu przycięta do końca poprzedniego kursu, podrozdział „Kursy
+leczenia otyłości = cykle”). Zmienia się to, **które punkty** tworzą cykl i kurs leczenia oraz kiedy ocena jest
+wydawana.
+
+**Części raty** (każda z regułą, przypadkami wejście → wynik, testami i ograniczeniami):
+1. moduł cykli — R6 (podrozdział niżej);
+2. monitor DocPro — R6 w podglądzie pod przyciskami i na banerze porządkowania (niżej);
+3. Karta pacjenta — nota i wstrzymany werdykt przy zmianie substancji czynnej (niżej);
+4. zakładka „Postępy” dorosłego — bieżący cykl (niżej);
+5. karta porównania i analiza trajektorii — kursy otyłości = cykle: w sekcji modułu trajektorii, podrozdział „Kursy
+   leczenia otyłości = cykle” na końcu wpisu P-WERDYKT rata 6 (reguła 1 tamtego wpisu oznaczona „[ZASTĄPIONE dla leczenia
+   otyłości]”, reguły 2 i 5 — „[ZMIENIONE dla leczenia otyłości]”).
+
+Kolumny „Przed” i „Przed zmianą” w tabelach przypadków wszystkich części opisują **produkcję 893e7262** (moduł cykli
+VERSION 1, bez R6) — względem niej właściciel akceptuje zmianę. Stan pośredni między częściami raty (np. moduł z R6
+przed częścią monitora albo Karty, pierwsza wersja części przed recenzją) pojawia się tylko w nawiasie, tam gdzie
+wyjaśnia poprawkę po recenzji.
+
+**Wpływ kliniczny (zbiorczo).**
+- Pacjent z jednym cyklem i jedną substancją: liczby, werdykty i brzmienia bez zmian, z wyjątkami opisanymi
+  w podrozdziałach (każdy zmienia wynik i wymaga akceptacji klinicznej):
+  - **wizyta dopisana wstecz w tym samym miesiącu wieku co Zakończenie** (zwykła droga zapisu w monitorze — `sprawdz`
+    stawia ją w tablicy po Zakończeniu): kurs w analizie trajektorii i w karcie porównania kończy się na Zakończeniu,
+    dotąd trwał; zmienia chip okresu leczenia, nagłówek i werdykty par po Zakończeniu (trajektoria, grupa 5);
+  - Zakończenie bez wieku (stary zapis albo import) w zapisie, w którym każdy punkt ma datę: kurs zamknięty na
+    najstarszym wieku cyklu, dotąd
+    trwał — krótsze okno chipu może zmienić jego werdykt z „redukcja w trakcie leczenia” na „brak istotnej odpowiedzi
+    na leczenie — po N mies.” (trajektoria, grupa 3);
+  - Zakończenie bez masy (np. z importu): „Postępy” pokazują „Leczenie odstawione w N. tygodniu”, dotąd „na leczeniu”;
+  - zdublowane Zakończenie (stary zapis albo import; monitor go nie przyjmie): drugie Zakończenie jest osobnym cyklem —
+    w „Postępach” bieżącym, z odniesieniem od niego (cały kurs „sprzed odniesienia”), w trajektorii kursem zerowej
+    długości bez chipu okresu leczenia; Karta pacjenta — jak od raty 3 (nota i wstrzymany werdykt). Do decyzji
+    właściciela.
+- Istniejący zapis ze zmianą substancji w cyklu bez Zakończenia dostaje niezgodność `zmiana-substancji`: Karta pacjenta
+  **wstrzymuje werdykt wg ChPL** tego cyklu (D5, rata 3) i nazywa przejście, „Postępy” zdejmują znacznik oceny wg ChPL,
+  monitor pokazuje pozycję banera z poprawką w dwóch krokach. Nic nie zmienia się samo.
+- Monitor nie przyjmie nowej zmiany substancji w trakcie cyklu (dodanie, edycja); przycisk jest wyłączony z powodem.
+- Dziecko z kilkoma cyklami (zmiana leku, wznowienie): karta porównania i analiza trajektorii liczą każdy cykl jako
+  osobny kurs. Okno obejmujące dwa cykle dostaje werdykt populacyjny z dopiskiem „— w tym N mies. leczenia
+  redukcyjnego” zamiast „redukcja w trakcie leczenia”, a chip okresu leczenia liczy się od ostatniego cyklu — także przy
+  przerwie 3–6 mies. między cyklami, gdy podział na kursy jest taki sam jak dotąd (przycięta tolerancja startu, reguły
+  2 i 5 P-WERDYKT rata 6); pośrednio zmienia to też epikryzę i kopiowany opis pacjenta.
+- Dorosły z kilkoma cyklami: „Postępy” liczą od Włączenia bieżącego cyklu, z drabinką i punktem oceny ChPL jego leku
+  (CY-10: 98,5 kg z 12.11.2024 i „na leczeniu” zamiast 104 kg z 12.01.2024 i „Leczenie odstawione w 40. tygodniu”).
+
+**Sprostowanie do wpisów rat 1–2.** `obesity_migration_assist.js` (import leków z notatek) nie jest ładowany przez żadną
+stronę ani skrypt; wzmianki o nim jako o ścieżce omijającej reguły są nieaktualne. Reguł cykli nadal nie przechodzą:
+`obesityTherapyMonitorSetPoints` (import danych) i `obesityTherapyMonitorAssignDrug` (przypisanie leku podpowiedzianego
+z notatek wszystkim punktom bez leku, bez względu na cykl) — niezgodność wykryje dopiero `podziel` (baner, D5).
+
+**Poza zakresem (osobne wątki).** Pasek terapii na siatkach Karty pacjenta (własna reguła kursu); kursy GH w panelu
+„Analiza trajektorii” Karty (dziś koperta, przerwa GH liczy się tam jako leczenie); przypisanie leku z notatek w obrębie
+cyklu; edycja zbiorcza leku cyklu; rozpoznawanie preparatów spoza listy kryteriów ChPL (np. Ozempic — dziś punkt
+neutralny).
+
+**Wersje** (`npm run podbij-wersje`, baza `audyt` 84a857d). `obesity_therapy_monitor.js` 26, `vilda_auth_ui.js` 476,
+`vilda_chrome.js` 101, `vilda_cykle_leczenia.js` 3, `vilda_postepy_doroslego.js` 7, `vilda_postepy_doroslego_ui.js` 8,
+`vilda_postepy_doroslego_wydruk.js` 6, `vilda_session_bridge.js` 26, `vilda_trajectory_analysis.js` 40; precache
+(append-only); `SW_VERSION` 1.1.157 → 1.1.158 (+ pin); fixture wersji. Wersje wewnętrzne: `VildaCykleLeczenia` 2,
+`VildaTrajectoryAnalysis` 32 (pin w e2e), `VildaPostepyDoroslego` 2, `VildaPostepyDoroslegoUI` 2,
+`VildaPostepyDoroslegoWydruk` 3.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wszystkich części (szczegółowe listy w podrozdziałach),
+w szczególności: wstrzymanie werdyktu ChPL istniejącym zapisom z mieszaną substancją; brzmienia komunikatów R6 i pozycji
+banera; odniesienie „Postępów” dla cyklu bez Włączenia (także z Włączeniem bez masy) i stan „brak pomiaru w cyklu”;
+przycięcie tolerancji startu i werdykty par przez granicę cykli w karcie porównania; zmiany wyniku u pacjenta z jednym
+cyklem wymienione wyżej (zwłaszcza kurs zamknięty na Zakończeniu przy wizycie dopisanej wstecz); jedno rozstrzygnięcie
+dla zdublowanego Zakończenia we wszystkich obszarach — Karta pacjenta, „Postępy”, trajektoria (stan raty 4 albo
+wariant „cykl złożony wyłącznie z Zakończenia nie jest bieżącym cyklem”); scalenie i wdrożenie.
+
+### Moduł cykli: zmiana substancji czynnej zaczyna nowy cykl — R6 (`VildaCykleLeczenia` VERSION 2)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej),
+w tym **D3** „zmiana substancji czynnej zaczyna nowy cykl”; „ruszaj z ratą 4” — 2026-10-01. Ten wpis opisuje część raty 4
+w module cykli (`vilda_cykle_leczenia.js`); karta porównania, „Postępy”, baner monitora i nota Karty pacjenta dla R6 mają
+własne podrozdziały (karta porównania — w sekcji modułu trajektorii). Źródło progów i okien bez zmian — moduł kryteriów `ObesityResponseCriteria` (ChPL, P-KRYTERIA,
+P-KOTWICA); R6 nie zmienia żadnego progu, okna ani liczby, tylko to, **jaki zapis cyklu** wolno wpisać.
+
+**Uzasadnienie kliniczne.** Karta pacjenta wybiera kryteria ChPL cyklu po leku jego ostatniego punktu (a Włączenie jest
+punktem odniesienia). Wizyta z innym lekiem dopisana do trwającego cyklu przełączała więc ocenę całego cyklu na progi
+i okno innej substancji, liczone od masy przy Włączeniu poprzedniego leku. R6 wymusza zapis zmiany leku jako Zakończenie
+cyklu (z dotychczasowym lekiem) i Włączenie nowego cyklu — także tego samego dnia (R3, CY-8).
+
+**Reguła R6 (populacja: każdy pacjent monitora leczenia otyłości — dzieci i dorośli; bez zależności od wieku).**
+- Substancję czynną punktu rozpoznaje `ObesityResponseCriteria.resolveDrug(drug, substance).substanceKey` — ta sama funkcja,
+  którą Karta wybiera kryteria ChPL. Porównywany jest wyłącznie klucz substancji (liraglutyd, semaglutyd, naltrekson/bupropion,
+  tirzepatyd); nazwa preparatu, zapis i dawka bez znaczenia („Semaglutyd (Wegovy) 0,25 mg” i „… 0,5 mg”, etykieta
+  substancji i jej klucz to ta sama substancja).
+- Punkt bez leku albo z lekiem nierozpoznanym przez kryteria (np. „Ozempic” bez nazwy substancji) jest **neutralny**: nie
+  tworzy przejścia i nie jest blokowany. Rozszerzenie listy rozpoznawanych preparatów to osobna zmiana kryteriów.
+- R6 **nie jest granicą cyklu** (D1 — granicę wyznacza wyłącznie Zakończenie). W obrębie cyklu każde przejście „ostatnia
+  znana substancja ≠ bieżąca” to niezgodność `zmiana-substancji` `{punkty: [ostatni punkt starej substancji, pierwszy punkt
+  nowej], z, na}`, dopisywana po kodach sprzed raty 4 (drugie Włączenie z innym lekiem w aktywnym cyklu dalej zgłasza się
+  jako `dwa-wlaczenia`).
+- Dodanie i edycja, które wprowadzają **nowe** przejście, są odrzucane (bez `wybor` — wybór jest zarezerwowany dla D2).
+  Przejście rozpoznaje się po parze substancji i numerze jej wystąpienia w zapisie, nie po punktach: stare przejście
+  przesunięte na inny punkt w tym samym cyklu (np. dopisana wcześniejsza wizyta starego leku, poprawka leku pierwszej wizyty
+  nowego) albo do cyklu o innym numerze po przenumerowaniu nie jest nowe. Mimo zgodnej pary i numeru przejście jest
+  **nowe**, gdy (a) w jego cyklu — rozpoznanym po pozostałych punktach, nie po numerze — przed akcją nie było przejścia tej
+  pary (zmiana daty nie przenosi starego przejścia do innego, poprawnego cyklu), albo (b) pierwszym punktem nowej
+  substancji staje się dopiero tą akcją Zakończenie (Zakończenie ma lek swojego cyklu). Stare Zakończenie z lekiem nowej
+  substancji wolno edytować (D5). Usunięcia R6 nie blokuje nigdy.
+- Stary zapis ze zmianą substancji w cyklu (D5) nie jest poprawiany sam. Zakończenie wpisane tak, że odcięta część cyklu
+  zaczyna się od pierwszego punktu nowej substancji, jest poprawką (jak rozdzielenie dwóch Włączeń w racie 2): odcięta
+  część staje się cyklem bez Włączenia, a lekarz zmienia potem tę wizytę na Włączenie. Takie Zakończenie musi mieć lek
+  zamykanego cyklu albo być bez leku — z lekiem nowej substancji jest odrzucane (b).
+- Remis dat: gdy żadne miejsce w remisie nie przechodzi, a któreś odpadło przez R6, komunikat mówi o zmianie substancji
+  (przyczyna niezależna od miejsca), nie o „dacie w trakcie cyklu”. Wyjątek: pytanie o cykl bez Włączenia (D2) nie jest
+  odmową — Kontynuacja z nowym lekiem w dniu Zakończenia poprzedniego cyklu dostaje pytanie „Zapisz jako Włączenie nowego
+  cyklu” / „Cykl bez Włączenia”, a nie odmowę R6 (przed Zakończeniem zmieniałaby substancję, po nim zaczyna nowy cykl).
+- Bez modułu kryteriów (np. offline bez pliku z `OPTIONAL_ASSETS`) R6 nie działa — zasada sprzed raty 4.
+
+**Komunikaty** (`kod: 'zmiana-substancji'`; {N} — numer cyklu, {Z}/{NA} — krótka nazwa leku punktu starej/nowej substancji):
+- wizyta (Kontynuacja) z nowym lekiem na końcu cyklu, który nie ma jeszcze Zakończenia (tylko tam radę da się wykonać):
+  „Ta wizyta ma inną substancję czynną ({NA}) niż wcześniejsze wizyty cyklu {N} ({Z}). Zmiana substancji czynnej zaczyna
+  nowy cykl: zapisz najpierw Zakończenie cyklu {N} z lekiem {Z} (może mieć tę samą datę), a tę wizytę jako Włączenie nowego
+  cyklu.” — pod przyciskiem „Inna substancja niż w cyklu {N} ({Z})”;
+- Zakończenie z nowym lekiem: „Zakończenie zamyka cykl {N} — zapisz je z lekiem tego cyklu ({Z}). Nowy lek ({NA}) zapiszesz
+  potem jako Włączenie nowego cyklu, także tego samego dnia.” — „Zakończenie z lekiem cyklu {N} ({Z})”;
+- Włączenie z innym lekiem niż wizyty jego cyklu (dopisane wstecz albo edycja leku Włączenia): „Wizyty cyklu {N} mają inną
+  substancję czynną ({NA}) niż to Włączenie ({Z}). Włączenie musi mieć lek swojego cyklu — popraw lek albo datę.” —
+  „Inna substancja niż wizyty cyklu {N} ({NA})”;
+- pozostałe (np. zmiana daty przenosząca wizytę do cyklu z innym lekiem; wizyta z nowym lekiem w środku cyklu albo
+  w cyklu, który ma już Zakończenie — także w remisie z nim — gdzie drugiego Zakończenia nie da się wpisać): „Po tej zmianie
+  w cyklu {N} zmieniałaby się substancja czynna ({Z} → {NA}) bez Zakończenia między wizytami. Zmiana substancji czynnej
+  zaczyna nowy cykl — popraw lek albo datę.” — „Zmiana substancji w cyklu {N}”.
+
+**Kod.** `vilda_cykle_leczenia.js` (VERSION '1' → '2'): `substancja(p)` i `nazwaLeku(p)` (eksportowane; `nazwaLeku`
+używa monitor DocPro — Karta pacjenta ma własną krótką nazwę leku `Ob_ln` → `Vr`; eksportu `substancja` nie woła dziś
+żaden inny plik), niezgodność `zmiana-substancji` w `podziel`, sygnatura przejścia po parze substancji, wyjątek
+rozcięcia dla poprawki starego zapisu, wybór komunikatu i odmowa R6 w remisie dat w `sprawdz`. Kryteria czytane w chwili
+wywołania, w `try/catch` — wyjątek daje punkt neutralny, nigdy wyjątek z `sprawdz` (monitor przy wyjątku dodałby punkt bez
+reguł). Monitor (`vt`, `Ed`/`Eb`) przekazuje lek z formularza bez zmian po swojej stronie.
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm; leki zapisane jak w monitorze — tekst opcji i etykieta
+substancji):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą |
+|---|---|---|---|
+| CY-11 | W Saxenda 12.01.2024; dodaj K 12.04.2024 z Wegovy | odmowa „Ta wizyta ma inną substancję czynną (Wegovy) niż wcześniejsze wizyty cyklu 1 (Saxenda)…”; punkt nie dodany; ta sama K z Saxendą — dodana | dodana; Karta oceniała cykl wg kryteriów Wegovy od 104 kg |
+| R6-Z | W, K Saxenda; dodaj Z 15.10.2024 z Wegovy | odmowa „Zakończenie zamyka cykl 1 — zapisz je z lekiem tego cyklu (Saxenda)…”; Z z Saxendą, potem W Wegovy tego samego dnia — dwa cykle (CY-8) | dodane |
+| R6-W | W, K Saxenda; dodaj W 10.06.2024 z Wegovy | odmowa `dwa-wlaczenia` (jak dotąd) | odmowa `dwa-wlaczenia` |
+| R6-N | W, K Saxenda; dodaj K bez leku albo z „Ozempic” | dodana (punkt neutralny) | dodana |
+| R6-E | W, K Saxenda; zmień lek Włączenia na Wegovy | odmowa „Wizyty cyklu 1 mają inną substancję czynną (Saxenda) niż to Włączenie (Wegovy)…” | zapisane |
+| R6-D | dwa cykle (CY-9); zmień datę K 12.04.2024 (Saxenda) na 01.03.2025 | odmowa „Po tej zmianie w cyklu 2 zmieniałaby się substancja czynna (Wegovy → Saxenda)…”; z lekiem Wegovy — pytanie o przeniesienie | pytanie o przeniesienie |
+| R6-S | stary zapis W 12.01.2024, K 12.04.2024 (Saxenda), K 12.02.2025, K 10.05.2025 (Wegovy) | jeden cykl, niezgodność `zmiana-substancji` [12.04.2024, 12.02.2025]; K Wegovy na końcu — dodana; K Saxenda na końcu — odmowa; usunięcie K 12.02.2025 — przechodzi | jeden cykl bez niezgodności |
+| R6-P | jak R6-S; dodaj Z Saxenda 12.02.2025, potem zmień K 12.02.2025 na W | cykle „W, K, Z” i „K, K” (bez Włączenia), potem „W, K” — bez niezgodności | Z odrzucone (rozcięcie cyklu) |
+| R6-R | K 10.01.2025, K 10.04.2025 (Saxenda, cykl bez Włączenia); dodaj W 10.01.2025 z Wegovy | odmowa „Wizyty cyklu 1 mają inną substancję czynną (Saxenda) niż to Włączenie (Wegovy)…” | dodane jako Włączenie cyklu |
+| R6-K | cykl 1 Saxenda zakończony 15.10.2024; dodaj K 15.10.2024 z Wegovy | pytanie D2 „… Ta wizyta rozpocznie cykl 2.” (Włączenie nowego cyklu albo cykl bez Włączenia) | dodana do cyklu 1 przed Zakończeniem |
+| R6-KZ | jak R6-K, ale istnieje już cykl 2 (W 12.11.2024, K 12.02.2025 Wegovy); dodaj K 15.10.2024 z Wegovy | odmowa „Po tej zmianie w cyklu 1 zmieniałaby się substancja czynna (Saxenda → Wegovy)… — popraw lek albo datę.” (bez rady o dopisaniu Zakończenia — cykl 1 już je ma) | dodana do cyklu 1 przed Zakończeniem |
+| R6-ZP | jak R6-S; dodaj Z 10.11.2024 albo 12.02.2025 z Wegovy | odmowa „Zakończenie zamyka cykl 1 — zapisz je z lekiem tego cyklu (Saxenda)…”; Z bez leku — jak Z z Saxendą (R6-P) | Z odrzucone (rozcięcie cyklu) |
+| R6-PD | cykl 1: W, K Saxenda, K 12.07.2024 Wegovy, Z Saxenda; cykl 2: W 12.11.2024, K 12.02.2025 Saxenda; zmień datę K Wegovy na 01.03.2025 | odmowa „Po tej zmianie w cyklu 2 zmieniałaby się substancja czynna (Saxenda → Wegovy)…”; gdy cykl 2 to Wegovy — pytanie o przeniesienie, zapis bez niezgodności | pytanie o przeniesienie |
+
+**Testy.** `tests/unit/cykle-leczenia.test.mjs` 33 → 66 (prawdziwy moduł z prawdziwymi kryteriami ChPL — loader
+`tests/support/load-browser-script.mjs` ładuje je teraz jako zależność modułu cykli): przypadki z tabeli, rozpoznanie
+substancji i nazwa leku, przesunięcie starego przejścia, przenumerowanie cykli, wybór komunikatu przy nowym przejściu
+wcześniej w zapisie niż stare, rada o Zakończeniu tylko tam, gdzie da się ją wykonać, edycja starego Zakończenia z lekiem
+nowej substancji, Kontynuacja z nowym lekiem w dniu Zakończenia (pytanie D2), kontrola negatywna bez kryteriów, kryteria
+załadowane po module, awaria kryteriów (punkt neutralny, bez wyjątku). Test „zmiana daty przenosząca punkt do innego
+cyklu wymaga potwierdzenia” przenosi teraz wizytę z lekiem cyklu docelowego (z innym lekiem — osobny test odmowy R6).
+`tests/e2e/otylosc-cykle-rata-4-modul.spec.mjs` 4 (prawdziwy DocPro: CY-11 i Zakończenie z nowym lekiem odrzucone przy kliknięciu, CY-8 przechodzi, edycja leku Włączenia odrzucona przy zapisie,
+telefon 390 px bez poziomego przewijania). Bez zmian i zielone: `otylosc-edycja-punktu.test.mjs`, e2e monitora (raty 1–2,
+edycja punktu), Karty (rata 3, P-OTYLOSC-BEZ-STARTU), P-KOTWICA, kryteriów ChPL, porównania, „Postępów” i kursów raty 6.
+
+**Wpływ kliniczny.** Liczby, progi, okna i werdykty dla zapisów z jedną substancją w cyklu — bez zmian. Monitor nie
+przyjmie wizyty, Zakończenia ani Włączenia, które wprowadzają zmianę substancji czynnej w trakcie cyklu. **Istniejące
+zapisy** z mieszaną substancją w cyklu dostają niezgodność `zmiana-substancji`: Karta pacjenta (rata 3, D5) **wstrzymuje dla
+takiego cyklu werdykt wg ChPL** („Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana”), a monitor oznacza cykl
+„do uporządkowania”; baner monitora prowadzi poprawkę (Zakończenie starego leku przed pierwszą wizytą nowego, potem ta
+wizyta jako Włączenie), a nota Karty nazywa przejście — podrozdziały niżej.
+
+**Ograniczenia.** Rozpoznanie substancji = lista kryteriów ChPL (cztery preparaty z monitora); preparaty spoza niej są
+neutralne. `obesityTherapyMonitorSetPoints` (import) i `obesityTherapyMonitorAssignDrug` (masowe przypisanie leku) nie
+przechodzą przez reguły — przejście wykryje dopiero `podziel` (niezgodność, baner). Sygnatura po parze substancji oznacza, że
+w cyklu, który już ma przejście A → B, przejście A → B przesunięte na inny punkt tego cyklu nie jest „nowe” i przechodzi
+(np. Kontynuacja z lekiem B dopisana przed pierwszą wizytą B) — cykl zostaje wtedy „do uporządkowania” z wstrzymanym
+werdyktem. Błędnie wpisanego leku cyklu z kilkoma wizytami nie da się poprawić pojedynczą edycją (każda pierwsza zmiana
+tworzy przejście) — w tej racie tylko odmowa; zostaje usunięcie wizyt i wpisanie ich ponownie (zrywa powiązanie `obesityPointId` z osią czasu Karty).
+
+**Wersje.** VERSION modułu '1' → '2'; `?v=`, precache i `SW_VERSION` — wiersz „Wersje” na początku wpisu raty 4.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna R6 i brzmień komunikatów; rozpoznanie substancji przez listę
+kryteriów ChPL (preparaty spoza listy neutralne); wstrzymanie werdyktu ChPL istniejącym zapisom z mieszaną substancją;
+ewentualna edycja zbiorcza leku cyklu; scalenie i wdrożenie.
+
+### Monitor DocPro: R6 w podglądzie pod przyciskami i na banerze porządkowania (`obesity_therapy_monitor.js`)
+
+**Zmiana.** Reguła R6, odmowy i ich brzmienia — bez zmian (moduł wyżej). Monitor dokłada:
+- **Podgląd pod przyciskami rodzaju wizyty** (`CyS`, `CyE`) liczy wizytę z lekiem z formularza, tak jak zapis: przy dodawaniu
+  z listy leku (`ht()`, jak `vt`), przy edycji z `Eh()` (lista, a gdy nic nie pokazuje — lek edytowanego punktu, jak `Eb`).
+  Przycisk, który R6 odrzuci, dostaje `aria-disabled` i krótki powód z modułu (np. „Inna substancja niż w cyklu 1
+  (Saxenda)”, „Zakończenie z lekiem cyklu 1 (Saxenda)”). Zmiana leku na liście (`change` na `#obesityMonDrug`) przelicza
+  podgląd. Kandydat podglądu nie miał dotąd leku (przy edycji — lek zapisany w punkcie): w produkcji 893e7262 (bez R6)
+  nie miało to znaczenia — przyciski były aktywne, a zapis przechodził; sam moduł z R6 bez tej części dawałby aktywny
+  przycisk i odmowę dopiero po kliknięciu.
+- **Baner „Zapis wymaga uporządkowania”** (`CyB`) — pozycja dla niezgodności `zmiana-substancji`: „W cyklu {N} zmienia się
+  substancja czynna: {Z} (do {dZ}) → {NA} (od {dNa}) bez Zakończenia między nimi.” z akcjami „Dopisz Zakończenie przed
+  {dNa}” i „Edytuj wizytę {dNa}” (pomyłka w leku). Podpowiedź pierwszej akcji (`CsZ`, w miejscu przycisków, nic nie
+  zapisuje): „Wpisz wizytę kończącą leczenie {Z} — datę (najpóźniej {dNa}; może być ten sam dzień), masę i wzrost — wybierz
+  w liście lek {Z} i „Zakończenie leczenia”. Potem zmień wizytę {dNa} na Włączenie (ołówek przy wizycie).” — drugie zdanie
+  pomijane, gdy wizyta {dNa} już jest Włączeniem (wtedy obok stoi też dotychczasowa pozycja dwóch Włączeń albo wizyty
+  przed Włączeniem).
+  Gdy nowa substancja zaczyna się od drugiego Włączenia (w cyklu jednocześnie `dwa-wlaczenia` i `zmiana-substancji` dla tego
+  samego punktu), pozycja dwóch Włączeń zostaje jako zdanie, ale bez akcji (`CsP`): „Zmień {d} na Kontynuację”
+  zostawiłoby zmianę substancji w cyklu (pozycja R6 i jej podpowiedź prowadzą z powrotem do Włączenia), a drugi przycisk
+  „Dopisz Zakończenie przed {d}” miałby inną podpowiedź niż ten w pozycji R6. Akcje daje pozycja R6. Po poprawce leku
+  drugiego Włączenia (pomyłka w liście) zostaje sama pozycja dwóch Włączeń — z dotychczasowymi akcjami. Pozycja bez akcji
+  nie dostaje pustego paska przycisków.
+  Gdy pierwszym punktem nowej substancji jest samo Zakończenie (stary zapis), drugiego Zakończenia cykl nie przyjmie
+  (`drugie-zakonczenie`), więc pozycja nie ma akcji „Dopisz Zakończenie”. Brzmienie zależy od tego, czy przed Zakończeniem
+  cykl miał jedną substancję:
+  - jedna substancja (jedyna niezgodność R6 w cyklu): „Zakończenie cyklu {N} ({dNa}) ma inny lek ({NA}) niż wcześniejsze
+    wizyty tego cyklu ({Z}, do {dZ}). Zakończenie zapisuje się z lekiem swojego cyklu.” — akcja „Edytuj wizytę {dNa}”;
+  - lek zmieniał się w tym cyklu już wcześniej (`CsW`; np. Saxenda → Wegovy → Zakończenie z Saxendą — jedna pomyłkowa
+    wizyta w środku): „Zakończenie cyklu {N} ({dNa}) ma inny lek ({NA}) niż wcześniejsza wizyta tego cyklu ({Z}, {dZ}).
+    Lek zmienia się w tym cyklu więcej niż raz — sprawdź leki tych wizyt.” — akcje „Edytuj wizytę {dZ}” i „Edytuj wizytę
+    {dNa}”. Pierwsze brzmienie byłoby tu nieprawdziwe (cykl zaczął się od leku Zakończenia) i z jedyną akcją prowadziło do
+    zmiany leku Zakończenia, a dalsze kroki banera zrobiłyby z jednej pomyłkowej wizyty osobny cykl (recenzja raty 4).
+  Nieznany kod niezgodności (np. nowsza wersja modułu) — „W cyklu {N} zapis nie spełnia reguł cykli leczenia.” (+ „Edytuj
+  wizytę {d}” dla pierwszego punktu niezgodności): chip cyklu mówi wtedy „do uporządkowania”, więc baner nie może milczeć.
+  {Z}/{NA} — `VildaCykleLeczenia.nazwaLeku` (zapas: nazwa leku z nagłówka cyklu), daty jak w pozostałych pozycjach.
+- **Przypomnienie o kroku 2** (`CsK`). Zapis Zakończenia (krok 1) czyści podpowiedź `CsZ`, a cykl bez Włączenia nie jest
+  niezgodnością, więc baner znika; zostawała tylko ogólna rada „Dodaj go (także wstecznie)”, która prowadzi do nowego
+  Włączenia — drugiej wizyty z tą samą datą — zamiast zmiany istniejącej. `CsZ` zapamiętuje wizytę {dNa} (gdy nie jest
+  Włączeniem); po najbliższym udanym dodaniu punktu (`vt`), jeśli ta wizyta zaczyna teraz cykl bez Włączenia, w miejscu
+  komunikatów stoi „Zakończenie zapisane. Teraz zmień wizytę {dNa} na Włączenie (ołówek przy wizycie) — nie dopisuj
+  nowego Włączenia.” z przyciskiem „Edytuj wizytę {dNa}”. Jednorazowe (znika przy kolejnym zapisie albo po kliknięciu
+  ołówka); nic nie zapisuje.
+
+**Wpływ kliniczny.** Liczby, progi, okna, werdykty i zapis punktów — bez zmian; nic nie zmienia się samo (D5). Zmienia się
+to, co lekarz widzi przed kliknięciem (powód pod przyciskiem) i na banerze: stary zapis ze zmianą substancji w cyklu
+(werdykt ChPL w Karcie wstrzymany przez R6 z części modułu) dostaje pozycję z poprawką w dwóch krokach zamiast ukrytego
+banera (w produkcji 893e7262 baner był ukryty, a cykl nie miał chipu „do uporządkowania”).
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm; leki jak w monitorze):
+
+| Przypadek | Wejście | Oczekiwany wynik (po) | Przed (produkcja 893e7262) |
+|---|---|---|---|
+| B-1 (CY-11) | W Saxenda 12.01.2024; formularz 12.04.2024, lista Wegovy | Kontynuacja i Zakończenie `aria-disabled`: „Inna substancja niż w cyklu 1 (Saxenda)”, „Zakończenie z lekiem cyklu 1 (Saxenda)”; bez przydziału; po wyborze Saxendy oba aktywne, „Ta wizyta trafi do cyklu 1 (aktywny, od 12.01.2024).” | oba aktywne, przydział „Ta wizyta trafi do cyklu 1 (aktywny, od 12.01.2024).”; zapis przechodzi — Kontynuacja i Zakończenie z Wegovy dodane do cyklu Saxendy |
+| B-2 | W, K Saxenda; ołówek przy W, lista Wegovy | Włączenie `aria-disabled`: „Inna substancja niż wizyty cyklu 1 (Saxenda)” | aktywne; zapis przechodzi (Włączenie z Wegovy w cyklu Saxendy) |
+| B-3 | jak B-2 (cykl 2 Wegovy od 12.11.2024); ołówek przy K 12.04.2024, data 01.03.2025, lista pusta | Kontynuacja `aria-disabled`: „Zmiana substancji w cyklu 2” (zapis weźmie lek punktu); z Wegovy na liście — aktywna (zapis pyta o przeniesienie) | aktywna w obu wariantach; zapis pyta „Nowa data przenosi punkt z cyklu 1 do cyklu 2. Zapisać zmiany?” także z lekiem Saxenda |
+| B-4 (R6-S) | W 12.01.2024, K 12.04.2024 (Saxenda), K 12.07.2024, K 12.10.2024 (Wegovy) | baner: „W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.”, chip „do uporządkowania” | baner ukryty, bez chipu „do uporządkowania” (cykl bez niezgodności) |
+| B-5 (R6-P) | jak B-4; „Dopisz Zakończenie przed 12.07.2024” → Z Saxenda 12.07.2024; „Edytuj wizytę 12.07.2024” z przypomnienia (albo ołówek) → Włączenie | podpowiedź `CsZ`; cykle „W, K, Z” i „K, K” (bez Włączenia) i przypomnienie „Zakończenie zapisane. Teraz zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie) — nie dopisuj nowego Włączenia.”; potem nagłówek cyklu 2 „Wegovy (semaglutyd) · od 12.07.2024” z Włączeniem; baner znika | baner ukryty; Zakończenie Saxendy 12.07.2024 odrzucone („Po 12.07.2024 w cyklu 1 są jeszcze wizyty (1). Zakończenie musi być ostatnim punktem cyklu.”) — poprawki nie dało się wpisać (po części modułu Zakończenie przechodziło, a po kroku 1 zostawała tylko rada „Dodaj go (także wstecznie)” — stąd przypomnienie `CsK`) |
+| B-6 | W, K Saxenda, Z 15.10.2024 Wegovy (stary zapis) | „Zakończenie cyklu 1 (15.10.2024) ma inny lek (Wegovy) niż wcześniejsze wizyty tego cyklu (Saxenda, do 12.04.2024)…”, tylko „Edytuj wizytę 15.10.2024” | baner ukryty |
+| B-7 | niezgodność o nieznanym kodzie w cyklu 2 | „W cyklu 2 zapis nie spełnia reguł cykli leczenia.” + „Edytuj wizytę …” | baner ukryty |
+| B-8 | W Saxenda; lista bez leku | przyciski jak przed ratą 4 (punkt neutralny) | to samo |
+| B-9 (A→B→A) | W 12.01.2024, K 12.04.2024 Saxenda, K 12.07.2024 Wegovy, Z 15.10.2024 Saxenda | pozycja R6 jak B-4 oraz „Zakończenie cyklu 1 (15.10.2024) ma inny lek (Saxenda) niż wcześniejsza wizyta tego cyklu (Wegovy, 12.07.2024). Lek zmienia się w tym cyklu więcej niż raz — sprawdź leki tych wizyt.” z „Edytuj wizytę 12.07.2024” i „Edytuj wizytę 15.10.2024”; poprawka leku wizyty 12.07.2024 na Saxendę — baner znika | baner ukryty (pierwsza wersja tej części przed recenzją: „…niż wcześniejsze wizyty tego cyklu (Wegovy, do 12.07.2024). Zakończenie zapisuje się z lekiem swojego cyklu.” tylko z „Edytuj wizytę 15.10.2024”) |
+| B-10 | W, K Saxenda, W 12.07.2024 i K 12.10.2024 Wegovy | „W cyklu 1 są dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.” bez akcji; pozycja R6 jak B-4 z „Dopisz Zakończenie przed 12.07.2024” (podpowiedź bez kroku 2) i „Edytuj wizytę 12.07.2024” | sama pozycja dwóch Włączeń (rata 2) z akcjami „Zmień 12.07.2024 na Kontynuację” i „Dopisz Zakończenie przed 12.07.2024”, bez pozycji R6 (pierwsza wersja tej części przed recenzją: dwa przyciski „Dopisz Zakończenie przed 12.07.2024” z różnymi podpowiedziami) |
+
+**Testy.** `tests/unit/monitor-otylosci-r6.test.mjs` 27 — funkcje wycięte z pliku produkcyjnego (`CyS`, `CyE`, `Eh`, `ht`,
+`CyB`, `CsB`, `CsU`, `CsZ`, `CsN`, `CsW`, `CsP`, `CsK` z pomocnikami dat) na atrapie DOM z prawdziwym modułem cykli
+i kryteriami ChPL: B-1–B-10, poprawka dwukrokowa z przypomnieniem o kroku 2 (i bez niego, gdy wizyta nie zaczyna cyklu bez
+Włączenia, już jest Włączeniem albo podpowiedź nie miała kroku 2), przejście w cyklu 2, wariant Zakończenia z trzecią
+substancją i z niezgodnością R6 tylko w innym cyklu, dwa Włączenia z tym samym lekiem (dotychczasowe akcje), test
+negatywny bez kryteriów, zapas nazw bez `nazwaLeku`, niepełna niezgodność R6 bez wyjątku (pozycja zapasowa — `CyB` stoi
+w rysowaniu tabeli bez `try`); strażniki tekstowe (`j()` z nasłuchem listy, `vt` z `CsK()` po udanym dodaniu, dokładnie 2
+odczyty `data-substance`, funkcje `Cs*` bez przesłaniania). Każdą z 10 mutacji poprawek z recenzji (`CsW`, `CsP`, pusty
+pasek akcji, zapamiętanie i warunki `CsK`, wywołanie w `vt`) wyłapuje co najmniej jeden test.
+`tests/e2e/otylosc-cykle-rata-4.spec.mjs` 6 (prawdziwy DocPro): B-1 z kliknięciem i odświeżeniem po zmianie leku, B-2,
+B-4/B-5 z akcją „Edytuj wizytę” i przypomnieniem o kroku 2, B-9 z poprawką leku wizyty w środku cyklu, B-10, telefon 390 px
+bez poziomego przewijania; na kodzie pierwszej wersji tej części padają B-4/B-5, B-9 i B-10.
+Bez zmian i zielone: e2e monitora (raty 1, 2, 4-moduł), edycji punktu, Karty (rata 3, P-OTYLOSC-BEZ-STARTU), P-KOTWICA,
+kryteriów ChPL; testy jednostkowe monitora (`monitor-otylosci-lek`, `otylosc-edycja-punktu`, strażnik stylów).
+
+**Ograniczenia.** Przycisk „Ustaw” podpowiedzi leku z notatek (`obesity_therapy.js`) ustawia listę bez zdarzenia `change` —
+podgląd odświeży się przy następnym wpisie w formularzu; kliknięcie i tak sprawdza regułę. Ołówek przy wizycie nie
+zmienia rodzaju sam — krok 2 poprawki robi lekarz (przypomnienie tylko podpowiada). W trybie wieku (punkt bez daty) daty
+w pozycjach i podpowiedzi to `CyM` („w wieku 40 l. 6 mies.”), więc brzmienia są niezgrabne („(do w wieku …)”, „Dopisz
+Zakończenie przed w wieku …”) — tak samo jak w pozycjach dwóch Włączeń z raty 2; ewentualna zmiana dla wszystkich pozycji
+banera — do decyzji właściciela. Dla punktów z samym kluczem substancji (import bez nazwy preparatu) `nazwaLeku` oddaje
+klucz („liraglutide”) — dotyczy modułu cykli, także komunikatów odmów i Karty. Ołówek przy punkcie z lekiem spoza listy
+(np. Ozempic) albo bez leku nie zmienia wyboru listy (P-LEK, sprzed raty 4): podgląd i zapis biorą lek z listy z
+poprzedniej czynności — podgląd pokazuje to samo, co zrobiłby zapis.
+
+### Karta pacjenta: nota i wstrzymany werdykt przy zmianie substancji czynnej (`vilda_auth_ui.js`)
+
+**Zmiana.** W produkcji 893e7262 (moduł cykli VERSION 1, bez R6) cykl ze zmianą substancji czynnej nie miał żadnej
+niezgodności: Karta nie pokazywała noty i wydawała werdykt wg ChPL według kryterium leku **ostatniego** punktu cyklu,
+liczony od masy przy Włączeniu poprzedniego leku — np. „Ocena kliniczna — brak twardego progu SmPC” wg „Wegovy dorośli”
+w cyklu rozpoczętym Saxendą od 104 kg, a w zakończonym cyklu Saxenda → Wegovy → Zakończenie z Saxendą „Cykl
+zakończony — odpowiedź była wystarczająca wg ChPL” wg „Saxenda dorośli”. Od R6 (moduł wyżej) taki cykl ma niezgodność
+`zmiana-substancji`, a Karta (rata 3, D5) wstrzymuje werdykt wg ChPL każdego cyklu z niezgodnością. Sama reguła D5
+opisywałaby jednak nowy kod ogólnie („zapis nie spełnia reguł cykli leczenia”), uzasadniała wstrzymanie zdaniem „Nie
+wiadomo, od którego punktu liczyć odpowiedź.” i zostawiałaby kafelek „Próg ChPL” z kryterium leku ostatniego punktu.
+Ta część raty:
+- nota na karcie i opis w werdykcie (`Ob_bd`) mówią, co jest nie tak: „zmiana substancji czynnej w trakcie cyklu ({Z} do
+  {dZ} → {NA} od {dNa}) bez Zakończenia między nimi.” — {Z}/{NA} to krótka nazwa leku punktu jak w Karcie (`Vr(drug)`;
+  bez preparatu etykieta substancji; w ostateczności „inny lek”), {dZ}/{dNa} — data punktu (w zapisie bez dat: „do wieku
+  … / od wieku …”). Punkty to `[ostatni punkt starej substancji, pierwszy punkt nowej]` z modułu cykli. Opisywana jest,
+  jak dotąd, pierwsza niezgodność cyklu (drugie Włączenie z innym lekiem dalej opisuje się w nocie jako dwa Włączenia),
+  a przy kilku przejściach substancji w cyklu (np. Saxenda → Wegovy → Saxenda) — pierwsze przejście;
+- gdy wśród niezgodności cyklu jest `zmiana-substancji` (`Ob_bz`), werdykt mówi „Progi i okna oceny wg ChPL są różne dla
+  każdej substancji, więc nie wiadomo, według którego leku i od którego punktu liczyć odpowiedź.” i zdjęte są **oba**
+  kafelki zależne od kryterium — „Redukcja do oceny” i „Próg ChPL”. Liczby przebiegu (masa, redukcja masy i BMI, tempo,
+  czas leczenia) zostają — to pomiary, nie ocena wg ChPL;
+- gdy pierwsza niezgodność cyklu jest innego rodzaju (dwa Włączenia, wizyta przed Włączeniem), a `zmiana-substancji` stoi
+  dalej na liście, opis werdyktu dokłada po opisie pierwszej niezgodności „Ponadto: zmiana substancji czynnej w trakcie
+  cyklu ({Z} do {dZ} → {NA} od {dNa}) bez Zakończenia między nimi.” (pierwsze przejście, `Ob_bp`) — bez tego zdanie
+  o progach różnych dla każdej substancji nie miałoby w tekście podstawy (nie padała nazwa żadnego leku). Nota na karcie
+  zostaje przy pierwszej niezgodności — po jej poprawieniu pokaże przejście substancji;
+- inne kody — bez zmian (zdanie „Nie wiadomo, od którego punktu liczyć odpowiedź.”, zdjęty tylko kafelek „Redukcja do
+  oceny”). Bez modułu cykli albo bez kryteriów ChPL niezgodności R6 nie ma — nota i werdykt Karty jak przed ratą 4
+  (kursy otyłości w panelach „Analiza trajektorii” i „Porównanie pomiarów” zmieniają się także bez modułu — patrz
+  „Ścieżka bez modułu cykli” w podrozdziale „Kursy leczenia otyłości = cykle”).
+
+Progi, okna, wybór kryterium i liczby dla cykli z jedną substancją — bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm, wiek realny wg dat; leki zapisane jak w monitorze):
+
+| Przypadek | Wejście | Oczekiwany wynik (po) | Przed zmianą (produkcja 893e7262) |
+|---|---|---|---|
+| R6-K1 | W Saxenda 12.01.2024 104 kg, K Saxenda 12.04.2024 99 kg, K Wegovy 12.07.2024 97 kg, K Wegovy 12.10.2024 95 kg | nota „Zapis bieżącego cyklu wymaga uporządkowania: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Popraw go w monitorze DocPro — do tego czasu ocena odpowiedzi wg ChPL jest wstrzymana.”; werdykt „Zapis cyklu wymaga uporządkowania — ocena wg ChPL wstrzymana” (wait) z opisem przejścia i zdaniem o progach i oknach różnych dla każdej substancji; bez kafelków „Redukcja do oceny” i „Próg ChPL” | brak noty, werdykt wydany wg kryterium leku ostatniego punktu („Wegovy dorośli”): „Ocena kliniczna — brak twardego progu SmPC” (wait), „… Obecnie: −8,7% masy.” (od 104 kg); kafelki „Redukcja do oceny” (−8,7%) i „Próg ChPL” (—) |
+| R6-K2 | jak R6-K1, wszystkie punkty z Saxendą (kontrola) | brak noty; werdykt „Odpowiedź wystarczająca — kontynuować leczenie” (−8,7% masy po 39 tyg.); kafelki „Redukcja do oceny” i „Próg ChPL” („Saxenda dorośli”) | to samo |
+| R6-K3 | cykl 1: W, K Saxenda, K Wegovy 12.07.2024, Z Wegovy 15.10.2024 (jedno przejście); cykl 2: W Wegovy 12.11.2024, K Wegovy 12.02.2025 | „Poprzednie cykle”: „Cykl 1 · Saxenda · … · do uporządkowania”; brak noty (bieżący cykl czysty); cykl 1 w panelu: „Cykl zakończony 15.10.2024 — … W tym cyklu: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) … Progi i okna oceny wg ChPL są różne …”, bez kafelków kryterium; cykl 2: „Ocena kliniczna”, kafelki kryterium są | „Poprzednie cykle”: „Cykl 1 · Saxenda · 12.01.2024 – 15.10.2024 · 39,6 tyg. · −6,3% masy” (bez „do uporządkowania”); cykl 1 w panelu: „Ocena kliniczna — brak twardego progu SmPC” wg „Wegovy dorośli” (lek Zakończenia), „… Obecnie: −6,3% masy.”, z kafelkami kryterium; cykl 2 — jak po zmianie |
+| R6-K4 | W Saxenda 12.01.2024, K Saxenda 12.04.2024, **W** Wegovy 12.07.2024, K Wegovy 12.10.2024 (dwa Włączenia, różne leki) | nota „dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.” (jak dotąd); werdykt „W tym cyklu: dwa punkty „Włączenie” (…) bez Zakończenia między nimi. Ponadto: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Progi i okna oceny wg ChPL są różne …”, bez obu kafelków kryterium | zdanie „Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
+| R6-K5 | jak R6-K1, bez dat (kolejność po wieku) | „(Saxenda do wieku 40 l. 4 mies. → Wegovy od wieku 40 l. 7 mies.)” | jak R6-K1: brak noty, „Ocena kliniczna — brak twardego progu SmPC” (−8,7% masy), oba kafelki kryterium |
+| R6-K6 | K Saxenda 12.01.2024, W Saxenda 12.04.2024, K Wegovy 12.07.2024 (wizyta przed Włączeniem, potem inny lek) | nota „wizyta (12.01.2024) przed Włączeniem (12.04.2024).” (jak dotąd); werdykt „W tym cyklu: wizyta (12.01.2024) przed Włączeniem (12.04.2024). Ponadto: zmiana substancji czynnej w trakcie cyklu (Saxenda do 12.04.2024 → Wegovy od 12.07.2024) bez Zakończenia między nimi. Progi i okna oceny wg ChPL są różne …”, bez obu kafelków kryterium | zdanie „Nie wiadomo, od którego punktu …”, kafelek „Próg ChPL” zostawał |
+| R6-K7 | jak R6-K3, ale Z Saxenda 15.10.2024 (Saxenda → Wegovy → Saxenda: dwa przejścia w cyklu 1) | cykl 1: opis pierwszego przejścia (Saxenda do 12.04.2024 → Wegovy od 12.07.2024), bez „Ponadto:”, zdanie R6, bez kafelków kryterium | cykl 1 bez „do uporządkowania”; w panelu wg „Saxenda dorośli” (lek Zakończenia): „Cykl zakończony — odpowiedź była wystarczająca wg ChPL” (good), −6,3% po 36 tyg. dawki podtrzymującej, „Próg ChPL” ≥5 % |
+
+**Testy.** `tests/unit/karta-otylosc-r6.test.mjs` (21): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (`Ob_cy`,
+`Ob_bd`, `Ob_bn`, pomocnicy dat, wieku i nazwy leku) z prawdziwym modułem cykli i kryteriami ChPL; blok wstrzymania werdyktu
+z wnętrza `Ob_b` wykonywany z podstawionymi zmiennymi (kafelki, zdanie, tytuł); R6-K1…K7, kolejność tablicy odwrócona, nazwa
+leku z etykiety substancji i „inny lek”, kody sprzed raty 4 (`dwa-wlaczenia`, `wlaczenie-nie-pierwsze`,
+`zakonczenie-bez-wizyt`) i nieznany kod bez zmian — także w werdykcie (zdanie „Nie wiadomo…”, bez „Ponadto:”), kontrola
+negatywna bez modułu cykli i bez kryteriów; strażnicy źródła (kodowanie napisów miejsca: `Ob_bd` w UTF-8, `Ob_b`
+w `\uXXXX`; dokładnie dwa kafelki kryterium; `Ob_bp` tylko w werdykcie). Testy kontrolne wołają wyłącznie funkcje sprzed tej
+części, więc na kodzie sprzed niej przechodzą (7 z 21) — to dowód niezmienności dla innych kodów; pozostałe 14 padają tam na
+asercjach zachowania albo strażnikach źródła. 13 mutacji kodu — każdą wyłapuje co najmniej jeden test.
+`tests/e2e/karta-otylosc-cykle-rata-4.spec.mjs` (5, prawdziwa Karta pacjenta z sejfem testowym): R6-K1, R6-K2, R6-K3
+z przełącznikiem cykli, R6-K4 („Ponadto:” w werdykcie), telefon 390 px bez poziomego przewijania. Bez zmian i zielone: e2e
+Karty raty 3, P-OTYLOSC-BEZ-STARTU, P-KOTWICA, kryteriów ChPL, monitora (raty 1, 2, 4-moduł, edycja punktu), „Postępów”.
+
+**Ograniczenia.** Wykres „Dawka a przebieg leczenia” w panelu dalej rysuje na jednej osi dawki obu substancji (np. 3 mg/d
+i 2,4 mg/tydz.); pola „Lek”/„Substancja” i odznaka karty pokazują lek ostatniego punktu, a etykieta cyklu — lek Włączenia.
+Uporządkowanie zapisu (Zakończenie starego leku, potem ta wizyta jako Włączenie) przywraca werdykt bez zmian w Karcie.
+
+### Zakładka „Postępy” dorosłego liczy bieżący cykl (`vilda_postepy_doroslego.js` VERSION 2)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (rata 1 wyżej);
+2026-10-01: „ruszaj z ratą 4”. Źródła progów, okien i pasm bez zmian: kryteria ChPL z `ObesityResponseCriteria`
+(P-KRYTERIA, P-KOTWICA), drabinki pasm z `VildaPostepyDoroslegoDane` (P-POSTEPY). Ta część raty zmienia tylko to,
+**które punkty leczenia** wyznaczają punkt odniesienia, lek i stan leczenia w zakładce „Postępy” dorosłego.
+
+**Zmiany kliniczne** (silnik `vilda_postepy_doroslego.js`, `analizuj`):
+1. **Punkt odniesienia = Włączenie bieżącego cyklu.** Punkty monitora dzieli na cykle `VildaCykleLeczenia.podziel` —
+   na SUROWYCH punktach (`normPomiar` gubi `type`/`id` i odrzuca punkt bez masy), granicą jest wyłącznie Zakończenie;
+   bieżący cykl = ostatni. Dotąd: pierwsze Włączenie w KOLEJNOŚCI ZAPISU tablicy. Od odniesienia zależą masa
+   początkowa, każdy procent i kilogram, delta BMI, pasma, nadir, odzysk, kamienie i tydzień na osi. Pożyczka daty
+   Włączenia od „bliźniaczki” w serii (audyt F1) — bez zmian, ale tylko dla Włączenia bieżącego cyklu.
+2. **Cykl nr ≥ 2 bez Włączenia** (stara Kontynuacja po Zakończeniu): odniesieniem jest pierwszy pomiar serii z kluczem
+   osi nie wcześniejszym niż pierwszy punkt tego cyklu, z pominięciem pomiarów będących punktami wcześniejszych cykli
+   (przy remisie dat z pomiarem spoza punktów leczenia — pomiar będący punktem tego cyklu; gdy seria takiego pomiaru nie
+   ma — pierwszy punkt cyklu z masą), `zrodlo: 'pierwszy-pomiar-cyklu'`; znacznik ChPL zdjęty jak w F1
+   (`bezOsi: 'brak-punktu-wlaczenia'`). Dotąd: pierwsze Włączenie poprzedniego cyklu. Cykl nr 1 bez Włączenia — bez zmian
+   (F1: pierwszy pomiar serii).
+   **Włączenie cyklu nr ≥ 2 zapisane bez masy** (import albo stary zapis — monitor wymusza masę tylko dla nowych punktów;
+   poprawka po recenzji całości raty): `normSeria` odrzuca takie Włączenie, więc arytmetyka jest ta sama co w cyklu bez
+   Włączenia (`pierwszy-pomiar-cyklu`, pierwszy pomiar tego cyklu), ale cykl MA Włączenie (`cykl.bezWlaczenia` = false;
+   monitor i Karta pacjenta je pokazują). Flaga `punktOdniesienia.wlaczenieBezMasy` zmienia tylko brzmienia (niżej) —
+   przed poprawką tekst mówił „ten cykl nie ma punktu „Włączenie””.
+   **Cykl nr ≥ 2 bez żadnego pomiaru masy** (np. jedyna Kontynuacja z importu bez masy; poprawka po recenzji raty):
+   `zrodlo: 'brak-pomiaru-cyklu'`. Arytmetyka od pierwszego pomiaru serii (innej masy nie ma), ale WSZYSTKIE pomiary są
+   „sprzed odniesienia”: bez kamieni, nadiru, odzysku, pasm osiągniętych i werdyktu kafelka zmiany; ostrzeżenie
+   „Bieżący cykl leczenia nie ma jeszcze pomiaru masy ciała — wykres pokazuje wyłącznie pomiary sprzed tego cyklu, bez
+   kamieni milowych i bez oceny postępu.”; tydzień odstawienia pusty (zero osi należy do wcześniejszego cyklu). Przed
+   poprawką: cichy powrót do pierwszego pomiaru serii jako `pierwszy-pomiar`, z kamieniami cyklu 1 i tekstem „w rekordzie
+   nie ma punktu „Włączenie””.
+3. **Lek** (drabinka pasm, punkt oceny wg ChPL, „Lek:” w opisie, „lek:” na kartce do dokumentacji): Włączenie bieżącego
+   cyklu z lekiem, inaczej pierwszy punkt tego cyklu z lekiem. Dotąd: pierwsze Włączenie z lekiem w kolejności zapisu.
+4. **Stan leczenia:** „odstawione” wyłącznie wtedy, gdy ostatni cykl jest zakończony; data — z jego Zakończenia (także
+   Zakończenia bez masy), tydzień — od odniesienia tego cyklu. Dotąd: „odstawione” przy jakimkolwiek Zakończeniu, tydzień od
+   pierwszego Włączenia (przy odwrotnej kolejności zapisu ujemny: „odstawione w -4. tygodniu”), a Zakończenie bez masy
+   pomijane (jedyny cykl W, K, Z bez masy dawał „na leczeniu”).
+5. **Niezgodny zapis bieżącego cyklu** (dowolny kod `niezgodnosci` z `podziel`, np. `dwa-wlaczenia`, a po R6
+   `zmiana-substancji`): znacznik oceny wg ChPL i pas „zwiększanie dawki” zdjęte z wykresu (`bezOsi:
+   'niezgodny-zapis-cyklu'`; reguła ChPL zostaje w wyniku), ostrzeżenie „Zapis bieżącego cyklu leczenia wymaga
+   uporządkowania w monitorze DocPro — punktu oceny wg ChPL nie postawiono (ocena wg ChPL tego cyklu jest wstrzymana,
+   jak w Karcie pacjenta).” (zastępuje ostrzeżenie F1, jedno zdanie o znaczniku). Pasma zostają. Dotąd: znacznik w 16.
+   tyg. od pierwszego Włączenia, bez ostrzeżenia — przy werdykcie Karty „wstrzymana” (D5, rata 3).
+6. **Pomiar wcześniejszego cyklu nigdy nie jest postępem bieżącego** (poprawka po recenzji raty). Pomiar serii, który
+   jest punktem wcześniejszego cyklu (ta sama reguła wizyty co w `scalSerie`: klucz sejfu i zgodna data), a nie jest
+   punktem bieżącego, ma `przedOdniesieniem: true` — także przy remisie dat z odniesieniem (Zakończenie poprzedniego
+   cyklu i Włączenie bieżącego tego samego dnia, CY-8; krok 1 poprawki dwukrokowej starego zapisu). Tydzień 0 zostaje na
+   wykresie; pomiar nie wchodzi do pasm, nadiru, odzysku ani kamieni. Przed poprawką pomiar Zakończenia o niższej masie
+   zostawał nadirem w 0. tyg. i dawał zdarzenie „istotny odzysk” (waga „alarm”) w panelu i na kartce pacjenta.
+7. **Bez zmian:** seria pomiarów i `scalSerie` (wszystkie pomiary i punkty; pomiary poprzednich cykli zostają na
+   wykresie z ujemnymi tygodniami, bez kamieni — jak dotąd pomiary sprzed Włączenia), progi, pasma, `OPIS_PASM`.
+
+**Wynik silnika.** Nowe pole `cykl = { numer, liczba, stan ('aktywny'|'zakonczony'), bezWlaczenia, niezgodnosci: [kody] }`;
+`null` bez modułu cykli albo bez punktów leczenia. Nowa flaga `punktOdniesienia.wlaczenieBezMasy` — `true`, gdy
+odniesieniem nie jest Włączenie, bo Włączenie bieżącego cyklu nr ≥ 2 zapisano bez masy; inaczej `false` (także
+w cyklu nr 1).
+
+**Teksty** (tylko gdy cykli jest więcej niż jeden; przy jednym cyklu brzmienia co do litery jak dotąd):
+- opis odniesienia (panel i obie kartki PDF): „Wszystkie zmiany liczone od masy ciała przy włączeniu bieżącego cyklu
+  leczenia (cykl N z M; X kg, DD.MM.RRRR), nie od poprzedniej wizyty.”; cykl bez Włączenia: „…od pierwszego pomiaru
+  bieżącego cyklu leczenia (cykl N z M; X kg, DD.MM.RRRR) — ten cykl nie ma punktu „Włączenie”, więc procenty nie liczą
+  się od masy sprzed leczenia, nie od poprzedniej wizyty.”;
+- kartka pacjenta: „Od włączenia bieżącego leczenia (DD.MM.RRRR) masa ciała zmniejszyła się o …” / „…zwiększyła się o …”
+  zamiast „Od początku obserwacji…”; cykl bez Włączenia: „Od pierwszego pomiaru w bieżącym leczeniu (DD.MM.RRRR) …”;
+- kartka do dokumentacji: „Punkt odniesienia: włączenie bieżącego cyklu leczenia (cykl N z M)”; cykl bez Włączenia:
+  „Punkt odniesienia: pierwszy pomiar bieżącego cyklu leczenia (cykl N z M)”;
+- podpis osi wykresu masy: bez zmian („tygodnie od włączenia leczenia”); cykl bez Włączenia: „tygodnie od pierwszego
+  pomiaru bieżącego cyklu”; ostrzeżenie F1 w cyklu nr ≥ 2: „…od pierwszego pomiaru bieżącego cyklu, nie od masy
+  początkowej z ChPL.”
+- Włączenie cyklu nr ≥ 2 bez masy (`wlaczenieBezMasy`): opis odniesienia (panel i obie kartki) „…od pierwszego pomiaru
+  bieżącego cyklu leczenia (cykl N z M; X kg, DD.MM.RRRR) — punkt „Włączenie” tego cyklu nie ma masy ciała, więc
+  procenty nie liczą się od masy sprzed leczenia, nie od poprzedniej wizyty.”; `punktOdniesienia.opis` „Punkt „Włączenie”
+  bieżącego cyklu leczenia nie ma masy ciała — procenty liczone od pierwszego pomiaru tego cyklu, nie od masy sprzed
+  leczenia.”; ostrzeżenie F1 „Punktu oceny wg ChPL nie postawiono na wykresie: bez masy w punkcie „Włączenie” oś nie ma
+  wspólnego zera z leczeniem, a procenty liczą się od pierwszego pomiaru bieżącego cyklu, nie od masy początkowej
+  z ChPL.”; kartki pacjenta i do dokumentacji oraz podpis osi — jak dla cyklu bez Włączenia (mówią prawdę). W cyklu
+  nr 1 (jedyny cykl) flagi nie ma — brzmienia co do litery jak przed ratą 4 („Ograniczenia”).
+- cykl nr ≥ 2 bez żadnego pomiaru masy: opis odniesienia (panel i obie kartki) „Wszystkie zmiany liczone od pierwszego
+  zapisanego pomiaru (X kg, DD.MM.RRRR), nie od poprzedniej wizyty. Bieżący cykl leczenia (cykl N z M) nie ma jeszcze
+  pomiaru masy ciała — wykres pokazuje tylko pomiary sprzed tego cyklu.”; kartka do dokumentacji „Punkt odniesienia:
+  pierwszy pomiar — bieżący cykl leczenia (cykl N z M) bez pomiaru masy”; kartka pacjenta „Od początku obserwacji…”
+  (zdanie prawdziwe: liczby idą od pierwszego pomiaru serii); podpis osi „tygodnie od pierwszego pomiaru”.
+
+**Bez modułu cykli** (strony, które go nie ładują; offline bez pliku z `OPTIONAL_ASSETS`; wyjątek w `podziel`) — reguła
+sprzed raty 4, bez zmian w wyniku. Moduł czytany w chwili wywołania (na wszystkich 8 stronach ładuje się po „Postępach”,
+na 6 z 8 także po trajektorii).
+
+**Przypadki syntetyczne** (dane fikcyjne; dorosły 170 cm, wiek monitora zgodny z datami: 40 l. 0 mies. → 41 l. 3 mies.;
+cykl 1 — Saxenda: W 12.01.2024 104,0 kg, K 12.04.2024 99,0 kg, Z 15.10.2024 97,5 kg; cykl 2 — Wegovy: W 12.11.2024
+98,5 kg, K 12.02.2025 95,5 kg, K 10.05.2025 93,0 kg; ścieżka `scalSerie` → `analizuj` jak w Karcie pacjenta):
+
+| Przypadek | Wejście | Oczekiwany wynik | Przed zmianą (produkcja 893e7262) |
+|---|---|---|---|
+| CY-10 | dwa cykle, dowolna kolejność zapisu | odniesienie 98,5 kg / 12.11.2024; „na leczeniu”; lek Wegovy, drabinka ogólna, bez punktu ChPL; 98,5 → 93,0 kg, −5,5 kg, −5,6 %; tygodnie −44, −31, −4, 0, 13, 26; kamień: 5 % w 26. tyg.; „cykl 2 z 2” w opisie | 104,0 kg / 12.01.2024; „Leczenie odstawione w 40. tygodniu”; Saxenda, drabinka liraglutydu, znacznik ChPL w 16. tyg.; −11,0 kg, −10,6 % (przy cyklu 2 wpisanym przed 1: „odstawione w -4. tygodniu”) |
+| CY-10-Z | CY-10 + Z Wegovy 01.06.2025 92,5 kg (także bez masy) | „Leczenie odstawione w 29. tygodniu” (od 12.11.2024), data 01.06.2025 | „odstawione w 72. tygodniu” (od 12.01.2024); bez masy — „w 40. tygodniu”, data 15.10.2024 |
+| CY-10-KpoZ | cykl 1 + K Wegovy 12.11.2024 98,5 kg (bez Włączenia) + K, K | `pierwszy-pomiar-cyklu`, 98,5 kg; podpis osi „…pierwszego pomiaru bieżącego cyklu” | 104,0 kg, „odstawione w 40. tygodniu”, liraglutyd |
+| CK-5 | W 12.01.2024 104, K 12.04.2024 99, W 03.05.2024 99, K 01.09.2024 96 (Saxenda) | bez znacznika i pasa ChPL, ostrzeżenie „Zapis bieżącego cyklu leczenia wymaga uporządkowania…”; drabinka liraglutydu i −7,7 % od 104 kg zostają | znacznik ChPL w 16. tyg., bez ostrzeżenia |
+| jeden cykl | W 12.01.2024 104 kg, K 12.04.2024 99 kg, Z 15.10.2024 **bez masy** (Saxenda; dowolna kolejność zapisu) | „Leczenie odstawione w 40. tygodniu”, data 15.10.2024; odniesienie 104 kg i znacznik ChPL w 16. tyg. bez zmian | „na leczeniu” (także dziś bez modułu cykli) |
+| CY-8 | W Saxenda 12.01.2024 104, K 12.04.2024 99, Z 12.11.2024 97,0, W Wegovy 12.11.2024 98,5, K 12.02.2025 98,2 (zapis przyjęty przez `sprawdz`) | odniesienie 98,5 kg; pomiar Z 97,0 kg w 0. tyg. „sprzed odniesienia”; nadir 98,2 kg (ostatni); bez kamieni i zdarzeń | 104,0 kg / 12.01.2024; „Leczenie odstawione w 44. tygodniu” (12.11.2024); drabinka liraglutydu, znacznik ChPL w 16. tyg.; kamienie 13 (zmiana klasy), 16 (ChPL), 44 (pasmo 5 %), 44 (nadir); nadir 97,0 kg w 44. tyg.; −5,8 kg (−5,6 %); bez zdarzeń (wersja raty przed recenzją: nadir 97,0 kg w 0. tyg., zdarzenie „istotny odzysk” (alarm) i „Odzyskano ponad 25 %…” w panelu i na kartce pacjenta) |
+| CY-8-KpoZ | jak CY-8, ale cykl 2 zaczyna K Wegovy 12.11.2024 98,5 (bez Włączenia) | `pierwszy-pomiar-cyklu`, 98,5 kg; Z 97,0 kg „sprzed odniesienia”; bez kamieni | jak CY-8 (wersja raty przed recenzją: nadir 97,0, „istotny odzysk”) |
+| cykl 2 bez masy | cykl 1 + K Wegovy 12.11.2024 bez masy | `brak-pomiaru-cyklu`; wszystkie pomiary „sprzed odniesienia”; bez kamieni; ostrzeżenie | 104,0 kg / 12.01.2024; „Leczenie odstawione w 40. tygodniu”; drabinka liraglutydu; kamienie 13 (zmiana klasy), 16 (ChPL), 40 (pasmo 5 %) (wersja raty przed recenzją: `pierwszy-pomiar` 104 kg, kamienie 13 i 40, „w rekordzie nie ma punktu „Włączenie””) |
+| Włączenie cyklu 2 bez masy | CY-10, ale W Wegovy 12.11.2024 bez masy (import albo stary zapis; dowolna kolejność zapisu) | `pierwszy-pomiar-cyklu`, 95,5 kg / 12.02.2025, `wlaczenieBezMasy`; „na leczeniu”; tygodnie −57, −44, −17, 0, 12; opis „…(cykl 2 z 2; 95,5 kg, 12.02.2025) — punkt „Włączenie” tego cyklu nie ma masy ciała…”; kartka pacjenta „Od pierwszego pomiaru w bieżącym leczeniu (12.02.2025) masa ciała zmniejszyła się o 2,5 kg (2,6 % masy początkowej).”; z Saxendą w cyklu 2 ostrzeżenie „…bez masy w punkcie „Włączenie”…” | 104,0 kg / 12.01.2024; „Leczenie odstawione w 40. tygodniu”; drabinka liraglutydu, znacznik ChPL w 16. tyg.; −11,0 kg, −10,6 % (przed poprawką po recenzji całości raty: liczby jak po, tekst „ten cykl nie ma punktu „Włączenie””) |
+| zdublowane Z | cykl 1 + Z Saxenda 15.11.2024 97,0 kg, bez wizyty między Zakończeniami (import albo stary zapis — monitor odrzuca `drugie-zakonczenie`) | cykl 2 z 2 = samo drugie Z (`zakonczenie-bez-wizyt`): `pierwszy-pomiar-cyklu` 97,0 kg / 15.11.2024; tygodnie −44, −31, −4 „sprzed odniesienia”, 0; bez kamieni; „Zmiana masy ciała 0,0 kg 0,0 %”; „Leczenie odstawione w 0. tygodniu”; znacznik ChPL zdjęty z ostrzeżeniem „Zapis bieżącego cyklu leczenia wymaga uporządkowania…” (panel, kartka do dokumentacji); kartka pacjenta bez ostrzeżeń: „Od pierwszego pomiaru w bieżącym leczeniu (15.11.2024) masa ciała zwiększyła się o 0,0 kg.” — stan raty 4, do decyzji właściciela | 104,0 kg; −7,0 kg (−6,7 %); drabinka liraglutydu, znacznik ChPL w 16. tyg.; kamienie 13 (zmiana klasy), 16 (ChPL), 40 (pasmo 5 %); „Leczenie odstawione w 44. tygodniu” (przy odwrotnej kolejności zapisu — w 40.) |
+| zdublowane Z bez masy | cykl 1 + Z Saxenda 15.11.2024 bez masy | `brak-pomiaru-cyklu`: wszystkie pomiary „sprzed odniesienia”, bez kamieni; „odstawione” z datą 15.11.2024, bez tygodnia; drabinka ogólna (jedyny punkt cyklu bez masy — lek nieznany) — stan raty 4, do decyzji właściciela | 104,0 kg; „Leczenie odstawione w 40. tygodniu”; drabinka liraglutydu; kamienie 13 (zmiana klasy), 16 (ChPL), 40 (pasmo 5 %) |
+
+**Testy.** `tests/unit/postepy-doroslego-cykle.test.mjs` (50; prawdziwe `scalSerie` → `analizuj`, `buildHtml`,
+`buildDokument`: CY-10 w czterech kolejnościach zapisu, zakończony ostatni cykl, Zakończenie bez masy (cykl 2 z 2
+i jedyny cykl — wiersz „jeden cykl”, w obu kolejnościach zapisu, także bez modułu: „na leczeniu”), cykl nr 2 bez
+Włączenia z remisem dat, Włączenie cyklu nr 2 bez masy (silnik, panel, obie kartki, ostrzeżenie przy Saxendzie; cykl
+nr 1 z Włączeniem bez masy — brzmienia sprzed raty), zdublowane Zakończenie z masą i bez masy (stan raty 4 — do
+decyzji właściciela; monitor odrzuca drugie Zakończenie), CY-8 przez prawdziwe `sprawdz` z masą Zakończenia niższą,
+wyższą i równą masie Włączenia, krok 1 poprawki dwukrokowej, pierwszy punkt cyklu 2 bez masy w dniu Zakończenia,
+cykl 2 bez żadnego pomiaru masy (silnik, teksty, zakończony, pomiar z osi czasu), niezgodność `dwa-wlaczenia`
+i dowolny kod przez atrapę, niezgodność tylko w poprzednim cyklu, teksty panelu i obu kartek, test negatywny bez
+modułu / z wyjątkiem w `podziel`, moduł ładowany po silniku; dane leków jak w monitorze — `substance` to etykieta
+substancji);
+`tests/e2e/postepy-doroslego-cykle.spec.mjs` (4; prawdziwa Karta pacjenta z sejfem testowym: CY-10 z cyklem 2 wpisanym
+przed cyklem 1, CY-10-Z, CY-8 bez „Odzyskano…” i bez kafelka najniższej masy, telefon 390 px bez poziomego przewijania). `tests/support/load-browser-script.mjs`: moduł cykli
+w zależnościach silnika „Postępów” (bez niego testy cicho szłyby dawną regułą). Istniejące testy „Postępów” (jeden
+cykl) — bez zmian asercji; komentarz testu „punkt „Włączenie” wygrywa z późniejszym punktem o innym leku” opisuje R6.
+
+**Ograniczenia.** Po R6 stary zapis ze zmianą substancji w jednym cyklu dostaje niezgodność: znacznik ChPL zdjęty, ale
+drabinka pasm i „Lek:” nadal pochodzą z Włączenia cyklu (lek sprzed zmiany). `OPIS_PASM` (rozwijany opis) mówi ogólnie
+o „włączeniu leczenia”. Granica cyklu nie jest rysowana na wykresie. Przynależność punktu do cyklu wyznacza moduł cykli
+(daty lokalne, ISO i DD.MM.RRRR), a oś „Postępów” — daty ISO. Zakończenie z datą DD.MM.RRRR BEZ masy: stan
+„odstawione”, tydzień odstawienia pusty. Takie Zakończenie Z masą trafia do serii, więc cała oś przechodzi na wiek
+(zachowanie sprzed raty): tydzień odstawienia jest wtedy przybliżony z wieku (np. 26 zamiast 29 z dat), a
+`odstawienieDateISO` niesie napis nie-ISO.
+**Zdublowane Zakończenie** (stary zapis albo import; monitor od raty 1 odrzuca drugie Zakończenie): bieżącym cyklem jest
+cykl złożony wyłącznie z drugiego Zakończenia (`zakonczenie-bez-wizyt`) — tak samo jak w Karcie pacjenta od raty 3
+(nota i wstrzymany werdykt „Zakończenie (15.11.2024) bez wizyt w cyklu”). Cały rzeczywisty kurs trafia więc do części
+„sprzed odniesienia”: bez kamieni, „Leczenie odstawione w 0. tygodniu”, a kartka pacjenta (bez ostrzeżeń) mówi
+„…zwiększyła się o 0,0 kg” pacjentowi po redukcji (wiersz „zdublowane Z”; drugie Z bez masy — `brak-pomiaru-cyklu`).
+Panel i kartka do dokumentacji mają ostrzeżenie o zapisie do uporządkowania, a baner monitora — akcję „Usuń to
+Zakończenie”. Rozstrzygnięcie — wspólne dla Karty, „Postępów” i trajektorii — do decyzji właściciela.
+Cykl nr 1 (jedyny cykl) z Włączeniem bez masy mówi jak przed ratą 4 „Brak punktu „Włączenie”…” / „w rekordzie nie ma
+punktu „Włączenie””, choć Włączenie jest (bez masy) — zachowanie F1 sprzed raty, poza jej zakresem (flaga
+`wlaczenieBezMasy` dotyczy tylko cyklu nr ≥ 2). Podobnie Włączenie cyklu nr ≥ 2 Z masą, ale bez daty wizyty i bez
+pomiaru tego dnia w serii („bliźniaczki”, F1) nie da się postawić na osi dat: odniesieniem jest pierwszy pomiar cyklu,
+a tekst mówi „ten cykl nie ma punktu „Włączenie”” — jak dotąd w cyklu nr 1 (F1); monitor od raty 1 (R7) nie przyjmuje
+Włączenia bez daty, więc dotyczy to tylko starych zapisów i importu.
+
+**Wersje.** `?v=`, precache i `SW_VERSION` — wiersz „Wersje” na początku wpisu raty 4. Wewnętrzne: `VildaPostepyDoroslego` 1 → 2,
+`VildaPostepyDoroslegoUI` 1 → 2, `VildaPostepyDoroslegoWydruk` 2 → 3 (bez pinów w testach).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna punktu odniesienia z bieżącego cyklu, odniesienia cyklu bez
+Włączenia, stanu „odstawione” per cykl i wstrzymania znacznika ChPL przy niezgodnym zapisie; brzmienia dla cyklu bez
+Włączenia (nie były w specyfikacji raty) i dla Włączenia cyklu nr ≥ 2 bez masy (poprawka po recenzji całości raty);
+wyłączenia pomiarów wcześniejszych cykli z postępu bieżącego przy remisie dat oraz stanu „brak-pomiaru-cyklu” z jego
+brzmieniami (poprawki po recenzji); zmiany u pacjenta z jednym cyklem (Zakończenie bez masy → „odstawione”);
+zdublowane Zakończenie — stan raty 4 albo wariant „cykl złożony wyłącznie z Zakończenia nie jest bieżącym cyklem”
+(w `cyklBiezacy` bieżący = ostatni cykl z punktem innym niż Zakończenie; kod niezgodności zostaje w ostrzeżeniu),
+jedno rozstrzygnięcie dla Karty pacjenta (`Ob_cy`), „Postępów” i trajektorii (pkt 5 „Do decyzji właściciela”
+w podrozdziale „Kursy leczenia otyłości = cykle”); scalenie i wdrożenie.
+
 ## Mostek punktów terapii GH czyta wyłącznie pamięć modułu bieżącego pacjenta (P-GH-ZRODLO, SW 1.1.120, `vilda_advanced_growth.js` 73, 2026-09-30)
 
 **Skąd.** Audyt przepływu pomiarów między kartą „Zaawansowane obliczenia wzrostowe” a monitorem leczenia GH
@@ -6994,6 +7668,159 @@ z komentarzem w wierszu punktu — bez zmian (nie jest częścią pomiaru). Kole
 
 **Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania (edycja pomiaru punktu tylko w monitorze),
 scalenie i wdrożenie.
+
+## „Nowy pomiar” nie dopisuje do historii karty zaawansowanej pomiaru, z którego powstał punkt terapii GH (P-GH-NOWY-POMIAR, SW 1.1.141, `vilda_data_import_export.js` 94, 2026-10-01)
+
+**Skąd.** Audyt przepływu pomiarów GH (`docs/AUDYT-PRZEPLYW-GH.md`): po P-GH-BLOKADA kolejnym krokiem był pomiar
+ścieżki „Nowy pomiar” (okno wyboru przy wczytaniu pacjenta). Pomiar pokazał rozjazd opisany niżej; właściciel wybrał
+2026-10-01 wariant A — nie dopisywać do historii karty zaawansowanej bieżącego pomiaru, z którego powstał punkt GH.
+
+**Zmierzone na `audyt` `f254852` i powtórzone na `767cc10`** (Chromium, własne konto sejfu, dane fikcyjne).
+Wizyta 1: dziewczynka 13 l. 1 mies., bieżący pomiar 139,9 cm / 45 kg, wiersz ręczny 11 l. / 123,9 cm / 35 kg, punkt
+GH z bieżącego pomiaru (13 l. 1 mies. / 139,9 cm / 45 kg). Zapis, wczytanie, „Nowy pomiar”:
+- „Nowy pomiar” (`_ensureCurrentMeasurementInHistory`) dopisał bieżący pomiar wizyty 1 do historii karty jako wiersz
+  ręczny 13 l. 1 mies. / 139,9 cm. Mostek uznał go za ten sam pomiar co punkt (reguła „wiersz ręczny wygrywa”: ten sam
+  miesiąc, wzrost i masa ±0,11) i schował wiersz punktu. Karta i tabela spożycia pokazywały pomiar jako ręczny,
+  edytowalny — bez blokady P-GH-BLOKADA;
+- poprawka tego wiersza na 140,4 cm nie wracała do punktu (139,9);
+- zapis wizyty 2 trzymał ten pomiar dwa razy: w `advanced.data.measurements` (13 l. 1 mies. / 140,4) i w
+  `ghTherapyPoints` (139,9); po F5 i po ponownym imporcie karta miała dwa pomiary z 13 l. 1 mies. (140,4 ręczny
+  i 139,9 punktu), oba w danych karty (`advancedGrowthData.measurements`);
+- kontrola: „Odtwórz zapis” z tego samego zapisu — jeden wiersz punktu, bez kopii ręcznej.
+
+**Zmiana (`vilda_data_import_export.js`, funkcja `_ensureCurrentMeasurementInHistory`).** Bieżący pomiar nie jest
+dopisywany do `advanced.data.measurements` jako nowy wpis, gdy w `ghTherapyPoints` rekordu jest punkt z tym samym
+miesiącem wieku (`ageYears·12 + ageMonths`), wzrostem w granicy ±0,11 cm i — jeżeli oba są podane — masą w granicy
+±0,11 kg. To ta sama reguła i ta sama tolerancja, którą mostek (`ghReczny`, `vilda_advanced_growth.js`) rozpoznaje
+wiersz ręczny jako ten sam pomiar co punkt. Pomiar pokazuje wtedy wiersz punktu dodany przez mostek.
+Bez zmian:
+- historia karty podstawowej (`growthBasic`) dostaje pomiar jak dotąd;
+- istniejący wpis z tego samego miesiąca w historii karty zaawansowanej jest nadpisywany bieżącym pomiarem jak dotąd —
+  zmiana dotyczy wyłącznie dopisania nowego wpisu;
+- pomiar, który różni się od punktu (inny miesiąc, wzrost > 0,11 cm, masa > 0,11 kg), punkt bez wzrostu i bieżący
+  pomiar bez wzrostu — dopisywane jak dotąd.
+Tę samą funkcję woła zapis korekty w oknie „Szybki pomiar” Karty Pacjenta (`vilda_auth_ui.js`, tryb edycji); reguła
+działa tam tak samo. Tej ścieżki nie mierzono osobno w przeglądarce.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (integralność danych) bez zmiany wzorów, progów, jednostek,
+dawkowania i formatu rekordu. Pomiar, z którego powstał punkt terapii, ma w karcie jeden wiersz (punktu, tylko do
+odczytu) zamiast wiersza ręcznego, który chował punkt. Przed zmianą, po poprawce takiego wiersza, do obliczeń karty
+zaawansowanej wchodziły dwa pomiary z tego samego miesiąca (ręczny i punktu); po zmianie — jeden. Bez poprawki wynik
+obliczeń jest ten sam (tempo wzrostu z wizyty 2 liczone z odstępu 6 miesięcy przed i po zmianie). Źródło medyczne:
+nie dotyczy.
+
+**Strażnicy.**
+- `tests/unit/gh-nowy-pomiar-historia.test.mjs` (8, prawdziwa funkcja modułu na atrapie okna): punkt z tego samego
+  pomiaru — historia karty bez nowego wpisu, `growthBasic` z pomiarem; granica wzrostu (0,10 cm — ten sam pomiar,
+  0,15 cm — inny); inna masa (0,5 kg) — dopisany, punkt bez masy — porównanie samego wzrostu; inny miesiąc; brak
+  punktów, brak listy, punkt bez wzrostu; istniejący wpis z tego miesiąca — nadpisany jak dotąd; bieżący pomiar bez
+  wzrostu. **Zmierzone czerwone** na `767cc10`: 3 z 8 (pierwsze trzy przypadki reguły); pozostałe pilnują, że nic
+  poza dopisaniem się nie zmieniło.
+- `tests/e2e/gh-nowy-pomiar.spec.mjs` (3, prawdziwa strona `index.html`, zapis w sejfie, „Wczytaj tego pacjenta”,
+  „Nowy pomiar”): A — w karcie 11 l. ręczny i 13 l. 1 mies. punktu (zablokowany), lustra w tabeli spożycia; wizyta 2
+  z tempem z odstępu 6 miesięcy; zapis bez kopii pomiaru w `advanced.data.measurements`; to samo po F5; B — punkt
+  z innym wzrostem (141,0) obok dopisanego wiersza ręcznego 139,9; C — bez punktu pomiar dopisany jako wiersz ręczny.
+  **Zmierzone czerwone** na `767cc10`: A (B i C zielone po obu stronach).
+
+**Czego to nie zmienia.** Rekordy zapisane wcześniej z kopią ręczną pomiaru punktu nie są przerabiane — mostek
+nadal chowa w nich wiersz punktu, gdy wiersz ręczny ma ten sam pomiar. Ich ewentualne rozpoznanie i połączenie
+z punktem — osobna decyzja. Mostek, blokada P-GH-BLOKADA, monitor GH i format rekordu — bez zmian.
+
+**Wersje.** `vilda_data_import_export.js` 93 → 94 (`index.html`, `docpro.html`, `kalkulator-klirens.html`,
+`vilda_smoke_tests.js`); precache (append-only); `SW_VERSION` 1.1.140 → 1.1.141 (+ pin w
+`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `audyt` `767cc10`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja zmiany zachowania, scalenie i wdrożenie; decyzja o rekordach
+zapisanych wcześniej z kopią ręczną pomiaru punktu.
+
+## Liczba wkładów, wstrzykiwaczy i fiolek uwzględnia ważność po pierwszym użyciu (P-GH-WAZNOSC, SW 1.1.159, `gh_igf_therapy.js` 28, nowe `vilda_gh_opakowania_dane.js` i `vilda_gh_opakowania.js`, 2026-10-05)
+
+**Skąd.** Porównanie dawkowania w kodzie z ChPL (pakiet „dawka podawana”, przegląd 2026-10-05) pokazało, że karta
+„Leczenie hormonem wzrostu / IGF-1” liczy, ile leku wydać, wyłącznie z ilości leku. Decyzja właściciela z 2026-10-05
+(D4): „uwzględnij ważność po otwarciu — można też dodać informację dla lekarza, że aplikacja to uwzględniła w
+obliczeniach i jaka jest ta ważność”. To pierwszy z trzech PR-ów pakietu (D9).
+
+**Źródła (ChPL, punkt 6.3).**
+- Omnitrope 5, 10 i 15 mg/1,5 ml — informacja o produkcie EMA, wersja polska, PDF z 26.06.2025 (punkt 10 bez daty):
+  „Po pierwszym użyciu wkład powinien pozostać we wstrzykiwaczu i musi być przechowywany w lodówce (2°C - 8°C)
+  maksymalnie przez 28 dni.”
+- Genotropin 5,3 i 12 mg — ChPL URPL, data zmiany tekstu 10.05.2024: „Produkt leczniczy może być przechowywany po
+  rekonstytucji przez 28 dni w temperaturze 2°C-8°C.”
+- Ngenla 24 i 60 mg — informacja o produkcie EMA, wersja angielska, PDF z 16.01.2026 (punkt 10 bez daty):
+  „After first use: 28 days. […] The Ngenla pen should be discarded if it has been used 5 times […]”.
+- Increlex 10 mg/ml (fiolka 40 mg / 4 ml) — informacja o produkcie EMA, wersja angielska, PDF z 26.03.2026 (punkt 10
+  bez daty): „may be stored for a maximum of 30 days at 2°C to 8°C”.
+
+**Zmierzone przed zmianą (`audyt` `b8b2f6b`, prawdziwa karta na `index.html`, dane fikcyjne).**
+- Omnitrope 10 mg, 12 kg, 0,025 mg/kg/d (0,3 mg/d): 3 ampułki na 90 dni i 6 na 180 dni. Wkład 10 mg starczyłby na
+  33 dni, ale wolno go używać 28 dni — potrzeba 4 i 7.
+- Increlex, 10 kg, 0,08 mg/kg/d (2 × 0,4 mg): 2 fiolki na 90 dni (potrzeba 3) i 4 na 180 dni (potrzeba 6).
+- Ngenla 60 mg, 14 kg, 0,66 mg/kg/tydz (9 mg/tydz): 2 wstrzykiwacze na 90 dni (potrzeba 3) i 4 na 180 dni (6).
+- Pod tabelą stało „W obliczeniach zaokrąglamy liczbę ampułek w górę – uwzględnia to typowe straty podczas
+  podawania”, choć wynik niczego poza zaokrągleniem nie uwzględniał.
+Problem dotyczył małych dawek: Omnitrope 10 mg poniżej ok. 0,36 mg/d, Omnitrope 5 mg poniżej ok. 0,18 mg/d,
+Increlex poniżej ok. 1,33 mg/d, Ngenla 60 mg poniżej 12 mg/tydz — czyli głównie małych dzieci.
+
+**Reguła.** Liczba sztuk to większa z dwóch liczb:
+- z ilości leku, jak dotąd: ⌈dawka × okres / zawartość sztuki⌉ (dawka po zaokrągleniu do kroku, jak w karcie);
+- z ważności: preparat dobowy ⌈dni / ważność⌉; Ngenla ⌈liczba dawek / dawek na wstrzykiwacz⌉, gdzie liczba dawek =
+  ⌈dni / 7⌉ (jak dotąd), a dawek na wstrzykiwacz = min(⌊28 / 7⌋ + 1, 5) = 5. Interpretacja: wstrzykiwacz obsłuży dawki
+  z dni 0, 7, 14, 21 i 28 od pierwszego użycia, co zgadza się z limitem 5 użyć z ChPL. Zakładamy jedno wstrzyknięcie na
+  dawkę; dawki wymagające dwóch wstrzyknięć (powyżej 12 mg na wstrzykiwaczu 24 mg, powyżej 30 mg na 60 mg) wyczerpują
+  zawartość wcześniej, niż zadziała limit użyć.
+Ważności nie skracamy o zapas: zostaje zaokrąglenie w górę. Ilości leku na odpowietrzenie (priming) i martwej
+objętości wkładu reguła nie liczy — ChPL Omnitrope i Increlexu jej nie podają, a dla GoQuick i Ngenli to osobna
+decyzja właściciela.
+
+**Zmiana.**
+- Dane: `vilda_gh_opakowania_dane.js` — dla każdej pozycji listy „Preparat” zawartość sztuki, schemat (dobowy /
+  tygodniowy), ważność po pierwszym użyciu, limit użyć i źródło (dokument, punkt, wersja, cytat). Zawartość sztuk jest
+  ta sama co w karcie (test pilnuje zgodności).
+- Silnik: `vilda_gh_opakowania.js` (`window.VildaGhOpakowania`: `policz`, `notka`, `dopisek`) — bezpaństwowy, wynik
+  niesie źródło. Nieznany preparat albo brak modułu → karta liczy jak dotąd.
+- Karta `gh_igf_therapy.js` (wpięcia opisane komentarzem `P-GH-WAZNOSC`): tabela zapotrzebowania na 90 i 180 dni
+  oraz na dowolną liczbę dni, `window.ghTherapyCalc.units90/units180` (z nich korzystają kopiowane zalecenia na 90 i
+  180 dni) i trzy funkcje zaleceń przy ręcznej dacie kontroli (preparaty dobowe, Ngenla, Increlex).
+- Informacja dla lekarza: notka pod tabelą podaje ważność i źródło, np. „Liczba wkładów uwzględnia ważność po
+  pierwszym użyciu: 28 dni (ChPL Omnitrope, pkt 6.3). Po tym czasie wkład się wyrzuca, nawet jeśli w nim został lek.
+  Wynik zaokrąglamy w górę.” Gdy to ważność zdecydowała o wyniku, wiersz tabeli ma dopisek, np. „· uwzględniono
+  ważność 28 dni (z samej ilości leku: 3)”.
+- Nazwy jednostek w karcie i w zaleceniach dla pacjenta („ampułek”, „wstrzykiwaczy”, „fiolek”) — bez zmian.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana kliniczna: zmienia się zalecana ilość wydanego leku (liczba wkładów,
+wstrzykiwaczy i fiolek) na okres do kontroli. Wynik rośnie tylko tam, gdzie otwarta sztuka przeterminowałaby się przed
+zużyciem leku; w pozostałych przypadkach jest identyczny jak dotąd. Dawki, jednostki, zakresy, zaokrąglenie dawki do
+kroku i format rekordu się nie zmieniają. Populacja: dzieci leczone w programach B.19, B.20, B.38, B.41, B.42 i B.64.
+
+**Przypadki `wejście → oczekiwany wynik`** (90 / 180 dni):
+- Omnitrope 10 mg, 0,3 mg/d → 4 / 7 wkładów (z ilości leku 3 / 6);
+- Omnitrope 10 mg, 1,0 mg/d → 9 / 18 (bez zmian, decyduje ilość leku);
+- Genotropin 12 mg, 0,3 mg/d → 4 / 7;
+- Increlex, 0,8 mg/d → 3 / 6 fiolek (z ilości leku 2 / 4); 30 dni → 1, 31 dni → 2;
+- Ngenla 60 mg, 9 mg/tydz → 3 / 6 wstrzykiwaczy (z ilości leku 2 / 4);
+- Ngenla 60 mg, 33 mg/tydz → 8 na 90 dni (bez zmian, decyduje ilość leku).
+
+**Strażnicy.**
+- `tests/unit/gh-opakowania-waznosc.test.mjs` (11, prawdziwe pliki danych i silnika): zgodność listy preparatów i
+  zawartości z kartą, ważność i limit użyć z ChPL, źródła z wersją, przypadki powyżej, teksty notki i dopisku.
+- `tests/e2e/gh-opakowania-waznosc.spec.mjs` (5, prawdziwa karta na `index.html`): A Omnitrope 4 / 7 z dopiskiem i
+  notką; B Omnitrope 1,0 mg/d bez zmian (strażnik nadmiernej zmiany); C Increlex 3 / 6 z notką o fiolce; D Ngenla 3 / 6
+  z notką o 5 dawkach; E zalecenia przy ręcznej dacie kontroli (Omnitrope „4 ampułki”, Increlex „3 fiolki”, Ngenla
+  „3 wstrzykiwacze”). **Zmierzone czerwone** na `b8b2f6b`: A, C, D, E; B zielony po obu stronach.
+
+**Czego to nie zmienia.** Krok wstrzykiwacza i limit dawki na jedno wstrzyknięcie (osobny PR pakietu), Increlex
+(osobny PR pakietu), zapis punktów terapii i monitor GH, notatki Terminarza.
+
+**Wersje.** `gh_igf_therapy.js` 27 → 28 (`index.html` — ładowanie leniwe, `docpro.html`); nowe
+`vilda_gh_opakowania_dane.js` i `vilda_gh_opakowania.js` w wersji 1, ładowane statycznie przed kartą na obu stronach,
+dopisane do rdzenia precache obok karty; precache (append-only); `SW_VERSION` 1.1.158 → 1.1.159 (+ pin w
+`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — numery z `npm run podbij-wersje`
+względem `audyt` `b8b2f6b`, wersje i precache nowych plików wpisane ręcznie (pozycje „Do decyzji”).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy liczyć ilość leku na odpowietrzenie (np. GoQuick
+0,1 / 0,3 mg według instrukcji użycia); czy przekazywać ważność po otwarciu także w zaleceniach dla pacjenta;
+nazwy jednostek („ampułki” wobec „wkłady” z ChPL); scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
@@ -8985,10 +9812,15 @@ koduj” (wszystkie R1–R9 w jednej racie).
 1. *Kursy leczenia* (`therapyIntervals`): punkty monitora posortowane po wieku; kurs otwiera pierwszy punkt, zamyka „end”;
    punkt po „end” z przerwą < 3 mies. wraca do kursu, ≥ 3 mies. otwiera nowy. Kontekst niesie `ghKursy` / `redKursy`
    (etykieta kursu = preparat z jego ostatniego punktu) obok dotychczasowej koperty `gh` / `red`.
+   **[ZASTĄPIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4, blok „Kursy leczenia otyłości = cykle” na końcu tej
+   sekcji; dla GH reguła obowiązuje bez zmian.]**
 2. *Okno w kursie* (`kursOkna`): start okna ≥ początek kursu − 6 mies., koniec ≤ koniec kursu (gdy zakończony), pokrycie
    leczeniem ≥ 50 % okna. Tylko takie okno dostaje werdykt odpowiedzi na leczenie. Okno mieszane dostaje werdykt
    populacyjny/MPH z dopiskiem „— w tym N mies. na GH” / „— w tym N mies. leczenia redukcyjnego” (dopisek jest
    ogonem etykiety; słowniki opisu i epikryzy odmieniają głowę, ogon wraca na koniec zdania).
+   **[ZMIENIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4: dolna granica tolerancji startu = max(początek kursu
+   − 6 mies., koniec poprzedniego kursu otyłości); GH bez zmian. Blok „Kursy leczenia otyłości = cykle” na końcu tej
+   sekcji.]**
 3. *Odpowiedź na GH na rok*: okno w kursie < 6 mies. → „za wcześnie na ocenę odpowiedzi na GH — N mies.”; ≥ 6 mies. →
    ΔhSDS × 12 / okno z progami ≥ +0,3 dobra, < +0,1 słaba (dotychczasowe liczby aplikacji, PR #63/v388; słaba
    odpowiedź w 1. roku < 0,3 wg konsensusu Bang 2012, doi:10.1111/j.1365-2265.2012.04420.x); okno 6–11 mies. z dopiskiem
@@ -9006,6 +9838,8 @@ koduj” (wszystkie R1–R9 w jednej racie).
    jest nagłówkiem wiersza (jak dotąd). Zakończony kurs: linia „↳ okres leczenia (X → Y, zakończone): ΔSDS … — …”,
    nagłówek wraca do fazy/całości (karta, podsumowanie, opis pacjenta, epikryza). Chip masy przechodzi przez nakładkę
    masa↔BMI, chip BMI przez nakładkę prędkości.
+   **[ZMIENIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4: pomiar na starcie nie starszy niż 6 mies. przed startem
+   i nie wcześniejszy niż koniec poprzedniego kursu otyłości (dolna granica jak w regule 2); GH bez zmian.]**
 6. *Faza* (rata 5) nie przechodzi przez granicę kursu: odcinek w kursie i odcinek poza nim (albo w innym kursie) nie
    sklejają się w jedną fazę, nawet przy tym samym kierunku.
 7. *Krótkie okno wzrostu*: |ΔhSDS| ≥ 0,5 w oknie < 6 mies. → „szybka zmiana w krótkim oknie — do weryfikacji pomiaru”
@@ -9035,6 +9869,185 @@ odpowiedzi redukcyjnej −0,2 → −0,25. U pacjentów bez punktów terapii zmi
 **Decyzje właściciela do potwierdzenia.** Niższy próg odpowiedzi na GH dla kolejnych lat kursu (dziś ten sam co w 1. roku);
 brzmienie „brak istotnej odpowiedzi na leczenie — po N mies.”; próg −0,25 zamiast −0,2; czy dopisek „w tym N mies.” ma
 być także w epikryzie (dziś idzie jako ogon etykiety, więc tak).
+
+### Kursy leczenia otyłości = cykle (P-OTYLOSC-CYKLE rata 4, obszar trajektorii; `vilda_trajectory_analysis.js` 32, 2026-10-01)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (D1: cykle wyliczane
+z punktów, granica = wyłącznie Zakończenie; D6: „karta porównania — dla otyłości granicą są Zakończenie i Włączenie,
+bez progu przerwy 3 mies., GH bez zmian”; „Kontynuacja po Zakończeniu w starym zapisie staje się cyklem bez Włączenia”);
+„ruszaj z ratą 4” — 2026-10-01. Źródłem jest decyzja organizacyjna o granicach cyklu, nie nowy próg kliniczny: progi
+odpowiedzi (reguły 3, 4 i 6 wyżej) się nie zmieniają; zmienia się to, które miesiące są „w kursie”, a w regułach 2 i 5
+tolerancja startu kursu otyłości nie sięga przed koniec poprzedniego kursu (niżej).
+
+**Reguła.** Kursy leczenia otyłości (`redKursy` w kontekście z `buildClinicalContext`) liczy `kursyOtylosci` z cykli
+`VildaCykleLeczenia.podziel` (ten sam podział, co monitor DocPro, Karta pacjenta i „Postępy”): kurs = cykl; `a` = wiek
+pierwszego punktu cyklu z wiekiem > 0 (miesiące, `ageYears·12 + ageMonths`), `b` = wiek Zakończenia (Zakończenie bez
+wieku → najstarszy punkt cyklu), aktywny cykl `b = null`; cykl bez punktu z wiekiem > 0 pominięty; etykieta = preparat
+ostatniego punktu cyklu z lekiem, kurs bez leku — „otyłość” (dotąd dostawał lek innego kursu). Kolejność kursów =
+kolejność cykli (po datach, gdy datę ma każdy punkt). Cykl bez Włączenia i cykl z niezgodnością zapisu to zwykły kurs:
+werdykt BMI-SDS trajektorii nie jest oceną odpowiedzi wg ChPL (tę Karta pacjenta wstrzymuje przy niezgodnym zapisie).
+Bez modułu cykli na stronie (offline bez pliku z `OPTIONAL_ASSETS`) albo przy wyjątku kursy dzieli reguła sprzed raty
+(`therapyIntervals`); pozostałe punkty niżej działają także wtedy — patrz „Ścieżka bez modułu cykli”.
+Dodatkowo:
+- *Tolerancja startu przy stykających się kursach.* Dla kursów otyłości dolna granica tolerancji startu (okno w kursie,
+  pomiar startowy chipu) = max(start − 6 mies., koniec poprzedniego kursu) — przy Zakończeniu i Włączeniu tego samego
+  dnia okno ani pomiar z poprzedniego cyklu nie liczy się jako „w kursie” nowego leku. Przycięcie działa przy KAŻDEJ
+  przerwie między kursami krótszej niż 6 mies. (`KURS_START_TOL_M`), także przy przerwie 3–6 mies., przy której lista
+  kursów jest taka sama jak przed ratą; przy przerwie ≥ 6 mies. nic nie zmienia. GH bez tego przycięcia.
+- *Pasek meta* analizy trajektorii: przy kilku kursach otyłości żeton na każdy kurs („⬇ redukcja Saxenda · od … do …”,
+  „⬇ redukcja Wegovy · od … — nadal”); przy jednym — jak dotąd z koperty. Długi żeton zawija tekst zamiast wystawać.
+- *Karta pacjenta:* panel „Analiza trajektorii” dostaje listę kursów otyłości (dotąd samą kopertę — przerwa między
+  kursami liczyła się tam jako leczenie, także po racie 6); pasek kontekstu panelu „Porównanie pomiarów” liczy
+  „🍽 … w przedziale (N mies.)” jako sumę pokryć kursów, z etykietą kursu o największym pokryciu. Przy JEDNYM kursie
+  etykieta koperty — ta sama co żeton paska meta i co przed ratą 4 (kurs i koperta to wtedy ten sam przedział, a
+  etykieta kursu — lek ostatniego punktu cyklu z lekiem — bywa inna niż koperty, np. przy Włączeniu i Zakończeniu bez
+  leku: kurs „Saxenda”, koperta i żeton „otyłość”; poprawka po recenzji całości raty). GH w Karcie bez zmian
+  (koperta — osobny wątek).
+
+**Populacja i ograniczenia.** Zmiana widoczna wyłącznie u dzieci (analiza trajektorii i karty porównania wymagają siatek
+centylowych); u dorosłego kontekst liczy się tak samo, ale żaden ekran go nie pokazuje. Wiek kursów pochodzi z pól wieku
+punktów, kolejność cykli z dat — przy niespójnych wiekach i datach kurs może mieć `b < a` (brak okna w kursie). Pasek
+terapii na siatkach Karty pacjenta i `growth-basic-module.js` zostają na kopercie (poza zakresem raty).
+Przypadki brzegowe (stan po racie 4; testy w `tests/unit/kursy-otylosci-cykle.test.mjs`) — pierwszy powstaje zwykłą
+drogą zapisu w monitorze, pozostałe tylko w starym zapisie albo w imporcie:
+- *Wizyta w tym samym miesiącu wieku co Zakończenie, wcześniejsza datą, zapisana w tablicy po Zakończeniu* — zwykła
+  droga zapisu: wizyta dopisana wstecz w monitorze (`sprawdz` stawia ją na końcu tablicy). Moduł cykli porządkuje po
+  datach, więc kurs kończy się na Zakończeniu, także przy JEDNYM cyklu. Dotąd `therapyIntervals` (sortowanie po wieku,
+  remis w kolejności tablicy) widziało wizytę „po” Zakończeniu i otwierało kurs ponownie — leczenie liczyło się jako
+  trwające. Ta sama przyczyna (kolejność z dat zamiast z tablicy) może zmienić etykietę kursu, gdy punkty w remisie
+  mają różny tekst leku tej samej substancji. GH i ścieżka bez modułu cykli zostają przy `therapyIntervals` (dawny
+  wynik).
+- *Zakończenie bez wieku* (wiek 0). Gdy datę ma każdy punkt, moduł cykli porządkuje po datach i Zakończenie zamyka
+  cykl — kurs kończy się na najstarszym wieku cyklu, także przy JEDNYM cyklu (dotąd `therapyIntervals` pomijało ten
+  punkt i kurs trwał). Gdy choć jeden punkt nie ma daty, moduł porządkuje po wieku: Zakończenie z wiekiem 0 staje na
+  początku jako osobny cykl bez wieku > 0 (pominięty), a kurs trwa — jak dotąd. Ten sam punkt daje więc różny wynik
+  zależnie od tego, czy INNE wizyty mają daty (niespójność — do decyzji właściciela).
+- *Włączenie nowego leku zapisane w tablicy PRZED Zakończeniem poprzedniego tego samego dnia.* Przy remisie dat moduł
+  cykli zachowuje kolejność tablicy, więc Włączenie trafia do cyklu 1 (niezgodność „dwa-wlaczenia”), a kurs 2 (cykl bez
+  Włączenia) zaczyna się od pierwszej Kontynuacji; przerwa Zakończenie → Kontynuacja nie jest liczona jako leczenie.
+  Przy odwrotnej kolejności (Zakończenie przed Włączeniem) to zwykła zmiana leku tego samego dnia (CY-8).
+- *Zdublowane Zakończenie* (Z, Z bez wizyty między nimi — niezgodność „zakonczenie-bez-wizyt”). Drugi cykl to sam punkt
+  Zakończenia; zgodnie z regułą „cykl z niezgodnością to zwykły kurs” daje kurs zerowej długości `{a: m, b: m}`. Jako
+  OSTATNI kurs przejmuje chip okresu leczenia, a `oknoKursu` nie znajduje w nim okna — chip PRAWDZIWEGO kursu znika,
+  a pasek meta pokazuje żeton „… · od 13 lat 2 mies. do 13 lat 2 mies.”. Kurs zerowej długości nie dodaje miesięcy
+  leczenia; leczenie kończy się na pierwszym Zakończeniu (dotąd `therapyIntervals` wydłużało kurs do drugiego, gdy dzieliło
+  je < 3 mies. — np. dopisek całości „w tym 13 mies.” → „w tym 12 mies.”). Wariant do decyzji właściciela (niżej).
+
+**Ścieżka bez modułu cykli.** Bez `VildaCykleLeczenia` (albo przy wyjątku w `podziel`) kursy otyłości liczy
+`therapyIntervals` (Zakończenie + przerwa ≥ 3 mies. = nowy kurs). NIE jest to jednak w pełni zachowanie sprzed raty 4 —
+kontekst nie niesie informacji, skąd pochodzą kursy (kształt `{a, b, label}` bez nowych pól), więc na każdej liście
+kursów otyłości działają: przycięcie tolerancji startu (zmienia wynik przy przerwie 3–6 mies.), żeton na każdy kurs
+w pasku meta, etykieta „otyłość” per kurs, a w Karcie pacjenta lista kursów w panelu „Analiza trajektorii” i suma pokryć
+w pasku panelu „Porównanie pomiarów”. Przy przerwie < 3 mies. `therapyIntervals` skleja cykle w jeden kurs, więc wynik
+jest jak przed ratą (test negatywny). Przy przerwie ≥ 3 mies. widać różnicę (przypadek „przerwa 4 mies.” niżej — z modułem
+i bez niego wynik jest ten sam).
+
+**Przypadki syntetyczne (wejście → wynik).**
+- CY-9 dorosłego (170 cm; W 12.01.2024 Saxenda 40 l. 1 mies., K, Z 15.10.2024; W 12.11.2024 Wegovy, K, K 10.05.2025):
+  `redKursy` = `[{481, 490, Saxenda}, {491, null, Wegovy}]` niezależnie od kolejności w tablicy (dotąd jeden kurs
+  `{481, null, Wegovy}`).
+- Stary zapis W 96, Z 100, K 101 mies. → `[[96, 100], [101, null]]` (drugi kurs = cykl bez Włączenia); jako GH → `[[96, null]]`.
+- Dziecko: Saxenda W 145, K 148, Z 154 mies.; Wegovy W 154 (ten sam dzień), K 158; pomiary 145, 148, 151, 158, 161 →
+  dwa kursy `[[145, 154], [154, null]]`; chip okresu leczenia 158 → 161 („— wstępnie (3 mies.)”), odcinek 151 → 158
+  mieszany „— w tym 7 mies. leczenia redukcyjnego”, całość 145 → 161 „redukcja nadmiaru masy ciała — w tym 16 mies.
+  leczenia redukcyjnego”. Dotąd jeden kurs od 145 mies.: chip 145 → 161, odcinek 151 → 158 w kursie, całość „redukcja
+  w trakcie leczenia”.
+- Przerwa 4 mies. (kursy takie same jak przed ratą): Saxenda W 145, Z 151; Wegovy W 155, K 158 → `[[145, 151], [155, null]]`
+  (z modułem cykli i bez niego). Karta porównania z poprzednim pomiarem 150 → 161 mies. (masa SDS 2,45 → 2,10): dotąd
+  „redukcja w trakcie leczenia”, okno w kursie Wegovy i „kontekst: leczenie otyłości (Wegovy) — 6 mies. w odcinku”;
+  teraz „redukcja nadmiaru masy ciała — w tym 7 mies. leczenia redukcyjnego”, okno mieszane, kontekstu brak (start
+  okna 150 < koniec Saxendy 151). Analiza trajektorii (pomiary 145, 150, 158, 161): chip okresu leczenia dotąd 150 → 161
+  „redukcja w trakcie leczenia”, teraz 158 → 161 „redukcja w trakcie leczenia — wstępnie (3 mies.)”; pasek meta dotąd
+  jeden żeton „Wegovy · od 12 lat 1 mies. — nadal”, teraz dwa („Saxenda · od 12 lat 1 mies. do 12 lat 7 mies.”,
+  „Wegovy · od 12 lat 11 mies. — nadal”).
+- Zakończenie bez wieku, jeden cykl, zapis z datami (W 145, K 151, Z z wiekiem 0 i datą) → `[[145, 151]]` (dotąd
+  `[[145, null]]`): pomiary po 151 mies. nie są „w kursie” — chip okresu leczenia kończy się na 151 mies., okno sięgające
+  dalej dostaje werdykt populacyjny z dopiskiem. Pomiary 140, 143, 145, 148, 151, 154, 157, 160, 163 mies., SDS masy
+  malejący o 0,02/mies.: chip dotąd 145 → 163 „redukcja w trakcie leczenia” (aktywny kurs; okno 18 mies. oceniane po
+  zmianie skumulowanej, ΔSDS −0,36), teraz 145 → 151 „brak istotnej odpowiedzi na leczenie — po 6 mies.” (ton warn;
+  kurs zakończony; okno 6 mies. przeliczane na rok: ΔSDS −0,12 → −0,24/rok > −0,25); całość dotąd „redukcja w trakcie
+  leczenia”, teraz „redukcja nadmiaru masy ciała — w tym 6 mies. leczenia redukcyjnego”. Ten sam zapis bez dat →
+  `[[145, null]]`, jak dotąd.
+- Jeden cykl, wizyta dopisana wstecz w miesiącu wieku Zakończenia (dziewczynka ur. 05.01.2012; Saxenda: W 10.02.2024
+  145 mies., K 10.05.2024 148, Z 20.08.2024 151; potem dopisana K 08.08.2024 151 — prawdziwe `sprawdz` daje tablicę
+  W, K, Z, K i jeden cykl „zakończony” W, K, K, Z). Pomiary 145, 148, 151, 155, 158, 161, 164 mies., SDS masy 2,60;
+  2,45; 2,30; 2,35; 2,45; 2,55; 2,65. `redKursy` `[[145, 151]]` (dotąd `[[145, null]]`). Chip okresu leczenia teraz
+  „↳ okres leczenia (12 lat 1 mies. → 12 lat 7 mies., zakończone): ΔSDS −0,30 — redukcja w trakcie leczenia”, dotąd
+  „(od 12 lat 1 mies.): ΔSDS +0,05 — brak istotnej odpowiedzi na leczenie — po 19 mies.” jako nagłówek wiersza masy;
+  nagłówek teraz „progresja nadmiaru masy (>97. centyla)”; całość teraz „tor stabilny, ale masa ciała znacznie powyżej
+  typowego zakresu (>97c) — w tym 6 mies. leczenia redukcyjnego”, dotąd „brak istotnej odpowiedzi na leczenie — po
+  19 mies.”. Karta porównania, para 151 → 158 mies.: teraz „tor stabilny, ale masa ciała znacznie powyżej typowego
+  zakresu (>97c)”, dotąd „przyrost masy mimo leczenia redukcyjnego”; pasek „Porównanie pomiarów” w Karcie 151 → 158:
+  bez „🍽 Saxenda w przedziale (7 mies.)” (148 → 164: 3 mies. zamiast 16). Ta sama tablica w kolejności dat (W, K, K, Z)
+  daje `[[145, 151]]` po obu stronach — różnicę robi wyłącznie remis wieku przy kolejności tablicy.
+- Stary zapis W Saxenda 145, K 148, W Wegovy 154 i Z Saxenda 154 (ta sama data, Włączenie wcześniej w tablicy), K 155,
+  K 160 → cykle `[W, K, W, Z]` („dwa-wlaczenia”) i `[K, K]`; kursy `[[145, 154, Saxenda], [155, null, Wegovy]]` (dotąd
+  `[[145, null, Wegovy]]`).
+- Zdublowane Zakończenie: W 145, K 148, Z 157, Z 158 (z datami) → `[[145, 157], [158, 158]]`; chip okresu leczenia brak
+  (dotąd jeden kurs 145 → 158 i chip 145 → 157).
+- Dziecko, Saxenda 145–154, Wegovy od 155: pasek meta „Saxenda · od 12 lat 1 mies. do 12 lat 10 mies.”, „Wegovy · od
+  12 lat 11 mies. — nadal”; chip „↳ okres leczenia (od 12 lat 11 mies.)”; całość 145 → 161 werdykt populacyjny
+  „— w tym 15 mies. leczenia redukcyjnego” (dotąd „redukcja w trakcie leczenia”).
+- Karta porównania z poprzednim pomiarem 150 → 161 mies., Z 150, W 152: „kontekst: leczenie otyłości (Wegovy) — 9 mies.
+  w odcinku” (dotąd 11 mies.).
+
+**Wpływ kliniczny.** Dotyczy dzieci z punktami monitora otyłości (u dorosłego nic nie jest widoczne). Wynik zmienia się
+w pięciu grupach — z modułem cykli na stronie; bez niego patrz „Ścieżka bez modułu cykli”:
+1. *Zakończenie i kolejny punkt (Włączenie albo Kontynuacja) dzieli mniej niż 3 mies.*, w tym zmiana leku tego samego
+   dnia: dwa kursy zamiast jednego. Okno obejmujące oba cykle przestaje być oceną odpowiedzi na leczenie i dostaje werdykt
+   populacyjny z dopiskiem „— w tym N mies. leczenia redukcyjnego”; chip okresu leczenia liczy tylko bieżący cykl; pasek
+   meta ma żeton na każdy kurs; chip kontekstu karty porównania pokazuje miesiące kursu bieżącego cyklu albo znika przy
+   oknie mieszanym.
+2. *Przerwa między kursami krótsza niż 6 mies.* (`KURS_START_TOL_M`) — także przerwa 3–6 mies., przy której lista kursów
+   jest TAKA SAMA jak przed ratą: okno albo pomiar startowy, który zaczyna się przed końcem poprzedniego kursu, nie należy
+   do następnego kursu (dotąd wystarczał start ≥ początek − 6 mies.). Karta porównania z poprzednim pomiarem traci chip
+   kontekstu („kontekst: leczenie otyłości …”), a werdykt pary staje się populacyjny z dopiskiem zamiast „redukcja
+   w trakcie leczenia”; chip okresu leczenia zaczyna się od pomiaru nie wcześniejszego niż koniec poprzedniego kursu
+   (krótsze okno, może dostać „wstępnie”). Przy przerwie ≥ 6 mies. bez zmian.
+3. *Zakończenie bez wieku w zapisie, w którym każdy punkt ma datę:* kurs zamyka się na najstarszym wieku cyklu, także
+   przy jednym cyklu (dotąd trwał) — pomiary po tym wieku przestają być „w kursie”. Krótsze okno chipu okresu leczenia
+   może zmienić jego werdykt, także z „redukcja w trakcie leczenia” na „brak istotnej odpowiedzi na leczenie — po
+   N mies.” (ton warn): okno < 12 mies. jest przeliczane na rok zamiast oceny zmiany skumulowanej (reguła 4). W zapisie
+   z choć jednym punktem bez daty ten sam punkt jest pomijany, jak dotąd (niespójność trybów — „Populacja
+   i ograniczenia”).
+4. *Karta pacjenta* (panel „Analiza trajektorii” i pasek panelu „Porównanie pomiarów”): przerwa między kursami
+   (dowolnej długości) przestaje być „leczeniem” — np. przyrost w przerwie nie brzmi już „przyrost masy mimo leczenia
+   redukcyjnego”, a „🍽 … w przedziale (N mies.)” liczy sumę pokryć kursów (przerwa 4 mies., przedział 150 → 161:
+   7 mies. zamiast 11). Przy jednym kursie etykieta paska jak dotąd (koperta).
+5. *Jeden cykl z wizytą w tym samym miesiącu wieku co Zakończenie, wcześniejszą datą, ale zapisaną w tablicy po
+   Zakończeniu* (wizyta dopisana wstecz w monitorze — zwykła droga zapisu): punkty w remisie wieku są porządkowane po
+   dacie (gdy datę ma każdy punkt), nie po kolejności tablicy, więc kurs kończy się na Zakończeniu (dotąd był aktywny).
+   Pomiary po Zakończeniu przestają być „w kursie”: chip okresu leczenia zamyka się na Zakończeniu i przestaje być
+   nagłówkiem, odcinki i pary po Zakończeniu tracą werdykty odpowiedzi na leczenie (np. „przyrost masy mimo leczenia
+   redukcyjnego”) na rzecz werdyktu populacyjnego, pasek Karty traci „🍽 … w przedziale”. Wynik jest poprawniejszy
+   (leczenie zakończono), ale zmienia werdykty pacjentowi z jednym cyklem i jedną substancją. Może też zmienić etykietę
+   kursu przy różnym tekście leku punktów w remisie.
+Skutki przechodzą do epikryzy i opisu pacjenta (czytają model trajektorii). Przypadki brzegowe starego zapisu (Włączenie
+przed Zakończeniem tego samego dnia w tablicy, zdublowane Zakończenie) opisuje „Populacja i ograniczenia”. Testy:
+`tests/unit/kursy-otylosci-cykle.test.mjs`, `tests/e2e/kursy-otylosci-cykle.spec.mjs`; test „wraca do tego samego kursu”
+w `werdykt-kursy-rata-6.test.mjs` opisuje odtąd wyłącznie GH.
+
+**Do decyzji właściciela.**
+1. Akceptacja kliniczna grup 1–5 wyżej (każda zmienia wynik; grupy 2, 3 i 5 dotyczą także pacjentów, u których lista
+   kursów przed ratą była taka sama albo był tylko jeden cykl — grupa 5 powstaje zwykłą drogą zapisu w monitorze).
+2. Czy zmiana leku bez przerwy (Z i W tego samego dnia) ma przerywać ocenę całości okna.
+3. Przycięcie tolerancji startu przy przerwie 3–6 mies. (grupa 2): zostawić czy ograniczyć do kursów stykających się
+   (przerwa < 3 mies.).
+4. Zakończenie bez wieku (grupa 3): zostawić zależność od dat innych wizyt czy ujednolicić (np. zawsze zamykać kurs albo
+   zawsze pomijać taki punkt).
+5. Zdublowane Zakończenie: zostawić kurs zerowej długości (stan raty 4), pomijać cykl złożony wyłącznie z Zakończenia
+   (wariant A) albo brać do chipu ostatni kurs, w którym `oknoKursu` znajduje okno (wariant B). Rozstrzygnięcie ma być
+   wspólne dla wszystkich obszarów: Karta pacjenta (`Ob_cy` — dziś samotne Zakończenie jest bieżącym cyklem z notą
+   „Zakończenie (…) bez wizyt w cyklu” i wstrzymanym werdyktem, jak od raty 3) i „Postępy” (`cyklBiezacy` — dziś
+   odniesienie od drugiego Zakończenia, cały kurs „sprzed odniesienia”, „odstawione w 0. tygodniu”; podrozdział
+   „Postępów”, wiersz „zdublowane Z”) liczą tak samo jak trajektoria. Wariant A wymaga zmiany we wszystkich trzech
+   miejscach, inaczej obszary się rozjadą.
+6. Ścieżka bez modułu cykli: zostawić jak opisano wyżej (wariant B) czy uzależnić przycięcie, żetony per kurs i etykietę
+   „otyłość” od tego, czy kursy pochodzą z modułu cykli (wariant A — pełne zachowanie sprzed raty 4 bez modułu).
+7. Panel trajektorii w Karcie z `ghKursy` (GH) i pasek terapii na siatkach — osobne wątki.
+8. Poza zakresem raty: czy `therapyIntervals` (GH i ścieżka bez modułu cykli) ma porządkować punkty w remisie wieku po
+   dacie, gdy datę ma każdy punkt (dziś zostawia kolejność tablicy — wizyta dopisana wstecz po Zakończeniu otwiera kurs
+   ponownie, grupa 5).
 
 ## Werdykt trajektorii: ostatnia faza jako nagłówek, poziom nadwagi przy stabilnym torze (P-WERDYKT rata 5, SW 1.1.77, 2026-09-27)
 
@@ -12342,6 +13355,25 @@ racie ich nie ruszano, zgodnie z kolejnością wskazaną przez właściciela.
   i przedstawiona właścicielowi.
 
 SW 1.1.23 → **1.1.24**; `vilda_bmi.js?v=5→6`, `vilda_bmi_journey.js?v=12→13`.
+
+## Stan wizyty po własnym zapisie i odtworzeniu sesji (2026-10-01)
+
+Poprawka dotyczy cyklu życia formularza i widoczności porównania, bez zmiany wzorów,
+norm, dawek, jednostek ani zapisanych wyników klinicznych.
+
+- Własny zapis nowego pacjenta potwierdza bieżący stan przed utrwaleniem bazy
+  `lastLoadedData`. Nie tworzy oczekującego wczytania; zachowuje istniejący wybór
+  „Odtwórz zapis” albo „Nowy pomiar”. Powiadomienie `source: 'save'` nie kasuje tego wyboru.
+- Odtworzenie sesji przy przejściu Start → DocPro lub F5 nie używa bieżących pól jako
+  poprzedniego pomiaru. W trybie „Nowy pomiar” pozostaje rzeczywisty punkt odniesienia.
+- Ukrycie karty porównania usuwa także jej znacznik `dataset.loaded`. Odczyt rekordu
+  rozpoczęty przed wyborem „Odtwórz zapis” ani późniejszy cykl terapii nie wskrzeszają karty.
+  Rekord bez skończonej wartości wzrostu lub masy nie tworzy pustej tabeli porównania.
+
+Regresje wykonują rzeczywiste moduły importu, wyboru wizyty i karty porównania oraz
+formularze w powłoce `app.html`: pierwszy własny zapis, odtworzenie po edycji historii
+i cyklu GH, przełączanie ramek, F5 i kontrola prawidłowego wyboru „Nowy pomiar”.
+Dane testowe są wyłącznie fikcyjne.
 
 ## Zasady aktualizacji rejestru
 

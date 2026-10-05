@@ -46,7 +46,7 @@
     PUB_AGE_MIN_M: 120,       // od 10 lat (poniżej działa drabinka wiekowa)
     PUB_AGE_MAX_F_M: 156,     // dziewczęta: okno generyczne do 13 lat
     PUB_AGE_MAX_M_M: 180,     // chłopcy: okno generyczne do 15 lat
-    BONE_AGE_FRESH_M: 18      // wiek kostny użyty tylko, gdy oznaczony w ciągu ostatnich 18 mies.
+    BONE_AGE_FRESH_M: 12      // badanie użyte tylko przy znanym czasie, maksymalnie 12 mies. temu
   };
 
   /* Drabinka wiekowa < 10 lat. `prog` to wartość, przy której pada alarm; `etykieta` opisuje
@@ -177,7 +177,16 @@
       return out;
     }
     var ba = ctx && ctx.boneAge ? ctx.boneAge : null;
-    var baFresh = ba && (ba.atAgeMonths == null || (target - ba.atAgeMonths) <= P.BONE_AGE_FRESH_M);
+    var baAt = ba ? num(ba.atAgeMonths) : null;
+    var baGap = baAt == null ? null : target - baAt;
+    var baFresh = ba && baGap != null && baGap >= 0 && baGap <= P.BONE_AGE_FRESH_M;
+    if (ba && !baFresh) {
+      out.boneAgeOmittedReason = baGap == null ? 'unknown-time' : baGap < 0 ? 'future-time' : 'stale';
+      out.note = 'Wiek kostny pominięty w ocenie normy tempa: ' + (baGap == null
+        ? 'nieznany czas oznaczenia'
+        : baGap < 0 ? 'wiek oznaczenia późniejszy niż oceniany pomiar'
+          : 'oznaczony ' + Math.round(baGap) + ' mies. temu (maksymalnie ' + P.BONE_AGE_FRESH_M + ' mies.)') + '.';
+    }
     if (ba && baFresh) {
       var thrBA = prog(ba.baMonths);
       if (thrBA) {
@@ -314,7 +323,7 @@
 
   /* Werdykt w słowach — przeniesiony z velocityAssessment() trajektorii (ten sam tekst
    * widzi lekarz na karcie, w opisie pacjenta i w podsumowaniu). Zwraca {cls, text, short, note}. */
-  function ocenaTekst(vel) {
+  function ocenaTekstPodstawowa(vel) {
     if (!vel) return null;
     if (vel.slow && vel.severity === 'danger') {
       return { cls: 'bad', text: 'poniżej normy dla wieku' + (vel.normLabel ? ' (' + vel.normLabel + ')' : ''), short: 'poniżej normy dla wieku', note: vel.normLabel ? 'norma ' + vel.normLabel : null };
@@ -325,6 +334,18 @@
     if (vel.aboveNormAge) return { cls: 'stable', text: 'poza oknem automatycznej oceny normy tempa', short: 'poza oknem automatycznej oceny normy tempa', note: null };
     if (!vel.usedLastYear) return { cls: 'stable', text: 'odstęp pomiarów poza oknem oceny, bez porównania z normą', short: 'odstęp pomiarów poza oknem oceny, bez porównania z normą', note: null };
     return null;
+  }
+
+  // Powód pominięcia badania uzupełnia ocenę opartą na pozostałych danych;
+  // nie zastępuje samej normy ani jej werdyktu.
+  function ocenaTekst(vel) {
+    var podstawowa = vel && vel.boneAgeOmittedReason ? Object.assign({}, vel, { note: null }) : vel;
+    var oc = ocenaTekstPodstawowa(podstawowa);
+    if (oc && vel && vel.boneAgeOmittedReason && vel.note) {
+      oc.text += '; ' + vel.note;
+      oc.note = (oc.note ? oc.note + '; ' : '') + vel.note;
+    }
+    return oc;
   }
 
   /* Odstęp zawsze w miesiącach — naturalna jednostka między wizytami. */

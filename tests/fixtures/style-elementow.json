@@ -77,6 +77,7 @@
     "vilda_estimated_intake_ui.js": 1,
     "vilda_food_summary.js": 4,
     "vilda_growth_prediction_validation.js": 7,
+    "vilda_lab_assessment_ui.js": 1,
     "vilda_patient_narrative_ui.js": 3,
     "vilda_patient_report.js": 38,
     "vilda_persist_runtime.js": 4,

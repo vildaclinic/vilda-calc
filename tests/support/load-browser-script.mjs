@@ -15,12 +15,19 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 // Bez pliku danych pasma znikają, bez silnika BMI znikają klasy, bez kryteriów ChPL znika
 // punkt decyzyjny — w każdym z tych przypadków wynik jest UBOŻSZY, a nie błędny, więc brak
 // zależności czytałby się jak regresja produktu.
+// vilda_cykle_leczenia.js (P-OTYLOSC-CYKLE rata 4) dzieli punkty leczenia otyłości na cykle — od niego
+// trajektoria bierze kursy otyłości (kursyOtylosci). Bez niego moduł trajektorii nie pada, tylko cicho
+// wraca do reguły sprzed raty 4 (Zakończenie + przerwa ≥ 3 mies.), więc testy kursów sprawdzałyby starą regułę.
 const ZALEZNOSCI = {
-  'vilda_trajectory_analysis.js': ['vilda_werdykt.js'],
+  'vilda_trajectory_analysis.js': ['vilda_werdykt.js', 'vilda_cykle_leczenia.js'],
   'vilda_postepy_doroslego.js': [
     'vilda_bmi.js',
     'obesity_response_criteria.js',
     'vilda_postepy_doroslego_dane.js',
+    // P-OTYLOSC-CYKLE rata 4: silnik bierze punkt odniesienia, lek i stan z BIEŻĄCEGO cyklu
+    // leczenia. Bez modulu cykli wraca do reguly sprzed raty 4 (pierwsze Wlaczenie w historii,
+    // „odstawione" przy jakimkolwiek Zakonczeniu) — po cichu, bez bledu.
+    'vilda_cykle_leczenia.js',
   ],
   // Widok sam z siebie nic nie liczy — bez silnika nie ma czego narysowac, wiec jego brak
   // dalby pusty HTML zamiast bledu, czyli znowu cicha zmiane wyniku zamiast glosnej awarii.
@@ -28,6 +35,10 @@ const ZALEZNOSCI = {
   // Modul wydruku sklada dokument z tego, co narysowal widok; bez widoku oddaje pusty napis,
   // czyli znowu cicha zmiane wyniku zamiast glosnej awarii.
   'vilda_postepy_doroslego_wydruk.js': ['vilda_postepy_doroslego_ui.js'],
+  // Modul cykli (P-OTYLOSC-CYKLE rata 4, R6) rozpoznaje substancje czynna punktu przez kryteria
+  // ChPL. Bez nich kazdy punkt jest „neutralny”, R6 milknie i zmiana leku w cyklu przechodzi
+  // bez odmowy — test czytalby sie jak brak regresji, a bylby brakiem wsadu.
+  'vilda_cykle_leczenia.js': ['obesity_response_criteria.js'],
 };
 
 // Zaleznosci sa PRZECHODNIE i wykonywane RAZ na dane okno.

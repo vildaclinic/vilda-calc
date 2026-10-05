@@ -135,9 +135,20 @@ test('kontrola negatywna: bez zmiennej dymek wracałby na dół — to CSS ją c
   await expect(dymek).toBeVisible({ timeout: 10000 });
   const z = await prostokat(dymek);
 
-  // usuwamy zmienną „ręką" — dymek ma zjechać do paska bezpieczeństwa (na desktopowym Chromium: 16 px od dołu)
-  await page.evaluate(() => document.documentElement.style.setProperty('--vilda-dol-wolny', '0px'));
+  // Kontrola zeruje WYŁĄCZNIE wejście do CSS, nie pozycję dymka. Zwykłe inline
+  // setProperty przegrywało z kolejną publikacją właściciela docka (resize/obserwatory),
+  // więc drugi pomiar czasem sprawdzał znowu oryginalny stan zamiast kontroli negatywnej.
+  // Reguła !important utrzymuje kontrolowane wejście mimo aktualizacji aplikacji.
+  await page.addStyleTag({ content: ':root { --vilda-dol-wolny: 0px !important; }' });
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('--vilda-dol-wolny', '0px');
+    window.dispatchEvent(new Event('resize'));
+  });
   await page.waitForTimeout(400); // przejście .22s
+  expect(await page.evaluate(() => parseFloat(document.documentElement.style.getPropertyValue('--vilda-dol-wolny'))),
+    'właściciel docka rzeczywiście opublikował dodatnią wartość po resize').toBeGreaterThan(0);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--vilda-dol-wolny').trim()),
+    'kontrola utrzymuje zerową zmienną również po ponownej publikacji docka').toBe('0px');
   const bez = await prostokat(dymek);
   const okno = await page.evaluate(() => window.innerHeight);
   expect(bez.bottom, 'bez zmiennej dymek siada przy dole okna').toBeGreaterThan(z.bottom);

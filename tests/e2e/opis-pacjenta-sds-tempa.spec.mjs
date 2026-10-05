@@ -34,6 +34,20 @@ async function otworz(page) {
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Opis sprawdzamy przy aktywnej karcie profesjonalnej. Ręczne usunięcie
+  // disabled z przycisku nie włączało trybu: następna aktualizacja dostępu
+  // ponownie ukrywała kartę jeszcze przed wpisaniem pomiaru historycznego.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (!tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  await expect(page.locator('#resultsModeToggle')).toBeChecked();
 }
 
 // Dziewczynka 14 lat, 148,5 cm. Jeden pomiar historyczny — jego wiek rozstrzyga o odstępie:
@@ -57,16 +71,10 @@ async function pacjentka(page, lata, miesiace, wzrost) {
     '#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
     { state: 'attached' },
   );
-  await page.evaluate(() => {
-    const t = document.getElementById('toggleAdvancedGrowth');
-    const f = document.getElementById('advancedGrowthForm');
-    if (f && getComputedStyle(f).display !== 'none') return;
-    if (t) { t.disabled = false; t.click(); }
-  });
-  // CI (PR #264): karta bywa jeszcze ukryta przez animację wejścia (klasa `_enter`), a wiersz
-  // pomiaru może być zwinięty (`data-analysis-open="false"`) — czekamy na OBECNOŚĆ karty, potem
-  // (z dłuższym limitem) na jej widoczność; wiersz wystarczy, że istnieje w DOM, bo wartości
-  // wpisujemy przez DOM, nie klikami.
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
+  if (!await page.locator('#advancedGrowthForm').isVisible()) await page.locator('#toggleAdvancedGrowth').click();
+  // Karta musi być widoczna po włączeniu właściwego trybu. Wiersz pomiaru może
+  // być zwinięty (`data-analysis-open="false"`); jego pola wypełniamy przez DOM.
   await page.waitForSelector('#advancedGrowthForm', { state: 'attached', timeout: 10000 });
   await expect(page.locator('#advancedGrowthForm')).toBeVisible({ timeout: 10000 });
   await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });

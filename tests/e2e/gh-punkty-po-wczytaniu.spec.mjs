@@ -42,6 +42,18 @@ async function otworz(page) {
   await page.waitForFunction(
     () => !document.documentElement.classList.contains('vilda-auth-locked'),
   );
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Scenariusz dotyczy danych terapii, nie zakupu PRO. Karta wymaga jawnego
+  // trybu profesjonalnego; odblokowanie samego przycisku nie spełnia warunku.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (tryb && !tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
 }
 
 // Dziewczynka, 14 lat, 148,5 cm.
@@ -68,11 +80,12 @@ async function policzPacjentke(page) {
     '#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]',
     { state: 'attached' },
   );
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
   await page.evaluate(() => {
     const t = document.getElementById('toggleAdvancedGrowth');
     const f = document.getElementById('advancedGrowthForm');
     if (f && getComputedStyle(f).display !== 'none') return;
-    if (t) { t.disabled = false; t.click(); }
+    if (t) t.click();
   });
   // Wiersz pomiaru bywa chwilowo ukryty (zwinięta analiza) — wartości wpisujemy przez DOM,
   // więc wystarczy, że istnieje; sama karta musi być widoczna (z dłuższym limitem).

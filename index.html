@@ -87,9 +87,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/></noscript>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=26" rel="stylesheet">
-<link href="style.css?v=86" rel="stylesheet">
+<link href="style.css?v=87" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
-<link href="vilda_chrome.css?v=43" rel="stylesheet">
+<link href="vilda_chrome.css?v=44" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=76" rel="stylesheet">
 <link href="vilda_urodzeniowe_rozbieznosc.css?v=1" rel="stylesheet" />
 <link href="vilda_save_status_indicator.css?v=6" rel="stylesheet">
@@ -129,13 +129,16 @@
 
 <script defer src="vilda_logger.js?v=2"></script>
 <script defer src="vilda_html.js?v=4"></script>
-<script defer src="vilda_persistence_adapter.js?v=28"></script>
-<script defer src="vilda_session_bridge.js?v=16"></script>
+<script defer src="vilda_persistence_adapter.js?v=29"></script>
+<script defer src="vilda_session_bridge.js?v=26"></script>
 <script defer src="vilda_init.js?v=4"></script>
 <script defer src="vilda_crypto.js?v=15"></script>
 <script defer src="vilda_retention.js?v=1"></script>
 <script defer src="vilda_cloud_cache_warm.js?v=2"></script>
-<script defer src="vilda_vault.js?v=194"></script>
+<script defer src="vilda_bone_age.js?v=1"></script>
+<script defer src="vilda_lab_snapshot.js?v=3"></script>
+<script defer src="vilda_lab_assessment_ui.js?v=5"></script>
+<script defer src="vilda_vault.js?v=196"></script>
 <script defer src="vilda_frame_sync.js?v=2"></script>
 <script defer src="vilda_sync.js?v=32"></script>
 <script defer src="vilda_sync_integration.js?v=45"></script>
@@ -143,18 +146,21 @@
 <script defer src="qrcode.min.js?v=1"></script>
 <script defer src="obesity_response_criteria.js?v=4"></script>
 <script defer src="gh_therapy_segments.js?v=4"></script>
+<!-- P-GH-WAZNOSC: dane i licznik opakowan GH/IGF-1 (waznosc po otwarciu, ChPL 6.3); czyta je karta gh_igf_therapy.js -->
+<script defer src="vilda_gh_opakowania_dane.js?v=1"></script>
+<script defer src="vilda_gh_opakowania.js?v=1"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
-<script defer src="vilda_patient_summary_copy.js?v=13"></script>
+<script defer src="vilda_patient_summary_copy.js?v=14"></script>
 <script defer src="vilda_postepy_doroslego_dane.js?v=4"></script>
 <script defer src="vilda_obwod_talii_dane.js?v=1"></script>
 <script defer src="vilda_obwod_talii.js?v=1"></script>
-<script defer src="vilda_postepy_doroslego.js?v=6"></script>
-<script defer src="vilda_postepy_doroslego_ui.js?v=7"></script>
-<script defer src="vilda_postepy_doroslego_wydruk.js?v=5"></script>
+<script defer src="vilda_postepy_doroslego.js?v=7"></script>
+<script defer src="vilda_postepy_doroslego_ui.js?v=8"></script>
+<script defer src="vilda_postepy_doroslego_wydruk.js?v=6"></script>
 <script defer src="vilda_werdykt.js?v=7"></script>
-<script defer src="vilda_auth_ui.js?v=470"></script>
+<script defer src="vilda_auth_ui.js?v=476"></script>
 <script defer src="vilda_urodzeniowe_rozbieznosc.js?v=1"></script>
-<script defer src="vilda_cykle_leczenia.js?v=2"></script>
+<script defer src="vilda_cykle_leczenia.js?v=3"></script>
 <script defer src="vilda_name_fix.js?v=3"></script>
 <script defer src="vilda_reminders_collapse.js?v=2"></script>
 <script defer src="vilda_version_history_ui.js?v=14"></script>
@@ -168,7 +174,7 @@
 <script defer src="vilda_deps.js?v=98"></script>
 <script defer src="vilda_update_hooks.js?v=7"></script>
 <script defer src="vilda_centile_chart_header.js?v=1"></script>
-<script src="vilda_gh_therapy_resource_audit.js?v=33" defer></script>
+<script src="vilda_gh_therapy_resource_audit.js?v=34" defer></script>
 <script defer src="vilda_dymek.js?v=1"></script>
 <script defer src="vilda_app_helpers.js?v=3"></script>
 <script defer src="vilda_food_data.js?v=1"></script>
@@ -177,7 +183,7 @@
 <script defer src="vilda_food_summary.js?v=2"></script>
 <script defer src="vilda_dob_age.js?v=7"></script>
 <script defer src="vilda_status_bar.js?v=1"></script>
-<script defer src="vilda_data_import_export.js?v=93"></script>
+<script defer src="vilda_data_import_export.js?v=96"></script>
 <script defer src="vilda_baseline_pacjenta.js?v=1"></script>
 <script defer src="vilda_pola_tozsamosci.js?v=4"></script>
 <script defer src="vilda_save_status_indicator.js?v=26"></script>
@@ -189,23 +195,23 @@
 <script defer src="vilda_puberty_profile.js?v=2"></script>
 <script defer src="vilda_growth_card_c.js?v=27"></script>
 <script defer src="vilda_sds_wzrostu.js?v=4"></script>
-<script defer src="vilda_bmi.js?v=8"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=22"></script>
-<script defer src="vilda_tempo_wzrastania.js?v=1"></script>
-<script defer src="vilda_trajectory_analysis.js?v=39"></script>
+<script defer src="vilda_bmi.js?v=9"></script><script defer src="vilda_masa.js?v=1"></script><script defer src="vilda_farmakoterapia.js?v=1"></script><script defer src="vilda_raport_plan.js?v=22"></script>
+<script defer src="vilda_tempo_wzrastania.js?v=2"></script>
+<script defer src="vilda_trajectory_analysis.js?v=40"></script>
 <script defer src="vilda_prediction_drift.js?v=1"></script>
 <script defer src="hv_donald_data.js?v=2"></script>
 <script defer src="hv_kelly_data.js?v=3"></script>
 <script defer src="hv_cdgp_data.js?v=2"></script>
 <script defer src="vilda_height_velocity.js?v=3"></script>
 <script defer src="vilda_zrodla_pacjenta.js?v=1"></script>
-<script defer src="vilda_puberty_source.js?v=7"></script>
+<script defer src="vilda_puberty_source.js?v=9"></script>
 <script defer src="vilda_pubertal_status.js?v=5"></script>
 <script defer src="vilda_perinatal_source.js?v=2"></script>
 <script defer src="vilda_ds_source.js?v=3"></script>
 <script defer src="vilda_sga_catchup.js?v=2"></script>
-<script defer src="vilda_patient_narrative.js?v=20"></script>
-<script defer src="vilda_patient_narrative_ui.js?v=10"></script>
-<script defer src="vilda_advanced_growth.js?v=74"></script>
+<script defer src="vilda_patient_narrative.js?v=21"></script>
+<script defer src="vilda_patient_narrative_ui.js?v=11"></script>
+<script defer src="vilda_advanced_growth.js?v=75"></script>
 <script defer src="vilda_adv_history_collapse.js?v=2"></script>
 <script defer src="vilda_growth_method_ledger.js?v=2"></script>
 <script defer src="vilda_growth_prediction_validation_model.js?v=3"></script>
@@ -245,11 +251,11 @@
   });
 })();
 </script>
-<script defer src="vilda_epicrisis.js?v=26"></script>
-<script defer src="vilda_epicrisis_ui.js?v=26"></script>
+<script defer src="vilda_epicrisis.js?v=27"></script>
+<script defer src="vilda_epicrisis_ui.js?v=27"></script>
 <script defer src="vilda_publication_creator.js?v=20"></script>
 <script defer src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=93" defer></script>
+<script src="vilda_update_prep.js?v=94" defer></script>
 
 <script defer src="inline_index_01.js?v=1"></script>
 <!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
@@ -341,7 +347,8 @@
         ]
       }
       </script>
-<script defer src="vilda_chrome.js?v=88"></script>
+<script defer src="vilda_chrome.js?v=101"></script>
+<link href="vilda_lab_assessment_ui.css?v=4" rel="stylesheet">
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
@@ -1372,8 +1379,9 @@
         <div class="pro-summary-label" style="display:none;">PRO</div>
         <label>Imię i&nbsp;Nazwisko (opcjonalnie):
           <input type="text" id="advName"></label>
-        <label>Wiek kostny (lata):
-          <input type="number" id="advBoneAge" min="0" max="18" step="0.1"></label>
+        <label>Wiek kostny tej wizyty (lata):
+          <input type="number" id="advBoneAge" min="0" max="18" step="0.1">
+          <small id="advBoneAgeLastInfo" class="adv-bone-age-info" hidden aria-live="polite"></small></label>
         <label>Wzrost Mamy (cm):
           <input type="number" id="advMotherHeight" min="100" max="250"></label>
         <label>Wzrost Taty (cm):
@@ -1654,10 +1662,10 @@
 <script src="adult_vitals.js?v=5" defer></script>
 <script defer src="vilda_growth_reference_data.js?v=1"></script>
 <script defer src="vilda_professional_module.js?v=11"></script>
-<script defer src="vilda_persist_runtime.js?v=18"></script>
+<script defer src="vilda_persist_runtime.js?v=19"></script>
 <script defer src="vilda_schowek.js?v=3"></script>
 <script defer src="vilda_raport_naglowek.js?v=10"></script>
-<script defer src="vilda_summary_cards.js?v=52"></script>
+<script defer src="vilda_summary_cards.js?v=55"></script>
 <script defer src="vilda_ree_rownania_data.js?v=3"></script>
 <script defer src="vilda_diet_plan_ui.js?v=44"></script>
 <script defer src="vilda_bmi_journey.js?v=28"></script>
@@ -1666,7 +1674,7 @@
 <script defer src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script defer src="vilda_estimated_intake_dom_mount.js?v=1"></script>
 <script defer src="vilda_terms_gate.js?v=1"></script>
-<script src="app.js?v=229" defer></script>
+<script src="app.js?v=230" defer></script>
 <!-- PERF-P2e2 cykl 5 (2026-06-07): zalecenia dietetyczne (197 KB) + raport
      pacjenta (190 KB) ładowane LENIWIE i SEKWENCYJNIE (dieta -> raport), bo
      reguła deps "diet-recommendations-before-patient-report" mówi, że raport
@@ -1680,7 +1688,7 @@
 (function () {
   'use strict';
   var SRC_DIET = 'vilda_diet_recommendations.js?v=69';
-  var SRC_PR = 'vilda_patient_report.js?v=45';
+  var SRC_PR = 'vilda_patient_report.js?v=46';
   var started = false;
   function inject(src, onload) {
     var s = document.createElement('script');
@@ -1772,7 +1780,7 @@
 <script>
 (function () {
   'use strict';
-  var SRC_GHIGF = 'gh_igf_therapy.js?v=27';
+  var SRC_GHIGF = 'gh_igf_therapy.js?v=28';
   var started = false;
   function loadGhIgf() {
     if (started) return;
@@ -1829,7 +1837,7 @@
     <script src="userData.js?v=6" defer></script>
 
     <!-- Uproszczony moduł „Obliczenia wzrostowe” dla zwykłych użytkowników -->
-    <script src="growth-basic-module.js?v=18" defer></script>
+    <script src="growth-basic-module.js?v=19" defer></script>
 
     <!-- Skrypt stosujący ustawienia widoczności kart na stronie głównej.  
          Funkcja applyCardVisibilitySettings pobiera z localStorage obiekt
@@ -2027,13 +2035,13 @@
 <script defer src="inline_index_03.js?v=15"></script>
 
 <!-- Now override the default growth chart implementation to support infants (0–<3 lata) and older children (3–18 lat).  -->
-<script defer src="inline_index_04.js?v=25"></script>
+<script defer src="inline_index_04.js?v=26"></script>
 
 <!-- Skrypt generujący siatkę centylową DS (wzrost i waga) w formacie PDF -->
 <script defer src="inline_index_05.js?v=5"></script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=43" defer></script>
+<script src="ios26-ui.js?v=44" defer></script>
 <!-- Guided tutorial for first‑time users -->
 <script src="tutorial.js?v=8" defer></script>
 
@@ -2108,7 +2116,7 @@
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=71" defer></script>
+  <script defer src="vilda_tab_guard.js?v=5"></script><script src="custom-fixes.js?v=72" defer></script>
 
   <!-- Dynamic repositioning of Cole and Advanced Growth cards on mobile/desktop
        views.  This script adjusts the DOM order of these elements only in
@@ -2127,7 +2135,7 @@
   <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
   <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
   <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
-  <script defer src="inline_index_07.js?v=10"></script>
+  <script defer src="inline_index_07.js?v=11"></script>
 
   <!-- Skrypt do zapisywania stanu rozwinięcia/zwinięcia kart w localStorage i jego przywracania.  
        Dzięki temu sekcje, takie jak „Zaawansowane obliczenia wzrostowe” czy „Obwód głowy i klatki piersiowej”,

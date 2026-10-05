@@ -902,6 +902,10 @@ body.chrome-drawer-open .chrome-drawer-panel {
   font-weight: 700
 }
 
+.chrome-drawer-inert-fallback {
+  pointer-events: none!important
+}
+
 body.chrome-drawer-open {
   overflow: hidden
 }

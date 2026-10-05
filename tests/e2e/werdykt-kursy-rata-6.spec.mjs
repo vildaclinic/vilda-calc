@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test';
 async function otworz(page) {
   await page.goto('/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.update === 'function' && !!window.VildaTrajectoryAnalysis && !!window.VildaWerdykt
-    && window.VildaWerdykt.version === '7' && window.VildaTrajectoryAnalysis.version === '31' && typeof window.calculateGrowthAdvanced === 'function');
+    && window.VildaWerdykt.version === '7' && window.VildaTrajectoryAnalysis.version === '32' && typeof window.calculateGrowthAdvanced === 'function');
 }
 
 // s: { sex, cur: { y, m, w, h }, hist: [[lata, mies, kg, cm], …], gh: [[type, lata, mies], …], red: [[type, lata, mies, lek], …] }
