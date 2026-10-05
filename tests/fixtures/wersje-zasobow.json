@@ -76,8 +76,8 @@
   "sha256": "4aba850313fe73ba4c08cbd18cda0288c6314e0b92641bcec421eb986c0b8eae"
  },
  "gh_igf_therapy.js": {
-  "v": 27,
-  "sha256": "0c2b6f3d51e4518b5e281921018d7488341d1013476d1b4d9a6086726e7c96f3"
+  "v": 28,
+  "sha256": "90100edaa438b31453af74bf9c19a3732528907b52775c6112d60894b4fef752"
  },
  "gh_therapy_monitor.js": {
   "v": 47,
@@ -622,6 +622,14 @@
  "vilda_frame_sync.js": {
   "v": 2,
   "sha256": "c944a5eadc91aa3a4e4628edb8b693d06633527b9cb4a7380f39ae61a64ad14e"
+ },
+ "vilda_gh_opakowania.js": {
+  "v": 1,
+  "sha256": "231d71f43f1601a4571f6860f4b3465c01198107d9aa758c276278b22d2cb72c"
+ },
+ "vilda_gh_opakowania_dane.js": {
+  "v": 1,
+  "sha256": "4c418390b2b18ad1721a26ef9b23175d327d2ee98a8aa5bfc64134f62b945f12"
  },
  "vilda_gh_response_b64.js": {
   "v": 2,
