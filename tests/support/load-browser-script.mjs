@@ -24,6 +24,10 @@ const ZALEZNOSCI = {
     'vilda_bmi.js',
     'obesity_response_criteria.js',
     'vilda_postepy_doroslego_dane.js',
+    // P-OTYLOSC-CYKLE rata 4: silnik bierze punkt odniesienia, lek i stan z BIEŻĄCEGO cyklu
+    // leczenia. Bez modulu cykli wraca do reguly sprzed raty 4 (pierwsze Wlaczenie w historii,
+    // „odstawione" przy jakimkolwiek Zakonczeniu) — po cichu, bez bledu.
+    'vilda_cykle_leczenia.js',
   ],
   // Widok sam z siebie nic nie liczy — bez silnika nie ma czego narysowac, wiec jego brak
   // dalby pusty HTML zamiast bledu, czyli znowu cicha zmiane wyniku zamiast glosnej awarii.

@@ -553,6 +553,9 @@ describe('P-POSTEPY rata 2 — lek znajduje się sam w punktach leczenia', () =>
 
   it('punkt „Włączenie" wygrywa z późniejszym punktem o innym leku', () => {
     // Zmiana preparatu w trakcie leczenia: odniesieniem jest włączenie, więc i lek stamtąd.
+    // P-OTYLOSC-CYKLE rata 4: zmiana substancji bez Zakończenia to odtąd niezgodność zapisu
+    // cyklu (R6) — znacznik ChPL jest wtedy wstrzymany (postepy-doroslego-cykle.test.mjs),
+    // ale lek i drabinka nadal idą za Włączeniem cyklu. Ta asercja się nie zmienia.
     const m = silnik().analizuj({
       wiekLat: 47, pomiary: SERIA,
       punktyLeczenia: [
