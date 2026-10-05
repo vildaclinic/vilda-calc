@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.161';
+const SW_VERSION = '1.1.162';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1535,10 +1535,13 @@ const CORE_SHELL_URLS = [
   '/gh_igf_therapy.js?v=27',
   '/gh_igf_therapy.js?v=28',
   '/gh_igf_therapy.js?v=29',
+  '/gh_igf_therapy.js?v=30',
   '/vilda_gh_opakowania_dane.js?v=1',
   '/vilda_gh_opakowania.js?v=1',
   '/vilda_gh_dawka_dane.js?v=1',
+  '/vilda_gh_dawka_dane.js?v=2',
   '/vilda_gh_dawka.js?v=1',
+  '/vilda_gh_dawka.js?v=2',
   '/antibiotic_therapy.js',
   '/antibiotic_therapy.js?v=10',
   '/antibiotic_therapy.js?v=11',
@@ -2604,7 +2607,9 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=46',
   '/gh_therapy_monitor.js?v=47',
   '/gh_therapy_monitor.js?v=48',
+  '/gh_therapy_monitor.js?v=49',
   '/gh_therapy_segments.js?v=4',
+  '/gh_therapy_segments.js?v=5',
   '/vilda_gh_response_b64.js?v=2',
   '/vilda_diet_plan_ui.js?v=16',
   '/vilda_diet_plan_ui.js?v=17',

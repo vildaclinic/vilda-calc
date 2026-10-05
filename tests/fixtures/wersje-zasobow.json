@@ -76,16 +76,16 @@
   "sha256": "4aba850313fe73ba4c08cbd18cda0288c6314e0b92641bcec421eb986c0b8eae"
  },
  "gh_igf_therapy.js": {
-  "v": 29,
-  "sha256": "1b558d4b5d139094f6e0a05d5f3c22c1b524462180641475e5350bb6067c09a7"
+  "v": 30,
+  "sha256": "229b922dc1903b092777b985fee9f20ea714698ff21ca9ff9e015f88d4f29c1a"
  },
  "gh_therapy_monitor.js": {
-  "v": 48,
-  "sha256": "e0f7b3bd208dcc4e681cda0e301e76f8a66f0991088f9b6c0abd69b88e880afc"
+  "v": 49,
+  "sha256": "6479bd95b9d6af9fe981a89502f1bb27f91cff8b50f586124f181d72c2adf70e"
  },
  "gh_therapy_segments.js": {
-  "v": 4,
-  "sha256": "51709a60e1d1214b24843599104e6c17daa1f25c4718bdcbe08c65dacd90a4e1"
+  "v": 5,
+  "sha256": "5f0836ce0fc9d85a893d013c28d02877e180297e6c7a5049ec9c580f2159d0eb"
  },
  "growth-basic-module.js": {
   "v": 19,
@@ -624,12 +624,12 @@
   "sha256": "c944a5eadc91aa3a4e4628edb8b693d06633527b9cb4a7380f39ae61a64ad14e"
  },
  "vilda_gh_dawka.js": {
-  "v": 1,
-  "sha256": "5d2234ff4b8957a9efe094ad3d7b84921c5039e8e0c1aef736095e9b423d0f16"
+  "v": 2,
+  "sha256": "ea001a244a0aa21654da9e84584bd62fbbeb04c527b7e029633be2c588daac30"
  },
  "vilda_gh_dawka_dane.js": {
-  "v": 1,
-  "sha256": "c60cf975e4d20209dcb9fdc3521a294968615336189fd370e39a3990a5fa08a5"
+  "v": 2,
+  "sha256": "dba3fe147247afac7ea837193158042129b5fb4de4c30a29df69f6b77dccfd1d"
  },
  "vilda_gh_opakowania.js": {
   "v": 1,

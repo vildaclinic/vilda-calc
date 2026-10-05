@@ -20,7 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
-| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA) | wysoki priorytet przeglądu klinicznego |
+| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
@@ -7959,6 +7959,129 @@ ESLint o jeden wpis mniejsza (`gh_igf_therapy.js`, `no-useless-assignment` 4 →
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy limit i podział mają trafić także do zaleceń dla
 pacjenta i do liczby „iniekcji” w tabeli zapotrzebowania; czy dawkę Genotropin ponad 4,5 mg/d dzielić; czy usunąć
 „(… mg/d)” dla Ngenla także z historii tworzonej z punktów w sejfie; scalenie i wdrożenie.
+
+## Increlex: dawka na podanie 2× na dobę, dawka początkowa 0,04 mg/kg, krok 0,1 mg, nie więcej niż 0,12 mg/kg na podanie (P-GH-INCRELEX-PODANIE, SW 1.1.162, `gh_igf_therapy.js` 30, `gh_therapy_monitor.js` 49, `gh_therapy_segments.js` 5, `vilda_gh_dawka_dane.js` i `vilda_gh_dawka.js` 2, 2026-10-05)
+
+**Skąd.** Pakiet „dawka podawana” (porównanie dawkowania w kodzie z ChPL, 2026-10-05), trzeci z trzech PR-ów (D9),
+po scaleniu P-GH-WAZNOSC i P-GH-DAWKA-PODAWANA. Decyzje właściciela z 2026-10-05:
+- główną dawką Increlex jest dawka na jedno podanie (mg), podawana 2× na dobę; pole mg/kg to przelicznik na podanie;
+- D5: zostaje strzykawka insulinowa U-100 i krok 0,1 mg (1 jednostka), dawka na podanie;
+- dawka domyślna karty = dawka początkowa 0,04 mg/kg na podanie; 100% w Karcie pacjenta („% dawki zalecanej”, etykieta
+  bez zmian) = 0,12 mg/kg na podanie;
+- po makiecie: gdy dawka po zaokrągleniu do kroku przekracza 0,12 mg/kg na podanie, karta zaokrągla w dół do kroku i
+  mówi o tym; punkt wsteczny i edycja zapisują wpis bez zaokrąglania, z ostrzeżeniem (jak w P-GH-DAWKA-PODAWANA).
+
+**Źródła.**
+- Increlex 10 mg/ml — informacja o produkcie EMA, wersja angielska, PDF z 26.03.2026 (punkt 10 bez daty), pkt 4.2:
+  „The recommended starting dose of mecasermin is 0.04 mg/kg of body weight twice daily by subcutaneous injection.
+  […] the dose may be raised in increments of 0.04 mg/kg to the maximum dose of 0.12 mg/kg given twice daily. Doses
+  greater than 0.12 mg/kg twice daily should not be exceeded as this may increase the risk of neoplasia […].”
+- Krok 0,1 mg: strzykawka insulinowa U-100 do roztworu 10 mg/ml (1 jednostka = 0,01 ml = 0,1 mg) — decyzja właściciela
+  D5; ChPL krok nie podaje (oznaczone w danych jako osobne źródło kroku, `zrodloKroku`).
+
+**Zmierzone przed zmianą (`audyt` `cff739c`, prawdziwa karta i monitor na `docpro.html`, dane fikcyjne, te same kroki
+co w testach e2e I–K).**
+- Increlex, 20 kg, dawka domyślna: „Pacjent: 2 × 2,4 mg na dobę · 24 j. insulinówki U-100 na dawkę · 0,24 mg/kg/d ·
+  0,12 mg/kg/dawkę · 4,8 mg/d”, notka „IGF‑1: docelowa dawka 0,12 mg/kg podawana 2×/dobę (łącznie ≈ 0,24 mg/kg/d).
+  (0,08–0,24 mg/kg/d)” — domyślną była dawka największa, nie początkowa.
+- 13 kg, 0,24 mg/kg/d: „2 × 1,6 mg” — 0,12 × 13 = 1,56 mg zaokrąglone w górę do 1,6 mg, czyli 0,123 mg/kg na podanie,
+  bez komunikatu. Ostrzeżenie o zakresie programu liczyło się z wpisu mg/kg, nie z dawki po zaokrągleniu.
+- Punkt z karty (20 kg, 0,24 mg/kg/d): `dose` 0,24, `doseAbs` 4,8; tabela „4,800 mg/d / 0,240 mg/kg/d”; edycja i punkt
+  wsteczny z polem „Dawka podawana (mg/dobę)” (wsteczny 0,8 → `doseAbs` 0,8 mg/d, `dose` 0,04 mg/kg/d — lekarz
+  wpisujący dawkę jednego podania zapisałby połowę dawki dobowej).
+- Karta pacjenta: `ghDosePercent` liczył procent do 0,12 mg/kg/d, a punkty trzymają mg/kg/d — dawka największa
+  (0,24 mg/kg/d) wychodziła 200%.
+- Wizyta kontrolna do Terminarza: „Dawka: 0,24 mg/kg/d (4,80 mg/d).”
+
+**Reguła.**
+- Karta (`gh_igf_therapy.js`), Increlex:
+  - pole główne „Dawka na podanie, 2× na dobę (mg)” (`therDailyDoseAbs`); obok „Dawka na kg (mg/kg na podanie)”
+    (`therDoseKgPod`, nowe); pole mg/kg/dobę (`therDailyDose`) jest ukryte i nadal trzyma zapis karty w mg/kg/d;
+  - dawka domyślna (kotwica „kg”): 0,04 mg/kg na podanie (0,08 mg/kg/d) × masa, zaokrąglona do kroku 0,1 mg;
+  - zaokrąglenie dawki na podanie: round(mg / 0,1) × 0,1; jeżeli wynik > 0,12 mg/kg × masa, to
+    floor(0,12 × masa / 0,1) × 0,1 i komunikat „Zaokrąglono w dół” ze źródłem (z wpisu lekarza w mg/kg, w mg albo — bez
+    wpisu — z dawki z zapisu); dawka dobowa = 2 × dawka na podanie; mg/kg/d = dawka dobowa / masa;
+  - kotwica dawki jak w P-GH-DAWKA-PODAWANA: wpis lekarza w polu na podanie albo w polu mg/kg na podanie ustawia dawkę
+    podawaną (zmiana masy jej nie zmienia, ale nadal obowiązuje limit 0,12 mg/kg); zdarzenia syntetyczne pola mg/kg
+    na podanie są pomijane;
+  - zakres programu (ostrzeżenie „poza zakresem”) sprawdzany na dawce po zaokrągleniu, w mg/kg na podanie, z granicami
+    zaokrąglonymi do kroku: dolna = 0,04 × masa do najbliższego kroku, górna = 0,12 × masa w dół do kroku (dawka
+    początkowa po zaokrągleniu, np. 0,5 mg przy 13 kg = 0,038 mg/kg, nie jest „poza zakresem”);
+  - ramka „Pacjent”: „2 × … mg na dobę”, „… j. insulinówki U-100 na podanie”, „… mg/kg na podanie · … mg/kg/d”,
+    „… mg/d”; notka programu z dawką początkową, krokiem zwiększania i dawką największą (ChPL 4.2), zakres
+    „(0,04–0,12 mg/kg na podanie)”; linia kroku „Krok 0,1 mg = 1 j. strzykawki U-100”;
+  - odtworzenie starego zapisu karty (`dailyDose` w mg/kg/d, `dailyDoseAbs` puste): kotwica „kg”, dawka z mg/kg/d, np.
+    0,24 mg/kg/d przy 20 kg → 2 × 2,4 mg; nowy zapis niesie `dailyDoseAbs` = dawka na podanie i wraca jako dawka podawana.
+- Wizyta kontrolna (okno i wpis do Terminarza): „2 × … mg na dobę (… mg/kg na podanie)”; pole `medication` bez zmian
+  (`doseNum` w mg/kg/d, `doseUnit` „mg/kg/d”).
+- Monitor (`gh_therapy_monitor.js`), Increlex:
+  - nowy punkt z karty: `dose` = dawka dobowa / masa (mg/kg/d), `doseAbs` = dawka dobowa (mg/d) — z wyniku karty po
+    zaokrągleniu; gdy wynik karty nie pasuje (inna masa), `doseAbs` = `dose` × masa (nie pole karty, które jest teraz
+    na podanie);
+  - edycja i punkt wsteczny: pole „Dawka na podanie, 2× na dobę (mg)”; zapis `dose` = 2 × podanie / masa,
+    `doseAbs` = 2 × podanie; pod polem przeliczenie „= … mg/kg na podanie przy … kg” i ostrzeżenie, gdy wpis nie
+    pasuje do kroku albo przekracza 0,12 mg/kg na podanie — zapis tak, jak wpisano; zmiana preparatu na inny schemat
+    czyści pole z komunikatem („podawany 2× na dobę”);
+  - pole edycji czyta stare punkty z `doseAbs` / 2 (bez `doseAbs` — `dose` × masa / 2), rekord bez zmian;
+  - tabela: „2 × … mg” i pod spodem „… mg/kg na podanie”.
+- Karta pacjenta (`gh_therapy_segments.js`): dla IGF-1 / Increlex 100% = 0,24 mg/kg/d (= 0,12 mg/kg na podanie × 2);
+  punkty nadal w mg/kg/d.
+
+**Zmiana.**
+- Dane: `vilda_gh_dawka_dane.js` — pozycja „Increlex 40 mg” (schemat „naPodanie”, 2 podania na dobę, krok 0,1 mg,
+  dawka początkowa 0,04 i największa 0,12 mg/kg na podanie, źródło ChPL i osobne źródło kroku); `WERSJA` 1 → 2.
+- Silnik: `vilda_gh_dawka.js` — jednostki „mg na podanie” i „mg/kg na podanie”, `dawkaNaPodanie` (zaokrąglenie z górnym
+  limitem na kg), `komunikatObnizenia`, ostrzeżenie o dawce ponad 0,12 mg/kg w `opisPola`, nazwy schematów w
+  `komunikatZmianySchematu`, linia kroku z jednostką strzykawki.
+- Karta, monitor i segmenty — wpięcia opisane komentarzem `P-GH-INCRELEX-PODANIE`; nowe style w klasach arkusza karty.
+- Rekord punktu terapii i zapis karty: te same pola i jednostki (`dose` mg/kg/d, `doseAbs` mg/d; `dailyDose` mg/kg/d);
+  `dailyDoseAbs` dla Increlex to teraz dawka na podanie (dotąd puste).
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana kliniczna:
+- dawka domyślna Increlex spada z 0,12 do 0,04 mg/kg na podanie (dawka początkowa wg ChPL); przy 20 kg 2 × 0,8 mg
+  zamiast 2 × 2,4 mg;
+- dawka po zaokrągleniu nie przekracza już 0,12 mg/kg na podanie (dotąd mogła o mniej niż pół kroku, np. 1,6 mg przy
+  13 kg = 0,123 mg/kg) — karta zaokrągla w dół i mówi o tym;
+- edycja i punkt wsteczny pytają o dawkę na podanie i zapisują dawkę dobową 2 × wpis (dotąd wpis był dawką dobową);
+- „% dawki zalecanej” w Karcie pacjenta dla Increlex spada o połowę (100% = 0,24 mg/kg/d zamiast 0,12) — także dla już
+  zapisanych punktów;
+- ostrzeżenie o zakresie programu liczy się z dawki po zaokrągleniu, z tolerancją kroku.
+Zakresy programu (0,08–0,24 mg/kg/d = 0,04–0,12 mg/kg na podanie), liczenie fiolek i preparaty GH — bez zmian.
+Populacja: dzieci z ciężkim pierwotnym niedoborem IGF-1 leczone mekaserminą (program lekowy).
+
+**Przypadki `wejście → oczekiwany wynik`.**
+- 20 kg, dawka domyślna → 0,8 mg na podanie (0,04 mg/kg), 2 × 0,8 mg, 8 j. U-100, 1,6 mg/d, bez ostrzeżeń;
+- 13 kg, dawka domyślna → 0,52 → 0,5 mg (0,038 mg/kg), bez ostrzeżenia o zakresie;
+- 13 kg, wpis 0,12 mg/kg na podanie → 1,56 → krok 1,6 (0,123 mg/kg) → w dół 1,5 mg (0,115 mg/kg), komunikat
+  „Zaokrąglono w dół”; wpis 1,6 mg → 1,5 mg z komunikatem; wpis 0,83 mg → 0,8 mg (zwykłe zaokrąglenie);
+- 14 kg, 0,12 mg/kg → 1,68 → 1,6 mg; 15 kg → 1,8 mg; 16 kg → 1,92 → 1,9 mg (bez obniżenia);
+- stary zapis karty 0,24 mg/kg/d, 20 kg → 2 × 2,4 mg; ten sam zapis przy 13 kg → 1,5 mg z komunikatem;
+- punkt z karty, 20 kg → `dose` 0,08, `doseAbs` 1,6, tabela „2 × 0,8 mg / 0,040 mg/kg na podanie”, 33,3%;
+  edycja 1,2 mg przy 25 kg → `doseAbs` 2,4, `dose` 0,096; wsteczny 2,45 mg przy 20 kg → ostrzeżenie (krok, 0,123 mg/kg),
+  zapis `doseAbs` 4,9, `dose` 0,245;
+- stary punkt (0,24 mg/kg/d, 13 kg, `doseAbs` 3,12) → tabela „2 × 1,56 mg / 0,120 mg/kg na podanie”, edycja 1,56; rekord
+  bez zmian; 0,24 mg/kg/d → 100%.
+
+**Strażnicy.**
+- `tests/unit/gh-dawka-podawana.test.mjs` (44, prawdziwe pliki danych, silnika i segmentów): lista preparatów z Increlex,
+  krok karty, źródło; `dawkaNaPodanie` (osiem mas), komunikaty, pole monitora, zmiana schematu, procent dawki.
+- `tests/e2e/gh-dawka-podawana.spec.mjs` (11; nowe I–K): I karta Increlex na `index.html` (dawka domyślna, 13 kg,
+  obniżenie z pola mg/kg i z pola mg, zaokrąglenie, powrót do GH); J stary i nowy zapis karty, wizyta kontrolna;
+  K monitor na `docpro.html` (punkt z karty, edycja, punkt wsteczny, stary punkt, procent). Pomiary „przed” wyżej —
+  tymi samymi krokami na `cff739c`.
+
+**Czego to nie zmienia.** Preparaty GH (P-GH-DAWKA-PODAWANA), liczba fiolek i ważność po otwarciu (P-GH-WAZNOSC),
+zalecenia kopiowane dla pacjenta, liczba „iniekcji” w tabeli zapotrzebowania, kod Karty pacjenta i historii tworzonej z
+punktów w sejfie (`vilda_auth_ui.js`, `vilda_vault.js` — tam „Aktualna dawka” Increlex nadal w mg/kg/d).
+
+**Wersje.** `gh_igf_therapy.js` 29 → 30 (`index.html` — ładowanie leniwe, `docpro.html`), `gh_therapy_monitor.js`
+48 → 49, `gh_therapy_segments.js` 4 → 5, `vilda_gh_dawka_dane.js` i `vilda_gh_dawka.js` 1 → 2 (`index.html`,
+`docpro.html`); precache (append-only); `SW_VERSION` 1.1.161 → 1.1.162 (+ pin w `tests/unit/klirens-ui-model.test.mjs`);
+`tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje` względem `audyt` `cff739c`. Bez nowych plików.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy obniżać procent dawki już zapisanych punktów Increlex
+(zmiana 100% dotyczy też historii); czy „Aktualna dawka” w Karcie pacjenta i historia z sejfu mają pokazywać dawkę na
+podanie; scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
