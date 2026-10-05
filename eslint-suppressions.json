@@ -69,7 +69,7 @@
   },
   "gh_igf_therapy.js": {
     "no-useless-assignment": {
-      "count": 4
+      "count": 3
     }
   },
   "gh_therapy_monitor.js": {

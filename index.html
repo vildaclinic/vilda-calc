@@ -149,6 +149,9 @@
 <!-- P-GH-WAZNOSC: dane i licznik opakowan GH/IGF-1 (waznosc po otwarciu, ChPL 6.3); czyta je karta gh_igf_therapy.js -->
 <script defer src="vilda_gh_opakowania_dane.js?v=1"></script>
 <script defer src="vilda_gh_opakowania.js?v=1"></script>
+<!-- P-GH-DAWKA-PODAWANA: kroki i limity jednego wstrzykniecia GH, dawka podawana; czyta je karta gh_igf_therapy.js i monitor gh_therapy_monitor.js -->
+<script defer src="vilda_gh_dawka_dane.js?v=1"></script>
+<script defer src="vilda_gh_dawka.js?v=1"></script>
 <script defer src="vilda_growth_prediction_lines.js?v=1"></script>
 <script defer src="vilda_patient_summary_copy.js?v=14"></script>
 <script defer src="vilda_postepy_doroslego_dane.js?v=4"></script>
@@ -1780,7 +1783,7 @@
 <script>
 (function () {
   'use strict';
-  var SRC_GHIGF = 'gh_igf_therapy.js?v=28';
+  var SRC_GHIGF = 'gh_igf_therapy.js?v=29';
   var started = false;
   function loadGhIgf() {
     if (started) return;
