@@ -367,6 +367,7 @@ test('H: wizyta kontrolna z karty dla Ngenla — dawka w mg/tydz i mg/kg/tydz (d
   await page.click('#tzGhConfirm');
   await page.waitForFunction(() => Boolean(window.__wpis));
   const wpis = await page.evaluate(() => window.__wpis);
+  expect(wpis.title).toBe('Leczenie rhGH');
   expect(wpis.body).toContain('Dawka: 26,5 mg/tydz (0,662 mg/kg/tydz).');
   expect(wpis.body).not.toContain('mg/kg/d');
   expect(wpis.medication).toMatchObject({ doseUnit: 'mg/kg/tydz', freq: 'tydzień' });
@@ -485,6 +486,8 @@ test('J: Increlex — stary zapis karty (0,24 mg/kg/d, bez dawki podawanej) daje
   await page.waitForFunction(() => Boolean(window.__wpis));
   const wpis = await page.evaluate(() => window.__wpis);
   expect(wpis.body).toContain('Dawka: 2 × 1,7 mg na dobę (0,085 mg/kg na podanie).');
+  // P-GH-INCRELEX-TYTUL: tytuł wpisu właściwy dla IGF-1 (dotąd „Leczenie rhGH”, jak dla hormonu wzrostu).
+  expect(wpis.title).toBe('Leczenie IGF-1 (mekasermina)');
   expect(wpis.medication).toMatchObject({ doseUnit: 'mg/kg/d', freq: 'dzień' });
 });
 
