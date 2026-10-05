@@ -10,6 +10,9 @@
  *   podpowiedź    = preparat tej samej grupy, który poda dawkę w mniejszej liczbie wstrzyknięć
  *                   (albo mieści dawkę mniejszą niż najmniejsze wstrzyknięcie)
  *
+ * Increlex (P-GH-INCRELEX-PODANIE): dawka na podanie 2× na dobę, krok 0,1 mg; po zaokrągleniu nie więcej niż
+ * 0,12 mg/kg na podanie — nadmiar zaokrąglamy w dół do kroku (dawkaNaPodanie, komunikatObnizenia).
+ *
  * Teksty komunikatów powstają tutaj, z danych, żeby karta i monitor mówiły to samo. Nieznany preparat →
  * { znany: false } i karta liczy jak dotąd. Rejestr: docs/clinical/ALGORITHMS.md, P-GH-DAWKA-PODAWANA.
  */
@@ -56,10 +59,15 @@
   }
 
   function jednostki(schemat) {
+    if (schemat === 'naPodanie') {
+      return { dawka: 'mg na podanie', naKg: 'mg/kg na podanie', pole: 'mg na podanie', poleKg: 'mg/kg na podanie' };
+    }
     return schemat === 'tygodniowy'
       ? { dawka: 'mg/tydz', naKg: 'mg/kg/tydz', pole: 'mg/tydzień', poleKg: 'mg/kg/tydzień' }
       : { dawka: 'mg/d', naKg: 'mg/kg/d', pole: 'mg/dobę', poleKg: 'mg/kg/dobę' };
   }
+
+  var NAZWA_SCHEMATU = { dobowy: 'dobowy', tygodniowy: 'tygodniowy', naPodanie: 'podawany 2× na dobę' };
 
   function rozmiar(lek) {
     return String(lek).replace(/^\S+\s+/, '');
@@ -241,9 +249,48 @@
     var p = preparat(lek);
     if (!p) return '';
     var t = 'Krok ' + mg(p.krokMg);
+    if (p.krokJednostka) return t + ' = ' + p.krokJednostka.replace(' j. ', NBSP + 'j. ');
     if (liczbaDodatnia(p.minMg) && liczbaDodatnia(p.maksMg)) t += '; jedno wstrzyknięcie ' + zakres(p);
     else t += ' (' + lek + ')';
     return t;
+  }
+
+  /* P-GH-INCRELEX-PODANIE: dawka na podanie zaokrąglona do kroku; gdy po zaokrągleniu przekracza największą
+     dawkę na kg (Increlex: 0,12 mg/kg na podanie, ChPL 4.2), zaokrąglamy w dół do kroku (decyzja właściciela). */
+  function dawkaNaPodanie(lek, wartosc, waga) {
+    var p = preparat(lek);
+    var z = zaokraglij(lek, wartosc);
+    var wynik = { znany: z.znany, lek: lek, surowe: wartosc, zaokraglone: z.mg, mg: z.mg, krokMg: z.krokMg,
+      maksMg: null, obnizono: false };
+    if (!p || z.mg == null || !liczbaDodatnia(p.maksMgKgNaPodanie) || !liczbaDodatnia(waga)) return wynik;
+    wynik.maksMg = czysc(p.maksMgKgNaPodanie * waga);
+    if (z.mg > wynik.maksMg + EPS) {
+      wynik.mg = czysc(Math.floor(wynik.maksMg / p.krokMg + EPS) * p.krokMg);
+      wynik.obnizono = true;
+    }
+    return wynik;
+  }
+
+  /* Komunikat karty, gdy dawka na podanie została zaokrąglona w dół (wynik z dawkaNaPodanie).
+     wpis = { pole: 'kg'|'podawana', wartosc } — skąd wzięła się dawka przed zaokrągleniem (opcjonalnie). */
+  function komunikatObnizenia(lek, wynik, waga, wpis) {
+    var p = preparat(lek);
+    if (!p || !wynik || !wynik.obnizono || !liczbaDodatnia(waga)) return null;
+    var j = jednostki(p.schemat);
+    var zr = zrodlo(p);
+    var ma = liczbaDodatnia(wpis && wpis.wartosc);
+    var surowe = ma ? (wpis.pole === 'kg' ? wpis.wartosc * waga : wpis.wartosc) : null;
+    var t = '';
+    if (ma && wpis.pole === 'kg') {
+      t = 'Wpisano ' + fmt(wpis.wartosc) + NBSP + j.naKg + ' × ' + fmt(waga, 2) + NBSP + 'kg = ' + mg(surowe) + '. ';
+    }
+    t += ma && wpis.pole !== 'kg' && Math.abs(surowe - wynik.zaokraglone) < EPS
+      ? 'Wpisano ' + mg(wynik.zaokraglone) + ', czyli '
+      : (ma && wpis.pole !== 'kg' ? 'Wpisano ' + mg(surowe) + '. ' : '') + 'Najbliższy krok to ' + mg(wynik.zaokraglone) + ', czyli ';
+    t += fmt(wynik.zaokraglone / waga) + NBSP + j.naKg + ' — więcej niż największa dawka ' + fmt(p.maksMgKgNaPodanie)
+      + NBSP + j.naKg + ' (' + (zr ? zr.krotko : '') + '). Dawka na podanie: ' + mg(wynik.mg) + ' ('
+      + fmt(wynik.mg / waga) + NBSP + j.naKg + ').';
+    return { rodzaj: 'warn', tytul: 'Zaokrąglono w dół', tekst: t, przyciski: [] };
   }
 
   /* Wyjaśnienie, gdy dawka podawana różni się od wpisanej: wpis = { pole: 'kg'|'podawana'|'zmiana', wartosc }.
@@ -281,19 +328,23 @@
     wynik.naKg = liczbaDodatnia(waga)
       ? '= ' + fmt(wartosc / waga) + NBSP + j.naKg + ' przy ' + fmt(waga, 2) + NBSP + 'kg'
       : 'Wpisz wagę, aby przeliczyć dawkę na kg.';
-    if (p && !naKroku(lek, wartosc)) {
-      wynik.ostrzezenie = mg(wartosc) + ' nie pasuje do kroku ' + mg(p.krokMg) + ' (' + lek + '). '
-        + 'Zapiszemy tak, jak wpisano — sprawdź wpis.';
+    var problemy = [];
+    if (p && !naKroku(lek, wartosc)) problemy.push(mg(wartosc) + ' nie pasuje do kroku ' + mg(p.krokMg) + ' (' + lek + ').');
+    if (p && liczbaDodatnia(p.maksMgKgNaPodanie) && liczbaDodatnia(waga) && wartosc / waga > p.maksMgKgNaPodanie + EPS) {
+      var zr = zrodlo(p);
+      problemy.push(mg(wartosc) + ' to ' + fmt(wartosc / waga) + NBSP + j.naKg + ' — więcej niż największa dawka '
+        + fmt(p.maksMgKgNaPodanie) + NBSP + j.naKg + ' (' + (zr ? zr.krotko : '') + ').');
     }
+    if (problemy.length) wynik.ostrzezenie = problemy.join(' ') + ' Zapiszemy tak, jak wpisano — sprawdź wpis.';
     return wynik;
   }
 
-  /* Edycja punktu w monitorze: zmiana preparatu dobowego na tygodniowy (albo odwrotnie) czyści pole dawki. */
+  /* Edycja punktu w monitorze: zmiana preparatu na inny schemat (dobowy, tygodniowy, na podanie) czyści pole dawki. */
   function komunikatZmianySchematu(schematPrzed, schematPo, poprzednia) {
     var a = jednostki(schematPrzed);
     var b = jednostki(schematPo);
-    return 'Zmieniono preparat ' + (schematPo === 'tygodniowy' ? 'dobowy na tygodniowy' : 'tygodniowy na dobowy')
-      + '. Wpisz dawkę podawaną w ' + b.pole
+    return 'Zmieniono preparat ' + (NAZWA_SCHEMATU[schematPrzed] || schematPrzed) + ' na '
+      + (NAZWA_SCHEMATU[schematPo] || schematPo) + '. Wpisz dawkę podawaną w ' + b.pole
       + (liczbaDodatnia(poprzednia) ? ' — poprzednia (' + fmt(poprzednia) + NBSP + a.pole + ') się nie przenosi.' : '.');
   }
 
@@ -310,6 +361,8 @@
     opisZaokraglenia: opisZaokraglenia,
     opisPola: opisPola,
     komunikatZmianySchematu: komunikatZmianySchematu,
+    dawkaNaPodanie: dawkaNaPodanie,
+    komunikatObnizenia: komunikatObnizenia,
     wstrzykniecia: wstrzykniecia,
     fmt: fmt
   });
