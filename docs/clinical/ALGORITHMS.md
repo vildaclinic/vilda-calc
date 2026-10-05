@@ -20,7 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
-| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC) | wysoki priorytet przeglądu klinicznego |
+| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
@@ -7821,6 +7821,144 @@ względem `audyt` `b8b2f6b`, wersje i precache nowych plików wpisane ręcznie (
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy liczyć ilość leku na odpowietrzenie (np. GoQuick
 0,1 / 0,3 mg według instrukcji użycia); czy przekazywać ważność po otwarciu także w zaleceniach dla pacjenta;
 nazwy jednostek („ampułki” wobec „wkłady” z ChPL); scalenie i wdrożenie.
+
+## Dawka podawana: krok wstrzykiwacza, limit jednego wstrzyknięcia i zapis punktów terapii (P-GH-DAWKA-PODAWANA, SW 1.1.161, `gh_igf_therapy.js` 29, `gh_therapy_monitor.js` 48, nowe `vilda_gh_dawka_dane.js` i `vilda_gh_dawka.js`, 2026-10-05)
+
+**Skąd.** Pakiet „dawka podawana” (porównanie dawkowania w kodzie z ChPL, 2026-10-05), drugi z trzech PR-ów (D9).
+Decyzje właściciela z 2026-10-05:
+- główną dawką w karcie i w monitorze jest dawka podawana: mg/dobę dla Omnitrope i Genotropin, mg/tydzień dla
+  Ngenla (Increlex — dawka na podanie, osobny PR);
+- D2: zaokrąglanie do najbliższego kroku wstrzykiwacza zostaje automatyczne;
+- kroki Omnitrope zostają jak w kodzie karty (5 mg: 0,05 mg; 10 mg: 0,1 mg), bez źródła w ChPL; Omnitrope 15 mg
+  nie dodajemy;
+- D6: karta podpowiada wstrzykiwacz Ngenla 60 mg; bez ograniczania Ngenli do SNP i wieku;
+- D8: dawkę podawaną starych punktów czytamy z `doseAbs` (Ngenla × 7), bez przepisywania rekordów;
+- makieta desktop i telefon przed zmianą formularzy; po makiecie: Ngenla bez przeliczeń na dobę i IU; dawka ponad
+  limit jednego wstrzyknięcia dzielona na równe części w krokach wstrzykiwacza; punkt wsteczny i edycja zapisują
+  wpis bez zaokrąglania, z ostrzeżeniem; etykieta „% dawki zalecanej” w Karcie pacjenta zostaje.
+
+**Źródła.**
+- Ngenla 24 i 60 mg — informacja o produkcie EMA, wersja angielska, PDF z 16.01.2026 (punkt 10 bez daty), pkt 4.2:
+  „The pre-filled pen delivers doses from 0.2 mg to 12 mg of somatrogon in increments of 0.2 mg (0.01 mL)” oraz
+  „from 0.5 mg to 30 mg of somatrogon in increments of 0.5 mg (0.01 mL)”; „When doses higher than 30 mg are needed
+  (i.e. bodyweight > 45 kg), two injections have to be administered.”; „If more than one injection is required to
+  deliver a complete dose, each injection should be administered at a different injection site to prevent
+  lipoatrophy.”
+- Genotropin 5,3 i 12 mg — ulotka URPL z instrukcją wstrzykiwacza GoQuick, data ostatniej aktualizacji 11/2025:
+  „można podawać lek Genotropin 5,3 w zakresie dawek od 0,1 mg do 1,5 mg. Każde kliknięcie czarnego pierścienia
+  zmienia dawkę o 0,05 mg”; Genotropin 12 „od 0,3 mg do 4,5 mg […] o 0,15 mg”.
+- Omnitrope 5 i 10 mg — ChPL EMA (wersja polska, PDF z 26.06.2025) kroku wstrzykiwacza nie podaje; krok z
+  dotychczasowego kodu karty, decyzja właściciela (oznaczone w danych jako „bez źródła w ChPL”).
+
+**Zmierzone przed zmianą (`audyt` `53d6a9e`, prawdziwa karta na `index.html` i monitor na `docpro.html`, dane
+fikcyjne, te same kroki co w teście e2e).**
+- Omnitrope 10 mg, 35 kg, wpis 0,033 mg/kg/d → 1,2 mg/d; po zmianie masy na 38 kg karta liczyła od nowa z mg/kg:
+  1,3 mg/d — dawka podawana zmieniała się sama.
+- Odtworzenie zapisanego stanu karty (1,1 mg/d przy 35 kg) przy masie 40 kg: 1,2 mg/d zamiast 1,1.
+- Ngenla 24 mg, 40 kg: „Pacjent: 26,4 mg/tydz 0,094 mg/kg/d = 0,66 mg/kg/tydz (1,98 IU/kg/tydz) 3,771 mg/d”, notka
+  „(≈ 0,094 mg/kg/d). (0,014–0,047 mg/kg/d)” (zakres dobowy somatropiny z programu); bez informacji, że 26,4 mg to
+  więcej niż 12 mg na wstrzyknięcie i więcej niż cały wstrzykiwacz.
+- Punkt Ngenla 60 mg dodany przy 43 kg: `doseAbs` × 7 = 28,38 mg/tydz (0,66 × 43), choć karta pokazywała
+  28,5 mg/tydz po zaokrągleniu do kroku 0,5 mg; tabela „28,380 mg/tydz = 0,660 mg/kg/tydz”. Edycja punktu miała pole
+  „Dawka (mg/kg/tydz)”, a zmiana masy w edycji na 45 kg zmieniała dawkę podawaną na 29,7 mg/tydz.
+- Wizyta kontrolna z karty, Ngenla 60 mg, 40 kg: wpis do Terminarza „Dawka: 0,662 mg/kg/d (3,79 mg/d).” — wartość
+  mg/kg/tydz z etykietą mg/kg/d.
+
+**Reguła.**
+- Dawka podawana jest źródłem prawdy po wpisie lekarza (w polu dawki podawanej albo w polu mg/kg przy znanej masie),
+  po odtworzeniu zapisanego stanu karty i po zmianie wstrzykiwacza w tym samym schemacie. Dawka domyślna programu (po
+  wyborze programu albo preparatu) nadal liczy się z mg/kg × masa, dopóki lekarz nie wpisze dawki. Kotwica jest w
+  atrybucie `data-vilda-dawka` pola `therDailyDoseAbs` („kg” albo „podawana”); zdarzenia syntetyczne (np. odtwarzanie
+  pól przez persistence) nie przestawiają jej z pola mg/kg.
+- Zaokrąglenie: round(mg / krok) × krok — jak dotąd w karcie; kroki w pliku danych są te same co w karcie (test).
+  Wpis w mg/kg: dawka podawana = round(mg/kg × masa); pod polami linia kroku i wyjaśnienie zaokrąglenia.
+- Zmiana masy ciała nie zmienia dawki podawanej; zmienia się dawka na kg.
+- Zmiana preparatu w tym samym schemacie (dobowy ↔ dobowy, Ngenla 24 ↔ 60 mg) zachowuje dawkę podawaną i zaokrągla
+  ją do kroku nowego wstrzykiwacza; zmiana programu albo schematu — dawka domyślna programu, jak dotąd.
+- Limit jednego wstrzyknięcia (Genotropin GoQuick, Ngenla; Omnitrope bez limitu w danych): dawka powyżej limitu →
+  komunikat z podpowiedzią preparatu tej samej grupy, który poda ją w mniejszej liczbie wstrzyknięć (Genotropin 5,3 →
+  12 mg; Ngenla 24 → 60 mg), z przyciskami „Zmień na …” i „Zostaw …”; dawka poniżej najmniejszego wstrzyknięcia →
+  podpowiedź mniejszego wstrzykiwacza. Genotropin 12 mg ponad 4,5 mg: tylko „Sprawdź dawkę” (źródło nie opisuje dawki
+  dobowej w kilku wstrzyknięciach).
+- Podział dawki Ngenla ponad limit: n = ⌈jednostek kroku / jednostek limitu⌉ wstrzyknięć, równe części w krokach, a
+  reszta po jednym kroku do pierwszych części (33,5 mg → 17 + 16,5 mg); każde wstrzyknięcie w inne miejsce (ChPL 4.2).
+- Ngenla: ramka „Pacjent” bez mg/kg/d, mg/d i IU (dawka tygodniowa, dawka na kg tygodniowo, liczba wstrzyknięć);
+  notka programu bez „≈ … mg/kg/d” i bez dobowego zakresu somatropiny. Ostrzeżenie „zalecana dawka to 0,66 mg/kg/tydz”
+  pojawia się, gdy dawka podawana różni się od 0,66 mg/kg/tydz × masa po zaokrągleniu do kroku (dotąd: gdy wpisana
+  wartość mg/kg różniła się od 0,66 — po przejściu na inny krok ostrzeżenie pojawiałoby się bez powodu).
+- Monitor:
+  - nowy punkt z karty: `dose` = dawka podawana / masa (mg/kg/d albo mg/kg/tydz), `doseAbs` = dawka podawana na dobę
+    (Ngenla: tygodniowa / 7) — z wyniku karty po zaokrągleniu do kroku;
+  - edycja punktu: pole „Dawka podawana (mg/dobę | mg/tydzień)” z `doseAbs` (Ngenla × 7; bez `doseAbs` — dose × masa);
+    zapis: `dose` = podawana / masa, `doseAbs` = podawana (Ngenla / 7); zmiana preparatu dobowy ↔ tygodniowy czyści
+    pole z komunikatem; pod polem przeliczenie na kg; dawka spoza kroku — ostrzeżenie, zapis tak, jak wpisano;
+  - punkt wsteczny: etykieta „Dawka podawana”, przeliczenie i ostrzeżenie jak w edycji (zapis był już w dawce
+    podawanej i się nie zmienia);
+  - tabela: w kolumnie „Dawka” najpierw dawka podawana, pod nią dawka na kg; Ngenla z `doseAbs` × 7 i liczbą
+    wstrzyknięć, gdy jest ich więcej niż 1.
+- Wizyta kontrolna z karty (okno i wpis do Terminarza): dla Ngenla „26,5 mg/tydz (0,662 mg/kg/tydz)”; preparaty
+  dobowe bez zmian.
+
+**Zmiana.**
+- Dane: `vilda_gh_dawka_dane.js` — dla preparatów GH z listy karty grupa, schemat, krok, najmniejsza i największa dawka
+  jednego wstrzyknięcia, uwaga o kilku wstrzyknięciach i źródło (dokument, punkt, wersja, cytat).
+- Silnik: `vilda_gh_dawka.js` (`window.VildaGhDawka`: `zaokraglij`, `podzial`, `ocen`, `komunikat`, `opisKroku`,
+  `opisZaokraglenia`, `opisPola`, `komunikatZmianySchematu`) — bezpaństwowy, wynik niesie źródło, teksty powstają z
+  danych. Nieznany preparat (Increlex) albo brak modułu → karta i monitor liczą jak dotąd.
+- Karta `gh_igf_therapy.js` i monitor `gh_therapy_monitor.js` — wpięcia opisane komentarzem `P-GH-DAWKA-PODAWANA`;
+  nowe style w klasach arkuszy komponentów (bez nowych stylów na elementach).
+- Rekord punktu terapii: te same pola (`dose`, `doseUnit`, `doseAbs`). Dla nowych i edytowanych punktów `doseAbs` jest
+  dawką podawaną po zaokrągleniu, a nie mg/kg × masa, a `dose` — dawką na kg z dawki podawanej (pełna precyzja; dotąd
+  dla Ngenla wpisane mg/kg, np. 0,66, dla preparatów dobowych 3 miejsca po przecinku). Widać to tam, gdzie czyta się
+  `dose`: w Karcie pacjenta „% dawki zalecanej” i zakres dawek w segmencie liczą się z dawki po zaokrągleniu, np.
+  Ngenla 28,5 mg/tydz przy 43 kg → 0,663 mg/kg/tydz ≈ 100,4% (dotąd 0,66 = 100%). Zapisany stan karty: te same pola
+  (`dailyDose`, `dailyDoseAbs`); dla Ngenla `dailyDoseAbs` to teraz mg/tydzień (dotąd puste).
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana kliniczna. Zmienia się to, co jest stałe między wizytami: dawka podawana
+zamiast mg/kg — po zmianie masy ciała albo po odtworzeniu stanu przy innej masie karta nie przelicza już dawki
+podawanej. Zapisywane punkty Ngenla dostają dawkę po zaokrągleniu do kroku (tak, jak ją pokazywała karta). Nowe
+ostrzeżenia o limicie jednego wstrzyknięcia i podpowiedzi wstrzykiwacza nie zmieniają dawki same z siebie (przycisk
+zmienia preparat, a dawka podawana zostaje i jest zaokrąglana do nowego kroku). Ngenla traci wyświetlanie przeliczeń
+dobowych i IU. Zakresy programów, dawki domyślne, kroki zaokrąglenia, Increlex i liczenie opakowań — bez zmian.
+Populacja: dzieci leczone w programach B.19, B.38, B.41, B.42 i B.64 (somatropina, somatrogon).
+
+**Przypadki `wejście → oczekiwany wynik`.**
+- Omnitrope 10 mg, 35 kg, wpis 0,033 mg/kg/d → 1,2 mg/d (0,034 mg/kg/d); masa 38 kg → nadal 1,2 mg/d (0,032 mg/kg/d);
+- Omnitrope 10 mg, wpis 1,13 mg/d → 1,1 mg/d z wyjaśnieniem zaokrąglenia;
+- Ngenla 24 mg, 40 kg, 26,4 mg/tydz → ostrzeżenie (limit 12 mg, więcej niż wstrzykiwacz 24 mg, 3 × 8,8 mg) i
+  podpowiedź 60 mg; „Zmień na Ngenla 60 mg” → 26,5 mg/tydz, 1 wstrzyknięcie, bez ostrzeżenia o 0,66 mg/kg/tydz;
+- Ngenla 60 mg, 50 kg → 33 mg/tydz, 2 × 16,5 mg; 33,5 mg/tydz → 17 + 16,5 mg;
+- Genotropin 5,3 mg, 1,6 mg/d → ostrzeżenie (limit 1,5 mg); „Zmień na Genotropin 12 mg” → 1,65 mg/d;
+- Genotropin 12 mg, 0,15 mg/d → podpowiedź Genotropin 5,3 mg; Ngenla 60 mg, 0,4 mg/tydz → podpowiedź 24 mg;
+- punkt Ngenla 60 mg przy 43 kg → `doseAbs` × 7 = 28,5, `dose` = 28,5 / 43; edycja masy na 45 kg → `doseAbs` × 7 = 28,5,
+  `dose` = 28,5 / 45;
+- punkt wsteczny Omnitrope 10 mg 1,13 mg/d przy 38 kg → zapis 1,13 mg/d, ostrzeżenie o kroku 0,1 mg;
+- stary punkt Ngenla (0,66 mg/kg/tydz, 50 kg, `doseAbs` = 0,66 × 50 / 7) → w edycji 33 mg/tydz, w tabeli
+  „33 mg/tydz · 2 wstrzyknięcia”; rekord bez zmian.
+
+**Strażnicy.**
+- `tests/unit/gh-dawka-podawana.test.mjs` (30, prawdziwe pliki danych i silnika): lista preparatów, kroki zgodne z
+  kartą, limity i źródła; zaokrąglenie, podział, ocena i podpowiedź; teksty komunikatów i linii pod polami.
+- `tests/e2e/gh-dawka-podawana.spec.mjs` (8, prawdziwa karta na `index.html` i monitor na `docpro.html`): A Omnitrope —
+  wpis mg/kg, zmiana masy, wpis spoza kroku; B Ngenla 24 → 60 mg; C Ngenla 60 mg — podział i „Zostaw 24 mg”;
+  D Genotropin 5,3 → 12 mg; E odtworzenie stanu przy innej masie; F punkt z karty i edycja; G punkt wsteczny i stary
+  punkt Ngenla; H wizyta kontrolna Ngenla. Pomiary „przed” wyżej wykonane tymi samymi krokami na `53d6a9e`.
+
+**Czego to nie zmienia.** Increlex (dawka na podanie, krok strzykawki U-100, limit 0,12 mg/kg — osobny PR pakietu),
+liczba opakowań i ważność po otwarciu (P-GH-WAZNOSC), zalecenia kopiowane dla pacjenta, liczba „iniekcji” w tabeli
+zapotrzebowania (to liczba dawek tygodniowych), kod Karty pacjenta i historii tworzonej z punktów w sejfie
+(`vilda_vault.js` — tam dla Ngenla nadal „Dawka: … mg/kg/tydz (… mg/d)”).
+
+**Wersje.** `gh_igf_therapy.js` 28 → 29 (`index.html` — ładowanie leniwe, `docpro.html`), `gh_therapy_monitor.js`
+47 → 48 (`docpro.html`); nowe `vilda_gh_dawka_dane.js` i `vilda_gh_dawka.js` w wersji 1, ładowane statycznie przed
+kartą na obu stronach, dopisane do rdzenia precache obok plików P-GH-WAZNOSC; precache (append-only); `SW_VERSION`
+1.1.160 → 1.1.161 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — z
+`npm run podbij-wersje` względem `audyt` `53d6a9e`, wersje i precache nowych plików wpisane ręcznie. Baza wyjątków
+ESLint o jeden wpis mniejsza (`gh_igf_therapy.js`, `no-useless-assignment` 4 → 3).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna; czy limit i podział mają trafić także do zaleceń dla
+pacjenta i do liczby „iniekcji” w tabeli zapotrzebowania; czy dawkę Genotropin ponad 4,5 mg/d dzielić; czy usunąć
+„(… mg/d)” dla Ngenla także z historii tworzonej z punktów w sejfie; scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
