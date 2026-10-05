@@ -6,7 +6,8 @@ import { expect, test } from '@playwright/test';
 // i przy zapisie edycji). Ten plik sprawdza w prawdziwym DocPro to, co dokłada monitor:
 //   • podgląd pod przyciskami liczy wizytę Z LEKIEM Z LISTY i odświeża się po zmianie leku —
 //     Kontynuacja/Zakończenie z innym lekiem są wyłączone (aria-disabled) z krótkim powodem;
-//   • baner porządkowania ma pozycję dla zmiany substancji w cyklu i dwukrokową poprawkę.
+//   • baner porządkowania ma pozycję dla zmiany substancji w cyklu i dwukrokową poprawkę (z przypomnieniem
+//     o kroku 2), a przy kilku zmianach w cyklu i przy drugim Włączeniu z innym lekiem nie prowadzi w złą stronę.
 // Dane wyłącznie FIKCYJNE: dorosły, 170 cm; leki zapisane jak w monitorze (tekst opcji listy
 // i etykieta substancji).
 
@@ -82,6 +83,7 @@ const tekst = (loc) => loc.evaluate((e) => e.textContent.replace(/\s+/g, ' ').tr
 
 const KOMUNIKAT_CY11 = 'Ta wizyta ma inną substancję czynną (Wegovy) niż wcześniejsze wizyty cyklu 1 (Saxenda). Zmiana substancji czynnej zaczyna nowy cykl: zapisz najpierw Zakończenie cyklu 1 z lekiem Saxenda (może mieć tę samą datę), a tę wizytę jako Włączenie nowego cyklu.';
 const POZYCJA_R6 = 'W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.';
+const PRZYPOMNIENIE_KROK_2 = 'Zakończenie zapisane. Teraz zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie) — nie dopisuj nowego Włączenia.';
 const PODPOWIEDZ_R6 = 'Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę i wzrost — wybierz w liście lek Saxenda i „Zakończenie leczenia”. Potem zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie).';
 
 test('CY-11: przyciski z innym lekiem wyłączone z powodem i odświeżane po zmianie leku na liście', async ({ page }) => {
@@ -164,9 +166,16 @@ test('stary zapis Saxenda → Wegovy w jednym cyklu: pozycja banera i poprawka w
   expect(kolejnosc).toEqual(['2', '1']);
   expect(await naglowek(page, 2)).toContain('Cykl 2 aktywny bez Włączenia');
   expect(await naglowek(page, 1)).toContain('Cykl 1 zakończony Saxenda');
+  // Baner zniknął (cykl bez Włączenia to nie niezgodność), więc krok 2 przypomina komunikat — zamiast
+  // ogólnej rady „Dodaj go (także wstecznie)”, która prowadziłaby do drugiej wizyty z tą samą datą.
+  await expect(komunikat(page)).toBeVisible();
+  await expect(komunikat(page)).toHaveClass(/\bwarn\b/);
+  await expect(komunikat(page).locator('.obm-msg-t')).toHaveText(PRZYPOMNIENIE_KROK_2);
+  expect(await punkty(page), 'przypomnienie niczego nie zapisuje').toHaveLength(5);
 
-  // Krok 2: pierwsza wizyta Wegovy staje się Włączeniem nowego cyklu (ołówek przy wizycie).
-  await page.locator('#obesityTherapyTableWrap button.obm-edit[data-id="e"]').click();
+  // Krok 2: pierwsza wizyta Wegovy staje się Włączeniem nowego cyklu (przycisk przypomnienia = ołówek przy wizycie).
+  await komunikat(page).getByRole('button', { name: 'Edytuj wizytę 12.07.2024' }).click();
+  await expect(page.locator('#obesityEditBar')).toContainText('Edytujesz punkt: Kontynuacja');
   await expect(page.locator('#obesityMonDrug')).toHaveValue('wegovy');
   await expect(przycisk(page, 'Włączenie leczenia')).not.toHaveAttribute('aria-disabled', 'true');
   await przycisk(page, 'Włączenie leczenia').click();
@@ -178,6 +187,41 @@ test('stary zapis Saxenda → Wegovy w jednym cyklu: pozycja banera i poprawka w
   expect(await punkty(page)).toEqual(['start:2024-01-12:Saxenda', 'continue:2024-04-12:Saxenda', 'end:2024-07-12:Saxenda', 'start:2024-07-12:Wegovy', 'continue:2024-10-12:Wegovy']);
   expect(await page.evaluate(() => window.VildaCykleLeczenia.podziel(window.obesityTherapyPoints).niezgodnosci.length)).toBe(0);
   expect(pytania.some((p) => p.startsWith('Ten punkt jest odniesieniem')), 'zmiana na Włączenie pyta o punkt odniesienia').toBe(true);
+});
+
+test('Saxenda → Wegovy → Zakończenie z Saxendą: pozycja Zakończenia mówi o sąsiedniej wizycie i daje edycję obu', async ({ page }) => {
+  test.setTimeout(120_000);
+  // Jedna pomyłkowa wizyta (Wegovy) w środku cyklu Saxendy, który kończy Zakończenie z Saxendą.
+  await otworzMonitor(page, [W_SAX, K_SAX, M('e', 'continue', 40, 6, 97, '2024-07-12', WEGOVY), M('c', 'end', 40, 9, 97.5, '2024-10-15')]);
+  const baner = page.locator('#obesityTherapyFixBanner');
+  await expect(baner).toBeVisible();
+  const pozycje = baner.locator('.obm-fix-list > li');
+  await expect(pozycje).toHaveCount(2);
+  expect(await tekst(pozycje.nth(0).locator('span').first())).toBe(POZYCJA_R6);
+  expect(await tekst(pozycje.nth(1).locator('span').first())).toBe('Zakończenie cyklu 1 (15.10.2024) ma inny lek (Saxenda) niż wcześniejsza wizyta tego cyklu (Wegovy, 12.07.2024). Lek zmienia się w tym cyklu więcej niż raz — sprawdź leki tych wizyt.');
+  expect(await pozycje.nth(1).locator('button').allTextContents()).toEqual(['Edytuj wizytę 12.07.2024', 'Edytuj wizytę 15.10.2024']);
+
+  // Poprawka pomyłkowej wizyty: Wegovy → Saxenda. Baner znika, w cyklu 1 nie ma niezgodności.
+  await pozycje.nth(1).getByRole('button', { name: 'Edytuj wizytę 12.07.2024' }).click();
+  await expect(page.locator('#obesityEditBar')).toContainText('Edytujesz punkt: Kontynuacja');
+  await expect(page.locator('#obesityMonDrug')).toHaveValue('wegovy');
+  await page.selectOption('#obesityMonDrug', 'saxenda');
+  await expect(przycisk(page, 'Kontynuacja leczenia')).not.toHaveAttribute('aria-disabled', 'true');
+  await przycisk(page, 'Kontynuacja leczenia').click();
+  await expect(baner).toBeHidden();
+  expect(await punkty(page)).toEqual(['start:2024-01-12:Saxenda', 'continue:2024-04-12:Saxenda', 'continue:2024-07-12:Saxenda', 'end:2024-10-15:Saxenda']);
+});
+
+test('drugie Włączenie z innym lekiem: akcje tylko w pozycji R6 (bez „Zmień na Kontynuację” i bez drugiego „Dopisz Zakończenie”)', async ({ page }) => {
+  test.setTimeout(120_000);
+  await otworzMonitor(page, [W_SAX, K_SAX, M('g', 'start', 40, 6, 97, '2024-07-12', WEGOVY), M('h', 'continue', 40, 9, 95, '2024-10-12', WEGOVY)]);
+  const pozycje = page.locator('#obesityTherapyFixBanner .obm-fix-list > li');
+  await expect(pozycje).toHaveCount(2);
+  expect(await tekst(pozycje.nth(0))).toBe('W cyklu 1 są dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.');
+  await expect(pozycje.nth(0).locator('.obm-msg-actions')).toHaveCount(0);
+  expect(await tekst(pozycje.nth(1).locator('span').first())).toBe(POZYCJA_R6);
+  expect(await pozycje.nth(1).locator('button').allTextContents()).toEqual(['Dopisz Zakończenie przed 12.07.2024', 'Edytuj wizytę 12.07.2024']);
+  await expect(page.locator('#obesityTherapyFixBanner').getByRole('button', { name: 'Dopisz Zakończenie przed 12.07.2024' })).toHaveCount(1);
 });
 
 test('telefon (390 px): baner R6 i powód pod przyciskiem bez poziomego przewijania', async ({ page }) => {

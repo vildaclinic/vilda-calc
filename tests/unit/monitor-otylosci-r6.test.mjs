@@ -10,6 +10,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //   • baner porządkowania (CyB) ma pozycję dla niezgodności „zmiana-substancji” (i dla nieznanego
 //     kodu — chip cyklu mówi wtedy „do uporządkowania”, więc baner nie może milczeć);
 //   • podpowiedź „Dopisz Zakończenie” w wariancie R6 (CsZ) — nic nie zapisuje.
+//   • po zapisie Zakończenia z tej podpowiedzi — przypomnienie o kroku 2 (CsK, wołane z vt), też bez zapisu.
 //
 // Funkcje są WYCINANE z pliku produkcyjnego (konwencja otylosc-edycja-punktu.test.mjs
 // i monitor-otylosci-lek.test.mjs) i wykonywane na atrapie DOM z PRAWDZIWYM modułem cykli
@@ -133,7 +134,7 @@ function monitor({ punkty = [], cykle } = {}) {
     function l() {}
     function q() {}
     ${KOD}
-    return { CyB: CyB, CyS: CyS, edytuj: function (id) { Es = id; } };
+    return { CyB: CyB, CyS: CyS, CsK: CsK, edytuj: function (id) { Es = id; } };
   `)(document, okno, slad);
   const ustaw = (pola) => {
     if ('lata' in pola) el.obesityAge.value = String(pola.lata);
@@ -151,6 +152,7 @@ function monitor({ punkty = [], cykle } = {}) {
   const baner = el.obesityTherapyFixBanner;
   const pozycje = () => baner.potomkowie('li').map((li) => ({
     txt: li.dzieci[0].textContent,
+    pasekAkcji: li.dzieci.length > 1,
     akcje: li.potomkowie('button').map((b) => b.textContent),
     przycisk: (etykieta) => li.potomkowie('button').find((b) => b.textContent === etykieta),
   }));
@@ -241,6 +243,9 @@ describe('R6 w podglądzie pod przyciskami (CyS): kandydat niesie lek z formular
   });
 });
 
+// Krok 1 poprawki dwukrokowej starego zapisu: Zakończenie Saxendy w dniu pierwszej wizyty Wegovy.
+const krokPierwszy = (C) => C.sprawdz(STARY, { rodzaj: 'dodaj', punkt: M('z', 'end', 40, 6, 97, '2024-07-12') });
+
 describe('R6 na banerze porządkowania (CyB) i podpowiedź Zakończenia (CsZ)', () => {
   it('stary zapis Saxenda → Wegovy w jednym cyklu: pozycja R6 z dwiema akcjami', () => {
     const m = monitor({ punkty: STARY });
@@ -290,7 +295,7 @@ describe('R6 na banerze porządkowania (CyB) i podpowiedź Zakończenia (CsZ)', 
     expect(p[0].akcje).toEqual(['Dopisz Zakończenie przed 10.05.2025', 'Edytuj wizytę 10.05.2025']);
   });
 
-  it('nowa substancja od drugiego Włączenia: obie pozycje, a podpowiedź R6 nie każe zmieniać Włączenia na Włączenie', () => {
+  it('nowa substancja od drugiego Włączenia: obie pozycje, akcje tylko w pozycji R6, a podpowiedź nie każe zmieniać Włączenia na Włączenie', () => {
     const pts = [W_SAX, K_SAX, M('g', 'start', 40, 6, 97, '2024-07-12', WEGOVY), M('h', 'continue', 40, 9, 95, '2024-10-12', WEGOVY)];
     const m = monitor({ punkty: pts });
     m.api.CyB(m.okno.VildaCykleLeczenia.podziel(pts));
@@ -299,10 +304,29 @@ describe('R6 na banerze porządkowania (CyB) i podpowiedź Zakończenia (CsZ)', 
       'W cyklu 1 są dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.',
       'W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.',
     ]);
+    // Recenzja raty 4: „Zmień 12.07.2024 na Kontynuację” zostawiałoby zmianę substancji w cyklu (pozycja
+    // R6 i jej podpowiedź prowadzą z powrotem do Włączenia), a drugi „Dopisz Zakończenie przed 12.07.2024”
+    // miałby inną podpowiedź niż ten w pozycji R6. Akcje daje tylko pozycja R6; pusty pasek akcji nie powstaje.
+    expect(p[0].akcje).toEqual([]);
+    expect(p[0].pasekAkcji).toBe(false);
+    expect(p[1].akcje).toEqual(['Dopisz Zakończenie przed 12.07.2024', 'Edytuj wizytę 12.07.2024']);
     p[1].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
     expect(m.slad.komunikat.tekst).toBe('Wpisz wizytę kończącą leczenie Saxenda — datę (najpóźniej 12.07.2024; może być ten sam dzień), masę i wzrost — wybierz w liście lek Saxenda i „Zakończenie leczenia”.');
-    // Dotychczasowy wariant (dwa Włączenia) bez zmian.
+  });
+
+  it('dwa Włączenia z tym samym lekiem (np. po poprawce leku drugiego): pozycja i podpowiedź jak przed ratą 4', () => {
+    const pts = [W_SAX, K_SAX, M('g', 'start', 40, 6, 97, '2024-07-12')];
+    const m = monitor({ punkty: pts });
+    m.api.CyB(m.okno.VildaCykleLeczenia.podziel(pts));
+    const p = m.pozycje();
+    expect(p.map((x) => [x.txt, x.akcje])).toEqual([[
+      'W cyklu 1 są dwa punkty „Włączenie” (12.01.2024 i 12.07.2024) bez Zakończenia między nimi.',
+      ['Zmień 12.07.2024 na Kontynuację', 'Dopisz Zakończenie przed 12.07.2024'],
+    ]]);
     p[0].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
+    expect(m.slad.komunikat.tekst).toBe('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 12.07.2024), masę i wzrost — i wybierz „Zakończenie leczenia”.');
+    // Wariant dwóch Włączeń nie zostawia przypomnienia o kroku 2 poprawki R6.
+    m.api.CsK();
     expect(m.slad.komunikat.tekst).toBe('Wpisz dane wizyty, która zakończyła wcześniejszy cykl — datę (przed 12.07.2024), masę i wzrost — i wybierz „Zakończenie leczenia”.');
   });
 
@@ -320,6 +344,116 @@ describe('R6 na banerze porządkowania (CyB) i podpowiedź Zakończenia (CsZ)', 
     const popr = C.sprawdz(pts, { rodzaj: 'edytuj', id: 'c', punkt: { ...pts[2], ...SAXENDA } });
     expect(popr.ok).toBe(true);
     expect(C.podziel(popr.punkty).niezgodnosci).toEqual([]);
+  });
+
+  it('Saxenda → Wegovy → Zakończenie z Saxendą: pozycja Zakończenia nie twierdzi, że cykl miał lek Wegovy (recenzja raty 4)', () => {
+    // Jedna pomyłkowa wizyta w środku cyklu. Wcześniejsze brzmienie („niż wcześniejsze wizyty tego cyklu
+    // (Wegovy, do 12.07.2024). Zakończenie zapisuje się z lekiem swojego cyklu.”) było nieprawdziwe i z jedyną
+    // akcją „Edytuj wizytę 15.10.2024” prowadziło do zmiany leku Zakończenia, od którego cykl się zaczął.
+    const pts = [W_SAX, K_SAX, M('e', 'continue', 40, 6, 97, '2024-07-12', WEGOVY), M('c', 'end', 40, 9, 97.5, '2024-10-15')];
+    const m = monitor({ punkty: pts });
+    const C = m.okno.VildaCykleLeczenia;
+    m.api.CyB(C.podziel(pts));
+    const p = m.pozycje();
+    expect(p.map((x) => x.txt)).toEqual([
+      'W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.04.2024) → Wegovy (od 12.07.2024) bez Zakończenia między nimi.',
+      'Zakończenie cyklu 1 (15.10.2024) ma inny lek (Saxenda) niż wcześniejsza wizyta tego cyklu (Wegovy, 12.07.2024). Lek zmienia się w tym cyklu więcej niż raz — sprawdź leki tych wizyt.',
+    ]);
+    expect(p[1].txt).not.toContain('lekiem swojego cyklu');
+    expect(p[1].akcje, 'edycja obu wizyt, bez wskazywania, która jest błędna').toEqual(['Edytuj wizytę 12.07.2024', 'Edytuj wizytę 15.10.2024']);
+    p[1].przycisk('Edytuj wizytę 12.07.2024').click();
+    p[1].przycisk('Edytuj wizytę 15.10.2024').click();
+    expect(m.slad.edycja).toEqual(['e', 'c']);
+    // Poprawka pomyłkowej wizyty (Wegovy → Saxenda) porządkuje cały zapis.
+    const popr = C.sprawdz(pts, { rodzaj: 'edytuj', id: 'e', punkt: { ...pts[2], ...SAXENDA } });
+    expect(popr.ok).toBe(true);
+    expect(C.podziel(popr.punkty).niezgodnosci).toEqual([]);
+  });
+
+  it('trzecia substancja w Zakończeniu po wcześniejszej zmianie: to samo brzmienie sąsiedniej wizyty', () => {
+    const pts = [W_SAX, M('e', 'continue', 40, 6, 97, '2024-07-12', WEGOVY), M('c', 'end', 40, 9, 97.5, '2024-10-15', MOUNJARO)];
+    const m = monitor({ punkty: pts });
+    m.api.CyB(m.okno.VildaCykleLeczenia.podziel(pts));
+    expect(m.pozycje().map((x) => [x.txt, x.akcje])[1]).toEqual([
+      'Zakończenie cyklu 1 (15.10.2024) ma inny lek (Mounjaro) niż wcześniejsza wizyta tego cyklu (Wegovy, 12.07.2024). Lek zmienia się w tym cyklu więcej niż raz — sprawdź leki tych wizyt.',
+      ['Edytuj wizytę 12.07.2024', 'Edytuj wizytę 15.10.2024'],
+    ]);
+  });
+
+  it('przypomnienie o kroku 2: po zapisie Zakończenia Saxendy wizyta 12.07.2024 do zmiany na Włączenie (CsK)', () => {
+    const m = monitor({ punkty: STARY });
+    const C = m.okno.VildaCykleLeczenia;
+    m.api.CyB(C.podziel(STARY));
+    m.pozycje()[0].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
+    // Krok 1 zapisany (vt woła CsK po udanym dodaniu punktu; Cc wcześniej wyczyściło podpowiedź).
+    const krok1 = C.sprawdz(STARY, { rodzaj: 'dodaj', punkt: M('z', 'end', 40, 6, 97, '2024-07-12') });
+    expect(krok1.ok).toBe(true);
+    m.slad.punkty = krok1.punkty;
+    m.slad.komunikat = null;
+    m.api.CsK();
+    expect(m.slad.komunikat.klasa).toBe('warn');
+    expect(m.slad.komunikat.tekst).toBe('Zakończenie zapisane. Teraz zmień wizytę 12.07.2024 na Włączenie (ołówek przy wizycie) — nie dopisuj nowego Włączenia.');
+    expect(m.slad.komunikat.akcje.map((a) => a.label)).toEqual(['Edytuj wizytę 12.07.2024']);
+    m.slad.komunikat.akcje[0].run();
+    expect(m.slad.edycja).toEqual(['e']);
+    expect(m.slad.punkty, 'przypomnienie niczego nie zapisuje').toBe(krok1.punkty);
+    // Jednorazowe: kolejny zapis już nie przypomina.
+    m.slad.komunikat = null;
+    m.api.CsK();
+    expect(m.slad.komunikat).toBeNull();
+    expect(m.slad.bledy).toEqual([]);
+  });
+
+  it('przypomnienie o kroku 2 tylko wtedy, gdy wizyta rzeczywiście zaczyna cykl bez Włączenia', () => {
+    const m = monitor({ punkty: STARY });
+    const C = m.okno.VildaCykleLeczenia;
+    m.api.CyB(C.podziel(STARY));
+    m.pozycje()[0].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
+    // Zamiast Zakończenia zapisano inną wizytę — wizyta 12.07.2024 dalej jest w środku cyklu 1.
+    m.slad.punkty = STARY.concat([M('k', 'continue', 40, 11, 94, '2024-12-12', WEGOVY)]);
+    m.slad.komunikat = null;
+    m.api.CsK();
+    expect(m.slad.komunikat).toBeNull();
+    // Gdy pierwszą wizytą nowej substancji jest drugie Włączenie, podpowiedź nie ma kroku 2 — przypomnienia też nie ma.
+    const pts = [W_SAX, K_SAX, M('g', 'start', 40, 6, 97, '2024-07-12', WEGOVY)];
+    const m2 = monitor({ punkty: pts });
+    m2.api.CyB(C.podziel(pts));
+    m2.pozycje()[1].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
+    const k1 = C.sprawdz(pts, { rodzaj: 'dodaj', punkt: M('z', 'end', 40, 6, 97, '2024-07-12') });
+    expect(k1.ok).toBe(true);
+    m2.slad.punkty = k1.punkty;
+    m2.slad.komunikat = null;
+    m2.api.CsK();
+    expect(m2.slad.komunikat).toBeNull();
+    // …nawet gdy ta wizyta jest potem (inną drogą) Kontynuacją na początku cyklu — przypomnienie dotyczy tylko kroku 2 z podpowiedzi.
+    m2.pozycje()[1].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
+    m2.slad.punkty = [W_SAX, K_SAX, M('z', 'end', 40, 6, 97, '2024-07-12'), M('g', 'continue', 40, 6, 97, '2024-07-12', WEGOVY)];
+    m2.slad.komunikat = null;
+    m2.api.CsK();
+    expect(m2.slad.komunikat).toBeNull();
+    // Wizyta z kroku 2 jest już Włączeniem (np. poprawiona ołówkiem przed zapisem kolejnego punktu) — nic do przypomnienia.
+    const m3 = monitor({ punkty: STARY });
+    m3.api.CyB(C.podziel(STARY));
+    m3.pozycje()[0].przycisk('Dopisz Zakończenie przed 12.07.2024').click();
+    const e = krokPierwszy(C).punkty.find((p) => p.id === 'e');
+    m3.slad.punkty = C.sprawdz(krokPierwszy(C).punkty, { rodzaj: 'edytuj', id: 'e', punkt: { ...e, type: 'start' } }).punkty;
+    expect(C.podziel(m3.slad.punkty).cykle[1].punkty[0]).toMatchObject({ id: 'e', type: 'start' });
+    m3.slad.komunikat = null;
+    m3.api.CsK();
+    expect(m3.slad.komunikat).toBeNull();
+  });
+
+  it('numer cyklu przy wariancie Zakończenia: zmiana substancji w cyklu 1 nie zmienia brzmienia pozycji Zakończenia w cyklu 2', () => {
+    const pts = [W_SAX, M('e', 'continue', 40, 3, 99, '2024-04-12', WEGOVY), M('c', 'end', 40, 9, 97.5, '2024-10-15', WEGOVY),
+      M('d', 'start', 40, 10, 98.5, '2024-11-12', WEGOVY), M('y', 'end', 41, 4, 93, '2025-05-10', MOUNJARO)];
+    const m = monitor({ punkty: pts });
+    m.api.CyB(m.okno.VildaCykleLeczenia.podziel(pts));
+    expect(m.pozycje().map((x) => [x.txt, x.akcje])).toEqual([
+      ['W cyklu 1 zmienia się substancja czynna: Saxenda (do 12.01.2024) → Wegovy (od 12.04.2024) bez Zakończenia między nimi.',
+        ['Dopisz Zakończenie przed 12.04.2024', 'Edytuj wizytę 12.04.2024']],
+      ['Zakończenie cyklu 2 (10.05.2025) ma inny lek (Mounjaro) niż wcześniejsze wizyty tego cyklu (Wegovy, do 12.11.2024). Zakończenie zapisuje się z lekiem swojego cyklu.',
+        ['Edytuj wizytę 10.05.2025']],
+    ]);
   });
 
   it('nieznany kod niezgodności dostaje pozycję zapasową — baner nie milczy, gdy chip mówi „do uporządkowania”', () => {
@@ -374,8 +508,14 @@ describe('strażniki tekstowe monitora (R6)', () => {
     expect((MON.match(/getAttribute\("data-substance"\)/g) || []).length).toBe(2);
   });
 
+  it('vt: po udanym dodaniu punktu przypomnienie o kroku 2 poprawki R6 (CsK), po odświeżeniu podglądu', () => {
+    const vt = bezKomentarzy(funkcjaZ(MON, 'vt'));
+    expect(vt).toContain('k&&(k.value="")}),CyS(),CsK()}}');
+    expect((MON.match(/[^ ]CsK\(\)/g) || []).length, 'jedno wywołanie — tylko w zapisie dodawania').toBe(1);
+  });
+
   it('nowe funkcje R6 nie przesłaniają istniejących nazw (prefiks Cs)', () => {
-    for (const n of ['CsN', 'CsB', 'CsU', 'CsZ']) {
+    for (const n of ['CsN', 'CsB', 'CsU', 'CsZ', 'CsW', 'CsP', 'CsK']) {
       expect((MON.match(new RegExp(`function ${n}\\(`, 'g')) || []).length, n).toBe(1);
     }
     // Dotychczasowe funkcji banera i podpowiedzi żyją bez zmian w sygnaturze.
