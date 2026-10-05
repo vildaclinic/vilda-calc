@@ -15,8 +15,11 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 // Bez pliku danych pasma znikają, bez silnika BMI znikają klasy, bez kryteriów ChPL znika
 // punkt decyzyjny — w każdym z tych przypadków wynik jest UBOŻSZY, a nie błędny, więc brak
 // zależności czytałby się jak regresja produktu.
+// vilda_cykle_leczenia.js (P-OTYLOSC-CYKLE rata 4) dzieli punkty leczenia otyłości na cykle — od niego
+// trajektoria bierze kursy otyłości (kursyOtylosci). Bez niego moduł trajektorii nie pada, tylko cicho
+// wraca do reguły sprzed raty 4 (Zakończenie + przerwa ≥ 3 mies.), więc testy kursów sprawdzałyby starą regułę.
 const ZALEZNOSCI = {
-  'vilda_trajectory_analysis.js': ['vilda_werdykt.js'],
+  'vilda_trajectory_analysis.js': ['vilda_werdykt.js', 'vilda_cykle_leczenia.js'],
   'vilda_postepy_doroslego.js': [
     'vilda_bmi.js',
     'obesity_response_criteria.js',

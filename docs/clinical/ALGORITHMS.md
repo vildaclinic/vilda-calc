@@ -9011,6 +9011,8 @@ koduj” (wszystkie R1–R9 w jednej racie).
 1. *Kursy leczenia* (`therapyIntervals`): punkty monitora posortowane po wieku; kurs otwiera pierwszy punkt, zamyka „end”;
    punkt po „end” z przerwą < 3 mies. wraca do kursu, ≥ 3 mies. otwiera nowy. Kontekst niesie `ghKursy` / `redKursy`
    (etykieta kursu = preparat z jego ostatniego punktu) obok dotychczasowej koperty `gh` / `red`.
+   **[ZASTĄPIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4, blok „Kursy leczenia otyłości = cykle” na końcu tej
+   sekcji; dla GH reguła obowiązuje bez zmian.]**
 2. *Okno w kursie* (`kursOkna`): start okna ≥ początek kursu − 6 mies., koniec ≤ koniec kursu (gdy zakończony), pokrycie
    leczeniem ≥ 50 % okna. Tylko takie okno dostaje werdykt odpowiedzi na leczenie. Okno mieszane dostaje werdykt
    populacyjny/MPH z dopiskiem „— w tym N mies. na GH” / „— w tym N mies. leczenia redukcyjnego” (dopisek jest
@@ -9061,6 +9063,139 @@ odpowiedzi redukcyjnej −0,2 → −0,25. U pacjentów bez punktów terapii zmi
 **Decyzje właściciela do potwierdzenia.** Niższy próg odpowiedzi na GH dla kolejnych lat kursu (dziś ten sam co w 1. roku);
 brzmienie „brak istotnej odpowiedzi na leczenie — po N mies.”; próg −0,25 zamiast −0,2; czy dopisek „w tym N mies.” ma
 być także w epikryzie (dziś idzie jako ogon etykiety, więc tak).
+
+### Kursy leczenia otyłości = cykle (P-OTYLOSC-CYKLE rata 4, obszar trajektorii; `vilda_trajectory_analysis.js` 32, 2026-10-01)
+
+**Decyzja właściciela.** Rekomendacje D1–D8 projektu „Cykle leczenia otyłości” przyjęte 2026-09-30 (D1: cykle wyliczane
+z punktów, granica = wyłącznie Zakończenie; D6: „karta porównania — dla otyłości granicą są Zakończenie i Włączenie,
+bez progu przerwy 3 mies., GH bez zmian”; „Kontynuacja po Zakończeniu w starym zapisie staje się cyklem bez Włączenia”);
+„ruszaj z ratą 4” — 2026-10-01. Źródłem jest decyzja organizacyjna o granicach cyklu, nie nowy próg kliniczny: progi
+odpowiedzi (reguły 2–6 wyżej) się nie zmieniają, zmienia się to, które miesiące są „w kursie”.
+
+**Reguła.** Kursy leczenia otyłości (`redKursy` w kontekście z `buildClinicalContext`) liczy `kursyOtylosci` z cykli
+`VildaCykleLeczenia.podziel` (ten sam podział, co monitor DocPro, Karta pacjenta i „Postępy”): kurs = cykl; `a` = wiek
+pierwszego punktu cyklu z wiekiem > 0 (miesiące, `ageYears·12 + ageMonths`), `b` = wiek Zakończenia (Zakończenie bez
+wieku → najstarszy punkt cyklu), aktywny cykl `b = null`; cykl bez punktu z wiekiem > 0 pominięty; etykieta = preparat
+ostatniego punktu cyklu z lekiem, kurs bez leku — „otyłość” (dotąd dostawał lek innego kursu). Kolejność kursów =
+kolejność cykli (po datach, gdy datę ma każdy punkt). Cykl bez Włączenia i cykl z niezgodnością zapisu to zwykły kurs:
+werdykt BMI-SDS trajektorii nie jest oceną odpowiedzi wg ChPL (tę Karta pacjenta wstrzymuje przy niezgodnym zapisie).
+Bez modułu cykli na stronie (offline bez pliku z `OPTIONAL_ASSETS`) albo przy wyjątku kursy dzieli reguła sprzed raty
+(`therapyIntervals`); pozostałe punkty niżej działają także wtedy — patrz „Ścieżka bez modułu cykli”.
+Dodatkowo:
+- *Tolerancja startu przy stykających się kursach.* Dla kursów otyłości dolna granica tolerancji startu (okno w kursie,
+  pomiar startowy chipu) = max(start − 6 mies., koniec poprzedniego kursu) — przy Zakończeniu i Włączeniu tego samego
+  dnia okno ani pomiar z poprzedniego cyklu nie liczy się jako „w kursie” nowego leku. Przycięcie działa przy KAŻDEJ
+  przerwie między kursami krótszej niż 6 mies. (`KURS_START_TOL_M`), także przy przerwie 3–6 mies., przy której lista
+  kursów jest taka sama jak przed ratą; przy przerwie ≥ 6 mies. nic nie zmienia. GH bez tego przycięcia.
+- *Pasek meta* analizy trajektorii: przy kilku kursach otyłości żeton na każdy kurs („⬇ redukcja Saxenda · od … do …”,
+  „⬇ redukcja Wegovy · od … — nadal”); przy jednym — jak dotąd z koperty. Długi żeton zawija tekst zamiast wystawać.
+- *Karta pacjenta:* panel „Analiza trajektorii” dostaje listę kursów otyłości (dotąd samą kopertę — przerwa między
+  kursami liczyła się tam jako leczenie, także po racie 6); pasek kontekstu panelu „Porównanie pomiarów” liczy
+  „🍽 … w przedziale (N mies.)” jako sumę pokryć kursów, z etykietą kursu o największym pokryciu. GH w Karcie bez zmian
+  (koperta — osobny wątek).
+
+**Populacja i ograniczenia.** Zmiana widoczna wyłącznie u dzieci (analiza trajektorii i karty porównania wymagają siatek
+centylowych); u dorosłego kontekst liczy się tak samo, ale żaden ekran go nie pokazuje. Wiek kursów pochodzi z pól wieku
+punktów, kolejność cykli z dat — przy niespójnych wiekach i datach kurs może mieć `b < a` (brak okna w kursie). Pasek
+terapii na siatkach Karty pacjenta i `growth-basic-module.js` zostają na kopercie (poza zakresem raty).
+Przypadki brzegowe starego zapisu (stan po racie 4; testy w `tests/unit/kursy-otylosci-cykle.test.mjs`):
+- *Zakończenie bez wieku* (wiek 0). Gdy datę ma każdy punkt, moduł cykli porządkuje po datach i Zakończenie zamyka
+  cykl — kurs kończy się na najstarszym wieku cyklu, także przy JEDNYM cyklu (dotąd `therapyIntervals` pomijało ten
+  punkt i kurs trwał). Gdy choć jeden punkt nie ma daty, moduł porządkuje po wieku: Zakończenie z wiekiem 0 staje na
+  początku jako osobny cykl bez wieku > 0 (pominięty), a kurs trwa — jak dotąd. Ten sam punkt daje więc różny wynik
+  zależnie od tego, czy INNE wizyty mają daty (niespójność — do decyzji właściciela).
+- *Włączenie nowego leku zapisane w tablicy PRZED Zakończeniem poprzedniego tego samego dnia.* Przy remisie dat moduł
+  cykli zachowuje kolejność tablicy, więc Włączenie trafia do cyklu 1 (niezgodność „dwa-wlaczenia”), a kurs 2 (cykl bez
+  Włączenia) zaczyna się od pierwszej Kontynuacji; przerwa Zakończenie → Kontynuacja nie jest liczona jako leczenie.
+  Przy odwrotnej kolejności (Zakończenie przed Włączeniem) to zwykła zmiana leku tego samego dnia (CY-8).
+- *Zdublowane Zakończenie* (Z, Z bez wizyty między nimi — niezgodność „zakonczenie-bez-wizyt”). Drugi cykl to sam punkt
+  Zakończenia; zgodnie z regułą „cykl z niezgodnością to zwykły kurs” daje kurs zerowej długości `{a: m, b: m}`. Jako
+  OSTATNI kurs przejmuje chip okresu leczenia, a `oknoKursu` nie znajduje w nim okna — chip PRAWDZIWEGO kursu znika,
+  a pasek meta pokazuje żeton „… · od 13 lat 2 mies. do 13 lat 2 mies.”. Kurs zerowej długości nie dodaje miesięcy
+  leczenia; leczenie kończy się na pierwszym Zakończeniu (dotąd `therapyIntervals` wydłużało kurs do drugiego, gdy dzieliło
+  je < 3 mies. — np. dopisek całości „w tym 13 mies.” → „w tym 12 mies.”). Wariant do decyzji właściciela (niżej).
+
+**Ścieżka bez modułu cykli.** Bez `VildaCykleLeczenia` (albo przy wyjątku w `podziel`) kursy otyłości liczy
+`therapyIntervals` (Zakończenie + przerwa ≥ 3 mies. = nowy kurs). NIE jest to jednak w pełni zachowanie sprzed raty 4 —
+kontekst nie niesie informacji, skąd pochodzą kursy (kształt `{a, b, label}` bez nowych pól), więc na każdej liście
+kursów otyłości działają: przycięcie tolerancji startu (zmienia wynik przy przerwie 3–6 mies.), żeton na każdy kurs
+w pasku meta, etykieta „otyłość” per kurs, a w Karcie pacjenta lista kursów w panelu „Analiza trajektorii” i suma pokryć
+w pasku panelu „Porównanie pomiarów”. Przy przerwie < 3 mies. `therapyIntervals` skleja cykle w jeden kurs, więc wynik
+jest jak przed ratą (test negatywny). Przy przerwie ≥ 3 mies. widać różnicę (przypadek „przerwa 4 mies.” niżej — z modułem
+i bez niego wynik jest ten sam).
+
+**Przypadki syntetyczne (wejście → wynik).**
+- CY-9 dorosłego (170 cm; W 12.01.2024 Saxenda 40 l. 1 mies., K, Z 15.10.2024; W 12.11.2024 Wegovy, K, K 10.05.2025):
+  `redKursy` = `[{481, 490, Saxenda}, {491, null, Wegovy}]` niezależnie od kolejności w tablicy (dotąd jeden kurs
+  `{481, null, Wegovy}`).
+- Stary zapis W 96, Z 100, K 101 mies. → `[[96, 100], [101, null]]` (drugi kurs = cykl bez Włączenia); jako GH → `[[96, null]]`.
+- Dziecko: Saxenda W 145, K 148, Z 154 mies.; Wegovy W 154 (ten sam dzień), K 158; pomiary 145, 148, 151, 158, 161 →
+  dwa kursy `[[145, 154], [154, null]]`; chip okresu leczenia 158 → 161 („— wstępnie (3 mies.)”), odcinek 151 → 158
+  mieszany „— w tym 7 mies. leczenia redukcyjnego”, całość 145 → 161 „redukcja nadmiaru masy ciała — w tym 16 mies.
+  leczenia redukcyjnego”. Dotąd jeden kurs od 145 mies.: chip 145 → 161, odcinek 151 → 158 w kursie, całość „redukcja
+  w trakcie leczenia”.
+- Przerwa 4 mies. (kursy takie same jak przed ratą): Saxenda W 145, Z 151; Wegovy W 155, K 158 → `[[145, 151], [155, null]]`
+  (z modułem cykli i bez niego). Karta porównania z poprzednim pomiarem 150 → 161 mies. (masa SDS 2,45 → 2,10): dotąd
+  „redukcja w trakcie leczenia”, okno w kursie Wegovy i „kontekst: leczenie otyłości (Wegovy) — 6 mies. w odcinku”;
+  teraz „redukcja nadmiaru masy ciała — w tym 7 mies. leczenia redukcyjnego”, okno mieszane, kontekstu brak (start
+  okna 150 < koniec Saxendy 151). Analiza trajektorii (pomiary 145, 150, 158, 161): chip okresu leczenia dotąd 150 → 161
+  „redukcja w trakcie leczenia”, teraz 158 → 161 „redukcja w trakcie leczenia — wstępnie (3 mies.)”; pasek meta dotąd
+  jeden żeton „Wegovy · od 12 lat 1 mies. — nadal”, teraz dwa („Saxenda · od 12 lat 1 mies. do 12 lat 7 mies.”,
+  „Wegovy · od 12 lat 11 mies. — nadal”).
+- Zakończenie bez wieku, jeden cykl, zapis z datami (W 145, K 151, Z z wiekiem 0 i datą) → `[[145, 151]]` (dotąd
+  `[[145, null]]`): pomiary po 151 mies. nie są „w kursie” — chip okresu leczenia kończy się na 151 mies., okno sięgające
+  dalej dostaje werdykt populacyjny z dopiskiem (pomiary 140–163 co 3 mies., SDS masy malejący o 0,02/mies.: chip dotąd
+  145 → 163 „redukcja w trakcie leczenia”, teraz 145 → 151; całość dotąd „redukcja w trakcie leczenia”, teraz „redukcja
+  nadmiaru masy ciała — w tym 6 mies. leczenia redukcyjnego”). Ten sam zapis bez dat → `[[145, null]]`, jak dotąd.
+- Stary zapis W Saxenda 145, K 148, W Wegovy 154 i Z Saxenda 154 (ta sama data, Włączenie wcześniej w tablicy), K 155,
+  K 160 → cykle `[W, K, W, Z]` („dwa-wlaczenia”) i `[K, K]`; kursy `[[145, 154, Saxenda], [155, null, Wegovy]]` (dotąd
+  `[[145, null, Wegovy]]`).
+- Zdublowane Zakończenie: W 145, K 148, Z 157, Z 158 (z datami) → `[[145, 157], [158, 158]]`; chip okresu leczenia brak
+  (dotąd jeden kurs 145 → 158 i chip 145 → 157).
+- Dziecko, Saxenda 145–154, Wegovy od 155: pasek meta „Saxenda · od 12 lat 1 mies. do 12 lat 10 mies.”, „Wegovy · od
+  12 lat 11 mies. — nadal”; chip „↳ okres leczenia (od 12 lat 11 mies.)”; całość 145 → 161 werdykt populacyjny
+  „— w tym 15 mies. leczenia redukcyjnego” (dotąd „redukcja w trakcie leczenia”).
+- Karta porównania z poprzednim pomiarem 150 → 161 mies., Z 150, W 152: „kontekst: leczenie otyłości (Wegovy) — 9 mies.
+  w odcinku” (dotąd 11 mies.).
+
+**Wpływ kliniczny.** Dotyczy dzieci z punktami monitora otyłości (u dorosłego nic nie jest widoczne). Wynik zmienia się
+w czterech grupach — z modułem cykli na stronie; bez niego patrz „Ścieżka bez modułu cykli”:
+1. *Zakończenie i kolejny punkt (Włączenie albo Kontynuacja) dzieli mniej niż 3 mies.*, w tym zmiana leku tego samego
+   dnia: dwa kursy zamiast jednego. Okno obejmujące oba cykle przestaje być oceną odpowiedzi na leczenie i dostaje werdykt
+   populacyjny z dopiskiem „— w tym N mies. leczenia redukcyjnego”; chip okresu leczenia liczy tylko bieżący cykl; pasek
+   meta ma żeton na każdy kurs; chip kontekstu karty porównania pokazuje miesiące kursu bieżącego cyklu albo znika przy
+   oknie mieszanym.
+2. *Przerwa między kursami krótsza niż 6 mies.* (`KURS_START_TOL_M`) — także przerwa 3–6 mies., przy której lista kursów
+   jest TAKA SAMA jak przed ratą: okno albo pomiar startowy, który zaczyna się przed końcem poprzedniego kursu, nie należy
+   do następnego kursu (dotąd wystarczał start ≥ początek − 6 mies.). Karta porównania z poprzednim pomiarem traci chip
+   kontekstu („kontekst: leczenie otyłości …”), a werdykt pary staje się populacyjny z dopiskiem zamiast „redukcja
+   w trakcie leczenia”; chip okresu leczenia zaczyna się od pomiaru nie wcześniejszego niż koniec poprzedniego kursu
+   (krótsze okno, może dostać „wstępnie”). Przy przerwie ≥ 6 mies. bez zmian.
+3. *Zakończenie bez wieku w zapisie, w którym każdy punkt ma datę:* kurs zamyka się na najstarszym wieku cyklu, także
+   przy jednym cyklu (dotąd trwał) — pomiary po tym wieku przestają być „w kursie”. W zapisie z choć jednym punktem bez
+   daty ten sam punkt jest pomijany, jak dotąd (niespójność trybów — „Populacja i ograniczenia”).
+4. *Karta pacjenta* (panel „Analiza trajektorii” i pasek panelu „Porównanie pomiarów”): przerwa między kursami
+   (dowolnej długości) przestaje być „leczeniem” — np. przyrost w przerwie nie brzmi już „przyrost masy mimo leczenia
+   redukcyjnego”, a „🍽 … w przedziale (N mies.)” liczy sumę pokryć kursów (przerwa 4 mies., przedział 150 → 161:
+   7 mies. zamiast 11).
+Skutki przechodzą do epikryzy i opisu pacjenta (czytają model trajektorii). Przypadki brzegowe starego zapisu (Włączenie
+przed Zakończeniem tego samego dnia w tablicy, zdublowane Zakończenie) opisuje „Populacja i ograniczenia”. Testy:
+`tests/unit/kursy-otylosci-cykle.test.mjs`, `tests/e2e/kursy-otylosci-cykle.spec.mjs`; test „wraca do tego samego kursu”
+w `werdykt-kursy-rata-6.test.mjs` opisuje odtąd wyłącznie GH.
+
+**Do decyzji właściciela.**
+1. Akceptacja kliniczna grup 1–4 wyżej (każda zmienia wynik; grupy 2 i 3 dotyczą także pacjentów, u których lista kursów
+   przed ratą była taka sama albo był tylko jeden cykl).
+2. Czy zmiana leku bez przerwy (Z i W tego samego dnia) ma przerywać ocenę całości okna.
+3. Przycięcie tolerancji startu przy przerwie 3–6 mies. (grupa 2): zostawić czy ograniczyć do kursów stykających się
+   (przerwa < 3 mies.).
+4. Zakończenie bez wieku (grupa 3): zostawić zależność od dat innych wizyt czy ujednolicić (np. zawsze zamykać kurs albo
+   zawsze pomijać taki punkt).
+5. Zdublowane Zakończenie: zostawić kurs zerowej długości (stan raty 4), pomijać cykl złożony wyłącznie z Zakończenia
+   (wariant A) albo brać do chipu ostatni kurs, w którym `oknoKursu` znajduje okno (wariant B).
+6. Ścieżka bez modułu cykli: zostawić jak opisano wyżej (wariant B) czy uzależnić przycięcie, żetony per kurs i etykietę
+   „otyłość” od tego, czy kursy pochodzą z modułu cykli (wariant A — pełne zachowanie sprzed raty 4 bez modułu).
+7. Panel trajektorii w Karcie z `ghKursy` (GH) i pasek terapii na siatkach — osobne wątki.
 
 ## Werdykt trajektorii: ostatnia faza jako nagłówek, poziom nadwagi przy stabilnym torze (P-WERDYKT rata 5, SW 1.1.77, 2026-09-27)
 
