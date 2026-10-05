@@ -52,6 +52,19 @@ async function otworz(page) {
 async function naStartGotowy(page) {
   await page.waitForFunction(() => Boolean(window.VildaVault) && window.VildaVault.isUnlocked());
   await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+  await page.waitForFunction(() => Boolean(window.VildaProAccess));
+  // Na Start karta wymaga trybu profesjonalnego także po powrocie z DocPro.
+  // Samo disabled=false otwierało ją tylko do następnego update. Jak w testach
+  // GH poprawionych w #530: dostęp fikcyjny, bez zależności od zewnętrznego triala.
+  await page.evaluate(() => {
+    window.VildaProAccess.hasAccess = () => true;
+    document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+    const tryb = document.getElementById('resultsModeToggle');
+    if (tryb && !tryb.checked) {
+      tryb.checked = true;
+      tryb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
 }
 
 async function naDocPro(page) {
@@ -96,11 +109,12 @@ async function pacjentkaZPunktem(page, reczne) {
     if (typeof window.update === 'function') window.update();
   });
   await page.waitForSelector('#toggleAdvancedGrowth[data-vilda-advanced-growth-toggle-attached="true"]', { state: 'attached' });
+  await expect(page.locator('#toggleAdvancedGrowth')).toBeEnabled();
   await page.evaluate(() => {
     const t = document.getElementById('toggleAdvancedGrowth');
     const f = document.getElementById('advancedGrowthForm');
     if (f && getComputedStyle(f).display !== 'none') return;
-    if (t) { t.disabled = false; t.click(); }
+    if (t) t.click();
   });
   await expect(page.locator('#advancedGrowthForm')).toBeVisible({ timeout: 10000 });
   await page.waitForSelector('#advMeasurements .measure-row', { state: 'attached', timeout: 10000 });

@@ -435,7 +435,10 @@ describe('strażniki źródła', () => {
   });
 
   it('scalanie sprawdza nagrobek w obu pętlach wersji i zwraca liczbę przeniesionych do kosza', () => {
-    expect(src.match(/if\(Bkz_pomin\(Bkz_S,F\.patientId,[SY]\)\)continue;/g)).toHaveLength(2);
+    // Od P-SCALANIE-BLOKADA obie pętle (karta istniejąca i nowa) są w Bsl_scalPacjenta, pod blokadą pacjenta.
+    const scalPacjenta = src.slice(src.indexOf('async function Bsl_scalPacjenta('), src.indexOf('async function Bsl_usunPacjenta('));
+    expect(scalPacjenta.match(/if \(Bkz_pomin\(ctx, F\.patientId, S\)\) continue;/g)).toHaveLength(2);
+    expect(src).toContain('const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);');
     expect(src).toContain('trashedSnapshotCount:Bkz_n,prunedSnapshotCount:Bkz_S.przyciete||0');
     expect(src).toContain('snapshotTombstones:await Bkz_eksport()');
   });

@@ -9716,3 +9716,11 @@ body:is(.high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3).
   border-radius: var(--radius-8);
   padding: var(--space-0-4) var(--space-0-55)
 }
+
+
+.adv-bone-age-info:not([hidden]) {
+  display: block;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-top: var(--space-0-4)
+}

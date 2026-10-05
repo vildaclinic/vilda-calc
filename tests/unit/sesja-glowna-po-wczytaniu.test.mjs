@@ -133,7 +133,10 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(env.win.vildaSession.saveNow(), 'bez force przed odtworzeniem: odmowa').toBe(false);
     expect(env.zapisy).toHaveLength(0);
     expect(env.sesja().name, 'sesja z nazwiskiem nietknięta').toBe('Fikcyjna Ewa');
-    await czekaj(30); // strona wykonała próbę odtworzenia (latka Ke)
+    // Gotowość pochodzi z końca finalizacji rAF + tick, nie z upływu 30 ms.
+    // Nie ponawiamy saveNow w poll: każdy zapis ma pozostać pojedynczą operacją.
+    await expect.poll(() => env.odswiezenia(), { timeout: 2000 }).toBeGreaterThanOrEqual(1);
+    expect(env.win.__vildaPersistRestoring).toBe(false);
     expect(env.win.vildaSession.saveNow({ force: true })).toBe(true);
     expect(env.zapisy).toHaveLength(1);
   });
@@ -178,7 +181,7 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     const zastosowane = [];
     const env = await uruchom(null, { przedOdtworzeniem: true, sesja: REKORD(), applyLoadedData: (p, o) => { zastosowane.push({ name: p.name, sesja: !!(o && o.isSessionRestore) }); } });
     expect(env.odswiezenia(), 'przed odtworzeniem nic').toBe(0);
-    await czekaj(60); // start persistence → restoreMainSessionIfAny → finalizacja (rAF + tick)
+    await expect.poll(() => env.odswiezenia(), { timeout: 2000 }).toBeGreaterThanOrEqual(1);
     expect(zastosowane, 'odtworzenie sesji weszło przez applyLoadedData z isSessionRestore').toEqual([{ name: 'Fikcyjna Ewa', sesja: true }]);
     expect(env.odswiezenia(), 'po finalizacji odtworzenia karta odświeżona').toBeGreaterThanOrEqual(1);
     expect(env.win.__vildaPersistRestoring, 'flaga odtwarzania zdjęta').toBe(false);
@@ -218,13 +221,33 @@ describe('P-POWLOKA-PANELE — sesja główna po wczytaniu nie czeka na zdarzeni
     expect(ie).toContain('function Gp_o(){try{typeof r.updateProfessionalSummaryCard=="function"&&r.updateProfessionalSummaryCard()}');
     const sh = czytaj('vilda_shell.js');
     expect(sh).toContain('P-POWLOKA-PANELE (zgloszenie wlasciciela 2026-09-28)');
-    expect(sh).toContain('function w(t){t=y(t);var Gp_c=c;c&&c!==t&&Gp_f(c);var e=_(t);');
-    expect(sh).toContain('Gp_c!==t&&Gp_p(t,e);');
+    // Dodatkowe parametry i cleanup nawigacji nie zmieniają kolejności sesji.
+    // Ograniczamy strażnika do rzeczywistej funkcji przełączającej panel.
+    const pokazPanel = sh.match(/function w\([^)]*\)\{[\s\S]*?(?=function jt\()/)?.[0] || '';
+    let poprzedniaOperacja = -1;
+    for (const operacja of [
+      't=y(t)', 'var Gp_c=c', 'c&&c!==t&&Gp_f(c)',
+      'var e=_(t)', 'l[c].frame.hidden=!0',
+      'e.frame.hidden=!1', 'c=t', 'Gp_c!==t&&Gp_p(t,e)',
+    ]) {
+      const pozycja = pokazPanel.indexOf(operacja);
+      expect(pozycja, `przełączenie panelu: ${operacja}`).toBeGreaterThan(poprzedniaOperacja);
+      poprzedniaOperacja = pozycja;
+    }
+    const zapiszPanel = sh.match(/function Gp_f\([^)]*\)\{[\s\S]*?(?=function Gp_u\()/)?.[0] || '';
+    expect(zapiszPanel).toContain('e.vildaPersistFlushNow({force:!0})');
+    expect(zapiszPanel).toContain('e.vildaSession.saveNow({force:!0})');
     // panel docelowy: odtworzenie tylko przy zmianie odcisku, odświeżenie podsumowania po dwu klatkach zawsze
     expect(sh).toContain('var r=Gp_s();if(r!==e.sessionStamp){e.sessionStamp=r;');
     expect(sh).toMatch(/n\.vildaSession\.restore\(\)\}catch\{\}\}Gp_u\(n\)\}/);
     expect(sh).toContain('function Gp_u(n){try{if(!n||typeof n.requestAnimationFrame!="function")return;n.requestAnimationFrame(function(){n.requestAnimationFrame(function(){try{typeof n.updateProfessionalSummaryCard=="function"&&n.updateProfessionalSummaryCard()}catch{}})})}catch{}}');
-    expect(sh).toContain('n.loaded=!0,n.sessionStamp=Gp_s(),');
+    const zaladujRamke = sh.match(/r\.addEventListener\("load",function\(\)\{([\s\S]*?)\}\),r\.src=/)?.[1] || '';
+    expect(zaladujRamke).toContain('if(!bt(r)){Tt(t,n);return}');
+    const gotowaRamka = zaladujRamke.indexOf('n.loaded=!0');
+    const odciskSesji = zaladujRamke.indexOf('n.sessionStamp=Gp_s()');
+    expect(gotowaRamka).toBeGreaterThan(zaladujRamke.indexOf('if(!bt(r)){Tt(t,n);return}'));
+    expect(odciskSesji).toBeGreaterThan(gotowaRamka);
+    expect(zaladujRamke.indexOf('Sn_deliverTarget()')).toBeGreaterThan(odciskSesji);
     // odcisk sesji bez pola czasu — inaczej każde przełączenie odtwarzałoby panel od nowa
     expect(sh).toContain('var n=Object.assign({},r);delete n.timestampISO;');
     // kolejność w panelu docelowym jak przy starcie strony: wspólny stan, potem sesja główna

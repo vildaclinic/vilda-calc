@@ -169,8 +169,9 @@ describe('Pytanie bramy nie otwiera okna na cudzy zapis', () => {
     const zapisA = v.savePatient(payload([60, 66, 74]), {
       patientId: a.patientId, dedup: false, baselinePayload: kopia(wczytane),
     });
-    await chwila(20);
-    expect(pytania, 'pytanie o 80 czeka na odpowiedź').toEqual([[80]]);
+    // Odczyt i deszyfrowanie mogą potrwać dłużej pod obciążeniem; czekamy na
+    // rzeczywiste otwarcie pytania, nie na arbitralny odstęp przed asercją.
+    await expect.poll(() => pytania, { timeout: 2000, message: 'pytanie o 80 czeka na odpowiedź' }).toEqual([[80]]);
 
     // W tym czasie karta B (która zna 80) dopisuje 92 i zapisuje.
     let zapisBSkonczony = false;
@@ -194,7 +195,8 @@ describe('Pytanie bramy nie otwiera okna na cudzy zapis', () => {
   it('zapisy INNEGO pacjenta nie czekają na to pytanie', async () => {
     const v = await sejf();
     const odpowiedz = odroczone();
-    v.setSaveConflictResolver(() => odpowiedz.obietnica);
+    let pytanieOtwarte = false;
+    v.setSaveConflictResolver(() => { pytanieOtwarte = true; return odpowiedz.obietnica; });
 
     const wczytane = payload([60, 66]);
     const a = await v.savePatient(kopia(wczytane), { dedup: false });
@@ -204,7 +206,7 @@ describe('Pytanie bramy nie otwiera okna na cudzy zapis', () => {
     const zapisA = v.savePatient(payload([60, 66, 74]), {
       patientId: a.patientId, dedup: false, baselinePayload: kopia(wczytane),
     });
-    await chwila(20);
+    await expect.poll(() => pytanieOtwarte, { timeout: 2000 }).toBe(true);
     const zapisB = await v.savePatient(payload([48, 54], 'Adam'), { patientId: b.patientId, dedup: false });
     expect(zapisB.snapshotCount, 'inny pacjent zapisany od razu').toBe(2);
 
@@ -232,15 +234,14 @@ describe('Blokada zapisu z limitem czasu (Web Locks)', () => {
     const a = await v.savePatient(kopia(wczytane), { dedup: false });
     await v.savePatient(payload([60, 66, 80]), { patientId: a.patientId, dedup: false });
     const zapisA = v.savePatient(payload([60, 66, 74]), { patientId: a.patientId, dedup: false, baselinePayload: kopia(wczytane) });
-    await chwila(20);
+    await expect.poll(() => pierwsze, { timeout: 2000 }).toBe(false);
 
     let czekal = 0;
     const zapisB = v.savePatient(payload([60, 66, 80, 92]), {
       patientId: a.patientId, dedup: false, baselinePayload: payload([60, 66, 80]),
       onLockWait: () => { czekal += 1; }, lockTimeoutMs: 5000,
     });
-    await chwila(20);
-    expect(czekal, 'zapis B dostał sygnał czekania').toBe(1);
+    await expect.poll(() => czekal, { timeout: 2000, message: 'zapis B dostał sygnał czekania' }).toBe(1);
 
     odpowiedz.rozwiaz('scal');
     await Promise.all([zapisA, zapisB]);
@@ -259,7 +260,7 @@ describe('Blokada zapisu z limitem czasu (Web Locks)', () => {
     const a = await v.savePatient(kopia(wczytane), { dedup: false });
     await v.savePatient(payload([60, 66, 80]), { patientId: a.patientId, dedup: false });
     const zapisA = v.savePatient(payload([60, 66, 74]), { patientId: a.patientId, dedup: false, baselinePayload: kopia(wczytane) });
-    await chwila(20);
+    await expect.poll(() => pierwsze, { timeout: 2000 }).toBe(false);
     const przed = (await v.getPatient(a.patientId)).snapshots.length;
 
     let czekal = 0;
