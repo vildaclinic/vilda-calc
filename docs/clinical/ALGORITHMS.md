@@ -9870,6 +9870,58 @@ tylko do odczytu sprawdzenie danych (decyzja właściciela 2026-09-30, najpierw 
 panelu) w rekordzie B, rekord A nietknięty; „Nowy pomiar” — porównanie z poprzedniego pomiaru B (strażnik). Mutacje:
 bez przejęcia pacjenta pada sprawdzenie identyfikatora DocPro, bez `BdupId`/notatek — sprawdzenie celu zapisu, bez
 obu — zapis ląduje w A (stan `21046aa`). Wersje na stronach, precache (append-only), SW 1.1.117.
+
+*(Uzupełnienie 2026-10-06, P-ZRODLA-PRZEJECIE: przejęcie pacjenta nie powiadamiało źródeł rozpoznania DS i danych
+okołoporodowych, bo nie wysyła `vilda:patient-loaded` — wpis niżej.)*
+## Źródła DS i danych okołoporodowych nadążają za pacjentem przejętym z sesji karty (P-ZRODLA-PRZEJECIE, SW 1.1.167, `vilda_ds_source.js` 4, `vilda_perinatal_source.js` 3, 2026-10-06)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, siatka, populacja ani interpretacja. Zmienia się to, **którego pacjenta**
+rekord czytają dwa moduły źródłowe po przejściu między panelami powłoki. Zlecenie właściciela 2026-10-06 („potwierdź
+punkt 2”): uwaga Codex P1 do #491 (P-POWLOKA-ID), dotąd bez odpowiedzi.
+
+**Co było.** Panel powłoki przejmuje pacjenta wczytanego w innej ramce w `vildaPersistRestoreAll` (P-POWLOKA-ID):
+bierze go z sesji karty, odtwarza formularz i kończy zdarzeniem `vilda:persist-restored`. `vilda:patient-loaded`
+dostaje tylko ramka, która pacjenta wczytała. `vilda_ds_source.js` (rozpoznanie zespołu Downa → populacja siatek BMI,
+`VildaPopulacjaPacjenta`) i `vilda_perinatal_source.js` („Dane okołoporodowe” z Karty Pacjenta → opis pacjenta,
+ściąga B.64, rozbieżność danych urodzeniowych) przeładowywały się tylko na `patient-loaded` oraz przy okazji: po
+zamknięciu panelu konta (`vilda:auth-hidden`) i po zmianie stanu synchronizacji. Panel konta powłoka zamyka przy przejściu
+z menu, ale nie przy powrocie przyciskiem „Wstecz” (popstate). Zmierzone na `audyt` `db8f26c` w prawdziwej powłoce
+(dane fikcyjne): DocPro z A (zespół Downa, 34+2 tc, 1650 g) → Start, wczytanie C (bez rozpoznania i bez danych
+okołoporodowych) → „Wstecz”:
+- formularz i identyfikator DocPro to C, ale `VildaPopulacjaPacjenta()` = `'DS'` — wyniki BMI C na siatkach DS;
+- ściąga B.64 dla C: kryterium 1 „SPEŁNIONE” (masa −3,13 SD; długość −3,48 SD; 34+2 tc) — liczby A;
+- stan trwał (sprawdzone po 8 s) do przypadkowego zdarzenia synchronizacji albo przeładowania ramki. Przy przejściu
+  z menu źródła poprawiały się dopiero po zamknięciu panelu konta, a panel DocPro w tle liczył dla C z rekordu A.
+
+Źródło dojrzewania (`vilda_puberty_source.js`) robiło to dobrze już wcześniej (zdarzenie `storage` i sesja karty
+najpierw) — zostaje bez zmian i jako strażnik w teście.
+
+**Co jest (oba moduły, ta sama reguła co w `vilda_puberty_source.js`).**
+- Odczyt z sejfu także po `vilda:persist-restored` i po zmianie `vildaCurrentPatientId` w innej ramce tej samej karty
+  przeglądarki (zdarzenie `storage`).
+- Bieżący pacjent to pacjent sesji karty; zmienna ramki (`_vildaCurrentPatientId`) tylko wtedy, gdy sesja go nie zna —
+  zasada P-POWLOKA-ID i P-NOTATKI-1.
+- Wynik starszego odczytu nie nadpisuje nowszego (licznik odczytów), bo po zmianie pacjenta w locie bywają dwa odczyty.
+- Przy okazji: zmiana rozpoznania DS albo danych okołoporodowych zapisana w innej ramce dociera do panelu przy jego
+  odtworzeniu, bez przeładowania.
+
+**Czego zmiana nie robi.** Nie zmienia `vilda_persist_runtime.js` (przejęcie nadal nie wysyła `patient-loaded` — to
+zdarzenie ma w aplikacji ponad 20 słuchaczy z efektami ubocznymi, m.in. okna wyboru), formatu rekordu, synchronizacji ani
+pierwszeństwa źródeł danych urodzeniowych (karta SGA → `birth` → „Dane okołoporodowe”). Inne moduły, które trzymają
+dane pacjenta z `patient-loaded`, nie są tu poprawiane — przegląd tylko do odczytu wskazał kandydatów do osobnej
+weryfikacji (opis w PR).
+
+**Testy.**
+- `tests/unit/zrodla-przejecie-pacjenta.test.mjs` — 12 testów (po 6 na moduł), prawdziwe moduły na atrapie okna
+  i sejfu: `persist-restored` po przejęciu C, `storage` przy zmiennej ramki wciąż wskazującej A, spóźniona odpowiedź
+  dla A po C; kontrole: znany A, obcy klucz `storage`, sesja bez pacjenta. Na `db8f26c` 6 czerwonych (3 zachowania × 2
+  moduły), kontrole zielone.
+- `tests/e2e/powloka-zrodla-wstecz.spec.mjs` — prawdziwa powłoka: kontrola A w DocPro (DS, 34+2 tc, B.64 „SPEŁNIONE”),
+  DocPro w tle po wczytaniu C na Start, potem „Wstecz”: populacja `'OGOLNA'`, brak danych okołoporodowych, B.64 dla C
+  „BRAK DANYCH”, dojrzewanie C. Na `db8f26c` czerwony (DocPro w tle zostaje przy `'DS'` i 34+2 tc).
+
+SW 1.1.166 → **1.1.167**; `vilda_ds_source.js?v=3→4`, `vilda_perinatal_source.js?v=2→3`.
+
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 
 **Zgłoszenie.** Punkt 1 „Czego to nie naprawia” w P-TOZSAMOSC-RAMKI. Ramki powłoki `app.html` dzielą `sessionStorage`

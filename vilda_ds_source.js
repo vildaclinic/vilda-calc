@@ -25,7 +25,7 @@
 (function (w) {
   'use strict';
 
-  var VERSION = '2';
+  var VERSION = '3';
 
   /* ── czyste funkcje (mierzalne bez przeglądarki) ─────────────────────────────── */
 
@@ -90,12 +90,19 @@
 
   /* ── wczytanie z sejfu ───────────────────────────────────────────────────────── */
 
+  /* P-ZRODLA-PRZEJECIE (2026-10-06): odczyty z sejfu bywają w locie dwa naraz — poprzedni pacjent
+   * i ten, którego panel właśnie przejął z sesji karty. Wynik starszego odczytu nie nadpisuje
+   * nowszego (ta sama zasada co w vilda_puberty_source.js). */
+  var generacjaOdczytu = 0;
+
   function wczytaj(patientId) {
     var V = w.VildaVault;
     if (!patientId || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()
       || typeof V.getPatient !== 'function') return;
+    var generacja = ++generacjaOdczytu;
     try {
       V.getPatient(patientId).then(function (rec) {
+        if (generacja !== generacjaOdczytu) return;
         var snap = rec && Array.isArray(rec.snapshots) && rec.snapshots.length
           ? rec.snapshots[0] : null;
         zapamietaj(snap && snap.payload ? snap.payload : null);
@@ -119,15 +126,30 @@
       w.addEventListener('vilda:user-state-cleared', zapomnij);
     }
 
+    /* P-ZRODLA-PRZEJECIE (2026-10-06, uwaga Codex P1 do #491): bieżący pacjent to pacjent sesji
+     * karty. Ramki powłoki app.html dzielą sessionStorage, a własna zmienna ramki potrafi jeszcze
+     * wskazywać poprzedniego pacjenta (P-POWLOKA-ID); zmienna ramki zostaje, gdy sesja go nie zna. */
     var odswiez = function () {
+      var id = null;
       try {
-        var id = w._vildaCurrentPatientId || null;
-        if (!id && w.sessionStorage) id = w.sessionStorage.getItem('vildaCurrentPatientId');
-        if (id) wczytaj(id);
+        if (w.sessionStorage) id = w.sessionStorage.getItem('vildaCurrentPatientId');
       } catch (e) { /* brak dostepu do sessionStorage */ }
+      if (!id) id = w._vildaCurrentPatientId || null;
+      if (id) wczytaj(id);
     };
     doc.addEventListener('vilda:auth-hidden', odswiez);
     doc.addEventListener('vilda:sync-status-changed', odswiez);
+    /* P-ZRODLA-PRZEJECIE: panel powłoki przejmuje pacjenta wczytanego w innej ramce w
+     * vildaPersistRestoreAll (vilda_persist_runtime.js) — bez vilda:patient-loaded, które dostaje
+     * tylko ramka wczytująca. Odtworzenie kończy się vilda:persist-restored, a zmiana pacjenta
+     * sesji karty w innej ramce przychodzi tu jako zdarzenie storage. Bez tego panel po powrocie
+     * przyciskiem „Wstecz” liczył dla nowego pacjenta z rekordu poprzedniego. */
+    doc.addEventListener('vilda:persist-restored', odswiez);
+    if (typeof w.addEventListener === 'function') {
+      w.addEventListener('storage', function (ev) {
+        if (!ev || ev.key == null || ev.key === 'vildaCurrentPatientId') odswiez();
+      });
+    }
     if (doc.readyState === 'loading') {
       doc.addEventListener('DOMContentLoaded', function () { setTimeout(odswiez, 0); }, { once: true });
     } else {
