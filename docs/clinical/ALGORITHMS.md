@@ -8569,6 +8569,48 @@ a lekarz poprawia jedno z miejsc. Wartość dni spoza 0–6 w rekordzie nie jest
 
 **Wersje.** `sga_birth_module.js?v=10→11`; SW 1.1.168 → **1.1.169**.
 
+## Karta przywrócona z pliku po usunięciu pacjenta przeżywa nagrobek z chmury (P-IMPORT-NAGROBEK, SW 1.1.171, `vilda_vault.js` 198, 2026-10-06)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg ani interpretacja. **Zmiana reguły synchronizacji** (decyzja właściciela
+2026-10-06: „zajmij się punktem 3, zwykły PR do audyt” — punkt A4 przeglądu „co dalej po #518”): data, z którą karta
+i notatki przywrócone z pliku stają do porównania z nagrobkami.
+
+**Co było.** Lekarz usuwa pacjenta, a synchronizacja wysyła nagrobek (`deletedAt` D; razem z nagrobkami notatek pacjenta,
+P-NOTATKI-1 G2). Później importuje kartę z pliku sprzed usunięcia (`importPatientFromEnvelope`). Import zdejmuje
+lokalny nagrobek (P-NOTATKI-1 G3), ale `lastSavedAtISO` rekordu brał z pliku, czyli wcześniejszy niż D, a notatki
+z pliku zachowywały swoje `updatedAtISO`. Pierwsze pobranie z chmury stosuje regułę „karta zostaje tylko przy
+`lastSavedAt` > `deletedAt`” (reguła N w scalaniu, `Bsl_usunPacjenta`; dla notatek analogicznie z `updatedAt`), więc
+**kasowało przywróconą kartę po cichu** i stawiało nagrobek z powrotem. Import zgłaszał „nowy pacjent, 2 zapisy”, a po
+synchronizacji karty nie było. Tak samo przy delcie nagrobka z kanału zmian i na drugim urządzeniu. Zmierzone na
+`audyt` `3855858` (prawdziwy sejf, magazyn w pamięci, dane fikcyjne).
+
+**Reguła po zmianie.**
+- Import karty, której **na tym urządzeniu nie ma** (usunięta albo nigdy nie pobrana), to jawne przywrócenie:
+  `lastSavedAtISO` rekordu = chwila przywrócenia (jak `updatedAtISO` wersji w `Bkz_poImporcie`, P-KOSZ-ZAPISOW).
+- Notatka pacjenta z pliku, której nie ma lokalnie, dostaje przy takim przywróceniu `updatedAtISO` = chwila przywrócenia.
+  Notatka obecna lokalnie zostaje przy swojej dacie — nowsza edycja lokalna nie przegrywa ze starszą kopią z pliku.
+- Import do **istniejącej** karty bez zmian (`lastSavedAtISO` = późniejsza z dat rekordu i pliku).
+- Reguły scalania bez zmian — działają więc tak samo na urządzeniach z poprzednią wersją aplikacji: karta z
+  `lastSavedAt` późniejszym niż nagrobek zostaje, a lokalny nagrobek jest zdejmowany.
+
+**Skutek widoczny.** Przywrócona karta ma na liście pacjentów „ostatni zapis” z dnia przywrócenia i staje na górze listy
+(sortowanie po ostatnim zapisie); daty wersji (wizyt) i wiek w wersjach bez zmian. Import nadal nie uruchamia wysyłki
+sam — przywrócenie trafia do chmury z najbliższą wysyłką (każdy zapis); do tego czasu pobranie już go nie kasuje.
+
+**Przypadki syntetyczne (wejście → oczekiwany wynik)** — `tests/unit/import-po-usunieciu.test.mjs`, prawdziwy
+`vilda_vault.js`, karta z 2 wersjami i notatką „Morfologia”:
+- usunięcie → ładunek chmury z nagrobkiem → import pliku → scalenie ładunku: karta, 2 wersje, notatka, bez nagrobka;
+- jak wyżej, ale nagrobek przychodzi jako delta z kanału zmian: karta zostaje;
+- dwa urządzenia: B ma nagrobek, A przywraca z pliku; B scala stan A → karta i notatka na B; A scala stan B → zostaje;
+- kontrola: import do istniejącej karty — „ostatni zapis” bez zmian;
+- kontrola: bez nagrobka w chmurze — karta zostaje (jak dotąd).
+Na `3855858` trzy pierwsze czerwone, kontrole zielone. Mutacje: bez nowej daty karty padają trzy przypadki; bez nowej
+daty notatek karta zostaje, ale notatka znika (dwa przypadki).
+
+**Czego zmiana nie robi.** Nie obejmuje importu blokadą pacjenta (punkt A3/4 przeglądu: przeploty importu z zapisem
+i scalaniem w innej karcie) ani pełnej kopii konta (`mergeVaultBackup`, `restoreVaultBackup` — tych ścieżek ta zmiana
+nie sprawdzała). Nie zmienia formatu pliku, ładunku ani reguł scalania.
+
 ## Wysyłka nie nadpisuje chmury bez scalenia; delty i wysyłka po MERGE_BUSY (P-SYNC-STRAZNIK, SW 1.1.160, `vilda_sync.js` 33, `vilda_sync_integration.js` 46, 2026-10-05)
 
 **Decyzja właściciela (2026-10-05).** „Zaczynaj od punktu 1, zwykły PR do audyt” — punkt 1 przeglądu „co dalej po
@@ -10146,7 +10188,7 @@ i dla tego samego nowego dziecka po nadaniu identyfikatora. Panel z danymi INNEG
 po wczytaniu C na Start) jest nieaktualny: w tle nie zapisuje stanu karty, a przy pokazaniu przeładowuje się i jego
 moduły startują od pacjenta karty — wpis niżej.)*
 
-## Panel powłoki nie przejmuje po cichu innego pacjenta: dokument z poprzednim pacjentem jest bezczynny i przeładowuje się przy pokazaniu (P-POWLOKA-OBCY, SW 1.1.171, `vilda_panel_pacjent.js` 1, 2026-10-06)
+## Panel powłoki nie przejmuje po cichu innego pacjenta: dokument z poprzednim pacjentem jest bezczynny i przeładowuje się przy pokazaniu (P-POWLOKA-OBCY, SW 1.1.172, `vilda_panel_pacjent.js` 1, 2026-10-06)
 
 **Zmiana kliniczna: NIE w sensie wzorów** — żaden wzór, próg, siatka, populacja, jednostka ani interpretacja się nie
 zmienia. Zmienia się, **czyje dane** trafiają do formularza i do rekordu po przejściu między panelami powłoki, więc wynik
@@ -10268,7 +10310,7 @@ leczenia otyłości poprzedniego pacjenta i odkłada je z powrotem do magazynu k
   przy A, nieaktualny; po „Wstecz” świeży dokument z C” (zamierzona zmiana z części (c)); asercje stanu po „Wstecz” bez
   zmian.
 
-SW 1.1.170 → **1.1.171**; `custom-fixes.js?v=72→73`, `vilda_data_import_export.js?v=97→98`,
+SW 1.1.171 → **1.1.172**; `custom-fixes.js?v=72→73`, `vilda_data_import_export.js?v=97→98`,
 `vilda_persist_runtime.js?v=19→20`, `vilda_persistence_adapter.js?v=29→30`, `vilda_shell.js?v=59→60`,
 `vilda_unsaved_guard.js?v=5→6`; nowy `vilda_panel_pacjent.js?v=1` (index, docpro, kalkulator-klirens; precache).
 
