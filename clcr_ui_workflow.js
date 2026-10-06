@@ -4017,6 +4017,30 @@
     scheduleHistoryRefresh();
   }
 
+  /* P-PRZEJECIE-MODULY (2026-10-06): panel powłoki app.html przejmuje pacjenta wczytanego w innej
+   * ramce w vildaPersistRestoreAll (P-POWLOKA-ID) — bez vilda:patient-loaded, które dostaje tylko
+   * ramka wczytująca. Cel zapisu „do karty” zostawał wtedy przy poprzednim pacjencie, a formularz
+   * pokazywał już nowego: wyniki pacjenta C trafiałyby jako notatki do karty A. Po odtworzeniu
+   * wspólnego stanu cel zapisu to pacjent sesji karty; sesja bez pacjenta zdejmuje cel. */
+  function sessionPatientId() {
+    try {
+      if (!global.sessionStorage) return undefined;
+      const id = global.sessionStorage.getItem("vildaCurrentPatientId");
+      return typeof id === "string" && id ? id : null;
+    } catch (e) {
+      return undefined; // brak dostępu do sesji karty — nic nie zmieniamy
+    }
+  }
+
+  function onSharedStateRestored() {
+    const id = sessionPatientId();
+    if (id === undefined || id === state.patientId) return;
+    state.patientId = id;
+    state.patientName = id ? readPatientName() : "";
+    refresh();
+    scheduleHistoryRefresh();
+  }
+
   function init() {
     buildUI();
     buildHistoryUI();
@@ -4024,6 +4048,7 @@
     observeResults();
     if (doc) {
       doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
+      doc.addEventListener("vilda:persist-restored", onSharedStateRestored);
       if (global.addEventListener) {
         global.addEventListener("focus", scheduleRefresh);
       }
@@ -4431,6 +4456,25 @@
     scheduleRenders();
   }
 
+  /* P-PRZEJECIE-MODULY: po przejęciu pacjenta z sesji karty (wyżej, ClcrVisitSave) chip bierze
+   * nazwę z formularza, a data masy — z rekordu nowego pacjenta. Po ClcrVisitSave, bo stąd
+   * czytamy jego cel zapisu. */
+  function onSharedStateRestored() {
+    global.setTimeout(function () {
+      const pid = patientId();
+      if (pid === st.lastPatientId) return;
+      st.currentName = "";
+      st.weightTouched = false;
+      st.lastPatientId = pid;
+      st.lastWeightDateISO = null;
+      if (hasPatient()) {
+        setCollapsed(true);
+        loadWeightDate();
+      }
+      scheduleRenders();
+    }, 0);
+  }
+
   function onFieldInput(e) {
     const t = e && e.target;
     if (!t || !t.id) return;
@@ -4451,6 +4495,7 @@
       set.addEventListener("change", onFieldInput);
     }
     doc.addEventListener("vilda:patient-loaded", onPatientLoaded);
+    doc.addEventListener("vilda:persist-restored", onSharedStateRestored);
     // Pacjent mógł zostać wczytany przed inicjalizacją (odtworzenie sesji).
     if (hasPatient()) {
       setCollapsed(true);

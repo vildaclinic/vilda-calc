@@ -20,8 +20,8 @@
   "sha256": "fe698c438442590b665fcace52f750ee99588a2d002641cc86f3439115a3beb6"
  },
  "bisphos_therapy_monitor.js": {
-  "v": 5,
-  "sha256": "ebd214fc2ac64b0eb5b00a9f0e19fa4f47eda11539206f36613dd72cf0780b0d"
+  "v": 6,
+  "sha256": "138066147f3a178f726a02b81d99acd6d159212b0fd92453ba827971d73a96f1"
  },
  "bp_module.js": {
   "v": 11,
@@ -52,8 +52,8 @@
   "sha256": "669e08d7e64194ad82da4776ecb633dd8b7018c5a6dc071593911ae6201641ef"
  },
  "clcr_ui_workflow.js": {
-  "v": 4,
-  "sha256": "a17b055e9c493f8160c0f3b9f8844b516e266f62b4a4c75c40476d331ff2a216"
+  "v": 5,
+  "sha256": "95ea540c40bd87d326431ee61ad4364f45e91ac7d684d5076940038ad3eb4fe2"
  },
  "cukrzyca.js": {
   "v": 30,
@@ -380,12 +380,12 @@
   "sha256": "83f957da87132df95c7d165a7bc601e23d06cbfe6d3c4a22772514b5fa453e20"
  },
  "obesity_therapy.js": {
-  "v": 10,
-  "sha256": "5f99a80f03bccde51b898db72e4cb62e5cbdb7a880c0cb0c80cfe8656bc48936"
+  "v": 11,
+  "sha256": "3ac8c37920899e4c286031807d4308f9d860a00cc007e67b8add65d092563884"
  },
  "obesity_therapy_monitor.js": {
-  "v": 26,
-  "sha256": "c4b436220f888dcf9a882f8d661595a81d65d71dfaa32ef85ea64ba0641e02e6"
+  "v": 27,
+  "sha256": "0e5d24cd820056fe466a1425318e262c6b908416593aaf5871664b863900a8ff"
  },
  "pdfmake.min.js": {
   "v": 1,
@@ -580,8 +580,8 @@
   "sha256": "018cbca2291c955f39383ab147d721f5ac97f1c15a41ac27a467f06a0f96c6a8"
  },
  "vilda_epicrisis_ui.js": {
-  "v": 27,
-  "sha256": "0eca07a2d5f632ecc5f8d5fffe37836a0253e27cbfc512e38fa3b98c5b3008a3"
+  "v": 28,
+  "sha256": "e34dd928d6a50a54caf0e35d05dbcbee525415df5ec264977580cfc19dbe35cc"
  },
  "vilda_estimated_intake.js": {
   "v": 3,
@@ -740,8 +740,8 @@
   "sha256": "34919a94637f6bb54b1011782b01b3425867b76a1705496db5af7eccc7607d89"
  },
  "vilda_name_fix.js": {
-  "v": 3,
-  "sha256": "b919f3daffa570bdb041a5f489a630c6c007d7660246130f078c9205481f3ccd"
+  "v": 4,
+  "sha256": "c39832487c0ab3339f3255f762078e7510c8bf6c365f5ebc5daab66c07e6a750"
  },
  "vilda_obesity_banner.css": {
   "v": 7,
@@ -864,8 +864,8 @@
   "sha256": "5caeafa2dcc83cbaa98ce7add635ee15addfeec802d98065fe0877372c1f2af7"
  },
  "vilda_save_status_indicator.js": {
-  "v": 26,
-  "sha256": "f93d38d360982782a85088ad4b3a00773d43d483cd8c372c47ec9bd8dce7400c"
+  "v": 27,
+  "sha256": "ca2da96c5da1f4ddb7e2ab847a9f52915ee45c00940f3ceef90d94712513c346"
  },
  "vilda_schowek.js": {
   "v": 3,
