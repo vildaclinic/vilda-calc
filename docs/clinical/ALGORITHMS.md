@@ -8337,6 +8337,66 @@ zalecenia i tabela bez podziału. Oba rozstrzygnięcia potwierdzają działanie 
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna treści linii o podziale dawki Ngenla.
 
+## Edycja punktu terapii GH zapisuje wyłącznie punkt z bieżącej listy (P-GH-EDYCJA-LISTA, SW 1.1.173, `gh_therapy_monitor.js` 50, 2026-10-06)
+
+**Skąd.** Projekt „Wspólne API punktów GH” (`docs/AUDYT-PRZEPLYW-GH.md` § 5 p. 2), krok po testach charakteryzujących
+(P-GH-PUNKTY-TESTY, #557). Decyzja właściciela D1 z 2026-10-06: zapis edycji punktu, którego nie ma na bieżącej liście,
+jest odmawiany z komunikatem; edycja kończy się także przy zmianie pacjenta sesji karty; odświeżenie u tego samego
+pacjenta edycję zachowuje. Pełny opis ustaleń właściciel otrzymał poza repozytorium.
+
+**Niezmienniki** (monitor `gh_therapy_monitor.js`, wpięcia opisane komentarzem `P-GH-EDYCJA-LISTA`):
+- edycja punktu dotyczy wyłącznie punktu z bieżącej listy pacjenta sesji karty, przy którym ją otwarto (znacznik
+  pacjenta zapamiętany przy otwarciu edycji: `sessionStorage.vildaCurrentPatientId`, zapasowo `window._vildaCurrentPatientId`,
+  jak w P-PRZEJECIE-MODULY; porównywany tylko, gdy oba znaczniki są niepuste);
+- gdy po wczytaniu listy (`D()`: wczytanie pacjenta, odświeżenie z innej ramki, zdarzenie `storage`, zapis) punktu nie ma
+  na liście albo pacjent sesji karty jest inny, edycja kończy się bez zmiany danych: formularz edycji się chowa, stan
+  edycji jest pusty; lista, pamięć modułu, kanał `gh-therapy-sync` i baza nie są dotykane (to nie jest reset monitora);
+- usunięcie edytowanego punktu kończy edycję; usunięcie innego punktu jej nie kończy;
+- zapis edycji punktu spoza bieżącej listy kończy się komunikatem „Nie zapisano zmian: edytowany punkt nie należy do
+  bieżącej listy punktów. Otwórz edycję ponownie.” — bez zapisu modułu i bez sygnału na kanale; tabela pokazuje bieżącą
+  listę. Następne kliknięcie W/K/Z dodaje zwykły nowy punkt z karty;
+- stan edycji punktu spoza bieżącej listy nie jest utrwalany w stanie kart DocPro, a odtworzenie takiego stanu nie
+  wpisuje pól edycji. Wynik odtworzenia (`true`) bez zmian, więc ponowienia `docpro_state_persist.js` działają jak dotąd.
+
+**Co się nie zmienia.** Zwykła edycja punktu z listy (zapis w miejscu: ten sam id, pozycja, kolejność kluczy, pola spoza
+schematu), także po odświeżeniu tej samej listy; dodawanie punktu z karty i wstecznego; usuwanie; kształt rekordu;
+kolejność sygnałów zapisu (moduł → zdarzenie → kanał); wzory, dawki i jednostki. Testy charakteryzujące P-GH-PUNKTY-TESTY
+(monitor, rekord pacjenta, mostek, złota siatka `tests/fixtures/gh-punkty-wzorzec.json`) przechodzą bez zmiany asercji.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna (integralność danych w rekordzie pacjenta), nie kliniczna:
+bez zmiany wzorów, progów, dawek, jednostek i interpretacji. Lekarz może zobaczyć nowy komunikat i zamknięty formularz
+edycji w sytuacji, w której wcześniej zapis szedł bez sygnału. Punktów zapisanych wcześniej zmiana nie poprawia.
+Źródło medyczne: nie dotyczy. Wymaga akceptacji właściciela.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne):
+- lista [Włączenie, Kontynuacja], edycja Kontynuacji, lista w pamięci modułu zmienia się na [Włączenie], klik
+  „Kontynuacja” → komunikat jak wyżej, lista, moduł i tabela = [Włączenie], formularz schowany; drugi klik → nowy punkt
+  z karty z nowym id;
+- ta sama lista odświeżona w trakcie edycji (inna ramka tej karty, ten sam pacjent) → edycja trwa, zapis w miejscu;
+- pacjent sesji karty `fikc-pacjent-1` przy otwarciu edycji, `fikc-pacjent-2` przy wczytaniu listy o tych samych id →
+  edycja zakończona; znacznik pusty przy otwarciu albo przy wczytaniu → edycja trwa;
+- odtworzenie stanu z id spoza listy → `true`, pola edycji puste; z id z listy → edycja otwarta, pola wpisane.
+
+**Strażnicy.**
+- `tests/unit/gh-edycja-biezaca-lista.test.mjs` (9, prawdziwy monitor na atrapie z P-GH-PUNKTY-TESTY). Na `audyt`
+  `c730011` czerwone 7 z 9; dwa przypadki kontrolne („ta sama lista…”, „punkt jest na liście…”) zielone po obu stronach.
+- `tests/e2e/gh-edycja-biezaca-lista.spec.mjs` (2, prawdziwe DocPro): A — odświeżenie listy kanałem z tej samej
+  karty w trakcie edycji, zapis w miejscu (kontrola, zielony po obu stronach); B — punkt znika z listy w trakcie edycji,
+  zapis kończy się komunikatem (na `c730011` czerwony).
+
+**Poza zakresem.**
+- Odświeżenie strony (F5) w trakcie edycji nie ma testu e2e. Odświeżenie DocPro z otwartą zakładką „Monitorowanie”
+  karty GH/IGF-1 zawiesza dziś stronę niezależnie od tej zmiany: pętla odtwarzania stanu w `docpro_state_persist.js`,
+  zmierzone także na `audyt` `39d1109` (SW 1.1.91). Zgłoszone osobno.
+- Odblokowanie `#therProg` przy pustej liście i chowanie formularza po resecie monitora — osobny mały PR po decyzji
+  (pytanie 16 projektu).
+
+**Wersje.** `gh_therapy_monitor.js` 49 → 50 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.172 → 1.1.173
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `audyt` `c730011`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja zmiany, scalenie i wdrożenie.
+
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 
 **Zlecenie właściciela (2026-09-29).** Najpierw pomiar rozmiaru precache (otwarta decyzja z P-SW-DOCPRO), potem — po decyzji na podstawie pomiaru — migracja: instalacja bez historii, kopiowanie niezmiennych wpisów z poprzedniej pamięci powłoki i przycięcie historii starej pamięci.
