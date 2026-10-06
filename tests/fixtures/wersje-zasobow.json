@@ -80,8 +80,8 @@
   "sha256": "71b425aa71804cb0463418d6abb2cfe11c1204d11c862daace55e4a9bc47bffb"
  },
  "gh_therapy_monitor.js": {
-  "v": 50,
-  "sha256": "496d8a6356f5a11de0e449c626aa020424b8b23fffe3616a10d596ff4d089fab"
+  "v": 51,
+  "sha256": "c884ff1e659bdc4e2623d8cc7455ff13402699c19dd86d766547de7e1a138c01"
  },
  "gh_therapy_segments.js": {
   "v": 5,

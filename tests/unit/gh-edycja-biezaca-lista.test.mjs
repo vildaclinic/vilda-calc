@@ -194,3 +194,45 @@ describe('odtworzenie stanu nie wpisuje pól punktu spoza listy', () => {
     expect(atrapa.stan().modul).toEqual([WLACZENIE]);
   });
 });
+
+// P-GH-EDYCJA-PACJENT (uwaga recenzji Codex do #561): zmianę pacjenta sesji karty w innej ramce monitor dostaje jako
+// zdarzenie `storage` z kluczem vildaCurrentPatientId. Edycja otwarta przy innym pacjencie kończy się od razu, także gdy
+// lista punktów nowego pacjenta jest identyczna (wtedy nie przychodzi zdarzenie listy) — bez wczytania listy i bez zapisu.
+describe('zmiana pacjenta sesji karty w innej ramce kończy edycję od razu', () => {
+  const zmianaPacjenta = (atrapa, id) => {
+    ustawPacjenta(atrapa, id);
+    return atrapa.zdarzenieOkna('storage', { key: 'vildaCurrentPatientId', newValue: id });
+  };
+
+  it('inny pacjent: formularz schowany, stan edycji pusty, bez zdarzeń, zapisu modułu i kanału; lista bez zmian', () => {
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
+    ustawPacjenta(atrapa, 'fikc-pacjent-1');
+    atrapa.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
+    expect(atrapa.stan().edycjaWidoczna).toBe(true);
+
+    const wpisy = zmianaPacjenta(atrapa, 'fikc-pacjent-2');
+
+    expect(wpisy).toEqual([]);
+    const s = atrapa.stan();
+    expect(s.edycjaWidoczna).toBe(false);
+    expect(s.okno).toEqual([WLACZENIE, KONTYNUACJA]);
+    expect(s.modul).toEqual([WLACZENIE, KONTYNUACJA]);
+    expect(atrapa.pole('ghEditNotice')).toBeNull();
+    expect(atrapa.pole('ghEditOverlay')).toBeNull();
+    expect(api(atrapa).captureState()).toBeNull();
+  });
+
+  it('kontrola: ten sam pacjent albo pusty znacznik przy otwarciu lub teraz — edycja trwa', () => {
+    for (const [przyOtwarciu, teraz] of [['fikc-pacjent-1', 'fikc-pacjent-1'], [null, 'fikc-pacjent-1'], ['fikc-pacjent-1', null]]) {
+      const atrapa = utworzAtrapeMonitoraGh({ punkty: [WLACZENIE, KONTYNUACJA] });
+      ustawPacjenta(atrapa, przyOtwarciu);
+      atrapa.edytuj(KONTYNUACJA.id);
+
+      const wpisy = zmianaPacjenta(atrapa, teraz);
+
+      expect(wpisy, `${przyOtwarciu} → ${teraz}`).toEqual([]);
+      expect(atrapa.stan().edycjaWidoczna, `${przyOtwarciu} → ${teraz}`).toBe(true);
+      expect(api(atrapa).captureState(), `${przyOtwarciu} → ${teraz}`).toMatchObject({ currentEditingId: KONTYNUACJA.id });
+    }
+  });
+});
