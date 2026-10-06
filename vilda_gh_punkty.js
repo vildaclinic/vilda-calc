@@ -237,7 +237,7 @@
     }
     return kanal;
   }
-  // tabId jak Y() monitora: getTabId(), a bez niego vildaTabIdV1 z sessionStorage, na końcu pusty.
+  // tabId do informacji w gotowe(): getTabId(), a bez niego vildaTabIdV1 z sessionStorage, na końcu pusty.
   function tabId() {
     try {
       var P = persistence();
@@ -245,10 +245,20 @@
       return (w.sessionStorage && w.sessionStorage.getItem('vildaTabIdV1')) || '';
     } catch (e) { return ''; }
   }
+  // Dopisanie tabId dokładnie jak Y() monitora: getTabId(), a bez niego vildaTabIdV1 z sessionStorage (gdy magazyn
+  // istnieje); wyjątek albo brak obu — komunikat bez pola tabId (odbiornik w app.js traktuje to jak brak karty).
+  function dopiszTabId(m) {
+    if (!m || typeof m !== 'object' || m.tabId) return;
+    try {
+      var P = w.VildaPersistence;
+      if (P && typeof P.getTabId === 'function') m.tabId = P.getTabId();
+      else if (w.sessionStorage) m.tabId = w.sessionStorage.getItem('vildaTabIdV1') || '';
+    } catch (e) { /* jak Y(): bez tabId */ }
+  }
   function nadajWlasnym(m) {
     var k = wlasnyKanal();
     if (!k || typeof k.postMessage !== 'function') return false;
-    if (!m.tabId) m.tabId = tabId();
+    dopiszTabId(m);
     k.postMessage(m);
     return true;
   }
