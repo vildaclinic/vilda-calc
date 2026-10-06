@@ -196,6 +196,50 @@ Plik uznany za zminifikowany, gdy ma ponad 4 kB i średnio ponad 300 znaków na 
 | `vilda_file_export.js` | 1 | 11 KB | istniał | #186 |
 | `vilda_unsaved_guard.js` | 1 | 12 KB | istniał | #299 |
 
+## Łatka P-GH-EDYCJA-LISTA (`gh_therapy_monitor.js` 49 → 50, 2026-10-06)
+
+Zmiana wprost w artefakcie, opisana tu w czytelnej postaci do przeniesienia do lokalnego źródła. Nazwy w nawiasach to nazwy z artefaktu (`x` — id edytowanego punktu, `q()` — usunięcie notki edycji, `D()` — wczytanie listy z pamięci modułu, `F()` — tabela, `B()` — komunikat, `O()` — otwarcie edycji, `He()` — zapis W/K/Z, `re()` — usunięcie, `Ve()`/`Ue()` — `captureState`/`restoreState`). Wszystkie miejsca mają komentarz `P-GH-EDYCJA-LISTA`; opis działania: `docs/clinical/ALGORITHMS.md`, wpis o tej samej nazwie.
+
+```js
+let edycjaPacjent = null;                       // (Gep) znacznik pacjenta przy otwarciu edycji
+function biezacyPacjent() {                     // (Gpid) jak w P-PRZEJECIE-MODULY
+  try { return sessionStorage.getItem('vildaCurrentPatientId') || window._vildaCurrentPatientId || null; }
+  catch { return window._vildaCurrentPatientId || null; }
+}
+function edycjaAktualna() {                     // (Gea)
+  if (x == null) return true;
+  const lista = Array.isArray(window.ghTherapyPoints) ? window.ghTherapyPoints : [];
+  if (!lista.some((p) => p && String(p.id) === String(x))) return false;
+  const teraz = biezacyPacjent();
+  return !(edycjaPacjent && teraz && String(edycjaPacjent) !== String(teraz));
+}
+function koniecEdycji() {                       // (Gek) tylko stan edycji: bez listy, modułu, kanału i bazy
+  x = null; edycjaPacjent = null;
+  q();
+  schowajFormularzEdycji();                     // (Gsch) ta sama funkcja chowa formularz po udanym zapisie edycji w He()
+  zamknijNakladke('#ghEditOverlay');            // przycisk „Rozumiem”, potem usunięcie węzła
+}
+
+// D(): po wczytaniu listy
+edycjaAktualna() || koniecEdycji();
+// re(id): po filter + L() + F() + J('gh-point-deleted')
+edycjaAktualna() || koniecEdycji();
+// O(id): przy x = id
+edycjaPacjent = biezacyPacjent();
+// He(typ): na początku
+const byla = x != null;
+D();
+if (byla && x == null) { F(); B(NIE_ZAPISANO); return; }
+// He(typ), gałąź edycji: brak punktu o id x na liście (zamiast dopisania nowego obiektu)
+else { koniecEdycji(); F(); B(NIE_ZAPISANO); return; }
+// Ve(): po dotychczasowym warunku widoczności formularza
+if (!edycjaAktualna()) return null;
+// Ue(stan): po O(stan.currentEditingId)
+if (x == null || String(x) !== String(stan.currentEditingId)) return true;   // wynik jak dotąd, bez wpisywania pól
+
+const NIE_ZAPISANO = 'Nie zapisano zmian: edytowany punkt nie należy do bieżącej listy punktów. Otwórz edycję ponownie.';
+```
+
 ## Jak odtworzyć
 
 ```bash
