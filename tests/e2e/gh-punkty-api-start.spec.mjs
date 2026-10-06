@@ -38,18 +38,24 @@ const rekord = (id, p) => ({ id, ...p });
 const SZUM_KONSOLI = [
   // Ostrzeżenie przeglądarki o dyrektywie CSP w <meta> — każda strona aplikacji, niezależnie od skryptów.
   { powod: 'frame-ancestors w <meta>', pasuje: (tekst) => /'frame-ancestors' is ignored when delivered via a <meta> element/.test(tekst) },
-  // Zasoby obcego pochodzenia (Google Fonts, serwer synchronizacji): wynik zależy od sieci środowiska testu.
+  // Zasoby obcego pochodzenia (Google Fonts, odcięty serwer synchronizacji): wynik zależy od sieci środowiska testu.
   { powod: 'zasób obcego pochodzenia', pasuje: (tekst, adres, strona) => /^Failed to load resource/.test(tekst) && adres.origin !== strona.origin },
   // Powłoka: przeglądarka sama prosi o /favicon.ico, którego serwer testowy nie ma.
   { powod: 'favicon powłoki', pasuje: (tekst, adres) => /^Failed to load resource/.test(tekst) && adres.pathname === '/favicon.ico' },
-  // Powłoka: ramka przelicznik-jednostek.html ładuje vilda_pro_access.js (przez vilda_chrome.js), a jej CSP nie
-  // dopuszcza serwera synchronizacji — stan sprzed tej zmiany, poza zakresem punktów GH.
-  { powod: 'CSP ramki przelicznika', pasuje: (tekst) => /(Refused to connect to|Fetch API cannot load) '?https:\/\/vilda-sync\./.test(tekst) },
+  // Serwer synchronizacji (sprawdzanie uprawnień PRO po odblokowaniu sejfu): test go odcina (odetnijSerwerSynchronizacji),
+  // a treść błędu zależy od środowiska — brak sieci, CORS z adresu testowego (zmierzone w CI) albo CSP ramki
+  // przelicznik-jednostek.html, która ładuje vilda_pro_access.js (przez vilda_chrome.js) i nie dopuszcza tego serwera
+  // („Refused to connect”, w CI „Connecting to … violates”). Stan sprzed tej zmiany, poza zakresem punktów GH.
+  { powod: 'serwer synchronizacji', pasuje: (tekst) => /https:\/\/vilda-sync\./.test(tekst) },
   // DocPro: odtworzenie stanu wysyła programowe „change” do pola trybu profesjonalnego, którego słuchacz woła
   // navigator.vibrate (vilda_professional_module.js); Chrome blokuje to przed pierwszym dotknięciem. Zależy od
   // chwili odtworzenia (zmierzone: 1 na 3 przebiegi), stan sprzed tej zmiany.
   { powod: 'vibrate przed gestem', pasuje: (tekst) => /^Blocked call to navigator\.vibrate because user hasn't tapped/.test(tekst) },
 ];
+
+// Zapytania do serwera synchronizacji (także z ramek powłoki) kończą się błędem sieci w każdym środowisku: test nie
+// zależy od sieci CI i nie odpytuje prawdziwego serwera fikcyjnym kontem.
+const odetnijSerwerSynchronizacji = (page) => page.route(/^https:\/\/vilda-sync\./, (route) => route.abort());
 
 // Błędy konsoli i pageerror z adnotacją strony (także z ramek powłoki), bez SZUM_KONSOLI.
 function zbierajBledy(page) {
@@ -142,6 +148,7 @@ const wierszeGh = (cel) => cel.evaluate(() => Array.from(document.querySelectorA
 
 test('A: Start bez monitora — zapis przez API: moduł, 1 zdarzenie, 1 komunikat z tabId, echo buduje i przebudowuje wiersz karty zaawansowanej', async ({ page }) => {
   test.setTimeout(150_000);
+  await odetnijSerwerSynchronizacji(page);
   const bledy = zbierajBledy(page);
   await zaloguj(page);
   await startGotowy(page);
@@ -241,6 +248,7 @@ async function ramka(page, tytul) {
 
 test('B: powłoka — punkt zapisany przez API w ramce Start widzi DocPro (monitor GH) po przejściu do panelu', async ({ page }) => {
   test.setTimeout(150_000);
+  await odetnijSerwerSynchronizacji(page);
   const bledy = zbierajBledy(page);
   await zaakceptujRegulamin(page);
   await page.goto('/app.html#/start', { waitUntil: 'load' });
@@ -282,6 +290,7 @@ test('B: powłoka — punkt zapisany przez API w ramce Start widzi DocPro (monit
 
 test('C: index.html i docpro.html z załadowanym VildaGhPunkty — bez błędów konsoli i pageerror', async ({ page }) => {
   test.setTimeout(150_000);
+  await odetnijSerwerSynchronizacji(page);
   const bledy = zbierajBledy(page);
   // Żaden komunikat konsoli (dowolnego typu, także ostrzeżenie) nie dotyczy modułu.
   const oModule = [];

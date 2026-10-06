@@ -52,15 +52,14 @@ function atrapaOkna({ sesja = null, modul = BRAK, tabelaSpozycia = false, bezOdc
   return { win, zapisy };
 }
 
-const czekaj = (ms) => new Promise((r) => { setTimeout(r, ms); });
-
 async function zapisz(opcje, rekordStrony) {
   const env = atrapaOkna(opcje);
   loadBrowserScript('vilda_data_import_export.js', env.win);
   const api = env.win.VildaDataImportExport;
   expect(api.initMainSessionPersistence({ collectUserData: () => JSON.parse(JSON.stringify(rekordStrony)) })).toBe(true);
-  await czekaj(30); // strona wykonała próbę odtworzenia sesji, zapis jest dozwolony
-  expect(env.win.vildaSession.saveNow({ force: true })).toBe(true);
+  // Zapis jest dozwolony dopiero po próbie odtworzenia sesji (łańcuch zegarów 0 ms). Pod obciążeniem trwa to dłużej
+  // niż stałe 30 ms, więc czekamy na sam warunek; odmowa przed odtworzeniem niczego nie zapisuje (sprawdza linia niżej).
+  await expect.poll(() => env.win.vildaSession.saveNow({ force: true }), { timeout: 5000, interval: 10 }).toBe(true);
   expect(env.zapisy).toHaveLength(1);
   return env.zapisy[0];
 }
