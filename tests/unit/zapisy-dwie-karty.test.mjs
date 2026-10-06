@@ -144,7 +144,16 @@ describe('Dwa zapisy tego samego pacjenta naraz', () => {
 
     const rek = await v.getPatient(a.patientId);
     expect(wieki(rek.snapshots[0]), 'bieżąca wersja ma pomiary z obu formularzy').toEqual([60, 66, 72, 84]);
-    expect(pytania, 'drugi zapis zapytał o pomiar z pierwszego').toEqual([[72]]);
+    // Który z dwóch zapisów dostanie blokadę pacjenta pierwszy, nie zależy od kolejności wywołań:
+    // savePatient przed wejściem do kolejki czyta i deszyfruje, a pod obciążeniem całego zestawu te
+    // kroki potrafią się wyprzedzić (zmierzone 2026-10-06: raz na kilka przebiegów `npm test` pytał
+    // zapis z 72 o 84). Pierwszy zapis widać w historii — to wersja między wczytaną a bieżącą — i to
+    // o JEGO pomiar ma zapytać drugi.
+    expect(rek.snapshots, 'wersje: bieżąca, pierwszy zapis, wczytana').toHaveLength(3);
+    expect(wieki(rek.snapshots[2]), 'najstarsza wersja to wczytany formularz').toEqual([60, 66]);
+    const pierwszy = wieki(rek.snapshots[1]).filter((m) => m !== 60 && m !== 66);
+    expect([[72], [84]], 'wersja pośrednia to dokładnie jeden z dwóch formularzy').toContainEqual(pierwszy);
+    expect(pytania, 'drugi zapis zapytał o pomiar z pierwszego').toEqual([pierwszy]);
   });
 });
 

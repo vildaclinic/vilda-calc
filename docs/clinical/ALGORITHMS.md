@@ -5462,7 +5462,7 @@ Po drugim scaleniu `origin/audyt` (79b72204, P-GH-BLOKADA): `npm test` — **400
 3. Uzupełnienie punktu 1 z P-BRAMKI-4: warunek `prefers-reduced-motion` w `clcr_ui_workflow.css` dotyczy selektora `html[data-clcr-workflow-ui="1"] *`, czyli potomków `html`, a nie samego `html` — przewijanie widoku bierze `scroll-behavior` z elementu głównego, więc ta reguła płynnego przewijania okna nie wyłącza.
 4. `applyLoadedData` wywołuje 36 plików e2e, z czego **25** korzysta z zegara testowego. Bramka z `sesja-czekanie.mjs` stoi na razie tylko w pliku pokwitania, bo tylko tu wyścig został zmierzony; pozostałe mogą być narażone na tę samą przyczynę.
 5. **Pytanie o produkt, niezbadane.** W aplikacji okno między rejestracją a odtworzeniem sesji to dwie klatki animacji po starcie strony — w widocznej karcie ułamek sekundy, przed jakimkolwiek kliknięciem. Nie sprawdzałem, czy da się w nie trafić w realnym użyciu, np. w ukrytym panelu powłoki `app.html`, w którym przeglądarka może wstrzymywać klatki animacji, a który w tym czasie dostanie pacjenta. Warunek pominięcia odtworzenia w `restoreMainSessionIfAny` przepuszcza odtworzenie, gdy pacjent jest wczytany (`_vildaCurrentPatientId`). To decyzja i analiza po stronie właściciela.
-6. **Niestabilny test jednostkowy spoza zakresu.** Pierwszy pełny `npm test` tej gałęzi dał 3989/3990: `tests/unit/zapisy-dwie-karty.test.mjs` › „formularze z tej samej wersji: drugi zapis widzi pierwszy i pyta…" oczekuje, że o pomiar z pierwszego zapisu (72) zapyta drugi, a pytanie dotyczyło 84 — kolejność dwóch równoległych zapisów się odwróciła. Dane były kompletne (pierwsza asercja, pomiary obu formularzy w bieżącej wersji, przeszła). W izolacji 5/5 zielonych, kolejny pełny `npm test` zielony. Nie badałem, czy test zakłada kolejność, której sejf nie obiecuje, czy kolejka zapisów ma okno przed ustawieniem się w kolejce — to obszar sejfu i osobny wątek.
+6. **Niestabilny test jednostkowy spoza zakresu.** Pierwszy pełny `npm test` tej gałęzi dał 3989/3990: `tests/unit/zapisy-dwie-karty.test.mjs` › „formularze z tej samej wersji: drugi zapis widzi pierwszy i pyta…" oczekuje, że o pomiar z pierwszego zapisu (72) zapyta drugi, a pytanie dotyczyło 84 — kolejność dwóch równoległych zapisów się odwróciła. Dane były kompletne (pierwsza asercja, pomiary obu formularzy w bieżącej wersji, przeszła). W izolacji 5/5 zielonych, kolejny pełny `npm test` zielony. Nie badałem, czy test zakłada kolejność, której sejf nie obiecuje, czy kolejka zapisów ma okno przed ustawieniem się w kolejce — to obszar sejfu i osobny wątek. *(Rozstrzygnięte 2026-10-06, P-TEST-DWIE-KARTY: test zakładał kolejność, której sejf nie obiecuje; dane obu zapisów są kompletne w każdej kolejności. Poprawiony test — wpis P-ZAPISY-DWIE-KARTY.)*
 
 ## Etykieta pola Klirensu wskazuje pole, a nie przycisk „i" (P-KLIRENS-ETYKIETY, SW 1.1.139, 2026-10-01)
 
@@ -9215,7 +9215,10 @@ wersji w miejscu, korekta i usunięcie pomiaru, przypięcie i usunięcie wersji 
 
 **Walidacja.** `tests/unit/zapisy-dwie-karty.test.mjs` (7: kolejka strony bez Web Locks i blokada z limitem na atrapie
 Web Locks; na bazie 5 czerwonych, 2 kontrole zielone) i `tests/e2e/zapisy-dwie-karty.spec.mjs` (2, prawdziwe Web Locks
-w dwóch kartach; na bazie oba czerwone). `npm test` i powiązane spec-e — wyniki w PR.
+w dwóch kartach; na bazie oba czerwone). `npm test` i powiązane spec-e — wyniki w PR. *(Korekta testu 2026-10-06, P-TEST-DWIE-KARTY: przypadek „formularze z tej samej wersji…”
+zakładał, że blokadę pacjenta pierwszy dostanie zapis wywołany pierwszy. Sejf tego nie obiecuje — `savePatient` czyta
+i deszyfruje przed wejściem do kolejki — a pod obciążeniem całego `npm test` kolejność bywała odwrotna. Test ustala
+pierwszy zapis z historii wersji i sprawdza, że drugi pyta o JEGO pomiar; zachowanie sejfu bez zmian.)*
 
 **Wersje.** `vilda_vault.js` 188 → 189 (8 stron oraz wstrzyknięcia w `vilda_chrome.js` i `vilda_session_bridge.js`),
 `vilda_chrome.js` 80 → 81 i `vilda_session_bridge.js` 8 → 9 (wszystkie strony), `vilda_data_import_export.js` 92 → 93,
