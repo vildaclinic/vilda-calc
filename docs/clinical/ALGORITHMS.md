@@ -20,7 +20,7 @@ Rejestr jest inwentaryzacją techniczną. Nie nadaje opisanym modułom statusu w
 | LAB-UNITS | Konwersje jednostek laboratoryjnych | `lab_unit_converter.js`, `lab_units_data.js` | Vitest konwersji | test regresyjny; każda nowa para jednostek wymaga źródła |
 | LAB-PUBERTY | LH/FSH: niezależna ocena zakresu i czasu dojrzewania | `vilda_lab_puberty_data.js`, `vilda_lab_puberty.js`, `vilda_lab_snapshot.js`, `vilda_lab_puberty_ui.js`, `vilda_lab_assessment_ui.js` | `lab-puberty*.test.mjs`, `lab-snapshot*.test.mjs`, `lab-assessment*.test.mjs`, E2E `lab-snapshot.spec.mjs`, `lab-puberty-ui.spec.mjs` | PR3: aktywacja LH/FSH w dotychczasowym układzie i odczyt utrwalonych ocen; szczegóły w `LH_FSH.md` |
 | LAB-PANELS | Panele i interpretacje laboratoryjne | `lab_clinical_panels.js`, `lab_pin_result.js` | kontrola składni; brak dedykowanej regresji interpretacji klinicznych | wysoki priorytet; brak pełnego pokrycia klinicznego |
-| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL) | wysoki priorytet przeglądu klinicznego |
+| GH-IGF | Dawkowanie i monitorowanie GH/IGF-1 | `gh_igf_therapy.js`, `gh_therapy_monitor.js`, `gh_therapy_segments.js`, `vilda_gh_opakowania_dane.js`, `vilda_gh_opakowania.js`, `vilda_gh_dawka_dane.js`, `vilda_gh_dawka.js` | kontrola składni; testy PRO dotyczą uprawnień, nie dawkowania ani terapii; liczba wkładów, wstrzykiwaczy i fiolek: `gh-opakowania-waznosc` (Vitest + E2E, P-GH-WAZNOSC); dawka podawana, krok i limit jednego wstrzyknięcia: `gh-dawka-podawana` (Vitest + E2E, P-GH-DAWKA-PODAWANA); Increlex — dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg: `gh-dawka-podawana` (Vitest + E2E, P-GH-INCRELEX-PODANIE); „Aktualna dawka” Increlex w Karcie pacjenta: `karta-gh-increlex-dawka` (E2E, P-GH-INCRELEX-KARTA); pozostałe widoki dawki Increlex w Karcie pacjenta: `karta-gh-increlex-widoki` (E2E, P-GH-INCRELEX-WIDOKI); tytuł wpisów Increlex: `karta-pacjenta-historia-automat` (Vitest) i `gh-dawka-podawana` (E2E, P-GH-INCRELEX-TYTUL); zalecenia dla pacjenta i liczba iniekcji z podziałem dawki: `gh-dawka-podawana` (Vitest) i `gh-iniekcje-zalecenia` (E2E, P-GH-INIEKCJE-ZALECENIA) | wysoki priorytet przeglądu klinicznego |
 | OBESITY-RX | Farmakoterapia i odpowiedź w otyłości | `obesity_therapy.js`, `obesity_therapy_monitor.js`, `obesity_response_criteria.js` | kontrola składni; testy PRO dotyczą uprawnień, nie farmakoterapii | wysoki priorytet przeglądu klinicznego |
 | ANTIBIOTIC-RX | Schematy antybiotykoterapii | `antibiotic_therapy.js` | kontrola składni; brak dedykowanej regresji dawkowania | wymaga ponownego przeglądu mapowania źródeł |
 | BISPHOS-RX | Bisfosfoniany | `bisphos_therapy.js`, `bisphos_therapy_monitor.js` | kontrola składni; brak dedykowanej regresji dawkowania | zinwentaryzowane; dawki i limity do rejestru szczegółowego |
@@ -8234,6 +8234,90 @@ względem `audyt` `e0ee9e8` (po scaleniu P-SWIEZE-WCZYTANIE, które wydało SW 1
 
 **Co pozostaje decyzją właściciela.** Akceptacja; czy i jak zmienić tytuł wpisów Increlex zapisanych wcześniej (migracja
 danych w sejfie z kopią albo zamiana tylko przy wyświetlaniu); scalenie i wdrożenie.
+
+## Zalecenia dla pacjenta i liczba „iniekcji” uwzględniają limit jednego wstrzyknięcia i podział dawki (P-GH-INIEKCJE-ZALECENIA, SW 1.1.167, `gh_igf_therapy.js` 32, `vilda_gh_dawka.js` 3, 2026-10-06)
+
+**Skąd.** Polecenie właściciela z 2026-10-06 („zajmij się rozwiązaniem tego problemu: Zalecenia dla pacjenta i liczba
+„iniekcji”: nie uwzględniają limitu jednego wstrzyknięcia ani podziału dawki”) — otwarta sprawa z P-GH-DAWKA-PODAWANA.
+Karta pilnowała limitu jednego wstrzyknięcia i dzieliła dawkę Ngenla w komunikacie pod polem dawki i w ramce „Pacjent”,
+ale zalecenia kopiowane dla pacjenta i tabela zapotrzebowania tego nie wiedziały.
+
+**Zmierzone przed zmianą (`audyt` `db8f26c`, prawdziwa karta na `index.html`, te same kroki co w nowym teście e2e).**
+- Ngenla 24 mg, 40 kg, 26,4 mg/tydz po „Zostaw 24 mg” (karta: „3 wstrzyknięcia po 8,8 mg”): tabela „≈ 343,2 mg →
+  wstrzykiwaczy: 15; 13 iniekcji” (90 dni) i „…; 26 iniekcji” (180 dni) — „iniekcje” to liczba dawek tygodniowych;
+  zalecenia 90/180 dni i przy ręcznej dacie kontroli: „1. Ngenla - 26,4 mg raz na tydzień. Preparat podaje się
+  podskórnie, …” bez słowa o trzech wstrzyknięciach.
+- Ngenla 60 mg, 50 kg, 33 mg/tydz (2 × 16,5 mg) i 33,5 mg/tydz (17 + 16,5 mg): „13 iniekcji”, zalecenia bez podziału.
+- Genotropin 5,3 mg, 1,6 mg/d po „Zostaw 5,3 mg”; Genotropin 12 mg, 100 kg, ZT, 5,7 mg/d; Genotropin 12 mg, 6 kg,
+  0,15 mg/d po „Zostaw 12 mg”: zalecenia „… mg na dobę w codziennych wstrzyknięciach podskórnych.” i dymek „Zalecenia
+  zostały skopiowane do schowka.” — bez sygnału, że wstrzykiwacz tej dawki nie poda w jednym wstrzyknięciu.
+- Ngenla 60 mg, 40 kg, 26,5 mg/tydz (jedno wstrzyknięcie), Omnitrope 10 mg — punkt odniesienia.
+
+**Reguła.** Silnik `vilda_gh_dawka.js` (dane: `vilda_gh_dawka_dane.js`, bez zmian), wpięcia w karcie opisane komentarzem
+`P-GH-INIEKCJE-ZALECENIA`:
+- wstrzyknięć na dawkę = liczba równych części w krokach wstrzykiwacza (`podzial`, jak w komunikacie karty) — tylko dla
+  preparatu, dla którego źródło mówi o dawce w kilku wstrzyknięciach (`uwagaPodzialu`: Ngenla); pozostałe: 1;
+- tabela zapotrzebowania (Ngenla, wiersze 90 i 180 dni i wiersz ręcznej daty kontroli): iniekcji = ⌈dni / 7⌉ ×
+  wstrzyknięć na dawkę, z dopiskiem „(n na dawkę)”, gdy n > 1; przy jednym wstrzyknięciu tekst jak dotąd;
+- zalecenia Ngenla (90 i 180 dni, ręczna data kontroli): gdy dawka wymaga kilku wstrzyknięć, nowa linia 2 „Dawkę
+  {mg} podaje się w {n} wstrzyknięciach po {część} mg, każde w inne miejsce, aby zapobiec lipoatrofii.” (przy
+  nierównych częściach „…: 17 mg i 16,5 mg, …”); dalsze linie przesuwają się o jeden numer, ich treść bez zmian;
+- dymek po skopiowaniu zaleceń (wszystkie preparaty z danymi wstrzykiwacza): gdy dawki nie poda jedno wstrzyknięcie,
+  a preparat nie ma reguły podziału (Genotropin ponad 1,5 / 4,5 mg), albo gdy dawka jest mniejsza niż najmniejsze
+  wstrzyknięcie, zamiast „Zalecenia zostały skopiowane do schowka.” ostrzeżenie dla lekarza (ton „błąd”, 8 s, prawy
+  dolny róg — na telefonie pełna szerokość minus marginesy): „Skopiowano zalecenia, ale {mg} to więcej niż {maks} —
+  tyle najwięcej podaje jedno wstrzyknięcie wstrzykiwacza {preparat} ({źródło}). Sprawdź dawkę, zanim przekażesz
+  zalecenia pacjentowi.” (albo „… to mniej niż {min} — tyle najmniej podaje wstrzykiwacz …”). Kopiowanie nie jest
+  blokowane, tekst zaleceń dla pacjenta się nie zmienia.
+
+Źródła jak w P-GH-DAWKA-PODAWANA: SmPC Ngenla 4.2 (EMA, PDF z 16.01.2026: limity 0,2–12 mg co 0,2 mg i 0,5–30 mg co
+0,5 mg; „If more than one injection is required to deliver a complete dose, each injection should be administered at
+a different injection site to prevent lipoatrophy.”), ulotka Genotropin — instrukcja GoQuick (11/2025). Sposób
+podziału (równe części w krokach) — decyzja właściciela z P-GH-DAWKA-PODAWANA; ChPL go nie określa.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana kliniczna (AGENTS.md § 3): zmienia się treść zaleceń dla pacjenta (sposób
+podania dawki Ngenla) i liczba iniekcji w tabeli, którą lekarz może przekazać pacjentowi albo aptece. Dawki, kroki,
+limity, liczba wstrzykiwaczy i ampułek (P-GH-WAZNOSC), daty kontroli i zapis punktów bez zmian. Populacja: dzieci
+i młodzież leczeni somatrogonem i somatropiną w programach z listy karty. Ograniczenia: Ngenla — reguła podziału
+jak w karcie; Genotropin — bez podziału, tylko ostrzeżenie (czy dzielić taką dawkę — osobna decyzja właściciela);
+Omnitrope i Increlex — źródła nie podają limitu jednego wstrzyknięcia, bez zmian.
+
+**Liczba wstrzykiwaczy Ngenla przy podziale (bez zmian, sprawdzone).** P-GH-WAZNOSC liczy najwyżej 5 użyć jednego
+wstrzykiwacza (ChPL Ngenla 6.3) jako 5 dawek tygodniowych. Dawka dzielona jest większa niż limit jednego wstrzyknięcia
+(12 / 30 mg), każda część to co najmniej połowa limitu, a wstrzykiwacz zawiera 2 limity (24 / 60 mg) — mieści więc
+najwyżej 4 takie wstrzyknięcia i limit 5 użyć nie decyduje o liczbie sztuk.
+
+**Przypadki `wejście → oczekiwany wynik`.**
+- Ngenla 24 mg, 26,4 mg/tydz → tabela „39 iniekcji (3 na dawkę)” (90 dni), „78 iniekcji (3 na dawkę)” (180 dni);
+  zalecenia, linia 2: „Dawkę 26,4 mg podaje się w 3 wstrzyknięciach po 8,8 mg, każde w inne miejsce, aby zapobiec
+  lipoatrofii.”; ręczna data kontroli za 94 dni (lek na 90 dni) → ta sama linia i „39 iniekcji (3 na dawkę)”.
+- Ngenla 60 mg, 33 mg/tydz → „26 iniekcji (2 na dawkę)” i „52 iniekcje (2 na dawkę)”; „Dawkę 33 mg podaje się
+  w 2 wstrzyknięciach po 16,5 mg, …”; 33,5 mg/tydz → „… w 2 wstrzyknięciach: 17 mg i 16,5 mg, …”.
+- Ngenla 60 mg, 26,5 mg/tydz → „13 iniekcji”, „26 iniekcji”, zalecenia bez linii o podziale (jak dotąd).
+- Genotropin 5,3 mg, 1,6 mg/d → zalecenia bez zmian; dymek „Skopiowano zalecenia, ale 1,6 mg to więcej niż 1,5 mg —
+  … (ulotka Genotropin). Sprawdź dawkę, zanim przekażesz zalecenia pacjentowi.”; Genotropin 12 mg, 5,7 mg/d →
+  „… 5,7 mg to więcej niż 4,5 mg …”; Genotropin 12 mg, 0,15 mg/d → „… 0,15 mg to mniej niż 0,3 mg — tyle najmniej
+  podaje wstrzykiwacz Genotropin 12 mg …”.
+- Genotropin 12 mg, 1,2 mg/d; Omnitrope 10 mg, 0,9 mg/d → zwykłe „Zalecenia zostały skopiowane do schowka.”.
+
+**Strażnicy.** `tests/unit/gh-dawka-podawana.test.mjs` (4 nowe przypadki na prawdziwym silniku: `iniekcje`,
+`liniaPodzialu`, `ostrzezenieZalecen`, odmiana; wpięcia w karcie); `tests/e2e/gh-iniekcje-zalecenia.spec.mjs`
+(3 — prawdziwa karta na `index.html`, tekst ze schowka i dymek: A Ngenla 24 mg — tabela i zalecenia 90/180/ręczne,
+B Ngenla 60 mg — równe i nierówne części oraz jedno wstrzyknięcie, C Genotropin poza zakresem i kontrole). Na `db8f26c`
+wszystkie trzy czerwone z wartościami jak wyżej.
+
+**Czego to nie zmienia.** Dawki i ich zaokrąglanie, komunikat pod polem dawki, ramka „Pacjent”, liczba wstrzykiwaczy,
+ampułek i fiolek, daty kontroli, zalecenia Omnitrope, Increlex i Genotropin (tekst), punkty terapii, monitor, Karta
+pacjenta, wpis do Terminarza. Tabela dawek dobowych nadal bez liczby iniekcji.
+
+**Wersje.** `gh_igf_therapy.js` 31 → 32 (`index.html` — ładowanie leniwe, `docpro.html`), `vilda_gh_dawka.js` 2 → 3
+(oba pliki stron); precache (append-only); `SW_VERSION` 1.1.166 → 1.1.167 (+ pin w
+`tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `audyt` `db8f26c`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna treści linii o podziale; czy przy dawce Genotropin poza
+zakresem jednego wstrzyknięcia kopiowanie ma zostać z ostrzeżeniem, czy być zablokowane; czy dawkę Genotropin ponad
+4,5 mg/d dzielić (wtedy ta sama reguła obejmie zalecenia i tabelę); scalenie i wdrożenie.
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 

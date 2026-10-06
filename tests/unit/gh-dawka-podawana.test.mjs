@@ -293,3 +293,69 @@ describe('Increlex: dawka na podanie, krok 0,1 mg, nie więcej niż 0,12 mg/kg n
     expect(S.ghDosePercent({ program: 'SNP', drug: 'Omnitrope 10 mg', dose: 0.034, doseUnit: 'mg/kg/d' })).toBeCloseTo(100, 9);
   });
 });
+
+// P-GH-INIEKCJE-ZALECENIA (2026-10-06, polecenie właściciela): zalecenia kopiowane dla pacjenta i liczba „iniekcji”
+// w tabeli zapotrzebowania uwzględniają limit jednego wstrzyknięcia i podział dawki. Ngenla — równe części w krokach
+// (decyzja właściciela z P-GH-DAWKA-PODAWANA; SmPC 4.2: każde wstrzyknięcie w inne miejsce). Genotropin poza zakresem
+// jednego wstrzyknięcia — bez podziału (osobna decyzja właściciela), tylko ostrzeżenie dla lekarza po skopiowaniu.
+describe('Zalecenia dla pacjenta i liczba iniekcji w tabeli zapotrzebowania', () => {
+  it('iniekcji = dawki tygodniowe × wstrzyknięcia na dawkę (Ngenla ponad limit jednego wstrzyknięcia)', () => {
+    // 90 dni = ⌈90 / 7⌉ = 13 dawek, 180 dni = 26 dawek (jak dotąd w karcie).
+    expect(E.iniekcje('Ngenla 24 mg', 26.4, 13)).toEqual({ dawek: 13, naDawke: 3, razem: 39, tekst: '39 iniekcji (3 na dawkę)' });
+    expect(E.iniekcje('Ngenla 24 mg', 26.4, 26).tekst).toBe('78 iniekcji (3 na dawkę)');
+    expect(E.iniekcje('Ngenla 60 mg', 33, 13).tekst).toBe('26 iniekcji (2 na dawkę)');
+    expect(E.iniekcje('Ngenla 60 mg', 33.5, 13).tekst).toBe('26 iniekcji (2 na dawkę)');
+    expect(E.iniekcje('Ngenla 24 mg', 12.2, 1).tekst).toBe('2 iniekcje (2 na dawkę)');
+    // Jedno wstrzyknięcie na dawkę — liczba jak dotąd, z odmianą.
+    expect(E.iniekcje('Ngenla 60 mg', 26.5, 13)).toEqual({ dawek: 13, naDawke: 1, razem: 13, tekst: '13 iniekcji' });
+    expect(E.iniekcje('Ngenla 24 mg', 12, 1).tekst).toBe('1 iniekcja');
+    expect(E.iniekcje('Ngenla 24 mg', 12, 3).tekst).toBe('3 iniekcje');
+    expect(E.iniekcje('Ngenla 24 mg', 12, 12).tekst).toBe('12 iniekcji');
+    expect(E.iniekcje('Ngenla 24 mg', 12, 22).tekst).toBe('22 iniekcje');
+    // Bez reguły podziału (Genotropin ponad limit) i nieznany preparat: jedno wstrzyknięcie na dawkę.
+    expect(E.iniekcje('Genotropin 5,3 mg', 1.6, 13).naDawke).toBe(1);
+    expect(E.iniekcje('Nieznany', 30, 13).tekst).toBe('13 iniekcji');
+    expect(E.iniekcje('Ngenla 24 mg', 26.4, 0).tekst).toBe('0 iniekcji');
+  });
+
+  it('linia o podziale dawki w zaleceniach: równe części w krokach, każde wstrzyknięcie w inne miejsce', () => {
+    expect(bez(E.liniaPodzialu('Ngenla 24 mg', 26.4))).toBe('Dawkę 26,4 mg podaje się w 3 wstrzyknięciach po 8,8 mg, '
+      + 'każde w inne miejsce, aby zapobiec lipoatrofii.');
+    expect(bez(E.liniaPodzialu('Ngenla 60 mg', 33))).toBe('Dawkę 33 mg podaje się w 2 wstrzyknięciach po 16,5 mg, '
+      + 'każde w inne miejsce, aby zapobiec lipoatrofii.');
+    expect(bez(E.liniaPodzialu('Ngenla 60 mg', 33.5))).toBe('Dawkę 33,5 mg podaje się w 2 wstrzyknięciach: 17 mg i 16,5 mg, '
+      + 'każde w inne miejsce, aby zapobiec lipoatrofii.');
+    expect(E.liniaPodzialu('Ngenla 60 mg', 33)).toContain(`16,5${NB}mg`);
+    // Jedno wstrzyknięcie, preparat bez reguły podziału, brak dawki — bez linii.
+    expect(E.liniaPodzialu('Ngenla 60 mg', 26.5)).toBe('');
+    expect(E.liniaPodzialu('Ngenla 24 mg', 12)).toBe('');
+    expect(E.liniaPodzialu('Genotropin 5,3 mg', 1.6)).toBe('');
+    expect(E.liniaPodzialu('Increlex 40 mg', 0.8)).toBe('');
+    expect(E.liniaPodzialu('Ngenla 24 mg', 0)).toBe('');
+  });
+
+  it('ostrzeżenie dla lekarza po skopiowaniu: Genotropin poza zakresem jednego wstrzyknięcia; Ngenla z podziałem — bez', () => {
+    expect(bez(E.ostrzezenieZalecen('Genotropin 5,3 mg', 1.6))).toBe('Skopiowano zalecenia, ale 1,6 mg to więcej niż 1,5 mg '
+      + '— tyle najwięcej podaje jedno wstrzyknięcie wstrzykiwacza Genotropin 5,3 mg (ulotka Genotropin). Sprawdź dawkę, '
+      + 'zanim przekażesz zalecenia pacjentowi.');
+    expect(bez(E.ostrzezenieZalecen('Genotropin 12 mg', 5.7))).toBe('Skopiowano zalecenia, ale 5,7 mg to więcej niż 4,5 mg '
+      + '— tyle najwięcej podaje jedno wstrzyknięcie wstrzykiwacza Genotropin 12 mg (ulotka Genotropin). Sprawdź dawkę, '
+      + 'zanim przekażesz zalecenia pacjentowi.');
+    expect(bez(E.ostrzezenieZalecen('Genotropin 12 mg', 0.15))).toBe('Skopiowano zalecenia, ale 0,15 mg to mniej niż 0,3 mg '
+      + '— tyle najmniej podaje wstrzykiwacz Genotropin 12 mg (ulotka Genotropin). Sprawdź dawkę, zanim przekażesz '
+      + 'zalecenia pacjentowi.');
+    for (const [lek, mg] of [['Genotropin 5,3 mg', 1.5], ['Genotropin 12 mg', 4.5], ['Genotropin 12 mg', 0.3],
+      ['Ngenla 24 mg', 26.4], ['Ngenla 60 mg', 33], ['Omnitrope 10 mg', 5], ['Increlex 40 mg', 0.8], ['Nieznany', 1]]) {
+      expect(E.ostrzezenieZalecen(lek, mg)).toBe('');
+    }
+  });
+
+  it('karta korzysta z silnika w tabeli, zaleceniach Ngenla (90/180 i ręczne) i w dymku kopiowania', () => {
+    const karta = fs.readFileSync(path.join(korzen, 'gh_igf_therapy.js'), 'utf8');
+    expect(karta.match(/P-GH-INIEKCJE-ZALECENIA/g).length).toBeGreaterThanOrEqual(4);
+    expect(karta).toContain('.iniekcje(');
+    expect(karta.match(/Gzl\(r,t\.drug,t\.perWeekMg\)/g)?.length).toBe(1);
+    expect(karta.match(/Gzl\(k,n\.drug,n\.perWeekMg\)/g)?.length).toBe(1);
+    expect(karta).toContain('.ostrzezenieZalecen(');
+  });
+});
