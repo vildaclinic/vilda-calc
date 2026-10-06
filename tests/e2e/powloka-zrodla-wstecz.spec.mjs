@@ -14,6 +14,9 @@ import { expect, test } from '../support/test-czas.mjs';
 //
 // Źródło dojrzewania (`vilda_puberty_source.js`) robiło to dobrze już wcześniej — zostaje jako strażnik.
 //
+// Od P-POWLOKA-OBCY (2026-10-06) DocPro z formularzem A nie przejmuje C w tle: jest nieaktualny i przy „Wstecz”
+// przeładowuje się (bez wpisu w historii); świeży dokument czyta źródła dla C. Stan końcowy sprawdzany jak dotąd.
+//
 // Dane wyłącznie fikcyjne, własne konto sejfu w efemerycznym profilu przeglądarki.
 test.use({ serviceWorkers: 'block' });
 
@@ -134,15 +137,21 @@ test('powłoka: DocPro z A → Start, wczytanie C → „Wstecz” — populacja
   await page.waitForTimeout(1500);
   await wczytaj(start, idC, 'Probny');
 
-  // Panel DocPro w tle przejmuje C (vildaPersistRestoreAll na ping vilda:sharedLoadSeq) — źródła razem z nim.
-  await expect.poll(() => docpro.evaluate(() => window._vildaCurrentPatientId), { timeout: 15000 }).toBe(idC);
-  await expect.poll(() => zrodla(docpro), { timeout: 15000, message: 'DocPro w tle: źródła pacjenta C' })
-    .toEqual({ populacja: 'OGOLNA', urodzenie: null, urodzenieDlaKonsumentow: false, dojrzewanie: null });
+  // P-POWLOKA-OBCY (2026-10-06): DocPro w tle trzyma formularz A, więc po wczytaniu C na Start jest nieaktualny
+  // i bezczynny — nie przejmuje C w odświeżaniu paneli w tle (dotąd: vildaPersistRestoreAll na ping
+  // vilda:sharedLoadSeq). Pacjenta C dostaje przy pokazaniu, jako świeży dokument (location.reload()).
+  await expect.poll(() => docpro.evaluate(() => window.VildaPanelPacjent.nieaktualny()), { timeout: 15000 }).toBe(true);
+  await page.waitForTimeout(3000); // dłużej niż ping vilda:sharedLoadSeq i odświeżenie paneli w tle
+  expect(await docpro.evaluate(() => [window._vildaCurrentPatientId, document.getElementById('lastName').value]),
+    'DocPro w tle nie przejmuje C').toEqual([idA, 'Testowy']);
+  await docpro.evaluate(() => { window.__e2eDokument = 'docpro-a'; });
 
   // Powrót przyciskiem „Wstecz” (popstate) — bez zamykania panelu konta w ramce DocPro.
   await page.evaluate(() => window.history.back());
   await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#/docpro');
   await expect(docpro.locator('#lastName'), 'DocPro po „Wstecz” pokazuje C').toHaveValue('Probny', { timeout: 15000 });
+  expect(await docpro.evaluate(() => window.__e2eDokument || null), 'DocPro przeładowany przy pokazaniu').toBe(null);
+  expect(await docpro.evaluate(() => window._vildaCurrentPatientId)).toBe(idC);
   await page.waitForTimeout(3000); // dłużej niż odczyt rekordu z sejfu — stan ma być trwały, nie chwilowy
   expect(await zrodla(docpro), 'DocPro po „Wstecz”: populacja, dane urodzeniowe i dojrzewanie C')
     .toEqual({ populacja: 'OGOLNA', urodzenie: null, urodzenieDlaKonsumentow: false, dojrzewanie: null });

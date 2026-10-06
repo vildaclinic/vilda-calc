@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.169';
+const SW_VERSION = '1.1.170';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -330,6 +330,8 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=27',
   '/vilda_persistence_adapter.js?v=28',
   '/vilda_persistence_adapter.js?v=29',
+  '/vilda_persistence_adapter.js?v=30',
+  '/vilda_panel_pacjent.js?v=1',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -1380,6 +1382,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persist_runtime.js?v=17',
   '/vilda_persist_runtime.js?v=18',
   '/vilda_persist_runtime.js?v=19',
+  '/vilda_persist_runtime.js?v=20',
   '/vilda_summary_cards.js',
   '/vilda_summary_cards.js?v=2',
   '/vilda_summary_cards.js?v=3',
@@ -1468,6 +1471,7 @@ const CORE_SHELL_URLS = [
   '/vilda_unsaved_guard.js?v=3',
   '/vilda_unsaved_guard.js?v=4',
   '/vilda_unsaved_guard.js?v=5',
+  '/vilda_unsaved_guard.js?v=6',
   '/vilda_diet_recommendations.js',
   '/vilda_diet_recommendations.js?v=3',
   '/vilda_diet_recommendations.js?v=4',
@@ -1906,6 +1910,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=57',
   '/vilda_shell.js?v=58',
   '/vilda_shell.js?v=59',
+  '/vilda_shell.js?v=60',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -2098,6 +2103,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=70',
   '/custom-fixes.js?v=71',
   '/custom-fixes.js?v=72',
+  '/custom-fixes.js?v=73',
   '/reposition.js?v=7',
   '/vilda_patient_report.js?v=10',
   '/vilda_summary_cards.js?v=26',
@@ -2393,6 +2399,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=95',
   '/vilda_data_import_export.js?v=96',
   '/vilda_data_import_export.js?v=97',
+  '/vilda_data_import_export.js?v=98',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_pola_tozsamosci.js?v=1',
   '/vilda_pola_tozsamosci.js?v=2',
