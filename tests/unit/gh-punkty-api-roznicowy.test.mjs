@@ -469,6 +469,41 @@ describe('VildaGhPunkty ↔ żywy monitor — pozostałe reguły formularzy', ()
       expect(roznice(wynik.lista, [WLACZENIE])).toEqual([]);
     }
   });
+
+  // ZNANE ODSTĘPSTWO (nagłówek modułu, ALGORITHMS P-GH-PUNKTY-API): pusty wpis (null) w pamięci modułu, który pojawił
+  // się po starcie monitora. Test przypina OBA zachowania. Zmiana którejkolwiek strony (np. monitor przeniesiony na API
+  // w PR-4) wymaga decyzji, nie dopasowania oczekiwań.
+  it('ZNANE ODSTĘPSTWO: null na liście — monitor rzuca TypeError i nie zapisuje, API pomija null i dałoby zapis', () => {
+    const WSTECZNY = {
+      ghRetroType: 'start', ghRetroProg: 'SNP', ghRetroDrug: 'Omnitrope 10 mg', ghRetroAge: '9', ghRetroAgeMonths: '6',
+      ghRetroWeight: '32', ghRetroHeight: '133', ghRetroDose: '0.96',
+    };
+    for (const modulDawki of [true, false]) {
+      // (a) punkt wsteczny „Włączenie” przy liście [null]
+      const a = atrapaZApi({ modulDawki, punkty: [] });
+      a.atrapa.kliknij('btnGhRetro');
+      for (const [k, v] of Object.entries(WSTECZNY)) a.atrapa.ustaw(k, v);
+      a.atrapa.ustawModul([null]);
+      expect(() => a.atrapa.kliknij('btnGhRetroAdd')).toThrow(TypeError);
+      expect(a.klikniecia).toHaveLength(1);
+      expect(rodzaje(a.atrapa.dziennik.slice(a.klikniecia[0].od))).toEqual(['E']);
+      expect(a.atrapa.stan().modul).toEqual([null]);
+      const wsteczny = wynikApi(a.api, a.klikniecia[0], null, 'fikc-nowy');
+      expect(wsteczny.zapis).toBe(true);
+      expect(wsteczny.lista.map((p) => p && p.id)).toEqual([null, 'fikc-nowy']);
+
+      // (b) edycja Kontynuacji, gdy przed nią pojawił się null
+      const b = atrapaZApi({ modulDawki, punkty: [KONTYNUACJA] });
+      b.atrapa.edytuj(KONTYNUACJA.id, { ghEditHeight: '139' });
+      b.atrapa.ustawModul([null, KONTYNUACJA]);
+      expect(() => b.atrapa.kliknij('btnGhContinue')).toThrow(TypeError);
+      expect(rodzaje(b.atrapa.dziennik.slice(b.klikniecia[0].od))).toEqual(['E']);
+      expect(b.atrapa.stan().modul.map((p) => p && p.height)).toEqual([null, KONTYNUACJA.height]);
+      const edycja = wynikApi(b.api, b.klikniecia[0], KONTYNUACJA.id, null);
+      expect(edycja.zapis).toBe(true);
+      expect(edycja.lista.map((p) => p && p.height)).toEqual([null, 139]);
+    }
+  });
 });
 
 /* ---------- Kontrole negatywne ---------- */

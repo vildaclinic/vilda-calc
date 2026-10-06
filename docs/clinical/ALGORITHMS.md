@@ -8451,8 +8451,8 @@ P-GH-EDYCJA-PACJENT). Decyzja właściciela D4 z 2026-10-06: nazwa `VildaGhPunkt
 Start (`index.html`) i w DocPro (`docpro.html`); Kalkulator klirensu — nie (punktów nie tworzy).
 
 **Co to jest.** Czytelny moduł (jak `vilda_gh_dawka.js`), który odtwarza 1:1 reguły punktu terapii GH z monitora
-(`gh_therapy_monitor.js`): edycji punktu, punktu wstecznego i zapisu listy. W tej racie **nikt go nie woła** — monitor
-działa jak dotąd. Kolejne raty przeniosą monitor na API (z zapasową ścieżką) i pozwolą dodać punkt z innych stron.
+(`gh_therapy_monitor.js`): edycji punktu, punktu wstecznego i zapisu listy — z jednym znanym odstępstwem (niżej). W tej
+racie **nikt go nie woła** — monitor działa jak dotąd. Kolejne raty przeniosą monitor na API (z zapasową ścieżką) i pozwolą dodać punkt z innych stron.
 
 **API** (`window.VildaGhPunkty`, `wersja: 1`, obiekt zamrożony):
 - dane: `KLUCZE` (15 kluczy rekordu w kolejności zapisu: `id, type, ageYears, ageMonths, weight, height, boneAge, dose,
@@ -8471,6 +8471,15 @@ dawka dobowa = podawana (Increlex: 2 × dawka na podanie, schemat `naPodanie` z 
 (Ngenla: tygodniowa / masa, `mg/kg/tydz`); `doseAbs` = mg/d (Ngenla: tygodniowa / 7). Bez zaokrąglania — punkt
 historyczny zapisuje się tak, jak go wpisano. Bez `VildaGhDawka` wynik jak w monitorze bez tego modułu (Increlex bez × 2)
 i flaga `bezModuluDawki: true`. Dawka nowego punktu z karty (wynik karty, pola zapasowe) zostaje w monitorze.
+`opcje.dawka` ma w `polaZPodawanej` i `gotowe` jedno znaczenie: brak klucza albo `true` — `VildaGhDawka` z okna; obiekt —
+wstrzyknięty moduł; `null`/`false` — bez modułu. Moduł liczy się tylko z funkcją `preparat`, a to samo kryterium wyznacza
+× 2, `bezModuluDawki` i brak w `gotowe` (po przeglądzie: wcześniej `{dawka:true}` albo moduł bez `preparat` dawały wynik
+bez × 2 z flagą „moduł jest”; nikt tego nie wołał, w aplikacji `VildaGhDawka` zawsze ma `preparat`).
+
+**Znane odstępstwo od monitora.** Pusty wpis (`null`) na liście w pamięci modułu (np. z uszkodzonego rekordu wczytanego
+przy otwartym DocPro): `sprawdzRodzaj` i `zmienWMiejscu` go pomijają, a monitor przy punkcie wstecznym i edycji rzuca
+`TypeError` i nie zapisuje (tabela monitora w tym stanie też się nie rysuje). Aplikacja sama `null` na listę nie wpisuje.
+Test różnicowy przypina oba zachowania; o tym, które zostaje, gdy monitor przejdzie na API (PR-4), decyduje właściciel.
 
 **Niezmienniki.** Przy ładowaniu moduł niczego nie czyta i nie zapisuje (magazyn, kanał, słuchacze); nie normalizuje list
 z rekordu ani z sejfu; `zmienWMiejscu` nigdy nie dopisuje punktu (odmowa `brak-punktu`); `zapisz` nie odświeża tabeli,
@@ -8486,14 +8495,15 @@ zasób PWA. Wzory, progi, dawki, jednostki i zapis punktów bez zmian; reguły o
 wyżej, nie zgadywane. Zgodność z monitorem pilnuje test różnicowy na żywym monitorze.
 
 **Strażnicy.**
-- `tests/unit/gh-punkty-api.test.mjs` (123): przypadki `wejście → wynik` na prawdziwym module (z `vilda_gh_dawka.js`),
+- `tests/unit/gh-punkty-api.test.mjs` (124): przypadki `wejście → wynik` na prawdziwym module (z `vilda_gh_dawka.js`),
   strażnik czystości funkcji czystych, brak skutków przy ładowaniu, zamrożenie.
 - `tests/unit/gh-punkty-api-zapis.test.mjs` (53): kontrakt `zapisz`/`wczytaj`/`gotowe` (kolejność moduł → zdarzenie →
   kanał, `tabId` dokładnie jak `Y()` monitora — wyjątek albo brak magazynu daje komunikat bez pola `tabId`, brak każdej
   zależności bez wyjątku), także różnicowo z prawdziwym `L()`.
-- `tests/unit/gh-punkty-api-roznicowy.test.mjs` (16): te same wejścia przez żywy monitor (punkt wsteczny, edycja) i przez
+- `tests/unit/gh-punkty-api-roznicowy.test.mjs` (17): te same wejścia przez żywy monitor (punkt wsteczny, edycja) i przez
   API, porównanie ścisłe (kolejność kluczy, `Object.is`), komunikaty odmów; przypadki własne i ze złotej siatki, oba
-  warianty modułu dawki, kontrole negatywne. Cała siatka Z2+Z4 (6035 przypadków) sprawdzona raz poza testem: 0 różnic.
+  warianty modułu dawki, kontrole negatywne, przypięte znane odstępstwo (`null`). Cała siatka Z2+Z4 (6035 przypadków)
+  sprawdzona raz poza testem: 0 różnic.
 - `tests/e2e/gh-punkty-api-start.spec.mjs` (3): zapis przez API na Start (moduł, jedno zdarzenie, komunikat z `tabId`,
   wiersz mostka), punkt widoczny w monitorze DocPro w powłoce, brak błędów konsoli.
 
@@ -8506,7 +8516,9 @@ Uwaga: własny kanał API powstaje leniwie przy pierwszym zapisie (monitor tworz
 `tests/support/load-browser-script.mjs`).
 
 **Co pozostaje decyzją właściciela.** Akceptacja, scalenie i wdrożenie. Następna rata (PR-4): monitor korzysta z API bez
-zmiany zachowania, z zapasową ścieżką.
+zmiany zachowania, z zapasową ścieżką; tam także decyzja o odstępstwie `null` i zachowanie własnego sprawdzenia Z3 w
+monitorze przed regułami API (monitor odmawia tekstem P-GH-EDYCJA-LISTA przed sprawdzeniem rodzaju i wartości, API
+zwraca `brak-punktu` dopiero na końcu).
 
 ## Instalacja service workera bez historii precache: tylko wpisy bieżące, kopia niezmiennych wpisów z poprzedniej pamięci, przycięcie historii (P-SW-PRECACHE, SW 1.1.105, 2026-09-29)
 

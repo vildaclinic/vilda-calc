@@ -490,6 +490,28 @@ describe('polaZPodawanej — dawka na kg i dawka dobowa z dawki podawanej', () =
     const ng = o.VildaGhPunkty.polaZPodawanej(liczbowe({ preparat: 'Ngenla 60 mg', podawana: 14, masa: 33 }), 'wsteczny');
     expect([ng.pola.dose, ng.pola.doseAbs, ng.bezModuluDawki]).toEqual([14 / 33, 2, true]);
   });
+
+  it('opcje.dawka ma jedno znaczenie: true = moduł z okna (jak gotowe), obiekt bez preparat = brak modułu; × 2 i flaga zawsze razem', () => {
+    const we = liczbowe({ preparat: 'Increlex 40 mg', program: 'IGF-1', podawana: 0.5, masa: 30 });
+    const zWynik = (r) => [r.pola.dose, r.pola.doseAbs, r.bezModuluDawki];
+    const Z_MODULEM = [1 / 30, 1, false];
+    const BEZ_MODULU = [0.5 / 30, 0.5, true];
+
+    // Ten sam obiekt opcji co dla gotowe({dawka:true}) — liczy z modułem okna.
+    expect(zWynik(A.polaZPodawanej(we, 'wsteczny', { dawka: true }))).toEqual(Z_MODULEM);
+    expect(zWynik(A.polaZPodawanej(we, 'wsteczny', { dawka: w.VildaGhDawka }))).toEqual(Z_MODULEM);
+    for (const dawka of [null, false, {}, { preparat: 'nie funkcja' }]) {
+      expect(zWynik(A.polaZPodawanej(we, 'wsteczny', { dawka })), JSON.stringify(dawka)).toEqual(BEZ_MODULU);
+    }
+
+    // Okno z modułem dawki bez funkcji preparat: bez × 2 i z flagą (wcześniej flaga mówiła „moduł jest”).
+    const o = oknoBezModuluDawki();
+    o.VildaGhDawka = {};
+    expect(zWynik(o.VildaGhPunkty.polaZPodawanej(we, 'wsteczny'))).toEqual(BEZ_MODULU);
+    expect(zWynik(o.VildaGhPunkty.polaZPodawanej(we, 'wsteczny', { dawka: true }))).toEqual(BEZ_MODULU);
+    // Jawnie wstrzyknięty moduł działa także wtedy, gdy okno go nie ma.
+    expect(zWynik(o.VildaGhPunkty.polaZPodawanej(we, 'wsteczny', { dawka: w.VildaGhDawka }))).toEqual(Z_MODULEM);
+  });
 });
 
 describe('polaZPodawanej — wartości pól jako napisy, czytane jak w monitorze', () => {

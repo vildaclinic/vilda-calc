@@ -13,7 +13,11 @@
  *
  * Funkcje czyste (bez DOM, magazynu i zdarzeń; jedyna zależność: VildaGhDawka do odczytu, wstrzykiwana przez
  * opcje.dawka): normalizujWiek, wiekLacznieMies, sprawdzRodzaj, dostepneRodzaje, sprawdzWartosci,
- * jednostkaDawki, dniIgf, polaZPodawanej, noweId, punkt, zmienWMiejscu.
+ * jednostkaDawki, dniIgf, polaZPodawanej, noweId, punkt, zmienWMiejscu. Przyjmują liczby, jak monitor po parseFloat
+ * (polaZPodawanej parsuje pola sama).
+ * opcje.dawka (polaZPodawanej, gotowe) — jedno znaczenie: brak klucza albo true → VildaGhDawka z okna; obiekt →
+ * wstrzyknięty moduł; null/false → bez modułu. Moduł liczy się tylko z funkcją preparat; to samo kryterium
+ * wyznacza × 2, bezModuluDawki i brak w gotowe.
  * Funkcje z efektami: wczytaj (pamięć modułu GH_THERAPY_POINTS), zapisz (= L() monitora: moduł → zdarzenie
  * vilda:therapy-points-changed → kanał gh-therapy-sync), gotowe (czy zależności są dostępne).
  *
@@ -21,6 +25,8 @@
  * nie normalizuje list z rekordu ani z sejfu; nie dopisuje punktu przy edycji (zmienWMiejscu); nie liczy dawki
  * nowego punktu z karty (zostaje w monitorze); nie dotyka mostka, IndexedDB ghTherapyDB ani resetu monitora.
  * Bez VildaGhDawka liczy jak monitor bez tego modułu (Increlex bez × 2) i zwraca bezModuluDawki: true.
+ * Znane odstępstwo od monitora: pusty wpis (null) na liście — sprawdzRodzaj i zmienWMiejscu go pomijają, a monitor
+ * (He, ghAddRetroPoint) rzuca TypeError i nie zapisuje. Przypięte testem różnicowym; decyzja przy PR-4.
  * Rejestr: docs/clinical/ALGORITHMS.md, P-GH-PUNKTY-API.
  */
 (function (w) {
@@ -43,15 +49,17 @@
 
   // ---- Funkcje czyste --------------------------------------------------------------------------------------------
 
+  // Moduł dawki według opcje.dawka (opis w nagłówku) albo null, gdy go nie ma lub nie ma funkcji preparat.
   function modulDawki(opcje) {
-    if (opcje && Object.prototype.hasOwnProperty.call(opcje, 'dawka')) return opcje.dawka || null;
-    return w.VildaGhDawka || null;
+    var jawny = opcje && Object.prototype.hasOwnProperty.call(opcje, 'dawka') && opcje.dawka !== true;
+    var E = jawny ? opcje.dawka : w.VildaGhDawka;
+    return E && typeof E.preparat === 'function' ? E : null;
   }
 
   // Increlex: dawka na podanie, 2 podania na dobę (= Gmpod/Gmt monitora).
   function naPodanie(preparat, opcje) {
     var E = modulDawki(opcje);
-    var P = E && preparat && typeof E.preparat === 'function' ? E.preparat(preparat) : null;
+    var P = E && preparat ? E.preparat(preparat) : null;
     return !!(P && P.schemat === 'naPodanie');
   }
   function dobowaZPodawanej(preparat, podawana, opcje) {
@@ -294,10 +302,7 @@
     var P = persistence();
     if (!P || typeof P.readModuleJSON !== 'function') braki.push('VildaPersistence.readModuleJSON');
     if (!P || typeof P.writeModuleJSON !== 'function') braki.push('VildaPersistence.writeModuleJSON');
-    if (opcje && opcje.dawka) {
-      var E = w.VildaGhDawka;
-      if (!E || typeof E.preparat !== 'function') braki.push('VildaGhDawka.preparat');
-    }
+    if (opcje && opcje.dawka && !modulDawki(opcje)) braki.push('VildaGhDawka.preparat');
     return { ok: braki.length === 0, braki: braki, kanal: typeof w.BroadcastChannel === 'function', tabId: !!tabId() };
   }
 

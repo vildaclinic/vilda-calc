@@ -652,6 +652,10 @@ describe('VildaGhPunkty.gotowe — czy zależności zapisu są dostępne', () =>
     pustyModul.win.VildaGhDawka = {};
     expect(pustyModul.A.gotowe({ dawka: true })).toEqual({ ok: false, braki: ['VildaGhDawka.preparat'], kanal: true, tabId: true });
 
+    // Obiekt w opcje.dawka znaczy to samo co w polaZPodawanej: sprawdzany jest wstrzyknięty moduł, nie okno.
+    expect(pustyModul.A.gotowe({ dawka: o.win.VildaGhDawka }).ok).toBe(true);
+    expect(o.A.gotowe({ dawka: {} })).toEqual({ ok: false, braki: ['VildaGhDawka.preparat'], kanal: true, tabId: true });
+
     // Kolejność braków: odczyt, zapis, moduł dawki.
     const nic = utworzOkno();
     for (const k of ['VildaPersistence', 'VildaGhDawka', 'BroadcastChannel', 'sessionStorage']) delete nic.win[k];
