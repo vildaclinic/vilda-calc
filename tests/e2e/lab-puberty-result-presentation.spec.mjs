@@ -1,5 +1,6 @@
 import { expect, test } from '../support/test-czas.mjs';
 import { quickSelect as select, quickFill as fill, configureProfile } from '../support/lab-puberty-quick.mjs';
+import { kliknij } from '../support/uklad-czekanie.mjs';
 
 // Every value comes through the production form, engine and renderer. Patients
 // and the one encrypted vault below are fictional and isolated per test.
@@ -227,11 +228,17 @@ test('desktop and narrow screens keep both axes, clinical warning and expanded d
     await expectNoOverflow(page, width);
     await expect(assessment(page).locator('[data-clinical-code="early_development"]')).toBeVisible();
     const details = assessment(page).locator(':scope > details');
-    await details.locator(':scope > summary').click();
+    // Po zmianie szerokości `summary` potrafi wystawać kilka pikseli poza okno (390 px: 986 + 20
+    // przy wysokości 1000). Playwright przewija go wtedy sam, a strona ma `scroll-behavior:
+    // smooth` — element jedzie przez kilkadziesiąt klatek, nie jest „stable" i każde ponowienie
+    // zleca kolejny płynny przejazd, aż test wyczerpie budżet. `kliknij` ustawia cel bez animacji
+    // i czeka na stały prostokąt (P-BRAMKI-5, P-LAB-PUB-KLIK).
+    await kliknij(details.locator(':scope > summary'));
     await expect(details).toHaveAttribute('open');
     await expect(details).toContainText('Mayo Clinic Laboratories');
     await expectNoOverflow(page, width);
-    await details.locator(':scope > summary').click();
+    await kliknij(details.locator(':scope > summary'));
+    await expect(details).not.toHaveAttribute('open');
   }
 });
 
