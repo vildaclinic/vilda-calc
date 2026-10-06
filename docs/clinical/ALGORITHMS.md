@@ -108,6 +108,18 @@ Szybki formularz LH/FSH udostępnia dla M: nieokreślony typ, G, P i Ax; dla F: 
 
 Syntetyczne regresje rzeczywistego adaptera/formularza i silnika: F/Th3→M usuwa Th3 bez nadania G3; M/G3/8 mL Prader→F→M nie przywraca niezgodnych danych; M/P3→F zachowuje P3; ogólny Tanner III nie staje się G3 lub Th3 przez sam wybór płci; zmiana płci formularza nie przepisuje źródłowego rodzaju początku; M2 lata 9 miesięcy/G3/LH2 zachowuje istniejące porównania i ostrzeżenie rozwoju. Akceptacja kliniczna i scalenie pozostają decyzją właściciela.
 
+#### LAB-PUBERTY — stabilny test układu na wąskim ekranie (P-LAB-PUB-KLIK), 2026-10-05
+
+**Zmiana kliniczna: NIE** — zmienia się wyłącznie test e2e. Silnik, dane referencyjne, progi, jednostki, widok i teksty oceny LH/FSH pozostają bez zmian. Zlecenie właściciela.
+
+**Objaw.** Test `tests/e2e/lab-puberty-result-presentation.spec.mjs` → „desktop and narrow screens keep both axes, clinical warning and expanded details inside the viewport” padał przy kliknięciu w „Szczegóły oceny i źródła” po limicie 60 s, z komunikatem „element is not stable” / „element is outside of the viewport”. Pomiar z 2026-10-05 na `audyt` 8bd056db: 4 z 6 przebiegów czerwone; na gałęzi poprawki przed zmianą testu (ta sama treść) 15 z 20 czerwonych przy `--repeat-each=20`.
+
+**Przyczyna (zmierzona, nie zgadnięta).** Po zmianie szerokości okna na 390 px `summary` stoi na 986 px przy wysokości okna 1000 px i wysokości elementu 20 px, czyli wystaje 6 px poza okno. Playwright sam przewija wtedy cel do widoku. Strona ma `scroll-behavior: smooth`, więc to przewinięcie trwa kilkadziesiąt klatek: ślad klatka po klatce pokazał `scrollY` 898 → 1162 → … → 716, a `summary` jechał razem ze stroną. Element nie jest w tym czasie „stable”. Każde ponowienie Playwrighta zleca kolejne płynne przewinięcie z innym wyrównaniem, więc pętla potrafi wyczerpać budżet testu. Przy 1440 px i 320 px `summary` mieści się w oknie, dlatego tam objaw nie występuje. Instrumentacja `scrollTo`, `scrollBy`, `scroll`, `scrollIntoView` i `scrollTop` nie wykazała żadnego przewijania z kodu strony. To ten sam mechanizm co pierwszy objaw P-BRAMKI-5.
+
+**Poprawka.** Oba kliknięcia w `summary` idą przez `kliknij` z `tests/support/uklad-czekanie.mjs`: cel jest ustawiany bez animacji (`behavior: 'instant'`), a kliknięcie pada dopiero po trzech klatkach o identycznym prostokącie i pozycji przewinięcia. Kliknięcie nadal przechodzi pełną kontrolę „actionability” Playwrighta. Dodano asercję, że drugie kliknięcie rzeczywiście zamyka szczegóły. Żadnej asercji nie usunięto ani nie osłabiono, a limit czasu się nie zmienił.
+
+**Walidacja.** Po poprawce `--repeat-each=20`: **20/20** przy 2 workerach i **20/20** przy 4 workerach (większe obciążenie CPU). Cały plik: **8/8**. Kontrola negatywna: ten sam test bez poprawki w tych samych warunkach — **5/20**.
+
 ### ANTIBIOTIC-RX — mapowanie cytowań
 
 W `antibiotic_therapy.js` występują powtarzające się klucze w mapie źródeł i liczne stłumienia `no-dupe-keys`. Obliczenia przechodzą obecne testy, ale nie dowodzi to poprawnego przypisania każdej rekomendacji do cytowania.
