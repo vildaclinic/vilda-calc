@@ -9934,6 +9934,56 @@ kontroli jak wyżej. `npm test` i pełny zestaw e2e (desktop) — wyniki w PR.
 **Wersje.** `vilda_data_import_export.js` 90 → 91 (index, docpro, kalkulator-klirens, `EXPECTED_BROWSER_SCRIPTS`; 90 wydał
 P-POWLOKA-ID, #491), precache (append-only), `SW_VERSION` 1.1.120 → 1.1.121 (+ pin; 1.1.119 wydał #493 P-TOZSAMOSC-RAMEK, 1.1.120 #490 P-GH-ZRODLO), fixture wersji.
 
+## Lista punktów terapii GH w sesji głównej DocPro i klirensu pochodzi z pamięci modułu karty (P-GH-SESJA-LISTA, SW 1.1.174, `vilda_data_import_export.js` 99, 2026-10-06)
+
+**Skąd.** Projekt „Wspólne API punktów GH” (`docs/AUDYT-PRZEPLYW-GH.md` § 5 p. 2), krok po P-GH-EDYCJA-LISTA (#561).
+Decyzja właściciela D2 z 2026-10-06: przy zapisie sesji głównej na stronach bez tabeli spożycia o liście punktów GH
+decyduje pamięć modułu, gdy klucz istnieje (także pusta lista); tylko lista GH, tylko strony bez `#intakePal`; warunkiem
+scalenia są testy utraty. Pełny opis ustaleń właściciel otrzymał poza repozytorium.
+
+**Reguła** (`saveMainSessionNow`, wpięcie z komentarzem `P-GH-SESJA-LISTA`, zaraz po scalaniu z P-SESJA-OBCA):
+- na stronie bez `#intakePal` (DocPro, Kalkulator klirensu), gdy `readModuleJSON('GH_THERAPY_POINTS')` zwraca tablicę
+  (także `[]`), pole `ghTherapyPoints` zapisywanej sesji głównej przyjmuje tę listę — zamiast listy okna uzupełnionej
+  z poprzedniej sesji (`Et`). To ta sama lista, którą piszą monitor GH, wczytanie pacjenta i mostek na Start;
+- brak klucza modułu albo adapter bez odczytu modułu — scalanie jak dotąd;
+- inne pola i listy (punkty otyłości, bisfosfonianów, dane wizyty) scalają się jak dotąd; reguła obcej sesji (P-SESJA-OBCA)
+  bez zmian;
+- strona z tabelą spożycia (Start) bez zmian: zapisuje własną listę bez scalania.
+
+**Co się nie zmienia.** Format sesji i rekordu, wspólny stan karty (`sharedUserData`), synchronizacja z chmurą, monitor GH,
+mostek, zapis „Zapisz dane”. Wzory, dawki i jednostki.
+
+**Klasyfikacja i wpływ kliniczny.** Zmiana funkcjonalna zapisu sesji (integralność listy punktów terapii między panelami
+karty przeglądarki), nie kliniczna. Lekarz może zauważyć, że punkt usunięty albo dodany w jednym panelu zostaje taki sam
+w pozostałych bez „Zapisz dane”. Punktów zapisanych wcześniej zmiana nie poprawia. Źródło medyczne: nie dotyczy.
+Wymaga akceptacji właściciela.
+
+**Pamięć modułu a sesja główna.** Klucz `GH_THERAPY_POINTS` jest „pacjencki” (pamięć sesji karty; w PWA iOS standalone
+pamięć lokalna, `patientScopedStorageType`), sesja główna zawsze w pamięci sesji karty. Klucz piszą: monitor GH (`L()`),
+wczytanie pacjenta (`applyLoadedData`), mostek na Start (także `[]`, gdy klucza nie było — w tym samym kroku mostek
+ustawia pustą listę okna, a Start zapisuje sesję bez scalania, więc reguła nie dodaje tu nowej drogi utraty); reset
+monitora i „Wyczyść” klucz usuwają.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne, strona bez tabeli spożycia):
+- poprzednia sesja [P0], lista strony [], moduł [] → sesja [];
+- poprzednia sesja [P0], lista strony [], moduł [P0, P1] → [P0, P1]; lista strony [P0, P1], moduł [P0] → [P0];
+- moduł [], poprzednia sesja z punktem otyłości i datą urodzenia, strona bez nich → GH [], otyłość i data z poprzedniej;
+- bez klucza modułu: poprzednia [P0], strona [] → [P0] (jak dotąd); Start: strona [], moduł [P0, P1] → [] (jak dotąd).
+
+**Strażnicy.**
+- `tests/unit/sesja-glowna-lista-gh.test.mjs` (5, prawdziwy `vildaSession.saveNow` na atrapie). Na `audyt` `f51d1f2`
+  czerwone 3 z 5; dwa przypadki kontrolne (bez klucza, Start) zielone po obu stronach.
+- `tests/e2e/powloka-punkty-gh-sesja.spec.mjs` (3, powłoka `app.html` z prawdziwym monitorem) — testy utraty, warunek
+  scalenia z D2, zielone po obu stronach: A punkt dodany w DocPro przeżywa przejścia Start ↔ DocPro bez „Zapisz”;
+  B wizyta w Kalkulatorze klirensu (panel bez monitora) nie kasuje listy; C punkt dodany przy wstrzymanym mostku
+  na Start przeżywa przejścia.
+
+**Wersje.** `vilda_data_import_export.js` 98 → 99 (`index.html`, `docpro.html`, `kalkulator-klirens.html`); precache
+(append-only); `SW_VERSION` 1.1.173 → 1.1.174 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json`
+— wszystko z `npm run podbij-wersje` względem `audyt` `f51d1f2`.
+
+**Co pozostaje decyzją właściciela.** Akceptacja zmiany, scalenie i wdrożenie.
+
 ## Karta porównania po „Odtwórz zapis”: spóźniony odczyt z sejfu nie przywraca porównania na Start ani w DocPro (P-POWLOKA-WYSCIG, SW 1.1.112, `vilda_summary_cards.js` 50, 2026-09-30)
 
 **Zgłoszenie (2026-09-29).** Test `tests/e2e/powloka-przelaczanie-paneli.spec.mjs` (`:147`, `:172`, oba z P-POWLOKA-PANELE)
