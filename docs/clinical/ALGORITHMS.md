@@ -10064,7 +10064,7 @@ najpierw) — zostaje bez zmian i jako strażnik w teście.
 zdarzenie ma w aplikacji ponad 20 słuchaczy z efektami ubocznymi, m.in. okna wyboru), formatu rekordu, synchronizacji ani
 pierwszeństwa źródeł danych urodzeniowych (karta SGA → `birth` → „Dane okołoporodowe”). Inne moduły, które trzymają
 dane pacjenta z `patient-loaded`, nie są tu poprawiane — przegląd tylko do odczytu wskazał kandydatów do osobnej
-weryfikacji (opis w PR).
+weryfikacji (opis w PR). *(Uzupełnienie 2026-10-06: zweryfikowane i poprawione w P-PRZEJECIE-MODULY — wpis niżej.)*
 
 **Testy.**
 - `tests/unit/zrodla-przejecie-pacjenta.test.mjs` — 12 testów (po 6 na moduł), prawdziwe moduły na atrapie okna
@@ -10082,7 +10082,68 @@ jest nieaktualny i przy pokazaniu („Wstecz”) przeładowuje się przez `locat
 dokument czyta źródła DS i danych okołoporodowych dla C. W `powloka-zrodla-wstecz.spec.mjs` krok „DocPro w tle przejmuje
 C” zastąpiony krokiem „DocPro w tle zostaje przy A, nieaktualny”; asercje stanu po „Wstecz” bez zmian.)*
 
-## Panel powłoki nie przejmuje po cichu innego pacjenta: dokument z poprzednim pacjentem jest bezczynny i przeładowuje się przy pokazaniu (P-POWLOKA-OBCY, SW 1.1.170, `vilda_panel_pacjent.js` 1, 2026-10-06)
+## Moduły paneli powłoki nadążają za pacjentem przejętym z sesji karty (P-PRZEJECIE-MODULY, SW 1.1.170, 2026-10-06)
+
+**Zmiana kliniczna: NIE** — żaden wzór, próg, dawka ani interpretacja. Zmienia się to, **którego pacjenta** dane czytają
+i dokąd zapisują moduły paneli powłoki po przejęciu pacjenta wczytanego w innej ramce. Zlecenie właściciela 2026-10-06
+(kandydaci z przeglądu w P-ZRODLA-PRZEJECIE).
+
+**Mechanizm.** Panel powłoki `app.html` przejmuje pacjenta w `vildaPersistRestoreAll` (P-POWLOKA-ID): bierze go z sesji
+karty, odtwarza formularz i kończy zdarzeniem `vilda:persist-restored`. `vilda:patient-loaded` dostaje tylko ramka, która
+pacjenta wczytała. Moduły trzymające dane pacjenta z `patient-loaded` zostawały przy poprzednim.
+
+**Co było** — zmierzone na `audyt` `8aa4150` w prawdziwej powłoce, fikcyjni pacjenci A i C (każdy punkt osobno potwierdzony
+sondą; kandydaci z przeglądu, których nie dało się potwierdzić, nie są zmieniani):
+1. **Klirens (`clcr_ui_workflow.js`).** A wczytany w Klirensie → C wczytany na Start → powrót: formularz i chip C, a cel
+   zapisu wyników „do karty” (`ClcrVisitSave.resolveCurrentPatientId`) = A. Notatka z wynikami C trafiłaby do karty A.
+2. **Monitory otyłości i bisfosfonianów (`obesity_therapy_monitor.js`, `bisphos_therapy_monitor.js`).** DocPro z A
+   (punkty leczenia), C wczytany na Start: zapis pustych punktów C budził w DocPro zapasowy odczyt z sejfu, który brał
+   pacjenta ze zmiennej okna (jeszcze A) i zapisywał punkty A do wspólnego stanu karty przeglądarki — DocPro i wspólny stan
+   C miały punkty leczenia A.
+3. **Podpowiedź leku z notatek (`obesity_therapy.js`).** „Z notatek pacjenta: Wegovy … — ustawić jako lek monitorowania?”
+   pacjenta A zostawała przy C; „Ustaw” przypisałby lek A punktom C.
+4. **Generator epikryzy (`vilda_epicrisis_ui.js`, Start).** Po przejęciu C krok „Dane urodzeniowe” wypełniał się danymi
+   okołoporodowymi A (34+2 tc, 1650 g); tak samo po „Wyczyść” na tej samej stronie, bo czyszczenie stanu leci na
+   `window`, a moduł słuchał tylko na `document`. To samo dotyczyło stadium Tannera z rekordu.
+5. **Pytanie o podział imienia i nazwiska (`vilda_name_fix.js`).** Pytanie dla jednopolowego rekordu A zostawało otwarte
+   przy formularzu C; wybór wpisywał imię i nazwisko A do formularza C.
+6. **Wskaźnik zapisu (`vilda_save_status_indicator.js`).** Po powrocie „Wstecz” pokazywał nazwę i numer zapisu A przy C.
+
+**Co jest.** Wspólna zasada (jak w P-POWLOKA-ID i P-ZRODLA-PRZEJECIE): bieżący pacjent to pacjent sesji karty, zmienna ramki
+tylko wtedy, gdy sesja jest niedostępna albo pacjenta nie zna; moduł reaguje na `vilda:persist-restored` (i tam, gdzie to
+potrzebne, na zmianę `vildaCurrentPatientId` w innej ramce — zdarzenie `storage`).
+1. Klirens: cel zapisu i chip (z datą masy) przechodzą na pacjenta sesji karty; sesja bez pacjenta zdejmuje cel zapisu.
+   Skutek uboczny zamierzony: Klirens otwarty w powłoce po wczytaniu pacjenta w innym panelu od razu zapisuje do tego
+   pacjenta (wcześniej cel był pusty do wczytania pacjenta w samym Klirensie).
+2. Monitory: zapasowy odczyt bierze pacjenta sesji karty, odrzuca wynik, gdy pacjent zmienił się w trakcie odczytu,
+   a po zmianie punktów w innej ramce rusza z opóźnieniem 350 ms — jak po wczytaniu pacjenta.
+3. Podpowiedź leku: pacjent sesji karty; znika i liczy się od nowa przy zmianie pacjenta; pacjent bez notatek o leku jej
+   nie dostaje; odrzucona przez lekarza wraca dopiero przy innym pacjencie.
+4. Epikryza: czyszczenie także na `window`; po odtworzeniu wspólnego stanu dane okołoporodowe i Tanner z rekordu pacjenta
+   sesji karty, a bez pacjenta — żadne; spóźniona odpowiedź starszego odczytu nie nadpisuje nowszego ani czyszczenia.
+5. Pytanie o podział nazwiska znika, gdy pacjent sesji karty jest inny niż ten, którego dotyczy.
+6. Wskaźnik zapisu przy zmianie pacjenta sesji karty zapomina własny punkt odniesienia i bierze wspólny
+   (`vilda-save-ref-v1`), zapisany przez ramkę, która pacjenta wczytała.
+
+**Czego zmiana nie robi.** Nie zmienia `vilda_persist_runtime.js` ani formatu rekordu i synchronizacji; nie rozgłasza
+`patient-loaded` z przejęcia. Nie naprawia danych już zapisanych z pomyłką (np. notatki Klirensu w karcie innego pacjenta
+albo punktów leczenia przeniesionych przed zmianą) — do tego sprawdzenie spójności zapisów (P-SPOJNOSC-ZAPISOW).
+
+**Testy.** `tests/e2e/powloka-moduly-przejecie.spec.mjs` — 4 testy w prawdziwej powłoce, każdy z kontrolą pozytywną dla A:
+Klirens (cel zapisu), DocPro (punkty otyłości i bisfosfonianów we wspólnym stanie C i w panelu, podpowiedź leku), Start
+(pytanie o podział nazwiska, epikryza po przejęciu i po „Wyczyść”), DocPro (wskaźnik zapisu po „Wstecz”). Na `8aa4150`
+4/4 czerwone. Mutacje: cofnięcie każdego z sześciu modułów osobno (i samego nasłuchu czyszczenia na `window` w epikryzie)
+wywraca odpowiedni test.
+
+**Wersje.** `clcr_ui_workflow.js` 5, `vilda_epicrisis_ui.js` 28, `obesity_therapy.js` 11, `obesity_therapy_monitor.js` 27,
+`bisphos_therapy_monitor.js` 6, `vilda_name_fix.js` 4, `vilda_save_status_indicator.js` 27; SW 1.1.169 → **1.1.170**.
+
+*(Uzupełnienie 2026-10-06, P-POWLOKA-OBCY: przejęcie pacjenta przez `vildaPersistRestoreAll` zostaje dla panelu pustego
+i dla tego samego nowego dziecka po nadaniu identyfikatora. Panel z danymi INNEGO pacjenta (np. DocPro albo Klirens z A
+po wczytaniu C na Start) jest nieaktualny: w tle nie zapisuje stanu karty, a przy pokazaniu przeładowuje się i jego
+moduły startują od pacjenta karty — wpis niżej.)*
+
+## Panel powłoki nie przejmuje po cichu innego pacjenta: dokument z poprzednim pacjentem jest bezczynny i przeładowuje się przy pokazaniu (P-POWLOKA-OBCY, SW 1.1.171, `vilda_panel_pacjent.js` 1, 2026-10-06)
 
 **Zmiana kliniczna: NIE w sensie wzorów** — żaden wzór, próg, siatka, populacja, jednostka ani interpretacja się nie
 zmienia. Zmienia się, **czyje dane** trafiają do formularza i do rekordu po przejściu między panelami powłoki, więc wynik
@@ -10201,9 +10262,10 @@ leczenia otyłości poprzedniego pacjenta i odkłada je z powrotem do magazynu k
   przy A, nieaktualny; po „Wstecz” świeży dokument z C” (zamierzona zmiana z części (c)); asercje stanu po „Wstecz” bez
   zmian.
 
-SW 1.1.169 → **1.1.170**; `custom-fixes.js?v=72→73`, `vilda_data_import_export.js?v=97→98`,
+SW 1.1.170 → **1.1.171**; `custom-fixes.js?v=72→73`, `vilda_data_import_export.js?v=97→98`,
 `vilda_persist_runtime.js?v=19→20`, `vilda_persistence_adapter.js?v=29→30`, `vilda_shell.js?v=59→60`,
 `vilda_unsaved_guard.js?v=5→6`; nowy `vilda_panel_pacjent.js?v=1` (index, docpro, kalkulator-klirens; precache).
+
 
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 

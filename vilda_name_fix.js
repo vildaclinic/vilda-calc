@@ -548,6 +548,31 @@
     // 0 tokenów → brak nazwy, nic nie robimy.
   }
 
+  // P-PRZEJECIE-MODULY (2026-10-06): panel powłoki app.html przejmuje pacjenta wczytanego w innej
+  // ramce (vildaPersistRestoreAll, P-POWLOKA-ID) bez 'vilda:patient-loaded'. Pytanie otwarte dla
+  // pacjenta A zostawało wtedy na ekranie przy formularzu pacjenta C, a wybór wpisywał imię
+  // i nazwisko A do formularza C. Pytanie dotyczy pacjenta sesji karty — przy innym znika.
+  function sessionPatientId() {
+    try {
+      if (!w.sessionStorage) return undefined;
+      return w.sessionStorage.getItem('vildaCurrentPatientId') || null;
+    } catch (_) { return undefined; }
+  }
+  function hidePromptForOtherPatient() {
+    if (!currentPromptId || !els.fix || els.fix.hidden) return;
+    var id = sessionPatientId();
+    if (id === undefined) return;
+    if (currentPromptId === '__anon__' ? !id : id === currentPromptId) return;
+    hidePrompt();
+    if (els.done) els.done.hidden = true;
+  }
+  doc.addEventListener('vilda:persist-restored', hidePromptForOtherPatient);
+  if (typeof w.addEventListener === 'function') {
+    w.addEventListener('storage', function (ev) {
+      if (ev && ev.key === 'vildaCurrentPatientId') hidePromptForOtherPatient();
+    });
+  }
+
   // Handler NIGDY nie rzuca; asynchroniczne odrzucenia też wyłapujemy.
   doc.addEventListener('vilda:patient-loaded', function (ev) {
     try {
@@ -563,7 +588,7 @@
   // Publiczny znacznik gotowości (dla testów/diagnostyki; nie zmienia zachowania aplikacji).
   w.VildaNameFix = {
     __init: true,
-    version: '3',
+    version: '4',
     resolvedCount: function () { return resolved.size; }
   };
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
