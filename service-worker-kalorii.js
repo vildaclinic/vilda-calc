@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.167';
+const SW_VERSION = '1.1.168';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;

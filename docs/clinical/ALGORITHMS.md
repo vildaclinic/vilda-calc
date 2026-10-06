@@ -9969,7 +9969,7 @@ obu — zapis ląduje w A (stan `21046aa`). Wersje na stronach, precache (append
 
 *(Uzupełnienie 2026-10-06, P-ZRODLA-PRZEJECIE: przejęcie pacjenta nie powiadamiało źródeł rozpoznania DS i danych
 okołoporodowych, bo nie wysyła `vilda:patient-loaded` — wpis niżej.)*
-## Źródła DS i danych okołoporodowych nadążają za pacjentem przejętym z sesji karty (P-ZRODLA-PRZEJECIE, SW 1.1.167, `vilda_ds_source.js` 4, `vilda_perinatal_source.js` 3, 2026-10-06)
+## Źródła DS i danych okołoporodowych nadążają za pacjentem przejętym z sesji karty (P-ZRODLA-PRZEJECIE, SW 1.1.168, `vilda_ds_source.js` 4, `vilda_perinatal_source.js` 3, 2026-10-06)
 
 **Zmiana kliniczna: NIE** — żaden wzór, próg, siatka, populacja ani interpretacja. Zmienia się to, **którego pacjenta**
 rekord czytają dwa moduły źródłowe po przejściu między panelami powłoki. Zlecenie właściciela 2026-10-06 („potwierdź
@@ -10016,7 +10016,7 @@ weryfikacji (opis w PR).
   DocPro w tle po wczytaniu C na Start, potem „Wstecz”: populacja `'OGOLNA'`, brak danych okołoporodowych, B.64 dla C
   „BRAK DANYCH”, dojrzewanie C. Na `db8f26c` czerwony (DocPro w tle zostaje przy `'DS'` i 34+2 tc).
 
-SW 1.1.166 → **1.1.167**; `vilda_ds_source.js?v=3→4`, `vilda_perinatal_source.js?v=2→3`.
+SW 1.1.167 → **1.1.168**; `vilda_ds_source.js?v=3→4`, `vilda_perinatal_source.js?v=2→3`.
 
 ## Stan kart DocPro należy do pacjenta; ramka DocPro w tle czyści karty po zmianie pacjenta w innej ramce (P-TOZSAMOSC-RAMEK, SW 1.1.119, `docpro_state_persist.js` 6, 2026-09-30)
 
