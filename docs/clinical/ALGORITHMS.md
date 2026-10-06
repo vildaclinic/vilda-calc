@@ -10251,6 +10251,9 @@ leczenia otyłości poprzedniego pacjenta i odkłada je z powrotem do magazynu k
   przeładowania w `Gp_p`; bez czyszczenia globals (pokarm X — 7 porcji — w Start z Y); bez nadania identyfikatora
   (DocPro przeładowany); przeładowanie przez `src` (dodatkowy wpis w historii); bez odświeżenia mini-podsumowania
   (pomiary X przy DocPro z Y); bez pominięcia w `It` (DocPro w tle przejmuje Y).
+  Od P-PRZEJECIE-MODULY (#553) wskaźnik zapisu panelu, który odtworzył albo przejął pacjenta karty, bywa „dirty” bez
+  zmiany i strażnik pyta „Zapisać zmiany przed wczytaniem?” (zmierzone sondą: przed #553 0/4, na `audyt` `d3c0935` 4/4;
+  zgłoszone osobno). Test odpowiada wtedy jak lekarz bez zmian — „Odrzuć zmiany i wczytaj” — i zostawia adnotację.
 - `tests/unit/powloka-panel-obcy.test.mjs` — prawdziwe moduły na atrapach: reguły modułu (leniwa ocena, nadanie
   identyfikatora, „dane” poza polami, usunięcie identyfikatora, powrót X→Y→X, „Wyczyść” na window, `utrwal`, `cel`,
   brak protokołu), strażnik adaptera i flaga lustra, lustro, powłoka (pominięcie w `It`, przeładowanie w `Gp_p` bez

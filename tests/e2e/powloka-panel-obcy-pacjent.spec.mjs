@@ -118,11 +118,25 @@ const zalozWizyteY = (start, idY) => start.evaluate(async (pid) => {
   return Boolean(w && w.id);
 }, idY);
 
+/* Od P-PRZEJECIE-MODULY (#553, 2026-10-06) wskaźnik zapisu w panelu, który odtworzył albo przejął pacjenta karty
+   wczytanego w innej ramce, bywa „dirty” bez żadnej zmiany w formularzu, a strażnik pyta przed wczytaniem innego
+   pacjenta („Zapisać zmiany przed wczytaniem?”). Przed #553 tego okna w tych scenariuszach nie było; zgłoszone
+   właścicielowi osobno. Odpowiadamy jak lekarz, który niczego nie zmieniał („Odrzuć zmiany i wczytaj”), i zostawiamy
+   adnotację w raporcie testu. */
+const STRAZNIK = '.vug-backdrop';
+async function odpowiedzStraznikowi(ctx, gdzie) {
+  test.info().annotations.push({ type: 'strażnik niezapisanych zmian (#553)', description: gdzie });
+  await ctx.locator('.vug-btn.vug-danger').click();
+  await ctx.waitForSelector(STRAZNIK, { state: 'detached', timeout: 10000 }).catch(() => {});
+}
+
 /* Lista pacjentów → karta → „Wczytaj tego pacjenta” → wybór wizyty (tak jak lekarz). */
 async function wczytajZListy(page, ctx, nazwa, wybor) {
   await page.locator('#patientsListBtnSidebar').click();
   await ctx.locator('.pt-rcard2', { hasText: nazwa }).first().click();
   await ctx.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+  await ctx.waitForSelector(`#vildaLoadChoiceModal, ${STRAZNIK}`, { state: 'visible', timeout: 10000 });
+  if (await ctx.locator(STRAZNIK).isVisible()) await odpowiedzStraznikowi(ctx, `wczytanie ${nazwa} z listy`);
   await ctx.waitForSelector('#vildaLoadChoiceModal', { state: 'visible', timeout: 10000 });
   await ctx.click(wybor === 'restore' ? '#vildaLcmRestore' : '#vildaLcmNew');
   await ctx.waitForSelector('#vildaLoadChoiceModal', { state: 'detached', timeout: 10000 }).catch(() => {});
@@ -156,6 +170,9 @@ async function skokGHDoY(page, idY) {
   await skok.waitFor({ state: 'visible', timeout: 10000 });
   await skok.click();
   const docpro = await ramka(page, 'DocPro');
+  await docpro.waitForFunction((y) => window._vildaCurrentPatientId === y
+    || Boolean(document.querySelector('.vug-backdrop')), idY, { timeout: 20000 });
+  if (await docpro.locator(STRAZNIK).isVisible()) await odpowiedzStraznikowi(docpro, 'skok GH do DocPro');
   await docpro.waitForFunction((y) => window._vildaCurrentPatientId === y, idY, { timeout: 20000 });
   return docpro;
 }
